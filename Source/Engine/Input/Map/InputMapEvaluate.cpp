@@ -387,9 +387,10 @@ namespace sw
         GamepadDevice* pPad = _pInput->getGamepad( binding._deviceIndex );
         if ( pPad == nullptr || pPad->isConnected() == false )
             return false;
-        const float2 stick  = ( binding._stick == GamepadStick::Left ) ? pPad->getLeftStick() : pPad->getRightStick();
-        float32      stickX = stick._x;
-        float32      stickY = stick._y;
+        const float2 stick = ( binding._stick == GamepadStick::Left ) ? pPad->getLeftStick() : pPad->getRightStick();
+        // 한 성분만 내는 바인딩은 다른 성분을 읽지 않는다 — 원형 데드존이 두 성분을 함께 정규화하면 다른 성분이 1D 값에 섞인다.
+        float32 stickX = binding._stickAxis == GamepadStickAxis::Y ? 0.0f : stick._x;
+        float32 stickY = binding._stickAxis == GamepadStickAxis::X ? 0.0f : stick._y;
 
         const float32 inDeadzone  = _playerSettings._stickDeadzoneOverride >= 0.0f ? _playerSettings._stickDeadzoneOverride : binding._deadzone;
         const float32 outDeadzone = binding._outerDeadzone > inDeadzone ? binding._outerDeadzone : 1.0f;

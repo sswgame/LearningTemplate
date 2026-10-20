@@ -280,6 +280,11 @@ msgid "No target"
 msgstr "대상 없음"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.PlayPreviewTime"
+msgid "Play"
+msgstr "재생"
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.PointIndex"
 msgid "Point"
 msgstr "점"
@@ -706,6 +711,48 @@ msgstr "음소거"
 msgctxt "settings.audio.sfxVolume"
 msgid "Effects Volume"
 msgstr "효과음 음량"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.audio.speakerMode"
+msgid "Speaker Setup"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.audio.speakerMode.auto"
+msgid "Automatic"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.audio.speakerMode.headphones"
+msgid "Headphones (3D)"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.audio.speakerMode.stereo"
+msgid "Stereo"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.audio.speakerMode.surround51"
+msgid "5.1 Surround"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.audio.speakerMode.surround71"
+msgid "7.1 Surround"
+msgstr ""
 
 #. Context: Options menu label
 #. Max length: 32

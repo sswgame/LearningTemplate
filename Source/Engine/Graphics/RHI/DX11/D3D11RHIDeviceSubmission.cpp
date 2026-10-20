@@ -92,7 +92,7 @@ namespace sw
             return;
         // 타임스탬프 쿼리는 Begin 이 없다. End 하나가 "지금 GPU 시각" 이다.
         pContext->End( pQuery );
-        _timestampWrittenMask.fetch_or( 1u << slotIndex, std::memory_order_relaxed );
+        _timestampWrittenMask.fetch_or( makeGPUTimestampSlotBit( slotIndex ), std::memory_order_relaxed );
     }
 
     void D3D11RHIDevice::ensureTimestampResources()
@@ -142,11 +142,11 @@ namespace sw
         if ( disjointData.Disjoint != FALSE || disjointData.Frequency == 0 )
             return;
 
-        uint64 arrTick[constant::kMaxGPUTimestampSlot]{};
-        uint32 readyMask{ 0 };
+        uint64               arrTick[constant::kMaxGPUTimestampSlot]{};
+        GPUTimestampSlotMask readyMask{ 0 };
         for ( uint32 slotIndex = 0; slotIndex < constant::kMaxGPUTimestampSlot; ++slotIndex )
         {
-            if ( ( frame._writtenMask & ( 1u << slotIndex ) ) == 0 )
+            if ( ( frame._writtenMask & makeGPUTimestampSlotBit( slotIndex ) ) == 0 )
                 continue;
 
             uint64 tick{ 0 };
@@ -154,7 +154,7 @@ namespace sw
                                           D3D11_ASYNC_GETDATA_DONOTFLUSH ) != S_OK )
                 continue;
             arrTick[slotIndex] = tick;
-            readyMask |= ( 1u << slotIndex );
+            readyMask |= makeGPUTimestampSlotBit( slotIndex );
         }
         _lastTimestampFrequency = disjointData.Frequency;
         RHITimestamp::resolve( arrTick, readyMask, constant::kNanosecondsPerSecond / static_cast<float64>( disjointData.Frequency ), _timestampFrame );

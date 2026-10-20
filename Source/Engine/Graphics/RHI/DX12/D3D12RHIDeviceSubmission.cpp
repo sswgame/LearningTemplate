@@ -456,8 +456,8 @@ namespace sw
     {
         // 이 슬롯은 방금 펜스를 통과했다. 지난번 이 슬롯에 적은 값이 GPU 에서 이미 끝나 있다.
         _timestampFrame._listMicro.clear();
-        const uint32 writtenMask         = _arrTimestampMask[_frameRing.currentIndex()];
-        const bool   bNoTimestampsToRead = _timestampReadback == nullptr || _timestampFrequency == 0 || writtenMask == 0;
+        const GPUTimestampSlotMask writtenMask         = _arrTimestampMask[_frameRing.currentIndex()];
+        const bool                 bNoTimestampsToRead = _timestampReadback == nullptr || _timestampFrequency == 0 || writtenMask == 0;
         if ( bNoTimestampsToRead )
             return;
 
@@ -554,7 +554,7 @@ namespace sw
                 // 구간 전체를 읽기 버퍼로 옮긴다. 32 칸이면 256 바이트라 옮기는 값이 사실상 공짜고,
                 // 어느 칸이 이번 것인지는 비트로 따로 굳혀 둔다(안 적은 칸에는 지난 사이클 값이 남아 있다).
                 // 슬롯 번호는 **패스 인덱스로 고정**이라 병렬 기록에도 경쟁이 없다.
-                const uint32 writtenMask                     = _timestampWrittenMask.load( std::memory_order_relaxed );
+                const GPUTimestampSlotMask writtenMask       = _timestampWrittenMask.load( std::memory_order_relaxed );
                 _arrTimestampMask[_frameRing.currentIndex()] = writtenMask;
                 const bool bShouldResolveTimestamps          = _bTimestampEnabled != SW_FALSE && _timestampHeap != nullptr && _timestampReadback != nullptr &&
                                                       writtenMask != 0;
@@ -565,13 +565,13 @@ namespace sw
                     uint32       slot = 0;
                     while ( slot < constant::kMaxGPUTimestampSlot )
                     {
-                        if ( ( writtenMask & ( 1u << slot ) ) == 0 )
+                        if ( ( writtenMask & makeGPUTimestampSlotBit( slot ) ) == 0 )
                         {
                             ++slot;
                             continue;
                         }
                         const uint32 runStart = slot;
-                        while ( slot < constant::kMaxGPUTimestampSlot && ( writtenMask & ( 1u << slot ) ) != 0 )
+                        while ( slot < constant::kMaxGPUTimestampSlot && ( writtenMask & makeGPUTimestampSlotBit( slot ) ) != 0 )
                         {
                             ++slot;
                         }

@@ -47,7 +47,7 @@ namespace sw
 
         // glQueryCounter 는 Begin/End 쌍이 아니다. 한 번 부르면 "여기까지 GPU 가 끝낸 시각" 이 찍힌다.
         glQueryCounter( _arrTimestampQuery[_timestampFrameIndex * constant::kMaxGPUTimestampSlot + slotIndex], GL_TIMESTAMP );
-        _arrTimestampMask[_timestampFrameIndex] |= ( 1u << slotIndex );
+        _arrTimestampMask[_timestampFrameIndex] |= makeGPUTimestampSlotBit( slotIndex );
     }
 
     void OpenGLRHIDevice::ensureTimestampQueries()
@@ -70,17 +70,17 @@ namespace sw
     void OpenGLRHIDevice::collectTimestampsForSlot()
     {
         _timestampFrame._listMicro.clear();
-        const uint32 writtenMask         = _arrTimestampMask[_timestampFrameIndex];
-        const bool   bNoTimestampsToRead = _bTimestampEnabled == SW_FALSE || _bTimestampReady == SW_FALSE || writtenMask == 0;
+        const GPUTimestampSlotMask writtenMask         = _arrTimestampMask[_timestampFrameIndex];
+        const bool                 bNoTimestampsToRead = _bTimestampEnabled == SW_FALSE || _bTimestampReady == SW_FALSE || writtenMask == 0;
         if ( bNoTimestampsToRead )
             return;
 
-        const uint32 base = _timestampFrameIndex * constant::kMaxGPUTimestampSlot;
-        uint64       arrTick[constant::kMaxGPUTimestampSlot]{};
-        uint32       readyMask{ 0 };
+        const uint32         base = _timestampFrameIndex * constant::kMaxGPUTimestampSlot;
+        uint64               arrTick[constant::kMaxGPUTimestampSlot]{};
+        GPUTimestampSlotMask readyMask{ 0 };
         for ( uint32 slotIndex = 0; slotIndex < constant::kMaxGPUTimestampSlot; ++slotIndex )
         {
-            if ( ( writtenMask & ( 1u << slotIndex ) ) == 0 )
+            if ( ( writtenMask & makeGPUTimestampSlotBit( slotIndex ) ) == 0 )
                 continue;
 
             // **가용 여부부터 묻는다.** 바로 결과를 읽으면 GL 이 그 자리에서 GPU 를 기다려,
@@ -93,7 +93,7 @@ namespace sw
             GLuint64 tick{ 0 };
             glGetQueryObjectui64v( _arrTimestampQuery[base + slotIndex], GL_QUERY_RESULT, &tick );
             arrTick[slotIndex] = tick;
-            readyMask |= ( 1u << slotIndex );
+            readyMask |= makeGPUTimestampSlotBit( slotIndex );
         }
         // GL 타임스탬프는 나노초다.
         RHITimestamp::resolve( arrTick, readyMask, 1.0, _timestampFrame );

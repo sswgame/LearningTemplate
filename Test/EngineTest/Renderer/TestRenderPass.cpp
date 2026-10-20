@@ -506,11 +506,11 @@ SW_TEST_CASE( RenderPassTest, GPUTimestampPassCapacityMatchesSlotLayout )
 {
     constexpr uint32 kCapacity = sw::FrameRendererUtil::kGPUTimedPassCapacity;
     static_assert( kCapacity * 2u <= sw::FrameRendererUtil::kGPUTimestampSlotComputeBegin, "패스 칸이 예약 칸과 겹친다" );
-    SW_EXPECT_EQUAL( 14u, kCapacity );
+    SW_EXPECT_EQUAL( 30u, kCapacity ); // 64 칸 = 패스 30 쌍 + 예약 3 칸(+ 빈 1 칸)
     SW_EXPECT_EQUAL( 0u, sw::FrameRendererUtil::countUntimedGPUPass( 0 ) );
     SW_EXPECT_EQUAL( 0u, sw::FrameRendererUtil::countUntimedGPUPass( kCapacity ) );
     SW_EXPECT_EQUAL( 1u, sw::FrameRendererUtil::countUntimedGPUPass( kCapacity + 1u ) );
-    SW_EXPECT_EQUAL( 6u, sw::FrameRendererUtil::countUntimedGPUPass( 20 ) );
+    SW_EXPECT_EQUAL( 6u, sw::FrameRendererUtil::countUntimedGPUPass( 36 ) );
 }
 
 /**

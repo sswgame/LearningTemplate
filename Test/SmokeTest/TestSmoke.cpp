@@ -1677,6 +1677,12 @@ SW_TEST_CASE( ModuleAPITest, ExportGameAPI_ShippingStatic )
  */
 SW_TEST_CASE( ModuleAPITest, ExportGameAPI )
 {
+    // SWGame 은 GameFramework 를 지연 로드한다(exportGameAPI 가 그 코드를 부르는 순간 올라온다). 그 정적 등록기가 전역 머리에 남은 채
+    // 아래 SWGame 등록이 돌면 GameFramework 타입이 SWGame 이름으로 들어가고, 해제가 그 타입(GameSettings 등)을 묘비로 만든다 — 뒤 테스트가
+    // 그 타입을 찾지 못한다. 공용 모듈을 먼저 명시적으로 올려 제 이름으로 걷는다(`registerModuleTypes` 의 경고와 같은 규칙). 내리지 않는다.
+    void* hGameFramework = sw::loadModule( "GameFramework" );
+    SW_ASSERT_TRUE( hGameFramework != nullptr );
+    sw::engine::registerModuleTypes( "GameFramework" );
     void* handle = sw::loadModule( "SWGame" );
     SW_EXPECT_TRUE( handle != nullptr );
     if ( handle == nullptr )
@@ -1711,6 +1717,12 @@ SW_TEST_CASE( ModuleAPITest, ExportGameAPI )
  */
 SW_TEST_CASE( ModuleAPITest, FullGameSceneAndComponentLifecycle )
 {
+    // 앞 테스트의 라이브 리로드가 "GameFramework" 타입을 해제했으면(묘비) 이 프로세스에 이미 올라온 GameFramework 이미지는 등록기를 다시 돌리지
+    // 않아 게임 설정 읽기가 타입을 찾지 못한다. 앱과 같은 길(섀도 복사본을 올려 그 등록기를 제 이름으로)로 GameFramework 타입을 살려 둔다.
+    // 이 호스트가 가장 먼저 만들어져 가장 늦게 부서지므로 아래 게임이 내려간 뒤에 해제된다.
+    sw::LiveReloadManager gameFrameworkHost;
+    SW_ASSERT_TRUE_MSG( gameFrameworkHost.registerModule( "GameFramework" ), "GameFramework did not register - see the log above" );
+
     void* hOverworld = sw::loadModule( "GF_Overworld" );
     if ( hOverworld != nullptr )
         sw::engine::registerModuleTypes( "GF_Overworld" );
@@ -1974,6 +1986,10 @@ SW_TEST_CASE( ModuleAPITest, EveryModulePropertyHasATypeTheSerializersCanCarry )
  */
 SW_TEST_CASE( ModuleAPITest, GameModuleRepeatedReloadCycle )
 {
+    // FullGameSceneAndComponentLifecycle 과 같은 까닭으로 GameFramework 타입을 먼저 살려 둔다(게임 설정 읽기가 그 타입을 쓴다).
+    sw::LiveReloadManager gameFrameworkHost;
+    SW_ASSERT_TRUE_MSG( gameFrameworkHost.registerModule( "GameFramework" ), "GameFramework did not register - see the log above" );
+
     for ( int32 cycle = 0; cycle < 2; ++cycle )
     {
         void* hOverworld = sw::loadModule( "GF_Overworld" );

@@ -9,6 +9,8 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Graphics/RHI/RHITypes.h"
+
 namespace sw
 {
     /**
@@ -45,7 +47,7 @@ namespace sw
          * @param outFrame 슬롯 수만큼 채웁니다. 기록되지 않은 슬롯은 -1 이고, 부르는 쪽이 그 쌍을 통째로 버리는 약속입니다. readyMask 가 0 이면 비웁니다.
          * @return 하나라도 풀었으면 true 입니다.
          */
-        static bool resolve( const uint64* pTick, uint32 readyMask, float64 nanosPerTick, RHITimestampFrame& outFrame );
+        static bool resolve( const uint64* pTick, GPUTimestampSlotMask readyMask, float64 nanosPerTick, RHITimestampFrame& outFrame );
 
         /** @brief 틱을 GPU 시계 나노초로 바꿉니다(`resolve` 의 기준점과 `readGPUClockNanos` 가 같은 환산을 쓰게 한 곳에 둡니다). */
         static int64 convertTickToNanos( uint64 tick, float64 nanosPerTick );

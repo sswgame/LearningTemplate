@@ -209,6 +209,10 @@
             "text": "대상 없음",
             "sourceHash": "88b4f03b7af48b9f"
         },
+        "EdMeshModifiers.PlayPreviewTime": {
+            "text": "재생",
+            "sourceHash": "cd105819b5a10243"
+        },
         "EdMeshModifiers.PointIndex": {
             "text": "점",
             "sourceHash": "8a439296ced9ed11"

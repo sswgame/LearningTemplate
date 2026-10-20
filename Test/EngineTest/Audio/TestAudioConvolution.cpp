@@ -112,8 +112,9 @@ SW_TEST_CASE( AudioConvolutionTest, ConvolutionReverbAppliesTheImpulseResponse )
     }
 
     SW_TEST_DEFENSIVE_SCOPE( "a convolution reverb without an impulse response is an error" );
+    // 믹서 에셋 읽기가 이 서술을 먼저 거른다(MixerLoadRejectsConvolutionReverbWithoutImpulse). 효과 생성도 같은 결함을 받지 않는지 본다.
     sw::AudioEffectDesc missing;
-    SW_ASSERT_TRUE( loadConvolutionTestEffectDesc( "<AudioEffectDesc _type=\"ConvolutionReverb\" />", missing ) );
+    missing._type = sw::hashed_string( "ConvolutionReverb" );
     SW_EXPECT_TRUE( sw::AudioEffectRegistry::createEffect( missing, sw::AudioChannelLayout::Stereo ) == nullptr );
 }
 

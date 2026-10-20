@@ -430,6 +430,10 @@
             "text": "장소"
         },
         {
+            "source": "Play",
+            "text": "재생"
+        },
+        {
             "source": "Point",
             "text": "점"
         },

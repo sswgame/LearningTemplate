@@ -376,10 +376,10 @@ namespace sw
          * @details 읽기는 그 묶음을 **다시 쓰기 직전**(링 한 바퀴 뒤)에 GL_QUERY_RESULT_AVAILABLE
          *          로 먼저 물어보고 준비된 슬롯만 읽는다. 준비되지 않은 슬롯을 바로 읽으면 GL 이 거기서 막힌다.
          */
-        uint32            _arrTimestampQuery[constant::kMaxGPUTimestampSlot * constant::kMaxFrameCountInFlight];
-        uint32            _arrTimestampMask[constant::kMaxFrameCountInFlight];
-        uint32            _timestampFrameIndex;
-        RHITimestampFrame _timestampFrame; ///< 마지막으로 읽은 프레임(`readTimestamps`)
+        uint32               _arrTimestampQuery[constant::kMaxGPUTimestampSlot * constant::kMaxFrameCountInFlight];
+        GPUTimestampSlotMask _arrTimestampMask[constant::kMaxFrameCountInFlight];
+        uint32               _timestampFrameIndex;
+        RHITimestampFrame    _timestampFrame; ///< 마지막으로 읽은 프레임(`readTimestamps`)
 
         uint32 _arrComputeRootConstantShadow[shaderslot::kRootConstantDwords];
 

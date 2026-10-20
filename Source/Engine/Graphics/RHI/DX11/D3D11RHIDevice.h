@@ -379,7 +379,7 @@ namespace sw
         {
             Microsoft::WRL::ComPtr<ID3D11Query> _disjoint;
             Microsoft::WRL::ComPtr<ID3D11Query> _arrQuery[constant::kMaxGPUTimestampSlot];
-            uint32                              _writtenMask{ 0 };
+            GPUTimestampSlotMask                _writtenMask{ 0 };
             uint8                               _bPending{ SW_FALSE };
         };
 
@@ -391,10 +391,10 @@ namespace sw
         D3D11TimestampFrame _arrTimestampFrame[constant::kMaxFrameCountInFlight];
         uint32              _timestampFrameIndex;
         /// @brief 이번 프레임에 기록된 슬롯 비트입니다. 패스가 병렬로 기록하므로 atomic 입니다.
-        atomic<uint32> _timestampWrittenMask;
-        uint8          _bTimestampEnabled; ///< 엔진이 켜기 전에는 쿼리도 만들지 않는다.
-        uint8          _bTimestampReady;
-        uint8          _bTimestampFrameOpen;
+        atomic<GPUTimestampSlotMask> _timestampWrittenMask;
+        uint8                        _bTimestampEnabled; ///< 엔진이 켜기 전에는 쿼리도 만들지 않는다.
+        uint8                        _bTimestampReady;
+        uint8                        _bTimestampFrameOpen;
         /// @brief 드라이버가 커맨드 리스트를 네이티브로 지원하면 SW_TRUE 입니다. 병렬 기록 능력을 판단하는 근거입니다.
         uint8             _bDriverCommandLists;
         RHITimestampFrame _timestampFrame; ///< 마지막으로 읽은 프레임(`readTimestamps`)

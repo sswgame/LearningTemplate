@@ -83,9 +83,11 @@ namespace sw
                 outListViolation.push_back( reference );
                 continue;
             }
-            const WorldCellObjectRecord& from     = listObject[fromIt->second];
-            const WorldCellObjectRecord& to       = listObject[toIt->second];
-            const bool                   bAllowed = to._bAlwaysLoaded || from._cell == to._cell;
+            const WorldCellObjectRecord& from = listObject[fromIt->second];
+            const WorldCellObjectRecord& to   = listObject[toIt->second];
+            // 늘 올라 있는 쪽은 셀이 아니라 기본 묶음에 실린다 — 같은 셀 자리여도 셀의 오브젝트를 가리키면 그 셀이 내려갈 때 끊긴다.
+            const bool bSameCell = from._bAlwaysLoaded == false && from._cell == to._cell;
+            const bool bAllowed  = to._bAlwaysLoaded || bSameCell;
             if ( bAllowed == false )
                 outListViolation.push_back( reference );
         }

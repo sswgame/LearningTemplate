@@ -324,6 +324,12 @@
                 "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
             ]
         },
+        "EdMeshModifiers.PlayPreviewTime": {
+            "source": "Play",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
+            ]
+        },
         "EdMeshModifiers.PointIndex": {
             "source": "Point",
             "origins": [

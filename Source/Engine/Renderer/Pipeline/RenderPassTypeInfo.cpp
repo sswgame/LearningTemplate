@@ -170,8 +170,10 @@ namespace sw
                     case RenderPassType::Sky:
                     {
                         // 하늘 — 깊이 1 의 풀스크린 삼각형을 깊이 테스트(LessEqual)로 그려 빈 곳만 칠한다. 깊이는 쓰지 않는다(전용 실행: 하늘이 없거나 표면 값 보기면 건너뛴다).
+                        // 하늘 값은 패스 상수(g_Sky*)로 받는다. 입력은 그려 둔 장면 색 · 깊이 뒤에 서게 하는 순서 선언이라 둘 다 선택이다(셰이더는 읽지 않는다).
                         info._pDefaultShader = &EngineDefaultAssets::_shaderSky;
-                        info._flags          = Flag::kDepthTest;
+                        info._inputContract  = makeContract( {}, { Role::SourceColor, Role::SceneDepth } );
+                        info._flags          = Flag::kDepthTest | Flag::kHasInputContract;
                         break;
                     }
                     case RenderPassType::Canvas:

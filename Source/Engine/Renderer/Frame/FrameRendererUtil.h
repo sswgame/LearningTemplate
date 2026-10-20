@@ -41,14 +41,14 @@ namespace sw
         static constexpr uint32 kDefaultTransientSize = 1280;
 
         /**
-         * @brief GPU 타임스탬프 슬롯 배치입니다. 슬롯은 `constant::kMaxGPUTimestampSlot`(32)개입니다.
+         * @brief GPU 타임스탬프 슬롯 배치입니다. 슬롯은 `constant::kMaxGPUTimestampSlot`(64)개입니다.
          * @details 패스는 앞에서부터 인덱스 × 2 쌍을 쓴다(병렬 기록이라 흐르는 카운터가 아니라 고정 슬롯).
-         *          프레임 전체와 컴퓨트 프리패스는 **뒤쪽 세 슬롯**을 쓴다. 그래서 패스는 14개까지다.
+         *          프레임 전체와 컴퓨트 프리패스는 **뒤쪽 세 슬롯**을 쓴다. 그래서 패스는 30개까지다.
          *          백엔드는 가장 이른 시각을 기준점으로 삼으므로 뒤쪽 슬롯이 먼저 기록되어도 값이 잘리지 않는다.
          */
-        static constexpr uint32 kGPUTimestampSlotComputeBegin = 29;
-        static constexpr uint32 kGPUTimestampSlotComputeEnd   = 30;
-        static constexpr uint32 kGPUTimestampSlotFrameBegin   = 31;
+        static constexpr uint32 kGPUTimestampSlotComputeBegin = constant::kMaxGPUTimestampSlot - 3u;
+        static constexpr uint32 kGPUTimestampSlotComputeEnd   = constant::kMaxGPUTimestampSlot - 2u;
+        static constexpr uint32 kGPUTimestampSlotFrameBegin   = constant::kMaxGPUTimestampSlot - 1u;
         /// @brief 패스 쌍이 쓸 수 있는 슬롯의 끝(미포함)입니다. 위 예약 슬롯과 겹치지 않게 합니다.
         static constexpr uint32 kGPUTimestampPassSlotEnd = kGPUTimestampSlotComputeBegin;
         /// @brief GPU 시간을 측정할 수 있는 패스 수입니다(패스마다 슬롯 둘). 넘는 패스는 시간이 기록되지 않으며, 파이프라인을 로드할 때 경고합니다.
