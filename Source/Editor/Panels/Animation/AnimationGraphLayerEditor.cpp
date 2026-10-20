@@ -147,6 +147,21 @@ namespace sw::editor
 
     const utf8* AnimationGraphLayerEditor::drawLayers( AnimationGraphAsset& inoutGraph )
     {
+        const utf8* pEdit = drawLayerList( inoutGraph );
+
+        vector<AnimationGraphLayerDef>& listLayer = inoutGraph._listLayer;
+        if ( _selectedLayer < 0 || _selectedLayer >= static_cast<int32>( listLayer.size() ) )
+            return pEdit;
+        AnimationGraphLayerDef& layer = listLayer[static_cast<size_t>( _selectedLayer )];
+        ImGui::PushID( "layerDetail" );
+        drawLayerIdentityRows( inoutGraph, layer, pEdit );
+        drawLayerBlendRows( layer, pEdit );
+        ImGui::PopID();
+        return pEdit;
+    }
+
+    const utf8* AnimationGraphLayerEditor::drawLayerList( AnimationGraphAsset& inoutGraph )
+    {
         const utf8*                     pEdit     = nullptr;
         vector<AnimationGraphLayerDef>& listLayer = inoutGraph._listLayer;
         ImGui::SeparatorText( "Layers" );
@@ -208,108 +223,125 @@ namespace sw::editor
         ImGui::EndDisabled();
         ImGui::EndDisabled();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "LayerOrderTip" ) );
+        return pEdit;
+    }
 
-        if ( _selectedLayer < 0 || _selectedLayer >= static_cast<int32>( listLayer.size() ) )
-            return pEdit;
-        AnimationGraphLayerDef& layer = listLayer[static_cast<size_t>( _selectedLayer )];
-        ImGui::PushID( "layerDetail" );
+    void AnimationGraphLayerEditor::drawLayerIdentityRows( AnimationGraphAsset& inoutGraph, AnimationGraphLayerDef& inoutLayer, const utf8*& pInoutEdit )
+    {
         string committed;
         AnimationGraphLayerEditorInternal::drawRowLabel( "Name" );
-        if ( drawCommittedText( "##layerName", layer._name.c_str(), committed ) )
+        if ( drawCommittedText( "##layerName", inoutLayer._name.c_str(), committed ) )
         {
             const hashed_string name( committed.c_str() );
-            const bool          bTaken = name != layer._name && inoutGraph.findLayer( name ) != nullptr;
+            const bool          bTaken = name != inoutLayer._name && inoutGraph.findLayer( name ) != nullptr;
             if ( committed.empty() || bTaken )
             {
-                SW_LOG_WARNING( "Layer name '%#' is empty or already used - the name stays '%#'", committed.c_str(), layer._name.c_str() );
+                SW_LOG_WARNING( "Layer name '%#' is empty or already used - the name stays '%#'", committed.c_str(), inoutLayer._name.c_str() );
             }
-            else if ( name != layer._name )
+            else if ( name != inoutLayer._name )
             {
-                layer._name = name;
-                pEdit       = "Rename Animation Layer";
+                inoutLayer._name = name;
+                pInoutEdit       = "Rename Animation Layer";
             }
         }
         AnimationGraphLayerEditorInternal::drawRowLabel( "Clip" );
-        if ( drawCommittedText( "##layerClip", layer._clipName.c_str(), committed ) )
+        if ( drawCommittedText( "##layerClip", inoutLayer._clipName.c_str(), committed ) )
         {
             if ( committed.empty() )
             {
-                SW_LOG_WARNING( "A layer needs a clip - the clip stays '%#'", layer._clipName.c_str() );
+                SW_LOG_WARNING( "A layer needs a clip - the clip stays '%#'", inoutLayer._clipName.c_str() );
             }
             else
             {
-                layer._clipName = hashed_string( committed.c_str() );
-                pEdit           = "Edit Animation Layer";
+                inoutLayer._clipName = hashed_string( committed.c_str() );
+                pInoutEdit           = "Edit Animation Layer";
             }
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "LayerClipTip" ) );
 
         AnimationGraphLayerEditorInternal::drawRowLabel( "Mask" );
-        if ( ImGui::BeginCombo( "##layerMask", layer._maskName.empty() ? "(all bones)" : layer._maskName.c_str() ) )
+        if ( ImGui::BeginCombo( "##layerMask", inoutLayer._maskName.empty() ? "(all bones)" : inoutLayer._maskName.c_str() ) )
         {
-            if ( ImGui::Selectable( "(all bones)", layer._maskName.empty() ) )
+            if ( ImGui::Selectable( "(all bones)", inoutLayer._maskName.empty() ) )
             {
-                layer._maskName = hashed_string{};
-                pEdit           = "Edit Animation Layer";
+                inoutLayer._maskName = hashed_string{};
+                pInoutEdit           = "Edit Animation Layer";
             }
             for ( const AnimationBoneMaskDef& mask : inoutGraph._listBoneMask )
             {
-                if ( ImGui::Selectable( mask._name.c_str(), layer._maskName == mask._name ) )
+                if ( ImGui::Selectable( mask._name.c_str(), inoutLayer._maskName == mask._name ) )
                 {
-                    layer._maskName = mask._name;
-                    pEdit           = "Edit Animation Layer";
+                    inoutLayer._maskName = mask._name;
+                    pInoutEdit           = "Edit Animation Layer";
                 }
             }
             ImGui::EndCombo();
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "LayerMaskTip" ) );
+    }
 
+    void AnimationGraphLayerEditor::drawLayerBlendRows( AnimationGraphLayerDef& inoutLayer, const utf8*& pInoutEdit )
+    {
+        string committed;
         AnimationGraphLayerEditorInternal::drawRowLabel( "Weight" );
-        ImGui::SliderFloat( "##layerWeight", &layer._weight, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
+        ImGui::SliderFloat( "##layerWeight", &inoutLayer._weight, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
-            pEdit = "Edit Animation Layer";
+            pInoutEdit = "Edit Animation Layer";
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "LayerWeightTip" ) );
         AnimationGraphLayerEditorInternal::drawRowLabel( "Weight Param" );
         // 빈 hashed_string 의 c_str 는 "None" 이다 — 그대로 보이면 그 글이 파라미터 이름으로 저장된다.
-        if ( drawCommittedText( "##layerWeightParam", layer._weightParameter.empty() ? "" : layer._weightParameter.c_str(), committed ) )
+        if ( drawCommittedText( "##layerWeightParam", inoutLayer._weightParameter.empty() ? "" : inoutLayer._weightParameter.c_str(), committed ) )
         {
-            layer._weightParameter = hashed_string( committed.c_str() );
-            pEdit                  = "Edit Animation Layer";
+            inoutLayer._weightParameter = hashed_string( committed.c_str() );
+            pInoutEdit                  = "Edit Animation Layer";
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "LayerWeightParamTip" ) );
 
         AnimationGraphLayerEditorInternal::drawRowLabel( "Blend" );
-        if ( ImGui::BeginCombo( "##layerBlend", AnimationGraphAsset::getLayerBlendText( layer._blend ) ) )
+        if ( ImGui::BeginCombo( "##layerBlend", AnimationGraphAsset::getLayerBlendText( inoutLayer._blend ) ) )
         {
             for ( const AnimationLayerBlend blend : { AnimationLayerBlend::Override, AnimationLayerBlend::Additive } )
             {
-                if ( ImGui::Selectable( AnimationGraphAsset::getLayerBlendText( blend ), layer._blend == blend ) )
+                if ( ImGui::Selectable( AnimationGraphAsset::getLayerBlendText( blend ), inoutLayer._blend == blend ) )
                 {
-                    layer._blend = blend;
-                    pEdit        = "Edit Animation Layer";
+                    inoutLayer._blend = blend;
+                    pInoutEdit        = "Edit Animation Layer";
                 }
             }
             ImGui::EndCombo();
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "LayerBlendTip" ) );
         AnimationGraphLayerEditorInternal::drawRowLabel( "Loop" );
-        bool bLoop = layer._bLoop == SW_TRUE;
+        bool bLoop = inoutLayer._bLoop == SW_TRUE;
         if ( ImGui::Checkbox( "##layerLoop", &bLoop ) )
         {
-            layer._bLoop = bLoop ? SW_TRUE : SW_FALSE;
-            pEdit        = "Edit Animation Layer";
+            inoutLayer._bLoop = bLoop ? SW_TRUE : SW_FALSE;
+            pInoutEdit        = "Edit Animation Layer";
         }
         AnimationGraphLayerEditorInternal::drawRowLabel( "Half Life" );
-        ImGui::DragFloat( "##layerHalfLife", &layer._halfLifeSeconds, 0.01f, 0.0f, 2.0f, layer._halfLifeSeconds > 0.0f ? "%.2f s" : "(immediate)",
+        ImGui::DragFloat( "##layerHalfLife", &inoutLayer._halfLifeSeconds, 0.01f, 0.0f, 2.0f, inoutLayer._halfLifeSeconds > 0.0f ? "%.2f s" : "(immediate)",
                           ImGuiSliderFlags_AlwaysClamp );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
-            pEdit = "Edit Animation Layer";
+            pInoutEdit = "Edit Animation Layer";
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "LayerHalfLifeTip" ) );
+    }
+
+    const utf8* AnimationGraphLayerEditor::drawBoneMasks( AnimationGraphAsset& inoutGraph )
+    {
+        const utf8* pEdit = drawMaskList( inoutGraph );
+
+        vector<AnimationBoneMaskDef>& listMask = inoutGraph._listBoneMask;
+        if ( _selectedMask < 0 || _selectedMask >= static_cast<int32>( listMask.size() ) )
+            return pEdit;
+        AnimationBoneMaskDef& mask = listMask[static_cast<size_t>( _selectedMask )];
+        ImGui::PushID( "maskDetail" );
+        drawMaskSourceRows( inoutGraph, mask, pEdit );
+        drawMaskEntries( mask, pEdit );
         ImGui::PopID();
         return pEdit;
     }
 
-    const utf8* AnimationGraphLayerEditor::drawBoneMasks( AnimationGraphAsset& inoutGraph )
+    const utf8* AnimationGraphLayerEditor::drawMaskList( AnimationGraphAsset& inoutGraph )
     {
         const utf8*                   pEdit    = nullptr;
         vector<AnimationBoneMaskDef>& listMask = inoutGraph._listBoneMask;
@@ -359,49 +391,49 @@ namespace sw::editor
         EditorSelfTestMarks::note( "animationGraph.mask.remove" );
         if ( pUser != nullptr )
             ImGui::SetItemTooltip( "Used by layer '%s'", pUser->_name.c_str() );
+        return pEdit;
+    }
 
-        if ( _selectedMask < 0 || _selectedMask >= static_cast<int32>( listMask.size() ) )
-            return pEdit;
-        AnimationBoneMaskDef& mask = listMask[static_cast<size_t>( _selectedMask )];
-        ImGui::PushID( "maskDetail" );
+    void AnimationGraphLayerEditor::drawMaskSourceRows( AnimationGraphAsset& inoutGraph, AnimationBoneMaskDef& inoutMask, const utf8*& pInoutEdit )
+    {
         string committed;
         AnimationGraphLayerEditorInternal::drawRowLabel( "Name" );
-        if ( drawCommittedText( "##maskName", mask._name.c_str(), committed ) )
+        if ( drawCommittedText( "##maskName", inoutMask._name.c_str(), committed ) )
         {
             const hashed_string name( committed.c_str() );
-            const bool          bTaken = name != mask._name && inoutGraph.findBoneMask( name ) != nullptr;
+            const bool          bTaken = name != inoutMask._name && inoutGraph.findBoneMask( name ) != nullptr;
             if ( committed.empty() || bTaken )
             {
-                SW_LOG_WARNING( "Bone mask name '%#' is empty or already used - the name stays '%#'", committed.c_str(), mask._name.c_str() );
+                SW_LOG_WARNING( "Bone mask name '%#' is empty or already used - the name stays '%#'", committed.c_str(), inoutMask._name.c_str() );
             }
-            else if ( name != mask._name )
+            else if ( name != inoutMask._name )
             {
                 // 이름이 곧 레이어의 참조다 — 그 마스크를 쓰던 레이어도 함께 옮긴다.
                 for ( AnimationGraphLayerDef& layer : inoutGraph._listLayer )
                 {
-                    if ( layer._maskName == mask._name )
+                    if ( layer._maskName == inoutMask._name )
                         layer._maskName = name;
                 }
-                mask._name = name;
-                pEdit      = "Rename Bone Mask";
+                inoutMask._name = name;
+                pInoutEdit      = "Rename Bone Mask";
             }
         }
 
         // 프리셋 파일을 고르면 그 파일을 읽어 항목을 채우고, 비우면 지금 항목을 그래프에 바로 적는다.
-        string presetPath = mask._filePath;
+        string presetPath = inoutMask._filePath;
         if ( EditorWidgets::drawAssetSlot( "Preset", presetPath, ".bonemask.json", AnimationGraphLayerEditorInternal::kLabelWidth * EditorThemeUtil::getDpiScale() ) )
         {
             AnimationBoneMaskDef loaded{};
-            loaded._name = mask._name;
+            loaded._name = inoutMask._name;
             if ( presetPath.empty() )
             {
-                mask._filePath.clear();
-                pEdit = "Embed Bone Mask";
+                inoutMask._filePath.clear();
+                pInoutEdit = "Embed Bone Mask";
             }
             else if ( loaded.loadFromFile( presetPath ) )
             {
-                mask  = std::move( loaded );
-                pEdit = "Use Bone Mask Preset";
+                inoutMask  = std::move( loaded );
+                pInoutEdit = "Use Bone Mask Preset";
             }
             else
             {
@@ -409,11 +441,15 @@ namespace sw::editor
             }
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "BoneMaskPresetTip" ) );
+    }
 
+    void AnimationGraphLayerEditor::drawMaskEntries( AnimationBoneMaskDef& inoutMask, const utf8*& pInoutEdit )
+    {
         // 프리셋의 항목은 그 파일이 정본이다 — 여기서 고치면 저장할 때 버려지므로 보이기만 한다.
-        const bool bPreset = mask._filePath.empty() == false;
+        const bool bPreset = inoutMask._filePath.empty() == false;
         ImGui::BeginDisabled( bPreset );
-        size_t removeIndex = mask._listEntry.size();
+        string committed;
+        size_t removeIndex = inoutMask._listEntry.size();
         if ( ImGui::BeginTable( "##maskEntries", 4, ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_RowBg ) )
         {
             ImGui::TableSetupColumn( "Bone", ImGuiTableColumnFlags_WidthStretch, 3.0f );
@@ -421,9 +457,9 @@ namespace sw::editor
             ImGui::TableSetupColumn( "Children", ImGuiTableColumnFlags_WidthFixed );
             ImGui::TableSetupColumn( "##remove", ImGuiTableColumnFlags_WidthFixed );
             ImGui::TableHeadersRow();
-            for ( size_t entryIndex = 0; entryIndex < mask._listEntry.size(); ++entryIndex )
+            for ( size_t entryIndex = 0; entryIndex < inoutMask._listEntry.size(); ++entryIndex )
             {
-                AnimationBoneMaskEntry& entry = mask._listEntry[entryIndex];
+                AnimationBoneMaskEntry& entry = inoutMask._listEntry[entryIndex];
                 ImGui::PushID( static_cast<int32>( entryIndex ) );
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
@@ -436,25 +472,25 @@ namespace sw::editor
                     else
                     {
                         entry._bone = hashed_string( committed.c_str() );
-                        pEdit       = "Edit Bone Mask";
+                        pInoutEdit  = "Edit Bone Mask";
                     }
                 }
                 ImGui::TableNextColumn();
                 ImGui::SetNextItemWidth( -FLT_MIN );
                 ImGui::SliderFloat( "##weight", &entry._weight, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
                 if ( ImGui::IsItemDeactivatedAfterEdit() )
-                    pEdit = "Edit Bone Mask";
+                    pInoutEdit = "Edit Bone Mask";
                 ImGui::TableNextColumn();
                 bool bPropagate = entry._bPropagate == SW_TRUE;
                 if ( ImGui::Checkbox( "##children", &bPropagate ) )
                 {
                     entry._bPropagate = bPropagate ? SW_TRUE : SW_FALSE;
-                    pEdit             = "Edit Bone Mask";
+                    pInoutEdit        = "Edit Bone Mask";
                 }
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "BoneMaskChildrenTip" ) );
                 ImGui::TableNextColumn();
                 // 항목이 없는 마스크는 로드 오류다 — 마지막 하나는 지우지 못한다.
-                ImGui::BeginDisabled( mask._listEntry.size() <= 1 );
+                ImGui::BeginDisabled( inoutMask._listEntry.size() <= 1 );
                 if ( ImGui::SmallButton( "x" ) )
                     removeIndex = entryIndex;
                 ImGui::EndDisabled();
@@ -462,20 +498,18 @@ namespace sw::editor
             }
             ImGui::EndTable();
         }
-        if ( removeIndex < mask._listEntry.size() )
+        if ( removeIndex < inoutMask._listEntry.size() )
         {
-            mask._listEntry.erase( mask._listEntry.begin() + static_cast<ptrdiff_t>( removeIndex ) );
-            pEdit = "Edit Bone Mask";
+            inoutMask._listEntry.erase( inoutMask._listEntry.begin() + static_cast<ptrdiff_t>( removeIndex ) );
+            pInoutEdit = "Edit Bone Mask";
         }
         if ( ImGui::Button( "Add Bone" ) )
         {
-            AnimationBoneMaskEntry entry = mask._listEntry.back();
-            mask._listEntry.push_back( entry );
-            pEdit = "Edit Bone Mask";
+            AnimationBoneMaskEntry entry = inoutMask._listEntry.back();
+            inoutMask._listEntry.push_back( entry );
+            pInoutEdit = "Edit Bone Mask";
         }
         EditorSelfTestMarks::note( "animationGraph.mask.addBone" );
         ImGui::EndDisabled();
-        ImGui::PopID();
-        return pEdit;
     }
 } // namespace sw::editor
