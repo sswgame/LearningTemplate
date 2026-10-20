@@ -5,7 +5,6 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"
-#include "Engine/Resource/Cache/BuiltInAssetCache.h"
 #include "Engine/Resource/Cache/SharedAssetCacheDefinition.h"
 
 namespace sw
@@ -23,7 +22,5 @@ namespace sw
 
 namespace sw
 {
-    template class SW_API SharedAssetCache<SpriteClipAsset>;
-
-    SW_BUILT_IN_ASSET_CACHE( SpriteClipCache );
+    SW_SHARED_ASSET_CACHE( SpriteClipAsset );
 } // namespace sw

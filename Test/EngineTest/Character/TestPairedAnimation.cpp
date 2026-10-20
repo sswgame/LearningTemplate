@@ -550,11 +550,11 @@ SW_TEST_CASE( PairedAnimationTest, ComponentStartsWithEditedAssetAfterCacheReloa
         <Role name="Leader" anchor="true" required="true" clip="Lead" enterBlend="0" exitState="Idle" exitBlend="0"/>
         <Role name="Prop" required="false" clip="Late" align="none" enterBlend="0" exitState="Idle" exitBlend="0"/>
     </PairedAnimation>)" ) );
-    PairedAnimationDefCache cache;
+    SharedAssetCache<PairedAnimationDef> cache;
     SW_EXPECT_TRUE( cache.isCached( path ) );
-    const uint32 reloadCount = PairedAnimationDefCache::getReloadCount();
+    const uint32 reloadCount = SharedAssetCache<PairedAnimationDef>::getReloadCount();
     cache.reload( path, nullptr );
-    SW_EXPECT_EQUAL( reloadCount + 1, PairedAnimationDefCache::getReloadCount() );
+    SW_EXPECT_EQUAL( reloadCount + 1, SharedAssetCache<PairedAnimationDef>::getReloadCount() );
     SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), pFirst->getDef().getRoles().size() ); // 돌던 세션은 옛 에셋
 
     pComponent->abortSession();

@@ -229,7 +229,7 @@ namespace sw
         listDef.reserve( step._listPairedAnimationPath.size() );
         for ( const string& path : step._listPairedAnimationPath )
         {
-            shared_ptr<const PairedAnimationDef> def = PairedAnimationDefCache::acquire( path );
+            shared_ptr<const PairedAnimationDef> def = SharedAssetCache<PairedAnimationDef>::acquire( path );
             if ( def == nullptr )
             {
                 // 읽기 오류는 로더가 줄마다 남겼다. 남은 세트로 고르지 않는다.

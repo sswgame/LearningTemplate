@@ -70,6 +70,6 @@ namespace sw
         string                    _fracturePath;
         FractureNavGeometrySource _navGeometrySource;
         SceneNavigation*          _pSceneNavigation; ///< 기하 소스를 등록한 씬의 내비게이션이다(등록하는 동안만 유효하다).
-        uint32                    _seenReloadCount;  ///< 받았을 때의 `FractureAssetCache::getReloadCount` 다(핫 리로드 판정에 쓴다).
+        uint32                    _seenReloadCount;  ///< 받았을 때의 `SharedAssetCache<FractureAsset>::getReloadCount` 다(핫 리로드 판정에 쓴다).
     };
 } // namespace sw
