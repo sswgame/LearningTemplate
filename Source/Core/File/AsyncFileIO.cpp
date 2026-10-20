@@ -21,7 +21,7 @@ namespace sw
 
         struct AsyncFileIOInternal
         {
-            /** @brief 완료 콜백을 싣는 태스크의 우선순위입니다 — 파일 일은 렌더 · 물리 몫인 High 줄에 싣지 않는다(`AssetStreamingQueue::toTaskPriority` 와 같은 표). */
+            /** @brief 완료 콜백을 싣는 태스크의 우선순위입니다 — 파일 작업은 렌더 · 물리가 쓰는 High 큐에 싣지 않는다(`AssetStreamingQueue::toTaskPriority` 와 같은 대응). */
             static TaskPriority toTaskPriority( AsyncIOPriority priority )
             {
                 switch ( priority )
@@ -36,7 +36,7 @@ namespace sw
                 return TaskPriority::Low;
             }
 
-            /** @brief 우선순위의 큐 칸 번호입니다. */
+            /** @brief 우선순위의 큐 슬롯 번호입니다. */
             static uint32 toQueueIndex( AsyncIOPriority priority )
             {
                 const uint32 index = static_cast<uint32>( priority );
@@ -268,7 +268,7 @@ namespace sw
             pRequest->_state.store( static_cast<uint8>( AsyncReadState::Delivering ), std::memory_order_release );
         }
 
-        // OS 에 넘기기 전에 뺐다 — 결과는 취소다. 콜백은 다른 완료와 같은 길(태스크 워커)로 간다.
+        // OS 에 넘기기 전에 뺐다 — 결과는 취소다. 콜백은 다른 완료와 같은 경로(태스크 워커)로 간다.
         pRequest->_result._status = AsyncIOStatus::Canceled;
         deliver( pRequest, false );
         return true;

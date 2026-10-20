@@ -266,7 +266,7 @@ namespace sw
             uint8                   _bDone{ SW_FALSE };
         };
 
-        /** @brief 요청 프레임의 머리(id · 메서드 · 시한 · 멱등 키 · 추적 id)와 몸의 자리입니다. */
+        /** @brief 요청 프레임의 머리(id · 메서드 · 시한 · 멱등 키 · 추적 id)와 몸의 위치입니다. */
         struct RequestHeader
         {
             NetIdempotencyKey _key{};

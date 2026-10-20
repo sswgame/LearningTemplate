@@ -17,7 +17,7 @@ namespace sw
     {
         struct NetRequestInternal
         {
-            /** @brief 바이트 정렬한 뒤의 몸 — 읽은 비트를 바이트로 올림한 자리부터 끝까지입니다. */
+            /** @brief 바이트 정렬한 뒤의 몸 — 읽은 비트를 바이트로 올림한 위치부터 끝까지입니다. */
             static void findPayload( const BitReader& reader, const uint8* pBody, int32 bodySize, const uint8*& pOutPayload, int32& outPayloadSize )
             {
                 const int32 offset = ( reader.getBitPosition() + 7 ) / 8;
@@ -470,7 +470,7 @@ namespace sw
         {
             case RequestAdmission::Action::Dispatch:
             {
-                ScopedLogContext scope( LogContext{ admission._context._traceID, admission._context._principalID } ); // 처리기 · 그가 맡긴 저장소 일의 줄에 같은 꼬리표
+                ScopedLogContext scope( LogContext{ admission._context._traceID, admission._context._principalID } ); // 처리기 · 그가 맡긴 저장소 작업의 로그 줄에 같은 태그
                 admission._pHandler->onNetRequest( *this, admission._context );                                       // 어떤 잠금도 쥐지 않은 채
                 break;
             }

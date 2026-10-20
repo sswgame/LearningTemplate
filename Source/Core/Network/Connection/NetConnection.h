@@ -68,7 +68,7 @@ namespace sw
         static constexpr float64 kDefaultAckRequestInterval = 0.25;
         static constexpr int32   kMaxReliablePerPacket      = 64;  ///< 패킷 하나에 싣는 신뢰 메시지 상한(보낸 패킷 기록이 힙을 쓰지 않게 한다).
         static constexpr int32   kReliableWindow            = 256; ///< 확인되지 않은 신뢰 메시지의 상한. 넘으면 `sendMessage` 가 거절한다(막힘). 2 의 거듭제곱(`SequenceBuffer`).
-        static constexpr uint32  kPacketWindow              = 256; ///< 보낸 · 받은 패킷을 기억하는 칸 수. 2 의 거듭제곱(`SequenceBuffer`).
+        static constexpr uint32  kPacketWindow              = 256; ///< 보낸 · 받은 패킷을 기억하는 슬롯 수. 2 의 거듭제곱(`SequenceBuffer`).
         static constexpr int32   kPacketHeaderBits          = 16 + 16 + 32;
         static constexpr int32   kFastResendGap             = 3;    ///< 이만큼 뒤의 패킷이 확인됐는데 확인이 없으면 잃은 것으로 본다.
         static constexpr float64 kResendMargin              = 0.05; ///< 재전송 간격은 RTT에 이 여유를 더한 값이다(흔들림과 상대의 보내기 간격을 흡수한다).
@@ -146,7 +146,7 @@ namespace sw
         {
             static constexpr SequenceSlotReset kSlotReset = SequenceSlotReset::ReuseBuffer;
 
-            /** @brief 모든 필드를 기본값으로 되돌리되 버퍼 용량은 남깁니다(`SequenceBuffer` 가 칸을 다시 쓸 때 부른다). */
+            /** @brief 모든 필드를 기본값으로 되돌리되 버퍼 용량은 남깁니다(`SequenceBuffer` 가 슬롯을 다시 쓸 때 부른다). */
             void resetForReuse()
             {
                 vector<uint8> keptBuffer = std::move( _buffer );
@@ -167,7 +167,7 @@ namespace sw
         {
             static constexpr SequenceSlotReset kSlotReset = SequenceSlotReset::ReuseBuffer;
 
-            /** @brief 모든 필드를 기본값으로 되돌리되 버퍼 용량은 남깁니다(`SequenceBuffer` 가 칸을 다시 쓸 때 부른다). */
+            /** @brief 모든 필드를 기본값으로 되돌리되 버퍼 용량은 남깁니다(`SequenceBuffer` 가 슬롯을 다시 쓸 때 부른다). */
             void resetForReuse()
             {
                 vector<uint8> keptBuffer = std::move( _buffer );
@@ -229,7 +229,7 @@ namespace sw
 
         /** @brief 패킷의 메시지를 모두 읽어 `_listParsedScratch` 에 둡니다. 깨졌으면 false 이고, 그때는 아무것도 적용하지 않습니다. */
         [[nodiscard]] bool parseMessages( BitReader& reader );
-        /** @brief 읽은 메시지 하나를 채널 규칙대로 받은 큐나 신뢰 칸에 넣습니다(중복 · 창 밖 · 늦은 순서만은 버린다). */
+        /** @brief 읽은 메시지 하나를 채널 규칙대로 받은 큐나 신뢰 슬롯에 넣습니다(중복 · 창 밖 · 늦은 순서만은 버린다). */
         void dispatchParsedMessage( ParsedMessage& message );
 
         /** @brief 다시 쓸 메시지 버퍼 하나를 꺼냅니다. 없으면 빈 버퍼입니다(처음 쓸 때 할당한다). */

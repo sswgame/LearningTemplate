@@ -24,7 +24,7 @@ namespace sw
                 return static_cast<float32>( value + ( sample - value ) * factor );
             }
             static constexpr int32   kMessageCountMax = 255;
-            static constexpr float64 kMinLostAge      = 0.5; ///< 확인이 이보다 늦으면 잃은 것으로 센다. 유지 간격(0.25초)보다 길게 잡는다(답을 잃으면 다음 교환의 묶음이 확인한다).
+            static constexpr float64 kMinLostAge      = 0.5; ///< 확인이 이보다 늦으면 잃은 것으로 센다. 유지 간격(0.25초)보다 길게 잡는다(답을 잃으면 다음 교환의 ack 비트가 확인한다).
             static constexpr float64 kBandwidthWindow = 1.0; ///< 대역폭 통계의 윈도우(초).
 
             /** @brief 메시지 하나가 차지하는 비트 수입니다(채널, ID, 조각 비트, 길이, 본문). */
@@ -448,8 +448,8 @@ namespace sw
             case NetChannelType::ReliableOrdered:
             case NetChannelType::ReliableUnordered:
             {
-                // 이미 넘긴 것과 창 밖의 것은 버린다. 신뢰 순서는 칸에 두었다가 순서대로 넘기고(`deliverReliable`), 신뢰 순서 없음은 앞의 신뢰 메시지를
-                // 기다리지 않고 받는 대로 넘기되 칸에 "넘겼다" 표시만 남겨 순서 커서가 지나가게 하고 늦게 온 중복을 거른다.
+                // 이미 넘긴 것과 창 밖의 것은 버린다. 신뢰 순서는 슬롯에 두었다가 순서대로 넘기고(`deliverReliable`), 신뢰 순서 없음은 앞의 신뢰 메시지를
+                // 기다리지 않고 받는 대로 넘기되 슬롯에 "넘겼다" 표시만 남겨 순서 커서가 지나가게 하고 늦게 온 중복을 거른다.
                 const int32 ahead                           = NetSequence::computeDifference( message._id, _nextReliableReceiveID );
                 const bool  bReliableOutOfWindowOrDuplicate = ahead < 0 || ahead >= kReliableWindow || _incomingReliable.exists( message._id );
                 if ( bReliableOutOfWindowOrDuplicate )
@@ -463,7 +463,7 @@ namespace sw
                     _arrIncoming[static_cast<int32>( NetChannelType::ReliableUnordered )].push_back( std::move( message._buffer ) );
                     return;
                 }
-                pIncoming->_buffer.swap( message._buffer ); // 칸의 옛 용량은 받은 메시지 자리로 가 다음 패킷이 줄로 돌린다
+                pIncoming->_buffer.swap( message._buffer ); // 슬롯의 옛 용량은 받은 메시지 쪽으로 가 다음 패킷이 재사용 목록에 돌려 놓는다
                 pIncoming->_bMore = message._bMore;
                 return;
             }

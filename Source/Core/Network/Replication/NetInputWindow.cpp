@@ -86,7 +86,7 @@ namespace sw
     {
         const uint32 first    = getFirstPendingTick();
         const uint32 maxCount = static_cast<uint32>( MathUtil::min( getPendingCount(), MathUtil::max( 0, _format._maxEntryCount ) ) );
-        // 개수 칸은 항목보다 먼저 쓰므로 가장 큰 값으로 센다. 오래된 것부터 — 새 것부터 실으면 못 실은 옛 것이 영구 빈틈이 된다.
+        // 개수 필드는 항목보다 먼저 쓰므로 가장 큰 값으로 센다. 오래된 것부터 — 새 것부터 실으면 못 실은 옛 것이 영구 빈틈이 된다.
         budget.reserveBits( BitMath::computeVarUintBits( first ) + BitMath::computeVarUintBits( maxCount ) );
         uint32 count = 0;
         while ( count < maxCount && budget.tryReserveBits( computeEntryBits( getEntry( first + count ) ) ) )
@@ -230,7 +230,7 @@ namespace sw
     {
         if ( _listEntry.getCapacity() == 0 || tick < lowestTick )
             return nullptr;
-        // 고리 한 바퀴보다 앞은 칸이 겹친다 — 거기까지만 본다.
+        // 링 한 바퀴보다 앞은 슬롯이 겹친다 — 거기까지만 본다.
         const uint32 stepCount = MathUtil::min( tick - lowestTick, static_cast<uint32>( _listEntry.getCapacity() ) - 1u ) + 1u;
         for ( uint32 step = 0; step < stepCount; ++step )
         {

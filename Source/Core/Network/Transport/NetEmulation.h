@@ -72,7 +72,7 @@ namespace sw
      */
     struct SW_API NetEmulationReport
     {
-        /** @brief 줄의 머리입니다. 로그 줄 안 어디에 있어도 찾습니다(앞에 로그 꼬리표 · 명령 메아리가 붙는다). */
+        /** @brief 줄의 머리입니다. 로그 줄 안 어디에 있어도 찾습니다(앞에 로그 태그 · 명령 에코가 붙는다). */
         static constexpr const utf8* kLinePrefix = "Net emulation stats";
 
         uint64  _sentPacketCount{ 0 };        ///< 흉내가 안쪽 전송에 넘긴 패킷
@@ -137,7 +137,7 @@ namespace sw
         /** @brief 목적지에 적용하는 조건을 반환합니다. */
         NetEmulationConditions findConditions( const NetAddress& to ) const;
         /**
-         * @brief 받는 쪽(내려받기) 조건을 둡니다. 지연 · 흔들림 · 손실 · 순서 바꿈만 씁니다(대역폭 · 중복 · 깨짐은 보내는 쪽 조건의 몫).
+         * @brief 받는 쪽(내려받기) 조건을 둡니다. 지연 · 흔들림 · 손실 · 순서 바꿈만 씁니다(대역폭 · 중복 · 깨짐은 보내는 쪽 조건이 담당).
          * @details 한 프로세스가 올림과 내림을 따로 나쁘게 하는 길입니다(언리얼 `PktIncomingLagMin` · `PktIncomingLoss`). 받은 패킷을 큐에 두고 때가 되면 `receive` 가 넘깁니다.
          */
         void                   setIncomingConditions( const NetEmulationConditions& conditions );

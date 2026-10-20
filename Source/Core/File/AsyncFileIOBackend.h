@@ -1,7 +1,7 @@
 /**
  * @file AsyncFileIOBackend.h
  * @brief `AsyncFileIO` 의 안쪽 — 요청 상태 · 우선순위 큐 · 백엔드 계약입니다. 백엔드(스레드 풀 · IOCP · io_uring)와 매니저만 include 합니다.
- * @details 큐가 정책(우선순위 · 동시 진행 상한 · 취소 · 파일 열기와 버퍼 준비 · 완료 전달)을 모두 들고, 백엔드는 "꺼내서 OS 에 걸고, 끝나면 알린다"
+ * @details 큐가 정책(우선순위 · 동시 진행 상한 · 취소 · 파일 열기와 버퍼 준비 · 완료 전달)을 모두 맡고, 백엔드는 "꺼내서 OS 에 제출하고, 끝나면 알린다"
  *          만 합니다. 그래서 백엔드를 하나 더 붙여도 정책은 그대로입니다.
  */
 #pragma once
@@ -20,7 +20,7 @@ namespace sw
 {
     /**
      * @struct AsyncOpenFile
-     * @brief 열린 OS 파일 하나의 공유 상태입니다(`AsyncFileHandle` 사본과 진행 중인 요청이 함께 든다). 마지막 소유자가 닫습니다.
+     * @brief 열린 OS 파일 하나의 공유 상태입니다(`AsyncFileHandle` 사본과 진행 중인 요청이 함께 참조한다). 마지막 소유자가 닫습니다.
      */
     struct AsyncOpenFile
     {
@@ -136,7 +136,7 @@ namespace sw
          */
         AsyncIOStatus prepare( AsyncReadRequest& request ) const;
         /**
-         * @brief 백엔드가 읽기를 끝냈습니다. 진행 자리를 놓고 완료를 전달합니다(태스크 매니저가 있으면 그 워커에서).
+         * @brief 백엔드가 읽기를 끝냈습니다. 동시 진행 슬롯을 반납하고 완료를 전달합니다(태스크 매니저가 있으면 그 워커에서).
          * @details 취소가 요청됐으면 결과를 버리고 `Canceled` 로 바꿉니다. 성공이 아니면 바이트를 비웁니다.
          */
         void finish( const shared_ptr<AsyncReadRequest>& pRequest, AsyncIOStatus status );

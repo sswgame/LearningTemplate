@@ -218,7 +218,7 @@ namespace sw
         AsyncIOBackendKind getKind() const override { return AsyncIOBackendKind::IOUring; }
 
     private:
-        /** @brief 채우고 · 제출하고 · 거두는 루프입니다. 큐가 멈추고 걸린 것이 없으면 끝납니다. */
+        /** @brief 채우고 · 제출하고 · 완료를 회수하는 루프입니다. 큐가 멈추고 걸린 것이 없으면 끝납니다. */
         void run( MemoryTag memoryTag )
         {
             const ScopedMemoryTag threadMemoryTag{ memoryTag };
@@ -309,7 +309,7 @@ namespace sw
 
         /**
          * @brief 다음 빈 SQE 를 0 으로 비워 돌려줍니다(링은 이 스레드만 쓴다).
-         * @details 큐가 걸린 수를 상한으로 묶어 SQ 는 차지 않는다. 그래도 찼으면(짧은 읽기의 이어 읽기가 몰린 경우) 쌓인 것을 먼저 제출해 자리를 낸다.
+         * @details 큐가 제출한 수를 상한으로 제한해 SQ 는 차지 않는다. 그래도 찼으면(짧은 읽기의 이어 읽기가 몰린 경우) 쌓인 것을 먼저 제출해 슬롯을 낸다.
          */
         io_uring_sqe* acquireSqe()
         {

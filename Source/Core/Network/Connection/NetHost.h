@@ -338,7 +338,7 @@ namespace sw
         void handlePayloadPacket( float64 nowSeconds, int32 slotIndex, BitReader& reader );
         /** @brief 제어 패킷을 종류별로 처리합니다(핸드셰이크 · 거절 · 끊기). */
         void handleControlPacket( PacketType type, const ControlPacket& packet, BitReader& reader );
-        /** @brief 서버가 연결 요청에 답합니다. 프로토콜이 다르면 거절, 자리가 없으면 가득 참, 아니면 챌린지를 보냅니다. */
+        /** @brief 서버가 연결 요청에 답합니다. 프로토콜이 다르면 거절, 빈 슬롯이 없으면 가득 참, 아니면 챌린지를 보냅니다. */
         void handleConnectRequest( const ControlPacket& packet );
         /** @brief 서버가 챌린지 응답을 확인하고 슬롯을 할당해 수락합니다. 이미 연결된 주소의 같은 응답이면 수락만 다시 보냅니다. */
         void handleChallengeResponse( const ControlPacket& packet, BitReader& reader );

@@ -48,7 +48,7 @@ namespace sw
         static FILE* openFile( const utf8* pFilePath, const utf8* pMode );
 
         /**
-         * @brief @p pSourcePath 를 @p pTargetPath 자리로 옮기며, 이미 있으면 **한 번에** 바꿔치기합니다(같은 볼륨 안에서 원자적).
+         * @brief @p pSourcePath 를 @p pTargetPath 경로로 옮기며, 이미 있으면 **한 번에** 바꿔치기합니다(같은 볼륨 안에서 원자적).
          * @details 저장은 임시 파일에 다 쓴 뒤 이것으로 바꿔 끼웁니다. 도중에 죽어도 원본은 온전하거나 새 파일이 온전하며, 반쯤 쓴 파일이
          *          남지 않습니다. Windows 는 `MoveFileExW( REPLACE_EXISTING | WRITE_THROUGH )`, POSIX 는 `rename` 입니다.
          * @return 성공하면 true 입니다. 다른 프로세스가 대상 파일을 삭제 공유 없이 열고 있으면 Windows 에서 실패할 수 있습니다.
@@ -59,7 +59,7 @@ namespace sw
         static bool hasRecycleBin();
 
         /**
-         * @brief 파일 · 폴더들을 OS 휴지통으로 한 번에 옮깁니다(사용자가 되살릴 수 있는 삭제).
+         * @brief 파일 · 폴더들을 OS 휴지통으로 한 번에 옮깁니다(사용자가 복원할 수 있는 삭제).
          * @details Windows 는 셸 파일 작업 하나(`SHFileOperationW` + `FOF_ALLOWUNDO`)로 목록 전체를 보내며 확인 창 · 오류 창을 띄우지 않습니다.
          *          휴지통 규약(freedesktop Trash)이 데스크톱마다 다른 Linux 는 지원하지 않아 아무것도 건드리지 않고 false 입니다(`hasRecycleBin`).
          * @param listPath UTF-8 경로들. 구분자는 `/` · `\` 모두 받습니다.

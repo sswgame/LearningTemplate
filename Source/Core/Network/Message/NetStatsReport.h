@@ -14,7 +14,7 @@ namespace sw
 {
     class NetMessageRouter;
 
-    /** @brief 메시지 종류 하나의 받은 셈입니다(보고 줄의 `kinds=` 칸 한 항목). */
+    /** @brief 메시지 종류 하나의 받은 셈입니다(보고 줄의 `kinds=` 필드 한 항목). */
     struct NetStatsKindEntry
     {
         uint64 _messageCount{ 0 };
@@ -33,7 +33,7 @@ namespace sw
      */
     struct SW_API NetStatsReport
     {
-        /** @brief 줄의 머리입니다. 로그 줄 안 어디에 있어도 찾습니다(앞에 로그 꼬리표 · 명령 메아리가 붙는다). */
+        /** @brief 줄의 머리입니다. 로그 줄 안 어디에 있어도 찾습니다(앞에 로그 태그 · 명령 에코가 붙는다). */
         static constexpr const utf8* kLinePrefix = "Net traffic stats";
         /** @brief 줄에 싣는 메시지 종류의 상한입니다. 바이트가 큰 종류부터 싣습니다. */
         static constexpr int32 kMaxKindEntry = 8;

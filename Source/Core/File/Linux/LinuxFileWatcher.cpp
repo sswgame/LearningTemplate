@@ -23,7 +23,7 @@ namespace sw
         struct LinuxFileWatcherInternal
         {
             static constexpr uint32 kInotifyEventBufferSize = 64 * 1024;
-            // IN_ATTRIB 는 mtime 만 바뀐 변경(`touch`, 시각을 지키는 복사)을 알린다. Windows 의 FILE_NOTIFY_CHANGE_ATTRIBUTES 와 같은 자리다.
+            // IN_ATTRIB 는 mtime 만 바뀐 변경(`touch`, 시각을 지키는 복사)을 알린다. Windows 의 FILE_NOTIFY_CHANGE_ATTRIBUTES 에 해당한다.
             static constexpr uint32 kInotifyMask = IN_CREATE | IN_DELETE | IN_MODIFY | IN_ATTRIB | IN_MOVED_FROM | IN_MOVED_TO | IN_CLOSE_WRITE | IN_DELETE_SELF | IN_MOVE_SELF;
 
             static string makeRelativePath( string_view root, string_view absolutePath )

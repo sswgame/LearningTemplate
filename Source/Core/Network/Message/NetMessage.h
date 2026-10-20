@@ -136,7 +136,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 라우터가 꺼낸 메시지의 종류 하나 몫 누적 셈입니다(처리기가 없는 메시지도 셉니다). 개발 명령 `net.stats` 의 메시지 종류별 비중이 이 값입니다. */
+    /** @brief 라우터가 꺼낸 메시지의 종류 하나에 대한 누적 셈입니다(처리기가 없는 메시지도 셉니다). 개발 명령 `net.stats` 의 메시지 종류별 비중이 이 값입니다. */
     struct NetMessageKindTally
     {
         uint64 _messageCount{ 0 };
