@@ -53,9 +53,9 @@ namespace sw::editor
     bool EditorDefaultObjects::isDefaultValue( const PropertyInfo& prop, const void* pInstance, const void* pDefaultInstance )
     {
         const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring );
-        const string            current = SerializerUtil::formatPropertyText( prop, pInstance, context );
+        const string            current = SerializerUtil::formatPropertyText( prop, ObjectAddress{ pInstance }, context );
         if ( pDefaultInstance != nullptr )
-            return current == SerializerUtil::formatPropertyText( prop, pDefaultInstance, context );
+            return current == SerializerUtil::formatPropertyText( prop, ObjectAddress{ pDefaultInstance }, context );
         if ( prop._metadata._defaultValue.empty() )
             return true;
         // 메타 글은 사람이 쓴 꼴이라("1.0" 과 "1") 숫자는 값으로 비교한다.

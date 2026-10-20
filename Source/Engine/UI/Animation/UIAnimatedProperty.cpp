@@ -140,7 +140,7 @@ namespace sw
         // 잎 타입의 값으로 읽고 성분으로 옮긴다(XML 속성과 같은 텍스트이며 "0.5", "0,12", "1,0,0,1" 같은 형식이다).
         float4              scratch{};
         const PropertyInfo& leaf = _path.getLeafProperty();
-        if ( SerializerUtil::parseTextValue( &scratch, leaf._typeName, text, SerializeContext::getDefault( SerializePurpose::Authoring ) ) == false )
+        if ( SerializerUtil::parseTextValue( MutableValueAddress{ &scratch }, leaf._typeName, text, SerializeContext::getDefault( SerializePurpose::Authoring ) ) == false )
             return false;
         UIAnimatedPropertyInternal::readComponents( _builtinIndex, &scratch, outValue._arrComponent );
         return true;
@@ -158,7 +158,7 @@ namespace sw
         if ( _kind == UIAnimatedValueKind::Float )
             UIAnimatedPropertyInternal::readComponents( _builtinIndex, leaf.getRawPtr( pOwner ), value._arrComponent );
         else
-            value._text = SerializerUtil::formatPropertyText( leaf, pOwner, SerializeContext::getDefault( SerializePurpose::Authoring ) );
+            value._text = SerializerUtil::formatPropertyText( leaf, ObjectAddress{ pOwner }, SerializeContext::getDefault( SerializePurpose::Authoring ) );
         return value;
     }
 
@@ -178,10 +178,10 @@ namespace sw
         else
         {
             const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring );
-            const string            before  = SerializerUtil::formatPropertyText( leaf, pOwner, context );
-            if ( SerializerUtil::applyPropertyText( leaf, pOwner, value._text, context ) == false )
+            const string            before  = SerializerUtil::formatPropertyText( leaf, ObjectAddress{ pOwner }, context );
+            if ( SerializerUtil::applyPropertyText( leaf, MutableObjectAddress{ pOwner }, value._text, context ) == false )
                 return false;
-            bChanged = SerializerUtil::formatPropertyText( leaf, pOwner, context ) != before;
+            bChanged = SerializerUtil::formatPropertyText( leaf, ObjectAddress{ pOwner }, context ) != before;
         }
         if ( bChanged )
             widget.onBoundPropertyChanged( _path.getRootProperty() );

@@ -86,6 +86,50 @@ namespace sw
                                          SchemaVersionSource versionSource, SchemaOrphanPolicy orphanPolicy,
                                          const SoftDeserializeFn& softDeserialize );
 
+    /** @brief `TextAddress` 가 가리키는 것의 종류입니다. */
+    enum class TextAddressKind : uint8
+    {
+        Object, ///< 프로퍼티를 가진 객체. 프로퍼티 오프셋(또는 접근자)으로 값을 찾는다.
+        Value,  ///< 값 하나 자체. 오프셋이 없다.
+    };
+
+    /**
+     * @class TextAddress
+     * @brief 텍스트 변환 함수에 넘기는 주소에 "객체 주소인가, 값 주소인가"를 형식으로 붙입니다.
+     * @details `const void*` 로 받으면 값 주소를 객체 주소 자리에 넘겨도 컴파일된다. 프로퍼티 쪽이 오프셋을 한 번 더 더해 엉뚱한 곳을 읽고 쓴다
+     *          (인스펙터 핸들 선택기가 고른 값이 `0:0` 으로 써졌다). 두 종류는 서로 바뀌지 않고 `void*` 에서 암묵 변환도 되지 않아,
+     *          잘못 넘기면 컴파일이 안 되고 넘기는 쪽은 `ObjectAddress{ p }` · `ValueAddress{ p }` 로 어느 쪽인지 적는다.
+     *          쓰기 주소(`void`)는 읽기 주소(`const void`)로 변환된다.
+     */
+    template <TextAddressKind kKind, typename TVoid>
+    class TextAddress
+    {
+    public:
+        explicit constexpr TextAddress( TVoid* pAddress ) noexcept
+            : _pAddress{ pAddress }
+        {
+        }
+
+        template <typename TOther, typename = std::enable_if_t<std::is_const_v<TVoid> && std::is_same_v<TOther, std::remove_const_t<TVoid>>>>
+        constexpr TextAddress( TextAddress<kKind, TOther> other ) noexcept
+            : _pAddress{ other.get() }
+        {
+        }
+
+        [[nodiscard]] constexpr TVoid* get() const noexcept { return _pAddress; }
+
+    private:
+        TVoid* _pAddress{ nullptr };
+    };
+} // namespace sw
+
+namespace sw
+{
+    using ObjectAddress        = TextAddress<TextAddressKind::Object, const void>; ///< 프로퍼티를 가진 객체의 주소(읽기)
+    using MutableObjectAddress = TextAddress<TextAddressKind::Object, void>;       ///< 프로퍼티를 가진 객체의 주소(쓰기)
+    using ValueAddress         = TextAddress<TextAddressKind::Value, const void>;  ///< 값 하나의 주소(읽기)
+    using MutableValueAddress  = TextAddress<TextAddressKind::Value, void>;        ///< 값 하나의 주소(쓰기)
+
     /** @brief 직렬화기 TU 들이 함께 쓰는 도우미입니다. */
     struct SerializerUtil
     {
@@ -132,7 +176,7 @@ namespace sw
                                  const SerializeContext& context );
 
         /** @brief 텍스트 토큰을 값 하나 자체(객체 주소가 아니다)에 읽어 씁니다. 값 주소 쪽 텍스트 쓰기이며, 짝은 `formatValueText` 입니다. */
-        [[nodiscard]] SW_API static bool parseTextValue( void* pValPtr, const hashed_string& typeName, string_view valStr,
+        [[nodiscard]] SW_API static bool parseTextValue( MutableValueAddress value, const hashed_string& typeName, string_view valStr,
                                                          const SerializeContext& context );
 
         /**
@@ -151,7 +195,7 @@ namespace sw
         /** @brief 두 인스턴스의 프로퍼티 값이 같은지 확인합니다. 비트필드는 그 비트만 비교합니다. */
         SW_API static bool arePropertyValuesEqual( const PropertyInfo& prop, const void* pInstanceA, const void* pInstanceB, const SerializeContext& context );
         /** @brief 텍스트 하나를 프로퍼티 값으로 씁니다(비트필드는 그 비트만). 읽지 못하면 false 이고 값은 그대로입니다. 컨테이너는 받지 않습니다. */
-        [[nodiscard]] SW_API static bool applyPropertyText( const PropertyInfo& prop, void* pInstance, string_view text, const SerializeContext& context );
+        [[nodiscard]] SW_API static bool applyPropertyText( const PropertyInfo& prop, MutableObjectAddress instance, string_view text, const SerializeContext& context );
         /**
          * @brief 바이너리 페이로드 하나(그 프로퍼티 값 전부)를 프로퍼티에 읽어 씁니다. 페이로드를 **끝까지** 읽어야 true 입니다.
          * @details 바이트가 남으면 스트림이 이 필드를 다른 형태로 적은 것이다(`int32` 0 을 `vector<int32>` 로 읽으면 원소 수 0 으로 성공한다). 그래서 오프셋을
@@ -170,15 +214,16 @@ namespace sw
 
         /**
          * @brief 객체 안 프로퍼티 값을 사람이 읽을 수 있는 텍스트로 씁니다(XML 속성 값과 같은 형태). 비트필드는 `true` 나 `false`, 컨테이너는 `[n]`(원소 수)입니다.
-         * @param pInstance 프로퍼티를 가진 **객체**의 주소입니다. 프로퍼티 오프셋(또는 접근자)으로 값을 찾습니다. 값 자체의 주소는 `formatValueText` 로 넘깁니다.
+         * @param instance 프로퍼티를 가진 **객체**의 주소입니다. 프로퍼티 오프셋(또는 접근자)으로 값을 찾습니다. 값 자체의 주소(`ValueAddress`)는 받지 않고 `formatValueText` 로 넘깁니다.
          */
-        [[nodiscard]] SW_API static string formatPropertyText( const PropertyInfo& prop, const void* pInstance, const SerializeContext& context );
+        [[nodiscard]] SW_API static string formatPropertyText( const PropertyInfo& prop, ObjectAddress instance, const SerializeContext& context );
         /**
          * @brief 값 하나 자체를 텍스트로 씁니다. `formatPropertyText` 의 값 부분과 같은 형태이고, 짝은 `parseTextValue` 입니다.
          * @details 객체 주소와 값 주소를 한 함수로 받으면 값 주소에 오프셋이 한 번 더 더해진다(인스펙터 핸들 선택기가 고른 값을 `0:0` 으로 썼다).
-         *          그래서 값 주소는 프로퍼티를 받지 않는 이 함수가 받는다. 오프셋 0 짜리 가짜 `PropertyInfo` 를 만들어 `formatPropertyText` 에 넘기지 않는다.
+         *          그래서 값 주소(`ValueAddress`)는 프로퍼티를 받지 않는 이 함수가 받고, 객체 주소와는 형식이 달라 서로 넘길 수 없다.
+         *          오프셋 0 짜리 가짜 `PropertyInfo` 를 만들어 `formatPropertyText` 에 넘기지 않는다.
          */
-        [[nodiscard]] SW_API static string formatValueText( const void* pValue, const hashed_string& typeName, const SerializeContext& context );
+        [[nodiscard]] SW_API static string formatValueText( ValueAddress value, const hashed_string& typeName, const SerializeContext& context );
 
         /** @brief 키 문자열이 같은지 비교합니다(대소문자 무시 옵션 지원). */
         static bool keysEqual( string_view left, string_view right, bool bIgnoreCase );

@@ -3660,13 +3660,13 @@ SW_TEST_CASE( ReflectionSerializationTest, PropertyValueHelpersTouchOnlyTheirOwn
     SW_EXPECT_EQUAL( 0, static_cast<int32>( target._bInvulnerable ) );
 
     // 글은 불리언이어야 한다 — 아니면 값은 그대로다.
-    SW_EXPECT_FALSE( sw::SerializerUtil::applyPropertyText( *pCanJump, &target, "ture", context ) );
+    SW_EXPECT_FALSE( sw::SerializerUtil::applyPropertyText( *pCanJump, sw::MutableObjectAddress{ &target }, "ture", context ) );
     SW_EXPECT_EQUAL( 0, static_cast<int32>( target._bCanJump ) );
-    SW_EXPECT_TRUE( sw::SerializerUtil::applyPropertyText( *pCanJump, &target, "Yes", context ) );
+    SW_EXPECT_TRUE( sw::SerializerUtil::applyPropertyText( *pCanJump, sw::MutableObjectAddress{ &target }, "Yes", context ) );
     SW_EXPECT_EQUAL( 1, static_cast<int32>( target._bCanJump ) );
     SW_EXPECT_EQUAL( 1, static_cast<int32>( target._bActive ) );
-    SW_EXPECT_STREQ( "true", sw::SerializerUtil::formatPropertyText( *pCanJump, &target, context ).c_str() );
-    SW_EXPECT_STREQ( "false", sw::SerializerUtil::formatPropertyText( *pInvuln, &target, context ).c_str() );
+    SW_EXPECT_STREQ( "true", sw::SerializerUtil::formatPropertyText( *pCanJump, sw::ObjectAddress{ &target }, context ).c_str() );
+    SW_EXPECT_STREQ( "false", sw::SerializerUtil::formatPropertyText( *pInvuln, sw::ObjectAddress{ &target }, context ).c_str() );
 
     // 컨테이너는 원소째 옮기고 견준다.
     const sw::TypeInfo* pNested = sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::NestedContainerActor" ) );
@@ -3684,7 +3684,7 @@ SW_TEST_CASE( ReflectionSerializationTest, PropertyValueHelpersTouchOnlyTheirOwn
     SW_ASSERT_EQUAL( size_t( 2 ), gridTarget._grid.size() );
     SW_EXPECT_EQUAL( 3, gridTarget._grid[1][0] );
     SW_EXPECT_TRUE( sw::SerializerUtil::arePropertyValuesEqual( *pGrid, &gridSource, &gridTarget, context ) );
-    SW_EXPECT_STREQ( "[2]", sw::SerializerUtil::formatPropertyText( *pGrid, &gridTarget, context ).c_str() );
+    SW_EXPECT_STREQ( "[2]", sw::SerializerUtil::formatPropertyText( *pGrid, sw::ObjectAddress{ &gridTarget }, context ).c_str() );
 }
 
 /**
@@ -3701,15 +3701,30 @@ SW_TEST_CASE( ReflectionSerializationTest, ValueAddressTextDoesNotAddPropertyOff
     SW_ASSERT_NOT_NULL( pScore );
     SW_ASSERT_TRUE( pScore->_offset != 0 );
 
+    // 옛 오용(값 주소를 객체 주소 자리에 넘김, 그 반대, 맨 포인터)은 컴파일이 안 된다.
+    using FormatPropertyFn = decltype( &sw::SerializerUtil::formatPropertyText );
+    using ApplyPropertyFn  = decltype( &sw::SerializerUtil::applyPropertyText );
+    using FormatValueFn    = decltype( &sw::SerializerUtil::formatValueText );
+    using ParseValueFn     = decltype( &sw::SerializerUtil::parseTextValue );
+    static_assert( std::is_invocable_v<FormatPropertyFn, const sw::PropertyInfo&, sw::ObjectAddress, const sw::SerializeContext&> );
+    static_assert( std::is_invocable_v<FormatPropertyFn, const sw::PropertyInfo&, sw::MutableObjectAddress, const sw::SerializeContext&> );
+    static_assert( !std::is_invocable_v<FormatPropertyFn, const sw::PropertyInfo&, sw::ValueAddress, const sw::SerializeContext&> );
+    static_assert( !std::is_invocable_v<FormatPropertyFn, const sw::PropertyInfo&, const void*, const sw::SerializeContext&> );
+    static_assert( !std::is_invocable_v<ApplyPropertyFn, const sw::PropertyInfo&, sw::MutableValueAddress, std::string_view, const sw::SerializeContext&> );
+    static_assert( !std::is_invocable_v<ApplyPropertyFn, const sw::PropertyInfo&, sw::ObjectAddress, std::string_view, const sw::SerializeContext&> ); // 읽기 주소로는 쓰지 못한다
+    static_assert( !std::is_invocable_v<FormatValueFn, sw::ObjectAddress, const sw::hashed_string&, const sw::SerializeContext&> );
+    static_assert( !std::is_invocable_v<FormatValueFn, const void*, const sw::hashed_string&, const sw::SerializeContext&> );
+    static_assert( !std::is_invocable_v<ParseValueFn, sw::MutableObjectAddress, const sw::hashed_string&, std::string_view, const sw::SerializeContext&> );
+
     sw::BitfieldTestActor actor;
     actor._score = 42;
-    SW_EXPECT_STREQ( "42", sw::SerializerUtil::formatPropertyText( *pScore, &actor, context ).c_str() );
-    SW_EXPECT_STREQ( "42", sw::SerializerUtil::formatValueText( &actor._score, pScore->_typeName, context ).c_str() );
+    SW_EXPECT_STREQ( "42", sw::SerializerUtil::formatPropertyText( *pScore, sw::ObjectAddress{ &actor }, context ).c_str() );
+    SW_EXPECT_STREQ( "42", sw::SerializerUtil::formatValueText( sw::ValueAddress{ &actor._score }, pScore->_typeName, context ).c_str() );
 
     int32 value = 0;
-    SW_ASSERT_TRUE( sw::SerializerUtil::parseTextValue( &value, pScore->_typeName, "7", context ) );
+    SW_ASSERT_TRUE( sw::SerializerUtil::parseTextValue( sw::MutableValueAddress{ &value }, pScore->_typeName, "7", context ) );
     SW_EXPECT_EQUAL( 7, value );
-    SW_EXPECT_STREQ( "7", sw::SerializerUtil::formatValueText( &value, pScore->_typeName, context ).c_str() );
+    SW_EXPECT_STREQ( "7", sw::SerializerUtil::formatValueText( sw::ValueAddress{ &value }, pScore->_typeName, context ).c_str() );
 }
 
 /**

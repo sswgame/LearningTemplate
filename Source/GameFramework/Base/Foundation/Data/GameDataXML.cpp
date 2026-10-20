@@ -147,7 +147,7 @@ namespace sw
                 continue;
             }
             const utf8* const pValue = attribute.getValue() != nullptr ? attribute.getValue() : "";
-            if ( SerializerUtil::applyPropertyText( *pFound, pInstance, pValue, context ) == false )
+            if ( SerializerUtil::applyPropertyText( *pFound, MutableObjectAddress{ pInstance }, pValue, context ) == false )
             {
                 SW_LOG_ERROR( "%#: <%# %#=\"%#\"> cannot be read as %#", sourceName, pElement, attributeName, pValue, pFound->_typeName.c_str() );
                 bOk = false;

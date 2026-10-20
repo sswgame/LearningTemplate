@@ -130,7 +130,7 @@ namespace sw
                         outReply += "  ";
                         outReply += prop._name.c_str();
                         outReply += " = ";
-                        outReply += SerializerUtil::formatPropertyText( prop, pComponent, context );
+                        outReply += SerializerUtil::formatPropertyText( prop, ObjectAddress{ pComponent }, context );
                         outReply += '\n';
                     }, true );
                 } );
