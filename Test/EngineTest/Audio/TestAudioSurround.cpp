@@ -33,6 +33,14 @@ namespace
             return direction;
         }
 
+        /** @brief 종류 이름만 있는 데이터로 이펙트를 만듭니다. */
+        static sw::unique_ptr<sw::IAudioEffect> createEffect( const utf8* pType, sw::AudioChannelLayout layout )
+        {
+            sw::AudioEffectDesc desc;
+            desc._type = sw::hashed_string( pType );
+            return sw::AudioEffectRegistry::createEffect( desc, layout );
+        }
+
         /** @brief 게인 제곱의 합입니다. */
         static float32 computePower( const float32 ( &arrGain )[sw::audio::kMaxChannelCount] )
         {
@@ -215,7 +223,7 @@ SW_TEST_CASE( AudioSurroundTest, EffectsProcessEveryChannelIndependently )
     const utf8* arrIndependent[] = { "LowPass", "Delay" };
     for ( const utf8* pType : arrIndependent )
     {
-        sw::unique_ptr<sw::IAudioEffect> pEffect = sw::AudioEffectRegistry::createEffect( sw::hashed_string( pType ), sw::AudioChannelLayout::Surround71 );
+        sw::unique_ptr<sw::IAudioEffect> pEffect = AudioSurroundTestInternal::createEffect( pType, sw::AudioChannelLayout::Surround71 );
         SW_ASSERT_NOT_NULL( pEffect.get() );
         sw::AudioBlockBuffer buffer;
         buffer.allocate( sw::AudioChannelLayout::Surround71 );
@@ -237,7 +245,7 @@ SW_TEST_CASE( AudioSurroundTest, EffectsProcessEveryChannelIndependently )
         }
     }
 
-    sw::unique_ptr<sw::IAudioEffect> pReverb = sw::AudioEffectRegistry::createEffect( sw::hashed_string( "Reverb" ), sw::AudioChannelLayout::Surround51 );
+    sw::unique_ptr<sw::IAudioEffect> pReverb = AudioSurroundTestInternal::createEffect( "Reverb", sw::AudioChannelLayout::Surround51 );
     SW_ASSERT_NOT_NULL( pReverb.get() );
     sw::AudioBlockBuffer buffer;
     buffer.allocate( sw::AudioChannelLayout::Surround51 );

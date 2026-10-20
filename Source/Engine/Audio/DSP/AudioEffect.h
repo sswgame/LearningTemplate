@@ -29,6 +29,8 @@ namespace sw
 
 namespace sw
 {
+    struct AudioEffectDesc;
+
     class IAudioEffect;
 
     /** @brief 이펙트 종류 하나입니다(레지스트리의 한 줄). */
@@ -37,7 +39,8 @@ namespace sw
         const utf8*                     _pName{ nullptr };
         const AudioEffectParameterInfo* _pParameter{ nullptr };
         uint32                          _parameterCount{ 0 };
-        unique_ptr<IAudioEffect> ( *_pCreate )( const AudioEffectTypeInfo& typeInfo, AudioChannelLayout layout ){ nullptr };
+        /** @brief 만드는 함수입니다. 데이터(@p desc, 임펄스 응답 같은 자원 경로)를 읽지 못하면 오류를 남기고 nullptr 를 돌려줍니다. */
+        unique_ptr<IAudioEffect> ( *_pCreate )( const AudioEffectTypeInfo& typeInfo, const AudioEffectDesc& desc, AudioChannelLayout layout ){ nullptr };
         uint8 _supportedLayoutMask{ 0 }; ///< 처리할 수 있는 레이아웃의 비트(`1 << AudioChannelLayout`)다. 믹서가 맞지 않는 그래프를 초기화 오류로 멈춘다.
 
         /** @brief 이 종류가 @p layout 을 처리할 수 있는지입니다. */
@@ -97,14 +100,17 @@ namespace sw
 {
     /**
      * @struct AudioEffectRegistry
-     * @brief 이름에서 이펙트 종류로 가는 테이블입니다. LowPass, HighPass, BandPass, Peaking, LowShelf, HighShelf, Compressor, Limiter, Reverb, Delay 를 지원합니다.
+     * @brief 이름에서 이펙트 종류로 가는 테이블입니다. LowPass, HighPass, BandPass, Peaking, LowShelf, HighShelf, Compressor, Limiter, Reverb, Delay, ConvolutionReverb 를 지원합니다.
      */
     struct SW_API AudioEffectRegistry
     {
         /** @brief 이름의 종류입니다. 없으면 nullptr 입니다. */
         static const AudioEffectTypeInfo* findType( const hashed_string& name );
-        /** @brief 이름의 이펙트를 @p layout 용으로 기본 파라미터로 만듭니다. 모르는 이름이거나 종류가 그 레이아웃을 지원하지 않으면 nullptr 입니다(오류를 남깁니다). */
-        static unique_ptr<IAudioEffect> createEffect( const hashed_string& name, AudioChannelLayout layout );
+        /**
+         * @brief 데이터 @p desc 의 종류로 @p layout 용 이펙트를 만들고 데이터의 파라미터를 겁니다(적지 않은 파라미터는 기본값).
+         * @return 모르는 종류 · 모르는 파라미터 · 지원하지 않는 레이아웃 · 읽지 못한 자원(컨볼루션 리버브의 임펄스 응답)이면 오류를 남기고 nullptr 입니다.
+         */
+        static unique_ptr<IAudioEffect> createEffect( const AudioEffectDesc& desc, AudioChannelLayout layout );
         /** @brief 번호의 종류입니다. */
         static const AudioEffectTypeInfo& getType( uint32 typeIndex );
     };
