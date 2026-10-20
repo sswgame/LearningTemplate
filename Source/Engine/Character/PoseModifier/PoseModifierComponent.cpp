@@ -177,7 +177,7 @@ namespace sw
     {
         Component::onBeginPlay();
         if ( _asset == nullptr && _rigPath.empty() == false )
-            _asset = RigAssetCache::acquire( _rigPath );
+            _asset = SharedAssetCache<RigAsset>::acquire( _rigPath );
         if ( _ownSockets == nullptr && _socketSetPath.empty() == false )
             setSocketSetPath( _socketSetPath );
         bindRig();
@@ -210,7 +210,7 @@ namespace sw
     void PoseModifierComponent::setRigPath( string_view path )
     {
         _rigPath = string{ path };
-        _asset   = _rigPath.empty() ? nullptr : RigAssetCache::acquire( _rigPath );
+        _asset   = _rigPath.empty() ? nullptr : SharedAssetCache<RigAsset>::acquire( _rigPath );
         if ( _rigPath.empty() == false && _asset == nullptr )
             SW_LOG_ERROR( "Rig '%#' could not be loaded", _rigPath.c_str() );
         bindRig();
