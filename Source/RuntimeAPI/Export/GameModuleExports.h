@@ -6,6 +6,7 @@
  *       정의는 GameFramework 가 가집니다. 모듈 구현 `.cpp` 만 include 합니다.
  */
 #pragma once
+#include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
 #include "RuntimeAPI/ABI/GameAPI.h"
@@ -57,8 +58,23 @@ namespace sw
             else                                                                                                                                                                                             \
                 sw::game::unbindGameService();                                                                                                                                                               \
         };                                                                                                                                                                                                   \
-        pOutAPI->serializeState = []( sw::GameHandle gameHandle, void* pOutBuffer, uint32* pInOutSize ) -> bool                                                                                              \
-        { return sw::ModuleForwardUtil::callOr<GameClass, bool>( gameHandle, false, &GameClass::serializeState, pOutBuffer, pInOutSize ); };                                                                 \
+        pOutAPI->serializeState = []( sw::GameHandle gameHandle, const sw::StateBufferSink* pSink ) -> bool                                                                                                  \
+        {                                                                                                                                                                                                    \
+            GameClass* pGame    = static_cast<GameClass*>( gameHandle );                                                                                                                                     \
+            const bool bHasSink = pSink != nullptr && pSink->allocate != nullptr;                                                                                                                            \
+            if ( pGame == nullptr || bHasSink == false )                                                                                                                                                     \
+                return false;                                                                                                                                                                                \
+            sw::vector<uint8> bytes;                                                                                                                                                                         \
+            if ( pGame->serializeState( bytes ) == false )                                                                                                                                                   \
+                return false;                                                                                                                                                                                \
+            if ( bytes.empty() )                                                                                                                                                                             \
+                return true;                                                                                                                                                                                 \
+            void* pBuffer = pSink->allocate( pSink->_pContext, static_cast<uint32>( bytes.size() ) );                                                                                                        \
+            if ( pBuffer == nullptr )                                                                                                                                                                        \
+                return false;                                                                                                                                                                                \
+            sw::Memory::copy( pBuffer, bytes.data(), bytes.size() );                                                                                                                                         \
+            return true;                                                                                                                                                                                     \
+        };                                                                                                                                                                                                   \
         pOutAPI->deserializeState = []( sw::GameHandle gameHandle, const void* pInBuffer, uint32 bufferSize ) -> bool                                                                                        \
         { return sw::ModuleForwardUtil::callOr<GameClass, bool>( gameHandle, false, &GameClass::deserializeState, pInBuffer, bufferSize ); };                                                                \
         return true;                                                                                                                                                                                         \

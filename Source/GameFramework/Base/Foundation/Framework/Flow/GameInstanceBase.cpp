@@ -175,9 +175,12 @@ namespace sw
         if ( _gameScope.getCollection().initializeAll( SubsystemHostMask::All ) == false )
             SW_LOG_ERROR( "Game instance subsystems did not all initialize: %#", _gameScope.getCollection().getError().c_str() );
         // 네트워크 세션은 엔진 수명이다 — 처음이면 실행 인자로 열고, 리로드로 다시 선 인스턴스는 열린 세션을 이어받는다(클라이언트가 끊기지 않는다).
-        game::getSubsystem<GameNetSession>().openFromLaunch(); // `bindEngineServices` 가 있음을 확인했다
+        // 서버 · 클라이언트로 띄웠는데 열지 못하면(틀린 인자 · 포트 사용 중) 혼자 하는 게임으로 서지 않는다.
+        const bool bNetSessionOpened = game::getSubsystem<GameNetSession>().openFromLaunch(); // `bindEngineServices` 가 있음을 확인했다
+        if ( bNetSessionOpened == false )
+            SW_LOG_ERROR( "Game instance cannot start - the net session asked for by the launch arguments or the server config did not open" );
         // 사운드 이벤트는 gamesettings 가 정본이다. 적었는데 못 읽으면 게임을 띄우지 않는다(소리 없이 진행하지 않는다). 입력 맵을 적었는데 입력 서비스가 없어도 같다.
-        const bool bInitialized = bBootstrapApplied && loadAudioEvents() && onInitialize();
+        const bool bInitialized = bBootstrapApplied && bNetSessionOpened && loadAudioEvents() && onInitialize();
         registerSessionCommands();
 
         // 플레이어 설정을 다시 넣는다. 언어 팩과 입력 맵(키 바인딩, 누르기/토글)은 위에서 막 생겼고, 엔진 기동 때의 적용은 그 대상이 없을 때 한 것이다.
@@ -541,9 +544,9 @@ namespace sw
         }
     }
 
-    bool GameInstanceBase::serializeState( void* pOutBuffer, uint32* pInOutSize )
+    bool GameInstanceBase::serializeState( vector<uint8>& outBytes )
     {
-        return writeStateEnvelope( SerializePurpose::Snapshot, pOutBuffer, pInOutSize );
+        return captureSnapshot( SerializePurpose::Snapshot, outBytes );
     }
 
     bool GameInstanceBase::deserializeState( const void* pInBuffer, uint32 size )
@@ -551,11 +554,8 @@ namespace sw
         return readStateEnvelope( SerializePurpose::Snapshot, pInBuffer, size );
     }
 
-    bool GameInstanceBase::writeStateEnvelope( SerializePurpose purpose, void* pOutBuffer, uint32* pInOutSize )
+    bool GameInstanceBase::captureSnapshot( SerializePurpose purpose, vector<uint8>& outBytes )
     {
-        if ( pInOutSize == nullptr )
-            return false;
-
         _pComponentStateStore->clear();
         captureStatefulComponents();
         onBeforeStateSerialize();
@@ -601,18 +601,8 @@ namespace sw
         arch.writeSection( componentArch.getData(), static_cast<uint32>( componentArch.getSize() ) );
         _pComponentStateStore->clear();
 
-        const size_t totalSize = arch.getSize();
-        if ( pOutBuffer == nullptr )
-        {
-            *pInOutSize = static_cast<uint32>( totalSize );
-            return true;
-        }
-
-        if ( *pInOutSize < totalSize )
-            return false;
-
-        Memory::copy( pOutBuffer, arch.getData(), totalSize );
-        *pInOutSize = static_cast<uint32>( totalSize );
+        // 봉투는 한 번 써서 그대로 넘긴다.
+        outBytes.assign( arch.getData(), arch.getData() + arch.getSize() );
         return true;
     }
 
@@ -696,16 +686,6 @@ namespace sw
         onAfterStateDeserialize();
         _pComponentStateStore->clear();
         return true;
-    }
-
-    bool GameInstanceBase::captureSnapshot( SerializePurpose purpose, vector<uint8>& outBytes )
-    {
-        uint32 size = 0;
-        if ( writeStateEnvelope( purpose, nullptr, &size ) == false || size == 0 )
-            return false;
-
-        outBytes.resize( size );
-        return writeStateEnvelope( purpose, outBytes.data(), &size );
     }
 
     bool GameInstanceBase::restoreSnapshot( SerializePurpose purpose, const vector<uint8>& inBytes )

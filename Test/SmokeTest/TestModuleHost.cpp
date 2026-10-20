@@ -223,12 +223,14 @@ namespace
     vector<const utf8*> s_listGameCall;
     bool                s_bGameSerializeSucceeds{ true };
 
-    bool recordGameSerialize( GameHandle, void* pOutBuffer, uint32* pInOutSize )
+    bool recordGameSerialize( GameHandle, const StateBufferSink* pSink )
     {
         s_listGameCall.push_back( "serializeState" );
-        if ( pOutBuffer == nullptr && pInOutSize != nullptr )
-            *pInOutSize = 4;
-        return s_bGameSerializeSucceeds;
+        const bool bHasSink = pSink != nullptr && pSink->allocate != nullptr;
+        if ( s_bGameSerializeSucceeds == false || bHasSink == false )
+            return false;
+        constexpr uint32 kStateSize = 4;
+        return pSink->allocate( pSink->_pContext, kStateSize ) != nullptr;
     }
     void recordGameShutdown( GameHandle )
     {

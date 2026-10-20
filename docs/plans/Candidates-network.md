@@ -68,11 +68,6 @@
 - 리눅스 서버(`WSL-*-Server`) 빌드 · `readelf -d` 로 libX11 없음 확인 · `ServerTest` — Windows 만 확인했다. 로컬 WSL 빌드는 하지 않기로 해서(사용자 결정) CI 리눅스 잡 몫이다.
 함정: 서버용 크래시 보고 전송 동의(운영 설정)는 `OperationsAndDeployment` 쪽이다.
 
-### OnlineNetworkBaseRename
-제목: 클라이언트 접속 인자 이름 바꾸기
-옛번호: D7-5
-왜 필요한가: 클라이언트 접속 인자 `-gv_netConnectAddress` 의 이름을 바꾼다. `GameNetSession` 의 같은 함수로 바꾸면 된다.
-남은 것: [ServerDebug](ServerDebug.md) 의 `GameNetSession`(`Engine/Net`) 일과 한 작업자가 맡는다.
 
 ### OnlineMultiServerLatency
 제목: 서버 여럿의 실제 망 지연 측정
