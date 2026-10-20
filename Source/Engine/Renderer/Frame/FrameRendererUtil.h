@@ -483,6 +483,10 @@ namespace sw
         hashed_string _world{ "g_World" };
         hashed_string _keyLightDirIntensity{ "g_KeyLightDirIntensity" };
         hashed_string _keyLightColor{ "g_KeyLightColor" };
+        /// @brief 하늘 그러데이션입니다(스카이 패스). 배치는 `SkyGradient` 머리 주석 — 천정(rgb, w 지수) · 지평선(rgb) · 땅(rgb, w 세기).
+        hashed_string _skyZenith{ "g_SkyZenith" };
+        hashed_string _skyHorizon{ "g_SkyHorizon" };
+        hashed_string _skyGround{ "g_SkyGround" };
         hashed_string _shadowParams{ "g_ShadowParams" };
         /// @brief 방향광 캐스케이드 배치입니다 — x 수, y 칸 배율, z 경계 섞기 폭. `ViewShadowData::_cascadeLayout`.
         hashed_string _shadowCascadeLayout{ "g_ShadowCascadeLayout" };

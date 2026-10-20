@@ -7,6 +7,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/PackEngineSettings.h"
+#include "Engine/Environment/Sky/SkyComponent.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -115,6 +116,7 @@ namespace sw
         , _statusMessage{}
         , _graphContext{}
         , _frameLight{}
+        , _frameSky{}
         , _outputWidth{ 0 }
         , _outputHeight{ 0 }
         , _lastRenderedExtraViewCount{ 0 }
@@ -126,6 +128,7 @@ namespace sw
         , _bCallbacksBound{ SW_FALSE }
         , _bPassResourcesReady{ SW_FALSE }
         , _bScenePreview{ SW_FALSE }
+        , _bHasFrameSky{ SW_FALSE }
         , _reservedFlags{ 0 }
         , _viewMode{ static_cast<uint8>( RenderViewMode::Lit ) }
         , _sceneViewMode{ static_cast<uint8>( RenderViewMode::Lit ) }
@@ -554,6 +557,10 @@ namespace sw
         {
             _frameLight = FrameLightState{};
         }
+        // 하늘도 패킷 경로(RenderPacketBuilder)와 같은 규칙으로 씬에서 읽는다.
+        SkyGradient sceneSky;
+        const bool  bSceneSky = scene.getObjectManager() != nullptr && SkyComponent::findSky( *scene.getObjectManager(), sceneSky );
+        applyFrameSky( bSceneSky, sceneSky );
         // 출력 크기(인자가 없으면 스왑체인)를 먼저 정한다 — 주 시점의 비율이 그것을 본다.
         ensurePassResources();
         ensureTransientResources( _directOutputWidth, _directOutputHeight );
@@ -645,6 +652,8 @@ namespace sw
         {
             _frameLight = FrameLightState{};
         }
+        // 하늘도 패킷으로만 온다.
+        applyFrameSky( packet._bHasSky != SW_FALSE, packet._sky );
         // 그림자 배치도 패킷으로만 온다. 맞바꾸기라 지난 프레임의 저장소가 패킷으로 돌아간다.
         std::swap( _frameShadow, packet._shadow );
         applyFrameShadow();

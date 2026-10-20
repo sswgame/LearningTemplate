@@ -40,6 +40,7 @@ namespace sw
 {
     struct RenderFramePacket;
     struct ShaderCompileResult;
+    struct SkyGradient;
 
     class CameraComponent;
     class IRHICommandList;
@@ -532,6 +533,18 @@ namespace sw
             float4 _colorAmbient{ 0.0f, 0.0f, 0.0f, 0.0f };
         };
         /**
+         * @brief 이번 프레임의 하늘을 셰이더 상수 모양으로 둔 것입니다(`g_SkyZenith` · `g_SkyHorizon` · `g_SkyGround`, 배치는 `SkyGradient` 머리 주석).
+         * @details 씬에 하늘이 없으면 `_bHasFrameSky` 가 0 이고 스카이 패스가 그리지 않는다 — 배경은 SceneColor 클리어 색이다(기본 하늘로 대신 칠하지 않는다).
+         */
+        struct FrameSkyState
+        {
+            float4 _zenithExponent{};  ///< rgb 천정 색, w 지평선 지수
+            float4 _horizon{};         ///< rgb 지평선 색
+            float4 _groundIntensity{}; ///< rgb 땅 색, w 세기
+        };
+        /** @brief 이번 프레임의 하늘(`_frameSky` · `_bHasFrameSky`)을 정합니다. 씬 직접 경로와 패킷 경로가 같은 규칙으로 부릅니다. */
+        void applyFrameSky( bool bHasSky, const SkyGradient& sky );
+        /**
          * @brief 이번 프레임의 그림자 배치(`_frameShadow`)를 마무리합니다. 주 시점 그림자가 비어 있으면(게임 스레드가 배치를 만들지 않았다) 그림자 없는 뷰로 두고, 주 시점 뷰에 옮깁니다.
          * @details 라이트 버퍼 업로드보다 먼저 부른다 — 점광 · 스폿 타일 원소가 라이트 버퍼 꼬리에 붙는다.
          */
@@ -927,6 +940,7 @@ namespace sw
 
         // 아래는 8바이트보다 작은 필드다. 사이에 끼면 패딩이 생기므로 큰 것부터 두고 작은 것을 끝에 모은다.
         FrameLightState _frameLight; ///< float4 둘(32바이트)이다.
+        FrameSkyState   _frameSky;   ///< float4 셋(48바이트)이다. `_bHasFrameSky` 가 0 이면 쓰지 않는다.
         /// @brief 주 출력(백버퍼, 게임 뷰 RT)의 크기입니다. 주 시점의 풀은 이 크기 × 사각형 × 해상도 배율이고, 화면 사각형 뷰와 Present 캡처는 이 크기를 씁니다.
         uint32 _outputWidth;
         uint32 _outputHeight;
@@ -947,7 +961,8 @@ namespace sw
         uint8                  _bCallbacksBound     : 1;
         uint8                  _bPassResourcesReady : 1;
         uint8                  _bScenePreview       : 1; ///< 미리보기 씬 렌더러다 — 프로파일러 보고 · 렌더 타깃 공개를 하지 않는다
-        [[maybe_unused]] uint8 _reservedFlags       : 4;
+        uint8                  _bHasFrameSky        : 1; ///< 이번 프레임의 씬에 하늘이 있다(`_frameSky`). 기록 전에 정하고 패스 콜백은 읽기만 한다
+        [[maybe_unused]] uint8 _reservedFlags       : 3;
         /**
          * @brief 주 출력의 보기 모드(`RenderViewMode`)입니다.
          * @details 게임 스레드(패킷)와 직접 경로가 프레임 시작에 읽어 뷰 설정에 싣고, 드로우는 뷰 설정만 본다. 쓰는 쪽이 다른 스레드이므로 atomic 이다.
