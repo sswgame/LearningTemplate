@@ -279,41 +279,47 @@ namespace sw
         shutdown();
     }
 
-    bool GameNetSession::makeLaunchParams( GameNetSessionParams& outParams )
+    GameNetLaunch GameNetSession::makeLaunchParams( GameNetSessionParams& outParams )
     {
         outParams                = GameNetSessionParams{};
         outParams._bLoopbackOnly = gv_netLoopbackOnly;
-        const bool bListen       = gv_netListenPort > 0;
+        const bool bListen       = gv_netListenPort != 0;
         const bool bConnect      = gv_netConnectAddress.empty() == false;
         if ( bListen == false && bConnect == false )
         {
             // 개발 덮어쓰기가 없으면 전용 서버는 서버 설정의 게임 포트를 연다. 리슨 호스트(App) · 테스트는 서버 문맥이 없어 열지 않는다.
             const ServerServiceContext* pHostContext = ServerServiceRegistry::findHostContext();
             if ( pHostContext == nullptr || pHostContext->_pServerConfig == nullptr )
-                return false;
-            return makeServerParams( *pHostContext->_pServerConfig, outParams );
+                return GameNetLaunch::None;
+            return makeServerParams( *pHostContext->_pServerConfig, outParams ) ? GameNetLaunch::Open : GameNetLaunch::Invalid;
+        }
+        // 두 역할을 함께 주면 어느 쪽을 바랐는지 모른다 — 한쪽을 골라 띄우지 않는다.
+        if ( bListen && bConnect )
+        {
+            SW_LOG_ERROR( "Both gv_netListenPort and gv_netConnectAddress are set - pick one role" );
+            return GameNetLaunch::Invalid;
         }
         if ( bListen )
         {
-            if ( GameNetSessionInternal::kMaxPort < gv_netListenPort )
+            const bool bPortInRange = 0 < gv_netListenPort && gv_netListenPort <= GameNetSessionInternal::kMaxPort;
+            if ( bPortInRange == false )
             {
-                SW_LOG_WARNING( "gv_netListenPort %# is not a UDP port - no net session", gv_netListenPort );
-                return false;
+                SW_LOG_ERROR( "gv_netListenPort %# is not a UDP port", gv_netListenPort );
+                return GameNetLaunch::Invalid;
             }
-            if ( bConnect )
-                SW_LOG_WARNING( "Both gv_netListenPort and gv_netConnectAddress are set - starting as the server on port %#", gv_netListenPort );
             outParams._role       = GameNetRole::Server;
             outParams._listenPort = static_cast<uint16>( gv_netListenPort );
-            return true;
+            return GameNetLaunch::Open;
         }
         // 기동 때 한 번 막고 푼다 — HTTP 클라이언트의 해석 스레드와 같은 해석기다(이름 · hosts 파일 · 점 넷 숫자).
-        if ( PlatformSocketUtil::resolveAddress( gv_netConnectAddress, kDefaultPort, outParams._serverAddress ) == false || outParams._serverAddress.isValid() == false )
+        const bool bResolved = PlatformSocketUtil::resolveAddress( gv_netConnectAddress, kDefaultPort, outParams._serverAddress );
+        if ( bResolved == false || outParams._serverAddress.isValid() == false )
         {
-            SW_LOG_WARNING( "gv_netConnectAddress '%#' did not resolve to an IPv4 address with a port - no net session", gv_netConnectAddress );
-            return false;
+            SW_LOG_ERROR( "gv_netConnectAddress '%#' did not resolve to an IPv4 address with a port", gv_netConnectAddress );
+            return GameNetLaunch::Invalid;
         }
         outParams._role = GameNetRole::Client;
-        return true;
+        return GameNetLaunch::Open;
     }
 
     bool GameNetSession::makeServerParams( const ServerConfig& config, GameNetSessionParams& outParams )
@@ -413,13 +419,21 @@ namespace sw
         return true;
     }
 
-    void GameNetSession::openFromLaunch()
+    bool GameNetSession::openFromLaunch()
     {
         if ( isActive() )
-            return; // 리로드로 다시 선 게임 인스턴스 — 열린 세션과 연결을 이어받는다
+            return true; // 리로드로 다시 선 게임 인스턴스 — 열린 세션과 연결을 이어받는다
         GameNetSessionParams params;
-        if ( makeLaunchParams( params ) )
-            (void)initialize( params ); // 실패는 initialize 가 알린다 — 게임은 혼자 뜬다
+        switch ( makeLaunchParams( params ) )
+        {
+            case GameNetLaunch::None:
+                return true;
+            case GameNetLaunch::Open:
+                return initialize( params ); // 실패는 initialize 가 알린다
+            case GameNetLaunch::Invalid:
+                return false;
+        }
+        return false;
     }
 
     void GameNetSession::shutdown()

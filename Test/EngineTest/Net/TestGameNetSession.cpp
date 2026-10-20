@@ -197,8 +197,9 @@ SW_TEST_CASE( GameNetSessionTest, OpenFromLaunchKeepsAnOpenSessionAcrossInstance
     context._pServerConfig = &config;
     ServerServiceRegistry::bindHostContext( &context );
     GameNetSession server;
-    server.openFromLaunch(); // 첫 게임 인스턴스
+    const bool     bFirstOpened = server.openFromLaunch(); // 첫 게임 인스턴스
     ServerServiceRegistry::bindHostContext( nullptr );
+    SW_ASSERT_TRUE( bFirstOpened );
     SW_ASSERT_TRUE( server.isActive() );
     const uint16 port = server.getListenPort();
 
@@ -216,7 +217,7 @@ SW_TEST_CASE( GameNetSessionTest, OpenFromLaunchKeepsAnOpenSessionAcrossInstance
     }
     SW_ASSERT_EQUAL( 1, server.getConnectedCount() );
 
-    server.openFromLaunch(); // 리로드로 다시 선 인스턴스 — 서버 문맥이 없어도 열린 세션을 이어받는다
+    SW_EXPECT_TRUE( server.openFromLaunch() ); // 리로드로 다시 선 인스턴스 — 서버 문맥이 없어도 열린 세션을 이어받는다
     SW_EXPECT_TRUE( server.isActive() );
     SW_EXPECT_EQUAL( port, server.getListenPort() );
     client.update();
@@ -233,16 +234,37 @@ SW_TEST_CASE( GameNetSessionTest, OpenFromLaunchKeepsAnOpenSessionAcrossInstance
 SW_TEST_CASE( GameNetSessionTest, LaunchParamsOpenTheGamePortOnlyOnADedicatedServer )
 {
     GameNetSessionParams params;
-    SW_EXPECT_FALSE( GameNetSession::makeLaunchParams( params ) ); // 문맥이 없다(App · 테스트)
+    SW_EXPECT_TRUE( GameNetSession::makeLaunchParams( params ) == GameNetLaunch::None ); // 문맥이 없다(App · 테스트)
     ServerConfig config;
     config._listenAddress = "127.0.0.1";
     config._gamePort      = 0;
     ServerServiceContext context;
     context._pServerConfig = &config;
     ServerServiceRegistry::bindHostContext( &context );
-    const bool bServer = GameNetSession::makeLaunchParams( params );
+    const GameNetLaunch launch = GameNetSession::makeLaunchParams( params );
     ServerServiceRegistry::bindHostContext( nullptr );
-    SW_ASSERT_TRUE( bServer );
+    SW_ASSERT_TRUE( launch == GameNetLaunch::Open );
     SW_EXPECT_TRUE( params._role == GameNetRole::Server );
     SW_EXPECT_TRUE( params._bLoopbackOnly );
+}
+
+/**
+ * @brief [GameNetSessionTest] 전용 서버 설정이 틀리면 "세션 없음" 이 아니라 `Invalid` 이고 `openFromLaunch` 가 false 다 — 게임 인스턴스가 혼자 하는 게임으로 서지 않는다
+ */
+SW_TEST_CASE( GameNetSessionTest, AnInvalidServerConfigStopsTheLaunchInsteadOfStartingAlone )
+{
+    ServerConfig config;
+    config._listenAddress = "10.0.0.5"; // 게임 포트는 0.0.0.0 · 127.0.0.1 만 묶는다
+    config._gamePort      = 0;
+    ServerServiceContext context;
+    context._pServerConfig = &config;
+    ServerServiceRegistry::bindHostContext( &context );
+    GameNetSessionParams params;
+    const GameNetLaunch  launch = GameNetSession::makeLaunchParams( params );
+    GameNetSession       session;
+    const bool           bOpened = session.openFromLaunch();
+    ServerServiceRegistry::bindHostContext( nullptr );
+    SW_EXPECT_TRUE( launch == GameNetLaunch::Invalid );
+    SW_EXPECT_FALSE( bOpened );
+    SW_EXPECT_FALSE( session.isActive() );
 }
