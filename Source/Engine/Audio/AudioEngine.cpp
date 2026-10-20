@@ -670,35 +670,70 @@ namespace sw
         _listApplyingCommand.clear();
     }
 
+    void AudioEngine::applyPlayClip( const Command& command )
+    {
+        _appliedPlayingID = MathUtil::max( _appliedPlayingID, command._playingID );
+        VoiceSlot* pSlot  = allocateVoice();
+        if ( pSlot == nullptr )
+        {
+            SW_LOG_WARNING( "Voice pool exhausted - dropped %#", command._path.c_str() );
+            return;
+        }
+        pSlot->_playingID        = command._playingID;
+        pSlot->_clipPath         = command._path;
+        pSlot->_busName          = command._name;
+        pSlot->_busIndex         = resolveBusIndex( command._name );
+        pSlot->_volume           = AudioMath::dbToLinear( command._clipParams._volumeDb );
+        pSlot->_pan              = command._clipParams._pan;
+        pSlot->_pitchRatio       = AudioMath::semitonesToRatio( command._clipParams._pitchSemitones );
+        pSlot->_fadeInSeconds    = command._clipParams._fadeInSeconds;
+        pSlot->_bLoop            = command._clipParams._bLoop;
+        pSlot->_emitterID        = command._clipParams._emitterID;
+        pSlot->_attenuationName  = command._clipParams._attenuation;
+        pSlot->_attenuationIndex = resolveAttenuationIndex( command._clipParams._attenuation );
+        pSlot->_priority         = command._clipParams._priority;
+        pSlot->_virtualMode      = command._clipParams._virtual;
+        pSlot->_bWaitingForClip  = true;
+        startWaitingVoice( *pSlot );
+    }
+
+    void AudioEngine::applySetEmitterParameter( const Command& command )
+    {
+        vector<EmitterParameter>& listParameter = _mapEmitter[command._emitterID]._listParameter;
+        bool                      bFound        = false;
+        for ( EmitterParameter& parameter : listParameter )
+        {
+            if ( parameter._name == command._name )
+            {
+                parameter._value = command._value;
+                bFound           = true;
+            }
+        }
+        if ( bFound == false )
+            listParameter.push_back( EmitterParameter{ command._name, command._value } );
+    }
+
+    void AudioEngine::applyStartSnapshot( const Command& command )
+    {
+        SnapshotState* pSnapshot = findOrAddSnapshot( command._name );
+        if ( pSnapshot == nullptr )
+            return;
+        pSnapshot->_target  = 1.0f;
+        pSnapshot->_bDriven = false;
+        // 가장 나중에 켠 것이 마지막에 적용된다.
+        const SnapshotState moved = *pSnapshot;
+        _listSnapshot.erase( _listSnapshot.begin() + ( pSnapshot - _listSnapshot.data() ) );
+        _listSnapshot.push_back( moved );
+    }
+
+    // 긴 케이스(클립 재생 · 에미터 파라미터 · 스냅샷 켜기)는 함수로 뺐고, 남은 것은 명령 종류마다 한두 줄인 switch 디스패처라 나누지 않는다.
     void AudioEngine::applyCommand( Command& command )
     {
         switch ( command._type )
         {
             case CommandType::PlayClip:
             {
-                _appliedPlayingID = MathUtil::max( _appliedPlayingID, command._playingID );
-                VoiceSlot* pSlot  = allocateVoice();
-                if ( pSlot == nullptr )
-                {
-                    SW_LOG_WARNING( "Voice pool exhausted - dropped %#", command._path.c_str() );
-                    break;
-                }
-                pSlot->_playingID        = command._playingID;
-                pSlot->_clipPath         = command._path;
-                pSlot->_busName          = command._name;
-                pSlot->_busIndex         = resolveBusIndex( command._name );
-                pSlot->_volume           = AudioMath::dbToLinear( command._clipParams._volumeDb );
-                pSlot->_pan              = command._clipParams._pan;
-                pSlot->_pitchRatio       = AudioMath::semitonesToRatio( command._clipParams._pitchSemitones );
-                pSlot->_fadeInSeconds    = command._clipParams._fadeInSeconds;
-                pSlot->_bLoop            = command._clipParams._bLoop;
-                pSlot->_emitterID        = command._clipParams._emitterID;
-                pSlot->_attenuationName  = command._clipParams._attenuation;
-                pSlot->_attenuationIndex = resolveAttenuationIndex( command._clipParams._attenuation );
-                pSlot->_priority         = command._clipParams._priority;
-                pSlot->_virtualMode      = command._clipParams._virtual;
-                pSlot->_bWaitingForClip  = true;
-                startWaitingVoice( *pSlot );
+                applyPlayClip( command );
                 break;
             }
             case CommandType::PostEvent:
@@ -789,18 +824,7 @@ namespace sw
             }
             case CommandType::SetEmitterParameter:
             {
-                vector<EmitterParameter>& listParameter = _mapEmitter[command._emitterID]._listParameter;
-                bool                      bFound        = false;
-                for ( EmitterParameter& parameter : listParameter )
-                {
-                    if ( parameter._name == command._name )
-                    {
-                        parameter._value = command._value;
-                        bFound           = true;
-                    }
-                }
-                if ( bFound == false )
-                    listParameter.push_back( EmitterParameter{ command._name, command._value } );
+                applySetEmitterParameter( command );
                 break;
             }
             case CommandType::RemoveEmitter:
@@ -821,15 +845,7 @@ namespace sw
             }
             case CommandType::StartSnapshot:
             {
-                SnapshotState* pSnapshot = findOrAddSnapshot( command._name );
-                if ( pSnapshot == nullptr )
-                    break;
-                pSnapshot->_target  = 1.0f;
-                pSnapshot->_bDriven = false;
-                // 가장 나중에 켠 것이 마지막에 적용된다.
-                const SnapshotState moved = *pSnapshot;
-                _listSnapshot.erase( _listSnapshot.begin() + ( pSnapshot - _listSnapshot.data() ) );
-                _listSnapshot.push_back( moved );
+                applyStartSnapshot( command );
                 break;
             }
             case CommandType::StopSnapshot:

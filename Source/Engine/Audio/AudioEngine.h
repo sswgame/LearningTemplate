@@ -383,6 +383,12 @@ namespace sw
         void applyCommands();
         /** @brief 명령 하나를 적용합니다. */
         void applyCommand( Command& command );
+        /** @brief 클립 재생 명령으로 보이스를 잡고 클립 불러오기를 시작합니다. 보이스가 없으면 경고하고 버립니다. */
+        void applyPlayClip( const Command& command );
+        /** @brief 에미터의 이름 붙은 파라미터를 넣거나 고칩니다. */
+        void applySetEmitterParameter( const Command& command );
+        /** @brief 스냅샷을 켭니다. 가장 나중에 켠 것이 마지막에 적용되도록 목록 끝으로 옮깁니다. */
+        void applyStartSnapshot( const Command& command );
         /** @brief 만든 그래프로 바꿉니다(사용자 버스 상태 다시 적용, 보이스 버스 다시 찾기, 감쇠 · 스냅샷 다시 묶기). 그래프 레이아웃은 `_layout` 과 같아야 합니다. */
         void adoptMixer( shared_ptr<AudioMixer> pMixer );
         /** @brief 블록 하나를 렌더해 `_blockOutput`(평면)에 둡니다. */
@@ -415,6 +421,12 @@ namespace sw
         // AudioEngineEvents.cpp: 이벤트, 파라미터, 스냅샷, 보이스 제한
         /** @brief 이벤트를 재생합니다. 쿨다운, 상한, 컨테이너를 적용합니다. */
         void applyPostEvent( const Command& command );
+        /** @brief 쿨다운과 동시 재생 상한을 봅니다. 상한이면 뺏을 인스턴스를 멈춥니다. 버려야 하면(버린 수를 올리고) false 입니다. */
+        [[nodiscard]] bool tryAdmitEvent( const EventState& state, const AudioEventDesc& event );
+        /** @brief 이벤트의 살아 있는 인스턴스 수와, 뺏을 인스턴스(정책에 가장 맞는 것)의 번호를 구합니다. 없으면 -1 입니다. */
+        int32 findStealVictim( const AudioEventDesc& event, uint32& outLiveCount ) const;
+        /** @brief 컨테이너 종류에 따라 이번에 낼 첫 클립과 개수를 고릅니다(무작위는 앞서 낸 것을 피하고, 순차는 커서를 옮긴다). */
+        void pickEventClips( EventState& inoutState, const AudioEventDesc& event, uint32& outFirstClip, uint32& outPickCount );
         /** @brief 라이브러리를 교체하거나 언로드하고, 이벤트와 감쇠 테이블을 다시 만듭니다. */
         void applySetLibrary( const Command& command );
         /** @brief 감쇠 테이블(그래프와 라이브러리의 프리셋)을 다시 만들고, 보이스의 번호를 이름으로 다시 찾습니다. */
