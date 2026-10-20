@@ -1,6 +1,7 @@
 /**
  * @file MeshComponent.h
  * @brief 메시를 그리는 SceneComponent 입니다(3D 렌더링). 프리미티브 레지스트리를 거쳐 GPUScene 으로 들어갑니다.
+ * @details 레지스트리 번호는 코어 기반 `ScenePrimitive` 가 가집니다. 레지스트리는 그 기반만 알고, 빌더가 이 타입으로 `static_cast` 합니다.
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -11,7 +12,7 @@
 
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Binding/GPUSpriteInstanceData.h"
-#include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/Registry/ScenePrimitive.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -27,11 +28,8 @@ namespace sw
      * @brief GameObject 에 붙어 그려지는 메시입니다(월드 트랜스폼은 SceneComponent 에서 얻습니다).
      */
     REFLECT( Category = "Rendering 3D", DisplayName = "Mesh Component", Tooltip = "3D Static Mesh Renderer", Meta = "Icon=Cube" )
-    class SW_API MeshComponent : public SceneComponent
+    class SW_API MeshComponent : public ScenePrimitive
     {
-        /// 레지스트리 슬롯과 더티 플래그를 관리하는 유일한 주체입니다.
-        friend class PrimitiveRegistry;
-
     public:
         REFLECT_BODY();
 
@@ -155,9 +153,6 @@ namespace sw
         /** @brief 가시 여부를 반환합니다. */
         bool isVisible() const { return _bVisible == SW_TRUE; }
 
-        /** @brief 등록되지 않은 프리미티브의 인덱스입니다. */
-        static constexpr uint32 kInvalidPrimitiveIndex = invalid_index::kUint32;
-
         /**
          * @brief 렌더 스냅샷이 다시 읽어야 할 상태로 표시합니다.
          * @details 세터, PROPERTY 편집, 월드 트랜스폼 갱신이 모두 이 함수로 모인다. 렌더러가 매 프레임
@@ -188,10 +183,6 @@ namespace sw
         void setSpriteInstanceData( const GPUSpriteInstanceData& data );
 
     private:
-        /** @brief 레지스트리 슬롯입니다. 레지스트리(PrimitiveRegistry)만 접근합니다. */
-        uint32 getPrimitiveIndex() const { return _primitiveIndex; }
-        /** @brief 레지스트리 슬롯을 설정합니다. */
-        void                         setPrimitiveIndex( uint32 index );
         shared_ptr<Mesh>             _mesh;
         Material*                    _pMaterial;
         shared_ptr<MaterialInstance> _materialInstance;
@@ -218,8 +209,6 @@ namespace sw
         uint32 _sortKey;
         /** @brief 등록할 때 받은 레지스트리입니다. 더티 표시는 소유자를 거치지 않고 여기로 바로 갑니다. */
         PrimitiveRegistry* _pPrimitiveRegistry;
-        /** @brief 레지스트리 슬롯입니다. 등록되지 않았으면 kInvalidPrimitiveIndex 입니다. */
-        uint32 _primitiveIndex;
         // "더티" 비트는 여기 없다. 레지스트리의 원자 플래그 하나가 기준이다. 더티를 이 비트필드에 두면 워커의 더티 쓰기가
         // `_bVisible` 과 같은 바이트를 읽고 고쳐 쓰는 것이라, 이웃 비트를 만지는 스레드와 레이스가 된다.
         /** @brief 그리는지 여부입니다. 저장됩니다(PROPERTY). 숨긴 메시가 Stop, 되돌리기, 씬 다시 열기 뒤에도 숨은 채로 남습니다. */

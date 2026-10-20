@@ -16,8 +16,9 @@ Engine 레이어 금지 include 검사.
      Engine · GameFramework · 게임은 호스트(App · ModuleHost · Server)를 모른다.
   6) 게임은 다른 게임을 include 하지 않는다 — 나눠 쓸 것은 키트 · 기반으로 내린다.
   7) 컴포넌트 모델 코어(`[coreTree]` — Object/GameObject 아래 전부, `[coreFolder]` — Prefab · Component **바로 아래** 파일)는 기능 폴더(`[coreBannedLayer]` — Graphics ·
-     Physics · Navigation · Audio · Animation · TileMap)를 include 하지 않는다. 티어로는 Object 가 그 폴더들 위라 티어 검사가 못 잡는 방향이다.
-     기능 컴포넌트(Component/2D · 3D · Audio · Navigation · Physics)는 코어가 아니다. 예외 키는 `core:<파일>|<include 경로>` 다.
+     Physics · Navigation · Audio · Animation · TileMap, 그리고 기능 컴포넌트 폴더 Object/Component/2D · 3D · Audio · Navigation · Physics 와
+     Object/SceneAnimation)를 include 하지 않는다. 티어로는 Object 가 그 폴더들 위이거나 같은 Object 안이라 티어 검사가 못 잡는 방향이다.
+     금지 항목은 폴더 접두로 본다(그 폴더와 하위 전부). 예외 키는 `core:<파일>|<include 경로>` 다.
 
 티어는 **include 그래프에서 계산한 것**이다 — 손으로 고른 금지 쌍은 늘릴 기준이 없다. 전체 그래프를
 Tarjan SCC 로 줄이고 위상 순서를 티어로 쓰며, 위반은 경고가 아니라 실패다.
@@ -141,8 +142,8 @@ _kSubTieredLayer: frozenset[str] = frozenset(key.split("/")[0] for key in _kEngi
 _kCoreFolder: frozenset[str] = frozenset(_kRuleData["coreFolder"])
 #: 하위 폴더까지 모두 코어인 폴더(Engine/ 기준) — 오브젝트 모델 본체를 하위 폴더로 나눠도 코어 규칙이 따라간다.
 _kCoreTree: tuple[str, ...] = tuple(_kRuleData["coreTree"])
-#: 코어가 include 하지 않는 Engine 최상위 폴더.
-_kCoreBannedLayer: frozenset[str] = frozenset(_kRuleData["coreBannedLayer"])
+#: 코어가 include 하지 않는 폴더(Engine/ 기준). 최상위 폴더(`Graphics`)도, 그 아래 폴더(`Object/Component/3D`)도 된다 — 그 폴더와 하위 전부를 막는다.
+_kCoreBannedLayer: tuple[str, ...] = tuple(_kRuleData["coreBannedLayer"])
 #: 코어 예외 키 접두 — `core:<저장소 기준 파일>|<include 경로>`.
 _kCorePrefix = "core:"
 
@@ -224,14 +225,15 @@ def findCoreViolationsInternal(relativeFilePath: str, engineRelativePath: str, l
         normalizedInclude = normalizePath(includePath)
         if normalizedInclude.startswith("Engine/") is False:
             continue
-        destLayer = engineLayerOfInternal(normalizedInclude[len("Engine/") :])
-        if destLayer not in _kCoreBannedLayer:
+        destPath = normalizedInclude[len("Engine/") :]
+        bannedFolder = next((banned for banned in _kCoreBannedLayer if destPath.startswith(banned + "/")), None)
+        if bannedFolder is None:
             continue
         coreKey = f"{_kCorePrefix}{relativeFilePath}|{normalizedInclude}"
         if coreKey in gate.mapExemption:
             gate.useExemption(coreKey)
             continue
-        listViolation.append(f'{relativeFilePath}: #include "{includePath}"  (컴포넌트 모델 코어 {folderPath} -> 기능 폴더 {destLayer})')
+        listViolation.append(f'{relativeFilePath}: #include "{includePath}"  (컴포넌트 모델 코어 {folderPath} -> 기능 폴더 {bannedFolder})')
     return listViolation
 
 

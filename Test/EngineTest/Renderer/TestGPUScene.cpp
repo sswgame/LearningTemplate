@@ -1999,7 +1999,7 @@ SW_TEST_CASE( GPUSceneTest, ParallelCollectMatchesSerial )
         SW_EXPECT_NEAR_EQUAL( expectedSum, sumOfX(), 0.5 );
 
         // 전부 옮기면 부분 수집이 안 되어 다시 전체 수집(병렬)이다 — 합이 N 만큼 밀린다.
-        for ( sw::MeshComponent* pMesh : pObjects->getPrimitiveRegistry().getAll() )
+        for ( sw::ScenePrimitive* pMesh : pObjects->getPrimitiveRegistry().getAll() )
         {
             pMesh->setLocalPosition( pMesh->getLocalPosition() + sw::float3( 1.0f, 0.0f, 0.0f ) );
         }

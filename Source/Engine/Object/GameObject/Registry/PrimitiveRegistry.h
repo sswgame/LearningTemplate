@@ -12,6 +12,9 @@
  * 등록 하나 하려고 그 모두에 손이 닿습니다. 기능을 별도 타입으로 떼어 두면 컴포넌트는 자기가 쓰는
  * 것만 가지고 있으면 됩니다. 언리얼이 `UWorld` 안에 `FScene` 과 `FPhysScene` 을 따로 두는 것과 같은
  * 구성입니다.
+ *
+ * 레지스트리는 기반 타입(`ScenePrimitive`, `ScenePrimitiveBatch`)만 압니다. 메시 헤더를 include 하지 않으므로 코어가 기능 폴더를
+ * 가리키지 않습니다. 들어오는 타입이 메시 계열뿐이라는 불변식은 기반의 private 생성자가 지킵니다(`ScenePrimitive.h`).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -23,8 +26,8 @@
 
 namespace sw
 {
-    class MeshComponent;
-    class MeshInstanceBatch;
+    class ScenePrimitive;
+    class ScenePrimitiveBatch;
 
     /**
      * @brief 인스턴스 배치의 항목 하나입니다. 레지스트리의 프리미티브 번호 공간에서 메시 컴포넌트 뒤에 이어 붙습니다.
@@ -33,8 +36,8 @@ namespace sw
      */
     struct PrimitiveInstanceEntry
     {
-        MeshInstanceBatch* _pBatch{ nullptr };
-        uint32             _index{ 0 };
+        ScenePrimitiveBatch* _pBatch{ nullptr };
+        uint32               _index{ 0 };
     };
 } // namespace sw
 
@@ -62,9 +65,9 @@ namespace sw
         PrimitiveRegistry& operator=( const PrimitiveRegistry& ) = delete;
 
         /** @brief 프리미티브를 등록합니다. 붙을 때 한 번 부릅니다. 이미 등록됐으면 무시합니다. */
-        void add( MeshComponent* pComp );
+        void add( ScenePrimitive* pPrimitive );
         /** @brief 프리미티브를 등록 해제합니다. 여러 번 불러도 안전합니다. */
-        void remove( MeshComponent* pComp );
+        void remove( ScenePrimitive* pPrimitive );
 
         /**
          * @brief 이 프리미티브의 렌더 상태가 바뀌었다고 표시합니다. **잠금이 없습니다.** 워커 스레드에서 불러도 됩니다.
@@ -76,7 +79,7 @@ namespace sw
          *          `_listPrimitive` 는 잠금 없이 읽는다. add 와 remove 는 게임 스레드가 병렬 구간 밖에서만 부른다
          *          (컴포넌트 추가와 제거는 틱 중에 미뤄진다). 그 전제가 깨지면 컨테이너 레이스 탐지기가 잡는다.
          */
-        void markDirty( MeshComponent* pComp );
+        void markDirty( ScenePrimitive* pPrimitive );
         /**
          * @brief 프리미티브 번호 하나의 **월드 행렬만** 바뀌었다고 표시합니다. 잠금이 없습니다. 워커에서 불러도 됩니다.
          * @details 트랜스폼 슬롯에 적힌 번호로 표시한다(`SceneTransformPage::_arrPrimitiveIndex`). 틱 뒤 적용이 컴포넌트를 거치지 않고 부르는
@@ -94,8 +97,8 @@ namespace sw
          */
         void markSetDirty() { _setGeneration.fetch_add( 1, std::memory_order_relaxed ); }
 
-        /** @brief 등록된 메시 컴포넌트 목록입니다. 렌더 스냅샷 수집의 입력입니다(인스턴스 배치 항목은 `getInstanceEntries`). */
-        const vector<MeshComponent*>& getAll() const { return _listPrimitive; }
+        /** @brief 등록된 프리미티브 목록입니다. 렌더 스냅샷 수집의 입력입니다(인스턴스 배치 항목은 `getInstanceEntries`). 실제 타입은 `MeshComponent` 계열입니다. */
+        const vector<ScenePrimitive*>& getAll() const { return _listPrimitive; }
         /** @brief 집합의 세대입니다. 값이 달라졌으면 전체 재구축이 필요합니다. */
         uint64 getSetGeneration() const { return _setGeneration.load( std::memory_order_relaxed ); }
         /** @brief 렌더 상태가 바뀐 프리미티브가 하나라도 있으면 true 입니다. */
@@ -118,11 +121,11 @@ namespace sw
          * @brief 인스턴스 배치를 등록합니다. 항목마다 프리미티브 번호 하나를 받습니다(메시 컴포넌트 뒤에 이어서). 집합 세대가 오릅니다.
          * @details 배치는 소유하지 않는다. 배치가 먼저 사라지면 자기 소멸자에서 빠지고, 레지스트리가 먼저 사라지면 배치의 포인터를 비운다.
          */
-        void addInstanceBatch( MeshInstanceBatch* pBatch );
+        void addInstanceBatch( ScenePrimitiveBatch* pBatch );
         /** @brief 인스턴스 배치를 제거합니다. 항목 구간을 지우고 뒤 배치의 위치를 당깁니다. 집합 세대가 오릅니다. */
-        void removeInstanceBatch( MeshInstanceBatch* pBatch );
+        void removeInstanceBatch( ScenePrimitiveBatch* pBatch );
         /** @brief 배치의 항목 하나를 더티로 표시합니다. 그 항목의 프리미티브 번호에 플래그를 켭니다. */
-        void markInstanceDirty( MeshInstanceBatch* pBatch, uint32 index );
+        void markInstanceDirty( ScenePrimitiveBatch* pBatch, uint32 index );
         /** @brief 인스턴스 배치의 항목 목록입니다. 메시 컴포넌트 목록 뒤에 이어지는 프리미티브들입니다. */
         const vector<PrimitiveInstanceEntry>& getInstanceEntries() const { return _listInstanceEntry; }
         /** @brief 프리미티브 번호 공간의 크기입니다(메시 컴포넌트 수 + 인스턴스 항목 수). */
@@ -144,11 +147,11 @@ namespace sw
         static void storeWordBit( atomic<uint64>* pArrWord, uint32 slot, bool bDirty );
 
         /** @brief 등록된 메시 컴포넌트입니다. 소유하지 않습니다(수명은 GameObject 가 관리합니다). */
-        vector<MeshComponent*> _listPrimitive;
+        vector<ScenePrimitive*> _listPrimitive;
         /** @brief `_listPrimitive` 와 같은 위치의 트랜스폼 슬롯 번호입니다(`getTransformSlots`). */
         vector<uint32>                 _listPrimitiveTransformSlot;
         vector<PrimitiveInstanceEntry> _listInstanceEntry; ///< 배치 순서대로 이어 붙은 항목들
-        vector<MeshInstanceBatch*>     _listInstanceBatch; ///< 등록된 배치. 빼기와 자리 당기기에 씁니다
+        vector<ScenePrimitiveBatch*>   _listInstanceBatch; ///< 등록된 배치. 빼기와 자리 당기기에 씁니다
         /**
          * @brief 슬롯마다 "바뀌었다" 비트입니다. **워드 하나가 슬롯 64 개**입니다. 원자값이라 워커 여럿이 동시에 표시해도 됩니다.
          * @details `consumeDirty` 는 워드마다 exchange 한 번(8000 슬롯이면 125 번)이고 켜진 비트만 골라 순회한다. 슬롯마다 원자 바이트로 두면
