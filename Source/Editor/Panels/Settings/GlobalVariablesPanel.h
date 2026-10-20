@@ -43,6 +43,8 @@ namespace sw::editor
         void drawContent() override;
         /** @brief 검색·그룹화·리셋·프리셋 툴바를 그립니다. */
         void drawVariableToolbar( GlobalVariableManager& gvm );
+        /** @brief "Presets..." 단추의 팝업입니다. 이름을 붙여 저장하고, 저장한 프리셋 목록에서 불러옵니다. */
+        void drawPresetsPopup();
         /** @brief 핀 고정된 즐겨찾기 변수 섹션을 그립니다. */
         void drawPinnedSection( GlobalVariableManager& gvm );
         /** @brief 모듈별 묶음 또는 평면 모드로 변수 테이블을 그립니다. */
