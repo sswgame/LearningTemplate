@@ -17,6 +17,8 @@
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Base/World/Environment/WorldClock.h"
 
+#include <algorithm>
+
 namespace sw
 {
     SW_LOG_CALLER( "AIDirector" );
@@ -32,16 +34,6 @@ namespace sw
             static constexpr uint32 kStateVersion   = 1;
             static constexpr uint32 kPoolMinBytes   = 20; ///< 풀 하나의 최소 바이트(타이머 · 예산 · 마지막 고른 시각 · 골라 둔 것 · 항목 수)
             static constexpr uint32 kEncounterBytes = 8;  ///< 항목 하나(마지막 시각 · 횟수)
-
-            static bool containsAny( const vector<hashed_string>& listName, const vector<hashed_string>& listOther )
-            {
-                for ( const hashed_string& entry : listName )
-                {
-                    if ( VectorUtil::contains( listOther, entry ) )
-                        return true;
-                }
-                return false;
-            }
 
             template <typename T>
             static uint64 hashValue( uint64 hash, const T& value )
@@ -403,7 +395,8 @@ namespace sw
         const bool bAboveMax = encounter._maxIntensity >= 0.0f && _intensity > encounter._maxIntensity;
         if ( bBelowMin || bAboveMax )
             mask |= AIDirectorBlock::kIntensity;
-        if ( encounter._listArea.empty() == false && AIDirectorInternal::containsAny( encounter._listArea, _context._listAreaTag ) == false )
+        if ( encounter._listArea.empty() == false && std::any_of( encounter._listArea.begin(), encounter._listArea.end(), [this]( const hashed_string& area )
+        { return VectorUtil::contains( _context._listAreaTag, area ); } ) == false )
             mask |= AIDirectorBlock::kArea;
         if ( encounter._condition.isEmpty() == false )
         {

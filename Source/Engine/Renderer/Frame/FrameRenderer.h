@@ -539,7 +539,7 @@ namespace sw
          * @brief 그림자 패스 하나를 그립니다 — 지금 뷰의 캐스케이드 타일과 프레임의 점광 · 스폿 타일을 아틀라스의 자기 칸(뷰포트)에 그립니다.
          * @details 타일마다 `g_LightViewProj` 를 그 타일의 행렬로 바꿔 씬을 한 번씩 그린다. 컬링은 모든 타일을 덮는 상자(`ViewShadowData::_cullViewProj`) 하나다.
          */
-        void drawShadowTiles( FramePassContext& context, RHIDescriptorIndex passCb, bool bTransparentBatch );
+        void drawShadowTiles( FramePassContext& context, bool bTransparentBatch );
         /** @brief 이번 프레임 한 뷰의 그림자 패스가 그리는 타일 수입니다(상수 버퍼 링 용량 산정). */
         uint32 computeShadowTileCountPerView() const;
         /**
@@ -568,11 +568,11 @@ namespace sw
         /** @brief 배치의 머티리얼 데이터 버퍼(GPUScene)를 패스 레지스트리에 "SwMaterials" 이름으로 등록합니다. */
         void registerMaterialBuffer( FramePassContext& context, const GPUMeshBatch& batch, RHIPipelineStateHandle pso );
         /** @brief 씬 메시를 그립니다. GPUScene 이 올라가 있으면 drawGPUBatches 로 넘기고, 아니면 상태만 맞춥니다. */
-        void drawSceneMeshes( FramePassContext& context, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass );
+        void drawSceneMeshes( FramePassContext& context, RHIPipelineStateHandle pso, bool bTransparentPass );
         /** @brief GPUScene 배치를 간접 드로우로 그립니다. */
-        void drawGPUBatches( FramePassContext& context, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass );
+        void drawGPUBatches( FramePassContext& context, RHIPipelineStateHandle pso, bool bTransparentPass );
         /** @brief 풀스크린 삼각형을 그립니다. */
-        void drawFullscreen( FramePassContext& context, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex );
+        void drawFullscreen( FramePassContext& context, RHIPipelineStateHandle pso );
         /**
          * @brief 방출기마다의 입자 그리기(`GPUScene::getParticleBatches`)를 지금 열린 투명 패스에 그립니다. 메시 투명 배치 **뒤**에 부릅니다.
          * @details 입자 PSO(`ensureParticlePSO`)를 걸고 PassCB 를 바인딩한 뒤 `VfxParticleRenderer::drawBatches` 로 넘긴다. 순서는 주 시점의 정렬 순서다(추가 뷰도 같은 순서로 그린다).
