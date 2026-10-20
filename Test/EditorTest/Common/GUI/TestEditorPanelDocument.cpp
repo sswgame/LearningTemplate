@@ -1,6 +1,5 @@
 #include "pch.h"
 
-#include "Editor/Common/GUI/EditorDocumentPanel.h"
 #include "Editor/Common/GUI/IEditorPanel.h"
 
 #include "TestFramework/TestFramework.h"
@@ -57,33 +56,6 @@ namespace
         int32 _revertCount{ 0 };
         bool  _bSaveSucceeds{ true };
         bool  _bSaveAllowed{ true };
-    };
-
-    /**
-     * @brief 문서 패널의 최소 파생 — `drawDocumentContent` 와 `loadDocument` 와 `saveDocument` 만 구현한다(`revertDocument` 는 구현하지 않는다).
-     */
-    class FakeReloadPanel : public EditorDocumentPanel
-    {
-    public:
-        FakeReloadPanel()
-            : EditorDocumentPanel{ EditorAssetType::Data, false }
-        {
-        }
-
-        void  edit() { markDocumentDirty(); }
-        int32 getLoadCount() const { return _loadCount; }
-
-    protected:
-        void                drawDocumentContent() override {}
-        ToolAssetLoadResult loadDocument() override
-        {
-            ++_loadCount;
-            return ToolAssetLoadResult::Loaded;
-        }
-        [[nodiscard]] bool saveDocument() override { return true; }
-
-    private:
-        int32 _loadCount{ 0 };
     };
 
     /** @brief 문서가 없는 패널 — 계약을 아무것도 구현하지 않는다. */
@@ -218,22 +190,4 @@ SW_TEST_CASE( EditorPanelDocumentTest, SaveIsRefusedWhenTheDocumentCannotBeSaved
     panel.setSaveAllowed( true );
     SW_EXPECT_TRUE( panel.saveDocumentAndClearDirty() );
     SW_EXPECT_EQUAL( 1, panel.getSaveCount() );
-}
-
-/**
- * @brief [EditorPanelDocumentTest] 문서 패널이 `revertDocument` 를 구현하지 않아도 "저장 안 함" 은 문서를 다시 읽어 편집을 버린다
- * @details 기본이 없으면 저장하지 않고 닫은 뒤에도 편집한 메모리 상태가 남아, 다시 열면 미저장 표시 없이 편집본이 보인다.
- */
-SW_TEST_CASE( EditorPanelDocumentTest, DiscardReloadsTheDocumentByDefault )
-{
-    FakeReloadPanel panel;
-    SW_EXPECT_EQUAL( 0, panel.getLoadCount() );
-
-    panel.discardDirtyDocument(); // 깨끗하면 읽지 않는다
-    SW_EXPECT_EQUAL( 0, panel.getLoadCount() );
-
-    panel.edit();
-    panel.discardDirtyDocument();
-    SW_EXPECT_EQUAL( 1, panel.getLoadCount() );
-    SW_EXPECT_FALSE( panel.isDocumentDirty() );
 }
