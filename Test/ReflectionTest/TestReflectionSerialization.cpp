@@ -7,6 +7,7 @@
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/ReflectionRPC.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Serialization/Base/ContainerVisitor.h"
 #include "Engine/Serialization/Base/SchemaMigrate.h"
 #include "Engine/Serialization/Base/SchemaMigrationRegistry.h"
 #include "Engine/Serialization/Base/SerializeContext.h"
@@ -3650,8 +3651,8 @@ SW_TEST_CASE( ReflectionSerializationTest, PropertyValueHelpersTouchOnlyTheirOwn
     target._bCanJump      = SW_FALSE;
 
     // 같은 바이트의 다른 비트가 달라도 그 비트가 같으면 같다.
-    SW_EXPECT_TRUE( sw::SerializerUtil::arePropertyValuesEqual( *pInvuln, &source, &target, context ) );
-    SW_EXPECT_FALSE( sw::SerializerUtil::arePropertyValuesEqual( *pActive, &source, &target, context ) );
+    SW_EXPECT_TRUE( sw::SerializerUtil::arePropertyValuesEqual( *pInvuln, sw::ObjectAddress{ &source }, sw::ObjectAddress{ &target }, context ) );
+    SW_EXPECT_FALSE( sw::SerializerUtil::arePropertyValuesEqual( *pActive, sw::ObjectAddress{ &source }, sw::ObjectAddress{ &target }, context ) );
 
     // 옮기면 그 비트만 바뀐다.
     SW_ASSERT_TRUE( sw::SerializerUtil::copyPropertyValue( *pActive, sw::ObjectAddress{ &source }, sw::MutableObjectAddress{ &target }, context ) );
@@ -3679,11 +3680,11 @@ SW_TEST_CASE( ReflectionSerializationTest, PropertyValueHelpersTouchOnlyTheirOwn
         { 3 }
     };
     sw::NestedContainerActor gridTarget;
-    SW_EXPECT_FALSE( sw::SerializerUtil::arePropertyValuesEqual( *pGrid, &gridSource, &gridTarget, context ) );
+    SW_EXPECT_FALSE( sw::SerializerUtil::arePropertyValuesEqual( *pGrid, sw::ObjectAddress{ &gridSource }, sw::ObjectAddress{ &gridTarget }, context ) );
     SW_ASSERT_TRUE( sw::SerializerUtil::copyPropertyValue( *pGrid, sw::ObjectAddress{ &gridSource }, sw::MutableObjectAddress{ &gridTarget }, context ) );
     SW_ASSERT_EQUAL( size_t( 2 ), gridTarget._grid.size() );
     SW_EXPECT_EQUAL( 3, gridTarget._grid[1][0] );
-    SW_EXPECT_TRUE( sw::SerializerUtil::arePropertyValuesEqual( *pGrid, &gridSource, &gridTarget, context ) );
+    SW_EXPECT_TRUE( sw::SerializerUtil::arePropertyValuesEqual( *pGrid, sw::ObjectAddress{ &gridSource }, sw::ObjectAddress{ &gridTarget }, context ) );
     SW_EXPECT_STREQ( "[2]", sw::SerializerUtil::formatPropertyText( *pGrid, sw::ObjectAddress{ &gridTarget }, context ).c_str() );
 }
 
@@ -3747,6 +3748,62 @@ SW_TEST_CASE( ReflectionSerializationTest, ValueAddressTextDoesNotAddPropertyOff
     static_assert( std::is_invocable_v<ApplyBinaryFn, const sw::PropertyInfo&, sw::MutableObjectAddress, const uint8*, size_t, const sw::SerializeContext&, sw::BinaryWireVersion> );
     static_assert( !std::is_invocable_v<ApplyBinaryFn, const sw::PropertyInfo&, sw::MutableValueAddress, const uint8*, size_t, const sw::SerializeContext&, sw::BinaryWireVersion> );
     static_assert( !std::is_invocable_v<ApplyBinaryFn, const sw::PropertyInfo&, void*, const uint8*, size_t, const sw::SerializeContext&, sw::BinaryWireVersion> );
+
+    // 기본값 · 비교는 객체 주소, 강제 변환 읽기 · 중첩 컨테이너 · 컨테이너 방문자는 값 주소만 받는다(맨 포인터도 안 된다).
+    using ApplyDefaultFn      = decltype( &sw::SerializerUtil::applyPropertyDefault );
+    using AreEqualFn          = decltype( &sw::SerializerUtil::arePropertyValuesEqual );
+    using CoerceBinaryFn      = decltype( &sw::tryCoerceBinaryPayload );
+    using SerializeNestedFn   = decltype( &sw::SerializerUtil::serializeNestedContainerBinary );
+    using DeserializeNestedFn = decltype( &sw::SerializerUtil::deserializeNestedContainerBinary );
+    using VisitWriteFn        = decltype( &sw::ContainerVisitor::write );
+    using VisitReadFn         = decltype( &sw::ContainerVisitor::read );
+    using WriterMapEntryFn    = decltype( &sw::IContainerWriter::beginMapEntry );
+    using WriterOwnedFn       = decltype( &sw::IContainerWriter::writeOwnedPointer );
+    using WriterScalarFn      = decltype( &sw::IContainerWriter::writeScalar );
+    using ReaderMapKeyFn      = decltype( &sw::IContainerReader::readMapKey );
+    using ReaderScalarFn      = decltype( &sw::IContainerReader::readScalar );
+    using ReaderValueObjectFn = decltype( &sw::IContainerReader::readValueObject );
+    using Nested              = sw::NestedContainerInfo;
+    static_assert( std::is_invocable_v<ApplyDefaultFn, const sw::PropertyInfo&, sw::MutableObjectAddress, const sw::SerializeContext&> );
+    static_assert( !std::is_invocable_v<ApplyDefaultFn, const sw::PropertyInfo&, sw::MutableValueAddress, const sw::SerializeContext&> );
+    static_assert( !std::is_invocable_v<ApplyDefaultFn, const sw::PropertyInfo&, sw::ObjectAddress, const sw::SerializeContext&> ); // 읽기 주소로는 쓰지 못한다
+    static_assert( !std::is_invocable_v<ApplyDefaultFn, const sw::PropertyInfo&, void*, const sw::SerializeContext&> );
+    static_assert( std::is_invocable_v<AreEqualFn, const sw::PropertyInfo&, sw::ObjectAddress, sw::MutableObjectAddress, const sw::SerializeContext&> );
+    static_assert( !std::is_invocable_v<AreEqualFn, const sw::PropertyInfo&, sw::ValueAddress, sw::ValueAddress, const sw::SerializeContext&> );
+    static_assert( !std::is_invocable_v<AreEqualFn, const sw::PropertyInfo&, const void*, const void*, const sw::SerializeContext&> );
+    static_assert( std::is_invocable_v<CoerceBinaryFn, sw::MutableValueAddress, sw::hashed_string, const uint8*, size_t, const sw::SerializeContext&, sw::hashed_string, sw::BinaryWireVersion> );
+    static_assert( !std::is_invocable_v<CoerceBinaryFn, sw::MutableObjectAddress, sw::hashed_string, const uint8*, size_t, const sw::SerializeContext&, sw::hashed_string, sw::BinaryWireVersion> );
+    static_assert( !std::is_invocable_v<CoerceBinaryFn, sw::ValueAddress, sw::hashed_string, const uint8*, size_t, const sw::SerializeContext&, sw::hashed_string, sw::BinaryWireVersion> );
+    static_assert( !std::is_invocable_v<CoerceBinaryFn, void*, sw::hashed_string, const uint8*, size_t, const sw::SerializeContext&, sw::hashed_string, sw::BinaryWireVersion> );
+    static_assert( std::is_invocable_v<SerializeNestedFn, sw::ValueAddress, const Nested&, ByteBuffer&, const sw::SerializeContext&> );
+    static_assert( !std::is_invocable_v<SerializeNestedFn, sw::ObjectAddress, const Nested&, ByteBuffer&, const sw::SerializeContext&> );
+    static_assert( !std::is_invocable_v<SerializeNestedFn, const void*, const Nested&, ByteBuffer&, const sw::SerializeContext&> );
+    static_assert( std::is_invocable_v<DeserializeNestedFn, sw::MutableValueAddress, const Nested&, const uint8*, size_t, size_t&, const sw::SerializeContext&, sw::BinaryWireVersion> );
+    static_assert( !std::is_invocable_v<DeserializeNestedFn, sw::MutableObjectAddress, const Nested&, const uint8*, size_t, size_t&, const sw::SerializeContext&, sw::BinaryWireVersion> );
+    static_assert( !std::is_invocable_v<DeserializeNestedFn, void*, const Nested&, const uint8*, size_t, size_t&, const sw::SerializeContext&, sw::BinaryWireVersion> );
+    static_assert( std::is_invocable_v<VisitWriteFn, sw::ValueAddress, const Nested&, sw::IContainerWriter&, const sw::SerializeContext&> );
+    static_assert( !std::is_invocable_v<VisitWriteFn, sw::ObjectAddress, const Nested&, sw::IContainerWriter&, const sw::SerializeContext&> );
+    static_assert( !std::is_invocable_v<VisitWriteFn, const void*, const Nested&, sw::IContainerWriter&, const sw::SerializeContext&> );
+    static_assert( std::is_invocable_v<VisitReadFn, sw::MutableValueAddress, const Nested&, sw::IContainerReader&, const sw::SerializeContext&> );
+    static_assert( !std::is_invocable_v<VisitReadFn, sw::MutableObjectAddress, const Nested&, sw::IContainerReader&, const sw::SerializeContext&> );
+    static_assert( !std::is_invocable_v<VisitReadFn, void*, const Nested&, sw::IContainerReader&, const sw::SerializeContext&> );
+    static_assert( std::is_invocable_v<WriterMapEntryFn, sw::IContainerWriter&, sw::ValueAddress, const sw::hashed_string&> );
+    static_assert( !std::is_invocable_v<WriterMapEntryFn, sw::IContainerWriter&, sw::ObjectAddress, const sw::hashed_string&> );
+    static_assert( !std::is_invocable_v<WriterMapEntryFn, sw::IContainerWriter&, const void*, const sw::hashed_string&> );
+    static_assert( std::is_invocable_v<WriterOwnedFn, sw::IContainerWriter&, sw::ObjectAddress> );
+    static_assert( !std::is_invocable_v<WriterOwnedFn, sw::IContainerWriter&, sw::ValueAddress> ); // 포인터 칸(값)이 아니라 가리키는 객체다
+    static_assert( !std::is_invocable_v<WriterOwnedFn, sw::IContainerWriter&, const void*> );
+    static_assert( std::is_invocable_v<WriterScalarFn, sw::IContainerWriter&, sw::ValueAddress, const sw::hashed_string&, sw::ContainerSlot> );
+    static_assert( !std::is_invocable_v<WriterScalarFn, sw::IContainerWriter&, sw::ObjectAddress, const sw::hashed_string&, sw::ContainerSlot> );
+    static_assert( !std::is_invocable_v<WriterScalarFn, sw::IContainerWriter&, const void*, const sw::hashed_string&, sw::ContainerSlot> );
+    static_assert( std::is_invocable_v<ReaderMapKeyFn, sw::IContainerReader&, sw::MutableValueAddress, const sw::hashed_string&> );
+    static_assert( !std::is_invocable_v<ReaderMapKeyFn, sw::IContainerReader&, sw::ValueAddress, const sw::hashed_string&> ); // 읽기 주소로는 쓰지 못한다
+    static_assert( !std::is_invocable_v<ReaderMapKeyFn, sw::IContainerReader&, void*, const sw::hashed_string&> );
+    static_assert( std::is_invocable_v<ReaderScalarFn, sw::IContainerReader&, sw::MutableValueAddress, const sw::hashed_string&, sw::ContainerSlot> );
+    static_assert( !std::is_invocable_v<ReaderScalarFn, sw::IContainerReader&, sw::MutableObjectAddress, const sw::hashed_string&, sw::ContainerSlot> );
+    static_assert( !std::is_invocable_v<ReaderScalarFn, sw::IContainerReader&, void*, const sw::hashed_string&, sw::ContainerSlot> );
+    static_assert( std::is_invocable_v<ReaderValueObjectFn, sw::IContainerReader&, sw::MutableValueAddress, const sw::hashed_string&, const sw::TypeInfo&, sw::ContainerSlot> );
+    static_assert( !std::is_invocable_v<ReaderValueObjectFn, sw::IContainerReader&, void*, const sw::hashed_string&, const sw::TypeInfo&, sw::ContainerSlot> );
 
     sw::BitfieldTestActor actor;
     actor._score = 42;

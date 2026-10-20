@@ -25,24 +25,24 @@ namespace sw
                     case ContainerElementKind::NestedContainer:
                     {
                         writer.beginNestedContainer( slot );
-                        ContainerVisitor::write( pElement, *nested._elementNested, writer, context );
+                        ContainerVisitor::write( ValueAddress{ pElement }, *nested._elementNested, writer, context );
                         writer.endNestedContainer( slot );
                         break;
                     }
                     case ContainerElementKind::OwnedPointer:
                     {
                         const void* const* ppObject = static_cast<const void* const*>( pElement );
-                        writer.writeOwnedPointer( ppObject != nullptr ? *ppObject : nullptr );
+                        writer.writeOwnedPointer( ObjectAddress{ ppObject != nullptr ? *ppObject : nullptr } );
                         break;
                     }
                     case ContainerElementKind::ValueObject:
                     {
-                        writer.writeValueObject( pElement, nested._elementTypeName, *plan._pElementType, slot );
+                        writer.writeValueObject( ValueAddress{ pElement }, nested._elementTypeName, *plan._pElementType, slot );
                         break;
                     }
                     case ContainerElementKind::Scalar:
                     {
-                        writer.writeScalar( pElement, nested._elementTypeName, slot );
+                        writer.writeScalar( ValueAddress{ pElement }, nested._elementTypeName, slot );
                         break;
                     }
                 }
@@ -54,13 +54,13 @@ namespace sw
                 switch ( plan._kind )
                 {
                     case ContainerElementKind::NestedContainer:
-                        return ContainerVisitor::read( pElement, *nested._elementNested, reader, context );
+                        return ContainerVisitor::read( MutableValueAddress{ pElement }, *nested._elementNested, reader, context );
                     case ContainerElementKind::OwnedPointer:
                         return ContainerReadResult::StreamBroken; // 시퀀스만 — readSequence 가 먼저 가른다(맵 값 계획은 이 모양을 만들지 않는다)
                     case ContainerElementKind::ValueObject:
-                        return reader.readValueObject( pElement, nested._elementTypeName, *plan._pElementType, slot );
+                        return reader.readValueObject( MutableValueAddress{ pElement }, nested._elementTypeName, *plan._pElementType, slot );
                     case ContainerElementKind::Scalar:
-                        return reader.readScalar( pElement, nested._elementTypeName, slot );
+                        return reader.readScalar( MutableValueAddress{ pElement }, nested._elementTypeName, slot );
                 }
                 return ContainerReadResult::StreamBroken;
             }
@@ -120,7 +120,7 @@ namespace sw
                 {
                     map.defaultConstructKey( keyBytes.data() );
                     map.defaultConstructValue( valueBytes.data() );
-                    const ContainerReadResult keyResult = reader.readMapKey( keyBytes.data(), nested._keyTypeName );
+                    const ContainerReadResult keyResult = reader.readMapKey( MutableValueAddress{ keyBytes.data() }, nested._keyTypeName );
                     // 키를 못 읽어도 자리를 알면 값을 읽는다 — 바이너리는 값을 지나야 다음 항목 자리에 선다.
                     ContainerReadResult valueResult{ ContainerReadResult::StreamBroken };
                     if ( keyResult != ContainerReadResult::StreamBroken )
@@ -161,8 +161,9 @@ namespace sw
         return plan;
     }
 
-    void ContainerVisitor::write( const void* pContainer, const NestedContainerInfo& nested, IContainerWriter& writer, const SerializeContext& context )
+    void ContainerVisitor::write( const ValueAddress container, const NestedContainerInfo& nested, IContainerWriter& writer, const SerializeContext& context )
     {
+        const void* const pContainer = container.get();
         if ( pContainer == nullptr || nested._wrapper == nullptr )
             return;
 
@@ -187,15 +188,16 @@ namespace sw
         writer.beginMap( pMap->getSize( pContainer ) );
         pMap->forEach( pContainer, [&]( const void* pKey, const void* pValue )
         {
-            writer.beginMapEntry( pKey, nested._keyTypeName );
+            writer.beginMapEntry( ValueAddress{ pKey }, nested._keyTypeName );
             ContainerVisitorInternal::writeElement( pValue, nested, plan, ContainerSlot::MapValue, writer, context );
             writer.endMapEntry();
         } );
         writer.endMap();
     }
 
-    ContainerReadResult ContainerVisitor::read( void* pContainer, const NestedContainerInfo& nested, IContainerReader& reader, const SerializeContext& context )
+    ContainerReadResult ContainerVisitor::read( const MutableValueAddress container, const NestedContainerInfo& nested, IContainerReader& reader, const SerializeContext& context )
     {
+        void* const pContainer = container.get();
         if ( pContainer == nullptr || nested._wrapper == nullptr )
             return ContainerReadResult::StreamBroken;
 

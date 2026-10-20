@@ -202,7 +202,7 @@ namespace sw
                         // 기록 타입을 모르면(지운 enum, 지운 타입) 바이트의 뜻을 모른다. 크기로 짐작해 읽지 않는다(지운 enum 의 열거자 이름 해시
                         // 4 바이트가 int32 로 바뀐 필드에 그대로 읽히게 된다).
                         if ( wireTypeName.empty() == false )
-                            bApplied = tryCoerceBinaryPayload( pPropPtr, prop._typeName, pData + payloadStart, payloadSize, context, wireTypeName, wireVersion );
+                            bApplied = tryCoerceBinaryPayload( MutableValueAddress{ pPropPtr }, prop._typeName, pData + payloadStart, payloadSize, context, wireTypeName, wireVersion );
                     }
                     else
                     {
@@ -249,7 +249,7 @@ namespace sw
                     // 이 목적이 다루지 않는 필드(Transient, 저작의 RuntimeState, 옵트인 세이브의 나머지)는 현재 값 그대로다. 기본값으로 되돌리지 않는다.
                     const bool bOutsidePurpose = SerializerUtil::shouldSerializeProperty( typeInfo, listProp[propIdx], context ) == false;
                     if ( bMatched == false && bOutsidePurpose == false )
-                        SerializerUtil::applyPropertyDefault( listProp[propIdx], pInstance, context );
+                        SerializerUtil::applyPropertyDefault( listProp[propIdx], MutableObjectAddress{ pInstance }, context );
                 }
                 // 선언된 범위는 부르는 두 쪽(`deserialize` · `deserializeSoft`)이 읽기 공통 끝으로 본다 — 소프트 읽기가 "스트림이 깨짐"과 "범위 밖 값"을 가르게.
                 return true;
