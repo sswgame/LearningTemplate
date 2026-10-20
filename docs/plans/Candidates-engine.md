@@ -144,6 +144,12 @@
 남은 것: `-DSW_ENABLE_UNITY_BUILD` 로 익명 함수 이름 충돌을 한 번 봅니다.
 함정: `DuplicateAnonymousFunction` 은 `Source/` 만 보므로 `Test/` 는 직접 확인합니다.
 
+### ModuleHostStateSizeQuery
+제목: 핫 리로드 상태 저장의 크기 묻기 두 번 직렬화
+옛번호: 없음
+왜 필요한가: `GameInstanceBase::captureSnapshot` 은 봉투를 한 번만 씁니다. 하지만 `ModuleHost::captureGameState` 는 C-ABI `serializeState( nullptr, &size )` 로 크기를 먼저 묻고 내용을 다시 받으므로 씬 전체와 상태 훅이 두 번 돕니다. 두 번째 봉투가 더 커지면 버퍼가 모자라 저장이 실패합니다.
+남은 것: `GameAPI` 의 `serializeState` 를 호스트가 준 버퍼 할당 콜백으로 한 번에 채우는 모양으로 바꾸고 `ModuleHost.cpp` 의 두 번 호출을 하나로 합칩니다. 모듈 ABI 가 바뀝니다.
+
 ## 기능
 
 ### NavMeshExtensions

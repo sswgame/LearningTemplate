@@ -74,7 +74,8 @@ namespace sw
 
         /**
          * @brief Shipping/Gameplay: 현재 씬과 게임 상태를 인메모리 버퍼에 캡처합니다(체크포인트 · 타임 리와인드는 `Snapshot`, 세이브 파일은 `SaveGame`).
-         * @details 같은 봉투를 두 목적이 함께 쓰므로 목적은 부르는 쪽이 정한다. 읽는 쪽(`restoreSnapshot`)도 같은 목적이어야 한다.
+         * @details 같은 봉투(씬 오브젝트, 커스텀 상태, 컴포넌트 상태)를 두 목적이 함께 쓰므로 목적은 부르는 쪽이 정한다. 읽는 쪽(`restoreSnapshot`)도 같은 목적이어야 한다.
+         *          봉투는 한 번 직렬화해 @p outBytes 에 담는다. 크기만 묻는 C-ABI 약속은 `serializeState` 가 이 함수 위에서 받는다.
          */
         bool captureSnapshot( SerializePurpose purpose, vector<uint8>& outBytes );
 
@@ -273,9 +274,7 @@ namespace sw
          */
         [[nodiscard]] bool deserializeSceneObjects( SerializePurpose purpose, const uint8* pData, size_t size, SceneObjectFormat format,
                                                     vector<ComponentStateStore::SavedComponentID>& outListRemap );
-        /** @brief 게임 상태 봉투(씬 오브젝트, 커스텀 상태, 컴포넌트 상태)를 목적 @p purpose 로 씁니다. 버퍼가 없으면 크기만 돌려줍니다. */
-        [[nodiscard]] bool writeStateEnvelope( SerializePurpose purpose, void* pOutBuffer, uint32* pInOutSize );
-        /** @brief `writeStateEnvelope` 로 같은 목적으로 쓴 봉투를 읽습니다. */
+        /** @brief `captureSnapshot` 이 같은 목적으로 쓴 봉투를 읽습니다. */
         [[nodiscard]] bool readStateEnvelope( SerializePurpose purpose, const void* pInBuffer, uint32 size );
 
         BootstrapConfig _bootstrap;  ///< 팩 루트와 gamesettings
