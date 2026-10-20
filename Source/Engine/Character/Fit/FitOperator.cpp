@@ -31,9 +31,16 @@ namespace sw
                 return false;
             }
 
-            static float32 findArgument( const FitPairContext& pair, const utf8* pName, float32 fallback )
+            static constexpr float32 kDefaultPushStrength = 1.0f; ///< 상호작용이 `strength` 를 적지 않은 밀어내기의 세기
+
+            /**
+             * @brief 상호작용 인자 @p pName 이 있으면 그 값, 없으면 @p profileValue 입니다.
+             * @details 인자는 프로필 값(또는 이 연산자의 이름 있는 기본값)을 덮는 선택 칸이다 — 대신할 값은 늘 데이터 · 이름 있는 상수에서 온다.
+             */
+            static float32 findArgumentOr( const FitPairContext& pair, const utf8* pName, float32 profileValue )
             {
-                return pair._pInteraction == nullptr ? fallback : pair._pInteraction->findArgument( hashed_string( pName ), fallback );
+                const std::optional<float32> argument = pair._pInteraction != nullptr ? pair._pInteraction->findArgument( hashed_string( pName ) ) : std::nullopt;
+                return argument.has_value() ? *argument : profileValue;
             }
 
             /**
@@ -101,10 +108,10 @@ namespace sw
                 const float32       softness = 1.0f - inner._pProfile->_rigidity;
                 if ( softness <= 0.0f )
                     return;
-                const float32             strength     = FitOperatorInternal::findArgument( pair, "strength", inner._pProfile->_shrinkStrength ) * softness;
-                const float32             margin       = FitOperatorInternal::findArgument( pair, "margin", FitOperatorInternal::kDefaultMargin );
-                const float32             search       = FitOperatorInternal::findArgument( pair, "searchDistance", FitOperatorInternal::kDefaultSearchDistance );
-                const float32             falloffWidth = FitOperatorInternal::findArgument( pair, "falloffWidth", inner._pProfile->_falloffWidth );
+                const float32             strength     = FitOperatorInternal::findArgumentOr( pair, "strength", inner._pProfile->_shrinkStrength ) * softness;
+                const float32             margin       = FitOperatorInternal::findArgumentOr( pair, "margin", FitOperatorInternal::kDefaultMargin );
+                const float32             search       = FitOperatorInternal::findArgumentOr( pair, "searchDistance", FitOperatorInternal::kDefaultSearchDistance );
+                const float32             falloffWidth = FitOperatorInternal::findArgumentOr( pair, "falloffWidth", inner._pProfile->_falloffWidth );
                 const vector<FitRingDef>& listRing     = outer._pInput->_pFitData->getRings();
                 if ( listRing.empty() == false )
                 {
@@ -200,10 +207,10 @@ namespace sw
                 const float32       softness = 1.0f - outer._pProfile->_rigidity;
                 if ( softness <= 0.0f )
                     return;
-                const float32     strength     = FitOperatorInternal::findArgument( pair, "strength", 1.0f ) * softness;
-                const float32     distance     = FitOperatorInternal::findArgument( pair, "distance", outer._pProfile->_pushDistance );
-                const float32     search       = FitOperatorInternal::findArgument( pair, "searchDistance", FitOperatorInternal::kDefaultSearchDistance );
-                const float32     falloffWidth = FitOperatorInternal::findArgument( pair, "falloffWidth", outer._pProfile->_falloffWidth );
+                const float32     strength     = FitOperatorInternal::findArgumentOr( pair, "strength", FitOperatorInternal::kDefaultPushStrength ) * softness;
+                const float32     distance     = FitOperatorInternal::findArgumentOr( pair, "distance", outer._pProfile->_pushDistance );
+                const float32     search       = FitOperatorInternal::findArgumentOr( pair, "searchDistance", FitOperatorInternal::kDefaultSearchDistance );
+                const float32     falloffWidth = FitOperatorInternal::findArgumentOr( pair, "falloffWidth", outer._pProfile->_falloffWidth );
                 const SurfaceBvh& surface      = state.getLayerSurface( pair._innerPart );
                 const uint16      innerFilter  = static_cast<uint16>( pair._innerPart );
                 vector<float32>   listAmount( outer._listPosition.size(), 0.0f );

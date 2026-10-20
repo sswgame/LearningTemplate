@@ -838,7 +838,7 @@ SW_TEST_CASE( InputMapTest, SaveAndLoadAllBindingKinds )
  * @brief [InputMapTest] 유저 바인딩의 패드 번호 · 수정 키 마스크가 범위를 벗어나면 그 바인딩을 버리고 알린다 — 감아서 엉뚱한 패드에 묶지 않는다
  * @details `static_cast<uint8>( getAttributeInt( … ) )` 로 읽으면 `pad="256"` 은 0 번, `pad="-1"` 은 255 번 패드가 되고
  *          (`pad="4"` 는 없는 패드), `modifierMask="257"` 은 Ctrl 이 된다 — 모두 말없이. 패드 번호는 슬롯 수(`kMaxGamepadSlot`),
- *          마스크는 아는 비트(`ModifierKey::All`) 안에서만 받고(`XMLNode::tryGetAttributeIntInRange`), 벗어나면 경고하고 그 바인딩을 버린다.
+ *          마스크는 아는 비트(`ModifierKey::All`) 안에서만 받고, 벗어나면 오류를 남기고 그 바인딩을 버린다.
  */
 SW_TEST_CASE( InputMapTest, UserBindingsRejectOutOfRangePadAndModifierMask )
 {
@@ -848,7 +848,7 @@ SW_TEST_CASE( InputMapTest, UserBindingsRejectOutOfRangePadAndModifierMask )
     const sw::string keyS         = sw::KeyCodeUtil::toName( sw::Key::S );
 
     sw::string xml = "<UserBindings>";
-    xml += "<bind action=\"StickOk\" kind=\"" + stickKind + "\" stick=\"Right\" pad=\"3\"/>";
+    xml += "<bind action=\"StickOk\" kind=\"" + stickKind + "\" stick=\"Right\" pad=\"3\" deadzone=\"0.15\" outerDeadzone=\"1\" exponent=\"1\"/>";
     xml += "<bind action=\"StickWrapsHigh\" kind=\"" + stickKind + "\" pad=\"256\"/>";
     xml += "<bind action=\"StickWrapsLow\" kind=\"" + stickKind + "\" pad=\"-1\"/>";
     xml += "<bind action=\"StickNoSuchPad\" kind=\"" + stickKind + "\" pad=\"4\"/>";
@@ -887,8 +887,8 @@ SW_TEST_CASE( InputMapTest, UserBindingsRejectOutOfRangePadAndModifierMask )
     SW_EXPECT_TRUE_MSG( inputMap.hasAction( "PadButtonWraps" ) == false, "단일 버튼의 pad=\"256\" 이 0 번 패드로 감겼습니다" );
 
     // 버린 것마다 한 줄씩 알린다.
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "attribute 'pad'" ) == 4, logs.joined().c_str() );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "attribute 'modifierMask'" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "<bind pad=" ) == 4, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "<bind modifierMask=" ) == 1, logs.joined().c_str() );
 }
 
 /**
@@ -953,7 +953,8 @@ SW_TEST_CASE( InputMapTest, UserBindingsWithMissingAttributesDoNotCrash )
     sw::InputMap inputMap;
     {
         SW_TEST_DEFENSIVE_SCOPE( "user bindings whose kind-specific attributes are missing" );
-        SW_EXPECT_TRUE( inputMap.loadUserBindings( path ) );
+        // 저장 쪽이 늘 적는 수치(deadzone · scale · radius 등)가 빠진 파일은 깨진 파일이다 — 그 바인딩을 넣지 않고 읽기를 실패로 돌린다.
+        SW_EXPECT_FALSE( inputMap.loadUserBindings( path ) );
     }
     SW_EXPECT_TRUE( inputMap.hasAction( "BareSingleKey" ) == false );
     SW_EXPECT_TRUE( inputMap.hasAction( "BareSingleMouse" ) == false );

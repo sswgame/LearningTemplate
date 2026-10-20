@@ -122,7 +122,7 @@ namespace
             void     execute( FitSolveState& state, const FitPairContext& pair ) const override
             {
                 const FitPartState& inner  = state._listPart[pair._innerPart];
-                const float32       amount = pair._pInteraction->findArgument( hashed_string( "amount" ), 0.0f );
+                const float32       amount = pair._pInteraction->findArgument( hashed_string( "amount" ) ).value_or( 0.0f );
                 for ( uint32 vertex = 0; vertex < inner._listPosition.size(); ++vertex )
                 {
                     const float3 desired = inner._listBindPosition[vertex] + inner._listNormal[vertex] * amount;

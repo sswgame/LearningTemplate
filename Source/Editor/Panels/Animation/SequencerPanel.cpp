@@ -469,11 +469,13 @@ namespace sw::editor
         for ( uint32 channelIndex = 0; channelIndex < channelCount; ++channelIndex )
         {
             ImGui::PushID( static_cast<int32>( channelIndex ) );
-            const bool    bKeyed     = track.findChannelKey( channelIndex, frame ) != invalid_index::kUint32;
-            const bool    bRotation  = SequencerPanelInternal::isRotationChannel( track, channelIndex );
-            const float32 fallback   = channelIndex < kSequenceTransformChannelCount ? arrCurrent[channelIndex] : 0.0f;
-            const float32 displayMul = bRotation ? MathUtil::kRadianToDegree : 1.0f;
-            float32       value      = track.evaluateChannel( channelIndex, frame, fallback ) * displayMul;
+            const bool bKeyed    = track.findChannelKey( channelIndex, frame ) != invalid_index::kUint32;
+            const bool bRotation = SequencerPanelInternal::isRotationChannel( track, channelIndex );
+            // 키가 없는 채널은 대상의 지금 값을 보인다(트랜스폼 채널만 지금 값이 있다).
+            const float32                currentValue = channelIndex < kSequenceTransformChannelCount ? arrCurrent[channelIndex] : 0.0f;
+            const float32                displayMul   = bRotation ? MathUtil::kRadianToDegree : 1.0f;
+            const std::optional<float32> keyedValue   = track.evaluateChannel( channelIndex, frame );
+            float32                      value        = ( keyedValue.has_value() ? *keyedValue : currentValue ) * displayMul;
             // 키가 있는 프레임이면 표식을 강조색으로 — 언리얼 Sequencer 채널 줄의 키 마름모 자리.
             ImGui::TextColored( bKeyed ? ImGui::GetStyleColorVec4( ImGuiCol_CheckMark ) : ImGui::GetStyleColorVec4( ImGuiCol_TextDisabled ), bKeyed ? "<>" : "--" );
             ImGui::SameLine();

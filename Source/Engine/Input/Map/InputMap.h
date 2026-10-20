@@ -197,6 +197,7 @@ namespace sw
         inline constexpr float32 kHoldThresholdMin                 = 0.05f;
         inline constexpr float32 kHoldThresholdMax                 = 10.0f;
         inline constexpr float32 kNeverPressedSentinel             = 1.0e9f;
+        inline constexpr float32 kStickDeadzone                    = 0.15f; ///< 입력 맵 XML 의 스틱 바인딩이 `deadzone` 을 적지 않았을 때(패드 스틱의 흔한 중심 흔들림)
     } // namespace InputMapDefaults
 
     /// @brief XML 레이어 정의입니다(우선순위, enabled, blockLower, alwaysOn).
@@ -389,7 +390,7 @@ namespace sw
          * @param axisScale 축마다 배율입니다. 1 이 아니거나 @p bScaleByDelta 면 값이 [-1, 1] 을 넘는 이동량이 되어 마우스 이동(`bindMouseDelta`)과 같은 액션에 합쳐집니다.
          * @param bScaleByDelta 켜면 값에 프레임 시간(초)을 곱합니다. 오른쪽 스틱을 `Look` 에 묶을 때 @p axisScale 을 초당 픽셀로 적으면 프레임률과 무관한 속도가 됩니다.
          */
-        void bindGamepadStick2D( const hashed_string& action, GamepadStick stick = GamepadStick::Left, float32 deadzone = 0.15f, const hashed_string& layer = {}, uint8 padIndex = 0, float32 outerDeadzone = 1.0f, float32 responseExponent = 1.0f,
+        void bindGamepadStick2D( const hashed_string& action, GamepadStick stick = GamepadStick::Left, float32 deadzone = InputMapDefaults::kStickDeadzone, const hashed_string& layer = {}, uint8 padIndex = 0, float32 outerDeadzone = 1.0f, float32 responseExponent = 1.0f,
                                  float2 axisScale = float2{ 1.0f, 1.0f }, bool bScaleByDelta = false );
         void bindMouseDelta( const hashed_string& action, float32 sensitivity = 1.0f, const hashed_string& layer = {} );
         /** @brief 마우스 휠을 1D 축으로 등록합니다. 값은 이번 프레임 휠 이동량(한 칸 = 1, 위가 +)에 @p scale 을 곱한 값이며, 휠을 굴린 프레임에만 0 이 아닙니다. */

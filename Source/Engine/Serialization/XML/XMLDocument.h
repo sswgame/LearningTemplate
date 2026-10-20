@@ -160,6 +160,29 @@ namespace sw
             outValue                = read == XMLValueRead::Read ? std::optional<T>{ value } : std::nullopt;
             return read != XMLValueRead::Invalid;
         }
+        /**
+         * @brief 없어도 되는 숫자 속성을 [@p minValue, @p maxValue] 안에서 읽습니다(스키마 구조체 없이 손으로 읽는 곳).
+         * @details 없으면 @p inoutValue 를 두고 true 다 — 기본값은 부르는 쪽이 넣어 둔 값(Def 의 초기값)이고 여기서 정하지 않는다.
+         *          깨진 값이나 범위 밖 값은 원소 · 속성 이름으로 오류를 남기고 false 이며 @p inoutValue 는 그대로다(자르지 않는다).
+         */
+        template <typename T>
+        [[nodiscard]] bool readOptionalAttributeInRange( const utf8* pName, T minValue, T maxValue, T& inoutValue ) const
+        {
+            T                  value{};
+            const XMLValueRead read = parseAttributeValue( pName, value );
+            if ( read == XMLValueRead::Absent )
+                return true;
+            if ( read == XMLValueRead::Invalid )
+                return false;
+            const bool bInRange = minValue <= value && value <= maxValue;
+            if ( bInRange == false )
+            {
+                reportOutOfRange( pName, static_cast<float64>( value ), static_cast<float64>( minValue ), static_cast<float64>( maxValue ) );
+                return false;
+            }
+            inoutValue = value;
+            return true;
+        }
 
         /** @brief 첫 속성을 반환합니다. */
         XMLAttribute getFirstAttribute() const;
@@ -259,6 +282,8 @@ namespace sw
         XMLValueRead parseChildValue( const utf8* pName, string& outValue ) const;
         /** @brief 필수 속성 · 자식이 없다고 원소 이름과 함께 오류로 남깁니다. */
         void reportMissing( const utf8* pKind, const utf8* pName ) const;
+        /** @brief 속성 값이 범위 밖이라고 원소 이름과 함께 오류로 남깁니다. */
+        void reportOutOfRange( const utf8* pName, float64 value, float64 minValue, float64 maxValue ) const;
 
         friend class XMLDocument;
         /** @brief pugixml 노드 포인터로 핸들을 만듭니다. */

@@ -133,8 +133,8 @@ namespace sw
         int32 getFrameCount() const { return static_cast<int32>( _listFrame.size() ); }
         /** @brief 프레임 하나입니다. 범위 밖이면 nullptr 입니다. */
         const SpriteClipFrame* findFrame( int32 frameIndex ) const;
-        /** @brief 프레임을 보여 줄 시간(초)입니다. 프레임에 시간이 없거나(0 이하) 범위 밖이면 @p fallbackSeconds 입니다. */
-        float32 getFrameDurationSeconds( int32 frameIndex, float32 fallbackSeconds ) const;
+        /** @brief 프레임을 보여 줄 시간(초)입니다. 프레임에 시간이 없거나(0 이하) 범위 밖이면 @p animatorFrameSeconds 입니다. */
+        float32 getFrameDurationSeconds( int32 frameIndex, float32 animatorFrameSeconds ) const;
         /** @brief 이름으로 애니메이션을 찾습니다. 없으면 nullptr 입니다. */
         const SpriteClipAnimation* findAnimation( string_view name ) const;
         /**
@@ -143,8 +143,8 @@ namespace sw
          *          애니메이션 하나다. 이름 붙은 것이 있는데 그 이름이 없으면 false 를 반환한다.
          */
         bool findFrameRange( string_view name, SpriteClipAnimation& outRange ) const;
-        /** @brief 클립 타임라인에서 프레임 @p frameIndex 가 시작하는 시각(초)을 반환합니다. 앞 프레임들의 시간 합이며, 시간이 없는 프레임은 @p fallbackSeconds 로 셉니다. */
-        float32 computeFrameStartSeconds( int32 frameIndex, float32 fallbackSeconds ) const;
+        /** @brief 클립 타임라인에서 프레임 @p frameIndex 가 시작하는 시각(초)을 반환합니다. 앞 프레임들의 시간 합이며, 시간이 없는 프레임은 @p animatorFrameSeconds 로 셉니다. */
+        float32 computeFrameStartSeconds( int32 frameIndex, float32 animatorFrameSeconds ) const;
         /** @brief 트랜스폼 키가 하나라도 있으면 true 입니다. */
         bool hasTransformKeys() const { return _listKey.empty() == false; }
         /**

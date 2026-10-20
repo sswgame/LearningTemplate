@@ -151,7 +151,7 @@ SW_TEST_CASE( TelemetryTest, SchemaRejectsUnknownNamesAndKeepsWhatWasLoaded )
         {R"(<TelemetrySchema><Event id="a"><Field name="x" type="vector"/></Event></TelemetrySchema>)",     "unknown type 'vector'"},
         { R"(<TelemetrySchema><Event id="a"><Field name="seq" type="int"/></Event></TelemetrySchema>)",                  "reserved"},
         {                              R"(<TelemetrySchema><Event id="game.kill"/></TelemetrySchema>)",            "declared twice"},
-        {                           R"(<TelemetrySchema><Event id="a" sample="2"/></TelemetrySchema>)",              "outside 0..1"},
+        {                           R"(<TelemetrySchema><Event id="a" sample="2"/></TelemetrySchema>)",            "> is outside ["},
         { R"(<TelemetrySchema><Event id="b"/><Pipeline batchEvents="9" speed="1"/></TelemetrySchema>)", "unknown attribute 'speed'"},
     };
     for ( const BadCase& bad : arrBad )

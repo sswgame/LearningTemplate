@@ -30,10 +30,10 @@ namespace
 SW_TEST_CASE( FloatCurveTest, EmptyUsesFallbackAndEndsHold )
 {
     FloatCurve empty;
-    SW_EXPECT_NEAR_EQUAL( 7.0f, empty.evaluate( 1.0f, 7.0f ), TestFloatCurveInternal::kTolerance );
+    SW_EXPECT_FALSE( empty.evaluate( 1.0f ).has_value() );
     const FloatCurve curve = TestFloatCurveInternal::makeTwoKeys( CurveInterpolation::Linear );
-    SW_EXPECT_NEAR_EQUAL( 0.0f, curve.evaluate( -5.0f ), TestFloatCurveInternal::kTolerance );
-    SW_EXPECT_NEAR_EQUAL( 4.0f, curve.evaluate( 9.0f ), TestFloatCurveInternal::kTolerance );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, curve.evaluate( -5.0f ).value(), TestFloatCurveInternal::kTolerance );
+    SW_EXPECT_NEAR_EQUAL( 4.0f, curve.evaluate( 9.0f ).value(), TestFloatCurveInternal::kTolerance );
 }
 
 /**
@@ -42,10 +42,10 @@ SW_TEST_CASE( FloatCurveTest, EmptyUsesFallbackAndEndsHold )
 SW_TEST_CASE( FloatCurveTest, ConstantAndLinear )
 {
     const FloatCurve constant = TestFloatCurveInternal::makeTwoKeys( CurveInterpolation::Constant );
-    SW_EXPECT_NEAR_EQUAL( 0.0f, constant.evaluate( 1.5f ), TestFloatCurveInternal::kTolerance );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, constant.evaluate( 1.5f ).value(), TestFloatCurveInternal::kTolerance );
     const FloatCurve linear = TestFloatCurveInternal::makeTwoKeys( CurveInterpolation::Linear );
-    SW_EXPECT_NEAR_EQUAL( 1.0f, linear.evaluate( 0.5f ), TestFloatCurveInternal::kTolerance );
-    SW_EXPECT_NEAR_EQUAL( 3.0f, linear.evaluate( 1.5f ), TestFloatCurveInternal::kTolerance );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, linear.evaluate( 0.5f ).value(), TestFloatCurveInternal::kTolerance );
+    SW_EXPECT_NEAR_EQUAL( 3.0f, linear.evaluate( 1.5f ).value(), TestFloatCurveInternal::kTolerance );
 }
 
 /**
@@ -55,15 +55,15 @@ SW_TEST_CASE( FloatCurveTest, CubicIsHermite )
 {
     FloatCurve curve = TestFloatCurveInternal::makeTwoKeys( CurveInterpolation::Cubic );
     // 끝 키 둘의 자동 접선은 평평(0)이다 — 가운데는 (0 + 4) / 2, 1/4 지점은 h01(0.25) × 4 = 0.15625 × 4.
-    SW_EXPECT_NEAR_EQUAL( 2.0f, curve.evaluate( 1.0f ), TestFloatCurveInternal::kTolerance );
-    SW_EXPECT_NEAR_EQUAL( 0.625f, curve.evaluate( 0.5f ), TestFloatCurveInternal::kTolerance );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, curve.evaluate( 1.0f ).value(), TestFloatCurveInternal::kTolerance );
+    SW_EXPECT_NEAR_EQUAL( 0.625f, curve.evaluate( 0.5f ).value(), TestFloatCurveInternal::kTolerance );
     // 접선 1 · 1, t = 0.25: h10 = 0.140625, h01 = 0.15625, h11 = -0.046875 → 0.140625 × 2 + 0.15625 × 4 - 0.046875 × 2 = 0.8125.
     curve._listKey[0]._bAutoTangent  = false;
     curve._listKey[0]._leaveTangent  = 1.0f;
     curve._listKey[1]._bAutoTangent  = false;
     curve._listKey[1]._arriveTangent = 1.0f;
-    SW_EXPECT_NEAR_EQUAL( 2.0f, curve.evaluate( 1.0f ), TestFloatCurveInternal::kTolerance );
-    SW_EXPECT_NEAR_EQUAL( 0.8125f, curve.evaluate( 0.5f ), TestFloatCurveInternal::kTolerance );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, curve.evaluate( 1.0f ).value(), TestFloatCurveInternal::kTolerance );
+    SW_EXPECT_NEAR_EQUAL( 0.8125f, curve.evaluate( 0.5f ).value(), TestFloatCurveInternal::kTolerance );
 }
 
 /**

@@ -38,10 +38,10 @@ namespace sw
         };
     } // namespace
 
-    float32 FloatCurve::evaluate( float32 time, float32 fallback ) const
+    std::optional<float32> FloatCurve::evaluate( float32 time ) const
     {
         if ( _listKey.empty() )
-            return fallback;
+            return std::nullopt;
         if ( time <= _listKey.front()._time )
             return _listKey.front()._value;
         if ( time >= _listKey.back()._time )
@@ -116,7 +116,7 @@ namespace sw
         for ( uint32 sampleIndex = 0; sampleIndex <= FloatCurveInternal::kRangeSampleCount; ++sampleIndex )
         {
             const float32 time  = startTime + span * static_cast<float32>( sampleIndex ) / static_cast<float32>( FloatCurveInternal::kRangeSampleCount );
-            const float32 value = evaluate( time );
+            const float32 value = *evaluate( time ); // 위에서 키가 있음을 확인했다
             outMin              = MathUtil::min( outMin, value );
             outMax              = MathUtil::max( outMax, value );
         }

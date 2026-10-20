@@ -25,6 +25,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include <optional>
+
 namespace sw
 {
     struct AppearanceGeometry;
@@ -92,8 +94,8 @@ namespace sw
         hashed_string       _operator{};
         vector<FitArgument> _listArgument{};
 
-        /** @brief 인자 값입니다. 없으면 @p fallback 입니다. */
-        float32 findArgument( const hashed_string& name, float32 fallback ) const;
+        /** @brief 인자 값입니다. 이 상호작용이 적지 않은 인자면 비어 있습니다(연산자가 프로필 값으로 대신한다). */
+        [[nodiscard]] std::optional<float32> findArgument( const hashed_string& name ) const;
     };
 } // namespace sw
 

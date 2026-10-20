@@ -55,7 +55,11 @@ namespace sw
         SpawnTable();
 
         /** @brief @p time 의 예산 배율입니다. 곡선 점 사이는 선형으로 잇고, 끝 밖은 끝 값을 쓰며, 곡선이 없으면 1 입니다. */
-        float32 computeScale( float32 time ) const { return _curve.evaluate( time, 1.0f ); }
+        float32 computeScale( float32 time ) const
+        {
+            const std::optional<float32> scale = _curve.evaluate( time );
+            return scale.has_value() ? *scale : 1.0f;
+        }
 
         const SpawnEntryDef*         findEntry( const hashed_string& id ) const { return _catalog.find( id ); }
         int32                        findEntryIndex( const hashed_string& id ) const { return _catalog.findIndex( id ); }

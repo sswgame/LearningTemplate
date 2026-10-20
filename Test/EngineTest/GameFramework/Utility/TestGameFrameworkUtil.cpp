@@ -470,32 +470,40 @@ SW_TEST_CASE( GameFrameworkUtilTest, DataXMLReadFieldsLeavesRangesToTheCommonRea
 }
 
 /**
- * @brief [GameFrameworkUtilTest] 데이터 XML 의 커브 — `<Curve><Key time value interpolation/></Curve>` 를 FloatCurve 로 읽는다(시각 순 정렬 · 값 하한 · 기본 선형)
- * @details 키트 꺾은선(GameCurve)이 FloatCurve 로 옮겨 간 뒤의 데이터 형식이다. 모르는 속성이나 보간 이름은 경고하고 false 를 반환한다.
+ * @brief [GameFrameworkUtilTest] 데이터 XML 의 커브 — `<Curve><Key time value interpolation/></Curve>` 를 FloatCurve 로 읽는다(시각 순 정렬 · 기본 선형)
+ * @details 키트 꺾은선(GameCurve)이 FloatCurve 로 옮겨 간 뒤의 데이터 형식이다. 하한 아래 값 · 빠진 값 · 모르는 속성 · 보간 이름은 오류이고 false 다(자르지 않는다).
  */
 SW_TEST_CASE( GameFrameworkUtilTest, DataXMLReadsFloatCurveKeys )
 {
     sw::XMLDocument doc;
     XMLNode         root;
-    SW_ASSERT_TRUE( GameDataXML::parseRoot( doc, R"(<Table><Curve><Key time="600" value="2"/><Key time="0" value="-1"/></Curve></Table>)", "GameFrameworkUtilTest", "Table", root ) );
+    SW_ASSERT_TRUE( GameDataXML::parseRoot( doc, R"(<Table><Curve><Key time="600" value="2"/><Key time="0" value="0.5"/></Curve></Table>)", "GameFrameworkUtilTest", "Table", root ) );
     FloatCurve curve;
     SW_EXPECT_TRUE( GameDataXML::readFloatCurve( root, "Curve", 0.5f, curve, "GameFrameworkUtilTest" ) );
     SW_ASSERT_EQUAL( 2u, static_cast<uint32>( curve._listKey.size() ) );
     SW_EXPECT_NEAR_EQUAL( 0.0f, curve._listKey[0]._time, 1.0e-6f );
-    SW_EXPECT_NEAR_EQUAL( 0.5f, curve._listKey[0]._value, 1.0e-6f );        // 하한으로 올린다
-    SW_EXPECT_NEAR_EQUAL( 1.25f, curve.evaluate( 300.0f, 1.0f ), 1.0e-4f ); // 키 사이는 선형
-    SW_EXPECT_NEAR_EQUAL( 2.0f, curve.evaluate( 900.0f, 1.0f ), 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, curve._listKey[0]._value, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 1.25f, curve.evaluate( 300.0f ).value(), 1.0e-4f ); // 키 사이는 선형
+    SW_EXPECT_NEAR_EQUAL( 2.0f, curve.evaluate( 900.0f ).value(), 1.0e-6f );
 
-    // 원소가 없으면 키도 없다 — 커브가 대체값을 쓴다
+    // 하한 아래 값은 올리지 않고 오류다 — 그 키는 들어가지 않는다.
+    SW_ASSERT_TRUE( GameDataXML::parseRoot( doc, R"(<Table><Curve><Key time="0" value="-1"/></Curve></Table>)", "GameFrameworkUtilTest", "Table", root ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a curve key below the minimum is a data error" );
+        SW_EXPECT_FALSE( GameDataXML::readFloatCurve( root, "Curve", 0.5f, curve, "GameFrameworkUtilTest" ) );
+    }
+    SW_EXPECT_TRUE( curve._listKey.empty() );
+
+    // 원소가 없으면 키도 없다 — 값이 없는 커브다(부르는 쪽이 뜻을 정한다).
     SW_ASSERT_TRUE( GameDataXML::parseRoot( doc, "<Table/>", "GameFrameworkUtilTest", "Table", root ) );
     SW_EXPECT_TRUE( GameDataXML::readFloatCurve( root, "Curve", 0.0f, curve, "GameFrameworkUtilTest" ) );
     SW_EXPECT_TRUE( curve._listKey.empty() );
-    SW_EXPECT_NEAR_EQUAL( 1.0f, curve.evaluate( 5.0f, 1.0f ), 1.0e-6f );
+    SW_EXPECT_FALSE( curve.evaluate( 5.0f ).has_value() );
 
     // 보간 이름과 틀린 속성
     SW_ASSERT_TRUE( GameDataXML::parseRoot( doc, R"(<Table><Curve><Key time="0" value="0" interpolation="constant"/><Key time="10" value="4"/></Curve></Table>)", "GameFrameworkUtilTest", "Table", root ) );
     SW_EXPECT_TRUE( GameDataXML::readFloatCurve( root, "Curve", 0.0f, curve, "GameFrameworkUtilTest" ) );
-    SW_EXPECT_NEAR_EQUAL( 0.0f, curve.evaluate( 9.0f, 1.0f ), 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, curve.evaluate( 9.0f ).value(), 1.0e-6f );
     SW_ASSERT_TRUE( GameDataXML::parseRoot( doc, R"(<Table><Curve><Key time="0" scale="1"/></Curve></Table>)", "GameFrameworkUtilTest", "Table", root ) );
     SW_TEST_DEFENSIVE_SCOPE( "an unknown <Key> attribute is a data warning" );
     SW_EXPECT_FALSE( GameDataXML::readFloatCurve( root, "Curve", 0.0f, curve, "GameFrameworkUtilTest" ) );

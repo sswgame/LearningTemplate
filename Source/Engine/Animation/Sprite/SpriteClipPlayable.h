@@ -25,9 +25,9 @@ namespace sw
 
         /**
          * @brief 구간을 정합니다. 클립이나 구간이 바뀔 때마다 호출합니다(길이를 다시 셉니다).
-         * @param fallbackSeconds 시간이 없는 프레임(0 ms)이 머무는 시간입니다.
+         * @param animatorFrameSeconds 시간이 없는 프레임(0 ms)이 머무는 시간입니다.
          */
-        void configure( const SpriteClipAsset* pClip, int32 firstFrame, int32 frameCount, bool bLoop, float32 fallbackSeconds );
+        void configure( const SpriteClipAsset* pClip, int32 firstFrame, int32 frameCount, bool bLoop, float32 animatorFrameSeconds );
 
         float32 getPlayLength() const override { return _playLength; }
         bool    isLoopingByDefault() const override { return _bLoop == SW_TRUE; }
@@ -49,7 +49,7 @@ namespace sw
     private:
         AnimationNotifyTrack   _notifyTrack; ///< 지금 구간의 알림(구간을 정할 때 클립에서 베낀다)
         const SpriteClipAsset* _pClip;
-        float32                _fallbackSeconds;
+        float32                _animatorFrameSeconds;
         float32                _playLength;
         float32                _rangeStartSeconds;
         int32                  _firstFrame;

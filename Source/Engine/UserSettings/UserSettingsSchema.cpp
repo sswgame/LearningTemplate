@@ -19,6 +19,11 @@ namespace sw
     {
         struct UserSettingsSchemaInternal
         {
+            static constexpr int32 kMaxSchemaVersion = 1 << 20; ///< 판 번호의 상한(깨진 큰 수를 거른다)
+            static constexpr int32 kMaxBindIndex     = 15;      ///< 액션 하나의 바인딩 번호 상한
+            static constexpr int32 kMaxCoreCount     = 4096;    ///< 자동 감지 규칙의 코어 수 상한
+            static constexpr int32 kMaxMemoryMb      = 1 << 30; ///< 자동 감지 규칙의 메모리(MB) 상한
+
             /** @brief 키 바인딩 설정이 대상을 적지 않았을 때 쓰는 핸들러입니다(입력 맵 리바인딩). */
             static constexpr utf8 kKeyBindingHandler[] = "input.keyBinding";
 
@@ -87,15 +92,21 @@ namespace sw
                 return false;
             }
 
-            /** @brief 실수 하나를 읽습니다. 속성이 없으면 @p fallback 을 쓰고 true 를 반환하며, 텍스트가 숫자가 아니면 오류를 알리고 false 를 반환합니다. */
-            [[nodiscard]] static bool readNumberAttribute( const XMLNode& node, const utf8* pName, float64 fallback, float64& outValue, string_view sourceName )
+            /**
+             * @brief 실수 하나를 읽습니다. 속성이 없으면 @p inoutValue 를 두고 true 입니다(기본값은 정의 구조체의 초기값 — 여기서 정하지 않는다).
+             * @details 텍스트가 숫자가 아니면 오류를 알리고 false 이며 @p inoutValue 는 그대로입니다.
+             */
+            [[nodiscard]] static bool readNumberAttribute( const XMLNode& node, const utf8* pName, float64& inoutValue, string_view sourceName )
             {
                 const string_view text = node.getAttributeText( pName );
-                outValue               = fallback;
                 if ( text.empty() )
                     return true;
-                if ( StringUtil::parseDouble( text, outValue ) )
+                float64 value{};
+                if ( StringUtil::parseDouble( text, value ) )
+                {
+                    inoutValue = value;
                     return true;
+                }
                 SW_LOG_ERROR( "%#: <%#> attribute '%#' is not a number: '%#'", sourceName, node.getName(), pName, text );
                 return false;
             }
@@ -320,8 +331,8 @@ namespace sw
         // 다 읽은 뒤에만 합친다. 반쯤 읽은 덧붙이기가 남으면 다음 검사가 엉뚱한 줄을 탓하기 때문이다.
         UserSettingsSchema overlay;
         bool               bOk = XMLNameCheck::reportUnknownAttributes( root, Internal::kArrRootAttribute, sourceName );
-        int32              version{ 0 };
-        if ( root.tryGetAttributeIntInRange( "version", 0, 0, 1 << 20, version ) == false )
+        int32              version{ 0 }; // 적지 않으면 판 0 이다
+        if ( root.readOptionalAttributeInRange( "version", 0, Internal::kMaxSchemaVersion, version ) == false )
             bOk = false;
         overlay._version = static_cast<uint32>( version );
 
@@ -385,14 +396,15 @@ namespace sw
                 bOk = Internal::parseConditions( child.getAttributeText( "enabledWhen" ), def, sourceName ) && bOk;
                 bOk = Internal::parsePlatforms( child.getAttributeText( "platforms" ), def._platformMask, sourceName, def._id ) && bOk;
 
-                float64 confirmSeconds{ 0.0 };
-                bOk                 = Internal::readNumberAttribute( child, "min", 0.0, def._minValue, sourceName ) && bOk;
-                bOk                 = Internal::readNumberAttribute( child, "max", 0.0, def._maxValue, sourceName ) && bOk;
-                bOk                 = Internal::readNumberAttribute( child, "step", 0.0, def._step, sourceName ) && bOk;
-                bOk                 = Internal::readNumberAttribute( child, "confirmSeconds", 0.0, confirmSeconds, sourceName ) && bOk;
-                def._confirmSeconds = static_cast<float32>( confirmSeconds );
-                int32 bindIndex{ 0 };
-                if ( child.tryGetAttributeIntInRange( "bindIndex", 0, 0, 15, bindIndex ) == false )
+                // 적지 않은 칸은 UserSettingDef 의 초기값이다.
+                float64 confirmSeconds = def._confirmSeconds;
+                bOk                    = Internal::readNumberAttribute( child, "min", def._minValue, sourceName ) && bOk;
+                bOk                    = Internal::readNumberAttribute( child, "max", def._maxValue, sourceName ) && bOk;
+                bOk                    = Internal::readNumberAttribute( child, "step", def._step, sourceName ) && bOk;
+                bOk                    = Internal::readNumberAttribute( child, "confirmSeconds", confirmSeconds, sourceName ) && bOk;
+                def._confirmSeconds    = static_cast<float32>( confirmSeconds );
+                int32 bindIndex        = static_cast<int32>( def._bindIndex );
+                if ( child.readOptionalAttributeInRange( "bindIndex", 0, Internal::kMaxBindIndex, bindIndex ) == false )
                     bOk = false;
                 def._bindIndex = static_cast<uint32>( bindIndex );
 
@@ -452,9 +464,9 @@ namespace sw
                         int32 minCores{ 0 };
                         int32 minMemoryMb{ 0 };
                         int32 minGPUMemoryMb{ 0 };
-                        bOk = groupChild.tryGetAttributeIntInRange( "minCores", 0, 0, 4096, minCores ) && bOk;
-                        bOk = groupChild.tryGetAttributeIntInRange( "minMemoryMb", 0, 0, 1 << 30, minMemoryMb ) && bOk;
-                        bOk = groupChild.tryGetAttributeIntInRange( "minGPUMemoryMb", 0, 0, 1 << 30, minGPUMemoryMb ) && bOk;
+                        bOk = groupChild.readOptionalAttributeInRange( "minCores", 0, Internal::kMaxCoreCount, minCores ) && bOk;
+                        bOk = groupChild.readOptionalAttributeInRange( "minMemoryMb", 0, Internal::kMaxMemoryMb, minMemoryMb ) && bOk;
+                        bOk = groupChild.readOptionalAttributeInRange( "minGPUMemoryMb", 0, Internal::kMaxMemoryMb, minGPUMemoryMb ) && bOk;
                         group._listAutoDetectRule.push_back( ScalabilityAutoDetectRule{ hashed_string( groupChild.getAttributeText( "preset" ) ),
                                                                                         static_cast<uint32>( minCores ), static_cast<uint32>( minMemoryMb ), static_cast<uint32>( minGPUMemoryMb ) } );
                     }
@@ -471,13 +483,13 @@ namespace sw
                 bOk = XMLNameCheck::reportUnknownAttributes( child, Internal::kArrUpgradeAttribute, sourceName ) && bOk;
                 UserSettingsUpgradeStep step;
                 int32                   fromVersion{ 0 };
-                bOk               = child.tryGetAttributeIntInRange( "version", 0, 0, 1 << 20, fromVersion ) && bOk;
+                bOk               = child.readOptionalAttributeInRange( "version", 0, Internal::kMaxSchemaVersion, fromVersion ) && bOk;
                 step._fromVersion = static_cast<uint32>( fromVersion );
                 step._key         = string( child.getAttributeText( "key" ) );
                 step._newKey      = string( child.getAttributeText( "to" ) );
                 step._fromValue   = string( child.getAttributeText( "valueFrom" ) );
                 step._toValue     = string( child.getAttributeText( "valueTo" ) );
-                bOk               = Internal::readNumberAttribute( child, "scale", 1.0, step._scale, sourceName ) && bOk;
+                bOk               = Internal::readNumberAttribute( child, "scale", step._scale, sourceName ) && bOk;
                 if ( Internal::findNamedValue( Internal::kArrUpgradeName, child.getAttributeText( "op" ), step._operation ) == false )
                 {
                     SW_LOG_ERROR( "%#: <Upgrade> has an unknown op '%#'", sourceName, child.getAttributeText( "op" ) );

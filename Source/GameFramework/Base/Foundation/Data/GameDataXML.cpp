@@ -91,23 +91,14 @@ namespace sw
                 return true;
             }
 
-            /** @brief `GameDataXML::readOptionalNumber` 의 몸통입니다. 범위 밖 값은 자르지 않고 오류입니다. */
+            /** @brief `GameDataXML::readOptionalNumber` 의 몸통입니다. 읽기 · 범위 검사는 `XMLNode` 하나가 하고, 여기서는 어느 파일인지만 덧붙입니다. */
             template <typename T>
             [[nodiscard]] static bool readOptionalInRange( const XMLNode& node, const utf8* pAttribute, string_view sourceName, T minValue, T maxValue, T& inoutValue )
             {
-                std::optional<T> value;
-                if ( node.readOptionalAttribute( pAttribute, value ) == false )
-                    return false;
-                if ( value.has_value() == false )
+                if ( node.readOptionalAttributeInRange( pAttribute, minValue, maxValue, inoutValue ) )
                     return true;
-                const bool bInRange = minValue <= *value && *value <= maxValue;
-                if ( bInRange == false )
-                {
-                    SW_LOG_ERROR( "%#: <%# %#=\"%#\"> is outside [%#, %#]", sourceName, node.getName(), pAttribute, *value, minValue, maxValue );
-                    return false;
-                }
-                inoutValue = *value;
-                return true;
+                SW_LOG_ERROR( "%#: <%#> has an invalid %# (listed above)", sourceName, node.getName(), pAttribute );
+                return false;
             }
 
             static bool isHandRead( string_view attribute, std::initializer_list<string_view> listHandRead )

@@ -126,10 +126,10 @@ SW_TEST_CASE( MeshModifierParamValueTest, StackDocumentKeepsCurveInterpolationAn
     SW_EXPECT_TRUE( shapeBack._listKey[2]._interpolation == CurveInterpolation::Constant );
     for ( const float32 time : { 0.1f, 0.4f, 0.6f, 0.9f } )
     {
-        SW_EXPECT_NEAR_EQUAL( shape._curve.evaluate( time ), shapeBack.evaluate( time ), 1e-5f );
+        SW_EXPECT_NEAR_EQUAL( shape._curve.evaluate( time ).value(), shapeBack.evaluate( time ).value(), 1e-5f );
     }
     SW_ASSERT_EQUAL( size_t{ 3 }, listBack.size() );
-    SW_EXPECT_NEAR_EQUAL( layerCurves._listCurve[0].evaluate( 0.3f ), listBack[0].evaluate( 0.3f ), 1e-5f );
+    SW_EXPECT_NEAR_EQUAL( layerCurves._listCurve[0].evaluate( 0.3f ).value(), listBack[0].evaluate( 0.3f ).value(), 1e-5f );
     SW_ASSERT_EQUAL( size_t{ 2 }, listBack[1]._listKey.size() );
     SW_EXPECT_FALSE( listBack[1]._listKey[0]._bAutoTangent );
     SW_EXPECT_NEAR_EQUAL( 0.5f, listBack[1]._listKey[0]._arriveTangent, 1e-6f );

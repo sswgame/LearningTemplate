@@ -2,5 +2,5 @@
 
 # 전체 훑기의 기준선 — 규칙마다 지금 남은 수(계획 문서 DataDriven 이 줄인다). 늘면 실패한다(커밋 훅은 추가한 줄만 본다).
 [baseline]
-AttributeFallback = 42
+AttributeFallback = 0
 TuningConstexpr = 45

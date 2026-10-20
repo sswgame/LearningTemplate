@@ -156,7 +156,7 @@ SW_TEST_CASE( AIDirectorTest, ProfileRejectsUnknownNames )
     SW_EXPECT_EQUAL( 3u, static_cast<uint32>( profile.getIntensity()._listSignal.size() ) );
     SW_EXPECT_EQUAL( 0, profile.getStartPhaseIndex() );
     SW_EXPECT_EQUAL( 1, profile.getPhases()[0]._listExit[0]._toIndex );
-    SW_EXPECT_NEAR_EQUAL( 1.5f, profile.getPhases()[0]._spawnCurve.evaluate( 5.0f ), 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 1.5f, profile.getPhases()[0]._spawnCurve.evaluate( 5.0f ).value(), 1.0e-6f );
     vector<hashed_string> listID;
     profile.collectEncounterIDs( listID );
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( listID.size() ) );

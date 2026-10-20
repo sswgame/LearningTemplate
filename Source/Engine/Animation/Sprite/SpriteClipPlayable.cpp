@@ -11,7 +11,7 @@ namespace sw
     SpriteClipPlayable::SpriteClipPlayable()
         : _notifyTrack{}
         , _pClip{ nullptr }
-        , _fallbackSeconds{ 1.0f / 12.0f }
+        , _animatorFrameSeconds{ 1.0f / 12.0f }
         , _playLength{ 1.0f / 12.0f }
         , _rangeStartSeconds{ 0.0f }
         , _firstFrame{ 0 }
@@ -20,15 +20,15 @@ namespace sw
     {
     }
 
-    void SpriteClipPlayable::configure( const SpriteClipAsset* pClip, int32 firstFrame, int32 frameCount, bool bLoop, float32 fallbackSeconds )
+    void SpriteClipPlayable::configure( const SpriteClipAsset* pClip, int32 firstFrame, int32 frameCount, bool bLoop, float32 animatorFrameSeconds )
     {
-        _pClip             = pClip;
-        _fallbackSeconds   = fallbackSeconds > 0.0f ? fallbackSeconds : 1.0f / 12.0f;
-        _firstFrame        = MathUtil::max( firstFrame, 0 );
-        _frameCount        = MathUtil::max( frameCount, 1 );
-        _bLoop             = bLoop ? SW_TRUE : SW_FALSE;
-        _rangeStartSeconds = ( _pClip != nullptr ) ? _pClip->computeFrameStartSeconds( _firstFrame, _fallbackSeconds ) : 0.0f;
-        _playLength        = computeFrameStart( _frameCount );
+        _pClip                = pClip;
+        _animatorFrameSeconds = animatorFrameSeconds > 0.0f ? animatorFrameSeconds : 1.0f / 12.0f;
+        _firstFrame           = MathUtil::max( firstFrame, 0 );
+        _frameCount           = MathUtil::max( frameCount, 1 );
+        _bLoop                = bLoop ? SW_TRUE : SW_FALSE;
+        _rangeStartSeconds    = ( _pClip != nullptr ) ? _pClip->computeFrameStartSeconds( _firstFrame, _animatorFrameSeconds ) : 0.0f;
+        _playLength           = computeFrameStart( _frameCount );
         // 구간의 알림은 같은 첫 프레임과 프레임 수를 가진 이름 붙은 구간에서 복사한다.
         _notifyTrack.clear();
         for ( size_t animationIndex = 0; _pClip != nullptr && animationIndex < _pClip->_listAnimation.size(); ++animationIndex )
@@ -46,7 +46,7 @@ namespace sw
 
     float32 SpriteClipPlayable::getFrameDuration( int32 frameInRange ) const
     {
-        return ( _pClip != nullptr ) ? _pClip->getFrameDurationSeconds( _firstFrame + frameInRange, _fallbackSeconds ) : _fallbackSeconds;
+        return ( _pClip != nullptr ) ? _pClip->getFrameDurationSeconds( _firstFrame + frameInRange, _animatorFrameSeconds ) : _animatorFrameSeconds;
     }
 
     float32 SpriteClipPlayable::computeFrameStart( int32 frameInRange ) const

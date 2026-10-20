@@ -17,6 +17,8 @@ namespace sw
     {
         struct TileSetAssetInternal
         {
+            static constexpr int32 kBlockedNavCost = 255; ///< `NavGrid` 의 막힘 값 — 이동 비용의 상한
+
             /** @brief 공백으로 나뉜 정수 목록을 읽습니다. 숫자가 아닌 것이 있으면 false 를 반환합니다. */
             [[nodiscard]] static bool parseIntList( string_view text, vector<int32>& outListValue )
             {
@@ -126,7 +128,8 @@ namespace sw
                 SW_LOG_ERROR( "%#: <%#> frames must be cell numbers", sourceName, node.getName() );
                 return false;
             }
-            outVisual._framesPerSecond = node.getAttributeFloat( "fps", 0.0f );
+            if ( node.readOptionalAttributeInRange( "fps", 0.0f, MathUtil::kMaxFloat, outVisual._framesPerSecond ) == false )
+                return false;
             if ( outVisual._listFrameCell.size() > 1 && outVisual._framesPerSecond <= 0.0f )
             {
                 SW_LOG_ERROR( "%#: <%#> has frames but no positive fps", sourceName, node.getName() );
@@ -135,7 +138,10 @@ namespace sw
         }
         else if ( node.findAttribute( "cell" ) != nullptr )
         {
-            outVisual._listFrameCell.push_back( node.getAttributeInt( "cell", -1 ) );
+            const std::optional<int32> cell = node.readRequiredAttribute<int32>( "cell" );
+            if ( cell.has_value() == false )
+                return false;
+            outVisual._listFrameCell.push_back( *cell );
         }
         else if ( bRequired )
         {
@@ -174,11 +180,14 @@ namespace sw
             return false;
 
         TileSetAsset loaded;
-        loaded._atlasPath              = string( root.getAttributeText( "atlas" ) );
-        loaded._normalAtlasPath        = string( root.getAttributeText( "normalAtlas" ) );
-        loaded._columnCount            = root.getAttributeInt( "columns", 1 );
-        loaded._rowCount               = root.getAttributeInt( "rows", 1 );
-        loaded._tileSize               = root.getAttributeFloat( "tileSize", 1.0f );
+        loaded._atlasPath       = string( root.getAttributeText( "atlas" ) );
+        loaded._normalAtlasPath = string( root.getAttributeText( "normalAtlas" ) );
+        // 적지 않은 칸은 TileSetAsset 의 초기값이다. 깨진 값은 읽기 실패다.
+        bool bFieldsValid = root.readOptionalAttributeInRange( "columns", MathUtil::kMinInt32, MathUtil::kMaxInt32, loaded._columnCount );
+        bFieldsValid      = root.readOptionalAttributeInRange( "rows", MathUtil::kMinInt32, MathUtil::kMaxInt32, loaded._rowCount ) && bFieldsValid;
+        bFieldsValid      = root.readOptionalAttributeInRange( "tileSize", -MathUtil::kMaxFloat, MathUtil::kMaxFloat, loaded._tileSize ) && bFieldsValid;
+        if ( bFieldsValid == false )
+            return false;
         const bool bInvalidTileSetSize = loaded._columnCount <= 0 || loaded._rowCount <= 0 || loaded._tileSize <= 0.0f;
         if ( bInvalidTileSetSize )
         {
@@ -213,9 +222,16 @@ namespace sw
             }
             if ( loaded.parseVisual( node, sourceName, true, brush._defaultVisual ) == false )
                 return false;
-            brush._bSolid                         = node.getAttributeBool( "solid", false ) ? SW_TRUE : SW_FALSE;
-            const int32 navCost                   = node.getAttributeInt( "navCost", 10 );
-            brush._navCost                        = static_cast<uint8>( MathUtil::clamp( navCost, 1, 255 ) );
+            // 적지 않은 칸은 TileBrush 의 초기값이다. 범위 밖 이동 비용은 자르지 않고 오류다.
+            std::optional<bool> bSolid;
+            int32               navCost = brush._navCost;
+            const bool          bBrushFieldsValid =
+                node.readOptionalAttribute( "solid", bSolid ) && node.readOptionalAttributeInRange( "navCost", 1, Internal::kBlockedNavCost, navCost );
+            if ( bBrushFieldsValid == false )
+                return false;
+            if ( bSolid.has_value() )
+                brush._bSolid = *bSolid ? SW_TRUE : SW_FALSE;
+            brush._navCost                        = static_cast<uint8>( navCost );
             const string_view outside             = node.getAttributeText( "outside" );
             const bool        bInvalidOutsideMode = outside.empty() == false && StringUtil::equals( outside, "same", true ) == false && StringUtil::equals( outside, "empty", true ) == false;
             if ( bInvalidOutsideMode )

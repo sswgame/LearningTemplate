@@ -46,14 +46,14 @@ namespace sw
 
 namespace sw
 {
-    float32 FitInteractionDef::findArgument( const hashed_string& name, float32 fallback ) const
+    std::optional<float32> FitInteractionDef::findArgument( const hashed_string& name ) const
     {
         for ( const FitArgument& argument : _listArgument )
         {
             if ( argument._name == name )
                 return argument._value;
         }
-        return fallback;
+        return std::nullopt;
     }
 } // namespace sw
 

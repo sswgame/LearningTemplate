@@ -429,6 +429,11 @@ namespace sw
         SW_LOG_ERROR( "<%#> has no required %# '%#'", getName(), pKind, pName );
     }
 
+    void XMLNode::reportOutOfRange( const utf8* pName, float64 value, float64 minValue, float64 maxValue ) const
+    {
+        SW_LOG_ERROR( "<%# %#=\"%#\"> is outside [%#, %#]", getName(), pName, value, minValue, maxValue );
+    }
+
     XMLNode XMLNode::findChild( const utf8* pName, bool bIgnoreCaseKeys ) const
     {
         const pugi::xml_node pNode = XMLDocumentInternal::asNode( _pNode );

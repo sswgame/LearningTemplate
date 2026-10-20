@@ -164,10 +164,12 @@ namespace sw
         {
             const string_view actionText = bindNode.getAttributeText( kActionAttr );
             const string_view slotText   = bindNode.getAttributeText( kSlotAttr );
-            int32             bindIndex  = 0;
-            InputSlot         slot{};
-            const bool        bUnreadableBind = actionText.empty() || bindNode.tryGetAttributeIntInRange( kIndexAttr, 0, 0, kMaxBindIndex, bindIndex ) == false ||
-                                         InputSlotUtil::tryParse( slotText, slot ) == false;
+            // 저장할 때 바인딩 번호를 늘 적는다 — 빠진 번호를 0 번으로 보지 않는다.
+            const std::optional<int32> index      = bindNode.readRequiredAttribute<int32>( kIndexAttr );
+            const int32                bindIndex  = index.has_value() ? *index : -1;
+            const bool                 bIndexOkay = 0 <= bindIndex && bindIndex <= kMaxBindIndex;
+            InputSlot                  slot{};
+            const bool                 bUnreadableBind = actionText.empty() || bIndexOkay == false || InputSlotUtil::tryParse( slotText, slot ) == false;
             if ( bUnreadableBind )
             {
                 SW_LOG_WARNING( "Shell user bindings '%#': a <bind> with action '%#' and slot '%#' cannot be read - skipped", filePath, string( actionText ).c_str(),
