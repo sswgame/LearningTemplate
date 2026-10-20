@@ -15,7 +15,10 @@
  *            이동은 멤버 레코드의 버전 조건과 한 트랜잭션에 들어가므로 그사이 내보내지거나 역할이 바뀌면 충돌로 다시 읽는다.
  *            맡기기는 길드 레코드를 다시 써서 해산과 겹치지 않게 하며, 창고에 남은 것이 있으면 해산(혼자 남은 길드장의 떠나기)은 `StorageNotEmpty` 이다.
  *
- *          PlayFab Groups 와 Nakama Groups(역할, 초대, 정원)에 해당한다. 레벨과 가입 신청은 게임이 구현한다.
+ *          PlayFab Groups 와 Nakama Groups(역할, 초대, 정원)에 해당한다.
+ *          - 레벨은 경험치(`addExperience`, 서버 시스템만)와 서버 설정의 레벨 표로 응답할 때 정한다. 표가 바뀌면 저장된 데이터를 고치지 않아도 레벨이 따라간다.
+ *          - 공개 길드(`_bOpenToApply`)에는 누구나 가입 신청을 내고 임원 이상이 받아들이거나 지운다. 신청은 `social_guild_application`(키 `<길드>/<계정>`)이며 7일 뒤 죽는다.
+ *            길드마다 살아 있는 신청은 50개까지이고, 새 신청을 받을 때 죽은 신청을 같은 트랜잭션에서 지운다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -43,10 +46,16 @@ namespace sw
         SetRole,
         SetNotice,
         Get,
-        Attach,     ///< 로그인한 계정의 길드를 찾는다. 완료는 없고 이벤트만 발생한다
-        Deposit,    ///< 내 계정에서 길드 창고로 옮긴다
-        Withdraw,   ///< 길드 창고에서 내 계정으로 옮긴다. 임원 이상
-        ListStorage ///< 길드 창고의 잔액 목록이다
+        Attach,           ///< 로그인한 계정의 길드를 찾는다. 완료는 없고 이벤트만 발생한다
+        Deposit,          ///< 내 계정에서 길드 창고로 옮긴다
+        Withdraw,         ///< 길드 창고에서 내 계정으로 옮긴다. 임원 이상
+        ListStorage,      ///< 길드 창고의 잔액 목록이다
+        SetJoinPolicy,    ///< 공개 길드를 켜고 끈다. 임원 이상
+        Apply,            ///< 공개 길드에 가입 신청을 낸다. 길드가 없는 계정만
+        ListApplications, ///< 살아 있는 신청 목록이다. 임원 이상
+        Approve,          ///< 신청을 받아들인다. 임원 이상
+        Reject,           ///< 신청을 지운다. 임원 이상
+        AddExperience     ///< 서버 시스템이 길드 경험치를 올린다(`addExperience`). 완료는 없다
     };
 } // namespace sw
 
@@ -82,10 +91,11 @@ namespace sw
         AccountID      _accountID{ kInvalidAccountID }; ///< 요청한 사람이다
         AccountID      _targetID{ kInvalidAccountID };  ///< 초대, 내보내기, 역할 변경의 대상이다
         uint64         _guildID{ 0 };                   ///< 수락할 길드이다
-        int64          _amount{ 0 };                    ///< Deposit · Withdraw 의 양이다
+        int64          _amount{ 0 };                    ///< Deposit · Withdraw 의 양, AddExperience 의 경험치이다
         int64          _nowMs{ 0 };
         GuildRole      _role{ GuildRole::Member };
         GuildOperation _operation{ GuildOperation::Get };
+        uint8          _bOpen{ SW_FALSE }; ///< SetJoinPolicy 의 값이다
     };
 } // namespace sw
 
@@ -94,8 +104,9 @@ namespace sw
     /** @brief 요청 하나의 완료입니다. */
     struct GuildCompletion
     {
-        GuildInfo                _info{};        ///< Create 에서는 id 와 이름이고 Get 에서는 멤버까지 담는다
-        vector<GuildStorageItem> _listStorage{}; ///< ListStorage 는 창고 전체, Deposit · Withdraw 는 옮긴 자산의 창고 잔액 하나이다
+        GuildInfo                _info{};            ///< Create 에서는 id 와 이름이고 Get 에서는 멤버까지 담는다
+        vector<GuildStorageItem> _listStorage{};     ///< ListStorage 는 창고 전체, Deposit · Withdraw 는 옮긴 자산의 창고 잔액 하나이다
+        vector<GuildApplication> _listApplication{}; ///< ListApplications 의 결과이다
         uint64                   _requestTag{ 0 };
         SocialResult             _result{ SocialResult::Ok };
     };
@@ -108,6 +119,7 @@ namespace sw
     {
         GuildInfo                _info{};
         vector<GuildStorageItem> _listStorage{};
+        vector<GuildApplication> _listApplication{};
         vector<AccountID>        _listNotifyMember{}; ///< GuildChanged 를 받을 멤버이다
         AccountID                _invitedID{ kInvalidAccountID };
         AccountID                _joinedID{ kInvalidAccountID };
@@ -135,6 +147,15 @@ namespace sw
         void submit( const GuildRequest& request, uint64 requestTag );
         /** @brief 로그인한 계정의 길드를 찾아 `MemberAttached` 이벤트를 냅니다. 완료는 없습니다. */
         void attachAccount( AccountID accountID, int64 nowMs );
+        /** @brief 서버 시스템(퀘스트, 전투)이 길드 경험치를 @p amount(1 이상) 올립니다. 완료는 없고 멤버에게 GuildChanged 를 알립니다. */
+        void addExperience( uint64 guildID, int64 amount, int64 nowMs );
+        /**
+         * @brief 레벨 표를 정합니다. @p listLevelExperience 의 i 번째 값은 레벨 i + 2 가 되는 누적 경험치이며 1 이상이고 늘어나야 합니다.
+         * @return 규칙에 맞지 않으면 false 이고 표를 바꾸지 않습니다. 비어 있으면 모든 길드가 레벨 1 입니다.
+         */
+        [[nodiscard]] bool setLevelTable( const vector<int64>& listLevelExperience );
+        /** @brief 경험치에 맞는 레벨입니다(1 부터). */
+        int32 computeLevel( int64 experience ) const;
         /** @brief 이벤트를 받을 델리게이트입니다. 게임 조립 단계가 지정하며 비어 있으면 이벤트를 버립니다. */
         void setEventDelegate( const GuildEventDelegate& onEvent ) { _onEvent = onEvent; }
         /** @brief 꺼내기가 계정 잔액 상한을 볼 정책입니다(화폐 카탈로그). 빌려 쓰며 nullptr 이면 원장 상한(`kMaxBalance`)만 봅니다. */
@@ -157,6 +178,7 @@ namespace sw
         EventBuffer<GuildCompletion>    _completionBuffer;
         EventBuffer<SocialNotification> _notificationBuffer;
         GuildEventDelegate              _onEvent;
+        vector<int64>                   _listLevelExperience; ///< 레벨 2 부터의 누적 경험치이다. 데이터(서버 설정)가 원본이다
         IServiceStore*                  _pStore;
         const ILedgerPolicy*            _pLedgerPolicy;
         int32                           _pendingCount;

@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Container/StringUtil.h"
+
 #include "GameFramework/Base/Online/Identity/AccountBlockList.h"
 #include "GameFramework/Base/Online/Identity/GroupChannelMembership.h"
 #include "GameFramework/Base/Online/Server/OnlineServerConfig.h"
@@ -10,7 +12,9 @@
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialService.h"
 
 // 친구 키트의 서버 조립 — 친구 · 길드 서비스와 바인딩을 올리고, 차단 목록을 기반 인터페이스(`IAccountBlockList`)로 문맥에 내놓는다(채팅이 차단을 지킨다).
-// 옵션: 없음. 접속 상태는 계정 키트가, 이름 찾기는 계정 키트의 이름 인덱스가 준다(없으면 이름으로 신청하기가 NotFound 로 끝난다).
+// 옵션:
+//   guildLevelExperience  레벨 2 부터의 누적 경험치(같은 키를 레벨 순서로 여러 번). 늘어나야 하며 없으면 모든 길드가 레벨 1 이다.
+// 접속 상태는 계정 키트가, 이름 찾기는 계정 키트의 이름 인덱스가 준다(없으면 이름으로 신청하기가 NotFound 로 끝난다).
 // 길드 창고에서 꺼낼 때의 화폐 상한은 경제 키트가 문맥에 내놓은 원장 정책을 쓴다.
 // 채팅 키트가 있으면 길드 이벤트(가입, 떠남, 접속한 멤버 붙이기)로 길드 채널 멤버를 바꾼다. 접속한 계정의 길드는 바인딩이 로그인 때 붙인다.
 // 다른 서버에 있는 계정이 내보내지면 그 서버의 채널에는 다음 접속까지 남는다(이벤트는 처리한 서버에서만 난다).
@@ -53,8 +57,28 @@ namespace sw
 
             bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
             {
-                if ( entry.readOptions( {}, outError ) == false )
+                vector<string> listLevelText;
+                if ( entry.readOptions( {
+                                            { "guildLevelExperience", listLevelText }
+                },
+                                        outError ) == false )
                     return false;
+                vector<int64> listLevelExperience;
+                for ( const string& text : listLevelText )
+                {
+                    int64 experience = 0;
+                    if ( StringUtil::parseInt64( text, experience ) == false )
+                    {
+                        outError = "social: guildLevelExperience '" + text + "' is not an integer";
+                        return false;
+                    }
+                    listLevelExperience.push_back( experience );
+                }
+                if ( _guildService.setLevelTable( listLevelExperience ) == false )
+                {
+                    outError = "social: guildLevelExperience must be positive, increasing and at most 100 levels";
+                    return false;
+                }
                 if ( registerHostService( context, entry, &_socialServer, outError ) == false )
                     return false;
                 context._pBlockList = &_blockList;
