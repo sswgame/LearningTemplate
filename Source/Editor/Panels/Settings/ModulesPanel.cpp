@@ -209,7 +209,7 @@ namespace sw::editor
 
     void ModulesPanel::drawPreview()
     {
-        if ( ImGui::BeginPopupModal( "Confirm Module Change", nullptr, ImGuiWindowFlags_AlwaysAutoResize ) == false )
+        if ( EditorWidgets::beginCenteredModal( "Confirm Module Change" ) == false )
             return;
         ImGui::Text( "%s: %s -> %s", SW_LOCKEY( "EditorSettings", "ModuleChangeTarget" ), _pendingModule.c_str(), _bPendingEnabled ? "On" : "Off" );
         if ( _listNewlyInactive.empty() && _listNewlyActive.empty() )

@@ -256,7 +256,7 @@ namespace sw::editor
                     ImGui::OpenPopup( kUnsavedPopupID );
                     _s_bConfirmUnsavedPlay = false;
                 }
-                if ( ImGui::BeginPopupModal( kUnsavedPopupID, nullptr, ImGuiWindowFlags_AlwaysAutoResize ) == false )
+                if ( EditorWidgets::beginCenteredModal( kUnsavedPopupID ) == false )
                     return;
                 ImGui::TextUnformatted( "Scene has unsaved changes. Play anyway?" );
                 if ( ImGui::Button( "Play" ) )
