@@ -266,8 +266,41 @@ namespace sw
             uint8                   _bDone{ SW_FALSE };
         };
 
-        void sendResponse( StreamConnectionHandle handle, uint64 requestID, NetRequestStatus status, const uint8* pBody, int32 bodySize );
-        void purgeIdempotencyLocked( int64 now );
+        /** @brief 요청 프레임의 머리(id · 메서드 · 시한 · 멱등 키 · 추적 id)와 몸의 자리입니다. */
+        struct RequestHeader
+        {
+            NetIdempotencyKey _key{};
+            LogTraceID        _traceID{};
+            uint64            _requestID{ 0 };
+            uint64            _timeoutMilli{ 0 };
+            const uint8*      _pPayload{ nullptr };
+            int32             _payloadSize{ 0 };
+            uint16            _method{ 0 };
+        };
+        /** @brief 요청 하나를 받을지 정한 결과입니다. 잠금 안에서 정하고 잠금 밖에서 따른다. */
+        struct RequestAdmission
+        {
+            enum class Action : uint8
+            {
+                Dispatch = 0, ///< 처리기를 부른다
+                Reply,        ///< 바로 답한다(모르는 메서드 · 과부하 · 기억한 응답)
+                Wait          ///< 처리 중인 같은 키 — 첫 응답을 같이 받는다
+            };
+            NetRequestContext   _context{};
+            vector<uint8>       _replyBytes{};
+            INetRequestHandler* _pHandler{ nullptr };
+            NetRequestStatus    _replyStatus{ NetRequestStatus::Ok };
+            Action              _action{ Action::Dispatch };
+        };
+
+        /** @brief 취소 프레임: 처리 중인 그 요청에 취소 표시를 남깁니다(처리기가 `isCancelled` 로 본다). */
+        void handleCancelFrame( StreamConnectionHandle handle, const uint8* pBody, int32 bodySize );
+        /** @brief 요청 프레임의 머리를 읽습니다. 깨졌으면 false 이고, 그때 `_requestID` 는 읽은 만큼(못 읽었으면 0)입니다. */
+        [[nodiscard]] static bool readRequestHeader( const uint8* pBody, int32 bodySize, RequestHeader& outHeader );
+        /** @brief 메서드 · 처리 중 수 · 멱등 키로 요청을 받을지 정하고, 받으면 처리 중 목록에 올립니다(`_mutex` 를 잡는다). */
+        RequestAdmission admitRequest( StreamConnectionHandle handle, const RequestHeader& header );
+        void             sendResponse( StreamConnectionHandle handle, uint64 requestID, NetRequestStatus status, const uint8* pBody, int32 bodySize );
+        void             purgeIdempotencyLocked( int64 now );
 
         mutable mutex                              _mutex;
         unordered_map<uint16, INetRequestHandler*> _mapHandler;
