@@ -29,7 +29,9 @@ SW_TEST_CASE( XMLDocumentTest, ParseAndNavigateIgnoreCaseKeys )
     SW_EXPECT_TRUE( root.isValid() );
     SW_EXPECT_STREQ( "Root", root.getName() );
     SW_EXPECT_STREQ( "Demo", root.findAttribute( "name" ) );
-    SW_EXPECT_EQUAL( 12, root.getAttributeInt( "missing", 12 ) );
+    std::optional<int32> missingValue{ 12 };
+    SW_EXPECT_TRUE( root.readOptionalAttribute( "missing", missingValue ) );
+    SW_EXPECT_FALSE( missingValue.has_value() );
 
     SW_EXPECT_STREQ( "12", root.findChildText( "_score" ) );
     SW_EXPECT_STREQ( "12", root.findChildText( "_SCORE" ) );
@@ -123,12 +125,11 @@ SW_TEST_CASE( XMLDocumentTest, ParseErrorNamesSourceLineAndColumn )
 }
 
 /**
- * @brief [XMLDocumentTest] 불리언이 아닌 글은 폴백을 쓰되 알린다 — 속성 · 자식 텍스트 모두
- * @details `getAttributeBool` · `getChildBool` 은 정수 · 실수 형제(`getAttributeInt` · `getAttributeFloat`)와 같은 규칙이다(`StringUtil::tryParseBool`).
- *          `StringUtil::parseBool` 로 읽으면 `enabled="ture"` 가 **아무 말 없이** 폴백이 된다.
- *          없거나 빈 값은 여전히 조용한 폴백이다.
+ * @brief [XMLDocumentTest] 불리언이 아닌 글은 폴백이 되지 않고 읽기 실패다 — 속성 · 자식 텍스트 모두, 빈 글도
+ * @details 폴백을 받던 `getAttributeBool` · `getChildBool` 은 `enabled="ture"` 를 경고 한 줄과 함께 폴백으로 읽었다(D9 에서 지웠다).
+ *          선택 읽기는 없음(빈 optional · true)과 깨짐(false · 오류)을 가르고, 기본값은 부르는 쪽 Def 의 초기값이 정한다.
  */
-SW_TEST_CASE( XMLDocumentTest, UnreadableBooleanFallsBackAndSaysSo )
+SW_TEST_CASE( XMLDocumentTest, UnreadableBooleanIsAReadFailure )
 {
     sw::XMLDocument doc;
     SW_ASSERT_TRUE( doc.parse( R"(<Root on="yes" off="0" typo="ture" empty=""><flag>nope</flag><good>TRUE</good></Root>)" ) );
@@ -136,20 +137,21 @@ SW_TEST_CASE( XMLDocumentTest, UnreadableBooleanFallsBackAndSaysSo )
     SW_ASSERT_TRUE( root.isValid() );
 
     test::ScopedLogCollector logs;
-    SW_EXPECT_TRUE( root.getAttributeBool( "on", false ) );
-    SW_EXPECT_FALSE( root.getAttributeBool( "off", true ) );
-    SW_EXPECT_TRUE( root.getAttributeBool( "missing", true ) );
-    SW_EXPECT_TRUE( root.getAttributeBool( "empty", true ) );
-    SW_EXPECT_TRUE( root.getChildBool( "good", false ) );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "unreadable boolean" ) == 0, logs.joined().c_str() );
+    std::optional<bool>      value;
+    SW_EXPECT_TRUE( root.readOptionalAttribute( "on", value ) && value == true );
+    SW_EXPECT_TRUE( root.readOptionalAttribute( "off", value ) && value == false );
+    SW_EXPECT_TRUE( root.readOptionalAttribute( "missing", value ) && value.has_value() == false );
+    SW_EXPECT_TRUE( root.readOptionalChild( "good", value ) && value == true );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "is not a boolean" ) == 0, logs.joined().c_str() );
 
     {
         test::ScopedDefensiveTestLog expected( "non-boolean attribute and element text" );
-        SW_EXPECT_TRUE( root.getAttributeBool( "typo", true ) );
-        SW_EXPECT_FALSE( root.getChildBool( "flag", false ) );
+        SW_EXPECT_FALSE( root.readOptionalAttribute( "typo", value ) );
+        SW_EXPECT_FALSE( root.readOptionalAttribute( "empty", value ) );
+        SW_EXPECT_FALSE( root.readOptionalChild( "flag", value ) );
     }
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "Attribute 'typo' has an unreadable boolean 'ture'" ) == 1, logs.joined().c_str() );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "Element 'flag' has an unreadable boolean 'nope'" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "<Root> attribute 'typo' is not a boolean: 'ture'" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "<Root> child 'flag' is not a boolean: 'nope'" ) == 1, logs.joined().c_str() );
 }
 
 /**
@@ -171,7 +173,7 @@ SW_TEST_CASE( XMLDocumentTest, AttributeTextIsEmptyWhenMissing )
 /**
  * @brief [XMLDocumentTest] 범위를 정한 정수 속성은 범위 밖 · 정수가 아닌 글을 거절하고 알린다 — 좁은 칸으로 감지 않는다
  * @details 좁은 칸에 `static_cast<uint8>( getAttributeInt( … ) )` 로 넣으면 "256" 이 0, "-1" 이 255 로 감겼다(입력 맵의 패드 번호).
- *          `tryGetAttributeIntInRange` 는 없으면 폴백으로 성공, 범위 안이면 그 값, 아니면 경고하고 false(값은 폴백)다.
+ *          `readOptionalAttributeInRange` 는 없으면 넣어 둔 값(Def 초기값) 그대로 성공, 범위 안이면 그 값, 아니면 오류와 false(값은 그대로 — 자르지 않는다)다.
  */
 SW_TEST_CASE( XMLDocumentTest, RangeCheckedIntegerRejectsWhatDoesNotFit )
 {
@@ -181,25 +183,26 @@ SW_TEST_CASE( XMLDocumentTest, RangeCheckedIntegerRejectsWhatDoesNotFit )
     SW_ASSERT_TRUE( node.isValid() );
 
     test::ScopedLogCollector logs;
-    int32                    value{ -7 };
-    SW_EXPECT_TRUE( node.tryGetAttributeIntInRange( "missing", 1, 0, 3, value ) );
+    int32                    value{ 1 };
+    SW_EXPECT_TRUE( node.readOptionalAttributeInRange( "missing", 0, 3, value ) );
     SW_EXPECT_EQUAL( 1, value );
-    SW_EXPECT_TRUE( node.tryGetAttributeIntInRange( "low", 1, 0, 3, value ) );
+    SW_EXPECT_TRUE( node.readOptionalAttributeInRange( "low", 0, 3, value ) );
     SW_EXPECT_EQUAL( 0, value );
-    SW_EXPECT_TRUE( node.tryGetAttributeIntInRange( "high", 1, 0, 3, value ) );
+    SW_EXPECT_TRUE( node.readOptionalAttributeInRange( "high", 0, 3, value ) );
     SW_EXPECT_EQUAL( 3, value );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "rejected" ) == 0, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "outside" ) == 0, logs.joined().c_str() );
 
     {
         test::ScopedDefensiveTestLog expected( "out-of-range and non-integer attributes" );
-        SW_EXPECT_FALSE( node.tryGetAttributeIntInRange( "over", 1, 0, 255, value ) );
-        SW_EXPECT_EQUAL( 1, value );
-        SW_EXPECT_FALSE( node.tryGetAttributeIntInRange( "under", 1, 0, 255, value ) );
-        SW_EXPECT_FALSE( node.tryGetAttributeIntInRange( "text", 1, 0, 255, value ) );
-        SW_EXPECT_FALSE( node.tryGetAttributeIntInRange( "huge", 1, 0, 255, value ) );
+        SW_EXPECT_FALSE( node.readOptionalAttributeInRange( "over", 0, 255, value ) );
+        SW_EXPECT_EQUAL( 3, value );
+        SW_EXPECT_FALSE( node.readOptionalAttributeInRange( "under", 0, 255, value ) );
+        SW_EXPECT_FALSE( node.readOptionalAttributeInRange( "text", 0, 255, value ) );
+        SW_EXPECT_FALSE( node.readOptionalAttributeInRange( "huge", 0, 255, value ) );
     }
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "<bind> attribute 'over' is '256', not an integer in [0, 255]" ) == 1, logs.joined().c_str() );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "rejected" ) == 4, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "<bind over=" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "outside" ) == 2, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "is not a integer" ) == 2, logs.joined().c_str() );
 }
 
 /**

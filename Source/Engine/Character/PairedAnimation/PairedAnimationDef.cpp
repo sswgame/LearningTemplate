@@ -185,10 +185,10 @@ namespace sw
         const utf8* pSkeletonPath = node.findAttribute( "skeleton" );
         role._skeletonPath        = pSkeletonPath != nullptr ? pSkeletonPath : "";
         role._bRequired           = reader.readBool( node, "required" );
-        role._bAnchor             = reader.readOptionalBool( node, "anchor", false );
-        role._startSeconds        = reader.readOptionalFloat( node, "start", 0.0f );
-        role._enterBlendSeconds   = reader.readFloat( node, "enterBlend" );
-        role._exitBlendSeconds    = reader.readFloat( node, "exitBlend" );
+        reader.readOptionalBool( node, "anchor", role._bAnchor );
+        reader.readOptionalFloat( node, "start", role._startSeconds );
+        role._enterBlendSeconds = reader.readFloat( node, "enterBlend" );
+        role._exitBlendSeconds  = reader.readFloat( node, "exitBlend" );
         PairedAnimationDefInternal::requireNonNegative( reader, node, "start", role._startSeconds );
         PairedAnimationDefInternal::requireNonNegative( reader, node, "enterBlend", role._enterBlendSeconds );
         PairedAnimationDefInternal::requireNonNegative( reader, node, "exitBlend", role._exitBlendSeconds );
@@ -203,8 +203,11 @@ namespace sw
         const bool bAligned = role._align == PairedAnimationAlign::Snap || role._align == PairedAnimationAlign::Warp;
         if ( bAligned )
         {
-            role._offset           = reader.readFloat3( node, "offset" );
-            role._yawRadians       = reader.readOptionalFloat( node, "yaw", 0.0f ) * MathUtil::kDegreeToRadian;
+            role._offset = reader.readFloat3( node, "offset" );
+            // 데이터의 요는 도 단위다. 없으면 정의의 초기값(0)이다.
+            float32 yawDegrees = role._yawRadians * MathUtil::kRadianToDegree;
+            reader.readOptionalFloat( node, "yaw", yawDegrees );
+            role._yawRadians       = yawDegrees * MathUtil::kDegreeToRadian;
             role._maxAlignDistance = reader.readFloat( node, "maxAlignDistance" );
             for ( uint32 axis = 0; axis < 3; ++axis )
             {

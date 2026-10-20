@@ -68,14 +68,19 @@ namespace sw
 
         /** @brief 문자열 내용을 반환합니다. 문자열이 아니면 스칼라를 dump 한 값(따옴표 없음)을 반환합니다. */
         string asString() const;
-        /** @brief 정수로 읽습니다. */
-        int64 asInt( int64 fallback = 0 ) const;
-        /** @brief 부호 없는 정수로 읽습니다. */
-        uint64 asUint( uint64 fallback = 0 ) const;
-        /** @brief 실수로 읽습니다. */
-        float64 asFloat( float64 fallback = 0.0 ) const;
-        /** @brief 불리언으로 읽습니다. */
-        bool asBool( bool fallback = false ) const;
+        /**
+         * @brief 이 값 자체(배열 원소처럼 키가 없는 값)를 타입 T 로 읽습니다. 무효 · null 이면 nullopt, 타입이 다르면(정수 칸의 실수 · 범위 밖 포함)
+         *        값을 적어 오류를 남기고 nullopt 입니다.
+         * @details 폴백을 받던 `asInt( fallback )` · `asFloat( fallback )` · `asBool( fallback )` 를 대신한다(데이터 주도 계획 D9). 없음을 어떻게 다룰지는
+         *          부르는 쪽이 정한다. 타입으로 가지를 칠 때는 `isNumber()` 같은 검사를 먼저 쓴다. T 는 `readRequired` 와 같다.
+         *          `std::optional<bool>` 은 조건식에서 "값이 있다"로 읽히므로 `if ( value.read<bool>() )` 로 쓰지 말고 `== true` 로 비교한다.
+         */
+        template <typename T>
+        [[nodiscard]] std::optional<T> read() const
+        {
+            T value{};
+            return parseSelf( value ) == JSONValueRead::Read ? std::optional<T>{ value } : std::nullopt;
+        }
 
         /** @brief 객체 멤버 수 또는 배열 원소 수를 반환합니다. */
         size_t size() const;
@@ -108,6 +113,19 @@ namespace sw
             T                   value{};
             const JSONValueRead read = parseMember( key, value );
             outValue                 = read == JSONValueRead::Read ? std::optional<T>{ value } : std::nullopt;
+            return read != JSONValueRead::Invalid;
+        }
+        /**
+         * @brief 없어도 되는 객체 멤버 @p key 를 읽어 @p inoutValue 에 넣습니다. 없으면(또는 null) 그대로 두고 true, 타입이 다르면 오류와 false 입니다.
+         * @details 기본값은 부르는 쪽이 넣어 둔 값(형식의 초기값)이고 여기서 정하지 않는다 — 폴백 인자를 받지 않는다.
+         */
+        template <typename T>
+        [[nodiscard]] bool readOptionalInto( string_view key, T& inoutValue ) const
+        {
+            T                   value{};
+            const JSONValueRead read = parseMember( key, value );
+            if ( read == JSONValueRead::Read )
+                inoutValue = value;
             return read != JSONValueRead::Invalid;
         }
 
@@ -160,6 +178,14 @@ namespace sw
         JSONValueRead parseMember( string_view key, float64& outValue ) const;
         JSONValueRead parseMember( string_view key, bool& outValue ) const;
         JSONValueRead parseMember( string_view key, string& outValue ) const;
+        JSONValueRead parseSelf( int32& outValue ) const;
+        JSONValueRead parseSelf( uint32& outValue ) const;
+        JSONValueRead parseSelf( int64& outValue ) const;
+        JSONValueRead parseSelf( uint64& outValue ) const;
+        JSONValueRead parseSelf( float32& outValue ) const;
+        JSONValueRead parseSelf( float64& outValue ) const;
+        JSONValueRead parseSelf( bool& outValue ) const;
+        JSONValueRead parseSelf( string& outValue ) const;
         /** @brief 필수 멤버가 없다고 오류로 남깁니다. */
         void reportMissing( string_view key ) const;
 

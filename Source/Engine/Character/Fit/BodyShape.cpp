@@ -177,10 +177,10 @@ namespace sw
             }
             reader.reportUnknownAttributes( axisNode, BodyShapeInternal::kArrAxisAttribute );
             BodyShapeAxis axis;
-            axis._name                   = reader.readName( axisNode, "name", true );
-            axis._min                    = reader.readOptionalFloat( axisNode, "min", -1.0f );
-            axis._max                    = reader.readOptionalFloat( axisNode, "max", 1.0f );
-            axis._default                = reader.readOptionalFloat( axisNode, "default", 0.0f );
+            axis._name = reader.readName( axisNode, "name", true );
+            reader.readOptionalFloat( axisNode, "min", axis._min );
+            reader.readOptionalFloat( axisNode, "max", axis._max );
+            reader.readOptionalFloat( axisNode, "default", axis._default );
             const bool bInvalidAxisRange = axis._min > 0.0f || axis._max < 0.0f || axis._min >= axis._max;
             if ( bInvalidAxisRange )
                 reader.addError( axisNode, "needs min <= 0 <= max with min < max" );
@@ -217,9 +217,9 @@ namespace sw
             }
             reader.reportUnknownAttributes( boneNode, BodyShapeInternal::kArrBoneAttribute );
             BoneProportionEntry entry;
-            entry._bone   = reader.readName( boneNode, "name", true );
-            entry._scale  = reader.readOptionalFloat3( boneNode, "scale", float3( 1.0f ) );
-            entry._offset = reader.readOptionalFloat3( boneNode, "offset", float3::Zero );
+            entry._bone = reader.readName( boneNode, "name", true );
+            reader.readOptionalFloat3( boneNode, "scale", entry._scale );
+            reader.readOptionalFloat3( boneNode, "offset", entry._offset );
             if ( entry._bone.empty() == false )
                 outSide._listBone.push_back( entry );
         }

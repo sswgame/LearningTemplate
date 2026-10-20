@@ -421,9 +421,11 @@ namespace sw::editor
             const size_t    childCount = children.isArray() ? children.size() : 0;
             for ( size_t childSlot = 0; childSlot < childCount; ++childSlot )
             {
-                const uint64 childIndex = children.at( childSlot ).asUint( nodeCount );
-                if ( childIndex < nodeCount )
-                    listParent[childIndex] = nodeIndex;
+                const std::optional<uint64> childIndex = children.at( childSlot ).read<uint64>();
+                if ( childIndex.has_value() == false )
+                    return 0; // 읽지 못하는 번호 — 고치지 않고 cgltf 가 알리게 한다
+                if ( *childIndex < nodeCount )
+                    listParent[*childIndex] = nodeIndex;
             }
         }
 
@@ -440,7 +442,10 @@ namespace sw::editor
             bool           bPromoted = false;
             for ( size_t slot = 0; slot < sceneNodes.size(); ++slot )
             {
-                const uint64 listedIndex = sceneNodes.at( slot ).asUint( nodeCount );
+                const std::optional<uint64> listedSlot = sceneNodes.at( slot ).read<uint64>();
+                if ( listedSlot.has_value() == false )
+                    return 0; // 읽지 못하는 번호 — 고치지 않고 cgltf 가 알리게 한다
+                const uint64 listedIndex = *listedSlot;
                 uint64       rootIndex   = listedIndex;
                 for ( size_t step = 0; rootIndex < nodeCount && listParent[rootIndex] != nodeCount && step < nodeCount; ++step )
                 {

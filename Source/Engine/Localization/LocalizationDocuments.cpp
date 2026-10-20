@@ -183,10 +183,15 @@ namespace sw
                 break;
             }
             SourceTextEntry entry;
-            entry._source    = source.asString();
-            entry._context   = value.get( "context", false ).asString();
-            entry._comment   = value.get( "comment", false ).asString();
-            entry._maxLength = static_cast<uint32>( value.get( "maxLength", false ).asUint( 0 ) );
+            entry._source  = source.asString();
+            entry._context = value.get( "context", false ).asString();
+            entry._comment = value.get( "comment", false ).asString();
+            // 최대 길이는 없으면 항목의 초기값(제한 없음 0)이다.
+            if ( value.readOptionalInto( "maxLength", entry._maxLength ) == false )
+            {
+                error = string( sourceName ) + ": entry '" + key + "' maxLength must be a non-negative integer";
+                break;
+            }
             if ( LocalizationDocumentsInternal::readStringList( value.get( "origins", false ), entry._listOrigin ) == false )
             {
                 error = string( sourceName ) + ": entry '" + key + "' origins must be strings";
@@ -294,9 +299,13 @@ namespace sw
                 break;
             }
             TranslationEntry entry;
-            entry._text               = text.asString();
-            entry._translatorComment  = value.get( "translatorComment", false ).asString();
-            entry._bReview            = value.get( "review", false ).asBool( false );
+            entry._text              = text.asString();
+            entry._translatorComment = value.get( "translatorComment", false ).asString();
+            if ( value.readOptionalInto( "review", entry._bReview ) == false )
+            {
+                error = string( sourceName ) + ": entry '" + key + "' review must be true or false";
+                break;
+            }
             const JSONValue hashValue = value.get( "sourceHash", false );
             if ( hashValue.isValid() && LocalizationTextUtil::tryParseSourceHash( hashValue.asString(), entry._sourceHash ) == false )
             {

@@ -46,51 +46,10 @@ namespace sw
         return parse( text, outMap, opt );
     }
 
-    const utf8* KeyValueFile::get( const KeyValueMap& mapData, string_view key, const utf8* pFallback )
+    const string* KeyValueFile::find( const KeyValueMap& mapData, string_view key )
     {
-        if ( key.empty() )
-            return pFallback != nullptr ? pFallback : "";
-        const KeyValueMap::const_iterator it = mapData.find( string( key ) );
-        if ( it == mapData.end() )
-            return pFallback;
-        return it->second.c_str();
-    }
-
-    int32 KeyValueFile::getInt( const KeyValueMap& mapData, string_view key, int32 fallback )
-    {
-        const utf8* pValue = get( mapData, key, nullptr );
-        if ( StringUtil::isNullOrEmpty( pValue ) )
-            return fallback;
-        int32 val{ fallback };
-        if ( StringUtil::parseInt( pValue, val ) == false )
-            SW_LOG_WARNING( "Key '%#' has an unreadable integer '%#' - using %#", key, pValue, fallback );
-        return val;
-    }
-
-    float32 KeyValueFile::getFloat( const KeyValueMap& mapData, string_view key, float32 fallback )
-    {
-        const utf8* pValue = get( mapData, key, nullptr );
-        if ( StringUtil::isNullOrEmpty( pValue ) )
-            return fallback;
-        float32 val{ fallback };
-        if ( StringUtil::parseFloat( pValue, val ) == false )
-            SW_LOG_WARNING( "Key '%#' has an unreadable number '%#' - using %#", key, pValue, fallback );
-        return val;
-    }
-
-    bool KeyValueFile::getBool( const KeyValueMap& mapData, string_view key, bool fallback )
-    {
-        const utf8* pValue = get( mapData, key, nullptr );
-        if ( StringUtil::isNullOrEmpty( pValue ) )
-            return fallback;
-        // 형제 `getInt` · `getFloat` 처럼 못 읽은 글은 알린다("ture" 를 말없이 폴백으로 돌려주지 않는다).
-        bool value{ fallback };
-        if ( StringUtil::tryParseBool( pValue, value ) == false )
-        {
-            SW_LOG_WARNING( "Key '%#' has an unreadable boolean '%#' - using %#", key, pValue, fallback ? "true" : "false" );
-            return fallback;
-        }
-        return value;
+        const KeyValueMap::const_iterator it = mapData.find( key );
+        return it != mapData.end() ? &it->second : nullptr;
     }
 
     string KeyValueFile::dump( const KeyValueMap& mapData, string_view headerComment, string_view sectionName )

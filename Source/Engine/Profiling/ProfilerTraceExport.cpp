@@ -187,12 +187,18 @@ namespace sw
         const JSONValue other = root.isObject() ? root.get( "otherData" ) : JSONValue{};
         if ( other.isObject() )
         {
-            outTrace._meta._processName          = other.get( "processName" ).asString();
-            outTrace._meta._hostName             = other.get( "hostName" ).asString();
-            outTrace._meta._processID            = static_cast<int32>( other.get( "processID" ).asInt() );
-            outTrace._meta._wallUnixMilliseconds = other.get( "wallUnixMilliseconds" ).asInt();
-            outTrace._meta._monotonicNanoseconds = other.get( "monotonicNanoseconds" ).asUint();
-            outTrace._meta._bTruncated           = other.get( "truncated" ).asBool();
+            // 머리말 칸은 모두 선택이다(다른 도구가 쓴 파일). 없으면 머리말의 초기값이고, 타입이 다르면 파일을 거절한다.
+            outTrace._meta._processName = other.get( "processName" ).asString();
+            outTrace._meta._hostName    = other.get( "hostName" ).asString();
+            const bool bMetaRead        = other.readOptionalInto( "processID", outTrace._meta._processID ) &&
+                                   other.readOptionalInto( "wallUnixMilliseconds", outTrace._meta._wallUnixMilliseconds ) &&
+                                   other.readOptionalInto( "monotonicNanoseconds", outTrace._meta._monotonicNanoseconds ) &&
+                                   other.readOptionalInto( "truncated", outTrace._meta._bTruncated );
+            if ( bMetaRead == false )
+            {
+                outError = "otherData has a value of the wrong type";
+                return false;
+            }
         }
 
         struct ThreadKey
@@ -236,15 +242,26 @@ namespace sw
         {
             const JSONValue event = events.at( index );
             const string    phase = event.get( "ph" ).asString();
-            const int64     pid   = event.get( "pid" ).asInt();
-            const int64     tid   = event.get( "tid" ).asInt();
+            // pid · tid 는 없으면 0 번 프로세스 · 스레드다(Trace Event 사양). 정수가 아니면 파일을 거절한다.
+            int64 pid{ 0 };
+            int64 tid{ 0 };
+            if ( event.readOptionalInto( "pid", pid ) == false || event.readOptionalInto( "tid", tid ) == false )
+            {
+                outError = "event " + to_string( index ) + " has a pid or tid that is not an integer";
+                return false;
+            }
             if ( phase == "X" )
             {
-                const float64         begin    = event.get( "ts" ).asFloat();
-                const float64         duration = event.get( "dur" ).asFloat();
+                const std::optional<float64> begin    = event.readRequired<float64>( "ts" );
+                const std::optional<float64> duration = event.readRequired<float64>( "dur" );
+                if ( begin.has_value() == false || duration.has_value() == false )
+                {
+                    outError = "complete event " + to_string( index ) + " needs numeric ts and dur";
+                    return false;
+                }
                 ProfilerTimelineEvent loaded;
-                loaded._beginNanos = static_cast<uint64>( begin * constant::kNanosecondsPerMicrosecond + 0.5 );
-                loaded._endNanos   = loaded._beginNanos + static_cast<uint64>( duration * constant::kNanosecondsPerMicrosecond + 0.5 );
+                loaded._beginNanos = static_cast<uint64>( *begin * constant::kNanosecondsPerMicrosecond + 0.5 );
+                loaded._endNanos   = loaded._beginNanos + static_cast<uint64>( *duration * constant::kNanosecondsPerMicrosecond + 0.5 );
                 loaded._slot       = findSlot( event.get( "name" ).asString() );
                 outTrace._listThread[findThread( pid, tid )]._listEvent.push_back( loaded );
                 ++eventCount;
@@ -259,7 +276,13 @@ namespace sw
             }
             else if ( phase == "i" && event.get( "name" ).asString() == "Frame" )
             {
-                outTrace._listFrameBegin.push_back( static_cast<uint64>( event.get( "ts" ).asFloat() * constant::kNanosecondsPerMicrosecond + 0.5 ) );
+                const std::optional<float64> frameBegin = event.readRequired<float64>( "ts" );
+                if ( frameBegin.has_value() == false )
+                {
+                    outError = "frame marker " + to_string( index ) + " needs a numeric ts";
+                    return false;
+                }
+                outTrace._listFrameBegin.push_back( static_cast<uint64>( *frameBegin * constant::kNanosecondsPerMicrosecond + 0.5 ) );
             }
         }
         if ( eventCount == 0 )
@@ -621,10 +644,17 @@ namespace sw
             const bool      bHasClockData = other.isObject() && other.has( "wallUnixMilliseconds" ) && other.has( "monotonicNanoseconds" );
             if ( bHasClockData )
             {
+                const std::optional<int64> wallMilliseconds     = other.readRequired<int64>( "wallUnixMilliseconds" );
+                const std::optional<int64> monotonicNanoseconds = other.readRequired<int64>( "monotonicNanoseconds" );
+                if ( wallMilliseconds.has_value() == false || monotonicNanoseconds.has_value() == false )
+                {
+                    outReport = "input " + to_string( index ) + " has a clock header that is not integers";
+                    return false;
+                }
                 pSource->_bHasClock            = true;
                 pSource->_hostName             = other.get( "hostName" ).asString();
-                pSource->_wallUnixMilliseconds = other.get( "wallUnixMilliseconds" ).asInt();
-                pSource->_monotonicNanoseconds = other.get( "monotonicNanoseconds" ).asInt();
+                pSource->_wallUnixMilliseconds = *wallMilliseconds;
+                pSource->_monotonicNanoseconds = *monotonicNanoseconds;
             }
             pSource->_label = listInput[index]._label;
             if ( pSource->_label.empty() && other.isObject() )
@@ -636,7 +666,13 @@ namespace sw
                 const JSONValue pid = pSource->_listEvent.at( eventIndex ).get( "pid" );
                 if ( pid.isNumber() )
                 {
-                    pSource->_sourcePID = pid.asInt();
+                    const std::optional<int64> sourcePID = pid.read<int64>();
+                    if ( sourcePID.has_value() == false )
+                    {
+                        outReport = "input " + to_string( index ) + " has a pid that is not an integer";
+                        return false;
+                    }
+                    pSource->_sourcePID = *sourcePID;
                     break;
                 }
             }
@@ -736,8 +772,8 @@ namespace sw
                     const JSONValue value = event.get( member, false );
                     if ( member == "pid" )
                         outJSON += pid;
-                    else if ( member == "ts" && value.isNumber() )
-                        appendMicroseconds( outJSON, shiftMicroseconds( value.asFloat(), source._shiftNanos ) );
+                    else if ( const std::optional<float64> ts = member == "ts" && value.isNumber() ? value.read<float64>() : std::nullopt; ts.has_value() )
+                        appendMicroseconds( outJSON, shiftMicroseconds( *ts, source._shiftNanos ) );
                     else
                         outJSON += value.dump();
                 }

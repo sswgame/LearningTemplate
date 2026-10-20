@@ -320,9 +320,11 @@ namespace sw
                 if ( pEnumInfo != nullptr )
                 {
                     // 모르는 이름 · 값이면 쓰지 않고 실패한다(XML 과 같다 — `EnumInfo::tryParseText`).
-                    int64        parsedValue{ 0 };
-                    const string text = src.isString() ? string( src.asString() ) : sw::to_string( src.asInt( 0 ) );
-                    if ( ( src.isString() || src.isNumber() ) && pEnumInfo->tryParseText( text, parsedValue ) )
+                    int64                      parsedValue{ 0 };
+                    const std::optional<int64> number = src.isNumber() ? src.read<int64>() : std::nullopt;
+                    const string               text   = src.isString() ? string( src.asString() ) : number.has_value() ? sw::to_string( *number )
+                                                                                                                       : src.dump();
+                    if ( ( src.isString() || number.has_value() ) && pEnumInfo->tryParseText( text, parsedValue ) )
                     {
                         pEnumInfo->writeValueToMemory( pValPtr, parsedValue );
                         return true;
@@ -370,12 +372,16 @@ namespace sw
             {
                 if ( prop._bIsBitField == SW_TRUE )
                 {
-                    // 불리언 · 숫자 · 불리언 글만 받는다. 그 밖의 것("ture" · 오브젝트 · null)은 실패다.
+                    // 불리언 · 정수 · 불리언 글만 받는다. 그 밖의 것("ture" · 0.5 · 오브젝트 · null)은 실패다.
                     bool bVal = false;
-                    if ( field.isBool() )
-                        bVal = field.asBool();
-                    else if ( field.isNumber() )
-                        bVal = ( field.asInt() != 0 );
+                    if ( field.isBool() || field.isNumber() )
+                    {
+                        const std::optional<bool>  flag   = field.isBool() ? field.read<bool>() : std::nullopt;
+                        const std::optional<int64> number = field.isNumber() ? field.read<int64>() : std::nullopt;
+                        if ( flag.has_value() == false && number.has_value() == false )
+                            return false;
+                        bVal = flag.has_value() ? *flag : *number != 0;
+                    }
                     else if ( field.isString() == false || StringUtil::tryParseBool( field.asString(), bVal ) == false )
                         return false;
                     prop.setValue<bool>( pInstance, bVal );
@@ -473,8 +479,13 @@ namespace sw
             const JSONValue field = src.get( keyRaw, false );
             if ( SerializerUtil::keysEqual( keyRaw, kSchemaVersionKey, bIgnoreCaseKeys ) )
             {
-                if ( pOutVersion != nullptr )
-                    *pOutVersion = static_cast<uint32>( field.asUint( 0 ) );
+                if ( pOutVersion == nullptr )
+                    continue;
+                // 판 번호가 부호 없는 정수가 아니면 이관을 고를 수 없다 — 0 판으로 읽지 않고 실패한다(읽기가 값을 알린다).
+                const std::optional<uint32> version = field.read<uint32>();
+                if ( version.has_value() == false )
+                    return false;
+                *pOutVersion = *version;
                 continue;
             }
             bool bCaseVariant{ false };

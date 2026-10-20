@@ -195,8 +195,10 @@ namespace sw::editor
         {
             for ( const EditorPanelEntry& entry : pContext->getSubsystem<EditorPanelManager>().getPanels() )
             {
-                if ( entry._pInstance != nullptr )
-                    entry._pInstance->setOpen( KeyValueFile::getBool( _pendingLayoutVisibility, entry._id.c_str(), entry._pInstance->isOpen() ) );
+                // 적지 않은 패널은 지금 상태 그대로다. 깨진 줄은 읽기가 키와 함께 알리고, 그 패널도 지금 상태로 둔다.
+                bool bOpen = entry._pInstance != nullptr && entry._pInstance->isOpen();
+                if ( entry._pInstance != nullptr && KeyValueFile::readOptionalInto( _pendingLayoutVisibility, entry._id, bOpen ) )
+                    entry._pInstance->setOpen( bOpen );
             }
         }
         ImGui::LoadIniSettingsFromMemory( _pendingLayoutIni.c_str(), _pendingLayoutIni.size() );
@@ -305,8 +307,10 @@ namespace sw::editor
         {
             if ( entry._pInstance == nullptr )
                 continue;
-            const bool bOpen = KeyValueFile::getBool( visibilityKv, entry._id.c_str(), entry._pInstance->isOpen() );
-            entry._pInstance->setOpen( bOpen );
+            // 적지 않은 패널은 지금 상태 그대로다. 깨진 줄은 읽기가 키와 함께 알리고, 그 패널도 지금 상태로 둔다.
+            bool bOpen = entry._pInstance->isOpen();
+            if ( KeyValueFile::readOptionalInto( visibilityKv, entry._id, bOpen ) )
+                entry._pInstance->setOpen( bOpen );
         }
 
         SW_LOG_TRACE( "Restored panel visibility from %#", _windowsIniPath.c_str() );

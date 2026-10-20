@@ -132,7 +132,14 @@ namespace sw
                 bValid = false;
                 return;
             }
-            const float2 position{ static_cast<float32>( sampleJSON.get( "x" ).asFloat( 0.0 ) ), static_cast<float32>( sampleJSON.get( "y" ).asFloat( 0.0 ) ) };
+            // 적지 않은 축은 0 이다("y" 가 없으면 1D).
+            float2 position{};
+            if ( sampleJSON.readOptionalInto( "x", position._x ) == false || sampleJSON.readOptionalInto( "y", position._y ) == false )
+            {
+                SW_LOG_ERROR( "Animation graph node '%#' blend space sample %# has a non-numeric position", inoutNode._name.c_str(), sampleIndex );
+                bValid = false;
+                return;
+            }
             def._space.addSample( position, hashed_string( clipName ) );
         } );
         if ( bValid && def._space.getSampleCount() == 0 )
@@ -182,13 +189,23 @@ namespace sw
         bool bValid = true;
         forEachObjectInArray( root, "nodes", [this, &bValid]( const JSONValue& nodeJSON, size_t /*nodeIndex*/ )
         {
+            // id 는 필수이고 1 이상이다. 위치는 없으면 노드의 초기 자리다. 반복은 적었을 때만 클립 설정을 덮는다.
             AnimationGraphNode node{};
-            node._id          = static_cast<int32>( nodeJSON.get( "id" ).asInt( 0 ) );
-            node._name        = nodeJSON.get( "name" ).asString();
-            node._position._x = static_cast<float32>( nodeJSON.get( "x" ).asFloat( 40.0 ) );
-            node._position._y = static_cast<float32>( nodeJSON.get( "y" ).asFloat( 40.0 ) );
-            if ( nodeJSON.has( "loop" ) )
-                node._loopOverride = nodeJSON.get( "loop" ).asBool() ? 1 : 0;
+            node._name                                 = nodeJSON.get( "name" ).asString();
+            const std::optional<int32> nodeID          = nodeJSON.readRequired<int32>( "id" );
+            bool                       bLoop           = false;
+            const bool                 bHasLoop        = nodeJSON.has( "loop" );
+            const bool                 bNodeFieldsRead = nodeID.has_value() && *nodeID > 0 && nodeJSON.readOptionalInto( "x", node._position._x ) &&
+                                         nodeJSON.readOptionalInto( "y", node._position._y ) && nodeJSON.readOptionalInto( "loop", bLoop );
+            if ( bNodeFieldsRead == false )
+            {
+                SW_LOG_ERROR( "Animation graph node '%#' needs an 'id' of 1 or more and numeric 'x', 'y' and boolean 'loop'", node._name.c_str() );
+                bValid = false;
+                return;
+            }
+            node._id = *nodeID;
+            if ( bHasLoop )
+                node._loopOverride = bLoop ? 1 : 0;
             if ( nodeJSON.has( "sync_group" ) )
                 node._syncGroup = hashed_string( nodeJSON.get( "sync_group" ).asString() );
             const JSONValue blendSpaceJSON = nodeJSON.get( "blend_space" );
@@ -202,18 +219,27 @@ namespace sw
                 SW_LOG_ERROR( "Animation graph node '%#' has both blend_space and pose_node", node._name.c_str() );
                 bValid = false;
             }
-            if ( node._id > 0 )
-                _listNode.push_back( std::move( node ) );
+            _listNode.push_back( std::move( node ) );
         } );
 
         forEachObjectInArray( root, "links", [this, &bValid]( const JSONValue& linkJSON, size_t /*linkIndex*/ )
         {
-            AnimationGraphLink link{};
-            link._id       = static_cast<int32>( linkJSON.get( "id" ).asInt( 0 ) );
-            link._fromNode = static_cast<int32>( linkJSON.get( "from" ).asInt( 0 ) );
-            link._toNode   = static_cast<int32>( linkJSON.get( "to" ).asInt( 0 ) );
-            if ( linkJSON.has( "blend" ) )
-                link._blendSeconds = static_cast<float32>( linkJSON.get( "blend" ).asFloat( -1.0 ) );
+            // id · from · to 는 필수다. 크로스페이드 길이 · 반감기는 없으면 링크의 초기값(플레이어 기본 · 즉시)이다.
+            AnimationGraphLink         link{};
+            const std::optional<int32> linkID          = linkJSON.readRequired<int32>( "id" );
+            const std::optional<int32> fromNode        = linkJSON.readRequired<int32>( "from" );
+            const std::optional<int32> toNode          = linkJSON.readRequired<int32>( "to" );
+            const bool                 bLinkFieldsRead = linkID.has_value() && *linkID > 0 && fromNode.has_value() && toNode.has_value() && linkJSON.readOptionalInto( "blend", link._blendSeconds ) &&
+                                         linkJSON.readOptionalInto( "half_life", link._halfLifeSeconds );
+            if ( bLinkFieldsRead == false )
+            {
+                SW_LOG_ERROR( "Animation graph link needs an 'id' of 1 or more, 'from' and 'to' node ids and numeric 'blend' and 'half_life'" );
+                bValid = false;
+                return;
+            }
+            link._id       = *linkID;
+            link._fromNode = *fromNode;
+            link._toNode   = *toNode;
             if ( linkJSON.has( "blend_mode" ) )
             {
                 const string modeText = linkJSON.get( "blend_mode" ).asString();
@@ -223,8 +249,6 @@ namespace sw
                     bValid = false;
                 }
             }
-            if ( linkJSON.has( "half_life" ) )
-                link._halfLifeSeconds = static_cast<float32>( linkJSON.get( "half_life" ).asFloat( 0.0 ) );
             if ( link._blendMode == AnimationBlendMode::Inertialization && link._halfLifeSeconds <= 0.0f )
             {
                 SW_LOG_ERROR( "Animation graph link %# uses inertialization without a positive 'half_life'", link._id );
@@ -240,10 +264,13 @@ namespace sw
                     bValid = false;
                 }
                 link._parameter = hashed_string( condition.get( "param" ).asString() );
-                link._threshold = static_cast<float32>( condition.get( "value" ).asFloat( 0.0 ) );
+                if ( condition.readOptionalInto( "value", link._threshold ) == false )
+                {
+                    SW_LOG_ERROR( "Animation graph link %# has a non-numeric condition value", link._id );
+                    bValid = false;
+                }
             }
-            if ( link._id > 0 )
-                _listLink.push_back( link );
+            _listLink.push_back( link );
         } );
         if ( parseLayers( root ) == false )
             bValid = false;
@@ -329,11 +356,12 @@ namespace sw
                 bValid = false;
                 continue;
             }
-            const JSONValue weightJSON = layerJSON.get( "weight" );
-            layer._weight              = static_cast<float32>( weightJSON.asFloat( -1.0 ) );
-            const bool   bWeightValid  = weightJSON.isNumber() && 0.0f <= layer._weight && layer._weight <= 1.0f;
-            const string blendText     = layerJSON.get( "blend" ).asString();
-            bool         bBlendValid   = false;
+            const std::optional<float32> weight       = layerJSON.get( "weight" ).isNumber() ? layerJSON.readRequired<float32>( "weight" ) : std::nullopt;
+            const bool                   bWeightValid = weight.has_value() && 0.0f <= *weight && *weight <= 1.0f;
+            if ( bWeightValid )
+                layer._weight = *weight;
+            const string blendText   = layerJSON.get( "blend" ).asString();
+            bool         bBlendValid = false;
             for ( uint32 blendIndex = 0; blendIndex < static_cast<uint32>( std::size( AnimationGraphAssetInternal::kArrLayerBlendText ) ); ++blendIndex )
             {
                 if ( blendText == AnimationGraphAssetInternal::kArrLayerBlendText[blendIndex] )
@@ -346,8 +374,9 @@ namespace sw
                 SW_LOG_ERROR( "Animation graph layer '%#' needs a 'weight' in [0, 1]", layer._name.c_str() );
             if ( bBlendValid == false )
                 SW_LOG_ERROR( "Animation graph layer '%#' has unknown 'blend' '%#' (Override, Additive)", layer._name.c_str(), blendText.c_str() );
-            if ( layerJSON.has( "loop" ) )
-                layer._bLoop = layerJSON.get( "loop" ).asBool() ? SW_TRUE : SW_FALSE;
+            bool       bLayerLoop = layer._bLoop != SW_FALSE;
+            const bool bLoopValid = layerJSON.readOptionalInto( "loop", bLayerLoop );
+            layer._bLoop          = bLayerLoop ? SW_TRUE : SW_FALSE;
             if ( layerJSON.has( "weight_param" ) )
                 layer._weightParameter = hashed_string( layerJSON.get( "weight_param" ).asString() );
             if ( layerJSON.has( "mask" ) )
@@ -358,13 +387,14 @@ namespace sw
             bool bHalfLifeValid = true;
             if ( layerJSON.has( "half_life" ) )
             {
-                const JSONValue halfLifeJSON = layerJSON.get( "half_life" );
-                layer._halfLifeSeconds       = static_cast<float32>( halfLifeJSON.asFloat( -1.0 ) );
-                bHalfLifeValid               = halfLifeJSON.isNumber() && layer._halfLifeSeconds > 0.0f;
+                const std::optional<float32> halfLife = layerJSON.get( "half_life" ).isNumber() ? layerJSON.readRequired<float32>( "half_life" ) : std::nullopt;
+                bHalfLifeValid                        = halfLife.has_value() && *halfLife > 0.0f;
+                if ( bHalfLifeValid )
+                    layer._halfLifeSeconds = *halfLife;
                 if ( bHalfLifeValid == false )
                     SW_LOG_ERROR( "Animation graph layer '%#' needs a positive 'half_life'", layer._name.c_str() );
             }
-            const bool bLayerValid = bWeightValid && bBlendValid && bMaskValid && bHalfLifeValid;
+            const bool bLayerValid = bWeightValid && bBlendValid && bMaskValid && bHalfLifeValid && bLoopValid;
             if ( bLayerValid == false )
             {
                 bValid = false;

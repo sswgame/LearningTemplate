@@ -231,10 +231,10 @@ namespace sw
     {
         reader.reportUnknownAttributes( node, SocketSetInternal::kArrVirtualBoneAttribute );
         VirtualBoneDef virtualBone;
-        virtualBone._name                 = reader.readName( node, "name", true );
-        virtualBone._from                 = reader.readName( node, "from", true );
-        virtualBone._to                   = reader.readName( node, "to", true );
-        virtualBone._weight               = reader.readOptionalFloat( node, "weight", 0.5f );
+        virtualBone._name = reader.readName( node, "name", true );
+        virtualBone._from = reader.readName( node, "from", true );
+        virtualBone._to   = reader.readName( node, "to", true );
+        reader.readOptionalFloat( node, "weight", virtualBone._weight );
         const bool bIncompleteVirtualBone = virtualBone._name.empty() || virtualBone._from.empty() || virtualBone._to.empty();
         if ( bIncompleteVirtualBone )
             return;

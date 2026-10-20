@@ -100,7 +100,13 @@ namespace sw
             settings._profileURL      = Internal::readText( entry, "profileUrl", "" );
             settings._subjectPath     = Internal::readText( entry, "subjectPath", settings._kind == PlatformLoginProviderKind::Oidc ? "sub" : "id" );
             settings._displayNamePath = Internal::readText( entry, "displayNamePath", "" );
-            settings._bRequireNonce   = entry.get( "requireNonce", false ).asBool( false ) ? SW_TRUE : SW_FALSE;
+            bool bRequireNonce        = settings._bRequireNonce != SW_FALSE; // 없으면 설정의 초기값이다
+            if ( entry.readOptionalInto( "requireNonce", bRequireNonce ) == false )
+            {
+                outError = "provider '" + settings._name + "' has a requireNonce that is not true or false";
+                return false;
+            }
+            settings._bRequireNonce   = bRequireNonce ? SW_TRUE : SW_FALSE;
             const JSONValue clientIDs = entry.get( "clientIds", false );
             for ( size_t clientIndex = 0; clientIDs.isArray() && clientIndex < clientIDs.size(); ++clientIndex )
             {

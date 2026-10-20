@@ -52,22 +52,22 @@ namespace sw
                         }
                     }
                     AnimationBoneMaskEntry entry{};
-                    entry._bone                = hashed_string( entryJSON.get( "bone" ).asString() );
-                    entry._bPropagate          = bPropagate ? SW_TRUE : SW_FALSE;
-                    const JSONValue weightJSON = entryJSON.get( "weight" );
+                    entry._bone       = hashed_string( entryJSON.get( "bone" ).asString() );
+                    entry._bPropagate = bPropagate ? SW_TRUE : SW_FALSE;
                     if ( entry._bone.empty() )
                     {
                         SW_LOG_ERROR( "%#: bone mask '%#' item %# has no 'bone'", context, pListKey, index );
                         bValid = false;
                         continue;
                     }
-                    if ( weightJSON.isNumber() == false )
+                    const std::optional<float32> weight = entryJSON.get( "weight" ).isNumber() ? entryJSON.readRequired<float32>( "weight" ) : std::nullopt;
+                    if ( weight.has_value() == false )
                     {
                         SW_LOG_ERROR( "%#: bone mask entry '%#' needs a numeric 'weight'", context, entry._bone.c_str() );
                         bValid = false;
                         continue;
                     }
-                    entry._weight           = static_cast<float32>( weightJSON.asFloat() );
+                    entry._weight           = *weight;
                     const bool bWeightValid = 0.0f <= entry._weight && entry._weight <= 1.0f;
                     if ( bWeightValid == false )
                     {

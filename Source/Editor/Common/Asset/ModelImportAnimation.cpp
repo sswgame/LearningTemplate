@@ -315,7 +315,12 @@ namespace sw::editor
                 return false;
             ClipExtra extra{};
             if ( clipValue.has( "loop" ) )
-                extra._loopOverride = clipValue.get( "loop" ).asBool( true ) ? 1 : 0;
+            {
+                const std::optional<bool> bLoop = clipValue.readRequired<bool>( "loop" );
+                if ( bLoop.has_value() == false )
+                    return false;
+                extra._loopOverride = *bLoop ? 1 : 0;
+            }
             const JSONValue notifies = clipValue.get( "notifies" );
             for ( size_t notifyIndex = 0; notifies.isArray() && notifyIndex < notifies.size(); ++notifyIndex )
             {
@@ -328,9 +333,12 @@ namespace sw::editor
                     return false;
                 }
                 AnimationNotifyEvent event{};
-                event._name     = hashed_string( notify.get( "name" ).asString() );
-                event._time     = static_cast<float32>( notify.get( "time" ).asFloat() );
-                event._duration = static_cast<float32>( notify.get( "duration" ).asFloat( 0.0 ) );
+                event._name                       = hashed_string( notify.get( "name" ).asString() );
+                const std::optional<float32> time = notify.readRequired<float32>( "time" );
+                // 길이는 없으면 형식의 초기값(순간 알림)이다.
+                if ( time.has_value() == false || notify.readOptionalInto( "duration", event._duration ) == false )
+                    return false;
+                event._time = *time;
                 extra._listNotify.push_back( event );
             }
             const JSONValue curves = clipValue.get( "curves" );

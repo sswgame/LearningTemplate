@@ -98,8 +98,8 @@ namespace sw
             {
                 reader.reportUnknownAttributes( child, FitTablesInternal::kArrLayerAttribute );
                 FitLayerDef layer;
-                layer._name  = reader.readName( child, "name", true );
-                layer._order = reader.readOptionalInt( child, "order", 0 );
+                layer._name = reader.readName( child, "name", true );
+                reader.readOptionalInt( child, "order", layer._order );
                 if ( layer._name.empty() )
                     continue;
                 if ( findLayer( layer._name ) != nullptr )
@@ -111,9 +111,9 @@ namespace sw
             {
                 reader.reportUnknownAttributes( child, FitTablesInternal::kArrRegionAttribute );
                 BodyRegionDef region;
-                region._name      = reader.readName( child, "name", true );
-                region._group     = reader.readName( child, "group", false );
-                region._minWeight = reader.readOptionalFloat( child, "minWeight", 0.5f );
+                region._name  = reader.readName( child, "name", true );
+                region._group = reader.readName( child, "group", false );
+                reader.readOptionalFloat( child, "minWeight", region._minWeight );
                 reader.readNameList( child, "bones", region._listBone );
                 const bool bHasBones = region._listBone.empty() == false;
                 const bool bHasGroup = region._group.empty() == false;
@@ -130,12 +130,12 @@ namespace sw
             {
                 reader.reportUnknownAttributes( child, FitTablesInternal::kArrProfileAttribute );
                 FitProfileDef profile;
-                profile._name             = reader.readName( child, "name", true );
-                profile._rigidity         = reader.readOptionalFloat( child, "rigidity", profile._rigidity );
-                profile._shrinkStrength   = reader.readOptionalFloat( child, "shrinkStrength", profile._shrinkStrength );
-                profile._pushDistance     = reader.readOptionalFloat( child, "pushDistance", profile._pushDistance );
-                profile._falloffWidth     = reader.readOptionalFloat( child, "falloffWidth", profile._falloffWidth );
-                profile._coverageDistance = reader.readOptionalFloat( child, "coverageDistance", profile._coverageDistance );
+                profile._name = reader.readName( child, "name", true );
+                reader.readOptionalFloat( child, "rigidity", profile._rigidity );
+                reader.readOptionalFloat( child, "shrinkStrength", profile._shrinkStrength );
+                reader.readOptionalFloat( child, "pushDistance", profile._pushDistance );
+                reader.readOptionalFloat( child, "falloffWidth", profile._falloffWidth );
+                reader.readOptionalFloat( child, "coverageDistance", profile._coverageDistance );
                 if ( profile._rigidity < 0.0f || profile._rigidity > 1.0f )
                     reader.addError( child, "needs rigidity in [0, 1]" );
                 if ( profile._name.empty() )

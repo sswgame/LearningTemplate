@@ -42,42 +42,54 @@ namespace sw
             /**
              * @brief 버전 1에서 2로 올립니다. `version` 은 `formatVersion` 으로, `count` 는 `presetCount` 로 바꾸고, 즐겨찾기 목록(`favorites=이름,이름`)은 프리셋마다 `.favorite=1` 로 바꿉니다.
              */
-            static void upgradeFromVersion1( KeyValueMap& inoutMap )
+            [[nodiscard]] static bool upgradeFromVersion1( KeyValueMap& inoutMap )
             {
-                const int32    count = KeyValueFile::getInt( inoutMap, "count", 0 );
+                // 개수는 필수다. 즐겨찾기 목록과 이름은 비어 있을 수 있다(빈 값은 적지 않은 것과 같다).
+                const std::optional<int32> count = KeyValueFile::readRequired<int32>( inoutMap, "count" );
+                string                     favorites;
+                if ( count.has_value() == false || KeyValueFile::readOptionalInto( inoutMap, "favorites", favorites ) == false )
+                    return false;
                 vector<string> listFavorite;
-                StringUtil::forEachToken( string_view( KeyValueFile::get( inoutMap, "favorites", "" ) ), ",", [&]( string_view token )
+                StringUtil::forEachToken( string_view( favorites ), ",", [&]( string_view token )
                 {
                     listFavorite.push_back( string( StringUtil::trim( token ) ) );
                 } );
-                for ( int32 index = 0; index < count && index < kMaxPresetCount; ++index )
+                for ( int32 index = 0; index < *count && index < kMaxPresetCount; ++index )
                 {
-                    const string name      = KeyValueFile::get( inoutMap, makeKey( index, "name" ), "" );
-                    bool         bFavorite = false;
+                    string name;
+                    if ( KeyValueFile::readOptionalInto( inoutMap, makeKey( index, "name" ), name ) == false )
+                        return false;
+                    bool bFavorite = false;
                     for ( const string& favorite : listFavorite )
                     {
                         bFavorite = bFavorite || favorite == name;
                     }
                     inoutMap[makeKey( index, "favorite" )] = bFavorite ? "1" : "0";
                 }
-                inoutMap["presetCount"]   = to_string( count );
+                inoutMap["presetCount"]   = to_string( *count );
                 inoutMap["formatVersion"] = "2";
                 inoutMap.erase( "count" );
                 inoutMap.erase( "version" );
                 inoutMap.erase( "favorites" );
+                return true;
             }
 
-            /** @brief 파일의 버전을 현재 버전까지 올립니다. 알 수 없는 새 버전이면 false 입니다. */
-            static bool upgradeToCurrent( KeyValueMap& inoutMap )
+            /** @brief 파일의 버전을 현재 버전까지 올립니다. 버전이 없거나 깨졌거나 알 수 없는 새 버전이면 false 입니다. */
+            [[nodiscard]] static bool upgradeToCurrent( KeyValueMap& inoutMap )
             {
-                int32 version = KeyValueFile::getInt( inoutMap, "formatVersion", 0 );
-                if ( version == 0 )
-                    version = KeyValueFile::getInt( inoutMap, "version", 0 );
+                // 2 판부터는 `formatVersion`, 1 판은 `version` 이다.
+                std::optional<int32> formatVersion;
+                std::optional<int32> legacyVersion;
+                if ( KeyValueFile::readOptional( inoutMap, "formatVersion", formatVersion ) == false || KeyValueFile::readOptional( inoutMap, "version", legacyVersion ) == false )
+                    return false;
+                int32 version = formatVersion.has_value() ? *formatVersion : legacyVersion.has_value() ? *legacyVersion
+                                                                                                       : 0;
                 if ( version <= 0 || version > UserAppearancePresetStore::kVersion )
                     return false;
                 if ( version == 1 )
                 {
-                    upgradeFromVersion1( inoutMap );
+                    if ( upgradeFromVersion1( inoutMap ) == false )
+                        return false;
                     version = 2;
                 }
                 return version == UserAppearancePresetStore::kVersion;
@@ -212,16 +224,27 @@ namespace sw
             return false;
         }
         _listPreset.clear();
-        const int32 count = KeyValueFile::getInt( map, "presetCount", 0 );
-        for ( int32 index = 0; index < count && index < Internal::kMaxPresetCount; ++index )
+        const std::optional<int32> count = KeyValueFile::readRequired<int32>( map, "presetCount" );
+        if ( count.has_value() == false )
+            return false;
+        for ( int32 index = 0; index < *count && index < Internal::kMaxPresetCount; ++index )
         {
+            // 이름 · 썸네일 · 코드는 빈 글일 수 있고(빈 값은 적지 않은 것과 같다), 즐겨찾기는 없으면 프리셋의 초기값이다.
             UserAppearancePreset preset;
-            preset._name          = KeyValueFile::get( map, Internal::makeKey( index, "name" ), "" );
-            preset._thumbnailPath = KeyValueFile::get( map, Internal::makeKey( index, "thumbnail" ), "" );
-            preset._bFavorite     = KeyValueFile::getBool( map, Internal::makeKey( index, "favorite" ), false ) ? SW_TRUE : SW_FALSE;
-            const utf8* pCode     = KeyValueFile::get( map, Internal::makeKey( index, "code" ), "" );
-            string      reason;
-            if ( _pDatabase == nullptr || AppearanceShareCode::decode( string_view( pCode ), *_pDatabase, preset._selection, &reason ) == false )
+            bool                 bFavorite = preset._bFavorite != SW_FALSE;
+            string               code;
+            const bool           bFieldsRead = KeyValueFile::readOptionalInto( map, Internal::makeKey( index, "name" ), preset._name ) &&
+                                     KeyValueFile::readOptionalInto( map, Internal::makeKey( index, "thumbnail" ), preset._thumbnailPath ) &&
+                                     KeyValueFile::readOptionalInto( map, Internal::makeKey( index, "favorite" ), bFavorite ) &&
+                                     KeyValueFile::readOptionalInto( map, Internal::makeKey( index, "code" ), code );
+            if ( bFieldsRead == false )
+            {
+                SW_LOG_WARNING( "Appearance preset %# has a broken field - skipped", index );
+                continue;
+            }
+            preset._bFavorite = bFavorite ? SW_TRUE : SW_FALSE;
+            string reason;
+            if ( _pDatabase == nullptr || AppearanceShareCode::decode( string_view( code ), *_pDatabase, preset._selection, &reason ) == false )
             {
                 SW_LOG_WARNING( "Appearance preset '%#' cannot be read (%#) - skipped", preset._name, _pDatabase == nullptr ? "no appearance data" : reason.c_str() );
                 continue;

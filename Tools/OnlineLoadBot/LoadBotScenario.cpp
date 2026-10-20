@@ -177,10 +177,21 @@ namespace sw
             }
         }
 
-        const bool bRepeat = outStep._action == LoadBotAction::Repeat;
-        outStep._minMs     = value.get( "_minMs", false ).asInt();
-        outStep._maxMs     = value.has( "_maxMs", false ) ? value.get( "_maxMs", false ).asInt() : outStep._minMs;
-        outStep._count     = value.has( "_count", false ) ? static_cast<int32>( value.get( "_count", false ).asInt() ) : 1;
+        // 적지 않은 시간 · 횟수는 단계의 초기값이고, `_maxMs` 는 없으면 `_minMs` 와 같다(고정 대기). 정수가 아니면 거절한다.
+        const bool bRepeat     = outStep._action == LoadBotAction::Repeat;
+        bool       bTimingRead = value.readOptionalInto( "_minMs", outStep._minMs );
+        outStep._maxMs         = outStep._minMs;
+        bTimingRead            = bTimingRead && value.readOptionalInto( "_maxMs", outStep._maxMs ) && value.readOptionalInto( "_count", outStep._count );
+        if ( outStep._action == LoadBotAction::WaitMatch )
+        {
+            bTimingRead    = bTimingRead && value.readOptionalInto( "_timeoutMs", outStep._minMs );
+            outStep._maxMs = outStep._minMs;
+        }
+        if ( bTimingRead == false )
+        {
+            outError = "action '" + actionName + "' has a time or _count that is not an integer";
+            return false;
+        }
         for ( const string_view key : kArrTextKey )
         {
             if ( value.has( key, false ) )
@@ -190,11 +201,6 @@ namespace sw
             outStep._secondText = value.get( "_text", false ).asString();
         else if ( value.has( "_activity", false ) )
             outStep._secondText = value.get( "_activity", false ).asString();
-        if ( outStep._action == LoadBotAction::WaitMatch )
-        {
-            outStep._minMs = value.get( "_timeoutMs", false ).asInt();
-            outStep._maxMs = outStep._minMs;
-        }
         const bool bInvalidStepTiming = outStep._minMs < 0 || outStep._maxMs < outStep._minMs || outStep._count <= 0;
         if ( bInvalidStepTiming )
         {
@@ -248,13 +254,16 @@ namespace sw
                 return false;
             }
         }
-        const LoadBotScenario defaults;
-        outScenario                  = LoadBotScenario{};
-        outScenario._name            = root.get( "_name", false ).asString();
-        outScenario._botCount        = static_cast<int32>( root.get( "_botCount", false ).asInt( defaults._botCount ) );
-        outScenario._rampUpSeconds   = static_cast<int32>( root.get( "_rampUpSeconds", false ).asInt( defaults._rampUpSeconds ) );
-        outScenario._durationSeconds = static_cast<int32>( root.get( "_durationSeconds", false ).asInt( defaults._durationSeconds ) );
-        outScenario._seed            = static_cast<uint32>( root.get( "_seed", false ).asUint( defaults._seed ) );
+        // 적지 않은 칸은 시나리오의 초기값이다. 정수가 아니면 거절한다.
+        outScenario       = LoadBotScenario{};
+        outScenario._name = root.get( "_name", false ).asString();
+        const bool bRead  = root.readOptionalInto( "_botCount", outScenario._botCount ) && root.readOptionalInto( "_rampUpSeconds", outScenario._rampUpSeconds ) &&
+                           root.readOptionalInto( "_durationSeconds", outScenario._durationSeconds ) && root.readOptionalInto( "_seed", outScenario._seed );
+        if ( bRead == false )
+        {
+            outError = "_botCount, _rampUpSeconds, _durationSeconds and _seed must be integers";
+            return false;
+        }
         if ( root.has( "_region", false ) )
             outScenario._region = root.get( "_region", false ).asString();
         const bool bInvalidScenarioTiming = outScenario._botCount <= 0 || outScenario._rampUpSeconds < 0 || outScenario._durationSeconds <= 0;
