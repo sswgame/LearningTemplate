@@ -1,6 +1,6 @@
 # 간접 조명 구현 단위 (`D2-12`)
 
-> 상태: 구현중 · 선행: ClusteredLighting · 영역: graphics · 옛번호: D2-12 · 진행: 4/7
+> 상태: 구현중 · 선행: ClusteredLighting · 영역: graphics · 옛번호: D2-12 · 진행: 5/7
 
 결정은 [결정 기록](../09_Decisions.md) 5-12 의 `D2-12` 행이 원본입니다. 이 문서는 그 결정을 구현 단위로 나눈 계획과 단위마다의 계약을 적습니다.
 단위가 끝나면 그 단위의 절을 지우고, 남는 교훈은 코드의 헤더 주석으로 옮깁니다.
@@ -23,7 +23,7 @@
 | P3 | 셰이더 소비: 볼륨은 라이트 목록의 `SW_LIGHT_TYPE_PROBE_VOLUME` 원소(클러스터 그리드 항목), SH9 는 전용 슬롯 t13 `g_SwLightProbes`(`swLoadProbe` 하나만 위치를 안다). `swShadeLights` 가 덮는 볼륨들의 SH(삼선형, 가중 평균)로 앰비언트를 바꾼다. 상자 밖은 자르지 않는다 — **들어감**. 스카이 전역 항목(볼륨 밖)은 D3-7.4 뒤로 남음, 그때까지 볼륨 밖은 지금의 앰비언트. 툰(`toon.hlsl`)은 자기 앰비언트를 그대로 쓴다. `RenderPassGPUTest.LightProbeVolumeReplacesAmbient` · `SceneLightTest.CollectsBakedProbeVolumesAfterLights` 실행은 **확인 필요** | P1, `D2-13` S1 |
 | P4 | 반사 프로브: GPU 베이크(씬을 여섯 면으로 그려 옥타헤드럴로 접고 거칠기 밉을 만듭니다)와 아틀라스 슬롯 | `D2-6.3` 슬롯 지도, P5 |
 | P5 | 금속도와 거칠기 PBR(GGX, 슐릭 프레넬), 머티리얼 필드와 G버퍼 칸 | `D2-6.4` G버퍼 확장 |
-| P6 | 에디터 베이크 UI(볼륨 선택, 베이크 단추, 진행 표시)와 에디터 시나리오 | P2 |
+| P6 | 에디터 베이크: 커맨드 `lighting.bakeProbes`(Build > Bake Light Probes — 선택한 볼륨, 없으면 모든 볼륨), 결과는 씬 옆 `<씬>.<오브젝트>.probes` 와 볼륨의 `_probeDataPath`, 탐침 `Editor.LightProbeBakeCount` · `Editor.BakedLightProbeVolumeCount`, 시나리오 `engine/automation/editor/lightprobebake.scenario.xml` — **들어감**. 굽기는 동기라 진행 표시는 끝난 뒤 알림 하나다(긴 굽기를 비동기 작업으로 옮기는 일은 **남음**). 볼륨을 실제로 굽는 시나리오(파일을 쓰는)와 시나리오 실행은 **확인 필요** | P2 |
 
 ## 3. 충돌 주의
 
