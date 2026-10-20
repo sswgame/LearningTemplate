@@ -18,7 +18,8 @@ namespace sw
     {
         struct JSONSerializerInternal
         {
-            static void writeJSONValue( JSONValue dst, const void* pValPtr, const hashed_string& typeName, const SerializeContext& context )
+            // 주소는 값 자체다(프로퍼티 오프셋을 더한 뒤). 객체 주소는 `writeProperty` 가 받는다.
+            static void writeJSONValue( JSONValue dst, const ValueAddress value, const hashed_string& typeName, const SerializeContext& context )
             {
                 if ( dst.isValid() == false )
                     return;
@@ -34,7 +35,7 @@ namespace sw
                 if ( bIsString || bIsEnum )
                 {
                     StringBuilder<constant::kMaxBuffer8192> text;
-                    SerializerUtil::valueToText( text, ValueAddress{ pValPtr }, typeName, context );
+                    SerializerUtil::valueToText( text, value, typeName, context );
                     dst.setString( text.view() );
                     return;
                 }
@@ -42,7 +43,7 @@ namespace sw
                 if ( bIsBool )
                 {
                     StringBuilder<constant::kMaxBuffer8192> text;
-                    SerializerUtil::valueToText( text, ValueAddress{ pValPtr }, typeName, context );
+                    SerializerUtil::valueToText( text, value, typeName, context );
                     dst.setBool( StringUtil::parseBool( text.view(), false ) );
                     return;
                 }
@@ -50,7 +51,7 @@ namespace sw
                 if ( context.findTextWriter( resolved ) != nullptr )
                 {
                     StringBuilder<constant::kMaxBuffer8192> text;
-                    SerializerUtil::valueToText( text, ValueAddress{ pValPtr }, typeName, context );
+                    SerializerUtil::valueToText( text, value, typeName, context );
                     JSONDocument parsed;
                     const bool   bParsedScalar = parsed.tryParse( text.view() ) && parsed.getRoot().isObject() == false && parsed.getRoot().isArray() == false;
                     if ( bParsedScalar )
@@ -67,13 +68,13 @@ namespace sw
                 {
                     if ( pStructInfo->isPrimitive() == false )
                     {
-                        JSONSerializer::writeObject( dst, pValPtr, *pStructInfo, context );
+                        JSONSerializer::writeObject( dst, value.get(), *pStructInfo, context );
                         return;
                     }
                 }
 
                 StringBuilder<constant::kMaxBuffer8192> text;
-                SerializerUtil::valueToText( text, ValueAddress{ pValPtr }, typeName, context );
+                SerializerUtil::valueToText( text, value, typeName, context );
                 dst.setString( text.view() );
             }
 
@@ -153,7 +154,7 @@ namespace sw
 
                 void writeScalar( const ValueAddress value, const hashed_string& typeName, const ContainerSlot slot ) override
                 {
-                    writeJSONValue( openElementSlot( slot ), value.get(), typeName, _context );
+                    writeJSONValue( openElementSlot( slot ), value, typeName, _context );
                 }
 
             private:
@@ -271,7 +272,7 @@ namespace sw
 
                 ContainerReadResult readScalar( const MutableValueAddress value, const hashed_string& typeName, ContainerSlot ) override
                 {
-                    return ContainerVisitor::toElementResult( readJSONValue( value.get(), typeName, _listCursor.back(), _context ) );
+                    return ContainerVisitor::toElementResult( readJSONValue( value, typeName, _listCursor.back(), _context ) );
                 }
 
                 ContainerReadResult skipElement( size_t ) override { return ContainerReadResult::FieldFailed; }
@@ -310,8 +311,9 @@ namespace sw
             }
 
             /** @brief @p src 를 @p typeName 값 하나로 읽습니다. 구조체이면 그 객체의 결과(금지된 필드면 ObjectRejected)를 그대로 돌려줍니다. */
-            [[nodiscard]] static FieldReadResult readJSONValue( void* pValPtr, const hashed_string& typeName, const JSONValue& src, const SerializeContext& context )
+            [[nodiscard]] static FieldReadResult readJSONValue( const MutableValueAddress value, const hashed_string& typeName, const JSONValue& src, const SerializeContext& context )
             {
+                void* const pValPtr = value.get();
                 if ( pValPtr == nullptr || src.isValid() == false )
                     return FieldReadResult::FieldFailed;
 
@@ -351,29 +353,29 @@ namespace sw
                 }
 
                 if ( src.isString() )
-                    return fieldResultOf( parseTextValueCoerced( MutableValueAddress{ pValPtr }, typeName, src.asString(), context ) );
-                return fieldResultOf( parseTextValueCoerced( MutableValueAddress{ pValPtr }, typeName, src.dump(), context ) );
+                    return fieldResultOf( parseTextValueCoerced( value, typeName, src.asString(), context ) );
+                return fieldResultOf( parseTextValueCoerced( value, typeName, src.dump(), context ) );
             }
-            static void writeProperty( JSONValue parent, const PropertyInfo& prop, const void* pInstance, const SerializeContext& context )
+            static void writeProperty( JSONValue parent, const PropertyInfo& prop, const ObjectAddress instance, const SerializeContext& context )
             {
                 if ( prop._bIsBitField == SW_TRUE )
                 {
-                    const bool bVal = prop.getValue<bool>( pInstance );
+                    const bool bVal = prop.getValue<bool>( instance.get() );
                     parent.set( prop._name.c_str(), false ).setBool( bVal );
                     return;
                 }
-                const void* pPropPtr = prop.getRawPtr( pInstance );
+                const ValueAddress propValue{ prop.getRawPtr( instance.get() ) };
                 if ( prop._bIsContainer && prop.hasContainerWrapper() )
                 {
                     // 프로퍼티 이름 아래에 바로 배열/오브젝트로 쓴다.
                     ContainerWriter writer( parent.set( prop._name.c_str(), false ), context );
-                    ContainerVisitor::write( ValueAddress{ pPropPtr }, prop.getContainerShape(), writer, context );
+                    ContainerVisitor::write( propValue, prop.getContainerShape(), writer, context );
                     return;
                 }
-                writeJSONValue( parent.set( prop._name.c_str(), false ), pPropPtr, prop._typeName, context );
+                writeJSONValue( parent.set( prop._name.c_str(), false ), propValue, prop._typeName, context );
             }
 
-            [[nodiscard]] static FieldReadResult readProperty( const JSONValue& field, const PropertyInfo& prop, void* pInstance, const SerializeContext& context,
+            [[nodiscard]] static FieldReadResult readProperty( const JSONValue& field, const PropertyInfo& prop, const MutableObjectAddress instance, const SerializeContext& context,
                                                                vector<SchemaOrphanValue>* pOutListOrphan = nullptr )
             {
                 if ( prop._bIsBitField == SW_TRUE )
@@ -386,16 +388,16 @@ namespace sw
                         bVal = ( field.asInt() != 0 );
                     else if ( field.isString() == false || StringUtil::tryParseBool( field.asString(), bVal ) == false )
                         return FieldReadResult::FieldFailed;
-                    prop.setValue<bool>( pInstance, bVal );
+                    prop.setValue<bool>( instance.get(), bVal );
                     return FieldReadResult::Read;
                 }
-                void* pPropPtr = prop.getRawPtr( pInstance );
+                const MutableValueAddress propValue{ prop.getRawPtr( instance.get() ) };
                 if ( prop._bIsContainer && prop.hasContainerWrapper() )
                 {
                     ContainerReader reader( field, context, pOutListOrphan, prop );
-                    return ContainerVisitor::toFieldResult( ContainerVisitor::read( MutableValueAddress{ pPropPtr }, prop.getContainerShape(), reader, context ) );
+                    return ContainerVisitor::toFieldResult( ContainerVisitor::read( propValue, prop.getContainerShape(), reader, context ) );
                 }
-                return readJSONValue( pPropPtr, prop._typeName, field, context );
+                return readJSONValue( propValue, prop._typeName, field, context );
             }
         };
     } // namespace
@@ -453,7 +455,7 @@ namespace sw
         {
             if ( SerializerUtil::shouldSerializeProperty( typeInfo, prop, context ) == false )
                 return;
-            JSONSerializerInternal::writeProperty( dst, prop, pInstance, context );
+            JSONSerializerInternal::writeProperty( dst, prop, ObjectAddress{ pInstance }, context );
         }, true /* 상속 PROPERTY 포함 */ );
     }
 
@@ -523,7 +525,7 @@ namespace sw
             uniqueMatched.insert( pMatched->getNameHash() );
             if ( bContinuesAfterUnreadable && rollback.keepValueBeforeRead( typeInfo, *pMatched, ObjectAddress{ pInstance }, context ) == false )
                 return FieldReadResult::ObjectRejected;
-            const FieldReadResult fieldResult = JSONSerializerInternal::readProperty( field, *pMatched, pInstance, context, pOutListOrphan );
+            const FieldReadResult fieldResult = JSONSerializerInternal::readProperty( field, *pMatched, MutableObjectAddress{ pInstance }, context, pOutListOrphan );
             switch ( fieldResult )
             {
                 case FieldReadResult::Read:
@@ -573,7 +575,7 @@ namespace sw
         const bool bStrictFieldError = pOutListOrphan == nullptr && bFieldError;
         if ( bStrictFieldError )
             return FieldReadResult::FieldFailed;
-        return SerializerUtil::isWithinDeclaredRanges( typeInfo, pInstance ) ? FieldReadResult::Read : FieldReadResult::FieldFailed;
+        return SerializerUtil::isWithinDeclaredRanges( typeInfo, ObjectAddress{ pInstance } ) ? FieldReadResult::Read : FieldReadResult::FieldFailed;
     }
 
     SoftReadResult JSONSerializer::deserializeSoft( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr,
@@ -598,7 +600,7 @@ namespace sw
         {
             if ( SerializerUtil::shouldSerializeProperty( typeInfo, prop, context ) == false )
                 return;
-            JSONSerializerInternal::writeProperty( root, prop, pInstance, context );
+            JSONSerializerInternal::writeProperty( root, prop, ObjectAddress{ pInstance }, context );
         }, true /* 상속 PROPERTY 포함 */ );
         return doc.dump();
     }
@@ -610,12 +612,12 @@ namespace sw
         // 절차는 JSON · XML · Binary 가 공통이다(`runVersionedDeserialize`). 여기서 정하는 것은 두 가지뿐이다.
         // **버전이 어디서 오는가**(본문 안의 `_schemaVersion`)와 **orphan 만 있을 때의 정책**이다.
         return runVersionedDeserialize(
-            outVersion, pInstance, typeInfo, currentVersion, pLegacyTypeInfo, context,
+            outVersion, MutableObjectAddress{ pInstance }, typeInfo, currentVersion, pLegacyTypeInfo, context,
             SchemaVersionSource::Payload, SchemaOrphanPolicy::Ignore,
             SW_DELEGATE_LAMBDA( SoftDeserializeFn,
-                                [&]( void* pTarget, const TypeInfo& targetType, vector<SchemaOrphanValue>& listOrphan, uint32& outSoftVersion ) -> bool
+                                [&]( const MutableObjectAddress target, const TypeInfo& targetType, vector<SchemaOrphanValue>& listOrphan, uint32& outSoftVersion ) -> bool
         {
-            return deserializeSoft( pTarget, targetType, jsonStr, &listOrphan, &outSoftVersion, context ) == SoftReadResult::Read;
+            return deserializeSoft( target.get(), targetType, jsonStr, &listOrphan, &outSoftVersion, context ) == SoftReadResult::Read;
         } ) );
     }
 

@@ -239,16 +239,16 @@ namespace sw
              *          남은 기록 타입 해시로 정한다. 프로퍼티 타입을 기록 타입으로 가정하면 타입이 바뀐 orphan(int32 → float32 등)을
              *          그 비트 그대로 제자리에 읽게 된다.
              */
-            [[nodiscard]] static bool applyOrphanAt( void* pInstance, const TypeInfo& typeInfo, const utf8* pPath, const SchemaOrphanValue& orphan,
+            [[nodiscard]] static bool applyOrphanAt( const MutableObjectAddress instance, const TypeInfo& typeInfo, const utf8* pPath, const SchemaOrphanValue& orphan,
                                                      hashed_string wireTypeHint, const SerializeContext& context )
             {
-                void*               pPtr{ nullptr };
+                MutableValueAddress value{ nullptr };
                 const PropertyInfo* pProp = nullptr;
-                if ( resolvePropertyPath( pInstance, typeInfo, pPath, pPtr, pProp ) == false )
+                if ( resolvePropertyPath( instance, typeInfo, pPath, value, pProp ) == false )
                     return false;
 
                 if ( orphan._text.empty() == false )
-                    return parseTextValueCoerced( MutableValueAddress{ pPtr }, pProp->_typeName, orphan._text, context );
+                    return parseTextValueCoerced( value, pProp->_typeName, orphan._text, context );
                 if ( orphan._listBinary.empty() )
                     return false;
 
@@ -258,7 +258,7 @@ namespace sw
                 // 기록 타입이 적혀 있는데 모르면(지운 enum, 지운 타입) 바이트의 뜻을 모른다. 크기로 짐작해 옮기지 않는다(바이너리 필드 읽기와 같은 규칙이다).
                 if ( hint.empty() && orphan._wireTypeHash != 0 )
                     return false;
-                return applyOrphanBinary( MutableValueAddress{ pPtr }, pProp->_typeName, orphan, hint, context );
+                return applyOrphanBinary( value, pProp->_typeName, orphan, hint, context );
             }
 
             /** @brief orphan 의 이름 해시입니다. 이름을 intern 하지 않은 orphan 은 해시만 가집니다. */
@@ -443,7 +443,7 @@ namespace sw
             return false;
 
         const SerializeContext& context = _serializeContext;
-        return SchemaMigrateInternal::applyOrphanAt( _pInstance, *_pTypeInfo, propName.c_str(), *pOrphan, wireTypeHint, context );
+        return SchemaMigrateInternal::applyOrphanAt( MutableObjectAddress{ _pInstance }, *_pTypeInfo, propName.c_str(), *pOrphan, wireTypeHint, context );
     }
 
     bool SchemaMigrateContext::applyOrphanToPath( const utf8* pDottedPath, hashed_string wireTypeHint ) const
@@ -465,7 +465,7 @@ namespace sw
             return false;
 
         const SerializeContext& context = _serializeContext;
-        return SchemaMigrateInternal::applyOrphanAt( _pInstance, *_pTypeInfo, pDottedPath, *pOrphan, wireTypeHint, context );
+        return SchemaMigrateInternal::applyOrphanAt( MutableObjectAddress{ _pInstance }, *_pTypeInfo, pDottedPath, *pOrphan, wireTypeHint, context );
     }
 
     bool SchemaMigrateContext::moveProperty( hashed_string fromProp, hashed_string toProp ) const
@@ -481,33 +481,33 @@ namespace sw
 
         const SerializeContext& context = _serializeContext;
 
-        void*               pSrcPtr{ nullptr };
-        const PropertyInfo* pSrcProp = nullptr;
-        void*               pSrcRoot = _pLegacyInstance != nullptr ? _pLegacyInstance : _pInstance;
-        const TypeInfo*     pSrcType = _pLegacyTypeInfo != nullptr ? _pLegacyTypeInfo : _pTypeInfo;
-        if ( resolvePropertyPath( pSrcRoot, *pSrcType, pFromPath, pSrcPtr, pSrcProp ) == false )
+        MutableValueAddress        srcValue{ nullptr };
+        const PropertyInfo*        pSrcProp = nullptr;
+        const MutableObjectAddress srcRoot{ _pLegacyInstance != nullptr ? _pLegacyInstance : _pInstance };
+        const TypeInfo*            pSrcType = _pLegacyTypeInfo != nullptr ? _pLegacyTypeInfo : _pTypeInfo;
+        if ( resolvePropertyPath( srcRoot, *pSrcType, pFromPath, srcValue, pSrcProp ) == false )
             return false;
 
-        void*               pDstPtr{ nullptr };
+        MutableValueAddress dstValue{ nullptr };
         const PropertyInfo* pDstProp = nullptr;
-        if ( resolvePropertyPath( _pInstance, *_pTypeInfo, pToPath, pDstPtr, pDstProp ) == false )
+        if ( resolvePropertyPath( MutableObjectAddress{ _pInstance }, *_pTypeInfo, pToPath, dstValue, pDstProp ) == false )
             return false;
 
         StringBuilder<constant::kMaxBuffer8192> ss;
-        SerializerUtil::valueToText( ss, ValueAddress{ pSrcPtr }, pSrcProp->_typeName, context );
-        return parseTextValueCoerced( MutableValueAddress{ pDstPtr }, pDstProp->_typeName, ss.view(), context );
+        SerializerUtil::valueToText( ss, srcValue, pSrcProp->_typeName, context );
+        return parseTextValueCoerced( dstValue, pDstProp->_typeName, ss.view(), context );
     }
 
     bool SchemaMigrateContext::setPropertyFromText( hashed_string propName, string_view text ) const
     {
         if ( _pInstance == nullptr || _pTypeInfo == nullptr )
             return false;
-        void*               pPtr{ nullptr };
+        MutableValueAddress value{ nullptr };
         const PropertyInfo* pProp = nullptr;
-        if ( resolvePropertyPath( _pInstance, *_pTypeInfo, propName.c_str(), pPtr, pProp ) == false )
+        if ( resolvePropertyPath( MutableObjectAddress{ _pInstance }, *_pTypeInfo, propName.c_str(), value, pProp ) == false )
             return false;
         const SerializeContext& context = _serializeContext;
-        return parseTextValueCoerced( MutableValueAddress{ pPtr }, pProp->_typeName, text, context );
+        return parseTextValueCoerced( value, pProp->_typeName, text, context );
     }
 
     bool isValueOnlyCoercion( hashed_string targetTypeName, hashed_string wireTypeName )
@@ -642,19 +642,20 @@ namespace sw
         return false;
     }
 
-    bool resolvePropertyPath( void* pRoot, const TypeInfo& typeInfo, const utf8* pDottedPath, void*& pOutPtr,
+    bool resolvePropertyPath( const MutableObjectAddress root, const TypeInfo& typeInfo, const utf8* pDottedPath, MutableValueAddress& outValue,
                               const PropertyInfo*& pOutProp )
     {
-        pOutPtr  = nullptr;
+        outValue = MutableValueAddress{ nullptr };
         pOutProp = nullptr;
-        if ( pRoot == nullptr || pDottedPath == nullptr )
+        if ( root.get() == nullptr || pDottedPath == nullptr )
             return false;
 
         const vector<string> listPart = SchemaMigrateInternal::splitPath( pDottedPath );
         if ( listPart.empty() )
             return false;
 
-        void*               pCur      = pRoot;
+        // 경로 중간의 구조체 값은 다음 부분의 객체 주소다.
+        void*               pCur      = root.get();
         const TypeInfo*     pCurType  = &typeInfo;
         const PropertyInfo* pLastProp = nullptr;
 
@@ -668,7 +669,7 @@ namespace sw
             void* pPropPtr = pProp->getRawPtr( pCur );
             if ( partIndex + 1 == listPart.size() )
             {
-                pOutPtr  = pPropPtr;
+                outValue = MutableValueAddress{ pPropPtr };
                 pOutProp = pProp;
                 return true;
             }

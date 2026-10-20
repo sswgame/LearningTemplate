@@ -541,7 +541,7 @@ SW_TEST_CASE( FixedLayoutTest, ReadsKeepTheFieldBoundTheInspectorKeeps )
     SW_EXPECT_FALSE( sw::JSONSerializer::deserialize( &fromJSON, typeInfo, sw::JSONSerializer::serialize( &source, typeInfo ) ) );
 
     sw::vector<sw::string> listRangeError;
-    sw::SerializerUtil::collectRangeErrors( typeInfo, &source, sw::string(), listRangeError );
+    sw::SerializerUtil::collectRangeErrors( typeInfo, sw::ObjectAddress{ &source }, sw::string(), listRangeError );
     SW_ASSERT_EQUAL( size_t{ 1 }, listRangeError.size() );
     SW_EXPECT_TRUE( listRangeError[0].find( "_offset" ) != sw::string::npos );
 

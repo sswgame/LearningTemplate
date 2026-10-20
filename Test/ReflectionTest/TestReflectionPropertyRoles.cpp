@@ -66,14 +66,14 @@ SW_TEST_CASE( ReflectionPropertyRoleTest, RepNotifyCallsTheDeclaredFunction )
     sw::PropertyRoleActor actor;
     const int32           oldHealth = actor._health;
     actor._health                   = 40; // 네트워크 계층이 받은 값을 쓴 뒤
-    SW_EXPECT_TRUE( sw::PropertyRoleUtil::callRepNotify( getRoleProperty( "_health" ), &actor, &oldHealth ) );
+    SW_EXPECT_TRUE( sw::PropertyRoleUtil::callRepNotify( getRoleProperty( "_health" ), sw::MutableObjectAddress{ &actor }, sw::ValueAddress{ &oldHealth } ) );
     SW_EXPECT_EQUAL( 100, actor._oldHealthSeen );
 
-    SW_EXPECT_TRUE( sw::PropertyRoleUtil::callRepNotify( getRoleProperty( "_team" ), &actor, nullptr ) );
+    SW_EXPECT_TRUE( sw::PropertyRoleUtil::callRepNotify( getRoleProperty( "_team" ), sw::MutableObjectAddress{ &actor }, sw::ValueAddress{ nullptr } ) );
     SW_EXPECT_EQUAL( 1, actor._teamNotifyCount );
 
     // RepNotify 가 없는 프로퍼티는 부르지 않는다
-    SW_EXPECT_FALSE( sw::PropertyRoleUtil::callRepNotify( getRoleProperty( "_gold" ), &actor, nullptr ) );
+    SW_EXPECT_FALSE( sw::PropertyRoleUtil::callRepNotify( getRoleProperty( "_gold" ), sw::MutableObjectAddress{ &actor }, sw::ValueAddress{ nullptr } ) );
 }
 
 /**
@@ -143,23 +143,23 @@ SW_TEST_CASE( ReflectionPropertyRoleTest, InterpBlendsNumbersVectorsAndRotations
 
     const float32 opacityFrom = 0.0f;
     const float32 opacityTo   = 1.0f;
-    SW_ASSERT_TRUE( sw::PropertyRoleUtil::applyInterpolated( getRoleProperty( "_opacity" ), &actor, &opacityFrom, &opacityTo, 0.25f ) );
+    SW_ASSERT_TRUE( sw::PropertyRoleUtil::applyInterpolated( getRoleProperty( "_opacity" ), sw::MutableObjectAddress{ &actor }, sw::ValueAddress{ &opacityFrom }, sw::ValueAddress{ &opacityTo }, 0.25f ) );
     SW_EXPECT_NEAR_EQUAL( 0.25f, actor._opacity, 1e-5f );
 
     const int32 stepFrom = 0;
     const int32 stepTo   = 10;
-    SW_ASSERT_TRUE( sw::PropertyRoleUtil::applyInterpolated( getRoleProperty( "_step" ), &actor, &stepFrom, &stepTo, 0.46f ) );
+    SW_ASSERT_TRUE( sw::PropertyRoleUtil::applyInterpolated( getRoleProperty( "_step" ), sw::MutableObjectAddress{ &actor }, sw::ValueAddress{ &stepFrom }, sw::ValueAddress{ &stepTo }, 0.46f ) );
     SW_EXPECT_EQUAL( 5, actor._step );
 
     const sw::float3 offsetFrom( 0.0f, 0.0f, 0.0f );
     const sw::float3 offsetTo( 2.0f, 4.0f, -8.0f );
-    SW_ASSERT_TRUE( sw::PropertyRoleUtil::applyInterpolated( getRoleProperty( "_offset" ), &actor, &offsetFrom, &offsetTo, 0.5f ) );
+    SW_ASSERT_TRUE( sw::PropertyRoleUtil::applyInterpolated( getRoleProperty( "_offset" ), sw::MutableObjectAddress{ &actor }, sw::ValueAddress{ &offsetFrom }, sw::ValueAddress{ &offsetTo }, 0.5f ) );
     SW_EXPECT_NEAR_EQUAL( 1.0f, actor._offset._x, 1e-5f );
     SW_EXPECT_NEAR_EQUAL( -4.0f, actor._offset._z, 1e-5f );
 
     const sw::quaternion rotationFrom = sw::quaternion::Identity;
     const sw::quaternion rotationTo   = sw::quaternion::makeFromYawPitchRoll( sw::float3( 1.0f, 0.0f, 0.0f ) );
-    SW_ASSERT_TRUE( sw::PropertyRoleUtil::applyInterpolated( getRoleProperty( "_rotation" ), &actor, &rotationFrom, &rotationTo, 1.0f ) );
+    SW_ASSERT_TRUE( sw::PropertyRoleUtil::applyInterpolated( getRoleProperty( "_rotation" ), sw::MutableObjectAddress{ &actor }, sw::ValueAddress{ &rotationFrom }, sw::ValueAddress{ &rotationTo }, 1.0f ) );
     SW_EXPECT_NEAR_EQUAL( rotationTo._w, actor._rotation._w, 1e-4f );
 
     // 글 · 비트필드는 섞지 않는다
