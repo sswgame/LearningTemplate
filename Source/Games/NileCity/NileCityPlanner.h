@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
@@ -60,8 +61,13 @@ namespace sw
         /** @brief 칸의 강 한가운데 x(실수)입니다 — 지형과 화면이 같은 곡선을 씁니다. */
         static float32 computeRiverCenter( const NileCityLayout& layout, int32 y );
 
-        /** @brief 순서표를 @p layout 으로 처음부터 다시 짓습니다. 만든 직후에는 순서표가 비어 있습니다. */
-        void reset( const NileCityLayout& layout );
+        /**
+         * @brief 순서표를 데이터 @p planPath(자동 계획 XML)와 @p layout 으로 처음부터 다시 짓습니다. 만든 직후에는 순서표가 비어 있습니다.
+         * @details 계획의 칸 · 건물 · 인구 임계값은 데이터가 정본이다(코드에 좌표가 없다). 칸의 x 는 배치의 이름(road · farm)일 수 있고,
+         *          임계값은 구역(1 · 2 · 3 — 배치의 구역 인구) + extra 다.
+         * @return 파일을 읽지 못했거나 단계 하나라도 모양이 틀리면 오류를 남기고 false 이며 순서표는 빈다.
+         */
+        [[nodiscard]] bool reset( const NileCityLayout& layout, string_view planPath );
         /**
          * @brief 돈 · 인구가 되는 데까지 순서표를 실행합니다. 이번에 지은(또는 깐) 단계 수입니다.
          * @details 돈이 모자라거나 인구 임계값에 못 미치면 멈추고 다음 부름에 이어 갑니다. 놓을 수 없는 자리(겹침 · 땅)는 경고 없이 건너뜁니다.

@@ -39,6 +39,25 @@ namespace sw
     class Mesh;
     class PawnComponent;
 
+    /**
+     * @struct FarmCropModel
+     * @brief 작물 하나의 모델 표 한 줄입니다(디렉터의 PROPERTY — 씬 데이터). 표에 없는 작물은 기본 자라는 모델(잎)을 쓰고, 다 자라면 작물 색을 입는다.
+     */
+    REFLECT()
+    struct FarmCropModel
+    {
+        REFLECT_BODY();
+        PROPERTY( Tooltip = "Crop catalog id" )
+        hashed_string _cropID{};
+        PROPERTY( AssetPath, Tooltip = "Model of the ready crop; empty keeps the growing model tinted with the crop colour" )
+        string _readyModel{};
+        PROPERTY( Tooltip = "Growing models by stage: the first for stages 0 and 1, then one per stage, the last repeats; empty uses the default growing models" )
+        vector<string> _listGrowingModel{};
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 손에 든 도구입니다. */
     enum class FarmTool : uint8
     {
@@ -124,6 +143,10 @@ namespace sw
         const shared_ptr<MaterialInstance>& findCropLook( const hashed_string& cropID, bool bWithered, bool bCropColored ) const;
         /** @brief 타일 중심(땅 높이)을 반환합니다. 밭은 원점에서 +X, +Z 방향으로 1m 타일입니다. */
         static float3 computeTileCenter( int32 x, int32 y );
+        /** @brief 다 자란 작물이 따로 모델을 가졌으면 그 경로, 아니면 nullptr 입니다(자라는 모델에 작물 색을 입힌다). 표는 `_listCropModel` 이다. */
+        const string* findReadyModel( const hashed_string& cropID ) const;
+        /** @brief 자라는 중인 작물의 단계 @p stage 모델 경로입니다(작물 줄의 자라는 모델, 없으면 기본 자라는 모델). 판을 열 때 기본 목록이 비지 않았음을 확인했다. */
+        const string& findGrowingModel( const hashed_string& cropID, int32 stage ) const;
 
     protected:
         /** @brief 작물 카탈로그를 읽고 밭과 출하함을 새로 만들며, 같은 오브젝트의 공유 상태를 엽니다(새 판일 때만 시작 돈과 씨앗을 줍니다). */
@@ -236,6 +259,11 @@ namespace sw
         int32 _startingSeedCount;
         PROPERTY( Category = "Economy", DisplayName = "Item Stack Size", Tooltip = "Most seeds or produce one bag slot holds", Min = 1 )
         int32 _itemStackSize;
+        PROPERTY( Category = "Crop Models", DisplayName = "Crop Models", Tooltip = "Ready and growing models per crop id" )
+        vector<FarmCropModel> _listCropModel;
+        PROPERTY( Category = "Crop Models", DisplayName = "Default Growing Models", AssetPath,
+                  Tooltip = "Growing models of crops without their own (the first for stages 0 and 1, then one per stage); required" )
+        vector<string> _listDefaultGrowingModel;
 
         CropCatalog                  _cropCatalog;
         ItemCatalog                  _itemCatalog; ///< 작물 카탈로그가 채운 씨앗과 수확물(공유 가방의 겹침 수).

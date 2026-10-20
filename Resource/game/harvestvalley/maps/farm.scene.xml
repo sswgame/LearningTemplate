@@ -53,7 +53,16 @@
 					                  _bActive="true"
 					                  _director="35"
 					                  _rainDimming="0.55"
-					                  _nightIntensity="0.2" />
+					                  _nightIntensity="0.2"
+					                  _sunriseHour="6"
+					                  _sunsetHour="20"
+					                  _nightEndHour="5"
+					                  _horizonIntensity="0.25"
+					                  _noonIntensity="1.5"
+					                  _horizonPitch="0.25"
+					                  _noonPitch="1.35"
+					                  _morningYaw="-1.2"
+					                  _eveningYaw="1.2" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -750,7 +759,25 @@
 					                       _farmer="33"
 					                       _autoFarmerPrefab="game/harvestvalley/prefabs/autofarmer.prefab.xml"
 					                       _playerStart="6,0,-1.2"
-					                       _bAutoPlay="false" />
+					                       _bAutoPlay="false">
+						<_listCropModel>
+							<FarmCropModel _cropID="turnip" _readyModel="game/harvestvalley/models/crop_turnip.mesh" />
+							<FarmCropModel _cropID="onion" _readyModel="game/harvestvalley/models/crop_turnip.mesh" />
+							<FarmCropModel _cropID="carrot" _readyModel="game/harvestvalley/models/crop_carrot.mesh" />
+							<FarmCropModel _cropID="pumpkin" _readyModel="game/harvestvalley/models/crop_pumpkin.mesh" />
+							<FarmCropModel _cropID="corn" _readyModel="game/harvestvalley/models/crops_corn_stage_d.mesh">
+								<_listGrowingModel>
+									<item>game/harvestvalley/models/crops_corn_stage_a.mesh</item>
+									<item>game/harvestvalley/models/crops_corn_stage_b.mesh</item>
+									<item>game/harvestvalley/models/crops_corn_stage_c.mesh</item>
+								</_listGrowingModel>
+							</FarmCropModel>
+						</_listCropModel>
+						<_listDefaultGrowingModel>
+							<item>game/harvestvalley/models/crops_leafs_stage_a.mesh</item>
+							<item>game/harvestvalley/models/crops_leafs_stage_b.mesh</item>
+						</_listDefaultGrowingModel>
+					</FarmDirectorComponent>
 					<FarmVillageDirectorComponent _componentName="FarmVillageDirectorComponent"
 					                              _bActive="true"
 					                              _scheduleDataPath="game/harvestvalley/data/villagers.schedules.xml"

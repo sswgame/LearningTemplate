@@ -193,6 +193,8 @@ namespace sw
         , _handStaminaCost{ 1 }
         , _startingSeedCount{ 10 }
         , _itemStackSize{ 99 }
+        , _listCropModel{}
+        , _listDefaultGrowingModel{}
         , _cropCatalog{}
         , _itemCatalog{}
         , _field{}
@@ -377,6 +379,29 @@ namespace sw
         return float3{ static_cast<float32>( x ) + 0.5f, 0.0f, static_cast<float32>( y ) + 0.5f };
     }
 
+    const string* FarmDirectorComponent::findReadyModel( const hashed_string& cropID ) const
+    {
+        for ( const FarmCropModel& model : _listCropModel )
+        {
+            if ( model._cropID == cropID )
+                return model._readyModel.empty() ? nullptr : &model._readyModel;
+        }
+        return nullptr;
+    }
+
+    const string& FarmDirectorComponent::findGrowingModel( const hashed_string& cropID, int32 stage ) const
+    {
+        const vector<string>* pList = &_listDefaultGrowingModel;
+        for ( const FarmCropModel& model : _listCropModel )
+        {
+            if ( model._cropID == cropID && model._listGrowingModel.empty() == false )
+                pList = &model._listGrowingModel;
+        }
+        // 첫 모델이 0 · 1 단계, 그다음부터 한 단계에 하나, 모자라면 마지막을 쓴다.
+        const int32 index = MathUtil::clamp( stage - 1, 0, static_cast<int32>( pList->size() ) - 1 );
+        return ( *pList )[static_cast<size_t>( index )];
+    }
+
     // ------------------------------------------------------------------------------
     // 데이터
     // ------------------------------------------------------------------------------
@@ -399,6 +424,20 @@ namespace sw
         {
             SW_LOG_ERROR( "[Farm] the director's Shipping Bin and Shop must point at objects in the scene - the farm cannot start" );
             return false;
+        }
+        // 작물 모델 표는 씬 데이터다. 기본 자라는 모델이 없으면 뷰가 고를 모델이 없다 — 시작하지 않는다.
+        if ( _listDefaultGrowingModel.empty() )
+        {
+            SW_LOG_ERROR( "[Farm] the director's Default Growing Models is empty - the farm cannot start" );
+            return false;
+        }
+        for ( const FarmCropModel& model : _listCropModel )
+        {
+            if ( _cropCatalog.findCrop( model._cropID ) == nullptr )
+            {
+                SW_LOG_ERROR( "[Farm] the director's Crop Models names crop '%#', which %# does not have - the farm cannot start", model._cropID.c_str(), _cropDataPath.c_str() );
+                return false;
+            }
         }
         _itemCatalog = ItemCatalog{};
         _cropCatalog.fillItemCatalog( _itemCatalog, _itemStackSize );
@@ -569,8 +608,14 @@ namespace sw
             _listCropLook.push_back( look );
         }
         _listCropMesh.clear();
-        vector<string> listModelPath;
-        FarmCropComponent::collectModelPaths( listModelPath );
+        // 작물 모델 표(씬 데이터)의 모델을 모두 미리 잡는다.
+        vector<string> listModelPath = _listDefaultGrowingModel;
+        for ( const FarmCropModel& model : _listCropModel )
+        {
+            if ( model._readyModel.empty() == false )
+                listModelPath.push_back( model._readyModel );
+            listModelPath.insert( listModelPath.end(), model._listGrowingModel.begin(), model._listGrowingModel.end() );
+        }
         for ( const string& path : listModelPath )
         {
             shared_ptr<Mesh> mesh = MeshCache::acquire( path );

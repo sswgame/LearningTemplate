@@ -35,13 +35,7 @@ namespace sw
         /** @brief 따라갈 디렉터와 칸 번호(행 우선)를 정합니다(디렉터가 스폰한 뒤 부른다). */
         void assignTile( GameObjectHandle director, int32 tileIndex );
 
-        /** @brief 이 뷰가 고를 수 있는 모델 경로를 모두 모읍니다(디렉터가 미리 잡는다). */
-        static void collectModelPaths( vector<string>& outListPath );
-        /** @brief 다 자란 작물이 따로 모델을 가졌으면 그 이름, 아니면 nullptr 입니다(잎 모델에 작물 색을 입힌다). */
-        static const utf8* findReadyModel( const hashed_string& cropID );
-        /** @brief 자라는 중인 작물의 모델 이름입니다. */
-        static const utf8* findGrowingModel( const hashed_string& cropID, int32 stage );
-        static string      makeModelPath( const utf8* pName );
+        // 작물 → 모델은 디렉터의 작물 모델 표(씬 데이터, `FarmDirectorComponent::findReadyModel` · `findGrowingModel`)가 정한다.
 
     private:
         PROPERTY( Category = "Tile", DisplayName = "Director", Tooltip = "Object with the FarmDirectorComponent" )

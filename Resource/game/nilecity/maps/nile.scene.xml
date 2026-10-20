@@ -83,6 +83,7 @@
 					<NileDirectorComponent _componentName="NileDirectorComponent"
 					                       _bActive="true"
 					                       _cityDataPath="game/nilecity/data/city.xml"
+					                       _autoPlanPath="game/nilecity/data/autoplan.xml"
 					                       _groundPrefab="game/nilecity/prefabs/ground.prefab.xml"
 					                       _roadPrefab="game/nilecity/prefabs/road.prefab.xml"
 					                       _modelBuildingPrefab="game/nilecity/prefabs/modelbuilding.prefab.xml"

@@ -136,6 +136,8 @@ namespace sw
     private:
         PROPERTY( Category = "Data", DisplayName = "City Data", AssetPath, Tooltip = "City catalog XML" )
         string _cityDataPath;
+        PROPERTY( Category = "Data", DisplayName = "Auto Plan", AssetPath, Tooltip = "Build order the auto plan follows (roads, buildings and population thresholds); required" )
+        string _autoPlanPath;
         PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab" )
         string _groundPrefab;
         PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab" )
