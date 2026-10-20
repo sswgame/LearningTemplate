@@ -34,6 +34,8 @@ namespace sw
         /** @brief @p key 가 비어 있으면 새로 만듭니다. 재시도할 때는 응답의 키를 다시 넘깁니다. */
         uint64 requestPurchase( const EconomyPurchaseRequest& request, const NetIdempotencyKey& key, const ReplyDelegate& onReply );
         uint64 requestRedeem( const EconomyRedeemRequest& request, const NetIdempotencyKey& key, const ReplyDelegate& onReply );
+        /** @brief 유상 구매를 청약철회합니다. 지급 영수증의 스토어와 거래 id 를 보내며 응답의 `_listWithdrawn` 이 돌려받은 양입니다. */
+        uint64 requestWithdraw( const EconomyWithdrawRequest& request, const ReplyDelegate& onReply );
 
         /** @brief 잔액을 캐시에 넣습니다. 다른 키트 응답의 잔액도 게임이 이 함수로 넘깁니다. @p bSnapshot 이 true 이면 캐시를 통째로 바꿉니다. */
         void applyBalances( const vector<LedgerBalance>& listBalance, bool bSnapshot );

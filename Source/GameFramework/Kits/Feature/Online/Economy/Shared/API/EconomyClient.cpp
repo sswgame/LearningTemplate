@@ -34,6 +34,11 @@ namespace sw
         return sendRequest( EconomyMethod::kRedeemReceipt, request, key.isValid() ? key : NetIdempotencyKey::makeRandom(), onReply );
     }
 
+    uint64 EconomyClient::requestWithdraw( const EconomyWithdrawRequest& request, const ReplyDelegate& onReply )
+    {
+        return sendRequest( EconomyMethod::kWithdrawPurchase, request, NetIdempotencyKey::makeRandom(), onReply ); // 분개 키가 거래 id 라 다시 보내도 한 번만 적용된다
+    }
+
     void EconomyClient::applyBalances( const vector<LedgerBalance>& listBalance, bool bSnapshot )
     {
         if ( bSnapshot )

@@ -28,6 +28,7 @@ namespace sw
         GetHistory,
         Purchase,
         RedeemReceipt,
+        WithdrawPurchase,
         Count,
     };
 } // namespace sw
@@ -37,10 +38,11 @@ namespace sw
     /** @brief 경제 서비스 메서드 번호입니다. 번호는 열거자 순서에서 나오며 그 이름 순서가 온라인 스키마 해시에 섞입니다(`OnlineMethodTable`). */
     struct EconomyMethod : OnlineMethodTable<EconomyMethodName, OnlineMethodRange::kEconomy, OnlineNoPushName>
     {
-        static constexpr uint16 kGetWallet     = toMethod( EconomyMethodName::GetWallet );
-        static constexpr uint16 kGetHistory    = toMethod( EconomyMethodName::GetHistory );
-        static constexpr uint16 kPurchase      = toMethod( EconomyMethodName::Purchase ); ///< 멱등 키가 필수이다
-        static constexpr uint16 kRedeemReceipt = toMethod( EconomyMethodName::RedeemReceipt );
+        static constexpr uint16 kGetWallet        = toMethod( EconomyMethodName::GetWallet );
+        static constexpr uint16 kGetHistory       = toMethod( EconomyMethodName::GetHistory );
+        static constexpr uint16 kPurchase         = toMethod( EconomyMethodName::Purchase ); ///< 멱등 키가 필수이다
+        static constexpr uint16 kRedeemReceipt    = toMethod( EconomyMethodName::RedeemReceipt );
+        static constexpr uint16 kWithdrawPurchase = toMethod( EconomyMethodName::WithdrawPurchase ); ///< 유상 구매 청약철회이다. 기한 안에 쓰지 않은 만큼 회수한다
     };
 } // namespace sw
 
@@ -58,15 +60,19 @@ namespace sw
         NotPurchasable, ///< 결제 상품이라 화폐로 살 수 없다
         LimitReached,   ///< 계정당 구매 한도에 도달했다
         InsufficientFunds,
-        CapExceeded,     ///< 받으면 잔액 상한을 넘는다
-        UnknownProduct,  ///< 영수증의 상품이 카탈로그에 없다
-        ReceiptInvalid,  ///< 서명, 형식, 상품이 맞지 않거나 모르는 스토어이거나 허락하지 않은 샌드박스이다
-        ReceiptRefunded, ///< 환불되었거나 취소된 거래이다
-        ReceiptPending,  ///< 스토어에 닿지 못했다. 같은 영수증으로 다시 시도한다
-        AlreadyRedeemed, ///< 다른 계정이 이미 받은 영수증이다
-        Busy,            ///< 버전 충돌이 상한 횟수를 넘었다. 같은 멱등 키로 다시 시도한다
-        Unavailable,     ///< 저장소나 전송을 쓸 수 없다. 적용됐는지 알 수 없으므로 같은 멱등 키로 다시 시도한다
-        UpdateRequired,  ///< 온라인 스키마 해시가 다르다(`kVersionMismatch`). 클라이언트만 만들고 서버는 보내지 않는다. 다시 접속하지 않으므로 재시도하지 않는다
+        CapExceeded,       ///< 받으면 잔액 상한을 넘는다
+        UnknownProduct,    ///< 영수증의 상품이 카탈로그에 없다
+        ReceiptInvalid,    ///< 서명, 형식, 상품이 맞지 않거나 모르는 스토어이거나 허락하지 않은 샌드박스이다
+        ReceiptRefunded,   ///< 환불되었거나 취소된 거래이다
+        ReceiptPending,    ///< 스토어에 닿지 못했다. 같은 영수증으로 다시 시도한다
+        AlreadyRedeemed,   ///< 다른 계정이 이미 받은 영수증이다
+        Busy,              ///< 버전 충돌이 상한 횟수를 넘었다. 같은 멱등 키로 다시 시도한다
+        Unavailable,       ///< 저장소나 전송을 쓸 수 없다. 적용됐는지 알 수 없으므로 같은 멱등 키로 다시 시도한다
+        UpdateRequired,    ///< 온라인 스키마 해시가 다르다(`kVersionMismatch`). 클라이언트만 만들고 서버는 보내지 않는다. 다시 접속하지 않으므로 재시도하지 않는다
+        AlreadyRefunded,   ///< 이미 환불되었거나 청약철회한 거래이다
+        WithdrawalExpired, ///< 청약철회 기한(구매 뒤 7일)이 지났다
+        NotPurchaser,      ///< 다른 계정이 받은 거래이거나 받은 적이 없는 거래이다
+        NothingToWithdraw, ///< 지급한 재화를 모두 써서 돌려받을 것이 없다
         Count
     };
 } // namespace sw
@@ -96,6 +102,20 @@ namespace sw
         string _storeName{};
         PROPERTY( MaxCount = 16384 )
         string _payload{}; ///< 스토어가 준 영수증이다. 서명된 JWS, 구매 토큰, 주문 id 가 해당하며 그 뜻은 제공자가 안다. Apple JWS 는 수 KB 이다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 청약철회 요청입니다. 지급 응답의 스토어와 거래 id 를 그대로 보냅니다. */
+    REFLECT()
+    struct EconomyWithdrawRequest
+    {
+        REFLECT_BODY();
+        PROPERTY( MaxCount = 64 )
+        string _storeName{};
+        PROPERTY( MaxCount = 96 )
+        string _transactionID{}; ///< 상한은 `LedgerConstant::kMaxTokenBytes` 와 같다
     };
 } // namespace sw
 
@@ -142,6 +162,8 @@ namespace sw
         vector<LedgerBalance> _listBalance{}; ///< GetWallet 은 전부(스냅샷)를, Purchase 와 Redeem 은 바뀐 것만 담는다. 상한은 `OnlineLimit::kMaxBalanceCount` 와 같다
         PROPERTY( MaxCount = 100 )
         vector<EconomyHistoryEntry> _listHistory{};
+        PROPERTY( MaxCount = 16 )
+        vector<LedgerBalance> _listWithdrawn{}; ///< WithdrawPurchase 가 회수한 자산과 양이다. 스토어 환불 금액은 이것으로 정한다
         PROPERTY( MaxCount = 64 )
         string _productID{}; ///< Redeem 의 영수증에 든 스토어 상품이다
         PROPERTY( MaxCount = 512 )
@@ -162,7 +184,7 @@ namespace sw
      */
     struct SW_KIT_API EconomyProtocol
     {
-        using MessageTypes = OnlineMessageTypes<EconomyPurchaseRequest, EconomyRedeemRequest, EconomyHistoryRequest, EconomyReply>;
+        using MessageTypes = OnlineMessageTypes<EconomyPurchaseRequest, EconomyRedeemRequest, EconomyWithdrawRequest, EconomyHistoryRequest, EconomyReply>;
 
         static const OnlineProtocolEntry kOnlineEntry; ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
 

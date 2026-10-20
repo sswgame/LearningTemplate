@@ -27,6 +27,7 @@ namespace sw
             static constexpr int32 kHistoryIndex  = EconomyMethod::toIndex( EconomyMethod::kGetHistory );
             static constexpr int32 kPurchaseIndex = EconomyMethod::toIndex( EconomyMethod::kPurchase );
             static constexpr int32 kRedeemIndex   = EconomyMethod::toIndex( EconomyMethod::kRedeemReceipt );
+            static constexpr int32 kWithdrawIndex = EconomyMethod::toIndex( EconomyMethod::kWithdrawPurchase );
         };
 
         /** @brief 경제 요청 하나의 저장소 왕복입니다. 입력은 공개 필드에 값으로 채워 맡기고, 결과는 `complete` 에서 서비스에 넘깁니다. */
@@ -36,12 +37,14 @@ namespace sw
             EconomyPurchaseInput  _purchase;
             EconomyRedeemInput    _redeem;
             EconomyHistoryRequest _history;
+            EconomyWithdrawInput  _withdraw;
             AccountID             _accountID;
 
             EconomyRequestWork( EconomyService* pService, const EconomyServiceConfig& settings, uint64 callID, int32 methodIndex )
                 : _purchase{}
                 , _redeem{}
                 , _history{}
+                , _withdraw{}
                 , _accountID{ kInvalidAccountID }
                 , _reply{}
                 , _settings{ settings }
@@ -77,6 +80,12 @@ namespace sw
                         (void)EconomyStoreLogic::redeemReceipt( connection, *_settings._pCurrencyCatalog, *_settings._pOfferCatalog, _redeem, _reply );
                         break;
                     }
+                    case EconomyServiceInternal::kWithdrawIndex:
+                    {
+                        // 결과는 finish 가 _reply._result 에 담는다 — complete 가 그대로 돌려준다
+                        (void)EconomyStoreLogic::withdrawPurchase( connection, *_settings._pCurrencyCatalog, _withdraw, _reply );
+                        break;
+                    }
                     default:
                     {
                         _reply._result = EconomyResult::InvalidRequest;
@@ -94,6 +103,29 @@ namespace sw
             uint64               _callID;
             int32                _methodIndex;
         };
+        /** @brief 환불 알림 하나의 회수입니다. 응답이 없다. */
+        class EconomyRefundWork final : public IServiceStoreWork
+        {
+        public:
+            EconomyRefundWork( EconomyService* pService, const CurrencyCatalog* pCurrencies, ReceiptRefundNotice&& notice, int64 nowMs )
+                : _notice{ std::move( notice ) }
+                , _pService{ pService }
+                , _pCurrencies{ pCurrencies }
+                , _nowMs{ nowMs }
+                , _result{ EconomyResult::Unavailable }
+            {
+            }
+
+            void run( IServiceStoreConnection& connection ) override { _result = EconomyStoreLogic::revokeRefund( connection, *_pCurrencies, _notice, _nowMs ); }
+            void complete() override { _pService->completeRefund( _result ); }
+
+        private:
+            ReceiptRefundNotice    _notice;
+            EconomyService*        _pService;
+            const CurrencyCatalog* _pCurrencies;
+            int64                  _nowMs;
+            EconomyResult          _result;
+        };
     } // namespace
 } // namespace sw
 
@@ -104,7 +136,9 @@ namespace sw
         , _metrics{}
         , _settings{}
         , _pStore{ nullptr }
+        , _pMetricRegistry{ nullptr }
         , _nextCallID{ 1 }
+        , _pendingRefundCount{ 0 }
         , _nowMs{ 0 }
     {
     }
@@ -129,8 +163,9 @@ namespace sw
             return false;
         }
 #endif
-        _pStore   = pStore;
-        _settings = settings;
+        _pStore          = pStore;
+        _settings        = settings;
+        _pMetricRegistry = settings._pMetricRegistry;
         _metrics.initialize<EconomyMethodName, EconomyResult>( settings._pMetricRegistry, "economy" );
         return true;
     }
@@ -139,7 +174,7 @@ namespace sw
     {
         // 영수증 검증 완료도 호출을 끝내므로 걸음마다 같이 거둔다.
         ServiceStoreUtil::drainUntilIdle( _pStore, [this]()
-        { return _listPendingCall.empty(); }, [this]()
+        { return _listPendingCall.empty() && _pendingRefundCount <= 0; }, [this]()
         { pollReceipts(); } );
         if ( _listPendingCall.empty() == false )
         {
@@ -158,7 +193,8 @@ namespace sw
 
     void EconomyService::onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body )
     {
-        const bool          bMutating        = context._method == EconomyMethod::kPurchase || context._method == EconomyMethod::kRedeemReceipt;
+        const bool bMutating = context._method == EconomyMethod::kPurchase || context._method == EconomyMethod::kRedeemReceipt ||
+                               context._method == EconomyMethod::kWithdrawPurchase;
         const RemoteConfig* pConfig          = host.getRemoteConfig();
         const bool          bFeatureDisabled = bMutating && pConfig != nullptr && pConfig->isFeatureEnabled( kFeatureFlag, context._accountID, true ) == false;
         if ( bFeatureDisabled )
@@ -189,6 +225,11 @@ namespace sw
                 readResult = EconomyProtocol::MessageTypes::read( body, call._redeem );
                 break;
             }
+            case EconomyMethod::kWithdrawPurchase:
+            {
+                readResult = EconomyProtocol::MessageTypes::read( body, call._withdraw );
+                break;
+            }
             default:
             {
                 break;
@@ -217,6 +258,7 @@ namespace sw
         if ( _pStore == nullptr )
             return;
         pollReceipts();
+        pollRefunds();
         _metrics.setPendingStoreWorkCount( static_cast<int32>( _listPendingCall.size() ) );
     }
 
@@ -266,6 +308,11 @@ namespace sw
         work->_purchase._nowMs               = nowMs;
         work->_purchase._journalKey          = LedgerJournalKey::makeFromIdempotency( LedgerJournalKey::makeAccountScope( call._accountID ), call._idempotencyKey._high,
                                                                                       call._idempotencyKey._low );
+        work->_withdraw._storeName           = call._withdraw._storeName;
+        work->_withdraw._transactionID       = call._withdraw._transactionID;
+        work->_withdraw._accountID           = call._accountID;
+        work->_withdraw._nowMs               = nowMs;
+        work->_withdraw._windowMs            = _settings._withdrawalWindowMs;
         _pStore->submit( std::move( work ) );
     }
 
@@ -292,6 +339,34 @@ namespace sw
                 break;
             }
         }
+    }
+
+    void EconomyService::pollRefunds()
+    {
+        if ( _settings._pReceiptRegistry == nullptr )
+            return;
+        vector<ReceiptRefundNotice> listNotice;
+        _settings._pReceiptRegistry->pollRefunds( listNotice );
+        for ( ReceiptRefundNotice& notice : listNotice )
+        {
+            ++_pendingRefundCount;
+            _pStore->submit( make_unique<EconomyRefundWork>( this, _settings._pCurrencyCatalog, std::move( notice ), _nowMs ) );
+        }
+    }
+
+    void EconomyService::completeRefund( EconomyResult result )
+    {
+        --_pendingRefundCount;
+        if ( result != EconomyResult::Ok && result != EconomyResult::AlreadyRefunded )
+            SW_LOG_ERROR( "EconomyService: a store refund could not be revoked (%#) - the store will resend or an operator revokes it", static_cast<int32>( result ) );
+        if ( _pMetricRegistry == nullptr )
+            return;
+        const vector<MetricLabel> listLabel = {
+            { "result", result == EconomyResult::Ok ? "revoked" : ( result == EconomyResult::AlreadyRefunded ? "duplicate" : "failed" ) }
+        };
+        MetricCounter* pCounter = _pMetricRegistry->registerCounter( "economy_refund_total", "Store refunds revoked from accounts", listLabel );
+        if ( pCounter != nullptr )
+            pCounter->add();
     }
 
     void EconomyService::completeCall( uint64 callID, const EconomyReply& reply )
