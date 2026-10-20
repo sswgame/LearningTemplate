@@ -187,7 +187,7 @@ SW_TEST_CASE( ReflectionPurposeTest, RuntimeStateInAnAuthoringFileFailsTheRead )
 /**
  * @brief [ReflectionPurposeTest] 컨테이너 원소인 값 구조체 안의 RuntimeState 필드도 소프트 읽기를 객체째 실패시킨다(칸째 되돌려 orphan 으로 넘기지 않는다)
  * @details 예전에는 원소 읽기의 실패가 "필드 실패" 하나로 내려와 그 칸이 읽기 전 값으로 되돌려지고 orphan 이 되어 읽기가 성공했다
- *          (`docs/plans/SerializerSilentSkips.md` S3). 이제 원소 결과가 `ContainerReadResult::ObjectRejected` 로 올라온다. 바이너리는 아직 가르지 못한다(3절).
+ *          (`docs/plans/SerializerSilentSkips.md` S3). 이제 원소 결과가 `ContainerReadResult::ObjectRejected` 로 올라온다. 바이너리는 `RuntimeStateInAContainerElementRejectsTheBinarySoftRead`.
  */
 SW_TEST_CASE( ReflectionPurposeTest, RuntimeStateInAContainerElementRejectsTheSoftRead )
 {
@@ -217,6 +217,45 @@ SW_TEST_CASE( ReflectionPurposeTest, RuntimeStateInAContainerElementRejectsTheSo
     sw::vector<sw::SchemaOrphanValue> listAuthoringOrphan;
     const sw::string                  authoringText = sw::XMLSerializer::serialize( &source, holderType, authoring );
     SW_EXPECT_TRUE( sw::XMLSerializer::deserializeSoft( &authoringTarget, holderType, authoringText, &listAuthoringOrphan, nullptr, authoring ) == sw::SoftReadResult::Read );
+    SW_ASSERT_EQUAL( size_t( 1 ), authoringTarget._listSample.size() );
+    SW_EXPECT_EQUAL( 11, authoringTarget._listSample[0]._plain );
+    SW_EXPECT_EQUAL( 9, authoringTarget._after );
+}
+
+/**
+ * @brief [ReflectionPurposeTest] 바이너리도 컨테이너 원소인 값 구조체 안의 RuntimeState 필드가 소프트 읽기를 객체째 실패시킨다
+ * @details 원소 구조체는 `BinarySerializer::deserialize` 의 bool 로 읽혀 금지된 필드가 원소 실패(스트림 깨짐)로 내려왔고, 그 칸이 읽기 전 값으로
+ *          되돌려져 orphan 이 되어 읽기가 성공했다. 이제 `deserializeNested` 의 `FieldReadResult::ObjectRejected` 가 그대로 올라온다
+ *          (`docs/plans/SerializerSilentSkips.md` S4).
+ */
+SW_TEST_CASE( ReflectionPurposeTest, RuntimeStateInAContainerElementRejectsTheBinarySoftRead )
+{
+    const sw::TypeInfo          holderType = makePurposeListHolderType();
+    const sw::SerializeContext& snapshot   = sw::SerializeContext::getDefault( sw::SerializePurpose::Snapshot );
+    const sw::SerializeContext& authoring  = sw::SerializeContext::getDefault( sw::SerializePurpose::Authoring );
+    PurposeListHolder           source;
+    source._listSample.resize( 1 );
+    source._listSample[0]._plain   = 11;
+    source._listSample[0]._runtime = 33;
+    source._after                  = 9;
+
+    test::ScopedLogSuppressor suppressor; // 금지된 필드 오류
+
+    sw::vector<uint8> snapshotBytes;
+    SW_ASSERT_TRUE( sw::BinarySerializer::serialize( &source, holderType, snapshotBytes, snapshot ) );
+    PurposeListHolder                 binaryTarget;
+    sw::vector<sw::SchemaOrphanValue> listBinaryOrphan;
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeSoft( &binaryTarget, holderType, snapshotBytes.data(), snapshotBytes.size(), &listBinaryOrphan, authoring ) ==
+                    sw::SoftReadResult::Rejected );
+    SW_EXPECT_FALSE( sw::BinarySerializer::deserialize( &binaryTarget, holderType, snapshotBytes.data(), snapshotBytes.size(), authoring ) );
+
+    // 저작 목적으로 쓴 데이터는 원소에도 RuntimeState 를 싣지 않으므로 소프트 읽기가 그대로 읽는다.
+    sw::vector<uint8> authoringBytes;
+    SW_ASSERT_TRUE( sw::BinarySerializer::serialize( &source, holderType, authoringBytes, authoring ) );
+    PurposeListHolder                 authoringTarget;
+    sw::vector<sw::SchemaOrphanValue> listAuthoringOrphan;
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeSoft( &authoringTarget, holderType, authoringBytes.data(), authoringBytes.size(), &listAuthoringOrphan, authoring ) ==
+                    sw::SoftReadResult::Read );
     SW_ASSERT_EQUAL( size_t( 1 ), authoringTarget._listSample.size() );
     SW_EXPECT_EQUAL( 11, authoringTarget._listSample[0]._plain );
     SW_EXPECT_EQUAL( 9, authoringTarget._after );

@@ -9,6 +9,7 @@
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Serialization/Base/BinaryStream.h"
+#include "Engine/Serialization/Base/ContainerVisitor.h"
 #include "Engine/Serialization/Base/SchemaMigrate.h"
 #include "Engine/Serialization/Base/SerializerUtil.h"
 #include "Engine/Serialization/Format/Archive.h"
@@ -99,21 +100,23 @@ namespace sw
              *          옮기고, 나머지는 제 타입으로 끝까지 읽히는지부터 본다. 이관이 안 되면 읽지 못한 프로퍼티다. 제 타입으로 "읽힌 만큼" 받지 않는다
              *          (`int32` 0 을 `vector<int32>` 로 읽으면 원소 수 0 으로 성공해 값이 조용히 빈다).
              *          신뢰할 수 없는 스트림의 경계 검사가 이 안에 있다. 사본이 하나여야 그 검사가 한쪽에서만 빠지는 일이 없다.
+             * @return 스트림이 깨졌거나 엄격 읽기가 받지 않는 필드가 있으면 `FieldFailed`, 금지된 필드가 있거나(안쪽 칸 포함) 읽지 못한 필드를 되돌리지
+             *         못하면 `ObjectRejected` 입니다. 소프트 읽기의 맨 바깥은 앞을 `NotParsed`, 뒤를 `Rejected` 로 옮긴다(`deserializeSoft`).
              */
-            [[nodiscard]] static bool deserializeTagged( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
-                                                         const SerializeContext& context, vector<SchemaOrphanValue>* pOutListOrphan, bool bStrict )
+            [[nodiscard]] static FieldReadResult deserializeTagged( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
+                                                                    const SerializeContext& context, vector<SchemaOrphanValue>* pOutListOrphan, bool bStrict )
             {
                 BinaryStreamReader reader( pData, dataSize );
                 uint32             header{ 0 };
                 if ( reader.read( header ) == false )
-                    return false;
+                    return FieldReadResult::FieldFailed;
                 // 머리가 버전을 말한다. 이 스트림 안의 값(컨테이너 원소, 맵 키 포함)은 그 버전으로 읽는다. 현재 버전이 아니면 읽지 않는다.
                 const uint32 wireVersionNumber = header >> kTaggedVersionShift;
                 if ( isReadableWireVersion( wireVersionNumber ) == false )
                 {
                     SW_LOG_WARNING( "%#: binary stream is wire version %# but this build reads up to %# - not read", typeInfo._name.c_str(), wireVersionNumber,
                                     static_cast<uint32>( kCurrentBinaryWireVersion ) );
-                    return false;
+                    return FieldReadResult::FieldFailed;
                 }
                 const BinaryWireVersion wireVersion = static_cast<BinaryWireVersion>( wireVersionNumber );
                 const uint32            propCount   = header & kTaggedCountMask;
@@ -136,11 +139,11 @@ namespace sw
                     uint32     payloadSize{ 0 };
                     const bool bTruncatedTag = reader.read( tagHash ) == false || reader.read( wireTypeHash ) == false || reader.read( payloadSize ) == false;
                     if ( bTruncatedTag )
-                        return false;
+                        return FieldReadResult::FieldFailed;
 
                     const size_t payloadStart = reader.getOffset();
                     if ( payloadStart + payloadSize > dataSize )
-                        return false;
+                        return FieldReadResult::FieldFailed;
 
                     // 지금 이름을 먼저, 없을 때만 옛 이름(Alias)을 본다. Transient 칸을 가리키는 태그는 모르는 칸과 같다.
                     const size_t        matchedIndex = SerializerUtil::findPropertyIndexByNameHash( listProp, tagHash );
@@ -150,7 +153,7 @@ namespace sw
                     if ( pTargetProp == nullptr )
                     {
                         if ( bStrict && context.skipsUnknownProperties() == false )
-                            return false;
+                            return FieldReadResult::FieldFailed;
                         if ( bStrict == false )
                             pushOrphanVal( pOutListOrphan, {}, tagHash, wireTypeHash, pData + payloadStart, payloadSize, wireVersion );
                         else
@@ -169,7 +172,7 @@ namespace sw
                     if ( SerializerUtil::isForbiddenInFile( prop, context ) )
                     {
                         SerializerUtil::reportForbiddenProperty( typeInfo, prop );
-                        return false;
+                        return FieldReadResult::ObjectRejected;
                     }
                     // 이 목적이 다루지 않는 필드(옵트인 세이브의 나머지)는 읽지 않는다. 현재 값을 덮지 않는다(쓰기도 적지 않는다).
                     if ( SerializerUtil::shouldSerializeProperty( typeInfo, prop, context ) == false )
@@ -178,41 +181,55 @@ namespace sw
                         continue;
                     }
 
+                    // 값을 담지 못하면 실패해도 되돌릴 수 없다(코덱 결함). 기본값으로 넘어가지 않고 객체째 실패다.
                     if ( bContinuesAfterUnreadable && rollback.keepValueBeforeRead( typeInfo, prop, ObjectAddress{ pInstance }, context ) == false )
-                        return false;
+                        return FieldReadResult::ObjectRejected;
 
                     // **기록 타입을 같이 넘긴다.** 태그가 그것을 가지고 있는데 넘기지 않으면 POD -> string 이관이 크기로만
                     // 타입을 짐작한다(정수와 실수를 가르지 못한다).
-                    const bool bWireMismatch = ( wireTypeHash != 0 && wireTypeHash != prop._typeName.getHash() );
-                    bool       bApplied      = false;
+                    const bool      bWireMismatch = ( wireTypeHash != 0 && wireTypeHash != prop._typeName.getHash() );
+                    FieldReadResult fieldResult   = FieldReadResult::FieldFailed;
                     if ( bWireMismatch )
                     {
-                        void*               pPropPtr     = prop.getRawPtr( pInstance );
                         const hashed_string wireTypeName = findWireTypeName( wireTypeHash );
                         // 기록 타입을 모르면(지운 enum, 지운 타입) 바이트의 뜻을 모른다. 크기로 짐작해 읽지 않는다(지운 enum 의 열거자 이름 해시
                         // 4 바이트가 int32 로 바뀐 필드에 그대로 읽히게 된다).
+                        // 프로퍼티 단위로 넘긴다 — 값 주소를 여기서 꺼내면 비트필드는 그 바이트 주소라 bool 이 같은 바이트의 다른 플래그까지 덮는다.
                         if ( wireTypeName.empty() == false )
-                            bApplied = tryCoerceBinaryPayload( MutableValueAddress{ pPropPtr }, prop._typeName, pData + payloadStart, payloadSize, context, wireTypeName, wireVersion );
+                            fieldResult = tryCoercePropertyBinary( prop, MutableObjectAddress{ pInstance }, pData + payloadStart, payloadSize, context, wireTypeName, wireVersion );
                     }
                     else
                     {
                         // 기록 타입이 같은데 끝까지 읽히지 않으면 손상이다. 소프트 읽기도 이관으로 짐작하지 않고 orphan 으로 넘긴다(이관은 크기로 짐작해 4 바이트 페이로드를 수의 텍스트로 문자열에 넣는다).
-                        bApplied = SerializerUtil::applyPropertyBinary( prop, MutableObjectAddress{ pInstance }, pData + payloadStart, payloadSize, context, wireVersion );
+                        fieldResult = SerializerUtil::applyPropertyBinary( prop, MutableObjectAddress{ pInstance }, pData + payloadStart, payloadSize, context, wireVersion );
                     }
 
-                    if ( bApplied == false )
+                    switch ( fieldResult )
                     {
-                        // 엄격한 읽기도 읽지 못한 필드를 받는 컨텍스트(오브젝트 상태)이면 **이 필드만** 건너뛴다. 크기를 알아 다음 필드 위치는 맞다. 모르는 열거자 하나가
-                        // 컴포넌트를, 그래서 그 뒤 컴포넌트까지 버리던 경로다. 혼합 빌드 사이의 메시지는 받지 않는다(그 필드가 읽기 전 값으로 남는다).
-                        if ( bContinuesAfterUnreadable == false )
-                            return false;
-                        // 읽다 만 값을 읽기 전 값으로 되돌린다. 되돌릴 수 없으면(소유 포인터 목록, 코덱 결함) 객체째 실패다.
-                        if ( rollback.restoreValueBeforeRead( MutableObjectAddress{ pInstance }, context ) == false )
-                            return false;
-                        if ( bStrict )
-                            warnUnreadableFieldOnce( typeInfo, prop );
-                        else
-                            pushOrphanVal( pOutListOrphan, prop._name, tagHash, wireTypeHash, pData + payloadStart, payloadSize, wireVersion );
+                        case FieldReadResult::Read:
+                        {
+                            break;
+                        }
+                        case FieldReadResult::FieldFailed:
+                        {
+                            // 엄격한 읽기도 읽지 못한 필드를 받는 컨텍스트(오브젝트 상태)이면 **이 필드만** 건너뛴다. 크기를 알아 다음 필드 위치는 맞다. 모르는 열거자 하나가
+                            // 컴포넌트를, 그래서 그 뒤 컴포넌트까지 버리던 경로다. 혼합 빌드 사이의 메시지는 받지 않는다(그 필드가 읽기 전 값으로 남는다).
+                            if ( bContinuesAfterUnreadable == false )
+                                return FieldReadResult::FieldFailed;
+                            // 읽다 만 값을 읽기 전 값으로 되돌린다. 되돌릴 수 없으면(소유 포인터 목록, 코덱 결함) 객체째 실패다.
+                            if ( rollback.restoreValueBeforeRead( MutableObjectAddress{ pInstance }, context ) == false )
+                                return FieldReadResult::ObjectRejected;
+                            if ( bStrict )
+                                warnUnreadableFieldOnce( typeInfo, prop );
+                            else
+                                pushOrphanVal( pOutListOrphan, prop._name, tagHash, wireTypeHash, pData + payloadStart, payloadSize, wireVersion );
+                            break;
+                        }
+                        case FieldReadResult::ObjectRejected:
+                        {
+                            // 안쪽(구조체 칸, 컨테이너 원소인 구조체 · 컴포넌트)의 금지된 필드다. 이 필드만 넘기면 그것이 orphan 으로 넘어간다 — 객체째 실패다.
+                            return FieldReadResult::ObjectRejected;
+                        }
                     }
 
                     reader.skip( payloadSize );
@@ -231,8 +248,8 @@ namespace sw
                     if ( bMatched == false && bOutsidePurpose == false )
                         SerializerUtil::applyPropertyDefault( listProp[propIdx], MutableObjectAddress{ pInstance }, context );
                 }
-                // 선언된 범위는 부르는 두 쪽(`deserialize` · `deserializeSoft`)이 읽기 공통 끝으로 본다 — 소프트 읽기가 "스트림이 깨짐"과 "범위 밖 값"을 가르게.
-                return true;
+                // 선언된 범위는 부르는 쪽(`deserializeNested` · `deserializeSoft`)이 읽기 공통 끝으로 본다 — 소프트 읽기가 "스트림이 깨짐"과 "범위 밖 값"을 가르게.
+                return FieldReadResult::Read;
             }
 
             /**
@@ -416,9 +433,24 @@ namespace sw
     bool BinarySerializer::deserialize( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
                                         const SerializeContext& context )
     {
-        // 선언된 범위는 읽기 공통 끝에서 본다(JSON · XML 과 같다). 범위 밖 값은 성공으로 돌아오지 않는다.
-        return BinarySerializerInternal::deserializeTagged( pInstance, typeInfo, pData, dataSize, context, nullptr, true ) &&
-               SerializerUtil::isWithinDeclaredRanges( typeInfo, ObjectAddress{ pInstance } );
+        // 맨 바깥 객체다. 바깥에 이어 읽을 읽기가 없으므로 필드 실패와 객체 실패는 같은 실패다.
+        return deserializeNested( pInstance, typeInfo, pData, dataSize, context ) == FieldReadResult::Read;
+    }
+
+    FieldReadResult BinarySerializer::deserializeNested( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
+                                                         const SerializeContext& context )
+    {
+        const FieldReadResult taggedResult = BinarySerializerInternal::deserializeTagged( pInstance, typeInfo, pData, dataSize, context, nullptr, true );
+        switch ( taggedResult )
+        {
+            case FieldReadResult::Read:
+                // 선언된 범위는 읽기 공통 끝에서 본다(JSON · XML 과 같다). 범위 밖 값은 성공으로 돌아오지 않는다.
+                return SerializerUtil::isWithinDeclaredRanges( typeInfo, ObjectAddress{ pInstance } ) ? FieldReadResult::Read : FieldReadResult::FieldFailed;
+            case FieldReadResult::FieldFailed:
+            case FieldReadResult::ObjectRejected:
+                return taggedResult;
+        }
+        return FieldReadResult::ObjectRejected;
     }
 
     SoftReadResult BinarySerializer::deserializeSoft( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
@@ -427,9 +459,17 @@ namespace sw
         const bool bInvalidDeserializeInput = pInstance == nullptr || pData == nullptr || dataSize == 0;
         if ( bInvalidDeserializeInput )
             return SoftReadResult::NotParsed;
-        // 소프트 읽기의 태그 루프는 스트림이 깨졌을 때만 실패한다(모르는 · 읽지 못한 칸은 orphan 이다).
-        if ( BinarySerializerInternal::deserializeTagged( pInstance, typeInfo, pData, dataSize, context, pOutOrphans, false ) == false )
-            return SoftReadResult::NotParsed;
+        // 소프트 읽기의 태그 루프는 모르는 · 읽지 못한 칸을 orphan 으로 넘기므로, 필드 실패는 스트림이 깨졌을 때뿐이다.
+        // 객체째 실패(금지된 필드, 되돌리지 못한 필드)는 스트림을 읽은 뒤의 거절이다(XML · JSON 의 `Rejected` 와 같다).
+        switch ( BinarySerializerInternal::deserializeTagged( pInstance, typeInfo, pData, dataSize, context, pOutOrphans, false ) )
+        {
+            case FieldReadResult::Read:
+                break;
+            case FieldReadResult::FieldFailed:
+                return SoftReadResult::NotParsed;
+            case FieldReadResult::ObjectRejected:
+                return SoftReadResult::Rejected;
+        }
         return SerializerUtil::isWithinDeclaredRanges( typeInfo, ObjectAddress{ pInstance } ) ? SoftReadResult::Read : SoftReadResult::Rejected;
     }
 

@@ -3545,7 +3545,7 @@ SW_TEST_CASE( ReflectionSerializationTest, BinaryBoolReadNormalizesTheByte )
     bool        value{ false };
     size_t      offset{ 0 };
     SW_ASSERT_TRUE( sw::SerializerUtil::deserializeValueBinary( sw::MutableValueAddress{ &value }, sw::hashed_string( "bool" ), arrByte, sizeof( arrByte ), offset,
-                                                                sw::SerializeContext::getDefault( sw::SerializePurpose::Authoring ) ) );
+                                                                sw::SerializeContext::getDefault( sw::SerializePurpose::Authoring ) ) == sw::FieldReadResult::Read );
     uint8 rawValue{ 0 };
     sw::Memory::copy( &rawValue, &value, sizeof( rawValue ) );
     SW_EXPECT_EQUAL( uint8{ 1 }, rawValue );
@@ -3710,6 +3710,43 @@ SW_TEST_CASE( ReflectionSerializationTest, PropertyValueHelpersTouchOnlyTheirOwn
     SW_EXPECT_EQUAL( 3, gridTarget._grid[1][0] );
     SW_EXPECT_TRUE( sw::SerializerUtil::arePropertyValuesEqual( *pGrid, sw::ObjectAddress{ &gridSource }, sw::ObjectAddress{ &gridTarget }, context ) );
     SW_EXPECT_STREQ( "[2]", sw::SerializerUtil::formatPropertyText( *pGrid, sw::ObjectAddress{ &gridTarget }, context ).c_str() );
+}
+
+/**
+ * @brief [ReflectionSerializationTest] 기록 타입이 다른 비트필드를 바이너리로 읽으면 그 비트만 바뀐다(같은 바이트의 다른 플래그는 그대로)
+ * @details 태그 스트림의 이관 경로가 `getRawPtr` 로 비트필드의 바이트 주소를 꺼내 bool 을 통째로 썼다. 이제 프로퍼티 단위(`tryCoercePropertyBinary`)로 옮긴다
+ *          (`docs/plans/SerializerSilentSkips.md` S4).
+ */
+SW_TEST_CASE( ReflectionSerializationTest, CoercedBitFieldReadTouchesOnlyItsOwnBit )
+{
+    const sw::SerializeContext& context = sw::SerializeContext::getDefault( sw::SerializePurpose::Authoring );
+    const sw::TypeInfo*         pBits   = sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::BitfieldTestActor" ) );
+    SW_ASSERT_NOT_NULL( pBits );
+    const sw::PropertyInfo* pInvuln = pBits->findPropertyInHierarchy( sw::hashed_string( "_bInvulnerable" ) );
+    SW_ASSERT_NOT_NULL( pInvuln );
+
+    // _bInvulnerable 하나를 int32 1 로 적은 태그 스트림이다(옛 빌드가 이 필드를 int32 로 가졌던 경우).
+    sw::vector<uint8> bytes;
+    const auto        appendUint32 = [&bytes]( const uint32 value )
+    {
+        const uint8* pValue = reinterpret_cast<const uint8*>( &value );
+        bytes.insert( bytes.end(), pValue, pValue + sizeof( value ) );
+    };
+    constexpr uint32 kVersionShift = 24;
+    appendUint32( 1u | ( static_cast<uint32>( sw::kCurrentBinaryWireVersion ) << kVersionShift ) );
+    appendUint32( pInvuln->getNameHash() );
+    appendUint32( sw::hashed_string( "int32" ).getHash() );
+    appendUint32( static_cast<uint32>( sizeof( int32 ) ) );
+    appendUint32( 1u );
+
+    sw::BitfieldTestActor target;
+    target._bActive       = SW_TRUE;
+    target._bInvulnerable = SW_FALSE;
+    target._bCanJump      = SW_TRUE;
+    SW_ASSERT_TRUE( sw::BinarySerializer::deserialize( &target, *pBits, bytes.data(), bytes.size(), context ) );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( target._bInvulnerable ) );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( target._bActive ) );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( target._bCanJump ) );
 }
 
 /**
@@ -4068,7 +4105,8 @@ SW_TEST_CASE( ReflectionSerializationTest, UncarriedValueTypeFailsTheReadAndTheW
     const sw::vector<uint8> arrPayload = { 1, 2, 3, 4 };
     UncarriedHost           host;
     size_t                  offset{ 0 };
-    SW_EXPECT_FALSE( sw::SerializerUtil::deserializeValueBinary( sw::MutableValueAddress{ &host._value }, kUncarriedType, arrPayload.data(), arrPayload.size(), offset, context ) );
+    SW_EXPECT_TRUE( sw::SerializerUtil::deserializeValueBinary( sw::MutableValueAddress{ &host._value }, kUncarriedType, arrPayload.data(), arrPayload.size(), offset, context ) ==
+                    sw::FieldReadResult::FieldFailed );
     SW_EXPECT_EQUAL( size_t( 0 ), offset );
     sw::vector<uint8> valueBytes;
     SW_EXPECT_FALSE( sw::SerializerUtil::serializeValueBinary( sw::ValueAddress{ &host._value }, kUncarriedType, valueBytes, context ) );

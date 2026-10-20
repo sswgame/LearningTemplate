@@ -8,6 +8,8 @@
 
 namespace sw
 {
+    enum class FieldReadResult : uint8;
+
     struct PropertyInfo;
     struct TypeInfo;
 
@@ -219,13 +221,24 @@ namespace sw
      * @param wireTypeName 그 payload 를 **쓸 때의** 타입입니다. 알면 넘기십시오(`findWireTypeName`). 비워 두면 크기로 짐작하는데, 크기만으로는
      *                     정수와 실수를 가를 수 없습니다(`sizeof(float32) == sizeof(int32)`).
      * @param wireVersion 그 payload 를 적은 버전입니다(스트림 머리나 orphan 이 가지고 있습니다).
-     * @return 적용에 성공하면 true 입니다.
+     * @return 적용에 성공하면 `Read`, 옮기지 못하면 `FieldFailed` 입니다. 대상이 구조체이고 그 안에 객체째 실패여야 할 것(금지된 필드)이 있으면
+     *         다른 방법을 더 해 보지 않고 `ObjectRejected` 입니다(`SerializerUtil::deserializeValueBinary`).
+     * @warning 비트필드 프로퍼티의 값 주소(그 바이트)를 넘기면 bool 이 같은 바이트의 다른 플래그까지 덮습니다. 프로퍼티는 `tryCoercePropertyBinary` 로 옮깁니다.
      */
-    [[nodiscard]] SW_API bool tryCoerceBinaryPayload( MutableValueAddress value, hashed_string targetTypeName,
-                                                      const uint8* pPayload, size_t payloadSize,
-                                                      const SerializeContext& context,
-                                                      hashed_string           wireTypeName = hashed_string{},
-                                                      BinaryWireVersion       wireVersion  = kCurrentBinaryWireVersion );
+    [[nodiscard]] SW_API FieldReadResult tryCoerceBinaryPayload( MutableValueAddress value, hashed_string targetTypeName,
+                                                                 const uint8* pPayload, size_t payloadSize,
+                                                                 const SerializeContext& context,
+                                                                 hashed_string           wireTypeName = hashed_string{},
+                                                                 BinaryWireVersion       wireVersion  = kCurrentBinaryWireVersion );
+
+    /**
+     * @brief 기록 타입이 다른 바이너리 페이로드를 프로퍼티 하나에 강제 변환해 씁니다(`tryCoerceBinaryPayload` 의 프로퍼티 판). @p instance 는 프로퍼티를 가진 **객체**의 주소입니다.
+     * @details 비트필드는 주소를 가질 수 없어 임시 bool 에 옮긴 뒤 그 비트만 씁니다(`SerializerUtil::applyPropertyBinary` 와 같다). 예전에는 태그 스트림
+     *          읽기가 `getRawPtr` 로 그 바이트 주소를 꺼내 bool 을 통째로 써, 같은 바이트의 다른 비트필드가 지워졌다.
+     * @return `tryCoerceBinaryPayload` 와 같습니다.
+     */
+    [[nodiscard]] SW_API FieldReadResult tryCoercePropertyBinary( const PropertyInfo& prop, MutableObjectAddress instance, const uint8* pPayload, size_t payloadSize,
+                                                                  const SerializeContext& context, hashed_string wireTypeName, BinaryWireVersion wireVersion );
 
     /**
      * @brief 바이너리 태그의 기록 타입 해시를 이름으로 바꿔 반환합니다. 등록된 타입(원본 이름) 또는 enum(FQN)이며, 모르면 빈 이름입니다.
