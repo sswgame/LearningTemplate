@@ -321,7 +321,7 @@ SW_TEST_CASE( PoseModifierTest, HotReloadRebindsRig )
     SW_EXPECT_TRUE( TestPoseModifierInternal::isNear( float3{ 1.0f, 0.0f, 0.0f }, TestPoseModifierInternal::getBoneModel( *pUnit, 2 ), 1e-4f ) );
 
     SW_ASSERT_TRUE( FileUtil::writeTextFile( path, secondJSON ) );
-    SW_ASSERT_TRUE( RigAssetCache::reloadShared( path ) );
+    SW_ASSERT_TRUE( SharedAssetCache<RigAsset>::reloadShared( path ) );
     manager.getSubsystem<AnimationSystem>().evaluate( 1.0f / 60.0f );
     SW_EXPECT_TRUE( TestPoseModifierInternal::isNear( float3{ -1.0f, 0.0f, 0.0f }, TestPoseModifierInternal::getBoneModel( *pUnit, 2 ), 1e-4f ) );
 }

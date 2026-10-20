@@ -7,6 +7,7 @@
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "GameFramework/Base/Online/HTTP/BlockingHTTPClient.h"
 #include "GameFramework/Base/Online/HTTP/HTTPClient.h"
 #include "GameFramework/Base/Online/HTTP/HTTPServer.h"
 #include "GameFramework/Base/Online/Security/NetSecurity.h"
@@ -272,4 +273,43 @@ SW_TEST_CASE( HTTPTest, TransportFailuresAreReportedOnce )
     const HTTPClientResponse refusedResponse = pair.run( refused );
     SW_EXPECT_TRUE( refusedResponse._bTransportFailed == SW_TRUE );
     SW_EXPECT_EQUAL( 0, pair._client.getPendingCount() );
+}
+
+SW_TEST_CASE( HTTPTest, BlockingAdapterConvertsRequestsAndReturnsTransportFailures )
+{
+    HTTPRequest engineRequest;
+    engineRequest._method = "post";
+    engineRequest._url    = "http://127.0.0.1:1/upload";
+    engineRequest._body   = "abc";
+    engineRequest._listHeader.push_back( { "Content-Type", "application/json" } );
+    HTTPClientRequest clientRequest;
+    SW_ASSERT_TRUE( BlockingHTTPClient::makeClientRequest( engineRequest, clientRequest ) );
+    SW_EXPECT_TRUE( clientRequest._method == HTTPMethod::Post );
+    SW_EXPECT_EQUAL( size_t( 3 ), clientRequest._bodyBytes.size() );
+    SW_ASSERT_EQUAL( size_t( 1 ), clientRequest._listHeader.size() );
+    SW_EXPECT_EQUAL( string( "application/json" ), clientRequest._listHeader[0]._value );
+
+    HTTPRequest putRequest = engineRequest;
+    putRequest._method     = "PUT";
+    SW_EXPECT_FALSE( BlockingHTTPClient::makeClientRequest( putRequest, clientRequest ) );
+
+    BlockingHTTPClient notRunning;
+    const HTTPResponse notRunningResponse = notRunning.send( engineRequest ); // 띄우지 않은 클라이언트도 응답은 한 번 온다
+    SW_EXPECT_EQUAL( 0, notRunningResponse._status );
+    SW_EXPECT_FALSE( notRunningResponse._error.empty() );
+    const HTTPResponse putResponse = notRunning.send( putRequest );
+    SW_EXPECT_EQUAL( 0, putResponse._status );
+
+    LoopbackStreamNetwork network{ 11u };
+    BlockingHTTPClient    adapter;
+    StreamTransportConfig transportSettings;
+    transportSettings._ioThreadCount = 0;
+    SW_ASSERT_TRUE( adapter.initialize( network.createTransport(), transportSettings, HTTPClientConfig{} ) );
+    const HTTPResponse refused = adapter.send( engineRequest ); // 듣는 쪽이 없는 포트
+    SW_EXPECT_EQUAL( 0, refused._status );
+    SW_EXPECT_FALSE( refused.isSuccess() );
+    engineRequest._url              = "https://127.0.0.1:1/upload"; // 그 호스트의 TLS 컨텍스트가 없다
+    const HTTPResponse noTLSContext = adapter.send( engineRequest );
+    SW_EXPECT_EQUAL( 0, noTLSContext._status );
+    adapter.shutdown();
 }

@@ -231,7 +231,7 @@ namespace sw
         shared_ptr<const Skeleton> skeleton;
         if ( _skeletonPath.empty() == false )
         {
-            skeleton = SkeletonCache::acquire( _skeletonPath );
+            skeleton = SharedAssetCache<Skeleton>::acquire( _skeletonPath );
             if ( skeleton == nullptr )
                 SW_LOG_ERROR( "Skeleton '%#' could not be loaded - using a one-bone implicit skeleton", _skeletonPath.c_str() );
         }
@@ -252,7 +252,7 @@ namespace sw
             setBoneLOD( nullptr );
             return;
         }
-        shared_ptr<const SkeletonBoneLOD> boneLOD = SkeletonBoneLODCache::acquire( path );
+        shared_ptr<const SkeletonBoneLOD> boneLOD = SharedAssetCache<SkeletonBoneLOD>::acquire( path );
         if ( boneLOD != _boneLOD )
             setBoneLOD( std::move( boneLOD ) );
     }

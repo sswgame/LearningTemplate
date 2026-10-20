@@ -82,6 +82,11 @@ namespace sw
         void updateAnimator( float32 moveCode );
         /** @brief 플레이어를 때리는 것을 틱 뒤로 미룹니다. */
         void requestPlayerDamage( GameObjectHandle player ) const;
+        /**
+         * @brief 쓰러질 때 외형의 소켓 부품 가운데 강체(`RigidBodyComponent`)가 있는 것(무기 · 방패 프리팹)을 물리로 뗍니다(틱 뒤 · 게임 스레드).
+         * @details 어느 부품을 떨어뜨릴지는 데이터(부품 프리팹에 강체가 있는가)가 정한다. 뗀 부품은 시체와 함께 외형이 걷는다(`despawnParts`).
+         */
+        void requestDropSocketParts() const;
 
     private:
         PROPERTY( Category = "Enemy", DisplayName = "Director", Tooltip = "Object with the ShooterDirectorComponent" )

@@ -39,7 +39,7 @@
 | 메시 | `MeshCache::acquire` → `shared_ptr<Mesh>`, 약한 참조 표 | `MeshPreloadSet` 만(`MeshPreloadSet.cpp:63`) | 7곳: `MeshComponent.cpp:110`, `FoliageComponent.cpp:51`, `NavGeometryCollector.cpp:245`, 게임 둘 등 |
 | 오디오 | `AudioClipCache` → `shared_ptr<const AudioClipData>` + `AudioClipStatus{Missing, Loading, Ready, Failed}` | **이미 있음** `requestClip` · `getStatus`(`AudioClip.h:58`, `:101`, `:110`) | `loadClip` 동기 1곳(`IAudioService.cpp:162`), `requestClip` 5줄 |
 | 프리팹 | `PrefabCache::loadPrefab` → `PrefabAsset*`(캐시 소유, 수명 규약 약함) | 없음 | 17줄 · 5파일(`Scene.cpp:117,178,280,360`, `PrefabAsset.cpp:564`, 에디터) |
-| 애니메이션 · 스켈레톤 | `AnimationClipCache` · `SkeletonCache::acquire` → `shared_ptr<const T>`(`SharedAssetTable`) | 없음 | `AnimationClipCache` 1곳(`SkeletalAnimatorComponent.cpp:371` `preloadClip`, 호출 6곳), `SkeletonCache` 1곳(`SkeletalMeshComponent.cpp:234`) |
+| 애니메이션 · 스켈레톤 | `SharedAssetCache<AnimationClip>` · `SharedAssetCache<Skeleton>::acquire` → `shared_ptr<const T>`(`SharedAssetTable`) | 없음 | `SharedAssetCache<AnimationClip>` 1곳(`SkeletalAnimatorComponent.cpp:371` `preloadClip`, 호출 6곳), `SharedAssetCache<Skeleton>` 1곳(`SkeletalMeshComponent.cpp:234`) |
 | 셰이더 | `ShaderCache` 가 `ResourceIO::readBinaryResource` 로 읽음(`ShaderCache.cpp:190`) | 없음 | 미조사(C1 에서) |
 | 바이트 읽기 | `ResourceIO::readBinaryResource` 동기 22줄 · 21파일 | `readBinaryResourceAsync` 는 `AssetStreamingQueue` 만 씀(`AssetStreamingQueue.cpp:256`) | — |
 

@@ -153,12 +153,6 @@ Base 에 남긴 것: 계산한 키로 정렬하는 람다(`TimingJudge` 폭 합,
 왜 필요한가: `Source/Engine/Navigation/` 의 3D 내비메시에 아래가 비었습니다.
 남은 것: (2) 식생을 베이크 기하로 — 레이어마다 "길을 막는가" 값이 `FoliageLayer` 에 있어야 합니다(지형 높이장은 종류별 기하 레지스트리로 들어갔음). (3) 장애물이 많고 자주 움직이면 TileCache(압축 층) — 지금은 타일을 통째로 다시 베이크합니다. (6) 다른 테스트 게임(AbilityArena 등)의 적도 내비메시로 — 행동 트리 `MoveTo` 노드가 `INavMover` 를 씁니다.
 
-### ClothFollowups
-제목: 천(`ClothComponent`)의 남은 것
-옛번호: D1-4
-왜 필요한가: 같은 오브젝트의 `MeshComponent` 에 물리 프레임마다 양면 동적 메시(`Mesh::setDynamic` — 씬 정점 풀 밖)를 거는 길은 들어갔습니다.
-남은 것: 화면 확인(천을 쓰는 씬이 없음 — 테스트 씬을 하나 두고 `gpu-verifier` 로 앞뒤 면 · 노멀 캡처), 새 메시 대신 제자리 갱신 정점 버퍼(정점 풀 부분 갱신은 [WorldStreaming](WorldStreaming.md) 2절에서 끝났으므로 그 풀을 쓴다), 헤어 카드 · 옷처럼 스킨드 메시 뼈에 고정하는 길(Jolt `Skinned` 구속).
-
 ### Wayland
 제목: Linux 창 계층이 X11 뿐이다
 옛번호: D1-6

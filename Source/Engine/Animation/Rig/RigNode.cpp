@@ -289,9 +289,11 @@ namespace sw
 
     bool RigNode::parseCommon( RigJSONReader& reader )
     {
-        const bool bOk = reader.readName( "name", _name, true ) && reader.readFloat( "weight", _weight, false ) &&
+        bool       bEnabled = true; // 적지 않으면 켜짐 — 형식이 정한 "적지 않음" 값이다(에디터가 끈 노드만 `"enabled": false` 를 쓴다)
+        const bool bOk      = reader.readName( "name", _name, true ) && reader.readFloat( "weight", _weight, false ) &&
                          reader.readName( "weight_curve", _weightCurve, false ) && reader.readName( "weight_slot", _weightSlot, false ) &&
-                         reader.readFloat( "min_screen_size", _minScreenSize, false );
+                         reader.readFloat( "min_screen_size", _minScreenSize, false ) && reader.readBool( "enabled", bEnabled, false );
+        _bEnabled = bEnabled ? SW_TRUE : SW_FALSE;
         if ( bOk && ( _weight < 0.0f || 1.0f < _weight ) )
         {
             reader.fail( "'weight' must be in [0, 1]" );

@@ -91,11 +91,11 @@ namespace sw
     void AnimationNotifyComponent::loadNotifyTable()
     {
         // 경로가 비면 코드가 넣은 표(`setNotifyTable`)를 그대로 둔다.
-        _seenTableReloadCount = AnimationNotifyTableCache::getReloadCount();
+        _seenTableReloadCount = SharedAssetCache<AnimationNotifyTable>::getReloadCount();
         if ( _notifyTablePath.empty() )
             return;
         closeAllStates();
-        _table = AnimationNotifyTableCache::acquire( _notifyTablePath );
+        _table = SharedAssetCache<AnimationNotifyTable>::acquire( _notifyTablePath );
         if ( _table == nullptr )
             SW_LOG_ERROR( "'%#': notify table '%#' could not be loaded", getOwner() != nullptr ? getOwner()->getName().c_str() : "(no owner)", _notifyTablePath.c_str() );
     }
@@ -234,7 +234,7 @@ namespace sw
     {
         _listAction.clear();
         // 테이블 파일을 고쳤으면 열린 구간을 이전 항목(복사해 둔 것)으로 닫고 새 테이블로 이어 간다.
-        if ( _notifyTablePath.empty() == false && _seenTableReloadCount != AnimationNotifyTableCache::getReloadCount() )
+        if ( _notifyTablePath.empty() == false && _seenTableReloadCount != SharedAssetCache<AnimationNotifyTable>::getReloadCount() )
             loadNotifyTable();
 
         // 0) 재생할 것이 바뀌었다(스프라이트가 같은 객체를 다른 구간으로 재생한다). 이전 구간의 열린 알림은 모두 끊긴 것이다.
