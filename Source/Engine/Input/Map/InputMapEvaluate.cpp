@@ -39,7 +39,7 @@ namespace sw
 
             const size_t bindCount = actionEntry._listBinding.size();
             if ( actionEntry._listBindingState.size() != bindCount )
-                actionEntry._listBindingState.resize( bindCount );
+                rebuildBindingStates( actionEntry );
 
             bool    anyDown{ false };
             bool    anyPressed{ false };
@@ -55,11 +55,14 @@ namespace sw
                 const ActionBinding& binding = actionEntry._listBinding[bindIndex];
                 ActionBindingState&  state   = actionEntry._listBindingState[bindIndex];
 
-                // 꺼진 레이어의 바인딩도 장치를 읽어 눌림을 추적한다. 레이어가 켜지는 프레임에 이미 눌려 있던 입력을 새 누름으로 읽지 않기 위해서다(아래 `_bWasDown`).
+                // 꺼진 레이어의 바인딩이나 콘솔이 가린 키도 장치를 읽어 눌림을 추적한다. 다시 보이는 프레임에 이미 눌려 있던 입력을 새 누름으로 읽지 않기 위해서다(아래 `_bWasDown`).
                 const bool bLayerActive = isBindingLayerActive( binding );
+                float2     deviceValue{ 0.0f, 0.0f };
                 float2     bindingValue{ 0.0f, 0.0f };
-                const bool bPhysicalDown = evaluateBindingDown( binding, bindingValue );
-                const bool bRawDown      = bLayerActive && bPhysicalDown;
+                const bool bPhysicalDown = evaluateBindingDown( binding, deviceValue, SlotRead::Device );
+                const bool bRawDown      = bLayerActive && evaluateBindingDown( binding, bindingValue, SlotRead::Game );
+                // 장치는 눌려 있는데 레이어가 켜진 게임이 안 눌림으로 보면 콘솔 · 포커스가 눌린 키를 가린 것이다.
+                const bool bLive = bLayerActive && ( bPhysicalDown == false || bRawDown );
                 if ( binding._bNegate )
                 {
                     bindingValue._x = -bindingValue._x;
@@ -74,13 +77,14 @@ namespace sw
 
                 state._bWasDown = state._bDown;
                 state._bDown    = bRawDown ? SW_TRUE : SW_FALSE;
-                // 레이어가 막 켜졌고 그 전부터 눌려 있었으면 Pressed 가 아니라 Held 로 시작한다(눌린 채 켜진 입력을 새 누름으로 읽으면 일시정지를 연 Esc 가 층 안 Back 이 된다).
-                // 눌린 채 켜진 프레임에 뗐으면 아무 일도 아니다. 켜진 뒤 뗐다 다시 누른 입력은 새 누름이다.
-                const bool bLayerJustActivated = bLayerActive && state._bLayerActive == SW_FALSE;
-                if ( bLayerJustActivated && state._bPhysicalDown == SW_TRUE )
+                // 바인딩이 막 보이게 됐고(레이어가 켜짐, 콘솔이 닫혀 키가 다시 보임, 리바인딩 · 복원 · 새 바인딩으로 상태가 새로 만들어짐) 그 전부터 눌려 있었으면
+                // Pressed 가 아니라 Held 로 시작한다(눌린 채 켜진 입력을 새 누름으로 읽으면 일시정지를 연 Esc 가 층 안 Back 이 된다).
+                // 눌린 채 보이게 된 프레임에 뗐으면 아무 일도 아니다. 보인 뒤 뗐다 다시 누른 입력은 새 누름이다.
+                const bool bJustBecameLive = bLive && state._bLive == SW_FALSE;
+                if ( bJustBecameLive && state._bPhysicalDown == SW_TRUE )
                     state._bWasDown = state._bDown;
                 state._bPhysicalDown = bPhysicalDown ? SW_TRUE : SW_FALSE;
-                state._bLayerActive  = bLayerActive ? SW_TRUE : SW_FALSE;
+                state._bLive         = bLive ? SW_TRUE : SW_FALSE;
 
                 state._bPressed       = ( state._bDown == SW_TRUE && state._bWasDown == SW_FALSE ) ? SW_TRUE : SW_FALSE;
                 state._bReleased      = ( state._bDown == SW_FALSE && state._bWasDown == SW_TRUE ) ? SW_TRUE : SW_FALSE;
@@ -268,11 +272,34 @@ namespace sw
         return float2{ value._x + relative._x, value._y + relative._y };
     }
 
-    bool InputMap::isKeyboardKeyDown( Key key ) const
+    InputMap::ActionBindingState InputMap::makeBindingState( const ActionBinding& binding ) const
+    {
+        float2             unused{ 0.0f, 0.0f };
+        ActionBindingState state{};
+        state._bPhysicalDown = evaluateBindingDown( binding, unused, SlotRead::Device ) ? SW_TRUE : SW_FALSE;
+        return state;
+    }
+
+    void InputMap::reseedBindingState( ActionEntry& entry, uint32 bindIndex ) const
+    {
+        entry._listBindingState[bindIndex] = makeBindingState( entry._listBinding[bindIndex] );
+    }
+
+    void InputMap::rebuildBindingStates( ActionEntry& entry ) const
+    {
+        entry._listBindingState.clear();
+        entry._listBindingState.reserve( entry._listBinding.size() );
+        for ( const ActionBinding& binding : entry._listBinding )
+        {
+            entry._listBindingState.push_back( makeBindingState( binding ) );
+        }
+    }
+
+    bool InputMap::isKeyboardKeyDown( Key key, SlotRead read ) const
     {
         if ( _pInput == nullptr )
             return false;
-        if ( _bKeyboardFocusIgnored == SW_TRUE )
+        if ( read == SlotRead::Device || _bKeyboardFocusIgnored == SW_TRUE )
             return _pInput->getKeyboard() != nullptr && _pInput->getKeyboard()->isKeyDown( key );
         return _pInput->isKeyDown( key );
     }
@@ -286,22 +313,22 @@ namespace sw
         return _pInput->wasKeyPressed( key );
     }
 
-    bool InputMap::isSlotDown( const InputSlot& slot ) const
+    bool InputMap::isSlotDown( const InputSlot& slot, SlotRead read ) const
     {
         const IInputDevice* pDevice = _pInput != nullptr ? _pInput->getDevice( slot._deviceKind, slot._deviceIndex ) : nullptr;
         if ( pDevice == nullptr )
             return false;
-        if ( isSlotHiddenByConsole( slot ) )
+        if ( read == SlotRead::Game && isSlotHiddenByConsole( slot ) )
             return false;
         return pDevice->isControlDown( slot._controlIndex );
     }
 
-    bool InputMap::wasSlotPressed( const InputSlot& slot ) const
+    bool InputMap::wasSlotPressed( const InputSlot& slot, SlotRead read ) const
     {
         const IInputDevice* pDevice = _pInput != nullptr ? _pInput->getDevice( slot._deviceKind, slot._deviceIndex ) : nullptr;
         if ( pDevice == nullptr )
             return false;
-        if ( isSlotHiddenByConsole( slot ) )
+        if ( read == SlotRead::Game && isSlotHiddenByConsole( slot ) )
             return false;
         return pDevice->wasControlPressed( slot._controlIndex );
     }
@@ -318,16 +345,19 @@ namespace sw
         return false;
     }
 
-    bool InputMap::evaluateBindingDown( const ActionBinding& binding, float2& outValue ) const
+    bool InputMap::evaluateBindingDown( const ActionBinding& binding, float2& outValue, SlotRead read ) const
     {
         if ( _pInput == nullptr )
+            return false;
+        // 이동량과 "아무 키" 신호는 눌려 있는 상태가 없어 이어 갈 장치 눌림이 없다. 있는 척하면 다음 신호가 새 누름이 아닌 것으로 읽힌다.
+        if ( read == SlotRead::Device && ( binding._kind == BindingKind::MouseDelta2D || binding._kind == BindingKind::MouseWheel1D || binding._kind == BindingKind::AnyKey ) )
             return false;
 
         // isControlDown() 만 보면 같은 프레임 안에서 Down 과 Up 이 모두 처리된 탭(예: 매크로 주입, 초고속 입력, 가상 입력 hold=0)을
         // 놓친다. wasControlPressed() 를 함께 확인해 그 프레임에는 "눌렸었다" 로 취급한다. 단일 키와 합성(axis1d, vector2d) 모두 같은 규칙이다.
-        const auto isSlotHeldThisFrame = [this]( const InputSlot& slot ) -> bool
+        const auto isSlotHeldThisFrame = [this, read]( const InputSlot& slot ) -> bool
         {
-            return isSlotDown( slot ) || wasSlotPressed( slot );
+            return isSlotDown( slot, read ) || wasSlotPressed( slot, read );
         };
 
         switch ( binding._kind )
@@ -342,8 +372,8 @@ namespace sw
                         const bool bIsModifierKey = ( key == Key::LeftControl || key == Key::RightControl || key == Key::LeftShift || key == Key::RightShift || key == Key::LeftAlt || key == Key::RightAlt || key == Key::LeftSuper || key == Key::RightSuper );
                         if ( bIsModifierKey == false )
                         {
-                            const bool bCtrlHeld = isKeyboardKeyDown( Key::LeftControl ) || isKeyboardKeyDown( Key::RightControl );
-                            const bool bAltHeld  = isKeyboardKeyDown( Key::LeftAlt ) || isKeyboardKeyDown( Key::RightAlt );
+                            const bool bCtrlHeld = isKeyboardKeyDown( Key::LeftControl, read ) || isKeyboardKeyDown( Key::RightControl, read );
+                            const bool bAltHeld  = isKeyboardKeyDown( Key::LeftAlt, read ) || isKeyboardKeyDown( Key::RightAlt, read );
                             if ( bCtrlHeld || bAltHeld )
                                 return false;
                         }
@@ -447,7 +477,7 @@ namespace sw
             }
             case BindingKind::Chord:
             {
-                if ( isSlotDown( binding._arrSlot[0] ) && isSlotDown( binding._arrSlot[1] ) )
+                if ( isSlotDown( binding._arrSlot[0], read ) && isSlotDown( binding._arrSlot[1], read ) )
                 {
                     outValue = float2{ 1.0f, 0.0f };
                     return true;
@@ -471,7 +501,7 @@ namespace sw
             }
             case BindingKind::VirtualJoystick2D:
             {
-                const bool bActivationDown = isSlotDown( binding._arrSlot[0] );
+                const bool bActivationDown = isSlotDown( binding._arrSlot[0], read );
 
                 if ( bActivationDown == false )
                 {
@@ -496,18 +526,18 @@ namespace sw
             {
                 bool bModifierMatch = true;
                 if ( ( binding._modifierMask & ModifierKey::Ctrl ) != 0 )
-                    bModifierMatch = bModifierMatch && ( isKeyboardKeyDown( Key::LeftControl ) || isKeyboardKeyDown( Key::RightControl ) );
+                    bModifierMatch = bModifierMatch && ( isKeyboardKeyDown( Key::LeftControl, read ) || isKeyboardKeyDown( Key::RightControl, read ) );
                 if ( ( binding._modifierMask & ModifierKey::Shift ) != 0 )
-                    bModifierMatch = bModifierMatch && ( isKeyboardKeyDown( Key::LeftShift ) || isKeyboardKeyDown( Key::RightShift ) );
+                    bModifierMatch = bModifierMatch && ( isKeyboardKeyDown( Key::LeftShift, read ) || isKeyboardKeyDown( Key::RightShift, read ) );
                 if ( ( binding._modifierMask & ModifierKey::Alt ) != 0 )
-                    bModifierMatch = bModifierMatch && ( isKeyboardKeyDown( Key::LeftAlt ) || isKeyboardKeyDown( Key::RightAlt ) );
+                    bModifierMatch = bModifierMatch && ( isKeyboardKeyDown( Key::LeftAlt, read ) || isKeyboardKeyDown( Key::RightAlt, read ) );
                 if ( ( binding._modifierMask & ModifierKey::Super ) != 0 )
-                    bModifierMatch = bModifierMatch && ( isKeyboardKeyDown( Key::LeftSuper ) || isKeyboardKeyDown( Key::RightSuper ) );
+                    bModifierMatch = bModifierMatch && ( isKeyboardKeyDown( Key::LeftSuper, read ) || isKeyboardKeyDown( Key::RightSuper, read ) );
 
                 if ( bModifierMatch == false )
                     return false;
 
-                if ( isSlotDown( binding._arrSlot[0] ) )
+                if ( isSlotDown( binding._arrSlot[0], read ) )
                 {
                     outValue = float2{ 1.0f, 0.0f };
                     return true;

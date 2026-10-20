@@ -209,7 +209,7 @@ namespace sw
         ActionEntry& entry = getOrCreateAction( action, valueType );
         entry._listBinding.push_back( binding );
         entry._listDefaultBinding.push_back( binding );
-        entry._listBindingState.push_back( ActionBindingState{} );
+        entry._listBindingState.push_back( makeBindingState( binding ) );
     }
 
     void InputMap::bind( const hashed_string& action, InputSlot slot, ActionTrigger trigger, const hashed_string& layer )
@@ -572,6 +572,7 @@ namespace sw
         if ( reportVirtualCursorConflict( "rebind", action, candidate ) )
             return false;
         binding = candidate;
+        reseedBindingState( *pEntry, bindIndex );
         return true;
     }
 
@@ -628,12 +629,16 @@ namespace sw
                 const InputSlot oldSlot                                                      = pEntry->_listBinding[bindIndex]._arrSlot[targetSlot];
                 pConflictEntry->_listBinding[conflictingBindIndex]._arrSlot[conflictingSlot] = oldSlot;
                 pEntry->_listBinding[bindIndex]._arrSlot[targetSlot]                         = newSlot;
+                reseedBindingState( *pEntry, bindIndex );
+                reseedBindingState( *pConflictEntry, conflictingBindIndex );
                 return true;
             }
             else if ( strategy == ConflictResolution::Override && pConflictEntry != nullptr )
             {
                 pConflictEntry->_listBinding[conflictingBindIndex]._arrSlot[conflictingSlot] = InputSlot{};
                 pEntry->_listBinding[bindIndex]._arrSlot[targetSlot]                         = newSlot;
+                reseedBindingState( *pEntry, bindIndex );
+                reseedBindingState( *pConflictEntry, conflictingBindIndex );
                 return true;
             }
             else if ( strategy == ConflictResolution::AddSecondary )
@@ -641,12 +646,13 @@ namespace sw
                 ActionBinding newBinding        = pEntry->_listBinding[bindIndex];
                 newBinding._arrSlot[targetSlot] = newSlot;
                 pEntry->_listBinding.push_back( newBinding );
-                pEntry->_listBindingState.push_back( ActionBindingState{} );
+                pEntry->_listBindingState.push_back( makeBindingState( newBinding ) );
                 return true;
             }
         }
 
         pEntry->_listBinding[bindIndex]._arrSlot[targetSlot] = newSlot;
+        reseedBindingState( *pEntry, bindIndex );
         return true;
     }
 
@@ -720,8 +726,7 @@ namespace sw
             return false;
 
         pEntry->_listBinding = pEntry->_listDefaultBinding;
-        pEntry->_listBindingState.clear();
-        pEntry->_listBindingState.resize( pEntry->_listBinding.size() );
+        rebuildBindingStates( *pEntry );
         return true;
     }
 
@@ -732,8 +737,7 @@ namespace sw
             if ( entry._listDefaultBinding.empty() == false )
             {
                 entry._listBinding = entry._listDefaultBinding;
-                entry._listBindingState.clear();
-                entry._listBindingState.resize( entry._listBinding.size() );
+                rebuildBindingStates( entry );
             }
         }
     }

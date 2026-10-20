@@ -1487,6 +1487,151 @@ SW_TEST_CASE( InputMapTest, KeyHeldWhenTheLayerTurnsOnStartsHeldNotPressed )
 }
 
 /**
+ * @brief [InputMapTest] 개발 콘솔이 쥔 채 누른 키를 닫을 때까지 쥐고 있으면 다시 보이는 프레임에 Pressed 가 아니라 Held 로 시작하고, 뗐다 다시 누르면 Pressed 가 나온다
+ * @details 변이: 콘솔이 가린 키의 눌림을 추적하지 않으면(`SlotRead::Device`) 콘솔이 닫혀 키가 다시 보이는 프레임에 이미 눌려 있던 키가 새 누름으로 발화한다.
+ *          레이어가 켜질 때(`KeyHeldWhenTheLayerTurnsOnStartsHeldNotPressed`)와 같은 규칙이다.
+ */
+SW_TEST_CASE( InputMapTest, KeyHeldThroughTheConsoleStartsHeldWhenItIsVisibleAgain )
+{
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    sw::InputMap& inputMap = input.getInputMap();
+    inputMap.bind( "Fire", sw::Key::F8, sw::ActionTrigger::Pressed );
+    inputMap.bind( "FireHeld", sw::Key::F8, sw::ActionTrigger::Down );
+
+    input.setKeyboardFocus( sw::InputKeyboardFocus::DevConsole );
+    input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::F8 ) );
+    input.beginFrame( 1.0f / 60.0f ); // 콘솔이 쥔 채 누른다 — 게임은 안 눌림으로 본다
+    SW_EXPECT_FALSE( inputMap.wasActionTriggered( "Fire" ) );
+    SW_EXPECT_FALSE( inputMap.isActionDown( "FireHeld" ) );
+    input.endFrame();
+
+    input.setKeyboardFocus( sw::InputKeyboardFocus::Game );
+    input.beginFrame( 1.0f / 60.0f ); // 누른 채 콘솔이 닫혀 다시 보이는 첫 프레임
+    SW_EXPECT_FALSE( inputMap.wasActionTriggered( "Fire" ) );
+    SW_EXPECT_FALSE( inputMap.wasActionPressed( "Fire" ) );
+    SW_EXPECT_TRUE( inputMap.isActionDown( "FireHeld" ) ); // 눌려 있는 것은 Held 로 보인다
+    input.endFrame();
+
+    input.beginFrame( 1.0f / 60.0f );
+    SW_EXPECT_FALSE( inputMap.wasActionTriggered( "Fire" ) );
+    input.endFrame();
+
+    input.postRawEvent( sw::RawInputEvent::makeKeyUp( sw::Key::F8 ) );
+    input.beginFrame( 1.0f / 60.0f );
+    input.endFrame();
+    input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::F8 ) ); // 뗐다 다시 누른 것은 새 누름이다
+    input.beginFrame( 1.0f / 60.0f );
+    SW_EXPECT_TRUE( inputMap.wasActionTriggered( "Fire" ) );
+    input.endFrame();
+
+    // 콘솔이 쥔 동안 떼었으면 다시 보여도 아무 일도 아니고, 그 뒤 누르면 새 누름이다.
+    input.setKeyboardFocus( sw::InputKeyboardFocus::DevConsole );
+    input.beginFrame( 1.0f / 60.0f ); // 누른 채 콘솔이 쥔다
+    input.endFrame();
+    input.postRawEvent( sw::RawInputEvent::makeKeyUp( sw::Key::F8 ) );
+    input.beginFrame( 1.0f / 60.0f );
+    input.endFrame();
+    input.setKeyboardFocus( sw::InputKeyboardFocus::Game );
+    input.beginFrame( 1.0f / 60.0f );
+    SW_EXPECT_FALSE( inputMap.wasActionTriggered( "Fire" ) );
+    SW_EXPECT_FALSE( inputMap.isActionDown( "FireHeld" ) );
+    input.endFrame();
+    input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::F8 ) );
+    input.beginFrame( 1.0f / 60.0f );
+    SW_EXPECT_TRUE( inputMap.wasActionTriggered( "Fire" ) );
+    input.endFrame();
+
+    input.shutdown();
+}
+
+/**
+ * @brief [InputMapTest] 이미 눌린 키로 리바인딩하면 Pressed 가 아니라 Held 로 시작하고, 뗐다 다시 누르면 Pressed 가 나온다
+ * @details 변이: 리바인딩이 바인딩 상태를 새 장치 값으로 다시 만들지 않으면(`reseedBindingState`) 옛 슬롯 기준의 "안 눌림" 이 남아 새 키가 새 누름으로 발화한다.
+ *          리바인딩 화면은 새 키를 누른 채로 적용하므로 늘 이 길이다.
+ */
+SW_TEST_CASE( InputMapTest, RebindingOntoAHeldKeyStartsHeldNotPressed )
+{
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    sw::InputMap& inputMap = input.getInputMap();
+    inputMap.bind( "Fire", sw::Key::F7, sw::ActionTrigger::Pressed );
+    inputMap.bind( "FireHeld", sw::Key::F7, sw::ActionTrigger::Down );
+    inputMap.bind( "Jump", sw::Key::F6, sw::ActionTrigger::Pressed );
+
+    input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::F8 ) );
+    input.beginFrame( 1.0f / 60.0f ); // 새로 잡을 키를 누르고 있다
+    input.endFrame();
+
+    SW_EXPECT_TRUE( inputMap.rebindKey( "Fire", sw::Key::F8 ) );
+    SW_EXPECT_TRUE( inputMap.rebindKey( "FireHeld", sw::Key::F8 ) );
+    SW_EXPECT_TRUE( inputMap.rebindWithResolution( "Jump", sw::InputSlot::fromKey( sw::Key::F8 ), sw::ConflictResolution::AddSecondary ) );
+    input.beginFrame( 1.0f / 60.0f );
+    SW_EXPECT_FALSE( inputMap.wasActionTriggered( "Fire" ) );
+    SW_EXPECT_FALSE( inputMap.wasActionPressed( "Fire" ) );
+    SW_EXPECT_TRUE( inputMap.isActionDown( "FireHeld" ) );
+    SW_EXPECT_FALSE( inputMap.wasActionTriggered( "Jump" ) ); // 보조 바인딩으로 추가한 길도 같다
+    input.endFrame();
+
+    input.postRawEvent( sw::RawInputEvent::makeKeyUp( sw::Key::F8 ) );
+    input.beginFrame( 1.0f / 60.0f );
+    input.endFrame();
+    input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::F8 ) ); // 뗐다 다시 누른 것은 새 누름이다
+    input.beginFrame( 1.0f / 60.0f );
+    SW_EXPECT_TRUE( inputMap.wasActionTriggered( "Fire" ) );
+    SW_EXPECT_TRUE( inputMap.wasActionTriggered( "Jump" ) );
+    input.endFrame();
+
+    input.shutdown();
+}
+
+/**
+ * @brief [InputMapTest] 기본값 복원과 맵 비우기 뒤 다시 만든 바인딩도 이미 눌린 키를 Pressed 가 아니라 Held 로 시작한다
+ * @details 변이: 바인딩 상태를 빈 `ActionBindingState{}` 로 다시 만들면(`makeBindingState` 를 거치지 않으면) 눌린 채 다시 만들어진 바인딩이 새 누름으로 발화한다.
+ *          맵 다시 읽기(`clear` + 새 바인딩)도 이 길이다.
+ */
+SW_TEST_CASE( InputMapTest, RebuiltBindingStateStartsHeldNotPressed )
+{
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    sw::InputMap& inputMap = input.getInputMap();
+    inputMap.bind( "Fire", sw::Key::F8, sw::ActionTrigger::Pressed );
+    inputMap.bind( "FireHeld", sw::Key::F8, sw::ActionTrigger::Down );
+    SW_ASSERT_TRUE( inputMap.rebindKey( "Fire", sw::Key::F7 ) );
+    SW_ASSERT_TRUE( inputMap.rebindKey( "FireHeld", sw::Key::F7 ) );
+
+    input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::F8 ) );
+    input.beginFrame( 1.0f / 60.0f ); // 기본 키(F8)를 누르고 있다 — 지금은 F7 에 묶여 있다
+    SW_EXPECT_FALSE( inputMap.wasActionTriggered( "Fire" ) );
+    input.endFrame();
+
+    SW_EXPECT_TRUE( inputMap.resetActionToDefault( "Fire" ) );
+    inputMap.resetAllBindingsToDefault();
+    input.beginFrame( 1.0f / 60.0f );
+    SW_EXPECT_FALSE( inputMap.wasActionTriggered( "Fire" ) );
+    SW_EXPECT_TRUE( inputMap.isActionDown( "FireHeld" ) );
+    input.endFrame();
+
+    inputMap.clear(); // 맵을 다시 읽는 길 — 누른 채 새로 만든 바인딩
+    inputMap.bind( "Fire", sw::Key::F8, sw::ActionTrigger::Pressed );
+    inputMap.bind( "FireHeld", sw::Key::F8, sw::ActionTrigger::Down );
+    input.beginFrame( 1.0f / 60.0f );
+    SW_EXPECT_FALSE( inputMap.wasActionTriggered( "Fire" ) );
+    SW_EXPECT_TRUE( inputMap.isActionDown( "FireHeld" ) );
+    input.endFrame();
+
+    input.postRawEvent( sw::RawInputEvent::makeKeyUp( sw::Key::F8 ) );
+    input.beginFrame( 1.0f / 60.0f );
+    input.endFrame();
+    input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::F8 ) ); // 뗐다 다시 누른 것은 새 누름이다
+    input.beginFrame( 1.0f / 60.0f );
+    SW_EXPECT_TRUE( inputMap.wasActionTriggered( "Fire" ) );
+    input.endFrame();
+
+    input.shutdown();
+}
+
+/**
  * @brief [InputMapTest] 합성 바인딩(axis1d · vector2d)도 같은 프레임 안의 누름 + 뗌을 한 번 눌린 것으로 본다 — 단일 키와 같은 규칙
  * @details 매크로 · 초고속 탭 · 가상 입력(hold=0)은 한 `beginFrame` 에 누름과 뗌이 함께 들어온다. 합성 갈래가 "지금 눌려 있나" 만 보면
  *          그 프레임 축이 0 이라 `Pressed` 로 묶은 무기 교체(Shooter3D SwitchWeapon)가 발동하지 않는다.

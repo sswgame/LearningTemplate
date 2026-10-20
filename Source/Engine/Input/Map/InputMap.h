@@ -579,10 +579,18 @@ namespace sw
         static const utf8*   actionTriggerToName( ActionTrigger trigger );
 
     private:
+        /** @brief 입력을 읽는 눈입니다. 게임이 보는 값과 장치 값은 개발 콘솔 · 포커스 · 캡처가 가린 키에서 달라진다. */
+        enum class SlotRead : uint8
+        {
+            Game,  ///< 게임이 보는 값. 콘솔이 쥔 키는 "안 눌림" 이다(`isSlotHiddenByConsole`).
+            Device ///< 가림과 상관없는 장치 값. 바인딩이 "보이게 되는 순간" 이미 눌려 있었는지 추적하는 데만 쓴다.
+        };
+
         /**
          * @brief 바인딩 하나의 프레임 사이 상태입니다.
-         * @details `_bPhysicalDown` 은 레이어가 꺼져 있어도 매 프레임 장치를 읽어 갱신한다(`_bDown` 은 켜진 레이어에서만 눌림이다).
-         *          레이어가 켜지는 프레임에 이미 눌려 있던 입력이 새 누름(Pressed)으로 읽히지 않게 하는 근거다 — `update` 가 `_bWasDown` 을 맞춘다.
+         * @details `_bPhysicalDown` 은 레이어가 꺼져 있거나 콘솔이 키를 가려도 매 프레임 장치를 읽어 갱신한다(`_bDown` 은 보이는 입력에서만 눌림이다).
+         *          바인딩이 "보이게 되는" 프레임(`_bLive` 가 false 에서 true)에 이미 눌려 있던 입력이 새 누름(Pressed)으로 읽히지 않게 하는 근거다 — `update` 가 `_bWasDown` 을 맞춘다.
+         *          레이어가 켜질 때, 콘솔이 닫혀 키가 다시 보일 때, 리바인딩 · 기본값 복원 · 새 바인딩으로 상태가 새로 만들어질 때(`makeBindingState`)가 모두 이 한 규칙이다.
          */
         struct ActionBindingState
         {
@@ -598,8 +606,8 @@ namespace sw
             uint8                  _bHoldThreshold : 1;
             uint8                  _bWasDown       : 1;
             uint8                  _bTriggered     : 1;
-            uint8                  _bPhysicalDown  : 1; ///< 직전 프레임에 레이어와 상관없이 장치가 눌려 있었는지입니다.
-            uint8                  _bLayerActive   : 1; ///< 직전 프레임에 바인딩의 레이어가 켜져 있었는지입니다.
+            uint8                  _bPhysicalDown  : 1; ///< 직전 프레임에 레이어 · 콘솔 가림과 상관없이 장치가 눌려 있었는지입니다.
+            uint8                  _bLive          : 1; ///< 직전 프레임에 바인딩이 보였는지입니다(레이어가 켜져 있고, 콘솔이 눌린 키를 가리지 않음).
             [[maybe_unused]] uint8 _reserved       : 7;
 
             ActionBindingState()
@@ -616,7 +624,7 @@ namespace sw
                 , _bWasDown{ SW_FALSE }
                 , _bTriggered{ SW_FALSE }
                 , _bPhysicalDown{ SW_FALSE }
-                , _bLayerActive{ SW_FALSE }
+                , _bLive{ SW_FALSE }
                 , _reserved{ 0 } {}
         };
 
@@ -677,13 +685,23 @@ namespace sw
         const ActionEntry* getActionFromHandle( ActionHandle handle ) const;
 
         string getGlyphForActionInternal( const hashed_string& action, InputGlyphStyle device ) const;
-        bool   evaluateBindingDown( const ActionBinding& binding, float2& outValue ) const;
-        /** @brief 이 맵이 보는 키 하나의 눌림 상태입니다. `isKeyboardFocusIgnored` 면 장치 상태 그대로, 아니면 키보드 포커스를 따릅니다. */
-        bool isKeyboardKeyDown( Key key ) const;
+        bool   evaluateBindingDown( const ActionBinding& binding, float2& outValue, SlotRead read = SlotRead::Game ) const;
+        /**
+         * @brief 새로 만드는 바인딩 상태입니다. 지금 장치가 눌려 있으면 `_bPhysicalDown` 을 미리 채워, 첫 `update` 에서 Pressed 가 아니라 Held 로 시작하게 합니다.
+         * @details 바인딩 상태를 만드는 길(`commitBinding`, 리바인딩, 기본값 복원)은 모두 이 함수 하나를 거친다 — 빈 `ActionBindingState{}` 를 직접 넣는 길이 남으면
+         *          이미 눌린 키가 한 번 새 누름으로 읽힌다.
+         */
+        ActionBindingState makeBindingState( const ActionBinding& binding ) const;
+        /** @brief 바인딩 하나의 슬롯이 바뀐 뒤 그 상태를 새로 만듭니다. 다른 바인딩의 상태는 건드리지 않습니다. */
+        void reseedBindingState( ActionEntry& entry, uint32 bindIndex ) const;
+        /** @brief 액션의 바인딩 상태를 모두 새로 만듭니다(기본값 복원). */
+        void rebuildBindingStates( ActionEntry& entry ) const;
+        /** @brief 이 맵이 보는 키 하나의 눌림 상태입니다. `isKeyboardFocusIgnored` 면 장치 상태 그대로, 아니면 키보드 포커스를 따릅니다(`SlotRead::Device` 는 늘 장치 상태). */
+        bool isKeyboardKeyDown( Key key, SlotRead read = SlotRead::Game ) const;
         bool wasKeyboardKeyPressed( Key key ) const;
         /** @brief 슬롯 하나의 눌림입니다. 키보드 슬롯은 `isKeyboardKeyDown` 과 같은 규칙을 따릅니다. */
-        bool isSlotDown( const InputSlot& slot ) const;
-        bool wasSlotPressed( const InputSlot& slot ) const;
+        bool isSlotDown( const InputSlot& slot, SlotRead read = SlotRead::Game ) const;
+        bool wasSlotPressed( const InputSlot& slot, SlotRead read = SlotRead::Game ) const;
         /** @brief 개발 콘솔이 입력을 쥐어 이 맵이 슬롯을 "안 눌림" 으로 봐야 하면 true 입니다(키보드와 패드 슬롯). 키보드 포커스를 무시하는 맵(셸 맵, UI 맵)은 늘 false 입니다. */
         bool isSlotHiddenByConsole( const InputSlot& slot ) const;
         /**
