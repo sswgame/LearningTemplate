@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Container/vector.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -40,15 +41,13 @@ namespace sw
         virtual void fixedUpdate( float32 /*fixedDeltaTime*/ ) {}
 
         /**
-         * @brief 게임의 상태를 버퍼에 직렬화하거나 필요한 버퍼 크기를 계산합니다.
-         * @param pOutBuffer 상태를 저장할 버퍼 (nullptr 이면 pInOutSize 에 크기만 반환)
-         * @param pInOutSize 버퍼의 크기 (입력/출력)
-         * @return 지원하면 true
+         * @brief 게임의 상태를 한 번 직렬화해 @p outBytes 에 담습니다. C-ABI 는 이 결과를 호스트 싱크(`StateBufferSink`)로 옮긴다.
+         * @param outBytes 상태 바이트. 비어 있으면 저장할 상태가 없다는 뜻이다.
+         * @return 지원하고 성공하면 true
          */
-        [[nodiscard]] virtual bool serializeState( void* pOutBuffer, uint32* pInOutSize )
+        [[nodiscard]] virtual bool serializeState( vector<uint8>& outBytes )
         {
-            (void)pOutBuffer;
-            (void)pInOutSize;
+            (void)outBytes;
             return false;
         }
 

@@ -175,9 +175,12 @@ namespace sw
         if ( _gameScope.getCollection().initializeAll( SubsystemHostMask::All ) == false )
             SW_LOG_ERROR( "Game instance subsystems did not all initialize: %#", _gameScope.getCollection().getError().c_str() );
         // 네트워크 세션은 엔진 수명이다 — 처음이면 실행 인자로 열고, 리로드로 다시 선 인스턴스는 열린 세션을 이어받는다(클라이언트가 끊기지 않는다).
-        game::getSubsystem<GameNetSession>().openFromLaunch(); // `bindEngineServices` 가 있음을 확인했다
+        // 서버 · 클라이언트로 띄웠는데 열지 못하면(틀린 인자 · 포트 사용 중) 혼자 하는 게임으로 서지 않는다.
+        const bool bNetSessionOpened = game::getSubsystem<GameNetSession>().openFromLaunch(); // `bindEngineServices` 가 있음을 확인했다
+        if ( bNetSessionOpened == false )
+            SW_LOG_ERROR( "Game instance cannot start - the net session asked for by the launch arguments or the server config did not open" );
         // 사운드 이벤트는 gamesettings 가 정본이다. 적었는데 못 읽으면 게임을 띄우지 않는다(소리 없이 진행하지 않는다). 입력 맵을 적었는데 입력 서비스가 없어도 같다.
-        const bool bInitialized = bBootstrapApplied && loadAudioEvents() && onInitialize();
+        const bool bInitialized = bBootstrapApplied && bNetSessionOpened && loadAudioEvents() && onInitialize();
         registerSessionCommands();
 
         // 플레이어 설정을 다시 넣는다. 언어 팩과 입력 맵(키 바인딩, 누르기/토글)은 위에서 막 생겼고, 엔진 기동 때의 적용은 그 대상이 없을 때 한 것이다.
@@ -217,11 +220,11 @@ namespace sw
         const GameSettings& settings = _bootstrap._data;
 
         // 게임의 로컬라이제이션 프로젝트를 올린다. 엔진 프로젝트는 엔진이 기동 때 올렸다.
-        if ( settings._localizationProject.empty() == false && GameStrings::initialize( settings._localizationProject, settings._defaultLanguage, settings._fallbackLanguage ) == false )
+        if ( settings._localizationProject.isSet() && GameStrings::initialize( settings._localizationProject.get(), settings._defaultLanguage, settings._fallbackLanguage ) == false )
             SW_LOG_WARNING( "GameSettings localization project '%#' could not be loaded - strings show their keys", settings._localizationProject.c_str() );
 
         // 게임플레이 입력 맵은 `InputManager::beginFrame` 이 프레임마다 갱신하는 통합 맵이며, `PlayerController` 가 읽는다.
-        if ( settings._inputMap.empty() )
+        if ( settings._inputMap.isSet() == false )
             return true;
         if ( _pInput == nullptr )
         {
@@ -229,16 +232,17 @@ namespace sw
                           settings._inputMap.c_str() );
             return false;
         }
-        if ( _pInput->getInputMap().loadFromResource( settings._inputMap ) == false )
+        if ( _pInput->getInputMap().loadFromResource( settings._inputMap.get() ) == false )
             SW_LOG_WARNING( "GameSettings input map '%#' could not be loaded - gameplay actions keep their current bindings", settings._inputMap.c_str() );
         return true;
     }
 
     bool GameInstanceBase::loadAudioEvents()
     {
-        const string& path = _bootstrap._data._audioEvents;
-        if ( path.empty() )
+        const DataPath& audioEvents = _bootstrap._data._audioEvents;
+        if ( audioEvents.isSet() == false )
             return true; // 적지 않은 게임은 사운드 이벤트가 없다
+        const string& path = audioEvents.get();
         if ( GameSound::loadEvents( path ) == false )
         {
             SW_LOG_ERROR( "GameSettings audioEvents '%#' could not be loaded (missing or invalid - see the messages above) - the game does not start", path.c_str() );
@@ -274,12 +278,13 @@ namespace sw
     {
         if ( gv_firstScene.empty() == false )
             return gv_firstScene;
-        return _bootstrap._data._titleScene.empty() ? _bootstrap._data._startMap : _bootstrap._data._titleScene;
+        // 시작 맵은 필수 칸이다 — 읽기(`GameSettings::loadRoot`)가 빠진 것을 오류로 멈춘다.
+        return _bootstrap._data._titleScene.isSet() ? _bootstrap._data._titleScene.get() : _bootstrap._data._startMap.get();
     }
 
     const string& GameInstanceBase::getEntranceScene() const
     {
-        return _bootstrap._data._entranceScene.empty() ? _bootstrap._data._startMap : _bootstrap._data._entranceScene;
+        return _bootstrap._data._entranceScene.isSet() ? _bootstrap._data._entranceScene.get() : _bootstrap._data._startMap.get();
     }
 
     bool GameInstanceBase::requestFirstScene()
@@ -299,13 +304,16 @@ namespace sw
 
     bool GameInstanceBase::requestTitleScene()
     {
-        return requestLoadScene( _bootstrap._data._titleScene, "title" );
+        const DataPath& titleScene = _bootstrap._data._titleScene;
+        if ( titleScene.isSet() == false )
+            return false;
+        return requestLoadScene( titleScene.get(), "title" );
     }
 
     void GameInstanceBase::registerSessionCommands()
     {
         // 창이 없는 호스트(전용 서버 · 테스트)는 UI 가 없다(`bindEngineServices`) — 타이틀로 돌아갈 메뉴도 없다.
-        if ( _pUISystem == nullptr || _bootstrap._data._titleScene.empty() )
+        if ( _pUISystem == nullptr || _bootstrap._data._titleScene.isSet() == false )
             return;
         _pUISystem->getGlobalCommands().registerCommand( hashed_string( UIGlobalCommandRegistry::kReturnToTitle ),
                                                          SW_DELEGATE_METHOD( UICommandDelegate, &GameInstanceBase::onReturnToTitleCommand, this ) );
@@ -541,9 +549,9 @@ namespace sw
         }
     }
 
-    bool GameInstanceBase::serializeState( void* pOutBuffer, uint32* pInOutSize )
+    bool GameInstanceBase::serializeState( vector<uint8>& outBytes )
     {
-        return writeStateEnvelope( SerializePurpose::Snapshot, pOutBuffer, pInOutSize );
+        return captureSnapshot( SerializePurpose::Snapshot, outBytes );
     }
 
     bool GameInstanceBase::deserializeState( const void* pInBuffer, uint32 size )
@@ -551,11 +559,8 @@ namespace sw
         return readStateEnvelope( SerializePurpose::Snapshot, pInBuffer, size );
     }
 
-    bool GameInstanceBase::writeStateEnvelope( SerializePurpose purpose, void* pOutBuffer, uint32* pInOutSize )
+    bool GameInstanceBase::captureSnapshot( SerializePurpose purpose, vector<uint8>& outBytes )
     {
-        if ( pInOutSize == nullptr )
-            return false;
-
         _pComponentStateStore->clear();
         captureStatefulComponents();
         onBeforeStateSerialize();
@@ -601,18 +606,8 @@ namespace sw
         arch.writeSection( componentArch.getData(), static_cast<uint32>( componentArch.getSize() ) );
         _pComponentStateStore->clear();
 
-        const size_t totalSize = arch.getSize();
-        if ( pOutBuffer == nullptr )
-        {
-            *pInOutSize = static_cast<uint32>( totalSize );
-            return true;
-        }
-
-        if ( *pInOutSize < totalSize )
-            return false;
-
-        Memory::copy( pOutBuffer, arch.getData(), totalSize );
-        *pInOutSize = static_cast<uint32>( totalSize );
+        // 봉투는 한 번 써서 그대로 넘긴다.
+        outBytes.assign( arch.getData(), arch.getData() + arch.getSize() );
         return true;
     }
 
@@ -698,16 +693,6 @@ namespace sw
         return true;
     }
 
-    bool GameInstanceBase::captureSnapshot( SerializePurpose purpose, vector<uint8>& outBytes )
-    {
-        uint32 size = 0;
-        if ( writeStateEnvelope( purpose, nullptr, &size ) == false || size == 0 )
-            return false;
-
-        outBytes.resize( size );
-        return writeStateEnvelope( purpose, outBytes.data(), &size );
-    }
-
     bool GameInstanceBase::restoreSnapshot( SerializePurpose purpose, const vector<uint8>& inBytes )
     {
         if ( inBytes.empty() )
@@ -717,14 +702,15 @@ namespace sw
 
     bool GameInstanceBase::saveStateToFile( string_view filePath )
     {
-        const string_view path = filePath.empty() ? string_view( _bootstrap._data._defaultSavePath ) : filePath;
-        if ( path.empty() )
+        const DataPath& defaultSavePath = _bootstrap._data._defaultSavePath;
+        if ( filePath.empty() && defaultSavePath.isSet() == false )
         {
             SW_LOG_ERROR( "No save path was given and GameSettings has no defaultSavePath - nothing is saved" );
             return false;
         }
-        vector<uint8> snapshotBytes;
-        const bool    bSaved = captureSnapshot( SerializePurpose::SaveGame, snapshotBytes ) && FileUtil::writeFile( path, snapshotBytes.data(), snapshotBytes.size() );
+        const string_view path = filePath.empty() ? string_view( defaultSavePath.get() ) : filePath;
+        vector<uint8>     snapshotBytes;
+        const bool        bSaved = captureSnapshot( SerializePurpose::SaveGame, snapshotBytes ) && FileUtil::writeFile( path, snapshotBytes.data(), snapshotBytes.size() );
 
         SaveGameSavedEvent event{};
         event._savePath = string( path );
@@ -735,14 +721,15 @@ namespace sw
 
     bool GameInstanceBase::loadStateFromFile( string_view filePath )
     {
-        const string_view path = filePath.empty() ? string_view( _bootstrap._data._defaultSavePath ) : filePath;
-        if ( path.empty() )
+        const DataPath& defaultSavePath = _bootstrap._data._defaultSavePath;
+        if ( filePath.empty() && defaultSavePath.isSet() == false )
         {
             SW_LOG_ERROR( "No save path was given and GameSettings has no defaultSavePath - nothing is loaded" );
             return false;
         }
-        vector<uint8> snapshotBytes;
-        const bool    bLoaded = FileUtil::readFile( path, snapshotBytes ) && restoreSnapshot( SerializePurpose::SaveGame, snapshotBytes );
+        const string_view path = filePath.empty() ? string_view( defaultSavePath.get() ) : filePath;
+        vector<uint8>     snapshotBytes;
+        const bool        bLoaded = FileUtil::readFile( path, snapshotBytes ) && restoreSnapshot( SerializePurpose::SaveGame, snapshotBytes );
 
         SaveGameLoadedEvent event{};
         event._savePath = string( path );

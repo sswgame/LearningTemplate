@@ -2,7 +2,7 @@
  * @file PlatformLoginClient.h
  * @brief 외부 로그인의 클라이언트 쪽입니다. "구글로 로그인" 을 누르면 제공자 티켓(ID 토큰, 액세스 토큰)을 얻어 계정 서버의 외부 로그인(`kPlatformLogin`)에 넘깁니다.
  * @details - 모바일은 모바일 빌드가 생기면 플랫폼 SDK 를 쓴다. PC 는 **시스템 브라우저, 루프백 리다이렉트, PKCE** 를 쓰며(RFC 8252, 임베드 웹뷰 금지) `LoopbackPkceLoginClient` 가 맡는다.
- *          - 시스템 브라우저는 `IExternalBrowser` 로 연다. 게임이 OS 에 맞게 구현하며(ShellExecute, xdg-open) 테스트에서는 가짜를 쓴다. 테스트와 개발에는 `FakePlatformLoginClient` 를 쓴다.
+ *          - 시스템 브라우저는 `IExternalBrowser` 로 연다. OS 구현은 `SystemExternalBrowser` 이고 테스트에서는 가짜를 쓴다. 테스트와 개발에는 `FakePlatformLoginClient` 를 쓴다.
  *          - OIDC 제공자의 티켓은 `ID 토큰|nonce` 형식이다. 서버의 `OidcLoginProvider` 가 nonce 를 확인해 티켓의 재사용을 막는다.
  */
 #pragma once
