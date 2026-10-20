@@ -99,6 +99,7 @@ namespace sw
             return false;
         _pDecoder     = shared_ptr<IAudioStreamDecoder>( std::move( pDecoder ) );
         _channelCount = source.getInfo()._channelCount;
+        _downmix      = source.getDownmix();
         _listWindow.reserve( static_cast<size_t>( kChunkFrames + kRetainFrames ) * _channelCount );
         return true;
     }
@@ -162,8 +163,13 @@ namespace sw
                 return false;
         }
         const float32* pFrame = _listWindow.data() + static_cast<size_t>( frame - _windowStart ) * _channelCount;
-        outLeft               = pFrame[0];
-        outRight              = _channelCount >= 2 ? pFrame[1] : pFrame[0];
+        if ( _downmix._channelCount > 0 )
+        {
+            _downmix.apply( pFrame, outLeft, outRight );
+            return true;
+        }
+        outLeft  = pFrame[0];
+        outRight = _channelCount >= 2 ? pFrame[1] : pFrame[0];
         return true;
     }
 
@@ -177,8 +183,17 @@ namespace sw
             unique_ptr<IAudioStreamDecoder> pProbe = AudioClipDecoder::openOggStream( inoutBytes.data(), inoutBytes.size(), info );
             if ( pProbe == nullptr )
                 return nullptr;
-            pSource->_info   = info;
-            pSource->_format = Format::Vorbis;
+            pSource->_info           = info;
+            pSource->_format         = Format::Vorbis;
+            const bool bNeedsDownmix = info._channelCount > 2;
+            if ( bNeedsDownmix )
+            {
+                uint32     arrSpeakerBit[AudioDownmix::kMaxSourceChannelCount]{};
+                const bool bDownmixReady = AudioDownmix::getVorbisSpeakers( info._channelCount, arrSpeakerBit ) &&
+                                           AudioDownmix::makeForSpeakers( arrSpeakerBit, info._channelCount, pSource->_downmix );
+                if ( bDownmixReady == false )
+                    return nullptr;
+            }
         }
         else if ( FileUtil::hasExtension( path, ".wav" ) )
         {
@@ -187,11 +202,14 @@ namespace sw
             uint32   dataBytes{ 0 };
             if ( AudioClipDecoder::parseWavLayout( inoutBytes.data(), inoutBytes.size(), format, dataOffset, dataBytes ) == false )
                 return nullptr;
-            const bool bChannelsOk              = format._channelCount == 1 || format._channelCount == 2;
+            const bool bChannelsOk              = 1 <= format._channelCount && format._channelCount <= AudioDownmix::kMaxSourceChannelCount;
             const bool bPcm16                   = format._bFloat == SW_FALSE && format._bitsPerSample == 16;
             const bool bFloat32                 = format._bFloat == SW_TRUE && format._bitsPerSample == 32;
             const bool bUnsupportedStreamFormat = bChannelsOk == false || ( bPcm16 == false && bFloat32 == false ) || format._sampleRate == 0;
             if ( bUnsupportedStreamFormat )
+                return nullptr;
+            const bool bNeedsDownmix = format._channelCount > 2;
+            if ( bNeedsDownmix && AudioDownmix::makeForWaveMask( format._channelCount, format._channelMask, pSource->_downmix ) == false )
                 return nullptr;
             pSource->_info._sampleRate   = format._sampleRate;
             pSource->_info._channelCount = format._channelCount;

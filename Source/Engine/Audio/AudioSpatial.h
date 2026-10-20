@@ -1,7 +1,8 @@
 /**
  * @file AudioSpatial.h
- * @brief 공간화입니다. 리스너와 에미터 상태, 거리 감쇠 곡선(데이터), 팬(등전력 스테레오), 도플러, 가림(occlusion)에 따른 볼륨과 로우패스를 다룹니다.
- * @details 3D 는 리스너의 오른쪽 축으로 팬을 정한다. 고도는 팬에 쓰지 않으며 HRTF 는 지원하지 않는다. 2D 는 화면 평면(XY)의 가로 거리로 팬을 정한다.
+ * @brief 공간화입니다. 리스너와 에미터 상태, 거리 감쇠 곡선(데이터), 방향(패너 입력), 도플러, 가림(occlusion)에 따른 볼륨과 로우패스를 다룹니다.
+ * @details 3D 는 리스너 수평면의 (오른쪽, 앞) 방향을 내고 `AudioPanner` 가 레이아웃(스테레오 · 5.1 · 7.1)에 맞춰 게인으로 바꾼다. 고도는 쓰지 않으며 HRTF 는 지원하지 않는다.
+ *          2D(Screen2D)는 화면 평면의 가로 거리를 팬 값으로 쓰고 앞 두 채널에만 낸다(`AudioPanMode::FrontStereo`).
  *          감쇠 프리셋(`AudioAttenuationDesc`)은 Wwise 의 Attenuation ShareSet, 언리얼의 Sound Attenuation 에 해당하며, 소리(이벤트나 클립)가 이름으로 고른다.
  *          가림 값(0 = 열림, 1 = 막힘)은 게임 스레드가 레이캐스트로 측정해서 넣는다(`IAudioOcclusionQuery`). 엔진이 이 값을 부드럽게 따라가며 볼륨과 컷오프로 바꾼다.
  */
@@ -12,6 +13,7 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Audio/AudioPanner.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -158,11 +160,11 @@ namespace sw
     /** @brief 한 보이스의 공간화 결과입니다. */
     struct AudioSpatialResult
     {
-        float32 _gain{ 1.0f };          ///< 거리 감쇠 × 가림(선형)
-        float32 _pan{ 0.0f };           ///< [-1, 1]
-        float32 _pitchRatio{ 1.0f };    ///< 도플러 비다.
-        float32 _lowPassHz{ 20000.0f }; ///< 공기 흡수와 가림 중 낮은 쪽이다.
-        float32 _distance{ 0.0f };
+        AudioPanDirection _direction{};           ///< 패너 입력이다(리스너 공간 방향과 퍼짐).
+        float32           _gain{ 1.0f };          ///< 거리 감쇠 × 가림(선형)
+        float32           _pitchRatio{ 1.0f };    ///< 도플러 비다.
+        float32           _lowPassHz{ 20000.0f }; ///< 공기 흡수와 가림 중 낮은 쪽이다.
+        float32           _distance{ 0.0f };
     };
 } // namespace sw
 
@@ -185,11 +187,15 @@ namespace sw
         /**
          * @brief 리스너마다의 결과 @p count 개(1 개 이상)를 보이스 하나의 결과로 합칩니다.
          * @details `Loudest` 는 게인이 가장 큰 결과 그대로입니다. `PowerSum` 은 게인 = √(Σ 게인²)(상한은 1 과 가장 큰 단독 게인 중 큰 쪽),
-         *          팬 = 전력으로 가중한 평균, 컷오프 = 들리는(게인 > 0) 리스너 가운데 가장 열린 것, 도플러 = 가장 크게 들리는 리스너의 것, 거리 = 가장 가까운 리스너입니다.
+         *          방향 = 성분마다 전력으로 가중한 평균(모드는 가장 크게 들리는 리스너의 것), 컷오프 = 들리는(게인 > 0) 리스너 가운데 가장 열린 것,
+         *          도플러 = 가장 크게 들리는 리스너의 것, 거리 = 가장 가까운 리스너입니다.
          */
         static AudioSpatialResult combineListeners( const AudioSpatialResult* pResult, uint32 count, AudioListenerMixMode mode );
-        /** @brief 리스너 → 에미터의 팬([-1, 1])입니다. 리스너에 아주 가까우면 가운데로 모읍니다(@p centerRadius). */
-        static float32 computePan( const AudioListenerState& listener, const float3& emitterPosition, float32 centerRadius );
+        /**
+         * @brief 리스너 → 에미터의 방향입니다. World3D 는 수평면의 (오른쪽, 앞) 단위 방향이고 리스너에 아주 가까우면(@p centerRadius 안) 길이를 줄여 퍼뜨립니다(`Surround`).
+         *        Screen2D 는 화면 가로 거리 / 화면 반폭을 오른쪽 성분으로 씁니다(`FrontStereo`). 두 경우 모두 오른쪽 성분이 스테레오 팬 값입니다.
+         */
+        static AudioPanDirection computeDirection( const AudioListenerState& listener, const float3& emitterPosition, float32 centerRadius );
         /** @brief 도플러 비(1 = 그대로)입니다. @p factor 0 이면 1 입니다. */
         static float32 computeDopplerRatio( const AudioListenerState& listener, const AudioEmitterState& emitter, float32 factor );
         /**

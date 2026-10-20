@@ -20,7 +20,7 @@ namespace
         /** @brief 이름의 이펙트를 만들고 파라미터를 이름으로 겁니다. */
         static sw::unique_ptr<sw::IAudioEffect> createEffect( const utf8* pType, std::initializer_list<std::pair<const utf8*, float32>> listParameter )
         {
-            sw::unique_ptr<sw::IAudioEffect> pEffect = sw::AudioEffectRegistry::createEffect( sw::hashed_string( pType ) );
+            sw::unique_ptr<sw::IAudioEffect> pEffect = sw::AudioEffectRegistry::createEffect( sw::hashed_string( pType ), sw::AudioChannelLayout::Stereo );
             if ( pEffect == nullptr )
                 return pEffect;
             for ( const std::pair<const utf8*, float32>& parameter : listParameter )

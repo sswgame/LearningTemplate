@@ -115,18 +115,20 @@ namespace sw
         return denominator <= 0.0 ? 0.0f : static_cast<float32>( numerator / denominator );
     }
 
-    void AudioBiquadStereo::reset()
+    void AudioBiquadFilter::reset()
     {
-        _arrState1[0] = 0.0f;
-        _arrState1[1] = 0.0f;
-        _arrState2[0] = 0.0f;
-        _arrState2[1] = 0.0f;
+        for ( uint32 channel = 0; channel < audio::kMaxChannelCount; ++channel )
+        {
+            _arrState1[channel] = 0.0f;
+            _arrState2[channel] = 0.0f;
+        }
     }
 
-    void AudioBiquadStereo::process( const AudioBlockView& block )
+    void AudioBiquadFilter::process( const AudioBlockView& block )
     {
+        SW_ASSERT( block._channelCount <= audio::kMaxChannelCount );
         const AudioBiquadCoefficients coefficients = _coefficients;
-        for ( uint32 channel = 0; channel < audio::kStereoChannelCount; ++channel )
+        for ( uint32 channel = 0; channel < block._channelCount; ++channel )
         {
             float32  state1   = _arrState1[channel];
             float32  state2   = _arrState2[channel];

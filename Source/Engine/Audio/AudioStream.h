@@ -7,7 +7,8 @@
  *          - **디코더는 보이스마다 하나**다(`AudioStreamSource::openDecoder`). 같은 곡을 두 보이스가 재생해도 압축 바이트는 한 벌이다.
  *          - **디코드는 믹서 스레드에서** 한다(블록마다 필요한 만큼). OGG 한 블록(256 프레임)이 수 마이크로초라 워커 스레드 링 버퍼는 두지 않았다.
  *          - 파일을 처음부터 끝까지 메모리에 읽는다. 팩의 부분 읽기 API 가 없어서 디스크 스트리밍은 아니다.
- *          - 지원 형식: OGG Vorbis(채널 1 ~ 2), WAV(16 비트 정수 · 32 비트 float PCM, 채널 1 ~ 2). 나머지는 통째로 푼다.
+ *          - 지원 형식: OGG Vorbis(채널 1 ~ 8), WAV(16 비트 정수 · 32 비트 float PCM, 채널 1 ~ 8). 나머지는 통째로 푼다.
+ *          - 3 채널 이상은 프레임을 읽을 때 명시 다운믹스(`AudioDownmix`)로 스테레오로 줄인다. 행렬은 소스를 만들 때 한 번 정한다(WAV 는 채널 마스크, Vorbis 는 명세의 순서).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -16,6 +17,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Audio/AudioDownmix.h"
+
 namespace sw
 {
     /** @brief 스트리밍 소리의 형식입니다. */
@@ -23,7 +26,7 @@ namespace sw
     {
         uint32 _sampleRate{ 0 };
         uint32 _frameCount{ 0 };   ///< 채널당 전체 프레임 수
-        uint16 _channelCount{ 0 }; ///< 1 또는 2
+        uint16 _channelCount{ 0 }; ///< 파일의 채널 수(1 ~ 8)다. 재생은 3 채널 이상이면 다운믹스한 2 채널이다.
     };
 } // namespace sw
 
@@ -71,6 +74,10 @@ namespace sw
         static shared_ptr<const AudioStreamSource> tryCreate( string_view path, vector<uint8>& inoutBytes, float32 minSeconds );
 
         const AudioStreamInfo& getInfo() const { return _info; }
+        /** @brief 재생 채널 수(1 · 2)입니다. 3 채널 이상인 파일은 다운믹스해 2 입니다. */
+        uint16 getPlaybackChannelCount() const { return _info._channelCount >= 2 ? static_cast<uint16>( 2 ) : _info._channelCount; }
+        /** @brief 3 채널 이상인 파일의 다운믹스 행렬입니다(`_channelCount` 0 이면 다운믹스 없음). */
+        const AudioDownmix& getDownmix() const { return _downmix; }
         /** @brief 압축 바이트 수입니다. */
         size_t getByteCount() const { return _pBytes != nullptr ? _pBytes->size() : 0u; }
         /** @brief 처음부터 읽는 디코더를 엽니다. 실패하면 nullptr 입니다. */
@@ -87,6 +94,7 @@ namespace sw
 
         shared_ptr<const vector<uint8>> _pBytes{};
         AudioStreamInfo                 _info{};
+        AudioDownmix                    _downmix{};       ///< 3 채널 이상일 때의 행렬이다.
         size_t                          _dataOffset{ 0 }; ///< WAV 의 data 청크 시작
         uint32                          _dataBytes{ 0 };
         Format                          _format{ Format::Vorbis };
@@ -119,7 +127,7 @@ namespace sw
         bool isOpen() const { return _pDecoder != nullptr; }
 
         /**
-         * @brief 클립의 @p frame 번째 프레임을 읽습니다(모노는 두 값이 같습니다).
+         * @brief 클립의 @p frame 번째 프레임을 읽습니다(모노는 두 값이 같고, 3 채널 이상은 다운믹스한 값입니다).
          * @return 스트림 끝을 넘었거나 디코드할 수 없으면 false 이고 출력은 0 입니다.
          */
         [[nodiscard]] bool readFrame( uint32 frame, float32& outLeft, float32& outRight );
@@ -136,6 +144,7 @@ namespace sw
     private:
         shared_ptr<IAudioStreamDecoder> _pDecoder{};
         vector<float32>                 _listWindow{}; ///< 푼 프레임(채널 교차)입니다. 첫 프레임이 `_windowStart` 입니다.
+        AudioDownmix                    _downmix{};    ///< 소스의 다운믹스 행렬 복사본입니다(3 채널 이상).
         uint64                          _decodedFrameCount{ 0 };
         uint32                          _windowStart{ 0 };
         uint32                          _windowFrames{ 0 };
