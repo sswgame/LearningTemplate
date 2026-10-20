@@ -49,6 +49,25 @@
 - **작업자가 범위 밖으로 남긴 조용한 폴백**: `EditorNotificationManager::push` 의 `durationSec > 0.5f ? : 4.0f`, `EditorNetProfilerSeries` 의 `max(capacity, 1)`. 같은 모양: 렌즈 시프트(비대칭 투영)는 읽는 쪽이 생길 때 `CameraDepthOfFieldValues` 방식으로 옮긴다.
 - **환경 함정**: 작업자가 `python - <<'EOF'` heredoc 을 본문 없이 써서 표준입력을 기다리며 헛도는 `python.exe -` 프로세스 16 개가 코어 하나씩 쓰며 CPU 100% 를 만든 일이 있었다(2026-10-21, 종료함). 통합 빌드가 느리면 `Get-Process python | ? CPU -gt 1000` 으로 먼저 본다.
 
+**못 한 것 모음 (2026-10-21, 작업자 보고에서 모음)** — 한 건도 지우지 않고 나눠 둔다.
+- **A. 빌드 · 셰이더 쿠킹이 있어야 하는 것(통합 뒤 첫 파동)**:
+  - 셰이더 소스 커밋 넷: `lighting`(`bindingslots.hlsli` `binding.hlsli` `lighting.hlsli` `canvas.hlsl` `lightgrid.hlsl` `lightgridcommon.hlsli`) · `vfx2`(`particle.hlsl` 띠) · `previewwin`(스카이 패스 15 파일) · `camera`(`postgrade.hlsli` `tonemap.hlsl` `postchain.hlsl`). 전부 `binding.hlsli` · 슬롯 번호를 건드리므로 **병합해 슬롯 충돌을 푼 뒤 한 번에** `--cook-shaders` 로 굽고 소스와 바이너리를 함께 커밋한다. `particle.hlsl` · `VfxParticleRenderer` 주석의 옛 번호 `t12` 를 고친다.
+  - Vfx V4(Niagara 식), 피사계 심도 패스(CameraRendererIntegration S2: 새 패스 종류 + 파이프라인 XML 넷), ToonShadingCompletion 의 `toon.hlsl` `#error`(define 빠진 머티리얼 쿠킹 차단), Shaded Wireframe(RHI 깊이 비교 · 바이어스가 먼저), IndirectLighting P4 · P5(선행 D2-6.4 G버퍼 셋째 타깃).
+  - 임포트가 필요한 것: 활 · 화살(`MakeBowProps.py` → `--import-models` → 프리팹 → 시나리오), 휘두름 피해 알림(사이드카 변경 후 재임포트, Shooter3D 적의 `_attackHitTime` 을 데이터로), `wstream` 씬 변환 실행(`--cook-scenes`), 프리팹 판을 올릴 때의 변환 도구.
+  - 링크 오류를 보며 하는 것: `DedicatedServerNoRenderer`, ServerDebug S5 흐름 이벤트(타임라인 + Core 네트워크), BuildSpeed 남은 것(`Component.h` · `RHITypes.h` 가 `ReflectionCore.h` 묶음 전체를 읽는 문제, `GameObjectManager.h` 재검토, 5 · 6 절).
+  - 문자열: 새 문자열 ko/ja 번역(`App --gather-text` + `LocalizationGatherTest`): `EdMeshModifiers.PlayPreviewTime`, 오디오 `audio.speakerMode` 설정, 네트워크 툴팁 9 개.
+  - 실행해 봐야 하는 에디터 일: `GraphSaveScenarioRun`(`dialoguegraphsave` · `animgraphsave`), 에디터 패널 스크린샷, 시나리오 uiaudit.
+- **B. 지금 띄울 수 있었으나 아직 안 띄운 것(다음 파동)**:
+  - 게임플레이 기능 후보 약 17 개(`Candidates-gameplay.md` 기능 절), 그래픽스 5 · 에디터 4 · UI 5 · 네트워크 4 · 엔진 3 · 오디오 2.
+  - StructureSimplification: HC4 마무리(Shipping 구성 컴파일 확인), **PK → AT → TX** 는 이번에 손도 못 댔다(AT1 은 `AssetFormat.h` 를 바꿔 전 모듈 재빌드). AsyncResourceLoading A2(설계 검토 뒤), GpuVerification V2(CI 세 번 확인 후 `continue-on-error` 해제), EditorCharacterEditor 0/6(선행 EditorMultiWorld 6절 끝난 뒤), WorldStreaming W6 에디터 UI · W5 서버 게임 코드 연결 · `MMOReplicator` 격자를 `WorldCellGrid` 로, TerrainEditCost T3 Release 측정 · T4 교체 프레임의 GPUScene 수집.
+  - 애니메이션: AnimationLodAndCrowd(선행: 적 몸 외형 소켓 작업), 대상 본 기즈모, 1인칭에서 머리만 숨기기, 천 제자리 갱신(`GPUScene` 변경이 들어온 뒤), 천 Skinned 구속, 파괴 복제의 이름순 번호표가 씬 밖 생성 오브젝트를 못 다루는 한계.
+  - 오디오: E5 절차적 · 그래뉼러 소리 그래프(설계 전), E6 에디터 비용 측정, 버스별 레이아웃.
+  - 카메라: S3 컷 신호 · S4 가려짐(렌더러 기능이 먼저), GamepadVirtualCursor G2 Nile · Skirmish 바인딩 결정 · G3 실기, 렌즈 시프트(비대칭 투영)를 `CameraDepthOfFieldValues` 방식으로.
+  - 네트워크: ServerDebug S1 포트 샤딩(키트 재설계 + 측정이 착수 조건) · S6 게임 뷰 겹치기(디버그 선 패스 신설) · S7 클라이언트 쪽 기록(서버 틱 번호 노출) · S8(EditorMultiWorld 선행), 파괴 쇼케이스 `destructionnet.scene.xml` 저장.
+  - 정리: 묶음 3 · 4 · 7 · 8, Online 쪽 FunctorLambda · 긴 함수 5 개 · 주석, Core 나머지 폴더 주석(Math · Process · Delegate · Memory · Diagnostics · CommandLine · Container · Task · LogSink · String), Editor 구역 CommentRewrite 약 240 개, `std::remove_if` 게이트, 조용한 폴백 둘(위), GUI · Widgets 등 EditorModule 폴더의 층 경계를 빌드 형식으로(`listEditorModelDir` 방식), `RunCoreLayerGraph` 숨은 폴백 · `SessionGuard.py:33` 종료 코드 베낌(scriptsstruct 가 하는지 확인).
+  - 문서: 후보 `OperationsAndDeployment` 외 보류 3 개는 풀지 않는다. `lighting` 이 거절당한 `Roadmap.md` 줄(클러스터드 · 간접 조명)을 직접 고친다. `NetKitMessageRange.h` 의 0x60 이 다른 키트와 겹치지 않는지 병합 때 본다.
+- **C. 확인 대기 · 조건부 · 관찰**: 후보 문서 `## 확인 대기` 21 · `## 조건부` 18 · `## 관찰` 7 개는 측정 · 사용자 결정 · 외부 조건이 필요해 이번에 건드리지 않았다.
+
 **panelclean**(묶음 6b: FunctorLambda Panels/Inspector 2 · LongFunctions Editor/Panels 27 · CommentRewrite Panels 약 25)은 띄워서 진행 중이다. **아직 못 띄운 것**: 이후 묶음 3(HeaderIncludeSlimming · EngineServiceInjection, 전 모듈 재빌드, GameObjectManager.h 는 enginepart 가 먼저) · 4(그래픽 긴 함수 + DiskPathVsResourceId, 경로 형식 결정이 먼저) · 7(시험→테스트) · 8(NamingAuditNext, 전역이라 마지막 단독). 보류: PreludeAndFwdCleanup(프렐류드 위치 미확인), NameReferenceAudit ③(`SW_DEV_COMMAND` 구조 결정), CarriedOverChecks 의 bindless 진입 구조 · 겹침 도구(사용자 확인). 동시 실행 한도는 20 명(`CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS`)이라 일곱 건이 거절됐고 지금은 위 둘만 남았다.
 
 **병합 뒤에 해야 할 측정 · 검증 목록**(구현 중 모두 미뤘다):
