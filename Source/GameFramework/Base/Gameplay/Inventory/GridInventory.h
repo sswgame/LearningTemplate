@@ -75,7 +75,7 @@ namespace sw
         int32 takeFromInstance( int32 instanceID, int32 count );
         /** @brief 옮깁니다. 방향도 바꿀 수 있습니다. 목적지가 막혀 있으면 그대로 두고 false 를 반환합니다. */
         [[nodiscard]] bool moveItem( int32 instanceID, int32 x, int32 y, bool bRotated );
-        /** @brief 왼쪽 위 셀을 고정한 채 제위치에서 회전합니다. 막히면 false 입니다. */
+        /** @brief 왼쪽 위 셀을 고정한 채 제자리에서 회전합니다. 막히면 false 입니다. */
         [[nodiscard]] bool rotateItem( int32 instanceID );
 
         /** @brief 셀을 차지한 아이템 번호입니다. 비어 있거나 격자 밖이면 -1 입니다. */

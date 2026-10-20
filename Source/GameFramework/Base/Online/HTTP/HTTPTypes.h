@@ -61,7 +61,7 @@ namespace sw
     /** @brief 나가는 요청 하나입니다. */
     struct HTTPClientRequest
     {
-        vector<HTTPHeader> _listHeader{}; ///< `Host` · `Content-Length` · `Connection` 은 클라이언트가 붙인다
+        vector<HTTPHeader> _listHeader{}; ///< `Host`, `Content-Length`, `Connection` 은 클라이언트가 붙인다
         vector<uint8>      _bodyBytes{};
         string             _url{}; ///< `http://` · `https://` + 호스트[:포트] + 경로[?쿼리]
         int64              _timeoutMs{ HTTPConstant::kDefaultTimeoutMs };
@@ -112,7 +112,7 @@ namespace sw
         vector<HTTPHeader> _listHeader{}; ///< `Content-Length` · `Connection` 은 서버가 붙인다
         vector<uint8>      _bodyBytes{};
         int32              _statusCode{ HTTPConstant::kStatusOk };
-        uint8              _bChunked{ SW_FALSE }; ///< 몸을 chunked 로 보낸다(테스트 — 받는 쪽 chunked 풀기)
+        uint8              _bChunked{ SW_FALSE }; ///< 본문을 chunked 로 보낸다(받는 쪽 chunked 해석을 테스트할 때 쓴다)
     };
 } // namespace sw
 

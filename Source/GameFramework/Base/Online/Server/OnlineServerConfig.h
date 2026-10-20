@@ -36,9 +36,9 @@ namespace sw
 {
     /**
      * @class OnlineServerKitOptionField
-     * @brief 키트 옵션 표의 한 줄입니다 — 옵션 이름과 값을 읽어 넣을 칸. 칸의 타입이 읽는 법을 정합니다.
-     * @details 정수는 `StringUtil::parseInt`, 참거짓은 `1` · `true` · `0` · `false`, 글은 첫 값, 글 목록은 같은 키의 값 전부(적은 순서)입니다.
-     *          옵션이 없으면 칸을 그대로 두므로 기본값은 칸에 미리 넣어 둡니다. 칸은 `readOptions` 동안만 빌려 씁니다.
+     * @brief 키트 옵션 테이블의 한 줄입니다. 옵션 이름과 값을 읽어 넣을 필드를 둡니다. 필드의 타입이 읽는 방법을 정합니다.
+     * @details 정수는 `StringUtil::parseInt`, 참거짓은 `1`, `true`, `0`, `false`, 문자열은 첫 값, 문자열 목록은 같은 키의 값 전부(적은 순서)입니다.
+     *          옵션이 없으면 필드를 그대로 두므로 기본값은 필드에 미리 넣어 둡니다. 필드는 `readOptions` 동안만 빌려 씁니다.
      */
     class SW_GF_API OnlineServerKitOptionField
     {
@@ -50,7 +50,7 @@ namespace sw
 
         const utf8* getKey() const { return _pKey; }
 
-        /** @brief 같은 키의 값 @p listValue (적은 순서)를 칸에 넣습니다. 형식이 틀리면 false 와 @p outError 입니다. */
+        /** @brief 같은 키의 값 @p listValue (적은 순서)를 필드에 넣습니다. 형식이 틀리면 false 와 @p outError 입니다. */
         [[nodiscard]] bool readValues( const vector<const string*>& listValue, const string& kitName, string& outError ) const;
 
     private:
@@ -76,7 +76,7 @@ namespace sw
     {
         REFLECT_BODY();
 
-        /** @brief 키트 이름(`account`, `chat`, `directory` …)입니다. 키트가 올린 이름과 같아야 하며, 모르는 이름이면 기동이 멈춥니다. */
+        /** @brief 키트 이름(`account`, `chat`, `directory` …)입니다. 키트가 등록한 이름과 같아야 하며, 모르는 이름이면 기동이 멈춥니다. */
         PROPERTY()
         string _name{};
         PROPERTY()

@@ -1,8 +1,8 @@
 /**
  * @file ServiceSanction.h
- * @brief 계정 제재 — 종류(채팅 금지 · 정지 · 영구 정지)마다 끝 시각과 사유 코드를 계정마다 레코드 하나(`service_sanction`, 키 = 계정 16 진)에 둡니다.
+ * @brief 계정 제재입니다. 종류(채팅 금지, 정지, 영구 정지)마다 끝 시각과 사유 코드를 계정마다 레코드 하나(`service_sanction`, 키는 계정 16 진)에 둡니다.
  * @details GM 키트(GF_Admin)가 판 조건으로 쓰고, 계정 키트는 로그인 · 재접속에서, 채팅 키트는 말하기에서 읽는다(저장소 스레드). 지난 제재 이력은 감사 로그가 갖는다.
- *          쓰는 쪽 · 읽는 쪽이 다른 키트라 기반에 둔다. 넥슨 · 엔씨 GM 툴의 "계정 제재(종류 · 기간 · 사유)" 칸과 같다.
+ *          쓰는 쪽과 읽는 쪽이 다른 키트라 기반에 둔다. 넥슨과 엔씨 GM 툴의 "계정 제재(종류, 기간, 사유)" 항목과 같다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -22,7 +22,7 @@ namespace sw
     enum class ServiceSanctionKind : uint8
     {
         ChatMute = 0, ///< 채팅 금지
-        Suspend,      ///< 기간 정지 — 로그인 거절 + 세션 끊기
+        Suspend,      ///< 기간 정지. 로그인을 거절하고 세션을 끊는다
         Ban,          ///< 영구 정지
         Count
     };
@@ -38,7 +38,7 @@ namespace sw
         static constexpr int64 kPermanentMs = 0x7FFFFFFFFFFFFFFFll;
 
         PROPERTY( MaxCount = 256 )
-        string _reasonCode{}; ///< 표시용 사유 코드(로컬라이제이션 키) — 가장 최근 것
+        string _reasonCode{}; ///< 표시용 사유 코드(로컬라이제이션 키). 가장 최근 것이다
         PROPERTY()
         int64  _arrUntilMs[static_cast<int32>( ServiceSanctionKind::Count )]{}; ///< 0 = 없음
         uint64 _version{ 0 };                                                   ///< 레코드 판(0 = 레코드 없음)
@@ -57,7 +57,7 @@ namespace sw
         static bool isActive( const ServiceSanctionState& state, ServiceSanctionKind kind, int64 nowMs );
         /** @brief 로그인을 막는 제재(정지 · 영구 정지)가 걸려 있으면 그 끝 시각(둘 중 늦은 것), 아니면 0 입니다. */
         static int64 getLoginBlockedUntilMs( const ServiceSanctionState& state, int64 nowMs );
-        /** @brief 새 상태를 판 조건(@p state 의 `_version` — 0 이면 "없어야 한다")으로 붙입니다. 모든 종류가 0 이면 레코드를 지운다. */
+        /** @brief 새 상태를 버전 조건(@p state 의 `_version`. 0 이면 "없어야 한다")으로 붙입니다. 모든 종류가 0 이면 레코드를 지운다. */
         static void stageWrite( ServiceTransaction& inoutTransaction, uint64 accountID, const ServiceSanctionState& state );
     };
 } // namespace sw
@@ -80,7 +80,7 @@ namespace sw
     /**
      * @struct ServiceSanctionBus
      * @brief 제재가 바뀌었다는 서버 버스 주제입니다. GM 키트가 쓴 뒤 내고, 제재를 묵혀 보는 키트(채팅)는 그 계정의 묵힌 값을 버린다.
-     * @details 버스는 최대 한 번이다 — 놓치면 읽는 쪽이 묵힘 시한(채팅 60 초) 안에 다시 읽는다.
+     * @details 버스는 최대 한 번 배달한다. 놓치면 읽는 쪽이 캐시 시한(채팅 60 초) 안에 다시 읽는다.
      */
     struct ServiceSanctionBus
     {

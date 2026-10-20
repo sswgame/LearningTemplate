@@ -31,7 +31,7 @@ namespace sw
      *          값은 이번 프레임의 틱 **뒤에** 넣는다. 틱 직후 큐를 쓰는데, 위젯은 게임 스레드만 고칠 수 있기 때문이다.
      *          같은 오브젝트에 `WidgetComponent` 가 없으면 경고를 한 번 남기고 계산만 한다.
      *          막대는 뷰모델 바인딩이 아니라 코드가 값을 넣는다. 화면 마커는 오브젝트마다 하나라서 뷰모델과 문서를 두면 마커 수만큼 생기고,
-     *          값은 컴포넌트 칸에 이미 있기 때문이다.
+     *          값은 컴포넌트 필드에 이미 있기 때문이다.
      */
     REFLECT( Category = "UI", DisplayName = "Health Bar Component", Tooltip = "Smooth lerping HP bar drawn by the object's screen-marker WidgetComponent" )
     class SW_GF_API HealthBarComponent : public HealthListenerComponent
@@ -50,7 +50,7 @@ namespace sw
         void onBeginPlay() override;
         /** @brief 채움과 흔적을 참 비율 쪽으로 옮기고, 틱 뒤에 막대 값을 넣게 합니다. */
         void onTick( float32 deltaTime ) override;
-        /** @brief 보임, 색, 비율 칸을 고치면 막대를 다시 채웁니다. 켜고 끄기도 포함합니다. */
+        /** @brief 보임, 색, 비율 필드를 고치면 막대를 다시 채웁니다. 켜고 끄기도 포함합니다. */
         void onPropertyChanged( hashed_string propertyName ) override;
         /** @brief 소유 오브젝트가 꺼지면 막대를 숨깁니다(꺼진 오브젝트는 틱이 돌지 않습니다). */
         void onOwnerActiveInHierarchyChanged() override;
@@ -65,7 +65,7 @@ namespace sw
         /**
          * @brief 참 HP 비율(0..1)을 넣습니다. 체력 시스템의 입력은 이것 하나입니다. 범위 밖은 묶습니다.
          * @details 줄면 다음 틱에 채움이 바로 줄고 흔적이 남는다. 늘면 채움이 `_lerpSpeed` 로 차오른다.
-         *          게임 스레드(틱 밖이나 틱 직후 큐)에서 불러야 한다. 다른 오브젝트의 병렬 틱에서 부르면 이 컴포넌트의 틱과 같은 칸을 쓰게 된다.
+         *          게임 스레드(틱 밖이나 틱 직후 큐)에서 불러야 한다. 다른 오브젝트의 병렬 틱에서 부르면 이 컴포넌트의 틱과 같은 필드를 쓰게 된다.
          *          데미지는 `deferPostTick` 으로 오므로 보통은 문제가 없다.
          */
         void setTargetRatio( float32 ratio );

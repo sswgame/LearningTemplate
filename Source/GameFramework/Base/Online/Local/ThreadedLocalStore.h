@@ -1,8 +1,8 @@
 /**
  * @file ThreadedLocalStore.h
- * @brief 디스크 일을 전용 스레드 하나에서 하는 로컬 저장 앞 — 바닥(파일 · SQLite)을 갖고 요청을 맡긴 순서대로 실행합니다.
- * @details 게임 스레드는 맡기고(`submit*`) 거두기만 한다(`pollCompletions`). 디스크를 기다리는 일이라 TaskManager 워커가 아니라 전용 스레드다
- *          (로그 · 파일 감시 · SQL 풀과 같은 규칙). `shutdown` 은 남은 쓰기 · 지우기를 끝까지 마치고 합류한다.
+ * @brief 디스크 작업을 전용 스레드 하나에서 하는 로컬 저장 프런트입니다. 백엔드(파일, SQLite)를 소유하고 요청을 받은 순서대로 실행합니다.
+ * @details 게임 스레드는 요청하고(`submit*`) 회수만 한다(`pollCompletions`). 디스크를 기다리는 일이라 TaskManager 워커가 아니라 전용 스레드다
+ *          (로그, 파일 감시, SQL 풀과 같은 규칙). `shutdown` 은 남은 쓰기와 지우기를 끝까지 마치고 합류한다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -27,7 +27,7 @@ namespace sw
     class SW_GF_API ThreadedLocalStore final : public ILocalStore
     {
     public:
-        /** @brief 바닥은 이 앞이 가지고, 봉인 창구는 빌려 쓴다. 스레드를 바로 띄운다. */
+        /** @brief 백엔드는 이 프런트가 소유하고, 봉인 인터페이스는 빌려 씁니다. 스레드를 바로 시작합니다. */
         ThreadedLocalStore( unique_ptr<ILocalSlotStorage> storage, const LocalSealContext& sealContext );
         ~ThreadedLocalStore() override;
 

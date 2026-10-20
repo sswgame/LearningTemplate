@@ -1,7 +1,7 @@
 /**
  * @file ServerSelection.h
- * @brief 접속 분배 — 서버 목록에서 손님 하나(또는 파티 · 경기 인원)를 받을 서버를 고르는 순수 함수입니다. 클라이언트 배정(서버 디렉터리)과 매칭의 전용 서버 배정이 같이 쓴다.
- * @details 후보: Open(점검 허용이면 Maintenance 도) · 같은 종류 · 빌드 판 일치(질의 0 = 무관) · 하트비트가 `_staleMs` 안 · 부하 + 자리 ≤ 정원.
+ * @brief 접속 분배입니다. 서버 목록에서 손님 하나(또는 파티나 경기 인원)를 받을 서버를 고르는 순수 함수입니다. 클라이언트 배정(서버 디렉터리)과 매칭의 전용 서버 배정이 같이 쓴다.
+ * @details 후보 조건은 Open(점검 허용이면 Maintenance 도), 같은 종류, 빌드 버전 일치(질의가 0 이면 무관), `_staleMs` 안의 하트비트, 부하 + 좌석 ≤ 정원이다.
  *          같은 지역 후보가 있으면 그중에서, 없고 `_bAllowOtherRegion` 이면 전체에서. 찬 비율(부하 × 1024 / 정원)이 낮은 것, 같으면 서버 id 가 작은 것(결정적).
  */
 #pragma once
@@ -22,9 +22,9 @@ namespace sw
         string _region{};
         int64  _staleMs{ 15000 }; ///< 하트비트가 이보다 오래되면 죽은 것으로 본다
         uint32 _buildVersion{ 0 };
-        int32  _seatCount{ 1 }; ///< 한 번에 들어갈 자리(파티 · 경기 인원)
+        int32  _seatCount{ 1 }; ///< 한 번에 들어갈 좌석 수(파티나 경기 인원)
         uint8  _bAllowOtherRegion{ SW_TRUE };
-        uint8  _bIncludeMaintenance{ SW_FALSE }; ///< 점검 중 허용 계정 — Maintenance 상태 서버도 후보
+        uint8  _bIncludeMaintenance{ SW_FALSE }; ///< 점검 중 허용 계정이다. Maintenance 상태 서버도 후보로 본다
     };
 } // namespace sw
 

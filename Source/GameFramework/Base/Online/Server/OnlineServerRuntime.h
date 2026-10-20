@@ -1,13 +1,13 @@
 /**
  * @file OnlineServerRuntime.h
- * @brief 온라인 서비스 서버 조립입니다. 저장소, 캐시, 버스, 예약 작업, 원격 설정, 서비스 호스트를 만들고 올라온 키트(`IOnlineServerKit`)를 설정대로 붙입니다.
+ * @brief 온라인 서비스 서버 조립입니다. 저장소, 캐시, 버스, 예약 작업, 원격 설정, 서비스 호스트를 만들고 로드된 키트(`IOnlineServerKit`)를 설정대로 연결합니다.
  * @details - 전용 서버는 서버 서비스(`OnlineServerService`)로 이것을 띄웁니다. 부하 테스트 봇의 `--local-server` 와 끝단 테스트도 같은 조립을 씁니다.
- *          - 시작 순서는 저장소와 캐시 → 버스 → 키트 `initialize`(바인딩을 올린다) → 호스트(전송, TLS) → 버스를 라우터에 묶음 → 키트 `start` → 서버 등록입니다.
+ *          - 시작 순서는 저장소와 캐시 → 버스 → 키트 `initialize`(바인딩을 등록한다) → 호스트(전송, TLS) → 버스를 라우터에 연결 → 키트 `start` → 서버 등록입니다.
  *            종료는 서버 등록 → 키트 `stop` → 호스트 → 예약 작업 → 저장소(남은 완료를 돌린다) → 키트 `shutdown` → 캐시 순입니다. 온라인 기반의 종료 계약과 같습니다.
  *          - 버스는 캐시 위 버스(`EphemeralServerBus`)이고 캐시 앞은 호스트의 라우터로 서비스와 나눠 씁니다. 메모리 캐시이면 이 프로세스 안에서만 돕니다(서버 한 대).
  *          - 서비스 스레드 하나(`tick` 을 부르는 스레드)에서 씁니다.
- * @note 이 조립은 `SubsystemCollection` 으로 옮기지 않는다 — 키트 계약은 "만든 키트는 어느 단계에서 멈췄든 모두 stop · shutdown 을 받는다" 인데,
- *       목록은 초기화에 성공한 것만 내린다. 키트 초기화나 호스트 기동이 실패하면 키트 stop 을 받을 자리가 없어진다.
+ * @note 이 조립은 `SubsystemCollection` 으로 옮기지 않는다. 키트 계약은 "만든 키트는 어느 단계에서 멈췄든 모두 stop 과 shutdown 을 받는다" 인데,
+ *       컬렉션은 초기화에 성공한 것만 종료한다. 그러면 키트 초기화나 호스트 기동이 실패했을 때 키트가 stop 을 받지 못한다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -55,7 +55,7 @@ namespace sw
         ServiceHealthRegistry*  _pHealthRegistry{ nullptr };
         uint16                  _gamePort{ 0 };                ///< 디렉터리에 알릴 게임(UDP) 포트
         uint8                   _bTLS{ SW_TRUE };              ///< 서비스 스트림을 TLS 1.3 으로 받는다(테스트와 봇은 끈다)
-        uint8                   _bManualCacheTime{ SW_FALSE }; ///< 메모리 캐시의 만료를 `tick` 의 시각으로 잰다(가짜 시각 테스트, 봇)
+        uint8                   _bManualCacheTime{ SW_FALSE }; ///< 메모리 캐시의 만료를 `tick` 의 시각으로 측정한다(가짜 시각 테스트, 봇)
     };
 } // namespace sw
 

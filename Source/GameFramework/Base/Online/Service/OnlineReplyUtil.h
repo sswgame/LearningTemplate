@@ -15,7 +15,7 @@ namespace sw
     /**
      * @struct OnlineReplyUtil
      * @brief "오류 코드면 결과로 바꾸고, 본문을 못 읽으면 Unavailable" 을 키트마다 적지 않게 모은 도우미입니다.
-     * @details @p TResponse 는 `OnlineResponse`(`isOk` · `_errorCode` · `_pBody` · `_bodySize`)다 — 템플릿 인자라 이 헤더는 `OnlineServiceClient.h` 를 끌어오지 않는다.
+     * @details @p TResponse 는 `OnlineResponse`(`isOk`, `_errorCode`, `_pBody`, `_bodySize`)다. 템플릿 인자라 이 헤더는 `OnlineServiceClient.h` 를 끌어오지 않는다.
      *          @p TProtocol 은 `fromErrorCode( uint16 )` 과 메시지 타입 목록 `MessageTypes`(`OnlineMessageTypes`, @p TReply 를 담는다)를 가진 키트 프로토콜 구조체다.
      *          @p TReply 는 `_result` 필드를 가지고, 그 열거형에 `Unavailable` 과 `UpdateRequired` 가 있어야 한다.
      * @code

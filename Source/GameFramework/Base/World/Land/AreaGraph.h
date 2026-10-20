@@ -26,7 +26,7 @@ namespace sw
     {
         hashed_string _id{};
         hashed_string _name{};
-        hashed_string _region{}; ///< 지역(층 · 구역) — 지역별 완료율의 단위
+        hashed_string _region{}; ///< 지역(층, 구역). 지역별 완료율의 단위다
         float32       _x{ 0.0f };
         float32       _y{ 0.0f };
         float32       _width{ 1.0f };
@@ -41,12 +41,12 @@ namespace sw
     {
         hashed_string _from{};
         hashed_string _to{};
-        hashed_string _kind{};     ///< `Door` · `Passage` · `Vent` … 게임이 정한다
-        string        _requires{}; ///< `GameFlags` 조건식 — 비면 늘 열려 있다
+        hashed_string _kind{};     ///< `Door`, `Passage`, `Vent` … 게임이 정한다
+        string        _requires{}; ///< `GameFlags` 조건식. 비면 늘 열려 있다
         int32         _fromIndex{ -1 };
         int32         _toIndex{ -1 };
         uint8         _bOneWay{ SW_FALSE };           ///< `_from` → `_to` 로만 지난다
-        uint8         _bInvalidCondition{ SW_FALSE }; ///< 조건식이 문법에 맞지 않았다 — 늘 잠김(읽을 때 한 번만 경고)
+        uint8         _bInvalidCondition{ SW_FALSE }; ///< 조건식이 문법에 맞지 않았다. 늘 잠기며 읽을 때 한 번만 경고한다
     };
 } // namespace sw
 
@@ -67,7 +67,7 @@ namespace sw
 {
     /**
      * @class AreaGraph
-     * @brief `<AreaGraph>` 를 읽고 탐색 상태를 들고 있습니다.
+     * @brief `<AreaGraph>` 를 읽고 탐색 상태를 보관합니다.
      * @code
      *     <AreaGraph><Area id="hall" name="Hall" x="0" y="0" w="10" h="8" region="Mansion1F"/>
      *         <Link from="hall" to="kitchen" requires="hasKey_red" oneWay="false" kind="Door"/></AreaGraph>
@@ -152,7 +152,7 @@ namespace sw
 
         GameCatalog<AreaDef>  _catalog;
         vector<AreaLink>      _listLink;
-        vector<vector<int32>> _listAdjacency;  ///< 방마다 닿은 연결 자리(읽은 순서)
+        vector<vector<int32>> _listAdjacency;  ///< 방마다 닿은 연결의 인덱스(읽은 순서)
         vector<uint8>         _listVisited;    ///< 방마다 SW_TRUE/SW_FALSE
         vector<uint8>         _listDiscovered; ///< 방마다
         int32                 _visitedCount;

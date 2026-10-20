@@ -1,8 +1,8 @@
 /**
  * @file LocalSlotStorage.h
- * @brief 로컬 저장의 바닥 — 슬롯 이름 → 봉투 바이트를 실제로 두는 곳(파일 · 메모리 · SQLite)과, 요청 하나를 봉투 · 규칙과 함께 실행하는 도우미.
- * @details 앞(`MemoryLocalStore` · `ThreadedLocalStore`)은 언제 · 어느 스레드에서 실행할지만 정하고, 무엇을 할지는 `LocalStoreRequestUtil::execute` 하나다 —
- *          저장소마다 슬롯 규칙 · 상한 · 봉투가 갈리지 않는다. 바닥은 한 스레드에서만 불린다.
+ * @brief 로컬 저장의 백엔드입니다. 슬롯 이름별 봉투 바이트를 실제로 두는 곳(파일, 메모리, SQLite)과, 요청 하나를 봉투와 규칙에 맞춰 실행하는 도우미를 둡니다.
+ * @details 프런트(`MemoryLocalStore`, `ThreadedLocalStore`)는 언제, 어느 스레드에서 실행할지만 정하고, 무엇을 할지는 `LocalStoreRequestUtil::execute` 하나가 정한다.
+ *          그래서 저장소마다 슬롯 규칙, 상한, 봉투가 달라지지 않는다. 백엔드는 한 스레드에서만 불린다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -53,11 +53,11 @@ namespace sw
 {
     /**
      * @struct LocalStoreRequestUtil
-     * @brief 요청 하나를 바닥에 실행합니다 — 이름 규칙 · 크기 상한 · 봉투 짓기/풀기.
+     * @brief 요청 하나를 백엔드에서 실행합니다. 이름 규칙, 크기 상한, 봉투 만들기와 열기를 처리합니다.
      */
     struct SW_GF_API LocalStoreRequestUtil
     {
-        /** @brief 바닥에 닿기 전에 거절할 요청이면(이름 · 상한) Invalid 완료를 만들고 true 입니다. */
+        /** @brief 백엔드에 닿기 전에 거절할 요청이면(이름, 상한) Invalid 완료를 만들고 true 입니다. */
         static bool                 makeInvalidCompletion( const LocalStoreRequest& request, LocalStoreCompletion& outCompletion );
         static LocalStoreCompletion execute( LocalStoreRequest& request, ILocalSlotStorage& storage, const LocalSealContext& sealContext );
         static LocalStoreCompletion makeCompletion( const LocalStoreRequest& request, LocalStoreResult result );

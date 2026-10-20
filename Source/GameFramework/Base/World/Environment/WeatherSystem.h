@@ -36,7 +36,7 @@ namespace sw
     {
         hashed_string               _id{};
         vector<WeatherSeasonWeight> _listSeasonWeight{}; ///< 비면 모든 계절에 `_weight`
-        StatBlock                   _values{};           ///< `<Values wetness="1" wind="0.6" fog="0.2"/>` — 렌더 · 게임 규칙이 읽는다
+        StatBlock                   _values{};           ///< `<Values wetness="1" wind="0.6" fog="0.2"/>` . 렌더러와 게임 규칙이 읽는다
         float32                     _weight{ 1.0f };
         float32                     _minDuration{ 600.0f }; ///< 게임 초
         float32                     _maxDuration{ 1800.0f };
@@ -74,7 +74,7 @@ namespace sw
 {
     /**
      * @class WeatherSystem
-     * @brief 지금 날씨와 넘어가는 중인 이전 날씨를 들고 있습니다. 시간은 게임 초(`WorldClock` 과 같은 배율)로 넘기며, 씨앗이 같으면 같은 날씨가 이어집니다.
+     * @brief 지금 날씨와 넘어가는 중인 이전 날씨를 보관합니다. 시간은 게임 초(`WorldClock` 과 같은 배율)로 넘기며, 시드가 같으면 같은 날씨가 이어집니다.
      */
     class SW_GF_API WeatherSystem
     {

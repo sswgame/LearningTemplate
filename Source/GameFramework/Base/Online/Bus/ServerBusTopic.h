@@ -3,7 +3,7 @@
  * @brief 서버 버스 주제 정의입니다. 주제 하나가 이름과 본문 타입을 함께 가지고, 그 타입으로만 쓰고 읽습니다(docs/plans/ServerBusFormat.md 3.1).
  * @details - `ServerBusTopic<T>` 는 고정 이름 주제, `ServerBusTopicFamily<T>` 는 접미사가 붙는 주제(`chat.channel.<채널>`)입니다. `static constexpr` 객체로 선언합니다.
  *          - 본문은 `T::kBusVersion`(타입 안의 `static constexpr uint32`, 의미 버전) 머리 + A 입니다(`MixedBuildCodec`). 없으면 컴파일이 멈춥니다.
- *            필드 이름 짝짓기로 견딜 수 없는 변경(뜻이 바뀜, 기본값을 처리할 수 없는 새 필드)에서만 올립니다. 다르면 섞인 동안 거절합니다(이관 없음).
+ *            필드 이름 짝짓기로 감당할 수 없는 변경(뜻이 바뀜, 기본값을 처리할 수 없는 새 필드)에서만 올립니다. 다르면 섞인 동안 거절합니다(이관 없음).
  *          - 읽기 실패는 (타입, 결과, 받은 버전)마다 한 번 오류 로그를 남기고 `ServerBusReadLog::getRejectedCount` 를 올립니다. 부르는 쪽은 결과만 보고 버립니다.
  */
 #pragma once
@@ -25,7 +25,7 @@ namespace sw
         OtherTopic,      ///< 이 주제의 메시지가 아닙니다(로그 없음)
         VersionMismatch, ///< 의미 버전이 다릅니다(섞인 빌드)
         Unreadable,      ///< 아는 필드를 읽지 못했거나(모르는 열거자, 바뀐 타입) 바이트가 깨졌습니다
-        OutOfRange       ///< 선언된 범위(`Min` · `Max` · `MaxCount`) 밖입니다
+        OutOfRange       ///< 선언된 범위(`Min`, `Max`, `MaxCount`) 밖입니다
     };
 } // namespace sw
 
@@ -34,7 +34,7 @@ namespace sw
     /** @struct ServerBusReadLog @brief 버스 읽기 거절의 로그와 카운터입니다. 프로세스 하나에 하나입니다. */
     struct SW_GF_API ServerBusReadLog
     {
-        /** @brief 거절을 셉니다. 로그는 (타입, 결과, 받은 버전)마다 한 번입니다 — 배포 중 채팅 중계에서 메시지마다 쓰지 않습니다. */
+        /** @brief 거절을 셉니다. 로그는 (타입, 결과, 받은 버전)마다 한 번입니다. 배포 중 채팅 중계에서 메시지마다 로그를 쓰지 않으려는 것입니다. */
         static void noteRejected( const hashed_string& typeFqn, string_view topic, ServerBusReadResult result, uint32 readVersion );
         /** @brief 크기 상한을 넘어 발행하지 않은 메시지를 알립니다(매번). */
         static void noteTooLarge( const hashed_string& typeFqn, string_view topic, int32 byteCount );

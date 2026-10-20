@@ -43,7 +43,7 @@ namespace sw
         const uint8*     _pBody{ nullptr }; ///< Ok 면 서비스 몸, ApplicationError 면 오류 코드 뒤의 자세한 몸
         int32            _bodySize{ 0 };
         uint64           _requestID{ 0 }; ///< `sendRequest` 가 돌려준 id
-        uint16           _errorCode{ 0 }; ///< `OnlineError::kOk` 또는 공통 · 키트 코드. 전송 실패(끊김 · 시한)는 `kUnavailable`
+        uint16           _errorCode{ 0 }; ///< `OnlineError::kOk` 이거나 공통 코드, 키트 코드. 전송 실패(끊김, 시한)는 `kUnavailable`
         NetRequestStatus _status{ NetRequestStatus::Ok };
 
         bool isOk() const { return _status == NetRequestStatus::Ok; }
@@ -63,7 +63,7 @@ namespace sw
     public:
         IOnlineClientService() = default;
         /**
-         * @brief 올린 서비스 클라이언트에서 스스로 내립니다.
+         * @brief 등록한 서비스 클라이언트에서 스스로 해제합니다.
          * @details 그 영역의 대기 · 보낸 요청의 응답 델리게이트를 부르지 않고 버린다(`OnlineServiceClient::unregisterClientService`).
          *          키트 클라이언트가 서비스 클라이언트보다 먼저 파괴되어도 시한 안에 온 응답이 파괴된 객체를 부르지 않는다.
          *          서비스 클라이언트가 먼저 파괴되면 그 소멸자가 이 키트에서 자기를 지워 두므로 파괴된 객체를 부르지 않는다.
@@ -85,7 +85,7 @@ namespace sw
     private:
         friend class OnlineServiceClient;
 
-        vector<OnlineServiceClient*> _listRegisteredClient{}; ///< 올린 서비스 클라이언트들(테스트는 한 키트를 여럿에 올린다). 소멸자에서 내릴 때 쓴다
+        vector<OnlineServiceClient*> _listRegisteredClient{}; ///< 등록한 서비스 클라이언트들(테스트는 한 키트를 여럿에 등록한다). 소멸자에서 해제할 때 쓴다
         uint16                       _registeredRange{ 0 };   ///< 올릴 때의 영역. 기반 소멸자에서는 가상 함수를 부를 수 없어 담아 둔다
     };
 } // namespace sw
@@ -104,7 +104,7 @@ namespace sw
 
     struct OnlineServiceClientConfig
     {
-        StreamTransportConfig _transportSettings{}; ///< 자기 엔드포인트 모드 — `_ioThreadCount == 0` 이면 `tick` 이 전송을 돈다
+        StreamTransportConfig _transportSettings{}; ///< 자기 엔드포인트 모드. `_ioThreadCount == 0` 이면 `tick` 이 전송을 처리한다
         StreamEndpointConfig  _endpointSettings{};
         NetAddress            _serverAddress{};
         string                _gameBuild{}; ///< Hello 에 싣는 게임 빌드 글(64 B 이하)
@@ -131,7 +131,7 @@ namespace sw
         /** @brief 키트를 올립니다. 빌려 쓰며 초기화 전에 불러야 합니다. 영역이 겹치면 false 입니다. */
         [[nodiscard]] bool registerClientService( IOnlineClientService* pService );
         /**
-         * @brief 키트를 내리고 그 영역의 요청을 `cancelRequestsOf` 로 버립니다. 올리지 않은 키트면 아무것도 하지 않습니다.
+         * @brief 키트를 해제하고 그 영역의 요청을 `cancelRequestsOf` 로 버립니다. 등록하지 않은 키트면 아무것도 하지 않습니다.
          * @details 키트 기반 소멸자가 부른다. 스키마 해시는 빌드의 항목 전부에서 나오므로 내려도 바뀌지 않는다.
          */
         void unregisterClientService( IOnlineClientService* pService );
@@ -160,7 +160,7 @@ namespace sw
         uint64 sendRequest( uint16 method, const BitWriter& body, const NetRequestOptions& options, OnlineResponseDelegate onResponse );
         /**
          * @brief 보내지 않은 요청 하나를 @p errorCode 응답으로 끝내고 id 를 반환합니다. 본문을 쓰지 못한 요청(범위 밖 값)이 씁니다(`ServiceClientCallTable::sendMessage`).
-         * @details `sendRequest` 가 그 자리에서 끝내는 실패(초기화 전, 멈춤)와 같은 약속입니다. id 는 `sendRequest` 와 같은 순서에서 나오며 0 이 아니고,
+         * @details `sendRequest` 가 즉시 끝내는 실패(초기화 전, 멈춤)와 같은 계약입니다. id 는 `sendRequest` 와 같은 순서에서 나오며 0 이 아니고,
          *          @p onResponse 는 이 함수 안에서 정확히 한 번 불립니다. 서버가 같은 본문을 거절한 응답과 구별되지 않습니다.
          */
         uint64 rejectRequest( uint16 errorCode, OnlineResponseDelegate onResponse );
@@ -198,7 +198,7 @@ namespace sw
             uint64                 _requestID{ 0 };
             int64                  _deadlineMs{ 0 };
             uint16                 _method{ 0 };
-            uint8                  _bCancelled{ SW_FALSE }; ///< 꺼내 돌던 중 `cancelRequestsOf` 가 가렸다 — 부르지도 보내지도 않는다
+            uint8                  _bCancelled{ SW_FALSE }; ///< 꺼내 처리하던 중 `cancelRequestsOf` 가 취소 표시했다. 부르지도 보내지도 않는다
         };
 
         struct PendingCall
@@ -234,7 +234,7 @@ namespace sw
         StreamMessageEndpoint*             _pEndpoint;
         NetRequestClient*                  _pRequestClient;
         IStreamTransport*                  _pTransport;
-        const QueuedCall*                  _pSendingCall; ///< `sendRequest` 가 그 자리에서 실패를 부를 때의 대상
+        const QueuedCall*                  _pSendingCall; ///< `sendRequest` 가 즉시 실패를 부를 때의 대상
         StreamConnectionHandle             _connection;
         int64                              _nowMs;
         int64                              _nextConnectMs;

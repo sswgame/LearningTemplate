@@ -1,7 +1,7 @@
 /**
  * @file ArcLengthUtil.h
  * @brief 누적 거리 표(샘플 점마다 시작부터의 거리)로 거리 → 구간 · 비율을 찾는 공통 계산입니다.
- * @details 스플라인(`SplinePath`) · 코스터 트랙(`CoasterTrack`)처럼 곡선을 점 목록으로 풀어 들고 "거리 s 의 자리" 를 묻는 곳이 함께 씁니다.
+ * @details 스플라인(`SplinePath`)과 코스터 트랙(`CoasterTrack`)처럼 곡선을 점 목록으로 펼쳐 보관하고 "거리 s 의 위치" 를 묻는 곳이 함께 씁니다.
  *          닫힌 곡선은 거리를 한 바퀴로 감고(음수도), 열린 곡선은 양 끝에서 자릅니다. 마지막 점 뒤의 구간은 닫힌 곡선에서만 첫 점으로 이어집니다.
  */
 #pragma once
@@ -11,7 +11,7 @@
 
 namespace sw
 {
-    /** @brief 거리 하나가 떨어지는 구간입니다 — `_index` 점과 `_nextIndex` 점 사이 `_alpha`(0..1) 자리입니다. */
+    /** @brief 거리 하나가 떨어지는 구간입니다. `_index` 점과 `_nextIndex` 점 사이 `_alpha`(0..1) 위치입니다. */
     struct ArcLengthSpan
     {
         size_t  _index{ 0 };
@@ -24,7 +24,7 @@ namespace sw
 {
     /**
      * @struct ArcLengthUtil
-     * @brief 거리 감기 · 구간 찾기입니다. 점 타입은 거리 칸을 가리키는 멤버 포인터로 받습니다(점마다 다른 칸을 들어도 같은 계산).
+     * @brief 거리 감기와 구간 찾기입니다. 점 타입은 거리 필드를 가리키는 멤버 포인터로 받습니다(점 타입마다 다른 필드를 써도 같은 계산이다).
      */
     struct ArcLengthUtil
     {

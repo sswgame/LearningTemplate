@@ -2,10 +2,10 @@
  * @file LocalStore.h
  * @brief 클라이언트 로컬 저장 계약을 정의합니다.
  * @details 슬롯(이름에서 바이트로) 하나씩 원자적으로 읽고, 쓰고, 지우고, 나열한다.
- *          일을 맡기고(`submit*`) 완료를 거두는(`pollCompletions`) 방식이라 게임 스레드는 디스크를 기다리지 않는다.
+ *          작업을 요청하고(`submit*`) 완료를 회수하는(`pollCompletions`) 방식이라 게임 스레드는 디스크를 기다리지 않는다.
  *          언리얼의 `ISaveGameSystem`(슬롯 이름과 바이트, 플랫폼별 저장)에 해당하고, 그 위의 `SaveGame` 이 `USaveGame` 에 해당한다.
  *
- *          - 슬롯 이름은 ASCII `[0-9a-z_.-]`(64 자 이하)이고, `/` 로 한 단계 묶음 하나까지 둘 수 있다(`save/slot0`). 대소문자를 가리지 않는 파일 시스템에서도 같다.
+ *          - 슬롯 이름은 ASCII `[0-9a-z_.-]`(64 자 이하)이고, `/` 로 한 단계 그룹 하나까지 둘 수 있다(`save/slot0`). 대소문자를 가리지 않는 파일 시스템에서도 같다.
  *          - 쓰기는 슬롯 하나 단위로 원자적이다. 도중에 꺼져도 옛 내용이나 새 내용 중 하나가 남는다. 파일은 임시 파일을 쓰고 이름을 바꾸며, SQLite 는 한 문으로 쓴다.
  *          - 모든 저장소가 같은 봉투(`LocalSlotEnvelope`: 형식 버전, 코덱, 봉인, CRC/태그)를 쓴다. 저장소를 바꿔도 같은 바이트이다.
  *          - 서버 계약(`IServiceStore`: 64 KiB 레코드, 여러 키 트랜잭션)은 쓰지 않는다. 파일 저장소가 지킬 수 없는 약속이기 때문이다. 경쟁 데이터의 원본은 서버이다.
@@ -24,10 +24,10 @@ namespace sw
     {
         Ok = 0,
         NotFound,
-        Corrupt,  ///< 봉투 · 체크섬 · 태그가 맞지 않는다(변조 · 반쪽 쓰기 — 원자 쓰기라 보통은 변조)
+        Corrupt,  ///< 봉투, 체크섬, 태그가 맞지 않는다(변조나 반쪽 쓰기. 원자 쓰기라 보통은 변조)
         WrongKey, ///< 봉인을 풀 키가 이 장치 · 계정 것이 아니다
-        IOError,  ///< 디스크 가득 · 권한 · 경로 · 내린 저장소
-        Invalid   ///< 슬롯 이름 규칙 · 크기 상한(64 MiB) · 봉인할 암호 창구가 없다
+        IOError,  ///< 디스크 가득 참, 권한, 경로, 종료된 저장소
+        Invalid   ///< 슬롯 이름 규칙이나 크기 상한(64 MiB) 위반, 또는 봉인할 암호 인터페이스가 없다
     };
 } // namespace sw
 
@@ -38,7 +38,7 @@ namespace sw
         Read = 0,
         Write,
         Erase,
-        List ///< 묶음 접두로 슬롯 이름 · 크기 · 쓴 시각
+        List ///< 그룹 접두로 슬롯 이름, 크기, 쓴 시각을 나열한다
     };
 } // namespace sw
 
@@ -48,8 +48,8 @@ namespace sw
     enum class LocalStoreSeal : uint8
     {
         None = 0,      ///< CRC32 만(사람이 열어 볼 세이브 · 개발)
-        Authenticated, ///< AEAD 태그 — 고치면 Corrupt(가벼운 변조 막기, 내용은 보인다)
-        Encrypted      ///< AEAD — 내용도 숨긴다(계정 연동 토큰 · 결제 대기 영수증)
+        Authenticated, ///< AEAD 태그. 고치면 Corrupt 다(가벼운 변조 막기, 내용은 보인다)
+        Encrypted      ///< AEAD. 내용도 숨긴다(계정 연동 토큰, 결제 대기 영수증)
     };
 } // namespace sw
 
@@ -58,7 +58,7 @@ namespace sw
     /** @brief 슬롯 하나를 쓸 때의 선택 사항입니다. */
     struct LocalStoreWriteOptions
     {
-        uint32         _formatVersion{ 1 };    ///< 쓰는 쪽의 형식 판 — 읽을 때 그대로 돌려준다(옛 판 리더를 두지 않는다 — 다르면 부르는 쪽이 거절)
+        uint32         _formatVersion{ 1 };    ///< 쓰는 쪽의 형식 버전. 읽을 때 그대로 돌려준다. 옛 버전 리더를 두지 않으므로 다르면 부르는 쪽이 거절한다
         uint8          _compressionCodec{ 0 }; ///< Core `CompressionCodecType` 값(0 = 안 함). 줄지 않으면 원문으로 둔다
         LocalStoreSeal _seal{ LocalStoreSeal::None };
     };
@@ -70,7 +70,7 @@ namespace sw
     {
         string _slot{};
         int64  _byteCount{ 0 };   ///< 봉투 크기
-        int64  _writtenAtMs{ 0 }; ///< 이 기계의 파일 시계(밀리초) — 같은 기계 안에서만 견준다
+        int64  _writtenAtMs{ 0 }; ///< 이 기계의 파일 시계(밀리초). 같은 기계 안에서만 비교한다
     };
 } // namespace sw
 
@@ -79,11 +79,11 @@ namespace sw
     /** @brief 끝난 요청 하나입니다. */
     struct LocalStoreCompletion
     {
-        vector<uint8>         _bytes{};        ///< Read — 봉투를 푼 몸
-        vector<LocalSlotInfo> _listSlotInfo{}; ///< List — 이름순
-        string                _slot{};         ///< Read · Write · Erase 의 슬롯, List 의 묶음 접두
+        vector<uint8>         _bytes{};        ///< Read 에서 봉투를 연 본문
+        vector<LocalSlotInfo> _listSlotInfo{}; ///< List 결과. 이름순
+        string                _slot{};         ///< Read, Write, Erase 의 슬롯이거나 List 의 그룹 접두
         uint64                _requestID{ 0 };
-        uint32                _formatVersion{ 0 }; ///< Read — 쓸 때의 판
+        uint32                _formatVersion{ 0 }; ///< Read 에서 쓸 때의 버전
         LocalStoreResult      _result{ LocalStoreResult::Ok };
         LocalStoreOperation   _operation{ LocalStoreOperation::Read };
     };
@@ -115,9 +115,9 @@ namespace sw
 {
     /**
      * @class ILocalStore
-     * @brief 로컬 저장의 앞입니다. 게임 스레드 하나가 일을 맡기고 거두며, 완료는 맡긴 순서대로 옵니다.
+     * @brief 로컬 저장의 프런트입니다. 게임 스레드 하나가 작업을 요청하고 회수하며, 완료는 요청한 순서대로 옵니다.
      * @details 구현은 두 가지가 있다.
-     *          `MemoryLocalStore` 는 테스트용이며 그 자리에서 실행한다.
+     *          `MemoryLocalStore` 는 테스트용이며 즉시 실행한다.
      *          `ThreadedLocalStore` 는 전용 스레드 하나와 슬롯 저장소(파일, SQLite)를 쓴다.
      */
     class SW_GF_API ILocalStore
@@ -135,7 +135,7 @@ namespace sw
         virtual uint64 submitRead( string_view slot )                                                              = 0;
         virtual uint64 submitWrite( string_view slot, vector<uint8> bytes, const LocalStoreWriteOptions& options ) = 0;
         virtual uint64 submitErase( string_view slot )                                                             = 0;
-        /** @brief 묶음 접두(`save/`)로 나열합니다. 빈 글이면 모두 나열합니다. */
+        /** @brief 그룹 접두(`save/`)로 나열합니다. 빈 문자열이면 모두 나열합니다. */
         virtual uint64 submitList( string_view groupPrefix )                              = 0;
         virtual int32  pollCompletions( vector<LocalStoreCompletion>& outListCompletion ) = 0;
         virtual int32  getPendingCount() const                                            = 0;
@@ -144,7 +144,7 @@ namespace sw
 
         /** @brief 슬롯 이름이 규칙을 지키면 true 입니다. 규칙은 `[0-9a-z_.-]` 1..64 자이고, `/` 는 하나까지이며, 빈 마디와 `.` 으로 시작하는 마디는 없어야 합니다. */
         static bool isValidSlotName( string_view slot );
-        /** @brief 나열 접두가 규칙을 지키면 true 입니다. 규칙은 빈 글이거나 `<묶음>/` 입니다. */
+        /** @brief 나열 접두가 규칙을 지키면 true 입니다. 규칙은 빈 문자열이거나 `<그룹>/` 입니다. */
         static bool isValidGroupPrefix( string_view groupPrefix );
     };
 } // namespace sw

@@ -3,7 +3,7 @@
  * @brief 온라인 키트 프로토콜의 메시지 타입 목록, 등록 항목, 레지스트리입니다. 접속 핸드셰이크의 첫 필드인 온라인 스키마 해시가 여기서 나옵니다.
  * @details - 키트는 와이어에 싣는 메시지 타입을 `OnlineMessageTypes<...>` 하나에 적고(`XxxProtocol::MessageTypes`), 그 목록으로만 메시지를 쓰고 읽습니다.
  *            목록에 없는 타입을 이 길로 쓰거나 읽으면 컴파일이 멈춥니다. 이 길을 지나지 않는 본문은 셋입니다. 빈 본문(본문 없는 요청과 알림),
- *            `kRateLimited` 응답의 자세한 몸(varuint 기다릴 시간, `OnlineError`), 서버 버스 본문(자기 기술형 A, 주제 정의 `ServerBusTopic` — 배포 중 빌드가 섞이므로 B 가 아님)입니다.
+ *            `kRateLimited` 응답의 자세한 본문(varuint 기다릴 시간, `OnlineError`), 서버 버스 본문(자기 기술형 A, 주제 정의 `ServerBusTopic`. 배포 중 빌드가 섞이므로 B 가 아니다)입니다.
  *            버스에만 쓰는 타입은 이 목록에 넣지 않습니다. 넣으면 서버끼리만 쓰는 필드를 바꿀 때 클라이언트가 업데이트를 받습니다.
  *          - 키트는 Shared `.cpp` 의 이름 공간 범위 객체로 `OnlineProtocolEntry` 하나를 두고 메서드 표(`XxxMethod`, `OnlineMethodTable`)와 같은 목록을 넘깁니다.
  *            객체를 만들면 레지스트리에 오르고, 모듈이 내려가며 파괴되면 내립니다. 그래서 메시지를 쓰는 목록과 해시에 섞는 목록이 같은 선언 하나이고,
@@ -19,7 +19,7 @@
  *          - 메시지마다 머리에 싣는 타입 스키마 해시(`FixedLayout::write`)는 메서드와 타입의 짝을 확인합니다. 표는 메서드의 이름과 번호만 담고 그 메서드가 받는 타입은
  *            담지 않으므로, 한 메서드가 받는 타입을 목록 안의 다른 타입으로 바꾼 빌드는 해시가 같습니다. 그 어긋남은 읽기가 `SchemaMismatch` 로 거절합니다.
  *          - 메시지 타입에 코덱이 없으면(적격이 아니면) 해시를 계산하는 기동 때 이유와 함께 프로세스가 멈춥니다(`FixedLayout::getSchemaHash`).
- *          언리얼 `FNetworkVersion::GetLocalNetworkVersion`(빌드에서 나온 값 하나를 접속 때 비교)과 같은 자리입니다(기억에 의존).
+ *          언리얼 `FNetworkVersion::GetLocalNetworkVersion`(빌드에서 나온 값 하나를 접속 때 비교)에 해당합니다(기억에 의존).
  */
 #pragma once
 #include "Core/Common/HashUtil.h"
@@ -40,9 +40,9 @@ namespace sw
 {
     /**
      * @brief 키트 하나가 와이어에 싣는 메시지 타입 목록입니다. 메시지를 쓰고 읽는 길은 이것뿐이며, 같은 목록의 스키마 해시가 등록 항목에 섞입니다.
-     * @details 메시지는 고정 배치형(B, `FixedLayout`)입니다. 타입은 `REFLECT` 와 `PROPERTY` 만 가지며, 범위 · 길이는 `Min` · `Max` · `MaxCount` 로 적습니다.
+     * @details 메시지는 고정 배치형(B, `FixedLayout`)입니다. 타입은 `REFLECT` 와 `PROPERTY` 만 가지며, 범위와 길이는 `Min`, `Max`, `MaxCount` 로 적습니다.
      *          범위 밖 값은 잘라 쓰지 않고 쓰기가 실패합니다. 중첩 타입(목록의 원소, 필드 구조체)은 바깥 타입의 해시에 섞이므로 목록에 적지 않습니다.
-     * @tparam TMessage 요청, 응답, 알림 본문의 최상위 타입들(클라이언트와 주고받는 것만 — 서버 버스 본문은 `ServerBusTopic`)
+     * @tparam TMessage 요청, 응답, 알림 본문의 최상위 타입들(클라이언트와 주고받는 것만 넣는다. 서버 버스 본문은 `ServerBusTopic`)
      */
     template <typename... TMessage>
     struct OnlineMessageTypes
@@ -117,7 +117,7 @@ namespace sw
                                          collectEnumNames( typeFqn<TPushName>(), static_cast<int32>( TPushName::Count ) ) );
         }
 
-        /** @brief 메서드 이름 목록과 알림 이름 목록을 순서대로 섞습니다. 순서가 와이어 번호이므로 두 이름의 자리를 맞바꾸면 값이 바뀝니다. */
+        /** @brief 메서드 이름 목록과 알림 이름 목록을 순서대로 섞습니다. 순서가 와이어 번호이므로 두 이름의 위치를 맞바꾸면 값이 바뀝니다. */
         [[nodiscard]] static uint64 computeNameOrderHash( const vector<string>& listMethodName, const vector<string>& listPushName );
 
     private:
@@ -146,7 +146,7 @@ namespace sw
     {
         /**
          * @brief 올라온 항목 전부의 영역, 메서드 표의 이름 순서, 메시지 스키마 해시와 `OnlineProtocolConstant::kBaseVersion` 을 섞은 온라인 스키마 해시입니다.
-         * @details 영역 순(같으면 이름 순)으로 섞으므로 모듈을 올린 순서와 상관없이 같은 값입니다. 호스트와 클라이언트가 `initialize` 때 한 번 부릅니다.
+         * @details 영역 순(같으면 이름 순)으로 섞으므로 모듈을 로드한 순서와 상관없이 같은 값입니다. 호스트와 클라이언트가 `initialize` 때 한 번 부릅니다.
          */
         [[nodiscard]] static uint64 computeSchemaHash();
 

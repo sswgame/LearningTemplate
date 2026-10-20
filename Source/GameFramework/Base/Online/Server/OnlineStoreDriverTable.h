@@ -1,7 +1,7 @@
 /**
  * @file OnlineStoreDriverTable.h
- * @brief 서버 조립이 서버 설정의 저장소 · 캐시 항목(드라이버 이름)으로 실제 드라이버를 만드는 함수 테이블입니다.
- * @details - 드라이버(SQLite · PostgreSQL · RESP)는 저장 키트(`GF_Server_SQLStore`, `GF_Server_CacheStore`)에 있고, 기반은 키트를 모릅니다.
+ * @brief 서버 조립이 서버 설정의 저장소와 캐시 항목(드라이버 이름)으로 실제 드라이버를 만드는 함수 테이블입니다.
+ * @details - 드라이버(SQLite, PostgreSQL, RESP)는 저장 키트(`GF_Server_SQLStore`, `GF_Server_CacheStore`)에 있고, 기반은 키트를 모릅니다.
  *            그래서 저장 키트가 모듈 로드 때 만들기 함수를 이 테이블에 묶고, 서버 조립은 이 테이블로 만듭니다.
  *          - `memory` 드라이버는 테이블과 상관없이 서버 조립이 직접 만듭니다(그 런타임 안에서만 나눠 쓰는 메모리 구현).
  *          - 묶인 함수가 없는데 다른 드라이버를 고르면 서버 조립은 기동을 멈춥니다. 다른 드라이버로 대신하지 않습니다.
@@ -47,7 +47,7 @@ namespace sw
     /**
      * @class OnlineStoreDriverBinding
      * @brief 저장 키트의 만들기 함수를 모듈 수명 동안 테이블에 묶는 정적 객체입니다. 키트 `.cpp` 의 `namespace sw` 에 하나 둡니다.
-     * @details @p pRelease 는 풀 때(모듈 언로드) 부르는 정리입니다 — 드라이버 레지스트리에서 이 모듈의 드라이버를 내리는 일처럼. 없으면 nullptr.
+     * @details @p pRelease 는 해제할 때(모듈 언로드) 부르는 정리 함수입니다. 드라이버 레지스트리에서 이 모듈의 드라이버를 해제하는 일 같은 것입니다. 없으면 nullptr 입니다.
      */
     class OnlineStoreDriverBinding
     {

@@ -14,7 +14,7 @@ namespace sw
     /**
      * @class LedgerTransferWork
      * @brief `store.submit( make_unique<LedgerTransferWork>( request, Delegate<void( const LedgerTransferOutcome& )>::create<&X::onTransferred>( this ) ) )`.
-     * @details 요청은 복사해 든다. `_pPolicy` 는 빌려 쓰므로 일이 끝날 때까지 살아야 한다(카탈로그는 서비스와 같이 산다).
+     * @details 요청은 복사해 보관한다. `_pPolicy` 는 빌려 쓰므로 작업이 끝날 때까지 살아야 한다(카탈로그는 서비스와 같이 산다).
      */
     class SW_GF_API LedgerTransferWork final : public IServiceStoreWork
     {

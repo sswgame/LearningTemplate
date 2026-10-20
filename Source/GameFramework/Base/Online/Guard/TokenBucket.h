@@ -1,8 +1,8 @@
 /**
  * @file TokenBucket.h
- * @brief 토큰 버킷 — @p refillIntervalMs 마다 하나씩 차고 @p capacity 까지 쌓이며, 쓸 때 꺼냅니다. 로그인 시도 · 요청 · 도배 제한이 함께 씁니다.
+ * @brief 토큰 버킷입니다. @p refillIntervalMs 마다 하나씩 차고 @p capacity 까지 쌓이며, 쓸 때 꺼냅니다. 로그인 시도, 요청, 도배 제한이 함께 씁니다.
  * @details 시각은 부르는 쪽이 밀리초로 넘긴다(테스트는 가짜 시각, 서버는 한 가지 시계). 시각이 되돌아가면 채우지 않는다. 정수만 쓴다.
- *          처음에는 가득 차 있다 — 처음 몇 번은 몰아 쓸 수 있고(버스트) 그 뒤로는 간격마다 하나다. Envoy · nginx `limit_req` 와 같은 모양이다.
+ *          처음에는 가득 차 있다. 그래서 처음 몇 번은 몰아 쓸 수 있고(버스트) 그 뒤로는 간격마다 하나다. Envoy 와 nginx `limit_req` 와 같은 구조다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -55,7 +55,7 @@ namespace sw
             return tokenCount < _capacity ? static_cast<int32>( tokenCount ) : _capacity;
         }
 
-        /** @brief 가득 찼는가입니다 — 오래 안 쓴 버킷을 지울 때 본다(가득 찬 버킷은 새로 만든 것과 같다). */
+        /** @brief 가득 찼는지입니다. 오래 안 쓴 버킷을 지울 때 봅니다(가득 찬 버킷은 새로 만든 것과 같다). */
         bool  isFull( int64 nowMs ) const { return computeTokenCount( nowMs ) >= _capacity; }
         int32 getCapacity() const { return _capacity; }
 

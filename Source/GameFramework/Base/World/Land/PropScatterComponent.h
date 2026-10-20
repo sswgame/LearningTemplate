@@ -1,7 +1,7 @@
 /**
  * @file PropScatterComponent.h
  * @brief 장식(나무, 꽃, 바위)을 흩뿌리는 컴포넌트를 정의합니다.
- * @details 씨앗이 고정된 배치를 영역 가장자리, 안쪽 격자, 배치 규칙(밀도, 최소 거리, 경사, 높이, 레이어 필터)으로 둔다. 제외 원은 비운다.
+ * @details 시드가 고정된 배치를 영역 가장자리, 안쪽 격자, 배치 규칙(밀도, 최소 거리, 경사, 높이, 레이어 필터)으로 둔다. 제외 원은 비운다.
  *          규칙 모드는 Engine 의 배치 코어(`PlacementScatter`)를 쓰고, 영역 아래 지형(`TerrainComponent`)을 표면으로 읽는다.
  */
 #pragma once
@@ -19,13 +19,13 @@
 
 namespace sw
 {
-    /** @brief 흩뿌릴 자리의 모양입니다. */
+    /** @brief 흩뿌릴 위치의 형태입니다. */
     ENUM()
     enum class PropScatterMode : uint8
     {
         Edge = 0, ///< 영역 네 변을 따라 한 줄(잔디 가장자리의 나무)
         Fill,     ///< 영역 안쪽 격자(숲 · 꽃밭)
-        Rules,    ///< 배치 규칙(`_rule`) — 밀도 · 최소 거리 · 경사 · 높이 · 레이어 필터, 영역 아래 지형 위에
+        Rules,    ///< 배치 규칙(`_rule`: 밀도, 최소 거리, 경사, 높이, 레이어 필터)으로 영역 아래 지형 위에 놓는다
     };
 } // namespace sw
 
@@ -46,7 +46,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 아무것도 놓지 않는 원입니다. 땅 위의 원이라 y 는 보지 않으며, 정문 앞 길이나 건물 자리를 비울 때 씁니다. */
+    /** @brief 아무것도 놓지 않는 원입니다. 땅 위의 원이라 y 는 보지 않으며, 정문 앞 길이나 건물 위치를 비울 때 씁니다. */
     REFLECT()
     struct SW_GF_API PropScatterExclusion
     {
@@ -70,12 +70,12 @@ namespace sw
         float3                       _regionMax{};
         float32                      _spacing{ 9.0f };
         float32                      _alongJitter{ 3.0f };  ///< 줄을 따라 흔드는 폭(m)
-        float32                      _inwardJitter{ 4.0f }; ///< 변에서 안쪽으로 흔드는 폭(m) — 안쪽 모드는 두 축 모두 이 폭
+        float32                      _inwardJitter{ 4.0f }; ///< 변에서 안쪽으로 흔드는 폭(m). 안쪽 모드는 두 축 모두 이 폭을 쓴다
         float32                      _scaleMin{ 1.0f };
         float32                      _scaleMax{ 1.0f };
         uint32                       _seed{ 1u };
         PropScatterMode              _mode{ PropScatterMode::Edge };
-        PlacementRule                _rule{}; ///< 규칙 모드의 규칙 — 씨앗은 `_seed` 가 아니라 이 안의 것이다
+        PlacementRule                _rule{}; ///< 규칙 모드의 규칙. 시드는 `_seed` 가 아니라 이 안의 것이다
     };
 } // namespace sw
 
@@ -96,8 +96,8 @@ namespace sw
     /**
      * @struct PropScatterMath
      * @brief 배치 계산입니다. 같은 입력이면 같은 배치가 나옵니다.
-     * @details 난수는 xorshift32 이며, 씨앗 0 은 고정점이라 1 로 바꾼다.
-     *          자리마다 난수를 자리 흔들기 둘, 모델, 제외 판정, 크기, 요 순으로 꺼낸다. 제외된 자리는 크기와 요를 꺼내지 않는다.
+     * @details 난수는 xorshift32 이며, 시드 0 은 고정점이라 1 로 바꾼다.
+     *          위치마다 난수를 위치 흔들기 둘, 모델, 제외 판정, 크기, 요 순으로 꺼낸다. 제외된 위치는 크기와 요를 꺼내지 않는다.
      */
     struct SW_GF_API PropScatterMath
     {
@@ -120,10 +120,10 @@ namespace sw
 {
     /**
      * @class PropScatterComponent
-     * @brief 플레이가 시작되면 배치대로 메시 오브젝트를 세우고, 끝나면 걷습니다.
-     * @details 씬에는 설정만 저장된다. 세운 오브젝트는 저장하지 않는 런타임 산출물이다.
-     *          세운 오브젝트는 핸들로 든다. 틱 중에 시작돼도 `executeOrDeferPostTick` 으로 틱 뒤에 세운다. 틱하지는 않는다.
-     *          핸들 목록은 PROPERTY 이다. 핫 리로드는 오브젝트를 같은 id 로 복원하므로, 다시 만든 컴포넌트가 그 핸들로 세운 것을 알아보고 한 벌 더 세우지 않는다.
+     * @brief 플레이가 시작되면 배치대로 메시 오브젝트를 스폰하고, 끝나면 정리합니다.
+     * @details 씬에는 설정만 저장된다. 스폰한 오브젝트는 저장하지 않는 런타임 산출물이다.
+     *          스폰한 오브젝트는 핸들로 보관한다. 틱 중에 시작돼도 `executeOrDeferPostTick` 으로 틱 뒤에 스폰한다. 틱하지는 않는다.
+     *          핸들 목록은 PROPERTY 이다. 핫 리로드는 오브젝트를 같은 id 로 복원하므로, 다시 만든 컴포넌트가 그 핸들로 스폰한 오브젝트를 알아보고 한 벌 더 스폰하지 않는다.
      *          에디터는 플레이 전 상태로 되돌리므로 씬 파일에는 빈 목록이 남는다.
      */
     REFLECT( Category = "World", DisplayName = "Prop Scatter", Tooltip = "Scatters seeded decoration meshes along or inside a region at play start" )
@@ -144,7 +144,7 @@ namespace sw
         void setExclusions( const vector<PropScatterExclusion>& listExclusion ) { _listExclusion = listExclusion; }
         /** @brief 지금 PROPERTY 값으로 계산 입력을 만듭니다. */
         PropScatterParams makeParams() const;
-        /** @brief 세운 오브젝트를 모두 지웁니다. 상태를 저장하기 전과 플레이가 끝날 때 부릅니다. */
+        /** @brief 스폰한 오브젝트를 모두 지웁니다. 상태를 저장하기 전과 플레이가 끝날 때 부릅니다. */
         void   despawnProps();
         uint32 getSpawnedCount() const { return static_cast<uint32>( _listSpawned.size() ); }
 
