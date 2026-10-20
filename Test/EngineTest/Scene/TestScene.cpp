@@ -1731,7 +1731,7 @@ SW_TEST_CASE( SceneTest, BrokenSceneFileSaysWhereNotFileNotFound )
 }
 
 /**
- * @brief [SceneTest] 엔진 서비스 없이도 XML 씬 · 프리팹을 읽고, 지원하는 것보다 새 형식 · 올릴 단계가 없는 옛 판은 그때도 거절한다
+ * @brief [SceneTest] 엔진 서비스 없이도 XML 프리팹을 읽고 씬의 판을 가른다 — 지원하는 것보다 새 형식 · 올릴 단계가 없는 옛 판은 그때도 거절한다
  * @details 단독 도구 · 테스트는 서비스를 묶지 않고 에셋을 읽는다. 로더가 `getAssetManager()` 로 형식 레지스트리를 꺼내면 거기서 assert 다 —
  *          같은 함수의 GUID 블록과 바이너리 로더는 이미 서비스가 있는지 묻는다. 서비스가 없을 때는 내장 migrator 만 든 레지스트리로 판정한다.
  */
@@ -1751,16 +1751,19 @@ SW_TEST_CASE( SceneTest, XMLAssetsLoadWithoutEngineServices )
     const sw::string prefabPath = test::makeTempPath( "standalone.prefab.xml" );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( prefabPath, "<Prefab name=\"Crate\">\n  <GameObject _name=\"Crate\"/>\n</Prefab>\n" ) );
 
+    // 판 2 씬의 월드 설정(`<WorldSettings>`, 필수)은 리플렉션 형식(WorldSettings · WorldCellGridDef)으로 읽으므로 타입 레지스트리가 있어야 한다 —
+    // 문서 전체를 읽는 것은 서비스를 묶은 쪽에서 본다. 판 판정(새 판 · 올릴 수 없는 옛 판)은 그 앞에서 끝나므로 서비스 없이도 거절한다.
     SW_ASSERT_TRUE( sw::engine::areEngineServicesBound() );
     {
-        const test::ScopedUnboundEngineServices unbound;
-        SW_ASSERT_FALSE( sw::engine::areEngineServicesBound() );
-
         sw::SceneDocument document;
         SW_EXPECT_TRUE( document.loadXML( scenePath ) );
         SW_EXPECT_EQUAL( sw::string( "Standalone" ), document._name );
         SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), document._listSceneObjectNode.size() );
         SW_EXPECT_EQUAL( sw::string( "game/demo/prefabs/crate.prefab.xml" ), document._listSceneObjectNode[0]._prefab );
+    }
+    {
+        const test::ScopedUnboundEngineServices unbound;
+        SW_ASSERT_FALSE( sw::engine::areEngineServicesBound() );
 
         {
             test::ScopedDefensiveTestLog expected( "a scene file newer than this build" );
