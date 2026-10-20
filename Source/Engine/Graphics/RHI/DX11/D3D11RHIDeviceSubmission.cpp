@@ -131,10 +131,23 @@ namespace sw
 
         std::scoped_lock<mutex> lock{ _immediateContextMutex };
         // **GetData 는 즉시 컨텍스트 전용이다.** Deferred Context 에서 End 한 쿼리도 여기서만 읽는다.
-        // DONOTFLUSH 로 묻는다: 아직이면 S_FALSE 를 받고 그냥 물러난다(측정하려던 것을 멈추지 않는다).
+        // **이 묶음은 곧 다시 End 하므로 지금 읽지 못하면 영영 잃는다.** 한 번만 묻고(DONOTFLUSH) 물러나면 GPU 가 몇 프레임 뒤처진 무거운
+        // 그래프(디퍼드 15 패스)에서 프레임 뒤쪽 패스의 칸이 늘 준비 전이라 GPU 표에서 Tonemap · Present · Canvas 가 빠졌다. 그래서 묶음마다
+        // 상한(kClockReadTimeoutMilliseconds)까지 기다려 읽는다 — DX12 · Vulkan 이 묶음을 다시 쓰기 전에 펜스를 기다리는 것과 같은 자리다.
+        // 프로파일러가 켜졌을 때만 오는 경로다(`_bTimestampEnabled`).
+        const Deadline deadline     = Deadline::afterMilliseconds( D3D11RHIDeviceSubmissionInternal::kClockReadTimeoutMilliseconds );
+        auto           waitForQuery = [this, &deadline]( ID3D11Query* pQuery, void* pData, uint32 byteSize ) -> bool
+        {
+            while ( _deviceContext->GetData( pQuery, pData, byteSize, 0 ) != S_OK )
+            {
+                if ( deadline.isExpired() )
+                    return false;
+                std::this_thread::yield();
+            }
+            return true;
+        };
         D3D11_QUERY_DATA_TIMESTAMP_DISJOINT disjointData{};
-        if ( _deviceContext->GetData( frame._disjoint.Get(), &disjointData, sizeof( disjointData ),
-                                      D3D11_ASYNC_GETDATA_DONOTFLUSH ) != S_OK )
+        if ( waitForQuery( frame._disjoint.Get(), &disjointData, sizeof( disjointData ) ) == false )
             return;
 
         frame._bPending = SW_FALSE;
@@ -150,8 +163,7 @@ namespace sw
                 continue;
 
             uint64 tick{ 0 };
-            if ( _deviceContext->GetData( frame._arrQuery[slotIndex].Get(), &tick, sizeof( tick ),
-                                          D3D11_ASYNC_GETDATA_DONOTFLUSH ) != S_OK )
+            if ( waitForQuery( frame._arrQuery[slotIndex].Get(), &tick, sizeof( tick ) ) == false )
                 continue;
             arrTick[slotIndex] = tick;
             readyMask |= makeGPUTimestampSlotBit( slotIndex );
