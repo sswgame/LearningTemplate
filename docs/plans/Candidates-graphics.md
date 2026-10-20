@@ -37,18 +37,17 @@
 - 강 경로: 경로가 점 목록이다. 스플라인 컴포넌트가 Engine 에 들어오면 그것을 경로로 받는다.
 - 하늘 · 시간 · 높이 안개와 물속 안개 패스: 값은 `WaterBodyComponent::findUnderwaterFog` 가 이미 준다. 다중 뷰 병합 뒤. 볼륨 안개 · 대기 산란은 [RealtimeGlobalIllumination](Candidates-graphics.md)과 합친다(옛 D2-5.2).
 - 물의 굴절 · 화면 공간 두께: 반투명 패스가 장면 색 사본 · 장면 깊이를 입력으로 받는 계약이 있어야 한다(지금은 지형 깊이를 정점에 굽는다).
-- 지형 LOD 교체 프레임 시간: 최악이 기준(GT 2 ms)을 넘는다(측정값은 [검증과 측정](../08_Verification.md) 2절 "지형 LOD 교체"). 메시 집합이 바뀌어 RT 는 정점 풀을 통째로 다시 만든다(`RT.GPUScene.vertexPool`, 벤치에는 없다 — App 표로). LOD 메시를 미리 만들어 두거나 청크 정점을 풀에서 부분 갱신한다(옛 D2-5.6).
 - 지오모프(LOD 튐)와 레이어 다섯 이상: 머티리얼 텍스처 칸은 16 개로 늘었지만 `.layerweights` · 스플랫 업로드 · 브러시 · 셰이더가 레이어 넷이다. 두 번째 스플랫이 필요하다.
-- 지형 쓰기(결정은 [결정 기록](../09_Decisions.md) 5-5)의 남은 것(옛 D2-5.7): 측정이 Debug 뿐이라 `TerrainBenchTest.ColliderRebuildAfterBrushWrite` · `WriteHeightsRectSizes` 를 Release 로 다시 재고 `TerrainComponent` 의 청크 재생성 예산(쓰기 · 틱마다 넷)을 GT 2 ms 에 맞춘다. 식생은 드래그가 끝나면 숲 전체를 다시 뿌린다(쇼케이스 Debug 약 0.86 s) — 바뀐 셀만 다시 계산한다. 내비는 런타임 내비메시 타일만 다시 굽는다(에디터가 구운 내비 에셋은 다시 굽기 명령으로). 에디터 편집 모드에서도 틱이 남은 청크를 만드는지 확인하지 않았다(브러시 한 번은 쓰기에서 끝난다). 브러시 선택은 레이 전진이 걸음마다 `findTerrainAt` 으로 지형을 훑는다(측정 안 함).
+- 지형 LOD 교체 · 지형 쓰기의 비용과 식생 부분 계산은 계획 [TerrainEditCost](TerrainEditCost.md) 에 있다.
 함정: 머티리얼 텍스처 칸 16 — 에뮬 슬롯은 Vulkan t 밴드 뒤 t16..t31 이라 SRV 띠(지금 t0..t12)가 밴드 끝까지 자라도 밀리지 않고 DX11 은 정적 머티리얼 샘플러로 읽는다(옛 D2-6.3, 정본은 `ShaderBindingSlots.h` 헤더).
 
 ### ToonShadingCompletion
 제목: 툰 머티리얼(MToon 1.0)의 남은 것
-옛번호: D2-6, D2-6.4
+옛번호: D2-6
 왜 필요한가: `toon.hlsl` 은 MToon 1.0 체계이고 아래가 빠졌다.
 착수 조건 / 남은 것:
+- 포워드 전용 지킴: toon.hlsl 의 `SW_PASS_GBUFFER` 분기를 `#error "toon.hlsl is forward-only ..."` 로 바꾼다 — `MATERIAL_FORWARD_ONLY` 를 빠뜨린 머티리얼이 G버퍼에서 램버트로 조용히 칠해지지 않고 쿠킹에서 멈춘다. 커밋 훅(`CheckShaderStamps`)이 다시 굽기를 요구하므로 App 빌드가 있는 통합 때 `--cook-shaders` 와 함께 한다(G버퍼 분기의 "디퍼드 조명은 램버트로 칠한다" 주석도 그때 지운다).
 - UV 스크롤 애니메이션(`uvAnimation*`): VRM 머티리얼 임포터(`Source/Editor`)의 매핑과 같이 바꾼다.
-- 디퍼드의 계단 셰이딩: G버퍼는 표면만 적어 램버트로 칠해진다. 셋째 타깃(셰이딩 모델 ID · 그림자색 · 시프트 · 계단 · 그림자 받기)이 필요하다(옛 D2-6.4). 에뮬 백엔드의 엔진 텍스처 칸 · 입력 역할 · G버퍼 PSO 의 타깃 수가 함께 바뀌어 빌드로 확인하는 단위다. 통합 빌드가 초록인 뒤에 단위 하나로 한다.
 - 스킨 · 모프 메시의 탄젠트: 스키닝 · 모프 컴퓨트가 위치 · 노멀만 돌려 노멀 맵이 레스트 탄젠트를 쓴다. `GPUMorphVertex` 에 탄젠트 칸이 필요하다.
 
 ### VrmRuntimeConsumption
@@ -74,7 +73,7 @@
 착수 조건 / 남은 것:
 - Shipping 베이크: 쿠킹한 LightingOnly 변형으로 Shipping hostgpu 를 돌린다. Shipping 전체 빌드가 필요해 통합 담당의 Shipping 확인 때 돌린다.
 - Metallic 금속도 칸은 PBR([IndirectLighting](IndirectLighting.md) P5)과 함께 생긴다.
-- Shaded Wireframe: 패스가 둘 필요하다.
+- Shaded Wireframe: 패스가 둘 필요하다(셰이딩한 면 위에 같은 배치를 선으로 한 번 더). 착수 조건은 RHI 다 — `RHIPipelineStateDesc` 에 깊이 비교 함수(LessEqual)와 깊이 바이어스가 없어(네 백엔드) 겹쳐 그린 선이 면과 z-fighting 한다. 선 색은 보기 모드 define 하나(`swStoreSurface` 가 단색을 낸다)이고 G버퍼에는 셰이딩 모델 Unlit 으로 적으면 디퍼드도 그대로 된다. 디퍼드에서 툰은 `ForwardOnlyOpaque` 패스가 그리므로 그 패스에도 같은 겹침이 필요하다.
 함정: `swStoreSurface` 가 셰이더마다 명시한 거칠기 · 금속도를 받는다. `toon` · `sprite2dlit` 포워드 경로도 LightingOnly 에서는 회색으로 바뀐다.
 
 ### RealtimeGlobalIllumination

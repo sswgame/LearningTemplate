@@ -76,11 +76,12 @@ namespace sw
                     case RenderPassType::GBuffer:
                     {
                         // define 은 이 PSO 를 물려받는 머티리얼 변형까지 MRT 서명으로 컴파일되게 한다.
-                        info._pDefaultShader   = &EngineDefaultAssets::_shaderGBuffer;
-                        info._pPassDefine      = kPassGBufferDefine;
-                        info._pColorFormat     = kArrGBufferColorFormat;
-                        info._colorTargetCount = 2;
-                        info._flags            = Flag::kDepthTest | Flag::kDepthWrite | kSceneColorPassFlags;
+                        info._pDefaultShader          = &EngineDefaultAssets::_shaderGBuffer;
+                        info._pPassDefine             = kPassGBufferDefine;
+                        info._pExcludedMaterialDefine = kMaterialForwardOnlyDefine;
+                        info._pColorFormat            = kArrGBufferColorFormat;
+                        info._colorTargetCount        = 2;
+                        info._flags                   = Flag::kDepthTest | Flag::kDepthWrite | kSceneColorPassFlags;
                         break;
                     }
                     case RenderPassType::Lighting:
@@ -175,6 +176,14 @@ namespace sw
                         info._flags          = Flag::kBlend | Flag::kPremultipliedAlpha | Flag::kHasInputContract;
                         break;
                     }
+                    case RenderPassType::ForwardOnlyOpaque:
+                    {
+                        // 디퍼드의 G버퍼가 뺀 배치(MATERIAL_FORWARD_ONLY)만 조명 패스 뒤에 포워드로 그린다. 깊이는 G버퍼가 쓴 장면 깊이에 테스트 · 쓰기 한다.
+                        info._pDefaultShader          = &EngineDefaultAssets::_shaderForwardLit;
+                        info._pRequiredMaterialDefine = kMaterialForwardOnlyDefine;
+                        info._flags                   = Flag::kDepthTest | Flag::kDepthWrite | kSceneColorPassFlags;
+                        break;
+                    }
                     case RenderPassType::ForwardOpaqueNoDepthWrite:
                     {
                         // 깊이 프리패스가 돈 프레임의 불투명 패스다. 깊이는 테스트만 한다.
@@ -258,7 +267,8 @@ namespace sw
                     if ( row.hasFlag( kMeshOnlyFlags ) && row.hasFlag( Flag::kDrawsSceneMeshes ) == false )
                         return false;
                     // 머티리얼로 배치를 거르는 것도 씬 메시 패스의 성질이다.
-                    if ( row._pRequiredMaterialDefine != nullptr && row.hasFlag( Flag::kDrawsSceneMeshes ) == false )
+                    const bool bFiltersByMaterial = row._pRequiredMaterialDefine != nullptr || row._pExcludedMaterialDefine != nullptr;
+                    if ( bFiltersByMaterial && row.hasFlag( Flag::kDrawsSceneMeshes ) == false )
                         return false;
                     // 일반 풀스크린 실행은 선언한 입력을 계약대로 건다.
                     if ( row.hasFlag( Flag::kGenericFullscreen ) && row.hasFlag( Flag::kHasInputContract ) == false )

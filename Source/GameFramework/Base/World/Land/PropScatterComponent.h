@@ -125,6 +125,8 @@ namespace sw
      *          세운 오브젝트는 핸들로 든다. 틱 중에 시작돼도 `executeOrDeferPostTick` 으로 틱 뒤에 세운다. 틱하지는 않는다.
      *          핸들 목록은 PROPERTY 이다. 핫 리로드는 오브젝트를 같은 id 로 복원하므로, 다시 만든 컴포넌트가 그 핸들로 세운 것을 알아보고 한 벌 더 세우지 않는다.
      *          에디터는 플레이 전 상태로 되돌리므로 씬 파일에는 빈 목록이 남는다.
+     *          지형 편집을 따라 다시 계산하지 않는다. 지형 쓰기는 정지 상태에서만 열리고(`EditorSessionPolicy::areSceneEditsAllowed`) 이 컴포넌트는 플레이 중에만 세우므로,
+     *          세운 동안 표면이 바뀌지 않는다. 플레이 중 지형 쓰기를 열면 `FoliageComponent::refreshFromTerrainEdits` 처럼 후보 판정을 들고 편집 사각형만 다시 판정한다.
      */
     REFLECT( Category = "World", DisplayName = "Prop Scatter", Tooltip = "Scatters seeded decoration meshes along or inside a region at play start" )
     class SW_GF_API PropScatterComponent : public Component

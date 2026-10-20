@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 
+#include "Engine/Common/EngineParallel.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Environment/Terrain/HeightfieldData.h"
 #include "Engine/Environment/Terrain/LayerWeightsData.h"
@@ -31,9 +32,14 @@ namespace sw
             static constexpr float32 kLODHysteresis = 0.1f;
             /**
              * @brief 높이 쓰기로 낡은 청크 메시를 한 프레임(쓰기 한 번 또는 틱 한 번)에 다시 만드는 최대 수입니다. 브러시 한 번이 닿는 청크(넷 이하)는 바로 끝난다.
-             * @details Debug 측정으로 32 칸 청크 하나가 약 4.4 ms 이고(`TerrainBenchTest.WriteHeightsRectSizes`), 257 샘플 전체(청크 64)는 288 ms 였다.
+             * @details Debug 측정으로 32 칸 청크 하나가 약 4.4 ms 이고(`TerrainBenchTest.WriteHeightsRectSizes`), 257 샘플 전체(청크 64)는 288 ms 였다(정점 만들기를 워커로
+             *          나누기 전의 값). 넷은 워커로 나눠 만든다(`rebuildChunkMeshes`). Release 로 다시 재어 GT 2 ms 에 맞게 고친다.
              */
             static constexpr uint32 kMaxChunkMeshRebuildsPerFrame = 4;
+            /** @brief 청크 메시 정점 만들기를 워커로 나누는 최소 청크 수입니다. 청크 하나가 디스패치 비용(수십 us)보다 훨씬 크다. */
+            static constexpr uint32 kParallelChunkMeshCount = 2;
+            /** @brief `findEditedArea` 가 바뀐 청크 둘레로 더 넓히는 칸 수입니다. 높이 질의는 셀의 두 샘플을, 노멀은 그 이웃 샘플을 읽는다. */
+            static constexpr uint32 kEditedAreaMarginCells = 2;
             /** @brief `writeState` 형식 버전입니다. 형식을 바꾸면 올린다. */
             static constexpr uint32 kStateVersion = 1;
 
@@ -80,6 +86,34 @@ namespace sw
                 const float32 deltaY   = viewPosition._y - heightfield.getSampleHeight( centerX, centerZ );
                 return MathUtil::sqrt( deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ );
             }
+
+            /** @brief 다시 만들 청크 하나의 LOD 와 이웃 LOD 입니다(워커에 넘기는 값). */
+            struct ChunkMeshRequest
+            {
+                uint32 _chunkIndex{ 0 };
+                uint32 _lod{ 0 };
+                uint32 _arrNeighborLOD[static_cast<uint32>( TerrainChunkSide::Count )]{};
+            };
+
+            /** @brief 청크 메시 정점 만들기 한 덩어리입니다. 워커는 높이장을 읽기만 하고 자기 구간의 정점 배열만 씁니다. */
+            struct ChunkVertexJob
+            {
+                const TerrainHeightfield* _pHeightfield{ nullptr };
+                const TerrainChunkLayout* _pLayout{ nullptr };
+                const ChunkMeshRequest*   _pRequest{ nullptr };
+                vector<RHIVertex>*        _pListVertex{ nullptr };
+
+                void run( uint32 start, uint32 end )
+                {
+                    for ( uint32 index = start; index < end; ++index )
+                    {
+                        const ChunkMeshRequest& request = _pRequest[index];
+                        const uint32            chunkX  = request._chunkIndex % _pLayout->_chunkCountX;
+                        const uint32            chunkZ  = request._chunkIndex / _pLayout->_chunkCountX;
+                        TerrainMeshBuilder::makeChunkVertices( *_pHeightfield, *_pLayout, chunkX, chunkZ, request._lod, request._arrNeighborLOD, _pListVertex[index] );
+                    }
+                }
+            };
         };
     } // namespace
 } // namespace sw
@@ -105,6 +139,7 @@ namespace sw
         , _listChunk{}
         , _listWantedLOD{}
         , _listChunkGeneration{}
+        , _listChunkSplatRevision{}
         , _listStaleChunk{}
         , _material{}
         , _pPrimitiveRegistry{ nullptr }
@@ -208,19 +243,19 @@ namespace sw
 
     uint32 TerrainComponent::rebuildStaleChunkMeshes( uint32 maxCount )
     {
-        uint32 rebuiltCount{ 0 };
-        size_t index{ 0 };
-        for ( ; index < _listStaleChunk.size() && rebuiltCount < maxCount; ++index )
+        vector<uint32> listRebuild;
+        size_t         index{ 0 };
+        for ( ; index < _listStaleChunk.size() && listRebuild.size() < maxCount; ++index )
         {
             const uint32 chunkIndex = _listStaleChunk[index];
             // LOD 교체가 먼저 다시 만들었으면 이미 최신이다.
             if ( chunkIndex >= _listChunk.size() || _listChunk[chunkIndex]._bMeshStale == false )
                 continue;
-            rebuildChunkMesh( chunkIndex );
-            ++rebuiltCount;
+            listRebuild.push_back( chunkIndex );
         }
         _listStaleChunk.erase( _listStaleChunk.begin(), _listStaleChunk.begin() + static_cast<ptrdiff_t>( index ) );
-        return rebuiltCount;
+        rebuildChunkMeshes( listRebuild );
+        return static_cast<uint32>( listRebuild.size() );
     }
 
     void TerrainComponent::setHeightRange( float32 heightMin, float32 heightMax )
@@ -251,6 +286,7 @@ namespace sw
         releaseChunks();
         _heightfield.shutdown();
         _listChunkGeneration.clear();
+        _listChunkSplatRevision.clear();
         ++_heightfieldGeneration; // 실패해도 오른다 — 비워진 높이장으로 만든 바디도 낡았다
         _splatRevision   = 0;
         _bHeightsWritten = false;
@@ -278,6 +314,7 @@ namespace sw
         acquireMaterial();
         createChunks();
         _listChunkGeneration.assign( _layout.getChunkCount(), _heightfieldGeneration );
+        _listChunkSplatRevision.assign( _layout.getChunkCount(), 0u );
         return true;
     }
 
@@ -338,6 +375,7 @@ namespace sw
         if ( _heightfield.writeSplatWeights( listWeight, rect ) == false )
             return false;
         ++_splatRevision;
+        markSplatChunks( rect );
         // 엔진 서비스가 없으면(CPU 테스트) 텍스처가 없고 CPU 값만 바뀐다.
         if ( _cpuSplatPath.empty() )
             return true;
@@ -354,6 +392,64 @@ namespace sw
             Memory::copy( rgbaBytes.data() + static_cast<size_t>( row ) * width * 4, listByte.data() + source, static_cast<size_t>( width ) * 4 );
         }
         textures.requestRegionUpdate( _cpuSplatPath, rect._minX, rect._minZ, width, height, std::move( rgbaBytes ) );
+        return true;
+    }
+
+    void TerrainComponent::markSplatChunks( const TerrainSampleRect& texelRect )
+    {
+        using Internal           = TerrainComponentInternal;
+        const uint32 chunkCount  = _layout.getChunkCount();
+        const uint32 splatWidth  = _heightfield.getSplatWidth();
+        const uint32 splatHeight = _heightfield.getSplatHeight();
+        const bool   bTracked    = chunkCount > 0 && _listChunkSplatRevision.size() == chunkCount && splatWidth > 0 && splatHeight > 0 && texelRect.isEmpty() == false;
+        if ( bTracked == false )
+            return;
+        // 쌍선형은 한 텍셀 바깥까지 읽는다. 텍셀 t 는 지형 정규 좌표 t / (너비 - 1) 이고 샘플로는 그 × (해상도 - 1) 이다.
+        const uint32      lastSample = _heightfield.getResolution() - 1;
+        const uint32      lastTexelX = splatWidth - 1;
+        const uint32      lastTexelZ = splatHeight - 1;
+        const uint32      minTexelX  = texelRect._minX > 0 ? texelRect._minX - 1 : 0u;
+        const uint32      minTexelZ  = texelRect._minZ > 0 ? texelRect._minZ - 1 : 0u;
+        const uint32      maxTexelX  = MathUtil::min( texelRect._maxX + 1, lastTexelX );
+        const uint32      maxTexelZ  = MathUtil::min( texelRect._maxZ + 1, lastTexelZ );
+        TerrainSampleRect sampleRect{};
+        sampleRect.include( lastTexelX > 0 ? minTexelX * lastSample / lastTexelX : 0u, lastTexelZ > 0 ? minTexelZ * lastSample / lastTexelZ : 0u );
+        sampleRect.include( lastTexelX > 0 ? ( maxTexelX * lastSample + lastTexelX - 1 ) / lastTexelX : lastSample,
+                            lastTexelZ > 0 ? ( maxTexelZ * lastSample + lastTexelZ - 1 ) / lastTexelZ : lastSample );
+        const TerrainSampleRect chunkRect = Internal::findChunksOfSamples( _layout, sampleRect );
+        for ( uint32 chunkZ = chunkRect._minZ; chunkZ <= chunkRect._maxZ; ++chunkZ )
+        {
+            for ( uint32 chunkX = chunkRect._minX; chunkX <= chunkRect._maxX; ++chunkX )
+            {
+                _listChunkSplatRevision[static_cast<size_t>( chunkZ ) * _layout._chunkCountX + chunkX] = _splatRevision;
+            }
+        }
+    }
+
+    bool TerrainComponent::findEditedArea( uint32 sinceGeneration, uint32 sinceSplatRevision, float2& outMin, float2& outMax ) const
+    {
+        using Internal          = TerrainComponentInternal;
+        const uint32 chunkCount = _layout.getChunkCount();
+        const bool   bTracked   = _heightfield.isValid() && chunkCount > 0 && _listChunkGeneration.size() == chunkCount && _listChunkSplatRevision.size() == chunkCount;
+        if ( bTracked == false )
+            return false;
+        TerrainSampleRect chunkRect{};
+        for ( uint32 chunkIndex = 0; chunkIndex < chunkCount; ++chunkIndex )
+        {
+            const bool bEdited = _listChunkGeneration[chunkIndex] > sinceGeneration || _listChunkSplatRevision[chunkIndex] > sinceSplatRevision;
+            if ( bEdited )
+                chunkRect.include( chunkIndex % _layout._chunkCountX, chunkIndex / _layout._chunkCountX );
+        }
+        if ( chunkRect.isEmpty() )
+            return false;
+        const float3  origin   = _heightfield.getOrigin();
+        const float2  cellSize = _heightfield.getCellSize();
+        const float32 cells    = static_cast<float32>( _layout._chunkCells );
+        const float32 margin   = static_cast<float32>( Internal::kEditedAreaMarginCells );
+        outMin                 = float2{ origin._x + ( static_cast<float32>( chunkRect._minX ) * cells - margin ) * cellSize._x,
+                         origin._z + ( static_cast<float32>( chunkRect._minZ ) * cells - margin ) * cellSize._y };
+        outMax                 = float2{ origin._x + ( static_cast<float32>( chunkRect._maxX + 1 ) * cells + margin ) * cellSize._x,
+                         origin._z + ( static_cast<float32>( chunkRect._maxZ + 1 ) * cells + margin ) * cellSize._y };
         return true;
     }
 
@@ -532,6 +628,7 @@ namespace sw
         releaseChunks();
         const uint32 chunkCount = _layout.getChunkCount();
         _listChunk.resize( chunkCount );
+        vector<uint32> listAllChunk( chunkCount );
         for ( uint32 chunkIndex = 0; chunkIndex < chunkCount; ++chunkIndex )
         {
             const uint32 chunkX = chunkIndex % _layout._chunkCountX;
@@ -546,24 +643,54 @@ namespace sw
             chunk._batch->setOwnerComponent( this );
             chunk._batch->setWorld( 0, float4x4::makeTranslation( TerrainMeshBuilder::computeChunkTranslation( _heightfield, _layout, chunkX, chunkZ ) ) );
             chunk._batch->setBoundsRadius( 0, TerrainMeshBuilder::computeChunkBoundsRadius( _heightfield, _layout, chunkX, chunkZ ) );
-            rebuildChunkMesh( chunkIndex );
-            if ( _pPrimitiveRegistry != nullptr )
-                _pPrimitiveRegistry->addInstanceBatch( chunk._batch.get() );
+            listAllChunk[chunkIndex] = chunkIndex;
+        }
+        // 메시를 모두 채운 뒤에 등록한다 — 빈 메시 배치가 레지스트리에 한 번도 보이지 않는다.
+        rebuildChunkMeshes( listAllChunk );
+        if ( _pPrimitiveRegistry == nullptr )
+            return;
+        for ( Chunk& chunk : _listChunk )
+        {
+            _pPrimitiveRegistry->addInstanceBatch( chunk._batch.get() );
         }
     }
 
-    void TerrainComponent::rebuildChunkMesh( uint32 chunkIndex )
+    void TerrainComponent::rebuildChunkMeshes( const vector<uint32>& listChunkIndex )
     {
-        Chunk&            chunk  = _listChunk[chunkIndex];
-        const uint32      chunkX = chunkIndex % _layout._chunkCountX;
-        const uint32      chunkZ = chunkIndex / _layout._chunkCountX;
-        vector<RHIVertex> listVertex;
-        TerrainMeshBuilder::makeChunkVertices( _heightfield, _layout, chunkX, chunkZ, chunk._lod, chunk._arrNeighborLOD, listVertex );
-        chunk._vertexCount    = static_cast<uint32>( listVertex.size() );
-        chunk._bMeshStale     = false;
-        shared_ptr<Mesh> mesh = Mesh::create();
-        mesh->setVertices( std::move( listVertex ) );
-        chunk._batch->setMesh( std::move( mesh ) );
+        using Internal            = TerrainComponentInternal;
+        const uint32 rebuildCount = static_cast<uint32>( listChunkIndex.size() );
+        if ( rebuildCount == 0 )
+            return;
+        vector<Internal::ChunkMeshRequest> listRequest( rebuildCount );
+        vector<vector<RHIVertex>>          listChunkVertex( rebuildCount );
+        for ( uint32 index = 0; index < rebuildCount; ++index )
+        {
+            const Chunk&                chunk   = _listChunk[listChunkIndex[index]];
+            Internal::ChunkMeshRequest& request = listRequest[index];
+            request._chunkIndex                 = listChunkIndex[index];
+            request._lod                        = chunk._lod;
+            for ( uint32 side = 0; side < static_cast<uint32>( TerrainChunkSide::Count ); ++side )
+            {
+                request._arrNeighborLOD[side] = chunk._arrNeighborLOD[side];
+            }
+        }
+        Internal::ChunkVertexJob job{};
+        job._pHeightfield = &_heightfield;
+        job._pLayout      = &_layout;
+        job._pRequest     = listRequest.data();
+        job._pListVertex  = listChunkVertex.data();
+        engine::runParallel( rebuildCount, Internal::kParallelChunkMeshCount, SW_DELEGATE_METHOD( ParallelBlockDelegate, &Internal::ChunkVertexJob::run, &job ) );
+
+        // 메시 생성과 배치 교체는 레지스트리 더티 표시를 건드리므로 이 스레드에서 한다.
+        for ( uint32 index = 0; index < rebuildCount; ++index )
+        {
+            Chunk& chunk          = _listChunk[listChunkIndex[index]];
+            chunk._vertexCount    = static_cast<uint32>( listChunkVertex[index].size() );
+            chunk._bMeshStale     = false;
+            shared_ptr<Mesh> mesh = Mesh::create();
+            mesh->setVertices( std::move( listChunkVertex[index] ) );
+            chunk._batch->setMesh( std::move( mesh ) );
+        }
     }
 
     void TerrainComponent::fillNeighborLODs( uint32 chunkX, uint32 chunkZ, const vector<uint32>& listLOD, uint32 ( &outArrLOD )[4] ) const
@@ -597,7 +724,7 @@ namespace sw
             _listWantedLOD[chunkIndex] = wantedLOD;
         }
 
-        uint32 rebuiltCount{ 0 };
+        vector<uint32> listRebuild;
         for ( uint32 chunkIndex = 0; chunkIndex < chunkCount; ++chunkIndex )
         {
             Chunk&       chunk  = _listChunk[chunkIndex];
@@ -617,10 +744,11 @@ namespace sw
             chunk._lod = _listWantedLOD[chunkIndex];
             if ( bChanged == false )
                 continue;
-            rebuildChunkMesh( chunkIndex );
-            ++rebuiltCount;
+            listRebuild.push_back( chunkIndex );
         }
-        return rebuiltCount;
+        // 고리를 넘는 프레임에 바뀐 청크를 한꺼번에 나눠 만든다(이웃 이음매가 같은 프레임에 맞는다).
+        rebuildChunkMeshes( listRebuild );
+        return static_cast<uint32>( listRebuild.size() );
     }
 
     uint32 TerrainComponent::getChunkLOD( uint32 chunkX, uint32 chunkZ ) const

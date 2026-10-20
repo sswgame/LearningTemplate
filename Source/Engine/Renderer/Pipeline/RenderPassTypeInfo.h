@@ -69,6 +69,15 @@ namespace sw
     /** @brief 정점 셰이더가 정점을 옮기는 머티리얼(바람)의 define 입니다. 그림자 패스는 머티리얼 셰이더로 그리고 깊이 프리패스는 그 배치를 뺀다. */
     inline constexpr const utf8* kMaterialVertexDeformDefine = "MATERIAL_VERTEX_DEFORM";
 
+    /**
+     * @brief G버퍼로 나타낼 수 없는 셰이딩의 머티리얼 define 입니다. G버퍼 패스가 그 배치를 빼고 `ForwardOnlyOpaque` 패스가 포워드로 그립니다.
+     * @details 툰(toon.hlsl)은 빛마다 계단 · 그림자색 · 림 · 맷캡을 섞어 알베도 · 노멀 두 칸에 담을 수 없다. G버퍼에 칸을 더하는 대신 포워드로 그린다 —
+     *          유니티 URP 디퍼드가 `UniversalForwardOnly` 머티리얼을 포워드 패스로 그리는 것과 같다(기억에 의존한 비교).
+     * @note 이 define 을 빠뜨린 툰 머티리얼은 아직 G버퍼로 가서 램버트로 칠해진다. toon.hlsl 의 G버퍼 퍼뮤테이션을 `#error` 로 막는 일은 셰이더 다시 굽기와 함께 한다
+     *       (후보 ToonShadingCompletion).
+     */
+    inline constexpr const utf8* kMaterialForwardOnlyDefine = "MATERIAL_FORWARD_ONLY";
+
     /** @brief 그림자를 드리우지 않는 머티리얼의 define 입니다. 그림자 패스 셰이더가 정점을 클립 공간 밖으로 모아 그리지 않습니다. */
     inline constexpr const utf8* kMaterialShadowCastOffDefine = "MATERIAL_SHADOW_CAST_OFF";
 
@@ -121,6 +130,8 @@ namespace sw
          * @details 없는 배치(머티리얼 없는 배치 포함)는 드로우, 머티리얼 PSO 변형, 셰이더 쿠킹에서 함께 빠집니다(`FrameRendererUtil::drawsBatchInPass`).
          */
         const utf8* _pRequiredMaterialDefine{ nullptr };
+        /** @brief 이 패스가 빼는 배치의 머티리얼 define 입니다(G버퍼의 `MATERIAL_FORWARD_ONLY`). nullptr 이면 빼지 않습니다. 빠지는 범위는 `_pRequiredMaterialDefine` 과 같습니다. */
+        const utf8* _pExcludedMaterialDefine{ nullptr };
         /** @brief 고정 컬러 포맷(`_colorTargetCount` 개)입니다. nullptr 이면 패스가 선언한 출력의 포맷을 씁니다. */
         const RHIFormat* _pColorFormat{ nullptr };
         /** @brief 풀스크린 패스가 타깃 첨부의 클리어 색 선언이 없을 때 쓰는 색입니다. nullptr 이면 렌더러의 클리어 색을 씁니다. */

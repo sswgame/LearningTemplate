@@ -137,6 +137,13 @@ namespace sw
         [[nodiscard]] bool writeLayerWeights( const vector<float4>& listWeight, const TerrainSampleRect& rect );
         /** @brief `writeLayerWeights` 마다 오르는 세대입니다(`reloadTerrain` 은 0 으로 돌립니다). 가중치로 만든 것(레이어 필터 배치)이 낡았는지 견줍니다. */
         uint32 getSplatRevision() const { return _splatRevision; }
+        /**
+         * @brief 높이장 세대 @p sinceGeneration 뒤에 높이를 썼거나 스플랫 세대 @p sinceSplatRevision 뒤에 가중치를 쓴 청크를 모두 덮는 월드 평면 사각형(x, z)입니다.
+         * @details 청크 단위로 잡고 둘레로 두 칸 더 넓힌다(노멀 중앙 차분과 쌍선형 보간이 이웃 샘플 · 텍셀을 읽는다). 이 사각형 밖의 높이 · 노멀 · 레이어 가중치 질의 값은
+         *          그 세대들 뒤로 그대로다. `reloadTerrain` 은 모든 청크의 높이 세대를 올리고 스플랫 세대를 0 으로 돌린다 — 스플랫 세대가 줄었으면 쓰는 쪽이 통째로 다시 계산한다.
+         * @return 그 뒤에 바뀐 청크가 있으면 true 입니다.
+         */
+        [[nodiscard]] bool findEditedArea( uint32 sinceGeneration, uint32 sinceSplatRevision, float2& outMin, float2& outMax ) const;
         /** @brief 이 지형이 그리는 자기 스플랫 텍스처의 캐시 경로(`cpu/terrain/...`)입니다. 가중치가 없거나 엔진 서비스가 없으면(CPU 테스트) 비어 있습니다. */
         const string& getCPUSplatPath() const { return _cpuSplatPath; }
         /** @brief 지금 높이를 `.heightfield` 형식으로 절대 경로에 씁니다(높이는 `_heightMin`..`_heightMax` 로 양자화). 높이장이 없으면 false 입니다. */
@@ -201,8 +208,12 @@ namespace sw
         [[nodiscard]] bool reloadTerrainKeepingEdits();
         /** @brief 지금 LOD 로 청크 배치를 모두 만들어 등록합니다. */
         void createChunks();
-        /** @brief 청크 하나의 메시를 현재 LOD 와 이웃 LOD 로 다시 만들어 배치에 적용합니다. */
-        void rebuildChunkMesh( uint32 chunkIndex );
+        /**
+         * @brief 청크들의 메시를 각자의 현재 LOD 와 이웃 LOD 로 다시 만들어 배치에 적용합니다.
+         * @details 정점 만들기(높이장 읽기만)는 워커가 청크마다 나눠 돌고, 메시 생성과 배치 교체는 이 스레드가 한다. LOD 고리를 넘는 프레임은
+         *          청크 여럿이 한꺼번에 바뀌므로 최악 프레임이 청크 하나의 비용에 가까워진다. 이음매는 그 프레임 안에서 모두 맞춘다(나눠 미루지 않는다 — 틈이 보인다).
+         */
+        void rebuildChunkMeshes( const vector<uint32>& listChunkIndex );
         /** @brief 청크 (x, z) 의 이웃 LOD 를 `TerrainChunkSide` 순서로 채웁니다(가장자리는 자기 LOD 를 넣습니다). */
         void fillNeighborLODs( uint32 chunkX, uint32 chunkZ, const vector<uint32>& listLOD, uint32 ( &outArrLOD )[4] ) const;
         /** @brief 머티리얼을 만들고 인스턴스에 레이어와 텍스처 값을 싣습니다. 엔진 서비스가 없으면(CPU 테스트) 건너뜁니다. */
@@ -212,6 +223,8 @@ namespace sw
          * @return 경로가 비었거나 읽었으면 true 입니다. 정한 가중치를 읽지 못하면 오류를 남기고 false 입니다 — 레이어 0 으로 두지 않는다.
          */
         [[nodiscard]] bool loadSplatWeights();
+        /** @brief 스플랫 텍셀 사각형 @p texelRect 의 가중치를 읽는 청크(쌍선형이 이웃 텍셀을 읽으므로 한 텍셀 바깥까지)에 지금 스플랫 세대를 적습니다. */
+        void markSplatChunks( const TerrainSampleRect& texelRect );
         /** @brief 자기 스플랫 텍스처(`_cpuSplatPath`)를 캐시에 돌려줍니다. 없으면 아무것도 하지 않습니다. */
         void releaseCPUSplat();
 
@@ -246,9 +259,10 @@ namespace sw
         TerrainHeightfield  _heightfield;
         TerrainChunkLayout  _layout;
         vector<Chunk>       _listChunk;
-        vector<uint32>      _listWantedLOD;       ///< updateLODs 의 스크래치(청크마다 고른 LOD)
-        vector<uint32>      _listChunkGeneration; ///< 청크마다 높이를 마지막으로 바꾼 세대(`getChunkGenerations`)
-        vector<uint32>      _listStaleChunk;      ///< 메시를 다시 만들 청크(쓴 순서, `rebuildStaleChunkMeshes`)
+        vector<uint32>      _listWantedLOD;          ///< updateLODs 의 스크래치(청크마다 고른 LOD)
+        vector<uint32>      _listChunkGeneration;    ///< 청크마다 높이를 마지막으로 바꾼 세대(`getChunkGenerations`)
+        vector<uint32>      _listChunkSplatRevision; ///< 청크마다 가중치를 마지막으로 바꾼 스플랫 세대(`findEditedArea`)
+        vector<uint32>      _listStaleChunk;         ///< 메시를 다시 만들 청크(쓴 순서, `rebuildStaleChunkMeshes`)
         EnvironmentMaterial _material;
         string              _cpuSplatPath;          ///< 가중치로 만든 자기 스플랫 텍스처(`getCPUSplatPath`)
         PrimitiveRegistry*  _pPrimitiveRegistry;    ///< 등록된 매니저의 레지스트리(구조 링크라 생포인터)

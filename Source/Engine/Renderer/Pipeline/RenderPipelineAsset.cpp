@@ -259,12 +259,12 @@ namespace sw
                 checkSameDivisor( pass._depthAttachment );
         }
 
-        // 3-1) 지오메트리 패스(ForwardOpaque · GBuffer · Transparent)는 **선언한 컬러 출력**에 그린다. 컬러 출력이 없으면 그릴 곳이 없다
+        // 3-1) 지오메트리 패스(ForwardOpaque · ForwardOnlyOpaque · GBuffer · Transparent)는 **선언한 컬러 출력**에 그린다. 컬러 출력이 없으면 그릴 곳이 없다
         //      (없는 첨부의 핸들 0 은 백버퍼라, 그대로 두면 화면에 그린다).
         for ( const RenderGraphPassDesc& pass : _desc._listPass )
         {
-            const bool bGeometryColorPass = pass._resolvedType == RenderPassType::ForwardOpaque || pass._resolvedType == RenderPassType::GBuffer ||
-                                            pass._resolvedType == RenderPassType::Transparent;
+            const bool bGeometryColorPass = pass._resolvedType == RenderPassType::ForwardOpaque || pass._resolvedType == RenderPassType::ForwardOnlyOpaque ||
+                                            pass._resolvedType == RenderPassType::GBuffer || pass._resolvedType == RenderPassType::Transparent;
             if ( bGeometryColorPass == false || pass._listResolvedColorOutput.empty() == false )
                 continue;
             SW_LOG_ERROR( "[%#] pass '%#'(%#): 컬러 출력이 없습니다 — 지오메트리 패스는 _listOutput 에 선언한 컬러 첨부에 그립니다",

@@ -69,6 +69,28 @@
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
+		<!-- G버퍼로 나타낼 수 없는 머티리얼(MATERIAL_FORWARD_ONLY — 툰의 계단 셰이딩)을 조명 결과 위에 포워드로 그린다. G버퍼 패스는 그 배치를 뺀다.
+		     장면 깊이를 테스트 · 쓰기 하므로 외곽선 · 반투명보다 앞이다. -->
+		<RenderGraphPassDesc _name="ForwardOnly"
+		                     _type="ForwardOnlyOpaque"
+		                     _depthAttachment="SceneDepth"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="Back"
+		                     _bEnableDepthTest="true"
+		                     _bEnableDepthWrite="true"
+		                     _bEnableBlend="false">
+			<_listInput>
+				<item>LitColor</item>
+				<item>SceneDepth</item>
+				<item>ShadowMap</item>
+			</_listInput>
+			<_listOutput>
+				<item>LitColor</item>
+				<item>SceneDepth</item>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
 		<RenderGraphPassDesc _name="SSAO"
 		                     _type="SSAO"
 		                     _vertexEntryPoint="VSMain"

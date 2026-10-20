@@ -1157,6 +1157,28 @@ SW_TEST_CASE( RenderPassTest, MeshOutlineDrawsOnlyMaterialsWithOutline )
 }
 
 /**
+ * @brief [RenderPassTest] 디퍼드의 G버퍼는 포워드 전용 머티리얼(툰)을 빼고 ForwardOnlyOpaque 가 그것만 그린다 — 두 패스가 나눠 모든 불투명 배치를 한 번씩 그린다
+ * @details 툰 머티리얼은 `MATERIAL_FORWARD_ONLY` 를 늘 켠다(toon.hlsl 은 G버퍼 퍼뮤테이션을 #error 로 막는다). 머티리얼이 없는 배치와 램버트 머티리얼은 G버퍼로 간다.
+ */
+SW_TEST_CASE( RenderPassTest, GBufferSkipsForwardOnlyMaterials )
+{
+    SW_EXPECT_TRUE( sw::isPipelinePassType( sw::RenderPassType::ForwardOnlyOpaque ) );
+    sw::shared_ptr<sw::Material> toon = sw::Material::create();
+    SW_ASSERT_TRUE( toon->loadFromFile( "engine/materials/toon.material" ) );
+    sw::shared_ptr<sw::Material> lit = sw::Material::create();
+    SW_ASSERT_TRUE( lit->loadFromFile( "engine/materials/defaultmaterial.material" ) );
+
+    SW_EXPECT_FALSE( sw::FrameRendererUtil::drawsMaterialInPass( sw::RenderPassType::GBuffer, &toon->getCachedShaderDefines() ) );
+    SW_EXPECT_TRUE( sw::FrameRendererUtil::drawsMaterialInPass( sw::RenderPassType::ForwardOnlyOpaque, &toon->getCachedShaderDefines() ) );
+    SW_EXPECT_TRUE( sw::FrameRendererUtil::drawsMaterialInPass( sw::RenderPassType::GBuffer, &lit->getCachedShaderDefines() ) );
+    SW_EXPECT_FALSE( sw::FrameRendererUtil::drawsMaterialInPass( sw::RenderPassType::ForwardOnlyOpaque, &lit->getCachedShaderDefines() ) );
+    SW_EXPECT_TRUE( sw::FrameRendererUtil::drawsMaterialInPass( sw::RenderPassType::GBuffer, nullptr ) );
+    SW_EXPECT_FALSE( sw::FrameRendererUtil::drawsMaterialInPass( sw::RenderPassType::ForwardOnlyOpaque, nullptr ) );
+    // 포워드 파이프라인의 불투명 패스는 거르지 않는다 — 툰도 그린다.
+    SW_EXPECT_TRUE( sw::FrameRendererUtil::drawsMaterialInPass( sw::RenderPassType::ForwardOpaque, &toon->getCachedShaderDefines() ) );
+}
+
+/**
  * @brief [RenderPassTest] 비어 있는 진입점은 스테이지 표(getShaderStageInfo)의 기본값이 된다 — 진입점 기본값은 표 한 줄이다
  */
 SW_TEST_CASE( RenderPassTest, EmptyEntryPointsResolveToStageTable )

@@ -305,17 +305,27 @@ namespace sw
         }
 
         /**
-         * @brief 이 패스가 이 머티리얼 define 목록의 배치를 그리는지 반환합니다. 테이블의 `_pRequiredMaterialDefine` 이 없으면 항상 true 입니다.
+         * @brief 이 패스가 이 머티리얼 define 목록의 배치를 그리는지 반환합니다. 테이블의 `_pRequiredMaterialDefine` 이 있으면 그것이 있어야 하고,
+         *        `_pExcludedMaterialDefine` 이 있으면 그것이 없어야 합니다. 둘 다 없으면 항상 true 입니다.
          * @details 드로우 루프, 머티리얼 PSO 변형, 셰이더 쿠커가 같은 판정을 쓴다. 셋이 갈리면 쿠킹하지 않은 변형을 런타임이 찾거나,
          *          외곽선을 모르는 셰이더가 외곽선 패스의 앞면 컬링으로 그려져 뒷면이 화면을 덮는다.
          * @param pListMaterialDefine 배치 머티리얼의 define 목록입니다. nullptr 이면 머티리얼이 없는 배치입니다.
          */
         static bool drawsMaterialInPass( RenderPassType passType, const vector<string>* pListMaterialDefine )
         {
-            const utf8* pRequired = getRenderPassTypeInfo( passType )._pRequiredMaterialDefine;
-            if ( pRequired == nullptr )
+            const RenderPassTypeInfo& info = getRenderPassTypeInfo( passType );
+            if ( info._pExcludedMaterialDefine != nullptr && hasMaterialDefine( pListMaterialDefine, info._pExcludedMaterialDefine ) )
+                return false;
+            if ( info._pRequiredMaterialDefine == nullptr )
                 return true;
-            return hasMaterialDefine( pListMaterialDefine, pRequired );
+            return hasMaterialDefine( pListMaterialDefine, info._pRequiredMaterialDefine );
+        }
+
+        /** @brief 이 패스가 머티리얼 define 으로 배치를 거르는지(있어야 하거나 없어야 하는 define 이 있는지) 반환합니다. 거르지 않으면 판정을 건너뛴다. */
+        static bool filtersBatchesByMaterial( RenderPassType passType )
+        {
+            const RenderPassTypeInfo& info = getRenderPassTypeInfo( passType );
+            return info._pRequiredMaterialDefine != nullptr || info._pExcludedMaterialDefine != nullptr;
         }
 
         /** @brief 머티리얼 define 목록에 이 define 이 있는지 반환합니다. nullptr(머티리얼 없는 배치)이면 false 입니다. */

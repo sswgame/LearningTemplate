@@ -149,6 +149,57 @@ SW_TEST_CASE( FoliageTest, TerrainEditsRebuildPlacementAfterSettling )
 }
 
 /**
+ * @brief [FoliageTest] 작은 지형 편집 뒤의 다시 계산은 바뀐 셀만 다시 만들고, 결과는 처음부터 계산한 것과 같다
+ * @details 평지(x < 32)에 5 × 5 샘플 언덕(높이 4 m — 경사 필터 20 도를 넘는다)을 쌓는다. 편집 사각형 안의 후보만 다시 판정하므로
+ *          다시 만든 셀 배치는 일부이고, 인스턴스 수와 위치는 같은 지형으로 통째로 계산한 것(`computeLayerPlacements`)과 같아야 한다.
+ */
+SW_TEST_CASE( FoliageTest, TerrainEditRefreshesOnlyChangedCells )
+{
+    constexpr float32 kFrame = 1.0f / 60.0f;
+    GameObjectManager manager;
+    TerrainComponent* pTerrain = FoliageTestUtil::createTerrain( manager );
+    SW_ASSERT_NOT_NULL( pTerrain );
+    GameObject* pObject = manager.createGameObject( hashed_string( "Foliage" ) );
+    SW_ASSERT_NOT_NULL( pObject );
+    FoliageComponent* pFoliage = pObject->addComponent<FoliageComponent>();
+    SW_ASSERT_NOT_NULL( pFoliage );
+    pFoliage->setLocalPosition( float3{ 32.0f, 0.0f, 32.0f } );
+    pFoliage->setCellSize( 8.0f );
+    pFoliage->setLayers( { FoliageTestUtil::makeGrassLayer() } );
+    pFoliage->rebuildFoliage();
+    for ( uint32 frame = 0; frame < 40; ++frame )
+    {
+        manager.update( kFrame );
+    }
+    const uint32 batchCount = pFoliage->getBatchCount();
+    SW_ASSERT_TRUE( batchCount > 8 );
+
+    vector<float32>   listHeight = pTerrain->getHeightfield().getHeightSamples();
+    TerrainSampleRect rect;
+    rect.include( 10, 40 );
+    rect.include( 14, 44 );
+    for ( uint32 sampleZ = 40; sampleZ <= 44; ++sampleZ )
+    {
+        for ( uint32 sampleX = 10; sampleX <= 14; ++sampleX )
+        {
+            listHeight[sampleZ * 65 + sampleX] = 4.0f;
+        }
+    }
+    SW_ASSERT_TRUE( pTerrain->writeHeights( listHeight, rect ) );
+    for ( uint32 frame = 0; frame < 40; ++frame )
+    {
+        manager.update( kFrame );
+    }
+
+    const uint32 rebuiltCount = pFoliage->getLastRebuiltBatchCount();
+    SW_EXPECT_TRUE_MSG( rebuiltCount > 0, "the terrain edit did not refresh any foliage cell" );
+    SW_EXPECT_TRUE_MSG( rebuiltCount < batchCount / 2, "a 5x5 edit rebuilt most foliage cells - the refresh is not incremental" );
+    vector<PlacementInstance> listFull;
+    SW_ASSERT_TRUE( pFoliage->computeLayerPlacements( 0, listFull ) );
+    SW_EXPECT_EQUAL( static_cast<uint32>( listFull.size() ), pFoliage->getInstanceCount() );
+}
+
+/**
  * @brief [FoliageTest] 페이드 끝보다 먼 셀은 배치를 숨기고, 카메라가 오면 다시 보인다
  */
 SW_TEST_CASE( FoliageTest, FarCellsAreCulled )

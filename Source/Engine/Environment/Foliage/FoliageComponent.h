@@ -22,6 +22,7 @@ namespace sw
     class Mesh;
     class MeshInstanceBatch;
     class PrimitiveRegistry;
+    class TerrainComponent;
 
     /** @brief 식생 레이어가 고르는 메시 하나입니다. `_meshID` 는 `.mesh` 경로이거나 내장 도형 이름(`GrassClump` 포함)입니다. */
     REFLECT()
@@ -82,6 +83,9 @@ namespace sw
      *          인스턴스마다 위상은 셰이더가 위치 해시로 정하고, 밝기 흔들기는 인스턴스 색 필드(`GPUSpriteInstanceData` 의 tint)로 받는다.
      *          지형을 고치면(`writeHeights` · `writeLayerWeights` · `reloadTerrain`) 높이장 · 스플랫 세대가 오른다. 틱이 그 변화를 보고, 세대가
      *          `kTerrainSettleSeconds` 동안 그대로이면(브러시 드래그가 끝나면) 틱 뒤에 배치를 다시 계산한다 — 칠하는 프레임마다 숲 전체를 다시 뿌리지 않는다.
+     *          다시 계산은 **바뀐 곳만** 한다. 레이어마다 후보의 표면 판정(`PlacementCandidate`)을 들고 있다가 지형이 알려 준 편집 사각형(`TerrainComponent::findEditedArea`)
+     *          안의 후보만 다시 판정하고, 최소 거리부터는 전부 다시 풀어(앞 번호가 이기는 순서 규칙이라 연쇄로 바뀔 수 있다) 처음부터 계산한 것과 비트까지 같은 배치를 얻는다.
+     *          그다음 셀마다 내용 해시를 견줘 **바뀐 셀의 배치만** 다시 만든다 — 나머지 셀 배치는 레지스트리에 그대로 남는다. 영역 · 규칙이 바뀌었거나 지형을 다시 읽었으면 통째로 다시 계산한다.
      *          스레드: 배치 다시 만들기(`rebuildFoliage`)는 틱 밖에서만 호출한다. 틱은 자기 배치와 자기 머티리얼 인스턴스만 쓴다.
      */
     REFLECT( Category = "Environment", DisplayName = "Foliage", Tooltip = "Rule-placed GPU-instanced grass and trees with wind", Meta = "Icon=Foliage, IconColor=Environment" )
@@ -121,6 +125,8 @@ namespace sw
         uint32 getBatchCount() const { return static_cast<uint32>( _listCell.size() ); }
         /** @brief 지금 보이는 셀 배치 수입니다. */
         uint32 getVisibleBatchCount() const;
+        /** @brief 마지막 배치 계산(통째 또는 지형 편집 뒤의 부분)이 새로 만든 셀 배치 수입니다. 바뀌지 않은 셀을 다시 만들지 않는지 테스트가 봅니다. */
+        uint32 getLastRebuiltBatchCount() const { return _lastRebuiltBatchCount; }
 
         void setLayers( const vector<FoliageLayer>& listLayer ) { _listLayer = listLayer; }
         void setExclusions( const vector<PlacementExclusion>& listExclusion ) { _listExclusion = listExclusion; }
@@ -134,6 +140,8 @@ namespace sw
             unique_ptr<MeshInstanceBatch> _batch;
             float3                        _center{};
             float32                       _radius{ 0.0f };
+            uint64                        _key{ 0 };         ///< (메시 번호, 셀 x, 셀 z) 키 — 레이어 안에서 하나
+            uint64                        _contentHash{ 0 }; ///< 셀 인스턴스들의 내용 해시 — 같으면 다시 만들지 않는다
             uint32                        _layerIndex{ 0 };
         };
 
@@ -143,6 +151,15 @@ namespace sw
         void markCellsDirty();
         /** @brief 아래 지형의 세대 변화를 따라가다 `kTerrainSettleSeconds` 동안 그대로이면 틱 뒤에 배치를 다시 계산하게 합니다(틱이 부른다). */
         void followTerrainEdits( GameObjectManager& manager, float32 deltaTime );
+        /** @brief 지형 편집 뒤의 다시 계산입니다. 들고 있는 후보 판정을 쓸 수 있으면 편집 사각형 안만 다시 판정하고, 아니면 `rebuildFoliage` 로 통째로 계산합니다. 틱 밖에서만 부른다. */
+        void refreshFromTerrainEdits();
+        /**
+         * @brief 레이어 @p layerIndex 의 배치를 계산합니다. 지형 위면 후보 판정을 `_listLayerCandidate` 에 들고, @p pDirtyArea 가 있으면 그 안의 후보만 다시 판정합니다.
+         * @param pTerrain 표면 지형입니다. nullptr 이면 오너 높이의 평면이고 후보 판정을 들지 않습니다.
+         */
+        void computeLayerInstances( uint32 layerIndex, const TerrainComponent* pTerrain, const PlacementRegion* pDirtyArea, vector<PlacementInstance>& outListInstance );
+        /** @brief 레이어 @p layerIndex 의 배치를 셀로 나눠, 내용이 바뀐 셀만 배치를 새로 만들고 없어진 셀은 놓습니다. */
+        void applyLayerInstances( uint32 layerIndex, const vector<PlacementInstance>& listInstance );
         /** @brief 셀 배치를 모두 레지스트리에서 빼고 놓습니다. */
         void releaseCells();
 
@@ -158,15 +175,19 @@ namespace sw
 
         vector<Cell>                            _listCell;
         vector<unique_ptr<EnvironmentMaterial>> _listLayerMaterial;  ///< 레이어마다 하나다(바람 값을 레이어마다 싣는다).
+        vector<vector<PlacementCandidate>>      _listLayerCandidate; ///< 레이어마다 후보의 표면 판정(지형 위일 때만, 지형 편집 뒤 부분 계산용)
+        PlacementRegion                         _builtRegion;        ///< 배치를 계산한 영역 — 바뀌면 후보 판정을 버린다
         PrimitiveRegistry*                      _pPrimitiveRegistry; ///< 등록된 매니저의 레지스트리다(구조 링크라 생포인터를 쓴다).
         float32                                 _time;
         float32                                 _terrainSettleTime; ///< 지형 세대가 마지막으로 바뀐 뒤 흐른 시간(s) — 칠하는 동안은 다시 만들지 않는다
         uint32                                  _instanceCount;
-        uint32                                  _builtTerrainGeneration; ///< 배치를 계산할 때 지형의 높이장 세대(`TerrainComponent::getHeightfieldGeneration`)
-        uint32                                  _builtSplatRevision;     ///< 배치를 계산할 때 지형의 스플랫 세대(`TerrainComponent::getSplatRevision`)
-        uint32                                  _seenTerrainGeneration;  ///< 지난 틱에 본 높이장 세대
-        uint32                                  _seenSplatRevision;      ///< 지난 틱에 본 스플랫 세대
-        uint8                                   _bBuiltOnTerrain : 1;    ///< 마지막 계산이 지형 위였다(아니면 시작 때 지형을 다시 찾는다)
-        [[maybe_unused]] uint8                  _reserved        : 7;
+        uint32                                  _lastRebuiltBatchCount;      ///< `getLastRebuiltBatchCount`
+        uint32                                  _builtTerrainGeneration;     ///< 배치를 계산할 때 지형의 높이장 세대(`TerrainComponent::getHeightfieldGeneration`)
+        uint32                                  _builtSplatRevision;         ///< 배치를 계산할 때 지형의 스플랫 세대(`TerrainComponent::getSplatRevision`)
+        uint32                                  _seenTerrainGeneration;      ///< 지난 틱에 본 높이장 세대
+        uint32                                  _seenSplatRevision;          ///< 지난 틱에 본 스플랫 세대
+        uint8                                   _bBuiltOnTerrain        : 1; ///< 마지막 계산이 지형 위였다(아니면 시작 때 지형을 다시 찾는다)
+        uint8                                   _bTerrainRefreshPending : 1; ///< 지형 편집 뒤 다시 계산을 틱 뒤로 걸어 두었다(같은 편집으로 두 번 걸지 않는다)
+        [[maybe_unused]] uint8                  _reserved               : 6;
     };
 } // namespace sw
