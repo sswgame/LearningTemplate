@@ -111,6 +111,11 @@ namespace sw
         /** @brief 리소스 파일에서 읽습니다. */
         [[nodiscard]] bool loadFromResource( string_view path );
 
+        /**
+         * @brief 읽은 리소스 경로입니다(`loadFromResource`). 텍스트에서 읽었거나 코드가 만든 에셋은 비어 있습니다.
+         * @details 네트워크 복제(`GF_NetPairedAnimation`)는 이 경로로 클라이언트가 같은 에셋을 받게 한다 — 경로가 빈 에셋의 세션은 복제할 수 없다(오류).
+         */
+        const string& getSourcePath() const { return _sourcePath; }
         /** @brief 공유 타임라인 길이(초)입니다. 앵커 클립 길이와 같아야 세션이 시작합니다. */
         float32 getDuration() const { return _duration; }
         /** @brief 역할들입니다(파일 순서). */
@@ -141,6 +146,7 @@ namespace sw
         vector<PairedAnimationRoleDef>   _listRole;
         vector<PairedAnimationNotifyDef> _listNotify;
         PairedAnimationSelectDef         _select;
+        string                           _sourcePath;
         float32                          _duration;
         uint32                           _anchorRoleIndex;
         bool                             _bHasSelect;

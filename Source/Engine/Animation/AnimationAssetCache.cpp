@@ -9,177 +9,67 @@
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Animation/Skeletal/SkeletonBoneLOD.h"
 #include "Engine/Resource/Cache/BuiltInAssetCache.h"
-#include "Engine/Resource/Cache/SharedAssetTable.h"
+#include "Engine/Resource/Cache/SharedAssetCacheDefinition.h"
 
 namespace sw
 {
-    namespace
+    template <>
+    struct SharedAssetCacheTraits<Skeleton>
     {
-        struct AnimationAssetCacheInternal
-        {
-            [[nodiscard]] static bool loadSkeleton( string_view path, Skeleton& outSkeleton ) { return outSkeleton.loadFromResource( path ); }
-            [[nodiscard]] static bool loadClip( string_view path, AnimationClip& outClip ) { return outClip.loadFromResource( path ); }
-            [[nodiscard]] static bool loadRig( string_view path, RigAsset& outRig ) { return outRig.loadFromResource( path ); }
-            [[nodiscard]] static bool loadBoneLOD( string_view path, SkeletonBoneLOD& outBoneLOD ) { return outBoneLOD.loadFromResource( path ); }
+        static constexpr const utf8*           kKindName   = "Skeleton";
+        static constexpr MemoryTag             kMemoryTag  = MemoryTag::Animation;
+        static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
 
-            static SharedAssetTable<Skeleton>& getSkeletonTable()
-            {
-                static SharedAssetTable<Skeleton> s_table;
-                return s_table;
-            }
-
-            static SharedAssetTable<AnimationClip>& getClipTable()
-            {
-                static SharedAssetTable<AnimationClip> s_table;
-                return s_table;
-            }
-
-            static SharedAssetTable<RigAsset>& getRigTable()
-            {
-                static SharedAssetTable<RigAsset> s_table;
-                return s_table;
-            }
-
-            static SharedAssetTable<SkeletonBoneLOD>& getBoneLODTable()
-            {
-                static SharedAssetTable<SkeletonBoneLOD> s_table;
-                return s_table;
-            }
-        };
-    } // namespace
+        [[nodiscard]] static bool load( string_view path, Skeleton& outSkeleton ) { return outSkeleton.loadFromResource( path ); }
+    };
 } // namespace sw
 
 namespace sw
 {
-    shared_ptr<const Skeleton> SkeletonCache::acquire( string_view path )
+    template <>
+    struct SharedAssetCacheTraits<AnimationClip>
     {
-        SW_MEMORY_SCOPE( Animation );
-        return AnimationAssetCacheInternal::getSkeletonTable().acquire( path, &AnimationAssetCacheInternal::loadSkeleton );
-    }
+        static constexpr const utf8*           kKindName   = "AnimationClip";
+        static constexpr MemoryTag             kMemoryTag  = MemoryTag::Animation;
+        static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
 
-    bool SkeletonCache::reloadShared( string_view path )
-    {
-        return AnimationAssetCacheInternal::getSkeletonTable().reloadShared( path, &AnimationAssetCacheInternal::loadSkeleton );
-    }
-
-    bool SkeletonCache::isCached( string_view relativePath ) const
-    {
-        return AnimationAssetCacheInternal::getSkeletonTable().findLive( relativePath ) != nullptr;
-    }
-
-    void SkeletonCache::reload( string_view relativePath, IRHIDevice* pDevice )
-    {
-        (void)pDevice;
-        (void)reloadShared( relativePath ); // 읽지 못하면 이전 내용을 그대로 쓴다. 읽기 오류는 loadFromResource 가 남긴다.
-    }
-
-    size_t SkeletonCache::getCachedCount() const
-    {
-        return AnimationAssetCacheInternal::getSkeletonTable().countLive();
-    }
-
-    void SkeletonCache::clear()
-    {
-        AnimationAssetCacheInternal::getSkeletonTable().clear();
-    }
-
-    shared_ptr<const AnimationClip> AnimationClipCache::acquire( string_view path )
-    {
-        SW_MEMORY_SCOPE( Animation );
-        return AnimationAssetCacheInternal::getClipTable().acquire( path, &AnimationAssetCacheInternal::loadClip );
-    }
-
-    bool AnimationClipCache::reloadShared( string_view path )
-    {
-        return AnimationAssetCacheInternal::getClipTable().reloadShared( path, &AnimationAssetCacheInternal::loadClip );
-    }
-
-    bool AnimationClipCache::isCached( string_view relativePath ) const
-    {
-        return AnimationAssetCacheInternal::getClipTable().findLive( relativePath ) != nullptr;
-    }
-
-    void AnimationClipCache::reload( string_view relativePath, IRHIDevice* pDevice )
-    {
-        (void)pDevice;
-        (void)reloadShared( relativePath ); // 읽지 못하면 이전 내용을 그대로 쓴다. 읽기 오류는 loadFromResource 가 남긴다.
-    }
-
-    size_t AnimationClipCache::getCachedCount() const
-    {
-        return AnimationAssetCacheInternal::getClipTable().countLive();
-    }
-
-    void AnimationClipCache::clear()
-    {
-        AnimationAssetCacheInternal::getClipTable().clear();
-    }
-
-    shared_ptr<const SkeletonBoneLOD> SkeletonBoneLODCache::acquire( string_view path )
-    {
-        return AnimationAssetCacheInternal::getBoneLODTable().acquire( path, &AnimationAssetCacheInternal::loadBoneLOD );
-    }
-
-    bool SkeletonBoneLODCache::reloadShared( string_view path )
-    {
-        return AnimationAssetCacheInternal::getBoneLODTable().reloadShared( path, &AnimationAssetCacheInternal::loadBoneLOD );
-    }
-
-    bool SkeletonBoneLODCache::isCached( string_view relativePath ) const
-    {
-        return AnimationAssetCacheInternal::getBoneLODTable().findLive( relativePath ) != nullptr;
-    }
-
-    void SkeletonBoneLODCache::reload( string_view relativePath, IRHIDevice* pDevice )
-    {
-        (void)pDevice;
-        (void)reloadShared( relativePath ); // 읽지 못하면 이전 내용을 그대로 쓴다. 읽기 오류는 loadFromResource 가 남긴다.
-    }
-
-    shared_ptr<const RigAsset> RigAssetCache::acquire( string_view path )
-    {
-        return AnimationAssetCacheInternal::getRigTable().acquire( path, &AnimationAssetCacheInternal::loadRig );
-    }
-
-    bool RigAssetCache::reloadShared( string_view path )
-    {
-        return AnimationAssetCacheInternal::getRigTable().reloadShared( path, &AnimationAssetCacheInternal::loadRig );
-    }
-
-    bool RigAssetCache::isCached( string_view relativePath ) const
-    {
-        return AnimationAssetCacheInternal::getRigTable().findLive( relativePath ) != nullptr;
-    }
-
-    void RigAssetCache::reload( string_view relativePath, IRHIDevice* pDevice )
-    {
-        (void)pDevice;
-        (void)reloadShared( relativePath ); // 읽지 못하면 이전 내용을 그대로 쓴다. 읽기 오류는 loadFromResource 가 남긴다.
-    }
-
-    size_t SkeletonBoneLODCache::getCachedCount() const
-    {
-        return AnimationAssetCacheInternal::getBoneLODTable().countLive();
-    }
-
-    void SkeletonBoneLODCache::clear()
-    {
-        AnimationAssetCacheInternal::getBoneLODTable().clear();
-    }
-
-    size_t RigAssetCache::getCachedCount() const
-    {
-        return AnimationAssetCacheInternal::getRigTable().countLive();
-    }
-
-    void RigAssetCache::clear()
-    {
-        AnimationAssetCacheInternal::getRigTable().clear();
-    }
+        [[nodiscard]] static bool load( string_view path, AnimationClip& outClip ) { return outClip.loadFromResource( path ); }
+    };
 } // namespace sw
 
 namespace sw
 {
+    template <>
+    struct SharedAssetCacheTraits<SkeletonBoneLOD>
+    {
+        static constexpr const utf8*           kKindName   = "SkeletonBoneLOD";
+        static constexpr MemoryTag             kMemoryTag  = MemoryTag::Animation;
+        static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
+
+        [[nodiscard]] static bool load( string_view path, SkeletonBoneLOD& outBoneLOD ) { return outBoneLOD.loadFromResource( path ); }
+    };
+} // namespace sw
+
+namespace sw
+{
+    template <>
+    struct SharedAssetCacheTraits<RigAsset>
+    {
+        static constexpr const utf8*           kKindName   = "Rig";
+        static constexpr MemoryTag             kMemoryTag  = MemoryTag::Animation;
+        static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
+
+        [[nodiscard]] static bool load( string_view path, RigAsset& outRig ) { return outRig.loadFromResource( path ); }
+    };
+} // namespace sw
+
+namespace sw
+{
+    template class SW_API SharedAssetCache<Skeleton>;
+    template class SW_API SharedAssetCache<AnimationClip>;
+    template class SW_API SharedAssetCache<SkeletonBoneLOD>;
+    template class SW_API SharedAssetCache<RigAsset>;
+
     SW_BUILT_IN_ASSET_CACHE( SkeletonCache );
     SW_BUILT_IN_ASSET_CACHE( AnimationClipCache );
     SW_BUILT_IN_ASSET_CACHE( SkeletonBoneLODCache );
