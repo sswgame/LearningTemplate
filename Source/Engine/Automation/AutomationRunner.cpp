@@ -173,19 +173,100 @@ namespace sw
                 return step.hasOnlyAttributes( { "value" }, outError ) && step.requireAttribute( "value", outError ) != nullptr;
             }
 
-            static bool validateVariable( const AutomationStep& step, string& outError )
+            /** @brief `name` · `value` 가 있고 `name` 이 등록된 전역 변수인지 봅니다. 아니면 nullptr 과 이유입니다(`Variable` · `ExpectVariable` 이 함께 씁니다). */
+            static GlobalVariableInfo* findRequiredVariable( const AutomationStep& step, string& outError )
             {
-                if ( step.hasOnlyAttributes( { "name", "value" }, outError ) == false )
-                    return false;
                 const string* pName = step.requireAttribute( "name", outError );
                 if ( pName == nullptr || step.requireAttribute( "value", outError ) == nullptr )
-                    return false;
-                if ( engine::areEngineServicesBound() == false || engine::getSubsystem<GlobalVariableManager>().findVariable( *pName ) == nullptr )
-                {
+                    return nullptr;
+                GlobalVariableInfo* pInfo = engine::areEngineServicesBound() ? engine::getSubsystem<GlobalVariableManager>().findVariable( *pName ) : nullptr;
+                if ( pInfo == nullptr )
                     outError = step.describe() + ": unknown global variable '" + *pName + "'";
+                return pInfo;
+            }
+
+            static bool validateVariable( const AutomationStep& step, string& outError )
+            {
+                return step.hasOnlyAttributes( { "name", "value" }, outError ) && findRequiredVariable( step, outError ) != nullptr;
+            }
+
+            /**
+             * @brief 변수의 지금 값이 @p expected 와 같은지 @p outMatched 에 적습니다. 실수는 @p tolerance 안이면 같습니다.
+             * @return @p expected 를 변수의 타입으로 읽지 못하면 false 입니다(enum 은 숫자만 받는다).
+             */
+            [[nodiscard]] static bool compareVariable( const GlobalVariableInfo& info, string_view expected, float32 tolerance, bool& outMatched )
+            {
+                switch ( info._type )
+                {
+                    case GlobalVariableType::Boolean:
+                    {
+                        bool value = false;
+                        if ( StringUtil::tryParseBool( expected, value ) == false )
+                            return false;
+                        outMatched = info.getValueAsBool() == value;
+                        return true;
+                    }
+                    case GlobalVariableType::Int32:
+                    case GlobalVariableType::Enum:
+                    {
+                        int32 value = 0;
+                        if ( StringUtil::parseInt( expected, value ) == false )
+                            return false;
+                        outMatched = info.getValueAsInt() == value;
+                        return true;
+                    }
+                    case GlobalVariableType::Float:
+                    {
+                        float32 value = 0.0f;
+                        if ( StringUtil::parseFloat( expected, value ) == false )
+                            return false;
+                        outMatched = MathUtil::abs( info.getValueAsFloat() - value ) <= tolerance;
+                        return true;
+                    }
+                    case GlobalVariableType::String:
+                    {
+                        outMatched = string_view{ info.getValueAsString() } == expected;
+                        return true;
+                    }
+                    case GlobalVariableType::Count:
+                    {
+                        break;
+                    }
+                }
+                return false;
+            }
+
+            /**
+             * @brief `ExpectVariable` 의 `value` · `tolerance` 를 @p info 의 타입으로 읽어 지금 값과 견줍니다(검사와 실행이 함께 씁니다).
+             * @return `value` 가 그 타입으로 읽히지 않거나 `tolerance` 가 음수이거나 실수 변수가 아닌데 붙었으면 false 와 이유입니다.
+             */
+            [[nodiscard]] static bool evaluateExpectVariable( const AutomationStep& step, const GlobalVariableInfo& info, bool& outMatched, string& outError )
+            {
+                float32 tolerance = 0.0f;
+                if ( readFloat( step, "tolerance", 0.0f, tolerance, outError ) == false )
+                    return false;
+                if ( step.findAttribute( "tolerance" ) != nullptr && ( info._type != GlobalVariableType::Float || tolerance < 0.0f ) )
+                {
+                    outError = step.describe() + ": tolerance is a non-negative number for float variables only";
+                    return false;
+                }
+                const string& value = *step.findAttribute( "value" );
+                if ( compareVariable( info, string_view{ value }, tolerance, outMatched ) == false )
+                {
+                    outError = step.describe() + ": value '" + value + "' is not a " + info.getTypeName() + " (enum variables take the number)";
                     return false;
                 }
                 return true;
+            }
+
+            /** @brief `ExpectVariable` 입니다. 변수가 등록돼 있고, `value` 가 그 타입으로 읽히며, `tolerance`(0 이상)는 실수 변수에만 붙습니다. */
+            static bool validateExpectVariable( const AutomationStep& step, string& outError )
+            {
+                if ( step.hasOnlyAttributes( { "name", "value", "tolerance" }, outError ) == false )
+                    return false;
+                const GlobalVariableInfo* pInfo    = findRequiredVariable( step, outError );
+                bool                      bMatched = false;
+                return pInfo != nullptr && evaluateExpectVariable( step, *pInfo, bMatched, outError );
             }
 
             /** @brief 탐침 이름과 그 탐침이 꼭 받아야 하는 `target` · `key` 를 봅니다. */
@@ -736,6 +817,26 @@ namespace sw
             return true;
         }
 
+        static bool runExpectVariable( AutomationRunner& runner, const AutomationStep& step )
+        {
+            const string&             name  = *step.findAttribute( "name" );
+            const string&             value = *step.findAttribute( "value" );
+            const GlobalVariableInfo* pInfo = engine::getSubsystem<GlobalVariableManager>().findVariable( name );
+            if ( pInfo == nullptr )
+            {
+                runner.recordFailure( step, name + " is no longer registered" ); // 검사 뒤에 모듈이 언로드됐다(핫 리로드)
+                return true;
+            }
+            bool   bMatched = false;
+            string error;
+            if ( AutomationRunnerInternal::evaluateExpectVariable( step, *pInfo, bMatched, error ) == false ) // 변수가 다른 타입으로 다시 등록됐다(핫 리로드)
+                runner.recordFailure( step, error );
+            else if ( bMatched == false )
+                runner.recordFailure( step, name + " is '" + pInfo->getValueAsString() + "', expected '" + value + "'" +
+                                                ( step.findAttribute( "tolerance" ) != nullptr ? " (tolerance " + *step.findAttribute( "tolerance" ) + ")" : string() ) );
+            return true;
+        }
+
         static bool runExpect( AutomationRunner& runner, const AutomationStep& step )
         {
             runner.runExpect( step );
@@ -874,6 +975,7 @@ namespace sw
                                    nullptr, false );
     SW_AUTOMATION_STEP_WITH_HOOKS( runnerText, "Text", nullptr, &AutomationRunnerInternal::validateText, &AutomationRunnerEngineSteps::prepareText, nullptr, false );
     SW_AUTOMATION_STEP( runnerVariable, "Variable", &AutomationRunnerEngineSteps::runVariable, &AutomationRunnerInternal::validateVariable, false );
+    SW_AUTOMATION_STEP( runnerExpectVariable, "ExpectVariable", &AutomationRunnerEngineSteps::runExpectVariable, &AutomationRunnerInternal::validateExpectVariable, false );
     SW_AUTOMATION_STEP( runnerExpect, "Expect", &AutomationRunnerEngineSteps::runExpect, &AutomationRunnerInternal::validateExpect, false );
     SW_AUTOMATION_STEP_WITH_HOOKS( runnerWaitUntil, "WaitUntil", nullptr, &AutomationRunnerInternal::validateWaitUntil, &AutomationRunnerEngineSteps::prepareWaitUntil,
                                    &AutomationRunnerEngineSteps::holdWaitUntil, false );

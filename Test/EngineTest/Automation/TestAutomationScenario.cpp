@@ -265,6 +265,79 @@ SW_TEST_CASE( AutomationScenarioTest, UnknownStepOrAttributeIsALoadError )
 }
 
 /**
+ * @brief [AutomationScenarioTest] ExpectVariable 은 전역 변수 값을 타입대로 견주고(실수는 tolerance), 틀린 값은 실패, 없는 변수 · 모르는 속성 · 타입에 안 맞는 값은 읽기 오류다
+ * @details 테스트용 변수 `gv_testBool` · `gv_testInt` · `gv_testFloat` · `gv_testString`(TestGlobalVariableMacro.cpp)의 값을 바꿔 쓰고 끝에 되돌린다.
+ */
+SW_TEST_CASE( AutomationScenarioTest, ExpectVariableComparesGlobalVariables )
+{
+    using Internal                       = TestAutomationScenarioInternal;
+    sw::GlobalVariableManager& variables = sw::engine::getSubsystem<sw::GlobalVariableManager>();
+    sw::GlobalVariableInfo*    pBool     = variables.findVariable( "gv_testBool" );
+    sw::GlobalVariableInfo*    pInt      = variables.findVariable( "gv_testInt" );
+    sw::GlobalVariableInfo*    pFloat    = variables.findVariable( "gv_testFloat" );
+    sw::GlobalVariableInfo*    pString   = variables.findVariable( "gv_testString" );
+    SW_ASSERT_NOT_NULL( pBool );
+    SW_ASSERT_NOT_NULL( pInt );
+    SW_ASSERT_NOT_NULL( pFloat );
+    SW_ASSERT_NOT_NULL( pString );
+    const sw::string oldBool   = pBool->getValueAsString();
+    const sw::string oldInt    = pInt->getValueAsString();
+    const sw::string oldFloat  = pFloat->getValueAsString();
+    const sw::string oldString = pString->getValueAsString();
+    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [oldBool, oldInt, oldFloat, oldString]()
+    {
+        sw::GlobalVariableManager& manager = sw::engine::getSubsystem<sw::GlobalVariableManager>();
+        (void)manager.setValueFromString( "gv_testBool", oldBool );
+        (void)manager.setValueFromString( "gv_testInt", oldInt );
+        (void)manager.setValueFromString( "gv_testFloat", oldFloat );
+        (void)manager.setValueFromString( "gv_testString", oldString );
+    } ) );
+    SW_ASSERT_TRUE( pBool->setValueAsBool( true ) );
+    SW_ASSERT_TRUE( pInt->setValueAsInt( 60 ) );
+    SW_ASSERT_TRUE( pFloat->setValueAsFloat( 80.0f ) );
+    SW_ASSERT_TRUE( pString->setValueAsString( "abc" ) );
+
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    const auto makeScenario = []( const utf8* pSteps )
+    { return sw::string( R"(<Scenario name="t" startAfter="Immediately"><At frame="1">)" ) + pSteps + "<Pass/></At></Scenario>"; };
+    {
+        sw::AutomationRunner runner;
+        SW_ASSERT_TRUE( runner.startFromText( makeScenario( R"(<ExpectVariable name="gv_testFloat" value="80"/><ExpectVariable name="gv_testFloat" value="80.4" tolerance="0.5"/>
+            <ExpectVariable name="gv_testInt" value="60"/><ExpectVariable name="gv_testBool" value="true"/><ExpectVariable name="gv_testString" value="abc"/>)" ) ) );
+        SW_EXPECT_TRUE_MSG( Internal::run( runner, input, 10 ) == sw::AutomationResult::Passed, runner.getFinishReason().c_str() );
+    }
+    {
+        sw::AutomationRunner runner;
+        SW_ASSERT_TRUE( runner.startFromText( makeScenario( R"(<ExpectVariable name="gv_testFloat" value="70"/><ExpectVariable name="gv_testFloat" value="80.7" tolerance="0.5"/>
+            <ExpectVariable name="gv_testInt" value="61"/><ExpectVariable name="gv_testBool" value="false"/><ExpectVariable name="gv_testString" value="abd"/>)" ) ) );
+        SW_TEST_DEFENSIVE_SCOPE( "a scenario that expects wrong variable values fails" );
+        SW_EXPECT_TRUE( Internal::run( runner, input, 10 ) == sw::AutomationResult::Failed );
+        SW_ASSERT_EQUAL( 5u, static_cast<uint32>( runner.getFailures().size() ) );
+        SW_EXPECT_TRUE_MSG( runner.getFailures()[0].find( "gv_testFloat is '" ) != sw::string::npos && runner.getFailures()[0].find( "expected '70'" ) != sw::string::npos,
+                            runner.getFailures()[0].c_str() );
+    }
+    static constexpr const utf8* kArrBadStep[] = {
+        R"(<ExpectVariable name="gv_noSuchVariable" value="1"/>)",
+        R"(<ExpectVariable name="gv_testInt"/>)",
+        R"(<ExpectVariable name="gv_testInt" value="60" extra="1"/>)",
+        R"(<ExpectVariable name="gv_testInt" value="sixty"/>)",
+        R"(<ExpectVariable name="gv_testBool" value="maybe"/>)",
+        R"(<ExpectVariable name="gv_testInt" value="60" tolerance="1"/>)",
+        R"(<ExpectVariable name="gv_testFloat" value="80" tolerance="-1"/>)",
+        R"(<ExpectVariable name="gv_testFloat" value="80" tolerance="wide"/>)",
+    };
+    SW_TEST_DEFENSIVE_SCOPE( "bad ExpectVariable steps are reported as load errors" );
+    for ( const utf8* pStep : kArrBadStep )
+    {
+        sw::AutomationRunner runner;
+        SW_ASSERT_TRUE( runner.startFromText( makeScenario( pStep ) ) );
+        SW_EXPECT_TRUE_MSG( Internal::run( runner, input, 10 ) == sw::AutomationResult::LoadError, pStep );
+    }
+    input.shutdown();
+}
+
+/**
  * @brief [AutomationScenarioTest] 루트 editor 속성은 에디터 실행이 필요한 시나리오를 표시한다 — 적지 않으면 false, true · false 만 받는다
  * @details AppScenarioTest 가 이 값으로 게임 팩 시나리오에 -EnableEditor 를 붙인다. 틀린 값("yes")은 위 읽기 오류 목록이 본다.
  */
@@ -630,7 +703,7 @@ SW_TEST_CASE( AutomationScenarioTest, EngineStepsAreRegistered )
         SW_ASSERT_NOT_NULL( pRegistration );
         SW_EXPECT_TRUE( pRegistration->_pRun == nullptr && pRegistration->_pPrepare != nullptr && pRegistration->_pValidate != nullptr );
     }
-    static constexpr const utf8* kArrRunKind[] = { "Variable", "Expect", "ExpectLog", "Screenshot", "ExpectImage", "CloseWindow", "ExpectExitWithin", "Pass", "Fail", "Skip" };
+    static constexpr const utf8* kArrRunKind[] = { "Variable", "ExpectVariable", "Expect", "ExpectLog", "Screenshot", "ExpectImage", "CloseWindow", "ExpectExitWithin", "Pass", "Fail", "Skip" };
     for ( const utf8* pKind : kArrRunKind )
     {
         const sw::AutomationStepRegistration* pRegistration = sw::AutomationStepRegistry::find( pKind );
