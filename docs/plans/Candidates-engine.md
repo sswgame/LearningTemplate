@@ -131,13 +131,6 @@
 남은 것: 경계를 형식으로 표현할 방법을 찾습니다. 경계는 "런타임 읽기만 배포에서 막는다"입니다.
 함정: `DiskFilePath` 형식으로 막는 안은 하지 않았습니다 — Shipping App 이 쿠킹 호스트라 디스크 입구를 컴파일에서 뺄 수는 없습니다.
 
-### InternalErasureRemaining
-제목: `Internal` 소거의 남은 것
-옛번호: C-72
-왜 필요한가: 병합 때 작업자끼리 겹친 익명 함수 이름이 한 건 났습니다(`makeRandomSeed`).
-남은 것: `-DSW_ENABLE_UNITY_BUILD` 로 익명 함수 이름 충돌을 한 번 봅니다.
-함정: `DuplicateAnonymousFunction` 은 `Source/` 만 보므로 `Test/` 는 직접 확인합니다.
-
 ## 기능
 
 ### NavMeshExtensions
