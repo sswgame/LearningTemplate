@@ -102,6 +102,7 @@ namespace sw
         , _mapLayoutMaterialFallback{}
         , _transparentRankPlaceholder{}
         , _psoCache{}
+        , _pPSOCache{ &_psoCache }
         , _outputRenderTarget{ 0 }
         , _capture{ _pDevice, _mainView._transientPool, _pipelineResource }
         , _canvasRenderer{}
@@ -119,6 +120,7 @@ namespace sw
         , _lastRenderedExtraViewCount{ 0 }
         , _directOutputWidth{ 0 }
         , _directOutputHeight{ 0 }
+        , _scenePreviewRendererCount{ 0 }
         , _bGPUCullingActive{ SW_FALSE }
         , _status{ FrameRendererStatus::Uninitialized }
         , _bCallbacksBound{ SW_FALSE }
@@ -240,12 +242,14 @@ namespace sw
         // 스냅샷이 가진 머티리얼과 인스턴스의 소유권을 **디바이스가 살아 있을 때** 해제한다. 스냅샷은 소유권을 함께
         // 싣고 있으므로(GPUScene.h) 여기서 비우지 않으면 렌더러가 소멸할 때까지 그것들이 살아 있어, 디바이스가 먼저
         // 사라진 뒤 소멸자가 사라진 디바이스에 GPU 자원을 반환하려 한다(해제 후 사용).
-        // 미리보기 씬 렌더러도 같은 디바이스의 자원을 든다 — 디바이스가 살아 있을 때 먼저 내린다.
+        // 미리보기 씬 렌더러도 같은 디바이스의 자원을 든다 — 디바이스가 살아 있을 때 먼저 내린다. 그 렌더러들은 이 렌더러의 PSO 캐시를 빌려 쓰므로
+        // 캐시를 놓는 `releasePassResources` 보다 먼저여야 한다.
         for ( ScenePreviewRenderer& preview : _listScenePreviewRenderer )
         {
             preview._renderer->shutdown();
         }
         _listScenePreviewRenderer.clear();
+        _scenePreviewRendererCount.store( 0 );
         _graph.releaseCommandLists();
         if ( _pDevice != nullptr )
             _gpuScene.releaseGPU( _pDevice );
@@ -426,7 +430,7 @@ namespace sw
         dispatchMeshSkin();
         dispatchCullAndSort( animationInstanceCount );
         // 월드 공간 UI 의 렌더 텍스처다. 장면 뷰가 그 텍스처를 읽기 전에 먼저 제출하는 프리패스 리스트(같은 큐)로 그린다.
-        _canvasRenderer.drawTargets( *_pCmd, *pDevice, _canvasFrame, _psoCache, getEnginePSO( RenderPassType::Canvas ) );
+        _canvasRenderer.drawTargets( *_pCmd, *pDevice, _canvasFrame, *_pPSOCache, getEnginePSO( RenderPassType::Canvas ) );
 
 #if SW_PROFILE_COMPILED
         if ( bWriteGPUTime )

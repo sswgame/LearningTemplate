@@ -41,13 +41,15 @@ namespace sw
 
         // 엔진 PSO 는 패스 종류의 표(RenderPassTypeInfo)를 enum 순서로 훑어 만든다. 셰이더 경로는 파이프라인 XML 패스 설정이 먼저이고
         // 표의 EngineDefaultAssets 경로는 마지막 폴백일 뿐이다. 셰이더 쿠커가 같은 표를 훑는다.
+        // 캐시에 이미 있는 패스는 만들지 않는다 — 미리보기 씬 렌더러는 주 렌더러의 캐시를 함께 쓰고(`_pPSOCache`), 주 렌더러가 같은 파이프라인으로 먼저 만들었다.
         const EngineDefaultAssets& engineDefaultAssets = engine::getSubsystem<EngineDefaultAssets>();
         const RHICapabilities      caps                = _pDevice->getCapabilities();
         for ( uint32 typeIndex = 0; typeIndex < kRenderPassTypeCount; ++typeIndex )
         {
             const RenderPassType      passType = static_cast<RenderPassType>( typeIndex );
             const RenderPassTypeInfo& info     = getRenderPassTypeInfo( passType );
-            if ( info._pDefaultShader == nullptr )
+            const bool                bMissing = info._pDefaultShader != nullptr && _pPSOCache->findEnginePSO( passType ) == 0;
+            if ( bMissing == false )
                 continue;
 
             RHIPipelineStateHandle pso{ 0 };
@@ -64,7 +66,7 @@ namespace sw
                 pso = createPSOForPassType( passType );
             }
             if ( pso != 0 )
-                _psoCache.setEnginePSO( passType, pso );
+                _pPSOCache->setEnginePSO( passType, pso );
         }
 
         // 씬 메시는 **인다이렉트 드로우 하나로만** 그린다(컬링 · 정렬 · 인스턴스 애니메이션이 모두 그 경로에 붙어 있다).
@@ -117,7 +119,9 @@ namespace sw
             _graph.releaseCommandLists();
 
         // PSO 는 캐시가 순서대로 놓는다: 변형(소유한 것만) → 패스 → Present → 레이아웃 표.
-        _psoCache.releaseAll( _pDevice );
+        // 빌려 쓰는 캐시(미리보기 씬 렌더러의 `_pPSOCache`)는 소유자인 주 렌더러가 놓는다 — 다른 미리보기 창과 주 시점이 아직 그 PSO 로 그린다.
+        if ( _pPSOCache == &_psoCache )
+            _pPSOCache->releaseAll( _pDevice );
 
         _gpuScene.releaseGPU( _pDevice );
         // 캔버스의 아틀라스 텍스처 · 사각형 버퍼도 이 디바이스의 것이다(거울은 남아 다음 프레임에 다시 올린다).
@@ -179,16 +183,16 @@ namespace sw
 
     RHIPipelineStateHandle FrameRenderer::getEnginePSO( RenderPassType passType ) const
     {
-        return _psoCache.findEnginePSO( passType );
+        return _pPSOCache->findEnginePSO( passType );
     }
 
     RHIPipelineStateHandle FrameRenderer::findPassPSO( RenderPassType passType ) const
     {
-        const RHIPipelineStateHandle pso = _psoCache.findEnginePSO( passType );
+        const RHIPipelineStateHandle pso = _pPSOCache->findEnginePSO( passType );
         if ( pso != 0 )
             return pso;
         const RenderPassType fallbackType = getRenderPassTypeInfo( passType )._psoFallbackType;
-        return fallbackType != RenderPassType::Invalid ? _psoCache.findEnginePSO( fallbackType ) : 0;
+        return fallbackType != RenderPassType::Invalid ? _pPSOCache->findEnginePSO( fallbackType ) : 0;
     }
 
     void FrameRenderer::ensureMaterialFallbackBuffers()
@@ -199,7 +203,7 @@ namespace sw
         // 등록된 PSO 레이아웃마다 머티리얼 폴백 원소를 만든다. stride 와 텍스처 인덱스 필드 위치는 셰이더 타입마다 다를 수 있고, 레이아웃은
         // 이 디바이스의 백엔드로 빌드된 것이다(SPIR-V 도 지금은 `-fvk-use-dx-layout` 으로 DX 규칙을 따른다). 내용이 같은 원소는 버퍼 하나를 나눠 쓴다.
         vector<RenderPSOCache::RegisteredLayout> listLayout;
-        _psoCache.collectLayouts( listLayout );
+        _pPSOCache->collectLayouts( listLayout );
         for ( const RenderPSOCache::RegisteredLayout& registered : listLayout )
         {
             const RHIPipelineStateHandle     pso     = registered._pso;
@@ -259,12 +263,12 @@ namespace sw
             for ( const RHIFormat format : arrTargetFormat )
             {
                 RHIPipelineStateHandle existing{ 0 };
-                if ( format == RHIFormat::Unknown || _psoCache.findOutputPSO( passType, format, existing ) )
+                if ( format == RHIFormat::Unknown || _pPSOCache->findOutputPSO( passType, format, existing ) )
                     continue;
                 const RHIFormat              arrRtvFormat[] = { format };
                 const RHIPipelineStateHandle pso            = createPSOForPassType( passType, arrRtvFormat );
                 // 실패해도 기록한다. 0 이면 부르는 쪽이 폴백으로 간다(Present 는 blit, Canvas 는 그리지 않는다).
-                _psoCache.setOutputPSO( passType, format, pso );
+                _pPSOCache->setOutputPSO( passType, format, pso );
             }
         }
     }
@@ -278,7 +282,7 @@ namespace sw
         if ( targetFormat == RHIFormat::Unknown )
             return getEnginePSO( passType );
         RHIPipelineStateHandle pso{ 0 };
-        if ( _psoCache.findOutputPSO( passType, targetFormat, pso ) )
+        if ( _pPSOCache->findOutputPSO( passType, targetFormat, pso ) )
             return pso;
 
         if ( _bOutputPSOMissingLogged.exchange( 1 ) == 0 )

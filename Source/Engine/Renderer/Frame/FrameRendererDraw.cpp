@@ -29,7 +29,7 @@ namespace sw
             return;
         // gv_rhiBackend(전역) 대신 이 FrameRenderer 가 실제로 물려 있는 디바이스의 백엔드를 넘긴다.
         // 한 프로세스에 여러 IRHIDevice 가 동시에 있으면 전역값이 어긋날 수 있다.
-        _psoCache.registerLayout( pso, desc, _pDevice->getBackendType() );
+        _pPSOCache->registerLayout( pso, desc, _pDevice->getBackendType() );
     }
 
     void FrameRenderer::onShaderRecompiled( string_view shaderPath, const ShaderCompileResult& result )
@@ -37,12 +37,9 @@ namespace sw
         if ( result._bSuccess == false || _pDevice == nullptr )
             return;
 
-        // 미리보기 씬 렌더러도 같은 셰이더로 PSO 를 만들었다.
-        for ( ScenePreviewRenderer& preview : _listScenePreviewRenderer )
-        {
-            preview._renderer->onShaderRecompiled( shaderPath, result );
-        }
-        _psoCache.invalidateLayoutsByShaderPath( shaderPath );
+        // 빌려 쓰는 캐시(미리보기 씬 렌더러)는 소유자인 주 렌더러가 이미 무효화하고 다시 채웠다.
+        if ( _pPSOCache == &_psoCache )
+            _pPSOCache->invalidateLayoutsByShaderPath( shaderPath );
 
         // **PSO 를 실제로 다시 만든다.** 주의: 바인딩 레이아웃만 새로 만들면 PSO 는 바이트코드를 박아 넣은
         // 객체라 화면이 시작 때 컴파일된 셰이더 그대로다.
@@ -54,11 +51,18 @@ namespace sw
         ensurePassResources();
         ensureTransientResources();
         bindPassCallbacks();
+
+        // 미리보기 씬 렌더러는 주 렌더러의 PSO 캐시를 함께 쓴다. 주 렌더러가 캐시를 다시 채운 **뒤에** 자기 몫(레이아웃을 가리키는 폴백 버퍼 표,
+        // 바인딩 캐시, 패스 콜백)을 다시 만들어야 새 PSO 를 집는다.
+        for ( ScenePreviewRenderer& preview : _listScenePreviewRenderer )
+        {
+            preview._renderer->onShaderRecompiled( shaderPath, result );
+        }
     }
 
     const ShaderBindingLayout* FrameRenderer::layoutForPSO( RHIPipelineStateHandle pso ) const
     {
-        return _psoCache.findLayout( pso );
+        return _pPSOCache->findLayout( pso );
     }
 
     void FrameRenderer::registerInstanceBuffer( FramePassContext& context )

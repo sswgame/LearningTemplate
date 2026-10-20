@@ -151,8 +151,11 @@ namespace sw
         bool executeScenePreviewPacket( IRHIDevice* pDevice, RenderFramePacket& packet );
         /** @brief @p mainPacket 의 미리보기 목록에 없는 씬의 렌더러를 내립니다(창을 닫았거나 가렸다). 미리보기 패킷을 다 그린 뒤 부릅니다. */
         void retireScenePreviews( const RenderFramePacket& mainPacket );
-        /** @brief 지금 살아 있는 미리보기 씬 렌더러 수입니다(진단과 테스트용). */
-        uint32 getScenePreviewRendererCount() const { return static_cast<uint32>( _listScenePreviewRenderer.size() ); }
+        /**
+         * @brief 지금 살아 있는 미리보기 씬 렌더러 수입니다(진단, 테스트, 자동화 탐침 `Editor.ScenePreviewRenderers`).
+         * @details 렌더 스레드가 렌더러를 세우고 내릴 때 공개하는 값이라 어느 스레드에서 읽어도 된다. 창을 닫으면 다음 렌더 프레임에 줄어든다(`retireScenePreviews`).
+         */
+        uint32 getScenePreviewRendererCount() const { return _scenePreviewRendererCount.load(); }
 
         // ------------------------------------------------------------------------------
         // 3) 조회
@@ -877,12 +880,20 @@ namespace sw
             RHIStructuredBufferSlot _buffer;
         };
         vector<MaterialFallback> _listMaterialFallback;
-        /// @brief 바인딩 레이아웃 → `_listMaterialFallback` 순번입니다. 레이아웃은 `_psoCache` 가 소유하며 PSO 마다 하나입니다.
+        /// @brief 바인딩 레이아웃 → `_listMaterialFallback` 순번입니다. 레이아웃은 `_pPSOCache` 가 소유하며 PSO 마다 하나입니다.
         unordered_map<const ShaderBindingLayout*, uint32> _mapLayoutMaterialFallback;
         /// @brief 순번 테이블이 없는 뷰(주 시점, 그림자)의 정렬 디스패치가 t2 에 바인딩하는 원소 하나짜리 자리 표시 버퍼입니다. 셰이더는 플래그(`g_UseViewRank`)가 0 이면 읽지 않습니다.
         RHIStructuredBufferSlot _transparentRankPlaceholder;
-        /// @brief 엔진 패스 PSO, Present PSO, 머티리얼 변형과 그 바인딩 레이아웃입니다. 소유와 해제 순서는 캐시가 관리합니다.
-        RenderPSOCache                       _psoCache;
+        /// @brief 이 렌더러가 소유하는 PSO 저장소입니다(엔진 패스 PSO, Present PSO, 머티리얼 변형과 그 바인딩 레이아웃). 소유와 해제 순서는 캐시가 관리합니다.
+        ///        미리보기 씬 렌더러는 이것을 비워 둔다 — `_pPSOCache` 가 주 렌더러의 것을 가리킨다.
+        RenderPSOCache _psoCache;
+        /**
+         * @brief 이 렌더러가 PSO 를 찾고 넣는 저장소입니다. 주 렌더러는 자기 `_psoCache`, 미리보기 씬 렌더러는 주 렌더러의 것입니다(`executeScenePreviewPacket` 이 만들 때 건다).
+         * @details 미리보기 씬은 주 렌더러와 같은 디바이스 · 파이프라인 XML 로 그리므로 PSO 가 같다. 나눠 두면 창을 열 때마다(닫으면 렌더러를 내리므로 다시 열 때마다)
+         *          엔진 PSO 를 모두 다시 만들어 첫 프레임이 끊기고, 같은 PSO 가 창 수만큼 메모리에 남는다(다중 월드 결정 2). 해제는 소유자만 한다(`releasePassResources`).
+         *          미리보기 렌더러는 주 렌더러보다 먼저 내려가고(`shutdown`), 렌더 스레드에서 주 렌더러와 차례로 기록하므로 캐시를 동시에 고치지 않는다.
+         */
+        RenderPSOCache*                      _pPSOCache;
         unordered_map<hashed_string, uint32> _mapPassNameToIndex;
         RHITextureHandle                     _outputRenderTarget;
         /// @brief 캡처 · 되읽기입니다. Present 결과 텍스처(`-gv_screenshot`, 크기는 주 출력)를 소유하고 `_pDevice` · 주 시점 풀 · 파이프라인을 빌려 씁니다(그래서 그 셋보다 뒤에 선언한다).
@@ -924,6 +935,8 @@ namespace sw
         /// @brief 씬 직접 경로의 출력 크기(`setOutputSizeOverride`)입니다. 0이면 백버퍼 크기를 씁니다.
         uint32 _directOutputWidth;
         uint32 _directOutputHeight;
+        /// @brief `_listScenePreviewRenderer` 의 크기를 렌더 스레드가 공개한 값입니다. 다른 스레드(자동화 탐침)는 목록 대신 이것을 읽습니다.
+        atomic<uint32> _scenePreviewRendererCount;
         /**
          * @brief 이번 프레임에 컬링 컴퓨트가 실제로 돌았는지 여부입니다. 가시 목록이 유효한지를 나타냅니다.
          * @details 드로우가 가시 목록을 바인딩할지 정하는 값이다. 목록을 바인딩했는데 컬링이 돌지 않았다면 셰이더가
