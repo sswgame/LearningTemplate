@@ -30,8 +30,13 @@ namespace sw
         {
             case AdminMethod::kLookupAccount:
             case AdminMethod::kListAudit:
+            case AdminMethod::kListReports:
             {
                 return AdminRole::Viewer;
+            }
+            case AdminMethod::kResolveReport:
+            {
+                return AdminRole::Support;
             }
             case AdminMethod::kSetSanction:
             {
