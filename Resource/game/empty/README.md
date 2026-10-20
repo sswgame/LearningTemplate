@@ -13,6 +13,15 @@
 | `maps/destructionshowcase.scene.xml` | 파괴 | Destruction |
 | `maps/gimmickshowcase.scene.xml` | 발판, 횃불, 스프링 같은 기믹 | Gimmick |
 | `maps/spriteui.scene.xml` | 머리 위 HP 바 같은 월드 UI | GameFramework |
+| `maps/clothshowcase.scene.xml` | 천(`ClothComponent`) — 윗변 고정 커튼이 정적 구에 걸치고, 양 끝 고정 깃발이 처진다 | 아래 |
+
+## 천 쇼케이스
+
+```powershell
+build/Ninja-Shipping/Bin/App.exe -dx12 "-gv_firstScene=game/empty/maps/clothshowcase.scene.xml" -gv_screenshot=cloth.ppm -gv_screenshotFrame=180
+```
+
+천은 물리 프레임마다 같은 오브젝트의 `MeshComponent` 에 양면 동적 메시를 건다. 앞면 · 뒷면이 모두 보이는지(감김), 접힌 곳의 음영이 매끄러운지(노멀)를 본다.
 
 ## 환경 쇼케이스
 
