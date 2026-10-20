@@ -162,7 +162,7 @@ namespace sw
                     // 자식이 없으면 false 다 — 빈 컨테이너라 볼 것이 없다.
                     (void)_backend.iterateChildren( SW_DELEGATE_LAMBDA( XMLChildVisitDelegate, [&]( string_view tagName )
                     {
-                        if ( total == ContainerReadResult::StreamBroken )
+                        if ( ContainerVisitor::stopsReading( total ) )
                             return;
                         _currentTagName = tagName;
                         total           = ContainerVisitor::mergeResult( total, visit( elementIndex++ ) );
@@ -197,20 +197,20 @@ namespace sw
                         }
                         return ContainerReadResult::Read;
                     }
-                    // 원소 안의 못 읽은 칸 — orphan 목록이 있으면 거기 남고 Read, 엄격 읽기면 FieldFailed 다.
-                    return toResult( readNestedXMLIntoInstance( pObject, *pType, _backend, _context, _pOutListOrphan ) );
+                    // 원소 안의 못 읽은 칸 — orphan 목록이 있으면 거기 남고 Read, 엄격 읽기면 FieldFailed 다. 금지된 필드는 ObjectRejected 로 올라간다.
+                    return ContainerVisitor::toElementResult( readNestedXMLIntoInstance( pObject, *pType, _backend, _context, _pOutListOrphan ) );
                 }
 
                 ContainerReadResult readValueObject( void* pValue, const hashed_string&, const TypeInfo& typeInfo, const ContainerSlot slot ) override
                 {
                     if ( slot == ContainerSlot::SequenceElement )
-                        return toResult( readNestedXMLIntoInstance( pValue, typeInfo, _backend, _context, _pOutListOrphan ) );
+                        return ContainerVisitor::toElementResult( readNestedXMLIntoInstance( pValue, typeInfo, _backend, _context, _pOutListOrphan ) );
                     // 맵 값의 구조체는 `<entry>` 안의 `<TypeName>` 자식이다. 자식이 없으면 기본값 그대로 넣는다.
                     if ( _backend.pushFirstChild() == false )
                         return ContainerReadResult::Read;
-                    const bool bRead = readNestedXMLIntoInstance( pValue, typeInfo, _backend, _context, _pOutListOrphan );
+                    const FieldReadResult entryResult = readNestedXMLIntoInstance( pValue, typeInfo, _backend, _context, _pOutListOrphan );
                     _backend.popChild();
-                    return toResult( bRead );
+                    return ContainerVisitor::toElementResult( entryResult );
                 }
 
                 // 시퀀스 원소는 `<item>` 의 글, 맵 값은 `<entry>` 의 글이다 — 둘 다 지금 노드의 글이다.
@@ -231,8 +231,6 @@ namespace sw
                 }
 
             private:
-                static ContainerReadResult toResult( const bool bRead ) { return bRead ? ContainerReadResult::Read : ContainerReadResult::FieldFailed; }
-
                 /** @brief 글 하나를 값으로 읽습니다. 못 읽으면 그 글을 orphan 으로 남기고 FieldFailed 입니다(조용히 버리지 않는다). */
                 ContainerReadResult readText( void* pValue, const hashed_string& typeName, const string& text ) const
                 {
@@ -321,13 +319,13 @@ namespace sw
              * @details 루트 원소는 `deserializeSoft` 가 따로 훑는다. 안쪽 원소의 모르는 이름은 타입 이름을 붙여 적는다(`SpriteComponent._clipPth`) —
              *          로드가 끝난 뒤 `runSchemaMigrateStep` 이 루트 타입 이름과 함께 경고한다.
              */
-            [[nodiscard]] static bool readNestedXMLIntoInstance( void* pInstance, const TypeInfo& typeInfo, IXMLBackend& backend, const SerializeContext& context,
-                                                                 vector<SchemaOrphanValue>* pOutListOrphan )
+            [[nodiscard]] static FieldReadResult readNestedXMLIntoInstance( void* pInstance, const TypeInfo& typeInfo, IXMLBackend& backend, const SerializeContext& context,
+                                                                            vector<SchemaOrphanValue>* pOutListOrphan )
             {
-                const bool bRead = readXMLIntoInstance( pInstance, typeInfo, backend, context, pOutListOrphan );
+                const FieldReadResult fieldsResult = readXMLIntoInstance( pInstance, typeInfo, backend, context, pOutListOrphan );
                 if ( pOutListOrphan != nullptr )
                     appendUnknownXMLChildOrphans( backend.getCurrentNode(), typeInfo, backend.ignoresCaseKeys(), pOutListOrphan, typeInfo._name.c_str() );
-                return bRead;
+                return fieldsResult;
             }
 
             /**
@@ -352,8 +350,13 @@ namespace sw
                 return true;
             }
 
-            [[nodiscard]] static bool readXMLIntoInstance( void* pInstance, const TypeInfo& typeInfo, IXMLBackend& backend, const SerializeContext& context,
-                                                           vector<SchemaOrphanValue>* pOutListOrphan )
+            /**
+             * @brief 지금 원소에서 @p typeInfo 의 필드를 읽습니다.
+             * @return 금지된 필드가 있거나 되돌리지 못하면 ObjectRejected, 엄격 읽기(orphan 목록 없음)에서 읽지 못한 필드가 있으면 FieldFailed 입니다.
+             *         소프트 읽기는 읽지 못한 필드를 orphan 으로 넘기고 Read 입니다.
+             */
+            [[nodiscard]] static FieldReadResult readXMLIntoInstance( void* pInstance, const TypeInfo& typeInfo, IXMLBackend& backend, const SerializeContext& context,
+                                                                      vector<SchemaOrphanValue>* pOutListOrphan )
             {
                 bool bFieldError{ false };
                 bool bForbiddenField{ false };
@@ -395,13 +398,29 @@ namespace sw
                             }
                             else
                             {
-                                const size_t    orphanCountBefore = bContinuesAfterUnreadable ? pOutListOrphan->size() : 0;
-                                ContainerReader reader( backend, context, pOutListOrphan, prop );
-                                if ( ContainerVisitor::read( pPropPtr, prop.getContainerShape(), reader, context ) != ContainerReadResult::Read )
+                                const size_t          orphanCountBefore = bContinuesAfterUnreadable ? pOutListOrphan->size() : 0;
+                                ContainerReader       reader( backend, context, pOutListOrphan, prop );
+                                const FieldReadResult containerResult = ContainerVisitor::toFieldResult( ContainerVisitor::read( pPropPtr, prop.getContainerShape(), reader, context ) );
+                                switch ( containerResult )
                                 {
-                                    bFieldError = true;
-                                    if ( bContinuesAfterUnreadable )
-                                        bObjectFailed = restoreContainerField( rollback, prop, pInstance, backend, context, orphanCountBefore, *pOutListOrphan ) == false;
+                                    case FieldReadResult::Read:
+                                    {
+                                        break;
+                                    }
+                                    case FieldReadResult::FieldFailed:
+                                    {
+                                        bFieldError = true;
+                                        if ( bContinuesAfterUnreadable )
+                                            bObjectFailed = restoreContainerField( rollback, prop, pInstance, backend, context, orphanCountBefore, *pOutListOrphan ) == false;
+                                        break;
+                                    }
+                                    case FieldReadResult::ObjectRejected:
+                                    {
+                                        // 원소 안의 금지된 필드 · 되돌리지 못한 필드다. 칸을 되돌려 orphan 으로 넘기지 않고 객체째 실패한다.
+                                        bFieldError   = true;
+                                        bObjectFailed = true;
+                                        break;
+                                    }
                                 }
                             }
                             backend.popChild();
@@ -420,11 +439,25 @@ namespace sw
                             } );
                             if ( entered )
                             {
-                                // 소프트 읽기의 안쪽 실패는 안쪽 필드가 이미 되돌렸다. 안쪽이 false 이면 금지된 필드이거나 되돌리지 못한 것이라 객체째 실패다.
-                                if ( readNestedXMLIntoInstance( pPropPtr, *pNestedType, backend, context, pOutListOrphan ) == false )
+                                // 소프트 읽기의 안쪽 실패는 안쪽 필드가 이미 되돌렸으므로 FieldFailed 는 엄격 읽기에서만 온다.
+                                const FieldReadResult nestedResult = readNestedXMLIntoInstance( pPropPtr, *pNestedType, backend, context, pOutListOrphan );
+                                switch ( nestedResult )
                                 {
-                                    bFieldError   = true;
-                                    bObjectFailed = bContinuesAfterUnreadable;
+                                    case FieldReadResult::Read:
+                                    {
+                                        break;
+                                    }
+                                    case FieldReadResult::FieldFailed:
+                                    {
+                                        bFieldError = true;
+                                        break;
+                                    }
+                                    case FieldReadResult::ObjectRejected:
+                                    {
+                                        bFieldError   = true;
+                                        bObjectFailed = true;
+                                        break;
+                                    }
                                 }
                                 backend.popChild();
                             }
@@ -462,12 +495,12 @@ namespace sw
                     }
                 }, true /* 상속 PROPERTY 포함 */ );
 
-                // 금지된 필드는 소프트 읽기(orphan 목록)에서도 실패다 — orphan 으로 넘기면 경고 한 줄로 사라진다.
+                // 금지된 필드는 소프트 읽기(orphan 목록)에서도 실패다 — orphan 으로 넘기면 경고 한 줄로 사라진다. 바깥 칸도 이것을 칸 실패로 낮추지 않는다.
                 if ( bForbiddenField || bObjectFailed )
-                    return false;
+                    return FieldReadResult::ObjectRejected;
                 if ( pOutListOrphan != nullptr )
-                    return true;
-                return bFieldError == false;
+                    return FieldReadResult::Read;
+                return bFieldError ? FieldReadResult::FieldFailed : FieldReadResult::Read;
             }
 
             /** @brief 지금 원소에 프로퍼티 @p prop 의 속성이나 자식(지금 이름 또는 옛 이름)이 있으면 true 입니다. 읽는 위치는 그대로입니다. */
@@ -837,7 +870,7 @@ namespace sw
         if ( backend.initializeXMLDeserialization( xmlStr, typeInfo._name.c_str() ) == false )
             return false;
 
-        if ( XMLSerializerInternal::readXMLIntoInstance( pInstance, typeInfo, backend, context, nullptr ) == false )
+        if ( XMLSerializerInternal::readXMLIntoInstance( pInstance, typeInfo, backend, context, nullptr ) != FieldReadResult::Read )
             return false;
 
         vector<SchemaOrphanValue> listOrphan;
@@ -911,7 +944,7 @@ namespace sw
         }
 
         // 칸 하나를 읽지 못해도 멈추지 않는다 — 루트의 모르는 자식과 범위 밖 값까지 모아야 부르는 쪽이 한 번에 다 알린다(C-60).
-        const bool bFieldsRead = XMLSerializerInternal::readXMLIntoInstance( pInstance, typeInfo, backend, context, pOutListOrphan );
+        const bool bFieldsRead = XMLSerializerInternal::readXMLIntoInstance( pInstance, typeInfo, backend, context, pOutListOrphan ) == FieldReadResult::Read;
 
         if ( pOutListOrphan != nullptr )
             XMLSerializerInternal::appendUnknownXMLChildOrphans( root, typeInfo, bIgnore, pOutListOrphan );

@@ -543,7 +543,7 @@ namespace sw
                     for ( uint32 elementIndex = 0; elementIndex < elementCount; ++elementIndex )
                     {
                         total = ContainerVisitor::mergeResult( total, visit( elementIndex ) );
-                        if ( total == ContainerReadResult::StreamBroken )
+                        if ( ContainerVisitor::stopsReading( total ) )
                             break;
                     }
                     return total;

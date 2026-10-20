@@ -35,9 +35,23 @@ namespace sw
     /** @brief 원소 하나 · 컨테이너 하나를 읽은 결과입니다. 뒤로 갈수록 나쁩니다(`ContainerVisitor::mergeResult`). */
     enum class ContainerReadResult : uint8
     {
-        Read,         ///< 모두 읽었습니다.
-        FieldFailed,  ///< 일부 원소 · 항목을 못 읽었습니다 — 그것만 빼고 다음 자리로 갔습니다(칸은 실패로 알린다).
-        StreamBroken, ///< 다음 자리를 모릅니다 — 읽기를 멈췄습니다.
+        Read,           ///< 모두 읽었습니다.
+        FieldFailed,    ///< 일부 원소 · 항목을 못 읽었습니다 — 그것만 빼고 다음 자리로 갔습니다(칸은 실패로 알린다).
+        StreamBroken,   ///< 다음 자리를 모릅니다 — 읽기를 멈췄습니다.
+        ObjectRejected, ///< 원소 안에 객체째 실패여야 할 것이 있었습니다(`FieldReadResult::ObjectRejected`) — 읽기를 멈췄습니다. 칸 실패로 낮추지 않습니다.
+    };
+
+    /**
+     * @brief 필드 하나(구조체 칸이면 그 안의 객체 하나)를 읽은 결과입니다. 읽지 못한 필드를 넘기고 이어 읽는 읽기(소프트)가 두 실패를 가릅니다.
+     * @details `FieldFailed` 는 그 필드만 읽기 전 값으로 되돌리고 orphan 으로 넘기며, `ObjectRejected` 는 넘기지 않고 객체째 실패합니다.
+     *          예전에는 둘 다 `bool` 의 false 였다. 그래서 컨테이너 원소인 구조체 안의 금지된 필드가 칸 실패로 내려와 orphan 으로 넘어갔다.
+     *          받는 쪽은 `switch` 로 세 값을 다 다룬다(`default` 없이 — 값이 늘면 빌드가 멈춘다).
+     */
+    enum class FieldReadResult : uint8
+    {
+        Read,           ///< 읽었습니다. 소프트 읽기는 안쪽에서 넘긴 필드가 있어도 Read 입니다(orphan 목록에 있다).
+        FieldFailed,    ///< 이 필드를 읽지 못했습니다(모양 · 값이 다르다). 이어 읽는 읽기는 이 필드만 넘깁니다.
+        ObjectRejected, ///< 객체째 실패여야 합니다 — 저작 파일의 금지된 필드, 되돌리지 못한 필드(읽다 만 소유 포인터 목록, 코덱 결함). 넘기지 않습니다.
     };
 } // namespace sw
 
@@ -153,7 +167,16 @@ namespace sw
          */
         [[nodiscard]] static ContainerReadResult read( void* pContainer, const NestedContainerInfo& nested, IContainerReader& reader, const SerializeContext& context );
 
-        /** @brief 두 결과 중 나쁜 쪽입니다(StreamBroken > FieldFailed > Read). */
+        /** @brief 두 결과 중 나쁜 쪽입니다(ObjectRejected > StreamBroken > FieldFailed > Read). */
         static ContainerReadResult mergeResult( ContainerReadResult lhs, ContainerReadResult rhs ) noexcept;
+        /** @brief 이 결과 뒤로 원소를 더 읽지 않습니다(StreamBroken, ObjectRejected). 형식의 `forEachElement` 가 원소마다 봅니다. */
+        [[nodiscard]] static bool stopsReading( ContainerReadResult result ) noexcept;
+        /**
+         * @brief 컨테이너 필드 하나의 결과를 필드 결과로 바꿉니다. 필드의 끝은 형식이 알므로(XML 노드, JSON 값, 바이너리 페이로드 크기) StreamBroken 은 그 필드의 실패입니다.
+         * @details ObjectRejected 는 그대로 객체째 실패입니다 — 칸 실패로 낮추면 안의 금지된 필드가 orphan 으로 넘어간다.
+         */
+        [[nodiscard]] static FieldReadResult toFieldResult( ContainerReadResult result ) noexcept;
+        /** @brief 원소 하나(값 구조체 · 소유 포인터 객체)의 필드 결과를 원소 결과로 바꿉니다. ObjectRejected 는 그대로 위로 올라갑니다. */
+        [[nodiscard]] static ContainerReadResult toElementResult( FieldReadResult result ) noexcept;
     };
 } // namespace sw
