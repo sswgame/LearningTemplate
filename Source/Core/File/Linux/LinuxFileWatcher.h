@@ -44,6 +44,10 @@ namespace sw
     private:
         /** @brief inotify 이벤트를 읽어 큐에 넣습니다. */
         void workerThreadMain( MemoryTag memoryTag );
+        /** @brief inotify fd 에 쌓인 이벤트를 다 읽어 처리합니다. 읽기가 실패하거나 루트를 잃으면 감시를 잃은 것으로 알리고 false 를 반환합니다. */
+        [[nodiscard]] bool drainEvents( uint8* pBuffer, uint32 bufferSize );
+        /** @brief inotify 이벤트 하나(감시 wd, 마스크, wd 기준 이름)를 변경으로 바꿔 큐에 넣습니다. 루트를 잃으면 알리고 false 를 반환합니다. */
+        [[nodiscard]] bool handleWatchEvent( int32 watchDescriptor, uint32 mask, string_view name );
         /** @brief 디렉터리를(재귀면 하위 디렉터리까지) inotify 에 등록합니다. */
         bool addWatchRecursive( string_view directoryPath );
         /** @brief 디렉터리 하나만 inotify 에 등록하고 wd 맵에 넣습니다. */
