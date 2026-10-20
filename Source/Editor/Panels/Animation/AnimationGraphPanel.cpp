@@ -250,6 +250,22 @@ namespace sw::editor
             return;
         }
 
+        drawStateNodes();
+        drawTransitionLinks();
+        drawNodeContextMenu();
+        // 캔버스의 선택을 따라간다(고른 순서는 `_listSelectionOrder` — Link Selected 가 쓴다).
+        trackCanvasSelection();
+
+        updateUnreachableIssues();
+        handleCanvasEdits();
+
+        _nodeGraph.applyContentFitIfNeeded();
+        cacheNodeLayout();
+        endGraphCanvas();
+    }
+
+    void AnimationGraphPanel::drawStateNodes()
+    {
         for ( GraphNode& node : _graph._listNode )
         {
             const ed::NodeId nodeID = toNodeID( node._id );
@@ -289,7 +305,10 @@ namespace sw::editor
                 ed::SetNodePosition( nodeID, ImVec2( node._position._x, node._position._y ) );
             applyNodePlacement( node._id );
         }
+    }
 
+    void AnimationGraphPanel::drawTransitionLinks()
+    {
         for ( const GraphLink& link : _graph._listLink )
         {
             // 조건이 있는 전이는 굵게 · 다른 색으로(조건 없는 "끝나면 다음" 과 구별).
@@ -304,6 +323,10 @@ namespace sw::editor
             ed::Flow( toLinkID( _flowLinkID ) );
             _flowLinkID = 0;
         }
+    }
+
+    void AnimationGraphPanel::drawNodeContextMenu()
+    {
         // 노드 오른쪽 클릭 메뉴(지우기 · 복제).
         ed::NodeId contextNode{};
         ed::Suspend();
@@ -321,9 +344,10 @@ namespace sw::editor
             ImGui::EndPopup();
         }
         ed::Resume();
-        // 캔버스의 선택을 따라간다(고른 순서는 `_listSelectionOrder` — Link Selected 가 쓴다).
-        trackCanvasSelection();
+    }
 
+    void AnimationGraphPanel::updateUnreachableIssues()
+    {
         // 상태 그래프의 첫 노드가 진입이다 — 나머지는 들어오는 전환이 없으면 닿지 않는다.
         vector<int32> listInputNode;
         for ( size_t index = 1; index < _graph._listNode.size(); ++index )
@@ -339,7 +363,10 @@ namespace sw::editor
         EditorNodeGraphRules::collectUnreachableNodes( listInputNode, listEdge, listIssue );
         _nodeGraph.setNodeIssues( std::move( listIssue ) );
         _nodeGraph.drawNodeIssues();
+    }
 
+    void AnimationGraphPanel::handleCanvasEdits()
+    {
         int32 fromPin{ 0 };
         int32 toPin{ 0 };
         if ( _nodeGraph.queryNewLink( SW_DELEGATE_METHOD( Delegate<bool( int32, EditorGraphPinInfo& )>, &AnimationGraphPanel::findGraphPin, this ), fromPin, toPin ) )
@@ -368,12 +395,7 @@ namespace sw::editor
         processCanvasDeletions( []( const auto& link, int32 nodeID )
         { return link._fromNode == nodeID || link._toNode == nodeID; },
                                 []( int32 ) {}, "Delete Animation Graph Link", "Delete Animation Graph Node" );
-
-        _nodeGraph.applyContentFitIfNeeded();
-        cacheNodeLayout();
-        endGraphCanvas();
     }
-
     void AnimationGraphPanel::ensureDefaults()
     {
         if ( _graph._listNode.empty() == false )
@@ -582,6 +604,13 @@ namespace sw::editor
 
     void AnimationGraphPanel::drawGraphInspector()
     {
+        drawStateInspector();
+        drawTransitionList();
+        drawTransitionCondition();
+    }
+
+    void AnimationGraphPanel::drawStateInspector()
+    {
         // 상태(노드): 이름은 클립을 묶는 열쇠다 — 이름이 곧 클립 지정이다(AnimationGraphNode::_name).
         GraphNode* pNode = nullptr;
         for ( GraphNode& node : _graph._listNode )
@@ -589,36 +618,39 @@ namespace sw::editor
             if ( node._id == _selectedNodeID )
                 pNode = &node;
         }
-        if ( pNode != nullptr )
-        {
-            ImGui::SeparatorText( "State" );
-            if ( ImGui::IsAnyItemActive() == false )
-                _nameEditBuffer = pNode->_name;
-            ImGui::TextUnformatted( "Clip" );
-            ImGui::SameLine();
-            ImGui::SetNextItemWidth( -FLT_MIN );
-            EditorWidgets::drawTextField( "##stateName", _nameEditBuffer );
-            EditorSelfTestMarks::note( "animationGraph.state.name" );
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "StateClipTip" ) );
-            const bool bStateNameCommitted = ImGui::IsItemDeactivatedAfterEdit() && _nameEditBuffer.empty() == false && _nameEditBuffer != pNode->_name;
-            if ( bStateNameCommitted )
-            {
-                pNode->_name = _nameEditBuffer;
-                notifyDocumentEdited( "Rename Animation State" );
-            }
-            const utf8* const arrLoop[] = { "Default", "Loop", "Once" };
-            int32             loopIndex = pNode->_loopOverride < 0 ? 0 : ( pNode->_loopOverride > 0 ? 1 : 2 );
-            ImGui::TextUnformatted( "Loop" );
-            ImGui::SameLine();
-            ImGui::SetNextItemWidth( -FLT_MIN );
-            if ( ImGui::Combo( "##stateLoop", &loopIndex, arrLoop, 3 ) )
-            {
-                pNode->_loopOverride = loopIndex == 0 ? int8{ -1 } : ( loopIndex == 1 ? int8{ 1 } : int8{ 0 } );
-                notifyDocumentEdited( "Edit Animation State" );
-            }
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "StateLoopTip" ) );
-        }
+        if ( pNode == nullptr )
+            return;
 
+        ImGui::SeparatorText( "State" );
+        if ( ImGui::IsAnyItemActive() == false )
+            _nameEditBuffer = pNode->_name;
+        ImGui::TextUnformatted( "Clip" );
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth( -FLT_MIN );
+        EditorWidgets::drawTextField( "##stateName", _nameEditBuffer );
+        EditorSelfTestMarks::note( "animationGraph.state.name" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "StateClipTip" ) );
+        const bool bStateNameCommitted = ImGui::IsItemDeactivatedAfterEdit() && _nameEditBuffer.empty() == false && _nameEditBuffer != pNode->_name;
+        if ( bStateNameCommitted )
+        {
+            pNode->_name = _nameEditBuffer;
+            notifyDocumentEdited( "Rename Animation State" );
+        }
+        const utf8* const arrLoop[] = { "Default", "Loop", "Once" };
+        int32             loopIndex = pNode->_loopOverride < 0 ? 0 : ( pNode->_loopOverride > 0 ? 1 : 2 );
+        ImGui::TextUnformatted( "Loop" );
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth( -FLT_MIN );
+        if ( ImGui::Combo( "##stateLoop", &loopIndex, arrLoop, 3 ) )
+        {
+            pNode->_loopOverride = loopIndex == 0 ? int8{ -1 } : ( loopIndex == 1 ? int8{ 1 } : int8{ 0 } );
+            notifyDocumentEdited( "Edit Animation State" );
+        }
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "StateLoopTip" ) );
+    }
+
+    void AnimationGraphPanel::drawTransitionList()
+    {
         // 전이 목록 — 누르면 그 전이를 고른다(캔버스에서 링크를 눌러도 된다).
         ImGui::SeparatorText( "Transitions" );
         for ( size_t index = 0; index < _graph._listLink.size(); ++index )
@@ -641,7 +673,10 @@ namespace sw::editor
                 EditorSelfTestMarks::note( ( "animationGraph.link." + to_string( static_cast<uint64>( index ) ) ).c_str() );
             ImGui::PopID();
         }
+    }
 
+    void AnimationGraphPanel::drawTransitionCondition()
+    {
         GraphLink* pLink = nullptr;
         for ( GraphLink& link : _graph._listLink )
         {

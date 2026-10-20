@@ -22,6 +22,7 @@
 #include "Engine/Object/Component/TagComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
@@ -1771,11 +1772,11 @@ SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterStatsAreInMetersAndReach
     const PropertyInfo* pMoveSpeed    = pStatsType->findProperty( hashed_string( "_moveSpeed" ) );
     SW_ASSERT_NOT_NULL( pMonsterSpeed );
     SW_ASSERT_NOT_NULL( pMoveSpeed );
-    SW_EXPECT_NEAR_EQUAL( pMonsterSpeed->_metadata._maxRange, pMoveSpeed->_metadata._maxRange, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( pMonsterSpeed->_metadata->_maxRange, pMoveSpeed->_metadata->_maxRange, 1e-4f );
 
     // 스키마 기본값(`MonsterStatsDef` · `MonsterAIDef` 의 초기값)이 미터 단위다.
     const MonsterDef defaultDef{};
-    const float32    maxSpeed = static_cast<float32>( pMonsterSpeed->_metadata._maxRange );
+    const float32    maxSpeed = static_cast<float32>( pMonsterSpeed->_metadata->_maxRange );
     SW_EXPECT_TRUE( 0.0f < defaultDef._stats._speed && defaultDef._stats._speed <= maxSpeed );
     SW_EXPECT_TRUE( defaultDef._ai._attackRange < defaultDef._ai._detectRange && defaultDef._ai._detectRange <= maxSpeed );
 

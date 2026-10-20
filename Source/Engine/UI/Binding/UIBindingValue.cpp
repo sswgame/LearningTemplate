@@ -66,27 +66,27 @@ namespace sw
                 return &kArrNumberOps[builtinIndex - ReflectBuiltinIndex::kint8];
             }
 
-            /** @brief 종류 하나의 이름과 경로 필드 읽기 · 쓰기입니다. @p pValue 는 잎 필드 주소, @p builtinIndex 는 잎의 내장 타입 자리입니다. */
+            /** @brief 종류 하나의 이름과 경로 필드 읽기 · 쓰기입니다. @p owner 는 잎 프로퍼티를 가진 객체, @p value 는 잎 필드 주소, @p builtinIndex 는 잎의 내장 타입 자리입니다. */
             struct KindOps
             {
                 UIBindingValueKind kind; ///< 이 줄의 종류입니다. 줄 위치가 이 값과 같은지 static_assert 로 본다
                 const utf8*        pName;
-                UIBindingValue ( *pRead )( const PropertyInfo& leaf, const void* pOwner, const void* pValue, int32 builtinIndex );
-                bool ( *pWrite )( const PropertyInfo& leaf, void* pOwner, void* pValue, int32 builtinIndex, const UIBindingValue& value ); ///< 바뀌었으면 true 입니다.
+                UIBindingValue ( *pRead )( const PropertyInfo& leaf, ObjectAddress owner, ValueAddress value, int32 builtinIndex );
+                bool ( *pWrite )( const PropertyInfo& leaf, MutableObjectAddress owner, MutableValueAddress value, int32 builtinIndex, const UIBindingValue& newValue ); ///< 바뀌었으면 true 입니다.
             };
 
-            static UIBindingValue     readNone( const PropertyInfo&, const void*, const void*, int32 ) { return {}; }
-            [[nodiscard]] static bool writeNone( const PropertyInfo&, void*, void*, int32, const UIBindingValue& ) { return false; }
+            static UIBindingValue     readNone( const PropertyInfo&, ObjectAddress, ValueAddress, int32 ) { return {}; }
+            [[nodiscard]] static bool writeNone( const PropertyInfo&, MutableObjectAddress, MutableValueAddress, int32, const UIBindingValue& ) { return false; }
 
-            static UIBindingValue readBool( const PropertyInfo&, const void*, const void* pValue, int32 )
+            static UIBindingValue readBool( const PropertyInfo&, ObjectAddress, const ValueAddress value, int32 )
             {
-                return UIBindingValue::makeBool( *static_cast<const bool*>( pValue ) );
+                return UIBindingValue::makeBool( *static_cast<const bool*>( value.get() ) );
             }
-            [[nodiscard]] static bool writeBool( const PropertyInfo&, void*, void* pValue, int32, const UIBindingValue& value )
+            [[nodiscard]] static bool writeBool( const PropertyInfo&, MutableObjectAddress, const MutableValueAddress target, int32, const UIBindingValue& value )
             {
                 if ( value._kind != UIBindingValueKind::Bool && value._kind != UIBindingValueKind::Number )
                     return false;
-                bool&      field  = *static_cast<bool*>( pValue );
+                bool&      field  = *static_cast<bool*>( target.get() );
                 const bool bValue = value.toBool();
                 if ( field == bValue )
                     return false;
@@ -94,60 +94,60 @@ namespace sw
                 return true;
             }
 
-            static UIBindingValue readNumberKind( const PropertyInfo&, const void*, const void* pValue, int32 builtinIndex )
+            static UIBindingValue readNumberKind( const PropertyInfo&, ObjectAddress, const ValueAddress value, int32 builtinIndex )
             {
                 // Number 로 분류한 필드라 표 줄이 있다(없으면 0)
                 const NumberOps* pOps = findNumberOps( builtinIndex );
                 if ( pOps == nullptr )
                     return UIBindingValue::makeNumber( 0.0, false );
-                return UIBindingValue::makeNumber( pOps->pRead( pValue ), pOps->bInteger );
+                return UIBindingValue::makeNumber( pOps->pRead( value.get() ), pOps->bInteger );
             }
-            [[nodiscard]] static bool writeNumberKind( const PropertyInfo&, void*, void* pValue, int32 builtinIndex, const UIBindingValue& value )
+            [[nodiscard]] static bool writeNumberKind( const PropertyInfo&, MutableObjectAddress, const MutableValueAddress target, int32 builtinIndex, const UIBindingValue& value )
             {
                 if ( value._kind != UIBindingValueKind::Bool && value._kind != UIBindingValueKind::Number )
                     return false;
                 const NumberOps* pOps = findNumberOps( builtinIndex );
-                return pOps != nullptr && pOps->pWrite( pValue, value.toNumber() );
+                return pOps != nullptr && pOps->pWrite( target.get(), value.toNumber() );
             }
 
-            static UIBindingValue readText( const PropertyInfo&, const void*, const void* pValue, int32 builtinIndex )
+            static UIBindingValue readText( const PropertyInfo&, ObjectAddress, const ValueAddress value, int32 builtinIndex )
             {
                 if ( builtinIndex == ReflectBuiltinIndex::khashed_string )
-                    return UIBindingValue::makeText( static_cast<const hashed_string*>( pValue )->c_str() );
-                return UIBindingValue::makeText( *static_cast<const string*>( pValue ) );
+                    return UIBindingValue::makeText( static_cast<const hashed_string*>( value.get() )->c_str() );
+                return UIBindingValue::makeText( *static_cast<const string*>( value.get() ) );
             }
-            [[nodiscard]] static bool writeText( const PropertyInfo&, void*, void* pValue, int32 builtinIndex, const UIBindingValue& value )
+            [[nodiscard]] static bool writeText( const PropertyInfo&, MutableObjectAddress, const MutableValueAddress target, int32 builtinIndex, const UIBindingValue& value )
             {
                 const string text = value.toText();
                 if ( builtinIndex == ReflectBuiltinIndex::khashed_string )
                 {
-                    hashed_string& field = *static_cast<hashed_string*>( pValue );
+                    hashed_string& field = *static_cast<hashed_string*>( target.get() );
                     if ( field.isEqual( hashed_string( text ), NameCase::CaseSensitive ) )
                         return false;
                     field = hashed_string( text );
                     return true;
                 }
-                string& field = *static_cast<string*>( pValue );
+                string& field = *static_cast<string*>( target.get() );
                 if ( field == text )
                     return false;
                 field = text;
                 return true;
             }
 
-            static UIBindingValue readOther( const PropertyInfo& leaf, const void* pOwner, const void*, int32 )
+            static UIBindingValue readOther( const PropertyInfo& leaf, const ObjectAddress owner, ValueAddress, int32 )
             {
-                UIBindingValue value = UIBindingValue::makeText( SerializerUtil::formatPropertyText( leaf, ObjectAddress{ pOwner }, SerializeContext::getDefault( SerializePurpose::Authoring ) ) );
+                UIBindingValue value = UIBindingValue::makeText( SerializerUtil::formatPropertyText( leaf, owner, SerializeContext::getDefault( SerializePurpose::Authoring ) ) );
                 value._kind          = UIBindingValueKind::Other;
                 return value;
             }
-            [[nodiscard]] static bool writeOther( const PropertyInfo& leaf, void* pOwner, void*, int32, const UIBindingValue& value )
+            [[nodiscard]] static bool writeOther( const PropertyInfo& leaf, const MutableObjectAddress owner, MutableValueAddress, int32, const UIBindingValue& value )
             {
                 if ( value._kind != UIBindingValueKind::Other && value._kind != UIBindingValueKind::Text )
                     return false;
                 const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring );
-                if ( SerializerUtil::formatPropertyText( leaf, ObjectAddress{ pOwner }, context ) == value._text )
+                if ( SerializerUtil::formatPropertyText( leaf, owner, context ) == value._text )
                     return false;
-                return SerializerUtil::applyPropertyText( leaf, MutableObjectAddress{ pOwner }, value._text, context );
+                return SerializerUtil::applyPropertyText( leaf, owner, value._text, context );
             }
 
             /** @brief 종류 표입니다. 줄 순서는 `UIBindingValueKind` 의 값 순서와 같다. 종류를 더하면 여기에 한 줄을 더한다. */
@@ -401,7 +401,7 @@ namespace sw
             return UIBindingValue::makeBool( leaf.getValue<bool>( pOwner ) );
         const void* pValue       = leaf.getRawPtr( pOwner );
         const int32 builtinIndex = ReflectValueUtil::findBuiltinIndex( leaf._typeName );
-        return UIBindingValueInternal::getKindOps( path._kind ).pRead( leaf, pOwner, pValue, builtinIndex );
+        return UIBindingValueInternal::getKindOps( path._kind ).pRead( leaf, ObjectAddress{ pOwner }, ValueAddress{ pValue }, builtinIndex );
     }
 
     bool UIBindingValueUtil::writeValue( const UIPropertyPath& path, void* pRoot, const UIBindingValue& value )
@@ -422,7 +422,7 @@ namespace sw
         }
         void*       pValue       = leaf.getRawPtr( pOwner );
         const int32 builtinIndex = ReflectValueUtil::findBuiltinIndex( leaf._typeName );
-        return UIBindingValueInternal::getKindOps( path._kind ).pWrite( leaf, pOwner, pValue, builtinIndex, value );
+        return UIBindingValueInternal::getKindOps( path._kind ).pWrite( leaf, MutableObjectAddress{ pOwner }, MutableValueAddress{ pValue }, builtinIndex, value );
     }
 
     bool UIBindingValueUtil::copyValue( const UIPropertyPath& sourcePath, const void* pSourceRoot, const UIPropertyPath& targetPath, void* pTargetRoot )

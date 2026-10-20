@@ -48,6 +48,56 @@ namespace sw::editor
                 }
             }
 
+            /** @brief 로그 목록에서 레벨별 줄 수를 셉니다. */
+            static ConsolePanel::LevelCounts countLevels( const vector<LogEntry>& listEntry )
+            {
+                ConsolePanel::LevelCounts counts;
+                for ( const LogEntry& entry : listEntry )
+                {
+                    switch ( entry._level )
+                    {
+                        case LogLevel::Error:
+                        {
+                            ++counts._error;
+                            break;
+                        }
+                        case LogLevel::Warning:
+                        {
+                            ++counts._warning;
+                            break;
+                        }
+                        case LogLevel::Info:
+                        {
+                            ++counts._info;
+                            break;
+                        }
+                        case LogLevel::Trace:
+                        {
+                            ++counts._trace;
+                            break;
+                        }
+                        case LogLevel::Count:
+                        {
+                            break;
+                        }
+                    }
+                }
+                return counts;
+            }
+
+            /** @brief 레벨 보기 토글 칩 하나("이름 (줄 수)")를 그립니다. @p pMark 가 있으면 시나리오용 이름표를 남깁니다. */
+            static void drawLevelChip( bool& inoutEnabled, const utf8* pName, size_t count, const Color& color, const utf8* pTooltip, const utf8* pMark )
+            {
+                ImGui::SameLine();
+                fixed_string<constant::kMaxBuffer32> label;
+                formatstring( label.data(), label.capacity(), "%# (%#)", pName, static_cast<uint64>( count ) );
+                if ( EditorWidgets::drawToggleButton( label.c_str(), inoutEnabled, color ) )
+                    inoutEnabled = ( inoutEnabled == false );
+                if ( pMark != nullptr )
+                    EditorSelfTestMarks::note( pMark );
+                EditorWidgets::drawTooltip( pTooltip );
+            }
+
             /** @brief 입력 줄의 Tab(자동완성) · ↑↓(기록)을 개발 콘솔로 처리합니다. */
             static int32 onCommandLineEdit( ImGuiInputTextCallbackData* pData )
             {
@@ -283,141 +333,96 @@ namespace sw::editor
 
     void ConsolePanel::drawConsoleToolbar( bool& bNewLogs )
     {
-        size_t errorCount{ 0 };
-        size_t warnCount{ 0 };
-        size_t infoCount{ 0 };
-        size_t traceCount{ 0 };
-        for ( const LogEntry& entry : _listDrawSnapshot )
-        {
-            switch ( entry._level )
-            {
-                case LogLevel::Error:
-                {
-                    ++errorCount;
-                    break;
-                }
-                case LogLevel::Warning:
-                {
-                    ++warnCount;
-                    break;
-                }
-                case LogLevel::Info:
-                {
-                    ++infoCount;
-                    break;
-                }
-                case LogLevel::Trace:
-                {
-                    ++traceCount;
-                    break;
-                }
-                case LogLevel::Count:
-                {
-                    break;
-                }
-            }
-        }
+        const LevelCounts counts = ConsolePanelInternal::countLevels( _listDrawSnapshot );
 
         if ( EditorChrome::beginToolbar( "##ConsoleToolbar" ) )
         {
-            if ( ImGui::Button( "Clear" ) )
-            {
-                clearEntries();
-                bNewLogs = false;
-            }
-            EditorSelfTestMarks::note( "console.clear" );
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "Clear" ) );
-
-            ImGui::SameLine();
-            ImGui::Checkbox( "Auto-scroll", &_bAutoScroll );
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "AutoScroll" ) );
-
-            ImGui::SameLine();
-            if ( EditorWidgets::drawToggleButton( "Collapse", _bCollapse == SW_TRUE, EditorThemeUtil::getSuccessColor() ) )
-                _bCollapse = _bCollapse == SW_TRUE ? SW_FALSE : SW_TRUE;
-            EditorSelfTestMarks::note( "console.collapse" );
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "Collapse" ) );
-
-            ImGui::SameLine();
-            if ( EditorWidgets::drawToggleButton( "Clear on Play", _bClearOnPlay == SW_TRUE, EditorThemeUtil::getSuccessColor() ) )
-                _bClearOnPlay = _bClearOnPlay == SW_TRUE ? SW_FALSE : SW_TRUE;
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "ClearOnPlay" ) );
-
-            ImGui::SameLine();
-            if ( EditorWidgets::drawToggleButton( "Error Pause", _bErrorPause == SW_TRUE, EditorThemeUtil::getErrorColor() ) )
-                _bErrorPause = _bErrorPause == SW_TRUE ? SW_FALSE : SW_TRUE;
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "ErrorPause" ) );
-
-            fixed_string<constant::kMaxBuffer32> arrErrLabel;
-            formatstring( arrErrLabel.data(), arrErrLabel.capacity(), "Error (%zu)", errorCount );
-            fixed_string<constant::kMaxBuffer32> arrWarnLabel;
-            formatstring( arrWarnLabel.data(), arrWarnLabel.capacity(), "Warning (%zu)", warnCount );
-            fixed_string<constant::kMaxBuffer32> arrInfoLabel;
-            formatstring( arrInfoLabel.data(), arrInfoLabel.capacity(), "Info (%zu)", infoCount );
-            fixed_string<constant::kMaxBuffer32> arrTraceLabel;
-            formatstring( arrTraceLabel.data(), arrTraceLabel.capacity(), "Trace (%zu)", traceCount );
-
-            constexpr Color kTraceChip{ 0.40f, 0.40f, 0.45f, 1.0f };
-
-            ImGui::SameLine();
-            // 0 건이면 경고색을 쓰지 않는다. 걸러 보이는 중이라는 뜻만 강조색으로 보인다(빨간 "Error (0)" 은 문제가 있다고 읽힌다).
-            const Color& errorChip = errorCount > 0 ? EditorThemeUtil::getErrorColor() : EditorThemeUtil::getAccentColor();
-            const Color& warnChip  = warnCount > 0 ? EditorThemeUtil::getWarningColor() : EditorThemeUtil::getAccentColor();
-            if ( EditorWidgets::drawToggleButton( arrErrLabel.c_str(), _arrLevelEnabled[0], errorChip ) )
-                _arrLevelEnabled[0] = ( _arrLevelEnabled[0] == false );
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "ShowErrors" ) );
-
-            ImGui::SameLine();
-            if ( EditorWidgets::drawToggleButton( arrWarnLabel.c_str(), _arrLevelEnabled[1], warnChip ) )
-                _arrLevelEnabled[1] = ( _arrLevelEnabled[1] == false );
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "ShowWarnings" ) );
-
-            ImGui::SameLine();
-            if ( EditorWidgets::drawToggleButton( arrInfoLabel.c_str(), _arrLevelEnabled[2], EditorThemeUtil::getSuccessColor() ) )
-                _arrLevelEnabled[2] = ( _arrLevelEnabled[2] == false );
-            EditorSelfTestMarks::note( "console.level.info" );
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "ShowInfo" ) );
-
-            ImGui::SameLine();
-            if ( EditorWidgets::drawToggleButton( arrTraceLabel.c_str(), _arrLevelEnabled[3], kTraceChip ) )
-                _arrLevelEnabled[3] = ( _arrLevelEnabled[3] == false );
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "ShowTrace" ) );
-
-            ImGui::SameLine();
-            if ( ImGui::Button( "Copy All" ) && _listVisible.empty() == false )
-            {
-                string allLogs;
-                for ( const LogEntry* pEntry : _listVisible )
-                {
-                    if ( pEntry != nullptr )
-                        allLogs += formatEntryLine( *pEntry ) + "\n";
-                }
-                ImGui::SetClipboardText( allLogs.c_str() );
-            }
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "CopyAll" ) );
-
-            ImGui::SameLine();
-            if ( ImGui::Button( "Open Log File" ) )
-                showLogFileInExplorer();
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "OpenLogFile" ) );
-
-            ImGui::SameLine();
-            fixed_string<constant::kMaxBuffer32> tagLabel;
-            if ( _tagFilter.getHiddenCount() > 0 )
-                formatstring( tagLabel.data(), tagLabel.capacity(), "Tags (-%u)", _tagFilter.getHiddenCount() );
-            else
-                formatstring( tagLabel.data(), tagLabel.capacity(), "Tags" );
-            if ( ImGui::Button( tagLabel.c_str() ) )
-                ImGui::OpenPopup( "##LogTagFilter" );
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "TagFilter" ) );
-            drawTagFilterPopup();
-
-            EditorWidgets::drawSearchField( "##log_filter", _filterBuffer, SW_LOCKEY( "EditorConsole", "FilterHint" ), -1.0f, false );
-            EditorSelfTestMarks::note( "console.filter" );
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "FilterTooltip" ) );
+            drawToolbarToggles( bNewLogs );
+            drawLevelChips( counts );
+            drawToolbarCommands();
         }
 
         EditorChrome::endToolbar();
+    }
+
+    void ConsolePanel::drawToolbarToggles( bool& bNewLogs )
+    {
+        if ( ImGui::Button( "Clear" ) )
+        {
+            clearEntries();
+            bNewLogs = false;
+        }
+        EditorSelfTestMarks::note( "console.clear" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "Clear" ) );
+
+        ImGui::SameLine();
+        ImGui::Checkbox( "Auto-scroll", &_bAutoScroll );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "AutoScroll" ) );
+
+        ImGui::SameLine();
+        if ( EditorWidgets::drawToggleButton( "Collapse", _bCollapse == SW_TRUE, EditorThemeUtil::getSuccessColor() ) )
+            _bCollapse = _bCollapse == SW_TRUE ? SW_FALSE : SW_TRUE;
+        EditorSelfTestMarks::note( "console.collapse" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "Collapse" ) );
+
+        ImGui::SameLine();
+        if ( EditorWidgets::drawToggleButton( "Clear on Play", _bClearOnPlay == SW_TRUE, EditorThemeUtil::getSuccessColor() ) )
+            _bClearOnPlay = _bClearOnPlay == SW_TRUE ? SW_FALSE : SW_TRUE;
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "ClearOnPlay" ) );
+
+        ImGui::SameLine();
+        if ( EditorWidgets::drawToggleButton( "Error Pause", _bErrorPause == SW_TRUE, EditorThemeUtil::getErrorColor() ) )
+            _bErrorPause = _bErrorPause == SW_TRUE ? SW_FALSE : SW_TRUE;
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "ErrorPause" ) );
+    }
+
+    void ConsolePanel::drawLevelChips( const LevelCounts& counts )
+    {
+        constexpr Color kTraceChip{ 0.40f, 0.40f, 0.45f, 1.0f };
+
+        // 0 건이면 경고색을 쓰지 않는다. 걸러 보이는 중이라는 뜻만 강조색으로 보인다(빨간 "Error (0)" 은 문제가 있다고 읽힌다).
+        const Color& errorChip = counts._error > 0 ? EditorThemeUtil::getErrorColor() : EditorThemeUtil::getAccentColor();
+        const Color& warnChip  = counts._warning > 0 ? EditorThemeUtil::getWarningColor() : EditorThemeUtil::getAccentColor();
+        ConsolePanelInternal::drawLevelChip( _arrLevelEnabled[0], "Error", counts._error, errorChip, SW_LOCKEY( "EditorConsole", "ShowErrors" ), nullptr );
+        ConsolePanelInternal::drawLevelChip( _arrLevelEnabled[1], "Warning", counts._warning, warnChip, SW_LOCKEY( "EditorConsole", "ShowWarnings" ), nullptr );
+        ConsolePanelInternal::drawLevelChip( _arrLevelEnabled[2], "Info", counts._info, EditorThemeUtil::getSuccessColor(), SW_LOCKEY( "EditorConsole", "ShowInfo" ), "console.level.info" );
+        ConsolePanelInternal::drawLevelChip( _arrLevelEnabled[3], "Trace", counts._trace, kTraceChip, SW_LOCKEY( "EditorConsole", "ShowTrace" ), nullptr );
+    }
+
+    void ConsolePanel::drawToolbarCommands()
+    {
+        ImGui::SameLine();
+        if ( ImGui::Button( "Copy All" ) && _listVisible.empty() == false )
+        {
+            string allLogs;
+            for ( const LogEntry* pEntry : _listVisible )
+            {
+                if ( pEntry != nullptr )
+                    allLogs += formatEntryLine( *pEntry ) + "\n";
+            }
+            ImGui::SetClipboardText( allLogs.c_str() );
+        }
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "CopyAll" ) );
+
+        ImGui::SameLine();
+        if ( ImGui::Button( "Open Log File" ) )
+            showLogFileInExplorer();
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "OpenLogFile" ) );
+
+        ImGui::SameLine();
+        fixed_string<constant::kMaxBuffer32> tagLabel;
+        if ( _tagFilter.getHiddenCount() > 0 )
+            formatstring( tagLabel.data(), tagLabel.capacity(), "Tags (-%u)", _tagFilter.getHiddenCount() );
+        else
+            formatstring( tagLabel.data(), tagLabel.capacity(), "Tags" );
+        if ( ImGui::Button( tagLabel.c_str() ) )
+            ImGui::OpenPopup( "##LogTagFilter" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "TagFilter" ) );
+        drawTagFilterPopup();
+
+        EditorWidgets::drawSearchField( "##log_filter", _filterBuffer, SW_LOCKEY( "EditorConsole", "FilterHint" ), -1.0f, false );
+        EditorSelfTestMarks::note( "console.filter" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "FilterTooltip" ) );
     }
 
     void ConsolePanel::drawLogList( bool bNewLogs )
@@ -456,8 +461,6 @@ namespace sw::editor
 
         const bool    bListHovered = ImGui::IsWindowHovered();
         const float32 rowWidth     = ImGui::GetContentRegionAvail().x;
-        ImDrawList*   pDrawList    = ImGui::GetWindowDrawList();
-        const ImU32   selectColor  = ImGui::GetColorU32( ImGuiCol_Header );
 
         ImGuiListClipper clipper;
         clipper.Begin( static_cast<int32>( _listRow.size() ) );
@@ -465,78 +468,7 @@ namespace sw::editor
         {
             for ( int32 rowIndex = clipper.DisplayStart; rowIndex < clipper.DisplayEnd; ++rowIndex )
             {
-                const ConsoleLogRow& row   = _listRow[static_cast<size_t>( rowIndex )];
-                const LogEntry&      entry = *row._pEntry;
-                ImGui::PushID( rowIndex );
-
-                const ImVec2 rowMin = ImGui::GetCursorScreenPos();
-                const ImVec2 rowMax{ rowMin.x + rowWidth, rowMin.y + lineHeight };
-                if ( _selection.isSelected( static_cast<uint32>( rowIndex ) ) )
-                    pDrawList->AddRectFilled( rowMin, rowMax, selectColor );
-
-                if ( row._repeatCount > 1 )
-                {
-                    ImGui::TextColored( EditorColorUtil::toImVec4( ConsolePanelInternal::colorForLevel( entry._level ) ), "(%u)", row._repeatCount );
-                    ImGui::SameLine( 0.0f, ImGui::GetStyle().ItemInnerSpacing.x );
-                }
-                ImGui::TextDisabled( "[%s]", entry._timeStamp.c_str() );
-                ImGui::SameLine( 0.0f, 0.0f );
-                EditorThemeUtil::pushTextColor( EditorThemeUtil::getInfoColor() );
-                if ( entry._caller.empty() )
-                    ImGui::Text( " [%s]", entry._tag.c_str() );
-                else
-                    ImGui::Text( " [%s:%s]", entry._tag.c_str(), entry._caller.c_str() );
-                EditorThemeUtil::popTextColor();
-                ImGui::SameLine( 0.0f, 0.0f );
-                ImGui::TextColored( EditorColorUtil::toImVec4( ConsolePanelInternal::colorForLevel( entry._level ) ), " [%s]", ConsolePanelInternal::levelName( entry._level ) );
-                ImGui::SameLine( 0.0f, 0.0f );
-                ImGui::TextUnformatted( " - " );
-                ImGui::SameLine( 0.0f, 0.0f );
-                ImGui::TextUnformatted( entry._message.c_str() );
-
-                if ( entry._file.empty() == false && ImGui::IsItemHovered( ImGuiHoveredFlags_DelayShort ) )
-                {
-                    const string tooltipText = SW_LOCKEYFORMAT( "EditorConsole", "EntrySource", TextArgumentList().addText( "file", entry._file.c_str() ).addInteger( "line", entry._line ) );
-                    EditorWidgets::drawTooltip( tooltipText.c_str() );
-                }
-                if ( ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked( ImGuiMouseButton_Left ) )
-                    openEntryInIde( entry );
-
-                // 줄을 누르면 고르고, 누른 채 끌거나 Shift 로 누르면 넓힌다(언리얼 Output Log 의 여러 줄 선택).
-                if ( bListHovered && ImGui::IsMouseHoveringRect( rowMin, rowMax, false ) )
-                {
-                    if ( ImGui::IsMouseClicked( ImGuiMouseButton_Left ) )
-                        _selection.press( static_cast<uint32>( rowIndex ), ImGui::GetIO().KeyShift );
-                    else if ( ImGui::IsMouseClicked( ImGuiMouseButton_Right ) && _selection.isSelected( static_cast<uint32>( rowIndex ) ) == false )
-                    {
-                        _selection.press( static_cast<uint32>( rowIndex ), false );
-                        _selection.release();
-                    }
-                    else if ( _selection.isDragging() )
-                        _selection.dragTo( static_cast<uint32>( rowIndex ) );
-                }
-
-                if ( ImGui::BeginPopupContextItem( "LogEntryCtx" ) )
-                {
-                    if ( ImGui::MenuItem( "Open in IDE" ) )
-                        openEntryInIde( entry );
-                    if ( ImGui::MenuItem( "Copy Message" ) )
-                        ImGui::SetClipboardText( entry._message.c_str() );
-                    if ( ImGui::MenuItem( "Copy Full Log Line" ) )
-                    {
-                        string full = formatEntryLine( entry );
-                        if ( entry._file.empty() == false )
-                            full += " (" + entry._file + ":" + to_string( entry._line ) + ")";
-                        ImGui::SetClipboardText( full.c_str() );
-                    }
-                    fixed_string<constant::kMaxBuffer64> copySelectedLabel;
-                    formatstring( copySelectedLabel.data(), copySelectedLabel.capacity(), "Copy Selected (%u lines)", _selection.getCount() );
-                    if ( ImGui::MenuItem( copySelectedLabel.c_str(), "Ctrl+C", false, _selection.hasSelection() ) )
-                        copySelectedRows();
-                    ImGui::EndPopup();
-                }
-
-                ImGui::PopID();
+                drawLogRow( rowIndex, rowWidth, lineHeight, bListHovered );
             }
         }
 
@@ -554,6 +486,85 @@ namespace sw::editor
         EditorWidgets::drawCountLabel( static_cast<uint32>( _listRow.size() ), static_cast<uint32>( _listDrawSnapshot.size() ), "lines" );
         ImGui::SameLine();
         drawCommandLine();
+    }
+
+    void ConsolePanel::drawLogRow( int32 rowIndex, float32 rowWidth, float32 lineHeight, bool bListHovered )
+    {
+        const ConsoleLogRow& row   = _listRow[static_cast<size_t>( rowIndex )];
+        const LogEntry&      entry = *row._pEntry;
+        ImGui::PushID( rowIndex );
+
+        const ImVec2 rowMin = ImGui::GetCursorScreenPos();
+        const ImVec2 rowMax{ rowMin.x + rowWidth, rowMin.y + lineHeight };
+        if ( _selection.isSelected( static_cast<uint32>( rowIndex ) ) )
+            ImGui::GetWindowDrawList()->AddRectFilled( rowMin, rowMax, ImGui::GetColorU32( ImGuiCol_Header ) );
+
+        if ( row._repeatCount > 1 )
+        {
+            ImGui::TextColored( EditorColorUtil::toImVec4( ConsolePanelInternal::colorForLevel( entry._level ) ), "(%u)", row._repeatCount );
+            ImGui::SameLine( 0.0f, ImGui::GetStyle().ItemInnerSpacing.x );
+        }
+        ImGui::TextDisabled( "[%s]", entry._timeStamp.c_str() );
+        ImGui::SameLine( 0.0f, 0.0f );
+        EditorThemeUtil::pushTextColor( EditorThemeUtil::getInfoColor() );
+        if ( entry._caller.empty() )
+            ImGui::Text( " [%s]", entry._tag.c_str() );
+        else
+            ImGui::Text( " [%s:%s]", entry._tag.c_str(), entry._caller.c_str() );
+        EditorThemeUtil::popTextColor();
+        ImGui::SameLine( 0.0f, 0.0f );
+        ImGui::TextColored( EditorColorUtil::toImVec4( ConsolePanelInternal::colorForLevel( entry._level ) ), " [%s]", ConsolePanelInternal::levelName( entry._level ) );
+        ImGui::SameLine( 0.0f, 0.0f );
+        ImGui::TextUnformatted( " - " );
+        ImGui::SameLine( 0.0f, 0.0f );
+        ImGui::TextUnformatted( entry._message.c_str() );
+
+        if ( entry._file.empty() == false && ImGui::IsItemHovered( ImGuiHoveredFlags_DelayShort ) )
+        {
+            const string tooltipText = SW_LOCKEYFORMAT( "EditorConsole", "EntrySource", TextArgumentList().addText( "file", entry._file.c_str() ).addInteger( "line", entry._line ) );
+            EditorWidgets::drawTooltip( tooltipText.c_str() );
+        }
+        if ( ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked( ImGuiMouseButton_Left ) )
+            openEntryInIde( entry );
+
+        // 줄을 누르면 고르고, 누른 채 끌거나 Shift 로 누르면 넓힌다(언리얼 Output Log 의 여러 줄 선택).
+        if ( bListHovered && ImGui::IsMouseHoveringRect( rowMin, rowMax, false ) )
+        {
+            if ( ImGui::IsMouseClicked( ImGuiMouseButton_Left ) )
+                _selection.press( static_cast<uint32>( rowIndex ), ImGui::GetIO().KeyShift );
+            else if ( ImGui::IsMouseClicked( ImGuiMouseButton_Right ) && _selection.isSelected( static_cast<uint32>( rowIndex ) ) == false )
+            {
+                _selection.press( static_cast<uint32>( rowIndex ), false );
+                _selection.release();
+            }
+            else if ( _selection.isDragging() )
+                _selection.dragTo( static_cast<uint32>( rowIndex ) );
+        }
+
+        drawLogRowContextMenu( entry );
+        ImGui::PopID();
+    }
+
+    void ConsolePanel::drawLogRowContextMenu( const LogEntry& entry )
+    {
+        if ( ImGui::BeginPopupContextItem( "LogEntryCtx" ) == false )
+            return;
+        if ( ImGui::MenuItem( "Open in IDE" ) )
+            openEntryInIde( entry );
+        if ( ImGui::MenuItem( "Copy Message" ) )
+            ImGui::SetClipboardText( entry._message.c_str() );
+        if ( ImGui::MenuItem( "Copy Full Log Line" ) )
+        {
+            string full = formatEntryLine( entry );
+            if ( entry._file.empty() == false )
+                full += " (" + entry._file + ":" + to_string( entry._line ) + ")";
+            ImGui::SetClipboardText( full.c_str() );
+        }
+        fixed_string<constant::kMaxBuffer64> copySelectedLabel;
+        formatstring( copySelectedLabel.data(), copySelectedLabel.capacity(), "Copy Selected (%u lines)", _selection.getCount() );
+        if ( ImGui::MenuItem( copySelectedLabel.c_str(), "Ctrl+C", false, _selection.hasSelection() ) )
+            copySelectedRows();
+        ImGui::EndPopup();
     }
 
     void ConsolePanel::drawCommandLine()

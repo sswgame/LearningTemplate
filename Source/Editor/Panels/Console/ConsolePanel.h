@@ -45,6 +45,24 @@ namespace sw::editor
         void drawConsoleToolbar( bool& bNewLogs );
         /** @brief 필터를 통과한 로그 목록을 그립니다. */
         void drawLogList( bool bNewLogs );
+        /** @brief 툴바에 보이는 레벨별 줄 수입니다. */
+        struct LevelCounts
+        {
+            size_t _error{ 0 };
+            size_t _warning{ 0 };
+            size_t _info{ 0 };
+            size_t _trace{ 0 };
+        };
+        /** @brief 툴바의 첫 줄(지우기 · 자동 스크롤 · 접기 · 재생 때 지우기 · 오류 때 멈춤)입니다. 지우면 @p bNewLogs 를 끕니다. */
+        void drawToolbarToggles( bool& bNewLogs );
+        /** @brief 레벨 보기 토글 칩(오류 · 경고 · 정보 · 추적)입니다. */
+        void drawLevelChips( const LevelCounts& counts );
+        /** @brief 툴바의 복사 · 로그 파일 열기 · 태그 거르기 · 검색창입니다. */
+        void drawToolbarCommands();
+        /** @brief 로그 한 줄(선택 칠하기 · 글 · 툴팁 · 클릭 선택 · 우클릭 메뉴)을 그립니다. */
+        void drawLogRow( int32 rowIndex, float32 rowWidth, float32 lineHeight, bool bListHovered );
+        /** @brief 로그 줄의 우클릭 메뉴(IDE 열기 · 복사)입니다. */
+        void drawLogRowContextMenu( const LogEntry& entry );
         /** @brief Logger 구독을 해제합니다. */
         void shutdown( IRHIDevice* pRHIDevice ) override;
 

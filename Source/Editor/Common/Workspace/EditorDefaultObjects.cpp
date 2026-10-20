@@ -8,6 +8,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Serialization/Base/SerializerUtil.h"
 
@@ -50,22 +51,22 @@ namespace sw::editor
         _pManager.reset();
     }
 
-    bool EditorDefaultObjects::isDefaultValue( const PropertyInfo& prop, const void* pInstance, const void* pDefaultInstance )
+    bool EditorDefaultObjects::isDefaultValue( const PropertyInfo& prop, const ObjectAddress instance, const ObjectAddress defaultInstance )
     {
         const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring );
-        const string            current = SerializerUtil::formatPropertyText( prop, ObjectAddress{ pInstance }, context );
-        if ( pDefaultInstance != nullptr )
-            return current == SerializerUtil::formatPropertyText( prop, ObjectAddress{ pDefaultInstance }, context );
-        if ( prop._metadata._defaultValue.empty() )
+        const string            current = SerializerUtil::formatPropertyText( prop, instance, context );
+        if ( defaultInstance.get() != nullptr )
+            return current == SerializerUtil::formatPropertyText( prop, defaultInstance, context );
+        if ( prop._metadata->_defaultValue.empty() )
             return true;
         // 메타 글은 사람이 쓴 꼴이라("1.0" 과 "1") 숫자는 값으로 비교한다.
         float64 currentNumber{ 0.0 };
         float64 defaultNumber{ 0.0 };
-        if ( StringUtil::parseDouble( string_view{ current }, currentNumber ) && StringUtil::parseDouble( string_view{ prop._metadata._defaultValue }, defaultNumber ) )
+        if ( StringUtil::parseDouble( string_view{ current }, currentNumber ) && StringUtil::parseDouble( string_view{ prop._metadata->_defaultValue }, defaultNumber ) )
         {
             const float64 scale = MathUtil::max( MathUtil::abs( defaultNumber ), 1.0 );
             return MathUtil::abs( currentNumber - defaultNumber ) <= 1e-6 * scale;
         }
-        return StringUtil::equals( string_view{ current }, string_view{ prop._metadata._defaultValue }, true );
+        return StringUtil::equals( string_view{ current }, string_view{ prop._metadata->_defaultValue }, true );
     }
 } // namespace sw::editor

@@ -19,6 +19,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Scene/Scene.h"
@@ -161,7 +162,7 @@ namespace sw::editor
         {
             for ( const FunctionInfo& method : pType->_listMethod )
             {
-                if ( method._metadata._editorPreview == previewKind )
+                if ( method._metadata->_editorPreview == previewKind )
                     return &method;
             }
         }

@@ -1,7 +1,7 @@
 /**
  * @file FrameRendererCompute.cpp
- * @brief 프레임의 컴퓨트 프리패스 다섯 가지를 정의합니다. 인스턴스 애니메이션, 메시 모프, 메시 스킨, GPU 컬링, 인스턴스 정렬입니다.
- * @details 다섯 가지 모두 그래프(RenderGraph)의 패스가 아니다. 그리기 **전에** 프레임 커맨드 리스트에 직접 기록되고, 그 순서가
+ * @brief 프레임의 컴퓨트 프리패스 여섯 가지를 정의합니다. 인스턴스 애니메이션, 메시 모프, 메시 스킨, GPU 컬링, 인스턴스 정렬, 라이트 그리드입니다.
+ * @details 여섯 가지 모두 그래프(RenderGraph)의 패스가 아니다. 그리기 **전에** 프레임 커맨드 리스트에 직접 기록되고, 그 순서가
  *          곧 GPU 타임라인의 순서다. 애니메이션이 바운드를 바꾸고, 컬링이 그 바운드로 거르고, 정렬이 컬링 결과를
  *          되돌린다. 그래서 순서와 배리어가 한 파일 안에 나란히 보여야 한다.
  *
@@ -324,6 +324,26 @@ namespace sw
                 pView->_bRenderThisFrame = SW_FALSE;
         }
         _bGPUCullingActive = bAllViewsCulled ? 1u : 0u;
+    }
+
+    void FrameRenderer::dispatchLightGrid()
+    {
+        // 생산자가 GPU 인 프레임에만 뷰 수가 0 보다 크다(GPULightBuffer::updateGPUGrid). 그때 PSO 와 버퍼는 이미 확인됐다(selectLightGridProducer, updateGPUGrid) —
+        // 여기서 건너뛰면 채우지 않은 그리드를 셰이더가 읽으므로 더 거르지 않는다.
+        const uint32 viewCount = _lightBuffer.getGPUGridViewCount();
+        if ( viewCount == 0 || _pCmd == nullptr )
+            return;
+        const RHIStructuredBufferSlot& gridBuffer = _lightBuffer.getGPUGridBuffer();
+        _pCmd->transitionBuffer( gridBuffer._buffer, RHIBufferState::UnorderedAccess );
+        _pCmd->setComputePipelineState( getEnginePSO( RenderPassType::LightGrid ) );
+        // g_LightGridLights(t0) / g_LightGridViews(t1) / g_LightGridRW(u0). lightgrid.hlsl 레지스터와 1:1 로 대응한다. 상수 버퍼는 없다(뷰마다의 값은 t1).
+        _pCmd->bindComputeShaderResource( _lightBuffer.getBuffer()._srv, 0 );
+        _pCmd->bindComputeShaderResource( _lightBuffer.getGPUGridViewBuffer()._srv, 1 );
+        _pCmd->bindComputeUav( gridBuffer._uav, 0 );
+        // 그룹 하나 = 뷰 하나. 그룹 안에서 세기 · 접두사 합 · 채우기를 그룹 동기화로 잇는다.
+        _pCmd->dispatchCompute( viewCount, 1, 1 );
+        // 조명 패스(포워드 · 디퍼드 · 투명)가 t12 로 읽는다. 쓰기가 끝났음을 알린다(빠지면 DX12 · Vulkan 에서 예전 그리드를 읽는다).
+        _pCmd->transitionBuffer( gridBuffer._buffer, RHIBufferState::ShaderResource );
     }
 
     bool FrameRenderer::dispatchCullView( uint32 cullViewIndex, const RenderView& renderView, uint32 instanceCount, const ViewTarget* pExtraView )

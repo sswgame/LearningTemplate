@@ -28,7 +28,7 @@ namespace sw
     {
         float2  _lookDelta{};           ///< 시점 이동량(`Camera.Look` — 마우스면 픽셀, +y 는 화면 아래)
         float2  _pan{};                 ///< 앞 · 오른쪽 축(−1..1)
-        float32 _zoomNotches{ 0.0f };   ///< 확대 칸(`Camera.Zoom` — 휠 칸 · 패드 버튼 한 번, + 는 확대)
+        float32 _zoomNotches{ 0.0f };   ///< 확대 칸(`Camera.Zoom` — 휠 칸 · 패드 버튼 한 번 · 스틱 한 축 × 초당 칸 × 프레임 시간(`<stick axis="Y" scaleByDelta>`), + 는 확대)
         int32   _rotateSteps{ 0 };      ///< 회전 키(E +1, Q −1)
         uint8   _bLookHeld{ SW_FALSE }; ///< 시점 돌리기 버튼(오른쪽)을 누르고 있다
     };

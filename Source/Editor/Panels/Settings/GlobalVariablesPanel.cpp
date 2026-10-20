@@ -309,82 +309,87 @@ namespace sw::editor
                 ImGui::OpenPopup( "##GvPresetsPopup" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "Presets" ) );
 
-            if ( ImGui::BeginPopup( "##GvPresetsPopup" ) )
-            {
-                ImGui::Text( "Global Variable Presets" );
-                ImGui::Separator();
-
-                ImGui::InputTextWithHint( "##PresetNameInput", SW_LOCKEY( "EditorSettings", "PresetNameHint" ), _presetNameBuf.data(),
-                                          _presetNameBuf.capacity() );
-                ImGui::SameLine();
-                if ( ImGui::Button( "Save" ) && _presetNameBuf.empty() == false )
-                {
-                    const string presetPath = FileUtil::joinPath(
-                        EditorGlobalVariableCommands::getPresetFolderPath(),
-                        string( _presetNameBuf.c_str() ) + ".gvpreset.xml" );
-                    // 이름 붙인 프리셋 저장은 세션 문서의 저장이 아니다. 세션의 dirty 는 건드리지 않는다.
-                    if ( EditorGlobalVariableCommands::savePreset( presetPath, _presetNameBuf.c_str() ) )
-                    {
-                        _presetNameBuf.clear();
-                        _bPresetListDirty = SW_TRUE;
-                    }
-                    else
-                    {
-                        SW_LOG_ERROR( "Could not save preset '%#'", presetPath.c_str() );
-                    }
-                }
-
-                ImGui::Separator();
-                ImGui::TextDisabled( "Saved Presets:" );
-
-                vector<string>       listNewPresetFile;
-                const EditorTaskPoll presetPoll = _presetJob.take( listNewPresetFile );
-                if ( presetPoll == EditorTaskPoll::Ready )
-                {
-                    _listPresetFile   = std::move( listNewPresetFile );
-                    _bPresetListDirty = SW_FALSE;
-                }
-
-                bool bPresetScanning = presetPoll == EditorTaskPoll::Running;
-                if ( _bPresetListDirty == SW_TRUE && presetPoll != EditorTaskPoll::Running )
-                {
-                    _presetJob.request( EditorGlobalVariableCommands::getPresetFolderPath(), ".gvpreset.xml", false );
-                    bPresetScanning = true;
-                }
-
-                if ( bPresetScanning )
-                {
-                    ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorSettings", "ScanningPresets" ) );
-                }
-                else if ( _listPresetFile.empty() )
-                {
-                    EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorSettings", "NoPresets" ) );
-                }
-                else
-                {
-                    for ( const string& presetFile : _listPresetFile )
-                    {
-                        const string          fname         = FileUtil::getFileNamePart( presetFile );
-                        string                displayName   = fname;
-                        constexpr string_view kPresetSuffix = ".gvpreset.xml";
-                        if ( StringUtil::endsWith( displayName, kPresetSuffix, true ) )
-                            displayName = displayName.substr( 0, displayName.size() - kPresetSuffix.size() );
-
-                        if ( ImGui::MenuItem( displayName.c_str() ) )
-                        {
-                            // 읽은 프리셋이 현재 값이 된다. 저장된 세션과 다르므로 dirty 다. 읽지 못하면 값이 그대로다.
-                            if ( EditorGlobalVariableCommands::loadPreset( presetFile ) == false )
-                                SW_LOG_ERROR( "Could not load preset '%#'", presetFile.c_str() );
-                        }
-                    }
-                }
-
-                ImGui::EndPopup();
-            }
+            drawPresetsPopup();
         }
         EditorChrome::endToolbar();
 
         ImGui::Separator();
+    }
+
+    void GlobalVariablesPanel::drawPresetsPopup()
+    {
+        if ( ImGui::BeginPopup( "##GvPresetsPopup" ) == false )
+            return;
+
+        ImGui::Text( "Global Variable Presets" );
+        ImGui::Separator();
+
+        ImGui::InputTextWithHint( "##PresetNameInput", SW_LOCKEY( "EditorSettings", "PresetNameHint" ), _presetNameBuf.data(),
+                                  _presetNameBuf.capacity() );
+        ImGui::SameLine();
+        if ( ImGui::Button( "Save" ) && _presetNameBuf.empty() == false )
+        {
+            const string presetPath = FileUtil::joinPath(
+                EditorGlobalVariableCommands::getPresetFolderPath(),
+                string( _presetNameBuf.c_str() ) + ".gvpreset.xml" );
+            // 이름 붙인 프리셋 저장은 세션 문서의 저장이 아니다. 세션의 dirty 는 건드리지 않는다.
+            if ( EditorGlobalVariableCommands::savePreset( presetPath, _presetNameBuf.c_str() ) )
+            {
+                _presetNameBuf.clear();
+                _bPresetListDirty = SW_TRUE;
+            }
+            else
+            {
+                SW_LOG_ERROR( "Could not save preset '%#'", presetPath.c_str() );
+            }
+        }
+
+        ImGui::Separator();
+        ImGui::TextDisabled( "Saved Presets:" );
+
+        vector<string>       listNewPresetFile;
+        const EditorTaskPoll presetPoll = _presetJob.take( listNewPresetFile );
+        if ( presetPoll == EditorTaskPoll::Ready )
+        {
+            _listPresetFile   = std::move( listNewPresetFile );
+            _bPresetListDirty = SW_FALSE;
+        }
+
+        bool bPresetScanning = presetPoll == EditorTaskPoll::Running;
+        if ( _bPresetListDirty == SW_TRUE && presetPoll != EditorTaskPoll::Running )
+        {
+            _presetJob.request( EditorGlobalVariableCommands::getPresetFolderPath(), ".gvpreset.xml", false );
+            bPresetScanning = true;
+        }
+
+        if ( bPresetScanning )
+        {
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorSettings", "ScanningPresets" ) );
+        }
+        else if ( _listPresetFile.empty() )
+        {
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorSettings", "NoPresets" ) );
+        }
+        else
+        {
+            for ( const string& presetFile : _listPresetFile )
+            {
+                const string          fname         = FileUtil::getFileNamePart( presetFile );
+                string                displayName   = fname;
+                constexpr string_view kPresetSuffix = ".gvpreset.xml";
+                if ( StringUtil::endsWith( displayName, kPresetSuffix, true ) )
+                    displayName = displayName.substr( 0, displayName.size() - kPresetSuffix.size() );
+
+                if ( ImGui::MenuItem( displayName.c_str() ) )
+                {
+                    // 읽은 프리셋이 현재 값이 된다. 저장된 세션과 다르므로 dirty 다. 읽지 못하면 값이 그대로다.
+                    if ( EditorGlobalVariableCommands::loadPreset( presetFile ) == false )
+                        SW_LOG_ERROR( "Could not load preset '%#'", presetFile.c_str() );
+                }
+            }
+        }
+
+        ImGui::EndPopup();
     }
 
     void GlobalVariablesPanel::drawPinnedSection( GlobalVariableManager& gvm )

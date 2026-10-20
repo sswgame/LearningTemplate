@@ -122,7 +122,7 @@ namespace sw
         _pLedgerPolicy = pLedgerPolicy;
         _serverID      = serverID;
         _settings      = settings;
-        _nextSeed      = serverID * HashUtil::kFnvPrime64;
+        _nextSeed      = HashUtil::fnvStep64( HashUtil::kFnvOffset64, serverID );
     }
 
     void TradeService::shutdown()

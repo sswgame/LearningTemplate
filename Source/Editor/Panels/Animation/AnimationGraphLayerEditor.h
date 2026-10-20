@@ -13,6 +13,9 @@
 
 namespace sw
 {
+    struct AnimationBoneMaskDef;
+    struct AnimationGraphLayerDef;
+
     class AnimationGraphAsset;
 } // namespace sw
 
@@ -35,6 +38,18 @@ namespace sw::editor
     private:
         const utf8* drawLayers( AnimationGraphAsset& inoutGraph );
         const utf8* drawBoneMasks( AnimationGraphAsset& inoutGraph );
+        /** @brief 레이어 목록과 추가 · 삭제 · 순서 버튼입니다. 편집했으면 되돌리기 이름을 돌려줍니다. */
+        const utf8* drawLayerList( AnimationGraphAsset& inoutGraph );
+        /** @brief 고른 레이어의 이름 · 클립 · 마스크 행입니다. 편집했으면 @p pInoutEdit 에 되돌리기 이름을 둡니다. */
+        void drawLayerIdentityRows( AnimationGraphAsset& inoutGraph, AnimationGraphLayerDef& inoutLayer, const utf8*& pInoutEdit );
+        /** @brief 고른 레이어의 가중치 · 블렌드 · 반복 · 반감기 행입니다. */
+        void drawLayerBlendRows( AnimationGraphLayerDef& inoutLayer, const utf8*& pInoutEdit );
+        /** @brief 본 마스크 목록과 추가 · 삭제 버튼입니다. */
+        const utf8* drawMaskList( AnimationGraphAsset& inoutGraph );
+        /** @brief 고른 마스크의 이름과 프리셋 파일 행입니다. 이름을 바꾸면 그 마스크를 쓰는 레이어도 따라 옮깁니다. */
+        void drawMaskSourceRows( AnimationGraphAsset& inoutGraph, AnimationBoneMaskDef& inoutMask, const utf8*& pInoutEdit );
+        /** @brief 고른 마스크의 본 항목 표와 항목 추가 · 삭제입니다. 프리셋 마스크는 보이기만 합니다. */
+        void drawMaskEntries( AnimationBoneMaskDef& inoutMask, const utf8*& pInoutEdit );
         /**
          * @brief 글 입력란입니다. 편집을 마친 프레임에만 @p outCommitted 에 새 글을 넣고 true 를 돌려줍니다.
          * @details 편집하는 동안의 글은 입력란 id 별 버퍼에 둔다(편집을 시작할 때 만들고 마칠 때 지운다). 매 프레임 값에서 만든 임시 글을 넘기면

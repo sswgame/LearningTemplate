@@ -8,6 +8,8 @@
 
 #include "Editor/Common/EditorExports.h"
 
+#include "Engine/Reflection/TextAddress.h"
+
 namespace sw
 {
     struct PropertyInfo;
@@ -38,7 +40,7 @@ namespace sw::editor
         /** @brief 모든 오브젝트가 가진 컴포넌트 타입을 주 선택의 컴포넌트 순서대로 모읍니다(먼저 비운다). 오브젝트가 하나면 그 오브젝트의 컴포넌트 전부입니다. */
         static void collectCommonComponents( const vector<GameObject*>& listObject, vector<EditorMultiEditComponent>& outListCommon );
         /** @brief 프로퍼티 @p prop 의 값이 @p listInstance 사이에서 다르면 true 입니다(프로퍼티 글로 비교). */
-        static bool hasMixedValues( const PropertyInfo& prop, const vector<const void*>& listInstance );
+        static bool hasMixedValues( const PropertyInfo& prop, const vector<ObjectAddress>& listInstance );
         /**
          * @brief 첫 컴포넌트의 @p prop 값을 나머지에 입힙니다. 프로퍼티 글 하나만 옮기므로 다른 프로퍼티의 값은 그대로입니다. 입힌 수입니다.
          * @details 입힌 컴포넌트마다 `onPropertyChanged` 를 부릅니다. Undo 기록은 부르는 쪽(인스펙터)이 한 트랜잭션으로 감쌉니다.

@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Engine/Reflection/ReflectionMetadata.h"
+
 // 인스펙터 배치는 에디터 메타데이터를 읽는다 — Shipping 빌드에는 그 메타데이터가 없어 이 테스트도 없다.
 
 #if !defined( SW_SHIPPING )
@@ -164,8 +166,8 @@ SW_TEST_CASE( InspectorPropertyLayoutTest, RadianAnglesAreShownInDegrees )
 SW_TEST_CASE( InspectorPropertyLayoutTest, RatiosAreShownAsPercent )
 {
     PropertyInfo ratio;
-    ratio._metadata._mapCustomMeta[hashed_string( "Units" )] = "ratio";
-    const InspectorDisplayUnit unit                          = InspectorPropertyLayout::getDisplayUnit( ratio );
+    ratio._metadata->_mapCustomMeta[hashed_string( "Units" )] = "ratio";
+    const InspectorDisplayUnit unit                           = InspectorPropertyLayout::getDisplayUnit( ratio );
     // 0.25 가 25 % 로 보인다. 드래그는 퍼센트 단위다 — 한 픽셀이 1 % 이하.
     SW_EXPECT_NEAR_EQUAL( 25.0f, 0.25f * unit._scale, 1e-4f );
     SW_EXPECT_EQUAL( string( "%" ), unit._suffix );
@@ -196,16 +198,16 @@ SW_TEST_CASE( InspectorPropertyLayoutTest, ParameterListShowsNamesAndDefaults )
 SW_TEST_CASE( InspectorPropertyLayoutTest, SliderRangeIsSeparateFromAllowedRange )
 {
     PropertyInfo height;
-    height._metadata._minRange       = 0.0f;
-    height._metadata._maxRange       = 1000.0f;
-    height._metadata._bHasMinRange   = SW_TRUE;
-    height._metadata._bHasMaxRange   = SW_TRUE;
-    height._metadata._uiMinRange     = 50.0f;
-    height._metadata._uiMaxRange     = 250.0f;
-    height._metadata._bHasUIMinRange = SW_TRUE;
-    height._metadata._bHasUIMaxRange = SW_TRUE;
+    height._metadata->_minRange       = 0.0f;
+    height._metadata->_maxRange       = 1000.0f;
+    height._metadata->_bHasMinRange   = SW_TRUE;
+    height._metadata->_bHasMaxRange   = SW_TRUE;
+    height._metadata->_uiMinRange     = 50.0f;
+    height._metadata->_uiMaxRange     = 250.0f;
+    height._metadata->_bHasUIMinRange = SW_TRUE;
+    height._metadata->_bHasUIMaxRange = SW_TRUE;
 
-    const InspectorNumericRange range = InspectorPropertyLayout::getNumericRange( height, nullptr );
+    const InspectorNumericRange range = InspectorPropertyLayout::getNumericRange( height, ObjectAddress{ nullptr } );
     SW_EXPECT_TRUE( range._bSlider );
     SW_EXPECT_NEAR_EQUAL( 50.0, range._widgetMin, 1e-9 );
     SW_EXPECT_NEAR_EQUAL( 250.0, range._widgetMax, 1e-9 );
@@ -216,21 +218,21 @@ SW_TEST_CASE( InspectorPropertyLayoutTest, SliderRangeIsSeparateFromAllowedRange
 
     // UI 범위가 없으면 위젯도 허용 범위, 슬라이더는 `Meta = "Slider"` 일 때만(지금 규칙 그대로)
     PropertyInfo ratio;
-    ratio._metadata._minRange     = 0.0f;
-    ratio._metadata._maxRange     = 1.0f;
-    ratio._metadata._bHasMinRange = SW_TRUE;
-    ratio._metadata._bHasMaxRange = SW_TRUE;
-    InspectorNumericRange plain   = InspectorPropertyLayout::getNumericRange( ratio, nullptr );
+    ratio._metadata->_minRange     = 0.0f;
+    ratio._metadata->_maxRange     = 1.0f;
+    ratio._metadata->_bHasMinRange = SW_TRUE;
+    ratio._metadata->_bHasMaxRange = SW_TRUE;
+    InspectorNumericRange plain    = InspectorPropertyLayout::getNumericRange( ratio, ObjectAddress{ nullptr } );
     SW_EXPECT_FALSE( plain._bSlider );
     SW_EXPECT_NEAR_EQUAL( 1.0, plain._widgetMax, 1e-9 );
-    ratio._metadata._mapCustomMeta[hashed_string( "Slider" )] = "1";
-    SW_EXPECT_TRUE( InspectorPropertyLayout::getNumericRange( ratio, nullptr )._bSlider );
+    ratio._metadata->_mapCustomMeta[hashed_string( "Slider" )] = "1";
+    SW_EXPECT_TRUE( InspectorPropertyLayout::getNumericRange( ratio, ObjectAddress{ nullptr } )._bSlider );
 
     // 한쪽만 적은 범위는 그쪽만 막는다
     PropertyInfo lowOnly;
-    lowOnly._metadata._minRange     = 1.0f;
-    lowOnly._metadata._bHasMinRange = SW_TRUE;
-    const InspectorNumericRange low = InspectorPropertyLayout::getNumericRange( lowOnly, nullptr );
+    lowOnly._metadata->_minRange     = 1.0f;
+    lowOnly._metadata->_bHasMinRange = SW_TRUE;
+    const InspectorNumericRange low  = InspectorPropertyLayout::getNumericRange( lowOnly, ObjectAddress{ nullptr } );
     SW_EXPECT_FALSE( low._bHasWidgetMax );
     SW_EXPECT_NEAR_EQUAL( 99999.0, InspectorPropertyLayout::clampToAllowedRange( low, 99999.0 ), 1e-9 );
 }
@@ -243,17 +245,17 @@ SW_TEST_CASE( InspectorPropertyLayoutTest, SliderRangeIsSeparateFromAllowedRange
 SW_TEST_CASE( InspectorPropertyLayoutTest, FieldNamedRangeFollowsTheInstance )
 {
     PropertyInfo offset;
-    offset._metadata._pReadMinRange = []( const void* pInstance ) -> float64
+    offset._metadata->_pReadMinRange = []( const void* pInstance ) -> float64
     {
         return -static_cast<float64>( static_cast<const FieldBoundSample*>( pInstance )->_halfSize );
     };
-    offset._metadata._pReadMaxRange = []( const void* pInstance ) -> float64
+    offset._metadata->_pReadMaxRange = []( const void* pInstance ) -> float64
     {
         return static_cast<float64>( static_cast<const FieldBoundSample*>( pInstance )->_halfSize );
     };
 
     FieldBoundSample            sample;
-    const InspectorNumericRange range = InspectorPropertyLayout::getNumericRange( offset, &sample );
+    const InspectorNumericRange range = InspectorPropertyLayout::getNumericRange( offset, ObjectAddress{ &sample } );
     SW_EXPECT_TRUE( range._bHasClampMin && range._bHasClampMax );
     SW_EXPECT_NEAR_EQUAL( -10.0, range._clampMin, 1e-9 );
     SW_EXPECT_NEAR_EQUAL( 10.0, range._clampMax, 1e-9 );
@@ -262,12 +264,12 @@ SW_TEST_CASE( InspectorPropertyLayoutTest, FieldNamedRangeFollowsTheInstance )
     SW_EXPECT_NEAR_EQUAL( -10.0, InspectorPropertyLayout::clampToAllowedRange( range, -25.0 ), 1e-9 );
     // 두 경계가 다 있으니 `Meta = "Slider"` 면 슬라이더다(숫자 범위와 같은 규칙).
     SW_EXPECT_FALSE( range._bSlider );
-    offset._metadata._mapCustomMeta[hashed_string( "Slider" )] = "1";
-    SW_EXPECT_TRUE( InspectorPropertyLayout::getNumericRange( offset, &sample )._bSlider );
+    offset._metadata->_mapCustomMeta[hashed_string( "Slider" )] = "1";
+    SW_EXPECT_TRUE( InspectorPropertyLayout::getNumericRange( offset, ObjectAddress{ &sample } )._bSlider );
 
     // 범위 필드가 바뀌면 다음 그리기의 범위도 바뀐다.
     sample._halfSize                   = 2.5f;
-    const InspectorNumericRange shrunk = InspectorPropertyLayout::getNumericRange( offset, &sample );
+    const InspectorNumericRange shrunk = InspectorPropertyLayout::getNumericRange( offset, ObjectAddress{ &sample } );
     SW_EXPECT_NEAR_EQUAL( -2.5, shrunk._clampMin, 1e-9 );
     SW_EXPECT_NEAR_EQUAL( 2.5, InspectorPropertyLayout::clampToAllowedRange( shrunk, 7.0 ), 1e-9 );
 }
@@ -286,7 +288,7 @@ SW_TEST_CASE( InspectorPropertyLayoutTest, FileFilterAndHdrColor )
     PropertyInfo emissive;
     emissive._name = hashed_string( "_emissive" );
     SW_EXPECT_FALSE( InspectorPropertyLayout::isColorRequested( emissive ) );
-    emissive._metadata._bColorHdr = SW_TRUE;
+    emissive._metadata->_bColorHdr = SW_TRUE;
     SW_EXPECT_TRUE( InspectorPropertyLayout::isColorRequested( emissive ) );
 }
 
@@ -315,13 +317,13 @@ SW_TEST_CASE( InspectorPropertyLayoutTest, ElementPropertyKeepsHandleTarget )
     container._handleTargetTypeName = hashed_string( "X" );
     container._bIsContainer         = SW_TRUE;
     container._offset               = 24;
-    container._metadata._tooltip    = "tip";
+    container._metadata->_tooltip   = "tip";
 
     const PropertyInfo element = InspectorPropertyLayout::makeElementProperty( container );
     SW_EXPECT_TRUE( element._typeName == hashed_string( "ComponentHandle" ) );
     SW_EXPECT_TRUE( element._handleTargetTypeName == hashed_string( "X" ) );
     SW_EXPECT_TRUE( element._name == hashed_string( "_listLink" ) );
-    SW_EXPECT_TRUE( element._metadata._tooltip == container._metadata._tooltip );
+    SW_EXPECT_TRUE( element._metadata->_tooltip == container._metadata->_tooltip );
     SW_EXPECT_EQUAL( size_t{ 0 }, static_cast<size_t>( element._offset ) );
     SW_EXPECT_TRUE( element._bIsContainer == SW_FALSE );
 }

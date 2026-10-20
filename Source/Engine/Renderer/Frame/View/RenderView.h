@@ -11,6 +11,7 @@
 
 #include "Engine/Graphics/RHI/RHIConstantBufferSlot.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Object/Component/CameraPostProcessValues.h"
 #include "Engine/Renderer/Light/ShadowSetup.h"
 
 namespace sw
@@ -62,6 +63,12 @@ namespace sw
         Roughness,    ///< 표면의 거칠기를 회색으로 보인다(언리얼 Buffer Visualization Roughness). PBR 칸이 없는 셰이더는 자기 정의값(셰이더의 kSurfaceRoughness)을 보인다.
         Metallic,     ///< 표면의 금속도를 회색으로 보인다(언리얼 Buffer Visualization Metallic). 금속도 칸이 아직 없어 모든 표면이 0 이다.
         Mipmaps,      ///< 머티리얼 텍스처를 읽는 밉 단계를 색으로 보인다(유니티 Scene 뷰 Mipmaps). 확대는 파랑, 밉 0 초록, 1 노랑, 2 주황, 3 이상 빨강.
+        /**
+         * @brief 픽셀마다 조명 식이 도는 라이트 수(라이트 그리드의 전역 구간 + 그 클러스터 목록)를 색 띠로 보인다(언리얼 Light Complexity, 유니티 Forward+ 디버그 보기).
+         * @details 0 은 검정, 그 뒤로 파랑 · 초록 · 노랑 · 빨강(binding.hlsli kViewModeLightComplexityMax 이상)이다. 그리드가 없으면(gv_lightCulling 0) 목록 전체의 수다.
+         *          G버퍼가 표면에서 셈하므로 디퍼드 조명 패스에 보기 모드 변형이 필요 없다.
+         */
+        LightComplexity,
 
         Count
     };
@@ -78,16 +85,17 @@ namespace sw
 
     /** @brief 보기 모드 테이블입니다. 쿠커, PSO 변형, 툴바, 로그가 모두 이것을 읽습니다. 항목 순서가 열거값입니다. */
     inline constexpr RenderViewModeInfo kArrRenderViewModeInfo[] = {
-        {         "Lit",                      nullptr, false, false, false},
-        {       "Unlit",        "SW_VIEWMODE_UNLIT=1", false, false, false},
-        {   "Wireframe",                      nullptr,  true, false, false},
-        {     "Normals",      "SW_VIEWMODE_NORMALS=1", false, false,  true},
-        {       "Depth",        "SW_VIEWMODE_DEPTH=1", false, false,  true},
-        {    "Overdraw",     "SW_VIEWMODE_OVERDRAW=1", false,  true,  true},
-        {"LightingOnly", "SW_VIEWMODE_LIGHTINGONLY=1", false, false, false},
-        {   "Roughness",    "SW_VIEWMODE_ROUGHNESS=1", false, false,  true},
-        {    "Metallic",     "SW_VIEWMODE_METALLIC=1", false, false,  true},
-        {     "Mipmaps",      "SW_VIEWMODE_MIPMAPS=1", false, false,  true},
+        {            "Lit",                         nullptr, false, false, false},
+        {          "Unlit",           "SW_VIEWMODE_UNLIT=1", false, false, false},
+        {      "Wireframe",                         nullptr,  true, false, false},
+        {        "Normals",         "SW_VIEWMODE_NORMALS=1", false, false,  true},
+        {          "Depth",           "SW_VIEWMODE_DEPTH=1", false, false,  true},
+        {       "Overdraw",        "SW_VIEWMODE_OVERDRAW=1", false,  true,  true},
+        {   "LightingOnly",    "SW_VIEWMODE_LIGHTINGONLY=1", false, false, false},
+        {      "Roughness",       "SW_VIEWMODE_ROUGHNESS=1", false, false,  true},
+        {       "Metallic",        "SW_VIEWMODE_METALLIC=1", false, false,  true},
+        {        "Mipmaps",         "SW_VIEWMODE_MIPMAPS=1", false, false,  true},
+        {"LightComplexity", "SW_VIEWMODE_LIGHTCOMPLEXITY=1", false, false,  true},
     };
     static_assert( sizeof( kArrRenderViewModeInfo ) / sizeof( kArrRenderViewModeInfo[0] ) == static_cast<size_t>( RenderViewMode::Count ),
                    "보기 모드 표와 열거형의 개수가 다릅니다" );
@@ -108,12 +116,14 @@ namespace sw
      */
     struct RenderViewSettings
     {
-        float4         _screenRect{ 0.0f, 0.0f, 1.0f, 1.0f }; ///< 출력 안의 사각형(x, y, 너비, 높이. 0..1, 왼쪽 위 원점). 렌더 텍스처는 항상 전체다.
-        float32        _resolutionScale{ 1.0f };              ///< 출력 크기에 곱하는 내부 해상도
-        uint8          _bShadows{ SW_TRUE };                  ///< 그림자를 그린다(끄면 그림자 맵을 지우기만 하므로 모두 밝다).
-        uint8          _bPostProcess{ SW_TRUE };              ///< 후처리(블룸, 외곽선, 톤맵, TAA)를 적용한다.
-        uint8          _bCut{ SW_FALSE };                     ///< 이번 프레임에 화면이 끊겼다(언리얼 `bCameraCut`). TAA 히스토리를 버린다.
-        RenderViewMode _viewMode{ RenderViewMode::Lit };      ///< 이 뷰의 보기 모드(에디터 씬 뷰만 바꾸고, 게임 뷰는 Lit 이다).
+        float4  _screenRect{ 0.0f, 0.0f, 1.0f, 1.0f }; ///< 출력 안의 사각형(x, y, 너비, 높이. 0..1, 왼쪽 위 원점). 렌더 텍스처는 항상 전체다.
+        float32 _resolutionScale{ 1.0f };              ///< 출력 크기에 곱하는 내부 해상도
+        /// @brief 이 뷰를 그리는 카메라의 후처리 값(노출 · 블룸 배율 · 비네트 · 채도 · 대비 · 레터박스)입니다. 후처리를 끈 뷰와 표면 값을 보이는 보기 모드는 읽지 않습니다.
+        CameraPostProcessValues _postProcess{};
+        uint8                   _bShadows{ SW_TRUE };             ///< 그림자를 그린다(끄면 그림자 맵을 지우기만 하므로 모두 밝다).
+        uint8                   _bPostProcess{ SW_TRUE };         ///< 후처리(블룸, 외곽선, 톤맵, TAA)를 적용한다.
+        uint8                   _bCut{ SW_FALSE };                ///< 이번 프레임에 화면이 끊겼다(언리얼 `bCameraCut`). TAA 히스토리를 버린다.
+        RenderViewMode          _viewMode{ RenderViewMode::Lit }; ///< 이 뷰의 보기 모드(에디터 씬 뷰만 바꾸고, 게임 뷰는 Lit 이다).
         /**
          * @brief 정수 업스케일 배율입니다(0 = 끔). N 이면 내부 해상도가 사각형 픽셀 / N(내림)이고 Present 가 점 샘플로 N 배 키워 사각형 가운데에 놓는다.
          * @details 픽셀 아트의 Upscale Render Texture(유니티 Pixel Perfect Camera) — 낮은 해상도에서 그려 자산 픽셀이 화면 픽셀 N × N 으로 고르게 커진다.

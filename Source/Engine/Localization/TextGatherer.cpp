@@ -8,6 +8,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Localization/LocalizationDocuments.h"
 #include "Engine/Localization/TextFormatter.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -434,17 +435,17 @@ namespace sw
                         if ( value.empty() || value.front() == '{' )
                             return;
                         const string context = string( pType->_name.c_str() ) + "." + property._name.c_str();
-                        if ( property._metadata.findCustomMeta( hashed_string( TextGatherer::kMetaLocalizable ) ) != nullptr )
+                        if ( property._metadata->findCustomMeta( hashed_string( TextGatherer::kMetaLocalizable ) ) != nullptr )
                         {
-                            const string* pMaxLength = property._metadata.findCustomMeta( hashed_string( TextGatherer::kMetaMaxLength ) );
+                            const string* pMaxLength = property._metadata->findCustomMeta( hashed_string( TextGatherer::kMetaMaxLength ) );
                             int32         maxLength{ 0 };
                             if ( pMaxLength != nullptr && StringUtil::parseInt( *pMaxLength, maxLength ) == false )
                                 maxLength = 0;
                             gatherer.addTextOrKey( value, context, originName, static_cast<uint32>( maxLength > 0 ? maxLength : 0 ) );
                             return;
                         }
-                        const bool bExempt = property._metadata.findCustomMeta( hashed_string( TextGatherer::kMetaNotLocalizable ) ) != nullptr ||
-                                             property._metadata._bAssetPath != SW_FALSE || property._metadata._assetType.empty() == false;
+                        const bool bExempt = property._metadata->findCustomMeta( hashed_string( TextGatherer::kMetaNotLocalizable ) ) != nullptr ||
+                                             property._metadata->_bAssetPath != SW_FALSE || property._metadata->_assetType.empty() == false;
                         if ( bExempt == false && looksLikeUserFacingText( value ) )
                             gatherer.addIssue( originName, "possible hardcoded user-facing text in " + context + ": '" + string( value ) + "' - mark the property Meta = \"Localizable\" (or \"NotLocalizable\")",
                                                false );

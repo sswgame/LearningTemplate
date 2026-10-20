@@ -49,8 +49,21 @@ namespace sw::editor
          */
         void apply( MeshModifierMesh& inoutMesh, const MeshModifierEvaluation& evaluation ) const;
 
+        /**
+         * @brief `apply` 를 나눠 겁니다 — 켜진 모디파이어 중 [@p firstIndex, @p endIndex) 만 겁니다. 법선 재계산과 스택 입력 복사는 하지 않습니다.
+         * @details 앞부분 결과를 캐시해 뒷부분만 다시 거는 쪽(에디터 세션)이 쓴다. `needsStackInputPosition` 이면 부르는 쪽이 스택 입력(첫 모디파이어 전) 위치를
+         *          `_pListStackInputPosition` 에 넣고, 마지막 구간 뒤에 `finishApply` 를 부른다. 그러면 결과는 `apply` 한 번과 비트 단위로 같다.
+         */
+        void applyRange( MeshModifierMesh& inoutMesh, const MeshModifierEvaluation& evaluation, int32 firstIndex, int32 endIndex ) const;
+        /** @brief 켜진 모디파이어 중 스택 입력 위치(`needsOriginalPosition`)가 필요한 것이 있으면 true 입니다. */
+        bool needsStackInputPosition() const;
+        /** @brief 모든 구간을 건 뒤의 마무리(법선 재계산을 고르면 면 법선으로 다시 만든다)입니다. */
+        void finishApply( MeshModifierMesh& inoutMesh ) const;
+
         /** @brief 저장 문서(JSON 글)를 만듭니다. @p indent 가 음수면 한 줄입니다. */
         string makeJSONText( int32 indent = 2 ) const;
+        /** @brief 위에서 @p endIndex 개 모디파이어만 담은 한 줄 저장 글입니다. 같은 글이면 그 구간을 건 결과가 같아 앞부분 결과 캐시의 열쇠로 씁니다. */
+        string makePrefixJSONText( int32 endIndex ) const;
         /** @brief 저장 문서를 읽습니다. 문서가 틀리면 false 이고 스택은 비웁니다. 모르는 종류는 경고하고 건너뜁니다. */
         [[nodiscard]] bool readJSONText( string_view jsonText );
         /** @brief 절대 경로에 저장합니다. */

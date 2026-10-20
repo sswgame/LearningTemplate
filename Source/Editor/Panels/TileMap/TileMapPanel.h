@@ -114,6 +114,12 @@ namespace sw::editor
         void drawToolBar();
         /** @brief 칠하는 캔버스를 그립니다. 확대, 이동, 미리보기, 도구 입력을 처리합니다. */
         void drawCanvas();
+        /** @brief 휠 확대(커서 아래 칸을 붙든 채)와 가운데 · 오른쪽 끌기 이동을 처리합니다. */
+        void updateCanvasView( const ImVec2& canvasMin, bool bHovered, bool bActive );
+        /** @brief 현재 층의 칸을 모두 그립니다(타일 층은 아틀라스 그림, 워프 층은 워프 칸 표시). */
+        void drawGridCells( ImDrawList* pDl, const ImVec2& origin, float32 cell );
+        /** @brief 커서 아래 칸이나 Rect 도구로 끄는 사각형의 브러시 미리보기를 그립니다(지우기면 빨강). */
+        void drawBrushPreview( ImDrawList* pDl, const ImVec2& origin, float32 cell, const int2& hoverCell, bool bHovered );
         /** @brief 캔버스에서 왼쪽 버튼으로 한 입력을 현재 도구로 처리합니다. */
         void applyToolInput( const int2& hoverCell, bool bHovered );
         /** @brief 현재 레이어에서 셀마다 비교할 값을 채웁니다. 채우기 도구가 씁니다. */

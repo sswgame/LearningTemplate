@@ -7,6 +7,7 @@
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/GameSelection.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/Base/SchemaMigrate.h"
 #include "Engine/Serialization/Base/SerializerUtil.h"
@@ -69,7 +70,7 @@ namespace sw
                 const JSONValue value = object.get( prop._name.c_str(), false );
                 if ( value.isValid() == false )
                 {
-                    if ( prop._metadata._bRequired != SW_FALSE )
+                    if ( prop._metadata->_bRequired != SW_FALSE )
                         outListPath.push_back( path );
                     continue;
                 }
@@ -152,7 +153,7 @@ namespace sw
         bool          bRequiredRead = true;
         for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
         {
-            if ( prop._metadata._bRequired == SW_FALSE )
+            if ( prop._metadata->_bRequired == SW_FALSE )
                 continue;
             const bool bWritten = element.findAttribute( prop._name.c_str(), false ) != nullptr || element.findChild( prop._name.c_str(), false ).isValid();
             if ( bWritten )
@@ -166,7 +167,7 @@ namespace sw
     bool ConfigManager::isWithinRange( const void* pInstance, const TypeInfo& typeInfo, const utf8* pSourceLabel )
     {
         vector<string> listRangeError;
-        SerializerUtil::collectRangeErrors( typeInfo, pInstance, string(), listRangeError );
+        SerializerUtil::collectRangeErrors( typeInfo, ObjectAddress{ pInstance }, string(), listRangeError );
         for ( const string& rangeError : listRangeError )
         {
             SW_LOG_ERROR( "Config %# (%#): %#", pSourceLabel, typeInfo._fullyQualifiedName.c_str(), rangeError.c_str() );

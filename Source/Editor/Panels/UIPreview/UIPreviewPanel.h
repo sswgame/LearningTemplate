@@ -118,6 +118,9 @@ namespace sw::editor
         /** @brief 떼어 낸 위젯을 되돌리기 항목이 들고 있는 상자입니다(지우기를 되돌리면 같은 위젯을 다시 끼운다). */
         struct RemovedWidget;
 
+        /** @brief Slot 칸 한 번 그리기의 상태(슬롯 사본 · 필터 · 직전 컨트롤을 그렸는지)와 컨트롤 묶음별 그리기입니다. */
+        struct SlotFieldPass;
+
         /** @brief 프로퍼티 하나의 기준 값입니다. */
         struct BaselineValue
         {

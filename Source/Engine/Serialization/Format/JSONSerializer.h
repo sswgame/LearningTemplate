@@ -11,6 +11,8 @@
 
 namespace sw
 {
+    enum class FieldReadResult : uint8;
+
     struct TypeInfo;
 
     /**
@@ -48,10 +50,14 @@ namespace sw
         /** @brief JSONValue 객체에 리플렉션 필드를 씁니다. dst 는 객체여야 합니다. */
         static void writeObject( JSONValue dst, const void* pInstance, const TypeInfo& typeInfo,
                                  const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
-        /** @brief JSONValue 객체에서 리플렉션 필드를 읽습니다. */
-        [[nodiscard]] static bool readObject( JSONValue src, void* pInstance, const TypeInfo& typeInfo,
-                                              vector<SchemaOrphanValue>* pOutListOrphan = nullptr, uint32* pOutVersion = nullptr,
-                                              const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
+        /**
+         * @brief JSONValue 객체에서 리플렉션 필드를 읽습니다.
+         * @return 금지된 필드가 있거나 읽지 못한 필드를 되돌리지 못하면(안쪽 구조체 · 컨테이너 원소 포함) `ObjectRejected` 입니다.
+         *         객체가 아니거나, 엄격 읽기(@p pOutListOrphan 없음)에서 읽지 못한 필드가 있거나, 선언된 범위 밖이면 `FieldFailed` 입니다(`FieldReadResult`).
+         */
+        [[nodiscard]] static FieldReadResult readObject( JSONValue src, void* pInstance, const TypeInfo& typeInfo,
+                                                         vector<SchemaOrphanValue>* pOutListOrphan = nullptr, uint32* pOutVersion = nullptr,
+                                                         const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
 
         // ------------------------------------------------------------------------------
         // 2) Soft · 버전: orphan 수집, _schemaVersion
@@ -60,6 +66,8 @@ namespace sw
          * @brief Soft 역직렬화입니다. 변환하지 못한 필드를 orphan 으로 모읍니다.
          * @param pOutVersion nullptr 가 아니면 kSchemaVersionKey 값을 적습니다(없으면 0).
          * @return 본문이 JSON 객체가 아니면 `NotParsed`, 범위 밖 값이 있으면 `Rejected`(orphan 은 끝까지 모은다)입니다(`SoftReadResult`).
+         *         읽지 못한 필드는 orphan 으로 넘어가고 **읽기 전 값**으로 남습니다(`PropertyReadRollback`). 되돌릴 수 없으면(읽다 만 소유 포인터 목록) 그 자리에서 `Rejected` 입니다.
+         *         안쪽(구조체 칸, 컨테이너 원소인 구조체 · 컴포넌트)의 금지된 필드도 그 필드를 넘기지 않고 `Rejected` 입니다(`FieldReadResult::ObjectRejected`).
          */
         [[nodiscard]] static SoftReadResult deserializeSoft( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr,
                                                              vector<SchemaOrphanValue>* pOutListOrphan = nullptr, uint32* pOutVersion = nullptr,

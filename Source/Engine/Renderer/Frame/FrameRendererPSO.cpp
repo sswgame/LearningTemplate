@@ -289,7 +289,7 @@ namespace sw
         // 유리 머티리얼의 변형을 그림자 패스까지 만들어 두는 낭비가 없다.
         // 퍼뮤테이션이 없는 배치(머티리얼을 붙이지 않은 메시)도 모은다. Lit 이 아니거나 거울 배치면 그 배치에도
         // 변형이 필요하다. 그냥 건너뛰면 머티리얼 없는 메시만 뷰 모드와 컬 반전이 적용되지 않아 화면이 섞인다.
-        auto collect = []( const vector<GPUMeshBatch>& listBatch, vector<MaterialPSORequest>& outList )
+        auto collect = []( vector_reference<const GPUMeshBatch> listBatch, vector<MaterialPSORequest>& outList )
         {
             for ( const GPUMeshBatch& batch : listBatch )
             {

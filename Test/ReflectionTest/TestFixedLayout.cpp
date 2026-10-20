@@ -4,6 +4,7 @@
 #include "Core/Network/BitStream.h"
 
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Serialization/Base/SerializerUtil.h"
 #include "Engine/Serialization/Fixed/FixedLayout.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
@@ -493,26 +494,26 @@ SW_TEST_CASE( FixedLayoutTest, OwnFieldRangeBecomesAReaderForTheInspector )
     SW_ASSERT_NOT_NULL( pScalarType );
     const sw::PropertyInfo* pOffset = pScalarType->findProperty( sw::hashed_string( "_offset" ) );
     SW_ASSERT_NOT_NULL( pOffset );
-    SW_ASSERT_NOT_NULL( pOffset->_metadata._pReadMinRange );
-    SW_ASSERT_NOT_NULL( pOffset->_metadata._pReadMaxRange );
-    SW_EXPECT_TRUE( pOffset->_metadata._bHasMinRange == SW_FALSE );
+    SW_ASSERT_NOT_NULL( pOffset->_metadata->_pReadMinRange );
+    SW_ASSERT_NOT_NULL( pOffset->_metadata->_pReadMaxRange );
+    SW_EXPECT_TRUE( pOffset->_metadata->_bHasMinRange == SW_FALSE );
 
     sw::FixedScalarSample sample;
     sample._halfSize = 12.5f;
-    SW_EXPECT_NEAR_EQUAL( -12.5, pOffset->_metadata._pReadMinRange( &sample ), 1e-9 );
-    SW_EXPECT_NEAR_EQUAL( 12.5, pOffset->_metadata._pReadMaxRange( &sample ), 1e-9 );
+    SW_EXPECT_NEAR_EQUAL( -12.5, pOffset->_metadata->_pReadMinRange( &sample ), 1e-9 );
+    SW_EXPECT_NEAR_EQUAL( 12.5, pOffset->_metadata->_pReadMaxRange( &sample ), 1e-9 );
 
     const sw::PropertyInfo* pHalfSize = pScalarType->findProperty( sw::hashed_string( "_halfSize" ) );
     SW_ASSERT_NOT_NULL( pHalfSize );
-    SW_EXPECT_TRUE( pHalfSize->_metadata._pReadMinRange == nullptr );
-    SW_EXPECT_TRUE( pHalfSize->_metadata._bHasMinRange == SW_TRUE );
+    SW_EXPECT_TRUE( pHalfSize->_metadata->_pReadMinRange == nullptr );
+    SW_EXPECT_TRUE( pHalfSize->_metadata->_bHasMinRange == SW_TRUE );
 
     const sw::TypeInfo* pPointType = sw::FixedPointSample::StaticType();
     SW_ASSERT_NOT_NULL( pPointType );
     const sw::PropertyInfo* pY = pPointType->findProperty( sw::hashed_string( "_y" ) );
     SW_ASSERT_NOT_NULL( pY );
-    SW_EXPECT_TRUE( pY->_metadata._pReadMinRange == nullptr && pY->_metadata._pReadMaxRange == nullptr );
-    SW_EXPECT_TRUE( pY->_metadata._bHasMinRange == SW_FALSE );
+    SW_EXPECT_TRUE( pY->_metadata->_pReadMinRange == nullptr && pY->_metadata->_pReadMaxRange == nullptr );
+    SW_EXPECT_TRUE( pY->_metadata->_bHasMinRange == SW_FALSE );
 }
 
 /**
@@ -530,7 +531,7 @@ SW_TEST_CASE( FixedLayoutTest, ReadsKeepTheFieldBoundTheInspectorKeeps )
 
     const sw::PropertyInfo* pOffset = typeInfo.findProperty( sw::hashed_string( "_offset" ) );
     SW_ASSERT_NOT_NULL( pOffset );
-    const sw::PropertyAllowedRange range = pOffset->_metadata.computeAllowedRange( &source );
+    const sw::PropertyAllowedRange range = pOffset->_metadata->computeAllowedRange( &source );
     SW_EXPECT_TRUE( range._bHasMin && range._bHasMax );
     SW_EXPECT_FALSE( range.contains( 2.5 ) );
     SW_EXPECT_TRUE( range.contains( -2.0 ) );
@@ -541,7 +542,7 @@ SW_TEST_CASE( FixedLayoutTest, ReadsKeepTheFieldBoundTheInspectorKeeps )
     SW_EXPECT_FALSE( sw::JSONSerializer::deserialize( &fromJSON, typeInfo, sw::JSONSerializer::serialize( &source, typeInfo ) ) );
 
     sw::vector<sw::string> listRangeError;
-    sw::SerializerUtil::collectRangeErrors( typeInfo, &source, sw::string(), listRangeError );
+    sw::SerializerUtil::collectRangeErrors( typeInfo, sw::ObjectAddress{ &source }, sw::string(), listRangeError );
     SW_ASSERT_EQUAL( size_t{ 1 }, listRangeError.size() );
     SW_EXPECT_TRUE( listRangeError[0].find( "_offset" ) != sw::string::npos );
 

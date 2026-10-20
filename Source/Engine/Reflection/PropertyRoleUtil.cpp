@@ -7,6 +7,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Reflection/ReflectValue.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 
 namespace sw
@@ -95,16 +96,16 @@ namespace sw
         outListProperty.clear();
         for ( const PropertyInfo& prop : type.getPropertiesWithBase() )
         {
-            if ( prop._metadata._bReplicated == SW_TRUE )
+            if ( prop._metadata->_bReplicated == SW_TRUE )
                 outListProperty.push_back( &prop );
         }
     }
 
-    bool PropertyRoleUtil::callRepNotify( const PropertyInfo& prop, void* pInstance, const void* pOldValue )
+    bool PropertyRoleUtil::callRepNotify( const PropertyInfo& prop, const MutableObjectAddress instance, const ValueAddress oldValue )
     {
-        if ( prop._pRepNotify == nullptr || pInstance == nullptr )
+        if ( prop._pRepNotify == nullptr || instance.get() == nullptr )
             return false;
-        prop._pRepNotify( pInstance, pOldValue );
+        prop._pRepNotify( instance.get(), oldValue.get() );
         return true;
     }
 
@@ -118,17 +119,17 @@ namespace sw
         outListProperty.clear();
         for ( const PropertyInfo& prop : type.getPropertiesWithBase() )
         {
-            if ( prop._metadata._bInterp == SW_TRUE )
+            if ( prop._metadata->_bInterp == SW_TRUE )
                 outListProperty.push_back( &prop );
         }
     }
 
-    bool PropertyRoleUtil::applyInterpolated( const PropertyInfo& prop, void* pInstance, const void* pFrom, const void* pTo, const float32 alpha )
+    bool PropertyRoleUtil::applyInterpolated( const PropertyInfo& prop, const MutableObjectAddress instance, const ValueAddress from, const ValueAddress to, const float32 alpha )
     {
         const PropertyRoleUtilInternal::BlendFn pBlend            = PropertyRoleUtilInternal::findBlend( prop );
-        const bool                              bBlendUnavailable = pBlend == nullptr || pInstance == nullptr || pFrom == nullptr || pTo == nullptr;
+        const bool                              bBlendUnavailable = pBlend == nullptr || instance.get() == nullptr || from.get() == nullptr || to.get() == nullptr;
         if ( bBlendUnavailable )
             return false;
-        return pBlend( pFrom, pTo, alpha, prop.getRawPtr( pInstance ) );
+        return pBlend( from.get(), to.get(), alpha, prop.getRawPtr( instance.get() ) );
     }
 } // namespace sw

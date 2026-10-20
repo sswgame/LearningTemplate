@@ -13,6 +13,7 @@ namespace sw
 {
     class GameObject;
     class GameObjectManager;
+    class Scene;
 } // namespace sw
 
 namespace sw::editor
@@ -53,6 +54,13 @@ namespace sw::editor
         void setOffscreenRowSkipEnabled( bool bEnabled ) { _bSkipOffscreenRows = bEnabled; }
 
     private:
+        /** @brief 생성 버튼과 검색창이 있는 위쪽 막대를 그립니다. */
+        void drawToolbar( GameObjectManager* pManager );
+        /** @brief 루트 오브젝트 행을 그립니다. 화면 밖의 접힌 루트는 같은 높이의 빈 공간으로 합칩니다. */
+        void drawRootRows( Scene* pScene, GameObjectManager* pManager );
+        /** @brief 트리 아래 빈 영역의 드래그 앤 드롭 대상, 단축키, 우클릭 메뉴를 처리합니다. */
+        void drawTreeEmptyArea( GameObjectManager* pManager );
+
         /**
          * @brief 프레임마다 다시 채우는 오브젝트 스냅샷입니다(용량 재사용).
          * @details 트리를 그리는 도중 오브젝트가 지워지거나 부모가 바뀔 수 있으므로 스냅샷이 필요합니다. 매니저를 잠근 채로

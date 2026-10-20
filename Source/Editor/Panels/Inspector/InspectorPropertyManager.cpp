@@ -33,6 +33,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/SceneManager.h"
@@ -79,7 +80,7 @@ namespace sw::editor
             const utf8* _pLabel = "##value";
             void        showTooltipIfHovered( const PropertyInfo& prop )
             {
-                EditorWidgets::drawTooltip( prop._metadata._tooltip.c_str() );
+                EditorWidgets::drawTooltip( prop._metadata->_tooltip.c_str() );
             }
             void drawReadOnlyText( const PropertyInfo& prop, const utf8* pValue )
             {
@@ -89,32 +90,32 @@ namespace sw::editor
                 showTooltipIfHovered( prop );
             }
             /** @brief 내장 타입 값을 테이블의 형식(`InspectorBuiltinValue::_pFormatValue`)으로 읽기 전용 표시합니다. */
-            void drawReadOnlyValue( const PropertyInfo& prop, const void* pValue )
+            void drawReadOnlyValue( const PropertyInfo& prop, const ValueAddress value )
             {
                 fixed_string<constant::kMaxBuffer512> buf;
                 const InspectorBuiltinValue*          pRow = InspectorBuiltinValueUtil::findBuiltin( prop._typeName.c_str() );
                 if ( pRow != nullptr )
-                    pRow->_pFormatValue( pValue, buf.data(), buf.capacity() );
+                    pRow->_pFormatValue( value.get(), buf.data(), buf.capacity() );
                 drawReadOnlyText( prop, buf.c_str() );
             }
             bool isColorRequested( const PropertyInfo& prop ) { return InspectorPropertyLayout::isColorRequested( prop ); }
             /** @brief 색 편집 플래그입니다. `ColorHdr` 이면 1 을 넘는 값을 받습니다. */
             ImGuiColorEditFlags getColorFlags( const PropertyInfo& prop )
             {
-                return ImGuiColorEditFlags_Float | ( prop._metadata._bColorHdr != SW_FALSE ? ImGuiColorEditFlags_HDR : ImGuiColorEditFlags_None );
+                return ImGuiColorEditFlags_Float | ( prop._metadata->_bColorHdr != SW_FALSE ? ImGuiColorEditFlags_HDR : ImGuiColorEditFlags_None );
             }
 
             /** @brief 비트필드는 포인터를 잡을 수 없으므로 값으로 읽고 씁니다. 정수 계열과 bool 이 같은 체크박스를 씁니다. */
-            bool drawBitFieldCheckbox( void* pInstance, const PropertyInfo& prop )
+            bool drawBitFieldCheckbox( const MutableObjectAddress instance, const PropertyInfo& prop )
             {
-                bool bValue = prop.getValue<bool>( pInstance );
-                if ( prop._metadata._bReadOnly != SW_FALSE )
+                bool bValue = prop.getValue<bool>( instance.get() );
+                if ( prop._metadata->_bReadOnly != SW_FALSE )
                 {
                     drawReadOnlyText( prop, bValue ? "true" : "false" );
                     return true;
                 }
                 if ( ImGui::Checkbox( _pLabel, &bValue ) )
-                    prop.setValue<bool>( pInstance, bValue );
+                    prop.setValue<bool>( instance.get(), bValue );
                 showTooltipIfHovered( prop );
                 return true;
             }
@@ -166,7 +167,7 @@ namespace sw::editor
                     ImGui::BeginChild( "##pickerList", ImVec2{ 320.0f * EditorThemeUtil::getDpiScale(), 260.0f * EditorThemeUtil::getDpiScale() } );
                     for ( const EditorResourceIndexEntry& entry : picker._listEntry )
                     {
-                        if ( InspectorPropertyLayout::matchesFileFilter( prop._metadata._fileFilter, entry._path ) == false ||
+                        if ( InspectorPropertyLayout::matchesFileFilter( prop._metadata->_fileFilter, entry._path ) == false ||
                              filter.matchesAny( { string_view{ entry._path }, string_view{ entry._title } } ) == false )
                             continue;
                         const bool bFirst = shownCount == 0;
@@ -388,15 +389,15 @@ namespace sw::editor
             static constexpr bool kIsInteger = std::is_integral_v<T>;
 
         public:
-            bool draw( void* pInstance, const PropertyInfo& prop, EditorPropertyGrid& /*grid*/ ) override
+            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, EditorPropertyGrid& /*grid*/ ) override
             {
                 if constexpr ( kIsInteger )
                 {
                     if ( prop._bIsBitField == SW_TRUE )
-                        return drawBitFieldCheckbox( pInstance, prop );
+                        return drawBitFieldCheckbox( instance, prop );
                 }
 
-                T* pPtr = prop.getValuePtr<T>( pInstance );
+                T* pPtr = prop.getValuePtr<T>( instance.get() );
                 if ( pPtr == nullptr )
                     return true;
 
@@ -404,7 +405,7 @@ namespace sw::editor
                 const InspectorDisplayUnit unit      = InspectorPropertyLayout::getDisplayUnit( prop );
                 const float64              scale     = kIsInteger ? 1.0 : static_cast<float64>( unit._scale );
                 const float32              dragSpeed = kIsInteger ? 1.0f : ( unit._dragSpeed > 0.0f ? unit._dragSpeed : 0.01f );
-                if ( prop._metadata._bReadOnly != SW_FALSE )
+                if ( prop._metadata->_bReadOnly != SW_FALSE )
                 {
                     fixed_string<constant::kMaxBuffer64> buf;
                     if constexpr ( kIsInteger )
@@ -417,7 +418,7 @@ namespace sw::editor
 
                 // 위젯은 `UIMin` 과 `UIMax`(없으면 `Min` 과 `Max`) 안에서 움직이고, 값은 항상 `Min` 과 `Max` 로 제한한다(`InspectorNumericRange`).
                 // 적히지 않은 쪽은 nullptr 이므로 ImGui 가 타입의 범위로 제한한다(uint8 은 0..255). 필드 이름 꼴 경계는 이 객체의 그 필드 값이다.
-                const InspectorNumericRange range    = InspectorPropertyLayout::getNumericRange( prop, pInstance );
+                const InspectorNumericRange range    = InspectorPropertyLayout::getNumericRange( prop, instance );
                 const T                     minValue = static_cast<T>( range._widgetMin * scale );
                 const T                     maxValue = static_cast<T>( range._widgetMax * scale );
                 const T*                    pMin     = range._bHasWidgetMin ? &minValue : nullptr;
@@ -437,7 +438,7 @@ namespace sw::editor
                     *pPtr                = static_cast<T>( InspectorPropertyLayout::clampToAllowedRange( range, stored ) );
                 }
                 showTooltipIfHovered( prop );
-                InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), prop );
+                InspectorPropertyUndo::trackPod( MutableValueAddress{ pPtr }, sizeof( *pPtr ), prop );
                 return true;
             }
         };
@@ -450,27 +451,27 @@ namespace sw::editor
         class CheckboxProperty : public BuiltinPropertyBase
         {
         public:
-            bool draw( void* pInstance, const PropertyInfo& prop, EditorPropertyGrid& /*grid*/ ) override
+            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, EditorPropertyGrid& /*grid*/ ) override
             {
                 if constexpr ( std::is_same_v<T, bool> )
                 {
                     if ( prop._bIsBitField == SW_TRUE )
-                        return drawBitFieldCheckbox( pInstance, prop );
+                        return drawBitFieldCheckbox( instance, prop );
                 }
 
-                T* pPtr = prop.getValuePtr<T>( pInstance );
+                T* pPtr = prop.getValuePtr<T>( instance.get() );
                 if ( pPtr == nullptr )
                     return true;
-                if ( prop._metadata._bReadOnly != SW_FALSE )
+                if ( prop._metadata->_bReadOnly != SW_FALSE )
                 {
-                    drawReadOnlyValue( prop, pPtr );
+                    drawReadOnlyValue( prop, ValueAddress{ pPtr } );
                     return true;
                 }
                 drawValueWidget( _pLabel, *pPtr );
                 showTooltipIfHovered( prop );
                 // atomic<bool> 은 다른 스레드가 쓰는 값이므로 되돌리기 기록에 넣지 않는다.
                 if constexpr ( std::is_same_v<T, bool> )
-                    InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), prop );
+                    InspectorPropertyUndo::trackPod( MutableValueAddress{ pPtr }, sizeof( *pPtr ), prop );
                 return true;
             }
         };
@@ -480,19 +481,19 @@ namespace sw::editor
         class ValueProperty : public BuiltinPropertyBase
         {
         public:
-            bool draw( void* pInstance, const PropertyInfo& prop, EditorPropertyGrid& /*grid*/ ) override
+            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, EditorPropertyGrid& /*grid*/ ) override
             {
-                T* pPtr = prop.getValuePtr<T>( pInstance );
+                T* pPtr = prop.getValuePtr<T>( instance.get() );
                 if ( pPtr == nullptr )
                     return true;
-                if ( prop._metadata._bReadOnly != SW_FALSE )
+                if ( prop._metadata->_bReadOnly != SW_FALSE )
                 {
-                    drawReadOnlyValue( prop, pPtr );
+                    drawReadOnlyValue( prop, ValueAddress{ pPtr } );
                     return true;
                 }
                 drawValueWidget( _pLabel, *pPtr );
                 showTooltipIfHovered( prop );
-                InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), prop );
+                InspectorPropertyUndo::trackPod( MutableValueAddress{ pPtr }, sizeof( *pPtr ), prop );
                 return true;
             }
         };
@@ -506,10 +507,10 @@ namespace sw::editor
         class ComponentHandleProperty : public BuiltinPropertyBase
         {
         public:
-            bool draw( void* pInstance, const PropertyInfo& prop, EditorPropertyGrid& grid ) override
+            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, EditorPropertyGrid& grid ) override
             {
                 if ( prop._handleTargetTypeName.empty() )
-                    return _untyped.draw( pInstance, prop, grid );
+                    return _untyped.draw( instance, prop, grid );
 
                 const TypeRegistry*      pRegistry   = findSubsystem<TypeRegistry>();
                 const TypeInfo*          pTargetType = pRegistry != nullptr ? InspectorComponentPickerUtil::findTargetType( *pRegistry, prop ) : nullptr;
@@ -521,7 +522,7 @@ namespace sw::editor
                     return true;
                 }
 
-                ComponentHandle* pValue = prop.getValuePtr<ComponentHandle>( pInstance );
+                ComponentHandle* pValue = prop.getValuePtr<ComponentHandle>( instance.get() );
                 if ( pValue == nullptr )
                     return true;
 
@@ -529,7 +530,7 @@ namespace sw::editor
                 fixed_string<constant::kMaxBuffer512> preview;
                 makePreview( *pManager, *pValue, state, preview );
 
-                if ( prop._metadata._bReadOnly != SW_FALSE )
+                if ( prop._metadata->_bReadOnly != SW_FALSE )
                 {
                     drawReadOnlyText( prop, preview.c_str() );
                     return true;
@@ -569,7 +570,7 @@ namespace sw::editor
                     {
                         // `picked` 는 값 자체라 값 주소 쪽 변환(`formatValueText`)으로 쓴다. 객체 주소 쪽(`formatPropertyText`)은 오프셋을 한 번 더 더한다.
                         const string undoLabel = InspectorPropertyLayout::makeUndoLabel( InspectorPropertyLayout::getPropertyLabel( prop ) );
-                        grid.applyPropertyTextAsEdit( pInstance, prop,
+                        grid.applyPropertyTextAsEdit( instance, prop,
                                                       SerializerUtil::formatValueText( ValueAddress{ &picked }, prop._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) ),
                                                       undoLabel.c_str() );
                     }
@@ -629,14 +630,14 @@ namespace sw::editor
         class StringProperty : public BuiltinPropertyBase
         {
         public:
-            bool draw( void* pInstance, const PropertyInfo& prop, EditorPropertyGrid& grid ) override
+            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, EditorPropertyGrid& grid ) override
             {
-                const bool bAssetPath = prop._metadata._bAssetPath != SW_FALSE || prop._metadata._assetType.empty() == false;
+                const bool bAssetPath = prop._metadata->_bAssetPath != SW_FALSE || prop._metadata->_assetType.empty() == false;
 
-                string* pPtr = prop.getValuePtr<string>( pInstance );
+                string* pPtr = prop.getValuePtr<string>( instance.get() );
                 if ( pPtr == nullptr )
                     return true;
-                if ( prop._metadata._bReadOnly != SW_FALSE )
+                if ( prop._metadata->_bReadOnly != SW_FALSE )
                 {
                     drawReadOnlyText( prop, pPtr->c_str() );
                     return true;
@@ -649,12 +650,12 @@ namespace sw::editor
                         [pPtr]( const utf8* pID )
                     { EditorWidgets::drawTextField( pID, *pPtr ); }, prop, string_view{ *pPtr }, droppedPath );
                     // `FileFilter` 에 맞지 않는 파일은 받지 않는다. 드롭, 선택, 지우기는 위젯 편집이 아니라 그리드가 적용해야 알림과 되돌리기에 남는다.
-                    if ( action == AssetFieldAction::Dropped && InspectorPropertyLayout::matchesFileFilter( prop._metadata._fileFilter, droppedPath ) )
-                        grid.applyPropertyTextAsEdit( pInstance, prop, droppedPath, "Set Asset" );
+                    if ( action == AssetFieldAction::Dropped && InspectorPropertyLayout::matchesFileFilter( prop._metadata->_fileFilter, droppedPath ) )
+                        grid.applyPropertyTextAsEdit( instance, prop, droppedPath, "Set Asset" );
                     else if ( action == AssetFieldAction::Cleared )
-                        grid.applyPropertyTextAsEdit( pInstance, prop, "", "Clear Asset" );
+                        grid.applyPropertyTextAsEdit( instance, prop, "", "Clear Asset" );
                 }
-                else if ( prop._metadata._bMultiline != SW_FALSE )
+                else if ( prop._metadata->_bMultiline != SW_FALSE )
                 {
                     EditorWidgets::drawTextFieldMultiline( _pLabel, *pPtr );
                 }
@@ -671,14 +672,14 @@ namespace sw::editor
         class HashedStringProperty : public BuiltinPropertyBase
         {
         public:
-            bool draw( void* pInstance, const PropertyInfo& prop, EditorPropertyGrid& grid ) override
+            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, EditorPropertyGrid& grid ) override
             {
-                const bool bAssetPath = prop._metadata._bAssetPath != SW_FALSE || prop._metadata._assetType.empty() == false;
+                const bool bAssetPath = prop._metadata->_bAssetPath != SW_FALSE || prop._metadata->_assetType.empty() == false;
 
-                hashed_string* pPtr = prop.getValuePtr<hashed_string>( pInstance );
+                hashed_string* pPtr = prop.getValuePtr<hashed_string>( instance.get() );
                 if ( pPtr == nullptr )
                     return true;
-                if ( prop._metadata._bReadOnly != SW_FALSE )
+                if ( prop._metadata->_bReadOnly != SW_FALSE )
                 {
                     drawReadOnlyText( prop, pPtr->c_str() );
                     return true;
@@ -690,10 +691,10 @@ namespace sw::editor
                     const AssetFieldAction action = drawAssetPathField(
                         [pPtr]( const utf8* pID )
                     { drawNameInput( pID, *pPtr ); }, prop, pPtr->view(), droppedPath );
-                    if ( action == AssetFieldAction::Dropped && InspectorPropertyLayout::matchesFileFilter( prop._metadata._fileFilter, droppedPath ) )
-                        grid.applyPropertyTextAsEdit( pInstance, prop, droppedPath, "Set Asset" );
+                    if ( action == AssetFieldAction::Dropped && InspectorPropertyLayout::matchesFileFilter( prop._metadata->_fileFilter, droppedPath ) )
+                        grid.applyPropertyTextAsEdit( instance, prop, droppedPath, "Set Asset" );
                     else if ( action == AssetFieldAction::Cleared )
-                        grid.applyPropertyTextAsEdit( pInstance, prop, "", "Clear Asset" );
+                        grid.applyPropertyTextAsEdit( instance, prop, "", "Clear Asset" );
                 }
                 else
                 {
@@ -701,7 +702,7 @@ namespace sw::editor
                 }
                 showTooltipIfHovered( prop );
                 // 인턴 인덱스 하나이므로 POD 로 되돌린다. 인턴된 문자열은 해제되지 않으므로 이전 인덱스는 언제나 유효하다.
-                InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), prop );
+                InspectorPropertyUndo::trackPod( MutableValueAddress{ pPtr }, sizeof( *pPtr ), prop );
                 return true;
             }
         };
@@ -709,14 +710,14 @@ namespace sw::editor
         class Float3Property : public BuiltinPropertyBase
         {
         public:
-            bool draw( void* pInstance, const PropertyInfo& prop, EditorPropertyGrid& /*grid*/ ) override
+            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, EditorPropertyGrid& /*grid*/ ) override
             {
-                float3* pPtr = prop.getValuePtr<float3>( pInstance );
+                float3* pPtr = prop.getValuePtr<float3>( instance.get() );
                 if ( pPtr == nullptr )
                     return true;
                 // 라디안으로 저장한 각도(`Units=rad`)는 도로 보여 주고 편집한다. 바뀌었을 때만 다시 쓴다.
                 const InspectorDisplayUnit unit = InspectorPropertyLayout::getDisplayUnit( prop );
-                if ( prop._metadata._bReadOnly != SW_FALSE )
+                if ( prop._metadata->_bReadOnly != SW_FALSE )
                 {
                     const float3                          shown = *pPtr * unit._scale;
                     fixed_string<constant::kMaxBuffer128> buf;
@@ -736,7 +737,7 @@ namespace sw::editor
                 else
                     EditorWidgets::drawVec3Control( _pLabel, *pPtr, 0.0f, 100.0f, 0.1f );
                 showTooltipIfHovered( prop );
-                InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), prop );
+                InspectorPropertyUndo::trackPod( MutableValueAddress{ pPtr }, sizeof( *pPtr ), prop );
                 return true;
             }
         };
@@ -744,12 +745,12 @@ namespace sw::editor
         class Float2Property : public BuiltinPropertyBase
         {
         public:
-            bool draw( void* pInstance, const PropertyInfo& prop, EditorPropertyGrid& /*grid*/ ) override
+            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, EditorPropertyGrid& /*grid*/ ) override
             {
-                float2* pPtr = prop.getValuePtr<float2>( pInstance );
+                float2* pPtr = prop.getValuePtr<float2>( instance.get() );
                 if ( pPtr == nullptr )
                     return true;
-                if ( prop._metadata._bReadOnly != SW_FALSE )
+                if ( prop._metadata->_bReadOnly != SW_FALSE )
                 {
                     fixed_string<constant::kMaxBuffer128> buf;
                     formatstring( buf.data(), buf.capacity(), "(%#, %#)",
@@ -759,7 +760,7 @@ namespace sw::editor
                 }
                 ImGui::DragFloat2( _pLabel, &pPtr->_x, 0.1f );
                 showTooltipIfHovered( prop );
-                InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), prop );
+                InspectorPropertyUndo::trackPod( MutableValueAddress{ pPtr }, sizeof( *pPtr ), prop );
                 return true;
             }
         };
@@ -767,12 +768,12 @@ namespace sw::editor
         class Float4Property : public BuiltinPropertyBase
         {
         public:
-            bool draw( void* pInstance, const PropertyInfo& prop, EditorPropertyGrid& /*grid*/ ) override
+            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, EditorPropertyGrid& /*grid*/ ) override
             {
-                float4* pPtr = prop.getValuePtr<float4>( pInstance );
+                float4* pPtr = prop.getValuePtr<float4>( instance.get() );
                 if ( pPtr == nullptr )
                     return true;
-                if ( prop._metadata._bReadOnly != SW_FALSE )
+                if ( prop._metadata->_bReadOnly != SW_FALSE )
                 {
                     fixed_string<constant::kMaxBuffer256> buf;
                     formatstring( buf.data(), buf.capacity(), "(%#, %#, %#, %#)",
@@ -786,7 +787,7 @@ namespace sw::editor
                 else
                     ImGui::DragFloat4( _pLabel, &pPtr->_x, 0.01f );
                 showTooltipIfHovered( prop );
-                InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), prop );
+                InspectorPropertyUndo::trackPod( MutableValueAddress{ pPtr }, sizeof( *pPtr ), prop );
                 return true;
             }
         };

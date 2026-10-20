@@ -24,7 +24,7 @@ namespace sw
     enum class AnnotationEmit : uint8
     {
         Display, ///< Editor 와 같은 자리에 쓰는 표시 메타 — 어느 멤버(이벤트 포함)에나 붙는다
-        Editor,  ///< `#if !defined( SW_SHIPPING )` 블록 안의 `<접두>_metadata.<멤버>`
+        Editor,  ///< `#if !defined( SW_SHIPPING )` 블록 안의 `<접두>_metadata-><멤버>`
         Runtime, ///< 같은 꼴, 블록 밖
         Manual,  ///< CodeGenerator 가 직접 쓴다(템플릿 변수 · 별칭 등록 · 범위처럼 메타데이터 멤버가 아닌 자리)
     };
@@ -108,7 +108,7 @@ namespace sw
         /**
          * @brief Editor · Runtime 필드를 표 순서대로 씁니다.
          * @details Editor 묶음은 쓸 것이 있을 때만 `#if !defined( SW_SHIPPING )` 로 감쌉니다(빈 블록을 남기지 않습니다).
-         * @param prefix 생성 코드의 대상 식. 예: "p._metadata." · "info._metadata." · "info."
+         * @param prefix 생성 코드의 대상 식. 예: "p._metadata->" · "info._metadata->" · "info."
          */
         template <typename TParsed>
         static void emitMetadata( CodeEmit& emit, const TParsed& parsed, string_view prefix );

@@ -6,6 +6,8 @@
 
 #include "Editor/Common/EditorPaths.h"
 
+#include "Engine/Reflection/ReflectionTypes.h"
+
 #include <algorithm>
 
 namespace sw::editor
@@ -61,6 +63,30 @@ namespace sw::editor
         auto         it     = std::lower_bound( _listKey.begin(), _listKey.end(), string_view{ prefix }, []( const string& lhs, string_view rhs )
                     { return string_view{ lhs } < rhs; } );
         return it != _listKey.end() && string_view{ *it }.substr( 0, prefix.size() ) == string_view{ prefix };
+    }
+
+    string InspectorFavorites::makePropertyKey( const TypeInfo& type, const PropertyInfo& prop )
+    {
+        const TypeInfo* pDeclaring = &type;
+        for ( const TypeInfo* pType = &type; pType != nullptr; pType = pType->getParentType() )
+        {
+            if ( pType->findProperty( prop._name ) != nullptr )
+            {
+                pDeclaring = pType;
+                break;
+            }
+        }
+        return makeKey( pDeclaring->_name.c_str(), prop._name.c_str() );
+    }
+
+    bool InspectorFavorites::hasAnyForTypeOrBase( const TypeInfo& type ) const
+    {
+        for ( const TypeInfo* pType = &type; pType != nullptr; pType = pType->getParentType() )
+        {
+            if ( hasAnyForType( pType->_name.c_str() ) )
+                return true;
+        }
+        return false;
     }
 
     string InspectorFavorites::toText() const

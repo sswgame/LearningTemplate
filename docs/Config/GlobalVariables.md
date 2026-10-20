@@ -167,7 +167,7 @@
 | `gv_drawMerge` | `int32` | `1` | 일반 | 씬 배치 멀티 드로우 묶기 (0=배치마다 호출, 진단용) | [FrameRenderer.cpp](../../Source/Engine/Renderer/Frame/FrameRenderer.cpp) |
 | `gv_dumpRenderGraph` | `bool` | `false` | 시험 | 렌더 그래프를 컴파일할 때마다 레벨 · 패스 · 읽고 쓰는 자원을 로그로 남긴다 | [FrameRendererPassExecute.cpp](../../Source/Engine/Renderer/Frame/FrameRendererPassExecute.cpp) |
 | `gv_gpuCulling` | `int32` | `1` | 일반 | GPU 컬링 컴퓨트 디스패치 (0=건너뜀, 진단용) | [FrameRendererCompute.cpp](../../Source/Engine/Renderer/Frame/FrameRendererCompute.cpp) |
-| `gv_lightCulling` | `int32` | `1` | 시험 | 라이트 컬링 (0=그리드 없이 목록 전체, 1=CPU 클러스터 그리드) | [FrameRenderer.cpp](../../Source/Engine/Renderer/Frame/FrameRenderer.cpp) |
+| `gv_lightCulling` | `int32` | `2` | 시험 | 라이트 컬링 (0=그리드 없이 목록 전체, 1=CPU 클러스터 그리드, 2=GPU 클러스터 그리드) | [FrameRenderer.cpp](../../Source/Engine/Renderer/Frame/FrameRenderer.cpp) |
 | `gv_morphDiag` | `int32` | `0` | 일반 | 메시 모프 진단 (0 평소 / 1 강제 켬 / 2 디스패치 생략 / 3 번호표) | [FrameRendererCompute.cpp](../../Source/Engine/Renderer/Frame/FrameRendererCompute.cpp) |
 | `gv_renderPipeline` | `string` | — | 일반 | 이 파이프라인 XML 로 그린다 (비우면 gv_deferred · 팩 설정 · 기본 포워드) | [FrameRenderer.cpp](../../Source/Engine/Renderer/Frame/FrameRenderer.cpp) |
 | `gv_renderViewBudget` | `int32` | `4` | 일반 | 한 프레임에 그리는 렌더 텍스처 뷰(CCTV · 백미러)의 최대 수 (0 = 제한 없음) | [RenderViewCollector.cpp](../../Source/Engine/Renderer/Frame/View/RenderViewCollector.cpp) |
@@ -181,7 +181,7 @@
 | `gv_screenshotQuit` | `bool` | `false` | 시험 · 배포본에도 | 요청한 스크린샷을 모두 찍으면 앱이 스스로 끝난다 (0, 파일을 쓰지 못했으면 14) | [RenderThread.cpp](../../Source/Engine/Renderer/RenderThread.cpp) |
 | `gv_useRenderThread` | `bool` | `true` | 일반 | 전용 RenderThread 사용 (false = 게임 스레드 인라인 submit) | [RenderThread.cpp](../../Source/Engine/Renderer/RenderThread.cpp) |
 | `gv_vertexPool` | `int32` | `1` | 일반 | 씬 메시 정점 풀 (0=메시마다 정점 버퍼, 진단용) | [FrameRenderer.cpp](../../Source/Engine/Renderer/Frame/FrameRenderer.cpp) |
-| `gv_viewMode` | `int32` | `0` | 일반 | 주 출력 보기 모드 (0 Lit / 1 Unlit / 2 Wireframe / 3 Normals / 4 Depth / 5 Overdraw / 6 LightingOnly / 7 Roughness / 8 Metallic / 9 Mipmaps) | [FrameRenderer.cpp](../../Source/Engine/Renderer/Frame/FrameRenderer.cpp) |
+| `gv_viewMode` | `int32` | `0` | 일반 | 주 출력 보기 모드 (0 Lit / 1 Unlit / 2 Wireframe / 3 Normals / 4 Depth / 5 Overdraw / 6 LightingOnly / 7 Roughness / 8 Metallic / 9 Mipmaps / 10 LightComplexity) | [FrameRenderer.cpp](../../Source/Engine/Renderer/Frame/FrameRenderer.cpp) |
 
 ## `Source/Engine/Resource`
 

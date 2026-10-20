@@ -7,6 +7,7 @@
 #include "Engine/Reflection/ReflectAny.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 
@@ -31,10 +32,10 @@ SW_TEST_CASE( ReflectionBindingTest, BiDirectionalPropertyBinding )
     sw::PropertyInfo prop( sw::hashed_string( "score" ), sw::hashed_string( "uint32" ), SW_OFFSET_OF( TestBindingActor, _score ) );
 
     bool bCalled{ false };
-    prop.bindOnChanged( SW_DELEGATE_LAMBDA( sw::PropertyInfo::PropertyBindingDelegate, [&bCalled]( const sw::PropertyInfo& p, const void* pInst )
+    prop.bindOnChanged( SW_DELEGATE_LAMBDA( sw::PropertyInfo::PropertyBindingDelegate, [&bCalled]( const sw::PropertyInfo& p, const sw::ObjectAddress inst )
     {
         (void)p;
-        (void)pInst;
+        (void)inst;
         bCalled = true;
     } ) );
 
@@ -107,8 +108,8 @@ SW_TEST_CASE( ReflectionFunctionMacroTest, CodegenMethodInvoke )
     const sw::FunctionInfo* getHpFn      = typeInfo->findMethod( sw::hashed_string( "getHp" ) );
     SW_ASSERT_NOT_NULL( takeDamageFn );
     SW_ASSERT_NOT_NULL( getHpFn );
-    SW_EXPECT_EQUAL( 0, static_cast<int32>( takeDamageFn->_metadata._bConst ) );
-    SW_EXPECT_EQUAL( 1, static_cast<int32>( getHpFn->_metadata._bConst ) );
+    SW_EXPECT_EQUAL( 0, static_cast<int32>( takeDamageFn->_metadata->_bConst ) );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( getHpFn->_metadata->_bConst ) );
 
     sw::TaskArgs damageArgs;
     damageArgs.add( int32{ 40 } );

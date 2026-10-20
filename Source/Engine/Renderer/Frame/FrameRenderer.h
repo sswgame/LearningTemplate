@@ -363,9 +363,12 @@ namespace sw
             RHIDescriptorIndex          _taaHistorySrv{ kInvalidDescriptorIndex };
             RHIStructuredBufferSlot     _transparentRank;           ///< 이 뷰의 투명 순번 테이블(정렬 디스패치 t2). GPU 정렬 백엔드에서 쓴다.
             vector<uint32>              _listTransparentBatchOrder; ///< 이번 프레임 이 뷰의 투명 배치 순서(비면 주 순서를 쓴다)
-            vector<uint32>              _listInstanceSlot;          ///< 지금 `_instanceSlotStream` 에 들어 있는 내용(같으면 다시 만들지 않는다)
-            RHIBufferHandle             _instanceSlotStream{ 0 };   ///< 이 뷰의 인스턴스 슬롯 스트림(꼬리만 뷰 순서). 컬링이 없는 백엔드(DX11)에서 쓴다.
-            uint32                      _transparentTailBase{ 0 };  ///< 순번 테이블 0번의 인스턴스 번호
+            /// @brief 이번 프레임 이 뷰의 입자 그리기 순서와 자리(`_listTransparentBatchOrder` 안의 자리)입니다. `_bHasParticleOrder` 가 0 이면 주 시점의 것을 쓴다.
+            vector<GPUTransparentParticleSlot> _listParticleSlot;
+            uint8                              _bHasParticleOrder{ SW_FALSE }; ///< `_listParticleSlot` 이 이 뷰의 배치 순서와 짝인지
+            vector<uint32>                     _listInstanceSlot;              ///< 지금 `_instanceSlotStream` 에 들어 있는 내용(같으면 다시 만들지 않는다)
+            RHIBufferHandle                    _instanceSlotStream{ 0 };       ///< 이 뷰의 인스턴스 슬롯 스트림(꼬리만 뷰 순서). 컬링이 없는 백엔드(DX11)에서 쓴다.
+            uint32                             _transparentTailBase{ 0 };      ///< 순번 테이블 0번의 인스턴스 번호
             /**
              * @brief 이 뷰의 방향광 그림자(셰이더 상수 · 캐스케이드 타일 · 컬링 절두체)입니다. 주 시점은 프레임의 것, 추가 뷰는 자기 카메라에 맞춘 것이다.
              * @details 추가 뷰가 주 시점 볼륨을 쓰면 다른 곳을 보는 CCTV · 분할 화면은 그림자가 빠진다(언리얼의 뷰별 그림자 뷰).
@@ -539,7 +542,7 @@ namespace sw
          * @brief 그림자 패스 하나를 그립니다 — 지금 뷰의 캐스케이드 타일과 프레임의 점광 · 스폿 타일을 아틀라스의 자기 칸(뷰포트)에 그립니다.
          * @details 타일마다 `g_LightViewProj` 를 그 타일의 행렬로 바꿔 씬을 한 번씩 그린다. 컬링은 모든 타일을 덮는 상자(`ViewShadowData::_cullViewProj`) 하나다.
          */
-        void drawShadowTiles( FramePassContext& context, RHIDescriptorIndex passCb, bool bTransparentBatch );
+        void drawShadowTiles( FramePassContext& context, bool bTransparentBatch );
         /** @brief 이번 프레임 한 뷰의 그림자 패스가 그리는 타일 수입니다(상수 버퍼 링 용량 산정). */
         uint32 computeShadowTileCountPerView() const;
         /**
@@ -568,16 +571,33 @@ namespace sw
         /** @brief 배치의 머티리얼 데이터 버퍼(GPUScene)를 패스 레지스트리에 "SwMaterials" 이름으로 등록합니다. */
         void registerMaterialBuffer( FramePassContext& context, const GPUMeshBatch& batch, RHIPipelineStateHandle pso );
         /** @brief 씬 메시를 그립니다. GPUScene 이 올라가 있으면 drawGPUBatches 로 넘기고, 아니면 상태만 맞춥니다. */
-        void drawSceneMeshes( FramePassContext& context, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass );
-        /** @brief GPUScene 배치를 간접 드로우로 그립니다. */
-        void drawGPUBatches( FramePassContext& context, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass );
-        /** @brief 풀스크린 삼각형을 그립니다. */
-        void drawFullscreen( FramePassContext& context, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex );
+        void drawSceneMeshes( FramePassContext& context, RHIPipelineStateHandle pso, bool bTransparentPass );
         /**
-         * @brief 방출기마다의 입자 그리기(`GPUScene::getParticleBatches`)를 지금 열린 투명 패스에 그립니다. 메시 투명 배치 **뒤**에 부릅니다.
-         * @details 입자 PSO(`ensureParticlePSO`)를 걸고 PassCB 를 바인딩한 뒤 `VfxParticleRenderer::drawBatches` 로 넘긴다. 순서는 주 시점의 정렬 순서다(추가 뷰도 같은 순서로 그린다).
+         * @brief GPUScene 배치를 간접 드로우로 그립니다.
+         * @param pParticleSlot 투명 패스의 입자 자리(`findActiveParticleSlots`). 주면 배치 순서의 그 자리마다 입자를 끼우고 멀티 드로우 묶음을 그 자리에서 끊으며,
+         *                      남은 입자는 모든 배치 뒤에 그린다. 투명 큐가 아닌 패스(외곽선 · 그림자 등)는 nullptr 이다.
          */
-        void drawParticles( FramePassContext& context );
+        void drawGPUBatches( FramePassContext& context, RHIPipelineStateHandle pso, bool bTransparentPass, const vector<GPUTransparentParticleSlot>* pParticleSlot );
+        /** @brief 투명 큐(메시 투명 배치와 입자 그리기를 한 순서로)를 지금 열린 투명 패스에 그립니다. */
+        void drawTransparentQueue( FramePassContext& context, RHIPipelineStateHandle pso );
+        /** @brief 지금 그리는 뷰의 입자 자리입니다. 추가 뷰는 자기 순서가 있으면 그것, 없으면 주 시점의 것(그 뷰도 주 배치 순서로 그린다)입니다. */
+        const vector<GPUTransparentParticleSlot>& findActiveParticleSlots() const;
+        /** @brief 풀스크린 삼각형을 그립니다. */
+        void drawFullscreen( FramePassContext& context, RHIPipelineStateHandle pso );
+        /**
+         * @brief 입자 그리기 구간 @p listSlot 을 지금 열린 투명 패스에 그 순서로 그립니다.
+         * @details 입자 PSO(`ensureParticlePSO`)를 걸고 PassCB 를 바인딩한 뒤 `VfxParticleRenderer::drawBatches` 로 넘긴다. PSO · 정점 버퍼 슬롯을 바꾸므로
+         *          메시 드로우로 돌아가는 쪽(`drawGPUBatches`)이 그 상태를 다시 건다.
+         * @return 입자 상태를 걸었으면 true 입니다(그릴 것이 없거나 PSO 가 없으면 false — 상태도 그대로다)
+         */
+        bool drawParticleSlots( FramePassContext& context, vector_reference<const GPUTransparentParticleSlot> listSlot );
+        /**
+         * @brief @p listSlot 의 @p inOutCursor 부터 자리가 @p position 이하인 입자를 그리고 커서를 그 뒤로 옮깁니다. 메시 드로우로 돌아갈 패스 상태(인스턴스 슬롯
+         *        스트림 @p slotStream, 에뮬 텍스처 슬롯)를 다시 겁니다.
+         * @return 입자 상태를 걸었으면 true 입니다 — 부르는 쪽은 자기가 기억한 PSO · 정점 버퍼를 잊어야 한다
+         */
+        bool drawParticleRun( FramePassContext& context, vector_reference<const GPUTransparentParticleSlot> listSlot, uint32& inOutCursor, uint32 position,
+                              RHIBufferHandle slotStream );
         /** @brief 뷰의 풀에서 트랜지언트 텍스처를 할당합니다. */
         void allocateTransient( TransientAttachmentPool& pool, string_view name, RHIFormat format, bool bDepth, const float4& clearColor,
                                 uint32 resolutionDivisor = 1 );
@@ -626,10 +646,16 @@ namespace sw
          */
         bool uploadSceneAndSubmit( IRHIDevice* pDevice, const utf8* pCallerName );
         /**
-         * @brief 뷰마다 라이트 그리드를 만들어 라이트 버퍼를 올립니다. 업로드 전에, 추가 뷰가 정해진 뒤에 부릅니다(`gv_lightCulling` 0 이면 그리드 없이).
+         * @brief 라이트 버퍼를 올리고 뷰마다 라이트 그리드를 준비합니다. 업로드 전에, 추가 뷰가 정해진 뒤에 부릅니다(생산자는 `selectLightGridProducer`).
          * @details 라이트와 그림자 타일은 앞서 `GPULightBuffer::populate` 로 담겨 있어야 한다. 뷰의 그리드 번호는 `ViewTarget::_lightGridIndex` 에 남는다.
+         *          GPU 생산자면 그리드 채우기는 커맨드 리스트가 열린 뒤 `dispatchLightGrid` 가 한다.
          */
         void updateLightBuffer( IRHIDevice* pDevice );
+        /**
+         * @brief 이번 프레임의 라이트 그리드 생산자입니다. 개발 빌드는 `gv_lightCulling`(0 없음, 1 CPU, 2 GPU), Shipping 은 GPU 로 고정입니다.
+         * @details GPU 를 골랐는데 컴퓨트 PSO 가 없으면 오류를 한 번 남기고 그리드 없이 그린다 — 채우지 않은 그리드 버퍼를 셰이더가 읽게 두지 않는다.
+         */
+        LightGridProducer selectLightGridProducer();
 
         // ------------------------------------------------------------------------------
         // 6) 어태치먼트 · PSO
@@ -854,6 +880,11 @@ namespace sw
          */
         void dispatchCullAndSort( uint32 instanceCount );
         /**
+         * @brief GPU 생산자로 뷰마다의 라이트 그리드를 채웁니다(lightgrid.hlsl, 그룹 하나 = 뷰 하나). 생산자가 GPU 가 아니면 아무것도 하지 않습니다.
+         * @details 그리기 전에, 그래프 밖의 컴퓨트 프리패스로 기록한다(렌더 그래프에 컴퓨트 패스 상태가 없다). 끝나면 그리드 버퍼를 SRV 로 돌린다.
+         */
+        void dispatchLightGrid();
+        /**
          * @brief 컬링 슬롯 하나를 컬링하고 정렬합니다. 그 뷰의 절두체와 자기 상수 버퍼를 씁니다. 디스패치를 돌렸으면 true 입니다.
          * @param pExtraView 추가 뷰면 그 뷰(투명 순번 테이블을 정렬에 바인딩합니다), 고정 뷰(주 시점, 그림자)면 nullptr 입니다.
          */
@@ -931,10 +962,11 @@ namespace sw
          */
         uint8                  _bGPUCullingActive;
         FrameRendererStatus    _status;
-        uint8                  _bCallbacksBound     : 1;
-        uint8                  _bPassResourcesReady : 1;
-        uint8                  _bScenePreview       : 1; ///< 미리보기 씬 렌더러다 — 프로파일러 보고 · 렌더 타깃 공개를 하지 않는다
-        [[maybe_unused]] uint8 _reservedFlags       : 4;
+        uint8                  _bCallbacksBound            : 1;
+        uint8                  _bPassResourcesReady        : 1;
+        uint8                  _bScenePreview              : 1; ///< 미리보기 씬 렌더러다 — 프로파일러 보고 · 렌더 타깃 공개를 하지 않는다
+        uint8                  _bLightGridPSOMissingLogged : 1; ///< 라이트 그리드 컴퓨트 PSO 가 없다는 것을 한 번만 알리는 래치다(셋업 단계에서만 쓴다)
+        [[maybe_unused]] uint8 _reservedFlags              : 3;
         /**
          * @brief 주 출력의 보기 모드(`RenderViewMode`)입니다.
          * @details 게임 스레드(패킷)와 직접 경로가 프레임 시작에 읽어 뷰 설정에 싣고, 드로우는 뷰 설정만 본다. 쓰는 쪽이 다른 스레드이므로 atomic 이다.

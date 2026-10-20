@@ -11,6 +11,8 @@
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/Workspace/EditorExtensionRegistry.h"
 
+#include "Engine/Reflection/TextAddress.h"
+
 namespace sw
 {
     struct PropertyInfo;
@@ -108,7 +110,7 @@ namespace sw::editor
         /** @brief JSON 오브젝트 문자열을 인스턴스에 적용합니다. 없는 키는 그대로 둡니다. 모르는 키는 @p outListUnknownKey 에 담습니다. 형식이 틀리면 false 입니다. */
         [[nodiscard]] static bool applyJSON( const TypeInfo& type, void* pInstance, string_view jsonText, vector<string>& outListUnknownKey );
         /** @brief @p prop 의 값이 기본값과 다르면 true 입니다. 창의 "Modified only" 필터와 수정 표시에 씁니다. */
-        static bool isPropertyModified( const PropertyInfo& prop, const void* pCurrent, const void* pDefault );
+        static bool isPropertyModified( const PropertyInfo& prop, ObjectAddress current, ObjectAddress defaultInstance );
         /** @brief 섹션 하나를 기본값으로 되돌리고 `_pfnOnChanged` 를 부릅니다. */
         static void resetSection( const EditorSettingsRegistration& registration );
         /** @brief 파일에 저장된 프로퍼티 수를 반환합니다. 모든 섹션의 키를 합한 값입니다. 파일이 없거나 형식이 틀리면 0 입니다. */

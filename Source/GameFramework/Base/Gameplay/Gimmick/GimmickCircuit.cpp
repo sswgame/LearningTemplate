@@ -43,11 +43,11 @@ namespace sw
                 outValue._text = text;
                 if ( spec._type == GimmickParamType::Text )
                     return true;
-                float32      arrValue[4] = {};
-                const uint32 count       = GameDataXML::parseFloats( text, arrValue, 4 );
-                if ( count == 0 || ( spec._type == GimmickParamType::Number && count != 1 ) )
+                vector<float32> listValue;
+                if ( GameDataXML::parseFloatList( text, 4, listValue ) == false || ( spec._type == GimmickParamType::Number && listValue.size() != 1 ) )
                     return false;
-                outValue._vector = float4{ arrValue[0], arrValue[1], arrValue[2], arrValue[3] };
+                listValue.resize( 4, 0.0f ); // 벡터는 모자란 성분이 0 이다
+                outValue._vector = float4{ listValue[0], listValue[1], listValue[2], listValue[3] };
                 return true;
             }
         };

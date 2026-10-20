@@ -14,6 +14,37 @@
 
 한 일은 `git log` 가 정본입니다.
 
+## 0. 2026-10-21 세션 끝 — 구현만 끝낸 브랜치 약 40 개가 병합을 기다린다 (이것부터 읽는다)
+
+사용자 지시: "모두 다 해 · 미루지 말 것 · 측정은 나중, 구현 먼저 · 별칭은 없앤다". **전부 구현만 했고 빌드 · 테스트 · 측정 · GPU 검증은 한 번도 안 돌렸다(빌드 미확인). push 도 없다.** main 은 이 세션에서 문서 하나(이 절)만 늘었다.
+
+**다음 세션 첫 일**: `git worktree list` 와 `git log main..wt/<이름> --oneline` 으로 브랜치별 커밋을 읽는다. 작업자 일부는 이 세션이 끝난 뒤에도 커밋을 더하고 있을 수 있어 먼저 `git worktree list` 로 새 커밋이 멈췄는지 본다(보고는 이 세션에 쌓였고 새 세션은 못 받는다 — 커밋 메시지와 각 계획 문서가 정본). 그다음 `integrator`(opus, high)에게 맡겨 아래 순서로 병합하고 **단계마다** `full-build` 한다(한 번에 다 합치지 않는다).
+
+**병합 묶음과 순서** (같은 줄의 브랜치는 앞의 것 위에 쌓였다 — 앞에서부터 병합):
+1. 작은 것 · 도구: `wt/wtclean` · `wt/hc4` → `wt/hc4b` · `wt/docsclean` · `wt/smallfix`
+2. 직렬화: `wt/silentskip` → `wt/silentskip2` → `wt/silentskip3` · `wt/voidstar` → `wt/voidstar2` (같은 Serializer 파일, silentskip3 · voidstar2 가 서로를 따라갔는지 확인)
+3. 저장 · 설정 · 상태: `wt/capsnap` → `wt/abisink`(ABI v7, 옛 게임 DLL 거부) · `wt/gsdatapath` → `wt/gspaths2`
+4. 렌더러 자료: `wt/batchview` → `wt/oparity` · `wt/assetcache` → `wt/assetcache2`(별칭 제거, `Macros.h` 로 전 모듈 재빌드)
+5. 구조: `wt/enginepart`(E3 · E4, 전 모듈 재빌드, batchview · oparity 를 이미 병합함) · `wt/scriptsstruct`(Scripts 구조 개편, 설계는 아래) · `wt/meshbuild`(BuildSpeed, 헤더 팬아웃)
+6. 도메인: `wt/vfx2` `wt/lighting` `wt/wstream` `wt/datadriven` `wt/camera` `wt/previewwin` `wt/gfxformat` `wt/audioext` `wt/onlinekits` `wt/animation` `wt/netdebug`
+7. 정리: `wt/corenet`(묶음 1) `wt/kitclean`(2a) `wt/baseclean`(2b) `wt/longfn`(5) `wt/editorcommon`(6a)
+충돌이 가장 많은 곳은 `Roadmap.md` 와 README 표(생성물 — `status-board --write` 로 다시 만든다), `Candidates-engine.md`, 렌더러 파일, `GameInstanceBase.cpp`, `docs/Config/*`(`GenerateConfigReference.py`). 린트 기준선 `Scripts/lint/rules/CheckDataDrivenStructure.toml` 에 한 작업자가 main 체크아웃에 잘못 쓴 줄이 한 번 있었다(되돌림) — 병합 전 `git status` 로 main 이 깨끗한지 본다.
+
+**직렬화 병합 메모**: `wt/silentskip3`(S3, `FieldReadResult`)는 `wt/voidstar` 를 이미 병합해 두 변경을 합쳤다. `wt/voidstar2`(남은 `void*`)는 시작할 때 `silentskip3` 를 가져오게 했으니 둘 중 나중 것 하나만 병합해도 된다. **S4(남은 단위)**: 바이너리 `BinarySerializer::deserialize` · `deserializeValueBinary` · `applyPropertyBinary` 가 아직 필드 실패와 객체 실패를 `bool` 하나로 돌려준다 — `deserializeTagged` 등이 `FieldReadResult` 를 돌려주게 해야 한다(`SerializerSilentSkips` 3절). 추측: `tryCoerceBinaryPayload` 가 기록 타입이 다른 비트필드의 바이트 주소에 바로 쓸 수 있다.
+
+**아직 못 띄운 것**: `wt/panelclean`(묶음 6b: FunctorLambda Panels/Inspector 2 · LongFunctions Editor/Panels 27 · CommentRewrite Panels 약 25). 이후 묶음 3(HeaderIncludeSlimming · EngineServiceInjection, 전 모듈 재빌드, GameObjectManager.h 는 enginepart 가 먼저) · 4(그래픽 긴 함수 + DiskPathVsResourceId, 경로 형식 결정이 먼저) · 7(시험→테스트) · 8(NamingAuditNext, 전역이라 마지막 단독). 보류: PreludeAndFwdCleanup(프렐류드 위치 미확인), NameReferenceAudit ③(`SW_DEV_COMMAND` 구조 결정), CarriedOverChecks 의 bindless 진입 구조 · 겹침 도구(사용자 확인). 동시 실행 한도는 20 명(`CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS`)이라 일곱 건이 거절됐고 지금은 위 둘만 남았다.
+
+**병합 뒤에 해야 할 측정 · 검증 목록**(구현 중 모두 미뤘다):
+- 빌드: Debug `all AllTests`(특히 `SW_SHARED_ASSET_CACHE` dllexport 명시 인스턴스화, `Macros.h` 의 `SW_API_EXTERN_TEMPLATE`, `ScenePrimitive` 리플렉션 사슬), Shipping 구성 컴파일(HC4), unity · Linux 빌드.
+- 테스트: `GameFrameworkTest.*`(스냅샷 왕복, `GameSettingsUnknownElementIsALoadError`, `BootstrapGameSettingsIsBoundAndApplied`), `ModuleHostTest.ReloadBatchKeepsTheGameWhenItsStateCannotBeCaptured`, `ReflectionSerializationTest.*`(S1~S3, `ValueAddressTextDoesNotAddPropertyOffset` static_assert), `ObjectStateRoundTripTest.*`, `GPUScene*` · `TestRenderPassGPU` · `TestGPUTransparentSorter`, `TestAssetCacheRegistry` · `TestSpriteClipAsset` · `TestRagdoll` · `TestPairedAnimation` · `TestPoseModifier`, `PackEngineSettingsTest`, EditorTest 의 트랜잭션 · 플레이 세션 · 씬.
+- 화면: 네 백엔드 투명 · 추가 뷰 · 모프 · VAT(batchview · oparity), 렌더러를 만진 도메인(lighting · vfx2 · gfxformat), 에디터 패널(previewwin · editorcommon). 셰이더를 바꾼 브랜치는 `App.exe --cook-shaders` 재베이크 후 낡은 바이너리 삭제. 씬 형식 판이 오른 wstream 은 씬 에셋 변환 실행.
+- 측정: 씬 로드 · 스냅샷 복원 시간(S2 의 필드별 담기 비용), `tickCost*` · 큐브 20,000 개 `GT.Frame` p50 · p99 3~5 판 전후(enginepart), `exportCPUSnapshot` 복사 비용(batchview), BuildSpeed 빌드 시간, EncryptedTickCost, WorldStreaming W7 히치(Release 에서 혼자), AudioChannelLayout U1 Release 비교, 결정 기록 3절의 재측정 칸(스핀 · hot pool · `flatMapInProcesses`).
+- 데이터: 개수가 가변인 기믹(`GimmickCircuit` · `GimmickNodeRegistry`)이 이제 최대 개수 초과 · 숫자 아닌 토큰을 오류로 막는다 — 기존 데이터가 로드되는지, 소프트 읽기가 객체째 실패하도록 바뀐 곳(읽다 만 소유 포인터 목록, XML 구조체 칸의 금지된 필드)이 기존 씬 · 세이브를 깨지 않는지.
+
+**설계 결정과 이유**: 사용자 결정 대기였던 것은 권고안으로 갔다 — PairedAnimation P3b(기존 네트워크 킷 복제 재사용, 서버가 정확한 진입 시각을 보냄, 게임이 고른 역할의 `exitState` 는 지금 규칙 그대로), 키트 51 개는 견본으로 유지. Scripts 구조: 권고안 B(폴더는 옮기지 않고 import 루트를 `Scripts/` 하나로, 층 0 common · 1 린트 틀 · 2 명령 · 3 `__main__`, `CheckScriptLayers` 게이트, `common` 파사드 제거, 파일 목록 문서를 `--list` 생성으로) — 설계 문서는 세션 임시 폴더라 사라졌을 수 있고 `docs/plans/ScriptsStructure.md`(scriptsstruct 가 만들 계획 문서)가 정본이다. 별칭은 없앤다(사용자 지시) — `SW_SHARED_ASSET_CACHE` 로 해결했다.
+
+**남은 작은 후보**(작업자가 범위 밖으로 둔 것): `ModuleHost` 외 ABI 의 크기 묻기 모양은 없음 확인. 편집용 경로 칸의 별도 형식(`InputMapPanel::_inputMapPath` · `UIPreviewPanel::_documentPath`), `EditorPreferences::_startupScene` · `ServerConfig` TLS 경로. `MaterialPreviewShading::parseFloats`(Editor, 표시용). 같은 모양의 Mesh · Texture · Material · Prefab · UITextAsset 캐시는 코드 근거로 합치지 않기로 했다(`SharedAssetCache.h` 머리 주석). `SessionGuard.py:33` 종료 코드 복사 · `RunCoreLayerGraph` 의 숨은 폴백은 scriptsstruct 가 다룬다.
+
 ## 1. 지금 상태 (2026-10-20, 밤 세션 끝)
 
 - **main 은 한 번에 push 한다**(`full-build` 증거 있음, 병합 작업자 브랜치는 모두 들어감). 이번 세션 병합분: `kitsxml` · `hashutil` · `hashutil2`(FNV 단일 정본 `HashUtil`) · `hc1` · `hc2` · `hc3`(`PackEngineSettings`, `GameConfig` 는 `_packRoot` 만) · `dead`(죽은 인자 · 호출처 없는 선언 · `UnionFindUtil`) · `cifail`(애니메이션 의존 고리 레이스) · `respclock`(`IRespClock`) · `silentdef`(`parseFloat2/3/4` 정확한 개수, 재질 `value` 는 `readRequiredShaderValue` 1~4 개) · `textaddr` · `camdir` · `paired`(P3a 스냅샷) · `tcbench`(측정 하네스) · `warnfix`(컴파일러 경고 0, `SW_LOG_DISCARDED`) · 다른 세션의 `edcand`(패널 열기 요청 형식, 후보 `ScenarioWritesSourceTree`).

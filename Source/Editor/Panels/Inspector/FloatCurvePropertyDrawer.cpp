@@ -31,9 +31,9 @@ namespace sw::editor
         class FloatCurvePropertyDrawer final : public IInspectorProperty
         {
         public:
-            bool draw( void* pInstance, const PropertyInfo& prop, EditorPropertyGrid& grid ) override
+            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, EditorPropertyGrid& grid ) override
             {
-                FloatCurve* pCurve = prop.getValuePtr<FloatCurve>( pInstance );
+                FloatCurve* pCurve = prop.getValuePtr<FloatCurve>( instance.get() );
                 if ( pCurve == nullptr )
                     return false;
                 const float32 scale = EditorThemeUtil::getDpiScale();
@@ -68,7 +68,7 @@ namespace sw::editor
                 if ( EditorCurveEditor::drawEditor( _state ) )
                 {
                     const string text = SerializerUtil::formatValueText( ValueAddress{ &_state._working }, prop._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
-                    grid.applyPropertyTextAsEdit( pInstance, prop, text, "Edit Curve" );
+                    grid.applyPropertyTextAsEdit( instance, prop, text, "Edit Curve" );
                 }
                 ImGui::EndPopup();
                 return true;

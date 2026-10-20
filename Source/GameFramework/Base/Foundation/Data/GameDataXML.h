@@ -145,10 +145,10 @@ namespace sw
         static void appendNameList( string_view text, string_view separators, vector<hashed_string>& outListName );
 
         /**
-         * @brief 쉼표, 공백, 탭, 세미콜론으로 나뉜 실수를 최대 @p maxCount 개 읽고 읽은 개수를 반환합니다.
-         * @details 못 읽은 토큰은 그 칸을 건드리지 않고 넘어간다. 호출부가 기본값을 채워 두어야 한다.
+         * @brief 쉼표, 공백, 탭, 세미콜론으로 나뉜 실수를 하나 이상 @p maxCount 개 이하로 읽습니다.
+         * @details 하나도 없거나 @p maxCount 를 넘거나 숫자가 아닌 토큰이 있으면 false 이고 @p outListValue 는 그대로입니다. 개수가 정해져 있으면 `parseFloat2` · `parseFloat3` · `parseFloat4` 를 쓴다.
          */
-        static uint32 parseFloats( string_view text, float32* pOutValue, uint32 maxCount );
+        [[nodiscard]] static bool parseFloatList( string_view text, uint32 maxCount, vector<float32>& outListValue );
         /**
          * @brief "x y" 처럼 정확히 두 실수를 읽습니다. 개수가 모자라거나 남거나 숫자가 아닌 토큰이 있으면 false 이고 @p outValue 는 그대로입니다.
          * @details `parseFloat3` · `parseFloat4` 도 같다. 빠진 성분을 기본값으로 메우지 않으므로 호출부가 실패를 로드 오류로 올려야 한다.

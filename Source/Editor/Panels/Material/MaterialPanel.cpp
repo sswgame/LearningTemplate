@@ -73,6 +73,10 @@ namespace sw::editor
                 return EditorWidgets::drawTextField( pLabel, prop._value );
             }
 
+            /**
+             * @brief 머티리얼 프로퍼티 하나를 타입에 맞는 위젯으로 그립니다. 바뀌었으면 true 입니다.
+             * @details 경우마다 짧은 `switch` 디스패처라 나누지 않습니다(`LongFunctions` 의 유지 기준). 타입을 더하면 `switch` 에 경우가 없다는 경고가 서므로 빠뜨릴 수 없습니다.
+             */
             static bool drawTypedProperty( MaterialProperty& prop )
             {
                 const utf8* pLabel = prop._displayName.empty() ? prop._name.c_str() : prop._displayName.c_str();

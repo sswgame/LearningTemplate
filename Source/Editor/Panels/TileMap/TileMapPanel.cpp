@@ -223,6 +223,26 @@ namespace sw::editor
         const bool bHovered = ImGui::IsItemHovered();
         const bool bActive  = ImGui::IsItemActive();
 
+        updateCanvasView( canvasMin, bHovered, bActive );
+
+        const float32 cell = TileMapPanelInternal::kBaseCellSize * EditorThemeUtil::getDpiScale() * _canvasZoom;
+        const ImVec2  origin( canvasMin.x + _canvasPan._x, canvasMin.y + _canvasPan._y );
+        const ImVec2  canvasMax( canvasMin.x + canvasSize.x, canvasMin.y + canvasSize.y );
+        ImDrawList*   pDl = ImGui::GetWindowDrawList();
+        pDl->PushClipRect( canvasMin, canvasMax, true );
+        pDl->AddRectFilled( canvasMin, canvasMax, EditorColorUtil::toImU32( TileMapPanelInternal::kCanvasBg ) );
+
+        drawGridCells( pDl, origin, cell );
+
+        const int2 hoverCell = TileMapPaintUtil::findCellAt( ImGui::GetIO().MousePos.x - origin.x, ImGui::GetIO().MousePos.y - origin.y, cell );
+        drawBrushPreview( pDl, origin, cell, hoverCell, bHovered );
+        pDl->PopClipRect();
+
+        applyToolInput( hoverCell, bHovered );
+    }
+
+    void TileMapPanel::updateCanvasView( const ImVec2& canvasMin, bool bHovered, bool bActive )
+    {
         // 휠은 커서 아래 자리를 붙든 채 확대하고, 가운데 · 오른쪽 끌기는 이동한다(유니티 씬 뷰 2D).
         const ImGuiIO& io = ImGui::GetIO();
         if ( bHovered && io.MouseWheel != 0.0f )
@@ -240,14 +260,10 @@ namespace sw::editor
             _canvasPan._x += io.MouseDelta.x;
             _canvasPan._y += io.MouseDelta.y;
         }
+    }
 
-        const float32 cell = TileMapPanelInternal::kBaseCellSize * EditorThemeUtil::getDpiScale() * _canvasZoom;
-        const ImVec2  origin( canvasMin.x + _canvasPan._x, canvasMin.y + _canvasPan._y );
-        const ImVec2  canvasMax( canvasMin.x + canvasSize.x, canvasMin.y + canvasSize.y );
-        ImDrawList*   pDl = ImGui::GetWindowDrawList();
-        pDl->PushClipRect( canvasMin, canvasMax, true );
-        pDl->AddRectFilled( canvasMin, canvasMax, EditorColorUtil::toImU32( TileMapPanelInternal::kCanvasBg ) );
-
+    void TileMapPanel::drawGridCells( ImDrawList* pDl, const ImVec2& origin, float32 cell )
+    {
         void* pAtlasTexture{ nullptr };
         if ( _layer == PaintLayer::Tile )
         {
@@ -308,9 +324,11 @@ namespace sw::editor
                 pDl->AddRect( p0, p1, EditorColorUtil::toImU32( TileMapPanelInternal::kCellBorder ) );
             }
         }
+    }
 
+    void TileMapPanel::drawBrushPreview( ImDrawList* pDl, const ImVec2& origin, float32 cell, const int2& hoverCell, bool bHovered )
+    {
         // 브러시 미리보기 — 커서 아래 칸, Rect 도구로 끄는 중이면 그 사각형(지우기면 빨강).
-        const int2  hoverCell    = TileMapPaintUtil::findCellAt( io.MousePos.x - origin.x, io.MousePos.y - origin.y, cell );
         const ImU32 previewColor = EditorColorUtil::toImU32( _bErase ? TileMapPanelInternal::kBrushPreviewErase : TileMapPanelInternal::kBrushPreview );
         if ( _bRectActive )
         {
@@ -326,11 +344,7 @@ namespace sw::editor
             const ImVec2 p0( origin.x + static_cast<float32>( hoverCell._x ) * cell, origin.y + static_cast<float32>( hoverCell._y ) * cell );
             pDl->AddRect( p0, ImVec2( p0.x + cell, p0.y + cell ), previewColor, 0.0f, 0, 2.0f );
         }
-        pDl->PopClipRect();
-
-        applyToolInput( hoverCell, bHovered );
     }
-
     void TileMapPanel::applyToolInput( const int2& hoverCell, bool bHovered )
     {
         const bool bClicked = bHovered && ImGui::IsMouseClicked( ImGuiMouseButton_Left );

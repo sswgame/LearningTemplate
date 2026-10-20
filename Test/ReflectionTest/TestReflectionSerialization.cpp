@@ -3,10 +3,14 @@
 #include "Core/String/RegistrationList.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Reflection/PropertyEditCondition.h"
+#include "Engine/Reflection/PropertyRoleUtil.h"
 #include "Engine/Reflection/ReflectAny.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionRPC.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Serialization/Base/ContainerVisitor.h"
 #include "Engine/Serialization/Base/SchemaMigrate.h"
 #include "Engine/Serialization/Base/SchemaMigrationRegistry.h"
 #include "Engine/Serialization/Base/SerializeContext.h"
@@ -312,8 +316,8 @@ namespace
         sw::PropertyInfo renamed = makeEvolutionField( "_renamed", SW_OFFSET_OF( FieldEvolutionHost, _renamed ) );
         if ( bDeclareOldName )
             renamed._listAlias = { sw::hashed_string( "_oldName" ) };
-        sw::PropertyInfo added        = makeEvolutionField( "_added", SW_OFFSET_OF( FieldEvolutionHost, _added ) );
-        added._metadata._defaultValue = "7";
+        sw::PropertyInfo added         = makeEvolutionField( "_added", SW_OFFSET_OF( FieldEvolutionHost, _added ) );
+        added._metadata->_defaultValue = "7";
         return makeEvolutionType( { makeEvolutionField( "_kept", SW_OFFSET_OF( FieldEvolutionHost, _kept ) ), renamed, added } );
     }
 
@@ -410,6 +414,27 @@ namespace
         holder._single = MixedBuildItem{ 3, 30, WireShiftColor::Blue };
         holder._after  = 9;
         return holder;
+    }
+
+    /** @brief 텍스트 형식의 소프트 읽기 테스트가 쓰는 값입니다. 목록의 원소 하나를 읽지 못하게 고친 글을 읽습니다. */
+    struct TextListHolder
+    {
+        sw::vector<int32> _listValue;
+        int32             _after{ 0 };
+    };
+
+    sw::TypeInfo makeTextListHolderType()
+    {
+        sw::TypeInfo holderType;
+        holderType._name               = sw::hashed_string( "TextListHolder" );
+        holderType._fullyQualifiedName = sw::hashed_string( "sw::TextListHolder" );
+        holderType._size               = sizeof( TextListHolder );
+        holderType._listProperty       = {
+            { sw::hashed_string( "_listValue" ), sw::hashed_string( "vector" ), SW_OFFSET_OF( TextListHolder, _listValue ), true, sw::ContainerKind::Sequence,
+             sw::hashed_string( "int32" ), sw::hashed_string(), sw::make_shared<sw::VectorWrapper<sw::vector<int32>>>() },
+            { sw::hashed_string( "_after" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( TextListHolder, _after ) },
+        };
+        return holderType;
     }
 } // namespace
 
@@ -1822,12 +1847,12 @@ SW_TEST_CASE( ReflectionSerializationTest, PropertyDefaultOnMissing )
 
     sw::PropertyInfo manaProp( sw::hashed_string( "_mana" ), sw::hashed_string( "int32" ),
                                SW_OFFSET_OF( DefaultActor, _mana ) );
-    manaProp._metadata._defaultValue = "75";
+    manaProp._metadata->_defaultValue = "75";
     sw::PropertyInfo titleProp( sw::hashed_string( "_title" ), sw::hashed_string( "string" ),
                                 SW_OFFSET_OF( DefaultActor, _title ) );
-    titleProp._metadata._defaultValue  = "Apprentice";
-    titleProp._metadata._bXMLAttribute = SW_TRUE;
-    info._listProperty                 = { manaProp, titleProp };
+    titleProp._metadata->_defaultValue  = "Apprentice";
+    titleProp._metadata->_bXMLAttribute = SW_TRUE;
+    info._listProperty                  = { manaProp, titleProp };
 
     DefaultActor actor;
     const utf8*  emptyXML = R"(<?xml version="1.0"?><DefaultActor></DefaultActor>)";
@@ -1977,7 +2002,7 @@ SW_TEST_CASE( ReflectionSerializationTest, LayoutEvolveAddRemoveRename )
                            sw::hashed_string( "health" ) ); ///< 개명: 옛 키 health
     sw::PropertyInfo manaV2( sw::hashed_string( "_mana" ), sw::hashed_string( "int32" ),
                              SW_OFFSET_OF( LayoutV2, _mana ) );
-    manaV2._metadata._defaultValue = "9";
+    manaV2._metadata->_defaultValue = "9";
 
     sw::TypeInfo infoV2;
     infoV2._name               = sw::hashed_string( "LayoutActor" );
@@ -3120,12 +3145,12 @@ SW_TEST_CASE( ReflectionSerializationTest, ReflectionRPCPackInvoke )
     SW_ASSERT_TRUE( typeInfo != nullptr );
     const sw::FunctionInfo* fn = typeInfo->findMethod( sw::hashed_string( "applyDamage" ) );
     SW_ASSERT_TRUE( fn != nullptr );
-    SW_EXPECT_TRUE( fn->_metadata._netRole == sw::FunctionNetRole::Server );
-    SW_EXPECT_EQUAL( 1, static_cast<int32>( fn->_metadata._bReliable ) );
+    SW_EXPECT_TRUE( fn->_metadata->_netRole == sw::FunctionNetRole::Server );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( fn->_metadata->_bReliable ) );
 #if !defined( SW_SHIPPING )
-    SW_EXPECT_EQUAL( sw::string( "Apply Damage" ), fn->_metadata._displayName );
-    SW_EXPECT_EQUAL( sw::string( "Subtracts amount from HP" ), fn->_metadata._tooltip );
-    SW_EXPECT_EQUAL( sw::string( "Combat" ), fn->_metadata._category );
+    SW_EXPECT_EQUAL( sw::string( "Apply Damage" ), fn->_metadata->_displayName );
+    SW_EXPECT_EQUAL( sw::string( "Subtracts amount from HP" ), fn->_metadata->_tooltip );
+    SW_EXPECT_EQUAL( sw::string( "Combat" ), fn->_metadata->_category );
 #endif
 
     sw::RPCDemoActor actor;
@@ -3192,11 +3217,11 @@ SW_TEST_CASE( ReflectionSerializationTest, ReflectAbstractAndStatic )
 
     const sw::FunctionInfo* doubleFn = staticInfo->findMethod( sw::hashed_string( "doubleInt" ) );
     SW_ASSERT_TRUE( doubleFn != nullptr );
-    SW_EXPECT_EQUAL( 1, static_cast<int32>( doubleFn->_metadata._bStatic ) );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( doubleFn->_metadata->_bStatic ) );
 #if !defined( SW_SHIPPING )
-    SW_EXPECT_EQUAL( sw::string( "Double Int" ), doubleFn->_metadata._displayName );
-    SW_EXPECT_EQUAL( sw::string( "Returns value * 2" ), doubleFn->_metadata._tooltip );
-    SW_EXPECT_EQUAL( sw::string( "Math" ), doubleFn->_metadata._category );
+    SW_EXPECT_EQUAL( sw::string( "Double Int" ), doubleFn->_metadata->_displayName );
+    SW_EXPECT_EQUAL( sw::string( "Returns value * 2" ), doubleFn->_metadata->_tooltip );
+    SW_EXPECT_EQUAL( sw::string( "Math" ), doubleFn->_metadata->_category );
 #endif
 
     sw::TaskArgs args;
@@ -3228,7 +3253,7 @@ SW_TEST_CASE( ReflectionSerializationTest, ReflectAnyPolymorphic )
         SW_TEST_SKIP( "AssetPathActor type not registered" );
     const sw::PropertyInfo* albedo = typeInfo->findProperty( sw::hashed_string( "_albedo" ) );
     SW_ASSERT_TRUE( albedo != nullptr );
-    SW_EXPECT_EQUAL( 1, static_cast<int32>( albedo->_metadata._bAssetPath ) );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( albedo->_metadata->_bAssetPath ) );
 }
 
 /**
@@ -3650,8 +3675,8 @@ SW_TEST_CASE( ReflectionSerializationTest, PropertyValueHelpersTouchOnlyTheirOwn
     target._bCanJump      = SW_FALSE;
 
     // 같은 바이트의 다른 비트가 달라도 그 비트가 같으면 같다.
-    SW_EXPECT_TRUE( sw::SerializerUtil::arePropertyValuesEqual( *pInvuln, &source, &target, context ) );
-    SW_EXPECT_FALSE( sw::SerializerUtil::arePropertyValuesEqual( *pActive, &source, &target, context ) );
+    SW_EXPECT_TRUE( sw::SerializerUtil::arePropertyValuesEqual( *pInvuln, sw::ObjectAddress{ &source }, sw::ObjectAddress{ &target }, context ) );
+    SW_EXPECT_FALSE( sw::SerializerUtil::arePropertyValuesEqual( *pActive, sw::ObjectAddress{ &source }, sw::ObjectAddress{ &target }, context ) );
 
     // 옮기면 그 비트만 바뀐다.
     SW_ASSERT_TRUE( sw::SerializerUtil::copyPropertyValue( *pActive, sw::ObjectAddress{ &source }, sw::MutableObjectAddress{ &target }, context ) );
@@ -3679,11 +3704,11 @@ SW_TEST_CASE( ReflectionSerializationTest, PropertyValueHelpersTouchOnlyTheirOwn
         { 3 }
     };
     sw::NestedContainerActor gridTarget;
-    SW_EXPECT_FALSE( sw::SerializerUtil::arePropertyValuesEqual( *pGrid, &gridSource, &gridTarget, context ) );
+    SW_EXPECT_FALSE( sw::SerializerUtil::arePropertyValuesEqual( *pGrid, sw::ObjectAddress{ &gridSource }, sw::ObjectAddress{ &gridTarget }, context ) );
     SW_ASSERT_TRUE( sw::SerializerUtil::copyPropertyValue( *pGrid, sw::ObjectAddress{ &gridSource }, sw::MutableObjectAddress{ &gridTarget }, context ) );
     SW_ASSERT_EQUAL( size_t( 2 ), gridTarget._grid.size() );
     SW_EXPECT_EQUAL( 3, gridTarget._grid[1][0] );
-    SW_EXPECT_TRUE( sw::SerializerUtil::arePropertyValuesEqual( *pGrid, &gridSource, &gridTarget, context ) );
+    SW_EXPECT_TRUE( sw::SerializerUtil::arePropertyValuesEqual( *pGrid, sw::ObjectAddress{ &gridSource }, sw::ObjectAddress{ &gridTarget }, context ) );
     SW_EXPECT_STREQ( "[2]", sw::SerializerUtil::formatPropertyText( *pGrid, sw::ObjectAddress{ &gridTarget }, context ).c_str() );
 }
 
@@ -3747,6 +3772,91 @@ SW_TEST_CASE( ReflectionSerializationTest, ValueAddressTextDoesNotAddPropertyOff
     static_assert( std::is_invocable_v<ApplyBinaryFn, const sw::PropertyInfo&, sw::MutableObjectAddress, const uint8*, size_t, const sw::SerializeContext&, sw::BinaryWireVersion> );
     static_assert( !std::is_invocable_v<ApplyBinaryFn, const sw::PropertyInfo&, sw::MutableValueAddress, const uint8*, size_t, const sw::SerializeContext&, sw::BinaryWireVersion> );
     static_assert( !std::is_invocable_v<ApplyBinaryFn, const sw::PropertyInfo&, void*, const uint8*, size_t, const sw::SerializeContext&, sw::BinaryWireVersion> );
+
+    // 기본값 · 비교는 객체 주소, 강제 변환 읽기 · 중첩 컨테이너 · 컨테이너 방문자는 값 주소만 받는다(맨 포인터도 안 된다).
+    using ApplyDefaultFn      = decltype( &sw::SerializerUtil::applyPropertyDefault );
+    using AreEqualFn          = decltype( &sw::SerializerUtil::arePropertyValuesEqual );
+    using CoerceBinaryFn      = decltype( &sw::tryCoerceBinaryPayload );
+    using SerializeNestedFn   = decltype( &sw::SerializerUtil::serializeNestedContainerBinary );
+    using DeserializeNestedFn = decltype( &sw::SerializerUtil::deserializeNestedContainerBinary );
+    using VisitWriteFn        = decltype( &sw::ContainerVisitor::write );
+    using VisitReadFn         = decltype( &sw::ContainerVisitor::read );
+    using WriterMapEntryFn    = decltype( &sw::IContainerWriter::beginMapEntry );
+    using WriterOwnedFn       = decltype( &sw::IContainerWriter::writeOwnedPointer );
+    using WriterScalarFn      = decltype( &sw::IContainerWriter::writeScalar );
+    using ReaderMapKeyFn      = decltype( &sw::IContainerReader::readMapKey );
+    using ReaderScalarFn      = decltype( &sw::IContainerReader::readScalar );
+    using ReaderValueObjectFn = decltype( &sw::IContainerReader::readValueObject );
+    using Nested              = sw::NestedContainerInfo;
+    static_assert( std::is_invocable_v<ApplyDefaultFn, const sw::PropertyInfo&, sw::MutableObjectAddress, const sw::SerializeContext&> );
+    static_assert( !std::is_invocable_v<ApplyDefaultFn, const sw::PropertyInfo&, sw::MutableValueAddress, const sw::SerializeContext&> );
+    static_assert( !std::is_invocable_v<ApplyDefaultFn, const sw::PropertyInfo&, sw::ObjectAddress, const sw::SerializeContext&> ); // 읽기 주소로는 쓰지 못한다
+    static_assert( !std::is_invocable_v<ApplyDefaultFn, const sw::PropertyInfo&, void*, const sw::SerializeContext&> );
+    static_assert( std::is_invocable_v<AreEqualFn, const sw::PropertyInfo&, sw::ObjectAddress, sw::MutableObjectAddress, const sw::SerializeContext&> );
+    static_assert( !std::is_invocable_v<AreEqualFn, const sw::PropertyInfo&, sw::ValueAddress, sw::ValueAddress, const sw::SerializeContext&> );
+    static_assert( !std::is_invocable_v<AreEqualFn, const sw::PropertyInfo&, const void*, const void*, const sw::SerializeContext&> );
+    static_assert( std::is_invocable_v<CoerceBinaryFn, sw::MutableValueAddress, sw::hashed_string, const uint8*, size_t, const sw::SerializeContext&, sw::hashed_string, sw::BinaryWireVersion> );
+    static_assert( !std::is_invocable_v<CoerceBinaryFn, sw::MutableObjectAddress, sw::hashed_string, const uint8*, size_t, const sw::SerializeContext&, sw::hashed_string, sw::BinaryWireVersion> );
+    static_assert( !std::is_invocable_v<CoerceBinaryFn, sw::ValueAddress, sw::hashed_string, const uint8*, size_t, const sw::SerializeContext&, sw::hashed_string, sw::BinaryWireVersion> );
+    static_assert( !std::is_invocable_v<CoerceBinaryFn, void*, sw::hashed_string, const uint8*, size_t, const sw::SerializeContext&, sw::hashed_string, sw::BinaryWireVersion> );
+    static_assert( std::is_invocable_v<SerializeNestedFn, sw::ValueAddress, const Nested&, ByteBuffer&, const sw::SerializeContext&> );
+    static_assert( !std::is_invocable_v<SerializeNestedFn, sw::ObjectAddress, const Nested&, ByteBuffer&, const sw::SerializeContext&> );
+    static_assert( !std::is_invocable_v<SerializeNestedFn, const void*, const Nested&, ByteBuffer&, const sw::SerializeContext&> );
+    static_assert( std::is_invocable_v<DeserializeNestedFn, sw::MutableValueAddress, const Nested&, const uint8*, size_t, size_t&, const sw::SerializeContext&, sw::BinaryWireVersion> );
+    static_assert( !std::is_invocable_v<DeserializeNestedFn, sw::MutableObjectAddress, const Nested&, const uint8*, size_t, size_t&, const sw::SerializeContext&, sw::BinaryWireVersion> );
+    static_assert( !std::is_invocable_v<DeserializeNestedFn, void*, const Nested&, const uint8*, size_t, size_t&, const sw::SerializeContext&, sw::BinaryWireVersion> );
+    static_assert( std::is_invocable_v<VisitWriteFn, sw::ValueAddress, const Nested&, sw::IContainerWriter&, const sw::SerializeContext&> );
+    static_assert( !std::is_invocable_v<VisitWriteFn, sw::ObjectAddress, const Nested&, sw::IContainerWriter&, const sw::SerializeContext&> );
+    static_assert( !std::is_invocable_v<VisitWriteFn, const void*, const Nested&, sw::IContainerWriter&, const sw::SerializeContext&> );
+    static_assert( std::is_invocable_v<VisitReadFn, sw::MutableValueAddress, const Nested&, sw::IContainerReader&, const sw::SerializeContext&> );
+    static_assert( !std::is_invocable_v<VisitReadFn, sw::MutableObjectAddress, const Nested&, sw::IContainerReader&, const sw::SerializeContext&> );
+    static_assert( !std::is_invocable_v<VisitReadFn, void*, const Nested&, sw::IContainerReader&, const sw::SerializeContext&> );
+    static_assert( std::is_invocable_v<WriterMapEntryFn, sw::IContainerWriter&, sw::ValueAddress, const sw::hashed_string&> );
+    static_assert( !std::is_invocable_v<WriterMapEntryFn, sw::IContainerWriter&, sw::ObjectAddress, const sw::hashed_string&> );
+    static_assert( !std::is_invocable_v<WriterMapEntryFn, sw::IContainerWriter&, const void*, const sw::hashed_string&> );
+    static_assert( std::is_invocable_v<WriterOwnedFn, sw::IContainerWriter&, sw::ObjectAddress> );
+    static_assert( !std::is_invocable_v<WriterOwnedFn, sw::IContainerWriter&, sw::ValueAddress> ); // 포인터 칸(값)이 아니라 가리키는 객체다
+    static_assert( !std::is_invocable_v<WriterOwnedFn, sw::IContainerWriter&, const void*> );
+    static_assert( std::is_invocable_v<WriterScalarFn, sw::IContainerWriter&, sw::ValueAddress, const sw::hashed_string&, sw::ContainerSlot> );
+    static_assert( !std::is_invocable_v<WriterScalarFn, sw::IContainerWriter&, sw::ObjectAddress, const sw::hashed_string&, sw::ContainerSlot> );
+    static_assert( !std::is_invocable_v<WriterScalarFn, sw::IContainerWriter&, const void*, const sw::hashed_string&, sw::ContainerSlot> );
+    static_assert( std::is_invocable_v<ReaderMapKeyFn, sw::IContainerReader&, sw::MutableValueAddress, const sw::hashed_string&> );
+    static_assert( !std::is_invocable_v<ReaderMapKeyFn, sw::IContainerReader&, sw::ValueAddress, const sw::hashed_string&> ); // 읽기 주소로는 쓰지 못한다
+    static_assert( !std::is_invocable_v<ReaderMapKeyFn, sw::IContainerReader&, void*, const sw::hashed_string&> );
+    static_assert( std::is_invocable_v<ReaderScalarFn, sw::IContainerReader&, sw::MutableValueAddress, const sw::hashed_string&, sw::ContainerSlot> );
+    static_assert( !std::is_invocable_v<ReaderScalarFn, sw::IContainerReader&, sw::MutableObjectAddress, const sw::hashed_string&, sw::ContainerSlot> );
+    static_assert( !std::is_invocable_v<ReaderScalarFn, sw::IContainerReader&, void*, const sw::hashed_string&, sw::ContainerSlot> );
+    static_assert( std::is_invocable_v<ReaderValueObjectFn, sw::IContainerReader&, sw::MutableValueAddress, const sw::hashed_string&, const sw::TypeInfo&, sw::ContainerSlot> );
+    static_assert( !std::is_invocable_v<ReaderValueObjectFn, sw::IContainerReader&, void*, const sw::hashed_string&, const sw::TypeInfo&, sw::ContainerSlot> );
+
+    // 점 경로 · 범위 검사 · 버전 읽기 절차는 객체 주소를 받고, 점 경로가 찾은 것은 값 주소다. 역할 도우미는 객체와 값을 한 함수에 함께 받는다.
+    using ResolvePathFn  = decltype( &sw::resolvePropertyPath );
+    using RangeErrorsFn  = decltype( &sw::SerializerUtil::collectRangeErrors );
+    using WithinRangesFn = decltype( &sw::SerializerUtil::isWithinDeclaredRanges );
+    using RepNotifyFn    = decltype( &sw::PropertyRoleUtil::callRepNotify );
+    using InterpolateFn  = decltype( &sw::PropertyRoleUtil::applyInterpolated );
+    using PropertyPtr    = const sw::PropertyInfo*&;
+    static_assert( std::is_invocable_v<ResolvePathFn, sw::MutableObjectAddress, const sw::TypeInfo&, const utf8*, sw::MutableValueAddress&, PropertyPtr> );
+    static_assert( !std::is_invocable_v<ResolvePathFn, sw::MutableValueAddress, const sw::TypeInfo&, const utf8*, sw::MutableValueAddress&, PropertyPtr> );
+    static_assert( !std::is_invocable_v<ResolvePathFn, sw::MutableObjectAddress, const sw::TypeInfo&, const utf8*, sw::MutableObjectAddress&, PropertyPtr> ); // 찾은 것은 값이다
+    static_assert( !std::is_invocable_v<ResolvePathFn, void*, const sw::TypeInfo&, const utf8*, void*&, PropertyPtr> );
+    static_assert( std::is_invocable_v<RangeErrorsFn, const sw::TypeInfo&, sw::ObjectAddress, const sw::string&, sw::vector<sw::string>&> );
+    static_assert( !std::is_invocable_v<RangeErrorsFn, const sw::TypeInfo&, sw::ValueAddress, const sw::string&, sw::vector<sw::string>&> );
+    static_assert( !std::is_invocable_v<RangeErrorsFn, const sw::TypeInfo&, const void*, const sw::string&, sw::vector<sw::string>&> );
+    static_assert( std::is_invocable_v<WithinRangesFn, const sw::TypeInfo&, sw::MutableObjectAddress> );
+    static_assert( !std::is_invocable_v<WithinRangesFn, const sw::TypeInfo&, const void*> );
+    static_assert( std::is_invocable_v<RepNotifyFn, const sw::PropertyInfo&, sw::MutableObjectAddress, sw::ValueAddress> );
+    static_assert( !std::is_invocable_v<RepNotifyFn, const sw::PropertyInfo&, sw::MutableObjectAddress, sw::ObjectAddress> ); // 옛 값은 객체가 아니다
+    static_assert( !std::is_invocable_v<RepNotifyFn, const sw::PropertyInfo&, void*, const void*> );
+    static_assert( std::is_invocable_v<InterpolateFn, const sw::PropertyInfo&, sw::MutableObjectAddress, sw::ValueAddress, sw::ValueAddress, float32> );
+    static_assert( !std::is_invocable_v<InterpolateFn, const sw::PropertyInfo&, sw::MutableValueAddress, sw::ValueAddress, sw::ValueAddress, float32> );
+    static_assert( !std::is_invocable_v<InterpolateFn, const sw::PropertyInfo&, void*, const void*, const void*, float32> );
+    // 인스펙터의 EditCondition 판정도 프로퍼티를 가진 객체를 받는다(에디터 쪽 `IInspectorProperty::draw` · `EditorPropertyGrid` 와 같은 주소 형식).
+    using EditStateFn = decltype( &sw::PropertyEditCondition::getEditState );
+    static_assert( std::is_invocable_v<EditStateFn, const sw::TypeInfo&, const sw::PropertyInfo&, sw::ObjectAddress> );
+    static_assert( std::is_invocable_v<EditStateFn, const sw::TypeInfo&, const sw::PropertyInfo&, sw::MutableObjectAddress> );
+    static_assert( !std::is_invocable_v<EditStateFn, const sw::TypeInfo&, const sw::PropertyInfo&, sw::ValueAddress> );
+    static_assert( !std::is_invocable_v<EditStateFn, const sw::TypeInfo&, const sw::PropertyInfo&, const void*> );
 
     sw::BitfieldTestActor actor;
     actor._score = 42;
@@ -4054,6 +4164,124 @@ SW_TEST_CASE( ReflectionSerializationTest, MixedBuildReadRejectsAnUnknownEnumera
     SW_ASSERT_EQUAL( size_t( 2 ), lenient._listItem.size() );
     SW_EXPECT_TRUE( lenient._listItem[0]._color == WireShiftColor::Red ); // 읽지 못한 필드는 지금 값 그대로 남는다 — 오브젝트 상태에만 맞는 정책이다
     SW_EXPECT_EQUAL( 9, lenient._after );
+}
+
+/**
+ * @brief [ReflectionSerializationTest] 읽지 못한 필드를 넘기고 이어 읽는 읽기는 그 필드를 **읽기 전 값**으로 남긴다 — 읽다 만 컨테이너가 남지 않는다
+ * @details 컨테이너는 원소를 채운 뒤 끝에서 실패한다(모르는 열거자 원소만 빼고 필드는 실패). 예전에는 오브젝트 상태의 엄격 읽기와 소프트 읽기가 그 필드를
+ *          건너뛰면서 앞 원소가 써진 채로 남았다(`docs/plans/SerializerSilentSkips.md`). 엄격 읽기(실패하면 객체째 버림)는 그대로 실패다.
+ */
+SW_TEST_CASE( ReflectionSerializationTest, UnreadableFieldKeepsItsValueBeforeTheRead )
+{
+    struct ColorListHolder
+    {
+        sw::vector<WireShiftColor> _listColor;
+        int32                      _after{ 0 };
+    };
+
+    const MixedBuildSide newBuild( true, true );
+    const MixedBuildSide oldBuild( true, false ); // 옛 빌드의 열거형에는 Green 이 없다
+
+    sw::TypeInfo holderType;
+    holderType._name               = sw::hashed_string( "ColorListHolder" );
+    holderType._fullyQualifiedName = sw::hashed_string( "sw::ColorListHolder" );
+    holderType._size               = sizeof( ColorListHolder );
+    holderType._listProperty       = {
+        { sw::hashed_string( "_listColor" ), sw::hashed_string( "vector" ), SW_OFFSET_OF( ColorListHolder, _listColor ), true, sw::ContainerKind::Sequence,
+         sw::hashed_string( "sw::WireShiftColor" ), sw::hashed_string(), sw::make_shared<sw::VectorWrapper<sw::vector<WireShiftColor>>>() },
+        { sw::hashed_string( "_after" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( ColorListHolder, _after ) },
+    };
+
+    ColorListHolder saved;
+    saved._listColor = { WireShiftColor::Red, WireShiftColor::Green, WireShiftColor::Blue };
+    saved._after     = 9;
+    sw::vector<uint8> bytes;
+    SW_ASSERT_TRUE( sw::BinarySerializer::serialize( &saved, holderType, bytes, newBuild.makeContext( false, false ) ) );
+
+    test::ScopedLogSuppressor suppressor; // 모르는 열거자 · 읽지 못한 필드 경고
+
+    // 오브젝트 상태처럼 읽지 못한 필드를 넘기는 엄격 읽기: 목록은 읽기 전 값 그대로이고 뒤 필드는 읽힌다.
+    ColorListHolder lenient;
+    lenient._listColor = { WireShiftColor::Blue };
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &lenient, holderType, bytes.data(), bytes.size(), oldBuild.makeContext( true, true ) ) );
+    SW_ASSERT_TRUE_MSG( lenient._listColor.size() == size_t( 1 ), "읽다 만 목록(앞 원소가 써진 채)이 남았습니다" );
+    SW_EXPECT_TRUE( lenient._listColor[0] == WireShiftColor::Blue );
+    SW_EXPECT_EQUAL( 9, lenient._after );
+
+    // 소프트 읽기: 그 필드는 orphan 으로 넘어가고 필드 자신은 읽기 전 값이다.
+    ColorListHolder                   soft;
+    sw::vector<sw::SchemaOrphanValue> listOrphan;
+    soft._listColor = { WireShiftColor::Blue };
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeSoft( &soft, holderType, bytes.data(), bytes.size(), &listOrphan, oldBuild.makeContext( false, false ) ) ==
+                    sw::SoftReadResult::Read );
+    SW_EXPECT_EQUAL( size_t( 1 ), listOrphan.size() );
+    SW_ASSERT_EQUAL( size_t( 1 ), soft._listColor.size() );
+    SW_EXPECT_TRUE( soft._listColor[0] == WireShiftColor::Blue );
+    SW_EXPECT_EQUAL( 9, soft._after );
+
+    // 실패하면 객체째 버리는 엄격 읽기는 그대로 실패다.
+    ColorListHolder strict;
+    SW_EXPECT_FALSE( sw::BinarySerializer::deserialize( &strict, holderType, bytes.data(), bytes.size(), oldBuild.makeContext( true, false ) ) );
+}
+
+/**
+ * @brief [ReflectionSerializationTest] JSON 소프트 읽기도 읽지 못한 필드를 **읽기 전 값**으로 남긴다 — 앞 원소를 채우다 만 목록이 남지 않는다
+ * @details 예전에는 원소 하나를 읽지 못한 목록이 앞 원소가 써진 채로 남고 orphan 으로 넘어갔다(`docs/plans/SerializerSilentSkips.md` S2).
+ *          바이너리(`UnreadableFieldKeepsItsValueBeforeTheRead`)와 같은 `PropertyReadRollback` 을 쓴다. 엄격 읽기는 그대로 실패다.
+ */
+SW_TEST_CASE( ReflectionSerializationTest, JSONSoftReadKeepsUnreadableFieldValueBeforeTheRead )
+{
+    const sw::TypeInfo    holderType = makeTextListHolderType();
+    const sw::string_view text       = R"({"_listValue":[1,"x",3],"_after":9})"; // 둘째 원소를 int32 로 읽지 못한다
+
+    test::ScopedLogSuppressor suppressor; // 읽지 못한 원소 경고
+
+    TextListHolder                    soft;
+    sw::vector<sw::SchemaOrphanValue> listOrphan;
+    soft._listValue = { 7 };
+    SW_EXPECT_TRUE( sw::JSONSerializer::deserializeSoft( &soft, holderType, text, &listOrphan, nullptr ) == sw::SoftReadResult::Read );
+    SW_EXPECT_EQUAL( size_t( 1 ), listOrphan.size() );
+    SW_ASSERT_TRUE_MSG( soft._listValue.size() == size_t( 1 ), "읽다 만 목록(앞 원소가 써진 채)이 남았습니다" );
+    SW_EXPECT_EQUAL( 7, soft._listValue[0] );
+    SW_EXPECT_EQUAL( 9, soft._after );
+
+    TextListHolder strict;
+    SW_EXPECT_FALSE( sw::JSONSerializer::deserialize( &strict, holderType, text ) );
+}
+
+/**
+ * @brief [ReflectionSerializationTest] XML 소프트 읽기도 읽지 못한 필드를 **읽기 전 값**으로 남기고, 그 칸의 원문 하나를 orphan 으로 넘긴다
+ * @details 예전에는 읽지 못한 원소만 빠진 목록이 남고 그 원소 글만 orphan 이었다. 이제 칸째 되돌리므로 읽힌 원소도 버려지고, 버린 값을 다 알리게
+ *          원소 orphan 대신 칸 원문 하나를 남긴다(바이너리 · JSON 이 칸 하나를 orphan 하나로 남기는 것과 같다). 엄격 읽기는 그대로 실패다.
+ */
+SW_TEST_CASE( ReflectionSerializationTest, XMLSoftReadKeepsUnreadableFieldValueBeforeTheRead )
+{
+    const sw::TypeInfo holderType = makeTextListHolderType();
+    TextListHolder     saved;
+    saved._listValue = { 1, 2, 3 };
+    saved._after     = 9;
+    sw::string text  = sw::XMLSerializer::serialize( &saved, holderType );
+    // 둘째 원소를 int32 로 읽지 못하게 고친다
+    const sw::string_view readableItem = "<item>2</item>";
+    const size_t          itemPosition = text.find( readableItem );
+    SW_ASSERT_TRUE_MSG( itemPosition != sw::string::npos, "XML 글의 모양이 짐작과 다릅니다" );
+    text.replace( itemPosition, readableItem.size(), "<item>x</item>" );
+
+    test::ScopedLogSuppressor suppressor; // 읽지 못한 원소 경고
+
+    TextListHolder                    soft;
+    sw::vector<sw::SchemaOrphanValue> listOrphan;
+    soft._listValue = { 7 };
+    SW_EXPECT_TRUE( sw::XMLSerializer::deserializeSoft( &soft, holderType, text, &listOrphan, nullptr ) == sw::SoftReadResult::Read );
+    SW_ASSERT_EQUAL( size_t( 1 ), listOrphan.size() );
+    SW_EXPECT_TRUE( listOrphan[0]._name == sw::hashed_string( "_listValue" ) );
+    SW_EXPECT_TRUE( listOrphan[0]._text.find( "<item>1</item>" ) != sw::string::npos );
+    SW_ASSERT_TRUE_MSG( soft._listValue.size() == size_t( 1 ), "읽다 만 목록(읽힌 원소만 남은 채)이 남았습니다" );
+    SW_EXPECT_EQUAL( 7, soft._listValue[0] );
+    SW_EXPECT_EQUAL( 9, soft._after );
+
+    TextListHolder strict;
+    SW_EXPECT_FALSE( sw::XMLSerializer::deserialize( &strict, holderType, text ) );
 }
 
 /**

@@ -51,7 +51,28 @@ namespace sw
         return _listViewKey;
     }
 
-    GPUViewTransparentOrder GPUTransparentSorter::computeViewOrder( uint64 viewID, uint32 tailBase, const vector<GPUMeshBatch>& listBatch )
+    void GPUTransparentSorter::placeParticles( vector_reference<const GPUTransparentSortKey> listBatchHeadKey,
+                                               vector_reference<const GPUTransparentSortKey> listParticleKey, vector<GPUTransparentParticleSlot>& outListSlot )
+    {
+        // 두 목록이 같은 순서로 정렬돼 있으므로 한 번 같이 걷는다(병합). 배치는 첫 인스턴스의 키로만 본다 — 배치 안을 가르지 않는다.
+        outListSlot.clear();
+        outListSlot.reserve( listParticleKey.size() );
+        uint32       position   = 0;
+        const uint32 batchCount = static_cast<uint32>( listBatchHeadKey.size() );
+        for ( const GPUTransparentSortKey& particleKey : listParticleKey )
+        {
+            while ( position < batchCount && isBatchDrawnBeforeParticle( listBatchHeadKey[position], particleKey ) )
+            {
+                ++position;
+            }
+            GPUTransparentParticleSlot& slot = outListSlot.emplace_back();
+            slot._particleBatchIndex         = particleKey._candidateIndex;
+            slot._drawPosition               = position;
+        }
+    }
+
+    GPUViewTransparentOrder GPUTransparentSorter::computeViewOrder( uint64 viewID, uint32 tailBase, vector_reference<const GPUMeshBatch> listBatch,
+                                                                    vector_reference<const GPUTransparentSortKey> listParticleKey )
     {
         const uint32 tailCount = static_cast<uint32>( _listViewKey.size() );
         // 1) 이 뷰의 시점으로 꼬리 전체를 정렬한다. 같은 깊이는 주 순서(꼬리 번호)로 가른다. 전순서라 결정적이다.
@@ -97,6 +118,25 @@ namespace sw
         std::stable_sort( order._listBatchOrder.begin(), order._listBatchOrder.end(),
                           [&listBatchFirstRank]( uint32 batchA, uint32 batchB )
         { return listBatchFirstRank[batchA] < listBatchFirstRank[batchB]; } );
+
+        // 3) 입자 자리 — 배치 순서마다 가장 먼저 그리는 인스턴스의 키(정렬된 꼬리 키의 그 순번)와 견준다. 꼬리 밖 배치는 키가 없어 모든 입자 뒤다.
+        if ( listParticleKey.empty() == false )
+        {
+            _listViewBatchHeadKey.resize( order._listBatchOrder.size() );
+            for ( size_t position = 0; position < order._listBatchOrder.size(); ++position )
+            {
+                const uint32 firstRank = listBatchFirstRank[order._listBatchOrder[position]];
+                if ( firstRank < tailCount )
+                {
+                    _listViewBatchHeadKey[position] = _listViewKey[firstRank];
+                    continue;
+                }
+                GPUTransparentSortKey& noKey = _listViewBatchHeadKey[position];
+                noKey                        = GPUTransparentSortKey{};
+                noKey._sortKey               = kNoBatchHeadLayer;
+            }
+            placeParticles( vector_reference<const GPUTransparentSortKey>( _listViewBatchHeadKey ), listParticleKey, order._listParticleSlot );
+        }
         order._pListRank     = std::move( listRank );
         order._pListTailSlot = std::move( listTailSlot );
         return order;
