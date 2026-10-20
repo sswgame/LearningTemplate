@@ -15,6 +15,7 @@
 #include "Engine/Audio/AudioSpatial.h"
 #include "Engine/Audio/AudioTypes.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Base/DataPath.h"
 
 namespace sw
 {
@@ -61,19 +62,23 @@ namespace sw
      *     <AudioEffectDesc _type="Compressor" _name="Glue">
      *         <_listParameter><AudioEffectParameterDesc _name="thresholdDb" _value="-18" /></_listParameter>
      *     </AudioEffectDesc>
+     *     <AudioEffectDesc _type="ConvolutionReverb" _impulse="game/mygame/audio/hall_ir.wav" />
      * @endcode
+     * @details 컨볼루션 리버브는 임펄스 응답 클립(`_impulse`)이 필수다. 없거나 읽지 못하면 믹서를 만들 때 오류로 멈춘다.
      */
     REFLECT()
     struct SW_API AudioEffectDesc
     {
         REFLECT_BODY();
 
-        PROPERTY( Tooltip = "Effect type: LowPass, HighPass, BandPass, Peaking, LowShelf, HighShelf, Compressor, Limiter, Reverb, Delay" )
+        PROPERTY( Tooltip = "Effect type: LowPass, HighPass, BandPass, Peaking, LowShelf, HighShelf, Compressor, Limiter, Reverb, Delay, ConvolutionReverb" )
         hashed_string _type{};
         PROPERTY( Tooltip = "Name snapshots use to reach this effect; empty means the type name" )
         hashed_string _name{};
         PROPERTY( Tooltip = "Parameter values" )
         vector<AudioEffectParameterDesc> _listParameter{};
+        PROPERTY( Tooltip = "Impulse response clip (ConvolutionReverb only; mono or stereo, up to 3 s)" )
+        DataPath _impulse;
 
         /** @brief 스냅샷이 찾는 이름입니다(비었으면 종류 이름). */
         const hashed_string& getEffectName() const { return _name.empty() ? _type : _name; }

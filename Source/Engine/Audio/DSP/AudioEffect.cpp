@@ -4,8 +4,13 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Audio/AudioClip.h"
+#include "Engine/Audio/AudioClipDecoder.h"
+#include "Engine/Audio/AudioMixerDesc.h"
 #include "Engine/Audio/AudioTypes.h"
 #include "Engine/Audio/DSP/AudioBiquad.h"
+#include "Engine/Audio/DSP/AudioFft.h"
+#include "Engine/Resource/ResourceIO.h"
 
 namespace sw
 {
@@ -514,6 +519,219 @@ namespace sw
             float32         _dampCoefficient;                       /**< 피드백 로우패스 계수입니다(0 이면 없음). */
         };
 
+        /**
+         * @brief 컨볼루션 리버브입니다. 데이터의 임펄스 응답(`AudioEffectDesc::_impulse`, 실제 공간을 녹음한 클립)을 입력에 컨볼루션합니다.
+         * @details 균일 분할 overlap-save 다. 임펄스 응답을 블록(256 프레임) 조각으로 나눠 조각마다 FFT(512)를 미리 해 두고, 블록마다 입력 FFT 하나를 주파수 영역 지연선에 넣어
+         *          조각 수만큼 곱해 더한 뒤 역FFT 한다. 블록 하나(5.3 ms)를 모아 처리하므로 젖은 소리는 그만큼 늦는다(dry 는 늦지 않는다).
+         *          젖은 채널은 LFE 를 뺀 채널이고, k 번째 젖은 채널은 임펄스 응답의 (k mod 응답 채널 수) 번째 채널을 쓴다(스테레오 응답이면 왼쪽 · 오른쪽이 번갈아).
+         *          임펄스 응답은 만들 때(게임 스레드) 읽고 48 kHz 로 선형 리샘플하며, `kMaxImpulseSeconds` 보다 길면 오류다(조각 수가 곧 비용이다).
+         *          파라미터는 wet, dry 입니다.
+         */
+        class AudioConvolutionEffect final : public IAudioEffect
+        {
+        public:
+            /** @brief 조각 하나의 프레임 수(블록 길이)입니다. */
+            static constexpr uint32 kPartitionFrames = audio::kBlockFrameCount;
+            /** @brief FFT 크기(조각 둘)입니다. */
+            static constexpr uint32 kFftSize = kPartitionFrames * 2;
+            /** @brief 받는 가장 긴 임펄스 응답(초)입니다. 3 초면 조각 563 개, 블록마다 젖은 채널당 복소 곱 약 29 만 번입니다. */
+            static constexpr float32 kMaxImpulseSeconds = 3.0f;
+
+            AudioConvolutionEffect( const AudioEffectTypeInfo& typeInfo, AudioChannelLayout layout )
+                : IAudioEffect{ typeInfo, layout }
+                , _fft{}
+                , _arrImpulseSpectrum{}
+                , _listWork{}
+                , _listAccumulate{}
+                , _listWet{}
+                , _partitionCount{ 0 }
+                , _historyCursor{ 0 }
+                , _fillIndex{ 0 }
+                , _wet{ 0.0f }
+                , _dry{ 0.0f }
+            {
+                onParameterChanged();
+            }
+
+            /** @brief 임펄스 응답을 읽어 조각 스펙트럼과 채널 상태를 만듭니다. 읽기 · 디코드 실패, 빈 응답, 너무 긴 응답은 오류를 남기고 false 입니다. */
+            [[nodiscard]] bool loadImpulse( const DataPath& path )
+            {
+                if ( path.isSet() == false )
+                {
+                    SW_LOG_ERROR( "ConvolutionReverb needs an impulse response clip (_impulse)" );
+                    return false;
+                }
+                vector<uint8> bytes;
+                AudioPcm      pcm;
+                AudioClipData clip;
+                const bool    bDecoded = ResourceIO::readBinaryResource( path.get(), bytes ) && AudioClipDecoder::decode( path.get(), bytes.data(), bytes.size(), pcm ) &&
+                                      AudioClipData::convertPcm( pcm, clip );
+                if ( bDecoded == false || clip._frameCount == 0 )
+                {
+                    SW_LOG_ERROR( "ConvolutionReverb could not read the impulse response '%#'", path.get() );
+                    return false;
+                }
+                // 48 kHz 로 선형 리샘플한다(응답 길이 기준 시간은 그대로).
+                const uint32  channelCount = clip._channelCount;
+                const float64 ratio        = static_cast<float64>( clip._sampleRate ) / static_cast<float64>( audio::kSampleRate );
+                const uint32  frameCount   = static_cast<uint32>( static_cast<float64>( clip._frameCount ) / ratio );
+                if ( static_cast<float32>( frameCount ) > kMaxImpulseSeconds * static_cast<float32>( audio::kSampleRate ) )
+                {
+                    SW_LOG_ERROR( "ConvolutionReverb impulse response '%#' is longer than %# s", path.get(), kMaxImpulseSeconds );
+                    return false;
+                }
+                if ( _fft.initialize( kFftSize ) == false )
+                    return false;
+                _partitionCount = MathUtil::max( 1u, ( frameCount + kPartitionFrames - 1 ) / kPartitionFrames );
+                for ( uint32 impulseChannel = 0; impulseChannel < channelCount; ++impulseChannel )
+                {
+                    vector<AudioComplex>& spectrum = _arrImpulseSpectrum[impulseChannel];
+                    spectrum.assign( static_cast<size_t>( _partitionCount ) * kFftSize, AudioComplex{} );
+                    for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
+                    {
+                        const float64 source   = static_cast<float64>( frameIndex ) * ratio;
+                        const uint32  index    = static_cast<uint32>( source );
+                        const uint32  next     = MathUtil::min( index + 1, clip._frameCount - 1 );
+                        const float32 fraction = static_cast<float32>( source - static_cast<float64>( index ) );
+                        const float32 sampleA  = clip._listSample[static_cast<size_t>( index ) * channelCount + impulseChannel];
+                        const float32 sampleB  = clip._listSample[static_cast<size_t>( next ) * channelCount + impulseChannel];
+                        const uint32  part     = frameIndex / kPartitionFrames;
+                        // 조각마다 앞 절반에 응답, 뒤 절반은 0(overlap-save 의 영 채우기)이다.
+                        spectrum[static_cast<size_t>( part ) * kFftSize + frameIndex % kPartitionFrames]._real = sampleA + ( sampleB - sampleA ) * fraction;
+                    }
+                    for ( uint32 part = 0; part < _partitionCount; ++part )
+                    {
+                        _fft.forward( spectrum.data() + static_cast<size_t>( part ) * kFftSize );
+                    }
+                }
+                for ( uint32 channel = 0; channel < _channelCount; ++channel )
+                {
+                    const bool bLfe = AudioChannelLayoutUtil::hasLfe( _layout ) && channel == audio::kLfeChannelIndex;
+                    if ( bLfe )
+                        continue;
+                    WetChannel wet;
+                    wet._channelIndex   = channel;
+                    wet._impulseChannel = static_cast<uint32>( _listWet.size() ) % channelCount;
+                    wet._listHistory.assign( static_cast<size_t>( _partitionCount ) * kFftSize, AudioComplex{} );
+                    wet._listInput.assign( kPartitionFrames, 0.0f );
+                    wet._listPrevious.assign( kPartitionFrames, 0.0f );
+                    wet._listOutput.assign( kPartitionFrames, 0.0f );
+                    _listWet.push_back( std::move( wet ) );
+                }
+                _listWork.assign( kFftSize, AudioComplex{} );
+                _listAccumulate.assign( kFftSize, AudioComplex{} );
+                return true;
+            }
+
+            void process( const AudioBlockView& block ) override
+            {
+                SW_ASSERT( block._channelCount == _channelCount );
+                const bool bHasLfe = AudioChannelLayoutUtil::hasLfe( _layout );
+                for ( uint32 frameIndex = 0; frameIndex < block._frameCount; ++frameIndex )
+                {
+                    for ( WetChannel& wet : _listWet )
+                    {
+                        float32&      sample       = block.getChannel( wet._channelIndex )[frameIndex];
+                        const float32 input        = sample;
+                        wet._listInput[_fillIndex] = input;
+                        sample                     = input * _dry + wet._listOutput[_fillIndex] * _wet;
+                    }
+                    // LFE 는 젖지 않고 dry 만 지난다.
+                    if ( bHasLfe )
+                        block.getChannel( audio::kLfeChannelIndex )[frameIndex] *= _dry;
+                    ++_fillIndex;
+                    if ( _fillIndex == kPartitionFrames )
+                    {
+                        runPartition();
+                        _fillIndex = 0;
+                    }
+                }
+            }
+
+            void reset() override
+            {
+                for ( WetChannel& wet : _listWet )
+                {
+                    wet._listHistory.assign( wet._listHistory.size(), AudioComplex{} );
+                    wet._listInput.assign( kPartitionFrames, 0.0f );
+                    wet._listPrevious.assign( kPartitionFrames, 0.0f );
+                    wet._listOutput.assign( kPartitionFrames, 0.0f );
+                }
+                _historyCursor = 0;
+                _fillIndex     = 0;
+            }
+
+        protected:
+            void onParameterChanged() override
+            {
+                _wet = _listParameter[0];
+                _dry = _listParameter[1];
+            }
+
+        private:
+            /** @brief 젖은 채널 하나의 상태입니다. */
+            struct WetChannel
+            {
+                vector<AudioComplex> _listHistory{};  ///< 주파수 영역 지연선(조각 수 × FFT 크기)이다.
+                vector<float32>      _listInput{};    ///< 모으는 중인 입력 블록이다.
+                vector<float32>      _listPrevious{}; ///< 지난 입력 블록(overlap-save 앞 절반)이다.
+                vector<float32>      _listOutput{};   ///< 지난 블록에서 나온 젖은 소리다(한 블록 늦게 낸다).
+                uint32               _channelIndex{ 0 };
+                uint32               _impulseChannel{ 0 };
+            };
+
+            /** @brief 모은 입력 블록 하나를 컨볼루션해 다음 블록의 젖은 소리를 만듭니다. */
+            void runPartition()
+            {
+                for ( WetChannel& wet : _listWet )
+                {
+                    for ( uint32 index = 0; index < kPartitionFrames; ++index )
+                    {
+                        _listWork[index]                    = AudioComplex{ wet._listPrevious[index], 0.0f };
+                        _listWork[index + kPartitionFrames] = AudioComplex{ wet._listInput[index], 0.0f };
+                    }
+                    _fft.forward( _listWork.data() );
+                    AudioComplex* pSlot = wet._listHistory.data() + static_cast<size_t>( _historyCursor ) * kFftSize;
+                    Memory::copy( pSlot, _listWork.data(), sizeof( AudioComplex ) * kFftSize );
+
+                    for ( AudioComplex& value : _listAccumulate )
+                    {
+                        value = AudioComplex{};
+                    }
+                    const vector<AudioComplex>& impulse = _arrImpulseSpectrum[wet._impulseChannel];
+                    for ( uint32 part = 0; part < _partitionCount; ++part )
+                    {
+                        const uint32        slot     = ( _historyCursor + _partitionCount - part ) % _partitionCount;
+                        const AudioComplex* pInput   = wet._listHistory.data() + static_cast<size_t>( slot ) * kFftSize;
+                        const AudioComplex* pImpulse = impulse.data() + static_cast<size_t>( part ) * kFftSize;
+                        for ( uint32 bin = 0; bin < kFftSize; ++bin )
+                        {
+                            _listAccumulate[bin]._real += pInput[bin]._real * pImpulse[bin]._real - pInput[bin]._imaginary * pImpulse[bin]._imaginary;
+                            _listAccumulate[bin]._imaginary += pInput[bin]._real * pImpulse[bin]._imaginary + pInput[bin]._imaginary * pImpulse[bin]._real;
+                        }
+                    }
+                    _fft.inverse( _listAccumulate.data() );
+                    for ( uint32 index = 0; index < kPartitionFrames; ++index )
+                    {
+                        wet._listOutput[index]   = _listAccumulate[index + kPartitionFrames]._real;
+                        wet._listPrevious[index] = wet._listInput[index];
+                    }
+                }
+                _historyCursor = ( _historyCursor + 1 ) % _partitionCount;
+            }
+
+            AudioFft             _fft;                                            /**< 크기 `kFftSize` 의 FFT 표입니다. */
+            vector<AudioComplex> _arrImpulseSpectrum[audio::kStereoChannelCount]; /**< 응답 채널마다 조각 스펙트럼(조각 수 × FFT 크기)입니다. */
+            vector<AudioComplex> _listWork;                                       /**< 입력 FFT 작업 버퍼입니다. */
+            vector<AudioComplex> _listAccumulate;                                 /**< 조각 곱의 합입니다. */
+            vector<WetChannel>   _listWet;                                        /**< 젖은 채널입니다(LFE 를 뺀 채널). */
+            uint32               _partitionCount;                                 /**< 조각 수입니다. */
+            uint32               _historyCursor;                                  /**< 주파수 영역 지연선에서 이번 블록의 자리입니다. */
+            uint32               _fillIndex;                                      /**< 모으는 중인 블록에서 다음 프레임 자리입니다. */
+            float32              _wet;                                            /**< wet 게인입니다. */
+            float32              _dry;                                            /**< dry 게인입니다. */
+        };
+
         struct AudioEffectInternal
         {
             static constexpr AudioEffectParameterInfo kArrLowPassParameter[] = {
@@ -560,16 +778,32 @@ namespace sw
                 {"dampingHz", 20000.0f, 200.0f, 20000.0f,  true},
             };
 
+            static constexpr AudioEffectParameterInfo kArrConvolutionParameter[] = {
+                {"wet", 0.5f, 0.0f, 1.0f, false},
+                {"dry", 0.0f, 0.0f, 1.0f, false},
+            };
+
             template <AudioBiquadType TType>
-            static unique_ptr<IAudioEffect> createFilter( const AudioEffectTypeInfo& typeInfo, AudioChannelLayout layout )
+            static unique_ptr<IAudioEffect> createFilter( const AudioEffectTypeInfo& typeInfo, const AudioEffectDesc& desc, AudioChannelLayout layout )
             {
+                (void)desc;
                 return make_unique<AudioFilterEffect>( typeInfo, layout, TType );
             }
 
             template <typename TEffect>
-            static unique_ptr<IAudioEffect> createEffect( const AudioEffectTypeInfo& typeInfo, AudioChannelLayout layout )
+            static unique_ptr<IAudioEffect> createEffect( const AudioEffectTypeInfo& typeInfo, const AudioEffectDesc& desc, AudioChannelLayout layout )
             {
+                (void)desc;
                 return make_unique<TEffect>( typeInfo, layout );
+            }
+
+            /** @brief 컨볼루션 리버브를 만들고 데이터의 임펄스 응답을 읽습니다. 읽지 못하면 nullptr 입니다(오류는 `loadImpulse` 가 남깁니다). */
+            static unique_ptr<IAudioEffect> createConvolution( const AudioEffectTypeInfo& typeInfo, const AudioEffectDesc& desc, AudioChannelLayout layout )
+            {
+                unique_ptr<AudioConvolutionEffect> pEffect = make_unique<AudioConvolutionEffect>( typeInfo, layout );
+                if ( pEffect->loadImpulse( desc._impulse ) == false )
+                    return nullptr;
+                return pEffect;
             }
 
             /** @brief 모든 레이아웃(스테레오 · 5.1 · 7.1 · 바이노럴)입니다. 지금 종류는 모두 채널 수에 상관없이 처리합니다. */
@@ -579,16 +813,17 @@ namespace sw
 
             /** @brief 이펙트 종류 표입니다. 이름은 데이터가 쓰는 철자이고, 마지막 칸은 처리할 수 있는 레이아웃입니다. */
             inline static const AudioEffectTypeInfo kArrEffectType[] = {
-                {   "LowPass",    kArrLowPassParameter,    SW_COUNT_OF( kArrLowPassParameter ),   &createFilter<AudioBiquadType::LowPass>, kAllLayouts},
-                {  "HighPass",   kArrHighPassParameter,   SW_COUNT_OF( kArrHighPassParameter ),  &createFilter<AudioBiquadType::HighPass>, kAllLayouts},
-                {  "BandPass",       kArrBandParameter,       SW_COUNT_OF( kArrBandParameter ),  &createFilter<AudioBiquadType::BandPass>, kAllLayouts},
-                {   "Peaking",       kArrBandParameter,       SW_COUNT_OF( kArrBandParameter ),   &createFilter<AudioBiquadType::Peaking>, kAllLayouts},
-                {  "LowShelf",       kArrBandParameter,       SW_COUNT_OF( kArrBandParameter ),  &createFilter<AudioBiquadType::LowShelf>, kAllLayouts},
-                { "HighShelf",       kArrBandParameter,       SW_COUNT_OF( kArrBandParameter ), &createFilter<AudioBiquadType::HighShelf>, kAllLayouts},
-                {"Compressor", kArrCompressorParameter, SW_COUNT_OF( kArrCompressorParameter ),      &createEffect<AudioCompressorEffect>, kAllLayouts},
-                {   "Limiter",    kArrLimiterParameter,    SW_COUNT_OF( kArrLimiterParameter ),         &createEffect<AudioLimiterEffect>, kAllLayouts},
-                {    "Reverb",     kArrReverbParameter,     SW_COUNT_OF( kArrReverbParameter ),          &createEffect<AudioReverbEffect>, kAllLayouts},
-                {     "Delay",      kArrDelayParameter,      SW_COUNT_OF( kArrDelayParameter ),           &createEffect<AudioDelayEffect>, kAllLayouts},
+                {          "LowPass",     kArrLowPassParameter,     SW_COUNT_OF( kArrLowPassParameter ),   &createFilter<AudioBiquadType::LowPass>, kAllLayouts},
+                {         "HighPass",    kArrHighPassParameter,    SW_COUNT_OF( kArrHighPassParameter ),  &createFilter<AudioBiquadType::HighPass>, kAllLayouts},
+                {         "BandPass",        kArrBandParameter,        SW_COUNT_OF( kArrBandParameter ),  &createFilter<AudioBiquadType::BandPass>, kAllLayouts},
+                {          "Peaking",        kArrBandParameter,        SW_COUNT_OF( kArrBandParameter ),   &createFilter<AudioBiquadType::Peaking>, kAllLayouts},
+                {         "LowShelf",        kArrBandParameter,        SW_COUNT_OF( kArrBandParameter ),  &createFilter<AudioBiquadType::LowShelf>, kAllLayouts},
+                {        "HighShelf",        kArrBandParameter,        SW_COUNT_OF( kArrBandParameter ), &createFilter<AudioBiquadType::HighShelf>, kAllLayouts},
+                {       "Compressor",  kArrCompressorParameter,  SW_COUNT_OF( kArrCompressorParameter ),      &createEffect<AudioCompressorEffect>, kAllLayouts},
+                {          "Limiter",     kArrLimiterParameter,     SW_COUNT_OF( kArrLimiterParameter ),         &createEffect<AudioLimiterEffect>, kAllLayouts},
+                {           "Reverb",      kArrReverbParameter,      SW_COUNT_OF( kArrReverbParameter ),          &createEffect<AudioReverbEffect>, kAllLayouts},
+                {            "Delay",       kArrDelayParameter,       SW_COUNT_OF( kArrDelayParameter ),           &createEffect<AudioDelayEffect>, kAllLayouts},
+                {"ConvolutionReverb", kArrConvolutionParameter, SW_COUNT_OF( kArrConvolutionParameter ),                        &createConvolution, kAllLayouts},
             };
         };
     } // namespace
@@ -639,20 +874,33 @@ namespace sw
         return nullptr;
     }
 
-    unique_ptr<IAudioEffect> AudioEffectRegistry::createEffect( const hashed_string& name, AudioChannelLayout layout )
+    unique_ptr<IAudioEffect> AudioEffectRegistry::createEffect( const AudioEffectDesc& desc, AudioChannelLayout layout )
     {
-        const AudioEffectTypeInfo* pTypeInfo = findType( name );
+        const AudioEffectTypeInfo* pTypeInfo = findType( desc._type );
         if ( pTypeInfo == nullptr )
         {
-            SW_LOG_ERROR( "Unknown audio effect type '%#'", name.c_str() );
+            SW_LOG_ERROR( "Unknown audio effect type '%#'", desc._type.c_str() );
             return nullptr;
         }
         if ( pTypeInfo->supportsLayout( layout ) == false )
         {
-            SW_LOG_ERROR( "Audio effect '%#' does not support %# output channels", name.c_str(), AudioChannelLayoutUtil::getChannelCount( layout ) );
+            SW_LOG_ERROR( "Audio effect '%#' does not support %# output channels", desc._type.c_str(), AudioChannelLayoutUtil::getChannelCount( layout ) );
             return nullptr;
         }
-        return pTypeInfo->_pCreate( *pTypeInfo, layout );
+        unique_ptr<IAudioEffect> pEffect = pTypeInfo->_pCreate( *pTypeInfo, desc, layout );
+        if ( pEffect == nullptr )
+            return nullptr;
+        for ( const AudioEffectParameterDesc& parameter : desc._listParameter )
+        {
+            const int32 parameterIndex = pEffect->findParameterIndex( parameter._name );
+            if ( parameterIndex < 0 )
+            {
+                SW_LOG_ERROR( "Audio effect '%#' has no parameter '%#'", desc._type.c_str(), parameter._name.c_str() );
+                return nullptr;
+            }
+            pEffect->setParameter( static_cast<uint32>( parameterIndex ), parameter._value );
+        }
+        return pEffect;
     }
 
     const AudioEffectTypeInfo& AudioEffectRegistry::getType( uint32 typeIndex )
