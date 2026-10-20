@@ -541,24 +541,9 @@ namespace sw
         }
     }
 
-    bool GameInstanceBase::serializeState( void* pOutBuffer, uint32* pInOutSize )
+    bool GameInstanceBase::serializeState( vector<uint8>& outBytes )
     {
-        // C-ABI 의 크기 묻기 약속(버퍼가 없으면 크기만)은 여기서만 받는다. 봉투는 부를 때마다 처음부터 다시 쓴다(`ModuleHost` 가 크기와 내용을 두 번 묻는다).
-        if ( pInOutSize == nullptr )
-            return false;
-        vector<uint8> bytes;
-        if ( captureSnapshot( SerializePurpose::Snapshot, bytes ) == false )
-            return false;
-        if ( pOutBuffer == nullptr )
-        {
-            *pInOutSize = static_cast<uint32>( bytes.size() );
-            return true;
-        }
-        if ( *pInOutSize < bytes.size() )
-            return false;
-        Memory::copy( pOutBuffer, bytes.data(), bytes.size() );
-        *pInOutSize = static_cast<uint32>( bytes.size() );
-        return true;
+        return captureSnapshot( SerializePurpose::Snapshot, outBytes );
     }
 
     bool GameInstanceBase::deserializeState( const void* pInBuffer, uint32 size )
@@ -613,7 +598,7 @@ namespace sw
         arch.writeSection( componentArch.getData(), static_cast<uint32>( componentArch.getSize() ) );
         _pComponentStateStore->clear();
 
-        // 봉투는 한 번 써서 그대로 넘긴다. 크기만 묻는 길은 C-ABI(`serializeState`)에만 있다.
+        // 봉투는 한 번 써서 그대로 넘긴다.
         outBytes.assign( arch.getData(), arch.getData() + arch.getSize() );
         return true;
     }
