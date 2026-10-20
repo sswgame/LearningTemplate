@@ -49,10 +49,8 @@ namespace sw
     class SW_API DebugHUD
     {
     public:
-        /** @brief Dev 기동이 엔진과 게임 스키마 뒤에 덧붙이는 설정 스키마입니다. */
-        static constexpr const utf8* kSettingsSchemaPath = "engine/settings/debughud.settings.xml";
-        /** @brief 섹션 체크 상자 창 문서입니다. */
-        static constexpr const utf8* kWindowDocumentPath = "engine/ui/debughud.ui.xml";
+        // 설정 스키마(Dev 기동이 엔진과 게임 스키마 뒤에 덧붙인다)와 섹션 체크 상자 창 문서는 엔진 기본 에셋 표가 정본이다
+        // (`EngineDefaultAssets::_debugHUDSettingsSchema` · `_uiDebugHUD`, 창은 `UISystem::getEngineDocuments()._debugHUD`).
         /** @brief 셸 입력 맵(`engine/input/default.input.xml`) Debug 레이어의 마스터 단축키 액션입니다(Ctrl+F3). */
         static constexpr const utf8* kToggleActionName = "DebugHUDToggle";
         /** @brief HUD 패널 위젯 이름입니다(레이아웃 덤프와 탐침이 찾습니다). */

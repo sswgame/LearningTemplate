@@ -22,6 +22,7 @@
 #include "Engine/UI/UISystem.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
+#include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
 
 // UINavigationScriptTest — 탐색 열(자동화 시나리오 형식 — `<At frame><Tap slot/></At>` + `<ExpectUI focus screen screens/>`)을 가상 입력으로 재생해
@@ -80,6 +81,7 @@ namespace
             _viewport._physicalSize = _viewport._size;
             SW_EXPECT_TRUE( _input.initialize() );
             SW_EXPECT_TRUE( _ui.initialize( _input, nullptr, UINavigationScriptTestUtil::kUIInputMap ) );
+            _ui.setEngineDocuments( sw::UIEngineDocuments::makeFromDefaultAssets( ::test::getEngineDefaultAssets() ) );
             _ui.setUserSettings( &_settings );
         }
 

@@ -60,6 +60,54 @@ namespace sw
         PROPERTY( Required )
         DataPath _uiPauseMenu; ///< 일시정지 메뉴 문서 — 팩 설정이 `_bUIPauseMenu` 를 켤 때 `UI.Pause` 가 연다(`PauseMenuScreen`)
 
+        // 엔진 UI 문서 — 옵션 메뉴의 행 견본 · 확인 창, 알림 · 자막 화면, 디버그 HUD(`UIEngineDocuments` 로 UI 시스템에 넘긴다)
+        PROPERTY( Required )
+        DataPath _uiOptionsRowBool; ///< 옵션 메뉴 행 견본: 불리언 설정(체크 상자)
+        PROPERTY( Required )
+        DataPath _uiOptionsRowInt; ///< 옵션 메뉴 행 견본: 정수 설정
+        PROPERTY( Required )
+        DataPath _uiOptionsRowFloat; ///< 옵션 메뉴 행 견본: 실수 설정
+        PROPERTY( Required )
+        DataPath _uiOptionsRowEnum; ///< 옵션 메뉴 행 견본: 고르기 설정(마우스 · 키보드 — 콤보 상자)
+        PROPERTY( Required )
+        DataPath _uiOptionsRowEnumPad; ///< 옵션 메뉴 행 견본: 고르기 설정(패드 탐색 — 좌우로 넘기기)
+        PROPERTY( Required )
+        DataPath _uiOptionsRowKeyBinding; ///< 옵션 메뉴 행 견본: 키 바인딩 설정(단추)
+        PROPERTY( Required )
+        DataPath _uiOptionsRowString; ///< 옵션 메뉴 행 견본: 글 설정
+        PROPERTY( Required )
+        DataPath _uiSettingsConfirm; ///< 바꾼 설정을 되돌리기 전 카운트다운 확인 창
+        PROPERTY( Required )
+        DataPath _uiSettingsUnsaved; ///< 저장하지 않은 설정을 두고 닫을 때의 확인 창
+        PROPERTY( Required )
+        DataPath _uiKeyRebind; ///< 키 바인딩을 받는 창
+        PROPERTY( Required )
+        DataPath _uiNotifications; ///< 알림 화면(`UINotificationService`)
+        PROPERTY( Required )
+        DataPath _uiNotificationEntry; ///< 알림 한 줄 견본
+        PROPERTY( Required )
+        DataPath _uiSubtitles; ///< 자막 화면(`UISubtitleService`)
+        PROPERTY( Required )
+        DataPath _uiDebugHUD; ///< 디버그 HUD 설정 창(`DebugHUD`, 개발 빌드)
+        PROPERTY( Required )
+        DataPath _debugHUDSettingsSchema; ///< 디버그 HUD 설정 스키마(`DebugHUD`, 개발 빌드)
+
+        // 엔진 설정 표
+        PROPERTY( Required )
+        DataPath _uiResolutionPresets; ///< UI 미리보기 해상도 프리셋 표(`UIResolutionPresetTable`)
+        PROPERTY( Required )
+        DataPath _netEmulationPresets; ///< 네트워크 에뮬레이션 프리셋 표(`NetEmulationPresetTable`)
+
+        // 컴포넌트 기본 머티리얼 — 컴포넌트의 머티리얼 칸이 비면 이것을 쓴다(칸에 적으면 그것)
+        PROPERTY( Required )
+        DataPath _tileMapMaterial; ///< 타일맵 렌더러(`TileMapRendererComponent`) — 픽셀 아트 스프라이트 머티리얼
+        PROPERTY( Required )
+        DataPath _foliageMaterial; ///< 풀 · 나무 층(`FoliageComponent`)
+        PROPERTY( Required )
+        DataPath _terrainMaterial; ///< 지형(`TerrainComponent`)
+        PROPERTY( Required )
+        DataPath _waterMaterial; ///< 물(`WaterBodyComponent`)
+
         PROPERTY( Required )
         DataPath _defaultForwardPipeline; ///< 포워드 렌더 파이프라인(프레임 그래프)
         PROPERTY( Required )

@@ -10,6 +10,7 @@
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/UI/HUD/TutorialHintComponent.h"
 
+#include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
 
 // TutorialHintTest — 튜토리얼 힌트 볼륨(runtime-ui 8-3): 태그가 맞는 활성자에게 한 번, 종류 Hint 알림으로. 설정 gameplay.showTutorials 가 꺼져 있으면 띄우지 않는다.
@@ -23,6 +24,7 @@ SW_TEST_CASE( TutorialHintTest, PostsOnceAndHonorsTheSetting )
     UISystem     ui;
     SW_ASSERT_TRUE( input.initialize() );
     SW_ASSERT_TRUE( ui.initialize( input, nullptr ) );
+    ui.setEngineDocuments( sw::UIEngineDocuments::makeFromDefaultAssets( ::test::getEngineDefaultAssets() ) );
     UserSettingsManager settings;
     settings.initialize( UserSettingsTargets{} );
     SW_ASSERT_TRUE( settings.loadSchemaFromXMLText(

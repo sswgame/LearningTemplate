@@ -21,6 +21,7 @@
 #include "Engine/UI/Widgets/TextWidget.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
+#include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
 
 // UIOptionsMenuTest — 옵션 메뉴(8-2): 설정 스키마 → 탭 · 행(엔진 문서 engine/ui/options.ui.xml + 행 견본 조각), 확인 카운트다운, 닫을 때 보류 값 확인,
@@ -81,6 +82,7 @@ namespace
             _viewport._physicalSize = _viewport._size;
             SW_EXPECT_TRUE( _input.initialize() );
             SW_EXPECT_TRUE( _ui.initialize( _input, nullptr, UIOptionsMenuTestUtil::kUIInputMap ) );
+            _ui.setEngineDocuments( sw::UIEngineDocuments::makeFromDefaultAssets( ::test::getEngineDefaultAssets() ) );
             _ui.setUserSettings( &_settings );
             _menu = sw::OptionsMenuScreen::open( _ui );
             runFrame();

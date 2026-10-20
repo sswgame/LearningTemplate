@@ -1,9 +1,11 @@
 #include "pch.h"
 
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/NetEmulationPresetTable.h"
 
 #include "EngineTest/NetSimDestructionScenario.h"
 
+#include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
 
 #include <cstdlib>
@@ -51,7 +53,7 @@ SW_TEST_CASE( NetSimLoadTest, DestructionReplicationUnderLoad )
     options._rampUpTicks = static_cast<uint32>( Internal::readEnvironmentNumber( "SW_LOAD_RAMP_UP_SECONDS", 2.0f ) * Internal::kTickRate );
     options._tickCount   = static_cast<uint32>( MathUtil::max( 1.0f, Internal::readEnvironmentNumber( "SW_LOAD_DURATION_SECONDS", 12.0f ) ) * Internal::kTickRate );
     NetEmulationPresetTable presetTable;
-    SW_ASSERT_TRUE( presetTable.loadFromResource() );
+    SW_ASSERT_TRUE( presetTable.loadFromResource( ::test::getEngineDefaultAssets()._netEmulationPresets.get() ) );
     SW_ASSERT_TRUE_MSG( presetTable.tryGetConditions( network, options._conditions ), string( "unknown SW_LOAD_NETWORK preset " ) + string( network ) );
 
     const ScenarioResult result = runShowcase( document, options );

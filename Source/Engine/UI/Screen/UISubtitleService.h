@@ -47,8 +47,7 @@ namespace sw
         static constexpr float32 kMinReadingSeconds = 2.0f;
         /** @brief 글자 하나의 읽기 시간(초)입니다. */
         static constexpr float32 kReadingSecondsPerCharacter = 0.06f;
-        /** @brief 자막 화면 문서입니다. 줄 위젯 이름은 `Line<n>`(바탕), `Speaker<n>`, `Text<n>`(텍스트)입니다. */
-        static constexpr utf8 kDocumentPath[] = "engine/ui/subtitles.ui.xml";
+        // 자막 화면 문서는 엔진 기본 에셋 표가 정본이다(`UISystem::getEngineDocuments()._subtitles`). 줄 위젯 이름은 `Line<n>`(바탕), `Speaker<n>`, `Text<n>`(텍스트)입니다.
 
         explicit UISubtitleService( UISystem& uiSystem );
         ~UISubtitleService();

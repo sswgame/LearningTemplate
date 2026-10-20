@@ -17,6 +17,7 @@
 #include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Common/EngineSubsystemHost.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/UserSettings/UserSettingsEngineHandlers.h"
 #include "Engine/UserSettings/UserSettingsHandlerRegistry.h"
 #include "Engine/UserSettings/UserSettingsSchema.h"
@@ -138,8 +139,11 @@ namespace sw
         const utf8*             getSubsystemName() const override { return kSubsystemName; }
         span<const utf8* const> getSubsystemDependencies() const override;
         SubsystemHostMask       getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
-        /** @brief `initializeSubsystem` 이 사용자 파일보다 먼저 읽을 스키마를 더합니다(개발 도구의 스키마 — 저장된 값이 버려지지 않게). 기동 전에 부릅니다. */
-        void addStartupSchema( string_view schemaPath ) { _listStartupSchemaPath.push_back( string( schemaPath ) ); }
+        /**
+         * @brief `initializeSubsystem` 이 사용자 파일보다 먼저 읽을 스키마를 더합니다(개발 도구의 스키마 — 저장된 값이 버려지지 않게). 기동 전에 부릅니다.
+         * @details 경로는 엔진 기본 에셋 표의 칸 @p pSchemaField 로 준다 — 표는 기동 단계에서 읽히므로 그때 그 칸의 값을 쓴다(코드에 경로를 적지 않는다).
+         */
+        void addStartupSchema( DataPath EngineDefaultAssets::* pSchemaField ) { _listStartupSchemaField.push_back( pSchemaField ); }
 
         /** @brief 스키마 XML 을 덧붙이고 검사합니다. 실패하면 덧붙인 것을 버리고 false 입니다. 새 설정은 기본값으로 시작합니다. */
         [[nodiscard]] bool loadSchema( string_view resourcePath );
@@ -303,15 +307,15 @@ namespace sw
         [[nodiscard]] bool   saveIfPathSet();
 
     private:
-        UserSettingsSchema          _schema;
-        UserSettingsHandlerRegistry _registry;
-        UserSettingsEngineHandlers  _engineHandlers;
-        vector<SettingState>        _listState;
-        UserSettingEventDelegate    _onEvent;
-        string                      _userFilePath;
-        float32                     _confirmSecondsLeft;
-        bool                        _bUserFileLoaded;
-        bool                        _bStartupApplied;       ///< 첫 `reapplyAll`(기동 적용)이 지났는지 나타냅니다. 그 뒤로 `NeedsRestart` 값은 바뀌지 않습니다.
-        vector<string>              _listStartupSchemaPath; ///< `addStartupSchema` 가 더한 스키마(기동이 사용자 파일보다 먼저 읽는다)
+        UserSettingsSchema                      _schema;
+        UserSettingsHandlerRegistry             _registry;
+        UserSettingsEngineHandlers              _engineHandlers;
+        vector<SettingState>                    _listState;
+        UserSettingEventDelegate                _onEvent;
+        string                                  _userFilePath;
+        float32                                 _confirmSecondsLeft;
+        bool                                    _bUserFileLoaded;
+        bool                                    _bStartupApplied;        ///< 첫 `reapplyAll`(기동 적용)이 지났는지 나타냅니다. 그 뒤로 `NeedsRestart` 값은 바뀌지 않습니다.
+        vector<DataPath EngineDefaultAssets::*> _listStartupSchemaField; ///< `addStartupSchema` 가 더한 스키마 칸(기동이 사용자 파일보다 먼저 읽는다)
     };
 } // namespace sw

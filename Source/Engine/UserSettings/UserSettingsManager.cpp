@@ -1001,9 +1001,11 @@ namespace sw
             if ( loadSchema( packSettings._userSettingsSchema.get() ) == false )
                 SW_LOG_ERROR( "Game user settings schema '%#' is not loaded", packSettings._userSettingsSchema.c_str() );
         }
-        for ( const string& schemaPath : _listStartupSchemaPath )
+        const EngineDefaultAssets& defaultAssets = engine::getSubsystem<EngineDefaultAssets>();
+        for ( DataPath EngineDefaultAssets::* pSchemaField : _listStartupSchemaField )
         {
-            if ( loadSchema( schemaPath ) == false )
+            const DataPath& schemaPath = defaultAssets.*pSchemaField;
+            if ( loadSchema( schemaPath.get() ) == false )
                 SW_LOG_ERROR( "User settings schema '%#' is not loaded", schemaPath.c_str() );
         }
         for ( const auto& [settingID, value] : packSettings._mapUserSettingDefault )

@@ -362,7 +362,7 @@ namespace sw
             UserSettingsManager& userSettings = _startup.addSubsystem( sw::make_unique<UserSettingsManager>() );
 #if SW_DEV_COMMANDS_ENABLED
             // 디버그 HUD 설정(개발 도구) — Dev 만 덧붙인다. 사용자 파일보다 먼저 읽어야 저장된 HUD 값이 버려지지 않는다.
-            userSettings.addStartupSchema( DebugHUD::kSettingsSchemaPath );
+            userSettings.addStartupSchema( &EngineDefaultAssets::_debugHUDSettingsSchema );
 #else
             (void)userSettings; // 배포본은 덧붙일 스키마가 없다
 #endif

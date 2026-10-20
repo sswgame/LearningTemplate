@@ -9,6 +9,7 @@
 
 #include "EngineTest/UI/UIScopedVariable.h"
 
+#include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
 
 // UINotificationTest — 알림 · 토스트(8-3): 셋까지 쌓고 대기열(우선순위), 같은 글 합치기("x2"), 시간이 다 되면 내리고 다음을 올림, 입력 · 포커스를 받지 않음.
@@ -45,6 +46,7 @@ namespace
             _viewport._physicalSize = _viewport._size;
             SW_EXPECT_TRUE( _input.initialize() );
             SW_EXPECT_TRUE( _ui.initialize( _input, nullptr, "engine/input/ui.input.xml" ) );
+            _ui.setEngineDocuments( sw::UIEngineDocuments::makeFromDefaultAssets( ::test::getEngineDefaultAssets() ) );
         }
 
         ~UINotificationFixture()

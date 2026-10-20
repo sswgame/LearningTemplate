@@ -53,10 +53,9 @@ namespace sw
     class SW_API UINotificationService
     {
     public:
-        static constexpr uint32  kMaxVisible       = 3;
-        static constexpr utf8    kScreenDocument[] = "engine/ui/notifications.ui.xml";
-        static constexpr utf8    kEntryDocument[]  = "engine/ui/parts/notification.ui.xml";
-        static constexpr float32 kFadeSeconds      = 0.2f; ///< 들어올 때와 나갈 때 불투명도가 변하는 시간입니다.
+        // 화면 · 항목 문서는 엔진 기본 에셋 표가 정본이다(`UISystem::getEngineDocuments` 의 `_notifications` · `_notificationEntry`).
+        static constexpr uint32  kMaxVisible  = 3;
+        static constexpr float32 kFadeSeconds = 0.2f; ///< 들어올 때와 나갈 때 불투명도가 변하는 시간입니다.
 
         explicit UINotificationService( UISystem& ui );
         UINotificationService( const UINotificationService& )            = delete;

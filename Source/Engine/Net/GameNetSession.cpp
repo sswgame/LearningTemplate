@@ -12,6 +12,7 @@
 #include "Core/Network/Transport/UDPNetTransport.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/NetEmulationPresetTable.h"
 #include "Engine/Config/Server/ServerConfig.h"
 #include "Engine/Observability/ServerServiceRegistry.h"
@@ -110,9 +111,10 @@ namespace sw
                 if ( bPreset )
                 {
                     NetEmulationPresetTable presetTable;
-                    if ( presetTable.loadFromResource() == false )
+                    const DataPath&         presetPath = engine::getSubsystem<EngineDefaultAssets>()._netEmulationPresets;
+                    if ( presetTable.loadFromResource( presetPath.get() ) == false )
                     {
-                        outReply = string( "net emulation presets could not be read (" ) + NetEmulationPresetTable::kResourcePath + ")";
+                        outReply = string( "net emulation presets could not be read (" ) + presetPath.get() + ")";
                         return true;
                     }
                     if ( presetTable.tryGetConditions( listArgument[1], preset ) == false )
@@ -374,7 +376,8 @@ namespace sw
         {
             NetEmulationPresetTable presetTable;
             emulationConditions = NetEmulationConditions{};
-            if ( presetTable.loadFromResource() && presetTable.tryGetConditions( gv_netEmuPreset, emulationConditions ) == false )
+            if ( presetTable.loadFromResource( engine::getSubsystem<EngineDefaultAssets>()._netEmulationPresets.get() ) &&
+                 presetTable.tryGetConditions( gv_netEmuPreset, emulationConditions ) == false )
                 SW_LOG_ERROR( "gv_netEmuPreset '%#' is not a preset (%#) - no emulation", gv_netEmuPreset.c_str(), presetTable.makePresetNames().c_str() );
         }
         _emulation->setDefaultConditions( emulationConditions );

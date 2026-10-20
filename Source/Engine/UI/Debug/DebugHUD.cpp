@@ -782,7 +782,7 @@ namespace sw
             return false;
         if ( isWindowOpen() )
             return true;
-        _window = _pUI->openScreen<DebugHUDWindowScreen>( kWindowDocumentPath );
+        _window = _pUI->openScreen<DebugHUDWindowScreen>( _pUI->getEngineDocuments()._debugHUD );
         return _window != kInvalidUIScreenHandle;
     }
 

@@ -50,8 +50,8 @@ namespace sw
         PlacementRule _rule{};
         PROPERTY()
         vector<FoliageMesh> _listMesh{};
-        PROPERTY( AssetPath, AssetType = "Material", Tooltip = "foliage.material (casts shadows) or grass.material (no shadows)" )
-        string _materialPath{ "engine/materials/foliage.material" };
+        PROPERTY( AssetPath, AssetType = "Material", Tooltip = "foliage.material (casts shadows) or grass.material (no shadows). Empty uses the engine default foliage material" )
+        string _materialPath{}; ///< 비면 엔진 기본 에셋 표의 `_foliageMaterial` 이다
         PROPERTY( Tooltip = "Linear RGB tint" )
         float4 _tint{ 1.0f, 1.0f, 1.0f, 1.0f };
         PROPERTY( Min = 0.0, Max = 1.0, Tooltip = "Per-instance brightness variation" )

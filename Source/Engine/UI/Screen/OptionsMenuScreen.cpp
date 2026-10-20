@@ -40,23 +40,23 @@ namespace sw
             static constexpr utf8 kTabClass[]          = "tab";
             static constexpr utf8 kSelectedTabClass[]  = "tab selected";
 
-            /** @brief 설정 종류 하나의 행 UI — 행 문서와 값 위젯에 연결하는 필드(설정 바인딩 규약)입니다. */
+            /** @brief 설정 종류 하나의 행 UI — 행 문서(엔진 UI 문서 묶음의 칸)와 값 위젯에 연결하는 필드(설정 바인딩 규약)입니다. */
             struct RowWidgetDef
             {
                 UserSettingType _type;
-                const utf8*     _pValueProperty;         ///< 키 바인딩은 버튼이라 nullptr 입니다.
-                const utf8*     _pRowDocument;           ///< 마우스 · 키보드 모드의 행 문서입니다.
-                const utf8*     _pNavigationRowDocument; ///< 패드 탐색 모드(`UIInputMode::Navigation`)의 행 문서입니다.
+                const utf8*     _pValueProperty;                     ///< 키 바인딩은 버튼이라 nullptr 입니다.
+                string UIEngineDocuments::* _pRowDocument;           ///< 마우스 · 키보드 모드의 행 문서 칸입니다.
+                string UIEngineDocuments::* _pNavigationRowDocument; ///< 패드 탐색 모드(`UIInputMode::Navigation`)의 행 문서 칸입니다.
             };
 
-            /** @brief 종류마다 한 줄, 열거자 순서입니다 — 아래 static_assert 가 순서와 줄 수를 지킵니다. */
+            /** @brief 종류마다 한 줄, 열거자 순서입니다 — 아래 static_assert 가 순서와 줄 수를 지킵니다. 경로 값은 엔진 기본 에셋 표에 있다. */
             static constexpr RowWidgetDef kArrRowWidget[] = {
-                {      UserSettingType::Bool,      "_bChecked",       "engine/ui/parts/setting_bool.ui.xml",       "engine/ui/parts/setting_bool.ui.xml"},
-                {       UserSettingType::Int,         "_value",        "engine/ui/parts/setting_int.ui.xml",        "engine/ui/parts/setting_int.ui.xml"},
-                {     UserSettingType::Float,         "_value",      "engine/ui/parts/setting_float.ui.xml",      "engine/ui/parts/setting_float.ui.xml"},
-                {      UserSettingType::Enum, "_selectedIndex",       "engine/ui/parts/setting_enum.ui.xml",   "engine/ui/parts/setting_enum_pad.ui.xml"},
-                {UserSettingType::KeyBinding,          nullptr, "engine/ui/parts/setting_keybinding.ui.xml", "engine/ui/parts/setting_keybinding.ui.xml"},
-                {    UserSettingType::String,          "_text",     "engine/ui/parts/setting_string.ui.xml",     "engine/ui/parts/setting_string.ui.xml"},
+                {      UserSettingType::Bool,      "_bChecked",       &UIEngineDocuments::_optionsRowBool,       &UIEngineDocuments::_optionsRowBool},
+                {       UserSettingType::Int,         "_value",        &UIEngineDocuments::_optionsRowInt,        &UIEngineDocuments::_optionsRowInt},
+                {     UserSettingType::Float,         "_value",      &UIEngineDocuments::_optionsRowFloat,      &UIEngineDocuments::_optionsRowFloat},
+                {      UserSettingType::Enum, "_selectedIndex",       &UIEngineDocuments::_optionsRowEnum,    &UIEngineDocuments::_optionsRowEnumPad},
+                {UserSettingType::KeyBinding,          nullptr, &UIEngineDocuments::_optionsRowKeyBinding, &UIEngineDocuments::_optionsRowKeyBinding},
+                {    UserSettingType::String,          "_text",     &UIEngineDocuments::_optionsRowString,     &UIEngineDocuments::_optionsRowString},
             };
 
             static constexpr bool isRowWidgetInEnumOrder()
@@ -145,10 +145,10 @@ namespace sw
         return handle;
     }
 
-    const utf8* OptionsMenuScreen::findRowDocument( const UserSettingDef& setting, UIInputMode mode )
+    const string& OptionsMenuScreen::findRowDocument( const UIEngineDocuments& documents, const UserSettingDef& setting, UIInputMode mode )
     {
         const OptionsMenuScreenInternal::RowWidgetDef& rowWidget = OptionsMenuScreenInternal::getRowWidget( setting._type );
-        return mode == UIInputMode::Navigation ? rowWidget._pNavigationRowDocument : rowWidget._pRowDocument;
+        return documents.*( mode == UIInputMode::Navigation ? rowWidget._pNavigationRowDocument : rowWidget._pRowDocument );
     }
 
     bool OptionsMenuScreen::onCommand( const hashed_string& command, Widget& source )
@@ -191,7 +191,7 @@ namespace sw
             {
                 const bool bOpenRebindPrompt = row._value == source.getID() && pUI != nullptr && _pSettings != nullptr && isPromptOpen() == false;
                 if ( bOpenRebindPrompt )
-                    _promptScreen = KeyRebindScreen::open( *pUI, *_pSettings, row._settingID, kRebindDocument );
+                    _promptScreen = KeyRebindScreen::open( *pUI, *_pSettings, row._settingID, pUI->getEngineDocuments()._keyRebind );
             }
             return true;
         }
@@ -274,7 +274,7 @@ namespace sw
         UISystem*                     pUI                = getUISystem();
         const bool                    bOpenConfirmPrompt = result._bAwaitingConfirm && pUI != nullptr && isPromptOpen() == false;
         if ( bOpenConfirmPrompt )
-            _promptScreen = SettingsConfirmScreen::open( *pUI, *_pSettings, kConfirmDocument );
+            _promptScreen = SettingsConfirmScreen::open( *pUI, *_pSettings, pUI->getEngineDocuments()._settingsConfirm );
         if ( result._bNeedsRestart && pUI != nullptr )
         {
             UINotificationDesc notice{};
@@ -356,9 +356,9 @@ namespace sw
         UISystem* pUI  = getUISystem();
         if ( pUI == nullptr )
             return false;
-        const utf8*                             pDocumentPath = findRowDocument( setting, pUI->getInputRouter().getInputMode() );
+        const string&                           documentPath = findRowDocument( pUI->getEngineDocuments(), setting, pUI->getInputRouter().getInputMode() );
         string                                  error;
-        const shared_ptr<const UIDocumentAsset> document = pUI->getDocumentCache().findOrLoad( pDocumentPath, error );
+        const shared_ptr<const UIDocumentAsset> document = pUI->getDocumentCache().findOrLoad( documentPath, error );
         vector<UIBindingDesc>                   listBinding;
         unique_ptr<Widget>                      row = document != nullptr ? UIDocumentLoader::instantiate( *document, pUI->getDocumentCache(), listBinding, error ) : nullptr;
         if ( row == nullptr )
@@ -434,7 +434,7 @@ namespace sw
         UISystem* pUI = getUISystem();
         if ( pUI == nullptr || isPromptOpen() )
             return;
-        _promptScreen     = pUI->openScreen( kUnsavedDocument );
+        _promptScreen     = pUI->openScreen( pUI->getEngineDocuments()._settingsUnsaved );
         UIScreen* pPrompt = pUI->findScreen( _promptScreen );
         if ( pPrompt == nullptr )
             return;

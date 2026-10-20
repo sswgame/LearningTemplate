@@ -178,7 +178,7 @@ namespace sw
         UIScreen* pScreen = _ui.findScreen( _screen );
         if ( pScreen != nullptr && pScreen->isClosing() == false )
             return pScreen;
-        _screen = _ui.openScreen( kScreenDocument );
+        _screen = _ui.openScreen( _ui.getEngineDocuments()._notifications );
         return _ui.findScreen( _screen );
     }
 
@@ -191,11 +191,11 @@ namespace sw
         PanelWidget* pStack = pScreen->getTree().findWidget<PanelWidget>( Internal::kStackName );
         if ( pStack == nullptr )
         {
-            SW_LOG_ERROR( "[UI] Notification document %# has no '%#' panel", kScreenDocument, Internal::kStackName );
+            SW_LOG_ERROR( "[UI] Notification document %# has no '%#' panel", _ui.getEngineDocuments()._notifications.c_str(), Internal::kStackName );
             return;
         }
         string                                  error;
-        const shared_ptr<const UIDocumentAsset> document = _ui.getDocumentCache().findOrLoad( kEntryDocument, error );
+        const shared_ptr<const UIDocumentAsset> document = _ui.getDocumentCache().findOrLoad( _ui.getEngineDocuments()._notificationEntry, error );
         vector<UIBindingDesc>                   listBinding;
         unique_ptr<Widget>                      widget = document != nullptr ? UIDocumentLoader::instantiate( *document, _ui.getDocumentCache(), listBinding, error ) : nullptr;
         if ( widget == nullptr )
