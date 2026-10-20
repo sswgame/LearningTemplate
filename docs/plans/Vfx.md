@@ -23,5 +23,13 @@
 | V3 | `VfxComponent`(효과 경로, 재생, 정지, 씨앗)와 에디터 미리보기 창(`VfxPreviewPanel` — 보기 전용, 효과 편집은 카탈로그 편집기) — **들어감**(표본 효과 `engine/vfx/sparks.vfx.xml`) | V2 |
 | V4 | GPU 시뮬레이션 `vfxsimulate.hlsl`: 같은 모듈 의미를 컴퓨트로, 생존 수는 원자적 카운터, 간접 드로우 인자. DX11 은 구조 버퍼와 간접 인자를 한 버퍼로 못 쓰므로 복사 단계 하나를 더합니다. 이 단위에서 Shipping 의 CPU 경로를 뺍니다(지금은 CPU 가 유일한 경로라 Shipping 도 CPU 다) | V2, `D2-6.3` 슬롯 지도 |
 | V5 | CPU 와 GPU 비교 테스트: 같은 씨앗, 같은 단계 수에서 입자 수가 같고 위치가 허용 오차 안입니다(hostgpu) | V4 |
-| V6 | 메시 입자(`VfxRenderMode::Mesh` — 메시 인스턴스 배치), 리본(`Ribbon` — 태어난 순서의 띠, `particle.hlsl`), 충돌(`VfxCollisionDef` — 물리 레이캐스트, `IVfxCollisionScene`), 파티클 라이트(`VfxLightDef` — 씬 라이트 목록 · CPU 라이트 그리드) — **들어감**(`VfxEffectDefTest.RenderModeFieldsAreChecked` · `VfxCPUSimulationTest.RibbonParticlesAreWrittenInBirthOrder` · `CollisionBouncesOrKills` · `VfxComponentTest.TrailSampleDrivesRibbonMeshAndLights`, 표본 `engine/vfx/trail.vfx.xml`, 빌드 · 셰이더 재베이크 · 화면 확인 전). GPU 라이트 그리드에 넣는 일은 `ClusteredLighting` S5 | V3 |
+| V6 | 메시 입자(`VfxRenderMode::Mesh` — 메시 인스턴스 배치), 리본(`Ribbon` — 태어난 순서의 띠, `particle.hlsl`), 충돌(`VfxCollisionDef` — 물리 레이캐스트, `IVfxCollisionScene`), 파티클 라이트(`VfxLightDef` — 씬 라이트 목록 · CPU 라이트 그리드) — **들어감**(`VfxEffectDefTest.RenderModeFieldsAreChecked` · `VfxCPUSimulationTest.RibbonParticlesAreWrittenInBirthOrder` · `CollisionBouncesOrKills` · `VfxComponentTest.TrailSampleDrivesRibbonMeshAndLights`, 표본 `engine/vfx/trail.vfx.xml`, 빌드 · 화면 확인 전). 띠의 셰이더 경로(`particle.hlsl` 플래그 칸)는 커밋 훅(`CheckShaderStamps`)이 쿠킹한 바이너리와 함께 커밋하라고 막아 **아직 커밋되지 않았다** — 빌드 뒤 `App --cook-shaders` 와 함께 넣는다(그 전까지 띠는 더하기 빌보드로 잘못 그려진다). GPU 라이트 그리드에 넣는 일은 `ClusteredLighting` S5 | V3 |
 | V7 | 메시 투명과 입자의 교차 정렬: 방출기를 메시 투명 배치와 한 순서로 섞고(프리미티브 단위, 결정 기록 5-12 `D2-11`), 추가 뷰는 그 뷰의 순서로 그립니다(`GPUTransparentParticleSlot`) — **들어감**(`GPUTransparentSorterTest.ParticlePlacementFollowsLayerAndDepth` · `VfxComponentTest.ParticlesInterleaveWithTransparentMeshes`, 빌드 · 화면 확인 전) | V2 |
+
+### V4 계약
+
+- **착수 조건: 빌드.** 새 컴퓨트 셰이더(`vfxsimulate.hlsl`)와 셰이더 수정은 커밋 훅(`CheckShaderStamps`)이 네 백엔드의 쿠킹 바이너리와 함께 커밋하라고 막는다. 쿠킹(`App --cook-shaders`)은 빌드가 있어야 하므로, 빌드를 허락받은 작업자가 맡는다.
+- **CPU 전용 모듈과 Shipping 의 GPU 고정이 부딪힌다.** V6 의 물리 레이캐스트 충돌 · 파티클 라이트 · 메시 입자는 CPU 데이터(물리 씬, CPU 라이트 목록, 메시 인스턴스 배치 항목)가 필요해 GPU 시뮬레이션으로 옮길 수 없다(언리얼 Niagara 도 라이트 렌더러와 CPU 레이 트레이스 충돌은 CPU 시뮬레이션 전용이고, GPU 충돌은 깊이 버퍼로 한다).
+  권고안: Niagara 처럼 **방출기마다 시뮬레이션 대상**을 정한다 — GPU 가 표현할 수 있는 방출기(빌보드 · 띠, 충돌 없음 · 라이트 없음)만 `gv_vfxSimulation` · Shipping 고정의 대상이고, CPU 전용 모듈을 쓰는 방출기는 모든 빌드에서 CPU 로 돈다(검증이 대상을 데이터로 정해 로그에 남긴다). Shipping 에서 CPU 경로를 통째로 빼는 원래 결정(결정 기록 5-12 `D2-11`)과 다르므로 사용자 확인이 필요하다. GPU 깊이 버퍼 충돌은 그다음 단위로 둔다.
+- 결정성: 난수는 CPU 와 같은 splitmix64 수열이다. DX11(SM5)에는 64 비트 정수가 없어 uint2 로 흉내 낸다. 커브는 키와 접선을 올려 같은 식으로 계산한다(표로 굽지 않는다 — V5 가 같은 값을 기대한다).
+- DX11: 구조 버퍼와 간접 인자를 한 버퍼로 못 쓰므로 RAW UAV(`RHIBufferUsage::Raw | IndirectArgs`)에 인자를 쓰는 작은 컴퓨트 단계를 더한다(RHI 에 버퍼 복사가 없다).
