@@ -129,6 +129,10 @@ namespace sw
         context._resourceRegistry.registerBuffer( passConstantNames()._swLights, buffer._buffer, buffer._srv );
         if ( bGridReady )
             context._resourceRegistry.registerBuffer( passConstantNames()._swLightGrid, pGridBuffer->_buffer, pGridBuffer->_srv );
+        // 라이트 프로브 SH9(t13) — 볼륨 원소가 라이트 목록에 있는 프레임에만 있다. 셰이더는 g_SwLightProbesIndex 로 걸렸는지 본다.
+        const RHIStructuredBufferSlot* pProbeBuffer = _lightBuffer.findProbeBuffer();
+        if ( pProbeBuffer != nullptr )
+            context._resourceRegistry.registerBuffer( passConstantNames()._swLightProbes, pProbeBuffer->_buffer, pProbeBuffer->_srv );
     }
 
     void FrameRenderer::registerMaterialBuffer( FramePassContext& context, const GPUMeshBatch& batch, RHIPipelineStateHandle pso )

@@ -538,7 +538,7 @@ namespace sw
         _mainView._settings._viewMode = getViewMode(); // 직접 경로(테스트)는 주 출력 모드를 쓴다. 패킷 경로는 Engine 가 싣는다.
         // 씬 직접 경로(에디터, 테스트)도 패킷 경로와 **같은 라이트 버퍼**를 쓴다. 경로마다 조명이
         // 다르면 에디터에서 본 이미지와 게임 화면이 달라진다.
-        collectSceneLights( pScene, _listScratchLight, &_listScratchShadowLightIndex );
+        collectSceneLights( pScene, _listScratchLight, &_listScratchShadowLightIndex, &_listScratchLightProbe );
         // 주 광원(그림자 배치, 앰비언트)도 패킷 경로(Engine)와 **같은 규칙**으로
         // 씬에서 읽는다. 주의: 이 경로가 주 광원을 채우지 않으면 테스트가 씬에 둔 방향광이 이미지에 반영되지 않아,
         // 조명이 필요한 픽셀 검증(블룸이 1을 넘는 위치)이 불가능해진다.
@@ -565,7 +565,7 @@ namespace sw
         ShadowSetupUtil::populateFrame( pKeyLight != nullptr ? pShadowLight : nullptr, &mainCameraViewProj, getShadowMapResolution(), _listScratchShadowLightIndex, _listScratchLight,
                                         _frameShadow );
         applyFrameShadow();
-        _lightBuffer.populate( _listScratchLight, _frameShadow._listTileElement );
+        _lightBuffer.populate( _listScratchLight, _frameShadow._listTileElement, _listScratchLightProbe );
         resetPassCbRing();
         setIdentityWorld( _frameContext );
         updatePassConstants( _frameContext, mainCameraViewProj );
@@ -651,7 +651,7 @@ namespace sw
         applyFrameShadow();
         // 씬의 모든 라이트다. 방향광과 점광이 한 버퍼에 섞여 올라가고 포워드와 디퍼드가 같이 읽는다. 점광 · 스폿 그림자 타일은 그 뒤에 붙는다.
         // 비어 있으면 셰이더는 앰비언트만 더한다 — 라이트 컴포넌트가 없는 씬은 어둡다(키 라이트로 대신 비추지 않는다).
-        _lightBuffer.populate( packet._listLight, _frameShadow._listTileElement );
+        _lightBuffer.populate( packet._listLight, _frameShadow._listTileElement, packet._listLightProbe );
 
         ensurePassResources();
         ensureTransientResources( packet._viewportWidth, packet._viewportHeight );

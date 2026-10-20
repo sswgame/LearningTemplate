@@ -37,6 +37,8 @@ namespace sw
          *          라이트 목록이 비어도 키라이트 하나로 그리는 폴백 경로이기도 합니다.
          */
         vector<GPULight> _listLight;
+        /** @brief 라이트 프로브 볼륨들의 SH9 원소입니다(`collectSceneLights`). 볼륨 원소는 `_listLight` 에 있고 이 목록의 첫 프로브를 가리킵니다. */
+        vector<float4> _listLightProbe;
         /** @brief 이번 프레임의 추가 뷰(CCTV, 백미러, 분할 화면, PiP)입니다. 쉬는 뷰도 실립니다(`RenderViewRequest::_bRender`). */
         vector<RenderViewRequest> _listView;
         /**
@@ -76,6 +78,8 @@ namespace sw
             , _shadow{}
             , _lightDirIntensity{}
             , _lightColorAmbient{}
+            , _listLight{}
+            , _listLightProbe{}
             , _listView{}
             , _canvas{}
             , _mainView{}
@@ -120,6 +124,7 @@ namespace sw
             _lightDirIntensity = float4{};
             _lightColorAmbient = float4{};
             _listLight.clear();
+            _listLightProbe.clear();
             _listView.clear();
             _canvas.clear();
             _mainView = RenderViewSettings{};

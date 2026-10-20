@@ -155,7 +155,7 @@ namespace sw
                 _listGlobalScratch.push_back( lightIndex );
                 continue;
             }
-            const bool   bLocal = lightType == shaderslot::kLightTypePoint || lightType == shaderslot::kLightTypeSpot;
+            const bool   bLocal = lightType == shaderslot::kLightTypePoint || lightType == shaderslot::kLightTypeSpot || lightType == shaderslot::kLightTypeProbeVolume;
             ClusterRange range{};
             if ( bLocal == false || computeLightRange( viewProj, light, range ) == false )
                 continue;

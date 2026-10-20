@@ -8,6 +8,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Object/Component/2D/ShadowCaster2DComponent.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
+#include "Engine/Object/Component/3D/LightProbeVolumeComponent.h"
 #include "Engine/Object/Component/3D/PointLightComponent.h"
 #include "Engine/Object/Component/3D/SpotLightComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -20,20 +21,52 @@ namespace sw
 
     namespace
     {
-        /** @brief 그림자를 켠 점광과 스폿이면 true 입니다(방향광은 씬이 하나 고릅니다). */
-        bool castsLocalShadow( const LightComponent& light )
+        struct GPULightBufferInternal
         {
-            if ( light.getLightType() == shaderslot::kLightTypePoint )
-                return static_cast<const PointLightComponent&>( light ).castsShadow();
-            if ( light.getLightType() == shaderslot::kLightTypeSpot )
-                return static_cast<const SpotLightComponent&>( light ).castsShadow();
-            return false;
-        }
+            /** @brief 그림자를 켠 점광과 스폿이면 true 입니다(방향광은 씬이 하나 고릅니다). */
+            static bool castsLocalShadow( const LightComponent& light )
+            {
+                if ( light.getLightType() == shaderslot::kLightTypePoint )
+                    return static_cast<const PointLightComponent&>( light ).castsShadow();
+                if ( light.getLightType() == shaderslot::kLightTypeSpot )
+                    return static_cast<const SpotLightComponent&>( light ).castsShadow();
+                return false;
+            }
+
+            /**
+             * @brief 프로브 볼륨 하나를 라이트 원소(bindingslots.hlsli 8 절의 SW_LIGHT_TYPE_PROBE_VOLUME 배치)로 만들고, 그 프로브들의 SH9 원소를 붙입니다.
+             * @details 경계 구는 상자의 외접구다 — 라이트 그리드가 점광과 같은 식으로 클러스터에 넣는다. 수와 번호는 실수로 싣는다(2^24 안이면 정확하다).
+             */
+            static GPULight makeProbeVolumeElement( const LightProbeGrid& grid, vector<float4>& inoutListProbeElement )
+            {
+                const LightProbeGridLayout& layout = grid._layout;
+                const float3                extent{ layout._spacing._x * static_cast<float32>( layout._countX - 1u ), layout._spacing._y * static_cast<float32>( layout._countY - 1u ),
+                                     layout._spacing._z * static_cast<float32>( layout._countZ - 1u ) };
+                const float3                center    = layout._origin + extent * 0.5f;
+                const uint32                probeBase = static_cast<uint32>( inoutListProbeElement.size() ) / shaderslot::kLightProbeFloat4Count;
+                GPULight                    element{};
+                element._positionRadius = float4{ center._x, center._y, center._z, extent.getLength() * 0.5f };
+                element._colorIntensity = float4{ layout._origin._x, layout._origin._y, layout._origin._z, 0.0f };
+                element._directionType  = float4{ layout._spacing._x, layout._spacing._y, layout._spacing._z, static_cast<float32>( shaderslot::kLightTypeProbeVolume ) };
+                element._params         = float4{ static_cast<float32>( layout._countX ), static_cast<float32>( layout._countY ), static_cast<float32>( layout._countZ ),
+                                          static_cast<float32>( probeBase ) };
+                for ( const SH9Color& probe : grid._listProbe )
+                {
+                    float4 arrElement[SH9Color::kGPUFloat4Count];
+                    probe.makeGPUElement( arrElement );
+                    inoutListProbeElement.insert( inoutListProbeElement.end(), arrElement, arrElement + SH9Color::kGPUFloat4Count );
+                }
+                return element;
+            }
+        };
+        static_assert( shaderslot::kLightProbeFloat4Count == SH9Color::kGPUFloat4Count, "셰이더의 프로브 원소 수와 SH9Color 의 GPU 원소 수가 같아야 한다" );
     } // namespace
 
-    void collectSceneLights( const Scene* pScene, vector<GPULight>& outList, vector<uint32>* pOutListShadowLightIndex )
+    void collectSceneLights( const Scene* pScene, vector<GPULight>& outList, vector<uint32>* pOutListShadowLightIndex, vector<float4>* pOutListProbeElement )
     {
         outList.clear();
+        if ( pOutListProbeElement != nullptr )
+            pOutListProbeElement->clear();
         if ( pOutListShadowLightIndex != nullptr )
             pOutListShadowLightIndex->clear();
         if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
@@ -57,9 +90,21 @@ namespace sw
                 if ( pLight == pShadowLight )
                     light._params._x = 1.0f;
                 // 그림자를 드리우는 점광과 스폿은 번호만 적는다. 아틀라스 슬롯(`_params.x`, `_params.w`)은 슬롯 수를 아는 쪽이 나눠 준다(ShadowSetupUtil).
-                if ( pOutListShadowLightIndex != nullptr && castsLocalShadow( *pLight ) )
+                if ( pOutListShadowLightIndex != nullptr && GPULightBufferInternal::castsLocalShadow( *pLight ) )
                     pOutListShadowLightIndex->push_back( static_cast<uint32>( outList.size() ) );
                 outList.push_back( light );
+            }
+        }
+
+        // 라이트 프로브 볼륨은 3D 라이트 뒤에 붙는다(IndirectLighting.md P3). 쓸 수 있는 베이크가 없는 볼륨(굽지 않음 · 모양이 다름)은 넣지 않는다 —
+        // 그곳은 볼륨이 없는 곳과 같다(이유는 볼륨이 읽을 때 남긴다).
+        if ( pOutListProbeElement != nullptr )
+        {
+            for ( const LightProbeVolumeComponent* pVolume : registry.getAll<LightProbeVolumeComponent>() )
+            {
+                const LightProbeGrid* pGrid = ( pVolume != nullptr && pVolume->isActive() ) ? pVolume->findProbeData() : nullptr;
+                if ( pGrid != nullptr )
+                    outList.push_back( GPULightBufferInternal::makeProbeVolumeElement( *pGrid, *pOutListProbeElement ) );
             }
         }
 
@@ -71,7 +116,7 @@ namespace sw
         }
     }
 
-    void GPULightBuffer::populate( const vector<GPULight>& listLight, const vector<GPULight>& listShadowTileElement )
+    void GPULightBuffer::populate( const vector<GPULight>& listLight, const vector<GPULight>& listShadowTileElement, const vector<float4>& listProbeElement )
     {
         uint32 count = static_cast<uint32>( listLight.size() );
         if ( count > shaderslot::kMaxFrameLight )
@@ -87,13 +132,15 @@ namespace sw
         // 점광과 스폿 그림자 타일 원소는 (잘린) 라이트 뒤에 붙는다. 셰이더는 g_SwLightCount + 라이트의 params.w 로 찾는다. 그리드는 따로 버퍼(t12)다.
         _listUploadScratch.assign( listLight.begin(), listLight.begin() + count );
         _listUploadScratch.insert( _listUploadScratch.end(), listShadowTileElement.begin(), listShadowTileElement.end() );
+        _listProbeScratch.assign( listProbeElement.begin(), listProbeElement.end() );
     }
 
     void GPULightBuffer::update( IRHIDevice* pDevice, const vector<float4x4>& listGridViewProj, LightGridProducer producer )
     {
         _listGridBase.assign( listGridViewProj.size(), invalid_index::kUint32 );
-        _gpuGridViewCount = 0;
-        _gridProducer     = LightGridProducer::None;
+        _gpuGridViewCount  = 0;
+        _gridProducer      = LightGridProducer::None;
+        _probeElementCount = 0;
         if ( pDevice == nullptr || _count == 0 )
         {
             // 버퍼는 그대로 둔다. 라이트가 잠깐 0 이 되는 프레임마다 만들고 지우면 그것이 비용이다.
@@ -111,6 +158,22 @@ namespace sw
             return;
         }
         _buffer.upload( pDevice, pUpload, totalCount * stride );
+
+        // 라이트 프로브 SH9(t13). 볼륨 원소가 라이트 목록에 있으면 그 프로브들이 여기 있다 — 못 올리면 볼륨 원소가 빈 버퍼를 가리키므로 오류로 남긴다.
+        if ( _listProbeScratch.empty() == false )
+        {
+            const uint32 probeElementCount = static_cast<uint32>( _listProbeScratch.size() );
+            const uint32 probeStride       = static_cast<uint32>( sizeof( float4 ) );
+            if ( _probeBuffer.ensureCapacity( pDevice, probeStride, probeElementCount, kUsage, true, false, _listProbeScratch.data() ) )
+            {
+                _probeBuffer.upload( pDevice, _listProbeScratch.data(), probeElementCount * probeStride );
+                _probeElementCount = probeElementCount;
+            }
+            else
+            {
+                SW_LOG_ERROR( "Light probe buffer (%# elements) could not be allocated - probe volumes give no indirect light this frame", probeElementCount );
+            }
+        }
 
         if ( listGridViewProj.empty() )
             return;
@@ -223,6 +286,12 @@ namespace sw
         SW_LOG_ERROR( "Light grid for view %# %# - that view walks every light", viewIndex, pReason );
     }
 
+    const RHIStructuredBufferSlot* GPULightBuffer::findProbeBuffer() const
+    {
+        const bool bReady = _probeElementCount > 0 && _probeBuffer._buffer != 0 && _probeBuffer._srv != kInvalidDescriptorIndex;
+        return bReady ? &_probeBuffer : nullptr;
+    }
+
     const RHIStructuredBufferSlot* GPULightBuffer::findGridBuffer() const
     {
         switch ( _gridProducer )
@@ -243,9 +312,11 @@ namespace sw
         _cpuGridBuffer.release( pDevice );
         _gpuGridBuffer.release( pDevice );
         _gpuGridViewBuffer.release( pDevice );
-        _count            = 0;
-        _gpuGridViewCount = 0;
-        _gridProducer     = LightGridProducer::None;
+        _probeBuffer.release( pDevice );
+        _probeElementCount = 0;
+        _count             = 0;
+        _gpuGridViewCount  = 0;
+        _gridProducer      = LightGridProducer::None;
         _listGridBase.clear();
     }
 } // namespace sw

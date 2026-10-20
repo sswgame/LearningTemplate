@@ -347,6 +347,9 @@ namespace sw
                 // 라이트 그리드 t12 (네 백엔드 공통): 조명 식의 커서(lighting.hlsli swLoadLightGridWord)가 읽는다.
                 add( shaderslot::resname::kLightGrid, ShaderBindingKind::StructuredBuffer, slotB( shaderslot::kLightGridBuffer ), slotB( shaderslot::kLightGridBuffer ),
                      vkT( shaderslot::kLightGridBuffer ), slotB( shaderslot::kLightGridBuffer ) );
+                // 라이트 프로브 t13 (네 백엔드 공통): 조명 식이 프로브 볼륨 원소를 만나면 읽는다(lighting.hlsli swLoadProbe).
+                add( shaderslot::resname::kLightProbes, ShaderBindingKind::StructuredBuffer, slotB( shaderslot::kLightProbeBuffer ), slotB( shaderslot::kLightProbeBuffer ),
+                     vkT( shaderslot::kLightProbeBuffer ), slotB( shaderslot::kLightProbeBuffer ) );
                 // lightgrid 컴퓨트: 라이트 t0 · 뷰 정보 t1 읽기, 그리드 u0 쓰기. GL 의 u# 은 SSBO SW_GL_UAV_BINDING0 + #.
                 add( shaderslot::resname::kLightGridLights, ShaderBindingKind::StructuredBuffer, slotB( 0 ), slotB( 0 ), vkT( 0 ), slotB( 0 ) );
                 add( shaderslot::resname::kLightGridViews, ShaderBindingKind::StructuredBuffer, slotB( 1 ), slotB( 1 ), vkT( 1 ), slotB( 1 ) );

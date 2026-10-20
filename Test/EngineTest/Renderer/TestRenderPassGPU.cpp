@@ -44,6 +44,7 @@
 #include "Engine/Object/Component/2D/ShadowCaster2DComponent.h"
 #include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
+#include "Engine/Object/Component/3D/LightProbeVolumeComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/3D/PointLightComponent.h"
 #include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
@@ -5155,6 +5156,60 @@ SW_TEST_CASE( RenderPassGPUTest, CascadedShadowCastsOnEveryBackend )
 SW_TEST_CASE( RenderPassGPUTest, PointLightShadowCastsOnEveryBackend )
 {
     expectLocalShadowOnEveryBackend( "PointLightShadowCastsOnEveryBackend", false );
+}
+
+/**
+ * @brief [RenderPassGPUTest] 큐브를 덮는 라이트 프로브 볼륨은 앰비언트를 프로브의 간접광으로 바꾼다 — 네 백엔드 모두
+ * @details 볼륨에 밝은 한 색 SH 를 넣으면(굽기 없이 `adoptProbeData`) 그림자 쪽 면이 밝아져 볼륨 없는 그림과 달라야 한다. 같으면 볼륨 원소가 라이트 목록 ·
+ *          그리드 · 프로브 버퍼(t13) · `swSampleProbeVolume` 중 어딘가에서 빠졌다.
+ */
+SW_TEST_CASE( RenderPassGPUTest, LightProbeVolumeReplacesAmbient )
+{
+    uint32                comparedCount{ 0 };
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const utf8*           pName = device->getBackendName();
+        sw::vector<uint8>     arrCapture[2];
+        sw::RHITextureMipSpan arrLayout[2]{};
+        bool                  bOk = true;
+        for ( uint32 caseIndex = 0; caseIndex < 2u && bOk; ++caseIndex )
+        {
+            LitCubeScene cube;
+            bOk = cube.populate();
+            if ( bOk && caseIndex == 1u )
+            {
+                sw::GameObject*                pObject = cube._scene.getObjectManager()->createGameObject( sw::hashed_string( "ProbeVolume" ) );
+                sw::LightProbeVolumeComponent* pVolume = ( pObject != nullptr ) ? pObject->addComponent<sw::LightProbeVolumeComponent>() : nullptr;
+                bOk                                    = pVolume != nullptr;
+                if ( bOk )
+                {
+                    pVolume->setExtent( sw::float3{ 8.0f, 8.0f, 8.0f } );
+                    pVolume->setSpacing( 4.0f );
+                    sw::LightProbeGrid grid{};
+                    grid._layout = pVolume->computeLayout();
+                    grid._listProbe.assign( grid._layout.getProbeCount(), sw::SH9Color::makeConstant( sw::float3{ 2.0f, 2.0f, 2.0f } ) );
+                    bOk = pVolume->adoptProbeData( std::move( grid ), "test/maps/probevolume.probes" );
+                }
+            }
+            if ( bOk )
+            {
+                cube._scene.getObjectManager()->flushSceneTransforms();
+                bOk = renderPresentCaptureOf( device.get(), cube._scene, "engine/pipeline/forwardpipeline.xml", arrCapture[caseIndex], arrLayout[caseIndex] );
+            }
+        }
+        if ( bOk == false )
+        {
+            SW_LOG_WARNING( "LightProbeVolumeReplacesAmbient: %# 에서 그리지 못했습니다.", pName );
+            continue;
+        }
+        ++comparedCount;
+        const CaptureDifference difference = compareCaptures( arrCapture[0], arrCapture[1] );
+        SW_EXPECT_TRUE_MSG( difference._notBackgroundCount > 0, ( sw::string( pName ) + ": 기준 그림이 배경뿐입니다" ).c_str() );
+        SW_EXPECT_FALSE_MSG( difference.isSameImage(), ( sw::string( pName ) + ": 프로브 볼륨을 넣어도 그림이 같다 (" + difference.describe() + ")" ).c_str() );
+    }
+    if ( comparedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could run the light probe volume test" );
 }
 
 /**

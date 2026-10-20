@@ -103,7 +103,13 @@ namespace sw
          * @details CPU 생산자(`LightGrid`)는 동적 버퍼로, GPU 생산자(lightgrid.hlsl)는 기본 힙 UAV 버퍼로 같은 슬롯에 바인딩한다. 셰이더는 생산자를 모른다.
          */
         inline constexpr uint32 kLightGridBuffer = SW_SLOT_LIGHT_GRID_SRV;
-        inline constexpr uint32 kSrvSlotCount    = SW_SRV_SLOT_COUNT;
+        /**
+         * @brief 라이트 프로브의 SH9(g_SwLightProbes, float4 배열)입니다. 프로브 하나가 `kLightProbeFloat4Count` 원소입니다.
+         * @details 볼륨은 라이트 목록의 `kLightTypeProbeVolume` 원소이고 그 원소가 이 버퍼의 첫 프로브 번호를 싣는다(bindingslots.hlsli 8절).
+         */
+        inline constexpr uint32 kLightProbeBuffer      = SW_SLOT_LIGHT_PROBE_SRV;
+        inline constexpr uint32 kLightProbeFloat4Count = SW_LIGHT_PROBE_FLOAT4_COUNT;
+        inline constexpr uint32 kSrvSlotCount          = SW_SRV_SLOT_COUNT;
 
         // ------------------------------------------------------------------------------
         // 2-1) 라이트 원소의 타입 값. bindingslots.hlsli 가 기준이다(셰이더와 같은 파일).
@@ -122,6 +128,8 @@ namespace sw
         inline constexpr uint32 kPassFlagPointUpscale   = SW_PASS_FLAG_POINT_UPSCALE;
         /// @brief 2D 그림자 가림막 토막 원소의 종류입니다. 빛 종류가 아니라서(레지스트리 슬롯이 없다) `kLightTypeCount` 밖에 있습니다.
         inline constexpr uint32 kLightTypeShadow2D = SW_LIGHT_TYPE_SHADOW2D;
+        /// @brief 라이트 프로브 볼륨 원소의 종류입니다. 빛 종류가 아니라서 `kLightTypeCount` 밖이고, 라이트 그리드는 경계 구로 클러스터에 넣습니다.
+        inline constexpr uint32 kLightTypeProbeVolume = SW_LIGHT_TYPE_PROBE_VOLUME;
         /// @brief 한 프레임에 GPU 로 보내는 라이트 수의 상한입니다. 넘으면 엔진이 잘라서 보내고 경고합니다.
         inline constexpr uint32 kMaxFrameLight = SW_MAX_FRAME_LIGHT;
 
@@ -300,6 +308,7 @@ namespace sw
             inline constexpr const utf8* kCanvasQuads          = "g_SwCanvasQuads";        ///< t11(캔버스 패스). 화면 2D 사각형
             inline constexpr const utf8* kParticles            = "g_SwParticles";          ///< t11(투명 패스의 입자 그리기). 방출기 하나의 입자(particle.hlsl)
             inline constexpr const utf8* kLightGrid            = "g_SwLightGrid";          ///< t12(그래픽스). 뷰마다의 라이트 그리드 단어
+            inline constexpr const utf8* kLightProbes          = "g_SwLightProbes";        ///< t13(그래픽스). 라이트 프로브의 SH9(프로브 하나가 float4 일곱 개)
             inline constexpr const utf8* kLightGridLights      = "g_LightGridLights";      ///< lightgrid 컴퓨트 t0. 씬 라이트 버퍼(g_SwLights 와 같은 버퍼)
             inline constexpr const utf8* kLightGridViews       = "g_LightGridViews";       ///< lightgrid 컴퓨트 t1. 뷰마다의 뷰-투영과 깊이 조각 상수
             inline constexpr const utf8* kLightGridRw          = "g_LightGridRW";          ///< lightgrid 컴퓨트 u0. 뷰마다의 그리드를 쓴다
@@ -337,10 +346,11 @@ namespace sw
         static_assert( kBatchBuffer == kLightBuffer + 1, "배치 표는 라이트 다음이다" );
         static_assert( kVertexAnimationBuffer == kBatchBuffer + 1, "VAT 표는 배치 표 다음이다" );
         static_assert( kPassBuffer == kVertexAnimationBuffer + 1, "패스 전용 버퍼는 VAT 표 다음이다" );
-        static_assert( kLightGridBuffer == kPassBuffer + 1 && kLightGridBuffer + 1 == kSrvSlotCount, "라이트 그리드는 패스 전용 버퍼 다음이고 SRV 슬롯의 마지막이다" );
+        static_assert( kLightGridBuffer == kPassBuffer + 1, "라이트 그리드는 패스 전용 버퍼 다음이다" );
+        static_assert( kLightProbeBuffer == kLightGridBuffer + 1 && kLightProbeBuffer + 1 == kSrvSlotCount, "라이트 프로브는 라이트 그리드 다음이고 SRV 슬롯의 마지막이다" );
         static_assert( kLightTypeDirectional < kLightTypeCount && kLightTypePoint < kLightTypeCount &&
                            kLightTypeSpot < kLightTypeCount && kLightTypePoint2D < kLightTypeCount && kLightTypeGlobal2D < kLightTypeCount &&
-                           kLightTypeShadow2D >= kLightTypeCount,
+                           kLightTypeShadow2D >= kLightTypeCount && kLightTypeProbeVolume >= kLightTypeCount && kLightTypeProbeVolume != kLightTypeShadow2D,
                        "라이트 타입 값이 타입 수 안에 있어야 한다" );
         static_assert( SW_SLOT_ENGINE_TEX3 == kEngineTexture0 + kEngineTextureCount - 1, "엔진 텍스처 슬롯은 연속이어야 한다" );
         static_assert( kPassConstantBuffer != kMaterialConstantBuffer && kMaterialConstantBuffer < kConstantBufferSlotCount &&

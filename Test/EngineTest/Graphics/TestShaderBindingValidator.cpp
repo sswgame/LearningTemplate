@@ -864,6 +864,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, EveryBoundNameIsInCookedReflection )
         &passNames._swMaterials,
         &passNames._swLights,
         &passNames._swLightGrid,
+        &passNames._swLightProbes,
         &passNames._swBatches,
     };
     for ( const sw::hashed_string* pName : arrRegistryName )

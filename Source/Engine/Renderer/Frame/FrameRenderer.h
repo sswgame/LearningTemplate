@@ -811,6 +811,8 @@ namespace sw
         vector<float4x4> _listScratchGridViewProj; ///< 라이트 그리드를 만들 뷰의 뷰-투영(프레임마다 다시 쓴다)
         /// @brief 씬 직접 경로에서 라이트를 모으는 버퍼입니다. 프레임마다 할당하지 않으려고 보관합니다.
         vector<GPULight> _listScratchLight;
+        /// @brief 씬 직접 경로에서 라이트 프로브 SH9 원소를 모으는 버퍼입니다(`collectSceneLights`). 프레임마다 재사용합니다.
+        vector<float4> _listScratchLightProbe;
         /// @brief 씬 직접 경로에서 그림자를 켠 점광 · 스폿의 라이트 원소 번호입니다. 프레임마다 재사용합니다.
         vector<uint32> _listScratchShadowLightIndex;
         /**

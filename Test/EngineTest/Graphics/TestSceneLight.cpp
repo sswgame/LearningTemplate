@@ -5,6 +5,7 @@
 
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
+#include "Engine/Object/Component/3D/LightProbeVolumeComponent.h"
 #include "Engine/Object/Component/3D/PointLightComponent.h"
 #include "Engine/Object/Component/3D/SpotLightComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -431,4 +432,44 @@ SW_TEST_CASE( SceneLightTest, FindActiveDirectionalLightSkipsInactiveOnes )
     SW_ASSERT_NOT_NULL( pSecondOwner );
     pSecondOwner->setActive( false );
     SW_EXPECT_NULL( scene.findActiveDirectionalLight() );
+}
+
+/**
+ * @brief [SceneLightTest] 쓸 수 있는 베이크를 가진 라이트 프로브 볼륨은 3D 라이트 뒤에 볼륨 원소 하나와 프로브마다 SH9 원소 일곱 개로 모인다
+ * @details 원소의 배치(bindingslots.hlsli 8 절)를 셰이더 `swSampleProbeVolume` 이 그대로 읽는다 — 첫 프로브 위치 · 간격 · 수 · 첫 프로브 번호.
+ *          굽지 않은 볼륨과 프로브 목록을 받지 않는 수집(nullptr)은 볼륨을 넣지 않는다.
+ */
+SW_TEST_CASE( SceneLightTest, CollectsBakedProbeVolumesAfterLights )
+{
+    sw::Scene              scene( "SceneLightProbe" );
+    sw::GameObjectManager* pObjects = scene.getObjectManager();
+    SW_ASSERT_NOT_NULL( pObjects );
+    SW_ASSERT_NOT_NULL( addLightObject<sw::PointLightComponent>( pObjects, "Point" ) );
+    sw::LightProbeVolumeComponent* pVolume  = addLightObject<sw::LightProbeVolumeComponent>( pObjects, "Volume" );
+    sw::LightProbeVolumeComponent* pUnbaked = addLightObject<sw::LightProbeVolumeComponent>( pObjects, "Unbaked" );
+    SW_ASSERT_NOT_NULL( pVolume );
+    SW_ASSERT_NOT_NULL( pUnbaked );
+    pVolume->setExtent( sw::float3{ 4.0f, 2.0f, 4.0f } );
+    pVolume->setSpacing( 2.0f );
+
+    sw::LightProbeGrid grid{};
+    grid._layout = pVolume->computeLayout();
+    grid._listProbe.assign( grid._layout.getProbeCount(), sw::SH9Color::makeConstant( sw::float3{ 0.5f, 0.5f, 0.5f } ) );
+    SW_ASSERT_TRUE( pVolume->adoptProbeData( std::move( grid ), "test/maps/volume.probes" ) );
+
+    sw::vector<sw::GPULight> listLight;
+    sw::vector<sw::float4>   listProbe;
+    collectSceneLights( &scene, listLight, nullptr, &listProbe );
+    SW_ASSERT_EQUAL( size_t( 2 ), listLight.size() );
+    SW_EXPECT_EQUAL( size_t( 1 ), countLightOfType( listLight, sw::shaderslot::kLightTypeProbeVolume ) );
+    const sw::GPULight& volume = listLight[1];
+    SW_EXPECT_EQUAL( static_cast<uint32>( volume._directionType._w ), sw::shaderslot::kLightTypeProbeVolume );
+    SW_EXPECT_NEAR_EQUAL( 3.0f, volume._params._x, 0.0f ); // 4 m / 2 m + 1
+    SW_EXPECT_NEAR_EQUAL( 2.0f, volume._params._y, 0.0f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, volume._params._w, 0.0f ); // 첫 프로브 번호
+    SW_EXPECT_EQUAL( listProbe.size(), static_cast<size_t>( pVolume->computeLayout().getProbeCount() * sw::shaderslot::kLightProbeFloat4Count ) );
+
+    // 프로브 목록을 받지 않으면 볼륨을 넣지 않는다(볼륨 원소가 빈 프로브 버퍼를 가리키지 않게).
+    collectSceneLights( &scene, listLight );
+    SW_EXPECT_EQUAL( size_t( 0 ), countLightOfType( listLight, sw::shaderslot::kLightTypeProbeVolume ) );
 }

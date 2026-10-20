@@ -519,6 +519,8 @@ namespace sw
         hashed_string _swLightGridBase{ "g_SwLightGridBase" };
         /// @brief 뷰마다의 라이트 그리드 버퍼입니다. lighting.hlsli g_SwLightGrid(t12)와 "SwLightGrid" 에 대응하며, 패스당 한 번 바인딩합니다(CPU · GPU 생산자 공통).
         hashed_string _swLightGrid{ "SwLightGrid" };
+        /// @brief 라이트 프로브 SH9 버퍼입니다. lighting.hlsli g_SwLightProbes(t13)와 "SwLightProbes" 에 대응하며, 볼륨이 있는 프레임에만 바인딩합니다.
+        hashed_string _swLightProbes{ "SwLightProbes" };
         /// @brief 정점 애니메이션(VAT) 테이블입니다. binding.hlsli g_SwVertexAnimation 과 "SwVertexAnimation" 에 대응하며, 패스당 한 번 바인딩합니다.
         hashed_string _swVertexAnimation{ "SwVertexAnimation" };
         /// @brief 그 테이블의 원소 수입니다. PassCB g_SwVertexAnimationCount 에 대응합니다.
