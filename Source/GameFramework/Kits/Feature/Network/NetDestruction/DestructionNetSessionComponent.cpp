@@ -16,7 +16,7 @@ namespace sw
 
     namespace
     {
-        /** @brief 틱 간격을 정수 틱 빈도(Hz)로 바꿉니다. 서버 틱 빈도는 정수(`ServerConfig::_tickRateHz`)이므로 실수 반올림 차이 없이 견준다. */
+        /** @brief 틱 간격을 정수 틱 빈도(Hz)로 바꿉니다. 서버 틱 빈도는 정수(`ServerConfig::_tickRateHz`)이므로 실수 반올림 차이 없이 비교한다. */
         int32 computeDestructionNetTickRateHz( float32 interval )
         {
             return static_cast<int32>( MathUtil::round( 1.0f / interval ) );
@@ -69,7 +69,7 @@ namespace sw
         Component::onTick( deltaTime );
         if ( _session.isActive() == false )
             return;
-        // 서버의 첫 틱(델타가 있는)에서 틱 빈도를 한 번 견준다.
+        // 서버의 첫 틱(델타가 있는)에서 틱 빈도를 한 번 비교한다.
         const bool bCheckServerTick = _session.getSide() == DestructionNetSide::Server && _bTickChecked == SW_FALSE && deltaTime > 0.0f;
         if ( bCheckServerTick )
         {

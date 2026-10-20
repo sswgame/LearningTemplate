@@ -77,7 +77,7 @@ namespace sw
                 return archive.isError() == false;
             }
 
-            /** @brief 칸 좌표 목록 하나(개수 + 좌표)를 읽습니다. */
+            /** @brief 타일 좌표 목록 하나(개수 + 좌표)를 읽습니다. */
             [[nodiscard]] static bool readTileList( Archive& archive, vector<int2>& outListTile )
             {
                 uint32 count = 0;

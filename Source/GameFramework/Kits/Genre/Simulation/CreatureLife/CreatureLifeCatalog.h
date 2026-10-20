@@ -48,7 +48,7 @@ namespace sw
         PROPERTY( Min = 1 )
         int32 _capacity{ 1 }; ///< 이 서식지 하나에 머무는 생물 수
 
-        vector<HabitatCell> _listCell{}; ///< 행 우선 배열이다(칸 번호는 `_topology`). `<Key>` · `<Row>` 자식에서 읽는다
+        vector<HabitatCell> _listCell{}; ///< 행 우선 배열이다(셀 번호는 `_topology`). `<Key>` · `<Row>` 자식에서 읽는다
         GridTopology        _topology{}; ///< 패턴의 너비와 높이
 
         const HabitatCell& getCell( int32 x, int32 y ) const { return _listCell[static_cast<size_t>( _topology.toIndex( x, y ) )]; }

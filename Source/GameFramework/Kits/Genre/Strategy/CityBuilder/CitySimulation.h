@@ -213,7 +213,7 @@ namespace sw
 
         int32 getWidth() const { return _topology._width; }
         int32 getHeight() const { return _topology._height; }
-        /** @brief 도시의 칸 격자를 반환합니다. 칸 번호와 좌표는 이것으로 바꾸고 `index % 너비` 를 손으로 적지 않습니다. */
+        /** @brief 도시의 셀 격자를 반환합니다. 셀 번호와 좌표는 이것으로 바꾸고 `index % 너비` 를 손으로 적지 않습니다. */
         const GridTopology&  getTopology() const { return _topology; }
         const hashed_string& getCurrency() const { return _settings._currency; }
         int32                getPopulation() const;

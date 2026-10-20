@@ -52,7 +52,7 @@ namespace sw
         /**
          * @brief 같은 크기의 다른 타일 레이어(집 · 나무 같은 소품 레이어)에서 단단한(`solid`) 브러시 칸을 막습니다.
          * @details 막힘은 플래그 레이어(`Walkable`, 파일에 저장되는 값)가 아니라 따로 든 표에 쌓는다 — 저장하면 손으로 칠한 플래그만 남는다.
-         *          충돌의 정본은 타일셋의 `solid` 하나다(렌더러의 물리 충돌체와 같은 값). 유니티의 TilemapCollider2D, Godot TileSet physics layer 와 같다.
+         *          충돌의 원본은 타일셋의 `solid` 하나다(렌더러의 물리 충돌체와 같은 값). 유니티의 TilemapCollider2D, Godot TileSet physics layer 와 같다.
          * @return 크기가 다르거나 타일셋에 없는 브러시를 칠한 레이어면 false 이고, 막힘은 바뀌지 않습니다.
          */
         [[nodiscard]] bool addSolidLayer( const TileMapXMLData& layer, const TileSetAsset& tileSet );
@@ -129,8 +129,8 @@ namespace sw
         void debugLogTileHd2d( int32 x, int32 y ) const;
 
         /**
-         * @brief 맵의 칸 격자(칸 번호 · 경계)를 반환합니다. 크기의 정본은 파일 스키마 `_data` 이고, 이것은 그 값으로 만든 뷰입니다.
-         * @details 칸 수는 `TileMapXMLData::kMaxTileCount` 로 막혀 있어 int32 칸 번호가 넘치지 않습니다.
+         * @brief 맵의 셀 격자(셀 번호 · 경계)를 반환합니다. 크기의 원본은 파일 스키마 `_data` 이고, 이것은 그 값으로 만든 뷰입니다.
+         * @details 셀 수는 `TileMapXMLData::kMaxTileCount` 로 막혀 있어 int32 셀 번호가 넘치지 않습니다.
          */
         GridTopology getTopology() const { return GridTopology{ _data._width, _data._height }; }
 

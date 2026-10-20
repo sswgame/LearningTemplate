@@ -158,7 +158,7 @@ namespace sw
     /**
      * @struct EconomyProtocol
      * @brief 경제 키트의 메시지 타입 목록과 등록 항목입니다. 본문은 고정 배치형(B)이며 `MessageTypes::write` · `read` 로만 쓰고 읽습니다.
-     * @details 범위 · 길이 상한은 메시지 타입의 `PROPERTY` 키가 정본입니다. 범위 밖 값은 쓰기가 실패하고, 읽을 때는 `OutOfRange` 로 거절됩니다.
+     * @details 범위 · 길이 상한은 메시지 타입의 `PROPERTY` 키가 원본입니다. 범위 밖 값은 쓰기가 실패하고, 읽을 때는 `OutOfRange` 로 거절됩니다.
      */
     struct SW_KIT_API EconomyProtocol
     {

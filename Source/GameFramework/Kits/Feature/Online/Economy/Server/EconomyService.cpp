@@ -137,7 +137,7 @@ namespace sw
 
     void EconomyService::shutdown()
     {
-        // 영수증 검증 완료도 호출을 끝내므로 걸음마다 같이 거둔다.
+        // 영수증 검증 완료도 호출을 끝내므로 단계마다 같이 회수한다.
         ServiceStoreUtil::drainUntilIdle( _pStore, [this]()
         { return _listPendingCall.empty(); }, [this]()
         { pollReceipts(); } );

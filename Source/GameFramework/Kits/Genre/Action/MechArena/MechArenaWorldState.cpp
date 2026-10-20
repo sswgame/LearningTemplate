@@ -54,7 +54,7 @@ namespace sw
             }
 
             /**
-             * @brief 조종사의 덱(기체 id)과 스킬 id 를 카탈로그에서 찾아 채우고, 스킬 수만큼 타이머 칸을 잡습니다.
+             * @brief 조종사의 덱(기체 id)과 스킬 id 를 카탈로그에서 찾아 채우고, 스킬 수만큼 타이머 슬롯을 잡습니다.
              * @return 덱이 비었거나 카탈로그에 없는 기체 · 스킬이면 false 입니다.
              */
             [[nodiscard]] static bool readLoadout( Archive& archive, const MechCatalog& catalog, MechPilot& outPilot )
@@ -91,7 +91,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 스킬마다 남은 시간 · 쿨다운 · 쓴 표시를 읽습니다. 칸은 `readLoadout` 이 스킬 수만큼 잡아 두었습니다. */
+            /** @brief 스킬마다 남은 시간 · 쿨다운 · 쓴 표시를 읽습니다. 슬롯은 `readLoadout` 이 스킬 수만큼 잡아 두었습니다. */
             [[nodiscard]] static bool readSkillTimers( Archive& archive, MechPilot& outPilot )
             {
                 for ( size_t index = 0; index < outPilot._listSkill.size(); ++index )

@@ -94,7 +94,7 @@ namespace sw
 
             void stop() override
             {
-                // 맡긴 저장 일과 영수증 검증을 거둔다 — 저장소를 내리기 전.
+                // 맡긴 저장 일과 영수증 검증을 회수한다 — 저장소를 종료하기 전.
                 if ( _bServiceStarted )
                     _service.shutdown();
                 _bServiceStarted = false;

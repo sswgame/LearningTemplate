@@ -65,7 +65,7 @@ namespace sw
 
             /**
              * @brief `<Note>` 하나를 읽어 @p outListNote 끝에 붙입니다. `endBeat` 를 적지 않으면 탭 노트입니다.
-             * @return 칸이 틀렸거나, 레인이 @p laneCount 밖이거나, 끝이 시작보다 앞이면 붙이지 않고 false 입니다(이유는 로그로 남긴다).
+             * @return 필드가 틀렸거나, 레인이 @p laneCount 밖이거나, 끝이 시작보다 앞이면 붙이지 않고 false 입니다(이유는 로그로 남긴다).
              */
             [[nodiscard]] static bool readNote( const XMLNode& node, string_view sourceName, int32 laneCount, vector<RhythmNote>& outListNote )
             {

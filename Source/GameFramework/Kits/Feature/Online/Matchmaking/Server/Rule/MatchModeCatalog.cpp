@@ -24,7 +24,7 @@ namespace sw
             return false;
         MatchModeDefinition mode;
         const bool          bNumbers = StringUtil::parseInt( shape.substr( 0, cross ), mode._teamCount ) && StringUtil::parseInt( shape.substr( cross + 1 ), mode._teamSize );
-        // 팀 수 · 인원의 범위는 `MatchModeDefinition` 의 `PROPERTY` 하나가 정본이다. 손으로 다시 적지 않는다.
+        // 팀 수 · 인원의 범위는 `MatchModeDefinition` 의 `PROPERTY` 하나가 원본이다. 손으로 다시 적지 않는다.
         if ( bNumbers == false || ConfigRangeUtil::describeRangeErrors( mode ).empty() == false )
             return false;
         outMode._modeID    = string( text.substr( 0, colon ) );

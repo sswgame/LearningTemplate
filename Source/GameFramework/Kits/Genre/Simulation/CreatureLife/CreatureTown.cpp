@@ -73,7 +73,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief `writeState` 가 쓴 서식지 하나를 읽습니다. 셀 번호가 마을(@p tileCount 칸) 밖이면 false 입니다. */
+            /** @brief `writeState` 가 쓴 서식지 하나를 읽습니다. 셀 번호가 마을(@p tileCount 셀) 밖이면 false 입니다. */
             [[nodiscard]] static bool readHabitat( Archive& archive, int32 tileCount, HabitatInstance& outHabitat )
             {
                 uint32 habitatTileCount = 0;
