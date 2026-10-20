@@ -35,7 +35,7 @@ namespace sw
         hashed_string       _materialVariant{}; ///< 고른 머티리얼 변형(비어 있으면 기본)
         hashed_string       _asset{};           ///< 변형과 규칙을 반영한 메시, 프리팹, 스프라이트
         hashed_string       _material{};        ///< 변형과 규칙을 반영한 머티리얼(비어 있으면 에셋의 것)
-        hashed_string       _skeleton{};        ///< 비어 있으면 뿌리 본 하나짜리 암묵 스켈레톤
+        hashed_string       _skeleton{};        ///< 비어 있으면 루트 본 하나짜리 암묵 스켈레톤
         hashed_string       _socketSet{};
         hashed_string       _state{};       ///< 외형 상태
         hashed_string       _damageStage{}; ///< 피해 단계(비어 있으면 멀쩡함)
@@ -215,7 +215,7 @@ namespace sw
     {
         /**
          * @brief @p equipment 의 슬롯을 @p inoutSpec 에 덮어씁니다. 아이템, 인스턴스 상태(꾸미기, 피해, 떨어진 부품), 숨김을 반영하고, 형상 변경과 외형 상태는 spec 의 것을 그대로 둡니다.
-         * @details 피해는 맞은 피해와 닳은 내구도(1 − 내구도 / 최대) 중 큰 쪽이다. 장비에 없는 슬롯은 비운다.
+         * @details 피해는 맞은 피해와 닳은 내구도(1 - 내구도 / 최대) 중 큰 쪽이다. 장비에 없는 슬롯은 비운다.
          */
         static void applyEquipment( const Equipment& equipment, CharacterAppearanceSpec& inoutSpec );
     };

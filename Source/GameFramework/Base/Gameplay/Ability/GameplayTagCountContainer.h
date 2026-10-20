@@ -1,8 +1,8 @@
 /**
  * @file GameplayTagCountContainer.h
- * @brief 개수로 세는 태그 묶음입니다. 이펙트 둘이 같은 태그를 주면 둘 다 풀려야 사라집니다(언리얼 `FGameplayTagCountContainer`).
- * @details 어빌리티 시스템 컴포넌트가 가진 태그(`getOwnedTagCounts`)와 막힌 어빌리티 태그가 이 묶음 하나씩입니다. 알림은 태그가 생기거나(개수 0 → 1)
- *          사라질 때(1 → 0)만 보냅니다 — 같은 태그를 주는 이펙트가 하나 더 걸려도 "생겼다" 고 알리지 않습니다(언리얼의 NewOrRemoved).
+ * @brief 개수로 세는 태그 집합입니다. 이펙트 둘이 같은 태그를 주면 둘 다 해제돼야 사라집니다(언리얼 `FGameplayTagCountContainer`).
+ * @details 어빌리티 시스템 컴포넌트가 가진 태그(`getOwnedTagCounts`)와 막힌 어빌리티 태그가 각각 이 집합 하나입니다. 알림은 태그가 생기거나(개수 0 → 1)
+ *          사라질 때(1 → 0)만 보냅니다. 같은 태그를 주는 이펙트가 하나 더 적용돼도 "생겼다" 고 알리지 않습니다(언리얼의 NewOrRemoved).
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -44,7 +44,7 @@ namespace sw
 
         /** @brief @p tag 의 개수를 @p delta 만큼 바꿉니다. 0 아래로 내려가지 않습니다. 태그가 생기거나 사라지면 알립니다. */
         void updateCount( TagID tag, int32 delta );
-        /** @brief 묶음의 태그마다 `updateCount` 를 부릅니다. */
+        /** @brief 집합의 태그마다 `updateCount` 를 부릅니다. */
         void updateCounts( const TagContainer& tags, int32 delta );
 
         /** @brief 태그가 새로 생기거나(개수 0 → 1) 사라질 때(1 → 0) 부를 델리게이트를 겁니다. 인자는 태그와 새 개수입니다. */

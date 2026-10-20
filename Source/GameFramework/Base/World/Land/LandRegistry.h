@@ -83,7 +83,7 @@ namespace sw
         void computeWorldRect( const float3& center, const float3& size, int2& outMin, int2& outMax ) const;
 
         vector<Cell>          _listCell;
-        vector<hashed_string> _listOwnerName; ///< 번호 − 1 자리의 이름
+        vector<hashed_string> _listOwnerName; ///< 번호 - 1 자리의 이름
         GridTopology          _topology;
         float3                _origin;
         float32               _cellSize;

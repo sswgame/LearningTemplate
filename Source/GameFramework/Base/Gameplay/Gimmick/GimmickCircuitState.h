@@ -1,6 +1,6 @@
 /**
  * @file GimmickCircuitState.h
- * @brief 기믹 회로 하나의 실행 상태입니다. 같은 `REFLECT` 선언 하나가 두 형식을 냅니다. 씬 · 프리팹 · 레벨 세이브는 자기 기술형(A)으로, 롤백 · 넷 스냅샷은 고정 배치형(B, `FixedLayout`)으로 씁니다.
+ * @brief 기믹 회로 하나의 실행 상태입니다. 같은 `REFLECT` 선언 하나가 두 형식을 냅니다. 씬, 프리팹, 레벨 세이브는 자기 기술형(A)으로, 롤백과 넷 스냅샷은 고정 배치형(B, `FixedLayout`)으로 씁니다.
  * @details 계획은 `docs/plans/GimmickCircuitState.md` 에 있다. 노드 상태는 **노드 id 로 짝짓는다**(`GimmickCircuit::loadState`). 그래서 디자이너가 노드를 더하거나 지워도
  *          옛 세이브의 나머지 노드는 이어지고, 새 노드는 처음 상태로 시작한다. 같은 id 인데 종류나 종류의 상태 버전(`GimmickNodeKind::_stateVersion`), 슬롯 수가 다르면
  *          그 상태는 읽지 않는다(`GimmickStateMatch::Mismatch`). 슬롯의 뜻을 기본값으로 메울 수 없기 때문이다.
@@ -24,7 +24,7 @@
 
 namespace sw
 {
-    /** @brief 노드 하나의 실행 상태입니다. 상태 슬롯은 노드마다 따로 들고, 종류가 정한 개수(`GimmickNodeKind::_floatStateCount` · `_intStateCount`)와 같습니다. */
+    /** @brief 노드 하나의 실행 상태입니다. 상태 슬롯은 노드마다 따로 보관하고, 종류가 정한 개수(`GimmickNodeKind::_floatStateCount`, `_intStateCount`)와 같습니다. */
     REFLECT()
     struct SW_GF_API GimmickNodeState
     {

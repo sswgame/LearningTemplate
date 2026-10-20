@@ -144,7 +144,7 @@ namespace sw
     private:
         static constexpr const utf8* kXMLRootName = "AreaGraph"; ///< 루트 원소(`XMLCatalog`)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
-        /** @brief 연결을 @p fromIndex 쪽에서 지나면 닿는 방을 반환합니다. 그 방향으로 지날 수 없으면 −1 이며, 잠금은 보지 않습니다. */
+        /** @brief 연결을 @p fromIndex 쪽에서 지나면 닿는 방을 반환합니다. 그 방향으로 지날 수 없으면 -1 이며, 잠금은 보지 않습니다. */
         int32 findOtherSide( const AreaLink& link, int32 fromIndex ) const;
         bool  isUnlocked( const AreaLink& link, const GameFlags& flags ) const;
         void  markVisited( int32 areaIndex );

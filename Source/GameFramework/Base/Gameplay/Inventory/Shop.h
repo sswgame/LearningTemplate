@@ -99,8 +99,8 @@ namespace sw
     {
         hashed_string _itemID{};
         string        _requirement{}; ///< 잠금 조건 식입니다. 키트나 게임이 평가하며, 예를 들어 GameFlags 조건이 있습니다. 비어 있으면 항상 열려 있습니다
-        int32         _price{ -1 };   ///< 단가(−1 이면 `ItemDef::_value`)
-        int32         _count{ -1 };   ///< 처음 재고이자 최대 재고(−1 이면 무한)
+        int32         _price{ -1 };   ///< 단가(-1 이면 `ItemDef::_value`)
+        int32         _count{ -1 };   ///< 처음 재고이자 최대 재고(-1 이면 무한)
         int32         _restock{ 0 };  ///< 재입고할 때 더하는 수(최대 재고까지)
     };
 } // namespace sw
@@ -205,7 +205,7 @@ namespace sw
     struct ShopRuntime
     {
         hashed_string         _shopID{};
-        vector<int32>         _listStockCount{};    ///< `ShopDef::_listStock` 과 같은 순서의 재고(−1 이면 무한)
+        vector<int32>         _listStockCount{};    ///< `ShopDef::_listStock` 과 같은 순서의 재고(-1 이면 무한)
         vector<hashed_string> _listSaturatedItem{}; ///< 시세가 떨어진 아이템
         vector<float32>       _listSellFactor{};    ///< 그 아이템의 시세(1 이면 보통)
         vector<hashed_string> _listExtraRefused{};  ///< 실행 중에 추가한 "사들이지 않는 분류"
@@ -247,11 +247,11 @@ namespace sw
         void advanceDay();
         void drainEvents( vector<ShopEvent>& outListEvent );
 
-        /** @brief 사는 단가입니다. 가게가 팔지 않는 아이템이면 −1 입니다. */
+        /** @brief 사는 단가입니다. 가게가 팔지 않는 아이템이면 -1 입니다. */
         int32 computeBuyPrice( const hashed_string& shopID, const hashed_string& itemID ) const;
         /** @brief @p count 개를 지금 팔면 받는 돈입니다. 시세 하락을 반영합니다. */
         int64 computeSellTotal( const hashed_string& shopID, const hashed_string& itemID, int32 count ) const;
-        /** @brief 남은 재고입니다. 무한이면 −1 이고, 진열에 없으면 0 입니다. */
+        /** @brief 남은 재고입니다. 무한이면 -1 이고, 진열에 없으면 0 입니다. */
         int32 getStockCount( const hashed_string& shopID, const hashed_string& itemID ) const;
         /** @brief 그 아이템의 매입 시세입니다. 1 이면 보통입니다. */
         float32 getSellFactor( const hashed_string& shopID, const hashed_string& itemID ) const;

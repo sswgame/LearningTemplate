@@ -47,12 +47,12 @@ namespace sw
 {
     /**
      * @class AbilitySystemComponent
-     * @brief 오브젝트 하나의 어빌리티 시스템으로, 어트리뷰트 세트와 걸린 이펙트, 부여된 어빌리티, 태그 개수를 보관하고 시간을 진행합니다.
+     * @brief 오브젝트 하나의 어빌리티 시스템으로, 어트리뷰트 세트와 적용된 이펙트, 부여된 어빌리티, 태그 개수를 보관하고 시간을 진행합니다.
      * @details **쓰는 법**(언리얼 GAS 와 같은 순서):
      *          1. 오브젝트에 붙이고 어트리뷰트 세트를 추가한다. 코드(`addAttributeSet<CombatAttributeSet>()`)로 하거나 데이터로 할 수 있다.
      *             데이터로 하면 `_abilitySetID` 가 가리키는 카탈로그의 `<AbilitySet>` 이 플레이 시작에 어트리뷰트 세트, 어빌리티, 시작 이펙트, 태그를 한 번에 준다.
      *          2. 어빌리티를 준다(`giveAbility`, `giveAbilityByID`). 입력 번호를 주면 `abilityInputPressed( 번호 )` 가 어빌리티를 발동한다.
-     *          3. 어빌리티는 이펙트 스펙(`makeOutgoingSpec`)을 만들어 자기 자신이나 다른 오브젝트에 건다(`applyGameplayEffectSpecToTarget`).
+     *          3. 어빌리티는 이펙트 스펙(`makeOutgoingSpec`)을 만들어 자기 자신이나 다른 오브젝트에 적용한다(`applyGameplayEffectSpecToTarget`).
      *          4. 게임은 델리게이트(어트리뷰트, 태그, 큐, 이벤트)나 "game" 채널(`GameplayCueEvent`, `AbilityOwnerDiedEvent`)로 반응한다.
      *
      *          **시간**: 컴포넌트 틱이 `advanceTime( 프레임 시간 )` 을 부른다. 턴제 게임은 틱을 끄고(`setCanEverTick( false )`) 턴마다
@@ -158,16 +158,16 @@ namespace sw
         // --------------------------------------------------------------------------
         /**
          * @brief 가진 태그와 개수입니다. 이펙트 · 어빌리티가 준 태그와 이펙트 없이 붙인 태그(언리얼 Loose Tag, `updateCount`)를 함께 셉니다.
-         * @details 태그가 생기거나 사라질 때의 알림은 `registerChanged` 입니다. 조회는 `hasMatchingTag` · `hasAllMatchingTags` · `hasAnyMatchingTags` · `getCount`.
+         * @details 태그가 생기거나 사라질 때의 알림은 `registerChanged` 입니다. 조회는 `hasMatchingTag`, `hasAllMatchingTags`, `hasAnyMatchingTags`, `getCount` 입니다.
          */
         GameplayTagCountContainer&       getOwnedTagCounts() { return _ownedTagCounts; }
         const GameplayTagCountContainer& getOwnedTagCounts() const { return _ownedTagCounts; }
         /**
          * @brief 무적 태그("State.Invulnerable")입니다. 주인이 이 태그를 가진 동안 체력 어트리뷰트의 base 는 내려가지 않습니다.
-         * @details 막는 자리는 base 를 쓰는 두 길(이펙트 모디파이어 `applyModifierToBase` · 직접 쓰기 `setAttributeBaseValue`)이 함께 지나는
-         *          `guardHealthBaseChange` 하나다 — `IncomingDamage` 같은 메타 어트리뷰트도 끝내 `setAttributeBaseValue` 로 체력을 쓰므로 함께 막힌다.
+         * @details 막는 곳은 base 를 쓰는 두 경로(이펙트 모디파이어 `applyModifierToBase`, 직접 쓰기 `setAttributeBaseValue`)가 함께 지나는
+         *          `guardHealthBaseChange` 하나다. `IncomingDamage` 같은 메타 어트리뷰트도 끝내 `setAttributeBaseValue` 로 체력을 쓰므로 함께 막힌다.
          *          이펙트가 부여 태그로 주면 무적 시간(구르기 · 부활 직후)이고, 치트(`cheat.god`)는 이펙트 없는 태그로 단다(언리얼 Lyra 의
-         *          `Cheat.GodMode` · `Gameplay.DamageImmunity` 와 같은 자리, 결정 기록 5-12 `D3-4.2`).
+         *          `Cheat.GodMode`, `Gameplay.DamageImmunity` 에 해당한다. 결정 기록 5-12 `D3-4.2`).
          */
         static TagID getInvulnerableTag();
         /** @brief 주인이 무적 태그를 가졌으면 true 입니다. */
@@ -196,32 +196,32 @@ namespace sw
         /** @brief 카탈로그의 이펙트 id 로 스펙을 만들어 자기에게 겁니다. 시작 이펙트와 디버그에 씁니다. */
         ActiveEffectHandle applyGameplayEffectToSelf( const hashed_string& effectID, int32 level = 1 );
         /**
-         * @brief 걸린 이펙트를 지웁니다. @p stacksToRemove 가 0 이하이면 통째로 지우고, 아니면 그만큼 스택을 줄입니다. 스택이 0 이 되면 이펙트를 지웁니다.
+         * @brief 적용된 이펙트를 지웁니다. @p stacksToRemove 가 0 이하이면 통째로 지우고, 아니면 그만큼 스택을 줄입니다. 스택이 0 이 되면 이펙트를 지웁니다.
          * @return 무엇이든 바뀌었으면 true 입니다.
          */
         [[nodiscard]] bool removeActiveEffect( ActiveEffectHandle handle, int32 stacksToRemove = -1 );
         /** @brief 에셋 태그나 부여 태그가 @p tags 와 일치하는 이펙트를 모두 지우고, 지운 수를 반환합니다. 정화와 디스펠에 씁니다. */
         int32 removeActiveEffectsWithTags( const TagContainer& tags );
-        /** @brief 걸린 이펙트를 찾습니다. 즉시 이펙트나 이미 해제된 이펙트는 nullptr 입니다. */
+        /** @brief 적용된 이펙트를 찾습니다. 즉시 이펙트나 이미 해제된 이펙트는 nullptr 입니다. */
         const ActiveGameplayEffect* findActiveEffect( ActiveEffectHandle handle ) const;
         /** @brief 이펙트가 아직 걸려 있으면 true 입니다. */
         bool isActiveEffect( ActiveEffectHandle handle ) const { return findActiveEffect( handle ) != nullptr; }
         /** @brief 걸려 있는 이펙트 수입니다. */
         uint32 getActiveEffectCount() const;
-        /** @brief 걸린 이펙트 목록입니다(건 순서). 지우는 중인 항목(`_bPendingRemove`)도 들어 있으므로 읽는 쪽이 거릅니다. 디버그 창이 씁니다. */
+        /** @brief 적용된 이펙트 목록입니다(적용 순서). 지우는 중인 항목(`_bPendingRemove`)도 들어 있으므로 읽는 쪽이 거릅니다. 디버그 창이 씁니다. */
         const vector<unique_ptr<ActiveGameplayEffect>>& getActiveEffects() const { return _listActiveEffect; }
-        /** @brief 걸린 이펙트의 남은 시간입니다. 무한 이펙트이거나 이펙트가 없으면 0 입니다. */
+        /** @brief 적용된 이펙트의 남은 시간입니다. 무한 이펙트이거나 이펙트가 없으면 0 입니다. */
         float32 getActiveEffectRemainingTime( ActiveEffectHandle handle ) const;
-        /** @brief 걸린 이펙트의 스택 수입니다. 없으면 0 입니다. */
+        /** @brief 적용된 이펙트의 스택 수입니다. 없으면 0 입니다. */
         int32 getActiveEffectStackCount( ActiveEffectHandle handle ) const;
         /** @brief 부여 태그가 @p tags 와 일치하는 지속 이펙트 중 가장 늦게 끝나는 것의 남은 시간입니다. 쿨다운 표시에 씁니다. 해당하는 이펙트가 없으면 0 입니다. */
         float32 findLongestRemainingTimeWithGrantedTags( const TagContainer& tags ) const;
         /**
-         * @brief 스펙을 지금 걸어도 어떤 어트리뷰트도 0 아래로 내려가지 않으면 true 입니다. 비용 검사에 씁니다(언리얼의 `CanApplyAttributeModifiers` 에 해당).
+         * @brief 스펙을 지금 적용해도 어떤 어트리뷰트도 0 아래로 내려가지 않으면 true 입니다. 비용 검사에 씁니다(언리얼의 `CanApplyAttributeModifiers` 에 해당).
          * @details `Add` 모디파이어만 검사합니다. 없는 어트리뷰트를 깎는 비용은 지불할 수 없으므로 false 입니다.
          */
         bool canApplyAttributeModifiers( const GameplayEffectSpec& spec ) const;
-        /** @brief 이펙트가 걸린 뒤(지속, 무한, 스택 증가) 호출할 델리게이트를 등록합니다. */
+        /** @brief 이펙트가 적용된 뒤(지속, 무한, 스택 증가) 호출할 델리게이트를 등록합니다. */
         DelegateHandle registerEffectApplied( const EffectDelegate& delegate );
         void           unregisterEffectApplied( DelegateHandle handle );
         /** @brief 이펙트가 해제된 뒤 호출할 델리게이트를 등록합니다. */
@@ -266,7 +266,7 @@ namespace sw
         void getAbilitySpecHandles( vector<AbilitySpecHandle>& outListHandle ) const;
         /** @brief 입력 @p inputID 가 눌렸을 때 부릅니다. 그 번호의 어빌리티가 실행 중이면 알리고, 아니면 발동을 시도합니다. */
         void abilityInputPressed( int32 inputID );
-        /** @brief 입력 @p inputID 가 떼어졌을 때 부릅니다. */
+        /** @brief 입력 @p inputID 를 뗐을 때 부릅니다. */
         void abilityInputReleased( int32 inputID );
         /** @brief 어빌리티가 발동한 뒤 호출할 델리게이트를 등록합니다. */
         DelegateHandle registerAbilityActivated( const AbilityActivatedDelegate& delegate );
@@ -342,13 +342,13 @@ namespace sw
         void applyModifierToBase( const EvaluatedModifier& modifier, float32 stackScale, const GameplayEffectSpec& spec );
         /** @brief 지속 이펙트나 무한 이펙트를 새로 걸거나 스택을 올립니다. */
         ActiveEffectHandle applyDurationSpec( const GameplayEffectSpec& spec );
-        /** @brief 걸린 이펙트를 활성 목록에서 해제합니다. 태그, 집계, 큐, 알림을 함께 정리합니다. */
+        /** @brief 적용된 이펙트를 활성 목록에서 해제합니다. 태그, 집계, 큐, 알림을 함께 정리합니다. */
         void removeActiveEffectInternal( ActiveGameplayEffect& activeEffect );
-        /** @brief 걸린 이펙트를 찾습니다. 지우는 중인 것은 제외합니다. */
+        /** @brief 적용된 이펙트를 찾습니다. 지우는 중인 것은 제외합니다. */
         ActiveGameplayEffect* findActiveEffectMutable( ActiveEffectHandle handle );
         /** @brief 같은 정의로 걸려 있는 스택 이펙트를 찾습니다. */
         ActiveGameplayEffect* findStackableEffect( const GameplayEffectDef& def );
-        /** @brief 걸린 이펙트들의 지속 시간과 주기를 @p deltaTime 만큼 진행합니다. */
+        /** @brief 적용된 이펙트들의 지속 시간과 주기를 @p deltaTime 만큼 진행합니다. */
         void updateActiveEffects( float32 deltaTime );
         /** @brief 이펙트 하나의 큐를 내보냅니다. */
         void dispatchCues( const GameplayEffectSpec& spec, GameplayCuePhase phase, float32 magnitude );
@@ -356,7 +356,7 @@ namespace sw
         void compactPendingRemovals();
 
         // ---- 어트리뷰트 ----
-        /** @brief 어트리뷰트 하나의 current 를 base 와 걸린 이펙트로 다시 집계하고, 바뀌었으면 알립니다. */
+        /** @brief 어트리뷰트 하나의 current 를 base 와 적용된 이펙트로 다시 집계하고, 바뀌었으면 알립니다. */
         void recomputeAttribute( const hashed_string& name );
         /** @brief 세트 안의 값을 찾습니다. 쓰기용입니다. */
         AttributeData* findAttributeDataMutable( const hashed_string& name, AttributeSet** ppOutSet );

@@ -93,8 +93,8 @@ namespace sw
         /** @brief 단계의 페어드 애니메이션 세트를 틱 뒤(게임 스레드)에 시작하도록 미룹니다. */
         void deferPairedAnimationStart( GameObjectManager& manager, const InteractionStepDef& step );
         /**
-         * @brief 하는 쪽(`interactorRole`)과 대상(`interactableRole`)의 애니메이터로 자리에 맞는 첫 세트를 시작합니다(게임 스레드, 틱 밖).
-         * @details 애니메이터 · 에셋이 없거나 시작이 거절되면 상호작용을 취소한다 — 애니메이션 없이 진행하지 않는다.
+         * @brief 하는 쪽(`interactorRole`)과 대상(`interactableRole`)의 애니메이터로 배치에 맞는 첫 세트를 시작합니다(게임 스레드, 틱 밖).
+         * @details 애니메이터나 에셋이 없거나 시작이 거절되면 상호작용을 취소한다. 애니메이션 없이 진행하지 않는다.
          */
         void startPairedAnimation( GameObjectManager& manager, TComponentHandle<InteractableComponent> target, const InteractionStepDef& step );
         /** @brief 이 상호작용이 시작한 페어드 애니메이션이 있으면 틱 뒤에 중단합니다. */
@@ -114,7 +114,7 @@ namespace sw
 
         InteractionSession                              _session;
         hashed_string                                   _resumeState;     ///< 몽타주를 틀기 전 애니메이터 상태입니다. 취소하면 이 상태로 돌아갑니다(몽타주가 없었으면 비어 있다).
-        int32                                           _montageStep;     ///< 이번 상호작용에서 몽타주를 튼 단계 번호입니다(상호작용이 아니면 −1).
+        int32                                           _montageStep;     ///< 이번 상호작용에서 몽타주를 튼 단계 번호입니다(상호작용이 아니면 -1).
         uint32                                          _pairedSessionID; ///< 이번 상호작용이 시작한 페어드 애니메이션 세션 id 입니다(없으면 0). 취소하면 중단한다
         InteractionPrompt                               _prompt;
         vector<InteractionCandidate>                    _listCandidate;

@@ -41,9 +41,9 @@ namespace sw
 
         /**
          * @brief 의도를 모터 입력으로 바꿉니다. 의도의 월드 이동을 차 방향(@p vehicleYaw)으로 투영해서, 앞 성분은 가속(음수이면 브레이크나 후진), 옆 성분은 조향으로 씁니다.
-         * @param driftIndex 폰 스키마의 드리프트 버튼 인덱스입니다. 없으면 −1입니다.
-         * @param boostIndex 폰 스키마의 부스트 버튼 인덱스입니다. 없으면 −1입니다.
-         * @param jumpIndex 폰 스키마의 점프 버튼 인덱스입니다. 없으면 −1입니다.
+         * @param driftIndex 폰 스키마의 드리프트 버튼 인덱스입니다. 없으면 -1입니다.
+         * @param boostIndex 폰 스키마의 부스트 버튼 인덱스입니다. 없으면 -1입니다.
+         * @param jumpIndex 폰 스키마의 점프 버튼 인덱스입니다. 없으면 -1입니다.
          */
         static ArcadeVehicleInput toVehicleInput( const ControlIntent& intent, float32 vehicleYaw, int32 driftIndex, int32 boostIndex, int32 jumpIndex );
 

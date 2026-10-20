@@ -6,8 +6,8 @@
  *          시간 단위가 정수 프레임이라 결정적이며, 게임은 `FixedStepTimer` 로 고정 걸음마다 `advanceFrame` 을 부른다.
  *
  *          프레임 번호는 1 부터 센다. `_startup` 은 첫 지속(active) 프레임의 번호이다(철권의 "i10" 은 10 프레임째에 맞는다).
- *          그래서 발생 구간은 1 .. startup−1, 지속 구간은 startup .. startup+active−1, 후딜은 그다음 recovery 프레임이다.
- *          전체 길이는 startup − 1 + active + recovery 이다.
+ *          그래서 발생 구간은 1 .. startup-1, 지속 구간은 startup .. startup+active-1, 후딜은 그다음 recovery 프레임이다.
+ *          전체 길이는 startup - 1 + active + recovery 이다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -108,7 +108,7 @@ namespace sw
         uint8                    _bWallSplat{ SW_FALSE };   ///< 벽에 붙인다
         uint8                    _bUnblockable{ SW_FALSE }; ///< 가드 불가(높이로 피하는 것은 된다)
 
-        /** @brief 전체 길이(프레임)입니다. startup − 1 + active + recovery 와 같습니다. */
+        /** @brief 전체 길이(프레임)입니다. startup - 1 + active + recovery 와 같습니다. */
         int32 getTotalFrames() const { return _startup - 1 + _active + _recovery; }
         /** @brief 마지막 지속 프레임 번호입니다. */
         int32 getLastActiveFrame() const { return _startup + _active - 1; }
@@ -209,10 +209,10 @@ namespace sw
         bool canCancelInto( const hashed_string& moveID ) const;
         /**
          * @brief 지금 프레임에 닿았다고 보고 계산한 프레임 이득입니다.
-         * @details 이득은 (막혔으면 blockstun, 아니면 hitstun) − (남은 지속 프레임 + 후딜)이며,
-         *          stun − (전체 길이 − 지금 프레임)과 같다.
+         * @details 이득은 (막혔으면 blockstun, 아니면 hitstun) - (남은 지속 프레임 + 후딜)이며,
+         *          stun - (전체 길이 - 지금 프레임)과 같다.
          *          지금 프레임이 닿은 프레임이고, 맞은 쪽의 경직은 그다음 프레임부터 센다.
-         *          양수면 공격 쪽이 먼저 움직인다(+ 이득). 음수면 막힌 뒤 반격당할 수 있는 프레임 수이며, 철권에서 −10 이하는 확정 반격이다.
+         *          양수면 공격 쪽이 먼저 움직인다(+ 이득). 음수면 막힌 뒤 반격당할 수 있는 프레임 수이며, 철권에서 -10 이하는 확정 반격이다.
          *          히트스톱은 양쪽이 같이 멈추므로 계산에서 빠진다.
          */
         int32 computeFrameAdvantage( bool bOnBlock ) const;

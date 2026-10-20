@@ -2,7 +2,7 @@
  * @file GrabberComponent.h
  * @brief 집기, 던지기, 붙이기입니다. 물리 백엔드를 모르는 인터페이스(`IGrabPhysics`)와 그것을 쓰는 컴포넌트를 담습니다.
  * @details 게임이 `IGrabPhysics` 를 게임 서비스로 등록하면 그것을 쓰고, 없으면 강체 백엔드(`RigidBodyGrabPhysics`)를 쓴다. 이 백엔드는 강체를 키네마틱으로 손에 묶고, 놓을 때
- *          동적으로 되돌리고 속도를 준다. 강체가 없는 대상은 트랜스폼 폴백(`TransformGrabPhysics`)을 쓴다. 이 폴백은 들고 있는 쪽 씬 컴포넌트에 월드 위치를 유지한 채 붙이고, 놓으면 떼며,
+ *          동적으로 되돌리고 속도를 준다. 강체가 없는 대상은 트랜스폼 폴백(`TransformGrabPhysics`)을 쓴다. 이 폴백은 쥐고 있는 쪽 씬 컴포넌트에 월드 위치를 유지한 채 붙이고, 놓으면 분리하며,
  *          속도는 대상의 `GravityComponent` 수직 속도로만 준다.
  */
 #pragma once
@@ -68,7 +68,7 @@ namespace sw
     /**
      * @class GrabberComponent
      * @brief 하나를 집어 들고(`grab`) 던지거나(`throwHeld`) 내려놓습니다(`dropHeld`). 소켓에 붙이기(무기를 등에 메기)는 `grab` 에 그 소켓의 위치를 오프셋으로 줍니다.
-     * @details 든 것은 핸들로 저장한다(`_held`). 백엔드는 게임 서비스 `IGrabPhysics` 를 쓰고, 없으면 `RigidBodyGrabPhysics` 를 쓴다.
+     * @details 쥔 대상은 핸들로 저장한다(`_held`). 백엔드는 게임 서비스 `IGrabPhysics` 를 쓰고, 없으면 `RigidBodyGrabPhysics` 를 쓴다.
      */
     REFLECT( Category = "Interaction", DisplayName = "Grabber", Tooltip = "Grab, carry, throw or attach one object through the grab physics interface" )
     class SW_GF_API GrabberComponent : public Component
@@ -79,7 +79,7 @@ namespace sw
         GrabberComponent();
         virtual ~GrabberComponent() override = default;
 
-        /** @brief 집습니다. 이미 들고 있거나 자기 자신이면 false 입니다. 게임 스레드에서 부릅니다. */
+        /** @brief 집습니다. 이미 쥐고 있거나 자기 자신이면 false 입니다. 게임 스레드에서 부릅니다. */
         [[nodiscard]] bool grab( GameObject& target );
         /** @brief 든 것을 @p velocity 로 던집니다. 든 것이 없으면 false 입니다. */
         bool throwHeld( const float3& velocity );

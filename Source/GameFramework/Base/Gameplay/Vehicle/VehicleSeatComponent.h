@@ -72,6 +72,6 @@ namespace sw
 
         GameObjectHandle                      _occupant;                  ///< 앉은 탑승자의 오브젝트
         TComponentHandle<ControllerComponent> _occupantController;        ///< 탈 때 탑승자를 쥐고 있던 조종자. 운전석에서 쓰며 내릴 때 탑승자에게 돌려준다
-        TComponentHandle<ControllerComponent> _previousVehicleController; ///< 탈 때 탈것을 쥐고 있던 조종자. 주인을 따라오던 말 AI 가 해당하며, 내리면 다시 쥔다
+        TComponentHandle<ControllerComponent> _previousVehicleController; ///< 탈 때 탈것에 빙의해 있던 조종자. 주인을 따라오던 말 AI 가 해당하며, 내리면 다시 빙의한다
     };
 } // namespace sw

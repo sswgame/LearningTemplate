@@ -87,13 +87,13 @@ namespace sw
         enum class Kind : uint8
         {
             PhaseChanged = 0, ///< _value = MatchPhase
-            Killed,           ///< _participant 는 죽은 쪽이고, _other 는 죽인 쪽이다(−1 이면 환경)
+            Killed,           ///< _participant 는 죽은 쪽이고, _other 는 죽인 쪽이다(-1 이면 환경)
             Assisted,         ///< _participant 는 도운 쪽이고, _other 는 죽은 쪽이다
             Respawned,
             ParticipantEliminated,
             TeamEliminated, ///< _team 은 팀이고, _value 는 순위이다
             ScoreChanged,   ///< _team 은 팀이고, _value 는 새 점수이다
-            MatchEnded      ///< _team 은 이긴 팀이다(−1 이면 무승부)
+            MatchEnded      ///< _team 은 이긴 팀이다(-1 이면 무승부)
         };
         int32 _participant{ -1 };
         int32 _other{ -1 };
@@ -125,13 +125,13 @@ namespace sw
 
         /** @brief 피해를 기록합니다. 도움 판정과 통계에 씁니다. */
         void reportDamage( int32 attacker, int32 victim, float32 amount );
-        /** @brief 죽음을 알립니다. @p killer 가 −1 이면 환경이 죽인 것입니다(낙사, 자기장). */
+        /** @brief 죽음을 알립니다. @p killer 가 -1 이면 환경이 죽인 것입니다(낙사, 자기장). */
         void reportKill( int32 victim, int32 killer );
         /** @brief 부활 없이 탈락시킵니다. 배틀로얄의 기절 후 확인 사살과 비대칭 대전의 희생에 씁니다. */
         void eliminate( int32 participant );
         /** @brief 팀 점수를 더합니다. 거점, 목표, 탈출에 씁니다. */
         void addScore( int32 team, int32 amount );
-        /** @brief 판을 바로 끝냅니다. 탈출구나 화물 운반 같은 목표를 달성했을 때 씁니다. @p winningTeam 이 −1 이면 무승부입니다. */
+        /** @brief 판을 바로 끝냅니다. 탈출구나 화물 운반 같은 목표를 달성했을 때 씁니다. @p winningTeam 이 -1 이면 무승부입니다. */
         void endMatch( int32 winningTeam );
 
         MatchPhase              getPhase() const { return _phase; }

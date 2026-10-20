@@ -119,9 +119,9 @@ namespace sw
         static void applySelection( const AppearanceDatabase& database, const AppearanceSelection& selection, const CharacterAppearanceSpec& current,
                                     const IAppearanceUnlockQuery* pUnlockQuery, CharacterAppearanceSpec& outSpec, AppearanceSelectionReport& outReport );
         /**
-         * @brief 전체 선택을 데이터 프리셋 하나(`CharacterAppearanceDef`)로 바꿉니다 — 기준 프리셋이 부모이고, 선택이 정한 칸(몸 종류 · 체형 · 얼굴 · 꾸미기 값 · 슬롯)만 적습니다(유니티 프리팹 변형).
-         * @details 값의 종류(슬라이더 · 색 · 고르기)는 선택의 스키마가 정한다. 스키마에 없는 매개변수 · 부분 선택 · 아이템 인스턴스 꾸미기 값은 프리셋이 나타낼 수 없어
-         *          false 와 @p outReason 이다(조용히 버리지 않는다). 시드는 프리셋에 없다 — 부모의 후보는 그 프리셋을 쓰는 컴포넌트의 시드로 뽑는다.
+         * @brief 전체 선택을 데이터 프리셋 하나(`CharacterAppearanceDef`)로 바꿉니다. 기준 프리셋이 부모이고, 선택이 정한 필드(몸 종류, 체형, 얼굴, 꾸미기 값, 슬롯)만 적습니다(유니티 프리팹 변형).
+         * @details 값의 종류(슬라이더, 색, 고르기)는 선택의 스키마가 정한다. 스키마에 없는 매개변수, 부분 선택, 아이템 인스턴스 꾸미기 값은 프리셋이 나타낼 수 없어
+         *          false 와 @p outReason 을 돌려준다(조용히 버리지 않는다). 시드는 프리셋에 없다. 부모의 후보는 그 프리셋을 쓰는 컴포넌트의 시드로 뽑는다.
          */
         [[nodiscard]] static bool makePresetDef( const AppearanceDatabase& database, const AppearanceSelection& selection, const hashed_string& presetID,
                                                  CharacterAppearanceDef& outDef, string& outReason );

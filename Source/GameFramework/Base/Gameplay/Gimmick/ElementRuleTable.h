@@ -88,8 +88,8 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 자극 규칙 하나입니다. 조건(재질, 플래그, 있어야 하는 상태, 없어야 하는 상태, 비어 있으면 아무 셀)과 동작(재질 바꾸기, 상태 붙이기와 떼기, 이어진 셀로 퍼뜨리기)을 담습니다.
-     * @details 자극(불, 얼음, 전기)마다 규칙을 위에서부터 보고 **처음 맞는 규칙 하나만** 적용한다. 번호는 테이블 안의 인덱스이고 −1 은 "없음" 이다.
+     * @brief 자극 규칙 하나입니다. 조건(재질, 플래그, 있어야 하는 상태, 없어야 하는 상태, 비어 있으면 아무 셀)과 동작(재질 바꾸기, 상태 붙이기와 제거, 연결된 셀로 퍼뜨리기)을 담습니다.
+     * @details 자극(불, 얼음, 전기)마다 규칙을 위에서부터 보고 **처음 맞는 규칙 하나만** 적용한다. 번호는 테이블 안의 인덱스이고 -1 은 "없음" 이다.
      */
     struct ElementStimulusRule
     {
@@ -159,9 +159,9 @@ namespace sw
         /** @brief `findShared` 의 테이블을 다시 읽은 횟수입니다. */
         static uint32 getSharedReloadCount();
 
-        /** @brief 플래그를 추가합니다. 이미 있으면 그 번호를 반환하고, 개수가 넘치면 −1 입니다. */
+        /** @brief 플래그를 추가합니다. 이미 있으면 그 번호를 반환하고, 개수가 넘치면 -1 입니다. */
         int32 addFlag( const hashed_string& id );
-        /** @brief 재질을 추가하고 재질 번호를 반환합니다. 플래그 이름은 이미 추가한 것이어야 하며, 없으면 −1 입니다. */
+        /** @brief 재질을 추가하고 재질 번호를 반환합니다. 플래그 이름은 이미 추가한 것이어야 하며, 없으면 -1 입니다. */
         int32 addMaterial( const hashed_string& id, const vector<hashed_string>& listFlag );
         /** @brief 재질 수치를 정합니다. 다 타는 스텝 수 등이 해당합니다. */
         void  setMaterialParam( int32 material, const hashed_string& name, int32 value );
@@ -187,7 +187,7 @@ namespace sw
         [[nodiscard]] bool loadRoot( const XMLNode& root, string_view sourceName );
         [[nodiscard]] bool readStimulusRule( const XMLNode& node, ElementStimulusRule& outRule, string_view sourceName ) const;
         [[nodiscard]] bool readStepRule( const XMLNode& node, ElementStepRule& outRule, string_view sourceName ) const;
-        /** @brief 이름 속성을 테이블의 번호로 읽습니다. 속성이 없으면 −1 로 두고 true 를 반환하고, 알 수 없는 이름이면 경고를 남기고 false 를 반환합니다. */
+        /** @brief 이름 속성을 테이블의 번호로 읽습니다. 속성이 없으면 -1 로 두고 true 를 반환하고, 알 수 없는 이름이면 경고를 남기고 false 를 반환합니다. */
         [[nodiscard]] bool readIndex( const XMLNode& node, const utf8* pAttribute, int32 ( ElementRuleTable::*pFind )( const hashed_string& ) const, int32& outIndex,
                                       string_view sourceName ) const;
 

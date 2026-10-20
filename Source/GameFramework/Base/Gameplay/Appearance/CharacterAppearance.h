@@ -112,8 +112,8 @@ namespace sw
          */
         [[nodiscard]] bool loadPresetFromNode( const XMLNode& presetNode, AppearanceLoadReport& report, string_view sourceName );
         /**
-         * @brief @p def 를 @p outNode(`<CharacterAppearance>` 원소)에 씁니다 — `loadPresetFromNode` 가 같은 값으로 다시 읽는 형식입니다(읽기와 쓰기가 이 파일 한 자리).
-         * @details 슬롯의 아이템 인스턴스 꾸미기 값은 종류(슬라이더 · 색)를 값만으로 알 수 없어 쓰지 않는다 — 그런 슬롯이 있으면 false 와 @p outReason 이다(조용히 버리지 않는다).
+         * @brief @p def 를 @p outNode(`<CharacterAppearance>` 원소)에 씁니다. `loadPresetFromNode` 가 같은 값으로 다시 읽는 형식입니다(읽기와 쓰기가 이 파일 한곳에 있다).
+         * @details 슬롯의 아이템 인스턴스 꾸미기 값은 종류(슬라이더, 색)를 값만으로 알 수 없어 쓰지 않는다. 그런 슬롯이 있으면 false 와 @p outReason 을 돌려준다(조용히 버리지 않는다).
          */
         [[nodiscard]] static bool writePresetToNode( const CharacterAppearanceDef& def, const XMLNode& outNode, string& outReason );
         void                      clear() { _listPreset.clear(); }
@@ -122,7 +122,7 @@ namespace sw
         const vector<CharacterAppearanceDef>& getPresets() const { return _listPreset; }
 
         /**
-         * @brief 부모 체인을 뿌리부터 합칩니다. 값은 이름별, 슬롯은 슬롯별, 소켓은 이름별로 아래쪽이 덮어씁니다. 세트는 쌓이고 태그는 합쳐집니다.
+         * @brief 부모 체인을 루트부터 합칩니다. 값은 이름별, 슬롯은 슬롯별, 소켓은 이름별로 아래쪽이 덮어씁니다. 세트는 쌓이고 태그는 합쳐집니다.
          * @details 알 수 없는 부모이거나 순환이면 false 이다. 로드 검사가 이런 데이터를 막는다.
          */
         [[nodiscard]] bool mergeChain( const hashed_string& id, CharacterAppearanceDef& outMerged ) const;
@@ -140,7 +140,7 @@ namespace sw
         static float32 pickUnit( uint32 seed, uint64 keyHash );
 
     private:
-        /** @brief 부모 체인을 뿌리부터 모읍니다. 알 수 없는 부모이거나 순환이면 false 입니다. */
+        /** @brief 부모 체인을 루트부터 모읍니다. 알 수 없는 부모이거나 순환이면 false 입니다. */
         bool collectChain( const hashed_string& id, vector<const CharacterAppearanceDef*>& outListChain ) const;
 
         vector<CharacterAppearanceDef> _listPreset{};

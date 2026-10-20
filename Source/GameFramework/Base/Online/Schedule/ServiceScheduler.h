@@ -99,7 +99,7 @@ namespace sw
         /** @brief 저장소에 맡겨 아직 거두지 않은 일의 수입니다. */
         int32 getPendingWorkCount() const { return _pendingWorkCount; }
 
-        /** @brief @p nowMs 직전(포함)의 회차 시각입니다(테스트 · 표시). 없으면 −1. */
+        /** @brief @p nowMs 직전(포함)의 회차 시각입니다(테스트 · 표시). 없으면 -1. */
         static int64                computeLatestOccurrence( const ScheduleDefinition& definition, int64 nowMs );
         static bool                 isValidDefinition( const ScheduleDefinition& definition );
         static const hashed_string& getTable(); ///< "service_schedule"

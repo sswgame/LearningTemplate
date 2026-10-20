@@ -111,7 +111,7 @@ namespace sw
         static void computeRulePlacements( const PropScatterParams& params, const IPlacementSurface* pSurface, vector<PropScatterPlacement>& outListPlacement );
         /** @brief [0, 1] 난수 하나를 꺼내고 상태를 한 걸음 나아가게 합니다. */
         static float32 nextUnit( uint32& inoutState );
-        /** @brief 비중대로 고른 모델 번호를 반환합니다. @p unit 은 [0, 1] 입니다. 모델이 없거나 비중 합이 0 이면 −1 입니다. */
+        /** @brief 비중대로 고른 모델 번호를 반환합니다. @p unit 은 [0, 1] 입니다. 모델이 없거나 비중 합이 0 이면 -1 입니다. */
         static int32 pickModel( const vector<PropScatterModel>& listModel, float32 unit );
     };
 } // namespace sw

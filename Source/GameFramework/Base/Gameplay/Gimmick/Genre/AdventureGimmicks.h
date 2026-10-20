@@ -1,6 +1,6 @@
 /**
  * @file AdventureGimmicks.h
- * @brief 어드벤처 기믹입니다. 미는 블록(격자 한 칸 단위)과 오브젝트의 원소 상태(횃불 퍼즐, 타는 상자)를 다룹니다. 스위치와 열쇠 문은 상호작용과 회로 프리팹으로 만듭니다.
+ * @brief 어드벤처 기믹입니다. 미는 블록(격자 한 셀 단위)과 오브젝트의 원소 상태(횃불 퍼즐, 타는 상자)를 다룹니다. 스위치와 열쇠 문은 상호작용과 회로 프리팹으로 만듭니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -19,7 +19,7 @@ namespace sw
 {
     /**
      * @class PushBlockComponent
-     * @brief 한 칸 단위로 미는 블록입니다(젤다, 소코반). `push( 방향 )` 은 방향을 가장 가까운 축으로 맞추고, 한 칸 앞이 비어 있으면(`WorldQuery` 광선으로 확인) `_moveTime` 동안 블록을 옮깁니다.
+     * @brief 한 셀 단위로 미는 블록입니다(젤다, 소코반). `push( 방향 )` 은 방향을 가장 가까운 축으로 맞추고, 한 셀 앞이 비어 있으면(`WorldQuery` 광선으로 확인) `_moveTime` 동안 블록을 옮깁니다.
      * @details 같은 오브젝트의 `InteractableComponent`(Push)를 끝내면 끝낸 쪽에서 블록 방향으로 민다. 센서의 사용 알림을 읽어서 처리한다. 2D 는 `_bPlanar2D`(XY 축)를 켠다.
      */
     REFLECT( Category = "Gimmick", DisplayName = "Push Block", Tooltip = "Grid-snapped block pushed one cell at a time if the cell ahead is free" )
@@ -34,7 +34,7 @@ namespace sw
         void onTick( float32 deltaTime ) override;
         /** @brief 한 스텝(60 Hz)입니다. */
         void stepOnce();
-        /** @brief @p direction 에서 가장 가까운 축으로 한 칸 밉니다. 움직이는 중이거나 막혀 있으면 false 입니다. */
+        /** @brief @p direction 에서 가장 가까운 축으로 한 셀 밉니다. 움직이는 중이거나 막혀 있으면 false 입니다. */
         [[nodiscard]] bool push( const float3& direction );
         bool               isMoving() const { return _stepsLeft > 0; }
 

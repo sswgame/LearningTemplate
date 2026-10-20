@@ -69,7 +69,7 @@ namespace sw
         InventorySlot takeFromSlot( int32 slot, int32 count );
         /** @brief 슬롯을 옮깁니다. 같은 아이템이면 합치고(넘치면 남김), 다른 아이템이면 서로 바꿉니다. */
         [[nodiscard]] bool moveSlot( int32 fromSlot, int32 toSlot );
-        /** @brief 슬롯에서 @p count 개를 떼어 빈 슬롯에 둡니다. 둔 슬롯의 번호를 반환하고, 못 하면 −1 입니다. */
+        /** @brief 슬롯에서 @p count 개를 떼어 빈 슬롯에 둡니다. 둔 슬롯의 번호를 반환하고, 못 하면 -1 입니다. */
         int32 splitSlot( int32 slot, int32 count );
         /** @brief 분류, 희귀도(높은 것 먼저), id 순으로 정렬하고, 겹칠 수 있는 것은 합칩니다. */
         void sortSlots();

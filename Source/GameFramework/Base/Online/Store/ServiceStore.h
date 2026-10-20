@@ -109,7 +109,7 @@ namespace sw
     struct ServiceCommitInfo
     {
         uint64 _commitVersion{ 0 };  ///< Ok — 이 커밋이 쓴 레코드들의 새 판
-        int32  _conflictIndex{ -1 }; ///< Conflict — 어긋난 쓰기 번호(`getWrites` 순서, 알 수 없으면 −1 — SQL 직렬화 실패)
+        int32  _conflictIndex{ -1 }; ///< Conflict — 어긋난 쓰기 번호(`getWrites` 순서, 알 수 없으면 -1 — SQL 직렬화 실패)
     };
 } // namespace sw
 

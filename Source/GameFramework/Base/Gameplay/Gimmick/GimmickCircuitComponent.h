@@ -15,7 +15,7 @@
  *          그 상태에서 이어진다(자기 기술형 A). 체크포인트는 `captureCheckpoint` 와 `restoreCheckpoint` 로, 처음 상태로의 복귀는 `resetCircuit` 으로 한다.
  *          체크포인트는 프로세스 밖으로 나가지 않으므로 바이트가 아니라 값으로 둔다. 롤백 · 넷 스냅샷은 `GimmickStateBundle` 이 고정 배치형(B)으로 싣는다.
  *
- *          저장 상태를 회로에 적용하는 길은 `applySavedState` 하나다(로드, 플레이 시작, 체크포인트). 상태는 노드 id 로 짝짓고(`GimmickCircuit::loadState`),
+ *          저장 상태를 회로에 적용하는 경로는 `applySavedState` 하나다(로드, 플레이 시작, 체크포인트). 상태는 노드 id 로 짝짓고(`GimmickCircuit::loadState`),
  *          노드가 늘거나 준 것은 경고 뒤 이어 가며, 같은 id 인데 종류나 상태 버전이 바뀐 노드가 있으면 오류를 남기고 회로를 돌리지 않는다. 조용히 처음 상태로 바꾸지 않는다.
  *          씬 · 프리팹 저작 저장에도 이 런타임 상태가 들어갈 수 있다(지금 저장 문맥이 레벨 세이브와 같다). 저작 저장에서 빼는 표시는 옛 `C-53` 다(GimmickCircuitState).
  */
@@ -174,7 +174,7 @@ namespace sw
         void applyActuator( GameObjectManager& manager, int32 node, Binding binding );
         void storeState();
         /**
-         * @brief 저장 상태(씬 · 프리팹 · 레벨 세이브의 `_state`, 체크포인트)를 회로에 적용하는 유일한 길입니다. `onPostLoad` · `onBeginPlay` · `restoreCheckpoint` 가 지납니다.
+         * @brief 저장 상태(씬, 프리팹, 레벨 세이브의 `_state`, 체크포인트)를 회로에 적용하는 유일한 경로입니다. `onPostLoad`, `onBeginPlay`, `restoreCheckpoint` 가 이것을 거칩니다.
          * @details 노드가 늘거나 줄었으면 경고 한 줄 뒤 이어 간다. 같은 id 인데 종류 · 상태 버전이 바뀐 노드가 있으면 오류를 `_listError` 와 로그에 남기고
          *          회로를 비워 돌지 않게 한다. 처음 상태로 조용히 바꾸면 레벨 세이브의 진행이 경고 한 줄로만 사라진다.
          */

@@ -24,7 +24,7 @@ namespace sw
     /** @brief 상호작용 하나의 규칙입니다. */
     struct SW_GF_API InteractionConfig
     {
-        vector<float32> _listParticipantScale{};        ///< [n−1] 이 n 명일 때의 속도 배율이다. 비어 있으면 `1 + (n−1) × _extraParticipantScale` 를 쓰고, 목록보다 많으면 마지막 값을 쓴다
+        vector<float32> _listParticipantScale{};        ///< [n-1] 이 n 명일 때의 속도 배율이다. 비어 있으면 `1 + (n-1) × _extraParticipantScale` 를 쓰고, 목록보다 많으면 마지막 값을 쓴다
         StatBlock       _gradeBonus{};                  ///< 스킬 체크 등급에 따라 더하는 진행량(0..1). 없는 등급은 `_skillCheckBonus` 를 쓴다
         float32         _duration{ 10.0f };             ///< 혼자서 0 에서 1 까지 채우는 데 걸리는 초
         float32         _extraParticipantScale{ 0.8f }; ///< 목록이 없을 때 한 명 늘 때마다 더하는 배율

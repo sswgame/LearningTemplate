@@ -20,8 +20,8 @@ namespace sw
     /** @brief 의도에서 만든 바퀴 차 운전 입력입니다. */
     struct PhysicsCarInput
     {
-        float32 _forward{ 0.0f };   ///< −1..1 이며 음수이면 후진이다
-        float32 _right{ 0.0f };     ///< −1..1
+        float32 _forward{ 0.0f };   ///< -1..1 이며 음수이면 후진이다
+        float32 _right{ 0.0f };     ///< -1..1
         float32 _brake{ 0.0f };     ///< 0..1
         float32 _handBrake{ 0.0f }; ///< 0..1
     };

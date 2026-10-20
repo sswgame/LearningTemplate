@@ -69,7 +69,7 @@ namespace sw
      * @details 태그는 다섯 가지이고, 언리얼과 뜻이 같다.
      *          - `_assetTags`: 이 이펙트 **자체**를 설명한다("Effect.Damage.Fire"). `removeActiveEffectsWithTags` 가 이 태그로 대상을 고른다.
      *          - `_grantedTags`: 걸려 있는 동안 **대상에게** 붙는다("State.Burning", 쿨다운이면 "Cooldown.Fireball").
-     *          - `_applicationRequiredTags`: 대상이 이 태그를 모두 가져야 걸린다.
+     *          - `_applicationRequiredTags`: 대상이 이 태그를 모두 가져야 적용된다.
      *          - `_applicationBlockedTags`: 대상이 이 태그를 하나라도 가지면 걸리지 않는다(면역).
      *          - `_removeEffectsWithTags`: 걸리는 순간 대상의 활성 이펙트 중 에셋 태그나 부여 태그가 이 태그와 일치하는 것을 지운다(정화).
      *          `_cueTags` 는 연출에 쓴다(`GameplayCueEvent`).
@@ -118,7 +118,7 @@ namespace sw
      * @brief 이펙트를 **한 번 적용하는** 데이터입니다. 정의, 레벨, 컨텍스트, 코드가 넣은 수, 쏜 쪽 어트리뷰트 스냅샷을 담습니다.
      * @details `AbilitySystemComponent::makeOutgoingSpec` 이 만든다. 이때 쏜 쪽 어트리뷰트를 통째로 저장해 두므로(`_mapSourceAttribute`),
      *          투사체가 날아가는 동안 쏜 쪽이 죽거나 사라져도 피해 공식은 쏜 순간의 공격력을 쓴다(언리얼의 Source 캡처와 스냅샷에 해당).
-     *          값 타입이므로 복사해서 여러 대상에 걸어도 된다.
+     *          값 타입이므로 복사해서 여러 대상에 적용해도 된다.
      */
     struct SW_GF_API GameplayEffectSpec
     {
@@ -215,7 +215,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     /**
      * @brief 대상에 걸려 있는 이펙트 하나입니다. `AbilitySystemComponent` 가 보관하고 시간을 진행합니다.
-     * @details 지속 모디파이어는 걸린 순간 크기를 계산해 `_listEvaluatedModifier` 에 저장한다(스냅샷). 현재값은 이 목록에 스택 수를 곱해 집계한다.
+     * @details 지속 모디파이어는 적용된 순간 크기를 계산해 `_listEvaluatedModifier` 에 저장한다(스냅샷). 현재값은 이 목록에 스택 수를 곱해 집계한다.
      */
     struct ActiveGameplayEffect
     {
@@ -226,7 +226,7 @@ namespace sw
         float32                   _duration{ 0.0f };      ///< 걸려 있을 시간(무한이면 0)
         float32                   _remainingTime{ 0.0f }; ///< 남은 시간(무한이면 의미 없음)
         float32                   _periodTimer{ 0.0f };   ///< 다음 주기 실행까지 남은 시간
-        float32                   _startTime{ 0.0f };     ///< 걸린 순간의 컴포넌트 시각
+        float32                   _startTime{ 0.0f };     ///< 적용된 순간의 컴포넌트 시각
         int32                     _stackCount{ 1 };
         uint8                     _bPendingRemove{ SW_FALSE }; ///< 지우는 중이다. 알리는 도중에 다시 지우지 않는다
     };

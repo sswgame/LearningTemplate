@@ -25,7 +25,7 @@ namespace sw
     {
         Exact = 0,      ///< 회로의 모든 노드가 저장 상태에 있고 남는 저장 노드도 없다
         NodeSetChanged, ///< 노드가 늘거나 줄었다. 짝이 맞는 노드만 옮기고, 새 노드는 처음 상태, 저장에만 있는 노드는 버린다
-        Mismatch        ///< 같은 id 인데 종류 · 상태 버전 · 슬롯 수가 다른 노드가 있거나, 저장 상태에 같은 id 가 둘이다. 아무것도 옮기지 않는다
+        Mismatch        ///< 같은 id 인데 종류, 상태 버전, 슬롯 수가 다른 노드가 있거나, 저장 상태에 같은 id 가 둘이다. 아무것도 옮기지 않는다
     };
 
     /** @brief `GimmickCircuit::loadState` 의 결과입니다. */
@@ -91,13 +91,13 @@ namespace sw
         const GimmickParamValue* findParam( int32 node, const hashed_string& name ) const;
 
         /**
-         * @brief 상태 전체를 씁니다. 스텝 번호, 누적 시간, 노드마다 id · 종류 · 상태 버전 · 출력 · 지난 입력 · 센서 값 · 상태 슬롯이 들어 있습니다.
+         * @brief 상태 전체를 씁니다. 스텝 번호, 누적 시간, 노드마다 id, 종류, 상태 버전, 출력, 지난 입력, 센서 값, 상태 슬롯이 들어 있습니다.
          * @details @p outState 의 목록 용량을 이어 쓰므로, 틱마다 같은 값에 쓰면 새로 할당하지 않는다.
          */
         void saveState( GimmickCircuitState& outState ) const;
         /**
          * @brief 저장 상태를 노드 id 로 짝지어 옮깁니다. 짝이 맞는 정도(`GimmickStateMatch`)가 @p weakestAccepted 보다 약하면 아무것도 바꾸지 않습니다.
-         * @details 롤백 · 넷 스냅샷(같은 빌드, 같은 회로)은 `Exact` 만, 레벨 세이브 · 씬처럼 회로 데이터가 그 뒤에 바뀌었을 수 있는 것은 `NodeSetChanged` 까지 받는다.
+         * @details 롤백과 넷 스냅샷(같은 빌드, 같은 회로)은 `Exact` 만, 레벨 세이브와 씬처럼 회로 데이터가 그 뒤에 바뀌었을 수 있는 것은 `NodeSetChanged` 까지 받는다.
          *          `Mismatch` 는 어떤 한계로도 받지 않는다. 받지 않은 결과를 무엇으로 볼지는 부르는 쪽이 정한다(`GimmickCircuitComponent::applySavedState`).
          */
         GimmickStateLoad loadState( const GimmickCircuitState& state, GimmickStateMatch weakestAccepted );

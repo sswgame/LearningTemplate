@@ -74,7 +74,7 @@ namespace sw
         hashed_string                      _name{};
         hashed_string                      _asset{};      ///< 메시, 프리팹, 스프라이트 경로
         hashed_string                      _material{};   ///< 비어 있으면 메시의 것
-        hashed_string                      _skeleton{};   ///< 자기 스켈레톤. 비어 있으면 뿌리 본 하나짜리 암묵 스켈레톤
+        hashed_string                      _skeleton{};   ///< 자기 스켈레톤. 비어 있으면 루트 본 하나짜리 암묵 스켈레톤
         hashed_string                      _socketSet{};  ///< 부품의 소켓 에셋(`*.sockets.xml`)
         hashed_string                      _breakStage{}; ///< 이 피해 단계에 이르면 저절로 떨어진다. 비어 있으면 맞아서만 떨어진다
         int32                              _layer{ 0 };   ///< 스프라이트 그리기 순서
@@ -139,9 +139,9 @@ namespace sw
         const AppearancePartDef*        findPart( const hashed_string& name ) const;
         const AppearanceStateDef*       findState( const hashed_string& name ) const;
         const AppearanceDamageStageDef* findDamageStage( const hashed_string& name ) const;
-        /** @brief 피해 @p damage 의 단계 번호입니다. 첫 임계값 아래이면 −1 이고, 멀쩡한 상태입니다. */
+        /** @brief 피해 @p damage 의 단계 번호입니다. 첫 임계값 아래이면 -1 이고, 멀쩡한 상태입니다. */
         int32 computeDamageStageIndex( float32 damage ) const;
-        /** @brief 단계 이름의 번호입니다. 없으면 −1 입니다. */
+        /** @brief 단계 이름의 번호입니다. 없으면 -1 입니다. */
         int32 findDamageStageIndex( const hashed_string& name ) const;
     };
 } // namespace sw
