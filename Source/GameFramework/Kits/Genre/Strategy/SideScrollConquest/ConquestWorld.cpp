@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Strategy/SideScrollConquest/ConquestWorld.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -491,12 +492,7 @@ namespace sw
 
     const ConquestUnit* ConquestWorld::findUnit( int32 unitID ) const
     {
-        for ( const ConquestUnit& unit : _listUnit )
-        {
-            if ( unit._unitID == unitID )
-                return &unit;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&ConquestUnit::_unitID>( _listUnit, unitID );
     }
 
     int32 ConquestWorld::getSquadSize() const
@@ -520,9 +516,8 @@ namespace sw
         {
             stepUnit( unitIndex, deltaTime );
         }
-        _listUnit.erase( std::remove_if( _listUnit.begin(), _listUnit.end(), []( const ConquestUnit& unit )
-        { return unit._bAlive == SW_FALSE; } ),
-                         _listUnit.end() );
+        VectorUtil::removeIf( _listUnit, []( const ConquestUnit& unit )
+        { return unit._bAlive == SW_FALSE; } );
         refreshSquadSlots();
         stepCapture( deltaTime );
         stepEconomy( deltaTime );

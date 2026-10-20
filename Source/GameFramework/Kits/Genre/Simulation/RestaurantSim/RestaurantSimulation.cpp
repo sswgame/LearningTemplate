@@ -1018,12 +1018,7 @@ namespace sw
 
     const MenuEntry* RestaurantSimulation::findMenuEntry( const hashed_string& dishID ) const
     {
-        for ( const MenuEntry& entry : _listMenu )
-        {
-            if ( entry._dishID == dishID )
-                return &entry;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&MenuEntry::_dishID>( _listMenu, dishID );
     }
 
     const RecipeDef* RestaurantSimulation::findRecipe( const DishDef& dish ) const

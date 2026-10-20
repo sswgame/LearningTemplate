@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureTown.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -31,14 +32,15 @@ namespace sw
             /** @brief 회전한 패턴의 가로와 세로를 반환합니다(홀수 회전이면 서로 바뀝니다). */
             static int2 computeRotatedSize( const HabitatDef& habitat, int32 rotation )
             {
-                return ( rotation & 1 ) != 0 ? int2{ habitat._height, habitat._width } : int2{ habitat._width, habitat._height };
+                const GridTopology& pattern = habitat._topology;
+                return ( rotation & 1 ) != 0 ? int2{ pattern._height, pattern._width } : int2{ pattern._width, pattern._height };
             }
 
             /** @brief 회전한 패턴의 (@p rotatedX, @p rotatedY) 셀이 원래 패턴의 어느 셀인지 반환합니다. 90° 를 @p rotation 번 돌린 것입니다. */
             static const HabitatCell& sampleRotated( const HabitatDef& habitat, int32 rotation, int32 rotatedX, int32 rotatedY )
             {
-                const int32 width  = habitat._width;
-                const int32 height = habitat._height;
+                const int32 width  = habitat._topology._width;
+                const int32 height = habitat._topology._height;
                 switch ( rotation )
                 {
                     case 1:
@@ -401,12 +403,7 @@ namespace sw
 
     const HabitatInstance* CreatureTown::findHabitat( int32 habitatInstanceID ) const
     {
-        for ( const HabitatInstance& instance : _listHabitat )
-        {
-            if ( instance._id == habitatInstanceID )
-                return &instance;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&HabitatInstance::_id>( _listHabitat, habitatInstanceID );
     }
 
     int32 CreatureTown::countHabitats( const hashed_string& habitatID ) const

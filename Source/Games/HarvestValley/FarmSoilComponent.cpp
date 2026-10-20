@@ -45,8 +45,12 @@ namespace sw
         const FarmDirectorComponent* pDirector = GameDirectorComponent::resolve<FarmDirectorComponent>( *pManager, _director );
         if ( pDirector == nullptr )
             return;
-        const FarmField& field = pDirector->getField();
-        const FarmTile*  pTile = field.getWidth() > 0 ? field.findTile( _tileIndex % field.getWidth(), _tileIndex / field.getWidth() ) : nullptr;
+        const FarmField&    field    = pDirector->getField();
+        const GridTopology& topology = field.getTopology();
+        if ( _tileIndex >= topology.getCellCount() )
+            return;
+        const int2      cell  = topology.toCell( _tileIndex );
+        const FarmTile* pTile = field.findTile( cell._x, cell._y );
         if ( pTile == nullptr )
             return;
         const int32 soilState = pTile->_bTilled == SW_FALSE ? 0 : ( pTile->_bWatered != SW_FALSE ? 2 : 1 );

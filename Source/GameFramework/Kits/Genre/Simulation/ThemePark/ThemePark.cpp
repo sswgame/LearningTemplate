@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/ThemePark.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -234,9 +235,8 @@ namespace sw
 
         // 떠난 손님을 지운다(놀이기구의 줄과 탑승자에는 남아 있지 않다. 떠나기 전에 뺐다). 한 번에 당겨 담아 순서(id 오름차순)를 지킨다.
         // 손님마다 `erase` 하면 뒤를 매번 옮기게 된다.
-        _listGuest.erase( std::remove_if( _listGuest.begin(), _listGuest.end(), []( const ParkGuest& guest )
-        { return guest._state == ParkGuestState::Left; } ),
-                          _listGuest.end() );
+        VectorUtil::removeIf( _listGuest, []( const ParkGuest& guest )
+        { return guest._state == ParkGuestState::Left; } );
         updateParkRating();
     }
 

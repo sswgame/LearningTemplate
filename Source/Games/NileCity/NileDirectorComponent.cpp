@@ -581,12 +581,14 @@ namespace sw
     {
         preloadModels();
         spawnTerrain( manager );
-        const size_t tileCount = static_cast<size_t>( _city.getWidth() * _city.getHeight() );
+        const GridTopology& topology  = _city.getTopology();
+        const size_t        tileCount = static_cast<size_t>( topology.getCellCount() );
         _listRoadObject.assign( tileCount, GameObjectHandle{} );
         _listRoadShown.assign( tileCount, SW_FALSE );
         for ( int32 tileIndex = 0; tileIndex < static_cast<int32>( tileCount ); ++tileIndex )
         {
-            if ( _city.findTile( tileIndex % _city.getWidth(), tileIndex / _city.getWidth() )->_bRoad == SW_FALSE )
+            const int2 cell = topology.toCell( tileIndex );
+            if ( _city.findTile( cell._x, cell._y )->_bRoad == SW_FALSE )
                 continue;
             _listRoadShown[static_cast<size_t>( tileIndex )] = SW_TRUE;
             spawnRoad( manager, tileIndex );
@@ -641,10 +643,9 @@ namespace sw
     void NileDirectorComponent::spawnRoad( GameObjectManager& manager, int32 tileIndex )
     {
         // 도로 타일은 보도 조각을 타일 크기만큼 늘려 쓴다(팔레트 머티리얼 그대로).
-        const int32 x     = tileIndex % _city.getWidth();
-        const int32 y     = tileIndex / _city.getWidth();
+        const int2  cell  = _city.getTopology().toCell( tileIndex );
         GameObject* pRoad = spawnPrefab( manager, _roadPrefab, "NileRoad" );
-        (void)NileDirectorComponentInternal::placeMesh( pRoad, float3{ static_cast<float32>( x ) + 0.5f, 0.0f, static_cast<float32>( y ) + 0.5f },
+        (void)NileDirectorComponentInternal::placeMesh( pRoad, float3{ static_cast<float32>( cell._x ) + 0.5f, 0.0f, static_cast<float32>( cell._y ) + 0.5f },
                                                         float3{ _roadTileScale } );
         _listRoadObject[static_cast<size_t>( tileIndex )] = pRoad != nullptr ? pRoad->getHandle() : GameObjectHandle{};
     }
@@ -724,10 +725,11 @@ namespace sw
     void NileDirectorComponent::collectViewChanges()
     {
         // 도로 타일은 깔렸거나 철거된 타일만 처리한다. 건물 타일은 새 건물이거나 허물렸거나 다른 건물로 다시 쓰인 타일만 처리한다. 단계와 사람은 뷰가 맞춘다.
-        const int32 width = _city.getWidth();
+        const GridTopology& topology = _city.getTopology();
         for ( int32 tileIndex = 0; tileIndex < static_cast<int32>( _listRoadShown.size() ); ++tileIndex )
         {
-            const uint8 bRoad = _city.findTile( tileIndex % width, tileIndex / width )->_bRoad != SW_FALSE ? SW_TRUE : SW_FALSE;
+            const int2  cell  = topology.toCell( tileIndex );
+            const uint8 bRoad = _city.findTile( cell._x, cell._y )->_bRoad != SW_FALSE ? SW_TRUE : SW_FALSE;
             uint8&      shown = _listRoadShown[static_cast<size_t>( tileIndex )];
             if ( shown == bRoad )
                 continue;

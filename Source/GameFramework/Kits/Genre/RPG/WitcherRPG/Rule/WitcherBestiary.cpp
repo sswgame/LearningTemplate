@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/RPG/WitcherRPG/Rule/WitcherBestiary.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -109,12 +110,7 @@ namespace sw
 
     const WitcherBestiary::Entry* WitcherBestiary::findEntry( const hashed_string& monsterID ) const
     {
-        for ( const Entry& entry : _listEntry )
-        {
-            if ( entry._monsterID == monsterID )
-                return &entry;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&Entry::_monsterID>( _listEntry, monsterID );
     }
 
     bool WitcherBestiary::raiseKnowledge( const hashed_string& monsterID, int32 level )

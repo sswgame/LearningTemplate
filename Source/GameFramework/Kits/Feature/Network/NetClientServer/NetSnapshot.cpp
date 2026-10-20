@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Network/NetClientServer/NetSnapshot.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Network/BitStream.h"
 #include "Core/Network/Message/NetSendBudget.h"
 
@@ -173,10 +174,8 @@ namespace sw
             if ( reader.hasOverflowed() )
                 return false;
             std::sort( listRemoved.begin(), listRemoved.end() );
-            outSnapshot._listEntity.erase( std::remove_if( outSnapshot._listEntity.begin(), outSnapshot._listEntity.end(),
-                                                           [&listRemoved]( const NetEntityState& entity )
-            { return std::binary_search( listRemoved.begin(), listRemoved.end(), entity._entityID ); } ),
-                                           outSnapshot._listEntity.end() );
+            VectorUtil::removeIf( outSnapshot._listEntity, [&listRemoved]( const NetEntityState& entity )
+            { return std::binary_search( listRemoved.begin(), listRemoved.end(), entity._entityID ); } );
         }
         // 기준에 있던 엔티티는 그 항목의 버퍼에 바로 읽고(id 순이므로 이분 탐색), 새 엔티티는 뒤에 붙인 뒤 끝에서 한 번 정렬한다.
         const size_t baselineCount = outSnapshot._listEntity.size(); // [0, baselineCount) 는 id 오름차순이다

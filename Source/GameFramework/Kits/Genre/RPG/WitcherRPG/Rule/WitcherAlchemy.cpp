@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/RPG/WitcherRPG/Rule/WitcherAlchemy.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -192,12 +193,7 @@ namespace sw
 
     bool WitcherAlchemy::isEffectActive( const hashed_string& itemID ) const
     {
-        for ( const WitcherActiveEffect& effect : _listEffect )
-        {
-            if ( effect._itemID == itemID )
-                return true;
-        }
-        return false;
+        return VectorUtil::containsBy<&WitcherActiveEffect::_itemID>( _listEffect, itemID );
     }
 
     hashed_string WitcherAlchemy::getOilElement() const

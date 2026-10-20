@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/RPG/WitcherRPG/Rule/SkillTree.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -15,12 +16,7 @@ namespace sw
 
     const SkillDef* SkillTreeDef::findSkill( const hashed_string& skillID ) const
     {
-        for ( const SkillDef& skill : _listSkill )
-        {
-            if ( skill._id == skillID )
-                return &skill;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&SkillDef::_id>( _listSkill, skillID );
     }
 
     // ------------------------------------------------------------------------------

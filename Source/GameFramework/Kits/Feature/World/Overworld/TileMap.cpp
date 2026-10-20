@@ -2,6 +2,8 @@
 
 #include "GameFramework/Kits/Feature/World/Overworld/TileMap.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include "Engine/TileMap/TileGridUtil.h"
 #include "Engine/TileMap/TileSetAsset.h"
 
@@ -104,14 +106,15 @@ namespace sw
 
     bool TileMap::isFlagSet( TileFlagLayer layer, int32 x, int32 y ) const
     {
-        if ( isInBounds( x, y ) == false )
+        const GridTopology topology = getTopology();
+        if ( topology.isInside( x, y ) == false )
             return false;
-        return _data.getFlagLayer( layer )[indexOf( x, y )] != 0;
+        return _data.getFlagLayer( layer )[static_cast<size_t>( topology.toIndex( x, y ) )] != 0;
     }
 
     bool TileMap::isWalkable( int32 x, int32 y ) const
     {
-        return isFlagSet( TileFlagLayer::Walkable, x, y ) && _listTileSolid[indexOf( x, y )] == 0;
+        return isFlagSet( TileFlagLayer::Walkable, x, y ) && _listTileSolid[static_cast<size_t>( getTopology().toIndex( x, y ) )] == 0;
     }
 
     bool TileMap::isEncounterTile( int32 x, int32 y ) const
@@ -148,15 +151,17 @@ namespace sw
 
     OverworldTileVisual TileMap::getTileVisual( int32 x, int32 y ) const
     {
-        if ( isInBounds( x, y ) == false )
+        const GridTopology topology = getTopology();
+        if ( topology.isInside( x, y ) == false )
             return {};
-        return _data._listVisual[indexOf( x, y )];
+        return _data._listVisual[static_cast<size_t>( topology.toIndex( x, y ) )];
     }
 
     void TileMap::setFlag( TileFlagLayer layer, int32 x, int32 y, bool bSet )
     {
-        if ( isInBounds( x, y ) )
-            _data.getFlagLayer( layer )[indexOf( x, y )] = bSet ? 1 : 0;
+        const GridTopology topology = getTopology();
+        if ( topology.isInside( x, y ) )
+            _data.getFlagLayer( layer )[static_cast<size_t>( topology.toIndex( x, y ) )] = bSet ? 1 : 0;
     }
 
     void TileMap::setWalkable( int32 x, int32 y, bool bWalkable )
@@ -176,8 +181,9 @@ namespace sw
 
     void TileMap::setTileVisual( int32 x, int32 y, const OverworldTileVisual& visual )
     {
-        if ( isInBounds( x, y ) )
-            _data._listVisual[indexOf( x, y )] = visual;
+        const GridTopology topology = getTopology();
+        if ( topology.isInside( x, y ) )
+            _data._listVisual[static_cast<size_t>( topology.toIndex( x, y ) )] = visual;
     }
 
     void TileMap::setOrUpdateWarp( const TileWarp& warp )
@@ -194,10 +200,8 @@ namespace sw
 
     void TileMap::removeWarp( int32 x, int32 y )
     {
-        _data._listWarp.erase( std::remove_if( _data._listWarp.begin(), _data._listWarp.end(),
-                                               [x, y]( const TileWarp& warp )
-        { return warp._tileX == x && warp._tileY == y; } ),
-                               _data._listWarp.end() );
+        VectorUtil::removeIf( _data._listWarp, [x, y]( const TileWarp& warp )
+        { return warp._tileX == x && warp._tileY == y; } );
         rebuildWarpIndex();
     }
 
@@ -266,10 +270,5 @@ namespace sw
         SW_LOG_TRACE( "tile (%#,%#) h=%# tint=(%#,%#,%#) flags walk=%# enc=%# pt=%#",
                       x, y, tileVisual._height, tileVisual._tintR, tileVisual._tintG, tileVisual._tintB,
                       isWalkable( x, y ) ? 1 : 0, isEncounterTile( x, y ) ? 1 : 0, isPassThrough( x, y ) ? 1 : 0 );
-    }
-
-    bool TileMap::isInBounds( int32 x, int32 y ) const
-    {
-        return 0 <= x && x < _data._width && 0 <= y && y < _data._height;
     }
 } // namespace sw

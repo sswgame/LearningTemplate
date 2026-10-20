@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/AsymmetricHorrorRules.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -54,12 +55,7 @@ namespace sw
 
     const HorrorScoreRule* AsymmetricHorrorRulesCatalog::findScoreRule( const hashed_string& action ) const
     {
-        for ( const HorrorScoreRule& rule : _listScoreRule )
-        {
-            if ( rule._action == action )
-                return &rule;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&HorrorScoreRule::_action>( _listScoreRule, action );
     }
 
     uint32 AsymmetricHorrorRulesCatalog::loadRoot( const XMLNode& root, string_view sourceName )

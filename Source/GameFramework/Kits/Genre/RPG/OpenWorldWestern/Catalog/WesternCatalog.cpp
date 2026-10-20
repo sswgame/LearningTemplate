@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Catalog/WesternCatalog.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -87,12 +88,7 @@ namespace sw
 
     const WesternHonorTierDef* WesternCatalog::findHonorTier( const hashed_string& name ) const
     {
-        for ( const WesternHonorTierDef& tier : _listHonorTier )
-        {
-            if ( tier._name == name )
-                return &tier;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&WesternHonorTierDef::_name>( _listHonorTier, name );
     }
 
     const WesternPursuitDef* WesternCatalog::findPursuit( int32 wantedLevel ) const

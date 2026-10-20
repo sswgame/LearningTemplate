@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Casual/Rhythm/RhythmPlaySession.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -499,12 +500,7 @@ namespace sw
 
     const RhythmGradeRule* RhythmPlaySession::findGradeRule( const hashed_string& grade ) const
     {
-        for ( const RhythmGradeRule& rule : _settings._listGradeRule )
-        {
-            if ( rule._grade == grade )
-                return &rule;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&RhythmGradeRule::_grade>( _settings._listGradeRule, grade );
     }
 
     void RhythmPlaySession::finishIfDone()

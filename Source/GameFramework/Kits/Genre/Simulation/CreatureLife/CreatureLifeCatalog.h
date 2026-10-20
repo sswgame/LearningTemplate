@@ -34,7 +34,7 @@ namespace sw
 {
     /**
      * @brief 서식지 레시피 하나입니다. 격자 위 오브젝트의 조합이며, 90° 회전한 모양도 같은 서식지입니다.
-     * @details 패턴은 `_width` x `_height` 크기의 행 우선 배열이다. 서식지는 "무엇이든 되는 셀" 이 아닌 셀을 차지한다(한 셀은 한 서식지에만 속한다).
+     * @details 패턴은 `_topology` 크기의 행 우선 배열이다. 서식지는 "무엇이든 되는 셀" 이 아닌 셀을 차지한다(한 셀은 한 서식지에만 속한다).
      */
     REFLECT()
     struct SW_KIT_API HabitatDef
@@ -48,11 +48,10 @@ namespace sw
         PROPERTY( Min = 1 )
         int32 _capacity{ 1 }; ///< 이 서식지 하나에 머무는 생물 수
 
-        vector<HabitatCell> _listCell{}; ///< 행 우선 배열이다(y x width + x). `<Key>` · `<Row>` 자식에서 읽는다
-        int32               _width{ 0 };
-        int32               _height{ 0 };
+        vector<HabitatCell> _listCell{}; ///< 행 우선 배열이다(칸 번호는 `_topology`). `<Key>` · `<Row>` 자식에서 읽는다
+        GridTopology        _topology{}; ///< 패턴의 너비와 높이
 
-        const HabitatCell& getCell( int32 x, int32 y ) const { return _listCell[static_cast<size_t>( GridTopology( _width, _height ).toIndex( x, y ) )]; }
+        const HabitatCell& getCell( int32 x, int32 y ) const { return _listCell[static_cast<size_t>( _topology.toIndex( x, y ) )]; }
         /** @brief 차지하는 셀 수를 반환합니다(무엇이든 되는 셀은 제외합니다). 큰 서식지를 먼저 맞춥니다. */
         int32 countClaimedCells() const;
     };

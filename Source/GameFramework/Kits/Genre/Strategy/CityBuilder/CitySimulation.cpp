@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CitySimulation.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -419,9 +420,8 @@ namespace sw
         updateBuildings( deltaTime );
         updateWalkers( deltaTime );
         updateHouses( deltaTime );
-        _listWalker.erase( std::remove_if( _listWalker.begin(), _listWalker.end(), []( const CityWalker& walker )
-        { return walker._bAlive == SW_FALSE; } ),
-                           _listWalker.end() );
+        VectorUtil::removeIf( _listWalker, []( const CityWalker& walker )
+        { return walker._bAlive == SW_FALSE; } );
     }
 
     void CitySimulation::assignLabor()

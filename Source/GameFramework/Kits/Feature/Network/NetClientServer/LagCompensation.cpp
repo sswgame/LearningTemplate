@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Network/NetClientServer/LagCompensation.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 namespace sw
@@ -19,12 +20,7 @@ namespace sw
 
     const LagRecord* LagCompensationHistory::findRecord( const vector<LagRecord>& listRecord, uint32 entityID )
     {
-        for ( const LagRecord& record : listRecord )
-        {
-            if ( record._entityID == entityID )
-                return &record;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&LagRecord::_entityID>( listRecord, entityID );
     }
 
     bool LagCompensationHistory::sampleAt( float32 tick, uint32 entityID, LagRecord& outRecord ) const
