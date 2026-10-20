@@ -8,6 +8,7 @@
 #include "Engine/Observability/MetricRegistry.h"
 
 #include "GameFramework/Base/Online/Config/RemoteConfig.h"
+#include "GameFramework/Base/Online/Ledger/LedgerAudit.h"
 #include "GameFramework/Base/Online/Store/ServiceStore.h"
 #include "GameFramework/Base/Online/Store/ServiceStoreUtil.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyStoreLogic.h"
@@ -103,6 +104,26 @@ namespace sw
             uint64               _callID;
             int32                _methodIndex;
         };
+        /** @brief 원장 보존 검사 한 번입니다. 표 전체를 읽는다. */
+        class EconomyLedgerAuditWork final : public IServiceStoreWork
+        {
+        public:
+            explicit EconomyLedgerAuditWork( EconomyService* pService )
+                : _report{}
+                , _pService{ pService }
+                , _result{ ServiceStoreResult::Unavailable }
+            {
+            }
+
+            void run( IServiceStoreConnection& connection ) override { _result = LedgerAudit::computeReport( connection, _report ); }
+            void complete() override { _pService->completeLedgerAudit( _result, _report ); }
+
+        private:
+            LedgerAuditReport  _report;
+            EconomyService*    _pService;
+            ServiceStoreResult _result;
+        };
+
         /** @brief 환불 알림 하나의 회수입니다. 응답이 없다. */
         class EconomyRefundWork final : public IServiceStoreWork
         {
@@ -139,6 +160,10 @@ namespace sw
         , _pMetricRegistry{ nullptr }
         , _nextCallID{ 1 }
         , _pendingRefundCount{ 0 }
+        , _auditRun{}
+        , _bAuditPending{ SW_FALSE }
+        , _bAuditRunHeld{ SW_FALSE }
+        , _bLastAuditBalanced{ SW_FALSE }
         , _nowMs{ 0 }
     {
     }
@@ -166,6 +191,18 @@ namespace sw
         _pStore          = pStore;
         _settings        = settings;
         _pMetricRegistry = settings._pMetricRegistry;
+        if ( settings._pScheduler != nullptr )
+        {
+            ScheduleDefinition schedule;
+            schedule._jobID       = kAuditJobID;
+            schedule._kind        = ScheduleKind::Daily;
+            schedule._minuteOfDay = settings._auditMinuteOfDay;
+            if ( settings._pScheduler->registerJob( schedule, this ) == false )
+            {
+                SW_LOG_ERROR( "EconomyService: the ledger audit job could not be scheduled (minute of day %#)", settings._auditMinuteOfDay );
+                return false;
+            }
+        }
         _metrics.initialize<EconomyMethodName, EconomyResult>( settings._pMetricRegistry, "economy" );
         return true;
     }
@@ -174,7 +211,7 @@ namespace sw
     {
         // 영수증 검증 완료도 호출을 끝내므로 걸음마다 같이 거둔다.
         ServiceStoreUtil::drainUntilIdle( _pStore, [this]()
-        { return _listPendingCall.empty() && _pendingRefundCount <= 0; }, [this]()
+        { return _listPendingCall.empty() && _pendingRefundCount <= 0 && _bAuditPending == SW_FALSE; }, [this]()
         { pollReceipts(); } );
         if ( _listPendingCall.empty() == false )
         {
@@ -339,6 +376,56 @@ namespace sw
                 break;
             }
         }
+    }
+
+    void EconomyService::onScheduledRun( const ScheduledRun& run )
+    {
+        _auditRun      = run;
+        _bAuditRunHeld = SW_TRUE;
+        requestLedgerAudit();
+    }
+
+    void EconomyService::requestLedgerAudit()
+    {
+        if ( _pStore == nullptr || _bAuditPending == SW_TRUE )
+            return;
+        _bAuditPending = SW_TRUE;
+        _pStore->submit( make_unique<EconomyLedgerAuditWork>( this ) );
+    }
+
+    void EconomyService::completeLedgerAudit( ServiceStoreResult result, const LedgerAuditReport& report )
+    {
+        _bAuditPending      = SW_FALSE;
+        const bool bRead    = result == ServiceStoreResult::Ok;
+        _bLastAuditBalanced = bRead && report.isBalanced() ? SW_TRUE : SW_FALSE;
+        if ( bRead == false )
+            SW_LOG_ERROR( "EconomyService: the ledger audit could not read the store" );
+        else if ( report.isBalanced() == false )
+            SW_LOG_ERROR( "EconomyService: the ledger is not balanced (negative escrows %#, unreadable records %#)", report._negativeEscrowCount, report._unreadableRecordCount );
+        if ( bRead && _pMetricRegistry != nullptr )
+        {
+            for ( const LedgerAssetAudit& asset : report._listAsset )
+            {
+                const vector<MetricLabel> listLabel = {
+                    { "asset", asset._assetID }
+                };
+                MetricGauge* pIssued    = _pMetricRegistry->registerGauge( "economy_issued_total", "Amount minted per asset (ledger audit)", listLabel );
+                MetricGauge* pBurned    = _pMetricRegistry->registerGauge( "economy_burned_total", "Amount burned per asset (ledger audit)", listLabel );
+                MetricGauge* pHeld      = _pMetricRegistry->registerGauge( "economy_held_total", "Amount held by accounts and escrows per asset (ledger audit)", listLabel );
+                MetricGauge* pImbalance = _pMetricRegistry->registerGauge( "economy_ledger_imbalance", "held - (issued - burned) per asset; must be 0", listLabel );
+                if ( pIssued != nullptr )
+                    pIssued->set( static_cast<float64>( asset._issued ) );
+                if ( pBurned != nullptr )
+                    pBurned->set( static_cast<float64>( asset._burned ) );
+                if ( pHeld != nullptr )
+                    pHeld->set( static_cast<float64>( asset._held ) );
+                if ( pImbalance != nullptr )
+                    pImbalance->set( static_cast<float64>( asset._held - ( asset._issued - asset._burned ) ) );
+            }
+        }
+        if ( _bAuditRunHeld == SW_TRUE && _settings._pScheduler != nullptr )
+            _settings._pScheduler->completeRun( _auditRun, bRead );
+        _bAuditRunHeld = SW_FALSE;
     }
 
     void EconomyService::pollRefunds()

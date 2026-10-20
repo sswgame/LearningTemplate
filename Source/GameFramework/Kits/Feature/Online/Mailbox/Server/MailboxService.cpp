@@ -179,6 +179,8 @@ namespace sw
         , _bSweepRequested{ SW_FALSE }
         , _bCampaignRefreshPending{ SW_FALSE }
         , _bNoticePending{ SW_FALSE }
+        , _bSweepRunHeld{ SW_FALSE }
+        , _sweepRun{}
     {
     }
 
@@ -205,6 +207,18 @@ namespace sw
                     MetricLabel{ "action", MailboxServiceInternal::kArrExpiryAction[actionIndex] }
                 };
                 _arrExpiredCounter[actionIndex] = settings._pMetricRegistry->registerCounter( "mailbox_expired_total", "Expired mail handled by the sweep", listLabel );
+            }
+        }
+        if ( settings._pScheduler != nullptr )
+        {
+            ScheduleDefinition schedule;
+            schedule._jobID      = kSweepJobID;
+            schedule._kind       = ScheduleKind::Interval;
+            schedule._intervalMs = settings._sweepIntervalMs;
+            if ( settings._pScheduler->registerJob( schedule, this ) == false )
+            {
+                SW_LOG_ERROR( "MailboxService: the sweep job could not be scheduled (sweepIntervalMs %# must be at least a minute)", settings._sweepIntervalMs );
+                return false;
             }
         }
         return true;
@@ -250,7 +264,8 @@ namespace sw
             _nextCampaignRefreshMs   = nowMs + _settings._campaignRefreshMs;
             _pStore->submit( make_unique<MailboxCampaignWork>( this ) );
         }
-        const bool bSweepDue = ( _settings._sweepIntervalMs > 0 && nowMs >= _nextSweepMs ) || _bSweepRequested == SW_TRUE;
+        const bool bTickSweep = _settings._pScheduler == nullptr && _settings._sweepIntervalMs > 0 && nowMs >= _nextSweepMs; // 예약 테이블이 있으면 회차가 부른다
+        const bool bSweepDue  = bTickSweep || _bSweepRequested == SW_TRUE;
         if ( _bSweepPending == SW_FALSE && bSweepDue )
         {
             _bSweepPending   = SW_TRUE;
@@ -313,6 +328,13 @@ namespace sw
         if ( _settings._pOfflinePush == nullptr || accountID == kInvalidAccountID )
             return;
         (void)_settings._pOfflinePush->sendOfflinePush( accountID, "push.mail.title", "push.mail.body", "mailbox", _nowMs ); // 도배 제한에 걸리면 보내지 않는다. 우편은 목록에 있다
+    }
+
+    void MailboxService::onScheduledRun( const ScheduledRun& run )
+    {
+        _sweepRun      = run;
+        _bSweepRunHeld = SW_TRUE;
+        requestSweep();
     }
 
     void MailboxService::requestSweep()
@@ -396,7 +418,13 @@ namespace sw
         if ( stats._failedCount > 0 )
             SW_LOG_WARNING( "Mail sweep left %# expired mails for the next pass", stats._failedCount );
         if ( stats._bMore == SW_TRUE )
+        {
             _bSweepRequested = SW_TRUE; // 상한까지 채웠으므로 다음 틱에 바로 다시 정리한다
+            return;
+        }
+        if ( _bSweepRunHeld == SW_TRUE && _settings._pScheduler != nullptr )
+            _settings._pScheduler->completeRun( _sweepRun, stats._failedCount == 0 ); // 남은 것이 있으면 실패로 적어 다음 회차가 다시 본다
+        _bSweepRunHeld = SW_FALSE;
     }
 
     void MailboxService::completeCampaignRefresh( ServiceStoreResult result, vector<ServiceMailCampaign>& inoutListCampaign )

@@ -312,6 +312,11 @@ namespace sw
                 occurrenceMs       = bInside ? definition._windowStartMs : -1;
                 break;
             }
+            case ScheduleKind::Interval:
+            {
+                occurrenceMs = ServiceSchedulerInternal::floorDivide( nowMs, definition._intervalMs ) * definition._intervalMs;
+                break;
+            }
         }
         return occurrenceMs >= 0 ? occurrenceMs : -1;
     }
@@ -335,6 +340,8 @@ namespace sw
                 return 0 <= definition._minuteOfDay && definition._minuteOfDay < 24 * 60 && 0 <= definition._dayOfWeek && definition._dayOfWeek < 7;
             case ScheduleKind::Window:
                 return 0 <= definition._windowStartMs && definition._windowStartMs < definition._windowEndMs;
+            case ScheduleKind::Interval:
+                return definition._intervalMs >= ServiceSchedulerInternal::kMinuteMs;
         }
         return false;
     }

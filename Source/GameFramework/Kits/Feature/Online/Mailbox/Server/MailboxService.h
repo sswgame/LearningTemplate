@@ -16,6 +16,7 @@
 
 #include "GameFramework/Base/Online/Mail/ServiceMailCampaign.h"
 #include "GameFramework/Base/Online/Observability/ServiceMetrics.h"
+#include "GameFramework/Base/Online/Schedule/ServiceScheduler.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Mailbox/Server/MailboxStoreLogic.h"
@@ -33,13 +34,15 @@ namespace sw
     class IServiceStore;
     class MetricCounter;
     class MetricRegistry;
+    class ServiceScheduler;
 
     /** @brief 우편함 서비스 설정입니다. 포인터는 빌려 씁니다. */
     struct MailboxServiceConfig
     {
         const ILedgerPolicy* _pPolicy{ nullptr }; ///< 계정 상한이다. 게임이 CurrencyCatalog 를 넘기며, 기반 계층의 계약이라 키트끼리 몰라도 된다
         MetricRegistry*      _pMetricRegistry{ nullptr };
-        int64                _sweepIntervalMs{ 60000 }; ///< 만료 정리 주기이다. 0이면 끄며 이때는 예약 작업이 `requestSweep` 을 부른다
+        int64                _sweepIntervalMs{ 60000 }; ///< 만료 정리 주기이다. 예약 테이블이 있으면 그 주기의 예약 작업(`mail.sweep`)으로 서버 하나만 돌린다
+        ServiceScheduler*    _pScheduler{ nullptr };    ///< 서버 조립의 예약 테이블이다. 없으면(테스트, 서버 한 대 도구) 틱 주기로 정리한다
         int64                _campaignRefreshMs{ 60000 };
         int32                _sweepBatchCount{ 256 };
         int64                _noticeIntervalMs{ 1000 }; ///< 새 우편 알림을 가져가는 주기이다. 0 이면 알림을 보내지 않는다(다른 서버가 맡는다)
@@ -65,7 +68,7 @@ namespace sw
 namespace sw
 {
     /** @class MailboxService @brief 우편함 요청 처리기입니다. 서비스 스레드에서 씁니다. */
-    class SW_KIT_SERVER_API MailboxService final : public IOnlineHostService
+    class SW_KIT_SERVER_API MailboxService final : public IOnlineHostService, public IScheduledJobHandler
     {
     public:
         using ReplyDelegate = Delegate<void( const MailboxReply& )>;
@@ -91,6 +94,9 @@ namespace sw
         const OnlineProtocolEntry& getProtocol() const override { return MailboxProtocol::kOnlineEntry; }
         void                       onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
         void                       onServiceTick( OnlineServiceHost& host, int64 nowMs ) override;
+        // IScheduledJobHandler — 만료 정리 회차를 차지했다
+        void                         onScheduledRun( const ScheduledRun& run ) override;
+        static constexpr const utf8* kSweepJobID = "mail.sweep";
 
         /** @brief 작업의 `complete` 가 호출합니다. */
         void completeCall( uint64 callID, const MailboxReply& reply );
@@ -138,5 +144,7 @@ namespace sw
         uint8                                 _bSweepRequested;
         uint8                                 _bCampaignRefreshPending;
         uint8                                 _bNoticePending;
+        uint8                                 _bSweepRunHeld; ///< 예약 회차를 차지해 정리하는 중이다. 끝나면 `completeRun`
+        ScheduledRun                          _sweepRun;      ///< 차지한 회차이다
     };
 } // namespace sw

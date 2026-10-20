@@ -120,6 +120,19 @@ SW_TEST_CASE( EconomyServiceTest, RepliesArriveOnlyOnStoreCompletion )
     SW_EXPECT_EQUAL( wallet._reply._listBalance[0]._amount, int64( 100 ) );
 }
 
+SW_TEST_CASE( EconomyServiceTest, LedgerAuditPublishesIssuedBurnedAndHeldTotals )
+{
+    EconomyServiceFixture fixture;
+    SW_EXPECT_FALSE( fixture._service.wasLastAuditBalanced() ); // 아직 검사하지 않았다
+    fixture._service.requestLedgerAudit();
+    fixture.update( 1000 );
+    SW_EXPECT_TRUE( fixture._service.wasLastAuditBalanced() );
+    string text;
+    fixture._metrics.writePrometheusText( text );
+    SW_EXPECT_TRUE( text.find( "economy_issued_total{asset=\"cur.gold\"} 100" ) != string::npos ); // 준비에서 발행한 100
+    SW_EXPECT_TRUE( text.find( "economy_ledger_imbalance{asset=\"cur.gold\"} 0" ) != string::npos );
+}
+
 SW_TEST_CASE( EconomyServiceTest, SameKeyPurchaseChargesOnce )
 {
     EconomyServiceFixture fixture;
