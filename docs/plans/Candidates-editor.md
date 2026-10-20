@@ -45,6 +45,15 @@
 GameFramework 에디터 플러그인의 `setPanelOpen( "admin.tool" )` · `"gimmick_graph"` · `"charactereditor.main"`, `EditorSelfTestDevTools.cpp` 의 `ImGui::SetWindowFocus( "Scene" )`(창 제목 글). 오타는 실행 중 false 로만 드러난다.
 남은 것: 같은 모듈이면 `setPanelOpen<T>()` 로, 층이 막히면 id 상수를 아래 층(패널 호스트 창구)으로 내린다.
 
+### ScenarioWritesSourceTree
+제목: 에디터 시나리오가 저장소 소스 트리에 직접 쓴다
+옛번호: 없음
+왜 필요한가: 에디터 시나리오를 한 번 돌리면 추적 중인 리소스가 바뀌거나 잔여 파일이 남는다(2026-10-20 DX12 묶음에서 확인).
+`animgraphlayers/animgraphlayers.animgraph.json` 이 줄바꿈이 바뀐 채 남고, `assetmanage` 가 `new_material.material` · `new_material_2.material` 을 남기고 추적 중인 `probe.material(.meta)` 를 지운다.
+잔여 파일이 있으면 다음 실행이 다른 이름(`new_material_2`)을 만들고 검증의 `[orphans]` 경고로 시나리오가 진다 — 중단된 실행(옛 프로세스)이 남긴 파일이 다음 실행을 지게 한 것으로 보이며 정확한 원인은 확인하지 못했다.
+근본 원인: 시나리오가 `Resource/` 원본에 쓴다. 증상(파일 지우기 · 되돌리기)이 아니라 시나리오가 쓰는 곳을 실행마다 비우는 임시 폴더로 옮기는 것이 구조적 해결이다.
+남은 것: 시나리오 에셋 쓰기를 임시 마운트로 보내는 길(엔진이 쓰기 가능한 임시 루트를 제공), 그 전까지 시나리오 시작 전에 작업 트리가 깨끗한지 확인하는 게이트를 둘지 판단.
+
 ### DesignerDataToolsAudit
 제목: 디자이너용 데이터 도구 점검
 옛번호: D3-13
