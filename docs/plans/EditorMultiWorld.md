@@ -174,11 +174,19 @@ Undo 를 창마다 두는 것은 두 엔진과 다릅니다. 두 엔진 모두 �
 단계 1~4 와 머티리얼 창은 들어갔습니다(각 단계의 "구현됨"). 규모가 XL 이라 에디터 보강 묶음에서 뺐고 설계부터 따로 짰습니다(2026-10-14 사용자 결정).
 
 1. **프리팹 창의 남은 것** — 본체는 단계 5 의 "구현됨". 콘텐츠 브라우저의 프리팹 열기는 새 창으로 돌렸고(종류 테이블의 프리팹 패널 제목 = "Prefab Window", 오버라이드 도구 `PrefabPanel` 은 "Prefab Overrides" 로 따로 둠),
-   X 로 닫을 때의 미저장 확인(Save / Don't Save / Cancel, 저장 실패면 열어 둠)도 들어갔다. 둘 다 GPU 없이 테스트(`EditorPrefabIsolationTest.CloseAsksOnlyWhenEditsRemain` · `EditorAssetType` 제목 단언)했다.
-   **닫기 확인은 프리팹 창 것이 아니라 문서 패널 공통이다**(2026-10-20). `EditorDocumentPanel::drawContent` 를 `final` 로 막고 파생이 `drawDocumentContent` 를 구현하게 했으므로 머티리얼 · 시퀀서 · 타일맵 · 그래프 · VFX 창도 X 로 닫을 때 같은 확인을 받고, 확인을 건너뛰는 문서 패널은 컴파일되지 않는다.
-   "Don't Save" 는 `revertDocument` 로 편집을 버린다 — 기본은 문서를 다시 읽기(`reloadDocument`), 프리팹 창은 디스크 프리팹으로 문서 루트를 다시 세움(재정의). 미리보기 씬의 편집은 창 Undo 스택이 늘고 줄 때 기반(`EditorPreviewPanel::syncDocumentDirty`)이 dirty 로 표시하므로 파생이 따로 알리지 않는다.
-   확인하지 않은 것: 프리팹 창 밖 문서 패널의 닫기 확인 화면(머티리얼 창 등) — 프리팹 창만 DX12 화면으로 확인했다.
-   확인함(2026-10-20, DX12, `editor.prefabwindow`): 콘텐츠 브라우저 더블클릭이 "Prefab Window" 탭(가운데 도크)을 열고, 편집 뒤 X 는 Save / Don't Save / Cancel 모달을 띄우며 Cancel 은 열어 두고 Don't Save 는 닫고 다시 열면 깨끗하고 그때의 X 는 묻지 않는다. 남은 것: 다른 세 백엔드 화면, 패널 메뉴 토글 등 X 가 아닌 닫는 길(확인하지 않는다).
+   X 로 닫을 때의 미저장 확인(Save / Don't Save / Cancel, 저장 실패면 열어 둠)도 들어갔다. 둘 다 GPU 없이 테스트(`EditorPanelDocumentTest` 의 닫기 상태 전이 · `EditorAssetType` 제목 단언)했다.
+   **닫기 확인은 프리팹 창 것도 문서 패널 것도 아니라 모든 패널 공통이고, 닫는 길은 하나다**(2026-10-20). 확인은 `IEditorPanel` 에 있다. `setOpen( false )` 가 `requestClose` 라서 미저장 편집이 있으면 열어 둔 채 Save / Don't Save / Cancel 을 기다리고,
+   X 는 `draw` 가 창을 연 직후 `absorbCloseButton` 으로 같은 길에 넣는다(접힌 창 · 숨은 탭의 X 도 — 모달은 창 밖에서 그린다). 그래서 문서 패널이 아닌 패널 중 편집 상태가 있는 것(Data Table · Project Settings · Catalog · Input Map · UI Preview)과
+   패널 메뉴 토글 · 이름 붙인 레이아웃 불러오기 · 최대화 · 프리팹 창의 Close · `panel.close` 가 모두 같은 확인을 받는다. 닫는 길마다 확인을 손으로 부르는 코드는 없다.
+   편집이 패널 밖에 살아 닫아도 잃는 것이 없는 패널만 `asksBeforeClose` 로 빠진다 — 지금은 전역 변수 창 하나(값이 관리자에 바로 적용되어 있어, 확인을 두면 저장하거나 값을 초기화하지 않고는 창을 숨길 수 없다). 편집 상태가 없는 패널은 dirty 가 없어 달라지지 않는다.
+   에디터 종료는 원래 `EditorSceneFileCommands::tryBeginQuit` 가 열린 · 닫힌 패널의 dirty 를 모두 세어 종료 확인(Save All / Don't Save / Cancel)을 거치므로 그대로다. `panel.resetOptional` 과 모듈 언로드(`releasePanelsWithin`)는 패널을 닫는 것이 아니라 인스턴스를 버리는 것이라(문서에 적힌 대로 편집을 버린다) 묻지 않는다 — 시나리오 체인의 초기화가 쓴다.
+   "Don't Save" 는 `revertDocument` 로 편집을 버린다 — 문서 패널의 기본은 문서를 다시 읽기(`reloadDocument`), 프리팹 창은 디스크 프리팹으로 문서 루트를 다시 세움(재정의). 미리보기 씬의 편집은 창 Undo 스택이 늘고 줄 때 기반(`EditorPreviewPanel::syncDocumentDirty`, 이제 `IEditorPanel` 의 훅)이 dirty 로 표시하므로 파생이 따로 알리지 않는다.
+   `EditorDocumentPanel::drawContent` 가 `final` 이고 `drawDocumentContent` 를 부르는 구조는 남겼다(닫기 확인을 지키려던 것이 아니라 파생 이름을 되돌리는 변경을 피하려고).
+   문서 패널의 상태 · 읽기 · 되돌리기는 ImGui 없이 `EditorDocumentPanelCore.cpp` 로 나눠 `EditorTest` 가 가짜 파생을 링크한다 — `EditorPanelDocumentTest.DiscardReloadsTheDocumentByDefault`(되돌리기 기본) 와 닫기 상태 전이 테스트(`CleanPanelClosesAtOnce` · `DirtyPanelAsksOnEveryClosePath` · `CloseChoiceDecidesWhatHappensToTheEdits` · `FailedSaveKeepsThePanelOpen` · `LivePanelClosesWithoutAsking`)가 있다.
+   확인하지 않은 것: 문서 패널 중 프리팹 창 밖(머티리얼 창 등)의 닫기 확인 화면 — 기반이 하나이고 Input Map 과 프리팹 창이 같은 화면을 냈다는 것으로 갈음했다. 최대화 · 레이아웃 불러오기에 편집 중인 패널이 걸렸을 때의 모달 여러 개 동시 표시는 화면으로 보지 않았다(모달 ID 는 패널마다 따로다).
+   확인함(2026-10-20, DX12, `editor.prefabwindow`): 콘텐츠 브라우저 더블클릭이 "Prefab Window" 탭(가운데 도크)을 열고, 편집 뒤 X 는 Save / Don't Save / Cancel 모달을 띄우며 Cancel 은 열어 두고 Don't Save 는 닫고 다시 열면 깨끗하고 그때의 X 는 묻지 않는다.
+   확인함(2026-10-20, DX12, `editor.panelclose`): 문서 패널이 아닌 Input Map Editor 에서 발화 규칙을 고치면 제목에 ● 와 "Unsaved changes" 가 뜨고, 메뉴 토글 경로(`panel.close`)는 창을 닫지 않고 "This document has unsaved changes. Close anyway?" 모달을 띄우며 Cancel 은 열어 두고 편집(HoldThreshold)도 남는다.
+   X 도 같은 모달을 띄우고 Don't Save 는 창을 닫으며, 다시 열면 바인딩이 Pressed 로 돌아가 있고 제목 표시도 없다(캡처 4장을 눈으로 봄). 남은 것: 다른 세 백엔드 화면.
    고침(2026-10-20): 제목을 나눈 뒤 기본 배치가 종류 테이블 제목("Prefab Window")만 붙여 열린 채 시작하는 "Prefab Overrides" 가 떠 있는 큰 창으로 씬 뷰를 덮었다. 패널이 영역을 밝히게(`getDefaultDockSlot`) 바꿔 가운데 탭으로 돌렸다(결정 기록 5-11).
 3. **스카이** — 엔진에 스카이 컴포넌트가 없어 조명 환경 프리셋(`EditorPreviewEnvironment`)은 방향광 · 바닥뿐이다.
 4. **풀 공유** — 미리보기 렌더러가 씬마다 머티리얼 · 정점 풀 · PSO 캐시를 따로 든다(결정 기록 5-11). 창 여럿을 띄운 메모리 · 첫 프레임 히치를 재고 필요하면 결정 2 대로 공유한다.

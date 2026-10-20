@@ -84,7 +84,8 @@ namespace sw::editor
                 const bool     bClosePanelFailed = listArgument.size() != 1 || pContext == nullptr || pContext->getSubsystem<EditorPanelManager>().setPanelOpen( listArgument[0], false ) == false;
                 if ( bClosePanelFailed )
                     return false;
-                outReply = "closed " + listArgument[0];
+                const IEditorPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanelByID( listArgument[0] );
+                outReply                   = ( pPanel != nullptr && pPanel->isOpen() ? "waiting for the close confirmation of " : "closed " ) + listArgument[0];
                 return true;
             }
 

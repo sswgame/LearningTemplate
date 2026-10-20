@@ -38,7 +38,7 @@ namespace sw::editor
      *            그것을 겨눈다(`editor::getFocusedSelection`). 인스펙터의 값 · 구조 편집과 전역 명령(삭제 · 정렬 …)의 기록은 이 창의 스택에 남는다
      *            (`EditorTransaction` 이 오브젝트가 사는 씬으로 스택을 고른다).
      *          - 창 스택이 늘거나 줄면 기반이 문서를 dirty 로 표시한다(`syncDocumentDirty`, 닫기 확인보다 앞선다) — 파생이 미리보기 씬 편집을 따로 알릴 필요가 없다.
-     *            저장에 성공하면 `acknowledgePreviewEdits`, 문서를 다시 세우면 `resetPreviewEdits` 를 부른다. 닫기 확인은 `EditorDocumentPanel` 이 한다.
+     *            저장에 성공하면 `acknowledgePreviewEdits`, 문서를 다시 세우면 `resetPreviewEdits` 를 부른다. 닫기 확인은 `IEditorPanel::requestClose` 가 한다.
      *          - 창을 내릴 때(`shutdown`) 씬 · 타깃 · 초점을 놓는다. 파생이 `shutdown` 을 재정의하면 기반의 것을 부른다.
      */
     class SW_EDITOR_API EditorPreviewPanel : public EditorDocumentPanel

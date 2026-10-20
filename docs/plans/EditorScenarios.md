@@ -21,7 +21,7 @@
 | 지형 브러시 | `terrainbrush` · `rhiswap/terrainedits` | `flowterrain`(편집 → 플레이 → 백엔드 교체 → 되돌리기) |
 | 메시 모디파이어 | `meshmodifiers` | `flowedit`(배치 → 휘기 → 플레이 뒤 미리보기 유지) |
 | 캐릭터 편집 | `charactereditor` | `game/shooter3d/automation/charactereditorscene`(외형 → 데이터 프리셋 내보내기 → 씬의 외형 컴포넌트가 그 id → 플레이 조립) |
-| 입력 맵 창 | `inputmapedit` · `inputmaptaps` | — |
+| 입력 맵 창 | `inputmapedit` · `inputmaptaps` · `panelclose`(문서 패널이 아닌 패널의 닫기 확인) | — |
 | UI 미리보기 · 디자이너 | `uipreview` · `uipreviewdesigner` · `uiscale` | — |
 | 다중 월드 미리보기 | `previewscene` | — |
 | 머티리얼 · 셰이더 | `materialpreview` | — |

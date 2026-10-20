@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Editor/Common/GUI/EditorDocumentPanel.h"
 #include "Editor/Common/GUI/IEditorPanel.h"
 
 #include "TestFramework/TestFramework.h"
@@ -56,6 +57,41 @@ namespace
         int32 _revertCount{ 0 };
         bool  _bSaveSucceeds{ true };
         bool  _bSaveAllowed{ true };
+    };
+
+    /** @brief 편집이 패널 밖에 살아서 닫아도 잃는 것이 없는 패널 — 닫기 확인을 두지 않는다(`GlobalVariablesPanel` 이 이렇다). */
+    class FakeLivePanel : public FakeDocumentPanel
+    {
+    protected:
+        bool asksBeforeClose() const override { return false; }
+    };
+
+    /**
+     * @brief 문서 패널의 최소 파생 — `drawDocumentContent` 와 `loadDocument` 와 `saveDocument` 만 구현한다(`revertDocument` 는 구현하지 않는다).
+     * @details `EditorDocumentPanelCore.cpp` 가 ImGui 없이 링크되므로 가짜 파생이 링크된다.
+     */
+    class FakeReloadPanel : public EditorDocumentPanel
+    {
+    public:
+        FakeReloadPanel()
+            : EditorDocumentPanel{ EditorAssetType::Data, false }
+        {
+        }
+
+        void  edit() { markDocumentDirty(); }
+        int32 getLoadCount() const { return _loadCount; }
+
+    protected:
+        void                drawDocumentContent() override {}
+        ToolAssetLoadResult loadDocument() override
+        {
+            ++_loadCount;
+            return ToolAssetLoadResult::Loaded;
+        }
+        [[nodiscard]] bool saveDocument() override { return true; }
+
+    private:
+        int32 _loadCount{ 0 };
     };
 
     /** @brief 문서가 없는 패널 — 계약을 아무것도 구현하지 않는다. */
@@ -190,4 +226,147 @@ SW_TEST_CASE( EditorPanelDocumentTest, SaveIsRefusedWhenTheDocumentCannotBeSaved
     panel.setSaveAllowed( true );
     SW_EXPECT_TRUE( panel.saveDocumentAndClearDirty() );
     SW_EXPECT_EQUAL( 1, panel.getSaveCount() );
+}
+
+/**
+ * @brief [EditorPanelDocumentTest] 깨끗한 패널은 닫기 요청에 바로 닫히고, 이미 닫힌 패널은 확인을 쥐지 않는다
+ */
+SW_TEST_CASE( EditorPanelDocumentTest, CleanPanelClosesAtOnce )
+{
+    FakeDocumentPanel panel;
+    panel.setOpen( true );
+
+    panel.setOpen( false );
+    SW_EXPECT_FALSE( panel.isOpen() );
+    SW_EXPECT_FALSE( panel.isCloseConfirmPending() );
+
+    panel.edit();
+    panel.requestClose(); // 닫힌 패널은 그려지지 않는다 — 확인이 남으면 다시 열 때 갑자기 뜬다
+    SW_EXPECT_FALSE( panel.isCloseConfirmPending() );
+}
+
+/**
+ * @brief [EditorPanelDocumentTest] 미저장 편집이 있으면 어느 길로 닫으려 해도 열어 둔 채 확인을 기다린다
+ * @details 패널 메뉴 토글 · 레이아웃 불러오기 · 최대화 · 프리팹 창의 Close 는 `setOpen( false )`, X 는 ImGui 가 내린 열림 표시(`absorbCloseButton`)다.
+ */
+SW_TEST_CASE( EditorPanelDocumentTest, DirtyPanelAsksOnEveryClosePath )
+{
+    FakeDocumentPanel panel;
+    panel.setOpen( true );
+    panel.edit();
+
+    panel.setOpen( false ); // 메뉴 토글 등
+    SW_EXPECT_TRUE( panel.isOpen() );
+    SW_EXPECT_TRUE( panel.isCloseConfirmPending() );
+
+    panel.applyCloseChoice( EditorUnsavedChoice::Cancel );
+    SW_EXPECT_TRUE( panel.isOpen() );
+    SW_EXPECT_FALSE( panel.isCloseConfirmPending() );
+    SW_EXPECT_TRUE( panel.isDocumentDirty() );
+
+    *panel.getOpenFlagAddress() = false; // X: ImGui 는 열림 표시만 내린다
+    panel.absorbCloseButton();
+    SW_EXPECT_TRUE( panel.isOpen() );
+    SW_EXPECT_TRUE( panel.isCloseConfirmPending() );
+    SW_EXPECT_EQUAL( 0, panel.getRevertCount() ); // 묻는 동안 아무것도 버리지 않는다
+}
+
+/**
+ * @brief [EditorPanelDocumentTest] X 가 내린 열림 표시도 깨끗한 패널은 그대로 닫는다
+ */
+SW_TEST_CASE( EditorPanelDocumentTest, CleanPanelAcceptsTheCloseButton )
+{
+    FakeDocumentPanel panel;
+    panel.setOpen( true );
+
+    *panel.getOpenFlagAddress() = false;
+    panel.absorbCloseButton();
+    SW_EXPECT_FALSE( panel.isOpen() );
+    SW_EXPECT_FALSE( panel.isCloseConfirmPending() );
+}
+
+/**
+ * @brief [EditorPanelDocumentTest] 확인의 선택에 따라 Save 는 저장하고 닫고, Don't Save 는 버리고 닫고, Cancel 은 열어 둔다
+ */
+SW_TEST_CASE( EditorPanelDocumentTest, CloseChoiceDecidesWhatHappensToTheEdits )
+{
+    FakeDocumentPanel panel;
+    panel.setOpen( true );
+
+    panel.edit();
+    panel.requestClose();
+    panel.applyCloseChoice( EditorUnsavedChoice::None ); // 아직 고르지 않았다
+    SW_EXPECT_TRUE( panel.isCloseConfirmPending() );
+    panel.applyCloseChoice( EditorUnsavedChoice::Save );
+    SW_EXPECT_FALSE( panel.isOpen() );
+    SW_EXPECT_FALSE( panel.isDocumentDirty() );
+    SW_EXPECT_EQUAL( 1, panel.getSaveCount() );
+    SW_EXPECT_EQUAL( 0, panel.getRevertCount() );
+
+    panel.setOpen( true );
+    panel.edit();
+    panel.requestClose();
+    panel.applyCloseChoice( EditorUnsavedChoice::Discard );
+    SW_EXPECT_FALSE( panel.isOpen() );
+    SW_EXPECT_FALSE( panel.isDocumentDirty() );
+    SW_EXPECT_EQUAL( 1, panel.getSaveCount() );
+    SW_EXPECT_EQUAL( 1, panel.getRevertCount() );
+}
+
+/**
+ * @brief [EditorPanelDocumentTest] 저장하지 못하면 닫지 않는다 — 닫으면 편집이 사라진다
+ */
+SW_TEST_CASE( EditorPanelDocumentTest, FailedSaveKeepsThePanelOpen )
+{
+    FakeDocumentPanel panel;
+    panel.setOpen( true );
+    panel.setSaveSucceeds( false );
+    panel.edit();
+    panel.requestClose();
+
+    panel.applyCloseChoice( EditorUnsavedChoice::Save );
+    SW_EXPECT_TRUE( panel.isOpen() );
+    SW_EXPECT_TRUE( panel.isDocumentDirty() );
+    SW_EXPECT_FALSE( panel.isCloseConfirmPending() ); // 확인은 끝났다 — 다시 닫으려 하면 다시 묻는다
+}
+
+/**
+ * @brief [EditorPanelDocumentTest] 편집이 패널 밖에 사는 패널은 확인 없이 닫히고 편집은 그대로 남는다
+ */
+SW_TEST_CASE( EditorPanelDocumentTest, LivePanelClosesWithoutAsking )
+{
+    FakeLivePanel panel;
+    panel.setOpen( true );
+    panel.edit();
+
+    panel.setOpen( false );
+    SW_EXPECT_FALSE( panel.isOpen() );
+    SW_EXPECT_FALSE( panel.isCloseConfirmPending() );
+    SW_EXPECT_TRUE( panel.isDocumentDirty() );
+    SW_EXPECT_EQUAL( 0, panel.getRevertCount() );
+}
+
+/**
+ * @brief [EditorPanelDocumentTest] 문서 패널이 `revertDocument` 를 구현하지 않아도 "저장 안 함" 은 문서를 다시 읽어 편집을 버린다
+ * @details 기본이 없으면 저장하지 않고 닫은 뒤에도 편집한 메모리 상태가 남아, 다시 열면 미저장 표시 없이 편집본이 보인다.
+ */
+SW_TEST_CASE( EditorPanelDocumentTest, DiscardReloadsTheDocumentByDefault )
+{
+    FakeReloadPanel panel;
+    SW_EXPECT_EQUAL( 0, panel.getLoadCount() );
+
+    panel.discardDirtyDocument(); // 깨끗하면 읽지 않는다
+    SW_EXPECT_EQUAL( 0, panel.getLoadCount() );
+
+    panel.edit();
+    panel.discardDirtyDocument();
+    SW_EXPECT_EQUAL( 1, panel.getLoadCount() );
+    SW_EXPECT_FALSE( panel.isDocumentDirty() );
+
+    panel.setOpen( true ); // 닫기 확인의 "저장 안 함" 도 같은 길이다
+    panel.edit();
+    panel.requestClose();
+    panel.applyCloseChoice( EditorUnsavedChoice::Discard );
+    SW_EXPECT_EQUAL( 2, panel.getLoadCount() );
+    SW_EXPECT_FALSE( panel.isOpen() );
 }

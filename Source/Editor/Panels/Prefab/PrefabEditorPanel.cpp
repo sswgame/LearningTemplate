@@ -206,8 +206,9 @@ namespace sw::editor
 
         if ( _isolation.getDepth() <= 1 )
         {
-            setOpen( false ); // 문서 단계 — 창을 닫는다. 문서 루트는 씬에 남는다
-            PrefabEditorPanelInternal::notifyExited();
+            setOpen( false ); // 문서 단계 — 창을 닫는다(편집이 남았으면 확인을 거친다). 문서 루트는 씬에 남는다
+            if ( isOpen() == false )
+                PrefabEditorPanelInternal::notifyExited(); // 확인을 기다리는 중이면 아직 나가지 않았다
             return true;
         }
 
