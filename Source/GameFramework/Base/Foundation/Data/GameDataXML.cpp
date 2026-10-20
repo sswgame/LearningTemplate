@@ -256,25 +256,22 @@ namespace sw
         { outListName.push_back( hashed_string( token ) ); } );
     }
 
-    uint32 GameDataXML::parseFloats( string_view text, float32* pOutValue, uint32 maxCount )
+    bool GameDataXML::parseFloatList( string_view text, uint32 maxCount, vector<float32>& outListValue )
     {
-        if ( pOutValue == nullptr )
-            return 0;
-        uint32 tokenIndex = 0;
-        uint32 readCount  = 0;
+        vector<float32> listValue;
+        bool            bValid = true;
         StringUtil::forEachToken( text, GameDataXMLInternal::kNumberSeparators, [&]( string_view token )
         {
-            if ( tokenIndex >= maxCount )
-                return;
             float32 value = 0.0f;
-            if ( StringUtil::parseFloat( token, value ) )
-            {
-                pOutValue[tokenIndex] = value;
-                ++readCount;
-            }
-            ++tokenIndex;
+            if ( listValue.size() >= maxCount || StringUtil::parseFloat( token, value ) == false )
+                bValid = false;
+            else
+                listValue.push_back( value );
         } );
-        return readCount;
+        if ( bValid == false || listValue.empty() )
+            return false;
+        outListValue = std::move( listValue );
+        return true;
     }
 
     bool GameDataXML::parseFloat2( string_view text, float2& outValue )

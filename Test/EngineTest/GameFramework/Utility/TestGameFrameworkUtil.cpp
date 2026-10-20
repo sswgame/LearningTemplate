@@ -427,10 +427,14 @@ SW_TEST_CASE( GameFrameworkUtilTest, DataXMLReadsRootsIDsNumbersAndTokens )
     SW_EXPECT_NEAR_EQUAL( 3.0f, position._z, 1.0e-6f );
     SW_EXPECT_TRUE( GameDataXML::parseFloat3( "-0.5,0,0", position ) );
     SW_EXPECT_NEAR_EQUAL( -0.5f, position._x, 1.0e-6f );
-    float32 arrValue[2] = { -1.0f, -1.0f };
-    SW_EXPECT_EQUAL( 1u, GameDataXML::parseFloats( "x;3", arrValue, 2 ) ); // 못 읽은 칸은 그대로
-    SW_EXPECT_NEAR_EQUAL( -1.0f, arrValue[0], 1.0e-6f );
-    SW_EXPECT_NEAR_EQUAL( 3.0f, arrValue[1], 1.0e-6f );
+    vector<float32> listValue{ -1.0f };
+    SW_EXPECT_FALSE( GameDataXML::parseFloatList( "x;3", 2, listValue ) );
+    SW_EXPECT_FALSE( GameDataXML::parseFloatList( "1 2 3", 2, listValue ) );
+    SW_EXPECT_FALSE( GameDataXML::parseFloatList( "", 2, listValue ) );
+    SW_EXPECT_EQUAL( size_t{ 1 }, listValue.size() ); // 실패하면 그대로
+    SW_EXPECT_TRUE( GameDataXML::parseFloatList( "4;3", 2, listValue ) );
+    SW_EXPECT_EQUAL( size_t{ 2 }, listValue.size() );
+    SW_EXPECT_NEAR_EQUAL( 3.0f, listValue[1], 1.0e-6f );
 
     int32 tokenCount = 0;
     StringUtil::forEachToken( ",Spring,, Fall ;", ",; ", [&]( string_view token )

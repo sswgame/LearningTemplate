@@ -231,9 +231,9 @@ namespace sw
             // MAP 병기의 범위는 "x,y x,y ..." 이고 반드시 적는다(기준 셀 하나로 물러나지 않는다).
             StringUtil::forEachToken( node.getAttributeText( "pattern" ), " ;\t", [&]( string_view token )
             {
-                float32 arrValue[2]{ 0.0f, 0.0f };
-                if ( GameDataXML::parseFloats( token, arrValue, 2 ) == 2 )
-                    def._listMapOffset.push_back( int2{ static_cast<int32>( arrValue[0] ), static_cast<int32>( arrValue[1] ) } );
+                float2 cell{};
+                if ( GameDataXML::parseFloat2( token, cell ) )
+                    def._listMapOffset.push_back( int2{ static_cast<int32>( cell._x ), static_cast<int32>( cell._y ) } );
                 else
                 {
                     SW_LOG_ERROR( "%#: MAP weapon '%#' has a bad pattern cell '%#' (x,y)", sourceName, def._id.c_str(), token );
