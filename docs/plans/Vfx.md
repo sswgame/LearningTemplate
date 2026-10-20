@@ -1,6 +1,6 @@
 # 파티클 · VFX 구현 단위 (`D2-11`)
 
-> 상태: 구현중 · 선행: 없음 · 영역: graphics · 옛번호: D2-11 · 진행: 4/8
+> 상태: 구현중 · 선행: 없음 · 영역: graphics · 옛번호: D2-11 · 진행: 5/8
 
 결정은 [결정 기록](../09_Decisions.md) 5-12 의 `D2-11` 행들과 옛 `D2-11` 본문의 사용자 결정이 원본입니다. 이 문서는 그 결정을 구현 단위로 나눈 계획과 단위마다의 계약을 적습니다.
 단위가 끝나면 그 단위의 절을 지우고, 남는 교훈은 코드의 헤더 주석으로 옮깁니다.
@@ -19,15 +19,9 @@
 |---|---|---|
 | V0 | 데이터 형식: `VfxEffectDef`(방출기 목록), `VfxEmitterDef`(생성률, 버스트, 수명, 초기 속도 범위, 중력, 크기와 색의 `FloatCurve`, 텍스처, 블렌드), 리플렉션 로드와 검증(필수 값이 없으면 로드 실패) — **들어감**(`VfxEffectDefTest` · 리소스 종류 `vfx`) | 없음 |
 | V1 | CPU 시뮬레이션 `VfxCPUSimulation`: 고정 크기 풀, 결정적 난수(방출기 씨앗), 단계 하나 = 생성, 적분, 수명 제거(뒤쪽과 바꾸기). 출력은 렌더 입력 `GPUParticle`(float4 셋: 위치와 크기, 색, 회전과 수명 비율) — **들어감**(`VfxCPUSimulationTest`) | V0 |
-| V2 | 렌더 경로: 방출기마다 입자 그리기 하나(`GPUParticleBatch`, 스냅샷의 `_listParticleBatch`)를 투명 패스가 메시 투명 배치 뒤에 빌보드로 그립니다(`VfxParticleRenderer`, `particle.hlsl` — `SV_VertexID` 와 패스 전용 슬롯 t11 의 입자 버퍼) — **들어감**(`VfxComponentTest`, 시나리오 `editor/vfxpreview` 네 백엔드) | V1 |
+| V2 | 렌더 경로: 방출기마다 입자 그리기 하나(`GPUParticleBatch`, 스냅샷의 `_listParticleBatch`)를 투명 패스가 빌보드로 그립니다(`VfxParticleRenderer`, `particle.hlsl` — `SV_VertexID` 와 패스 전용 슬롯 t11 의 입자 버퍼) — **들어감**(`VfxComponentTest`, 시나리오 `editor/vfxpreview` 네 백엔드) | V1 |
 | V3 | `VfxComponent`(효과 경로, 재생, 정지, 씨앗)와 에디터 미리보기 창(`VfxPreviewPanel` — 보기 전용, 효과 편집은 카탈로그 편집기) — **들어감**(표본 효과 `engine/vfx/sparks.vfx.xml`) | V2 |
 | V4 | GPU 시뮬레이션 `vfxsimulate.hlsl`: 같은 모듈 의미를 컴퓨트로, 생존 수는 원자적 카운터, 간접 드로우 인자. DX11 은 구조 버퍼와 간접 인자를 한 버퍼로 못 쓰므로 복사 단계 하나를 더합니다. 이 단위에서 Shipping 의 CPU 경로를 뺍니다(지금은 CPU 가 유일한 경로라 Shipping 도 CPU 다) | V2, `D2-6.3` 슬롯 지도 |
 | V5 | CPU 와 GPU 비교 테스트: 같은 씨앗, 같은 단계 수에서 입자 수가 같고 위치가 허용 오차 안입니다(hostgpu) | V4 |
 | V6 | 메시 입자, 리본, 충돌(물리 레이캐스트), 파티클 라이트(`D2-13` S5) | V3 |
-| V7 | 메시 투명과 입자의 교차 정렬: 방출기를 메시 투명 후보와 한 순서로 섞고(언리얼 · 유니티의 프리미티브 단위 정렬), 추가 뷰는 그 뷰의 순서로 그립니다. 지금은 입자가 메시 투명 뒤에 주 시점 순서로 그려집니다(결정 기록 5-12 `D2-11`) | V2 |
-
-### V7 계약
-
-- 메시 투명은 정렬된 인스턴스 꼬리를 배치로 묶어(`GPUSceneBuilder::emitTransparentBatches`) 멀티 드로우로 그리고, 추가 뷰는 `GPUViewTransparentOrder` 로 배치 순서를 바꿉니다. 입자 그리기를 그 사이에 끼우려면 배치마다 정렬 키(첫 인스턴스의 키)를 싣고, 드로우 루프가 키를 비교해 입자 그리기를 끼우며 묶음을 그 자리에서 끊어야 합니다.
-- 입자 PSO 는 투명 패스 PSO 의 렌더 상태를 물려받습니다(`FrameRenderer::ensureParticlePSO`, 머티리얼 변형 캐시에 둔다). 교차 정렬에서도 PSO 를 바꾸는 자리가 입자 그리기마다 하나 늘어납니다.
-- 표본 효과의 텍스처(Kenney 파티클)는 RGB 가 알파와 함께 어두워지는 형태라 곧은 알파로 섞으면 가장자리가 두 번 곱해져 흐립니다. 지금은 색 커브(더하기 방출기는 1 보다 큰 HDR 색)로 맞췄습니다. 텍스처 임포트에 "알파만 마스크" 규칙이 필요해지면 후보로 따로 적습니다.
+| V7 | 메시 투명과 입자의 교차 정렬: 방출기를 메시 투명 배치와 한 순서로 섞고(프리미티브 단위, 결정 기록 5-12 `D2-11`), 추가 뷰는 그 뷰의 순서로 그립니다(`GPUTransparentParticleSlot`) — **들어감**(`GPUTransparentSorterTest.ParticlePlacementFollowsLayerAndDepth` · `VfxComponentTest.ParticlesInterleaveWithTransparentMeshes`, 빌드 · 화면 확인 전) | V2 |

@@ -113,9 +113,11 @@ namespace sw
         _uploadedParticleCount = particleCount;
     }
 
-    uint32 VfxParticleRenderer::drawBatches( IRHICommandList& cmd, const vector<GPUParticleBatch>& listBatch, bool bNativeBindless ) const
+    uint32 VfxParticleRenderer::drawBatches( IRHICommandList& cmd, const vector<GPUParticleBatch>& listBatch, vector_reference<const GPUTransparentParticleSlot> listSlot,
+                                             bool bNativeBindless ) const
     {
-        const bool bNothingToDraw = _uploadedParticleCount == 0 || _particleBuffer.isValid() == false || _listBatchBase.size() != listBatch.size();
+        const bool bNothingToDraw =
+            listSlot.empty() || _uploadedParticleCount == 0 || _particleBuffer.isValid() == false || _listBatchBase.size() != listBatch.size();
         if ( bNothingToDraw )
             return 0;
         SW_PROFILE_SCOPE( "RT.Vfx.Draw" );
@@ -123,8 +125,10 @@ namespace sw
         // 바인딩은 PSO 뒤에 건다(setPipelineState 가 슬롯 상태를 비운다) — 부르는 쪽이 PSO 를 걸고 PassCB 를 바인딩한 뒤 여기로 온다.
         cmd.bindStructuredBuffer( _particleBuffer._srv, shaderslot::kPassBuffer );
         uint32 drawnBatchCount = 0;
-        for ( size_t batchIndex = 0; batchIndex < listBatch.size(); ++batchIndex )
+        for ( const GPUTransparentParticleSlot& slot : listSlot )
         {
+            const uint32 batchIndex = slot._particleBatchIndex;
+            SW_ASSERT( batchIndex < listBatch.size() );
             const GPUParticleBatch&  batch = listBatch[batchIndex];
             const RHIDescriptorIndex srv   = findTextureSrv( batch._texturePath );
             if ( srv == kInvalidDescriptorIndex )
