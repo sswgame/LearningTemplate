@@ -111,7 +111,7 @@ SW_TEST_CASE( PairedAnimationReplicationTest, StateMessageRestoresSessionAndEndA
     server.initialize( nullptr, &serverManager );
     SW_EXPECT_EQUAL( 3u, server.getObjectTable().getCount() );
 
-    const shared_ptr<const PairedAnimationDef> def = PairedAnimationDefCache::acquire( assetPath );
+    const shared_ptr<const PairedAnimationDef> def = SharedAssetCache<PairedAnimationDef>::acquire( assetPath );
     SW_ASSERT_NOT_NULL( def.get() );
     SW_EXPECT_TRUE( def->getSourcePath() == assetPath );
     PairedAnimationSystem& serverSystem = PairedAnimationSystem::getOrCreate( serverManager );
