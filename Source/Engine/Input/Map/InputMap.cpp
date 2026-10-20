@@ -294,7 +294,7 @@ namespace sw
     }
 
     void InputMap::bindGamepadStick2D( const hashed_string& action, GamepadStick stick, float32 deadzone, const hashed_string& layer, uint8 padIndex, float32 outerDeadzone, float32 responseExponent,
-                                       float2 axisScale, bool bScaleByDelta )
+                                       float2 axisScale, bool bScaleByDelta, GamepadStickAxis axis )
     {
         if ( action.empty() )
             return;
@@ -302,12 +302,13 @@ namespace sw
         ActionBinding binding     = beginBinding( action, BindingKind::GamepadStick2D, ActionTrigger::Down, layer );
         binding._deviceIndex      = padIndex;
         binding._stick            = stick;
+        binding._stickAxis        = axis;
         binding._deadzone         = deadzone;
         binding._outerDeadzone    = outerDeadzone;
         binding._responseExponent = responseExponent;
         binding._axisScale        = axisScale;
         binding._bScaleByDelta    = bScaleByDelta;
-        commitBinding( action, InputActionValueType::Axis2D, binding );
+        commitBinding( action, axis == GamepadStickAxis::Both ? InputActionValueType::Axis2D : InputActionValueType::Axis1D, binding );
     }
 
     float2 InputMap::getVector2D( const hashed_string& action ) const

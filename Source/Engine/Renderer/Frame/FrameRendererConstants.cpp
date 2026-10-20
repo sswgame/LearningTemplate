@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -56,7 +57,6 @@ namespace sw
 
         context._passValues.setFloat4( passConstantNames()._keyLightDirIntensity, _frameLight._dirIntensity );
         context._passValues.setFloat4( passConstantNames()._keyLightColor, _frameLight._colorAmbient );
-        context._passValues.setFloat4( passConstantNames()._bloomParams, kDefaultBloomParams );
         context._passValues.setFloat4( passConstantNames()._outlineColor, kDefaultOutlineColor );
         applyViewPassConstants( context );
     }
@@ -71,6 +71,15 @@ namespace sw
         // 원본 텍셀의 기본값은 프레임 텍셀이다. 원본 역할 입력을 바인딩하는 패스가 그 첨부의 실제 크기로 덮는다(registerPassTexture).
         context._passValues.setFloat4( passConstantNames()._sourceTexel,
                                        float4{ outlineY, outlineZ, static_cast<float32>( pool.getWidth() ), static_cast<float32>( pool.getHeight() ) } );
+        // 카메라별 후처리 값(CameraPostProcessValues)도 뷰마다다. 중립 값(노출 0, 배율 1, 비네트 · 레터박스 0)이면 셰이더 결과가 전역 값과 같다.
+        const CameraPostProcessValues& post = _pActiveView->_settings._postProcess;
+        float4                         bloomParams{ kDefaultBloomParams };
+        bloomParams._y *= MathUtil::max( 0.0f, post._bloomScale );
+        context._passValues.setFloat4( passConstantNames()._bloomParams, bloomParams );
+        context._passValues.setFloat4( passConstantNames()._cameraGrade, float4{ MathUtil::pow( 2.0f, post._exposureCompensation ), MathUtil::max( 0.0f, post._saturation ),
+                                                                                 MathUtil::max( 0.0f, post._contrast ), MathUtil::saturate( post._vignetteIntensity ) } );
+        const float32 viewAspect = pool.getHeight() > 0 ? static_cast<float32>( pool.getWidth() ) / static_cast<float32>( pool.getHeight() ) : 0.0f;
+        context._passValues.setFloat4( passConstantNames()._cameraFrame, float4{ MathUtil::max( 0.0f, post._letterboxAspectRatio ), viewAspect, 0.0f, 0.0f } );
         // 패스 플래그: 비트는 bindingslots.hlsli 의 SW_PASS_FLAG_*(C++ 는 shaderslot::kPassFlag*)가 기준이다. 후처리는 뷰마다 끌 수 있다(CCTV).
         uint32 flags = ( _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling() ) ? shaderslot::kPassFlagNativeBindless : 0u;
         if ( _pActiveView->_settings.usesPostProcess() == false )

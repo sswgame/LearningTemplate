@@ -11,12 +11,12 @@
    - E3(E4 가 뒤따름) — [EnginePartition](EnginePartition.md) 6.4. `GameObjectManager.h` 를 바꿔 모든 모듈이 다시 빌드된다. [단독: 모든 모듈 재빌드]
    - V2 — [GpuVerification](GpuVerification.md) 2절. 지는 케이스 수정은 들어갔고(로컬 확인, CI 미확인) 리눅스 `gl` 원인 확인 뒤 해제. [병렬 가능]
 2. **새 시스템**:
-   - Vfx V7(메시 투명과 교차 정렬) · V6, V4 는 `D2-6.3` 슬롯 지도 뒤(V0 ~ V3 들어감) — [Vfx](Vfx.md). [병렬 가능]
+   - Vfx V4 → V5(V0 ~ V3 · V6 · V7 들어감) — [Vfx](Vfx.md). [병렬 가능]
    - 클러스터드 라이팅 S2 → S5 — [ClusteredLighting](ClusteredLighting.md). [단독: 셰이더 재베이크]
    - 간접 조명 P0 부터(ClusteredLighting 뒤) — [IndirectLighting](IndirectLighting.md). [단독: 셰이더 재베이크]
    - 월드 스트리밍 W2 → W7 — [WorldStreaming](WorldStreaming.md) (W1 은 들어갔고 W2 부터). [단독: W2 가 씬 파일 형식 판을 올려 씬 직렬화를 쓰는 모듈이 다시 빌드되고, W7 의 히치 측정은 Release 에서 혼자]
 3. **기능 묶음**(분류는 결정 기록 5-12, 한 묶음에 단위가 여럿):
-   1. 카메라 디렉터 · 직교 리그 [CameraRendererIntegration](Candidates-gameplay.md#camerarendererintegration)(다중 뷰 보임의 가려짐, 컷 프레임 신호, 렌더러 쪽) → [GamepadVirtualCursor](Candidates-gameplay.md#gamepadvirtualcursor), 에디터 시나리오 [GraphSaveScenarioRun](Candidates-editor.md#graphsavescenariorun) · [ScenarioRecorderAndInspectorGaps](Candidates-editor.md#scenariorecorderandinspectorgaps) (옛 `D4-5` → `D4-3` → `D3-5` · `D3-8` 에 대응). [병렬 가능]
+   1. 카메라 디렉터 · 직교 리그 [CameraRendererIntegration](CameraRendererIntegration.md)(S2 피사계 심도, S3 · S4 는 렌더러 기능 선행) → [GamepadVirtualCursor](GamepadVirtualCursor.md)(G2 게임 바인딩 정하기 · G3 실기), 에디터 시나리오 [GraphSaveScenarioRun](Candidates-editor.md#graphsavescenariorun) · [ScenarioRecorderAndInspectorGaps](Candidates-editor.md#scenariorecorderandinspectorgaps) (옛 `D4-5` → `D4-3` → `D3-5` · `D3-8` 에 대응). [병렬 가능]
    2. 미리보기 창 · 스카이 — [EditorMultiWorld](EditorMultiWorld.md) 6절 (3) 스카이(엔진에 스카이 컴포넌트가 먼저 필요), (4) 풀 공유 · (5) 내리기 안전 · (6) 백엔드 교체(같은 파일은 한 작업자). [병렬 가능]
    3. 지형 · 식생 [TerrainWaterVegetationRemainders](Candidates-graphics.md#terrainwatervegetationremainders)(지형 LOD 교체 프레임 시간 → 지형 쓰기 남은 것 → 식생), 서버 파괴 호스트 [DestructionNetSessionScene](Candidates-network.md#destructionnetsessionscene) → [EncryptedTickCost](Candidates-network.md#encryptedtickcost). [단독: 지형 · 식생이 셰이더 재베이크를 부르고 측정은 Release 에서 혼자]
    4. 오디오 [AudioEngineExtensions](Candidates-audio-ai-localization.md#audioengineextensions), 온라인 키트 [OnlineAccountProviders](Candidates-network.md#onlineaccountproviders) · [OnlineChatModeration](Candidates-network.md#onlinechatmoderation) · [OnlineServerDirectoryAdmin](Candidates-network.md#onlineserverdirectoryadmin) · [OnlineFriendsGuild](Candidates-network.md#onlinefriendsguild) · [OnlineLeaderboardExtras](Candidates-network.md#onlineleaderboardextras) · [OnlineMatchmakingIntegration](Candidates-network.md#onlinematchmakingintegration) · [OnlineLiveOps](Candidates-network.md#onlineliveops) · [OnlineEconomyReceipts](Candidates-network.md#onlineeconomyreceipts) · [OnlineEconomyItems](Candidates-network.md#onlineeconomyitems)(옛 `D7-5.1 → 5.10 → 5.3 → 5.6` 의 하위 번호는 백로그에 정의된 적이 없어 절과의 대응을 알 수 없다. 이 순서에 얽매이지 않고 절의 선행 관계로 고른다). [병렬 가능]

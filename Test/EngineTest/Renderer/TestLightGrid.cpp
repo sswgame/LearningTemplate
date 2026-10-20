@@ -68,7 +68,9 @@ SW_TEST_CASE( LightGridTest, PointsInsideALightSphereSeeThatLight )
     sw::LightGrid grid;
     SW_ASSERT_TRUE( grid.populate( viewProj, listLight.data(), static_cast<uint32>( listLight.size() ) ) );
     SW_EXPECT_EQUAL( grid.getGlobalLightCount(), 1u );
-    SW_EXPECT_EQUAL( grid.getWords().size() % sw::shaderslot::lightgrid::kWordsPerElement, static_cast<size_t>( 0 ) );
+    // 단어 수는 목록 시작 + 담은 항목 수다(헤더의 항목 수 단어가 그 수다 — GPU 생산자도 같은 단어를 쓴다).
+    const uint32 entryCount = grid.getWords()[sw::shaderslot::lightgrid::kWordEntryCount];
+    SW_EXPECT_EQUAL( grid.getWords().size(), static_cast<size_t>( sw::shaderslot::lightgrid::kIndexBase + entryCount ) );
 
     sw::vector<uint32> listFound;
     for ( uint32 lightIndex = 1; lightIndex < static_cast<uint32>( listLight.size() ); ++lightIndex )

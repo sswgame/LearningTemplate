@@ -46,12 +46,13 @@ namespace sw
         inline constexpr uint32 kEngineTextureSampler = SW_ENGINE_TEXTURE_SAMPLER;
         inline constexpr uint32 kInstanceBuffer       = SW_SLOT_INSTANCE_SRV;
         /**
-         * @brief 네이티브 bindless 가 없는 백엔드(DX11, GL)의 머티리얼 텍스처 슬롯 t12..t27(16 칸)입니다. 머티리얼 하나가 받는 텍스처 수의 상한이기도 합니다(네 백엔드 공통).
+         * @brief 네이티브 bindless 가 없는 백엔드(DX11, GL)의 머티리얼 텍스처 슬롯 t16..t31(16 칸)입니다. 머티리얼 하나가 받는 텍스처 수의 상한이기도 합니다(네 백엔드 공통).
          * @details 그 두 백엔드는 머티리얼이 준 전역 인덱스를 셰이더에서 해석할 수 없다. DX11 은 SM5.0 이라
          *          리소스 배열 동적 인덱싱이 없고(그건 SM5.1, 곧 D3D12), GL 은 SPIR-V 로 먹이므로
          *          ARB_bindless_texture 를 쓸 수 없다. 그래서 엔진이 머티리얼 텍스처를 이 고정 슬롯에
          *          바인딩하고 머티리얼 데이터에는 서수를 넣는다. 16 은 언리얼 머티리얼 샘플러 한도와 같다(결정 기록 5-12).
-         *          슬롯은 SRV 띠(`kSrvSlotCount`) **뒤**에 있다 — DX12 테이블과 Vulkan t 밴드는 이 슬롯을 모른다(선언도 에뮬 백엔드뿐이다).
+         *          슬롯은 Vulkan t 밴드(`vk::kRangeSize`) 전체의 **뒤**에 있다 — DX12 테이블과 Vulkan t 밴드는 이 슬롯을 모르고(선언도 에뮬 백엔드뿐이다),
+         *          SRV 띠(`kSrvSlotCount`)가 밴드 끝까지 자라도 이 슬롯은 움직이지 않는다.
          */
         inline constexpr uint32 kMaterialTexture0     = SW_SLOT_MATERIAL_TEX0;
         inline constexpr uint32 kMaterialTextureCount = SW_MATERIAL_TEXTURE_SLOT_COUNT;
@@ -60,7 +61,7 @@ namespace sw
         /**
          * @brief 머티리얼 텍스처를 읽는 샘플러(bindingslots.hlsli 4 의 SW_SAMPLER_*)입니다. 선형 필터와 랩 주소를 씁니다.
          * @details 네이티브 bindless(DX12, Vulkan)는 `swSampleMaterialTexture` 가 이 샘플러로 읽는다. 슬롯 결합 샘플러를 쓰는
-         *          GL 은 셰이더가 고르지 못하므로 엔진이 머티리얼 유닛 12..27 에 같은 샘플러를 바인딩하고, DX11 은 셰이더가 정적 세트의 이 번호로 읽는다
+         *          GL 은 셰이더가 고르지 못하므로 엔진이 머티리얼 유닛 16..31 에 같은 샘플러를 바인딩하고, DX11 은 셰이더가 정적 세트의 이 번호로 읽는다
          *          (샘플러 슬롯이 16 개뿐이라 머티리얼 슬롯마다 짝을 둘 수 없다). 언리얼 머티리얼 텍스처의 기본 Wrap 샘플러다.
          */
         inline constexpr uint32 kMaterialTextureSampler = SW_MATERIAL_TEXTURE_SAMPLER;
@@ -94,10 +95,15 @@ namespace sw
         /**
          * @brief 패스 전용 구조 버퍼 슬롯입니다. 캔버스 패스는 사각형(g_SwCanvasQuads)을, 투명 패스의 입자 그리기는 입자(g_SwParticles)를 겁니다.
          * @details 정점 셰이더가 원소 하나를 인스턴스 하나로 읽고 `SV_VertexID` 로 모서리를 만든다(동적 정점 버퍼는 없다). 두 그리기는 같은 패스에서 겹치지 않으므로
-         *          슬롯을 나눠 쓴다 — SRV 띠(t0..t11)를 늘리면 DX11 · GL 의 머티리얼 텍스처 슬롯이 모두 밀린다.
+         *          슬롯을 나눠 쓴다.
          */
-        inline constexpr uint32 kPassBuffer   = SW_SLOT_PASS_SRV;
-        inline constexpr uint32 kSrvSlotCount = SW_SRV_SLOT_COUNT;
+        inline constexpr uint32 kPassBuffer = SW_SLOT_PASS_SRV;
+        /**
+         * @brief 지금 뷰의 라이트 그리드(g_SwLightGrid, `uint` 단어 배열)입니다. 뷰마다의 그리드가 이어 붙어 있고 PassCB `g_SwLightGridBase` 가 첫 단어입니다.
+         * @details CPU 생산자(`LightGrid`)는 동적 버퍼로, GPU 생산자(lightgrid.hlsl)는 기본 힙 UAV 버퍼로 같은 슬롯에 바인딩한다. 셰이더는 생산자를 모른다.
+         */
+        inline constexpr uint32 kLightGridBuffer = SW_SLOT_LIGHT_GRID_SRV;
+        inline constexpr uint32 kSrvSlotCount    = SW_SRV_SLOT_COUNT;
 
         // ------------------------------------------------------------------------------
         // 2-1) 라이트 원소의 타입 값. bindingslots.hlsli 가 기준이다(셰이더와 같은 파일).
@@ -142,25 +148,43 @@ namespace sw
         inline constexpr uint32 kPointShadowFaceCount = SW_POINT_SHADOW_FACE_COUNT;
 
         /**
-         * @brief 라이트 그리드(클러스터드 라이팅)의 단어 배치입니다. 원본은 bindingslots.hlsli 10절이고, C++ `LightGrid` 와 셰이더 `swBeginLights` 가 같은 값을 읽습니다.
-         * @details 그리드는 32 비트 단어 배열이고 라이트 버퍼 원소 하나가 단어 16 개입니다. 헤더, 클러스터마다 단어 두 개, 라이트 번호 목록 순서로 놓입니다.
+         * @brief 라이트 그리드(클러스터드 라이팅)의 단어 배치입니다. 원본은 bindingslots.hlsli 10절이고, C++ `LightGrid`, 셰이더 `swBeginLights`, 컴퓨트 lightgrid.hlsl 이 같은 값을 읽습니다.
+         * @details 그리드는 32 비트 단어 배열(g_SwLightGrid)입니다. 헤더, 클러스터마다 단어 두 개, 라이트 번호 목록 순서로 놓입니다.
          */
         namespace lightgrid
         {
-            inline constexpr uint32 kWordsPerElement = SW_LIGHT_GRID_WORDS_PER_ELEMENT;
             inline constexpr uint32 kHeaderWordCount = SW_LIGHT_GRID_HEADER_WORD_COUNT;
             inline constexpr uint32 kWordsPerCluster = SW_LIGHT_GRID_WORDS_PER_CLUSTER;
-            inline constexpr uint32 kWordDimX        = SW_LIGHT_GRID_WORD_DIM_X;
-            inline constexpr uint32 kWordDimY        = SW_LIGHT_GRID_WORD_DIM_Y;
-            inline constexpr uint32 kWordDimZ        = SW_LIGHT_GRID_WORD_DIM_Z;
-            inline constexpr uint32 kWordPerspective = SW_LIGHT_GRID_WORD_PERSPECTIVE;
-            inline constexpr uint32 kWordNearDepth   = SW_LIGHT_GRID_WORD_NEAR_DEPTH;
-            inline constexpr uint32 kWordSliceScale  = SW_LIGHT_GRID_WORD_SLICE_SCALE;
-            inline constexpr uint32 kWordGlobalCount = SW_LIGHT_GRID_WORD_GLOBAL_COUNT;
-            inline constexpr uint32 kWordClusterBase = SW_LIGHT_GRID_WORD_CLUSTER_BASE;
-            inline constexpr uint32 kWordIndexBase   = SW_LIGHT_GRID_WORD_INDEX_BASE;
-            static_assert( kHeaderWordCount == kWordsPerElement, "라이트 그리드 헤더는 라이트 버퍼 원소 하나다" );
-            static_assert( kWordIndexBase < kHeaderWordCount, "헤더 단어 번호가 헤더 안에 있어야 한다" );
+            inline constexpr uint32 kDimX            = SW_LIGHT_GRID_DIM_X;
+            inline constexpr uint32 kDimY            = SW_LIGHT_GRID_DIM_Y;
+            inline constexpr uint32 kDimZ            = SW_LIGHT_GRID_DIM_Z;
+            inline constexpr uint32 kClusterCount    = kDimX * kDimY * kDimZ;
+            /// @brief 라이트 번호 목록이 시작하는 단어(그리드 첫 단어 기준)입니다. 헤더와 클러스터 단어 뒤입니다.
+            inline constexpr uint32 kIndexBase = kHeaderWordCount + kClusterCount * kWordsPerCluster;
+            /// @brief GPU 생산자가 뷰 하나에 담는 목록 항목의 상한과 그 뷰가 차지하는 단어 수입니다.
+            inline constexpr uint32 kGPUMaxEntryCount     = SW_LIGHT_GRID_GPU_MAX_ENTRY_COUNT;
+            inline constexpr uint32 kGPUWordsPerView      = kIndexBase + kGPUMaxEntryCount;
+            inline constexpr uint32 kGPUThreadCount       = SW_LIGHT_GRID_GPU_THREAD_COUNT;
+            inline constexpr uint32 kGPUViewFloat4Count   = SW_LIGHT_GRID_VIEW_FLOAT4_COUNT;
+            inline constexpr uint32 kWordDimX             = SW_LIGHT_GRID_WORD_DIM_X;
+            inline constexpr uint32 kWordDimY             = SW_LIGHT_GRID_WORD_DIM_Y;
+            inline constexpr uint32 kWordDimZ             = SW_LIGHT_GRID_WORD_DIM_Z;
+            inline constexpr uint32 kWordPerspective      = SW_LIGHT_GRID_WORD_PERSPECTIVE;
+            inline constexpr uint32 kWordNearDepth        = SW_LIGHT_GRID_WORD_NEAR_DEPTH;
+            inline constexpr uint32 kWordSliceScale       = SW_LIGHT_GRID_WORD_SLICE_SCALE;
+            inline constexpr uint32 kWordGlobalCount      = SW_LIGHT_GRID_WORD_GLOBAL_COUNT;
+            inline constexpr uint32 kWordClusterBase      = SW_LIGHT_GRID_WORD_CLUSTER_BASE;
+            inline constexpr uint32 kWordIndexBase        = SW_LIGHT_GRID_WORD_INDEX_BASE;
+            inline constexpr uint32 kWordEntryCount       = SW_LIGHT_GRID_WORD_ENTRY_COUNT;
+            inline constexpr uint32 kGroupSharedByteLimit = 32768; ///< DX11 cs_5_0 · DX12 · Vulkan 최소 보장 · GL 최소 보장의 그룹 공유 메모리
+            /// @brief 라이트 범위의 여유(NDC, 깊이 조각)와 카메라 면 판정 클립 w 입니다. CPU 생산자 · GPU 생산자가 같은 값을 씁니다.
+            inline constexpr float32 kNdcPad         = SW_LIGHT_GRID_NDC_PAD;
+            inline constexpr float32 kSlicePad       = SW_LIGHT_GRID_SLICE_PAD;
+            inline constexpr float32 kMinCornerClipW = SW_LIGHT_GRID_MIN_CORNER_CLIP_W;
+            static_assert( kWordEntryCount < kHeaderWordCount, "헤더 단어 번호가 헤더 안에 있어야 한다" );
+            static_assert( kClusterCount * sizeof( uint32 ) + kGPUThreadCount * sizeof( uint32 ) * 2 < kGroupSharedByteLimit,
+                           "컴퓨트 생산자가 클러스터마다의 개수와 스레드마다의 합을 그룹 공유 메모리에 둔다 — 칸 수를 줄이거나 생산자를 나눈다" );
+            static_assert( kGPUThreadCount * 4 >= SW_MAX_FRAME_LIGHT, "컴퓨트 생산자의 스레드는 라이트를 넷 이하씩 돈다" );
         } // namespace lightgrid
 
         // ------------------------------------------------------------------------------
@@ -275,6 +299,10 @@ namespace sw
             inline constexpr const utf8* kVertexAnimation      = "g_SwVertexAnimation";    ///< t10(그래픽스). 정점 애니메이션(VAT) 테이블
             inline constexpr const utf8* kCanvasQuads          = "g_SwCanvasQuads";        ///< t11(캔버스 패스). 화면 2D 사각형
             inline constexpr const utf8* kParticles            = "g_SwParticles";          ///< t11(투명 패스의 입자 그리기). 방출기 하나의 입자(particle.hlsl)
+            inline constexpr const utf8* kLightGrid            = "g_SwLightGrid";          ///< t12(그래픽스). 뷰마다의 라이트 그리드 단어
+            inline constexpr const utf8* kLightGridLights      = "g_LightGridLights";      ///< lightgrid 컴퓨트 t0. 씬 라이트 버퍼(g_SwLights 와 같은 버퍼)
+            inline constexpr const utf8* kLightGridViews       = "g_LightGridViews";       ///< lightgrid 컴퓨트 t1. 뷰마다의 뷰-투영과 깊이 조각 상수
+            inline constexpr const utf8* kLightGridRw          = "g_LightGridRW";          ///< lightgrid 컴퓨트 u0. 뷰마다의 그리드를 쓴다
             inline constexpr const utf8* kMorphRestVertices    = "g_RestVertices";         ///< meshmorph t0. 레스트 포즈
             inline constexpr const utf8* kMorphDeformPrograms  = "g_DeformPrograms";       ///< meshmorph t1. 메시 칸 표 + 변형 프로그램(meshmodifier.hlsli)
             inline constexpr const utf8* kMorphVerticesRw      = "g_MorphVerticesRW";      ///< meshmorph 와 meshskin 의 u0. 변형 결과
@@ -291,7 +319,8 @@ namespace sw
         // 계약의 내부 일관성을 검사한다. 값을 바꾸면 여기서 먼저 걸린다.
         static_assert( kInstanceBuffer == kEngineTexture0 + kEngineTextureCount, "인스턴스 버퍼는 엔진 텍스처 슬롯 바로 다음이어야 한다" );
         static_assert( kMaterialBuffer == kInstanceBuffer + 1, "머티리얼 데이터 버퍼는 인스턴스 버퍼 바로 다음이어야 한다" );
-        static_assert( kMaterialTexture0 == kSrvSlotCount, "머티리얼 텍스처 슬롯(에뮬)은 SRV 띠 바로 뒤에 둔다 — DX12 테이블 · Vulkan t 밴드 밖" );
+        static_assert( kMaterialTexture0 == vk::kRangeSize && kSrvSlotCount <= kMaterialTexture0,
+                       "머티리얼 텍스처 슬롯(에뮬)은 Vulkan t 밴드 바로 뒤에 둔다 — DX12 테이블 · Vulkan t 밴드 밖이고 SRV 띠가 자라도 겹치지 않는다" );
         static_assert( SW_SLOT_MATERIAL_TEX1 == SW_SLOT_MATERIAL_TEX0 + 1 && SW_SLOT_MATERIAL_TEX2 == SW_SLOT_MATERIAL_TEX0 + 2 &&
                            SW_SLOT_MATERIAL_TEX3 == SW_SLOT_MATERIAL_TEX0 + 3 && SW_SLOT_MATERIAL_TEX4 == SW_SLOT_MATERIAL_TEX0 + 4 &&
                            SW_SLOT_MATERIAL_TEX5 == SW_SLOT_MATERIAL_TEX0 + 5 && SW_SLOT_MATERIAL_TEX6 == SW_SLOT_MATERIAL_TEX0 + 6 &&
@@ -307,7 +336,8 @@ namespace sw
         static_assert( kLightBuffer == kMorphVertexBuffer + 1, "라이트 버퍼는 모프 정점 다음이다" );
         static_assert( kBatchBuffer == kLightBuffer + 1, "배치 표는 라이트 다음이다" );
         static_assert( kVertexAnimationBuffer == kBatchBuffer + 1, "VAT 표는 배치 표 다음이다" );
-        static_assert( kPassBuffer == kVertexAnimationBuffer + 1 && kPassBuffer + 1 == kSrvSlotCount, "패스 전용 버퍼는 VAT 표 다음이고 SRV 슬롯의 마지막이다" );
+        static_assert( kPassBuffer == kVertexAnimationBuffer + 1, "패스 전용 버퍼는 VAT 표 다음이다" );
+        static_assert( kLightGridBuffer == kPassBuffer + 1 && kLightGridBuffer + 1 == kSrvSlotCount, "라이트 그리드는 패스 전용 버퍼 다음이고 SRV 슬롯의 마지막이다" );
         static_assert( kLightTypeDirectional < kLightTypeCount && kLightTypePoint < kLightTypeCount &&
                            kLightTypeSpot < kLightTypeCount && kLightTypePoint2D < kLightTypeCount && kLightTypeGlobal2D < kLightTypeCount &&
                            kLightTypeShadow2D >= kLightTypeCount,

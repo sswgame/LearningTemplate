@@ -295,9 +295,14 @@ namespace sw
                     case BindingKind::GamepadStick2D:
                     {
                         const uint16 axisX = pBinding->_stick == GamepadStick::Left ? kLeftStickAxisX : kRightStickAxisX;
+                        // 한 성분 바인딩(`axis="Y"`, 1D 액션)은 x 값이 그 성분이다 — 액션 값과 같은 규칙(InputMapEvaluate).
+                        const bool    bYOnly = pBinding->_stickAxis == GamepadStickAxis::Y;
+                        const bool    bXOnly = pBinding->_stickAxis == GamepadStickAxis::X;
+                        const float32 stickX = bYOnly ? 0.0f : valueX;
+                        const float32 stickY = bYOnly ? valueX : ( bXOnly ? 0.0f : valueY );
                         connectGamepad( script, first, pBinding->_deviceIndex );
-                        script.addGamepadAxis( first, axisX, valueX, pBinding->_deviceIndex );
-                        script.addGamepadAxis( first, static_cast<uint16>( axisX + 1 ), valueY, pBinding->_deviceIndex );
+                        script.addGamepadAxis( first, axisX, stickX, pBinding->_deviceIndex );
+                        script.addGamepadAxis( first, static_cast<uint16>( axisX + 1 ), stickY, pBinding->_deviceIndex );
                         script.addGamepadAxis( first + frames, axisX, 0.0f, pBinding->_deviceIndex );
                         script.addGamepadAxis( first + frames, static_cast<uint16>( axisX + 1 ), 0.0f, pBinding->_deviceIndex );
                         break;

@@ -321,7 +321,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 스틱 배율 · 프레임 시간 곱(`scaleX` · `scaleY` · `scaleByDelta`)을 적습니다. 기본값(1, 1, false)이면 적지 않아 기존 파일이 그대로 나온다. */
+            /** @brief 스틱 배율 · 프레임 시간 곱 · 성분(`scaleX` · `scaleY` · `scaleByDelta` · `axis`)을 적습니다. 기본값(1, 1, false, 둘 다)이면 적지 않아 기존 파일이 그대로 나온다. */
             static void writeStickModifier( XMLNode node, const ActionBinding& binding )
             {
                 if ( binding._axisScale._x != 1.0f )
@@ -330,13 +330,35 @@ namespace sw
                     node.appendAttribute( "scaleY", binding._axisScale._y );
                 if ( binding._bScaleByDelta )
                     node.appendAttribute( "scaleByDelta", true );
+                if ( binding._stickAxis != GamepadStickAxis::Both )
+                    node.appendAttribute( "axis", binding._stickAxis == GamepadStickAxis::X ? "X" : "Y" );
             }
 
-            /** @brief 스틱 배율 · 프레임 시간 곱을 읽습니다. 없는 속성은 기본값(1, 1, false)입니다. */
-            static void readStickModifier( XMLNode node, float2& outAxisScale, bool& outScaleByDelta )
+            /**
+             * @brief 스틱 배율 · 프레임 시간 곱 · 성분을 읽습니다. 없는 속성은 기본값(1, 1, false, 둘 다)입니다.
+             * @return `axis` 가 `X` · `Y` 가 아닌 글이면 경고하고 false 입니다(그 바인딩은 버린다 — 2D 로 바꿔 묶으면 1D 액션이 엉뚱한 성분을 읽는다).
+             */
+            [[nodiscard]] static bool readStickModifier( XMLNode node, float2& outAxisScale, bool& outScaleByDelta, GamepadStickAxis& outAxis )
             {
                 outAxisScale    = float2{ node.getAttributeFloat( "scaleX", 1.0f ), node.getAttributeFloat( "scaleY", 1.0f ) };
                 outScaleByDelta = node.getAttributeBool( "scaleByDelta", false );
+
+                outAxis              = GamepadStickAxis::Both;
+                const utf8* pAxisStr = node.findAttribute( "axis" );
+                if ( StringUtil::isNullOrEmpty( pAxisStr ) )
+                    return true;
+                if ( StringUtil::equals( pAxisStr, "X", true ) )
+                {
+                    outAxis = GamepadStickAxis::X;
+                    return true;
+                }
+                if ( StringUtil::equals( pAxisStr, "Y", true ) )
+                {
+                    outAxis = GamepadStickAxis::Y;
+                    return true;
+                }
+                SW_LOG_WARNING( "stick axis '%#' is neither 'X' nor 'Y' - binding dropped", pAxisStr );
+                return false;
             }
 
             /** @brief 바인딩마다 발화 시간 · 부호 뒤집기(`time` · `negate`)를 적습니다. 기본값(0, false)이면 적지 않아 기존 파일이 그대로 나온다. */
@@ -686,8 +708,12 @@ namespace sw
                 const float32 responseExponent = stickNode.getAttributeFloat( "responseExponent", 1.0f );
                 float2        axisScale{ 1.0f, 1.0f };
                 bool          bScaleByDelta{ false };
-                InputMapSerializationInternal::readStickModifier( stickNode, axisScale, bScaleByDelta );
-                bindGamepadStick2D( hashed_string( pActionName ), stick, deadzone, hashed_string( stickLayer.view() ), padIndex, outerDeadzone, responseExponent, axisScale, bScaleByDelta );
+
+                GamepadStickAxis axis{ GamepadStickAxis::Both };
+                if ( InputMapSerializationInternal::readStickModifier( stickNode, axisScale, bScaleByDelta, axis ) == false )
+                    continue; // 이미 경고했으므로 엉뚱한 성분으로 묶지 않고 이 바인딩을 버린다
+                bindGamepadStick2D( hashed_string( pActionName ), stick, deadzone, hashed_string( stickLayer.view() ), padIndex, outerDeadzone, responseExponent, axisScale, bScaleByDelta,
+                                    axis );
             }
 
             // 5) <chord> 태그 파싱
@@ -1076,8 +1102,10 @@ namespace sw
                     const float32      exp           = bindNode.getAttributeFloat( "exponent", 1.0f );
                     float2             axisScale{ 1.0f, 1.0f };
                     bool               bScaleByDelta{ false };
-                    InputMapSerializationInternal::readStickModifier( bindNode, axisScale, bScaleByDelta );
-                    bindGamepadStick2D( hashed_string( pAction ), stick, deadzone, hashed_string( layer ), pad, outerDeadzone, exp, axisScale, bScaleByDelta );
+                    GamepadStickAxis   axis{ GamepadStickAxis::Both };
+                    if ( InputMapSerializationInternal::readStickModifier( bindNode, axisScale, bScaleByDelta, axis ) == false )
+                        break; // 이미 경고했으므로 이 바인딩을 버린다
+                    bindGamepadStick2D( hashed_string( pAction ), stick, deadzone, hashed_string( layer ), pad, outerDeadzone, exp, axisScale, bScaleByDelta, axis );
                     break;
                 }
                 case BindingKind::MouseDelta2D:

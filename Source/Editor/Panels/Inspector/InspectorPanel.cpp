@@ -296,11 +296,11 @@ namespace sw::editor
         // 그릴 것이 있는 대상만 모은다. 하나도 없으면 구역 머리도 그리지 않는다.
         vector<EditorPropertyGridTarget> listTarget;
         const TypeInfo*                  pObjectType = pObj->getTypeInfo();
-        if ( pObjectType != nullptr && _favorites.hasAnyForType( pObjectType->_name.c_str() ) )
+        if ( pObjectType != nullptr && _favorites.hasAnyForTypeOrBase( *pObjectType ) )
             listTarget.push_back( EditorPropertyGridTarget{ pObj, pObjectType, nullptr, pObj, {}, {} } );
         for ( Component* pComp : pObj->getComponents() )
         {
-            const bool bNotFavoriteComponent = pComp == nullptr || pComp->getTypeInfo() == nullptr || _favorites.hasAnyForType( pComp->getTypeInfo()->_name.c_str() ) == false;
+            const bool bNotFavoriteComponent = pComp == nullptr || pComp->getTypeInfo() == nullptr || _favorites.hasAnyForTypeOrBase( *pComp->getTypeInfo() ) == false;
             if ( bNotFavoriteComponent )
                 continue;
             listTarget.push_back( EditorPropertyGridTarget{ pComp, pComp->getTypeInfo(), pComp, pComp->getOwner(), {}, {} } );
