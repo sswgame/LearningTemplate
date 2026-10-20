@@ -26,7 +26,7 @@
 
 ### S3 — 측정
 
-- `Scripts/dev/MakeStressScene.py` 에 점광 수를 매개변수로 더하고, 라이트 16 · 128 · 1024 개에서 `GPU.DeferredLighting` p50 · p99 를 `gv_lightCulling` 0 · 1 로 측정합니다(Release).
+- 측정 씬은 `py -3 Scripts/dev/MakeStressScene.py --count 4000 --point-lights <N>` 이 만듭니다(점광 수 매개변수는 들어감). 라이트 16 · 128 · 1024 개에서 `GPU.DeferredLighting` p50 · p99 를 `gv_lightCulling` 0 · 1 · 2 로 측정합니다(Release) — **남음**.
 - 클러스터 크기(X, Y, 깊이 조각)는 측정 뒤에 정하고 결정 기록에 측정값과 함께 남깁니다.
 
 ### S4 — Light Complexity 보기 모드
