@@ -43,8 +43,9 @@ namespace sw
         float32 getDurationSeconds() const { return _sampleRate == 0 ? 0.0f : static_cast<float32>( _frameCount ) / static_cast<float32>( _sampleRate ); }
 
         /**
-         * @brief 디코드한 PCM(정수 8, 16, 24, 32 비트와 float 32 비트)을 float 클립으로 바꿉니다. 3 채널 이상은 앞 두 채널(왼쪽, 오른쪽)로 줄입니다.
-         * @return 형식이 비었거나(채널이나 샘플레이트가 0) 비트 수를 모르면 false 를 반환합니다.
+         * @brief 디코드한 PCM(정수 8, 16, 24, 32 비트와 float 32 비트)을 float 클립으로 바꿉니다. 3 채널 이상은 채널 마스크(WAV 순서)의 배치로
+         *        명시 다운믹스(ITU-R BS.775, `AudioDownmix`)해 스테레오로 줄입니다.
+         * @return 형식이 비었거나(채널이나 샘플레이트가 0) 비트 수를 모르거나, 3 채널 이상인데 배치를 모르면(높이 채널, 마스크 비트 부족) false 를 반환합니다.
          */
         [[nodiscard]] static bool convertPcm( const AudioPcm& pcm, AudioClipData& outClip );
         /** @brief 채널을 평균해 모노 샘플로 바꿉니다(립싱크 분석에 씁니다). 스트리밍 클립은 샘플이 없어 빈 결과입니다. */

@@ -5,7 +5,9 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Task/TaskManager.h"
 
+#include "Engine/Audio/AudioChannelLayout.h"
 #include "Engine/Audio/AudioClipDecoder.h"
+#include "Engine/Audio/AudioDownmix.h"
 #include "Engine/Audio/AudioStream.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Resource/ResourceIO.h"
@@ -78,7 +80,13 @@ namespace sw
         const uint32 sourceChannelCount = pcm._channelCount;
         const uint32 frameBytes         = sourceChannelCount * bytesPerSample;
         const uint32 frameCount         = static_cast<uint32>( pcm._listData.size() / frameBytes );
-        const uint32 targetChannelCount = sourceChannelCount >= 2 ? 2u : 1u;
+        const uint32 targetChannelCount = sourceChannelCount >= audio::kStereoChannelCount ? audio::kStereoChannelCount : 1u;
+
+        // 3 채널 이상은 채널 마스크의 배치로 명시 다운믹스한다(센터 대사와 서라운드가 사라지지 않는다). 배치를 모르면 오류다.
+        const bool   bDownmix = sourceChannelCount > audio::kStereoChannelCount;
+        AudioDownmix downmix;
+        if ( bDownmix && AudioDownmix::makeForWaveMask( sourceChannelCount, pcm._channelMask, downmix ) == false )
+            return false;
 
         AudioClipData clip;
         clip._sampleRate   = pcm._sampleRate;
@@ -86,15 +94,27 @@ namespace sw
         clip._frameCount   = frameCount;
         clip._listSample.resize( static_cast<size_t>( frameCount ) * targetChannelCount );
 
+        float32      arrSourceFrame[AudioDownmix::kMaxSourceChannelCount]{};
         const uint8* pFrame = pcm._listData.data();
         for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
         {
-            for ( uint32 channelIndex = 0; channelIndex < targetChannelCount; ++channelIndex )
+            const uint32 readChannelCount = bDownmix ? sourceChannelCount : targetChannelCount;
+            for ( uint32 channelIndex = 0; channelIndex < readChannelCount; ++channelIndex )
             {
-                const uint8*  pSample                                                                   = pFrame + static_cast<size_t>( channelIndex ) * bytesPerSample;
-                const float32 value                                                                     = pcm._bFloat == SW_TRUE ? AudioClipInternal::readFloatSample( pSample )
-                                                                                                                                 : AudioClipInternal::readIntegerSample( pSample, bytesPerSample );
-                clip._listSample[static_cast<size_t>( frameIndex ) * targetChannelCount + channelIndex] = value;
+                const uint8* pSample         = pFrame + static_cast<size_t>( channelIndex ) * bytesPerSample;
+                arrSourceFrame[channelIndex] = pcm._bFloat == SW_TRUE ? AudioClipInternal::readFloatSample( pSample ) : AudioClipInternal::readIntegerSample( pSample, bytesPerSample );
+            }
+            float32* pTarget = clip._listSample.data() + static_cast<size_t>( frameIndex ) * targetChannelCount;
+            if ( bDownmix )
+            {
+                downmix.apply( arrSourceFrame, pTarget[0], pTarget[1] );
+            }
+            else
+            {
+                for ( uint32 channelIndex = 0; channelIndex < targetChannelCount; ++channelIndex )
+                {
+                    pTarget[channelIndex] = arrSourceFrame[channelIndex];
+                }
             }
             pFrame += frameBytes;
         }
@@ -238,7 +258,7 @@ namespace sw
                         pClip->_pStream                 = pStream;
                         pClip->_frameCount              = pStream->getInfo()._frameCount;
                         pClip->_sampleRate              = pStream->getInfo()._sampleRate;
-                        pClip->_channelCount            = pStream->getInfo()._channelCount;
+                        pClip->_channelCount            = pStream->getPlaybackChannelCount();
                         return pClip;
                     }
                 }

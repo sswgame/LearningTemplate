@@ -197,7 +197,7 @@ SW_TEST_CASE( AudioStreamTest, StreamedVoiceMatchesMemoryVoiceAcrossTheLoopSeam 
     const float64 rate = static_cast<float64>( kRate ) / static_cast<float64>( sw::audio::kSampleRate );
     for ( sw::AudioVoice* pVoice : { &memoryVoice, &streamVoice } )
     {
-        pVoice->setTarget( 0.8f, 0.25f );
+        pVoice->setTarget( 0.8f, sw::AudioPanDirection::makeStereoPan( 0.25f ), sw::AudioChannelLayout::Stereo );
         pVoice->setPlaybackRate( rate );
     }
 
@@ -213,8 +213,8 @@ SW_TEST_CASE( AudioStreamTest, StreamedVoiceMatchesMemoryVoiceAcrossTheLoopSeam 
     {
         memoryBuffer.clear( sw::audio::kBlockFrameCount );
         streamBuffer.clear( sw::audio::kBlockFrameCount );
-        memoryVoice.mix( memoryBlock, sw::AudioBlockView{} );
-        streamVoice.mix( streamBlock, sw::AudioBlockView{} );
+        memoryVoice.mix( memoryBlock );
+        streamVoice.mix( streamBlock );
         maxDifference = sw::MathUtil::max( maxDifference, AudioStreamTestInternal::computeMaxDifference( memoryBlock, streamBlock ) );
     }
     SW_EXPECT_TRUE( maxDifference < 1e-6f );

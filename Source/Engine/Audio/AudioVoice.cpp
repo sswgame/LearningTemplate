@@ -77,16 +77,16 @@ namespace sw
     AudioVoice::AudioVoice()
         : _pClip{ nullptr }
         , _lowPass{}
+        , _binaural{}
         , _stream{}
         , _firstFrameLeft{ 0.0f }
         , _firstFrameRight{ 0.0f }
         , _bHaveFirstFrame{ false }
         , _position{ 0.0 }
         , _rate{ 1.0 }
-        , _gainLeft{ 0.0f }
-        , _gainRight{ 0.0f }
-        , _targetGainLeft{ 0.0f }
-        , _targetGainRight{ 0.0f }
+        , _arrGain{}
+        , _arrTargetGain{}
+        , _gainChannelCount{ 0 }
         , _lowPassHz{ audio::kFilterOpenHz }
         , _fadeGain{ 1.0f }
         , _fadeTarget{ 1.0f }
@@ -99,6 +99,7 @@ namespace sw
         , _bStopAtFade{ SW_FALSE }
         , _bFirstBlock{ SW_TRUE }
         , _bRampIn{ SW_TRUE }
+        , _bBinaural{ SW_FALSE }
         , _reservedVoice{ 0 }
     {
     }
@@ -122,26 +123,51 @@ namespace sw
         *this = AudioVoice{};
     }
 
-    void AudioVoice::setTarget( float32 volume, float32 pan )
+    void AudioVoice::setTarget( float32 volume, const AudioPanDirection& direction, AudioChannelLayout layout )
     {
-        const float32 clampedPan = MathUtil::clamp( pan, -1.0f, 1.0f );
-        if ( _pClip != nullptr && _pClip->_channelCount >= 2 )
+        _gainChannelCount        = AudioChannelLayoutUtil::getChannelCount( layout );
+        const bool bStereoSource = _pClip != nullptr && _pClip->_channelCount >= audio::kStereoChannelCount;
+        const bool bBinaural     = layout == AudioChannelLayout::Binaural && bStereoSource == false && direction._mode == AudioPanMode::Surround;
+        if ( bBinaural && _bBinaural == SW_FALSE )
+            _binaural.reset(); // 처음 바이노럴로 바뀌면 지난 지연선이 섞이지 않게 비운다
+        _bBinaural = bBinaural ? SW_TRUE : SW_FALSE;
+        if ( bBinaural )
         {
-            // 밸런스: 가운데에서 두 채널 그대로, 한쪽으로 가면 반대쪽만 줄인다.
-            _targetGainLeft  = volume * MathUtil::min( 1.0f, 1.0f - clampedPan );
-            _targetGainRight = volume * MathUtil::min( 1.0f, 1.0f + clampedPan );
+            // 방향은 HRTF 가 내고, 게인은 볼륨만 두 귀에 같다.
+            _binaural.setDirection( direction );
+            for ( float32& gain : _arrTargetGain )
+            {
+                gain = 0.0f;
+            }
+            _arrTargetGain[0] = volume;
+            _arrTargetGain[1] = volume;
+        }
+        else if ( bStereoSource )
+        {
+            // 밸런스: 가운데에서 두 채널 그대로, 한쪽으로 가면 반대쪽만 줄인다. 앞 두 채널(FL FR) 밖은 0 이다.
+            const float32 clampedPan = MathUtil::clamp( direction._right, -1.0f, 1.0f );
+            for ( float32& gain : _arrTargetGain )
+            {
+                gain = 0.0f;
+            }
+            _arrTargetGain[0] = volume * MathUtil::min( 1.0f, 1.0f - clampedPan );
+            _arrTargetGain[1] = volume * MathUtil::min( 1.0f, 1.0f + clampedPan );
         }
         else
         {
-            // 등전력: θ = (pan + 1)·π/4, L = cos θ, R = sin θ.
-            const float32 theta = ( clampedPan + 1.0f ) * MathUtil::kPi * 0.25f;
-            _targetGainLeft     = volume * MathUtil::cos( theta );
-            _targetGainRight    = volume * MathUtil::sin( theta );
+            float32 arrPanGain[audio::kMaxChannelCount]{};
+            AudioPanner::computeGains( layout, direction, arrPanGain );
+            for ( uint32 channelIndex = 0; channelIndex < audio::kMaxChannelCount; ++channelIndex )
+            {
+                _arrTargetGain[channelIndex] = volume * arrPanGain[channelIndex];
+            }
         }
         if ( _bFirstBlock == SW_TRUE )
         {
-            _gainLeft  = _bRampIn == SW_TRUE ? 0.0f : _targetGainLeft;
-            _gainRight = _bRampIn == SW_TRUE ? 0.0f : _targetGainRight;
+            for ( uint32 channelIndex = 0; channelIndex < audio::kMaxChannelCount; ++channelIndex )
+            {
+                _arrGain[channelIndex] = _bRampIn == SW_TRUE ? 0.0f : _arrTargetGain[channelIndex];
+            }
         }
     }
 
@@ -191,78 +217,126 @@ namespace sw
             _lowPass._coefficients = AudioBiquadCoefficients::make( AudioBiquadType::LowPass, cutoff, 0.7071f, 0.0f, static_cast<float32>( audio::kSampleRate ) );
     }
 
-    void AudioVoice::mix( const AudioBlockView& bus, const AudioBlockView& scratch )
+    void AudioVoice::mix( const AudioBlockView& bus )
     {
         if ( isActive() == false || _bPaused == SW_TRUE )
             return;
-        // 보이스는 아직 앞 두 채널(FL FR)에만 더한다. 그 밖의 레이아웃은 엔진이 초기화에서 거절한다(방향 패너는 U2).
-        SW_ASSERT( bus._channelCount == audio::kStereoChannelCount );
-        if ( _lowPassHz >= audio::kFilterOpenHz || scratch.isEmpty() )
-        {
-            mixInto( bus );
-            return;
-        }
-        AudioBlockView work = scratch;
-        work._channelCount  = bus._channelCount;
-        work._frameCount    = bus._frameCount;
-        for ( uint32 channelIndex = 0; channelIndex < audio::kStereoChannelCount; ++channelIndex )
-        {
-            Memory::set( work.getChannel( channelIndex ), 0, static_cast<size_t>( work._frameCount ) * sizeof( float32 ) );
-        }
-        mixInto( work );
-        _lowPass.process( work );
-        for ( uint32 channelIndex = 0; channelIndex < audio::kStereoChannelCount; ++channelIndex )
-        {
-            float32*       pTarget = bus.getChannel( channelIndex );
-            const float32* pSource = work.getChannel( channelIndex );
-            for ( uint32 frameIndex = 0; frameIndex < work._frameCount; ++frameIndex )
-            {
-                pTarget[frameIndex] += pSource[frameIndex];
-            }
-        }
-    }
+        SW_ASSERT( bus._channelCount == _gainChannelCount );
+        SW_ASSERT( bus._frameCount <= audio::kBlockFrameCount );
 
-    void AudioVoice::mixInto( const AudioBlockView& target )
-    {
+        // 1 단계: 소스(왼쪽 · 오른쪽 평면)와 프레임별 페이드를 한 번만 만든다. 출력 채널 수와 상관없는 일이다.
+        float32        arrSource[audio::kStereoChannelCount * audio::kBlockFrameCount];
+        float32        arrFade[audio::kBlockFrameCount];
+        AudioBlockView source;
+        source._pData        = arrSource;
+        source._channelCount = audio::kStereoChannelCount;
+        source._frameCount   = bus._frameCount;
+        uint32 activeBegin{ 0 };
+        uint32 activeEnd{ 0 };
         if ( _pClip->isStreamed() )
         {
             AudioVoiceStreamSampler sampler{ _stream, _firstFrameLeft, _firstFrameRight, _bHaveFirstFrame };
-            mixLoop( target, sampler );
-            return;
+            renderSource( sampler, source, arrFade, activeBegin, activeEnd );
         }
-        AudioVoiceMemorySampler sampler{ _pClip->_listSample.data(), _pClip->_channelCount >= audio::kStereoChannelCount };
-        mixLoop( target, sampler );
+        else
+        {
+            AudioVoiceMemorySampler sampler{ _pClip->_listSample.data(), _pClip->_channelCount >= audio::kStereoChannelCount };
+            renderSource( sampler, source, arrFade, activeBegin, activeEnd );
+        }
+
+        // 2 단계: 로우패스는 패닝 전에 소스 채널에만 건다(모노 클립은 한 채널). 소리가 나지 않은 자리는 0 으로 채워 필터 상태가 이어지게 한다.
+        const bool   bStereoSource      = _pClip->_channelCount >= audio::kStereoChannelCount;
+        const uint32 sourceChannelCount = bStereoSource ? audio::kStereoChannelCount : 1u;
+        const bool   bFiltered          = _lowPassHz < audio::kFilterOpenHz;
+        if ( bFiltered || _bBinaural == SW_TRUE )
+        {
+            for ( uint32 channelIndex = 0; channelIndex < sourceChannelCount; ++channelIndex )
+            {
+                float32* pChannel = source.getChannel( channelIndex );
+                for ( uint32 frameIndex = 0; frameIndex < activeBegin; ++frameIndex )
+                {
+                    pChannel[frameIndex] = 0.0f;
+                }
+                for ( uint32 frameIndex = activeEnd; frameIndex < source._frameCount; ++frameIndex )
+                {
+                    pChannel[frameIndex] = 0.0f;
+                }
+            }
+        }
+        if ( bFiltered )
+        {
+            AudioBlockView filtered = source;
+            filtered._channelCount  = sourceChannelCount;
+            _lowPass.process( filtered );
+        }
+
+        // 바이노럴: 모노 소스를 두 귀 신호로 바꿔 소스의 왼쪽 · 오른쪽 채널로 둔다. 아래 단계는 스테레오 소스처럼 FL ← 왼쪽, FR ← 오른쪽으로 더한다.
+        float32    arrEar[audio::kStereoChannelCount * audio::kBlockFrameCount];
+        const bool bBinaural = _bBinaural == SW_TRUE && bStereoSource == false;
+        if ( bBinaural )
+        {
+            _binaural.process( source.getChannel( 0 ), source._frameCount, arrEar, arrEar + audio::kBlockFrameCount );
+            source._pData = arrEar;
+        }
+
+        // 3 단계: 출력 채널마다 게인을 램프하며 더한다. 스테레오 소스는 FL ← 왼쪽, FR ← 오른쪽이고 나머지 채널은 게인이 0 이다.
+        const float32 invFrames = 1.0f / static_cast<float32>( bus._frameCount );
+        for ( uint32 channelIndex = 0; channelIndex < bus._channelCount; ++channelIndex )
+        {
+            const bool bSilentChannel = _arrGain[channelIndex] == 0.0f && _arrTargetGain[channelIndex] == 0.0f;
+            if ( bSilentChannel )
+                continue;
+            const bool     bTwoSource   = bStereoSource || bBinaural;
+            const bool     bRightSource = bTwoSource && channelIndex == 1;
+            const float32* pSource      = source.getChannel( bRightSource ? 1u : 0u );
+            float32*       pTarget      = bus.getChannel( channelIndex );
+            const float32  step         = ( _arrTargetGain[channelIndex] - _arrGain[channelIndex] ) * invFrames;
+            float32        gain         = _arrGain[channelIndex];
+            for ( uint32 frameIndex = 0; frameIndex < activeBegin; ++frameIndex )
+            {
+                gain += step;
+            }
+            for ( uint32 frameIndex = activeBegin; frameIndex < activeEnd; ++frameIndex )
+            {
+                gain += step;
+                pTarget[frameIndex] += pSource[frameIndex] * gain * arrFade[frameIndex];
+            }
+        }
+        for ( uint32 channelIndex = 0; channelIndex < audio::kMaxChannelCount; ++channelIndex )
+        {
+            _arrGain[channelIndex] = _arrTargetGain[channelIndex];
+        }
+        _bFirstBlock = SW_FALSE;
     }
 
     template <typename TSampler>
-    void AudioVoice::mixLoop( const AudioBlockView& target, TSampler& sampler )
+    void AudioVoice::renderSource( TSampler& sampler, const AudioBlockView& source, float32* pFade, uint32& outActiveBegin, uint32& outActiveEnd )
     {
-        const uint32         frameCount   = target._frameCount;
-        float32*             pTargetLeft  = target.getChannel( 0 );
-        float32*             pTargetRight = target.getChannel( 1 );
+        const uint32         frameCount   = source._frameCount;
+        float32*             pLeft        = source.getChannel( 0 );
+        float32*             pRight       = source.getChannel( 1 );
         const AudioClipData& clip         = *_pClip;
         const uint32         clipFrames   = clip._frameCount;
-        const float32        invFrames    = 1.0f / static_cast<float32>( frameCount );
-        const float32        stepLeft     = ( _targetGainLeft - _gainLeft ) * invFrames;
-        const float32        stepRight    = ( _targetGainRight - _gainRight ) * invFrames;
-        float32              gainLeft     = _gainLeft;
-        float32              gainRight    = _gainRight;
         float64              position     = _position;
         const float64        rate         = _rate;
         const float64        clipFrames64 = static_cast<float64>( clipFrames );
 
+        // 시작 지연은 블록 앞쪽에만, 끝남은 블록 뒤쪽에만 있으므로 소리가 난 프레임은 한 구간이다.
+        outActiveBegin = frameCount;
+        outActiveEnd   = frameCount;
         for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
         {
-            gainLeft += stepLeft;
-            gainRight += stepRight;
             if ( _startDelayFrames > 0 )
             {
                 --_startDelayFrames;
                 continue;
             }
+            if ( outActiveBegin == frameCount )
+                outActiveBegin = frameIndex;
             if ( stepFade() == false )
             {
-                _bFinished = SW_TRUE;
+                _bFinished   = SW_TRUE;
+                outActiveEnd = frameIndex;
                 break;
             }
 
@@ -272,29 +346,26 @@ namespace sw
             if ( next >= clipFrames )
                 next = _bLoop == SW_TRUE ? 0u : index;
 
-            const float32 fade = _fadeGain;
-            float32       left{ 0.0f };
-            float32       right{ 0.0f };
+            float32 left{ 0.0f };
+            float32 right{ 0.0f };
             sampler.sample( index, next, fraction, left, right );
-            pTargetLeft[frameIndex] += left * gainLeft * fade;
-            pTargetRight[frameIndex] += right * gainRight * fade;
+            pLeft[frameIndex]  = left;
+            pRight[frameIndex] = right;
+            pFade[frameIndex]  = _fadeGain;
 
             position += rate;
             if ( position >= clipFrames64 )
             {
                 if ( _bLoop == SW_FALSE )
                 {
-                    _bFinished = SW_TRUE;
+                    _bFinished   = SW_TRUE;
+                    outActiveEnd = frameIndex + 1;
                     break;
                 }
                 position -= clipFrames64 * MathUtil::floor( position / clipFrames64 );
             }
         }
-
-        _position    = position;
-        _gainLeft    = _targetGainLeft;
-        _gainRight   = _targetGainRight;
-        _bFirstBlock = SW_FALSE;
+        _position = position;
     }
 
     void AudioVoice::advanceVirtual( uint32 frameCount )
@@ -302,8 +373,10 @@ namespace sw
         if ( isActive() == false || _bPaused == SW_TRUE )
             return;
         // 다시 섞일 때 0 에서 오르게 둔다. 가상이 되는 동안은 들리지 않았기 때문이다.
-        _gainLeft    = 0.0f;
-        _gainRight   = 0.0f;
+        for ( float32& gain : _arrGain )
+        {
+            gain = 0.0f;
+        }
         _bFirstBlock = SW_FALSE;
 
         uint32 remaining = frameCount;

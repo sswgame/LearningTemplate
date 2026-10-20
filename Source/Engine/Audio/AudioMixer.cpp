@@ -29,18 +29,6 @@ namespace sw
         if ( desc.validate( "mixer" ) == false || desc.makeProcessingOrder( _listOrder ) == false )
             return false;
 
-        // 이펙트는 스테레오만 처리한다. 맞지 않는 조합은 조용히 건너뛰지 않고 여기서 멈춘다(채널별 이펙트는 U3).
-        const bool bStereo = AudioChannelLayoutUtil::getChannelCount( layout ) == audio::kStereoChannelCount;
-        for ( const AudioBusDesc& busDesc : desc._listBus )
-        {
-            if ( bStereo == false && busDesc._listEffect.empty() == false )
-            {
-                SW_LOG_ERROR( "Bus '%#' has effects, which only process stereo, but the layout has %# channels", busDesc._name.c_str(),
-                              AudioChannelLayoutUtil::getChannelCount( layout ) );
-                return false;
-            }
-        }
-
         _desc   = desc;
         _layout = layout;
         _listBusState.resize( desc._listBus.size() );
@@ -75,12 +63,14 @@ namespace sw
             }
             for ( const AudioEffectDesc& effectDesc : busDesc._listEffect )
             {
-                unique_ptr<IAudioEffect> pEffect = AudioEffectRegistry::createEffect( effectDesc._type );
-                for ( const AudioEffectParameterDesc& parameter : effectDesc._listParameter )
+                // 지원하지 않는 레이아웃 · 읽지 못한 자원(임펄스 응답)은 조용히 건너뛰지 않고 그래프 전체를 오류로 멈춘다(오류는 createEffect 가 남긴다).
+                unique_ptr<IAudioEffect> pEffect = AudioEffectRegistry::createEffect( effectDesc, layout );
+                if ( pEffect == nullptr )
                 {
-                    const int32 parameterIndex = pEffect->findParameterIndex( parameter._name );
-                    if ( parameterIndex >= 0 )
-                        pEffect->setParameter( static_cast<uint32>( parameterIndex ), parameter._value );
+                    SW_LOG_ERROR( "Bus '%#' effect '%#' could not be created for %# output channels", busDesc._name.c_str(), effectDesc._type.c_str(),
+                                  AudioChannelLayoutUtil::getChannelCount( layout ) );
+                    _listBusState.clear();
+                    return false;
                 }
                 bus._listEffect.push_back( std::move( pEffect ) );
                 bus._listEffectName.push_back( effectDesc.getEffectName() );

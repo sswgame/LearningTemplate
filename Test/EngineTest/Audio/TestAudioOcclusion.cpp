@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Math/MathUtil.h"
+
 #include "Engine/Audio/AudioRoomGraph.h"
 #include "Engine/Object/Component/Audio/Physics2DAudioOcclusionQuery.h"
 #include "Engine/Physics/IPhysicsQueryScene.h"
@@ -75,23 +77,23 @@ namespace
 SW_TEST_CASE( AudioOcclusionTest, Physics2DRayQueryCountsBlockedRays )
 {
     sw::Physics2DAudioOcclusionQuery query;
-    SW_EXPECT_NEAR_EQUAL( 0.0f, query.computeOcclusion( sw::float3( 0.0f, 0.0f, 0.0f ), sw::float3( 10.0f, 0.0f, 0.0f ) ), 1e-6f ); // 씬 없음
+    SW_EXPECT_NEAR_EQUAL( 0.0f, query.computePropagation( sw::float3( 0.0f, 0.0f, 0.0f ), sw::float3( 10.0f, 0.0f, 0.0f ) )._occlusion, 1e-6f ); // 씬 없음
 
     const WallQueryScene2D fullWall( 5.0f, -10.0f, 10.0f );
     query.setScene( &fullWall, 0xFFFFFFFFu );
-    SW_EXPECT_NEAR_EQUAL( 1.0f, query.computeOcclusion( sw::float3( 0.0f, 0.0f, 0.0f ), sw::float3( 10.0f, 0.0f, 0.0f ) ), 1e-6f );
-    SW_EXPECT_NEAR_EQUAL( 0.0f, query.computeOcclusion( sw::float3( 0.0f, 0.0f, 0.0f ), sw::float3( 4.0f, 0.0f, 0.0f ) ), 1e-6f );  // 벽 앞
-    SW_EXPECT_NEAR_EQUAL( 0.0f, query.computeOcclusion( sw::float3( 0.0f, 0.0f, 0.0f ), sw::float3( 0.0f, 0.0f, 50.0f ) ), 1e-6f ); // Z 는 평면 밖이라 무시한다
+    SW_EXPECT_NEAR_EQUAL( 1.0f, query.computePropagation( sw::float3( 0.0f, 0.0f, 0.0f ), sw::float3( 10.0f, 0.0f, 0.0f ) )._occlusion, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, query.computePropagation( sw::float3( 0.0f, 0.0f, 0.0f ), sw::float3( 4.0f, 0.0f, 0.0f ) )._occlusion, 1e-6f );  // 벽 앞
+    SW_EXPECT_NEAR_EQUAL( 0.0f, query.computePropagation( sw::float3( 0.0f, 0.0f, 0.0f ), sw::float3( 0.0f, 0.0f, 50.0f ) )._occlusion, 1e-6f ); // Z 는 평면 밖이라 무시한다
 
     // 벽이 위쪽 레이(+0.4)만 가린다.
     const WallQueryScene2D partialWall( 5.0f, 0.2f, 5.0f );
     query.setScene( &partialWall, 0xFFFFFFFFu );
-    SW_EXPECT_NEAR_EQUAL( 1.0f / 3.0f, query.computeOcclusion( sw::float3( 0.0f, 0.0f, 0.0f ), sw::float3( 10.0f, 0.0f, 0.0f ) ), 1e-5f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f / 3.0f, query.computePropagation( sw::float3( 0.0f, 0.0f, 0.0f ), sw::float3( 10.0f, 0.0f, 0.0f ) )._occlusion, 1e-5f );
 
     // 리스너 껍질(0.3 m) 안의 벽은 세지 않는다 — 서 있는 캐릭터 자신이다.
     const WallQueryScene2D nearWall( 0.1f, -10.0f, 10.0f );
     query.setScene( &nearWall, 0xFFFFFFFFu );
-    SW_EXPECT_NEAR_EQUAL( 0.0f, query.computeOcclusion( sw::float3( 0.0f, 0.0f, 0.0f ), sw::float3( 10.0f, 0.0f, 0.0f ) ), 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, query.computePropagation( sw::float3( 0.0f, 0.0f, 0.0f ), sw::float3( 10.0f, 0.0f, 0.0f ) )._occlusion, 1e-6f );
 }
 
 /**
@@ -102,7 +104,7 @@ SW_TEST_CASE( AudioOcclusionTest, RoomGraphUsesPortalOpenness )
     sw::AudioRoomGraph graph;
     const uint32       roomA = graph.addRoom( sw::float3( 5.0f, 0.0f, 0.0f ), sw::float3( 5.0f, 5.0f, 5.0f ) );  // x 0..10
     const uint32       roomB = graph.addRoom( sw::float3( 15.0f, 0.0f, 0.0f ), sw::float3( 5.0f, 5.0f, 5.0f ) ); // x 10..20
-    const uint32       door  = graph.addPortal( roomA, roomB, 1.0f );
+    const uint32       door  = graph.addPortal( roomA, roomB, sw::float3( 10.0f, 0.0f, 0.0f ), 1.0f );
     SW_ASSERT_TRUE( door != sw::invalid_index::kUint32 );
 
     const sw::float3 inA( 2.0f, 0.0f, 0.0f );
@@ -112,16 +114,16 @@ SW_TEST_CASE( AudioOcclusionTest, RoomGraphUsesPortalOpenness )
     SW_EXPECT_EQUAL( roomB, graph.findRoom( inB ) );
     SW_EXPECT_EQUAL( sw::AudioRoomGraph::kOutside, graph.findRoom( sw::float3( 50.0f, 0.0f, 0.0f ) ) );
 
-    SW_EXPECT_NEAR_EQUAL( 0.0f, graph.computeOcclusion( inA, inA2 ), 1e-6f );
-    SW_EXPECT_NEAR_EQUAL( 0.15f, graph.computeOcclusion( inA, inB ), 1e-5f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, graph.computePropagation( inA, inA2 )._occlusion, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.15f, graph.computePropagation( inA, inB )._occlusion, 1e-5f );
 
     SW_EXPECT_TRUE( graph.setPortalOpenness( door, 0.5f ) );
-    SW_EXPECT_NEAR_EQUAL( 1.0f - 0.5f * 0.85f, graph.computeOcclusion( inA, inB ), 1e-5f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f - 0.5f * 0.85f, graph.computePropagation( inA, inB )._occlusion, 1e-5f );
 
     SW_EXPECT_TRUE( graph.setPortalOpenness( door, 0.0f ) );
-    SW_EXPECT_NEAR_EQUAL( 1.0f, graph.computeOcclusion( inA, inB ), 1e-6f ); // 닫힌 문
+    SW_EXPECT_NEAR_EQUAL( 1.0f, graph.computePropagation( inA, inB )._occlusion, 1e-6f ); // 닫힌 문
     graph.setWallLeak( 0.1f );
-    SW_EXPECT_NEAR_EQUAL( 0.9f, graph.computeOcclusion( inA, inB ), 1e-5f ); // 벽으로 새는 소리
+    SW_EXPECT_NEAR_EQUAL( 0.9f, graph.computePropagation( inA, inB )._occlusion, 1e-5f ); // 벽으로 새는 소리
 
     SW_EXPECT_FALSE( graph.setPortalOpenness( 99, 1.0f ) );
 }
@@ -135,30 +137,56 @@ SW_TEST_CASE( AudioOcclusionTest, RoomGraphPicksTheBestPath )
     const uint32       roomA = graph.addRoom( sw::float3( 5.0f, 0.0f, 0.0f ), sw::float3( 5.0f, 5.0f, 5.0f ) );
     const uint32       roomB = graph.addRoom( sw::float3( 15.0f, 0.0f, 0.0f ), sw::float3( 5.0f, 5.0f, 5.0f ) );
     const uint32       roomC = graph.addRoom( sw::float3( 25.0f, 0.0f, 0.0f ), sw::float3( 5.0f, 5.0f, 5.0f ) );
-    const uint32       ab    = graph.addPortal( roomA, roomB, 1.0f );
-    const uint32       bc    = graph.addPortal( roomB, roomC, 1.0f );
+    const uint32       ab    = graph.addPortal( roomA, roomB, sw::float3( 10.0f, 0.0f, 0.0f ), 1.0f );
+    const uint32       bc    = graph.addPortal( roomB, roomC, sw::float3( 20.0f, 0.0f, 0.0f ), 1.0f );
     SW_ASSERT_TRUE( ab != sw::invalid_index::kUint32 && bc != sw::invalid_index::kUint32 );
 
     const sw::float3 inA( 2.0f, 0.0f, 0.0f );
     const sw::float3 inC( 28.0f, 0.0f, 0.0f );
-    SW_EXPECT_NEAR_EQUAL( 1.0f - 0.85f * 0.85f, graph.computeOcclusion( inA, inC ), 1e-5f ); // 문 둘을 지난다
+    SW_EXPECT_NEAR_EQUAL( 1.0f - 0.85f * 0.85f, graph.computePropagation( inA, inC )._occlusion, 1e-5f ); // 문 둘을 지난다
 
     // 바로 잇는 닫힌 문 AC 가 있어도 열린 AB-BC 길이 이긴다. AC 를 열면 한 번만 지나는 길이 이긴다.
-    const uint32 ac = graph.addPortal( roomA, roomC, 0.0f );
-    SW_EXPECT_NEAR_EQUAL( 1.0f - 0.85f * 0.85f, graph.computeOcclusion( inA, inC ), 1e-5f );
+    const uint32 ac = graph.addPortal( roomA, roomC, sw::float3( 15.0f, 0.0f, 5.0f ), 0.0f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f - 0.85f * 0.85f, graph.computePropagation( inA, inC )._occlusion, 1e-5f );
     SW_EXPECT_TRUE( graph.setPortalOpenness( ac, 1.0f ) );
-    SW_EXPECT_NEAR_EQUAL( 0.15f, graph.computeOcclusion( inA, inC ), 1e-5f );
+    SW_EXPECT_NEAR_EQUAL( 0.15f, graph.computePropagation( inA, inC )._occlusion, 1e-5f );
 
     // 이어지지 않은 바깥 소리는 막히고, 바깥으로 잇는 문이 있으면 들린다.
     const sw::float3 outdoors( 100.0f, 0.0f, 0.0f );
-    SW_EXPECT_NEAR_EQUAL( 1.0f, graph.computeOcclusion( inA, outdoors ), 1e-6f );
-    const uint32 front = graph.addPortal( roomC, sw::AudioRoomGraph::kOutside, 1.0f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, graph.computePropagation( inA, outdoors )._occlusion, 1e-6f );
+    const uint32 front = graph.addPortal( roomC, sw::AudioRoomGraph::kOutside, sw::float3( 30.0f, 0.0f, 0.0f ), 1.0f );
     SW_ASSERT_TRUE( front != sw::invalid_index::kUint32 );
-    SW_EXPECT_NEAR_EQUAL( 1.0f - 0.85f * 0.85f, graph.computeOcclusion( inA, outdoors ), 1e-5f ); // A -> C(열린 AC) -> 바깥
+    SW_EXPECT_NEAR_EQUAL( 1.0f - 0.85f * 0.85f, graph.computePropagation( inA, outdoors )._occlusion, 1e-5f ); // A -> C(열린 AC) -> 바깥
 
     // 잘못된 포털은 거절한다.
-    SW_EXPECT_TRUE( graph.addPortal( roomA, roomA, 1.0f ) == sw::invalid_index::kUint32 );
-    SW_EXPECT_TRUE( graph.addPortal( roomA, 77, 1.0f ) == sw::invalid_index::kUint32 );
+    SW_EXPECT_TRUE( graph.addPortal( roomA, roomA, sw::float3( 0.0f, 0.0f, 0.0f ), 1.0f ) == sw::invalid_index::kUint32 );
+    SW_EXPECT_TRUE( graph.addPortal( roomA, 77, sw::float3( 0.0f, 0.0f, 0.0f ), 1.0f ) == sw::invalid_index::kUint32 );
+}
+
+/**
+ * @brief [AudioOcclusionTest] 회절 — 문을 돌아 오는 소리는 리스너 쪽 문 방향에서 길 전체 길이만큼 떨어져 들리고, 꺾인 각 / 180° 가 회절이다. 같은 방이나 벽 누설이 이기면 곧게 온다
+ */
+SW_TEST_CASE( AudioOcclusionTest, RoomGraphDiffractsAroundPortals )
+{
+    sw::AudioRoomGraph graph;
+    const uint32       roomA = graph.addRoom( sw::float3( 5.0f, 0.0f, 0.0f ), sw::float3( 5.0f, 5.0f, 5.0f ) );  // x 0..10
+    const uint32       roomB = graph.addRoom( sw::float3( 15.0f, 0.0f, 0.0f ), sw::float3( 5.0f, 5.0f, 5.0f ) ); // x 10..20
+    SW_ASSERT_TRUE( graph.addPortal( roomA, roomB, sw::float3( 10.0f, 0.0f, 4.0f ), 1.0f ) != sw::invalid_index::kUint32 );
+
+    // 리스너 (2,0,0) → 문 (10,0,4) → 에미터 (18,0,0): 두 토막 √80 씩, 꺾임 acos(0.6).
+    const sw::AudioPropagation around = graph.computePropagation( sw::float3( 2.0f, 0.0f, 0.0f ), sw::float3( 18.0f, 0.0f, 0.0f ) );
+    SW_EXPECT_TRUE( around._bRedirected );
+    SW_EXPECT_NEAR_EQUAL( 0.15f, around._occlusion, 1e-5f );
+    SW_EXPECT_NEAR_EQUAL( sw::MathUtil::acos( 0.6f ) / sw::MathUtil::kPi, around._diffraction, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 18.0f, around._apparentPosition._x, 1e-3f );
+    SW_EXPECT_NEAR_EQUAL( 8.0f, around._apparentPosition._z, 1e-3f );
+
+    const sw::AudioPropagation sameRoom = graph.computePropagation( sw::float3( 2.0f, 0.0f, 0.0f ), sw::float3( 8.0f, 0.0f, 0.0f ) );
+    SW_EXPECT_FALSE( sameRoom._bRedirected );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, sameRoom._diffraction, 1e-6f );
+
+    graph.setWallLeak( 0.9f ); // 벽이 문(0.85)보다 잘 통하면 곧게 온다
+    SW_EXPECT_FALSE( graph.computePropagation( sw::float3( 2.0f, 0.0f, 0.0f ), sw::float3( 18.0f, 0.0f, 0.0f ) )._bRedirected );
 }
 
 /**
@@ -167,16 +195,16 @@ SW_TEST_CASE( AudioOcclusionTest, RoomGraphPicksTheBestPath )
 SW_TEST_CASE( AudioOcclusionTest, NestedRoomsPreferTheSmallest )
 {
     sw::AudioRoomGraph graph;
-    SW_EXPECT_NEAR_EQUAL( 0.0f, graph.computeOcclusion( sw::float3( 0.0f, 0.0f, 0.0f ), sw::float3( 9.0f, 0.0f, 0.0f ) ), 1e-6f ); // 방이 없는 씬
+    SW_EXPECT_NEAR_EQUAL( 0.0f, graph.computePropagation( sw::float3( 0.0f, 0.0f, 0.0f ), sw::float3( 9.0f, 0.0f, 0.0f ) )._occlusion, 1e-6f ); // 방이 없는 씬
 
     const uint32 hall   = graph.addRoom( sw::float3( 0.0f, 0.0f, 0.0f ), sw::float3( 20.0f, 5.0f, 20.0f ) );
     const uint32 closet = graph.addRoom( sw::float3( 0.0f, 0.0f, 0.0f ), sw::float3( 2.0f, 2.0f, 2.0f ) );
     SW_EXPECT_EQUAL( closet, graph.findRoom( sw::float3( 1.0f, 0.0f, 0.0f ) ) );
     SW_EXPECT_EQUAL( hall, graph.findRoom( sw::float3( 10.0f, 0.0f, 0.0f ) ) );
 
-    SW_EXPECT_NEAR_EQUAL( 1.0f, graph.computeOcclusion( sw::float3( 1.0f, 0.0f, 0.0f ), sw::float3( 10.0f, 0.0f, 0.0f ) ), 1e-6f ); // 이어 주는 문이 없다
-    SW_EXPECT_TRUE( graph.addPortal( hall, closet, 1.0f ) != sw::invalid_index::kUint32 );
-    SW_EXPECT_NEAR_EQUAL( 0.15f, graph.computeOcclusion( sw::float3( 1.0f, 0.0f, 0.0f ), sw::float3( 10.0f, 0.0f, 0.0f ) ), 1e-5f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, graph.computePropagation( sw::float3( 1.0f, 0.0f, 0.0f ), sw::float3( 10.0f, 0.0f, 0.0f ) )._occlusion, 1e-6f ); // 이어 주는 문이 없다
+    SW_EXPECT_TRUE( graph.addPortal( hall, closet, sw::float3( 2.0f, 0.0f, 0.0f ), 1.0f ) != sw::invalid_index::kUint32 );
+    SW_EXPECT_NEAR_EQUAL( 0.15f, graph.computePropagation( sw::float3( 1.0f, 0.0f, 0.0f ), sw::float3( 10.0f, 0.0f, 0.0f ) )._occlusion, 1e-5f );
     graph.clear();
     SW_EXPECT_EQUAL( uint32( 0 ), graph.getRoomCount() );
 }

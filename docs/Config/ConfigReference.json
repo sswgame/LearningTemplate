@@ -2540,6 +2540,14 @@
    "source": "Source/Engine/Resource/AssetLoadProfiler.cpp"
   },
   {
+   "name": "gv_audioDumpPath",
+   "type": "string",
+   "default": "",
+   "kind": "시험",
+   "description": "오프라인 오디오 렌더를 내릴 때 이 WAV 로 남김(비면 끄기)",
+   "source": "Source/Engine/Audio/IAudioService.cpp"
+  },
+  {
    "name": "gv_authorityGhostPort",
    "type": "int32",
    "default": "0",

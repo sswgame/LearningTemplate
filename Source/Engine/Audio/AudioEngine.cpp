@@ -28,7 +28,6 @@ namespace sw
         , _listInstance{}
         , _listBusUserState{}
         , _blockOutput{}
-        , _voiceScratch{}
         , _listAttenuation{}
         , _listSnapshot{}
         , _music{}
@@ -57,12 +56,6 @@ namespace sw
 
     bool AudioEngine::initialize( const AudioMixerDesc& mixerDesc, AudioChannelLayout layout )
     {
-        // 보이스는 스테레오 패너뿐이다(방향 패너는 U2). 앞 두 채널에만 소리가 나는 5.1 로 두지 않고 여기서 멈춘다.
-        if ( AudioChannelLayoutUtil::getChannelCount( layout ) != audio::kStereoChannelCount )
-        {
-            SW_LOG_ERROR( "Audio engine supports only the stereo layout for now (requested %# channels)", AudioChannelLayoutUtil::getChannelCount( layout ) );
-            return false;
-        }
         shared_ptr<AudioMixer> pMixer = make_shared<AudioMixer>();
         if ( pMixer->initialize( mixerDesc, layout ) == false )
             return false;
@@ -75,7 +68,6 @@ namespace sw
         _listInstance.clear();
         _listInstance.resize( mixerDesc._maxVoiceCount );
         _blockOutput.allocate( layout );
-        _voiceScratch.allocate( AudioChannelLayout::Stereo );
         _blockCursor        = audio::kBlockFrameCount;
         _renderedFrameCount = 0;
         rebuildAttenuationTable();
@@ -123,6 +115,51 @@ namespace sw
         command._pMixer = std::move( pMixer );
         pushCommand( std::move( command ) );
         return true;
+    }
+
+    bool AudioEngine::setChannelLayout( AudioChannelLayout layout )
+    {
+        if ( isInitialized() == false || _pMixer == nullptr )
+            return false;
+        if ( layout == _layout )
+            return true;
+        // 밀린 명령(옛 레이아웃으로 만든 그래프 교체 포함)을 먼저 적용한다. 장치가 닫혀 있어 오디오 스레드가 없으므로 여기서 불러도 된다.
+        applyCommands();
+        shared_ptr<AudioMixer> pMixer = make_shared<AudioMixer>();
+        if ( pMixer->initialize( _pMixer->getDesc(), layout ) == false )
+        {
+            SW_LOG_ERROR( "The mixer graph cannot run with %# output channels - keeping %# channels", AudioChannelLayoutUtil::getChannelCount( layout ),
+                          AudioChannelLayoutUtil::getChannelCount( _layout ) );
+            return false;
+        }
+        _layout = layout;
+        adoptMixer( std::move( pMixer ) );
+        _blockOutput.allocate( layout );
+        _blockCursor = audio::kBlockFrameCount;
+        return true;
+    }
+
+    void AudioEngine::adoptMixer( shared_ptr<AudioMixer> pMixer )
+    {
+        SW_ASSERT( pMixer->getChannelLayout() == _layout );
+        _pMixer = std::move( pMixer );
+        for ( const BusUserState& state : _listBusUserState )
+        {
+            applyBusUserState( state );
+        }
+        // 살아 있는 보이스는 같은 이름의 버스로 옮긴다(없으면 sfx, 그것도 없으면 master).
+        for ( VoiceSlot& slot : _listVoice )
+        {
+            if ( slot._bInUse )
+                slot._busIndex = resolveBusIndex( slot._busName );
+        }
+        if ( _listVoice.size() < _pMixer->getDesc()._maxVoiceCount )
+        {
+            _listVoice.resize( _pMixer->getDesc()._maxVoiceCount );
+            _listInstance.resize( _pMixer->getDesc()._maxVoiceCount );
+        }
+        rebuildAttenuationTable();
+        rebindSnapshots();
     }
 
     bool AudioEngine::loadEventLibrary( const hashed_string& libraryName, const AudioEventLibrary& library )
@@ -537,14 +574,16 @@ namespace sw
         pushCommand( std::move( command ) );
     }
 
-    void AudioEngine::setEmitterOcclusion( AudioEmitterID emitterID, float32 occlusion )
+    void AudioEngine::setEmitterPropagation( AudioEmitterID emitterID, const AudioPropagation& propagation )
     {
         if ( emitterID == 0 )
             return;
         Command command;
-        command._type      = CommandType::SetEmitterOcclusion;
-        command._emitterID = emitterID;
-        command._value     = MathUtil::saturate( occlusion );
+        command._type                     = CommandType::SetEmitterPropagation;
+        command._emitterID                = emitterID;
+        command._propagation              = propagation;
+        command._propagation._occlusion   = MathUtil::saturate( propagation._occlusion );
+        command._propagation._diffraction = MathUtil::saturate( propagation._diffraction );
         pushCommand( std::move( command ) );
     }
 
@@ -712,24 +751,7 @@ namespace sw
             }
             case CommandType::SwapMixer:
             {
-                _pMixer = std::move( command._pMixer );
-                for ( const BusUserState& state : _listBusUserState )
-                {
-                    applyBusUserState( state );
-                }
-                // 살아 있는 보이스는 같은 이름의 버스로 옮긴다(없으면 sfx, 그것도 없으면 master).
-                for ( VoiceSlot& slot : _listVoice )
-                {
-                    if ( slot._bInUse )
-                        slot._busIndex = resolveBusIndex( slot._busName );
-                }
-                if ( _listVoice.size() < _pMixer->getDesc()._maxVoiceCount )
-                {
-                    _listVoice.resize( _pMixer->getDesc()._maxVoiceCount );
-                    _listInstance.resize( _pMixer->getDesc()._maxVoiceCount );
-                }
-                rebuildAttenuationTable();
-                rebindSnapshots();
+                adoptMixer( std::move( command._pMixer ) );
                 break;
             }
             case CommandType::SetLibrary:
@@ -755,9 +777,14 @@ namespace sw
                 record._bRemoved        = false;
                 break;
             }
-            case CommandType::SetEmitterOcclusion:
+            case CommandType::SetEmitterPropagation:
             {
-                _mapEmitter[command._emitterID]._state._occlusionTarget = command._value;
+                // 가림 · 회절은 엔진이 부드럽게 따라가고(`updateEmitters`), 겉보기 위치는 길이 바뀐 블록부터 쓴다.
+                AudioEmitterState& state = _mapEmitter[command._emitterID]._state;
+                state._occlusionTarget   = command._propagation._occlusion;
+                state._diffractionTarget = command._propagation._diffraction;
+                state._apparentPosition  = command._propagation._apparentPosition;
+                state._bRedirected       = command._propagation._bRedirected;
                 break;
             }
             case CommandType::SetEmitterParameter:
@@ -972,16 +999,17 @@ namespace sw
         {
             AudioEmitterState& emitter = entry.second._state;
             emitter._occlusion += ( emitter._occlusionTarget - emitter._occlusion ) * step;
+            emitter._diffraction += ( emitter._diffractionTarget - emitter._diffraction ) * step;
         }
     }
 
     void AudioEngine::updateVoiceTargets( VoiceSlot& slot )
     {
-        float32 volume    = slot._volume * slot._musicGain;
-        float32 pan       = slot._pan;
-        float32 pitch     = slot._pitchRatio;
-        float32 lowPassHz = audio::kFilterOpenHz;
-        slot._distance    = 0.0f;
+        float32           volume    = slot._volume * slot._musicGain;
+        AudioPanDirection direction = AudioPanDirection::makeStereoPan( slot._pan );
+        float32           pitch     = slot._pitchRatio;
+        float32           lowPassHz = audio::kFilterOpenHz;
+        slot._distance              = 0.0f;
 
         const bool bSpatial = slot._attenuationIndex >= 0 && slot._emitterID != 0;
         if ( bSpatial )
@@ -1005,7 +1033,9 @@ namespace sw
                 if ( bHaveListener )
                 {
                     volume *= best._gain;
-                    pan = MathUtil::clamp( pan + best._pan, -1.0f, 1.0f );
+                    // 공간화 방향 위에 재생 인자의 팬을 더한다(스테레오 결과는 두 팬의 합을 자른 것).
+                    direction = best._direction;
+                    direction.addPan( slot._pan );
                     pitch *= best._pitchRatio;
                     lowPassHz      = best._lowPassHz;
                     slot._distance = best._distance;
@@ -1047,7 +1077,7 @@ namespace sw
         const AudioClipData* pClip = slot._voice.getClip();
         if ( pClip != nullptr )
             slot._voice.setPlaybackRate( static_cast<float64>( pClip->_sampleRate ) / static_cast<float64>( audio::kSampleRate ) * static_cast<float64>( pitch ) );
-        slot._voice.setTarget( volume, pan );
+        slot._voice.setTarget( volume, direction, _layout );
         slot._voice.setLowPass( lowPassHz );
         // 들림은 보이스 자신의 게인(거리, 가림, 파라미터, 페이드 목표)이다. 버스 페이더는 넣지 않는다(음소거된 버스의 프리 페이더 센드가 살아 있어야 한다).
         slot._audibility = volume * slot._voice.getFadeTarget();
@@ -1091,7 +1121,7 @@ namespace sw
             }
             else
             {
-                slot._voice.mix( mixer.getBusInput( slot._busIndex ), _voiceScratch.makeView( audio::kBlockFrameCount ) );
+                slot._voice.mix( mixer.getBusInput( slot._busIndex ) );
                 ++realCount;
             }
             if ( slot._voice.isFinished() )

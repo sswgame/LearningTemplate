@@ -108,16 +108,16 @@ SW_TEST_CASE( AudioSpatialTest, AttenuationCurvesAtDistances )
 SW_TEST_CASE( AudioSpatialTest, EqualPowerPanFollowsListenerAxes )
 {
     sw::AudioListenerState listener = AudioSpatialTestInternal::makeListener();
-    SW_EXPECT_NEAR_EQUAL( 1.0f, sw::AudioSpatializer::computePan( listener, sw::float3( 10.0f, 0.0f, 0.0f ), 0.5f ), 1e-5f );
-    SW_EXPECT_NEAR_EQUAL( -1.0f, sw::AudioSpatializer::computePan( listener, sw::float3( -10.0f, 0.0f, 0.0f ), 0.5f ), 1e-5f );
-    SW_EXPECT_NEAR_EQUAL( 0.0f, sw::AudioSpatializer::computePan( listener, sw::float3( 0.0f, 0.0f, 10.0f ), 0.5f ), 1e-5f );
-    SW_EXPECT_NEAR_EQUAL( 0.70710678f, sw::AudioSpatializer::computePan( listener, sw::float3( 10.0f, 0.0f, 10.0f ), 0.5f ), 1e-5f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, sw::AudioSpatializer::computeDirection( listener, sw::float3( 10.0f, 0.0f, 0.0f ), 0.5f )._right, 1e-5f );
+    SW_EXPECT_NEAR_EQUAL( -1.0f, sw::AudioSpatializer::computeDirection( listener, sw::float3( -10.0f, 0.0f, 0.0f ), 0.5f )._right, 1e-5f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, sw::AudioSpatializer::computeDirection( listener, sw::float3( 0.0f, 0.0f, 10.0f ), 0.5f )._right, 1e-5f );
+    SW_EXPECT_NEAR_EQUAL( 0.70710678f, sw::AudioSpatializer::computeDirection( listener, sw::float3( 10.0f, 0.0f, 10.0f ), 0.5f )._right, 1e-5f );
     // 고도는 팬에 쓰지 않는다 — 머리 위는 가운데.
-    SW_EXPECT_NEAR_EQUAL( 0.0f, sw::AudioSpatializer::computePan( listener, sw::float3( 0.0f, 10.0f, 0.0f ), 0.5f ), 1e-5f );
-    SW_EXPECT_NEAR_EQUAL( 1.0f, sw::AudioSpatializer::computePan( listener, sw::float3( 10.0f, 10.0f, 0.0f ), 0.5f ), 1e-5f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, sw::AudioSpatializer::computeDirection( listener, sw::float3( 0.0f, 10.0f, 0.0f ), 0.5f )._right, 1e-5f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, sw::AudioSpatializer::computeDirection( listener, sw::float3( 10.0f, 10.0f, 0.0f ), 0.5f )._right, 1e-5f );
     // 리스너가 오른쪽(+X)을 보면 +Z 의 소리는 왼쪽이다.
     listener._forward = sw::float3( 1.0f, 0.0f, 0.0f );
-    SW_EXPECT_NEAR_EQUAL( -1.0f, sw::AudioSpatializer::computePan( listener, sw::float3( 0.0f, 0.0f, 10.0f ), 0.5f ), 1e-5f );
+    SW_EXPECT_NEAR_EQUAL( -1.0f, sw::AudioSpatializer::computeDirection( listener, sw::float3( 0.0f, 0.0f, 10.0f ), 0.5f )._right, 1e-5f );
 
     // 엔진에서: 오른쪽 2 m 의 모노 직류 → 오른쪽만 0.5(Inverse), 가운데 앞 2 m → 두 채널 0.5·cos 45°.
     sw::AudioEngine engine;
@@ -179,7 +179,7 @@ SW_TEST_CASE( AudioSpatialTest, OcclusionDimsAndMuffles )
             engine.getClipStore().addClip( sw::hashed_string( "test/tone" ), test::AudioTestUtil::makeSineClip( arrFrequency[toneIndex], 0.5f, 48000 ) );
             engine.setListener( 0, AudioSpatialTestInternal::makeListener() );
             engine.setEmitter( 1, sw::float3( 0.0f, 0.0f, 1.0f ), sw::float3( 0.0f, 0.0f, 0.0f ) );
-            engine.setEmitterOcclusion( 1, caseIndex == 1 ? 1.0f : 0.0f );
+            engine.setEmitterPropagation( 1, sw::AudioPropagation::makeOcclusion( caseIndex == 1 ? 1.0f : 0.0f ) );
             (void)AudioSpatialTestInternal::playAtEmitter( engine, "test/tone" );
             const sw::vector<float32> listSample                  = test::AudioTestUtil::render( engine, 48000 );
             const float32             amplitude                   = test::AudioTestUtil::computeToneAmplitude( listSample, 0, 24000, 24000, arrFrequency[toneIndex] );
@@ -200,17 +200,17 @@ SW_TEST_CASE( AudioSpatialTest, Screen2DPansOnTheScreenPlane )
     sw::AudioListenerState listener = AudioSpatialTestInternal::makeListener();
     listener._mode                  = sw::AudioSpatialMode::Screen2D;
     listener._screenHalfWidth       = 10.0f;
-    SW_EXPECT_NEAR_EQUAL( 0.5f, sw::AudioSpatializer::computePan( listener, sw::float3( 5.0f, 7.0f, 0.0f ), 0.5f ), 1e-6f );
-    SW_EXPECT_NEAR_EQUAL( 0.5f, sw::AudioSpatializer::computePan( listener, sw::float3( 5.0f, -3.0f, 0.0f ), 0.5f ), 1e-6f );
-    SW_EXPECT_NEAR_EQUAL( 0.0f, sw::AudioSpatializer::computePan( listener, sw::float3( 0.0f, 8.0f, 0.0f ), 0.5f ), 1e-6f );
-    SW_EXPECT_NEAR_EQUAL( -1.0f, sw::AudioSpatializer::computePan( listener, sw::float3( -25.0f, 0.0f, 0.0f ), 0.5f ), 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, sw::AudioSpatializer::computeDirection( listener, sw::float3( 5.0f, 7.0f, 0.0f ), 0.5f )._right, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, sw::AudioSpatializer::computeDirection( listener, sw::float3( 5.0f, -3.0f, 0.0f ), 0.5f )._right, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, sw::AudioSpatializer::computeDirection( listener, sw::float3( 0.0f, 8.0f, 0.0f ), 0.5f )._right, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( -1.0f, sw::AudioSpatializer::computeDirection( listener, sw::float3( -25.0f, 0.0f, 0.0f ), 0.5f )._right, 1e-6f );
     // Z(깊이 · 레이어)는 거리에 들지 않는다.
     SW_EXPECT_NEAR_EQUAL( 5.0f, sw::AudioSpatializer::computeDistance( listener, sw::float3( 3.0f, 4.0f, 100.0f ) ), 1e-5f );
 
     // 위에서 내려다보는 직교 카메라(XZ 세계 — RTS · 경영): 화면 가로는 +X, 시선(높이)은 거리에서 빠진다.
     listener._forward = sw::float3( 0.0f, -1.0f, 0.0f );
     listener._up      = sw::float3( 0.0f, 0.0f, 1.0f );
-    SW_EXPECT_NEAR_EQUAL( 0.5f, sw::AudioSpatializer::computePan( listener, sw::float3( 5.0f, -20.0f, 7.0f ), 0.5f ), 1e-5f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, sw::AudioSpatializer::computeDirection( listener, sw::float3( 5.0f, -20.0f, 7.0f ), 0.5f )._right, 1e-5f );
     SW_EXPECT_NEAR_EQUAL( 5.0f, sw::AudioSpatializer::computeDistance( listener, sw::float3( 3.0f, -30.0f, 4.0f ) ), 1e-5f );
 }
 
@@ -246,22 +246,22 @@ SW_TEST_CASE( AudioSpatialTest, NearestListenerWins )
 SW_TEST_CASE( AudioSpatialTest, CombineListenersByPower )
 {
     sw::AudioSpatialResult arrResult[2];
-    arrResult[0]._gain      = 0.5f;
-    arrResult[0]._pan       = -1.0f;
-    arrResult[0]._lowPassHz = 900.0f;
-    arrResult[0]._distance  = 4.0f;
-    arrResult[1]._gain      = 0.5f;
-    arrResult[1]._pan       = 1.0f;
-    arrResult[1]._lowPassHz = 5000.0f;
-    arrResult[1]._distance  = 2.0f;
+    arrResult[0]._gain             = 0.5f;
+    arrResult[0]._direction._right = -1.0f;
+    arrResult[0]._lowPassHz        = 900.0f;
+    arrResult[0]._distance         = 4.0f;
+    arrResult[1]._gain             = 0.5f;
+    arrResult[1]._direction._right = 1.0f;
+    arrResult[1]._lowPassHz        = 5000.0f;
+    arrResult[1]._distance         = 2.0f;
 
     const sw::AudioSpatialResult loudest = sw::AudioSpatializer::combineListeners( arrResult, 2, sw::AudioListenerMixMode::Loudest );
     SW_EXPECT_NEAR_EQUAL( 0.5f, loudest._gain, 1e-6f );
-    SW_EXPECT_NEAR_EQUAL( -1.0f, loudest._pan, 1e-6f ); // 같은 크기면 앞의 리스너
+    SW_EXPECT_NEAR_EQUAL( -1.0f, loudest._direction._right, 1e-6f ); // 같은 크기면 앞의 리스너
 
     const sw::AudioSpatialResult summed = sw::AudioSpatializer::combineListeners( arrResult, 2, sw::AudioListenerMixMode::PowerSum );
     SW_EXPECT_NEAR_EQUAL( 0.70710678f, summed._gain, 1e-5f );
-    SW_EXPECT_NEAR_EQUAL( 0.0f, summed._pan, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, summed._direction._right, 1e-6f );
     SW_EXPECT_NEAR_EQUAL( 5000.0f, summed._lowPassHz, 1e-3f );
     SW_EXPECT_NEAR_EQUAL( 2.0f, summed._distance, 1e-6f );
 
@@ -270,7 +270,7 @@ SW_TEST_CASE( AudioSpatialTest, CombineListenersByPower )
     arrResult[1]._gain                  = 0.0f;
     const sw::AudioSpatialResult skewed = sw::AudioSpatializer::combineListeners( arrResult, 2, sw::AudioListenerMixMode::PowerSum );
     SW_EXPECT_NEAR_EQUAL( 0.8f, skewed._gain, 1e-6f );
-    SW_EXPECT_NEAR_EQUAL( -1.0f, skewed._pan, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( -1.0f, skewed._direction._right, 1e-6f );
     SW_EXPECT_NEAR_EQUAL( 900.0f, skewed._lowPassHz, 1e-3f );
 
     // 합이 1 을 넘지 않는다.
@@ -278,7 +278,7 @@ SW_TEST_CASE( AudioSpatialTest, CombineListenersByPower )
     arrResult[1]._gain = 1.0f;
     SW_EXPECT_NEAR_EQUAL( 1.0f, sw::AudioSpatializer::combineListeners( arrResult, 2, sw::AudioListenerMixMode::PowerSum )._gain, 1e-6f );
 
-    SW_EXPECT_NEAR_EQUAL( 0.0f, sw::AudioSpatializer::combineListeners( arrResult, 0, sw::AudioListenerMixMode::PowerSum )._pan, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, sw::AudioSpatializer::combineListeners( arrResult, 0, sw::AudioListenerMixMode::PowerSum )._direction._right, 1e-6f );
 }
 
 /**

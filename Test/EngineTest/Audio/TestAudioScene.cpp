@@ -75,8 +75,8 @@ namespace
         /** @brief 늘 같은 가림을 돌려주는 질의입니다. */
         struct ConstantOcclusion final : public sw::IAudioOcclusionQuery
         {
-            float32 _value{ 1.0f };
-            float32 computeOcclusion( const sw::float3&, const sw::float3& ) const override { return _value; }
+            float32              _value{ 1.0f };
+            sw::AudioPropagation computePropagation( const sw::float3&, const sw::float3& ) const override { return sw::AudioPropagation::makeOcclusion( _value ); }
         };
     };
 } // namespace
@@ -205,9 +205,9 @@ SW_TEST_CASE( AudioSceneTest, PhysicsRaycastOcclusion )
 
     sw::PhysicsAudioOcclusionQuery query;
     query.setScene( pScene.get(), sw::MathUtil::kMaxUInt32 );
-    SW_EXPECT_NEAR_EQUAL( 1.0f, query.computeOcclusion( sw::float3( 0.0f, 0.0f, 0.0f ), sw::float3( 0.0f, 0.0f, 10.0f ) ), 1e-6f );
-    SW_EXPECT_NEAR_EQUAL( 0.0f, query.computeOcclusion( sw::float3( 20.0f, 0.0f, 0.0f ), sw::float3( 20.0f, 0.0f, 10.0f ) ), 1e-6f );
-    SW_EXPECT_NEAR_EQUAL( 1.0f / 3.0f, query.computeOcclusion( sw::float3( 30.0f, 0.0f, 0.0f ), sw::float3( 30.0f, 0.0f, 10.0f ) ), 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, query.computePropagation( sw::float3( 0.0f, 0.0f, 0.0f ), sw::float3( 0.0f, 0.0f, 10.0f ) )._occlusion, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, query.computePropagation( sw::float3( 20.0f, 0.0f, 0.0f ), sw::float3( 20.0f, 0.0f, 10.0f ) )._occlusion, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f / 3.0f, query.computePropagation( sw::float3( 30.0f, 0.0f, 0.0f ), sw::float3( 30.0f, 0.0f, 10.0f ) )._occlusion, 1e-6f );
 
     // 씬 오디오가 가림을 엔진에 넣는다: 막힌 에미터는 -12 dB(직류는 로우패스를 그대로 지난다).
     sw::AudioEngine engine;
