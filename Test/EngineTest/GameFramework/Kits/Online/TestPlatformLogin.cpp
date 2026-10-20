@@ -18,9 +18,11 @@
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/JSONWebToken.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/OidcLoginProvider.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProviderConfig.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProviderSet.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/ProfileAPILoginProvider.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginService.h"
 #include "GameFramework/Kits/Feature/Online/Account/Shared/API/LoopbackPkceLoginClient.h"
+#include "GameFramework/Kits/Feature/Online/Account/Shared/API/SystemExternalBrowser.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -508,4 +510,39 @@ SW_TEST_CASE( PlatformLoginTest, LoginServiceCreatesAnAccountFromAVerifiedIDToke
     store.shutdown();
     (void)store.pollCompletions();
     service.shutdown();
+}
+
+SW_TEST_CASE( PlatformLoginTest, ProviderSetNeedsATrustFileForHTTPSProviders )
+{
+    PlatformLoginProviderConfig plain;
+    plain._name        = "naver";
+    plain._kind        = PlatformLoginProviderKind::AccessTokenProfile;
+    plain._profileURL  = "http://127.0.0.1:9/v1/nid/me";
+    plain._subjectPath = "response.id";
+    PlatformLoginProviderSet set;
+    string                   error;
+    SW_ASSERT_TRUE( set.initialize( { plain }, "", error ) );
+    SW_ASSERT_EQUAL( 1, set.getProviderCount() );
+    SW_EXPECT_EQUAL( string( "naver" ), string( set.getProvider( 0 )->getName() ) );
+
+    PlatformLoginProviderConfig secure = plain;
+    secure._name                       = "kakao";
+    secure._profileURL                 = "https://kapi.kakao.com/v2/user/me";
+    SW_EXPECT_FALSE( set.initialize( { plain, secure }, "", error ) ); // 신뢰 파일 없이 개발용 인증서로 바꾸지 않는다
+    SW_EXPECT_TRUE( error.find( "platformTrustFile" ) != string::npos );
+    SW_EXPECT_EQUAL( 0, set.getProviderCount() ); // 실패하면 만든 것을 모두 버린다
+    set.shutdown();
+}
+
+SW_TEST_CASE( PlatformLoginTest, SystemBrowserOpensOnlyPlainWebAddresses )
+{
+    SW_EXPECT_TRUE( SystemExternalBrowser::isOpenableURL( "https://accounts.example.com/authorize?client_id=a&redirect_uri=http%3A%2F%2F127.0.0.1%3A5%2Fcb" ) );
+    SW_EXPECT_TRUE( SystemExternalBrowser::isOpenableURL( "HTTP://127.0.0.1:8080/" ) );
+    SW_EXPECT_FALSE( SystemExternalBrowser::isOpenableURL( "file:///etc/passwd" ) );
+    SW_EXPECT_FALSE( SystemExternalBrowser::isOpenableURL( "javascript:alert(1)" ) );
+    SW_EXPECT_FALSE( SystemExternalBrowser::isOpenableURL( "https://a.example/'; rm -rf ~; '" ) ); // 따옴표와 공백은 셸이 해석한다
+    SW_EXPECT_FALSE( SystemExternalBrowser::isOpenableURL( "https://a.example/$HOME" ) );
+    SW_EXPECT_FALSE( SystemExternalBrowser::isOpenableURL( "https://a.example/\"x" ) );
+    SystemExternalBrowser browser;
+    SW_EXPECT_FALSE( browser.openURL( "file:///etc/passwd" ) ); // 띄우기 전에 거절한다
 }
