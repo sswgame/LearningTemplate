@@ -52,7 +52,6 @@
 - `HalfResolutionBloomMeasurement`(옛 D2-9) · `TerrainWaterVegetationRemainders`(옛 D2-5 ⑹ · ⑺, Debug 값을 Release 로) · `HeaderIncludeSlimming` ②(옛 C-13, 2026-10-05 측정 기준이라 지금 TU 수로 다시 판정) · `RuntimeQualityAdjust` ②(옛 C-29, 13 ~ 20 ms 프레임의 Tracy) · `BuildSpeed` 5 단계(옛 C-2, 공유 설치가 조용할 때).
 - `UdpSocketLayerScaling`(옛 B-10): Windows 서버 스레드 % 는 다른 빌드의 CPU 부하가 섞여 무효로 표시했다. 다른 빌드가 없을 때 다시 잰다.
 - 부하 기준선(`Test/Load/Baselines.json` 의 connect · replication · soak 은 커밋 `14c775c55`, 2026-10-15)은 온라인 B([리플렉션 형식 계획](ReflectionFormats.md)) 이전 값이다. B 가 들어간 뒤 `py -3 -m Scripts load suite baseline --runs 3 --record` 로 다시 뜬다(옛 C-29 ⑤).
-- 판단이 모호해 남김: 옛 `D6-6` · `D7-5` 의 "온라인 부하 봇 Debug 값" 은 현재 `UiDrawPerformance` · `EpollAndRealStoreVerification` 본문에 없다. 부하 봇 Debug 값은 [검증과 측정](../08_Verification.md) 2절 "온라인 부하 봇 참고값" 에 Debug 로 표시돼 있고 Release 측정은 `OperationsAndDeployment` 후보가 맡는다. 더 지울 것이 있는지는 그 절을 고치는 사람이 본다.
 함정: 항목이 이름 체계로 옮겨지는 중이라 옛 번호는 `py -3 -m Scripts plans --find` 로 새 이름을 먼저 찾는다.
 
 ### DecisionMeasurementColumn
@@ -60,8 +59,8 @@
 옛번호: C-75
 왜 필요한가: 측정 조건(기계 · 규모 · 날짜 · 근거 커밋)이 떨어져 나가면 "그 조건에서 이득 없음" 이 무조건 금지가 된다. 형식은 정했고(결정 기록 3절 머리, `[측정: 기계 · 규모 · 날짜 · 근거 커밋]`, 모르면 `미상`), 낡은 문서 셋(`EditorCharacterEditor` · `EnginePartition` 3 단계 · `DataDriven` 4절)은 2026-10-20 에 고쳤다.
 남은 것:
-- 3절의 나머지 측정 기반 기각에 같은 줄을 적는다(지금은 태스크 · TaskManager 후보 셋 · 콜드 프리셋 · 층 DLL 넷뿐). 날짜 · 기계가 본문에 없으면 `git log -S` 로 찾고, 못 찾으면 `미상`.
-- 재측정: 스핀 늘리기(2→50 us) · hot pool 은 09-20 측정(조건 변수 시절, 0.7 ms 프레임, ±40 % 흔들림, p99 없음)이 근거라 무거운 프레임(8 ms 이상)에서 다시 잰다. 기계는 `미상` 이다.
+- 3절의 나머지 측정 기반 기각의 측정 조건 줄은 2026-10-21 에 채웠다(`git log -S` 로 찾은 날짜 · 커밋, 못 찾은 기계는 `미상`). 기계가 `미상` 인 칸이 많으므로 재측정 때 `PC SW` 처럼 적어 고친다.
+- 재측정 필요: 스핀 늘리기(2→50 us) · hot pool 은 09-20 측정(조건 변수 시절, 0.7 ms 프레임, ±40 % 흔들림, p99 없음)이 근거라 무거운 프레임(8 ms 이상)에서 다시 잰다. `flatMapInProcesses` 16 → 8 워커는 `ctest -j` 겹침에서 다시 잰다. 이 둘은 3절 해당 줄에도 적혀 있다.
 - 재검토: "레인 없이 GT 병렬화" 기각은 High · Normal · Low 큐(`TaskManager`)가 생겨 전제가 사라졌다. 레인 있는 설계로 다시 판단한다.
 
 ### CarriedOverChecks
@@ -69,7 +68,7 @@
 옛번호: C-76
 왜 필요한가: 다른 항목에 속하지 않고 확인만 남은 이월 조각입니다.
 남은 것:
-- 리플렉션 크기: 리플렉션 단계 1 의 실행 파일 크기 증가(전후 Release `App.exe` · 모듈 DLL)를 `ReflectionFormats.md` 에 적는다(7-a 만의 값은 `Engine.dll` +0.08 %).
+- 리플렉션 크기: 값은 `ReflectionFormats.md` 3.1 절 표에 옮겼다. 단계 1 의 Release `App.exe` · 모듈 DLL 전후 값만 아직 없다(Debug 값은 있다). 두 커밋을 Release 로 지어 재야 하므로 측정 때 한다.
 - 셰이더 bindless 입문: `shaderdoc` 결과를 받은 뒤 분기를 숨기는 진입 함수 구조 변경을 따로 결정한다.
 - 겹침 도구: 항목마다 "건드릴 파일 · 겹침 주의"를 적고 겹치지 않는 묶음을 뽑는 도구. 이전 세션에서 사용자가 시킨 일로 기억되나 지시를 찾지 못했다, 사용자에게 확인.
 - 리눅스 CI 뒤: 리눅스 CI 가 초록이 된 뒤 `E-1` `E-4` `E-10` `C-29 ⑤` 관찰 항목과 `B-5` `B-7` 을 본다.

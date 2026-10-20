@@ -97,12 +97,12 @@
 
 측정이 근거인 결정은 끝에 한 줄로 조건을 적는다: `[측정: 기계 · 규모 · 날짜 · 근거 커밋]`. 알 수 없는 값은 `미상`. 조건이 바뀌면(빌드 구성 · 프레임 길이 · 기계) 이 기각은 "무조건 금지"가 아니라 "그 조건에서 이득 없음"이므로, 다른 문서가 "하지 말 것"을 말할 때는 이 절의 항목을 링크해 조건째 읽게 한다. 재측정이 필요한 항목은 [후보 문서](plans/Candidates-project.md)의 `DecisionMeasurementColumn` 에 남긴다.
 
-- **`runParallelByCost` 를 모든 병렬 호출처로 넓히기**(2026-10-16): 트랜스폼 계층의 고정 임계값(쓰기 1024 · 플러시 2048)과 GPU 씬(2048 / 4096)은 손익분기에 맞춘 값이라, 트랜스폼 세 곳을 바꿔 재니 쓰기 적용은 61 ~ 66 → 64 ~ 67 us 로 같고 틱 8000 은 86 ~ 99 → 105 ~ 107 us 로 조금 느려져 되돌렸다. 항목당 비용이 크고 개수가 달라지는 곳에만 쓴다 — 씬 틱(작은 씬)과 애니메이션 평가.
+- **`runParallelByCost` 를 모든 병렬 호출처로 넓히기**(2026-10-16): 트랜스폼 계층의 고정 임계값(쓰기 1024 · 플러시 2048)과 GPU 씬(2048 / 4096)은 손익분기에 맞춘 값이라, 트랜스폼 세 곳을 바꿔 재니 쓰기 적용은 61 ~ 66 → 64 ~ 67 us 로 같고 틱 8000 은 86 ~ 99 → 105 ~ 107 us 로 조금 느려져 되돌렸다. 항목당 비용이 크고 개수가 달라지는 곳에만 쓴다 — 씬 틱(작은 씬)과 애니메이션 평가. [측정: 기계 미상 · Release 트랜스폼 세 곳 · 2026-10-16 · e3542d9db]
 
-- **`common` 지연 import(PEP 562 `__getattr__`)**(2026-10-06, 12 회 중앙값): `import common` 누적 81.0 → 1.8 ms 이지만 `GenerateCookContract.py` 한 번이 110.5 → 110.1 ms — 생성기는 결국 같은 하위 모듈을 다 올린다.
+- **`common` 지연 import(PEP 562 `__getattr__`)**(2026-10-06, 12 회 중앙값): `import common` 누적 81.0 → 1.8 ms 이지만 `GenerateCookContract.py` 한 번이 110.5 → 110.1 ms — 생성기는 결국 같은 하위 모듈을 다 올린다. [측정: 기계 미상 · 12 회 중앙값 · 2026-10-06 · 0df62d4cd]
   기준(생성기 30 % 이상)에 한참 못 미치고, 하위 모듈 이름과 같은 공개 이름(`BuildTree`)이 import 순서에 따라 모듈로 바뀌는 함정이 생긴다.
 - **N18c 메시지 버퍼 풀**(2026-10-06, Release `NetReplicationBenchTest` 16 × 1000, 3 회): N18b 뒤 틱당 할당 1133 중 서버 복제 544 — "전체 − 서버 복제" 589 < 문턱 1 000.
-  (N18b 전 25182 · 서버 복제 16886, ReplicationServer tick p50 5.4 → 3.5 ms.)
+  (N18b 전 25182 · 서버 복제 16886, ReplicationServer tick p50 5.4 → 3.5 ms.) [측정: 기계 미상 · Release `NetReplicationBenchTest` 16 × 1000, 3 회 · 2026-10-06 · 38a18ee1c, 기각 e18e5674f]
 - **TaskManager 후보 셋**(Release, 큐브 8000, 16 스레드, 5~8 회 번갈아): 스핀 워커 2 개 제한 + 적응 예산(GT 839→846, RT.ExecutePacket 395→436 us), 워커별 노드
   자유 목록(GT 839→917, RT.Graph 187→237 us), 워커 지정 틱 쓰기 적용(queued 78→80 us, p99 163→212 us). 셋 다 손해 또는 잡음. [측정: 기계 미상 · Release 큐브 8000, 16 스레드, 5~8 회 · 날짜 미상 · 커밋 미상]
 
@@ -115,28 +115,28 @@
   DX12 온라인 블록 잠금의 워커별 목록(잠금이 드는 씬 배치 기록 전체가 p50 36~65 us = RT 프레임의 2~4 %, 큐브 8000 · 도형 5 · 디퍼드).
   `GPUInstance` 128 → 96 B(모든 인스턴스가 매 프레임 올라가는 최악에서도 증분 상한이 RT ~57 · GT ~65 us, 월드 float3x4 · 블렌드 비트 묶기는 모든 셰이더 · 계약 시험을 건드린다).
   추가 뷰 사이 그림자 공유(2026-10-06, Release 큐브 8000 + 바닥, `-gv_benchViews=4` — 512² 캡처 카메라 넷, 번갈아 4 쌍): 추가 뷰의 그림자 패스를 빼도 `GPU.Frame` 이
-  쌍마다 256 · 390 · −47 · 169 us 줄 뿐(뷰당 ~50 us, 추가 뷰 넷이 GPU 프레임을 0.65 → 1.8~2.1 ms 로 늘리는 몫의 ~15 %). 프레임 순서를 바꾸는 구조 변경에 비해 작다.
+  쌍마다 256 · 390 · −47 · 169 us 줄 뿐(뷰당 ~50 us, 추가 뷰 넷이 GPU 프레임을 0.65 → 1.8~2.1 ms 로 늘리는 몫의 ~15 %). 프레임 순서를 바꾸는 구조 변경에 비해 작다. [측정: 위 그림자 공유 한 건만 — 기계 미상 · Release 큐브 8000 + 바닥, `-gv_benchViews=4` · 2026-10-06 · 7b1d868d4. 나머지 GPUScene · 렌더 항목은 날짜 · 커밋 미상 — 2026-10-03 의 백로그 정리 a55a90f0b 이전 값]
 - **히치**: 펜스 시그널을 Present 앞으로 · 백버퍼 수 · 인라인/즉시 제출 — 분포가 그대로였다. 어댑터 강제 선택은 A/B 로 악화.
   2026-10-06 재측정(Release, 큐브 100 · VSync 끔, 제안서 측정 3 회씩): 꼬리(p99 2.4~4.2 ms · 최악 12~37 ms)는 DX11 에도 같은 크기로 있고(DX11 은 Present 안, DX12 · Vulkan 은
   BeginFrame 펜스) Present 호출 자체는 p99 0.2 ms — GPU 백프레셔다. VSync 켬은 DXGI 가 판당 많아야 한 주기를 놓친다. 대기 가능 스왑체인으로 고칠 히치가 없다.
-  Vulkan 스왑체인 이미지를 4 개로(+1) 늘려도 VSync 주기 놓침이 줄지 않았다(12 판 중 6 판 최악 13~27 ms — 3 개는 22 판 중 2 판).
+  Vulkan 스왑체인 이미지를 4 개로(+1) 늘려도 VSync 주기 놓침이 줄지 않았다(12 판 중 6 판 최악 13~27 ms — 3 개는 22 판 중 2 판). [측정: 기계 미상 · Release 큐브 100 · VSync 끔, 3 회씩 · 2026-10-06 재측정(첫 측정 2026-09-20 baaa78ee8) · 커밋 미상]
 - **틱 · 오브젝트**: 인라인 `TickItem`(GameObject 192 → 232 B), 적용 단계를 틱에 합치기(칸당 +124 B), 회전 사원수 캐시(+28 B), 축별 sin/cos 건너뛰기(18.0 → 18.7 ns), 쓰기 정렬의
-  `id % 버킷`(150 → 450 us) · 키를 건에 넣기(64 → 80 B), 오브젝트 id 표 2 단 디렉터리(1 억 스폰이면 800 MB) · 늘 견주기(5.6 → 6.4 ns), 엔티티당 XML 재파싱 구조 변경(2 ms 뿐).
+  `id % 버킷`(150 → 450 us) · 키를 건에 넣기(64 → 80 B), 오브젝트 id 표 2 단 디렉터리(1 억 스폰이면 800 MB) · 늘 견주기(5.6 → 6.4 ns), 엔티티당 XML 재파싱 구조 변경(2 ms 뿐). [측정: 기계 미상 · 규모 미상 · 날짜 미상 · 커밋 미상 — 2026-10-03 의 백로그 정리 a55a90f0b 에 이미 있던 값]
 - **패딩 재배치 나머지**(2026-10-06, `RunPaddingReport --preset Ninja-Release --min-saving 8` 69 개): GameObject(168 → 160, 풀 칸 176 → 160)만 했다. 나머지는 인스턴스가
   적거나 나눠 쓴다 — Material · MaterialInstance 16 B(캐시 · `MaterialTintCache` · 스프라이트 공유, 수백 개 이하), Mesh 8 B(`MeshCache` 공유), 컴포넌트(RigidBody 16 · SkeletalMesh 16 ·
   Camera 8 — PROPERTY 순서 고정), 싱글턴(InputManager 64 · FrameProfiler 8). 수천 개가 만들어지는 타입이 나오면 그것만 한다. 위치 초기화 표(EditorAssetTypeInfo ·
-  AssetMatchRow · CommandRow)는 모든 행을 같이 바꿔야 한다.
+  AssetMatchRow · CommandRow)는 모든 행을 같이 바꿔야 한다. [측정: 기계 미상 · `RunPaddingReport --preset Ninja-Release --min-saving 8` 69 개 · 2026-10-06 · 529e83933]
 - **전역 소형 블록 할당자**(2026-10-06): Release 프레임당 sw 할당 7.7 회(120 프레임 × 3) — 회당 ~100 ns 로 잡아도 프레임당 1 us 아래. 기동(Release 856~1207 ms)의
   sw 할당은 Debug 기준 상주 블록 8 만 개 — 회당 100 ns 면 8 ms(1 % 아래)라 절반을 줄여도 기동의 0.5 %. 프레임당 할당이 다시 늘거나 큰 맵 로드의 프로파일에서
-  할당이 5 % 를 넘으면 다시 잰다.
+  할당이 5 % 를 넘으면 다시 잰다. [측정: 기계 미상 · Release 120 프레임 × 3, 기동은 Debug 상주 블록 · 2026-10-06 이전 · 529e83933(첫 기록 678b343bf, 2026-09-21)]
 - **파일 시스템을 플랫폼 API 로 다시 짜기**(2026-10-06, Release 스크래치 · 2920 파일): 존재 확인 p50 10.9 vs 10.3 us · 순회 6.5~9.4 vs 7.6~10.0 ms — 시간은 같고
   할당만 준다(존재 확인 1 → 0, 순회 항목당 3.1 → 1.0). 그 할당은 기동 때만이고 상주가 아니다. `Core/File/Std` 로 감싼 뒤(Debug `FileUtilBenchTest`): 존재 확인 호출당 sw 할당자 밖 2 · sw 4
   (구분자 정규화 · UTF-16 변환 문자열), 순회 파일당 밖 2.3 · sw 6.5. 줄이려면 `toPath` 를 스택 버퍼 변환으로(sw 0).
-  다시 재는 법: App Debug `-gv_memoryReport=1` 의 "cumulative since start" 줄 · `FileUtilBenchTest`. 한 경로가 프로파일에 보이면(Release 기동이나 프레임에서 1 ms 이상 · 프레임마다 부르는 경로) 그 함수만 `File/Windows` · `File/Linux` 로 옮긴다.
+  다시 재는 법: App Debug `-gv_memoryReport=1` 의 "cumulative since start" 줄 · `FileUtilBenchTest`. 한 경로가 프로파일에 보이면(Release 기동이나 프레임에서 1 ms 이상 · 프레임마다 부르는 경로) 그 함수만 `File/Windows` · `File/Linux` 로 옮긴다. [측정: 기계 미상 · Release 스크래치 2920 파일 · 2026-10-06 · a6cd49bb9]
 - **물리**: 파괴 잎 볼록 껍질을 워커로 나눠 짓기(Jolt 잡 시스템, 2026-10-06) — `FractureBenchTest` p50 20.7 → 24.4 ms 로 느려졌다. 워커 15 개가 청크(잎 13 개)마다
   ~10 ms(잎당 ~750 us — 직렬 55 us 의 14 배)를 썼다: 껍질 짓기는 할당이 많고 Jolt 할당이 엔진 `Memory::allocate` 로 가서 경합한다. 할당을 풀어 주지 않는 한 다시 하지 말 것.
   주의: Jolt 백엔드 TU(`Physics/Jolt/*.cpp`, PCH 없이 Jolt 정의 · 대상 기능으로 컴파일)에 `Engine/Common/EngineParallel.h` 를 넣자 물리 전체가 깨졌다(질량 · 자세가 쓰레기) —
-  그 TU 에서는 엔진 태스크 대신 이미 쓰는 Jolt 잡 시스템(`JoltJobSystem`)을 쓴다.
+  그 TU 에서는 엔진 태스크 대신 이미 쓰는 Jolt 잡 시스템(`JoltJobSystem`)을 쓴다. [측정: 기계 미상 · `FractureBenchTest`(잎 13 개 청크, 워커 15 개) · 2026-10-06 · 3ba538f4d]
 - **태스크**: 워커 스핀 늘리기(2 → 50 us 면 SMT 형제를 빼앗아 GT 889 → 1305 us), hot pool(이득 없음), 스레드별 목록 머리 패딩(잡음), 공유 풀 위 GT 병렬화를 레인 없이(RT 170 → 261 us),
   워커 깨우기 사슬, `TaskArgs` 인라인 4 칸(기록 122 → 196 us), `PagedArray` 통합의 첫 측정(번갈아 재니 차이 없음 — 측정 착시).
   [측정: 스핀 · hot pool · 레인 없는 GT 병렬화 — 기계 미상 · 큐브 100 · 2000 × 워커 14/16, 조건 변수 시절의 0.7 ms 프레임, 흔들림 ±40 %, p99 없음 · 2026-09-20 · 4846237f0. 프레임 8 ms 이상에서 다시 재기 전까지는 "그 조건에서 이득 없음"이다. "레인 없이" 기각은 High · Normal · Low 큐가 생겨 전제가 없어졌으니 레인 있는 설계로 다시 판단한다]
@@ -144,7 +144,7 @@
   `.cpp` 분리(41 → 44 s) · 타입 소거 배열, `ContainerTypeMap` 선형 탐색 개선(파서 시간은 libclang), 팩 코덱 Zstd(−0.1 %) · LZ4(+28 %) — 이미 압축된 자산이라 Zlib 유지(압축 안 된 자산이
   들어오면 다시 잰다), 린트 파일 공유 캐시(C++ 2500 개 28.7 MB 를 다 읽어도 0.15–0.7 s — 게이트는 정규식에 쓴다), 린트 CTest 를 한 프로세스로(기동 0.17 s × 항목 수 —
   항목별 보고 · TIMEOUT 을 잃는다), 린트 증분 해시 캐시(훅 바닥 ~2–4 s 에 교차 파일 규칙 재작성 — 보류), `flatMapInProcesses` 16 → 8 워커(혼자 돌면 3.3 → 3.7 s 로
-  지고 CPU −40 % — `ctest -j` 겹침에서 재 볼 것).
+  지고 CPU −40 % — `ctest -j` 겹침에서 재 볼 것). [측정: 기계 미상 · 린트 5.3 → 9.4 s 등 항목별 규모는 본문 · 날짜 미상 · 커밋 미상 — 2026-10-03 의 백로그 정리 a55a90f0b 에 이미 있던 값. `flatMapInProcesses` 8 워커는 `ctest -j` 겹침에서 재측정 필요]
 - **구조**: 백엔드 `*RHIResource.h` · `*RHICommandContext.h` 공통 기반(겹침이 전부 override 선언), `ResourceCache<T>`(나머지 39 % 가 소유 방식), 모듈 팩토리 골격 공통화(공통 4 줄),
   RHI · GF leaf CMakeLists 를 부모 루프로(디렉터리 스코프), `FindWindowsTools` 파이썬 이전, `EngineTest` 에 `GF_*` 자동 링크, `SW_ASSERT_NULL`, `formatstring` 인자 수 컴파일 검사의 매크로 판
   (C++20 으로 올리면 `consteval` 포맷 타입으로 옮긴다), "자유 `static` 함수 금지" 린트(오탐), "CommandList 가 RecordingState 를 소유" 린트, `CheckCodeConventions` 매개변수 · 지역변수 사슬,
@@ -163,19 +163,19 @@
   임포트 라이브러리 수정 시각 때문에 킷 · 게임 DLL 84 개가 다시 링크된 것이었다(`sw_keepImportLibraryIfUnchanged` 로 해결, 5 s). 헤더를 고친 비용은 DLL 경계가 아니라 PCH 에 든 헤더가 정하므로
   (`GameObject.h` 가 TU 약 2,200 개) 분할로 줄지 않는다(언리얼도 헤더를 모듈 공개 헤더로 좁혀 팬아웃을 줄이는 쪽이 본체로 알고 있다). 링크 단위 분할은 엔진 분할 계획 3 단계의 다른 이유가 생길 때만 한다. [측정: PC `SW` · Debug, `.cpp` 하나 증분 · 2026-10-16 · 04024dda7]
 - **킷 밖 묶음의 PCH 공유**(BuildSpeed 3 단계, 2026-10-11): PCH 를 따로 짓는 것은 시험 9 · RHI 백엔드 4(`<타깃>_EXPORTS` 만 다름) · App · Server · ModuleHost 3 · 에디터 확장 · `SWGame` 이다.
-  PCH 하나가 약 2.7 CPU 초라 다 합쳐도 16 스레드에서 2 ~ 3 s(측정 편차 ±3 s 안) — 킷(PCH 60 개 → 1, −20.6 s)만 했다.
+  PCH 하나가 약 2.7 CPU 초라 다 합쳐도 16 스레드에서 2 ~ 3 s(측정 편차 ±3 s 안) — 킷(PCH 60 개 → 1, −20.6 s)만 했다. [측정: 기계 미상 · 16 스레드 · 2026-10-11 · 65ee88bb4]
 - **ReflectionParser 강제 include PCH**(2026-10-06): Debug `ReflectionParserTest` 35 케이스 25.8 초(여섯 조각, 조각당 약 4.3 초 · 한도 30 초), 파서 한 번
-  1.1~1.3 초 중 공통 include 0.5 초 — 조각당 약 2 초를 위해 depfile 의존(PCH 안 헤더를 `clang_getInclusions` 가 내는가) 재검증을 떠안지 않는다.
+  1.1~1.3 초 중 공통 include 0.5 초 — 조각당 약 2 초를 위해 depfile 의존(PCH 안 헤더를 `clang_getInclusions` 가 내는가) 재검증을 떠안지 않는다. [측정: 기계 미상 · Debug `ReflectionParserTest` 35 케이스 · 2026-10-06 · 529e83933(첫 기록 a55a90f0b, 2026-10-03)]
 - **롤백에 파괴 상태 싣기**(사용자 결정 2026-10-06): 롤백 키트(격투)에 파괴물이 없고 조각 물리(Jolt)는 되감지 못한다(Chaos GC 도 롤백 없음). 롤백 게임이
   파괴물을 쓰면 `saveState` 에 `makeNetworkSnapshot` 을 싣고(바뀐 사건 수일 때만) `loadState` 가 즉시 적용하는 창구를 더한다.
 - **훅의 `CheckHeaderSelfContained` 를 하위 프로세스로 띄우기**(`preCommitRunsInBackground` 같은 선언, 2026-10-10): 파일 단위 게이트 중 시간을 내는 것은 이것 하나(헤더 10 개 ~2 s 벽)이고,
-  트리 전체 게이트(`CheckConfigReference` 5~14 s)는 이미 먼저 띄워져 있어 그 시간 안에 겹친다. 홀로 남는 커밋에서는 겹칠 상대가 파일 단위 게이트들(합 <0.5 s)뿐이고 기동 0.2 s 를 낸다. 넣지 않았다.
-- **GPUScene 배치 키 중복 계산 제거**(투명 배치 헤드 키 재계산, 인스턴스마다 셰이더 경로 해시): `GT.GPUScene.build` 3670 → 3761 us 로 차이가 없었습니다.
+  트리 전체 게이트(`CheckConfigReference` 5~14 s)는 이미 먼저 띄워져 있어 그 시간 안에 겹친다. 홀로 남는 커밋에서는 겹칠 상대가 파일 단위 게이트들(합 <0.5 s)뿐이고 기동 0.2 s 를 낸다. 넣지 않았다. [측정: 기계 미상 · 헤더 10 개 · 2026-10-10 · 4304eb03f]
+- **GPUScene 배치 키 중복 계산 제거**(투명 배치 헤드 키 재계산, 인스턴스마다 셰이더 경로 해시): `GT.GPUScene.build` 3670 → 3761 us 로 차이가 없었습니다. [측정: 기계 미상 · 규모 미상 · 날짜 미상 · 커밋 미상 — 첫 기록 e6973186b, 2026-09-09]
 - **`CheckConfigReference` 를 파일 단위(바뀐 구조체만)로 나누기**(2026-10-11, Scripts 개편 1 단계 뒤). 커밋 훅의 바닥은 트리 전체 게이트 여섯이 각자 `Source/` 를 읽는 값(조용할 때 1 ~ 1.4 s)이 만듭니다.
   단독 실행 중앙값(5 회): `CheckConfigReference` 1.49 → 0.99 s, `CheckDuplicateTypeNames` 1.35 → 1.03 s, `CheckEngineLayers` 2.00 → 1.09 s, `CheckModuleTargets` 1.44 → 1.21 s, 커밋 훅(`REFLECT` 헤더 하나) 2.31 → 1.92 s.
   하나만 0 으로 만들어도 나머지 다섯이 같은 높이로 남습니다. 더 내리려면 한 프로세스가 읽고 여럿이 훑는 구조가 필요한데 파이썬 GIL 때문에 지금의 동시 실행을 잃습니다.
   파일마다 보는 소스 게이트는 그 구조로 옮겼습니다(2026-10-17, `SourceScan` — 트리를 한 번 걷고 파일을 코어 수만큼 프로세스에 나눠 읽고 가린 뒤 게이트 전부가 훑는다).
-  트리 전체 대조 게이트 중 무거운 `CheckNameReferences` · `CheckKitNamespaces` 는 커밋 훅에서 빼 CI 린트 잡으로 넘겼습니다([검증과 측정](08_Verification.md) 4절).
+  트리 전체 대조 게이트 중 무거운 `CheckNameReferences` · `CheckKitNamespaces` 는 커밋 훅에서 빼 CI 린트 잡으로 넘겼습니다([검증과 측정](08_Verification.md) 4절). [측정: 기계 미상 · 단독 실행 5 회 중앙값 · 2026-10-11 · 7a5fe1016(문서 이동 커밋 — 값을 처음 적은 커밋은 미상)]
 
 ## 4. 옛 이름 → 지금 이름 (`git log` 을 읽을 때)
 
