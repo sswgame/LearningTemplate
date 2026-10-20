@@ -5,11 +5,16 @@
  *          - 저장소 완료는 호스트(`OnlineServiceHost::update`)가 서비스 틱 전에 회수한다. 호스트 없이 쓰면 호출하는 쪽이 `IServiceStore::pollCompletions` 를 부른 뒤 `tick` 을 부른다.
  *          - 구매에는 멱등 키가 필수이다. 분개 키는 `acct.<계정>/<키>` 이다. 영수증은 레지스트리에 맡기고, `tick` 이 결과를 회수해 지급 작업을 맡긴다.
  *          - 원격 설정 `feature.shop_enabled`(기본값은 켬)가 꺼지면 구매와 지급은 `kFeatureDisabled` 로 끝나고 조회는 된다. Shipping 빌드는 개발 전용 영수증 제공자를 거절한다.
+ *          - 환불 알림은 `update` 가 레지스트리에서 거두어 회수 작업(`EconomyStoreLogic::revokeRefund`)을 맡긴다. 응답이 없고 결과는 지표 `economy_refund_total{result}` 이다.
+ *          - 청약철회(`WithdrawPurchase`)는 설정의 기한(`_withdrawalWindowMs`, 기본 7일) 안에 쓰지 않은 만큼 회수한다.
+ *          - 원장 보존 검사(`LedgerAudit`)는 예약 작업 `ledger.audit`(매일 `_auditMinuteOfDay`)으로 서버 하나가 돌린다. 자산마다 발행, 소각, 보유 총량을
+ *            지표 `economy_issued_total{asset}` · `economy_burned_total{asset}` · `economy_held_total{asset}` 로 내고, 맞지 않으면 오류 로그와 `economy_ledger_imbalance{asset}` 이다.
  *          - `shutdown` 은 맡긴 작업이 모두 끝날 때까지 저장소를 회수한다(상한 5초). 저장소를 종료하기 **전에** 부른다.
  *
  *          PlayFab Economy v2 의 `PurchaseInventoryItems` 와 `Redeem*` 에 해당한다.
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -18,26 +23,34 @@
 #include "Core/Network/Message/NetRequest.h"
 
 #include "GameFramework/Base/Online/Observability/ServiceMetrics.h"
+#include "GameFramework/Base/Online/Schedule/ServiceScheduler.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
+#include "GameFramework/Base/Online/Store/ServiceStore.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Shared/Protocol/EconomyProtocol.h"
 
 namespace sw
 {
+    struct LedgerAuditReport;
+
     class CurrencyCatalog;
     class IServiceStore;
     class IServiceStoreWork;
     class MetricRegistry;
     class OfferCatalog;
     class ReceiptValidatorRegistry;
+    class ServiceScheduler;
 
     /** @brief 서비스 설정입니다. 포인터는 모두 빌려 쓰며 서비스보다 오래 살아야 합니다. */
     struct EconomyServiceConfig
     {
         const CurrencyCatalog*    _pCurrencyCatalog{ nullptr };
         const OfferCatalog*       _pOfferCatalog{ nullptr };
-        ReceiptValidatorRegistry* _pReceiptRegistry{ nullptr }; ///< 없으면 RedeemReceipt 는 ReceiptInvalid 로 끝난다
-        MetricRegistry*           _pMetricRegistry{ nullptr };  ///< 없으면 지표를 세지 않는다
+        ReceiptValidatorRegistry* _pReceiptRegistry{ nullptr };                                                           ///< 없으면 RedeemReceipt 는 ReceiptInvalid 로 끝난다
+        MetricRegistry*           _pMetricRegistry{ nullptr };                                                            ///< 없으면 지표를 세지 않는다
+        int64                     _withdrawalWindowMs{ 7 * constant::kSecondsPerDay * constant::kMillisecondsPerSecond }; ///< 청약철회 기한이다(전자상거래법의 7일)
+        ServiceScheduler*         _pScheduler{ nullptr };                                                                 ///< 원장 보존 검사를 예약한다. 없으면 검사하지 않는다(테스트는 `requestLedgerAudit`)
+        int32                     _auditMinuteOfDay{ 4 * 60 + 30 };                                                       ///< 보존 검사 시각(UTC 분)이다. 표 전체를 읽으므로 한가한 시간에 둔다
         uint8                     _bAcceptSandboxReceipts{ SW_FALSE };
     };
 } // namespace sw
@@ -49,6 +62,7 @@ namespace sw
     {
         EconomyPurchaseRequest _purchase{};
         EconomyRedeemRequest   _redeem{};
+        EconomyWithdrawRequest _withdraw{};
         EconomyHistoryRequest  _history{};
         NetIdempotencyKey      _idempotencyKey{};
         AccountID              _accountID{ kInvalidAccountID };
@@ -60,7 +74,7 @@ namespace sw
 namespace sw
 {
     /** @class EconomyService @brief 경제 요청 처리기입니다. */
-    class SW_KIT_SERVER_API EconomyService final : public IOnlineHostService
+    class SW_KIT_SERVER_API EconomyService final : public IOnlineHostService, public IScheduledJobHandler
     {
     public:
         using ReplyDelegate = Delegate<void( const EconomyReply& )>;
@@ -86,9 +100,20 @@ namespace sw
         const OnlineProtocolEntry& getProtocol() const override { return EconomyProtocol::kOnlineEntry; }
         void                       onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
         void                       onServiceTick( OnlineServiceHost& host, int64 nowMs ) override;
+        // IScheduledJobHandler — 보존 검사 회차를 차지했다
+        void onScheduledRun( const ScheduledRun& run ) override;
+        /** @brief 보존 검사 한 번을 맡깁니다. 예약 회차와 테스트가 부릅니다. 이미 도는 중이면 무시합니다. */
+        void requestLedgerAudit();
+        /** @brief 보존 검사 작업의 `complete` 입니다. 지표와 로그를 남기고 예약 회차를 마칩니다. */
+        void                         completeLedgerAudit( ServiceStoreResult result, const LedgerAuditReport& report );
+        static constexpr const utf8* kAuditJobID = "ledger.audit";
+        /** @brief 마지막 보존 검사가 맞았으면 true 입니다(검사 전에는 false). */
+        bool wasLastAuditBalanced() const { return _bLastAuditBalanced == SW_TRUE; }
 
         /** @brief 작업(work)의 `complete` 가 호출합니다. 응답과 지표를 처리합니다. */
-        void  completeCall( uint64 callID, const EconomyReply& reply );
+        void completeCall( uint64 callID, const EconomyReply& reply );
+        /** @brief 환불 회수 작업의 `complete` 가 호출합니다. 지표와 로그만 남깁니다. */
+        void  completeRefund( EconomyResult result );
         int32 getPendingCallCount() const { return static_cast<int32>( _listPendingCall.size() ); }
 
     private:
@@ -108,12 +133,20 @@ namespace sw
         void startCall( const EconomyCall& call, PendingCall pending );
         void finishCall( size_t pendingIndex, const EconomyReply& reply );
         void pollReceipts();
+        /** @brief 환불 알림을 거두어 회수 작업을 맡깁니다. */
+        void pollRefunds();
 
         vector<PendingCall>  _listPendingCall;
         ServiceMetrics       _metrics;
         EconomyServiceConfig _settings;
         IServiceStore*       _pStore;
+        MetricRegistry*      _pMetricRegistry; ///< 환불 결과 지표를 센다(설정에서 복사)
         uint64               _nextCallID;
+        int32                _pendingRefundCount;
+        ScheduledRun         _auditRun;
+        uint8                _bAuditPending;
+        uint8                _bAuditRunHeld;
+        uint8                _bLastAuditBalanced;
         int64                _nowMs;
     };
 } // namespace sw

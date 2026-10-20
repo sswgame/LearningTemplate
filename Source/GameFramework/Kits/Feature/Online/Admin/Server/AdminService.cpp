@@ -9,6 +9,7 @@
 #include "Engine/Reflection/EnumName.h"
 
 #include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
+#include "GameFramework/Base/Online/Config/LiveEventControl.h"
 #include "GameFramework/Base/Online/Directory/ServerDirectoryControl.h"
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/Base/Online/Identity/AccountSessionControl.h"
@@ -108,7 +109,7 @@ namespace sw
         ServiceStoreUtil::drainUntilIdle(
             _pStore, [this]()
         { return _listPendingCall.empty() && _pendingSeedCount <= 0; }, [this]()
-        { pollDirectoryCompletions(); } );
+        { pollForwardedCompletions(); } );
         if ( _listPendingCall.empty() == false )
         {
             SW_LOG_ERROR( "AdminService shut down with %# calls still pending", _listPendingCall.size() );
@@ -133,19 +134,20 @@ namespace sw
         pending._adminID             = adminID;
         pending._methodIndex         = AdminMethod::toIndex( method );
         pending._method              = method;
-        if ( AdminMethod::isDirectoryMethod( method ) )
+        if ( AdminMethod::isForwardedMethod( method ) )
             pending._request = request;
         _listPendingCall.push_back( pending );
         const size_t pendingIndex = _listPendingCall.size() - 1;
 
         AdminCommand command;
-        command._request = request;
-        command._pPolicy = _settings._pPolicy;
-        command._adminID = adminID;
-        command._keyHigh = idempotencyKey._high;
-        command._keyLow  = idempotencyKey._low;
-        command._nowMs   = pending._nowMs;
-        command._method  = method;
+        command._request    = request;
+        command._pPolicy    = _settings._pPolicy;
+        command._pNameIndex = _settings._pNameIndex;
+        command._adminID    = adminID;
+        command._keyHigh    = idempotencyKey._high;
+        command._keyLow     = idempotencyKey._low;
+        command._nowMs      = pending._nowMs;
+        command._method     = method;
 
         AdminReply refused;
         refused._result = AdminResult::Ok;
@@ -155,16 +157,6 @@ namespace sw
             refused._result = AdminResult::NotSignedIn;
         else if ( pending._methodIndex < 0 )
             refused._result = AdminResult::Forbidden; // 모르는 명령이므로 누구도 가질 수 없는 등급이 필요하다
-        const bool bByName = method == AdminMethod::kLookupAccount && request._displayName.empty() == false && request._accountID == kInvalidAccountID;
-        if ( refused._result == AdminResult::Ok && bByName )
-        {
-            AccountIdentity identity;
-            if ( _settings._pDirectory == nullptr || _settings._pDirectory->findIdentityByDisplayName( request._displayName, identity ) == false )
-                refused._result = AdminResult::UnknownAccount; // 이 프로세스에 접속한 계정만 이름으로 찾는다
-            else
-                command._request._accountID = identity._accountID;
-            _listPendingCall[pendingIndex]._targetID = command._request._accountID;
-        }
         if ( refused._result != AdminResult::Ok )
         {
             finishCall( pendingIndex, refused );
@@ -185,7 +177,7 @@ namespace sw
     void AdminService::update( int64 nowMs )
     {
         _nowMs = nowMs;
-        pollDirectoryCompletions();
+        pollForwardedCompletions();
         _metrics.setPendingStoreWorkCount( static_cast<int32>( _listPendingCall.size() ) );
     }
 
@@ -217,14 +209,8 @@ namespace sw
             if ( pending._callID != callID )
                 continue;
             const bool bLookupWithDirectory = pending._method == AdminMethod::kLookupAccount && inoutReply._result == AdminResult::Ok && _settings._pDirectory != nullptr;
-            if ( bLookupWithDirectory )
-            {
-                AccountIdentity identity;
-                if ( _settings._pDirectory->findIdentity( pending._targetID, identity ) )
-                    inoutReply._identity = identity;
-                inoutReply._identity._accountID = pending._targetID;
-                inoutReply._bOnline             = _settings._pDirectory->isAccountOnline( pending._targetID ) ? SW_TRUE : SW_FALSE;
-            }
+            if ( bLookupWithDirectory ) // 신원은 저장소 조회가 채웠다(이름으로 찾았으면 계정 id 도). 접속 여부만 이 프로세스로 본다
+                inoutReply._bOnline = _settings._pDirectory->isAccountOnline( inoutReply._identity._accountID ) ? SW_TRUE : SW_FALSE;
             const bool bRevoke = inoutReply._result == AdminResult::Ok && inoutReply._bRevokeSessions == SW_TRUE && inoutReply._bReplayed == SW_FALSE;
             if ( bRevoke && _settings._pSessionControl != nullptr )
             {
@@ -238,6 +224,9 @@ namespace sw
                     return; // 서버 디렉터리 키트의 완료가 응답한다
                 inoutReply._result = AdminResult::Unavailable;
             }
+            const bool bForwardToLiveOps = AdminMethod::isLiveEventMethod( pending._method ) && inoutReply._result == AdminResult::Ok;
+            if ( bForwardToLiveOps && forwardLiveEventCall( pending, inoutReply ) )
+                return; // 라이브 운영 키트의 완료가 응답한다
             const bool bSanctionChanged = pending._method == AdminMethod::kSetSanction && inoutReply._result == AdminResult::Ok && inoutReply._bReplayed == SW_FALSE;
             if ( bSanctionChanged && _settings._pBus != nullptr )
                 (void)ServiceSanctionBus::kChangedTopic.publish( *_settings._pBus, ServiceSanctionChanged{ pending._targetID } ); // 실패는 발행이 로그로 남겼다. 채팅은 묵힘 시한 안에 다시 읽는다
@@ -295,8 +284,67 @@ namespace sw
         }
     }
 
-    void AdminService::pollDirectoryCompletions()
+    bool AdminService::forwardLiveEventCall( const PendingCall& pending, AdminReply& inoutReply )
     {
+        ILiveEventControl* const pControl = _settings._pLiveEventControl;
+        if ( pControl == nullptr )
+        {
+            inoutReply._result = AdminResult::Unavailable;
+            return false;
+        }
+        const AdminRequest& request = pending._request;
+        if ( pending._method == AdminMethod::kListLiveEvents )
+        {
+            vector<string> listJSON;
+            pControl->collectEventJSON( listJSON );
+            for ( string& definitionJSON : listJSON )
+            {
+                if ( static_cast<int32>( inoutReply._listLiveEvent.size() ) >= AdminProtocol::kMaxLiveEventCount )
+                    break; // 응답 상한이다. 운영 화면은 이 수보다 많은 이벤트를 두지 않는다
+                if ( definitionJSON.size() <= static_cast<size_t>( AdminProtocol::kMaxEventJSONSize ) )
+                    inoutReply._listLiveEvent.push_back( AdminLiveEventView{ std::move( definitionJSON ) } );
+            }
+            return false;
+        }
+        if ( pending._method == AdminMethod::kPutLiveEvent )
+            pControl->putEventJSON( request._eventJSON, pending._adminID, request._memo, pending._nowMs, pending._callID );
+        else
+            pControl->removeEvent( request._eventID, pending._adminID, request._memo, pending._nowMs, pending._callID );
+        return true;
+    }
+
+    void AdminService::finishForwardedCall( uint64 callID, AdminResult result )
+    {
+        for ( size_t pendingIndex = 0; pendingIndex < _listPendingCall.size(); ++pendingIndex )
+        {
+            if ( _listPendingCall[pendingIndex]._callID != callID )
+                continue;
+            AdminReply reply;
+            reply._result = result;
+            finishCall( pendingIndex, reply );
+            return;
+        }
+        SW_LOG_WARNING( "AdminService got a forwarded completion for an unknown call %#", callID );
+    }
+
+    void AdminService::pollForwardedCompletions()
+    {
+        if ( _settings._pLiveEventControl != nullptr )
+        {
+            vector<LiveEventControlCompletion> listLiveCompletion;
+            _settings._pLiveEventControl->drainControlCompletions( listLiveCompletion );
+            for ( const LiveEventControlCompletion& completion : listLiveCompletion )
+            {
+                AdminResult result = AdminResult::Unavailable;
+                if ( completion._result == LiveEventControlResult::Ok )
+                    result = AdminResult::Ok;
+                else if ( completion._result == LiveEventControlResult::Invalid )
+                    result = AdminResult::InvalidRequest;
+                else if ( completion._result == LiveEventControlResult::NotFound )
+                    result = AdminResult::NotFound;
+                finishForwardedCall( completion._requestTag, result );
+            }
+        }
         if ( _settings._pDirectoryControl == nullptr )
             return;
         vector<ServerDirectoryControlCompletion> listCompletion;

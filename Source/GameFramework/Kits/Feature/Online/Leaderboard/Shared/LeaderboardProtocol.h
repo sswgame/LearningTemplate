@@ -30,6 +30,8 @@ namespace sw
         SubmitScore,
         GetAchievements,
         GetSeasonResult,
+        GetScoresOf,
+        GetAchievementProgress,
         Count,
     };
 
@@ -47,13 +49,15 @@ namespace sw
     /** @brief 순위표 메서드 번호입니다. 번호는 열거자 순서에서 나오며 그 이름 순서가 온라인 스키마 해시에 섞입니다(`OnlineMethodTable`). */
     struct LeaderboardMethod : OnlineMethodTable<LeaderboardMethodName, OnlineMethodRange::kLeaderboard, LeaderboardPushName>
     {
-        static constexpr uint16 kGetTop          = toMethod( LeaderboardMethodName::GetTop );          ///< 보드, 시작, 개수를 받아 기간 id 와 항목 목록을 돌려준다
-        static constexpr uint16 kGetAround       = toMethod( LeaderboardMethodName::GetAround );       ///< 보드와 반경을 받아 내 주변 항목을 나를 포함해 돌려준다
-        static constexpr uint16 kGetStats        = toMethod( LeaderboardMethodName::GetStats );        ///< 내 통계 목록을 돌려준다
-        static constexpr uint16 kSubmitScore     = toMethod( LeaderboardMethodName::SubmitScore );     ///< 보드와 점수를 받아 적용한 뒤의 점수를 돌려준다. 클라이언트 제출이 켜진 보드만 받는다
-        static constexpr uint16 kGetAchievements = toMethod( LeaderboardMethodName::GetAchievements ); ///< 달성한 업적 목록을 돌려준다
-        static constexpr uint16 kGetSeasonResult = toMethod( LeaderboardMethodName::GetSeasonResult ); ///< 보드와 시즌을 받아 내 결과를 돌려준다. 없으면 NotRanked 이다
-        static constexpr uint16 kPushAchievement = toPush( LeaderboardPushName::Achievement );         ///< 업적 id 와 달성 시각을 보낸다
+        static constexpr uint16 kGetTop                 = toMethod( LeaderboardMethodName::GetTop );                 ///< 보드, 시작, 개수를 받아 기간 id 와 항목 목록을 돌려준다
+        static constexpr uint16 kGetAround              = toMethod( LeaderboardMethodName::GetAround );              ///< 보드와 반경을 받아 내 주변 항목을 나를 포함해 돌려준다
+        static constexpr uint16 kGetStats               = toMethod( LeaderboardMethodName::GetStats );               ///< 내 통계 목록을 돌려준다
+        static constexpr uint16 kSubmitScore            = toMethod( LeaderboardMethodName::SubmitScore );            ///< 보드와 점수를 받아 적용한 뒤의 점수를 돌려준다. 클라이언트 제출이 켜진 보드만 받는다
+        static constexpr uint16 kGetAchievements        = toMethod( LeaderboardMethodName::GetAchievements );        ///< 달성한 업적 목록을 돌려준다
+        static constexpr uint16 kGetSeasonResult        = toMethod( LeaderboardMethodName::GetSeasonResult );        ///< 보드와 시즌을 받아 내 결과를 돌려준다. 없으면 NotRanked 이다
+        static constexpr uint16 kGetScoresOf            = toMethod( LeaderboardMethodName::GetScoresOf );            ///< 보드와 계정 목록(친구와 나)을 받아 이번 기간 점수를 목록 안 순위로 돌려준다
+        static constexpr uint16 kGetAchievementProgress = toMethod( LeaderboardMethodName::GetAchievementProgress ); ///< 등록한 업적마다 진행률을 돌려준다. 숨긴 업적은 달성 전에 가린다
+        static constexpr uint16 kPushAchievement        = toPush( LeaderboardPushName::Achievement );                ///< 업적 id 와 달성 시각을 보낸다
     };
 } // namespace sw
 
@@ -74,6 +78,8 @@ namespace sw
         int32 _offset{ 0 }; ///< kGetTop
         PROPERTY( Min = 0, Max = 100 )
         int32 _count{ 0 }; ///< kGetTop 에서는 개수이고 kGetAround 에서는 반경이다. 상한은 `LeaderboardLimit::kMaxPage` 와 같다
+        PROPERTY( MaxCount = 201 )
+        vector<AccountID> _listAccountID{}; ///< kGetScoresOf 의 계정들이다. 클라이언트가 친구 목록에 자기를 더해 보낸다. 상한은 `LeaderboardLimit::kMaxScoresOfCount` 와 같다
     };
 } // namespace sw
 
@@ -84,12 +90,14 @@ namespace sw
     struct LeaderboardReply
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 100 )
-        vector<LeaderboardEntry> _listEntry{}; ///< 상한은 `LeaderboardLimit::kMaxPage` 와 같다
+        PROPERTY( MaxCount = 201 )
+        vector<LeaderboardEntry> _listEntry{}; ///< 상한은 `LeaderboardLimit::kMaxScoresOfCount` 와 같다. 순위 조회는 `kMaxPage` 까지 담는다
         PROPERTY( MaxCount = 256 )
         vector<LeaderboardStat> _listStat{}; ///< 상한은 `LeaderboardLimit::kMaxStatCount` 와 같다
         PROPERTY( MaxCount = 1024 )
         vector<AchievementState> _listAchievement{}; ///< 상한은 `LeaderboardLimit::kMaxAchievementCount` 와 같다
+        PROPERTY( MaxCount = 1024 )
+        vector<AchievementProgress> _listProgress{}; ///< kGetAchievementProgress. 상한은 `LeaderboardLimit::kMaxAchievementCount` 와 같다
         PROPERTY()
         uint64 _periodID{ 0 };
         PROPERTY()

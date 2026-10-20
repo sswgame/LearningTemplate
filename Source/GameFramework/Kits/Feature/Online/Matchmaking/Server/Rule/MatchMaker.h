@@ -7,6 +7,8 @@
  *          - 채우기: 후보를 앵커에 가까운 실력 순(같으면 오래 기다린 순)으로 넣어 슬롯(팀 수 × 팀 인원)을 정확히 채운다.
  *            파티는 쪼개지 않는다. 큰 티켓부터 자리가 남은 팀 중 실력 합이 가장 낮은 팀에 넣는 그리디 방식이며, 나눌 수 없으면 이번 처리에서는 그 앵커를 건너뛴다.
  *          - 시한: `_maxWaitMs` 를 넘긴 티켓은 빼서 돌려준다.
+ *          - 백필: 새 경기를 만들기 전에 경기 중 빈자리(`MatchBackfillRequest`)를 오래된 요청부터 채운다. 티켓은 오래 기다린 순으로 보고,
+ *            파티를 쪼개지 않고 한 팀의 빈자리에 다 들어가야 하며, 평균 실력 차가 티켓의 허용 범위 안이고 지역이 같거나 완화돼야 한다.
  *
  *          PlayFab Matchmaking 의 규칙 세 가지(실력 확장, 지역 완화, 팀 균형)를 데이터 구조체 하나(`MatchModeDefinition`)로 표현한 것이다.
  */
@@ -37,12 +39,22 @@ namespace sw
         /** @brief 경기를 만듭니다. 만든 경기는 @p outListMatch 뒤에, 시한을 넘긴 티켓은 @p outListTimedOut 뒤에 덧붙입니다. */
         void process( int64 nowMs, vector<MatchFormed>& outListMatch, vector<MatchTicket>& outListTimedOut );
 
+        /** @brief 빈자리를 채워 @p outListBackfilled 뒤에 덧붙입니다. 다 찼거나 시한이 지난 요청은 지웁니다. `process` 보다 먼저 부릅니다. */
+        void processBackfills( int64 nowMs, vector<MatchBackfilled>& outListBackfilled );
+        /** @brief 빈자리 요청을 넣습니다. 같은 경기 id 가 있으면 바꿉니다. 모드가 다르거나 팀 수가 다르거나 빈자리가 음수면 Invalid 입니다. */
+        MatchmakingResult addBackfill( const MatchBackfillRequest& request );
+        int32             getBackfillCount() const { return static_cast<int32>( _listBackfill.size() ); }
+
         /** @brief 티켓을 넣습니다. 인원이 0이거나 팀 인원을 넘으면 PartyTooLarge, 같은 id 가 있으면 AlreadyQueued 를 반환합니다. */
         MatchmakingResult  addTicket( const MatchTicket& ticket );
         [[nodiscard]] bool removeTicket( uint64 ticketID );
         bool               hasTicket( uint64 ticketID ) const;
         /** @brief 티켓을 모두 뺍니다. 규칙과 다음 경기 id 는 그대로라 권한을 되찾아도 경기 id 가 겹치지 않습니다. 권한을 잃은 대기열이 씁니다. */
-        void clearTickets() { _listTicket.clear(); }
+        void clearTickets()
+        {
+            _listTicket.clear();
+            _listBackfill.clear();
+        }
 
         int32                      getTicketCount() const { return static_cast<int32>( _listTicket.size() ); }
         const MatchModeDefinition& getDefinition() const { return _definition; }
@@ -53,8 +65,9 @@ namespace sw
         [[nodiscard]] bool tryFormMatch( int32 anchorIndex, int64 nowMs, vector<uint8>& inoutListUsed, MatchFormed& outMatch ) const;
         [[nodiscard]] bool partitionIntoTeams( const vector<int32>& listTicketIndex, MatchFormed& outMatch ) const;
 
-        vector<MatchTicket> _listTicket;
-        MatchModeDefinition _definition;
-        uint64              _nextMatchID;
+        vector<MatchTicket>          _listTicket;
+        vector<MatchBackfillRequest> _listBackfill; ///< 들어온 순서(오래된 것 먼저)이다
+        MatchModeDefinition          _definition;
+        uint64                       _nextMatchID;
     };
 } // namespace sw

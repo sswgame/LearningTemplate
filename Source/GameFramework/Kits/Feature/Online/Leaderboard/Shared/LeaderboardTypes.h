@@ -178,6 +178,7 @@ namespace sw
         static constexpr int32 kMaxStatCount        = 256;        ///< 계정 하나의 통계 수이며 조회의 상한이다
         static constexpr int32 kMaxAchievementCount = 1024;       ///< 계정 하나의 업적 수이며 조회의 상한이다
         static constexpr int64 kNameTtlMs           = 2592000000; ///< 30일이며 표시 이름 캐시의 시한이다
+        static constexpr int32 kMaxScoresOfCount    = 201;        ///< 계정 목록 조회의 상한이다. 친구 200 명과 나이다(`SocialLimit::kMaxFriend` + 1)
     };
 } // namespace sw
 
@@ -211,6 +212,31 @@ namespace sw
         int64 _threshold{ 1 };
         PROPERTY( Min = 0 )
         int64 _rewardAmount{ 0 };
+        PROPERTY( Name = "hidden" )
+        bool _bHidden{ false }; ///< 달성하기 전에는 진행률 목록에 id 와 진행을 보이지 않는다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief 업적 하나의 진행률입니다. 진행률 응답 목록의 원소이며 등록한 업적마다 하나입니다.
+     * @details 숨긴 업적(`AchievementDefinition::_bHidden`)은 달성하기 전에는 `_bHidden` 만 켜고 id, 진행, 임계값을 비워 보냅니다. UI 는 "숨겨진 업적" 칸으로 그립니다.
+     */
+    REFLECT()
+    struct AchievementProgress
+    {
+        REFLECT_BODY();
+        PROPERTY( MaxCount = 32 )
+        string _achievementID{};
+        PROPERTY()
+        int64 _progress{ 0 }; ///< 연결된 통계의 지금 값이다. 임계값을 넘을 수 있다
+        PROPERTY()
+        int64 _threshold{ 0 };
+        PROPERTY()
+        int64 _unlockedMs{ 0 }; ///< 0 이면 아직 달성하지 않았다
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bHidden{ SW_FALSE };
     };
 } // namespace sw
 

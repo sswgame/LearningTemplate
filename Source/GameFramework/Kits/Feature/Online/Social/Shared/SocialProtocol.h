@@ -46,6 +46,11 @@ namespace sw
         GuildDeposit,
         GuildWithdraw,
         GuildStorage,
+        GuildSetJoinPolicy,
+        GuildApply,
+        GuildApplications,
+        GuildApprove,
+        GuildReject,
         Count,
     };
 
@@ -76,20 +81,25 @@ namespace sw
         static constexpr uint16 kGuildInvite         = toMethod( SocialMethodName::GuildInvite );    ///< 계정을 받으며 임원 이상만 부를 수 있다
         static constexpr uint16 kGuildAccept         = toMethod( SocialMethodName::GuildAccept );    ///< 길드 id
         static constexpr uint16 kGuildLeave          = toMethod( SocialMethodName::GuildLeave );
-        static constexpr uint16 kGuildKick           = toMethod( SocialMethodName::GuildKick );      ///< 계정을 받으며 더 높은 역할만 부를 수 있다
-        static constexpr uint16 kGuildSetRole        = toMethod( SocialMethodName::GuildSetRole );   ///< 계정과 역할을 받으며 길드장만 부를 수 있다. 역할이 Master 이면 길드장을 넘기는 것이다
-        static constexpr uint16 kGuildSetNotice      = toMethod( SocialMethodName::GuildSetNotice ); ///< 문구를 받으며 임원 이상만 부를 수 있다
-        static constexpr uint16 kGuildGet            = toMethod( SocialMethodName::GuildGet );       ///< 내 길드를 멤버 목록까지 돌려준다
-        static constexpr uint16 kGuildDeposit        = toMethod( SocialMethodName::GuildDeposit );   ///< 자산과 양을 받아 내 계정에서 길드 창고로 옮긴다. 멱등 키가 필수이다
-        static constexpr uint16 kGuildWithdraw       = toMethod( SocialMethodName::GuildWithdraw );  ///< 자산과 양을 받아 길드 창고에서 내 계정으로 옮긴다. 임원 이상, 멱등 키 필수
-        static constexpr uint16 kGuildStorage        = toMethod( SocialMethodName::GuildStorage );   ///< 길드 창고의 잔액 목록을 돌려준다
-        static constexpr uint16 kPushNotification    = toPush( SocialPushName::Notification );       ///< 알림 하나이다
+        static constexpr uint16 kGuildKick           = toMethod( SocialMethodName::GuildKick );          ///< 계정을 받으며 더 높은 역할만 부를 수 있다
+        static constexpr uint16 kGuildSetRole        = toMethod( SocialMethodName::GuildSetRole );       ///< 계정과 역할을 받으며 길드장만 부를 수 있다. 역할이 Master 이면 길드장을 넘기는 것이다
+        static constexpr uint16 kGuildSetNotice      = toMethod( SocialMethodName::GuildSetNotice );     ///< 문구를 받으며 임원 이상만 부를 수 있다
+        static constexpr uint16 kGuildGet            = toMethod( SocialMethodName::GuildGet );           ///< 내 길드를 멤버 목록까지 돌려준다
+        static constexpr uint16 kGuildDeposit        = toMethod( SocialMethodName::GuildDeposit );       ///< 자산과 양을 받아 내 계정에서 길드 창고로 옮긴다. 멱등 키가 필수이다
+        static constexpr uint16 kGuildWithdraw       = toMethod( SocialMethodName::GuildWithdraw );      ///< 자산과 양을 받아 길드 창고에서 내 계정으로 옮긴다. 임원 이상, 멱등 키 필수
+        static constexpr uint16 kGuildStorage        = toMethod( SocialMethodName::GuildStorage );       ///< 길드 창고의 잔액 목록을 돌려준다
+        static constexpr uint16 kGuildSetJoinPolicy  = toMethod( SocialMethodName::GuildSetJoinPolicy ); ///< `_bOpen` 으로 공개 길드를 켜고 끈다. 임원 이상
+        static constexpr uint16 kGuildApply          = toMethod( SocialMethodName::GuildApply );         ///< 공개 길드 `_guildID` 에 가입 신청을 낸다. 다시 내면 기한이 늘어난다
+        static constexpr uint16 kGuildApplications   = toMethod( SocialMethodName::GuildApplications );  ///< 내 길드의 살아 있는 신청 목록이다. 임원 이상
+        static constexpr uint16 kGuildApprove        = toMethod( SocialMethodName::GuildApprove );       ///< 신청한 계정 `_otherID` 를 받아들인다. 임원 이상
+        static constexpr uint16 kGuildReject         = toMethod( SocialMethodName::GuildReject );        ///< 신청한 계정 `_otherID` 의 신청을 지운다. 임원 이상
+        static constexpr uint16 kPushNotification    = toPush( SocialPushName::Notification );           ///< 알림 하나이다
 
         /** @brief 관계를 바꾸는 메서드이면 true 입니다. 이 경우 멱등 키를 싣습니다. */
         static constexpr bool isLinkChange( uint16 method ) { return kRequestFriend <= method && method <= kUnblock; }
-        static constexpr bool isGuild( uint16 method ) { return kGuildCreate <= method && method <= kGuildStorage; }
+        static constexpr bool isGuild( uint16 method ) { return kGuildCreate <= method && method <= kGuildReject; }
         /** @brief 읽기만 하는 길드 메서드이면 true 입니다. 나머지 길드 메서드는 멱등 키를 싣습니다. */
-        static constexpr bool isGuildRead( uint16 method ) { return method == kGuildGet || method == kGuildStorage; }
+        static constexpr bool isGuildRead( uint16 method ) { return method == kGuildGet || method == kGuildStorage || method == kGuildApplications; }
     };
 } // namespace sw
 
@@ -116,6 +126,8 @@ namespace sw
         GuildRole _role{ GuildRole::Member }; ///< kGuildSetRole
         PROPERTY( Min = 0, Max = 1 )
         uint8 _bAccept{ SW_FALSE }; ///< kRespondFriend
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bOpen{ SW_FALSE }; ///< kGuildSetJoinPolicy
     };
 } // namespace sw
 
@@ -132,6 +144,8 @@ namespace sw
         vector<SocialPresence> _listPresence{}; ///< kFriendPresence. 상한은 `SocialLimit::kMaxFriend` 와 같다
         PROPERTY( MaxCount = 128 )
         vector<GuildStorageItem> _listStorage{}; ///< kGuildStorage 는 창고 전체, kGuildDeposit · kGuildWithdraw 는 옮긴 자산의 창고 잔액 하나. 상한은 `GuildLimit::kMaxStorageItem` 와 같다
+        PROPERTY( MaxCount = 50 )
+        vector<GuildApplication> _listApplication{}; ///< kGuildApplications. 상한은 `GuildLimit::kMaxApplication` 와 같다
         PROPERTY()
         GuildInfo _guild{}; ///< kGuildCreate 에서는 id 와 이름이고 kGuildGet 에서는 전체 정보이다
         PROPERTY()

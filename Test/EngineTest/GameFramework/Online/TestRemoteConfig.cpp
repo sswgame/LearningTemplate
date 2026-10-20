@@ -2,13 +2,16 @@
 
 #include "Core/Network/BitStream.h"
 
+#include "Engine/Observability/MetricRegistry.h"
+
 #include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"
 #include "GameFramework/Base/Online/Config/RemoteConfig.h"
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
 
 #include "TestFramework/TestFramework.h"
 
-// 원격 설정 — 다시 읽기 뒤 값 · 해시, 출시 비율(0 · 10000 · 5000)과 계정마다 늘 같은 쪽, 클라이언트 묶음에 숨은 키 없음, 낡은 판의 바꾸기는 Conflict(감사 줄 · 버스 알림 포함).
+// 원격 설정 — 다시 읽기 뒤 값 · 해시, 출시 비율(0 · 10000 · 5000)과 계정마다 늘 같은 쪽, 클라이언트 묶음에 숨은 키 없음, 낡은 판의 바꾸기는 Conflict(감사 줄 · 버스 알림 포함),
+// A/B 실험(변형 비중 규칙, 계정마다 같은 변형, 클라이언트도 같은 변형, 변형별 지표).
 
 using namespace sw;
 
@@ -110,6 +113,63 @@ SW_TEST_CASE( RemoteConfigTest, RolloutIsDeterministicPerAccount )
     }
     SW_EXPECT_TRUE( config.isFeatureEnabled( "feature.missing", 7, true ) ); // 없는 플래그는 기본값
     SW_EXPECT_FALSE( config.isFeatureEnabled( "feature.missing", 7, false ) );
+}
+
+SW_TEST_CASE( RemoteConfigTest, ExperimentAssignsStableVariantsAndCountsThem )
+{
+    using Internal = TestRemoteConfigInternal;
+    vector<RemoteConfigVariant> listVariant;
+    SW_EXPECT_TRUE( RemoteConfig::parseVariants( "control:5000;cheap_gems:5000", listVariant ) );
+    SW_EXPECT_EQUAL( listVariant.size(), size_t( 2 ) );
+    SW_EXPECT_FALSE( RemoteConfig::parseVariants( "control:5000;b:4000", listVariant ) ); // 합이 10000 이 아니다
+    SW_EXPECT_FALSE( RemoteConfig::parseVariants( "control:5000;control:5000", listVariant ) );
+    SW_EXPECT_FALSE( RemoteConfig::parseVariants( "Control:10000", listVariant ) );
+    SW_EXPECT_FALSE( RemoteConfig::parseVariants( "a:0;b:10000", listVariant ) );
+
+    MemoryServiceDatabase database;
+    MemoryServiceStore    front{ &database };
+    RemoteConfig          server;
+    RemoteConfigValue     experiment;
+    experiment._type           = RemoteConfigValueType::Experiment;
+    experiment._text           = "control:5000;cheap_gems:5000";
+    experiment._bClientVisible = SW_TRUE;
+    server.submitSet( front, "exp.gem_price", experiment, Internal::makeAudit( 1 ) );
+    RemoteConfigValue broken = experiment;
+    broken._text             = "control:9999";
+    server.submitSet( front, "exp.broken", broken, Internal::makeAudit( 2 ) ); // 쓰기 전에 거절된다
+    front.pollCompletions();
+    string variant;
+    SW_EXPECT_FALSE( server.findVariant( "exp.broken", 1, variant ) );
+    SW_EXPECT_FALSE( server.findVariant( "exp.missing", 1, variant ) );
+    int32 cheapCount = 0;
+    for ( uint64 accountID = 1; accountID <= 1000; ++accountID )
+    {
+        SW_ASSERT_TRUE( server.findVariant( "exp.gem_price", accountID, variant ) );
+        cheapCount += variant == "cheap_gems" ? 1 : 0;
+    }
+    SW_EXPECT_TRUE( 450 <= cheapCount && cheapCount <= 550 );
+
+    BitWriter snapshot;
+    server.writeClientSnapshot( snapshot );
+    const vector<uint8> snapshotBytes = snapshot.releaseBytes();
+    RemoteConfig        client;
+    BitReader           reader( snapshotBytes.data(), static_cast<int32>( snapshotBytes.size() ) );
+    SW_ASSERT_TRUE( client.readClientSnapshot( reader ) );
+    string clientVariant;
+    SW_ASSERT_TRUE( server.findVariant( "exp.gem_price", 77, variant ) );
+    SW_ASSERT_TRUE( client.findVariant( "exp.gem_price", 77, clientVariant ) );
+    SW_EXPECT_EQUAL( variant, clientVariant ); // 클라이언트도 같은 변형이다
+
+    MetricRegistry                registry;
+    RemoteConfigExperimentMetrics metrics{ &registry };
+    SW_EXPECT_TRUE( metrics.recordExposure( server, "exp.gem_price", 77 ) );
+    SW_EXPECT_TRUE( metrics.recordEvent( server, "exp.gem_price", 77, "purchase" ) );
+    SW_EXPECT_FALSE( metrics.recordEvent( server, "exp.gem_price", 77, "Bad Event" ) );
+    SW_EXPECT_FALSE( metrics.recordExposure( server, "exp.missing", 77 ) );
+    string text;
+    registry.writePrometheusText( text );
+    SW_EXPECT_TRUE( text.find( "remote_config_experiment_total" ) != string::npos );
+    SW_EXPECT_TRUE( text.find( string( "variant=\"" ) + variant + "\"" ) != string::npos );
 }
 
 SW_TEST_CASE( RemoteConfigTest, ClientSnapshotCarriesOnlyVisibleKeys )

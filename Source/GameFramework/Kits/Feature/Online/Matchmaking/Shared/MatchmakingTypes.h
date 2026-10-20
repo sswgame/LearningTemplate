@@ -38,7 +38,8 @@ namespace sw
         Invalid,
         Unavailable,
         Conflict,
-        UpdateRequired, ///< 온라인 스키마 해시가 다르다(`kVersionMismatch`). 클라이언트만 만들고 서버는 보내지 않는다. 다시 접속하지 않으므로 재시도하지 않는다
+        UpdateRequired,    ///< 온라인 스키마 해시가 다르다(`kVersionMismatch`). 클라이언트만 만들고 서버는 보내지 않는다. 다시 접속하지 않으므로 재시도하지 않는다
+        RatingUnavailable, ///< 실력 모드인데 이 서버가 아직 멤버의 통계를 읽지 않았다. 잠시 뒤 다시 줄을 선다
         Count
     };
 } // namespace sw
@@ -74,6 +75,10 @@ namespace sw
         int32 _maxRatingWindow{ 1000 };
         PROPERTY()
         uint32 _buildVersion{ 0 }; ///< 전용 서버 빌드 버전이다. 0이면 상관없다
+        PROPERTY()
+        string _ratingStat{}; ///< 실력으로 쓰는 계정 통계 이름(순위표 키트 통계)이다. 비우면 실력을 보지 않는 모드이고 모두 `_initialRating` 이다
+        PROPERTY()
+        int32 _initialRating{ 1500 }; ///< 통계가 한 번도 바뀌지 않은 계정의 실력이고, 실력을 보지 않는 모드와 로비 경기의 실력이다
     };
 } // namespace sw
 
@@ -154,6 +159,50 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @brief 경기 중 빈자리(백필) 요청입니다. 전용 게임 서버가 권한 매처에 보내는 서버 버스(`mm.backfill.<모드>`)의 본문입니다.
+     * @details 팀마다 빈자리 수를 싣습니다. 매처는 대기 티켓을 실력 허용 범위와 지역 규칙으로 골라 채우고, 채운 사람을 같은 경기 id 의 배정으로 게임 서버에 알립니다.
+     *          빈자리가 모두 차거나 모드의 `_maxWaitMs` 가 지나면 요청이 끝납니다. 같은 경기 id 로 다시 보내면 빈자리 수를 바꿉니다.
+     */
+    REFLECT()
+    struct SW_KIT_API MatchBackfillRequest
+    {
+        REFLECT_BODY();
+        static constexpr uint32 kBusVersion = 1; ///< 서버 버스의 의미 버전(docs/plans/ServerBusFormat.md 3.4)
+        PROPERTY( MaxCount = 16 )
+        vector<int32> _listOpenSlot{}; ///< 팀마다 빈자리 수이다. 상한은 `MatchmakingLimit::kMaxTeamCount` 와 같다
+        PROPERTY( MaxCount = 32 )
+        string _modeID{};
+        PROPERTY( MaxCount = 16 )
+        string _region{}; ///< 경기의 지역이다
+        PROPERTY( MaxCount = 128 )
+        string _address{}; ///< 채운 사람이 접속할 게임 서버 주소이다. 상한은 `ServerRecord::kMaxAddressSize` 와 같다
+        PROPERTY()
+        uint64 _matchID{ 0 };
+        PROPERTY()
+        uint64 _serverID{ 0 }; ///< 요청한 게임 서버이다. 채운 사람의 배정을 이 서버의 배정 주제로 보낸다
+        PROPERTY()
+        int64 _requestedMs{ 0 };
+        PROPERTY()
+        int32 _averageRating{ 0 }; ///< 남은 사람들의 평균 실력이다
+        PROPERTY()
+        uint16 _port{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 백필로 채운 티켓 하나입니다. 매처가 내고 대기열 서비스가 배정으로 보냅니다. */
+    struct MatchBackfilled
+    {
+        MatchBackfillRequest _request{}; ///< 채운 뒤의 남은 빈자리가 아니라 요청의 서버 정보를 쓴다
+        MatchTicket          _ticket{};
+        int32                _team{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 매칭의 상한 값들입니다. */
     struct MatchmakingLimit
     {
@@ -172,7 +221,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 파티 하나의 스냅샷입니다. 캐시 기록, 알림, 응답이 같은 형식을 씁니다. 실력은 두지 않으며, 줄을 설 때 `IMatchRatingSource` 가 모드마다 줍니다.
+     * @brief 파티 하나의 스냅샷입니다. 캐시 기록, 알림, 응답이 같은 형식을 씁니다. 실력은 두지 않으며, 줄을 설 때 모드의 실력 통계(`_ratingStat`)를 `IAccountStatSource` 에서 읽습니다.
      * @details 알림과 응답은 고정 배치형(B)이고, 캐시 기록은 배포 중에 다른 빌드의 서버가 읽을 수 있으므로 자기 기술형(A, `MatchmakingProtocol::encodeParty`)입니다.
      */
     REFLECT()

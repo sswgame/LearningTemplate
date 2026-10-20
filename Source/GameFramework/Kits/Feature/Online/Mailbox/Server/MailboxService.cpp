@@ -7,6 +7,10 @@
 
 #include "Engine/Observability/MetricRegistry.h"
 
+#include "GameFramework/Base/Online/Identity/AccountPresence.h"
+#include "GameFramework/Base/Online/Identity/OfflinePush.h"
+#include "GameFramework/Base/Online/Identity/OnlinePushRelay.h"
+#include "GameFramework/Base/Online/Mail/ServiceMail.h"
 #include "GameFramework/Base/Online/Store/ServiceStore.h"
 #include "GameFramework/Base/Online/Store/ServiceStoreUtil.h"
 
@@ -19,6 +23,28 @@ namespace sw
         struct MailboxServiceInternal
         {
             static constexpr const utf8* kArrExpiryAction[] = { "discarded", "returned", "removed" };
+        };
+
+        /** @brief 새 우편 알림을 가져가며 지우는 작업입니다(`ServiceMail::claimNotices`). */
+        class MailboxNoticeWork final : public IServiceStoreWork
+        {
+        public:
+            MailboxNoticeWork( MailboxService* pService, int32 batchCount )
+                : _listNotice{}
+                , _pService{ pService }
+                , _batchCount{ batchCount }
+                , _result{ ServiceStoreResult::Unavailable }
+            {
+            }
+
+            void run( IServiceStoreConnection& connection ) override { _result = ServiceMail::claimNotices( connection, _batchCount, _listNotice ); }
+            void complete() override { _pService->completeNotices( _result, _listNotice ); }
+
+        private:
+            vector<ServiceMailNotice> _listNotice;
+            MailboxService*           _pService;
+            int32                     _batchCount;
+            ServiceStoreResult        _result;
         };
 
         /** @brief 우편함 요청 하나의 저장소 왕복입니다. */
@@ -140,15 +166,21 @@ namespace sw
         , _listCampaign{}
         , _metrics{}
         , _settings{}
+        , _mapPresenceRequestToNotice{}
         , _pStore{ nullptr }
+        , _pHost{ nullptr }
         , _arrExpiredCounter{}
         , _nextCallID{ 1 }
         , _nowMs{ 0 }
         , _nextSweepMs{ 0 }
         , _nextCampaignRefreshMs{ 0 }
+        , _nextNoticeMs{ 0 }
         , _bSweepPending{ SW_FALSE }
         , _bSweepRequested{ SW_FALSE }
         , _bCampaignRefreshPending{ SW_FALSE }
+        , _bNoticePending{ SW_FALSE }
+        , _bSweepRunHeld{ SW_FALSE }
+        , _sweepRun{}
     {
     }
 
@@ -177,6 +209,18 @@ namespace sw
                 _arrExpiredCounter[actionIndex] = settings._pMetricRegistry->registerCounter( "mailbox_expired_total", "Expired mail handled by the sweep", listLabel );
             }
         }
+        if ( settings._pScheduler != nullptr )
+        {
+            ScheduleDefinition schedule;
+            schedule._jobID      = kSweepJobID;
+            schedule._kind       = ScheduleKind::Interval;
+            schedule._intervalMs = settings._sweepIntervalMs;
+            if ( settings._pScheduler->registerJob( schedule, this ) == false )
+            {
+                SW_LOG_ERROR( "MailboxService: the sweep job could not be scheduled (sweepIntervalMs %# must be at least a minute)", settings._sweepIntervalMs );
+                return false;
+            }
+        }
         return true;
     }
 
@@ -189,7 +233,17 @@ namespace sw
             SW_LOG_ERROR( "MailboxService shut down with %# calls still pending", _listPendingCall.size() );
             _listPendingCall.clear();
         }
+        if ( _settings._pPresence != nullptr )
+        {
+            for ( const auto& [requestID, notice] : _mapPresenceRequestToNotice )
+            {
+                (void)notice;
+                _settings._pPresence->cancel( requestID ); // 알림 하나를 잃는다. 우편은 목록에 있다
+            }
+        }
+        _mapPresenceRequestToNotice.clear();
         _pStore = nullptr;
+        _pHost  = nullptr;
     }
 
     void MailboxService::submitCall( const MailboxCall& call, ReplyDelegate onReply )
@@ -210,7 +264,8 @@ namespace sw
             _nextCampaignRefreshMs   = nowMs + _settings._campaignRefreshMs;
             _pStore->submit( make_unique<MailboxCampaignWork>( this ) );
         }
-        const bool bSweepDue = ( _settings._sweepIntervalMs > 0 && nowMs >= _nextSweepMs ) || _bSweepRequested == SW_TRUE;
+        const bool bTickSweep = _settings._pScheduler == nullptr && _settings._sweepIntervalMs > 0 && nowMs >= _nextSweepMs; // 예약 테이블이 있으면 회차가 부른다
+        const bool bSweepDue  = bTickSweep || _bSweepRequested == SW_TRUE;
         if ( _bSweepPending == SW_FALSE && bSweepDue )
         {
             _bSweepPending   = SW_TRUE;
@@ -218,7 +273,68 @@ namespace sw
             _nextSweepMs     = nowMs + _settings._sweepIntervalMs;
             _pStore->submit( make_unique<MailboxSweepWork>( this, nowMs, _settings._sweepBatchCount ) );
         }
+        const bool bNoticeDue = _settings._noticeIntervalMs > 0 && nowMs >= _nextNoticeMs && _pHost != nullptr;
+        if ( _bNoticePending == SW_FALSE && bNoticeDue )
+        {
+            _bNoticePending = SW_TRUE;
+            _nextNoticeMs   = nowMs + _settings._noticeIntervalMs;
+            _pStore->submit( make_unique<MailboxNoticeWork>( this, _settings._noticeBatchCount ) );
+        }
         _metrics.setPendingStoreWorkCount( static_cast<int32>( _listPendingCall.size() ) );
+    }
+
+    void MailboxService::completeNotices( ServiceStoreResult result, vector<ServiceMailNotice>& inoutListNotice )
+    {
+        _bNoticePending = SW_FALSE;
+        if ( result == ServiceStoreResult::Invalid )
+            SW_LOG_ERROR( "MailboxService: a new-mail notice record is corrupt - notices stop until it is fixed" );
+        if ( result != ServiceStoreResult::Ok || _pHost == nullptr )
+            return; // Conflict 는 다른 서버가 가져갔다. 그 밖은 다음 주기에 다시 한다
+        if ( static_cast<int32>( inoutListNotice.size() ) == _settings._noticeBatchCount )
+            _nextNoticeMs = _nowMs; // 더 있을 수 있으므로 다음 틱에 바로 다시 가져간다
+        for ( ServiceMailNotice& notice : inoutListNotice )
+        {
+            const AccountID accountID = notice._recipientAccountID;
+            MailboxNewMail  newMail{ std::move( notice._mailKey ), std::move( notice._titleKey ) };
+            BitWriter       body;
+            const bool      bWritten = MailboxProtocol::MessageTypes::write( body, newMail );
+            if ( bWritten && _pHost->sendPush( accountID, MailboxMethod::kPushNewMail, body ) )
+                continue; // 이 서버에 붙어 있다
+            if ( _settings._pPresence == nullptr )
+            {
+                sendOfflinePush( accountID ); // 서버가 하나이고 붙어 있지 않다
+                continue;
+            }
+            const uint64 requestID                 = _settings._pPresence->submitFindByAccount( accountID, AccountPresenceDelegate::create<&MailboxService::onNoticePresenceFound>( this ) );
+            _mapPresenceRequestToNotice[requestID] = std::move( newMail );
+        }
+    }
+
+    void MailboxService::onNoticePresenceFound( const AccountPresenceResult& result )
+    {
+        const auto noticeIt = _mapPresenceRequestToNotice.find( result._requestID );
+        if ( noticeIt == _mapPresenceRequestToNotice.end() )
+            return;
+        const MailboxNewMail newMail = std::move( noticeIt->second );
+        _mapPresenceRequestToNotice.erase( noticeIt );
+        const AccountID accountID = result._identity._accountID;
+        if ( result.isOnline() && _settings._pPresence->sendRemotePush( accountID, MailboxPushName::NewMail, newMail ) )
+            return; // 다른 서버에 붙어 있다
+        sendOfflinePush( accountID );
+    }
+
+    void MailboxService::sendOfflinePush( AccountID accountID )
+    {
+        if ( _settings._pOfflinePush == nullptr || accountID == kInvalidAccountID )
+            return;
+        (void)_settings._pOfflinePush->sendOfflinePush( accountID, "push.mail.title", "push.mail.body", "mailbox", _nowMs ); // 도배 제한에 걸리면 보내지 않는다. 우편은 목록에 있다
+    }
+
+    void MailboxService::onScheduledRun( const ScheduledRun& run )
+    {
+        _sweepRun      = run;
+        _bSweepRunHeld = SW_TRUE;
+        requestSweep();
     }
 
     void MailboxService::requestSweep()
@@ -246,7 +362,7 @@ namespace sw
 
     void MailboxService::onServiceTick( OnlineServiceHost& host, int64 nowMs )
     {
-        (void)host;
+        _pHost = &host;
         update( nowMs );
     }
 
@@ -302,7 +418,13 @@ namespace sw
         if ( stats._failedCount > 0 )
             SW_LOG_WARNING( "Mail sweep left %# expired mails for the next pass", stats._failedCount );
         if ( stats._bMore == SW_TRUE )
+        {
             _bSweepRequested = SW_TRUE; // 상한까지 채웠으므로 다음 틱에 바로 다시 정리한다
+            return;
+        }
+        if ( _bSweepRunHeld == SW_TRUE && _settings._pScheduler != nullptr )
+            _settings._pScheduler->completeRun( _sweepRun, stats._failedCount == 0 ); // 남은 것이 있으면 실패로 적어 다음 회차가 다시 본다
+        _bSweepRunHeld = SW_FALSE;
     }
 
     void MailboxService::completeCampaignRefresh( ServiceStoreResult result, vector<ServiceMailCampaign>& inoutListCampaign )
@@ -337,6 +459,11 @@ namespace sw
 
     bool MailboxService::isIdle() const
     {
-        return _listPendingCall.empty() && _bSweepPending == SW_FALSE && _bCampaignRefreshPending == SW_FALSE;
+        return _listPendingCall.empty() && _bSweepPending == SW_FALSE && _bCampaignRefreshPending == SW_FALSE && _bNoticePending == SW_FALSE;
     }
+} // namespace sw
+
+namespace sw
+{
+    const OnlinePushRelayEntry kMailboxNewMailRelay{ "Mailbox.NewMail", MailboxMethod{}, MailboxPushName::NewMail, MailboxProtocol::MessageTypes{}, OnlinePushBody<MailboxNewMail>{} };
 } // namespace sw

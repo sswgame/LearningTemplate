@@ -40,6 +40,8 @@ namespace sw
         const OnlineProtocolEntry& getProtocol() const override;
         void                       onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
         void                       onServiceTick( OnlineServiceHost& host, int64 nowMs ) override;
+        void                       onAccountJoined( OnlineServiceHost& host, AccountID accountID ) override;
+        void                       onAccountLeft( OnlineServiceHost& host, AccountID accountID ) override;
 
     private:
         ServicePendingTable           _pendingTable;

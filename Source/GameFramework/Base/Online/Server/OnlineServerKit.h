@@ -28,9 +28,12 @@ namespace sw
     class IAccountNameIndex;
     class IAccountPresence;
     class IAccountSessionControl;
+    class IAccountStatSource;
     class IEphemeralStore;
     class IGroupChannelMembership;
     class ILedgerPolicy;
+    class ILiveEventControl;
+    class IOfflinePushSender;
     class IOnlineHostService;
     class IServerDirectoryControl;
     class IServiceStore;
@@ -78,14 +81,17 @@ namespace sw
         int64                     _nowMs{ 0 }; ///< 시작 시각(UTC 밀리초). 테스트는 가짜 시각을 넣는다
 
         // 키트가 `initialize` 에서 내놓고 다른 키트가 `start` 에서 읽는다. 내놓는 키트가 없으면 null 이다.
-        IAccountDirectory*       _pAccountDirectory{ nullptr }; ///< 계정 키트
-        IAccountPresence*        _pPresence{ nullptr };         ///< 계정 키트
-        const IAccountNameIndex* _pNameIndex{ nullptr };        ///< 계정 키트
-        IAccountSessionControl*  _pSessionControl{ nullptr };   ///< 계정 키트
-        const IAccountBlockList* _pBlockList{ nullptr };        ///< 친구 키트
-        const ILedgerPolicy*     _pLedgerPolicy{ nullptr };     ///< 경제 키트(화폐 카탈로그)
-        IServerDirectoryControl* _pDirectoryControl{ nullptr }; ///< 서버 디렉터리 키트(점검과 공지 바꾸기)
-        IGroupChannelMembership* _pGroupChannels{ nullptr };    ///< 채팅 키트(길드와 파티 채널 멤버)
+        IAccountDirectory*        _pAccountDirectory{ nullptr }; ///< 계정 키트
+        IAccountPresence*         _pPresence{ nullptr };         ///< 계정 키트
+        const IAccountNameIndex*  _pNameIndex{ nullptr };        ///< 계정 키트
+        IAccountSessionControl*   _pSessionControl{ nullptr };   ///< 계정 키트
+        const IAccountBlockList*  _pBlockList{ nullptr };        ///< 친구 키트
+        const ILedgerPolicy*      _pLedgerPolicy{ nullptr };     ///< 경제 키트(화폐 카탈로그)
+        IServerDirectoryControl*  _pDirectoryControl{ nullptr }; ///< 서버 디렉터리 키트(점검과 공지 바꾸기)
+        IGroupChannelMembership*  _pGroupChannels{ nullptr };    ///< 채팅 키트(길드와 파티 채널 멤버)
+        const IAccountStatSource* _pStatSource{ nullptr };       ///< 순위표 키트(접속한 계정의 통계, 매칭 실력)
+        IOfflinePushSender*       _pOfflinePush{ nullptr };      ///< 라이브 운영 키트(오프라인 계정의 기기 푸시)
+        ILiveEventControl*        _pLiveEventControl{ nullptr }; ///< 라이브 운영 키트(GM 의 이벤트 운영)
     };
 } // namespace sw
 

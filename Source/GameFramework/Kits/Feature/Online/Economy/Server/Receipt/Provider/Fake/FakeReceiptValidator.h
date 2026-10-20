@@ -21,9 +21,13 @@ namespace sw
         bool        isDevelopmentOnly() const override { return true; }
         void        submitValidation( const ReceiptValidationRequest& request ) override;
         void        pollCompletions( vector<ReceiptValidationResult>& outListResult ) override;
-        int32       getPendingCount() const { return static_cast<int32>( _listPending.size() ); }
+        void        pollRefunds( vector<ReceiptRefundNotice>& outListNotice ) override;
+        /** @brief 다음 `pollRefunds` 에 환불 알림 하나를 냅니다(테스트와 개발 서버). */
+        void  pushRefund( string_view transactionID, int64 refundedMs );
+        int32 getPendingCount() const { return static_cast<int32>( _listPending.size() ); }
 
     private:
         vector<ReceiptValidationResult> _listPending;
+        vector<ReceiptRefundNotice>     _listRefund;
     };
 } // namespace sw

@@ -16,18 +16,20 @@
 
 namespace sw
 {
+    class IAccountNameIndex;
     class ILedgerPolicy;
 
     /** @brief 명령 하나의 입력입니다. 값으로 담으며 작업이 들고 저장소 스레드로 갑니다. */
     struct AdminCommand
     {
-        AdminRequest         _request{};
-        const ILedgerPolicy* _pPolicy{ nullptr };
-        AccountID            _adminID{ kInvalidAccountID };
-        uint64               _keyHigh{ 0 }; ///< 멱등 키이다. 상태를 바꾸는 명령에는 필수이다
-        uint64               _keyLow{ 0 };
-        int64                _nowMs{ 0 };
-        uint16               _method{ 0 };
+        AdminRequest             _request{};
+        const ILedgerPolicy*     _pPolicy{ nullptr };
+        const IAccountNameIndex* _pNameIndex{ nullptr }; ///< 이름으로 찾기(접속하지 않은 계정 포함)이다. 계정 키트가 없으면 null 이고 이름 찾기는 UnknownAccount 이다
+        AccountID                _adminID{ kInvalidAccountID };
+        uint64                   _keyHigh{ 0 }; ///< 멱등 키이다. 상태를 바꾸는 명령에는 필수이다
+        uint64                   _keyLow{ 0 };
+        int64                    _nowMs{ 0 };
+        uint16                   _method{ 0 };
     };
 } // namespace sw
 

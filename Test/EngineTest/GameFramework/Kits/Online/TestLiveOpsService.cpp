@@ -139,6 +139,32 @@ SW_TEST_CASE( LiveOpsServiceTest, PutEventIsSeenAfterReloadAndOnOtherServer )
     SW_EXPECT_EQUAL( database.countRecords( ServiceAuditLog::getTable() ), 2 );
 }
 
+SW_TEST_CASE( LiveOpsServiceTest, GmEventControlTakesAndListsJSONDefinitions )
+{
+    using Internal = LiveOpsServiceTestInternal;
+    MemoryServiceDatabase database;
+    LocalServerBusHub     hub;
+    LiveOpsNode           node( &database, &hub, 1 );
+    const int64           nowMs = Internal::kMonday20261005 + Internal::kHour;
+    node.step( nowMs );
+    ILiveEventControl& control = node._service;
+    control.putEventJSON( LiveOpsProtocol::writeEventJSON( Internal::makeHalloween() ), 7, "json", nowMs, 1 );
+    control.putEventJSON( "{not json", 7, "json", nowMs, 2 );
+    node.step( nowMs );
+    SW_ASSERT_EQUAL( node._listCompletion.size(), size_t( 2 ) );
+    for ( const LiveOpsCompletion& completion : node._listCompletion )
+    {
+        SW_EXPECT_TRUE( completion._result == ( completion._requestTag == 1 ? LiveOpsResult::Ok : LiveOpsResult::Invalid ) );
+    }
+    vector<string> listJSON;
+    control.collectEventJSON( listJSON );
+    SW_ASSERT_EQUAL( listJSON.size(), size_t( 1 ) );
+    SW_EXPECT_TRUE( listJSON[0].find( "halloween" ) != string::npos );
+    LiveEventDefinition readBack;
+    SW_ASSERT_TRUE( LiveOpsProtocol::readEventJSON( listJSON[0], readBack ) );
+    SW_EXPECT_EQUAL( readBack._kind, string( "xp_boost" ) );
+}
+
 SW_TEST_CASE( LiveOpsServiceTest, BoundaryRaisesStateChangeWithoutReload )
 {
     using Internal = LiveOpsServiceTestInternal;

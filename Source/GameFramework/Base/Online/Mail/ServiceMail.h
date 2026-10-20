@@ -6,6 +6,8 @@
  *          `mail_item` 의 키는 `<받는 계정 16 진>/<만든 시각 16 진>.<멱등 키 해시 16 진>` 이다.
  *          `mail_sent` 의 키는 `<받는 계정 16 진>/<멱등 키>` 이고 값은 우편 키이다.
  *          `mail_expiry` 의 키는 `<만료 16 진>/<우편 키>` 이고 값은 없다.
+ *          `mail_notice` 의 키는 `<만든 시각 16 진>/<우편 키>` 이고 값은 제목 키다. 새 우편 알림을 보낼 차례이며, 우편함 키트가 가져가며 지운다(`claimNotices`).
+ *          우편을 넣는 모든 경로가 이 함수 하나를 지나므로 알림을 빠뜨리는 경로가 없다. 우편 하나는 쓰기 넷(우편, 보낸 기록, 만료, 알림)이다.
  *          우편 키는 시각이 앞이라서 받는 계정의 우편은 키 순서가 만든 순서와 같다.
  *          저장소 스레드의 동기 함수이다. 읽기, 수령, 만료 처리는 우편함 키트(GF_Mailbox)가 한다.
  *          거래 실패 반환, GM 지급, 보상이 자기 레코드와 한 트랜잭션에서 우편을 만들어야 하므로 키트가 아니라 기반에 둔다. 키트끼리는 include 하지 못한다.
@@ -109,12 +111,24 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 보낼 차례인 새 우편 알림 하나입니다. */
+    struct ServiceMailNotice
+    {
+        string _mailKey{};
+        string _titleKey{};
+        uint64 _recipientAccountID{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 우편 넣기와 레코드 형식 함수 모음입니다. 저장소 스레드에서 부릅니다. */
     struct SW_GF_API ServiceMail
     {
         static const hashed_string& getMailTable();
         static const hashed_string& getSentTable();
         static const hashed_string& getExpiryTable();
+        static const hashed_string& getNoticeTable(); ///< "mail_notice"
 
         /**
          * @brief 우편 하나를 @p inoutTransaction 에 붙입니다. 우편, 보낸 기록, 만료 색인(만료가 있을 때), 재원에서 우편으로 가는 맡김 이동(재원이 발행이 아닐 때)을 붙입니다.
@@ -124,6 +138,11 @@ namespace sw
         [[nodiscard]] static LedgerResult stageSend( IServiceStoreConnection& connection, const ServiceMailMessage& message, ServiceTransaction& inoutTransaction,
                                                      string& outMailKey, bool& outbReplayed );
 
+        /**
+         * @brief 오래된 새 우편 알림을 @p maxCount 개까지 가져가며 지웁니다. 지우기를 한 트랜잭션으로 커밋한 쪽만 알림을 받으므로 서버가 여럿이어도 한 번만 보냅니다.
+         * @return 그사이 다른 서버가 가져갔으면 Conflict 이고 @p outListNotice 는 비어 있습니다. 손상된 알림은 건너뛰지 않고 Invalid 입니다.
+         */
+        [[nodiscard]] static ServiceStoreResult claimNotices( IServiceStoreConnection& connection, int32 maxCount, vector<ServiceMailNotice>& outListNotice );
         /** @brief 재원에 맞는 기본 만료 처리를 반환합니다. 계정이 낸 첨부(플레이어 우편)는 반환하고, 그 밖(운영, 보상, 거래 반환)은 버립니다. */
         static ServiceMailExpiryAction getDefaultExpiryAction( const LedgerHolder& fundingHolder );
         /** @brief 우편의 맡김 보유자 `esc/mail/<토큰>` 을 반환합니다. 토큰은 우편 키의 `/` 를 `.` 로 바꾼 값입니다. */

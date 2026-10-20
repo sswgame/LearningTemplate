@@ -9,12 +9,14 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Network/Message/NetRequest.h"
 
 #include "GameFramework/Base/Online/Mail/ServiceMailCampaign.h"
 #include "GameFramework/Base/Online/Observability/ServiceMetrics.h"
+#include "GameFramework/Base/Online/Schedule/ServiceScheduler.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Mailbox/Server/MailboxStoreLogic.h"
@@ -22,19 +24,31 @@
 
 namespace sw
 {
+    struct AccountPresenceResult;
+    struct ServiceMailNotice;
+
+    class IAccountDirectory;
+    class IAccountPresence;
     class ILedgerPolicy;
+    class IOfflinePushSender;
     class IServiceStore;
     class MetricCounter;
     class MetricRegistry;
+    class ServiceScheduler;
 
     /** @brief 우편함 서비스 설정입니다. 포인터는 빌려 씁니다. */
     struct MailboxServiceConfig
     {
         const ILedgerPolicy* _pPolicy{ nullptr }; ///< 계정 상한이다. 게임이 CurrencyCatalog 를 넘기며, 기반 계층의 계약이라 키트끼리 몰라도 된다
         MetricRegistry*      _pMetricRegistry{ nullptr };
-        int64                _sweepIntervalMs{ 60000 }; ///< 만료 정리 주기이다. 0이면 끄며 이때는 예약 작업이 `requestSweep` 을 부른다
+        int64                _sweepIntervalMs{ 60000 }; ///< 만료 정리 주기이다. 예약 테이블이 있으면 그 주기의 예약 작업(`mail.sweep`)으로 서버 하나만 돌린다
+        ServiceScheduler*    _pScheduler{ nullptr };    ///< 서버 조립의 예약 테이블이다. 없으면(테스트, 서버 한 대 도구) 틱 주기로 정리한다
         int64                _campaignRefreshMs{ 60000 };
         int32                _sweepBatchCount{ 256 };
+        int64                _noticeIntervalMs{ 1000 }; ///< 새 우편 알림을 가져가는 주기이다. 0 이면 알림을 보내지 않는다(다른 서버가 맡는다)
+        int32                _noticeBatchCount{ 32 };   ///< 한 번에 가져가는 알림 수이다(트랜잭션 상한 64 안)
+        IAccountPresence*    _pPresence{ nullptr };     ///< 다른 서버에 붙은 계정을 찾고 알림을 넘긴다. 서버가 하나면 null 이다
+        IOfflinePushSender*  _pOfflinePush{ nullptr };  ///< 접속하지 않은 계정의 기기 푸시이다(라이브 운영 키트). 없으면 오프라인 계정에는 알리지 않는다
     };
 } // namespace sw
 
@@ -54,7 +68,7 @@ namespace sw
 namespace sw
 {
     /** @class MailboxService @brief 우편함 요청 처리기입니다. 서비스 스레드에서 씁니다. */
-    class SW_KIT_SERVER_API MailboxService final : public IOnlineHostService
+    class SW_KIT_SERVER_API MailboxService final : public IOnlineHostService, public IScheduledJobHandler
     {
     public:
         using ReplyDelegate = Delegate<void( const MailboxReply& )>;
@@ -80,11 +94,16 @@ namespace sw
         const OnlineProtocolEntry& getProtocol() const override { return MailboxProtocol::kOnlineEntry; }
         void                       onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
         void                       onServiceTick( OnlineServiceHost& host, int64 nowMs ) override;
+        // IScheduledJobHandler — 만료 정리 회차를 차지했다
+        void                         onScheduledRun( const ScheduledRun& run ) override;
+        static constexpr const utf8* kSweepJobID = "mail.sweep";
 
         /** @brief 작업의 `complete` 가 호출합니다. */
         void completeCall( uint64 callID, const MailboxReply& reply );
         /** @brief 만료 정리 작업의 `complete` 입니다. 지표 `mailbox_expired_total{action}` 을 갱신하며 `_bMore` 이면 다음 틱에 바로 다시 정리합니다. */
         void completeSweep( const MailboxSweepStats& stats );
+        /** @brief 새 우편 알림 작업의 `complete` 입니다. 이 서버의 계정에는 알림을, 다른 서버의 계정에는 중계를, 접속하지 않은 계정에는 기기 푸시를 보냅니다. */
+        void completeNotices( ServiceStoreResult result, vector<ServiceMailNotice>& inoutListNotice );
         /** @brief 캠페인 작업의 `complete` 입니다. 활성 캠페인과 곧 열릴 캠페인만 남겨 캐시를 바꿉니다. */
         void completeCampaignRefresh( ServiceStoreResult result, vector<ServiceMailCampaign>& inoutListCampaign );
 
@@ -103,21 +122,29 @@ namespace sw
         };
 
         void startCall( const MailboxCall& call, PendingCall pending );
+        void onNoticePresenceFound( const AccountPresenceResult& result );
+        void sendOfflinePush( AccountID accountID );
         void finishCall( size_t pendingIndex, const MailboxReply& reply );
         bool isIdle() const;
 
-        vector<PendingCall>         _listPendingCall;
-        vector<ServiceMailCampaign> _listCampaign;
-        ServiceMetrics              _metrics;
-        MailboxServiceConfig        _settings;
-        IServiceStore*              _pStore;
-        MetricCounter*              _arrExpiredCounter[3]; ///< discarded · returned · removed
-        uint64                      _nextCallID;
-        int64                       _nowMs;
-        int64                       _nextSweepMs;
-        int64                       _nextCampaignRefreshMs;
-        uint8                       _bSweepPending;
-        uint8                       _bSweepRequested;
-        uint8                       _bCampaignRefreshPending;
+        vector<PendingCall>                   _listPendingCall;
+        vector<ServiceMailCampaign>           _listCampaign;
+        ServiceMetrics                        _metrics;
+        MailboxServiceConfig                  _settings;
+        unordered_map<uint64, MailboxNewMail> _mapPresenceRequestToNotice; ///< 접속 상태를 묻는 중인 알림(받는 계정은 결과에 있다)
+        IServiceStore*                        _pStore;
+        OnlineServiceHost*                    _pHost;                ///< 알림을 보낼 호스트이다. 첫 틱에 받는다
+        MetricCounter*                        _arrExpiredCounter[3]; ///< discarded · returned · removed
+        uint64                                _nextCallID;
+        int64                                 _nowMs;
+        int64                                 _nextSweepMs;
+        int64                                 _nextCampaignRefreshMs;
+        int64                                 _nextNoticeMs;
+        uint8                                 _bSweepPending;
+        uint8                                 _bSweepRequested;
+        uint8                                 _bCampaignRefreshPending;
+        uint8                                 _bNoticePending;
+        uint8                                 _bSweepRunHeld; ///< 예약 회차를 차지해 정리하는 중이다. 끝나면 `completeRun`
+        ScheduledRun                          _sweepRun;      ///< 차지한 회차이다
     };
 } // namespace sw

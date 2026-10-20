@@ -69,6 +69,15 @@ SW_TEST_CASE( ServiceSchedulerTest, LatestOccurrenceFollowsDailyWeeklyAndWindowB
     SW_EXPECT_EQUAL( dayStartMs, ServiceScheduler::computeLatestOccurrence( window, dayStartMs ) );
     SW_EXPECT_EQUAL( int64( -1 ), ServiceScheduler::computeLatestOccurrence( window, dayStartMs + Internal::kDayMs ) ); // 끝은 빠진다
 
+    ScheduleDefinition interval = daily;
+    interval._kind              = ScheduleKind::Interval;
+    interval._intervalMs        = 5 * 60 * 1000; // 5 분
+    SW_EXPECT_TRUE( ServiceScheduler::isValidDefinition( interval ) );
+    SW_EXPECT_EQUAL( dayStartMs + 10 * Internal::kHourMs, ServiceScheduler::computeLatestOccurrence( interval, todayAtTenMs + 4 * 60 * 1000 ) ); // 5 분 단위로 내린다
+    SW_EXPECT_EQUAL( todayAtTenMs + 5 * 60 * 1000, ServiceScheduler::computeLatestOccurrence( interval, todayAtTenMs + 5 * 60 * 1000 ) );
+    interval._intervalMs = 1000; // 1 분보다 잦으면 저장소 차지가 넘친다
+    SW_EXPECT_FALSE( ServiceScheduler::isValidDefinition( interval ) );
+
     ScheduleDefinition broken = daily;
     broken._jobID             = "Daily Reward";
     SW_EXPECT_FALSE( ServiceScheduler::isValidDefinition( broken ) );

@@ -54,6 +54,19 @@ namespace sw
         return send( LeaderboardMethod::kGetSeasonResult, request, onReply );
     }
 
+    uint64 LeaderboardClient::requestScoresOf( string_view boardID, const vector<AccountID>& listAccountID, const ReplyDelegate& onReply )
+    {
+        LeaderboardRequest request;
+        request._boardID       = string( boardID );
+        request._listAccountID = listAccountID;
+        return send( LeaderboardMethod::kGetScoresOf, request, onReply );
+    }
+
+    uint64 LeaderboardClient::requestAchievementProgress( const ReplyDelegate& onReply )
+    {
+        return send( LeaderboardMethod::kGetAchievementProgress, LeaderboardRequest{}, onReply );
+    }
+
     void LeaderboardClient::onServicePush( uint16 kind, BitReader& body )
     {
         if ( kind != LeaderboardMethod::kPushAchievement )

@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "GameFramework/Base/Online/Identity/OfflinePush.h"
 #include "GameFramework/Base/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Base/Online/Server/OnlineServerKit.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
@@ -17,6 +18,28 @@ namespace sw
 {
     namespace
     {
+        /** @brief 푸시 발송기를 기반의 오프라인 푸시 창으로 내놓습니다. 우편함 키트가 접속하지 않은 계정의 새 우편에 부릅니다. */
+        class LiveOpsOfflinePush final : public IOfflinePushSender
+        {
+        public:
+            explicit LiveOpsOfflinePush( PushNotificationDispatcher* pDispatcher )
+                : _pDispatcher{ pDispatcher }
+            {
+            }
+
+            bool sendOfflinePush( AccountID accountID, string_view titleKey, string_view bodyKey, string_view deepLink, int64 nowMs ) override
+            {
+                PushNotificationMessage message;
+                message._titleKey = string( titleKey );
+                message._bodyKey  = string( bodyKey );
+                message._deepLink = string( deepLink );
+                return _pDispatcher->notifyAccount( accountID, message, nowMs );
+            }
+
+        private:
+            PushNotificationDispatcher* _pDispatcher;
+        };
+
         /**
          * @class LiveOpsOnlineServerKit
          * @brief 라이브 운영 키트의 서버 조립입니다. 발송기는 맡긴 저장 일이 끝날 때까지(저장소를 내린 뒤) 살아 있어야 하므로 키트와 수명이 같습니다.
@@ -28,6 +51,7 @@ namespace sw
                 : _service{}
                 , _server{}
                 , _dispatcher{}
+                , _offlinePush{ &_dispatcher }
                 , _fakeProvider{}
                 , _bStarted{ false }
             {
@@ -57,6 +81,8 @@ namespace sw
                 }
                 if ( registerHostService( context, entry, &_server, outError ) == false )
                     return false;
+                context._pOfflinePush      = &_offlinePush; // 우편함 키트가 접속하지 않은 계정의 새 우편에 쓴다
+                context._pLiveEventControl = &_service;     // GM 키트의 이벤트 운영이 쓴다. 부르는 것은 모든 키트가 시작한 뒤다
                 return true;
             }
 
@@ -86,6 +112,7 @@ namespace sw
             LiveOpsService             _service;
             LiveOpsServer              _server;
             PushNotificationDispatcher _dispatcher;
+            LiveOpsOfflinePush         _offlinePush; ///< 발송기를 빌려 쓰므로 뒤에 선언한다
             FakePushProvider           _fakeProvider;
             bool                       _bStarted;
         };

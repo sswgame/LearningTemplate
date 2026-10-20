@@ -7,7 +7,7 @@
 
 // 우편함 키트의 서버 조립 — 우편함 서비스를 올린다. 수령은 원장 이동이라 계정 잔액 상한을 경제 키트의 원장 정책(화폐 카탈로그)으로 받는다.
 // 옵션:
-//   sweepIntervalMs  만료 정리 주기(밀리초, 기본 60000). 0 이면 끄고 예약 작업이 정리를 맡는다.
+//   sweepIntervalMs  만료 정리 주기(밀리초, 기본 60000, 1 분 이상). 이 주기의 예약 작업(`mail.sweep`)을 등록해 서버 하나만 정리한다.
 
 namespace sw
 {
@@ -45,9 +45,12 @@ namespace sw
             {
                 _settings._pPolicy         = context._pLedgerPolicy; // 경제 키트가 없으면 원장 상한만 적용된다
                 _settings._pMetricRegistry = context._pMetricRegistry;
+                _settings._pPresence       = context._pPresence;    // 계정 키트(다른 서버에 붙은 계정)
+                _settings._pOfflinePush    = context._pOfflinePush; // 라이브 운영 키트(접속하지 않은 계정의 기기 푸시)
+                _settings._pScheduler      = context._pScheduler;   // 만료 정리를 예약 작업(`mail.sweep`)으로 서버 하나만 돌린다
                 if ( _service.initialize( context._pStore, _settings ) == false )
                 {
-                    outError = "the mailbox service needs a store";
+                    outError = "the mailbox service needs a store and a sweep interval of at least a minute";
                     return false;
                 }
                 _bStarted = true;

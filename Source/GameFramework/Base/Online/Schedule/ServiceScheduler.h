@@ -25,7 +25,8 @@ namespace sw
     {
         Daily = 0,
         Weekly,
-        Window
+        Window,
+        Interval ///< `_intervalMs` 마다(UTC 0 기준의 배수 시각). 만료 정리처럼 하루보다 잦은 일이다
     };
 } // namespace sw
 
@@ -40,6 +41,7 @@ namespace sw
         int64        _leaseMs{ 10 * constant::kSecondsPerMinute * constant::kMillisecondsPerSecond };
         int32        _minuteOfDay{ 0 }; ///< UTC 0..1439
         int32        _dayOfWeek{ 0 };   ///< Weekly — 0 = 월요일(ISO)
+        int64        _intervalMs{ 0 };  ///< Interval — 1 분 이상
         ScheduleKind _kind{ ScheduleKind::Daily };
     };
 } // namespace sw

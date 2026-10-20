@@ -52,7 +52,22 @@ namespace sw
 {
     FakeReceiptValidator::FakeReceiptValidator()
         : _listPending{}
+        , _listRefund{}
     {
+    }
+
+    void FakeReceiptValidator::pollRefunds( vector<ReceiptRefundNotice>& outListNotice )
+    {
+        for ( ReceiptRefundNotice& notice : _listRefund )
+        {
+            outListNotice.push_back( std::move( notice ) );
+        }
+        _listRefund.clear();
+    }
+
+    void FakeReceiptValidator::pushRefund( string_view transactionID, int64 refundedMs )
+    {
+        _listRefund.push_back( ReceiptRefundNotice{ getStoreName(), string( transactionID ), refundedMs } );
     }
 
     void FakeReceiptValidator::submitValidation( const ReceiptValidationRequest& request )

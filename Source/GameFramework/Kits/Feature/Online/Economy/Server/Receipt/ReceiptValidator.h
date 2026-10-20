@@ -3,6 +3,7 @@
  * @brief 결제 영수증 검증 계약입니다. 스토어(Apple, Google, Steam, 가짜)마다 제공자가 하나씩 있으며 비동기로 동작합니다. 서비스 스레드가 맡기고 나중에 회수합니다.
  * @details 제공자는 스토어 서버와의 통신(HTTP, 서명 검증)을 **자기 스레드**에서 한다. 서비스 스레드는 `pollCompletions` 로 결과만 받는다.
  *          검증이 끝나면 서비스가 원장에 지급한다. 분개 키는 거래 id(`rcpt.<스토어>/…`)이므로 같은 영수증은 어느 계정으로든 한 번만 지급된다.
+ *          환불과 결제 취소 알림(Apple 서버 알림 v2, Google RTDN, Steam 환불 보고)은 제공자가 받아 `pollRefunds` 로 넘긴다. 서비스가 지급한 재화를 빚을 허용해 회수한다.
  *          제품 이름은 `Receipt/Provider/<제품>/` 폴더 안에만 쓴다. PlayFab 의 `RedeemAppleAppStoreInventoryItems` 가 하는 검증과 지급에 해당한다.
  */
 #pragma once
@@ -57,6 +58,17 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 스토어가 알린 환불이나 결제 취소 하나입니다. */
+    struct ReceiptRefundNotice
+    {
+        string _storeName{};
+        string _transactionID{}; ///< 지급 때의 거래 id 와 같다
+        int64  _refundedMs{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @class IReceiptValidator @brief 스토어 하나의 검증 제공자입니다. 서비스 스레드가 `submitValidation` 과 `pollCompletions` 를 부릅니다. */
     class SW_KIT_SERVER_API IReceiptValidator
     {
@@ -75,6 +87,8 @@ namespace sw
         virtual void submitValidation( const ReceiptValidationRequest& request ) = 0;
         /** @brief 끝난 결과를 @p outListResult 뒤에 붙입니다. */
         virtual void pollCompletions( vector<ReceiptValidationResult>& outListResult ) = 0;
+        /** @brief 받은 환불 알림을 @p outListNotice 뒤에 붙입니다. 제공자마다 알림을 받는 길(웹훅, 구독, 보고 조회)이 다르므로 기본 구현을 두지 않습니다. */
+        virtual void pollRefunds( vector<ReceiptRefundNotice>& outListNotice ) = 0;
         virtual void shutdown() {}
     };
 } // namespace sw
@@ -95,6 +109,7 @@ namespace sw
         /** @brief 검증을 맡기고 번호를 반환합니다. 모르는 스토어이면 0을 반환하며 맡기지 않습니다. */
         uint64 submitValidation( string_view storeName, string_view payload, uint64 accountID );
         void   pollCompletions( vector<ReceiptValidationResult>& outListResult );
+        void   pollRefunds( vector<ReceiptRefundNotice>& outListNotice );
         void   shutdown();
 
     private:

@@ -61,7 +61,7 @@ namespace sw
         /**
          * @brief 거래 화면이 인벤토리 슬롯 @p listSlot 에서 거래 항목을 만듭니다. 슬롯을 (원장 자산 id, 수량)으로 바꾸며 같은 아이템의 슬롯은 한 항목으로 합칩니다.
          * @details 빈 슬롯 · 범위 밖 · 같은 슬롯 두 번은 Invalid 이고, 인스턴스 상태가 있는 슬롯(꾸미기, 떨어진 부품, 외형 피해, 내구도)이나 바꿀 수 없는 아이템은 NotTradable 입니다.
-         *          원장 1차 버전은 개수 자산만 다루기 때문이다.
+         *          인벤토리 슬롯에는 서버의 인스턴스 아이템 id 가 없기 때문이다. 인스턴스 아이템(`LedgerItemInstance`)은 게임이 그 자산 id 와 양 1 로 다리를 직접 만든다.
          */
         static TradeResult makeLegs( const Inventory& inventory, const vector<int32>& listSlot, AssetIDFromItem pAssetIDFromItem, vector<TradeLeg>& outListLeg );
 

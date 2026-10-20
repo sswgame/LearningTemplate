@@ -31,6 +31,7 @@ namespace sw
             case AdminMethod::kLookupAccount:
             case AdminMethod::kListAudit:
             case AdminMethod::kListReports:
+            case AdminMethod::kListLiveEvents:
             {
                 return AdminRole::Viewer;
             }
@@ -50,6 +51,8 @@ namespace sw
             case AdminMethod::kClearMaintenance:
             case AdminMethod::kPostNotice:
             case AdminMethod::kRemoveNotice:
+            case AdminMethod::kPutLiveEvent:
+            case AdminMethod::kRemoveLiveEvent:
             {
                 return AdminRole::Operator;
             }

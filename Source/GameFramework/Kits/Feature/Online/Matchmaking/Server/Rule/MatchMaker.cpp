@@ -66,6 +66,7 @@ namespace sw
 {
     MatchMaker::MatchMaker()
         : _listTicket{}
+        , _listBackfill{}
         , _definition{}
         , _nextMatchID{ 1 }
     {
@@ -83,6 +84,7 @@ namespace sw
         _definition  = definition;
         _nextMatchID = ( matchIDSeed << 32 ) | 1u;
         _listTicket.clear();
+        _listBackfill.clear();
         return true;
     }
 
@@ -91,6 +93,70 @@ namespace sw
         const int64 waitedSeconds = std::max<int64>( 0, nowMs - ticket._enqueuedMs ) / constant::kMillisecondsPerSecond;
         const int64 window        = static_cast<int64>( _definition._baseRatingWindow ) + waitedSeconds * _definition._ratingWindowPerSecond;
         return static_cast<int32>( std::min<int64>( window, _definition._maxRatingWindow ) );
+    }
+
+    MatchmakingResult MatchMaker::addBackfill( const MatchBackfillRequest& request )
+    {
+        const bool bShapeOk = request._modeID == _definition._modeID && static_cast<int32>( request._listOpenSlot.size() ) == _definition._teamCount && request._matchID != 0;
+        if ( bShapeOk == false )
+            return MatchmakingResult::Invalid;
+        for ( const int32 openSlot : request._listOpenSlot )
+        {
+            if ( openSlot < 0 || openSlot > _definition._teamSize )
+                return MatchmakingResult::Invalid;
+        }
+        for ( MatchBackfillRequest& existing : _listBackfill )
+        {
+            if ( existing._matchID == request._matchID )
+            {
+                existing = request;
+                return MatchmakingResult::Ok;
+            }
+        }
+        _listBackfill.push_back( request );
+        return MatchmakingResult::Ok;
+    }
+
+    void MatchMaker::processBackfills( int64 nowMs, vector<MatchBackfilled>& outListBackfilled )
+    {
+        std::stable_sort( _listTicket.begin(), _listTicket.end(), MatchMakerInternal::AgeOrder{} );
+        for ( size_t backfillIndex = 0; backfillIndex < _listBackfill.size(); )
+        {
+            MatchBackfillRequest& request = _listBackfill[backfillIndex];
+            for ( size_t ticketIndex = 0; ticketIndex < _listTicket.size(); )
+            {
+                const MatchTicket& ticket       = _listTicket[ticketIndex];
+                const int32        memberCount  = static_cast<int32>( ticket._listMember.size() );
+                const int32        ratingGap    = std::abs( ticket.computeAverageRating() - request._averageRating );
+                const bool         bRegionRelax = nowMs - ticket._enqueuedMs >= _definition._regionRelaxMs;
+                const bool         bRegionOk    = bRegionRelax || ticket._region == request._region;
+                int32              team         = -1;
+                for ( size_t teamIndex = 0; teamIndex < request._listOpenSlot.size() && team < 0; ++teamIndex )
+                {
+                    if ( request._listOpenSlot[teamIndex] >= memberCount )
+                        team = static_cast<int32>( teamIndex );
+                }
+                const bool bFits = team >= 0 && bRegionOk && ratingGap <= computeRatingWindow( ticket, nowMs );
+                if ( bFits == false )
+                {
+                    ++ticketIndex;
+                    continue;
+                }
+                request._listOpenSlot[static_cast<size_t>( team )] -= memberCount;
+                outListBackfilled.push_back( MatchBackfilled{ request, ticket, team } );
+                _listTicket.erase( _listTicket.begin() + static_cast<ptrdiff_t>( ticketIndex ) );
+            }
+            bool bFull = true;
+            for ( const int32 openSlot : request._listOpenSlot )
+            {
+                bFull = bFull && openSlot == 0;
+            }
+            const bool bExpired = nowMs - request._requestedMs >= _definition._maxWaitMs;
+            if ( bFull || bExpired )
+                _listBackfill.erase( _listBackfill.begin() + static_cast<ptrdiff_t>( backfillIndex ) );
+            else
+                ++backfillIndex;
+        }
     }
 
     MatchmakingResult MatchMaker::addTicket( const MatchTicket& ticket )

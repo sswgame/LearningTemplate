@@ -58,6 +58,16 @@ namespace sw
                         return GuildOperation::Withdraw;
                     case SocialMethod::kGuildStorage:
                         return GuildOperation::ListStorage;
+                    case SocialMethod::kGuildSetJoinPolicy:
+                        return GuildOperation::SetJoinPolicy;
+                    case SocialMethod::kGuildApply:
+                        return GuildOperation::Apply;
+                    case SocialMethod::kGuildApplications:
+                        return GuildOperation::ListApplications;
+                    case SocialMethod::kGuildApprove:
+                        return GuildOperation::Approve;
+                    case SocialMethod::kGuildReject:
+                        return GuildOperation::Reject;
                     default:
                         return GuildOperation::Get;
                 }
@@ -160,6 +170,7 @@ namespace sw
             guildRequest._operation = Internal::toGuildOperation( context._method );
             guildRequest._assetID   = std::move( request._assetID );
             guildRequest._amount    = request._amount;
+            guildRequest._bOpen     = request._bOpen;
             if ( context._idempotencyKey.isValid() ) // 창고 이동의 분개 키이다. 없으면 길드 로직이 Invalid 로 끝낸다
                 guildRequest._journalKey = LedgerJournalKey::makeFromIdempotency( LedgerJournalKey::makeAccountScope( selfID ), context._idempotencyKey._high,
                                                                                   context._idempotencyKey._low );
@@ -216,9 +227,10 @@ namespace sw
         for ( GuildCompletion& completion : _listGuildScratch )
         {
             SocialReply reply;
-            reply._result      = completion._result;
-            reply._guild       = std::move( completion._info );
-            reply._listStorage = std::move( completion._listStorage );
+            reply._result          = completion._result;
+            reply._guild           = std::move( completion._info );
+            reply._listStorage     = std::move( completion._listStorage );
+            reply._listApplication = std::move( completion._listApplication );
             respond( host, completion._requestTag, reply );
         }
         sendNotifications( host );

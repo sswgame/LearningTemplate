@@ -103,12 +103,36 @@ namespace sw
                 _pService->readAchievements( selfID, requestTag );
                 break;
             }
+            case LeaderboardMethod::kGetAchievementProgress:
+            {
+                _pService->readAchievementProgress( selfID, requestTag );
+                break;
+            }
+            case LeaderboardMethod::kGetScoresOf:
+            {
+                _pService->readScoresOf( request._boardID, request._listAccountID, context._nowMs, requestTag );
+                break;
+            }
             default:
             {
                 _pService->readSeasonResult( request._boardID, request._seasonID, selfID, requestTag );
                 break;
             }
         }
+    }
+
+    void LeaderboardServer::onAccountJoined( OnlineServiceHost& host, AccountID accountID )
+    {
+        (void)host;
+        if ( _pService != nullptr )
+            _pService->loadAccountStats( accountID ); // 매칭 실력이 메모리에서 읽는다
+    }
+
+    void LeaderboardServer::onAccountLeft( OnlineServiceHost& host, AccountID accountID )
+    {
+        (void)host;
+        if ( _pService != nullptr )
+            _pService->dropAccountStats( accountID );
     }
 
     void LeaderboardServer::onServiceTick( OnlineServiceHost& host, int64 nowMs )
@@ -130,6 +154,7 @@ namespace sw
             reply._listEntry       = std::move( completion._listEntry );
             reply._listStat        = std::move( completion._listStat );
             reply._listAchievement = std::move( completion._listAchievement );
+            reply._listProgress    = std::move( completion._listProgress );
             (void)host.respondMessage<LeaderboardProtocol::MessageTypes>( token, reply ); // 연결이 닫혔으면 호스트가 버린다
         }
 

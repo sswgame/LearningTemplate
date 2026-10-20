@@ -395,6 +395,7 @@ SW_TEST_CASE( SocialProtocolTest, DeclaredLimitsMatchTheConstants )
     SW_EXPECT_EQUAL( Util::declaredMaxCount<GuildInfo>( "_name" ), uint32( GuildLimit::kMaxNameSize ) );
     SW_EXPECT_EQUAL( Util::declaredMaxCount<GuildInfo>( "_notice" ), uint32( GuildLimit::kMaxNoticeSize ) );
     SW_EXPECT_EQUAL( Util::declaredMaxCount<GuildStorageItem>( "_assetID" ), uint32( LedgerConstant::kMaxAssetIDSize ) );
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<SocialReply>( "_listApplication" ), uint32( GuildLimit::kMaxApplication ) );
 }
 
 /**

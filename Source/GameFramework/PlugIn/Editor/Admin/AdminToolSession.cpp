@@ -21,6 +21,12 @@ namespace sw::editor
                 return "SetSanction";
             if ( method == AdminMethod::kListAudit )
                 return "ListAudit";
+            if ( method == AdminMethod::kListReports || method == AdminMethod::kResolveReport )
+                return "Report";
+            if ( AdminMethod::isDirectoryMethod( method ) )
+                return "ServerDirectory";
+            if ( AdminMethod::isLiveEventMethod( method ) )
+                return "LiveEvent";
             return "Command";
         }
     } // namespace
@@ -34,6 +40,8 @@ namespace sw::editor
         , _pActive{ &_fake }
         , _lookup{}
         , _lookupAudit{}
+        , _reports{}
+        , _liveEvents{}
         , _statusLine{}
         , _completedCount{ 0 }
         , _pendingCount{ 0 }
@@ -93,6 +101,86 @@ namespace sw::editor
         send( AdminMethod::kListAudit, request, NetIdempotencyKey{} );
     }
 
+    void AdminToolSession::requestReports( bool bOpen )
+    {
+        AdminRequest request;
+        request._reportStatus = bOpen ? ServiceReportStatus::Open : ServiceReportStatus::Resolved;
+        request._maxCount     = AdminProtocol::kMaxReportListCount;
+        send( AdminMethod::kListReports, request, NetIdempotencyKey{} );
+    }
+
+    void AdminToolSession::requestResolveReport( string_view reportKey, ServiceReportStatus status, string_view memo )
+    {
+        AdminRequest request;
+        request._reportKey    = string( reportKey );
+        request._reportStatus = status;
+        request._memo         = string( memo );
+        send( AdminMethod::kResolveReport, request, NetIdempotencyKey::makeRandom() );
+    }
+
+    void AdminToolSession::requestSetMaintenance( string_view scope, string_view messageKey, int64 durationSeconds, string_view memo )
+    {
+        const int64  nowMs = WallClock::nowUnixMilliseconds();
+        AdminRequest request;
+        request._scope      = string( scope );
+        request._messageKey = string( messageKey );
+        request._startMs    = nowMs;
+        request._endMs      = durationSeconds > 0 ? nowMs + durationSeconds * constant::kMillisecondsPerSecond : 0;
+        request._memo       = string( memo );
+        send( AdminMethod::kSetMaintenance, request, NetIdempotencyKey::makeRandom() );
+    }
+
+    void AdminToolSession::requestClearMaintenance( string_view scope, string_view memo )
+    {
+        AdminRequest request;
+        request._scope = string( scope );
+        request._memo  = string( memo );
+        send( AdminMethod::kClearMaintenance, request, NetIdempotencyKey::makeRandom() );
+    }
+
+    void AdminToolSession::requestPostNotice( uint64 noticeID, string_view text, int32 priority, int64 durationSeconds, string_view memo )
+    {
+        const int64  nowMs = WallClock::nowUnixMilliseconds();
+        AdminRequest request;
+        request._noticeID     = noticeID;
+        request._body         = string( text );
+        request._priority     = priority;
+        request._bLiteralText = SW_TRUE;
+        request._startMs      = nowMs;
+        request._endMs        = durationSeconds > 0 ? nowMs + durationSeconds * constant::kMillisecondsPerSecond : 0;
+        request._memo         = string( memo );
+        send( AdminMethod::kPostNotice, request, NetIdempotencyKey::makeRandom() );
+    }
+
+    void AdminToolSession::requestRemoveNotice( uint64 noticeID, string_view memo )
+    {
+        AdminRequest request;
+        request._noticeID = noticeID;
+        request._memo     = string( memo );
+        send( AdminMethod::kRemoveNotice, request, NetIdempotencyKey::makeRandom() );
+    }
+
+    void AdminToolSession::requestLiveEvents()
+    {
+        send( AdminMethod::kListLiveEvents, AdminRequest{}, NetIdempotencyKey{} );
+    }
+
+    void AdminToolSession::requestPutLiveEvent( string_view definitionJSON, string_view memo )
+    {
+        AdminRequest request;
+        request._eventJSON = string( definitionJSON );
+        request._memo      = string( memo );
+        send( AdminMethod::kPutLiveEvent, request, NetIdempotencyKey::makeRandom() );
+    }
+
+    void AdminToolSession::requestRemoveLiveEvent( string_view eventID, string_view memo )
+    {
+        AdminRequest request;
+        request._eventID = string( eventID );
+        request._memo    = string( memo );
+        send( AdminMethod::kRemoveLiveEvent, request, NetIdempotencyKey::makeRandom() );
+    }
+
     void AdminToolSession::send( uint16 method, const AdminRequest& request, const NetIdempotencyKey& key )
     {
         ++_pendingCount;
@@ -126,6 +214,22 @@ namespace sw::editor
         else if ( reply._method == AdminMethod::kListAudit )
         {
             _lookupAudit = reply._reply;
+        }
+        else if ( reply._method == AdminMethod::kListReports )
+        {
+            _reports = reply._reply;
+        }
+        else if ( reply._method == AdminMethod::kResolveReport )
+        {
+            requestReports( true ); // 처리한 신고가 열린 목록에서 빠진다
+        }
+        else if ( reply._method == AdminMethod::kListLiveEvents )
+        {
+            _liveEvents = reply._reply;
+        }
+        else if ( AdminMethod::isLiveEventMethod( reply._method ) )
+        {
+            requestLiveEvents(); // 서버가 다시 읽은 뒤의 목록이다. 다른 서버는 주기와 버스로 따라온다
         }
         else if ( _bHasLookup && _lookupAccountID != kInvalidAccountID )
         {

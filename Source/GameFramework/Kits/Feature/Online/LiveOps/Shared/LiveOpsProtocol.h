@@ -113,6 +113,9 @@ namespace sw
          */
         [[nodiscard]] static bool encodeEvent( const LiveEventDefinition& definition, vector<uint8>& outBytes );
         [[nodiscard]] static bool decodeEvent( string_view key, const vector<uint8>& bytes, LiveEventDefinition& outDefinition );
+        /** @brief 이벤트 정의를 리플렉션 JSON 글로 읽고 씁니다(GM 의 이벤트 운영). 읽기는 JSON 이 아니면 false 이며, 규칙 검사는 쓰기 길(`LiveEventRules::isValid`)이 합니다. */
+        [[nodiscard]] static bool readEventJSON( string_view definitionJSON, LiveEventDefinition& outDefinition );
+        static string             writeEventJSON( const LiveEventDefinition& definition );
         [[nodiscard]] static bool encodeDevice( const PushDeviceRegistration& registration, vector<uint8>& outBytes );
         [[nodiscard]] static bool decodeDevice( string_view key, const vector<uint8>& bytes, PushDeviceRegistration& outRegistration );
 

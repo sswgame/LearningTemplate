@@ -2,7 +2,9 @@
  * @file MatchQueueService.h
  * @brief 매칭 대기열입니다. 모드마다 캐시 임대를 잡은 서버 하나가 매처를 돌리고, 만들어진 경기를 전용 서버에 배정해 게임 서버와 티켓을 낸 서버에 버스로 알립니다. 전송은 모르며 서비스 스레드 하나에서 씁니다.
  * @details - 권한: 모드마다 임대 `mm/lease/<모드>`(값은 서버 id, 10초)를 없을 때만 잡는다. 잡은 서버는 3초마다 자기 값일 때만 연장한다. 버스가 없으면(서버 한 대) 항상 권한을 가진다.
- *          - 티켓 흐름: 계정이 접속한 서버가 티켓을 만든다. 파티장이면 파티 전체의 티켓이며 실력은 `IMatchRatingSource` 에서 얻는다.
+ *          - 백필: 게임 서버가 빈자리(`MatchBackfillRequest`, 버스 `mm.backfill.<모드>`)를 보내면 권한 매처가 새 경기보다 먼저 채운다. 채운 사람은 같은 경기 id 의 배정으로
+ *            게임 서버(배정 주제)와 티켓을 낸 서버(결과 주제)에 알린다.
+ *          - 티켓 흐름: 계정이 접속한 서버가 티켓을 만든다. 파티장이면 파티 전체의 티켓이며 실력은 모드의 실력 통계를 순위표 키트의 통계 창(`IAccountStatSource`)에서 읽는다. 아직 읽지 않은 계정이 있으면 RatingUnavailable 이다.
  *            권한이 있으면 바로 매처에 넣고, 없으면 버스 `mm.queue.<모드>` 로 보낸다. 빠지기는 `mm.cancel.<모드>` 로 보낸다.
  *          - 배정: 경기가 만들어지면 기반 계층의 `ServerRegistryReader` 로 모드의 서버 종류, 경기 지역, 인원 슬롯에 맞는 서버를 고른다.
  *            게임 서버에는 `mm.assign.<서버>`(접속할 사람 목록)로, 티켓을 낸 서버에는 `mm.result.<서버>` 로 결과를 보낸다. 결과를 받은 서버가 멤버에게 알린다.
@@ -31,20 +33,10 @@ namespace sw
     struct EphemeralReply;
 
     class EphemeralStoreRouter;
+    class IAccountStatSource;
     class PartyLobbyService;
     class ServerBus;
     class ServerBusMessage;
-
-    /**
-     * @class IMatchRatingSource
-     * @brief 게임 조립이 제공하는 실력 값입니다. 순위표 통계나 게임 자체 MMR 이 해당합니다. 서비스 스레드에서 부르므로 메모리 조회여야 하며, 클라이언트는 실력을 보내지 않습니다.
-     */
-    class IMatchRatingSource
-    {
-    public:
-        virtual ~IMatchRatingSource()                                             = default;
-        virtual int32 findRating( AccountID accountID, string_view modeID ) const = 0;
-    };
 } // namespace sw
 
 namespace sw
@@ -52,11 +44,11 @@ namespace sw
     /** @brief 빌려 쓰는 객체들입니다. 대기열보다 오래 살아야 합니다. */
     struct MatchQueueDependencies
     {
-        EphemeralStoreRouter*     _pRouter{ nullptr };       ///< 필수이다. 임대와 서버 목록에 쓴다
-        ServerBus*                _pBus{ nullptr };          ///< 서버가 한 대이면 null 이며 이 서버가 항상 권한을 가진다
-        PartyLobbyService*        _pPartyLobby{ nullptr };   ///< 파티 티켓과 로비 다시 열기에 쓴다. 없으면 혼자 티켓만 다룬다
-        const IMatchRatingSource* _pRatingSource{ nullptr }; ///< 없으면 모두 `MatchQueueLimit::kDefaultRating`
-        uint64                    _serverID{ 1 };            ///< 32비트 안의 값이다. 티켓과 경기 id 의 위쪽 32비트가 된다
+        EphemeralStoreRouter*     _pRouter{ nullptr };     ///< 필수이다. 임대와 서버 목록에 쓴다
+        ServerBus*                _pBus{ nullptr };        ///< 서버가 한 대이면 null 이며 이 서버가 항상 권한을 가진다
+        PartyLobbyService*        _pPartyLobby{ nullptr }; ///< 파티 티켓과 로비 다시 열기에 쓴다. 없으면 혼자 티켓만 다룬다
+        const IAccountStatSource* _pStatSource{ nullptr }; ///< 실력 모드(`_ratingStat` 이 있는 모드)가 있으면 필수이다. 클라이언트는 실력을 보내지 않는다
+        uint64                    _serverID{ 1 };          ///< 32비트 안의 값이다. 티켓과 경기 id 의 위쪽 32비트가 된다
         int64                     _registryRefreshPeriodMs{ 2000 };
     };
 } // namespace sw
@@ -70,7 +62,6 @@ namespace sw
         static constexpr int64  kLeaseRenewMs     = 3000; ///< 임대를 연장하거나 잡아 보는 주기이다
         static constexpr int64  kNoServerGiveUpMs = 30000;
         static constexpr int64  kResultGraceMs    = 10000;
-        static constexpr int32  kDefaultRating    = 1500;
         static constexpr uint64 kLobbyMatchBit    = 0x80000000ull; ///< 로비 경기 id 의 아래쪽 32비트 중 첫 비트이다. 매처의 순번과 겹치지 않게 한다
     };
 } // namespace sw
@@ -121,7 +112,8 @@ namespace sw
         MatchQueueService( const MatchQueueService& )            = delete;
         MatchQueueService& operator=( const MatchQueueService& ) = delete;
 
-        void initialize( const MatchQueueDependencies& dependencies, const vector<MatchModeDefinition>& listMode );
+        /** @brief 실력 모드가 있는데 통계 창이 없으면 오류 로그와 false 입니다(기본 실력으로 조용히 돌지 않는다). */
+        [[nodiscard]] bool initialize( const MatchQueueDependencies& dependencies, const vector<MatchModeDefinition>& listMode );
         /** @brief 기다리던 캐시 요청을 취소합니다. 임대는 놓지 않으며 TTL 이 지나면 넘어갑니다. */
         void shutdown();
         /** @brief 임대, 서버 목록, 매처, 배정, 낸 티켓의 시한을 처리합니다. */
@@ -138,6 +130,8 @@ namespace sw
 
         /** @brief 바인딩이 구독한 주제로 온 버스 메시지를 처리합니다. */
         void handleBusMessage( const ServerBusMessage& message, int64 nowMs );
+        /** @brief 경기 중 빈자리를 맡깁니다. 이 서버가 그 모드의 권한이면 매처에 바로 넣고, 아니면 버스로 권한 서버에 보냅니다. 같은 프로세스의 게임 서버와 테스트가 부릅니다. */
+        void submitBackfill( const MatchBackfillRequest& request );
         void drainCompletions( vector<MatchQueueCompletion>& outListCompletion ) { _completionBuffer.drainTo( outListCompletion ); }
         void drainNotifications( vector<MatchQueueNotification>& outListNotification ) { _notificationBuffer.drainTo( outListNotification ); }
         void drainTopicChanges( vector<MatchQueueTopicChange>& outListChange ) { _topicBuffer.drainTo( outListChange ); }
@@ -150,6 +144,7 @@ namespace sw
         static string makeLeaseKey( string_view modeID );
         static string makeQueueTopic( string_view modeID );
         static string makeCancelTopic( string_view modeID );
+        static string makeBackfillTopic( string_view modeID );
         static string makeResultTopic( uint64 serverID );
         static string makeAssignTopic( uint64 serverID );
 
@@ -189,8 +184,10 @@ namespace sw
             int64     _nowMs{ 0 };
         };
 
-        void               onPartyFound( uint64 lookupTag, MatchmakingResult result, const PartySnapshot& party );
-        void               submitTicket( const PendingJoin& join, const vector<AccountID>& listAccount, uint64 partyID );
+        void onPartyFound( uint64 lookupTag, MatchmakingResult result, const PartySnapshot& party );
+        void submitTicket( const PendingJoin& join, const vector<AccountID>& listAccount, uint64 partyID );
+        /** @brief 백필로 채운 티켓을 게임 서버(배정)와 티켓을 낸 서버(결과)에 알립니다. */
+        void               deliverBackfill( const MatchBackfilled& backfilled );
         void               updateLease( const string& modeID, ModeState& state, int64 nowMs );
         void               onLeaseReply( const EphemeralReply& reply );
         void               placeMatches( ModeState& state, int64 nowMs );
@@ -199,7 +196,8 @@ namespace sw
         void               notifyLocalTicket( uint64 ticketID, const MatchAssignment& assignment );
         void               removeFromQueue( const string& modeID, uint64 ticketID );
         ModeState*         findModeState( string_view modeID );
-        int32              findRating( AccountID accountID, string_view modeID ) const;
+        /** @brief 모드의 실력입니다. 실력 모드인데 이 서버가 그 계정의 통계를 아직 읽지 않았으면 false 입니다. */
+        [[nodiscard]] bool findRating( AccountID accountID, const MatchModeDefinition& mode, int32& outRating ) const;
         static void        fillTeam( const MatchFormed& match, AccountID accountID, MatchAssignment& inoutAssignment );
 
         unordered_map<string, MatchModeDefinition> _mapMode;
@@ -223,9 +221,10 @@ namespace sw
     /** @brief 매칭의 서버 버스 주제입니다. 내보내는 클래스의 정적 멤버로 두지 않습니다(지연 로드 모듈은 데이터를 가져올 수 없습니다). */
     struct MatchQueueBus
     {
-        static constexpr ServerBusTopicFamily<MatchTicket>       kQueueTopic{ "mm.queue." };   ///< 뒤에 모드 id. 권한 서버로 가는 티켓이다
-        static constexpr ServerBusTopicFamily<MatchTicketCancel> kCancelTopic{ "mm.cancel." }; ///< 뒤에 모드 id. 권한 서버로 가는 티켓 취소이다
-        static constexpr ServerBusTopicFamily<MatchAssignment>   kResultTopic{ "mm.result." }; ///< 뒤에 서버 16진. 티켓을 낸 서버로 가는 결과이다
-        static constexpr ServerBusTopicFamily<MatchFormed>       kAssignTopic{ "mm.assign." }; ///< 뒤에 게임 서버 16진. 게임 서버로 가는 접속 예정자 목록이다
+        static constexpr ServerBusTopicFamily<MatchTicket>          kQueueTopic{ "mm.queue." };       ///< 뒤에 모드 id. 권한 서버로 가는 티켓이다
+        static constexpr ServerBusTopicFamily<MatchTicketCancel>    kCancelTopic{ "mm.cancel." };     ///< 뒤에 모드 id. 권한 서버로 가는 티켓 취소이다
+        static constexpr ServerBusTopicFamily<MatchAssignment>      kResultTopic{ "mm.result." };     ///< 뒤에 서버 16진. 티켓을 낸 서버로 가는 결과이다
+        static constexpr ServerBusTopicFamily<MatchFormed>          kAssignTopic{ "mm.assign." };     ///< 뒤에 게임 서버 16진. 게임 서버로 가는 접속 예정자 목록이다
+        static constexpr ServerBusTopicFamily<MatchBackfillRequest> kBackfillTopic{ "mm.backfill." }; ///< 뒤에 모드 id. 게임 서버가 권한 서버로 보내는 경기 중 빈자리이다
     };
 } // namespace sw

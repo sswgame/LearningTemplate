@@ -7,7 +7,7 @@
 #include <cstdlib>
 
 // 매처 — 혼자 넷이 균형 잡힌 2v2, 파티는 한 팀(나눌 수 없는 조합은 건너뜀), 실력 차가 크면 기다리다 창이 넓어져 묶임, 지역은 기다린 뒤 풀림,
-// 시한, 같은 입력은 같은 결과(결정적), 표 넣기 · 빼기의 결과 코드.
+// 시한, 같은 입력은 같은 결과(결정적), 표 넣기 · 빼기의 결과 코드, 백필(빈자리를 새 경기보다 먼저, 실력 · 지역 규칙, 다 차면 끝).
 
 using namespace sw;
 
@@ -72,6 +72,45 @@ SW_TEST_CASE( MatchMakerTest, FourSolosMakeABalancedTwoVersusTwo )
     SW_EXPECT_STREQ( listMatch[0]._modeID.c_str(), "duo" );
     SW_EXPECT_EQUAL( maker.getTicketCount(), 0 );
     SW_EXPECT_EQUAL( listTimedOut.size(), size_t( 0 ) );
+}
+
+SW_TEST_CASE( MatchMakerTest, BackfillFillsOpenSlotsBeforeNewMatches )
+{
+    MatchMaker maker;
+    SW_ASSERT_TRUE( maker.initialize( makeMode( 2, 2 ), 7 ) );
+    MatchBackfillRequest request;
+    request._modeID        = "duo";
+    request._region        = "kr";
+    request._matchID       = 900;
+    request._serverID      = 50;
+    request._averageRating = 1500;
+    request._listOpenSlot  = { 0, 1 };
+    SW_ASSERT_TRUE( maker.addBackfill( request ) == MatchmakingResult::Ok );
+    MatchBackfillRequest wrongShape = request;
+    wrongShape._listOpenSlot        = { 1 }; // 팀 수가 다르다
+    SW_EXPECT_TRUE( maker.addBackfill( wrongShape ) == MatchmakingResult::Invalid );
+
+    SW_ASSERT_TRUE( maker.addTicket( makeTicket( 1, { 1500, 1500 } ) ) == MatchmakingResult::Ok ); // 둘은 빈자리 하나에 들어가지 않는다
+    SW_ASSERT_TRUE( maker.addTicket( makeTicket( 2, { 2600 } ) ) == MatchmakingResult::Ok );       // 실력 차가 허용 범위(상한 1000)보다도 크다
+    SW_ASSERT_TRUE( maker.addTicket( makeTicket( 3, { 1520 }, "eu" ) ) == MatchmakingResult::Ok ); // 지역이 다르다
+    SW_ASSERT_TRUE( maker.addTicket( makeTicket( 4, { 1480 } ) ) == MatchmakingResult::Ok );
+    vector<MatchBackfilled> listBackfilled;
+    maker.processBackfills( 0, listBackfilled );
+    SW_ASSERT_EQUAL( listBackfilled.size(), size_t( 1 ) );
+    SW_EXPECT_EQUAL( listBackfilled[0]._ticket._ticketID, uint64( 4 ) );
+    SW_EXPECT_EQUAL( listBackfilled[0]._team, 1 );
+    SW_EXPECT_EQUAL( listBackfilled[0]._request._serverID, uint64( 50 ) );
+    SW_EXPECT_EQUAL( maker.getBackfillCount(), 0 ); // 다 찼다
+    SW_EXPECT_EQUAL( maker.getTicketCount(), 3 );
+
+    request._matchID      = 901;
+    request._listOpenSlot = { 1, 0 };
+    SW_ASSERT_TRUE( maker.addBackfill( request ) == MatchmakingResult::Ok );
+    listBackfilled.clear();
+    maker.processBackfills( makeMode( 2, 2 )._maxWaitMs, listBackfilled ); // 시한까지 맞는 티켓이 없었다 — 지역이 풀린 eu 가 들어간다
+    SW_ASSERT_EQUAL( listBackfilled.size(), size_t( 1 ) );
+    SW_EXPECT_EQUAL( listBackfilled[0]._ticket._ticketID, uint64( 3 ) );
+    SW_EXPECT_EQUAL( maker.getBackfillCount(), 0 );
 }
 
 SW_TEST_CASE( MatchMakerTest, PartyStaysTogetherAndUnsplittableMixIsSkipped )

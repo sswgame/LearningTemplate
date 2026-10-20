@@ -90,6 +90,14 @@ namespace sw
         }
     }
 
+    void ReceiptValidatorRegistry::pollRefunds( vector<ReceiptRefundNotice>& outListNotice )
+    {
+        for ( IReceiptValidator* pValidator : _listValidator )
+        {
+            pValidator->pollRefunds( outListNotice );
+        }
+    }
+
     void ReceiptValidatorRegistry::shutdown()
     {
         for ( IReceiptValidator* pValidator : _listValidator )

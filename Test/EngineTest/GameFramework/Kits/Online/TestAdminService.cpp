@@ -8,7 +8,9 @@
 
 #include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"
 #include "GameFramework/Base/Online/Bus/LocalServerBus.h"
+#include "GameFramework/Base/Online/Config/LiveEventControl.h"
 #include "GameFramework/Base/Online/Directory/ServerDirectoryControl.h"
+#include "GameFramework/Base/Online/Identity/AccountNameIndex.h"
 #include "GameFramework/Base/Online/Identity/AccountSessionControl.h"
 #include "GameFramework/Base/Online/Ledger/Ledger.h"
 #include "GameFramework/Base/Online/Mail/ServiceMail.h"
@@ -34,11 +36,13 @@ namespace
         static constexpr AccountID kSuper    = 0x4;
         static constexpr AccountID kPlayer   = 0x100;
 
-        MemoryServiceDatabase _database;
-        uint64                _nextKey;
+        MemoryServiceDatabase    _database;
+        const IAccountNameIndex* _pNameIndex;
+        uint64                   _nextKey;
 
         AdminFixture()
             : _database{}
+            , _pNameIndex{ nullptr }
             , _nextKey{ 1 }
         {
             (void)AdminStoreLogic::seedRole( _database, kViewer, AdminRole::Viewer, 1 );
@@ -50,11 +54,12 @@ namespace
         AdminResult run( AccountID adminID, uint16 method, AdminRequest request, AdminReply* pOutReply = nullptr, uint64 keyLow = 0 )
         {
             AdminCommand command;
-            command._adminID = adminID;
-            command._method  = method;
-            command._nowMs   = 5000;
-            command._keyHigh = 7;
-            command._keyLow  = keyLow != 0 ? keyLow : _nextKey++;
+            command._adminID    = adminID;
+            command._method     = method;
+            command._pNameIndex = _pNameIndex;
+            command._nowMs      = 5000;
+            command._keyHigh    = 7;
+            command._keyLow     = keyLow != 0 ? keyLow : _nextKey++;
             if ( request._memo.empty() )
                 request._memo = "ticket-1";
             command._request = std::move( request );
@@ -88,6 +93,28 @@ namespace
             string                    cursor;
             (void)ServiceAuditLog::listEntries( _database, subject, "", 100, listEntry, cursor );
             return static_cast<int32>( listEntry.size() );
+        }
+    };
+
+    /** @brief 접속하지 않은 정식 계정 하나("OfflineHero" = kPlayer)만 아는 이름 색인입니다. */
+    class FakeNameIndex final : public IAccountNameIndex
+    {
+    public:
+        ServiceStoreResult readIdentityByDisplayName( IServiceStoreConnection& connection, string_view displayName, AccountIdentity& outIdentity ) const override
+        {
+            (void)connection;
+            if ( displayName != "OfflineHero" )
+                return ServiceStoreResult::NotFound;
+            outIdentity._accountID   = AdminFixture::kPlayer;
+            outIdentity._displayName = "OfflineHero";
+            return ServiceStoreResult::Ok;
+        }
+
+        ServiceStoreResult readIdentity( IServiceStoreConnection& connection, AccountID accountID, AccountIdentity& outIdentity ) const override
+        {
+            if ( accountID != AdminFixture::kPlayer )
+                return ServiceStoreResult::NotFound;
+            return readIdentityByDisplayName( connection, "OfflineHero", outIdentity );
         }
     };
 
@@ -148,6 +175,40 @@ namespace
         }
 
         void drainControlCompletions( vector<ServerDirectoryControlCompletion>& outListCompletion ) override
+        {
+            outListCompletion.insert( outListCompletion.end(), _listPending.begin(), _listPending.end() );
+            _listPending.clear();
+        }
+    };
+
+    /** @brief 이벤트 하나를 가진 가짜 라이브 운영 창입니다. 바꾸기는 다음 거두기에 Ok 로 끝난다. */
+    class FakeLiveEventControl final : public ILiveEventControl
+    {
+    public:
+        vector<LiveEventControlCompletion> _listPending{};
+        vector<string>                     _listPutJSON{};
+
+        void putEventJSON( string_view definitionJSON, AccountID actorID, string_view memo, int64 nowMs, uint64 requestTag ) override
+        {
+            (void)actorID;
+            (void)memo;
+            (void)nowMs;
+            _listPutJSON.push_back( string( definitionJSON ) );
+            _listPending.push_back( LiveEventControlCompletion{ requestTag, LiveEventControlResult::Ok } );
+        }
+
+        void removeEvent( string_view eventID, AccountID actorID, string_view memo, int64 nowMs, uint64 requestTag ) override
+        {
+            (void)eventID;
+            (void)actorID;
+            (void)memo;
+            (void)nowMs;
+            _listPending.push_back( LiveEventControlCompletion{ requestTag, LiveEventControlResult::NotFound } );
+        }
+
+        void collectEventJSON( vector<string>& outListJSON ) const override { outListJSON = { "{\"_eventID\":\"halloween\"}" }; }
+
+        void drainControlCompletions( vector<LiveEventControlCompletion>& outListCompletion ) override
         {
             outListCompletion.insert( outListCompletion.end(), _listPending.begin(), _listPending.end() );
             _listPending.clear();
@@ -339,6 +400,26 @@ SW_TEST_CASE( AdminServiceTest, AdminCannotChangeOwnRole )
     SW_EXPECT_TRUE( fixture.run( AdminFixture::kSupport, AdminMethod::kAdjustAsset, fixture.adjust( 1 ) ) == AdminResult::Ok ); // 다음 명령부터 새 등급
 }
 
+SW_TEST_CASE( AdminServiceTest, LookupFindsOfflineAccountsByNameThroughTheNameIndex )
+{
+    AdminFixture  fixture;
+    FakeNameIndex nameIndex;
+    AdminRequest  byName;
+    byName._displayName = "OfflineHero";
+    SW_EXPECT_TRUE( fixture.run( AdminFixture::kViewer, AdminMethod::kLookupAccount, byName ) == AdminResult::UnknownAccount ); // 색인이 없으면 이름으로 찾지 않는다
+    fixture._pNameIndex = &nameIndex;
+    AdminReply reply;
+    SW_ASSERT_TRUE( fixture.run( AdminFixture::kViewer, AdminMethod::kLookupAccount, byName, &reply ) == AdminResult::Ok );
+    SW_EXPECT_EQUAL( reply._identity._accountID, AdminFixture::kPlayer );
+    SW_EXPECT_EQUAL( reply._identity._displayName, string( "OfflineHero" ) );
+    AdminRequest unknown;
+    unknown._displayName = "Nobody";
+    SW_EXPECT_TRUE( fixture.run( AdminFixture::kViewer, AdminMethod::kLookupAccount, unknown ) == AdminResult::UnknownAccount );
+    AdminRequest byID;
+    byID._accountID = 0x999; // 색인에 없는 계정 id
+    SW_EXPECT_TRUE( fixture.run( AdminFixture::kViewer, AdminMethod::kLookupAccount, byID ) == AdminResult::UnknownAccount );
+}
+
 SW_TEST_CASE( AdminServiceTest, ReportsAreListedAndResolvedOnceByTheSupportRole )
 {
     AdminFixture  fixture;
@@ -426,6 +507,53 @@ SW_TEST_CASE( AdminServiceTest, MaintenanceAndNoticeCommandsAreForwardedAfterThe
     control._nextResult = ServerDirectoryControlResult::NotFound;
     AdminReplyCapture removed;
     service.submitCall( AdminFixture::kOperator, AdminMethod::kRemoveNotice, notice, NetIdempotencyKey{ 1, 4 }, 5000, removed.makeDelegate() );
+    (void)store.pollCompletions();
+    service.update( 5000 );
+    SW_EXPECT_TRUE( removed._reply._result == AdminResult::NotFound );
+    service.shutdown();
+    store.shutdown();
+    (void)store.pollCompletions();
+}
+
+SW_TEST_CASE( AdminServiceTest, LiveEventCommandsGoToTheLiveOpsKit )
+{
+    MemoryServiceDatabase database;
+    MemoryServiceStore    store{ &database };
+    FakeLiveEventControl  control;
+    AdminService          service;
+    AdminServiceConfig    settings;
+    settings._pLiveEventControl = &control;
+    SW_ASSERT_TRUE( service.initialize( &store, settings ) );
+    service.seedRole( AdminFixture::kOperator, AdminRole::Operator, 1 );
+    service.seedRole( AdminFixture::kViewer, AdminRole::Viewer, 1 );
+    (void)store.pollCompletions();
+
+    AdminReplyCapture listed;
+    service.submitCall( AdminFixture::kViewer, AdminMethod::kListLiveEvents, AdminRequest{}, NetIdempotencyKey{}, 5000, listed.makeDelegate() );
+    (void)store.pollCompletions();
+    SW_ASSERT_EQUAL( listed._count, 1 ); // 목록은 넘기지 않고 바로 답한다
+    SW_ASSERT_EQUAL( listed._reply._listLiveEvent.size(), size_t( 1 ) );
+    SW_EXPECT_TRUE( listed._reply._listLiveEvent[0]._definitionJSON.find( "halloween" ) != string::npos );
+
+    AdminRequest put;
+    put._eventJSON = "{\"_eventID\":\"winter\"}";
+    put._memo      = "season";
+    AdminReplyCapture denied;
+    AdminReplyCapture putDone;
+    service.submitCall( AdminFixture::kViewer, AdminMethod::kPutLiveEvent, put, NetIdempotencyKey{ 2, 1 }, 5000, denied.makeDelegate() );
+    service.submitCall( AdminFixture::kOperator, AdminMethod::kPutLiveEvent, put, NetIdempotencyKey{ 2, 2 }, 5000, putDone.makeDelegate() );
+    (void)store.pollCompletions();
+    SW_EXPECT_TRUE( denied._reply._result == AdminResult::Forbidden );
+    SW_EXPECT_EQUAL( putDone._count, 0 );
+    SW_ASSERT_EQUAL( control._listPutJSON.size(), size_t( 1 ) );
+    service.update( 5000 );
+    SW_EXPECT_TRUE( putDone._reply._result == AdminResult::Ok );
+
+    AdminRequest remove;
+    remove._eventID = "nope";
+    remove._memo    = "cleanup";
+    AdminReplyCapture removed;
+    service.submitCall( AdminFixture::kOperator, AdminMethod::kRemoveLiveEvent, remove, NetIdempotencyKey{ 2, 3 }, 5000, removed.makeDelegate() );
     (void)store.pollCompletions();
     service.update( 5000 );
     SW_EXPECT_TRUE( removed._reply._result == AdminResult::NotFound );
@@ -537,7 +665,7 @@ SW_TEST_CASE( AdminProtocolTest, MessagesRoundTripAndRefuseOutOfRange )
     using Util     = test::OnlineMessageTestUtil;
     AdminRequest request;
     request._listAttachment.assign( 8, ServiceMailAttachment{ "cur.gold", 10 } );
-    request._listAccountID.assign( 16, AccountID( 0x201 ) );
+    request._listAccountID.assign( AdminProtocol::kMaxBulkCount, AccountID( 0x201 ) );
     request._memo         = string( 1024, 'm' );
     request._body         = string( 2048, 'b' );
     request._maxCount     = 100;

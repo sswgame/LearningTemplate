@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeStateMachine.h"
 
+#include "GameFramework/Base/Online/Ledger/LedgerItemInstance.h"
 #include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
 
 namespace sw
@@ -18,7 +19,8 @@ namespace sw
         for ( size_t legIndex = 0; legIndex < listLeg.size(); ++legIndex )
         {
             const TradeLeg& leg       = listLeg[legIndex];
-            const bool      bAmountOk = 1 <= leg._amount && leg._amount <= LedgerConstant::kMaxAmount;
+            const bool      bInstance = LedgerItemInstance::isInstanceAssetID( leg._assetID );
+            const bool      bAmountOk = bInstance ? leg._amount == 1 : 1 <= leg._amount && leg._amount <= LedgerConstant::kMaxAmount; // 인스턴스 아이템은 하나씩이며 상태 레코드가 따라간다
             if ( LedgerUtil::isValidAssetID( leg._assetID ) == false || bAmountOk == false )
                 return TradeResult::Invalid;
             if ( policy.isTradable( leg._assetID ) == false )

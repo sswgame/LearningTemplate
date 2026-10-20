@@ -19,6 +19,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
+#include "GameFramework/Base/Online/Config/LiveEventControl.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Shared/LiveOpsTypes.h"
 
@@ -76,11 +77,11 @@ namespace sw
      * @class LiveOpsService
      * @brief 라이브 운영 로직입니다. 서비스 스레드 하나에서 씁니다.
      */
-    class SW_KIT_SERVER_API LiveOpsService
+    class SW_KIT_SERVER_API LiveOpsService final : public ILiveEventControl
     {
     public:
         LiveOpsService();
-        ~LiveOpsService();
+        ~LiveOpsService() override;
 
         LiveOpsService( const LiveOpsService& )            = delete;
         LiveOpsService& operator=( const LiveOpsService& ) = delete;
@@ -101,9 +102,14 @@ namespace sw
         /** @brief 매개변수 값을 반환합니다. 원격 설정까지 해석한 값이며 이벤트나 키가 없으면 false 를 반환합니다. */
         bool findParameter( string_view eventID, string_view key, string& outValue ) const;
 
-        // 운영 함수들이며 게임 조립 단계에서 GF_Admin 명령이 부른다. 완료는 drainCompletions 로 받는다. @p actorID 는 감사 기록의 GM 계정이며 0이면 system 이다.
+        // 운영 함수들이다. GF_Admin 은 서버 조립 문맥의 `ILiveEventControl` 로 부르고 완료를 `drainControlCompletions` 로 받는다.
+        // 같은 프로세스의 코드와 테스트는 직접 부르고 `drainCompletions` 로 받는다. 한 서비스의 완료를 두 쪽이 함께 거두지 않는다. @p actorID 는 감사 기록의 GM 계정이며 0이면 system 이다.
         void putEvent( const LiveEventDefinition& definition, AccountID actorID, string_view memo, int64 nowMs, uint64 requestTag );
-        void removeEvent( string_view eventID, AccountID actorID, string_view memo, int64 nowMs, uint64 requestTag );
+        void removeEvent( string_view eventID, AccountID actorID, string_view memo, int64 nowMs, uint64 requestTag ) override;
+        // ILiveEventControl
+        void putEventJSON( string_view definitionJSON, AccountID actorID, string_view memo, int64 nowMs, uint64 requestTag ) override;
+        void collectEventJSON( vector<string>& outListJSON ) const override;
+        void drainControlCompletions( vector<LiveEventControlCompletion>& outListCompletion ) override;
         void drainCompletions( vector<LiveOpsCompletion>& outListCompletion ) { _completionBuffer.drainTo( outListCompletion ); }
 
         const vector<LiveEventDefinition>& getEvents() const { return _listEvent; }

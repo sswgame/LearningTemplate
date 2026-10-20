@@ -10,7 +10,8 @@
 namespace sw
 {
     MatchServerAgent::MatchServerAgent()
-        : _mapAccountToExpected{}
+        : _mutex{}
+        , _mapAccountToExpected{}
         , _newMatchBuffer{}
         , _serverID{ 0 }
     {
@@ -31,6 +32,7 @@ namespace sw
         MatchFormed match;
         if ( MatchQueueBus::kAssignTopic.read( message, match ) != ServerBusReadResult::Read )
             return false; // 읽기가 (타입, 결과, 버전)마다 한 번 오류 로그와 카운터를 남겼다
+        std::scoped_lock<mutex> lock{ _mutex };
         for ( size_t team = 0; team < match._listTeam.size(); ++team )
         {
             for ( const MatchMember& member : match._listTeam[team]._listMember )
@@ -42,8 +44,16 @@ namespace sw
         return true;
     }
 
+    bool MatchServerAgent::requestBackfill( ServerBus& bus, const MatchBackfillRequest& request ) const
+    {
+        MatchBackfillRequest sent = request;
+        sent._serverID            = _serverID;
+        return MatchQueueBus::kBackfillTopic.publish( bus, sent._modeID, sent );
+    }
+
     void MatchServerAgent::update( int64 nowMs )
     {
+        std::scoped_lock<mutex> lock{ _mutex };
         for ( auto expectedIt = _mapAccountToExpected.begin(); expectedIt != _mapAccountToExpected.end(); )
         {
             if ( nowMs >= expectedIt->second._expiresMs )
@@ -55,11 +65,24 @@ namespace sw
 
     bool MatchServerAgent::findExpected( AccountID accountID, uint64& outMatchID, int32& outTeam ) const
     {
-        const auto expectedIt = _mapAccountToExpected.find( accountID );
+        std::scoped_lock<mutex> lock{ _mutex };
+        const auto              expectedIt = _mapAccountToExpected.find( accountID );
         if ( expectedIt == _mapAccountToExpected.end() )
             return false;
         outMatchID = expectedIt->second._matchID;
         outTeam    = expectedIt->second._team;
         return true;
+    }
+
+    bool MatchServerAgent::isAdmitted( AccountID accountID ) const
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        return _mapAccountToExpected.find( accountID ) != _mapAccountToExpected.end();
+    }
+
+    int32 MatchServerAgent::getExpectedCount() const
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        return static_cast<int32>( _mapAccountToExpected.size() );
     }
 } // namespace sw

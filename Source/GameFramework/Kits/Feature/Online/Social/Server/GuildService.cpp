@@ -17,14 +17,16 @@ namespace sw
     {
         struct GuildServiceInternal
         {
-            static constexpr uint8       kFormatVersion   = 1;
-            static constexpr const utf8* kSequenceKey     = "guild";
-            static constexpr uint32      kReplacementChar = 0xFFFDu;
-            static constexpr uint32      kFirstPrintable  = 0x20u;
-            static constexpr uint32      kDeleteChar      = 0x7Fu;
-            static constexpr const utf8* kStorageDomain   = "guild";
-            static constexpr const utf8* kDepositReason   = "guild.deposit";
-            static constexpr const utf8* kWithdrawReason  = "guild.withdraw";
+            static constexpr uint8       kFormatVersion      = 1;
+            static constexpr uint8       kGuildFormatVersion = 2;                             ///< 길드 레코드이다. 2 에서 경험치와 공개 여부를 더했다(옛 레코드는 다시 쓴다)
+            static constexpr int64       kMaxExperience      = static_cast<int64>( 1 ) << 53; ///< 경험치 상한이다. 넘으면 상한에 멈춘다
+            static constexpr const utf8* kSequenceKey        = "guild";
+            static constexpr uint32      kReplacementChar    = 0xFFFDu;
+            static constexpr uint32      kFirstPrintable     = 0x20u;
+            static constexpr uint32      kDeleteChar         = 0x7Fu;
+            static constexpr const utf8* kStorageDomain      = "guild";
+            static constexpr const utf8* kDepositReason      = "guild.deposit";
+            static constexpr const utf8* kWithdrawReason     = "guild.withdraw";
 
             /** @brief 길드 창고 보유자(`esc/guild/<길드 16진>`)입니다. */
             static LedgerHolder makeStorageHolder( uint64 guildID ) { return LedgerHolder::makeEscrow( kStorageDomain, ServiceKeyUtil::makeHex64( guildID ) ); }
@@ -59,6 +61,12 @@ namespace sw
                 return s_table;
             }
 
+            static const hashed_string& getApplicationTable()
+            {
+                static const hashed_string s_table{ "social_guild_application" };
+                return s_table;
+            }
+
             static const hashed_string& getSequenceTable()
             {
                 static const hashed_string s_table{ "social_sequence" };
@@ -90,27 +98,31 @@ namespace sw
             static vector<uint8> encodeGuild( const GuildInfo& info )
             {
                 BitWriter writer;
-                writer.writeBits( kFormatVersion, 8 );
+                writer.writeBits( kGuildFormatVersion, 8 );
                 ServiceKeyUtil::writeString( writer, info._name );
                 ServiceKeyUtil::writeString( writer, info._notice );
                 writer.writeVarUint( info._masterID );
                 writer.writeVarInt( info._createdMs );
                 writer.writeVarInt( info._memberCount );
+                writer.writeVarInt( info._experience );
+                writer.writeBits( info._bOpenToApply == SW_TRUE ? 1u : 0u, 1 );
                 return writer.getBytes();
             }
 
             [[nodiscard]] static bool decodeGuild( const vector<uint8>& bytes, uint64 guildID, GuildInfo& outInfo )
             {
                 BitReader  reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                const bool bHeadOk = reader.readBits( 8 ) == kFormatVersion && ServiceKeyUtil::readString( reader, GuildLimit::kMaxNameSize, outInfo._name ) &&
+                const bool bHeadOk = reader.readBits( 8 ) == kGuildFormatVersion && ServiceKeyUtil::readString( reader, GuildLimit::kMaxNameSize, outInfo._name ) &&
                                      ServiceKeyUtil::readString( reader, GuildLimit::kMaxNoticeSize, outInfo._notice );
                 if ( bHeadOk == false )
                     return false;
-                outInfo._guildID     = guildID;
-                outInfo._masterID    = reader.readVarUint();
-                outInfo._createdMs   = reader.readVarInt();
-                outInfo._memberCount = static_cast<int32>( reader.readVarInt() );
-                return reader.hasOverflowed() == false;
+                outInfo._guildID      = guildID;
+                outInfo._masterID     = reader.readVarUint();
+                outInfo._createdMs    = reader.readVarInt();
+                outInfo._memberCount  = static_cast<int32>( reader.readVarInt() );
+                outInfo._experience   = reader.readVarInt();
+                outInfo._bOpenToApply = reader.readBits( 1 ) == 1u ? SW_TRUE : SW_FALSE;
+                return reader.hasOverflowed() == false && 0 <= outInfo._experience;
             }
 
             static vector<uint8> encodeMember( GuildRole role, int64 joinedMs )
@@ -159,6 +171,25 @@ namespace sw
                 writer.writeVarUint( inviterID );
                 writer.writeVarInt( expiresMs );
                 return writer.getBytes();
+            }
+
+            static vector<uint8> encodeApplication( int64 appliedMs, int64 expiresMs )
+            {
+                BitWriter writer;
+                writer.writeBits( kFormatVersion, 8 );
+                writer.writeVarInt( appliedMs );
+                writer.writeVarInt( expiresMs );
+                return writer.getBytes();
+            }
+
+            [[nodiscard]] static bool decodeApplication( const vector<uint8>& bytes, int64& outAppliedMs, int64& outExpiresMs )
+            {
+                BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
+                if ( reader.readBits( 8 ) != kFormatVersion )
+                    return false;
+                outAppliedMs = reader.readVarInt();
+                outExpiresMs = reader.readVarInt();
+                return reader.hasOverflowed() == false;
             }
 
             [[nodiscard]] static bool decodeInviteExpiry( const vector<uint8>& bytes, int64& outExpiresMs )
@@ -245,6 +276,14 @@ namespace sw
                     {
                         return bSelfInGuild ? fail( SocialResult::AlreadyInGuild ) : runAccept( connection );
                     }
+                    case GuildOperation::Apply:
+                    {
+                        return bSelfInGuild ? fail( SocialResult::AlreadyInGuild ) : runApply( connection );
+                    }
+                    case GuildOperation::AddExperience:
+                    {
+                        return runAddExperience( connection );
+                    }
                     case GuildOperation::Attach:
                     {
                         if ( bSelfInGuild == false )
@@ -298,6 +337,73 @@ namespace sw
                     _outcome._joinedID = _request._accountID;
                 }
                 return commitResult; // 이름이 그사이 선점됐으면 다시 읽어 GuildNameTaken 으로 끝낸다
+            }
+
+            /** @brief 공개 길드에 가입 신청을 냅니다. 죽은 신청을 지우고 살아 있는 신청이 상한이면 PendingLimit 입니다. */
+            ServiceStoreResult runApply( IServiceStoreConnection& connection )
+            {
+                using Internal = GuildServiceInternal;
+                ServiceRecord guildRecord;
+                GuildInfo     info;
+                const string  guildKey = ServiceKeyUtil::makeHex64( _request._guildID );
+                const bool    bGuildOk = connection.readRecord( Internal::getGuildTable(), guildKey, guildRecord ) == ServiceStoreResult::Ok &&
+                                      Internal::decodeGuild( guildRecord._bytes, _request._guildID, info );
+                if ( bGuildOk == false )
+                    return fail( SocialResult::NotFound );
+                if ( info._bOpenToApply == SW_FALSE )
+                    return fail( SocialResult::GuildClosed );
+                if ( info._memberCount >= GuildLimit::kMaxMember )
+                    return fail( SocialResult::GuildFull );
+                vector<ServiceRecord> listRecord;
+                const string          prefix = guildKey + "/";
+                if ( connection.listRecords( Internal::getApplicationTable(), prefix, "", GuildLimit::kMaxApplication, false, listRecord ) != ServiceStoreResult::Ok )
+                    return ServiceStoreResult::Unavailable;
+                const string       selfKey   = Internal::makePairKey( _request._guildID, _request._accountID );
+                int32              liveCount = 0;
+                ServiceTransaction transaction;
+                for ( const ServiceRecord& record : listRecord )
+                {
+                    if ( record._key == selfKey )
+                        continue; // 다시 낸 신청은 아래 put 이 덮어쓴다
+                    int64      appliedMs = 0;
+                    int64      expiresMs = 0;
+                    const bool bLive     = Internal::decodeApplication( record._bytes, appliedMs, expiresMs ) && _request._nowMs < expiresMs;
+                    if ( bLive )
+                        ++liveCount;
+                    else
+                        transaction.erase( Internal::getApplicationTable(), record._key, record._version ); // 죽었거나 읽을 수 없는 신청이다
+                }
+                if ( liveCount >= GuildLimit::kMaxApplication )
+                    return fail( SocialResult::PendingLimit );
+                transaction.put( Internal::getApplicationTable(), selfKey, Internal::encodeApplication( _request._nowMs, _request._nowMs + GuildLimit::kApplicationLifetimeMs ) );
+                transaction.requireVersion( Internal::getGuildTable(), guildKey, guildRecord._version ); // 그사이 비공개로 바뀌면 다시 읽는다
+                return connection.commit( transaction );
+            }
+
+            /** @brief 서버 시스템이 길드 경험치를 올립니다. 상한(`kMaxExperience`)을 넘지 않습니다. */
+            ServiceStoreResult runAddExperience( IServiceStoreConnection& connection )
+            {
+                using Internal = GuildServiceInternal;
+                if ( _request._amount <= 0 )
+                    return fail( SocialResult::Invalid );
+                ServiceRecord guildRecord;
+                GuildInfo     info;
+                const string  guildKey = ServiceKeyUtil::makeHex64( _request._guildID );
+                const bool    bGuildOk = connection.readRecord( Internal::getGuildTable(), guildKey, guildRecord ) == ServiceStoreResult::Ok &&
+                                      Internal::decodeGuild( guildRecord._bytes, _request._guildID, info );
+                if ( bGuildOk == false )
+                    return fail( SocialResult::NotFound );
+                const bool bReachesCap = _request._amount >= Internal::kMaxExperience - info._experience;
+                info._experience       = bReachesCap ? Internal::kMaxExperience : info._experience + _request._amount;
+                ServiceTransaction transaction;
+                transaction.put( Internal::getGuildTable(), guildKey, Internal::encodeGuild( info ), guildRecord._version );
+                const ServiceStoreResult commitResult = connection.commit( transaction );
+                if ( commitResult == ServiceStoreResult::Ok )
+                {
+                    _outcome._guildID = _request._guildID;
+                    _outcome._info    = info;
+                }
+                return commitResult;
             }
 
             ServiceStoreResult runAccept( IServiceStoreConnection& connection )
@@ -429,6 +535,22 @@ namespace sw
                     {
                         return runStorageTransfer( connection, guildID, info, guildRecord, selfMember, selfMemberRecord );
                     }
+                    case GuildOperation::SetJoinPolicy:
+                    {
+                        if ( selfMember._role < GuildRole::Officer )
+                            return fail( SocialResult::NotAllowed );
+                        info._bOpenToApply = _request._bOpen == SW_TRUE ? SW_TRUE : SW_FALSE;
+                        transaction.put( Internal::getGuildTable(), guildKey, Internal::encodeGuild( info ), guildRecord._version );
+                        return connection.commit( transaction );
+                    }
+                    case GuildOperation::ListApplications:
+                    case GuildOperation::Approve:
+                    case GuildOperation::Reject:
+                    {
+                        if ( selfMember._role < GuildRole::Officer )
+                            return fail( SocialResult::NotAllowed );
+                        return runApplication( connection, guildID, info, guildRecord );
+                    }
                     case GuildOperation::ListStorage:
                     {
                         vector<LedgerBalance> listBalance;
@@ -448,6 +570,62 @@ namespace sw
                         return fail( SocialResult::Invalid );
                     }
                 }
+            }
+
+            /** @brief 임원의 신청 처리입니다. 목록, 받아들이기(수락과 같은 쓰기), 지우기가 해당합니다. */
+            ServiceStoreResult runApplication( IServiceStoreConnection& connection, uint64 guildID, GuildInfo& inoutInfo, const ServiceRecord& guildRecord )
+            {
+                using Internal = GuildServiceInternal;
+                if ( _request._operation == GuildOperation::ListApplications )
+                {
+                    vector<ServiceRecord> listRecord;
+                    const string          prefix = ServiceKeyUtil::makeHex64( guildID ) + "/";
+                    if ( connection.listRecords( Internal::getApplicationTable(), prefix, "", GuildLimit::kMaxApplication, false, listRecord ) != ServiceStoreResult::Ok )
+                        return ServiceStoreResult::Unavailable;
+                    for ( const ServiceRecord& record : listRecord )
+                    {
+                        GuildApplication application;
+                        int64            expiresMs = 0;
+                        const bool       bLive     = Internal::decodeApplication( record._bytes, application._appliedMs, expiresMs ) && _request._nowMs < expiresMs &&
+                                           ServiceKeyUtil::parseHex64( string_view( record._key ).substr( prefix.size() ), application._accountID );
+                        if ( bLive )
+                            _outcome._listApplication.push_back( application );
+                    }
+                    return ServiceStoreResult::Ok;
+                }
+                ServiceRecord applicationRecord;
+                int64         appliedMs        = 0;
+                int64         expiresMs        = 0;
+                const string  applicationKey   = Internal::makePairKey( guildID, _request._targetID );
+                const bool    bApplicationRead = connection.readRecord( Internal::getApplicationTable(), applicationKey, applicationRecord ) == ServiceStoreResult::Ok &&
+                                              Internal::decodeApplication( applicationRecord._bytes, appliedMs, expiresMs );
+                if ( bApplicationRead == false )
+                    return fail( SocialResult::NotFound );
+                ServiceTransaction transaction;
+                transaction.erase( Internal::getApplicationTable(), applicationKey, applicationRecord._version );
+                if ( _request._operation == GuildOperation::Reject )
+                    return connection.commit( transaction );
+                if ( _request._nowMs >= expiresMs )
+                    return fail( SocialResult::InviteExpired );
+                uint64                   targetGuildID = 0;
+                ServiceRecord            targetRecord;
+                const ServiceStoreResult targetRead = readAccountGuild( connection, _request._targetID, targetGuildID, targetRecord );
+                if ( targetRead == ServiceStoreResult::Unavailable )
+                    return ServiceStoreResult::Unavailable;
+                if ( targetRead == ServiceStoreResult::Ok )
+                    return fail( SocialResult::AlreadyInGuild ); // 그사이 다른 길드에 들어갔다
+                if ( inoutInfo._memberCount >= GuildLimit::kMaxMember )
+                    return fail( SocialResult::GuildFull );
+                ++inoutInfo._memberCount;
+                const string guildKey = ServiceKeyUtil::makeHex64( guildID );
+                transaction.put( Internal::getGuildTable(), guildKey, Internal::encodeGuild( inoutInfo ), guildRecord._version );
+                transaction.put( Internal::getMemberTable(), Internal::makePairKey( guildID, _request._targetID ), Internal::encodeMember( GuildRole::Member, _request._nowMs ),
+                                 ServiceRecord::kAbsentVersion );
+                transaction.put( Internal::getAccountGuildTable(), ServiceKeyUtil::makeHex64( _request._targetID ), Internal::encodeID( guildID ), ServiceRecord::kAbsentVersion );
+                const ServiceStoreResult commitResult = connection.commit( transaction );
+                if ( commitResult == ServiceStoreResult::Ok )
+                    _outcome._joinedID = _request._targetID;
+                return commitResult;
             }
 
             /** @brief 내보내기와 역할 바꾸기(길드장 넘기기 포함)입니다. */
@@ -569,7 +747,10 @@ namespace sw
             {
                 const bool bStorage = _request._operation == GuildOperation::Deposit || _request._operation == GuildOperation::Withdraw ||
                                       _request._operation == GuildOperation::ListStorage;
-                const bool bSkip = _outcome._guildID == 0 || _request._operation == GuildOperation::Attach || _request._operation == GuildOperation::Invite || bStorage;
+                const bool bApplication = _request._operation == GuildOperation::Apply || _request._operation == GuildOperation::ListApplications ||
+                                          _request._operation == GuildOperation::Reject;
+                const bool bSkip = _outcome._guildID == 0 || _request._operation == GuildOperation::Attach || _request._operation == GuildOperation::Invite || bStorage ||
+                                   bApplication;
                 if ( bSkip )
                     return;
                 vector<ServiceRecord> listRecord;
@@ -604,6 +785,7 @@ namespace sw
         : _completionBuffer{}
         , _notificationBuffer{}
         , _onEvent{}
+        , _listLevelExperience{}
         , _pStore{ nullptr }
         , _pLedgerPolicy{ nullptr }
         , _pendingCount{ 0 }
@@ -656,16 +838,56 @@ namespace sw
         submit( request, 0 );
     }
 
+    void GuildService::addExperience( uint64 guildID, int64 amount, int64 nowMs )
+    {
+        GuildRequest request;
+        request._operation = GuildOperation::AddExperience;
+        request._guildID   = guildID;
+        request._amount    = amount;
+        request._nowMs     = nowMs;
+        submit( request, 0 );
+    }
+
+    bool GuildService::setLevelTable( const vector<int64>& listLevelExperience )
+    {
+        if ( listLevelExperience.size() > static_cast<size_t>( GuildLimit::kMaxLevelCount ) )
+            return false;
+        int64 previous = 0;
+        for ( const int64 experience : listLevelExperience )
+        {
+            if ( experience <= previous )
+                return false;
+            previous = experience;
+        }
+        _listLevelExperience = listLevelExperience;
+        return true;
+    }
+
+    int32 GuildService::computeLevel( int64 experience ) const
+    {
+        int32 level = 1;
+        for ( const int64 threshold : _listLevelExperience )
+        {
+            if ( experience < threshold )
+                break;
+            ++level;
+        }
+        return level;
+    }
+
     void GuildService::applyOutcome( const GuildRequest& request, uint64 requestTag, GuildOutcome&& outcome )
     {
         --_pendingCount;
-        if ( request._operation != GuildOperation::Attach )
+        const bool bServerOperation = request._operation == GuildOperation::Attach || request._operation == GuildOperation::AddExperience;
+        if ( bServerOperation == false )
         {
             GuildCompletion completion;
-            completion._requestTag  = requestTag;
-            completion._result      = outcome._result;
-            completion._info        = outcome._info;
-            completion._listStorage = std::move( outcome._listStorage );
+            completion._requestTag      = requestTag;
+            completion._result          = outcome._result;
+            completion._info            = outcome._info;
+            completion._info._level     = computeLevel( outcome._info._experience );
+            completion._listStorage     = std::move( outcome._listStorage );
+            completion._listApplication = std::move( outcome._listApplication );
             _completionBuffer.push( std::move( completion ) );
         }
         if ( outcome._result != SocialResult::Ok )

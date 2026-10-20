@@ -72,6 +72,7 @@ namespace sw
                 settings._pOfferCatalog          = &_offerCatalog;
                 settings._pReceiptRegistry       = &_receiptRegistry;
                 settings._pMetricRegistry        = context._pMetricRegistry;
+                settings._pScheduler             = context._pScheduler; // 원장 보존 검사를 매일 서버 하나가 돌린다
                 settings._bAcceptSandboxReceipts = bAcceptSandbox ? SW_TRUE : SW_FALSE;
                 if ( _service.initialize( context._pStore, settings ) == false )
                 {

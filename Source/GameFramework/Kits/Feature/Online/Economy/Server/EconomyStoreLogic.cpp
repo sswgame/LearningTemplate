@@ -15,7 +15,17 @@ namespace sw
     {
         struct EconomyStoreLogicInternal
         {
-            static constexpr const utf8* kReceiptScopePrefix = "rcpt.";
+            static constexpr const utf8* kReceiptScopePrefix  = "rcpt.";
+            static constexpr const utf8* kRefundScopePrefix   = "refund.";
+            static constexpr const utf8* kWithdrawScopePrefix = "withdraw.";
+            static constexpr uint8       kMarkRefunded        = 1;
+            static constexpr uint8       kMarkWithdrawn       = 2;
+
+            /** @brief 거래의 지급 분개 키입니다. 환불 표시의 키이기도 하다. */
+            [[nodiscard]] static bool makeRedeemKey( string_view storeName, string_view transactionID, string& outKey )
+            {
+                return LedgerJournalKey::makeFromToken( string( kReceiptScopePrefix ) + string( storeName ), transactionID, outKey );
+            }
 
             static EconomyResult finish( EconomyReply& outReply, EconomyResult result )
             {
@@ -277,9 +287,14 @@ namespace sw
             return EconomyStoreLogicInternal::finish( outReply, EconomyResult::UnknownProduct );
 
         LedgerTransferRequest request;
-        const string          scope = string( EconomyStoreLogicInternal::kReceiptScopePrefix ) + receipt._storeName;
-        if ( LedgerJournalKey::makeFromToken( scope, receipt._transactionID, request._journalKey ) == false )
+        if ( EconomyStoreLogicInternal::makeRedeemKey( receipt._storeName, receipt._transactionID, request._journalKey ) == false )
             return EconomyStoreLogicInternal::finish( outReply, EconomyResult::ReceiptInvalid );
+        ServiceRecord            refundMark;
+        const ServiceStoreResult markRead = connection.readRecord( getRefundTable(), request._journalKey, refundMark );
+        if ( markRead == ServiceStoreResult::Ok )
+            return EconomyStoreLogicInternal::finish( outReply, EconomyResult::ReceiptRefunded ); // 지급 전에 환불 알림이 왔거나 이미 돌려받은 거래이다
+        if ( markRead != ServiceStoreResult::NotFound )
+            return EconomyStoreLogicInternal::finish( outReply, EconomyResult::Unavailable );
         request._reason            = "iap.redeem";
         request._memo              = receipt._productID.substr( 0, static_cast<size_t>( LedgerConstant::kMaxMemoSize ) );
         request._pPolicy           = &currencies;
@@ -300,6 +315,134 @@ namespace sw
         collectAccountBalances( outcome, input._accountID, outReply._listBalance );
         outReply._bReplayed = outcome._bReplayed;
         return EconomyStoreLogicInternal::finish( outReply, EconomyResult::Ok );
+    }
+
+    const hashed_string& EconomyStoreLogic::getRefundTable()
+    {
+        static const hashed_string s_table{ "econ_refund" };
+        return s_table;
+    }
+
+    EconomyResult EconomyStoreLogic::revokeRefund( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const ReceiptRefundNotice& notice, int64 nowMs )
+    {
+        using Internal = EconomyStoreLogicInternal;
+        string redeemKey;
+        if ( Internal::makeRedeemKey( notice._storeName, notice._transactionID, redeemKey ) == false )
+            return EconomyResult::InvalidRequest;
+        for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
+        {
+            ServiceRecord            mark;
+            const ServiceStoreResult markRead = connection.readRecord( getRefundTable(), redeemKey, mark );
+            if ( markRead == ServiceStoreResult::Ok )
+                return EconomyResult::AlreadyRefunded; // 이미 회수했거나 청약철회로 돌려받았다
+            if ( markRead != ServiceStoreResult::NotFound )
+                return EconomyResult::Unavailable;
+            LedgerJournalEntry       redeem;
+            const ServiceStoreResult found = Ledger::findJournal( connection, redeemKey, redeem );
+            if ( found != ServiceStoreResult::Ok && found != ServiceStoreResult::NotFound )
+                return EconomyResult::Unavailable;
+            ServiceTransaction transaction;
+            transaction.put( getRefundTable(), redeemKey, vector<uint8>{ Internal::kMarkRefunded }, ServiceRecord::kAbsentVersion );
+            if ( found == ServiceStoreResult::NotFound )
+            {
+                // 지급 전에 환불이 왔다. 표시만 남겨 뒤에 온 지급을 막는다
+                const ServiceStoreResult committed = connection.commit( transaction );
+                if ( committed == ServiceStoreResult::Conflict )
+                    continue;
+                return committed == ServiceStoreResult::Ok ? EconomyResult::Ok : EconomyResult::Unavailable;
+            }
+            LedgerTransferRequest request;
+            if ( LedgerJournalKey::makeFromToken( string( Internal::kRefundScopePrefix ) + notice._storeName, notice._transactionID, request._journalKey ) == false )
+                return EconomyResult::InvalidRequest;
+            request._reason     = "refund.revoke";
+            request._memo       = redeem._memo;
+            request._pPolicy    = &currencies;
+            request._timeMs     = nowMs;
+            request._actorKind  = LedgerActorKind::System;
+            request._bAllowDebt = SW_TRUE; // 환불 회수만 빚을 허용한다(결정 기록 5-9)
+            for ( const LedgerPosting& posting : redeem._listPosting )
+            {
+                request._listPosting.push_back( LedgerPosting{ posting._to, LedgerHolder::makeSink(), posting._assetID, posting._amount } );
+            }
+            LedgerTransferOutcome outcome;
+            const LedgerResult    staged = Ledger::stageTransfer( connection, request, transaction, outcome );
+            if ( staged != LedgerResult::Ok )
+                return toEconomyResult( staged );
+            const ServiceStoreResult committed = connection.commit( transaction );
+            if ( committed == ServiceStoreResult::Ok )
+                return EconomyResult::Ok;
+            if ( committed != ServiceStoreResult::Conflict )
+                return EconomyResult::Unavailable;
+        }
+        return EconomyResult::Busy;
+    }
+
+    EconomyResult EconomyStoreLogic::withdrawPurchase( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const EconomyWithdrawInput& input,
+                                                       EconomyReply& outReply )
+    {
+        using Internal = EconomyStoreLogicInternal;
+        outReply       = EconomyReply{};
+        string redeemKey;
+        if ( input._accountID == 0 || Internal::makeRedeemKey( input._storeName, input._transactionID, redeemKey ) == false )
+            return Internal::finish( outReply, EconomyResult::InvalidRequest );
+        const LedgerHolder account = LedgerHolder::makeAccount( input._accountID );
+        for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
+        {
+            ServiceRecord            mark;
+            const ServiceStoreResult markRead = connection.readRecord( getRefundTable(), redeemKey, mark );
+            if ( markRead == ServiceStoreResult::Ok )
+                return Internal::finish( outReply, EconomyResult::AlreadyRefunded );
+            if ( markRead != ServiceStoreResult::NotFound )
+                return Internal::finish( outReply, EconomyResult::Unavailable );
+            LedgerJournalEntry       redeem;
+            const ServiceStoreResult found = Ledger::findJournal( connection, redeemKey, redeem );
+            if ( found == ServiceStoreResult::NotFound )
+                return Internal::finish( outReply, EconomyResult::NotPurchaser );
+            if ( found != ServiceStoreResult::Ok )
+                return Internal::finish( outReply, EconomyResult::Unavailable );
+            if ( input._nowMs - redeem._timeMs > input._windowMs )
+                return Internal::finish( outReply, EconomyResult::WithdrawalExpired );
+            LedgerTransferRequest request;
+            if ( LedgerJournalKey::makeFromToken( string( Internal::kWithdrawScopePrefix ) + input._storeName, input._transactionID, request._journalKey ) == false )
+                return Internal::finish( outReply, EconomyResult::InvalidRequest );
+            request._reason    = "iap.withdraw";
+            request._memo      = redeem._memo;
+            request._pPolicy   = &currencies;
+            request._timeMs    = input._nowMs;
+            request._actorID   = input._accountID;
+            request._actorKind = LedgerActorKind::Player;
+            outReply._listWithdrawn.clear();
+            for ( const LedgerPosting& posting : redeem._listPosting )
+            {
+                if ( posting._to != account )
+                    return Internal::finish( outReply, EconomyResult::NotPurchaser );
+                LedgerBalance balance;
+                if ( Ledger::readBalance( connection, account, posting._assetID, balance ) != ServiceStoreResult::Ok )
+                    return Internal::finish( outReply, EconomyResult::Unavailable );
+                const int64 unused = balance._amount < posting._amount ? balance._amount : posting._amount; // 쓰지 않은 만큼만 돌려받는다
+                if ( unused <= 0 )
+                    continue;
+                request._listPosting.push_back( LedgerPosting{ account, LedgerHolder::makeSink(), posting._assetID, unused } );
+                outReply._listWithdrawn.push_back( LedgerBalance{ posting._assetID, unused } );
+            }
+            if ( request._listPosting.empty() )
+                return Internal::finish( outReply, EconomyResult::NothingToWithdraw );
+            ServiceTransaction transaction;
+            transaction.put( getRefundTable(), redeemKey, vector<uint8>{ Internal::kMarkWithdrawn }, ServiceRecord::kAbsentVersion );
+            LedgerTransferOutcome outcome;
+            const LedgerResult    staged = Ledger::stageTransfer( connection, request, transaction, outcome );
+            if ( staged != LedgerResult::Ok )
+                return Internal::finish( outReply, toEconomyResult( staged ) );
+            const ServiceStoreResult committed = connection.commit( transaction );
+            if ( committed == ServiceStoreResult::Ok )
+            {
+                collectAccountBalances( outcome, input._accountID, outReply._listBalance );
+                return Internal::finish( outReply, EconomyResult::Ok );
+            }
+            if ( committed != ServiceStoreResult::Conflict )
+                return Internal::finish( outReply, EconomyResult::Unavailable );
+        }
+        return Internal::finish( outReply, EconomyResult::Busy );
     }
 
     EconomyResult EconomyStoreLogic::readWallet( IServiceStoreConnection& connection, uint64 accountID, EconomyReply& outReply )

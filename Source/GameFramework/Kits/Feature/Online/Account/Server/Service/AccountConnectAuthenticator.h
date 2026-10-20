@@ -5,6 +5,7 @@
  *          - 게임 서버가 로그인 서버와 다른 프로세스이면 같은 마스터 키로 `LoginTicketAuthority` 만 만든다. 저장소는 없다. 마스터 키는 서버 설정의 비밀(환경 변수)에서 읽는다.
  *            키 배포와 교체 절차는 아직 정하지 않았다. 로그인 서버와 게임 서버가 키를 나눠 갖고 시한은 60초로 하는 것까지 사용자가 정했다.
  *          - 티켓 비밀이 UDP 키 유도의 솔트가 되므로 가로챈 티켓만으로는 접속할 수 없다. netcode.io 의 connect token 과 같은 구조이다.
+ *          - 티켓이 맞으면 받아들이기 정책(`IConnectAdmission`)에 묻는다. 매칭으로 배정되는 서버는 배정받은 사람만 받는다(`MatchServerAgent`).
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -16,6 +17,7 @@
 
 namespace sw
 {
+    class IConnectAdmission;
     class LoginTicketAuthority;
 
     /**
@@ -25,8 +27,11 @@ namespace sw
     class SW_KIT_SERVER_API AccountConnectAuthenticator final : public INetConnectAuthenticator
     {
     public:
-        /** @brief @p pAuthority 는 초기화를 마친 것을 빌려 씁니다. @p serverID 는 티켓이 가리켜야 하는 이 게임 서버의 id 입니다. */
-        AccountConnectAuthenticator( const LoginTicketAuthority* pAuthority, const hashed_string& serverID );
+        /**
+         * @brief @p pAuthority 는 초기화를 마친 것을 빌려 씁니다. @p serverID 는 티켓이 가리켜야 하는 이 게임 서버의 id 입니다.
+         * @param admission 티켓이 맞은 계정을 받아들일지 정합니다(빌려 쓴다). 매칭 서버는 `MatchServerAgent`, 그 밖은 `AdmitEveryAccount` 입니다.
+         */
+        AccountConnectAuthenticator( const LoginTicketAuthority* pAuthority, const hashed_string& serverID, const IConnectAdmission& admission );
 
         void setNowMs( int64 nowMs ) { _nowMs.store( nowMs, std::memory_order_relaxed ); }
 
@@ -35,6 +40,7 @@ namespace sw
     private:
         hashed_string               _serverID;
         const LoginTicketAuthority* _pAuthority;
+        const IConnectAdmission*    _pAdmission;
         atomic<int64>               _nowMs;
     };
 } // namespace sw
