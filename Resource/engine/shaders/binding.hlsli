@@ -104,9 +104,15 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
 	float4   g_ShadowCascade2;
 	float4   g_ShadowCascade3;
 	float4   g_BloomParams;
+	float4   g_CameraGrade;   // 카메라별 색 보정 — x 노출 배율(2^EV), y 채도, z 대비, w 비네트 세기(CameraPostProcessValues, postgrade.hlsli)
+	float4   g_CameraFrame;   // 카메라별 화면 틀 — x 레터박스로 남길 가로/세로 비율(0 = 없음), y 지금 뷰의 가로/세로 비율
 	float4   g_OutlineColor;
 	float4   g_OutlineParams;
 	float4   g_SourceTexel;   // xy = 1 / 원본(SourceColor 역할 입력) 크기, zw = 그 크기. 원본이 없는 패스는 프레임 크기 — 반해상도 첨부를 읽는 패스가 비켜 읽는 거리
+	// 하늘 그러데이션(스카이 패스 sky.hlsl, C++ SkyGradient) — 천정(rgb, w 지평선 지수) · 지평선(rgb) · 땅(rgb, w 세기). 씬에 하늘이 없으면 스카이 패스가 돌지 않는다
+	float4   g_SkyZenith;
+	float4   g_SkyHorizon;
+	float4   g_SkyGround;
 	uint     g_ShadowMapIndex;
 	uint     g_GBufferAlbedoIndex;
 	uint     g_GBufferNormalIndex;

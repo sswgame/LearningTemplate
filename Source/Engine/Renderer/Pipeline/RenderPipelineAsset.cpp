@@ -259,12 +259,13 @@ namespace sw
                 checkSameDivisor( pass._depthAttachment );
         }
 
-        // 3-1) 지오메트리 패스(ForwardOpaque · ForwardOnlyOpaque · GBuffer · Transparent)는 **선언한 컬러 출력**에 그린다. 컬러 출력이 없으면 그릴 곳이 없다
+        // 3-1) 지오메트리 패스(ForwardOpaque · ForwardOnlyOpaque · GBuffer · Transparent)와 하늘(Sky)은 **선언한 컬러 출력**에 그린다. 컬러 출력이 없으면 그릴 곳이 없다
         //      (없는 첨부의 핸들 0 은 백버퍼라, 그대로 두면 화면에 그린다).
         for ( const RenderGraphPassDesc& pass : _desc._listPass )
         {
             const bool bGeometryColorPass = pass._resolvedType == RenderPassType::ForwardOpaque || pass._resolvedType == RenderPassType::ForwardOnlyOpaque ||
-                                            pass._resolvedType == RenderPassType::GBuffer || pass._resolvedType == RenderPassType::Transparent;
+                                            pass._resolvedType == RenderPassType::GBuffer || pass._resolvedType == RenderPassType::Transparent ||
+                                            pass._resolvedType == RenderPassType::Sky;
             if ( bGeometryColorPass == false || pass._listResolvedColorOutput.empty() == false )
                 continue;
             SW_LOG_ERROR( "[%#] pass '%#'(%#): 컬러 출력이 없습니다 — 지오메트리 패스는 _listOutput 에 선언한 컬러 첨부에 그립니다",
@@ -358,6 +359,15 @@ namespace sw
                     ++issueCount;
                 }
             }
+        }
+
+        // 3-4) 하늘(Sky)은 깊이 테스트로 빈 곳만 칠한다 — 뎁스 첨부가 없으면 장면 위를 통째로 덮는다.
+        for ( const RenderGraphPassDesc& pass : _desc._listPass )
+        {
+            if ( pass._resolvedType != RenderPassType::Sky || pass._depthAttachment.empty() == false )
+                continue;
+            SW_LOG_ERROR( "[%#] pass '%#'(Sky): _depthAttachment 가 비어 있습니다 — 하늘은 깊이 테스트로 아무것도 그리지 않은 곳만 칠합니다", sourcePath, pass._name );
+            ++issueCount;
         }
 
         if ( issueCount > 0 )

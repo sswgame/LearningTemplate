@@ -102,6 +102,8 @@ namespace sw
         PROPERTY( Required )
         DataPath _shaderTonemap; ///< 톤 매핑
         PROPERTY( Required )
+        DataPath _shaderSky; ///< 하늘 그러데이션(스카이 패스) — 깊이 1 의 풀스크린 삼각형
+        PROPERTY( Required )
         DataPath _shaderToon; ///< 셀 셰이딩 머티리얼 셰이더 — 메시 외곽선 패스의 기본 셰이더이기도 하다
         PROPERTY( Required )
         DataPath _shaderCanvas; ///< 화면 2D(UI · 월드 글자) 사각형 — 사각형 하나 = 인스턴스 하나, SDF 모양 · 글리프

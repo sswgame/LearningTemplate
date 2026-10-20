@@ -9,6 +9,7 @@
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
+#include "Engine/Environment/Sky/SkyComponent.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -238,6 +239,13 @@ namespace sw::editor
                 pFloor->setLocalScale( float3{ environment._floorSize, 1.0f, environment._floorSize } );
                 ++spawnedCount;
             }
+        }
+        if ( environment._bSky )
+        {
+            GameObject*   pSkyObject = pManager->createGameObject( hashed_string( "PreviewSky" ) );
+            SkyComponent* pSky       = pSkyObject != nullptr ? pSkyObject->addComponent<SkyComponent>() : nullptr;
+            if ( pSky != nullptr )
+                ++spawnedCount;
         }
         return spawnedCount;
     }

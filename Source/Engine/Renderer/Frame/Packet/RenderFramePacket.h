@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Engine/EngineMinimal.h"
+#include "Engine/Environment/Sky/SkyGradient.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Renderer/Frame/Capture/PresentHookDelegate.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
@@ -39,6 +40,8 @@ namespace sw
         vector<GPULight> _listLight;
         /** @brief 라이트 프로브 볼륨들의 SH9 원소입니다(`collectSceneLights`). 볼륨 원소는 `_listLight` 에 있고 이 목록의 첫 프로브를 가리킵니다. */
         vector<float4> _listLightProbe;
+        /** @brief 씬의 하늘(`SkyComponent`)입니다. `_bHasSky` 가 0 이면 값이 없고 스카이 패스가 그리지 않는다(배경은 SceneColor 클리어 색). */
+        SkyGradient _sky;
         /** @brief 이번 프레임의 추가 뷰(CCTV, 백미러, 분할 화면, PiP)입니다. 쉬는 뷰도 실립니다(`RenderViewRequest::_bRender`). */
         vector<RenderViewRequest> _listView;
         /**
@@ -67,8 +70,10 @@ namespace sw
         uint8 _bHasViewProj : 1;
         uint8 _bValid       : 1;
         /** @brief 씬에 DirectionalLightComponent 가 있어 라이트 필드가 유효하면 1 입니다. */
-        uint8                  _bHasLight : 1;
-        [[maybe_unused]] uint8 _reserved  : 5;
+        uint8 _bHasLight : 1;
+        /** @brief 씬에 활성 `SkyComponent` 가 있어 `_sky` 가 유효하면 1 입니다. */
+        uint8                  _bHasSky  : 1;
+        [[maybe_unused]] uint8 _reserved : 4;
 
         RenderFramePacket()
             : _gpuScene{}
@@ -80,6 +85,7 @@ namespace sw
             , _lightColorAmbient{}
             , _listLight{}
             , _listLightProbe{}
+            , _sky{}
             , _listView{}
             , _canvas{}
             , _mainView{}
@@ -94,6 +100,7 @@ namespace sw
             , _bHasViewProj{ SW_FALSE }
             , _bValid{ SW_FALSE }
             , _bHasLight{ SW_FALSE }
+            , _bHasSky{ SW_FALSE }
             , _reserved{ 0 }
         {
         }
@@ -125,6 +132,7 @@ namespace sw
             _lightColorAmbient = float4{};
             _listLight.clear();
             _listLightProbe.clear();
+            _sky = SkyGradient{};
             _listView.clear();
             _canvas.clear();
             _mainView = RenderViewSettings{};
@@ -138,6 +146,7 @@ namespace sw
             _bHasViewProj       = SW_FALSE;
             _bValid             = SW_FALSE;
             _bHasLight          = SW_FALSE;
+            _bHasSky            = SW_FALSE;
         }
     };
 } // namespace sw

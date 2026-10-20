@@ -7,6 +7,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/PackEngineSettings.h"
+#include "Engine/Environment/Sky/SkyComponent.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -104,6 +105,7 @@ namespace sw
         , _mapLayoutMaterialFallback{}
         , _transparentRankPlaceholder{}
         , _psoCache{}
+        , _pPSOCache{ &_psoCache }
         , _outputRenderTarget{ 0 }
         , _capture{ _pDevice, _mainView._transientPool, _pipelineResource }
         , _canvasRenderer{}
@@ -116,16 +118,19 @@ namespace sw
         , _statusMessage{}
         , _graphContext{}
         , _frameLight{}
+        , _frameSky{}
         , _outputWidth{ 0 }
         , _outputHeight{ 0 }
         , _lastRenderedExtraViewCount{ 0 }
         , _directOutputWidth{ 0 }
         , _directOutputHeight{ 0 }
+        , _scenePreviewRendererCount{ 0 }
         , _bGPUCullingActive{ SW_FALSE }
         , _status{ FrameRendererStatus::Uninitialized }
         , _bCallbacksBound{ SW_FALSE }
         , _bPassResourcesReady{ SW_FALSE }
         , _bScenePreview{ SW_FALSE }
+        , _bHasFrameSky{ SW_FALSE }
         , _bLightGridPSOMissingLogged{ SW_FALSE }
         , _reservedFlags{ 0 }
         , _viewMode{ static_cast<uint8>( RenderViewMode::Lit ) }
@@ -243,12 +248,14 @@ namespace sw
         // 스냅샷이 가진 머티리얼과 인스턴스의 소유권을 **디바이스가 살아 있을 때** 해제한다. 스냅샷은 소유권을 함께
         // 싣고 있으므로(GPUScene.h) 여기서 비우지 않으면 렌더러가 소멸할 때까지 그것들이 살아 있어, 디바이스가 먼저
         // 사라진 뒤 소멸자가 사라진 디바이스에 GPU 자원을 반환하려 한다(해제 후 사용).
-        // 미리보기 씬 렌더러도 같은 디바이스의 자원을 든다 — 디바이스가 살아 있을 때 먼저 내린다.
+        // 미리보기 씬 렌더러도 같은 디바이스의 자원을 든다 — 디바이스가 살아 있을 때 먼저 내린다. 그 렌더러들은 이 렌더러의 PSO 캐시를 빌려 쓰므로
+        // 캐시를 놓는 `releasePassResources` 보다 먼저여야 한다.
         for ( ScenePreviewRenderer& preview : _listScenePreviewRenderer )
         {
             preview._renderer->shutdown();
         }
         _listScenePreviewRenderer.clear();
+        _scenePreviewRendererCount.store( 0 );
         _graph.releaseCommandLists();
         if ( _pDevice != nullptr )
             _gpuScene.releaseGPU( _pDevice );
@@ -431,7 +438,7 @@ namespace sw
         // 라이트 그리드(GPU 생산자) — 조명을 계산하는 패스(포워드 · 디퍼드 · 투명)보다 먼저 끝나야 한다. 이 리스트는 그 패스들의 리스트보다 먼저 큐에 낸다.
         dispatchLightGrid();
         // 월드 공간 UI 의 렌더 텍스처다. 장면 뷰가 그 텍스처를 읽기 전에 먼저 제출하는 프리패스 리스트(같은 큐)로 그린다.
-        _canvasRenderer.drawTargets( *_pCmd, *pDevice, _canvasFrame, _psoCache, getEnginePSO( RenderPassType::Canvas ) );
+        _canvasRenderer.drawTargets( *_pCmd, *pDevice, _canvasFrame, *_pPSOCache, getEnginePSO( RenderPassType::Canvas ) );
 
 #if SW_PROFILE_COMPILED
         if ( bWriteGPUTime )
@@ -555,6 +562,10 @@ namespace sw
         {
             _frameLight = FrameLightState{};
         }
+        // 하늘도 패킷 경로(RenderPacketBuilder)와 같은 규칙으로 씬에서 읽는다.
+        SkyGradient sceneSky;
+        const bool  bSceneSky = scene.getObjectManager() != nullptr && SkyComponent::findSky( *scene.getObjectManager(), sceneSky );
+        applyFrameSky( bSceneSky, sceneSky );
         // 출력 크기(인자가 없으면 스왑체인)를 먼저 정한다 — 주 시점의 비율이 그것을 본다.
         ensurePassResources();
         ensureTransientResources( _directOutputWidth, _directOutputHeight );
@@ -646,6 +657,8 @@ namespace sw
         {
             _frameLight = FrameLightState{};
         }
+        // 하늘도 패킷으로만 온다.
+        applyFrameSky( packet._bHasSky != SW_FALSE, packet._sky );
         // 그림자 배치도 패킷으로만 온다. 맞바꾸기라 지난 프레임의 저장소가 패킷으로 돌아간다.
         std::swap( _frameShadow, packet._shadow );
         applyFrameShadow();

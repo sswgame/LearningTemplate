@@ -3,6 +3,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 
+#include "Engine/Environment/Sky/SkyGradient.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
@@ -17,6 +18,20 @@ namespace sw
         constexpr float4 kDefaultBloomParams{ 0.55f, 0.65f, 0.25f, 0.0f };
         constexpr float4 kDefaultOutlineColor{ 0.08f, 0.05f, 0.12f, 0.85f };
     } // namespace
+
+    void FrameRenderer::applyFrameSky( bool bHasSky, const SkyGradient& sky )
+    {
+        // 셰이더 상수 배치는 SkyGradient 머리 주석이 정본이다(sky.hlsl 의 evaluateSky 가 같은 순서로 읽는다).
+        _bHasFrameSky = bHasSky ? SW_TRUE : SW_FALSE;
+        if ( bHasSky == false )
+        {
+            _frameSky = FrameSkyState{};
+            return;
+        }
+        _frameSky._zenithExponent  = float4{ sky._zenithColor._x, sky._zenithColor._y, sky._zenithColor._z, sky._horizonExponent };
+        _frameSky._horizon         = float4{ sky._horizonColor._x, sky._horizonColor._y, sky._horizonColor._z, 0.0f };
+        _frameSky._groundIntensity = float4{ sky._groundColor._x, sky._groundColor._y, sky._groundColor._z, sky._intensity };
+    }
 
     void FrameRenderer::applyFrameShadow()
     {
@@ -57,6 +72,9 @@ namespace sw
 
         context._passValues.setFloat4( passConstantNames()._keyLightDirIntensity, _frameLight._dirIntensity );
         context._passValues.setFloat4( passConstantNames()._keyLightColor, _frameLight._colorAmbient );
+        context._passValues.setFloat4( passConstantNames()._skyZenith, _frameSky._zenithExponent );
+        context._passValues.setFloat4( passConstantNames()._skyHorizon, _frameSky._horizon );
+        context._passValues.setFloat4( passConstantNames()._skyGround, _frameSky._groundIntensity );
         context._passValues.setFloat4( passConstantNames()._outlineColor, kDefaultOutlineColor );
         applyViewPassConstants( context );
     }

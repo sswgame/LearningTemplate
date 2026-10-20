@@ -49,6 +49,11 @@ namespace sw
         /// @brief 인버티드 헐(inverted hull, 뒤집은 껍질) 외곽선입니다. 씬 메시 중 퍼뮤테이션에 `MATERIAL_OUTLINE` 이 있는 배치만 노멀 방향으로 부풀려 앞면을 컬링해 그립니다(toon.hlsl).
         MeshOutline,
         /**
+         * @brief 하늘(`SkyComponent`)입니다. 불투명 패스 뒤 · 반투명 앞에 풀스크린 삼각형을 깊이 1 에 그려, 아무것도 그리지 않은 곳(깊이 클리어 1)만 칠합니다(sky.hlsl).
+         *        깊이는 테스트만 하고(LessEqual) 쓰지 않으므로 `_depthAttachment` 가 있어야 합니다(검증). 씬에 하늘이 없으면 그리지 않습니다(배경은 클리어 색).
+         */
+        Sky,
+        /**
          * @brief 화면 2D(UI, 월드 글자)를 주 시점 출력(백버퍼, 게임 뷰 RT, 스크린샷 캡처)에 **기존 내용을 유지한 채(Load)** 그립니다. Present(톤맵) 뒤에 두고,
          *        Swapchain 을 쓰는 마지막 패스여야 합니다(검증). 추가 뷰에서는 그리지 않습니다(UI 는 주 시점에만 있습니다).
          */

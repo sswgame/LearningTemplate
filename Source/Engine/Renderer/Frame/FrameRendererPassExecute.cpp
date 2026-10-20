@@ -487,6 +487,27 @@ namespace sw
                     }
                     break;
                 }
+                case RenderPassType::Sky:
+                {
+                    // 하늘이다. 깊이 1 의 풀스크린 삼각형을 깊이 테스트(LessEqual, 쓰기 없음)로 그려 아무것도 그리지 않은 곳만 칠한다(sky.hlsl).
+                    // 씬에 하늘이 없으면 그리지 않는다 — 배경은 컬러 첨부의 클리어 색이다. 와이어프레임과 표면 값 보기에서도 빠진다(값 위를 덮는다).
+                    // 뎁스나 선언한 컬러 출력이 없으면 그리지 않는다(장면을 통째로 덮거나 백버퍼에 그린다 — 그런 파이프라인은 검증이 거부한다).
+                    // 앞의 불투명 패스가 색과 깊이를 이미 썼으므로 둘 다 불러온다(지우지 않는다).
+                    const RenderViewModeInfo&    viewModeInfo = getRenderViewModeInfo( _pActiveView->_settings._viewMode );
+                    const RHIPipelineStateHandle skyPSO       = getEnginePSO( RenderPassType::Sky );
+                    const bool                   bShowsSky    = viewModeInfo._bWireframe == false && viewModeInfo._bShowsBuffer == false;
+                    const bool                   bHasTargets  = passDepth.empty() == false && pDeclaredColor != nullptr;
+                    const bool                   bDrawsSky    = _bHasFrameSky == SW_TRUE && bHasTargets && skyPSO != 0 && bShowsSky;
+                    if ( bDrawsSky == false )
+                        break;
+                    const hashed_string& colorTarget = ( *pDeclaredColor )[0]._attachment;
+                    if ( beginColorPass( context, colorTarget.view(), passDepth.view(), _clearColor, RHIRenderPassLoadOp::Load, RHIRenderPassLoadOp::Load ) )
+                    {
+                        drawFullscreen( context, skyPSO );
+                        context._pCmd->endRenderPass();
+                    }
+                    break;
+                }
                 case RenderPassType::TAA:
                 {
                     // 타깃은 선언한 출력 중 있는 것이다(풀스크린 패스와 같은 규칙이며 히스토리도 같은 규칙으로 만든다. ensureTaaHistory).

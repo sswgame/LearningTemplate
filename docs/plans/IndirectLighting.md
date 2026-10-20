@@ -19,7 +19,7 @@
 |---|---|---|
 | P0 | SH9 수학(`Core/Math/SphericalHarmonics.h` `SH9Color` — 투영, 평가, 회전 없이 합산, GPU 원소 float4 일곱 개)과 `SphericalHarmonicsTest` — **들어감**. 테스트 실행은 **확인 필요**(빌드 미확인) | 없음 |
 | P1 | `LightProbeVolumeComponent`(축 정렬 상자 `_extent`, 목표 간격 `_spacing`, 베이크 경로 `_probeDataPath`)와 `.probes` 형식(`LightProbeGrid` — 매직 `SWLP`, 버전, 격자 모양, 프로브마다 SH9 RGB 27 실수) — **들어감**. 모양이 다른 베이크는 쓰지 않는다. `LightProbeGridTest` 실행은 **확인 필요** | P0 |
-| P2 | CPU 베이크(`LightProbeBaker`): 프로브마다 균일 구 레이를 쏘아 닿은 면이 튕긴 직접광(반사율은 볼륨의 `_bounceAlbedo`)과 빈 방향의 하늘을 SH 로 투영한다. 직접광 자체는 담지 않는다(조명 식이 이미 계산해 두 번 비춘다). 가림은 물리 레이캐스트 — **들어감**. 하늘 항은 스카이 컴포넌트(`D3-7.4`)가 생기면 `LightProbeBaker::collectInput` 에 잇는다(지금은 0). 물리 씬이 있는 굽기 테스트는 **남음** | P1, `D3-7.4`(하늘) |
+| P2 | CPU 베이크(`LightProbeBaker`): 프로브마다 균일 구 레이를 쏘아 닿은 면이 튕긴 직접광(반사율은 볼륨의 `_bounceAlbedo`)과 빈 방향의 하늘을 SH 로 투영한다. 직접광 자체는 담지 않는다(조명 식이 이미 계산해 두 번 비춘다). 가림은 물리 레이캐스트 — **들어감**. 하늘 항은 이제 있는 스카이 컴포넌트(`SkyComponent` 의 `SkyGradient::evaluateRadiance`, D3-7.4)를 `LightProbeBaker::collectInput` 에 잇는 일이 **남음**(지금은 0). 물리 씬이 있는 굽기 테스트는 **남음** | P1, `D3-7.4`(하늘) |
 | P3 | 셰이더 소비: 볼륨은 라이트 목록의 `SW_LIGHT_TYPE_PROBE_VOLUME` 원소(클러스터 그리드 항목), SH9 는 전용 슬롯 t13 `g_SwLightProbes`(`swLoadProbe` 하나만 위치를 안다). `swShadeLights` 가 덮는 볼륨들의 SH(삼선형, 가중 평균)로 앰비언트를 바꾼다. 상자 밖은 자르지 않는다 — **들어감**. 스카이 전역 항목(볼륨 밖)은 D3-7.4 뒤로 남음, 그때까지 볼륨 밖은 지금의 앰비언트. 툰(`toon.hlsl`)은 자기 앰비언트를 그대로 쓴다. `RenderPassGPUTest.LightProbeVolumeReplacesAmbient` · `SceneLightTest.CollectsBakedProbeVolumesAfterLights` 실행은 **확인 필요** | P1, `D2-13` S1 |
 | P4 | 반사 프로브: GPU 베이크(씬을 여섯 면으로 그려 옥타헤드럴로 접고 거칠기 밉을 만듭니다)와 아틀라스 슬롯 | `D2-6.3` 슬롯 지도, P5 |
 | P5 | 금속도와 거칠기 PBR(GGX, 슐릭 프레넬), 머티리얼 필드와 G버퍼 칸 | `D2-6.4` G버퍼 확장 |

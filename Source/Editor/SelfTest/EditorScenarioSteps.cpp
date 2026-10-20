@@ -1565,6 +1565,16 @@ namespace sw::editor
 
             [[nodiscard]] static bool readGameViewMode( const GameObjectManager* /*pManager*/, float64& outValue ) { return readViewMode( false, outValue ); }
 
+            /** @brief 렌더 스레드에 살아 있는 미리보기 씬 렌더러 수입니다(창 하나에 하나). 창을 닫은 다음 렌더 프레임에 줄어듭니다. 렌더러가 없으면 false 입니다. */
+            [[nodiscard]] static bool readScenePreviewRenderers( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const FrameRenderer* pRenderer = editor::findSubsystem<FrameRenderer>();
+                if ( pRenderer == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pRenderer->getScenePreviewRendererCount() );
+                return true;
+            }
+
             /** @brief 마지막(또는 현재) 자체 테스트 실행에서 통과한 테스트 수입니다. Test Runner 창과 명령줄 실행 모두 해당합니다. */
             [[nodiscard]] static bool readTestRunnerPassCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -1885,6 +1895,9 @@ namespace sw::editor
                          &EditorScenarioStepsInternal::readSceneViewMode );
     SW_AUTOMATION_PROBE( editorGameViewMode, "Editor.GameViewMode", "Main output (game view) view mode — stays 0 Lit while the scene view changes",
                          &EditorScenarioStepsInternal::readGameViewMode );
+    SW_AUTOMATION_PROBE( editorScenePreviewRenderers, "Editor.ScenePreviewRenderers",
+                         "Scene preview renderers alive on the render thread (one per open preview window, retired the render frame after it closes)",
+                         &EditorScenarioStepsInternal::readScenePreviewRenderers );
     SW_AUTOMATION_PROBE( editorTestRunnerPassCount, "Editor.TestRunnerPassCount", "Editor self tests that passed in the last (or current) self test run",
                          &EditorScenarioStepsInternal::readTestRunnerPassCount );
     SW_AUTOMATION_PROBE( editorInputMapBindingCount, "Editor.InputMapBindingCount", "Bindings of the action selected in the Input Map Editor",

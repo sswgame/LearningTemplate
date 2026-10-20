@@ -19,6 +19,9 @@
 #if defined( SW_POST_OUTLINE )
 	#include "postoutline.hlsli"
 #endif
+#if defined( SW_POST_TONEMAP )
+	#include "postgrade.hlsli"
+#endif
 
 struct PSInput
 {
@@ -56,7 +59,10 @@ float4 PSMain(PSInput input) : SV_TARGET
 	color = swApplyOutline(input.uv, depthTexel, color);
 #endif
 #if defined( SW_POST_TONEMAP )
+	// 카메라별 후처리 값은 톤맵과 함께 간다 — 노출은 톤맵 앞, 색 보정 · 비네트 · 레터박스는 뒤(postgrade.hlsli). 후처리를 끈 뷰는 아래에서 원본을 고른다.
+	color = swApplyCameraExposure(color);
 	color = color / (color + 1.0f);
+	color = swApplyCameraGrade(input.uv, color);
 #endif
 	// 후처리를 끈 뷰(CCTV · 미니맵)는 원본을 낸다 — 뷰마다 달라서 퍼뮤테이션이 아니라 패스 플래그다. 고르기는 early-return 이 아니라
 	// 값 선택이다(GL 드라이버가 early-return 모양을 잘못 컴파일한 적이 있다 — binding.hlsli swComputeMorphElement).

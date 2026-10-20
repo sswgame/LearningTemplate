@@ -3,7 +3,9 @@
   에디터 시나리오 — 미리보기 창을 연 채 여닫기를 반복한다(다중 월드 6절 5번: 미리보기 렌더러 내리기의 GPU 안전).
   창이 닫히면 메인 패킷에서 그 씬의 뷰 요청이 사라지고, 렌더 스레드의 FrameRenderer::retireScenePreviews 가 그 씬의 렌더러를 FrameRenderer::shutdown 으로 바로 내린다.
   디바이스 해제 큐가 GPU 완료 뒤로 미루는 것에 기대는 경로라서, 이미 낸 프레임이 쓰는 자원을 지금 파괴하면 여기서 터진다(DX12 장치 제거 · Vulkan 장치 손실 · 검증 레이어 오류).
-  창을 다시 열면 같은 씬 키로 새 렌더러가 선다("Scene preview renderer started for scene key" 줄). 그래서 닫을 때마다 렌더러가 정말 내려갔는지를 이 줄의 수로 센다.
+  창을 다시 열면 같은 씬 키로 새 렌더러가 선다("Scene preview renderer started for scene key" 줄). 렌더러 수는 탐침 Editor.ScenePreviewRenderers 가 렌더 스레드의 값을 읽는다 -
+  닫을 때마다 그 수가 줄고(differsFrom) 다시 열면 닫기 전 수로 돌아오며(sameAs), 끝에서 시작 전 수(baseline)로 돌아온다. 시작 줄의 수(ExpectLog atLeast)도 함께 센다.
+  PSO 는 주 렌더러의 캐시를 함께 쓰므로(FrameRenderer::_pPSOCache) 미리보기 렌더러를 내려도 PSO 는 남는다 - 다시 열 때 PSO 를 다시 만들지 않는다.
   ① 머티리얼 창(id material): 빨간 테스트 머티리얼을 열어 구 미리보기가 그려지게 한 뒤(프레임 수 탐침이 오른다) 닫기 8 번, 닫아 둔 지 20 프레임 뒤 다시 열고 프레임이 다시 오르는 것을 기다린 뒤 닫는다.
   ② 프리팹 창(id prefab_window): 콘텐츠 브라우저 더블클릭으로 연 뒤 같은 식으로 8 번. 이 창에는 프레임 수 탐침이 없어 열림 탐침(Editor.PanelOpen)과 고정 프레임으로 기다린다.
   머티리얼 창 1/8 은 포커스를 쥔 채 닫아, 초점 씬 · Undo 스택이 메인 씬으로 돌아오는지(Editor.ToolFocusIsMain)도 본다.
@@ -19,6 +21,7 @@
 	<At frame="10"><DevCommand line="layout.reset"/><Variable name="gv_editorProbePanel" value="material"/></At>
 	<!-- 열린 채 시작하는 오버라이드 도구(prefab_editor)가 프리팹 창을 가리지 않게 닫는다 -->
 	<At frame="15"><DevCommand line="panel.close prefab_editor"/></At>
+	<At frame="20"><Remember probe="Editor.ScenePreviewRenderers" as="baseline"/></At>
 
 	<!-- ① 머티리얼 창: 문서를 열어 구 미리보기가 그려지게 한다 -->
 	<At frame="30"><Variable name="gv_editorProbeAsset" value="engine/automation/editor/materialpreview/previewred.material"/></At>
@@ -34,77 +37,101 @@
 	<At frame="109"><Expect probe="Editor.ToolFocusIsMain" equals="0"/></At>
 	<At frame="110">
 		<Remember probe="Editor.MaterialPreviewSceneFrames" as="frames"/>
+		<Remember probe="Editor.ScenePreviewRenderers" as="renderers"/>
 		<DevCommand line="panel.close material"/>
 	</At>
 	<At frame="112">
 		<Expect probe="Editor.PanelOpen" equals="0"/>
 		<Expect probe="Editor.ToolFocusIsMain" equals="1"/>
 	</At>
+	<At frame="113"><WaitUntil probe="Editor.ScenePreviewRenderers" differsFrom="renderers" timeoutFrames="30"/></At>
 	<At frame="130"><DevCommand line="panel.focus material"/></At>
 	<At frame="131"><WaitUntil probe="Editor.MaterialPreviewSceneFrames" differsFrom="frames" timeoutFrames="300"/></At>
+	<At frame="132"><WaitUntil probe="Editor.ScenePreviewRenderers" sameAs="renderers" timeoutFrames="60"/></At>
 
 	<!-- 머티리얼 창 2/8: 닫기 → 닫아 둔 채 20 프레임 → 열기 → 프레임이 다시 오름 → 30 프레임 그린 뒤 다음 닫기 -->
 	<At frame="160">
 		<Remember probe="Editor.MaterialPreviewSceneFrames" as="frames"/>
+		<Remember probe="Editor.ScenePreviewRenderers" as="renderers"/>
 		<DevCommand line="panel.close material"/>
 	</At>
 	<At frame="162"><Expect probe="Editor.PanelOpen" equals="0"/></At>
+	<At frame="163"><WaitUntil probe="Editor.ScenePreviewRenderers" differsFrom="renderers" timeoutFrames="30"/></At>
 	<At frame="180"><DevCommand line="panel.focus material"/></At>
 	<At frame="181"><WaitUntil probe="Editor.MaterialPreviewSceneFrames" differsFrom="frames" timeoutFrames="300"/></At>
+	<At frame="182"><WaitUntil probe="Editor.ScenePreviewRenderers" sameAs="renderers" timeoutFrames="60"/></At>
 
 	<!-- 머티리얼 창 3/8: 닫기 → 닫아 둔 채 20 프레임 → 열기 → 프레임이 다시 오름 → 30 프레임 그린 뒤 다음 닫기 -->
 	<At frame="210">
 		<Remember probe="Editor.MaterialPreviewSceneFrames" as="frames"/>
+		<Remember probe="Editor.ScenePreviewRenderers" as="renderers"/>
 		<DevCommand line="panel.close material"/>
 	</At>
 	<At frame="212"><Expect probe="Editor.PanelOpen" equals="0"/></At>
+	<At frame="213"><WaitUntil probe="Editor.ScenePreviewRenderers" differsFrom="renderers" timeoutFrames="30"/></At>
 	<At frame="230"><DevCommand line="panel.focus material"/></At>
 	<At frame="231"><WaitUntil probe="Editor.MaterialPreviewSceneFrames" differsFrom="frames" timeoutFrames="300"/></At>
+	<At frame="232"><WaitUntil probe="Editor.ScenePreviewRenderers" sameAs="renderers" timeoutFrames="60"/></At>
 
 	<!-- 머티리얼 창 4/8: 닫기 → 닫아 둔 채 20 프레임 → 열기 → 프레임이 다시 오름 → 30 프레임 그린 뒤 다음 닫기 -->
 	<At frame="260">
 		<Remember probe="Editor.MaterialPreviewSceneFrames" as="frames"/>
+		<Remember probe="Editor.ScenePreviewRenderers" as="renderers"/>
 		<DevCommand line="panel.close material"/>
 	</At>
 	<At frame="262"><Expect probe="Editor.PanelOpen" equals="0"/></At>
+	<At frame="263"><WaitUntil probe="Editor.ScenePreviewRenderers" differsFrom="renderers" timeoutFrames="30"/></At>
 	<At frame="280"><DevCommand line="panel.focus material"/></At>
 	<At frame="281"><WaitUntil probe="Editor.MaterialPreviewSceneFrames" differsFrom="frames" timeoutFrames="300"/></At>
+	<At frame="282"><WaitUntil probe="Editor.ScenePreviewRenderers" sameAs="renderers" timeoutFrames="60"/></At>
 
 	<!-- 머티리얼 창 5/8: 닫기 → 닫아 둔 채 20 프레임 → 열기 → 프레임이 다시 오름 → 30 프레임 그린 뒤 다음 닫기 -->
 	<At frame="310">
 		<Remember probe="Editor.MaterialPreviewSceneFrames" as="frames"/>
+		<Remember probe="Editor.ScenePreviewRenderers" as="renderers"/>
 		<DevCommand line="panel.close material"/>
 	</At>
 	<At frame="312"><Expect probe="Editor.PanelOpen" equals="0"/></At>
+	<At frame="313"><WaitUntil probe="Editor.ScenePreviewRenderers" differsFrom="renderers" timeoutFrames="30"/></At>
 	<At frame="330"><DevCommand line="panel.focus material"/></At>
 	<At frame="331"><WaitUntil probe="Editor.MaterialPreviewSceneFrames" differsFrom="frames" timeoutFrames="300"/></At>
+	<At frame="332"><WaitUntil probe="Editor.ScenePreviewRenderers" sameAs="renderers" timeoutFrames="60"/></At>
 
 	<!-- 머티리얼 창 6/8: 닫기 → 닫아 둔 채 20 프레임 → 열기 → 프레임이 다시 오름 → 30 프레임 그린 뒤 다음 닫기 -->
 	<At frame="360">
 		<Remember probe="Editor.MaterialPreviewSceneFrames" as="frames"/>
+		<Remember probe="Editor.ScenePreviewRenderers" as="renderers"/>
 		<DevCommand line="panel.close material"/>
 	</At>
 	<At frame="362"><Expect probe="Editor.PanelOpen" equals="0"/></At>
+	<At frame="363"><WaitUntil probe="Editor.ScenePreviewRenderers" differsFrom="renderers" timeoutFrames="30"/></At>
 	<At frame="380"><DevCommand line="panel.focus material"/></At>
 	<At frame="381"><WaitUntil probe="Editor.MaterialPreviewSceneFrames" differsFrom="frames" timeoutFrames="300"/></At>
+	<At frame="382"><WaitUntil probe="Editor.ScenePreviewRenderers" sameAs="renderers" timeoutFrames="60"/></At>
 
 	<!-- 머티리얼 창 7/8: 닫기 → 닫아 둔 채 20 프레임 → 열기 → 프레임이 다시 오름 → 30 프레임 그린 뒤 다음 닫기 -->
 	<At frame="410">
 		<Remember probe="Editor.MaterialPreviewSceneFrames" as="frames"/>
+		<Remember probe="Editor.ScenePreviewRenderers" as="renderers"/>
 		<DevCommand line="panel.close material"/>
 	</At>
 	<At frame="412"><Expect probe="Editor.PanelOpen" equals="0"/></At>
+	<At frame="413"><WaitUntil probe="Editor.ScenePreviewRenderers" differsFrom="renderers" timeoutFrames="30"/></At>
 	<At frame="430"><DevCommand line="panel.focus material"/></At>
 	<At frame="431"><WaitUntil probe="Editor.MaterialPreviewSceneFrames" differsFrom="frames" timeoutFrames="300"/></At>
+	<At frame="432"><WaitUntil probe="Editor.ScenePreviewRenderers" sameAs="renderers" timeoutFrames="60"/></At>
 
 	<!-- 머티리얼 창 8/8: 닫기 → 닫아 둔 채 20 프레임 → 열기 → 프레임이 다시 오름 → 30 프레임 그린 뒤 다음 닫기 -->
 	<At frame="460">
 		<Remember probe="Editor.MaterialPreviewSceneFrames" as="frames"/>
+		<Remember probe="Editor.ScenePreviewRenderers" as="renderers"/>
 		<DevCommand line="panel.close material"/>
 	</At>
 	<At frame="462"><Expect probe="Editor.PanelOpen" equals="0"/></At>
+	<At frame="463"><WaitUntil probe="Editor.ScenePreviewRenderers" differsFrom="renderers" timeoutFrames="30"/></At>
 	<At frame="480"><DevCommand line="panel.focus material"/></At>
 	<At frame="481"><WaitUntil probe="Editor.MaterialPreviewSceneFrames" differsFrom="frames" timeoutFrames="300"/></At>
+	<At frame="482"><WaitUntil probe="Editor.ScenePreviewRenderers" sameAs="renderers" timeoutFrames="60"/></At>
 
 	<!-- 머티리얼 창 반복이 끝났다 — 처음 하나 + 다시 연 8 개의 렌더러가 섰어야 한다. 렌더러가 안 내려갔으면 새로 서지 않아 줄이 모자란다 -->
 	<At frame="510">
@@ -122,52 +149,68 @@
 	<At frame="605"><Expect probe="Editor.PanelDirty" equals="0"/></At>
 
 	<!-- 프리팹 창 1/8: 깨끗한 창이라 확인 없이 닫힌다 -->
-	<At frame="620"><DevCommand line="panel.close prefab_window"/></At>
+	<At frame="620"><Remember probe="Editor.ScenePreviewRenderers" as="renderers"/><DevCommand line="panel.close prefab_window"/></At>
 	<At frame="622"><Expect probe="Editor.PanelOpen" equals="0"/></At>
+	<At frame="623"><WaitUntil probe="Editor.ScenePreviewRenderers" differsFrom="renderers" timeoutFrames="30"/></At>
 	<At frame="640"><DevCommand line="panel.focus prefab_window"/></At>
 	<At frame="641"><WaitUntil probe="Editor.PanelOpen" equals="1" timeoutFrames="120"/></At>
+	<At frame="642"><WaitUntil probe="Editor.ScenePreviewRenderers" sameAs="renderers" timeoutFrames="60"/></At>
 
 	<!-- 프리팹 창 2/8: 깨끗한 창이라 확인 없이 닫힌다 -->
-	<At frame="670"><DevCommand line="panel.close prefab_window"/></At>
+	<At frame="670"><Remember probe="Editor.ScenePreviewRenderers" as="renderers"/><DevCommand line="panel.close prefab_window"/></At>
 	<At frame="672"><Expect probe="Editor.PanelOpen" equals="0"/></At>
+	<At frame="673"><WaitUntil probe="Editor.ScenePreviewRenderers" differsFrom="renderers" timeoutFrames="30"/></At>
 	<At frame="690"><DevCommand line="panel.focus prefab_window"/></At>
 	<At frame="691"><WaitUntil probe="Editor.PanelOpen" equals="1" timeoutFrames="120"/></At>
+	<At frame="692"><WaitUntil probe="Editor.ScenePreviewRenderers" sameAs="renderers" timeoutFrames="60"/></At>
 
 	<!-- 프리팹 창 3/8: 깨끗한 창이라 확인 없이 닫힌다 -->
-	<At frame="720"><DevCommand line="panel.close prefab_window"/></At>
+	<At frame="720"><Remember probe="Editor.ScenePreviewRenderers" as="renderers"/><DevCommand line="panel.close prefab_window"/></At>
 	<At frame="722"><Expect probe="Editor.PanelOpen" equals="0"/></At>
+	<At frame="723"><WaitUntil probe="Editor.ScenePreviewRenderers" differsFrom="renderers" timeoutFrames="30"/></At>
 	<At frame="740"><DevCommand line="panel.focus prefab_window"/></At>
 	<At frame="741"><WaitUntil probe="Editor.PanelOpen" equals="1" timeoutFrames="120"/></At>
+	<At frame="742"><WaitUntil probe="Editor.ScenePreviewRenderers" sameAs="renderers" timeoutFrames="60"/></At>
 
 	<!-- 프리팹 창 4/8: 깨끗한 창이라 확인 없이 닫힌다 -->
-	<At frame="770"><DevCommand line="panel.close prefab_window"/></At>
+	<At frame="770"><Remember probe="Editor.ScenePreviewRenderers" as="renderers"/><DevCommand line="panel.close prefab_window"/></At>
 	<At frame="772"><Expect probe="Editor.PanelOpen" equals="0"/></At>
+	<At frame="773"><WaitUntil probe="Editor.ScenePreviewRenderers" differsFrom="renderers" timeoutFrames="30"/></At>
 	<At frame="790"><DevCommand line="panel.focus prefab_window"/></At>
 	<At frame="791"><WaitUntil probe="Editor.PanelOpen" equals="1" timeoutFrames="120"/></At>
+	<At frame="792"><WaitUntil probe="Editor.ScenePreviewRenderers" sameAs="renderers" timeoutFrames="60"/></At>
 
 	<!-- 프리팹 창 5/8: 깨끗한 창이라 확인 없이 닫힌다 -->
-	<At frame="820"><DevCommand line="panel.close prefab_window"/></At>
+	<At frame="820"><Remember probe="Editor.ScenePreviewRenderers" as="renderers"/><DevCommand line="panel.close prefab_window"/></At>
 	<At frame="822"><Expect probe="Editor.PanelOpen" equals="0"/></At>
+	<At frame="823"><WaitUntil probe="Editor.ScenePreviewRenderers" differsFrom="renderers" timeoutFrames="30"/></At>
 	<At frame="840"><DevCommand line="panel.focus prefab_window"/></At>
 	<At frame="841"><WaitUntil probe="Editor.PanelOpen" equals="1" timeoutFrames="120"/></At>
+	<At frame="842"><WaitUntil probe="Editor.ScenePreviewRenderers" sameAs="renderers" timeoutFrames="60"/></At>
 
 	<!-- 프리팹 창 6/8: 깨끗한 창이라 확인 없이 닫힌다 -->
-	<At frame="870"><DevCommand line="panel.close prefab_window"/></At>
+	<At frame="870"><Remember probe="Editor.ScenePreviewRenderers" as="renderers"/><DevCommand line="panel.close prefab_window"/></At>
 	<At frame="872"><Expect probe="Editor.PanelOpen" equals="0"/></At>
+	<At frame="873"><WaitUntil probe="Editor.ScenePreviewRenderers" differsFrom="renderers" timeoutFrames="30"/></At>
 	<At frame="890"><DevCommand line="panel.focus prefab_window"/></At>
 	<At frame="891"><WaitUntil probe="Editor.PanelOpen" equals="1" timeoutFrames="120"/></At>
+	<At frame="892"><WaitUntil probe="Editor.ScenePreviewRenderers" sameAs="renderers" timeoutFrames="60"/></At>
 
 	<!-- 프리팹 창 7/8: 깨끗한 창이라 확인 없이 닫힌다 -->
-	<At frame="920"><DevCommand line="panel.close prefab_window"/></At>
+	<At frame="920"><Remember probe="Editor.ScenePreviewRenderers" as="renderers"/><DevCommand line="panel.close prefab_window"/></At>
 	<At frame="922"><Expect probe="Editor.PanelOpen" equals="0"/></At>
+	<At frame="923"><WaitUntil probe="Editor.ScenePreviewRenderers" differsFrom="renderers" timeoutFrames="30"/></At>
 	<At frame="940"><DevCommand line="panel.focus prefab_window"/></At>
 	<At frame="941"><WaitUntil probe="Editor.PanelOpen" equals="1" timeoutFrames="120"/></At>
+	<At frame="942"><WaitUntil probe="Editor.ScenePreviewRenderers" sameAs="renderers" timeoutFrames="60"/></At>
 
 	<!-- 프리팹 창 8/8: 깨끗한 창이라 확인 없이 닫힌다 -->
-	<At frame="970"><DevCommand line="panel.close prefab_window"/></At>
+	<At frame="970"><Remember probe="Editor.ScenePreviewRenderers" as="renderers"/><DevCommand line="panel.close prefab_window"/></At>
 	<At frame="972"><Expect probe="Editor.PanelOpen" equals="0"/></At>
+	<At frame="973"><WaitUntil probe="Editor.ScenePreviewRenderers" differsFrom="renderers" timeoutFrames="30"/></At>
 	<At frame="990"><DevCommand line="panel.focus prefab_window"/></At>
 	<At frame="991"><WaitUntil probe="Editor.PanelOpen" equals="1" timeoutFrames="120"/></At>
+	<At frame="992"><WaitUntil probe="Editor.ScenePreviewRenderers" sameAs="renderers" timeoutFrames="60"/></At>
 
 	<!-- ③ 마지막: 프리팹 창을 닫고도 에디터가 정상이다 -->
 	<At frame="1020">
@@ -178,6 +221,7 @@
 	<At frame="1025"><DevCommand line="panel.focus scene_view"/></At>
 	<At frame="1045">
 		<Expect probe="Editor.PanelOpen" equals="0"/>
+		<Expect probe="Editor.ScenePreviewRenderers" sameAs="baseline"/>
 		<EditorClick mark="hierarchy.filter"/>
 		<CaptureEditorUI file="previewreopen/final.png"/>
 	</At>

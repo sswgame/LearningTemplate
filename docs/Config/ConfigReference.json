@@ -495,6 +495,15 @@
        "description": "톤 매핑"
       },
       {
+       "name": "_shaderSky",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "하늘 그러데이션(스카이 패스) — 깊이 1 의 풀스크린 삼각형"
+      },
+      {
        "name": "_shaderToon",
        "type": "DataPath",
        "default": "",

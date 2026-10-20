@@ -24,7 +24,7 @@ namespace sw::editor
 {
     /**
      * @brief 미리보기 씬에 스폰하는 조명 환경 프리셋입니다. 씬 안의 오브젝트로 스폰하므로 따로 된 "환경" 타입이 없습니다(`EditorMultiWorld.md` 2.1).
-     * @note 스카이는 없다 — 엔진에 스카이 컴포넌트가 없어 배경은 파이프라인의 SceneColor 클리어 색이다.
+     * @note 하늘은 `SkyComponent` 하나다(색은 컴포넌트의 기본값). `_bSky` 를 끄면 배경은 파이프라인의 SceneColor 클리어 색이다.
      */
     struct EditorPreviewEnvironment
     {
@@ -36,6 +36,7 @@ namespace sw::editor
         float32 _floorHeight{ -0.5f }; ///< 바닥 높이 — 지름 1 의 내장 도형이 원점에 서면 바닥에 닿는다
         bool    _bDirectionalLight{ true };
         bool    _bFloor{ true };
+        bool    _bSky{ true }; ///< 하늘(`SkyComponent`) — 빈 곳을 그러데이션으로 칠한다
     };
 } // namespace sw::editor
 

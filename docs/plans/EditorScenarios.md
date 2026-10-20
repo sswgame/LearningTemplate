@@ -23,7 +23,7 @@
 | 캐릭터 편집 | `charactereditor` | `game/shooter3d/automation/charactereditorscene`(외형 → 데이터 프리셋 내보내기 → 씬의 외형 컴포넌트가 그 id → 플레이 조립) |
 | 입력 맵 창 | `inputmapedit` · `inputmaptaps` · `panelclose`(문서 패널이 아닌 패널의 닫기 확인 · 창 크기를 바꾼 뒤에도 확인이 호스트 창 가운데에 뜬다) | — |
 | UI 미리보기 · 디자이너 | `uipreview` · `uipreviewdesigner` · `uiscale` | — |
-| 다중 월드 미리보기 | `previewscene` · `previewreopen`(머티리얼 · 프리팹 창을 연 채 8 번 여닫기, 렌더러 내리기) | `previewswap`(창을 연 채 `SwapBackend other` → `start`) |
+| 다중 월드 미리보기 | `previewscene` · `previewreopen`(머티리얼 · 프리팹 창을 연 채 8 번 여닫기, 렌더러 내리기 — 탐침 `Editor.ScenePreviewRenderers` 가 닫을 때 줄고 열 때 돌아오는지) | `previewswap`(창을 연 채 `SwapBackend other` → `start`, 교체 뒤 렌더러 수가 교체 앞과 같은지) |
 | 머티리얼 · 셰이더 | `materialpreview` | — |
 | 애니메이션 · 타임라인 | `animgraphedit` · `animgraphsave` · `sequencerkeys` · `curveedit` | — |
 | 대화 · 기믹 그래프 | `dialoguegraph` · `dialoguegraphsave` · `gimmickgraph` · `graphaddnode` | — |

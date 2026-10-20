@@ -35,6 +35,7 @@
                      _shaderSsao="engine/shaders/ssao.hlsl"
                      _shaderTaa="engine/shaders/taa.hlsl"
                      _shaderTonemap="engine/shaders/tonemap.hlsl"
+                     _shaderSky="engine/shaders/sky.hlsl"
                      _shaderToon="engine/shaders/toon.hlsl"
                      _shaderCanvas="engine/shaders/canvas.hlsl"
                      _shaderSprite2D="engine/shaders/sprite2d.hlsl"

@@ -167,6 +167,13 @@ namespace sw
                         info._flags                   = Flag::kDepthTest | Flag::kDepthWrite | Flag::kDrawsSceneMeshes | Flag::kUsesMaterialShader | Flag::kCullFront;
                         break;
                     }
+                    case RenderPassType::Sky:
+                    {
+                        // 하늘 — 깊이 1 의 풀스크린 삼각형을 깊이 테스트(LessEqual)로 그려 빈 곳만 칠한다. 깊이는 쓰지 않는다(전용 실행: 하늘이 없거나 표면 값 보기면 건너뛴다).
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderSky;
+                        info._flags          = Flag::kDepthTest;
+                        break;
+                    }
                     case RenderPassType::Canvas:
                     {
                         // 화면 2D — 사각형 구조버퍼(t11)를 인스턴스로 그린다(전용 실행: CanvasRenderer). 깊이 없음 · 프리멀티플라이 블렌드.
