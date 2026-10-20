@@ -30,20 +30,9 @@ namespace sw
         {
             static int32 toMinuteOfDay( int32 absoluteMinute ) { return absoluteMinute % kScheduleMinutesPerDay; }
 
-            static uint64 hashBytes( uint64 hash, const void* pData, size_t size )
-            {
-                const uint8* pByte = static_cast<const uint8*>( pData );
-                for ( size_t byteIndex = 0; byteIndex < size; ++byteIndex )
-                {
-                    hash ^= pByte[byteIndex];
-                    hash *= HashUtil::kFnvPrime64;
-                }
-                return hash;
-            }
-
             static uint64 hashName( uint64 hash, const hashed_string& name )
             {
-                return hashBytes( hash, name.c_str(), name.size() );
+                return HashUtil::appendBytes64( hash, name.c_str(), name.size() );
             }
 
             static uint32 hashNameToKey( const hashed_string& name ) { return static_cast<uint32>( hashName( HashUtil::kFnvOffset64, name ) ); }

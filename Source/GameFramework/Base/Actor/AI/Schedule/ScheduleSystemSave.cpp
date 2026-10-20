@@ -31,26 +31,15 @@ namespace sw
 
             static int32 toDay( int32 absoluteMinute ) { return absoluteMinute / kScheduleMinutesPerDay; }
 
-            static uint64 hashBytes( uint64 hash, const void* pData, size_t size )
-            {
-                const uint8* pByte = static_cast<const uint8*>( pData );
-                for ( size_t byteIndex = 0; byteIndex < size; ++byteIndex )
-                {
-                    hash ^= pByte[byteIndex];
-                    hash *= HashUtil::kFnvPrime64;
-                }
-                return hash;
-            }
-
             template <typename T>
             static uint64 hashValue( uint64 hash, const T& value )
             {
-                return hashBytes( hash, &value, sizeof( T ) );
+                return HashUtil::appendBytes64( hash, &value, sizeof( T ) );
             }
 
             static uint64 hashName( uint64 hash, const hashed_string& name )
             {
-                return hashBytes( hash, name.c_str(), name.size() );
+                return HashUtil::appendBytes64( hash, name.c_str(), name.size() );
             }
 
             static uint64 hashPosition( uint64 hash, const float3& position )
@@ -308,7 +297,7 @@ namespace sw
         fillNetSummary( listSummary );
         vector<uint8> bytes;
         encodeNetSummary( _minute, listSummary, bytes );
-        uint64 hash = Internal::hashBytes( HashUtil::kFnvOffset64, bytes.data(), bytes.size() );
+        uint64 hash = HashUtil::appendBytes64( HashUtil::kFnvOffset64, bytes.data(), bytes.size() );
         for ( const NpcRuntime& npc : _listNpc )
         {
             hash = Internal::hashValue( hash, npc._originMinute );

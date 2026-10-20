@@ -2,6 +2,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/YawUtil.h"
 
 #include "Engine/Animation/AnimationClip.h"
 #include "Engine/Animation/Codec/Raw/RawAnimationCodec.h"
@@ -80,12 +81,6 @@ namespace
             return pAnimator;
         }
 
-        static float32 computeYaw( const SceneComponent& scene )
-        {
-            const float3 forward = float3::transformVector( float3{ 0.0f, 0.0f, 1.0f }, scene.getWorldMatrix() );
-            return MathUtil::atan2( forward._x, forward._z );
-        }
-
         static RigidBodyComponent* spawnStaticBox( GameObjectManager& manager, const utf8* pName, const float3& position, const float3& halfExtents )
         {
             GameObject*         pObject = manager.createGameObject( hashed_string( pName ) );
@@ -144,7 +139,7 @@ SW_TEST_CASE( MotionWarpingTest, WarpWindowReachesTargetAtWindowEnd )
     SW_EXPECT_NEAR_EQUAL( 0.5f, position._x, 1e-3f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, position._y, 1e-3f );
     SW_EXPECT_NEAR_EQUAL( 2.0f, position._z, 1e-3f );
-    SW_EXPECT_NEAR_EQUAL( MathUtil::kHalfPi, TestMotionWarpingInternal::computeYaw( *pRoot ), 1e-3f );
+    SW_EXPECT_NEAR_EQUAL( MathUtil::kHalfPi, YawUtil::fromWorld( pRoot->getWorldMatrix() ), 1e-3f );
     SW_EXPECT_EQUAL( 0u, pWarping->getOpenWindowCount() );
 
     // 창 밖 — 클립 그대로(요 90° 라 +Z 루트 모션이 월드 +X 로 0.125 m).

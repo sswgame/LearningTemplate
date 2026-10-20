@@ -546,12 +546,6 @@ namespace sw
             SW_LOG_ERROR( "Gimmick circuit state has a value outside its declared range at step %#", _stepIndex );
             SW_ASSERT( bWritten );
         }
-        uint64       hash  = HashUtil::kFnvOffset64;
-        const uint8* pByte = writer.getBytes().data();
-        for ( int32 index = 0; index < writer.getByteCount(); ++index )
-        {
-            hash = ( hash ^ pByte[index] ) * HashUtil::kFnvPrime64;
-        }
-        return hash;
+        return HashUtil::appendBytes64( HashUtil::kFnvOffset64, writer.getBytes().data(), static_cast<size_t>( writer.getByteCount() ) );
     }
 } // namespace sw

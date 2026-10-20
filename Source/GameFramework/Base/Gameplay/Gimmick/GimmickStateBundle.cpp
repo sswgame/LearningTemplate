@@ -90,13 +90,7 @@ namespace sw
         BitWriter                   writer;
         [[maybe_unused]] const bool bWritten = FixedLayout::write( *this, writer );
         SW_ASSERT( bWritten ); // 항목 수는 kMaxEntryCount, 회로 상태는 populate · registerKind 가 상한 안으로 막았다
-        uint64       hash  = HashUtil::kFnvOffset64;
-        const uint8* pByte = writer.getBytes().data();
-        for ( int32 index = 0; index < writer.getByteCount(); ++index )
-        {
-            hash = ( hash ^ pByte[index] ) * HashUtil::kFnvPrime64;
-        }
-        return hash;
+        return HashUtil::appendBytes64( HashUtil::kFnvOffset64, writer.getBytes().data(), static_cast<size_t>( writer.getByteCount() ) );
     }
 
     const GimmickStateEntry* GimmickStateBundle::findEntry( uint64 ownerKey ) const

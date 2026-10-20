@@ -2,6 +2,7 @@
 
 #include "Engine/Serialization/Fixed/FixedLayout.h"
 
+#include "Core/Common/BitUtil.h"
 #include "Core/Common/HashUtil.h"
 #include "Core/Container/DynamicBitset.h"
 #include "Core/Log/Logger.h"
@@ -20,24 +21,13 @@ namespace sw
             /** @brief 의존 확인이 따라 내려가는 깊이 상한입니다. 서로를 담는 타입이 끝없이 돌지 않게 합니다. */
             static constexpr int32 kMaxDependencyDepth = 32;
 
-            static uint64 appendHashBytes( uint64 hash, const void* pData, const size_t byteCount ) noexcept
-            {
-                const uint8* pBytes = static_cast<const uint8*>( pData );
-                for ( size_t index = 0; index < byteCount; ++index )
-                {
-                    hash ^= pBytes[index];
-                    hash *= HashUtil::kFnvPrime64;
-                }
-                return hash;
-            }
-
             /** @brief 정수를 낮은 바이트부터 섞습니다. 호스트 바이트 순서와 무관합니다. */
             static uint64 appendHashInteger( uint64 hash, uint64 value ) noexcept
             {
                 for ( int32 index = 0; index < 8; ++index )
                 {
                     const uint8 byte = static_cast<uint8>( value & 0xFFu );
-                    hash             = appendHashBytes( hash, &byte, 1 );
+                    hash             = HashUtil::appendBytes64( hash, &byte, 1 );
                     value >>= 8;
                 }
                 return hash;
@@ -165,17 +155,12 @@ namespace sw
 
     void FixedCodecUtil::writeFloat64( BitWriter& writer, const float64 value )
     {
-        uint64 bits = 0;
-        std::memcpy( &bits, &value, sizeof( bits ) );
-        writeRawBits( writer, bits, 64 );
+        writeRawBits( writer, BitUtil::doubleToBits( value ), 64 );
     }
 
     float64 FixedCodecUtil::readFloat64( BitReader& reader )
     {
-        const uint64 bits  = readRawBits( reader, 64 );
-        float64      value = 0.0;
-        std::memcpy( &value, &bits, sizeof( value ) );
-        return value;
+        return BitUtil::bitsToDouble( readRawBits( reader, 64 ) );
     }
 
     bool FixedCodecUtil::writeBoundedFloat64( BitWriter& writer, const float64 value, const float64 minValue, const float64 maxValue )
@@ -235,20 +220,12 @@ namespace sw
 
     bool FixedCodecUtil::isBitEqual( const float32 a, const float32 b ) noexcept
     {
-        uint32 bitsA = 0;
-        uint32 bitsB = 0;
-        std::memcpy( &bitsA, &a, sizeof( bitsA ) );
-        std::memcpy( &bitsB, &b, sizeof( bitsB ) );
-        return bitsA == bitsB;
+        return BitUtil::floatToBits( a ) == BitUtil::floatToBits( b );
     }
 
     bool FixedCodecUtil::isBitEqual( const float64 a, const float64 b ) noexcept
     {
-        uint64 bitsA = 0;
-        uint64 bitsB = 0;
-        std::memcpy( &bitsA, &a, sizeof( bitsA ) );
-        std::memcpy( &bitsB, &b, sizeof( bitsB ) );
-        return bitsA == bitsB;
+        return BitUtil::doubleToBits( a ) == BitUtil::doubleToBits( b );
     }
 
     bool FixedCodecUtil::writeCount( BitWriter& writer, const size_t count, const uint32 maxCount )
@@ -383,7 +360,7 @@ namespace sw
     {
         uint64 hash = HashUtil::kFnvOffset64;
         hash        = FixedLayoutInternal::appendHashInteger( hash, version );
-        hash        = FixedLayoutInternal::appendHashBytes( hash, canonical.data(), canonical.size() );
+        hash        = HashUtil::appendBytes64( hash, canonical.data(), canonical.size() );
         for ( const uint64 nestedHash : listNestedHash )
         {
             hash = FixedLayoutInternal::appendHashInteger( hash, nestedHash );

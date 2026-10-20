@@ -5,6 +5,8 @@
 #pragma once
 #include "Core/Common/Types.h"
 
+#include <bit>
+
 namespace sw
 {
     /**
@@ -25,8 +27,22 @@ namespace sw
         {
             return ( value >> ( byteIndex * 8u ) ) & 0xFFu;
         }
+
+        /** @brief float32 의 IEEE 754 비트 패턴입니다(저장 · 해시 · 비트 단위 비교용). 값이 NaN 이어도 비트를 그대로 돌려줍니다. */
+        [[nodiscard]] static constexpr uint32 floatToBits( const float32 value ) noexcept { return std::bit_cast<uint32>( value ); }
+
+        /** @brief `floatToBits` 의 역입니다. */
+        [[nodiscard]] static constexpr float32 bitsToFloat( const uint32 bits ) noexcept { return std::bit_cast<float32>( bits ); }
+
+        /** @brief float64 의 IEEE 754 비트 패턴입니다. */
+        [[nodiscard]] static constexpr uint64 doubleToBits( const float64 value ) noexcept { return std::bit_cast<uint64>( value ); }
+
+        /** @brief `doubleToBits` 의 역입니다. */
+        [[nodiscard]] static constexpr float64 bitsToDouble( const uint64 bits ) noexcept { return std::bit_cast<float64>( bits ); }
     };
 
     static_assert( BitUtil::packBytes( 0x11u, 0x22u, 0x33u, 0x44u ) == 0x11223344u, "packBytes 는 높은 바이트부터다" );
     static_assert( BitUtil::getByte( 0x11223344u, 3u ) == 0x11u && BitUtil::getByte( 0x11223344u, 0u ) == 0x44u, "getByte 의 0 은 가장 낮은 바이트다" );
+    static_assert( BitUtil::floatToBits( 1.0f ) == 0x3F800000u && BitUtil::bitsToFloat( 0x3F800000u ) == 1.0f, "float32 비트는 IEEE 754 다" );
+    static_assert( BitUtil::doubleToBits( 1.0 ) == 0x3FF0000000000000ull && BitUtil::bitsToDouble( 0x3FF0000000000000ull ) == 1.0, "float64 비트는 IEEE 754 다" );
 } // namespace sw

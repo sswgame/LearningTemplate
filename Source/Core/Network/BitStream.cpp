@@ -2,6 +2,7 @@
 
 #include "Core/Network/BitStream.h"
 
+#include "Core/Common/BitUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/VectorMath.h"
 
@@ -112,9 +113,7 @@ namespace sw
 
     void BitWriter::writeFloat( float32 value )
     {
-        uint32 bits = 0;
-        std::memcpy( &bits, &value, sizeof( bits ) );
-        writeBits( bits, 32 );
+        writeBits( BitUtil::floatToBits( value ), 32 );
     }
 
     bool BitWriter::writeQuantizedFloat( float32 value, float32 minValue, float32 maxValue, float32 resolution )
@@ -275,10 +274,7 @@ namespace sw
 
     float32 BitReader::readFloat()
     {
-        const uint32 bits  = readBits( 32 );
-        float32      value = 0.0f;
-        std::memcpy( &value, &bits, sizeof( value ) );
-        return value;
+        return BitUtil::bitsToFloat( readBits( 32 ) );
     }
 
     bool BitReader::readQuantizedFloat( float32 minValue, float32 maxValue, float32 resolution, float32& outValue )
