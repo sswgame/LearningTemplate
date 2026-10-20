@@ -17,6 +17,21 @@ namespace sw
 namespace sw::editor
 {
     /**
+     * @brief 기본 도킹 배치(`EditorDockLayout::applyDefaultDockLayout`)에서 패널이 붙는 영역입니다. 패널이 스스로 밝힙니다.
+     * @details Godot 의 도크 기본 슬롯, 언리얼 탭 스포너의 기본 레이아웃과 같다. 배치가 패널 제목을 문자열로 따로 적어 두면
+     *          제목이 바뀐 패널이 말없이 떠 있는 창이 된다(프리팹 오버라이드 도구가 큰 창으로 씬 뷰를 덮었다). 그래서 배치는 등록된 패널의 제목만 쓴다.
+     */
+    enum class EditorDockSlot : uint8
+    {
+        Floating = 0, ///< 붙이지 않는다 — 떠 있는 창으로 연다
+        Left,
+        Right,
+        Center,
+        CenterFront, ///< 가운데 영역의 앞 탭(Scene). 한 패널만 쓴다
+        Bottom,
+    };
+
+    /**
      * @class IEditorPanel
      * @brief 도킹 가능한 ImGui 패널입니다. 파생 클래스는 drawContent() 만 구현합니다.
      */
@@ -46,6 +61,8 @@ namespace sw::editor
         virtual void shutdown( IRHIDevice* /*rhiDevice*/ ) {}
         /** @brief 도구 패널이면 true 입니다. 도구 패널은 닫힌 채, 핵심 패널은 열린 채 시작합니다. */
         virtual bool isToolPanel() const { return false; }
+        /** @brief 기본 배치에서 붙을 영역입니다. 기본은 떠 있는 창입니다. */
+        virtual EditorDockSlot getDefaultDockSlot() const { return EditorDockSlot::Floating; }
         /** @brief 마지막 draw 에서 이 패널 창에 포커스가 있었으면 true 입니다. */
         bool isWindowFocused() const { return _bWindowFocused; }
 

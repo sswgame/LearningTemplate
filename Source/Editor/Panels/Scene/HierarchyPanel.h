@@ -31,7 +31,8 @@ namespace sw::editor
         // 1) IEditorPanel — 제목/그리기
         // ------------------------------------------------------------------------------
         /** @brief 창 제목을 반환합니다. */
-        const utf8* getPanelTitle() const override { return "Hierarchy"; }
+        const utf8*    getPanelTitle() const override { return "Hierarchy"; }
+        EditorDockSlot getDefaultDockSlot() const override { return EditorDockSlot::Left; }
         /** @brief Hierarchy UI를 그립니다. */
         void drawContent() override;
 

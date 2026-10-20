@@ -36,7 +36,8 @@ namespace sw::editor
         // 1) IEditorPanel: 제목과 그리기
         // ------------------------------------------------------------------------------
         /** @brief 창 제목을 반환합니다. */
-        const utf8* getPanelTitle() const override { return "Content Browser"; }
+        const utf8*    getPanelTitle() const override { return "Content Browser"; }
+        EditorDockSlot getDefaultDockSlot() const override { return EditorDockSlot::Bottom; }
         /** @brief 소스 트리, 브레드크럼, 애셋 타일/리스트를 그립니다. */
         void drawContent() override;
         /** @brief 썸네일 캐시가 가진 텍스처와 ImGui 등록을 해제합니다. */

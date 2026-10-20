@@ -52,7 +52,8 @@ namespace sw::editor
         // 1) IEditorPanel: 제목과 그리기
         // ------------------------------------------------------------------------------
         /** @brief 패널 제목을 반환합니다. */
-        const utf8* getPanelTitle() const override { return "Inspector"; }
+        const utf8*    getPanelTitle() const override { return "Inspector"; }
+        EditorDockSlot getDefaultDockSlot() const override { return EditorDockSlot::Right; }
         /** @brief 인스펙터 UI 를 그립니다. */
         void drawContent() override;
 

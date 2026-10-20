@@ -37,7 +37,8 @@ namespace sw::editor
         // 2) IEditorPanel: 제목과 그리기
         // ------------------------------------------------------------------------------
         /** @brief 창 제목을 반환합니다. */
-        const utf8* getPanelTitle() const override { return "Output Log"; }
+        const utf8*    getPanelTitle() const override { return "Output Log"; }
+        EditorDockSlot getDefaultDockSlot() const override { return EditorDockSlot::Bottom; }
         /** @brief 필터, 레벨 토글, 로그 목록을 그립니다. */
         void drawContent() override;
         /** @brief 지우기, 필터, 레벨 토글 툴바를 그립니다. */
