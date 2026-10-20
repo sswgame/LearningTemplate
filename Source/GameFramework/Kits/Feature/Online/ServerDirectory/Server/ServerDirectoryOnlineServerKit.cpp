@@ -41,6 +41,7 @@ namespace sw
                     _settings._listServerKind.push_back( "game" );
                 if ( registerHostService( context, entry, &_server, outError ) == false )
                     return false;
+                context._pDirectoryControl = &_service; // GM 키트가 `start` 에서 읽는다. 이 키트의 `start` 가 먼저 돈다(순서 kDirectory)
                 return true;
             }
 

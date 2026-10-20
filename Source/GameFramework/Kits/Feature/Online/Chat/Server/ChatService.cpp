@@ -7,6 +7,7 @@
 
 #include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Base/Online/Identity/AccountPresence.h"
+#include "GameFramework/Base/Online/Report/ServiceReport.h"
 #include "GameFramework/Base/Online/Sanction/ServiceSanction.h"
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 #include "GameFramework/Base/Online/Store/ServiceStore.h"
@@ -29,17 +30,19 @@ namespace sw
                 return s_table;
             }
 
-            static string makeHistoryKey( const ChatMessage& message )
+            static string makeHistoryKey( string_view channelID, int64 sentMs, uint64 serverID, uint64 sequence )
             {
-                string key = message._channelID;
+                string key{ channelID };
                 key.push_back( '/' );
-                ServiceKeyUtil::appendHex64( key, static_cast<uint64>( message._sentMs ) );
+                ServiceKeyUtil::appendHex64( key, static_cast<uint64>( sentMs ) );
                 key.push_back( '.' );
-                ServiceKeyUtil::appendHex64( key, message._serverID );
+                ServiceKeyUtil::appendHex64( key, serverID );
                 key.push_back( '.' );
-                ServiceKeyUtil::appendHex64( key, message._sequence );
+                ServiceKeyUtil::appendHex64( key, sequence );
                 return key;
             }
+
+            static string makeHistoryKey( const ChatMessage& message ) { return makeHistoryKey( message._channelID, message._sentMs, message._serverID, message._sequence ); }
 
             static bool isClientJoinable( ChatChannelKind kind ) { return kind == ChatChannelKind::World || kind == ChatChannelKind::Custom; }
 
@@ -194,6 +197,85 @@ namespace sw
             int32               _maxCount;
             ChatResult          _result;
         };
+
+        /**
+         * @brief 신고한 메시지와 그 앞 기록을 읽어 신고 레코드(`ServiceReportStore`)로 남기는 작업입니다.
+         * @details 기록 키는 고정 폭 16진이라 순번을 하나 올린 키가 신고한 메시지 바로 다음 키입니다. 그 키를 커서로 내림차순으로 읽으면 첫 레코드가 신고한 메시지입니다.
+         *          첫 레코드가 그 메시지가 아니면 기록에 아직 없거나 지워진 것이므로 NotFound 입니다. 문맥 줄은 오래된 것부터 담아 마지막 줄이 신고 대상입니다.
+         */
+        class ChatReportWork final : public IServiceStoreWork
+        {
+        public:
+            ChatReportWork( ChatService* pService, const ChatReportRequest& request, AccountID reporterID, uint64 uniqueID, int64 nowMs, uint64 requestTag )
+                : _request{ request }
+                , _pService{ pService }
+                , _reporterID{ reporterID }
+                , _uniqueID{ uniqueID }
+                , _nowMs{ nowMs }
+                , _requestTag{ requestTag }
+                , _result{ ChatResult::Unavailable }
+            {
+            }
+
+            void run( IServiceStoreConnection& connection ) override
+            {
+                using Internal                   = ChatServiceInternal;
+                const string          messageKey = Internal::makeHistoryKey( _request._channelID, _request._sentMs, _request._serverID, _request._sequence );
+                const string          cursorKey  = Internal::makeHistoryKey( _request._channelID, _request._sentMs, _request._serverID, static_cast<uint64>( _request._sequence ) + 1 );
+                vector<ServiceRecord> listRecord;
+                if ( connection.listRecords( Internal::getHistoryTable(), _request._channelID + "/", cursorKey, ChatLimit::kReportContextCount, true, listRecord ) !=
+                     ServiceStoreResult::Ok )
+                    return;
+                if ( listRecord.empty() || listRecord.front()._key != messageKey )
+                {
+                    _result = ChatResult::NotFound;
+                    return;
+                }
+                ServiceReport report;
+                for ( auto recordIt = listRecord.rbegin(); recordIt != listRecord.rend(); ++recordIt )
+                {
+                    ChatMessage message;
+                    if ( ChatProtocol::decodeRecord( recordIt->_key, recordIt->_bytes, message ) == false )
+                        return; // 손상된 영속 기록은 건너뛰지 않고 이 신고를 실패로 돌려준다
+                    ServiceReportLine& line = report._listLine.emplace_back();
+                    line._senderName        = std::move( message._senderName );
+                    line._text              = std::move( message._text );
+                    line._senderID          = message._senderID;
+                    line._sentMs            = message._sentMs;
+                }
+                report._targetID = report._listLine.back()._senderID;
+                if ( report._targetID == _reporterID )
+                {
+                    _result = ChatResult::Invalid; // 자기 메시지는 신고하지 않는다
+                    return;
+                }
+                report._category   = "chat";
+                report._context    = _request._channelID;
+                report._reason     = _request._reason;
+                report._reporterID = _reporterID;
+                report._createdMs  = _nowMs;
+                ServiceTransaction transaction;
+                if ( ServiceReportStore::stageOpen( transaction, report, _uniqueID ) == false )
+                {
+                    _result = ChatResult::Invalid;
+                    return;
+                }
+                if ( connection.commit( transaction ) == ServiceStoreResult::Ok )
+                    _result = ChatResult::Ok;
+            }
+
+            void complete() override { _pService->applyReport( _requestTag, _result ); }
+
+        private:
+            ChatReportRequest _request;
+            ChatService*      _pService;
+            AccountID         _reporterID;
+            uint64            _uniqueID;
+            int64             _nowMs;
+            uint64            _requestTag;
+            ChatResult        _result;
+        };
+
     } // namespace
 } // namespace sw
 
@@ -209,10 +291,12 @@ namespace sw
         , _busTopicBuffer{}
         , _wordFilter{}
         , _spamGuard{}
+        , _reportGuard{}
         , _settings{}
         , _dependencies{}
         , _serverTopic{}
         , _sequence{ 0 }
+        , _reportSequence{ 0 }
         , _pendingStoreCount{ 0 }
         , _bHistoryWriting{ SW_FALSE }
     {
@@ -234,6 +318,7 @@ namespace sw
         _settings     = settings;
         _serverTopic  = ChatProtocol::makeServerTopic( dependencies._serverID );
         _spamGuard.initialize( settings._spam );
+        _reportGuard.initialize( settings._reportBurst, settings._reportRefillIntervalMs, static_cast<size_t>( settings._spam._maxTrackedAccount ) );
         if ( settings._bannedWordsPath.empty() == false && _wordFilter.loadFile( settings._bannedWordsPath, settings._filterMode ) == false )
             SW_LOG_WARNING( "ChatService: banned word file '%#' not found - chat is not filtered", settings._bannedWordsPath );
         if ( dependencies._pBus != nullptr )
@@ -705,18 +790,7 @@ namespace sw
             completeSimple( ChatMethod::kHistory, requestTag, ChatResult::Invalid );
             return;
         }
-        bool bAllowed = false;
-        if ( kind == ChatChannelKind::Whisper )
-        {
-            bAllowed = isWhisperParticipant( accountID, channelID );
-        }
-        else
-        {
-            const auto memberIt = _mapAccountToMember.find( accountID );
-            bAllowed            = memberIt != _mapAccountToMember.end() &&
-                       std::find( memberIt->second._listChannel.begin(), memberIt->second._listChannel.end(), string( channelID ) ) != memberIt->second._listChannel.end();
-        }
-        if ( bAllowed == false )
+        if ( canReadChannel( accountID, channelID, kind ) == false )
         {
             completeSimple( ChatMethod::kHistory, requestTag, ChatResult::NotMember );
             return;
@@ -735,5 +809,49 @@ namespace sw
         completion._reply._listHistory = std::move( listMessage );
         completion._reply._nextCursor  = std::move( nextCursor );
         _completionBuffer.push( std::move( completion ) );
+    }
+
+    bool ChatService::canReadChannel( AccountID accountID, string_view channelID, ChatChannelKind kind ) const
+    {
+        if ( kind == ChatChannelKind::Whisper )
+            return isWhisperParticipant( accountID, channelID );
+        const auto memberIt = _mapAccountToMember.find( accountID );
+        if ( memberIt == _mapAccountToMember.end() )
+            return false;
+        const vector<string>& listChannel = memberIt->second._listChannel;
+        return std::find( listChannel.begin(), listChannel.end(), string( channelID ) ) != listChannel.end();
+    }
+
+    void ChatService::reportMessage( AccountID accountID, const ChatReportRequest& request, int64 nowMs, uint64 requestTag )
+    {
+        ChatChannelKind kind           = ChatChannelKind::World;
+        const bool      bInvalidReport = ChatChannelID::parseKind( request._channelID, kind ) == false || request._sentMs < 0 ||
+                                    ServiceReportStore::isValidCode( request._reason, ChatLimit::kMaxReasonSize ) == false;
+        if ( bInvalidReport )
+        {
+            completeSimple( ChatMethod::kReport, requestTag, ChatResult::Invalid );
+            return;
+        }
+        if ( canReadChannel( accountID, request._channelID, kind ) == false )
+        {
+            completeSimple( ChatMethod::kReport, requestTag, ChatResult::NotMember );
+            return;
+        }
+        int64 retryAfterMs = 0;
+        if ( _reportGuard.tryConsume( accountID, nowMs, retryAfterMs ) == false )
+        {
+            completeSimple( ChatMethod::kReport, requestTag, ChatResult::RateLimited, retryAfterMs );
+            return;
+        }
+        ++_reportSequence;
+        const uint64 uniqueID = ( _dependencies._serverID << 32 ) | _reportSequence;
+        ++_pendingStoreCount;
+        _dependencies._pStore->submit( sw::make_unique<ChatReportWork>( this, request, accountID, uniqueID, nowMs, requestTag ) );
+    }
+
+    void ChatService::applyReport( uint64 requestTag, ChatResult result )
+    {
+        --_pendingStoreCount;
+        completeSimple( ChatMethod::kReport, requestTag, result );
     }
 } // namespace sw

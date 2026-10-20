@@ -93,11 +93,12 @@ namespace sw
             bool start( OnlineServerKitContext& context, string& outError ) override
             {
                 AdminServiceConfig settings;
-                settings._pDirectory      = context._pAccountDirectory;
-                settings._pSessionControl = context._pSessionControl;
-                settings._pBus            = context._pBus;
-                settings._pPolicy         = context._pLedgerPolicy;
-                settings._pMetricRegistry = context._pMetricRegistry;
+                settings._pDirectory        = context._pAccountDirectory;
+                settings._pSessionControl   = context._pSessionControl;
+                settings._pBus              = context._pBus;
+                settings._pPolicy           = context._pLedgerPolicy;
+                settings._pMetricRegistry   = context._pMetricRegistry;
+                settings._pDirectoryControl = context._pDirectoryControl;
                 if ( _service.initialize( context._pStore, settings ) == false )
                 {
                     outError = "the admin service needs a store";

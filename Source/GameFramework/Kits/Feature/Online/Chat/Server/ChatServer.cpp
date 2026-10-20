@@ -95,6 +95,14 @@ namespace sw
                 _pService->readHistory( context._accountID, request._channelID, request._cursor, request._maxCount, _pendingTable.add( context._token ) );
                 return;
             }
+            case ChatMethod::kReport:
+            {
+                ChatReportRequest request;
+                if ( ChatProtocol::MessageTypes::read( body, request ) != FixedReadResult::Ok )
+                    break;
+                _pService->reportMessage( context._accountID, request, context._nowMs, _pendingTable.add( context._token ) );
+                return;
+            }
             default:
             {
                 (void)host.respondError( context._token, OnlineError::kNotFound );

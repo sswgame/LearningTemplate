@@ -33,6 +33,7 @@ namespace sw
         Send,
         Whisper,
         History,
+        Report,
         Count,
     };
 
@@ -55,6 +56,7 @@ namespace sw
         static constexpr uint16 kSend        = toMethod( ChatMethodName::Send );    ///< 채널 id 와 글을 받아 거른 메시지(되울림)를 돌려준다
         static constexpr uint16 kWhisper     = toMethod( ChatMethodName::Whisper ); ///< 받는 계정과 글을 받아 거른 메시지를 돌려준다
         static constexpr uint16 kHistory     = toMethod( ChatMethodName::History ); ///< 채널 id(귓속말은 기록 키), 커서, 개수를 받아 최근 메시지부터 목록과 다음 커서를 돌려준다
+        static constexpr uint16 kReport      = toMethod( ChatMethodName::Report );  ///< `ChatReportRequest`. 메시지와 그 앞 기록을 스냅숏으로 신고 테이블에 남긴다
         static constexpr uint16 kPushMessage = toPush( ChatPushName::Message );     ///< 메시지 하나이다. 채널 메시지나 귓속말이다
     };
 } // namespace sw
@@ -130,6 +132,29 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @brief 메시지 신고의 요청입니다. 메시지는 (채널, 보낸 시각, 서버, 순번)으로 고르며 받은 `ChatMessage` 의 값을 그대로 넘깁니다.
+     * @details 신고자는 그 채널의 멤버이거나 귓속말의 당사자여야 합니다. 자기 메시지는 신고할 수 없습니다.
+     */
+    REFLECT()
+    struct ChatReportRequest
+    {
+        REFLECT_BODY();
+        PROPERTY( MaxCount = 48 )
+        string _channelID{}; ///< 채널 id 이거나 귓속말 기록 키이다
+        PROPERTY( MaxCount = 64 )
+        string _reason{}; ///< 사유 코드 `[0-9a-z_.]` 이다. 상한은 `ChatLimit::kMaxReasonSize` 와 같다
+        PROPERTY()
+        int64 _sentMs{ 0 };
+        PROPERTY()
+        uint64 _serverID{ 0 };
+        PROPERTY()
+        uint32 _sequence{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 모든 메서드의 응답입니다. 메서드마다 쓰는 필드만 채웁니다. 실패하면 `_result` 와 `_retryAfterMs` 만 의미가 있습니다. */
     REFLECT()
     struct ChatReply
@@ -157,7 +182,7 @@ namespace sw
      */
     struct SW_KIT_API ChatProtocol
     {
-        using MessageTypes = OnlineMessageTypes<ChatChannelRequest, ChatSendRequest, ChatWhisperRequest, ChatHistoryRequest, ChatReply, ChatMessage>;
+        using MessageTypes = OnlineMessageTypes<ChatChannelRequest, ChatSendRequest, ChatWhisperRequest, ChatHistoryRequest, ChatReportRequest, ChatReply, ChatMessage>;
 
         static const OnlineProtocolEntry kOnlineEntry;         ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
         static constexpr int32           kMaxCursorSize = 128; ///< 기록 키의 상한이다. 채널 id 뒤에 `/` 와 16진 문자열 셋이 붙는다
