@@ -15,8 +15,14 @@
 
 **폴더가 곧 성격이다.** 새 스크립트는 "무엇을 하는가" 로 자리를 고른다 — 도구를 찾아 설치하면 `setup/`, 파일을 만들어 내면 `generate/`,
 검사 · 수정이면 `lint/` 의 네 폴더 중 하나, 사람이 가끔 돌리는 실험 도구면 `dev/`, 빌드된 App 을 돌려 그림 · 시간 · 메모리를 기준과 비교하거나 에셋을
-규칙으로 훑으면 `qa/`, 사람과 git 이 부르는 에셋 비교 · 병합이면 `asset/`. 모두 `common/` 만 import 하고 서로는 부르지 않는다
-(`common` 은 위층을 부르지 않는다).
+규칙으로 훑으면 `qa/`, 사람과 git 이 부르는 에셋 비교 · 병합이면 `asset/`.
+
+**import 는 층을 따른다.** 0 `common/`(공용 라이브러리) → 1 `lint/` 의 틀(`LintGate` · `LintFixer` · `LintReport` · `LintCatalog` · `SourceScan` ·
+`LayerRules` · `StagedScope` · `SharedRules` · `conventions/`) → 2 명령(`lint/` 의 네 폴더와 루트 명령, `setup/` · `generate/` · `dev/` · `qa/` · `asset/`)
+→ 3 `__main__.py`. 아래 층은 위 층을, 명령은 다른 명령을 import 하지 않는다 — 다른 명령이 쓸 코드는 층 0 · 1 로 옮긴다. 층 표와 조립 명령의
+예외는 `lint/rules/CheckScriptLayers.toml` 이고 `gate/CheckScriptLayers.py` 가 지킨다.
+모든 모듈은 `Scripts/` 기준 점 이름 하나로 import 한다(`common.Worktree`, `lint.gate.CheckEngineLayers`). sys.path 는 진입점이 `Scripts/` 를 넣는
+한 줄만 바꾼다(`CheckScriptEntryPoints`). 같은 파일이 두 이름으로 로드되지 않는지는 `Test/PythonTest/TestScriptsImportIdentity.py` 가 본다.
 
 **파일 이름의 앞머리가 폴더를 말한다** — 이름만 보고 무엇을 하는지(실패하는가 · 고쳐 쓰는가 · 찍기만 하는가) 안다.
 

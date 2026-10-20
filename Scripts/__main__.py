@@ -22,10 +22,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-# 부모 경로(Scripts) 및 프로젝트 루트 임포트 보장
-_scriptRoot = Path(__file__).resolve().parent
-if str(_scriptRoot) not in sys.path:
-    sys.path.insert(0, str(_scriptRoot))
+sys.path.insert(0, str(Path(__file__).resolve().parent))   # Scripts — import 루트는 하나다(docs/plans/ScriptsStructure.md)
 
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 

@@ -11,7 +11,7 @@ Scripts/lint/gate/CheckProductNames.py
 
   1) 주석 · 문자열 밖의 식별자에 제품 낱말이 들면 위반이다 — 낱말 머리(`SQLiteDriver`)든 camelCase 가운데(`getTracyPort`)든.
      `Resp` 는 `Response` 와 겹쳐 `Resp` + 대문자만 본다.
-  2) 허용 자리: 그 제품을 감싼 라이브러리의 허용 뿌리(`CheckThirdPartyIsolation._kListLibraryRule` — 목록을 두 벌 두지 않는다)와
+  2) 허용 자리: 그 제품을 감싼 라이브러리의 허용 뿌리(`lint/SharedRules.py` 의 `kListLibraryRule` — 서드파티 격리 게이트와 같은 표, 목록을 두 벌 두지 않는다)와
      `*/Driver/*` · `*/Windows/*` · `*/Linux/*` 폴더(드라이버 · 플랫폼 구현).
   3) 제품을 골라 올리는 조립점(레지스트리 · 팩토리 · 외부 도구 실행기)은 예외 표(파일 fnmatch → 이유)에 둔다.
 
@@ -32,7 +32,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common import findFast, kLintTargetRelDirs  # noqa: E402
 from common.RuleData import kKindText, kKindTextList  # noqa: E402
-from lint.gate.CheckThirdPartyIsolation import _kListLibraryRule  # noqa: E402
+from lint.SharedRules import kListLibraryRule  # noqa: E402
 from lint.LintGate import LintGate  # noqa: E402
 from lint.SourceScan import FileFindings, SourceFile  # noqa: E402
 
@@ -47,7 +47,7 @@ _kProductNameRe = re.compile(r"(?<![A-Z])(" + "|".join(
     for word in sorted(_kMapProductToLibrary, key=len, reverse=True)) + r")(?![a-z])")
 #: 서드파티 격리 표 밖에서도 제품 이름을 쓰는 폴더 — 드라이버 · 플랫폼 구현.
 _kListProductFolderPattern = ("*/Driver/*", "*/Windows/*", "*/Linux/*")
-_kMapLibraryToRoot: dict[str, tuple[str, ...]] = {rule.name: rule.listAllowedRoot for rule in _kListLibraryRule}
+_kMapLibraryToRoot: dict[str, tuple[str, ...]] = {rule.name: rule.listAllowedRoot for rule in kListLibraryRule}
 
 
 def isProductAllowedInternal(relative: str, productWord: str) -> bool:
