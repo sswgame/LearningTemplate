@@ -10,6 +10,9 @@
  *            등록형 목록에 삭제 대기 검사를 더한 두 가지(컴포넌트 표시 하나 · 컴포넌트와 소유 오브젝트 둘)로 검사의 몫을 가른다.
  *          - 오브젝트 하나를 만들고 지우는 비용(버킷 넣기 · 빼기의 배타 잠금 두 번이 든다)과, 경합 없는 `std::shared_mutex` 배타 잠금 한 쌍의 비용.
  *          - `sizeof( Component )`.
+ *          - `resolveComponent<T>` 의 타입 확인 비용(`ResolveTypedCheckCost`): 같은 핸들을 확인하는 찾기와 타입 없는 찾기 + `static_cast` 로 푼 값을 견준다.
+ *            확인은 Shipping 이 아닌 구성에만 있으므로 Release 로 돌린 이 케이스가 "개발 빌드의 확인 비용" 이다(계획 문서 TypedComponents "남은 확인").
+ *          - 비동기 씬 로드 중의 조회(`QueryWhileAsyncSceneLoad`): 다른 매니저가 비동기로 큰 씬을 지을 때 조회 한 번의 지연을 쉴 때와 견준다.
  *
  *          타입 500 개를 만드는 법: 말단 타입은 `BenchBucketComponent<N>` 템플릿 인스턴스다. 코드젠이 아니라 손으로 `TypeInfo` 를 만들어
  *          `TypeRegistry::registerClass` 로 올리고, 표가 가진 사본의 주소를 `StaticType()` 의 함수 안 정적 변수에 담는다(FQN `sw::BenchBucketComponent<N>`,
@@ -28,7 +31,9 @@
 #include "pch.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Container/ComponentHandle.h"
 #include "Core/Container/vector.h"
+#include "Core/File/FileUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -36,12 +41,15 @@
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneDocument.h"
+#include "Engine/Scene/SceneManager.h"
 
 #include "TestFramework/Harness/TestBench.h"
 #include "TestFramework/TestFramework.h"
 
 SW_TEST_LOAD_SUITE( TypedComponentBenchTest, "typed component bucket query cost against the component registry and the object walk" );
-SW_TEST_TIME_BUDGET( TypedComponentBenchTest, 30000, "Release run of both cases took about 9 s (2026-10-19, Ryzen 7 6800H); scenes of 100000 objects" );
+SW_TEST_TIME_BUDGET( TypedComponentBenchTest, 30000, "Release run of the first two cases took about 9 s (2026-10-19, Ryzen 7 6800H); scenes of 100000 objects; the async load case is not timed yet" );
 
 SW_LOG_CALLER( "TypedComponentBench" );
 
@@ -248,6 +256,38 @@ namespace
         sw::formatstring( label.data(), label.capacity(), "N=%# K=%# %#", objectCount, typeCount, pQueryName );
         return label;
     }
+
+    /** @brief 타입 핸들 @p listHandle 을 **확인하는** 찾기(`resolveComponent<T>`)로 모두 풀고 `_payload` 를 합합니다. */
+    template <typename T>
+    QueryResult resolveAllTyped( const sw::GameObjectManager& manager, const sw::vector<sw::TComponentHandle<T>>& listHandle )
+    {
+        QueryResult result{};
+        for ( const sw::TComponentHandle<T>& handle : listHandle )
+        {
+            const T* pComp = manager.resolveComponent( handle );
+            if ( pComp == nullptr )
+                continue;
+            ++result._visitCount;
+            result._payloadSum += pComp->_payload;
+        }
+        return result;
+    }
+
+    /** @brief 같은 핸들을 타입 없는 찾기 + `static_cast`(확인 없음)로 모두 풀고 `_payload` 를 합합니다. */
+    template <typename T>
+    QueryResult resolveAllUntyped( const sw::GameObjectManager& manager, const sw::vector<sw::ComponentHandle>& listHandle )
+    {
+        QueryResult result{};
+        for ( const sw::ComponentHandle& handle : listHandle )
+        {
+            const sw::Component* pRaw = manager.resolveComponent( handle );
+            if ( pRaw == nullptr )
+                continue;
+            ++result._visitCount;
+            result._payloadSum += static_cast<const T*>( pRaw )->_payload;
+        }
+        return result;
+    }
 } // namespace
 
 /**
@@ -442,4 +482,153 @@ SW_TEST_CASE( TypedComponentBenchTest, SpawnDestroyChurnAndLockCost )
     } );
     test::logBenchDeciNanos( "uncontended std::shared_mutex lock + unlock", lockDeciNanos );
     SW_LOG_INFO( "[Bench] sizeof Component %#  BenchBucketBaseComponent %#", sizeof( sw::Component ), sizeof( BenchBucketBaseComponent ) );
+}
+
+/**
+ * @brief [TypedComponentBenchTest] 개발 빌드(Shipping 이 아닌 구성)의 `resolveComponent<T>` 타입 확인 비용 — 같은 핸들을 타입 없는 찾기 + `static_cast` 와 견준다
+ * @details 오브젝트 1만 · K = 200. 말단 타입 핸들(정확히 같은 타입이라 `isDerivedFrom` 이 바로 끝난다)과 기반 타입 핸들(말단 200 가지를 한 핸들 형식으로 푼다)을 따로 잰다.
+ *          확인은 `SW_SHIPPING` 이 아니면 켜지므로 Release 로 돌린 이 케이스의 두 줄 차(`typed` 대 `untyped`)가 개발 빌드의 확인 비용이다. 값은 핸들 하나를 푸는 ns 다.
+ *          앱에서 프레임당 비용은 (프레임당 `resolveComponent<T>` 횟수) × (그 차)로 어림한다.
+ */
+SW_TEST_CASE( TypedComponentBenchTest, ResolveTypedCheckCost )
+{
+    constexpr uint32 kObjectCount                       = 10000;
+    constexpr uint32 kTypeCount                         = 200;
+    BenchBucketBaseComponent::s_bRegisterLeafInRegistry = false;
+    BenchBucketBaseComponent::s_bRegisterBaseInRegistry = false;
+
+    sw::GameObjectManager manager;
+    SW_EXPECT_EQUAL( 0u, buildBucketScene( manager, kObjectCount, kTypeCount ) );
+    const sw::GameObjectManager& constManager = manager;
+
+    sw::vector<sw::TComponentHandle<BenchBucketBaseComponent>> listBaseTyped;
+    sw::vector<sw::ComponentHandle>                            listBaseUntyped;
+    constManager.forEachComponentOfType<BenchBucketBaseComponent>( [&listBaseTyped, &listBaseUntyped]( const BenchBucketBaseComponent* pComp )
+    {
+        listBaseTyped.push_back( sw::TComponentHandle<BenchBucketBaseComponent>{ pComp } );
+        listBaseUntyped.push_back( pComp->getHandle() );
+    } );
+    sw::vector<sw::TComponentHandle<BenchLeafComponent>> listLeafTyped;
+    sw::vector<sw::ComponentHandle>                      listLeafUntyped;
+    constManager.forEachComponentOfType<BenchLeafComponent>( [&listLeafTyped, &listLeafUntyped]( const BenchLeafComponent* pComp )
+    {
+        listLeafTyped.push_back( sw::TComponentHandle<BenchLeafComponent>{ pComp } );
+        listLeafUntyped.push_back( pComp->getHandle() );
+    } );
+    const uint64 leafCount = ( kObjectCount + kTypeCount - 1 ) / kTypeCount;
+    SW_ASSERT_EQUAL( static_cast<size_t>( kObjectCount ), listBaseTyped.size() );
+    SW_ASSERT_EQUAL( static_cast<size_t>( leafCount ), listLeafTyped.size() );
+
+    const QueryResult baseTyped   = measureQuery( "N=10000 K=200 resolve base handles, typed (checked)", kObjectCount, [&constManager, &listBaseTyped]()
+      {
+        return resolveAllTyped<BenchBucketBaseComponent>( constManager, listBaseTyped );
+    } );
+    const QueryResult baseUntyped = measureQuery( "N=10000 K=200 resolve base handles, untyped + static_cast", kObjectCount, [&constManager, &listBaseUntyped]()
+    {
+        return resolveAllUntyped<BenchBucketBaseComponent>( constManager, listBaseUntyped );
+    } );
+    SW_EXPECT_EQUAL( static_cast<uint64>( kObjectCount ), baseTyped._visitCount );
+    SW_EXPECT_EQUAL( baseTyped._payloadSum, baseUntyped._payloadSum );
+
+    const QueryResult leafTyped   = measureQuery( "N=10000 K=200 resolve leaf handles, typed (checked)", leafCount, [&constManager, &listLeafTyped]()
+      {
+        return resolveAllTyped<BenchLeafComponent>( constManager, listLeafTyped );
+    } );
+    const QueryResult leafUntyped = measureQuery( "N=10000 K=200 resolve leaf handles, untyped + static_cast", leafCount, [&constManager, &listLeafUntyped]()
+    {
+        return resolveAllUntyped<BenchLeafComponent>( constManager, listLeafUntyped );
+    } );
+    SW_EXPECT_EQUAL( leafCount, leafTyped._visitCount );
+    SW_EXPECT_EQUAL( leafTyped._payloadSum, leafUntyped._payloadSum );
+    SW_LOG_INFO( "[Bench] each line above is the cost of the whole handle list (base %# handles, leaf %# handles) - divide by the count for ns per resolve", kObjectCount, leafCount );
+}
+
+/**
+ * @brief [TypedComponentBenchTest] 다른 매니저가 비동기로 큰 씬을 짓는 동안 버킷 조회 한 번의 지연 — 쉴 때와 견준다
+ * @details 조회하는 매니저(1만 · K = 200)는 `SceneManager` 밖의 독립 매니저다. 로드 워커는 자기 전용 새 씬의 저장소에만 넣으므로(`SceneManager.cpp` 의 로드 작업)
+ *          조회와 겹치지 않아야 하고, 이 케이스는 그 말을 지연으로 확인한다. 조회 한 번(말단 타입, 50 개 방문)을 시계 사이에 직접 끼워 재므로 값에 시계 읽기 비용
+ *          (수십 ns)이 들어 있다 — 쉴 때와 로드 중을 같은 방식으로 재서 견주는 값이다. 게임 프레임 하나는 조회 64 번마다 전환을 한 번 갱신하는 것으로 흉내 낸다.
+ *          로드 중 표본이 너무 적으면(`samples` 가 수십 개 아래) `kLoadedObjectCount` 를 키운다.
+ */
+SW_TEST_CASE( TypedComponentBenchTest, QueryWhileAsyncSceneLoad )
+{
+    constexpr uint32 kQueryObjectCount                  = 10000;
+    constexpr uint32 kQueryTypeCount                    = 200;
+    constexpr uint32 kLoadedObjectCount                 = 50000;
+    constexpr uint32 kIdleSampleCount                   = 4000;
+    constexpr uint32 kQueriesPerTransitionUpdate        = 64;
+    constexpr int64  kLoadTimeoutMilliseconds           = 20000;
+    BenchBucketBaseComponent::s_bRegisterLeafInRegistry = false;
+    BenchBucketBaseComponent::s_bRegisterBaseInRegistry = false;
+
+    // 로드할 씬: 이름만 있는 오브젝트 kLoadedObjectCount 개. XML 과 바이너리를 같은 내용으로 둔다(어느 쪽을 읽는 구성이든 같은 씬이다).
+    const sw::string  xmlPath = test::makeTempPath( "sw_test_typed_bench_async.scene.xml" );
+    const sw::string  binPath = test::makeTempPath( "sw_test_typed_bench_async.scene.bin" );
+    sw::string        xmlText = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Scene formatVersion=\"1\" name=\"BenchStream\">\n  <entities>\n";
+    sw::SceneDocument doc{};
+    doc._name = "BenchStream";
+    for ( uint32 index = 0; index < kLoadedObjectCount; ++index )
+    {
+        sw::fixed_string<sw::constant::kMaxBuffer256> entityName{};
+        sw::formatstring( entityName.data(), entityName.capacity(), "Filler%#", index );
+        sw::fixed_string<sw::constant::kMaxBuffer256> line{};
+        sw::formatstring( line.data(), line.capacity(), "    <entity id=\"%#\" name=\"%#\"/>\n", index + 1, entityName.c_str() );
+        xmlText += line.c_str();
+        sw::SceneDocument::SceneObjectNode node{};
+        node._name   = entityName.c_str();
+        node._fileID = index + 1;
+        doc._listSceneObjectNode.push_back( std::move( node ) );
+    }
+    xmlText += "  </entities>\n</Scene>\n";
+    SW_ASSERT_TRUE( sw::FileUtil::writeFile( xmlPath, reinterpret_cast<const uint8*>( xmlText.data() ), static_cast<uint64>( xmlText.size() ) ) );
+    SW_ASSERT_TRUE( doc.saveBinary( binPath ) );
+
+    sw::GameObjectManager queried;
+    SW_EXPECT_EQUAL( 0u, buildBucketScene( queried, kQueryObjectCount, kQueryTypeCount ) );
+
+    uint64     sink        = 0;
+    const auto sampleQuery = [&queried, &sink]( sw::vector<int64>& listNano )
+    {
+        const sw::Stopwatch stopwatch;
+        queried.forEachComponentOfType<BenchLeafComponent>( [&sink]( const BenchLeafComponent* pComp )
+        {
+            sink += pComp->_payload;
+        } );
+        listNano.push_back( stopwatch.getElapsedNanoseconds() );
+    };
+
+    sw::vector<int64> listIdle;
+    listIdle.reserve( kIdleSampleCount );
+    for ( uint32 index = 0; index < kIdleSampleCount; ++index )
+    {
+        sampleQuery( listIdle );
+    }
+    logNanoSamples( "single bucket query, idle (N=10000 K=200 leaf)", listIdle );
+
+    sw::SceneManager sceneManager;
+    SW_ASSERT_TRUE( sceneManager.initialize() );
+    sw::vector<int64>   listDuring;
+    const sw::Stopwatch loadStopwatch;
+    SW_ASSERT_TRUE( sceneManager.requestLoadAsync( xmlPath ) );
+    const sw::Deadline deadline   = sw::Deadline::afterMilliseconds( kLoadTimeoutMilliseconds );
+    uint32             queryCount = 0;
+    while ( sceneManager.isTransitioning() && deadline.isExpired() == false )
+    {
+        sampleQuery( listDuring );
+        if ( ++queryCount % kQueriesPerTransitionUpdate == 0 )
+            sceneManager.updateTransitions();
+    }
+    sceneManager.waitForPendingLoad();
+    sceneManager.updateTransitions();
+    [[maybe_unused]] const int64 loadMilliseconds = loadStopwatch.getElapsedMilliseconds();
+    SW_ASSERT_FALSE( listDuring.empty() );
+    logNanoSamples( "single bucket query, while an async scene loads (N=10000 K=200 leaf)", listDuring );
+    SW_LOG_INFO( "[Bench] async load of %# objects took %# ms (%# queries ran meanwhile)", kLoadedObjectCount, loadMilliseconds, queryCount );
+
+    SW_EXPECT_FALSE( sceneManager.isTransitioning() );
+    SW_ASSERT_NOT_NULL( sceneManager.getActiveScene() );
+    sceneManager.getActiveScene()->getObjectManager()->update( 0.0f );
+    SW_EXPECT_EQUAL( static_cast<size_t>( kLoadedObjectCount ), sceneManager.getActiveScene()->getObjectManager()->getAllGameObjects().size() );
+    SW_EXPECT_TRUE( sink != 0 );
+    sceneManager.shutdown();
 }
