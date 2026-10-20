@@ -14,6 +14,8 @@
 //   catalog       모드 정의(리소스 경로, `<MatchModeCatalog>`).
 //   mode          `<id>:<팀 수>x<팀 인원>`(예: `duo:2x2`) — 데이터 파일 없이 도는 도구 · 테스트용(여러 번 적는다).
 //   maxPartySize  파티 최대 인원(기본 4).
+//   reconnectGraceMs  떠난 계정을 파티와 로비에 남겨 둘 밀리초(기본 60000, 0 이면 바로 뺀다).
+// 채팅 키트가 있으면 파티 채널 멤버를 맞춘다.
 
 namespace sw
 {
@@ -21,7 +23,8 @@ namespace sw
     {
         struct MatchmakingOnlineServerKitInternal
         {
-            static constexpr int32 kDefaultMaxPartySize = 4;
+            static constexpr int32 kDefaultMaxPartySize     = 4;
+            static constexpr int32 kDefaultReconnectGraceMs = 60000;
         };
 
         /**
@@ -38,6 +41,7 @@ namespace sw
                 , _queue{}
                 , _server{}
                 , _maxPartySize{ MatchmakingOnlineServerKitInternal::kDefaultMaxPartySize }
+                , _reconnectGraceMs{ MatchmakingOnlineServerKitInternal::kDefaultReconnectGraceMs }
                 , _bStarted{ false }
             {
             }
@@ -47,9 +51,10 @@ namespace sw
                 string         catalogPath;
                 vector<string> listCompact;
                 if ( entry.readOptions( {
-                                            {     "catalog",   catalogPath},
-                                            {        "mode",   listCompact},
-                                            {"maxPartySize", _maxPartySize}
+                                            {         "catalog",       catalogPath},
+                                            {            "mode",       listCompact},
+                                            {    "maxPartySize",     _maxPartySize},
+                                            {"reconnectGraceMs", _reconnectGraceMs}
                 },
                                         outError ) == false )
                     return false;
@@ -105,7 +110,14 @@ namespace sw
                     outError = "matchmaking has a rated mode but the leaderboard kit (stat source) is not assembled";
                     return false;
                 }
+                if ( _reconnectGraceMs < 0 )
+                {
+                    outError = "matchmaking option reconnectGraceMs must be 0 or more";
+                    return false;
+                }
                 _server.initialize( &_partyLobby, &_queue, nullptr, context._pPresence );
+                _server.setReconnectGrace( _reconnectGraceMs );
+                _server.setGroupChannels( context._pGroupChannels );
                 _bStarted = true;
                 return true;
             }
@@ -127,6 +139,7 @@ namespace sw
             MatchQueueService           _queue;
             MatchmakingServer           _server;
             int32                       _maxPartySize;
+            int32                       _reconnectGraceMs;
             bool                        _bStarted;
         };
     } // namespace

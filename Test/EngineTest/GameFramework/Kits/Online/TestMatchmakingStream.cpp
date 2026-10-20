@@ -174,7 +174,7 @@ SW_TEST_CASE( MatchmakingStreamTest, PartyLobbyAndQueueOverTheWire )
     SW_EXPECT_NOT_EQUAL( listMatchA[0]._team, listMatchB[0]._team );
 }
 
-SW_TEST_CASE( MatchmakingStreamTest, DroppedAccountLeavesThePartyAndTheQueue )
+SW_TEST_CASE( MatchmakingStreamTest, DroppedAccountLeavesThePartyAfterTheReconnectGrace )
 {
     LoopbackStreamNetwork   network( 3u );
     MemoryServiceDatabase   database;
@@ -209,8 +209,12 @@ SW_TEST_CASE( MatchmakingStreamTest, DroppedAccountLeavesThePartyAndTheQueue )
     SW_EXPECT_TRUE( recorder._listReply.back()._reply._result == MatchmakingResult::NotPartyLeader );
     SW_EXPECT_EQUAL( clientB.getParty()._listMemberID.size(), size_t( 2 ) );
 
-    clients.drop( indexA ); // 장이 끊김 — 파티에서 빠지고 B 가 장
+    clients.drop( indexA ); // 장이 끊김 — 재접속 유예 동안은 파티에 남는다
     test::updateAll( { &server }, clients, 0, 10 );
+    SW_EXPECT_EQUAL( clientB.getParty()._listMemberID.size(), size_t( 2 ) );
+    SW_EXPECT_EQUAL( matchmaking._binding.getGraceCount(), 1 );
+    test::updateAll( { &server }, clients, 61000, 10 ); // 유예(60초)가 지났고 다른 서버에도 없다 — 파티에서 빠지고 B 가 장
+    SW_EXPECT_EQUAL( matchmaking._binding.getGraceCount(), 0 );
     SW_ASSERT_EQUAL( clientB.getParty()._listMemberID.size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( clientB.getParty().getLeaderID(), AccountID( 2 ) );
     SW_EXPECT_EQUAL( matchmaking._partyLobby.getPendingCount(), 0 );

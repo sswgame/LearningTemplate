@@ -6,10 +6,22 @@
 
 #include "GameFramework/Base/Online/Bus/ServerBus.h"
 #include "GameFramework/Base/Online/Identity/AccountPresence.h"
+#include "GameFramework/Base/Online/Identity/GroupChannelMembership.h"
 #include "GameFramework/Base/Online/Identity/OnlinePushRelay.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchServerAgent.h"
 
 #include <algorithm>
+
+namespace sw
+{
+    namespace
+    {
+        struct MatchmakingServerConstant
+        {
+            static constexpr int64 kDefaultReconnectGraceMs = 60000; ///< 60초이다. 모바일 앱 전환과 짧은 끊김을 넘길 만큼이다
+        };
+    } // namespace
+} // namespace sw
 
 namespace sw
 {
@@ -26,9 +38,13 @@ namespace sw
         , _pPartyLobby{ nullptr }
         , _pQueue{ nullptr }
         , _pAgent{ nullptr }
+        , _mapAccountToGraceEnd{}
+        , _mapPresenceRequestToAccount{}
         , _pPresence{ nullptr }
+        , _pGroupChannels{ nullptr }
         , _pHost{ nullptr }
         , _nowMs{ 0 }
+        , _reconnectGraceMs{ MatchmakingServerConstant::kDefaultReconnectGraceMs }
     {
     }
 
@@ -42,6 +58,24 @@ namespace sw
 
     void MatchmakingServer::shutdown()
     {
+        if ( _pPresence != nullptr )
+        {
+            for ( const auto& [requestID, accountID] : _mapPresenceRequestToAccount )
+            {
+                _pPresence->cancel( requestID );
+                _mapAccountToGraceEnd[accountID] = _nowMs;
+            }
+        }
+        _mapPresenceRequestToAccount.clear();
+        if ( _pPartyLobby != nullptr )
+        {
+            for ( const auto& [accountID, graceEndMs] : _mapAccountToGraceEnd )
+            {
+                (void)graceEndMs;
+                _pPartyLobby->removeAccount( accountID ); // 내려가는 서버는 유예를 지킬 수 없다. 남기면 파티 기록의 시한(30분)까지 빈자리가 된다
+            }
+        }
+        _mapAccountToGraceEnd.clear();
         if ( _pHost != nullptr )
         {
             for ( const string& topic : _listSubscribedTopic )
@@ -51,11 +85,12 @@ namespace sw
         }
         _listSubscribedTopic.clear();
         _pendingTable.clear();
-        _pHost       = nullptr;
-        _pPartyLobby = nullptr;
-        _pQueue      = nullptr;
-        _pAgent      = nullptr;
-        _pPresence   = nullptr;
+        _pHost          = nullptr;
+        _pPartyLobby    = nullptr;
+        _pQueue         = nullptr;
+        _pAgent         = nullptr;
+        _pPresence      = nullptr;
+        _pGroupChannels = nullptr;
     }
 
     void MatchmakingServer::onHostShutdown( OnlineServiceHost& host )
@@ -208,6 +243,7 @@ namespace sw
         _pQueue->update( nowMs );
         if ( _pAgent != nullptr )
             _pAgent->update( nowMs );
+        expireGrace( nowMs );
 
         _listLobbyStartScratch.clear();
         _pPartyLobby->drainLobbyStarts( _listLobbyStartScratch );
@@ -252,7 +288,10 @@ namespace sw
             else if ( notification._pushKind == MatchmakingMethod::kPushLobby )
                 push( host, notification._recipientID, notification._pushKind, notification._lobby );
             else
+            {
                 push( host, notification._recipientID, notification._pushKind, notification._party );
+                syncPartyChannel( notification._recipientID, notification._party );
+            }
         }
         _listQueueNotificationScratch.clear();
         _pQueue->drainNotifications( _listQueueNotificationScratch );
@@ -279,13 +318,81 @@ namespace sw
         }
     }
 
+    void MatchmakingServer::onAccountJoined( OnlineServiceHost& host, AccountID accountID )
+    {
+        (void)host;
+        _mapAccountToGraceEnd.erase( accountID ); // 유예 안에 이 서버로 돌아왔다
+        if ( _pPartyLobby != nullptr && _pGroupChannels != nullptr )
+            _pPartyLobby->findPartyOfAccount( accountID, accountID, PartyLobbyService::PartyFoundDelegate::create<&MatchmakingServer::onPartyFound>( this ) );
+    }
+
     void MatchmakingServer::onAccountLeft( OnlineServiceHost& host, AccountID accountID )
     {
         (void)host;
         if ( _pQueue != nullptr )
-            _pQueue->removeAccount( accountID );
-        if ( _pPartyLobby != nullptr )
+            _pQueue->removeAccount( accountID ); // 떠난 사람과 경기를 만들 수 없으므로 대기열에서는 바로 뺀다
+        if ( _pPartyLobby == nullptr )
+            return;
+        if ( _reconnectGraceMs <= 0 )
+        {
             _pPartyLobby->removeAccount( accountID );
+            return;
+        }
+        _mapAccountToGraceEnd[accountID] = _nowMs + _reconnectGraceMs;
+    }
+
+    void MatchmakingServer::expireGrace( int64 nowMs )
+    {
+        for ( auto graceIt = _mapAccountToGraceEnd.begin(); graceIt != _mapAccountToGraceEnd.end(); )
+        {
+            if ( nowMs < graceIt->second )
+            {
+                ++graceIt;
+                continue;
+            }
+            const AccountID accountID = graceIt->first;
+            graceIt                   = _mapAccountToGraceEnd.erase( graceIt );
+            if ( _pPresence == nullptr )
+            {
+                _pPartyLobby->removeAccount( accountID ); // 서버가 한 대이고 돌아오지 않았다
+                continue;
+            }
+            const uint64 requestID                  = _pPresence->submitFindByAccount( accountID, AccountPresenceDelegate::create<&MatchmakingServer::onGracePresenceFound>( this ) );
+            _mapPresenceRequestToAccount[requestID] = accountID;
+        }
+    }
+
+    void MatchmakingServer::onGracePresenceFound( const AccountPresenceResult& result )
+    {
+        const auto requestIt = _mapPresenceRequestToAccount.find( result._requestID );
+        if ( requestIt == _mapPresenceRequestToAccount.end() )
+            return;
+        const AccountID accountID = requestIt->second;
+        _mapPresenceRequestToAccount.erase( requestIt );
+        if ( result.isOnline() || _pPartyLobby == nullptr )
+            return; // 다른 서버(또는 이 서버)로 돌아왔다. 파티와 로비에 그대로 둔다
+        _pPartyLobby->removeAccount( accountID );
+    }
+
+    void MatchmakingServer::onPartyFound( uint64 lookupTag, MatchmakingResult result, const PartySnapshot& party )
+    {
+        if ( result != MatchmakingResult::Ok || _pGroupChannels == nullptr )
+            return; // 파티가 없다
+        syncPartyChannel( static_cast<AccountID>( lookupTag ), party );
+    }
+
+    void MatchmakingServer::syncPartyChannel( AccountID recipientID, const PartySnapshot& party )
+    {
+        StreamConnectionHandle connection;
+        const bool             bLocal    = _pHost != nullptr && _pHost->findConnection( recipientID, connection );
+        const bool             bSyncHere = _pGroupChannels != nullptr && bLocal && party._partyID != 0;
+        if ( bSyncHere == false )
+            return; // 다른 서버의 멤버는 그 서버가 맞춘다
+        const bool bMember = std::find( party._listMemberID.begin(), party._listMemberID.end(), recipientID ) != party._listMemberID.end();
+        if ( bMember )
+            _pGroupChannels->addGroupMember( GroupChannelKind::Party, party._partyID, recipientID, _nowMs );
+        else
+            _pGroupChannels->removeGroupMember( GroupChannelKind::Party, party._partyID, recipientID );
     }
 
     void MatchmakingServer::onServerBusMessage( OnlineServiceHost& host, const ServerBusMessage& message )
