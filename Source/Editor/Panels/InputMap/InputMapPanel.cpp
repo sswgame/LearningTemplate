@@ -218,7 +218,7 @@ namespace sw::editor
         : IEditorPanel( false ) // 필요할 때 여는 도구이므로 닫힌 채 시작한다. 열린 채 시작하면 떠 있는 창이 화면 가운데를 덮는다
         , _inputMap{}
         , _replay{}
-        , _inputMapPath{ getSubsystem<const EngineDefaultAssets>()._shellInputMap.get() } // 처음 여는 맵은 셸 맵이다 — 경로의 정본은 enginedefaultassets.xml
+        , _inputMapPath{ getSubsystem<const EngineDefaultAssets>()._shellInputMap.get() } // 처음 여는 맵은 셸 맵이다 — 경로의 원본은 enginedefaultassets.xml
         , _replayFilePath{ "engine/replay/demo_01.swreplay" }
         , _newActionName{ "" }
         , _selectedAction{ "" }
@@ -522,11 +522,11 @@ namespace sw::editor
 
     void InputMapPanel::drawTriggerOptions( const hashed_string& action, uint32 bindIndex, const ActionBinding& binding, float32 rightEdgeX )
     {
-        // 바인딩마다 발화 시간(초)과 값 부호 뒤집기. 시간을 쓰지 않는 트리거(Pressed 등)면 시간 칸은 숨긴다.
+        // 바인딩마다 발화 시간(초)과 값 부호 뒤집기. 시간을 쓰지 않는 트리거(Pressed 등)면 시간 필드는 숨긴다.
         const float32 effectiveTime = _inputMap.getEffectiveTriggerTime( binding );
         const bool    bUsesTime     = effectiveTime > 0.0f;
         const bool    bUsesTaps     = binding._trigger == ActionTrigger::MultiTap;
-        // 시간 · 횟수 칸이 들거나 Negate 가 남은 폭에 안 들어가면 패널 오른쪽 밖으로 잘린다 — 콤보와 같은 칸에서 시작하는 다음 줄로 내린다.
+        // 시간 · 횟수 필드가 필요하거나 Negate 가 남은 폭에 안 들어가면 패널 오른쪽 밖으로 잘린다 — 콤보와 같은 열 위치에서 시작하는 다음 줄로 내린다.
         const float32 negateWidth       = ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize( "Negate" ).x;
         const bool    bNegateFits       = ImGui::GetItemRectMax().x + ImGui::GetStyle().ItemSpacing.x + negateWidth <= rightEdgeX;
         bool          bLineStart        = false;
@@ -1089,7 +1089,7 @@ namespace sw::editor
 
         ImGui::Separator();
 
-        // 재생 제어. 재생은 리플레이를 붙이는 것이고, 일시정지는 그 프레임으로 seekTo 하는 것이다(상태를 재현한 뒤 뗀다). 탐색도 seekTo 다.
+        // 재생 제어. 재생은 리플레이를 붙이는 것이고, 일시정지는 그 프레임으로 seekTo 하는 것이다(상태를 재현한 뒤 분리한다). 탐색도 seekTo 다.
         ImGui::Text( "Playback Controls (Total Frames: %u, Duration: %.2f s):", _replay.getFrameCount(), static_cast<float64>( _replay.getTotalDuration() ) );
         const uint32 currentFrame = _replay.getStartFrameIndex() + ( bPlaying ? pInput->getVirtualFrameIndex() : 0u );
         drawPlaybackControls( *pInput, bPlaying, currentFrame );

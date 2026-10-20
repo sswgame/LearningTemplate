@@ -54,14 +54,14 @@ namespace sw::editor
         const string* findCellValue( int32 elementIndex, string_view column ) const;
 
         // ------------------------------------------------------------------------------
-        // 편집 — 성공하면 되돌리기 스택에 이전 원문을 한 칸 쌓습니다. 실패하면 아무것도 바뀌지 않고 `getError` 에 이유가 있습니다.
+        // 편집 — 성공하면 되돌리기 스택에 이전 원문을 한 단계 쌓습니다. 실패하면 아무것도 바뀌지 않고 `getError` 에 이유가 있습니다.
         // ------------------------------------------------------------------------------
         [[nodiscard]] bool setCell( int32 elementIndex, string_view column, string_view value );
         [[nodiscard]] bool unsetCell( int32 elementIndex, string_view column );
         /** @brief @p groupName 표의 끝에 행을 더합니다. 열은 그 표의 열을 따르고 `id` · `name` 은 "new" 로 채웁니다. 표가 없으면 속성 없는 행(`id="new"` 하나)을 더합니다. */
         [[nodiscard]] bool addRow( string_view groupName );
         [[nodiscard]] bool removeRow( int32 elementIndex );
-        /** @brief 글 상자 편집입니다. 훑지 못하는 글도 받습니다(`isParsed` 가 false 가 되고 표는 비어 보입니다). 되돌리기 칸은 호출마다 쌓지 않고 @p bPushUndo 가 true 일 때만 쌓습니다. */
+        /** @brief 글 상자 편집입니다. 훑지 못하는 글도 받습니다(`isParsed` 가 false 가 되고 표는 비어 보입니다). 되돌리기 항목은 호출마다 쌓지 않고 @p bPushUndo 가 true 일 때만 쌓습니다. */
         void replaceText( string_view text, bool bPushUndo );
 
         bool canUndo() const { return _listUndo.empty() == false; }

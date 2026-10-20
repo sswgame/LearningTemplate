@@ -329,7 +329,7 @@ namespace sw::editor
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMaterial", "NameTip" ) );
         string shaderPath = _shaderPath.c_str();
-        ImGui::BeginGroup(); // 슬롯은 항목 여럿이라 툴팁을 묶음 전체에 건다
+        ImGui::BeginGroup(); // 슬롯은 항목 여럿이라 툴팁을 그룹 전체에 붙인다
         if ( EditorWidgets::drawAssetSlot( "Shader", shaderPath, ".hlsl" ) )
         {
             _shaderPath = shaderPath;
@@ -469,7 +469,7 @@ namespace sw::editor
         MeshComponent* pMesh = findPreviewSubject();
         if ( pMesh == nullptr )
             return;
-        // 캐시의 머티리얼을 건다 — 편집은 `applyLivePreview` 가 캐시 사본에 옮기므로 구도 따라온다.
+        // 캐시의 머티리얼을 바인딩한다 — 편집은 `applyLivePreview` 가 캐시 사본에 옮기므로 구도 따라온다.
         pMesh->setMaterialPath( getLoadedAssetPath() );
         _previewMaterialPath = getLoadedAssetPath();
     }

@@ -28,7 +28,7 @@ namespace sw::editor
 
     namespace
     {
-        /// @brief 목록 칸의 너비입니다. 이름이 길어도(GBufferAlbedo) 잘리지 않을 만큼 잡습니다.
+        /// @brief 목록 열의 너비입니다. 이름이 길어도(GBufferAlbedo) 잘리지 않을 만큼 잡습니다.
         constexpr float32 kListWidth = 220.0f;
         /// @brief Auto 일 때 스냅샷을 다시 읽는 간격(UI 프레임)입니다. 읽기는 GPU 를 기다리므로 매 프레임 하지 않는다.
         constexpr uint32 kAutoRefreshFrames = 30;
@@ -122,7 +122,7 @@ namespace sw::editor
             return;
 
         EditorContext* pContext = EditorContext::get();
-        // 컨텍스트가 이미 내려갔으면 놓아 줄 상대가 없다. 백엔드가 자기 힙을 통째로 버린 뒤다.
+        // 컨텍스트가 이미 종료됐으면 놓아 줄 상대가 없다. 백엔드가 자기 힙을 통째로 버린 뒤다.
         if ( pContext != nullptr && pContext->getSubsystem<EditorRenderViews>().getRendererBackend() != nullptr )
             pContext->getSubsystem<EditorRenderViews>().getRendererBackend()->unregisterTexture( _pPreviewTextureID );
         _pPreviewTextureID = nullptr;
@@ -233,7 +233,7 @@ namespace sw::editor
         if ( bCannotUploadSnapshot )
             return;
 
-        // 스냅샷마다 새 텍스처를 만든다. 쓰던 것에 다시 올리면 아직 그것을 그리는 프레임과 겹친다(옛 것은 해제 큐가 그 뒤에 부순다).
+        // 스냅샷마다 새 텍스처를 만든다. 쓰던 것에 다시 업로드하면 아직 그것을 그리는 프레임과 겹친다(옛 것은 해제 큐가 그 뒤에 부순다).
         RHITextureDesc desc{};
         desc._width                    = image._width;
         desc._height                   = image._height;
@@ -460,7 +460,7 @@ namespace sw::editor
             }
         }
 
-        // 색 그대로(RGBA)는 GPU 텍스처를 그대로 보인다(매 프레임 최신). 깊이 · 채널 하나는 CPU 스냅샷으로 만든 그림이다.
+        // 색 그대로(RGBA)는 GPU 텍스처를 그대로 보인다(매 프레임 최신). 깊이 · 채널 하나는 CPU 스냅샷으로 만든 이미지다.
         const bool bLive      = ( bDepth == false ) && ( _viewSettings._channel == RenderTargetChannel::RGBA );
         void*      pTextureID = bLive ? _pPreviewTextureID : _pSnapshotTextureID;
         if ( pTextureID == nullptr )
@@ -515,11 +515,11 @@ namespace sw::editor
         if ( _selectedName.empty() == false && findByName( _listTarget, _selectedName ) == nullptr )
             _selectedName.clear();
 
-        // 고른 타깃이 바뀌면 읽어 둔 픽셀 값은 다른 그림의 것이다.
+        // 고른 타깃이 바뀌면 읽어 둔 픽셀 값은 다른 이미지의 것이다.
         if ( _snapshot._texture != 0 && hasSnapshot() == false )
             _bProbedPixel = SW_FALSE;
 
-        // 아무것도 고르지 않았으면 **화면에 나가는 것**을 고른다. 열자마자 지금 보이는 그림이 뜬다.
+        // 아무것도 고르지 않았으면 **화면에 나가는 것**을 고른다. 열자마자 지금 보이는 이미지가 뜬다.
         // 이름순 첫 번째로 두면 AOColor 가 잡혀서 "이게 뭐지" 부터 시작하게 된다.
         if ( _selectedName.empty() )
         {

@@ -156,7 +156,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 단일 선택(주 선택)된 오브젝트를 형제 사이에서 한 칸 옮깁니다. 커맨드(`scene.moveSiblingUp` · `Down`)가 씁니다. */
+            /** @brief 단일 선택(주 선택)된 오브젝트를 형제 사이에서 한 단계 옮깁니다. 커맨드(`scene.moveSiblingUp` · `Down`)가 씁니다. */
             static void moveSelectionStep( bool bDown )
             {
                 EditorContext*     pContext = EditorContext::get();
@@ -242,7 +242,7 @@ namespace sw::editor
                 return pEditorCamera != nullptr ? pEditorCamera->getOwner() : nullptr;
             }
 
-            /** @brief 끌어 놓을 자리를 행 위에 그립니다 — 앞 · 뒤는 선, 자식으로 넣기는 행 테두리입니다. */
+            /** @brief 끌어 놓을 위치를 행 위에 그립니다 — 앞 · 뒤는 선, 자식으로 넣기는 행 테두리입니다. */
             static void drawDropIndicator( SiblingDropZone zone, const ImVec2& rowMin, const ImVec2& rowMax )
             {
                 ImDrawList*   pDrawList = ImGui::GetWindowDrawList();
@@ -258,7 +258,7 @@ namespace sw::editor
 
             /**
              * @brief 오브젝트 행에 끌어 놓은 오브젝트를 처리합니다. 행의 위 · 아래 가장자리는 그 오브젝트 앞 · 뒤의 형제로(형제 순서를 저장한다),
-             *        가운데는 자식으로 넣습니다(유니티 하이어라키의 끌기와 같다). 놓기 전에는 자리 표시만 그립니다.
+             *        가운데는 자식으로 넣습니다(유니티 하이어라키의 끌기와 같다). 놓기 전에는 위치 표시만 그립니다.
              */
             static void handleHierarchyDrop( GameObject* pTarget, const ImGuiPayload* pPayload, GameObjectManager* pManager )
             {
@@ -443,7 +443,7 @@ namespace sw::editor
                     }
                 }
 
-                // 확장 항목(`SW_EDITOR_CONTEXT_MENU_ENTRY`). 고른 동작은 메뉴를 닫은 뒤 부른다 — 동작이 모듈을 내려 목록이 바뀌어도 순회 중인 배열을 읽지 않는다.
+                // 확장 항목(`SW_EDITOR_CONTEXT_MENU_ENTRY`). 고른 동작은 메뉴를 닫은 뒤 부른다 — 동작이 모듈을 언로드해 목록이 바뀌어도 순회 중인 배열을 읽지 않는다.
                 void ( *pfnExtensionAction )( const EditorContextMenuTarget& ) = nullptr;
                 EditorContextMenuTarget extensionTarget{};
                 extensionTarget._kind        = EditorContextMenuKind::GameObject;
@@ -618,7 +618,7 @@ namespace sw::editor
                 pContext->getSubsystem<EditorWorkspace>().selectGameObject( pObj, SelectionMode::Add ); // 누른 행이 주 선택이다
             }
 
-            /** @brief 그 자리에서 이름을 바꾸는 입력입니다. 엔터나 포커스를 잃으면 확정하고 Esc 는 취소합니다. */
+            /** @brief 그 행에서 직접 이름을 바꾸는 입력입니다. 엔터나 포커스를 잃으면 확정하고 Esc 는 취소합니다. */
             static void drawInlineRename( GameObject* pObj, uint64 objectID, uint64& renamingObjectID, fixed_string<constant::kMaxBuffer256>& renameBuffer,
                                           bool& bFocusRenameInput )
             {
@@ -962,7 +962,7 @@ namespace sw::editor
         // 단축키는 Ctrl+D 복제, Ctrl+C 와 Ctrl+V 복사와 붙여 넣기, Ctrl+A 모두 선택, ↑↓ 이동, F2 이름 바꾸기, Delete 삭제다
         if ( ImGui::IsWindowFocused( ImGuiFocusedFlags_ChildWindows ) && ImGui::GetIO().WantTextInput == false )
         {
-            // 메인 월드를 보여 주는 창이 포커스다 — 인스펙터 · 전역 명령이 다시 메인 선택을 겨눈다(미리보기 창이 걸어 둔 것을 푼다).
+            // 메인 월드를 보여 주는 창이 포커스다 — 인스펙터 · 전역 명령이 다시 메인 선택을 겨눈다(미리보기 창이 등록해 둔 것을 해제한다).
             editor::setFocusedSelection( nullptr );
             const ImGuiIO&   io              = ImGui::GetIO();
             EditorSelection& editorSelection = editor::getMainSceneSelection();

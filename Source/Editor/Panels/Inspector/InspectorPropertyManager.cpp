@@ -417,7 +417,7 @@ namespace sw::editor
                 }
 
                 // 위젯은 `UIMin` 과 `UIMax`(없으면 `Min` 과 `Max`) 안에서 움직이고, 값은 항상 `Min` 과 `Max` 로 제한한다(`InspectorNumericRange`).
-                // 적히지 않은 쪽은 nullptr 이므로 ImGui 가 타입의 범위로 제한한다(uint8 은 0..255). 필드 이름 꼴 경계는 이 객체의 그 필드 값이다.
+                // 적히지 않은 쪽은 nullptr 이므로 ImGui 가 타입의 범위로 제한한다(uint8 은 0..255). 필드 이름 형태 경계는 이 객체의 그 필드 값이다.
                 const InspectorNumericRange range    = InspectorPropertyLayout::getNumericRange( prop, instance );
                 const T                     minValue = static_cast<T>( range._widgetMin * scale );
                 const T                     maxValue = static_cast<T>( range._widgetMax * scale );

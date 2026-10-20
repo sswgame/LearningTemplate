@@ -446,7 +446,7 @@ namespace sw::editor
         }
         ImGui::TextUnformatted( InspectorPropertyLayout::getPropertyLabel( prop ) );
         EditorWidgets::drawTooltip( prop._metadata->_tooltip.c_str() );
-        // 시나리오가 행 메뉴를 오른쪽 클릭으로 열 수 있게 이름 글에 이름표를 남긴다(`inspector.label.<타입>.<프로퍼티>`).
+        // 시나리오가 행 메뉴를 오른쪽 클릭으로 열 수 있게 이름 글에 레이블을 남긴다(`inspector.label.<타입>.<프로퍼티>`).
         fixed_string<constant::kMaxBuffer128> labelMark;
         formatstring( labelMark.data(), labelMark.capacity(), "inspector.label.%#.%#", typeInfo._name.c_str(), prop._name.c_str() );
         EditorSelfTestMarks::note( labelMark.c_str() );
@@ -732,7 +732,7 @@ namespace sw::editor
         valueProp._metadata         = prop._metadata;
         const bool bElementEditable = EditorSessionPolicy::areContainerElementEditsAllowed( bReadOnly, true );
 
-        // 값은 맵 노드 안에서 그 자리에서 고친다. 되돌리기는 위젯 하나 단위다(`drawPropertyWidget`). 삭제는 순회가 끝난 뒤에 한다.
+        // 값은 맵 노드 안에서 바로 고친다. 되돌리기는 위젯 하나 단위다(`drawPropertyWidget`). 삭제는 순회가 끝난 뒤에 한다.
         size_t eraseOrdinal = static_cast<size_t>( -1 );
         size_t ordinal      = 0;
         mapWrapper.forEachMutable( pContainer, SW_DELEGATE_LAMBDA( MapForEachMutableDelegate, [&]( const void* pKey, void* pValue )
@@ -892,7 +892,7 @@ namespace sw::editor
         {
             pFieldType->forEachProperty( [&]( const PropertyInfo& nestedProp )
             {
-                // 구조체 칸의 값 주소는 그 구조체 타입의 객체 주소다.
+                // 구조체 필드의 값 주소는 그 구조체 타입의 객체 주소다.
                 const PropertyEditState editState = PropertyEditCondition::getEditState( *pFieldType, nestedProp, ObjectAddress{ pNestedPtr } );
                 if ( editState == PropertyEditState::Hidden )
                     return;

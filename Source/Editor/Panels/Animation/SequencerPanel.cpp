@@ -124,14 +124,14 @@ namespace sw::editor
     {
         struct SequencerPanelInternal
         {
-            /** @brief 트랙 이름 칸의 폭(픽셀, DPI 전)입니다. 나머지 폭이 키 띠다. */
+            /** @brief 트랙 이름 필드의 폭(픽셀, DPI 전)입니다. 나머지 폭이 키 띠다. */
             static constexpr float32 kTrackLabelWidth = 180.0f;
             /** @brief 커브 편집기 구역의 높이(픽셀, DPI 전)입니다. */
             static constexpr float32 kCurveAreaHeight = 220.0f;
             /** @brief 키 마름모의 반지름(픽셀, DPI 전)입니다. */
             static constexpr float32 kKeyMarkerRadius = 4.0f;
 
-            /** @brief 트랜스폼 트랙의 회전 채널이면 true 입니다 — 값 칸은 도로 보이고 고친다(저장은 라디안, 인스펙터와 같은 규칙). */
+            /** @brief 트랜스폼 트랙의 회전 채널이면 true 입니다 — 값 필드는 도로 보이고 고친다(저장은 라디안, 인스펙터와 같은 규칙). */
             static bool isRotationChannel( const SequenceKeyTrack& track, uint32 channelIndex )
             {
                 return track._kind == SequenceTrackKind::Transform && channelIndex >= 3 && channelIndex < 6;
@@ -258,7 +258,7 @@ namespace sw::editor
     void SequencerPanel::drawItemFields()
     {
         constexpr float32 kClipFieldRowCount = 2.0f; // 이름 · 대상
-        // 고른 항목의 편집 칸은 늘 같은 높이의 구역에 그린다 — 고를 때만 칸이 생기면 그만큼 타임라인이 밀려 내려간다.
+        // 고른 항목의 편집 필드는 늘 같은 높이의 구역에 그린다 — 고를 때만 필드가 생기면 그만큼 타임라인이 밀려 내려간다.
         EditorSectionDesc clipDesc{};
         clipDesc._pID       = "##sequence_clip";
         clipDesc._kind      = EditorSectionKind::Child;
@@ -472,7 +472,7 @@ namespace sw::editor
             const float32 fallback   = channelIndex < kSequenceTransformChannelCount ? pArrCurrent[channelIndex] : 0.0f;
             const float32 displayMul = bRotation ? MathUtil::kRadianToDegree : 1.0f;
             float32       value      = track.evaluateChannel( channelIndex, frame, fallback ) * displayMul;
-            // 키가 있는 프레임이면 표식을 강조색으로 — 언리얼 Sequencer 채널 줄의 키 마름모 자리.
+            // 키가 있는 프레임이면 표식을 강조색으로 — 언리얼 Sequencer 채널 줄의 키 마름모에 해당한다.
             ImGui::TextColored( bKeyed ? ImGui::GetStyleColorVec4( ImGuiCol_CheckMark ) : ImGui::GetStyleColorVec4( ImGuiCol_TextDisabled ), bKeyed ? "<>" : "--" );
             ImGui::SameLine();
             ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x * 0.6f );
@@ -520,7 +520,7 @@ namespace sw::editor
             _curveTrack = -1;
             return;
         }
-        // 끄는 중 · 칸 입력 중이 아니면 채널에서 다시 뜬다(되돌리기 · 값 칸의 편집이 편집기에 보인다).
+        // 끄는 중 · 필드 입력 중이 아니면 채널에서 다시 뜬다(되돌리기 · 값 필드의 편집이 편집기에 보인다).
         if ( _curveState._drag == EditorCurveDrag::None && ImGui::IsAnyItemActive() == false )
             _curveState._working = channel;
         if ( ImGui::BeginChild( "##sequencerCurve", ImVec2( 0.0f, SequencerPanelInternal::kCurveAreaHeight * EditorThemeUtil::getDpiScale() ), ImGuiChildFlags_Borders ) )
@@ -633,7 +633,7 @@ namespace sw::editor
         _cinematicNote       = asset._note.c_str();
         _sequence->_listItem = asset._listItem;
         _listTrack           = asset._listTrack;
-        // 되돌리기가 트랙을 줄였으면 고른 자리를 맞춘다(지운 트랙을 가리키지 않게).
+        // 되돌리기가 트랙을 줄였으면 고른 위치를 맞춘다(지운 트랙을 가리키지 않게).
         if ( _selectedTrack >= static_cast<int32>( _listTrack.size() ) )
             _selectedTrack = static_cast<int32>( _listTrack.size() ) - 1;
         if ( _curveTrack >= static_cast<int32>( _listTrack.size() ) )

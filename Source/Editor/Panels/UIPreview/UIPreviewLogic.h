@@ -71,8 +71,8 @@ namespace sw::editor
 namespace sw::editor
 {
     /**
-     * @brief 고른 위젯의 부모 패널이 읽는 슬롯 필드 묶음입니다(디자이너의 Slot 칸이 이것만 보여 준다 — UMG 디자이너가 부모 패널의 슬롯 타입만 보여 주는 것과 같다).
-     * @details 슬롯은 모든 패널의 필드를 한 구조체(`WidgetLayoutSlot`)에 모았으므로, 패널 종류마다 슬롯 타입을 두지 않고 "어느 묶음을 보이는지" 만 고른다.
+     * @brief 고른 위젯의 부모 패널이 읽는 슬롯 필드 그룹입니다(디자이너의 Slot 필드가 이것만 보여 준다 — UMG 디자이너가 부모 패널의 슬롯 타입만 보여 주는 것과 같다).
+     * @details 슬롯은 모든 패널의 필드를 한 구조체(`WidgetLayoutSlot`)에 모았으므로, 패널 종류마다 슬롯 타입을 두지 않고 "어느 그룹을 보이는지" 만 고른다.
      */
     struct UIPreviewSlotFields
     {
@@ -99,7 +99,7 @@ namespace sw::editor
 {
     /**
      * @struct UIPreviewLogic
-     * @brief 미리보기 패널이 부르는 순수 함수들입니다(유니티 UI Builder · UMG 디자이너의 미리보기 해상도 · 위젯 계층 칸 자리).
+     * @brief 미리보기 패널이 부르는 순수 함수들입니다(유니티 UI Builder · UMG 디자이너의 미리보기 해상도 · 위젯 계층 창에 해당합니다).
      */
     struct UIPreviewLogic
     {
@@ -108,11 +108,11 @@ namespace sw::editor
          *        @p safeZoneRatio 만큼 안쪽으로(안전 영역 보기). 견본은 엔진 표(`UIResolutionPresetTable`)의 한 줄입니다.
          */
         static UIViewport makeViewport( const UIScaleSettings& settings, const UIResolutionPreset& resolution, float32 userScale, float32 safeZoneRatio );
-        /** @brief 크기 @p imageSize 의 그림을 @p available 안에 비율을 지켜 맞춘 크기입니다(늘리지 않는다 — 1 배가 상한). */
+        /** @brief 크기 @p imageSize 의 이미지를 @p available 안에 비율을 지켜 맞춘 크기입니다(늘리지 않는다 — 1 배가 상한). */
         static float2 fitImage( const float2& imageSize, const float2& available );
-        /** @brief 그린 그림 위의 점 @p imagePoint(그림 왼쪽 위 원점, 그린 크기 @p drawSize)를 UI 단위 점으로 옮깁니다. */
+        /** @brief 그린 이미지 위의 점 @p imagePoint(이미지 왼쪽 위 원점, 그린 크기 @p drawSize)를 UI 단위 점으로 옮깁니다. */
         static float2 mapImageToUI( const float2& imagePoint, const float2& drawSize, const UIViewport& viewport );
-        /** @brief UI 단위 사각형 @p rect 를 그린 그림 위 사각형(그림 왼쪽 위 원점)으로 옮깁니다. */
+        /** @brief UI 단위 사각형 @p rect 를 그린 이미지 위 사각형(이미지 왼쪽 위 원점)으로 옮깁니다. */
         static UIRect mapUIToImage( const UIRect& rect, const float2& drawSize, const UIViewport& viewport );
         /** @brief 트리의 위젯을 문서 순서로 한 줄씩(깊이 · "타입 #이름") 모읍니다. */
         static void collectWidgetRows( const WidgetTree& tree, vector<UIPreviewWidgetRow>& outListRow );
@@ -159,23 +159,23 @@ namespace sw::editor
         static PanelWidget* findPanelByOrdinal( WidgetTree& tree, uint32 ordinal );
         /**
          * @brief 팔레트 목록입니다 — 만들 수 있는(추상이 아닌) 위젯 타입을 이름순으로 담습니다(`Widget` 의 모든 파생 타입, 게임 모듈의 위젯 포함).
-         * @details 위젯 타입이 늘면 목록도 는다. 타입 레지스트리가 아는 것이 곧 팔레트라 따로 표를 두지 않는다(유니티 UI Builder 의 Library, UMG 의 Palette 와 같다).
+         * @details 위젯 타입이 늘면 목록도 는다. 타입 레지스트리가 아는 것이 곧 팔레트라 따로 테이블을 두지 않는다(유니티 UI Builder 의 Library, UMG 의 Palette 와 같다).
          */
         static void collectPaletteTypes( const TypeRegistry& registry, vector<const TypeInfo*>& outListType );
         /**
-         * @brief 놓은 자리 @p pTarget 이 받을 패널을 고릅니다 — 패널이면 그 패널(자식 끝에), 아니면 그 위젯의 부모(그 위젯 바로 뒤에)입니다. 둘 다 없으면 루트가 패널일 때 루트입니다.
+         * @brief 놓은 위치 @p pTarget 이 받을 패널을 고릅니다 — 패널이면 그 패널(자식 끝에), 아니면 그 위젯의 부모(그 위젯 바로 뒤에)입니다. 둘 다 없으면 루트가 패널일 때 루트입니다.
          * @param outIndex 새 위젯이 들어갈 자식 번호입니다.
          */
         static PanelWidget* findDropContainer( WidgetTree& tree, Widget* pTarget, uint32& outIndex );
         /** @brief @p type 의 위젯을 만들어 문서 순서 번호 @p parentOrdinal 인 패널의 @p index 번째에 끼웁니다. 못 끼우면 nullptr 입니다(패널이 아니거나 타입을 만들 수 없다). */
         static Widget* insertWidget( WidgetTree& tree, const TypeInfo& type, uint32 parentOrdinal, uint32 index );
-        /** @brief 문서 순서 번호 @p parentOrdinal 인 패널의 @p index 번째 자식을 떼어 소유권을 돌려줍니다(지우거나 되돌릴 때 다시 끼운다). 없으면 빈 포인터입니다. */
+        /** @brief 문서 순서 번호 @p parentOrdinal 인 패널의 @p index 번째 자식을 분리해 소유권을 돌려줍니다(지우거나 되돌릴 때 다시 끼운다). 없으면 빈 포인터입니다. */
         static unique_ptr<Widget> detachWidget( WidgetTree& tree, uint32 parentOrdinal, uint32 index );
-        /** @brief 떼어 낸 위젯을 같은 자리에 다시 끼웁니다(지우기 되돌리기). 못 끼우면 nullptr 입니다. */
+        /** @brief 분리한 위젯을 같은 위치에 다시 끼웁니다(지우기 되돌리기). 못 끼우면 nullptr 입니다. */
         static Widget* attachWidget( WidgetTree& tree, unique_ptr<Widget> widget, uint32 parentOrdinal, uint32 index );
         /** @brief 위젯의 슬롯을 손잡이로 고칠 수 있으면 true 입니다 — 부모가 캔버스 패널(앵커와 오프셋)일 때입니다. */
         static bool canEditSlotByHandle( const Widget& widget );
-        /** @brief 위젯 @p widget 의 부모 패널 종류로 Slot 칸에 보일 필드 묶음을 고릅니다. 부모가 없으면(루트) 모두 false 입니다. */
+        /** @brief 위젯 @p widget 의 부모 패널 종류로 Slot 필드에 보일 필드 그룹을 고릅니다. 부모가 없으면(루트) 모두 false 입니다. */
         static UIPreviewSlotFields findSlotFields( const Widget& widget );
         /**
          * @brief 손잡이 @p handle 을 UI 단위 @p deltaUI 만큼 끈 결과를 슬롯에 적용합니다. 가운데는 두 오프셋을 함께, 변은 그 변의 오프셋만 옮깁니다(자동 크기이면 오른쪽 · 아래 오프셋은 쓰이지 않아 옮기지 않는다).
@@ -187,20 +187,20 @@ namespace sw::editor
         /** @brief 앵커 프리셋 @p preset 의 자동화 표식 이름입니다("topleft" 등). */
         static const utf8* getAnchorPresetMark( UIPreviewAnchorPreset preset );
         /**
-         * @brief 앵커를 프리셋 @p preset 으로 바꾸고, 위젯이 화면에서 제자리에 머물도록 오프셋을 다시 채웁니다(UMG 의 기본 동작 — 앵커만 옮기고 자리는 지킨다).
+         * @brief 앵커를 프리셋 @p preset 으로 바꾸고, 위젯이 화면에서 제자리에 머물도록 오프셋을 다시 채웁니다(UMG 의 기본 동작 — 앵커만 옮기고 위치는 지킨다).
          * @param localRect 위젯의 지금 사각형(부모 왼쪽 위 원점, UI 단위)입니다. 자동 크기도 실제 크기가 들어오므로 오른쪽 · 아래 오프셋까지 맞게 채워진다.
          * @param parentSize 부모 캔버스의 크기(UI 단위)입니다.
          * @return 슬롯이 바뀌었으면 true 입니다.
          */
         [[nodiscard]] static bool applyAnchorPreset( WidgetLayoutSlot& inoutSlot, UIPreviewAnchorPreset preset, const UIRect& localRect, const float2& parentSize );
 
-        // --- 디자이너: 상자 순서 · 격자 칸 손잡이 ---------------------------------------------------------------
+        // --- 디자이너: 상자 순서 · 격자 셀 손잡이 ---------------------------------------------------------------
         /**
-         * @brief 상자 패널에서 끄는 점 @p point 가 들어갈 자리입니다 — 자식 가운데(@p listChildCenter, 상자 축 좌표, 자식 순서)가 @p point 보다 작은 자식 수입니다.
-         * @details 끄는 자식 자신도 목록에 있다. 떼어 낸 뒤의 번호는 `findReorderIndex` 가 고친다.
+         * @brief 상자 패널에서 끄는 점 @p point 가 들어갈 위치입니다 — 자식 가운데(@p listChildCenter, 상자 축 좌표, 자식 순서)가 @p point 보다 작은 자식 수입니다.
+         * @details 끄는 자식 자신도 목록에 있다. 분리한 뒤의 번호는 `findReorderIndex` 가 고친다.
          */
         static uint32 findBoxInsertIndex( const vector<float32>& listChildCenter, float32 point );
-        /** @brief 자식 @p fromIndex 를 떼고 끼울 번호입니다 — 사이 자리 @p insertIndex(떼기 전 번호)가 자신 뒤면 하나 당깁니다. */
+        /** @brief 자식 @p fromIndex 를 분리하고 끼울 번호입니다 — 사이 위치 @p insertIndex(떼기 전 번호)가 자신 뒤면 하나 당깁니다. */
         static uint32 findReorderIndex( uint32 fromIndex, uint32 insertIndex );
         /**
          * @brief 격자에서 점 @p point 가 속한 줄(행이나 열) 번호입니다. @p listTrackStart 는 줄마다 시작 좌표(오름차순), @p trackEnd 는 마지막 줄의 끝입니다.

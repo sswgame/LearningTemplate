@@ -48,7 +48,7 @@ namespace sw::editor
         /**
          * @brief 기본값과 다른 키만 파일에 씁니다. 읽지 못한 파일(`Invalid`)을 덮어쓰지 않도록, 그 상태에서는 false 입니다.
          * @details 저장하면 마지막으로 저장한 글을 바꿔 `isModified` 가 false 가 된다. 요소 모드는 그 요소만 바꾸고(없으면 루트 맨 앞에 넣는다),
-         *          파일이 없거나 쓴 글을 다시 읽어 같은 값이 아니거나 필수 칸이 빠졌으면 쓰지 않고 false 다.
+         *          파일이 없거나 쓴 글을 다시 읽어 같은 값이 아니거나 필수 필드가 빠졌으면 쓰지 않고 false 다.
          */
         [[nodiscard]] bool save();
 
@@ -61,9 +61,9 @@ namespace sw::editor
         /** @brief 파일이 디스크에 있으면 true 입니다(없으면 기본값으로 시작했고 저장하면 만들어진다). */
         [[nodiscard]] bool hasFile() const { return _readResult == ConfigReadResult::Loaded; }
 
-        /** @brief 지금 값에서 기본값과 다른 말단 키의 수입니다(구조체 칸은 안으로 들어가 센다). */
+        /** @brief 지금 값에서 기본값과 다른 말단 키의 수입니다(구조체 필드는 안으로 들어가 센다). */
         [[nodiscard]] uint32 countNonDefaultKeys() const;
-        /** @brief 파일에 쓸 글 — 기본값과 다른 키만 든 JSON(들여쓰기 4)이고, 요소 모드는 그 요소의 XML 입니다. 열려 있지 않으면 빈 글입니다. */
+        /** @brief 파일에 쓸 글 — 기본값과 다른 키만 가진 JSON(들여쓰기 4)이고, 요소 모드는 그 요소의 XML 입니다. 열려 있지 않으면 빈 글입니다. */
         [[nodiscard]] string makeDifferenceText() const;
         /** @brief 요소 모드(XML 파일 안의 설정 요소 하나)면 true 입니다. */
         [[nodiscard]] bool isElementMode() const { return _elementName.empty() == false; }
