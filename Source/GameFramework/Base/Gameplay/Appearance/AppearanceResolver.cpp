@@ -3,6 +3,7 @@
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceResolver.h"
 
 #include "Core/Common/HashUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/formatString.h"
 #include "Core/Math/MathUtil.h"
 
@@ -341,6 +342,129 @@ namespace sw
                 return pAllParts;
             }
 
+            /** @brief 상태가 바꾼 부품 배치입니다. 상태가 없거나 그 부품의 배치가 없으면 부품의 기본 배치입니다. */
+            static AppearancePlacement findPartPlacement( const AppearanceStateDef* pState, const AppearancePartDef& part )
+            {
+                AppearancePlacement placement = part._placement;
+                if ( pState == nullptr )
+                    return placement;
+                for ( const AppearanceStateDef::Placement& statePlacement : pState->_listPlacement )
+                {
+                    if ( statePlacement._part == part._name )
+                        placement = statePlacement._placement;
+                }
+                return placement;
+            }
+
+            /** @brief 맞아서 떨어지거나 피해 단계로 부서진 부품이면 떨어진 부품으로 내보내고 true 입니다. */
+            static bool emitDetachedPart( const ItemVisualDef& visual, const Entry& entry, const AppearancePartDef& part, const AppearancePlacement& placement, int32 stageIndex,
+                                          ResolvedAppearance& out )
+            {
+                const bool  bHitOff    = entry._pRequest != nullptr && AppearanceXMLUtil::containsName( entry._pRequest->_listDetachedPart, part._name );
+                const int32 breakIndex = part._breakStage.empty() ? -1 : visual.findDamageStageIndex( part._breakStage );
+                const bool  bStageOff  = breakIndex >= 0 && stageIndex >= breakIndex;
+                if ( bHitOff && part._bBreakable == SW_FALSE )
+                    addTrace( out, AppearanceTraceStep::Damage, entry._owner, "part '%#' is not breakable - detach request ignored", part._name.c_str() );
+                const bool bDetached = part._bBreakable == SW_TRUE && ( bHitOff || bStageOff );
+                if ( bDetached == false )
+                    return false;
+                ResolvedDetachedPart detached;
+                detached._owner            = entry._owner;
+                detached._itemID           = entry._itemID;
+                detached._partName         = part._name;
+                detached._asset            = part._asset;
+                detached._impulse          = part._breakImpulse;
+                detached._placement        = placement;
+                detached._bFromDamageStage = bHitOff ? SW_FALSE : SW_TRUE;
+                out._listDetachedPart.push_back( detached );
+                addTrace( out, AppearanceTraceStep::Damage, entry._owner, "part '%#' broke off (%#)", part._name.c_str(), bHitOff ? "hit" : "damage stage" );
+                return true;
+            }
+
+            /** @brief 몸 변형 부품의 모프, 머티리얼 값, 숨김 영역을 몸(주인이 빔)에 적용합니다. */
+            static void emitBodyModification( const ItemVisualDef& visual, const Entry& entry, const AppearancePartDef& part, ResolvedAppearance& out )
+            {
+                for ( const AppearanceMorphDef& morph : part._listMorph )
+                {
+                    setMorph( out, hashed_string{}, morph._name, morph._weight );
+                }
+                for ( const AppearanceMaterialValueDef& value : part._listMaterialValue )
+                {
+                    addMaterialValue( out, hashed_string{}, hashed_string{}, value._name, value._value, ResolvedMaterialTarget::Parameter, 0 );
+                }
+                for ( const hashed_string& region : part._listHiddenRegion )
+                {
+                    addHiddenRegion( out, region );
+                    addTrace( out, AppearanceTraceStep::Output, entry._owner, "body region '%#' hidden by '%#'", region.c_str(), visual._id.c_str() );
+                }
+            }
+
+            /**
+             * @brief 보이는 부품 하나를 해석합니다. 메시 변형, 머티리얼 변형, 규칙의 메시와 머티리얼 교체를 적용합니다.
+             * @details 메시 변형의 우선순위는 규칙, 피해 단계, 꾸미기 순이다. 부품에 없는 변형 이름은 그 부품에 아무 영향을 주지 않는다.
+             */
+            static ResolvedPart resolvePart( const ItemVisualDef& visual, const Entry& entry, const AppearancePartDef& part, const AppearancePlacement& placement,
+                                             const AppearanceDamageStageDef* pStage, const Decision* pRuleVariant, const vector<Decision>& listDecision,
+                                             ResolvedAppearance& out )
+            {
+                ResolvedPart resolved;
+                resolved._owner       = entry._owner;
+                resolved._itemID      = entry._itemID;
+                resolved._visualID    = visual._id;
+                resolved._partName    = part._name;
+                resolved._kind        = part._kind;
+                resolved._asset       = part._asset;
+                resolved._material    = part._material;
+                resolved._skeleton    = part._skeleton;
+                resolved._socketSet   = part._socketSet;
+                resolved._layer       = part._layer;
+                resolved._bDeforms    = part._bDeforms;
+                resolved._state       = entry._state;
+                resolved._placement   = placement;
+                resolved._damageStage = pStage != nullptr ? pStage->_name : hashed_string{};
+
+                hashed_string variant = entry._customVariant;
+                if ( pStage != nullptr )
+                {
+                    for ( const AppearanceDamageStageDef::PartVariant& stageVariant : pStage->_listVariant )
+                    {
+                        if ( stageVariant._part == part._name )
+                            variant = stageVariant._variant;
+                    }
+                }
+                if ( pRuleVariant != nullptr )
+                    variant = pRuleVariant->_pAction->_name;
+                const AppearancePartVariantDef* pVariant = variant.empty() ? nullptr : part.findVariant( variant );
+                if ( pVariant != nullptr )
+                {
+                    resolved._variant = pVariant->_name;
+                    if ( pVariant->_asset.empty() == false )
+                        resolved._asset = pVariant->_asset;
+                    if ( pVariant->_material.empty() == false )
+                        resolved._material = pVariant->_material;
+                }
+                const AppearancePartVariantDef* pMaterialVariant = entry._customMaterialVariant.empty() ? nullptr : part.findMaterialVariant( entry._customMaterialVariant );
+                if ( pMaterialVariant != nullptr )
+                {
+                    resolved._materialVariant = pMaterialVariant->_name;
+                    resolved._material        = pMaterialVariant->_material;
+                }
+                const Decision* pSwapMesh = findDecision( listDecision, AppearanceRuleActionKind::SwapMesh, entry._owner, part._name );
+                if ( pSwapMesh != nullptr )
+                {
+                    resolved._asset = pSwapMesh->_pAction->_value;
+                    addTrace( out, AppearanceTraceStep::Rule, pSwapMesh->_pRule->_id, "mesh of '%#.%#' swapped to '%#'", entry._owner.c_str(), part._name.c_str(), resolved._asset.c_str() );
+                }
+                const Decision* pSwapMaterial = findDecision( listDecision, AppearanceRuleActionKind::SwapMaterial, entry._owner, part._name );
+                if ( pSwapMaterial != nullptr )
+                {
+                    resolved._material = pSwapMaterial->_pAction->_value;
+                    addTrace( out, AppearanceTraceStep::Rule, pSwapMaterial->_pRule->_id, "material of '%#.%#' swapped to '%#'", entry._owner.c_str(), part._name.c_str(),
+                              resolved._material.c_str() );
+                }
+                return resolved;
+            }
+
             static void emitParts( const ItemVisualDef& visual, const Entry& entry, int32 stageIndex, const vector<Decision>& listDecision, ResolvedAppearance& out )
             {
                 const AppearanceStateDef*       pState       = visual.findState( entry._state );
@@ -350,107 +474,15 @@ namespace sw
                 {
                     if ( pState != nullptr && AppearanceXMLUtil::containsName( pState->_listHiddenPart, part._name ) )
                         continue;
-                    AppearancePlacement placement = part._placement;
-                    if ( pState != nullptr )
-                    {
-                        for ( const AppearanceStateDef::Placement& statePlacement : pState->_listPlacement )
-                        {
-                            if ( statePlacement._part == part._name )
-                                placement = statePlacement._placement;
-                        }
-                    }
-                    const bool  bHitOff    = entry._pRequest != nullptr && AppearanceXMLUtil::containsName( entry._pRequest->_listDetachedPart, part._name );
-                    const int32 breakIndex = part._breakStage.empty() ? -1 : visual.findDamageStageIndex( part._breakStage );
-                    const bool  bStageOff  = breakIndex >= 0 && stageIndex >= breakIndex;
-                    if ( bHitOff && part._bBreakable == SW_FALSE )
-                        addTrace( out, AppearanceTraceStep::Damage, entry._owner, "part '%#' is not breakable - detach request ignored", part._name.c_str() );
-                    if ( part._bBreakable == SW_TRUE && ( bHitOff || bStageOff ) )
-                    {
-                        ResolvedDetachedPart detached;
-                        detached._owner            = entry._owner;
-                        detached._itemID           = entry._itemID;
-                        detached._partName         = part._name;
-                        detached._asset            = part._asset;
-                        detached._impulse          = part._breakImpulse;
-                        detached._placement        = placement;
-                        detached._bFromDamageStage = bHitOff ? SW_FALSE : SW_TRUE;
-                        out._listDetachedPart.push_back( detached );
-                        addTrace( out, AppearanceTraceStep::Damage, entry._owner, "part '%#' broke off (%#)", part._name.c_str(), bHitOff ? "hit" : "damage stage" );
+                    const AppearancePlacement placement = findPartPlacement( pState, part );
+                    if ( emitDetachedPart( visual, entry, part, placement, stageIndex, out ) )
                         continue;
-                    }
                     if ( part._kind == AppearancePartKind::BodyModification )
                     {
-                        for ( const AppearanceMorphDef& morph : part._listMorph )
-                        {
-                            setMorph( out, hashed_string{}, morph._name, morph._weight );
-                        }
-                        for ( const AppearanceMaterialValueDef& value : part._listMaterialValue )
-                        {
-                            addMaterialValue( out, hashed_string{}, hashed_string{}, value._name, value._value, ResolvedMaterialTarget::Parameter, 0 );
-                        }
-                        for ( const hashed_string& region : part._listHiddenRegion )
-                        {
-                            addHiddenRegion( out, region );
-                            addTrace( out, AppearanceTraceStep::Output, entry._owner, "body region '%#' hidden by '%#'", region.c_str(), visual._id.c_str() );
-                        }
+                        emitBodyModification( visual, entry, part, out );
                         continue;
                     }
-                    ResolvedPart resolved;
-                    resolved._owner       = entry._owner;
-                    resolved._itemID      = entry._itemID;
-                    resolved._visualID    = visual._id;
-                    resolved._partName    = part._name;
-                    resolved._kind        = part._kind;
-                    resolved._asset       = part._asset;
-                    resolved._material    = part._material;
-                    resolved._skeleton    = part._skeleton;
-                    resolved._socketSet   = part._socketSet;
-                    resolved._layer       = part._layer;
-                    resolved._bDeforms    = part._bDeforms;
-                    resolved._state       = entry._state;
-                    resolved._placement   = placement;
-                    resolved._damageStage = pStage != nullptr ? pStage->_name : hashed_string{};
-
-                    // 메시 변형의 우선순위는 규칙, 피해 단계, 꾸미기 순이다. 부품에 없는 변형 이름은 그 부품에 아무 영향을 주지 않는다.
-                    hashed_string variant = entry._customVariant;
-                    if ( pStage != nullptr )
-                    {
-                        for ( const AppearanceDamageStageDef::PartVariant& stageVariant : pStage->_listVariant )
-                        {
-                            if ( stageVariant._part == part._name )
-                                variant = stageVariant._variant;
-                        }
-                    }
-                    if ( pRuleVariant != nullptr )
-                        variant = pRuleVariant->_pAction->_name;
-                    const AppearancePartVariantDef* pVariant = variant.empty() ? nullptr : part.findVariant( variant );
-                    if ( pVariant != nullptr )
-                    {
-                        resolved._variant = pVariant->_name;
-                        if ( pVariant->_asset.empty() == false )
-                            resolved._asset = pVariant->_asset;
-                        if ( pVariant->_material.empty() == false )
-                            resolved._material = pVariant->_material;
-                    }
-                    const AppearancePartVariantDef* pMaterialVariant = entry._customMaterialVariant.empty() ? nullptr : part.findMaterialVariant( entry._customMaterialVariant );
-                    if ( pMaterialVariant != nullptr )
-                    {
-                        resolved._materialVariant = pMaterialVariant->_name;
-                        resolved._material        = pMaterialVariant->_material;
-                    }
-                    const Decision* pSwapMesh = findDecision( listDecision, AppearanceRuleActionKind::SwapMesh, entry._owner, part._name );
-                    if ( pSwapMesh != nullptr )
-                    {
-                        resolved._asset = pSwapMesh->_pAction->_value;
-                        addTrace( out, AppearanceTraceStep::Rule, pSwapMesh->_pRule->_id, "mesh of '%#.%#' swapped to '%#'", entry._owner.c_str(), part._name.c_str(), resolved._asset.c_str() );
-                    }
-                    const Decision* pSwapMaterial = findDecision( listDecision, AppearanceRuleActionKind::SwapMaterial, entry._owner, part._name );
-                    if ( pSwapMaterial != nullptr )
-                    {
-                        resolved._material = pSwapMaterial->_pAction->_value;
-                        addTrace( out, AppearanceTraceStep::Rule, pSwapMaterial->_pRule->_id, "material of '%#.%#' swapped to '%#'", entry._owner.c_str(), part._name.c_str(),
-                                  resolved._material.c_str() );
-                    }
+                    const ResolvedPart resolved = resolvePart( visual, entry, part, placement, pStage, pRuleVariant, listDecision, out );
                     if ( resolved._socketSet.empty() == false )
                         out._listSocketSource.push_back( ResolvedSocketSource{ entry._owner, part._name, part._socketSet } );
                     out._listPart.push_back( resolved );
@@ -503,6 +535,213 @@ namespace sw
                     emitParts( *pExtraVisual, extra, -1, listDecision, out );
                 }
             }
+
+            /** @brief 1 단계입니다. 몸 항목을 넣고 캐릭터 꾸미기를 적용합니다. */
+            static void addBodyEntries( const AppearanceDatabase& database, const CharacterAppearanceSpec& spec, vector<Entry>& inoutListEntry, ResolvedAppearance& out )
+            {
+                int32                bodyIndex = -1;
+                const ItemVisualDef* pBody     = database.getVisuals().findVisual( spec._bodyVisual );
+                if ( pBody != nullptr )
+                {
+                    Entry body;
+                    body._pVisual = pBody;
+                    body._state   = getDefaultState( *pBody );
+                    inoutListEntry.push_back( body );
+                    bodyIndex = static_cast<int32>( inoutListEntry.size() ) - 1;
+                }
+                const CustomizationSchemaDef* pSchema = database.getSchemas().findSchema( spec._schema );
+                if ( pSchema == nullptr )
+                    return;
+                CustomizationValueSet normalized;
+                vector<hashed_string> listDropped;
+                CustomizationUtil::normalize( *pSchema, spec._customization, normalized, &listDropped );
+                for ( const hashed_string& dropped : listDropped )
+                {
+                    addTrace( out, AppearanceTraceStep::Customization, dropped, "'%#' is not in schema '%#' - dropped", dropped.c_str(), pSchema->_id.c_str() );
+                }
+                vector<const ItemVisualDef*> listUnused;
+                applyCustomization( *pSchema, normalized, hashed_string{}, bodyIndex, database, inoutListEntry, listUnused, out );
+            }
+
+            /** @brief 2 단계입니다. 슬롯마다 장비 항목을 넣습니다. 형상 변경(transmog)과 조건이 깨진 장비의 숨김을 여기서 정합니다. */
+            static void addSlotEntries( const AppearanceDatabase& database, const CharacterAppearanceSpec& spec, vector<Entry>& inoutListEntry, ResolvedAppearance& out )
+            {
+                const ItemCatalog* pItemCatalog = database.getItemCatalog();
+                for ( const AppearanceSlotRequest& request : spec._listSlot )
+                {
+                    if ( request._itemID.empty() )
+                        continue;
+                    const ItemDef*       pItem    = pItemCatalog != nullptr ? pItemCatalog->find( request._itemID ) : nullptr;
+                    const hashed_string  visualID = request._visibleVisual.empty() == false ? request._visibleVisual : ( pItem != nullptr ? pItem->_visualID : hashed_string{} );
+                    const ItemVisualDef* pVisual  = database.getVisuals().findVisual( visualID );
+                    if ( pVisual == nullptr )
+                    {
+                        addTrace( out, AppearanceTraceStep::Output, request._slot, "item '%#' has no visual", request._itemID.c_str() );
+                        continue;
+                    }
+                    Entry entry;
+                    entry._pVisual  = pVisual;
+                    entry._pRequest = &request;
+                    entry._owner    = request._slot;
+                    entry._itemID   = request._itemID;
+                    entry._state    = request._state.empty() ? getDefaultState( *pVisual ) : request._state;
+                    if ( request._visibleVisual.empty() == false )
+                        addTrace( out, AppearanceTraceStep::Output, request._slot, "'%#' shows visual '%#' (transmog)", request._itemID.c_str(), visualID.c_str() );
+                    if ( request._bSuppressed == SW_TRUE )
+                    {
+                        entry._bHidden = SW_TRUE;
+                        addTrace( out, AppearanceTraceStep::Output, request._slot, "'%#' hidden - its equip condition is broken", request._itemID.c_str() );
+                    }
+                    inoutListEntry.push_back( entry );
+                }
+            }
+
+            /** @brief 3 단계입니다. 슬롯 점유를 테이블 순서대로 보며, 먼저 보이는 장비의 점유가 이깁니다. */
+            static void applyOccupancy( const AppearanceDatabase& database, vector<Entry>& inoutListEntry, ResolvedAppearance& out )
+            {
+                for ( size_t index = 0; index < inoutListEntry.size(); ++index )
+                {
+                    const Entry& occupier      = inoutListEntry[index];
+                    const bool   bSkipOccupier = occupier._pRequest == nullptr || occupier._bHidden == SW_TRUE || occupier._pVisual->_occupancy.empty();
+                    if ( bSkipOccupier )
+                        continue;
+                    const SlotOccupancyDef* pOccupancy = database.getSlotTable().findOccupancy( occupier._pVisual->_occupancy );
+                    if ( pOccupancy == nullptr )
+                        continue;
+                    for ( const hashed_string& slot : pOccupancy->_listSlot )
+                    {
+                        const int32 otherIndex = slot == occupier._owner ? -1 : findEntry( inoutListEntry, slot, true );
+                        if ( otherIndex < 0 )
+                            continue;
+                        inoutListEntry[static_cast<size_t>( otherIndex )]._bHidden = SW_TRUE;
+                        addTrace( out, AppearanceTraceStep::Occupancy, occupier._owner, "'%#' occupies slot '%#' - '%#' hidden", occupier._itemID.c_str(), slot.c_str(),
+                                  inoutListEntry[static_cast<size_t>( otherIndex )]._itemID.c_str() );
+                    }
+                }
+            }
+
+            /** @brief 4 단계입니다. 세트 완성 표현을 요청된 아이템으로 판정합니다. 숨김 정책으로 꺼진 장비는 세지 않습니다. */
+            static void applySetCompletion( const AppearanceDatabase& database, const CharacterAppearanceSpec& spec, vector<Entry>& inoutListEntry, ResolvedAppearance& out )
+            {
+                for ( const EquipSetDef& set : database.getSets().getSets() )
+                {
+                    const ItemVisualDef* pCompleteVisual = set._completeVisual.empty() ? nullptr : database.getVisuals().findVisual( set._completeVisual );
+                    if ( pCompleteVisual == nullptr )
+                        continue;
+                    const EquipSetProgress progress = database.getSets().computeProgressWith( set, spec._bodyType, [&spec]( const hashed_string& slot )
+                    {
+                        const AppearanceSlotRequest* pRequest = spec.findSlot( slot );
+                        return pRequest == nullptr || pRequest->_bSuppressed == SW_TRUE ? hashed_string{} : pRequest->_itemID;
+                    } );
+                    if ( progress.isComplete() == false )
+                        continue;
+                    for ( const hashed_string& slot : set._listCompleteSlot )
+                    {
+                        const int32 replacedIndex = findEntry( inoutListEntry, slot, true );
+                        if ( replacedIndex >= 0 )
+                            inoutListEntry[static_cast<size_t>( replacedIndex )]._bHidden = SW_TRUE;
+                    }
+                    Entry complete;
+                    complete._pVisual = pCompleteVisual;
+                    complete._owner   = set._listCompleteSlot.front();
+                    complete._state   = getDefaultState( *pCompleteVisual );
+                    inoutListEntry.push_back( complete );
+                    addTrace( out, AppearanceTraceStep::SetComplete, set._id, "set complete - visual '%#' replaces %# slot(s)", set._completeVisual.c_str(),
+                              static_cast<int32>( set._listCompleteSlot.size() ) );
+                }
+            }
+
+            /**
+             * @brief 5 단계입니다. 규칙을 판정하고, 숨김 동작은 바로 적용하며, 나머지 동작은 대상별 판정 @p outListDecision 에 모읍니다.
+             * @details 조건은 지금의 목록(점유와 세트 처리 뒤, 규칙 동작 전)으로만 판정한다. 그래서 규칙끼리 서로의 숨김에 영향을 주지 않는다.
+             */
+            static void applyRules( const AppearanceDatabase& database, const CharacterAppearanceSpec& spec, vector<Entry>& inoutListEntry, vector<Decision>& outListDecision,
+                                    ResolvedAppearance& out )
+            {
+                const vector<Entry>              listSnapshot = inoutListEntry;
+                vector<const AppearanceRuleDef*> listFired;
+                for ( const AppearanceRuleDef& rule : database.getRules().getRules() )
+                {
+                    bool bFires = true;
+                    for ( const AppearanceRuleCondition& condition : rule._listCondition )
+                    {
+                        bFires = bFires && isConditionMet( condition, listSnapshot, spec );
+                    }
+                    if ( bFires == false )
+                        continue;
+                    listFired.push_back( &rule );
+                    addTrace( out, AppearanceTraceStep::Rule, rule._id, "fired (priority %#)", rule._priority );
+                    for ( const AppearanceRuleAction& action : rule._listAction )
+                    {
+                        if ( action.isHide() == false )
+                            decide( rule, action, outListDecision, out );
+                    }
+                }
+                for ( const AppearanceRuleDef* pRule : listFired )
+                {
+                    for ( const AppearanceRuleAction& action : pRule->_listAction )
+                    {
+                        if ( action._kind == AppearanceRuleActionKind::HideRegion )
+                        {
+                            addHiddenRegion( out, action._name );
+                            addTrace( out, AppearanceTraceStep::Rule, pRule->_id, "body region '%#' hidden", action._name.c_str() );
+                            continue;
+                        }
+                        if ( action.isHide() == false )
+                            continue;
+                        for ( Entry& entry : inoutListEntry )
+                        {
+                            const bool bMatches   = action._kind == AppearanceRuleActionKind::HideTarget ? entry._owner == action._target : entry._pVisual->_tags.hasTag( action._tag );
+                            const bool bHideEntry = bMatches && entry._bHidden == SW_FALSE && entry._owner.empty() == false;
+                            if ( bHideEntry )
+                            {
+                                entry._bHidden = SW_TRUE;
+                                addTrace( out, AppearanceTraceStep::Rule, pRule->_id, "'%#' hidden", entry._owner.c_str() );
+                            }
+                        }
+                    }
+                }
+            }
+
+            /** @brief 부품 밖으로 나가는 판정(모프, 고른 변형의 기록, 소켓 덮어쓰기)을 출력에 적용합니다. 소켓 덮어쓰기는 요청의 것 위에 같은 이름을 바꿉니다. */
+            static void emitDecisions( const CharacterAppearanceSpec& spec, const vector<Decision>& listDecision, ResolvedAppearance& out )
+            {
+                for ( const Decision& decision : listDecision )
+                {
+                    const AppearanceRuleAction& action = *decision._pAction;
+                    if ( action._kind == AppearanceRuleActionKind::ApplyMorph )
+                    {
+                        setMorph( out, action._target, action._name, action._weight );
+                        addTrace( out, AppearanceTraceStep::Rule, decision._pRule->_id, "morph '%#' = %#", action._name.c_str(), action._weight );
+                    }
+                    else if ( action._kind == AppearanceRuleActionKind::ChooseVariant )
+                    {
+                        addTrace( out, AppearanceTraceStep::Rule, decision._pRule->_id, "variant '%#' chosen for '%#'", action._name.c_str(), action._target.c_str() );
+                    }
+                }
+                out._listSocketOverride = spec._listSocketOverride;
+                for ( const Decision& decision : listDecision )
+                {
+                    const AppearanceRuleAction& action = *decision._pAction;
+                    if ( action._kind != AppearanceRuleActionKind::OverrideSocket )
+                        continue;
+                    AppearanceSocketOverride socketOverride;
+                    socketOverride._name      = action._name;
+                    socketOverride._placement = action._placement;
+                    bool bReplaced            = false;
+                    for ( AppearanceSocketOverride& existing : out._listSocketOverride )
+                    {
+                        if ( existing._name == socketOverride._name )
+                        {
+                            existing  = socketOverride;
+                            bReplaced = true;
+                        }
+                    }
+                    if ( bReplaced == false )
+                        out._listSocketOverride.push_back( socketOverride );
+                    addTrace( out, AppearanceTraceStep::Rule, decision._pRule->_id, "socket '%#' overridden", action._name.c_str() );
+                }
+            }
         };
     } // namespace
 } // namespace sw
@@ -521,12 +760,7 @@ namespace sw
 
     bool ResolvedAppearance::hasOwner( const hashed_string& owner ) const
     {
-        for ( const ResolvedPart& part : _listPart )
-        {
-            if ( part._owner == owner )
-                return true;
-        }
-        return false;
+        return VectorUtil::containsBy<&ResolvedPart::_owner>( _listPart, owner );
     }
 
     bool ResolvedAppearance::isRegionHidden( const hashed_string& region ) const
@@ -563,206 +797,29 @@ namespace sw
     void AppearanceResolver::resolve( const AppearanceDatabase& database, const CharacterAppearanceSpec& spec, ResolvedAppearance& outResolved )
     {
         using Internal         = AppearanceResolverInternal;
-        using Entry            = AppearanceResolverInternal::Entry;
         outResolved            = ResolvedAppearance{};
         outResolved._presetID  = spec._presetID;
         outResolved._bodyType  = spec._bodyType;
         outResolved._bodyShape = spec._bodyShape;
         outResolved._face      = spec._face;
 
-        // 1) 몸과 캐릭터 꾸미기.
-        vector<Entry>        listEntry;
-        int32                bodyIndex = -1;
-        const ItemVisualDef* pBody     = database.getVisuals().findVisual( spec._bodyVisual );
-        if ( pBody != nullptr )
-        {
-            Entry body;
-            body._pVisual = pBody;
-            body._state   = Internal::getDefaultState( *pBody );
-            listEntry.push_back( body );
-            bodyIndex = 0;
-        }
-        const CustomizationSchemaDef* pSchema = database.getSchemas().findSchema( spec._schema );
-        if ( pSchema != nullptr )
-        {
-            CustomizationValueSet normalized;
-            vector<hashed_string> listDropped;
-            CustomizationUtil::normalize( *pSchema, spec._customization, normalized, &listDropped );
-            for ( const hashed_string& dropped : listDropped )
-            {
-                Internal::addTrace( outResolved, AppearanceTraceStep::Customization, dropped, "'%#' is not in schema '%#' - dropped", dropped.c_str(), pSchema->_id.c_str() );
-            }
-            vector<const ItemVisualDef*> listUnused;
-            Internal::applyCustomization( *pSchema, normalized, hashed_string{}, bodyIndex, database, listEntry, listUnused, outResolved );
-        }
+        // 단계 순서가 결과다. 뒤 단계는 앞 단계가 숨긴 항목을 보지 않는다.
+        vector<Internal::Entry> listEntry;
+        Internal::addBodyEntries( database, spec, listEntry, outResolved );
+        Internal::addSlotEntries( database, spec, listEntry, outResolved );
+        Internal::applyOccupancy( database, listEntry, outResolved );
+        Internal::applySetCompletion( database, spec, listEntry, outResolved );
+        vector<Internal::Decision> listDecision;
+        Internal::applyRules( database, spec, listEntry, listDecision, outResolved );
 
-        // 2) 슬롯: 형상 변경과 숨김.
-        const ItemCatalog* pItemCatalog = database.getItemCatalog();
-        for ( const AppearanceSlotRequest& request : spec._listSlot )
-        {
-            if ( request._itemID.empty() )
-                continue;
-            const ItemDef*       pItem    = pItemCatalog != nullptr ? pItemCatalog->find( request._itemID ) : nullptr;
-            const hashed_string  visualID = request._visibleVisual.empty() == false ? request._visibleVisual : ( pItem != nullptr ? pItem->_visualID : hashed_string{} );
-            const ItemVisualDef* pVisual  = database.getVisuals().findVisual( visualID );
-            if ( pVisual == nullptr )
-            {
-                Internal::addTrace( outResolved, AppearanceTraceStep::Output, request._slot, "item '%#' has no visual", request._itemID.c_str() );
-                continue;
-            }
-            Entry entry;
-            entry._pVisual  = pVisual;
-            entry._pRequest = &request;
-            entry._owner    = request._slot;
-            entry._itemID   = request._itemID;
-            entry._state    = request._state.empty() ? Internal::getDefaultState( *pVisual ) : request._state;
-            if ( request._visibleVisual.empty() == false )
-                Internal::addTrace( outResolved, AppearanceTraceStep::Output, request._slot, "'%#' shows visual '%#' (transmog)", request._itemID.c_str(), visualID.c_str() );
-            if ( request._bSuppressed == SW_TRUE )
-            {
-                entry._bHidden = SW_TRUE;
-                Internal::addTrace( outResolved, AppearanceTraceStep::Output, request._slot, "'%#' hidden - its equip condition is broken", request._itemID.c_str() );
-            }
-            listEntry.push_back( entry );
-        }
-
-        // 3) 슬롯 점유: 테이블 순서대로 보며, 먼저 보이는 장비의 점유가 이긴다.
-        for ( size_t index = 0; index < listEntry.size(); ++index )
-        {
-            const Entry& occupier      = listEntry[index];
-            const bool   bSkipOccupier = occupier._pRequest == nullptr || occupier._bHidden == SW_TRUE || occupier._pVisual->_occupancy.empty();
-            if ( bSkipOccupier )
-                continue;
-            const SlotOccupancyDef* pOccupancy = database.getSlotTable().findOccupancy( occupier._pVisual->_occupancy );
-            if ( pOccupancy == nullptr )
-                continue;
-            for ( const hashed_string& slot : pOccupancy->_listSlot )
-            {
-                const int32 otherIndex = slot == occupier._owner ? -1 : Internal::findEntry( listEntry, slot, true );
-                if ( otherIndex < 0 )
-                    continue;
-                listEntry[static_cast<size_t>( otherIndex )]._bHidden = SW_TRUE;
-                Internal::addTrace( outResolved, AppearanceTraceStep::Occupancy, occupier._owner, "'%#' occupies slot '%#' - '%#' hidden", occupier._itemID.c_str(), slot.c_str(),
-                                    listEntry[static_cast<size_t>( otherIndex )]._itemID.c_str() );
-            }
-        }
-
-        // 4) 세트 완성 표현: 요청된 아이템으로 판정한다. 숨김 정책으로 꺼진 것은 뺀다.
-        for ( const EquipSetDef& set : database.getSets().getSets() )
-        {
-            const ItemVisualDef* pCompleteVisual = set._completeVisual.empty() ? nullptr : database.getVisuals().findVisual( set._completeVisual );
-            if ( pCompleteVisual == nullptr )
-                continue;
-            const EquipSetProgress progress = database.getSets().computeProgressWith( set, spec._bodyType, [&]( const hashed_string& slot )
-            {
-                const AppearanceSlotRequest* pRequest = spec.findSlot( slot );
-                return pRequest == nullptr || pRequest->_bSuppressed == SW_TRUE ? hashed_string{} : pRequest->_itemID;
-            } );
-            if ( progress.isComplete() == false )
-                continue;
-            for ( const hashed_string& slot : set._listCompleteSlot )
-            {
-                const int32 replacedIndex = Internal::findEntry( listEntry, slot, true );
-                if ( replacedIndex >= 0 )
-                    listEntry[static_cast<size_t>( replacedIndex )]._bHidden = SW_TRUE;
-            }
-            Entry complete;
-            complete._pVisual = pCompleteVisual;
-            complete._owner   = set._listCompleteSlot.front();
-            complete._state   = Internal::getDefaultState( *pCompleteVisual );
-            listEntry.push_back( complete );
-            Internal::addTrace( outResolved, AppearanceTraceStep::SetComplete, set._id, "set complete - visual '%#' replaces %# slot(s)", set._completeVisual.c_str(),
-                                static_cast<int32>( set._listCompleteSlot.size() ) );
-        }
-
-        // 5) 규칙: 지금의 목록(점유와 세트 처리 뒤, 규칙 동작 전)으로만 판정한다.
-        const vector<Entry>              listSnapshot = listEntry;
-        vector<Internal::Decision>       listDecision;
-        vector<const AppearanceRuleDef*> listFired;
-        for ( const AppearanceRuleDef& rule : database.getRules().getRules() )
-        {
-            bool bFires = true;
-            for ( const AppearanceRuleCondition& condition : rule._listCondition )
-            {
-                bFires = bFires && Internal::isConditionMet( condition, listSnapshot, spec );
-            }
-            if ( bFires == false )
-                continue;
-            listFired.push_back( &rule );
-            Internal::addTrace( outResolved, AppearanceTraceStep::Rule, rule._id, "fired (priority %#)", rule._priority );
-            for ( const AppearanceRuleAction& action : rule._listAction )
-            {
-                if ( action.isHide() == false )
-                    Internal::decide( rule, action, listDecision, outResolved );
-            }
-        }
-        for ( const AppearanceRuleDef* pRule : listFired )
-        {
-            for ( const AppearanceRuleAction& action : pRule->_listAction )
-            {
-                if ( action._kind == AppearanceRuleActionKind::HideRegion )
-                {
-                    Internal::addHiddenRegion( outResolved, action._name );
-                    Internal::addTrace( outResolved, AppearanceTraceStep::Rule, pRule->_id, "body region '%#' hidden", action._name.c_str() );
-                    continue;
-                }
-                if ( action.isHide() == false )
-                    continue;
-                for ( Entry& entry : listEntry )
-                {
-                    const bool bMatches   = action._kind == AppearanceRuleActionKind::HideTarget ? entry._owner == action._target : entry._pVisual->_tags.hasTag( action._tag );
-                    const bool bHideEntry = bMatches && entry._bHidden == SW_FALSE && entry._owner.empty() == false;
-                    if ( bHideEntry )
-                    {
-                        entry._bHidden = SW_TRUE;
-                        Internal::addTrace( outResolved, AppearanceTraceStep::Rule, pRule->_id, "'%#' hidden", entry._owner.c_str() );
-                    }
-                }
-            }
-        }
-
-        // 6) 출력: 몸, 꾸미기 외형, 슬롯 순서.
+        // 출력은 몸, 꾸미기 외형, 슬롯 순서다.
         for ( size_t index = 0; index < listEntry.size(); ++index )
         {
             if ( listEntry[index]._bHidden == SW_TRUE )
                 continue;
             Internal::emitEntry( database, listEntry[index], listEntry, static_cast<int32>( index ), listDecision, outResolved );
         }
-        for ( const Internal::Decision& decision : listDecision )
-        {
-            const AppearanceRuleAction& action = *decision._pAction;
-            if ( action._kind == AppearanceRuleActionKind::ApplyMorph )
-            {
-                Internal::setMorph( outResolved, action._target, action._name, action._weight );
-                Internal::addTrace( outResolved, AppearanceTraceStep::Rule, decision._pRule->_id, "morph '%#' = %#", action._name.c_str(), action._weight );
-            }
-            else if ( action._kind == AppearanceRuleActionKind::ChooseVariant )
-            {
-                Internal::addTrace( outResolved, AppearanceTraceStep::Rule, decision._pRule->_id, "variant '%#' chosen for '%#'", action._name.c_str(), action._target.c_str() );
-            }
-        }
-        outResolved._listSocketOverride = spec._listSocketOverride;
-        for ( const Internal::Decision& decision : listDecision )
-        {
-            const AppearanceRuleAction& action = *decision._pAction;
-            if ( action._kind != AppearanceRuleActionKind::OverrideSocket )
-                continue;
-            AppearanceSocketOverride socketOverride;
-            socketOverride._name      = action._name;
-            socketOverride._placement = action._placement;
-            bool bReplaced            = false;
-            for ( AppearanceSocketOverride& existing : outResolved._listSocketOverride )
-            {
-                if ( existing._name == socketOverride._name )
-                {
-                    existing  = socketOverride;
-                    bReplaced = true;
-                }
-            }
-            if ( bReplaced == false )
-                outResolved._listSocketOverride.push_back( socketOverride );
-            Internal::addTrace( outResolved, AppearanceTraceStep::Rule, decision._pRule->_id, "socket '%#' overridden", action._name.c_str() );
-        }
+        Internal::emitDecisions( spec, listDecision, outResolved );
         outResolved._meshHash = computeMeshHash( outResolved );
         outResolved._hash     = computeHash( outResolved );
     }

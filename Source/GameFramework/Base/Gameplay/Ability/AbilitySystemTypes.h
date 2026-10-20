@@ -67,7 +67,7 @@ namespace sw
     /**
      * @brief 모디파이어가 어트리뷰트를 바꾸는 방식입니다(언리얼의 `EGameplayModOp` 에 해당).
      * @details 지속 이펙트의 현재값은 언리얼의 집계 규칙을 그대로 따른다.
-     *          `((base + ΣAdd) × (1 + Σ(Multiply − 1))) ÷ (1 + Σ(Divide − 1))`, `Override` 가 있으면 마지막 것이 우선한다.
+     *          `((base + ΣAdd) × (1 + Σ(Multiply - 1))) ÷ (1 + Σ(Divide - 1))`, `Override` 가 있으면 마지막 것이 우선한다.
      *          곱은 **보너스를 더한다**. ×1.2 와 ×1.3 이 함께 걸리면 ×1.5 이고, ×1.56 이 아니다. 즉시 이펙트는 base 에 바로 쓴다.
      */
     ENUM()
@@ -92,7 +92,7 @@ namespace sw
     ENUM()
     enum class EffectStackingPolicy : uint8
     {
-        None = 0,         ///< 걸 때마다 새 인스턴스를 만든다(서로 독립)
+        None = 0,         ///< 적용할 때마다 새 인스턴스를 만든다(서로 독립)
         AggregateByTarget ///< 대상에 하나만 두고 스택 수를 올린다(상한은 `_stackLimit`)
     };
 
@@ -106,7 +106,7 @@ namespace sw
 
     /**
      * @brief 모디파이어 크기를 어디서 얻는지 나타냅니다(언리얼의 `EGameplayEffectMagnitudeCalculation` 에 해당).
-     * @details `AttributeBased` 는 적용하는 순간의 값을 쓴다(스냅샷). 이펙트가 걸린 뒤에 그 어트리뷰트가 바뀌어도 이미 걸린 이펙트는 다시 계산하지 않는다.
+     * @details `AttributeBased` 는 적용하는 순간의 값을 쓴다(스냅샷). 이펙트가 적용된 뒤에 그 어트리뷰트가 바뀌어도 이미 적용된 이펙트는 다시 계산하지 않는다.
      */
     ENUM()
     enum class EffectMagnitudeSource : uint8
@@ -151,7 +151,7 @@ namespace sw
     // 5) 레벨에 따라 커지는 수. 언리얼 `FScalableFloat` 에서 곡선을 뺀 버전이다
     // ------------------------------------------------------------------------------
     /**
-     * @brief 레벨 1 의 값과 레벨마다 더할 값입니다. `compute( level ) = base + perLevel × (level − 1)` 로 계산합니다.
+     * @brief 레벨 1 의 값과 레벨마다 더할 값입니다. `compute( level ) = base + perLevel × (level - 1)` 로 계산합니다.
      * @details 언리얼은 커브 테이블을 쓴다. 여기서는 데이터에 두 수를 적는 직선 하나로 충분하다. 커브가 필요해지면 이 타입에 테이블을 추가한다.
      */
     struct ScalableFloat

@@ -17,7 +17,7 @@ namespace sw
 
     /**
      * @class DamageNumberComponent
-     * @brief 소유 오브젝트 자리에 데미지 숫자를 띄웁니다. 위로 떠오르며 흐려지고, 수명이 다하면 오브젝트를 지웁니다.
+     * @brief 소유 오브젝트 위치에 데미지 숫자를 띄웁니다. 위로 떠오르며 흐려지고, 수명이 다하면 오브젝트를 지웁니다.
      * @details 숫자는 같은 오브젝트의 `WidgetComponent`(Screen 모드의 화면 마커)에 넣는 글 위젯 하나이다.
      *          스타일 클래스는 `damage` 이며 테마 시트가 크기, 굵기, 외곽선을 정한다. 색은 `_color` 이고, 불투명도는 `_alpha` 이며 수명에 따라 1 에서 0 으로 줄어든다.
      *          화면 공간이라 거리와 상관없이 같은 크기로 선명하다.
@@ -47,7 +47,7 @@ namespace sw
         void onBeginPlay() override;
         /** @brief 떠오르고 흐려지며, 수명이 다하면 오브젝트를 지웁니다. 틱 뒤에 글 위젯 값을 넣게 합니다. */
         void onTick( float32 deltaTime ) override;
-        /** @brief 값이나 색 칸을 고치면 글 위젯을 다시 채웁니다. */
+        /** @brief 값이나 색 필드를 고치면 글 위젯을 다시 채웁니다. */
         void onPropertyChanged( hashed_string propertyName ) override;
         /** @brief 소유 오브젝트가 꺼지면 숫자를 숨깁니다. */
         void onOwnerActiveInHierarchyChanged() override;

@@ -111,7 +111,7 @@ namespace sw
         int32         getValue( const hashed_string& factionID ) const;
         hashed_string getTierName( const hashed_string& factionID ) const;
         /**
-         * @brief 단계 번호입니다. 0 이 가장 낮은 단계이고, 단계가 없으면 −1 입니다.
+         * @brief 단계 번호입니다. 0 이 가장 낮은 단계이고, 단계가 없으면 -1 입니다.
          * @details 값이 가장 낮은 단계의 `min` 보다 작아도 0 이다. 단계에는 하한이 없어서 가장 낮은 단계로 떨어지며, "단계 밖" 은 없다.
          */
         int32 getTierIndex( const hashed_string& factionID ) const;
@@ -130,7 +130,7 @@ namespace sw
 
         Entry& acquireEntry( const hashed_string& factionID );
         int32  applyDelta( const hashed_string& factionID, int32 delta );
-        /** @brief `getTierIndex` 의 계산입니다. 값 이하인 마지막 단계를 고르고, 그런 단계가 없으면 0(가장 낮은 단계)이며, 단계가 아예 없으면 −1 입니다. */
+        /** @brief `getTierIndex` 의 계산입니다. 값 이하인 마지막 단계를 고르고, 그런 단계가 없으면 0(가장 낮은 단계)이며, 단계가 아예 없으면 -1 입니다. */
         static int32 computeTierIndex( const FactionDef* pFaction, int32 value );
 
         vector<Entry>                _listEntry;

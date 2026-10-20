@@ -14,7 +14,7 @@
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 1) GameStrings — 프로세스 전역 키 테이블
+    // 1) GameStrings: 프로세스 전역 키 테이블
     //    UI/로그 리터럴이 아니라 로컬라이제이션 프로젝트의 대사·표시 다국어 문자열
     // ------------------------------------------------------------------------------
     /** @brief 다국어 언어 파일 로딩과 키 조회를 맡는 게임 텍스트 시스템입니다. */
@@ -24,7 +24,7 @@ namespace sw
         using LanguageChangedCallback = sw::Delegate<void( string_view oldLanguage, string_view newLanguage )>;
 
         /**
-         * @brief 게임의 로컬라이제이션 프로젝트를 올리고 명령줄, 기본, 폴백 언어를 활성화합니다. 앞의 게임 프로젝트는 내립니다.
+         * @brief 게임의 로컬라이제이션 프로젝트를 로드하고 명령줄, 기본, 폴백 언어를 활성화합니다. 앞의 게임 프로젝트는 언로드합니다.
          * @param projectPath 프로젝트 파일(`<팩루트>/data/localization/<게임>.locproject.json`)
          * @param defaultLanguage 기본 활성 언어 코드 (예: "ko_KR")
          * @param fallbackLanguage 대체(Fallback) 언어 코드 (예: "en_US")

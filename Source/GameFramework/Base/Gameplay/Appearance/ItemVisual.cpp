@@ -3,6 +3,7 @@
 #include "GameFramework/Base/Gameplay/Appearance/ItemVisual.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -299,42 +300,22 @@ namespace sw
 {
     const AppearancePartVariantDef* AppearancePartDef::findVariant( const hashed_string& name ) const
     {
-        for ( const AppearancePartVariantDef& variant : _listVariant )
-        {
-            if ( variant._name == name )
-                return &variant;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&AppearancePartVariantDef::_name>( _listVariant, name );
     }
 
     const AppearancePartVariantDef* AppearancePartDef::findMaterialVariant( const hashed_string& name ) const
     {
-        for ( const AppearancePartVariantDef& variant : _listMaterialVariant )
-        {
-            if ( variant._name == name )
-                return &variant;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&AppearancePartVariantDef::_name>( _listMaterialVariant, name );
     }
 
     const AppearancePartDef* ItemVisualDef::findPart( const hashed_string& name ) const
     {
-        for ( const AppearancePartDef& part : _listPart )
-        {
-            if ( part._name == name )
-                return &part;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&AppearancePartDef::_name>( _listPart, name );
     }
 
     const AppearanceStateDef* ItemVisualDef::findState( const hashed_string& name ) const
     {
-        for ( const AppearanceStateDef& state : _listState )
-        {
-            if ( state._name == name )
-                return &state;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&AppearanceStateDef::_name>( _listState, name );
     }
 
     const AppearanceDamageStageDef* ItemVisualDef::findDamageStage( const hashed_string& name ) const
@@ -391,11 +372,6 @@ namespace sw
 
     const ItemVisualDef* ItemVisualCatalog::findVisual( const hashed_string& id ) const
     {
-        for ( const ItemVisualDef& visual : _listVisual )
-        {
-            if ( visual._id == id )
-                return &visual;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&ItemVisualDef::_id>( _listVisual, id );
     }
 } // namespace sw

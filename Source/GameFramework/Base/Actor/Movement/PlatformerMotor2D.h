@@ -1,8 +1,9 @@
 /**
  * @file PlatformerMotor2D.h
- * @brief 2D 플랫포머 몸 — 칸 지형(벽 · 한쪽 발판 · 사다리) 위에서 달리기 · 점프(높이와 정점 시간으로) · 짧은 점프 · 코요테 시간 · 점프 미리 누르기 ·
- *        다단 점프 · 벽 미끄러짐 · 벽 점프 · 대시 · 사다리 · 발판 아래로 내려가기입니다.
- * @details 메트로배니아 · 액션 플랫포머 · 소울라이크 2D 가 같은 몸을 씁니다(셀레스테 · 할로우 나이트의 손맛을 내는 규칙들). 좌표는 +X 오른쪽, +Y 위, 단위는 칸이 아니라 월드 단위입니다.
+ * @brief 2D 플랫포머 캐릭터 몸입니다. 타일 지형(벽, 한쪽 발판, 사다리) 위의 이동을 다룹니다.
+ * @details 달리기, 점프(높이와 정점 시간으로 정의), 짧은 점프, 코요테 시간, 점프 미리 누르기, 다단 점프, 벽 미끄러짐, 벽 점프, 대시, 사다리,
+ *          발판 아래로 내려가기를 지원합니다.
+ *          메트로배니아, 액션 플랫포머, 2D 소울라이크가 같은 몸을 씁니다. 셀레스테와 할로우 나이트의 조작감을 내는 규칙들입니다. 좌표는 +X 오른쪽, +Y 위, 단위는 타일이 아니라 월드 단위입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -18,27 +19,27 @@ namespace sw
 {
     class Archive;
 
-    /** @brief 칸 종류입니다. */
+    /** @brief 타일 종류입니다. */
     enum class PlatformTile : uint8
     {
         Empty = 0,
         Solid,
         OneWay, ///< 위에서만 밟힌다
         Ladder,
-        Hazard ///< 닿으면 알린다(가시 · 용암 — 피해는 게임이)
+        Hazard ///< 닿으면 알린다(가시, 용암). 피해는 게임이 준다
     };
 
-    /** @brief 칸 지형입니다. (0,0) 칸의 왼쪽 아래가 `_origin` 입니다. */
+    /** @brief 타일 지형입니다. (0,0) 타일의 왼쪽 아래가 `_origin` 입니다. */
     class SW_GF_API PlatformTileMap
     {
     public:
         void initialize( int32 width, int32 height, float32 tileSize, const float2& origin );
         void setTile( int32 x, int32 y, PlatformTile tile );
         void fillTiles( int32 minX, int32 minY, int32 maxX, int32 maxY, PlatformTile tile );
-        /** @brief 글자로 칠합니다 — 줄마다 한 행(첫 줄이 맨 위), '#' 벽 · '-' 한쪽 발판 · 'H' 사다리 · '^' 위험, 나머지 빈 칸. */
+        /** @brief 글자로 칠합니다. 줄마다 한 행(첫 줄이 맨 위)이고, '#' 는 벽, '-' 는 한쪽 발판, 'H' 는 사다리, '^' 는 위험, 나머지는 빈 타일입니다. */
         void loadFromText( string_view text, float32 tileSize, const float2& origin );
 
-        /** @brief 밖은 벽입니다(떨어져 나가지 않게 — 아래쪽 밖만 빈 칸이다: 구덩이). */
+        /** @brief 맵 밖은 벽으로 봐서 떨어져 나가지 않게 합니다. 아래쪽 밖만 빈 타일(구덩이)입니다. */
         PlatformTile getTile( int32 x, int32 y ) const;
         int32        computeTileX( float32 worldX ) const;
         int32        computeTileY( float32 worldY ) const;
@@ -52,7 +53,7 @@ namespace sw
         vector<PlatformTile> _listTile{};
         float2               _origin{};
         float32              _tileSize{ 1.0f };
-        GridTopology         _topology{}; ///< 타일 격자의 너비 · 높이 · 칸 번호
+        GridTopology         _topology{}; ///< 타일 격자의 너비, 높이, 타일 번호
     };
 } // namespace sw
 
@@ -92,7 +93,7 @@ namespace sw
     /** @brief 한 틱의 입력입니다. */
     struct PlatformerInput
     {
-        float2 _move{};                   ///< −1..1
+        float2 _move{};                   ///< -1..1
         uint8  _bJumpPressed{ SW_FALSE }; ///< 이번 틱에 눌렀다
         uint8  _bJumpHeld{ SW_FALSE };
         uint8  _bDashPressed{ SW_FALSE };
@@ -118,7 +119,7 @@ namespace sw
 {
     /**
      * @class PlatformerMotor2D
-     * @brief 고정 틱(권장 1/60)으로 부릅니다. 겹침은 축마다 따로 풀어(X → Y) 모서리에 걸리지 않게 하고, 한 틱 이동이 칸 반보다 크면 나눠 움직입니다.
+     * @brief 고정 틱(권장 1/60)으로 부릅니다. 겹침은 축마다 따로 해소해(X 다음 Y) 모서리에 걸리지 않게 하고, 한 틱 이동이 타일 반보다 크면 나눠 움직입니다.
      */
     class SW_GF_API PlatformerMotor2D
     {
@@ -128,7 +129,7 @@ namespace sw
         void setSettings( const PlatformerSettings& settings );
         void setPosition( const float2& position );
         void setVelocity( const float2& velocity ) { _velocity = velocity; }
-        /** @brief 넉백 · 튕기기 — 속도를 더하고 대시를 끊습니다. */
+        /** @brief 넉백이나 튕기기입니다. 속도를 더하고 대시를 끊습니다. */
         void addImpulse( const float2& impulse );
         void update( const PlatformTileMap& map, const PlatformerInput& input, float32 deltaTime );
 
@@ -137,7 +138,7 @@ namespace sw
         bool          isGrounded() const { return _bGrounded != SW_FALSE; }
         bool          isDashing() const { return _dash.isActive(); }
         bool          isClimbing() const { return _bClimbing != SW_FALSE; }
-        /** @brief 붙은 벽 쪽(−1 왼쪽, 1 오른쪽, 0 없음)입니다 — 벽 미끄러짐 중. */
+        /** @brief 벽 미끄러짐 중에 붙은 벽 쪽입니다. -1 은 왼쪽, 1 은 오른쪽, 0 은 없음입니다. */
         int32                     getWallSide() const { return _wallSide; }
         int32                     getFacing() const { return _facing; }
         uint32                    getEvents() const { return _events; }
@@ -146,7 +147,7 @@ namespace sw
         float32                   getJumpSpeed() const;
         const PlatformerSettings& getSettings() const { return _settings; }
 
-        /** @brief 자리 · 속도 · 타이머들 · 남은 점프 · 대시 · 벽 · 방향 · 바닥 · 오르기 · 상승을 씁니다. 설정과 이번 걸음의 사건 비트는 싣지 않습니다. */
+        /** @brief 위치, 속도, 타이머, 남은 점프, 대시, 벽, 방향, 바닥, 사다리 오르기, 상승을 씁니다. 설정과 이번 스텝의 사건 비트는 싣지 않습니다. */
         void writeState( Archive& outArchive ) const;
         /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
         [[nodiscard]] bool readState( Archive& archive );
@@ -156,6 +157,12 @@ namespace sw
         bool isTouching( const PlatformTileMap& map, PlatformTile tile ) const;
         void moveAxis( const PlatformTileMap& map, float32 delta, bool bVertical );
         void startJump( float32 speed, uint32 event );
+        /** @brief 대시를 누르고 쓸 수 있으면 입력 방향으로 대시를 시작합니다. 입력이 없으면 바라보는 쪽입니다. 대시는 중력 없이 곧게 갑니다. */
+        void tryStartDash( const PlatformerInput& input, float32 moveX, float32 moveY, bool bWasGrounded );
+        /** @brief 걷기와 공중 상태의 한 틱입니다. 좌우 가속, 벽 미끄러짐, 점프, 짧은 점프, 중력을 차례로 적용합니다. */
+        void updateRunAndJump( const PlatformTileMap& map, const PlatformerInput& input, float32 moveX, bool bWasGrounded, float32 deltaTime );
+        /** @brief 버퍼된 점프를 땅(코요테 포함), 벽, 공중 점프 순으로 시도합니다. @p bWallLeft 와 @p bWallRight 는 양옆 벽이 막혔는지입니다. */
+        void tryJump( bool bWallLeft, bool bWallRight );
 
         PlatformerSettings _settings;
         float2             _position;

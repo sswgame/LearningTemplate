@@ -1,8 +1,8 @@
 /**
  * @file ServiceMetrics.h
- * @brief 서비스 하나의 표준 지표 — `service_requests_total{service,method,result}` · `service_request_seconds{service,method}` · `service_store_pending{service}`.
- * @details 메서드 · 결과 이름은 서비스가 등록 때 넘기는 닫힌 집합이다(라벨에 계정 id · 추적 id 를 넣지 않는다). 레지스트리(`Engine/Observability/MetricRegistry`)가
- *          null 이면 모든 호출이 아무것도 하지 않는다. 지연은 응답 시점에 재므로 서비스는 받은 시각을 일 객체에 들고 `complete` 에서 `observe` 한다.
+ * @brief 서비스 하나의 표준 지표입니다. `service_requests_total{service,method,result}`, `service_request_seconds{service,method}`, `service_store_pending{service}` 를 둡니다.
+ * @details 메서드와 결과 이름은 서비스가 등록 때 넘기는 닫힌 집합이다(라벨에 계정 id 나 추적 id 를 넣지 않는다). 레지스트리(`Engine/Observability/MetricRegistry`)가
+ *          null 이면 모든 호출이 아무것도 하지 않는다. 지연은 응답 시점에 측정하므로 서비스는 받은 시각을 작업 객체에 보관하고 `complete` 에서 `observe` 한다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -24,7 +24,7 @@ namespace sw
 
 namespace sw
 {
-    /** @class ServiceMetrics @brief 서비스 하나의 지표 묶음입니다. 메서드 · 결과는 0 부터의 번호로 부른다. */
+    /** @class ServiceMetrics @brief 서비스 하나의 지표 그룹입니다. 메서드와 결과는 0 부터의 번호로 부릅니다. */
     class SW_GF_API ServiceMetrics
     {
     public:
@@ -33,7 +33,7 @@ namespace sw
         /**
          * @brief 등록합니다. 메서드 라벨은 @p TMethodName(키트의 메서드 이름 표, `OnlineMethodTable`), 결과 라벨은 @p TResult 의 열거자 이름(`ENUM()`)을
          *        snake_case 로 바꾼 것입니다(`NotSignedIn` → `not_signed_in`). 번호는 각각 `0 .. Count - 1` 입니다.
-         * @details 시리즈 수 = 메서드 × 결과 + 메서드 + 1 — 서비스당 수십 개.
+         * @details 시리즈 수는 메서드 × 결과 + 메서드 + 1 이라 서비스당 수십 개다.
          */
         template <typename TMethodName, typename TResult>
         void initialize( MetricRegistry* pRegistry, const utf8* pServiceName )

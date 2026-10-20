@@ -91,22 +91,38 @@ namespace sw
 
     bool GimmickCircuit::populate( const GimmickCircuitDef& def, const GimmickNodeRegistry& registry, vector<string>& outListError )
     {
-        using Internal         = GimmickCircuitInternal;
         const size_t errorBase = outListError.size();
         clear();
         _stepTime = def.getStepTime() > 0.0f ? def.getStepTime() : GimmickCircuitDef::kDefaultStepTime;
         _timer    = FixedStepTimer( _stepTime, 0.25f );
 
-        // 1) 노드: id, 종류, 매개변수. 상태가 담을 수 있는 노드 수를 넘으면 다른 검증 전에 멈춘다(노드마다 할당하지 않는다).
+        // 상태가 담을 수 있는 노드 수를 넘으면 다른 검증 전에 멈춘다(노드마다 할당하지 않는다).
         const vector<GimmickNodeDef>& listNodeDef = def.getNodes();
         if ( listNodeDef.size() > GimmickCircuitState::kMaxNodeCount )
         {
             utf8 arrBuffer[constant::kMaxBuffer256]{};
-            formatstring( arrBuffer, constant::kMaxBuffer256, "%#: %# nodes, more than the %# a circuit state holds", Internal::describeSource( def ).c_str(),
+            formatstring( arrBuffer, constant::kMaxBuffer256, "%#: %# nodes, more than the %# a circuit state holds", GimmickCircuitInternal::describeSource( def ).c_str(),
                           static_cast<uint64>( listNodeDef.size() ), GimmickCircuitState::kMaxNodeCount );
             outListError.push_back( string( arrBuffer ) );
             return false;
         }
+        populateNodes( def, registry, outListError );
+        populateWires( def, outListError );
+        initializeNodeStates( def, outListError );
+        computeEvaluationOrder( def, outListError );
+        if ( outListError.size() != errorBase )
+        {
+            clear();
+            return false;
+        }
+        saveState( _initialState );
+        return true;
+    }
+
+    void GimmickCircuit::populateNodes( const GimmickCircuitDef& def, const GimmickNodeRegistry& registry, vector<string>& outListError )
+    {
+        using Internal                            = GimmickCircuitInternal;
+        const vector<GimmickNodeDef>& listNodeDef = def.getNodes();
         _listNode.resize( listNodeDef.size() );
         for ( size_t nodeIndex = 0; nodeIndex < listNodeDef.size(); ++nodeIndex )
         {
@@ -158,8 +174,11 @@ namespace sw
             _listFloatState.resize( _listFloatState.size() + kind._floatStateCount, 0.0f );
             _listIntState.resize( _listIntState.size() + kind._intStateCount, 0 );
         }
+    }
 
-        // 2) 배선: 출력 포트에서 입력 포트로 이어지는 배선을 받는 노드 순서대로 모은다. 같은 입력에 여러 배선이 오면 OR 로 처리한다.
+    void GimmickCircuit::populateWires( const GimmickCircuitDef& def, vector<string>& outListError )
+    {
+        using Internal = GimmickCircuitInternal;
         vector<vector<InputWire>> listWirePerNode( _listNode.size() );
         for ( const GimmickWireDef& wire : def.getWires() )
         {
@@ -196,8 +215,11 @@ namespace sw
             node._wireCount   = static_cast<uint32>( listWirePerNode[nodeIndex].size() );
             _listInputWire.insert( _listInputWire.end(), listWirePerNode[nodeIndex].begin(), listWirePerNode[nodeIndex].end() );
         }
+    }
 
-        // 3) 처음 상태: 종류의 초기화가 매개변수를 해석해서 채운다. 틀린 이름이나 형식은 여기서 거절한다.
+    void GimmickCircuit::initializeNodeStates( const GimmickCircuitDef& def, vector<string>& outListError )
+    {
+        const vector<GimmickNodeDef>& listNodeDef = def.getNodes();
         for ( size_t nodeIndex = 0; nodeIndex < _listNode.size(); ++nodeIndex )
         {
             NodeRuntime& node = _listNode[nodeIndex];
@@ -207,11 +229,13 @@ namespace sw
             GimmickNodeContext context = makeContext( node );
             context._pError            = &error;
             if ( node._pKind->_pInitialize( context ) == false )
-                outListError.push_back( Internal::describeNode( def, listNodeDef[nodeIndex] ) + ": " + ( error.empty() ? string( "invalid parameters" ) : error ) );
+                outListError.push_back( GimmickCircuitInternal::describeNode( def, listNodeDef[nodeIndex] ) + ": " + ( error.empty() ? string( "invalid parameters" ) : error ) );
             node._outputBits = context._outputBits;
         }
+    }
 
-        // 4) 평가 순서: 고리를 끊는 노드(지연)가 먼저이고, 나머지는 위상 순서이다. 위상 순서가 같으면 정의 순서를 따른다. 남는 노드가 있으면 지연 없는 고리가 있다는 뜻이다.
+    void GimmickCircuit::computeEvaluationOrder( const GimmickCircuitDef& def, vector<string>& outListError )
+    {
         vector<uint32> listIndegree( _listNode.size(), 0 );
         for ( size_t nodeIndex = 0; nodeIndex < _listNode.size(); ++nodeIndex )
         {
@@ -270,15 +294,7 @@ namespace sw
             cycleNodes += node._id.c_str();
         }
         if ( cycleNodes.empty() == false )
-            outListError.push_back( Internal::describeSource( def ) + ": signal loop without a Delay through nodes " + cycleNodes );
-
-        if ( outListError.size() != errorBase )
-        {
-            clear();
-            return false;
-        }
-        saveState( _initialState );
-        return true;
+            outListError.push_back( GimmickCircuitInternal::describeSource( def ) + ": signal loop without a Delay through nodes " + cycleNodes );
     }
 
     GimmickNodeContext GimmickCircuit::makeContext( NodeRuntime& node )

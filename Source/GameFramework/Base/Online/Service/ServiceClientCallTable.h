@@ -4,10 +4,10 @@
  * @details 키트 클라이언트는 응답 공통 처리기(멤버 함수 델리게이트 하나)에서 요청마다 다른 사용자 델리게이트를 이 표로 찾는다.
  *
  *          - 한 스레드(`OnlineServiceClient::update` 을 부르는 스레드)에서만 쓴다.
- *          - 보내기는 `send` · `sendMessage` · `reject` 로만 한다. 키트 메시지는 `sendMessage` 가 쓰고, 쓰지 못하면(범위 밖 값) 보내지 않고 `kInvalidRequest` 응답으로 끝낸다.
+ *          - 보내기는 `send`, `sendMessage`, `reject` 로만 한다. 키트 메시지는 `sendMessage` 가 쓰고, 쓰지 못하면(범위 밖 값) 보내지 않고 `kInvalidRequest` 응답으로 끝낸다.
  *            그 응답도 다른 실패와 같이 응답 처리기로 오므로, 키트 클라이언트마다 쓰기 실패를 따로 처리하는 길이 없다.
  *          - 보내지 못한 요청(초기화 전, 멈춤, 쓰기 실패)도 0 이 아닌 요청 id 를 받고, 응답 델리게이트가 보내기 함수 안에서 바로 한 번 불린다.
- *            `OnlineServiceClient::sendRequest` 는 그 자리에서 실패(초기화 전, 버전 불일치, 끊김)를 응답 델리게이트로 부를 수 있다.
+ *            `OnlineServiceClient::sendRequest` 는 즉시 실패(초기화 전, 버전 불일치, 끊김)를 응답 델리게이트로 부를 수 있다.
  *            그래서 요청 id 를 받은 뒤에 표에 넣으면 그 응답이 사용자 델리게이트를 찾지 못한다.
  *            `send` 는 보내는 동안 온 응답에 보내는 중인 델리게이트를 내준다. 거래 클라이언트의 `_sendingCall` 과 같은 역할이다.
  * @code
@@ -19,7 +19,7 @@
  *     {
  *         FooDelegate onFoo;
  *         if ( _fooCallTable.take( response._requestID, onFoo ) && onFoo.isBound() )
- *             onFoo( response._errorCode, ... ); // _errorCode: OnlineError::kOk · 공통 · 키트 코드, 전송 실패는 kUnavailable
+ *             onFoo( response._errorCode, ... ); // _errorCode: OnlineError::kOk, 공통 코드, 키트 코드. 전송 실패는 kUnavailable
  *     }
  * @endcode
  */
@@ -35,10 +35,10 @@ namespace sw
 {
     /**
      * @class ServiceClientCallTable
-     * @brief 요청 id 와 델리게이트를 짝짓는 표입니다.
-     * @details 클라이언트 · 몸 · 옵션 · 응답 델리게이트 타입은 `send` 의 템플릿 인자라 이 헤더는 `OnlineServiceClient.h` 를 끌어오지 않는다.
+     * @brief 요청 id 와 델리게이트를 짝짓는 테이블입니다.
+     * @details 클라이언트, 본문, 옵션, 응답 델리게이트 타입은 `send` 의 템플릿 인자라 이 헤더는 `OnlineServiceClient.h` 를 끌어오지 않는다.
      *          @p TClient 는 `sendRequest( method, body, options, onResponse )`, `rejectRequest( errorCode, onResponse )`, `peekNextRequestID()` 를 가진다(`OnlineServiceClient`).
-     *          대기 중인 호출은 버리는 API 가 없다 — 클라이언트는 요청마다 콜백을 정확히 한 번 부르므로(끊김 · 시한도 실패 응답) 표는 응답으로만 빈다.
+     *          대기 중인 호출은 버리는 API 가 없다. 클라이언트는 요청마다 콜백을 정확히 한 번 부르므로(끊김과 시한도 실패 응답이다) 테이블은 응답으로만 빈다.
      */
     template <typename TDelegate>
     class ServiceClientCallTable
@@ -97,7 +97,7 @@ namespace sw
         size_t getCount() const { return _mapRequestToDelegate.size(); }
 
     private:
-        /** @brief @p issue 가 요청 id 를 받는 동안 그 자리에서 온 응답이 @p onDone 을 꺼내 가게 하고, 꺼내 가지 않았으면 표에 넣습니다. */
+        /** @brief @p issue 가 요청 id 를 받는 동안 즉시 온 응답이 @p onDone 을 꺼내 가게 하고, 꺼내 가지 않았으면 테이블에 넣습니다. */
         template <typename TClient, typename TIssue>
         uint64 dispatch( TClient& client, const TDelegate& onDone, const TIssue& issue )
         {

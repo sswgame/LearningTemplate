@@ -3,6 +3,7 @@
 #include "GameFramework/Base/Foundation/Data/StatBlock.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -14,12 +15,7 @@ namespace sw
 {
     StatValue* StatBlock::findValue( const hashed_string& name )
     {
-        for ( StatValue& value : _listValue )
-        {
-            if ( value._name == name )
-                return &value;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&StatValue::_name>( _listValue, name );
     }
 
     void StatBlock::setValue( const hashed_string& name, float32 value )
@@ -52,12 +48,7 @@ namespace sw
 
     bool StatBlock::hasValue( const hashed_string& name ) const
     {
-        for ( const StatValue& value : _listValue )
-        {
-            if ( value._name == name )
-                return true;
-        }
-        return false;
+        return VectorUtil::containsBy<&StatValue::_name>( _listValue, name );
     }
 
     bool StatBlock::canAfford( const StatBlock& cost ) const

@@ -2,6 +2,8 @@
 
 #include "GameFramework/Base/Online/Cache/EphemeralStoreRouter.h"
 
+#include "Core/Container/VectorUtil.h"
+
 namespace sw
 {
     EphemeralStoreRouter::EphemeralStoreRouter()
@@ -133,11 +135,6 @@ namespace sw
 
     bool EphemeralStoreRouter::hasChannelSubscriber( string_view channel ) const
     {
-        for ( const Subscription& subscription : _listSubscription )
-        {
-            if ( subscription._channel == channel )
-                return true;
-        }
-        return false;
+        return VectorUtil::containsBy<&Subscription::_channel>( _listSubscription, channel );
     }
 } // namespace sw

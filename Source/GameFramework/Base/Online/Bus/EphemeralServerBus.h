@@ -54,7 +54,7 @@ namespace sw
             uint64 _subscriptionID{ 0 };
         };
 
-        /** @brief 라우터가 이 버스의 채널 메시지 하나를 넘겨줍니다. 봉투를 풀어 큐에 넣습니다. */
+        /** @brief 라우터가 이 버스의 채널 메시지 하나를 넘겨줍니다. 봉투를 벗겨 큐에 넣습니다. */
         void onChannelMessage( const EphemeralMessage& message );
 
         vector<TopicSubscription> _listSubscription;

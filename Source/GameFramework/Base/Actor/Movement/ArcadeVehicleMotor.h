@@ -24,7 +24,7 @@ namespace sw
 
     /**
      * @class IVehicleGround
-     * @brief 차 밑의 땅입니다. 높이와 그 자리의 속도 배율(길은 1, 풀밭과 모래는 1 미만)을 게임이 지형, 높이맵, 트랙 메시로 답합니다.
+     * @brief 차 밑의 땅입니다. 높이와 그 위치의 속도 배율(길은 1, 풀밭과 모래는 1 미만)을 게임이 지형, 높이맵, 트랙 메시로 답합니다.
      */
     class SW_GF_API IVehicleGround
     {
@@ -36,7 +36,7 @@ namespace sw
         IVehicleGround& operator=( const IVehicleGround& ) = default;
 
         virtual float32 sampleHeight( float32 x, float32 z ) const = 0;
-        /** @brief 그 자리의 최고 속도 배율입니다. 길은 1, 풀밭 같은 오프로드는 0.5 입니다. */
+        /** @brief 그 위치의 최고 속도 배율입니다. 길은 1, 풀밭 같은 오프로드는 0.5 입니다. */
         virtual float32 sampleSpeedScale( float32 x, float32 z ) const
         {
             (void)x;
@@ -63,7 +63,7 @@ namespace sw
         float32 _steerRate{ 2.4f };                                                 ///< 느릴 때의 조향 속도
         float32 _steerRateAtMaxSpeed{ 1.1f };                                       ///< 최고 속도의 조향 속도(빠를수록 크게 돈다)
         float32 _steerMinSpeed{ 2.0f };                                             ///< 이보다 느리면 조향이 0 쪽으로 준다(제자리에서 돌지 않는다)
-        float32 _grip{ 10.0f };                                                     ///< 옆 미끄러짐 감쇠(/초) — 클수록 레일 위처럼
+        float32 _grip{ 10.0f };                                                     ///< 옆 미끄러짐 감쇠(/초). 클수록 레일 위처럼 달린다
         float32 _driftGrip{ 4.0f };                                                 ///< 드리프트 중 접지(낮을수록 크게 미끄러진다)
         float32 _driftBaseSteer{ 0.7f };                                            ///< 드리프트 중 조향 입력이 없을 때의 회전(드리프트 방향으로)
         float32 _driftSteerBonus{ 0.5f };                                           ///< 드리프트 방향으로 꺾으면 더하고 반대로 꺾으면 뺀다(조이기 · 풀기)
@@ -76,7 +76,7 @@ namespace sw
         float32 _nitroBoostTime{ 2.0f };                                            ///< 니트로 한 개의 부스트 시간
         float32 _nitroFillPerSecond{ 0.35f };                                       ///< 드리프트 1 초에 차는 게이지(1 이면 니트로 하나)
         int32   _maxNitroCount{ 2 };
-        float32 _offroadSensitivity{ 1.0f }; ///< 땅의 속도 배율을 얼마나 받는가(1 = 그대로, 0 = 무시 — 오프로드 차 · 말)
+        float32 _offroadSensitivity{ 1.0f }; ///< 땅의 속도 배율을 얼마나 받는가. 1 이면 그대로, 0 이면 무시한다(오프로드 차, 말)
         float32 _jumpSpeed{ 7.0f };
         float32 _gravity{ 25.0f };
         float32 _airSteerScale{ 0.3f };           ///< 공중 조향 약화
@@ -90,8 +90,8 @@ namespace sw
     /** @brief 한 걸음의 입력입니다. */
     struct ArcadeVehicleInput
     {
-        float32 _throttle{ 0.0f }; ///< −1(브레이크 · 후진)..1
-        float32 _steer{ 0.0f };    ///< −1(왼쪽)..1(오른쪽)
+        float32 _throttle{ 0.0f }; ///< -1(브레이크, 후진)..1
+        float32 _steer{ 0.0f };    ///< -1(왼쪽)..1(오른쪽)
         uint8   _bDriftHeld{ SW_FALSE };
         uint8   _bBoostPressed{ SW_FALSE }; ///< 이번에 눌렀다(니트로 쓰기)
         uint8   _bJumpPressed{ SW_FALSE };
@@ -105,11 +105,11 @@ namespace sw
     {
         enum class Kind : uint8
         {
-            DriftStarted = 0, ///< _value: 방향(−1 · 1)
-            DriftTierReached, ///< _value: 단계(1..3) — 불꽃 색
+            DriftStarted = 0, ///< _value: 방향(-1 또는 1)
+            DriftTierReached, ///< _value: 단계(1..3). 불꽃 색을 정한다
             DriftEnded,       ///< _value: 끝난 단계(0 이면 보상 없음)
             MiniTurbo,        ///< _value: 단계
-            BoostStarted,     ///< _value: 0 니트로 · 1..3 미니터보 · −1 게임이 준 것
+            BoostStarted,     ///< _value: 0 은 니트로, 1..3 은 미니터보, -1 은 게임이 준 부스트
             BoostEnded,
             NitroCharged, ///< _value: 가진 니트로 수
             Jumped,
@@ -161,7 +161,7 @@ namespace sw
 
         /** @brief 앞 속도 @p speed 에서 조향 1 의 회전 속도(라디안/초)입니다. 조향 반경은 속도를 이 값으로 나눈 것입니다. */
         float32 computeSteerRate( float32 speed ) const;
-        /** @brief 지금 자리와 부스트로 정해지는 최고 속도입니다. */
+        /** @brief 지금 위치와 부스트로 정해지는 최고 속도입니다. */
         float32 computeSpeedCap() const;
         float3  computeForward() const;
 
@@ -182,7 +182,7 @@ namespace sw
         const ArcadeVehicleSettings& getSettings() const { return _settings; }
         FixedStepTimer&              getTimer() { return _timer; }
 
-        /** @brief 고정 걸음의 남은 시간, 자리, 속도, 요, 드리프트, 부스트, 니트로, 공중 여부를 씁니다. 설정과 지면 포인터는 싣지 않고, 알림은 읽을 때 비웁니다. */
+        /** @brief 고정 스텝의 남은 시간, 위치, 속도, 요, 드리프트, 부스트, 니트로, 공중 여부를 씁니다. 설정과 지면 포인터는 싣지 않고, 알림은 읽을 때 비웁니다. */
         void writeState( Archive& outArchive ) const;
         /** @brief `writeState` 의 바이트로 상태를 바꿉니다. 바이트가 깨졌으면 false 를 반환하고 상태는 그대로입니다. */
         [[nodiscard]] bool readState( Archive& archive );
@@ -207,7 +207,7 @@ namespace sw
         Countdown                       _boost;
         float32                         _nitroGauge; ///< 0..1
         int32                           _nitroCount;
-        int32                           _driftDirection; ///< −1 왼쪽 · 1 오른쪽 · 0 드리프트 아님
+        int32                           _driftDirection; ///< -1 은 왼쪽, 1 은 오른쪽, 0 은 드리프트 아님
         uint8                           _bAirborne;
     };
 } // namespace sw

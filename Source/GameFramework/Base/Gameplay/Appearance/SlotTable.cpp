@@ -3,6 +3,7 @@
 #include "GameFramework/Base/Gameplay/Appearance/SlotTable.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -95,12 +96,7 @@ namespace sw
 
     const SlotOccupancyDef* SlotTable::findOccupancy( const hashed_string& id ) const
     {
-        for ( const SlotOccupancyDef& occupancy : _listOccupancy )
-        {
-            if ( occupancy._id == id )
-                return &occupancy;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&SlotOccupancyDef::_id>( _listOccupancy, id );
     }
 
     string SlotTable::makeEquipmentLayout() const

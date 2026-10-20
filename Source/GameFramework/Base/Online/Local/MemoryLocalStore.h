@@ -1,7 +1,8 @@
 /**
  * @file MemoryLocalStore.h
- * @brief 메모리 로컬 저장 — 테스트용입니다. 데이터(`MemoryLocalDatabase` — 슬롯 → 봉투 바이트, "쓰기 도중 꺼짐" 주입)와 앞(`MemoryLocalStore` — 맡기는 자리에서 실행)이 나뉩니다.
- * @details 앞을 없애고 새 앞을 같은 데이터에 붙이면 "다시 켠 게임" 이다. 꺼짐 주입은 다음 쓰기를 적지 않고 IOError 로 끝낸다 — 다시 켜면 옛 내용이다(원자 쓰기의 약속).
+ * @brief 메모리 로컬 저장소입니다. 테스트용입니다.
+ *        데이터(`MemoryLocalDatabase`: 슬롯별 봉투 바이트, "쓰기 도중 꺼짐" 주입)와 프런트(`MemoryLocalStore`: 요청 즉시 실행)가 나뉩니다.
+ * @details 프런트를 없애고 새 프런트를 같은 데이터에 붙이면 "다시 켠 게임" 이다. 꺼짐 주입은 다음 쓰기를 적지 않고 IOError 로 끝낸다. 다시 켜면 옛 내용이다(원자 쓰기의 계약).
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -17,7 +18,7 @@ namespace sw
 {
     /**
      * @class MemoryLocalDatabase
-     * @brief 슬롯 → 봉투 바이트입니다. 잠금 하나로 줄 세운다(앞 여럿이 같이 쓴다).
+     * @brief 슬롯별 봉투 바이트입니다. 잠금 하나로 직렬화합니다(프런트 여럿이 같이 쓴다).
      */
     class SW_GF_API MemoryLocalDatabase final : public ILocalSlotStorage
     {
@@ -29,7 +30,7 @@ namespace sw
         LocalStoreResult eraseSlot( const string& slot ) override;
         LocalStoreResult listSlots( const string& groupPrefix, vector<LocalSlotInfo>& outListSlotInfo ) override;
 
-        /** @brief 다음 쓰기 하나가 도중에 꺼진 것처럼 — 적지 않고 IOError 입니다. */
+        /** @brief 다음 쓰기 하나를 도중에 꺼진 것처럼 만듭니다. 적지 않고 IOError 로 끝냅니다. */
         void failNextWrite();
         /** @brief 봉투 바이트를 직접 고칩니다(변조 테스트). 없는 슬롯이면 false. */
         [[nodiscard]] bool modifyEnvelopeByte( const string& slot, size_t offset, uint8 xorMask );
@@ -53,12 +54,12 @@ namespace sw
 {
     /**
      * @class MemoryLocalStore
-     * @brief 메모리 데이터의 앞입니다. 맡기는 자리에서 실행하고 완료는 `pollCompletions` 까지 쌓는다.
+     * @brief 메모리 데이터의 프런트입니다. 요청 즉시 실행하고 완료는 `pollCompletions` 까지 쌓습니다.
      */
     class SW_GF_API MemoryLocalStore final : public ILocalStore
     {
     public:
-        /** @brief @p pDatabase 는 빌려 쓴다(앞보다 오래 산다). 봉인 창구도 빌려 쓴다. */
+        /** @brief @p pDatabase 는 빌려 쓰므로 프런트보다 오래 살아야 합니다. 봉인 인터페이스도 빌려 씁니다. */
         MemoryLocalStore( MemoryLocalDatabase* pDatabase, const LocalSealContext& sealContext );
 
         uint64 submitRead( string_view slot ) override;

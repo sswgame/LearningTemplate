@@ -26,12 +26,12 @@ namespace sw
     /**
      * @brief 총 한 종류입니다. 각도는 도, 시간은 초, 거리는 m 입니다.
      * @details 퍼짐은 쏠 때마다 `_spreadPerShot` 만큼 커지고(상한은 `_maxSpread`), 쏘지 않으면 초당 `_spreadRecovery` 만큼 `_minSpread` 로 돌아온다.
-     *          피해는 숫자로만 들고 있고, 게임이 어빌리티 시스템의 피해 이펙트(SetByCaller)로 넘긴다.
+     *          피해는 숫자로만 보관하고, 게임이 어빌리티 시스템의 피해 이펙트(SetByCaller)로 넘긴다.
      */
     struct WeaponDef
     {
         hashed_string _id{};
-        hashed_string _ammoID{}; ///< 예비탄으로 쓰는 아이템 id(인벤토리와 잇는 게임이 본다 — 비면 무기 자체 예비탄)
+        hashed_string _ammoID{}; ///< 예비탄으로 쓰는 아이템 id. 인벤토리와 연결하는 게임이 읽는다. 비면 무기 자체 예비탄을 쓴다
         string        _name{};
         float32       _fireInterval{ 0.1f }; ///< 발사 사이 최소 간격(s)
         float32       _reloadTime{ 1.8f };
@@ -45,8 +45,8 @@ namespace sw
         float32       _falloffStart{ 0.0f };   ///< 이 거리까지는 피해 그대로(0 = 감쇠 없음)
         float32       _falloffEnd{ 0.0f };     ///< 이 거리부터 `_falloffMinScale`
         float32       _falloffMinScale{ 1.0f };
-        float32       _projectileSpeed{ 0.0f };   ///< m/s — 0 이면 히트스캔(광선), 아니면 탄도(`Ballistics`)
-        float32       _projectileGravity{ 1.0f }; ///< 중력 배율(탄 낙차 — 0 이면 곧게)
+        float32       _projectileSpeed{ 0.0f };   ///< 탄속(m/s). 0 이면 히트스캔(광선), 아니면 탄도(`Ballistics`)
+        float32       _projectileGravity{ 1.0f }; ///< 탄 낙차의 중력 배율. 0 이면 곧게 간다
         float32       _headshotMultiplier{ 2.0f };
         int32         _magazineSize{ 30 };
         int32         _maxReserveAmmo{ 180 };
@@ -99,11 +99,11 @@ namespace sw
 {
     /**
      * @class WeaponState
-     * @brief 총 한 자루를 들고 있는 상태입니다. 탄창, 예비탄, 연사 쿨다운, 재장전, 퍼짐을 담습니다.
+     * @brief 총 한 자루의 상태입니다. 탄창, 예비탄, 연사 쿨다운, 재장전, 퍼짐을 담습니다.
      * @details 시간은 `update` 로만 흐르므로 테스트나 일시정지에서는 그대로 멈춘다.
-     *          퍼짐 난수는 상태가 들고 있어서, 씨앗이 같으면 같은 탄이 나간다.
-     *          연사에서는 쿨다운이 프레임 안에서 0 을 지나친 몫(늦음)을 다음 발 간격에서 빼므로 연사 속도가 fps 와 무관하다.
-     *          `pullTrigger` 한 번에 한 발이고 이어 주는 몫은 한 간격까지이다. 그래서 fps 가 1 / 간격보다 낮으면 프레임마다 한 발로 떨어진다.
+     *          퍼짐 난수는 상태가 보관하므로, 시드가 같으면 같은 탄이 나간다.
+     *          연사에서는 쿨다운이 프레임 안에서 0 을 지나친 시간(늦음)을 다음 발 간격에서 빼므로 연사 속도가 fps 와 무관하다.
+     *          `pullTrigger` 한 번에 한 발이고, 다음 발로 넘기는 시간은 한 간격까지이다. 그래서 fps 가 1 / 간격보다 낮으면 프레임마다 한 발로 떨어진다.
      *          멈춘 프레임 뒤에 몰아서 쏘지 않으며, CS 의 "한 틱 안의 늦음만 이어 준다"와 같은 규칙이다.
      *          쉬다가 당긴 첫 발은 쉰 시간을 이어 주지 않는다.
      */
@@ -141,7 +141,7 @@ namespace sw
     private:
         WeaponDef  _def;
         GameRandom _random;
-        Countdown  _cooldown; ///< 다음 발까지 — 발사는 `restart` 로 걸어 늦음을 다음 간격에서 뺀다
+        Countdown  _cooldown; ///< 다음 발까지 남은 시간. 발사는 `restart` 로 시작해 늦음을 다음 간격에서 뺀다
         Countdown  _reload;
         float32    _currentSpread;
         int32      _magazineAmmo;

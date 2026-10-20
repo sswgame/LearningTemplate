@@ -1,9 +1,10 @@
 /**
  * @file ScheduleSkeletalAnimator.h
- * @brief 일정의 활동 애니메이션 훅(`IScheduleActivityAnimator`)을 스켈레탈 애니메이터(`SkeletalAnimatorComponent`)의 그래프 상태로 잇는 구현입니다.
- * @details 활동이 시작되면 NPC 오브젝트(이름 = NPC id)의 애니메이터에서 상태를 재생한다. 상태 이름은 블록의 `animation`(없으면 활동 종류에 정해 둔 기본 상태)이고,
- *          활동이 끝나면 "쉬는 상태"(기본 `Idle`)로 돌아간다. 활동이 바로 이어지면 끝남 뒤에 시작이 불려 새 상태가 이긴다.
- *          화면 안(Near) NPC 에게만 불리므로(일정의 규칙) 화면 밖 NPC 는 애니메이터를 건드리지 않는다. 그래프에 없는 상태는 재생하지 않고 센다(`getFailedPlayCount`).
+ * @brief 일정의 활동 애니메이션 훅(`IScheduleActivityAnimator`)을 스켈레탈 애니메이터(`SkeletalAnimatorComponent`)의 그래프 상태에 연결하는 구현입니다.
+ * @details 활동이 시작되면 NPC 오브젝트(이름이 NPC id)의 애니메이터에서 상태를 재생한다. 상태 이름은 블록의 `animation` 이고, 없으면 활동 종류에 정해 둔 기본 상태다.
+ *          활동이 끝나면 쉬는 상태(기본 `Idle`)로 돌아간다. 활동이 바로 이어지면 끝남 뒤에 시작이 불려 새 상태가 이긴다.
+ *          일정은 화면 안(Near) NPC 에게만 이 훅을 부르므로, 화면 밖 NPC 의 애니메이터는 건드리지 않는다.
+ *          그래프에 없는 상태는 재생하지 않고 횟수만 센다(`getFailedPlayCount`).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -27,9 +28,9 @@ namespace sw
     public:
         ScheduleSkeletalAnimator();
 
-        /** @brief NPC 오브젝트를 찾을 씬의 오브젝트 매니저입니다(소유하지 않음). */
+        /** @brief NPC 오브젝트를 찾을 씬의 오브젝트 매니저를 정합니다. 소유하지 않습니다. */
         void initialize( GameObjectManager* pManager );
-        /** @brief 활동 종류의 기본 상태를 정합니다(블록에 `animation` 이 없을 때). 같은 활동을 다시 정하면 바꿉니다. */
+        /** @brief 블록에 `animation` 이 없을 때 쓸 활동 종류의 기본 상태를 정합니다. 같은 활동을 다시 정하면 바꿉니다. */
         void setActivityState( const hashed_string& activity, const hashed_string& stateName );
         /** @brief 활동이 끝났을 때 돌아가는 상태입니다(기본 `Idle`). 비우면 돌아가지 않고 마지막 상태를 둡니다. */
         void setIdleState( const hashed_string& stateName ) { _idleState = stateName; }

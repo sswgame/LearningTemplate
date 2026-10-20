@@ -31,9 +31,9 @@ namespace sw
      *          그래서 켠 순간 화면이 튀지 않고, 나가던 블렌드의 움직임도 살아 있다.
      *          층이 `kMaxLayerCount` 를 넘으면 가장 아래 둘을 그 순간의 섞인 포즈로 고정해 하나로 합친다.
      *          층이 다 섞이면(가중치 1) 그 아래 층은 버린다.
-     *          감쇠와 손떨림 · 머리 흔들림은 층마다의 포즈에 걸린다. 새로 켠 프리셋은 감쇠 없이 그 자리에서 시작한다.
-     *          사용자 설정(`setUserSettings`)의 시야각은 층의 모드가 1인칭 · 3인칭일 때 감쇠 전 포즈에, 흔들림 배율은 손떨림과 충격에 건다.
-     *          충격(`addImpulse`)은 섞인 포즈 위에 마지막으로 얹는다.
+     *          감쇠, 손떨림, 머리 흔들림은 층마다의 포즈에 적용한다. 새로 켠 프리셋은 감쇠 없이 그 위치에서 시작한다.
+     *          사용자 설정(`setUserSettings`)의 시야각은 층의 모드가 1인칭이나 3인칭일 때 감쇠 전 포즈에 적용하고, 흔들림 배율은 손떨림과 충격에 적용한다.
+     *          충격(`addImpulse`)은 섞인 포즈 위에 마지막으로 더한다.
      *          처음 켠 프리셋(아직 낸 포즈가 없다)과 컷 블렌드는 스택을 비우고 바로 붙는다.
      *          포즈를 내던 중의 컷은 `consumeCut` 이 한 번 알리며, 렌더러의 컷 신호로 쓴다.
      *          스택(프리셋 id, 블렌드 진행, 입력이 돌린 상태)은 `writeState` / `readState` 로 저장한다.
@@ -65,13 +65,13 @@ namespace sw
         void applyInput( const CameraModeInput& input, float32 deltaTime );
         /** @brief 암 충돌 질의를 정합니다. 수명은 부르는 쪽이 쥐며, nullptr 이면 쓸어 보지 않습니다. */
         void setCollisionProbe( const ICameraCollisionProbe* pProbe ) { _pProbe = pProbe; }
-        /** @brief 충격을 더합니다. 원점과 모양을 받으며, 듣는 자리는 카메라입니다. */
+        /** @brief 충격을 더합니다. 원점과 형태를 받으며, 충격을 받는 위치는 카메라입니다. */
         void addImpulse( const CameraImpulseDef& def, const float3& origin ) { _impulseListener.addImpulse( def, origin ); }
-        /** @brief 시야각 킥(+) · 줌 펀치(−)를 더합니다. 섞인 포즈의 시야각과 직교 높이에 마지막으로 곱합니다. */
+        /** @brief 시야각 킥(+)이나 줌 펀치(-)를 더합니다. 섞인 포즈의 시야각과 직교 높이에 마지막으로 곱합니다. */
         void addFieldOfViewKick( const CameraFieldOfViewKickDef& def ) { _fieldOfViewKickListener.addKick( def ); }
         /**
-         * @brief 다음 `step` 부터 쓸 사용자 설정(시야각 · 흔들림 배율 · 머리 흔들림)을 정합니다. 기본값은 바꾸지 않은 상태입니다.
-         * @details 디렉터는 전역 변수를 읽지 않는다 — 컴포넌트가 `CameraUserSettings::makeFromGlobalVariables` 로 읽어 넣고, 테스트는 값을 직접 넣는다.
+         * @brief 다음 `step` 부터 쓸 사용자 설정(시야각, 흔들림 배율, 머리 흔들림)을 정합니다. 기본값은 바꾸지 않은 상태입니다.
+         * @details 디렉터는 전역 변수를 읽지 않는다. 컴포넌트가 `CameraUserSettings::makeFromGlobalVariables` 로 읽어 넣고, 테스트는 값을 직접 넣는다.
          */
         void setUserSettings( const CameraUserSettings& settings ) { _userSettings = settings; }
 
@@ -115,10 +115,10 @@ namespace sw
             float32         _elapsed{ 0.0f };
             float32         _weight{ 1.0f };
             uint8           _bFrozen{ SW_FALSE }; ///< 프리셋 없이 고정한 포즈
-            uint8           _bFresh{ SW_FALSE };  ///< 다음 `step` 이 감쇠 없이 그 자리에서 시작한다
+            uint8           _bFresh{ SW_FALSE };  ///< 다음 `step` 이 감쇠 없이 그 위치에서 시작한다
         };
 
-        /** @brief 층 하나를 이번 프레임 포즈로 풉니다. 모드, 감쇠(새로 켰으면 그 자리), 손떨림 순으로 처리합니다. 고정 층은 그대로입니다. */
+        /** @brief 층 하나를 이번 프레임 포즈로 계산합니다. 모드, 감쇠(새로 켰으면 그 위치 그대로), 손떨림 순으로 처리합니다. 고정 층는 그대로입니다. */
         void evaluateLayer( Layer& inoutLayer, float32 deltaTime, const CameraTarget& target ) const;
         /** @brief 층이 넘치면 가장 아래 둘을 그 둘의 섞인 포즈로 고정해 하나로 합칩니다. */
         void collapseOverflow();

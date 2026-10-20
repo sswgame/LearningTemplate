@@ -27,15 +27,15 @@ namespace sw
      * @brief 외형 데이터 폴더 하나(`<게임>/data/appearance/`)를 읽습니다. 파일 하나가 한 종류이고, 루트 원소 이름으로 종류를 구분합니다.
      * @details 파일은 다음과 같다. `slots.xml`(`SlotTable`, 반드시 필요), `sets.xml`(`EquipSetCatalog`), `itemvisuals.xml`(`ItemVisualCatalog`),
      *          `customization.xml`(`CustomizationSchemaCatalog`), `rules.xml`(`AppearanceRuleTable`), `presets.xml`(`CharacterAppearanceCatalog`).
-     *          프리셋은 에셋 파일 하나에 하나씩도 둘 수 있다 — `presets/` 아래의 `*.appearance.xml`(루트 `<CharacterAppearance>`)을 `presets.xml` 뒤에 읽는다.
-     *          캐릭터 편집 창이 내보내는 자리이고(언리얼 · 유니티의 프리셋 에셋), 씬의 `CharacterAppearanceComponent` 는 그 id 를 가리킨다.
+     *          프리셋은 에셋 파일 하나에 하나씩도 둘 수 있다. `presets/` 아래의 `*.appearance.xml`(루트 `<CharacterAppearance>`)을 `presets.xml` 뒤에 읽는다.
+     *          캐릭터 편집 창이 내보내는 곳이고(언리얼과 유니티의 프리셋 에셋에 해당), 씬의 `CharacterAppearanceComponent` 는 그 id 를 가리킨다.
      *          모두 읽은 뒤 `finishLoad` 가 알 수 없는 이름(슬롯, 세트, 아이템, 외형, 스키마, 매개변수, 항목, 변형, 부품, 부모)과 장착 조건 순환, 프리셋 부모 순환을 오류로 모은다.
      *          파일을 고쳐 다시 읽으면 `getRevision` 이 늘어나고, 외형 상태(`CharacterAppearanceState`)가 외형을 다시 해석한다.
      */
     class SW_GF_API AppearanceDatabase
     {
     public:
-        /** @brief 프리셋 에셋 폴더(외형 폴더 아래 이름)와 파일 끝입니다. 캐릭터 편집 창이 같은 자리 · 이름으로 내보낸다. */
+        /** @brief 프리셋 에셋 폴더(외형 폴더 아래 이름)와 파일 끝입니다. 캐릭터 편집 창이 같은 위치와 이름으로 내보냅니다. */
         static constexpr const utf8* kPresetFolder    = "presets";
         static constexpr const utf8* kPresetExtension = ".appearance.xml";
 

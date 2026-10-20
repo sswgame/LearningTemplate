@@ -1,13 +1,13 @@
 /**
  * @file GameDataCache.h
- * @brief 게임 데이터 표(상호작용 표, 원소 규칙 표)의 캐시와, 그 캐시들을 에셋 캐시 레지스트리에 올리는 목록을 정의합니다.
+ * @brief 게임 데이터 테이블(상호작용 테이블, 원소 규칙 테이블)의 캐시와, 그 캐시들을 에셋 캐시 레지스트리에 등록하는 목록을 정의합니다.
  * @details 표는 경로마다 한 번 읽어 여러 컴포넌트가 나눠 쓴다.
  *          캐시는 GameFramework 모듈의 정적 객체이다.
  *          게임 서비스가 묶이면(`game::bindGameService`, 서비스에 `AssetManager` 가 있을 때) 레지스트리에 오르고, 풀리면(`unbindGameService`) 내려간다.
  *          그래서 에디터 핫 리로드가 파일을 고친 표를 종류 이름으로 찾아 다시 읽을 수 있고(`reload`), 종료할 때의 비우기와 진단도 엔진 캐시와 같은 길을 탄다.
- *          모듈이 내리지 않고 사라지면 `AssetManager::onModuleUnloading` 이 이미지 안의 캐시를 걷는다.
+ *          모듈이 해제하지 않고 사라지면 `AssetManager::onModuleUnloading` 이 이미지 안의 캐시를 정리한다.
  *
- *          다시 읽은 표는 **새 객체**로 칸을 바꾸고, 옛 객체는 캐시가 사라질 때까지 살려 둔다.
+ *          다시 읽은 테이블은 **새 객체**로 항목을 바꾸고, 옛 객체는 캐시가 사라질 때까지 살려 둔다.
  *          표 안의 정의를 날 포인터로 든 컴포넌트가 그 프레임에 옛 것을 읽어도 죽은 메모리를 밟지 않게 하려는 것이다.
  *          쓰는 쪽은 다시 읽은 횟수(`getReloadCount`)가 바뀌면 자기 정의를 다시 찾는다. UE 의 `UAssetManager` 가 주 에셋을 다시 읽는 방식과 같다.
  */
@@ -33,7 +33,7 @@ namespace sw
 
     /**
      * @struct GameDataCacheRegistry
-     * @brief GameFramework 의 데이터 캐시 목록과, 그것을 올린 에셋 매니저입니다. 캐시가 생기거나 서비스가 묶이고 풀릴 때 레지스트리를 맞춥니다.
+     * @brief GameFramework 의 데이터 캐시 목록과, 그것을 등록한 에셋 매니저입니다. 캐시가 생기거나 서비스가 바인딩되고 해제될 때 레지스트리를 맞춥니다.
      */
     struct SW_GF_API GameDataCacheRegistry
     {
@@ -41,7 +41,7 @@ namespace sw
         static void registerCache( IAssetCache* pCache );
         /** @brief 캐시를 목록에서 뺍니다. 캐시 소멸자가 부릅니다. 프로세스 끝에는 매니저가 이미 사라졌을 수 있으므로 매니저는 건드리지 않습니다. */
         static void unregisterCache( const IAssetCache* pCache );
-        /** @brief 목록의 캐시를 @p pAssetManager 레지스트리에 올립니다. 앞서 묶인 매니저가 있으면 거기서 먼저 내립니다. nullptr 이면 내리기만 합니다. */
+        /** @brief 목록의 캐시를 @p pAssetManager 레지스트리에 등록합니다. 앞서 바인딩된 매니저가 있으면 거기서 먼저 해제합니다. nullptr 이면 해제만 합니다. */
         static void attach( AssetManager* pAssetManager );
         /** @brief 묶인 매니저의 레지스트리에서 목록의 캐시를 내립니다. */
         static void detach() { attach( nullptr ); }
@@ -52,9 +52,9 @@ namespace sw
 {
     /**
      * @class GameDataCache
-     * @brief 경로마다 표 하나를 들고 있는 캐시입니다. 표 타입은 `bool loadFromResource( string_view )` 를 가져야 합니다.
+     * @brief 경로마다 테이블 하나를 보관하는 캐시입니다. 테이블 타입은 `bool loadFromResource( string_view )` 를 가져야 합니다.
      * @tparam TableType 기본 생성되는 데이터 표 타입입니다.
-     * @details 읽지 못한 경로도 빈 칸으로 남긴다. 쓰는 쪽마다 같은 오류를 다시 내지 않게 하려는 것이며, 파일을 고치면 `reload` 가 그 칸을 채운다.
+     * @details 읽지 못한 경로도 빈 항목으로 남긴다. 쓰는 쪽마다 같은 오류를 다시 내지 않게 하려는 것이며, 파일을 고치면 `reload` 가 그 항목을 채운다.
      */
     template <typename TableType>
     class GameDataCache final : public IAssetCache
@@ -106,7 +106,7 @@ namespace sw
             return _mapTable.find( makeKey( relativePath ) ) != _mapTable.end();
         }
 
-        /** @brief 읽은 적 있는 경로면 새 표로 다시 읽어 칸을 바꿉니다. 읽지 못하면 옛 표를 그대로 두고 오류를 남깁니다. 틱 밖(게임 스레드)에서 불러야 합니다. */
+        /** @brief 읽은 적 있는 경로면 새 테이블로 다시 읽어 항목을 바꿉니다. 읽지 못하면 옛 테이블을 그대로 두고 오류를 남깁니다. 틱 밖(게임 스레드)에서 불러야 합니다. */
         void reload( string_view relativePath, IRHIDevice* pDevice ) override
         {
             (void)pDevice;
@@ -130,7 +130,7 @@ namespace sw
             _reloadCount.fetch_add( 1, std::memory_order_release );
         }
 
-        /** @brief 읽어 둔 표의 수입니다. 읽지 못한 빈 칸은 세지 않습니다. */
+        /** @brief 읽어 둔 테이블의 수입니다. 읽지 못한 빈 항목은 세지 않습니다. */
         size_t getCachedCount() const override
         {
             std::scoped_lock<mutex> lock{ _mutex };
@@ -159,13 +159,13 @@ namespace sw
         }
 
     private:
-        /** @brief 표의 키를 만듭니다. 핫 리로드가 넘기는 경로와 같은 칸을 찾도록 구분자를 맞춥니다. */
+        /** @brief 테이블의 키를 만듭니다. 핫 리로드가 넘기는 경로와 같은 항목을 찾도록 구분자를 맞춥니다. */
         static string makeKey( string_view path ) { return FileUtil::normalizeSeparators( path ); }
 
         const utf8*                                  _pKindName;
         mutable mutex                                _mutex;
         unordered_map<string, unique_ptr<TableType>> _mapTable;
-        vector<unique_ptr<TableType>>                _listRetired; ///< 다시 읽거나 비우기 전의 표 — 날 포인터로 든 쪽이 있을 수 있어 캐시와 함께 산다
+        vector<unique_ptr<TableType>>                _listRetired; ///< 다시 읽거나 비우기 전의 테이블. 원시 포인터로 참조하는 쪽이 있을 수 있어 캐시와 함께 산다
         atomic<uint32>                               _reloadCount;
     };
 } // namespace sw

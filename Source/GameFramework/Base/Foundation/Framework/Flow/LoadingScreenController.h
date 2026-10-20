@@ -27,10 +27,10 @@ namespace sw
     struct LoadingScreenSettings
     {
         DataPath       _documentPath{};                      ///< 로딩 화면 문서(Loading 층 — 문서의 `UIScreenDesc`). 정본은 gamesettings 의 `_loadingScreen` 이고, 칸이 없으면(`isSet()` 거짓) 로딩 화면을 띄우지 않는다
-        vector<string> _listTip{};                           ///< 팁 글의 현지화 키(원문) — 열 때마다 하나를 고른다. 비면 팁 칸을 접는다
-        float32        _minimumSeconds{ 0.5f };              ///< 최소 표시 시간(초) — 빠른 로드에서 한 프레임 깜박이지 않게
+        vector<string> _listTip{};                           ///< 팁 글의 현지화 키(원문). 열 때마다 하나를 고른다. 비면 팁 영역을 접는다
+        float32        _minimumSeconds{ 0.5f };              ///< 최소 표시 시간(초). 빠른 로드에서 한 프레임만 깜박이지 않게 한다
         float32        _fadeInSeconds{ 0.35f };              ///< 닫은 뒤 검은 화면에서 씬으로 돌아오는 페이드 인(초)
-        uint32         _tipSeed{ GameRandom::kDefaultSeed }; ///< 팁 고르기 시드 — 같은 시드면 같은 순서
+        uint32         _tipSeed{ GameRandom::kDefaultSeed }; ///< 팁 고르기 시드. 같은 시드면 같은 순서다
     };
 } // namespace sw
 
@@ -42,9 +42,9 @@ namespace sw
      * @details 게임 인스턴스 서브시스템이다(`game::findSubsystem<LoadingScreenController>()`). `GameInstanceBase` 가 매 프레임 `update` 한다.
      *          초기화(`onInitialize` 앞)에서 gamesettings 의 `_loadingScreen` 문서와 UI 시스템을 묶어, 첫 씬 요청이 로딩 화면을 띄울 수 있다.
      *          - **로딩 화면**: `beginLoading` 이 Loading 층 화면(문서 `_documentPath`)을 연다. 이 화면은 입력을 막고 Back 으로 닫히지 않는다.
-     *            `update` 는 로드가 끝났고 최소 표시 시간이 지났으면 화면을 닫고 페이드 인을 건다.
+     *            `update` 는 로드가 끝났고 최소 표시 시간이 지났으면 화면을 닫고 페이드 인을 시작한다.
      *            닫기 애니메이션 역할이며, 검은 화면에서 씬이 드러난다. 페이드는 입력을 막지 않는다.
-     *            문서에 `Spinner` 가 있으면 돌리고, `Tip` 이 있으면 팁 하나를 넣는다. 팁 키는 `getStringByText` 로 푼다.
+     *            문서에 `Spinner` 가 있으면 돌리고, `Tip` 이 있으면 팁 하나를 넣는다. 팁 키는 `getStringByText` 로 문자열을 찾는다.
      *            진행률은 표시하지 않는다. 씬 매니저에 진행 질의가 없기 때문이다.
      *          - **페이드**: `ScreenFade::getOverlayAlpha` 가 0 보다 크면 Overlay 층(입력 없음, 로딩 화면 아래)에 전체 화면 검은 패널을 띄우고 불투명도를 그 알파로 둔다.
      *            0 이 되면 닫는다.
@@ -84,7 +84,7 @@ namespace sw
         /**
          * @brief 한 프레임을 넘깁니다.
          * @param bLoading 아직 로드 중이면 true 이다. 씬 로드 요청이 남았거나 씬 매니저가 전환 중일 때이다.
-         * @param fade     그릴 화면 페이드이다. 로딩 화면을 닫을 때 페이드 인을 건다. 페이드를 진행시키는 것(`ScreenFade::update`)은 주인(전환 관리자)의 일이다.
+         * @param fade     그릴 화면 페이드이다. 로딩 화면을 닫을 때 페이드 인을 시작한다. 페이드를 진행시키는 것(`ScreenFade::update`)은 주인(전환 관리자)의 일이다.
          */
         void update( float32 deltaSeconds, bool bLoading, ScreenFade& fade );
 
@@ -115,6 +115,6 @@ namespace sw
         UIScreenHandle        _fadeScreen;
         float32               _shownSeconds;
         float32               _spinnerAngle;
-        GameRandom            _tipRandom; ///< 팁 고르기(`setSettings` 가 시드를 다시 건다)
+        GameRandom            _tipRandom; ///< 팁 고르기 난수(`setSettings` 가 시드를 다시 설정한다)
     };
 } // namespace sw

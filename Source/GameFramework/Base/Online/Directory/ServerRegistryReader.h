@@ -1,9 +1,10 @@
 /**
  * @file ServerRegistryReader.h
- * @brief 종류 하나의 서버 목록을 캐시에서 주기적으로 읽어 스냅숏으로 듭니다 — 색인을 읽고, 기록을 하나씩 읽고, 다 오면 갈아 끼웁니다. 기록이 없는(죽은) 멤버는 색인에서 지웁니다.
- * @details - 서비스 스레드 하나에서 쓴다(라우터와 같은 스레드). 스냅숏은 읽기가 끝날 때까지 옛것이다 — 고르기는 옛 스냅숏 + 이 프로세스가 고른 몫(`pickServer` 가 얹는다)으로 한다
+ * @brief 종류 하나의 서버 목록을 캐시에서 주기적으로 읽어 스냅숏으로 보관합니다. 색인을 읽고, 기록을 하나씩 읽고, 다 오면 교체합니다.
+ *        기록이 없는(죽은) 멤버는 색인에서 지웁니다.
+ * @details - 서비스 스레드 하나에서 쓴다(라우터와 같은 스레드). 스냅숏은 읽기가 끝날 때까지 옛것이다. 고르기는 옛 스냅숏에 이 프로세스가 고른 인원(`pickServer` 가 더한다)을 더해 한다
  *            (다음 읽기까지 같은 서버에 몰리지 않게).
- *          - 라우터보다 먼저 내려갈 수 있다 — `shutdown` 이 기다리던 캐시 요청을 취소한다.
+ *          - 라우터보다 먼저 종료할 수 있다. `shutdown` 이 기다리던 캐시 요청을 취소한다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -45,7 +46,7 @@ namespace sw
         /** @brief 다음 `tick` 에 주기와 상관없이 읽습니다(읽는 중이면 끝난 뒤의 `tick` 에). */
         void requestRefresh();
 
-        /** @brief 고릅니다 — 고르면 그 서버에 @p query `_seatCount` 를 얹습니다(다음 스냅숏까지). */
+        /** @brief 서버를 고릅니다. 고르면 그 서버에 @p query 의 `_seatCount` 를 더합니다(다음 스냅숏까지). */
         [[nodiscard]] bool pickServer( const ServerSelectionQuery& query, int64 nowMs, ServerStatus& outStatus );
 
         const vector<ServerStatus>& getSnapshot() const { return _listSnapshot; }

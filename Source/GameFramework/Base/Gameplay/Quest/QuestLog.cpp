@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Gameplay/Quest/QuestLog.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -29,12 +30,7 @@ namespace sw
 
     QuestProgress* QuestLog::findProgressMutable( const hashed_string& questID )
     {
-        for ( QuestProgress& progress : _listProgress )
-        {
-            if ( progress._questID == questID )
-                return &progress;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&QuestProgress::_questID>( _listProgress, questID );
     }
 
     const QuestProgress* QuestLog::findProgress( const hashed_string& questID ) const

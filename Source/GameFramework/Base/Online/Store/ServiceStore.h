@@ -2,7 +2,7 @@
  * @file ServiceStore.h
  * @brief 서비스(계정, 경제, 거래)의 저장 계약을 정의합니다.
  * @details (표, 키)로 레코드(바이트와 버전)를 찾고, 조건부 쓰기를 트랜잭션으로 묶고, 키 범위를 읽는다.
- *          이 모든 것을 저장소 스레드에서 도는 "일"로 맡기는 비동기 창구도 여기서 정의한다.
+ *          이 모든 것을 저장소 스레드에서 도는 "작업"으로 요청하는 비동기 인터페이스도 여기서 정의한다.
  *
  *          - 버전(`ServiceRecord::_version`)은 저장소 전체에서 커밋마다 오르는 수이다. 지웠다 다시 만든 키도 옛 버전을 다시 받지 않으므로 ABA 가 없다. 빈틈은 있어도 된다.
  *          - 쓰기는 모두 트랜잭션이다. 쓰기마다 기대 버전을 준다. `kAnyVersion` 은 조건 없음이고, `kAbsentVersion` 은 "없어야 한다"이다.
@@ -31,10 +31,10 @@ namespace sw
     enum class ServiceStoreResult : uint8
     {
         Ok = 0,
-        NotFound,    ///< 읽기 — 키가 없다
-        Conflict,    ///< 커밋 — 기대 판이 어긋났다(아무것도 쓰지 않았다). SQL 의 직렬화 실패도 이것이다(다시 읽고 다시 하면 된다)
-        Unavailable, ///< 저장소에 닿지 못했다 — 커밋이면 적용됐는지 모른다
-        Invalid      ///< 빈 표 · 키, 키 규칙 · 상한 위반, 한 트랜잭션에 같은 키 둘
+        NotFound,    ///< 읽기에서 키가 없다
+        Conflict,    ///< 커밋에서 기대 버전이 어긋났다(아무것도 쓰지 않았다). SQL 의 직렬화 실패도 이것이다(다시 읽고 다시 하면 된다)
+        Unavailable, ///< 저장소에 닿지 못했다. 커밋이라면 적용됐는지 모른다
+        Invalid      ///< 빈 테이블이나 키, 키 규칙이나 상한 위반, 한 트랜잭션에 같은 키 둘
     };
 } // namespace sw
 
@@ -44,7 +44,7 @@ namespace sw
     struct ServiceRecord
     {
         static constexpr uint64 kAnyVersion    = ~0ull; ///< 쓰기 조건 없음
-        static constexpr uint64 kAbsentVersion = 0;     ///< 없어야 한다 — 읽은 판이 이 값이면 없다는 뜻
+        static constexpr uint64 kAbsentVersion = 0;     ///< "없어야 한다" 조건이다. 읽은 버전이 이 값이면 레코드가 없다는 뜻이다
 
         vector<uint8> _bytes{};
         string        _key{}; ///< `listRecords` 만 채운다
@@ -76,7 +76,7 @@ namespace sw
 {
     /**
      * @class ServiceTransaction
-     * @brief 한 번에 적용할 쓰기와 조건의 묶음입니다.
+     * @brief 한 번에 적용할 쓰기와 조건의 묶음(트랜잭션)입니다.
      */
     class SW_GF_API ServiceTransaction
     {
@@ -108,8 +108,8 @@ namespace sw
     /** @brief 커밋 결과를 담는 구조체입니다. */
     struct ServiceCommitInfo
     {
-        uint64 _commitVersion{ 0 };  ///< Ok — 이 커밋이 쓴 레코드들의 새 판
-        int32  _conflictIndex{ -1 }; ///< Conflict — 어긋난 쓰기 번호(`getWrites` 순서, 알 수 없으면 −1 — SQL 직렬화 실패)
+        uint64 _commitVersion{ 0 };  ///< Ok 일 때 이 커밋이 쓴 레코드들의 새 버전
+        int32  _conflictIndex{ -1 }; ///< Conflict 일 때 어긋난 쓰기 번호(`getWrites` 순서). 알 수 없으면 -1 이다(SQL 직렬화 실패)
     };
 } // namespace sw
 
@@ -118,7 +118,7 @@ namespace sw
     /**
      * @class IServiceStoreConnection
      * @brief 저장소 스레드에서 `IServiceStoreWork::run` 이 받는 동기 연결입니다.
-     * @details 그 호출 동안만 유효하므로 들고 있으면 안 된다.
+     * @details 그 호출 동안만 유효하므로 보관하면 안 된다.
      */
     class SW_GF_API IServiceStoreConnection
     {
@@ -152,10 +152,10 @@ namespace sw
      * @class IServiceStoreWork
      * @brief 저장 왕복 하나입니다.
      * @details 입력은 맡기기 전에 이 객체에 복사해 둔다.
-     *          `run` 은 저장소 스레드에서 정확히 한 번 불린다. 저장소를 내리는 중이면 모든 호출이 Unavailable 인 연결로 불린다.
+     *          `run` 은 저장소 스레드에서 정확히 한 번 불린다. 저장소를 종료하는 중이면 모든 호출이 Unavailable 인 연결로 불린다.
      *          그 뒤 `complete` 가 맡긴 쪽의 `pollCompletions` 에서 정확히 한 번 불린다.
      *          `run` 은 서비스 멤버를 만지지 않고, `complete` 는 저장소를 부르지 않는다. 필요하면 새 일을 맡긴다.
-     *          저장소는 `submit` 에서 맡긴 스레드의 로그 문맥(요청 추적 id 와 주체)을 잡아 두었다가 `run` 과 `complete` 동안 다시 건다.
+     *          저장소는 `submit` 을 부른 스레드의 로그 컨텍스트(요청 추적 id 와 주체)를 저장해 두었다가 `run` 과 `complete` 동안 다시 설정한다.
      *          그래서 저장소 스레드의 로그 줄에도 같은 요청 꼬리표가 붙는다.
      */
     class SW_GF_API IServiceStoreWork
@@ -199,7 +199,7 @@ namespace sw
         virtual void submit( unique_ptr<IServiceStoreWork> work ) = 0;
         /** @brief 끝난 일의 `complete` 를 이 스레드에서 부르고, 부른 수를 반환합니다. */
         virtual int32 pollCompletions() = 0;
-        /** @brief 맡았지만 아직 거두지 않은 일의 수를 반환합니다. */
+        /** @brief 받았지만 아직 회수하지 않은 작업의 수를 반환합니다. */
         virtual int32 getPendingCount() const = 0;
         /** @brief 새 일을 받지 않고, 돌지 못한 일은 닫힌 연결로 돌려 완료 큐에 넣습니다. 그 뒤 `pollCompletions` 한 번으로 모두 거둘 수 있습니다. */
         virtual void shutdown() = 0;

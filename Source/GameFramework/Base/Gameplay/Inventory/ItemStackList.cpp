@@ -2,6 +2,8 @@
 
 #include "GameFramework/Base/Gameplay/Inventory/ItemStackList.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
@@ -115,11 +117,6 @@ namespace sw
 
     ItemStack* ItemStackList::findStack( const hashed_string& itemID )
     {
-        for ( ItemStack& stack : _listStack )
-        {
-            if ( stack._itemID == itemID )
-                return &stack;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&ItemStack::_itemID>( _listStack, itemID );
     }
 } // namespace sw

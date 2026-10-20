@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Foundation/Utility/Time/TimerQueue.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 namespace sw
@@ -47,11 +48,7 @@ namespace sw
             return false;
         pTimer->_bCancelled = SW_TRUE; // 지우기는 advance 끝에서 — 도는 중에 목록을 옮기지 않는다
         if ( _bAdvancing == SW_FALSE )
-        {
-            _listTimer.erase( std::remove_if( _listTimer.begin(), _listTimer.end(), []( const Timer& timer )
-            { return timer._bCancelled != SW_FALSE; } ),
-                              _listTimer.end() );
-        }
+            removeCancelledTimers();
         return true;
     }
 
@@ -111,10 +108,14 @@ namespace sw
                 timer._dueTime = _time + static_cast<float64>( timer._interval );
         }
         _bAdvancing = SW_FALSE;
-        _listTimer.erase( std::remove_if( _listTimer.begin(), _listTimer.end(), []( const Timer& timer )
-        { return timer._bCancelled != SW_FALSE; } ),
-                          _listTimer.end() );
+        removeCancelledTimers();
         return callCount;
+    }
+
+    void TimerQueue::removeCancelledTimers()
+    {
+        VectorUtil::removeIf( _listTimer, []( const Timer& timer )
+        { return timer._bCancelled != SW_FALSE; } );
     }
 
     bool TimerQueue::isActive( TimerHandle handle ) const

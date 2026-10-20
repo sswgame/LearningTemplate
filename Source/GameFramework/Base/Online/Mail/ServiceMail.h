@@ -46,8 +46,8 @@ namespace sw
     /** @brief 만료 때 첨부를 어떻게 할지 정합니다. 저장 값이라 순서를 바꾸면 안 됩니다. */
     enum class ServiceMailExpiryAction : uint8
     {
-        Discard = 0,    ///< 버린다(운영 · 보상 우편) — 발행이 낸 것은 아무것도 움직이지 않고, 맡긴 것은 맡김 → 소각
-        ReturnToSender, ///< 맡김 → 보낸 계정(플레이어 우편 — 재원이 계정일 때만)
+        Discard = 0,    ///< 버린다(운영, 보상 우편). 발행한 것은 아무것도 움직이지 않고, 에스크로에 맡긴 것은 소각으로 보낸다
+        ReturnToSender, ///< 에스크로에서 보낸 계정으로 돌려준다(플레이어 우편이며 재원이 계정일 때만)
         Count
     };
 
@@ -85,7 +85,7 @@ namespace sw
         string                        _titleKey{}; ///< 로컬라이제이션 키(`_bLiteralText` 면 GM 이 쓴 글)
         string                        _body{};
         string                        _senderName{};
-        string                        _idempotencyKey{}; ///< 필수 — 보내는 쪽이 정한다("trade.<id>.return" · "admin.<GM>.<요청>" · "reward.<퀘스트>.<계정>")
+        string                        _idempotencyKey{}; ///< 필수. 보내는 쪽이 정한다("trade.<id>.return", "admin.<GM>.<요청>", "reward.<퀘스트>.<계정>")
         LedgerHolder                  _fundingHolder{};  ///< 기본 발행
         uint64                        _recipientAccountID{ 0 };
         uint64                        _actorID{ 0 };

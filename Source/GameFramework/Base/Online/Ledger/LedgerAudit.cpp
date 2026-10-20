@@ -3,6 +3,7 @@
 #include "GameFramework/Base/Online/Ledger/LedgerAudit.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/map.h"
 
 #include "GameFramework/Base/Online/Ledger/Ledger.h"
@@ -42,12 +43,7 @@ namespace sw
 
     const LedgerAssetAudit* LedgerAuditReport::findAsset( string_view assetID ) const
     {
-        for ( const LedgerAssetAudit& asset : _listAsset )
-        {
-            if ( asset._assetID == assetID )
-                return &asset;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&LedgerAssetAudit::_assetID>( _listAsset, assetID );
     }
 
     ServiceStoreResult LedgerAudit::computeReport( IServiceStoreConnection& connection, LedgerAuditReport& outReport )

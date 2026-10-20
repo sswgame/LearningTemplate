@@ -49,6 +49,104 @@ namespace sw
             }
 
             static float3 toRadians( const float3& degrees ) { return degrees * MathUtil::kDegreeToRadian; }
+
+            /** @brief 무버는 대상(없으면 회로 주인)의 스플라인에서 @p distance 위치로 옮깁니다. `faceForward` 면 진행 방향으로 돌립니다. */
+            static void applyMover( const GimmickCircuit& circuit, int32 node, GameObject& target, const GameObject* pOwner, SceneComponent* pScene,
+                                    const GimmickRestPose& pose, float32 distance )
+            {
+                const SplineComponent* pSpline = target.getComponent<SplineComponent>();
+                if ( pSpline == nullptr && pOwner != nullptr )
+                    pSpline = pOwner->getComponent<SplineComponent>();
+                const bool bSplineUnavailable = pScene == nullptr || pSpline == nullptr || pSpline->getWorldPath().isValid() == false;
+                if ( bSplineUnavailable )
+                    return;
+                const SplineSample sample = pSpline->getWorldPath().sampleAtDistance( distance );
+                pScene->setWorldPosition( sample._position );
+                if ( readNumber( circuit, node, "faceForward", 0.0f ) != 0.0f )
+                    pScene->setLocalRotation( float3{ pose._rotation._x, MathUtil::atan2( sample._tangent._x, sample._tangent._z ), pose._rotation._z } );
+            }
+
+            /** @brief 피해 틱 출력이 켜진 틱에 대상 센서 안의 오브젝트마다 피해를 줍니다. */
+            static void applyHazard( const GimmickCircuit& circuit, int32 node, GameObjectManager& manager, GameObject& target )
+            {
+                const GimmickSensorComponent* pSensor = target.getComponent<GimmickSensorComponent>();
+                if ( pSensor == nullptr || circuit.getOutput( node, hashed_string( "OnDamageTick" ) ) == false )
+                    return;
+                const float32 damage = readNumber( circuit, node, "damage", 0.0f );
+                for ( const GameObjectHandle& handle : pSensor->getOccupants() )
+                {
+                    GameObject* pVictim = manager.resolveGameObject( handle );
+                    if ( pVictim != nullptr )
+                        GimmickDamageUtil::applyDamage( *pVictim, &target, hashed_string( "Hazard" ), damage );
+                }
+            }
+
+            /** @brief 라이트 세기를 바꿉니다. 컴포넌트 상태를 바꾸므로 틱 뒤로 미룹니다. */
+            static void applyLight( const GimmickCircuit& circuit, int32 node, GameObjectManager& manager, GameObject& target, const GimmickRestPose& pose )
+            {
+                LightComponent* pLight = target.getComponent<LightComponent>();
+                if ( pLight == nullptr )
+                    return;
+                const float32 intensity = circuit.getOutput( node, hashed_string( "Lit" ) ) ? pose._intensity * readNumber( circuit, node, "intensity", 1.0f ) : 0.0f;
+                if ( pLight->getIntensity() == intensity )
+                    return;
+                const TComponentHandle<LightComponent> light{ pLight };
+                GameObjectManager*                     pManager = &manager;
+                manager.executeOrDeferPostTick( [pManager, light, intensity]()
+                {
+                    LightComponent* pResolved = pManager->resolveComponent( light );
+                    if ( pResolved != nullptr )
+                        pResolved->setIntensity( intensity );
+                } );
+            }
+
+            /** @brief 대상을 켜고 끕니다. 회로 주인은 끄지 않습니다. 활성 상태 변경은 틱 뒤로 미룹니다. */
+            static void applyEnable( const GimmickCircuit& circuit, int32 node, GameObjectManager& manager, GameObject& target, const GameObject* pOwner )
+            {
+                const bool bEnabled = circuit.getOutput( node, hashed_string( "Enabled" ) );
+                if ( target.isActive() == bEnabled || &target == pOwner )
+                    return;
+                const GameObjectHandle object   = target.getHandle();
+                GameObjectManager*     pManager = &manager;
+                manager.executeOrDeferPostTick( [pManager, object, bEnabled]()
+                {
+                    GameObject* pResolved = pManager->resolveGameObject( object );
+                    if ( pResolved != nullptr )
+                        pResolved->setActive( bEnabled );
+                } );
+            }
+
+            /** @brief 스폰 출력이 켜진 틱에 프리팹을 대상 위치(오프셋 더함)에 스폰합니다. 스폰은 틱 뒤로 미룹니다. */
+            static void applySpawner( const GimmickCircuit& circuit, int32 node, GameObjectManager& manager, const SceneComponent* pScene )
+            {
+                const string* pPrefab      = readText( circuit, node, "prefab" );
+                const bool    bCannotSpawn = circuit.getOutput( node, hashed_string( "OnSpawn" ) ) == false || pPrefab == nullptr || pPrefab->empty() || pScene == nullptr;
+                if ( bCannotSpawn )
+                    return;
+                const string       prefab   = *pPrefab;
+                const float3       position = pScene->getWorldPosition() + readVector( circuit, node, "offset" );
+                GameObjectManager* pManager = &manager;
+                manager.executeOrDeferPostTick( [pManager, prefab, position]()
+                {
+                    AssetManager*   pAssetManager = game::findSubsystem<AssetManager>();
+                    GameObject*     pSpawned      = pAssetManager != nullptr ? pAssetManager->getAssetCache<PrefabCache>().spawn( pManager, prefab ) : nullptr;
+                    SceneComponent* pSpawnedScene = pSpawned != nullptr ? pSpawned->getPrimarySceneComponent() : nullptr;
+                    if ( pSpawnedScene != nullptr )
+                        pSpawnedScene->setWorldPosition( position );
+                } );
+            }
+
+            /** @brief 재생 출력이 켜진 틱에 소리를 냅니다. 재생은 틱 뒤로 미룹니다. */
+            static void applySound( const GimmickCircuit& circuit, int32 node, GameObjectManager& manager )
+            {
+                const string* pSound           = readText( circuit, node, "sound" );
+                const bool    bCannotPlaySound = circuit.getOutput( node, hashed_string( "OnPlay" ) ) == false || pSound == nullptr || pSound->empty();
+                if ( bCannotPlaySound )
+                    return;
+                const string sound = *pSound;
+                manager.executeOrDeferPostTick( [sound]()
+                { (void)GameSound::play( sound ); } );
+            }
         };
     } // namespace
 } // namespace sw
@@ -388,6 +486,7 @@ namespace sw
         SceneComponent*        pScene = pTarget->getPrimarySceneComponent();
         const GimmickRestPose& pose   = _listRestPose[static_cast<size_t>( node )];
         const float32          value  = _circuit.getActuatorValue( node );
+        // 바인딩마다 짧은 분기다. 몇 줄이 넘는 액추에이터는 내부 함수로 나눴다.
         switch ( binding )
         {
             case Binding::Door:
@@ -412,94 +511,32 @@ namespace sw
             }
             case Binding::Mover:
             {
-                const SplineComponent* pSpline = pTarget->getComponent<SplineComponent>();
-                if ( pSpline == nullptr && getOwner() != nullptr )
-                    pSpline = getOwner()->getComponent<SplineComponent>();
-                const bool bSplineUnavailable = pScene == nullptr || pSpline == nullptr || pSpline->getWorldPath().isValid() == false;
-                if ( bSplineUnavailable )
-                    break;
-                const SplineSample sample = pSpline->getWorldPath().sampleAtDistance( value );
-                pScene->setWorldPosition( sample._position );
-                if ( Internal::readNumber( _circuit, node, "faceForward", 0.0f ) != 0.0f )
-                    pScene->setLocalRotation( float3{ pose._rotation._x, MathUtil::atan2( sample._tangent._x, sample._tangent._z ), pose._rotation._z } );
+                Internal::applyMover( _circuit, node, *pTarget, getOwner(), pScene, pose, value );
                 break;
             }
             case Binding::Hazard:
             {
-                const GimmickSensorComponent* pSensor = pTarget->getComponent<GimmickSensorComponent>();
-                if ( pSensor == nullptr || _circuit.getOutput( node, hashed_string( "OnDamageTick" ) ) == false )
-                    break;
-                const float32 damage = Internal::readNumber( _circuit, node, "damage", 0.0f );
-                for ( const GameObjectHandle& handle : pSensor->getOccupants() )
-                {
-                    GameObject* pVictim = manager.resolveGameObject( handle );
-                    if ( pVictim != nullptr )
-                        GimmickDamageUtil::applyDamage( *pVictim, pTarget, hashed_string( "Hazard" ), damage );
-                }
+                Internal::applyHazard( _circuit, node, manager, *pTarget );
                 break;
             }
             case Binding::Light:
             {
-                LightComponent* pLight = pTarget->getComponent<LightComponent>();
-                if ( pLight == nullptr )
-                    break;
-                const float32 intensity = _circuit.getOutput( node, hashed_string( "Lit" ) ) ? pose._intensity * Internal::readNumber( _circuit, node, "intensity", 1.0f ) : 0.0f;
-                if ( pLight->getIntensity() != intensity )
-                {
-                    const TComponentHandle<LightComponent> light{ pLight };
-                    GameObjectManager*                     pManager = &manager;
-                    manager.executeOrDeferPostTick( [pManager, light, intensity]()
-                    {
-                        LightComponent* pResolved = pManager->resolveComponent( light );
-                        if ( pResolved != nullptr )
-                            pResolved->setIntensity( intensity );
-                    } );
-                }
+                Internal::applyLight( _circuit, node, manager, *pTarget, pose );
                 break;
             }
             case Binding::Enable:
             {
-                const bool bEnabled = _circuit.getOutput( node, hashed_string( "Enabled" ) );
-                if ( pTarget->isActive() == bEnabled || pTarget == getOwner() )
-                    break;
-                const GameObjectHandle object   = pTarget->getHandle();
-                GameObjectManager*     pManager = &manager;
-                manager.executeOrDeferPostTick( [pManager, object, bEnabled]()
-                {
-                    GameObject* pResolved = pManager->resolveGameObject( object );
-                    if ( pResolved != nullptr )
-                        pResolved->setActive( bEnabled );
-                } );
+                Internal::applyEnable( _circuit, node, manager, *pTarget, getOwner() );
                 break;
             }
             case Binding::Spawner:
             {
-                const string* pPrefab      = Internal::readText( _circuit, node, "prefab" );
-                const bool    bCannotSpawn = _circuit.getOutput( node, hashed_string( "OnSpawn" ) ) == false || pPrefab == nullptr || pPrefab->empty() || pScene == nullptr;
-                if ( bCannotSpawn )
-                    break;
-                const string       prefab   = *pPrefab;
-                const float3       position = pScene->getWorldPosition() + Internal::readVector( _circuit, node, "offset" );
-                GameObjectManager* pManager = &manager;
-                manager.executeOrDeferPostTick( [pManager, prefab, position]()
-                {
-                    AssetManager*   pAssetManager = game::findSubsystem<AssetManager>();
-                    GameObject*     pSpawned      = pAssetManager != nullptr ? pAssetManager->getAssetCache<PrefabCache>().spawn( pManager, prefab ) : nullptr;
-                    SceneComponent* pSpawnedScene = pSpawned != nullptr ? pSpawned->getPrimarySceneComponent() : nullptr;
-                    if ( pSpawnedScene != nullptr )
-                        pSpawnedScene->setWorldPosition( position );
-                } );
+                Internal::applySpawner( _circuit, node, manager, pScene );
                 break;
             }
             case Binding::Sound:
             {
-                const string* pSound           = Internal::readText( _circuit, node, "sound" );
-                const bool    bCannotPlaySound = _circuit.getOutput( node, hashed_string( "OnPlay" ) ) == false || pSound == nullptr || pSound->empty();
-                if ( bCannotPlaySound )
-                    break;
-                const string sound = *pSound;
-                manager.executeOrDeferPostTick( [sound]()
-                { (void)GameSound::play( sound ); } );
+                Internal::applySound( _circuit, node, manager );
                 break;
             }
             default:

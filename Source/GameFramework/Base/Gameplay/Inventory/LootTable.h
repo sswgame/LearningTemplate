@@ -18,8 +18,8 @@
 namespace sw
 {
     /**
-     * @brief `<Entry>` · `<Always>` 속성의 스키마입니다(`GameDataXML::readFields` — 속성 이름은 칸 이름에서 `_` 를 뗀 것).
-     * @details 적지 않은 칸은 여기 초기값이고, 범위 밖 값은 로드 오류입니다(자르지 않는다). `max` 를 적지 않으면 `min` 과 같습니다(정해진 개수).
+     * @brief `<Entry>` 와 `<Always>` 속성의 스키마입니다(`GameDataXML::readFields`). 속성 이름은 필드 이름에서 `_` 를 뺀 것입니다.
+     * @details 적지 않은 필드는 여기 초기값이고, 범위 밖 값은 로드 오류입니다(자르지 않는다). `max` 를 적지 않으면 `min` 과 같습니다(정해진 개수).
      */
     REFLECT()
     struct LootEntryRowDef

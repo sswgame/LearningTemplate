@@ -17,11 +17,41 @@ namespace sw
             static constexpr float32 kMinAspectRatio = 0.01f;
 
             /**
-             * @brief 모드가 정하는 시점(자리 · 회전 · 투영)입니다. 렌즈의 나머지 값(초점, 조리개, 시프트, 더치)과 후처리는 `evaluateCameraMode` 가 적용한다.
+             * @brief 모드가 정하는 시점(위치, 회전, 투영)입니다. 렌즈의 나머지 값(초점, 조리개, 시프트, 더치)과 후처리는 `evaluateCameraMode` 가 적용한다.
              * @details 모드마다 일찍 끝나는 분기가 있어서, 모든 모드에 같이 적용하는 값은 이 함수 밖에서 한 번에 적용한다.
+             *          단계는 줌, look-ahead 초점, 모드별 배치, 암, 프레이밍, 경계 가두기 순이다.
              */
             static CameraPose evaluateView( const CameraPresetDef& def, const CameraTarget& target, float32 deltaTime, CameraModeState& inoutState,
                                             const ICameraCollisionProbe* pProbe );
+
+            /** @brief 모드별 배치 단계가 읽고 고치는 시점 값입니다. 초점은 look-ahead 를 더한 대상 위치입니다. */
+            struct CameraRig
+            {
+                float3  _focus{};
+                float3  _pivot{};
+                float3  _aimPoint{};
+                float32 _yaw{ 0.0f };
+                float32 _pitch{ 0.0f };
+                bool    _bArm{ false };     ///< 피벗에서 물러나는 모드(암이 있다)
+                bool    _bCompose{ false }; ///< 프레이밍이 조준을 정하는 모드
+            };
+
+            /**
+             * @brief 줌 입력과 그룹 맞추기를 적용하고 원근 거리를 돌려줍니다. 직교면 @p inoutPose 의 화면 높이를 바꿉니다.
+             * @details 그룹 맞추기는 그룹이 화면에 들어올 만큼만 늘리고 줄이지 않는다.
+             */
+            static float32 applyZoom( const CameraPresetDef& def, const CameraTarget& target, const CameraModeState& state, CameraPose& inoutPose );
+            /** @brief look-ahead 를 더한 초점입니다. 대상 속도는 지난 프레임 초점과의 차이로 구한다. */
+            static float3 computeLookAheadFocus( const CameraFramingDef& framing, const CameraTarget& target, float32 elapsed, CameraModeState& inoutState );
+            /**
+             * @brief 모드마다 위치와 각을 정합니다. 시점이 다 정해져 남은 단계가 필요 없으면 true 입니다.
+             * @details 모드마다 짧은 분기인 switch 디스패처라 더 나누지 않는다. 모드 하나의 배치 규칙을 한곳에서 읽는다.
+             */
+            static bool placeByMode( const CameraPresetDef& def, const CameraTarget& target, float32 inputYaw, CameraModeState& inoutState, CameraRig& inoutRig,
+                                     CameraPose& inoutPose );
+            /** @brief 대상이 프레이밍의 화면 위치에 오도록 감쇠한 조준 회전입니다. */
+            static quaternion composeFraming( const CameraFramingDef& framing, const CameraTarget& target, const CameraPose& pose, const float3& aimPoint, float32 elapsed,
+                                              CameraModeState& inoutState );
 
             static float3 rotateByYaw( const float3& value, float32 yaw ) { return float3::transform( value, quaternion::makeFromYawPitchRoll( yaw, 0.0f, 0.0f ) ); }
 
@@ -166,6 +196,186 @@ namespace sw
             inoutState._rotateYaw += static_cast<float32>( input._rotateSteps ) * inputDef._rotateStep;
     }
 
+    float32 CameraModeInternal::applyZoom( const CameraPresetDef& def, const CameraTarget& target, const CameraModeState& state, CameraPose& inoutPose )
+    {
+        const CameraConfinerDef& confiner = def._confiner;
+        const CameraFramingDef&  framing  = def._framing;
+        const bool               bOrtho   = inoutPose._bOrthographic == SW_TRUE;
+        float32                  distance = def._view._distance;
+        if ( state._zoom > 0.0f )
+        {
+            if ( bOrtho )
+                inoutPose._orthoHeight = state._zoom;
+            else
+                distance = state._zoom;
+        }
+        if ( framing._groupPadding > 0.0f && target._groupRadius > 0.0f )
+        {
+            const float32 radius = target._groupRadius * framing._groupPadding;
+            if ( bOrtho )
+                inoutPose._orthoHeight = MathUtil::max( inoutPose._orthoHeight, radius * 2.0f );
+            else
+                distance = MathUtil::max( distance, radius / MathUtil::max( 0.01f, MathUtil::sin( inoutPose._fieldOfViewY * 0.5f ) ) );
+        }
+        if ( bOrtho )
+            inoutPose._orthoHeight = clampZoom( confiner, inoutPose._orthoHeight );
+        else
+            distance = clampZoom( confiner, distance );
+        return distance;
+    }
+
+    float3 CameraModeInternal::computeLookAheadFocus( const CameraFramingDef& framing, const CameraTarget& target, float32 elapsed, CameraModeState& inoutState )
+    {
+        if ( framing._lookAheadTime <= 0.0f )
+            return target._focus;
+        if ( inoutState._bHasPreviousFocus == SW_TRUE && elapsed > 0.0f )
+        {
+            const float3 velocity = ( target._focus - inoutState._previousFocus ) * ( 1.0f / elapsed );
+            inoutState._lookAhead = float3::lerp( inoutState._lookAhead, velocity * framing._lookAheadTime, computeDampingAlpha( framing._lookAheadSmoothing, elapsed ) );
+        }
+        inoutState._previousFocus     = target._focus;
+        inoutState._bHasPreviousFocus = SW_TRUE;
+        return target._focus + inoutState._lookAhead;
+    }
+
+    bool CameraModeInternal::placeByMode( const CameraPresetDef& def, const CameraTarget& target, float32 inputYaw, CameraModeState& inoutState, CameraRig& inoutRig,
+                                          CameraPose& inoutPose )
+    {
+        const CameraViewDef&     view     = def._view;
+        const CameraConfinerDef& confiner = def._confiner;
+        switch ( view._mode )
+        {
+            case CameraPresetMode::Fixed:
+            {
+                inoutPose._position = view._offset + inoutState._panOffset;
+                if ( confiner._bBounds )
+                    inoutPose._position = clampToBounds( confiner, inoutPose._position );
+                if ( view._aim == CameraAimMode::Angles )
+                {
+                    inoutPose._rotation = quaternion::makeFromYawPitchRoll( inoutRig._yaw, clampPitch( confiner, inoutRig._pitch ), 0.0f );
+                    return true;
+                }
+                // 점이나 대상을 보는 고정 카메라(CCTV)다. 보는 각에 훑기와 입력을 더한다.
+                inoutRig._aimPoint = view._aim == CameraAimMode::Point ? view._lookAt : inoutRig._focus;
+                const float2 toAim = computeLookAngles( inoutPose._position, inoutRig._aimPoint );
+                inoutRig._yaw      = toAim._x + inputYaw;
+                inoutRig._pitch    = toAim._y + inoutState._pitchOffset;
+                inoutRig._bCompose = view._aim == CameraAimMode::Target;
+                return false;
+            }
+            case CameraPresetMode::FirstPerson:
+            {
+                inoutRig._yaw       = target._yaw + inoutRig._yaw;
+                inoutRig._pitch     = clampPitch( confiner, target._pitch + inoutRig._pitch );
+                inoutPose._rotation = quaternion::makeFromYawPitchRoll( inoutRig._yaw, inoutRig._pitch, 0.0f );
+                inoutPose._position = target._focus + rotateByYaw( view._offset, target._yaw );
+                return true;
+            }
+            case CameraPresetMode::ThirdPerson:
+            {
+                // 어깨 너머 시점이다. 대상의 시점을 따르고, 피벗(어깨)은 대상 요로 돌린 오프셋이다.
+                inoutRig._yaw   = target._yaw + inoutRig._yaw;
+                inoutRig._pitch = target._pitch + inoutRig._pitch;
+                inoutRig._pivot = target._focus + rotateByYaw( view._offset, target._yaw ) + inoutState._lookAhead;
+                inoutRig._bArm  = true;
+                return false;
+            }
+            case CameraPresetMode::Follow:
+            {
+                inoutRig._yaw      = target._yaw + inoutRig._yaw;
+                inoutRig._pivot    = inoutRig._focus + rotateByYaw( view._offset, target._yaw );
+                inoutRig._aimPoint = inoutRig._pivot;
+                inoutRig._bArm     = true;
+                inoutRig._bCompose = true;
+                return false;
+            }
+            case CameraPresetMode::OrthoTopDown:
+            {
+                // 직교 시점의 상자는 초점(X, Z)을 가둔다. 카메라 위치는 수백 m 위에 있어 그것을 가두면 화면이 상자 밖을 본다.
+                // 팬도 상자 끝에서 멈춘다. 넘친 만큼 남겨 두면 되돌아올 때 그만큼 키를 눌러도 화면이 움직이지 않는다.
+                if ( confiner._bBounds )
+                {
+                    const float3 clamped = clampToBounds( confiner, inoutRig._pivot );
+                    inoutState._panOffset._x += clamped._x - inoutRig._pivot._x;
+                    inoutState._panOffset._z += clamped._z - inoutRig._pivot._z;
+                    inoutRig._pivot = float3{ clamped._x, inoutRig._pivot._y, clamped._z };
+                }
+                return false;
+            }
+            case CameraPresetMode::Orbit:
+            {
+                inoutRig._aimPoint = inoutRig._pivot;
+                inoutRig._bArm     = true;
+                inoutRig._bCompose = true;
+                return false;
+            }
+            case CameraPresetMode::FollowXY:
+            {
+                // 2D 씬은 Y 가 위인 땅(XZ)이 아니라 XY 평면이다. 카메라는 초점 위가 아니라 카메라 평면(오프셋 Z)에 서서 평면을 본다.
+                inoutPose._position = float3{ inoutRig._pivot._x, inoutRig._pivot._y, view._offset._z };
+                if ( confiner._bBounds )
+                {
+                    const float3 clamped = clampToBounds( confiner, inoutPose._position );
+                    inoutPose._position  = float3{ clamped._x, clamped._y, inoutPose._position._z };
+                }
+                inoutPose._rotation = quaternion::makeFromYawPitchRoll( inoutRig._yaw, clampPitch( confiner, inoutRig._pitch ), 0.0f );
+                return true;
+            }
+            case CameraPresetMode::Dolly:
+            {
+                // 레일 위에서 대상에 가장 가까운 점에 서서 대상을 본다. 곡선은 처음 한 번만 만든다(호 길이 테이블).
+                if ( inoutState._bDollyPathBuilt == SW_FALSE )
+                {
+                    // 점이 모자라면 곡선이 비고 isValid 가 false 다. 그때는 오프셋 위치에 선다.
+                    (void)inoutState._dollyPath.initialize( def._dolly._listPoint, def._dolly._type, def._dolly._bClosed );
+                    inoutState._bDollyPathBuilt = SW_TRUE;
+                }
+                if ( inoutState._dollyPath.isValid() )
+                {
+                    const SplineSample nearest = inoutState._dollyPath.findClosest( inoutRig._focus );
+                    inoutPose._position        = inoutState._dollyPath.sampleAtDistance( nearest._distance + def._dolly._pathOffset )._position;
+                }
+                else
+                {
+                    inoutPose._position = view._offset;
+                }
+                inoutRig._aimPoint = inoutRig._focus;
+                const float2 toAim = computeLookAngles( inoutPose._position, inoutRig._aimPoint );
+                inoutRig._yaw      = toAim._x + inputYaw;
+                inoutRig._pitch    = toAim._y + inoutState._pitchOffset;
+                inoutRig._bCompose = true;
+                return false;
+            }
+        }
+        return false;
+    }
+
+    quaternion CameraModeInternal::composeFraming( const CameraFramingDef& framing, const CameraTarget& target, const CameraPose& pose, const float3& aimPoint,
+                                                   float32 elapsed, CameraModeState& inoutState )
+    {
+        const float32 tanHalfY     = MathUtil::tan( pose._fieldOfViewY * 0.5f );
+        const float32 tanHalfX     = tanHalfY * MathUtil::max( kMinAspectRatio, target._aspectRatio );
+        const float2  toAim        = computeLookAngles( pose._position, aimPoint );
+        const float32 screenYaw    = computeAtan( ( framing._screenPosition._x - 0.5f ) * 2.0f * tanHalfX );
+        const float32 screenPitch  = computeAtan( ( framing._screenPosition._y - 0.5f ) * 2.0f * tanHalfY );
+        const float32 desiredYaw   = toAim._x - screenYaw;
+        const float32 desiredPitch = toAim._y - screenPitch;
+        if ( inoutState._bAimValid == SW_FALSE )
+        {
+            inoutState._aimYaw    = desiredYaw;
+            inoutState._aimPitch  = desiredPitch;
+            inoutState._bAimValid = SW_TRUE;
+        }
+        else
+        {
+            const float32 alpha  = computeDampingAlpha( framing._damping, elapsed );
+            inoutState._aimYaw   = composeAxis( inoutState._aimYaw, desiredYaw, computeAtan( framing._deadZone._x * tanHalfX ), computeAtan( framing._softZone._x * tanHalfX ), alpha );
+            inoutState._aimPitch = composeAxis( inoutState._aimPitch, desiredPitch, computeAtan( framing._deadZone._y * tanHalfY ), computeAtan( framing._softZone._y * tanHalfY ),
+                                                alpha );
+        }
+        return quaternion::makeFromYawPitchRoll( inoutState._aimYaw, inoutState._aimPitch, 0.0f );
+    }
+
     CameraPose CameraModeInternal::evaluateView( const CameraPresetDef& def, const CameraTarget& target, float32 deltaTime, CameraModeState& inoutState,
                                                  const ICameraCollisionProbe* pProbe )
     {
@@ -181,205 +391,42 @@ namespace sw
         pose._orthoHeight   = def._lens._orthoHeight;
         pose._nearPlane     = def._lens._nearPlane;
         pose._farPlane      = def._lens._farPlane;
-        pose._bOrthographic = CameraModeInternal::isOrthographic( def ) ? SW_TRUE : SW_FALSE;
+        pose._bOrthographic = isOrthographic( def ) ? SW_TRUE : SW_FALSE;
 
-        // 줌 — 원근은 거리, 직교는 화면 높이. 그룹 맞추기는 묶음이 화면에 들어올 만큼만 늘린다(줄이지 않는다).
-        float32 distance = view._distance;
-        if ( inoutState._zoom > 0.0f )
-        {
-            if ( pose._bOrthographic == SW_TRUE )
-                pose._orthoHeight = inoutState._zoom;
-            else
-                distance = inoutState._zoom;
-        }
-        if ( framing._groupPadding > 0.0f && target._groupRadius > 0.0f )
-        {
-            const float32 radius = target._groupRadius * framing._groupPadding;
-            if ( pose._bOrthographic == SW_TRUE )
-                pose._orthoHeight = MathUtil::max( pose._orthoHeight, radius * 2.0f );
-            else
-                distance = MathUtil::max( distance, radius / MathUtil::max( 0.01f, MathUtil::sin( pose._fieldOfViewY * 0.5f ) ) );
-        }
-        if ( pose._bOrthographic == SW_TRUE )
-            pose._orthoHeight = CameraModeInternal::clampZoom( confiner, pose._orthoHeight );
-        else
-            distance = CameraModeInternal::clampZoom( confiner, distance );
-
-        // look-ahead — 대상이 가는 쪽을 미리 본다. 속도는 지난 프레임 초점과의 차이다.
-        float3 focus = target._focus;
-        if ( framing._lookAheadTime > 0.0f )
-        {
-            if ( inoutState._bHasPreviousFocus == SW_TRUE && elapsed > 0.0f )
-            {
-                const float3 velocity = ( target._focus - inoutState._previousFocus ) * ( 1.0f / elapsed );
-                inoutState._lookAhead = float3::lerp( inoutState._lookAhead, velocity * framing._lookAheadTime,
-                                                      computeDampingAlpha( framing._lookAheadSmoothing, elapsed ) );
-            }
-            inoutState._previousFocus     = target._focus;
-            inoutState._bHasPreviousFocus = SW_TRUE;
-            focus                         = focus + inoutState._lookAhead;
-        }
-
+        const float32 distance = applyZoom( def, target, inoutState, pose );
         const float32 sweep    = def._sweep._yawAmplitude > 0.0f
                                    ? def._sweep._yawAmplitude * MathUtil::sin( MathUtil::kTwoPi * ( inoutState._time / def._sweep._period + def._sweep._phase ) )
                                    : 0.0f;
         const float32 inputYaw = inoutState._yawOffset + inoutState._rotateYawShown + sweep;
-        float32       yaw      = view._yaw + inputYaw;
-        float32       pitch    = view._pitch + inoutState._pitchOffset;
-        float3        pivot    = focus + view._offset + inoutState._panOffset;
-        bool          bArm     = false; ///< 피벗에서 물러나는 모드(암이 있다)
-        bool          bCompose = false; ///< 프레이밍이 조준을 정하는 모드
-        float3        aimPoint = pivot;
 
-        switch ( view._mode )
-        {
-            case CameraPresetMode::Fixed:
-            {
-                pose._position = view._offset + inoutState._panOffset;
-                if ( confiner._bBounds )
-                    pose._position = CameraModeInternal::clampToBounds( confiner, pose._position );
-                if ( view._aim == CameraAimMode::Angles )
-                {
-                    pose._rotation = quaternion::makeFromYawPitchRoll( yaw, CameraModeInternal::clampPitch( confiner, pitch ), 0.0f );
-                    return pose;
-                }
-                // 점 · 대상을 보는 고정 카메라(CCTV) — 보는 각에 훑기 · 입력을 더한다.
-                aimPoint           = view._aim == CameraAimMode::Point ? view._lookAt : focus;
-                const float2 toAim = computeLookAngles( pose._position, aimPoint );
-                yaw                = toAim._x + inputYaw;
-                pitch              = toAim._y + inoutState._pitchOffset;
-                bCompose           = view._aim == CameraAimMode::Target;
-                break;
-            }
-            case CameraPresetMode::FirstPerson:
-            {
-                yaw            = target._yaw + yaw;
-                pitch          = CameraModeInternal::clampPitch( confiner, target._pitch + pitch );
-                pose._rotation = quaternion::makeFromYawPitchRoll( yaw, pitch, 0.0f );
-                pose._position = target._focus + CameraModeInternal::rotateByYaw( view._offset, target._yaw );
-                return pose;
-            }
-            case CameraPresetMode::ThirdPerson:
-            {
-                // 어깨 너머 — 대상의 시점을 따른다. 피벗(어깨)은 대상 요로 돌린 오프셋이다.
-                yaw   = target._yaw + yaw;
-                pitch = target._pitch + pitch;
-                pivot = target._focus + CameraModeInternal::rotateByYaw( view._offset, target._yaw ) + inoutState._lookAhead;
-                bArm  = true;
-                break;
-            }
-            case CameraPresetMode::Follow:
-            {
-                yaw      = target._yaw + yaw;
-                pivot    = focus + CameraModeInternal::rotateByYaw( view._offset, target._yaw );
-                aimPoint = pivot;
-                bArm     = true;
-                bCompose = true;
-                break;
-            }
-            case CameraPresetMode::OrthoTopDown:
-            {
-                // 직교 시점의 상자는 초점(X · Z)을 가둔다 — 카메라 자리는 수백 m 위에 있어 그것을 가두면 화면이 상자 밖을 본다.
-                // 팬도 상자 끝에서 멈춘다 — 넘친 만큼 남겨 두면 되돌아올 때 그만큼 키를 눌러도 화면이 움직이지 않는다.
-                if ( confiner._bBounds )
-                {
-                    const float3 clamped = CameraModeInternal::clampToBounds( confiner, pivot );
-                    inoutState._panOffset._x += clamped._x - pivot._x;
-                    inoutState._panOffset._z += clamped._z - pivot._z;
-                    pivot = float3{ clamped._x, pivot._y, clamped._z };
-                }
-                break;
-            }
-            case CameraPresetMode::Orbit:
-            {
-                aimPoint = pivot;
-                bArm     = true;
-                bCompose = true;
-                break;
-            }
-            case CameraPresetMode::FollowXY:
-            {
-                // 2D 씬은 Y 가 위인 땅(XZ)이 아니라 XY 평면이다 — 카메라는 초점 위가 아니라 카메라 평면(오프셋 Z)에 서서 평면을 본다.
-                pose._position = float3{ pivot._x, pivot._y, view._offset._z };
-                if ( confiner._bBounds )
-                {
-                    const float3 clamped = CameraModeInternal::clampToBounds( confiner, pose._position );
-                    pose._position       = float3{ clamped._x, clamped._y, pose._position._z };
-                }
-                pose._rotation = quaternion::makeFromYawPitchRoll( yaw, CameraModeInternal::clampPitch( confiner, pitch ), 0.0f );
-                return pose;
-            }
-            case CameraPresetMode::Dolly:
-            {
-                // 레일 위에서 대상에 가장 가까운 점에 서서 대상을 본다. 곡선은 처음 한 번만 만든다(호 길이 표).
-                if ( inoutState._bDollyPathBuilt == SW_FALSE )
-                {
-                    // 점이 모자라면 곡선이 비고 isValid 가 false 다 — 그때는 오프셋 자리에 선다
-                    (void)inoutState._dollyPath.initialize( def._dolly._listPoint, def._dolly._type, def._dolly._bClosed );
-                    inoutState._bDollyPathBuilt = SW_TRUE;
-                }
-                if ( inoutState._dollyPath.isValid() )
-                {
-                    const SplineSample nearest = inoutState._dollyPath.findClosest( focus );
-                    pose._position             = inoutState._dollyPath.sampleAtDistance( nearest._distance + def._dolly._pathOffset )._position;
-                }
-                else
-                {
-                    pose._position = view._offset;
-                }
-                aimPoint           = focus;
-                const float2 toAim = computeLookAngles( pose._position, aimPoint );
-                yaw                = toAim._x + inputYaw;
-                pitch              = toAim._y + inoutState._pitchOffset;
-                bCompose           = true;
-                break;
-            }
-        }
+        CameraRig rig;
+        rig._focus    = computeLookAheadFocus( framing, target, elapsed, inoutState );
+        rig._yaw      = view._yaw + inputYaw;
+        rig._pitch    = view._pitch + inoutState._pitchOffset;
+        rig._pivot    = rig._focus + view._offset + inoutState._panOffset;
+        rig._aimPoint = rig._pivot;
+        if ( placeByMode( def, target, inputYaw, inoutState, rig, pose ) )
+            return pose;
 
-        pitch                = CameraModeInternal::clampPitch( confiner, pitch );
-        const float3 forward = CameraModeInternal::computeForward( yaw, pitch );
-        const bool   bPlaced = view._mode == CameraPresetMode::Fixed || view._mode == CameraPresetMode::Dolly; ///< 자리를 이미 정한 모드(피벗에서 물러나지 않는다)
+        const float32 pitch   = clampPitch( confiner, rig._pitch );
+        const float3  forward = computeForward( rig._yaw, pitch );
+        const bool    bPlaced = view._mode == CameraPresetMode::Fixed || view._mode == CameraPresetMode::Dolly; ///< 위치를 이미 정한 모드(피벗에서 물러나지 않는다)
         if ( bPlaced == false )
         {
-            const float32 arm = bArm ? CameraModeInternal::resolveArm( def._collision, pivot, forward * -1.0f, distance, elapsed, pProbe, inoutState ) : distance;
-            pose._position    = pivot - forward * arm;
+            const float32 arm = rig._bArm ? resolveArm( def._collision, rig._pivot, forward * -1.0f, distance, elapsed, pProbe, inoutState ) : distance;
+            pose._position    = rig._pivot - forward * arm;
         }
 
-        const bool bComposeFraming = bCompose && framing._bCompose && pose._bOrthographic == SW_FALSE;
+        // 대상이 화면 위치에 오도록 조준을 비튼다. 데드존 안의 움직임은 카메라를 돌리지 않고, 소프트존 밖으로는 나가지 않는다.
+        const bool bComposeFraming = rig._bCompose && framing._bCompose && pose._bOrthographic == SW_FALSE;
         if ( bComposeFraming )
-        {
-            // 대상이 화면 위치에 오도록 조준을 비튼다. 데드존 안의 움직임은 카메라를 돌리지 않고, 소프트존 밖으로는 나가지 않는다.
-            const float32 tanHalfY     = MathUtil::tan( pose._fieldOfViewY * 0.5f );
-            const float32 tanHalfX     = tanHalfY * MathUtil::max( CameraModeInternal::kMinAspectRatio, target._aspectRatio );
-            const float2  toAim        = computeLookAngles( pose._position, aimPoint );
-            const float32 screenYaw    = CameraModeInternal::computeAtan( ( framing._screenPosition._x - 0.5f ) * 2.0f * tanHalfX );
-            const float32 screenPitch  = CameraModeInternal::computeAtan( ( framing._screenPosition._y - 0.5f ) * 2.0f * tanHalfY );
-            const float32 desiredYaw   = toAim._x - screenYaw;
-            const float32 desiredPitch = toAim._y - screenPitch;
-            if ( inoutState._bAimValid == SW_FALSE )
-            {
-                inoutState._aimYaw    = desiredYaw;
-                inoutState._aimPitch  = desiredPitch;
-                inoutState._bAimValid = SW_TRUE;
-            }
-            else
-            {
-                const float32 alpha  = computeDampingAlpha( framing._damping, elapsed );
-                inoutState._aimYaw   = CameraModeInternal::composeAxis( inoutState._aimYaw, desiredYaw, CameraModeInternal::computeAtan( framing._deadZone._x * tanHalfX ),
-                                                                        CameraModeInternal::computeAtan( framing._softZone._x * tanHalfX ), alpha );
-                inoutState._aimPitch = CameraModeInternal::composeAxis( inoutState._aimPitch, desiredPitch, CameraModeInternal::computeAtan( framing._deadZone._y * tanHalfY ),
-                                                                        CameraModeInternal::computeAtan( framing._softZone._y * tanHalfY ), alpha );
-            }
-            pose._rotation = quaternion::makeFromYawPitchRoll( inoutState._aimYaw, inoutState._aimPitch, 0.0f );
-        }
+            pose._rotation = composeFraming( framing, target, pose, rig._aimPoint, elapsed, inoutState );
         else
-        {
-            pose._rotation = quaternion::makeFromYawPitchRoll( yaw, pitch, 0.0f );
-        }
+            pose._rotation = quaternion::makeFromYawPitchRoll( rig._yaw, pitch, 0.0f );
 
         const bool bClampToBounds = confiner._bBounds && view._mode != CameraPresetMode::OrthoTopDown && bPlaced == false;
         if ( bClampToBounds )
-            pose._position = CameraModeInternal::clampToBounds( confiner, pose._position );
+            pose._position = clampToBounds( confiner, pose._position );
         return pose;
     }
 

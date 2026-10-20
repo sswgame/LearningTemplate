@@ -1,6 +1,7 @@
 /**
  * @file CameraPose.h
- * @brief 카메라 한 장면의 값 — 자리 · 회전 · 렌즈(시야각 · 직교 높이 · 투영 · 근/원평면 · 초점 · 조리개 · 시프트)와 카메라별 후처리 값(`CameraPostProcessValues`, 엔진)입니다.
+ * @brief 카메라 한 장면의 값입니다. 위치, 회전, 렌즈, 카메라별 후처리 값(엔진의 `CameraPostProcessValues`)을 담습니다.
+ * @details 렌즈는 시야각, 직교 높이, 투영, 근평면과 원평면, 초점, 조리개, 시프트입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -14,7 +15,7 @@ namespace sw
 {
     /**
      * @struct CameraPose
-     * @brief 카메라가 놓일 월드 자리 · 회전과 렌즈입니다. 프리셋 계산 · 블렌드 · 감쇠가 이 값 하나를 주고받습니다(컴포넌트를 모른다).
+     * @brief 카메라가 놓일 월드 위치, 회전, 렌즈입니다. 프리셋 계산, 블렌드, 감쇠가 이 값 하나를 주고받으며 컴포넌트는 모릅니다.
      * @details 회전은 앞이 +Z, 위가 +Y 인 엔진 규칙(`quaternion::makeFromYawPitchRoll`)입니다. 각은 라디안, 거리는 m 입니다.
      *          후처리 값(`_postProcess`)은 프리셋의 `<PostProcess>` 섹션이고, 포즈를 카메라에 쓰면 카메라 컴포넌트로 가서 렌더러가 뷰마다 읽습니다.
      *          피사계 심도 렌즈 값(`_depthOfField`, 엔진)도 같은 길로 카메라 컴포넌트와 렌더 뷰까지 간다(읽는 패스는 아직 없다).

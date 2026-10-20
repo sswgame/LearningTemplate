@@ -61,7 +61,7 @@ namespace sw
     /** @brief 나가는 요청 하나입니다. */
     struct HTTPClientRequest
     {
-        vector<HTTPHeader> _listHeader{}; ///< `Host` · `Content-Length` · `Connection` 은 클라이언트가 붙인다
+        vector<HTTPHeader> _listHeader{}; ///< `Host`, `Content-Length`, `Connection` 은 클라이언트가 붙인다
         vector<uint8>      _bodyBytes{};
         string             _url{}; ///< `http://` · `https://` + 호스트[:포트] + 경로[?쿼리]
         int64              _timeoutMs{ HTTPConstant::kDefaultTimeoutMs };
@@ -112,7 +112,7 @@ namespace sw
         vector<HTTPHeader> _listHeader{}; ///< `Content-Length` · `Connection` 은 서버가 붙인다
         vector<uint8>      _bodyBytes{};
         int32              _statusCode{ HTTPConstant::kStatusOk };
-        uint8              _bChunked{ SW_FALSE }; ///< 몸을 chunked 로 보낸다(테스트 — 받는 쪽 chunked 풀기)
+        uint8              _bChunked{ SW_FALSE }; ///< 본문을 chunked 로 보낸다(받는 쪽 chunked 해석을 테스트할 때 쓴다)
     };
 } // namespace sw
 
@@ -209,7 +209,18 @@ namespace sw
 
         HTTPParseState     fail( const utf8* pReason );
         [[nodiscard]] bool parseHead( string_view head );
-        HTTPParseState     advance();
+        /** @brief 버퍼에서 읽을 수 있는 데까지 단계를 넘깁니다. 단계마다 짧은 분기이고, 긴 단계는 아래 함수로 나눴습니다. */
+        HTTPParseState advance();
+        /**
+         * @brief 머리를 끝까지 받았으면 읽고 몸을 읽는 방식(청크, 길이, 닫힐 때까지)을 정합니다.
+         * @details 아래 단계 함수는 모두 같은 계약입니다. 다음 단계로 넘어갔으면 true, 데이터가 더 필요하거나 실패했으면 false 입니다.
+         *          실패는 `fail` 이 상태에 남깁니다.
+         */
+        bool advanceHead();
+        /** @brief 남은 몸 바이트를 버퍼에서 옮깁니다. 다 받으면 @p nextPhase 로 넘어갑니다. 고정 길이 몸과 청크 데이터가 같이 씁니다. */
+        bool takeBodyBytes( Phase nextPhase );
+        /** @brief 청크 크기 줄을 읽습니다. 크기 0 이면 트레일러로 넘어갑니다. */
+        bool advanceChunkSize();
 
         vector<HTTPHeader> _listHeader;
         vector<uint8>      _buffer; ///< 아직 해석하지 않은 바이트

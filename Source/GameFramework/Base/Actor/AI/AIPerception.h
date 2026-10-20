@@ -1,6 +1,7 @@
 /**
  * @file AIPerception.h
- * @brief AI 의 감각 — 시야(거리 · 시야각 · 가림), 청각(소리 반경), 그리고 본 것을 잠시 기억하기(마지막 위치 · 나이)입니다.
+ * @brief AI 의 감각입니다. 시야(거리, 시야각, 가림)와 청각(소리 반경)으로 대상을 감지하고, 본 것을 잠시 기억합니다.
+ * @details 기억은 마지막으로 감지한 위치와 그 뒤로 지난 시간을 가집니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -18,22 +19,22 @@ namespace sw
     struct AIPerceptionSettings
     {
         float32 _sightRange{ 12.0f };
-        float32 _loseSightRange{ 14.0f };   ///< 이미 보고 있는 대상은 여기까지 놓치지 않는다(경계에서 깜빡이지 않게)
-        float32 _sightHalfAngle{ 1.0472f }; ///< 시야각의 절반(라디안, 기본 60° → 120° 시야)
-        float32 _peripheralRange{ 2.0f };   ///< 이 안은 등 뒤도 느낀다
-        float32 _hearingScale{ 1.0f };      ///< 소리 반경에 곱한다(귀 밝음)
+        float32 _loseSightRange{ 14.0f };   ///< 이미 보고 있는 대상은 이 거리까지 놓치지 않는다. 경계에서 감지가 깜빡이지 않게 한다
+        float32 _sightHalfAngle{ 1.0472f }; ///< 시야각의 절반(라디안). 기본 60° 는 120° 시야다
+        float32 _peripheralRange{ 2.0f };   ///< 이 거리 안은 등 뒤도 느낀다
+        float32 _hearingScale{ 1.0f };      ///< 소리 반경에 곱하는 값(귀가 밝을수록 크다)
         float32 _memoryDuration{ 5.0f };    ///< 감지가 끊긴 뒤 기억하는 시간
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 감각에 닿을 수 있는 것 하나입니다(게임이 매 감지마다 넘긴다). */
+    /** @brief 감각에 닿을 수 있는 대상 하나입니다. 게임이 감지할 때마다 넘깁니다. */
     struct AIStimulus
     {
         float3  _position{};
         uint64  _id{ 0 };
-        float32 _noiseRadius{ 0.0f }; ///< 이번에 낸 소리의 반경(0 = 조용함)
+        float32 _noiseRadius{ 0.0f }; ///< 이번에 낸 소리의 반경. 0 이면 조용하다
     };
 } // namespace sw
 
@@ -46,7 +47,7 @@ namespace sw
         uint64  _id{ 0 };
         float32 _age{ 0.0f };        ///< 마지막으로 감지한 뒤 지난 시간
         uint8   _bSeen{ SW_FALSE };  ///< 지금 보인다
-        uint8   _bHeard{ SW_FALSE }; ///< 이번에 들렸다
+        uint8   _bHeard{ SW_FALSE }; ///< 이번 감지에서 들렸다
     };
 } // namespace sw
 
@@ -54,8 +55,8 @@ namespace sw
 {
     /**
      * @class AIPerception
-     * @brief 언리얼 `UAIPerceptionComponent`(Sight · Hearing, Max Age)의 작은 판입니다. 대상 후보는 게임이 고릅니다(보통 공간 해시의 원 질의).
-     * @details 가림은 격자가 있으면 칸 시선(`NavGrid::hasLineOfSight`)으로 봅니다 — 벽 뒤는 안 보이고 소리는 벽을 넘는다.
+     * @brief 언리얼 `UAIPerceptionComponent`(Sight, Hearing, Max Age)를 작게 만든 것입니다. 대상 후보는 게임이 고릅니다(보통 공간 해시의 원 질의).
+     * @details 격자가 있으면 가림을 셀 시선(`NavGrid::hasLineOfSight`)으로 봅니다. 벽 뒤는 보이지 않고, 소리는 벽을 넘습니다.
      */
     class SW_GF_API AIPerception
     {
@@ -64,11 +65,12 @@ namespace sw
 
         void setSettings( const AIPerceptionSettings& settings ) { _settings = settings; }
         /**
-         * @brief 한 번 감지합니다. 후보 중 보이거나 들린 것을 기억에 넣고, 감지되지 않은 기억은 나이를 먹이다 `_memoryDuration` 이 지나면 잊습니다.
-         * @param pGrid 가림을 볼 격자(없으면 가림 없음).
+         * @brief 한 번 감지합니다. 후보 중 보이거나 들린 것을 기억에 넣습니다.
+         * @details 감지되지 않은 기억은 나이를 더하고, `_memoryDuration` 이 지나면 잊습니다.
+         * @param pGrid 가림을 볼 격자입니다. 없으면 가림을 보지 않습니다.
          */
         void sense( const float3& eyePosition, const float3& forward, const vector<AIStimulus>& listCandidate, const NavGrid* pGrid, float32 deltaTime );
-        /** @brief 이 자리 · 방향에서 @p target 이 보이는지입니다(기억과 상관없이). @p bAlreadySeen 이면 놓치는 거리를 씁니다. */
+        /** @brief 이 위치와 방향에서 @p target 이 보이는지입니다. 기억과는 상관없습니다. @p bAlreadySeen 이면 놓치는 거리를 씁니다. */
         bool canSee( const float3& eyePosition, const float3& forward, const float3& target, const NavGrid* pGrid, bool bAlreadySeen ) const;
 
         const vector<AIPerceivedTarget>& getTargets() const { return _listTarget; }

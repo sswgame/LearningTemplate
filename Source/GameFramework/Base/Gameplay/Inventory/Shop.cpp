@@ -162,12 +162,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     const ShopStockDef* ShopDef::findStock( const hashed_string& itemID ) const
     {
-        for ( const ShopStockDef& stock : _listStock )
-        {
-            if ( stock._itemID == itemID )
-                return &stock;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&ShopStockDef::_itemID>( _listStock, itemID );
     }
 
     bool ShopDef::refusesCategory( const hashed_string& category ) const
@@ -472,12 +467,7 @@ namespace sw
 
     const ShopRuntime* ShopState::findRuntime( const hashed_string& shopID ) const
     {
-        for ( const ShopRuntime& runtime : _listRuntime )
-        {
-            if ( runtime._shopID == shopID )
-                return &runtime;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&ShopRuntime::_shopID>( _listRuntime, shopID );
     }
 
     ShopRuntime* ShopState::findRuntime( const hashed_string& shopID )

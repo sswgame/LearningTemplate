@@ -24,7 +24,7 @@ namespace sw
 {
     /**
      * @brief 시계 설정입니다. 시각은 0..24 시입니다.
-     * @details 범위는 칸의 `PROPERTY( Min · Max )` 이고, 벗어난 값은 `WorldClock::initialize` 가 오류로 거절한다(`ConfigRangeUtil`).
+     * @details 범위는 필드의 `PROPERTY( Min, Max )` 이고, 벗어난 값은 `WorldClock::initialize` 가 오류로 거절한다(`ConfigRangeUtil`).
      *          예전에는 하루 길이와 계절 날 수를 조용히 1 로 올렸다(폴백 금지 원칙).
      */
     REFLECT()
@@ -32,9 +32,9 @@ namespace sw
     {
         REFLECT_BODY();
         PROPERTY()
-        vector<hashed_string> _listSeason{}; ///< 비면 계절 하나("Default"). 계약이다 — 빈 목록은 틀린 값이 아니라 "계절을 쓰지 않는 게임"의 뜻이고, 계절 번호 · 이름 계산이 늘 한 칸 이상을 보게 한다
+        vector<hashed_string> _listSeason{}; ///< 비면 계절 하나("Default")다. 빈 목록은 틀린 값이 아니라 "계절을 쓰지 않는 게임" 이라는 계약이고, 계절 번호와 이름 계산이 늘 항목 하나 이상을 보게 한다
         PROPERTY( Min = 1, Units = s )
-        float32 _secondsPerDay{ 1440.0f }; ///< 실제 초 — 기본은 하루 24 분
+        float32 _secondsPerDay{ 1440.0f }; ///< 하루의 실제 초. 기본은 24 분이다
         PROPERTY( Min = 0, Max = 24 )
         float32 _startHour{ 6.0f };
         PROPERTY( Min = 0, Max = 24 )

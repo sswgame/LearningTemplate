@@ -1,14 +1,14 @@
 /**
  * @file RemoteConfig.h
- * @brief 서버가 내려 주는 설정 값 · 기능 플래그 — 저장소 표 `remote_config`(키 → 값 + 판)가 원본입니다. 서버는 주기로 다시 읽고(`OnlineServerRuntime`),
- *        클라이언트는 로그인 응답의 묶음 해시가 다르면 묶음을 받아 간다.
- * @details - 값 종류: 정수 · 실수 · 글 · 플래그. 플래그 = 켬/끔(`_integer` 0 이 아니면 켬) + 출시 비율(0..10000 만분율) — 계정마다
+ * @brief 서버가 내려 주는 설정 값과 기능 플래그입니다. 저장소 테이블 `remote_config`(키별 값과 버전)가 원본입니다.
+ *        서버는 주기적으로 다시 읽고(`OnlineServerRuntime`), 클라이언트는 로그인 응답의 번들 해시가 다르면 번들을 받아 갑니다.
+ * @details - 값 종류는 정수, 실수, 문자열, 플래그다. 플래그는 켬/끔(`_integer` 가 0 이 아니면 켬)과 출시 비율(0..10000 만분율)이다. 계정마다
  *            `hash( 플래그 이름, 계정 id ) % 10000 < 비율` 이라 같은 계정은 늘 같은 쪽이다.
- *          - 실험(A/B): 값 `_text` 가 `이름:비중;이름:비중` 이고 비중(만분율)의 합이 10000 이다. 계정의 변형은 출시 칸(`computeRolloutBucket`)을 비중 누적에 대어 고른다(`findVariant`).
+ *          - 실험(A/B): 값 `_text` 는 `이름:비중;이름:비중` 이고 비중(만분율)의 합이 10000 이다. 계정의 변형은 출시 버킷(`computeRolloutBucket`)을 비중 누적과 비교해 고른다(`findVariant`).
  *            서버와 클라이언트가 같은 함수로 고르므로 같은 계정은 늘 같은 변형이다. 지표는 `RemoteConfigExperimentMetrics` 가 변형별로 센다.
- *          - 키는 `[0-9a-z_.]`(예: "account.minimum_build.windows", "feature.trade_enabled"). 클라이언트 묶음에는 `_bClientVisible` 인 키만 든다.
- *          - 바꾸기(`submitSet`)는 이 객체가 마지막으로 읽은 판을 조건으로 건다 — 그새 다른 서버가 바꿨으면 Conflict(다시 읽고 다시 한다). 감사 줄과 같은 트랜잭션이다.
- *          - 맡긴 일의 `complete` 가 이 객체를 부르므로, 저장소의 완료를 모두 거두거나 저장소를 먼저 내린 뒤에 이 객체를 지운다. 서비스 스레드 하나가 쓴다.
+ *          - 키는 `[0-9a-z_.]`(예: "account.minimum_build.windows", "feature.trade_enabled"). 클라이언트 번들에는 `_bClientVisible` 인 키만 들어간다.
+ *          - 바꾸기(`submitSet`)는 이 객체가 마지막으로 읽은 버전을 조건으로 건다. 그사이 다른 서버가 바꿨으면 Conflict 이고, 다시 읽고 다시 한다. 감사 줄과 같은 트랜잭션이다.
+ *          - 요청한 작업의 `complete` 가 이 객체를 부르므로, 저장소의 완료를 모두 회수하거나 저장소를 먼저 종료한 뒤에 이 객체를 지운다. 서비스 스레드 하나가 쓴다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -58,7 +58,7 @@ namespace sw
         string                _text{};
         int64                 _integer{ 0 };
         float64               _real{ 0.0 };
-        int32                 _rolloutBasisPoints{ kFullRolloutPoints }; ///< Flag — 켜진 계정 비율(만분율)
+        int32                 _rolloutBasisPoints{ kFullRolloutPoints }; ///< Flag 에서 켜진 계정 비율(만분율)
         RemoteConfigValueType _type{ RemoteConfigValueType::Integer };
         uint8                 _bClientVisible{ SW_FALSE };
     };
@@ -105,9 +105,9 @@ namespace sw
         RemoteConfig( const RemoteConfig& )            = delete;
         RemoteConfig& operator=( const RemoteConfig& ) = delete;
 
-        /** @brief 저장소에서 다시 읽는 일을 맡깁니다(완료되면 값과 묶음 해시가 바뀐다). */
+        /** @brief 저장소에서 다시 읽는 작업을 요청합니다. 완료되면 값과 번들 해시가 바뀝니다. */
         void requestReload( IServiceStore& store );
-        /** @brief 운영 · GM 이 값 하나를 바꿉니다 — 판 조건 + 감사 줄을 한 트랜잭션에. 다른 서버는 주기로 다시 읽어 봅니다. */
+        /** @brief 운영자나 GM 이 값 하나를 바꿉니다. 버전 조건과 감사 줄을 한 트랜잭션에 넣습니다. 다른 서버는 주기적으로 다시 읽어 반영합니다. */
         void submitSet( IServiceStore& store, string_view key, const RemoteConfigValue& value, const ServiceAuditEntry& audit );
 
         bool findInteger( string_view key, int64& outValue ) const;
@@ -118,11 +118,11 @@ namespace sw
         /** @brief 플래그가 이 계정에 켜졌는가입니다(없거나 플래그가 아닌 키는 @p bDefault). */
         bool isFeatureEnabled( string_view flag, uint64 accountID, bool bDefault = false ) const;
 
-        /** @brief 클라이언트 묶음(보이는 키만)의 해시입니다. */
+        /** @brief 클라이언트 번들(보이는 키만)의 해시입니다. */
         uint64 getSnapshotHash() const { return _snapshotHash; }
-        /** @brief 클라이언트에 보낼 묶음(보이는 키만, 키 순서)을 씁니다. */
+        /** @brief 클라이언트에 보낼 번들(보이는 키만, 키 순서)을 씁니다. */
         void writeClientSnapshot( BitWriter& outWriter ) const;
-        /** @brief 클라이언트 쪽 — 받은 묶음으로 값을 모두 바꿉니다. 깨졌으면 false 이고 바꾸지 않는다. */
+        /** @brief 클라이언트 쪽에서 받은 번들로 값을 모두 바꿉니다. 깨졌으면 false 이고 바꾸지 않습니다. */
         [[nodiscard]] bool readClientSnapshot( BitReader& reader );
 
         int32              getPendingWorkCount() const { return _pendingWorkCount; }
@@ -134,7 +134,7 @@ namespace sw
         static bool                 isValidKey( string_view key );
         /** @brief 실험 값 `이름:비중;이름:비중` 을 읽습니다. 이름 규칙, 비중(1 이상), 합 10000, 같은 이름 두 번이 틀리면 false 입니다. */
         [[nodiscard]] static bool parseVariants( string_view text, vector<RemoteConfigVariant>& outListVariant );
-        /** @brief 계정의 출시 칸(0..9999)입니다 — `isFeatureEnabled` 가 비율과 견준다. */
+        /** @brief 계정의 출시 버킷(0..9999)입니다. `isFeatureEnabled` 가 비율과 비교합니다. */
         static int32 computeRolloutBucket( string_view flag, uint64 accountID );
 
     private:

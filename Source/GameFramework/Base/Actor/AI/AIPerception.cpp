@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Actor/AI/AIPerception.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "GameFramework/Base/Actor/Navigation/NavGrid.h"
@@ -73,20 +74,13 @@ namespace sw
             if ( target._age > 0.0f )
                 target._bSeen = SW_FALSE;
         }
-        _listTarget.erase( std::remove_if( _listTarget.begin(), _listTarget.end(),
-                                           [this]( const AIPerceivedTarget& target )
-        { return target._age > _settings._memoryDuration; } ),
-                           _listTarget.end() );
+        VectorUtil::removeIf( _listTarget, [this]( const AIPerceivedTarget& target )
+        { return target._age > _settings._memoryDuration; } );
     }
 
     const AIPerceivedTarget* AIPerception::findTarget( uint64 id ) const
     {
-        for ( const AIPerceivedTarget& target : _listTarget )
-        {
-            if ( target._id == id )
-                return &target;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&AIPerceivedTarget::_id>( _listTarget, id );
     }
 
     const AIPerceivedTarget* AIPerception::findNearestSeen( const float3& origin ) const

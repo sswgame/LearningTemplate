@@ -1,13 +1,13 @@
 /**
  * @file HTTPClient.h
- * @brief 최소 HTTP/1.1 클라이언트 — 요청을 맡기고(`submitRequest`) 응답을 거둡니다(`pollResponses`). 요청마다 연결 하나, TLS 는 호스트마다 올린 컨텍스트로.
+ * @brief 최소 HTTP/1.1 클라이언트입니다. 요청을 보내고(`submitRequest`) 응답을 회수합니다(`pollResponses`). 요청마다 연결 하나이고, TLS 는 호스트마다 등록한 컨텍스트로 합니다.
  * @details - 전송은 이 객체가 갖는다(처리기 = 이 객체). I/O 스레드가 없는 전송(루프백 테스트)은 `tick` 이 `pollIO` 를 돈다. 콜백은 I/O 스레드라 상태는 잠금 하나로 지킨다.
- *          - `https://` 는 그 호스트에 `registerTLSContext` 한 컨텍스트가 있어야 한다(서버 이름 검사 · 신뢰는 컨텍스트가 정한다) — 없으면 전송 실패로 끝난다.
- *          - 시한은 맡긴 때부터(`_timeoutMs`) — 넘으면 연결을 끊고 전송 실패. 응답 몸 상한을 넘어도 전송 실패.
- *          - 호스트가 이름이면 전용 해석 스레드(`PlatformSocketUtil::resolveAddress`, 처음 쓸 때 띄운다)에 맡기고, 풀리면 `update` 가 연결을 건다.
- *            DNS 왕복은 막는 호출이라 요청 경로(주인 스레드 · 잠금)와 TaskManager 워커에서 하지 않는다 — libcurl 의 스레드 해석기와 같은 자리다.
+ *          - `https://` 는 그 호스트에 `registerTLSContext` 한 컨텍스트가 있어야 한다(서버 이름 검사와 신뢰는 컨텍스트가 정한다). 없으면 전송 실패로 끝난다.
+ *          - 시한은 요청한 때부터 센다(`_timeoutMs`). 넘으면 연결을 끊고 전송 실패다. 응답 본문 상한을 넘어도 전송 실패다.
+ *          - 호스트가 이름이면 전용 해석 스레드(`PlatformSocketUtil::resolveAddress`, 처음 쓸 때 시작한다)에 맡기고, 해석되면 `update` 가 연결한다.
+ *            DNS 왕복은 막는 호출이라 요청 경로(주인 스레드, 잠금)와 TaskManager 워커에서 하지 않는다. libcurl 의 스레드 해석기에 해당한다.
  *            풀리지 않으면 전송 실패("could not resolve host"), 해석 중에도 시한은 흐른다. 숫자 주소는 해석 없이 바로 연결한다.
- *          언리얼 FHttpModule · libcurl multi 처럼 비동기 요청 · 완료 거두기 모양이다.
+ *          언리얼 FHttpModule 과 libcurl multi 처럼 비동기 요청과 완료 회수 구조다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -43,7 +43,7 @@ namespace sw
 {
     /**
      * @class HTTPClient
-     * @brief HTTP 클라이언트 하나입니다. `submitRequest` · `pollResponses` · `tick` 은 한 스레드(주인)에서 부른다.
+     * @brief HTTP 클라이언트 하나입니다. `submitRequest`, `pollResponses`, `tick` 은 한 스레드(주인)에서 부른다.
      */
     class SW_GF_API HTTPClient final : public IStreamHandler
     {
@@ -59,7 +59,7 @@ namespace sw
         /** @brief 날아가던 요청은 전송 실패로 끝나고 다음 `pollResponses` 가 거둔다. */
         void shutdown();
 
-        /** @brief @p host 의 `https://` 요청에 쓸 TLS 컨텍스트(빌려 쓴다 — 이 객체보다 오래 산다)를 올립니다. */
+        /** @brief @p host 의 `https://` 요청에 쓸 TLS 컨텍스트를 등록합니다. 빌려 쓰므로 이 객체보다 오래 살아야 합니다. */
         void registerTLSContext( string_view host, ITLSContext* pTLSContext );
         /** @brief 요청을 맡깁니다. 0 이 아닌 요청 id 입니다(응답의 `_requestID`). 응답은 반드시 한 번 온다(실패도). */
         uint64 submitRequest( const HTTPClientRequest& request, int64 nowMs );
@@ -69,7 +69,7 @@ namespace sw
         int32 pollResponses( vector<HTTPClientResponse>& outListResponse );
         int32 getPendingCount() const;
 
-        // IStreamHandler — I/O 스레드
+        // IStreamHandler: I/O 스레드
         void onStreamOpened( StreamConnectionHandle handle, const NetAddress& remote, bool bAccepted ) override;
         void onStreamReceived( StreamConnectionHandle handle, const uint8* pData, int32 size ) override;
         void onStreamClosed( StreamConnectionHandle handle, StreamCloseReason reason ) override;
@@ -90,21 +90,21 @@ namespace sw
             vector<uint8>     _requestBytes{};
             vector<uint8>     _plainBytes{};
             string            _resolveHost{}; ///< 해석을 기다리는 호스트 이름(숫자 주소면 비어 있다)
-            NetAddress        _address{};     ///< 연결할 주소 — 해석이 끝나면 채운다
+            NetAddress        _address{};     ///< 연결할 주소. 해석이 끝나면 채운다
             uint64            _requestID{ 0 };
             int64             _deadlineMs{ 0 };
             ResolveState      _resolveState{ ResolveState::Pending };
             uint8             _bOpened{ SW_FALSE };
         };
 
-        /** @brief 잠금 안에서 — 요청을 끝내고 응답을 쌓는다(연결은 부르는 쪽이 닫는다). */
+        /** @brief 잠금 안에서 부릅니다. 요청을 끝내고 응답을 쌓습니다(연결은 부르는 쪽이 닫는다). */
         void finishLocked( Call& call, const utf8* pFailure );
         void failImmediately( uint64 requestID, const utf8* pFailure );
-        /** @brief 잠금 안에서 — @p call 의 주소로 연결을 걸고 연결 표에 넣는다. 걸지 못하면 응답을 쌓는다. */
+        /** @brief 잠금 안에서 부릅니다. @p call 의 주소로 연결하고 연결 테이블에 넣습니다. 연결하지 못하면 응답을 쌓습니다. */
         void connectLocked( unique_ptr<Call> call );
-        /** @brief 잠금 안에서 — 해석이 끝났거나 시한이 지난 요청을 연결하거나 끝낸다(`update`). */
+        /** @brief 잠금 안에서 부릅니다. 해석이 끝났거나 시한이 지난 요청을 연결하거나 끝냅니다(`update`). */
         void advanceResolvingLocked( int64 nowMs );
-        /** @brief 해석 스레드 — 맡긴 이름을 하나씩 풀어 요청에 적는다. 내릴 때까지 돈다. */
+        /** @brief 해석 스레드입니다. 맡긴 이름을 하나씩 해석해 요청에 적습니다. 종료할 때까지 돕니다. */
         void runResolver();
 
         mutable mutex                           _mutex;

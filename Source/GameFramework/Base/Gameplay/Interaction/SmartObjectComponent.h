@@ -1,6 +1,6 @@
 /**
  * @file SmartObjectComponent.h
- * @brief 스마트 오브젝트입니다. 오브젝트 위의 슬롯(벤치 자리, 엄폐 지점, 작업대 앞)을 플레이어와 AI 가 같은 데이터와 같은 함수로 차지하고 비웁니다.
+ * @brief 스마트 오브젝트입니다. 오브젝트 위의 슬롯(벤치 좌석, 엄폐 지점, 작업대 앞)을 플레이어와 AI 가 같은 데이터와 같은 함수로 차지하고 비웁니다.
  * @details 언리얼의 Smart Objects 와 심즈의 오브젝트 광고에 해당한다. 슬롯 정의는 상호작용 테이블의 `<SmartObject>` 이고(`InteractionCatalog`),
  *          차지한 쪽은 오브젝트 핸들로 센다. 슬롯을 고르는 AI 는 태그(`Activity.Sit`)로 빈 슬롯을 찾고, 플레이어는 상호작용으로 같은 슬롯을 차지한다.
  */
@@ -36,7 +36,7 @@ namespace sw
         [[nodiscard]] bool claim( int32 slot, uint64 claimantID );
         /** @brief 그 쪽이 차지한 슬롯을 비웁니다. 차지한 슬롯이 없으면 false 입니다. */
         bool release( uint64 claimantID );
-        /** @brief @p requiredTags 를 모두 가진 빈 슬롯 중 앞의 것입니다. 없으면 −1 입니다. */
+        /** @brief @p requiredTags 를 모두 가진 빈 슬롯 중 앞의 것입니다. 없으면 -1 입니다. */
         int32  findFreeSlot( const TagContainer& requiredTags ) const;
         int32  findSlotOf( uint64 claimantID ) const;
         uint64 getClaimant( int32 slot ) const;
@@ -89,7 +89,7 @@ namespace sw
         void setCatalogPath( string_view path );
         /** @brief 슬롯을 차지합니다. */
         [[nodiscard]] bool claimSlot( const GameObject& claimant, int32 slot );
-        /** @brief 태그에 맞는 빈 슬롯을 찾아 차지합니다. 차지한 슬롯의 번호를 반환하고, 없으면 −1 입니다. */
+        /** @brief 태그에 맞는 빈 슬롯을 찾아 차지합니다. 차지한 슬롯의 번호를 반환하고, 없으면 -1 입니다. */
         int32 claimFreeSlot( const GameObject& claimant, const TagContainer& requiredTags );
         /** @brief 그 쪽이 차지한 슬롯을 비웁니다. */
         bool  releaseSlot( const GameObject& claimant );

@@ -69,7 +69,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 월드 질의로 시야를 판정합니다. `WorldQuery` 를 씁니다(걸린 서비스, 없으면 씬의 물리). */
+    /** @brief 월드 질의로 시야를 판정합니다. `WorldQuery` 를 씁니다(등록된 서비스, 없으면 씬의 물리). */
     class SW_GF_API WorldLineOfSightQuery final : public ILineOfSightQuery
     {
     public:
@@ -91,7 +91,7 @@ namespace sw
         static bool isInReach( const InteractionView& viewer, const InteractionCandidate& candidate, float32& outDistance );
         /**
          * @brief 닿고(`isInReach`) 보이는 후보 중 우선도가 가장 높고, 같으면 가장 가까운 것의 번호입니다. 보이는지는 @p pLineOfSight 가 있고 후보가 시야를 요구할 때만 검사합니다.
-         * @details 시야 질의는 거리와 각을 통과한 후보에만 가까운 순으로 한다. 광선 검사가 비싸기 때문이다. 고를 후보가 없으면 −1 이다.
+         * @details 시야 질의는 거리와 각을 통과한 후보에만 가까운 순으로 한다. 광선 검사가 비싸기 때문이다. 고를 후보가 없으면 -1 이다.
          */
         static int32 selectBest( const InteractionView& viewer, const vector<InteractionCandidate>& listCandidate, const ILineOfSightQuery* pLineOfSight );
     };

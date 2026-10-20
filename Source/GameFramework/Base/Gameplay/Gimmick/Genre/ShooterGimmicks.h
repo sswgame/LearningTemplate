@@ -3,7 +3,7 @@
  * @brief 슈터 기믹입니다. 폭발 드럼통(연쇄 폭발), 포탑(대상 고르기, 조준, 사격), 부서지는 엄폐물(단계, 파괴 훅)을 다룹니다. 점프대는 `LaunchPadComponent` 로, 키카드 문은 상호작용과 회로로 만듭니다.
  * @details 피해는 모두 같은 오브젝트의 `GimmickSensorComponent` 로 받는다. 총알, 위험 지대, 다른 폭발이 모두 같은 경로(`GimmickDamageUtil::applyDamage`)를 쓴다.
  *          오브젝트에 파괴 컴포넌트(`FractureComponentBase`, `.fracture` 가 있는 메시)가 있으면 몸을 끄는 대신 조각으로 부서진다. 폭발은 반경에 닿은
- *          파괴 오브젝트에 위치 기반 폭발 피해(`applyRadialDamageAtWorld`)를 주어 벽과 상자를 그 자리에서 깨뜨린다. 그래서 연쇄 폭발이 근처의 파괴물도 부순다.
+ *          파괴 오브젝트에 위치 기반 폭발 피해(`applyRadialDamageAtWorld`)를 주어 벽과 상자를 맞은 위치에서 깨뜨린다. 그래서 연쇄 폭발이 근처의 파괴물도 부순다.
  */
 #pragma once
 #include "Core/Common/Types.h"

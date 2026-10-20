@@ -38,7 +38,7 @@ namespace sw
         bool nextChance( float32 probability ) { return nextFloat() < probability; }
 
         /**
-         * @brief 가중치로 하나를 고릅니다. `nextFloat` 를 한 번 씁니다. @p getWeight( 원소 ) 가 가중치이고 음수는 0 으로 칩니다. 합이 0 이하이면 −1 입니다.
+         * @brief 가중치로 하나를 고릅니다. `nextFloat` 를 한 번 씁니다. @p getWeight( 원소 ) 가 가중치이고 음수는 0 으로 칩니다. 합이 0 이하이면 -1 입니다.
          * @code
          *     const int32 index = random.pickWeightedIndex( listItem, []( const ItemDef& def ) { return def._weight; } );
          * @endcode
@@ -73,7 +73,7 @@ namespace sw
         }
 
         /**
-         * @brief 정수 가중치로 하나를 고릅니다. `nextInt( 0, 합 − 1 )` 를 한 번 씁니다. 음수는 0 으로 치고, 합이 0 이하이면 −1 입니다.
+         * @brief 정수 가중치로 하나를 고릅니다. `nextInt( 0, 합 - 1 )` 를 한 번 씁니다. 음수는 0 으로 치고, 합이 0 이하이면 -1 입니다.
          * @details 정수 가중치(조우표, 드롭표)는 이것을 쓴다.
          *          정수 합과 정수 비교로 고르므로 부동소수 누적 오차가 없고, 가중치 합이 커도 비율이 정확하다.
          *          손으로 고르던 조우표와 난수 흐름도 같다.
@@ -105,7 +105,7 @@ namespace sw
             return -1;
         }
 
-        /** @brief Fisher-Yates 로 섞습니다. 뒤에서부터 [0, i] 의 한 자리와 바꾸며, `nextInt` 를 원소 수 − 1 번 부릅니다. */
+        /** @brief Fisher-Yates 로 섞습니다. 뒤에서부터 [0, i] 의 한 위치와 바꾸며, `nextInt` 를 원소 수 - 1 번 부릅니다. */
         template <typename TList>
         void shuffle( TList& inoutList )
         {
@@ -129,7 +129,7 @@ namespace sw
 {
     /**
      * @struct GameHash
-     * @brief 좌표를 정수 해시로 바꿉니다(lowbias32 섞기). 상태가 없어서 어느 칸부터 물어도 같은 값이 나오므로, 절차 생성(지형, 나무, 광석)에 씁니다.
+     * @brief 좌표를 정수 해시로 바꿉니다(lowbias32 섞기). 상태가 없어서 어느 셀부터 물어도 같은 값이 나오므로, 절차 생성(지형, 나무, 광석)에 씁니다.
      */
     struct GameHash
     {
@@ -149,7 +149,7 @@ namespace sw
             return mix32( static_cast<uint32>( x ) * 0x9e3779b1u ^ mix32( static_cast<uint32>( z ) * 0x85ebca77u ^ seed ) );
         }
 
-        /** @brief 3 차원 칸의 해시입니다. y 를 섞어 x 에 접은 뒤 2 차원 해시로 넘깁니다. */
+        /** @brief 3 차원 셀의 해시입니다. y 를 섞어 x 에 접은 뒤 2 차원 해시로 넘깁니다. */
         static constexpr uint32 hashCoord( int32 x, int32 y, int32 z, uint32 seed )
         {
             return hashCoord( static_cast<int32>( static_cast<uint32>( x ) ^ mix32( static_cast<uint32>( y ) * 0xc2b2ae35u ^ seed ) ), z, seed );

@@ -34,7 +34,7 @@ namespace sw
      *        크기가 걸음새를 정하고, 말은 그 방향으로 걸음새마다의 조향 속도만큼 몸을 돌리며 **자기 요 방향으로** 갑니다. 옆걸음과 제자리 뒷걸음은 없고,
      *        말은 돌아서 갑니다. 플레이어가 W 로 몰든 AI 가 목적지로 몰든 같은 규칙입니다.
      * @details 걸음새 사이의 속도는 `_acceleration` 과 `_deceleration` 으로 이어진다. 조향 속도는 걸음새마다 테이블(PROPERTY)로 둔다. `_bUseRootMotion` 이 켜져 있으면
-     *          애니메이터 파라미터(`Gait` 0..4, `Turn` −1..1)만 쓰고 이동은 애니메이션 루트 모션이 한다(`CharacterControllerComponent::addRootMotionDisplacement` 를
+     *          애니메이터 파라미터(`Gait` 0..4, `Turn` -1..1)만 쓰고 이동은 애니메이션 루트 모션이 한다(`CharacterControllerComponent::addRootMotionDisplacement` 를
      *          애니메이션 단계가 부른다). 캐릭터 컨트롤러가 없으면 루트를 직접 옮긴다(물리 없는 탈것). 질주 허용(`setGallopAllowed`)과
      *          걸음새 상한(`setMaxGait`)은 키트가 정한다(스태미나, 유대).
      *          언리얼의 Red Dead 류 말 이동과 같은 구조이다. 같은 의도이면 플레이어가 타든 AI 가 몰든 같은 궤적이 나온다.

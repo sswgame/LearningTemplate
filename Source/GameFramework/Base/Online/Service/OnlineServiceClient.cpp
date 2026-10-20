@@ -3,6 +3,7 @@
 #include "GameFramework/Base/Online/Service/OnlineServiceClient.h"
 
 #include "Core/Container/LittleEndianUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Log/LogContext.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 
@@ -64,8 +65,8 @@ namespace sw
         shutdown();
         for ( IOnlineClientService* pService : _listService ) // 키트가 더 오래 살면 그 소멸자가 파괴된 이 객체를 부르지 않게 끊는다
         {
-            vector<OnlineServiceClient*>& listClient = pService->_listRegisteredClient;
-            listClient.erase( std::remove( listClient.begin(), listClient.end(), this ), listClient.end() );
+            VectorUtil::removeIf( pService->_listRegisteredClient, [this]( const OnlineServiceClient* pClient )
+            { return pClient == this; } );
         }
     }
 
@@ -85,8 +86,8 @@ namespace sw
 
     void OnlineServiceClient::unregisterClientService( IOnlineClientService* pService )
     {
-        vector<OnlineServiceClient*>& listClient = pService->_listRegisteredClient;
-        listClient.erase( std::remove( listClient.begin(), listClient.end(), this ), listClient.end() );
+        VectorUtil::removeIf( pService->_listRegisteredClient, [this]( const OnlineServiceClient* pClient )
+        { return pClient == this; } );
         const auto serviceIt = std::find( _listService.begin(), _listService.end(), pService );
         if ( serviceIt == _listService.end() )
             return;
@@ -96,10 +97,8 @@ namespace sw
 
     void OnlineServiceClient::cancelRequestsOf( uint16 methodRange )
     {
-        const auto queuedEnd = std::remove_if( _listQueuedCall.begin(), _listQueuedCall.end(),
-                                               [methodRange]( const QueuedCall& call )
+        VectorUtil::removeIf( _listQueuedCall, [methodRange]( const QueuedCall& call )
         { return OnlineMethodRange::getRangeBase( call._method ) == methodRange; } );
-        _listQueuedCall.erase( queuedEnd, _listQueuedCall.end() );
         for ( vector<QueuedCall>* pDraining : _listDrainingCall ) // 꺼내 도는 목록은 지우지 않고 표시만 — 도는 쪽의 인덱스를 지킨다
         {
             for ( QueuedCall& call : *pDraining )
@@ -505,7 +504,7 @@ namespace sw
         const vector<IOnlineClientService*> listService = _listService;
         for ( IOnlineClientService* pService : listService )
         {
-            if ( std::find( _listService.begin(), _listService.end(), pService ) == _listService.end() )
+            if ( VectorUtil::contains( _listService, pService ) == false )
                 continue;
             ( pService->*pNotify )( *this );
         }

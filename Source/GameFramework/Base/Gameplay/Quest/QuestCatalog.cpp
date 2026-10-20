@@ -2,6 +2,8 @@
 
 #include "GameFramework/Base/Gameplay/Quest/QuestCatalog.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Base/Foundation/Data/GameDataXML.h"
@@ -39,12 +41,7 @@ namespace sw
 
     const QuestStage* QuestDef::findStage( const hashed_string& stageID ) const
     {
-        for ( const QuestStage& stage : _listStage )
-        {
-            if ( stage._id == stageID )
-                return &stage;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&QuestStage::_id>( _listStage, stageID );
     }
 
     uint32 QuestCatalog::loadRoot( const XMLNode& root, string_view sourceName )

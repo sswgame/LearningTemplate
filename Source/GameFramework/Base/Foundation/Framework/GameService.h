@@ -1,9 +1,9 @@
 /**
  * @file GameService.h
- * @brief GameFramework 가 제공하고 게임 모듈 · 키트가 쓰는 서비스 창구입니다 — 게임 범위(`SubsystemScope`)에서 찾고, 없으면 호스트(엔진) 서비스 표를 봅니다.
- * @details 게임 범위는 게임 인스턴스(`GameInstanceBase`)가 소유하고 기동 때 "지금 범위" 로 건다(언리얼 `UGameInstanceSubsystem` 을 게임 인스턴스가 드는 자리).
- *          게임이 쓰는 카탈로그 · 설정은 그 범위에 걸린다(`GameInstanceBase::bindScopedService`). 범위는 인스턴스와 함께 사라지므로 게임 모듈이 내려갈 때
- *          남는 칸이 없다. 테스트는 자기 범위를 만들어 `ScopedGameScope` 로 잠시 "지금 범위" 로 건다.
+ * @brief GameFramework 가 제공하고 게임 모듈과 키트가 쓰는 서비스 API 입니다. 게임 범위(`SubsystemScope`)에서 찾고, 없으면 호스트(엔진) 서비스 테이블을 봅니다.
+ * @details 게임 범위는 게임 인스턴스(`GameInstanceBase`)가 소유하고 기동 때 "지금 범위" 로 설정한다. 언리얼에서 게임 인스턴스가 `UGameInstanceSubsystem` 을 소유하는 것에 해당한다.
+ *          게임이 쓰는 카탈로그와 설정은 그 범위에 등록한다(`GameInstanceBase::bindScopedService`). 범위는 인스턴스와 함께 사라지므로 게임 모듈을 언로드할 때
+ *          남는 항목이 없다. 테스트는 자기 범위를 만들어 `ScopedGameScope` 로 잠시 "지금 범위" 로 설정한다.
  */
 #pragma once
 #include "Core/Subsystem/SubsystemScope.h"
@@ -26,7 +26,7 @@ namespace sw
         SW_GAMESERVICE_API SubsystemScope* findGameScope();
         /**
          * @brief 지금 게임 범위를 겁니다(nullptr 이면 풉니다). 게임 인스턴스가 기동 · 종료에서 부른다.
-         * @details 핫 리로드에서는 새 인스턴스가 먼저 걸 수 있으므로, 푸는 쪽은 자기 범위가 걸려 있을 때만 푼다.
+         * @details 핫 리로드에서는 새 인스턴스가 먼저 설정할 수 있으므로, 해제하는 쪽은 자기 범위가 설정돼 있을 때만 해제한다.
          */
         SW_GAMESERVICE_API void setGameScope( SubsystemScope* pScope );
 
@@ -47,7 +47,7 @@ namespace sw
 
         /**
          * @brief 반드시 있어야 하는 게임 서비스 @p T 입니다(`findSubsystem<T>()` 와 같은 순서로 찾는다). 없으면 부른 쪽의 잘못이라 `SW_ASSERT` 로 멈춥니다.
-         * @details 서비스가 묶인 뒤에만 도는 경로(카탈로그 읽기 · 타입 조회)가 쓴다. 없을 수 있는 자리는 `findSubsystem<T>()` 를 쓴다.
+         * @details 서비스가 바인딩된 뒤에만 도는 경로(카탈로그 읽기, 타입 조회)가 쓴다. 없을 수 있는 곳에서는 `findSubsystem<T>()` 를 쓴다.
          */
         template <typename T>
         T& getSubsystem()

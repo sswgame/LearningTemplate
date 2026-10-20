@@ -1,8 +1,9 @@
 /**
  * @file MemoryEphemeralStore.h
- * @brief 메모리 휘발성 저장 — 서버 한 대 · 테스트용입니다. 데이터(`MemoryEphemeralDatabase` — 시계 고정 가능 · 게으른 만료 · 채널 받은편지함)와 앞(`MemoryEphemeralStore`)이 나뉩니다.
- * @details - 앞의 `submit` 은 그 자리에서 실행해 답을 큐에 넣는다(메모리 서비스 저장소와 같은 약속 — 결정적이다). "서버 둘" 테스트는 앞 둘이 데이터 하나를 쓴다.
- *          - 만료는 읽을 때 지운다(게으른 만료 — Valkey 와 같은 관측). `nowMs >= 만료 시각` 이면 없는 것이다.
+ * @brief 메모리 휘발성 저장소입니다. 서버 한 대와 테스트에 씁니다.
+ *        데이터(`MemoryEphemeralDatabase`: 고정 가능한 시계, 게으른 만료, 채널 받은편지함)와 프런트(`MemoryEphemeralStore`)가 나뉩니다.
+ * @details - 프런트의 `submit` 은 즉시 실행해 답을 큐에 넣는다(메모리 서비스 저장소와 같은 계약이며 결정적이다). "서버 둘" 테스트는 프런트 둘이 데이터 하나를 쓴다.
+ *          - 만료는 읽을 때 지운다(게으른 만료, Valkey 와 같은 관측 결과). `nowMs >= 만료 시각` 이면 없는 것이다.
  *          - 발행은 그 채널을 구독한 앞마다 받은편지함에 넣고, 앞의 `pollMessages` 가 꺼낸다.
  */
 #pragma once
@@ -20,14 +21,14 @@ namespace sw
 {
     /**
      * @class MemoryEphemeralDatabase
-     * @brief 키 → 값 · 만료, 정렬 집합, 채널 구독 · 받은편지함입니다. 잠금 하나로 모든 호출을 줄 세운다(앞 여럿이 같이 쓴다).
+     * @brief 키별 값과 만료, 정렬 집합, 채널 구독과 받은편지함입니다. 잠금 하나로 모든 호출을 직렬화합니다(프런트 여럿이 같이 쓴다).
      */
     class SW_GF_API MemoryEphemeralDatabase
     {
     public:
         MemoryEphemeralDatabase();
 
-        /** @brief 요청 하나를 실행해 답을 돌려줍니다(요청 id 는 앞이 채운다). 맡기기 전의 모양 검사는 앞의 몫이다. */
+        /** @brief 요청 하나를 실행해 답을 돌려줍니다(요청 id 는 프런트가 채운다). 보내기 전의 형식 검사는 프런트가 맡습니다. */
         EphemeralReply execute( const EphemeralRequest& request );
 
         /** @brief 앞 하나를 받은편지함 주인으로 올립니다. 그 id 입니다. */
@@ -43,7 +44,7 @@ namespace sw
         void  setManualTimeMs( int64 nowMs );
         void  advanceTimeMs( int64 deltaMs );
         int64 getNowMs() const;
-        /** @brief 값 · 정렬 집합을 모두 지웁니다(구독은 남긴다) — 테스트의 "캐시 서버가 재시작해 비었다". */
+        /** @brief 값과 정렬 집합을 모두 지웁니다(구독은 남긴다). 테스트의 "캐시 서버가 재시작해 비었다" 에 씁니다. */
         void clearData();
 
     private:
@@ -90,7 +91,7 @@ namespace sw
 {
     /**
      * @class MemoryEphemeralStore
-     * @brief 메모리 데이터의 앞입니다. `submit` 이 그 자리에서 실행하고 답은 `pollReplies` 까지 쌓는다. 서비스 스레드 하나가 쓴다.
+     * @brief 메모리 데이터의 프런트입니다. `submit` 이 즉시 실행하고 답은 `pollReplies` 까지 쌓는다. 서비스 스레드 하나가 쓴다.
      */
     class SW_GF_API MemoryEphemeralStore final : public IEphemeralStore
     {

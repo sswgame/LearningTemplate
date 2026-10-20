@@ -46,7 +46,7 @@ namespace sw
         InteractionSession();
 
         /**
-         * @brief 시작합니다. 누름 단계이면 그 자리에서 끝납니다. 시작을 일으킨 누름이 그 단계의 누름입니다.
+         * @brief 시작합니다. 누름 단계이면 즉시 끝납니다. 시작을 일으킨 누름이 그 단계의 누름입니다.
          * @return 시작했으면 true 입니다. 정의가 없거나 단계가 없으면 false 입니다.
          */
         bool begin( const InteractionDef* pDef, uint32 actorID );

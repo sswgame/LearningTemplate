@@ -3,6 +3,7 @@
 #include "GameFramework/Base/Actor/Camera/CameraShake.h"
 
 #include "Core/Common/HashUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "GameFramework/Base/Actor/Camera/CameraPreset.h"
@@ -128,9 +129,8 @@ namespace sw
         {
             impulse._elapsed += elapsed;
         }
-        _listImpulse.erase( std::remove_if( _listImpulse.begin(), _listImpulse.end(), []( const CameraImpulse& impulse )
-        { return impulse.isFinished(); } ),
-                            _listImpulse.end() );
+        VectorUtil::removeIf( _listImpulse, []( const CameraImpulse& impulse )
+        { return impulse.isFinished(); } );
     }
 
     CameraShakeOffset CameraImpulseListener::computeOffset( const float3& listenerPosition ) const
@@ -182,9 +182,8 @@ namespace sw
         {
             kick._elapsed += elapsed;
         }
-        _listKick.erase( std::remove_if( _listKick.begin(), _listKick.end(), []( const CameraFieldOfViewKick& kick )
-        { return kick.isFinished(); } ),
-                         _listKick.end() );
+        VectorUtil::removeIf( _listKick, []( const CameraFieldOfViewKick& kick )
+        { return kick.isFinished(); } );
     }
 
     float32 CameraFieldOfViewKickListener::computeScale() const

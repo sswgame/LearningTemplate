@@ -1,6 +1,6 @@
 /**
  * @file AccountSessionControl.h
- * @brief 계정의 붙어 있는 세션을 끊는 창구 — 계정 키트(GF_Server_Account)가 구현하고 게임(서버 조립)이 GM 키트 · 제재를 거는 쪽에 넘깁니다(키트끼리는 include 하지 못한다).
+ * @brief 계정의 접속 세션을 끊는 인터페이스입니다. 계정 키트(GF_Server_Account)가 구현하고, 게임(서버 조립)이 GM 키트와 제재를 적용하는 쪽에 넘깁니다(키트끼리는 include 하지 못한다).
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -17,7 +17,7 @@ namespace sw
      */
     class IAccountSessionControl
     {
-        // 순수 인터페이스라 내보내지 않는다 — 인라인 생성자 · 소멸자를 GameFramework.dll 이 내보내지 않으므로 dllimport 로 풀리면 키트 링크가 깨진다(C-3).
+        // 순수 인터페이스라 내보내지 않는다. 인라인 생성자와 소멸자를 GameFramework.dll 이 내보내지 않으므로 dllimport 로 해석되면 키트 링크가 깨진다(C-3).
     public:
         IAccountSessionControl()          = default;
         virtual ~IAccountSessionControl() = default;

@@ -2,9 +2,9 @@
  * @file SplinePath.h
  * @brief 스플라인 곡선을 정의합니다.
  * @details 조절점(Catmull-Rom, 3차 베지어, 꺾은선), 호 길이 매개변수, 가장 가까운 점, 고른 간격 샘플을 지원한다.
- *          움직이는 발판, 카메라 레일, 길, 레일 그라인드처럼 "곡선 위 거리 s 의 자리"를 묻는 곳이 함께 쓴다.
+ *          움직이는 발판, 카메라 레일, 길, 레일 그라인드처럼 "곡선 위 거리 s 의 위치"를 묻는 곳이 함께 쓴다.
  *          거리는 조밀한 샘플 점의 누적 현 길이 표(`ArcLengthUtil`)로 곡선 매개변수(구간과 t)로 바뀐다.
- *          자리와 접선은 그 매개변수에서 곡선 식으로 다시 구하므로 샘플 사이의 직선 보간이 아니라 곡선 위의 값이다.
+ *          위치와 접선은 그 매개변수에서 곡선 식으로 다시 구하므로 샘플 사이의 직선 보간이 아니라 곡선 위의 값이다.
  *          같은 입력이면 같은 결과가 나오는 결정적 계산이라서 고정 스텝 무버가 기댈 수 있다.
  */
 #pragma once
@@ -19,19 +19,19 @@
 
 namespace sw
 {
-    /** @brief 조절점을 곡선으로 잇는 방식입니다. */
+    /** @brief 조절점을 곡선으로 연결하는 방식입니다. */
     ENUM()
     enum class SplineType : uint8
     {
         CatmullRom = 0, ///< 모든 조절점을 지난다(이웃 점으로 접선을 정한다)
-        Bezier,         ///< 3차 베지어 — 점 열은 [끝점, 손잡이, 손잡이, 끝점, 손잡이, 손잡이, 끝점 …]. 열린 곡선은 3n+1 개, 닫힌 곡선은 3n 개
+        Bezier,         ///< 3차 베지어. 점 열은 [끝점, 손잡이, 손잡이, 끝점, 손잡이, 손잡이, 끝점 …]. 열린 곡선은 3n+1 개, 닫힌 곡선은 3n 개
         Linear          ///< 꺾은선
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 곡선 위 한 자리입니다. */
+    /** @brief 곡선 위 한 위치입니다. */
     struct SplineSample
     {
         float3  _position{};
@@ -68,18 +68,18 @@ namespace sw
         /** @brief 비웁니다. */
         void clear();
 
-        /** @brief 거리 @p distance 의 자리와 접선입니다. 닫힌 곡선은 감기고, 열린 곡선은 잘립니다. */
+        /** @brief 거리 @p distance 의 위치와 접선입니다. 닫힌 곡선은 감기고, 열린 곡선은 잘립니다. */
         SplineSample sampleAtDistance( float32 distance ) const;
-        /** @brief 정규화 거리(0 이 처음, 1 이 끝)의 자리입니다. */
+        /** @brief 정규화 거리(0 이 처음, 1 이 끝)의 위치입니다. */
         SplineSample sampleAtFraction( float32 fraction ) const { return sampleAtDistance( fraction * _length ); }
         /**
-         * @brief @p point 에 가장 가까운 곡선 위 자리를 구합니다. 표의 구간마다 투영해 가장 가까운 것을 고른 뒤, 그 매개변수에서 곡선 위 점으로 다시 구합니다.
-         * @return 그 자리이다. `_distance` 가 곡선 위 거리이다. 곡선이 비었으면 기본값이다.
+         * @brief @p point 에 가장 가까운 곡선 위 위치를 구합니다. 표의 구간마다 투영해 가장 가까운 것을 고른 뒤, 그 매개변수에서 곡선 위 점으로 다시 구합니다.
+         * @return 그 위치이다. `_distance` 가 곡선 위 거리이다. 곡선이 비었으면 기본값이다.
          */
         SplineSample findClosest( const float3& point ) const;
-        /** @brief 처음부터 끝까지 @p spacing(m) 간격의 자리를 @p outListSample 에 채웁니다. 끝점을 포함하며, 길이나 간격이 0 이하면 비웁니다. */
+        /** @brief 처음부터 끝까지 @p spacing(m) 간격의 위치를 @p outListSample 에 채웁니다. 끝점을 포함하며, 길이나 간격이 0 이하면 비웁니다. */
         void sampleUniform( float32 spacing, vector<SplineSample>& outListSample ) const;
-        /** @brief 곡선 매개변수(구간과 t)의 자리입니다. */
+        /** @brief 곡선 매개변수(구간과 t)의 위치입니다. */
         float3 evaluate( float32 parameter ) const;
         /** @brief 곡선 매개변수의 접선입니다. 정규화하기 전의 미분입니다. */
         float3 evaluateDerivative( float32 parameter ) const;

@@ -30,20 +30,20 @@ namespace sw
 
     /**
      * @class CameraDirectorComponent
-     * @brief 프리셋 카탈로그(`<CameraPresets>` XML)를 읽고, 켠 프리셋을 대상에 맞춰 풀어 블렌드, 감쇠, 흔들림을 거쳐 같은 오브젝트의 카메라에 씁니다.
+     * @brief 프리셋 카탈로그(`<CameraPresets>` XML)를 읽고, 켠 프리셋을 대상에 맞춰 계산하고 블렌드, 감쇠, 흔들림을 거쳐 같은 오브젝트의 카메라에 씁니다.
      * @details **카메라에는 틱 뒤에 쓴다.** `TickGroup::PostPhysics` 에서는 입력만 읽고, 포즈 계산과 쓰기는 틱 뒤 게임 스레드로 미룬다(`executeOrDeferPostTick`).
-     *          틱 중의 트랜스폼 쓰기는 틱이 끝나야 적용되므로, 틱 안에서 대상을 읽으면 한 프레임 늦은 자리를 따라간다.
+     *          틱 중의 트랜스폼 쓰기는 틱이 끝나야 적용되므로, 틱 안에서 대상을 읽으면 한 프레임 늦은 위치를 따라간다.
      *          1인칭 프리셋이면 손에 든 총이 시점보다 한 프레임 앞서 흔들린다.
      *          틱 밖에서 부르면 바로 쓴다.
      *          이 그룹은 PostUpdate 보다 앞이라서, 이 카메라를 뷰 타깃으로 읽는 카메라 매니저(PostUpdate 에서 미룸)보다 먼저 돈다.
      *
-     *          대상은 오브젝트 하나(`_target`)이거나 묶음(`_listGroupTarget`, 프레이밍의 그룹 맞추기)이다. 초점은 월드 자리이고, 요와 피치는 그 오브젝트가 보는 쪽이다.
+     *          대상은 오브젝트 하나(`_target`)이거나 그룹(`_listGroupTarget`, 프레이밍의 그룹 맞추기)이다. 초점은 월드 위치이고, 요와 피치는 그 오브젝트가 보는 쪽이다.
      *          입력(`<Input>` 이 있는 프리셋)은 `InputManager` 에서 읽는다.
      *          암 충돌(`<Collision>`)은 따로 준 질의(`setCollisionProbe`)가 없으면 씬의 물리(`SceneCameraProbe`)에 쓸어 본다. 대상 자신은 뺀다.
      *          입력 맵 액션 `_cycleAction` 이 발동하면 카탈로그 순서로 다음 프리셋을 켠다.
      *          블렌드 없는 전환(컷)은 카메라에 컷 표시를 넣어서 렌더러가 TAA 기록을 버리게 한다.
      *          켠 프리셋과 블렌드 스택(진행, 입력이 돌린 각과 줌)은 `ComponentStateStore` 계약(`writeState` / `restoreState`)으로 저장한다.
-     *          이 타입은 정의한 .cpp 가 `StatefulComponentRegistrar` 로 등록해 모든 게임의 스냅샷에 실린다 — 게임 인스턴스가 따로 올리지 않는다.
+     *          이 타입은 정의한 .cpp 가 `StatefulComponentRegistrar` 로 등록해 모든 게임의 스냅샷에 실린다. 게임 인스턴스가 따로 등록하지 않는다.
      */
     REFLECT( Category = "Camera", DisplayName = "Camera Director", Tooltip = "Drives the camera on this object from data presets with blends, damping, framing and shake" )
     class SW_GF_API CameraDirectorComponent : public Component
@@ -81,9 +81,9 @@ namespace sw
         /**
          * @brief 포토 모드를 켭니다. 게임 시간을 멈추고(`GameTimeScale::addPauseRequest`), 지금 포즈에서 시작하는 자유 카메라를 디렉터 포즈 위에 덮습니다.
          * @details 디렉터 상태(프리셋, 블렌드, 덮어쓴 시점)는 건드리지 않고 마지막 쓰기만 바꾼다. 그래서 끌 때 되돌릴 것은 정지 요청 하나뿐이다.
-         *          `setViewOverride` 는 탑승 카메라가 매 프레임 부르는 원근 전용 창구라서 쓰지 않는다 — 겹치면 끌 때 탑승 시점을 지운다.
-         *          조작은 게임 입력 맵이 아니라 엔진의 포토 모드 입력 맵(`EngineDefaultAssets::_photoModeInputMap`)에서 읽는다 — 게임마다 맵에 액션을 달지 않아도 되고,
-         *          게임 키와 겹쳐도 게임이 멈춰 있어 부딪히지 않는다(언리얼 Enhanced Input 이 포토 모드 동안 전용 매핑 컨텍스트를 올리는 것과 같다).
+         *          `setViewOverride` 는 탑승 카메라가 매 프레임 부르는 원근 전용 함수라서 쓰지 않는다. 겹치면 끌 때 탑승 시점을 지운다.
+         *          조작은 게임 입력 맵이 아니라 엔진의 포토 모드 입력 맵(`EngineDefaultAssets::_photoModeInputMap`)에서 읽는다. 그래서 게임마다 맵에 액션을 더하지 않아도 되고,
+         *          게임 키와 겹쳐도 게임이 멈춰 있어 부딪히지 않는다(언리얼 Enhanced Input 이 포토 모드 동안 전용 매핑 컨텍스트를 추가하는 것과 같다).
          *          아직 포즈가 없거나(프리셋 없음) 이미 켜 있거나 그 맵을 읽지 못하면(오류 로그) false 입니다.
          */
         [[nodiscard]] bool enterPhotoMode();
@@ -101,16 +101,16 @@ namespace sw
          */
         [[nodiscard]] bool findGroundPoint( const float2& mouseNormalized, float32 groundHeight, float3& outPoint ) const;
 
-        /** @brief `ComponentStateStore` 계약 — 켠 프리셋과 블렌드 스택을 씁니다. */
+        /** @brief `ComponentStateStore` 계약입니다. 켠 프리셋과 블렌드 스택을 씁니다. */
         void writeState( Archive& outArchive ) const;
-        /** @brief `ComponentStateStore` 계약 — 시작 전이면 보관했다가 카탈로그를 읽은 뒤 적용하고, 시작 뒤면 바로 적용합니다. 읽지 못하면 알리고 지금 상태를 둡니다. */
+        /** @brief `ComponentStateStore` 계약입니다. 시작 전이면 보관했다가 카탈로그를 읽은 뒤 적용하고, 시작 뒤면 바로 적용합니다. 읽지 못하면 알리고 지금 상태를 둡니다. */
         void restoreState( vector<uint8>&& bytes );
 
         /** @brief 카메라가 따라갈 오브젝트입니다. 비우면 초점은 `_focusPoint` 이고 요와 피치는 0 입니다. */
         void                    setTarget( const GameObjectHandle& target ) { _target = target; }
         const GameObjectHandle& getTarget() const { return _target; }
         /**
-         * @brief 대상 오브젝트가 없을 때의 초점(월드)을 정하고, 이동 키가 옮긴 팬을 비웁니다 — 화면 가운데가 @p point 가 됩니다.
+         * @brief 대상 오브젝트가 없을 때의 초점(월드)을 정하고, 이동 키가 옮긴 팬을 비웁니다. 그러면 화면 가운데가 @p point 가 됩니다.
          * @details 직교 시점 게임의 디렉터가 앞 그룹(PrePhysics)에서 부른다(선택한 유닛으로 가기, 농부 따라가기). 디렉터는 PostPhysics 틱 뒤에 읽는다.
          */
         void          setFocusPoint( const float3& point );
@@ -119,13 +119,13 @@ namespace sw
         void setPanAction( const hashed_string& action ) { _panAction = action; }
         /**
          * @brief 시작 프리셋을 @p id 로 정합니다. 이미 시작했으면 그 프리셋으로 끊어 바꿉니다(컷).
-         * @details 게임 디렉터가 `onGameStarted` 에서 부른다 — 오브젝트의 시작 순서가 어느 쪽이어도 같은 프리셋에서 시작한다.
+         * @details 게임 디렉터가 `onGameStarted` 에서 부른다. 그래서 오브젝트의 시작 순서가 어느 쪽이어도 같은 프리셋에서 시작한다.
          *          시작 전에는 카탈로그가 없어 id 를 대어 보지 못하고, 시작할 때 없는 id 면 알린다(`onBeginPlay`).
          */
         void startWithPreset( const hashed_string& id );
         /** @brief 다음 프리셋으로 돌리는 입력 맵 액션입니다. 비우면 키로만 돌립니다. */
         void setCycleAction( const hashed_string& action ) { _cycleAction = action; }
-        /** @brief 함께 담을 오브젝트 묶음입니다. 프레이밍의 그룹 맞추기에 쓰며, 비어 있지 않으면 대상(`_target`) 대신 묶음을 따라갑니다. */
+        /** @brief 화면에 함께 담을 오브젝트 그룹입니다. 프레이밍의 그룹 맞추기에 쓰며, 비어 있지 않으면 대상(`_target`) 대신 그룹을 따라갑니다. */
         void setGroupTargets( const vector<GameObjectHandle>& listTarget ) { _listGroupTarget = listTarget; }
         /** @brief 암 충돌 질의를 정합니다. 수명은 부르는 쪽이 쥐며, nullptr 이면 씬의 물리(`SceneCameraProbe`)를 씁니다. */
         void setCollisionProbe( const ICameraCollisionProbe* pProbe ) { _pExternalProbe = pProbe; }
@@ -133,7 +133,7 @@ namespace sw
         void setInputEnabled( bool bEnabled ) { _bReadInput = bEnabled; }
         /** @brief 충격을 더합니다. 원점과 모양을 받으며, 폭발이나 착지에 씁니다. */
         void addImpulse( const CameraImpulseDef& def, const float3& origin ) { _director.addImpulse( def, origin ); }
-        /** @brief 시야각 킥(+, 달리기 · 부스트) · 줌 펀치(−, 사격 · 착탄)를 더합니다. */
+        /** @brief 시야각 킥(+, 달리기나 부스트)이나 줌 펀치(-, 사격이나 착탄)를 더합니다. */
         void addFieldOfViewKick( const CameraFieldOfViewKickDef& def ) { _director.addFieldOfViewKick( def ); }
 
         const hashed_string& getActivePresetID() const { return _director.getActivePresetID(); }
@@ -153,8 +153,8 @@ namespace sw
         /** @brief 이번 프레임 입력을 `InputManager` 에서 모읍니다. 켠 프리셋이 받는 것만 쓰입니다. */
         void gatherInput( float32 deltaTime );
         /**
-         * @brief 켠 프리셋이 받는 조작(둘러보기 · 줌 · 팬 · 회전)의 액션이 입력 맵에 없으면 프리셋마다 한 번 알립니다.
-         * @details 맵에 없는 액션 질의는 로그 없이 0 이다 — 액션 이름을 바꾸면 그 프리셋의 조작이 조용히 죽는다. 받지 않는 조작의 액션은 없어도 된다.
+         * @brief 켠 프리셋이 받는 조작(둘러보기, 줌, 팬, 회전)의 액션이 입력 맵에 없으면 프리셋마다 한 번 알립니다.
+         * @details 맵에 없는 액션 질의는 로그 없이 0 이다. 그래서 액션 이름을 바꾸면 그 프리셋의 조작이 조용히 멈춘다. 받지 않는 조작의 액션은 없어도 된다.
          */
         void warnMissingPresetActions( const InputMap& inputMap, const CameraInputDef& inputDef );
         /** @brief 포토 모드 입력 맵(`_photoInputMap`)을 갱신하고 그 액션(`Photo.Move` 등)을 모아 자유 카메라에 넣습니다. */
@@ -221,9 +221,9 @@ namespace sw
 
         CameraPresetCatalog          _catalog;
         CameraDirector               _director;
-        vector<uint8>                _pendingStateBytes; ///< 시작 전에 받은 상태(`restoreState`) — 카탈로그를 읽은 뒤 적용한다
+        vector<uint8>                _pendingStateBytes; ///< 시작 전에 받은 상태(`restoreState`). 카탈로그를 읽은 뒤 적용한다
         const ICameraCollisionProbe* _pExternalProbe;
         hashed_string                _inputCheckedPresetID; ///< 액션을 입력 맵에 대어 본 마지막 프리셋(`warnMissingPresetActions`)
-        float32                      _pendingDeltaTime;     ///< 틱이 모은 시간 — 미룬 계산이 쓴다
+        float32                      _pendingDeltaTime;     ///< 틱이 모은 시간. 미룬 계산이 쓴다
     };
 } // namespace sw

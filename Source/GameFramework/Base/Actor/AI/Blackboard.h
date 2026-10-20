@@ -1,6 +1,6 @@
 /**
  * @file Blackboard.h
- * @brief AI 의 메모장 — 이름 → 값(실수 · 정수 · 참거짓 · 위치 · 오브젝트 id)입니다. 행동 트리의 조건 · 작업이 읽고 씁니다.
+ * @brief AI 의 메모장입니다. 이름으로 값(실수, 정수, 참거짓, 위치, 오브젝트 id)을 저장하고, 행동 트리의 조건과 작업이 읽고 씁니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -21,10 +21,10 @@ namespace sw
         Int,
         Bool,
         Vector,
-        Object ///< 오브젝트 · 유닛 id(핸들의 묶은 값 — `SlotHandle::packed` 등)
+        Object ///< 오브젝트나 유닛의 id. 핸들을 하나로 묶은 값이다(`SlotHandle::packed` 등)
     };
 
-    /** @brief 값 하나입니다. 종류에 맞는 칸만 씁니다. */
+    /** @brief 값 하나입니다. 종류에 맞는 필드만 씁니다. */
     struct SW_GF_API BlackboardValue
     {
         float3              _vector{};
@@ -33,7 +33,7 @@ namespace sw
         int32               _int{ 0 };
         BlackboardValueType _type{ BlackboardValueType::None };
 
-        /** @brief 비교용 수치입니다(실수 · 정수 · 참거짓 · 오브젝트는 0 이 아니면 1). */
+        /** @brief 비교에 쓰는 수치입니다. 참거짓과 오브젝트는 0 이 아니면 1 입니다. */
         float32 computeNumeric() const;
     };
 } // namespace sw
@@ -42,8 +42,8 @@ namespace sw
 {
     /**
      * @class Blackboard
-     * @brief 언리얼 `UBlackboardComponent` 의 자리입니다. 값이 바뀔 때마다 리비전이 올라 행동 트리가 "바뀌었으면 다시 본다" 를 싸게 합니다.
-     * @details 이름은 `hashed_string` 이라 리터럴로 부르면 됩니다(`blackboard.setFloat( "Health", 0.5f )`). 없는 이름을 읽으면 기본값입니다.
+     * @brief 언리얼 `UBlackboardComponent` 에 해당합니다. 값이 바뀔 때마다 리비전이 올라, 행동 트리가 "바뀌었으면 다시 본다" 를 싸게 판단합니다.
+     * @details 이름은 `hashed_string` 이라 리터럴로 부르면 됩니다(`blackboard.setFloat( "Health", 0.5f )`). 없는 이름을 읽으면 기본값을 돌려줍니다.
      */
     class SW_GF_API Blackboard
     {
@@ -55,7 +55,7 @@ namespace sw
         void setBool( const hashed_string& key, bool bValue );
         void setVector( const hashed_string& key, const float3& value );
         void setObject( const hashed_string& key, uint64 objectID );
-        /** @brief 값을 지웁니다(없음 — `isSet` 이 false). */
+        /** @brief 값을 지웁니다. 지운 뒤에는 `isSet` 이 false 입니다. */
         void clearValue( const hashed_string& key );
         void clear();
 

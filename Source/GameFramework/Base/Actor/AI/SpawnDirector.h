@@ -30,7 +30,7 @@ namespace sw
         float32               _cost{ 1.0f };
         float32               _weight{ 1.0f };
         float32               _minTime{ 0.0f }; ///< 이 시각(초) 전에는 내지 않는다
-        int32                 _max{ -1 };       ///< 동시에 살아 있는 상한. −1 이면 없음
+        int32                 _max{ -1 };       ///< 동시에 살아 있는 상한. -1 이면 없음
 
         bool hasAnyTag( const vector<hashed_string>& listTag ) const;
     };
@@ -54,7 +54,7 @@ namespace sw
     public:
         SpawnTable();
 
-        /** @brief @p time 의 예산 배율입니다. 곡선 점 사이는 선형으로 잇고, 끝 밖은 끝 값을 쓰며, 곡선이 없으면 1 입니다. */
+        /** @brief @p time 의 예산 배율입니다. 곡선 점 사이는 선형 보간하고, 끝 밖은 끝 값을 쓰며, 곡선이 없으면 1 입니다. */
         float32 computeScale( float32 time ) const { return _curve.evaluate( time, 1.0f ); }
 
         const SpawnEntryDef*         findEntry( const hashed_string& id ) const { return _catalog.find( id ); }
@@ -86,7 +86,7 @@ namespace sw
     {
         enum class Kind : uint8
         {
-            Spawned = 0, ///< 게임이 `_entryID` 를 실제로 만든다 — 죽으면 `_spawnID` 로 `notifyDespawned`
+            Spawned = 0, ///< 게임이 `_entryID` 를 실제로 만든다. 죽으면 `_spawnID` 로 `notifyDespawned` 를 부른다
             Despawned
         };
         hashed_string _entryID{};
@@ -167,7 +167,7 @@ namespace sw
         float32                 _budget;
         float32                 _budgetScale;
         float32                 _time;
-        int32                   _pendingIndex; ///< −1 = 골라 둔 것 없음
+        int32                   _pendingIndex; ///< -1 이면 골라 둔 것이 없다
         uint32                  _nextSpawnID;
         uint8                   _bRefundOnDespawn;
     };

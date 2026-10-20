@@ -345,6 +345,50 @@ namespace sw
         finishNode( index );
     }
 
+    int32 BehaviorTreeRunner::findChild( const BehaviorNode& node, int32 order ) const
+    {
+        int32 child = node._firstChild;
+        for ( int32 skip = 0; skip < order && child >= 0; ++skip )
+        {
+            child = _pTree->getNode( child )._nextSibling;
+        }
+        return child;
+    }
+
+    BehaviorStatus BehaviorTreeRunner::tickSequence( const BehaviorNode& node, int32& inoutCursor )
+    {
+        for ( int32 child = findChild( node, inoutCursor ); child >= 0; child = _pTree->getNode( child )._nextSibling )
+        {
+            const BehaviorStatus childStatus = tickNode( child );
+            if ( childStatus != BehaviorStatus::Success )
+                return childStatus;
+            ++inoutCursor;
+        }
+        return BehaviorStatus::Success;
+    }
+
+    BehaviorStatus BehaviorTreeRunner::tickSelector( const BehaviorNode& node, int32& inoutCursor )
+    {
+        const int32 start = ( node._bReactive != SW_FALSE ) ? 0 : inoutCursor;
+        int32       child = findChild( node, start );
+        for ( int32 order = start; child >= 0; ++order, child = _pTree->getNode( child )._nextSibling )
+        {
+            const BehaviorStatus childStatus = tickNode( child );
+            if ( childStatus == BehaviorStatus::Failure )
+                continue;
+            if ( order != inoutCursor )
+            {
+                const int32 running = findChild( node, inoutCursor );
+                if ( running >= 0 && running != child )
+                    abortNode( running );
+                inoutCursor = order;
+            }
+            return childStatus;
+        }
+        return BehaviorStatus::Failure;
+    }
+
+    // 노드 종류마다 짧은 분기인 switch 디스패처라 더 나누지 않는다. 여러 자식을 도는 합성 노드는 tickSequence 와 tickSelector 로 나눴다.
     BehaviorStatus BehaviorTreeRunner::tickNode( int32 index )
     {
         const BehaviorNode& node                  = _pTree->getNode( index );
@@ -358,54 +402,12 @@ namespace sw
         {
             case BehaviorNodeType::Sequence:
             {
-                int32 child = node._firstChild;
-                for ( int32 skip = 0; skip < cursor && child >= 0; ++skip )
-                {
-                    child = _pTree->getNode( child )._nextSibling;
-                }
-                status = BehaviorStatus::Success;
-                while ( child >= 0 )
-                {
-                    const BehaviorStatus childStatus = tickNode( child );
-                    if ( childStatus != BehaviorStatus::Success )
-                    {
-                        status = childStatus;
-                        break;
-                    }
-                    ++cursor;
-                    child = _pTree->getNode( child )._nextSibling;
-                }
+                status = tickSequence( node, cursor );
                 break;
             }
             case BehaviorNodeType::Selector:
             {
-                // 반응형이면 매 틱 앞 자식부터 — 앞 자식이 실패하지 않으면 도는 뒤 자식을 멈추고 그쪽으로 간다.
-                const int32 start = ( node._bReactive != SW_FALSE ) ? 0 : cursor;
-                int32       child = node._firstChild;
-                for ( int32 skip = 0; skip < start && child >= 0; ++skip )
-                {
-                    child = _pTree->getNode( child )._nextSibling;
-                }
-                status = BehaviorStatus::Failure;
-                for ( int32 order = start; child >= 0; ++order, child = _pTree->getNode( child )._nextSibling )
-                {
-                    const BehaviorStatus childStatus = tickNode( child );
-                    if ( childStatus == BehaviorStatus::Failure )
-                        continue;
-                    if ( order != cursor )
-                    {
-                        int32 running = node._firstChild;
-                        for ( int32 skip = 0; skip < cursor && running >= 0; ++skip )
-                        {
-                            running = _pTree->getNode( running )._nextSibling;
-                        }
-                        if ( running >= 0 && running != child )
-                            abortNode( running );
-                        cursor = order;
-                    }
-                    status = childStatus;
-                    break;
-                }
+                status = tickSelector( node, cursor );
                 break;
             }
             case BehaviorNodeType::Inverter:

@@ -1,6 +1,7 @@
 /**
  * @file LockOnSelector.h
- * @brief 록온 — 시야 안 후보를 거리 · 화면 가운데에서 벗어난 각 · 우선도로 점수 매겨 고르고, 좌우로 다음 대상으로 넘기고, 멀어지거나 가려지면 풉니다.
+ * @brief 록온입니다. 시야 안 후보를 거리, 화면 가운데에서 벗어난 각, 우선도로 점수를 매겨 고릅니다.
+ * @details 좌우 입력으로 다음 대상으로 넘기고, 멀어지거나 가려지면 해제합니다.
  * @details 젤다의 주목(Z 주목), 소울라이크 · 위쳐의 대상 고정, 기체 대전의 록온, 카트 유도 아이템의 목표 고르기가 같은 계산입니다.
  */
 #pragma once
@@ -30,10 +31,10 @@ namespace sw
     /** @brief 록온 설정입니다. 각도는 도입니다. */
     struct LockOnSettings
     {
-        float32 _maxDistance{ 25.0f };   ///< 눈에서 대상까지의 3D 거리(높이 차도 든다 — 공중 대상)
+        float32 _maxDistance{ 25.0f };   ///< 눈에서 대상까지의 3D 거리. 공중 대상을 위해 높이 차도 넣는다
         float32 _breakDistance{ 32.0f }; ///< 잡은 뒤에는 이만큼까지 유지
         float32 _maxAngle{ 60.0f };      ///< 앞에서 이 각 안만 새로 잡는다
-        float32 _angleWeight{ 1.0f };    ///< 점수 = 거리 비 + 각 비 × 이 값 − 우선도
+        float32 _angleWeight{ 1.0f };    ///< 점수는 거리 비 + 각 비 × 이 값 - 우선도다
         float32 _lostSightGrace{ 1.0f }; ///< 가려진 뒤 이 초까지는 유지
     };
 } // namespace sw
@@ -51,9 +52,9 @@ namespace sw
 
         /** @brief 가장 좋은 후보를 잡습니다. 없으면 0 이고 풀립니다. */
         uint64 pickBest( const float3& eye, const float3& forward, const vector<LockOnCandidate>& listCandidate );
-        /** @brief 지금 대상에서 오른쪽(@p direction 1) · 왼쪽(−1)으로 가장 가까운 각의 후보로 넘깁니다. 없으면 그대로입니다. */
+        /** @brief 지금 대상에서 오른쪽(@p direction 1)이나 왼쪽(-1)으로 가장 가까운 각의 후보로 넘깁니다. 없으면 그대로입니다. */
         uint64 cycle( const float3& eye, const float3& forward, const vector<LockOnCandidate>& listCandidate, int32 direction );
-        /** @brief 유지 판정 — 사라졌거나 너무 멀거나 오래 가려졌으면 풉니다. 쥐고 있으면 true 입니다. */
+        /** @brief 록온을 유지할지 판정합니다. 사라졌거나 너무 멀거나 오래 가려졌으면 해제합니다. 유지하면 true 입니다. */
         bool update( const float3& eye, const vector<LockOnCandidate>& listCandidate, float32 deltaTime );
         void release();
 

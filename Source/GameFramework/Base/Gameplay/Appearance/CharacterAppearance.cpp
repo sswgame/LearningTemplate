@@ -3,6 +3,7 @@
 #include "GameFramework/Base/Gameplay/Appearance/CharacterAppearance.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -309,6 +310,95 @@ namespace sw
                     return hashed_string{};
                 return listCandidate[CharacterAppearanceCatalog::pickIndex( seed, key, static_cast<uint32>( listCandidate.size() ) )];
             }
+
+            /** @brief 프리셋의 꾸미기 값 범위에서 시드로 값을 골라 @p inoutSpec 에 넣습니다. 스키마에 없는 매개변수는 건너뜁니다. */
+            static void pickCustomization( const CharacterAppearanceDef& merged, const CustomizationSchemaCatalog& schemas, uint32 seed, CharacterAppearanceSpec& inoutSpec )
+            {
+                const CustomizationSchemaDef* pSchema = schemas.findSchema( merged._schema );
+                for ( const CharacterAppearanceValueDef& value : merged._listValue )
+                {
+                    const CustomizationParamDef* pParam = pSchema != nullptr ? pSchema->findParameter( value._parameter ) : nullptr;
+                    if ( pParam == nullptr )
+                        continue;
+                    const uint64 key = value._parameter.getHash();
+                    switch ( pParam->_kind )
+                    {
+                        case CustomizationKind::Slider:
+                        {
+                            inoutSpec._customization.setNumber( value._parameter, value._min + ( value._max - value._min ) * CharacterAppearanceCatalog::pickUnit( seed, key ) );
+                            break;
+                        }
+                        case CustomizationKind::Color:
+                        {
+                            if ( value._listColor.empty() == false )
+                                inoutSpec._customization.setColor( value._parameter,
+                                                                   value._listColor[CharacterAppearanceCatalog::pickIndex( seed, key, static_cast<uint32>( value._listColor.size() ) )] );
+                            break;
+                        }
+                        case CustomizationKind::Choice:
+                        case CustomizationKind::Attachment:
+                        {
+                            if ( value._listOption.empty() == false )
+                                inoutSpec._customization.setOption( value._parameter, pickName( value._listOption, seed, key ) );
+                            break;
+                        }
+                    }
+                }
+            }
+
+            /**
+             * @brief 프리셋 체인의 레이어 하나의 장비 구성을 적용합니다. 세트를 먼저, 그다음 슬롯을 적용합니다.
+             * @details 다른 아이템으로 바뀐 슬롯은 요청을 비우고 다시 채운다. 같은 아이템이면 앞 레이어의 상태와 꾸미기를 남긴다.
+             */
+            static void applySlotLayer( const CharacterAppearanceDef& level, const EquipSetCatalog& sets, uint32 seed, vector<EquipSetPieceDef>& inoutListPiece,
+                                        CharacterAppearanceSpec& inoutSpec )
+            {
+                for ( const hashed_string& setID : level._listSet )
+                {
+                    const EquipSetDef* pSet = sets.findSet( setID );
+                    if ( pSet == nullptr )
+                        continue;
+                    sets.computePieces( *pSet, inoutSpec._bodyType, inoutListPiece );
+                    for ( const EquipSetPieceDef& piece : inoutListPiece )
+                    {
+                        AppearanceSlotRequest* pRequest = inoutSpec.findSlot( piece._slot );
+                        if ( pRequest == nullptr )
+                            continue;
+                        *pRequest         = AppearanceSlotRequest{};
+                        pRequest->_slot   = piece._slot;
+                        pRequest->_itemID = piece._listItem.front();
+                    }
+                }
+                for ( const CharacterAppearanceSlotDef& slot : level._listSlot )
+                {
+                    AppearanceSlotRequest* pRequest = inoutSpec.findSlot( slot._slot );
+                    if ( pRequest == nullptr )
+                        continue;
+                    if ( slot._bClear == SW_TRUE )
+                    {
+                        *pRequest       = AppearanceSlotRequest{};
+                        pRequest->_slot = slot._slot;
+                        continue;
+                    }
+                    if ( slot._listItem.empty() == false )
+                    {
+                        const hashed_string itemID = pickName( slot._listItem, seed, slot._slot.getHash() ^ kKeySlot );
+                        if ( itemID != pRequest->_itemID )
+                        {
+                            *pRequest       = AppearanceSlotRequest{};
+                            pRequest->_slot = slot._slot;
+                        }
+                        pRequest->_itemID = itemID;
+                    }
+                    if ( slot._visibleVisual.empty() == false )
+                        pRequest->_visibleVisual = slot._visibleVisual;
+                    if ( slot._state.empty() == false )
+                        pRequest->_state = slot._state;
+                    if ( slot._damage > 0.0f )
+                        pRequest->_damage = slot._damage;
+                    pRequest->_customization.overlay( slot._customization );
+                }
+            }
         };
     } // namespace
 } // namespace sw
@@ -317,22 +407,12 @@ namespace sw
 {
     AppearanceSlotRequest* CharacterAppearanceSpec::findSlot( const hashed_string& slot )
     {
-        for ( AppearanceSlotRequest& request : _listSlot )
-        {
-            if ( request._slot == slot )
-                return &request;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&AppearanceSlotRequest::_slot>( _listSlot, slot );
     }
 
     const AppearanceSlotRequest* CharacterAppearanceSpec::findSlot( const hashed_string& slot ) const
     {
-        for ( const AppearanceSlotRequest& request : _listSlot )
-        {
-            if ( request._slot == slot )
-                return &request;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&AppearanceSlotRequest::_slot>( _listSlot, slot );
     }
 
     bool CharacterAppearanceCatalog::loadFromNode( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName )
@@ -442,12 +522,7 @@ namespace sw
 
     const CharacterAppearanceDef* CharacterAppearanceCatalog::findPreset( const hashed_string& id ) const
     {
-        for ( const CharacterAppearanceDef& def : _listPreset )
-        {
-            if ( def._id == id )
-                return &def;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&CharacterAppearanceDef::_id>( _listPreset, id );
     }
 
     bool CharacterAppearanceCatalog::collectChain( const hashed_string& id, vector<const CharacterAppearanceDef*>& outListChain ) const
@@ -567,36 +642,7 @@ namespace sw
         outSpec._face               = Internal::pickName( merged._listFace, seed, Internal::kKeyFace );
         outSpec._bodyVisual         = Internal::pickName( merged._listBody, seed, Internal::kKeyBody );
         outSpec._listSocketOverride = merged._listSocketOverride;
-
-        const CustomizationSchemaDef* pSchema = schemas.findSchema( merged._schema );
-        for ( const CharacterAppearanceValueDef& value : merged._listValue )
-        {
-            const CustomizationParamDef* pParam = pSchema != nullptr ? pSchema->findParameter( value._parameter ) : nullptr;
-            if ( pParam == nullptr )
-                continue;
-            const uint64 key = value._parameter.getHash();
-            switch ( pParam->_kind )
-            {
-                case CustomizationKind::Slider:
-                {
-                    outSpec._customization.setNumber( value._parameter, value._min + ( value._max - value._min ) * pickUnit( seed, key ) );
-                    break;
-                }
-                case CustomizationKind::Color:
-                {
-                    if ( value._listColor.empty() == false )
-                        outSpec._customization.setColor( value._parameter, value._listColor[pickIndex( seed, key, static_cast<uint32>( value._listColor.size() ) )] );
-                    break;
-                }
-                case CustomizationKind::Choice:
-                case CustomizationKind::Attachment:
-                {
-                    if ( value._listOption.empty() == false )
-                        outSpec._customization.setOption( value._parameter, Internal::pickName( value._listOption, seed, key ) );
-                    break;
-                }
-            }
-        }
+        Internal::pickCustomization( merged, schemas, seed, outSpec );
 
         for ( const AppearanceSlotDef& slotDef : slotTable.getSlots() )
         {
@@ -611,51 +657,7 @@ namespace sw
         vector<EquipSetPieceDef> listPiece;
         for ( const CharacterAppearanceDef* pLevel : listChain )
         {
-            for ( const hashed_string& setID : pLevel->_listSet )
-            {
-                const EquipSetDef* pSet = sets.findSet( setID );
-                if ( pSet == nullptr )
-                    continue;
-                sets.computePieces( *pSet, outSpec._bodyType, listPiece );
-                for ( const EquipSetPieceDef& piece : listPiece )
-                {
-                    AppearanceSlotRequest* pRequest = outSpec.findSlot( piece._slot );
-                    if ( pRequest == nullptr )
-                        continue;
-                    *pRequest         = AppearanceSlotRequest{};
-                    pRequest->_slot   = piece._slot;
-                    pRequest->_itemID = piece._listItem.front();
-                }
-            }
-            for ( const CharacterAppearanceSlotDef& slot : pLevel->_listSlot )
-            {
-                AppearanceSlotRequest* pRequest = outSpec.findSlot( slot._slot );
-                if ( pRequest == nullptr )
-                    continue;
-                if ( slot._bClear == SW_TRUE )
-                {
-                    *pRequest       = AppearanceSlotRequest{};
-                    pRequest->_slot = slot._slot;
-                    continue;
-                }
-                if ( slot._listItem.empty() == false )
-                {
-                    const hashed_string itemID = Internal::pickName( slot._listItem, seed, slot._slot.getHash() ^ Internal::kKeySlot );
-                    if ( itemID != pRequest->_itemID )
-                    {
-                        *pRequest       = AppearanceSlotRequest{};
-                        pRequest->_slot = slot._slot;
-                    }
-                    pRequest->_itemID = itemID;
-                }
-                if ( slot._visibleVisual.empty() == false )
-                    pRequest->_visibleVisual = slot._visibleVisual;
-                if ( slot._state.empty() == false )
-                    pRequest->_state = slot._state;
-                if ( slot._damage > 0.0f )
-                    pRequest->_damage = slot._damage;
-                pRequest->_customization.overlay( slot._customization );
-            }
+            Internal::applySlotLayer( *pLevel, sets, seed, listPiece, outSpec );
         }
         return true;
     }

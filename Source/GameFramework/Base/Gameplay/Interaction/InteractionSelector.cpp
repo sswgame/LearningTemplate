@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Gameplay/Interaction/InteractionSelector.h"
 
+#include "Core/Container/CompareUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "GameFramework/Base/World/Query/WorldQuery.h"
@@ -23,20 +24,12 @@ namespace sw
                 int32   _index{ 0 };
             };
 
-            struct ReachableOrder
-            {
-                bool operator()( const ReachableCandidate& lhs, const ReachableCandidate& rhs ) const
-                {
-                    if ( lhs._priority != rhs._priority )
-                        return lhs._priority > rhs._priority;
-                    if ( lhs._distance != rhs._distance )
-                        return lhs._distance < rhs._distance;
-                    // 동률은 오브젝트 id 로 가른다. 후보를 모은 순서(등록 순서나 씬 순서)에 의존하지 않기 위해서다.
-                    if ( lhs._objectID != rhs._objectID )
-                        return lhs._objectID < rhs._objectID;
-                    return lhs._index < rhs._index;
-                }
-            };
+            /**
+             * @brief 우선도가 높은 순, 같으면 가까운 순입니다.
+             * @details 그래도 같으면 오브젝트 id 와 원래 인덱스로 가른다. 후보를 모은 순서(등록 순서나 씬 순서)에 의존하지 않기 위해서다.
+             */
+            using ReachableOrder = Lexicographic<Descending<&ReachableCandidate::_priority>,
+                                                 Ascending<&ReachableCandidate::_distance, &ReachableCandidate::_objectID, &ReachableCandidate::_index>>;
 
             static float3 flatten( const float3& value, InteractionSpace space ) { return space == InteractionSpace::Space2D ? float3{ value._x, value._y, 0.0f } : value; }
         };

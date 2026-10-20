@@ -29,9 +29,9 @@ namespace sw
     {
         Ok = 0,
         NotFound,    ///< 키 · 멤버가 없다
-        Conflict,    ///< 조건(없어야 함 · 있어야 함 · 기대 값)이 어긋났다 — 쓰지 않았다
-        Unavailable, ///< 서버에 닿지 못했다 — 쓰기면 적용됐는지 모른다
-        Invalid      ///< 키 규칙 · 크기 상한 · 점수 범위 · 정수가 아닌 값의 증감
+        Conflict,    ///< 조건(없어야 함, 있어야 함, 기대 값)이 어긋나서 쓰지 않았다
+        Unavailable, ///< 서버에 닿지 못했다. 쓰기라면 적용됐는지 모른다
+        Invalid      ///< 키 규칙, 크기 상한, 점수 범위 위반이나 정수가 아닌 값의 증감
     };
 } // namespace sw
 
@@ -52,18 +52,18 @@ namespace sw
     enum class EphemeralOperation : uint8
     {
         Get = 0,
-        Set, ///< _value · _ttlMs(0 = 만료 없음) · _condition
+        Set, ///< _value, _ttlMs(0 이면 만료 없음), _condition
         Erase,
         CompareAndSet,   ///< 지금 값이 _expected 일 때만 _value 로(임대 연장), 만료는 _ttlMs 로
-        CompareAndErase, ///< 지금 값이 _expected 일 때만 지운다(임대 놓기 — 남의 임대를 지우지 않는다)
-        Increment,       ///< _delta 를 더하고 새 값(_integer). 새로 생긴 키면 _ttlMs 를 건다(고정 창 카운터)
+        CompareAndErase, ///< 지금 값이 _expected 일 때만 지운다(임대 해제. 다른 쪽의 임대를 지우지 않는다)
+        Increment,       ///< _delta 를 더하고 새 값(_integer). 새로 생긴 키면 _ttlMs 를 설정한다(고정 창 카운터)
         Expire,          ///< 만료를 _ttlMs 로 다시(0 이하면 바로 지운다)
         ScoreSet,        ///< 정렬 집합 _key 의 _member 점수를 _score 로
         ScoreAdd,        ///< _member 점수에 _score 를 더하고 새 점수(_integer · _score)
         ScoreRemove,
-        ScoreRank,  ///< 큰 것부터 0 기준 순위(_integer)와 점수(_score) — 없으면 NotFound
+        ScoreRank,  ///< 큰 것부터 0 기준 순위(_integer)와 점수(_score). 없으면 NotFound
         ScoreRange, ///< 큰 것부터 [_offset, _offset + _count) 의 멤버 · 점수(_listMember)
-        Publish     ///< 채널 _key 에 _value — 받은 구독자 수(_integer, 서버 전체)
+        Publish     ///< 채널 _key 에 _value 를 발행한다. 받은 구독자 수(_integer, 서버 전체)를 돌려준다
     };
 } // namespace sw
 
@@ -170,7 +170,7 @@ namespace sw
         virtual void  unsubscribe( string_view channel )                       = 0;
         virtual int32 pollMessages( vector<EphemeralMessage>& outListMessage ) = 0;
 
-        /** @brief 맡았지만 아직 거두지 않은 답의 수를 반환합니다. */
+        /** @brief 요청을 받았지만 아직 회수하지 않은 답의 수를 반환합니다. */
         virtual int32 getPendingCount() const = 0;
         /** @brief 남은 요청은 Unavailable 로 답하고 구독을 풉니다. 그 뒤에 맡긴 요청도 Unavailable 입니다. */
         virtual void shutdown() = 0;

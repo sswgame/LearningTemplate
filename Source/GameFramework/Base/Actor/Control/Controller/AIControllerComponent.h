@@ -1,6 +1,6 @@
 /**
  * @file AIControllerComponent.h
- * @brief AI 조종자 — 판단(`think`) → 의도. 플레이어와 같은 폰 이동으로 움직입니다.
+ * @brief AI 조종자입니다. 판단(`think`)으로 의도를 만들고, 플레이어와 같은 폰 이동으로 움직입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -23,8 +23,8 @@ namespace sw
 
     /**
      * @class AIControllerComponent
-     * @brief AI 조종자 — 파생이 `think` 에서 목표를 정하면(이동 목적지 · 바라볼 곳 · 누를 버튼) 이 클래스가 의도로 옮깁니다. 행동 트리 · 감독은 `think` 안에서 돈다.
-     * @details 언리얼 `AAIController` 의 자리입니다. 움직이는 것은 플레이어와 같은 폰 이동 컴포넌트입니다 — 이 조종자는 이동 축만 냅니다.
+     * @brief AI 조종자입니다. 파생이 `think` 에서 목표(이동 목적지, 바라볼 곳, 누를 버튼)를 정하면 이 클래스가 의도로 옮깁니다. 행동 트리와 감독은 `think` 안에서 돕니다.
+     * @details 언리얼 `AAIController` 에 해당합니다. 움직이는 것은 플레이어와 같은 폰 이동 컴포넌트이고, 이 조종자는 이동 축만 냅니다.
      *          폰 오브젝트에 내비 에이전트(`NavMeshAgentComponent`, 방식 `SteerOnly`)가 있으면 경로 · 군중 회피로 정한 속도를 이동 축으로 넣고,
      *          없으면 목적지로 곧장(장애물 무시) 갑니다. 바라보기는 초점이 있으면 그쪽, 없으면 움직이는 쪽으로 `_turnRate` 만큼 조종 요를 돌립니다.
      */
@@ -43,17 +43,17 @@ namespace sw
         void moveTo( const float3& destination );
         /** @brief 멈춥니다(목적지를 지운다). */
         void stopMoving();
-        /** @brief 바라볼 곳입니다 — 조종 요 · 피치를 `_turnRate` 로 그쪽으로 돌립니다. */
+        /** @brief 바라볼 곳을 정합니다. 조종 요와 피치를 `_turnRate` 속도로 그쪽으로 돌립니다. */
         void setFocus( const float3& worldPoint );
-        /** @brief 초점을 지웁니다 — 움직이는 쪽을 봅니다. */
+        /** @brief 초점을 지웁니다. 그 뒤로는 움직이는 쪽을 봅니다. */
         void clearFocus();
-        /** @brief 다음에 내는 의도에서 버튼을 한 번 누릅니다(발동 + 누름) — `think` 안 · 밖 어디서든. 폰 스키마에 없는 이름이면 할 일이 없습니다. */
+        /** @brief 다음에 내는 의도에서 버튼을 한 번 누릅니다(발동과 누름). `think` 안팎 어디서든 부를 수 있습니다. 폰 스키마에 없는 이름이면 아무 일도 하지 않습니다. */
         void pressButton( const hashed_string& name );
-        /** @brief 버튼을 누르고 있거나(@p bHeld) 뗍니다 — 다시 부를 때까지 유지합니다. */
+        /** @brief 버튼을 누르고 있거나(@p bHeld) 뗍니다. 다시 부를 때까지 유지합니다. */
         void holdButton( const hashed_string& name, bool bHeld );
-        /** @brief 다음에 내는 의도의 아날로그 값입니다(그 한 틱만 — `think` 안 · 밖 어디서든). */
+        /** @brief 다음에 내는 의도의 아날로그 값을 정합니다. 그 한 틱에만 쓰이며 `think` 안팎 어디서든 부를 수 있습니다. */
         void setAnalog( const hashed_string& name, float32 value );
-        /** @brief 이동 상태입니다 — 내비 에이전트가 있으면 그 상태, 없으면 목적지가 있으면 Moving, 닿았으면 Arrived. */
+        /** @brief 이동 상태입니다. 내비 에이전트가 있으면 그 상태이고, 없으면 목적지가 있을 때 Moving, 닿았을 때 Arrived 입니다. */
         NavMoveStatus getMoveStatus() const;
         bool          hasDestination() const { return _bHasDestination == SW_TRUE; }
         const float3& getDestination() const { return _destination; }
@@ -64,19 +64,19 @@ namespace sw
 
         /**
          * @brief 판단의 지금 상태 이름입니다(상태 머신의 상태 · 고른 할 일). 파생이 `think` 에서 상태가 바뀔 때 부릅니다.
-         * @details 디버그 표시와 자동화 탐침 `AI.State` 가 읽는다(`<ExpectVisited probe="AI.State" sequence="Till,Plant"/>`). 언리얼 Gameplay Debugger 의 BT · 상태 줄과 같은 자리다.
+         * @details 디버그 표시와 자동화 탐침 `AI.State` 가 읽는다(`<ExpectVisited probe="AI.State" sequence="Till,Plant"/>`). 언리얼 Gameplay Debugger 의 BT 줄과 상태 줄에 해당한다.
          */
         void                 setStateName( const hashed_string& stateName ) { _stateName = stateName; }
         const hashed_string& getStateName() const { return _stateName; }
         /** @brief 이 조종자의 블랙보드입니다(언리얼 `AAIController` 의 Blackboard 컴포넌트). 행동 트리 · 판단이 쓰고 탐침 `AI.Blackboard` 가 읽습니다. */
         Blackboard&       getBlackboard() { return _blackboard; }
         const Blackboard& getBlackboard() const { return _blackboard; }
-        /** @brief 판단이 행동 트리로 돌면 그 실행기입니다(탐침 `AI.BehaviorTask` 가 도는 잎 이름을 읽는다). 실행기는 파생이 소유하고, 내리기 전에 nullptr 로 돌립니다. */
+        /** @brief 판단이 행동 트리로 돌면 그 실행기를 정합니다. 탐침 `AI.BehaviorTask` 가 도는 잎 이름을 읽습니다. 실행기는 파생이 소유하고, 종료하기 전에 nullptr 로 돌립니다. */
         void                      setBehaviorTreeRunner( const BehaviorTreeRunner* pRunner ) { _pBehaviorTreeRunner = pRunner; }
         const BehaviorTreeRunner* getBehaviorTreeRunner() const { return _pBehaviorTreeRunner; }
 
     protected:
-        /** @brief 판단 — 파생이 덮습니다. 기본은 아무것도 하지 않습니다(이미 건 목적지 · 초점은 그대로 따른다). */
+        /** @brief 판단입니다. 파생이 덮어씁니다. 기본은 아무것도 하지 않고, 이미 정한 목적지와 초점을 그대로 따릅니다. */
         virtual void think( const ControlFrameContext& context, const PawnComponent& pawn )
         {
             (void)context;
@@ -86,7 +86,7 @@ namespace sw
     private:
         /** @brief 이번 틱에 갈 월드 방향(XZ, 길이 0..1)을 정합니다. 닿았으면 목적지를 지웁니다. */
         float3 computeMoveDirection( const PawnComponent& pawn, const float3& pawnPosition );
-        /** @brief 내비 에이전트(SteerOnly)가 낸 속도를 이동 방향으로 — 목적지를 한 번 걸고, 닿거나 길이 없으면 목적지를 지웁니다. */
+        /** @brief 내비 에이전트(SteerOnly)가 낸 속도를 이동 방향으로 씁니다. 목적지를 한 번 요청하고, 닿거나 경로가 없으면 목적지를 지웁니다. */
         float3 computeAgentMoveDirection( NavMeshAgentComponent& agent );
 
     private:

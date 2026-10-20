@@ -1,7 +1,7 @@
 /**
  * @file FirstPersonCameraComponent.h
  * @brief 1인칭 카메라를 정의합니다.
- * @details 시점(폰의 조종 회전, 피치 한계), 눈 자리, 손에 든 모델(뷰 모델)을 붙이는 자리를 다룬다.
+ * @details 시점(폰의 조종 회전, 피치 한계), 눈 위치, 손에 든 모델(뷰 모델)을 붙이는 위치를 다룬다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -29,7 +29,7 @@ namespace sw
      */
     struct SW_GF_API FirstPersonCameraMath
     {
-        /** @brief 눈 기준 오프셋(@p offset)에 둔 뷰 모델의 월드 자리입니다. 오프셋은 오른쪽(수평), 위(시점의 위), 앞(시점) 순입니다. */
+        /** @brief 눈 기준 오프셋(@p offset)에 둔 뷰 모델의 월드 위치입니다. 오프셋은 오른쪽(수평), 위(시점의 위), 앞(시점) 순입니다. */
         static float3 computeViewModelPosition( const float3& eyePosition, const FirstPersonLook& look, const float3& offset );
     };
 } // namespace sw
@@ -43,8 +43,8 @@ namespace sw
      *          마우스와 스틱은 플레이어 조종자가, 바라볼 곳은 AI 조종자가 조종 회전으로 낸다. 이 컴포넌트는 입력을 읽지 않는다.
      *          폰이 없으면(관전 카메라) `setAngles` 로 정한 시점을 지킨다.
      *          마우스 잠금과 Esc 는 플레이어 조종자의 일이다(`PawnComponent::wantsMouseLock`).
-     *          몸을 움직이는 게임 컴포넌트는 **같은 오브젝트**에서 뒤 그룹에 돈다. 이 시점(`getLook`)으로 걷고 쏜 뒤 `setEyePosition` 으로 눈 자리를 넣으면,
-     *          카메라와 뷰 모델이 그 자리에서 바로 다시 놓인다.
+     *          몸을 움직이는 게임 컴포넌트는 **같은 오브젝트**에서 뒤 그룹에 돈다. 이 시점(`getLook`)으로 걷고 쏜 뒤 `setEyePosition` 으로 눈 위치를 넣으면,
+     *          카메라와 뷰 모델이 그 위치에 바로 다시 놓인다.
      *          코드가 시점을 정할 때(시작 시점, 반동)는 `setAngles` 와 `addRecoil` 을 쓴다. 폰이 있으면 그 값이 조종 회전 요청과 오프셋으로 넘어가서 다음 틱부터 조종자의 값이 된다.
      *
      *          **뷰 모델**: 같은 오브젝트의 메시 컴포넌트 중 컴포넌트 이름이 `_viewModelName` 인 것(손에 든 총)을 카메라의 자식으로 둔다.
@@ -52,7 +52,7 @@ namespace sw
      *          같은 오브젝트의 씬 컴포넌트는 기본으로 첫 씬 컴포넌트(카메라)에 붙는다. 붙어 있지 않으면 틱 밖에서 붙인다. 이름을 비우면 뷰 모델이 없다.
      *
      *          **사용자 설정**: 옵션 메뉴의 시야각은 `_fieldOfViewY` 를 기본 시야각 대비 비율로 넓히고 좁히며, 머리 흔들림(`_headBob`, 진폭 0 이면 없음)은
-     *          `gameplay.headBob` 이 끄면 멈춘다(`CameraUserSettings`). 흔들림의 위상은 눈 자리가 간 거리로 가므로 `setEyePosition` 이 틱 밖에서 불려도 맞는다.
+     *          `gameplay.headBob` 이 끄면 멈춘다(`CameraUserSettings`). 흔들림의 위상은 눈 위치가 간 거리로 정하므로 `setEyePosition` 이 틱 밖에서 불려도 맞는다.
      */
     REFLECT( Category = "Camera", DisplayName = "First Person Camera", Tooltip = "First-person camera: follows the pawn's control rotation, pitch limit, eye position and a view-model slot" )
     class SW_GF_API FirstPersonCameraComponent : public Component
@@ -66,7 +66,7 @@ namespace sw
         void onBeginPlay() override;
         void onTick( float32 deltaTime ) override;
 
-        /** @brief 눈 자리를 넣고 카메라와 뷰 모델을 바로 다시 둡니다. 눈 자리는 카메라의 부모 공간 기준이며 루트 카메라면 월드입니다. 같은 오브젝트의 게임 컴포넌트가 걷고 난 뒤 부릅니다. */
+        /** @brief 눈 위치를 넣고 카메라와 뷰 모델을 바로 다시 둡니다. 눈 위치는 카메라의 부모 공간 기준이며 루트 카메라면 월드입니다. 같은 오브젝트의 게임 컴포넌트가 걷고 난 뒤 부릅니다. */
         void          setEyePosition( const float3& eyePosition );
         const float3& getEyePosition() const { return _eyePosition; }
         /** @brief 시점을 정합니다. 라디안이며 피치는 위가 +입니다. 카메라를 바로 다시 두고, 폰이 있으면 조종 회전을 이 값으로 요청합니다. */
@@ -108,6 +108,6 @@ namespace sw
         FirstPersonLook _look;
         float3          _eyePosition;
         CameraModeState _modeState;        ///< 머리 흔들림의 위상 · 크기
-        float32         _pendingDeltaTime; ///< 틱이 흘린 시간 — 다음 `applyToCamera` 가 머리 흔들림에 쓰고 비운다
+        float32         _pendingDeltaTime; ///< 틱이 흘린 시간. 다음 `applyToCamera` 가 머리 흔들림에 쓰고 비운다
     };
 } // namespace sw

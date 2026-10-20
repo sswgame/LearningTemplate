@@ -3,6 +3,7 @@
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceRule.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -218,12 +219,7 @@ namespace sw
 
     const AppearanceRuleDef* AppearanceRuleTable::findRule( const hashed_string& id ) const
     {
-        for ( const AppearanceRuleDef& rule : _listRule )
-        {
-            if ( rule._id == id )
-                return &rule;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&AppearanceRuleDef::_id>( _listRule, id );
     }
 
     bool AppearanceRuleTable::areExclusive( const AppearanceRuleDef& lhs, const AppearanceRuleDef& rhs )

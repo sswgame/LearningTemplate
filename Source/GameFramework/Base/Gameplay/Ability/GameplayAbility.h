@@ -48,8 +48,8 @@ namespace sw
         TagContainer                                _activationRequiredTags{};
         TagContainer                                _activationBlockedTags{};
         TagContainer                                _triggerEventTags{};
-        shared_ptr<const GameplayEffectDef>         _pCostEffect{};                          ///< 발동 비용(마나 −20). `commitAbility` 가 건다
-        shared_ptr<const GameplayEffectDef>         _pCooldownEffect{};                      ///< 쿨다운(부여 태그가 쿨다운 태그). `commitAbility` 가 건다
+        shared_ptr<const GameplayEffectDef>         _pCostEffect{};                          ///< 발동 비용(마나 -20). `commitAbility` 가 적용한다
+        shared_ptr<const GameplayEffectDef>         _pCooldownEffect{};                      ///< 쿨다운(부여 태그가 쿨다운 태그). `commitAbility` 가 적용한다
         unordered_map<hashed_string, float32>       _mapParameter{};                         ///< 데이터 매개변수(피해, 사거리, 속도)
         unordered_map<hashed_string, hashed_string> _mapNameParameter{};                     ///< 데이터 이름 매개변수(걸 이펙트 id, 프리팹)
         uint8                                       _bRetriggerInstancedAbility{ SW_FALSE }; ///< 실행 중에 다시 발동하면 끝내고 새로 시작할지 여부(아니면 실패)
@@ -67,7 +67,7 @@ namespace sw
      * @brief 어빌리티 하나입니다. 부여된 스펙마다 인스턴스 하나를 컴포넌트가 보관합니다(언리얼의 `InstancedPerActor` 에 해당).
      * @details 흐름은 언리얼과 같다.
      *          1. `AbilitySystemComponent::tryActivateAbility` 가 조건(태그, 쿨다운, 비용, `canActivateAbility`)을 검사하고 `activateAbility` 를 부른다.
-     *          2. 구현은 `commitAbility()` 로 비용과 쿨다운을 걸고(실패하면 `endAbility()`), 일을 한다. 바로 끝나면 그 자리에서 `endAbility()` 를 부른다.
+     *          2. 구현은 `commitAbility()` 로 비용과 쿨다운을 적용하고(실패하면 `endAbility()`), 일을 한다. 바로 끝나면 즉시 `endAbility()` 를 부른다.
      *             시간이 걸리면 작업(`waitDelay`, `waitGameplayEvent`)이나 `onTickAbility` 로 기다렸다가 끝낸다.
      *          3. 끝나면(`endAbility`, `cancelAbility`) 작업을 모두 정리하고 `onEndAbility( bWasCancelled )` 를 부른다.
      *
@@ -108,7 +108,7 @@ namespace sw
         virtual void onRemoved();
         /** @brief 이 어빌리티에 묶인 입력이 눌렸을 때 불립니다. 실행 중일 때만 불리며, 차지와 콤보에 씁니다. */
         virtual void onInputPressed();
-        /** @brief 이 어빌리티에 묶인 입력이 떼어졌을 때 불립니다. 실행 중일 때만 불리며, 차지 해제에 씁니다. */
+        /** @brief 이 어빌리티에 바인딩된 입력을 뗐을 때 불립니다. 실행 중일 때만 불리며, 차지 해제에 씁니다. */
         virtual void onInputReleased();
 
         /**
@@ -155,7 +155,7 @@ namespace sw
         bool isInputPressed() const { return _bInputPressed == SW_TRUE; }
 
         // --------------------------------------------------------------------------
-        // 이펙트. 레벨과 컨텍스트가 채워진 스펙을 만들고 건다
+        // 이펙트. 레벨과 컨텍스트가 채워진 스펙을 만들고 적용한다
         // --------------------------------------------------------------------------
         /** @brief 카탈로그의 이펙트 @p effectID 로 이 어빌리티 레벨의 스펙을 만듭니다. 이펙트가 없으면 경고를 남기고 빈 스펙을 반환합니다. */
         GameplayEffectSpec makeOutgoingSpec( const hashed_string& effectID ) const;
@@ -222,7 +222,7 @@ namespace sw
      * @details 이름 매개변수:
      *          - `selfEffect`: 주인에게 걸 이펙트 id. 회복, 버프, 패시브에 쓴다.
      *          - `targetEffect`: 발동 이벤트의 **상대**에게 걸 이펙트 id. 이벤트의 `_target` 이 주인 자신이거나 비어 있으면(피격처럼 받은 이벤트)
-     *            일으킨 쪽(`_instigator`)에게 걸고, 아니면 `_target` 에게 건다. 맞으면 때린 쪽에 피해를 주는 가시가 이 경로를 쓴다.
+     *            일으킨 쪽(`_instigator`)에게 적용하고, 아니면 `_target` 에게 적용한다. 맞으면 때린 쪽에 피해를 주는 가시가 이 경로를 쓴다.
      *            이벤트 없이 발동하면 걸지 않는다.
      *          `_bActivateOnGranted` 와 무한 이펙트를 함께 쓰면 패시브가 된다.
      */

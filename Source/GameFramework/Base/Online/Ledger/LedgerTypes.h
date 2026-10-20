@@ -1,7 +1,7 @@
 /**
  * @file LedgerTypes.h
  * @brief 원장이 쓰는 타입을 정의합니다.
- * @details 보유자(계정, 맡김, 발행, 소각), 이동 다리, 잔액, 요청, 결과, 분개를 정의하고, 분개 키를 만드는 방법과 글자 규칙도 여기서 정한다.
+ * @details 보유자(계정, 에스크로, 발행, 소각), 이동 레그(leg), 잔액, 요청, 결과, 분개를 정의하고, 분개 키를 만드는 방법과 글자 규칙도 여기서 정한다.
  *          원장은 자산의 뜻을 모른다. 자산 id 는 `[0-9a-z_.-]` 48 자 이하이고, 관례로 화폐는 `cur.<이름>`, 아이템은 `item.<이름>` 이다. 뜻은 카탈로그가 준다.
  */
 #pragma once
@@ -22,10 +22,10 @@ namespace sw
     /** @brief 원장 보유자의 종류입니다. 와이어와 저장에 쓰는 값이라 순서를 바꾸면 안 됩니다. */
     enum class LedgerHolderKind : uint8
     {
-        Account = 0, ///< 플레이어 계정 — 잔액이 음수가 되지 않는다(환불 회수 `_bAllowDebt` 만 예외 — 빚)
-        Escrow,      ///< 맡김(경매 · 우편 첨부) — 음수가 되지 않는다. 도메인 + 토큰으로 이름 짓는다
-        Mint,        ///< 발행 — 잔액 레코드가 없다(분개의 합이 발행량)
-        Sink,        ///< 소각 — 잔액 레코드가 없다
+        Account = 0, ///< 플레이어 계정. 잔액이 음수가 되지 않는다(환불 회수 `_bAllowDebt` 만 예외로 빚을 허용한다)
+        Escrow,      ///< 에스크로(경매, 우편 첨부). 음수가 되지 않는다. 도메인과 토큰으로 이름을 정한다
+        Mint,        ///< 발행. 잔액 레코드가 없다(분개의 합이 발행량)
+        Sink,        ///< 소각. 잔액 레코드가 없다
         Count
     };
 } // namespace sw
@@ -35,8 +35,8 @@ namespace sw
     /** @brief 원장 보유자 하나입니다. 키는 `acct/<16 진 16>`, `esc/<도메인>/<토큰>`, `sys/mint`, `sys/sink` 중 하나입니다. */
     struct SW_GF_API LedgerHolder
     {
-        string           _escrowDomain{}; ///< Escrow 만 — `[0-9a-z_]`, 16 자 이하("mail" · "auction")
-        string           _escrowToken{};  ///< Escrow 만 — `[0-9a-z_.-]`, 64 자 이하
+        string           _escrowDomain{}; ///< Escrow 만 쓴다. `[0-9a-z_]`, 16 자 이하("mail", "auction")
+        string           _escrowToken{};  ///< Escrow 만 쓴다. `[0-9a-z_.-]`, 64 자 이하
         uint64           _accountID{ 0 }; ///< Account 만
         LedgerHolderKind _kind{ LedgerHolderKind::Mint };
 
@@ -70,7 +70,7 @@ namespace sw
 {
     /**
      * @brief 잔액 하나입니다. 계정 잔액은 환불 회수로 음수(빚)가 될 수 있습니다.
-     * @details 온라인 메시지(경제 · 관리자 · 우편함 응답)에 고정 배치형으로 실립니다. `MaxCount` 는 `LedgerConstant::kMaxAssetIDSize` 와 같은 값입니다.
+     * @details 온라인 메시지(경제, 관리자, 우편함 응답)에 고정 배치형으로 실립니다. `MaxCount` 는 `LedgerConstant::kMaxAssetIDSize` 와 같은 값입니다.
      *          `_version` 은 저장소 레코드의 판이라 `PROPERTY` 가 아니며 와이어에 싣지 않습니다.
      */
     REFLECT()
@@ -81,7 +81,7 @@ namespace sw
         string _assetID{};
         PROPERTY()
         int64  _amount{ 0 };
-        uint64 _version{ 0 }; ///< 레코드 판 — 0 이면 레코드가 없다(잔액 0)
+        uint64 _version{ 0 }; ///< 레코드 버전. 0 이면 레코드가 없다(잔액 0)
 
         bool isDebt() const { return _amount < 0; }
     };
@@ -93,8 +93,8 @@ namespace sw
     ENUM( Count = Count )
     enum class LedgerActorKind : uint8
     {
-        System = 0, ///< 서버 로직(보상 · 만료 · 예약 작업)
-        Player,     ///< 플레이어 요청(구매 · 거래 · 수령)
+        System = 0, ///< 서버 로직(보상, 만료, 예약 작업)
+        Player,     ///< 플레이어 요청(구매, 거래, 수령)
         Admin,      ///< GM 도구
         Count
     };
@@ -103,13 +103,13 @@ namespace sw
     ENUM()
     enum class LedgerResult : uint8
     {
-        Ok = 0,            ///< 적용했다 — 또는 같은 분개 키로 이미 적용돼 있었다(`_bReplayed`)
-        InsufficientFunds, ///< 계정 · 맡김 잔액이 모자란다 · 빚이 있는 재화를 쓰려 했다(`_failedPostingIndex`)
+        Ok = 0,            ///< 적용했거나, 같은 분개 키로 이미 적용돼 있었다(`_bReplayed`)
+        InsufficientFunds, ///< 계정이나 에스크로 잔액이 모자라거나, 빚이 있는 재화를 쓰려 했다(`_failedPostingIndex`)
         CapExceeded,       ///< 계정 잔액 상한을 넘는다(`_failedPostingIndex`)
-        JournalKeyReused,  ///< 같은 분개 키에 다른 내용 — 다시 쓴 멱등 키이거나 이미 쓰인 영수증
-        Conflict,          ///< 판 충돌이 재시도 상한을 넘었다 — 부르는 쪽이 같은 키로 다시
-        Invalid,           ///< 규칙 위반(다리 수 · 금액 · 같은 보유자끼리 · 시스템끼리 · 글자 규칙 · 쓰기 상한)
-        Unavailable        ///< 저장소 — 적용됐는지 모른다(같은 키로 다시 하면 가려진다)
+        JournalKeyReused,  ///< 같은 분개 키에 다른 내용이다. 다시 쓴 멱등 키이거나 이미 쓰인 영수증이다
+        Conflict,          ///< 버전 충돌이 재시도 상한을 넘었다. 부르는 쪽이 같은 키로 다시 한다
+        Invalid,           ///< 규칙 위반(레그 수, 금액, 같은 보유자끼리, 시스템끼리, 글자 규칙, 쓰기 상한)
+        Unavailable        ///< 저장소 오류로 적용됐는지 모른다(같은 키로 다시 하면 판명된다)
     };
 } // namespace sw
 
@@ -136,7 +136,7 @@ namespace sw
     struct LedgerConstant
     {
         static constexpr int32 kMaxPostingCount   = 16;                 ///< 한 이동의 다리 수
-        static constexpr int64 kMaxAmount         = 1000000000000000ll; ///< 다리 하나 · 잔액 하나(10^15 — 다리 16 개 합이 int64 안)
+        static constexpr int64 kMaxAmount         = 1000000000000000ll; ///< 레그 하나와 잔액 하나의 상한(10^15). 레그 16 개의 합이 int64 안에 들어간다
         static constexpr int64 kMaxBalance        = kMaxAmount;
         static constexpr int32 kMaxAssetIDSize    = 48;
         static constexpr int32 kMaxStoredTextSize = 512; ///< 저장 레코드 안 글(메모 · 에스크로 표식) 하나의 최대 길이
@@ -162,7 +162,7 @@ namespace sw
     {
         vector<LedgerPosting> _listPosting{};
         string                _journalKey{};
-        string                _reason{}; ///< 사유 코드 `[0-9a-z_.]`("shop.buy" · "trade.settle" · "mail.claim" · "admin.grant" · "refund.revoke")
+        string                _reason{}; ///< 사유 코드 `[0-9a-z_.]`("shop.buy", "trade.settle", "mail.claim", "admin.grant", "refund.revoke")
         string                _memo{};   ///< 자유 글(GM 메모 · 티켓 번호), UTF-8
         const ILedgerPolicy*  _pPolicy{ nullptr };
         int64                 _timeMs{ 0 }; ///< 서버 벽시계(유닉스 밀리초)
@@ -205,7 +205,7 @@ namespace sw
         string                _memo{};
         int64                 _timeMs{ 0 };
         uint64                _actorID{ 0 };
-        uint64                _contentHash{ 0 }; ///< 다리 · 사유 · 빚 허용의 해시 — 같은 키 다른 내용 판정
+        uint64                _contentHash{ 0 }; ///< 레그, 사유, 빚 허용의 해시. 같은 키의 다른 내용을 판정한다
         LedgerActorKind       _actorKind{ LedgerActorKind::System };
     };
 } // namespace sw

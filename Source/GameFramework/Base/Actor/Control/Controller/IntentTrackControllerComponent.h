@@ -1,6 +1,6 @@
 /**
  * @file IntentTrackControllerComponent.h
- * @brief 기록 조종자 — 의도 목록(`.swintent` 트랙 · 시나리오 `<Intent>`)을 틱 순서로 냅니다. AI 조종자와 같은 자리입니다.
+ * @brief 기록 조종자입니다. 의도 목록(`.swintent` 트랙, 시나리오 `<Intent>`)을 틱 순서로 냅니다. AI 조종자와 같은 역할입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -68,6 +68,6 @@ namespace sw
         vector<ControlIntent>                 _listIntent;
         TComponentHandle<ControllerComponent> _returnController; ///< 끝나면 폰을 돌려줄 조종자(무효면 놓기만)
         size_t                                _cursor;           ///< 다음에 낼 의도
-        bool                                  _bReturnPending;   ///< 목록이 끝나면 돌려주기를 걸어야 한다(한 번)
+        bool                                  _bReturnPending;   ///< 목록이 끝나면 폰 돌려주기를 한 번 요청해야 한다
     };
 } // namespace sw

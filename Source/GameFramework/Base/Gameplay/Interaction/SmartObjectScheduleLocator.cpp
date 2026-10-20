@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Gameplay/Interaction/SmartObjectScheduleLocator.h"
 
+#include "Core/Container/CompareUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
@@ -93,8 +94,7 @@ namespace sw
             }
         }
         // 순회 순서에 기대지 않는다 — (오브젝트 id, 슬롯) 순이라 같은 씬이면 늘 같은 후보 순서다.
-        std::sort( outListCandidate.begin(), outListCandidate.end(), []( const Candidate& lhs, const Candidate& rhs )
-        { return lhs._objectID != rhs._objectID ? lhs._objectID < rhs._objectID : lhs._slot < rhs._slot; } );
+        std::sort( outListCandidate.begin(), outListCandidate.end(), Ascending<&Candidate::_objectID, &Candidate::_slot>{} );
     }
 
     bool SmartObjectScheduleLocator::computeReservationPosition( const Reservation& reservation, float3& outPosition ) const

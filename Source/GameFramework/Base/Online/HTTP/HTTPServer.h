@@ -1,7 +1,8 @@
 /**
  * @file HTTPServer.h
- * @brief 최소 HTTP/1.1 서버 — 연결마다 요청 하나를 받아 처리기에 넘기고 답한 뒤 닫습니다. PC 외부 로그인의 루프백 리다이렉트 받기(127.0.0.1) · 테스트의 가짜 제공자가 씁니다.
- * @details 게임 서비스 · 운영 엔드포인트가 아니다(그쪽은 `Online/Service` · 관측 엔드포인트). 받은 요청은 I/O 스레드에서 모으고 `tick` 을 부른 스레드에서 처리기를 부른다.
+ * @brief 최소 HTTP/1.1 서버입니다. 연결마다 요청 하나를 받아 처리기에 넘기고 답한 뒤 닫습니다.
+ *        PC 외부 로그인의 루프백 리다이렉트 받기(127.0.0.1)와 테스트의 가짜 제공자가 씁니다.
+ * @details 게임 서비스나 운영 엔드포인트가 아니다(그쪽은 `Online/Service` 와 관측 엔드포인트). 받은 요청은 I/O 스레드에서 모으고 `tick` 을 부른 스레드에서 처리기를 부른다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -72,7 +73,7 @@ namespace sw
         uint16 getListenPort() const;
         int32  getHandledCount() const { return _handledCount; }
 
-        // IStreamHandler — I/O 스레드
+        // IStreamHandler: I/O 스레드
         void onStreamOpened( StreamConnectionHandle handle, const NetAddress& remote, bool bAccepted ) override;
         void onStreamReceived( StreamConnectionHandle handle, const uint8* pData, int32 size ) override;
         void onStreamClosed( StreamConnectionHandle handle, StreamCloseReason reason ) override;

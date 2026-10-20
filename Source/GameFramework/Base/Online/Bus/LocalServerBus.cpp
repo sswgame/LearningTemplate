@@ -2,6 +2,8 @@
 
 #include "GameFramework/Base/Online/Bus/LocalServerBus.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include <algorithm>
 
 namespace sw
@@ -39,7 +41,7 @@ namespace sw
         if ( inboxIt == _mapInbox.end() )
             return;
         vector<string>& listTopic = inboxIt->second._listTopic;
-        if ( std::find( listTopic.begin(), listTopic.end(), topic ) == listTopic.end() )
+        if ( VectorUtil::contains( listTopic, topic ) == false )
             listTopic.push_back( string{ topic } );
     }
 
@@ -50,7 +52,8 @@ namespace sw
         if ( inboxIt == _mapInbox.end() )
             return;
         vector<string>& listTopic = inboxIt->second._listTopic;
-        listTopic.erase( std::remove( listTopic.begin(), listTopic.end(), topic ), listTopic.end() );
+        VectorUtil::removeIf( listTopic, [&topic]( const string& subscribed )
+        { return subscribed == topic; } );
     }
 
     int32 LocalServerBusHub::deliver( const ServerBusMessage& message )
@@ -60,7 +63,7 @@ namespace sw
         for ( auto& [inboxID, inbox] : _mapInbox )
         {
             (void)inboxID;
-            if ( std::find( inbox._listTopic.begin(), inbox._listTopic.end(), message.getTopic() ) == inbox._listTopic.end() )
+            if ( VectorUtil::contains( inbox._listTopic, message.getTopic() ) == false )
                 continue;
             inbox._listMessage.push_back( message );
             ++receiverCount;

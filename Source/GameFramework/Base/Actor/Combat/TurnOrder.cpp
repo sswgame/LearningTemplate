@@ -2,6 +2,8 @@
 
 #include "GameFramework/Base/Actor/Combat/TurnOrder.h"
 
+#include "Core/Container/CompareUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -32,12 +34,7 @@ namespace sw
 
     TurnOrder::Combatant* TurnOrder::findCombatant( int32 actorID )
     {
-        for ( Combatant& actor : _listCombatant )
-        {
-            if ( actor._actorID == actorID )
-                return &actor;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&Combatant::_actorID>( _listCombatant, actorID );
     }
 
     void TurnOrder::addActor( int32 actorID, float32 speed )
@@ -53,10 +50,10 @@ namespace sw
 
     void TurnOrder::removeActor( int32 actorID )
     {
-        _listCombatant.erase( std::remove_if( _listCombatant.begin(), _listCombatant.end(), [actorID]( const Combatant& actor )
-        { return actor._actorID == actorID; } ),
-                              _listCombatant.end() );
-        _listRoundQueue.erase( std::remove( _listRoundQueue.begin(), _listRoundQueue.end(), actorID ), _listRoundQueue.end() );
+        VectorUtil::removeIf( _listCombatant, [actorID]( const Combatant& actor )
+        { return actor._actorID == actorID; } );
+        VectorUtil::removeIf( _listRoundQueue, [actorID]( int32 queuedID )
+        { return queuedID == actorID; } );
     }
 
     void TurnOrder::setSpeed( int32 actorID, float32 speed )
@@ -92,14 +89,8 @@ namespace sw
         {
             actor._tieBreak = random.nextUint();
         }
-        std::sort( listSorted.begin(), listSorted.end(), []( const Combatant& lhs, const Combatant& rhs )
-        {
-            if ( lhs._priority != rhs._priority )
-                return lhs._priority > rhs._priority;
-            if ( lhs._speed != rhs._speed )
-                return lhs._speed > rhs._speed;
-            return lhs._tieBreak < rhs._tieBreak;
-        } );
+        std::sort( listSorted.begin(), listSorted.end(),
+                   Lexicographic<Descending<&Combatant::_priority, &Combatant::_speed>, Ascending<&Combatant::_tieBreak>>{} );
         outListQueue.clear();
         for ( const Combatant& actor : listSorted )
         {

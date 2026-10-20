@@ -3,6 +3,7 @@
 #include "GameFramework/Base/Foundation/Framework/Save/Autosave.h"
 
 #include "Core/Common/FourCcUtil.h"
+#include "Core/Container/CompareUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
@@ -247,8 +248,7 @@ namespace sw
             if ( slot._sequence != 0 )
                 outListSlot.push_back( slot );
         }
-        std::sort( outListSlot.begin(), outListSlot.end(), []( const AutosaveSlotInfo& lhs, const AutosaveSlotInfo& rhs )
-        { return lhs._sequence > rhs._sequence; } );
+        std::sort( outListSlot.begin(), outListSlot.end(), Descending<&AutosaveSlotInfo::_sequence>{} );
     }
 
     const AutosaveSlotInfo* AutosaveManager::findLatestSlot() const

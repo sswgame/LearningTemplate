@@ -266,6 +266,92 @@ namespace sw
         _events |= event;
     }
 
+    void PlatformerMotor2D::tryStartDash( const PlatformerInput& input, float32 moveX, float32 moveY, bool bWasGrounded )
+    {
+        const bool bCanDash = _dashCooldown.isActive() == false && _dash.isActive() == false && ( bWasGrounded || _airDashesLeft > 0 );
+        if ( input._bDashPressed == false || bCanDash == false )
+            return;
+        float2 direction{ moveX, moveY };
+        if ( direction.getLengthSquared() < 0.01f )
+            direction = float2{ static_cast<float32>( _facing ), 0.0f };
+        direction = direction * ( 1.0f / direction.getLength() );
+        _velocity = direction * _settings._dashSpeed;
+        _dash.start( _settings._dashDuration );
+        _dashCooldown.start( _settings._dashDuration + _settings._dashCooldown );
+        _bClimbing = SW_FALSE;
+        _bRising   = SW_FALSE;
+        if ( bWasGrounded == false )
+            --_airDashesLeft;
+        _events |= PlatformerEvent::kDashed;
+    }
+
+    void PlatformerMotor2D::tryJump( bool bWallLeft, bool bWallRight )
+    {
+        const bool bTouchingWall = _wallSide != 0 || bWallLeft || bWallRight;
+        if ( _coyote.isActive() )
+        {
+            startJump( getJumpSpeed(), PlatformerEvent::kJumped );
+        }
+        else if ( bTouchingWall )
+        {
+            const int32 side = _wallSide != 0 ? _wallSide : ( bWallLeft ? -1 : 1 );
+            startJump( _settings._wallJumpSpeedY, PlatformerEvent::kWallJumped );
+            _velocity._x = static_cast<float32>( -side ) * _settings._wallJumpSpeedX;
+            _facing      = -side;
+            _wallLock.start( _settings._wallJumpLockTime );
+            _airDashesLeft = _settings._airDashCount;
+            _wallSide      = 0;
+        }
+        else if ( _extraJumpsLeft > 0 )
+        {
+            --_extraJumpsLeft;
+            startJump( getJumpSpeed(), PlatformerEvent::kAirJumped );
+        }
+    }
+
+    void PlatformerMotor2D::updateRunAndJump( const PlatformTileMap& map, const PlatformerInput& input, float32 moveX, bool bWasGrounded, float32 deltaTime )
+    {
+        // 좌우 이동이다. 벽 점프 직후에는 입력을 약하게 받는다.
+        const float32 control      = _wallLock.isActive() ? 0.2f : 1.0f;
+        const float32 acceleration = ( bWasGrounded ? _settings._groundAcceleration : _settings._airAcceleration ) * control;
+        _velocity._x               = MathUtil::moveToward( _velocity._x, moveX * _settings._runSpeed, acceleration * deltaTime );
+
+        // 벽이다. 공중에서 벽 쪽을 누르고 내려오면 미끄러진다. 양옆 검사는 벽 점프도 같이 쓴다.
+        bool bWallLeft  = false;
+        bool bWallRight = false;
+        if ( _settings._bWallJump )
+        {
+            bWallLeft  = isBlocked( map, float2{ _position._x - 0.05f, _position._y }, false, 0.0f );
+            bWallRight = isBlocked( map, float2{ _position._x + 0.05f, _position._y }, false, 0.0f );
+        }
+        _wallSide = 0;
+        if ( bWasGrounded == false )
+        {
+            if ( bWallLeft && moveX < -0.1f )
+                _wallSide = -1;
+            else if ( bWallRight && moveX > 0.1f )
+                _wallSide = 1;
+        }
+
+        if ( _jumpBuffer.isActive() && _dropThrough.isActive() == false )
+            tryJump( bWallLeft, bWallRight );
+
+        // 오르는 중에 점프를 떼면 짧은 점프가 된다.
+        const bool bCutJump = _bRising && input._bJumpHeld == SW_FALSE && _velocity._y > 0.0f;
+        if ( bCutJump )
+        {
+            _velocity._y *= _settings._jumpCutRatio;
+            _bRising = SW_FALSE;
+        }
+        if ( _velocity._y <= 0.0f )
+            _bRising = SW_FALSE;
+
+        const float32 gravityScale = _velocity._y < 0.0f ? _settings._fallGravityScale : 1.0f;
+        _velocity._y               = MathUtil::max( -_settings._maxFallSpeed, _velocity._y - getGravity() * gravityScale * deltaTime );
+        if ( _wallSide != 0 )
+            _velocity._y = MathUtil::max( _velocity._y, -_settings._wallSlideSpeed );
+    }
+
     void PlatformerMotor2D::update( const PlatformTileMap& map, const PlatformerInput& input, float32 deltaTime )
     {
         _events = 0;
@@ -295,32 +381,16 @@ namespace sw
         else if ( moveX < -0.1f )
             _facing = -1;
 
-        // 대시 — 입력 방향(없으면 바라보는 쪽)으로 곧게, 중력 없이.
-        const bool bCanDash = _dashCooldown.isActive() == false && _dash.isActive() == false && ( bWasGrounded || _airDashesLeft > 0 );
-        if ( input._bDashPressed && bCanDash )
-        {
-            float2 direction{ moveX, moveY };
-            if ( direction.getLengthSquared() < 0.01f )
-                direction = float2{ static_cast<float32>( _facing ), 0.0f };
-            direction = direction * ( 1.0f / direction.getLength() );
-            _velocity = direction * _settings._dashSpeed;
-            _dash.start( _settings._dashDuration );
-            _dashCooldown.start( _settings._dashDuration + _settings._dashCooldown );
-            _bClimbing = SW_FALSE;
-            _bRising   = SW_FALSE;
-            if ( bWasGrounded == false )
-                --_airDashesLeft;
-            _events |= PlatformerEvent::kDashed;
-        }
+        tryStartDash( input, moveX, moveY, bWasGrounded );
 
-        // 사다리 — 위아래를 누르면 잡고, 점프로 놓는다.
+        // 사다리는 위아래를 누르면 잡고, 점프로 놓는다.
         const bool bOnLadder = isTouching( map, PlatformTile::Ladder );
         if ( bOnLadder == false )
             _bClimbing = SW_FALSE;
         else if ( MathUtil::abs( moveY ) > 0.5f && _dash.isActive() == false )
             _bClimbing = SW_TRUE;
 
-        // 발판 아래로 — 아래 + 점프.
+        // 아래와 점프를 함께 누르면 발판 아래로 내려간다.
         const bool bDropThrough = bWasGrounded && moveY < -0.5f && input._bJumpPressed;
         if ( bDropThrough )
         {
@@ -341,69 +411,13 @@ namespace sw
         }
         else
         {
-            // 좌우 — 벽 점프 직후에는 입력을 약하게.
-            const float32 control      = _wallLock.isActive() ? 0.2f : 1.0f;
-            const float32 acceleration = ( bWasGrounded ? _settings._groundAcceleration : _settings._airAcceleration ) * control;
-            _velocity._x               = MathUtil::moveToward( _velocity._x, moveX * _settings._runSpeed, acceleration * deltaTime );
-
-            // 벽 — 공중에서 벽 쪽을 누르고 내려오면 미끄러진다.
-            _wallSide = 0;
-            if ( bWasGrounded == false && _settings._bWallJump )
-            {
-                const bool bLeft  = isBlocked( map, float2{ _position._x - 0.05f, _position._y }, false, 0.0f );
-                const bool bRight = isBlocked( map, float2{ _position._x + 0.05f, _position._y }, false, 0.0f );
-                if ( bLeft && moveX < -0.1f )
-                    _wallSide = -1;
-                else if ( bRight && moveX > 0.1f )
-                    _wallSide = 1;
-            }
-
-            // 점프 — 땅(코요테 포함) → 벽 → 공중 점프 순.
-            if ( _jumpBuffer.isActive() && _dropThrough.isActive() == false )
-            {
-                if ( _coyote.isActive() )
-                {
-                    startJump( getJumpSpeed(), PlatformerEvent::kJumped );
-                }
-                else if ( _wallSide != 0 || ( _settings._bWallJump &&
-                                              ( isBlocked( map, float2{ _position._x - 0.05f, _position._y }, false, 0.0f ) ||
-                                                isBlocked( map, float2{ _position._x + 0.05f, _position._y }, false, 0.0f ) ) ) )
-                {
-                    const int32 side = _wallSide != 0 ? _wallSide : ( isBlocked( map, float2{ _position._x - 0.05f, _position._y }, false, 0.0f ) ? -1 : 1 );
-                    startJump( _settings._wallJumpSpeedY, PlatformerEvent::kWallJumped );
-                    _velocity._x = static_cast<float32>( -side ) * _settings._wallJumpSpeedX;
-                    _facing      = -side;
-                    _wallLock.start( _settings._wallJumpLockTime );
-                    _airDashesLeft = _settings._airDashCount;
-                    _wallSide      = 0;
-                }
-                else if ( _extraJumpsLeft > 0 )
-                {
-                    --_extraJumpsLeft;
-                    startJump( getJumpSpeed(), PlatformerEvent::kAirJumped );
-                }
-            }
-
-            // 짧은 점프 — 오르는 중에 떼면.
-            const bool bCutJump = _bRising && input._bJumpHeld == SW_FALSE && _velocity._y > 0.0f;
-            if ( bCutJump )
-            {
-                _velocity._y *= _settings._jumpCutRatio;
-                _bRising = SW_FALSE;
-            }
-            if ( _velocity._y <= 0.0f )
-                _bRising = SW_FALSE;
-
-            const float32 gravityScale = _velocity._y < 0.0f ? _settings._fallGravityScale : 1.0f;
-            _velocity._y               = MathUtil::max( -_settings._maxFallSpeed, _velocity._y - getGravity() * gravityScale * deltaTime );
-            if ( _wallSide != 0 )
-                _velocity._y = MathUtil::max( _velocity._y, -_settings._wallSlideSpeed );
+            updateRunAndJump( map, input, moveX, bWasGrounded, deltaTime );
         }
 
         _bGrounded = SW_FALSE;
         moveAxis( map, _velocity._x * deltaTime, false );
         moveAxis( map, _velocity._y * deltaTime, true );
-        // 서 있는가 — 발밑을 한 번 더 본다(위로 움직이지 않는 틱).
+        // 위로 움직이지 않는 틱에는 발밑을 한 번 더 보고 서 있는지 정한다.
         const bool bSnapToGround = _bGrounded == SW_FALSE && _velocity._y <= 0.0f && _bClimbing == SW_FALSE &&
                                    isBlocked( map, float2{ _position._x, _position._y - 0.02f }, true, _position._y - _settings._halfExtents._y );
         if ( bSnapToGround )

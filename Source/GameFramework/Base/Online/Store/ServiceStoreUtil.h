@@ -1,6 +1,6 @@
 /**
  * @file ServiceStoreUtil.h
- * @brief 서비스 저장소를 쓰는 쪽의 공통 도우미입니다. 종료할 때 맡긴 저장 작업을 시간 제한 안에서 거두는 대기를 제공합니다.
+ * @brief 서비스 저장소를 쓰는 쪽의 공통 도우미입니다. 종료할 때 요청한 저장 작업을 시간 제한 안에서 회수하는 대기를 제공합니다.
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -16,7 +16,7 @@ namespace sw
     {
         /** @brief 종료 대기의 시간 제한(ms)입니다. 넘기면 남은 작업은 호출부가 실패로 정리한다. */
         static constexpr int64 kShutdownWaitMilliseconds = 5000;
-        /** @brief 거둔 완료가 없을 때 다음 거두기까지 쉬는 시간(1 ms)입니다. */
+        /** @brief 회수한 완료가 없을 때 다음 회수까지 쉬는 시간(1 ms)입니다. */
         static constexpr int64 kIdlePollSleepNanoseconds = constant::kNanosecondsPerMillisecond;
 
         /**
@@ -41,7 +41,7 @@ namespace sw
             }
         }
 
-        /** @brief 저장소 완료만 거두는 `drainUntilIdle` 입니다. */
+        /** @brief 저장소 완료만 회수하는 `drainUntilIdle` 입니다. */
         template <typename TIsIdle>
         static void drainUntilIdle( IServiceStore* pStore, TIsIdle&& isIdle )
         {

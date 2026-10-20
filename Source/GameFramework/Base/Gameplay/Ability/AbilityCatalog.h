@@ -111,7 +111,7 @@ namespace sw
      * @class AbilityCatalog
      * @brief 이펙트, 어빌리티, 세트의 정의를 id 로 찾고, 클래스 이름으로 어빌리티, 어트리뷰트 세트, 실행 계산을 만듭니다.
      * @details **소유자**: 게임이 카탈로그를 하나 만들어 `GameInstanceBase` 의 멤버로 보관하고, 게임 서비스로 등록한다.
-     *          등록은 게임 인스턴스가 `bindScopedService( &_abilityCatalog )` 로 게임 범위에 건다. 컴포넌트에 카탈로그를 따로 정하지 않았으면 이 서비스를 쓴다.
+     *          등록은 게임 인스턴스가 `bindScopedService( &_abilityCatalog )` 로 게임 범위에 등록한다. 컴포넌트에 카탈로그를 따로 정하지 않았으면 이 서비스를 쓴다.
      *          등록한 팩토리는 게임 모듈의 코드이므로 카탈로그의 수명은 게임 모듈과 같아야 한다. 핫 리로드를 하면 새 인스턴스가 다시 등록한다.
      *
      *          **기본 등록**: 어트리뷰트 세트는 "Generic"(`AttributeSet`, 어트리뷰트를 데이터가 정함)과 "Combat"(`CombatAttributeSet`),
@@ -157,7 +157,7 @@ namespace sw
         // --------------------------------------------------------------------------
         // 정의. 코드로 추가한다
         // --------------------------------------------------------------------------
-        /** @brief 이펙트 정의를 추가합니다. 같은 id 가 있으면 교체합니다. 이미 걸린 이펙트는 교체 전 정의를 계속 참조합니다. */
+        /** @brief 이펙트 정의를 추가합니다. 같은 id 가 있으면 교체합니다. 이미 적용된 이펙트는 교체 전 정의를 계속 참조합니다. */
         shared_ptr<const GameplayEffectDef> addEffect( const GameplayEffectDef& def );
         /** @brief 어빌리티 정의를 추가합니다. 같은 id 가 있으면 교체합니다. */
         void addAbility( const GameplayAbilityDef& def );

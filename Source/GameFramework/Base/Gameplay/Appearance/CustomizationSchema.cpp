@@ -3,6 +3,7 @@
 #include "GameFramework/Base/Gameplay/Appearance/CustomizationSchema.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Reflection/EnumName.h"
@@ -236,12 +237,7 @@ namespace sw
 {
     const CustomizationOptionDef* CustomizationParamDef::findOption( const hashed_string& option ) const
     {
-        for ( const CustomizationOptionDef& entry : _listOption )
-        {
-            if ( entry._name == option )
-                return &entry;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&CustomizationOptionDef::_name>( _listOption, option );
     }
 
     CustomizationValue CustomizationParamDef::makeDefaultValue() const
@@ -272,12 +268,7 @@ namespace sw
 
     const CustomizationParamDef* CustomizationSchemaDef::findParameter( const hashed_string& name ) const
     {
-        for ( const CustomizationParamDef& param : _listParameter )
-        {
-            if ( param._name == name )
-                return &param;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&CustomizationParamDef::_name>( _listParameter, name );
     }
 
     bool CustomizationSchemaCatalog::loadFromNode( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName )
@@ -325,12 +316,7 @@ namespace sw
 
     const CustomizationSchemaDef* CustomizationSchemaCatalog::findSchema( const hashed_string& id ) const
     {
-        for ( const CustomizationSchemaDef& schema : _listSchema )
-        {
-            if ( schema._id == id )
-                return &schema;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&CustomizationSchemaDef::_id>( _listSchema, id );
     }
 
     uint32 CustomizationUtil::quantizeSlider( const CustomizationParamDef& param, float32 value )

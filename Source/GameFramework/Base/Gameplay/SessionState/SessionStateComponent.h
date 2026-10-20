@@ -31,8 +31,8 @@ namespace sw
 
     /**
      * @brief 판 상태를 여는 데 필요한 설정입니다. 카탈로그는 소유하지 않고 참조만 하므로 컴포넌트보다 오래 살아 있어야 합니다. 보통 게임 인스턴스가 카탈로그를 보관합니다.
-     * @details 숫자 칸의 범위는 `PROPERTY( Min )` 이고(시계 설정 안까지), 벗어나면 `SessionStateComponent::initialize` 가 오류로 거절한다(`ConfigRangeUtil`).
-     *          예전에는 음수 슬롯 수와 땅 크기를 조용히 0 으로 올렸다(폴백 금지 원칙). 카탈로그 포인터는 리플렉션 칸이 아니다.
+     * @details 숫자 필드의 범위는 `PROPERTY( Min )` 이고(시계 설정 안까지), 벗어나면 `SessionStateComponent::initialize` 가 오류로 거절한다(`ConfigRangeUtil`).
+     *          음수 슬롯 수와 땅 크기를 조용히 고치지 않는다(폴백 금지 원칙). 카탈로그 포인터는 리플렉션 필드이 아니다.
      */
     REFLECT()
     struct SW_GF_API SessionStateSettings
@@ -53,7 +53,7 @@ namespace sw
         PROPERTY( Min = 0 )
         int32 _landHeight{ 0 };
         PROPERTY( Min = 0.001 )
-        float32 _landCellSize{ 1.0f }; ///< 칸 한 변의 월드 길이. 0 보다 커야 한다(`LandRegistry::initialize` 의 전제 조건)
+        float32 _landCellSize{ 1.0f }; ///< 셀 한 변의 월드 길이. 0 보다 커야 한다(`LandRegistry::initialize` 의 전제 조건)
         PROPERTY()
         float3 _landOrigin{};
     };

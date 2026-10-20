@@ -2,26 +2,18 @@
 
 #include "GameFramework/Base/Foundation/Data/CustomizationValueSet.h"
 
+#include "Core/Container/VectorUtil.h"
+
 namespace sw
 {
     CustomizationValue* CustomizationValueSet::findMutableValue( const hashed_string& parameter )
     {
-        for ( CustomizationValue& value : _listValue )
-        {
-            if ( value._parameter == parameter )
-                return &value;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&CustomizationValue::_parameter>( _listValue, parameter );
     }
 
     const CustomizationValue* CustomizationValueSet::findValue( const hashed_string& parameter ) const
     {
-        for ( const CustomizationValue& value : _listValue )
-        {
-            if ( value._parameter == parameter )
-                return &value;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&CustomizationValue::_parameter>( _listValue, parameter );
     }
 
     void CustomizationValueSet::setValue( const CustomizationValue& value )

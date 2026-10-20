@@ -71,7 +71,7 @@ namespace sw
         /** @brief @p who 가 한 번 채집합니다. 상호작용이 부르는 것과 같은 동작입니다. 다 써서 없으면 false 입니다. */
         bool gather( GameObject& who );
 
-        /** @brief 저작 값 `_uses` 만큼 다 썼으면 true 입니다. 남은 횟수를 따로 저장하지 않고 쓴 횟수(런타임)와 견준다 — 저작 값이 바뀌어도 첫 플레이가 그 값을 따른다. */
+        /** @brief 저작 값 `_uses` 만큼 다 썼으면 true 입니다. 남은 횟수를 따로 저장하지 않고 쓴 횟수(런타임)와 비교한다. 그래서 저작 값이 바뀌어도 첫 플레이가 그 값을 따른다. */
         bool  isDepleted() const { return _usesTaken >= _uses; }
         int32 getUsesLeft() const { return _uses - _usesTaken; }
 

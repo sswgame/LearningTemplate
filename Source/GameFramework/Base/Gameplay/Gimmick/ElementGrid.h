@@ -1,7 +1,7 @@
 /**
  * @file ElementGrid.h
  * @brief 원소 규칙 테이블(`ElementRuleTable`)을 따르는 결정적 셀 오토마타입니다. 셀마다 재질 하나와 상태 몇 개를 가지며, 바람, 자극 대기, 고정 스텝을 지원합니다.
- * @details 한 스텝은 세 단계로 진행한다. (1) 셀마다 상태 시간을 진행한다(Age 는 +1, Countdown 은 −1). (2) 스텝 규칙을 **그 순간의 상태만 보고** 모은다. (3) 규칙 순서대로 한꺼번에
+ * @details 한 스텝은 세 단계로 진행한다. (1) 셀마다 상태 시간을 진행한다(Age 는 +1, Countdown 은 -1). (2) 스텝 규칙을 **그 순간의 상태만 보고** 모은다. (3) 규칙 순서대로 한꺼번에
  *          적용한다. 그래서 셀을 도는 순서가 결과를 바꾸지 않는다. 같은 조작이면 같은 상태 해시가 나오므로 리플레이와 롤백에 쓸 수 있다.
  *          오브젝트 하나(횃불, 상자)는 1 × 1 격자로 같은 규칙을 쓴다.
  */
@@ -34,7 +34,7 @@ namespace sw
 {
     /**
      * @class ElementGrid
-     * @brief 가로 × 세로 셀로 이루어진 격자입니다. 좌표는 (x, y)이고, 바람도 같은 축의 (−1..1, −1..1) 입니다. 규칙 테이블은 소유하지 않고 참조만 하므로 격자보다 오래 살아 있어야 합니다.
+     * @brief 가로 × 세로 셀로 이루어진 격자입니다. 좌표는 (x, y)이고, 바람도 같은 축의 (-1..1, -1..1) 입니다. 규칙 테이블은 소유하지 않고 참조만 하므로 격자보다 오래 살아 있어야 합니다.
      */
     class SW_GF_API ElementGrid
     {
@@ -49,7 +49,7 @@ namespace sw
         /** @brief 셀의 재질을 정하고 상태를 모두 제거합니다. */
         void  setMaterial( const int2& cell, int32 material );
         int32 getMaterial( const int2& cell ) const;
-        /** @brief 바람 방향입니다. 성분은 −1..1 로 자릅니다. */
+        /** @brief 바람 방향입니다. 성분은 -1..1 로 자릅니다. */
         void        setWind( const int2& wind );
         const int2& getWind() const { return _wind; }
 
@@ -105,6 +105,15 @@ namespace sw
         void  removeStatus( Cell& cell, int32 status ) const;
         void  pushEvent( const hashed_string& name, const int2& cell );
         void  collectSpread( const ElementStepRule& rule, int32 ruleIndex, const int2& position );
+        /** @brief `step` 1 단계입니다. 상태의 시간을 넘깁니다. 셀마다 따로 처리하므로 순서와 상관없습니다. */
+        void advanceStatusTimers();
+        /** @brief `step` 2 단계입니다. 스텝 규칙을 지금 상태만 보고 `_listPending` 에 모읍니다. 규칙 순서가 먼저이고 그다음이 행 우선입니다. */
+        void collectStepChanges();
+        /**
+         * @brief `step` 3 단계입니다. 모은 순서대로 적용합니다.
+         * @details 앞의 것이 바꾼 셀은 뒤의 것이 다시 확인합니다. 이렇게 하지 않으면 두 불이 같은 얼음을 녹이는 일이 생깁니다.
+         */
+        void applyStepChanges();
 
         vector<Cell>              _listCell;
         EventBuffer<ElementEvent> _eventBuffer;

@@ -25,8 +25,8 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief `<Quest>` 속성 중 기본값이 있는 칸의 스키마입니다(`GameDataXML::readFields` — 속성 이름은 칸 이름에서 `_` 를 뗀 것).
-     * @details `id` · `name` · `requires` 는 읽는 코드가 따로 읽는다(이름 · 이름 목록). 적지 않은 칸은 여기 초기값입니다.
+     * @brief `<Quest>` 속성 중 기본값이 있는 필드의 스키마입니다(`GameDataXML::readFields`). 속성 이름은 필드 이름에서 `_` 를 뺀 것입니다.
+     * @details `id`, `name`, `requires` 는 읽는 코드가 따로 읽는다(이름과 이름 목록). 적지 않은 필드는 여기 초기값입니다.
      */
     REFLECT()
     struct QuestRowDef
@@ -42,7 +42,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief `<Stage>` 속성 중 기본값이 있는 칸의 스키마입니다(`id` · `next` 는 이름으로 따로 읽는다). 범위 밖 값은 로드 오류입니다. */
+    /** @brief `<Stage>` 속성 중 기본값이 있는 필드의 스키마입니다(`id` 와 `next` 는 이름으로 따로 읽는다). 범위 밖 값은 로드 오류입니다. */
     REFLECT()
     struct QuestStageRowDef
     {
@@ -61,7 +61,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief `<Objective>` 속성 중 기본값이 있는 칸의 스키마입니다(`kind` · `target` 은 이름으로 따로 읽는다). */
+    /** @brief `<Objective>` 속성 중 기본값이 있는 필드의 스키마입니다(`kind` 와 `target` 은 이름으로 따로 읽는다). */
     REFLECT()
     struct QuestObjectiveRowDef
     {

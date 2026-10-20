@@ -58,7 +58,7 @@ namespace sw
 {
     /**
      * @brief 라운드 시리즈 설정입니다. 시간은 정수 스텝이고 0 은 "없음" 입니다.
-     * @details 범위는 칸의 `PROPERTY( Min )` 이고, 벗어난 값은 `RoundSeries::initialize` 가 오류로 거절한다(`ConfigRangeUtil`). 예전에는 조용히 1 · 0 으로 올렸다(폴백 금지 원칙).
+     * @details 범위는 필드의 `PROPERTY( Min )` 이고, 벗어난 값은 `RoundSeries::initialize` 가 오류로 거절한다(`ConfigRangeUtil`). 값을 조용히 고치지 않는다(폴백 금지 원칙).
      */
     REFLECT()
     struct SW_GF_API RoundSeriesSettings

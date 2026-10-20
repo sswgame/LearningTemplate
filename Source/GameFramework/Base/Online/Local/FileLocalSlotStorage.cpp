@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Online/Local/FileLocalSlotStorage.h"
 
+#include "Core/Container/CompareUtil.h"
 #include "Core/File/FileUtil.h"
 
 #include <algorithm>
@@ -10,12 +11,7 @@ namespace sw
 {
     namespace
     {
-        struct FileLocalSlotStorageInternal
-        {
-            static constexpr const utf8* kTempMarker = ".swls.tmp";
-
-            static bool isSlotInfoBefore( const LocalSlotInfo& left, const LocalSlotInfo& right ) { return left._slot < right._slot; }
-        };
+        constexpr const utf8* kLocalSlotTempMarker = ".swls.tmp";
     } // namespace
 } // namespace sw
 
@@ -28,7 +24,7 @@ namespace sw
         vector<string> listTempPath;
         (void)FileUtil::forEachDirectoryEntry( _rootDirectory, true, [&listTempPath]( const DirectoryEntry& entry )
         {
-            if ( entry._bDirectory == false && entry._path.find( FileLocalSlotStorageInternal::kTempMarker ) != string_view::npos )
+            if ( entry._bDirectory == false && entry._path.find( kLocalSlotTempMarker ) != string_view::npos )
                 listTempPath.emplace_back( entry._path );
             return true;
         } );
@@ -88,7 +84,7 @@ namespace sw
         } );
         if ( bListed == false )
             return LocalStoreResult::IOError;
-        std::sort( outListSlotInfo.begin() + static_cast<ptrdiff_t>( firstIndex ), outListSlotInfo.end(), &FileLocalSlotStorageInternal::isSlotInfoBefore );
+        std::sort( outListSlotInfo.begin() + static_cast<ptrdiff_t>( firstIndex ), outListSlotInfo.end(), Ascending<&LocalSlotInfo::_slot>{} );
         return LocalStoreResult::Ok;
     }
 

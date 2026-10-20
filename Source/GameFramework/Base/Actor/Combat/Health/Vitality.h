@@ -36,11 +36,11 @@ namespace sw
         float32 _poiseMax{ 0.0f };                   ///< 경직 · 다운 게이지(0 = 경직 없음). 0 까지 깎이면 경직 붕괴
         float32 _poiseRegenDelay{ 2.0f };            ///< 마지막 경직 피해 뒤 이만큼 지나야 찬다
         float32 _poiseRegenRate{ 0.0f };             ///< 초당 경직 게이지 회복
-        float32 _poiseBreakDuration{ 1.0f };         ///< 붕괴(비틀거림 · 다운) 시간 — 끝나면 게이지가 가득 찬다
+        float32 _poiseBreakDuration{ 1.0f };         ///< 붕괴(비틀거림, 다운) 시간. 끝나면 게이지가 가득 찬다
         int32   _maxDownCount{ 0 };                  ///< 이 횟수만큼 기절한 뒤 치명타는 바로 죽음(0 = 제한 없음)
         uint8   _bDownedEnabled{ SW_FALSE };         ///< 치명타에 바로 죽지 않고 기절(배틀로얄 기절 · DBD 빈사)
         uint8   _bDamageInterruptsRevive{ SW_TRUE }; ///< 부활 받는 중에 맞으면 부활이 끊긴다
-        uint8   _bKeepReviveProgress{ SW_FALSE };    ///< 끊겨도 진행을 남긴다(DBD 치료) — 아니면 처음부터(배틀로얄)
+        uint8   _bKeepReviveProgress{ SW_FALSE };    ///< 끊겨도 진행을 남긴다(DBD 치료). 아니면 처음부터 다시 한다(배틀로얄)
     };
 } // namespace sw
 
@@ -50,7 +50,7 @@ namespace sw
     enum class VitalityState : uint8
     {
         Alive = 0,
-        Downed, ///< 기절 · 빈사 — 출혈 체력이 줄고 부활을 기다린다
+        Downed, ///< 기절이나 빈사. 출혈 체력이 줄고 부활을 기다린다
         Dead
     };
 
@@ -65,7 +65,7 @@ namespace sw
         ReviveInterrupted, ///< 맞아서 부활이 끊겼다(`stopRevive` 로 그만둔 것은 알리지 않는다)
         Revived,           ///< `_instigatorID` = 살린 쪽
         Died,              ///< `_instigatorID` = 마지막으로 때린 쪽(출혈사면 기절시킨 쪽)
-        PoiseBroken,       ///< 경직 붕괴 — 게임이 비틀거림 · 다운 애니메이션을 튼다
+        PoiseBroken,       ///< 경직 붕괴. 게임이 비틀거림이나 다운 애니메이션을 재생한다
         PoiseRecovered     ///< 붕괴가 끝나 게이지가 가득 찼다
     };
 

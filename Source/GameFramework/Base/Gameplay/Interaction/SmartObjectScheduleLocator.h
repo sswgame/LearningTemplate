@@ -2,10 +2,10 @@
  * @file SmartObjectScheduleLocator.h
  * @brief NPC 하루 일정의 `UseObject` 활동이 씬의 스마트 오브젝트(`SmartObjectComponent`) 슬롯을 시간 창으로 예약하는 어댑터입니다.
  * @details 후보 슬롯은 씬을 훑지 않고 컴포넌트 레지스트리의 스마트 오브젝트 목록에서 모은다.
- *          일정은 계획을 세울 때 자리를 예약하고(`reserve`) 블록이 시작될 때 그 자리로 간다. 스마트 오브젝트는 지금 **점유**(claim)만 하므로, 어댑터가 시간 창 예약 표를
- *          들고 계획에는 예약한 자리를 돌려주며, 블록이 시작될 때 게임이 `claimReserved` 로 실제 점유한다(끝나면 `releaseClaim`).
- *          `objectKind` 는 스마트 오브젝트 정의의 id(`<SmartObject id="Bench">`)와 같은 이름이고, 자리는 슬롯 하나가 한 번에 한 NPC 입니다.
- *          같은 요청 순서에 늘 같은 답이다 — 후보를 (오브젝트 id, 슬롯 번호) 순으로 정렬해 같은 조건이면 먼저 오는 쪽을 고른다(결정성).
+ *          일정은 계획을 세울 때 슬롯을 예약하고(`reserve`) 블록이 시작될 때 그 슬롯으로 간다. 스마트 오브젝트는 지금 **점유**(claim)만 하므로, 어댑터가 시간 창 예약 테이블을
+ *          보관하고 계획에는 예약한 슬롯을 돌려주며, 블록이 시작될 때 게임이 `claimReserved` 로 실제 점유한다(끝나면 `releaseClaim`).
+ *          `objectKind` 는 스마트 오브젝트 정의의 id(`<SmartObject id="Bench">`)와 같은 이름이고, 슬롯은 슬롯 하나가 한 번에 한 NPC 입니다.
+ *          같은 요청 순서에 늘 같은 답이다. 후보를 (오브젝트 id, 슬롯 번호) 순으로 정렬해 같은 조건이면 먼저 오는 쪽을 고른다(결정성).
  *          기반 폴더의 층 규칙상 상호작용(Gameplay)이 일정(Actor)을 읽는 방향이라 이 어댑터는 일정 쪽이 아니라 여기에 있다.
  */
 #pragma once
@@ -27,14 +27,14 @@ namespace sw
 
     /**
      * @class SmartObjectScheduleLocator
-     * @brief 씬의 스마트 오브젝트 슬롯을 일정의 자리로 나눠 주는 제공자입니다. 게임 스레드에서만 부릅니다.
+     * @brief 씬의 스마트 오브젝트 슬롯을 일정의 슬롯으로 나눠 주는 제공자입니다. 게임 스레드에서만 부릅니다.
      */
     class SW_GF_API SmartObjectScheduleLocator final : public IScheduleActivityLocator
     {
     public:
         SmartObjectScheduleLocator();
 
-        /** @brief 자리를 찾을 씬의 오브젝트 매니저입니다(소유하지 않음). nullptr 이면 늘 자리가 없습니다. */
+        /** @brief 슬롯을 찾을 씬의 오브젝트 매니저입니다(소유하지 않음). nullptr 이면 늘 슬롯이 없습니다. */
         void initialize( const GameObjectManager* pManager );
         /** @brief 예약을 모두 지웁니다(점유는 건드리지 않습니다). */
         void clear();
@@ -55,7 +55,7 @@ namespace sw
 
         /** @brief 예약을 저장 상태로 채웁니다(`ScheduleSystem` 은 기본 제공자의 예약만 저장하므로 게임이 이것을 자기 세이브에 함께 싣는다). */
         void fillState( vector<ScheduleReservationSaveState>& outListReservation ) const;
-        /** @brief 저장 상태에서 예약을 되살립니다. 사라진 오브젝트의 예약은 버립니다(다시 세운 계획이 새 자리를 고른다). */
+        /** @brief 저장 상태에서 예약을 복원합니다. 사라진 오브젝트의 예약은 버립니다(다시 세운 계획이 새 슬롯을 고른다). */
         void   restoreState( const vector<ScheduleReservationSaveState>& listReservation );
         size_t getReservationCount() const { return _listReservation.size(); }
 
@@ -80,7 +80,7 @@ namespace sw
             int32  _slot{ 0 };
         };
 
-        /** @brief 예약의 슬롯 자리(월드 위치)를 구합니다. 오브젝트가 사라졌으면 false 입니다. */
+        /** @brief 예약의 슬롯 슬롯(월드 위치)를 구합니다. 오브젝트가 사라졌으면 false 입니다. */
         bool computeReservationPosition( const Reservation& reservation, float3& outPosition ) const;
         /** @brief 그 슬롯에 겹치는 시간 창의 예약이 있는지 셉니다. */
         int32 countOverlapping( uint64 objectID, int32 slot, int32 day, int32 startMinute, int32 endMinute ) const;

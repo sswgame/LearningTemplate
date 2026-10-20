@@ -18,7 +18,7 @@
  *     </Interactions>
  * @endcode
  *          단계가 없으면 `<Interaction>` 의 mode, prompt, duration, presses, decay 가 한 단계가 된다. 각도는 도 단위로 적고, 정의에는 라디안으로 저장한다.
- *          `pairedAnimation` 은 단계가 시작될 때 고를 페어드 애니메이션 세트(`;` 로 나눈 경로, 자리에 맞는 첫 세트)이고, 적으면 두 역할 이름이 필수이며
+ *          `pairedAnimation` 은 단계가 시작될 때 고를 페어드 애니메이션 세트(`;` 로 나눈 경로, 배치에 맞는 첫 세트)이고, 적으면 두 역할 이름이 필수이며
  *          `montage` 와 함께 쓰지 않는다(둘 다 하는 쪽의 애니메이터를 재생한다).
  *          알 수 없는 속성, 원소, 열거자 이름은 경고를 남기고 읽기에 실패한다(`ResourceDataSchemaTest`).
  */
@@ -75,7 +75,7 @@ namespace sw
     {
         hashed_string        _prompt{};                  ///< 안내 문구 키(지역화 테이블의 키)
         hashed_string        _montage{};                 ///< 이 단계가 시작될 때 하는 쪽의 애니메이터(`SkeletalAnimatorComponent`)가 한 번 재생하는 상태 · 클립 이름. 비면 재생하지 않는다
-        vector<string>       _listPairedAnimationPath{}; ///< 이 단계가 시작될 때 자리에 맞는 첫 세트로 시작할 페어드 애니메이션(`*.pairedanim.xml`). 비면 시작하지 않는다
+        vector<string>       _listPairedAnimationPath{}; ///< 이 단계가 시작될 때 배치에 맞는 첫 세트로 시작할 페어드 애니메이션(`*.pairedanim.xml`). 비면 시작하지 않는다
         hashed_string        _interactorRole{};          ///< 페어드 애니메이션에서 하는 쪽의 애니메이터가 맡는 역할
         hashed_string        _interactableRole{};        ///< 페어드 애니메이션에서 대상 오브젝트의 애니메이터가 맡는 역할
         float32              _duration{ 1.0f };          ///< Hold 에서 쓴다. 혼자 차오르는 데 걸리는 초
@@ -110,7 +110,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 스마트 오브젝트의 슬롯 하나입니다(벤치 자리, 엄폐 지점, 작업대 앞). */
+    /** @brief 스마트 오브젝트의 슬롯 하나입니다(벤치 좌석, 엄폐 지점, 작업대 앞). */
     struct SmartObjectSlotDef
     {
         hashed_string _id{};

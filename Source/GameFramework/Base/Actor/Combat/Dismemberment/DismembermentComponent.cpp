@@ -2,6 +2,8 @@
 
 #include "GameFramework/Base/Actor/Combat/Dismemberment/DismembermentComponent.h"
 
+#include "Core/Common/HashUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Math/MathUtil.h"
 
@@ -40,17 +42,8 @@ namespace sw
                 int64 _z{ 0 };
 
                 bool operator==( const WeldKey& other ) const { return _x == other._x && _y == other._y && _z == other._z; }
-            };
-
-            struct WeldKeyHash
-            {
-                size_t operator()( const WeldKey& key ) const
-                {
-                    uint64 hash = static_cast<uint64>( key._x ) * 73856093ull;
-                    hash ^= static_cast<uint64>( key._y ) * 19349663ull;
-                    hash ^= static_cast<uint64>( key._z ) * 83492791ull;
-                    return static_cast<size_t>( hash );
-                }
+                /** @brief 키의 해시입니다. `unordered_map` 의 기본 해시 `DefaultHash` 가 부릅니다. */
+                [[nodiscard]] uint64 computeHash() const { return HashUtil::makeHash( _x, _y, _z ); }
             };
 
             static WeldKey makeKey( const float3& position )
@@ -89,7 +82,7 @@ namespace sw
             static void weld( const vector<RHIVertex>& listVertex, const vector<MeshSkinVertex>& listSkin, AppearanceGeometry& outGeometry )
             {
                 outGeometry.clear();
-                unordered_map<WeldKey, uint32, WeldKeyHash> mapVertex;
+                unordered_map<WeldKey, uint32> mapVertex;
                 outGeometry._listIndex.reserve( listVertex.size() );
                 for ( size_t vertexIndex = 0; vertexIndex < listVertex.size(); ++vertexIndex )
                 {
@@ -159,6 +152,87 @@ namespace sw
                 inoutVertex._arrNormal[0]   = skinnedNormal._x;
                 inoutVertex._arrNormal[1]   = skinnedNormal._y;
                 inoutVertex._arrNormal[2]   = skinnedNormal._z;
+            }
+
+            /**
+             * @brief 1 단계입니다. 위치로 이은 형상과 정점마다의 영역을 구하고, @p regionIndex 영역을 잘라 삼각형마다 잘렸는지와 두 캡을 냅니다.
+             * @details 영역 매기기는 스켈레톤의 레퍼런스 포즈로 한다.
+             */
+            [[nodiscard]] static bool computeSeveredTriangles( const Mesh& mesh, const Skeleton& skeleton, const FitTables& regionTable, int32 regionIndex,
+                                                               DismembermentResult& outResult )
+            {
+                AppearanceGeometry welded;
+                weld( mesh.getVertices(), mesh.getSkinVertices(), welded );
+                CharacterBoneArray bones;
+                for ( uint32 boneIndex = 0; boneIndex < skeleton.getBoneCount(); ++boneIndex )
+                {
+                    (void)bones.addBone( skeleton.getBone( boneIndex )._name, skeleton.getBone( boneIndex )._parentIndex, skeleton.getBone( boneIndex )._referencePose.toMatrix() );
+                }
+                bones.computeModelTransforms();
+                vector<uint16> listVertexRegion;
+                regionTable.assignRegions( welded, bones, listVertexRegion );
+                const uint16 severedRegion = static_cast<uint16>( regionIndex );
+                return DismembermentUtil::severRegions( welded, vector_reference<const uint16>{ listVertexRegion.data(), listVertexRegion.size() },
+                                                        vector_reference<const uint16>{ &severedRegion, 1 }, outResult );
+            }
+
+            /** @brief 원래 정점(이음매 그대로)을 삼각형 단위로 남은 몸과 조각으로 나누고, 각각의 캡을 스킨 정점으로 붙입니다. */
+            static void splitByTriangle( const Mesh& mesh, const DismembermentResult& result, vector<RHIVertex>& outListKeptVertex, vector<MeshSkinVertex>& outListKeptSkin,
+                                         vector<RHIVertex>& outListPieceVertex, vector<MeshSkinVertex>& outListPieceSkin )
+            {
+                const vector<RHIVertex>&      listVertex    = mesh.getVertices();
+                const vector<MeshSkinVertex>& listSkin      = mesh.getSkinVertices();
+                const uint32                  triangleCount = static_cast<uint32>( listVertex.size() / 3 );
+                for ( uint32 triangle = 0; triangle < triangleCount; ++triangle )
+                {
+                    const bool              bSevered       = result._listTriangleSevered[triangle] == SW_TRUE;
+                    vector<RHIVertex>&      listTarget     = bSevered ? outListPieceVertex : outListKeptVertex;
+                    vector<MeshSkinVertex>& listTargetSkin = bSevered ? outListPieceSkin : outListKeptSkin;
+                    for ( uint32 corner = 0; corner < 3; ++corner )
+                    {
+                        listTarget.push_back( listVertex[triangle * 3 + corner] );
+                        listTargetSkin.push_back( listSkin[triangle * 3 + corner] );
+                    }
+                }
+                appendUnindexed( result._remainingCap, outListKeptVertex, &outListKeptSkin );
+                appendUnindexed( result._severedCap, outListPieceVertex, &outListPieceSkin );
+            }
+
+            /**
+             * @brief 조각 정점을 현재 포즈로 스키닝해 월드로 옮기고, 무게중심 기준 좌표로 바꿉니다. 무게중심을 돌려줍니다.
+             * @details 볼록 껍질 점은 고르게 솎아 `kMaxHullPoint` 개 안팎으로 @p outHull 에 담는다.
+             */
+            static float3 poseAndCenterPiece( vector<RHIVertex>& inoutListPieceVertex, const vector<MeshSkinVertex>& listPieceSkin, const vector<float4x4>& listPalette,
+                                              const float4x4& unitWorld, PhysicsShapeDesc3D& outHull )
+            {
+                float3 center{};
+                for ( size_t vertexIndex = 0; vertexIndex < inoutListPieceVertex.size(); ++vertexIndex )
+                {
+                    skinVertex( inoutListPieceVertex[vertexIndex], listPieceSkin[vertexIndex], listPalette );
+                    RHIVertex&   vertex    = inoutListPieceVertex[vertexIndex];
+                    const float3 world     = float3::transform( float3{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] }, unitWorld );
+                    const float3 normal    = float3::transformVector( float3{ vertex._arrNormal[0], vertex._arrNormal[1], vertex._arrNormal[2] }, unitWorld ).normalize();
+                    vertex._arrPosition[0] = world._x;
+                    vertex._arrPosition[1] = world._y;
+                    vertex._arrPosition[2] = world._z;
+                    vertex._arrNormal[0]   = normal._x;
+                    vertex._arrNormal[1]   = normal._y;
+                    vertex._arrNormal[2]   = normal._z;
+                    center += world;
+                }
+                center *= 1.0f / static_cast<float32>( MathUtil::max<size_t>( inoutListPieceVertex.size(), 1 ) );
+                outHull._type       = PhysicsShapeType3D::ConvexHull;
+                const size_t stride = MathUtil::max<size_t>( 1, inoutListPieceVertex.size() / kMaxHullPoint );
+                for ( size_t vertexIndex = 0; vertexIndex < inoutListPieceVertex.size(); ++vertexIndex )
+                {
+                    RHIVertex& vertex = inoutListPieceVertex[vertexIndex];
+                    vertex._arrPosition[0] -= center._x;
+                    vertex._arrPosition[1] -= center._y;
+                    vertex._arrPosition[2] -= center._z;
+                    if ( vertexIndex % stride == 0 )
+                        outHull._listPoint.push_back( float3{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] } );
+                }
+                return center;
             }
         };
     } // namespace
@@ -270,13 +344,14 @@ namespace sw
         if ( bInvalidBodyRegion )
             return;
         const hashed_string region = findRegionOfBone( pAsset->_listBody[static_cast<size_t>( bodyIndex )]._bone );
-        if ( region.empty() || std::find( _listSeverableRegion.begin(), _listSeverableRegion.end(), region ) == _listSeverableRegion.end() )
+        if ( region.empty() || VectorUtil::contains( _listSeverableRegion, region ) == false )
             return;
         (void)severRegion( region, hit._direction * hit._impulse );
     }
 
     bool DismembermentComponent::severRegion( const hashed_string& region, const float3& impulse )
     {
+        using Internal                      = DismembermentComponentInternal;
         GameObject*            pOwner       = getOwner();
         GameObjectManager*     pManager     = pOwner != nullptr ? pOwner->getManager() : nullptr;
         SkeletalMeshComponent* pUnit        = pOwner != nullptr ? pOwner->getComponent<SkeletalMeshComponent>() : nullptr;
@@ -284,86 +359,30 @@ namespace sw
         const bool             bCannotSever = pManager == nullptr || pUnit == nullptr || pUnit->getMesh() == nullptr || pUnit->getMesh()->hasSkin() == false || regionIndex < 0;
         if ( bCannotSever )
             return false;
-        if ( std::find( _listSeveredRegion.begin(), _listSeveredRegion.end(), region ) != _listSeveredRegion.end() )
+        if ( VectorUtil::contains( _listSeveredRegion, region ) )
             return false;
 
-        // 1) 위상: 위치로 이은 형상과 정점마다 영역을 구한다.
-        const shared_ptr<Mesh>&       mesh       = pUnit->getMesh();
-        const vector<RHIVertex>&      listVertex = mesh->getVertices();
-        const vector<MeshSkinVertex>& listSkin   = mesh->getSkinVertices();
-        AppearanceGeometry            welded;
-        DismembermentComponentInternal::weld( listVertex, listSkin, welded );
-        const Skeleton&    skeleton = pUnit->getSkeleton();
-        CharacterBoneArray bones;
-        for ( uint32 boneIndex = 0; boneIndex < skeleton.getBoneCount(); ++boneIndex )
-        {
-            (void)bones.addBone( skeleton.getBone( boneIndex )._name, skeleton.getBone( boneIndex )._parentIndex, skeleton.getBone( boneIndex )._referencePose.toMatrix() );
-        }
-        bones.computeModelTransforms();
-        vector<uint16> listVertexRegion;
-        _regionTable.assignRegions( welded, bones, listVertexRegion );
-        const uint16        severedRegion = static_cast<uint16>( regionIndex );
-        DismembermentResult result;
-        if ( DismembermentUtil::severRegions( welded, vector_reference<const uint16>{ listVertexRegion.data(), listVertexRegion.size() },
-                                              vector_reference<const uint16>{ &severedRegion, 1 }, result ) == false )
+        // 1) 위상: 위치로 이은 형상과 정점마다 영역을 구해 자른다.
+        const shared_ptr<Mesh>& mesh = pUnit->getMesh();
+        DismembermentResult     result;
+        if ( Internal::computeSeveredTriangles( *mesh, pUnit->getSkeleton(), _regionTable, regionIndex, result ) == false )
             return false;
 
-        // 2) 남은 몸: 원래 정점(이음매 그대로)에서 잘린 삼각형을 빼고, 남은 몸 캡을 스킨 정점으로 붙인다.
+        // 2) 남은 몸: 잘린 삼각형을 빼고 남은 몸 캡을 붙인 메시로 바꾼다.
         vector<RHIVertex>      listKeptVertex;
         vector<MeshSkinVertex> listKeptSkin;
         vector<RHIVertex>      listPieceVertex;
         vector<MeshSkinVertex> listPieceSkin;
-        const uint32           triangleCount = static_cast<uint32>( listVertex.size() / 3 );
-        for ( uint32 triangle = 0; triangle < triangleCount; ++triangle )
-        {
-            const bool              bSevered       = result._listTriangleSevered[triangle] == SW_TRUE;
-            vector<RHIVertex>&      listTarget     = bSevered ? listPieceVertex : listKeptVertex;
-            vector<MeshSkinVertex>& listTargetSkin = bSevered ? listPieceSkin : listKeptSkin;
-            for ( uint32 corner = 0; corner < 3; ++corner )
-            {
-                listTarget.push_back( listVertex[triangle * 3 + corner] );
-                listTargetSkin.push_back( listSkin[triangle * 3 + corner] );
-            }
-        }
-        DismembermentComponentInternal::appendUnindexed( result._remainingCap, listKeptVertex, &listKeptSkin );
-        DismembermentComponentInternal::appendUnindexed( result._severedCap, listPieceVertex, &listPieceSkin );
+        Internal::splitByTriangle( *mesh, result, listKeptVertex, listKeptSkin, listPieceVertex, listPieceSkin );
         shared_ptr<Mesh> kept = Mesh::create();
         kept->setVertices( std::move( listKeptVertex ) );
         kept->setSkin( std::move( listKeptSkin ), mesh->getSkinBoneCount() );
         pUnit->setMesh( std::move( kept ) );
 
         // 3) 떨어진 조각: 현재 포즈로 스키닝해 정적 메시로 만들고, 그 정점의 볼록 껍질로 강체를 만든다.
-        const vector<float4x4>& listPalette = pUnit->getSkinPalette();
-        const float4x4          unitWorld   = pUnit->getWorldMatrix();
-        float3                  center{};
-        for ( size_t vertexIndex = 0; vertexIndex < listPieceVertex.size(); ++vertexIndex )
-        {
-            DismembermentComponentInternal::skinVertex( listPieceVertex[vertexIndex], listPieceSkin[vertexIndex], listPalette );
-            RHIVertex&   vertex    = listPieceVertex[vertexIndex];
-            const float3 world     = float3::transform( float3{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] }, unitWorld );
-            const float3 normal    = float3::transformVector( float3{ vertex._arrNormal[0], vertex._arrNormal[1], vertex._arrNormal[2] }, unitWorld ).normalize();
-            vertex._arrPosition[0] = world._x;
-            vertex._arrPosition[1] = world._y;
-            vertex._arrPosition[2] = world._z;
-            vertex._arrNormal[0]   = normal._x;
-            vertex._arrNormal[1]   = normal._y;
-            vertex._arrNormal[2]   = normal._z;
-            center += world;
-        }
-        center *= 1.0f / static_cast<float32>( MathUtil::max<size_t>( listPieceVertex.size(), 1 ) );
         PhysicsShapeDesc3D hull;
-        hull._type          = PhysicsShapeType3D::ConvexHull;
-        const size_t stride = MathUtil::max<size_t>( 1, listPieceVertex.size() / DismembermentComponentInternal::kMaxHullPoint );
-        for ( size_t vertexIndex = 0; vertexIndex < listPieceVertex.size(); ++vertexIndex )
-        {
-            RHIVertex& vertex = listPieceVertex[vertexIndex];
-            vertex._arrPosition[0] -= center._x;
-            vertex._arrPosition[1] -= center._y;
-            vertex._arrPosition[2] -= center._z;
-            if ( vertexIndex % stride == 0 )
-                hull._listPoint.push_back( float3{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] } );
-        }
-        shared_ptr<Mesh> pieceMesh = Mesh::create();
+        const float3       center    = Internal::poseAndCenterPiece( listPieceVertex, listPieceSkin, pUnit->getSkinPalette(), pUnit->getWorldMatrix(), hull );
+        shared_ptr<Mesh>   pieceMesh = Mesh::create();
         pieceMesh->setVertices( std::move( listPieceVertex ) );
 
         GameObject*         pPiece = pManager->createGameObject( hashed_string( string( pOwner->getName().c_str() ) + "_" + region.c_str() ) );
