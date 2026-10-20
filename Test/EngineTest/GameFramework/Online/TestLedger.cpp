@@ -3,6 +3,7 @@
 
 #include "GameFramework/Base/Online/Ledger/Ledger.h"
 #include "GameFramework/Base/Online/Ledger/LedgerAudit.h"
+#include "GameFramework/Base/Online/Ledger/LedgerItemInstance.h"
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 
@@ -111,6 +112,61 @@ SW_TEST_CASE( LedgerTest, TransferMovesBothSidesAndKeepsTheSum )
     SW_EXPECT_TRUE( report.isBalanced() );
     SW_ASSERT_TRUE( report.findAsset( "cur.gold" ) != nullptr );
     SW_EXPECT_EQUAL( report.findAsset( "cur.gold" )->_held, int64( 100 ) );
+}
+
+SW_TEST_CASE( LedgerTest, InstanceItemIsOneAssetWhoseStateFollowsTheOwner )
+{
+    MemoryServiceDatabase database;
+    string                assetID;
+    SW_EXPECT_FALSE( LedgerItemInstance::makeAssetID( "Sword", 7, assetID ) ); // 정의 이름 규칙
+    SW_EXPECT_FALSE( LedgerItemInstance::makeAssetID( "sword", 0, assetID ) );
+    SW_ASSERT_TRUE( LedgerItemInstance::makeAssetID( "iron_sword", 7, assetID ) );
+    SW_EXPECT_TRUE( LedgerItemInstance::isInstanceAssetID( assetID ) );
+    SW_EXPECT_FALSE( LedgerItemInstance::isInstanceAssetID( "item.iron_sword" ) );
+    SW_EXPECT_FALSE( LedgerItemInstance::isInstanceAssetID( "cur.gold" ) );
+
+    LedgerItemState state;
+    state._assetID       = assetID;
+    state._durability    = 80;
+    state._maxDurability = 100;
+    state._enhanceLevel  = 3;
+    ServiceTransaction create;
+    SW_ASSERT_TRUE( LedgerItemInstance::stageCreate( database, LedgerHolder::makeAccount( kLedgerAlice ), state, "test/item1", "test.craft", 1000, create ) == LedgerResult::Ok );
+    SW_ASSERT_TRUE( database.commit( create ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( readAmount( database, kLedgerAlice, assetID.c_str() ), int64( 1 ) );
+    ServiceTransaction again; // 같은 id 로 다시 만들 수 없다
+    SW_EXPECT_TRUE( LedgerItemInstance::stageCreate( database, LedgerHolder::makeAccount( kLedgerBob ), state, "test/item1b", "test.craft", 1000, again ) ==
+                    LedgerResult::Invalid );
+
+    LedgerTransferOutcome outcome; // 거래와 같다 — 개수 1 을 옮기면 상태는 그대로 새 주인의 것이다
+    SW_ASSERT_TRUE( Ledger::executeTransfer( database,
+                                             makeRequest( "give1", "test.give",
+                                                          { makePosting( LedgerHolder::makeAccount( kLedgerAlice ), LedgerHolder::makeAccount( kLedgerBob ), assetID.c_str(), 1 ) } ),
+                                             outcome ) == LedgerResult::Ok );
+    SW_EXPECT_EQUAL( readAmount( database, kLedgerBob, assetID.c_str() ), int64( 1 ) );
+    SW_EXPECT_TRUE( Ledger::executeTransfer( database,
+                                             makeRequest( "give2", "test.give",
+                                                          { makePosting( LedgerHolder::makeAccount( kLedgerBob ), LedgerHolder::makeAccount( kLedgerAlice ), assetID.c_str(), 2 ) } ),
+                                             outcome ) == LedgerResult::Invalid ); // 인스턴스는 하나씩 옮긴다
+
+    LedgerItemState read;
+    uint64          version = 0;
+    SW_ASSERT_TRUE( LedgerItemInstance::readState( database, assetID, read, version ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( read._enhanceLevel, 3 );
+    read._enhanceLevel = 4; // 강화
+    ServiceTransaction enhance;
+    SW_ASSERT_TRUE( LedgerItemInstance::stageWriteState( enhance, read, version ) );
+    SW_ASSERT_TRUE( database.commit( enhance ) == ServiceStoreResult::Ok );
+    read._durability = 500; // 최대를 넘는 내구도는 쓰지 않는다
+    ServiceTransaction broken;
+    SW_EXPECT_FALSE( LedgerItemInstance::stageWriteState( broken, read, version ) );
+
+    ServiceTransaction destroy;
+    SW_ASSERT_TRUE( LedgerItemInstance::stageDestroy( database, LedgerHolder::makeAccount( kLedgerBob ), assetID, "test/item1x", "test.salvage", 2000, destroy ) ==
+                    LedgerResult::Ok );
+    SW_ASSERT_TRUE( database.commit( destroy ) == ServiceStoreResult::Ok );
+    SW_EXPECT_TRUE( LedgerItemInstance::readState( database, assetID, read, version ) == ServiceStoreResult::NotFound );
+    SW_EXPECT_TRUE( isBalanced( database ) );
 }
 
 SW_TEST_CASE( LedgerTest, NegativeBalanceIsRefusedAndNothingIsWritten )

@@ -6,6 +6,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Network/BitStream.h"
 
+#include "GameFramework/Base/Online/Ledger/LedgerItemInstance.h"
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 
 #include <algorithm>
@@ -155,7 +156,8 @@ namespace sw
                     const LedgerPosting& posting         = request._listPosting[static_cast<size_t>( postingIndex )];
                     const bool           bHolderOk       = posting._from.isValid() && posting._to.isValid() && posting._from != posting._to;
                     const bool           bSystemOnly     = posting._from.isSystem() && posting._to.isSystem();
-                    const bool           bAmountOk       = 1 <= posting._amount && posting._amount <= LedgerConstant::kMaxAmount;
+                    const bool           bInstance       = LedgerItemInstance::isInstanceAssetID( posting._assetID );
+                    const bool           bAmountOk       = bInstance ? posting._amount == 1 : 1 <= posting._amount && posting._amount <= LedgerConstant::kMaxAmount; // 인스턴스 아이템은 하나씩 옮긴다
                     const bool           bInvalidPosting = bHolderOk == false || bSystemOnly || bAmountOk == false || LedgerUtil::isValidAssetID( posting._assetID ) == false;
                     if ( bInvalidPosting )
                     {
@@ -208,6 +210,8 @@ namespace sw
 
             static int64 computeCap( const LedgerTransferRequest& request, const LedgerHolder& holder, string_view assetID )
             {
+                if ( LedgerItemInstance::isInstanceAssetID( assetID ) )
+                    return 1; // 인스턴스 아이템은 세상에 하나다. 어느 보유자도 둘을 가질 수 없다(같은 id 로 두 번 만들 수 없다)
                 if ( holder._kind != LedgerHolderKind::Account || request._pPolicy == nullptr )
                     return LedgerConstant::kMaxBalance;
                 const int64 policyCap = request._pPolicy->getBalanceCap( assetID );
