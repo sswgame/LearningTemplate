@@ -75,6 +75,7 @@ namespace sw
         , _plainWriter{}
         , _credentials{}
         , _settings{}
+        , _sentKindTally{}
         , _pTransport{ nullptr }
         , _rejectedPacketCount{ 0 }
         , _authenticationFailureCount{ 0 }
@@ -999,8 +1000,17 @@ namespace sw
 
     bool NetHost::sendMessageLocked( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size )
     {
-        NetHostSlot* pSlot = _slotTable.findConnected( connectionID );
-        return pSlot != nullptr && pSlot->_connection.sendMessage( channel, pData, size );
+        NetHostSlot* pSlot   = _slotTable.findConnected( connectionID );
+        const bool   bQueued = pSlot != nullptr && pSlot->_connection.sendMessage( channel, pData, size );
+        if ( bQueued )
+            _sentKindTally.add( pData, size );
+        return bQueued;
+    }
+
+    void NetHost::copySentKindTally( NetMessageKindTallyTable& outTable ) const
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        outTable = _sentKindTally;
     }
 
     int32 NetHost::broadcast( NetChannelType channel, const uint8* pData, int32 size, int32 exceptID )

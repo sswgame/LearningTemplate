@@ -129,11 +129,7 @@ namespace sw
         const SceneComponent*            pRoot   = pAnchor != nullptr ? PairedAnimationSessionInternal::findRoot( *pAnchor ) : nullptr;
         if ( pRoot == nullptr )
             return false;
-        // 오프셋은 앵커 요로 돌린다(+Z 가 앞). 같은 축 · 각 규칙을 `MotionWarpingComponent` 가 목표 요로 쓴다.
-        const float32    anchorYaw = YawUtil::fromWorld( pRoot->getWorldMatrix() );
-        const quaternion turn      = quaternion::makeFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, anchorYaw );
-        outPosition                = pRoot->getWorldPosition() + float3::transform( roleDef._offset, turn );
-        outYaw                     = MathUtil::wrapAngle( anchorYaw + roleDef._yawRadians );
+        PairedAnimationDef::computeAlignTarget( pRoot->getWorldPosition(), YawUtil::fromWorld( pRoot->getWorldMatrix() ), roleDef, outPosition, outYaw );
         return true;
     }
 

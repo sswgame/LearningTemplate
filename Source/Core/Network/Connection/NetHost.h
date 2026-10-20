@@ -219,6 +219,11 @@ namespace sw
         }
         /** @brief 연결된 모두에게 보냅니다. @p exceptID 는 제외합니다. 반환값은 보낸 수입니다. */
         int32 broadcast( NetChannelType channel, const uint8* pData, int32 size, int32 exceptID = -1 );
+        /**
+         * @brief 지금까지 보내기 큐에 넣은 메시지의 종류별 셈을 복사합니다(`sendMessage` · `broadcast` 가 연결마다 센다 — 받은 쪽 셈은 `NetMessageRouter::getKindTally`).
+         * @details 큐에 넣은 것을 센다. 대역폭에 막혀 늦게 나가거나 다시 보낸 바이트는 연결 통계(`NetConnectionStats`)의 몫이다. 잠금을 잡고 표 하나(4 KiB)를 복사한다 — `net.stats` 처럼 느리게 묻는 쪽이 쓴다.
+         */
+        void copySentKindTally( NetMessageKindTallyTable& outTable ) const;
         /** @brief 받은 메시지 하나를 꺼냅니다. 연결 순서대로, 채널은 신뢰 순서, 신뢰 순서 없음, 순서만, 비신뢰 순(채널 값 순)으로 확인합니다. */
         [[nodiscard]] bool receiveMessage( int32& outConnectionID, NetChannelType& outChannel, vector<uint8>& outBuffer );
         void               disconnect( int32 connectionID );
@@ -380,6 +385,7 @@ namespace sw
         BitWriter                     _plainWriter;    ///< 암호화에서 NetConnection 이 쓴 평문 패킷.
         NetConnectCredentials         _credentials;    ///< 클라이언트 전용. 지금 연결에 제시하는 자격.
         NetHostConfig                 _settings;
+        NetMessageKindTallyTable      _sentKindTally; ///< `sendMessageLocked` 가 큐에 넣은 메시지마다 더한다.
         INetTransport*                _pTransport;
         uint64                        _rejectedPacketCount;
         uint64                        _authenticationFailureCount;

@@ -682,8 +682,8 @@ namespace
         SW_ASSERT_TRUE_MSG( serverA._bOk, "the reference server could not be driven through the debug channel" );
         vector<StateHashSample> listA;
         vector<StateHashSample> listB;
-        StateHashHistory::parseReport( serverA._hashes, listA );
-        StateHashHistory::parseReport( serverB._hashes, listB );
+        SW_ASSERT_TRUE_MSG( StateHashHistory::parseReport( serverA._hashes, listA ), "the reference server's state.hashes answer is not a hash report" );
+        SW_ASSERT_TRUE_MSG( StateHashHistory::parseReport( serverB._hashes, listB ), "the perturbed server's state.hashes answer is not a hash report" );
         SW_ASSERT_TRUE_MSG( listA.empty() == false && listA.back()._tick >= serverB._endTick, "the reference server did not record up to the perturbed server's last tick" );
         uint64 firstDivergentTick = 0;
         SW_ASSERT_TRUE_MSG( StateHashHistory::findFirstDivergence( listA, listB, firstDivergentTick ), "the two servers never diverged" );

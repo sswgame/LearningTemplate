@@ -3,7 +3,7 @@
 #include "Core/Network/Message/NetStatsReport.h"
 
 #include "Core/Container/StringUtil.h"
-#include "Core/Network/Message/NetMessage.h"
+#include "Core/Network/NetTypes.h"
 
 #include <algorithm>
 
@@ -44,7 +44,7 @@ namespace sw
                 const bool bValid = StringUtil::parseInt( text.substr( 0, firstColon ), kind ) &&
                                     StringUtil::parseUint64( text.substr( firstColon + 1, secondColon - firstColon - 1 ), outEntry._messageCount ) &&
                                     StringUtil::parseUint64( text.substr( secondColon + 1 ), outEntry._byteCount );
-                const bool bInvalidEntry = bValid == false || kind < 0 || NetMessageRouter::kKindCount <= kind;
+                const bool bInvalidEntry = bValid == false || kind < 0 || NetMessageKindTallyTable::kKindCount <= kind;
                 if ( bInvalidEntry )
                     return false;
                 outEntry._kind = static_cast<uint8>( kind );
@@ -64,25 +64,47 @@ namespace sw
                 } );
                 return bValid;
             }
+
+            /** @brief 셈 표에서 바이트가 큰 종류 `kMaxKindEntry` 개로 목록을 채웁니다. 한 번도 세지 않은 종류는 뺍니다. */
+            static void populateEntries( const NetMessageKindTallyTable& tally, vector<NetStatsKindEntry>& outListEntry )
+            {
+                outListEntry.clear();
+                for ( int32 kind = 0; kind < NetMessageKindTallyTable::kKindCount; ++kind )
+                {
+                    const NetMessageKindTally& entry = tally.get( static_cast<uint8>( kind ) );
+                    if ( entry._messageCount == 0 )
+                        continue;
+                    outListEntry.push_back( NetStatsKindEntry{ entry._messageCount, entry._byteCount, static_cast<uint8>( kind ) } );
+                }
+                std::sort( outListEntry.begin(), outListEntry.end(), &isLargerKind );
+                if ( outListEntry.size() > static_cast<size_t>( NetStatsReport::kMaxKindEntry ) )
+                    outListEntry.resize( static_cast<size_t>( NetStatsReport::kMaxKindEntry ) );
+            }
+
+            /** @brief ` <key>=<종류>:<수>:<바이트>,…` 를 붙입니다. */
+            static void appendKinds( string& inoutText, const utf8* pKey, const vector<NetStatsKindEntry>& listEntry )
+            {
+                inoutText += ' ';
+                inoutText += pKey;
+                inoutText += '=';
+                for ( size_t index = 0; index < listEntry.size(); ++index )
+                {
+                    const NetStatsKindEntry& entry = listEntry[index];
+                    if ( index > 0 )
+                        inoutText += ',';
+                    inoutText += to_string( static_cast<int32>( entry._kind ) ) + ":" + to_string( entry._messageCount ) + ":" + to_string( entry._byteCount );
+                }
+            }
         };
     } // namespace
 } // namespace sw
 
 namespace sw
 {
-    void NetStatsReport::populateKinds( const NetMessageRouter& router )
+    void NetStatsReport::populateKinds( const NetMessageKindTallyTable& receivedTally, const NetMessageKindTallyTable& sentTally )
     {
-        _listKindEntry.clear();
-        for ( int32 kind = 0; kind < NetMessageRouter::kKindCount; ++kind )
-        {
-            const NetMessageKindTally& tally = router.getKindTally( static_cast<uint8>( kind ) );
-            if ( tally._messageCount == 0 )
-                continue;
-            _listKindEntry.push_back( NetStatsKindEntry{ tally._messageCount, tally._byteCount, static_cast<uint8>( kind ) } );
-        }
-        std::sort( _listKindEntry.begin(), _listKindEntry.end(), &NetStatsReportInternal::isLargerKind );
-        if ( _listKindEntry.size() > static_cast<size_t>( kMaxKindEntry ) )
-            _listKindEntry.resize( static_cast<size_t>( kMaxKindEntry ) );
+        NetStatsReportInternal::populateEntries( receivedTally, _listKindEntry );
+        NetStatsReportInternal::populateEntries( sentTally, _listSentKindEntry );
     }
 
     string NetStatsReport::makeLine() const
@@ -96,14 +118,8 @@ namespace sw
         NetStatsReportInternal::appendFloat( text, "receivedBps", _receivedBytesPerSecond );
         NetStatsReportInternal::appendFloat( text, "rttMs", _rttMilliseconds );
         NetStatsReportInternal::appendFloat( text, "lossPercent", _lossPercent );
-        text += " kinds=";
-        for ( size_t index = 0; index < _listKindEntry.size(); ++index )
-        {
-            const NetStatsKindEntry& entry = _listKindEntry[index];
-            if ( index > 0 )
-                text += ',';
-            text += to_string( static_cast<int32>( entry._kind ) ) + ":" + to_string( entry._messageCount ) + ":" + to_string( entry._byteCount );
-        }
+        NetStatsReportInternal::appendKinds( text, "kinds", _listKindEntry );
+        NetStatsReportInternal::appendKinds( text, "sentKinds", _listSentKindEntry );
         return text;
     }
 
@@ -139,6 +155,8 @@ namespace sw
                 bValid = StringUtil::parseFloat( value, parsed._lossPercent );
             else if ( key == "kinds" )
                 bValid = NetStatsReportInternal::tryParseKinds( value, parsed._listKindEntry );
+            else if ( key == "sentKinds" )
+                bValid = NetStatsReportInternal::tryParseKinds( value, parsed._listSentKindEntry );
             return bValid;
         } );
         if ( bValid )

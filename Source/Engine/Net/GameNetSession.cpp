@@ -568,7 +568,9 @@ namespace sw
             report._lossPercent     = MathUtil::max( report._lossPercent, stats._packetLoss * GameNetSessionInternal::kPercent );
             report._rttMilliseconds = MathUtil::max( report._rttMilliseconds, stats._rtt * constant::kMillisecondsPerSecond );
         }
-        report.populateKinds( _router );
+        NetMessageKindTallyTable sentTally;
+        _host.copySentKindTally( sentTally );
+        report.populateKinds( _router.getKindTally(), sentTally );
         return report;
     }
 

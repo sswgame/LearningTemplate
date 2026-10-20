@@ -70,8 +70,8 @@ namespace sw
     {
         if ( _pairedAnimationPath.empty() )
             return;
-        _seenReloadCount                         = PairedAnimationDefCache::getReloadCount();
-        shared_ptr<const PairedAnimationDef> def = PairedAnimationDefCache::acquire( _pairedAnimationPath );
+        _seenReloadCount                         = SharedAssetCache<PairedAnimationDef>::getReloadCount();
+        shared_ptr<const PairedAnimationDef> def = SharedAssetCache<PairedAnimationDef>::acquire( _pairedAnimationPath );
         if ( def == nullptr )
         {
             // 읽기 오류는 로더가 줄마다 남겼다. 지난 에셋으로 이어 가지 않는다.
@@ -88,7 +88,7 @@ namespace sw
         GameObjectManager*         pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
         SkeletalAnimatorComponent* pAnimator = pOwner != nullptr ? pOwner->getComponent<SkeletalAnimatorComponent>() : nullptr;
         // 파일을 고쳐 캐시가 다시 읽었으면 새 에셋으로 시작한다(돌고 있는 세션은 옛 에셋을 끝까지 쥔다).
-        const bool bAssetReloaded = _pairedAnimationPath.empty() == false && _seenReloadCount != PairedAnimationDefCache::getReloadCount();
+        const bool bAssetReloaded = _pairedAnimationPath.empty() == false && _seenReloadCount != SharedAssetCache<PairedAnimationDef>::getReloadCount();
         if ( bAssetReloaded )
             loadDef();
         if ( _def == nullptr || pManager == nullptr )

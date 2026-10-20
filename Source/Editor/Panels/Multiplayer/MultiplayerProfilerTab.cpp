@@ -173,6 +173,7 @@ namespace sw::editor
         vector<NetStatsKindEntry>  _listKindEntryScratch;
         vector<EditorNetKindShare> _listShareScratch;
         bool                       _bAllProcessKinds; ///< 비중을 대상 대신 모든 프로세스의 합으로 본다
+        bool                       _bSentKinds;       ///< 비중을 받은 메시지 대신 보낸 메시지(큐에 넣은 것)로 본다
     };
 } // namespace sw::editor
 
@@ -183,6 +184,7 @@ namespace sw::editor
         , _listKindEntryScratch{}
         , _listShareScratch{}
         , _bAllProcessKinds{ false }
+        , _bSentKinds{ false }
     {
     }
 
@@ -210,10 +212,11 @@ namespace sw::editor
     void MultiplayerProfilerTab::drawKindShares( const EditorNetProfilerTrack& track )
     {
         _listKindEntryScratch.clear();
+        const NetStatsKindDirection direction = _bSentKinds ? NetStatsKindDirection::Sent : NetStatsKindDirection::Received;
         if ( _bAllProcessKinds )
-            MultiplayerProfilerTabInternal::getHistory().collectKindEntries( _listKindEntryScratch );
+            MultiplayerProfilerTabInternal::getHistory().collectKindEntries( direction, _listKindEntryScratch );
         else
-            _listKindEntryScratch = track._lastReport._listKindEntry;
+            _listKindEntryScratch = track._lastReport.getKindEntries( direction );
         EditorNetProfilerUtil::computeKindShares( _listKindEntryScratch, _listShareScratch );
         if ( _listShareScratch.empty() )
         {
@@ -280,6 +283,9 @@ namespace sw::editor
         ImGui::SameLine();
         ImGui::Checkbox( "All processes", &_bAllProcessKinds );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ProfilerKindsAllProcesses" ) );
+        ImGui::SameLine();
+        ImGui::Checkbox( "Sent", &_bSentKinds );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ProfilerKindsSent" ) );
         drawKindShares( track );
     }
 

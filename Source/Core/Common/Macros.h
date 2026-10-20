@@ -123,12 +123,19 @@ namespace sw::internal
     #if defined( SW_EXPORTS )
         /** @brief Engine.dll 을 빌드할 때 export 합니다. Core 의 OBJECT 라이브러리도 이 매크로로 내보냅니다. */
         #define SW_API __declspec( dllexport )
+        /**
+         * @brief Engine.dll 이 명시적으로 인스턴스화해 내보내는 클래스 템플릿의 `extern template` 선언에 붙입니다. 내보내는 쪽에서는 비웁니다 —
+         *        인스턴스화 선언에 dllexport 를 붙이면 clang 이 경고합니다(-Wdllexport-explicit-instantiation-decl). 정의 쪽은 `template class SW_API …;` 입니다.
+         */
+        #define SW_API_EXTERN_TEMPLATE
     #elif defined( SW_IMPORTS )
         /** @brief Engine.dll 을 사용할 때 import 합니다. */
-        #define SW_API __declspec( dllimport )
+        #define SW_API                 __declspec( dllimport )
+        #define SW_API_EXTERN_TEMPLATE __declspec( dllimport )
     #else
         /** @brief 정적 링크할 때는 아무것도 붙이지 않습니다. */
         #define SW_API
+        #define SW_API_EXTERN_TEMPLATE
     #endif
 
     #if defined( SW_MODULE_EXPORTS )
@@ -140,9 +147,11 @@ namespace sw::internal
     #endif
 #else
     /** @brief ELF · Mach-O 에서는 기본 visibility 로 내보냅니다. */
-    #define SW_API        __attribute__( ( visibility( "default" ) ) )
+    #define SW_API                 __attribute__( ( visibility( "default" ) ) )
+    /** @brief 명시적 인스턴스화 선언도 기본 visibility 로 둡니다(숨긴 visibility 로 선언한 참조는 다른 이미지에서 풀리지 않는다). */
+    #define SW_API_EXTERN_TEMPLATE __attribute__( ( visibility( "default" ) ) )
     /** @brief 모듈 심볼도 기본 visibility 로 내보냅니다. */
-    #define SW_MODULE_API __attribute__( ( visibility( "default" ) ) )
+    #define SW_MODULE_API          __attribute__( ( visibility( "default" ) ) )
 #endif
 
 // ------------------------------------------------------------------------------

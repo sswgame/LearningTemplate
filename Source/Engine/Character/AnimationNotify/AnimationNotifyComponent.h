@@ -65,7 +65,7 @@ namespace sw
      *          - **스레드**: 3D 는 애니메이션 시스템의 게임 스레드 마무리에서 바로 받고, 2D 는 스프라이트 틱(워커)에서 받아 틱 뒤 게임 스레드로 미뤄서 처리한다.
      *            처리기는 항상 게임 스레드에서 돈다(스폰, 물리 질의, 맞음 알림).
      *          - **차원**: 같은 오브젝트에 `SkeletalMeshComponent` 가 있으면 3D 로, 없으면 2D 물리 씬에 묻는다.
-     *          - 테이블은 공유 캐시(`AnimationNotifyTableCache`)에서 받는다. 파일을 고치면 열린 구간을 닫고 새 테이블로 이어 간다.
+     *          - 테이블은 공유 캐시(`SharedAssetCache<AnimationNotifyTable>`)에서 받는다. 파일을 고치면 열린 구간을 닫고 새 테이블로 이어 간다.
      */
     REFLECT( Category = "Animation", DisplayName = "Animation Notify", Tooltip = "Dispatches animation notifies to handlers named in a notify table (*.notifies.xml)" )
     class SW_API AnimationNotifyComponent : public Component

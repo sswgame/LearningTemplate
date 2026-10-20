@@ -45,6 +45,17 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 에디터가 리그 파일에 되써 넣는 노드 하나의 값입니다(`RigAsset::rewriteNodeSettings`). 노드는 이름으로 찾습니다(이름은 파일 안에서 하나다). */
+    struct RigNodeSaveParams
+    {
+        hashed_string _name{};
+        float32       _weight{ 1.0f };
+        bool          _bEnabled{ true };
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class RigAsset
      * @brief 리그 하나입니다. 대상과 노드(원형)를 담습니다. 노드 순서가 결과를 바꾸므로 파일 순서 그대로 평가합니다.
@@ -79,6 +90,12 @@ namespace sw
         [[nodiscard]] bool loadFromResource( string_view path );
         /** @brief 모두 비웁니다. */
         void clear();
+        /**
+         * @brief 리그 파일 글(@p jsonText)의 노드 `weight` · `enabled` 를 @p listNode 의 값으로 바꾼 글을 @p outJSONText 에 씁니다(리그 디버그 창의 "Save to rig").
+         * @details 다른 키는 그대로 둔다. `enabled` 는 끈 노드이거나 파일에 이미 있을 때만 쓴다(적지 않음 = 켜짐). 이름의 노드가 없거나 결과가 리그 규칙에 맞지 않으면
+         *          (다시 읽어 본다) 오류를 남기고 false 이며 @p outJSONText 는 그대로다.
+         */
+        [[nodiscard]] static bool rewriteNodeSettings( string_view jsonText, string_view sourceLabel, const vector<RigNodeSaveParams>& listNode, string& outJSONText );
 
         const vector<RigTargetDef>&        getTargets() const { return _listTarget; }
         const vector<unique_ptr<RigNode>>& getNodes() const { return _listNode; }

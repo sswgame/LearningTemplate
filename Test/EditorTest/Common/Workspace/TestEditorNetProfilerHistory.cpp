@@ -144,6 +144,7 @@ SW_TEST_CASE( EditorNetProfilerTest, HistoryKeepsOneTrackPerProcess )
     server._sentBytesPerSecond = 4000.0f;
     server._sentPacketCount    = 10;
     server._listKindEntry.push_back( NetStatsKindEntry{ 2, 20, 0x0F } );
+    server._listSentKindEntry.push_back( NetStatsKindEntry{ 5, 50, 0x10 } );
     NetStatsReport client;
     client._sentBytesPerSecond = 9000.0f;
     client._listKindEntry.push_back( NetStatsKindEntry{ 1, 30, 0x0F } );
@@ -162,8 +163,12 @@ SW_TEST_CASE( EditorNetProfilerTest, HistoryKeepsOneTrackPerProcess )
     SW_EXPECT_NEAR_EQUAL( history.computePeak( EditorNetProfilerChannel::SentBytesPerSecond ), 9000.0f, 1.0e-3f );
 
     vector<NetStatsKindEntry> listEntry;
-    history.collectKindEntries( listEntry );
+    history.collectKindEntries( NetStatsKindDirection::Received, listEntry );
     SW_EXPECT_EQUAL( 2, static_cast<int32>( listEntry.size() ) );
+    listEntry.clear();
+    history.collectKindEntries( NetStatsKindDirection::Sent, listEntry ); // 보낸 쪽은 서버만 실었다
+    SW_ASSERT_EQUAL( 1, static_cast<int32>( listEntry.size() ) );
+    SW_EXPECT_EQUAL( 0x10, static_cast<int32>( listEntry[0]._kind ) );
 
     history.clear();
     SW_EXPECT_EQUAL( 0, history.computeSampleCount() );

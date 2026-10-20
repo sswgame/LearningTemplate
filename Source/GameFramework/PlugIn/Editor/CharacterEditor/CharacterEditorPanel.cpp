@@ -198,7 +198,7 @@ namespace sw::editor
             return;
         }
         ensureKindTable();
-        if ( _reloadGuard.pollExternalChange( SocketSetCache::getReloadCount(), ImGui::GetTime() ) )
+        if ( _reloadGuard.pollExternalChange( SharedAssetCache<SocketSet>::getReloadCount(), ImGui::GetTime() ) )
             _bExternalChange = true;
         drawFileRow();
         drawHistoryRow();
@@ -260,7 +260,7 @@ namespace sw::editor
             }
             else
             {
-                _reloadGuard.onSaved( SocketSetCache::getReloadCount(), ImGui::GetTime() ); // 파일 감시가 곧 같은 파일을 다시 읽는다 — 그건 외부 변경이 아니다
+                _reloadGuard.onSaved( SharedAssetCache<SocketSet>::getReloadCount(), ImGui::GetTime() ); // 파일 감시가 곧 같은 파일을 다시 읽는다 — 그건 외부 변경이 아니다
                 SW_LOG_INFO( "Socket file saved to %#", writePath.c_str() );
             }
         }
@@ -301,7 +301,7 @@ namespace sw::editor
                 _status.clear();
                 _selectedSocket  = hashed_string{};
                 _bExternalChange = false;
-                _reloadGuard.reset( SocketSetCache::getReloadCount() );
+                _reloadGuard.reset( SharedAssetCache<SocketSet>::getReloadCount() );
             }
         }
         EditorSelfTestMarks::note( "charactereditor.loadSockets" );
@@ -1009,7 +1009,7 @@ namespace sw::editor
         if ( _bKindTableReady )
             return;
         _bKindTableReady = true;
-        _reloadGuard.reset( SocketSetCache::getReloadCount() );
+        _reloadGuard.reset( SharedAssetCache<SocketSet>::getReloadCount() );
         SocketKindTable kinds;
         if ( kinds.loadFromResource( SocketKindTable::kDefaultPath ) == false )
             SW_LOG_WARNING( "Default socket kind table could not be loaded - kinds are not validated" );
