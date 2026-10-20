@@ -207,8 +207,10 @@ namespace sw
         }
     }
 
-    bool GPUSceneBuilder::fillCandidateFromPrimitive( MeshComponent* pMeshComp, Scene* pScene, DrawCandidate& candidate )
+    bool GPUSceneBuilder::fillCandidateFromPrimitive( ScenePrimitive* pPrimitive, Scene* pScene, DrawCandidate& candidate )
     {
+        // 레지스트리는 코어 기반만 알고, 들어오는 타입은 메시 계열뿐이다(`ScenePrimitive.h` 의 불변식). 인스턴스 배치도 같다.
+        MeshComponent* pMeshComp = static_cast<MeshComponent*>( pPrimitive );
         if ( pMeshComp == nullptr || pMeshComp->isVisible() == false )
             return false;
         // 컴포넌트를 꺼도 빠진다(`isActive` 는 자기 비트와 소유 오브젝트의 계층 활성을 함께 본다).
@@ -248,7 +250,7 @@ namespace sw
 
     bool GPUSceneBuilder::fillCandidateFromInstanceEntry( const PrimitiveInstanceEntry& entry, Scene* pScene, DrawCandidate& candidate )
     {
-        const MeshInstanceBatch* pBatch            = entry._pBatch;
+        const MeshInstanceBatch* pBatch            = static_cast<const MeshInstanceBatch*>( entry._pBatch );
         const bool               bHiddenBatchEntry = pBatch == nullptr || pBatch->isVisible() == false || entry._index >= pBatch->getCount();
         if ( bHiddenBatchEntry )
             return false;
@@ -440,7 +442,7 @@ namespace sw
         // 렌더 상태가 바뀐 것과 월드 행렬만 바뀐 것을 따로 받는다. 뒤쪽은 다시 모으지 않는다(`copyCandidateTransforms`).
         pObjects->getPrimitiveRegistry().consumeDirty( _listDirtyPrimitive, _listTransformDirtyPrimitive );
 
-        const vector<MeshComponent*>&         listPrimitive     = primitives.getAll();
+        const vector<ScenePrimitive*>&        listPrimitive     = primitives.getAll();
         const vector<PrimitiveInstanceEntry>& listInstanceEntry = primitives.getInstanceEntries();
         // 프리미티브 번호 공간은 메시 컴포넌트 뒤에 인스턴스 배치의 항목들이 이어진 것이다. 아래 전부가 이 공간을 돈다.
         const uint32 meshCount = static_cast<uint32>( listPrimitive.size() );
@@ -566,7 +568,7 @@ namespace sw
             {
                 GPUSceneBuilder*              _pBuilder{ nullptr };
                 Scene*                        _pScene{ nullptr };
-                MeshComponent* const*         _ppPrimitive{ nullptr };
+                ScenePrimitive* const*        _ppPrimitive{ nullptr };
                 const PrimitiveInstanceEntry* _pEntry{ nullptr };
                 uint32                        _meshCount{ 0 };
                 DrawCandidate*                _pCandidate{ nullptr };

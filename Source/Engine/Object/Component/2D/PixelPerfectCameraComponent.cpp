@@ -192,10 +192,11 @@ namespace sw
         pManager->executeOrDeferPostTick( [pManager, unit]()
         {
             pManager->getCameraRegistry().setPixelSnapUnit( unit );
-            for ( MeshComponent* pMesh : pManager->getPrimitiveRegistry().getAll() )
+            // 레지스트리는 코어 기반만 알고, 들어오는 타입은 메시 계열뿐이다(`ScenePrimitive.h` 의 불변식).
+            for ( ScenePrimitive* pPrimitive : pManager->getPrimitiveRegistry().getAll() )
             {
-                if ( pMesh != nullptr )
-                    pMesh->setPixelSnapUnit( unit );
+                if ( pPrimitive != nullptr )
+                    static_cast<MeshComponent*>( pPrimitive )->setPixelSnapUnit( unit );
             }
         } );
     }

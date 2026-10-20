@@ -38,17 +38,16 @@ namespace sw
         , _vertexAnimationPhase{ 0.0f }
         , _sortKey{ 0 }
         , _pPrimitiveRegistry{ nullptr }
-        , _primitiveIndex{ kInvalidPrimitiveIndex }
         , _bVisible{ SW_TRUE }
         , _reserved{ 0 }
     {
-        // 월드가 바뀌면 트랜스폼 칸의 프리미티브 번호로 렌더 더티가 찍힌다(`setPrimitiveIndex`). 훅은 받지 않는다.
+        // 월드가 바뀌면 트랜스폼 칸의 프리미티브 번호로 렌더 더티가 찍힌다(`ScenePrimitive::setPrimitiveIndex`). 훅은 받지 않는다.
         setWorldTransformNotify( false );
     }
 
     void MeshComponent::onBeginPlay()
     {
-        SceneComponent::onBeginPlay();
+        ScenePrimitive::onBeginPlay();
         resolveRenderAssets();
     }
 
@@ -114,7 +113,7 @@ namespace sw
 
     void MeshComponent::onRegister( GameObjectManager& manager )
     {
-        SceneComponent::onRegister( manager );
+        ScenePrimitive::onRegister( manager );
         _pPrimitiveRegistry = &manager.getPrimitiveRegistry();
         _pPrimitiveRegistry->add( this );
         // 픽셀 퍼펙트 카메라가 이미 정한 스냅 단위를 이어받는다(정한 뒤에 생긴 스프라이트도 격자에 붙는다).
@@ -133,7 +132,7 @@ namespace sw
             _acquiredMaterialPath = hashed_string{};
         }
         _requestedMaterialPath = hashed_string{};
-        SceneComponent::onUnregister( manager );
+        ScenePrimitive::onUnregister( manager );
     }
 
     void MeshComponent::markRenderStateDirty()
@@ -147,19 +146,12 @@ namespace sw
         // 트랜스폼 PROPERTY 는 여기서 markTransformDirty 로 이어지고, 그 결과 월드 행렬이 다시
         // 계산될 때 트랜스폼 칸의 프리미티브 번호로 렌더 더티가 찍힌다. 그래서 여기서는 렌더 관련
         // PROPERTY 만 보면 된다. 어느 쪽이든 빠지는 경로가 없다.
-        SceneComponent::onPropertyChanged( propertyName );
+        ScenePrimitive::onPropertyChanged( propertyName );
         static const hashed_string s_materialPathName( "_materialPath" );
         static const hashed_string s_meshIDName( "_meshID" );
         if ( propertyName == s_materialPathName || propertyName == s_meshIDName )
             resolveRenderAssets();
         markRenderStateDirty();
-    }
-
-    void MeshComponent::setPrimitiveIndex( uint32 index )
-    {
-        _primitiveIndex = index;
-        // 틱 뒤 적용 · 플러시는 이 번호로 레지스트리에 바로 찍는다(컴포넌트를 거치지 않는다).
-        setTransformPrimitiveIndex( index == kInvalidPrimitiveIndex ? SceneTransformStorage::kNoPrimitive : index );
     }
 
     void MeshComponent::onOwnerActiveInHierarchyChanged()

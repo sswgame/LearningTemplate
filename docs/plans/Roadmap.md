@@ -8,7 +8,7 @@
 
 1. **`integrator` 설계의 미구현 단위**(설계는 끝났고 코드가 없음).
    - 데이터화: D6 → D7 → D8 → D9, 이어서 P1 · P2 → P4(D9, P1 뒤), G1 · G2 — [DataDriven](DataDriven.md) 7.5. [단독: 기본값 · 로더 형식을 바꿔 여러 모듈이 다시 빌드됨]
-   - E3(E4 가 뒤따름) — [EnginePartition](EnginePartition.md) 6.4. `GameObjectManager.h` 를 바꿔 모든 모듈이 다시 빌드된다. [단독: 모든 모듈 재빌드]
+   - E3 · E4 의 남은 확인(빌드 · 테스트 · 큐브 20,000 개 벤치) — [EnginePartition](EnginePartition.md) 6.4. 구현은 `wt/enginepart` 에 있다. [단독: 모든 모듈 재빌드]
    - V2 — [GpuVerification](GpuVerification.md) 2절. 지는 케이스 수정은 들어갔고(로컬 확인, CI 미확인) 리눅스 `gl` 원인 확인 뒤 해제. [병렬 가능]
 2. **새 시스템**:
    - Vfx V7(메시 투명과 교차 정렬) · V6, V4 는 `D2-6.3` 슬롯 지도 뒤(V0 ~ V3 들어감) — [Vfx](Vfx.md). [병렬 가능]

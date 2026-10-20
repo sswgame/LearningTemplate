@@ -14,6 +14,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/Shader/Binding/GPUSpriteInstanceData.h"
+#include "Engine/Object/GameObject/Registry/ScenePrimitive.h"
 
 namespace sw
 {
@@ -21,9 +22,8 @@ namespace sw
     class Material;
     class MaterialInstance;
     class Mesh;
-    class PrimitiveRegistry;
 
-    class SW_API MeshInstanceBatch
+    class SW_API MeshInstanceBatch : public ScenePrimitiveBatch
     {
     public:
         /** @brief 인스턴스 하나입니다. 렌더에 필요한 것만 듭니다. */
@@ -47,8 +47,6 @@ namespace sw
         MeshInstanceBatch( const MeshInstanceBatch& )            = delete;
         MeshInstanceBatch& operator=( const MeshInstanceBatch& ) = delete;
 
-        /** @brief 항목 수입니다. */
-        uint32 getCount() const { return static_cast<uint32>( _listEntry.size() ); }
         /** @brief 항목 하나입니다. 빌더가 후보를 채울 때 읽습니다. */
         const Entry& getEntry( uint32 index ) const { return _listEntry[index]; }
 
@@ -109,22 +107,13 @@ namespace sw
         MaterialInstance* getRawMaterialInstance() const { return _instance.get(); }
         /** @brief 머티리얼 인스턴스(소유 포인터)입니다. */
         const shared_ptr<MaterialInstance>& getMaterialInstance() const { return _instance; }
-        /** @brief 레지스트리에 들어 있으면 true 입니다. */
-        bool isRegistered() const { return _pRegistry != nullptr; }
 
     private:
-        friend class PrimitiveRegistry;
-
-        /** @brief 항목 하나를 레지스트리에 더티로 알립니다. 등록 전이면 아무것도 하지 않습니다. */
-        void markDirty( uint32 index );
-
         vector<Entry>                _listEntry;
         shared_ptr<Mesh>             _mesh;
         Material*                    _pMaterial;
         shared_ptr<MaterialInstance> _instance;
         const Component*             _pOwnerComponent; ///< 든 컴포넌트(빌림). 꺼지면 빌더가 뺀다. nullptr 이면 늘 그린다
-        PrimitiveRegistry*           _pRegistry;       ///< 등록된 레지스트리. 레지스트리가 먼저 사라지면 레지스트리가 비웁니다
-        uint32                       _firstEntry;      ///< 레지스트리의 인스턴스 항목 목록에서 첫 항목 자리. 레지스트리가 적습니다
         uint32                       _sortKey;         ///< 항목 모두의 투명 정렬 키(0 = 기본)
         uint8                        _bVisible;
     };

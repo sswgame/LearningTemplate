@@ -1,10 +1,9 @@
 # 엔진 분할 계획
 
-> 상태: 구현대기 · 선행: 없음 · 영역: engine · 옛번호: C-1 · 진행: 2/6
+> 상태: 구현중 · 선행: 없음 · 영역: engine · 옛번호: C-1 · 진행: 4/6
 
 `Engine.dll` 하나를 티어 경계로 나누고, 그 전에 의존 방향의 약한 고리를 풉니다. 폴더 의존은 이미 DAG 이고 `CheckEngineLayers.py` 가 지킵니다.
-막힌 곳은 링크 단위가 하나라는 점입니다. 컴포넌트 모델 코어(`GameObject/` 등)가 기능 폴더를 직접 include 하던 것은 0 으로 줄었고 게이트가 지킵니다(2 단계).
-남은 것은 Object 폴더 안에서 코어가 기능 컴포넌트를 아는 방향입니다.
+막힌 곳은 링크 단위가 하나라는 점입니다. 컴포넌트 모델 코어(`GameObject/` 등)가 기능 폴더와 Object 안의 기능 컴포넌트 폴더를 include 하던 것은 0 으로 줄었고 게이트가 지킵니다(2 단계, E3 · E4).
 폴더 사이 include 수는 `py -3 Scripts/lint/report/RunEngineLayerGraph.py` 로 봅니다. Engine 에 남겨 두기로 한 폴더는 [결정 기록](../09_Decisions.md) 2절에 있습니다.
 
 ## 0. 기준 측정 (먼저)
@@ -24,17 +23,8 @@
 
 코어(`Object/GameObject` · `Object/Prefab` · `Object/Component` 바로 아래)가 기능 폴더(Graphics · Physics · Navigation · Audio · Animation · TileMap)를 include 하는 줄은 0 이고,
 `CheckEngineLayers` 의 코어 규칙(`coreFolder` · `coreBannedLayer`, 예외 키 `core:`)이 지킵니다. 물리 · 오디오 · 내비는 씬 서비스(`ISceneService`)이고, 씬 위의 애니메이션은 `Object/SceneAnimation` 입니다.
-남은 일은 Object 폴더 **안의** 방향입니다.
-
-- 코어가 기능 컴포넌트 폴더(`Object/Component/3D`)를 아직 include 합니다. `PrimitiveRegistry` 가 `MeshComponent` · `MeshInstanceBatch` 를 압니다(애니메이션은 씬 서비스로 옮겼습니다).
-  3 단계에서 Object 를 링크 단위 둘로 가르려면 이 방향도 뒤집어야 합니다. 규칙은 코어 금지 목록에 `Object/Component/*` 하위 폴더를 더하는 식으로 걸 수 있습니다.
-- 확인: `RunEngineLayerGraph.py` 에서 코어 폴더가 기능 폴더를 가리키는 화살표가 0 입니다.
-- 2026-10-18 에 센 남은 줄은 둘입니다. 작업 단위는 6절 E3 · E4 입니다.
-
-| 파일 | include | 쓰임 |
-|---|---|---|
-| `GameObject/Registry/PrimitiveRegistry.cpp:8` | `Component/3D/MeshComponent.h` | 레지스트리가 `MeshComponent*` 를 보관하고 `kInvalidPrimitiveIndex` 와 프리미티브 번호 접근자를 씁니다 |
-| `GameObject/Registry/PrimitiveRegistry.cpp:9` | `Component/3D/MeshInstanceBatch.h` | 인스턴스 배치의 `_pRegistry` 와 항목 번호를 씁니다 |
+Object 폴더 **안의** 방향도 0 입니다. 코어 금지 목록에 `Object/Component/2D` · `3D` · `Audio` · `Navigation` · `Physics` 와 `Object/SceneAnimation` 이 들어 있고, 게이트는 금지 항목을 폴더 접두로 봅니다.
+`PrimitiveRegistry` 는 코어 기반 `ScenePrimitive` · `ScenePrimitiveBatch`(`Object/GameObject/Registry/ScenePrimitive.h`)만 압니다. 들어오는 타입이 메시 계열뿐이라는 불변식은 기반의 private 생성자와 friend 가 지키고, 메시가 필요한 곳(`GPUSceneBuilder`, `PixelPerfectCameraComponent`)이 `static_cast` 합니다.
 
 ## 3. 링크 단위로 승격 (하지 않음)
 
@@ -99,12 +89,12 @@
 
 ### 6.4 단위
 
-동시 빌드는 둘까지입니다. E3 은 `GameObjectManager.h` 를 바꿔 모든 모듈을 다시 빌드합니다.
+E3 · E4 는 구현이 들어갔습니다(`wt/enginepart`, 빌드 미확인). `MeshComponent` 의 리플렉션 부모가 `ScenePrimitive`(`REFLECT( Abstract )`)로 바뀌어 모든 모듈이 다시 빌드됩니다.
+게이트 `CheckEngineLayers` 는 통과합니다(코어 → 기능 0 줄). 남은 것은 확인뿐입니다.
 
-| 단위 | 내용 | 건드릴 폴더 | 선행 | 검증 | 측정 |
-|---|---|---|---|---|---|
-| E3 | 프리미티브 개념을 코어 기반 타입으로 바꿉니다 | `Engine/Object/GameObject/Registry/`, `Engine/Object/Component/3D/Mesh*`, `Engine/Object/Component/2D/SpriteInstanceBatch.cpp`, `Engine/Environment/{Foliage,Terrain,Water}/`, `Engine/Renderer/Scene/GPUSceneBuilder.cpp` | 없음 | `TestGPUScene`, 인스턴스 배치 테스트, 네 백엔드 × 대표 셋 | 필요합니다. 큐브 20,000 개 벤치의 `GT.Frame` p50 · p99 를 Release, VSync 끔, 3 ~ 5 판으로 전후 비교합니다 |
-| E4 | 코어 금지 목록에 기능 컴포넌트 폴더를 더합니다 | `Scripts/lint/rules/CheckEngineLayers.toml` | E3 | `-L lint`, `RunEngineLayerGraph.py` 의 코어 → 기능 화살표 0 | 없음 |
+| 단위 | 남은 확인 | 측정 |
+|---|---|---|
+| E3 | 전체 빌드(App · Server · 모듈 · `AllTests`), `TestGPUScene`, 인스턴스 배치 테스트(`TestMemoryTag` 포함), `ReflectionTest`(부모 사슬과 상속 프로퍼티), 네 백엔드 × 대표 셋 | 큐브 20,000 개 벤치의 `GT.Frame` p50 · p99 를 Release, VSync 끔, 3 ~ 5 판으로 전후 비교합니다 |
 
 ### 6.5 사용자 결정
 
