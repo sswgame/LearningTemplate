@@ -30,9 +30,9 @@
   "_requiredBackendsReason": "hostgpu 항목(호스트 조각 · 레이스 묶음)이 --required_backends= 로 받는다. 이 백엔드가 서지 못하면 케이스가 건너뛰지 않고 진다 — GPU 가 있는 PC 에서 Vulkan 이 사라져도 건너뜀으로 초록이던 것을 막는다(C-41 3단계, 결정 기록 5-12). 이름은 쿠킹 표(Config/Engine/CookContract.json)의 command_line_name 이다. 배포본처럼 빌드에 없는 백엔드는 실행 파일이 스스로 뺀다. GPU 없는 PC 에서 hostgpu 를 돌리면 지는 것이 맞다(hostgpu 는 GPU 있는 PC 의 라벨).",
   "softwareRequiredBackends": {
     "windows": ["dx11", "dx12"],
-    "linux": ["vk", "gl"]
+    "linux": ["vk"]
   },
-  "_softwareRequiredBackendsReason": "swrender 항목(<타깃>_SoftwareRender)이 --required_backends= 로 받는다. CI 러너에 있는 소프트웨어 렌더러다 — Windows 는 WARP(DX11 · DX12), 리눅스는 mesa lavapipe(Vulkan) · llvmpipe(OpenGL) + xvfb. Windows 러너의 Vulkan · GL 소프트웨어 드라이버는 기본으로 없다.",
+  "_softwareRequiredBackendsReason": "swrender 항목(<타깃>_SoftwareRender)이 --required_backends= 로 받는다. CI 러너에 있는 소프트웨어 렌더러다 — Windows 는 WARP(DX11 · DX12), 리눅스는 mesa lavapipe(Vulkan) · llvmpipe(OpenGL) + xvfb. Windows 러너의 Vulkan · GL 소프트웨어 드라이버는 기본으로 없다. 리눅스 llvmpipe 는 OpenGL 백엔드가 요구하는 GL_ARB_gl_spirv 를 내지 않아(main 실행 39343813870 · 39342751204 · 39339645876 의 리눅스 Debug 잡 주석: 'OpenGL 백엔드를 쓸 수 없습니다 — GL_ARB_gl_spirv 없음') gl 이 서지 못한다. 설치 패키지 탓이 아니라 소프트웨어 렌더러의 한계라 gl 을 뺐다. gl 은 GPU 있는 PC 의 hostgpu 가 본다.",
   "labels": {
     "unit": "C++ 테스트 실행 파일의 항목 전부",
     "nogpu": "CI 러너가 돌릴 수 있다 — GPU · 창 · DXC 가 필요 없다",
