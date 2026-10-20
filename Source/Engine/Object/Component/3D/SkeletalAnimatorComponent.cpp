@@ -407,7 +407,7 @@ namespace sw
             return false;
         if ( _mapClip.find( clipName ) != _mapClip.end() )
             return true;
-        shared_ptr<const AnimationClip> clip = AnimationClipCache::acquire( makeClipPath( clipName ) );
+        shared_ptr<const AnimationClip> clip = SharedAssetCache<AnimationClip>::acquire( makeClipPath( clipName ) );
         if ( clip == nullptr )
             return false;
         _mapClip.emplace( clipName, std::move( clip ) );
