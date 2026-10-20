@@ -14,7 +14,8 @@ namespace sw
 {
     /**
      * @struct AudioPcm
-     * @brief 디코드한 소리 하나입니다. 샘플은 채널이 교차된(interleaved) 리틀 엔디언입니다.
+     * @brief 디코드한 소리 하나입니다. 샘플은 채널이 교차된(interleaved) 리틀 엔디언이고, 채널 순서는 WAV 순서(채널 마스크 비트 오름차순)입니다.
+     * @details 마스크가 0 인 3 채널 이상은 마스크 비트 순서로 아래부터 채운 배치로 읽습니다(`AudioDownmix::makeForWaveMask`).
      */
     struct AudioPcm
     {
@@ -59,15 +60,29 @@ namespace sw
          */
         [[nodiscard]] static bool parseWavLayout( const uint8* pBytes, size_t byteCount, AudioPcm& outFormat, size_t& outDataOffset, uint32& outDataSize );
         /**
-         * @brief OGG Vorbis 를 처음부터 순차로 읽는 디코더를 엽니다(스트리밍). 헤더가 틀렸거나 채널이 3 개 이상이면 nullptr 입니다.
+         * @brief OGG Vorbis 를 처음부터 순차로 읽는 디코더를 엽니다(스트리밍). 헤더가 틀렸거나 채널이 9 개 이상이면 nullptr 입니다. 채널은 Vorbis 순서 그대로입니다.
          * @details 디코더는 @p pBytes 를 복사하지 않고 읽으므로 호출한 쪽이 디코더보다 오래 바이트를 지켜야 합니다. 같은 헤더 검사(`decodeOgg`)를 거칩니다.
          */
         static unique_ptr<IAudioStreamDecoder> openOggStream( const uint8* pBytes, size_t byteCount, AudioStreamInfo& outInfo );
-        /** @brief OGG Vorbis 를 16 비트 정수 PCM 으로 풉니다(stb_vorbis). */
+        /** @brief OGG Vorbis 를 16 비트 정수 PCM 으로 풉니다(stb_vorbis). 3 채널 이상은 WAV 채널 순서로 옮기고 `_channelMask` 를 적습니다(PCM 의 약속). */
         [[nodiscard]] static bool decodeOgg( const uint8* pBytes, size_t byteCount, AudioPcm& outPcm );
         /** @brief 이 디코더가 확장자로 다루는 형식(`.wav`, `.ogg`)인지 반환합니다. */
         static bool isSupportedExtension( string_view path );
         /** @brief @p path 의 확장자로 디코더를 고릅니다. 다루지 않는 확장자면 false 입니다. */
         [[nodiscard]] static bool decode( string_view path, const uint8* pBytes, size_t byteCount, AudioPcm& outPcm );
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @struct AudioWavEncoder
+     * @brief float32 교차 샘플을 WAV(`WAVE_FORMAT_EXTENSIBLE`, IEEE float, 채널 마스크 포함) 바이트로 씁니다. `AudioClipDecoder::decodeWav` 가 그대로 읽습니다.
+     * @details 오프라인 렌더 덤프(`gv_audioDumpPath`)와 테스트가 다채널 출력을 파일로 남겨 분석할 때 씁니다. 형식 상수는 디코더와 같은 정의를 씁니다.
+     */
+    struct SW_API AudioWavEncoder
+    {
+        /** @brief @p frameCount 프레임 × @p channelCount 채널을 @p outBytes 에 씁니다(이전 내용은 지웁니다). */
+        static void encodeFloat32( const float32* pInterleaved, uint32 frameCount, uint32 channelCount, uint32 channelMask, uint32 sampleRate, vector<uint8>& outBytes );
     };
 } // namespace sw

@@ -33,15 +33,15 @@ namespace sw
         return _pScene->raycast( origin, direction, distance - kListenerSkin - kEmitterSkin, filter, hit );
     }
 
-    float32 Physics2DAudioOcclusionQuery::computeOcclusion( const float3& listener, const float3& emitter ) const
+    AudioPropagation Physics2DAudioOcclusionQuery::computePropagation( const float3& listener, const float3& emitter ) const
     {
         if ( _pScene == nullptr )
-            return 0.0f;
+            return AudioPropagation::makeOcclusion( 0.0f );
         const float2 from( listener._x, listener._y );
         const float2 to( emitter._x, emitter._y );
         float2       forward = to - from;
         if ( forward.getLengthSquared() <= 1e-6f )
-            return 0.0f;
+            return AudioPropagation::makeOcclusion( 0.0f );
         forward.normalize();
         const float2 offset = float2( -forward._y, forward._x ) * kSideOffset;
 
@@ -49,6 +49,6 @@ namespace sw
         blockedCount += isBlocked( from, to ) ? 1u : 0u;
         blockedCount += isBlocked( from + offset, to + offset ) ? 1u : 0u;
         blockedCount += isBlocked( from - offset, to - offset ) ? 1u : 0u;
-        return static_cast<float32>( blockedCount ) / 3.0f;
+        return AudioPropagation::makeOcclusion( static_cast<float32>( blockedCount ) / 3.0f );
     }
 } // namespace sw

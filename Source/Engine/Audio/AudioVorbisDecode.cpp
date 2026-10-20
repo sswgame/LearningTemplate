@@ -62,6 +62,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Audio/AudioDownmix.h"
 #include "Engine/Audio/AudioStream.h"
 
 namespace sw
@@ -179,7 +180,7 @@ namespace sw
             }
         };
 
-        /** @brief stb_vorbis 로 OGG 를 앞으로 가며 float 로 푸는 스트리밍 디코더입니다. 채널은 파일 그대로(1 ~ 2)입니다. */
+        /** @brief stb_vorbis 로 OGG 를 앞으로 가며 float 로 푸는 스트리밍 디코더입니다. 채널은 파일 그대로(1 ~ 8, Vorbis 순서)이며 다운믹스는 스트림 창이 합니다. */
         class OggStreamDecoder final : public IAudioStreamDecoder
         {
         public:
@@ -228,7 +229,7 @@ namespace sw
             return nullptr;
         const stb_vorbis_info info                     = stb_vorbis_get_info( pVorbis );
         const uint32          frameCount               = stb_vorbis_stream_length_in_samples( pVorbis );
-        const bool            bUnsupportedVorbisStream = info.channels < 1 || 2 < info.channels || info.sample_rate == 0 || frameCount == 0;
+        const bool            bUnsupportedVorbisStream = info.channels < 1 || static_cast<int32>( AudioDownmix::kMaxSourceChannelCount ) < info.channels || info.sample_rate == 0 || frameCount == 0;
         if ( bUnsupportedVorbisStream )
         {
             stb_vorbis_close( pVorbis );
@@ -270,7 +271,45 @@ namespace sw
         if ( listSample.empty() )
             return false;
 
+        // PCM 의 약속은 WAV 채널 순서(마스크 비트 오름차순)다. Vorbis 순서(L C R …)의 3 채널 이상은 그 순서로 옮기고 마스크를 적는다.
+        uint32 channelMask = 0;
+        if ( info.channels > 2 )
+        {
+            const uint32 channelCount = static_cast<uint32>( info.channels );
+            uint32       arrSpeakerBit[AudioDownmix::kMaxSourceChannelCount]{};
+            if ( AudioDownmix::getVorbisSpeakers( channelCount, arrSpeakerBit ) == false )
+                return false;
+            uint32 arrSourceOfTarget[AudioDownmix::kMaxSourceChannelCount]{};
+            for ( uint32 targetIndex = 0; targetIndex < channelCount; ++targetIndex )
+            {
+                // 아직 고르지 않은 가장 낮은 비트의 소스 채널이 다음 목표 채널이다.
+                uint32 lowestSource = channelCount;
+                for ( uint32 sourceIndex = 0; sourceIndex < channelCount; ++sourceIndex )
+                {
+                    const bool bTaken = ( channelMask & arrSpeakerBit[sourceIndex] ) != 0;
+                    const bool bLower = lowestSource == channelCount || arrSpeakerBit[sourceIndex] < arrSpeakerBit[lowestSource];
+                    if ( bTaken == false && bLower )
+                        lowestSource = sourceIndex;
+                }
+                arrSourceOfTarget[targetIndex] = lowestSource;
+                channelMask |= arrSpeakerBit[lowestSource];
+            }
+            int16 arrFrame[AudioDownmix::kMaxSourceChannelCount]{};
+            for ( size_t frameStart = 0; frameStart + channelCount <= listSample.size(); frameStart += channelCount )
+            {
+                for ( uint32 targetIndex = 0; targetIndex < channelCount; ++targetIndex )
+                {
+                    arrFrame[targetIndex] = listSample[frameStart + arrSourceOfTarget[targetIndex]];
+                }
+                for ( uint32 targetIndex = 0; targetIndex < channelCount; ++targetIndex )
+                {
+                    listSample[frameStart + targetIndex] = arrFrame[targetIndex];
+                }
+            }
+        }
+
         AudioPcm pcm;
+        pcm._channelMask    = channelMask;
         pcm._channelCount   = static_cast<uint16>( info.channels );
         pcm._sampleRate     = info.sample_rate;
         pcm._bitsPerSample  = 16;

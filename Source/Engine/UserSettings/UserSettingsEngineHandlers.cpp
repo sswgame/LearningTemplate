@@ -24,6 +24,8 @@ namespace sw
             static constexpr utf8 kToggle[]     = "toggle";
             static constexpr utf8 kWindowed[]   = "windowed";
             static constexpr utf8 kBorderless[] = "borderless";
+            /** @brief 스피커 모드의 설정 값입니다(`AudioSpeakerMode` 순서). */
+            static constexpr const utf8* kArrSpeakerModeName[] = { "auto", "stereo", "surround51", "surround71", "headphones" };
             /** @brief 해상도 한 변의 범위입니다. 0 이나 터무니없는 값은 데이터 오타로 봅니다. */
             static constexpr uint32 kMinResolution = 320;
             static constexpr uint32 kMaxResolution = 16384;
@@ -56,6 +58,8 @@ namespace sw
         _targets = targets;
         registry.registerHandler( "audio.busVolume", SW_DELEGATE_METHOD( UserSettingHandlerDelegate, &UserSettingsEngineHandlers::applyBusVolume, this ) );
         registry.registerHandler( "audio.mute", SW_DELEGATE_METHOD( UserSettingHandlerDelegate, &UserSettingsEngineHandlers::applyMute, this ) );
+        registry.registerHandler( "audio.speakerMode", SW_DELEGATE_METHOD( UserSettingHandlerDelegate, &UserSettingsEngineHandlers::applySpeakerMode, this ),
+                                  SW_DELEGATE_FUNCTION( UserSettingValueFilterDelegate, &UserSettingsEngineHandlers::isSpeakerModeName ) );
         registry.registerHandler( "input.mouseSensitivity", SW_DELEGATE_METHOD( UserSettingHandlerDelegate, &UserSettingsEngineHandlers::applyMouseSensitivity, this ) );
         registry.registerHandler( "input.gamepadSensitivity", SW_DELEGATE_METHOD( UserSettingHandlerDelegate, &UserSettingsEngineHandlers::applyGamepadSensitivity, this ) );
         registry.registerHandler( "input.invertX", SW_DELEGATE_METHOD( UserSettingHandlerDelegate, &UserSettingsEngineHandlers::applyInvertX, this ) );
@@ -172,6 +176,37 @@ namespace sw
         if ( _targets._pAudioService != nullptr )
             _targets._pAudioService->setMute( UserSettingsEngineHandlersInternal::toBool( context._value ) );
         return true;
+    }
+
+    bool UserSettingsEngineHandlers::tryParseSpeakerMode( string_view text, AudioSpeakerMode& outMode )
+    {
+        using Internal = UserSettingsEngineHandlersInternal;
+        for ( uint32 modeIndex = 0; modeIndex < SW_COUNT_OF( Internal::kArrSpeakerModeName ); ++modeIndex )
+        {
+            if ( StringUtil::equals( text, Internal::kArrSpeakerModeName[modeIndex], true ) )
+            {
+                outMode = static_cast<AudioSpeakerMode>( modeIndex );
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool UserSettingsEngineHandlers::applySpeakerMode( const UserSettingApplyParams& context )
+    {
+        AudioSpeakerMode mode{ AudioSpeakerMode::Auto };
+        if ( tryParseSpeakerMode( context._value, mode ) == false )
+            return false;
+        if ( _targets._pAudioService == nullptr )
+            return true;
+        // 장치가 그만큼의 채널을 갖지 않으면 서비스가 오류를 남기고 거절한다(지금 구성을 그대로 쓴다).
+        return _targets._pAudioService->setSpeakerMode( mode );
+    }
+
+    bool UserSettingsEngineHandlers::isSpeakerModeName( string_view value )
+    {
+        AudioSpeakerMode mode{ AudioSpeakerMode::Auto };
+        return tryParseSpeakerMode( value, mode );
     }
 
     bool UserSettingsEngineHandlers::applyMouseSensitivity( const UserSettingApplyParams& context )

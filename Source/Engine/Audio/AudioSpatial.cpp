@@ -78,23 +78,28 @@ namespace sw
         return offset.getLength();
     }
 
-    float32 AudioSpatializer::computePan( const AudioListenerState& listener, const float3& emitterPosition, float32 centerRadius )
+    AudioPanDirection AudioSpatializer::computeDirection( const AudioListenerState& listener, const float3& emitterPosition, float32 centerRadius )
     {
         const float3 offset = emitterPosition - listener._position;
         // 왼손 좌표(+X 오른쪽, +Y 위, +Z 앞)에서 오른쪽 = 위 × 앞이다.
         const float3 right = listener._up.cross( listener._forward ).normalize();
         if ( listener._mode == AudioSpatialMode::Screen2D )
         {
-            // 화면 가로 거리 / 화면 반폭이다. 화면 세로(고도)는 팬에 쓰지 않는다.
+            // 화면 가로 거리 / 화면 반폭이다. 화면 세로(고도)는 팬에 쓰지 않고, 앞 두 채널에만 낸다.
             const float32 halfWidth = MathUtil::max( 0.01f, listener._screenHalfWidth );
-            return MathUtil::clamp( offset.dot( right ) / halfWidth, -1.0f, 1.0f );
+            return AudioPanDirection::makeStereoPan( offset.dot( right ) / halfWidth );
         }
-        // 3D 팬은 수평면 위 방향의 오른쪽 성분이다(고도는 쓰지 않는다).
-        const float32 side       = offset.dot( right );
-        const float32 front      = offset.dot( listener._forward );
-        const float32 horizontal = MathUtil::sqrt( side * side + front * front );
-        const float32 radius     = MathUtil::max( horizontal, MathUtil::max( 1e-4f, centerRadius ) );
-        return MathUtil::clamp( side / radius, -1.0f, 1.0f );
+        // 3D 방향은 수평면 위의 (오른쪽, 앞) 성분이다(고도는 쓰지 않는다). 머리 근처(centerRadius 안)는 길이를 줄여 퍼뜨린다 —
+        // 스테레오에서는 팬이 가운데로 모이고, 서라운드에서는 모든 스피커로 퍼진다. 옆을 지나가는 소리가 튀지 않게 하려는 것이다.
+        const float32     side       = offset.dot( right );
+        const float32     front      = offset.dot( listener._forward );
+        const float32     horizontal = MathUtil::sqrt( side * side + front * front );
+        const float32     radius     = MathUtil::max( horizontal, MathUtil::max( 1e-4f, centerRadius ) );
+        AudioPanDirection direction;
+        direction._right = MathUtil::clamp( side / radius, -1.0f, 1.0f );
+        direction._front = MathUtil::clamp( front / radius, -1.0f, 1.0f );
+        direction._mode  = AudioPanMode::Surround;
+        return direction;
     }
 
     float32 AudioSpatializer::computeDopplerRatio( const AudioListenerState& listener, const AudioEmitterState& emitter, float32 factor )
@@ -184,17 +189,19 @@ namespace sw
         if ( mode == AudioListenerMixMode::Loudest || count == 1 )
             return pResult[loudest];
 
-        float32 powerSum    = 0.0f;
-        float32 panPowerSum = 0.0f;
-        float32 openestHz   = 0.0f;
-        float32 nearest     = pResult[0]._distance;
-        bool    bAnyAudible = false;
+        float32 powerSum      = 0.0f;
+        float32 rightPowerSum = 0.0f;
+        float32 frontPowerSum = 0.0f;
+        float32 openestHz     = 0.0f;
+        float32 nearest       = pResult[0]._distance;
+        bool    bAnyAudible   = false;
         for ( uint32 index = 0; index < count; ++index )
         {
             const AudioSpatialResult& result = pResult[index];
             const float32             power  = result._gain * result._gain;
             powerSum += power;
-            panPowerSum += power * result._pan;
+            rightPowerSum += power * result._direction._right;
+            frontPowerSum += power * result._direction._front;
             nearest = MathUtil::min( nearest, result._distance );
             if ( 0.0f < result._gain )
             {
@@ -204,8 +211,12 @@ namespace sw
         }
         AudioSpatialResult combined = pResult[loudest];
         combined._gain              = MathUtil::min( MathUtil::sqrt( powerSum ), MathUtil::max( 1.0f, pResult[loudest]._gain ) );
-        combined._pan               = 0.0f < powerSum ? panPowerSum / powerSum : pResult[loudest]._pan;
-        combined._distance          = nearest;
+        if ( 0.0f < powerSum )
+        {
+            combined._direction._right = rightPowerSum / powerSum;
+            combined._direction._front = frontPowerSum / powerSum;
+        }
+        combined._distance = nearest;
         if ( bAnyAudible )
             combined._lowPassHz = openestHz;
         return combined;
@@ -214,11 +225,14 @@ namespace sw
     AudioSpatialResult AudioSpatializer::compute( const AudioListenerState& listener, const AudioEmitterState& emitter, const AudioAttenuationDesc& attenuation,
                                                   const AudioOcclusionDesc& occlusion )
     {
+        // 소리가 문을 돌아 오면(회절) 방향과 거리는 겉보기 위치(리스너 쪽 문 방향, 길 전체 길이)로 정한다. 도플러는 에미터 자신의 움직임이다.
+        const bool         bRedirected = attenuation._bOcclusion && emitter._bRedirected;
+        const float3&      heardFrom   = bRedirected ? emitter._apparentPosition : emitter._position;
         AudioSpatialResult result;
-        result._distance = computeDistance( listener, emitter._position );
+        result._distance = computeDistance( listener, heardFrom );
         result._gain     = attenuation.computeGain( result._distance );
         // 리스너 0.5 m 안(최소 거리가 더 작으면 그 절반 안)에서는 팬을 가운데로 모은다. 머리 옆을 지나가는 소리가 좌우로 튀지 않게 하려는 것이다.
-        result._pan        = computePan( listener, emitter._position, MathUtil::min( attenuation._minDistance * 0.5f, 0.5f ) );
+        result._direction  = computeDirection( listener, heardFrom, MathUtil::min( attenuation._minDistance * 0.5f, 0.5f ) );
         result._pitchRatio = computeDopplerRatio( listener, emitter, attenuation._dopplerFactor );
         result._lowPassHz  = attenuation.computeLowPassHz( result._distance );
         if ( attenuation._bOcclusion && emitter._occlusion > 0.0f )
@@ -226,6 +240,12 @@ namespace sw
             const float32 amount = MathUtil::saturate( emitter._occlusion );
             result._gain *= AudioMath::dbToLinear( occlusion._volumeDb * amount );
             result._lowPassHz = MathUtil::min( result._lowPassHz, AudioMath::lerpFrequency( audio::kFilterOpenHz, occlusion._lowPassHz, amount ) );
+        }
+        if ( attenuation._bOcclusion && emitter._diffraction > 0.0f )
+        {
+            const float32 amount = MathUtil::saturate( emitter._diffraction );
+            result._gain *= AudioMath::dbToLinear( occlusion._diffractionVolumeDb * amount );
+            result._lowPassHz = MathUtil::min( result._lowPassHz, AudioMath::lerpFrequency( audio::kFilterOpenHz, occlusion._diffractionLowPassHz, amount ) );
         }
         return result;
     }

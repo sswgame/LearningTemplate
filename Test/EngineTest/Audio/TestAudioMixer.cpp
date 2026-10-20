@@ -278,19 +278,26 @@ SW_TEST_CASE( AudioMixerTest, SurroundLayoutMixesEveryChannelIndependently )
 }
 
 /**
- * @brief [AudioMixerTest] 스테레오만 처리하는 부분(이펙트, 보이스 패너)이 있는 구성은 조용히 낮추지 않고 초기화 오류로 멈춘다
+ * @brief [AudioMixerTest] 이펙트가 있는 그래프와 엔진이 5.1 · 7.1 로 선다 — 이펙트 종류 표가 모든 레이아웃을 선언하고, 선언 밖의 레이아웃은 종류가 거절한다
  */
-SW_TEST_CASE( AudioMixerTest, StereoOnlyPartsRejectSurroundLayout )
+SW_TEST_CASE( AudioMixerTest, SurroundLayoutAcceptsEffectsAndTheEngine )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "Effects and the voice panner only process stereo" );
     sw::AudioMixerDesc desc;
     SW_ASSERT_TRUE( desc.loadFromXMLText( R"(<AudioMixerDesc><_listBus><AudioBusDesc _name="master"><_listEffect><AudioEffectDesc _type="LowPass"><_listParameter>
         <AudioEffectParameterDesc _name="frequencyHz" _value="200" /></_listParameter></AudioEffectDesc></_listEffect></AudioBusDesc></_listBus></AudioMixerDesc>)" ) );
-    sw::AudioMixer mixer;
-    SW_EXPECT_FALSE( mixer.initialize( desc, sw::AudioChannelLayout::Surround51 ) );
-    SW_EXPECT_TRUE( mixer.initialize( desc, sw::AudioChannelLayout::Stereo ) );
+    const sw::AudioChannelLayout arrLayout[] = { sw::AudioChannelLayout::Stereo, sw::AudioChannelLayout::Surround51, sw::AudioChannelLayout::Surround71 };
+    for ( const sw::AudioChannelLayout layout : arrLayout )
+    {
+        sw::AudioMixer mixer;
+        SW_EXPECT_TRUE( mixer.initialize( desc, layout ) );
+        sw::AudioEngine engine;
+        SW_EXPECT_TRUE( engine.initialize( sw::AudioMixerDesc::makeDefault(), layout ) );
+        SW_EXPECT_EQUAL( sw::AudioChannelLayoutUtil::getChannelCount( layout ), sw::AudioChannelLayoutUtil::getChannelCount( engine.getChannelLayout() ) );
+    }
 
-    sw::AudioEngine engine;
-    SW_EXPECT_FALSE( engine.initialize( sw::AudioMixerDesc::makeDefault(), sw::AudioChannelLayout::Surround51 ) );
-    SW_EXPECT_FALSE( engine.isInitialized() );
+    // 선언한 레이아웃 밖은 거절한다(표의 칸이 정본이다).
+    sw::AudioEffectTypeInfo stereoOnly;
+    stereoOnly._supportedLayoutMask = sw::AudioEffectTypeInfo::makeLayoutBit( sw::AudioChannelLayout::Stereo );
+    SW_EXPECT_TRUE( stereoOnly.supportsLayout( sw::AudioChannelLayout::Stereo ) );
+    SW_EXPECT_FALSE( stereoOnly.supportsLayout( sw::AudioChannelLayout::Surround51 ) );
 }

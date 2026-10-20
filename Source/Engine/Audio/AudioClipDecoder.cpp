@@ -117,3 +117,40 @@ namespace sw
         return false;
     }
 } // namespace sw
+
+namespace sw
+{
+    void AudioWavEncoder::encodeFloat32( const float32* pInterleaved, uint32 frameCount, uint32 channelCount, uint32 channelMask, uint32 sampleRate, vector<uint8>& outBytes )
+    {
+        using Internal                  = AudioClipDecoderInternal;
+        constexpr uint32 kFmtSize       = 40; // WAVEFORMATEXTENSIBLE
+        constexpr uint16 kBitsPerSample = 32;
+        const uint32     blockAlign     = channelCount * static_cast<uint32>( sizeof( float32 ) );
+        const uint32     dataSize       = frameCount * blockAlign;
+
+        outBytes.clear();
+        outBytes.reserve( 12 + 8 + kFmtSize + 8 + static_cast<size_t>( dataSize ) );
+        outBytes.insert( outBytes.end(), { 'R', 'I', 'F', 'F' } );
+        LittleEndianUtil::appendUint32( outBytes, 4 + 8 + kFmtSize + 8 + dataSize );
+        outBytes.insert( outBytes.end(), { 'W', 'A', 'V', 'E', 'f', 'm', 't', ' ' } );
+        LittleEndianUtil::appendUint32( outBytes, kFmtSize );
+        LittleEndianUtil::appendUint16( outBytes, Internal::kWaveFormatExtensible );
+        LittleEndianUtil::appendUint16( outBytes, static_cast<uint16>( channelCount ) );
+        LittleEndianUtil::appendUint32( outBytes, sampleRate );
+        LittleEndianUtil::appendUint32( outBytes, sampleRate * blockAlign );
+        LittleEndianUtil::appendUint16( outBytes, static_cast<uint16>( blockAlign ) );
+        LittleEndianUtil::appendUint16( outBytes, kBitsPerSample );
+        LittleEndianUtil::appendUint16( outBytes, 22 ); // cbSize: 확장 부분의 바이트 수
+        LittleEndianUtil::appendUint16( outBytes, kBitsPerSample );
+        LittleEndianUtil::appendUint32( outBytes, channelMask );
+        // 하위 형식 GUID: 앞 4 바이트가 형식 태그(IEEE float), 뒤 12 바이트는 KSDATAFORMAT_SUBTYPE_* 공통 꼬리다.
+        LittleEndianUtil::appendUint32( outBytes, Internal::kWaveFormatIeeeFloat );
+        outBytes.insert( outBytes.end(), Internal::kArrSubFormatTail, Internal::kArrSubFormatTail + sizeof( Internal::kArrSubFormatTail ) );
+        outBytes.insert( outBytes.end(), { 'd', 'a', 't', 'a' } );
+        LittleEndianUtil::appendUint32( outBytes, dataSize );
+        const size_t sampleOffset = outBytes.size();
+        outBytes.resize( sampleOffset + dataSize );
+        if ( dataSize > 0 )
+            Memory::copy( outBytes.data() + sampleOffset, pInterleaved, dataSize );
+    }
+} // namespace sw

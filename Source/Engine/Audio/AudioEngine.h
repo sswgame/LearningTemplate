@@ -73,12 +73,17 @@ namespace sw
 
         /**
          * @brief 믹서 그래프를 만들고 요청을 받을 준비를 합니다. 그래프가 검사를 통과하지 못하면 false 를 반환합니다.
-         * @param layout 출력 채널 구성입니다. 레이아웃은 장치를 닫은 뒤에만(다시 초기화해서) 바꿉니다.
-         * @details 보이스가 아직 스테레오 패너뿐이라(U2 에서 방향 패너) 스테레오가 아니면 false 입니다. 앞 두 채널에만 소리가 나는 상태로 두지 않습니다.
+         * @param layout 출력 채널 구성입니다. 레이아웃은 장치를 닫은 뒤에만(`setChannelLayout`) 바꿉니다.
+         * @details 그래프의 이펙트가 레이아웃을 지원하지 않으면(이펙트 종류 표의 지원 레이아웃) false 입니다.
          */
         [[nodiscard]] bool initialize( const AudioMixerDesc& mixerDesc, AudioChannelLayout layout );
-        /** @brief 초기화 때 받은 출력 채널 구성입니다. `render` 의 교차 출력이 이 채널 수를 가집니다. */
+        /** @brief 출력 채널 구성입니다. `render` 의 교차 출력이 이 채널 수를 가집니다. */
         AudioChannelLayout getChannelLayout() const { return _layout; }
+        /**
+         * @brief 출력 채널 구성을 바꿉니다. 지금 그래프를 새 레이아웃으로 다시 만들고, 재생 중인 보이스는 이어서 다음 블록부터 새 레이아웃의 게인으로 램프합니다.
+         * @details 장치가 `render` 를 부르지 않을 때(출력을 닫은 뒤)만 부릅니다. 밀린 명령을 먼저 적용합니다. 그래프가 새 레이아웃을 받지 못하면 false 이고 지금 구성을 그대로 씁니다.
+         */
+        [[nodiscard]] bool setChannelLayout( AudioChannelLayout layout );
         /** @brief 보이스와 그래프를 해제합니다. 장치가 `render` 를 더 호출하지 않게 한 뒤에 호출해야 합니다. */
         void shutdown();
         /** @brief 초기화되었는지입니다. */
@@ -173,8 +178,11 @@ namespace sw
         void setListener( uint32 listenerIndex, const AudioListenerState& state );
         /** @brief 에미터의 위치와 속도를 정합니다. 처음이면 에미터를 만듭니다. */
         void setEmitter( AudioEmitterID emitterID, const float3& position, const float3& velocity );
-        /** @brief 에미터의 가림 값(0..1)을 정합니다. 엔진이 `AudioOcclusionDesc::_smoothingSeconds` 로 따라갑니다. */
-        void setEmitterOcclusion( AudioEmitterID emitterID, float32 occlusion );
+        /**
+         * @brief 에미터까지 소리가 오는 길(가림 0..1, 회절 0..1, 문을 돌아 오는 겉보기 위치)을 정합니다. 가림 · 회절은 엔진이 `AudioOcclusionDesc::_smoothingSeconds` 로 따라갑니다.
+         * @details 가림만 있으면 `AudioPropagation::makeOcclusion( value )` 를 넘깁니다.
+         */
+        void setEmitterPropagation( AudioEmitterID emitterID, const AudioPropagation& propagation );
         /** @brief 에미터를 지웁니다. 그 에미터의 소리는 마지막 위치에 남아 끝까지 재생합니다. */
         void removeEmitter( AudioEmitterID emitterID );
 
@@ -236,7 +244,7 @@ namespace sw
             SetRandomSeed,
             SetListener,
             SetEmitter,
-            SetEmitterOcclusion,
+            SetEmitterPropagation,
             SetEmitterParameter,
             RemoveEmitter,
             SetParameter,
@@ -251,15 +259,16 @@ namespace sw
         /** @brief 게임 스레드가 쌓는 명령 하나입니다. 종류마다 쓰는 필드만 채웁니다. */
         struct Command
         {
-            shared_ptr<AudioMixer>              _pMixer{};     ///< SwapMixer
-            shared_ptr<const AudioEventLibrary> _pLibrary{};   ///< SetLibrary 가 쓴다. nullptr 이면 언로드한다.
-            shared_ptr<const AudioMusicDesc>    _pMusic{};     ///< StartMusic
-            hashed_string                       _name{};       ///< 버스, 이벤트, 파라미터, 스냅샷, 라이브러리의 이름이다.
-            hashed_string                       _path{};       ///< 클립 경로다.
-            AudioClipPlayParams                 _clipParams{}; ///< PlayClip
-            AudioListenerState                  _listener{};   ///< SetListener
-            float3                              _position{};   ///< SetEmitter
-            float3                              _velocity{};   ///< SetEmitter
+            shared_ptr<AudioMixer>              _pMixer{};      ///< SwapMixer
+            shared_ptr<const AudioEventLibrary> _pLibrary{};    ///< SetLibrary 가 쓴다. nullptr 이면 언로드한다.
+            shared_ptr<const AudioMusicDesc>    _pMusic{};      ///< StartMusic
+            hashed_string                       _name{};        ///< 버스, 이벤트, 파라미터, 스냅샷, 라이브러리의 이름이다.
+            hashed_string                       _path{};        ///< 클립 경로다.
+            AudioClipPlayParams                 _clipParams{};  ///< PlayClip
+            AudioListenerState                  _listener{};    ///< SetListener
+            float3                              _position{};    ///< SetEmitter
+            float3                              _velocity{};    ///< SetEmitter
+            AudioPropagation                    _propagation{}; ///< SetEmitterPropagation
             AudioPlayingID                      _playingID{ 0 };
             AudioEmitterID                      _emitterID{ 0 };
             uint64                              _seed{ 0 };     ///< SetRandomSeed
@@ -374,6 +383,8 @@ namespace sw
         void applyCommands();
         /** @brief 명령 하나를 적용합니다. */
         void applyCommand( Command& command );
+        /** @brief 만든 그래프로 바꿉니다(사용자 버스 상태 다시 적용, 보이스 버스 다시 찾기, 감쇠 · 스냅샷 다시 묶기). 그래프 레이아웃은 `_layout` 과 같아야 합니다. */
+        void adoptMixer( shared_ptr<AudioMixer> pMixer );
         /** @brief 블록 하나를 렌더해 `_blockOutput`(평면)에 둡니다. */
         void renderBlock();
         /** @brief 빈 보이스 슬롯을 잡습니다. 없으면 nullptr 를 반환합니다. */
@@ -466,7 +477,6 @@ namespace sw
         vector<EventInstance>                        _listInstance;                   /**< 이벤트 인스턴스 슬롯입니다. */
         vector<BusUserState>                         _listBusUserState;               /**< 버스 이름의 사용자 상태입니다. */
         AudioBlockBuffer                             _blockOutput;                    /**< 마지막 블록의 출력입니다(평면). */
-        AudioBlockBuffer                             _voiceScratch;                   /**< 보이스 로우패스 작업 블록입니다(스테레오 평면, 블록 길이). */
         vector<AudioAttenuationDesc>                 _listAttenuation;                /**< 감쇠 테이블입니다. 그래프 프리셋과 라이브러리 프리셋을 합쳤습니다. */
         vector<SnapshotState>                        _listSnapshot;                   /**< 켜 둔 스냅샷입니다. 켠 순서대로 둡니다. */
         AudioMusicPlayback                           _music;                          /**< 적응형 음악의 재생 위치와 전환 예약입니다. */
@@ -482,7 +492,7 @@ namespace sw
         uint64                                       _droppedEventCount;              /**< 버린 이벤트 수입니다. 게시용입니다. */
         uint32                                       _peakRealVoiceCount;             /**< 한 블록에 섞은 보이스의 최댓값입니다. 게시용입니다. */
         uint32                                       _blockCursor;                    /**< `_blockOutput` 에서 다음에 내보낼 프레임입니다. */
-        AudioChannelLayout                           _layout;                         /**< 출력 채널 구성입니다. 초기화 때 정합니다. */
+        AudioChannelLayout                           _layout;                         /**< 출력 채널 구성입니다. 초기화와 `setChannelLayout`(장치를 닫은 뒤)이 정합니다. */
         // 게시(오디오 스레드 → 게임 스레드)
         AudioPublishedState _published;    /**< 게임 스레드가 읽는 사본입니다(재생 목록, 상태, 음악 위치). */
         atomic<bool>        _bInitialized; /**< 초기화되었는지입니다. */

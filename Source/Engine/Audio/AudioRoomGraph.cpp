@@ -11,6 +11,7 @@ namespace sw
         , _wallLeak{ 0.0f }
         , _listTransmittance{}
         , _listVisited{}
+        , _listViaPortal{}
     {
     }
 
@@ -24,7 +25,7 @@ namespace sw
         return static_cast<uint32>( _listRoom.size() - 1 );
     }
 
-    uint32 AudioRoomGraph::addPortal( uint32 roomA, uint32 roomB, float32 openness )
+    uint32 AudioRoomGraph::addPortal( uint32 roomA, uint32 roomB, const float3& position, float32 openness )
     {
         const bool bValidA             = roomA == kOutside || roomA < _listRoom.size();
         const bool bValidB             = roomB == kOutside || roomB < _listRoom.size();
@@ -32,6 +33,7 @@ namespace sw
         if ( bInvalidPortalRooms )
             return invalid_index::kUint32;
         Portal portal;
+        portal._position = position;
         portal._roomA    = roomA;
         portal._roomB    = roomB;
         portal._openness = MathUtil::saturate( openness );
@@ -87,6 +89,7 @@ namespace sw
         const size_t nodeCount = _listRoom.size() + 1;
         _listTransmittance.assign( nodeCount, 0.0f );
         _listVisited.assign( nodeCount, 0 );
+        _listViaPortal.assign( nodeCount, invalid_index::kUint32 );
         _listTransmittance[fromNode] = 1.0f;
         const float32 openFactor     = 1.0f - _openPortalOcclusion;
         for ( size_t step = 0; step < nodeCount; ++step )
@@ -105,30 +108,81 @@ namespace sw
             if ( current == invalid_index::kUint32 || current == targetNode )
                 break;
             _listVisited[current] = 1;
-            for ( const Portal& portal : _listPortal )
+            for ( uint32 portalIndex = 0; portalIndex < _listPortal.size(); ++portalIndex )
             {
-                const uint32 nodeA = toNode( portal._roomA );
-                const uint32 nodeB = toNode( portal._roomB );
+                const Portal& portal = _listPortal[portalIndex];
+                const uint32  nodeA  = toNode( portal._roomA );
+                const uint32  nodeB  = toNode( portal._roomB );
                 if ( nodeA != current && nodeB != current )
                     continue;
                 const uint32  other         = nodeA == current ? nodeB : nodeA;
                 const float32 transmittance = currentBest * portal._openness * openFactor;
                 if ( _listTransmittance[other] < transmittance )
+                {
                     _listTransmittance[other] = transmittance;
+                    _listViaPortal[other]     = portalIndex;
+                }
             }
         }
         return _listTransmittance[targetNode];
     }
 
-    float32 AudioRoomGraph::computeOcclusion( const float3& listener, const float3& emitter ) const
+    AudioPropagation AudioRoomGraph::computePropagation( const float3& listener, const float3& emitter ) const
     {
         if ( _listRoom.empty() )
-            return 0.0f;
+            return AudioPropagation::makeOcclusion( 0.0f );
         const uint32 listenerRoom = findRoom( listener );
         const uint32 emitterRoom  = findRoom( emitter );
         if ( listenerRoom == emitterRoom )
-            return 0.0f;
-        const float32 transmittance = computeBestTransmittance( toNode( listenerRoom ), toNode( emitterRoom ) );
-        return MathUtil::saturate( 1.0f - MathUtil::max( transmittance, _wallLeak ) );
+            return AudioPropagation::makeOcclusion( 0.0f );
+        const uint32     listenerNode  = toNode( listenerRoom );
+        const uint32     emitterNode   = toNode( emitterRoom );
+        const float32    transmittance = computeBestTransmittance( listenerNode, emitterNode );
+        AudioPropagation propagation   = AudioPropagation::makeOcclusion( MathUtil::saturate( 1.0f - MathUtil::max( transmittance, _wallLeak ) ) );
+        // 벽으로 새는 소리가 문을 돌아 오는 소리보다 크면 소리는 에미터 쪽에서 곧게 온다(회절 없음).
+        const bool bThroughPortals = 0.0f < transmittance && _wallLeak <= transmittance;
+        if ( bThroughPortals == false )
+            return propagation;
+
+        // 에미터 쪽에서 거슬러 올라가며 지나는 문을 모은다. 노드 수보다 길 수 없다.
+        float3  previous      = emitter;
+        float3  nearestPortal = emitter;
+        float3  outgoing      = float3( 0.0f, 0.0f, 0.0f );
+        float32 pathLength    = 0.0f;
+        float32 bendRadians   = 0.0f;
+        uint32  node          = emitterNode;
+        for ( size_t hop = 0; hop <= _listRoom.size() && node != listenerNode; ++hop )
+        {
+            const uint32 portalIndex = _listViaPortal[node];
+            if ( portalIndex == invalid_index::kUint32 )
+                return propagation; // 길 기록이 끊겼다 — 길 찾기가 목표에 닿지 않은 경우라 회절을 내지 않는다
+            const Portal& portal  = _listPortal[portalIndex];
+            float3        segment = previous - portal._position; // 문 → 소리 쪽(다음 점)
+            const float32 length  = segment.getLength();
+            pathLength += length;
+            if ( length > 1e-4f )
+            {
+                segment /= length;
+                if ( outgoing.getLengthSquared() > 0.0f )
+                    bendRadians += MathUtil::acos( MathUtil::clamp( segment.dot( outgoing ), -1.0f, 1.0f ) );
+                outgoing = segment;
+            }
+            previous           = portal._position;
+            nearestPortal      = portal._position;
+            const uint32 nodeA = toNode( portal._roomA );
+            node               = nodeA == node ? toNode( portal._roomB ) : nodeA;
+        }
+        float3        toPortal       = nearestPortal - listener;
+        const float32 listenerLength = toPortal.getLength();
+        pathLength += listenerLength;
+        if ( listenerLength <= 1e-4f )
+            return propagation; // 리스너가 문 위에 있다 — 방향을 정할 수 없고 꺾임도 없다
+        toPortal /= listenerLength;
+        if ( outgoing.getLengthSquared() > 0.0f )
+            bendRadians += MathUtil::acos( MathUtil::clamp( outgoing.dot( toPortal ), -1.0f, 1.0f ) );
+        propagation._bRedirected      = true;
+        propagation._apparentPosition = listener + toPortal * pathLength;
+        propagation._diffraction      = MathUtil::saturate( bendRadians / MathUtil::kPi );
+        return propagation;
     }
 } // namespace sw

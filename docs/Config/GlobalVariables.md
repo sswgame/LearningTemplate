@@ -87,6 +87,12 @@
 |---|---|---|---|---|---|
 | `gv_dumpReflection` | `string` | — | 시험 | 첫 프레임에 이 이름들(쉼표로 여럿)의 리플렉션 등록 내용을 로그로 남긴다 — 타입 · enum (비우면 사용 안 함) | [Engine.cpp](../../Source/Engine/Engine.cpp) |
 
+## `Source/Engine/Audio`
+
+| 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
+|---|---|---|---|---|---|
+| `gv_audioDumpPath` | `string` | — | 시험 | 오프라인 오디오 렌더를 내릴 때 이 WAV 로 남김(비면 끄기) | [IAudioService.cpp](../../Source/Engine/Audio/IAudioService.cpp) |
+
 ## `Source/Engine/Automation`
 
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |

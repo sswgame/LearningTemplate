@@ -35,7 +35,7 @@ namespace sw
         /**
          * @brief 데이터로 버스를 만듭니다. 데이터가 검사를 통과하지 못하면(이름이나 고리 문제) false 를 반환하고 그래프는 비어 있습니다.
          * @param layout 모든 버스의 채널 구성입니다(장치가 정합니다). 버스 입력은 여기서 채널 수만큼 한 번에 잡습니다.
-         * @details 이펙트는 아직 스테레오만 처리해서, 스테레오가 아닌 레이아웃에 이펙트가 있는 그래프는 false 입니다(조용히 건너뛰지 않습니다).
+         * @details 이펙트 종류가 레이아웃을 지원하지 않으면(종류 표의 지원 레이아웃) false 입니다(조용히 건너뛰지 않습니다).
          */
         [[nodiscard]] bool initialize( const AudioMixerDesc& desc, AudioChannelLayout layout );
 

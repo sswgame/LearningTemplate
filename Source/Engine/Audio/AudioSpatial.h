@@ -1,9 +1,11 @@
 /**
  * @file AudioSpatial.h
- * @brief 공간화입니다. 리스너와 에미터 상태, 거리 감쇠 곡선(데이터), 팬(등전력 스테레오), 도플러, 가림(occlusion)에 따른 볼륨과 로우패스를 다룹니다.
- * @details 3D 는 리스너의 오른쪽 축으로 팬을 정한다. 고도는 팬에 쓰지 않으며 HRTF 는 지원하지 않는다. 2D 는 화면 평면(XY)의 가로 거리로 팬을 정한다.
+ * @brief 공간화입니다. 리스너와 에미터 상태, 거리 감쇠 곡선(데이터), 방향(패너 입력), 도플러, 가림(occlusion)에 따른 볼륨과 로우패스를 다룹니다.
+ * @details 3D 는 리스너 수평면의 (오른쪽, 앞) 방향을 내고 `AudioPanner` 가 레이아웃(스테레오 · 5.1 · 7.1)에 맞춰 게인으로 바꾼다. 고도는 쓰지 않으며 HRTF 는 지원하지 않는다.
+ *          2D(Screen2D)는 화면 평면의 가로 거리를 팬 값으로 쓰고 앞 두 채널에만 낸다(`AudioPanMode::FrontStereo`).
  *          감쇠 프리셋(`AudioAttenuationDesc`)은 Wwise 의 Attenuation ShareSet, 언리얼의 Sound Attenuation 에 해당하며, 소리(이벤트나 클립)가 이름으로 고른다.
  *          가림 값(0 = 열림, 1 = 막힘)은 게임 스레드가 레이캐스트로 측정해서 넣는다(`IAudioOcclusionQuery`). 엔진이 이 값을 부드럽게 따라가며 볼륨과 컷오프로 바꾼다.
+ *          방 · 포털 그래프는 소리가 문을 돌아 오는 길(겉보기 위치, 회절)도 낸다(`AudioPropagation`). 엔진은 겉보기 위치로 방향 · 거리를, 회절로 볼륨 · 컷오프를 더 정한다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -12,6 +14,7 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Audio/AudioPanner.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -123,6 +126,34 @@ namespace sw
         float32 _lowPassHz{ 900.0f };
         PROPERTY( Min = 0.0, Tooltip = "Time the engine takes to follow a new occlusion value", Units = s )
         float32 _smoothingSeconds{ 0.15f };
+        PROPERTY( Max = 0.0, Tooltip = "Volume change when the sound bends a full 180 degrees around portals (diffraction)", Meta = "Units=dB" )
+        float32 _diffractionVolumeDb{ -6.0f };
+        PROPERTY( Min = 20.0, Max = 20000.0, Tooltip = "Low-pass cutoff when the sound bends a full 180 degrees around portals (blended on a log scale)", Units = Hz )
+        float32 _diffractionLowPassHz{ 1500.0f };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief 리스너에서 에미터까지 소리가 오는 길의 측정입니다(가림 질의의 결과).
+     * @details 레이캐스트 질의는 가림만 낸다. 방 · 포털 질의(`AudioRoomGraph`)는 소리가 문을 돌아 올 때 겉보기 위치(리스너 쪽 문 방향, 길 전체 길이만큼 떨어진 점)와
+     *          꺾인 정도(회절, 0 = 곧게, 1 = 180°)를 함께 낸다. 엔진은 겉보기 위치로 방향 · 거리를 정하고, 회절로 볼륨과 로우패스를 더 내린다(Wwise 의 Diffraction 과 같다).
+     */
+    struct AudioPropagation
+    {
+        float3  _apparentPosition{};   ///< `_bRedirected` 일 때 소리가 오는 겉보기 위치다.
+        float32 _occlusion{ 0.0f };    ///< 가림(0 = 열림, 1 = 막힘)이다.
+        float32 _diffraction{ 0.0f };  ///< 꺾인 정도(0 = 곧게, 1 = 180°)다.
+        bool    _bRedirected{ false }; ///< 소리가 에미터 위치가 아니라 `_apparentPosition` 에서 온다.
+
+        /** @brief 가림만 있는 결과입니다(레이캐스트 질의, 테스트). */
+        static AudioPropagation makeOcclusion( float32 occlusion )
+        {
+            AudioPropagation propagation;
+            propagation._occlusion = occlusion;
+            return propagation;
+        }
     };
 } // namespace sw
 
@@ -148,8 +179,12 @@ namespace sw
     {
         float3  _position{};
         float3  _velocity{};
-        float32 _occlusionTarget{ 0.0f }; ///< 게임이 넣은 값이다.
-        float32 _occlusion{ 0.0f };       ///< 엔진이 따라간 값이다.
+        float3  _apparentPosition{};        ///< 소리가 문을 돌아 올 때의 겉보기 위치다(`_bRedirected`).
+        float32 _occlusionTarget{ 0.0f };   ///< 게임이 넣은 값이다.
+        float32 _occlusion{ 0.0f };         ///< 엔진이 따라간 값이다.
+        float32 _diffractionTarget{ 0.0f }; ///< 게임이 넣은 회절(0..1)이다.
+        float32 _diffraction{ 0.0f };       ///< 엔진이 따라간 회절이다.
+        bool    _bRedirected{ false };      ///< 방향 · 거리를 `_apparentPosition` 으로 정한다.
     };
 } // namespace sw
 
@@ -158,11 +193,11 @@ namespace sw
     /** @brief 한 보이스의 공간화 결과입니다. */
     struct AudioSpatialResult
     {
-        float32 _gain{ 1.0f };          ///< 거리 감쇠 × 가림(선형)
-        float32 _pan{ 0.0f };           ///< [-1, 1]
-        float32 _pitchRatio{ 1.0f };    ///< 도플러 비다.
-        float32 _lowPassHz{ 20000.0f }; ///< 공기 흡수와 가림 중 낮은 쪽이다.
-        float32 _distance{ 0.0f };
+        AudioPanDirection _direction{};           ///< 패너 입력이다(리스너 공간 방향과 퍼짐).
+        float32           _gain{ 1.0f };          ///< 거리 감쇠 × 가림(선형)
+        float32           _pitchRatio{ 1.0f };    ///< 도플러 비다.
+        float32           _lowPassHz{ 20000.0f }; ///< 공기 흡수와 가림 중 낮은 쪽이다.
+        float32           _distance{ 0.0f };
     };
 } // namespace sw
 
@@ -185,11 +220,15 @@ namespace sw
         /**
          * @brief 리스너마다의 결과 @p count 개(1 개 이상)를 보이스 하나의 결과로 합칩니다.
          * @details `Loudest` 는 게인이 가장 큰 결과 그대로입니다. `PowerSum` 은 게인 = √(Σ 게인²)(상한은 1 과 가장 큰 단독 게인 중 큰 쪽),
-         *          팬 = 전력으로 가중한 평균, 컷오프 = 들리는(게인 > 0) 리스너 가운데 가장 열린 것, 도플러 = 가장 크게 들리는 리스너의 것, 거리 = 가장 가까운 리스너입니다.
+         *          방향 = 성분마다 전력으로 가중한 평균(모드는 가장 크게 들리는 리스너의 것), 컷오프 = 들리는(게인 > 0) 리스너 가운데 가장 열린 것,
+         *          도플러 = 가장 크게 들리는 리스너의 것, 거리 = 가장 가까운 리스너입니다.
          */
         static AudioSpatialResult combineListeners( const AudioSpatialResult* pResult, uint32 count, AudioListenerMixMode mode );
-        /** @brief 리스너 → 에미터의 팬([-1, 1])입니다. 리스너에 아주 가까우면 가운데로 모읍니다(@p centerRadius). */
-        static float32 computePan( const AudioListenerState& listener, const float3& emitterPosition, float32 centerRadius );
+        /**
+         * @brief 리스너 → 에미터의 방향입니다. World3D 는 수평면의 (오른쪽, 앞) 단위 방향이고 리스너에 아주 가까우면(@p centerRadius 안) 길이를 줄여 퍼뜨립니다(`Surround`).
+         *        Screen2D 는 화면 가로 거리 / 화면 반폭을 오른쪽 성분으로 씁니다(`FrontStereo`). 두 경우 모두 오른쪽 성분이 스테레오 팬 값입니다.
+         */
+        static AudioPanDirection computeDirection( const AudioListenerState& listener, const float3& emitterPosition, float32 centerRadius );
         /** @brief 도플러 비(1 = 그대로)입니다. @p factor 0 이면 1 입니다. */
         static float32 computeDopplerRatio( const AudioListenerState& listener, const AudioEmitterState& emitter, float32 factor );
         /**
@@ -212,8 +251,9 @@ namespace sw
 {
     /**
      * @class IAudioOcclusionQuery
-     * @brief 리스너와 에미터 사이가 막혔는지(0..1) 묻는 인터페이스입니다. 게임 스레드에서 호출합니다.
+     * @brief 리스너와 에미터 사이의 소리 길(가림 0..1, 문을 돌아 오는 겉보기 위치와 회절)을 묻는 인터페이스입니다. 게임 스레드에서 호출합니다.
      * @details 엔진 기본은 물리 씬의 레이캐스트(`PhysicsAudioOcclusionQuery`, Object/Component/Audio)이고, 물리 씬이 없으면 이 인터페이스를 쓰지 않는다(항상 0).
+     *          레이캐스트는 가림만 낸다(`AudioPropagation::makeOcclusion`). 방 · 포털 그래프(`AudioRoomGraph`)는 회절까지 낸다.
      */
     class SW_API IAudioOcclusionQuery
     {
@@ -224,7 +264,7 @@ namespace sw
         IAudioOcclusionQuery( const IAudioOcclusionQuery& )            = delete;
         IAudioOcclusionQuery& operator=( const IAudioOcclusionQuery& ) = delete;
 
-        /** @brief @p listener 에서 @p emitter 까지의 가림(0 = 열림, 1 = 완전히 막힘)입니다. */
-        virtual float32 computeOcclusion( const float3& listener, const float3& emitter ) const = 0;
+        /** @brief @p listener 에서 @p emitter 까지 소리가 오는 길입니다(가림 0 = 열림, 1 = 완전히 막힘). */
+        virtual AudioPropagation computePropagation( const float3& listener, const float3& emitter ) const = 0;
     };
 } // namespace sw

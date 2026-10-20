@@ -1,6 +1,6 @@
 /**
  * @file AudioBiquad.h
- * @brief 2 차 IIR 필터(바이쿼드)입니다. RBJ "Audio EQ Cookbook" 계수와 스테레오 상태(전치 직접형 II)를 담습니다.
+ * @brief 2 차 IIR 필터(바이쿼드)입니다. RBJ "Audio EQ Cookbook" 계수와 채널별 상태(전치 직접형 II)를 담습니다.
  * @details 버스 이펙트(LowPass, HighPass, BandPass, Peaking, 셸빙)와 보이스의 가림, 거리 로우패스가 함께 씁니다.
  */
 #pragma once
@@ -44,18 +44,19 @@ namespace sw
 namespace sw
 {
     /**
-     * @struct AudioBiquadStereo
-     * @brief 계수 하나와 채널 둘의 상태입니다. 스테레오 평면 블록을 제자리에서 거릅니다.
+     * @struct AudioBiquadFilter
+     * @brief 계수 하나와 채널마다의 상태입니다(최대 `audio::kMaxChannelCount` 채널). 평면 블록의 모든 채널을 제자리에서 거릅니다.
+     * @details 버스 이펙트는 레이아웃의 채널 수만큼, 보이스는 소스 채널(1 · 2)만큼 같은 형식을 쓴다. 채널마다 상태가 따로라 채널끼리 섞이지 않는다.
      */
-    struct SW_API AudioBiquadStereo
+    struct SW_API AudioBiquadFilter
     {
         AudioBiquadCoefficients _coefficients{};
-        float32                 _arrState1[audio::kStereoChannelCount]{ 0.0f, 0.0f }; ///< 채널마다 z⁻¹ 상태를 가진다.
-        float32                 _arrState2[audio::kStereoChannelCount]{ 0.0f, 0.0f }; ///< 채널마다 z⁻² 상태를 가진다.
+        float32                 _arrState1[audio::kMaxChannelCount]{}; ///< 채널마다 z⁻¹ 상태를 가진다.
+        float32                 _arrState2[audio::kMaxChannelCount]{}; ///< 채널마다 z⁻² 상태를 가진다.
 
         /** @brief 상태를 비웁니다. */
         void reset();
-        /** @brief @p block(스테레오 평면, `_frameCount` 프레임)을 제자리에서 거릅니다. */
+        /** @brief @p block(평면, `_channelCount` 채널 · `_frameCount` 프레임)을 제자리에서 거릅니다. */
         void process( const AudioBlockView& block );
     };
 } // namespace sw

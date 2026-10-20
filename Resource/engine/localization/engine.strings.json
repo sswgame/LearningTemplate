@@ -826,6 +826,54 @@
                 "engine/settings/engine.settings.xml"
             ]
         },
+        "settings.audio.speakerMode": {
+            "source": "Speaker Setup",
+            "context": "Options menu label",
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
+        },
+        "settings.audio.speakerMode.auto": {
+            "source": "Automatic",
+            "context": "Options menu label",
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
+        },
+        "settings.audio.speakerMode.headphones": {
+            "source": "Headphones (3D)",
+            "context": "Options menu label",
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
+        },
+        "settings.audio.speakerMode.stereo": {
+            "source": "Stereo",
+            "context": "Options menu label",
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
+        },
+        "settings.audio.speakerMode.surround51": {
+            "source": "5.1 Surround",
+            "context": "Options menu label",
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
+        },
+        "settings.audio.speakerMode.surround71": {
+            "source": "7.1 Surround",
+            "context": "Options menu label",
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
+        },
         "settings.audio.uiVolume": {
             "source": "Interface Volume",
             "context": "Options menu label",

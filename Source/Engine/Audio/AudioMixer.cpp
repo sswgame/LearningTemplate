@@ -29,15 +29,19 @@ namespace sw
         if ( desc.validate( "mixer" ) == false || desc.makeProcessingOrder( _listOrder ) == false )
             return false;
 
-        // 이펙트는 스테레오만 처리한다. 맞지 않는 조합은 조용히 건너뛰지 않고 여기서 멈춘다(채널별 이펙트는 U3).
-        const bool bStereo = AudioChannelLayoutUtil::getChannelCount( layout ) == audio::kStereoChannelCount;
+        // 이펙트 종류가 이 레이아웃을 처리하지 못하면 조용히 건너뛰지 않고 여기서 멈춘다(종류 표의 지원 레이아웃).
         for ( const AudioBusDesc& busDesc : desc._listBus )
         {
-            if ( bStereo == false && busDesc._listEffect.empty() == false )
+            for ( const AudioEffectDesc& effectDesc : busDesc._listEffect )
             {
-                SW_LOG_ERROR( "Bus '%#' has effects, which only process stereo, but the layout has %# channels", busDesc._name.c_str(),
-                              AudioChannelLayoutUtil::getChannelCount( layout ) );
-                return false;
+                const AudioEffectTypeInfo* pTypeInfo    = AudioEffectRegistry::findType( effectDesc._type );
+                const bool                 bUnsupported = pTypeInfo == nullptr || pTypeInfo->supportsLayout( layout ) == false;
+                if ( bUnsupported )
+                {
+                    SW_LOG_ERROR( "Bus '%#' effect '%#' cannot process %# output channels", busDesc._name.c_str(), effectDesc._type.c_str(),
+                                  AudioChannelLayoutUtil::getChannelCount( layout ) );
+                    return false;
+                }
             }
         }
 
@@ -75,7 +79,7 @@ namespace sw
             }
             for ( const AudioEffectDesc& effectDesc : busDesc._listEffect )
             {
-                unique_ptr<IAudioEffect> pEffect = AudioEffectRegistry::createEffect( effectDesc._type );
+                unique_ptr<IAudioEffect> pEffect = AudioEffectRegistry::createEffect( effectDesc._type, layout );
                 for ( const AudioEffectParameterDesc& parameter : effectDesc._listParameter )
                 {
                     const int32 parameterIndex = pEffect->findParameterIndex( parameter._name );

@@ -12,6 +12,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Audio/AudioBlock.h"
+#include "Engine/Audio/AudioChannelLayout.h"
 
 namespace sw
 {
@@ -36,7 +37,13 @@ namespace sw
         const utf8*                     _pName{ nullptr };
         const AudioEffectParameterInfo* _pParameter{ nullptr };
         uint32                          _parameterCount{ 0 };
-        unique_ptr<IAudioEffect> ( *_pCreate )( const AudioEffectTypeInfo& typeInfo ){ nullptr };
+        unique_ptr<IAudioEffect> ( *_pCreate )( const AudioEffectTypeInfo& typeInfo, AudioChannelLayout layout ){ nullptr };
+        uint8 _supportedLayoutMask{ 0 }; ///< 처리할 수 있는 레이아웃의 비트(`1 << AudioChannelLayout`)다. 믹서가 맞지 않는 그래프를 초기화 오류로 멈춘다.
+
+        /** @brief 이 종류가 @p layout 을 처리할 수 있는지입니다. */
+        bool supportsLayout( AudioChannelLayout layout ) const { return ( _supportedLayoutMask & makeLayoutBit( layout ) ) != 0; }
+        /** @brief 레이아웃 하나의 비트입니다(`_supportedLayoutMask` 를 채울 때 씁니다). */
+        static constexpr uint8 makeLayoutBit( AudioChannelLayout layout ) { return static_cast<uint8>( 1u << static_cast<uint32>( layout ) ); }
     };
 } // namespace sw
 
@@ -44,20 +51,21 @@ namespace sw
 {
     /**
      * @class IAudioEffect
-     * @brief 스테레오 평면 블록을 제자리에서 바꾸는 이펙트입니다. 파라미터는 종류가 서술한 순서의 float 배열입니다.
-     * @details 스테레오(`audio::kStereoChannelCount` 채널)만 처리합니다. 믹서가 다른 레이아웃에 이펙트가 있는 그래프를 거절합니다.
+     * @brief 평면 블록을 제자리에서 바꾸는 이펙트입니다. 파라미터는 종류가 서술한 순서의 float 배열입니다.
+     * @details 만들 때 받은 레이아웃의 채널 수만큼 처리합니다(상태도 그만큼 잡습니다). 종류마다 지원 레이아웃을 표에 선언하고, 맞지 않으면 믹서가 초기화 오류로 멈춥니다.
+     *          채널을 섞는 이펙트(리버브)는 LFE 를 입력에 넣지 않고 젖은 소리도 내지 않습니다. 컴프레서 · 리미터는 모든 채널을 한 검출기로 묶습니다(링크).
      * @details 파라미터가 바뀌면 `onParameterChanged` 가 계수를 다시 셉니다(오디오 스레드, 블록 경계).
      */
     class SW_API IAudioEffect
     {
     public:
-        explicit IAudioEffect( const AudioEffectTypeInfo& typeInfo );
+        IAudioEffect( const AudioEffectTypeInfo& typeInfo, AudioChannelLayout layout );
         virtual ~IAudioEffect() = default;
 
         IAudioEffect( const IAudioEffect& )            = delete;
         IAudioEffect& operator=( const IAudioEffect& ) = delete;
 
-        /** @brief @p block(스테레오 평면, `_frameCount` 프레임)을 제자리에서 처리합니다. */
+        /** @brief @p block(평면, 만들 때의 채널 수, `_frameCount` 프레임)을 제자리에서 처리합니다. */
         virtual void process( const AudioBlockView& block ) = 0;
         /** @brief 지연선과 필터 상태를 비웁니다. */
         virtual void reset() = 0;
@@ -70,6 +78,8 @@ namespace sw
         void setParameter( uint32 parameterIndex, float32 value );
         /** @brief 파라미터 값입니다. */
         float32 getParameter( uint32 parameterIndex ) const { return _listParameter[parameterIndex]; }
+        /** @brief 만들 때 받은 레이아웃입니다. */
+        AudioChannelLayout getChannelLayout() const { return _layout; }
 
     protected:
         /** @brief 파라미터가 바뀐 뒤 불립니다(만들 때도 한 번). */
@@ -78,6 +88,8 @@ namespace sw
     protected:
         const AudioEffectTypeInfo* _pTypeInfo;     /**< 종류입니다. */
         vector<float32>            _listParameter; /**< 파라미터 값(서술 순서)입니다. */
+        uint32                     _channelCount;  /**< 처리할 채널 수입니다(레이아웃의 채널 수). */
+        AudioChannelLayout         _layout;        /**< 처리할 레이아웃입니다. */
     };
 } // namespace sw
 
@@ -91,8 +103,8 @@ namespace sw
     {
         /** @brief 이름의 종류입니다. 없으면 nullptr 입니다. */
         static const AudioEffectTypeInfo* findType( const hashed_string& name );
-        /** @brief 이름의 이펙트를 기본 파라미터로 만듭니다. 모르는 이름이면 nullptr 입니다. */
-        static unique_ptr<IAudioEffect> createEffect( const hashed_string& name );
+        /** @brief 이름의 이펙트를 @p layout 용으로 기본 파라미터로 만듭니다. 모르는 이름이거나 종류가 그 레이아웃을 지원하지 않으면 nullptr 입니다(오류를 남깁니다). */
+        static unique_ptr<IAudioEffect> createEffect( const hashed_string& name, AudioChannelLayout layout );
         /** @brief 번호의 종류입니다. */
         static const AudioEffectTypeInfo& getType( uint32 typeIndex );
     };

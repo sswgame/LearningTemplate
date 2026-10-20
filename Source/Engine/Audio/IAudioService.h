@@ -5,7 +5,9 @@
  * @note **볼륨과 음소거는 이 서비스가 관리합니다.** 값 범위(0~1 클램프)와 "음소거는 master 버스에만 건다"는 규칙은 여기에만 적습니다.
  *       값은 같은 이름의 믹서 버스 사용자 볼륨으로 엔진에 전달됩니다.
  * @note **장치가 없으면**(Null 백엔드, 장치를 열지 못한 Windows, 테스트) `update` 가 흐른 시간만큼 엔진을 버퍼에 렌더합니다.
- *       재생 상태(끝남, 음악 박자, 가상 보이스)는 장치가 있을 때와 같이 진행합니다.
+ *       재생 상태(끝남, 음악 박자, 가상 보이스)는 장치가 있을 때와 같이 진행합니다. `-gv_audioDumpPath=<파일>.wav` 면 이 오프라인 렌더를 내릴 때 WAV(채널 마스크 포함)로 남깁니다.
+ * @note **출력 형식은 협상합니다.** 백엔드가 장치를 열어 채널 수와 마스크를 알려 주면(`openDevice`), 스피커 모드(`audio.speakerMode` → `setSpeakerMode`)로 레이아웃을
+ *       정하고(`resolveLayout`) 엔진을 그 레이아웃으로 만든 뒤 장치가 엔진을 당기기 시작합니다(`startOutput`). 장치가 그만큼의 채널을 갖지 않는 명시 모드는 오류로 멈춥니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -16,7 +18,18 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
 
+#include "Engine/Audio/AudioChannelLayout.h"
 #include "Engine/Audio/AudioTypes.h"
+
+namespace sw
+{
+    /** @brief 백엔드가 연 출력 장치의 형식입니다. 채널 수 0 은 "장치 없음"입니다. */
+    struct AudioOutputDevice
+    {
+        uint32 _channelCount{ 0 }; ///< 장치의 채널 수다.
+        uint32 _channelMask{ 0 };  ///< 장치의 WAV 채널 마스크다(`AudioChannelLayoutUtil::kSpeaker*`).
+    };
+} // namespace sw
 
 namespace sw
 {
@@ -58,7 +71,10 @@ namespace sw
         IAudioService( IAudioService&& )                 = delete;
         IAudioService& operator=( IAudioService&& )      = delete;
 
-        /** @brief 엔진을 만들고(기본 믹서 그래프) 출력 장치를 엽니다. 믹서 그래프를 못 읽으면 실패입니다. 장치를 열지 못하는 것은 성공이며, 오프라인으로 진행합니다. */
+        /**
+         * @brief 출력 장치를 열고, 스피커 모드로 레이아웃을 정해 엔진을 만들고(기본 믹서 그래프), 장치가 엔진을 당기게 합니다.
+         * @details 믹서 그래프를 못 읽거나, 장치가 명시 스피커 모드만큼의 채널을 갖지 않으면 실패입니다. 장치를 열지 못하는 것은 성공이며, 오프라인으로 진행합니다.
+         */
         [[nodiscard]] bool initialize();
         /** @brief 출력 장치를 닫고 엔진을 내립니다. */
         void shutdown();
@@ -75,6 +91,22 @@ namespace sw
         bool isInitialized() const { return _bInitialized; }
         /** @brief 출력 장치가 엔진을 당기고 있는지입니다. false 면 `update` 가 렌더합니다. */
         bool isOutputOpen() const { return _bOutputOpen; }
+
+        /**
+         * @brief 스피커 모드를 정합니다. 초기화 전이면 값만 두고 `initialize` 가 씁니다. 초기화 뒤면 출력을 멈추고 엔진 레이아웃을 바꾼 뒤 다시 엽니다(재생은 이어집니다).
+         * @return 장치가 그 모드만큼의 채널을 갖지 않거나 그래프가 새 레이아웃을 받지 못하면 false 이고 지금 모드와 레이아웃을 그대로 씁니다.
+         */
+        [[nodiscard]] bool setSpeakerMode( AudioSpeakerMode mode );
+        /** @brief 지금 스피커 모드입니다. */
+        AudioSpeakerMode getSpeakerMode() const { return _speakerMode; }
+        /** @brief 열린 장치의 형식입니다. 장치가 없으면 채널 수 0 입니다. */
+        const AudioOutputDevice& getOutputDevice() const { return _device; }
+        /**
+         * @brief 스피커 모드와 장치로 출력 레이아웃을 정합니다.
+         * @details `Auto` 는 장치 마스크가 7.1 을 다 가지면 7.1, 5.1(뒤 또는 옆 서라운드)을 가지면 5.1, 아니면 스테레오다(장치 없음도 스테레오).
+         *          명시값은 장치가 없으면 그 레이아웃(오프라인 렌더), 장치가 있으면 채널 수가 모자랄 때 false 다(몰래 낮추지 않는다).
+         */
+        [[nodiscard]] static bool resolveLayout( AudioSpeakerMode mode, const AudioOutputDevice& device, AudioChannelLayout& outLayout );
 
         /** @brief 프레임마다 부릅니다. 장치가 없으면 흐른 시간만큼 엔진을 렌더해 재생을 진행합니다. */
         void update( float32 deltaSeconds );
@@ -163,25 +195,45 @@ namespace sw
 
     protected:
         /**
-         * @brief 출력 장치를 열어, 장치 스레드에서 엔진의 `render` 를 호출하기 시작합니다.
-         * @return 장치가 없으면 false 를 반환합니다. 그때는 `update` 가 렌더합니다.
+         * @brief 출력 장치를 열고 그 형식(채널 수 · 마스크)을 @p outDevice 에 적습니다. 아직 엔진을 당기지 않습니다.
+         * @return 장치가 없으면 false 를 반환합니다(그때는 `update` 가 렌더합니다). 실패하면 잡은 것을 스스로 놓습니다.
          */
-        [[nodiscard]] virtual bool openOutput() { return false; }
-        /** @brief 출력 장치를 닫습니다. 돌아온 뒤에는 장치 스레드가 `render` 를 부르지 않습니다. */
-        virtual void closeOutput() {}
+        [[nodiscard]] virtual bool openDevice( AudioOutputDevice& outDevice )
+        {
+            (void)outDevice;
+            return false;
+        }
+        /** @brief 열린 장치에 @p layout 형식의 스트림을 열고, 장치 스레드에서 엔진의 `render` 를 부르기 시작합니다. 실패하면 false 입니다. */
+        [[nodiscard]] virtual bool startOutput( AudioChannelLayout layout )
+        {
+            (void)layout;
+            return false;
+        }
+        /** @brief 스트림을 닫습니다. 돌아온 뒤에는 장치 스레드가 `render` 를 부르지 않습니다(장치는 열려 있습니다). */
+        virtual void stopOutput() {}
+        /** @brief 장치를 닫습니다(`stopOutput` 뒤에 부릅니다). */
+        virtual void closeDevice() {}
+
+    private:
+        /** @brief 오프라인 렌더 덤프를 WAV 로 씁니다(`gv_audioDumpPath`). 쌓인 것이 없으면 아무것도 하지 않습니다. */
+        void writeOfflineDump();
 
     private:
         unique_ptr<AudioEngine> _pEngine;          /**< 오디오 엔진입니다. */
         vector<AudioBusVolume>  _listBusVolume;    /**< 세 기본 버스 밖의 버스 볼륨입니다. */
         vector<float32>         _listOfflineBlock; /**< 장치가 없을 때 렌더하는 버퍼입니다. */
+        vector<float32>         _listDumpSample;   /**< 덤프할 오프라인 렌더(채널 교차)입니다. `gv_audioDumpPath` 가 있을 때만 쌓습니다. */
         string                  _musicPath;        /**< 마지막으로 요청된 배경음악 경로입니다. */
         string                  _mixerPath;        /**< 마지막으로 읽은 믹서 그래프 경로입니다. */
         AudioPlayingID          _musicPlayingID;   /**< 배경음악 재생 id 입니다. */
         float64                 _offlineFrameDebt; /**< 장치가 없을 때 아직 렌더하지 않은 프레임(소수)입니다. */
+        AudioOutputDevice       _device;           /**< 열린 장치의 형식입니다(장치가 없으면 채널 수 0). */
         float32                 _masterVolume;     /**< 마스터 볼륨 [0,1] 입니다. */
         float32                 _musicVolume;      /**< 배경음악 볼륨 [0,1] 입니다. */
         float32                 _sfxVolume;        /**< 효과음 볼륨 [0,1] 입니다. */
+        AudioSpeakerMode        _speakerMode;      /**< 사용자가 고른 스피커 모드입니다. */
         bool                    _bMuted;           /**< 음소거 상태입니다. */
+        bool                    _bDeviceOpen;      /**< 장치를 열었는지입니다. */
         bool                    _bOutputOpen;      /**< 장치가 엔진을 당기고 있는지입니다. */
         bool                    _bInitialized;     /**< initialize 가 끝났는지입니다. */
     };

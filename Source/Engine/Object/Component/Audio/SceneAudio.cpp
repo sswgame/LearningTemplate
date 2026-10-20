@@ -216,7 +216,7 @@ namespace sw
                 AudioEmitterComponent* pEmitter = _listEmitterSnapshot[( _occlusionCursor + checkIndex ) % emitterCount];
                 if ( pEmitter->usesOcclusion() == false )
                     continue;
-                pEngine->setEmitterOcclusion( pEmitter->getEmitterID(), pQuery->computeOcclusion( _primaryListenerPosition, pEmitter->_lastAudioPosition ) );
+                pEngine->setEmitterPropagation( pEmitter->getEmitterID(), pQuery->computePropagation( _primaryListenerPosition, pEmitter->_lastAudioPosition ) );
             }
             _occlusionCursor = ( _occlusionCursor + checkCount ) % emitterCount;
         }
