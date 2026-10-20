@@ -25,7 +25,7 @@ namespace sw
             static constexpr utf8 kWindowed[]   = "windowed";
             static constexpr utf8 kBorderless[] = "borderless";
             /** @brief 스피커 모드의 설정 값입니다(`AudioSpeakerMode` 순서). */
-            static constexpr const utf8* kArrSpeakerModeName[] = { "auto", "stereo", "surround51", "surround71" };
+            static constexpr const utf8* kArrSpeakerModeName[] = { "auto", "stereo", "surround51", "surround71", "headphones" };
             /** @brief 해상도 한 변의 범위입니다. 0 이나 터무니없는 값은 데이터 오타로 봅니다. */
             static constexpr uint32 kMinResolution = 320;
             static constexpr uint32 kMaxResolution = 16384;

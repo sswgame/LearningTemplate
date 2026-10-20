@@ -842,6 +842,14 @@
                 "engine/settings/engine.settings.xml"
             ]
         },
+        "settings.audio.speakerMode.headphones": {
+            "source": "Headphones (3D)",
+            "context": "Options menu label",
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
+        },
         "settings.audio.speakerMode.stereo": {
             "source": "Stereo",
             "context": "Options menu label",

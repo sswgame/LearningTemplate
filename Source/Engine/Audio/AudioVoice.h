@@ -10,6 +10,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Audio/AudioBinaural.h"
 #include "Engine/Audio/AudioBlock.h"
 #include "Engine/Audio/AudioChannelLayout.h"
 #include "Engine/Audio/AudioClip.h"
@@ -25,6 +26,7 @@ namespace sw
      * @details 팬 법칙: 모노 소스는 방향을 `AudioPanner` 가 레이아웃의 채널별 게인으로 바꾼다(스테레오는 등전력, 가운데에서 채널마다 -3 dB).
      *          스테레오 소스는 어느 레이아웃에서나 앞 두 채널(FL FR)의 밸런스다. 가운데에서 두 채널이 0 dB 이고, 한쪽으로 갈수록 반대쪽이 줄어든다.
      *          로우패스는 패닝 전에 소스 채널(1 · 2)에 건다. 그래서 필터 비용이 출력 채널 수와 상관없다.
+     *          바이노럴 레이아웃의 3D 모노 소리는 패너 게인 대신 HRTF(`AudioBinauralFilter`)가 두 귀 신호를 만들고, 볼륨만 두 채널에 같게 곱한다.
      */
     class SW_API AudioVoice
     {
@@ -98,6 +100,7 @@ namespace sw
     private:
         shared_ptr<const AudioClipData> _pClip;                                  /**< 재생하는 클립입니다. */
         AudioBiquadFilter               _lowPass;                                /**< 보이스 로우패스입니다(소스 채널에 겁니다). */
+        AudioBinauralFilter             _binaural;                               /**< 바이노럴 레이아웃에서 3D 모노 소리를 두 귀로 바꾸는 상태입니다. */
         AudioStreamWindow               _stream;                                 /**< 스트리밍 클립의 디코더와 창입니다. */
         float32                         _firstFrameLeft;                         /**< 스트리밍 루프 이음매 보간에 쓰는 클립 첫 프레임(왼쪽)입니다. */
         float32                         _firstFrameRight;                        /**< 같은 첫 프레임의 오른쪽입니다. */
@@ -119,6 +122,7 @@ namespace sw
         uint8                           _bStopAtFade   : 1;                      /**< 페이드가 목표에 닿으면 끝냅니다. */
         uint8                           _bFirstBlock   : 1;                      /**< 아직 한 번도 섞지 않았습니다. 게인을 0 에서 램프합니다. */
         uint8                           _bRampIn       : 1;                      /**< 첫 블록에서 게인을 0 에서 램프합니다. */
-        [[maybe_unused]] uint8          _reservedVoice : 2;                      /**< 비트필드 패딩입니다. */
+        uint8                           _bBinaural     : 1;                      /**< 이번 블록은 바이노럴(HRTF)로 낸다(바이노럴 레이아웃 · 모노 · 3D 방향). */
+        [[maybe_unused]] uint8          _reservedVoice : 1;                      /**< 비트필드 패딩입니다. */
     };
 } // namespace sw

@@ -19,9 +19,11 @@
 // `#else` 안에만 두었을 때는 Windows 에서 한 번도 컴파일되지 않아 조용히 썩는다(FileWatcher 의
 // macOS 구현이 그랬다).
 
-// 전용 서버 빌드(SW_WITH_CLIENT_CODE 없음)에는 XAudio2 구현과 링크가 없다. 서버는 장치를 열지 않는다.
+// 전용 서버 빌드(SW_WITH_CLIENT_CODE 없음)에는 XAudio2 · ALSA 구현이 없다. 서버는 장치를 열지 않는다.
 #if defined( SW_PLATFORM_WINDOWS ) && defined( SW_WITH_CLIENT_CODE )
     #include "Engine/Audio/Windows/XAudio2AudioBackend.h"
+#elif defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
+    #include "Engine/Audio/Linux/AlsaAudioBackend.h"
 #endif
 
 namespace sw
@@ -51,6 +53,8 @@ namespace sw
     {
 #if defined( SW_PLATFORM_WINDOWS ) && defined( SW_WITH_CLIENT_CODE )
         return make_unique<XAudio2AudioBackend>();
+#elif defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
+        return make_unique<AlsaAudioBackend>();
 #else
         return make_unique<NullAudioBackend>();
 #endif
@@ -184,6 +188,11 @@ namespace sw
             case AudioSpeakerMode::Surround71:
             {
                 requested = AudioChannelLayout::Surround71;
+                break;
+            }
+            case AudioSpeakerMode::Headphones:
+            {
+                requested = AudioChannelLayout::Binaural;
                 break;
             }
         }

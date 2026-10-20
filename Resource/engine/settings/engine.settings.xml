@@ -143,6 +143,7 @@
 		<Option value="stereo" text="settings.audio.speakerMode.stereo"/>
 		<Option value="surround51" text="settings.audio.speakerMode.surround51"/>
 		<Option value="surround71" text="settings.audio.speakerMode.surround71"/>
+		<Option value="headphones" text="settings.audio.speakerMode.headphones"/>
 	</Setting>
 
 	<!-- 조작 — 게임 행동의 키 바인딩은 게임 입력 맵의 액션이라 게임 스키마가 더한다(type="keyBinding" action="Jump").

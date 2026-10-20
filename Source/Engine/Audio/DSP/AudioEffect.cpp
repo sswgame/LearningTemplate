@@ -572,10 +572,10 @@ namespace sw
                 return make_unique<TEffect>( typeInfo, layout );
             }
 
-            /** @brief 모든 레이아웃(스테레오 · 5.1 · 7.1)입니다. 지금 종류는 모두 채널 수에 상관없이 처리합니다. */
-            static constexpr uint8 kAllLayouts = AudioEffectTypeInfo::makeLayoutBit( AudioChannelLayout::Stereo ) |
-                                                 AudioEffectTypeInfo::makeLayoutBit( AudioChannelLayout::Surround51 ) |
-                                                 AudioEffectTypeInfo::makeLayoutBit( AudioChannelLayout::Surround71 );
+            /** @brief 모든 레이아웃(스테레오 · 5.1 · 7.1 · 바이노럴)입니다. 지금 종류는 모두 채널 수에 상관없이 처리합니다. */
+            static constexpr uint8 kAllLayouts =
+                AudioEffectTypeInfo::makeLayoutBit( AudioChannelLayout::Stereo ) | AudioEffectTypeInfo::makeLayoutBit( AudioChannelLayout::Surround51 ) |
+                AudioEffectTypeInfo::makeLayoutBit( AudioChannelLayout::Surround71 ) | AudioEffectTypeInfo::makeLayoutBit( AudioChannelLayout::Binaural );
 
             /** @brief 이펙트 종류 표입니다. 이름은 데이터가 쓰는 철자이고, 마지막 칸은 처리할 수 있는 레이아웃입니다. */
             inline static const AudioEffectTypeInfo kArrEffectType[] = {

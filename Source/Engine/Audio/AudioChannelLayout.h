@@ -28,11 +28,13 @@ namespace sw
         Stereo,
         Surround51,
         Surround71,
+        Binaural, ///< 헤드폰 두 채널(FL FR)이다. 채널 집합은 스테레오와 같고, 3D 모노 소리를 HRTF(`AudioBinauralFilter`)로 낸다.
     };
 
     /**
      * @brief 사용자 설정이 고르는 스피커 모드입니다(`audio.speakerMode`).
      * @details `Auto` 는 장치의 채널 마스크를 따르는 선언된 모드다(장치가 없으면 스테레오). 명시값은 장치가 그만큼의 채널을 갖지 않으면 오류로 멈추며, 몰래 낮추지 않는다.
+     *          헤드폰은 장치가 알려 주지 않으므로 `Auto` 가 고르지 않는다. 사용자가 `Headphones` 를 골라야 바이노럴(`AudioChannelLayout::Binaural`)이 된다.
      */
     enum class AudioSpeakerMode : uint8
     {
@@ -40,6 +42,7 @@ namespace sw
         Stereo,
         Surround51,
         Surround71,
+        Headphones,
     };
 
     /**
@@ -72,6 +75,8 @@ namespace sw
                     return 6;
                 case AudioChannelLayout::Surround71:
                     return audio::kMaxChannelCount;
+                case AudioChannelLayout::Binaural:
+                    return audio::kStereoChannelCount;
             }
             return 0;
         }
@@ -89,12 +94,14 @@ namespace sw
                     return k51Mask;
                 case AudioChannelLayout::Surround71:
                     return k51Mask | kSpeakerSideLeft | kSpeakerSideRight;
+                case AudioChannelLayout::Binaural:
+                    return kStereoMask;
             }
             return 0;
         }
 
         /** @brief 레이아웃에 LFE 채널이 있는지입니다. 있으면 번호는 `audio::kLfeChannelIndex` 입니다. */
-        static constexpr bool hasLfe( AudioChannelLayout layout ) { return layout != AudioChannelLayout::Stereo; }
+        static constexpr bool hasLfe( AudioChannelLayout layout ) { return layout == AudioChannelLayout::Surround51 || layout == AudioChannelLayout::Surround71; }
 
         /** @brief 레이아웃에서 LFE 를 뺀 채널 수입니다(패너의 퍼짐과 리버브 입력 정규화). */
         static constexpr uint32 getFullRangeChannelCount( AudioChannelLayout layout ) { return getChannelCount( layout ) - ( hasLfe( layout ) ? 1u : 0u ); }

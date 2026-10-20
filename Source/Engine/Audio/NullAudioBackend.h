@@ -1,9 +1,9 @@
 /**
  * @file NullAudioBackend.h
- * @brief 출력 장치가 없는 플랫폼용 오디오 시스템입니다. 엔진은 그대로 돌고, `update` 가 흐른 시간만큼 버퍼에 렌더합니다.
+ * @brief 출력 장치를 열지 않는 오디오 시스템입니다(전용 서버, 테스트). 엔진은 그대로 돌고, `update` 가 흐른 시간만큼 버퍼에 렌더합니다.
  *
- * @note Windows 에서는 쓰이지 않지만 **항상 컴파일됩니다**(`IAudioService.cpp` 가 무조건 include 합니다).
- *       `#else` 안에만 두면 Windows 에서 한 번도 컴파일되지 않아 조용히 썩습니다.
+ * @note 클라이언트(Windows XAudio2 · 리눅스 ALSA)에서는 `createNull` 로만 쓰지만 **항상 컴파일됩니다**(`IAudioService.cpp` 가 무조건 include 합니다).
+ *       `#else` 안에만 두면 한 번도 컴파일되지 않아 조용히 썩습니다.
  */
 #pragma once
 #include "Engine/Audio/IAudioService.h"

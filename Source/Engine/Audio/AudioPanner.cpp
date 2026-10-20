@@ -103,7 +103,9 @@ namespace sw
         {
             gain = 0.0f;
         }
-        const bool bFrontStereo = layout == AudioChannelLayout::Stereo || direction._mode == AudioPanMode::FrontStereo;
+        // 바이노럴의 3D 모노 소리는 보이스의 HRTF 상태(`AudioBinauralFilter`)가 낸다. 이 상태 없는 패너는 두 채널 레이아웃을 모두 스테레오 법칙으로 답한다.
+        const bool bTwoChannel  = AudioChannelLayoutUtil::getChannelCount( layout ) == audio::kStereoChannelCount;
+        const bool bFrontStereo = bTwoChannel || direction._mode == AudioPanMode::FrontStereo;
         if ( bFrontStereo )
         {
             AudioPannerInternal::computeFrontStereo( direction._right, outArrGain );
@@ -115,6 +117,7 @@ namespace sw
         switch ( layout )
         {
             case AudioChannelLayout::Stereo:
+            case AudioChannelLayout::Binaural:
             {
                 break;
             }

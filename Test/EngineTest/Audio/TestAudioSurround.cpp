@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Engine/Audio/AudioBinaural.h"
 #include "Engine/Audio/AudioClip.h"
 #include "Engine/Audio/AudioClipDecoder.h"
 #include "Engine/Audio/AudioDownmix.h"
@@ -331,6 +332,7 @@ SW_TEST_CASE( AudioSurroundTest, SpeakerModeResolvesAgainstTheDevice )
     SW_EXPECT_TRUE( sw::IAudioService::resolveLayout( sw::AudioSpeakerMode::Surround51, full71, layout ) && layout == sw::AudioChannelLayout::Surround51 );
     SW_EXPECT_TRUE( sw::IAudioService::resolveLayout( sw::AudioSpeakerMode::Surround71, none, layout ) && layout == sw::AudioChannelLayout::Surround71 );
     SW_EXPECT_FALSE( sw::IAudioService::resolveLayout( sw::AudioSpeakerMode::Surround51, stereo, layout ) );
+    SW_EXPECT_TRUE( sw::IAudioService::resolveLayout( sw::AudioSpeakerMode::Headphones, stereo, layout ) && layout == sw::AudioChannelLayout::Binaural );
 
     sw::AudioSpeakerMode mode{ sw::AudioSpeakerMode::Auto };
     SW_EXPECT_TRUE( sw::UserSettingsEngineHandlers::tryParseSpeakerMode( "surround71", mode ) && mode == sw::AudioSpeakerMode::Surround71 );
@@ -354,4 +356,39 @@ SW_TEST_CASE( AudioSurroundTest, NullServiceRendersTheChosenLayout )
     SW_EXPECT_TRUE( pService->getSpeakerMode() == sw::AudioSpeakerMode::Stereo );
     pService->update( 0.1f );
     pService->shutdown();
+}
+
+/**
+ * @brief [AudioSurroundTest] 바이노럴 — 오른쪽(90°) 소리는 오른쪽 귀에 먼저(지연 0), 왼쪽 귀에 (a/c)(1 + π/2) ≈ 31 프레임 늦게 오고 고음이 깎인다. 앞 소리는 두 귀가 같다
+ */
+SW_TEST_CASE( AudioSurroundTest, BinauralDelaysAndShadowsTheFarEar )
+{
+    constexpr uint32 kFrameCount = 128;
+    float32          arrImpulse[kFrameCount]{};
+    arrImpulse[0] = 1.0f;
+    float32 arrLeft[kFrameCount]{};
+    float32 arrRight[kFrameCount]{};
+
+    sw::AudioBinauralFilter filter;
+    filter.setDirection( AudioSurroundTestInternal::makeAzimuth( 90.0f ) );
+    filter.process( arrImpulse, kFrameCount, arrLeft, arrRight );
+    uint32 leftPeak  = 0;
+    uint32 rightPeak = 0;
+    for ( uint32 frameIndex = 1; frameIndex < kFrameCount; ++frameIndex )
+    {
+        leftPeak  = sw::MathUtil::abs( arrLeft[frameIndex] ) > sw::MathUtil::abs( arrLeft[leftPeak] ) ? frameIndex : leftPeak;
+        rightPeak = sw::MathUtil::abs( arrRight[frameIndex] ) > sw::MathUtil::abs( arrRight[rightPeak] ) ? frameIndex : rightPeak;
+    }
+    SW_EXPECT_EQUAL( 0u, rightPeak );
+    SW_EXPECT_TRUE( 30u <= leftPeak && leftPeak <= 33u );
+    SW_EXPECT_TRUE( sw::MathUtil::abs( arrLeft[leftPeak] ) < sw::MathUtil::abs( arrRight[rightPeak] ) ); // 그림자 쪽 귀는 순간 응답이 작다
+    SW_EXPECT_NEAR_EQUAL( sw::AudioBinauralFilter::computeDelayFrames( sw::MathUtil::kPi ), 0.0875f / 343.0f * ( 1.0f + sw::MathUtil::kHalfPi ) * 48000.0f, 1e-3f );
+
+    sw::AudioBinauralFilter front;
+    front.setDirection( AudioSurroundTestInternal::makeAzimuth( 0.0f ) );
+    front.process( arrImpulse, kFrameCount, arrLeft, arrRight );
+    for ( uint32 frameIndex = 0; frameIndex < kFrameCount; ++frameIndex )
+    {
+        SW_EXPECT_NEAR_EQUAL( arrLeft[frameIndex], arrRight[frameIndex], 1e-6f );
+    }
 }

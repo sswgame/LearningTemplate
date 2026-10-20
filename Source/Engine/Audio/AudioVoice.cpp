@@ -77,6 +77,7 @@ namespace sw
     AudioVoice::AudioVoice()
         : _pClip{ nullptr }
         , _lowPass{}
+        , _binaural{}
         , _stream{}
         , _firstFrameLeft{ 0.0f }
         , _firstFrameRight{ 0.0f }
@@ -98,6 +99,7 @@ namespace sw
         , _bStopAtFade{ SW_FALSE }
         , _bFirstBlock{ SW_TRUE }
         , _bRampIn{ SW_TRUE }
+        , _bBinaural{ SW_FALSE }
         , _reservedVoice{ 0 }
     {
     }
@@ -125,7 +127,22 @@ namespace sw
     {
         _gainChannelCount        = AudioChannelLayoutUtil::getChannelCount( layout );
         const bool bStereoSource = _pClip != nullptr && _pClip->_channelCount >= audio::kStereoChannelCount;
-        if ( bStereoSource )
+        const bool bBinaural     = layout == AudioChannelLayout::Binaural && bStereoSource == false && direction._mode == AudioPanMode::Surround;
+        if ( bBinaural && _bBinaural == SW_FALSE )
+            _binaural.reset(); // 처음 바이노럴로 바뀌면 지난 지연선이 섞이지 않게 비운다
+        _bBinaural = bBinaural ? SW_TRUE : SW_FALSE;
+        if ( bBinaural )
+        {
+            // 방향은 HRTF 가 내고, 게인은 볼륨만 두 귀에 같다.
+            _binaural.setDirection( direction );
+            for ( float32& gain : _arrTargetGain )
+            {
+                gain = 0.0f;
+            }
+            _arrTargetGain[0] = volume;
+            _arrTargetGain[1] = volume;
+        }
+        else if ( bStereoSource )
         {
             // 밸런스: 가운데에서 두 채널 그대로, 한쪽으로 가면 반대쪽만 줄인다. 앞 두 채널(FL FR) 밖은 0 이다.
             const float32 clampedPan = MathUtil::clamp( direction._right, -1.0f, 1.0f );
@@ -230,7 +247,8 @@ namespace sw
         // 2 단계: 로우패스는 패닝 전에 소스 채널에만 건다(모노 클립은 한 채널). 소리가 나지 않은 자리는 0 으로 채워 필터 상태가 이어지게 한다.
         const bool   bStereoSource      = _pClip->_channelCount >= audio::kStereoChannelCount;
         const uint32 sourceChannelCount = bStereoSource ? audio::kStereoChannelCount : 1u;
-        if ( _lowPassHz < audio::kFilterOpenHz )
+        const bool   bFiltered          = _lowPassHz < audio::kFilterOpenHz;
+        if ( bFiltered || _bBinaural == SW_TRUE )
         {
             for ( uint32 channelIndex = 0; channelIndex < sourceChannelCount; ++channelIndex )
             {
@@ -244,9 +262,21 @@ namespace sw
                     pChannel[frameIndex] = 0.0f;
                 }
             }
+        }
+        if ( bFiltered )
+        {
             AudioBlockView filtered = source;
             filtered._channelCount  = sourceChannelCount;
             _lowPass.process( filtered );
+        }
+
+        // 바이노럴: 모노 소스를 두 귀 신호로 바꿔 소스의 왼쪽 · 오른쪽 채널로 둔다. 아래 단계는 스테레오 소스처럼 FL ← 왼쪽, FR ← 오른쪽으로 더한다.
+        float32    arrEar[audio::kStereoChannelCount * audio::kBlockFrameCount];
+        const bool bBinaural = _bBinaural == SW_TRUE && bStereoSource == false;
+        if ( bBinaural )
+        {
+            _binaural.process( source.getChannel( 0 ), source._frameCount, arrEar, arrEar + audio::kBlockFrameCount );
+            source._pData = arrEar;
         }
 
         // 3 단계: 출력 채널마다 게인을 램프하며 더한다. 스테레오 소스는 FL ← 왼쪽, FR ← 오른쪽이고 나머지 채널은 게인이 0 이다.
@@ -256,7 +286,8 @@ namespace sw
             const bool bSilentChannel = _arrGain[channelIndex] == 0.0f && _arrTargetGain[channelIndex] == 0.0f;
             if ( bSilentChannel )
                 continue;
-            const bool     bRightSource = bStereoSource && channelIndex == 1;
+            const bool     bTwoSource   = bStereoSource || bBinaural;
+            const bool     bRightSource = bTwoSource && channelIndex == 1;
             const float32* pSource      = source.getChannel( bRightSource ? 1u : 0u );
             float32*       pTarget      = bus.getChannel( channelIndex );
             const float32  step         = ( _arrTargetGain[channelIndex] - _arrGain[channelIndex] ) * invFrames;
