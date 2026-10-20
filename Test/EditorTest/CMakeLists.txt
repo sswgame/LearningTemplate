@@ -40,6 +40,7 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorNetPlaySession.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorNetProfilerHistory.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorRemoteInspector.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorStateHashCompare.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/Scene/EditorMultiEdit.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/Scene/EditorSceneCommands.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/Dev/EditorShortcutOverrides.cpp"

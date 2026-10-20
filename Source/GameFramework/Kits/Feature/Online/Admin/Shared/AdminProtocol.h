@@ -17,6 +17,7 @@
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Base/Online/Mail/ServiceMail.h"
+#include "GameFramework/Base/Online/Report/ServiceReport.h"
 #include "GameFramework/Base/Online/Sanction/ServiceSanction.h"
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Base/Online/Service/OnlineProtocolRegistry.h"
@@ -36,6 +37,12 @@ namespace sw
         CreateCampaign,
         ListAudit,
         SetRole,
+        ListReports,
+        ResolveReport,
+        SetMaintenance,
+        ClearMaintenance,
+        PostNotice,
+        RemoveNotice,
         Count,
     };
 } // namespace sw
@@ -45,17 +52,28 @@ namespace sw
     /** @brief GM 명령 메서드 번호입니다. 번호는 열거자 순서에서 나오며 그 이름 순서가 온라인 스키마 해시에 섞입니다(`OnlineMethodTable`). */
     struct AdminMethod : OnlineMethodTable<AdminMethodName, OnlineMethodRange::kAdmin, OnlineNoPushName>
     {
-        static constexpr uint16 kLookupAccount  = toMethod( AdminMethodName::LookupAccount );
-        static constexpr uint16 kAdjustAsset    = toMethod( AdminMethodName::AdjustAsset );
-        static constexpr uint16 kSetSanction    = toMethod( AdminMethodName::SetSanction );
-        static constexpr uint16 kSendMail       = toMethod( AdminMethodName::SendMail );
-        static constexpr uint16 kBulkMail       = toMethod( AdminMethodName::BulkMail );
-        static constexpr uint16 kCreateCampaign = toMethod( AdminMethodName::CreateCampaign );
-        static constexpr uint16 kListAudit      = toMethod( AdminMethodName::ListAudit );
-        static constexpr uint16 kSetRole        = toMethod( AdminMethodName::SetRole );
+        static constexpr uint16 kLookupAccount    = toMethod( AdminMethodName::LookupAccount );
+        static constexpr uint16 kAdjustAsset      = toMethod( AdminMethodName::AdjustAsset );
+        static constexpr uint16 kSetSanction      = toMethod( AdminMethodName::SetSanction );
+        static constexpr uint16 kSendMail         = toMethod( AdminMethodName::SendMail );
+        static constexpr uint16 kBulkMail         = toMethod( AdminMethodName::BulkMail );
+        static constexpr uint16 kCreateCampaign   = toMethod( AdminMethodName::CreateCampaign );
+        static constexpr uint16 kListAudit        = toMethod( AdminMethodName::ListAudit );
+        static constexpr uint16 kSetRole          = toMethod( AdminMethodName::SetRole );
+        static constexpr uint16 kListReports      = toMethod( AdminMethodName::ListReports );      ///< 신고 목록(`_reportStatus` 가 Open 이면 열린 것, 아니면 닫힌 것)을 최근 것부터
+        static constexpr uint16 kResolveReport    = toMethod( AdminMethodName::ResolveReport );    ///< 열린 신고 `_reportKey` 를 `_reportStatus` 로 닫는다. 메모가 처리 메모다
+        static constexpr uint16 kSetMaintenance   = toMethod( AdminMethodName::SetMaintenance );   ///< 점검 창 `_scope` 를 건다(`_messageKey`, `_startMs`, `_endMs`, 허용 계정 `_listAccountID`)
+        static constexpr uint16 kClearMaintenance = toMethod( AdminMethodName::ClearMaintenance ); ///< 점검 창 `_scope` 를 푼다
+        static constexpr uint16 kPostNotice       = toMethod( AdminMethodName::PostNotice );       ///< 공지 `_noticeID` 를 올린다(`_body`, `_startMs`, `_endMs`, `_priority`, `_bLiteralText`)
+        static constexpr uint16 kRemoveNotice     = toMethod( AdminMethodName::RemoveNotice );     ///< 공지 `_noticeID` 를 내린다
 
         /** @brief 상태를 바꾸는 명령이면 true 입니다. 이 경우 멱등 키와 메모가 필수입니다. */
-        static constexpr bool isMutating( uint16 method ) { return method != kLookupAccount && method != kListAudit; }
+        static constexpr bool isMutating( uint16 method ) { return method != kLookupAccount && method != kListAudit && method != kListReports; }
+        /** @brief 서버 디렉터리 키트(`IServerDirectoryControl`)가 효과를 쓰는 명령이면 true 입니다. GM 키트는 등급만 확인하고 넘깁니다. */
+        static constexpr bool isDirectoryMethod( uint16 method )
+        {
+            return method == kSetMaintenance || method == kClearMaintenance || method == kPostNotice || method == kRemoveNotice;
+        }
     };
 } // namespace sw
 
@@ -66,8 +84,8 @@ namespace sw
     enum class AdminRole : uint8
     {
         None = 0,
-        Viewer,   ///< 조회와 감사 기록 열람이 가능하다
-        Support,  ///< Viewer 권한에 채팅 금지가 더해진다
+        Viewer,   ///< 조회, 감사 기록과 신고 열람이 가능하다
+        Support,  ///< Viewer 권한에 채팅 금지와 신고 처리가 더해진다
         Operator, ///< Support 권한에 지급, 회수, 정지, 우편이 더해진다
         Super,    ///< Operator 권한에 영구 정지, 일괄 지급, 전체 우편, 권한 부여가 더해진다
         Count
@@ -92,6 +110,7 @@ namespace sw
         Busy,
         Unavailable,
         UpdateRequired, ///< 온라인 스키마 해시가 다르다(`kVersionMismatch`). 클라이언트만 만들고 서버는 보내지 않는다. 다시 접속하지 않으므로 재시도하지 않는다
+        NotFound,       ///< 처리하려는 대상(열린 신고, 공지, 점검)이 없다
         Count
     };
 } // namespace sw
@@ -123,6 +142,12 @@ namespace sw
         string _body{}; ///< 상한은 `ServiceMailConstant::kMaxBodySize` 와 같다
         PROPERTY( MaxCount = 256 )
         string _cursor{};
+        PROPERTY( MaxCount = 16 )
+        string _scope{}; ///< 점검 범위(`all` 또는 서버 종류)이다. 상한은 `ServerRecord::kMaxNameSize` 와 같다
+        PROPERTY( MaxCount = 64 )
+        string _messageKey{}; ///< 점검 안내 문구 키이다
+        PROPERTY( MaxCount = 96 )
+        string _reportKey{}; ///< ResolveReport 의 대상이다. 상한은 `ServiceReportConstant::kMaxReportKeySize` 와 같다
         PROPERTY()
         AccountID _accountID{ kInvalidAccountID };
         PROPERTY()
@@ -140,9 +165,17 @@ namespace sw
         PROPERTY()
         ServiceSanctionKind _sanctionKind{ ServiceSanctionKind::ChatMute };
         PROPERTY()
+        uint64 _noticeID{ 0 }; ///< PostNotice, RemoveNotice 의 공지 id 이다
+        PROPERTY()
+        int32 _priority{ 0 }; ///< PostNotice 의 우선순위이며 큰 것이 위에 온다
+        PROPERTY()
         AdminRole _role{ AdminRole::None };
+        PROPERTY()
+        ServiceReportStatus _reportStatus{ ServiceReportStatus::Open }; ///< ListReports 는 Open 이면 열린 목록, ResolveReport 는 Resolved 나 Dismissed
         PROPERTY( Min = 0, Max = 1 )
-        uint8 _bRefund{ SW_FALSE }; ///< AdjustAsset 회수에서 환불이나 결제 취소로 회수하는 경우이다. 잔액이 모자라면 빚으로 남기며 사유는 "refund.revoke" 이다
+        uint8 _bRefund{ SW_FALSE };
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bLiteralText{ SW_FALSE }; ///< PostNotice 의 `_body` 가 GM 이 쓴 문구면 1, 로컬라이제이션 키면 0 이다 ///< AdjustAsset 회수에서 환불이나 결제 취소로 회수하는 경우이다. 잔액이 모자라면 빚으로 남기며 사유는 "refund.revoke" 이다
     };
 } // namespace sw
 
@@ -181,6 +214,8 @@ namespace sw
         vector<AdminJournalLine> _listJournal{}; ///< 상한은 `AdminProtocol::kMaxListCount` 와 같다
         PROPERTY( MaxCount = 100 )
         vector<ServiceAuditEntry> _listAudit{}; ///< 상한은 `AdminProtocol::kMaxListCount` 와 같다
+        PROPERTY( MaxCount = 10 )
+        vector<ServiceReport> _listReport{}; ///< ListReports 의 결과이며 ResolveReport 는 닫힌 신고 하나이다. 상한은 `AdminProtocol::kMaxReportListCount` 와 같다
         PROPERTY()
         ServiceSanctionState _sanction{};
         PROPERTY()
@@ -212,10 +247,11 @@ namespace sw
         using MessageTypes = OnlineMessageTypes<AdminRequest, AdminReply>;
 
         static const OnlineProtocolEntry kOnlineEntry; ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
-        static constexpr int32           kMaxBulkCount   = 16;
-        static constexpr int32           kMaxMemoSize    = 1024;
-        static constexpr int32           kMaxLookupCount = 10;
-        static constexpr int32           kMaxListCount   = 100;
+        static constexpr int32           kMaxBulkCount       = 16;
+        static constexpr int32           kMaxMemoSize        = 1024;
+        static constexpr int32           kMaxLookupCount     = 10;
+        static constexpr int32           kMaxListCount       = 100;
+        static constexpr int32           kMaxReportListCount = 10; ///< 신고 하나가 문맥 줄 20 개를 담아 커서 한 번에 열 개까지만 싣는다
 
         /** @brief 공통 오류 코드(`OnlineError`)를 결과로 바꿉니다. */
         static AdminResult fromErrorCode( uint16 errorCode );

@@ -142,7 +142,7 @@ namespace sw
         }
     }
 
-    void StateHashHistory::parseReport( string_view text, vector<StateHashSample>& outListSample )
+    bool StateHashHistory::parseReport( string_view text, vector<StateHashSample>& outListSample )
     {
         outListSample.clear();
         size_t lineStart = 0;
@@ -153,14 +153,21 @@ namespace sw
                 lineEnd = text.size();
             const string_view line = StringUtil::trim( text.substr( lineStart, lineEnd - lineStart ) );
             lineStart              = lineEnd + 1;
-            const size_t    space  = line.find( ' ' );
+            if ( line.empty() )
+                continue;
+            const size_t    space = line.find( ' ' );
             StateHashSample sample;
             const bool      bHasTick = space != string_view::npos && StringUtil::parseUint64( line.substr( 0, space ), sample._tick );
             const bool      bHasHash = bHasTick && StringUtil::parseUint64( line.substr( space + 1 ), sample._hash, 16 );
+            // 읽지 못한 줄을 건너뛰면 그 틱이 비교에서 조용히 빠진다 — 다른 글(오류 답 · 다른 파일)을 이력으로 받지 않는다.
             if ( bHasHash == false )
-                continue;
+            {
+                outListSample.clear();
+                return false;
+            }
             outListSample.push_back( sample );
         }
+        return true;
     }
 
     bool StateHashHistory::findFirstDivergence( const vector<StateHashSample>& listLeft, const vector<StateHashSample>& listRight, uint64& outTick )

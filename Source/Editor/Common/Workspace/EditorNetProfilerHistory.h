@@ -146,8 +146,8 @@ namespace sw::editor
         int32 computeSampleCount() const;
         /** @brief 모든 프로세스 가운데 한 칸의 가장 큰 값입니다. */
         float32 computePeak( EditorNetProfilerChannel channel ) const;
-        /** @brief 모든 프로세스의 마지막 보고의 종류별 셈을 @p outListEntry 뒤에 붙입니다(`computeKindShares` 의 입력). */
-        void collectKindEntries( vector<NetStatsKindEntry>& outListEntry ) const;
+        /** @brief 모든 프로세스의 마지막 보고에서 한 방향(받은 · 보낸)의 종류별 셈을 @p outListEntry 뒤에 붙입니다(`computeKindShares` 의 입력). */
+        void collectKindEntries( NetStatsKindDirection direction, vector<NetStatsKindEntry>& outListEntry ) const;
 
     private:
         vector<EditorNetProfilerTrack> _listTrack;

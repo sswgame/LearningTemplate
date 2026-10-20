@@ -323,7 +323,8 @@ namespace sw::editor
         if ( bDedicated )
         {
             _debugChannelToken = EditorNetPlaySessionInternal::makeDebugChannelToken();
-            serverArguments += " -gv_debugChannelPort=" + to_string( _debugChannelPort ) + " -gv_debugChannelToken=" + _debugChannelToken;
+            serverArguments += " -gv_debugChannelPort=" + to_string( _debugChannelPort ) + " -gv_debugChannelToken=" + _debugChannelToken +
+                               " -gv_stateHashHistory=" + to_string( kServerStateHashHistoryTicks );
         }
         int32       windowIndex = 0;
         bool        bLaunched   = bDedicated ? launchChild( "Server", serverPath, serverArguments, makeTracePath( "server" ) )

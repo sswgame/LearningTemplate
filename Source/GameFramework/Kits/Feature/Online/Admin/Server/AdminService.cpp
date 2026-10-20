@@ -9,6 +9,7 @@
 #include "Engine/Reflection/EnumName.h"
 
 #include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
+#include "GameFramework/Base/Online/Directory/ServerDirectoryControl.h"
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/Base/Online/Identity/AccountSessionControl.h"
 #include "GameFramework/Base/Online/Sanction/ServiceSanction.h"
@@ -103,8 +104,11 @@ namespace sw
 
     void AdminService::shutdown()
     {
-        ServiceStoreUtil::drainUntilIdle( _pStore, [this]()
-        { return _listPendingCall.empty() && _pendingSeedCount <= 0; } );
+        // 넘긴 점검과 공지 명령은 서버 디렉터리 키트의 저장 완료 뒤에 끝나므로 거둘 때마다 그 완료도 거둔다
+        ServiceStoreUtil::drainUntilIdle(
+            _pStore, [this]()
+        { return _listPendingCall.empty() && _pendingSeedCount <= 0; }, [this]()
+        { pollDirectoryCompletions(); } );
         if ( _listPendingCall.empty() == false )
         {
             SW_LOG_ERROR( "AdminService shut down with %# calls still pending", _listPendingCall.size() );
@@ -126,8 +130,11 @@ namespace sw
         pending._receivedNanoseconds = MonotonicClock::nowNanoseconds();
         pending._nowMs               = nowMs != 0 ? nowMs : _nowMs;
         pending._targetID            = request._accountID;
+        pending._adminID             = adminID;
         pending._methodIndex         = AdminMethod::toIndex( method );
         pending._method              = method;
+        if ( AdminMethod::isDirectoryMethod( method ) )
+            pending._request = request;
         _listPendingCall.push_back( pending );
         const size_t pendingIndex = _listPendingCall.size() - 1;
 
@@ -178,6 +185,7 @@ namespace sw
     void AdminService::update( int64 nowMs )
     {
         _nowMs = nowMs;
+        pollDirectoryCompletions();
         _metrics.setPendingStoreWorkCount( static_cast<int32>( _listPendingCall.size() ) );
     }
 
@@ -223,6 +231,13 @@ namespace sw
                 const string_view reasonCode = inoutReply._sanction._reasonCode.empty() ? string_view( "sanction.suspended" ) : string_view( inoutReply._sanction._reasonCode );
                 _settings._pSessionControl->revokeAccountSessions( pending._targetID, reasonCode, pending._nowMs );
             }
+            const bool bForwardToDirectory = AdminMethod::isDirectoryMethod( pending._method ) && inoutReply._result == AdminResult::Ok;
+            if ( bForwardToDirectory )
+            {
+                if ( forwardDirectoryCall( pending ) )
+                    return; // 서버 디렉터리 키트의 완료가 응답한다
+                inoutReply._result = AdminResult::Unavailable;
+            }
             const bool bSanctionChanged = pending._method == AdminMethod::kSetSanction && inoutReply._result == AdminResult::Ok && inoutReply._bReplayed == SW_FALSE;
             if ( bSanctionChanged && _settings._pBus != nullptr )
                 (void)ServiceSanctionBus::kChangedTopic.publish( *_settings._pBus, ServiceSanctionChanged{ pending._targetID } ); // 실패는 발행이 로그로 남겼다. 채팅은 묵힘 시한 안에 다시 읽는다
@@ -230,6 +245,100 @@ namespace sw
             return;
         }
         SW_LOG_WARNING( "AdminService completed an unknown call %#", callID );
+    }
+
+    bool AdminService::forwardDirectoryCall( const PendingCall& pending )
+    {
+        IServerDirectoryControl* const pControl = _settings._pDirectoryControl;
+        if ( pControl == nullptr )
+            return false;
+        const AdminRequest& request = pending._request;
+        switch ( pending._method )
+        {
+            case AdminMethod::kSetMaintenance:
+            {
+                ServerDirectoryMaintenanceChange change;
+                change._listAllowedAccount = request._listAccountID;
+                change._scope              = request._scope;
+                change._messageKey         = request._messageKey;
+                change._startMs            = request._startMs;
+                change._endMs              = request._endMs;
+                pControl->setMaintenance( change, pending._adminID, request._memo, pending._nowMs, pending._callID );
+                return true;
+            }
+            case AdminMethod::kClearMaintenance:
+            {
+                pControl->clearMaintenance( request._scope, pending._adminID, request._memo, pending._nowMs, pending._callID );
+                return true;
+            }
+            case AdminMethod::kPostNotice:
+            {
+                ServerDirectoryNoticeChange change;
+                change._text         = request._body;
+                change._noticeID     = request._noticeID;
+                change._startMs      = request._startMs;
+                change._endMs        = request._endMs;
+                change._priority     = request._priority;
+                change._bLiteralText = request._bLiteralText;
+                pControl->postNotice( change, pending._adminID, pending._nowMs, pending._callID );
+                return true;
+            }
+            case AdminMethod::kRemoveNotice:
+            {
+                pControl->removeNotice( request._noticeID, pending._adminID, pending._nowMs, pending._callID );
+                return true;
+            }
+            default:
+            {
+                return false;
+            }
+        }
+    }
+
+    void AdminService::pollDirectoryCompletions()
+    {
+        if ( _settings._pDirectoryControl == nullptr )
+            return;
+        vector<ServerDirectoryControlCompletion> listCompletion;
+        _settings._pDirectoryControl->drainControlCompletions( listCompletion );
+        for ( const ServerDirectoryControlCompletion& completion : listCompletion )
+        {
+            AdminReply reply;
+            switch ( completion._result )
+            {
+                case ServerDirectoryControlResult::Ok:
+                {
+                    reply._result = AdminResult::Ok;
+                    break;
+                }
+                case ServerDirectoryControlResult::Invalid:
+                {
+                    reply._result = AdminResult::InvalidRequest;
+                    break;
+                }
+                case ServerDirectoryControlResult::NotFound:
+                {
+                    reply._result = AdminResult::NotFound;
+                    break;
+                }
+                case ServerDirectoryControlResult::Unavailable:
+                {
+                    reply._result = AdminResult::Unavailable;
+                    break;
+                }
+            }
+            bool bFound = false;
+            for ( size_t pendingIndex = 0; pendingIndex < _listPendingCall.size(); ++pendingIndex )
+            {
+                if ( _listPendingCall[pendingIndex]._callID != completion._requestTag )
+                    continue;
+                finishCall( pendingIndex, reply );
+                bFound = true;
+                break;
+            }
+            if ( bFound == false )
+                SW_LOG_WARNING( "AdminService got a server directory completion for an unknown call %#", completion._requestTag );
+        }
     }
 
     void AdminService::completeSeed( AdminResult result )

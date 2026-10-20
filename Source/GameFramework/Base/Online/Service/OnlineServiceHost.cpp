@@ -217,9 +217,17 @@ namespace sw
             return false;
         if ( connectionIt->second._accountID != kInvalidAccountID && connectionIt->second._accountID != accountID )
             return false; // 한 연결에 계정 하나
+        const bool bNewlyBound             = boundIt == _mapAccountToConnection.end();
         connectionIt->second._accountID    = accountID;
         _mapAccountToConnection[accountID] = connection;
         _requestServer.setPrincipal( connection, accountID ); // 멱등 범위 = 계정(재접속한 재시도도 잡힌다)
+        if ( bNewlyBound )
+        {
+            for ( IOnlineHostService* pService : _listService )
+            {
+                pService->onAccountJoined( *this, accountID );
+            }
+        }
         return true;
     }
 

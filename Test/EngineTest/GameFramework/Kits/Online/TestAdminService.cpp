@@ -1,5 +1,5 @@
 // GM 도구 — 등급 문지기, 지급 · 회수는 원장 + 감사가 한 트랜잭션, 같은 키 재시도 · 응답 유실, 커밋 거절은 흔적 없음, 환불 회수의 빚, 제재 등급 · 세션 끊기 한 번,
-// 조회, 일괄 지급 이어 하기, 캠페인, 자기 등급 금지, 와이어 왕복, 제재 변경 버스 알림 한 번.
+// 조회, 일괄 지급 이어 하기, 캠페인, 자기 등급 금지, 와이어 왕복, 제재 변경 버스 알림 한 번, 신고 목록과 처리, 점검과 공지를 서버 디렉터리 키트에 넘기기.
 #include "pch.h"
 
 #include "Core/Network/BitStream.h"
@@ -8,10 +8,12 @@
 
 #include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"
 #include "GameFramework/Base/Online/Bus/LocalServerBus.h"
+#include "GameFramework/Base/Online/Directory/ServerDirectoryControl.h"
 #include "GameFramework/Base/Online/Identity/AccountSessionControl.h"
 #include "GameFramework/Base/Online/Ledger/Ledger.h"
 #include "GameFramework/Base/Online/Mail/ServiceMail.h"
 #include "GameFramework/Base/Online/Mail/ServiceMailCampaign.h"
+#include "GameFramework/Base/Online/Report/ServiceReport.h"
 #include "GameFramework/Base/Online/Sanction/ServiceSanction.h"
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
 #include "GameFramework/Kits/Feature/Online/Admin/Server/AdminService.h"
@@ -99,6 +101,56 @@ namespace
             (void)reasonCode;
             (void)nowMs;
             _listRevoked.push_back( accountID );
+        }
+    };
+
+    /** @brief 받은 변경을 적고 다음 `drainControlCompletions` 에 정한 결과로 끝낸다. */
+    class FakeDirectoryControl final : public IServerDirectoryControl
+    {
+    public:
+        vector<ServerDirectoryControlCompletion> _listPending{};
+        vector<string>                           _listCall{};
+        ServerDirectoryControlResult             _nextResult{ ServerDirectoryControlResult::Ok };
+
+        void setMaintenance( const ServerDirectoryMaintenanceChange& change, AccountID actorID, string_view memo, int64 nowMs, uint64 requestTag ) override
+        {
+            (void)actorID;
+            (void)memo;
+            (void)nowMs;
+            _listCall.push_back( "set:" + change._scope );
+            _listPending.push_back( ServerDirectoryControlCompletion{ requestTag, _nextResult } );
+        }
+
+        void clearMaintenance( string_view scope, AccountID actorID, string_view memo, int64 nowMs, uint64 requestTag ) override
+        {
+            (void)actorID;
+            (void)memo;
+            (void)nowMs;
+            _listCall.push_back( "clear:" + string( scope ) );
+            _listPending.push_back( ServerDirectoryControlCompletion{ requestTag, _nextResult } );
+        }
+
+        void postNotice( const ServerDirectoryNoticeChange& change, AccountID actorID, int64 nowMs, uint64 requestTag ) override
+        {
+            (void)actorID;
+            (void)nowMs;
+            _listCall.push_back( "post:" + change._text );
+            _listPending.push_back( ServerDirectoryControlCompletion{ requestTag, _nextResult } );
+        }
+
+        void removeNotice( uint64 noticeID, AccountID actorID, int64 nowMs, uint64 requestTag ) override
+        {
+            (void)noticeID;
+            (void)actorID;
+            (void)nowMs;
+            _listCall.push_back( "remove" );
+            _listPending.push_back( ServerDirectoryControlCompletion{ requestTag, _nextResult } );
+        }
+
+        void drainControlCompletions( vector<ServerDirectoryControlCompletion>& outListCompletion ) override
+        {
+            outListCompletion.insert( outListCompletion.end(), _listPending.begin(), _listPending.end() );
+            _listPending.clear();
         }
     };
 
@@ -287,6 +339,101 @@ SW_TEST_CASE( AdminServiceTest, AdminCannotChangeOwnRole )
     SW_EXPECT_TRUE( fixture.run( AdminFixture::kSupport, AdminMethod::kAdjustAsset, fixture.adjust( 1 ) ) == AdminResult::Ok ); // 다음 명령부터 새 등급
 }
 
+SW_TEST_CASE( AdminServiceTest, ReportsAreListedAndResolvedOnceByTheSupportRole )
+{
+    AdminFixture  fixture;
+    ServiceReport report;
+    report._category   = "chat";
+    report._context    = "world.kr";
+    report._reason     = "abuse.insult";
+    report._reporterID = 0x200;
+    report._targetID   = AdminFixture::kPlayer;
+    report._createdMs  = 4000;
+    report._listLine.push_back( ServiceReportLine{ "bad guy", "insult", AdminFixture::kPlayer, 3900 } );
+    ServiceTransaction open;
+    SW_ASSERT_TRUE( ServiceReportStore::stageOpen( open, report, 1 ) );
+    SW_ASSERT_TRUE( fixture._database.commit( open ) == ServiceStoreResult::Ok );
+
+    AdminRequest list;
+    list._reportStatus = ServiceReportStatus::Open;
+    AdminReply listed;
+    SW_ASSERT_TRUE( fixture.run( AdminFixture::kViewer, AdminMethod::kListReports, list, &listed ) == AdminResult::Ok );
+    SW_ASSERT_EQUAL( listed._listReport.size(), size_t( 1 ) );
+    SW_EXPECT_EQUAL( listed._listReport[0]._listLine[0]._text, string( "insult" ) );
+
+    AdminRequest resolve;
+    resolve._reportKey    = listed._listReport[0]._reportKey;
+    resolve._reportStatus = ServiceReportStatus::Resolved;
+    resolve._memo         = "muted for a day";
+    SW_EXPECT_TRUE( fixture.run( AdminFixture::kViewer, AdminMethod::kResolveReport, resolve ) == AdminResult::Forbidden ); // 처리는 Support 부터
+    SW_EXPECT_TRUE( fixture.run( AdminFixture::kSupport, AdminMethod::kResolveReport, resolve ) == AdminResult::Ok );
+    SW_EXPECT_TRUE( fixture.run( AdminFixture::kSupport, AdminMethod::kResolveReport, resolve ) == AdminResult::NotFound ); // 새 멱등 키 — 이미 닫혔다
+    AdminRequest reopen  = resolve;
+    reopen._reportStatus = ServiceReportStatus::Open;
+    SW_EXPECT_TRUE( fixture.run( AdminFixture::kSupport, AdminMethod::kResolveReport, reopen ) == AdminResult::InvalidRequest );
+    SW_EXPECT_EQUAL( fixture.countAudit( "acct.0000000000000100/" ), 1 ); // 처리 하나에 감사 기록 하나
+
+    AdminReply closed;
+    list._reportStatus = ServiceReportStatus::Resolved;
+    SW_ASSERT_TRUE( fixture.run( AdminFixture::kViewer, AdminMethod::kListReports, list, &closed ) == AdminResult::Ok );
+    SW_ASSERT_EQUAL( closed._listReport.size(), size_t( 1 ) );
+    SW_EXPECT_TRUE( closed._listReport[0]._status == ServiceReportStatus::Resolved );
+    SW_EXPECT_EQUAL( closed._listReport[0]._resolverID, AdminFixture::kSupport );
+}
+
+SW_TEST_CASE( AdminServiceTest, MaintenanceAndNoticeCommandsAreForwardedAfterTheRoleCheck )
+{
+    MemoryServiceDatabase database;
+    MemoryServiceStore    store{ &database };
+    FakeDirectoryControl  control;
+    AdminService          service;
+    AdminServiceConfig    settings;
+    settings._pDirectoryControl = &control;
+    SW_ASSERT_TRUE( service.initialize( &store, settings ) );
+    service.seedRole( AdminFixture::kOperator, AdminRole::Operator, 1 );
+    service.seedRole( AdminFixture::kSupport, AdminRole::Support, 1 );
+    (void)store.pollCompletions();
+
+    AdminRequest maintenance;
+    maintenance._scope      = "game";
+    maintenance._messageKey = "maintenance.weekly";
+    maintenance._startMs    = 1000;
+    maintenance._endMs      = 9000;
+    maintenance._memo       = "weekly";
+    AdminRequest notice;
+    notice._noticeID = 7;
+    notice._body     = "notice.event";
+    notice._memo     = "event";
+    AdminReplyCapture set;
+    AdminReplyCapture denied;
+    AdminReplyCapture posted;
+    service.submitCall( AdminFixture::kOperator, AdminMethod::kSetMaintenance, maintenance, NetIdempotencyKey{ 1, 1 }, 5000, set.makeDelegate() );
+    service.submitCall( AdminFixture::kSupport, AdminMethod::kSetMaintenance, maintenance, NetIdempotencyKey{ 1, 2 }, 5000, denied.makeDelegate() );
+    control._nextResult = ServerDirectoryControlResult::Ok;
+    service.submitCall( AdminFixture::kOperator, AdminMethod::kPostNotice, notice, NetIdempotencyKey{ 1, 3 }, 5000, posted.makeDelegate() );
+    (void)store.pollCompletions();    // 등급 확인이 끝나 넘긴다
+    SW_EXPECT_EQUAL( set._count, 0 ); // 아직 서버 디렉터리 키트의 완료 전이다
+    SW_EXPECT_EQUAL( denied._count, 1 );
+    SW_EXPECT_TRUE( denied._reply._result == AdminResult::Forbidden );
+    SW_ASSERT_EQUAL( control._listCall.size(), size_t( 2 ) );
+    SW_EXPECT_EQUAL( control._listCall[0], string( "set:game" ) );
+    SW_EXPECT_EQUAL( control._listCall[1], string( "post:notice.event" ) );
+    service.update( 5000 );
+    SW_EXPECT_EQUAL( set._count, 1 );
+    SW_EXPECT_TRUE( set._reply._result == AdminResult::Ok );
+    SW_EXPECT_TRUE( posted._reply._result == AdminResult::Ok );
+
+    control._nextResult = ServerDirectoryControlResult::NotFound;
+    AdminReplyCapture removed;
+    service.submitCall( AdminFixture::kOperator, AdminMethod::kRemoveNotice, notice, NetIdempotencyKey{ 1, 4 }, 5000, removed.makeDelegate() );
+    (void)store.pollCompletions();
+    service.update( 5000 );
+    SW_EXPECT_TRUE( removed._reply._result == AdminResult::NotFound );
+    service.shutdown();
+    store.shutdown();
+    (void)store.pollCompletions();
+}
+
 SW_TEST_CASE( AdminServiceTest, ServiceRevokesSessionsAfterSuspendOnce )
 {
     MemoryServiceDatabase database;
@@ -377,6 +524,8 @@ SW_TEST_CASE( AdminProtocolTest, DeclaredLimitsMatchTheConstants )
     SW_EXPECT_EQUAL( Util::declaredMaxCount<AdminReply>( "_listBalance" ), uint32( OnlineLimit::kMaxBalanceCount ) );
     SW_EXPECT_EQUAL( Util::declaredMaxCount<AdminReply>( "_listJournal" ), uint32( AdminProtocol::kMaxListCount ) );
     SW_EXPECT_EQUAL( Util::declaredMaxCount<AdminReply>( "_listAudit" ), uint32( AdminProtocol::kMaxListCount ) );
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<AdminReply>( "_listReport" ), uint32( AdminProtocol::kMaxReportListCount ) );
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<AdminRequest>( "_reportKey" ), uint32( ServiceReportConstant::kMaxReportKeySize ) );
 }
 
 /**

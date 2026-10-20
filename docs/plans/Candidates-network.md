@@ -55,7 +55,8 @@
 왜 필요한가: `GF_NetSimulation` · `GF_NetDestruction` 의 파괴 복제는 가상 서버에서 확인했다. 실제 세션 위의 파괴 복제(`DestructionNetSessionComponent` · `DestructionNetSession`)와 해시 로그 비교(`Scripts/dev/CompareDestructionHashLogs.py`)는 들어갔지만 빌드 · 실행 확인 전이다.
 남은 것:
 - 사건 지연 측정: 파괴 사건은 "신뢰 · 순서 없음" 채널(N21b)이다. 250 ms · 손실 15 % 의 사건 지연 평균 · 최대 전/후를 `NetSimDestructionMatrixTest` 로그(`max event lag … mean …`)로 잰다(빌드 뒤). 남은 최대는 한 메시지가 거듭 잃는 몫이다. 덩어리 멈춤 확정(신뢰 자세)도 받는 쪽이 틱으로 끼우므로 옮길 수 있다 — 재고 나서.
-- 컴포넌트를 둘 씬: 쇼케이스 씬(`destructionshowcase.scene.xml`)은 키트 없는 Empty 의 것이고 여러 테스트 · 쿠커가 읽는다. 키트 컴포넌트를 넣을지 · 네트워크용 씬을 따로 둘지 정한다(씬은 에디터로 저장한다).
+- 컴포넌트를 둘 씬: 쇼케이스 씬(`destructionshowcase.scene.xml`)은 키트 없는 Empty 의 것이고 여러 테스트 · 쿠커가 읽는다. 정함(2026-10-21): 쇼케이스는 그대로 두고 네트워크용 씬을 따로 둔다 —
+  에디터에서 쇼케이스를 열고(`scene.open`) 빈 오브젝트 하나에 `DestructionNetSessionComponent` 를 달아(`component.add`) `destructionnet.scene.xml` 로 저장한다(`scene.saveAs`). 손으로 XML 을 쓰지 않는다. 빌드 · 실행이 필요해 남았다.
 - 두 로그 견주기: 서버 `Server -gv_firstScene=<씬> -gv_netListenPort=7777` ↔ 클라이언트 `App -gv_firstScene=<씬> -gv_netConnectAddress=127.0.0.1:7777`. 리눅스 서버 ↔ Windows 클라이언트는 CI 잡 몫이다(결정 기록 5-12).
 함정: 같은 입력의 해시가 구성을 넘어 같은 것은 `DestructionDamageTest.EventLogHashMatchesTheRecordedValueOnEveryBuild`(해시 다섯)가 지킨다. Windows Debug · Release · Shipping 같은 값을 확인했고, 리눅스 clang 에서 다르면 CI 잡이 진다.
 
@@ -67,7 +68,6 @@
 - 서버 빌드에서 렌더러 코드를 아예 빼기(결정 기록 `D7-2.1`, 지금은 컴파일만 되고 돌지 않는다). 렌더러 · RHI 를 빼고 링크 오류를 보며 고친 뒤 실행 파일 크기 · 링크 시간을 전후로 잰다. 렌더러 · RHI 를 Engine CMake 에서 타깃별로 가르는 일이라 Engine 소유 작업이다.
 - 리눅스 서버(`WSL-*-Server`) 빌드 · `readelf -d` 로 libX11 없음 확인 · `ServerTest` — Windows 만 확인했다. 로컬 WSL 빌드는 하지 않기로 해서(사용자 결정) CI 리눅스 잡 몫이다.
 함정: 서버용 크래시 보고 전송 동의(운영 설정)는 `OperationsAndDeployment` 쪽이다.
-
 
 ### OnlineMultiServerLatency
 제목: 서버 여럿의 실제 망 지연 측정

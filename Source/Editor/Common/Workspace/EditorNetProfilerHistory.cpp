@@ -240,12 +240,14 @@ namespace sw::editor
         return peak;
     }
 
-    void EditorNetProfilerHistory::collectKindEntries( vector<NetStatsKindEntry>& outListEntry ) const
+    void EditorNetProfilerHistory::collectKindEntries( NetStatsKindDirection direction, vector<NetStatsKindEntry>& outListEntry ) const
     {
         for ( const EditorNetProfilerTrack& track : _listTrack )
         {
-            if ( track._bHasReport )
-                outListEntry.insert( outListEntry.end(), track._lastReport._listKindEntry.begin(), track._lastReport._listKindEntry.end() );
+            if ( track._bHasReport == false )
+                continue;
+            const vector<NetStatsKindEntry>& listEntry = track._lastReport.getKindEntries( direction );
+            outListEntry.insert( outListEntry.end(), listEntry.begin(), listEntry.end() );
         }
     }
 } // namespace sw::editor
