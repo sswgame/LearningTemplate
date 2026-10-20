@@ -100,8 +100,9 @@ namespace sw
         float32 computeNodeWeight( uint32 nodeIndex ) const;
 
         // --- 노드 ---
-        uint32   getNodeCount() const { return static_cast<uint32>( _listNode.size() ); }
-        RigNode& getNode( uint32 nodeIndex ) { return *_listNode[nodeIndex]; }
+        uint32         getNodeCount() const { return static_cast<uint32>( _listNode.size() ); }
+        RigNode&       getNode( uint32 nodeIndex ) { return *_listNode[nodeIndex]; }
+        const RigNode& getNode( uint32 nodeIndex ) const { return *_listNode[nodeIndex]; }
         /** @brief 이름의 노드입니다. 없으면 nullptr 입니다. */
         RigNode* findNode( const hashed_string& name ) const;
         /** @brief 노드의 조절 값을 정합니다(부모 바꾸기의 활성 부모 등). 노드나 조절이 없으면 false 를 반환합니다. */

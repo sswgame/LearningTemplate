@@ -15,9 +15,8 @@ namespace sw
     // 셀을 짓는 일은 파괴를 처리한 뒤(`DestroyPost`)다 — 이번 프레임에 내린 셀의 오브젝트와 겹치지 않고, 만든 오브젝트는 다음 프레임 병합에서 틱에 든다.
     SW_SCENE_SERVICE( WorldStreamingSubsystem, DestroyPost )
 
-    WorldStreamingSubsystem::WorldStreamingSubsystem( GameObjectManager& manager )
-        : _pManager{ &manager }
-        , _pScene{ nullptr }
+    WorldStreamingSubsystem::WorldStreamingSubsystem( GameObjectManager& /*manager*/ )
+        : _pScene{ nullptr }
         , _settings{}
         , _grid{}
         , _listCell{}

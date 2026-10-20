@@ -241,7 +241,6 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 길드 상한 값들입니다. */
     /** @brief 공개 길드의 가입 신청 하나입니다. 임원 이상이 목록으로 받습니다. */
     REFLECT()
     struct GuildApplication

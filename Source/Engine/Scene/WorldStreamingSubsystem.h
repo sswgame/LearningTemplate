@@ -113,7 +113,6 @@ namespace sw
         /** @brief 셀의 오브젝트를 내립니다. */
         void unloadCell( CellSlot& slot );
 
-        GameObjectManager*            _pManager;
         Scene*                        _pScene; ///< 셀을 받은 씬(빌림). nullptr 이면 스트리밍하지 않는다
         WorldSettings                 _settings;
         WorldCellGrid                 _grid;

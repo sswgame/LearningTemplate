@@ -232,7 +232,7 @@ namespace sw::editor
                                                                                                               : "exited";
             ImGui::PushID( static_cast<int32>( roleIndex ) );
             ImGui::SeparatorText( role._name.c_str() );
-            ImGui::Text( "%s  clip %s  %s %.3f s%s", role._bAnchor ? "anchor" : ( role._bRequired ? "required" : "optional" ), role._clip.c_str(), pStage, preview._clipSeconds,
+            ImGui::Text( "%s  clip %s  %s %.3f s%s", role._bAnchor ? "anchor" : ( role._bRequired ? "required" : "optional" ), role._clip.c_str(), pStage, static_cast<float64>( preview._clipSeconds ),
                          _listSlot[roleIndex]._clipSeconds > 0.0f ? "" : "  (clip length unknown - pick a prefab)" );
 
             RoleSlot& slot = _listSlot[roleIndex];

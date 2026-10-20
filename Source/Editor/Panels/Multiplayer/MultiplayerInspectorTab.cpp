@@ -92,7 +92,10 @@ namespace sw::editor
                 EditorRemoteInspector& inspector = getInspector();
                 if ( listArgument.empty() )
                 {
-                    outReply = inspector.refreshTree() ? "inspector read " + to_string( inspector.getObjectRows().size() ) + " object(s)" : inspector.getLastError();
+                    if ( inspector.refreshTree() )
+                        outReply = "inspector read " + to_string( inspector.getObjectRows().size() ) + " object(s)";
+                    else
+                        outReply = inspector.getLastError();
                     return true;
                 }
                 string line;

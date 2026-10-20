@@ -298,7 +298,7 @@ namespace sw
                 , _accountID{ accountID }
                 , _requestTag{ requestTag }
                 , _result{ LeaderboardResult::Unavailable }
-                , _bCache{ bCache ? SW_TRUE : SW_FALSE }
+                , _bCache{ static_cast<uint8>( bCache ? SW_TRUE : SW_FALSE ) }
             {
             }
 
