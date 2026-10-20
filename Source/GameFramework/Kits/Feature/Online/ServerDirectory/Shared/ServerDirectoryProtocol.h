@@ -67,7 +67,7 @@ namespace sw
     struct ServerListRequest
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 16 )
+        PROPERTY( MaxCount = ServerRecord::kMaxNameSize )
         string _kind{}; ///< 상한은 `ServerRecord::kMaxNameSize` 와 같다
     };
 } // namespace sw
@@ -79,7 +79,7 @@ namespace sw
     struct ServerListReply
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 256 )
+        PROPERTY( MaxCount = ServerDirectoryLimit::kMaxServerListCount )
         vector<ServerListEntry> _listEntry{}; ///< 상한은 `ServerDirectoryLimit::kMaxServerListCount` 와 같다
     };
 } // namespace sw

@@ -12,6 +12,7 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Base/Online/Guard/RequestLimits.h"
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -76,11 +77,11 @@ namespace sw
     {
         REFLECT_BODY();
         static constexpr uint32 kBusVersion = 1; ///< 서버 버스(`ChatBus`)의 의미 버전(docs/plans/ServerBusFormat.md 3.4). 기록 레코드의 판과 따로다
-        PROPERTY( MaxCount = 48 )
+        PROPERTY( MaxCount = ChatLimit::kMaxChannelIDSize )
         string _channelID{}; ///< 귓속말이면 기록 키(`ChatChannelID::makeWhisper`)이다
-        PROPERTY( MaxCount = 32 )
+        PROPERTY( MaxCount = RequestLimits::kMaxDisplayNameSize )
         string _senderName{};
-        PROPERTY( MaxCount = 512 )
+        PROPERTY( MaxCount = ChatLimit::kMaxTextSize )
         string _text{}; ///< 필터를 거친 글이다
         PROPERTY()
         AccountID _senderID{ kInvalidAccountID };

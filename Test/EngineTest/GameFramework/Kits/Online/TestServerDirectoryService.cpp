@@ -261,19 +261,6 @@ SW_TEST_CASE( ServerDirectoryServiceTest, StoreFailureLeavesNothingAndBadInputIs
 }
 
 /**
- * @brief [ServerDirectoryProtocolTest] 애노테이션은 정수 리터럴만 받으므로, 같은 상한을 적은 `PROPERTY( MaxCount )` 와 상수가 어긋나지 않는지 생성된 코덱의 정규 문자열로 본다
- */
-SW_TEST_CASE( ServerDirectoryProtocolTest, DeclaredLimitsMatchTheConstants )
-{
-    using Util = test::OnlineMessageTestUtil;
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<MaintenanceView>( "_messageKey" ), uint32( ServerDirectoryLimit::kMaxMessageKeySize ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<ServerAssignment>( "_messageKey" ), uint32( ServerDirectoryLimit::kMaxMessageKeySize ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<ServiceNotice>( "_text" ), uint32( ServerDirectoryLimit::kMaxNoticeTextSize ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<ServerDirectoryStatus>( "_listMaintenance" ), uint32( ServerDirectoryLimit::kMaxWindowCount ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<ServerDirectoryStatus>( "_listNotice" ), uint32( ServerDirectoryLimit::kMaxNoticeCount ) );
-}
-
-/**
  * @brief [ServerDirectoryProtocolTest] 허용 계정 목록의 원소를 `AccountID` 별칭으로 적어도 저장소 레코드의 바이트는 그대로다
  * @details 생성기가 컨테이너 원소의 별칭을 벗기기 전에는 `uint64` 로 적어 피했다. 골든은 `uint64` 로 적던 빌드가 쓴 바이트다.
  */

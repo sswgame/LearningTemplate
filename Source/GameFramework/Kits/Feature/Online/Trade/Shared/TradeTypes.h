@@ -4,7 +4,7 @@
  * @details 플레이어 간 거래는 양쪽 제시, 잠금, 양쪽 확정 순서로 진행하며, 정산은 에스크로 없이 원장 이동 하나로 처리한다(분개 키는 거래 id). 사용자가 정한 방식이다.
  *          제시를 바꾸면 양쪽의 잠금과 확정이 풀리고 제시 버전이 올라간다. 확정은 "내가 본 (내 버전, 상대 버전)" 을 싣는다. 바꿔치기 사기를 막으려는 것이며 WoW 와 언리얼 예제의 거래창과 같은 규칙이다.
  *          와이어에는 고정 배치형(B)으로, 저장소의 거래 레코드에는 자기 기술형(A, `TradeProtocol::encodeSession`)으로 실린다. 배치는 아래 `PROPERTY` 선언 순서와 키가 정한다.
- *          자산 id 상한(48)은 `LedgerConstant::kMaxAssetIDSize` 와 같은 값이다.
+ *          자산 id 상한은 `PROPERTY( MaxCount = LedgerConstant::kMaxAssetIDSize )` 로 원장 상수를 이름으로 가리킨다.
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -16,6 +16,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
+#include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -36,7 +37,7 @@ namespace sw
     struct TradeLeg
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 48 )
+        PROPERTY( MaxCount = LedgerConstant::kMaxAssetIDSize )
         string _assetID{};
         PROPERTY()
         int64 _amount{ 0 };
@@ -100,7 +101,7 @@ namespace sw
     struct TradeSide
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 8 )
+        PROPERTY( MaxCount = TradeConstant::kMaxLegsPerSide )
         vector<TradeLeg> _listLeg{}; ///< 상한은 `TradeConstant::kMaxLegsPerSide` 와 같다
         PROPERTY()
         AccountID _accountID{ kInvalidAccountID };

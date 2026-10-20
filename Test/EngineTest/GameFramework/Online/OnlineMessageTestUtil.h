@@ -62,35 +62,6 @@ namespace test
             return TMessageTypes::read( reader, other ) == sw::FixedReadResult::SchemaMismatch;
         }
 
-        /**
-         * @brief @p T 의 @p fieldName 필드에 선언된 `MaxCount` 입니다. 고정 배치형 코덱의 정규 문자열(`FixedCodec::_pCanonical`)에서 읽으며, 코덱이나 그 필드가 없으면 0 입니다.
-         * @details 애노테이션은 정수 리터럴만 받으므로 같은 상한을 상수로도 두는 곳은 둘을 이 값으로 묶는 테스트를 둡니다.
-         */
-        template <typename T>
-        static uint32 declaredMaxCount( const sw::string_view fieldName )
-        {
-            sw::string            reason;
-            const sw::FixedCodec* pCodec = sw::FixedLayout::findCodec<T>( reason );
-            if ( pCodec == nullptr || pCodec->_pCanonical == nullptr )
-                return 0;
-            const sw::string_view canonical( pCodec->_pCanonical );
-            const sw::string      fieldKey = sw::string( "|F=" ) + sw::string( fieldName ) + ":";
-            const size_t          begin    = canonical.find( fieldKey );
-            if ( begin == sw::string_view::npos )
-                return 0;
-            const sw::string_view field    = canonical.substr( begin + 1, canonical.find( '|', begin + 1 ) - begin - 1 );
-            const sw::string_view countKey = ":maxcount=";
-            const size_t          at       = field.find( countKey );
-            if ( at == sw::string_view::npos )
-                return 0;
-            uint32 value = 0;
-            for ( size_t index = at + countKey.size(); index < field.size() && '0' <= field[index] && field[index] <= '9'; ++index )
-            {
-                value = value * 10 + static_cast<uint32>( field[index] - '0' );
-            }
-            return value;
-        }
-
         /** @brief @p message 를 쓰지 못하면(범위 밖 값) true 입니다. */
         template <typename TMessageTypes, typename T>
         static bool refusesToWrite( const T& message )

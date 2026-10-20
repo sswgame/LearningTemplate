@@ -12,6 +12,7 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Base/Online/Guard/RequestLimits.h"
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -141,7 +142,7 @@ namespace sw
     struct LeaderboardEntry
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 32 )
+        PROPERTY( MaxCount = RequestLimits::kMaxDisplayNameSize )
         string _displayName{};
         PROPERTY()
         AccountID _accountID{ kInvalidAccountID };
@@ -248,7 +249,7 @@ namespace sw
     {
         REFLECT_BODY();
         static constexpr uint32 kBusVersion = 1; ///< push 중계(`OnlinePushRelay`)의 의미 버전(docs/plans/ServerBusFormat.md 3.4)
-        PROPERTY( MaxCount = 32 )
+        PROPERTY( MaxCount = LeaderboardLimit::kMaxIDSize )
         string _achievementID{};
         PROPERTY()
         int64 _unlockedMs{ 0 };

@@ -53,7 +53,7 @@ namespace sw
         REFLECT_BODY();
         PROPERTY( MaxCount = 16 )
         string _scope{}; ///< `all` 이거나 서버 종류 이름이다. 상한은 `ServerRecord::kMaxNameSize` 와 같다
-        PROPERTY( MaxCount = 64 )
+        PROPERTY( MaxCount = ServerDirectoryLimit::kMaxMessageKeySize )
         string _messageKey{}; ///< 안내 문구의 로컬라이제이션 키이다. 상한은 `ServerDirectoryLimit::kMaxMessageKeySize` 와 같다
         PROPERTY()
         int64 _startMs{ 0 };
@@ -109,7 +109,7 @@ namespace sw
     struct ServiceNotice
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 1024 )
+        PROPERTY( MaxCount = ServerDirectoryLimit::kMaxNoticeTextSize )
         string _text{}; ///< `_bLiteralText` 가 false 이면 로컬라이제이션 키이고, true 이면 GM 이 쓴 문구이다. 상한은 `ServerDirectoryLimit::kMaxNoticeTextSize` 와 같다
         PROPERTY()
         uint64 _noticeID{ 0 };
@@ -133,9 +133,9 @@ namespace sw
     struct ServerDirectoryStatus
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 16 )
+        PROPERTY( MaxCount = ServerDirectoryLimit::kMaxWindowCount )
         vector<MaintenanceView> _listMaintenance{}; ///< 상한은 `ServerDirectoryLimit::kMaxWindowCount` 와 같다
-        PROPERTY( MaxCount = 32 )
+        PROPERTY( MaxCount = ServerDirectoryLimit::kMaxNoticeCount )
         vector<ServiceNotice> _listNotice{}; ///< 상한은 `ServerDirectoryLimit::kMaxNoticeCount` 와 같다
     };
 } // namespace sw
@@ -147,9 +147,9 @@ namespace sw
     struct ServerAssignmentRequest
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 16 )
+        PROPERTY( MaxCount = ServerRecord::kMaxNameSize )
         string _kind{};
-        PROPERTY( MaxCount = 16 )
+        PROPERTY( MaxCount = ServerRecord::kMaxNameSize )
         string _region{};
         PROPERTY()
         uint32 _buildVersion{ 0 }; ///< 0이면 빌드 버전을 따지지 않는다
@@ -165,9 +165,9 @@ namespace sw
     struct ServerAssignment
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 128 )
+        PROPERTY( MaxCount = ServerRecord::kMaxAddressSize )
         string _address{}; ///< 상한은 `ServerRecord::kMaxAddressSize` 와 같다
-        PROPERTY( MaxCount = 64 )
+        PROPERTY( MaxCount = ServerDirectoryLimit::kMaxMessageKeySize )
         string _messageKey{};
         PROPERTY()
         uint64 _serverID{ 0 };
@@ -187,9 +187,9 @@ namespace sw
     struct ServerListEntry
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 16 )
+        PROPERTY( MaxCount = ServerRecord::kMaxNameSize )
         string _region{};
-        PROPERTY( MaxCount = 128 )
+        PROPERTY( MaxCount = ServerRecord::kMaxAddressSize )
         string _address{};
         PROPERTY()
         uint64 _serverID{ 0 };

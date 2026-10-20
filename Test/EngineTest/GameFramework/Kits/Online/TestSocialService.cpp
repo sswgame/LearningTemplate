@@ -386,19 +386,6 @@ SW_TEST_CASE( SocialServiceTest, StoreFailureWritesNothing )
 }
 
 /**
- * @brief [SocialProtocolTest] 애노테이션은 정수 리터럴만 받으므로, 같은 상한을 적은 `PROPERTY( MaxCount )` 와 상수가 어긋나지 않는지 생성된 코덱의 정규 문자열로 본다
- */
-SW_TEST_CASE( SocialProtocolTest, DeclaredLimitsMatchTheConstants )
-{
-    using Util = test::OnlineMessageTestUtil;
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<SocialRequest>( "_assetID" ), uint32( LedgerConstant::kMaxAssetIDSize ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<GuildInfo>( "_name" ), uint32( GuildLimit::kMaxNameSize ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<GuildInfo>( "_notice" ), uint32( GuildLimit::kMaxNoticeSize ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<GuildStorageItem>( "_assetID" ), uint32( LedgerConstant::kMaxAssetIDSize ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<SocialReply>( "_listApplication" ), uint32( GuildLimit::kMaxApplication ) );
-}
-
-/**
  * @brief [SocialProtocolTest] 친구 메시지, 알림, 버스 본문은 상한까지 왕복하고, 접속 상태 캐시 값은 자기 기술형으로 왕복하며, 범위 밖 값은 쓰지 않는다
  */
 SW_TEST_CASE( SocialProtocolTest, MessagesRoundTripAndRefuseOutOfRange )

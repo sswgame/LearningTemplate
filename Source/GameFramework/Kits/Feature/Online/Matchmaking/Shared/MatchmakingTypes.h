@@ -9,6 +9,7 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Base/Online/Directory/ServerRecord.h"
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -106,7 +107,7 @@ namespace sw
         static constexpr uint32 kBusVersion = 1; ///< 서버 버스의 의미 버전(docs/plans/ServerBusFormat.md 3.4). 새 필드는 옛 빌드 매처를 지나면 기본값이 된다(3.6)
         PROPERTY( MaxCount = 256 )
         vector<MatchMember> _listMember{}; ///< 상한은 팀 수 상한 곱하기 팀 인원 상한(`MatchmakingLimit`)이다
-        PROPERTY( MaxCount = 16 )
+        PROPERTY( MaxCount = ServerRecord::kMaxNameSize )
         string _region{}; ///< 상한은 `ServerRecord::kMaxNameSize` 와 같다
         PROPERTY()
         uint64 _ticketID{ 0 };
@@ -129,7 +130,7 @@ namespace sw
     struct MatchFormedTeam
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 16 )
+        PROPERTY( MaxCount = MatchmakingLimit::kMaxTeamSize )
         vector<MatchMember> _listMember{}; ///< 상한은 `MatchmakingLimit::kMaxTeamSize` 와 같다
     };
 } // namespace sw
@@ -142,13 +143,13 @@ namespace sw
     {
         REFLECT_BODY();
         static constexpr uint32 kBusVersion = 1; ///< 서버 버스의 의미 버전(docs/plans/ServerBusFormat.md 3.4)
-        PROPERTY( MaxCount = 16 )
+        PROPERTY( MaxCount = MatchmakingLimit::kMaxTeamCount )
         vector<MatchFormedTeam> _listTeam{}; ///< 상한은 `MatchmakingLimit::kMaxTeamCount` 와 같다
         PROPERTY( MaxCount = 256 )
         vector<MatchTicket> _listTicket{};
-        PROPERTY( MaxCount = 32 )
+        PROPERTY( MaxCount = MatchmakingLimit::kMaxIDSize )
         string _modeID{}; ///< 상한은 `MatchmakingLimit::kMaxIDSize` 와 같다
-        PROPERTY( MaxCount = 16 )
+        PROPERTY( MaxCount = ServerRecord::kMaxNameSize )
         string _region{}; ///< 앵커(가장 오래 기다린 티켓)의 지역이다. 전용 서버 배정이 먼저 확인한다
         PROPERTY()
         uint64 _matchID{ 0 };
@@ -230,7 +231,7 @@ namespace sw
         REFLECT_BODY();
         static constexpr uint32 kBusVersion = 1; ///< push 중계(`OnlinePushRelay`)의 의미 버전(docs/plans/ServerBusFormat.md 3.4)
         /// 첫 항목이 파티장이다. 상한은 `PartyLobbyLimit::kMaxPartySize` 와 같다.
-        PROPERTY( MaxCount = 8 )
+        PROPERTY( MaxCount = PartyLobbyLimit::kMaxPartySize )
         vector<AccountID> _listMemberID{};
         PROPERTY()
         uint64 _partyID{ 0 };
@@ -267,9 +268,9 @@ namespace sw
     struct LobbySetting
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 16 )
+        PROPERTY( MaxCount = PartyLobbyLimit::kMaxSettingKeySize )
         string _key{}; ///< `[0-9a-z_.]` 형식이며 16바이트 이하이다
-        PROPERTY( MaxCount = 64 )
+        PROPERTY( MaxCount = PartyLobbyLimit::kMaxSettingValueSize )
         string _value{}; ///< 64바이트 이하이다
     };
 } // namespace sw
@@ -297,13 +298,13 @@ namespace sw
     {
         REFLECT_BODY();
         static constexpr uint32 kBusVersion = 1; ///< push 중계(`OnlinePushRelay`)의 의미 버전(docs/plans/ServerBusFormat.md 3.4)
-        PROPERTY( MaxCount = 32 )
+        PROPERTY( MaxCount = PartyLobbyLimit::kMaxLobbySize )
         vector<LobbyMember> _listMember{}; ///< 첫 항목이 방장이다
-        PROPERTY( MaxCount = 8 )
+        PROPERTY( MaxCount = PartyLobbyLimit::kMaxLobbySetting )
         vector<LobbySetting> _listSetting{};
-        PROPERTY( MaxCount = 48 )
+        PROPERTY( MaxCount = PartyLobbyLimit::kMaxLobbyNameSize )
         string _name{};
-        PROPERTY( MaxCount = 32 )
+        PROPERTY( MaxCount = MatchmakingLimit::kMaxIDSize )
         string _modeID{};
         PROPERTY()
         uint64 _lobbyID{ 0 };
@@ -366,9 +367,9 @@ namespace sw
         static constexpr uint32 kBusVersion = 1; ///< 서버 버스와 push 중계의 의미 버전(docs/plans/ServerBusFormat.md 3.4)
         PROPERTY( MaxCount = 16 )
         vector<AccountID> _listTeammate{}; ///< 상한은 `MatchmakingLimit::kMaxTeamSize` 와 같다
-        PROPERTY( MaxCount = 128 )
+        PROPERTY( MaxCount = ServerRecord::kMaxAddressSize )
         string _address{}; ///< 상한은 `ServerRecord::kMaxAddressSize` 와 같다
-        PROPERTY( MaxCount = 32 )
+        PROPERTY( MaxCount = MatchmakingLimit::kMaxIDSize )
         string _modeID{};
         PROPERTY()
         uint64 _matchID{ 0 };

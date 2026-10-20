@@ -60,17 +60,17 @@ namespace sw
     struct SW_GF_API ServiceReport
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 20 )
+        PROPERTY( MaxCount = ServiceReportConstant::kMaxLineCount )
         vector<ServiceReportLine> _listLine{};
-        PROPERTY( MaxCount = 96 )
+        PROPERTY( MaxCount = ServiceReportConstant::kMaxReportKeySize )
         string _reportKey{}; ///< 저장소 키이다. GM 이 처리할 때 이 값으로 고른다
-        PROPERTY( MaxCount = 32 )
+        PROPERTY( MaxCount = ServiceReportConstant::kMaxCategorySize )
         string _category{}; ///< 신고 종류 `[0-9a-z_.]` 이다. 채팅은 "chat" 이다
-        PROPERTY( MaxCount = 48 )
+        PROPERTY( MaxCount = ServiceReportConstant::kMaxContextSize )
         string _context{}; ///< 종류마다 뜻이 다르다. 채팅이면 채널 id 또는 귓속말 기록 키이다
-        PROPERTY( MaxCount = 64 )
+        PROPERTY( MaxCount = ServiceReportConstant::kMaxReasonSize )
         string _reason{}; ///< 신고자가 고른 사유 코드 `[0-9a-z_.]` 이며 로컬라이제이션 키이다
-        PROPERTY( MaxCount = 1024 )
+        PROPERTY( MaxCount = ServiceReportConstant::kMaxMemoSize )
         string _resolutionMemo{}; ///< 처리한 GM 의 메모이다
         PROPERTY()
         AccountID _reporterID{ kInvalidAccountID };
@@ -89,7 +89,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 신고의 상한 값들입니다. `PROPERTY` 의 `MaxCount` 와 같은 값이며 키트 테스트가 묶습니다. */
+    /** @brief 신고의 상한 값들입니다. `PROPERTY( MaxCount )` 가 이 이름을 씁니다. */
     struct ServiceReportConstant
     {
         static constexpr int32  kMaxLineCount     = 20;

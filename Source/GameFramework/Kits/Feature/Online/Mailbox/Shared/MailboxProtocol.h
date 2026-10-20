@@ -16,6 +16,7 @@
 
 #include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Base/Online/Mail/ServiceMail.h"
+#include "GameFramework/Base/Online/Service/OnlineLimit.h"
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Base/Online/Service/OnlineProtocolRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -88,15 +89,15 @@ namespace sw
     struct MailView
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 8 )
+        PROPERTY( MaxCount = ServiceMailConstant::kMaxAttachmentCount )
         vector<ServiceMailAttachment> _listAttachment{}; ///< 상한은 `ServiceMailConstant::kMaxAttachmentCount` 와 같다
-        PROPERTY( MaxCount = 256 )
+        PROPERTY( MaxCount = OnlineLimit::kMaxKeySize )
         string _mailKey{}; ///< 상한은 `OnlineLimit::kMaxKeySize` 와 같다
-        PROPERTY( MaxCount = 128 )
+        PROPERTY( MaxCount = ServiceMailConstant::kMaxTitleSize )
         string _titleKey{}; ///< 상한은 `ServiceMailConstant::kMaxTitleSize` 와 같다
-        PROPERTY( MaxCount = 2048 )
+        PROPERTY( MaxCount = ServiceMailConstant::kMaxBodySize )
         string _body{}; ///< 상한은 `ServiceMailConstant::kMaxBodySize` 와 같다
-        PROPERTY( MaxCount = 64 )
+        PROPERTY( MaxCount = ServiceMailConstant::kMaxSenderNameSize )
         string _senderName{}; ///< 상한은 `ServiceMailConstant::kMaxSenderNameSize` 와 같다
         PROPERTY()
         int64 _createdMs{ 0 };
@@ -118,7 +119,7 @@ namespace sw
     struct MailboxRequest
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 256 )
+        PROPERTY( MaxCount = OnlineLimit::kMaxKeySize )
         string _mailKey{}; ///< 상한은 `OnlineLimit::kMaxKeySize` 와 같다
         PROPERTY( MaxCount = 256 )
         string _cursor{}; ///< List 에서 쓴다. 앞 응답의 `_nextCursor` 이며 처음에는 빈 문자열이다
@@ -136,7 +137,7 @@ namespace sw
         REFLECT_BODY();
         PROPERTY( MaxCount = 100 )
         vector<MailView> _listMail{}; ///< 캠페인이 개인 우편 앞에 끼어들므로 상한은 `MailboxProtocol::kMaxListCount` 의 두 배이다
-        PROPERTY( MaxCount = 1024 )
+        PROPERTY( MaxCount = OnlineLimit::kMaxBalanceCount )
         vector<LedgerBalance> _listBalance{}; ///< 수령과 모두 받기에서 바뀐 잔액이다. 게임이 EconomyClient::applyBalances 로 넘긴다
         PROPERTY( MaxCount = 256 )
         string _nextCursor{};

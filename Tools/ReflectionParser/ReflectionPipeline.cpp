@@ -83,6 +83,8 @@ namespace sw
                             out.appendFormat( "  Min=%#", prop._minRange );
                         if ( prop._bHasMaxRange == SW_TRUE )
                             out.appendFormat( "  Max=%#", prop._maxRange );
+                        if ( prop._bHasMaxCount == SW_TRUE )
+                            out.appendFormat( "  MaxCount=%#", prop._maxCount );
                         if ( prop._defaultValue.empty() == false )
                             out.appendFormat( "  Default=\"%#\"", prop._defaultValue );
                         if ( prop._bAssetPath == SW_TRUE )

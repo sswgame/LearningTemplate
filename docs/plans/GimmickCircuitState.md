@@ -23,7 +23,7 @@
 | 회로 `saveState` · `loadState`(`GimmickStateMatch`), 상한 검사 | `GimmickCircuit.*`, `GimmickNodeRegistry.*`(`registerKind` 의 슬롯 상한) |
 | 컴포넌트의 `_state` · 체크포인트 값 · `applySavedState` | `GimmickCircuitComponent.*` |
 | 번들(`REFLECT` + `FixedLayout`), 넷 조각 바이트 | `GimmickStateBundle.*`, `Kits/Feature/Network/NetClientServer/GimmickSnapshotUtil.*` |
-| 테스트 | `Test/EngineTest/GameFramework/Gimmick/` 의 `TestGimmick.cpp`(`StateLimitsMatchDeclaredMaxCount` 포함) · `TestGimmickScene.cpp`(XML · 바이너리 왕복) · `TestGimmickState.cpp`(번들 · 롤백 · 조각) |
+| 테스트 | `Test/EngineTest/GameFramework/Gimmick/` 의 `TestGimmick.cpp`(`StateLimitsRejectOversizedCircuitAndKind` 포함) · `TestGimmickScene.cpp`(XML · 바이너리 왕복) · `TestGimmickState.cpp`(번들 · 롤백 · 조각) |
 
 같은 이름의 `_stateBytes` 필드(`ObjectCopyBuffer`, `FractureNetworkSync` 등)는 기믹과 관계없으므로 고치지 않았습니다.
 
@@ -49,7 +49,7 @@
   `Mismatch` 는 같은 id 인데 종류 · 상태 버전 · 슬롯 수가 다르거나 같은 id 가 둘일 때뿐입니다. 새 노드는 처음 상태, 저장에만 있는 노드는 버립니다.
 - **종류의 상태 버전.** `GimmickNodeKind::_stateVersion`(기본 1). 슬롯 수만 대조하면 같은 수 안에서 뜻이 바뀐 변경을 잡지 못합니다.
 - **상한.** 노드 수 1,024(`GimmickCircuitState::kMaxNodeCount`, `populate` 가 오류), 종류마다 슬롯 32(`GimmickNodeState::kMaxSlotCount`, `registerKind` 가 거절). 회로 전체 슬롯 상한은 Delay 하나가 정수 20 개라 근거가 없어 두지 않았습니다.
-  `PropertyInfo` 에 `MaxCount` 메타데이터가 없어 C++ 상수를 함께 두고, 상한에서 B 쓰기가 성공하고 하나 넘으면 실패하는지를 `GimmickTest.StateLimitsMatchDeclaredMaxCount` 가 대조합니다.
+  상한의 정본은 그 C++ 상수이고 `PROPERTY( MaxCount = kMaxSlotCount )` 가 이름으로 가리킵니다(2026-10-21, [리플렉션 형식](ReflectionFormats.md) 3.5). 처음에는 애노테이션이 리터럴만 받아 같은 수를 두 곳에 적고 테스트로 대조했습니다.
 - **저장 상태 적용은 한 함수.** `GimmickCircuitComponent::applySavedState` 를 `onPostLoad` · `onBeginPlay` · `restoreCheckpoint` 가 지납니다. `NodeSetChanged` 는 경고 뒤 이어 가고, `Mismatch` 는 오류를 남기고 회로를 비워 돌지 않습니다(조용한 처음 상태 시작을 없앰).
   롤백 · 넷은 `restoreState`(`Exact` 만, 아니면 바꾸지 않고 false)이고 `GimmickStateBundle::apply` 는 건너뛴 수를 돌려 의미를 부르는 쪽이 정합니다. 체크포인트는 값입니다.
 - **저작 저장 문맥(검토 ⓕ)은 옛 `C-53`.** 애노테이션 · 파서 · `SerializeContext` · 씬 저장 경로를 함께 고쳐야 하고 리플렉션 작업과 파일이 겹쳐 이 단계에서 하지 않았습니다. 플레이 중에만 의미 있는 필드는 `PROPERTY( RuntimeState )` 로 표시해 저작 데이터에서 뺍니다.

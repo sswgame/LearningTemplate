@@ -185,20 +185,6 @@ SW_TEST_CASE( OnlineProtocolTest, MessageTypesHashFollowsTheTypes )
 }
 
 /**
- * @brief [OnlineProtocolTest] 애노테이션은 정수 리터럴만 받으므로, 같은 상한을 적은 `PROPERTY( MaxCount )` 와 상수가 어긋나지 않는지 생성된 코덱의 정규 문자열로 본다
- */
-SW_TEST_CASE( OnlineProtocolTest, DeclaredLimitsMatchTheConstants )
-{
-    using Util = test::OnlineMessageTestUtil;
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<LedgerBalance>( "_assetID" ), uint32( LedgerConstant::kMaxAssetIDSize ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<ServiceMailAttachment>( "_assetID" ), uint32( LedgerConstant::kMaxAssetIDSize ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<ServiceAuditEntry>( "_before" ), uint32( ServiceAuditEntry::kMaxStateSize ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<ServiceAuditEntry>( "_after" ), uint32( ServiceAuditEntry::kMaxStateSize ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<ServiceAuditEntry>( "_memo" ), uint32( ServiceAuditEntry::kMaxMemoSize ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<AccountIdentity>( "_displayName" ), uint32( RequestLimits::kMaxDisplayNameSize ) );
-}
-
-/**
  * @brief [OnlineProtocolTest] 메서드 표의 해시는 이름 순서를 따르므로, 같은 타입을 받는 두 메서드의 번호를 맞바꾸면 값이 바뀐다
  */
 SW_TEST_CASE( OnlineProtocolTest, MethodTableHashFollowsTheNameOrder )

@@ -111,6 +111,12 @@ namespace sw
         float32                   _minRange;
         float32                   _maxRange;
         /**
+         * @brief 문자열 · 컨테이너 최대 길이입니다(`PROPERTY( MaxCount = 32 )`, `MaxCount = kMaxSlotCount`). 적지 않았으면 0 입니다.
+         * @details 고정 배치형 코덱이 쓰기와 읽기에서 지키는 상한과 같은 값입니다. 상수 이름으로 적으면 생성기가 그 상수의 값을 넣으므로
+         *          상한을 C++ 상수와 애노테이션 두 곳에 숫자로 적지 않습니다.
+         */
+        uint32 _maxCount;
+        /**
          * @brief 아래 경계와 위 경계를 각각 적었는지 나타냅니다(`PROPERTY( Min = … )`, `Max = …`). 적은 쪽만 막습니다.
          * @details 경계 표시를 하나로 합치면 `Min = 0` 만 적은 프로퍼티의 위 경계가 기본값 1 로 남아, 인스펙터가 그 값을 1 에서 막는다.
          *          슬라이더는 두 경계가 모두 있을 때만 그린다(`hasFullRange`).

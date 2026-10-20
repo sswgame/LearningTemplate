@@ -19,6 +19,7 @@
 #include "GameFramework/Base/Online/Mail/ServiceMail.h"
 #include "GameFramework/Base/Online/Report/ServiceReport.h"
 #include "GameFramework/Base/Online/Sanction/ServiceSanction.h"
+#include "GameFramework/Base/Online/Service/OnlineLimit.h"
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Base/Online/Service/OnlineProtocolRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -135,23 +136,23 @@ namespace sw
     struct AdminRequest
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 8 )
+        PROPERTY( MaxCount = ServiceMailConstant::kMaxAttachmentCount )
         vector<ServiceMailAttachment> _listAttachment{}; ///< SendMail, BulkMail, CreateCampaign 에서 쓴다. 상한은 `ServiceMailConstant::kMaxAttachmentCount` 와 같다
-        PROPERTY( MaxCount = 12 )
+        PROPERTY( MaxCount = AdminProtocol::kMaxBulkCount )
         vector<AccountID> _listAccountID{}; ///< BulkMail 에서 쓰며 12개 이하이다. 우편 하나가 쓰기 넷이라 감사와 멱등 기록까지 한 트랜잭션(64) 안에 든다
         PROPERTY( MaxCount = 256 )
         string _displayName{}; ///< LookupAccount 에서 계정 id 대신 쓴다. 이 프로세스에 접속해 있는 계정만 찾을 수 있다
         PROPERTY( MaxCount = 256 )
         string _subject{}; ///< ListAudit 의 주체 접두어이다(예: `acct.<16진>/`)
-        PROPERTY( MaxCount = 48 )
+        PROPERTY( MaxCount = LedgerConstant::kMaxAssetIDSize )
         string _assetID{}; ///< 상한은 `LedgerConstant::kMaxAssetIDSize` 와 같다
         PROPERTY( MaxCount = 256 )
         string _reasonCode{}; ///< 제재 표시 사유이며 로컬라이제이션 키이다
-        PROPERTY( MaxCount = 1024 )
+        PROPERTY( MaxCount = AdminProtocol::kMaxMemoSize )
         string _memo{}; ///< 티켓이나 사유이다. 상태를 바꾸는 명령에는 필수이며 1 KB 이하이다
-        PROPERTY( MaxCount = 128 )
+        PROPERTY( MaxCount = ServiceMailConstant::kMaxTitleSize )
         string _titleKey{}; ///< 상한은 `ServiceMailConstant::kMaxTitleSize` 와 같다
-        PROPERTY( MaxCount = 2048 )
+        PROPERTY( MaxCount = ServiceMailConstant::kMaxBodySize )
         string _body{}; ///< 상한은 `ServiceMailConstant::kMaxBodySize` 와 같다
         PROPERTY( MaxCount = 256 )
         string _cursor{};
@@ -163,7 +164,7 @@ namespace sw
         string _eventID{}; ///< RemoveLiveEvent 의 이벤트 id 이다
         PROPERTY( MaxCount = 8192 )
         string _eventJSON{}; ///< PutLiveEvent 의 정의(`LiveEventDefinition` 의 리플렉션 JSON)이다. 상한은 `AdminProtocol::kMaxEventJSONSize` 와 같다
-        PROPERTY( MaxCount = 96 )
+        PROPERTY( MaxCount = ServiceReportConstant::kMaxReportKeySize )
         string _reportKey{}; ///< ResolveReport 의 대상이다. 상한은 `ServiceReportConstant::kMaxReportKeySize` 와 같다
         PROPERTY()
         AccountID _accountID{ kInvalidAccountID };
@@ -203,11 +204,11 @@ namespace sw
     struct AdminJournalLine
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 1024 )
+        PROPERTY( MaxCount = OnlineLimit::kMaxBalanceCount )
         vector<LedgerBalance> _listChange{}; ///< 상한은 `OnlineLimit::kMaxBalanceCount` 와 같다
-        PROPERTY( MaxCount = 32 )
+        PROPERTY( MaxCount = LedgerConstant::kMaxReasonSize )
         string _reason{}; ///< 상한은 `LedgerConstant::kMaxReasonSize` 와 같다
-        PROPERTY( MaxCount = 256 )
+        PROPERTY( MaxCount = LedgerConstant::kMaxMemoSize )
         string _memo{}; ///< 상한은 `LedgerConstant::kMaxMemoSize` 와 같다
         PROPERTY()
         int64 _timeMs{ 0 };
@@ -237,15 +238,15 @@ namespace sw
     struct AdminReply
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 1024 )
+        PROPERTY( MaxCount = OnlineLimit::kMaxBalanceCount )
         vector<LedgerBalance> _listBalance{}; ///< 상한은 `OnlineLimit::kMaxBalanceCount` 와 같다
-        PROPERTY( MaxCount = 100 )
+        PROPERTY( MaxCount = AdminProtocol::kMaxListCount )
         vector<AdminJournalLine> _listJournal{}; ///< 상한은 `AdminProtocol::kMaxListCount` 와 같다
-        PROPERTY( MaxCount = 100 )
+        PROPERTY( MaxCount = AdminProtocol::kMaxListCount )
         vector<ServiceAuditEntry> _listAudit{}; ///< 상한은 `AdminProtocol::kMaxListCount` 와 같다
         PROPERTY( MaxCount = 64 )
         vector<AdminLiveEventView> _listLiveEvent{}; ///< ListLiveEvents 의 결과이다. 상한은 `AdminProtocol::kMaxLiveEventCount` 와 같다
-        PROPERTY( MaxCount = 10 )
+        PROPERTY( MaxCount = AdminProtocol::kMaxReportListCount )
         vector<ServiceReport> _listReport{}; ///< ListReports 의 결과이며 ResolveReport 는 닫힌 신고 하나이다. 상한은 `AdminProtocol::kMaxReportListCount` 와 같다
         PROPERTY()
         ServiceSanctionState _sanction{};

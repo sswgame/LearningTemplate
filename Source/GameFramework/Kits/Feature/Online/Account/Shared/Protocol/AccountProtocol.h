@@ -81,7 +81,7 @@ namespace sw
         REFLECT_BODY();
         PROPERTY( MaxCount = 64 )
         string _loginName{};
-        PROPERTY( MaxCount = 128 )
+        PROPERTY( MaxCount = LoginConstant::kMaxPasswordSize )
         string _password{};
     };
 } // namespace sw
@@ -95,7 +95,7 @@ namespace sw
         REFLECT_BODY();
         PROPERTY( MaxCount = 64 )
         string _loginName{};
-        PROPERTY( MaxCount = 128 )
+        PROPERTY( MaxCount = LoginConstant::kMaxPasswordSize )
         string _password{};
         PROPERTY()
         AccountClientInfo _clientInfo{};
@@ -123,9 +123,9 @@ namespace sw
     struct AccountPlatformRequest
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 16 )
+        PROPERTY( MaxCount = LoginConstant::kMaxProviderNameSize )
         string _provider{};
-        PROPERTY( MaxCount = 8192, Min = 0, Max = 255 )
+        PROPERTY( MaxCount = LoginConstant::kMaxPlatformTicketSize, Min = 0, Max = 255 )
         vector<uint8> _ticketBytes{};
         PROPERTY()
         AccountClientInfo _clientInfo{};
@@ -165,7 +165,7 @@ namespace sw
     struct AccountProviderRequest
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 16 )
+        PROPERTY( MaxCount = LoginConstant::kMaxProviderNameSize )
         string _provider{};
     };
 } // namespace sw
@@ -219,7 +219,7 @@ namespace sw
     struct AccountRevokedPush
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 64 )
+        PROPERTY( MaxCount = LoginConstant::kMaxReasonCodeSize )
         string _reasonCode{};
         PROPERTY()
         LoginRevokeReason _reason{ LoginRevokeReason::None };
@@ -246,7 +246,7 @@ namespace sw
     {
         REFLECT_BODY();
         static constexpr uint32 kBusVersion = 1; ///< 의미 버전(docs/plans/ServerBusFormat.md 3.4)
-        PROPERTY( MaxCount = 64 )
+        PROPERTY( MaxCount = LoginConstant::kMaxReasonCodeSize )
         string _reasonCode{};
         PROPERTY()
         AccountID _accountID{ kInvalidAccountID };

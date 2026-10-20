@@ -2,7 +2,6 @@
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/Network/BitStream.h"
 
 #include "Engine/Serialization/Fixed/FixedLayout.h"
 
@@ -87,24 +86,6 @@ namespace
             {
                 circuit.step();
             }
-        }
-
-        /** @brief 고정 배치형으로 써 봅니다. 쓰기가 성공하면 true 입니다. */
-        template <typename T>
-        static bool canWriteFixed( const T& value )
-        {
-            BitWriter writer;
-            return FixedLayout::write( value, writer );
-        }
-
-        /** @brief id 하나 · 종류 하나의 노드 상태를 슬롯 수만큼 채워 만듭니다. */
-        static GimmickNodeState makeNodeState( uint32 id, uint32 floatCount, uint32 intCount )
-        {
-            GimmickNodeState state;
-            state._id = id;
-            state._listFloatState.assign( floatCount, 0.5f );
-            state._listIntState.assign( intCount, 7 );
-            return state;
         }
     };
 } // namespace
@@ -627,22 +608,12 @@ SW_TEST_CASE( GimmickTest, StateMatchesNodesByID )
 }
 
 /**
- * @brief [GimmickTest] 상태 상한 — C++ 상수(`kMaxNodeCount` · `kMaxSlotCount`)가 `PROPERTY( MaxCount )` 와 같고, 회로 · 종류 등록이 그 상한을 넘는 것을 오류로 막는다
- * @details 생성기는 C++ 상수를 키로 받지 않고 `PropertyInfo` 에는 `MaxCount` 가 없어 같은 수가 두 곳에 있다. 둘이 갈라지면 여기서 멈춘다: 상한에서 B 쓰기가 성공하고 하나 넘으면 실패해야 한다.
+ * @brief [GimmickTest] 상태 상한 — 회로 · 종류 등록이 상태가 담을 수 있는 수(`kMaxNodeCount` · `kMaxSlotCount`)를 넘는 것을 오류로 막는다
+ * @details 상한의 정본은 그 상수이고 `PROPERTY( MaxCount = kMaxSlotCount )` 가 이름으로 가리키므로, 코덱의 상한과 어긋나는지는 대조하지 않는다.
  */
-SW_TEST_CASE( GimmickTest, StateLimitsMatchDeclaredMaxCount )
+SW_TEST_CASE( GimmickTest, StateLimitsRejectOversizedCircuitAndKind )
 {
     constexpr uint32 kSlot = GimmickNodeState::kMaxSlotCount;
-    SW_EXPECT_TRUE( GimmickTestInternal::canWriteFixed( GimmickTestInternal::makeNodeState( 1, kSlot, kSlot ) ) );
-    SW_EXPECT_FALSE( GimmickTestInternal::canWriteFixed( GimmickTestInternal::makeNodeState( 1, kSlot + 1, 0 ) ) );
-    SW_EXPECT_FALSE( GimmickTestInternal::canWriteFixed( GimmickTestInternal::makeNodeState( 1, 0, kSlot + 1 ) ) );
-
-    GimmickCircuitState full;
-    full._listNode.assign( GimmickCircuitState::kMaxNodeCount, GimmickTestInternal::makeNodeState( 1, 0, 0 ) );
-    SW_EXPECT_TRUE( GimmickTestInternal::canWriteFixed( full ) );
-    full._listNode.push_back( GimmickTestInternal::makeNodeState( 2, 0, 0 ) );
-    SW_EXPECT_FALSE( GimmickTestInternal::canWriteFixed( full ) );
-
     // 기본 종류는 모두 상한 안이다(Delay 의 정수 슬롯 20 개가 가장 크다).
     for ( const GimmickNodeKind& kind : GimmickNodeRegistry::getDefault().getKinds() )
     {

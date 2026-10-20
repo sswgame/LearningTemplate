@@ -13,6 +13,7 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Base/Online/Guard/RequestLimits.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -30,7 +31,7 @@ namespace sw
     struct AccountIdentity
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 32 )
+        PROPERTY( MaxCount = RequestLimits::kMaxDisplayNameSize )
         string _displayName{};
         PROPERTY()
         AccountID _accountID{ kInvalidAccountID };

@@ -14,6 +14,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
+#include "GameFramework/Base/Online/Service/OnlineLimit.h"
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Base/Online/Service/OnlineProtocolRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -140,11 +141,11 @@ namespace sw
     struct EconomyHistoryEntry
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 1024 )
+        PROPERTY( MaxCount = OnlineLimit::kMaxBalanceCount )
         vector<LedgerBalance> _listChange{}; ///< 상한은 `OnlineLimit::kMaxBalanceCount` 와 같다
-        PROPERTY( MaxCount = 32 )
+        PROPERTY( MaxCount = LedgerConstant::kMaxReasonSize )
         string _reason{}; ///< 상한은 `LedgerConstant::kMaxReasonSize` 와 같다
-        PROPERTY( MaxCount = 256 )
+        PROPERTY( MaxCount = LedgerConstant::kMaxMemoSize )
         string _memo{}; ///< 상한은 `LedgerConstant::kMaxMemoSize` 와 같다
         PROPERTY()
         int64 _timeMs{ 0 };
@@ -158,7 +159,7 @@ namespace sw
     struct EconomyReply
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 1024 )
+        PROPERTY( MaxCount = OnlineLimit::kMaxBalanceCount )
         vector<LedgerBalance> _listBalance{}; ///< GetWallet 은 전부(스냅샷)를, Purchase 와 Redeem 은 바뀐 것만 담는다. 상한은 `OnlineLimit::kMaxBalanceCount` 와 같다
         PROPERTY( MaxCount = 100 )
         vector<EconomyHistoryEntry> _listHistory{};

@@ -127,7 +127,7 @@ namespace sw
         AccountIdentity _identity{};
         PROPERTY()
         LoginSessionToken _token{};
-        PROPERTY( MaxCount = 64 )
+        PROPERTY( MaxCount = LoginConstant::kMaxReasonCodeSize )
         string _sanctionReasonCode{}; ///< AccountSuspended 일 때의 사유 코드이다
         PROPERTY( MaxCount = 512 )
         string _storeURL{}; ///< UpdateRequired 이거나 업데이트 권장일 때 원격 설정에서 가져온 상점 주소이다
@@ -157,9 +157,9 @@ namespace sw
     struct AccountClientInfo
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 32 )
+        PROPERTY( MaxCount = LoginConstant::kMaxBuildTextSize )
         string _build{}; ///< 게임 빌드 버전이다(예: "1.4.2"). 점으로 나눈 정수열이다
-        PROPERTY( MaxCount = 16 )
+        PROPERTY( MaxCount = LoginConstant::kMaxPlatformTextSize )
         string _platform{}; ///< `[a-z0-9_]` 형식이다(예: "windows", "linux", "android", "ios")
     };
 } // namespace sw
@@ -171,7 +171,7 @@ namespace sw
     struct AccountLinkedProvider
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 16 )
+        PROPERTY( MaxCount = LoginConstant::kMaxProviderNameSize )
         string _name{};
     };
 } // namespace sw

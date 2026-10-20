@@ -14,6 +14,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
+#include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -107,7 +108,7 @@ namespace sw
     {
         REFLECT_BODY();
         static constexpr uint32 kBusVersion = 1; ///< 서버 버스(`SocialBus::kPresenceTopic`)의 의미 버전(docs/plans/ServerBusFormat.md 3.4). 캐시 레코드의 판과 따로다
-        PROPERTY( MaxCount = 64 )
+        PROPERTY( MaxCount = SocialLimit::kMaxActivitySize )
         string _activity{}; ///< 활동 문구이다(예: "던전 3층"). 상한은 `SocialLimit::kMaxActivitySize` 와 같다
         PROPERTY()
         AccountID _accountID{ kInvalidAccountID };
@@ -202,11 +203,11 @@ namespace sw
     struct GuildInfo
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 100 )
+        PROPERTY( MaxCount = GuildLimit::kMaxMember )
         vector<GuildMember> _listMember{}; ///< 상한은 `GuildLimit::kMaxMember` 와 같다
-        PROPERTY( MaxCount = 24 )
+        PROPERTY( MaxCount = GuildLimit::kMaxNameSize )
         string _name{}; ///< 상한은 `GuildLimit::kMaxNameSize` 와 같다
-        PROPERTY( MaxCount = 256 )
+        PROPERTY( MaxCount = GuildLimit::kMaxNoticeSize )
         string _notice{}; ///< 상한은 `GuildLimit::kMaxNoticeSize` 와 같다
         PROPERTY()
         uint64 _guildID{ 0 };
@@ -232,7 +233,7 @@ namespace sw
     struct GuildStorageItem
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 48 )
+        PROPERTY( MaxCount = LedgerConstant::kMaxAssetIDSize )
         string _assetID{};
         PROPERTY()
         int64 _amount{ 0 };

@@ -225,12 +225,19 @@ namespace sw
                 target._bHasStep = SW_TRUE;
             }
 
-            /** @brief 문자열 · 컨테이너 최대 길이입니다. 1 이상의 32 비트 정수인지는 `AnnotationApply` 가 이미 봤습니다. */
+            /**
+             * @brief 문자열 · 컨테이너 최대 길이입니다. 꼴(1 이상의 32 비트 정수 또는 상수 이름)은 `AnnotationApply` 가 이미 봤습니다.
+             * @details 상수 이름이면 이름만 남깁니다. 값은 선언을 아는 `AstVisitor` 가 그 상수를 찾아 채웁니다(`_maxCountName`).
+             */
             static void applyMaxCount( ParsedPropertyInfo& target, const string_view value )
             {
-                uint64 parsed = 0;
-                if ( StringUtil::parseUint64( StringUtil::trim( value ), parsed ) == false )
+                const string_view trimmed = StringUtil::trim( value );
+                uint64            parsed  = 0;
+                if ( StringUtil::parseUint64( trimmed, parsed ) == false )
+                {
+                    target._maxCountName = string( trimmed );
                     return;
+                }
                 target._maxCount     = static_cast<uint32>( parsed );
                 target._bHasMaxCount = SW_TRUE;
             }

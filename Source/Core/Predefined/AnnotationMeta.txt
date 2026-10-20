@@ -10,7 +10,7 @@
 #   string   key=value → 문자열 필드
 #   float    key=value → float (Min/Max 범위)
 #   netrole  단독 토큰 → FunctionNetRole (PredefinedFunctionNetRole.xxx)
-#   count    key=value → 1 이상의 정수 (MaxCount)
+#   count    key=value → 1 이상의 정수 또는 C++ 정수 상수 이름 (MaxCount, 이름은 생성기가 값으로 푼다)
 #
 # flag 한 줄이 두 형태(단독 토큰 · `X = true`)를 함께 맡는다. 두 형태를 따로 적지 말 것 — 한쪽이 빠지면
 # `PROPERTY( Polymorphic = true )` 같은 것이 경고 한 줄 없이 버려지고, 별칭도 한쪽만 늘어나는데 눈에 보이지 않는다.

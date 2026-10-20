@@ -68,7 +68,7 @@ namespace sw
     struct LeaderboardRequest
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 32 )
+        PROPERTY( MaxCount = LeaderboardLimit::kMaxIDSize )
         string _boardID{}; ///< 상한은 `LeaderboardLimit::kMaxIDSize` 와 같다
         PROPERTY()
         int64 _score{ 0 }; ///< kSubmitScore
@@ -78,7 +78,7 @@ namespace sw
         int32 _offset{ 0 }; ///< kGetTop
         PROPERTY( Min = 0, Max = 100 )
         int32 _count{ 0 }; ///< kGetTop 에서는 개수이고 kGetAround 에서는 반경이다. 상한은 `LeaderboardLimit::kMaxPage` 와 같다
-        PROPERTY( MaxCount = 201 )
+        PROPERTY( MaxCount = LeaderboardLimit::kMaxScoresOfCount )
         vector<AccountID> _listAccountID{}; ///< kGetScoresOf 의 계정들이다. 클라이언트가 친구 목록에 자기를 더해 보낸다. 상한은 `LeaderboardLimit::kMaxScoresOfCount` 와 같다
     };
 } // namespace sw
@@ -90,11 +90,11 @@ namespace sw
     struct LeaderboardReply
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 201 )
+        PROPERTY( MaxCount = LeaderboardLimit::kMaxScoresOfCount )
         vector<LeaderboardEntry> _listEntry{}; ///< 상한은 `LeaderboardLimit::kMaxScoresOfCount` 와 같다. 순위 조회는 `kMaxPage` 까지 담는다
-        PROPERTY( MaxCount = 256 )
+        PROPERTY( MaxCount = LeaderboardLimit::kMaxStatCount )
         vector<LeaderboardStat> _listStat{}; ///< 상한은 `LeaderboardLimit::kMaxStatCount` 와 같다
-        PROPERTY( MaxCount = 1024 )
+        PROPERTY( MaxCount = LeaderboardLimit::kMaxAchievementCount )
         vector<AchievementState> _listAchievement{}; ///< 상한은 `LeaderboardLimit::kMaxAchievementCount` 와 같다
         PROPERTY( MaxCount = 1024 )
         vector<AchievementProgress> _listProgress{}; ///< kGetAchievementProgress. 상한은 `LeaderboardLimit::kMaxAchievementCount` 와 같다
