@@ -339,7 +339,7 @@ namespace sw::editor
         , _paletteFilter{}
         , _slotDragBaseline{}
         , _paletteType{}
-        , _documentPath{ getEditorToolDefaults()._uiPreviewDocument.get() } // 처음 여는 문서 — 정본은 editortooldefaults.json
+        , _documentPath{ getEditorToolDefaults()._uiPreviewDocument } // 처음 여는 문서 — 정본은 editortooldefaults.json
         , _openedDocument{}
         , _targetPath{}
         , _error{}
@@ -462,11 +462,13 @@ namespace sw::editor
         if ( EditorAssetTypeRegistry::consumeWorkspaceFocusKey( _lastFocusKey, 0 ) == false )
             return;
         const string_view focused = EditorAssetTypeRegistry::matchingFocusedPath( EditorAssetType::UIDocument );
-        if ( focused.empty() || focused == string_view{ _documentPath } )
+        if ( focused.empty() || _documentPath == focused )
             return;
+        const string previous = _documentPath.get();
+        if ( _documentPath.commit( focused ) == false )
+            return; // 리소스 id 가 아니면 commit 이 알렸다 — 지금 문서를 그대로 둔다
         if ( isDocumentDirty() )
-            SW_LOG_WARNING( "UI Preview: unsaved edits of '%#' are discarded because '%#' was opened", _documentPath.c_str(), string{ focused }.c_str() );
-        _documentPath = string{ focused };
+            SW_LOG_WARNING( "UI Preview: unsaved edits of '%#' are discarded because '%#' was opened", previous.c_str(), _documentPath.c_str() );
         _error.clear();
     }
 
@@ -494,16 +496,16 @@ namespace sw::editor
         }
         _viewport                        = UIPreviewLogic::makeViewport( ui.getScaleSettings(), *pResolution, _uiScale, _safeZone );
         const string targetPath          = UIPreviewLogic::makeTargetPath( _viewport );
-        const bool   bReopen             = _screen == kInvalidUIScreenHandle || ui.getOffscreenScreens().findScreen( _screen ) == nullptr || _openedDocument != _documentPath;
-        const bool   bPreviousOpenFailed = bReopen && _documentPath.empty() == false && _error.empty() == false && _openedDocument == _documentPath;
+        const bool   bReopen             = _screen == kInvalidUIScreenHandle || ui.getOffscreenScreens().findScreen( _screen ) == nullptr || _documentPath != _openedDocument;
+        const bool   bPreviousOpenFailed = bReopen && _error.empty() == false && _documentPath == _openedDocument;
         if ( bPreviousOpenFailed )
             return; // 같은 문서가 지난번에 짓지 못했다 — 고칠 때까지(경로를 바꾸거나 다시 열기) 프레임마다 다시 시도하지 않는다
         if ( bReopen )
         {
-            const string documentPath = _documentPath;
-            releaseTexture(); // 크기가 바뀌면 렌더 텍스처도 새것이다
-            closePreview();   // 포인터 · 포커스를 놓고 화면을 닫는다(되돌리기 세대도 올린다)
-            _screen             = documentPath.empty() ? kInvalidUIScreenHandle : ui.openOffscreenScreen( documentPath, targetPath );
+            const string documentPath = _documentPath.get(); // 확정 경로는 늘 값이 있다(EditableResourcePath)
+            releaseTexture();                                // 크기가 바뀌면 렌더 텍스처도 새것이다
+            closePreview();                                  // 포인터 · 포커스를 놓고 화면을 닫는다(되돌리기 세대도 올린다)
+            _screen             = ui.openOffscreenScreen( documentPath, targetPath );
             _openedDocument     = documentPath;
             _targetPath         = targetPath;
             _error              = _screen == kInvalidUIScreenHandle ? SW_LOCKEY( "EditorUIPreview", "BuildFailed" ) : "";
@@ -895,13 +897,11 @@ namespace sw::editor
 
     void UIPreviewPanel::drawToolbar( UISystem& ui )
     {
-        string path = _documentPath;
-        ImGui::SetNextItemWidth( 320.0f * EditorThemeUtil::getDpiScale() );
-        if ( EditorWidgets::drawTextField( "##uipreviewdoc", path ) )
+        const string previous = _documentPath.get();
+        if ( _documentPath.drawField( "##uipreviewdoc", 320.0f * EditorThemeUtil::getDpiScale() ) )
         {
-            if ( path != _documentPath && isDocumentDirty() )
-                SW_LOG_WARNING( "UI Preview: unsaved edits of '%#' are discarded because the path changed", _documentPath.c_str() );
-            _documentPath = path;
+            if ( isDocumentDirty() )
+                SW_LOG_WARNING( "UI Preview: unsaved edits of '%#' are discarded because the path changed", previous.c_str() );
             _error.clear();
         }
         UIPreviewPanelInternal::noteMark( "uipreview", "path" );

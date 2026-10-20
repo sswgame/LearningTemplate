@@ -8,6 +8,7 @@
 #include "Core/Container/string.h"
 
 #include "Editor/Common/GUI/IEditorPanel.h"
+#include "Editor/Common/Widgets/EditableResourcePath.h"
 #include "Editor/Panels/InputMap/InputMapConflicts.h"
 
 #include "Engine/Input/Map/InputMap.h"
@@ -91,7 +92,7 @@ namespace sw::editor
         InputMap                 _inputMap;
         InputReplay              _replay;
         vector<InputMapConflict> _listConflict; ///< 이번 프레임의 바인딩 충돌이다. Mappings 탭이 다시 모은다
-        string                   _inputMapPath;
+        EditableResourcePath     _inputMapPath; ///< 편집하는 InputMap 리소스. 처음 값은 enginedefaultassets 의 셸 맵, 칸에서 고친 글은 확정해야 읽기 · 쓰기에 쓰인다
         string                   _replayFilePath;
         string                   _newActionName;
         string                   _selectedAction;

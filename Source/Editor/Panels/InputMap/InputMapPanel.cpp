@@ -218,7 +218,7 @@ namespace sw::editor
         : IEditorPanel( false ) // 필요할 때 여는 도구이므로 닫힌 채 시작한다. 열린 채 시작하면 떠 있는 창이 화면 가운데를 덮는다
         , _inputMap{}
         , _replay{}
-        , _inputMapPath{ getSubsystem<const EngineDefaultAssets>()._shellInputMap.get() } // 처음 여는 맵은 셸 맵이다 — 경로의 정본은 enginedefaultassets.xml
+        , _inputMapPath{ getSubsystem<const EngineDefaultAssets>()._shellInputMap } // 처음 여는 맵은 셸 맵이다 — 경로의 정본은 enginedefaultassets.xml
         , _replayFilePath{ "engine/replay/demo_01.swreplay" }
         , _newActionName{ "" }
         , _selectedAction{ "" }
@@ -353,7 +353,7 @@ namespace sw::editor
     {
         ImGui::TextUnformatted( "Input Map" );
         ImGui::SameLine();
-        EditorWidgets::drawTextField( "##InputMapPath", _inputMapPath, 260.0f );
+        (void)_inputMapPath.drawField( "##InputMapPath", 260.0f ); // 확정한 경로는 Reload · Save 가 쓴다 — 바꾸기만 해서는 다시 읽지 않는다
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "MapPathTip" ) );
         ImGui::SameLine();
         if ( ImGui::Button( "Reload" ) )

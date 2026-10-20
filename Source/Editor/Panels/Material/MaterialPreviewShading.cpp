@@ -2,6 +2,7 @@
 
 #include "Editor/Panels/Material/MaterialPreviewShading.h"
 
+#include "Core/Common/Macros.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
@@ -44,22 +45,28 @@ namespace sw::editor
 
             static const string& readValueText( const MaterialProperty& prop ) { return prop._value.empty() ? prop._defaultValue : prop._value; }
 
-            /** @brief 색 값을 선형 색으로 읽습니다. sRGB 로 적힌 값(`bSrgb`)은 풉니다. */
-            static float3 readColor( const MaterialProperty& prop )
+            /**
+             * @brief 색 값을 선형 색으로 읽어 @p outColor 에 씁니다. sRGB 로 적힌 값(`bSrgb`)은 풉니다.
+             * @details 못 읽으면 @p outColor 를 건드리지 않는다 — 그 값의 행은 패널이 원문 칸으로 보여 알린다(`MaterialPanel::drawTypedProperty`).
+             */
+            static void readColor( const MaterialProperty& prop, float3& outColor )
             {
-                float32 arrValue[4]{ 1.0f, 1.0f, 1.0f, 1.0f };
-                (void)MaterialPreviewShading::parseFloats( readValueText( prop ), arrValue, 4 ); // 미리보기 표시 — 못 읽은 칸 · 모자란 칸은 0 이다
+                float32 arrValue[4]{};
+                if ( MaterialPreviewShading::parseColor( readValueText( prop ), arrValue ) == false )
+                    return;
                 if ( prop._bSrgb == SW_FALSE )
-                    return float3{ arrValue[0], arrValue[1], arrValue[2] };
-                return float3{ toLinear( arrValue[0] ), toLinear( arrValue[1] ), toLinear( arrValue[2] ) };
+                    outColor = float3{ arrValue[0], arrValue[1], arrValue[2] };
+                else
+                    outColor = float3{ toLinear( arrValue[0] ), toLinear( arrValue[1] ), toLinear( arrValue[2] ) };
             }
 
-            static float32 readScalar( const MaterialProperty& prop, float32 fallback )
+            /** @brief 실수 하나를 읽어 0..1 로 잘라 @p outValue 에 씁니다. 못 읽으면 건드리지 않는다(`readColor` 와 같다). */
+            static void readUnitScalar( const MaterialProperty& prop, float32& outValue )
             {
-                float32 value = fallback;
-                if ( MaterialPreviewShading::parseFloats( readValueText( prop ), &value, 1 ) == 0 )
-                    return fallback;
-                return value;
+                float32 arrValue[1]{};
+                if ( MaterialPreviewShading::parseFloats( readValueText( prop ), arrValue ) == false )
+                    return;
+                outValue = MathUtil::clamp( arrValue[0], 0.0f, 1.0f );
             }
         };
     } // namespace
@@ -67,15 +74,39 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    uint32 MaterialPreviewShading::parseFloats( string_view text, float32* pOut, uint32 count )
+    bool MaterialPreviewShading::parseExactFloats( string_view text, float32* pOut, uint32 count )
     {
-        if ( pOut == nullptr || count == 0 )
-            return 0;
+        SW_ASSERT( pOut != nullptr && 1 <= count && count <= 4 );
+        float32 arrValue[4]{};
+        uint32  tokenCount = 0;
+        bool    bValid     = true;
+        StringUtil::forEachToken( text, ", \t", [&]( string_view token )
+        {
+            bValid = tokenCount < count && StringUtil::parseFloat( token, arrValue[tokenCount] );
+            ++tokenCount;
+            return bValid;
+        } );
+        if ( bValid == false || tokenCount != count )
+            return false;
         for ( uint32 index = 0; index < count; ++index )
         {
-            pOut[index] = 0.0f;
+            pOut[index] = arrValue[index];
         }
-        return StringUtil::parseFloatList( text, ", \t", pOut, count );
+        return true;
+    }
+
+    bool MaterialPreviewShading::parseColor( string_view text, float32 ( &outArrValue )[4] )
+    {
+        if ( parseFloats( text, outArrValue ) )
+            return true;
+        float32 arrRgb[3]{};
+        if ( parseFloats( text, arrRgb ) == false )
+            return false;
+        outArrValue[0] = arrRgb[0];
+        outArrValue[1] = arrRgb[1];
+        outArrValue[2] = arrRgb[2];
+        outArrValue[3] = 1.0f; // 알파를 적지 않은 색 — 엔진 묶기(MaterialPacking::writeNumericValue)와 같은 규칙
+        return true;
     }
 
     MaterialPreviewInputs MaterialPreviewShading::readInputs( const vector<MaterialProperty>& listProperty )
@@ -94,13 +125,13 @@ namespace sw::editor
             }
         }
         if ( pBase != nullptr )
-            inputs._baseColor = MaterialPreviewShadingInternal::readColor( *pBase );
+            MaterialPreviewShadingInternal::readColor( *pBase, inputs._baseColor );
         if ( const MaterialProperty* pEmissive = MaterialPreviewShadingInternal::findByNames( listProperty, { "emissive", "emission", "emissiveColor" } ) )
-            inputs._emissive = MaterialPreviewShadingInternal::readColor( *pEmissive );
+            MaterialPreviewShadingInternal::readColor( *pEmissive, inputs._emissive );
         if ( const MaterialProperty* pRoughness = MaterialPreviewShadingInternal::findByNames( listProperty, { "roughness" } ) )
-            inputs._roughness = MathUtil::clamp( MaterialPreviewShadingInternal::readScalar( *pRoughness, 0.5f ), 0.0f, 1.0f );
+            MaterialPreviewShadingInternal::readUnitScalar( *pRoughness, inputs._roughness );
         if ( const MaterialProperty* pMetallic = MaterialPreviewShadingInternal::findByNames( listProperty, { "metallic", "metalness" } ) )
-            inputs._metallic = MathUtil::clamp( MaterialPreviewShadingInternal::readScalar( *pMetallic, 0.0f ), 0.0f, 1.0f );
+            MaterialPreviewShadingInternal::readUnitScalar( *pMetallic, inputs._metallic );
         return inputs;
     }
 
