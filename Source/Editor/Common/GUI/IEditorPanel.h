@@ -144,7 +144,7 @@ namespace sw::editor
             if ( _bDocumentDirty && asksBeforeClose() )
                 _bConfirmClose = true;
             else
-                _bOpen = false;
+                closeNow();
         }
         /** @brief 닫기 확인(Save / Don't Save / Cancel)을 기다리는 중이면 true 입니다. */
         bool isCloseConfirmPending() const { return _bConfirmClose; }
@@ -162,7 +162,7 @@ namespace sw::editor
             if ( EditorSessionPolicy::shouldClearDirtyWithoutSave( choice ) )
                 discardDirtyDocument();
             if ( EditorSessionPolicy::shouldProceedWithAction( choice ) )
-                _bOpen = false;
+                closeNow();
         }
         /**
          * @brief ImGui 가 X 로 내린 열림 표시를 닫기 요청으로 바꿉니다. `draw()` 가 창을 연 직후 부릅니다.
@@ -205,6 +205,10 @@ namespace sw::editor
         /** @brief 패널이 접히거나 탭이 숨겨졌을 때 호출합니다. */
         virtual void onPanelCollapsed() {}
         /**
+         * @brief 패널이 닫힌 순간 한 번 부릅니다(`requestClose` · `applyCloseChoice` 가 닫는 모든 길). 닫힌 패널은 `draw()` 가 돌지 않으므로, 창이 쥐고 있던 전역 상태(초점 씬 · Undo 스택)는 여기서 풀어야 한다.
+         */
+        virtual void onPanelClosed() {}
+        /**
          * @brief EditorPanelFlags 조합을 반환합니다. 기본은 None 입니다.
          * @details `UnsavedDocument` 는 여기에 넣지 않는다. draw() 가 dirty 상태를 보고 스스로 추가한다. 그래야 이 함수를
          *          다른 플래그 때문에 재정의한 패널도 제목의 미저장 표시를 잃지 않는다.
@@ -233,6 +237,12 @@ namespace sw::editor
         virtual void revertDocument() {}
 
     private:
+        /** @brief 열림 표시를 내리고 `onPanelClosed` 를 부릅니다. 패널을 닫는 유일한 자리입니다. */
+        void closeNow()
+        {
+            _bOpen = false;
+            onPanelClosed();
+        }
         /** @brief 닫기 확인 모달을 그리고 고른 항목을 적용합니다. */
         void drawCloseConfirm();
 

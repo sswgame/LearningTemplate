@@ -92,6 +92,8 @@ namespace sw::editor
         void applyWindowFocus( bool bFocused );
         /** @brief 창 Undo 스택이 늘었거나 줄었으면 문서를 dirty 로 표시합니다 — 미리보기 씬의 편집은 모두 이 스택을 거치므로 파생이 따로 알릴 필요가 없다. */
         void syncDocumentDirty() override;
+        /** @brief 포커스를 쥔 채 닫혀도 초점 씬 · 창 스택을 푼다 — 닫힌 창은 그려지지 않아 `beginPreviewFrame` 의 `applyWindowFocus( false )` 가 다시 돌지 않는다. */
+        void onPanelClosed() override { applyWindowFocus( false ); }
 
         EditorPreviewViewport _viewport;
         CommandStack          _commandStack;

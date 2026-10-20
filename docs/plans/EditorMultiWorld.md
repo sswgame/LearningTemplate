@@ -195,13 +195,16 @@ Undo 를 창마다 두는 것은 두 엔진과 다릅니다. 두 엔진 모두 �
    렌더러가 안 내려가면 새로 서지 않아 줄이 모자란다. 끝에 계층 패널의 검색 칸을 눌러 에디터가 정상인지 본다.
    GPU 쪽 오류는 시나리오가 직접 못 보고 로그 줄로 본다. 검증 레이어를 켜는 `-gv_` 스위치는 없다 — DX12 디버그 레이어와 Vulkan 검증 레이어는 Debug 빌드에서만 켜지고(Release 에는 둘 다 없다),
    그 오류가 `[Warning]`(`D3D12 debug layer (severity …`) · `[Error]` 줄로 나와 로그 게이트가 시나리오를 진다. 그래서 검증 레이어 확인은 `build/Ninja-Debug` 로 돌린다.
-   - 실행(한 줄): `App.exe -EnableEditor -gv_editorStateDir=Saved/Automation/EditorState/previewreopen -scenario=engine/automation/editor/previewreopen.scenario.xml -dx12` (`-vk` · `-dx11` · `-opengl` 로 네 백엔드, 상태 폴더는 빈 곳).
+   - 실행(한 줄): `App.exe -EnableEditor -gv_editorStateDir=Saved/Automation/EditorState/previewreopen -scenario=engine/automation/editor/previewreopen.scenario.xml -dx12` (`-vk` · `-dx11` · `-gl` 로 네 백엔드, 상태 폴더는 빈 곳).
    - 한계: 시나리오는 렌더 스레드가 렌더러를 내린 시점을 직접 알지 못해(렌더러 개수 탐침이 없다) "시작 줄 수" 로 갈음한다. 닫은 프레임에 바로 여는 경합과 창 여러 개를 동시에 닫는 것은 넣지 않았다.
 6. **미리보기 씬의 백엔드 교체**(`-gv_rhiSwapAtFrame`). 이 스위치는 `RHIBackendSwitcher::onFrameBegin` 이 엔진 프레임 수가 N 일 때 `gv_rhiBackend` 를 `-gv_rhiSwapTo` 로 바꿔 요청하고 한 번만 쓴다 — 메뉴 · 콘솔 · 시나리오 단계 `SwapBackend` 와 같은 길이다.
    스위치는 창을 연 시점을 고르지 못하므로 시나리오 `editor/previewswap`(2026-10-20 작성, **아직 돌리지 않았다**)은 같은 길을 `SwapBackend` 로 머티리얼 창이 열려 그려지는 프레임에 요청한다(`other` 로 건너고 `start` 로 돌아와 창이 열린 교체를 두 번 거친다).
    교체마다 `RHI.SwapFailedCount` 0 · `Module.BindingsOk` 를 보고, 교체 뒤 같은 문서를 다시 열어(에디터 인스턴스가 다시 서므로 창이 닫혀 있어도 되고 그대로여도 된다) 프레임 수가 다시 오르는지와 새 디바이스 위에 새 렌더러가 서는지(시작 줄 수 2 · 3)를 본다.
    **자동 단언으로 못 한 것**: 미리보기 타깃의 그림. 평균 색의 문턱값을 GPU 로 돌려 보기 전에는 맞출 수 없어, 시나리오가 `gv_editorPreviewScreenshot` 을 교체 앞 · 뒤 · 복귀 뒤에 걸어 `Saved/Automation/previewswap_<before|after1|after2>.ppm` 으로 저장한다 — PNG 로 바꿔 눈으로 본다(빨간 구 + 바닥).
-   - 실행(한 줄): `App.exe -EnableEditor -gv_editorStateDir=Saved/Automation/EditorState/previewswap -scenario=engine/automation/editor/previewswap.scenario.xml -dx12` (`-vk` · `-opengl` 로 시작해도 `other` 는 DX12 로 건넌다).
+   - 실행(한 줄): `App.exe -EnableEditor -gv_editorStateDir=Saved/Automation/EditorState/previewswap -scenario=engine/automation/editor/previewswap.scenario.xml -dx12` (`-vk` · `-gl` 로 시작해도 `other` 는 DX12 로 건넌다).
    - 모르는 것: 교체로 에디터 인스턴스가 다시 서므로 머티리얼 창의 열린 문서가 남는지는 확인하지 않았다. 그래서 시나리오가 교체 뒤 문서를 무조건 다시 연다 — 창이 열린 채 교체하는 것은 교체 앞에서 이미 성립한다.
    - 남은 것: 캐릭터 편집 창이 `EditorPreviewPanel` 을 이어받기([EditorCharacterEditor](EditorCharacterEditor.md), 헤더 계약을 따른다).
+   고침(2026-10-20, 첫 측정): 두 시나리오가 DX11 에서만 졌다 — Quick Open 의 파일 목록을 일 스레드가 벽시계로 모으는데(DX12 약 450 프레임, DX11 약 650 프레임) `WaitUntil` 예산은 600 프레임이라 프레임이 빠른 DX11 이 먼저 바닥났다(`materialpreview` 도 같은 이유로 DX11 에서 졌다).
+   `QuickLauncherPopup` 이 목록이 오는 동안 자동화 시계를 잡게(`SW_AUTOMATION_CLOCK_HOLDER`) 해, Quick Open 을 쓰는 모든 시나리오가 프레임 속도와 상관없이 같은 프레임에 연다.
+   포커스를 쥔 채 닫으면 `applyWindowFocus( false )` 가 안 불려 초점 씬 · Undo 스택이 남는 결함도 실제였다(닫힌 창은 그려지지 않는다) — 닫는 길을 `IEditorPanel::closeNow` 하나로 모아 `onPanelClosed` 를 부르게 했고, `previewreopen` 이 `Editor.ToolFocusIsMain` 으로 본다. 위 수정은 **아직 빌드 · 실행하지 않았다**.
    두 시나리오는 `engine/automation/editor/` 에 있어 `AppScenarioTest.EditorScenariosPassOn<백엔드>` 의 체인이 자동으로 줍는다. 처음 돌릴 때는 위 한 줄로 단독 실행해 본 뒤 체인에 맡긴다(교체 · 렌더러 내리기가 터지면 체인 프로세스가 죽는다).

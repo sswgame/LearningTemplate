@@ -48,6 +48,8 @@ namespace sw::editor
         static void close();
         static void toggle();
         static bool isOpen();
+        /** @brief 팝업이 열려 있고 파일 목록(일 스레드)이 아직 안 왔으면 true 입니다. 자동화 시계 잡기 조건이 읽습니다(`QuickLauncherPopup.cpp`). */
+        static bool isIndexing();
 
     protected:
         virtual void drawContent() override;

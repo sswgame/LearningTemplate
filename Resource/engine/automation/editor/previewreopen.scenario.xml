@@ -6,9 +6,11 @@
   창을 다시 열면 같은 씬 키로 새 렌더러가 선다("Scene preview renderer started for scene key" 줄). 그래서 닫을 때마다 렌더러가 정말 내려갔는지를 이 줄의 수로 센다.
   ① 머티리얼 창(id material): 빨간 테스트 머티리얼을 열어 구 미리보기가 그려지게 한 뒤(프레임 수 탐침이 오른다) 닫기 8 번, 닫아 둔 지 20 프레임 뒤 다시 열고 프레임이 다시 오르는 것을 기다린 뒤 닫는다.
   ② 프리팹 창(id prefab_window): 콘텐츠 브라우저 더블클릭으로 연 뒤 같은 식으로 8 번. 이 창에는 프레임 수 탐침이 없어 열림 탐침(Editor.PanelOpen)과 고정 프레임으로 기다린다.
+  머티리얼 창 1/8 은 포커스를 쥔 채 닫아, 초점 씬 · Undo 스택이 메인 씬으로 돌아오는지(Editor.ToolFocusIsMain)도 본다.
+  Quick Open 의 파일 목록은 일 스레드가 벽시계로 모으는데, 목록이 오는 동안 자동화 시계를 잡는다(QuickLauncherPopup 의 SW_AUTOMATION_CLOCK_HOLDER) — 프레임이 빠른 DX11 에서도 Enter 가 문서를 같은 프레임에 연다.
   ③ 마지막에 에디터가 정상이다 — 계층 패널이 그려져 그 검색 칸(hierarchy.filter)을 누를 수 있고, 로그 게이트가 [Warning] · [Error] 가 없음을 본다.
   GPU 쪽 오류는 이 시나리오가 직접 보지 못하고 로그 줄로 본다. 검증 레이어는 Debug 빌드(DX12 디버그 레이어 · Vulkan 검증 레이어, Release 에는 없다)에서만 켜지고 오류가 [Warning] · [Error] 줄로 나와 로그 게이트가 진다.
-  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/previewreopen.scenario.xml -dx12 (-vk · -dx11 · -opengl 도 같다)
+  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/previewreopen.scenario.xml -dx12 (-vk · -dx11 · -gl 도 같다)
 -->
 <Scenario name="editor.previewreopen" fixedDelta="0.0166667" timeoutFrames="6000" startAfter="Immediately" input="exclusive">
 	<At frame="0"><DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/></At>
@@ -28,11 +30,16 @@
 	<At frame="101"><WaitUntil probe="Editor.MaterialPreviewSceneFrames" atLeast="40" timeoutFrames="600"/></At>
 
 	<!-- 머티리얼 창 1/8: 닫기 → 닫아 둔 채 20 프레임 → 열기 → 프레임이 다시 오름 → 30 프레임 그린 뒤 다음 닫기 -->
+	<!-- 포커스를 쥔 채 닫는다 — 창이 쥔 초점 씬 · Undo 스택이 닫힌 뒤에도 남지 않아야 한다(닫힌 창은 그려지지 않아 스스로 풀지 못한다: IEditorPanel::onPanelClosed) -->
+	<At frame="109"><Expect probe="Editor.ToolFocusIsMain" equals="0"/></At>
 	<At frame="110">
 		<Remember probe="Editor.MaterialPreviewSceneFrames" as="frames"/>
 		<DevCommand line="panel.close material"/>
 	</At>
-	<At frame="112"><Expect probe="Editor.PanelOpen" equals="0"/></At>
+	<At frame="112">
+		<Expect probe="Editor.PanelOpen" equals="0"/>
+		<Expect probe="Editor.ToolFocusIsMain" equals="1"/>
+	</At>
 	<At frame="130"><DevCommand line="panel.focus material"/></At>
 	<At frame="131"><WaitUntil probe="Editor.MaterialPreviewSceneFrames" differsFrom="frames" timeoutFrames="300"/></At>
 

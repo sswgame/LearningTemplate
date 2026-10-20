@@ -20,6 +20,7 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Popups/QuickLauncherLayout.h"
 
+#include "Engine/Automation/AutomationStepRegistry.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -52,6 +53,9 @@ namespace sw::editor
 namespace sw::editor
 {
     SW_EDITOR_POPUP( QuickLauncherPopup, 100 );
+    // 파일 목록은 벽시계로 도는 일 스레드가 모은다 — 시나리오가 프레임 수 예산으로 기다리면 프레임이 빠른 백엔드(DX11)가 목록이 오기 전에 예산을 다 쓴다.
+    // 목록이 올 때까지 시나리오 시계를 잡아, Quick Open 을 쓰는 모든 시나리오가 프레임 속도와 상관없이 같은 프레임에 문서를 연다.
+    SW_AUTOMATION_CLOCK_HOLDER( quickLauncherIndexing, "QuickLauncherIndexing", &QuickLauncherPopup::isIndexing );
 
     QuickLauncherPopup::QuickLauncherPopup()
         : _listAllItem{}
@@ -90,6 +94,16 @@ namespace sw::editor
         if ( pContext != nullptr )
             return pContext->getSubsystem<EditorPopupManager>().isPopupOpen( kPopupID );
         return false;
+    }
+
+    bool QuickLauncherPopup::isIndexing()
+    {
+        EditorContext* pContext = EditorContext::get();
+        if ( pContext == nullptr )
+            return false;
+        EditorPopupManager&       popups = pContext->getSubsystem<EditorPopupManager>();
+        const QuickLauncherPopup* pPopup = popups.findPopup<QuickLauncherPopup>( kPopupID );
+        return pPopup != nullptr && popups.isPopupOpen( kPopupID ) && pPopup->_fileIndexJob.isPending();
     }
 
     void QuickLauncherPopup::onOpen()

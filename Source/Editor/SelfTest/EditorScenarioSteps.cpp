@@ -791,6 +791,16 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief 툴이 겨누는 씬과 Undo 스택이 메인 씬의 것이면 1 입니다 — 포커스를 쥔 미리보기 창이 닫힌 뒤에도 남아 있으면 0 입니다(선택은 포커스를 잃어도 남는 것이 정상이라 보지 않는다). */
+            [[nodiscard]] static bool readToolFocusIsMain( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const CommandStack* pMainStack = editor::findSubsystem<CommandStack>();
+                if ( editor::getActiveScene() == nullptr || pMainStack == nullptr )
+                    return false;
+                outValue = editor::getFocusedScene() == editor::getActiveScene() && editor::getFocusedCommandStack() == pMainStack ? 1.0 : 0.0;
+                return true;
+            }
+
             // ------------------------------------------------------------------------------
             // 편집 상태 탐침(글). 경계(플레이 · 백엔드 교체 · 모듈 리로드 · 레이아웃)를 넘기 전 값을 `<Remember>` 로 두고 뒤에서 `sameAs` 로 견준다
             // ------------------------------------------------------------------------------
@@ -1767,6 +1777,8 @@ namespace sw::editor
                          &EditorScenarioStepsInternal::readSelectedIsEditorCamera );
     SW_AUTOMATION_PROBE( editorUndoCount, "Editor.UndoCount", "Commands on the undo stack", &EditorScenarioStepsInternal::readUndoCount );
     SW_AUTOMATION_PROBE( editorUndoIndex, "Editor.UndoIndex", "Position on the undo stack (commands not undone)", &EditorScenarioStepsInternal::readUndoIndex );
+    SW_AUTOMATION_PROBE( editorToolFocusIsMain, "Editor.ToolFocusIsMain", "1 when the scene and undo stack tools aim at are the main scene's (0 while a preview window holds the focus)",
+                         &EditorScenarioStepsInternal::readToolFocusIsMain );
     SW_AUTOMATION_QUERY_PROBE( editorSceneHash, "Editor.SceneHash", "Hash of the edited scene content (every object's name, parent and saved state; the scene view camera is left out)",
                                &EditorScenarioStepsInternal::readSceneHash, false, false );
     SW_AUTOMATION_QUERY_PROBE( editorSelectedNames, "Editor.SelectedNames", "Selected object names, sorted and comma separated ('(none)' when nothing is selected)",
