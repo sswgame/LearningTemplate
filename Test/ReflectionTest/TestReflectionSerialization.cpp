@@ -996,12 +996,11 @@ SW_TEST_CASE( ReflectionSerializationTest, OnlyTheCurrentWireVersionIsRead )
 }
 
 /**
- * @brief [ReflectionSerializationTest] 컨테이너 안의 모르는 열거자는 **그 원소만** 실패한다 — 뒤 원소 · 다른 항목은 읽힌다(XML 과 같다)
- * @details 바이너리 컨테이너 읽기가 원소 하나의 실패에서 멈추면 지운 열거자 하나 뒤의 원소를 **모두 잃는다**(맵은 그 항목 뒤 항목 전부). XML 은 그 원소만
- *          기본값으로 두고 계속 읽는다. 모르는 열거자는 바이트를 끝까지 읽고 실패하므로 같은 규칙을 쓸 수 있다(망가진 스트림은 그대로 멈춘다). 칸은 여전히
- *          실패로 알린다 — 모르는 칸을 받는 문맥은 그 칸을 넘기되 읽은 원소는 남는다.
+ * @brief [ReflectionSerializationTest] 컨테이너 안의 모르는 열거자는 그 칸을 실패시키고, 모르는 칸을 받는 문맥은 그 칸을 **읽기 전 값**으로 남긴다 — 다른 칸은 읽힌다
+ * @details 모르는 열거자는 바이트를 끝까지 읽고 실패하므로 스트림은 멈추지 않는다(망가진 스트림은 그대로 멈춘다). 원소 하나만 빼고 나머지를 받으면
+ *          다음 저장이 그 원소를 조용히 지우므로 칸째 되돌린다(SerializerSilentSkips S1 · S2, 세 형식이 같다).
  */
-SW_TEST_CASE( ReflectionSerializationTest, UnknownEnumeratorInAContainerFailsOnlyItsElement )
+SW_TEST_CASE( ReflectionSerializationTest, UnknownEnumeratorInAContainerKeepsTheFieldValueBeforeTheRead )
 {
     registerWireShiftEnumsAsDeclared();
     const RestoreWireShiftEnumsOnExit restoreEnums{};
@@ -1027,11 +1026,8 @@ SW_TEST_CASE( ReflectionSerializationTest, UnknownEnumeratorInAContainerFailsOnl
         test::ScopedDefensiveTestLog expected( "saved enumerators this build no longer has" );
         SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &target, info, bytes.data(), bytes.size(), lenient ) );
     }
-    SW_ASSERT_EQUAL( size_t( 3 ), target._listColor.size() );
-    SW_EXPECT_TRUE( target._listColor[0] == WireShiftColor::Blue );
-    SW_EXPECT_TRUE( target._listColor[2] == WireShiftColor::Red ); // 모르는 원소 뒤도 읽힌다
-    SW_EXPECT_EQUAL( size_t( 1 ), target._mapColorToCount.size() );
-    SW_EXPECT_TRUE( target._mapColorToCount.count( WireShiftColor::Blue ) == 1 && target._mapColorToCount[WireShiftColor::Blue] == 3 );
+    SW_EXPECT_TRUE( target._listColor.empty() );       // 읽기 전 값 — 읽다 만 목록이 아니다
+    SW_EXPECT_TRUE( target._mapColorToCount.empty() ); // 맵도 Green 항목 때문에 칸째 읽기 전 값이다
     SW_EXPECT_EQUAL( 9, target._after );
 }
 
@@ -1050,8 +1046,7 @@ SW_TEST_CASE( ReflectionSerializationTest, ContainerReadRulesAreTheSameInEveryFo
     WireShiftHost fromXML;
     SW_EXPECT_FALSE( sw::XMLSerializer::deserialize(
         &fromXML, info, R"(<WireShiftHost><_mapColorToCount><entry key="Purple">3</entry><entry key="Blue">4</entry></_mapColorToCount></WireShiftHost>)" ) );
-    SW_EXPECT_EQUAL( size_t( 1 ), fromXML._mapColorToCount.size() );
-    SW_EXPECT_EQUAL( 4, fromXML._mapColorToCount[WireShiftColor::Blue] );
+    SW_EXPECT_TRUE( fromXML._mapColorToCount.empty() ); // XML 글 입구는 소프트 읽기 위의 엄격이라 칸이 읽기 전 값이다(S2)
 
     WireShiftHost fromJSON;
     SW_EXPECT_FALSE( sw::JSONSerializer::deserialize( &fromJSON, info, R"({"_mapColorToCount":{"Purple":3,"Blue":4}})" ) );
