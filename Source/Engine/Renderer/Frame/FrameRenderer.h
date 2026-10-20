@@ -626,10 +626,16 @@ namespace sw
          */
         bool uploadSceneAndSubmit( IRHIDevice* pDevice, const utf8* pCallerName );
         /**
-         * @brief 뷰마다 라이트 그리드를 만들어 라이트 버퍼를 올립니다. 업로드 전에, 추가 뷰가 정해진 뒤에 부릅니다(`gv_lightCulling` 0 이면 그리드 없이).
+         * @brief 라이트 버퍼를 올리고 뷰마다 라이트 그리드를 준비합니다. 업로드 전에, 추가 뷰가 정해진 뒤에 부릅니다(생산자는 `selectLightGridProducer`).
          * @details 라이트와 그림자 타일은 앞서 `GPULightBuffer::populate` 로 담겨 있어야 한다. 뷰의 그리드 번호는 `ViewTarget::_lightGridIndex` 에 남는다.
+         *          GPU 생산자면 그리드 채우기는 커맨드 리스트가 열린 뒤 `dispatchLightGrid` 가 한다.
          */
         void updateLightBuffer( IRHIDevice* pDevice );
+        /**
+         * @brief 이번 프레임의 라이트 그리드 생산자입니다. 개발 빌드는 `gv_lightCulling`(0 없음, 1 CPU, 2 GPU), Shipping 은 GPU 로 고정입니다.
+         * @details GPU 를 골랐는데 컴퓨트 PSO 가 없으면 오류를 한 번 남기고 그리드 없이 그린다 — 채우지 않은 그리드 버퍼를 셰이더가 읽게 두지 않는다.
+         */
+        LightGridProducer selectLightGridProducer();
 
         // ------------------------------------------------------------------------------
         // 6) 어태치먼트 · PSO
@@ -854,6 +860,11 @@ namespace sw
          */
         void dispatchCullAndSort( uint32 instanceCount );
         /**
+         * @brief GPU 생산자로 뷰마다의 라이트 그리드를 채웁니다(lightgrid.hlsl, 그룹 하나 = 뷰 하나). 생산자가 GPU 가 아니면 아무것도 하지 않습니다.
+         * @details 그리기 전에, 그래프 밖의 컴퓨트 프리패스로 기록한다(렌더 그래프에 컴퓨트 패스 상태가 없다). 끝나면 그리드 버퍼를 SRV 로 돌린다.
+         */
+        void dispatchLightGrid();
+        /**
          * @brief 컬링 슬롯 하나를 컬링하고 정렬합니다. 그 뷰의 절두체와 자기 상수 버퍼를 씁니다. 디스패치를 돌렸으면 true 입니다.
          * @param pExtraView 추가 뷰면 그 뷰(투명 순번 테이블을 정렬에 바인딩합니다), 고정 뷰(주 시점, 그림자)면 nullptr 입니다.
          */
@@ -931,10 +942,11 @@ namespace sw
          */
         uint8                  _bGPUCullingActive;
         FrameRendererStatus    _status;
-        uint8                  _bCallbacksBound     : 1;
-        uint8                  _bPassResourcesReady : 1;
-        uint8                  _bScenePreview       : 1; ///< 미리보기 씬 렌더러다 — 프로파일러 보고 · 렌더 타깃 공개를 하지 않는다
-        [[maybe_unused]] uint8 _reservedFlags       : 4;
+        uint8                  _bCallbacksBound            : 1;
+        uint8                  _bPassResourcesReady        : 1;
+        uint8                  _bScenePreview              : 1; ///< 미리보기 씬 렌더러다 — 프로파일러 보고 · 렌더 타깃 공개를 하지 않는다
+        uint8                  _bLightGridPSOMissingLogged : 1; ///< 라이트 그리드 컴퓨트 PSO 가 없다는 것을 한 번만 알리는 래치다(셋업 단계에서만 쓴다)
+        [[maybe_unused]] uint8 _reservedFlags              : 3;
         /**
          * @brief 주 출력의 보기 모드(`RenderViewMode`)입니다.
          * @details 게임 스레드(패킷)와 직접 경로가 프레임 시작에 읽어 뷰 설정에 싣고, 드로우는 뷰 설정만 본다. 쓰는 쪽이 다른 스레드이므로 atomic 이다.
