@@ -9,7 +9,8 @@
 	<At frame="0"><Variable name="gv_nileAutoPlay" value="0"/></At>
 	<At frame="20"><MousePosition x="0.5" y="0.5"/></At>
 	<At frame="22"><Tap slot="Mouse.Left" hold="1"/></At>
-	<At frame="30"><Tap slot="Key.Escape" hold="1"/></At>
+	<!-- 사람의 누름처럼 여러 프레임(6) 누른다. 한 프레임짜리 누름은 UI 층이 켜지기 전에 떼어져, 같은 Esc 의 Back 이 메뉴를 닫는 결함을 가렸다 -->
+	<At frame="30"><Tap slot="Key.Escape" hold="6"/></At>
 	<At frame="36"><ExpectUI screen="engine/ui/pause.ui.xml"/></At>
 	<!-- 메뉴가 떠 있다: B 는 UI 뒤로가기라 메뉴를 닫고, 같은 B 로 허물지는 않는다 -->
 	<At frame="38"><Tap slot="Gamepad.B" hold="1"/></At>

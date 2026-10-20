@@ -401,6 +401,34 @@ SW_TEST_CASE( UIOptionsMenuTest, PauseActionOpensPauseMenu )
 }
 
 /**
+ * @brief [UIOptionsMenuTest] 일시정지 메뉴를 연 Esc 를 계속 누르고 있어도 메뉴가 닫히지 않는다(사람의 누름은 여러 프레임이다)
+ * @details 변이: `UIInputRouter::processActions` 의 `isPressFired` 가 소비 검사를 빼면 UI 층이 켜진 첫 프레임에 같은 Esc 의 Back 이 발화해 다음 프레임에 활성 화면이 없다.
+ *          한 프레임짜리 누름(`tapKey`)은 층이 켜지기 전에 떼어져 이 결함을 가렸다(시나리오 `Tap hold="1"` 도 같았다).
+ */
+SW_TEST_CASE( UIOptionsMenuTest, HeldPauseKeyDoesNotCloseThePauseMenu )
+{
+    UIOptionsMenuFixture fixture;
+    fixture.getMenu()->close();
+    fixture.runFrame();
+    SW_ASSERT_EQUAL( 0u, fixture._ui.getScreenCount() );
+    fixture._ui.setPauseMenuDocument( "engine/ui/pause.ui.xml" );
+
+    SW_EXPECT_TRUE( fixture._input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::Escape ) ) );
+    for ( uint32 frame = 0; frame < 6; ++frame )
+    {
+        fixture.runFrame();
+        SW_EXPECT_TRUE( fixture._ui.getActiveScreen() != nullptr );
+    }
+    SW_EXPECT_TRUE( fixture._input.postRawEvent( sw::RawInputEvent::makeKeyUp( sw::Key::Escape ) ) );
+    fixture.runFrame();
+    fixture.runFrame();
+    SW_EXPECT_TRUE( fixture._ui.getActiveScreen() != nullptr ); // 뗀 뒤에도 열려 있다
+
+    fixture.tapKey( sw::Key::Escape ); // 새 누름은 메뉴의 뒤로다 — 소비는 뗄 때까지만 막는다
+    SW_EXPECT_TRUE( fixture._ui.getActiveScreen() == nullptr );
+}
+
+/**
  * @brief [UIOptionsMenuTest] 일시정지 메뉴의 "타이틀로" · "끝내기" 단추 — 전역 명령 표에 같은 이름이 등록돼 있는 동안만 보이고, 누르면 메뉴를 닫고 등록한 함수를 부르며,
  *        등록한 처리 함수로만 거둘 수 있다
  * @details 변이: `PauseMenuScreen::onTick` 이 표를 보지 않고 늘 보이면 처음 접힘 단언이 진다. 전역 표로 넘기지 않으면 호출 수가 0 이고, 메뉴를 닫지 않으면 화면이 남는다.
