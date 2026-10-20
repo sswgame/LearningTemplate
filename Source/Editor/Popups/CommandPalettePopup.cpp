@@ -44,6 +44,17 @@ namespace sw::editor
             }
             return false;
         }
+
+        /// 검색어를 대소문자 없이 이어진 그대로 품는가. 이어진 일치가 흩어진 일치(fuzzyMatch)보다 앞에 온다 — VS Code 팔레트와 같다.
+        bool containsIgnoreCase( string_view text, string_view pattern )
+        {
+            for ( size_t start = 0; start + pattern.size() <= text.size(); ++start )
+            {
+                if ( StringUtil::startsWith( text.substr( start ), pattern, true ) )
+                    return true;
+            }
+            return false;
+        }
     } // namespace
 } // namespace sw::editor
 
@@ -201,15 +212,23 @@ namespace sw::editor
 
             ImGui::Separator();
 
+            // 이어진 일치를 먼저, 흩어진 일치를 뒤에 둔다(각 묶음 안은 등록 순서). 흩어진 일치만으로 줄을 세우면 Enter 가 뜻밖의 커맨드를 고른다
+            // — "Open the GM" 이 "Open the paired animation editor (... alignment ...)" 에 먼저 걸렸다.
             vector<const CommandPaletteEntry*> listFiltered;
+            vector<const CommandPaletteEntry*> listScattered;
             const string_view                  pattern{ _searchBuffer.c_str() };
             for ( const CommandPaletteEntry& entry : _listAllCommand )
             {
+                const bool bContainsPattern = containsIgnoreCase( entry._label, pattern ) || containsIgnoreCase( entry._category, pattern ) ||
+                                              containsIgnoreCase( entry._detail, pattern );
                 const bool bMatchesPattern = fuzzyMatch( entry._label, pattern ) || fuzzyMatch( entry._category, pattern ) ||
                                              fuzzyMatch( entry._detail, pattern );
-                if ( bMatchesPattern )
+                if ( bContainsPattern )
                     listFiltered.push_back( &entry );
+                else if ( bMatchesPattern )
+                    listScattered.push_back( &entry );
             }
+            listFiltered.insert( listFiltered.end(), listScattered.begin(), listScattered.end() );
 
             const bool bExecuteSelected =
                 EditorWidgets::updateListSelection( _selectedIndex, static_cast<int32>( listFiltered.size() ) );

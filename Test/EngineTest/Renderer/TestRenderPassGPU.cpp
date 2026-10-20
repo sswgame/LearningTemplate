@@ -4632,7 +4632,7 @@ SW_TEST_CASE( RenderPassGPUTest, RenamedAttachmentsRenderTheSameImage )
             sw::vector<uint8>        listBroken;
             sw::RHITextureMipSpan    layoutBroken{};
             (void)renderPresentCaptureOf( device.get(), cube._scene, brokenPath.c_str(), listBroken, layoutBroken );
-            SW_EXPECT_TRUE_MSG( collector.countContaining( "컬러 타깃 'SceneColor'" ) == 1, ( sw::string( pName ) + ": " + collector.joined() ).c_str() );
+            SW_EXPECT_TRUE_MSG( collector.countContaining( "컬러 출력이 없습니다" ) == 1, ( sw::string( pName ) + ": " + collector.joined() ).c_str() );
         }
     }
 
@@ -5448,7 +5448,8 @@ SW_TEST_CASE( RenderPassGPUTest, NormalsStayPerpendicularUnderNonUniformScale )
  *          "still bound on input" · "Forcing PS shader resource slot 3 to NULL" 을 낸다. 투명 셰이더(forwardlit)는 깊이를 샘플링하지 않아
  *          그림은 같다. 그래서 `FrameRenderer::bindPassCallbacks` 가 깊이 첨부를 그래프의 쓰기로 선언하고(첨부 전이) D3D11 의
  *          `prepareTextureForRenderTarget` 가 그 텍스처가 걸린 PS SRV 슬롯을 뗀다. 해저드 메시지는 디버그 레이어(SW_DEBUG)에서만 로그로 오므로
- *          배포 빌드에서는 그래프 선언만 본다. 디퍼드에서 SSAO 는 투명 패스보다 먼저 선언돼 불투명 깊이를 읽고 Shading 과 같은 레벨에 남는다.
+ *          배포 빌드에서는 그래프 선언만 본다. 디퍼드에서 SSAO 는 투명 패스보다 먼저 선언돼 불투명 깊이를 읽는다. 그 깊이에는 포워드 전용
+ *          패스(ForwardOnlyOpaque — 툰)가 쓴 깊이도 들어가야 하므로(AO 는 PostBloom 에서 그 픽셀에도 곱해진다) SSAO 는 그 패스 뒤 · 투명 패스 앞 레벨이다.
  */
 SW_TEST_CASE( RenderPassGPUTest, DepthAttachmentUnbindsItsShaderInputs )
 {
@@ -5477,7 +5478,7 @@ SW_TEST_CASE( RenderPassGPUTest, DepthAttachmentUnbindsItsShaderInputs )
                 SW_EXPECT_TRUE_MSG( graphText.find( "Transparent --> SceneDepth" ) != sw::string::npos,
                                     ( label + "그래프가 투명 패스의 깊이 첨부를 모른다" + graphText ).c_str() );
 
-                // 디퍼드의 SSAO 는 불투명 깊이를 읽는다 — 투명 패스의 첨부 쓰기 뒤로 밀리지 않고 Shading 과 같은 레벨에서 기록된다.
+                // 디퍼드의 SSAO 는 불투명 깊이를 읽는다 — 포워드 전용 불투명(툰)이 쓴 깊이 뒤, 투명 패스의 첨부 쓰기 앞 레벨에서 기록된다.
                 const sw::vector<sw::vector<sw::hashed_string>>& listLevel = renderer.getGraph().getExecutionLevels();
                 auto                                             findLevel = [&listLevel]( const utf8* pPass ) -> size_t
                 {
@@ -5494,8 +5495,9 @@ SW_TEST_CASE( RenderPassGPUTest, DepthAttachmentUnbindsItsShaderInputs )
                 };
                 if ( findLevel( "SSAO" ) < listLevel.size() )
                 {
-                    SW_EXPECT_TRUE_MSG( findLevel( "SSAO" ) == findLevel( "Shading" ) && findLevel( "SSAO" ) < findLevel( "Transparent" ),
-                                        ( label + "SSAO 가 Shading 과 같은 레벨 · 투명 패스 앞이 아니다\n" + renderer.getGraph().describeCompiledOrder() ).c_str() );
+                    const size_t opaqueDepthLevel = findLevel( "ForwardOnly" ) < listLevel.size() ? findLevel( "ForwardOnly" ) : findLevel( "Shading" );
+                    SW_EXPECT_TRUE_MSG( findLevel( "SSAO" ) > opaqueDepthLevel && findLevel( "SSAO" ) < findLevel( "Transparent" ),
+                                        ( label + "SSAO 가 불투명 깊이를 쓰는 마지막 패스 뒤 · 투명 패스 앞이 아니다\n" + renderer.getGraph().describeCompiledOrder() ).c_str() );
                 }
 
                 constexpr uint32 kFrameCount = 3;

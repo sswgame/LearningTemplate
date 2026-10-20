@@ -666,7 +666,8 @@ SW_TEST_CASE( AppSmokeTest, EditorRegistriesKeepTheirOrder )
         "EditorExtensionRegistry|panel|animation_graph|Tool|Animation Graph",
         "EditorExtensionRegistry|panel|dialogue_graph|Tool|Dialogue Graph",
         "EditorExtensionRegistry|panel|material|Tool|Material",
-        "EditorExtensionRegistry|panel|prefab_editor|Tool|Prefab Editor",
+        "EditorExtensionRegistry|panel|prefab_editor|Tool|Prefab Overrides",
+        "EditorExtensionRegistry|panel|prefab_window|Tool|Prefab Window",
         "EditorExtensionRegistry|panel|tile_map|Tool|Tile Map Tool",
         "EditorExtensionRegistry|panel|sprite_clip|Tool|Sprite Clip",
         "EditorExtensionRegistry|panel|data_table|Tool|Data Table Editor",
@@ -700,7 +701,8 @@ SW_TEST_CASE( AppSmokeTest, EditorRegistriesKeepTheirOrder )
         "editor.exit",
         "EditorExtensionRegistry|menu|MainMenu/Edit|edit.undo,edit.redo,-,editor.themeSettings,editor.preferences,editor.projectSettings,-,"
         "scene.moveSiblingUp,scene.moveSiblingDown,scene.createFolder,-,help.reportBug,automation.toggleScenarioRecord",
-        "EditorExtensionRegistry|menu|MainMenu/Build|build.compileGame,build.compileEditor,build.compileAll,-,build.cancel,-,navigation.bake",
+        "EditorExtensionRegistry|menu|MainMenu/Build|build.compileGame,build.compileEditor,build.compileAll,-,build.cancel,-,navigation.bake,"
+        "lighting.bakeProbes",
     };
 
     const AppRunResult result = runApp( "-gv_profileFrames=5 -EnableEditor -dx12 -gv_editorRegistryDump=1", "EditorExtensionRegistry|" );

@@ -22,6 +22,8 @@
 	<At frame="120">
 		<Expect probe="Editor.ProfilerTimelineThreadCount" atLeast="2"/>
 	</At>
+	<!-- 눈 확인용(GPU 검증): 녹화 중 타임라인 — GPU 타임스탬프 칸(64)을 실제로 얼마나 쓰는지 렌더 스레드 줄에서 본다 -->
+	<At frame="122"><CaptureEditorUI file="profilertimeline/recording.png"/></At>
 	<!-- 다시 누르면 녹화가 멈춘다 — 남은 사건은 그대로 보인다 -->
 	<At frame="130"><EditorClick mark="profiler.timeline.record"/></At>
 	<At frame="150"><Expect probe="Editor.ProfilerTimelineThreadCount" atLeast="2"/></At>

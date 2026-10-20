@@ -14,6 +14,8 @@
 		<Expect probe="Shooter3D.ShotCount" atLeast="3"/>
 		<Expect probe="Shooter3D.EnemyHitCount" atLeast="1"/>
 	</At>
+	<!-- 눈 확인용(GPU 검증): 경기장의 CCTV 모니터는 후처리를 끈 뷰라 화면의 노출 · 색 보정이 들어가지 않아야 한다 -->
+	<At frame="605"><Screenshot file="shooter3d/autoplay_cctv.ppm"/></At>
 	<At frame="610"><Variable name="gv_shooterAutoPlay" value="0"/></At>
 	<At frame="620"><Expect probe="Shooter3D.PlayerControllerKind" equals="0"/></At>
 	<!-- 돌려받은 플레이어 조종자에게 키가 먹는다 — 자동 플레이는 권총을 고르지 않으니 3 번 키(Weapon3)로 권총이 되면 사람의 입력이다 -->

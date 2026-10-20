@@ -29,6 +29,8 @@
 		<Expect probe="Object.Z" target="Bessie" atLeast="6"/>
 		<Expect probe="Object.Z" target="Player" atLeast="6"/>
 		<Expect probe="Pawn.Seat" target="Player" is="Bessie"/>
+		<!-- 눈 확인용(GPU 검증 — Shipping 에서도 같은 그림인지): 질주 중 말과 기수 -->
+		<Screenshot file="wildwest/mount_gallop.ppm"/>
 	</At>
 	<At frame="136"><Release slot="Key.W"/><Release slot="Key.LeftShift"/></At>
 	<!-- 감속(8 m/s²)으로 선다. -->
