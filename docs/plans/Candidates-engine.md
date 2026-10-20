@@ -1,6 +1,6 @@
 # 엔진 후보
 
-> 상태: 후보 · 선행: 없음 · 영역: engine · 옛번호: B-11, B-13, C-4, C-7, C-13, C-19, C-22, C-25, C-34, C-47, C-49, C-63, C-64, C-65, C-66, C-68, C-69, C-70, C-71, C-72, D1-3, D1-4, D1-6, D1-8, G-1, G-5, G-17, H-2 · 진행: 해당없음
+> 상태: 후보 · 선행: 없음 · 영역: engine · 옛번호: B-11, B-13, C-4, C-7, C-13, C-19, C-22, C-25, C-34, C-47, C-49, C-63, C-64, C-65, C-68, C-69, C-70, C-71, C-72, D1-3, D1-4, D1-6, D1-8, G-1, G-5, G-17, H-2 · 진행: 해당없음
 
 엔진 구조 · 물리 · 내비게이션 · 모듈 영역에서 아직 착수하지 않은 일의 목록입니다. 착수하면 그 절을 계획 문서로 옮기고 여기서 지웁니다. 순서는 [로드맵](Roadmap.md)이 가집니다.
 
@@ -100,12 +100,6 @@
 남은 것: ④ `ConfigManager::isWithinRange` 가 `collectRangeErrors` 로 범위를 따로 검사합니다(`C-56` 과 같은 모양, Config 영역). ⑤ `readName` 호출부 357 곳을 전수로 보지 못했습니다.
 함정: 이름을 경로 글로 바꿔 쓰는 `.c_str()`(`hashed_string` 의 FName 규칙: none = 빈 이름, 빈 이름의 `c_str()` = "None")은 형식으로 막지 못하고 이름 읽기 창구에서 글 none 만 막았습니다.
 
-### SerializerSilentSkips
-제목: 직렬화가 조용히 넘기는 곳
-옛번호: C-66
-왜 필요한가: 읽기 · 쓰기가 조용히 넘기면 데이터 결함이 숨습니다.
-남은 것(2026-10-20: 페이로드를 끝까지 읽었는지는 태그 스트림 두 경로 · diff · 값 복사가 `SerializerUtil::applyPropertyBinary` 하나로 보고, B 코덱 열거형 폭은 이미 열거자 범위입니다): 읽기가 실패한 필드에 앞부분이 써진 채 남습니다(컨테이너 · 구조체가 원소를 채운 뒤 끝 검사에서 실패). 엄격 읽기는 객체째 실패라 드러나지 않고, 읽지 못한 필드를 받는 컨텍스트(오브젝트 상태의 `skipsUnreadableProperties`, 소프트 읽기의 orphan 을 버리는 버전 읽기)에서만 그 필드가 반쯤 읽힌 값이 됩니다. 값을 임시에 읽고 성공할 때만 옮기는 형식(타입을 지운 임시 생성)이 필요합니다.
-
 ### FunctorLambdaCommonization
 제목: 함수 객체 · 람다 공통화 2단계
 옛번호: C-68
@@ -201,10 +195,3 @@
 왜 필요한가: 기믹 상태 구조체는 개수 상한을 `PROPERTY( MaxCount = 32 )` 와 C++ 상수(`kMaxSlotCount` · `kMaxNodeCount`) 두 곳에 적는다. 생성기가 상수를 키로 받지 않고(`ReflectionFormats.md` 3.8) `PropertyInfo` 에 `MaxCount` 를 읽는 메타데이터가 없기 때문이다. 두 값이 같은지는 테스트(`StateLimitsMatchDeclaredMaxCount`)가 대조하는데, 형식으로 막은 것이 아니라 게이트로 막은 것이다.
 남은 것: 생성기가 `MaxCount = 상수 이름` 을 받아 해석하고 `PropertyInfo` 가 상한을 읽게 한다. 그러면 상수 중복과 대조 테스트가 사라진다. 같은 모양으로 상한을 두 번 적는 다른 구조체가 있는지 먼저 센다.
 착수 조건: 상한이 있는 상태 구조체가 늘어 중복이 부담이 될 때, 또는 `ReflectionFormats` 생성기를 다시 열 때.
-
-### TextAddressRemainingVoid
-제목: 값 · 객체 주소를 아직 `void*` 로 받는 직렬화 함수를 주소 형식으로
-옛번호: 없음
-왜 필요한가: `SerializerUtil` 의 텍스트 · 이진 함수 열 개는 `ObjectAddress` · `ValueAddress`(`Engine/Serialization/Base/TextAddress.h`)로 옮겼는데, 아직 `void*` 를 받는 것이 남았다: `arePropertyValuesEqual` · `applyPropertyDefault` · `tryCoerceBinaryPayload`(`SchemaMigrate.h`)와 컨테이너 방문자 인터페이스. 객체 주소와 값 주소를 한 함수가 받으면 오프셋이 한 번 더 더해지는 결함이 다시 나올 수 있다(핸들 선택기에서 한 번 나왔다).
-남은 것: 위 함수와 방문자의 시그니처를 주소 형식으로 바꾸고, 반대쪽 주소를 넘기면 컴파일이 안 되게 `static_assert` 테스트를 더한다.
-착수 조건: 직렬화 경로를 다시 열 때, 또는 같은 모양의 주소 혼동 결함이 한 번 더 나올 때.

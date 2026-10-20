@@ -4,6 +4,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Serialization/Base/Serializer.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 
@@ -105,31 +106,57 @@ SW_TEST_CASE( ReflectionTypeInfoTest, FindExistingProperty )
 }
 
 /**
+ * @brief [ReflectionTypeInfoTest] 메타데이터 상자는 값 의미다 — 프로퍼티를 복사한 뒤 한쪽 메타데이터를 고쳐도 다른 쪽은 그대로이고, 이동 대입은 값을 옮긴다.
+ */
+SW_TEST_CASE( ReflectionTypeInfoTest, MetadataBoxCopiesByValue )
+{
+    sw::PropertyInfo original;
+    original._metadata->_defaultValue = "7";
+    sw::PropertyInfo copy             = original;
+    copy._metadata->_defaultValue     = "9";
+    SW_EXPECT_EQUAL( sw::string( "7" ), original._metadata->_defaultValue );
+    SW_EXPECT_EQUAL( sw::string( "9" ), copy._metadata->_defaultValue );
+
+    sw::PropertyInfo moved;
+    moved = std::move( copy );
+    SW_EXPECT_EQUAL( sw::string( "9" ), moved._metadata->_defaultValue );
+    copy = original; // 이동한 뒤의 원본은 대입으로 다시 쓸 수 있다
+    SW_EXPECT_EQUAL( sw::string( "7" ), copy._metadata->_defaultValue );
+
+    sw::vector<sw::PropertyInfo> listProperty;
+    for ( int32 index = 0; index < 32; ++index )
+    {
+        listProperty.push_back( original ); // 다시 잡을 때 이동 생성으로 옮겨도 메타데이터가 남는다
+    }
+    SW_EXPECT_EQUAL( sw::string( "7" ), listProperty.front()._metadata->_defaultValue );
+}
+
+/**
  * @brief [ReflectionTypeInfoTest] 프로퍼티 메타데이터
  */
 SW_TEST_CASE( ReflectionTypeInfoTest, PropertyMetadataSupport )
 {
     sw::PropertyInfo prop;
 #if !defined( SW_SHIPPING )
-    prop._metadata._category    = "Rendering";
-    prop._metadata._displayName = "Light Intensity";
-    prop._metadata._tooltip     = "Controls light intensity";
+    prop._metadata->_category    = "Rendering";
+    prop._metadata->_displayName = "Light Intensity";
+    prop._metadata->_tooltip     = "Controls light intensity";
 #endif
-    prop._metadata._minRange     = 0.0f;
-    prop._metadata._maxRange     = 100.0f;
-    prop._metadata._bHasMinRange = SW_TRUE;
-    prop._metadata._bHasMaxRange = SW_TRUE;
-    prop._metadata._bReadOnly    = SW_TRUE;
+    prop._metadata->_minRange     = 0.0f;
+    prop._metadata->_maxRange     = 100.0f;
+    prop._metadata->_bHasMinRange = SW_TRUE;
+    prop._metadata->_bHasMaxRange = SW_TRUE;
+    prop._metadata->_bReadOnly    = SW_TRUE;
 
 #if !defined( SW_SHIPPING )
-    SW_EXPECT_EQUAL( sw::string( "Rendering" ), prop._metadata._category );
-    SW_EXPECT_EQUAL( sw::string( "Light Intensity" ), prop._metadata._displayName );
-    SW_EXPECT_EQUAL( sw::string( "Controls light intensity" ), prop._metadata._tooltip );
+    SW_EXPECT_EQUAL( sw::string( "Rendering" ), prop._metadata->_category );
+    SW_EXPECT_EQUAL( sw::string( "Light Intensity" ), prop._metadata->_displayName );
+    SW_EXPECT_EQUAL( sw::string( "Controls light intensity" ), prop._metadata->_tooltip );
 #endif
-    SW_EXPECT_NEAR_EQUAL( 0.0f, prop._metadata._minRange, 1e-4f );
-    SW_EXPECT_NEAR_EQUAL( 100.0f, prop._metadata._maxRange, 1e-4f );
-    SW_EXPECT_TRUE( prop._metadata.hasFullRange() );
-    SW_EXPECT_TRUE( prop._metadata._bReadOnly );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, prop._metadata->_minRange, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 100.0f, prop._metadata->_maxRange, 1e-4f );
+    SW_EXPECT_TRUE( prop._metadata->hasFullRange() );
+    SW_EXPECT_TRUE( prop._metadata->_bReadOnly );
 }
 
 /**
@@ -387,8 +414,8 @@ SW_TEST_CASE( ReflectionTypeInfoTest, ReflectCtorPlacementNew )
     const sw::FunctionInfo* valueCtor   = typeInfo->findMethod( sw::hashed_string( "$ctor(int32)" ) );
     SW_ASSERT_TRUE( defaultCtor != nullptr );
     SW_ASSERT_TRUE( valueCtor != nullptr );
-    SW_EXPECT_EQUAL( 1, static_cast<int32>( defaultCtor->_metadata._bConstructor ) );
-    SW_EXPECT_EQUAL( 1, static_cast<int32>( valueCtor->_metadata._bConstructor ) );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( defaultCtor->_metadata->_bConstructor ) );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( valueCtor->_metadata->_bConstructor ) );
 
     alignas( sw::CtorDemoActor ) uint8 defaultStorage[sizeof( sw::CtorDemoActor )]{};
     sw::CtorDemoActor*                 defaultInstance = reinterpret_cast<sw::CtorDemoActor*>( defaultStorage );
@@ -416,11 +443,11 @@ SW_TEST_CASE( ReflectionTypeInfoTest, PropertyAnnotationMetadataCodegen )
     const sw::PropertyInfo* hp = typeInfo->findProperty( sw::hashed_string( "_hp" ) );
     SW_ASSERT_TRUE( hp != nullptr );
 #if !defined( SW_SHIPPING )
-    SW_EXPECT_EQUAL( sw::string( "Stats" ), hp->_metadata._category );
-    SW_EXPECT_EQUAL( sw::string( "Hit Points" ), hp->_metadata._displayName );
-    SW_EXPECT_EQUAL( sw::string( "Current HP" ), hp->_metadata._tooltip );
+    SW_EXPECT_EQUAL( sw::string( "Stats" ), hp->_metadata->_category );
+    SW_EXPECT_EQUAL( sw::string( "Hit Points" ), hp->_metadata->_displayName );
+    SW_EXPECT_EQUAL( sw::string( "Current HP" ), hp->_metadata->_tooltip );
 #endif
-    SW_EXPECT_TRUE( hp->_metadata._bReadOnly );
+    SW_EXPECT_TRUE( hp->_metadata->_bReadOnly );
 }
 
 /**
@@ -461,11 +488,11 @@ SW_TEST_CASE( ReflectionMetadataTest, PropertyMetadataQuery )
     const sw::PropertyInfo* pHealth = pType->findProperty( sw::hashed_string( "_health" ) );
     SW_ASSERT_NOT_NULL( pHealth );
 
-    SW_EXPECT_TRUE( pHealth->_metadata._bTransient == SW_TRUE );
-    SW_EXPECT_TRUE( pHealth->_metadata._bHideInInspector == SW_TRUE );
-    SW_EXPECT_TRUE( pHealth->_metadata._displayName == "Health Points" );
-    SW_EXPECT_TRUE( pHealth->_metadata._category == "Stats" );
-    SW_EXPECT_TRUE( pHealth->_metadata._tooltip == "Current health" );
+    SW_EXPECT_TRUE( pHealth->_metadata->_bTransient == SW_TRUE );
+    SW_EXPECT_TRUE( pHealth->_metadata->_bHideInInspector == SW_TRUE );
+    SW_EXPECT_TRUE( pHealth->_metadata->_displayName == "Health Points" );
+    SW_EXPECT_TRUE( pHealth->_metadata->_category == "Stats" );
+    SW_EXPECT_TRUE( pHealth->_metadata->_tooltip == "Current health" );
 
     const sw::string* pUnits = pHealth->findCustomMeta( sw::hashed_string( "Units" ) );
     SW_ASSERT_NOT_NULL( pUnits );
@@ -477,8 +504,8 @@ SW_TEST_CASE( ReflectionMetadataTest, PropertyMetadataQuery )
 
     const sw::PropertyInfo* pArmor = pType->findProperty( sw::hashed_string( "_armor" ) );
     SW_ASSERT_NOT_NULL( pArmor );
-    SW_EXPECT_TRUE( pArmor->_metadata._bTransient == SW_FALSE );
-    SW_EXPECT_TRUE( pArmor->_metadata._bHideInInspector == SW_FALSE );
+    SW_EXPECT_TRUE( pArmor->_metadata->_bTransient == SW_FALSE );
+    SW_EXPECT_TRUE( pArmor->_metadata->_bHideInInspector == SW_FALSE );
 #endif
 }
 
@@ -495,11 +522,11 @@ SW_TEST_CASE( ReflectionMetadataTest, FunctionMetadataQuery )
     const sw::FunctionInfo* pMethod = pType->findMethod( sw::hashed_string( "resetHealth" ) );
     SW_ASSERT_NOT_NULL( pMethod );
 
-    SW_EXPECT_TRUE( pMethod->_metadata._bCallInEditor == SW_TRUE );
-    SW_EXPECT_TRUE( pMethod->_metadata._displayName == "Reset Health" );
-    SW_EXPECT_TRUE( pMethod->_metadata._category == "Actions" );
-    SW_EXPECT_TRUE( pMethod->_metadata._tooltip == "Resets health to 100" );
-    SW_EXPECT_TRUE( pMethod->_metadata._editorPreview == "HealthReset" );
+    SW_EXPECT_TRUE( pMethod->_metadata->_bCallInEditor == SW_TRUE );
+    SW_EXPECT_TRUE( pMethod->_metadata->_displayName == "Reset Health" );
+    SW_EXPECT_TRUE( pMethod->_metadata->_category == "Actions" );
+    SW_EXPECT_TRUE( pMethod->_metadata->_tooltip == "Resets health to 100" );
+    SW_EXPECT_TRUE( pMethod->_metadata->_editorPreview == "HealthReset" );
 
     const sw::string* pActionType = pMethod->findCustomMeta( sw::hashed_string( "ActionType" ) );
     SW_ASSERT_NOT_NULL( pActionType );
@@ -1220,17 +1247,17 @@ SW_TEST_CASE( ReflectionTypeInfoTest, OneSidedRangeOnlyBoundsThatSide )
     SW_ASSERT_NOT_NULL( pLight );
     const sw::PropertyInfo* pIntensity = pLight->findProperty( sw::hashed_string( "_intensity" ) );
     SW_ASSERT_NOT_NULL( pIntensity );
-    SW_EXPECT_TRUE( pIntensity->_metadata._bHasMinRange == SW_TRUE );
-    SW_EXPECT_TRUE( pIntensity->_metadata._bHasMaxRange == SW_FALSE );
-    SW_EXPECT_FALSE( pIntensity->_metadata.hasFullRange() );
+    SW_EXPECT_TRUE( pIntensity->_metadata->_bHasMinRange == SW_TRUE );
+    SW_EXPECT_TRUE( pIntensity->_metadata->_bHasMaxRange == SW_FALSE );
+    SW_EXPECT_FALSE( pIntensity->_metadata->hasFullRange() );
 
     const sw::TypeInfo* pSequence = registry.findType( sw::hashed_string( "sw::SequencePlayerComponent" ) );
     SW_ASSERT_NOT_NULL( pSequence );
     const sw::PropertyInfo* pFps = pSequence->findProperty( sw::hashed_string( "_framesPerSecond" ) );
     SW_ASSERT_NOT_NULL( pFps );
-    SW_EXPECT_TRUE( pFps->_metadata.hasFullRange() );
-    SW_EXPECT_NEAR_EQUAL( 1.0f, pFps->_metadata._minRange, 1e-4f );
-    SW_EXPECT_NEAR_EQUAL( 120.0f, pFps->_metadata._maxRange, 1e-4f );
+    SW_EXPECT_TRUE( pFps->_metadata->hasFullRange() );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, pFps->_metadata->_minRange, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 120.0f, pFps->_metadata->_maxRange, 1e-4f );
 }
 
 /**

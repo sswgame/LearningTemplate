@@ -4,6 +4,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Base/SerializeContext.h"
 #include "Engine/Serialization/Base/SerializerUtil.h"
@@ -24,7 +25,7 @@ namespace test
         {
             for ( const sw::PropertyInfo& prop : pType->_listProperty )
             {
-                if ( prop._metadata._bTransient == SW_TRUE )
+                if ( prop._metadata->_bTransient == SW_TRUE )
                     continue;
                 ++report._checkedCount;
                 if ( sw::SerializerUtil::canCarryProperty( prop, context ) )

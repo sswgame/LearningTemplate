@@ -10,6 +10,7 @@
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/EditorSubsystem.h"
@@ -69,7 +70,11 @@ namespace sw::editor
 
         /** @brief 스택이 바뀌었다고 알립니다. 다음 `refreshPreview` 가 다시 겁니다. */
         void markDirty() { _bPreviewDirty = true; }
-        /** @brief 바뀌었으면 원본 정점에 스택을 다시 겁니다(CPU 정본 경로). GPU 미리보기가 켜져 있으면 같은 적용에서 모은 입력 상자로 변형 프로그램도 다시 겁니다. */
+        /**
+         * @brief 바뀌었으면 원본 정점에 스택을 다시 겁니다(CPU 정본 경로). GPU 미리보기가 켜져 있으면 같은 적용에서 모은 입력 상자로 변형 프로그램도 다시 겁니다.
+         * @details 고른 모디파이어 앞까지 건 결과(앞부분 캐시)를 들고, 앞부분 모디파이어의 저장 글 · 시간 · 메시 변환이 그대로면 고른 것부터만 다시 건다.
+         *          앞부분이 읽는 씬 입력(참조 오브젝트 변환 · 곡선 · 텍스처 파일)은 캐시를 만들 때의 값이다 — 앞부분이나 고른 번호가 바뀌면 다시 읽는다.
+         */
         void refreshPreview();
 
         /**
@@ -109,6 +114,13 @@ namespace sw::editor
         void                     setSelectedIndex( int32 index ) { _selectedIndex = index; }
         float32                  getPreviewTime() const { return _previewTime; }
         void                     setPreviewTime( float32 time );
+        /** @brief 미리보기 시간 칸의 상한(초)입니다. 재생은 여기서 0 으로 되감습니다. */
+        static constexpr float32 kMaxPreviewTimeSeconds = 600.0f;
+        /** @brief 미리보기 시간을 재생하는지입니다. 켜면 `advancePreviewTime` 이 시간을 흘려 애니메이션 모디파이어가 움직입니다. */
+        bool isPreviewPlaying() const { return _bPreviewPlaying; }
+        void setPreviewPlaying( bool bPlaying ) { _bPreviewPlaying = bPlaying; }
+        /** @brief 재생 중이면 미리보기 시간을 @p deltaSeconds 만큼 흘립니다(패널이 프레임마다 부릅니다). */
+        void advancePreviewTime( float32 deltaSeconds );
 
         /**
          * @brief 고른 모디파이어까지만 건 결과의 월드 선분을 @p outListSegmentPoint 에 점 둘씩 채웁니다(변형 영향 미리보기).
@@ -141,6 +153,13 @@ namespace sw::editor
 
     private:
         void makeSourceMesh( MeshModifierMesh& outMesh ) const;
+        /** @brief 미리보기 평가(메시 변환 · 씬 입력 · 시간 · 스택 입력 위치)를 만듭니다. */
+        MeshModifierEvaluation makeEvaluation() const;
+        /**
+         * @brief 앞부분 캐시(`_prefixMesh` = 고른 모디파이어 앞까지 건 결과)를 맞춥니다.
+         * @param bStackChanged 스택 · 시간이 바뀌었을 수 있으면 true(앞부분 저장 글을 견준다). false 면 고른 번호가 바뀌었을 때만 견준다.
+         */
+        void updatePrefixCache( const MeshModifierEvaluation& evaluation, bool bStackChanged );
         void makeSegments( const MeshModifierMesh& mesh, vector<float3>& outListSegmentPoint ) const;
         /** @brief 방금 건 CPU 적용의 평가 · 입력 상자로 셰이딩 미리보기를 맞춥니다(GPU 로 못 옮기면 CPU 결과 메시를 끼운다). */
         void updateShadedPreview( const MeshModifierEvaluation& evaluation, const vector<MeshModifierBounds>& listInputBounds );
@@ -149,31 +168,38 @@ namespace sw::editor
         /** @brief 대상에 끼워 둔 미리보기 메시를 원래 메시로 되돌립니다. 대상이 지워졌으면 잡아 둔 포인터만 놓습니다. */
         void restoreOriginalMesh();
 
-        MeshModifierStack  _stack;
-        shared_ptr<Mesh>   _gpuPreviewMesh; ///< 레스트 정점 + GPU 모프(엔진이 만든 메시라 모듈이 내려가도 소멸 코드는 엔진에 있다)
-        shared_ptr<Mesh>   _cpuPreviewMesh; ///< CPU 결과 정점(GPU 로 못 옮기는 스택일 때만 있다)
-        shared_ptr<Mesh>   _originalMesh;   ///< 미리보기를 끼우기 전 대상 컴포넌트의 메시
-        vector<float4>     _listGPUProgram;
-        int32              _gpuBlockingIndex;
-        bool               _bShadedPreview;
-        MeshModifierMesh   _previewMesh;
-        MeshModifierMesh   _stagePreviewMesh; ///< 고른 모디파이어까지만 건 결과(`makeStagePreviewSegments`)
-        MeshAssetData      _sourceData;
-        vector<string>     _listUndo;
-        vector<string>     _listRedo;
-        string             _meshPath;
-        MeshModifierBounds _sourceBounds;
-        GameObjectHandle   _target;
-        float32            _previewTime;
-        int32              _selectedIndex;
-        MeshModifierBounds _inputBounds;       ///< 고른 모디파이어의 입력 상자 캐시(`getSelectedModifierInputBounds`)
-        int32              _stagePreviewIndex; ///< `_stagePreviewMesh` 를 만든 고른 번호(-1 이면 없음)
-        int32              _inputBoundsIndex;  ///< `_inputBounds` 를 만든 고른 번호(-1 이면 없음)
-        int32              _selectedControlPoint;
-        uint32             _mirrorAxis;
-        bool               _bPreviewDirty;
-        bool               _bStagePreviewDirty;
-        bool               _bInputBoundsDirty;
-        bool               _bMirrorEditing;
+        MeshModifierStack          _stack;
+        shared_ptr<Mesh>           _gpuPreviewMesh; ///< 레스트 정점 + GPU 모프(엔진이 만든 메시라 모듈이 내려가도 소멸 코드는 엔진에 있다)
+        shared_ptr<Mesh>           _cpuPreviewMesh; ///< CPU 결과 정점(GPU 로 못 옮기는 스택일 때만 있다)
+        shared_ptr<Mesh>           _originalMesh;   ///< 미리보기를 끼우기 전 대상 컴포넌트의 메시
+        vector<float4>             _listGPUProgram;
+        int32                      _gpuBlockingIndex;
+        bool                       _bShadedPreview;
+        MeshModifierMesh           _previewMesh;
+        MeshModifierMesh           _stagePreviewMesh;      ///< 고른 모디파이어까지만 건 결과(`makeStagePreviewSegments`)
+        MeshModifierMesh           _prefixMesh;            ///< 고른 모디파이어 앞까지 건 결과(앞부분 캐시, `updatePrefixCache`)
+        vector<MeshModifierBounds> _listPrefixInputBounds; ///< 앞부분을 거는 동안 모은 입력 상자(GPU 프로그램용)
+        string                     _prefixKey;             ///< 앞부분 모디파이어의 한 줄 저장 글(`MeshModifierStack::makePrefixJSONText`)
+        float4x4                   _prefixMeshToWorld;     ///< 앞부분을 건 메시 변환
+        float32                    _prefixTime;            ///< 앞부분을 건 미리보기 시간
+        int32                      _prefixEnd;             ///< 앞부분의 끝 번호(-1 이면 캐시 없음)
+        MeshAssetData              _sourceData;
+        vector<float3>             _listSourcePosition; ///< 원본 정점 위치(스택 입력 위치 · 원본 상자)
+        vector<string>             _listUndo;
+        vector<string>             _listRedo;
+        string                     _meshPath;
+        MeshModifierBounds         _sourceBounds;
+        GameObjectHandle           _target;
+        float32                    _previewTime;
+        int32                      _selectedIndex;
+        MeshModifierBounds         _inputBounds;       ///< 고른 모디파이어의 입력 상자 캐시(`getSelectedModifierInputBounds`, 앞부분 캐시에서 센다)
+        int32                      _stagePreviewIndex; ///< `_stagePreviewMesh` 를 만든 고른 번호(-1 이면 없음)
+        int32                      _selectedControlPoint;
+        uint32                     _mirrorAxis;
+        bool                       _bPreviewDirty;
+        bool                       _bStagePreviewDirty;
+        bool                       _bInputBoundsDirty;
+        bool                       _bMirrorEditing;
+        bool                       _bPreviewPlaying;
     };
 } // namespace sw::editor

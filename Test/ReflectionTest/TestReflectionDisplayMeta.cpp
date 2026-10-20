@@ -4,6 +4,7 @@
 #include "Engine/Reflection/PropertyEditCondition.h"
 #include "Engine/Reflection/ReflectUnits.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
@@ -107,15 +108,15 @@ SW_TEST_CASE( ReflectionDisplayMetaTest, AnnotationsReachPropertyMetadata )
     const sw::string*       pUnits = height.findCustomMeta( "Units" );
     SW_ASSERT_NOT_NULL( pUnits );
     SW_EXPECT_EQUAL( sw::string( "cm" ), *pUnits );
-    SW_EXPECT_TRUE( height._metadata.hasFullRange() && height._metadata.hasFullUIRange() );
-    SW_EXPECT_NEAR_EQUAL( 1000.0f, height._metadata._maxRange, 1e-4f );
-    SW_EXPECT_NEAR_EQUAL( 250.0f, height._metadata._uiMaxRange, 1e-4f );
+    SW_EXPECT_TRUE( height._metadata->hasFullRange() && height._metadata->hasFullUIRange() );
+    SW_EXPECT_NEAR_EQUAL( 1000.0f, height._metadata->_maxRange, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 250.0f, height._metadata->_uiMaxRange, 1e-4f );
 
-    SW_EXPECT_TRUE( getDisplayProperty( "_emissive" )._metadata._bColorHdr == SW_TRUE );
-    SW_EXPECT_TRUE( getDisplayProperty( "_notes" )._metadata._bMultiline == SW_TRUE );
-    SW_EXPECT_EQUAL( sw::string( "*.png;*.dds" ), getDisplayProperty( "_texture" )._metadata._fileFilter );
-    SW_EXPECT_EQUAL( sw::string( "!_bEnabled" ), getDisplayProperty( "_fallback" )._metadata._editCondition );
-    SW_EXPECT_TRUE( getDisplayProperty( "_fallback" )._metadata._bEditConditionHides == SW_TRUE );
+    SW_EXPECT_TRUE( getDisplayProperty( "_emissive" )._metadata->_bColorHdr == SW_TRUE );
+    SW_EXPECT_TRUE( getDisplayProperty( "_notes" )._metadata->_bMultiline == SW_TRUE );
+    SW_EXPECT_EQUAL( sw::string( "*.png;*.dds" ), getDisplayProperty( "_texture" )._metadata->_fileFilter );
+    SW_EXPECT_EQUAL( sw::string( "!_bEnabled" ), getDisplayProperty( "_fallback" )._metadata->_editCondition );
+    SW_EXPECT_TRUE( getDisplayProperty( "_fallback" )._metadata->_bEditConditionHides == SW_TRUE );
 }
 
 /**
@@ -144,13 +145,13 @@ SW_TEST_CASE( ReflectionDisplayMetaTest, EditConditionFollowsTheOtherProperty )
     SW_EXPECT_TRUE( sw::PropertyEditCondition::getEditState( type, getDisplayProperty( "_blend" ), &actor ) == sw::PropertyEditState::Enabled );
 
     // 풀지 못하는 식은 막지 않고 이유를 말한다
-    sw::PropertyInfo broken         = getDisplayProperty( "_speed" );
-    broken._metadata._editCondition = "_mode == Sideways";
+    sw::PropertyInfo broken          = getDisplayProperty( "_speed" );
+    broken._metadata->_editCondition = "_mode == Sideways";
     sw::PropertyEditConditionExpr expr;
     sw::string                    error;
     SW_EXPECT_FALSE( sw::PropertyEditCondition::parse( type, broken, expr, error ) );
     SW_EXPECT_TRUE_MSG( error.find( "Sideways" ) != sw::string::npos, error.c_str() );
-    broken._metadata._editCondition = "_noSuchProperty";
+    broken._metadata->_editCondition = "_noSuchProperty";
     SW_EXPECT_FALSE( sw::PropertyEditCondition::parse( type, broken, expr, error ) );
     SW_EXPECT_TRUE( sw::PropertyEditCondition::getEditState( type, broken, &actor ) == sw::PropertyEditState::Enabled );
 }
@@ -166,7 +167,7 @@ SW_TEST_CASE( ReflectionDisplayMetaTest, EveryEditConditionResolves )
     {
         for ( const sw::PropertyInfo& prop : type.getPropertiesWithBase() )
         {
-            if ( prop._metadata._editCondition.empty() )
+            if ( prop._metadata->_editCondition.empty() )
                 continue;
             ++checkedCount;
             sw::PropertyEditConditionExpr expr;

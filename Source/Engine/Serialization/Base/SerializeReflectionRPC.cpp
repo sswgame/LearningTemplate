@@ -19,6 +19,7 @@
 #include "Core/String/TagID.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionRPC.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -198,8 +199,8 @@ namespace sw
         outEnvelope._methodName  = methodName.c_str();
         outEnvelope._typeFqnHash = typeFqn.getHash();
         outEnvelope._methodHash  = methodName.getHash();
-        outEnvelope._netRole     = static_cast<uint8>( pFunc->_metadata._netRole );
-        outEnvelope._bReliable   = pFunc->_metadata._bReliable;
+        outEnvelope._netRole     = static_cast<uint8>( pFunc->_metadata->_netRole );
+        outEnvelope._bReliable   = pFunc->_metadata->_bReliable;
 
         const SerializeContext& serializeContext = SerializeContext::getDefault( SerializePurpose::Snapshot );
         const uint32            count            = args.getCount();
@@ -239,7 +240,7 @@ namespace sw
             return {};
         // RPC 로 표시된 메서드만 받는다(`FUNCTION( Server | Client | Multicast )`). 로컬 메서드를 봉투로 부르게 두면 모든 리플렉션 메서드가
         // 원격 호출 표면이 된다.
-        if ( pFunc->_metadata._netRole == FunctionNetRole::Local )
+        if ( pFunc->_metadata->_netRole == FunctionNetRole::Local )
         {
             SW_LOG_WARNING( "RPC envelope targets %#::%# which is not an RPC — not invoked", typeFqn.c_str(), methodName.c_str() );
             return {};

@@ -4,7 +4,8 @@
  * @details Displace · Displace Render Target · Displace Web Cam 처럼 텍스처를 쓰는 모디파이어의 `IMeshModifierInputs::trySampleTexture` 뒤에 있습니다.
  *          디코드는 Editor 의 `ImageUtil`(stb_image)에 맡깁니다. EngineTest 는 EditorModule 을 링크하지 않아 `ImageUtil.cpp` 를 직접 컴파일합니다.
  *          픽셀은 텍셀마다 float4 로 보관해 HDR(.hdr) 도 클램프 없이 그대로 읽습니다. 8 비트 원본은 0..1 로 나눕니다.
- *          메모리 상한은 두지 않았습니다 — 텍셀당 16 바이트이므로 4096² 한 장이 256 MB 입니다. 큰 이미지를 자주 쓰게 되면 8 비트 보관이나 상한을 더합니다.
+ *          텍셀당 16 바이트이므로 4096² 한 장이 256 MB 입니다. 캐시 합이 512 MB 를 넘으면 1 초 넘게 안 쓴 이미지를 오래된 것부터 내립니다
+ *          (지금 적용이 번갈아 쓰는 이미지는 남긴다 — 정점마다 다시 디코드하지 않게). 8 비트 원본을 8 비트로 보관하면 4 배 줄지만 아직 하지 않았습니다.
  */
 #pragma once
 #include "Core/Common/Types.h"

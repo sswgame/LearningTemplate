@@ -215,12 +215,13 @@ namespace sw
      *          float32 1.5 → int32 처럼 텍스트가 맞지 않으면 실패한다. 기록 타입이 **다른 enum** 이면 그 enum 으로 읽어 열거자 이름(문자열)으로
      *          옮긴다. XML 이 이름을 적어 두는 것과 같은 결과다(문자열이면 이름, 같은 이름을 가진 enum 이면 그 열거자, 정수면 실패).
      *          그 밖에는 제 타입으로 끝까지 읽히는지부터 보고, 숫자와 문자열 변환, 마지막으로 크기가 같은 POD 재해석을 시도한다.
+     * @param value 값 하나 자체의 주소입니다(프로퍼티 값 위치 — 객체 주소가 아니다). 객체 주소(`MutableObjectAddress`)는 컴파일되지 않습니다.
      * @param wireTypeName 그 payload 를 **쓸 때의** 타입입니다. 알면 넘기십시오(`findWireTypeName`). 비워 두면 크기로 짐작하는데, 크기만으로는
      *                     정수와 실수를 가를 수 없습니다(`sizeof(float32) == sizeof(int32)`).
      * @param wireVersion 그 payload 를 적은 버전입니다(스트림 머리나 orphan 이 가지고 있습니다).
      * @return 적용에 성공하면 true 입니다.
      */
-    [[nodiscard]] SW_API bool tryCoerceBinaryPayload( void* pPropPtr, hashed_string targetTypeName,
+    [[nodiscard]] SW_API bool tryCoerceBinaryPayload( MutableValueAddress value, hashed_string targetTypeName,
                                                       const uint8* pPayload, size_t payloadSize,
                                                       const SerializeContext& context,
                                                       hashed_string           wireTypeName = hashed_string{},

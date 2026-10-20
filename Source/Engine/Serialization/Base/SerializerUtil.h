@@ -7,6 +7,7 @@
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Serialization/Base/SchemaMigrate.h"
 #include "Engine/Serialization/Base/SerializeContext.h"
 #include "Engine/Serialization/Base/TextAddress.h"
@@ -117,14 +118,17 @@ namespace sw
                                                                  const SerializeContext& context,
                                                                  BinaryWireVersion       wireVersion = kCurrentBinaryWireVersion );
 
-        /** @brief 중첩 컨테이너를 바이너리로 직렬화합니다. 원소 · 키 · 값 하나라도 쓰지 못하면(`serializeValueBinary`) false 이고 @p listBuffer 는 쓰면 안 됩니다. */
-        [[nodiscard]] SW_API static bool serializeNestedContainerBinary( const void* pContainerPtr, const NestedContainerInfo& nested,
+        /**
+         * @brief 중첩 컨테이너를 바이너리로 직렬화합니다. 원소 · 키 · 값 하나라도 쓰지 못하면(`serializeValueBinary`) false 이고 @p listBuffer 는 쓰면 안 됩니다.
+         * @param container 컨테이너 값 자체의 주소입니다(프로퍼티 오프셋을 더한 뒤). 객체 주소는 받지 않습니다.
+         */
+        [[nodiscard]] SW_API static bool serializeNestedContainerBinary( ValueAddress container, const NestedContainerInfo& nested,
                                                                          vector<uint8>& listBuffer, const SerializeContext& context );
         /**
          * @brief 바이너리에서 중첩 컨테이너를 역직렬화합니다. 원소, 키, 값은 `wireVersion` 으로 읽습니다(`deserializeValueBinary`).
          * @details 원소와 항목이 실패했을 때의 규칙은 `ContainerVisitor` 를 따른다(모르는 열거자는 그 원소만 빼고 필드 전체는 실패로 처리한다).
          */
-        [[nodiscard]] SW_API static bool deserializeNestedContainerBinary( void* pContainerPtr, const NestedContainerInfo& nested,
+        [[nodiscard]] SW_API static bool deserializeNestedContainerBinary( MutableValueAddress container, const NestedContainerInfo& nested,
                                                                            const uint8* pData, size_t dataSize, size_t& offset,
                                                                            const SerializeContext& context,
                                                                            BinaryWireVersion       wireVersion = kCurrentBinaryWireVersion );
@@ -142,7 +146,7 @@ namespace sw
          * @details "선언된 기본값을 읽지 못함"(코드 결함)은 경고한다. 그 필드는 현재 값을 유지한다. 값은 `applyPropertyText` 로 쓴다
          *          (비트필드는 그 비트만 쓴다. 값 주소에 bool 을 통째로 쓰면 같은 바이트의 다른 플래그까지 지워진다).
          */
-        static void applyPropertyDefault( const PropertyInfo& prop, void* pInstance, const SerializeContext& context );
+        static void applyPropertyDefault( const PropertyInfo& prop, MutableObjectAddress instance, const SerializeContext& context );
 
         // ------------------------------------------------------------------------------
         // 프로퍼티 값 하나: 비트필드, 컨테이너, 값 세 경우를 한 벌로 처리한다. 직렬화기 셋, 프리팹 오버라이드 도구, 인스펙터가 함께 쓴다
@@ -150,14 +154,22 @@ namespace sw
         // ------------------------------------------------------------------------------
         /** @brief 한 인스턴스의 프로퍼티 값을 다른 인스턴스로 옮깁니다(같은 타입). 비트필드는 그 비트만, 컨테이너는 원소째 옮깁니다. 두 주소는 프로퍼티를 가진 **객체**의 주소입니다. */
         [[nodiscard]] SW_API static bool copyPropertyValue( const PropertyInfo& prop, ObjectAddress srcInstance, MutableObjectAddress dstInstance, const SerializeContext& context );
-        /** @brief 두 인스턴스의 프로퍼티 값이 같은지 확인합니다. 비트필드는 그 비트만 비교합니다. */
-        SW_API static bool arePropertyValuesEqual( const PropertyInfo& prop, const void* pInstanceA, const void* pInstanceB, const SerializeContext& context );
+        /** @brief 두 인스턴스의 프로퍼티 값이 같은지 확인합니다. 비트필드는 그 비트만 비교합니다. 두 주소는 프로퍼티를 가진 **객체**의 주소입니다. */
+        SW_API static bool arePropertyValuesEqual( const PropertyInfo& prop, ObjectAddress instanceA, ObjectAddress instanceB, const SerializeContext& context );
         /** @brief 텍스트 하나를 프로퍼티 값으로 씁니다(비트필드는 그 비트만). 읽지 못하면 false 이고 값은 그대로입니다. 컨테이너는 받지 않습니다. */
         [[nodiscard]] SW_API static bool applyPropertyText( const PropertyInfo& prop, MutableObjectAddress instance, string_view text, const SerializeContext& context );
+        /**
+         * @brief 프로퍼티 값 하나(그 프로퍼티 값 전부)를 바이너리 페이로드로 @p outBytes 끝에 덧붙입니다. 짝은 `applyPropertyBinary` 입니다. 비트필드는 `bool` 로 씁니다.
+         * @details 태그 스트림 쓰기, 값 복사, 읽기 실패 되돌리기(`BinarySerializer` 의 태그 스트림 읽기)가 함께 쓴다. 비트필드 · 컨테이너 · 값 세 갈래를 한 벌로 둔다.
+         * @return 그 값이나 안의 값에 바이너리 · 열거형 · 구조체 · 텍스트 처리기가 없으면 false 이고, 그때 @p outBytes 는 쓰면 안 됩니다.
+         */
+        [[nodiscard]] SW_API static bool writePropertyBinary( const PropertyInfo& prop, ObjectAddress instance, vector<uint8>& outBytes, const SerializeContext& context );
         /**
          * @brief 바이너리 페이로드 하나(그 프로퍼티 값 전부)를 프로퍼티에 읽어 씁니다. 페이로드를 **끝까지** 읽어야 true 입니다. @p instance 는 프로퍼티를 가진 **객체**의 주소입니다.
          * @details 바이트가 남으면 스트림이 이 필드를 다른 형태로 적은 것이다(`int32` 0 을 `vector<int32>` 로 읽으면 원소 수 0 으로 성공한다). 그래서 오프셋을
          *          부른 쪽에 돌려주지 않고 여기서 끝을 본다 — 태그 스트림, diff, 값 복사가 "읽힌 만큼" 받는 사본을 따로 두지 않게.
+         *          false 이면 그 필드는 **읽다 만 값**일 수 있다(컨테이너 · 구조체는 원소와 필드를 채운 뒤 끝에서 실패한다). 실패한 뒤에도 이어 읽는 쪽은
+         *          읽기 전에 `writePropertyBinary` 로 값을 담아 두고 실패하면 되돌린다(태그 스트림 읽기가 그렇게 한다).
          */
         [[nodiscard]] SW_API static bool applyPropertyBinary( const PropertyInfo& prop, MutableObjectAddress instance, const uint8* pPayload, size_t payloadSize,
                                                               const SerializeContext& context, BinaryWireVersion wireVersion = kCurrentBinaryWireVersion );
@@ -241,16 +253,16 @@ namespace sw
          */
         static bool shouldSerializeProperty( const TypeInfo& owner, const PropertyInfo& prop, const SerializeContext& context )
         {
-            if ( prop._metadata._bTransient == SW_TRUE )
+            if ( prop._metadata->_bTransient == SW_TRUE )
                 return false;
             switch ( context.getPurpose() )
             {
                 case SerializePurpose::Authoring:
-                    return prop._metadata._bRuntimeState == SW_FALSE;
+                    return prop._metadata->_bRuntimeState == SW_FALSE;
                 case SerializePurpose::Snapshot:
                     return true;
                 case SerializePurpose::SaveGame:
-                    return prop._metadata._bSaveGame == SW_TRUE || owner.hasSaveGameProperty() == false;
+                    return prop._metadata->_bSaveGame == SW_TRUE || owner.hasSaveGameProperty() == false;
             }
             return false;
         }
@@ -262,7 +274,7 @@ namespace sw
          */
         static bool isForbiddenInFile( const PropertyInfo& prop, const SerializeContext& context )
         {
-            return context.getPurpose() == SerializePurpose::Authoring && prop._metadata._bTransient == SW_FALSE && prop._metadata._bRuntimeState == SW_TRUE;
+            return context.getPurpose() == SerializePurpose::Authoring && prop._metadata->_bTransient == SW_FALSE && prop._metadata->_bRuntimeState == SW_TRUE;
         }
 
         /** @brief 저작 파일에 있으면 안 되는 필드(`isForbiddenInFile`)를 타입과 필드 이름으로 오류 로그에 남깁니다. */

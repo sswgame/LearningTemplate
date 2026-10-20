@@ -215,7 +215,8 @@ libclang 은 기본 타깃, 즉 생성기를 빌드한 기계로 헤더를 읽�
    함수로 변환해 넣으면 `REGISTER_ANNOTATION_FIELD_FN( Property, AssetType, _assetType, applyAssetType, Runtime )` 형태입니다.
    마지막 열은 출력 위치입니다. `Editor` 는 생성 코드의 `#if !defined( SW_SHIPPING )` 안에, `Runtime` 은 그 밖에 쓰고, `Manual` 은 코드 생성기가 손으로 씁니다.
 2. `ParsedReflection.h` 의 DTO 에 멤버를 추가합니다. 멤버 타입이 값의 종류를 정합니다. `uint8` 비트필드는 bool, 그 밖에 `string`, `float32`, `FunctionNetRole`, `ParsedRangeExpr`(`Min` · `Max` 의 숫자 또는 숫자 · 필드 이름 목록), `uint32`(`MaxCount` 의 개수)가 있습니다.
-3. 출력 위치가 `Editor` 나 `Runtime` 이면 엔진 메타데이터(`Source/Engine/Reflection/ReflectionTypes.h`)에 **같은 이름**의 멤버를 추가합니다.
+3. 출력 위치가 `Editor` 나 `Runtime` 이면 엔진 메타데이터(`Source/Engine/Reflection/ReflectionMetadata.h`)에 **같은 이름**의 멤버를 추가합니다. 생성 코드는 `p._metadata->멤버` 로 씁니다
+   (`ReflectionTypes.h` 는 메타데이터를 상자로만 들어, 키를 더해도 그 헤더를 읽는 TU 가 다시 컴파일되지 않습니다).
 4. `Source/Core/Predefined/AnnotationMeta.txt` 에 철자를 추가합니다. 예: `flag.MyFlag = MyFlag, myFlag`.
 
 2번과 4번이 1번과 맞지 않으면 생성기가 시작할 때 멈춥니다(`AnnotationFields::validateBindings`).

@@ -5,6 +5,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Localization/LocalizationDocuments.h"
 #include "Engine/Localization/TextGatherer.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
@@ -59,16 +60,16 @@ namespace
             s_info._typeID             = static_cast<uint32>( s_info._name.getHash() );
 
             sw::PropertyInfo label{};
-            label._name                                                        = sw::hashed_string( "_label" );
-            label._typeName                                                    = sw::hashed_string( "string" );
-            label._metadata._mapCustomMeta[sw::hashed_string( "Localizable" )] = "1";
-            label._metadata._mapCustomMeta[sw::hashed_string( "MaxLength" )]   = "16";
+            label._name                                                         = sw::hashed_string( "_label" );
+            label._typeName                                                     = sw::hashed_string( "string" );
+            label._metadata->_mapCustomMeta[sw::hashed_string( "Localizable" )] = "1";
+            label._metadata->_mapCustomMeta[sw::hashed_string( "MaxLength" )]   = "16";
             s_info._listProperty.push_back( label );
 
             sw::PropertyInfo internalName{};
-            internalName._name                                                           = sw::hashed_string( "_debugName" );
-            internalName._typeName                                                       = sw::hashed_string( "string" );
-            internalName._metadata._mapCustomMeta[sw::hashed_string( "NotLocalizable" )] = "1";
+            internalName._name                                                            = sw::hashed_string( "_debugName" );
+            internalName._typeName                                                        = sw::hashed_string( "string" );
+            internalName._metadata->_mapCustomMeta[sw::hashed_string( "NotLocalizable" )] = "1";
             s_info._listProperty.push_back( internalName );
 
             sw::PropertyInfo tooltip{};
