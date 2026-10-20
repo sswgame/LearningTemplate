@@ -13,13 +13,12 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "Scripts"))
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "Scripts" / "dev"))
 
-import CiFailureReport  # noqa: E402
-import ListCiJobs  # noqa: E402
-import ListWorktrees  # noqa: E402
-import RemoveWorktree  # noqa: E402
-import RunFullBuild  # noqa: E402
+from dev import CiFailureReport  # noqa: E402
+from dev import ListCiJobs  # noqa: E402
+from dev import ListWorktrees  # noqa: E402
+from dev import RemoveWorktree  # noqa: E402
+from dev import RunFullBuild  # noqa: E402
 from common import SharedLock, Worktree  # noqa: E402
 
 

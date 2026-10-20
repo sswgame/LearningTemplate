@@ -14,10 +14,9 @@ from pathlib import Path
 
 kScriptsRoot = Path(__file__).resolve().parents[2] / "Scripts"
 sys.path.insert(0, str(kScriptsRoot))
-sys.path.insert(0, str(kScriptsRoot / "dev"))
 
-import RunAgentLog  # noqa: E402
-import ListPlans  # noqa: E402
+from dev import RunAgentLog  # noqa: E402
+from dev import ListPlans  # noqa: E402
 
 kTable = "머리말\n\n| 날짜 | 일 | 조각 | 에이전트(모델 · effort) | 토큰 | 도구 호출 | 비고 |\n|---|---|---|---|---|---|---|\n| 2026-10-19 | 가 | 나 | w | 약 1만 | 3 | x |\n\n뒷글\n"
 kArgs = ["--task", "일", "--piece", "조각", "--agent", "worker(sonnet, medium)", "--tokens", "약 16만", "--calls", "65", "--note", "비고"]

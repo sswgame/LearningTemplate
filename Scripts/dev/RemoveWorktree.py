@@ -31,9 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common import getProjectRoot, runGit  # noqa: E402
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "generate"))
-from CookAssets import kCookStampPathPattern  # noqa: E402 — 쿠킹 스탬프 경로의 정본
+from generate.CookAssets import kCookStampPathPattern  # noqa: E402 — 쿠킹 스탬프 경로의 정본
 from common.Worktree import (  # noqa: E402
     describeWorktreeOwner,
     findMainRoot,

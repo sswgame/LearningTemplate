@@ -17,10 +17,9 @@ import unittest
 from pathlib import Path
 
 kRepositoryRoot = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(kRepositoryRoot / "Scripts" / "dev"))
 sys.path.insert(0, str(kRepositoryRoot / "Scripts"))
 
-import MakePackage  # noqa: E402
+from dev import MakePackage  # noqa: E402
 
 
 class MakePackageTest(unittest.TestCase):

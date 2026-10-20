@@ -35,7 +35,6 @@ import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(co
 from common import BuildTree, getProjectRoot, kTestBuildTargets, runGit  # noqa: E402
 from common.BuildTree import kDefaultPreset  # noqa: E402
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
 from common.LogDigest import getLogPath, printDigest  # noqa: E402
 from common.SharedLock import getSharedSlotCount, kDefaultWaitSeconds, runHolding  # noqa: E402
 from common.Worktree import findMainRoot  # noqa: E402

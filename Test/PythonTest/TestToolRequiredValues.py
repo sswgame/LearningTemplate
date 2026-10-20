@@ -4,14 +4,12 @@
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import os
 import sys
 import tempfile
 import unittest
 from pathlib import Path
-from types import ModuleType
 from unittest import mock
 
 kRepositoryRoot = Path(__file__).resolve().parents[2]
@@ -22,14 +20,8 @@ from common import BuildTree, Host  # noqa: E402
 from common.CookContract import CookContractSpec, kCookContractConfigRelative  # noqa: E402
 from common.PackFormat import PackFormatSpec, kPackFormatConfigRelative  # noqa: E402
 from conventions import FileScan  # noqa: E402
-
-
-def loadScriptInternal(relativePath: str, moduleName: str) -> ModuleType:
-    """진입점 스크립트를 파일 경로로 불러온다(패키지가 아니다)."""
-    moduleSpec = importlib.util.spec_from_file_location(moduleName, kRepositoryRoot / relativePath)
-    module = importlib.util.module_from_spec(moduleSpec)
-    moduleSpec.loader.exec_module(module)
-    return module
+from generate import CookAssets  # noqa: E402
+from qa import PerfRegression  # noqa: E402
 
 
 class ToolRequiredValuesTest(unittest.TestCase):
@@ -57,16 +49,14 @@ class ToolRequiredValuesTest(unittest.TestCase):
                 list(BuildTree.iterConfigured(Path(tempDir)))
 
     def testPackConfigWithoutCompressionStops(self) -> None:
-        cooker = loadScriptInternal("Scripts/generate/CookAssets.py", "CookAssetsRequiredValues")
         with self.assertRaises(KeyError):
-            cooker.resolveCompressionCodecInternal({})
+            CookAssets.resolveCompressionCodecInternal({})
         with self.assertRaises(KeyError):
-            cooker.shouldIncludeFile("a/b.txt", {"global_exclude_directories": []})
+            CookAssets.shouldIncludeFile("a/b.txt", {"global_exclude_directories": []})
 
     def testPerfToleranceWithoutMetricStops(self) -> None:
-        perf = loadScriptInternal("Scripts/qa/PerfRegression.py", "PerfRegressionRequiredValues")
         with self.assertRaises(KeyError):
-            perf.compareInternal({"Scope": {"p75_us": 10.0}}, {"Scope": {"p75_us": 11.0}}, {"p50_us": 0.1}, 0.0)
+            PerfRegression.compareInternal({"Scope": {"p75_us": 10.0}}, {"Scope": {"p75_us": 11.0}}, {"p50_us": 0.1}, 0.0)
 
     def testUnreadableSourceStops(self) -> None:
         with tempfile.TemporaryDirectory() as tempDir:

@@ -10,9 +10,7 @@
 
 from __future__ import annotations
 
-import importlib.util
 import sys
-import types
 import unittest
 from pathlib import Path
 
@@ -20,15 +18,7 @@ kRepositoryRoot = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(kRepositoryRoot / "Scripts"))
 
 from common import CookContractSpec, kFilePackConfig  # noqa: E402
-
-
-def loadCookerInternal() -> types.ModuleType:
-    """쿠커 스크립트를 모듈로 불러옵니다."""
-    cookerPath = kRepositoryRoot / "Scripts" / "generate" / "CookAssets.py"
-    moduleSpec = importlib.util.spec_from_file_location("CookAssetsUnderTest", cookerPath)
-    module = importlib.util.module_from_spec(moduleSpec)
-    moduleSpec.loader.exec_module(module)
-    return module
+from generate import CookAssets  # noqa: E402
 
 
 def listDomainDirectoriesInternal() -> list[Path]:
@@ -42,7 +32,7 @@ def listDomainDirectoriesInternal() -> list[Path]:
 class ServerPackExclusionTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.cooker = loadCookerInternal()
+        cls.cooker = CookAssets
         cls.spec = CookContractSpec.load(kRepositoryRoot)
         cls.packConfig = cls.cooker.requireConfig(kRepositoryRoot / kFilePackConfig, kFilePackConfig)
         cls.mapPackFilesByTarget: dict[str, list[str]] = {}
