@@ -7,6 +7,7 @@
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 
+#include "GameFramework/Base/Foundation/Data/GameSettings.h"
 #include "GameFramework/Base/Foundation/Framework/Flow/LoadingScreenController.h"
 #include "GameFramework/Base/Foundation/Framework/Flow/ScreenTransitionManager.h"
 
@@ -81,7 +82,11 @@ SW_TEST_CASE( LoadingScreenTest, LoadingScreenStaysForMinimumTime )
 {
     LoadingScreenFixture      fixture;
     sw::LoadingScreenSettings settings{};
-    settings._documentPath = "engine/ui/loading.ui.xml"; // 게임에서는 gamesettings 의 loadingScreen 이 채운다
+    // 경로 칸(`DataPath`)은 데이터 읽기만 채운다 — 게임처럼 gamesettings 의 loadingScreen 을 읽어 옮긴다(시작 맵은 필수 칸이라 함께 적는다).
+    sw::GameSettings gameSettings{};
+    SW_ASSERT_TRUE( gameSettings.loadFromXMLText(
+        "<GameSettings><startMap>engine/ui/loading.ui.xml</startMap><loadingScreen>engine/ui/loading.ui.xml</loadingScreen></GameSettings>", "test" ) );
+    settings._documentPath = gameSettings._loadingScreen;
     settings._listTip.push_back( "Tip one" );
     fixture._loading.setSettings( settings );
     SW_ASSERT_TRUE( fixture._loading.beginLoading() );
