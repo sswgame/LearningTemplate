@@ -149,11 +149,11 @@ namespace sw
         /** @brief 이번 프레임 모프 가중치입니다. 없으면 nullptr 입니다. */
         const vector<float32>* findMorphWeights() const { return _snapshot._pListMorphWeight.get(); }
         /** @brief 모든 배치(불투명 다음 투명)를 반환합니다. 간접 슬롯 순서와 같으며, 모프 풀 구성이 이 목록을 봅니다. */
-        const vector<GPUMeshBatch>& getAllBatches() const { return _snapshot._listAllBatch; }
-        /** @brief 불투명 배치를 반환합니다. */
-        const vector<GPUMeshBatch>& getOpaqueBatches() const { return _snapshot._listOpaqueBatch; }
-        /** @brief 투명 배치를 반환합니다. */
-        const vector<GPUMeshBatch>& getTransparentBatches() const { return _snapshot._listTransparentBatch; }
+        const vector<GPUMeshBatch>& getAllBatches() const { return _snapshot.getAllBatches(); }
+        /** @brief 불투명 배치 구간(모든 배치의 앞쪽)을 반환합니다. */
+        vector_reference<const GPUMeshBatch> getOpaqueBatches() const { return _snapshot.getOpaqueBatches(); }
+        /** @brief 투명 배치 구간(모든 배치의 뒤쪽)을 반환합니다. */
+        vector_reference<const GPUMeshBatch> getTransparentBatches() const { return _snapshot.getTransparentBatches(); }
         /** @brief 방출기마다의 입자 그리기(주 시점에서 먼 것부터)를 반환합니다. */
         const vector<GPUParticleBatch>& getParticleBatches() const { return _snapshot._listParticleBatch; }
         /** @brief 이 추가 뷰의 투명 순서(스냅샷이 싣고 온 것)입니다. 없으면 nullptr 입니다. */

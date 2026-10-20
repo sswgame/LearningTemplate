@@ -495,13 +495,13 @@ namespace sw
 
             static bool initializeElevator( GimmickNodeContext& context )
             {
-                float32      arrFloor[kMaxElevatorFloor] = {};
-                const uint32 floorCount                  = GameDataXML::parseFloats( context.getText( 0 ), arrFloor, kMaxElevatorFloor );
-                if ( floorCount == 0 )
-                    return failParam( context, "floors needs at least one height (\"0 4 8\")" );
+                vector<float32> listFloor;
+                if ( GameDataXML::parseFloatList( context.getText( 0 ), kMaxElevatorFloor, listFloor ) == false )
+                    return failParam( context, "floors needs 1..kMaxElevatorFloor numeric heights (\"0 4 8\")" );
+                const uint32 floorCount = static_cast<uint32>( listFloor.size() );
                 for ( uint32 floor = 0; floor < floorCount; ++floor )
                 {
-                    context._pFloatState[1 + floor] = arrFloor[floor];
+                    context._pFloatState[1 + floor] = listFloor[floor];
                 }
                 context._pIntState[1]   = static_cast<int32>( floorCount );
                 context._pIntState[0]   = MathUtil::clamp( static_cast<int32>( context.getNumber( 2 ) ), 0, static_cast<int32>( floorCount ) - 1 );
