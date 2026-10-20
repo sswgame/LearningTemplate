@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/Rule/ScavengerCarry.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -85,12 +86,7 @@ namespace sw
 
     bool ScavengerCarry::isHoldingTwoHanded() const
     {
-        for ( const ScavengerScrap& scrap : _listScrap )
-        {
-            if ( scrap._bTwoHanded == SW_TRUE )
-                return true;
-        }
-        return false;
+        return VectorUtil::containsBy<&ScavengerScrap::_bTwoHanded>( _listScrap, SW_TRUE );
     }
 
     void ScavengerCarry::writeState( Archive& outArchive ) const

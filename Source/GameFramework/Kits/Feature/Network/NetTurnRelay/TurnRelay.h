@@ -213,7 +213,12 @@ namespace sw
         [[nodiscard]] bool handleJoin( int32 connectionID, BitReader& reader );
         [[nodiscard]] bool handleAction( int32 connectionID, BitReader& reader );
         void               sendJoined( int32 connectionID, uint32 roomID, int32 seat, uint32 token );
-        void               sendDenied( int32 connectionID, uint32 roomID, TurnRejectReason reason );
+        /**
+         * @brief 방이 시작했거나 이번 입장(@p connectionID 가 @p seat 에 앉음)으로 다 찼으면 시작을 알립니다.
+         * @details 막 시작하면 모두에게, 이미 시작했으면 들어온 사람에게만 시작 알림을 보내고 놓친 행동을 보낸다.
+         */
+        void announceStart( TurnRoom& room, TurnSeat& seat, int32 connectionID );
+        void sendDenied( int32 connectionID, uint32 roomID, TurnRejectReason reason );
         /** @brief 그 연결에 큐에 쌓인 것이 없으면 바로 보내고, 있거나 창이 찼으면 큐 끝에 넣습니다. */
         void sendOrQueue( int32 connectionID );
         /** @brief 자리의 연결에 아직 보내지 않은 행동을 신뢰 창이 허락하는 만큼 보냅니다. */

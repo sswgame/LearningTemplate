@@ -2,6 +2,8 @@
 
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/Rule/AdventureDungeon.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -47,22 +49,12 @@ namespace sw
 {
     const AdventureDoorDef* AdventureDungeonDef::findDoor( const hashed_string& id ) const
     {
-        for ( const AdventureDoorDef& door : _listDoor )
-        {
-            if ( door._id == id )
-                return &door;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&AdventureDoorDef::_id>( _listDoor, id );
     }
 
     const AdventureTreasureDef* AdventureDungeonDef::findTreasure( const hashed_string& id ) const
     {
-        for ( const AdventureTreasureDef& treasure : _listTreasure )
-        {
-            if ( treasure._id == id )
-                return &treasure;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&AdventureTreasureDef::_id>( _listTreasure, id );
     }
 
     int32 AdventureDungeonDef::findDeviceIndex( const hashed_string& id ) const

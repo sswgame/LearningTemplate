@@ -18,30 +18,55 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 채취
     // ------------------------------------------------------------------------------
+    void RTSWorld::returnCargo( RTSUnit& unit )
+    {
+        const RTSUnit* pDepot = findUnit( findNearestDepot( unit._owner, unit._position ) );
+        if ( pDepot == nullptr )
+        {
+            unit._agent.stop();
+            return;
+        }
+        if ( isWithinReach( unit, *pDepot, _settings._interactSlack ) == false )
+        {
+            approach( unit, pDepot->_position, false );
+            return;
+        }
+        unit._agent.stop();
+        RTSPlayer& player = _listPlayer[static_cast<size_t>( unit._owner )];
+        if ( player._pWallet != nullptr )
+            player._pWallet->add( unit._cargoType == RTSResourceType::Gas ? _settings._gasCurrency : _settings._mineralCurrency, unit._cargoAmount );
+        pushEvent( RTSEvent::Kind::ResourcesDeposited, unit._owner, unit._id, unit._pDef->_id, unit._cargoAmount );
+        unit._cargoAmount = 0;
+        unit._cargoType   = RTSResourceType::None;
+        unit._gatherPhase = RTSGatherPhase::ToResource;
+        unit._repathTimer.clear();
+    }
+
+    void RTSWorld::updateHarvest( RTSUnit& unit, RTSUnit& target, RTSUnit& source, float32 deltaTime )
+    {
+        unit._gatherTimer += deltaTime;
+        if ( unit._gatherTimer < unit._pDef->_gatherTime )
+            return;
+        const int32 amount = MathUtil::min( unit._pDef->_cargo, source._resourceLeft );
+        source._resourceLeft -= amount;
+        unit._cargoAmount = amount;
+        unit._cargoType   = source._pDef->_resourceType;
+        unit._gatherPhase = RTSGatherPhase::Returning;
+        unit._repathTimer.clear();
+        target._harvester = RTSUnitID{};
+        if ( source._resourceLeft > 0 )
+            return;
+        pushEvent( RTSEvent::Kind::ResourceDepleted, unit._owner, source._id, source._pDef->_id );
+        const bool bExtractor = target._pDef->_bExtractor != SW_FALSE;
+        if ( bExtractor == false )
+            killUnit( source, RTSUnitID{} );
+    }
+
     void RTSWorld::updateGather( RTSUnit& unit, RTSOrder& order, float32 deltaTime )
     {
         if ( unit._gatherPhase == RTSGatherPhase::Returning )
         {
-            const RTSUnit* pDepot = findUnit( findNearestDepot( unit._owner, unit._position ) );
-            if ( pDepot == nullptr )
-            {
-                unit._agent.stop();
-                return;
-            }
-            if ( isWithinReach( unit, *pDepot, _settings._interactSlack ) == false )
-            {
-                approach( unit, pDepot->_position, false );
-                return;
-            }
-            unit._agent.stop();
-            RTSPlayer& player = _listPlayer[static_cast<size_t>( unit._owner )];
-            if ( player._pWallet != nullptr )
-                player._pWallet->add( unit._cargoType == RTSResourceType::Gas ? _settings._gasCurrency : _settings._mineralCurrency, unit._cargoAmount );
-            pushEvent( RTSEvent::Kind::ResourcesDeposited, unit._owner, unit._id, unit._pDef->_id, unit._cargoAmount );
-            unit._cargoAmount = 0;
-            unit._cargoType   = RTSResourceType::None;
-            unit._gatherPhase = RTSGatherPhase::ToResource;
-            unit._repathTimer.clear();
+            returnCargo( unit );
             return;
         }
 
@@ -70,22 +95,7 @@ namespace sw
 
         if ( unit._gatherPhase == RTSGatherPhase::Harvesting )
         {
-            unit._gatherTimer += deltaTime;
-            if ( unit._gatherTimer < unit._pDef->_gatherTime )
-                return;
-            const int32 amount = MathUtil::min( unit._pDef->_cargo, pSource->_resourceLeft );
-            pSource->_resourceLeft -= amount;
-            unit._cargoAmount = amount;
-            unit._cargoType   = pSource->_pDef->_resourceType;
-            unit._gatherPhase = RTSGatherPhase::Returning;
-            unit._repathTimer.clear();
-            pTarget->_harvester = RTSUnitID{};
-            if ( pSource->_resourceLeft <= 0 )
-            {
-                pushEvent( RTSEvent::Kind::ResourceDepleted, unit._owner, pSource->_id, pSource->_pDef->_id );
-                if ( bExtractor == false )
-                    killUnit( *pSource, RTSUnitID{} );
-            }
+            updateHarvest( unit, *pTarget, *pSource, deltaTime );
             return;
         }
 

@@ -1561,7 +1561,7 @@ namespace sw
     {
         const auto progressIt = _mapSettlement.find( settlementID );
         if ( progressIt == _mapSettlement.end() )
-            return; // 서비스가 내려간 뒤 거둔 일이다
+            return; // 서비스가 종료된 뒤 회수한 작업이다
         if ( bReadOk == false )
         {
             finishSettlement( settlementID, false );

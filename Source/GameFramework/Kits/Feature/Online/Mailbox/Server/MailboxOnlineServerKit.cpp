@@ -59,7 +59,7 @@ namespace sw
 
             void stop() override
             {
-                // 맡긴 요청 · 만료 정리 · 캠페인 읽기를 거둔다 — 저장소를 내리기 전.
+                // 맡긴 요청 · 만료 정리 · 캠페인 읽기를 회수한다 — 저장소를 종료하기 전.
                 if ( _bStarted )
                     _service.shutdown();
                 _bStarted = false;

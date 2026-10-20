@@ -499,24 +499,7 @@ namespace sw
             }
             case EphemeralOperation::Increment:
             {
-                const bool bSingleCommand = operation._request._ttlMs <= 0;
-                if ( bSingleCommand )
-                {
-                    if ( value._type == RespType::Integer )
-                        reply._integer = value._integer;
-                    else
-                        reply._result = EphemeralResult::Invalid; // 정수가 아닌 값이거나 범위를 넘었다
-                    break;
-                }
-                if ( step != RespEphemeralStoreInternal::kStepFourth )
-                    break; // MULTI 와 QUEUED 의 답이다
-                const bool bExecuted = value._type == RespType::Array && value._listElement.size() == 2;
-                if ( bExecuted == false || value._listElement[1]._type != RespType::Integer )
-                {
-                    reply._result = EphemeralResult::Invalid;
-                    break;
-                }
-                reply._integer = value._listElement[1]._integer;
+                handleIncrementReply( operation, step, value );
                 break;
             }
             case EphemeralOperation::ScoreSet:
@@ -539,26 +522,7 @@ namespace sw
             }
             case EphemeralOperation::ScoreRank:
             {
-                if ( reply._result != EphemeralResult::Ok )
-                    break;
-                if ( value.isNull() )
-                {
-                    reply._result = EphemeralResult::NotFound;
-                    break;
-                }
-                if ( step == RespEphemeralStoreInternal::kStepFirst )
-                {
-                    if ( value._type == RespType::Integer )
-                        reply._integer = value._integer;
-                    else
-                        reply._result = EphemeralResult::Invalid; // WRONGTYPE
-                    break;
-                }
-                int64 score = 0;
-                if ( value.tryReadIntegerText( score ) )
-                    reply._score = score;
-                else
-                    reply._result = EphemeralResult::Invalid;
+                handleScoreRankReply( operation, step, value );
                 break;
             }
             case EphemeralOperation::ScoreRange:
@@ -588,6 +552,54 @@ namespace sw
         }
         if ( operation._awaitingReplyCount == 0 && operation._bDone == SW_FALSE )
             operation._bDone = SW_TRUE;
+    }
+
+    void RespEphemeralStore::handleIncrementReply( Operation& operation, uint32 step, const RespValue& value )
+    {
+        EphemeralReply& reply          = operation._reply;
+        const bool      bSingleCommand = operation._request._ttlMs <= 0;
+        if ( bSingleCommand )
+        {
+            if ( value._type == RespType::Integer )
+                reply._integer = value._integer;
+            else
+                reply._result = EphemeralResult::Invalid; // 정수가 아닌 값이거나 범위를 넘었다
+            return;
+        }
+        if ( step != RespEphemeralStoreInternal::kStepFourth )
+            return; // MULTI 와 QUEUED 의 답이다
+        const bool bExecuted = value._type == RespType::Array && value._listElement.size() == 2;
+        if ( bExecuted == false || value._listElement[1]._type != RespType::Integer )
+        {
+            reply._result = EphemeralResult::Invalid;
+            return;
+        }
+        reply._integer = value._listElement[1]._integer;
+    }
+
+    void RespEphemeralStore::handleScoreRankReply( Operation& operation, uint32 step, const RespValue& value )
+    {
+        EphemeralReply& reply = operation._reply;
+        if ( reply._result != EphemeralResult::Ok )
+            return;
+        if ( value.isNull() )
+        {
+            reply._result = EphemeralResult::NotFound;
+            return;
+        }
+        if ( step == RespEphemeralStoreInternal::kStepFirst )
+        {
+            if ( value._type == RespType::Integer )
+                reply._integer = value._integer;
+            else
+                reply._result = EphemeralResult::Invalid; // WRONGTYPE
+            return;
+        }
+        int64 score = 0;
+        if ( value.tryReadIntegerText( score ) )
+            reply._score = score;
+        else
+            reply._result = EphemeralResult::Invalid;
     }
 
     void RespEphemeralStore::handleCompareReply( Operation& operation, uint32 step, const RespValue& value )

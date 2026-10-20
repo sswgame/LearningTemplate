@@ -179,8 +179,8 @@ SW_TEST_CASE( CreatureLifeTest, CatalogReadsPatternsAndOrdersBySize )
 
     const HabitatDef* pTallGrass = world._catalog.findHabitat( "tall_grass" );
     SW_ASSERT_NOT_NULL( pTallGrass );
-    SW_EXPECT_EQUAL( 3, pTallGrass->_width );
-    SW_EXPECT_EQUAL( 2, pTallGrass->_height );
+    SW_EXPECT_EQUAL( 3, pTallGrass->_topology._width );
+    SW_EXPECT_EQUAL( 2, pTallGrass->_topology._height );
     SW_EXPECT_EQUAL( 5, pTallGrass->countClaimedCells() );
     SW_EXPECT_EQUAL( 0, world._catalog.getHabitatMatchOrder().front() ); // 5 칸이 2 칸보다 먼저
 

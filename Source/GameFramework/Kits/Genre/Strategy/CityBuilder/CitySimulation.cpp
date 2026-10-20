@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CitySimulation.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -43,6 +44,81 @@ namespace sw
             static int32 computeStockTarget( int32 population, int32 goodsPerFourPeople )
             {
                 return MathUtil::max( 2, ( population + 3 ) / 4 * goodsPerFourPeople * 2 );
+            }
+
+            /** @brief `writeState` 가 쓴 건물 하나를 읽습니다. 카탈로그에서 빠진 건물이면 도시를 맞출 수 없으므로 false 입니다. */
+            [[nodiscard]] static bool readBuilding( Archive& archive, const CityCatalog& catalog, CityBuilding& outBuilding )
+            {
+                hashed_string defID;
+                if ( StateArchiveUtil::readName( archive, defID ) == false )
+                    return false;
+                outBuilding._pDef = defID.empty() ? nullptr : catalog.findBuilding( defID );
+                if ( defID.empty() == false && outBuilding._pDef == nullptr )
+                    return false;
+                if ( outBuilding._stock.readState( archive ) == false )
+                    return false;
+                StateArchiveUtil::readInt2( archive, outBuilding._origin );
+                StateArchiveUtil::readInt2( archive, outBuilding._accessTile );
+                archive >> outBuilding._efficiency;
+                archive >> outBuilding._walkerTimer;
+                archive >> outBuilding._productionProgress;
+                for ( float32& serviceTime : outBuilding._arrServiceTime )
+                {
+                    archive >> serviceTime;
+                }
+                archive >> outBuilding._evolveTimer;
+                archive >> outBuilding._devolveTimer;
+                archive >> outBuilding._immigrationTimer;
+                archive >> outBuilding._assignedWorkers;
+                archive >> outBuilding._activeWalkerCount;
+                archive >> outBuilding._level;
+                archive >> outBuilding._population;
+                archive >> outBuilding._bAlive;
+                return archive.isError() == false;
+            }
+
+            /** @brief 타일 좌표 목록 하나(개수 + 좌표)를 읽습니다. */
+            [[nodiscard]] static bool readTileList( Archive& archive, vector<int2>& outListTile )
+            {
+                uint32 count = 0;
+                if ( StateArchiveUtil::readCount( archive, sizeof( int32 ) * 2, count ) == false )
+                    return false;
+                outListTile.resize( count );
+                for ( int2& tile : outListTile )
+                {
+                    StateArchiveUtil::readInt2( archive, tile );
+                }
+                return true;
+            }
+
+            /** @brief `writeState` 가 쓴 일꾼 하나를 읽습니다. 집 번호가 @p buildingCount 밖이거나 열거형이 범위 밖이면 false 입니다. */
+            [[nodiscard]] static bool readWalker( Archive& archive, uint32 buildingCount, CityWalker& outWalker )
+            {
+                const bool bListRead = readTileList( archive, outWalker._listPath ) && readTileList( archive, outWalker._listVisited );
+                if ( bListRead == false || StateArchiveUtil::readName( archive, outWalker._cargoGood ) == false )
+                    return false;
+                uint8 kind    = 0;
+                uint8 service = 0;
+                StateArchiveUtil::readInt2( archive, outWalker._tile );
+                StateArchiveUtil::readInt2( archive, outWalker._previousTile );
+                StateArchiveUtil::readInt2( archive, outWalker._nextTile );
+                archive >> outWalker._progress;
+                archive >> outWalker._homeBuilding;
+                archive >> outWalker._targetBuilding;
+                archive >> outWalker._stepsLeft;
+                archive >> outWalker._cargoAmount;
+                archive >> kind;
+                archive >> service;
+                archive >> outWalker._bReturning;
+                archive >> outWalker._bAlive;
+                const bool bHomeValid         = -1 <= outWalker._homeBuilding && outWalker._homeBuilding < static_cast<int32>( buildingCount );
+                const bool bEnumValid         = kind <= static_cast<uint8>( CityWalkerKind::Cart ) && service <= static_cast<uint8>( CityService::Count );
+                const bool bInvalidWalkerData = archive.isError() || bHomeValid == false || bEnumValid == false;
+                if ( bInvalidWalkerData )
+                    return false;
+                outWalker._kind    = static_cast<CityWalkerKind>( kind );
+                outWalker._service = static_cast<CityService>( service );
+                return true;
             }
         };
     } // namespace
@@ -419,9 +495,8 @@ namespace sw
         updateBuildings( deltaTime );
         updateWalkers( deltaTime );
         updateHouses( deltaTime );
-        _listWalker.erase( std::remove_if( _listWalker.begin(), _listWalker.end(), []( const CityWalker& walker )
-        { return walker._bAlive == SW_FALSE; } ),
-                           _listWalker.end() );
+        VectorUtil::removeIf( _listWalker, []( const CityWalker& walker )
+        { return walker._bAlive == SW_FALSE; } );
     }
 
     void CitySimulation::assignLabor()
@@ -1085,32 +1160,7 @@ namespace sw
         vector<CityBuilding> listBuilding( buildingCount );
         for ( CityBuilding& building : listBuilding )
         {
-            hashed_string defID;
-            if ( StateArchiveUtil::readName( archive, defID ) == false )
-                return false;
-            building._pDef = defID.empty() ? nullptr : _pCatalog->findBuilding( defID );
-            if ( defID.empty() == false && building._pDef == nullptr )
-                return false; // 카탈로그에서 빠진 건물이라 도시를 맞출 수 없다
-            if ( building._stock.readState( archive ) == false )
-                return false;
-            StateArchiveUtil::readInt2( archive, building._origin );
-            StateArchiveUtil::readInt2( archive, building._accessTile );
-            archive >> building._efficiency;
-            archive >> building._walkerTimer;
-            archive >> building._productionProgress;
-            for ( float32& serviceTime : building._arrServiceTime )
-            {
-                archive >> serviceTime;
-            }
-            archive >> building._evolveTimer;
-            archive >> building._devolveTimer;
-            archive >> building._immigrationTimer;
-            archive >> building._assignedWorkers;
-            archive >> building._activeWalkerCount;
-            archive >> building._level;
-            archive >> building._population;
-            archive >> building._bAlive;
-            if ( archive.isError() )
+            if ( CitySimulationInternal::readBuilding( archive, *_pCatalog, building ) == false )
                 return false;
         }
 
@@ -1120,45 +1170,8 @@ namespace sw
         vector<CityWalker> listWalker( walkerCount );
         for ( CityWalker& walker : listWalker )
         {
-            uint32 pathCount = 0;
-            if ( StateArchiveUtil::readCount( archive, sizeof( int32 ) * 2, pathCount ) == false )
+            if ( CitySimulationInternal::readWalker( archive, buildingCount, walker ) == false )
                 return false;
-            walker._listPath.resize( pathCount );
-            for ( int2& tile : walker._listPath )
-            {
-                StateArchiveUtil::readInt2( archive, tile );
-            }
-            uint32 visitedCount = 0;
-            if ( StateArchiveUtil::readCount( archive, sizeof( int32 ) * 2, visitedCount ) == false )
-                return false;
-            walker._listVisited.resize( visitedCount );
-            for ( int2& tile : walker._listVisited )
-            {
-                StateArchiveUtil::readInt2( archive, tile );
-            }
-            if ( StateArchiveUtil::readName( archive, walker._cargoGood ) == false )
-                return false;
-            uint8 kind    = 0;
-            uint8 service = 0;
-            StateArchiveUtil::readInt2( archive, walker._tile );
-            StateArchiveUtil::readInt2( archive, walker._previousTile );
-            StateArchiveUtil::readInt2( archive, walker._nextTile );
-            archive >> walker._progress;
-            archive >> walker._homeBuilding;
-            archive >> walker._targetBuilding;
-            archive >> walker._stepsLeft;
-            archive >> walker._cargoAmount;
-            archive >> kind;
-            archive >> service;
-            archive >> walker._bReturning;
-            archive >> walker._bAlive;
-            const bool bHomeValid         = -1 <= walker._homeBuilding && walker._homeBuilding < static_cast<int32>( buildingCount );
-            const bool bEnumValid         = kind <= static_cast<uint8>( CityWalkerKind::Cart ) && service <= static_cast<uint8>( CityService::Count );
-            const bool bInvalidWalkerData = archive.isError() || bHomeValid == false || bEnumValid == false;
-            if ( bInvalidWalkerData )
-                return false;
-            walker._kind    = static_cast<CityWalkerKind>( kind );
-            walker._service = static_cast<CityService>( service );
         }
 
         FixedStepTimer stepTimer = _stepTimer;

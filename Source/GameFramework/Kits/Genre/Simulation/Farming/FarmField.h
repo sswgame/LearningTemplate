@@ -94,6 +94,8 @@ namespace sw
         const FarmTile* findTile( int32 x, int32 y ) const;
         int32           getWidth() const { return _topology._width; }
         int32           getHeight() const { return _topology._height; }
+        /** @brief 밭의 타일 격자를 반환합니다. 타일 번호와 좌표는 이것으로 바꾸고 `index % 너비` 를 손으로 적지 않습니다. */
+        const GridTopology& getTopology() const { return _topology; }
         /** @brief 작물이 있는 타일 수를 반환합니다(시든 것 포함). */
         uint32 getCropCount() const;
         /** @brief 거둘 수 있는 타일 수를 반환합니다. */

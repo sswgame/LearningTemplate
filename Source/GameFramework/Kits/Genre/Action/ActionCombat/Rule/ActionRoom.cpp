@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Rule/ActionRoom.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
@@ -330,11 +331,8 @@ namespace sw
                 projectile._bAlive = SW_FALSE;
         }
 
-        _listProjectile.erase(
-            std::remove_if( _listProjectile.begin(), _listProjectile.end(),
-                            []( const Projectile& proj )
-        { return proj._bAlive == SW_FALSE; } ),
-            _listProjectile.end() );
+        VectorUtil::removeIf( _listProjectile, []( const Projectile& projectile )
+        { return projectile._bAlive == SW_FALSE; } );
     }
 
     void ActionRoom::resolvePlayerHits( float32 playerX, float32 playerY, ActionRoomFrameResult& outResult )

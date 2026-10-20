@@ -157,8 +157,13 @@ namespace sw
         /** @brief 스냅숏 메시지 하나를 보냅니다. 신뢰 창이 찼으면 false 를 반환하고, 호출한 쪽이 요청을 다음 `update` 로 미룹니다. */
         [[nodiscard]] bool sendSnapshot( Entry& entry, FractureComponentBase& component, int32 connectionID );
         void               sendPoses( Entry& entry, FractureComponentBase& component, uint32 serverTick );
-        void               sendHash( const Entry& entry, const FractureComponentBase& component );
-        int32              broadcast( NetChannelType channel );
+        /**
+         * @brief 자세 목록 하나를 메시지 예산(`kPoseMessageBudget`)에서 끊어 보냅니다.
+         * @details 멈춘 자세(@p bRest)는 비트 그대로, 움직이는 자세는 양자화해서 쓴다. 하나라도 양자화하지 못한 메시지는 보내지 않는다.
+         */
+        void  sendPoseList( const Entry& entry, const vector<const FractureGroupPose*>& listPose, bool bRest, bool bReliable, uint32 serverTick );
+        void  sendHash( const Entry& entry, const FractureComponentBase& component );
+        int32 broadcast( NetChannelType channel );
 
         vector<Entry>                _listEntry;
         vector<Request>              _listRequest;

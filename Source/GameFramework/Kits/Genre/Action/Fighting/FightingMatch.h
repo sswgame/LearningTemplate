@@ -294,7 +294,19 @@ namespace sw
         /** @brief 두 몸을 출발 위치로 되돌립니다. 라운드 번호와 시간은 `_series` 가 다시 시작합니다. */
         void startRound();
         void resetFighter( int32 player );
+        /**
+         * @brief 상태마다 한 프레임을 진행합니다.
+         * @note 본문이 100 줄 안팎이지만 상태마다 짧은 switch 디스패처라 더 나누지 않는다(긴 함수 기준의 "유지"). 긴 상태는 `update*` 로 뺐다.
+         */
         void updateFighter( int32 player, uint16 pressedButtons );
+        /** @brief 기술을 한 프레임 진행합니다. 끝났으면 `finishMove`, 추적 기술이면 상대 쪽으로 돕니다. */
+        void updateAttack( int32 player );
+        /** @brief 상대를 축으로 옆걸음 한 프레임만큼 돕니다. */
+        void updateSidestep( int32 player );
+        /** @brief 띄운 몸을 한 프레임 움직이고, 땅에 닿으면 다운, 처음 벽에 닿으면 벽꽝으로 넘깁니다. */
+        void updateJuggle( int32 player );
+        /** @brief 잡힌 쪽의 풀기 입력을 봅니다. 첫 시도가 맞으면 둘 다 경직으로 풀고, 시간이 다 되면 잡기가 들어갑니다. */
+        void updateThrowBreak( int32 player, uint16 pressedButtons );
         void updateControl( int32 player, const InputFrame& input );
         void resolveSpacing();
         void resolveHits();
@@ -308,6 +320,10 @@ namespace sw
         void  finishMove( int32 player );
         bool  testHit( int32 attacker );
         void  applyHit( int32 attacker );
+        /** @brief 잡기가 들어갔습니다. 상대에게 풀기 입력 창을 열고 잡은 쪽은 `Throwing` 으로 둡니다(피해는 `landThrow`). */
+        void grabOpponent( int32 attacker, const FighterMove& move );
+        /** @brief 띄운 상대에게 맞힌 추가타입니다. 스크류 · 바운드는 콤보마다 한 번이고, 그 밖에는 맞을수록 덜 뜹니다. */
+        void  hitAirborneOpponent( int32 attacker, const FighterMove& move );
         void  landThrow( int32 defender );
         int32 computeDamage( int32 attacker, float32 baseDamage, bool bComboScaled ) const;
         void  applyDamage( int32 defender, int32 damage );

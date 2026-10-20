@@ -206,84 +206,9 @@ namespace sw
         if ( bInvalidRestoredFlags )
             return false;
 
-        uint32 hookCount = 0;
-        if ( StateArchiveUtil::readCount( archive, 12, hookCount ) == false )
-            return false;
-        for ( uint32 index = 0; index < hookCount; ++index )
-        {
-            float3 position;
-            archive >> position;
-            (void)restored.addHook( position );
-        }
         uint32 palletCount = 0;
-        if ( StateArchiveUtil::readCount( archive, 13, palletCount ) == false )
+        if ( restored.readStage( archive, palletCount ) == false )
             return false;
-        for ( uint32 index = 0; index < palletCount; ++index )
-        {
-            float3 position;
-            uint8  state = 0;
-            archive >> position;
-            archive >> state;
-            if ( archive.isError() || state > static_cast<uint8>( PalletState::Broken ) )
-                return false;
-            restored._listPalletState[static_cast<size_t>( restored.addPallet( position ) )] = static_cast<PalletState>( state );
-        }
-        uint32 lockerCount = 0;
-        if ( StateArchiveUtil::readCount( archive, 16, lockerCount ) == false )
-            return false;
-        for ( uint32 index = 0; index < lockerCount; ++index )
-        {
-            float3 position;
-            int32  occupant = -1;
-            archive >> position;
-            archive >> occupant;
-            restored._listLockerOccupant[static_cast<size_t>( restored.addLocker( position ) )] = occupant;
-        }
-        uint32 windowCount = 0;
-        if ( StateArchiveUtil::readCount( archive, 20, windowCount ) == false )
-            return false;
-        for ( uint32 index = 0; index < windowCount; ++index )
-        {
-            float3 position;
-            archive >> position;
-            HorrorWindow& window = restored._listWindow[static_cast<size_t>( restored.addWindow( position ) )];
-            archive >> window._blockedRemaining;
-            archive >> window._chaseVaultCount;
-        }
-        uint32 generatorCount = 0;
-        if ( StateArchiveUtil::readCount( archive, 14, generatorCount ) == false )
-            return false;
-        for ( uint32 index = 0; index < generatorCount; ++index )
-        {
-            float3 position;
-            uint8  bKicked  = SW_FALSE;
-            uint8  bBlocked = SW_FALSE;
-            archive >> position;
-            archive >> bKicked;
-            archive >> bBlocked;
-            const bool bInvalidGeneratorFlags = archive.isError() || bKicked > SW_TRUE || bBlocked > SW_TRUE;
-            if ( bInvalidGeneratorFlags )
-                return false;
-            const int32 generator = restored.addGenerator( position );
-            restored.configureGenerator( generator, bKicked == SW_TRUE ); // 걷어차인 발전기는 퇴행 규칙을 쓴다
-            HorrorGenerator& target = restored._listGenerator[static_cast<size_t>( generator )];
-            target._bBlocked        = bBlocked;
-            if ( target._progress.readState( archive ) == false )
-                return false;
-        }
-        uint32 gateCount = 0;
-        if ( StateArchiveUtil::readCount( archive, 12, gateCount ) == false )
-            return false;
-        for ( uint32 index = 0; index < gateCount; ++index )
-        {
-            float3 position;
-            archive >> position;
-            if ( archive.isError() )
-                return false;
-            const int32 gate = restored.addGate( position );
-            if ( restored._listGate[static_cast<size_t>( gate )]._progress.readState( archive ) == false )
-                return false;
-        }
 
         uint32 survivorCount = 0;
         // 생존자마다 최소한 위치(12) + 실수, 타이머, 정수 필드(60) + 체력, 치료, 점수
@@ -305,23 +230,7 @@ namespace sw
                 return false;
         }
 
-        HorrorKiller& killer = restored._killer;
-        if ( killer._score.readState( archive ) == false )
-            return false;
-        archive >> killer._position;
-        archive >> killer._forward;
-        archive >> killer._busyExit;
-        const bool bKillerTimerRead = StateArchiveUtil::readCountdown( archive, killer._attackCooldown ) &&
-                                      StateArchiveUtil::readCountdown( archive, killer._stunRemaining ) &&
-                                      StateArchiveUtil::readCountdown( archive, killer._busyRemaining ) &&
-                                      StateArchiveUtil::readCountdown( archive, killer._abilityCooldown );
-        archive >> killer._carrying;
-        archive >> killer._breakingPallet;
-        archive >> killer._participant;
-        archive >> killer._bVaulting;
-        const bool bKillerValid = bKillerTimerRead && archive.isOk() && -1 <= killer._carrying && killer._carrying < static_cast<int32>( survivorCount ) &&
-                                -1 <= killer._breakingPallet && killer._breakingPallet < static_cast<int32>( palletCount ) && killer._bVaulting <= SW_TRUE;
-        if ( bKillerValid == false )
+        if ( restored.readKiller( archive, survivorCount, palletCount ) == false )
             return false;
 
         restored._bStarted = bStarted;
@@ -370,5 +279,108 @@ namespace sw
         outSurvivor._state    = static_cast<SurvivorState>( state );
         outSurvivor._activity = static_cast<SurvivorActivity>( activity );
         return true;
+    }
+
+    bool HorrorMatch::readStage( Archive& archive, uint32& outPalletCount )
+    {
+        uint32 hookCount = 0;
+        if ( StateArchiveUtil::readCount( archive, 12, hookCount ) == false )
+            return false;
+        for ( uint32 index = 0; index < hookCount; ++index )
+        {
+            float3 position;
+            archive >> position;
+            (void)addHook( position );
+        }
+        if ( StateArchiveUtil::readCount( archive, 13, outPalletCount ) == false )
+            return false;
+        for ( uint32 index = 0; index < outPalletCount; ++index )
+        {
+            float3 position;
+            uint8  state = 0;
+            archive >> position;
+            archive >> state;
+            if ( archive.isError() || state > static_cast<uint8>( PalletState::Broken ) )
+                return false;
+            _listPalletState[static_cast<size_t>( addPallet( position ) )] = static_cast<PalletState>( state );
+        }
+        uint32 lockerCount = 0;
+        if ( StateArchiveUtil::readCount( archive, 16, lockerCount ) == false )
+            return false;
+        for ( uint32 index = 0; index < lockerCount; ++index )
+        {
+            float3 position;
+            int32  occupant = -1;
+            archive >> position;
+            archive >> occupant;
+            _listLockerOccupant[static_cast<size_t>( addLocker( position ) )] = occupant;
+        }
+        uint32 windowCount = 0;
+        if ( StateArchiveUtil::readCount( archive, 20, windowCount ) == false )
+            return false;
+        for ( uint32 index = 0; index < windowCount; ++index )
+        {
+            float3 position;
+            archive >> position;
+            HorrorWindow& window = _listWindow[static_cast<size_t>( addWindow( position ) )];
+            archive >> window._blockedRemaining;
+            archive >> window._chaseVaultCount;
+        }
+        uint32 generatorCount = 0;
+        if ( StateArchiveUtil::readCount( archive, 14, generatorCount ) == false )
+            return false;
+        for ( uint32 index = 0; index < generatorCount; ++index )
+        {
+            float3 position;
+            uint8  bKicked  = SW_FALSE;
+            uint8  bBlocked = SW_FALSE;
+            archive >> position;
+            archive >> bKicked;
+            archive >> bBlocked;
+            const bool bInvalidGeneratorFlags = archive.isError() || bKicked > SW_TRUE || bBlocked > SW_TRUE;
+            if ( bInvalidGeneratorFlags )
+                return false;
+            const int32 generator = addGenerator( position );
+            configureGenerator( generator, bKicked == SW_TRUE ); // 걷어차인 발전기는 퇴행 규칙을 쓴다
+            HorrorGenerator& target = _listGenerator[static_cast<size_t>( generator )];
+            target._bBlocked        = bBlocked;
+            if ( target._progress.readState( archive ) == false )
+                return false;
+        }
+        uint32 gateCount = 0;
+        if ( StateArchiveUtil::readCount( archive, 12, gateCount ) == false )
+            return false;
+        for ( uint32 index = 0; index < gateCount; ++index )
+        {
+            float3 position;
+            archive >> position;
+            if ( archive.isError() )
+                return false;
+            const int32 gate = addGate( position );
+            if ( _listGate[static_cast<size_t>( gate )]._progress.readState( archive ) == false )
+                return false;
+        }
+        return true;
+    }
+
+    bool HorrorMatch::readKiller( Archive& archive, uint32 survivorCount, uint32 palletCount )
+    {
+        HorrorKiller& killer = _killer;
+        if ( killer._score.readState( archive ) == false )
+            return false;
+        archive >> killer._position;
+        archive >> killer._forward;
+        archive >> killer._busyExit;
+        const bool bKillerTimerRead = StateArchiveUtil::readCountdown( archive, killer._attackCooldown ) &&
+                                      StateArchiveUtil::readCountdown( archive, killer._stunRemaining ) &&
+                                      StateArchiveUtil::readCountdown( archive, killer._busyRemaining ) &&
+                                      StateArchiveUtil::readCountdown( archive, killer._abilityCooldown );
+        archive >> killer._carrying;
+        archive >> killer._breakingPallet;
+        archive >> killer._participant;
+        archive >> killer._bVaulting;
+        const bool bKillerValid = bKillerTimerRead && archive.isOk() && -1 <= killer._carrying && killer._carrying < static_cast<int32>( survivorCount ) &&
+                                -1 <= killer._breakingPallet && killer._breakingPallet < static_cast<int32>( palletCount ) && killer._bVaulting <= SW_TRUE;
+        return bKillerValid;
     }
 } // namespace sw

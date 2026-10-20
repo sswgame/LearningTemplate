@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureTown.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -31,14 +32,15 @@ namespace sw
             /** @brief 회전한 패턴의 가로와 세로를 반환합니다(홀수 회전이면 서로 바뀝니다). */
             static int2 computeRotatedSize( const HabitatDef& habitat, int32 rotation )
             {
-                return ( rotation & 1 ) != 0 ? int2{ habitat._height, habitat._width } : int2{ habitat._width, habitat._height };
+                const GridTopology& pattern = habitat._topology;
+                return ( rotation & 1 ) != 0 ? int2{ pattern._height, pattern._width } : int2{ pattern._width, pattern._height };
             }
 
             /** @brief 회전한 패턴의 (@p rotatedX, @p rotatedY) 셀이 원래 패턴의 어느 셀인지 반환합니다. 90° 를 @p rotation 번 돌린 것입니다. */
             static const HabitatCell& sampleRotated( const HabitatDef& habitat, int32 rotation, int32 rotatedX, int32 rotatedY )
             {
-                const int32 width  = habitat._width;
-                const int32 height = habitat._height;
+                const int32 width  = habitat._topology._width;
+                const int32 height = habitat._topology._height;
                 switch ( rotation )
                 {
                     case 1:
@@ -55,6 +57,63 @@ namespace sw
             static hashed_string makeDeliverKind() { return hashed_string( "Deliver" ); }
 
             static hashed_string makeHabitatKind() { return hashed_string( "Habitat" ); }
+
+            /** @brief 이름 목록 하나(개수 + 이름)를 읽어 @p outListName 을 채웁니다. */
+            [[nodiscard]] static bool readNameList( Archive& archive, vector<hashed_string>& outListName )
+            {
+                uint32 count = 0;
+                if ( StateArchiveUtil::readCount( archive, 4, count ) == false )
+                    return false;
+                outListName.assign( count, hashed_string{} );
+                for ( hashed_string& name : outListName )
+                {
+                    if ( StateArchiveUtil::readName( archive, name ) == false )
+                        return false;
+                }
+                return true;
+            }
+
+            /** @brief `writeState` 가 쓴 서식지 하나를 읽습니다. 셀 번호가 마을(@p tileCount 셀) 밖이면 false 입니다. */
+            [[nodiscard]] static bool readHabitat( Archive& archive, int32 tileCount, HabitatInstance& outHabitat )
+            {
+                uint32 habitatTileCount = 0;
+                if ( StateArchiveUtil::readName( archive, outHabitat._habitatID ) == false )
+                    return false;
+                StateArchiveUtil::readInt2( archive, outHabitat._origin );
+                archive >> outHabitat._id;
+                archive >> outHabitat._rotation;
+                if ( StateArchiveUtil::readCount( archive, 4, habitatTileCount ) == false )
+                    return false;
+                outHabitat._listTile.resize( habitatTileCount, 0 );
+                for ( int32& tileIndex : outHabitat._listTile )
+                {
+                    archive >> tileIndex;
+                    const bool bInside = 0 <= tileIndex && tileIndex < tileCount;
+                    if ( bInside == false )
+                        return false;
+                }
+                return true;
+            }
+
+            /** @brief `writeState` 가 쓴 생물 하나를 읽습니다. 번호가 가리키는 서식지 · 집의 확인은 모두 읽은 뒤에 합니다. */
+            [[nodiscard]] static bool readCreature( Archive& archive, TownCreature& outCreature )
+            {
+                uint32     abilityCount = 0;
+                const bool bHeadRead    = StateArchiveUtil::readName( archive, outCreature._speciesID ) && StateArchiveUtil::readCount( archive, 4, abilityCount );
+                if ( bHeadRead == false )
+                    return false;
+                outCreature._listAbilityUse.resize( abilityCount, 0 );
+                for ( int32& useCount : outCreature._listAbilityUse )
+                {
+                    archive >> useCount;
+                }
+                archive >> outCreature._habitat;
+                archive >> outCreature._house;
+                archive >> outCreature._lastTalkDay;
+                archive >> outCreature._lastGiftDay;
+                archive >> outCreature._arrivalDay;
+                return true;
+            }
         };
     } // namespace
 } // namespace sw
@@ -401,12 +460,7 @@ namespace sw
 
     const HabitatInstance* CreatureTown::findHabitat( int32 habitatInstanceID ) const
     {
-        for ( const HabitatInstance& instance : _listHabitat )
-        {
-            if ( instance._id == habitatInstanceID )
-                return &instance;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&HabitatInstance::_id>( _listHabitat, habitatInstanceID );
     }
 
     int32 CreatureTown::countHabitats( const hashed_string& habitatID ) const
@@ -783,22 +837,8 @@ namespace sw
         town._listHabitat.assign( habitatCount, HabitatInstance{} );
         for ( HabitatInstance& habitat : town._listHabitat )
         {
-            uint32 habitatTileCount = 0;
-            if ( StateArchiveUtil::readName( archive, habitat._habitatID ) == false )
+            if ( CreatureTownInternal::readHabitat( archive, tileCount, habitat ) == false )
                 return false;
-            StateArchiveUtil::readInt2( archive, habitat._origin );
-            archive >> habitat._id;
-            archive >> habitat._rotation;
-            if ( StateArchiveUtil::readCount( archive, 4, habitatTileCount ) == false )
-                return false;
-            habitat._listTile.resize( habitatTileCount, 0 );
-            for ( int32& tileIndex : habitat._listTile )
-            {
-                archive >> tileIndex;
-                const bool bInside = 0 <= tileIndex && tileIndex < tileCount;
-                if ( bInside == false )
-                    return false;
-            }
         }
 
         uint32 creatureCount = 0;
@@ -808,20 +848,8 @@ namespace sw
         town._listCreature.assign( creatureCount, TownCreature{} );
         for ( TownCreature& creature : town._listCreature )
         {
-            uint32     abilityCount = 0;
-            const bool bHeadRead    = StateArchiveUtil::readName( archive, creature._speciesID ) && StateArchiveUtil::readCount( archive, 4, abilityCount );
-            if ( bHeadRead == false )
+            if ( CreatureTownInternal::readCreature( archive, creature ) == false )
                 return false;
-            creature._listAbilityUse.resize( abilityCount, 0 );
-            for ( int32& useCount : creature._listAbilityUse )
-            {
-                archive >> useCount;
-            }
-            archive >> creature._habitat;
-            archive >> creature._house;
-            archive >> creature._lastTalkDay;
-            archive >> creature._lastGiftDay;
-            archive >> creature._arrivalDay;
         }
 
         uint32 houseCount = 0;
@@ -831,28 +859,14 @@ namespace sw
         town._listHouse.assign( houseCount, CreatureHouse{} );
         for ( CreatureHouse& house : town._listHouse )
         {
-            uint32 residentCount = 0;
-            if ( StateArchiveUtil::readCount( archive, 4, residentCount ) == false )
+            if ( CreatureTownInternal::readNameList( archive, house._listResident ) == false )
                 return false;
-            house._listResident.assign( residentCount, hashed_string{} );
-            for ( hashed_string& resident : house._listResident )
-            {
-                if ( StateArchiveUtil::readName( archive, resident ) == false )
-                    return false;
-            }
             StateArchiveUtil::readInt2( archive, house._tile );
             archive >> house._capacity;
         }
 
-        uint32 requestCount = 0;
-        if ( StateArchiveUtil::readCount( archive, 4, requestCount ) == false )
+        if ( CreatureTownInternal::readNameList( archive, town._listOpenRequest ) == false )
             return false;
-        town._listOpenRequest.assign( requestCount, hashed_string{} );
-        for ( hashed_string& questID : town._listOpenRequest )
-        {
-            if ( StateArchiveUtil::readName( archive, questID ) == false )
-                return false;
-        }
         archive >> town._nextHabitatID;
         archive >> town._lastAttractKey;
         if ( archive.isError() )

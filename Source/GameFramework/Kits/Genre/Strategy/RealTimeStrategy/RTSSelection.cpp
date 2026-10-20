@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSSelection.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -208,7 +209,7 @@ namespace sw
         vector<RTSUnitID>& listGroup = _arrGroup[group];
         for ( const RTSUnitID unitID : _listSelected )
         {
-            if ( std::find( listGroup.begin(), listGroup.end(), unitID ) == listGroup.end() )
+            if ( VectorUtil::contains( listGroup, unitID ) == false )
                 listGroup.push_back( unitID );
         }
     }
@@ -228,10 +229,10 @@ namespace sw
     {
         const auto isDead = [&world]( RTSUnitID unitID )
         { return world.findUnit( unitID ) == nullptr; };
-        _listSelected.erase( std::remove_if( _listSelected.begin(), _listSelected.end(), isDead ), _listSelected.end() );
+        VectorUtil::removeIf( _listSelected, isDead );
         for ( vector<RTSUnitID>& listGroup : _arrGroup )
         {
-            listGroup.erase( std::remove_if( listGroup.begin(), listGroup.end(), isDead ), listGroup.end() );
+            VectorUtil::removeIf( listGroup, isDead );
         }
     }
 
@@ -243,7 +244,7 @@ namespace sw
 
     bool RTSSelection::isSelected( RTSUnitID unitID ) const
     {
-        return std::find( _listSelected.begin(), _listSelected.end(), unitID ) != _listSelected.end();
+        return VectorUtil::contains( _listSelected, unitID );
     }
 
     bool RTSSelection::isCommandable( const RTSWorld& world ) const

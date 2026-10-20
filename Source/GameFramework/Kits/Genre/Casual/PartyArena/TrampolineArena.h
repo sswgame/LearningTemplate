@@ -199,16 +199,20 @@ namespace sw
         bool   isValidPlayer( int32 player ) const { return 0 <= player && player < static_cast<int32>( _listPlayer.size() ); }
         float3 makeSpawnPosition( int32 player ) const;
         void   updatePlayer( int32 player, float32 deltaTime );
-        void   updateAirControl( TrampolinePlayer& body, float32 deltaTime );
-        void   land( int32 player );
-        void   launch( int32 player, bool bSuccess, const hashed_string& grade );
-        void   updateAttacks();
-        void   knockBack( int32 victim, int32 attacker, const float3& direction, float32 strength );
-        void   ringOut( int32 player );
-        void   respawn( int32 player );
-        void   pickUpItems();
-        void   applyItem( int32 player, const PartyItemDef& def );
-        void   pushEvent( TrampolineEvent::Kind kind, int32 player, int32 other, int32 value );
+        /** @brief 트램펄린에 눌린 동안 점프 입력을 모으고, 눌림이 끝나면 닿은 순간을 목표로 판정해 띄웁니다. */
+        void updateContact( int32 player, float32 deltaTime );
+        /** @brief 공중 한 프레임입니다. 찍기 · 돌진을 시작하고, 속도와 위치를 진행하고, 내려오면 착지나 낙하로 넘깁니다. */
+        void updateAir( int32 player, float32 deltaTime );
+        void updateAirControl( TrampolinePlayer& body, float32 deltaTime );
+        void land( int32 player );
+        void launch( int32 player, bool bSuccess, const hashed_string& grade );
+        void updateAttacks();
+        void knockBack( int32 victim, int32 attacker, const float3& direction, float32 strength );
+        void ringOut( int32 player );
+        void respawn( int32 player );
+        void pickUpItems();
+        void applyItem( int32 player, const PartyItemDef& def );
+        void pushEvent( TrampolineEvent::Kind kind, int32 player, int32 other, int32 value );
 
         vector<TrampolinePlayer>     _listPlayer;
         EventBuffer<TrampolineEvent> _eventBuffer;

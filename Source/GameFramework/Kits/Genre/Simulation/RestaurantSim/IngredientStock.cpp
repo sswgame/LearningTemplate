@@ -2,6 +2,8 @@
 
 #include "GameFramework/Kits/Genre/Simulation/RestaurantSim/IngredientStock.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
@@ -14,11 +16,14 @@ namespace sw
 
     namespace
     {
-        /** @brief 정렬 키입니다. 상하지 않는 배치(-1)는 가장 뒤입니다. */
-        int32 makeExpiryKey( const IngredientBatch& batch )
+        struct IngredientStockInternal
         {
-            return batch._daysLeft < 0 ? 0x7fffffff : batch._daysLeft;
-        }
+            /** @brief 정렬 키입니다. 상하지 않는 배치(-1)는 가장 뒤입니다. */
+            static int32 makeExpiryKey( const IngredientBatch& batch ) { return batch._daysLeft < 0 ? 0x7fffffff : batch._daysLeft; }
+
+            /** @brief 다 쓴 배치이면 true 입니다. 쓰거나 상한 뒤 목록에서 지웁니다. */
+            static bool isEmptyBatch( const IngredientBatch& batch ) { return batch._count <= 0; }
+        };
     } // namespace
 } // namespace sw
 
@@ -74,9 +79,7 @@ namespace sw
             outCost += batch._unitCost * takenCount;
         }
         // 배치 없이 인벤토리에만 있던 것은 원가 0 이다.
-        _listBatch.erase( std::remove_if( _listBatch.begin(), _listBatch.end(), []( const IngredientBatch& batch )
-        { return batch._count <= 0; } ),
-                          _listBatch.end() );
+        VectorUtil::removeIf( _listBatch, IngredientStockInternal::isEmptyBatch );
         return true;
     }
 
@@ -118,9 +121,7 @@ namespace sw
                 outListSpoilage.push_back( IngredientSpoilage{ batch._itemID, batch._unitCost * spoiledCount, spoiledCount } );
             batch._count = 0;
         }
-        _listBatch.erase( std::remove_if( _listBatch.begin(), _listBatch.end(), []( const IngredientBatch& batch )
-        { return batch._count <= 0; } ),
-                          _listBatch.end() );
+        VectorUtil::removeIf( _listBatch, IngredientStockInternal::isEmptyBatch );
     }
 
     int32 IngredientStock::findEarliestExpiry( const hashed_string& itemID ) const
@@ -164,7 +165,7 @@ namespace sw
     void IngredientStock::sortBatches()
     {
         std::stable_sort( _listBatch.begin(), _listBatch.end(), []( const IngredientBatch& lhs, const IngredientBatch& rhs )
-        { return makeExpiryKey( lhs ) < makeExpiryKey( rhs ); } );
+        { return IngredientStockInternal::makeExpiryKey( lhs ) < IngredientStockInternal::makeExpiryKey( rhs ); } );
     }
 
     void IngredientStock::writeState( Archive& outArchive ) const

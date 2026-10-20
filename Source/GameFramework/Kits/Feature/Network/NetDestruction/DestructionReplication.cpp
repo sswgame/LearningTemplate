@@ -389,42 +389,44 @@ namespace sw
         // 자세는 세 종류로 보낸다. 움직이는 덩어리(비신뢰, 양자화), 멈춤 확정(신뢰, 비트 그대로), 멈춤 반복(비신뢰, 비트 그대로)이다. 메시지 하나가 예산을 넘으면 나눠 보낸다.
         // 비신뢰를 쓰는 이유: 받는 쪽이 틱으로 순서를 맞추므로 늦게 온 자세도 보간에 쓸 수 있다.
         // 반면 순서 전용 채널은 같은 종류의 메시지를 한 간격에 하나만 보내므로 오브젝트와 조각 메시지가 서로 지워 버린다.
-        for ( uint32 pass = 0; pass < 3; ++pass )
+        sendPoseList( entry, listMoving, false, false, serverTick );
+        sendPoseList( entry, listRest, true, true, serverTick );
+        sendPoseList( entry, listRestRepeat, true, false, serverTick );
+    }
+
+    void DestructionReplicationServer::sendPoseList( const Entry& entry, const vector<const FractureGroupPose*>& listPose, bool bRest, bool bReliable, uint32 serverTick )
+    {
+        using Internal = DestructionReplicationInternal;
+        size_t start   = 0;
+        while ( start < listPose.size() )
         {
-            const bool                              bRest     = pass != 0;
-            const bool                              bReliable = pass == 1;
-            const vector<const FractureGroupPose*>& list      = pass == 0 ? listMoving : ( pass == 1 ? listRest : listRestRepeat );
-            size_t                                  start     = 0;
-            while ( start < list.size() )
+            BitWriter& writer = _writer.begin( NetDestructionMessage::kPose );
+            writer.writeBool( bRest );
+            writer.writeVarUint( entry._netID );
+            writer.writeVarUint( serverTick );
+            // 개수는 끝에서야 알 수 있으므로 몇 개를 실을지 먼저 정한다. 예산 안에서 남은 최대 개수로 정한다.
+            const int32  perPoseBytes = bRest ? 30 : 15;
+            const size_t room         = static_cast<size_t>( MathUtil::max( 1, ( Internal::kPoseMessageBudget - 16 ) / perPoseBytes ) );
+            const size_t count        = MathUtil::min( room, listPose.size() - start );
+            writer.writeVarUint( count );
+            bool bPosesWritten = true;
+            for ( size_t index = start; index < start + count; ++index )
             {
-                BitWriter& writer = _writer.begin( NetDestructionMessage::kPose );
-                writer.writeBool( bRest );
-                writer.writeVarUint( entry._netID );
-                writer.writeVarUint( serverTick );
-                // 개수는 끝에서야 알 수 있으므로 몇 개를 실을지 먼저 정한다. 예산 안에서 남은 최대 개수로 정한다.
-                const int32  perPoseBytes = bRest ? 30 : 15;
-                const size_t room         = static_cast<size_t>( MathUtil::max( 1, ( Internal::kPoseMessageBudget - 16 ) / perPoseBytes ) );
-                const size_t count        = MathUtil::min( room, list.size() - start );
-                writer.writeVarUint( count );
-                bool bPosesWritten = true;
-                for ( size_t index = start; index < start + count; ++index )
-                {
-                    const FractureGroupPose& pose = *list[index];
-                    writer.writeVarUint( pose._groupID );
-                    // 질량 중심과 회전을 보낸다. 원점은 덩어리에서 멀 수 있어 회전하면 크게 움직이고, 보간이 그 움직임을 직선으로 연결하게 되기 때문이다.
-                    if ( bRest )
-                        Internal::writeExactPose( writer, pose._center, pose._rotation );
-                    else
-                        bPosesWritten = bPosesWritten && Internal::writeQuantizedPose( writer, pose._center, pose._rotation, _settings );
-                }
-                start += count;
-                // 움직이는 자세는 위에서 범위로 걸렀다. 그래도 하나라도 쓰지 못했으면 메시지가 어긋났으므로 보내지 않는다.
-                if ( bPosesWritten == false )
-                    continue;
-                (void)broadcast( bReliable ? NetChannelType::ReliableOrdered : NetChannelType::Unreliable );
-                ++_stats._poseMessageCount;
-                _stats._restPoseCount += bReliable ? count : 0u;
+                const FractureGroupPose& pose = *listPose[index];
+                writer.writeVarUint( pose._groupID );
+                // 질량 중심과 회전을 보낸다. 원점은 덩어리에서 멀 수 있어 회전하면 크게 움직이고, 보간이 그 움직임을 직선으로 연결하게 되기 때문이다.
+                if ( bRest )
+                    Internal::writeExactPose( writer, pose._center, pose._rotation );
+                else
+                    bPosesWritten = bPosesWritten && Internal::writeQuantizedPose( writer, pose._center, pose._rotation, _settings );
             }
+            start += count;
+            // 움직이는 자세는 위에서 범위로 걸렀다. 그래도 하나라도 쓰지 못했으면 메시지가 어긋났으므로 보내지 않는다.
+            if ( bPosesWritten == false )
+                continue;
+            (void)broadcast( bReliable ? NetChannelType::ReliableOrdered : NetChannelType::Unreliable );
+            ++_stats._poseMessageCount;
+            _stats._restPoseCount += bReliable ? count : 0u;
         }
     }
 

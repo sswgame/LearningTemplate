@@ -245,37 +245,12 @@ namespace sw
             }
             case FighterState::Attacking:
             {
-                const bool bAdvanced = fighter._timeline.advanceFrame();
-                if ( fighter._bAirborne == SW_TRUE && fighter._timeline.isInHitstop() == false )
-                    updateAirMotion( player );
-                if ( fighter._timeline.isPlaying() == false )
-                {
-                    finishMove( player );
-                }
-                else
-                {
-                    const FighterMove* pMove                = fighter.findCurrentMove();
-                    const bool         bShouldAimAtOpponent = bAdvanced && pMove != nullptr && pMove->_bTracking;
-                    if ( bShouldAimAtOpponent )
-                        aimAtOpponent( player );
-                }
+                updateAttack( player );
                 break;
             }
             case FighterState::Sidestep:
             {
-                // 상대를 축으로 돈다. 상대의 직선 기술은 시작 방향에 묶여 있어서 옆으로 벌어진 각도만큼 빗나간다.
-                const FighterRuntime& other = _arrFighter[opponent];
-                const float32         step  = fighter._pDef->_sidestepAngle / static_cast<float32>( fighter._pDef->_sidestepFrames );
-                const float32         angle = step * static_cast<float32>( fighter._sidestepSign );
-                const float32         relX  = fighter._x - other._x;
-                const float32         relZ  = fighter._z - other._z;
-                const float32         cosA  = MathUtil::cos( angle );
-                const float32         sinA  = MathUtil::sin( angle );
-                fighter._x                  = other._x + relX * cosA - relZ * sinA;
-                fighter._z                  = other._z + relX * sinA + relZ * cosA;
-                --fighter._stateFrames;
-                if ( fighter._stateFrames <= 0 )
-                    enterState( player, FighterState::Neutral, 0 );
+                updateSidestep( player );
                 break;
             }
             case FighterState::Jump:
@@ -302,25 +277,7 @@ namespace sw
             }
             case FighterState::Juggle:
             {
-                updateAirMotion( player );
-                const float32 limit   = _settings._stageHalfSize - fighter._pDef->_pushRadius;
-                const bool    bAtWall = MathUtil::abs( fighter._x ) >= limit || MathUtil::abs( fighter._z ) >= limit;
-                if ( fighter._bAirborne == SW_FALSE )
-                {
-                    enterState( player, FighterState::Down, _settings._downFrames );
-                }
-                else if ( bAtWall && fighter._bWallSplatUsed == SW_FALSE )
-                {
-                    // 저글로 벽까지 밀려왔으므로 벽꽝 상태로 만든다.
-                    fighter._bWallSplatUsed = SW_TRUE;
-                    fighter._bAirborne      = SW_FALSE;
-                    fighter._y              = 0.0f;
-                    fighter._velocityY      = 0.0f;
-                    fighter._carryX         = 0.0f;
-                    fighter._carryZ         = 0.0f;
-                    enterState( player, FighterState::WallSplat, _settings._wallSplatFrames );
-                    pushEvent( FightingEvent::Kind::WallSplat, opponent, 0 );
-                }
+                updateJuggle( player );
                 break;
             }
             case FighterState::WallSplat:
@@ -360,26 +317,7 @@ namespace sw
             }
             case FighterState::ThrowBreak:
             {
-                const uint16 pressed = static_cast<uint16>( pressedButtons & FightingMatchInternal::kButtonMask );
-                if ( pressed != 0 && fighter._bThrowAttempted == SW_FALSE )
-                {
-                    fighter._bThrowAttempted = SW_TRUE; // 첫 시도만 인정한다. 틀린 버튼을 눌렀으면 더 풀 수 없다
-                    if ( fighter._breakButtons != 0 && pressed == fighter._breakButtons )
-                    {
-                        enterState( player, FighterState::Blockstun, _settings._throwBreakRecovery );
-                        fighter._guard = GuardStance::Standing;
-                        enterState( opponent, FighterState::Blockstun, _settings._throwBreakRecovery );
-                        _arrFighter[opponent]._guard = GuardStance::Standing;
-                        fighter._x += _arrFighter[opponent]._dirX * 0.3f;
-                        fighter._z += _arrFighter[opponent]._dirZ * 0.3f;
-                        clampToStage( player );
-                        pushEvent( FightingEvent::Kind::ThrowBroken, player, 0 );
-                        break;
-                    }
-                }
-                --fighter._stateFrames;
-                if ( fighter._stateFrames <= 0 )
-                    landThrow( player );
+                updateThrowBreak( player, pressedButtons );
                 break;
             }
             case FighterState::Knockout:
@@ -387,6 +325,91 @@ namespace sw
                 break;
             }
         }
+    }
+
+    void FightingMatch::updateAttack( int32 player )
+    {
+        FighterRuntime& fighter   = _arrFighter[player];
+        const bool      bAdvanced = fighter._timeline.advanceFrame();
+        if ( fighter._bAirborne == SW_TRUE && fighter._timeline.isInHitstop() == false )
+            updateAirMotion( player );
+        if ( fighter._timeline.isPlaying() == false )
+        {
+            finishMove( player );
+            return;
+        }
+        const FighterMove* pMove                = fighter.findCurrentMove();
+        const bool         bShouldAimAtOpponent = bAdvanced && pMove != nullptr && pMove->_bTracking;
+        if ( bShouldAimAtOpponent )
+            aimAtOpponent( player );
+    }
+
+    void FightingMatch::updateSidestep( int32 player )
+    {
+        // 상대를 축으로 돈다. 상대의 직선 기술은 시작 방향에 묶여 있어서 옆으로 벌어진 각도만큼 빗나간다.
+        FighterRuntime&       fighter = _arrFighter[player];
+        const FighterRuntime& other   = _arrFighter[1 - player];
+        const float32         step    = fighter._pDef->_sidestepAngle / static_cast<float32>( fighter._pDef->_sidestepFrames );
+        const float32         angle   = step * static_cast<float32>( fighter._sidestepSign );
+        const float32         relX    = fighter._x - other._x;
+        const float32         relZ    = fighter._z - other._z;
+        const float32         cosA    = MathUtil::cos( angle );
+        const float32         sinA    = MathUtil::sin( angle );
+        fighter._x                    = other._x + relX * cosA - relZ * sinA;
+        fighter._z                    = other._z + relX * sinA + relZ * cosA;
+        --fighter._stateFrames;
+        if ( fighter._stateFrames <= 0 )
+            enterState( player, FighterState::Neutral, 0 );
+    }
+
+    void FightingMatch::updateJuggle( int32 player )
+    {
+        FighterRuntime& fighter = _arrFighter[player];
+        updateAirMotion( player );
+        const float32 limit   = _settings._stageHalfSize - fighter._pDef->_pushRadius;
+        const bool    bAtWall = MathUtil::abs( fighter._x ) >= limit || MathUtil::abs( fighter._z ) >= limit;
+        if ( fighter._bAirborne == SW_FALSE )
+        {
+            enterState( player, FighterState::Down, _settings._downFrames );
+            return;
+        }
+        if ( bAtWall == false || fighter._bWallSplatUsed != SW_FALSE )
+            return;
+        // 저글로 벽까지 밀려왔으므로 벽꽝 상태로 만든다.
+        fighter._bWallSplatUsed = SW_TRUE;
+        fighter._bAirborne      = SW_FALSE;
+        fighter._y              = 0.0f;
+        fighter._velocityY      = 0.0f;
+        fighter._carryX         = 0.0f;
+        fighter._carryZ         = 0.0f;
+        enterState( player, FighterState::WallSplat, _settings._wallSplatFrames );
+        pushEvent( FightingEvent::Kind::WallSplat, 1 - player, 0 );
+    }
+
+    void FightingMatch::updateThrowBreak( int32 player, uint16 pressedButtons )
+    {
+        FighterRuntime& fighter  = _arrFighter[player];
+        const int32     opponent = 1 - player;
+        const uint16    pressed  = static_cast<uint16>( pressedButtons & FightingMatchInternal::kButtonMask );
+        if ( pressed != 0 && fighter._bThrowAttempted == SW_FALSE )
+        {
+            fighter._bThrowAttempted = SW_TRUE; // 첫 시도만 인정한다. 틀린 버튼을 눌렀으면 더 풀 수 없다
+            if ( fighter._breakButtons != 0 && pressed == fighter._breakButtons )
+            {
+                enterState( player, FighterState::Blockstun, _settings._throwBreakRecovery );
+                fighter._guard = GuardStance::Standing;
+                enterState( opponent, FighterState::Blockstun, _settings._throwBreakRecovery );
+                _arrFighter[opponent]._guard = GuardStance::Standing;
+                fighter._x += _arrFighter[opponent]._dirX * 0.3f;
+                fighter._z += _arrFighter[opponent]._dirZ * 0.3f;
+                clampToStage( player );
+                pushEvent( FightingEvent::Kind::ThrowBroken, player, 0 );
+                return;
+            }
+        }
+        --fighter._stateFrames;
+        if ( fighter._stateFrames <= 0 )
+            landThrow( player );
     }
 
     void FightingMatch::updateAirMotion( int32 player )
@@ -878,16 +901,7 @@ namespace sw
 
         if ( frameData._height == AttackHeight::Throw )
         {
-            // 잡기에 성공했다. 풀기 입력 창을 열고, 피해는 창이 닫힐 때 준다.
-            enterState( defender, FighterState::ThrowBreak, _settings._throwBreakFrames );
-            other._breakButtons    = move._breakButtons;
-            other._bThrowAttempted = SW_FALSE;
-            other._bufferedMove    = -1;
-            fighter._timeline.registerContact( false );
-            fighter._state       = FighterState::Throwing;
-            fighter._stateFrames = MathUtil::max( 1, frameData._recovery );
-            fighter._guard       = GuardStance::None;
-            pushEvent( FightingEvent::Kind::ThrowGrab, attacker, 0, frameData._id );
+            grabOpponent( attacker, move );
             return;
         }
 
@@ -901,29 +915,7 @@ namespace sw
         const bool bWallSplat = frameData._bWallSplat == SW_TRUE && isNearWall( defender ) && other._bWallSplatUsed == SW_FALSE;
         if ( other._state == FighterState::Juggle )
         {
-            if ( move._bScrew && other._bScrewUsed == SW_FALSE )
-            {
-                // 스크류는 상대를 다시 띄워 멀리 밀어낸다. 한 콤보에 한 번만 쓸 수 있다.
-                other._bScrewUsed = SW_TRUE;
-                other._velocityY  = _settings._screwVelocity;
-                other._carryX     = fighter._dirX * _settings._screwCarrySpeed;
-                other._carryZ     = fighter._dirZ * _settings._screwCarrySpeed;
-                pushEvent( FightingEvent::Kind::Screw, attacker, 0, frameData._id );
-            }
-            else if ( move._bBound && other._bBoundUsed == SW_FALSE )
-            {
-                other._bBoundUsed = SW_TRUE;
-                other._velocityY  = _settings._boundVelocity;
-                pushEvent( FightingEvent::Kind::Bound, attacker, 0, frameData._id );
-            }
-            else
-            {
-                const float32 lift = MathUtil::max( _settings._juggleMinScale, 1.0f - _settings._juggleDecayPerHit * static_cast<float32>( other._airHits ) );
-                other._velocityY   = _settings._juggleHitVelocity * lift;
-                other._carryX      = fighter._dirX * _settings._juggleCarrySpeed;
-                other._carryZ      = fighter._dirZ * _settings._juggleCarrySpeed;
-            }
-            ++other._airHits;
+            hitAirborneOpponent( attacker, move );
         }
         else if ( other._state == FighterState::WallSplat || other._state == FighterState::Down )
         {
@@ -961,6 +953,54 @@ namespace sw
             clampToStage( defender );
         }
         pushEvent( FightingEvent::Kind::Hit, attacker, damage, frameData._id );
+    }
+
+    void FightingMatch::grabOpponent( int32 attacker, const FighterMove& move )
+    {
+        // 잡기에 성공했다. 풀기 입력 창을 열고, 피해는 창이 닫힐 때 준다.
+        FighterRuntime&      fighter   = _arrFighter[attacker];
+        const int32          defender  = 1 - attacker;
+        FighterRuntime&      other     = _arrFighter[defender];
+        const MoveFrameData& frameData = move._frame;
+        enterState( defender, FighterState::ThrowBreak, _settings._throwBreakFrames );
+        other._breakButtons    = move._breakButtons;
+        other._bThrowAttempted = SW_FALSE;
+        other._bufferedMove    = -1;
+        fighter._timeline.registerContact( false );
+        fighter._state       = FighterState::Throwing;
+        fighter._stateFrames = MathUtil::max( 1, frameData._recovery );
+        fighter._guard       = GuardStance::None;
+        pushEvent( FightingEvent::Kind::ThrowGrab, attacker, 0, frameData._id );
+    }
+
+    void FightingMatch::hitAirborneOpponent( int32 attacker, const FighterMove& move )
+    {
+        const FighterRuntime& fighter   = _arrFighter[attacker];
+        FighterRuntime&       other     = _arrFighter[1 - attacker];
+        const MoveFrameData&  frameData = move._frame;
+        if ( move._bScrew && other._bScrewUsed == SW_FALSE )
+        {
+            // 스크류는 상대를 다시 띄워 멀리 밀어낸다. 한 콤보에 한 번만 쓸 수 있다.
+            other._bScrewUsed = SW_TRUE;
+            other._velocityY  = _settings._screwVelocity;
+            other._carryX     = fighter._dirX * _settings._screwCarrySpeed;
+            other._carryZ     = fighter._dirZ * _settings._screwCarrySpeed;
+            pushEvent( FightingEvent::Kind::Screw, attacker, 0, frameData._id );
+        }
+        else if ( move._bBound && other._bBoundUsed == SW_FALSE )
+        {
+            other._bBoundUsed = SW_TRUE;
+            other._velocityY  = _settings._boundVelocity;
+            pushEvent( FightingEvent::Kind::Bound, attacker, 0, frameData._id );
+        }
+        else
+        {
+            const float32 lift = MathUtil::max( _settings._juggleMinScale, 1.0f - _settings._juggleDecayPerHit * static_cast<float32>( other._airHits ) );
+            other._velocityY   = _settings._juggleHitVelocity * lift;
+            other._carryX      = fighter._dirX * _settings._juggleCarrySpeed;
+            other._carryZ      = fighter._dirZ * _settings._juggleCarrySpeed;
+        }
+        ++other._airHits;
     }
 
     void FightingMatch::landThrow( int32 defender )

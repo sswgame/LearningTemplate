@@ -33,12 +33,6 @@
 왜 필요한가: `sw::unordered_map`(밀집 배열)은 삽입 때 값 주소가 옮겨지는데, 형식이 그것을 드러내지 않고 `&it->second` 를 내줍니다. TypedComponents T3 에서 테스트용 `makeMockComponentTypeInfo` 가 그 주소를 쥐어 타입이 늘자 매달렸습니다(`unique_ptr<TypeInfo>` 로 고침). 같은 모양이 다른 곳에 남을 수 있습니다.
 남은 것: 확인된 위험 위치는 `LiveReloadManager.cpp:873`(연쇄 리로드 동안 `ModuleContext*` 를 쥠, 그 사이 `_mapModule` 에 삽입이 들어오면 매달림). `&it->second` 를 돌려주는 `find` 계열(`AbilityCatalog` · `CultureInfo` · `ReflectionTypes` 등)은 호출부가 결과를 오래 쥐면 같은 결함입니다. 근본 해법은 주소가 고정된 맵 형식(값을 `unique_ptr` 로 두는 형식)을 따로 두고, 주소를 오래 쥐는 자리는 그 형식만 쓰게 하는 것입니다. 호출부 전수 조사가 먼저입니다.
 
-### GameFrameworkStructureCleanup
-제목: GameFramework 구조 정리의 남은 것
-옛번호: C-4
-왜 필요한가: 2026-10-04 리뷰(사용자 승인)에서 나온 칸 손셈 정리입니다.
-남은 것: Overworld `TileMap` 의 칸 손셈(`indexOf` · `isInBounds` — 크기는 파일 스키마 `TileMapXMLData` 가 듭니다), `Habitat`(CreatureLife). 게임 손셈(HarvestValley `FarmCropComponent` · `FarmSoilComponent`, NileCity `NileDirectorComponent` 의 `index % getWidth()`)은 키트가 `getTopology()` 를 열면 같이 합니다. 로드맵상 파일이 겹쳐 미룬 정리입니다.
-
 ### PerfConditionalCandidates
 제목: 측정해서 이기면 하는 성능 후보 묶음
 옛번호: C-7
@@ -110,7 +104,7 @@
 제목: 함수 객체 · 람다 공통화 2단계
 옛번호: C-68
 왜 필요한가: `containers` 가 남긴 후보 58 파일 80 건(`find_if` · `remove_if` · 해시 구조체)이 있습니다.
-남은 것: 디렉터리별로 합니다. 손 멤버 루프를 못 쓰게 하는 형식 또는 린트를 둡니다(형식으로 못 막는 이유를 적습니다).
+남은 것: 디렉터리별로 합니다. `GameFramework/Kits` 는 끝났습니다(2026-10-21, `wt/kitclean` — `erase( remove_if )` 9 곳은 `VectorUtil::removeIf`, 손 멤버 찾기 18 곳은 `findBy` · `containsBy`. `Feature/Online` 은 `wt/onlinekits` 와 겹쳐 남겼습니다). 손 멤버 루프를 못 쓰게 하는 형식 또는 린트를 둡니다(형식으로 못 막는 이유를 적습니다). `std::remove_if` 는 표준 함수라 형식으로 막을 수 없으므로 마지막 디렉터리가 끝난 뒤 `VectorUtil.h` 밖의 `erase( std::remove_if` 를 막는 게이트를 둡니다.
 
 ### DiskPathVsResourceId
 제목: 디스크 경로와 리소스 id 가 같은 `string_view` 입구를 쓴다

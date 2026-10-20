@@ -45,14 +45,14 @@ namespace sw
                     listKey.push_back( SymbolKey{ parseObject( keyNode.getAttributeText( "object" ) ), symbol[0] } );
                 }
                 outHabitat._listCell.clear();
-                outHabitat._width  = 0;
-                outHabitat._height = 0;
+                int32 width  = 0;
+                int32 height = 0;
                 for ( XMLNode rowNode = node.findChild( "Row" ); rowNode; rowNode = rowNode.findNextSibling( "Row" ) )
                 {
                     const string_view cells = rowNode.getAttributeText( "cells" );
-                    if ( outHabitat._height == 0 )
-                        outHabitat._width = static_cast<int32>( cells.size() );
-                    if ( cells.empty() || static_cast<int32>( cells.size() ) != outHabitat._width )
+                    if ( height == 0 )
+                        width = static_cast<int32>( cells.size() );
+                    if ( cells.empty() || static_cast<int32>( cells.size() ) != width )
                     {
                         SW_LOG_ERROR( "%#: habitat '%#' has rows of different length", sourceName, pHabitatID );
                         return false;
@@ -66,27 +66,20 @@ namespace sw
                         }
                         else
                         {
-                            bool bKnown = false;
-                            for ( const SymbolKey& key : listKey )
-                            {
-                                if ( key._symbol == symbol )
-                                {
-                                    cell._object = key._object;
-                                    bKnown       = true;
-                                    break;
-                                }
-                            }
-                            if ( bKnown == false )
+                            const SymbolKey* pKey = VectorUtil::findBy<&SymbolKey::_symbol>( listKey, symbol );
+                            if ( pKey == nullptr )
                             {
                                 SW_LOG_ERROR( "%#: habitat '%#' uses an unknown symbol in row '%#'", sourceName, pHabitatID, cells );
                                 return false;
                             }
+                            cell._object = pKey->_object;
                         }
                         outHabitat._listCell.push_back( cell );
                     }
-                    ++outHabitat._height;
+                    ++height;
                 }
-                if ( outHabitat._height == 0 || outHabitat.countClaimedCells() == 0 )
+                outHabitat._topology = GridTopology{ width, height };
+                if ( height == 0 || outHabitat.countClaimedCells() == 0 )
                 {
                     SW_LOG_ERROR( "%#: habitat '%#' has no cells to match", sourceName, pHabitatID );
                     return false;
@@ -112,12 +105,7 @@ namespace sw
 
     const CreatureTileRule* CreatureAbilityDef::findRule( const hashed_string& object ) const
     {
-        for ( const CreatureTileRule& rule : _listRule )
-        {
-            if ( rule._from == object )
-                return &rule;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&CreatureTileRule::_from>( _listRule, object );
     }
 
     bool CreatureSpeciesDef::likesHabitat( const hashed_string& habitatID ) const
@@ -164,7 +152,8 @@ namespace sw
 
     void CreatureLifeCatalog::addHabitat( const HabitatDef& habitat )
     {
-        const bool bMalformedHabitat = habitat._width <= 0 || habitat._height <= 0 || static_cast<int32>( habitat._listCell.size() ) != habitat._width * habitat._height;
+        const int32 cellCount         = habitat._topology.getCellCount();
+        const bool  bMalformedHabitat = cellCount <= 0 || static_cast<int32>( habitat._listCell.size() ) != cellCount;
         if ( bMalformedHabitat )
         {
             SW_LOG_WARNING( "habitat '%#' has a malformed pattern - skipped", habitat._id.c_str() );

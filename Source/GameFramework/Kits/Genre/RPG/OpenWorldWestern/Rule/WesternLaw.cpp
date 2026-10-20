@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Rule/WesternLaw.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -303,12 +304,7 @@ namespace sw
 
     const WesternLawState::RegionRecord* WesternLawState::findRecord( const hashed_string& regionID ) const
     {
-        for ( const RegionRecord& record : _listRecord )
-        {
-            if ( record._regionID == regionID )
-                return &record;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&RegionRecord::_regionID>( _listRecord, regionID );
     }
 
     WesternLawState::RegionRecord& WesternLawState::acquireRecord( const hashed_string& regionID )

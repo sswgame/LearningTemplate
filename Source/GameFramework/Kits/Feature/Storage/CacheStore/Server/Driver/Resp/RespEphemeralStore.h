@@ -122,11 +122,18 @@ namespace sw
         Operation* findOperation( uint64 requestID );
         /** @brief 아직 내보내지 않은 요청을 맡긴 순서대로 내보냅니다. 비교 후 쓰기의 GET 답을 기다리는 동안은 멈춥니다. */
         void sendDeferredOperations();
-        /** @brief 요청 하나의 명령을 보냅니다. 명령 연결이 없으면 다시 연결하며, 백오프 중이면 Unavailable 로 끝납니다. */
+        /**
+         * @brief 요청 하나의 명령을 보냅니다. 명령 연결이 없으면 다시 연결하며, 백오프 중이면 Unavailable 로 끝납니다.
+         * @note 본문이 100 줄을 넘지만 연산마다 명령 한두 줄인 switch 디스패처라 나누지 않는다(긴 함수 기준의 "유지").
+         */
         void sendOperation( Operation& operation );
         void sendCommand( Operation& operation, const RespCommand& command, uint32 step );
         void handleReply( Operation& operation, uint32 step, const RespValue& value );
         void handleCompareReply( Operation& operation, uint32 step, const RespValue& value );
+        /** @brief INCRBY 의 답입니다. 만료가 있으면 MULTI · SET NX · INCRBY · EXEC 중 EXEC 의 둘째 원소가 결과입니다. */
+        void handleIncrementReply( Operation& operation, uint32 step, const RespValue& value );
+        /** @brief ZREVRANK(첫 단계)와 ZSCORE(둘째 단계)의 답입니다. 앞 단계가 실패했으면 뒤 답은 보지 않습니다. */
+        void handleScoreRankReply( Operation& operation, uint32 step, const RespValue& value );
         void finishOperation( Operation& operation, EphemeralResult result );
         void failOperation( Operation& operation );
         /** @brief 명령 연결이 열려 있거나 연결 중이면 true 입니다. 아니면 백오프가 지났을 때 다시 연결합니다. */

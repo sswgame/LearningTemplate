@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Horror/GhostHunt/GhostEncounter.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -273,12 +274,7 @@ namespace sw
 
     const GhostInstance* GhostEncounter::findGhost( uint32 ghostID ) const
     {
-        for ( const GhostInstance& ghost : _listGhost )
-        {
-            if ( ghost._id == ghostID )
-                return &ghost;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&GhostInstance::_id>( _listGhost, ghostID );
     }
 
     GhostInstance* GhostEncounter::findGhostMutable( uint32 ghostID )

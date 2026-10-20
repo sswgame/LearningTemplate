@@ -22,7 +22,7 @@
 남은 것:
 - Engine: Graphics · Renderer 의 13KB 넘는 큰 파일 약 100 개(작은 파일은 끝났다), Object · Scene · Resource · Serialization · Spatial · Common 대부분, UI 의 `Console`, Compression · Observability · Profiling · Telemetry 전부. `SceneNavigation.h` · `GameObjectManager.h` 는 충돌 때문에 다시 쓰지 못했다.
 - Editor: 주석 25 줄 이상인 약 45 개(`Common/GUI`, `Commands`, `Panels/Animation` · `TileMap` · `Viewport` 등)와 그보다 짧은 파일. `EditorIconGlyphs.h` 는 생성 파일이라 제외한다.
-- GameFramework: Base 의 짧은 헤더 약 230 개와 .cpp · .inl, Kits/Feature 의 옛 어휘(꼬리표, 그새, 거두다, 짓다)가 남은 약 35 개(Network · Online · Voxel 등), Kits/Feature/Online 의 Account 밖 폴더.
+- GameFramework: Base 의 짧은 헤더 약 230 개와 .cpp · .inl, Kits/Feature/Online 의 Account 밖 폴더(옛 어휘 꼬리표 · 그새 · 거두다 · 짓다 · 정본 · 견주다는 2026-10-21 `wt/kitclean` 에서 Kits/Feature 전체를 고쳤다. `NetPairedAnimation` 은 `wt/animation` 이 새로 만든 파일이라 남겼다).
 - Core: Math, Process, Delegate, Memory, Diagnostics, CommandLine, Container, Task, LogSink, String(Network · File 은 대조표 용어만 2026-10-21 정리). RuntimeAPI 는 손대지 않았다. Games 는 Empty 벤치 씬 일부와 VoxelCraft 전체.
 - 용어 '시험' → '테스트': `Scripts/**` · `Test/**` · `docs/Config/**` 약 300 곳(2026-10-13 셈)과 셰이더 주석 2 곳(`waterwaveprobe.hlsl` · `lighting2d.hlsli`). 셰이더는 바꾸면 `App --cook-shaders` 로 다시 쿠킹한다.
 함정: 파일이 겹쳐 미뤄진 정리입니다. 같은 폴더를 다른 작업이 건드리는 중이면 미룹니다.

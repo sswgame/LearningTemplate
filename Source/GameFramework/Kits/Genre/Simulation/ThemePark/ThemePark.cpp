@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/ThemePark.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -23,6 +24,76 @@ namespace sw
             static float3 lerpPosition( const float3& from, const float3& to, float32 alpha )
             {
                 return from + ( to - from ) * MathUtil::clamp( alpha, 0.0f, 1.0f );
+            }
+
+            /** @brief 손님 id 목록 하나(개수 + id)를 읽습니다. */
+            [[nodiscard]] static bool readIDList( Archive& archive, vector<uint32>& outListID )
+            {
+                uint32 count = 0;
+                if ( StateArchiveUtil::readCount( archive, sizeof( uint32 ), count ) == false )
+                    return false;
+                outListID.resize( count );
+                for ( uint32& id : outListID )
+                {
+                    archive >> id;
+                }
+                return archive.isOk();
+            }
+
+            /** @brief `writeState` 가 쓴 놀이기구 하나를 읽습니다. */
+            [[nodiscard]] static bool readRide( Archive& archive, ParkRide& outRide )
+            {
+                if ( StateArchiveUtil::readName( archive, outRide._id ) == false )
+                    return false;
+                archive >> outRide._name;
+                archive >> outRide._excitement;
+                archive >> outRide._intensity;
+                archive >> outRide._nausea;
+                archive >> outRide._cycleTime;
+                archive >> outRide._entrance;
+                archive >> outRide._capacity;
+                archive >> outRide._price;
+                archive >> outRide._runningCostPerMinute;
+                archive >> outRide._bOpen;
+                if ( readIDList( archive, outRide._listQueue ) == false || readIDList( archive, outRide._listRider ) == false )
+                    return false;
+                archive >> outRide._cycleTimer._remaining;
+                archive >> outRide._totalRiders;
+                archive >> outRide._totalIncome;
+                return archive.isError() == false;
+            }
+
+            /** @brief `writeState` 가 쓴 손님 하나를 읽습니다. 열거형이 범위 밖이거나 목표 놀이기구가 @p rideCount 밖이면 false 입니다. */
+            [[nodiscard]] static bool readGuest( Archive& archive, uint32 rideCount, ParkGuest& outGuest )
+            {
+                uint8 state   = 0;
+                uint8 thought = 0;
+                archive >> outGuest._position;
+                archive >> outGuest._walkFrom;
+                archive >> outGuest._walkTo;
+                archive >> outGuest._id;
+                archive >> outGuest._cash;
+                archive >> outGuest._targetRideIndex;
+                archive >> outGuest._rideCount;
+                archive >> outGuest._happiness;
+                archive >> outGuest._nausea;
+                archive >> outGuest._energy;
+                archive >> outGuest._minIntensity;
+                archive >> outGuest._maxIntensity;
+                archive >> outGuest._nauseaTolerance;
+                archive >> outGuest._walkTimer;
+                archive >> outGuest._walkDuration;
+                archive >> outGuest._queueTime;
+                archive >> state;
+                archive >> thought;
+                const bool bEnumValid        = state <= static_cast<uint8>( ParkGuestState::Left ) && thought <= static_cast<uint8>( ParkGuestThought::NothingToRide );
+                const bool bRideValid        = -1 <= outGuest._targetRideIndex && outGuest._targetRideIndex < static_cast<int32>( rideCount );
+                const bool bInvalidGuestData = archive.isError() || bEnumValid == false || bRideValid == false;
+                if ( bInvalidGuestData )
+                    return false;
+                outGuest._state   = static_cast<ParkGuestState>( state );
+                outGuest._thought = static_cast<ParkGuestThought>( thought );
+                return true;
             }
         };
     } // namespace
@@ -234,9 +305,8 @@ namespace sw
 
         // 떠난 손님을 지운다(놀이기구의 줄과 탑승자에는 남아 있지 않다. 떠나기 전에 뺐다). 한 번에 당겨 담아 순서(id 오름차순)를 지킨다.
         // 손님마다 `erase` 하면 뒤를 매번 옮기게 된다.
-        _listGuest.erase( std::remove_if( _listGuest.begin(), _listGuest.end(), []( const ParkGuest& guest )
-        { return guest._state == ParkGuestState::Left; } ),
-                          _listGuest.end() );
+        VectorUtil::removeIf( _listGuest, []( const ParkGuest& guest )
+        { return guest._state == ParkGuestState::Left; } );
         updateParkRating();
     }
 
@@ -637,18 +707,6 @@ namespace sw
 
     bool ThemeParkSimulation::readState( Archive& archive )
     {
-        const auto readIDList = [&archive]( vector<uint32>& outListID )
-        {
-            uint32 count = 0;
-            if ( StateArchiveUtil::readCount( archive, sizeof( uint32 ), count ) == false )
-                return false;
-            outListID.resize( count );
-            for ( uint32& id : outListID )
-            {
-                archive >> id;
-            }
-            return archive.isOk();
-        };
         int32 entryFee = 0;
         archive >> entryFee;
         uint32 rideCount = 0;
@@ -657,24 +715,7 @@ namespace sw
         vector<ParkRide> listRide( rideCount );
         for ( ParkRide& ride : listRide )
         {
-            if ( StateArchiveUtil::readName( archive, ride._id ) == false )
-                return false;
-            archive >> ride._name;
-            archive >> ride._excitement;
-            archive >> ride._intensity;
-            archive >> ride._nausea;
-            archive >> ride._cycleTime;
-            archive >> ride._entrance;
-            archive >> ride._capacity;
-            archive >> ride._price;
-            archive >> ride._runningCostPerMinute;
-            archive >> ride._bOpen;
-            if ( readIDList( ride._listQueue ) == false || readIDList( ride._listRider ) == false )
-                return false;
-            archive >> ride._cycleTimer._remaining;
-            archive >> ride._totalRiders;
-            archive >> ride._totalIncome;
-            if ( archive.isError() )
+            if ( ThemeParkInternal::readRide( archive, ride ) == false )
                 return false;
         }
         uint32 guestCount = 0;
@@ -683,33 +724,8 @@ namespace sw
         vector<ParkGuest> listGuest( guestCount );
         for ( ParkGuest& guest : listGuest )
         {
-            uint8 state   = 0;
-            uint8 thought = 0;
-            archive >> guest._position;
-            archive >> guest._walkFrom;
-            archive >> guest._walkTo;
-            archive >> guest._id;
-            archive >> guest._cash;
-            archive >> guest._targetRideIndex;
-            archive >> guest._rideCount;
-            archive >> guest._happiness;
-            archive >> guest._nausea;
-            archive >> guest._energy;
-            archive >> guest._minIntensity;
-            archive >> guest._maxIntensity;
-            archive >> guest._nauseaTolerance;
-            archive >> guest._walkTimer;
-            archive >> guest._walkDuration;
-            archive >> guest._queueTime;
-            archive >> state;
-            archive >> thought;
-            const bool bEnumValid        = state <= static_cast<uint8>( ParkGuestState::Left ) && thought <= static_cast<uint8>( ParkGuestThought::NothingToRide );
-            const bool bRideValid        = -1 <= guest._targetRideIndex && guest._targetRideIndex < static_cast<int32>( rideCount );
-            const bool bInvalidGuestData = archive.isError() || bEnumValid == false || bRideValid == false;
-            if ( bInvalidGuestData )
+            if ( ThemeParkInternal::readGuest( archive, rideCount, guest ) == false )
                 return false;
-            guest._state   = static_cast<ParkGuestState>( state );
-            guest._thought = static_cast<ParkGuestThought>( thought );
         }
         FixedStepTimer stepTimer = _stepTimer;
         GameRandom     random;

@@ -4,6 +4,7 @@
 
 #include "Core/Common/Defines.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -271,12 +272,7 @@ namespace sw
 
     const ScavengerScrap* ScavengerFacility::findGroundScrap( int32 uid ) const
     {
-        for ( const ScavengerScrap& scrap : _listGroundScrap )
-        {
-            if ( scrap._uid == uid )
-                return &scrap;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&ScavengerScrap::_uid>( _listGroundScrap, uid );
     }
 
     int32 ScavengerFacility::computeGroundValue() const

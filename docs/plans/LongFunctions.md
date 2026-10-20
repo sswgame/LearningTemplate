@@ -28,7 +28,7 @@
 |---|---|---|---|---|---|
 | L3 이후 | 영역(폴더)마다 기준 1 ~ 4 를 적용합니다. 영역 하나가 단위 하나이고, 그 폴더를 다른 작업이 건드리는 중이면 미룹니다 | 영역마다 다름 | 그 영역의 다른 계획 단위(예: 자동화는 데이터 주도 D8) | 그 영역의 테스트, 동작 변경 없음 | 핫 패스 함수를 나눌 때만 Release 전후 측정 |
 
-L3 의 단순한 중복 합치기는 `mech-worker` 에 맡길 수 있습니다. 끝난 영역: `Source/Editor/Viewport`(2026-10-18 — 페이스 버튼 표, 기즈모 설정 · 단일 조작, 바 손잡이를 단계 함수로. 격자 `drawAdaptiveGrid` 는 람다를 옮기면 숫자 색 리터럴이 새 줄로 잡혀, 테마 토큰 작업(editorux) 때 함께 나눈다), `Source/Core/Network`(2026-10-21 — 패킷 읽기 · 쓰기와 제어 패킷 처리, 요청 프레임을 단계 함수로), `Source/Core/File`(2026-10-21 — 감시 워커의 이벤트 처리를 따로). 영역을 맡기 전에 3절 목록을 같은 명령으로 다시 뽑습니다.
+L3 의 단순한 중복 합치기는 `mech-worker` 에 맡길 수 있습니다. 끝난 영역: `Source/Editor/Viewport`(2026-10-18 — 페이스 버튼 표, 기즈모 설정 · 단일 조작, 바 손잡이를 단계 함수로. 격자 `drawAdaptiveGrid` 는 람다를 옮기면 숫자 색 리터럴이 새 줄로 잡혀, 테마 토큰 작업(editorux) 때 함께 나눈다), `Source/Core/Network`(2026-10-21 — 패킷 읽기 · 쓰기와 제어 패킷 처리, 요청 프레임을 단계 함수로), `Source/Core/File`(2026-10-21 — 감시 워커의 이벤트 처리를 따로), `Source/GameFramework/Kits`(2026-10-21, `wt/kitclean` — 상태 읽기는 원소 하나 읽기 함수로, 상태 디스패처의 긴 경우는 `update*` 로, 낙하 세기 · 격자 다시 칠하기 중복은 하나로. 유지: `FightingMatch::updateFighter` · `RespEphemeralStore::sendOperation`(짧은 switch 디스패처, 헤더에 이유). `Feature/Online` 5 개는 `wt/onlinekits` 와 겹쳐 남겼다). 영역을 맡기 전에 3절 목록을 같은 명령으로 다시 뽑습니다.
 
 ## 3. 목록
 
@@ -37,9 +37,9 @@ L3 의 단순한 중복 합치기는 `mech-worker` 에 맡길 수 있습니다. 
 
 | 영역 | 수 | 함수(본문 줄 · 중첩 · return · 람다 줄) | 기준 |
 |---|---|---|---|
-| `Source/GameFramework/Kits` | 35 | `RTSWorld::readState` (`Genre/Strategy/RealTimeStrategy/RTSWorldState.cpp:110`) 216 · 3 · 17 · 0 | 2 · 3 |
-|  |  | `WesternCatalog::loadRoot` (`Genre/RPG/OpenWorldWestern/Catalog/WesternCatalog.cpp:122`) 205 · 3 · 1 · 0 | 2 · 3 |
-|  |  | `FightingMatch::updateFighter` (`Genre/Action/Fighting/FightingMatch.cpp:218`) 172 · 4 · 2 · 0 | 3 |
+| `Source/GameFramework/Kits/Feature/Online` | 5 | `MatchmakingServer::onServiceRequest` (`Matchmaking/Server/Service/MatchmakingServer.cpp:69`) 130 · 2 · 3 · 0 | 3 |
+|  |  | `AccountServer::onServiceRequest` (`Account/Server/Service/AccountServer.cpp:85`) 126 · 3 · 4 · 0 | 3 |
+|  |  | `TradeStoreLogic::applyCommand` (`Trade/Server/TradeStoreLogic.cpp:215`) 125 · 5 · 16 · 0 | 4 |
 | `Source/Engine/Graphics` | 34 | `ShaderReflectionUtil::reflectSpirv` (`Shader/Reflection/ShaderReflectionSpirv.cpp:124`) 416 · 6 · 3 · 46 | 4 |
 |  |  | `ShaderCompiler::compileHlsl` (`Shader/Compile/ShaderCompiler.cpp:272`) 405 · 5 · 9 · 27 | 4 |
 |  |  | `OpenGLRHIDevice::initializeInternal` (`RHI/GL/OpenGLRHIDeviceInit.cpp:48`) 229 · 3 · 7 · 0 | 유지(순서가 곧 의미) |

@@ -11,6 +11,7 @@
 
 #include "Engine/TileMap/TileMapXML.h"
 
+#include "GameFramework/Base/Foundation/Utility/Grid/GridTopology.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -51,7 +52,7 @@ namespace sw
         /**
          * @brief 같은 크기의 다른 타일 레이어(집 · 나무 같은 소품 레이어)에서 단단한(`solid`) 브러시 칸을 막습니다.
          * @details 막힘은 플래그 레이어(`Walkable`, 파일에 저장되는 값)가 아니라 따로 든 표에 쌓는다 — 저장하면 손으로 칠한 플래그만 남는다.
-         *          충돌의 정본은 타일셋의 `solid` 하나다(렌더러의 물리 충돌체와 같은 값). 유니티의 TilemapCollider2D, Godot TileSet physics layer 와 같다.
+         *          충돌의 원본은 타일셋의 `solid` 하나다(렌더러의 물리 충돌체와 같은 값). 유니티의 TilemapCollider2D, Godot TileSet physics layer 와 같다.
          * @return 크기가 다르거나 타일셋에 없는 브러시를 칠한 레이어면 false 이고, 막힘은 바뀌지 않습니다.
          */
         [[nodiscard]] bool addSolidLayer( const TileMapXMLData& layer, const TileSetAsset& tileSet );
@@ -127,16 +128,13 @@ namespace sw
         /** @brief HD-2D 타일 디버그 로그를 남깁니다. */
         void debugLogTileHd2d( int32 x, int32 y ) const;
 
+        /**
+         * @brief 맵의 셀 격자(셀 번호 · 경계)를 반환합니다. 크기의 원본은 파일 스키마 `_data` 이고, 이것은 그 값으로 만든 뷰입니다.
+         * @details 셀 수는 `TileMapXMLData::kMaxTileCount` 로 막혀 있어 int32 셀 번호가 넘치지 않습니다.
+         */
+        GridTopology getTopology() const { return GridTopology{ _data._width, _data._height }; }
+
     private:
-        /** @brief 좌표가 맵 범위 안인지 반환합니다. */
-        bool isInBounds( int32 x, int32 y ) const;
-        /** @brief (x, y) 의 행 우선 1차원 인덱스를 반환합니다. */
-        size_t indexOf( int32 x, int32 y ) const
-        {
-            // 곱셈을 size_t 로 한다. int 로 곱하면 큰 맵에서 오버플로가 난 뒤에 확대되므로
-            // 캐스트가 값을 지켜 주는 것처럼 보이지만 이미 틀린 값이다. 좌표 유효성은 isInBounds 가 검사한다.
-            return static_cast<size_t>( y ) * static_cast<size_t>( _data._width ) + static_cast<size_t>( x );
-        }
         uint64 getWarpKey( int32 x, int32 y ) const { return ( static_cast<uint64>( static_cast<uint32>( x ) ) << 32 ) | static_cast<uint32>( y ); }
         void   rebuildWarpIndex();
 
