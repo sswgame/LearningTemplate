@@ -131,12 +131,6 @@
 남은 것: 경계를 형식으로 표현할 방법을 찾습니다. 경계는 "런타임 읽기만 배포에서 막는다"입니다.
 함정: `DiskFilePath` 형식으로 막는 안은 하지 않았습니다 — Shipping App 이 쿠킹 호스트라 디스크 입구를 컴파일에서 뺄 수는 없습니다.
 
-### NetSettingsRemaining
-제목: 넷 설정의 남은 것
-옛번호: C-71
-왜 필요한가: `gv_netLoopbackOnly` 도 테스트 전역 변수에서만 읽는 같은 모양입니다. Shipping 클라이언트에는 `gv_netConnectAddress` 가 없습니다.
-남은 것: 위 둘을 정리합니다. `_gamePortShardCount` 는 [ServerDebug](ServerDebug.md)(옛 `D7-3` ⑤)가 맡습니다.
-
 ### InternalErasureRemaining
 제목: `Internal` 소거의 남은 것
 옛번호: C-72

@@ -9,7 +9,7 @@
  *          - 전용 서버(`Server`): 서버 설정(`ServerConfig::_gamePort` · `_listenAddress`)의 게임 포트를 늘 연다(언리얼 전용 서버와 같다).
  *            설정은 `ServerServiceRegistry::findHostContext` 로 받는다. 포트 0 은 운영체제가 고른 포트다(한 기계에서 서버를 여럿 띄우는 테스트).
  *          - 서버(개발 덮어쓰기): `-gv_netListenPort=<포트>` 로 연다. 리슨 호스트(`App`)는 이 길뿐이고, 전용 서버에서는 설정보다 우선한다. Shipping 에는 없다.
- *          - 클라이언트: `-gv_netConnectAddress=<호스트:포트>` 로 붙는다. 호스트는 이름이어도 된다(`PlatformSocketUtil::resolveAddress` — HTTP 클라이언트와 같은 해석기,
+ *          - 클라이언트: `-gv_netConnectAddress=<호스트:포트>` 로 붙는다(Shipping 에도 있다). 호스트는 이름이어도 된다(`PlatformSocketUtil::resolveAddress` — HTTP 클라이언트와 같은 해석기,
  *            기동 때 한 번 막고 푼다). 포트를 빼면 `kDefaultPort` 를 쓴다.
  *          - 전용 서버가 아니고 인자도 없으면 세션을 열지 않는다. 혼자 하는 게임은 이전과 같이 동작한다.
  *
@@ -71,7 +71,7 @@ namespace sw
         NetAddress    _serverAddress{}; ///< 클라이언트 — 붙을 서버
         uint16        _listenPort{ 0 }; ///< 서버 — 열 UDP 포트
         GameNetRole   _role{ GameNetRole::None };
-        bool          _bLoopbackOnly{ true }; ///< 이 기계의 상대만 받는다 — 개발 실행의 기본. 다른 기계와 하려면 `gv_netLoopbackOnly=0`
+        bool          _bLoopbackOnly{ true }; ///< 서버 — 이 기계의 상대만 받는다(설정 `_listenAddress` 또는 `gv_netLoopbackOnly`). 클라이언트는 서버 주소가 정해 읽지 않는다
     };
 } // namespace sw
 

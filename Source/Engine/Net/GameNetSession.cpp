@@ -240,14 +240,15 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE( int32, gv_netListenPort, 0, "게임 네트워크 서버로 열 UDP 포트 (0=끄기)" );
     /**
      * @brief `-gv_netConnectAddress=<주소:포트>`: 게임 인스턴스가 그 서버에 클라이언트로 붙습니다(비면 끄기). 포트를 빼면 7777 입니다.
+     * @details 배포 클라이언트도 이것으로 서버에 붙으므로 Shipping 에도 등록한다(언리얼 실행 인자 URL 의 자리).
      * @note PowerShell 은 점이 든 인자를 쪼갠다 — 따옴표로 감쌀 것.
      */
-    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_netConnectAddress, "", "클라이언트로 붙을 게임 서버 주소 (주소:포트, 비면 끄기)" );
+    SW_TEST_GLOBAL_VARIABLE_SHIPPED( sw::string, gv_netConnectAddress, "", "클라이언트로 붙을 게임 서버 주소 (주소:포트, 비면 끄기)" );
     /**
-     * @brief `-gv_netLoopbackOnly=0`: 게임 UDP 소켓을 모든 인터페이스에 묶는다(기본 1 = 127.0.0.1 만).
+     * @brief `-gv_netLoopbackOnly=0`: `-gv_netListenPort` 로 연 서버의 UDP 소켓을 모든 인터페이스에 묶는다(기본 1 = 127.0.0.1 만).
      * @details 모든 인터페이스에 묶으면 Windows 방화벽이 실행 파일 경로마다 "허용" 창을 띄운다 — 워크트리 · 테스트 실행 파일이 많은 개발 환경에서는 매번 뜬다.
-     *          다른 기계와 붙을 때만 0 으로 둔다. 클라이언트는 서버 주소가 루프백이 아닐 때 이 값과 상관없이 모든 인터페이스에 묶는다(답을 받아야 한다).
-     *          서버 설정으로 연 전용 서버에는 쓰지 않는다 — 그쪽은 `ServerConfig::_listenAddress` 가 정한다.
+     *          다른 기계와 붙을 때만 0 으로 둔다. `gv_netListenPort` 와 함께 쓰는 개발 덮어쓰기라 같이 Shipping 에 없다.
+     *          클라이언트는 서버 주소가, 서버 설정으로 연 전용 서버는 `ServerConfig::_listenAddress` 가 묶을 곳을 정한다 — 이 값을 읽지 않는다.
      */
     SW_TEST_GLOBAL_VARIABLE( bool, gv_netLoopbackOnly, true, "게임 UDP 소켓을 127.0.0.1 에만 묶는다 (0=모든 인터페이스, 다른 기계와 붙을 때)" );
     /**
@@ -281,10 +282,9 @@ namespace sw
 
     bool GameNetSession::makeLaunchParams( GameNetSessionParams& outParams )
     {
-        outParams                = GameNetSessionParams{};
-        outParams._bLoopbackOnly = gv_netLoopbackOnly;
-        const bool bListen       = gv_netListenPort > 0;
-        const bool bConnect      = gv_netConnectAddress.empty() == false;
+        outParams           = GameNetSessionParams{};
+        const bool bListen  = gv_netListenPort > 0;
+        const bool bConnect = gv_netConnectAddress.empty() == false;
         if ( bListen == false && bConnect == false )
         {
             // 개발 덮어쓰기가 없으면 전용 서버는 서버 설정의 게임 포트를 연다. 리슨 호스트(App) · 테스트는 서버 문맥이 없어 열지 않는다.
@@ -302,8 +302,9 @@ namespace sw
             }
             if ( bConnect )
                 SW_LOG_WARNING( "Both gv_netListenPort and gv_netConnectAddress are set - starting as the server on port %#", gv_netListenPort );
-            outParams._role       = GameNetRole::Server;
-            outParams._listenPort = static_cast<uint16>( gv_netListenPort );
+            outParams._role          = GameNetRole::Server;
+            outParams._listenPort    = static_cast<uint16>( gv_netListenPort );
+            outParams._bLoopbackOnly = gv_netLoopbackOnly;
             return true;
         }
         // 기동 때 한 번 막고 푼다 — HTTP 클라이언트의 해석 스레드와 같은 해석기다(이름 · hosts 파일 · 점 넷 숫자).
@@ -356,9 +357,8 @@ namespace sw
             return false;
         _transport                 = make_unique<UDPNetTransport>();
         const uint16 transportPort = params._role == GameNetRole::Server ? params._listenPort : 0;
-        // 클라이언트가 다른 기계의 서버에 붙으면 그 서버의 답을 받아야 하므로 루프백에만 묶을 수 없다.
-        const bool bRemoteServer = params._role == GameNetRole::Client && params._serverAddress != NetAddress::makeLoopback( params._serverAddress._port );
-        const bool bLoopbackOnly = params._bLoopbackOnly && bRemoteServer == false;
+        // 클라이언트는 서버 주소가 정한다 — 다른 기계의 서버면 그 답을 받아야 하므로 루프백에만 묶을 수 없다.
+        const bool bLoopbackOnly = params._role == GameNetRole::Server ? params._bLoopbackOnly : params._serverAddress == NetAddress::makeLoopback( params._serverAddress._port );
         if ( _transport->open( transportPort, bLoopbackOnly ) == false )
         {
             SW_LOG_ERROR( "Net session could not open UDP port %# (in use?)", transportPort );
