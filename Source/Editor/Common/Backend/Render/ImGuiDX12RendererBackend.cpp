@@ -65,10 +65,12 @@ namespace sw::editor
         _listFreeDescriptor.clear();
 
         SW_LOG_TRACE( "Populating ImGui_ImplDX12_InitInfo" );
+        // NumFramesInFlight: ImGui 는 이 값을 뷰포트별 정점 · 인덱스 버퍼 링의 칸 수로 쓴다. 캡처 프레임은 메인 뷰포트를 두 번 그린다(`kImGuiDrawBufferRingSize`).
+        // 보조(플로팅) 뷰포트의 스왑체인 버퍼 수 · 프레임 지연 한도도 같은 값이다(ImGui 가 한 값으로 묶는다).
         ImGui_ImplDX12_InitInfo initInfo = {};
         initInfo.Device                  = pDevice;
         initInfo.CommandQueue            = static_cast<ID3D12CommandQueue*>( _pRHIDevice->getNativeCommandQueue() );
-        initInfo.NumFramesInFlight       = 3;
+        initInfo.NumFramesInFlight       = kImGuiDrawBufferRingSize;
         initInfo.RTVFormat               = DXGI_FORMAT_R8G8B8A8_UNORM;
         initInfo.SrvDescriptorHeap       = _d3d12SrvHeap.Get();
         initInfo.UserData                = this;

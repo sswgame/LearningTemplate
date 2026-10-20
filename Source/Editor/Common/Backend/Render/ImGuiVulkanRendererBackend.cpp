@@ -132,8 +132,10 @@ namespace sw::editor
             return false;
         }
 
-        const uint32 imageCount = vkNative._imageCount >= 2 ? vkNative._imageCount : 2;
-        const uint32 minImages  = vkNative._minImageCount >= 2 ? vkNative._minImageCount : 2;
+        // ImageCount 는 이 백엔드에서 뷰포트별 정점 · 인덱스 버퍼 링의 칸 수일 뿐이다(스왑체인 이미지 수와 상관없다). 칸이 GPU 에서 돌아오는 시간으로 정한다 —
+        // 캡처 프레임은 메인 뷰포트를 두 번 그린다(`kImGuiDrawBufferRingSize`). ImGui 는 MinImageCount 이상을 요구한다.
+        const uint32 minImages = vkNative._minImageCount >= 2 ? vkNative._minImageCount : 2;
+        const uint32 ringSize  = kImGuiDrawBufferRingSize > minImages ? kImGuiDrawBufferRingSize : minImages;
 
         ImGui_ImplVulkan_InitInfo init_info    = {};
         init_info.Instance                     = static_cast<VkInstance>( vkNative._pInstance );
@@ -146,7 +148,7 @@ namespace sw::editor
         init_info.PipelineInfoMain.RenderPass  = static_cast<VkRenderPass>( vkNative._pRenderPass );
         init_info.PipelineInfoMain.Subpass     = 0;
         init_info.MinImageCount                = minImages;
-        init_info.ImageCount                   = imageCount;
+        init_info.ImageCount                   = ringSize;
         init_info.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
         init_info.Allocator                    = nullptr;
         init_info.CheckVkResultFn              = nullptr;

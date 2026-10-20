@@ -24,3 +24,4 @@
 - 정렬 할당 객체를 기반 포인터로 지우면 배포본 힙이 깨진다(Debug 는 조용). 모듈 안 정적 객체의 소멸자에서 스레드를 join 하지 않는다.
 - 무효 bindless 인덱스(`0xFFFFFFFF`)는 DX12 페이지 폴트, Vulkan DEVICE_LOST 다. 셰이더를 바꾼 뒤에는 `App.exe --cook-shaders`.
 - `castTo<Component>( Component*, 타입 )` 은 항상 성공한다. 종류 거르기는 `getTypeInfo()->isDerivedFrom( 타입 )`.
+- ImGui 렌더러 백엔드(Vulkan · DX12)는 `RenderDrawData` 를 부를 때마다 뷰포트의 정점 · 인덱스 버퍼 링을 한 칸 넘기고, 모자란 칸은 GPU 를 기다리지 않고 바로 지운다. 한 프레임에 같은 뷰포트를 한 번 더 그리면(에디터 UI 캡처처럼) `kImGuiDrawsPerViewportPerFrame` 을 올린다 — 안 올리면 Vulkan 검증 레이어가 `vkDestroyBuffer ... in use by VkCommandBuffer`(VUID-vkDestroyBuffer-buffer-00922)를 낸다.

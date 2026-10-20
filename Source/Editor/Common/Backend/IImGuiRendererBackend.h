@@ -10,6 +10,8 @@
 
 #include "Editor/Common/Backend/EditorDrawReleaseQueue.h"
 
+#include "Engine/Graphics/RHI/RHITypes.h"
+
 namespace sw
 {
     enum class RHIBackend : uint32;
@@ -23,6 +25,22 @@ struct ImTextureData;
 namespace sw::editor
 {
     using RHITextureHandle = uint64;
+
+    /**
+     * @brief 렌더 스레드가 한 프레임에 같은 뷰포트(메인)의 그리기 데이터를 `IImGuiRendererBackend::render` 로 그리는 최대 횟수입니다.
+     * @details 메인 UI 한 번과 에디터 UI 캡처(`EditorUICapture::renderJob`, 주인 뷰포트가 메인인 합본) 한 번이다. 부르는 곳은 `ImGuiEditor::render` 하나다.
+     */
+    inline constexpr uint32 kImGuiDrawsPerViewportPerFrame = 2u;
+
+    /**
+     * @brief ImGui 렌더러 백엔드(Vulkan · DX12)가 뷰포트마다 두는 정점 · 인덱스 버퍼 링의 칸 수입니다.
+     * @details 두 백엔드는 `RenderDrawData` 를 부를 **때마다** 링을 한 칸 넘기고, 칸이 모자라면 그 칸의 버퍼를 GPU 를 기다리지 않고 바로 지우고 새로 만든다
+     *          (`imgui_impl_vulkan` 의 `CreateOrResizeBuffer`, `imgui_impl_dx12` 의 `SafeRelease`). 그래서 칸은 GPU 가 그 칸을 다 읽은 뒤에야 돌아와야 한다.
+     *          한 프레임에 여러 번 그리면 링이 프레임보다 빨리 돈다 — 링을 인플라이트 프레임 수로만 두면 캡처 프레임이 아직 GPU 에 있는 앞 프레임의 칸을
+     *          다시 쓰고, 그 칸을 늘리면 쓰는 중인 버퍼를 지운다(Vulkan 검증 레이어 VUID-vkDestroyBuffer-buffer-00922, 2026-10-20 `editor.inspectorhandle`).
+     *          "인플라이트 프레임 수 × 프레임당 그리는 수" 칸이면 어느 칸이든 인플라이트 프레임 수만큼 뒤의 프레임에서야 다시 쓰인다.
+     */
+    inline constexpr uint32 kImGuiDrawBufferRingSize = constant::kMaxFrameCountInFlight * kImGuiDrawsPerViewportPerFrame;
 
     /** @brief ImGui GPU 렌더러 백엔드입니다. DX11, DX12, Vulkan, OpenGL 이 각자 구현합니다. */
     class IImGuiRendererBackend
@@ -40,7 +58,7 @@ namespace sw::editor
         virtual void shutdown() = 0;
         /** @brief 프레임을 시작할 때 ImGui 렌더러 상태를 갱신합니다. */
         virtual void newFrame() = 0;
-        /** @brief 주어진 DrawData 를 RHI 로 그립니다. nullptr 이면 그리지 않습니다. */
+        /** @brief 주어진 DrawData 를 RHI 로 그립니다. nullptr 이면 그리지 않습니다. 한 프레임에 한 뷰포트로 `kImGuiDrawsPerViewportPerFrame` 번까지 부릅니다. */
         virtual void render( IRHIDevice* pRHIDevice, ImDrawData* pDrawData ) = 0;
         /**
          * @brief 대기 중인 ImGui 텍스처 생성과 갱신(폰트 아틀라스 재빌드 등)을 즉시 처리합니다.
