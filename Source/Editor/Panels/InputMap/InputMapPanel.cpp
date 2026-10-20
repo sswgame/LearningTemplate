@@ -689,7 +689,7 @@ namespace sw::editor
             return;
 
         ImGui::OpenPopup( "Press Key / Button To Bind" );
-        if ( ImGui::BeginPopupModal( "Press Key / Button To Bind", nullptr, ImGuiWindowFlags_AlwaysAutoResize ) )
+        if ( EditorWidgets::beginCenteredModal( "Press Key / Button To Bind" ) )
         {
             ImGui::Text( "Binding for Action: %s", _selectedAction.c_str() );
             ImGui::TextUnformatted( SW_LOCKEY( "EditorInputMap", "CaptureInstruction" ) );

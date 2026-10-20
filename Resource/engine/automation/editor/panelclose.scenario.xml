@@ -37,14 +37,15 @@
 		<Expect probe="Editor.InputMapSelectedTrigger" equals="4"/>
 	</At>
 
-	<!-- ③ X → 확인 → Don't Save -->
-	<At frame="210"><EditorClick mark="panel.close.Input Map Editor"/></At>
-	<At frame="230">
+	<!-- ③ 창을 줄인 뒤 X → 확인 → Don't Save. 확인은 창 크기가 바뀌어도 그때의 가운데에 뜬다(처음 위치를 붙들고 있지 않는다). -->
+	<At frame="206"><ResizeWindow width="1600" height="900"/></At>
+	<At frame="216"><EditorClick mark="panel.close.Input Map Editor"/></At>
+	<At frame="236">
 		<Expect probe="Editor.PanelOpen" equals="1"/>
 		<CaptureEditorUI file="panelclose/confirmX.png"/>
 	</At>
-	<At frame="235"><EditorClick mark="unsaved.discard"/></At>
-	<At frame="255"><Expect probe="Editor.PanelOpen" equals="0"/></At>
+	<At frame="241"><EditorClick mark="unsaved.discard"/></At>
+	<At frame="261"><Expect probe="Editor.PanelOpen" equals="0"/></At>
 
 	<!-- ④ 다시 열면 깨끗하다 -->
 	<At frame="265"><DevCommand line="panel.focus input_map"/></At>

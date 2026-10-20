@@ -455,7 +455,7 @@ namespace sw::editor
             ImGui::OpenPopup( ContentBrowserPanelInternal::kDeleteConfirmPopupName );
             _bOpenDeleteConfirm = SW_FALSE;
         }
-        if ( ImGui::BeginPopupModal( ContentBrowserPanelInternal::kDeleteConfirmPopupName, nullptr, ImGuiWindowFlags_AlwaysAutoResize ) == false )
+        if ( EditorWidgets::beginCenteredModal( ContentBrowserPanelInternal::kDeleteConfirmPopupName ) == false )
             return;
 
         const string&               pendingDeleteAbs = _fileActions.getPendingDeletePath();

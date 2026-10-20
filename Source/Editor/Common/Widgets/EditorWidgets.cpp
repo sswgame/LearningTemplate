@@ -605,12 +605,19 @@ namespace sw::editor
         return ImGui::IsKeyPressed( ImGuiKey_Enter, bRepeat );
     }
 
+    bool EditorWidgets::beginCenteredModal( const utf8* pPopupID )
+    {
+        // 팝업이 닫혀 있으면 BeginPopupModal 이 이 위치 요청을 버린다.
+        ImGui::SetNextWindowPos( ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2{ 0.5f, 0.5f } );
+        return ImGui::BeginPopupModal( pPopupID, nullptr, ImGuiWindowFlags_AlwaysAutoResize );
+    }
+
     EditorUnsavedChoice EditorWidgets::drawUnsavedChangesModal( const utf8* pPopupID, const utf8* pMessage )
     {
         if ( StringUtil::isNullOrEmpty( pPopupID ) )
             return EditorUnsavedChoice::None;
 
-        if ( ImGui::BeginPopupModal( pPopupID, nullptr, ImGuiWindowFlags_AlwaysAutoResize ) == false )
+        if ( beginCenteredModal( pPopupID ) == false )
             return EditorUnsavedChoice::None;
 
         ImGui::TextUnformatted( pMessage != nullptr ? pMessage : "You have unsaved changes." );

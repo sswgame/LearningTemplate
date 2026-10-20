@@ -199,6 +199,13 @@ namespace sw::editor
         static bool updateListSelection( int32& selectedIndex, int32 itemCount, bool bRepeat = true );
 
         /**
+         * @brief 열릴 때마다 호스트(주) 뷰포트 가운데에 뜨는 자동 크기 모달을 시작합니다. 에디터의 모달은 `ImGui::BeginPopupModal` 대신 이것을 씁니다.
+         * @details ImGui 의 기본 위치는 창 이름마다 처음 한 번만 가운데라서, 창 크기가 바뀐 뒤 다시 열면 옛 자리(작아진 창의 오른쪽 아래 가장자리)에 붙는다.
+         *          true 이면 `ImGui::EndPopup()` 으로 닫습니다.
+         */
+        static bool beginCenteredModal( const utf8* pPopupID );
+
+        /**
          * @brief Save / Don't Save / Cancel 모달을 그립니다. 버튼이 눌리기 전에는 None 입니다.
          */
         static EditorUnsavedChoice drawUnsavedChangesModal( const utf8* pPopupID, const utf8* pMessage );
