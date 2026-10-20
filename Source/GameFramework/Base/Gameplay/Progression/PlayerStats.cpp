@@ -101,7 +101,14 @@ namespace sw
             const utf8* pName = node.findAttribute( "name" );
             def._id           = hashed_string( pID );
             def._name         = pName != nullptr ? pName : pID;
-            def._maxValue     = MathUtil::max( 0.0, static_cast<float64>( node.getAttributeFloat( "max", 0.0f ) ) );
+            // 상한을 적지 않으면 정의의 초기값이다. 깨진 값 · 음수는 그 통계를 넣지 않는 오류다(자르지 않는다).
+            float32 maxValue = static_cast<float32>( def._maxValue );
+            if ( GameDataXML::readOptionalNumber( node, "max", sourceName, 0.0f, MathUtil::kMaxFloat, maxValue ) == false )
+            {
+                SW_LOG_ERROR( "%#: stat '%#' has an invalid max - skipped", sourceName, pID );
+                continue;
+            }
+            def._maxValue = maxValue;
             addStat( def );
             ++loadedCount;
         }

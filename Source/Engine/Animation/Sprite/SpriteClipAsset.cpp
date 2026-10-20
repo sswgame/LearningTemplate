@@ -171,11 +171,11 @@ namespace sw
         return &_listFrame[static_cast<size_t>( frameIndex )];
     }
 
-    float32 SpriteClipAsset::getFrameDurationSeconds( int32 frameIndex, float32 fallbackSeconds ) const
+    float32 SpriteClipAsset::getFrameDurationSeconds( int32 frameIndex, float32 animatorFrameSeconds ) const
     {
         const SpriteClipFrame* pFrame = findFrame( frameIndex );
         if ( pFrame == nullptr || pFrame->_durationMs <= 0 )
-            return fallbackSeconds;
+            return animatorFrameSeconds;
         return static_cast<float32>( pFrame->_durationMs ) * 0.001f;
     }
 
@@ -209,13 +209,13 @@ namespace sw
         return true;
     }
 
-    float32 SpriteClipAsset::computeFrameStartSeconds( int32 frameIndex, float32 fallbackSeconds ) const
+    float32 SpriteClipAsset::computeFrameStartSeconds( int32 frameIndex, float32 animatorFrameSeconds ) const
     {
         const int32 endFrame  = MathUtil::min( frameIndex, getFrameCount() );
         float32     startTime = 0.0f;
         for ( int32 earlierFrame = 0; earlierFrame < endFrame; ++earlierFrame )
         {
-            startTime += getFrameDurationSeconds( earlierFrame, fallbackSeconds );
+            startTime += getFrameDurationSeconds( earlierFrame, animatorFrameSeconds );
         }
         return startTime;
     }

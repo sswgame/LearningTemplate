@@ -11,6 +11,7 @@
 
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/Material/Material.h"
@@ -47,6 +48,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Window/IWindow.h"
 
+#include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
 
 // GPUSceneTest — 씬에서 GPU 스냅샷(인스턴스 · 배치 · 머티리얼 원소 · 퍼뮤테이션)을 만드는 규칙. 디바이스 없음(nogpu).
@@ -945,7 +947,7 @@ SW_TEST_CASE( GPUSceneTest, PerBatchMaterialElementsAreDistinct )
     {
         // 반환 대상을 하나로 둔다 — nullptr 과 material 을 섞어 돌려주면 NRVO 가 걸리지 않는다.
         sw::shared_ptr<sw::Material> material = sw::Material::create();
-        if ( material->loadFromFile( "engine/materials/defaultmaterial.material" ) == false ||
+        if ( material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) == false ||
              material->setParameter( nullptr, sw::hashed_string( "color" ), pColor ) == false )
             material.reset();
         return material;
@@ -1025,7 +1027,7 @@ SW_TEST_CASE( GPUSceneTest, PermutationSplitsBatchesAcrossMaterials )
     {
         // 반환 대상을 하나로 둔다 — nullptr 과 material 을 섞어 돌려주면 NRVO 가 걸리지 않는다.
         sw::shared_ptr<sw::Material> material = sw::Material::create();
-        if ( material->loadFromFile( "engine/materials/defaultmaterial.material" ) == false )
+        if ( material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) == false )
             material.reset();
         return material;
     };
@@ -1536,7 +1538,7 @@ SW_TEST_CASE( GPUSceneTest, CPUSnapshotCarriesShaderPermutations )
 SW_TEST_CASE( GPUSceneTest, InstancePermutationChangeRebuildsBatches )
 {
     sw::shared_ptr<sw::Material> material = sw::Material::create();
-    SW_ASSERT_TRUE( material->loadFromFile( "engine/materials/defaultmaterial.material" ) );
+    SW_ASSERT_TRUE( material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) );
 
     sw::Scene scene( "InstancePermutationScene" );
     SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
@@ -1611,7 +1613,7 @@ SW_TEST_CASE( GPUSceneTest, InstancePermutationChangeRebuildsBatches )
 SW_TEST_CASE( GPUSceneTest, InstanceOnlyMeshUsesInstanceParent )
 {
     sw::shared_ptr<sw::Material> parent = sw::Material::create();
-    SW_ASSERT_TRUE( parent->loadFromFile( "engine/materials/defaultmaterial.material" ) );
+    SW_ASSERT_TRUE( parent->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) );
 
     sw::Scene scene( "InstanceOnlyMeshScene" );
     SW_ASSERT_TRUE( scene.ensureDefaultCameras() );

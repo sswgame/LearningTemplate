@@ -16,6 +16,7 @@
 #include "Editor/Common/Asset/TextureImporter.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
+#include "Engine/Config/ConfigManager.h"
 #include "Engine/Resource/ResourcePaths.h"
 
 #include "RuntimeAPI/ABI/EditorAPI.h"
@@ -44,7 +45,7 @@ namespace sw::editor
 #endif
                         const string        configPath = TextureImporter::makeDefaultImportConfigPath();
                         TextureImportConfig config;
-                        if ( config.loadFromFile( configPath ) == false )
+                        if ( config.loadFromFile( configPath ) != ConfigReadResult::Loaded )
                         {
                             SW_LOG_ERROR( "Cannot import textures without the import config: %#", configPath.c_str() );
                             return -1;
@@ -57,7 +58,7 @@ namespace sw::editor
                     {
                         const string      configPath = ModelImportConfig::makeDefaultConfigPath();
                         ModelImportConfig config;
-                        if ( config.loadFromFile( configPath ) == false )
+                        if ( config.loadFromFile( configPath ) != ConfigReadResult::Loaded )
                         {
                             SW_LOG_ERROR( "Cannot import models without the import config: %#", configPath.c_str() );
                             return -1;

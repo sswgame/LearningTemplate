@@ -166,10 +166,10 @@ namespace sw::editor
 
         /**
          * @brief 프리미티브의 모프 타깃(POSITION, NORMAL 차이)을 @p inoutMesh 의 같은 이름 타깃에 더합니다. 모든 타깃 배열은 현재 정점 수에 맞춥니다(없는 정점은 0).
-         * @details 차이는 방향이므로 노드 변환의 3x3 만 곱하고 엔진 공간(X 뒤집기)으로 옮긴다.
+         * @details 차이는 방향이므로 노드 변환의 3x3 만 곱하고 엔진 공간(X 뒤집기)으로 옮긴다. 타깃이 적은 접근자를 읽지 못하면 false 입니다.
          */
-        static void appendMorphTargets( const cgltf_primitive& primitive, const cgltf_mesh* pSourceMesh, const float32 ( &arrWorld )[16], uint32 baseVertex,
-                                        cgltf_size vertexCount, MergedMesh& inoutMesh );
+        [[nodiscard]] static bool appendMorphTargets( const cgltf_primitive& primitive, const cgltf_mesh* pSourceMesh, const float32 ( &arrWorld )[16], uint32 baseVertex,
+                                                      cgltf_size vertexCount, MergedMesh& inoutMesh );
 
         static float3 normalizeOrZero( const float3& value );
 
@@ -196,13 +196,21 @@ namespace sw::editor
 
         /** @brief 접근자 원소 하나를 float 로 읽습니다(정규화 정수 포함). 접근자가 없거나 읽지 못하면 false 입니다. */
         [[nodiscard]] static bool readFloats( const cgltf_accessor* pAccessor, cgltf_size index, float32* pOutValue, cgltf_size count );
+        /**
+         * @brief 접근자 하나를 통째로 float 배열로 읽습니다(`cgltf_accessor_unpack_floats` — 희소 · 정규화 정수 포함). 원소마다 @p componentCount 칸입니다.
+         * @details 접근자가 없거나, 원소의 칸 수가 다르거나, 다 읽지 못하면 오류를 남기고 false 입니다. 원소 하나씩 읽다 실패한 칸을 0 으로 남기던 읽기를 대신한다.
+         */
+        [[nodiscard]] static bool unpackFloats( const cgltf_accessor* pAccessor, cgltf_size componentCount, vector<float32>& outListValue );
+        /** @brief `unpackFloats` 의 선택 속성판입니다. 접근자가 없으면 빈 배열로 true(부르는 쪽이 뜻을 정한다), 원소가 @p elementCount 보다 적으면 오류입니다. */
+        [[nodiscard]] static bool unpackOptionalFloats( const cgltf_accessor* pAccessor, cgltf_size componentCount, cgltf_size elementCount, vector<float32>& outListValue );
 
         /**
          * @brief 프리미티브 하나를 월드 변환과 좌표계 변환을 적용해 @p inoutMesh 에 더합니다.
          * @param pSkin 스킨드 메시를 만드는 중일 때의 본 매핑입니다. 스킨드 프리미티브는 JOINTS_0, WEIGHTS_0 을 쓰고, 아니면 고정 본에 가중치 1 을 줍니다. nullptr 이면 스킨을 보지 않습니다.
+         * @return 정점 속성 접근자를 읽지 못하면 오류를 남기고 false 입니다(삼각형이 아닌 · 위치 없는 프리미티브는 건너뛰고 true).
          */
-        static void appendPrimitive( const cgltf_primitive& primitive, const cgltf_mesh* pSourceMesh, const float32 ( &arrWorld )[16], const SkinBinding* pSkin,
-                                     MergedMesh& inoutMesh );
+        [[nodiscard]] static bool appendPrimitive( const cgltf_primitive& primitive, const cgltf_mesh* pSourceMesh, const float32 ( &arrWorld )[16], const SkinBinding* pSkin,
+                                                   MergedMesh& inoutMesh );
 
         /**
          * @brief 프리미티브의 삼각형을 @p baseVertex 부터 더한 정점에 이어 @p inoutMesh 에 더합니다(`appendPrimitive` 의 마지막 단계).
@@ -212,8 +220,8 @@ namespace sw::editor
         static void appendPrimitiveTriangles( const cgltf_primitive& primitive, const float32 ( &arrWorld )[16], uint32 baseVertex, cgltf_size vertexCount,
                                               MergedMesh& inoutMesh );
 
-        /** @brief 정점 하나의 JOINTS_0, WEIGHTS_0 를 본 번호와 합이 1 인 가중치로 읽습니다. 관절 번호가 범위 밖이면 가중치는 0 입니다. */
-        static void readSkinInfluence( const SkinBinding& skin, const cgltf_accessor* pJoint, const cgltf_accessor* pWeight, cgltf_size vertexIndex, ImportVertex& inoutVertex );
+        /** @brief 정점 하나의 JOINTS_0 과 미리 읽은 WEIGHTS_0(@p pWeight, `kInfluenceCount` 칸)를 본 번호와 합이 1 인 가중치로 바꿉니다. 관절 번호를 읽지 못하면 false 입니다. */
+        [[nodiscard]] static bool readSkinInfluence( const SkinBinding& skin, const cgltf_accessor* pJoint, const float32* pWeight, cgltf_size vertexIndex, ImportVertex& inoutVertex );
 
         /**
          * @brief 씬 루트 목록에서 부모가 있는 노드를 최상위 조상으로 바꾸고 중복을 지웁니다. 원본 바이트의 JSON 을 고치며, 바꾼 항목 수를 반환합니다.
@@ -227,8 +235,8 @@ namespace sw::editor
         /** @brief 규칙에 따라 메시를 옮깁니다. `translation`(원본 공간)을 적용한 다음 `recenter` 를 적용합니다. 경계 상자는 삼각형이 쓰는 정점만으로 측정합니다(엔진 공간). */
         static void applyRule( const ModelImportRule& rule, MergedMesh& inoutMesh );
 
-        /** @brief 노드와 그 자식을 따라가며 메시를 더합니다. 스킨 없는 모델용이며 월드 변환을 적용해 메시 하나로 만듭니다. */
-        static void appendNode( const cgltf_node& node, MergedMesh& inoutMesh );
+        /** @brief 노드와 그 자식을 따라가며 메시를 더합니다. 스킨 없는 모델용이며 월드 변환을 적용해 메시 하나로 만듭니다. 접근자를 읽지 못하면 false 입니다. */
+        [[nodiscard]] static bool appendNode( const cgltf_node& node, MergedMesh& inoutMesh );
 
         /** @brief 기본 씬(없으면 첫 씬)의 루트 노드 목록을 모읍니다. 씬이 없으면 부모 없는 모든 노드를 모읍니다. */
         static void collectSceneRoots( const cgltf_data& data, vector<const cgltf_node*>& outListRoot );
@@ -265,8 +273,8 @@ namespace sw::editor
         /** @brief 노드에서 가장 가까운 관절 조상을 관절 슬롯 테이블 기준으로 찾습니다(자기 자신은 제외). */
         static const cgltf_node* findJointAncestorBySlot( const cgltf_node& node, const unordered_map<const cgltf_node*, uint32>& mapJointSlot );
 
-        /** @brief 채널 하나의 키 시각과 값을 통째로 읽습니다. */
-        static void readChannel( const cgltf_animation_sampler& sampler, uint32 componentCount, ChannelData& outChannel );
+        /** @brief 채널 하나의 키 시각과 값을 접근자 단위로 통째로 읽습니다. 접근자를 읽지 못하면 false 입니다. */
+        [[nodiscard]] static bool readChannel( const cgltf_animation_sampler& sampler, uint32 componentCount, ChannelData& outChannel );
 
         /**
          * @brief 채널을 @p time 에서 평가해 값을 구합니다. glTF 보간을 따르며, LINEAR 는 회전이면 slerp, STEP 은 계단, CUBICSPLINE 은 에르미트입니다. 키가 없으면 false 입니다.
@@ -282,17 +290,19 @@ namespace sw::editor
 
         /**
          * @brief glTF 애니메이션 하나를 관절마다 균일한 간격으로 다시 샘플링합니다. 샘플 레이트는 길이를 정확히 나누도록 조금 조정합니다(마지막 샘플이 끝 시각이 된다).
+         * @return 채널 접근자를 읽지 못하면 false 입니다.
          */
-        static void resampleAnimation( const cgltf_animation& animation, const Skeleton& skeleton, const unordered_map<const cgltf_node*, int32>& mapJointBone,
-                                       const vector<BoneTransform>& listRest, const vector<float4x4>& listRootParent, float32 sampleRate, float32 minimumDuration,
-                                       AnimationRawClip& outRawClip );
+        [[nodiscard]] static bool resampleAnimation( const cgltf_animation& animation, const Skeleton& skeleton, const unordered_map<const cgltf_node*, int32>& mapJointBone,
+                                                     const vector<BoneTransform>& listRest, const vector<float4x4>& listRootParent, float32 sampleRate, float32 minimumDuration,
+                                                     AnimationRawClip& outRawClip );
 
         /**
          * @brief 애니메이션의 모프 가중치 채널(`weights`)을 타깃 이름의 커브로 읽습니다. 커브 이름은 모프 타깃 이름이며, 런타임이 이름으로 유닛의 모프 가중치에 연결합니다.
          * @details 출력은 키마다 타깃 수만큼의 스칼라이다(CUBICSPLINE 은 접선, 값, 접선 셋). 선형과 계단은 키 시각 그대로 읽고, 큐빅은 샘플 레이트로 다시 샘플링한다.
-         * @return 가중치 채널의 마지막 키 시각입니다. 클립 길이의 하한이 됩니다.
+         * @param outDuration 가중치 채널의 마지막 키 시각입니다. 클립 길이의 하한이 됩니다.
+         * @return 채널 접근자를 읽지 못하면 false 입니다.
          */
-        static float32 readMorphWeightCurves( const cgltf_animation& animation, float32 sampleRate, vector<AnimationClipCurve>& outListCurve );
+        [[nodiscard]] static bool readMorphWeightCurves( const cgltf_animation& animation, float32 sampleRate, vector<AnimationClipCurve>& outListCurve, float32& outDuration );
 
         /** @brief 부가 데이터(`<y>.clips.json`)를 읽습니다. 파일이 없으면 빈 맵으로 true 를 반환하고, 모르는 키나 잘못된 값이 있으면 false 를 반환합니다. */
         [[nodiscard]] static bool readClipData( string_view sourcePath, unordered_map<string, ClipExtra>& outMapExtra );
@@ -317,8 +327,9 @@ namespace sw::editor
         /**
          * @brief 구간 머티리얼이 쓰는 텍스처의 원본 이미지 바이트를 모읍니다. glTF 텍스처 번호로 찾으며, 파일 이름은 이미지 이름입니다(겹치면 번호를 붙인다).
          * @details 내장 이미지(bufferView)는 바이트 그대로 가져오고, 바깥 파일(uri)은 원본 옆에서 읽는다. data URI 이미지는 지원하지 않는다(경고를 남긴다).
+         * @return 원본이 가리키는 바깥 이미지 파일을 읽지 못하면 오류를 남기고 false 입니다(임포트 실패).
          */
-        static void collectSectionTextures( const cgltf_data& data, string_view sourcePath, ModelImportResult& inoutResult );
+        [[nodiscard]] static bool collectSectionTextures( const cgltf_data& data, string_view sourcePath, ModelImportResult& inoutResult );
 
         /**
          * @brief VRM 의 머티리얼 구간(메시와 툰 머티리얼)과 그 텍스처 원본을 씁니다.

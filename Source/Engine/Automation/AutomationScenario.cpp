@@ -8,6 +8,7 @@
 #include "Core/Network/Transport/NetEmulation.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/NetEmulationPresetTable.h"
 #include "Engine/Resource/Pack/ResourcePakManager.h"
 #include "Engine/Resource/ResourceIO.h"
@@ -422,9 +423,10 @@ namespace sw
             else if ( name == "network" )
             {
                 NetEmulationPresetTable presetTable;
-                if ( presetTable.loadFromResource() == false )
+                const DataPath&         presetPath = engine::getSubsystem<EngineDefaultAssets>()._netEmulationPresets;
+                if ( presetTable.loadFromResource( presetPath.get() ) == false )
                 {
-                    outReason = string( "network presets could not be read (" ) + NetEmulationPresetTable::kResourcePath + ")";
+                    outReason = string( "network presets could not be read (" ) + presetPath.get() + ")";
                     return false;
                 }
                 if ( presetTable.findPreset( pText ) == nullptr )

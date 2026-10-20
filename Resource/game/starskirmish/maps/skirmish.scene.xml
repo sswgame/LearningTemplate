@@ -162,6 +162,9 @@
 							<item>starport</item>
 							<item>bunker</item>
 						</_listBuildUnitID>
+						<_rushAI _workerTarget="12" _productionTarget="2" _attackArmySize="6" _supplyMargin="3" />
+						<_macroAI _workerTarget="18" _productionTarget="3" _attackArmySize="14" _supplyMargin="4" />
+						<_opponentAI _workerTarget="16" _productionTarget="2" _attackArmySize="10" _supplyMargin="3" />
 					</SkirmishDirectorComponent>
 				</_listComponent>
 			</GameObject>

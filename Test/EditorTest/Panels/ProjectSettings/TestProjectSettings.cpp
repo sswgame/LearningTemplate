@@ -235,6 +235,6 @@ SW_TEST_CASE( ProjectSettingsDocumentTest, SavedFileIsReloadedByTheHostConfigMan
     SW_ASSERT_TRUE( document.open( *sw::EngineConfig::StaticType(), path ) == sw::ConfigReadResult::Loaded );
     static_cast<sw::EngineConfig*>( document.getInstance() )->_maxFrameDeltaTime = 0.3f;
     SW_ASSERT_TRUE( document.save() );
-    SW_ASSERT_TRUE( manager.reloadConfigFile( path ) );
+    SW_ASSERT_TRUE( manager.reloadConfigFile( path ) == sw::ReloadOutcome::Reloaded );
     SW_EXPECT_NEAR_EQUAL( 0.3f, pHostConfig->_maxFrameDeltaTime, 0.0001f ); // 기동 때 받아 둔 포인터가 그대로 유효하다
 }

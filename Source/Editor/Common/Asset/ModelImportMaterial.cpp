@@ -133,7 +133,7 @@ namespace sw::editor
         }
     }
 
-    void ModelImportUtil::collectSectionTextures( const cgltf_data& data, string_view sourcePath, ModelImportResult& inoutResult )
+    bool ModelImportUtil::collectSectionTextures( const cgltf_data& data, string_view sourcePath, ModelImportResult& inoutResult )
     {
         vector<uint8> listUsed( data.textures_count, SW_FALSE );
         for ( const ModelImportSection& section : inoutResult._listSection )
@@ -175,12 +175,18 @@ namespace sw::editor
             else if ( pImage->uri != nullptr && StringUtil::startsWith( pImage->uri, "data:" ) == false )
             {
                 texture._extension = FileUtil::getExtension( pImage->uri );
-                // 못 읽으면 바이트가 비어 아래 경고가 알린다
-                (void)FileUtil::readFile( FileUtil::joinPath( FileUtil::getDirectoryPart( sourcePath ), pImage->uri ), texture._bytes );
+                // 원본이 가리키는 바깥 파일을 못 읽으면 흰 텍스처로 임포트하지 않고 실패한다(빠진 파일이 결과에 말없이 묻힌다).
+                const string imagePath = FileUtil::joinPath( FileUtil::getDirectoryPart( sourcePath ), pImage->uri );
+                if ( FileUtil::readFile( imagePath, texture._bytes ) == false )
+                {
+                    SW_LOG_ERROR( "glTF '%#': texture %# cannot read its image file %#", sourcePath, textureIndex, imagePath.c_str() );
+                    return false;
+                }
             }
             if ( texture._bytes.empty() )
                 SW_LOG_WARNING( "glTF '%#': texture %# has no readable image bytes - the material samples white", sourcePath, textureIndex );
         }
+        return true;
     }
 
     bool ModelImportUtil::writeMaterialSections( const ModelImportResult& result, string_view sourcePath, string_view sideFolder )

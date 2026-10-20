@@ -2,6 +2,7 @@
 
 #include "Core/File/FileUtil.h"
 
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/RawInputEvent.h"
@@ -24,6 +25,7 @@
 #include "Engine/UI/Widgets/TextWidget.h"
 #include "Engine/UI/Widgets/UserWidget.h"
 
+#include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
 
 // UIDocumentTest — UI 문서(*.ui.xml): 위젯 원소 = 리플렉션 타입 · 속성 = PROPERTY · 조각(UserWidget)의 이름 범위 · 바인딩 식 떼기 · 명령 · 캐시 · 다시 쓰기 ·
@@ -133,7 +135,7 @@ SW_TEST_CASE( UIDocumentTest, LoadsPauseMenuDocument )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     UIDocumentFixture        fixture;
-    const sw::UIScreenHandle handle  = fixture._ui.openScreen( "engine/ui/pause.ui.xml" );
+    const sw::UIScreenHandle handle  = fixture._ui.openScreen( ::test::getEngineDefaultAssets()._uiPauseMenu.c_str() );
     sw::UIScreen*            pScreen = fixture._ui.findScreen( handle );
     SW_ASSERT_NOT_NULL( pScreen );
 
@@ -143,7 +145,7 @@ SW_TEST_CASE( UIDocumentTest, LoadsPauseMenuDocument )
     SW_EXPECT_STREQ( "Resume", pResume->getCommand().c_str() );
     SW_EXPECT_STREQ( "Resume", pScreen->getDesc()._defaultFocus.c_str() );
     SW_EXPECT_TRUE( pScreen->getDesc()._bPausesGame );
-    SW_EXPECT_STREQ( "engine/ui/pause.ui.xml", pScreen->getDocumentPath().c_str() );
+    SW_EXPECT_STREQ( ::test::getEngineDefaultAssets()._uiPauseMenu.c_str(), pScreen->getDocumentPath().c_str() );
     SW_EXPECT_TRUE( pScreen->getTree().findWidget<sw::TextWidget>( "Hint.Label" ) != nullptr ); // 조각(inputhint) 안의 이름은 조각 위젯 이름으로 감싼다
     SW_EXPECT_TRUE( pScreen->getTree().findWidget<sw::UserWidget>( "Hint" ) != nullptr );
 }
@@ -385,7 +387,7 @@ SW_TEST_CASE( UIDocumentTest, RoundTripSaveMatchesSource )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     UIDocumentFixture fixture;
-    const utf8*       kPausePath = "engine/ui/pause.ui.xml";
+    const utf8*       kPausePath = ::test::getEngineDefaultAssets()._uiPauseMenu.c_str();
     sw::string        sourceText;
     SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( kPausePath, sourceText ) );
     sw::XMLDocument source;
@@ -570,10 +572,10 @@ SW_TEST_CASE( UIDocumentTest, OffscreenScreenDrawsToItsTargetAndReloads )
 SW_TEST_CASE( UIDocumentTest, OffscreenScreenDoesNotPlayOpenAnimation )
 {
     UIDocumentFixture        fixture;
-    const sw::UIScreenHandle offscreen = fixture._ui.openOffscreenScreen( "engine/ui/pause.ui.xml", "rendertarget/test_preview" );
+    const sw::UIScreenHandle offscreen = fixture._ui.openOffscreenScreen( ::test::getEngineDefaultAssets()._uiPauseMenu.c_str(), "rendertarget/test_preview" );
     sw::UIScreen*            pPreview  = fixture._ui.getOffscreenScreens().findScreen( offscreen );
     SW_ASSERT_NOT_NULL( pPreview );
-    const sw::UIScreenHandle stacked  = fixture._ui.openScreen( "engine/ui/pause.ui.xml" );
+    const sw::UIScreenHandle stacked  = fixture._ui.openScreen( ::test::getEngineDefaultAssets()._uiPauseMenu.c_str() );
     sw::UIScreen*            pStacked = fixture._ui.findScreen( stacked );
     SW_ASSERT_NOT_NULL( pStacked );
     SW_ASSERT_TRUE( pStacked->getAnimationPlayer().isPlaying( sw::hashed_string( sw::UIAnimation::kOpenName ) ) ); // 견본 문서에 Open 이 있다
@@ -596,7 +598,7 @@ SW_TEST_CASE( UIDocumentTest, OffscreenScreenDoesNotPlayOpenAnimation )
 SW_TEST_CASE( UIDocumentTest, OffscreenScreenPlaysAnimationsTheCallerPicks )
 {
     UIDocumentFixture        fixture;
-    const sw::UIScreenHandle offscreen = fixture._ui.openOffscreenScreen( "engine/ui/pause.ui.xml", "rendertarget/test_preview" );
+    const sw::UIScreenHandle offscreen = fixture._ui.openOffscreenScreen( ::test::getEngineDefaultAssets()._uiPauseMenu.c_str(), "rendertarget/test_preview" );
     sw::UIScreen*            pPreview  = fixture._ui.getOffscreenScreens().findScreen( offscreen );
     SW_ASSERT_NOT_NULL( pPreview );
     const sw::hashed_string openName( sw::UIAnimation::kOpenName );

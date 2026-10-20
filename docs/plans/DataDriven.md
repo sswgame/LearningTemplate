@@ -1,6 +1,6 @@
 # 데이터 주도 구조 정리 계획 (2026-10-16)
 
-> 상태: 구현중 · 선행: 없음 · 영역: engine · 옛번호: C-30, C-36 · 진행: 5/14
+> 상태: 구현중 · 선행: 없음 · 영역: engine · 옛번호: C-30, C-36 · 진행: 12/14
 
 값의 정본은 데이터 파일이고 코드 · 헤더는 형식만 가진다. 필수 값이 없으면 조용히 기본값 · 대체로 가지 않고 오류로 멈춘다. 결정은 [결정 기록](../09_Decisions.md) 5-4 "유지보수성을 위한 데이터화"이고, 이 문서는 6 영역 조사(2026-10-16)가 드러낸 위반을 근본 원인부터 없애는 순서다. 진행 표는 린트 게이트 `CheckDataDrivenStructure`의 `--summary` 가 정본이다(기준선이 줄면 진척).
 
@@ -60,17 +60,17 @@ C-30(데이터 속성의 리터럴 기본값)과 C-36(경로 리터럴, 조용�
 
 ### 7.1 지금 수치
 
-2026-10-18 에 두 게이트로 센 값입니다. 진행 표의 원본은 각 게이트의 출력입니다.
+2026-10-18 에 두 게이트로 센 값과 D6 ~ G1 뒤(2026-10-21, `wt/datadriven`)의 값입니다. 진행 표의 원본은 각 게이트의 출력입니다.
 
-| 게이트 | 종류 | 기준선 | 지금 |
+| 게이트 | 종류 | 2026-10-18 | 2026-10-21 |
 |---|---|---|---|
-| `CheckDataDrivenLiterals` | `AttributeFallback` | 886 | 886 |
-| `CheckDataDrivenLiterals` | `TuningConstexpr` | 60 | 48 |
-| `CheckDataDrivenStructure` | `AssetPathLiteral` | 40 | 40 |
-| `CheckDataDrivenStructure` | `SilentFallback` | 124 | 122 |
-| `CheckDataDrivenStructure` | `DiscardedLoadResult` | 164 | 164 |
-| `CheckDataDrivenStructure` | `MagicNameLiteral`(보고만) | 없음 | 75 |
-| `CheckDataDrivenStructure` | `LiteralGetDefault`(보고만) | 없음 | 0(P3 — 필수 키는 `[]` 와 이름 있는 오류, 선택 키는 없음을 형식으로) |
+| `CheckDataDrivenLiterals` | `AttributeFallback` | 886 | 없음(D9 — 폴백 읽기를 지워 형식으로 막혔다, 종류를 게이트에서 뺐다) |
+| `CheckDataDrivenLiterals` | `TuningConstexpr` | 48 | 45 |
+| `CheckDataDrivenStructure` | `AssetPathLiteral` | 40 | 19 |
+| `CheckDataDrivenStructure` | `SilentFallback` | 122 | 30 |
+| `CheckDataDrivenStructure` | `DiscardedLoadResult` | 164 | 87 |
+| `CheckDataDrivenStructure` | `MagicNameLiteral`(보고만) | 75 | 70 |
+| `CheckDataDrivenStructure` | `LiteralGetDefault`(보고만) | 0 | 1(P3 — 필수 키는 `[]` 와 이름 있는 오류, 선택 키는 없음을 형식으로) |
 
 `TuningConstexpr` 와 `GameTimeScale` 의 `SilentFallback` 은 이미 줄었으므로 기준선만 낮춥니다(D0).
 끝난 묶음은 W0, W1 의 엔진 기본 에셋 경로, W2, W3 의 에디터 경로, W4, W8 입니다.
@@ -132,6 +132,19 @@ C-30(데이터 속성의 리터럴 기본값)과 C-36(경로 리터럴, 조용�
 
 C-30 ④(에디터 색과 아이콘 테이블, UI 크기 리터럴)는 디자인 토큰 작업(editorux 묶음)이 맡으므로 이 표에 넣지 않습니다.
 D6 의 데이터 다시 쓰기는 키트가 읽는 데이터 파일만 건드립니다. 두 키트가 한 파일을 읽으면 같은 단위에 넣습니다. 맡기기 전에 `grep` 으로 확인합니다.
+
+**2026-10-21 상태(`wt/datadriven`, 빌드 미확인).** D6 · D7 · D8 · D9 · P1 · P4 · G1 은 코드가 들어갔고, P2 는 일부, G2 는 남았습니다. 검증 열의 확인이 모두 남아 있습니다.
+
+- D6 · D7: 카탈로그 · 손 읽기가 `readFields` 와 inout 선택 읽기(`readOptionalAttributeInRange` · `GameDataXML::readOptionalNumber`)로 갔고, 이름으로 찾는 값은 `std::optional` 을 돌려준다. 카메라 프리셋 데이터 각도는 라디안으로 다시 썼다.
+- D8: 자동화 단계는 계획의 "variant 로 한 번 읽어 넘기기" 대신 **검사와 실행이 같은 `parse*` 함수**를 쓴다 — 단계 레지스트리의 함수 포인터(검사 · 준비) 모양을 바꾸지 않기 위해서다. 버릴 결과가 없어진 것은 같다.
+  처음 읽기의 세 값은 새 형식 대신 이미 있던 `ConfigReadResult`(Loaded · Missing · Invalid)를 임포트 설정에 썼고, 다시 읽기는 `ReloadOutcome`(Reloaded · NotTracked · Failed)이다. 임포터는 `cgltf_accessor_unpack_floats` 로 접근자 단위로 읽는다.
+- D9: XML `getAttribute*` · `getChild*` · `tryGetAttributeIntInRange`, JSON `asInt` 류, `KeyValueFile::get*` 를 지웠다. JSON 키 없는 값은 `read<T>()`, 선택 키는 `readOptionalInto`(없으면 넣어 둔 값 그대로)다. `CharacterDataReader` 의 선택 읽기도 inout 이다.
+  게이트에서 `AttributeFallback` 종류를 뺐다. `fallbackParameter` 모양은 새 코드가 다시 쓸 수 있으므로 남겼다(형식으로 막히지 않는다).
+- P1: 엔진 UI 문서 15 개 · 프리셋 표 둘 · 컴포넌트 기본 머티리얼 넷이 `EngineDefaultAssets` 칸이 됐다. UI 는 `UIEngineDocuments` 묶음을 기동 때 받는다. 컴포넌트 머티리얼 칸은 비면 표의 값이다.
+- P2(일부): 파이프라인 검증 문제를 로드 실패로 바꾸고 `ensureNamed` · `attachmentFormatOrDefault` 를 지웠다(풀이 선언의 포맷 · 클리어 색을 든다). `getAttachmentClearColorOrDefault` 와 "선언이 없을 때만 원본 이름" 단계는 네 백엔드 골든 이미지 확인과 함께 뺀다.
+- P4: 엔진 기본 에셋 경로를 리터럴로 적던 테스트 약 130 곳이 `test::getEngineDefaultAssets()` 를 거친다. 실린 파일을 늘어놓은 목록 · 테스트 데이터 글 안의 경로는 그대로다.
+- G1: NileCity 계획표는 `data/autoplan.xml`, HarvestValley 작물 모델 표 · 해 곡선과 StarSkirmish 성향은 디렉터 PROPERTY(씬 데이터)다. 값은 옛 코드 그대로다.
+- G2(남음): 배포본 그림 비교는 구운 팩 시나리오의 `Screenshot` · `ExpectImage` 기준값(또는 골든)이 필요하고, 그 값은 실행해 재야 한다. 빌드 뒤 Empty 게임 팩 시나리오로 잰다.
 
 ### 7.6 사용자 결정
 

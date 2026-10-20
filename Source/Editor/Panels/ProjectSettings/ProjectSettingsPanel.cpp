@@ -196,8 +196,9 @@ namespace sw::editor
         if ( page._document.save() == false )
             return false;
         page._bDirty = false;
-        // 호스트가 파일에서 읽은 설정(EngineConfig · GameConfig …)이면 제자리에서 다시 읽는다. 팩 설정이나 모르는 파일은 false — 다음 실행부터 반영된다.
-        outApplied = ConfigHotReload::reloadChangedFile( ConfigManager::findPrimary(), page._absolutePath );
+        // 호스트가 파일에서 읽은 설정(EngineConfig · GameConfig …)이면 제자리에서 다시 읽는다. 팩 설정이나 모르는 파일은 NotTracked — 다음 실행부터 반영된다.
+        // 방금 쓴 파일을 다시 읽지 못하면(Failed) 읽는 쪽이 오류를 남겼다 — 적용하지 않은 것으로 알린다.
+        outApplied = ConfigHotReload::reloadChangedFile( ConfigManager::findPrimary(), page._absolutePath ) == ReloadOutcome::Reloaded;
         return true;
     }
 

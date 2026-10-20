@@ -284,7 +284,15 @@ namespace sw
             {
                 const JSONValue rightToLeft = entry.get( "rightToLeft", false );
                 if ( rightToLeft.isValid() )
-                    inoutInfo._bRightToLeft = rightToLeft.asBool( false );
+                {
+                    const std::optional<bool> bRightToLeft = rightToLeft.read<bool>();
+                    if ( bRightToLeft.has_value() == false )
+                    {
+                        outError = "rightToLeft must be true or false";
+                        return false;
+                    }
+                    inoutInfo._bRightToLeft = *bRightToLeft;
+                }
                 const JSONValue digits = entry.get( "digits", false );
                 if ( digits.isValid() )
                 {

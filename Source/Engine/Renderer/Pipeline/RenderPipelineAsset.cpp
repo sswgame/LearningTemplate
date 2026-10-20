@@ -23,8 +23,7 @@ namespace sw
         _desc = {};
         if ( ReflectedXMLFile::loadDesc( assetRelativePath, _desc ) == false )
             return false;
-        finishLoad( assetRelativePath );
-        return true;
+        return finishLoad( assetRelativePath );
     }
 
     bool RenderPipelineAsset::loadFromDiskFile( string_view diskPath )
@@ -32,16 +31,21 @@ namespace sw
         _desc = {};
         if ( ReflectedXMLFile::loadDescFromDiskFile( diskPath, _desc ) == false )
             return false;
-        finishLoad( diskPath );
-        return true;
+        return finishLoad( diskPath );
     }
 
-    void RenderPipelineAsset::finishLoad( string_view sourcePath )
+    bool RenderPipelineAsset::finishLoad( string_view sourcePath )
     {
-        validate( sourcePath );
-
+        // 검증 오류가 하나라도 있으면 로드 실패다. 선언하지 않은 첨부 · 모르는 패스 타입이 렌더러까지 가면 렌더러가 코드의 이름 · 포맷으로 짐작해야 한다.
+        const uint32 issueCount = validate( sourcePath );
+        if ( issueCount > 0 )
+        {
+            SW_LOG_ERROR( "'%#' has %# pipeline issue(s) - not loaded", sourcePath, issueCount );
+            return false;
+        }
         SW_LOG_INFO( "Loaded '%#' (model=%#, attachments=%#, passes=%#)",
                      _desc._name, _desc._shadingModel, _desc._listAttachment.size(), _desc._listPass.size() );
+        return true;
     }
 
     uint32 RenderPipelineAsset::validate( string_view sourcePath )

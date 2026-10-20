@@ -13,6 +13,7 @@
 #include "Editor/Panels/Multiplayer/MultiplayerTab.h"
 
 #include "Engine/Automation/AutomationProbe.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/NetEmulationPresetTable.h"
 #include "Engine/Localization/LocText.h"
 
@@ -264,7 +265,8 @@ namespace sw::editor
         float32                 _spikeSeconds;
         uint16                  _sessionPort;           ///< `_listLink` 가 맞춰진 세션(포트) — 바뀌면 지운다
         bool                    _bApplyToAll;           ///< 대상 대신 모든 프로세스에 보낸다
-        bool                    _bPresetTableAttempted; ///< 테이블을 읽어 봤다(실패도 한 번만 알린다)
+        bool                    _bPresetTableAttempted; ///< 표를 읽어 봤다(실패도 한 번만 알린다)
+        bool                    _bPresetTableFailed;    ///< 표를 읽지 못했다 — 단추 자리에 그렇다고 적는다
     };
 } // namespace sw::editor
 
@@ -277,6 +279,7 @@ namespace sw::editor
         , _sessionPort{ 0 }
         , _bApplyToAll{ false }
         , _bPresetTableAttempted{ false }
+        , _bPresetTableFailed{ false }
     {
     }
 
@@ -346,9 +349,13 @@ namespace sw::editor
         // 프리셋 — 두 방향을 같은 값으로(왕복이 그 회선이 된다). 단추는 엔진 프리셋 테이블의 항목이다.
         if ( _bPresetTableAttempted == false )
         {
-            _bPresetTableAttempted = true;
-            (void)_presetTable.loadFromResource(); // 실패는 테이블이 알린다 — 단추가 없을 뿐 슬라이더는 그대로 쓴다
+            // 표 경로는 엔진 기본 에셋 표가 정본이다. 읽지 못하면(이유는 표가 알린다) 단추가 없을 뿐 슬라이더는 그대로 쓴다 — 실패 표시를 남긴다.
+            _bPresetTableAttempted                    = true;
+            const EngineDefaultAssets* pDefaultAssets = editor::findSubsystem<const EngineDefaultAssets>();
+            _bPresetTableFailed                       = pDefaultAssets == nullptr || _presetTable.loadFromResource( pDefaultAssets->_netEmulationPresets.get() ) == false;
         }
+        if ( _bPresetTableFailed )
+            ImGui::TextDisabled( "Network presets could not be read - see the log" );
         for ( const NetEmulationPresetDef& preset : _presetTable._listPreset )
         {
             if ( &preset != &_presetTable._listPreset.front() )

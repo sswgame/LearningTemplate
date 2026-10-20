@@ -20,29 +20,6 @@ namespace sw
             /** @brief json 의 문자열 타입입니다. 키 · 문자열 값 · `dump` 결과가 sw 할당자를 지납니다. */
             using JSONString = std::basic_string<utf8, std::char_traits<utf8>, Allocator<utf8>>;
 
-            /** @brief 실수를 정수 범위로 잘라 바꿉니다. 범위 밖 실수를 그대로 `static_cast` 하면 정의되지 않은 동작입니다(`1e20` → int64). NaN 은 @p fallback 입니다. */
-            static int64 toInt64Saturated( float64 value, int64 fallback )
-            {
-                if ( value != value )
-                    return fallback;
-                if ( value >= static_cast<float64>( std::numeric_limits<int64>::max() ) )
-                    return std::numeric_limits<int64>::max();
-                if ( value <= static_cast<float64>( std::numeric_limits<int64>::min() ) )
-                    return std::numeric_limits<int64>::min();
-                return static_cast<int64>( value );
-            }
-
-            /** @brief 위와 같되 부호 없는 범위입니다(음수는 0). */
-            static uint64 toUint64Saturated( float64 value, uint64 fallback )
-            {
-                if ( value != value )
-                    return fallback;
-                if ( value >= static_cast<float64>( std::numeric_limits<uint64>::max() ) )
-                    return std::numeric_limits<uint64>::max();
-                if ( value <= 0.0 )
-                    return 0;
-                return static_cast<uint64>( value );
-            }
             /**
              * @brief `nlohmann::ordered_json` 과 같은 모양(키 순서 보존)이되 문자열 · 배열 · 객체 · 이진 값이 sw 할당자를 지나는 json 타입입니다.
              * @details 할당자 인자만 바꾼 것이라 동작은 ordered_json 과 같습니다. nlohmann 을 include 하는 곳은 이 파일 하나입니다.
@@ -243,6 +220,7 @@ namespace sw
             static const utf8* getTypeLabel( const bool& ) { return "boolean"; }
             static const utf8* getTypeLabel( const string& ) { return "string"; }
 
+            /** @brief 값 하나를 읽습니다. 결과는 0 읽음 · 1 없음(무효 · null) · 2 깨짐입니다. @p key 가 비면 키 없는 값(배열 원소 등)이다. */
             template <typename T>
             static uint8 read( const JSONDocumentInternal::JSONImpl* pMember, const JSONValue& member, string_view key, T& outValue )
             {
@@ -250,7 +228,10 @@ namespace sw
                     return 1;
                 if ( parse( *pMember, outValue ) )
                     return 0;
-                SW_LOG_ERROR( "JSON member '%#' is not a %#: %#", key, getTypeLabel( outValue ), member.dump() );
+                if ( key.empty() )
+                    SW_LOG_ERROR( "JSON value is not a %#: %#", getTypeLabel( outValue ), member.dump() );
+                else
+                    SW_LOG_ERROR( "JSON member '%#' is not a %#: %#", key, getTypeLabel( outValue ), member.dump() );
                 return 2;
             }
         };
@@ -296,65 +277,17 @@ namespace sw
         return JSONDocumentInternal::fromJSONString( pValue->dump() );
     }
 
-    int64 JSONValue::asInt( int64 fallback ) const
-    {
-        const JSONImpl* pValue = JSONDocumentInternal::asJSON( _pValue );
-        if ( pValue == nullptr || pValue->is_number() == false )
-            return fallback;
-        // **부호 없는 쪽을 먼저 본다.** nlohmann 의 `is_number_integer()` 는 부호 있는 정수와
-        // **부호 없는 정수 둘 다에 참**이다. 부호 없는 검사를 뒤에 두면 그 분기는 영영 돌지 않는다
-        // (`asUint` · `asFloat` 도 같은 순서다 — 뒤집히면 큰 부호 없는 값이 음수로 돌아온다).
-        if ( pValue->is_number_unsigned() )
-            return static_cast<int64>( pValue->get<uint64>() );
-        if ( pValue->is_number_integer() )
-            return pValue->get<int64>();
-        if ( pValue->is_number_float() )
-            return JSONDocumentInternal::toInt64Saturated( pValue->get<float64>(), fallback );
-        return fallback;
-    }
-
-    uint64 JSONValue::asUint( uint64 fallback ) const
-    {
-        const JSONImpl* pValue = JSONDocumentInternal::asJSON( _pValue );
-        if ( pValue == nullptr || pValue->is_number() == false )
-            return fallback;
-        if ( pValue->is_number_unsigned() )
-            return pValue->get<uint64>();
-        if ( pValue->is_number_integer() )
-            return static_cast<uint64>( pValue->get<int64>() );
-        if ( pValue->is_number_float() )
-            return JSONDocumentInternal::toUint64Saturated( pValue->get<float64>(), fallback );
-        return fallback;
-    }
-
-    float64 JSONValue::asFloat( float64 fallback ) const
-    {
-        const JSONImpl* pValue = JSONDocumentInternal::asJSON( _pValue );
-        if ( pValue == nullptr || pValue->is_number() == false )
-            return fallback;
-        if ( pValue->is_number_float() )
-            return pValue->get<float64>();
-        // 부호 없는 쪽이 먼저다(이유는 `asInt` 참고). 순서가 뒤집히면 `18446744073709551615` 가 `-1.0` 으로 돌아온다.
-        if ( pValue->is_number_unsigned() )
-            return static_cast<float64>( pValue->get<uint64>() );
-        if ( pValue->is_number_integer() )
-            return static_cast<float64>( pValue->get<int64>() );
-        return fallback;
-    }
-
-    bool JSONValue::asBool( bool fallback ) const
-    {
-        const JSONImpl* pValue = JSONDocumentInternal::asJSON( _pValue );
-        if ( pValue == nullptr || pValue->is_boolean() == false )
-            return fallback;
-        return pValue->get<bool>();
-    }
-
-#define SW_JSON_MEMBER_READER( Type )                                                                                                         \
-    JSONValue::JSONValueRead JSONValue::parseMember( string_view key, Type& outValue ) const                                                  \
-    {                                                                                                                                         \
-        const JSONValue member = get( key );                                                                                                  \
-        return static_cast<JSONValueRead>( JSONMemberReader::read( JSONDocumentInternal::asJSON( member._pValue ), member, key, outValue ) ); \
+    // 정수 읽기는 **부호 없는 쪽을 먼저 본다**(`JSONMemberReader::parse`). nlohmann 의 `is_number_integer()` 는 부호 있는 정수와 부호 없는 정수
+    // 둘 다에 참이라, 순서가 뒤집히면 큰 부호 없는 값이 음수로 돌아온다.
+#define SW_JSON_MEMBER_READER( Type )                                                                                                           \
+    JSONValue::JSONValueRead JSONValue::parseMember( string_view key, Type& outValue ) const                                                    \
+    {                                                                                                                                           \
+        const JSONValue member = get( key );                                                                                                    \
+        return static_cast<JSONValueRead>( JSONMemberReader::read( JSONDocumentInternal::asJSON( member._pValue ), member, key, outValue ) );   \
+    }                                                                                                                                           \
+    JSONValue::JSONValueRead JSONValue::parseSelf( Type& outValue ) const                                                                       \
+    {                                                                                                                                           \
+        return static_cast<JSONValueRead>( JSONMemberReader::read( JSONDocumentInternal::asJSON( _pValue ), *this, string_view{}, outValue ) ); \
     }
     SW_JSON_MEMBER_READER( int32 )
     SW_JSON_MEMBER_READER( uint32 )

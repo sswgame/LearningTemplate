@@ -4,7 +4,6 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
-#include "Core/Math/MathUtil.h"
 #include "Core/String/EnumNameTable.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -20,29 +19,21 @@ namespace sw
     {
         struct AIDirectorProfileInternal
         {
-            static constexpr const utf8* kArrRootAttribute[]      = { "startPhase" };
-            static constexpr const utf8* kArrCalendarAttribute[]  = { "days", "seasons", "weathers" };
-            static constexpr const utf8* kArrIntensityAttribute[] = { "max", "decayPerSecond", "decayDelay" };
-            static constexpr const utf8* kArrSignalAttribute[]    = { "id", "kind", "scale", "max", "combat" };
-            static constexpr const utf8* kArrPhaseAttribute[]     = { "id", "spawnScale", "rewardScale", "spawnTags" };
-            static constexpr const utf8* kArrExitAttribute[]      = { "to", "minTime", "intensityAbove", "intensityBelow", "calmFor" };
-            static constexpr const utf8* kArrPoolAttribute[]      = { "id", "kind", "trigger", "phase", "interval", "chance", "cooldown", "perMinute",
-                                                                      "maxBudget", "need", "needScale", "picks", "pacing" };
-            static constexpr const utf8* kArrEncounterAttribute[] = { "id", "weight", "cost", "cooldown", "minTime", "minIntensity", "maxIntensity",
-                                                                      "scale", "count", "maxCount", "minCycle", "areas", "pacing" };
+            static constexpr const utf8* kArrRootAttribute[]     = { "startPhase" };
+            static constexpr const utf8* kArrCalendarAttribute[] = { "days", "seasons", "weathers" };
 
-            /** @brief 표에 없는 속성마다 경고합니다. @p bCondition 이면 일정 조건 속성도 받습니다. 모르는 것이 있으면 false 입니다. */
+            /** @brief 표에 없는 속성마다 오류를 남깁니다. @p bCondition 이면 일정 조건 속성도 받습니다. 모르는 것이 있으면 false 입니다. */
             template <size_t Count>
             static bool validateAttributes( const XMLNode& node, const utf8* const ( &arrKnown )[Count], bool bCondition, string_view sourceName )
             {
-                return XMLNameCheck::reportUnknownAttributes( node, arrKnown, sourceName, LogLevel::Warning, bCondition ? &ScheduleCondition::isConditionAttribute : nullptr );
+                return XMLNameCheck::reportUnknownAttributes( node, arrKnown, sourceName, LogLevel::Error, bCondition ? &ScheduleCondition::isConditionAttribute : nullptr );
             }
 
-            /** @brief @p node 의 자식 중 @p arrKnown 에 없는 원소마다 경고합니다. 모르는 것이 있으면 false 입니다. */
+            /** @brief @p node 의 자식 중 @p arrKnown 에 없는 원소마다 오류를 남깁니다. 모르는 것이 있으면 false 입니다. */
             template <size_t Count>
             static bool validateChildren( const XMLNode& node, const utf8* const ( &arrKnown )[Count], string_view sourceName )
             {
-                return XMLNameCheck::reportUnknownChildren( node, arrKnown, sourceName, LogLevel::Warning );
+                return XMLNameCheck::reportUnknownChildren( node, arrKnown, sourceName, LogLevel::Error );
             }
 
             static constexpr const utf8*                          kArrSignalKindName[]  = { "impulse", "rate", "level" };
@@ -180,34 +171,26 @@ namespace sw
     {
         using Internal                                    = AIDirectorProfileInternal;
         static constexpr const utf8* kArrIntensityChild[] = { "Signal" };
-        bool                         bValid               = Internal::validateAttributes( node, Internal::kArrIntensityAttribute, false, sourceName );
-        bValid                                            = Internal::validateChildren( node, kArrIntensityChild, sourceName ) && bValid;
-        _intensity._max                                   = MathUtil::max( 0.0f, node.getAttributeFloat( "max", _intensity._max ) );
-        _intensity._decayPerSecond                        = MathUtil::max( 0.0f, node.getAttributeFloat( "decayPerSecond", _intensity._decayPerSecond ) );
-        _intensity._decayDelay                            = MathUtil::max( 0.0f, node.getAttributeFloat( "decayDelay", _intensity._decayDelay ) );
+        bool                         bValid               = Internal::validateChildren( node, kArrIntensityChild, sourceName );
+        bValid                                            = GameDataXML::readFields( node, _intensity, sourceName ) && bValid;
         for ( XMLNode child = node.findChild( "Signal" ); child; child = child.findNextSibling( "Signal" ) )
         {
-            bValid          = Internal::validateAttributes( child, Internal::kArrSignalAttribute, false, sourceName ) && bValid;
-            const utf8* pID = GameDataXML::findRequiredID( child, sourceName );
-            if ( pID == nullptr )
+            AIDirectorSignalDef signal;
+            if ( GameDataXML::readFields( child, signal, sourceName, { "kind" } ) == false )
             {
                 bValid = false;
                 continue;
             }
-            AIDirectorSignalDef signal;
-            signal._id      = hashed_string( pID );
-            signal._scale   = child.getAttributeFloat( "scale", signal._scale );
-            signal._max     = child.getAttributeFloat( "max", signal._max );
-            signal._bCombat = child.getAttributeBool( "combat", false ) ? SW_TRUE : SW_FALSE;
             if ( Internal::kSignalKindTable.parse( child.getAttributeText( "kind" ), signal._kind ) == false )
             {
-                SW_LOG_WARNING( "%#: signal '%#' has an unknown kind '%#' (%#)", sourceName, pID, child.getAttributeText( "kind" ), Internal::kSignalKindTable.joinNames().c_str() );
+                SW_LOG_ERROR( "%#: signal '%#' has an unknown kind '%#' (%#)", sourceName, signal._id.c_str(), child.getAttributeText( "kind" ),
+                              Internal::kSignalKindTable.joinNames().c_str() );
                 bValid = false;
                 continue;
             }
             if ( findSignalIndex( signal._id ) >= 0 )
             {
-                SW_LOG_WARNING( "%#: signal '%#' is declared twice", sourceName, pID );
+                SW_LOG_ERROR( "%#: signal '%#' is declared twice", sourceName, signal._id.c_str() );
                 bValid = false;
                 continue;
             }
@@ -220,31 +203,23 @@ namespace sw
     {
         using Internal                                = AIDirectorProfileInternal;
         static constexpr const utf8* kArrPhaseChild[] = { "Curve", "Exit" };
-        bool                         bValid           = Internal::validateAttributes( node, Internal::kArrPhaseAttribute, false, sourceName );
-        bValid                                        = Internal::validateChildren( node, kArrPhaseChild, sourceName ) && bValid;
-        const utf8* pID                               = GameDataXML::findRequiredID( node, sourceName );
-        if ( pID == nullptr )
+        bool                         bValid           = Internal::validateChildren( node, kArrPhaseChild, sourceName );
+        AIDirectorPhaseDef           phase;
+        if ( GameDataXML::readFields( node, phase, sourceName, { "spawnTags" } ) == false )
             return false;
-        AIDirectorPhaseDef phase;
-        phase._id          = hashed_string( pID );
-        phase._spawnScale  = MathUtil::max( 0.0f, node.getAttributeFloat( "spawnScale", phase._spawnScale ) );
-        phase._rewardScale = MathUtil::max( 0.0f, node.getAttributeFloat( "rewardScale", phase._rewardScale ) );
         ScheduleCondition::parseNameList( node.getAttributeText( "spawnTags" ), phase._listSpawnTag );
         bValid = GameDataXML::readFloatCurve( node, "Curve", 0.0f, phase._spawnCurve, sourceName ) && bValid; // 키가 없으면 곡선이 대체값을 쓴다
         for ( XMLNode child = node.findChild( "Exit" ); child; child = child.findNextSibling( "Exit" ) )
         {
-            bValid = Internal::validateAttributes( child, Internal::kArrExitAttribute, false, sourceName ) && bValid;
             AIDirectorExitDef exit;
-            exit._to             = hashed_string( child.getAttributeText( "to" ) );
-            exit._minTime        = MathUtil::max( 0.0f, child.getAttributeFloat( "minTime", exit._minTime ) );
-            exit._intensityAbove = child.getAttributeFloat( "intensityAbove", exit._intensityAbove );
-            exit._intensityBelow = child.getAttributeFloat( "intensityBelow", exit._intensityBelow );
-            exit._calmFor        = MathUtil::max( 0.0f, child.getAttributeFloat( "calmFor", exit._calmFor ) );
-            phase._listExit.push_back( exit );
+            if ( GameDataXML::readFields( child, exit, sourceName ) )
+                phase._listExit.push_back( exit );
+            else
+                bValid = false;
         }
         if ( findPhaseIndex( phase._id ) >= 0 )
         {
-            SW_LOG_WARNING( "%#: phase '%#' is declared twice", sourceName, pID );
+            SW_LOG_ERROR( "%#: phase '%#' is declared twice", sourceName, phase._id.c_str() );
             return false;
         }
         _listPhase.push_back( phase );
@@ -255,72 +230,46 @@ namespace sw
     {
         using Internal                               = AIDirectorProfileInternal;
         static constexpr const utf8* kArrPoolChild[] = { "Encounter" };
-        bool                         bValid          = Internal::validateAttributes( node, Internal::kArrPoolAttribute, false, sourceName );
-        bValid                                       = Internal::validateChildren( node, kArrPoolChild, sourceName ) && bValid;
-        const utf8* pID                              = GameDataXML::findRequiredID( node, sourceName );
-        if ( pID == nullptr )
+        bool                         bValid          = Internal::validateChildren( node, kArrPoolChild, sourceName );
+        AIDirectorPoolDef            pool;
+        if ( GameDataXML::readFields( node, pool, sourceName, { "kind", "trigger", "pacing" } ) == false )
             return false;
-        AIDirectorPoolDef pool;
-        pool._id                   = hashed_string( pID );
         const string_view kindText = node.getAttributeText( "kind" );
-        pool._kind                 = AIDirectorPoolKind::Encounter; // 적지 않으면 조우 풀이다
+        // 종류는 적지 않으면 조우 풀이다(Def 초기값). 계기는 반드시 적는다.
         if ( kindText.empty() == false && Internal::kPoolKindTable.parse( kindText, pool._kind ) == false )
         {
-            SW_LOG_WARNING( "%#: pool '%#' has an unknown kind '%#' (%#)", sourceName, pID, kindText, Internal::kPoolKindTable.joinNames().c_str() );
+            SW_LOG_ERROR( "%#: pool '%#' has an unknown kind '%#' (%#)", sourceName, pool._id.c_str(), kindText, Internal::kPoolKindTable.joinNames().c_str() );
             bValid = false;
         }
-        pool._trigger                 = AIDirectorPoolTrigger::Interval; // 적지 않거나 틀리면 주기 풀이다
         const string_view triggerText = node.getAttributeText( "trigger" );
         if ( Internal::kPoolTriggerTable.parse( triggerText, pool._trigger ) == false )
         {
-            SW_LOG_WARNING( "%#: pool '%#' has an unknown trigger '%#' (%#)", sourceName, pID, triggerText, Internal::kPoolTriggerTable.joinNames().c_str() );
+            SW_LOG_ERROR( "%#: pool '%#' has an unknown trigger '%#' (%#)", sourceName, pool._id.c_str(), triggerText, Internal::kPoolTriggerTable.joinNames().c_str() );
             bValid = false;
         }
-        pool._phase      = hashed_string( node.getAttributeText( "phase" ) );
-        pool._needSignal = hashed_string( node.getAttributeText( "need" ) );
-        pool._interval   = MathUtil::max( 0.01f, node.getAttributeFloat( "interval", pool._interval ) );
-        pool._chance     = MathUtil::clamp( node.getAttributeFloat( "chance", pool._chance ), 0.0f, 1.0f );
-        pool._cooldown   = MathUtil::max( 0.0f, node.getAttributeFloat( "cooldown", pool._cooldown ) );
-        pool._perMinute  = MathUtil::max( 0.0f, node.getAttributeFloat( "perMinute", pool._perMinute ) );
-        pool._maxBudget  = MathUtil::max( 0.0f, node.getAttributeFloat( "maxBudget", pool._maxBudget ) );
-        pool._needScale  = node.getAttributeFloat( "needScale", pool._needScale );
-        pool._picks      = MathUtil::max( 1, node.getAttributeInt( "picks", pool._picks ) );
         ScheduleCondition::parseNameList( node.getAttributeText( "pacing" ), pool._listPacing );
         if ( pool._trigger == AIDirectorPoolTrigger::PhaseEnter && pool._phase.empty() )
         {
-            SW_LOG_WARNING( "%#: pool '%#' is triggered on phase enter but names no phase", sourceName, pID );
+            SW_LOG_ERROR( "%#: pool '%#' is triggered on phase enter but names no phase", sourceName, pool._id.c_str() );
             bValid = false;
         }
 
         for ( XMLNode child = node.findChild( "Encounter" ); child; child = child.findNextSibling( "Encounter" ) )
         {
-            bValid                   = Internal::validateAttributes( child, Internal::kArrEncounterAttribute, true, sourceName ) && bValid;
-            const utf8* pEncounterID = GameDataXML::findRequiredID( child, sourceName );
-            if ( pEncounterID == nullptr )
+            AIDirectorEncounterDef encounter;
+            if ( GameDataXML::readFields( child, encounter, sourceName, { "areas", "pacing" }, &ScheduleCondition::isConditionAttribute ) == false )
             {
                 bValid = false;
                 continue;
             }
-            AIDirectorEncounterDef encounter;
-            encounter._id           = hashed_string( pEncounterID );
-            encounter._weight       = MathUtil::max( 0.0f, child.getAttributeFloat( "weight", encounter._weight ) );
-            encounter._cost         = MathUtil::max( 0.0f, child.getAttributeFloat( "cost", encounter._cost ) );
-            encounter._cooldown     = MathUtil::max( 0.0f, child.getAttributeFloat( "cooldown", encounter._cooldown ) );
-            encounter._minTime      = MathUtil::max( 0.0f, child.getAttributeFloat( "minTime", encounter._minTime ) );
-            encounter._minIntensity = child.getAttributeFloat( "minIntensity", encounter._minIntensity );
-            encounter._maxIntensity = child.getAttributeFloat( "maxIntensity", encounter._maxIntensity );
-            encounter._scale        = child.getAttributeFloat( "scale", encounter._scale );
-            encounter._count        = MathUtil::max( 0, child.getAttributeInt( "count", encounter._count ) );
-            encounter._maxCount     = child.getAttributeInt( "maxCount", encounter._maxCount );
-            encounter._minCycle     = MathUtil::max( 0, child.getAttributeInt( "minCycle", encounter._minCycle ) );
             ScheduleCondition::parseNameList( child.getAttributeText( "areas" ), encounter._listArea );
             ScheduleCondition::parseNameList( child.getAttributeText( "pacing" ), encounter._listPacing );
-            encounter._condition.readFromNode( child, vocabulary, sourceName, pEncounterID );
+            bValid = encounter._condition.readFromNode( child, vocabulary, sourceName, encounter._id.c_str() ) && bValid;
             for ( const AIDirectorEncounterDef& other : pool._listEncounter )
             {
                 if ( other._id == encounter._id )
                 {
-                    SW_LOG_WARNING( "%#: pool '%#' lists '%#' twice", sourceName, pID, pEncounterID );
+                    SW_LOG_ERROR( "%#: pool '%#' lists '%#' twice", sourceName, pool._id.c_str(), encounter._id.c_str() );
                     bValid = false;
                 }
             }
@@ -328,14 +277,14 @@ namespace sw
         }
         if ( pool._listEncounter.empty() )
         {
-            SW_LOG_WARNING( "%#: pool '%#' has no <Encounter>", sourceName, pID );
+            SW_LOG_ERROR( "%#: pool '%#' has no <Encounter>", sourceName, pool._id.c_str() );
             bValid = false;
         }
         for ( const AIDirectorPoolDef& other : _listPool )
         {
             if ( other._id == pool._id )
             {
-                SW_LOG_WARNING( "%#: pool '%#' is declared twice", sourceName, pID );
+                SW_LOG_ERROR( "%#: pool '%#' is declared twice", sourceName, pool._id.c_str() );
                 bValid = false;
             }
         }
@@ -350,7 +299,7 @@ namespace sw
         {
             if ( findPhaseIndex( phaseID ) >= 0 )
                 continue;
-            SW_LOG_WARNING( "%#: '%#' names an unknown pacing phase '%#'", sourceName, ownerID.c_str(), phaseID.c_str() );
+            SW_LOG_ERROR( "%#: '%#' names an unknown pacing phase '%#'", sourceName, ownerID.c_str(), phaseID.c_str() );
             bValid = false;
         }
         return bValid;
@@ -361,13 +310,13 @@ namespace sw
         bool bValid = true;
         if ( _listPhase.empty() )
         {
-            SW_LOG_WARNING( "%#: no <Phase>", sourceName );
+            SW_LOG_ERROR( "%#: no <Phase>", sourceName );
             return false;
         }
         _startPhaseIndex = _startPhase.empty() ? 0 : findPhaseIndex( _startPhase );
         if ( _startPhaseIndex < 0 )
         {
-            SW_LOG_WARNING( "%#: start phase '%#' is not a <Phase>", sourceName, _startPhase.c_str() );
+            SW_LOG_ERROR( "%#: start phase '%#' is not a <Phase>", sourceName, _startPhase.c_str() );
             bValid = false;
         }
         // 단계 이름은 나가는 길 · 풀 · 항목이 가리킨다 — 모르는 이름은 쓰는 쪽에서 조용히 "늘 거짓" 이 되므로 여기서 막는다.
@@ -378,7 +327,7 @@ namespace sw
                 exit._toIndex = findPhaseIndex( exit._to );
                 if ( exit._toIndex >= 0 )
                     continue;
-                SW_LOG_WARNING( "%#: phase '%#' exits to an unknown phase '%#'", sourceName, phase._id.c_str(), exit._to.c_str() );
+                SW_LOG_ERROR( "%#: phase '%#' exits to an unknown phase '%#'", sourceName, phase._id.c_str(), exit._to.c_str() );
                 bValid = false;
             }
         }
@@ -394,13 +343,13 @@ namespace sw
                 pool._phaseIndex = findPhaseIndex( pool._phase );
                 if ( pool._phaseIndex < 0 )
                 {
-                    SW_LOG_WARNING( "%#: pool '%#' waits for an unknown phase '%#'", sourceName, pool._id.c_str(), pool._phase.c_str() );
+                    SW_LOG_ERROR( "%#: pool '%#' waits for an unknown phase '%#'", sourceName, pool._id.c_str(), pool._phase.c_str() );
                     bValid = false;
                 }
             }
             if ( pool._needSignal.empty() == false && findSignalIndex( pool._needSignal ) < 0 )
             {
-                SW_LOG_WARNING( "%#: pool '%#' reads an unknown signal '%#'", sourceName, pool._id.c_str(), pool._needSignal.c_str() );
+                SW_LOG_ERROR( "%#: pool '%#' reads an unknown signal '%#'", sourceName, pool._id.c_str(), pool._needSignal.c_str() );
                 bValid = false;
             }
         }

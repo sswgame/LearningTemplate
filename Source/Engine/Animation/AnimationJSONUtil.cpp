@@ -39,7 +39,10 @@ namespace sw
             const JSONValue element = value.at( index );
             if ( element.isNumber() == false )
                 return false;
-            pOutValue[index] = static_cast<float32>( element.asFloat() );
+            const std::optional<float32> number = element.read<float32>();
+            if ( number.has_value() == false )
+                return false;
+            pOutValue[index] = *number;
         }
         return true;
     }

@@ -93,10 +93,12 @@ namespace sw
 
     bool JSONWebToken::findInteger( string_view claim, int64& outValue ) const
     {
-        const JSONValue value = _payload->getRoot().get( claim, false );
-        if ( value.isNumber() == false )
+        // 시각 클레임(NumericDate)은 소수 초도 허용된다(RFC 7519 2절) — 실수로 읽어 초 단위로 버린다. 값은 2^53 보다 작다.
+        const JSONValue              value  = _payload->getRoot().get( claim, false );
+        const std::optional<float64> number = value.isNumber() ? value.read<float64>() : std::nullopt;
+        if ( number.has_value() == false )
             return false;
-        outValue = value.asInt();
+        outValue = static_cast<int64>( *number );
         return true;
     }
 

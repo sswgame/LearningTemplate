@@ -32,25 +32,28 @@ SW_TEST_CASE( KeyValueFileTest, ParseBasicAndComments )
     sw::KeyValueMap map;
     SW_EXPECT_TRUE( sw::KeyValueFile::parse( kSampleConfig, map ) );
 
-    // 문자열 조회
-    SW_EXPECT_STREQ( "Assets/Scenes/Stage1.scene", sw::KeyValueFile::get( map, "map", "" ) );
-    SW_EXPECT_STREQ( "DefaultMap", sw::KeyValueFile::get( map, "missing_map", "DefaultMap" ) );
+    // 문자열 조회 — 없는 키는 nullptr 이다(폴백 글을 돌려주지 않는다).
+    SW_ASSERT_TRUE( sw::KeyValueFile::find( map, "map" ) != nullptr );
+    SW_EXPECT_STREQ( "Assets/Scenes/Stage1.scene", sw::KeyValueFile::find( map, "map" )->c_str() );
+    SW_EXPECT_TRUE( sw::KeyValueFile::find( map, "missing_map" ) == nullptr );
 
     // 정수형 조회
-    SW_EXPECT_EQUAL( 150, sw::KeyValueFile::getInt( map, "x", 0 ) );
-    SW_EXPECT_EQUAL( 250, sw::KeyValueFile::getInt( map, "y", 0 ) );
-    SW_EXPECT_EQUAL( 9999, sw::KeyValueFile::getInt( map, "flag.gold", 0 ) );
-    SW_EXPECT_EQUAL( 1, sw::KeyValueFile::getInt( map, "flag.quest_cleared", 0 ) );
-    SW_EXPECT_EQUAL( 42, sw::KeyValueFile::getInt( map, "missing_val", 42 ) );
+    SW_EXPECT_EQUAL( 150, sw::KeyValueFile::readRequired<int32>( map, "x" ).value() );
+    SW_EXPECT_EQUAL( 250, sw::KeyValueFile::readRequired<int32>( map, "y" ).value() );
+    SW_EXPECT_EQUAL( 9999, sw::KeyValueFile::readRequired<int32>( map, "flag.gold" ).value() );
+    SW_EXPECT_EQUAL( 1, sw::KeyValueFile::readRequired<int32>( map, "flag.quest_cleared" ).value() );
+    // 없는 선택 키는 넣어 둔 값(형식의 초기값) 그대로다.
+    int32 missingValue{ 42 };
+    SW_EXPECT_TRUE( sw::KeyValueFile::readOptionalInto( map, "missing_val", missingValue ) );
+    SW_EXPECT_EQUAL( 42, missingValue );
 
     // 부동소수점 조회
-    SW_EXPECT_NEAR_EQUAL( 3.75f, sw::KeyValueFile::getFloat( map, "speed", 0.0f ), 0.001f );
-    SW_EXPECT_NEAR_EQUAL( 1.0f, sw::KeyValueFile::getFloat( map, "missing_float", 1.0f ), 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 3.75f, sw::KeyValueFile::readRequired<float32>( map, "speed" ).value(), 0.001f );
 
-    // 문자열 조회 (불리언 문자열)
-    SW_EXPECT_STREQ( "true", sw::KeyValueFile::get( map, "enable_vsync", "false" ) );
-    SW_EXPECT_STREQ( "1", sw::KeyValueFile::get( map, "enable_shadow", "0" ) );
-    SW_EXPECT_STREQ( "false", sw::KeyValueFile::get( map, "disable_fog", "true" ) );
+    // 불리언 조회(1/true/yes/on 과 0/false/no/off)
+    SW_EXPECT_TRUE( sw::KeyValueFile::readRequired<bool>( map, "enable_vsync" ).value() );
+    SW_EXPECT_TRUE( sw::KeyValueFile::readRequired<bool>( map, "enable_shadow" ).value() );
+    SW_EXPECT_FALSE( sw::KeyValueFile::readRequired<bool>( map, "disable_fog" ).value() );
 }
 
 SW_TEST_CASE( KeyValueFileTest, EmptyAndMalformedLines )
@@ -66,8 +69,10 @@ SW_TEST_CASE( KeyValueFileTest, EmptyAndMalformedLines )
     sw::KeyValueMap map;
     SW_EXPECT_TRUE( sw::KeyValueFile::parse( kMalformedText, map ) );
 
-    SW_EXPECT_STREQ( "", sw::KeyValueFile::get( map, "EmptyVal", "fallback" ) );
-    SW_EXPECT_STREQ( "spacedVal", sw::KeyValueFile::get( map, "spacedKey", "" ) );
+    SW_ASSERT_TRUE( sw::KeyValueFile::find( map, "EmptyVal" ) != nullptr );
+    SW_EXPECT_STREQ( "", sw::KeyValueFile::find( map, "EmptyVal" )->c_str() );
+    SW_ASSERT_TRUE( sw::KeyValueFile::find( map, "spacedKey" ) != nullptr );
+    SW_EXPECT_STREQ( "spacedVal", sw::KeyValueFile::find( map, "spacedKey" )->c_str() );
 }
 
 /**
@@ -223,28 +228,30 @@ SW_TEST_CASE( KeyValueFileTest, DuplicateKeyTakesTheLastValue )
     sw::KeyValueMap map;
     SW_ASSERT_TRUE( sw::KeyValueFile::parse( "width=800\nheight=600\nwidth=1920\n", map ) );
 
-    SW_EXPECT_EQUAL( 1920, sw::KeyValueFile::getInt( map, "width", 0 ) );
-    SW_EXPECT_EQUAL( 600, sw::KeyValueFile::getInt( map, "height", 0 ) );
+    SW_EXPECT_EQUAL( 1920, sw::KeyValueFile::readRequired<int32>( map, "width" ).value() );
+    SW_EXPECT_EQUAL( 600, sw::KeyValueFile::readRequired<int32>( map, "height" ).value() );
     SW_EXPECT_EQUAL( size_t( 2 ), map.size() );
 }
 
 /**
- * @brief [KeyValueFileTest] 못 읽은 불리언은 fallback 이 되고 알린다 — 형제 getInt · getFloat 와 같은 규칙
- * @details `parseBool` 로 읽으면 "ture" 가 말없이 fallback 이 된다.
+ * @brief [KeyValueFileTest] 못 읽은 불리언은 폴백이 되지 않고 읽기 실패다 — 빈 값과 없는 키는 넣어 둔 값 그대로다
+ * @details 폴백을 받던 `getBool` 은 "ture" 를 경고 한 줄과 함께 폴백으로 읽었다(D9 에서 지웠다).
  */
-SW_TEST_CASE( KeyValueFileTest, UnreadableBooleanFallsBackAndSaysSo )
+SW_TEST_CASE( KeyValueFileTest, UnreadableBooleanIsAReadFailure )
 {
     sw::KeyValueMap map;
     SW_ASSERT_TRUE( sw::KeyValueFile::parse( "fullscreen=yes\nvsync=ture\nempty=\n", map ) );
 
     test::ScopedLogCollector logs;
-    SW_EXPECT_TRUE( sw::KeyValueFile::getBool( map, "fullscreen", false ) );
-    SW_EXPECT_FALSE( sw::KeyValueFile::getBool( map, "empty", false ) );
-    SW_EXPECT_TRUE( sw::KeyValueFile::getBool( map, "missing", true ) );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "unreadable boolean" ) == 0, logs.joined().c_str() );
+    bool                     bValue = false;
+    SW_EXPECT_TRUE( sw::KeyValueFile::readOptionalInto( map, "fullscreen", bValue ) && bValue );
+    SW_EXPECT_TRUE( sw::KeyValueFile::readOptionalInto( map, "empty", bValue ) && bValue );
+    SW_EXPECT_TRUE( sw::KeyValueFile::readOptionalInto( map, "missing", bValue ) && bValue );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "is not a boolean" ) == 0, logs.joined().c_str() );
     {
         test::ScopedDefensiveTestLog expected( "a boolean key with a typo" );
-        SW_EXPECT_TRUE( sw::KeyValueFile::getBool( map, "vsync", true ) );
+        SW_EXPECT_FALSE( sw::KeyValueFile::readOptionalInto( map, "vsync", bValue ) );
     }
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "Key 'vsync' has an unreadable boolean 'ture'" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE( bValue ); // 깨진 값은 넣어 둔 값을 바꾸지 않는다
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "Key 'vsync' is not a boolean: 'ture'" ) == 1, logs.joined().c_str() );
 }

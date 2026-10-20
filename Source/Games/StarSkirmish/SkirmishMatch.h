@@ -12,6 +12,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCommanderAI.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSWorld.h"
@@ -33,6 +35,31 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @struct SkirmishAIStyle
+     * @brief 컴퓨터 상대 하나의 성향(경제 · 병력 목표)입니다. 값은 씬 데이터(디렉터의 PROPERTY)에 있고, 코드에는 기본 성향이 없다.
+     * @details 적지 않은 성향은 0 이라 판을 열 때 거절한다(`isSet`) — 조용히 키트 기본값으로 돌지 않는다.
+     */
+    REFLECT()
+    struct SkirmishAIStyle
+    {
+        REFLECT_BODY();
+        PROPERTY( Min = 1, Tooltip = "Workers the AI trains" )
+        int32 _workerTarget{ 0 };
+        PROPERTY( Min = 1, Tooltip = "Production buildings the AI builds" )
+        int32 _productionTarget{ 0 };
+        PROPERTY( Min = 1, Tooltip = "Army size that starts an attack" )
+        int32 _attackArmySize{ 0 };
+        PROPERTY( Min = 0, Tooltip = "The AI builds supply when the free supply is at most this" )
+        int32 _supplyMargin{ 0 };
+
+        /** @brief 목표가 모두 적혔으면 true 입니다(보급 여유는 0 도 뜻이 있다). */
+        bool isSet() const { return _workerTarget >= 1 && _productionTarget >= 1 && _attackArmySize >= 1; }
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 한 판의 규칙 수치입니다. 디렉터의 PROPERTY 가 채웁니다. */
     struct SkirmishMatchSettings
     {
@@ -46,6 +73,10 @@ namespace sw
         hashed_string _supplyID{};
         hashed_string _productionID{};
         hashed_string _armyUnitID{};
+        // 컴퓨터 상대의 성향 — 둘 다 AI 면 0 번 러시 · 1 번 운영(같은 AI 끼리면 대칭이라 끝나지 않는다), 사람과 붙으면 상대 성향이다.
+        SkirmishAIStyle _rushAI{};
+        SkirmishAIStyle _macroAI{};
+        SkirmishAIStyle _opponentAI{};
     };
 } // namespace sw
 

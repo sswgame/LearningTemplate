@@ -10,6 +10,8 @@
 #include "Editor/Common/EditorSubsystem.h"
 #include "Editor/Common/Workspace/FileWatchDispatcher.h"
 
+#include "Engine/Serialization/Base/ReloadOutcome.h"
+
 namespace sw
 {
     class AssetManager;
@@ -69,9 +71,10 @@ namespace sw::editor
 
         /**
          * @brief 바뀐 에셋 하나를 다시 읽습니다. 임포터(있으면), 엔진 캐시의 `reload`, 활성 씬의 `notifyAssetUsers` 순서로 처리합니다. 게임 스레드에서 틱 밖에서 호출합니다.
-         * @return 핫 리로드 대상이고 처리했으면 true 입니다. 대상이 아니거나 그 이름의 캐시가 등록되지 않았으면 false 입니다.
+         * @return 처리했으면 `Reloaded`, 핫 리로드 대상이 아니거나 아무 캐시도 들지 않은 파일이면 `NotTracked`,
+         *         경로표가 가리키는 캐시가 등록되지 않았으면(오류를 남겼다) `Failed` 입니다.
          */
-        [[nodiscard]] static bool reloadChangedAsset( string_view relativePath );
+        [[nodiscard]] static ReloadOutcome reloadChangedAsset( string_view relativePath );
 
         /**
          * @brief @p resources 의 레지스트리에서 그 경로를 가진 캐시(`IAssetCache::isCached`)마다 `reload` 를 호출합니다. 이름을 모르는 모듈 캐시를 처리하는 경로입니다.

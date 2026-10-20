@@ -132,8 +132,8 @@ namespace sw
         GameplayAbilityConfig&       getConfig() { return _config; }
         /** @brief 설정을 통째로 바꿉니다. 카탈로그가 어빌리티를 만들 때 씁니다. */
         void setConfig( const GameplayAbilityConfig& config ) { _config = config; }
-        /** @brief 데이터 매개변수 값입니다. 없으면 @p fallback 입니다. */
-        float32 getParameter( const hashed_string& name, float32 fallback = 0.0f ) const;
+        /** @brief 데이터 매개변수(`<Param name value>`) 값입니다. 데이터에 없으면 비어 있습니다 — 어빌리티가 없음을 오류로 다룬다(코드가 기본값을 정하지 않는다). */
+        [[nodiscard]] std::optional<float32> getParameter( const hashed_string& name ) const;
         /** @brief 데이터 이름 매개변수 값입니다. 없으면 빈 이름입니다. */
         hashed_string getNameParameter( const hashed_string& name ) const;
 

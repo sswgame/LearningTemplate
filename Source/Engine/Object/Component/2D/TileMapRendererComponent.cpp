@@ -5,6 +5,8 @@
 #include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Common/EngineServices.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Shader/Binding/GPUSpriteInstanceData.h"
 #include "Engine/Object/Component/2D/SpriteInstanceBatch.h"
 #include "Engine/Object/Component/2D/SpriteRenderUtil.h"
@@ -22,7 +24,7 @@ namespace sw
 
     TileMapRendererComponent::TileMapRendererComponent()
         : _tileMapPath{}
-        , _materialPath{ "engine/materials/sprite2dpixel.material" }
+        , _materialPath{}
         , _sortingLayer{ "Default" }
         , _orderInLayer{ 0 }
         , _colliderLayer{ 0 }
@@ -234,7 +236,9 @@ namespace sw
         unique_ptr<SpriteInstanceBatch> batch = make_unique<SpriteInstanceBatch>();
         batch->setSorting( _sortingLayer, _orderInLayer );
         batch->setOwnerComponent( this );
-        if ( batch->initialize( *pManager, _tileSet.getAtlasPath(), count, _materialPath, _tileSet.getNormalAtlasPath() ) == false )
+        // 칸이 비면 엔진 기본 타일맵 머티리얼(픽셀 아트 스프라이트)이다(값의 정본은 엔진 기본 에셋 표).
+        const string& materialPath = _materialPath.empty() ? engine::getSubsystem<EngineDefaultAssets>()._tileMapMaterial.get() : _materialPath;
+        if ( batch->initialize( *pManager, _tileSet.getAtlasPath(), count, materialPath, _tileSet.getNormalAtlasPath() ) == false )
             return false;
         pBatch = std::move( batch );
         return true;

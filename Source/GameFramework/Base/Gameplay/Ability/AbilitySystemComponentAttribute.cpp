@@ -130,18 +130,22 @@ namespace sw
         return findAttributeSetFor( name ) != nullptr;
     }
 
-    float32 AbilitySystemComponent::getAttributeValue( const hashed_string& name, float32 fallback ) const
+    std::optional<float32> AbilitySystemComponent::getAttributeValue( const hashed_string& name ) const
     {
         const AttributeSet*  pAttributeSet = findAttributeSetFor( name );
         const AttributeData* pData         = pAttributeSet != nullptr ? pAttributeSet->findAttribute( name ) : nullptr;
-        return pData != nullptr ? pData->_currentValue : fallback;
+        if ( pData == nullptr )
+            return std::nullopt;
+        return pData->_currentValue;
     }
 
-    float32 AbilitySystemComponent::getAttributeBaseValue( const hashed_string& name, float32 fallback ) const
+    std::optional<float32> AbilitySystemComponent::getAttributeBaseValue( const hashed_string& name ) const
     {
         const AttributeSet*  pAttributeSet = findAttributeSetFor( name );
         const AttributeData* pData         = pAttributeSet != nullptr ? pAttributeSet->findAttribute( name ) : nullptr;
-        return pData != nullptr ? pData->_baseValue : fallback;
+        if ( pData == nullptr )
+            return std::nullopt;
+        return pData->_baseValue;
     }
 
     bool AbilitySystemComponent::setAttributeBaseValue( const hashed_string& name, float32 value )

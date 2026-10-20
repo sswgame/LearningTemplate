@@ -85,11 +85,11 @@ namespace sw
             {
                 reader.reportUnknownAttributes( child, FitPartDataInternal::kArrRingAttribute );
                 FitRingDef ring;
-                ring._bone              = reader.readName( child, "bone", false );
-                ring._offset            = reader.readOptionalFloat3( child, "offset", float3::Zero );
-                ring._axis              = reader.readOptionalFloat3( child, "axis", ring._axis );
-                ring._radius            = reader.readOptionalFloat( child, "radius", ring._radius );
-                ring._width             = reader.readOptionalFloat( child, "width", ring._width );
+                ring._bone = reader.readName( child, "bone", false );
+                reader.readOptionalFloat3( child, "offset", ring._offset );
+                reader.readOptionalFloat3( child, "axis", ring._axis );
+                reader.readOptionalFloat( child, "radius", ring._radius );
+                reader.readOptionalFloat( child, "width", ring._width );
                 const bool bInvalidRing = ring._radius <= 0.0f || ring._width < 0.0f || ring._axis.getLengthSquared() <= 0.0f;
                 if ( bInvalidRing )
                     reader.addError( child, "needs radius > 0, width >= 0 and a non-zero axis" );
@@ -117,7 +117,7 @@ namespace sw
                     }
                     FitCorrectiveDelta delta;
                     delta._vertex = static_cast<uint32>( vertex );
-                    delta._offset = reader.readOptionalFloat3( deltaNode, "offset", float3::Zero );
+                    reader.readOptionalFloat3( deltaNode, "offset", delta._offset );
                     corrective._listDelta.push_back( delta );
                 }
                 _listCorrective.push_back( std::move( corrective ) );

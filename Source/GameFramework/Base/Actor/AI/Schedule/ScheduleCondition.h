@@ -125,8 +125,11 @@ namespace sw
         /** @brief "Dawn,Day" 를 때 마스크로 읽습니다. 모르는 이름은 @p ownerName 과 함께 경고합니다. */
         static uint8 parsePhaseMask( string_view text, string_view sourceName, string_view ownerName );
 
-        /** @brief 조건 속성을 모두 읽습니다. 어휘에 없는 이름과 문법이 틀린 플래그 식은 경고합니다. 데이터 검사가 이 경고를 잡습니다. */
-        void readFromNode( const XMLNode& node, const ScheduleConditionVocabulary& vocabulary, string_view sourceName, string_view ownerName );
+        /**
+         * @brief 조건 속성을 모두 읽습니다. 어휘에 없는 이름은 경고합니다(데이터 검사가 잡는다).
+         * @return 깨진 숫자 · 범위 밖 확률 · 뒤집힌 호감도 범위 · 문법이 틀린 플래그 식이 있으면 오류를 남기고 false 입니다.
+         */
+        [[nodiscard]] bool readFromNode( const XMLNode& node, const ScheduleConditionVocabulary& vocabulary, string_view sourceName, string_view ownerName );
 
         bool                    isEmpty() const;
         ScheduleConditionResult evaluate( const ScheduleConditionContext& context ) const;

@@ -237,10 +237,12 @@ namespace sw::editor
         }
         inoutSheet._listRemovedKey.clear();
 
+        // 올린 프로젝트가 아니면 NotTracked — 다시 읽을 것이 없다. 저장은 끝났으니 다시 읽기 실패(관리자가 오류를 남겼다)는 실행 중 글이 예전 것이라는 알림이다.
         LocalizationManager* pLocalizationManager = editor::findSubsystem<LocalizationManager>();
-        if ( pLocalizationManager != nullptr )
-            (void)pLocalizationManager->reloadChangedFile( inoutSheet._projectPath ); // 로드한 프로젝트가 아니면 false 이고 다시 읽을 것이 없다
+        const bool           bReloadFailed        = pLocalizationManager != nullptr && pLocalizationManager->reloadChangedFile( inoutSheet._projectPath ) == ReloadOutcome::Failed;
         SW_LOG_INFO( "Saved localization project '%#'.", inoutSheet._projectPath.c_str() );
+        if ( bReloadFailed )
+            SW_LOG_WARNING( "The running game keeps the previous text of '%#' until it reloads", inoutSheet._projectPath.c_str() );
         return true;
     }
 

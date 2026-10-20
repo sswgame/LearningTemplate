@@ -231,8 +231,8 @@ namespace sw
     private:
         PROPERTY( Category = "Terrain", DisplayName = "Heightfield", AssetPath, FileFilter = "*.heightfield", Tooltip = "Imported .heightfield asset" )
         string _heightfieldPath;
-        PROPERTY( Category = "Terrain", DisplayName = "Material", AssetPath, AssetType = "Material", Tooltip = "Terrain material (terrain.hlsl)" )
-        string _materialPath;
+        PROPERTY( Category = "Terrain", DisplayName = "Material", AssetPath, AssetType = "Material", Tooltip = "Terrain material (terrain.hlsl). Empty uses the engine default terrain material" )
+        string _materialPath; ///< 비면 엔진 기본 에셋 표의 `_terrainMaterial` 이다
         PROPERTY( Category = "Terrain", DisplayName = "Layer Weights", AssetPath, FileFilter = "*.layerweights", Tooltip = "Layer weights asset (.layerweights, layers 0..3); read by client and dedicated server" )
         string _layerWeightsPath;
         PROPERTY( Category = "Terrain", DisplayName = "Detail Map", AssetPath, AssetType = "Texture", Tooltip = "Tileable detail, one channel per layer" )

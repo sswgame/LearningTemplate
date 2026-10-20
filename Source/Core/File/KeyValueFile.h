@@ -60,14 +60,9 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 3) 조회
         // ------------------------------------------------------------------------------
-        /** @brief 키의 문자열 값을 반환합니다. 없으면 fallback. */
-        static const utf8* get( const KeyValueMap& mapData, string_view key, const utf8* pFallback = "" );
-        /** @brief 키의 int32 값을 반환합니다. 없으면 fallback. */
-        static int32 getInt( const KeyValueMap& mapData, string_view key, int32 fallback = 0 );
-        /** @brief 키의 float32 값을 반환합니다. 없으면 fallback. */
-        static float32 getFloat( const KeyValueMap& mapData, string_view key, float32 fallback = 0.0f );
-        /** @brief 키의 bool 값을 반환합니다 (1/true/yes/on). */
-        static bool getBool( const KeyValueMap& mapData, string_view key, bool fallback = false );
+        // 폴백을 받던 `get` · `getInt` · `getFloat` · `getBool` 은 지웠다(데이터 주도 계획 D9). 없음은 아래 세 길로 형식이 가른다.
+        /** @brief 키의 글을 그대로 찾습니다(다듬지 않는다). 없으면 nullptr 입니다. */
+        [[nodiscard]] static const string* find( const KeyValueMap& mapData, string_view key );
 
         /**
          * @brief 반드시 있어야 하는 키 @p key 를 타입 T 로 읽습니다. 없거나 비었거나 깨지면 키와 함께 오류를 남기고 nullopt 입니다.
@@ -89,6 +84,19 @@ namespace sw
             T           value{};
             const uint8 read = parseValue( mapData, key, value );
             outValue         = read == kValueRead ? std::optional<T>{ value } : std::nullopt;
+            return read != kValueInvalid;
+        }
+        /**
+         * @brief 없어도 되는 키를 읽어 @p inoutValue 에 넣습니다. 없으면(또는 빈 값) 그대로 두고 true, 깨졌으면 오류와 false 입니다.
+         * @details 기본값은 부르는 쪽이 넣어 둔 값(형식의 초기값)이고 여기서 정하지 않는다.
+         */
+        template <typename T>
+        [[nodiscard]] static bool readOptionalInto( const KeyValueMap& mapData, string_view key, T& inoutValue )
+        {
+            T           value{};
+            const uint8 read = parseValue( mapData, key, value );
+            if ( read == kValueRead )
+                inoutValue = value;
             return read != kValueInvalid;
         }
         // ------------------------------------------------------------------------------

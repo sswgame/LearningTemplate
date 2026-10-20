@@ -169,8 +169,8 @@ SW_TEST_CASE( VfxEffectDefTest, XMLRoundTripKeepsValues )
     SW_EXPECT_NEAR_EQUAL( 4.0f, emitter._velocityMax._y, 0.0001f );
     SW_ASSERT_EQUAL( size_t( 1 ), emitter._listBurst.size() );
     SW_EXPECT_EQUAL( uint32( 12 ), emitter._listBurst[0]._count );
-    SW_EXPECT_NEAR_EQUAL( 0.5f, emitter._sizeOverLife.evaluate( 0.5f ), 0.0001f );
-    SW_EXPECT_NEAR_EQUAL( 0.25f, emitter._colorOverLife._green.evaluate( 0.5f ), 0.0001f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, emitter._sizeOverLife.evaluate( 0.5f ).value(), 0.0001f );
+    SW_EXPECT_NEAR_EQUAL( 0.25f, emitter._colorOverLife._green.evaluate( 0.5f ).value(), 0.0001f );
 }
 
 /**

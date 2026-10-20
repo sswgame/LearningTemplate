@@ -78,40 +78,8 @@ namespace sw
                 allocateTransient( pool, attachment._name, format, bDepth, attachment._clearColor, attachment._resolutionDivisor );
         }
 
-        auto ensureNamed = [&]( string_view name )
-        {
-            if ( pool.contains( name ) || name == FrameRendererUtil::Attachment::kSwapchain )
-                return;
-
-            float4     clearColor{};
-            const bool bHasClear = tryGetAttachmentClearColor( name, clearColor );
-
-            const bool bHalfFloatAttachment = name == FrameRendererUtil::Attachment::kGBufferNormal || name == FrameRendererUtil::Attachment::kLitColor || name == FrameRendererUtil::Attachment::kBloomColor || name == FrameRendererUtil::Attachment::kBloomBright;
-            if ( name == FrameRendererUtil::Attachment::kShadowMap )
-                (void)pool.allocateSized( _pDevice, name, RHIFormat::D24_UNORM_S8_UINT, true, bHasClear ? clearColor : FrameRendererUtil::kDepthClear,
-                                          shadowResolution, shadowResolution );
-            else if ( name == FrameRendererUtil::Attachment::kSceneDepth )
-                allocateTransient( pool, name, RHIFormat::D24_UNORM_S8_UINT, true, bHasClear ? clearColor : FrameRendererUtil::kDepthClear );
-            else if ( bHalfFloatAttachment )
-                allocateTransient( pool, name, RHIFormat::R16G16B16A16_FLOAT, false, bHasClear ? clearColor : FrameRendererUtil::kBloomClear );
-            else if ( name == FrameRendererUtil::Attachment::kSceneColor )
-                allocateTransient( pool, name, RHIFormat::R8G8B8A8_UNORM, false, bHasClear ? clearColor : FrameRendererUtil::kSceneClear );
-            else
-                allocateTransient( pool, name, RHIFormat::R8G8B8A8_UNORM, false, bHasClear ? clearColor : FrameRendererUtil::kBlackClear );
-        };
-
-        for ( const RenderGraphPassDesc& pass : _pipelineResource.getGraphPass() )
-        {
-            for ( const string& in : pass._listInput )
-            {
-                ensureNamed( in );
-            }
-            for ( const string& out : pass._listOutput )
-            {
-                ensureNamed( out );
-            }
-        }
-
+        // 패스가 쓰는 첨부는 모두 위에서 만들었다 — 파이프라인 로드가 선언하지 않은 입출력을 거절한다(`RenderPipelineAsset::validate`).
+        // 그래서 코드가 이름으로 포맷 · 클리어 색을 짐작해 첨부를 더 만드는 길이 없다(Swapchain 은 첨부가 아니라 백버퍼다).
         ensureTaaHistory( view );
         return true;
     }
@@ -134,24 +102,26 @@ namespace sw
         if ( pTaaPass == nullptr )
             return;
 
-        // 히스토리는 TAA 출력의 복사본이다. CopyResource 는 포맷이 정확히 같아야 하므로 대상 첨부의 포맷을 그대로 따라간다.
-        // 대상은 TAA 패스가 선언한 출력 중 있는 것이다(실행과 같은 규칙). 아래 이름은 선언이 없을 때의 폴백이다.
-        const TransientAttachmentPool& pool      = view._transientPool;
-        string_view                    taaTarget = pool.contains( string_view{ "TaaColor" } ) ? string_view{ "TaaColor" }
-                                                                                              : string_view{ FrameRendererUtil::Attachment::kSceneColor };
+        // 히스토리는 TAA 출력의 복사본이다. CopyResource 는 포맷이 정확히 같아야 하므로 대상 첨부의 포맷(선언에서 만든 것)을 그대로 따라간다.
+        // 대상은 TAA 패스가 선언한 출력 중 있는 것이다(실행과 같은 규칙). 이름으로 짐작하지 않는다 — 없으면 히스토리를 만들지 않고 알린다.
+        const TransientAttachmentPool&      pool = view._transientPool;
+        TransientAttachmentPool::Attachment taaTarget{};
         for ( const hashed_string& output : pTaaPass->_listResolvedOutput )
         {
-            if ( pool.contains( output.view() ) )
-            {
-                taaTarget = output.view();
+            taaTarget = pool.find( output.view() );
+            if ( taaTarget._texture != 0 )
                 break;
-            }
+        }
+        if ( taaTarget._texture == 0 )
+        {
+            SW_LOG_ERROR( "Pipeline '%#': the TAA pass has no declared output attachment - no TAA history", _pipelineResource.getDesc()._name.c_str() );
+            return;
         }
 
         RHITextureDesc historyDesc{};
         historyDesc._width             = pool.getWidth() != 0 ? pool.getWidth() : FrameRendererUtil::kDefaultTransientSize;
         historyDesc._height            = pool.getHeight() != 0 ? pool.getHeight() : FrameRendererUtil::kDefaultTransientSize;
-        historyDesc._format            = attachmentFormatOrDefault( taaTarget, constant::kBackBufferFormat );
+        historyDesc._format            = taaTarget._format;
         historyDesc._bIsRenderTarget   = SW_TRUE;
         historyDesc._bIsShaderResource = SW_TRUE;
 
@@ -276,7 +246,7 @@ namespace sw
             info._texture    = attachment._texture;
             info._width      = attachment._width;
             info._height     = attachment._height;
-            info._format     = attachmentFormatOrDefault( name, RHIFormat::R8G8B8A8_UNORM );
+            info._format     = attachment._format;
             info._bDepth     = FrameRendererUtil::isDepthFormat( info._format ) ? SW_TRUE : SW_FALSE;
             listTarget.push_back( std::move( info ) );
         }

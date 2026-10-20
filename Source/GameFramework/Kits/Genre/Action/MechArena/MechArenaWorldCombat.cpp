@@ -164,11 +164,11 @@ namespace sw
         {
             const MechDef*       pAttackerMech = _listPilot[static_cast<size_t>( attacker )].getMech();
             const hashed_string& kindName      = kind == MechWeaponKind::Melee ? Internal::getMeleeName() : Internal::getShotName();
-            scale                              = _pMechCatalog->getClassModifier( pAttackerMech->_rangeClass ).getValue( kindName, 1.0f );
+            scale                              = _pMechCatalog->getClassModifier( pAttackerMech->_rangeClass ).getScale( kindName );
             scale *= computeModifier( attacker, MechArenaWorldCombatInternal::getAttackName() );
         }
         const float32 finalDamage = damage * scale / MathUtil::max( 0.01f, computeModifier( victim, MechArenaWorldCombatInternal::getDefenseName() ) );
-        float32       finalDown   = downValue * _pMechCatalog->getClassModifier( pVictimMech->_rangeClass ).getValue( Internal::getDownName(), 1.0f ) /
+        float32       finalDown   = downValue * _pMechCatalog->getClassModifier( pVictimMech->_rangeClass ).getScale( Internal::getDownName() ) /
                             MathUtil::max( 0.01f, computeModifier( victim, MechArenaWorldCombatInternal::getDownResistName() ) );
         if ( bKnockdown )
             finalDown = MathUtil::max( finalDown, pVictimMech->_downMax ); // 눕히는 기술은 다운치를 한 번에 채운다

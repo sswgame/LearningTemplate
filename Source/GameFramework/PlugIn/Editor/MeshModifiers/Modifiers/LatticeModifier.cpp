@@ -167,19 +167,34 @@ namespace sw::editor
 
     bool LatticeModifier::readExtraJSON( const JSONValue& object )
     {
+        // 숫자 셋을 @p offset 부터 읽는다. 숫자가 아닌 칸이 있으면 false 다(0 으로 두지 않는다).
+        const auto readPoint = []( const JSONValue& array, size_t offset, float3& outPoint ) -> bool
+        {
+            const std::optional<float32> x        = array.at( offset ).read<float32>();
+            const std::optional<float32> y        = array.at( offset + 1 ).read<float32>();
+            const std::optional<float32> z        = array.at( offset + 2 ).read<float32>();
+            const bool                   bAllRead = x.has_value() && y.has_value() && z.has_value();
+            if ( bAllRead == false )
+                return false;
+            outPoint = float3{ *x, *y, *z };
+            return true;
+        };
+
         const JSONValue box = object.get( "box" );
         _box                = MeshModifierBounds{};
-        if ( box.isObject() && box.get( "valid" ).asBool( false ) )
+        bool bBoxValid      = false;
+        if ( box.isObject() && box.readOptionalInto( "valid", bBoxValid ) == false )
+            return false;
+        if ( bBoxValid )
         {
             const JSONValue boxMin    = box.get( "min" );
             const JSONValue boxMax    = box.get( "max" );
-            const bool      bValidBox = boxMin.isArray() && boxMin.size() == 3 && boxMax.isArray() && boxMax.size() == 3;
-            if ( bValidBox )
+            const bool      bValidBox = boxMin.isArray() && boxMin.size() == 3 && boxMax.isArray() && boxMax.size() == 3 && readPoint( boxMin, 0, _box._min ) &&
+                                   readPoint( boxMax, 0, _box._max );
+            if ( bValidBox == false )
             {
-                _box._min = float3{ static_cast<float32>( boxMin.at( 0 ).asFloat() ), static_cast<float32>( boxMin.at( 1 ).asFloat() ),
-                                    static_cast<float32>( boxMin.at( 2 ).asFloat() ) };
-                _box._max = float3{ static_cast<float32>( boxMax.at( 0 ).asFloat() ), static_cast<float32>( boxMax.at( 1 ).asFloat() ),
-                                    static_cast<float32>( boxMax.at( 2 ).asFloat() ) };
+                _box = MeshModifierBounds{};
+                return false;
             }
         }
 
@@ -188,26 +203,28 @@ namespace sw::editor
         const bool      bInvalidLatticeData = resolution.isArray() == false || resolution.size() != 3 || points.isArray() == false;
         if ( bInvalidLatticeData )
             return false;
-        const int32 countX     = static_cast<int32>( resolution.at( 0 ).asInt() );
-        const int32 countY     = static_cast<int32>( resolution.at( 1 ).asInt() );
-        const int32 countZ     = static_cast<int32>( resolution.at( 2 ).asInt() );
-        const bool  bValidSize = kMinResolution <= countX && countX <= kMaxResolution && kMinResolution <= countY && countY <= kMaxResolution &&
-                                kMinResolution <= countZ && countZ <= kMaxResolution;
-        if ( bValidSize == false || points.size() != static_cast<size_t>( countX * countY * countZ * 3 ) )
+        const std::optional<int32> countX     = resolution.at( 0 ).read<int32>();
+        const std::optional<int32> countY     = resolution.at( 1 ).read<int32>();
+        const std::optional<int32> countZ     = resolution.at( 2 ).read<int32>();
+        const bool                 bCountRead = countX.has_value() && countY.has_value() && countZ.has_value();
+        const bool                 bValidSize = bCountRead && kMinResolution <= *countX && *countX <= kMaxResolution && kMinResolution <= *countY && *countY <= kMaxResolution &&
+                                kMinResolution <= *countZ && *countZ <= kMaxResolution;
+        if ( bValidSize == false || points.size() != static_cast<size_t>( *countX * *countY * *countZ * 3 ) )
         {
             resetToIdentity();
             return false;
         }
-        _countX = countX;
-        _countY = countY;
-        _countZ = countZ;
-        _listControlPoint.assign( static_cast<size_t>( countX * countY * countZ ), float3{ 0.0f, 0.0f, 0.0f } );
+        _countX = *countX;
+        _countY = *countY;
+        _countZ = *countZ;
+        _listControlPoint.assign( static_cast<size_t>( _countX * _countY * _countZ ), float3{ 0.0f, 0.0f, 0.0f } );
         for ( size_t index = 0; index < _listControlPoint.size(); ++index )
         {
-            const float3 value{ static_cast<float32>( points.at( index * 3 ).asFloat() ), static_cast<float32>( points.at( index * 3 + 1 ).asFloat() ),
-                                static_cast<float32>( points.at( index * 3 + 2 ).asFloat() ) };
-            const bool   bFinite     = MathUtil::isFinite( value._x ) && MathUtil::isFinite( value._y ) && MathUtil::isFinite( value._z );
-            _listControlPoint[index] = bFinite ? value : getIdentityControlPoint( static_cast<int32>( index ) );
+            if ( readPoint( points, index * 3, _listControlPoint[index] ) == false )
+            {
+                resetToIdentity();
+                return false;
+            }
         }
         syncResolutionParams();
         return true;

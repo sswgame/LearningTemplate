@@ -9,12 +9,14 @@
 
     #include "Engine/Common/EngineServices.h"
     #include "Core/Console/DebugHUDRegistry.h"
+    #include "Engine/Config/EngineDefaultAssets.h"
     #include "Engine/Input/InputManager.h"
     #include "Engine/UI/Base/PanelWidget.h"
     #include "Engine/UI/Debug/DebugHUD.h"
     #include "Engine/UI/UISystem.h"
     #include "Engine/UserSettings/UserSettingsManager.h"
 
+    #include "TestFramework/Harness/TestHostRuntime.h"
     #include "TestFramework/TestFramework.h"
 
 // DebugHUDTest — 디버그 HUD: 섹션 레지스트리(등록 · 순서 · 거절 · 모듈 언로드), 설정 글(켬 · 끔 낱말), 사용자 설정 왕복(파일까지),
@@ -102,10 +104,11 @@ namespace
             sw::UserSettingsTargets targets;
             targets._pGlobalVariableManager = &sw::engine::getSubsystem<sw::GlobalVariableManager>();
             _settings.initialize( targets );
-            SW_EXPECT_TRUE( _settings.loadSchema( sw::DebugHUD::kSettingsSchemaPath ) );
+            SW_EXPECT_TRUE( _settings.loadSchema( ::test::getEngineDefaultAssets()._debugHUDSettingsSchema.get() ) );
             _settings.reapplyAll();
             SW_EXPECT_TRUE( _input.initialize() );
             SW_EXPECT_TRUE( _ui.initialize( _input, nullptr ) );
+            _ui.setEngineDocuments( sw::UIEngineDocuments::makeFromDefaultAssets( ::test::getEngineDefaultAssets() ) );
             _ui.setUserSettings( &_settings );
             _hud.initialize( _ui, &_settings );
         }

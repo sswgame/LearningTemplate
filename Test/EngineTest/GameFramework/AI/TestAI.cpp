@@ -80,7 +80,10 @@ namespace
 
     BehaviorStatus isHealthyCondition( BehaviorContext& context )
     {
-        return context._pBlackboard->getFloat( "Health", 1.0f ) > 0.3f ? BehaviorStatus::Success : BehaviorStatus::Failure;
+        // 체력을 아직 적지 않았으면 다치지 않은 것으로 본다 — 없음을 부르는 쪽이 직접 정한다.
+        const std::optional<float32> health   = context._pBlackboard->getFloat( "Health" );
+        const bool                   bHealthy = health.has_value() == false || *health > 0.3f;
+        return bHealthy ? BehaviorStatus::Success : BehaviorStatus::Failure;
     }
 
     void countTimer( int32* pCount )
@@ -90,13 +93,13 @@ namespace
 } // namespace
 
 /**
- * @brief [AITest] 블랙보드는 종류별로 읽고 쓰며 없는 이름은 기본값 · 오브젝트 0 과 거짓은 "없음" · 바꿀 때마다 리비전이 오른다
+ * @brief [AITest] 블랙보드는 종류별로 읽고 쓰며 없는 이름은 빈 값(기본값을 지어내지 않는다) · 오브젝트 0 과 거짓은 "없음" · 바꿀 때마다 리비전이 오른다
  */
 SW_TEST_CASE( AITest, BlackboardStoresTypedValues )
 {
     Blackboard blackboard;
     SW_EXPECT_FALSE( blackboard.isSet( "Target" ) );
-    SW_EXPECT_NEAR_EQUAL( 0.25f, blackboard.getFloat( "Missing", 0.25f ), 1.0e-6f );
+    SW_EXPECT_FALSE( blackboard.getFloat( "Missing" ).has_value() );
     const uint32 revision = blackboard.getRevision();
     blackboard.setFloat( "Health", 0.5f );
     blackboard.setInt( "Ammo", 12 );
@@ -104,14 +107,15 @@ SW_TEST_CASE( AITest, BlackboardStoresTypedValues )
     blackboard.setVector( "Home", float3{ 1.0f, 2.0f, 3.0f } );
     blackboard.setObject( "Target", 0 );
     SW_EXPECT_EQUAL( revision + 5, blackboard.getRevision() );
-    SW_EXPECT_EQUAL( 12, blackboard.getInt( "Ammo" ) );
-    SW_EXPECT_NEAR_EQUAL( 12.0f, blackboard.getFloat( "Ammo" ), 1.0e-6f );
-    SW_EXPECT_NEAR_EQUAL( 2.0f, blackboard.getVector( "Home" )._y, 1.0e-6f );
+    SW_EXPECT_EQUAL( 12, blackboard.getInt( "Ammo" ).value_or( -1 ) );
+    SW_EXPECT_NEAR_EQUAL( 12.0f, blackboard.getFloat( "Ammo" ).value_or( -1.0f ), 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, blackboard.getVector( "Home" ).value_or( float3{} )._y, 1.0e-6f );
+    SW_EXPECT_FALSE( blackboard.getVector( "Ammo" ).has_value() ); // 종류가 다르면 비어 있다
     SW_EXPECT_FALSE( blackboard.isSet( "Alert" ) );
     SW_EXPECT_FALSE( blackboard.isSet( "Target" ) );
     blackboard.setObject( "Target", 77u );
     SW_EXPECT_TRUE( blackboard.isSet( "Target" ) );
-    SW_EXPECT_EQUAL( 77u, static_cast<uint32>( blackboard.getObject( "Target" ) ) );
+    SW_EXPECT_EQUAL( 77u, static_cast<uint32>( blackboard.getObject( "Target" ).value_or( 0 ) ) );
     blackboard.clearValue( "Target" );
     SW_EXPECT_FALSE( blackboard.isSet( "Target" ) );
 }

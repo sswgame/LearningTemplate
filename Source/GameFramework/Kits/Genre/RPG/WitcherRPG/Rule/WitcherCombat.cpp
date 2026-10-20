@@ -66,7 +66,7 @@ namespace sw
             cast._result = WitcherCombatResult::NotEnoughStamina;
             return cast;
         }
-        const float32 intensity = stats.getValue( _pCatalog->getCombat()._intensityStat, 0.0f );
+        const float32 intensity = stats.getValue( _pCatalog->getCombat()._intensityStat );
         cast._element           = pSign->_element;
         cast._power             = pSign->_basePower * MathUtil::max( 0.0f, 1.0f + intensity / 100.0f ) * ( bAlternate ? pSign->_altPowerScale : 1.0f );
         if ( pChart != nullptr && pSign->_element.empty() == false )

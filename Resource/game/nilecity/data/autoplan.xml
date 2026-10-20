@@ -1,0 +1,79 @@
+<!-- 자동 플레이(P · 자동 플레이 스위치)의 짓기 순서표 — 한 줄이 한 단계이고 적힌 순서로 실행한다(NileCityPlanner::reset · advance).
+     Road 는 from → to 의 곧은 길(다 깔 돈이 될 때까지 기다린다), Building 은 from(과 to 가 있으면 그 사이 모든 칸, 행 우선)의 건물이다.
+     칸은 "x,y" 이고 x 는 배치의 이름일 수 있다(road = 남북 도로, farm = 농장 왼쪽 — 디렉터의 Auto Plan PROPERTY).
+     인구 임계값은 구역(block 1 · 2 · 3 — 1 은 처음부터, 2 · 3 은 디렉터의 구역 인구) + extra 다. 놓을 수 없는 자리는 건너뛴다. -->
+<NileAutoPlan>
+	<!-- 1 구역(x 18..26, y 5..13) — 도로 고리 · 우물 · 농장 · 창고 · 바자 · 집 · 신전. -->
+	<Road from="road,4" to="27,4" block="1" />
+	<Road from="road,4" to="road,14" block="1" />
+	<Road from="27,4" to="27,14" block="1" />
+	<Road from="road,14" to="27,14" block="1" />
+	<Building id="well" from="19,11" block="1" />
+	<Building id="well" from="23,11" block="1" />
+	<Building id="grain_farm" from="farm,5" block="1" />
+	<Building id="grain_farm" from="farm,8" block="1" />
+	<Building id="granary" from="18,5" block="1" />
+	<Building id="bazaar" from="21,5" block="1" />
+	<Building id="house" from="18,13" to="26,13" block="1" />
+	<Building id="house" from="18,12" to="26,12" block="1" />
+	<Building id="shrine" from="23,5" block="1" />
+	<Building id="house" from="26,7" to="26,10" block="1" />
+	<Building id="garden" from="21,11" block="1" />
+	<Building id="garden" from="25,11" block="1" />
+	<Building id="tax_collector" from="18,8" block="1" extra="20" />
+	<Building id="juggler" from="24,5" block="1" extra="40" />
+	<Building id="apothecary" from="18,10" block="1" extra="60" />
+	<Building id="fig_farm" from="farm,11" block="1" extra="60" />
+
+	<!-- 2 구역(x 28..36, y 5..13) — 물 공급 · 공방 · 저장 마당 · 두 번째 바자 · 학교. -->
+	<Road from="27,4" to="37,4" block="2" />
+	<Road from="37,4" to="37,14" block="2" />
+	<Road from="27,14" to="37,14" block="2" />
+	<Building id="well" from="30,11" block="2" />
+	<Building id="well" from="34,11" block="2" />
+	<Building id="house" from="28,13" to="36,13" block="2" />
+	<Building id="house" from="28,12" to="36,12" block="2" />
+	<Building id="water_supply" from="28,9" block="2" />
+	<Building id="shrine" from="36,11" block="2" />
+	<Building id="apothecary" from="28,11" block="2" />
+	<Building id="statue" from="32,11" block="2" />
+	<Building id="potter" from="28,5" block="2" />
+	<Building id="storage_yard" from="34,5" block="2" />
+	<Building id="bazaar" from="32,5" block="2" extra="40" />
+	<Building id="brewery" from="30,5" block="2" extra="60" />
+	<Building id="scribe_school" from="35,9" block="2" extra="60" />
+	<Building id="garden" from="31,9" block="2" extra="60" />
+	<Building id="garden" from="33,9" block="2" extra="60" />
+
+	<!-- 3 구역(y 15..23) — 농장을 늘리고 집 네 줄 · 광장 · 둘째 서비스. -->
+	<Road from="road,14" to="road,24" block="3" />
+	<Road from="27,14" to="27,24" block="3" />
+	<Road from="37,14" to="37,24" block="3" />
+	<Road from="road,24" to="37,24" block="3" />
+	<Building id="grain_farm" from="farm,15" block="3" />
+	<Building id="fig_farm" from="farm,18" block="3" />
+	<Building id="grain_farm" from="farm,21" block="3" />
+	<Building id="well" from="20,18" block="3" />
+	<Building id="well" from="30,18" block="3" />
+	<Building id="well" from="34,18" block="3" />
+	<Building id="house" from="18,15" to="26,15" block="3" />
+	<Building id="house" from="28,15" to="36,15" block="3" />
+	<Building id="house" from="18,16" to="26,16" block="3" />
+	<Building id="house" from="28,16" to="36,16" block="3" />
+	<Building id="shrine" from="18,19" block="3" />
+	<Building id="apothecary" from="28,19" block="3" />
+	<Building id="juggler" from="35,19" block="3" />
+	<Building id="granary" from="24,19" block="3" />
+	<Building id="plaza" from="21,19" block="3" />
+	<Building id="plaza" from="31,19" block="3" />
+	<Building id="well" from="20,21" block="3" extra="40" />
+	<Building id="well" from="30,21" block="3" extra="40" />
+	<Building id="well" from="34,21" block="3" extra="40" />
+	<Building id="house" from="18,23" to="26,23" block="3" extra="40" />
+	<Building id="house" from="28,23" to="36,23" block="3" extra="40" />
+	<Building id="house" from="18,22" to="26,22" block="3" extra="40" />
+	<Building id="house" from="28,22" to="36,22" block="3" extra="40" />
+	<Building id="statue" from="23,21" block="3" extra="80" />
+	<Building id="statue" from="33,21" block="3" extra="80" />
+	<Building id="tax_collector" from="18,17" block="3" extra="80" />
+</NileAutoPlan>

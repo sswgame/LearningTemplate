@@ -266,8 +266,8 @@ SW_TEST_CASE( SequencerTest, JSONRoundTripThroughFileKeepsValues )
     SW_ASSERT_EQUAL( size_t( 1 ), loaded._listTrack.size() );
     SW_ASSERT_EQUAL( size_t( sw::kSequenceTransformChannelCount ), loaded._listTrack[0]._listChannel.size() );
     SW_EXPECT_EQUAL( size_t( 2 ), loaded._listTrack[0]._listChannel[0]._listKey.size() );
-    SW_EXPECT_NEAR_EQUAL( 4.0f, loaded._listTrack[0].evaluateChannel( 0, 20.0f, 0.0f ), 0.0001f );
-    SW_EXPECT_NEAR_EQUAL( 2.0f, loaded._listTrack[0].evaluateChannel( 0, 10.0f, 0.0f ), 0.0001f );
+    SW_EXPECT_NEAR_EQUAL( 4.0f, loaded._listTrack[0].evaluateChannel( 0, 20.0f ).value(), 0.0001f );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, loaded._listTrack[0].evaluateChannel( 0, 10.0f ).value(), 0.0001f );
 }
 
 /**
@@ -722,7 +722,7 @@ SW_TEST_CASE( SequencerTest, KeyTrackSetKeyReplacesAndRemovesAcrossChannels )
     (void)track.setChannelKey( 1, 30.0f, 7.0f );                         // 채널 하나에만
 
     SW_EXPECT_EQUAL( size_t( 1 ), track._listChannel[0]._listKey.size() );
-    SW_EXPECT_NEAR_EQUAL( 5.0f, track.evaluateChannel( 0, 10.0f, 0.0f ), 0.0001f );
+    SW_EXPECT_NEAR_EQUAL( 5.0f, track.evaluateChannel( 0, 10.0f ).value(), 0.0001f );
     sw::vector<float32> listFrame;
     track.collectKeyFrames( listFrame );
     SW_ASSERT_EQUAL( size_t( 2 ), listFrame.size() );

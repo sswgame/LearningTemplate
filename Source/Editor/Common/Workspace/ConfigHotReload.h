@@ -10,6 +10,8 @@
 #include "Editor/Common/EditorSubsystem.h"
 #include "Editor/Common/Workspace/FileWatchDispatcher.h"
 
+#include "Engine/Serialization/Base/ReloadOutcome.h"
+
 namespace sw
 {
     class ConfigManager;
@@ -54,9 +56,9 @@ namespace sw::editor
 
         /**
          * @brief 바뀐 파일 하나를 처리합니다 — 호스트 설정이면 @p pConfigManager 가, 에디터 도구 시드면 에디터가 다시 읽습니다.
-         * @return 다시 읽은 설정이 있으면 true
+         * @return 다시 읽었으면 `Reloaded`, 맡은 설정 파일이 아니면 `NotTracked`, 깨진 파일이면(오류를 남기고 이전 값을 지켰다) `Failed`
          */
-        [[nodiscard]] static bool reloadChangedFile( ConfigManager* pConfigManager, string_view fullPath );
+        [[nodiscard]] static ReloadOutcome reloadChangedFile( ConfigManager* pConfigManager, string_view fullPath );
 
     private:
         void onConfigFileChanged( const FileChangeEvent& changeEvent );

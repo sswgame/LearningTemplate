@@ -30,6 +30,9 @@ namespace sw
      */
     struct WeaponDef
     {
+        static constexpr float32 kMinFireInterval = 0.01f; ///< `fireInterval` 의 하한(s) — 0 이면 한 프레임에 탄창을 비운다
+        static constexpr float32 kMinRange        = 0.1f;  ///< `range` 의 하한(m)
+
         hashed_string _id{};
         hashed_string _ammoID{}; ///< 예비탄으로 쓰는 아이템 id. 인벤토리와 연결하는 게임이 읽는다. 비면 무기 자체 예비탄을 쓴다
         string        _name{};

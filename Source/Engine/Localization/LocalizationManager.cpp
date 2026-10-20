@@ -331,7 +331,7 @@ namespace sw
         notifyLanguageChanged( oldLanguage, currentLanguage );
     }
 
-    bool LocalizationManager::reloadChangedFile( string_view changedPath )
+    ReloadOutcome LocalizationManager::reloadChangedFile( string_view changedPath )
     {
         string            projectPath;
         LocalizationScope scope{ LocalizationScope::Game };
@@ -350,15 +350,15 @@ namespace sw
             }
         }
         if ( projectPath.empty() )
-            return false;
+            return ReloadOutcome::NotTracked;
 
         // 다시 읽다 실패하면 기존 내용을 유지한다. 저장 도중의 반쯤 쓴 파일이 화면의 텍스트를 모두 지우면 안 된다.
         MountedProject reloaded;
         reloaded._scope = scope;
         if ( readProject( projectPath, reloaded ) == false )
         {
-            SW_LOG_WARNING( "Localization project '%#' is not reloaded - keeping the previous text", projectPath.c_str() );
-            return false;
+            SW_LOG_ERROR( "Localization project '%#' is not reloaded - keeping the previous text", projectPath.c_str() );
+            return ReloadOutcome::Failed;
         }
         string language;
         {
@@ -374,7 +374,7 @@ namespace sw
         }
         SW_LOG_INFO( "Reloaded localization project '%#' (changed: %#).", projectPath.c_str(), changedPath );
         notifyLanguageChanged( language, language );
-        return true;
+        return ReloadOutcome::Reloaded;
     }
 
     bool LocalizationManager::isProjectFile( string_view path ) const

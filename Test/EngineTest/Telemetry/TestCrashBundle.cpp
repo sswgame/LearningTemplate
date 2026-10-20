@@ -135,8 +135,8 @@ SW_TEST_CASE( CrashBundleTest, BundlesPreviousCrashesOnce )
     SW_EXPECT_TRUE( root.get( "buildId" ).asString() == "0A1B2C3D4E5F60718293A4B5C6D7E8F91" );
     SW_EXPECT_TRUE( root.get( "rhi" ).asString() == "DirectX12" && root.get( "gpu" ).asString() == "Test GPU" );
     SW_EXPECT_TRUE( root.get( "state" ).asString() == "local" );
-    SW_EXPECT_EQUAL( 3u, static_cast<uint32>( root.get( "breadcrumbCount" ).asUint() ) );
-    SW_EXPECT_TRUE( root.get( "system" ).get( "logicalCores" ).asUint() > 0u );
+    SW_EXPECT_EQUAL( 3u, static_cast<uint32>( root.get( "breadcrumbCount" ).read<sw::uint64>().value() ) );
+    SW_EXPECT_TRUE( root.get( "system" ).get( "logicalCores" ).read<sw::uint64>().value() > 0u );
     SW_EXPECT_EQUAL( 5u, static_cast<uint32>( root.get( "files" ).size() ) );
     SW_EXPECT_TRUE( root.get( "bundledBy" ).asString() == Internal::kCurrentSession );
 
@@ -258,7 +258,7 @@ SW_TEST_CASE( CrashBundleTest, ReporterArgumentIsACommandLineEntry )
     SW_EXPECT_EQUAL( 0u, CrashReportService::runReporter( folder, NullCrashReportUploader::get() ) );
     const JSONDocument manifest = Internal::loadManifest( reportsFolder, "queued01" );
     SW_EXPECT_TRUE( manifest.getRoot().get( "state" ).asString() == "queued" );
-    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( manifest.getRoot().get( "attempts" ).asUint() ) );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( manifest.getRoot().get( "attempts" ).read<sw::uint64>().value() ) );
 }
 
 /**

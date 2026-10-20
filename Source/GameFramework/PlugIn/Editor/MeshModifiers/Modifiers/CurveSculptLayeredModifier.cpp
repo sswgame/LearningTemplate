@@ -69,7 +69,7 @@ namespace sw::editor
                     continue;
                 const size_t layer     = index / 4;
                 const bool   bOwnCurve = layer < listCurve.size() && listCurve[layer]._listKey.empty() == false;
-                height += listLayer[index + 3] * ( bOwnCurve ? listCurve[layer].evaluate( distance, 0.0f ) : evaluateCurve( _shapeParam, distance ) );
+                height += listLayer[index + 3] * ( bOwnCurve ? *listCurve[layer].evaluate( distance ) : evaluateCurve( _shapeParam, distance ) ); // bOwnCurve 가 키를 확인했다
             }
             return point._position + point._normal * height;
         }

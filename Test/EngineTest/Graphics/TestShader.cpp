@@ -623,10 +623,10 @@ SW_TEST_CASE( ShaderCookStampTest, FreshnessIsJudgedByContentNotFileTime )
     const test::ScopedTempResourceRoot resourceRoot;
     const sw::string&                  root = resourceRoot.getRootFolderPath();
     SW_ASSERT_TRUE( resourceRoot.writeTextFile( "engine/shaders/common.hlsli", "#define SW_COMMON 1\n" ) );
-    SW_ASSERT_TRUE( resourceRoot.writeTextFile( "engine/shaders/forwardlit.hlsl", "#include \"common.hlsli\"\nfloat4 VSMain() : SV_Position { return 1; }\n" ) );
-    SW_ASSERT_TRUE( resourceRoot.writeTextFile( "engine/shaders/tonemap.hlsl", "#include \"common.hlsli\"\nfloat4 PSMain() : SV_Target { return 0.5; }\n" ) );
-    const sw::string shaderPath  = resourceRoot.makePath( "engine/shaders/forwardlit.hlsl" );
-    const sw::string tonemapPath = resourceRoot.makePath( "engine/shaders/tonemap.hlsl" );
+    SW_ASSERT_TRUE( resourceRoot.writeTextFile( ::test::getEngineDefaultAssets()._shaderForwardLit.c_str(), "#include \"common.hlsli\"\nfloat4 VSMain() : SV_Position { return 1; }\n" ) );
+    SW_ASSERT_TRUE( resourceRoot.writeTextFile( ::test::getEngineDefaultAssets()._shaderTonemap.c_str(), "#include \"common.hlsli\"\nfloat4 PSMain() : SV_Target { return 0.5; }\n" ) );
+    const sw::string shaderPath  = resourceRoot.makePath( ::test::getEngineDefaultAssets()._shaderForwardLit.c_str() );
+    const sw::string tonemapPath = resourceRoot.makePath( ::test::getEngineDefaultAssets()._shaderTonemap.c_str() );
     const sw::string binDir      = resourceRoot.makePath( "engine/shaders/bin/dx12" );
     SW_ASSERT_TRUE( sw::FileUtil::ensureDirectoryExists( binDir ) );
 
@@ -668,8 +668,8 @@ SW_TEST_CASE( ShaderCookStampTest, HeaderInAnotherIncludeRootMakesOutputStale )
     const test::ScopedTempResourceRoot resourceRoot;
     const sw::string&                  root = resourceRoot.getRootFolderPath();
     SW_ASSERT_TRUE( resourceRoot.writeTextFile( "engine/shaders/common.hlsli", "#define SW_COMMON 1\n" ) );
-    SW_ASSERT_TRUE( resourceRoot.writeTextFile( "common/shaders/samplecompute.hlsl", "#include \"common.hlsli\"\n[numthreads(1,1,1)] void CSMain() {}\n" ) );
-    const sw::string shaderPath = resourceRoot.makePath( "common/shaders/samplecompute.hlsl" );
+    SW_ASSERT_TRUE( resourceRoot.writeTextFile( ::test::getEngineDefaultAssets()._shaderProbeSampleCompute.c_str(), "#include \"common.hlsli\"\n[numthreads(1,1,1)] void CSMain() {}\n" ) );
+    const sw::string shaderPath = resourceRoot.makePath( ::test::getEngineDefaultAssets()._shaderProbeSampleCompute.c_str() );
     const sw::string binDir     = resourceRoot.makePath( "common/shaders/bin/dx12" );
     SW_ASSERT_TRUE( sw::FileUtil::ensureDirectoryExists( binDir ) );
 

@@ -114,7 +114,10 @@ namespace sw
                 SW_LOG_WARNING( "%#: rule '%#' -> '%#' names an undeclared element - skipped", sourceName, attack.c_str(), defend.c_str() );
                 continue;
             }
-            setMultiplier( attack, defend, node.getAttributeFloat( "multiplier", 1.0f ) );
+            // 규칙 줄은 배율을 적으려고 있는 것이다 — 빠진 배율을 1 로 두지 않는다.
+            const std::optional<float32> multiplier = node.readRequiredAttribute<float32>( "multiplier" );
+            if ( multiplier.has_value() )
+                setMultiplier( attack, defend, *multiplier );
         }
 
         for ( XMLNode node = root.findChild( "Status" ); node; node = node.findNextSibling( "Status" ) )
@@ -122,8 +125,13 @@ namespace sw
             ElementStatusChance entry;
             entry._element = hashed_string( node.getAttributeText( "element" ) );
             entry._status  = hashed_string( node.getAttributeText( "status" ) );
-            entry._chance  = node.getAttributeFloat( "chance", 0.0f );
-            if ( hasElement( entry._element ) == false || entry._status.empty() )
+            // 확률은 필수이고 [0, 1] 이다.
+            const std::optional<float32> chance       = node.readRequiredAttribute<float32>( "chance" );
+            const bool                   bChanceValid = chance.has_value() && 0.0f <= *chance && *chance <= 1.0f;
+            if ( bChanceValid )
+                entry._chance = *chance;
+            const bool bEntryValid = hasElement( entry._element ) && entry._status.empty() == false && bChanceValid;
+            if ( bEntryValid == false )
             {
                 SW_LOG_WARNING( "%#: status '%#' on '%#' is invalid - skipped", sourceName, entry._status.c_str(), entry._element.c_str() );
                 continue;

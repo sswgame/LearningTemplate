@@ -79,12 +79,13 @@ namespace sw
         const JSONValue value = readMember( key, bRequired );
         if ( value.isValid() == false )
             return bRequired == false;
-        if ( value.isNumber() == false )
+        const std::optional<float32> number = value.isNumber() ? value.read<float32>() : std::nullopt;
+        if ( number.has_value() == false )
         {
             fail( makeKeyMessage( key, "must be a number" ) );
             return false;
         }
-        outValue = static_cast<float32>( value.asFloat() );
+        outValue = *number;
         return true;
     }
 
@@ -109,12 +110,13 @@ namespace sw
         const JSONValue value = readMember( key, bRequired );
         if ( value.isValid() == false )
             return bRequired == false;
-        if ( value.isBool() == false )
+        const std::optional<bool> flag = value.isBool() ? value.read<bool>() : std::nullopt;
+        if ( flag.has_value() == false )
         {
             fail( makeKeyMessage( key, "must be true or false" ) );
             return false;
         }
-        outValue = value.asBool();
+        outValue = *flag;
         return true;
     }
 

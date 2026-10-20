@@ -3,8 +3,10 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Network/Transport/NetEmulation.h"
 
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/NetEmulationPresetTable.h"
 
+#include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
 
 using namespace sw;
@@ -16,7 +18,7 @@ using namespace sw;
 SW_TEST_CASE( NetEmulationPresetTableTest, ShippedTableMakesConditionsByName )
 {
     NetEmulationPresetTable table;
-    SW_ASSERT_TRUE( table.loadFromResource() );
+    SW_ASSERT_TRUE( table.loadFromResource( ::test::getEngineDefaultAssets()._netEmulationPresets.get() ) );
     SW_ASSERT_TRUE( table._listPreset.empty() == false );
 
     const NetEmulationPresetDef* pLTE = table.findPreset( "LTE" );

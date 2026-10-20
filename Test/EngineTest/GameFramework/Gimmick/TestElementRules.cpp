@@ -163,5 +163,6 @@ SW_TEST_CASE( ElementRuleTest, UnknownNamesAreLoadErrors )
     }
     SW_EXPECT_TRUE( table.loadFromXMLText( R"(<ElementRules><Flag id="Flammable"/><Status id="Burning" kind="Age"/><Material id="Grass" flags="Flammable" burnSteps="2"/></ElementRules>)",
                                            "ok.elements.xml" ) );
-    SW_EXPECT_EQUAL( 2, table.getMaterials()[0].getParam( "burnSteps", 0 ) );
+    SW_EXPECT_EQUAL( 2, table.getMaterials()[0].getParam( "burnSteps" ).value() );
+    SW_EXPECT_FALSE( table.getMaterials()[0].getParam( "missingParam" ).has_value() );
 }

@@ -135,8 +135,8 @@ namespace sw
     public:
         MoveCatalog();
 
-        /** @brief "High", "Mid", "Low", "Throw"(대소문자 무시)를 읽습니다. 모르는 값이면 @p fallback 을 반환합니다. */
-        static AttackHeight parseAttackHeight( string_view text, AttackHeight fallback );
+        /** @brief "High", "Mid", "Low", "Throw"(대소문자 무시)를 읽습니다. 모르는 값이면 @p outHeight 를 두고 false 입니다. */
+        [[nodiscard]] static bool parseAttackHeight( string_view text, AttackHeight& outHeight );
 
     private:
         static constexpr const utf8* kXMLRootName = "MoveCatalog"; ///< 루트 원소(`XMLCatalog`)

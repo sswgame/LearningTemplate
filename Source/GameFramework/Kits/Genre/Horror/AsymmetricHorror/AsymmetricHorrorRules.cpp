@@ -144,7 +144,8 @@ namespace sw
         }
         if ( bValid == false )
             return false;
-        _judge.loadFromNode( node );
+        if ( _judge.loadFromNode( node, sourceName ) == false )
+            return false;
         _rules._skillCheck = skillCheck;
         return true;
     }

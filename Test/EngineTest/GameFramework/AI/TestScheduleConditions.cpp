@@ -25,8 +25,9 @@ namespace
             const string      xml = "<Routine id=\"r\" " + string( attributes ) + "/>";
             XMLDocument       document;
             ScheduleCondition condition;
-            if ( document.parse( xml, "condition" ) )
-                condition.readFromNode( document.getRoot( "Routine" ), ScheduleConditionVocabulary{}, "condition", "r" );
+            // 틀린 조건을 읽는 테스트도 이 도우미를 쓴다 — 결과는 각 테스트가 로그로 본다.
+            const bool bParsed = document.parse( xml, "condition" ) && condition.readFromNode( document.getRoot( "Routine" ), ScheduleConditionVocabulary{}, "condition", "r" );
+            (void)bParsed;
             return condition;
         }
 

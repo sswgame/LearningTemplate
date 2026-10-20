@@ -7,6 +7,7 @@
 
 #include "Engine/Common/EngineParallel.h"
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Environment/Terrain/HeightfieldData.h"
 #include "Engine/Environment/Terrain/LayerWeightsData.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -122,7 +123,7 @@ namespace sw
 {
     TerrainComponent::TerrainComponent()
         : _heightfieldPath{}
-        , _materialPath{ "engine/materials/terrain.material" }
+        , _materialPath{}
         , _layerWeightsPath{}
         , _detailTexturePath{}
         , _listLayer{}
@@ -593,7 +594,9 @@ namespace sw
     void TerrainComponent::acquireMaterial()
     {
         using Internal = TerrainComponentInternal;
-        if ( _material.acquire( _materialPath ) == false )
+        // 칸이 비면 엔진 기본 지형 머티리얼이다(값의 정본은 엔진 기본 에셋 표).
+        const string& materialPath = _materialPath.empty() ? engine::getSubsystem<EngineDefaultAssets>()._terrainMaterial.get() : _materialPath;
+        if ( _material.acquire( materialPath ) == false )
             return;
         for ( uint32 layerIndex = 0; layerIndex < kMaxLayerCount; ++layerIndex )
         {

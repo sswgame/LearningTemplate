@@ -6,6 +6,7 @@
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Automation/AutomationScenario.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Input/Map/InputMap.h"
@@ -22,6 +23,7 @@
 #include "Engine/UI/UISystem.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
+#include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
 
 // UINavigationScriptTest — 탐색 열(자동화 시나리오 형식 — `<At frame><Tap slot/></At>` + `<ExpectUI focus screen screens/>`)을 가상 입력으로 재생해
@@ -33,7 +35,6 @@ namespace
     struct UINavigationScriptTestUtil
     {
         static constexpr float32     kFrameSeconds = 1.0f / 60.0f;
-        static constexpr const utf8* kUIInputMap   = "engine/input/ui.input.xml";
         static constexpr const utf8* kSchemaXML    = R"(
 <UserSettingsSchema version="1">
     <Category id="audio" text="t.audio"/>
@@ -79,7 +80,8 @@ namespace
             _viewport._size         = sw::float2{ 1920.0f, 1080.0f };
             _viewport._physicalSize = _viewport._size;
             SW_EXPECT_TRUE( _input.initialize() );
-            SW_EXPECT_TRUE( _ui.initialize( _input, nullptr, UINavigationScriptTestUtil::kUIInputMap ) );
+            SW_EXPECT_TRUE( _ui.initialize( _input, nullptr, ::test::getEngineDefaultAssets()._uiInputMap.c_str() ) );
+            _ui.setEngineDocuments( sw::UIEngineDocuments::makeFromDefaultAssets( ::test::getEngineDefaultAssets() ) );
             _ui.setUserSettings( &_settings );
         }
 
@@ -214,7 +216,7 @@ namespace
 SW_TEST_CASE( UINavigationScriptTest, PauseOptionsBackRestoresFocus )
 {
     UINavigationFixture fixture;
-    fixture._ui.setPauseMenuDocument( "engine/ui/pause.ui.xml" );
+    fixture._ui.setPauseMenuDocument( ::test::getEngineDefaultAssets()._uiPauseMenu.c_str() );
     fixture.runFrame();
     fixture.runScript( R"(<Scenario name="ui.pause.back" startAfter="Immediately">
         <At frame="1"><Tap slot="Key.Escape"/></At>
@@ -279,7 +281,7 @@ SW_TEST_CASE( UINavigationScriptTest, EveryEngineDocumentIsReachableByGamepad )
             continue; // uiscale.xml · uithemes.xml
         const sw::string    documentPath = "engine/ui/" + fileName;
         UINavigationFixture fixture;
-        if ( documentPath == "engine/ui/options.ui.xml" )
+        if ( documentPath == ::test::getEngineDefaultAssets()._uiOptionsMenu.c_str() )
         {
             const sw::UIScreenHandle handle = sw::OptionsMenuScreen::open( fixture._ui );
             fixture.runFrame();

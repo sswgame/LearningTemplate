@@ -96,12 +96,13 @@ namespace sw
                 bool   arrKeyed[3] = { false, false, false };
                 for ( uint32 channelIndex = 0; channelIndex < kSequenceTransformChannelCount; ++channelIndex )
                 {
-                    if ( track._listChannel[channelIndex]._listKey.empty() )
+                    // 키가 없는 채널은 지금 값을 둔다.
+                    const std::optional<float32> value = track._listChannel[channelIndex].evaluate( frame );
+                    if ( value.has_value() == false )
                         continue;
-                    const uint32 groupIndex = channelIndex / 3;
-                    float32&     component  = axisOf( arrValue[groupIndex], channelIndex % 3 );
-                    component               = track._listChannel[channelIndex].evaluate( frame, component );
-                    arrKeyed[groupIndex]    = true;
+                    const uint32 groupIndex                          = channelIndex / 3;
+                    axisOf( arrValue[groupIndex], channelIndex % 3 ) = *value;
+                    arrKeyed[groupIndex]                             = true;
                 }
                 // 키가 있는 그룹만 쓴다. 키 없는 회전과 크기까지 쓰면 트랜스폼이 프레임마다 더티가 된다.
                 if ( arrKeyed[0] )
@@ -119,14 +120,14 @@ namespace sw
                 const bool          bNoKeyData = track._listChannel.empty() || track._listChannel[0]._listKey.empty() || findTrackProperty( pTarget, track, pComponent, pProperty ) == false;
                 if ( bNoKeyData )
                     return;
+                // 위에서 채널 0 에 키가 있음을 확인했다.
+                const float32 value = *track._listChannel[0].evaluate( frame );
                 if ( pProperty->_typeName == hashed_string( "float32" ) )
                 {
-                    float32* pValue = pProperty->getValuePtr<float32>( pComponent );
-                    *pValue         = track._listChannel[0].evaluate( frame, *pValue );
+                    *pProperty->getValuePtr<float32>( pComponent ) = value;
                     return;
                 }
-                int32* pValue = pProperty->getValuePtr<int32>( pComponent );
-                *pValue       = static_cast<int32>( MathUtil::round( track._listChannel[0].evaluate( frame, static_cast<float32>( *pValue ) ) ) );
+                *pProperty->getValuePtr<int32>( pComponent ) = static_cast<int32>( MathUtil::round( value ) );
             }
 
             /** @brief 리그 슬롯 트랙의 가중치를 대상의 `PoseModifierComponent` 에 씁니다. 키나 슬롯 이름이 없으면 건드리지 않습니다. */
@@ -277,7 +278,9 @@ namespace sw
 
     float32 SequenceTimelineUtil::sampleRigSlotWeight( const SequenceKeyTrack& track, float32 frame )
     {
-        return MathUtil::saturate( track.evaluateChannel( 0, frame, 1.0f ) );
+        // 무게 트랙에 키가 없으면 슬롯을 다 건다(1) — 무게 트랙의 계약이다.
+        const std::optional<float32> weight = track.evaluateChannel( 0, frame );
+        return weight.has_value() ? MathUtil::saturate( *weight ) : 1.0f;
     }
 
     void SequenceTimelineUtil::releaseCameraCut( GameObjectManager* pManager, const SequenceAsset& asset )

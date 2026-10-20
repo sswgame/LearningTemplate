@@ -314,11 +314,11 @@ namespace sw
         outListFrame.erase( itUnique, outListFrame.end() );
     }
 
-    float32 SequenceKeyTrack::evaluateChannel( uint32 channelIndex, float32 frame, float32 fallback ) const
+    std::optional<float32> SequenceKeyTrack::evaluateChannel( uint32 channelIndex, float32 frame ) const
     {
         if ( channelIndex >= _listChannel.size() )
-            return fallback;
-        return _listChannel[channelIndex].evaluate( frame, fallback );
+            return std::nullopt;
+        return _listChannel[channelIndex].evaluate( frame );
     }
 
     uint32 SequenceKeyTrack::findChannelKey( uint32 channelIndex, float32 frame ) const

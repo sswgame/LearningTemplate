@@ -21,22 +21,30 @@ namespace sw
         } );
     }
 
-    void TimingJudge::loadFromNode( const XMLNode& node )
+    bool TimingJudge::loadFromNode( const XMLNode& node, string_view sourceName )
     {
+        // 적지 않은 칸은 TimingWindow 의 초기값이다. `width` 는 앞뒤 폭을 함께 정하고, `early` · `late` 가 각자 덮는다.
+        // 깨진 값 · 음수 폭은 오류이고 창 표를 바꾸지 않는다(자르지 않는다).
+        constexpr float32    kAnyFloat = MathUtil::kMaxFloat;
+        bool                 bValid    = true;
         vector<TimingWindow> listWindow;
         for ( XMLNode child = node.findChild( "Window" ); child; child = child.findNextSibling( "Window" ) )
         {
             TimingWindow window;
-            const utf8*  pGrade  = child.findAttribute( "grade" );
-            window._grade        = pGrade != nullptr ? hashed_string( pGrade ) : hashed_string{};
-            const float32 width  = child.getAttributeFloat( "width", window._earlyWidth );
-            window._earlyWidth   = MathUtil::max( 0.0f, child.getAttributeFloat( "early", width ) );
-            window._lateWidth    = MathUtil::max( 0.0f, child.getAttributeFloat( "late", width ) );
-            window._score        = child.getAttributeInt( "score", 0 );
-            window._bBreaksCombo = child.getAttributeBool( "breaksCombo", false ) ? SW_TRUE : SW_FALSE;
+            window._grade      = GameDataXML::readName( child, "grade" );
+            float32 width      = window._earlyWidth;
+            bValid             = GameDataXML::readOptionalNumber( child, "width", sourceName, 0.0f, kAnyFloat, width ) && bValid;
+            window._earlyWidth = width;
+            window._lateWidth  = width;
+            bValid             = GameDataXML::readOptionalNumber( child, "early", sourceName, 0.0f, kAnyFloat, window._earlyWidth ) && bValid;
+            bValid             = GameDataXML::readOptionalNumber( child, "late", sourceName, 0.0f, kAnyFloat, window._lateWidth ) && bValid;
+            bValid             = GameDataXML::readOptionalNumber( child, "score", sourceName, MathUtil::kMinInt32, MathUtil::kMaxInt32, window._score ) && bValid;
+            bValid             = GameDataXML::readOptionalFlag( child, "breaksCombo", window._bBreaksCombo ) && bValid;
             listWindow.push_back( window );
         }
-        setWindows( listWindow );
+        if ( bValid )
+            setWindows( listWindow );
+        return bValid;
     }
 
     bool TimingJudge::loadFromXMLText( string_view xmlText, string_view sourceName )
@@ -45,8 +53,7 @@ namespace sw
         XMLNode     root;
         if ( GameDataXML::parseRoot( doc, xmlText, sourceName, "TimingWindows", root ) == false )
             return false;
-        loadFromNode( root );
-        return _listWindow.empty() == false;
+        return loadFromNode( root, sourceName ) && _listWindow.empty() == false;
     }
 
     TimingResult TimingJudge::judge( float32 targetTime, float32 pressTime ) const

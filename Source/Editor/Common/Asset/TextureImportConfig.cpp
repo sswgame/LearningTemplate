@@ -5,6 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
+#include "Engine/Config/ConfigManager.h"
 #include "Engine/Serialization/JSON/ConfigKeyDoc.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
@@ -57,16 +58,17 @@ namespace sw::editor
     {
     }
 
-    bool TextureImportConfig::loadFromFile( string_view configPath )
+    ConfigReadResult TextureImportConfig::loadFromFile( string_view configPath )
     {
+        if ( FileUtil::exists( configPath ) == false )
+            return ConfigReadResult::Missing;
         string text;
         if ( FileUtil::readTextFile( configPath, text ) == false || text.empty() )
         {
-            SW_LOG_WARNING( "Failed to read TextureImportConfig file: %#", configPath );
-            return false;
+            SW_LOG_ERROR( "Failed to read TextureImportConfig file: %#", configPath );
+            return ConfigReadResult::Invalid;
         }
-
-        return loadFromJSONString( text );
+        return loadFromJSONString( text ) ? ConfigReadResult::Loaded : ConfigReadResult::Invalid;
     }
 
     bool TextureImportConfig::loadFromJSONString( string_view jsonString )
@@ -196,14 +198,20 @@ namespace sw::editor
             }
         }
 
-        if ( jsonValue.has( "generate_mips" ) )
-            inoutRule._bGenerateMips = jsonValue.get( "generate_mips" ).asBool() ? SW_TRUE : SW_FALSE;
-
-        if ( jsonValue.has( "srgb" ) )
-            inoutRule._bSrgb = jsonValue.get( "srgb" ).asBool() ? SW_TRUE : SW_FALSE;
-
-        if ( jsonValue.has( "invert_green" ) )
-            inoutRule._bInvertGreen = jsonValue.get( "invert_green" ).asBool() ? SW_TRUE : SW_FALSE;
+        // 적지 않은 칸은 상속받은(또는 규칙 초기) 값 그대로다. 불리언이 아닌 값은 규칙째 거절한다(읽기가 키와 함께 알린다).
+        bool       bGenerateMips = inoutRule._bGenerateMips != SW_FALSE;
+        bool       bSrgb         = inoutRule._bSrgb != SW_FALSE;
+        bool       bInvertGreen  = inoutRule._bInvertGreen != SW_FALSE;
+        const bool bFlagsRead    = jsonValue.readOptionalInto( "generate_mips", bGenerateMips ) && jsonValue.readOptionalInto( "srgb", bSrgb ) &&
+                                jsonValue.readOptionalInto( "invert_green", bInvertGreen );
+        if ( bFlagsRead == false )
+        {
+            SW_LOG_ERROR( "%#: generate_mips, srgb and invert_green must be booleans", context );
+            return false;
+        }
+        inoutRule._bGenerateMips = bGenerateMips ? SW_TRUE : SW_FALSE;
+        inoutRule._bSrgb         = bSrgb ? SW_TRUE : SW_FALSE;
+        inoutRule._bInvertGreen  = bInvertGreen ? SW_TRUE : SW_FALSE;
 
         inoutRule._filter.parse( jsonValue );
         return true;

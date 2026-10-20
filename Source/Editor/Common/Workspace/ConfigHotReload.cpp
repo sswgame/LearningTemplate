@@ -68,24 +68,28 @@ namespace sw::editor
             _pFileWatchDispatcher->update();
     }
 
-    bool ConfigHotReload::reloadChangedFile( ConfigManager* pConfigManager, string_view fullPath )
+    ReloadOutcome ConfigHotReload::reloadChangedFile( ConfigManager* pConfigManager, string_view fullPath )
     {
-        if ( pConfigManager != nullptr && pConfigManager->reloadConfigFile( fullPath ) )
-            return true;
+        if ( pConfigManager != nullptr )
+        {
+            const ReloadOutcome hostOutcome = pConfigManager->reloadConfigFile( fullPath );
+            if ( hostOutcome != ReloadOutcome::NotTracked )
+                return hostOutcome;
+        }
 
         // 에디터 도구 시드는 에디터가 들고 있다. 깨진 파일이면 이전 값을 그대로 둔다(읽기 실패는 loadFromHostPath 가 키 이름과 오류로 알린다).
         const string toolDefaultsPath = EditorPaths::resolveProjectRelativePath( config::kFileRuntimeEditorToolDefaults );
         if ( FileUtil::pathsEqualNormalized( toolDefaultsPath, fullPath ) == false )
-            return false;
+            return ReloadOutcome::NotTracked;
         // 편집기가 저장하며 잠시 지웠다 다시 쓰는 사건은 다시 읽을 것이 없다 — 이어지는 생성 사건이 읽는다. 정말 지웠으면 다음 기동이 오류로 멈춘다.
         if ( FileUtil::exists( toolDefaultsPath ) == false )
-            return false;
+            return ReloadOutcome::NotTracked;
         EditorToolDefaults reloaded{};
         if ( reloaded.loadFromHostPath() == false )
-            return false;
+            return ReloadOutcome::Failed;
         getEditorToolDefaults() = std::move( reloaded );
         SW_LOG_INFO( "Editor tool defaults reloaded from %#", toolDefaultsPath.c_str() );
-        return true;
+        return ReloadOutcome::Reloaded;
     }
 
     void ConfigHotReload::onConfigFileChanged( const FileChangeEvent& changeEvent )
@@ -93,6 +97,8 @@ namespace sw::editor
         if ( changeEvent._action == FileWatcherAction::Removed )
             return;
         const string fullPath = FileUtil::joinPath( changeEvent._directory, changeEvent._filename );
-        (void)reloadChangedFile( ConfigManager::findPrimary(), fullPath ); // 모르는 파일(EditorConfig · 임포트 설정)은 그냥 넘긴다
+        // 모르는 파일(EditorConfig · 임포트 설정)은 NotTracked 로 지나간다. 깨진 파일은 읽는 쪽이 키 이름과 오류를 남겼다 — 이전 값으로 돈다는 것만 덧붙인다.
+        if ( reloadChangedFile( ConfigManager::findPrimary(), fullPath ) == ReloadOutcome::Failed )
+            SW_LOG_WARNING( "Config hot reload kept the previous values - fix and save %# again", fullPath.c_str() );
     }
 } // namespace sw::editor

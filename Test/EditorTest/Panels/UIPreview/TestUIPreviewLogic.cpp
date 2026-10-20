@@ -4,6 +4,7 @@
 
 #include "Editor/Panels/UIPreview/UIPreviewLogic.h"
 
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/UI/Base/Widget.h"
@@ -19,6 +20,7 @@
 #include "Engine/UI/Widgets/BorderPanel.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 
+#include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
 
 // UIPreviewLogicTest — 에디터 UI 미리보기 패널의 판단(runtime-ui 8-5): 해상도 견본 → 뷰포트(게임과 같은 배율 규칙), 그림 맞춤 · 점 옮기기,
@@ -56,7 +58,7 @@ SW_TEST_CASE( UIPreviewLogicTest, ResolutionPresetMakesScaledViewport )
 
     // 패널의 견본은 데이터 표다 — 읽히고, 모든 줄이 이름과 양의 크기를 가진다.
     sw::UIResolutionPresetTable table;
-    SW_ASSERT_TRUE( table.loadFromResource() );
+    SW_ASSERT_TRUE( table.loadFromResource( ::test::getEngineDefaultAssets()._uiResolutionPresets.get() ) );
     for ( const sw::UIResolutionPreset& resolution : table._listResolution )
     {
         SW_EXPECT_TRUE_MSG( resolution._name.empty() == false && resolution._width > 0u && resolution._height > 0u, resolution._name.c_str() );

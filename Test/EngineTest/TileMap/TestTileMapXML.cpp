@@ -175,22 +175,22 @@ SW_TEST_CASE( TileMapXMLTest, SavingWithShortTileArraysStaysInsideTheArrays )
 }
 
 /**
- * @brief [TileMapXMLTest] 크기가 없거나 0 이하면 8×8 로 서고, 배열도 그 크기로 선다
- * @details 헤더가 아니라 구현에만 있던 규칙이다. 이게 없으면 뒤따르는 인덱싱이 전부 빈 배열을 민다.
+ * @brief [TileMapXMLTest] 크기가 없거나 0 이하면 읽기 실패이고 빈 맵이 남는다 — 다른 크기(옛 8×8)로 바꿔 읽지 않는다
+ * @details 크기를 지어내면 데이터의 실수가 8×8 맵으로 조용히 돈다. 필수 값은 없으면 멈춘다(데이터 주도 계획 7.3).
  */
-SW_TEST_CASE( TileMapXMLTest, MissingOrNegativeSizeFallsBackToEightByEight )
+SW_TEST_CASE( TileMapXMLTest, MissingOrNegativeSizeIsALoadError )
 {
     sw::TileMapXMLData loaded;
-    SW_ASSERT_TRUE( loaded.loadFromXML( "<TileMap><name>NoSize</name></TileMap>" ) );
-    SW_EXPECT_EQUAL( 8, loaded._width );
-    SW_EXPECT_EQUAL( 8, loaded._height );
-    SW_EXPECT_EQUAL( size_t( 64 ), loaded.getFlagLayer( sw::TileFlagLayer::Walkable ).size() );
-    SW_EXPECT_EQUAL( size_t( 64 ), loaded._listVisual.size() );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "tile map without a valid size" );
+        SW_EXPECT_FALSE( loaded.loadFromXML( "<TileMap><name>NoSize</name></TileMap>" ) );
+        SW_EXPECT_EQUAL( 0, loaded._width );
+        SW_EXPECT_TRUE( loaded.getFlagLayer( sw::TileFlagLayer::Walkable ).empty() );
 
-    SW_ASSERT_TRUE( loaded.loadFromXML( "<TileMap><width>-3</width><height>0</height></TileMap>" ) );
-    SW_EXPECT_EQUAL( 8, loaded._width );
-    SW_EXPECT_EQUAL( 8, loaded._height );
-    SW_EXPECT_EQUAL( size_t( 64 ), loaded.getFlagLayer( sw::TileFlagLayer::PassThrough ).size() );
+        SW_EXPECT_FALSE( loaded.loadFromXML( "<TileMap><width>-3</width><height>0</height></TileMap>" ) );
+        SW_EXPECT_EQUAL( 0, loaded._width );
+        SW_EXPECT_TRUE( loaded.getFlagLayer( sw::TileFlagLayer::PassThrough ).empty() );
+    }
 }
 
 /**

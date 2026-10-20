@@ -84,21 +84,6 @@ namespace sw
          * @details `string_view` 를 받는 함수(`KeyCodeUtil::fromName` 등)에 넘길 때 쓴다. `findAttribute` 가 반환한 nullptr 로 `string_view` 를 만들면 미정의 동작(strlen)이다.
          */
         string_view getAttributeText( const utf8* pName, bool bIgnoreCaseKeys = true ) const;
-        /** @brief 속성 값을 정수로 반환합니다. 정수가 아닌 문자열이면 경고하고 `fallback` 을 반환합니다. */
-        int32 getAttributeInt( const utf8* pName, int32 fallback = 0, bool bIgnoreCaseKeys = true ) const;
-        /**
-         * @brief 정수 속성을 `[minValue, maxValue]` 범위 안에서 읽습니다. 속성이 없으면 `outValue` 는 `fallback` 이고 true 를 반환합니다.
-         * @return 문자열이 정수가 아니거나 범위를 벗어나면 요소와 속성 이름을 담아 경고하고 false 를 반환합니다(`outValue` 는 `fallback`).
-         *         부르는 쪽은 그 값으로 만들던 것을 버립니다.
-         * @details 좁은 필드에 `static_cast<uint8>( getAttributeInt( … ) )` 로 넣으면 "256" 은 0 으로, "-1" 은 255 로 감겨 말없이
-         *          엉뚱한 값(다른 패드)이 된다. 범위는 필드의 타입이 아니라 **의미**로 준다(패드 번호는 슬롯 수까지).
-         */
-        [[nodiscard]] bool tryGetAttributeIntInRange( const utf8* pName, int32 fallback, int32 minValue, int32 maxValue, int32& outValue,
-                                                      bool bIgnoreCaseKeys = true ) const;
-        /** @brief 속성 값을 실수로 반환합니다. 실수가 아닌 문자열이면 경고하고 `fallback` 을 반환합니다. */
-        float32 getAttributeFloat( const utf8* pName, float32 fallback = 0.f, bool bIgnoreCaseKeys = true ) const;
-        /** @brief 속성 값을 bool 로 반환합니다(1/true/yes/on 과 0/false/no/off). 불리언이 아닌 문자열이면 경고하고 `fallback` 을 반환합니다. */
-        bool getAttributeBool( const utf8* pName, bool fallback = false, bool bIgnoreCaseKeys = true ) const;
 
         /** @brief 자식 노드를 찾습니다. pName 이 nullptr 이면 첫 자식을 반환합니다. */
         XMLNode findChild( const utf8* pName = nullptr, bool bIgnoreCaseKeys = true ) const;
@@ -106,18 +91,13 @@ namespace sw
         XMLNode findNextSibling( const utf8* pName = nullptr, bool bIgnoreCaseKeys = true ) const;
         /** @brief 이름이 일치하는 자식의 텍스트를 반환합니다. */
         const utf8* findChildText( const utf8* pName, bool bIgnoreCaseKeys = true ) const;
-        /** @brief 이름이 일치하는 자식의 텍스트를 정수로 반환합니다. */
-        int32 getChildInt( const utf8* pName, int32 fallback = 0, bool bIgnoreCaseKeys = true ) const;
-        /** @brief 이름이 일치하는 자식의 텍스트를 실수로 반환합니다. */
-        float32 getChildFloat( const utf8* pName, float32 fallback = 0.f, bool bIgnoreCaseKeys = true ) const;
-        /** @brief 이름이 일치하는 자식의 텍스트를 bool 로 반환합니다. */
-        bool getChildBool( const utf8* pName, bool fallback = false, bool bIgnoreCaseKeys = true ) const;
 
         /** @brief 비어 있지 않은 자식 텍스트를 dst 에 복사합니다. 복사했으면 true 입니다. */
         bool takeChildText( const utf8* pName, string& dst, bool bIgnoreCaseKeys = true ) const;
 
         // ------------------------------------------------------------------------------
-        // 1-1) 값 읽기 — 폴백 인자 없이(결정 기록 5-4, 데이터 주도 계획 7.3)
+        // 1-1) 값 읽기 — 폴백 인자 없이(결정 기록 5-4, 데이터 주도 계획 7.3). 폴백을 받던 `getAttributeInt` · `getChildFloat` 같은 읽기는 지웠다(D9).
+        //      좁은 칸은 `static_cast<uint8>( … )` 로 감지 말고 `readOptionalAttributeInRange` 로 의미의 범위를 준다("256" 이 0 번 패드가 되지 않게).
         //      필수: 없거나 깨지면 원소 · 속성 이름으로 오류를 남기고 nullopt.
         //      선택: 없으면 `out` 이 비고 true(기본값은 Def 초기값이 정한다 — 여기서 정하지 않는다), 깨지면 오류와 false.
         //      T 는 int32 · uint32 · float32 · bool · string 입니다.
@@ -159,6 +139,29 @@ namespace sw
             const XMLValueRead read = parseChildValue( pName, value );
             outValue                = read == XMLValueRead::Read ? std::optional<T>{ value } : std::nullopt;
             return read != XMLValueRead::Invalid;
+        }
+        /**
+         * @brief 없어도 되는 숫자 속성을 [@p minValue, @p maxValue] 안에서 읽습니다(스키마 구조체 없이 손으로 읽는 곳).
+         * @details 없으면 @p inoutValue 를 두고 true 다 — 기본값은 부르는 쪽이 넣어 둔 값(Def 의 초기값)이고 여기서 정하지 않는다.
+         *          깨진 값이나 범위 밖 값은 원소 · 속성 이름으로 오류를 남기고 false 이며 @p inoutValue 는 그대로다(자르지 않는다).
+         */
+        template <typename T>
+        [[nodiscard]] bool readOptionalAttributeInRange( const utf8* pName, T minValue, T maxValue, T& inoutValue ) const
+        {
+            T                  value{};
+            const XMLValueRead read = parseAttributeValue( pName, value );
+            if ( read == XMLValueRead::Absent )
+                return true;
+            if ( read == XMLValueRead::Invalid )
+                return false;
+            const bool bInRange = minValue <= value && value <= maxValue;
+            if ( bInRange == false )
+            {
+                reportOutOfRange( pName, static_cast<float64>( value ), static_cast<float64>( minValue ), static_cast<float64>( maxValue ) );
+                return false;
+            }
+            inoutValue = value;
+            return true;
         }
 
         /** @brief 첫 속성을 반환합니다. */
@@ -259,6 +262,8 @@ namespace sw
         XMLValueRead parseChildValue( const utf8* pName, string& outValue ) const;
         /** @brief 필수 속성 · 자식이 없다고 원소 이름과 함께 오류로 남깁니다. */
         void reportMissing( const utf8* pKind, const utf8* pName ) const;
+        /** @brief 속성 값이 범위 밖이라고 원소 이름과 함께 오류로 남깁니다. */
+        void reportOutOfRange( const utf8* pName, float64 value, float64 minValue, float64 maxValue ) const;
 
         friend class XMLDocument;
         /** @brief pugixml 노드 포인터로 핸들을 만듭니다. */

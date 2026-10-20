@@ -77,6 +77,8 @@ namespace sw
             return loadTextWith( &call, &RootCallWithContext<TLoader, TResult, TContext>::invoke, xmlText, sourceName, pRootName );
         }
 
+        /** @brief 속성 이름을 다른 읽기가 맡는지 답하는 함수입니다(`XMLNameCheck::AcceptNameFunction` 과 같은 모양). */
+        using AcceptAttributeFunction = bool ( * )( const utf8* pName );
         /** @brief 루트 읽기를 부르는 함수 포인터입니다. @p pCall 은 호출부 스택의 호출 정보이고, 할당하지 않습니다. */
         using ReadRootFunction = bool ( * )( void* pCall, const XMLNode& root, string_view sourceName );
         /** @brief 문서를 .cpp 안에서 열고 루트를 @p pReadRoot 에 넘깁니다. `loadFile` 템플릿의 몸통이라 헤더가 XML 구현 타입을 몰라도 된다. */
@@ -90,15 +92,17 @@ namespace sw
          *          적지 않은 칸은 Def 의 초기값(스키마 기본값)이고, `PROPERTY( Required )` 칸이 빠지면 오류다. 모르는 속성 · 읽지 못한 값 · `Min`/`Max` 밖 값도 이름과 함께 오류다.
          *          읽는 코드가 리터럴로 기본값을 채우거나 범위를 조용히 자르지 않게 하는 창구다(언리얼 DataTable 행 구조체 · Godot Resource 의 export 칸 자리).
          *          @p listHandRead 의 속성은 부르는 쪽이 따로 읽으므로 모르는 이름으로 보지 않는다(색 · 이름 목록처럼 칸 하나로 담지 않는 값).
+         *          @p pfnHandRead 는 열린 이름 묶음(일정 조건 속성처럼 다른 읽기가 맡는 이름)을 답한다.
          * @return 오류가 하나도 없으면 true 입니다. 오류가 있어도 읽을 수 있는 칸은 채웁니다.
          */
         [[nodiscard]] static bool readFields( const XMLNode& node, void* pInstance, const TypeInfo& typeInfo, string_view sourceName,
-                                              std::initializer_list<string_view> listHandRead = {} );
+                                              std::initializer_list<string_view> listHandRead = {}, AcceptAttributeFunction pfnHandRead = nullptr );
         /** @brief `readFields` 의 타입 지정 버전입니다(`TDef::StaticType()`). */
         template <typename TDef>
-        [[nodiscard]] static bool readFields( const XMLNode& node, TDef& outDef, string_view sourceName, std::initializer_list<string_view> listHandRead = {} )
+        [[nodiscard]] static bool readFields( const XMLNode& node, TDef& outDef, string_view sourceName, std::initializer_list<string_view> listHandRead = {},
+                                              AcceptAttributeFunction pfnHandRead = nullptr )
         {
-            return readFields( node, &outDef, *TDef::StaticType(), sourceName, listHandRead );
+            return readFields( node, &outDef, *TDef::StaticType(), sourceName, listHandRead, pfnHandRead );
         }
         /** @brief 원소 하나를 스키마 @p TDef 로 읽어 카탈로그에 더합니다. 스키마 오류면 더하지 않고 false 입니다. 같은 id 는 카탈로그가 알리고 뒤의 것을 버립니다. */
         template <typename TDef>
@@ -169,6 +173,20 @@ namespace sw
         /** @brief 필수 속성 @p pAttribute 를 "x y z" 세 실수로 읽습니다. 속성이 없거나 정확히 세 실수가 아니면 오류를 알리고 false 입니다. */
         [[nodiscard]] static bool readRequiredFloat3( const XMLNode& node, const utf8* pAttribute, string_view sourceName, float3& outValue );
 
+        /**
+         * @brief 선택 숫자 속성을 손으로 읽습니다(스키마 구조체가 없는 손 읽기용 — 카탈로그 원소는 `readFields`).
+         * @details 없으면 @p inoutValue 를 두고 true 다 — 기본값은 부르는 쪽 Def 의 초기값이고 여기서 정하지 않는다.
+         *          깨진 값이나 [@p minValue, @p maxValue] 밖 값은 원소 · 속성 이름과 함께 오류이고 false 이며 @p inoutValue 는 그대로다(자르지 않는다).
+         */
+        [[nodiscard]] static bool readOptionalNumber( const XMLNode& node, const utf8* pAttribute, string_view sourceName, int32 minValue, int32 maxValue, int32& inoutValue );
+        /** @brief `readOptionalNumber` 의 실수 버전입니다. */
+        [[nodiscard]] static bool readOptionalNumber( const XMLNode& node, const utf8* pAttribute, string_view sourceName, float32 minValue, float32 maxValue,
+                                                      float32& inoutValue );
+        /** @brief 선택 불리언 속성을 손으로 읽습니다. 없으면 @p inoutValue 를 두고 true, 깨졌으면 오류와 false 입니다. */
+        [[nodiscard]] static bool readOptionalBool( const XMLNode& node, const utf8* pAttribute, bool& inoutValue );
+        /** @brief `readOptionalBool` 의 `uint8` 표시(`SW_TRUE` · `SW_FALSE`) 버전입니다. */
+        [[nodiscard]] static bool readOptionalFlag( const XMLNode& node, const utf8* pAttribute, uint8& inoutFlag );
+
         /** @brief 루트 읽기가 읽은 항목 수를 성공 여부로 바꿉니다. 0 이면 실패입니다. */
         static constexpr bool isLoaded( uint32 loadedCount ) { return loadedCount > 0; }
         /** @brief 루트 읽기의 성공 여부를 그대로 반환합니다. */
@@ -176,8 +194,8 @@ namespace sw
 
         /**
          * @brief @p parent 의 첫 @p pElement 자식(`<Curve>`)이 든 `<Key time value interpolation/>` 를 읽어 @p outCurve 를 채웁니다. 먼저 키를 비웁니다.
-         * @details 값은 @p minValue 아래로 내려가지 않는다. `interpolation` 은 `linear`(기본) · `constant` · `cubic` 이고, 접선은 이웃 키로 센다.
-         *          원소가 없으면 키도 없다(커브가 대체값을 쓴다). 모르는 속성 · 원소나 모르는 보간 이름이 있으면 경고하고 false 를 반환한다(읽을 수 있는 키는 읽는다).
+         * @details `time` · `value` 는 필수이고 값이 @p minValue 아래면 오류다(자르지 않는다). `interpolation` 은 `linear`(기본) · `constant` · `cubic` 이고, 접선은 이웃 키로 센다.
+         *          원소가 없으면 키도 없다(커브가 대체값을 쓴다). 모르는 속성 · 원소 · 보간 이름, 빠진 · 깨진 값이 있으면 오류를 남기고 false 를 반환한다(그 키는 넣지 않는다).
          * @code
          *     <Curve><Key time="0" value="0.5"/><Key time="600" value="2" interpolation="cubic"/></Curve>
          * @endcode

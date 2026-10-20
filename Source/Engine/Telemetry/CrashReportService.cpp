@@ -417,9 +417,10 @@ namespace sw
         vector<pair<uint64, string>> listByTime;
         for ( const string& folder : listFolder )
         {
-            JSONDocument manifest;
-            const uint64 crashTime = Internal::loadManifest( folder, manifest ) ? manifest.getRoot().get( "crashTime" ).asUint() : 0u;
-            listByTime.push_back( { crashTime, folder } );
+            // 매니페스트를 읽지 못한 묶음은 가장 오래된 것으로 쳐 먼저 지운다(보낼 수 없는 묶음이다).
+            JSONDocument                manifest;
+            const std::optional<uint64> crashTime = Internal::loadManifest( folder, manifest ) ? manifest.getRoot().readRequired<uint64>( "crashTime" ) : std::nullopt;
+            listByTime.push_back( { crashTime.has_value() ? *crashTime : 0u, folder } );
         }
         std::sort( listByTime.begin(), listByTime.end() );
         for ( size_t index = 0; index + kMaxReports < listByTime.size(); ++index )
@@ -439,14 +440,18 @@ namespace sw
             JSONDocument manifest;
             if ( Internal::loadManifest( folder, manifest ) == false )
                 continue;
-            const JSONValue    root = manifest.getRoot();
+            const JSONValue             root      = manifest.getRoot();
+            const std::optional<uint64> crashTime = root.readRequired<uint64>( "crashTime" );
+            const std::optional<uint32> attempts  = root.readRequired<uint32>( "attempts" );
+            if ( crashTime.has_value() == false || attempts.has_value() == false )
+                continue; // 깨진 매니페스트 — 읽기가 키와 함께 알렸다
             CrashReportSummary summary;
             summary._sessionID = root.get( "session" ).asString();
             summary._folder    = folder;
             summary._reason    = root.get( "reason" ).asString();
             summary._buildID   = root.get( "buildId" ).asString();
-            summary._crashTime = root.get( "crashTime" ).asUint();
-            summary._attempts  = static_cast<uint32>( root.get( "attempts" ).asUint() );
+            summary._crashTime = *crashTime;
+            summary._attempts  = *attempts;
             summary._state     = Internal::getState( manifest );
             outListReport.push_back( summary );
         }
@@ -503,10 +508,10 @@ namespace sw
             JSONDocument manifest;
             if ( Internal::loadManifest( folder, manifest ) == false || Internal::getState( manifest ) != CrashReportState::Queued )
                 continue;
-            const JSONValue root     = manifest.getRoot();
-            const uint64    attempts = root.get( "attempts" ).asUint();
-            if ( attempts >= kMaxAttempts )
-                continue;
+            const JSONValue             root     = manifest.getRoot();
+            const std::optional<uint64> attempts = root.readRequired<uint64>( "attempts" );
+            if ( attempts.has_value() == false || *attempts >= kMaxAttempts )
+                continue; // 깨진 매니페스트는 보내지 않는다(읽기가 알렸다)
             CrashReportUploadBundle bundle;
             bundle._folder        = folder;
             bundle._sessionID     = root.get( "session" ).asString();
@@ -526,7 +531,7 @@ namespace sw
             }
             else
             {
-                root.set( "attempts" ).setUint( attempts + 1 );
+                root.set( "attempts" ).setUint( *attempts + 1 );
             }
             (void)Internal::saveManifest( folder, manifest ); // 못 쓰면 옛 상태로 남아 다음 보내기가 다시 시도한다(최소 한 번 전송)
         }

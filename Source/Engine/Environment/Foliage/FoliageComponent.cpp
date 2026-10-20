@@ -8,6 +8,8 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Common/EngineServices.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Environment/EnvironmentUtil.h"
 #include "Engine/Environment/Foliage/FoliageInfluencerComponent.h"
 #include "Engine/Environment/Foliage/WindComponent.h"
@@ -335,7 +337,9 @@ namespace sw
             const FoliageLayer& layer = _listLayer[layerIndex];
             _listLayerMaterial.push_back( sw::make_unique<EnvironmentMaterial>() );
             EnvironmentMaterial& material = *_listLayerMaterial.back();
-            (void)material.acquire( layer._materialPath ); // 못 잡으면 씬 기본 머티리얼(경고는 안에서)
+            // 칸이 비면 엔진 기본 풀 · 나무 머티리얼이다(값의 정본은 엔진 기본 에셋 표).
+            const string& materialPath = layer._materialPath.empty() ? engine::getSubsystem<EngineDefaultAssets>()._foliageMaterial.get() : layer._materialPath;
+            (void)material.acquire( materialPath ); // 못 잡으면 씬 기본 머티리얼(경고는 안에서)
             material.setVector( hashed_string( "tint" ), layer._tint );
 
             computeLayerInstances( layerIndex, pTerrain, nullptr, listInstance );

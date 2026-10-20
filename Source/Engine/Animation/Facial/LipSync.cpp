@@ -169,15 +169,16 @@ namespace sw
         const JSONValue root = document.getRoot();
         if ( AnimationJSONUtil::hasOnlyKnownKeys( root, { "frame_rate", "visemes", "frames" }, sourceLabel ) == false )
             return false;
-        const JSONValue visemes              = root.get( "visemes" );
-        const JSONValue frames               = root.get( "frames" );
-        const bool      bMissingVisemeFields = root.get( "frame_rate" ).isNumber() == false || visemes.isArray() == false || visemes.size() == 0 || frames.isArray() == false;
+        const JSONValue              visemes              = root.get( "visemes" );
+        const JSONValue              frames               = root.get( "frames" );
+        const std::optional<float32> frameRate            = root.readRequired<float32>( "frame_rate" );
+        const bool                   bMissingVisemeFields = frameRate.has_value() == false || visemes.isArray() == false || visemes.size() == 0 || frames.isArray() == false;
         if ( bMissingVisemeFields )
         {
             SW_LOG_ERROR( "Viseme track '%#' needs frame_rate, visemes and frames", sourceLabel );
             return false;
         }
-        _frameRate = static_cast<float32>( root.get( "frame_rate" ).asFloat() );
+        _frameRate = *frameRate;
         for ( size_t visemeIndex = 0; visemeIndex < visemes.size(); ++visemeIndex )
         {
             _listViseme.push_back( hashed_string( visemes.at( visemeIndex ).asString() ) );

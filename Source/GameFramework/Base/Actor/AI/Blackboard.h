@@ -11,6 +11,8 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 
+#include <optional>
+
 namespace sw
 {
     /** @brief 값의 종류입니다. */
@@ -42,8 +44,10 @@ namespace sw
 {
     /**
      * @class Blackboard
-     * @brief 언리얼 `UBlackboardComponent` 에 해당합니다. 값이 바뀔 때마다 리비전이 올라, 행동 트리가 "바뀌었으면 다시 본다" 를 싸게 판단합니다.
-     * @details 이름은 `hashed_string` 이라 리터럴로 부르면 됩니다(`blackboard.setFloat( "Health", 0.5f )`). 없는 이름을 읽으면 기본값을 돌려줍니다.
+     * @brief 언리얼 `UBlackboardComponent` 의 자리입니다. 값이 바뀔 때마다 리비전이 올라 행동 트리가 "바뀌었으면 다시 본다" 를 싸게 합니다.
+     * @details 이름은 `hashed_string` 이라 리터럴로 부르면 됩니다(`blackboard.setFloat( "Health", 0.5f )`).
+     *          키는 실행 중에 행동 트리가 만들므로 핸들로 바꿀 수 없다. 그래서 읽기는 `std::optional` 을 돌려주고, 없는(또는 종류가 맞지 않는) 값은
+     *          비어 있다 — 부르는 쪽이 없음을 직접 처리한다(언리얼 `GetValueAsFloat` 처럼 0 을 돌려주지 않는다, 데이터 주도 계획 7.3).
      */
     class SW_GF_API Blackboard
     {
@@ -59,14 +63,19 @@ namespace sw
         void clearValue( const hashed_string& key );
         void clear();
 
-        bool                   isSet( const hashed_string& key ) const;
-        float32                getFloat( const hashed_string& key, float32 fallback = 0.0f ) const;
-        int32                  getInt( const hashed_string& key, int32 fallback = 0 ) const;
-        bool                   getBool( const hashed_string& key, bool bFallback = false ) const;
-        float3                 getVector( const hashed_string& key, const float3& fallback = float3{} ) const;
-        uint64                 getObject( const hashed_string& key, uint64 fallback = 0 ) const;
-        const BlackboardValue* findValue( const hashed_string& key ) const;
-        uint32                 getRevision() const { return _revision; }
+        bool isSet( const hashed_string& key ) const;
+        /** @brief 수치로 읽습니다(실수 · 정수 · 참거짓 · 오브젝트). 없으면 비어 있습니다. */
+        [[nodiscard]] std::optional<float32> getFloat( const hashed_string& key ) const;
+        /** @brief 정수로 읽습니다(정수 · 참거짓 · 실수의 정수부). 없거나 다른 종류면 비어 있습니다. */
+        [[nodiscard]] std::optional<int32> getInt( const hashed_string& key ) const;
+        /** @brief 참거짓으로 읽습니다(수치가 0 이 아니면 참). 없으면 비어 있습니다. */
+        [[nodiscard]] std::optional<bool> getBool( const hashed_string& key ) const;
+        /** @brief 위치를 읽습니다. 없거나 다른 종류면 비어 있습니다. */
+        [[nodiscard]] std::optional<float3> getVector( const hashed_string& key ) const;
+        /** @brief 오브젝트 id 를 읽습니다. 없거나 다른 종류면 비어 있습니다. */
+        [[nodiscard]] std::optional<uint64> getObject( const hashed_string& key ) const;
+        const BlackboardValue*              findValue( const hashed_string& key ) const;
+        uint32                              getRevision() const { return _revision; }
 
     private:
         BlackboardValue& acquireValue( const hashed_string& key, BlackboardValueType type );

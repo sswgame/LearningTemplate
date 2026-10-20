@@ -16,7 +16,29 @@ namespace sw
     {
         struct TelemetrySchemaInternal
         {
-            static constexpr const utf8* kRootName               = "TelemetrySchema";
+            static constexpr const utf8* kRootName           = "TelemetrySchema";
+            static constexpr int32       kUnversionedSchema  = 1;    ///< `version` 을 적지 않은 스키마의 판
+            static constexpr uint32      kMinFileBytes       = 1024; ///< 스풀 파일 하나의 하한 — 사건 한 줄보다 작으면 회전만 한다
+            static constexpr uint32      kMaxBreadcrumbCount = 256;  ///< 크래시 보고에 붙이는 최근 사건 수의 상한
+
+            /** @brief `maxTotalBytes`(64 비트)를 읽습니다. 없으면 그대로, 깨졌거나 `kMinFileBytes` 아래면 오류와 false 입니다. */
+            [[nodiscard]] static bool readTotalBytes( const XMLNode& node, string_view sourceName, uint64& inoutBytes )
+            {
+                std::optional<string> text;
+                if ( node.readOptionalAttribute( "maxTotalBytes", text ) == false )
+                    return false;
+                if ( text.has_value() == false )
+                    return true;
+                uint64     bytes  = 0;
+                const bool bValid = StringUtil::parseUint64( *text, bytes ) && bytes >= kMinFileBytes;
+                if ( bValid == false )
+                {
+                    SW_LOG_ERROR( "%#: <Pipeline maxTotalBytes=\"%#\"> must be a byte count of at least %#", sourceName, *text, kMinFileBytes );
+                    return false;
+                }
+                inoutBytes = bytes;
+                return true;
+            }
             static constexpr const utf8* kArrRootAttribute[]     = { "version" };
             static constexpr const utf8* kArrRootChild[]         = { "Pipeline", "Event" };
             static constexpr const utf8* kArrPipelineAttribute[] = { "batchEvents", "flushSeconds", "maxFileBytes", "maxFiles", "maxTotalBytes", "sessionSample", "breadcrumbs" };
@@ -138,29 +160,25 @@ namespace sw
         bValid                              = XMLNameCheck::reportUnknownChildren( root, Internal::kArrRootChild, sourceName, LogLevel::Warning ) && bValid;
         for ( XMLNode node = root.findChild( "Pipeline" ); node; node = node.findNextSibling( "Pipeline" ) )
         {
-            bValid                      = Internal::reportUnknownNames( node, Internal::kArrPipelineAttribute, sourceName ) && bValid;
-            settings._batchEvents       = static_cast<uint32>( MathUtil::max( 1, node.getAttributeInt( "batchEvents", static_cast<int32>( settings._batchEvents ) ) ) );
-            settings._flushSeconds      = MathUtil::max( 0.0f, node.getAttributeFloat( "flushSeconds", settings._flushSeconds ) );
-            settings._maxFileBytes      = static_cast<uint32>( MathUtil::max( 1024, node.getAttributeInt( "maxFileBytes", static_cast<int32>( settings._maxFileBytes ) ) ) );
-            settings._maxFiles          = static_cast<uint32>( MathUtil::max( 1, node.getAttributeInt( "maxFiles", static_cast<int32>( settings._maxFiles ) ) ) );
-            settings._maxTotalBytes     = static_cast<uint64>( MathUtil::max( 1024.0f, node.getAttributeFloat( "maxTotalBytes", static_cast<float32>( settings._maxTotalBytes ) ) ) );
-            settings._sessionSampleRate = MathUtil::clamp( node.getAttributeFloat( "sessionSample", settings._sessionSampleRate ), 0.0f, 1.0f );
-            settings._breadcrumbCount   = static_cast<uint32>( MathUtil::clamp( node.getAttributeInt( "breadcrumbs", static_cast<int32>( settings._breadcrumbCount ) ), 0, 256 ) );
+            bValid = Internal::reportUnknownNames( node, Internal::kArrPipelineAttribute, sourceName ) && bValid;
+            // 적지 않은 칸은 TelemetryPipelineConfig 의 초기값이다. 깨진 값 · 범위 밖 값은 자르지 않고 오류이며, 파일 전체를 받지 않는다.
+            constexpr uint32 kAnyCount = invalid_index::kUint32;
+            bValid                     = node.readOptionalAttributeInRange( "batchEvents", 1u, kAnyCount, settings._batchEvents ) && bValid;
+            bValid                     = node.readOptionalAttributeInRange( "flushSeconds", 0.0f, MathUtil::kMaxFloat, settings._flushSeconds ) && bValid;
+            bValid                     = node.readOptionalAttributeInRange( "maxFileBytes", Internal::kMinFileBytes, kAnyCount, settings._maxFileBytes ) && bValid;
+            bValid                     = node.readOptionalAttributeInRange( "maxFiles", 1u, kAnyCount, settings._maxFiles ) && bValid;
+            bValid                     = node.readOptionalAttributeInRange( "sessionSample", 0.0f, 1.0f, settings._sessionSampleRate ) && bValid;
+            bValid                     = node.readOptionalAttributeInRange( "breadcrumbs", 0u, Internal::kMaxBreadcrumbCount, settings._breadcrumbCount ) && bValid;
+            bValid                     = Internal::readTotalBytes( node, sourceName, settings._maxTotalBytes ) && bValid;
         }
         for ( XMLNode node = root.findChild( "Event" ); node; node = node.findNextSibling( "Event" ) )
         {
             bValid = Internal::reportUnknownNames( node, Internal::kArrEventAttribute, sourceName ) && bValid;
             bValid = XMLNameCheck::reportUnknownChildren( node, Internal::kArrEventChild, sourceName, LogLevel::Warning ) && bValid;
             TelemetryEventDef event;
-            event._id                = hashed_string( node.getAttributeText( "id" ) );
-            event._category          = hashed_string( node.getAttributeText( "category" ) );
-            const float32 sampleRate = node.getAttributeFloat( "sample", event._sampleRate );
-            if ( sampleRate < 0.0f || sampleRate > 1.0f )
-            {
-                SW_LOG_WARNING( "%#: event '%#' has a sample rate %# outside 0..1", sourceName, event._id.c_str(), sampleRate );
-                bValid = false;
-            }
-            event._sampleRate = MathUtil::clamp( sampleRate, 0.0f, 1.0f );
+            event._id       = hashed_string( node.getAttributeText( "id" ) );
+            event._category = hashed_string( node.getAttributeText( "category" ) );
+            bValid          = node.readOptionalAttributeInRange( "sample", 0.0f, 1.0f, event._sampleRate ) && bValid;
             if ( event._id.empty() )
             {
                 SW_LOG_WARNING( "%#: <Event> without an id", sourceName );
@@ -173,7 +191,9 @@ namespace sw
                 TelemetryFieldDef field;
                 const string_view name = fieldNode.getAttributeText( "name" );
                 field._name            = hashed_string( name );
-                field._bRequired       = fieldNode.getAttributeBool( "required", false ) ? SW_TRUE : SW_FALSE;
+                std::optional<bool> bRequired;
+                bValid           = fieldNode.readOptionalAttribute( "required", bRequired ) && bValid;
+                field._bRequired = bRequired.has_value() && *bRequired ? SW_TRUE : SW_FALSE; // 적지 않으면 선택 칸이다
                 if ( Internal::parseFieldType( fieldNode.getAttributeText( "type" ), field._type ) == false )
                 {
                     SW_LOG_WARNING( "%#: field '%#' of '%#' has an unknown type '%#' (bool, int, float, string)", sourceName, name, event._id.c_str(),
@@ -202,11 +222,13 @@ namespace sw
             }
             listEvent.push_back( event );
         }
+        int32 schemaVersion = Internal::kUnversionedSchema;
+        bValid              = root.readOptionalAttributeInRange( "version", Internal::kUnversionedSchema, MathUtil::kMaxInt32, schemaVersion ) && bValid;
         if ( bValid == false )
             return false;
         _listEvent = std::move( listEvent );
         _settings  = settings;
-        _version   = MathUtil::max( _version, root.getAttributeInt( "version", 1 ) );
+        _version   = MathUtil::max( _version, schemaVersion );
         return true;
     }
 } // namespace sw

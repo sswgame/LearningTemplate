@@ -17,6 +17,8 @@ namespace sw
         {
             static constexpr utf8 kVersionKey[] = "version";
             static constexpr utf8 kValuesKey[]  = "values";
+            /** @brief 판 번호가 없는 파일(판 번호를 쓰기 전에 저장한 파일)의 판입니다. 모든 올림 단계를 거친다. */
+            static constexpr uint32 kUnversionedFile = 0;
 
             /** @brief JSON 값을 텍스트로 바꿉니다. 숫자는 쓰인 그대로, 불리언은 true/false 로 씁니다. */
             static string toText( const JSONValue& value )
@@ -24,7 +26,7 @@ namespace sw
                 switch ( value.getType() )
                 {
                     case JSONType::Bool:
-                        return value.asBool() ? "true" : "false";
+                        return value.read<bool>() == true ? "true" : "false";
                     case JSONType::Number:
                         return value.dump();
                     case JSONType::String:
@@ -115,7 +117,12 @@ namespace sw
             outListEntry.push_back( UserSettingsFileEntry{ key, Internal::toText( values.get( key, false ) ) } );
         }
 
-        const uint32 fileVersion   = static_cast<uint32>( root.get( Internal::kVersionKey ).asUint( 0 ) );
+        uint32 fileVersion{ Internal::kUnversionedFile };
+        if ( root.readOptionalInto( Internal::kVersionKey, fileVersion ) == false )
+        {
+            SW_LOG_ERROR( "User settings '%#' has a \"version\" that is not an unsigned integer", sourceName );
+            return false;
+        }
         const uint32 schemaVersion = schema.getVersion();
         for ( uint32 version = fileVersion; version < schemaVersion; ++version )
         {

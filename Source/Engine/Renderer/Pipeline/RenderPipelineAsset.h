@@ -88,15 +88,16 @@ namespace sw
          *          가리키는지, 첨부 포맷 표기가 RHIFormat 으로 읽히는지, 뎁스 첨부가 실재하는 뎁스 포맷인지,
          *          컬러 출력 개수가 한계 안인지, 지오메트리 패스에 컬러 출력이 있는지, 풀스크린 패스의 입력이 타입의 계약(`RenderPassInputSignature`)과
          *          맞는지를 봅니다. 여기서 못 잡은 불일치는 런타임에 조용히 어긋나거나 GPU 를 죽입니다.
-         * @return 발견한 문제 수 (0 이면 정상). 로드는 막지 않고 로그만 남깁니다.
+         * @return 발견한 문제 수 (0 이면 정상). 파일에서 읽을 때(`loadFromXMLFile` · `loadFromDiskFile`)는 하나라도 있으면 로드가 실패한다 —
+         *         그래서 렌더러는 선언하지 않은 첨부를 만나지 않는다(코드가 이름 · 포맷을 짐작하지 않는다).
          */
-        uint32 validate( string_view sourcePath );
+        [[nodiscard]] uint32 validate( string_view sourcePath );
 
         const vector<RenderGraphPassDesc>& getGraphPass() const { return _desc._listPass; }
 
     private:
-        /** @brief 읽기 입구 둘(리소스 id · 디스크 파일)이 같이 쓰는 끝 처리입니다(검사 · 로그). */
-        void finishLoad( string_view sourcePath );
+        /** @brief 읽기 입구 둘(리소스 id · 디스크 파일)이 같이 쓰는 끝 처리입니다(검사 · 로그). 검사 문제가 있으면 false 입니다. */
+        [[nodiscard]] bool finishLoad( string_view sourcePath );
         /** @brief 비동기 로드 태스크 본문입니다. TaskArgs 는 this 와 경로 문자열입니다. */
         static void loadFromXMLFileAsyncJob( const TaskArgs& args );
 

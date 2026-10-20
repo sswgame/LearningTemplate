@@ -31,15 +31,26 @@ namespace sw::editor
                 array.pushBack().setFloat( static_cast<float64>( value._z ) );
             }
 
-            static float3 readVector3( const JSONValue& parent, string_view key, const float3& fallback )
+            /** @brief 숫자 셋의 배열 @p array 를 읽습니다. 모양이 다르거나 숫자가 아닌 칸이 있으면 false 입니다(0 으로 두지 않는다). */
+            [[nodiscard]] static bool readFloat3( const JSONValue& array, float3& outValue )
+            {
+                if ( array.isArray() == false || array.size() != 3 )
+                    return false;
+                const std::optional<float32> x        = array.at( 0 ).read<float32>();
+                const std::optional<float32> y        = array.at( 1 ).read<float32>();
+                const std::optional<float32> z        = array.at( 2 ).read<float32>();
+                const bool                   bAllRead = x.has_value() && y.has_value() && z.has_value();
+                if ( bAllRead == false )
+                    return false;
+                outValue = float3{ *x, *y, *z };
+                return true;
+            }
+
+            /** @brief 없어도 되는 벡터 @p key 를 읽습니다. 없으면 @p inoutValue 를 그대로 두고(기즈모의 초기값), 숫자 셋이 아니면 false 입니다. */
+            [[nodiscard]] static bool readVector3( const JSONValue& parent, string_view key, float3& inoutValue )
             {
                 const JSONValue array = parent.get( key );
-                if ( array.isArray() == false || array.size() != 3 )
-                    return fallback;
-                const float64 x = array.at( 0 ).asFloat( static_cast<float64>( fallback._x ) );
-                const float64 y = array.at( 1 ).asFloat( static_cast<float64>( fallback._y ) );
-                const float64 z = array.at( 2 ).asFloat( static_cast<float64>( fallback._z ) );
-                return float3{ static_cast<float32>( x ), static_cast<float32>( y ), static_cast<float32>( z ) };
+                return array.isValid() == false || readFloat3( array, inoutValue );
             }
 
             /**
@@ -71,35 +82,39 @@ namespace sw::editor
                 }
             }
 
-            /** @brief `writeCurveKey` 의 배열을 읽습니다. 모양이 틀리면 키를 버립니다. 선형이 아닌 키의 자동 접선은 `setParamValue` 의 다듬기가 다시 센다. */
-            static void readCurve( const JSONValue& source, FloatCurve& outCurve )
+            /**
+             * @brief `writeCurveKey` 의 배열을 읽습니다. 선형이 아닌 키의 자동 접선은 `setParamValue` 의 다듬기가 다시 센다.
+             * @return 모양이 틀린 키(칸 수 · 숫자가 아닌 칸 · 모르는 보간)가 있으면 false 입니다. 그 키만 버리지 않는다(곡선 모양이 말없이 바뀐다).
+             */
+            [[nodiscard]] static bool readCurve( const JSONValue& source, FloatCurve& outCurve )
             {
                 outCurve._listKey.clear();
                 for ( size_t index = 0; index < source.size(); ++index )
                 {
                     const JSONValue pair = source.at( index );
                     if ( pair.isArray() == false || ( pair.size() != 2 && pair.size() != 3 && pair.size() != 5 ) )
-                        continue;
+                        return false;
+                    const std::optional<float32> time          = pair.at( 0 ).read<float32>();
+                    const std::optional<float32> value         = pair.at( 1 ).read<float32>();
+                    const std::optional<uint32>  interpolation = pair.size() >= 3 ? pair.at( 2 ).read<uint32>() : std::optional<uint32>{ 0u };
+                    const std::optional<float32> arrive        = pair.size() == 5 ? pair.at( 3 ).read<float32>() : std::optional<float32>{ 0.0f };
+                    const std::optional<float32> leave         = pair.size() == 5 ? pair.at( 4 ).read<float32>() : std::optional<float32>{ 0.0f };
+                    const bool                   bRead         = time.has_value() && value.has_value() && interpolation.has_value() && arrive.has_value() && leave.has_value();
+                    if ( bRead == false || *interpolation > static_cast<uint32>( CurveInterpolation::Cubic ) )
+                        return false;
                     FloatCurveKey key{};
-                    key._time          = static_cast<float32>( pair.at( 0 ).asFloat() );
-                    key._value         = static_cast<float32>( pair.at( 1 ).asFloat() );
-                    key._interpolation = CurveInterpolation::Linear;
-                    key._bAutoTangent  = false;
-                    if ( pair.size() >= 3 )
-                    {
-                        const int32 interpolation = static_cast<int32>( pair.at( 2 ).asFloat() );
-                        if ( interpolation < 0 || interpolation > static_cast<int32>( CurveInterpolation::Cubic ) )
-                            continue;
-                        key._interpolation = static_cast<CurveInterpolation>( interpolation );
-                        key._bAutoTangent  = pair.size() == 3;
-                    }
+                    key._time          = *time;
+                    key._value         = *value;
+                    key._interpolation = pair.size() >= 3 ? static_cast<CurveInterpolation>( *interpolation ) : CurveInterpolation::Linear;
+                    key._bAutoTangent  = pair.size() == 3;
                     if ( pair.size() == 5 )
                     {
-                        key._arriveTangent = static_cast<float32>( pair.at( 3 ).asFloat() );
-                        key._leaveTangent  = static_cast<float32>( pair.at( 4 ).asFloat() );
+                        key._arriveTangent = *arrive;
+                        key._leaveTangent  = *leave;
                     }
                     outCurve._listKey.push_back( key );
                 }
+                return true;
             }
 
             static void writeParam( const MeshModifier& modifier, uint32 paramIndex, const JSONValue& params )
@@ -165,7 +180,8 @@ namespace sw::editor
                 }
             }
 
-            static void readParam( MeshModifier& modifier, uint32 paramIndex, const JSONValue& source )
+            /** @brief 매개변수 하나를 읽습니다. 값의 모양이 매개변수 종류와 다르면 false 입니다(그 매개변수를 기본값으로 두지 않는다). */
+            [[nodiscard]] static bool readParam( MeshModifier& modifier, uint32 paramIndex, const JSONValue& source )
             {
                 const MeshModifierParamDef& def = modifier.getParamDefs()[paramIndex];
                 switch ( def._kind )
@@ -175,75 +191,85 @@ namespace sw::editor
                     case MeshModifierParamKind::Bool:
                     case MeshModifierParamKind::Axis:
                     {
-                        if ( source.isNumber() || source.isBool() )
-                            modifier.setScalar( paramIndex, source.isBool() ? ( source.asBool() ? 1.0f : 0.0f ) : static_cast<float32>( source.asFloat() ) );
-                        break;
+                        const std::optional<bool>    flag   = source.isBool() ? source.read<bool>() : std::nullopt;
+                        const std::optional<float32> number = source.isNumber() ? source.read<float32>() : std::nullopt;
+                        if ( flag.has_value() == false && number.has_value() == false )
+                            return false;
+                        modifier.setScalar( paramIndex, flag.has_value() ? ( *flag ? 1.0f : 0.0f ) : *number );
+                        return true;
                     }
                     case MeshModifierParamKind::Vector3:
                     {
-                        if ( source.isArray() && source.size() == 3 )
-                            modifier.setVector3( paramIndex, float3{ static_cast<float32>( source.at( 0 ).asFloat() ), static_cast<float32>( source.at( 1 ).asFloat() ),
-                                                                     static_cast<float32>( source.at( 2 ).asFloat() ) } );
-                        break;
+                        float3 value{};
+                        if ( readFloat3( source, value ) == false )
+                            return false;
+                        modifier.setVector3( paramIndex, value );
+                        return true;
                     }
                     case MeshModifierParamKind::Curve:
                     {
-                        if ( source.isArray() == false )
-                            break;
                         MeshModifierParamValue value{};
-                        readCurve( source, value._curve );
+                        if ( source.isArray() == false || readCurve( source, value._curve ) == false )
+                            return false;
                         modifier.setParamValue( paramIndex, value );
-                        break;
+                        return true;
                     }
                     case MeshModifierParamKind::CurveList:
                     {
                         if ( source.isArray() == false )
-                            break;
+                            return false;
                         MeshModifierParamValue value{};
                         value._listCurve.resize( source.size() );
                         for ( size_t index = 0; index < source.size(); ++index )
                         {
                             const JSONValue item = source.at( index );
-                            if ( item.isArray() )
-                                readCurve( item, value._listCurve[index] );
+                            if ( item.isArray() == false || readCurve( item, value._listCurve[index] ) == false )
+                                return false;
                         }
                         modifier.setParamValue( paramIndex, value );
-                        break;
+                        return true;
                     }
                     case MeshModifierParamKind::ReferenceList:
                     {
                         if ( source.isArray() == false )
-                            break;
+                            return false;
                         MeshModifierParamValue value{};
                         for ( size_t index = 0; index < source.size(); ++index )
                         {
                             const JSONValue item = source.at( index );
-                            value._listText.push_back( item.isString() ? string( item.asString() ) : string() );
+                            if ( item.isString() == false )
+                                return false;
+                            value._listText.push_back( item.asString() );
                         }
                         modifier.setParamValue( paramIndex, value );
-                        break;
+                        return true;
                     }
                     case MeshModifierParamKind::NumberList:
                     {
                         if ( source.isArray() == false )
-                            break;
+                            return false;
                         vector<float32> listNumber;
                         listNumber.reserve( source.size() );
                         for ( size_t index = 0; index < source.size(); ++index )
                         {
-                            listNumber.push_back( static_cast<float32>( source.at( index ).asFloat() ) );
+                            const std::optional<float32> number = source.at( index ).read<float32>();
+                            if ( number.has_value() == false )
+                                return false;
+                            listNumber.push_back( *number );
                         }
                         modifier.setNumberList( paramIndex, listNumber );
-                        break;
+                        return true;
                     }
                     case MeshModifierParamKind::Reference:
                     case MeshModifierParamKind::AssetPath:
                     {
-                        if ( source.isString() )
-                            modifier.setText( paramIndex, source.asString() );
-                        break;
+                        if ( source.isString() == false )
+                            return false;
+                        modifier.setText( paramIndex, source.asString() );
+                        return true;
                     }
                 }
+                return false;
             }
 
             static void writeModifier( const MeshModifier& modifier, const JSONValue& object )
@@ -269,42 +295,59 @@ namespace sw::editor
                 modifier.writeExtraJSON( extra );
             }
 
-            static unique_ptr<MeshModifier> readModifier( const JSONValue& object )
+            /**
+             * @brief 모디파이어 하나를 읽습니다. 모르는 종류는 경고하고 @p outModifier 가 비고 true 입니다(그 모듈이 빠진 실행).
+             * @return 값의 모양이 틀리면(켬 · 끔 · 벡터 · 축 · 매개변수 · 추가 상태) 오류를 남기고 false 입니다. 그 값을 기본값으로 두지 않는다.
+             */
+            [[nodiscard]] static bool readModifier( const JSONValue& object, unique_ptr<MeshModifier>& outModifier )
             {
-                const string             typeID   = object.get( "type" ).asString();
-                unique_ptr<MeshModifier> modifier = MeshModifierRegistry::create( typeID );
-                if ( modifier == nullptr )
+                const string typeID = object.get( "type" ).asString();
+                outModifier         = MeshModifierRegistry::create( typeID );
+                if ( outModifier == nullptr )
                 {
                     SW_LOG_WARNING( "Unknown mesh modifier type '%#' is skipped", typeID.c_str() );
-                    return modifier;
+                    return true;
                 }
+                MeshModifier& modifier = *outModifier;
                 if ( object.has( "name" ) )
-                    modifier->setName( object.get( "name" ).asString() );
-                modifier->setEnabled( object.get( "enabled" ).asBool( true ) );
-                modifier->setWorldSpace( object.get( "worldSpace" ).asBool( false ) );
-                modifier->setSpaceReference( object.get( "spaceReference" ).asString() );
-                MeshModifierGizmo& gizmo = modifier->getGizmo();
-                gizmo._center            = readVector3( object, "center", gizmo._center );
-                gizmo._rotationDegree    = readVector3( object, "rotation", gizmo._rotationDegree );
-                gizmo._axisIndex         = static_cast<uint32>( object.get( "axis" ).asUint( gizmo._axisIndex ) );
-                if ( gizmo._axisIndex > 2 )
-                    gizmo._axisIndex = 1;
+                    modifier.setName( object.get( "name" ).asString() );
+                // 적지 않은 칸은 모디파이어의 초기값이다.
+                bool               bEnabled    = modifier.isEnabled();
+                bool               bWorldSpace = modifier.isWorldSpace();
+                MeshModifierGizmo& gizmo       = modifier.getGizmo();
+                const bool         bFieldsRead = object.readOptionalInto( "enabled", bEnabled ) && object.readOptionalInto( "worldSpace", bWorldSpace ) &&
+                                         readVector3( object, "center", gizmo._center ) && readVector3( object, "rotation", gizmo._rotationDegree ) &&
+                                         object.readOptionalInto( "axis", gizmo._axisIndex ) && gizmo._axisIndex <= 2;
+                if ( bFieldsRead == false )
+                {
+                    SW_LOG_ERROR( "Mesh modifier '%#' has a broken enabled, worldSpace, center, rotation or axis (0 to 2)", typeID.c_str() );
+                    return false;
+                }
+                modifier.setEnabled( bEnabled );
+                modifier.setWorldSpace( bWorldSpace );
+                modifier.setSpaceReference( object.get( "spaceReference" ).asString() );
 
                 const JSONValue params = object.get( "params" );
                 if ( params.isObject() )
                 {
-                    for ( uint32 paramIndex = 0; paramIndex < modifier->getParamCount(); ++paramIndex )
+                    for ( uint32 paramIndex = 0; paramIndex < modifier.getParamCount(); ++paramIndex )
                     {
-                        const utf8* pName = modifier->getParamDefs()[paramIndex]._pName;
-                        if ( params.has( pName, false ) )
-                            readParam( *modifier, paramIndex, params.get( pName, false ) );
+                        const utf8* pName = modifier.getParamDefs()[paramIndex]._pName;
+                        if ( params.has( pName, false ) && readParam( modifier, paramIndex, params.get( pName, false ) ) == false )
+                        {
+                            SW_LOG_ERROR( "Mesh modifier '%#' parameter '%#' does not have the shape of its kind: %#", typeID.c_str(), pName, params.get( pName, false ).dump() );
+                            return false;
+                        }
                     }
                 }
-                modifier->onParamsChanged();
+                modifier.onParamsChanged();
                 const JSONValue extra = object.get( "extra" );
-                if ( extra.isObject() && modifier->readExtraJSON( extra ) == false )
-                    SW_LOG_WARNING( "Mesh modifier '%#' has broken extra state - defaults are used", typeID.c_str() );
-                return modifier;
+                if ( extra.isObject() && modifier.readExtraJSON( extra ) == false )
+                {
+                    SW_LOG_ERROR( "Mesh modifier '%#' has broken extra state", typeID.c_str() );
+                    return false;
+                }
+                return true;
             }
 
             static string_view stripMeshExtension( string_view meshPath )
@@ -443,19 +486,26 @@ namespace sw::editor
         JSONDocument document;
         if ( document.parse( jsonText, "modifiers.json" ) == false )
             return false;
-        const JSONValue root = document.getRoot();
-        if ( root.isObject() == false || root.get( "version" ).asUint( 0 ) != kVersion )
+        const JSONValue             root    = document.getRoot();
+        const std::optional<uint32> version = root.isObject() ? root.readRequired<uint32>( "version" ) : std::nullopt;
+        if ( version.has_value() == false || *version != kVersion )
             return false;
-        _bRecomputeNormals        = root.get( "recomputeNormals" ).asBool( false );
-        const JSONValue modifiers = root.get( "modifiers" );
-        if ( modifiers.isArray() == false )
+        bool            bRecomputeNormals = false; // 없으면 스택의 초기값(다시 세지 않음)이다
+        const JSONValue modifiers         = root.get( "modifiers" );
+        if ( root.readOptionalInto( "recomputeNormals", bRecomputeNormals ) == false || modifiers.isArray() == false )
             return false;
+        _bRecomputeNormals = bRecomputeNormals;
         for ( size_t index = 0; index < modifiers.size(); ++index )
         {
-            const JSONValue object = modifiers.at( index );
-            if ( object.isObject() == false )
-                continue;
-            (void)addModifier( MeshModifierStackInternal::readModifier( object ) ); // 모르는 종류는 readModifier 가 경고하고 nullptr 이다
+            const JSONValue          object = modifiers.at( index );
+            unique_ptr<MeshModifier> modifier;
+            if ( object.isObject() == false || MeshModifierStackInternal::readModifier( object, modifier ) == false )
+            {
+                clear();
+                return false;
+            }
+            if ( modifier != nullptr )                      // 모르는 종류는 readModifier 가 경고하고 건너뛰었다
+                (void)addModifier( std::move( modifier ) ); // 넘긴 것이 nullptr 이 아니므로 번호는 늘 유효하다
         }
         return true;
     }

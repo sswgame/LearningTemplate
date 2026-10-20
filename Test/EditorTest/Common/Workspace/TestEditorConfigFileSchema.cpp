@@ -47,13 +47,13 @@ namespace
         [[nodiscard]] static bool loadTextureImport( const string& absolutePath )
         {
             TextureImportConfig config;
-            return config.loadFromFile( absolutePath );
+            return config.loadFromFile( absolutePath ) == ConfigReadResult::Loaded;
         }
 
         [[nodiscard]] static bool loadModelImport( const string& absolutePath )
         {
             ModelImportConfig config;
-            return config.loadFromFile( absolutePath );
+            return config.loadFromFile( absolutePath ) == ConfigReadResult::Loaded;
         }
 
         /** @brief `Config/Editor/` 아래 파일 한 종류입니다. */

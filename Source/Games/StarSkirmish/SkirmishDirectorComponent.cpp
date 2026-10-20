@@ -184,6 +184,9 @@ namespace sw
         , _supplyUnitID{}
         , _productionUnitID{}
         , _armyUnitID{}
+        , _rushAI{}
+        , _macroAI{}
+        , _opponentAI{}
         , _playerZeroColor{ 0.25f, 0.45f, 0.95f, 1.0f }
         , _playerOneColor{ 0.9f, 0.25f, 0.2f, 1.0f }
         , _neutralColor{ 0.7f, 0.7f, 0.7f, 1.0f }
@@ -349,6 +352,12 @@ namespace sw
             SW_LOG_ERROR( "[Skirmish] the director's input actions or unit ids do not match the data - the match cannot start" );
             return false;
         }
+        const bool bAIStylesSet = _rushAI.isSet() && _macroAI.isSet() && _opponentAI.isSet();
+        if ( bAIStylesSet == false )
+        {
+            SW_LOG_ERROR( "[Skirmish] the director needs _rushAI, _macroAI and _opponentAI (worker, production and attack targets) - the match cannot start" );
+            return false;
+        }
         _bHuman = isAutoPlayOn() ? SW_FALSE : SW_TRUE;
         SkirmishMatchSettings matchSettings;
         matchSettings._huntIntervalSeconds   = _huntIntervalSeconds;
@@ -360,6 +369,9 @@ namespace sw
         matchSettings._supplyID              = _supplyUnitID;
         matchSettings._productionID          = _productionUnitID;
         matchSettings._armyUnitID            = _armyUnitID;
+        matchSettings._rushAI                = _rushAI;
+        matchSettings._macroAI               = _macroAI;
+        matchSettings._opponentAI            = _opponentAI;
         _match.initialize( &_catalog, _bHuman == SW_TRUE, matchSettings );
         _selection.clear();
         _selection.setPlayer( 0 );

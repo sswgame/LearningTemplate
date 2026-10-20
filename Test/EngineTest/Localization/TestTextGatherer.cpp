@@ -3,12 +3,14 @@
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Localization/LocalizationDocuments.h"
 #include "Engine/Localization/TextGatherer.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
+#include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
 
 namespace
@@ -150,8 +152,8 @@ SW_TEST_CASE( TextGathererTest, MergeReportsAddedChangedRemovedAndKeepsManualRow
     sw::TextGatherer gatherer;
     gatherer.addKeyedText( "Menu.Start", "Start Game", {}, "Menu.cpp" );
     gatherer.addKeyedText( "Menu.Quit", "Quit", {}, "Menu.cpp" );
-    gatherer.addKeyReference( "settings.title", "engine/settings/engine.settings.xml" );
-    gatherer.addKeyReference( "settings.unknown", "engine/settings/engine.settings.xml" );
+    gatherer.addKeyReference( "settings.title", ::test::getEngineDefaultAssets()._userSettingsSchema.c_str() );
+    gatherer.addKeyReference( "settings.unknown", ::test::getEngineDefaultAssets()._userSettingsSchema.c_str() );
     gatherer.addTextOrKey( "Welcome, traveler!", "Dialogue line", "game/x/intro.dialogue.json" );
     gatherer.addTextOrKey( "Manual.Only", "Sign.text", "game/x/maps/a.scene.xml" );
 

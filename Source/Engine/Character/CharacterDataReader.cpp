@@ -176,29 +176,23 @@ namespace sw
         return pText != nullptr ? parseRotationText( node, pName, pText ) : quaternion::Identity;
     }
 
-    float32 CharacterDataReader::readOptionalFloat( const XMLNode& node, const utf8* pName, float32 absentValue )
-    {
-        const utf8* pText = node.findAttribute( pName );
-        return pText != nullptr ? parseFloatText( node, pName, pText ) : absentValue;
+    // 선택 필드: 없으면 넣어 둔 값 그대로, 깨졌으면 오류만 남기고 값은 그대로다(로드는 `finish` 에서 실패한다).
+#define SW_CHARACTER_OPTIONAL_READER( FunctionName, Type, ParseFunction )                              \
+    void CharacterDataReader::FunctionName( const XMLNode& node, const utf8* pName, Type& inoutValue ) \
+    {                                                                                                  \
+        const utf8* pText = node.findAttribute( pName );                                               \
+        if ( pText == nullptr )                                                                        \
+            return;                                                                                    \
+        const size_t errorCountBefore = _listError.size();                                             \
+        const Type   value            = ParseFunction( node, pName, pText );                           \
+        if ( _listError.size() == errorCountBefore )                                                   \
+            inoutValue = value;                                                                        \
     }
-
-    int32 CharacterDataReader::readOptionalInt( const XMLNode& node, const utf8* pName, int32 absentValue )
-    {
-        const utf8* pText = node.findAttribute( pName );
-        return pText != nullptr ? parseIntText( node, pName, pText ) : absentValue;
-    }
-
-    bool CharacterDataReader::readOptionalBool( const XMLNode& node, const utf8* pName, bool bAbsentValue )
-    {
-        const utf8* pText = node.findAttribute( pName );
-        return pText != nullptr ? parseBoolText( node, pName, pText ) : bAbsentValue;
-    }
-
-    float3 CharacterDataReader::readOptionalFloat3( const XMLNode& node, const utf8* pName, const float3& absentValue )
-    {
-        const utf8* pText = node.findAttribute( pName );
-        return pText != nullptr ? parseFloat3Text( node, pName, pText ) : absentValue;
-    }
+    SW_CHARACTER_OPTIONAL_READER( readOptionalFloat, float32, parseFloatText )
+    SW_CHARACTER_OPTIONAL_READER( readOptionalInt, int32, parseIntText )
+    SW_CHARACTER_OPTIONAL_READER( readOptionalBool, bool, parseBoolText )
+    SW_CHARACTER_OPTIONAL_READER( readOptionalFloat3, float3, parseFloat3Text )
+#undef SW_CHARACTER_OPTIONAL_READER
 
     hashed_string CharacterDataReader::readName( const XMLNode& node, const utf8* pName, bool bRequired )
     {

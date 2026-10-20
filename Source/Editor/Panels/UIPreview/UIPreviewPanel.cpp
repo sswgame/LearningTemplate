@@ -25,6 +25,7 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/AutomationProbe.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Input/KeyCodeUtil.h"
@@ -476,8 +477,11 @@ namespace sw::editor
     {
         if ( _bResolutionTableAttempted == false )
         {
-            _bResolutionTableAttempted = true;
-            (void)_resolutionTable.loadFromResource(); // 실패는 테이블이 알린다 — 목록이 비어 미리보기를 만들지 않는다
+            // 표 경로는 엔진 기본 에셋 표가 정본이다. 읽지 못하면(이유는 표가 알린다) 목록이 비어 미리보기를 세우지 않는다.
+            _bResolutionTableAttempted                = true;
+            const EngineDefaultAssets* pDefaultAssets = editor::findSubsystem<const EngineDefaultAssets>();
+            if ( pDefaultAssets == nullptr || _resolutionTable.loadFromResource( pDefaultAssets->_uiResolutionPresets.get() ) == false )
+                return nullptr;
         }
         if ( _resolutionTable._listResolution.empty() )
             return nullptr;
@@ -491,7 +495,7 @@ namespace sw::editor
         const UIResolutionPreset* pResolution = findSelectedResolution();
         if ( pResolution == nullptr )
         {
-            _error = string( "UI preview resolutions could not be read (" ) + UIResolutionPresetTable::kResourcePath + ")";
+            _error = "UI preview resolutions could not be read (EngineDefaultAssets _uiResolutionPresets - see the log)";
             return;
         }
         _viewport                        = UIPreviewLogic::makeViewport( ui.getScaleSettings(), *pResolution, _uiScale, _safeZone );

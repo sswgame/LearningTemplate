@@ -2,9 +2,12 @@
 
 #include "Games/NileCity/NileCityPlanner.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CitySimulation.h"
@@ -19,6 +22,41 @@ namespace sw
             static float32 computeDesertEdge( const NileCityLayout& layout, int32 y )
             {
                 return static_cast<float32>( layout._desertStartX ) + layout._desertDuneHeight * MathUtil::sin( static_cast<float32>( y ) * layout._desertDuneRate );
+            }
+
+            /**
+             * @brief 순서표의 칸 글 "x,y" 를 읽습니다. x 는 수이거나 배치의 칸 이름(`road` = 남북 도로, `farm` = 농장 왼쪽)입니다.
+             * @return 모양이 틀리면 false 입니다(부르는 쪽이 원소와 함께 알린다).
+             */
+            [[nodiscard]] static bool parseCell( const NileCityLayout& layout, string_view text, int2& outCell )
+            {
+                const size_t comma = text.find( ',' );
+                if ( comma == string_view::npos )
+                    return false;
+                const string_view xText = StringUtil::trim( text.substr( 0, comma ) );
+                const string_view yText = StringUtil::trim( text.substr( comma + 1 ) );
+                int32             x{ 0 };
+                if ( xText == "road" )
+                    x = layout._roadX;
+                else if ( xText == "farm" )
+                    x = layout._farmX;
+                else if ( StringUtil::parseInt( xText, x ) == false )
+                    return false;
+                int32 y{ 0 };
+                if ( StringUtil::parseInt( yText, y ) == false )
+                    return false;
+                outCell = int2{ x, y };
+                return true;
+            }
+
+            /** @brief 구역 번호(1 · 2 · 3)의 시작 인구입니다. 1 구역은 처음부터, 2 · 3 구역은 배치의 인구 임계값이다. 모르는 번호면 false 입니다. */
+            [[nodiscard]] static bool findBlockPopulation( const NileCityLayout& layout, int32 block, int32& outPopulation )
+            {
+                const int32 arrBlockPopulation[] = { 0, layout._secondBlockPeople, layout._thirdBlockPeople };
+                if ( block < 1 || block > 3 )
+                    return false;
+                outPopulation = arrBlockPopulation[block - 1];
+                return true;
             }
 
             /** @brief 사막의 바위 — 흩어진 돌(결정적 무늬)과 동쪽 끝 능선입니다. */
@@ -109,97 +147,65 @@ namespace sw
         _listStep.push_back( step );
     }
 
-    void NileCityPlanner::reset( const NileCityLayout& layout )
+    bool NileCityPlanner::reset( const NileCityLayout& layout, string_view planPath )
     {
+        using Internal = NileCityPlannerInternal;
         _listStep.clear();
-        _nextStep              = 0;
-        _skippedCount          = 0;
-        const auto addHouseRow = [this]( int32 minX, int32 maxX, int32 y, int32 minPopulation )
-        {
-            for ( int32 x = minX; x <= maxX; ++x )
-            {
-                addBuilding( "house", x, y, minPopulation );
-            }
-        };
+        _nextStep     = 0;
+        _skippedCount = 0;
 
-        // 1 구역(x 18..26, y 5..13) — 도로 고리 · 우물 · 농장 · 창고 · 바자 · 집 · 신전.
-        addRoad( int2{ layout._roadX, 4 }, int2{ 27, 4 }, 0 );
-        addRoad( int2{ layout._roadX, 4 }, int2{ layout._roadX, 14 }, 0 );
-        addRoad( int2{ 27, 4 }, int2{ 27, 14 }, 0 );
-        addRoad( int2{ layout._roadX, 14 }, int2{ 27, 14 }, 0 );
-        addBuilding( "well", 19, 11, 0 );
-        addBuilding( "well", 23, 11, 0 );
-        addBuilding( "grain_farm", layout._farmX, 5, 0 );
-        addBuilding( "grain_farm", layout._farmX, 8, 0 );
-        addBuilding( "granary", 18, 5, 0 );
-        addBuilding( "bazaar", 21, 5, 0 );
-        addHouseRow( 18, 26, 13, 0 );
-        addHouseRow( 18, 26, 12, 0 );
-        addBuilding( "shrine", 23, 5, 0 );
-        for ( int32 y = 7; y <= 10; ++y )
+        XMLDocument document;
+        XMLNode     root;
+        if ( XMLReadUtil::loadRoot( document, planPath, "NileAutoPlan", root ) != XMLRootStatus::Found )
         {
-            addBuilding( "house", 26, y, 0 );
+            SW_LOG_ERROR( "[Nile] auto plan '%#' could not be read: %#", planPath, document.getLastError().c_str() );
+            return false;
         }
-        addBuilding( "garden", 21, 11, 0 );
-        addBuilding( "garden", 25, 11, 0 );
-        addBuilding( "tax_collector", 18, 8, 20 );
-        addBuilding( "juggler", 24, 5, 40 );
-        addBuilding( "apothecary", 18, 10, 60 );
-        addBuilding( "fig_farm", layout._farmX, 11, 60 );
-
-        // 2 구역(x 28..36, y 5..13) — 물 공급 · 공방 · 저장 마당 · 두 번째 바자 · 학교.
-        const int32 second = layout._secondBlockPeople;
-        addRoad( int2{ 27, 4 }, int2{ 37, 4 }, second );
-        addRoad( int2{ 37, 4 }, int2{ 37, 14 }, second );
-        addRoad( int2{ 27, 14 }, int2{ 37, 14 }, second );
-        addBuilding( "well", 30, 11, second );
-        addBuilding( "well", 34, 11, second );
-        addHouseRow( 28, 36, 13, second );
-        addHouseRow( 28, 36, 12, second );
-        addBuilding( "water_supply", 28, 9, second );
-        addBuilding( "shrine", 36, 11, second );
-        addBuilding( "apothecary", 28, 11, second );
-        addBuilding( "statue", 32, 11, second );
-        addBuilding( "potter", 28, 5, second );
-        addBuilding( "storage_yard", 34, 5, second );
-        addBuilding( "bazaar", 32, 5, second + 40 );
-        addBuilding( "brewery", 30, 5, second + 60 );
-        addBuilding( "scribe_school", 35, 9, second + 60 );
-        addBuilding( "garden", 31, 9, second + 60 );
-        addBuilding( "garden", 33, 9, second + 60 );
-
-        // 3 구역(y 15..23) — 농장을 늘리고 집 네 줄 · 광장 · 둘째 서비스.
-        const int32 third = layout._thirdBlockPeople;
-        addRoad( int2{ layout._roadX, 14 }, int2{ layout._roadX, 24 }, third );
-        addRoad( int2{ 27, 14 }, int2{ 27, 24 }, third );
-        addRoad( int2{ 37, 14 }, int2{ 37, 24 }, third );
-        addRoad( int2{ layout._roadX, 24 }, int2{ 37, 24 }, third );
-        addBuilding( "grain_farm", layout._farmX, 15, third );
-        addBuilding( "fig_farm", layout._farmX, 18, third );
-        addBuilding( "grain_farm", layout._farmX, 21, third );
-        addBuilding( "well", 20, 18, third );
-        addBuilding( "well", 30, 18, third );
-        addBuilding( "well", 34, 18, third );
-        addHouseRow( 18, 26, 15, third );
-        addHouseRow( 28, 36, 15, third );
-        addHouseRow( 18, 26, 16, third );
-        addHouseRow( 28, 36, 16, third );
-        addBuilding( "shrine", 18, 19, third );
-        addBuilding( "apothecary", 28, 19, third );
-        addBuilding( "juggler", 35, 19, third );
-        addBuilding( "granary", 24, 19, third );
-        addBuilding( "plaza", 21, 19, third );
-        addBuilding( "plaza", 31, 19, third );
-        addBuilding( "well", 20, 21, third + 40 );
-        addBuilding( "well", 30, 21, third + 40 );
-        addBuilding( "well", 34, 21, third + 40 );
-        addHouseRow( 18, 26, 23, third + 40 );
-        addHouseRow( 28, 36, 23, third + 40 );
-        addHouseRow( 18, 26, 22, third + 40 );
-        addHouseRow( 28, 36, 22, third + 40 );
-        addBuilding( "statue", 23, 21, third + 80 );
-        addBuilding( "statue", 33, 21, third + 80 );
-        addBuilding( "tax_collector", 18, 17, third + 80 );
+        // 한 줄이 한 단계다(적힌 순서). Road 는 from → to 의 곧은 길, Building 은 from(과 to 가 있으면 그 사이 모든 칸, 행 우선)의 건물이다.
+        // 인구 임계값은 구역(block)의 시작 인구 + extra 다. 칸의 x 는 수이거나 배치의 이름(road · farm)이다.
+        for ( XMLNode node = root.findChild(); node.isValid(); node = node.findNextSibling() )
+        {
+            const string_view kind = node.getName();
+            if ( kind.empty() )
+                continue; // 주석 · 글 노드
+            const bool                  bRoad      = kind == "Road";
+            const std::optional<string> from       = node.readRequiredAttribute<string>( "from" );
+            const std::optional<int32>  block      = node.readRequiredAttribute<int32>( "block" );
+            const std::optional<string> buildingID = bRoad ? std::optional<string>{ string{} } : node.readRequiredAttribute<string>( "id" );
+            std::optional<string>       to;
+            int32                       extra{ 0 }; // 없으면 구역 시작 인구 그대로다
+            int2                        fromCell{};
+            int2                        toCell{};
+            int32                       population{ 0 };
+            const bool                  bAttributesRead = node.readOptionalAttribute( "to", to ) && node.readOptionalAttributeInRange( "extra", 0, MathUtil::kMaxInt32, extra ) &&
+                                         from.has_value() && block.has_value() && buildingID.has_value();
+            const bool bStepRead = ( bRoad || kind == "Building" ) && bAttributesRead && Internal::parseCell( layout, *from, fromCell ) &&
+                                   ( to.has_value() == false || Internal::parseCell( layout, *to, toCell ) ) &&
+                                   Internal::findBlockPopulation( layout, *block, population );
+            if ( bStepRead == false )
+            {
+                SW_LOG_ERROR( "[Nile] auto plan '%#': <%#> needs from=\"x,y\" (to), block 1..3 (extra) and Building an id - %#", planPath, node.getName(),
+                              node.toString().c_str() );
+                _listStep.clear();
+                return false;
+            }
+            if ( to.has_value() == false )
+                toCell = fromCell;
+            const int32 minPopulation = population + extra;
+            if ( bRoad )
+            {
+                addRoad( fromCell, toCell, minPopulation );
+                continue;
+            }
+            for ( int32 y = MathUtil::min( fromCell._y, toCell._y ); y <= MathUtil::max( fromCell._y, toCell._y ); ++y )
+            {
+                for ( int32 x = MathUtil::min( fromCell._x, toCell._x ); x <= MathUtil::max( fromCell._x, toCell._x ); ++x )
+                {
+                    addBuilding( buildingID->c_str(), x, y, minPopulation );
+                }
+            }
+        }
+        return true;
     }
 
     int32 NileCityPlanner::advance( CitySimulation& city, const Wallet& wallet, int32 roadCost )

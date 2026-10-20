@@ -18,14 +18,14 @@ SW_TEST_CASE( JSONDocumentTest, ParseAndNavigateIgnoreCaseKeys )
     sw::JSONValue root = doc.getRoot();
     SW_EXPECT_TRUE( root.isObject() );
     SW_EXPECT_EQUAL( sw::string( "Demo" ), root.get( "name" ).asString() );
-    SW_EXPECT_EQUAL( 12, root.get( "_SCORE" ).asInt() );
+    SW_EXPECT_EQUAL( 12, root.get( "_SCORE" ).read<sw::int64>().value() );
     SW_EXPECT_TRUE( root.get( "missing" ).isValid() == false );
 
     sw::JSONValue items = root.get( "items" );
     SW_EXPECT_TRUE( items.isArray() );
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( items.size() ) );
-    SW_EXPECT_EQUAL( 1, items.at( 0 ).get( "ID" ).asInt() );
-    SW_EXPECT_EQUAL( 2, items.at( 1 ).get( "id" ).asInt() );
+    SW_EXPECT_EQUAL( 1, items.at( 0 ).get( "ID" ).read<sw::int64>().value() );
+    SW_EXPECT_EQUAL( 2, items.at( 1 ).get( "id" ).read<sw::int64>().value() );
 }
 
 /**
@@ -85,7 +85,7 @@ SW_TEST_CASE( JSONDocumentTest, WriteAndDumpRoundtrip )
     sw::JSONDocument loaded;
     SW_EXPECT_TRUE( loaded.parse( doc.dump() ) );
     SW_EXPECT_EQUAL( sw::string( "Demo" ), loaded.getRoot().get( "name" ).asString() );
-    SW_EXPECT_EQUAL( 3, loaded.getRoot().get( "count" ).asInt() );
+    SW_EXPECT_EQUAL( 3, loaded.getRoot().get( "count" ).read<sw::int64>().value() );
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( loaded.getRoot().get( "items" ).size() ) );
 }
 
@@ -109,20 +109,21 @@ SW_TEST_CASE( JSONDocumentTest, BooleanFloatAndDeepNestedObject )
     SW_EXPECT_TRUE( doc.parse( jsonStr ) );
 
     sw::JSONValue root = doc.getRoot();
-    SW_EXPECT_TRUE( root.get( "bEnabled" ).asBool() );
-    SW_EXPECT_FALSE( root.get( "bPaused" ).asBool() );
-    SW_EXPECT_NEAR_EQUAL( 2.75, root.get( "scale" ).asFloat(), 1e-4 );
+    SW_EXPECT_TRUE( root.get( "bEnabled" ).read<bool>().value() );
+    SW_EXPECT_FALSE( root.get( "bPaused" ).read<bool>().value() );
+    SW_EXPECT_NEAR_EQUAL( 2.75, root.get( "scale" ).read<sw::float64>().value(), 1e-4 );
 
     sw::JSONValue subArr = root.get( "nested" ).get( "sub" ).get( "array" );
     SW_EXPECT_TRUE( subArr.isArray() );
     SW_EXPECT_EQUAL( 3u, static_cast<uint32>( subArr.size() ) );
-    SW_EXPECT_NEAR_EQUAL( 10.5, subArr.at( 0 ).asFloat(), 1e-4 );
-    SW_EXPECT_NEAR_EQUAL( 20.25, subArr.at( 1 ).asFloat(), 1e-4 );
-    SW_EXPECT_NEAR_EQUAL( 30.125, subArr.at( 2 ).asFloat(), 1e-4 );
+    SW_EXPECT_NEAR_EQUAL( 10.5, subArr.at( 0 ).read<sw::float64>().value(), 1e-4 );
+    SW_EXPECT_NEAR_EQUAL( 20.25, subArr.at( 1 ).read<sw::float64>().value(), 1e-4 );
+    SW_EXPECT_NEAR_EQUAL( 30.125, subArr.at( 2 ).read<sw::float64>().value(), 1e-4 );
 }
 
 /**
- * @brief [JSONDocumentTest] 부동소수점 JSON 토큰의 asInt, asUint 변환 안전성 엣지 케이스 검증
+ * @brief [JSONDocumentTest] 정수로 읽을 때 부동소수점 토큰은 잘라 읽지 않고 실패한다
+ * @details 폴백을 받던 `asInt( fallback )` 은 3.75 를 3 으로 잘라 읽었다(D9 에서 `read<T>` 로 바꿨다).
  */
 SW_TEST_CASE( JSONDocumentTest, FloatToIntTypeSafetyAndCoercion )
 {
@@ -136,12 +137,19 @@ SW_TEST_CASE( JSONDocumentTest, FloatToIntTypeSafetyAndCoercion )
     sw::JSONDocument doc;
     SW_EXPECT_TRUE( doc.parse( jsonStr ) );
 
+    // 정수 칸의 실수는 잘라 읽지 않고 읽기 실패다(값을 적어 오류를 남긴다). 정수는 그대로다.
     sw::JSONValue root = doc.getRoot();
-    SW_EXPECT_EQUAL( 3, root.get( "floatVal" ).asInt() );
-    SW_EXPECT_EQUAL( 3u, static_cast<uint32>( root.get( "floatVal" ).asUint() ) );
-    SW_EXPECT_EQUAL( 42, root.get( "intVal" ).asInt() );
-    SW_EXPECT_EQUAL( -10, root.get( "negativeFloat" ).asInt() );
-    SW_EXPECT_EQUAL( 0, root.get( "zeroVal" ).asInt() );
+    {
+        test::ScopedDefensiveTestLog expected( "a float in an integer field" );
+        SW_EXPECT_FALSE( root.get( "floatVal" ).read<sw::int64>().has_value() );
+        SW_EXPECT_FALSE( root.get( "floatVal" ).read<sw::uint64>().has_value() );
+        SW_EXPECT_FALSE( root.get( "negativeFloat" ).read<sw::int64>().has_value() );
+        SW_EXPECT_FALSE( root.get( "zeroVal" ).read<sw::int64>().has_value() );
+    }
+    SW_EXPECT_EQUAL( sw::int64( 42 ), root.get( "intVal" ).read<sw::int64>().value() );
+    SW_EXPECT_NEAR_EQUAL( 3.75, root.get( "floatVal" ).read<sw::float64>().value(), 1e-9 );
+    // 없는 값은 오류 없이 비어 있다 — 없음을 어떻게 다룰지는 부르는 쪽이 정한다.
+    SW_EXPECT_FALSE( root.get( "missing" ).read<sw::int64>().has_value() );
 }
 
 /**
@@ -158,16 +166,21 @@ SW_TEST_CASE( JSONDocumentTest, LargeUnsignedNumbersKeepTheirMagnitude )
     const sw::JSONValue root = doc.getRoot();
     SW_ASSERT_TRUE( root.isObject() );
 
-    SW_EXPECT_EQUAL( uint64( 18446744073709551615ull ), root.get( "big" ).asUint( 0 ) );
+    SW_EXPECT_EQUAL( uint64( 18446744073709551615ull ), root.get( "big" ).read<uint64>().value() );
 
     // 크기를 잃지 않았는지만 본다 — int64 에 담을 수 없는 값이므로 정확한 정수 비교는 뜻이 없다.
-    const float64 big = root.get( "big" ).asFloat( 0.0 );
+    const float64 big = root.get( "big" ).read<float64>().value();
     SW_EXPECT_TRUE( big > 1.0e19 );
+    {
+        // int64 에 담을 수 없는 값은 음수로 감지 않고 읽기 실패다.
+        test::ScopedDefensiveTestLog expected( "an unsigned value beyond int64" );
+        SW_EXPECT_FALSE( root.get( "big" ).read<int64>().has_value() );
+    }
 
-    // 흔한 크기(ARGB 색)는 세 접근자 모두에서 같은 값이어야 한다.
-    SW_EXPECT_EQUAL( uint64( 4289362560ull ), root.get( "color" ).asUint( 0 ) );
-    SW_EXPECT_EQUAL( int64( 4289362560ll ), root.get( "color" ).asInt( 0 ) );
-    SW_EXPECT_NEAR_EQUAL( 4289362560.0, root.get( "color" ).asFloat( 0.0 ), 1.0 );
+    // 흔한 크기(ARGB 색)는 세 타입 모두에서 같은 값이어야 한다.
+    SW_EXPECT_EQUAL( uint64( 4289362560ull ), root.get( "color" ).read<uint64>().value() );
+    SW_EXPECT_EQUAL( int64( 4289362560ll ), root.get( "color" ).read<int64>().value() );
+    SW_EXPECT_NEAR_EQUAL( 4289362560.0, root.get( "color" ).read<float64>().value(), 1.0 );
 }
 
 /**

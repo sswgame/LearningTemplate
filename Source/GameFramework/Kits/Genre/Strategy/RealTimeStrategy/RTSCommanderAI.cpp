@@ -169,12 +169,14 @@ namespace sw
     // ------------------------------------------------------------------------------
     BehaviorStatus RTSCommanderAI::taskDefend( BehaviorContext& context )
     {
-        RTSCommanderAI&   self   = *static_cast<RTSCommanderAI*>( context._pOwner );
-        const float3      threat = context._pBlackboard->getVector( getThreatKey() );
+        RTSCommanderAI&             self   = *static_cast<RTSCommanderAI*>( context._pOwner );
+        const std::optional<float3> threat = context._pBlackboard->getVector( getThreatKey() );
+        if ( threat.has_value() == false )
+            return BehaviorStatus::Failure; // 위협 자리가 없으면 막을 곳이 없다
         vector<RTSUnitID> listArmy;
         self.collectArmy( listArmy );
         if ( listArmy.empty() == false )
-            (void)self._pWorld->issueGroupMove( listArmy, threat, true );
+            (void)self._pWorld->issueGroupMove( listArmy, *threat, true );
         context._pBlackboard->clearValue( getThreatKey() );
         return BehaviorStatus::Success;
     }

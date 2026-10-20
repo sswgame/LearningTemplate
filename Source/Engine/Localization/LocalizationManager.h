@@ -18,6 +18,7 @@
 #include "Engine/Localization/CultureInfo.h"
 #include "Engine/Localization/LocalizationBinaryTable.h"
 #include "Engine/Localization/LocalizationDocuments.h"
+#include "Engine/Serialization/Base/ReloadOutcome.h"
 
 namespace sw
 {
@@ -105,8 +106,11 @@ namespace sw
          *          콜백과 빠진 키 기록은 복사하지 않는다. 텍스트 버전은 오른다.
          */
         void copyStateFrom( const LocalizationManager& source );
-        /** @brief 바뀐 파일이 로드한 프로젝트의 것이면 그 프로젝트를 다시 읽고 true 를 반환합니다(핫 리로드). 아니면 아무것도 하지 않고 false 입니다. */
-        [[nodiscard]] bool reloadChangedFile( string_view changedPath );
+        /**
+         * @brief 바뀐 파일이 로드한 프로젝트의 것이면 그 프로젝트를 다시 읽습니다(핫 리로드).
+         * @return 다시 읽었으면 `Reloaded`, 로드한 프로젝트의 파일이 아니면 `NotTracked`, 다시 읽지 못했으면(오류를 남기고 이전 글을 지켰다) `Failed`
+         */
+        [[nodiscard]] ReloadOutcome reloadChangedFile( string_view changedPath );
         /** @brief 그 경로가 로드한 프로젝트의 파일(프로젝트, 원문 테이블, 번역 테이블)인지 확인합니다. */
         bool isProjectFile( string_view path ) const;
 

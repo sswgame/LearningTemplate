@@ -481,10 +481,18 @@ namespace sw
         // 웨이브가 오르면 적의 체력과 공격력이 오른다(이펙트의 perLevel 이 붙은 값만 커진다).
         if ( request._level > 1 )
         {
-            const float32 levelScale = 1.0f + 0.15f * static_cast<float32>( request._level - 1 );
-            (void)pAbilitySystem->setAttributeBaseValue( CombatAttributes::maxHealth(), pAbilitySystem->getAttributeBaseValue( CombatAttributes::maxHealth() ) * levelScale );
-            (void)pAbilitySystem->setAttributeBaseValue( CombatAttributes::health(), pAbilitySystem->getAttributeBaseValue( CombatAttributes::maxHealth() ) );
-            (void)pAbilitySystem->setAttributeBaseValue( CombatAttributes::attackPower(), pAbilitySystem->getAttributeBaseValue( CombatAttributes::attackPower() ) * levelScale );
+            const float32                levelScale  = 1.0f + 0.15f * static_cast<float32>( request._level - 1 );
+            const std::optional<float32> maxHealth   = pAbilitySystem->getAttributeBaseValue( CombatAttributes::maxHealth() );
+            const std::optional<float32> attackPower = pAbilitySystem->getAttributeBaseValue( CombatAttributes::attackPower() );
+            if ( maxHealth.has_value() == false || attackPower.has_value() == false )
+            {
+                SW_LOG_ERROR( "[Arena] ability set '%#' gives no MaxHealth / AttackPower - the unit is not spawned", setID.c_str() );
+                manager.destroyObject( pObject );
+                return false;
+            }
+            (void)pAbilitySystem->setAttributeBaseValue( CombatAttributes::maxHealth(), *maxHealth * levelScale );
+            (void)pAbilitySystem->setAttributeBaseValue( CombatAttributes::health(), *maxHealth * levelScale );
+            (void)pAbilitySystem->setAttributeBaseValue( CombatAttributes::attackPower(), *attackPower * levelScale );
         }
 
         applyTint( *pMesh, static_cast<int32>( request._kind ) );
@@ -721,8 +729,12 @@ namespace sw
             const AbilitySystemComponent* pAbilitySystem = pObject != nullptr ? pObject->getComponent<AbilitySystemComponent>() : nullptr;
             if ( pAbilitySystem == nullptr )
                 continue;
-            [[maybe_unused]] const int32 health = static_cast<int32>( pAbilitySystem->getAttributeValue( CombatAttributes::health() ) );
-            [[maybe_unused]] const int32 mana   = static_cast<int32>( pAbilitySystem->getAttributeValue( CombatAttributes::mana() ) );
+            const std::optional<float32> healthValue = pAbilitySystem->getAttributeValue( CombatAttributes::health() );
+            const std::optional<float32> manaValue   = pAbilitySystem->getAttributeValue( CombatAttributes::mana() );
+            if ( healthValue.has_value() == false || manaValue.has_value() == false )
+                continue; // 전투 세트가 없는 플레이어는 상태 줄이 없다
+            [[maybe_unused]] const int32 health = static_cast<int32>( *healthValue );
+            [[maybe_unused]] const int32 mana   = static_cast<int32>( *manaValue );
             SW_LOG_INFO( "[Arena] wave %# · kills %# · player HP %# · MP %# · units %# · projectiles %#", _wave, _killCount, health, mana,
                          static_cast<uint32>( _listUnit.size() ), static_cast<uint32>( _listProjectile.size() ) );
         }

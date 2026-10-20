@@ -89,11 +89,10 @@ namespace sw
         // (3) 이동 — 이동 속도는 어트리뷰트의 current 다(대시 ×3 · 둔화 이펙트가 그대로 반영된다).
         float3       position  = pMesh->getLocalPosition();
         const float3 direction = pAbilitySystem->getOwnedTagCounts().hasMatchingTag( "State.Dashing"_tag ) ? _facing : move;
-        if ( direction.getLengthSquared() > 0.0f )
-        {
-            const float32 speed = pAbilitySystem->getAttributeValue( CombatAttributes::moveSpeed() );
-            position            = position + direction * ( speed * deltaTime );
-        }
+        // 이동 속도 어트리뷰트가 없는 유닛은 움직이지 않는다(0 을 지어내지 않고 그 뜻을 여기서 정한다).
+        const std::optional<float32> speed = pAbilitySystem->getAttributeValue( CombatAttributes::moveSpeed() );
+        if ( direction.getLengthSquared() > 0.0f && speed.has_value() )
+            position = position + direction * ( *speed * deltaTime );
         if ( _kind != ArenaUnitKind::Player )
             separateFromEnemies( *pDirector, position );
         const float32 halfSize = pDirector->getArenaHalfSize();

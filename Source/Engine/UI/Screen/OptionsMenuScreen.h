@@ -18,6 +18,7 @@ namespace sw
 {
     enum class UIInputMode : uint8;
 
+    struct UIEngineDocuments;
     struct UserSettingDef;
 
     class PanelWidget;
@@ -36,10 +37,7 @@ namespace sw
     class SW_API OptionsMenuScreen : public UIScreen
     {
     public:
-        static constexpr utf8 kConfirmDocument[] = "engine/ui/confirm_countdown.ui.xml";
-        static constexpr utf8 kUnsavedDocument[] = "engine/ui/confirm_unsaved.ui.xml";
-        static constexpr utf8 kRebindDocument[]  = "engine/ui/key_rebind.ui.xml";
-
+        // 확인 창 · 키 바인딩 창 · 행 견본 문서는 엔진 기본 에셋 표가 정본이다(`UISystem::getEngineDocuments`).
         OptionsMenuScreen( const UIScreenDesc& desc, unique_ptr<Widget> root );
         ~OptionsMenuScreen() override;
 
@@ -49,11 +47,11 @@ namespace sw
          */
         static UIScreenHandle open( UISystem& ui );
         /**
-         * @brief 설정 @p setting 의 형식에 맞는 행 템플릿 문서 경로입니다(`engine/ui/parts/setting_*.ui.xml`).
-         * @details 열거형 행은 입력 방식 @p mode 가 탐색(패드 · 키보드)이면 좌우로 고르는 `RotatorWidget` 견본(`setting_enum_pad.ui.xml`)이고, 포인터이면 펼치는 콤보 상자 견본이다.
+         * @brief 설정 @p setting 의 형식에 맞는 행 템플릿 문서 경로입니다(@p documents 의 `_optionsRow*`, 엔진 기본 에셋 표의 `_uiOptionsRow*`).
+         * @details 열거형 행은 입력 방식 @p mode 가 탐색(패드 · 키보드)이면 좌우로 고르는 `RotatorWidget` 견본(`_optionsRowEnumPad`)이고, 포인터이면 펼치는 콤보 상자 견본이다.
          *          행은 탭을 고를 때 짓는다 — 행을 지은 뒤에 입력 방식이 바뀌어도 그 행은 그대로 쓸 수 있고(콤보는 `UI.Accept` 로, 로테이터는 클릭으로), 다음 탭 전환 때 바뀐다.
          */
-        static const utf8* findRowDocument( const UserSettingDef& setting, UIInputMode mode );
+        static const string& findRowDocument( const UIEngineDocuments& documents, const UserSettingDef& setting, UIInputMode mode );
 
         bool onCommand( const hashed_string& command, Widget& source ) override;
         bool onBack() override;

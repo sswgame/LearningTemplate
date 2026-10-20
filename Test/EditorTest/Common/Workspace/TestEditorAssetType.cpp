@@ -16,6 +16,7 @@
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"
 #include "Engine/Audio/AudioEvent.h"
 #include "Engine/Audio/AudioMixerDesc.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Destruction/FractureAsset.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
 #include "Engine/Environment/Terrain/HeightfieldData.h"
@@ -32,6 +33,7 @@
 #include "Engine/UI/Document/UIDocument.h"
 #include "Engine/UI/Style/UIStyleSheet.h"
 
+#include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
 
 SW_TEST_CASE( EditorAssetTypeTest, MatchesKnownSuffixes )
@@ -285,7 +287,7 @@ SW_TEST_CASE( EditorAssetTypeTest, ReloadRouteComesFromTheTable )
         SW_ASSERT_NOT_NULL( localization._pCacheKindName );
         SW_EXPECT_STREQ( "StringTable", localization._pCacheKindName );
     }
-    SW_EXPECT_NULL( EditorAssetTypeRegistry::findReloadRoute( "engine/localization/engine.cultures.json" )._pCacheKindName );
+    SW_EXPECT_NULL( EditorAssetTypeRegistry::findReloadRoute( ::test::getEngineDefaultAssets()._cultureTable.c_str() )._pCacheKindName );
 
     // 메시 에셋은 캐시가 다시 읽고, glTF 원본은 모델 임포터를 먼저 탄다(쓰인 `.mesh` 가 다음 이벤트로 온다).
     const AssetReloadRoute mesh = EditorAssetTypeRegistry::findReloadRoute( "game/empty/models/crate.mesh" );
@@ -467,11 +469,11 @@ SW_TEST_CASE( EditorAssetTypeTest, UIDocumentOpensTheUIPreviewPanel )
     using sw::editor::EditorAssetType;
     using sw::editor::EditorAssetTypeRegistry;
 
-    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "engine/ui/pause.ui.xml" ) == EditorAssetType::UIDocument );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( ::test::getEngineDefaultAssets()._uiPauseMenu.c_str() ) == EditorAssetType::UIDocument );
     SW_EXPECT_TRUE( EditorAssetTypeRegistry::matches( EditorAssetType::UIDocument, "game/shooter3d/ui/hud.ui.xml" ) );
     // `matches` 는 종류마다 따로 판정하므로 일반 데이터(.xml)도 UI 문서에 맞는다 — 어느 종류로 보이는지는 첫 일치인 `findKind` 가 정한다.
-    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "engine/ui/pause.ui.xml" ) != EditorAssetType::Data );
-    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findPanelKindForPath( "engine/ui/pause.ui.xml" ) == EditorAssetType::UIDocument );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( ::test::getEngineDefaultAssets()._uiPauseMenu.c_str() ) != EditorAssetType::Data );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findPanelKindForPath( ::test::getEngineDefaultAssets()._uiPauseMenu.c_str() ) == EditorAssetType::UIDocument );
     SW_EXPECT_STREQ( "UI Preview", EditorAssetTypeRegistry::getPanelTitle( EditorAssetType::UIDocument ) );
 
     // 스타일 시트와 일반 데이터는 UI 문서가 아니다.
@@ -488,7 +490,7 @@ SW_TEST_CASE( EditorAssetTypeTest, UIDocumentOpensTheUIPreviewPanel )
         bWatchesUIDocument = bWatchesUIDocument || suffix == ".ui.xml";
     }
     SW_EXPECT_TRUE( bWatchesUIDocument );
-    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findReloadRoute( "engine/ui/pause.ui.xml" )._pCacheKindName != nullptr );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findReloadRoute( ::test::getEngineDefaultAssets()._uiPauseMenu.c_str() )._pCacheKindName != nullptr );
 }
 
 /**

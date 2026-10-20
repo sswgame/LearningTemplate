@@ -38,6 +38,27 @@ enginedefaultassets.xml 의 엔진 셸 경로입니다. 읽기는 `XMLSerializer
 | `_uiThemes` | `DataPath` | — |  |  | 런타임 UI 테마 목록 — 테마 이름 → 스타일 시트들(`UIThemeCatalog`, 팩 설정이 덮어쓴다) |
 | `_uiOptionsMenu` | `DataPath` | — |  |  | 옵션 메뉴 문서. 설정 스키마에서 탭과 행을 만드는 화면(`OptionsMenuScreen`, 팩 설정이 덮어쓴다) |
 | `_uiPauseMenu` | `DataPath` | — |  |  | 일시정지 메뉴 문서 — 팩 설정이 `_bUIPauseMenu` 를 켤 때 `UI.Pause` 가 연다(`PauseMenuScreen`) |
+| `_uiOptionsRowBool` | `DataPath` | — |  |  | 옵션 메뉴 행 견본: 불리언 설정(체크 상자) |
+| `_uiOptionsRowInt` | `DataPath` | — |  |  | 옵션 메뉴 행 견본: 정수 설정 |
+| `_uiOptionsRowFloat` | `DataPath` | — |  |  | 옵션 메뉴 행 견본: 실수 설정 |
+| `_uiOptionsRowEnum` | `DataPath` | — |  |  | 옵션 메뉴 행 견본: 고르기 설정(마우스 · 키보드 — 콤보 상자) |
+| `_uiOptionsRowEnumPad` | `DataPath` | — |  |  | 옵션 메뉴 행 견본: 고르기 설정(패드 탐색 — 좌우로 넘기기) |
+| `_uiOptionsRowKeyBinding` | `DataPath` | — |  |  | 옵션 메뉴 행 견본: 키 바인딩 설정(단추) |
+| `_uiOptionsRowString` | `DataPath` | — |  |  | 옵션 메뉴 행 견본: 글 설정 |
+| `_uiSettingsConfirm` | `DataPath` | — |  |  | 바꾼 설정을 되돌리기 전 카운트다운 확인 창 |
+| `_uiSettingsUnsaved` | `DataPath` | — |  |  | 저장하지 않은 설정을 두고 닫을 때의 확인 창 |
+| `_uiKeyRebind` | `DataPath` | — |  |  | 키 바인딩을 받는 창 |
+| `_uiNotifications` | `DataPath` | — |  |  | 알림 화면(`UINotificationService`) |
+| `_uiNotificationEntry` | `DataPath` | — |  |  | 알림 한 줄 견본 |
+| `_uiSubtitles` | `DataPath` | — |  |  | 자막 화면(`UISubtitleService`) |
+| `_uiDebugHUD` | `DataPath` | — |  |  | 디버그 HUD 설정 창(`DebugHUD`, 개발 빌드) |
+| `_debugHUDSettingsSchema` | `DataPath` | — |  |  | 디버그 HUD 설정 스키마(`DebugHUD`, 개발 빌드) |
+| `_uiResolutionPresets` | `DataPath` | — |  |  | UI 미리보기 해상도 프리셋 표(`UIResolutionPresetTable`) |
+| `_netEmulationPresets` | `DataPath` | — |  |  | 네트워크 에뮬레이션 프리셋 표(`NetEmulationPresetTable`) |
+| `_tileMapMaterial` | `DataPath` | — |  |  | 타일맵 렌더러(`TileMapRendererComponent`) — 픽셀 아트 스프라이트 머티리얼 |
+| `_foliageMaterial` | `DataPath` | — |  |  | 풀 · 나무 층(`FoliageComponent`) |
+| `_terrainMaterial` | `DataPath` | — |  |  | 지형(`TerrainComponent`) |
+| `_waterMaterial` | `DataPath` | — |  |  | 물(`WaterBodyComponent`) |
 | `_defaultForwardPipeline` | `DataPath` | — |  |  | 포워드 렌더 파이프라인(프레임 그래프) |
 | `_defaultDeferredPipeline` | `DataPath` | — |  |  | 디퍼드 렌더 파이프라인 |
 | `_defaultRenderPass` | `DataPath` | — |  |  | 기본 렌더 패스 바인드 틀 |

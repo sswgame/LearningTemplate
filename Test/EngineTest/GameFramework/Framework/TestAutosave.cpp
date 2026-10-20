@@ -57,7 +57,7 @@ namespace
 } // namespace
 
 /**
- * @brief [AutosaveTest] 정책 XML 을 읽는다 — 빠진 속성은 기본값, 범위 밖 칸 수는 경고하고 3
+ * @brief [AutosaveTest] 정책 XML 을 읽는다 — 빠진 속성은 기본값, 범위 밖 칸 수는 읽기 실패(자르거나 바꿔 쓰지 않는다)
  */
 SW_TEST_CASE( AutosaveTest, SettingsReadFromXML )
 {
@@ -72,8 +72,8 @@ SW_TEST_CASE( AutosaveTest, SettingsReadFromXML )
 
     AutosaveSettings             bad;
     test::ScopedDefensiveTestLog expected( "slot count outside the range" );
-    SW_ASSERT_TRUE( bad.loadFromXMLText( R"(<Autosave slots="0"/>)" ) );
-    SW_EXPECT_EQUAL( 3, bad._slotCount );
+    SW_EXPECT_FALSE( bad.loadFromXMLText( R"(<Autosave slots="0"/>)" ) );
+    SW_EXPECT_EQUAL( 3, bad._slotCount ); // 범위 밖 값은 쓰지 않는다 — 생성자의 초기값이 남는다
 }
 
 /**

@@ -91,24 +91,15 @@ namespace sw::editor
         return nullptr;
     }
 
-    void ModelImportUtil::readChannel( const cgltf_animation_sampler& sampler, uint32 componentCount, ChannelData& outChannel )
+    bool ModelImportUtil::readChannel( const cgltf_animation_sampler& sampler, uint32 componentCount, ChannelData& outChannel )
     {
         outChannel                 = ChannelData{};
         outChannel._componentCount = componentCount;
         outChannel._interpolation  = sampler.interpolation;
         if ( sampler.input == nullptr || sampler.output == nullptr )
-            return;
-        outChannel._listTime.resize( sampler.input->count );
-        for ( cgltf_size keyIndex = 0; keyIndex < sampler.input->count; ++keyIndex )
-        {
-            (void)readFloats( sampler.input, keyIndex, &outChannel._listTime[keyIndex], 1 ); // 못 읽은 키는 0 으로 남는다(resize 기본값)
-        }
-        outChannel._listValue.resize( sampler.output->count * componentCount );
-        for ( cgltf_size valueIndex = 0; valueIndex < sampler.output->count; ++valueIndex )
-        {
-            // 못 읽은 값은 0 으로 남는다(resize 기본값)
-            (void)readFloats( sampler.output, valueIndex, &outChannel._listValue[valueIndex * componentCount], componentCount );
-        }
+            return true; // 샘플러가 가리키는 접근자가 없는 채널은 키가 없다(레스트 값을 쓴다)
+        // 접근자 하나를 통째로 읽는다 — 키 하나씩 읽다 실패한 키를 0 으로 남기지 않는다.
+        return unpackFloats( sampler.input, 1, outChannel._listTime ) && unpackFloats( sampler.output, componentCount, outChannel._listValue );
     }
 
     bool ModelImportUtil::evaluateChannel( const ChannelData& channel, float32 time, bool bRotation, float32* pOutValue )
@@ -192,7 +183,7 @@ namespace sw::editor
         return channel._listTime.empty() ? 0.0f : channel._listTime.back();
     }
 
-    void ModelImportUtil::resampleAnimation( const cgltf_animation& animation, const Skeleton& skeleton, const unordered_map<const cgltf_node*, int32>& mapJointBone,
+    bool ModelImportUtil::resampleAnimation( const cgltf_animation& animation, const Skeleton& skeleton, const unordered_map<const cgltf_node*, int32>& mapJointBone,
                                              const vector<BoneTransform>& listRest, const vector<float4x4>& listRootParent, float32 sampleRate, float32 minimumDuration,
                                              AnimationRawClip& outRawClip )
     {
@@ -206,12 +197,15 @@ namespace sw::editor
             if ( it == mapJointBone.end() || channel.sampler == nullptr )
                 continue; // 관절이 아닌 노드 · 모프 가중치(커브로 따로 싣는다 — readMorphWeightCurves)
             JointChannels& joint = listChannel[static_cast<uint32>( it->second )];
+            bool           bRead = true;
             if ( channel.target_path == cgltf_animation_path_type_translation )
-                readChannel( *channel.sampler, 3, joint._translation );
+                bRead = readChannel( *channel.sampler, 3, joint._translation );
             else if ( channel.target_path == cgltf_animation_path_type_rotation )
-                readChannel( *channel.sampler, 4, joint._rotation );
+                bRead = readChannel( *channel.sampler, 4, joint._rotation );
             else if ( channel.target_path == cgltf_animation_path_type_scale )
-                readChannel( *channel.sampler, 3, joint._scale );
+                bRead = readChannel( *channel.sampler, 3, joint._scale );
+            if ( bRead == false )
+                return false;
         }
         for ( const JointChannels& joint : listChannel )
         {
@@ -239,12 +233,14 @@ namespace sw::editor
                 outRawClip._listSample[static_cast<size_t>( sampleIndex ) * boneCount + boneIndex] = sample;
             }
         }
+        return true;
     }
 
-    float32 ModelImportUtil::readMorphWeightCurves( const cgltf_animation& animation, float32 sampleRate, vector<AnimationClipCurve>& outListCurve )
+    bool ModelImportUtil::readMorphWeightCurves( const cgltf_animation& animation, float32 sampleRate, vector<AnimationClipCurve>& outListCurve, float32& outDuration )
     {
         outListCurve.clear();
-        float32 duration = 0.0f;
+        float32& duration = outDuration;
+        duration          = 0.0f;
         for ( cgltf_size channelIndex = 0; channelIndex < animation.channels_count; ++channelIndex )
         {
             const cgltf_animation_channel& channel                = animation.channels[channelIndex];
@@ -259,16 +255,9 @@ namespace sw::editor
             ChannelData data{};
             data._componentCount = static_cast<uint32>( targetCount );
             data._interpolation  = channel.sampler->interpolation;
-            data._listTime.resize( channel.sampler->input->count );
-            for ( cgltf_size keyIndex = 0; keyIndex < channel.sampler->input->count; ++keyIndex )
-            {
-                (void)readFloats( channel.sampler->input, keyIndex, &data._listTime[keyIndex], 1 ); // 못 읽은 키는 0 으로 남는다(resize 기본값)
-            }
-            data._listValue.resize( channel.sampler->output->count );
-            for ( cgltf_size valueIndex = 0; valueIndex < channel.sampler->output->count; ++valueIndex )
-            {
-                (void)readFloats( channel.sampler->output, valueIndex, &data._listValue[valueIndex], 1 ); // 못 읽은 값은 0 으로 남는다(resize 기본값)
-            }
+            // 접근자 하나를 통째로 읽는다 — 키 하나씩 읽다 실패한 키를 0 으로 남기지 않는다.
+            if ( unpackFloats( channel.sampler->input, 1, data._listTime ) == false || unpackFloats( channel.sampler->output, 1, data._listValue ) == false )
+                return false;
             const float32 lastTime = findLastTime( data );
             duration               = MathUtil::max( duration, lastTime );
             // 키 시각(선형 · 계단) 또는 표본율 격자(큐빅)에서 값을 뽑는다.
@@ -300,7 +289,7 @@ namespace sw::editor
                 outListCurve.push_back( std::move( curve ) );
             }
         }
-        return duration;
+        return true;
     }
 
     bool ModelImportUtil::readClipData( string_view sourcePath, unordered_map<string, ClipExtra>& outMapExtra )
@@ -326,7 +315,12 @@ namespace sw::editor
                 return false;
             ClipExtra extra{};
             if ( clipValue.has( "loop" ) )
-                extra._loopOverride = clipValue.get( "loop" ).asBool( true ) ? 1 : 0;
+            {
+                const std::optional<bool> bLoop = clipValue.readRequired<bool>( "loop" );
+                if ( bLoop.has_value() == false )
+                    return false;
+                extra._loopOverride = *bLoop ? 1 : 0;
+            }
             const JSONValue notifies = clipValue.get( "notifies" );
             for ( size_t notifyIndex = 0; notifies.isArray() && notifyIndex < notifies.size(); ++notifyIndex )
             {
@@ -339,9 +333,12 @@ namespace sw::editor
                     return false;
                 }
                 AnimationNotifyEvent event{};
-                event._name     = hashed_string( notify.get( "name" ).asString() );
-                event._time     = static_cast<float32>( notify.get( "time" ).asFloat() );
-                event._duration = static_cast<float32>( notify.get( "duration" ).asFloat( 0.0 ) );
+                event._name                       = hashed_string( notify.get( "name" ).asString() );
+                const std::optional<float32> time = notify.readRequired<float32>( "time" );
+                // 길이는 없으면 형식의 초기값(순간 알림)이다.
+                if ( time.has_value() == false || notify.readOptionalInto( "duration", event._duration ) == false )
+                    return false;
+                event._time = *time;
                 extra._listNotify.push_back( event );
             }
             const JSONValue curves = clipValue.get( "curves" );

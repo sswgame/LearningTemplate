@@ -156,7 +156,7 @@ SW_TEST_CASE( AIDirectorTest, ProfileRejectsUnknownNames )
     SW_EXPECT_EQUAL( 3u, static_cast<uint32>( profile.getIntensity()._listSignal.size() ) );
     SW_EXPECT_EQUAL( 0, profile.getStartPhaseIndex() );
     SW_EXPECT_EQUAL( 1, profile.getPhases()[0]._listExit[0]._toIndex );
-    SW_EXPECT_NEAR_EQUAL( 1.5f, profile.getPhases()[0]._spawnCurve.evaluate( 5.0f ), 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 1.5f, profile.getPhases()[0]._spawnCurve.evaluate( 5.0f ).value(), 1.0e-6f );
     vector<hashed_string> listID;
     profile.collectEncounterIDs( listID );
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( listID.size() ) );
@@ -167,7 +167,7 @@ SW_TEST_CASE( AIDirectorTest, ProfileRejectsUnknownNames )
         const utf8* _pMessage;
     };
     const BadCase arrBad[] = {
-        {                                                                "<AIDirector><Phase id=\"A\" speed=\"2\"/></AIDirector>",     "unknown attribute 'speed'"},
+        {                                                                "<AIDirector><Phase id=\"A\" speed=\"2\"/></AIDirector>",     "speed=...> is not a field"},
         {                                                            "<AIDirector><Phase id=\"A\"/><Wave id=\"x\"/></AIDirector>",        "unknown element <Wave>"},
         {                                                     "<AIDirector><Phase id=\"A\"><Exit to=\"B\"/></Phase></AIDirector>", "exits to an unknown phase 'B'"},
         {               "<AIDirector><Phase id=\"A\"/><Pool id=\"p\" trigger=\"often\"><Encounter id=\"e\"/></Pool></AIDirector>",       "unknown trigger 'often'"},

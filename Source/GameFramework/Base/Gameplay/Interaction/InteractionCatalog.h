@@ -5,7 +5,7 @@
  * @details XML 형식은 다음과 같다(`Resource/common/data/interactions/default.interactions.xml`).
  * @code
  *     <Interactions>
- *       <Interaction id="Open" prompt="ui.interact.open" mode="Press" maxDistance="2" maxAngle="70" lineOfSight="true" cooldown="0.5"
+ *       <Interaction id="Open" prompt="ui.interact.open" mode="Press" maxDistance="2" maxAngle="1.2217" lineOfSight="true" cooldown="0.5"
  *                    requiredTags="" forbiddenTags="State.Stunned" alignment="Front" highlight="Outline" authority="Server"/>
  *       <Interaction id="Revive" prompt="ui.interact.revive" mode="Hold" duration="3" maxParticipants="2"/>
  *       <Interaction id="Craft" maxDistance="1.5">
@@ -14,11 +14,11 @@
  *       </Interaction>
  *       <Interaction id="Takedown" mode="Press" pairedAnimation="anim/takedown_front.pairedanim.xml;anim/takedown_back.pairedanim.xml"
  *                    interactorRole="Attacker" interactableRole="Victim"/>
- *       <SmartObject id="Bench"><Slot id="Left" offset="-0.5 0 0" yaw="180" tags="Activity.Sit"/></SmartObject>
+ *       <SmartObject id="Bench"><Slot id="Left" offset="-0.5 0 0" yaw="3.1416" tags="Activity.Sit"/></SmartObject>
  *     </Interactions>
  * @endcode
- *          단계가 없으면 `<Interaction>` 의 mode, prompt, duration, presses, decay 가 한 단계가 된다. 각도는 도 단위로 적고, 정의에는 라디안으로 저장한다.
- *          `pairedAnimation` 은 단계가 시작될 때 고를 페어드 애니메이션 세트(`;` 로 나눈 경로, 배치에 맞는 첫 세트)이고, 적으면 두 역할 이름이 필수이며
+ *          단계가 없으면 `<Interaction>` 의 mode, prompt, duration, presses, decay 가 한 단계가 된다. 각도는 라디안으로 적는다(`maxAngle` 은 [0, π], `yaw` 는 [−2π, 2π]). 깨진 숫자와 범위 밖 값은 오류다(자르지 않는다).
+ *          `pairedAnimation` 은 단계가 시작될 때 고를 페어드 애니메이션 세트(`;` 로 나눈 경로, 자리에 맞는 첫 세트)이고, 적으면 두 역할 이름이 필수이며
  *          `montage` 와 함께 쓰지 않는다(둘 다 하는 쪽의 애니메이터를 재생한다).
  *          알 수 없는 속성, 원소, 열거자 이름은 경고를 남기고 읽기에 실패한다(`ResourceDataSchemaTest`).
  */

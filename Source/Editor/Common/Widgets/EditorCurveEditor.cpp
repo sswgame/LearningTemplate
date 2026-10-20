@@ -53,7 +53,7 @@ namespace sw::editor
                 for ( uint32 sampleIndex = 0; sampleIndex <= sampleCount; ++sampleIndex )
                 {
                     const float32 time  = view._timeMin + ( view._timeMax - view._timeMin ) * static_cast<float32>( sampleIndex ) / static_cast<float32>( sampleCount );
-                    const ImVec2  point = toImVec2( view.toScreen( time, curve.evaluate( time ) ) );
+                    const ImVec2  point = toImVec2( view.toScreen( time, *curve.evaluate( time ) ) ); // 위에서 키가 있음을 확인했다
                     if ( sampleIndex > 0 )
                         drawList.AddLine( previous, point, color, thickness );
                     previous = point;

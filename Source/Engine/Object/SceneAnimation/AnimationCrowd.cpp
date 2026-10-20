@@ -82,19 +82,21 @@ namespace sw
     {
         if ( AnimationJSONUtil::hasOnlyKnownKeys( root, { "variations_per_clip", "bucket_keep_seconds", "vertex_animation_frames_per_second" }, sourceLabel ) == false )
             return false;
-        const JSONValue variations            = root.get( "variations_per_clip" );
-        const JSONValue keep                  = root.get( "bucket_keep_seconds" );
-        const JSONValue frameRate             = root.get( "vertex_animation_frames_per_second" );
-        const bool      bInvalidCrowdSettings = variations.isNumber() == false || keep.isNumber() == false || frameRate.isNumber() == false || variations.asInt( 0 ) < 1 || frameRate.asFloat() <= 0.0;
+        // 셋 다 필수다. 범위 밖 값은 자르지 않고 거절한다.
+        const std::optional<uint32>  variations            = root.readRequired<uint32>( "variations_per_clip" );
+        const std::optional<float32> keep                  = root.readRequired<float32>( "bucket_keep_seconds" );
+        const std::optional<float32> frameRate             = root.readRequired<float32>( "vertex_animation_frames_per_second" );
+        const bool                   bAllRead              = variations.has_value() && keep.has_value() && frameRate.has_value();
+        const bool                   bInvalidCrowdSettings = bAllRead == false || *variations < 1 || *keep < 0.0f || *frameRate <= 0.0f;
         if ( bInvalidCrowdSettings )
         {
-            SW_LOG_ERROR( "Animation crowd settings '%#': variations_per_clip (>= 1), bucket_keep_seconds and vertex_animation_frames_per_second (> 0) are required",
+            SW_LOG_ERROR( "Animation crowd settings '%#': variations_per_clip (>= 1), bucket_keep_seconds (>= 0) and vertex_animation_frames_per_second (> 0) are required",
                           sourceLabel );
             return false;
         }
-        _variationsPerClip              = static_cast<uint32>( variations.asInt( 1 ) );
-        _bucketKeepSeconds              = MathUtil::max( static_cast<float32>( keep.asFloat() ), 0.0f );
-        _vertexAnimationFramesPerSecond = static_cast<float32>( frameRate.asFloat() );
+        _variationsPerClip              = *variations;
+        _bucketKeepSeconds              = *keep;
+        _vertexAnimationFramesPerSecond = *frameRate;
         return true;
     }
 

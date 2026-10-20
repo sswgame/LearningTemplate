@@ -23,7 +23,7 @@ namespace sw
 
     /**
      * @brief 파일 하나를 읽는 동안의 오류 모음과 필드 읽기 도우미입니다.
-     * @details 필드 읽기는 둘로 나뉜다. `readXxx` 는 필수 필드라 없으면 오류이고, `readOptionalXxx` 는 선택 필드라 없으면 @p absentValue(형식의 "적지 않음" 값)다.
+     * @details 필드 읽기는 둘로 나뉜다. `readXxx` 는 필수 필드라 없으면 오류이고, `readOptionalXxx` 는 선택 필드라 없으면 넣어 둔 값(정의의 초기값) 그대로다.
      *          어느 쪽이든 숫자가 아닌 글은 오류다 — 오류가 하나라도 있으면 `finish` 가 실패해 로드가 멈추므로, 오류 뒤에 돌려주는 값은 쓰이지 않는다.
      *          벡터는 공백이나 쉼표로 나눈 세 수이고, 회전은 도 단위 오일러(피치, 요, 롤)다. `quaternion::makeFromYawPitchRoll( float3 )` 과 같은 배치다.
      */
@@ -64,11 +64,14 @@ namespace sw
         /** @brief 회전 필드를 읽습니다(도 단위 "피치 요 롤"). 필수입니다. */
         quaternion readRotation( const XMLNode& node, const utf8* pName );
 
-        /** @brief 선택 필드를 읽습니다. 없으면 @p absentValue 이고, 있는데 읽지 못하면 오류입니다. */
-        float32            readOptionalFloat( const XMLNode& node, const utf8* pName, float32 absentValue );
-        int32              readOptionalInt( const XMLNode& node, const utf8* pName, int32 absentValue );
-        [[nodiscard]] bool readOptionalBool( const XMLNode& node, const utf8* pName, bool bAbsentValue );
-        float3             readOptionalFloat3( const XMLNode& node, const utf8* pName, const float3& absentValue );
+        /**
+         * @brief 선택 필드를 읽어 @p inoutValue 에 넣습니다. 없으면 그대로 두고(정의의 초기값), 있는데 읽지 못하면 오류입니다(값은 그대로).
+         * @details 없을 때의 값을 인자로 받지 않는다 — 기본값의 원본은 정의 구조체의 초기값 하나다(데이터 주도 계획 7.4).
+         */
+        void readOptionalFloat( const XMLNode& node, const utf8* pName, float32& inoutValue );
+        void readOptionalInt( const XMLNode& node, const utf8* pName, int32& inoutValue );
+        void readOptionalBool( const XMLNode& node, const utf8* pName, bool& inoutValue );
+        void readOptionalFloat3( const XMLNode& node, const utf8* pName, float3& inoutValue );
         /** @brief 이름 필드를 읽습니다. @p bRequired 인데 비어 있으면 오류입니다. */
         hashed_string readName( const XMLNode& node, const utf8* pName, bool bRequired );
         /** @brief 공백이나 쉼표로 나눈 이름 목록 필드를 읽습니다(비우고 채웁니다). */

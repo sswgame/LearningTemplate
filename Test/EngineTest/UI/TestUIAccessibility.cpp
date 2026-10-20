@@ -7,6 +7,7 @@
 
 #include "Engine/Audio/AudioEngineState.h"
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Text/FontService.h"
 #include "Engine/Text/TextLayout.h"
@@ -25,6 +26,7 @@
 
 #include "GameFramework/Base/UI/Dialogue/DialogueRunnerComponent.h"
 
+#include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
 
 // UIAccessibilityTest — 글자 크기 하한(gv_uiTextScale) · 글자 배율 2 · 배율 1.5 에서 엔진 옵션 메뉴가 넘치지 않음 · 자막(UISubtitleService: 설정 · 읽기 시간 · 둘까지 쌓기 · 대화 러너).
@@ -86,6 +88,7 @@ namespace
             catalog._defaultFamily = "Latin";
             sw::test::FakeFontServiceFixture::addFamily( catalog, "Latin", "test/fonts/latin.ttf" );
             _bReady = _input.initialize() && _fonts.initialize( catalog ) && _ui.initialize( _input, _fonts._fontService.get() );
+            _ui.setEngineDocuments( sw::UIEngineDocuments::makeFromDefaultAssets( ::test::getEngineDefaultAssets() ) );
         }
 
         ~UIAccessibilityFixture()
@@ -151,7 +154,8 @@ namespace
             sw::test::FakeFontServiceFixture::addFamily( catalog, "Latin", "test/fonts/latin.ttf" );
             _settings.initialize( sw::UserSettingsTargets{} );
             _bReady = _settings.loadSchemaFromXMLText( kOptionsSchemaXML, "test.settings.xml" ) && _input.initialize() && _fonts.initialize( catalog ) &&
-                      _ui.initialize( _input, _fonts._fontService.get(), "engine/input/ui.input.xml" );
+                      _ui.initialize( _input, _fonts._fontService.get(), ::test::getEngineDefaultAssets()._uiInputMap.c_str() );
+            _ui.setEngineDocuments( sw::UIEngineDocuments::makeFromDefaultAssets( ::test::getEngineDefaultAssets() ) );
             _settings.reapplyAll();
             _ui.setUserSettings( &_settings );
             _viewport._physicalSize = sw::float2{ physicalWidth, physicalHeight };
@@ -312,7 +316,7 @@ SW_TEST_CASE( UIAccessibilityTest, OptionsMenuFitsAtDoubleTextScale )
             }
         }
 
-        sw::UIScreen* pPause = fixture._ui.findScreen( fixture._ui.openScreen( "engine/ui/pause.ui.xml" ) );
+        sw::UIScreen* pPause = fixture._ui.findScreen( fixture._ui.openScreen( ::test::getEngineDefaultAssets()._uiPauseMenu.c_str() ) );
         SW_ASSERT_NOT_NULL( pPause );
         fixture.runFrames( 1 );
         const sw::Widget* pPauseWindow = pPause->getTree().findWidgetByName( "Window" );

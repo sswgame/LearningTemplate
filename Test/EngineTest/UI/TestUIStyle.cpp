@@ -4,6 +4,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Reflection/EnumName.h"
@@ -23,6 +24,7 @@
 
 #include "EngineTest/UI/UIScopedVariable.h"
 
+#include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
 
 // UIStyleTest — 스타일 시트(*.uistyle.xml): 선택자 · 특정도 · 상태 · 자손 결합자 · 상속 · 변수 · 무효화 종류 · 나눠 쓰기 · 테마(고대비 · 사용자 설정).
@@ -591,11 +593,11 @@ SW_TEST_CASE( UIStyleTest, HighContrastThemeLoads )
     };
     UIStyleFixture     fixture;
     sw::UIThemeCatalog catalog{};
-    SW_ASSERT_TRUE( catalog.loadFromResource( "engine/ui/uithemes.xml" ) );
+    SW_ASSERT_TRUE( catalog.loadFromResource( ::test::getEngineDefaultAssets()._uiThemes.c_str() ) );
     SW_ASSERT_NOT_NULL( catalog.findTheme( "highcontrast" ) );
     fixture._ui.setThemeCatalog( catalog );
     SW_EXPECT_TRUE( fixture._ui.setTheme( "highcontrast" ) );
-    sw::UIScreen* pScreen = fixture._ui.findScreen( fixture._ui.openScreen( "engine/ui/pause.ui.xml" ) );
+    sw::UIScreen* pScreen = fixture._ui.findScreen( fixture._ui.openScreen( ::test::getEngineDefaultAssets()._uiPauseMenu.c_str() ) );
     SW_ASSERT_NOT_NULL( pScreen );
     Util::runFrame( fixture._input, fixture._ui );
 
@@ -630,7 +632,7 @@ SW_TEST_CASE( UIStyleTest, ThemeFollowsUserSetting )
     SW_ASSERT_NOT_NULL( pSetting );
     const sw::string   previous = pSetting->getValueAsString();
     sw::UIThemeCatalog catalog{};
-    SW_ASSERT_TRUE( catalog.loadFromResource( "engine/ui/uithemes.xml" ) );
+    SW_ASSERT_TRUE( catalog.loadFromResource( ::test::getEngineDefaultAssets()._uiThemes.c_str() ) );
     {
         SW_EXPECT_TRUE( pSetting->setValueAsString( "highcontrast" ) );
         UIStyleFixture fixture;

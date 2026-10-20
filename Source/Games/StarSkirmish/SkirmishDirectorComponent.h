@@ -188,6 +188,13 @@ namespace sw
         hashed_string _productionUnitID;
         PROPERTY( Category = "AI Units", DisplayName = "Army", Tooltip = "Unit the AI trains and attacks with" )
         hashed_string _armyUnitID;
+        // ---- 컴퓨터 상대의 성향 — 셋 다 씬 데이터에 적는다(적지 않으면 판을 열지 않는다) ----
+        PROPERTY( Category = "AI Styles", DisplayName = "Rush AI", Tooltip = "Player 0 when both players are AI: few workers, early small attacks" )
+        SkirmishAIStyle _rushAI;
+        PROPERTY( Category = "AI Styles", DisplayName = "Macro AI", Tooltip = "Player 1 when both players are AI: more workers and production, later big attacks" )
+        SkirmishAIStyle _macroAI;
+        PROPERTY( Category = "AI Styles", DisplayName = "Opponent AI", Tooltip = "The computer player against a human" )
+        SkirmishAIStyle _opponentAI;
         PROPERTY( Category = "Look", DisplayName = "Player 0 Color", Tooltip = "Tint of player 0's units (multiplies the kit's white body)" )
         float4 _playerZeroColor;
         PROPERTY( Category = "Look", DisplayName = "Player 1 Color" )

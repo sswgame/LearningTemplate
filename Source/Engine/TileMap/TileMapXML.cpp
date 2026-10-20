@@ -17,19 +17,19 @@ namespace sw
         struct TileMapXMLInternal
         {
             /**
-             * @brief 0~255 값(높이, 아틀라스, 색)을 읽습니다. 범위를 넘으면 0 이나 255 로 제한하고 경고합니다.
-             * @details 그대로 잘라 넣으면 색 "300" 이 44 가 되고 "-1" 이 255 가 된다(유니티의 `Color32` 는 제한한다).
+             * @brief 0~255 값(높이, 아틀라스, 색)을 읽습니다. 없으면 @p inoutValue 를 둡니다(타일 비주얼의 초기값).
+             * @details 범위 밖 값은 자르지 않고 오류다 — 잘라 넣으면 색 "300" 이 44 가, "-1" 이 255 가 되고, 255 로 제한해도 데이터의 실수가 다른 색으로 조용히 돈다.
              */
-            static uint8 readByteAttribute( const XMLNode& node, const utf8* pName, int32 fallback )
+            [[nodiscard]] static bool readByteAttribute( const XMLNode& node, const utf8* pName, uint8& inoutValue )
             {
-                const int32 value = node.getAttributeInt( pName, fallback );
-                if ( value < 0 || value > 255 )
-                {
-                    SW_LOG_WARNING( "Tile attribute '%#'=%# is outside 0..255 - clamped", pName, value );
-                    return static_cast<uint8>( value < 0 ? 0 : 255 );
-                }
-                return static_cast<uint8>( value );
+                int32 value = inoutValue;
+                if ( node.readOptionalAttributeInRange( pName, 0, kMaxByte, value ) == false )
+                    return false;
+                inoutValue = static_cast<uint8>( value );
+                return true;
             }
+
+            static constexpr int32 kMaxByte = 255; ///< 높이 · 아틀라스 · 색 칸이 uint8 이다
 
             /** @brief 테이블이 레이어 값 순서인지, 본문으로 저장하는 레이어가 하나뿐인지 확인합니다. */
             static constexpr bool isFlagLayerTableValid()
@@ -45,19 +45,23 @@ namespace sw
                 return textLayerCount <= 1;
             }
 
-            /** @brief `<t>` 하나에서 레이어 값을 읽습니다. 본문 레이어는 "0" 으로 시작하면 0 이고, 없으면 기본값입니다. */
-            static uint8 readFlag( const XMLNode& tileNode, const TileFlagLayerInfo& info )
+            /** @brief `<t>` 하나에서 레이어 값을 읽습니다. 본문 레이어는 "0" 으로 시작하면 0 이고, 없으면 레이어 표의 기본값입니다. 깨진 숫자는 false 입니다. */
+            [[nodiscard]] static bool readFlag( const XMLNode& tileNode, const TileFlagLayerInfo& info, uint8& outFlag )
             {
+                outFlag = info._defaultValue;
                 if ( info._pXMLAttribute == nullptr )
                 {
                     const utf8* pText = tileNode.getText();
-                    if ( pText == nullptr || pText[0] == '\0' )
-                        return info._defaultValue;
-                    return pText[0] != '0' ? 1 : 0;
+                    if ( pText != nullptr && pText[0] != '\0' )
+                        outFlag = pText[0] != '0' ? 1 : 0;
+                    return true;
                 }
-                if ( tileNode.findAttribute( info._pXMLAttribute ) == nullptr )
-                    return info._defaultValue;
-                return tileNode.getAttributeInt( info._pXMLAttribute, 0 ) != 0 ? 1 : 0;
+                std::optional<int32> value;
+                if ( tileNode.readOptionalAttribute( info._pXMLAttribute, value ) == false )
+                    return false;
+                if ( value.has_value() )
+                    outFlag = *value != 0 ? 1 : 0;
+                return true;
             }
         };
 
@@ -100,22 +104,27 @@ namespace sw
             return false;
         }
 
+        // 크기는 필수이고 1 이상이다 — 빠지거나 깨진 크기를 다른 크기(옛 8x8)로 바꿔 읽지 않는다.
         root.takeChildText( "name", _name );
-        _width  = root.getChildInt( "width", 0 );
-        _height = root.getChildInt( "height", 0 );
+        const std::optional<int32> width      = root.readRequiredChild<int32>( "width" );
+        const std::optional<int32> height     = root.readRequiredChild<int32>( "height" );
+        const bool                 bValidSize = width.has_value() && height.has_value() && *width > 0 && *height > 0;
+        if ( bValidSize == false )
+        {
+            SW_LOG_ERROR( "<TileMap> needs <width> and <height> of at least 1" );
+            *this = {};
+            return false;
+        }
+        _width  = *width;
+        _height = *height;
         root.takeChildText( "scene", _scenePath );
         root.takeChildText( "role", _role );
-        XMLNode spawn = root.findChild( "spawn" );
+        bool    bValid = true;
+        XMLNode spawn  = root.findChild( "spawn" );
         if ( spawn.isValid() )
         {
-            _spawnX = spawn.getAttributeInt( "x", _spawnX );
-            _spawnY = spawn.getAttributeInt( "y", _spawnY );
-        }
-
-        if ( _width <= 0 || _height <= 0 )
-        {
-            _width  = 8;
-            _height = 8;
+            bValid = spawn.readOptionalAttributeInRange( "x", 0, _width - 1, _spawnX ) && bValid;
+            bValid = spawn.readOptionalAttributeInRange( "y", 0, _height - 1, _spawnY ) && bValid;
         }
 
         // **파일이 말한 크기를 그대로 잡지 않는다.** 바로 아래에서 `_width x _height` 셀짜리
@@ -144,25 +153,28 @@ namespace sw
                 const size_t elementIndex = static_cast<size_t>( index );
                 for ( const TileFlagLayerInfo& info : kArrTileFlagLayerInfo )
                 {
-                    getFlagLayer( info._layer )[elementIndex] = TileMapXMLInternal::readFlag( tileNode, info );
+                    bValid = TileMapXMLInternal::readFlag( tileNode, info, getFlagLayer( info._layer )[elementIndex] ) && bValid;
                 }
 
-                // 높이와 틴트가 없는 맵은 레이어 값으로 비주얼을 만든다.
+                // 높이와 틴트가 없는 맵은 레이어 값으로 비주얼을 만든다(그 타일의 데이터에서 온 값).
                 Visual tileVisual{};
-                if ( tileNode.findAttribute( "h" ) != nullptr )
-                    tileVisual._height = TileMapXMLInternal::readByteAttribute( tileNode, "h", 0 );
-                else
-                    tileVisual._height = listEncounter[elementIndex] != 0 ? 2 : ( listWalkable[elementIndex] != 0 ? 1 : 0 );
-
-                if ( tileNode.findAttribute( "atlas" ) != nullptr )
-                    tileVisual._atlasID = TileMapXMLInternal::readByteAttribute( tileNode, "atlas", 0 );
+                tileVisual._height = listEncounter[elementIndex] != 0 ? 2 : ( listWalkable[elementIndex] != 0 ? 1 : 0 );
+                bValid             = TileMapXMLInternal::readByteAttribute( tileNode, "h", tileVisual._height ) && bValid;
+                bValid             = TileMapXMLInternal::readByteAttribute( tileNode, "atlas", tileVisual._atlasID ) && bValid;
 
                 const bool bHasTint = tileNode.findAttribute( "tr" ) != nullptr || tileNode.findAttribute( "tg" ) != nullptr || tileNode.findAttribute( "tb" ) != nullptr;
                 if ( bHasTint )
                 {
-                    tileVisual._tintR = TileMapXMLInternal::readByteAttribute( tileNode, "tr", 255 );
-                    tileVisual._tintG = TileMapXMLInternal::readByteAttribute( tileNode, "tg", 255 );
-                    tileVisual._tintB = TileMapXMLInternal::readByteAttribute( tileNode, "tb", 255 );
+                    // 틴트는 세 성분을 함께 적는다 — 빠진 성분을 어떤 값으로도 메우지 않는다.
+                    const bool bFullTint = tileNode.findAttribute( "tr" ) != nullptr && tileNode.findAttribute( "tg" ) != nullptr && tileNode.findAttribute( "tb" ) != nullptr;
+                    if ( bFullTint == false )
+                    {
+                        SW_LOG_ERROR( "TileMap tile %# needs all of tr, tg and tb", index );
+                        bValid = false;
+                    }
+                    bValid = TileMapXMLInternal::readByteAttribute( tileNode, "tr", tileVisual._tintR ) && bValid;
+                    bValid = TileMapXMLInternal::readByteAttribute( tileNode, "tg", tileVisual._tintG ) && bValid;
+                    bValid = TileMapXMLInternal::readByteAttribute( tileNode, "tb", tileVisual._tintB ) && bValid;
                 }
                 else if ( listEncounter[elementIndex] != 0 )
                 {
@@ -191,14 +203,25 @@ namespace sw
         {
             for ( XMLNode warpNode = warps.findChild( "warp" ); warpNode; warpNode = warpNode.findNextSibling( "warp" ) )
             {
-                Warp warp{};
-                warp._tileX      = warpNode.getAttributeInt( "x", 0 );
-                warp._tileY      = warpNode.getAttributeInt( "y", 0 );
+                // 워프의 자리와 도착 자리는 필수다 — 빠진 좌표를 (0, 0) 으로 두지 않는다.
+                Warp                       warp{};
+                const std::optional<int32> tileX       = warpNode.readRequiredAttribute<int32>( "x" );
+                const std::optional<int32> tileY       = warpNode.readRequiredAttribute<int32>( "y" );
+                const std::optional<int32> targetTileX = warpNode.readRequiredAttribute<int32>( "tx" );
+                const std::optional<int32> targetTileY = warpNode.readRequiredAttribute<int32>( "ty" );
+                const bool                 bComplete   = tileX.has_value() && tileY.has_value() && targetTileX.has_value() && targetTileY.has_value();
+                if ( bComplete == false )
+                {
+                    bValid = false;
+                    continue;
+                }
+                warp._tileX      = *tileX;
+                warp._tileY      = *tileY;
                 const utf8* pMap = warpNode.findAttribute( "map" );
                 if ( pMap != nullptr )
                     warp._targetMap = pMap;
-                warp._targetTileX = warpNode.getAttributeInt( "tx", 0 );
-                warp._targetTileY = warpNode.getAttributeInt( "ty", 0 );
+                warp._targetTileX = *targetTileX;
+                warp._targetTileY = *targetTileY;
                 const utf8* pPair = warpNode.findAttribute( "pair" );
                 if ( pPair != nullptr )
                     warp._pairID = pPair;
@@ -261,6 +284,12 @@ namespace sw
             }
         }
 
+        if ( bValid == false )
+        {
+            SW_LOG_ERROR( "TileMap '%#' has invalid attribute values (listed above)", _name );
+            *this = {};
+            return false;
+        }
         SW_LOG_INFO( "Loaded '%#' (%#×%#) scene=%# role=%#", _name, _width, _height, _scenePath, _role );
         return true;
     }

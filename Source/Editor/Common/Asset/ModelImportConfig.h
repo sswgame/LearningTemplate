@@ -14,6 +14,8 @@
 
 namespace sw
 {
+    enum class ConfigReadResult : uint8;
+
     class JSONValue;
 } // namespace sw
 
@@ -91,8 +93,8 @@ namespace sw::editor
         ModelImportConfig();
         ~ModelImportConfig() = default;
 
-        /** @brief 파일에서 설정을 읽습니다. */
-        [[nodiscard]] bool loadFromFile( string_view configPath );
+        /** @brief 파일에서 설정을 읽습니다. 파일이 없으면 `Missing`(규칙 없음 — 정상), 있는데 읽지 못하면 오류를 남기고 `Invalid` 입니다. */
+        [[nodiscard]] ConfigReadResult loadFromFile( string_view configPath );
 
         /** @brief JSON 문자열에서 설정을 읽습니다. 모르는 `recenter` 값, 숫자 세 개가 아닌 `translation`, 객체가 아닌 규칙은 오류입니다. */
         [[nodiscard]] bool loadFromJSONString( string_view jsonString );

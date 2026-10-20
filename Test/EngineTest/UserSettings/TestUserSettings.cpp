@@ -6,6 +6,7 @@
 
 #include "Engine/Audio/NullAudioBackend.h"
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Input/Map/InputMap.h"
@@ -14,6 +15,7 @@
 #include "Engine/UserSettings/HardwareProbe.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
+#include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
 
 // 사용자 설정(옵션 메뉴 백엔드) — 스키마 검사 · 핸들러 등록부 · 품질 프리셋 · 사용자 파일 · 적용/되돌리기 · 확인 카운트다운 · 키 바인딩 · 언어 · 접근성.
@@ -779,13 +781,13 @@ SW_TEST_CASE( UserSettingsTest, ShippedGameKeyBindingsNameRealInputMapActions )
         sw::UserSettingsManager settings;
         sw::UserSettingsTargets targets;
         settings.initialize( targets );
-        SW_ASSERT_TRUE_MSG( settings.loadSchema( "engine/settings/engine.settings.xml" ), game._pSchema );
+        SW_ASSERT_TRUE_MSG( settings.loadSchema( ::test::getEngineDefaultAssets()._userSettingsSchema.c_str() ), game._pSchema );
         SW_ASSERT_TRUE_MSG( settings.loadSchema( game._pSchema ), game._pSchema );
         sw::InputMap inputMap;
         SW_ASSERT_TRUE_MSG( inputMap.loadFromResource( game._pInputMap ), game._pInputMap );
         // 엔진 스키마의 키 바인딩(일시정지 메뉴 키 등)은 런타임 UI 맵의 액션이다(`UISystem` 이 키 바인딩 대상으로 더한다).
         sw::InputMap uiInputMap;
-        SW_ASSERT_TRUE( uiInputMap.loadFromResource( "engine/input/ui.input.xml" ) );
+        SW_ASSERT_TRUE( uiInputMap.loadFromResource( ::test::getEngineDefaultAssets()._uiInputMap.c_str() ) );
 
         sw::vector<const sw::UserSettingDef*> listSetting;
         settings.collectSettings( "controls", listSetting );
@@ -815,7 +817,7 @@ SW_TEST_CASE( UserSettingsTest, PseudoLocaleIsSelectableThroughTheLanguageSettin
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( folder, "p.strings.json" ), R"({ "culture": "en", "entries": { "MENU_START": { "source": "Start" } } })" ) );
 
     sw::LocalizationManager localization;
-    SW_ASSERT_TRUE( localization.loadCultureTable( "engine/localization/engine.cultures.json" ) );
+    SW_ASSERT_TRUE( localization.loadCultureTable( ::test::getEngineDefaultAssets()._cultureTable.c_str() ) );
     SW_ASSERT_TRUE( localization.mountProject( projectPath, sw::LocalizationScope::Game ) );
 
     sw::UserSettingsManager settings;
@@ -856,7 +858,7 @@ SW_TEST_CASE( UserSettingsTest, AccessibilitySettingsReachGlobalVariables )
     sw::UserSettingsTargets    targets;
     targets._pGlobalVariableManager = &variables;
     settings.initialize( targets );
-    SW_ASSERT_TRUE( settings.loadSchema( "engine/settings/engine.settings.xml" ) );
+    SW_ASSERT_TRUE( settings.loadSchema( ::test::getEngineDefaultAssets()._userSettingsSchema.c_str() ) );
     settings.reapplyAll();
 
     SW_EXPECT_TRUE( settings.setPendingValue( "accessibility.colorVision", "deuteranopia" ) == sw::UserSettingSetResult::Accepted );
@@ -894,7 +896,7 @@ SW_TEST_CASE( UserSettingsTest, DisplaySettingsQueueARequestForTheHost )
 {
     sw::UserSettingsManager settings;
     settings.initialize( sw::UserSettingsTargets{} );
-    SW_ASSERT_TRUE( settings.loadSchema( "engine/settings/engine.settings.xml" ) );
+    SW_ASSERT_TRUE( settings.loadSchema( ::test::getEngineDefaultAssets()._userSettingsSchema.c_str() ) );
     settings.reapplyAll();
 
     sw::DisplaySettingsRequest request;
@@ -926,7 +928,7 @@ SW_TEST_CASE( UserSettingsTest, GameOverlayAndGameDefaults )
     sw::UserSettingsTargets targets;
     targets._pGlobalVariableManager = &sw::engine::getSubsystem<sw::GlobalVariableManager>();
     settings.initialize( targets );
-    SW_ASSERT_TRUE( settings.loadSchema( "engine/settings/engine.settings.xml" ) );
+    SW_ASSERT_TRUE( settings.loadSchema( ::test::getEngineDefaultAssets()._userSettingsSchema.c_str() ) );
     SW_ASSERT_TRUE( settings.loadSchemaFromXMLText( R"(<UserSettingsSchema version="1">
         <Setting id="gameplay.difficulty" category="gameplay" type="enum" default="normal">
             <Option value="easy"/><Option value="normal"/><Option value="hard"/>

@@ -105,9 +105,13 @@ namespace sw
                 bool               bMinutes = false;
                 bool               bHours   = false;
                 bool               bToHour  = false;
-                (void)readNonNegative( step, "minutes", minutes, bMinutes, error ); // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
-                (void)readNonNegative( step, "hours", hours, bHours, error );       // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
-                (void)readNonNegative( step, "toHour", toHour, bToHour, error );    // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
+                const bool         bRead    = readNonNegative( step, "minutes", minutes, bMinutes, error ) && readNonNegative( step, "hours", hours, bHours, error ) &&
+                                   readNonNegative( step, "toHour", toHour, bToHour, error );
+                if ( bRead == false )
+                {
+                    runner.recordFailure( step, error ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
+                    return true;
+                }
                 vector<SessionStateComponent*> listState;
                 collectSessionStates( pManager, listState );
                 for ( SessionStateComponent* pState : listState )

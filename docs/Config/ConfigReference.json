@@ -315,6 +315,195 @@
        "description": "일시정지 메뉴 문서 — 팩 설정이 `_bUIPauseMenu` 를 켤 때 `UI.Pause` 가 연다(`PauseMenuScreen`)"
       },
       {
+       "name": "_uiOptionsRowBool",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "옵션 메뉴 행 견본: 불리언 설정(체크 상자)"
+      },
+      {
+       "name": "_uiOptionsRowInt",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "옵션 메뉴 행 견본: 정수 설정"
+      },
+      {
+       "name": "_uiOptionsRowFloat",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "옵션 메뉴 행 견본: 실수 설정"
+      },
+      {
+       "name": "_uiOptionsRowEnum",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "옵션 메뉴 행 견본: 고르기 설정(마우스 · 키보드 — 콤보 상자)"
+      },
+      {
+       "name": "_uiOptionsRowEnumPad",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "옵션 메뉴 행 견본: 고르기 설정(패드 탐색 — 좌우로 넘기기)"
+      },
+      {
+       "name": "_uiOptionsRowKeyBinding",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "옵션 메뉴 행 견본: 키 바인딩 설정(단추)"
+      },
+      {
+       "name": "_uiOptionsRowString",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "옵션 메뉴 행 견본: 글 설정"
+      },
+      {
+       "name": "_uiSettingsConfirm",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "바꾼 설정을 되돌리기 전 카운트다운 확인 창"
+      },
+      {
+       "name": "_uiSettingsUnsaved",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "저장하지 않은 설정을 두고 닫을 때의 확인 창"
+      },
+      {
+       "name": "_uiKeyRebind",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "키 바인딩을 받는 창"
+      },
+      {
+       "name": "_uiNotifications",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "알림 화면(`UINotificationService`)"
+      },
+      {
+       "name": "_uiNotificationEntry",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "알림 한 줄 견본"
+      },
+      {
+       "name": "_uiSubtitles",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "자막 화면(`UISubtitleService`)"
+      },
+      {
+       "name": "_uiDebugHUD",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "디버그 HUD 설정 창(`DebugHUD`, 개발 빌드)"
+      },
+      {
+       "name": "_debugHUDSettingsSchema",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "디버그 HUD 설정 스키마(`DebugHUD`, 개발 빌드)"
+      },
+      {
+       "name": "_uiResolutionPresets",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "UI 미리보기 해상도 프리셋 표(`UIResolutionPresetTable`)"
+      },
+      {
+       "name": "_netEmulationPresets",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "네트워크 에뮬레이션 프리셋 표(`NetEmulationPresetTable`)"
+      },
+      {
+       "name": "_tileMapMaterial",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "타일맵 렌더러(`TileMapRendererComponent`) — 픽셀 아트 스프라이트 머티리얼"
+      },
+      {
+       "name": "_foliageMaterial",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "풀 · 나무 층(`FoliageComponent`)"
+      },
+      {
+       "name": "_terrainMaterial",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "지형(`TerrainComponent`)"
+      },
+      {
+       "name": "_waterMaterial",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "물(`WaterBodyComponent`)"
+      },
+      {
        "name": "_defaultForwardPipeline",
        "type": "DataPath",
        "default": "",

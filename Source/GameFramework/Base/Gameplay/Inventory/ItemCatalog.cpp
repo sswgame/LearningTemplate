@@ -44,10 +44,11 @@ namespace sw
                 }
                 if ( pSet != nullptr )
                 {
-                    outCondition._setID      = hashed_string( pSet );
-                    outCondition._pieceCount = node.getAttributeInt( "pieces", 0 );
-                    outCondition._kind       = outCondition._pieceCount > 0 ? EquipConditionKind::SetPieces : EquipConditionKind::SetComplete;
-                    return outCondition._setID.empty() == false;
+                    // `pieces` 를 적지 않으면(초기값 0) 세트를 다 갖춘 조건이다.
+                    outCondition._setID     = hashed_string( pSet );
+                    const bool bPiecesValid = GameDataXML::readOptionalNumber( node, "pieces", sourceName, 0, MathUtil::kMaxInt32, outCondition._pieceCount );
+                    outCondition._kind      = outCondition._pieceCount > 0 ? EquipConditionKind::SetPieces : EquipConditionKind::SetComplete;
+                    return bPiecesValid && outCondition._setID.empty() == false;
                 }
                 if ( pEquippedTag != nullptr || pCharacterTag != nullptr )
                 {
@@ -112,13 +113,18 @@ namespace sw
             def._equipSlot         = pSlot != nullptr ? hashed_string( pSlot ) : hashed_string{};
             def._useEffect         = pUseEffect != nullptr ? hashed_string( pUseEffect ) : hashed_string{};
             def._visualID          = pVisual != nullptr ? hashed_string( pVisual ) : hashed_string{};
+            // 적지 않은 칸은 ItemDef 의 초기값이다. 깨진 값 · 범위 밖 값은 그 아이템을 넣지 않는 오류다(자르지 않는다).
+            bool bValid = true;
             if ( pPolicy != nullptr && parseEquipBreakPolicy( string_view( pPolicy ), def._breakPolicy ) == false )
-                SW_LOG_WARNING( "%#: item '%#' has unknown breakPolicy '%#'", sourceName, pID, pPolicy );
-            def._weight        = MathUtil::max( 0.0f, node.getAttributeFloat( "weight", def._weight ) );
-            def._maxDurability = MathUtil::max( 0.0f, node.getAttributeFloat( "durability", def._maxDurability ) );
-            def._maxStack      = MathUtil::max( 1, node.getAttributeInt( "maxStack", def._maxStack ) );
-            def._value         = MathUtil::max( 0, node.getAttributeInt( "value", def._value ) );
-            def._rarity        = node.getAttributeInt( "rarity", def._rarity );
+            {
+                SW_LOG_ERROR( "%#: item '%#' has unknown breakPolicy '%#'", sourceName, pID, pPolicy );
+                bValid = false;
+            }
+            bValid = GameDataXML::readOptionalNumber( node, "weight", sourceName, 0.0f, MathUtil::kMaxFloat, def._weight ) && bValid;
+            bValid = GameDataXML::readOptionalNumber( node, "durability", sourceName, 0.0f, MathUtil::kMaxFloat, def._maxDurability ) && bValid;
+            bValid = GameDataXML::readOptionalNumber( node, "maxStack", sourceName, 1, MathUtil::kMaxInt32, def._maxStack ) && bValid;
+            bValid = GameDataXML::readOptionalNumber( node, "value", sourceName, 0, MathUtil::kMaxInt32, def._value ) && bValid;
+            bValid = GameDataXML::readOptionalNumber( node, "rarity", sourceName, MathUtil::kMinInt32, MathUtil::kMaxInt32, def._rarity ) && bValid;
             StringUtil::forEachToken( node.getAttributeText( "tags" ), ",; ", [&]( string_view token )
             {
                 def._listTag.push_back( hashed_string( token ) );
@@ -136,6 +142,13 @@ namespace sw
                 EquipCondition condition;
                 if ( ItemCatalogInternal::readRequires( requiresNode, condition, sourceName, pID ) )
                     def._listEquipCondition.push_back( condition );
+                else
+                    bValid = false;
+            }
+            if ( bValid == false )
+            {
+                SW_LOG_ERROR( "%#: item '%#' has invalid fields - skipped", sourceName, pID );
+                continue;
             }
             add( def );
             ++loadedCount;

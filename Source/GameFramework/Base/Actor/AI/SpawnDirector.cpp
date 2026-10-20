@@ -12,6 +12,8 @@
 
 namespace sw
 {
+    SW_LOG_CALLER( "SpawnDirector" );
+
     bool SpawnEntryDef::hasAnyTag( const vector<hashed_string>& listTag ) const
     {
         for ( const hashed_string& tag : _listTag )
@@ -39,26 +41,40 @@ namespace sw
     {
         _catalog.clear();
         _curve._listKey.clear();
-        _budgetPerMinute  = MathUtil::max( 0.0f, root.getAttributeFloat( "budgetPerMinute", _budgetPerMinute ) );
-        _maxBudget        = MathUtil::max( 0.0f, root.getAttributeFloat( "maxBudget", _maxBudget ) );
-        _startBudget      = MathUtil::clamp( root.getAttributeFloat( "startBudget", _startBudget ), 0.0f, _maxBudget );
-        _bRefundOnDespawn = root.getAttributeBool( "refund", false ) ? SW_TRUE : SW_FALSE;
+        // 적지 않은 칸은 생성자의 초기값이다. 깨진 값 · 범위 밖 값은 표 전체를 읽지 않는 오류다(자르지 않는다).
+        constexpr float32 kAnyFloat = MathUtil::kMaxFloat;
+        bool              bValid    = GameDataXML::readOptionalNumber( root, "budgetPerMinute", sourceName, 0.0f, kAnyFloat, _budgetPerMinute );
+        bValid                      = GameDataXML::readOptionalNumber( root, "maxBudget", sourceName, 0.0f, kAnyFloat, _maxBudget ) && bValid;
+        bValid                      = GameDataXML::readOptionalNumber( root, "startBudget", sourceName, 0.0f, _maxBudget, _startBudget ) && bValid;
+        bValid                      = GameDataXML::readOptionalFlag( root, "refund", _bRefundOnDespawn ) && bValid;
         for ( XMLNode node = root.findChild( "Entry" ); node; node = node.findNextSibling( "Entry" ) )
         {
             const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
             if ( pID == nullptr )
+            {
+                bValid = false;
                 continue;
+            }
             SpawnEntryDef entry;
-            entry._id      = hashed_string( pID );
-            entry._cost    = MathUtil::max( 0.0f, node.getAttributeFloat( "cost", entry._cost ) );
-            entry._weight  = MathUtil::max( 0.0f, node.getAttributeFloat( "weight", entry._weight ) );
-            entry._minTime = MathUtil::max( 0.0f, node.getAttributeFloat( "minTime", entry._minTime ) );
-            entry._max     = node.getAttributeInt( "max", entry._max );
+            entry._id        = hashed_string( pID );
+            bool bEntryValid = GameDataXML::readOptionalNumber( node, "cost", sourceName, 0.0f, kAnyFloat, entry._cost );
+            bEntryValid      = GameDataXML::readOptionalNumber( node, "weight", sourceName, 0.0f, kAnyFloat, entry._weight ) && bEntryValid;
+            bEntryValid      = GameDataXML::readOptionalNumber( node, "minTime", sourceName, 0.0f, kAnyFloat, entry._minTime ) && bEntryValid;
+            bEntryValid      = GameDataXML::readOptionalNumber( node, "max", sourceName, -1, MathUtil::kMaxInt32, entry._max ) && bEntryValid;
             StringUtil::forEachToken( node.getAttributeText( "tags" ), ",; ", [&]( string_view token )
             { entry._listTag.push_back( hashed_string( token ) ); } );
-            (void)_catalog.add( entry );
+            if ( bEntryValid )
+                (void)_catalog.add( entry );
+            bValid = bEntryValid && bValid;
         }
-        (void)GameDataXML::readFloatCurve( root, "Curve", 0.0f, _curve, sourceName ); // 모르는 이름은 읽기가 이미 경고했고, 키가 없으면 곡선이 대체값을 쓴다
+        // 키가 없으면 곡선이 대체값을 쓴다(곡선의 계약). 모르는 이름 · 깨진 키는 오류다.
+        bValid = GameDataXML::readFloatCurve( root, "Curve", 0.0f, _curve, sourceName ) && bValid;
+        if ( bValid == false )
+        {
+            SW_LOG_ERROR( "%#: spawn table has invalid fields - not loaded", sourceName );
+            _catalog.clear();
+            return 0;
+        }
         return static_cast<uint32>( _catalog.getCount() );
     }
 

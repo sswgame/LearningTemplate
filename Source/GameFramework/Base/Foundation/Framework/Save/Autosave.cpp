@@ -62,19 +62,15 @@ namespace sw
             _directory = pDirectory;
         if ( pPrefix != nullptr )
             _prefix = pPrefix;
-        _interval   = MathUtil::max( 0.0f, root.getAttributeFloat( "interval", _interval ) );
-        _minimumGap = MathUtil::max( 0.0f, root.getAttributeFloat( "minimumGap", _minimumGap ) );
-        _slotCount  = root.getAttributeInt( "slots", _slotCount );
-        if ( _slotCount < 1 || _slotCount > AutosaveInternal::kMaxSlotCount )
-        {
-            SW_LOG_WARNING( "%#: autosave slots %# is outside 1..%# - using 3", sourceName, _slotCount, AutosaveInternal::kMaxSlotCount );
-            _slotCount = 3;
-        }
-        _bOnAreaChange = root.getAttributeBool( "areaChange", _bOnAreaChange != SW_FALSE ) ? SW_TRUE : SW_FALSE;
-        _bOnCheckpoint = root.getAttributeBool( "checkpoint", _bOnCheckpoint != SW_FALSE ) ? SW_TRUE : SW_FALSE;
-        _bOnBeforeBoss = root.getAttributeBool( "beforeBoss", _bOnBeforeBoss != SW_FALSE ) ? SW_TRUE : SW_FALSE;
-        _bOnQuit       = root.getAttributeBool( "quit", _bOnQuit != SW_FALSE ) ? SW_TRUE : SW_FALSE;
-        return true;
+        // 적지 않은 칸은 생성자의 초기값이다. 깨진 값 · 범위 밖 값은 읽기 실패이고 그 칸은 바꾸지 않는다(자르거나 다른 값으로 바꿔 쓰지 않는다).
+        bool bValid = GameDataXML::readOptionalNumber( root, "interval", sourceName, 0.0f, MathUtil::kMaxFloat, _interval );
+        bValid      = GameDataXML::readOptionalNumber( root, "minimumGap", sourceName, 0.0f, MathUtil::kMaxFloat, _minimumGap ) && bValid;
+        bValid      = GameDataXML::readOptionalNumber( root, "slots", sourceName, 1, AutosaveInternal::kMaxSlotCount, _slotCount ) && bValid;
+        bValid      = GameDataXML::readOptionalFlag( root, "areaChange", _bOnAreaChange ) && bValid;
+        bValid      = GameDataXML::readOptionalFlag( root, "checkpoint", _bOnCheckpoint ) && bValid;
+        bValid      = GameDataXML::readOptionalFlag( root, "beforeBoss", _bOnBeforeBoss ) && bValid;
+        bValid      = GameDataXML::readOptionalFlag( root, "quit", _bOnQuit ) && bValid;
+        return bValid;
     }
 
     string AutosaveSettings::makeSlotPath( int32 slot ) const

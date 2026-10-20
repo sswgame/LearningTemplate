@@ -92,6 +92,16 @@ namespace sw
                 return true;
             }
 
+            /** @brief `GameDataXML::readOptionalNumber` 의 몸통입니다. 읽기 · 범위 검사는 `XMLNode` 하나가 하고, 여기서는 어느 파일인지만 덧붙입니다. */
+            template <typename T>
+            [[nodiscard]] static bool readOptionalInRange( const XMLNode& node, const utf8* pAttribute, string_view sourceName, T minValue, T maxValue, T& inoutValue )
+            {
+                if ( node.readOptionalAttributeInRange( pAttribute, minValue, maxValue, inoutValue ) )
+                    return true;
+                SW_LOG_ERROR( "%#: <%#> has an invalid %# (listed above)", sourceName, node.getName(), pAttribute );
+                return false;
+            }
+
             static bool isHandRead( string_view attribute, std::initializer_list<string_view> listHandRead )
             {
                 for ( const string_view handRead : listHandRead )
@@ -167,7 +177,8 @@ namespace sw
         return parseRoot( doc, xmlText, sourceName, pRootName, root ) && pReadRoot( pCall, root, sourceName );
     }
 
-    bool GameDataXML::readFields( const XMLNode& node, void* pInstance, const TypeInfo& typeInfo, string_view sourceName, std::initializer_list<string_view> listHandRead )
+    bool GameDataXML::readFields( const XMLNode& node, void* pInstance, const TypeInfo& typeInfo, string_view sourceName, std::initializer_list<string_view> listHandRead,
+                                  AcceptAttributeFunction pfnHandRead )
     {
         using Internal = GameDataXMLInternal;
         // 오류 줄에 원소 이름과 id 를 함께 적는다(같은 원소가 여럿이면 어느 것인지 알아야 고친다).
@@ -184,7 +195,8 @@ namespace sw
         for ( XMLAttribute attribute = node.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
         {
             const string_view attributeName{ attribute.getName() != nullptr ? attribute.getName() : "" };
-            if ( Internal::isHandRead( attributeName, listHandRead ) )
+            const bool        bHandRead = Internal::isHandRead( attributeName, listHandRead ) || ( pfnHandRead != nullptr && pfnHandRead( attributeName.data() ) );
+            if ( bHandRead )
                 continue;
             const PropertyInfo* pFound = nullptr;
             for ( const PropertyInfo& prop : listProperty )
@@ -317,6 +329,35 @@ namespace sw
         return GameDataXMLInternal::readFloatAttribute( node, pAttribute, sourceName, true, "x y z", outValue, &GameDataXML::parseFloat3 );
     }
 
+    bool GameDataXML::readOptionalNumber( const XMLNode& node, const utf8* pAttribute, string_view sourceName, int32 minValue, int32 maxValue, int32& inoutValue )
+    {
+        return GameDataXMLInternal::readOptionalInRange( node, pAttribute, sourceName, minValue, maxValue, inoutValue );
+    }
+
+    bool GameDataXML::readOptionalNumber( const XMLNode& node, const utf8* pAttribute, string_view sourceName, float32 minValue, float32 maxValue, float32& inoutValue )
+    {
+        return GameDataXMLInternal::readOptionalInRange( node, pAttribute, sourceName, minValue, maxValue, inoutValue );
+    }
+
+    bool GameDataXML::readOptionalBool( const XMLNode& node, const utf8* pAttribute, bool& inoutValue )
+    {
+        std::optional<bool> value;
+        if ( node.readOptionalAttribute( pAttribute, value ) == false )
+            return false;
+        if ( value.has_value() )
+            inoutValue = *value;
+        return true;
+    }
+
+    bool GameDataXML::readOptionalFlag( const XMLNode& node, const utf8* pAttribute, uint8& inoutFlag )
+    {
+        bool bValue = inoutFlag != SW_FALSE;
+        if ( readOptionalBool( node, pAttribute, bValue ) == false )
+            return false;
+        inoutFlag = bValue ? SW_TRUE : SW_FALSE;
+        return true;
+    }
+
     bool GameDataXML::readFloatCurve( const XMLNode& parent, const utf8* pElement, float32 minValue, FloatCurve& outCurve, string_view sourceName )
     {
         outCurve._listKey.clear();
@@ -324,13 +365,27 @@ namespace sw
         if ( curveNode.isValid() == false )
             return true;
 
-        bool bValid = XMLNameCheck::reportUnknownChildren( curveNode, GameDataXMLInternal::kArrCurveChild, sourceName, LogLevel::Warning );
+        bool bValid = XMLNameCheck::reportUnknownChildren( curveNode, GameDataXMLInternal::kArrCurveChild, sourceName );
         for ( XMLNode keyNode = curveNode.findChild( "Key" ); keyNode; keyNode = keyNode.findNextSibling( "Key" ) )
         {
-            bValid = XMLNameCheck::reportUnknownAttributes( keyNode, GameDataXMLInternal::kArrCurveKeyAttribute, sourceName, LogLevel::Warning ) && bValid;
+            bValid = XMLNameCheck::reportUnknownAttributes( keyNode, GameDataXMLInternal::kArrCurveKeyAttribute, sourceName ) && bValid;
+            // 키의 시간과 값은 필수다. 값은 @p minValue 아래면 자르지 않고 오류다.
+            const std::optional<float32> time  = keyNode.readRequiredAttribute<float32>( "time" );
+            const std::optional<float32> value = keyNode.readRequiredAttribute<float32>( "value" );
+            if ( time.has_value() == false || value.has_value() == false )
+            {
+                bValid = false;
+                continue;
+            }
+            if ( *value < minValue )
+            {
+                SW_LOG_ERROR( "%#: <Key time=\"%#\" value=\"%#\"> is below %#", sourceName, *time, *value, minValue );
+                bValid = false;
+                continue;
+            }
             FloatCurveKey key{};
-            key._time                           = keyNode.getAttributeFloat( "time", 0.0f );
-            key._value                          = MathUtil::max( minValue, keyNode.getAttributeFloat( "value", 1.0f ) );
+            key._time                           = *time;
+            key._value                          = *value;
             key._interpolation                  = CurveInterpolation::Linear;
             const string_view interpolationText = keyNode.getAttributeText( "interpolation" );
             if ( interpolationText.empty() == false )
@@ -343,8 +398,9 @@ namespace sw
                     key._interpolation = CurveInterpolation::Cubic;
                 else
                 {
-                    SW_LOG_WARNING( "%#: <Key> has unknown interpolation '%#' - linear is used", sourceName, interpolationText );
+                    SW_LOG_ERROR( "%#: <Key> has unknown interpolation '%#'", sourceName, interpolationText );
                     bValid = false;
+                    continue;
                 }
             }
             outCurve._listKey.push_back( key );

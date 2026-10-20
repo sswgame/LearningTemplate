@@ -67,8 +67,8 @@ namespace sw
 
         // 패리 창은 판정의 유일한 근거다 — 코드가 대신 정한 창을 쓰지 않는다.
         const XMLNode parry = root.findChild( "Parry" );
-        if ( parry )
-            rules._parryJudge.loadFromNode( parry );
+        if ( parry && rules._parryJudge.loadFromNode( parry, sourceName ) == false )
+            bValid = false;
         if ( rules._parryJudge.getWindows().empty() )
         {
             SW_LOG_ERROR( "%#: needs <Parry> with at least one <Window grade=\"..\" early=\"..\" late=\"..\"/>", sourceName );

@@ -95,7 +95,7 @@ namespace sw
     {
         using Internal = DestructionProfileInternal;
         reader.reportUnknownAttributes( root, Internal::kArrRootAttribute );
-        _density           = reader.readOptionalFloat( root, "density", _density );
+        reader.readOptionalFloat( root, "density", _density );
         _physicsMaterial   = reader.readName( root, "physicsMaterial", false );
         uint8 bStrainSeen  = SW_FALSE;
         uint8 bLinkSeen    = SW_FALSE;
@@ -132,30 +132,31 @@ namespace sw
                 if ( Internal::claimElement( child, reader, bLinkSeen ) == false )
                     continue;
                 reader.reportUnknownAttributes( child, Internal::kArrLinkAttribute );
-                _linkStrength    = reader.readOptionalFloat( child, "strength", _linkStrength );
-                _supportStrength = reader.readOptionalFloat( child, "supportStrength", _supportStrength );
+                reader.readOptionalFloat( child, "strength", _linkStrength );
+                reader.readOptionalFloat( child, "supportStrength", _supportStrength );
             }
             else if ( StringUtil::equals( child.getName(), "Impact", true ) )
             {
                 if ( Internal::claimElement( child, reader, bImpactSeen ) == false )
                     continue;
                 reader.reportUnknownAttributes( child, Internal::kArrImpactAttribute );
-                _impulseToStrain = reader.readOptionalFloat( child, "impulseToStrain", _impulseToStrain );
-                _minImpulse      = reader.readOptionalFloat( child, "minImpulse", _minImpulse );
-                _impactRadius    = reader.readOptionalFloat( child, "radius", _impactRadius );
+                reader.readOptionalFloat( child, "impulseToStrain", _impulseToStrain );
+                reader.readOptionalFloat( child, "minImpulse", _minImpulse );
+                reader.readOptionalFloat( child, "radius", _impactRadius );
             }
             else if ( StringUtil::equals( child.getName(), "Debris", true ) )
             {
                 if ( Internal::claimElement( child, reader, bDebrisSeen ) == false )
                     continue;
                 reader.reportUnknownAttributes( child, Internal::kArrDebrisAttribute );
-                _debrisLifetime      = reader.readOptionalFloat( child, "lifetime", _debrisLifetime );
-                const int32 maxBody  = reader.readOptionalInt( child, "maxBodies", static_cast<int32>( _maxDebrisBody ) );
-                _smallDebrisVolume   = reader.readOptionalFloat( child, "smallVolume", _smallDebrisVolume );
-                _fadeTime            = reader.readOptionalFloat( child, "fadeTime", _fadeTime );
-                _sleepRemoveTime     = reader.readOptionalFloat( child, "sleepRemoveTime", _sleepRemoveTime );
-                _keepCollisionVolume = reader.readOptionalFloat( child, "keepCollisionVolume", _keepCollisionVolume );
-                _hullShrink          = reader.readOptionalFloat( child, "hullShrink", _hullShrink );
+                reader.readOptionalFloat( child, "lifetime", _debrisLifetime );
+                int32 maxBody{ static_cast<int32>( _maxDebrisBody ) };
+                reader.readOptionalInt( child, "maxBodies", maxBody );
+                reader.readOptionalFloat( child, "smallVolume", _smallDebrisVolume );
+                reader.readOptionalFloat( child, "fadeTime", _fadeTime );
+                reader.readOptionalFloat( child, "sleepRemoveTime", _sleepRemoveTime );
+                reader.readOptionalFloat( child, "keepCollisionVolume", _keepCollisionVolume );
+                reader.readOptionalFloat( child, "hullShrink", _hullShrink );
                 if ( maxBody < 0 )
                     reader.addError( child, "maxBodies must not be negative" );
                 else
@@ -166,7 +167,7 @@ namespace sw
                 if ( Internal::claimElement( child, reader, bNetworkSeen ) == false )
                     continue;
                 reader.reportUnknownAttributes( child, Internal::kArrNetworkAttribute );
-                _networkPoseRate = reader.readOptionalFloat( child, "poseRate", _networkPoseRate );
+                reader.readOptionalFloat( child, "poseRate", _networkPoseRate );
             }
             else
             {

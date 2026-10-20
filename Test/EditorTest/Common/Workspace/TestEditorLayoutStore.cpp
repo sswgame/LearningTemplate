@@ -48,8 +48,8 @@ SW_TEST_CASE( EditorLayoutStoreTest, SaveLoadListRemoveRoundTrip )
     KeyValueMap loadedVisibility;
     SW_ASSERT_TRUE( EditorLayoutStore::load( folder, "Beta", loadedIni, loadedVisibility ) );
     SW_EXPECT_TRUE( loadedIni == iniText );
-    SW_EXPECT_TRUE( KeyValueFile::getBool( loadedVisibility, "hierarchy", false ) );
-    SW_EXPECT_FALSE( KeyValueFile::getBool( loadedVisibility, "history", true ) );
+    SW_EXPECT_TRUE( KeyValueFile::readRequired<bool>( loadedVisibility, "hierarchy" ) == true );
+    SW_EXPECT_TRUE( KeyValueFile::readRequired<bool>( loadedVisibility, "history" ) == false );
 
     SW_EXPECT_TRUE( EditorLayoutStore::remove( folder, "Beta" ) );
     EditorLayoutStore::collectNames( folder, listName );

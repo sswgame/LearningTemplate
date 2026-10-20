@@ -62,13 +62,13 @@ namespace sw
     /** @brief 동작 하나입니다. */
     struct SW_GF_API AppearanceRuleAction
     {
-        AppearancePlacement      _placement{}; ///< OverrideSocket
-        hashed_string            _target{};    ///< 주인(슬롯 또는 꾸미기 매개변수). 비어 있으면 몸
-        hashed_string            _part{};      ///< SwapMesh, SwapMaterial 에서 쓴다(비어 있으면 주인의 모든 부품)
-        hashed_string            _name{};      ///< 변형, 모프, 영역, 소켓 이름
-        hashed_string            _value{};     ///< 메시나 머티리얼 경로
-        TagID                    _tag{};       ///< HideItemTag
-        float32                  _weight{ 0.0f };
+        AppearancePlacement      _placement{};    ///< OverrideSocket
+        hashed_string            _target{};       ///< 주인(슬롯 또는 꾸미기 매개변수). 비어 있으면 몸
+        hashed_string            _part{};         ///< SwapMesh, SwapMaterial 에서 쓴다(비어 있으면 주인의 모든 부품)
+        hashed_string            _name{};         ///< 변형, 모프, 영역, 소켓 이름
+        hashed_string            _value{};        ///< 메시나 머티리얼 경로
+        TagID                    _tag{};          ///< HideItemTag
+        float32                  _weight{ 1.0f }; ///< ApplyMorph — `weight` 를 적지 않으면 모프를 다 건다
         AppearanceRuleActionKind _kind{ AppearanceRuleActionKind::HideTarget };
 
         /** @brief 숨기기는 여러 번 겹쳐도 결과가 같으므로 충돌하지 않습니다. */

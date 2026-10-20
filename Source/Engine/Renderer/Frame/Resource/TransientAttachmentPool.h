@@ -38,6 +38,8 @@ namespace sw
             RHIDescriptorIndex _srv{ kInvalidDescriptorIndex };
             uint32             _width{ 0 }; ///< 이 첨부의 실제 크기(풀 크기를 나눗수로 나눈 값, 올림)
             uint32             _height{ 0 };
+            RHIFormat          _format{ RHIFormat::Unknown }; ///< 만들 때의 포맷(파이프라인 XML 의 선언)
+            float4             _clearColor{};                 ///< 클리어 색 · 깊이(`_x`) — 파이프라인 XML 의 선언
         };
 
         /** @brief 프레임 크기 하나를 나눗수로 줄인 크기입니다(올림, 최소 1). 나눗수 0 은 1 로 봅니다. */

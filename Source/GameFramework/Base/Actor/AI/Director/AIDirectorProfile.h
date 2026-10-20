@@ -13,6 +13,7 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Utility/FloatCurve.h"
 
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleCondition.h"
@@ -35,54 +36,81 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 긴장도 신호 하나입니다. */
+    /** @brief 긴장도 신호 하나(`<Signal>`)입니다. `kind` 는 손으로 읽습니다(이름 표 `toString`). */
+    REFLECT()
     struct AIDirectorSignalDef
     {
-        hashed_string        _id{};
-        float32              _scale{ 1.0f };
-        float32              _max{ -1.0f }; ///< 이 신호가 더하는 값의 상한. Impulse 는 한 번에, Rate 는 초마다, Level 은 하한으로 더한다. 음수면 없음
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id{};
+        PROPERTY()
+        float32 _scale{ 1.0f };
+        PROPERTY( Tooltip = "Cap of what this signal adds at once (Impulse), per second (Rate) or as a floor (Level); negative is none" )
+        float32              _max{ -1.0f };
         AIDirectorSignalKind _kind{ AIDirectorSignalKind::Impulse };
-        uint8                _bCombat{ SW_FALSE }; ///< 싸움 신호다. 들어오면 "싸움 뒤 지난 시간" 이 0 이 되고 긴장도 감소가 멈춘다
+        PROPERTY( Tooltip = "A combat signal resets the time since combat and stops the decay" )
+        bool _bCombat{ false };
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 기본 긴장도 모델(`AIDirectorIntensityModel`)의 설정입니다. */
+    /** @brief 기본 긴장도 모델(`AIDirectorIntensityModel`)의 설정(`<Intensity>`)입니다. 신호는 `<Signal>` 자식에서 읽습니다. */
+    REFLECT()
     struct AIDirectorIntensityDef
     {
+        REFLECT_BODY();
+
         vector<AIDirectorSignalDef> _listSignal{};
-        float32                     _max{ 1.0f };
-        float32                     _decayPerSecond{ 0.1f }; ///< 긴장도가 초마다 줄어드는 양
-        float32                     _decayDelay{ 3.0f };     ///< 마지막 싸움 신호 뒤 이만큼(s) 지나야 긴장도가 줄기 시작한다
+        PROPERTY( Min = 0.0 )
+        float32 _max{ 1.0f };
+        PROPERTY( Min = 0.0, Tooltip = "Decay per second" )
+        float32 _decayPerSecond{ 0.1f };
+        PROPERTY( Min = 0.0, Tooltip = "Decay starts this long after the last combat signal", Units = s )
+        float32 _decayDelay{ 3.0f };
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 단계에서 나가는 전환 하나입니다. 적은 절이 모두 참이어야 나가며, 적지 않은 절은 늘 참으로 봅니다. */
+    /** @brief 단계에서 나가는 길 하나(`<Exit>`)입니다. 적은 절이 모두 참이어야 나가며, 적지 않은 절은 늘 참으로 봅니다. */
+    REFLECT()
     struct AIDirectorExitDef
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string _to{};
         int32         _toIndex{ -1 };
-        float32       _minTime{ 0.0f };         ///< 단계에 머문 시간(s)이 이 이상
-        float32       _intensityAbove{ -1.0f }; ///< 긴장도가 이 이상(음수면 절 없음)
-        float32       _intensityBelow{ -1.0f }; ///< 긴장도가 이 이하(음수면 절 없음)
-        float32       _calmFor{ 0.0f };         ///< 마지막 싸움 뒤 이만큼(s) 지났다
+        PROPERTY( Min = 0.0, Tooltip = "Time spent in the phase is at least this", Units = s )
+        float32 _minTime{ 0.0f };
+        PROPERTY( Tooltip = "Intensity is at least this; negative is no clause" )
+        float32 _intensityAbove{ -1.0f };
+        PROPERTY( Tooltip = "Intensity is at most this; negative is no clause" )
+        float32 _intensityBelow{ -1.0f };
+        PROPERTY( Min = 0.0, Tooltip = "This long has passed since the last combat", Units = s )
+        float32 _calmFor{ 0.0f };
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 페이싱 단계 하나입니다. 쌓기, 절정, 쉼 같은 이름과 단계의 수는 데이터가 정합니다. */
+    /** @brief 페이싱 단계 하나(`<Phase>`)입니다. 쌓기, 절정, 쉼 같은 이름과 단계의 수는 데이터가 정합니다. `spawnTags` 와 `<Curve>` · `<Exit>` 는 손으로 읽습니다. */
+    REFLECT()
     struct AIDirectorPhaseDef
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string             _id{};
         vector<hashed_string>     _listSpawnTag{}; ///< 이 단계에서 낼 스폰 항목의 태그(`SpawnDirector::setAllowedTags`). 비면 모두
-        vector<AIDirectorExitDef> _listExit{};     ///< 적은 순서로 보고, 먼저 맞는 전환으로 나간다
-        FloatCurve                _spawnCurve{};   ///< 단계 안 시간에서 스폰 배율로 가는 곡선(곡선이 없으면 1)
-        float32                   _spawnScale{ 1.0f };
-        float32                   _rewardScale{ 1.0f };
+        vector<AIDirectorExitDef> _listExit{};     ///< 적은 순서로 본다 — 먼저 맞는 길로 나간다
+        FloatCurve                _spawnCurve{};   ///< 단계 안 시간 → 스폰 배율(곡선이 없으면 1)
+        PROPERTY( Min = 0.0 )
+        float32 _spawnScale{ 1.0f };
+        PROPERTY( Min = 0.0 )
+        float32 _rewardScale{ 1.0f };
     };
 } // namespace sw
 
@@ -109,46 +137,73 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 풀의 항목 하나입니다. 조우, 이벤트, 보상 중 하나이며 id 의 뜻은 게임이 압니다. */
+    /** @brief 풀의 항목 하나(`<Encounter>`)입니다. 조우, 이벤트, 보상 중 하나이며 id 의 뜻은 게임이 압니다. `areas` · `pacing` 과 일정 조건 속성은 손으로 읽습니다. */
+    REFLECT()
     struct SW_GF_API AIDirectorEncounterDef
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string         _id{};
         ScheduleCondition     _condition{};  ///< 요일, 계절, 날씨, 하루의 때(`phases`), 플래그 식, 태그(플레이어 상태), 확률
         vector<hashed_string> _listArea{};   ///< 지금 지역 태그 중 하나가 이것이어야 한다. 비면 어디서나
         vector<hashed_string> _listPacing{}; ///< 이 페이싱 단계에서만. 비면 늘
-        float32               _weight{ 1.0f };
-        float32               _cost{ 1.0f }; ///< 예산 풀에서 쓰는 값
-        float32               _cooldown{ 0.0f };
-        float32               _minTime{ 0.0f }; ///< 감독 시작 뒤 이 시간(s) 전에는 내지 않는다
-        float32               _minIntensity{ 0.0f };
-        float32               _maxIntensity{ -1.0f }; ///< 음수면 상한 없음
-        float32               _scale{ 1.0f };         ///< 게임에 넘기는 값(세기나 크기)
-        int32                 _count{ 1 };            ///< 게임에 넘기는 수(낼 오브젝트 수)
-        int32                 _maxCount{ -1 };        ///< 한 판에 낼 상한. -1 이면 없음
-        int32                 _minCycle{ 0 };         ///< 페이싱이 이만큼 돌아야 낸다(시작 단계로 돌아온 횟수)
+        PROPERTY( Min = 0.0 )
+        float32 _weight{ 1.0f };
+        PROPERTY( Min = 0.0, Tooltip = "Cost in a budget pool" )
+        float32 _cost{ 1.0f };
+        PROPERTY( Min = 0.0, Units = s )
+        float32 _cooldown{ 0.0f };
+        PROPERTY( Min = 0.0, Tooltip = "Not before this long after the director starts", Units = s )
+        float32 _minTime{ 0.0f };
+        PROPERTY()
+        float32 _minIntensity{ 0.0f };
+        PROPERTY( Tooltip = "Negative is no upper bound" )
+        float32 _maxIntensity{ -1.0f };
+        PROPERTY( Tooltip = "Value handed to the game (strength, size)" )
+        float32 _scale{ 1.0f };
+        PROPERTY( Min = 0, Tooltip = "Count handed to the game (how many to spawn)" )
+        int32 _count{ 1 };
+        PROPERTY( Tooltip = "Cap per run; -1 is none" )
+        int32 _maxCount{ -1 };
+        PROPERTY( Min = 0, Tooltip = "Pacing cycles completed (returns to the start phase) before this can appear" )
+        int32 _minCycle{ 0 };
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 가중 풀 하나입니다. */
+    /** @brief 가중 풀 하나(`<Pool>`)입니다. `kind` · `trigger` · `pacing` 은 손으로 읽습니다. */
+    REFLECT()
     struct AIDirectorPoolDef
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string                  _id{};
         vector<AIDirectorEncounterDef> _listEncounter{};
-        vector<hashed_string>          _listPacing{}; ///< 이 페이싱 단계에서만 돈다(밖에서는 타이머와 예산도 멈춘다). 비면 늘
-        hashed_string                  _phase{};      ///< PhaseEnter 의 단계
-        hashed_string                  _needSignal{}; ///< Budget 이 읽는 필요 신호(긴장도 모델의 신호 값)
-        float32                        _interval{ 10.0f };
-        float32                        _chance{ 1.0f };
-        float32                        _cooldown{ 0.0f }; ///< 이 풀에서 두 번 고르는 사이의 최소 시간(s)
-        float32                        _perMinute{ 1.0f };
-        float32                        _maxBudget{ 5.0f };
-        float32                        _needScale{ 0.0f };
-        int32                          _phaseIndex{ -1 };
-        int32                          _picks{ 1 };
-        AIDirectorPoolKind             _kind{ AIDirectorPoolKind::Encounter };
-        AIDirectorPoolTrigger          _trigger{ AIDirectorPoolTrigger::Interval };
+        vector<hashed_string>          _listPacing{}; ///< 이 페이싱 단계에서만 돈다(시계 · 예산도 멈춘다). 비면 늘
+        PROPERTY( Tooltip = "Phase of a PhaseEnter pool" )
+        hashed_string _phase{};
+        PROPERTY( Name = "need", Tooltip = "Need signal a Budget pool reads (a signal of the intensity model)" )
+        hashed_string _needSignal{};
+        PROPERTY( Min = 0.01, Units = s )
+        float32 _interval{ 10.0f };
+        PROPERTY( Min = 0.0, Max = 1.0 )
+        float32 _chance{ 1.0f };
+        PROPERTY( Min = 0.0, Tooltip = "Least time between two picks from this pool", Units = s )
+        float32 _cooldown{ 0.0f };
+        PROPERTY( Min = 0.0 )
+        float32 _perMinute{ 1.0f };
+        PROPERTY( Min = 0.0 )
+        float32 _maxBudget{ 5.0f };
+        PROPERTY()
+        float32 _needScale{ 0.0f };
+        int32   _phaseIndex{ -1 };
+        PROPERTY( Min = 1 )
+        int32                 _picks{ 1 };
+        AIDirectorPoolKind    _kind{ AIDirectorPoolKind::Encounter };
+        AIDirectorPoolTrigger _trigger{ AIDirectorPoolTrigger::Interval };
     };
 } // namespace sw
 
@@ -157,7 +212,7 @@ namespace sw
     /**
      * @class AIDirectorProfile
      * @brief `*.director.xml` 하나입니다.
-     * @details 모르는 원소, 속성, 종류, 단계, 신호와 겹친 id, 단계 없음은 로드 오류이며, 경고하고 false 를 반환한다.
+     * @details 모르는 원소, 속성, 종류, 단계, 신호와 겹친 id, 단계 없음, 깨진 값과 PROPERTY( Min · Max ) 밖 값은 로드 오류이며, 오류를 남기고 false 를 반환한다. 칸은 `GameDataXML::readFields` 가 읽는다.
      * @code
      *     <AIDirector startPhase="BuildUp">
      *       <Calendar weathers="sunny,rain"/>                                         <!-- 조건 이름 검사(선택) -->

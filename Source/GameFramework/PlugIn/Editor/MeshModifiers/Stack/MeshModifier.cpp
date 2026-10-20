@@ -447,7 +447,9 @@ namespace sw::editor
 
     float32 MeshModifier::evaluateCurve( uint32 paramIndex, float32 x ) const
     {
-        return _listParamValue[paramIndex]._curve.evaluate( x, 0.0f );
+        // 키가 없는 모양 커브는 모양을 주지 않는다(높이 · 무게 0) — 빈 커브의 뜻은 이 수정자가 정한다.
+        const std::optional<float32> value = _listParamValue[paramIndex]._curve.evaluate( x );
+        return value.has_value() ? *value : 0.0f;
     }
 
     void MeshModifier::setScalar( uint32 paramIndex, float32 value )

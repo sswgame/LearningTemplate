@@ -46,8 +46,8 @@ SW_TEST_CASE( MeshComponentTest, MissingMaterialUsesTheChecker )
     SW_EXPECT_TRUE( pMesh->getMaterial() == pFirst );
 
     // 경로를 고치면 그 머티리얼로 옮겨 간다.
-    pMesh->setMaterialPath( "engine/materials/defaultmaterial.material" );
+    pMesh->setMaterialPath( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() );
     SW_ASSERT_NOT_NULL( pMesh->getMaterial() );
     SW_EXPECT_TRUE( pMesh->getMaterial() != pFirst );
-    SW_EXPECT_TRUE( sw::engine::getSubsystem<sw::AssetManager>().getAssetCache<sw::MaterialCache>().isCached( "engine/materials/defaultmaterial.material" ) );
+    SW_EXPECT_TRUE( sw::engine::getSubsystem<sw::AssetManager>().getAssetCache<sw::MaterialCache>().isCached( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) );
 }

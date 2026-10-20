@@ -49,9 +49,9 @@ SW_TEST_CASE( ProfilerTraceExportTest, EmitsCompleteEventsMetaAndFrameMarks )
     SW_ASSERT_TRUE( document.parse( json ) );
     const sw::JSONValue root = document.getRoot();
     SW_EXPECT_EQUAL( sw::string( "Game" ), root.get( "otherData" ).get( "processName" ).asString() );
-    SW_EXPECT_EQUAL( static_cast<int64>( 4242 ), root.get( "otherData" ).get( "processID" ).asInt() );
-    SW_EXPECT_EQUAL( static_cast<int64>( 1700000000123 ), root.get( "otherData" ).get( "wallUnixMilliseconds" ).asInt() );
-    SW_EXPECT_EQUAL( static_cast<int64>( 987654321 ), root.get( "otherData" ).get( "monotonicNanoseconds" ).asInt() );
+    SW_EXPECT_EQUAL( static_cast<int64>( 4242 ), root.get( "otherData" ).get( "processID" ).read<sw::int64>().value() );
+    SW_EXPECT_EQUAL( static_cast<int64>( 1700000000123 ), root.get( "otherData" ).get( "wallUnixMilliseconds" ).read<sw::int64>().value() );
+    SW_EXPECT_EQUAL( static_cast<int64>( 987654321 ), root.get( "otherData" ).get( "monotonicNanoseconds" ).read<sw::int64>().value() );
 
     const sw::JSONValue events = root.get( "traceEvents" );
     SW_ASSERT_TRUE( events.isArray() );
@@ -68,13 +68,13 @@ SW_TEST_CASE( ProfilerTraceExportTest, EmitsCompleteEventsMetaAndFrameMarks )
         if ( phase == "X" )
         {
             ++completeCount;
-            SW_EXPECT_EQUAL( static_cast<int64>( 4242 ), event.get( "pid" ).asInt() );
+            SW_EXPECT_EQUAL( static_cast<int64>( 4242 ), event.get( "pid" ).read<sw::int64>().value() );
             if ( event.get( "name" ).asString() == "GT.Frame" )
             {
                 bFoundFirst = true;
-                SW_EXPECT_EQUAL( 1.0, event.get( "ts" ).asFloat() );  // 1000 ns = 1 us
-                SW_EXPECT_EQUAL( 4.5, event.get( "dur" ).asFloat() ); // 4500 ns = 4.5 us
-                SW_EXPECT_EQUAL( static_cast<int64>( 1 ), event.get( "tid" ).asInt() );
+                SW_EXPECT_EQUAL( 1.0, event.get( "ts" ).read<sw::float64>().value() );  // 1000 ns = 1 us
+                SW_EXPECT_EQUAL( 4.5, event.get( "dur" ).read<sw::float64>().value() ); // 4500 ns = 4.5 us
+                SW_EXPECT_EQUAL( static_cast<int64>( 1 ), event.get( "tid" ).read<sw::int64>().value() );
             }
             if ( event.get( "name" ).asString() == "slot 9" )
                 bFoundUnnamed = true;
@@ -120,7 +120,7 @@ SW_TEST_CASE( ProfilerTraceExportTest, TruncatedCaptureIsMarked )
     sw::JSONDocument document;
     SW_ASSERT_TRUE( document.parse( json ) );
     const sw::JSONValue root = document.getRoot();
-    SW_EXPECT_TRUE( root.get( "otherData" ).get( "truncated" ).asBool() );
+    SW_EXPECT_TRUE( root.get( "otherData" ).get( "truncated" ).read<bool>().value() );
     bool bFoundMark = false;
     for ( size_t index = 0; index < root.get( "traceEvents" ).size(); ++index )
     {
@@ -199,9 +199,9 @@ namespace
         for ( size_t index = 0; index < events.size(); ++index )
         {
             const sw::JSONValue event                 = events.at( index );
-            const bool          bGameThreadFrameEvent = event.get( "ph" ).asString() == "X" && event.get( "name" ).asString() == "GT.Frame" && event.get( "pid" ).asInt() == pid;
+            const bool          bGameThreadFrameEvent = event.get( "ph" ).asString() == "X" && event.get( "name" ).asString() == "GT.Frame" && event.get( "pid" ).read<sw::int64>().value() == pid;
             if ( bGameThreadFrameEvent )
-                return event.get( "ts" ).asFloat();
+                return event.get( "ts" ).read<sw::float64>().value();
         }
         return -1.0;
     }
@@ -281,14 +281,14 @@ SW_TEST_CASE( ProfilerTraceExportTest, MergeShiftsOtherHostsByWallClock )
         if ( event.get( "ph" ).asString() == "f" )
         {
             bFoundFlow = true;
-            SW_EXPECT_EQUAL( static_cast<int64>( 77 ), event.get( "id" ).asInt() );
-            SW_EXPECT_EQUAL( static_cast<int64>( 101 ), event.get( "pid" ).asInt() );
-            SW_EXPECT_EQUAL( 500002.0, event.get( "ts" ).asFloat() );
+            SW_EXPECT_EQUAL( static_cast<int64>( 77 ), event.get( "id" ).read<sw::int64>().value() );
+            SW_EXPECT_EQUAL( static_cast<int64>( 101 ), event.get( "pid" ).read<sw::int64>().value() );
+            SW_EXPECT_EQUAL( 500002.0, event.get( "ts" ).read<sw::float64>().value() );
         }
     }
     SW_EXPECT_TRUE( bFoundFlow );
     const sw::JSONValue sources = document.getRoot().get( "otherData" ).get( "sources" );
-    SW_EXPECT_EQUAL( static_cast<int64>( 500000000 ), sources.at( 1 ).get( "shiftNanoseconds" ).asInt() );
+    SW_EXPECT_EQUAL( static_cast<int64>( 500000000 ), sources.at( 1 ).get( "shiftNanoseconds" ).read<sw::int64>().value() );
 }
 
 /**
@@ -330,7 +330,7 @@ SW_TEST_CASE( ProfilerTraceExportTest, MarkersAndHostNameAreWritten )
         {
             bFoundMark = true;
             SW_EXPECT_EQUAL( sw::string( "i" ), event.get( "ph" ).asString() );
-            SW_EXPECT_EQUAL( 2.0, event.get( "ts" ).asFloat() );
+            SW_EXPECT_EQUAL( 2.0, event.get( "ts" ).read<sw::float64>().value() );
         }
     }
     SW_EXPECT_TRUE( bFoundMark );

@@ -72,54 +72,116 @@ namespace sw
 #endif
             }
 
-            /** @brief 있으면 수로 읽습니다(없으면 @p fallback). 형식이 틀리면 false 와 이유. */
-            [[nodiscard]] static bool readFloat( const AutomationStep& step, string_view name, float32 fallback, float32& outValue, string& outError )
+            /** @brief 있으면 수로 읽습니다. 없으면 @p inoutValue 를 둡니다(기본값은 아래 단계 인자 구조체의 초기값). 형식이 틀리면 false 와 이유이고 값은 그대로입니다. */
+            [[nodiscard]] static bool readFloat( const AutomationStep& step, string_view name, float32& inoutValue, string& outError )
             {
-                outValue             = fallback;
                 const string* pValue = step.findAttribute( name );
                 if ( pValue == nullptr )
                     return true;
-                if ( StringUtil::parseFloat( string_view{ *pValue }, outValue ) )
+                float32 value = 0.0f;
+                if ( StringUtil::parseFloat( string_view{ *pValue }, value ) )
+                {
+                    inoutValue = value;
                     return true;
+                }
                 outError = step.describe() + ": " + string( name ) + " must be a number, got '" + *pValue + "'";
                 return false;
             }
 
-            /** @brief 있으면 음이 아닌 정수로 읽습니다(없으면 @p fallback). */
-            [[nodiscard]] static bool readUint( const AutomationStep& step, string_view name, uint32 fallback, uint32& outValue, string& outError )
+            /** @brief 있으면 음이 아닌 정수로 읽습니다. 없으면 @p inoutValue 를 둡니다. */
+            [[nodiscard]] static bool readUint( const AutomationStep& step, string_view name, uint32& inoutValue, string& outError )
             {
-                outValue             = fallback;
                 const string* pValue = step.findAttribute( name );
                 if ( pValue == nullptr )
                     return true;
                 int32 value = 0;
                 if ( StringUtil::parseInt( string_view{ *pValue }, value ) && value >= 0 )
                 {
-                    outValue = static_cast<uint32>( value );
+                    inoutValue = static_cast<uint32>( value );
                     return true;
                 }
                 outError = step.describe() + ": " + string( name ) + " must be a non-negative integer, got '" + *pValue + "'";
                 return false;
             }
 
-            // --- 엔진 단계의 검사 함수(`AutomationStepValidateFunction`). 속성의 허용 값과 오류 메시지가 여기 있다 -------------
+            // --- 단계 인자: 검사 함수와 준비 · 실행 함수가 같은 읽기(`parse*`) 하나를 쓴다 -----------------------------------------
+            //     검사가 읽어 본 뒤 실행이 결과를 버리며 다시 읽던 것을 없앤다. 실행 때 읽기가 실패하면(핫 리로드로 바뀐 단계) 버리지 않고 오류로 끝낸다.
+            //     기본값은 구조체의 초기값 하나다.
 
-            /** @brief `Press` · `Release` · `Tap` 입니다. `hold` 는 `Tap` 에만 씁니다. */
-            static bool validateSlotStep( const AutomationStep& step, string& outError )
+            /** @brief `Press` · `Release` · `Tap` 의 인자입니다. */
+            struct SlotStepArgs
             {
-                uint32 count = 0;
-                if ( step.hasOnlyAttributes( { "slot", "hold" }, outError ) == false || readUint( step, "hold", 1, count, outError ) == false )
+                InputSlot _slot{};
+                uint32    _holdFrameCount{ 1 }; ///< `Tap` 이 누르고 있는 프레임 수
+            };
+
+            /** @brief `Wheel` · `MouseDelta` · `MousePosition` 의 두 축 인자입니다. 없는 축은 0 입니다. */
+            struct AxisPairArgs
+            {
+                float32 _x{ 0.0f };
+                float32 _y{ 0.0f };
+            };
+
+            /** @brief `GamepadAxis` 의 인자입니다. */
+            struct GamepadAxisArgs
+            {
+                uint32  _axis{ 0 };
+                uint32  _pad{ 0 };
+                float32 _value{ 0.0f };
+            };
+
+            /** @brief 수 비교 하나(`equals` · `near` · `atLeast` · `atMost`)입니다. */
+            enum class NumberRule : uint8
+            {
+                Equals,
+                Near,
+                AtLeast,
+                AtMost,
+            };
+            struct NumberComparison
+            {
+                string     _text{}; ///< 데이터에 적힌 기대값 글(실패 메시지)
+                float32    _expected{ 0.0f };
+                float32    _tolerance{ 0.0f }; ///< `near` 의 허용 폭
+                NumberRule _rule{ NumberRule::Equals };
+            };
+
+            static constexpr float32 kProbeNearTolerance = 1.0e-4f; ///< 탐침 `near` 의 기본 허용 폭
+            static constexpr float32 kImageNearTolerance = 1.0e-3f; ///< 이미지 측정 `near` 의 기본 허용 폭
+
+            /** @brief `WaitUntil` 의 시한입니다. `timeoutSeconds` 를 적었으면 초, 아니면 프레임입니다. */
+            struct WaitTimeoutArgs
+            {
+                uint32  _timeoutFrames{ kDefaultWaitTimeoutFrames };
+                float32 _timeoutSeconds{ 0.0f };
+                bool    _bSeconds{ false };
+            };
+
+            /** @brief `ExpectLog` 의 인자입니다. */
+            struct ExpectLogArgs
+            {
+                uint32 _since{ 0 };
+                uint32 _expected{ 0 };
+                bool   _bExactCount{ false }; ///< 참이면 `count`(같아야 한다), 거짓이면 `atLeast`
+            };
+
+            /** @brief `ExpectImage` 의 인자입니다. */
+            struct ExpectImageArgs
+            {
+                NumberComparison          _comparison{};
+                AutomationImageRegion     _region{};
+                float32                   _ratio{ kDefaultDarkRatio };
+                AutomationImageMetricKind _metric{ AutomationImageMetricKind::MeanLuma };
+            };
+
+            [[nodiscard]] static bool parseSlotStep( const AutomationStep& step, SlotStepArgs& outArgs, string& outError )
+            {
+                if ( readUint( step, "hold", outArgs._holdFrameCount, outError ) == false )
                     return false;
-                if ( string_view{ step._kind } != "Tap" && step.findAttribute( "hold" ) != nullptr )
-                {
-                    outError = step.describe() + ": hold is only for <Tap>";
-                    return false;
-                }
                 const string* pSlot = step.requireAttribute( "slot", outError );
-                InputSlot     slot{};
                 if ( pSlot == nullptr )
                     return false;
-                if ( InputSlotUtil::tryParse( *pSlot, slot ) == false )
+                if ( InputSlotUtil::tryParse( *pSlot, outArgs._slot ) == false )
                 {
                     outError = step.describe() + ": unknown slot '" + *pSlot + "' (Key.E · Mouse.Left · Gamepad.A · Gamepad1.A)";
                     return false;
@@ -127,17 +189,129 @@ namespace sw
                 return true;
             }
 
-            static bool validateMouseDelta( const AutomationStep& step, string& outError )
+            [[nodiscard]] static bool parseAxisPair( const AutomationStep& step, AxisPairArgs& outArgs, string& outError )
             {
-                float32 value = 0.0f;
-                return step.hasOnlyAttributes( { "x", "y" }, outError ) && readFloat( step, "x", 0.0f, value, outError ) && readFloat( step, "y", 0.0f, value, outError );
+                return readFloat( step, "x", outArgs._x, outError ) && readFloat( step, "y", outArgs._y, outError );
             }
 
-            /** @brief `Wheel` 입니다. `y` 는 세로 휠, `x` 는 가로 휠 눈금이고 없으면 0 입니다. */
-            static bool validateWheel( const AutomationStep& step, string& outError )
+            [[nodiscard]] static bool parseGamepadAxis( const AutomationStep& step, GamepadAxisArgs& outArgs, string& outError )
             {
-                float32 value = 0.0f;
-                return step.hasOnlyAttributes( { "x", "y" }, outError ) && readFloat( step, "x", 0.0f, value, outError ) && readFloat( step, "y", 0.0f, value, outError );
+                return step.requireAttribute( "axis", outError ) != nullptr && step.requireAttribute( "value", outError ) != nullptr &&
+                       readUint( step, "axis", outArgs._axis, outError ) && readFloat( step, "value", outArgs._value, outError ) && readUint( step, "pad", outArgs._pad, outError );
+            }
+
+            /** @brief 수 비교 하나를 읽습니다. `equals` · `near` · `atLeast` · `atMost` 중 적힌 것이 없으면 false 입니다(정확히 하나인지는 `countComparisons`). */
+            [[nodiscard]] static bool parseNumberComparison( const AutomationStep& step, float32 nearTolerance, NumberComparison& outComparison, string& outError )
+            {
+                static constexpr std::pair<const utf8*, NumberRule> kArrRule[] = {
+                    { "equals",  NumberRule::Equals},
+                    {   "near",    NumberRule::Near},
+                    {"atLeast", NumberRule::AtLeast},
+                    { "atMost",  NumberRule::AtMost},
+                };
+                outComparison._tolerance = nearTolerance;
+                for ( const std::pair<const utf8*, NumberRule>& entry : kArrRule )
+                {
+                    const string* pText = step.findAttribute( entry.first );
+                    if ( pText == nullptr )
+                        continue;
+                    outComparison._rule = entry.second;
+                    outComparison._text = *pText;
+                    return readFloat( step, entry.first, outComparison._expected, outError ) && readFloat( step, "tolerance", outComparison._tolerance, outError );
+                }
+                outError = step.describe() + ": needs one of equals · near · atLeast · atMost";
+                return false;
+            }
+
+            /** @brief @p comparison 대로 @p value 를 견줍니다. 실패 메시지의 규칙 글을 @p outRule 에 씁니다. */
+            static bool matchesNumber( const NumberComparison& comparison, float64 value, string& outRule )
+            {
+                const float64 expected = static_cast<float64>( comparison._expected );
+                switch ( comparison._rule )
+                {
+                    case NumberRule::Equals:
+                    {
+                        outRule = "== " + comparison._text;
+                        return value == expected;
+                    }
+                    case NumberRule::Near:
+                    {
+                        outRule = "near " + comparison._text;
+                        return MathUtil::abs( value - expected ) <= static_cast<float64>( comparison._tolerance );
+                    }
+                    case NumberRule::AtLeast:
+                    {
+                        outRule = ">= " + comparison._text;
+                        return value >= expected;
+                    }
+                    case NumberRule::AtMost:
+                    {
+                        outRule = "<= " + comparison._text;
+                        return value <= expected;
+                    }
+                }
+                return false;
+            }
+
+            [[nodiscard]] static bool parseWaitTimeout( const AutomationStep& step, WaitTimeoutArgs& outArgs, string& outError )
+            {
+                outArgs._bSeconds = step.findAttribute( "timeoutSeconds" ) != nullptr;
+                return readUint( step, "timeoutFrames", outArgs._timeoutFrames, outError ) && readFloat( step, "timeoutSeconds", outArgs._timeoutSeconds, outError );
+            }
+
+            [[nodiscard]] static bool parseExpectLog( const AutomationStep& step, ExpectLogArgs& outArgs, string& outError )
+            {
+                outArgs._bExactCount = step.findAttribute( "count" ) != nullptr;
+                return readUint( step, "since", outArgs._since, outError ) && readUint( step, outArgs._bExactCount ? "count" : "atLeast", outArgs._expected, outError );
+            }
+
+            [[nodiscard]] static bool parseExpectImage( const AutomationStep& step, ExpectImageArgs& outArgs, string& outError )
+            {
+                const string* pMetric = step.requireAttribute( "metric", outError );
+                if ( pMetric == nullptr )
+                    return false;
+                if ( AutomationImageMetric::tryParseKind( *pMetric, outArgs._metric ) == false )
+                {
+                    outError = step.describe() + ": unknown metric '" + *pMetric + "' (meanLuma · darkFraction · meanRedMinusBlue · differentFrom)";
+                    return false;
+                }
+                const string* pRegion = step.findAttribute( "region" );
+                if ( pRegion != nullptr && AutomationImageMetric::tryParseRegion( *pRegion, outArgs._region ) == false )
+                {
+                    outError = step.describe() + ": region must be x0,y0,x1,y1 in 0..1 with x0<x1 and y0<y1, got '" + *pRegion + "'";
+                    return false;
+                }
+                return readFloat( step, "ratio", outArgs._ratio, outError ) && parseNumberComparison( step, kImageNearTolerance, outArgs._comparison, outError );
+            }
+
+            /** @brief 종료 시한 단계의 초입니다. 없으면 `kDefaultExitWithinSeconds` 입니다. */
+            [[nodiscard]] static bool parseExitSeconds( const AutomationStep& step, const utf8* pName, float32& outSeconds, string& outError )
+            {
+                outSeconds = kDefaultExitWithinSeconds;
+                return readFloat( step, pName, outSeconds, outError );
+            }
+
+            // --- 엔진 단계의 검사 함수(`AutomationStepValidateFunction`). 속성의 허용 값과 오류 메시지가 여기 있다 -------------
+
+            /** @brief `Press` · `Release` · `Tap` 입니다. `hold` 는 `Tap` 에만 씁니다. */
+            static bool validateSlotStep( const AutomationStep& step, string& outError )
+            {
+                if ( step.hasOnlyAttributes( { "slot", "hold" }, outError ) == false )
+                    return false;
+                if ( string_view{ step._kind } != "Tap" && step.findAttribute( "hold" ) != nullptr )
+                {
+                    outError = step.describe() + ": hold is only for <Tap>";
+                    return false;
+                }
+                SlotStepArgs args;
+                return parseSlotStep( step, args, outError );
+            }
+
+            /** @brief `MouseDelta` · `Wheel`(`y` 는 세로 휠, `x` 는 가로 휠 눈금)입니다. 없는 축은 0 입니다. */
+            static bool validateAxisPair( const AutomationStep& step, string& outError )
+            {
+                AxisPairArgs args;
+                return step.hasOnlyAttributes( { "x", "y" }, outError ) && parseAxisPair( step, args, outError );
             }
 
             static bool validateMousePosition( const AutomationStep& step, string& outError )
@@ -146,11 +320,10 @@ namespace sw
                                                      step.requireAttribute( "y", outError ) == nullptr;
                 if ( bInvalidMouseAttributes )
                     return false;
-                float32 valueX = 0.0f;
-                float32 valueY = 0.0f;
-                if ( readFloat( step, "x", 0.0f, valueX, outError ) == false || readFloat( step, "y", 0.0f, valueY, outError ) == false )
+                AxisPairArgs args;
+                if ( parseAxisPair( step, args, outError ) == false )
                     return false;
-                const bool bMouseFractionOutOfRange = valueX < 0.0f || valueX > 1.0f || valueY < 0.0f || valueY > 1.0f;
+                const bool bMouseFractionOutOfRange = args._x < 0.0f || args._x > 1.0f || args._y < 0.0f || args._y > 1.0f;
                 if ( bMouseFractionOutOfRange )
                 {
                     outError = step.describe() + ": x and y are fractions of the client area (0..1)";
@@ -161,11 +334,8 @@ namespace sw
 
             static bool validateGamepadAxis( const AutomationStep& step, string& outError )
             {
-                float32 value = 0.0f;
-                uint32  count = 0;
-                return step.hasOnlyAttributes( { "axis", "value", "pad" }, outError ) && step.requireAttribute( "axis", outError ) != nullptr &&
-                       step.requireAttribute( "value", outError ) != nullptr && readUint( step, "axis", 0, count, outError ) && readFloat( step, "value", 0.0f, value, outError ) &&
-                       readUint( step, "pad", 0, count, outError );
+                GamepadAxisArgs args;
+                return step.hasOnlyAttributes( { "axis", "value", "pad" }, outError ) && parseGamepadAxis( step, args, outError );
             }
 
             static bool validateText( const AutomationStep& step, string& outError )
@@ -242,8 +412,8 @@ namespace sw
              */
             [[nodiscard]] static bool evaluateExpectVariable( const AutomationStep& step, const GlobalVariableInfo& info, bool& outMatched, string& outError )
             {
-                float32 tolerance = 0.0f;
-                if ( readFloat( step, "tolerance", 0.0f, tolerance, outError ) == false )
+                float32 tolerance = 0.0f; // 적지 않으면 정확히 같아야 한다
+                if ( readFloat( step, "tolerance", tolerance, outError ) == false )
                     return false;
                 if ( step.findAttribute( "tolerance" ) != nullptr && ( info._type != GlobalVariableType::Float || tolerance < 0.0f ) )
                 {
@@ -302,10 +472,11 @@ namespace sw
                     outError = step.describe() + ": needs exactly one of equals · near · atLeast · atMost · is · sameAs · differsFrom";
                     return false;
                 }
-                float32 value = 0.0f;
-                return readFloat( step, "equals", 0.0f, value, outError ) && readFloat( step, "near", 0.0f, value, outError ) &&
-                       readFloat( step, "tolerance", 0.0f, value, outError ) && readFloat( step, "atLeast", 0.0f, value, outError ) &&
-                       readFloat( step, "atMost", 0.0f, value, outError );
+                const bool bTextRule = step.findAttribute( "is" ) != nullptr || step.findAttribute( "sameAs" ) != nullptr || step.findAttribute( "differsFrom" ) != nullptr;
+                if ( bTextRule )
+                    return true;
+                NumberComparison comparison;
+                return parseNumberComparison( step, kProbeNearTolerance, comparison, outError );
             }
 
             static bool validateExpect( const AutomationStep& step, string& outError )
@@ -317,8 +488,6 @@ namespace sw
             /** @brief `WaitUntil` 입니다. 그 프레임에 혼자 있는지는 준비 함수(`AutomationRunnerEngineSteps::prepareWaitUntil`)가 시나리오 전체를 보고 확인합니다. */
             static bool validateWaitUntil( const AutomationStep& step, string& outError )
             {
-                uint32  count   = 0;
-                float32 seconds = 0.0f;
                 if ( step.hasOnlyAttributes( { "probe", "target", "key", "equals", "near", "tolerance", "atLeast", "atMost", "is", "sameAs", "differsFrom", "timeoutFrames",
                                                "timeoutSeconds" },
                                              outError ) == false )
@@ -328,14 +497,14 @@ namespace sw
                     outError = step.describe() + ": give timeoutFrames or timeoutSeconds, not both";
                     return false;
                 }
-                return readUint( step, "timeoutFrames", kDefaultWaitTimeoutFrames, count, outError ) && readFloat( step, "timeoutSeconds", 0.0f, seconds, outError ) &&
-                       validateProbeComparison( step, outError );
+                WaitTimeoutArgs timeout;
+                return parseWaitTimeout( step, timeout, outError ) && validateProbeComparison( step, outError );
             }
 
             /** @brief `ExpectVisited` 입니다. `is`(그 값을 한 번이라도 거쳤다) 또는 `sequence`(쉼표로 적은 값을 이 순서로 거쳤다) 하나와 `since`(프레임) 입니다. */
             static bool validateExpectVisited( const AutomationStep& step, string& outError )
             {
-                uint32 since = 0;
+                uint32 since = 0; // 적지 않으면 처음부터 본다
                 if ( step.hasOnlyAttributes( { "probe", "target", "key", "is", "sequence", "since" }, outError ) == false || validateProbeReference( step, outError ) == false )
                     return false;
                 if ( countComparisons( step, { "is", "sequence" } ) == false )
@@ -343,7 +512,7 @@ namespace sw
                     outError = step.describe() + ": needs exactly one of is · sequence";
                     return false;
                 }
-                return readUint( step, "since", 0, since, outError );
+                return readUint( step, "since", since, outError );
             }
 
             /** @brief `Record` 입니다. 탐침 값을 보고의 `records` 에 남깁니다. */
@@ -386,8 +555,8 @@ namespace sw
                     outError = step.describe() + ": needs exactly one of count · atLeast";
                     return false;
                 }
-                uint32 count = 0;
-                return readUint( step, "count", 0, count, outError ) && readUint( step, "atLeast", 0, count, outError ) && readUint( step, "since", 0, count, outError );
+                ExpectLogArgs args;
+                return parseExpectLog( step, args, outError );
             }
 
             static bool validateScreenshot( const AutomationStep& step, string& outError )
@@ -400,43 +569,27 @@ namespace sw
                 if ( step.hasOnlyAttributes( { "file", "region", "metric", "ratio", "reference", "equals", "near", "tolerance", "atLeast", "atMost" }, outError ) == false ||
                      step.requireAttribute( "file", outError ) == nullptr )
                     return false;
-                const string*             pMetric = step.requireAttribute( "metric", outError );
-                AutomationImageMetricKind metric  = AutomationImageMetricKind::MeanLuma;
-                if ( pMetric == nullptr )
-                    return false;
-                if ( AutomationImageMetric::tryParseKind( *pMetric, metric ) == false )
-                {
-                    outError = step.describe() + ": unknown metric '" + *pMetric + "' (meanLuma · darkFraction · meanRedMinusBlue · differentFrom)";
-                    return false;
-                }
-                const string*         pRegion = step.findAttribute( "region" );
-                AutomationImageRegion region{};
-                if ( pRegion != nullptr && AutomationImageMetric::tryParseRegion( *pRegion, region ) == false )
-                {
-                    outError = step.describe() + ": region must be x0,y0,x1,y1 in 0..1 with x0<x1 and y0<y1, got '" + *pRegion + "'";
-                    return false;
-                }
-                if ( ( metric == AutomationImageMetricKind::DifferentFrom ) != ( step.findAttribute( "reference" ) != nullptr ) )
-                {
-                    outError = step.describe() + ": reference=\"…\" goes with metric=\"differentFrom\" (and only with it)";
-                    return false;
-                }
                 if ( countComparisons( step, { "equals", "near", "atLeast", "atMost" } ) == false )
                 {
                     outError = step.describe() + ": needs exactly one of equals · near · atLeast · atMost";
                     return false;
                 }
-                float32 value = 0.0f;
-                return readFloat( step, "ratio", 0.0f, value, outError ) && readFloat( step, "equals", 0.0f, value, outError ) && readFloat( step, "near", 0.0f, value, outError ) &&
-                       readFloat( step, "tolerance", 0.0f, value, outError ) && readFloat( step, "atLeast", 0.0f, value, outError ) &&
-                       readFloat( step, "atMost", 0.0f, value, outError );
+                ExpectImageArgs args;
+                if ( parseExpectImage( step, args, outError ) == false )
+                    return false;
+                if ( ( args._metric == AutomationImageMetricKind::DifferentFrom ) != ( step.findAttribute( "reference" ) != nullptr ) )
+                {
+                    outError = step.describe() + ": reference=\"…\" goes with metric=\"differentFrom\" (and only with it)";
+                    return false;
+                }
+                return true;
             }
 
             /** @brief 종료 시한 단계의 시간 속성 @p pName 하나만 받습니다. */
             static bool validateExitSeconds( const AutomationStep& step, const utf8* pName, string& outError )
             {
-                float32 value = 0.0f;
-                return step.hasOnlyAttributes( { pName }, outError ) && readFloat( step, pName, 0.0f, value, outError );
+                float32 seconds = 0.0f;
+                return step.hasOnlyAttributes( { pName }, outError ) && parseExitSeconds( step, pName, seconds, outError );
             }
 
             static bool validateCloseWindow( const AutomationStep& step, string& outError ) { return validateExitSeconds( step, "withinSeconds", outError ); }
@@ -715,17 +868,16 @@ namespace sw
      */
     struct AutomationRunnerEngineSteps
     {
-        // --- 준비(`AutomationStepPrepareFunction`): 입력 단계는 가상 입력 원천으로 옮긴다. 속성은 검사 함수가 이미 읽어 봤으므로 다시 읽기는 실패할 수 없다 ---
+        // --- 준비(`AutomationStepPrepareFunction`): 입력 단계는 가상 입력 원천으로 옮긴다. 인자는 검사와 같은 `parse*` 로 읽고, 실패하면 버리지 않고 오류다 ---
 
         static bool prepareSlotStep( AutomationRunner& runner, const AutomationStep& step, string& outError )
         {
-            InputSlot slot{};
-            (void)InputSlotUtil::tryParse( *step.findAttribute( "slot" ), slot ); // 검사 함수가 이미 확인했다
-            uint32 holdFrameCount = 1;
-            (void)AutomationRunnerInternal::readUint( step, "hold", 1, holdFrameCount, outError ); // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
+            AutomationRunnerInternal::SlotStepArgs args;
+            if ( AutomationRunnerInternal::parseSlotStep( step, args, outError ) == false )
+                return false;
             const string_view kind   = step._kind;
-            const bool        bAdded = kind == "Tap" ? runner._inputScript.addTap( step._frameIndex, slot, holdFrameCount )
-                                                     : runner._inputScript.addSlot( step._frameIndex, slot, kind == "Press" );
+            const bool        bAdded = kind == "Tap" ? runner._inputScript.addTap( step._frameIndex, args._slot, args._holdFrameCount )
+                                                     : runner._inputScript.addSlot( step._frameIndex, args._slot, kind == "Press" );
             if ( bAdded == false )
                 outError = step.describe() + ": that slot cannot be pressed (an axis or an unknown device)";
             return bAdded;
@@ -733,24 +885,22 @@ namespace sw
 
         static bool prepareWheel( AutomationRunner& runner, const AutomationStep& step, string& outError )
         {
-            float32 valueX = 0.0f;
-            float32 valueY = 0.0f;
-            (void)AutomationRunnerInternal::readFloat( step, "x", 0.0f, valueX, outError ); // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
-            (void)AutomationRunnerInternal::readFloat( step, "y", 0.0f, valueY, outError ); // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
-            if ( valueY != 0.0f )
-                runner._inputScript.addEvent( step._frameIndex, RawInputEvent::makeMouseWheel( valueY ) );
-            if ( valueX != 0.0f )
-                runner._inputScript.addEvent( step._frameIndex, RawInputEvent::makeMouseHorizontalWheel( valueX ) );
+            AutomationRunnerInternal::AxisPairArgs args;
+            if ( AutomationRunnerInternal::parseAxisPair( step, args, outError ) == false )
+                return false;
+            if ( args._y != 0.0f )
+                runner._inputScript.addEvent( step._frameIndex, RawInputEvent::makeMouseWheel( args._y ) );
+            if ( args._x != 0.0f )
+                runner._inputScript.addEvent( step._frameIndex, RawInputEvent::makeMouseHorizontalWheel( args._x ) );
             return true;
         }
 
         static bool prepareMouseDelta( AutomationRunner& runner, const AutomationStep& step, string& outError )
         {
-            float32 valueX = 0.0f;
-            float32 valueY = 0.0f;
-            (void)AutomationRunnerInternal::readFloat( step, "x", 0.0f, valueX, outError ); // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
-            (void)AutomationRunnerInternal::readFloat( step, "y", 0.0f, valueY, outError ); // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
-            runner._inputScript.addMouseDelta( step._frameIndex, valueX, valueY );
+            AutomationRunnerInternal::AxisPairArgs args;
+            if ( AutomationRunnerInternal::parseAxisPair( step, args, outError ) == false )
+                return false;
+            runner._inputScript.addMouseDelta( step._frameIndex, args._x, args._y );
             return true;
         }
 
@@ -764,32 +914,30 @@ namespace sw
                 outError = step.describe() + ": no window to place the pointer in";
                 return false;
             }
-            float32 valueX = 0.0f;
-            float32 valueY = 0.0f;
-            (void)AutomationRunnerInternal::readFloat( step, "x", 0.0f, valueX, outError ); // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
-            (void)AutomationRunnerInternal::readFloat( step, "y", 0.0f, valueY, outError ); // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
+            AutomationRunnerInternal::AxisPairArgs args;
+            if ( AutomationRunnerInternal::parseAxisPair( step, args, outError ) == false )
+                return false;
             const float32 maxX = static_cast<float32>( pWindow->getWidth() - 1 );
             const float32 maxY = static_cast<float32>( pWindow->getHeight() - 1 );
-            runner._inputScript.addMousePosition( step._frameIndex, static_cast<int32>( MathUtil::round( valueX * maxX ) ), static_cast<int32>( MathUtil::round( valueY * maxY ) ) );
+            runner._inputScript.addMousePosition( step._frameIndex, static_cast<int32>( MathUtil::round( args._x * maxX ) ), static_cast<int32>( MathUtil::round( args._y * maxY ) ) );
             return true;
         }
 
         static bool prepareGamepadAxis( AutomationRunner& runner, const AutomationStep& step, string& outError )
         {
-            uint32  axisIndex = 0;
-            uint32  padIndex  = 0;
-            float32 value     = 0.0f;
-            (void)AutomationRunnerInternal::readUint( step, "axis", 0, axisIndex, outError );  // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
-            (void)AutomationRunnerInternal::readFloat( step, "value", 0.0f, value, outError ); // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
-            (void)AutomationRunnerInternal::readUint( step, "pad", 0, padIndex, outError );    // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
-            runner._inputScript.addGamepadAxis( step._frameIndex, static_cast<uint16>( axisIndex ), value, static_cast<uint8>( padIndex ) );
+            AutomationRunnerInternal::GamepadAxisArgs args;
+            if ( AutomationRunnerInternal::parseGamepadAxis( step, args, outError ) == false )
+                return false;
+            runner._inputScript.addGamepadAxis( step._frameIndex, static_cast<uint16>( args._axis ), args._value, static_cast<uint8>( args._pad ) );
             return true;
         }
 
         static bool prepareText( AutomationRunner& runner, const AutomationStep& step, string& outError )
         {
-            (void)outError;
-            runner._inputScript.addEvent( step._frameIndex, RawInputEvent::makeTextInput( *step.findAttribute( "value" ) ) );
+            const string* pValue = step.requireAttribute( "value", outError );
+            if ( pValue == nullptr )
+                return false;
+            runner._inputScript.addEvent( step._frameIndex, RawInputEvent::makeTextInput( *pValue ) );
             return true;
         }
 
@@ -885,34 +1033,30 @@ namespace sw
             return true;
         }
 
-        /** @brief 종료 시한을 겁니다. @p bClose 면 창 닫기도 요청합니다(`CloseWindow`). */
-        static void startExitDeadline( AutomationRunner& runner, const AutomationStep& step, bool bClose )
+        /** @brief 종료 시한을 겁니다. @p bClose 면 창 닫기도 요청합니다(`CloseWindow`). 시한을 읽지 못하면(핫 리로드로 바뀐 단계) 오류로 끝나도록 false 입니다. */
+        [[nodiscard]] static bool startExitDeadline( AutomationRunner& runner, const AutomationStep& step, bool bClose )
         {
             string  error;
             float32 seconds = 0.0f;
-            // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다.
-            (void)AutomationRunnerInternal::readFloat( step, bClose ? "withinSeconds" : "seconds", AutomationRunnerInternal::kDefaultExitWithinSeconds, seconds, error );
+            if ( AutomationRunnerInternal::parseExitSeconds( step, bClose ? "withinSeconds" : "seconds", seconds, error ) == false )
+            {
+                SW_LOG_ERROR( "[Scenario] %#", error.c_str() );
+                return false;
+            }
             runner._exitDeadlineSeconds = static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6 + static_cast<float64>( seconds );
             if ( bClose == false )
-                return;
+                return true;
             IWindow* pWindow = IWindow::getActiveWindow();
             if ( pWindow == nullptr )
                 runner.recordFailure( step, "there is no window to close" );
             else
                 pWindow->requestClose();
-        }
-
-        static bool runCloseWindow( AutomationRunner& runner, const AutomationStep& step )
-        {
-            startExitDeadline( runner, step, true );
             return true;
         }
 
-        static bool runExpectExitWithin( AutomationRunner& runner, const AutomationStep& step )
-        {
-            startExitDeadline( runner, step, false );
-            return true;
-        }
+        static bool runCloseWindow( AutomationRunner& runner, const AutomationStep& step ) { return startExitDeadline( runner, step, true ); }
+
+        static bool runExpectExitWithin( AutomationRunner& runner, const AutomationStep& step ) { return startExitDeadline( runner, step, false ); }
 
         static bool runPass( AutomationRunner& runner, const AutomationStep& step )
         {
@@ -966,9 +1110,9 @@ namespace sw
     SW_AUTOMATION_STEP_WITH_HOOKS( runnerPress, "Press", nullptr, &AutomationRunnerInternal::validateSlotStep, &AutomationRunnerEngineSteps::prepareSlotStep, nullptr, false );
     SW_AUTOMATION_STEP_WITH_HOOKS( runnerRelease, "Release", nullptr, &AutomationRunnerInternal::validateSlotStep, &AutomationRunnerEngineSteps::prepareSlotStep, nullptr, false );
     SW_AUTOMATION_STEP_WITH_HOOKS( runnerTap, "Tap", nullptr, &AutomationRunnerInternal::validateSlotStep, &AutomationRunnerEngineSteps::prepareSlotStep, nullptr, false );
-    SW_AUTOMATION_STEP_WITH_HOOKS( runnerMouseDelta, "MouseDelta", nullptr, &AutomationRunnerInternal::validateMouseDelta, &AutomationRunnerEngineSteps::prepareMouseDelta,
+    SW_AUTOMATION_STEP_WITH_HOOKS( runnerMouseDelta, "MouseDelta", nullptr, &AutomationRunnerInternal::validateAxisPair, &AutomationRunnerEngineSteps::prepareMouseDelta,
                                    nullptr, false );
-    SW_AUTOMATION_STEP_WITH_HOOKS( runnerWheel, "Wheel", nullptr, &AutomationRunnerInternal::validateWheel, &AutomationRunnerEngineSteps::prepareWheel, nullptr, false );
+    SW_AUTOMATION_STEP_WITH_HOOKS( runnerWheel, "Wheel", nullptr, &AutomationRunnerInternal::validateAxisPair, &AutomationRunnerEngineSteps::prepareWheel, nullptr, false );
     SW_AUTOMATION_STEP_WITH_HOOKS( runnerMousePosition, "MousePosition", nullptr, &AutomationRunnerInternal::validateMousePosition,
                                    &AutomationRunnerEngineSteps::prepareMousePosition, nullptr, false );
     SW_AUTOMATION_STEP_WITH_HOOKS( runnerGamepadAxis, "GamepadAxis", nullptr, &AutomationRunnerInternal::validateGamepadAxis, &AutomationRunnerEngineSteps::prepareGamepadAxis,
@@ -1351,18 +1495,18 @@ namespace sw
 
     bool AutomationRunner::shouldHoldForCondition( const AutomationStep& step, InputManager& input )
     {
-        bool       bMatched = false;
-        string     message;
-        const bool bHasValue = compareProbe( step, bMatched, message );
-        const bool bReady    = bHasValue && bMatched;
-        string     error;
-        uint32     timeoutFrames  = 0;
-        float32    timeoutSeconds = 0.0f;
-        (void)AutomationRunnerInternal::readUint( step, "timeoutFrames", AutomationRunnerInternal::kDefaultWaitTimeoutFrames, timeoutFrames,
-                                                  error );                                                // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
-        (void)AutomationRunnerInternal::readFloat( step, "timeoutSeconds", 0.0f, timeoutSeconds, error ); // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
-        if ( step.findAttribute( "timeoutSeconds" ) != nullptr )
-            timeoutFrames = convertSecondsToFrames( timeoutSeconds );
+        bool                                      bMatched = false;
+        string                                    message;
+        const bool                                bHasValue = compareProbe( step, bMatched, message );
+        const bool                                bReady    = bHasValue && bMatched;
+        string                                    error;
+        AutomationRunnerInternal::WaitTimeoutArgs timeout;
+        if ( AutomationRunnerInternal::parseWaitTimeout( step, timeout, error ) == false )
+        {
+            recordFailure( step, error ); // 검사 뒤 단계가 바뀌었다(핫 리로드) — 기다리지 않고 실패로 적는다
+            return false;
+        }
+        const uint32 timeoutFrames  = timeout._bSeconds ? convertSecondsToFrames( timeout._timeoutSeconds ) : timeout._timeoutFrames;
         const uint32 heldFrameCount = _holdFrameCount;
         if ( holdUntilReady( step, input, bReady, timeoutFrames ) == AutomationStepHold::Hold )
             return true;
@@ -1409,9 +1553,6 @@ namespace sw
             return false;
         const string valueText = Internal::makeValueText( value );
         const string subject   = outMessage;
-        string       error;
-        float32      expected  = 0.0f;
-        float32      tolerance = 0.0f;
         bool         bOk       = true;
         string       rule;
         const bool   bNumberRule = step.findAttribute( "is" ) == nullptr && step.findAttribute( "sameAs" ) == nullptr && step.findAttribute( "differsFrom" ) == nullptr;
@@ -1447,32 +1588,16 @@ namespace sw
             bOk  = valueText == *step.findAttribute( "is" );
             rule = "is '" + *step.findAttribute( "is" ) + "'";
         }
-        else if ( step.findAttribute( "equals" ) != nullptr )
-        {
-            (void)Internal::readFloat( step, "equals", 0.0f, expected, error ); // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
-            bOk  = value._number == static_cast<float64>( expected );
-            rule = "== " + *step.findAttribute( "equals" );
-        }
-        else if ( step.findAttribute( "near" ) != nullptr )
-        {
-            (void)Internal::readFloat( step, "near", 0.0f, expected, error );          // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
-            (void)Internal::readFloat( step, "tolerance", 1.0e-4f, tolerance, error ); // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
-            const float64 lower = static_cast<float64>( expected ) - static_cast<float64>( tolerance );
-            const float64 upper = static_cast<float64>( expected ) + static_cast<float64>( tolerance );
-            bOk                 = lower <= value._number && value._number <= upper;
-            rule                = "near " + *step.findAttribute( "near" );
-        }
-        else if ( step.findAttribute( "atLeast" ) != nullptr )
-        {
-            (void)Internal::readFloat( step, "atLeast", 0.0f, expected, error ); // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
-            bOk  = value._number >= static_cast<float64>( expected );
-            rule = ">= " + *step.findAttribute( "atLeast" );
-        }
         else
         {
-            (void)Internal::readFloat( step, "atMost", 0.0f, expected, error ); // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
-            bOk  = value._number <= static_cast<float64>( expected );
-            rule = "<= " + *step.findAttribute( "atMost" );
+            Internal::NumberComparison comparison;
+            string                     error;
+            if ( Internal::parseNumberComparison( step, Internal::kProbeNearTolerance, comparison, error ) == false )
+            {
+                outMessage = error; // 검사 뒤 단계가 바뀌었다(핫 리로드)
+                return false;
+            }
+            bOk = Internal::matchesNumber( comparison, value._number, rule );
         }
         outMatched = bOk;
         outMessage = subject + " " + rule + ", got " + valueText;
@@ -1551,8 +1676,12 @@ namespace sw
                 pWatch = &watch;
         }
         string error;
-        uint32 since = 0;
-        (void)AutomationRunnerInternal::readUint( step, "since", 0, since, error ); // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
+        uint32 since = 0; // 적지 않으면 처음부터 본다
+        if ( AutomationRunnerInternal::readUint( step, "since", since, error ) == false )
+        {
+            recordFailure( step, error ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
+            return;
+        }
         const string*        pIs      = step.findAttribute( "is" );
         const vector<string> listWant = pIs != nullptr ? vector<string>{ *pIs } : AutomationRunnerInternal::splitList( *step.findAttribute( "sequence" ) );
         // `since` 프레임에 이미 들어 있던 값(그 앞의 마지막 바뀜)도 거친 것으로 본다.
@@ -1622,36 +1751,36 @@ namespace sw
 
     void AutomationRunner::runExpectLog( const AutomationStep& step )
     {
-        const string& needle = *step.findAttribute( "contains" );
-        string        error;
-        uint32        since = 0;
-        (void)AutomationRunnerInternal::readUint( step, "since", 0, since, error ); // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
-        const uint32 matchCount = _logCapture.countMatchingLines( needle, since );
-        uint32       expected   = 0;
-        if ( step.findAttribute( "count" ) != nullptr )
+        const string&                           needle = *step.findAttribute( "contains" );
+        string                                  error;
+        AutomationRunnerInternal::ExpectLogArgs args;
+        if ( AutomationRunnerInternal::parseExpectLog( step, args, error ) == false )
         {
-            (void)AutomationRunnerInternal::readUint( step, "count", 0, expected, error ); // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
-            if ( matchCount != expected )
-                recordFailure( step, "ExpectLog '" + needle + "' count == " + to_string( expected ) + ", got " + to_string( matchCount ) );
+            recordFailure( step, error ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
             return;
         }
-        (void)AutomationRunnerInternal::readUint( step, "atLeast", 0, expected, error ); // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
-        if ( matchCount < expected )
-            recordFailure( step, "ExpectLog '" + needle + "' count >= " + to_string( expected ) + ", got " + to_string( matchCount ) );
+        const uint32 matchCount = _logCapture.countMatchingLines( needle, args._since );
+        if ( args._bExactCount )
+        {
+            if ( matchCount != args._expected )
+                recordFailure( step, "ExpectLog '" + needle + "' count == " + to_string( args._expected ) + ", got " + to_string( matchCount ) );
+            return;
+        }
+        if ( matchCount < args._expected )
+            recordFailure( step, "ExpectLog '" + needle + "' count >= " + to_string( args._expected ) + ", got " + to_string( matchCount ) );
     }
 
     void AutomationRunner::runExpectImage( const AutomationStep& step )
     {
         using Internal = AutomationRunnerInternal;
         string                    error;
-        AutomationImageMetricKind metric = AutomationImageMetricKind::MeanLuma;
-        AutomationImageRegion     region{};
-        float32                   ratio = Internal::kDefaultDarkRatio;
-        (void)AutomationImageMetric::tryParseKind( *step.findAttribute( "metric" ), metric ); // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
+        Internal::ExpectImageArgs args;
+        if ( Internal::parseExpectImage( step, args, error ) == false )
+        {
+            recordFailure( step, error ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
+            return;
+        }
         const string* pRegion = step.findAttribute( "region" );
-        if ( pRegion != nullptr )
-            (void)AutomationImageMetric::tryParseRegion( *pRegion, region );                   // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
-        (void)Internal::readFloat( step, "ratio", Internal::kDefaultDarkRatio, ratio, error ); // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
 
         const string    path = resolveOutputPath( *step.findAttribute( "file" ) );
         AutomationImage image;
@@ -1664,7 +1793,7 @@ namespace sw
             return;
         }
         float64 value = 0.0;
-        if ( AutomationImageMetric::measure( image, region, metric, ratio, pReference != nullptr ? &reference : nullptr, value, error ) == false )
+        if ( AutomationImageMetric::measure( image, args._region, args._metric, args._ratio, pReference != nullptr ? &reference : nullptr, value, error ) == false )
         {
             recordFailure( step, error );
             return;
@@ -1675,35 +1804,8 @@ namespace sw
         SW_LOG_INFO( "[Scenario] metric %#", line.c_str() );
         _reportWriter.addMetricLine( std::move( line ) );
 
-        float32 expected  = 0.0f;
-        float32 tolerance = 0.0f;
-        bool    bOk       = true;
-        string  rule;
-        if ( step.findAttribute( "equals" ) != nullptr )
-        {
-            (void)Internal::readFloat( step, "equals", 0.0f, expected, error ); // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
-            bOk  = value == static_cast<float64>( expected );
-            rule = "== " + *step.findAttribute( "equals" );
-        }
-        else if ( step.findAttribute( "near" ) != nullptr )
-        {
-            (void)Internal::readFloat( step, "near", 0.0f, expected, error );          // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
-            (void)Internal::readFloat( step, "tolerance", 1.0e-3f, tolerance, error ); // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
-            bOk  = MathUtil::abs( value - static_cast<float64>( expected ) ) <= static_cast<float64>( tolerance );
-            rule = "near " + *step.findAttribute( "near" );
-        }
-        else if ( step.findAttribute( "atLeast" ) != nullptr )
-        {
-            (void)Internal::readFloat( step, "atLeast", 0.0f, expected, error ); // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
-            bOk  = value >= static_cast<float64>( expected );
-            rule = ">= " + *step.findAttribute( "atLeast" );
-        }
-        else
-        {
-            (void)Internal::readFloat( step, "atMost", 0.0f, expected, error ); // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
-            bOk  = value <= static_cast<float64>( expected );
-            rule = "<= " + *step.findAttribute( "atMost" );
-        }
+        string     rule;
+        const bool bOk = Internal::matchesNumber( args._comparison, value, rule );
         if ( bOk == false )
             recordFailure( step, "ExpectImage " + *step.findAttribute( "metric" ) + " " + rule + ", got " + Internal::formatNumber( value ) );
     }

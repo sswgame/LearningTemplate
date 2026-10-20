@@ -11,6 +11,8 @@
 
 namespace sw
 {
+    SW_LOG_CALLER( "TrampolineArena" );
+
     namespace
     {
         struct TrampolineArenaInternal
@@ -686,9 +688,19 @@ namespace sw
         }
         else if ( def._effect == TrampolineArenaInternal::getHeavyName() )
         {
-            body._heavyTimer.start( def._stats.getValue( TrampolineArenaInternal::getDurationName(), 8.0f ) );
-            body._knockbackTaken = def._stats.getValue( TrampolineArenaInternal::getKnockbackTakenName(), 0.5f );
-            body._knockbackDealt = def._stats.getValue( TrampolineArenaInternal::getKnockbackDealtName(), 1.5f );
+            // Heavy 의 세 수치는 아이템 데이터가 반드시 적는다 — 코드가 대신 정한 값으로 효과를 내지 않는다.
+            const std::optional<float32> duration       = def._stats.findValue( TrampolineArenaInternal::getDurationName() );
+            const std::optional<float32> knockbackTaken = def._stats.findValue( TrampolineArenaInternal::getKnockbackTakenName() );
+            const std::optional<float32> knockbackDealt = def._stats.findValue( TrampolineArenaInternal::getKnockbackDealtName() );
+            const bool                   bComplete      = duration.has_value() && knockbackTaken.has_value() && knockbackDealt.has_value();
+            if ( bComplete == false )
+            {
+                SW_LOG_ERROR( "item '%#' (Heavy) needs duration, knockbackTaken and knockbackDealt - not applied", def._id.c_str() );
+                return;
+            }
+            body._heavyTimer.start( *duration );
+            body._knockbackTaken = *knockbackTaken;
+            body._knockbackDealt = *knockbackDealt;
         }
         else if ( def._effect == TrampolineArenaInternal::getShieldName() )
         {

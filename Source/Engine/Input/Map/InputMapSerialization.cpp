@@ -184,7 +184,34 @@ namespace sw
                 {
                     case BindingKind::SingleSlot:
                     {
-                        return writeSingleSlotDefinition( actionNode, pActionName, binding, pTriggerName );
+                        const InputSlot& slot     = binding._arrSlot[0];
+                        XMLNode          bindNode = actionNode.appendChild( InputMapXML::kBind );
+                        if ( slot._deviceKind == InputDeviceKind::Keyboard )
+                        {
+                            bindNode.appendAttribute( InputMapXML::kAttrSource, InputMapXML::kSourceKey );
+                            bindNode.appendAttribute( InputMapXML::kAttrCode, KeyCodeUtil::toName( static_cast<Key>( slot._controlIndex ) ) );
+                        }
+                        else if ( slot._deviceKind == InputDeviceKind::Mouse )
+                        {
+                            bindNode.appendAttribute( InputMapXML::kAttrSource, InputMapXML::kSourceMouse );
+                            bindNode.appendAttribute( InputMapXML::kAttrCode, MouseButtonUtil::toName( static_cast<MouseButton>( slot._controlIndex ) ) );
+                        }
+                        else if ( slot._deviceKind == InputDeviceKind::Gamepad )
+                        {
+                            bindNode.appendAttribute( InputMapXML::kAttrSource, InputMapXML::kSourceGamepad );
+                            bindNode.appendAttribute( InputMapXML::kAttrCode, GamepadButtonUtil::toName( static_cast<GamepadButton>( slot._controlIndex ) ) );
+                            bindNode.appendAttribute( InputMapXML::kAttrPad, static_cast<int32>( slot._deviceIndex ) );
+                        }
+                        else
+                        {
+                            SW_LOG_ERROR( "Action '%#' has a binding on a device the <InputMap> format cannot name - not saved", pActionName );
+                            return false;
+                        }
+                        if ( pTriggerName != nullptr )
+                            bindNode.appendAttribute( InputMapXML::kAttrTrigger, pTriggerName );
+                        InputMapSerializationInternal::writeBindingModifier( bindNode, binding );
+                        bindNode.appendAttribute( InputMapXML::kAttrLayer, binding._layer.c_str() );
+                        return true;
                     }
                     case BindingKind::Chord:
                     {
@@ -199,7 +226,35 @@ namespace sw
                     }
                     case BindingKind::Axis1DComposite:
                     {
-                        return writeAxis1DDefinition( actionNode, pActionName, binding, pTriggerName );
+                        const InputSlot& negativeSlot = binding._arrSlot[0];
+                        const InputSlot& positiveSlot = binding._arrSlot[1];
+                        const bool       bGamepad     = negativeSlot._deviceKind == InputDeviceKind::Gamepad && positiveSlot._deviceKind == InputDeviceKind::Gamepad &&
+                                              negativeSlot._deviceIndex == positiveSlot._deviceIndex;
+                        const bool bKeyboard = negativeSlot._deviceKind == InputDeviceKind::Keyboard && positiveSlot._deviceKind == InputDeviceKind::Keyboard;
+                        if ( bGamepad == false && bKeyboard == false )
+                        {
+                            SW_LOG_ERROR( "Action '%#' has an axis1d binding over two devices, which the <InputMap> format cannot name - not saved", pActionName );
+                            return false;
+                        }
+                        XMLNode axisNode = actionNode.appendChild( "axis1d" );
+                        if ( bGamepad )
+                        {
+                            axisNode.appendAttribute( InputMapXML::kAttrSource, InputMapXML::kSourceGamepad );
+                            axisNode.appendAttribute( "negative", GamepadButtonUtil::toName( static_cast<GamepadButton>( negativeSlot._controlIndex ) ) );
+                            axisNode.appendAttribute( "positive", GamepadButtonUtil::toName( static_cast<GamepadButton>( positiveSlot._controlIndex ) ) );
+                            axisNode.appendAttribute( InputMapXML::kAttrPad, static_cast<int32>( negativeSlot._deviceIndex ) );
+                        }
+                        else
+                        {
+                            axisNode.appendAttribute( "negative", KeyCodeUtil::toName( static_cast<Key>( negativeSlot._controlIndex ) ) );
+                            axisNode.appendAttribute( "positive", KeyCodeUtil::toName( static_cast<Key>( positiveSlot._controlIndex ) ) );
+                        }
+                        // Down 은 적지 않아도 Down 으로 읽히므로, 그 밖의 trigger 만 적는다.
+                        if ( binding._trigger != ActionTrigger::Down && pTriggerName != nullptr )
+                            axisNode.appendAttribute( InputMapXML::kAttrTrigger, pTriggerName );
+                        InputMapSerializationInternal::writeBindingModifier( axisNode, binding );
+                        axisNode.appendAttribute( InputMapXML::kAttrLayer, binding._layer.c_str() );
+                        return true;
                     }
                     case BindingKind::Vector2DComposite:
                     {
@@ -251,73 +306,6 @@ namespace sw
                 return false;
             }
 
-            /** @brief 슬롯 하나짜리 바인딩을 `<bind>` 로 씁니다. 키보드 · 마우스 · 게임패드 밖의 장치면 오류를 남기고 false 를 반환합니다. */
-            [[nodiscard]] static bool writeSingleSlotDefinition( XMLNode actionNode, const utf8* pActionName, const ActionBinding& binding, const utf8* pTriggerName )
-            {
-                const InputSlot& slot     = binding._arrSlot[0];
-                XMLNode          bindNode = actionNode.appendChild( InputMapXML::kBind );
-                if ( slot._deviceKind == InputDeviceKind::Keyboard )
-                {
-                    bindNode.appendAttribute( InputMapXML::kAttrSource, InputMapXML::kSourceKey );
-                    bindNode.appendAttribute( InputMapXML::kAttrCode, KeyCodeUtil::toName( static_cast<Key>( slot._controlIndex ) ) );
-                }
-                else if ( slot._deviceKind == InputDeviceKind::Mouse )
-                {
-                    bindNode.appendAttribute( InputMapXML::kAttrSource, InputMapXML::kSourceMouse );
-                    bindNode.appendAttribute( InputMapXML::kAttrCode, MouseButtonUtil::toName( static_cast<MouseButton>( slot._controlIndex ) ) );
-                }
-                else if ( slot._deviceKind == InputDeviceKind::Gamepad )
-                {
-                    bindNode.appendAttribute( InputMapXML::kAttrSource, InputMapXML::kSourceGamepad );
-                    bindNode.appendAttribute( InputMapXML::kAttrCode, GamepadButtonUtil::toName( static_cast<GamepadButton>( slot._controlIndex ) ) );
-                    bindNode.appendAttribute( InputMapXML::kAttrPad, static_cast<int32>( slot._deviceIndex ) );
-                }
-                else
-                {
-                    SW_LOG_ERROR( "Action '%#' has a binding on a device the <InputMap> format cannot name - not saved", pActionName );
-                    return false;
-                }
-                if ( pTriggerName != nullptr )
-                    bindNode.appendAttribute( InputMapXML::kAttrTrigger, pTriggerName );
-                InputMapSerializationInternal::writeBindingModifier( bindNode, binding );
-                bindNode.appendAttribute( InputMapXML::kAttrLayer, binding._layer.c_str() );
-                return true;
-            }
-
-            /** @brief 1D 축 합성을 `<axis1d>` 로 씁니다. 키보드 둘 또는 같은 패드의 버튼 둘만 표현할 수 있어, 그 밖이면 오류를 남기고 false 를 반환합니다. */
-            [[nodiscard]] static bool writeAxis1DDefinition( XMLNode actionNode, const utf8* pActionName, const ActionBinding& binding, const utf8* pTriggerName )
-            {
-                const InputSlot& negativeSlot = binding._arrSlot[0];
-                const InputSlot& positiveSlot = binding._arrSlot[1];
-                const bool       bGamepad     = negativeSlot._deviceKind == InputDeviceKind::Gamepad && positiveSlot._deviceKind == InputDeviceKind::Gamepad &&
-                                      negativeSlot._deviceIndex == positiveSlot._deviceIndex;
-                const bool bKeyboard = negativeSlot._deviceKind == InputDeviceKind::Keyboard && positiveSlot._deviceKind == InputDeviceKind::Keyboard;
-                if ( bGamepad == false && bKeyboard == false )
-                {
-                    SW_LOG_ERROR( "Action '%#' has an axis1d binding over two devices, which the <InputMap> format cannot name - not saved", pActionName );
-                    return false;
-                }
-                XMLNode axisNode = actionNode.appendChild( "axis1d" );
-                if ( bGamepad )
-                {
-                    axisNode.appendAttribute( InputMapXML::kAttrSource, InputMapXML::kSourceGamepad );
-                    axisNode.appendAttribute( "negative", GamepadButtonUtil::toName( static_cast<GamepadButton>( negativeSlot._controlIndex ) ) );
-                    axisNode.appendAttribute( "positive", GamepadButtonUtil::toName( static_cast<GamepadButton>( positiveSlot._controlIndex ) ) );
-                    axisNode.appendAttribute( InputMapXML::kAttrPad, static_cast<int32>( negativeSlot._deviceIndex ) );
-                }
-                else
-                {
-                    axisNode.appendAttribute( "negative", KeyCodeUtil::toName( static_cast<Key>( negativeSlot._controlIndex ) ) );
-                    axisNode.appendAttribute( "positive", KeyCodeUtil::toName( static_cast<Key>( positiveSlot._controlIndex ) ) );
-                }
-                // Down 은 적지 않아도 Down 으로 읽히므로, 그 밖의 trigger 만 적는다.
-                if ( binding._trigger != ActionTrigger::Down && pTriggerName != nullptr )
-                    axisNode.appendAttribute( InputMapXML::kAttrTrigger, pTriggerName );
-                InputMapSerializationInternal::writeBindingModifier( axisNode, binding );
-                axisNode.appendAttribute( InputMapXML::kAttrLayer, binding._layer.c_str() );
-                return true;
-            }
-
             /**
              * @brief `pad` 속성을 슬롯 범위(0 ~ `kMaxGamepadSlot` - 1)에서 읽습니다. 없으면 0 번 패드입니다.
              * @return 정수가 아니거나 범위 밖이면 경고하고 false 를 반환하며, 호출한 쪽은 그 바인딩을 버립니다.
@@ -326,9 +314,17 @@ namespace sw
              */
             [[nodiscard]] static bool tryGetPadIndex( XMLNode node, uint8& outPadIndex )
             {
-                int32 padIndex{ 0 };
-                if ( node.tryGetAttributeIntInRange( "pad", 0, 0, static_cast<int32>( kMaxGamepadSlot ) - 1, padIndex ) == false )
+                int32 padIndex{ 0 }; // 적지 않으면 0 번 패드다
+                bool  bValid = true;
+                readOptional( node, "pad", padIndex, bValid );
+                if ( bValid == false )
                     return false;
+                const bool bInRange = 0 <= padIndex && padIndex < static_cast<int32>( kMaxGamepadSlot );
+                if ( bInRange == false )
+                {
+                    SW_LOG_ERROR( "<%# pad=\"%#\"> is outside 0..%# - binding dropped", node.getName(), padIndex, static_cast<int32>( kMaxGamepadSlot ) - 1 );
+                    return false;
+                }
                 outPadIndex = static_cast<uint8>( padIndex );
                 return true;
             }
@@ -346,16 +342,55 @@ namespace sw
                     node.appendAttribute( "axis", binding._stickAxis == GamepadStickAxis::X ? "X" : "Y" );
             }
 
-            /**
-             * @brief 스틱 배율 · 프레임 시간 곱 · 성분을 읽습니다. 없는 속성은 기본값(1, 1, false, 둘 다)입니다.
-             * @return `axis` 가 `X` · `Y` 가 아닌 글이면 경고하고 false 입니다(그 바인딩은 버린다 — 2D 로 바꿔 묶으면 1D 액션이 엉뚱한 성분을 읽는다).
-             */
-            [[nodiscard]] static bool readStickModifier( XMLNode node, float2& outAxisScale, bool& outScaleByDelta, GamepadStickAxis& outAxis )
+            /** @brief 적지 않은 속성의 기본값을 담은 바인딩입니다. 기본값의 원본은 `ActionBinding` 의 초기값 하나다. */
+            static const ActionBinding& getDefaultBinding()
             {
-                outAxisScale    = float2{ node.getAttributeFloat( "scaleX", 1.0f ), node.getAttributeFloat( "scaleY", 1.0f ) };
-                outScaleByDelta = node.getAttributeBool( "scaleByDelta", false );
+                static const ActionBinding s_defaultBinding{};
+                return s_defaultBinding;
+            }
 
-                outAxis              = GamepadStickAxis::Both;
+            /**
+             * @brief 선택 속성 @p pName 을 읽어 있으면 @p inoutValue 에 넣습니다. 없으면 그대로입니다(부르는 쪽이 넣어 둔 초기값).
+             * @details 값이 깨졌으면 `XMLNode` 가 원소 · 속성 이름으로 오류를 남기고 @p inoutbValid 를 내린다(값은 그대로). 폴백 인자를 받지 않는다.
+             */
+            template <typename T>
+            static void readOptional( XMLNode node, const utf8* pName, T& inoutValue, bool& inoutbValid )
+            {
+                std::optional<T> value;
+                if ( node.readOptionalAttribute( pName, value ) == false )
+                {
+                    inoutbValid = false;
+                    return;
+                }
+                if ( value.has_value() )
+                    inoutValue = *value;
+            }
+
+            /** @brief 반드시 있어야 하는 속성 @p pName 을 읽습니다. 없거나 깨졌으면 `XMLNode` 가 오류를 남기고 @p inoutbValid 를 내립니다(값은 그대로). */
+            template <typename T>
+            static void readRequired( XMLNode node, const utf8* pName, T& outValue, bool& inoutbValid )
+            {
+                const std::optional<T> value = node.readRequiredAttribute<T>( pName );
+                if ( value.has_value() )
+                    outValue = *value;
+                else
+                    inoutbValid = false;
+            }
+
+            /**
+             * @brief 스틱 배율 · 프레임 시간 곱 · 성분을 읽습니다. 없는 속성은 `ActionBinding` 의 초기값(1, 1, false, 둘 다)입니다.
+             * @return `axis` 가 `X` · `Y` 가 아닌 글이면 오류를 남기고 @p inoutbValid 를 내린 뒤 false 입니다(그 바인딩은 버린다 — 2D 로 바꿔 묶으면
+             *         1D 액션이 엉뚱한 성분을 읽는다).
+             */
+            [[nodiscard]] static bool readStickModifier( XMLNode node, float2& outAxisScale, bool& outScaleByDelta, GamepadStickAxis& outAxis, bool& inoutbValid )
+            {
+                outAxisScale    = getDefaultBinding()._axisScale;
+                outScaleByDelta = getDefaultBinding()._bScaleByDelta;
+                outAxis         = getDefaultBinding()._stickAxis;
+                readOptional( node, "scaleX", outAxisScale._x, inoutbValid );
+                readOptional( node, "scaleY", outAxisScale._y, inoutbValid );
+                readOptional( node, "scaleByDelta", outScaleByDelta, inoutbValid );
+
                 const utf8* pAxisStr = node.findAttribute( "axis" );
                 if ( StringUtil::isNullOrEmpty( pAxisStr ) )
                     return true;
@@ -369,8 +404,27 @@ namespace sw
                     outAxis = GamepadStickAxis::Y;
                     return true;
                 }
-                SW_LOG_WARNING( "stick axis '%#' is neither 'X' nor 'Y' - binding dropped", pAxisStr );
+                SW_LOG_ERROR( "stick axis '%#' is neither 'X' nor 'Y' - binding dropped", pAxisStr );
+                inoutbValid = false;
                 return false;
+            }
+
+            /** @brief `<layer>` 의 설정입니다. 적지 않은 칸은 이 초기값(우선순위 0, 켜짐, 아래를 막지 않음, 늘 켜지 않음)입니다. */
+            struct LayerSettings
+            {
+                int32 _priority{ 0 };
+                bool  _bEnabled{ true };
+                bool  _bBlockLower{ false };
+                bool  _bAlwaysOn{ false };
+            };
+
+            /** @brief `<layer>` 원소의 설정을 읽습니다. 깨진 값은 오류로 @p inoutbValid 를 내립니다. */
+            static void readLayerSettings( XMLNode node, LayerSettings& inoutSettings, bool& inoutbValid )
+            {
+                readOptional( node, InputMapXML::kAttrPriority, inoutSettings._priority, inoutbValid );
+                readOptional( node, InputMapXML::kAttrEnabled, inoutSettings._bEnabled, inoutbValid );
+                readOptional( node, InputMapXML::kAttrBlockLower, inoutSettings._bBlockLower, inoutbValid );
+                readOptional( node, InputMapXML::kAttrAlwaysOn, inoutSettings._bAlwaysOn, inoutbValid );
             }
 
             /** @brief 바인딩마다 발화 시간 · 부호 뒤집기(`time` · `negate`)를 적습니다. 기본값(0, false)이면 적지 않아 기존 파일이 그대로 나온다. */
@@ -386,25 +440,36 @@ namespace sw
 
             /**
              * @brief @p node 를 읽어 방금 더한 바인딩(인덱스 @p previousCount)에 발화 시간 · 부호 뒤집기를 겁니다.
-             * @details 바인딩을 더하지 못했으면(모르는 키 등) 아무것도 하지 않는다. 없는 속성은 기본값(0 = 맵 값, false)이라 옛 파일은 그대로 읽힌다.
+             * @details 바인딩을 더하지 못했으면(모르는 키 등) 아무것도 하지 않는다. 없는 속성은 `ActionBinding` 의 초기값(0 = 맵 값, false, 2 번)이다.
+             *          깨진 값이나 2~255 밖의 탭 수는 자르지 않고 오류로 @p inoutbValid 를 내린다.
              */
-            static void readBindingModifier( InputMap& inputMap, const hashed_string& action, uint32 previousCount, XMLNode node )
+            static void readBindingModifier( InputMap& inputMap, const hashed_string& action, uint32 previousCount, XMLNode node, bool& inoutbValid )
             {
                 if ( inputMap.getBindingCount( action ) <= previousCount )
                     return;
-                const float32 triggerTime = node.getAttributeFloat( "time", 0.0f );
+                float32 triggerTime = getDefaultBinding()._triggerTime;
+                bool    bNegate     = getDefaultBinding()._bNegate;
+                int32   tapCount    = getDefaultBinding()._tapCount;
+                readOptional( node, "time", triggerTime, inoutbValid );
+                readOptional( node, "negate", bNegate, inoutbValid );
+                readOptional( node, "taps", tapCount, inoutbValid );
                 if ( triggerTime > 0.0f )
                     (void)inputMap.setBindingTriggerTime( action, previousCount, triggerTime ); // 바로 위에서 바인딩이 있음을 확인했다
-                if ( node.getAttributeBool( "negate", false ) )
+                if ( bNegate )
                     (void)inputMap.setBindingNegate( action, previousCount, true ); // 바로 위에서 바인딩이 있음을 확인했다
-                // MultiTap 횟수. 없으면 2 이고, 2~255 밖이면 잘라 넣는다(옛 파일에는 이 속성이 없다).
-                const int32 tapCount = node.getAttributeInt( "taps", 2 );
-                if ( tapCount != 2 )
+                const bool bTapCountInRange = kMinTapCount <= tapCount && tapCount <= kMaxTapCount;
+                if ( bTapCountInRange == false )
                 {
-                    const int32 clampedCount = ( tapCount < 2 ) ? 2 : ( ( tapCount > 255 ) ? 255 : tapCount );
-                    (void)inputMap.setBindingTapCount( action, previousCount, static_cast<uint8>( clampedCount ) ); // 바로 위에서 바인딩이 있음을 확인했다
+                    SW_LOG_ERROR( "Action '%#' has taps=\"%#\" outside %#..%#", action.c_str(), tapCount, kMinTapCount, kMaxTapCount );
+                    inoutbValid = false;
+                    return;
                 }
+                if ( tapCount != getDefaultBinding()._tapCount )
+                    (void)inputMap.setBindingTapCount( action, previousCount, static_cast<uint8>( tapCount ) ); // 바로 위에서 바인딩이 있음을 확인했다
             }
+
+            static constexpr int32 kMinTapCount = 2;   ///< MultiTap 은 두 번부터다
+            static constexpr int32 kMaxTapCount = 255; ///< `ActionBinding::_tapCount` 가 uint8 이다
 
             /**
              * @brief `modifierMask` 속성을 아는 수정 키 비트(`ModifierKey::All`) 범위에서 읽습니다. 없으면 0(수정 키 없음)입니다.
@@ -412,9 +477,17 @@ namespace sw
              */
             [[nodiscard]] static bool tryGetModifierMask( XMLNode node, uint8& outModifierMask )
             {
-                int32 modifierMask{ 0 };
-                if ( node.tryGetAttributeIntInRange( "modifierMask", 0, 0, ModifierKey::All, modifierMask ) == false )
+                int32 modifierMask{ 0 }; // 적지 않으면 수정 키 없음이다
+                bool  bValid = true;
+                readOptional( node, "modifierMask", modifierMask, bValid );
+                if ( bValid == false )
                     return false;
+                const bool bKnownBits = 0 <= modifierMask && modifierMask <= static_cast<int32>( ModifierKey::All );
+                if ( bKnownBits == false )
+                {
+                    SW_LOG_ERROR( "<%# modifierMask=\"%#\"> is outside 0..%# - binding dropped", node.getName(), modifierMask, static_cast<int32>( ModifierKey::All ) );
+                    return false;
+                }
                 outModifierMask = static_cast<uint8>( modifierMask );
                 return true;
             }
@@ -460,566 +533,6 @@ namespace sw
                 outPositive = InputSlot::fromKey( positiveKey );
                 return true;
             }
-
-            static constexpr float32 kStickDeadzoneDefault           = 0.15f; ///< `deadzone` 를 적지 않은 스틱 바인딩의 안쪽 데드존
-            static constexpr float32 kVector2DDeadzoneDefault        = 0.0f;
-            static constexpr float32 kOuterDeadzoneDefault           = 1.0f;
-            static constexpr float32 kResponseExponentDefault        = 1.0f;
-            static constexpr float32 kScaleDefault                   = 1.0f; ///< 마우스 이동량 · 휠 `scale`
-            static constexpr float32 kVirtualJoystickRadiusDefault   = 64.0f;
-            static constexpr float32 kVirtualJoystickDeadzoneDefault = 0.1f;
-
-            /** @brief 액션 하나를 읽는 동안 모든 태그가 함께 쓰는 값입니다. */
-            struct ActionLoadScope
-            {
-                hashed_string _action;
-                hashed_string _layer;          ///< 액션(또는 상위 레이어)의 레이어. 태그가 `layer` 를 적으면 그것이 이긴다.
-                ActionTrigger _defaultTrigger; ///< 액션이 적은 trigger. 안 적었으면 Pressed.
-                bool          _bTriggerWritten;
-            };
-
-            /** @brief `trigger` 계열 특성을 읽습니다. 없거나 모르는 이름이면 false 이고 @p outTrigger 는 그대로입니다. */
-            [[nodiscard]] static bool tryReadTrigger( XMLNode node, const utf8* pAttrName, ActionTrigger& outTrigger )
-            {
-                const utf8* pAttr = node.findAttribute( pAttrName );
-                if ( pAttr == nullptr )
-                    return false;
-                const ActionTrigger parsed = InputMap::actionTriggerFromName( pAttr );
-                if ( parsed == ActionTrigger::Count )
-                    return false;
-                outTrigger = parsed;
-                return true;
-            }
-
-            /** @brief 태그의 `layer` 특성을 읽습니다. 없으면 @p fallback 이고, 적었으면 그 레이어를 (없으면) 만들어 둡니다. */
-            [[nodiscard]] static hashed_string readLayer( InputMap& inputMap, XMLNode node, const hashed_string& fallback )
-            {
-                const utf8* pLayerAttr = node.findAttribute( InputMapXML::kAttrLayer );
-                if ( StringUtil::isNullOrEmpty( pLayerAttr ) )
-                    return fallback;
-                const hashed_string layer( pLayerAttr );
-                inputMap.registerLayer( layer );
-                return layer;
-            }
-
-            /** @brief `<layer>` 노드의 우선순위 · 켜짐 · 아래 막기 · 항상 켜짐을 읽어 레이어를 등록합니다. */
-            static void registerLayerNode( InputMap& inputMap, XMLNode layerNode, const utf8* pLayerName )
-            {
-                const int32 priority   = layerNode.getAttributeInt( InputMapXML::kAttrPriority, 0 );
-                const bool  enabled    = layerNode.getAttributeBool( InputMapXML::kAttrEnabled, true );
-                const bool  blockLower = layerNode.getAttributeBool( InputMapXML::kAttrBlockLower, false );
-                const bool  alwaysOn   = layerNode.getAttributeBool( InputMapXML::kAttrAlwaysOn, false );
-                inputMap.registerLayer( hashed_string( pLayerName ), priority, enabled, blockLower, alwaysOn );
-            }
-
-            /** @brief `modifier` 특성의 키를 읽습니다. 키 이름이 아니면 Ctrl · Shift · Alt 별칭을 봅니다. 모르면 Key::Unknown 입니다. */
-            static Key resolveModifierKey( const utf8* pModifierAttr )
-            {
-                const Key modifierKey = KeyCodeUtil::fromName( pModifierAttr );
-                if ( modifierKey != Key::Unknown )
-                    return modifierKey;
-                if ( StringUtil::equals( pModifierAttr, "Ctrl", true ) || StringUtil::equals( pModifierAttr, "Control", true ) )
-                    return Key::LeftControl;
-                if ( StringUtil::equals( pModifierAttr, "Shift", true ) )
-                    return Key::LeftShift;
-                if ( StringUtil::equals( pModifierAttr, "Alt", true ) )
-                    return Key::LeftAlt;
-                return Key::Unknown;
-            }
-
-            /** @brief `<bind modifier=...>` 이 키 조합이면 묶고 true 를 반환합니다. 수정 키나 방아쇠 키를 모르면 false 이며 단일 바인딩으로 이어집니다. */
-            [[nodiscard]] static bool tryBindChord( InputMap& inputMap, XMLNode bindNode, const utf8* pCode, const ActionLoadScope& scope, ActionTrigger trigger, const hashed_string& layer )
-            {
-                const utf8* pModifierAttr = bindNode.findAttribute( InputMapXML::kAttrModifier );
-                if ( StringUtil::isNullOrEmpty( pModifierAttr ) )
-                    return false;
-                const Key modifierKey = resolveModifierKey( pModifierAttr );
-                const Key triggerKey  = KeyCodeUtil::fromName( pCode );
-                if ( modifierKey == Key::Unknown || triggerKey == Key::Unknown )
-                    return false;
-                inputMap.bindChord( scope._action, modifierKey, triggerKey, trigger, layer );
-                return true;
-            }
-
-            /** @brief `source="gamepad"` 바인딩을 묶습니다. 코드가 스틱 이름이면 스틱, 아니면 버튼입니다. */
-            static void bindGamepadSource( InputMap& inputMap, XMLNode bindNode, const utf8* pCode, const ActionLoadScope& scope, ActionTrigger trigger, const hashed_string& layer )
-            {
-                const bool bLeftStick  = StringUtil::equals( pCode, "LeftStick", true );
-                const bool bRightStick = StringUtil::equals( pCode, "RightStick", true );
-                if ( bLeftStick || bRightStick )
-                {
-                    const float32 deadzone = bindNode.getAttributeFloat( InputMapXML::kAttrDeadzone, kStickDeadzoneDefault );
-                    inputMap.bindGamepadStick2D( scope._action, bLeftStick ? GamepadStick::Left : GamepadStick::Right, deadzone, layer );
-                    return;
-                }
-                const GamepadButton button = GamepadButtonUtil::fromName( pCode );
-                uint8               padIndex{ 0 };
-                if ( button != GamepadButton::Count && tryGetPadIndex( bindNode, padIndex ) )
-                    inputMap.bind( scope._action, InputSlot::fromGamepadButton( button, padIndex ), trigger, layer );
-            }
-
-            /** @brief `<bind source=... code=...>` 하나를 읽습니다. */
-            static void loadBindNode( InputMap& inputMap, XMLNode bindNode, const ActionLoadScope& scope )
-            {
-                const utf8* pSource = bindNode.findAttribute( InputMapXML::kAttrSource );
-                const utf8* pCode   = bindNode.findAttribute( InputMapXML::kAttrCode );
-                if ( pSource == nullptr || StringUtil::isNullOrEmpty( pCode ) )
-                    return;
-                const uint32 bindCountBefore = inputMap.getBindingCount( scope._action );
-
-                ActionTrigger trigger = scope._defaultTrigger;
-                (void)tryReadTrigger( bindNode, InputMapXML::kAttrTrigger, trigger ); // 없거나 모르는 이름이면 trigger 가 액션 기본값 그대로다
-                const hashed_string bindLayer = readLayer( inputMap, bindNode, scope._layer );
-
-                if ( tryBindChord( inputMap, bindNode, pCode, scope, trigger, bindLayer ) == false )
-                {
-                    if ( StringUtil::equals( pSource, InputMapXML::kSourceKey, true ) )
-                    {
-                        const Key key = KeyCodeUtil::fromName( pCode );
-                        if ( key != Key::Unknown )
-                            inputMap.bind( scope._action, key, trigger, bindLayer );
-                    }
-                    else if ( StringUtil::equals( pSource, InputMapXML::kSourceGamepad, true ) )
-                    {
-                        bindGamepadSource( inputMap, bindNode, pCode, scope, trigger, bindLayer );
-                    }
-                    else if ( StringUtil::equals( pSource, InputMapXML::kSourceMouse, true ) )
-                    {
-                        const MouseButton mouse = MouseButtonUtil::fromName( pCode );
-                        if ( mouse != MouseButton::Count )
-                            inputMap.bind( scope._action, mouse, trigger, bindLayer );
-                    }
-                }
-                readBindingModifier( inputMap, scope._action, bindCountBefore, bindNode );
-            }
-
-            static void loadVector2DNode( InputMap& inputMap, XMLNode compNode, const ActionLoadScope& scope )
-            {
-                const Key           upKey                  = KeyCodeUtil::fromName( compNode.getAttributeText( "up" ) );
-                const Key           downKey                = KeyCodeUtil::fromName( compNode.getAttributeText( "down" ) );
-                const Key           leftKey                = KeyCodeUtil::fromName( compNode.getAttributeText( "left" ) );
-                const Key           rightKey               = KeyCodeUtil::fromName( compNode.getAttributeText( "right" ) );
-                const float32       deadzone               = compNode.getAttributeFloat( "deadzone", kVector2DDeadzoneDefault );
-                const hashed_string compLayer              = readLayer( inputMap, compNode, scope._layer );
-                const bool          bCompleteDirectionKeys = upKey != Key::Unknown && downKey != Key::Unknown && leftKey != Key::Unknown && rightKey != Key::Unknown;
-                if ( bCompleteDirectionKeys )
-                    inputMap.bindVector2D( scope._action, upKey, downKey, leftKey, rightKey, deadzone, compLayer );
-            }
-
-            static void loadAxis1DNode( InputMap& inputMap, XMLNode axisNode, const ActionLoadScope& scope )
-            {
-                InputSlot negativeSlot{};
-                InputSlot positiveSlot{};
-                if ( tryReadAxisSlots( axisNode, "negative", "positive", negativeSlot, positiveSlot ) == false )
-                    return; // 모르는 이름이나 패드 번호는 이미 경고했으므로 이 바인딩을 버린다
-                const hashed_string axisLayer = readLayer( inputMap, axisNode, scope._layer );
-                // 축 값은 trigger 와 관계없이 누르는 동안 읽힌다. trigger 는 액션 발화(누를 때마다 한 칸 등)만 정한다.
-                ActionTrigger axisTrigger = scope._bTriggerWritten ? scope._defaultTrigger : ActionTrigger::Down;
-                (void)tryReadTrigger( axisNode, InputMapXML::kAttrTrigger, axisTrigger ); // 없으면 축 기본 trigger 그대로다
-                const uint32 axisCountBefore = inputMap.getBindingCount( scope._action );
-                inputMap.bindAxis1DComposite( scope._action, negativeSlot, positiveSlot, axisLayer, axisTrigger );
-                readBindingModifier( inputMap, scope._action, axisCountBefore, axisNode );
-            }
-
-            static void loadStickNode( InputMap& inputMap, XMLNode stickNode, const ActionLoadScope& scope )
-            {
-                uint8 padIndex{ 0 };
-                if ( tryGetPadIndex( stickNode, padIndex ) == false )
-                    return; // 이미 경고했으므로 엉뚱한 패드에 묶지 않고 이 바인딩을 버린다
-                const utf8*         pStickName       = stickNode.findAttribute( "stick" );
-                const GamepadStick  stick            = ( pStickName != nullptr && StringUtil::equals( pStickName, "Right", true ) ) ? GamepadStick::Right : GamepadStick::Left;
-                const float32       deadzone         = stickNode.getAttributeFloat( "deadzone", kStickDeadzoneDefault );
-                const hashed_string stickLayer       = readLayer( inputMap, stickNode, scope._layer );
-                const float32       outerDeadzone    = stickNode.getAttributeFloat( "outerDeadzone", kOuterDeadzoneDefault );
-                const float32       responseExponent = stickNode.getAttributeFloat( "responseExponent", kResponseExponentDefault );
-                float2              axisScale{ 1.0f, 1.0f };
-                bool                bScaleByDelta{ false };
-                GamepadStickAxis    axis{ GamepadStickAxis::Both };
-                if ( readStickModifier( stickNode, axisScale, bScaleByDelta, axis ) == false )
-                    return; // 이미 경고했으므로 엉뚱한 성분으로 묶지 않고 이 바인딩을 버린다
-                inputMap.bindGamepadStick2D( scope._action, stick, deadzone, stickLayer, padIndex, outerDeadzone, responseExponent, axisScale, bScaleByDelta, axis );
-            }
-
-            static void loadChordNode( InputMap& inputMap, XMLNode chordNode, const ActionLoadScope& scope )
-            {
-                const Key     modifierKey = KeyCodeUtil::fromName( chordNode.getAttributeText( "modifier" ) );
-                const Key     triggerKey  = KeyCodeUtil::fromName( chordNode.getAttributeText( "trigger" ) );
-                ActionTrigger trigger     = scope._defaultTrigger;
-                (void)tryReadTrigger( chordNode, "triggerMode", trigger ); // 없으면 액션 기본 trigger 그대로다
-                const hashed_string chordLayer       = readLayer( inputMap, chordNode, scope._layer );
-                const uint32        chordCountBefore = inputMap.getBindingCount( scope._action );
-                if ( modifierKey != Key::Unknown && triggerKey != Key::Unknown )
-                    inputMap.bindChord( scope._action, modifierKey, triggerKey, trigger, chordLayer );
-                readBindingModifier( inputMap, scope._action, chordCountBefore, chordNode );
-            }
-
-            /** @brief 값 종류를 적은 액션은 바인딩보다 먼저 만듭니다. 바인딩 없이 이름만 있는 액션(에디터의 "Add Action")도 다시 읽혀야 하기 때문입니다. */
-            static void createActionFromValueType( InputMap& inputMap, XMLNode actionNode, const utf8* pActionName )
-            {
-                const utf8* pValueTypeAttr = actionNode.findAttribute( InputMapXML::kAttrValueType );
-                if ( pValueTypeAttr == nullptr )
-                    return;
-                InputActionValueType valueType{ InputActionValueType::Boolean };
-                if ( tryParseValueType( pValueTypeAttr, valueType ) )
-                    inputMap.createAction( hashed_string( pActionName ), valueType );
-                else
-                    SW_LOG_WARNING( "Action '%#' has an unknown valueType '%#' - the bindings decide it", pActionName, pValueTypeAttr );
-            }
-
-            /** @brief 연속 값 바인딩(2D 합성, 스틱, 마우스 이동량)은 매 프레임 읽는 값이라 Down 으로 고정한다. 다른 trigger 는 조용히 버리지 않고 경고한다. */
-            static void warnIgnoredContinuousTrigger( XMLNode actionNode, const utf8* pActionName, const ActionLoadScope& scope )
-            {
-                const bool bHasContinuousBinding = actionNode.findChild( "vector2d" ).isValid() || actionNode.findChild( "stick" ).isValid() ||
-                                                   actionNode.findChild( "mouseDelta" ).isValid();
-                const bool bIgnoredTrigger = scope._bTriggerWritten && scope._defaultTrigger != ActionTrigger::Down && bHasContinuousBinding;
-                if ( bIgnoredTrigger )
-                    SW_LOG_WARNING( "Action '%#' sets trigger '%#', but its vector2d/stick/mouseDelta bindings are continuous values read every frame - "
-                                    "the trigger is ignored for them",
-                                    pActionName, actionNode.findAttribute( InputMapXML::kAttrTrigger ) );
-            }
-
-            /** @brief `<action>` 하나를 읽습니다. 태그 종류마다 형제 노드를 모두 읽습니다. */
-            static void loadAction( InputMap& inputMap, XMLNode actionNode, string_view inheritedLayer, const hashed_string& defaultLayerName )
-            {
-                const utf8* pActionName = actionNode.findAttribute( InputMapXML::kAttrName );
-                if ( StringUtil::isNullOrEmpty( pActionName ) )
-                    return;
-                createActionFromValueType( inputMap, actionNode, pActionName );
-
-                ActionLoadScope scope{ hashed_string( pActionName ), inheritedLayer.empty() ? defaultLayerName : hashed_string( inheritedLayer ), ActionTrigger::Pressed, false };
-                scope._layer = readLayer( inputMap, actionNode, scope._layer );
-                inputMap.registerLayer( scope._layer );
-
-                // trigger 를 적지 않으면 단일 키와 조합은 Pressed, 축 합성은 Down 이 된다. 적은 trigger 는 셋 모두에 그대로 적용한다.
-                scope._bTriggerWritten = tryReadTrigger( actionNode, InputMapXML::kAttrTrigger, scope._defaultTrigger );
-                warnIgnoredContinuousTrigger( actionNode, pActionName, scope );
-
-                for ( XMLNode node = actionNode.findChild( InputMapXML::kBind ); node.isValid(); node = node.findNextSibling( InputMapXML::kBind ) )
-                {
-                    loadBindNode( inputMap, node, scope );
-                }
-                for ( XMLNode node = actionNode.findChild( "vector2d" ); node.isValid(); node = node.findNextSibling( "vector2d" ) )
-                {
-                    loadVector2DNode( inputMap, node, scope );
-                }
-                for ( XMLNode node = actionNode.findChild( "axis1d" ); node.isValid(); node = node.findNextSibling( "axis1d" ) )
-                {
-                    loadAxis1DNode( inputMap, node, scope );
-                }
-                for ( XMLNode node = actionNode.findChild( "stick" ); node.isValid(); node = node.findNextSibling( "stick" ) )
-                {
-                    loadStickNode( inputMap, node, scope );
-                }
-                for ( XMLNode node = actionNode.findChild( "chord" ); node.isValid(); node = node.findNextSibling( "chord" ) )
-                {
-                    loadChordNode( inputMap, node, scope );
-                }
-                // 마우스 이동량(시점)이며 scale 은 감도 배율이다(1 = 픽셀 그대로).
-                for ( XMLNode node = actionNode.findChild( "mouseDelta" ); node.isValid(); node = node.findNextSibling( "mouseDelta" ) )
-                {
-                    inputMap.bindMouseDelta( scope._action, node.getAttributeFloat( "scale", kScaleDefault ), readLayer( inputMap, node, scope._layer ) );
-                }
-                // 마우스 휠(1D 축)이며 scale 은 배율이다(1 = 한 칸에 1).
-                for ( XMLNode node = actionNode.findChild( "mouseWheel" ); node.isValid(); node = node.findNextSibling( "mouseWheel" ) )
-                {
-                    inputMap.bindMouseWheel( scope._action, node.getAttributeFloat( "scale", kScaleDefault ), readLayer( inputMap, node, scope._layer ) );
-                }
-            }
-
-            /** @brief `<layers>` 안의 레이어 정의를 등록합니다. */
-            static void loadLayersTag( InputMap& inputMap, XMLNode root )
-            {
-                XMLNode layersNode = root.findChild( InputMapXML::kLayers );
-                if ( layersNode.isValid() == false )
-                    return;
-                for ( XMLNode layerNode = layersNode.findChild( InputMapXML::kLayer ); layerNode.isValid(); layerNode = layerNode.findNextSibling( InputMapXML::kLayer ) )
-                {
-                    const utf8* pLayerName = layerNode.findAttribute( InputMapXML::kAttrName );
-                    if ( StringUtil::isNullOrEmpty( pLayerName ) == false )
-                        registerLayerNode( inputMap, layerNode, pLayerName );
-                }
-            }
-
-            /** @brief 루트 아래 `<layer>` 안의 액션과 루트에 바로 놓인 액션을 읽습니다. */
-            static void loadActions( InputMap& inputMap, XMLNode root, const hashed_string& defaultLayerName )
-            {
-                for ( XMLNode layerNode = root.findChild( InputMapXML::kLayer ); layerNode.isValid(); layerNode = layerNode.findNextSibling( InputMapXML::kLayer ) )
-                {
-                    const utf8* pLayerName = layerNode.findAttribute( InputMapXML::kAttrName );
-                    if ( StringUtil::isNullOrEmpty( pLayerName ) )
-                        continue;
-                    if ( inputMap.hasLayer( hashed_string( pLayerName ) ) == false )
-                        registerLayerNode( inputMap, layerNode, pLayerName );
-                    for ( XMLNode actionNode = layerNode.findChild( InputMapXML::kAction ); actionNode.isValid(); actionNode = actionNode.findNextSibling( InputMapXML::kAction ) )
-                    {
-                        loadAction( inputMap, actionNode, pLayerName, defaultLayerName );
-                    }
-                }
-                for ( XMLNode actionNode = root.findChild( InputMapXML::kAction ); actionNode.isValid(); actionNode = actionNode.findNextSibling( InputMapXML::kAction ) )
-                {
-                    loadAction( inputMap, actionNode, defaultLayerName.view(), defaultLayerName );
-                }
-            }
-
-            /** @brief 유저 바인딩의 슬롯 하나짜리 줄의 특성(`source` 와 장치별 코드)을 적습니다. */
-            static void writeUserSingleSlot( XMLNode bindNode, const InputSlot& slot )
-            {
-                if ( slot._deviceKind == InputDeviceKind::Keyboard )
-                {
-                    bindNode.appendAttribute( "source", "key" );
-                    bindNode.appendAttribute( "key", KeyCodeUtil::toName( static_cast<Key>( slot._controlIndex ) ) );
-                }
-                else if ( slot._deviceKind == InputDeviceKind::Mouse )
-                {
-                    bindNode.appendAttribute( "source", "mouse" );
-                    bindNode.appendAttribute( "button", MouseButtonUtil::toName( static_cast<MouseButton>( slot._controlIndex ) ) );
-                }
-                else if ( slot._deviceKind == InputDeviceKind::Gamepad )
-                {
-                    bindNode.appendAttribute( "source", "gamepad" );
-                    bindNode.appendAttribute( "code", GamepadButtonUtil::toName( static_cast<GamepadButton>( slot._controlIndex ) ) );
-                    bindNode.appendAttribute( "pad", static_cast<int32>( slot._deviceIndex ) );
-                }
-            }
-
-            /** @brief 유저 바인딩 줄의 종류별 특성을 적습니다. */
-            static void writeUserBindingKind( XMLNode bindNode, const ActionBinding& b )
-            {
-                // 종류를 추가하고 여기를 빠뜨리면 그 바인딩이 특성 하나 없이 저장되어 조용히 사라진다. 그래서 default 에서 오류를 남긴다.
-                switch ( b._kind )
-                {
-                    case BindingKind::SingleSlot:
-                    {
-                        writeUserSingleSlot( bindNode, b._arrSlot[0] );
-                        break;
-                    }
-                    case BindingKind::Axis1DComposite:
-                    {
-                        if ( b._arrSlot[0]._deviceKind == InputDeviceKind::Gamepad )
-                        {
-                            bindNode.appendAttribute( "source", "gamepad" );
-                            bindNode.appendAttribute( "negKey", GamepadButtonUtil::toName( static_cast<GamepadButton>( b._arrSlot[0]._controlIndex ) ) );
-                            bindNode.appendAttribute( "posKey", GamepadButtonUtil::toName( static_cast<GamepadButton>( b._arrSlot[1]._controlIndex ) ) );
-                            bindNode.appendAttribute( "pad", static_cast<int32>( b._arrSlot[0]._deviceIndex ) );
-                            break;
-                        }
-                        bindNode.appendAttribute( "negKey", KeyCodeUtil::toName( static_cast<Key>( b._arrSlot[0]._controlIndex ) ) );
-                        bindNode.appendAttribute( "posKey", KeyCodeUtil::toName( static_cast<Key>( b._arrSlot[1]._controlIndex ) ) );
-                        break;
-                    }
-                    case BindingKind::Vector2DComposite:
-                    {
-                        const Key upKey    = static_cast<Key>( b._arrSlot[0]._controlIndex );
-                        const Key downKey  = static_cast<Key>( b._arrSlot[1]._controlIndex );
-                        const Key leftKey  = static_cast<Key>( b._arrSlot[2]._controlIndex );
-                        const Key rightKey = static_cast<Key>( b._arrSlot[3]._controlIndex );
-                        bindNode.appendAttribute( "up", KeyCodeUtil::toName( upKey ) );
-                        bindNode.appendAttribute( "down", KeyCodeUtil::toName( downKey ) );
-                        bindNode.appendAttribute( "left", KeyCodeUtil::toName( leftKey ) );
-                        bindNode.appendAttribute( "right", KeyCodeUtil::toName( rightKey ) );
-                        bindNode.appendAttribute( "deadzone", b._deadzone );
-                        break;
-                    }
-                    case BindingKind::GamepadStick2D:
-                    {
-                        bindNode.appendAttribute( "stick", b._stick == GamepadStick::Left ? "Left" : "Right" );
-                        bindNode.appendAttribute( "pad", static_cast<int32>( b._deviceIndex ) );
-                        bindNode.appendAttribute( "deadzone", b._deadzone );
-                        bindNode.appendAttribute( "outerDeadzone", b._outerDeadzone );
-                        bindNode.appendAttribute( "exponent", b._responseExponent );
-                        InputMapSerializationInternal::writeStickModifier( bindNode, b );
-                        break;
-                    }
-                    case BindingKind::MouseDelta2D:
-                    case BindingKind::MouseWheel1D:
-                    {
-                        bindNode.appendAttribute( "scale", b._scale );
-                        break;
-                    }
-                    case BindingKind::VirtualJoystick2D:
-                    {
-                        const MouseButton activationButton = static_cast<MouseButton>( b._arrSlot[0]._controlIndex );
-                        bindNode.appendAttribute( "button", MouseButtonUtil::toName( activationButton ) );
-                        bindNode.appendAttribute( "radius", b._scale );
-                        bindNode.appendAttribute( "deadzone", b._deadzone );
-                        bindNode.appendAttribute( "outerDeadzone", b._outerDeadzone );
-                        break;
-                    }
-                    case BindingKind::Chord:
-                    {
-                        const Key modifierKey = static_cast<Key>( b._arrSlot[0]._controlIndex );
-                        const Key triggerKey  = static_cast<Key>( b._arrSlot[1]._controlIndex );
-                        bindNode.appendAttribute( "modKey", KeyCodeUtil::toName( modifierKey ) );
-                        bindNode.appendAttribute( "trigKey", KeyCodeUtil::toName( triggerKey ) );
-                        break;
-                    }
-                    case BindingKind::Shortcut:
-                    {
-                        const Key key = static_cast<Key>( b._arrSlot[0]._controlIndex );
-                        bindNode.appendAttribute( "key", KeyCodeUtil::toName( key ) );
-                        bindNode.appendAttribute( "modifierMask", static_cast<int32>( b._modifierMask ) );
-                        break;
-                    }
-                    case BindingKind::AnyKey:
-                    {
-                        break; // 이름 말고는 적을 것이 없다.
-                    }
-                    case BindingKind::Count:
-                    {
-                        // 종류를 추가하고 이 switch 를 빠뜨린 경우다. 이름은 테이블에서 왔으므로 `kind` 는
-                        // 제대로 적히지만 딸린 특성이 하나도 없어서 다시 읽을 수 없는 줄이 된다.
-                        SW_LOG_ERROR( "저장하지 못한 바인딩 종류입니다 (kind=%#) — BindingKind 를 늘리고 saveUserBindings 를 빠뜨렸습니다.",
-                                      BindingKinds::toName( b._kind ) );
-                        break;
-                    }
-                }
-            }
-
-            /** @brief 유저 바인딩의 슬롯 하나짜리 줄을 읽습니다. 저장할 때와 같은 형태만 읽는다: source="key" key=…, source="mouse" button=…, source="gamepad" code=… pad=… */
-            static void loadUserSingleSlot( InputMap& inputMap, XMLNode bindNode, const utf8* pAction, string_view layer )
-            {
-                const utf8*         pSourceStr    = bindNode.findAttribute( "source" );
-                const ActionTrigger singleTrigger = readUserBindingTrigger( bindNode, ActionTrigger::Pressed );
-                if ( StringUtil::equals( pSourceStr, "key", true ) )
-                {
-                    const Key key = KeyCodeUtil::fromName( bindNode.getAttributeText( "key" ) );
-                    if ( key != Key::Unknown )
-                        inputMap.bind( hashed_string( pAction ), key, singleTrigger, hashed_string( layer ) );
-                }
-                else if ( StringUtil::equals( pSourceStr, "mouse", true ) )
-                {
-                    const MouseButton btn = MouseButtonUtil::fromName( bindNode.getAttributeText( "button" ) );
-                    if ( btn != MouseButton::Count )
-                        inputMap.bind( hashed_string( pAction ), btn, singleTrigger, hashed_string( layer ) );
-                }
-                else if ( StringUtil::equals( pSourceStr, "gamepad", true ) )
-                {
-                    const GamepadButton btn = GamepadButtonUtil::fromName( bindNode.getAttributeText( "code" ) );
-                    uint8               padIndex{ 0 };
-                    if ( btn != GamepadButton::Count && tryGetPadIndex( bindNode, padIndex ) )
-                    {
-                        InputSlot slot    = InputSlot::fromGamepadButton( btn );
-                        slot._deviceIndex = padIndex;
-                        inputMap.bind( hashed_string( pAction ), slot, singleTrigger, hashed_string( layer ) );
-                    }
-                }
-                else
-                {
-                    SW_LOG_ERROR( "단일 슬롯 바인딩의 source 가 없거나 모르는 값입니다 (action=%#, source=%#) — 이 바인딩은 건너뜁니다.", pAction,
-                                  ( pSourceStr != nullptr ) ? pSourceStr : "" );
-                }
-            }
-
-            /** @brief 유저 바인딩의 2D 방향 합성 줄을 읽습니다. 네 방향 키가 모두 있어야 묶습니다. */
-            static void loadUserVector2D( InputMap& inputMap, XMLNode bindNode, const utf8* pAction, string_view layer )
-            {
-                const Key     upKey                  = KeyCodeUtil::fromName( bindNode.getAttributeText( "up" ) );
-                const Key     downKey                = KeyCodeUtil::fromName( bindNode.getAttributeText( "down" ) );
-                const Key     leftKey                = KeyCodeUtil::fromName( bindNode.getAttributeText( "left" ) );
-                const Key     rightKey               = KeyCodeUtil::fromName( bindNode.getAttributeText( "right" ) );
-                const float32 deadzone               = bindNode.getAttributeFloat( "deadzone", kVector2DDeadzoneDefault );
-                const bool    bAllDirectionKeysBound = upKey != Key::Unknown && downKey != Key::Unknown && leftKey != Key::Unknown && rightKey != Key::Unknown;
-                if ( bAllDirectionKeysBound )
-                    inputMap.bindVector2D( hashed_string( pAction ), upKey, downKey, leftKey, rightKey, deadzone, hashed_string( layer ) );
-            }
-
-            /** @brief 유저 바인딩 줄 하나를 종류에 맞게 읽어 맵에 묶습니다. 저장할 때와 같은 형태만 읽습니다. */
-            static void loadUserBindingNode( InputMap& inputMap, XMLNode bindNode, const utf8* pAction, const utf8* pKindStr, BindingKind parsedKind, string_view layer )
-            {
-                switch ( parsedKind )
-                {
-                    case BindingKind::Axis1DComposite:
-                    {
-                        InputSlot negativeSlot{};
-                        InputSlot positiveSlot{};
-                        if ( InputMapSerializationInternal::tryReadAxisSlots( bindNode, "negKey", "posKey", negativeSlot, positiveSlot ) )
-                            inputMap.bindAxis1DComposite( hashed_string( pAction ), negativeSlot, positiveSlot, hashed_string( layer ),
-                                                          InputMapSerializationInternal::readUserBindingTrigger( bindNode, ActionTrigger::Down ) );
-                        break;
-                    }
-                    case BindingKind::Vector2DComposite:
-                    {
-                        loadUserVector2D( inputMap, bindNode, pAction, layer );
-                        break;
-                    }
-                    case BindingKind::GamepadStick2D:
-                    {
-                        uint8 pad{ 0 };
-                        if ( InputMapSerializationInternal::tryGetPadIndex( bindNode, pad ) == false )
-                            break; // 이미 경고했으므로 이 바인딩을 버린다
-                        const utf8*        pStickStr     = bindNode.findAttribute( "stick" );
-                        const GamepadStick stick         = StringUtil::equals( pStickStr, "Right", true ) ? GamepadStick::Right : GamepadStick::Left;
-                        const float32      deadzone      = bindNode.getAttributeFloat( "deadzone", kStickDeadzoneDefault );
-                        const float32      outerDeadzone = bindNode.getAttributeFloat( "outerDeadzone", kOuterDeadzoneDefault );
-                        const float32      exp           = bindNode.getAttributeFloat( "exponent", kResponseExponentDefault );
-                        float2             axisScale{ 1.0f, 1.0f };
-                        bool               bScaleByDelta{ false };
-                        GamepadStickAxis   axis{ GamepadStickAxis::Both };
-                        if ( InputMapSerializationInternal::readStickModifier( bindNode, axisScale, bScaleByDelta, axis ) == false )
-                            break; // 이미 경고했으므로 이 바인딩을 버린다
-                        inputMap.bindGamepadStick2D( hashed_string( pAction ), stick, deadzone, hashed_string( layer ), pad, outerDeadzone, exp, axisScale, bScaleByDelta, axis );
-                        break;
-                    }
-                    case BindingKind::MouseDelta2D:
-                    {
-                        const float32 scale = bindNode.getAttributeFloat( "scale", kScaleDefault );
-                        inputMap.bindMouseDelta( hashed_string( pAction ), scale, hashed_string( layer ) );
-                        break;
-                    }
-                    case BindingKind::MouseWheel1D:
-                    {
-                        const float32 scale = bindNode.getAttributeFloat( "scale", kScaleDefault );
-                        inputMap.bindMouseWheel( hashed_string( pAction ), scale, hashed_string( layer ) );
-                        break;
-                    }
-                    case BindingKind::VirtualJoystick2D:
-                    {
-                        const MouseButton activationButton = MouseButtonUtil::fromName( bindNode.getAttributeText( "button" ) );
-                        const float32     radius           = bindNode.getAttributeFloat( "radius", kVirtualJoystickRadiusDefault );
-                        const float32     deadzone         = bindNode.getAttributeFloat( "deadzone", kVirtualJoystickDeadzoneDefault );
-                        const float32     outerDeadzone    = bindNode.getAttributeFloat( "outerDeadzone", kOuterDeadzoneDefault );
-                        if ( activationButton != MouseButton::Count )
-                            inputMap.bindVirtualJoystick2D( hashed_string( pAction ), activationButton, radius, deadzone, hashed_string( layer ), outerDeadzone );
-                        break;
-                    }
-                    case BindingKind::Chord:
-                    {
-                        const Key modifierKey = KeyCodeUtil::fromName( bindNode.getAttributeText( "modKey" ) );
-                        const Key triggerKey  = KeyCodeUtil::fromName( bindNode.getAttributeText( "trigKey" ) );
-                        if ( modifierKey != Key::Unknown && triggerKey != Key::Unknown )
-                            inputMap.bindChord( hashed_string( pAction ), modifierKey, triggerKey, InputMapSerializationInternal::readUserBindingTrigger( bindNode, ActionTrigger::Pressed ),
-                                                hashed_string( layer ) );
-                        break;
-                    }
-                    case BindingKind::Shortcut:
-                    {
-                        uint8 modifierMask{ 0 };
-                        if ( InputMapSerializationInternal::tryGetModifierMask( bindNode, modifierMask ) == false )
-                            break; // 이미 경고했으므로 다른 수정 키 조합으로 묶지 않고 이 바인딩을 버린다
-                        const Key key = KeyCodeUtil::fromName( bindNode.getAttributeText( "key" ) );
-                        if ( key != Key::Unknown )
-                            inputMap.bindShortcut( hashed_string( pAction ), key, modifierMask, InputMapSerializationInternal::readUserBindingTrigger( bindNode, ActionTrigger::Pressed ),
-                                                   hashed_string( layer ) );
-                        break;
-                    }
-                    case BindingKind::AnyKey:
-                    {
-                        inputMap.bindAnyKey( hashed_string( pAction ), hashed_string( layer ) );
-                        break;
-                    }
-                    case BindingKind::SingleSlot:
-                    {
-                        loadUserSingleSlot( inputMap, bindNode, pAction, layer );
-                        break;
-                    }
-                    case BindingKind::Count:
-                    {
-                        // 테이블은 이 이름을 아는데 여기서는 모른다. 종류를 추가하고 이 switch 를 빠뜨린 경우다.
-                        SW_LOG_ERROR( "읽지 못한 바인딩 종류입니다 (kind=%#) — BindingKind 를 늘리고 loadUserBindings 를 빠뜨렸습니다.", pKindStr );
-                        break;
-                    }
-                }
-            }
         };
     } // namespace
 } // namespace sw
@@ -1043,9 +556,19 @@ namespace sw
             return false;
         }
 
-        const float32         dblClick       = root.getAttributeFloat( InputMapSerializationInternal::InputMapXML::kAttrDoubleClick, InputMapDefaults::kDoubleClickTime );
-        const float32         dblDist        = root.getAttributeFloat( InputMapSerializationInternal::InputMapXML::kAttrDoubleClickDist, InputMapDefaults::kDoubleClickMaxDistance );
-        const float32         holdThreshold  = root.getAttributeFloat( InputMapSerializationInternal::InputMapXML::kAttrHoldThreshold, InputMapDefaults::kHoldThreshold );
+        // 적지 않은 값은 `InputMapDefaults` 의 기본값이다. 깨진 값은 읽기 실패다.
+        bool    bValid        = true;
+        float32 dblClick      = InputMapDefaults::kDoubleClickTime;
+        float32 dblDist       = InputMapDefaults::kDoubleClickMaxDistance;
+        float32 holdThreshold = InputMapDefaults::kHoldThreshold;
+        InputMapSerializationInternal::readOptional( root, InputMapSerializationInternal::InputMapXML::kAttrDoubleClick, dblClick, bValid );
+        InputMapSerializationInternal::readOptional( root, InputMapSerializationInternal::InputMapXML::kAttrDoubleClickDist, dblDist, bValid );
+        InputMapSerializationInternal::readOptional( root, InputMapSerializationInternal::InputMapXML::kAttrHoldThreshold, holdThreshold, bValid );
+        if ( bValid == false )
+        {
+            SW_LOG_ERROR( "InputMap %# has invalid timing attributes", absPath );
+            return false;
+        }
         const utf8*           pDefaultLayer  = root.findAttribute( InputMapSerializationInternal::InputMapXML::kAttrDefaultLayer );
         const utf8*           pVirtualCursor = root.findAttribute( InputMapSerializationInternal::InputMapXML::kAttrVirtualCursor );
         InputMapVirtualCursor virtualCursor  = InputMapVirtualCursor::Off;
@@ -1063,10 +586,316 @@ namespace sw
         if ( StringUtil::isNullOrEmpty( pDefaultLayer ) == false )
             _defaultLayerName = hashed_string( pDefaultLayer );
 
-        InputMapSerializationInternal::loadLayersTag( *this, root );
-        ensureLayer( _defaultLayerName, 0, true, false );
-        InputMapSerializationInternal::loadActions( *this, root, _defaultLayerName );
+        XMLNode layersNode = root.findChild( InputMapSerializationInternal::InputMapXML::kLayers );
+        if ( layersNode.isValid() )
+        {
+            for ( XMLNode layerNode = layersNode.findChild( InputMapSerializationInternal::InputMapXML::kLayer ); layerNode.isValid();
+                  layerNode         = layerNode.findNextSibling( InputMapSerializationInternal::InputMapXML::kLayer ) )
+            {
+                const utf8* pLayerName = layerNode.findAttribute( InputMapSerializationInternal::InputMapXML::kAttrName );
+                if ( StringUtil::isNullOrEmpty( pLayerName ) )
+                    continue;
+                InputMapSerializationInternal::LayerSettings settings;
+                InputMapSerializationInternal::readLayerSettings( layerNode, settings, bValid );
+                registerLayer( hashed_string( pLayerName ), settings._priority, settings._bEnabled, settings._bBlockLower, settings._bAlwaysOn );
+            }
+        }
 
+        ensureLayer( _defaultLayerName, 0, true, false );
+
+        auto loadAction = [this, &bValid]( XMLNode actionNode, string_view inheritedLayer )
+        {
+            const utf8* pActionName = actionNode.findAttribute( InputMapSerializationInternal::InputMapXML::kAttrName );
+            if ( StringUtil::isNullOrEmpty( pActionName ) )
+                return;
+
+            // 값 종류를 적은 액션은 바인딩보다 먼저 만든다. 바인딩 없이 이름만 있는 액션(에디터의 "Add Action")도 다시 읽혀야 하기 때문이다.
+            const utf8* pValueTypeAttr = actionNode.findAttribute( InputMapSerializationInternal::InputMapXML::kAttrValueType );
+            if ( pValueTypeAttr != nullptr )
+            {
+                InputActionValueType valueType{ InputActionValueType::Boolean };
+                if ( InputMapSerializationInternal::tryParseValueType( pValueTypeAttr, valueType ) )
+                    createAction( hashed_string( pActionName ), valueType );
+                else
+                    SW_LOG_WARNING( "Action '%#' has an unknown valueType '%#' - the bindings decide it", pActionName, pValueTypeAttr );
+            }
+
+            hashed_string layer      = inheritedLayer.empty() ? _defaultLayerName : hashed_string( inheritedLayer );
+            const utf8*   pLayerAttr = actionNode.findAttribute( InputMapSerializationInternal::InputMapXML::kAttrLayer );
+            if ( StringUtil::isNullOrEmpty( pLayerAttr ) == false )
+                layer = hashed_string( pLayerAttr );
+            ensureLayer( layer );
+
+            // trigger 를 적지 않으면 단일 키와 조합은 Pressed, 축 합성은 Down 이 된다. 적은 trigger 는 셋 모두에 그대로 적용한다.
+            auto        defaultTrigger        = ActionTrigger::Pressed;
+            bool        bActionTriggerWritten = false;
+            const utf8* pTriggerAttr          = actionNode.findAttribute( InputMapSerializationInternal::InputMapXML::kAttrTrigger );
+            if ( pTriggerAttr != nullptr )
+            {
+                const ActionTrigger parsed = actionTriggerFromName( pTriggerAttr );
+                if ( parsed != ActionTrigger::Count )
+                {
+                    defaultTrigger        = parsed;
+                    bActionTriggerWritten = true;
+                }
+            }
+
+            // 연속 값 바인딩(2D 합성, 스틱, 마우스 이동량)은 매 프레임 읽는 값이라 Down 으로 고정한다. 다른 trigger 는 조용히 버리지 않고 경고한다.
+            const bool bHasContinuousBinding = actionNode.findChild( "vector2d" ).isValid() || actionNode.findChild( "stick" ).isValid() ||
+                                               actionNode.findChild( "mouseDelta" ).isValid();
+            const bool bIgnoredTrigger = bActionTriggerWritten && defaultTrigger != ActionTrigger::Down && bHasContinuousBinding;
+            if ( bIgnoredTrigger )
+                SW_LOG_WARNING( "Action '%#' sets trigger '%#', but its vector2d/stick/mouseDelta bindings are continuous values read every frame - "
+                                "the trigger is ignored for them",
+                                pActionName, pTriggerAttr );
+
+            // 1) <bind> 태그 파싱
+            for ( XMLNode bindNode = actionNode.findChild( InputMapSerializationInternal::InputMapXML::kBind ); bindNode.isValid();
+                  bindNode         = bindNode.findNextSibling( InputMapSerializationInternal::InputMapXML::kBind ) )
+            {
+                const utf8* pSource = bindNode.findAttribute( InputMapSerializationInternal::InputMapXML::kAttrSource );
+                const utf8* pCode   = bindNode.findAttribute( InputMapSerializationInternal::InputMapXML::kAttrCode );
+                if ( pSource == nullptr || StringUtil::isNullOrEmpty( pCode ) )
+                    continue;
+                const uint32 bindCountBefore = getBindingCount( hashed_string( pActionName ) );
+
+                ActionTrigger trigger          = defaultTrigger;
+                const utf8*   pBindTriggerAttr = bindNode.findAttribute( InputMapSerializationInternal::InputMapXML::kAttrTrigger );
+                if ( pBindTriggerAttr != nullptr )
+                {
+                    const ActionTrigger parsed = actionTriggerFromName( pBindTriggerAttr );
+                    if ( parsed != ActionTrigger::Count )
+                        trigger = parsed;
+                }
+
+                hashed_string bindLayer      = layer;
+                const utf8*   pBindLayerAttr = bindNode.findAttribute( InputMapSerializationInternal::InputMapXML::kAttrLayer );
+                if ( StringUtil::isNullOrEmpty( pBindLayerAttr ) == false )
+                {
+                    bindLayer = hashed_string( pBindLayerAttr );
+                    ensureLayer( bindLayer );
+                }
+
+                const utf8* pModifierAttr = bindNode.findAttribute( InputMapSerializationInternal::InputMapXML::kAttrModifier );
+                if ( StringUtil::isNullOrEmpty( pModifierAttr ) == false )
+                {
+                    Key modifierKey = KeyCodeUtil::fromName( pModifierAttr );
+                    if ( modifierKey == Key::Unknown )
+                    {
+                        if ( StringUtil::equals( pModifierAttr, "Ctrl", true ) || StringUtil::equals( pModifierAttr, "Control", true ) )
+                            modifierKey = Key::LeftControl;
+                        else if ( StringUtil::equals( pModifierAttr, "Shift", true ) )
+                            modifierKey = Key::LeftShift;
+                        else if ( StringUtil::equals( pModifierAttr, "Alt", true ) )
+                            modifierKey = Key::LeftAlt;
+                    }
+                    const Key triggerKey = KeyCodeUtil::fromName( pCode );
+                    if ( modifierKey != Key::Unknown && triggerKey != Key::Unknown )
+                    {
+                        bindChord( hashed_string( pActionName ), modifierKey, triggerKey, trigger, hashed_string( bindLayer.view() ) );
+                        InputMapSerializationInternal::readBindingModifier( *this, hashed_string( pActionName ), bindCountBefore, bindNode, bValid );
+                        continue;
+                    }
+                }
+
+                if ( StringUtil::equals( pSource, InputMapSerializationInternal::InputMapXML::kSourceKey, true ) )
+                {
+                    const Key key = KeyCodeUtil::fromName( pCode );
+                    if ( key != Key::Unknown )
+                        bind( hashed_string( pActionName ), key, trigger, hashed_string( bindLayer.view() ) );
+                }
+                else if ( StringUtil::equals( pSource, InputMapSerializationInternal::InputMapXML::kSourceGamepad, true ) )
+                {
+                    const bool bLeftStick  = StringUtil::equals( pCode, "LeftStick", true );
+                    const bool bRightStick = StringUtil::equals( pCode, "RightStick", true );
+                    if ( bLeftStick || bRightStick )
+                    {
+                        float32 deadzone = InputMapDefaults::kStickDeadzone;
+                        InputMapSerializationInternal::readOptional( bindNode, InputMapSerializationInternal::InputMapXML::kAttrDeadzone, deadzone, bValid );
+                        bindGamepadStick2D( hashed_string( pActionName ), bLeftStick ? GamepadStick::Left : GamepadStick::Right, deadzone, hashed_string( bindLayer.view() ) );
+                    }
+                    else
+                    {
+                        const GamepadButton button = GamepadButtonUtil::fromName( pCode );
+                        uint8               padIndex{ 0 };
+                        if ( button != GamepadButton::Count && InputMapSerializationInternal::tryGetPadIndex( bindNode, padIndex ) )
+                            bind( hashed_string( pActionName ), InputSlot::fromGamepadButton( button, padIndex ), trigger, hashed_string( bindLayer.view() ) );
+                    }
+                }
+                else if ( StringUtil::equals( pSource, InputMapSerializationInternal::InputMapXML::kSourceMouse, true ) )
+                {
+                    const MouseButton mouse = MouseButtonUtil::fromName( pCode );
+                    if ( mouse != MouseButton::Count )
+                        bind( hashed_string( pActionName ), mouse, trigger, hashed_string( bindLayer.view() ) );
+                }
+                InputMapSerializationInternal::readBindingModifier( *this, hashed_string( pActionName ), bindCountBefore, bindNode, bValid );
+            }
+
+            // 2) <vector2d> 태그 파싱
+            for ( XMLNode compNode = actionNode.findChild( "vector2d" ); compNode.isValid(); compNode = compNode.findNextSibling( "vector2d" ) )
+            {
+                const Key upKey    = KeyCodeUtil::fromName( compNode.getAttributeText( "up" ) );
+                const Key downKey  = KeyCodeUtil::fromName( compNode.getAttributeText( "down" ) );
+                const Key leftKey  = KeyCodeUtil::fromName( compNode.getAttributeText( "left" ) );
+                const Key rightKey = KeyCodeUtil::fromName( compNode.getAttributeText( "right" ) );
+                float32   deadzone = InputMapSerializationInternal::getDefaultBinding()._deadzone;
+                InputMapSerializationInternal::readOptional( compNode, "deadzone", deadzone, bValid );
+                hashed_string compLayer      = layer;
+                const utf8*   pCompLayerAttr = compNode.findAttribute( "layer" );
+                if ( StringUtil::isNullOrEmpty( pCompLayerAttr ) == false )
+                {
+                    compLayer = hashed_string( pCompLayerAttr );
+                    ensureLayer( compLayer );
+                }
+                const bool bCompleteDirectionKeys = upKey != Key::Unknown && downKey != Key::Unknown && leftKey != Key::Unknown && rightKey != Key::Unknown;
+                if ( bCompleteDirectionKeys )
+                    bindVector2D( hashed_string( pActionName ), upKey, downKey, leftKey, rightKey, deadzone, hashed_string( compLayer.view() ) );
+            }
+
+            // 3) <axis1d> 태그 파싱
+            for ( XMLNode axisNode = actionNode.findChild( "axis1d" ); axisNode.isValid(); axisNode = axisNode.findNextSibling( "axis1d" ) )
+            {
+                InputSlot negativeSlot{};
+                InputSlot positiveSlot{};
+                if ( InputMapSerializationInternal::tryReadAxisSlots( axisNode, "negative", "positive", negativeSlot, positiveSlot ) == false )
+                    continue; // 모르는 이름이나 패드 번호는 이미 경고했으므로 이 바인딩을 버린다
+                hashed_string axisLayer      = layer;
+                const utf8*   pAxisLayerAttr = axisNode.findAttribute( "layer" );
+                if ( StringUtil::isNullOrEmpty( pAxisLayerAttr ) == false )
+                {
+                    axisLayer = hashed_string( pAxisLayerAttr );
+                    ensureLayer( axisLayer );
+                }
+                // 축 값은 trigger 와 관계없이 누르는 동안 읽힌다. trigger 는 액션 발화(누를 때마다 한 칸 등)만 정한다.
+                ActionTrigger axisTrigger      = bActionTriggerWritten ? defaultTrigger : ActionTrigger::Down;
+                const utf8*   pAxisTriggerAttr = axisNode.findAttribute( InputMapSerializationInternal::InputMapXML::kAttrTrigger );
+                if ( pAxisTriggerAttr != nullptr )
+                {
+                    const ActionTrigger parsed = actionTriggerFromName( pAxisTriggerAttr );
+                    if ( parsed != ActionTrigger::Count )
+                        axisTrigger = parsed;
+                }
+                const uint32 axisCountBefore = getBindingCount( hashed_string( pActionName ) );
+                bindAxis1DComposite( hashed_string( pActionName ), negativeSlot, positiveSlot, hashed_string( axisLayer.view() ), axisTrigger );
+                InputMapSerializationInternal::readBindingModifier( *this, hashed_string( pActionName ), axisCountBefore, axisNode, bValid );
+            }
+
+            // 4) <stick> 태그 파싱
+            for ( XMLNode stickNode = actionNode.findChild( "stick" ); stickNode.isValid(); stickNode = stickNode.findNextSibling( "stick" ) )
+            {
+                uint8 padIndex{ 0 };
+                if ( InputMapSerializationInternal::tryGetPadIndex( stickNode, padIndex ) == false )
+                    continue; // 이미 경고했으므로 엉뚱한 패드에 묶지 않고 이 바인딩을 버린다
+                const utf8*        pStickName = stickNode.findAttribute( "stick" );
+                const GamepadStick stick      = ( pStickName != nullptr && StringUtil::equals( pStickName, "Right", true ) ) ? GamepadStick::Right : GamepadStick::Left;
+                float32            deadzone   = InputMapDefaults::kStickDeadzone;
+                InputMapSerializationInternal::readOptional( stickNode, "deadzone", deadzone, bValid );
+                hashed_string stickLayer      = layer;
+                const utf8*   pStickLayerAttr = stickNode.findAttribute( "layer" );
+                if ( StringUtil::isNullOrEmpty( pStickLayerAttr ) == false )
+                {
+                    stickLayer = hashed_string( pStickLayerAttr );
+                    ensureLayer( stickLayer );
+                }
+                float32 outerDeadzone    = InputMapSerializationInternal::getDefaultBinding()._outerDeadzone;
+                float32 responseExponent = InputMapSerializationInternal::getDefaultBinding()._responseExponent;
+                InputMapSerializationInternal::readOptional( stickNode, "outerDeadzone", outerDeadzone, bValid );
+                InputMapSerializationInternal::readOptional( stickNode, "responseExponent", responseExponent, bValid );
+                float2           axisScale{};
+                bool             bScaleByDelta{ false };
+                GamepadStickAxis axis{ GamepadStickAxis::Both };
+                if ( InputMapSerializationInternal::readStickModifier( stickNode, axisScale, bScaleByDelta, axis, bValid ) == false )
+                    continue; // 이미 오류를 남겼으므로 엉뚱한 성분으로 묶지 않고 이 바인딩을 버린다
+                bindGamepadStick2D( hashed_string( pActionName ), stick, deadzone, hashed_string( stickLayer.view() ), padIndex, outerDeadzone, responseExponent, axisScale, bScaleByDelta,
+                                    axis );
+            }
+
+            // 5) <chord> 태그 파싱
+            for ( XMLNode chordNode = actionNode.findChild( "chord" ); chordNode.isValid(); chordNode = chordNode.findNextSibling( "chord" ) )
+            {
+                const Key     modifierKey       = KeyCodeUtil::fromName( chordNode.getAttributeText( "modifier" ) );
+                const Key     triggerKey        = KeyCodeUtil::fromName( chordNode.getAttributeText( "trigger" ) );
+                ActionTrigger trigger           = defaultTrigger;
+                const utf8*   pChordTriggerAttr = chordNode.findAttribute( "triggerMode" );
+                if ( StringUtil::isNullOrEmpty( pChordTriggerAttr ) == false )
+                {
+                    const ActionTrigger parsed = actionTriggerFromName( pChordTriggerAttr );
+                    if ( parsed != ActionTrigger::Count )
+                        trigger = parsed;
+                }
+                hashed_string chordLayer      = layer;
+                const utf8*   pChordLayerAttr = chordNode.findAttribute( "layer" );
+                if ( StringUtil::isNullOrEmpty( pChordLayerAttr ) == false )
+                {
+                    chordLayer = hashed_string( pChordLayerAttr );
+                    ensureLayer( chordLayer );
+                }
+                const uint32 chordCountBefore = getBindingCount( hashed_string( pActionName ) );
+                if ( modifierKey != Key::Unknown && triggerKey != Key::Unknown )
+                    bindChord( hashed_string( pActionName ), modifierKey, triggerKey, trigger, hashed_string( chordLayer.view() ) );
+                InputMapSerializationInternal::readBindingModifier( *this, hashed_string( pActionName ), chordCountBefore, chordNode, bValid );
+            }
+
+            // 6) <mouseDelta> 태그 파싱. 마우스 이동량(시점)이며 scale 은 감도 배율이다(1 = 픽셀 그대로).
+            for ( XMLNode deltaNode = actionNode.findChild( "mouseDelta" ); deltaNode.isValid(); deltaNode = deltaNode.findNextSibling( "mouseDelta" ) )
+            {
+                hashed_string deltaLayer      = layer;
+                const utf8*   pDeltaLayerAttr = deltaNode.findAttribute( "layer" );
+                if ( StringUtil::isNullOrEmpty( pDeltaLayerAttr ) == false )
+                {
+                    deltaLayer = hashed_string( pDeltaLayerAttr );
+                    ensureLayer( deltaLayer );
+                }
+                float32 scale = InputMapSerializationInternal::getDefaultBinding()._scale;
+                InputMapSerializationInternal::readOptional( deltaNode, "scale", scale, bValid );
+                bindMouseDelta( hashed_string( pActionName ), scale, hashed_string( deltaLayer.view() ) );
+            }
+
+            // 7) <mouseWheel> 태그 파싱. 마우스 휠(1D 축)이며 scale 은 배율이다(1 = 한 칸에 1).
+            for ( XMLNode wheelNode = actionNode.findChild( "mouseWheel" ); wheelNode.isValid(); wheelNode = wheelNode.findNextSibling( "mouseWheel" ) )
+            {
+                hashed_string wheelLayer      = layer;
+                const utf8*   pWheelLayerAttr = wheelNode.findAttribute( "layer" );
+                if ( StringUtil::isNullOrEmpty( pWheelLayerAttr ) == false )
+                {
+                    wheelLayer = hashed_string( pWheelLayerAttr );
+                    ensureLayer( wheelLayer );
+                }
+                float32 scale = InputMapSerializationInternal::getDefaultBinding()._scale;
+                InputMapSerializationInternal::readOptional( wheelNode, "scale", scale, bValid );
+                bindMouseWheel( hashed_string( pActionName ), scale, hashed_string( wheelLayer.view() ) );
+            }
+        };
+
+        for ( XMLNode layerNode = root.findChild( InputMapSerializationInternal::InputMapXML::kLayer ); layerNode.isValid(); layerNode = layerNode.findNextSibling( InputMapSerializationInternal::InputMapXML::kLayer ) )
+        {
+            const utf8* pLayerName = layerNode.findAttribute( InputMapSerializationInternal::InputMapXML::kAttrName );
+            if ( StringUtil::isNullOrEmpty( pLayerName ) )
+                continue;
+            if ( hasLayer( hashed_string( pLayerName ) ) == false )
+            {
+                InputMapSerializationInternal::LayerSettings settings;
+                InputMapSerializationInternal::readLayerSettings( layerNode, settings, bValid );
+                registerLayer( hashed_string( pLayerName ), settings._priority, settings._bEnabled, settings._bBlockLower, settings._bAlwaysOn );
+            }
+            for ( XMLNode actionNode = layerNode.findChild( InputMapSerializationInternal::InputMapXML::kAction ); actionNode.isValid();
+                  actionNode         = actionNode.findNextSibling( InputMapSerializationInternal::InputMapXML::kAction ) )
+            {
+                loadAction( actionNode, pLayerName );
+            }
+        }
+
+        for ( XMLNode actionNode = root.findChild( InputMapSerializationInternal::InputMapXML::kAction ); actionNode.isValid();
+              actionNode         = actionNode.findNextSibling( InputMapSerializationInternal::InputMapXML::kAction ) )
+        {
+            loadAction( actionNode, _defaultLayerName.view() );
+        }
+
+        if ( bValid == false )
+        {
+            SW_LOG_ERROR( "InputMap %# has invalid attribute values (listed above)", absPath );
+            return false;
+        }
         // 가상 커서가 마우스로 바꾸는 스틱 · 버튼을 액션에 따로 묶으면 한 입력이 두 입력이 된다 — 읽기를 실패로 돌려 데이터를 고치게 한다.
         if ( countVirtualCursorConflicts( absPath ) > 0 )
             return false;
@@ -1193,7 +1022,112 @@ namespace sw
                     bindNode.appendAttribute( "trigger", pTriggerName );
                 InputMapSerializationInternal::writeBindingModifier( bindNode, b );
 
-                InputMapSerializationInternal::writeUserBindingKind( bindNode, b );
+                // 종류를 추가하고 여기를 빠뜨리면 그 바인딩이 특성 하나 없이 저장되어 조용히 사라진다. 그래서 default 에서 오류를 남긴다.
+                switch ( b._kind )
+                {
+                    case BindingKind::SingleSlot:
+                    {
+                        if ( b._arrSlot[0]._deviceKind == InputDeviceKind::Keyboard )
+                        {
+                            const Key key = static_cast<Key>( b._arrSlot[0]._controlIndex );
+                            bindNode.appendAttribute( "source", "key" );
+                            bindNode.appendAttribute( "key", KeyCodeUtil::toName( key ) );
+                        }
+                        else if ( b._arrSlot[0]._deviceKind == InputDeviceKind::Mouse )
+                        {
+                            const MouseButton btn = static_cast<MouseButton>( b._arrSlot[0]._controlIndex );
+                            bindNode.appendAttribute( "source", "mouse" );
+                            bindNode.appendAttribute( "button", MouseButtonUtil::toName( btn ) );
+                        }
+                        else if ( b._arrSlot[0]._deviceKind == InputDeviceKind::Gamepad )
+                        {
+                            const GamepadButton btn = static_cast<GamepadButton>( b._arrSlot[0]._controlIndex );
+                            bindNode.appendAttribute( "source", "gamepad" );
+                            bindNode.appendAttribute( "code", GamepadButtonUtil::toName( btn ) );
+                            bindNode.appendAttribute( "pad", static_cast<int32>( b._arrSlot[0]._deviceIndex ) );
+                        }
+                        break;
+                    }
+                    case BindingKind::Axis1DComposite:
+                    {
+                        if ( b._arrSlot[0]._deviceKind == InputDeviceKind::Gamepad )
+                        {
+                            bindNode.appendAttribute( "source", "gamepad" );
+                            bindNode.appendAttribute( "negKey", GamepadButtonUtil::toName( static_cast<GamepadButton>( b._arrSlot[0]._controlIndex ) ) );
+                            bindNode.appendAttribute( "posKey", GamepadButtonUtil::toName( static_cast<GamepadButton>( b._arrSlot[1]._controlIndex ) ) );
+                            bindNode.appendAttribute( "pad", static_cast<int32>( b._arrSlot[0]._deviceIndex ) );
+                            break;
+                        }
+                        bindNode.appendAttribute( "negKey", KeyCodeUtil::toName( static_cast<Key>( b._arrSlot[0]._controlIndex ) ) );
+                        bindNode.appendAttribute( "posKey", KeyCodeUtil::toName( static_cast<Key>( b._arrSlot[1]._controlIndex ) ) );
+                        break;
+                    }
+                    case BindingKind::Vector2DComposite:
+                    {
+                        const Key upKey    = static_cast<Key>( b._arrSlot[0]._controlIndex );
+                        const Key downKey  = static_cast<Key>( b._arrSlot[1]._controlIndex );
+                        const Key leftKey  = static_cast<Key>( b._arrSlot[2]._controlIndex );
+                        const Key rightKey = static_cast<Key>( b._arrSlot[3]._controlIndex );
+                        bindNode.appendAttribute( "up", KeyCodeUtil::toName( upKey ) );
+                        bindNode.appendAttribute( "down", KeyCodeUtil::toName( downKey ) );
+                        bindNode.appendAttribute( "left", KeyCodeUtil::toName( leftKey ) );
+                        bindNode.appendAttribute( "right", KeyCodeUtil::toName( rightKey ) );
+                        bindNode.appendAttribute( "deadzone", b._deadzone );
+                        break;
+                    }
+                    case BindingKind::GamepadStick2D:
+                    {
+                        bindNode.appendAttribute( "stick", b._stick == GamepadStick::Left ? "Left" : "Right" );
+                        bindNode.appendAttribute( "pad", static_cast<int32>( b._deviceIndex ) );
+                        bindNode.appendAttribute( "deadzone", b._deadzone );
+                        bindNode.appendAttribute( "outerDeadzone", b._outerDeadzone );
+                        bindNode.appendAttribute( "exponent", b._responseExponent );
+                        InputMapSerializationInternal::writeStickModifier( bindNode, b );
+                        break;
+                    }
+                    case BindingKind::MouseDelta2D:
+                    case BindingKind::MouseWheel1D:
+                    {
+                        bindNode.appendAttribute( "scale", b._scale );
+                        break;
+                    }
+                    case BindingKind::VirtualJoystick2D:
+                    {
+                        const MouseButton activationButton = static_cast<MouseButton>( b._arrSlot[0]._controlIndex );
+                        bindNode.appendAttribute( "button", MouseButtonUtil::toName( activationButton ) );
+                        bindNode.appendAttribute( "radius", b._scale );
+                        bindNode.appendAttribute( "deadzone", b._deadzone );
+                        bindNode.appendAttribute( "outerDeadzone", b._outerDeadzone );
+                        break;
+                    }
+                    case BindingKind::Chord:
+                    {
+                        const Key modifierKey = static_cast<Key>( b._arrSlot[0]._controlIndex );
+                        const Key triggerKey  = static_cast<Key>( b._arrSlot[1]._controlIndex );
+                        bindNode.appendAttribute( "modKey", KeyCodeUtil::toName( modifierKey ) );
+                        bindNode.appendAttribute( "trigKey", KeyCodeUtil::toName( triggerKey ) );
+                        break;
+                    }
+                    case BindingKind::Shortcut:
+                    {
+                        const Key key = static_cast<Key>( b._arrSlot[0]._controlIndex );
+                        bindNode.appendAttribute( "key", KeyCodeUtil::toName( key ) );
+                        bindNode.appendAttribute( "modifierMask", static_cast<int32>( b._modifierMask ) );
+                        break;
+                    }
+                    case BindingKind::AnyKey:
+                    {
+                        break; // 이름 말고는 적을 것이 없다.
+                    }
+                    case BindingKind::Count:
+                    {
+                        // 종류를 추가하고 이 switch 를 빠뜨린 경우다. 이름은 테이블에서 왔으므로 `kind` 는
+                        // 제대로 적히지만 딸린 특성이 하나도 없어서 다시 읽을 수 없는 줄이 된다.
+                        SW_LOG_ERROR( "저장하지 못한 바인딩 종류입니다 (kind=%#) — BindingKind 를 늘리고 saveUserBindings 를 빠뜨렸습니다.",
+                                      BindingKinds::toName( b._kind ) );
+                        break;
+                    }
+                }
             }
         }
         return doc.saveFile( filePath );
@@ -1213,6 +1147,7 @@ namespace sw
             return false;
 
         bool bCursorConflict = false;
+        bool bValid          = true; // 깨진 칸이 있는 바인딩은 넣지 않고 읽기를 실패로 돌린다
         for ( XMLNode bindNode = root.findChild( "bind" ); bindNode.isValid(); bindNode = bindNode.findNextSibling( "bind" ) )
         {
             const utf8*       pAction   = bindNode.findAttribute( "action" );
@@ -1234,8 +1169,159 @@ namespace sw
 
             const hashed_string actionName( pAction );
             const uint32        previousCount = getBindingCount( actionName );
-            InputMapSerializationInternal::loadUserBindingNode( *this, bindNode, pAction, pKindStr, parsedKind, layer );
-            InputMapSerializationInternal::readBindingModifier( *this, actionName, previousCount, bindNode );
+            switch ( parsedKind )
+            {
+                case BindingKind::Axis1DComposite:
+                {
+                    InputSlot negativeSlot{};
+                    InputSlot positiveSlot{};
+                    if ( InputMapSerializationInternal::tryReadAxisSlots( bindNode, "negKey", "posKey", negativeSlot, positiveSlot ) )
+                        bindAxis1DComposite( hashed_string( pAction ), negativeSlot, positiveSlot, hashed_string( layer ),
+                                             InputMapSerializationInternal::readUserBindingTrigger( bindNode, ActionTrigger::Down ) );
+                    break;
+                }
+                case BindingKind::Vector2DComposite:
+                {
+                    const Key upKey    = KeyCodeUtil::fromName( bindNode.getAttributeText( "up" ) );
+                    const Key downKey  = KeyCodeUtil::fromName( bindNode.getAttributeText( "down" ) );
+                    const Key leftKey  = KeyCodeUtil::fromName( bindNode.getAttributeText( "left" ) );
+                    const Key rightKey = KeyCodeUtil::fromName( bindNode.getAttributeText( "right" ) );
+                    // 사용자 바인딩 파일은 저장할 때 모든 칸을 적는다 — 빠진 칸은 기본값이 아니라 깨진 파일이다.
+                    float32 deadzone{};
+                    bool    bFields = true;
+                    InputMapSerializationInternal::readRequired( bindNode, "deadzone", deadzone, bFields );
+                    bValid                            = bFields && bValid;
+                    const bool bAllDirectionKeysBound = bFields && upKey != Key::Unknown && downKey != Key::Unknown && leftKey != Key::Unknown && rightKey != Key::Unknown;
+                    if ( bAllDirectionKeysBound )
+                        bindVector2D( hashed_string( pAction ), upKey, downKey, leftKey, rightKey, deadzone, hashed_string( layer ) );
+                    break;
+                }
+                case BindingKind::GamepadStick2D:
+                {
+                    uint8 pad{ 0 };
+                    if ( InputMapSerializationInternal::tryGetPadIndex( bindNode, pad ) == false )
+                        break; // 이미 경고했으므로 이 바인딩을 버린다
+                    const utf8*        pStickStr = bindNode.findAttribute( "stick" );
+                    const GamepadStick stick     = StringUtil::equals( pStickStr, "Right", true ) ? GamepadStick::Right : GamepadStick::Left;
+                    float32            deadzone{};
+                    float32            outerDeadzone{};
+                    float32            exp{};
+                    bool               bFields = true;
+                    InputMapSerializationInternal::readRequired( bindNode, "deadzone", deadzone, bFields );
+                    InputMapSerializationInternal::readRequired( bindNode, "outerDeadzone", outerDeadzone, bFields );
+                    InputMapSerializationInternal::readRequired( bindNode, "exponent", exp, bFields );
+                    float2           axisScale{};
+                    bool             bScaleByDelta{ false };
+                    GamepadStickAxis axis{ GamepadStickAxis::Both };
+                    const bool       bAxisRead = InputMapSerializationInternal::readStickModifier( bindNode, axisScale, bScaleByDelta, axis, bFields );
+                    bValid                     = bFields && bValid;
+                    if ( bFields && bAxisRead )
+                        bindGamepadStick2D( hashed_string( pAction ), stick, deadzone, hashed_string( layer ), pad, outerDeadzone, exp, axisScale, bScaleByDelta, axis );
+                    break;
+                }
+                case BindingKind::MouseDelta2D:
+                {
+                    float32 scale{};
+                    bool    bFields = true;
+                    InputMapSerializationInternal::readRequired( bindNode, "scale", scale, bFields );
+                    bValid = bFields && bValid;
+                    if ( bFields )
+                        bindMouseDelta( hashed_string( pAction ), scale, hashed_string( layer ) );
+                    break;
+                }
+                case BindingKind::MouseWheel1D:
+                {
+                    float32 scale{};
+                    bool    bFields = true;
+                    InputMapSerializationInternal::readRequired( bindNode, "scale", scale, bFields );
+                    bValid = bFields && bValid;
+                    if ( bFields )
+                        bindMouseWheel( hashed_string( pAction ), scale, hashed_string( layer ) );
+                    break;
+                }
+                case BindingKind::VirtualJoystick2D:
+                {
+                    const MouseButton activationButton = MouseButtonUtil::fromName( bindNode.getAttributeText( "button" ) );
+                    float32           radius{};
+                    float32           deadzone{};
+                    float32           outerDeadzone{};
+                    bool              bFields = true;
+                    InputMapSerializationInternal::readRequired( bindNode, "radius", radius, bFields );
+                    InputMapSerializationInternal::readRequired( bindNode, "deadzone", deadzone, bFields );
+                    InputMapSerializationInternal::readRequired( bindNode, "outerDeadzone", outerDeadzone, bFields );
+                    bValid = bFields && bValid;
+                    if ( bFields && activationButton != MouseButton::Count )
+                        bindVirtualJoystick2D( hashed_string( pAction ), activationButton, radius, deadzone, hashed_string( layer ), outerDeadzone );
+                    break;
+                }
+                case BindingKind::Chord:
+                {
+                    const Key modifierKey = KeyCodeUtil::fromName( bindNode.getAttributeText( "modKey" ) );
+                    const Key triggerKey  = KeyCodeUtil::fromName( bindNode.getAttributeText( "trigKey" ) );
+                    if ( modifierKey != Key::Unknown && triggerKey != Key::Unknown )
+                        bindChord( hashed_string( pAction ), modifierKey, triggerKey, InputMapSerializationInternal::readUserBindingTrigger( bindNode, ActionTrigger::Pressed ),
+                                   hashed_string( layer ) );
+                    break;
+                }
+                case BindingKind::Shortcut:
+                {
+                    uint8 modifierMask{ 0 };
+                    if ( InputMapSerializationInternal::tryGetModifierMask( bindNode, modifierMask ) == false )
+                        break; // 이미 경고했으므로 다른 수정 키 조합으로 묶지 않고 이 바인딩을 버린다
+                    const Key key = KeyCodeUtil::fromName( bindNode.getAttributeText( "key" ) );
+                    if ( key != Key::Unknown )
+                        bindShortcut( hashed_string( pAction ), key, modifierMask, InputMapSerializationInternal::readUserBindingTrigger( bindNode, ActionTrigger::Pressed ),
+                                      hashed_string( layer ) );
+                    break;
+                }
+                case BindingKind::AnyKey:
+                {
+                    bindAnyKey( hashed_string( pAction ), hashed_string( layer ) );
+                    break;
+                }
+                case BindingKind::SingleSlot:
+                {
+                    // 저장할 때와 같은 형태만 읽는다: source="key" key=…, source="mouse" button=…, source="gamepad" code=… pad=…
+                    const utf8*         pSourceStr    = bindNode.findAttribute( "source" );
+                    const ActionTrigger singleTrigger = InputMapSerializationInternal::readUserBindingTrigger( bindNode, ActionTrigger::Pressed );
+                    if ( StringUtil::equals( pSourceStr, "key", true ) )
+                    {
+                        const Key key = KeyCodeUtil::fromName( bindNode.getAttributeText( "key" ) );
+                        if ( key != Key::Unknown )
+                            bind( hashed_string( pAction ), key, singleTrigger, hashed_string( layer ) );
+                    }
+                    else if ( StringUtil::equals( pSourceStr, "mouse", true ) )
+                    {
+                        const MouseButton btn = MouseButtonUtil::fromName( bindNode.getAttributeText( "button" ) );
+                        if ( btn != MouseButton::Count )
+                            bind( hashed_string( pAction ), btn, singleTrigger, hashed_string( layer ) );
+                    }
+                    else if ( StringUtil::equals( pSourceStr, "gamepad", true ) )
+                    {
+                        const GamepadButton btn = GamepadButtonUtil::fromName( bindNode.getAttributeText( "code" ) );
+                        uint8               padIndex{ 0 };
+                        if ( btn != GamepadButton::Count && InputMapSerializationInternal::tryGetPadIndex( bindNode, padIndex ) )
+                        {
+                            InputSlot slot    = InputSlot::fromGamepadButton( btn );
+                            slot._deviceIndex = padIndex;
+                            bind( hashed_string( pAction ), slot, singleTrigger, hashed_string( layer ) );
+                        }
+                    }
+                    else
+                    {
+                        SW_LOG_ERROR( "단일 슬롯 바인딩의 source 가 없거나 모르는 값입니다 (action=%#, source=%#) — 이 바인딩은 건너뜁니다.", pAction,
+                                      ( pSourceStr != nullptr ) ? pSourceStr : "" );
+                    }
+                    break;
+                }
+                case BindingKind::Count:
+                {
+                    // 테이블은 이 이름을 아는데 여기서는 모른다. 종류를 추가하고 이 switch 를 빠뜨린 경우다.
+                    SW_LOG_ERROR( "읽지 못한 바인딩 종류입니다 (kind=%#) — BindingKind 를 늘리고 loadUserBindings 를 빠뜨렸습니다.", pKindStr );
+                    break;
+                }
+            }
+            InputMapSerializationInternal::readBindingModifier( *this, actionName, previousCount, bindNode, bValid );
 
             // 맵 읽기와 같은 검사 — 가상 커서가 마우스로 바꾸는 스틱 · 버튼을 다시 묶은 바인딩은 넣지 않고 읽기를 실패로 돌린다.
             ActionEntry* pEntry = findAction( actionName );
@@ -1252,7 +1338,9 @@ namespace sw
                 bCursorConflict = true;
             }
         }
-        return bCursorConflict == false;
+        if ( bValid == false )
+            SW_LOG_ERROR( "user bindings %# have invalid attribute values (listed above)", filePath );
+        return bCursorConflict == false && bValid;
     }
 
     ActionTrigger InputMap::actionTriggerFromName( string_view name )

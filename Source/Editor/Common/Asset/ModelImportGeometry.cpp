@@ -92,7 +92,7 @@ namespace sw::editor
         return hashed_string( "target" + to_string( static_cast<uint64>( targetIndex ) ) );
     }
 
-    void ModelImportUtil::appendMorphTargets( const cgltf_primitive& primitive, const cgltf_mesh* pSourceMesh, const float32 ( &arrWorld )[16], uint32 baseVertex,
+    bool ModelImportUtil::appendMorphTargets( const cgltf_primitive& primitive, const cgltf_mesh* pSourceMesh, const float32 ( &arrWorld )[16], uint32 baseVertex,
                                               cgltf_size vertexCount, MergedMesh& inoutMesh )
     {
         const size_t totalCount = inoutMesh._listVertex.size();
@@ -117,17 +117,21 @@ namespace sw::editor
                 else if ( target.attributes[attributeIndex].type == cgltf_attribute_type_normal )
                     pNormal = target.attributes[attributeIndex].data;
             }
+            // 타깃이 적지 않은 속성(노멀 없는 타깃)은 차이 0 이다(glTF 규약). 적은 접근자는 통째로 읽고, 못 읽으면 임포트가 실패한다.
+            vector<float32> listPositionValue;
+            vector<float32> listNormalValue;
+            if ( unpackOptionalFloats( pPosition, 3, vertexCount, listPositionValue ) == false || unpackOptionalFloats( pNormal, 3, vertexCount, listNormalValue ) == false )
+                return false;
             vector<float3>& listPosition = inoutMesh._listMorphPosition[indexOf];
             vector<float3>& listNormal   = inoutMesh._listMorphNormal[indexOf];
             listPosition.resize( totalCount );
             listNormal.resize( totalCount );
             for ( cgltf_size vertexIndex = 0; vertexIndex < vertexCount; ++vertexIndex )
             {
-                float32 arrValue[3]{};
-                if ( readFloats( pPosition, vertexIndex, arrValue, 3 ) )
-                    listPosition[baseVertex + vertexIndex] = convertToEngineSpace( transformDirection( arrWorld, float3{ arrValue } ) );
-                if ( readFloats( pNormal, vertexIndex, arrValue, 3 ) )
-                    listNormal[baseVertex + vertexIndex] = convertToEngineSpace( transformDirection( arrWorld, float3{ arrValue } ) );
+                if ( listPositionValue.empty() == false )
+                    listPosition[baseVertex + vertexIndex] = convertToEngineSpace( transformDirection( arrWorld, float3{ &listPositionValue[vertexIndex * 3] } ) );
+                if ( listNormalValue.empty() == false )
+                    listNormal[baseVertex + vertexIndex] = convertToEngineSpace( transformDirection( arrWorld, float3{ &listNormalValue[vertexIndex * 3] } ) );
             }
         }
         // 이 프리미티브에 없는 타깃도 정점 수를 맞춘다(차이 0).
@@ -136,6 +140,7 @@ namespace sw::editor
             inoutMesh._listMorphPosition[targetIndex].resize( totalCount );
             inoutMesh._listMorphNormal[targetIndex].resize( totalCount );
         }
+        return true;
     }
 
     float3 ModelImportUtil::normalizeOrZero( const float3& value )
@@ -180,14 +185,55 @@ namespace sw::editor
         return pAccessor != nullptr && cgltf_accessor_read_float( pAccessor, index, pOutValue, count ) != 0;
     }
 
-    void ModelImportUtil::appendPrimitive( const cgltf_primitive& primitive, const cgltf_mesh* pSourceMesh, const float32 ( &arrWorld )[16], const SkinBinding* pSkin,
+    bool ModelImportUtil::unpackFloats( const cgltf_accessor* pAccessor, cgltf_size componentCount, vector<float32>& outListValue )
+    {
+        outListValue.clear();
+        if ( pAccessor == nullptr )
+        {
+            SW_LOG_ERROR( "glTF accessor is missing" );
+            return false;
+        }
+        if ( cgltf_num_components( pAccessor->type ) != componentCount )
+        {
+            SW_LOG_ERROR( "glTF accessor has %# components per element, expected %#", static_cast<uint32>( cgltf_num_components( pAccessor->type ) ),
+                          static_cast<uint32>( componentCount ) );
+            return false;
+        }
+        const cgltf_size floatCount = pAccessor->count * componentCount;
+        outListValue.resize( floatCount );
+        if ( floatCount > 0 && cgltf_accessor_unpack_floats( pAccessor, outListValue.data(), floatCount ) != floatCount )
+        {
+            SW_LOG_ERROR( "glTF accessor (%# elements) could not be read", static_cast<uint32>( pAccessor->count ) );
+            outListValue.clear();
+            return false;
+        }
+        return true;
+    }
+
+    bool ModelImportUtil::unpackOptionalFloats( const cgltf_accessor* pAccessor, cgltf_size componentCount, cgltf_size elementCount, vector<float32>& outListValue )
+    {
+        outListValue.clear();
+        if ( pAccessor == nullptr )
+            return true; // 원본이 적지 않은 선택 속성이다 — 부르는 쪽이 그 뜻(노멀 계산 · 흰색 · 차이 0)을 정한다
+        if ( unpackFloats( pAccessor, componentCount, outListValue ) == false )
+            return false;
+        if ( pAccessor->count < elementCount )
+        {
+            SW_LOG_ERROR( "glTF accessor has %# elements, the primitive has %# vertices", static_cast<uint32>( pAccessor->count ), static_cast<uint32>( elementCount ) );
+            outListValue.clear();
+            return false;
+        }
+        return true;
+    }
+
+    bool ModelImportUtil::appendPrimitive( const cgltf_primitive& primitive, const cgltf_mesh* pSourceMesh, const float32 ( &arrWorld )[16], const SkinBinding* pSkin,
                                            MergedMesh& inoutMesh )
     {
         if ( primitive.type != cgltf_primitive_type_triangles )
         {
             SW_LOG_WARNING( "Skipping a non-triangle primitive (type %#)", static_cast<uint32>( primitive.type ) );
             ++inoutMesh._skippedPrimitiveCount;
-            return;
+            return true;
         }
 
         const cgltf_accessor* pPosition = nullptr;
@@ -216,8 +262,22 @@ namespace sw::editor
         {
             SW_LOG_WARNING( "Skipping a primitive without positions" );
             ++inoutMesh._skippedPrimitiveCount;
-            return;
+            return true;
         }
+        // 정점 속성은 접근자 단위로 통째로 읽는다 — 정점 하나씩 읽다 실패한 칸을 0 · 흰색으로 남기지 않는다(못 읽으면 임포트가 실패한다).
+        const cgltf_size vertexCount = pPosition->count;
+        vector<float32>  listPosition;
+        vector<float32>  listNormal;
+        vector<float32>  listUv;
+        vector<float32>  listColor;
+        vector<float32>  listWeight;
+        const cgltf_size colorComponentCount = pColor != nullptr ? cgltf_num_components( pColor->type ) : 0;
+        const bool       bSkinnedPrimitive   = pSkin != nullptr && pJoint != nullptr && pWeight != nullptr;
+        const bool       bAttributesRead     = unpackFloats( pPosition, 3, listPosition ) && unpackOptionalFloats( pNormal, 3, vertexCount, listNormal ) &&
+                                     unpackOptionalFloats( pUv, 2, vertexCount, listUv ) && unpackOptionalFloats( pColor, colorComponentCount, vertexCount, listColor ) &&
+                                     ( bSkinnedPrimitive == false || unpackOptionalFloats( pWeight, kInfluenceCount, vertexCount, listWeight ) );
+        if ( bAttributesRead == false )
+            return false;
 
         float4 baseColor{ 1.0f, 1.0f, 1.0f, 1.0f };
         if ( primitive.material != nullptr && primitive.material->has_pbr_metallic_roughness != 0 )
@@ -234,40 +294,45 @@ namespace sw::editor
             }
         }
 
-        const bool   bSkinnedPrimitive = pSkin != nullptr && pJoint != nullptr && pWeight != nullptr;
-        const uint32 baseVertex        = static_cast<uint32>( inoutMesh._listVertex.size() );
-        for ( cgltf_size vertexIndex = 0; vertexIndex < pPosition->count; ++vertexIndex )
+        const uint32 baseVertex = static_cast<uint32>( inoutMesh._listVertex.size() );
+        for ( cgltf_size vertexIndex = 0; vertexIndex < vertexCount; ++vertexIndex )
         {
             ImportVertex vertex;
-            float32      arrPosition[3]{};
-            (void)readFloats( pPosition, vertexIndex, arrPosition, 3 ); // cgltf_validate 가 접근자 범위를 보았다 — 실패는 0 으로 남는다
-            vertex._position = convertToEngineSpace( transformPoint( arrWorld, float3{ arrPosition } ) );
+            vertex._position = convertToEngineSpace( transformPoint( arrWorld, float3{ &listPosition[vertexIndex * 3] } ) );
 
-            float32 arrNormal[3]{};
-            if ( readFloats( pNormal, vertexIndex, arrNormal, 3 ) )
+            // 노멀이 없는 원본은 아래에서 면 노멀로 채운다(`_bHasNormal`).
+            if ( listNormal.empty() == false )
             {
-                vertex._normal     = convertToEngineSpace( transformNormal( arrWorld, float3{ arrNormal } ) );
+                vertex._normal     = convertToEngineSpace( transformNormal( arrWorld, float3{ &listNormal[vertexIndex * 3] } ) );
                 vertex._bHasNormal = vertex._normal.getLength() > MathUtil::kEpsilon;
             }
 
-            float32 arrUv[2]{};
-            if ( readFloats( pUv, vertexIndex, arrUv, 2 ) )
-                vertex._uv = float2{ arrUv[0], arrUv[1] };
+            if ( listUv.empty() == false )
+                vertex._uv = float2{ listUv[vertexIndex * 2], listUv[vertexIndex * 2 + 1] };
 
-            // COLOR_0 는 vec3 이거나 vec4 다. vec3 이면 알파는 1 이다.
+            // COLOR_0 는 vec3 이거나 vec4 다. vec3 이면 알파는 1 이고, 색이 없는 원본은 흰색(곱의 항등원)이다.
             float32 arrColor[4]{ 1.0f, 1.0f, 1.0f, 1.0f };
-            if ( pColor != nullptr )
-                (void)readFloats( pColor, vertexIndex, arrColor, cgltf_num_components( pColor->type ) ); // 못 읽으면 흰색(기본값)으로 둔다
+            for ( cgltf_size component = 0; component < colorComponentCount; ++component )
+            {
+                arrColor[component] = listColor[vertexIndex * colorComponentCount + component];
+            }
             vertex._color = float4{ baseColor._x * arrColor[0], baseColor._y * arrColor[1], baseColor._z * arrColor[2], baseColor._w * arrColor[3] };
 
             if ( bSkinnedPrimitive )
-                readSkinInfluence( *pSkin, pJoint, pWeight, vertexIndex, vertex );
+            {
+                if ( readSkinInfluence( *pSkin, pJoint, &listWeight[vertexIndex * kInfluenceCount], vertexIndex, vertex ) == false )
+                    return false;
+            }
             else if ( pSkin != nullptr )
+            {
                 vertex._arrJoint[0] = pSkin->_rigidBone;
+            }
             inoutMesh._listVertex.push_back( vertex );
         }
-        appendMorphTargets( primitive, pSourceMesh, arrWorld, baseVertex, pPosition->count, inoutMesh );
-        appendPrimitiveTriangles( primitive, arrWorld, baseVertex, pPosition->count, inoutMesh );
+        if ( appendMorphTargets( primitive, pSourceMesh, arrWorld, baseVertex, vertexCount, inoutMesh ) == false )
+            return false;
+        appendPrimitiveTriangles( primitive, arrWorld, baseVertex, vertexCount, inoutMesh );
+        return true;
     }
 
     void ModelImportUtil::appendPrimitiveTriangles( const cgltf_primitive& primitive, const float32 ( &arrWorld )[16], uint32 baseVertex, cgltf_size vertexCount,
@@ -292,20 +357,24 @@ namespace sw::editor
             inoutMesh._listIndex.push_back( bSwapWinding ? arrCorner[1] : arrCorner[2] );
             inoutMesh._listTriangleMaterial.push_back( primitive.material );
         }
+        return true;
     }
 
-    void ModelImportUtil::readSkinInfluence( const SkinBinding& skin, const cgltf_accessor* pJoint, const cgltf_accessor* pWeight, cgltf_size vertexIndex, ImportVertex& inoutVertex )
+    bool ModelImportUtil::readSkinInfluence( const SkinBinding& skin, const cgltf_accessor* pJoint, const float32* pWeight, cgltf_size vertexIndex, ImportVertex& inoutVertex )
     {
+        // 관절 번호는 정수 접근자라 정점마다 읽는다. 못 읽으면 가중치 0 으로 두지 않고 임포트가 실패한다.
         cgltf_uint arrJoint[kInfluenceCount]{};
-        float32    arrWeight[kInfluenceCount]{};
-        (void)cgltf_accessor_read_uint( pJoint, vertexIndex, arrJoint, kInfluenceCount );
-        (void)readFloats( pWeight, vertexIndex, arrWeight, kInfluenceCount ); // 못 읽으면 가중치 0 — 아래 합 검사가 처리한다
+        if ( cgltf_accessor_read_uint( pJoint, vertexIndex, arrJoint, kInfluenceCount ) == 0 )
+        {
+            SW_LOG_ERROR( "glTF JOINTS_0 of vertex %# could not be read", static_cast<uint32>( vertexIndex ) );
+            return false;
+        }
         float32 weightSum = 0.0f;
         for ( uint32 influence = 0; influence < kInfluenceCount; ++influence )
         {
             const bool bValid                 = arrJoint[influence] < skin._listJointToBone.size() && skin._listJointToBone[arrJoint[influence]] >= 0;
             inoutVertex._arrJoint[influence]  = bValid ? static_cast<uint16>( skin._listJointToBone[arrJoint[influence]] ) : 0u;
-            inoutVertex._arrWeight[influence] = bValid ? MathUtil::max( arrWeight[influence], 0.0f ) : 0.0f;
+            inoutVertex._arrWeight[influence] = bValid ? MathUtil::max( pWeight[influence], 0.0f ) : 0.0f;
             weightSum += inoutVertex._arrWeight[influence];
         }
         if ( weightSum <= MathUtil::kEpsilon )
@@ -316,12 +385,13 @@ namespace sw::editor
             {
                 inoutVertex._arrWeight[influence] = 0.0f;
             }
-            return;
+            return true;
         }
         for ( float32& weight : inoutVertex._arrWeight )
         {
             weight /= weightSum;
         }
+        return true;
     }
 
     uint32 ModelImportUtil::promoteSceneRootsToTopAncestor( vector<uint8>& inoutBytes )
@@ -356,9 +426,11 @@ namespace sw::editor
             const size_t    childCount = children.isArray() ? children.size() : 0;
             for ( size_t childSlot = 0; childSlot < childCount; ++childSlot )
             {
-                const uint64 childIndex = children.at( childSlot ).asUint( nodeCount );
-                if ( childIndex < nodeCount )
-                    listParent[childIndex] = nodeIndex;
+                const std::optional<uint64> childIndex = children.at( childSlot ).read<uint64>();
+                if ( childIndex.has_value() == false )
+                    return 0; // 읽지 못하는 번호 — 고치지 않고 cgltf 가 알리게 한다
+                if ( *childIndex < nodeCount )
+                    listParent[*childIndex] = nodeIndex;
             }
         }
 
@@ -375,7 +447,10 @@ namespace sw::editor
             bool           bPromoted = false;
             for ( size_t slot = 0; slot < sceneNodes.size(); ++slot )
             {
-                const uint64 listedIndex = sceneNodes.at( slot ).asUint( nodeCount );
+                const std::optional<uint64> listedSlot = sceneNodes.at( slot ).read<uint64>();
+                if ( listedSlot.has_value() == false )
+                    return 0; // 읽지 못하는 번호 — 고치지 않고 cgltf 가 알리게 한다
+                const uint64 listedIndex = *listedSlot;
                 uint64       rootIndex   = listedIndex;
                 for ( size_t step = 0; rootIndex < nodeCount && listParent[rootIndex] != nodeCount && step < nodeCount; ++step )
                 {
@@ -456,7 +531,7 @@ namespace sw::editor
         }
     }
 
-    void ModelImportUtil::appendNode( const cgltf_node& node, MergedMesh& inoutMesh )
+    bool ModelImportUtil::appendNode( const cgltf_node& node, MergedMesh& inoutMesh )
     {
         if ( node.mesh != nullptr )
         {
@@ -464,14 +539,16 @@ namespace sw::editor
             cgltf_node_transform_world( &node, arrWorld );
             for ( cgltf_size primitiveIndex = 0; primitiveIndex < node.mesh->primitives_count; ++primitiveIndex )
             {
-                appendPrimitive( node.mesh->primitives[primitiveIndex], node.mesh, arrWorld, nullptr, inoutMesh );
+                if ( appendPrimitive( node.mesh->primitives[primitiveIndex], node.mesh, arrWorld, nullptr, inoutMesh ) == false )
+                    return false;
             }
         }
         for ( cgltf_size childIndex = 0; childIndex < node.children_count; ++childIndex )
         {
-            if ( node.children[childIndex] != nullptr )
-                appendNode( *node.children[childIndex], inoutMesh );
+            if ( node.children[childIndex] != nullptr && appendNode( *node.children[childIndex], inoutMesh ) == false )
+                return false;
         }
+        return true;
     }
 
     void ModelImportUtil::collectSceneRoots( const cgltf_data& data, vector<const cgltf_node*>& outListRoot )

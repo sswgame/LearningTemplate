@@ -17,33 +17,19 @@ namespace sw
         struct SkirmishMatchInternal
         {
             /** @brief 성향별 AI 설정입니다 — 0 러시(일찍 작게) · 1 운영(일꾼 · 병영을 늘려 크게) · 2 사람 상대(그 사이). 유닛 id 는 판 설정(씬 데이터)에서 온다. */
-            static RTSCommanderAISettings makeAISettings( int32 style, const SkirmishMatchSettings& matchSettings )
+            /** @brief 성향 @p style(씬 데이터)과 판의 유닛 id 로 AI 설정을 만듭니다. 생각 주기 · 방어 반경은 키트의 값이다. */
+            static RTSCommanderAISettings makeAISettings( const SkirmishAIStyle& style, const SkirmishMatchSettings& matchSettings )
             {
                 RTSCommanderAISettings settings;
-                settings._workerID     = matchSettings._workerID;
-                settings._depotID      = matchSettings._depotID;
-                settings._supplyID     = matchSettings._supplyID;
-                settings._productionID = matchSettings._productionID;
-                settings._armyUnitID   = matchSettings._armyUnitID;
-                if ( style == 0 )
-                {
-                    settings._workerTarget     = 12;
-                    settings._productionTarget = 2;
-                    settings._attackArmySize   = 6;
-                }
-                else if ( style == 1 )
-                {
-                    settings._workerTarget     = 18;
-                    settings._productionTarget = 3;
-                    settings._attackArmySize   = 14;
-                    settings._supplyMargin     = 4;
-                }
-                else
-                {
-                    settings._workerTarget     = 16;
-                    settings._productionTarget = 2;
-                    settings._attackArmySize   = 10;
-                }
+                settings._workerID         = matchSettings._workerID;
+                settings._depotID          = matchSettings._depotID;
+                settings._supplyID         = matchSettings._supplyID;
+                settings._productionID     = matchSettings._productionID;
+                settings._armyUnitID       = matchSettings._armyUnitID;
+                settings._workerTarget     = style._workerTarget;
+                settings._productionTarget = style._productionTarget;
+                settings._attackArmySize   = style._attackArmySize;
+                settings._supplyMargin     = style._supplyMargin;
                 return settings;
             }
 
@@ -105,9 +91,10 @@ namespace sw
 
         for ( int32 player = 0; player < kPlayerCount; ++player )
         {
-            const bool bAI       = bHumanPlayer == false || player != 0;
-            _arrAIActive[player] = bAI ? SW_TRUE : SW_FALSE;
-            const int32 style    = bHumanPlayer ? 2 : player;
+            const bool bAI               = bHumanPlayer == false || player != 0;
+            _arrAIActive[player]         = bAI ? SW_TRUE : SW_FALSE;
+            const SkirmishAIStyle& style = bHumanPlayer ? _settings._opponentAI : player == 0 ? _settings._rushAI
+                                                                                              : _settings._macroAI;
             if ( bAI )
                 _arrAI[player].initialize( &_world, player, SkirmishMatchInternal::makeAISettings( style, _settings ) );
         }

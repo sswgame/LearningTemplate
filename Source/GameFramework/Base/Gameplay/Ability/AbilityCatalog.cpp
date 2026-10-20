@@ -3,6 +3,7 @@
 #include "GameFramework/Base/Gameplay/Ability/AbilityCatalog.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -55,13 +56,20 @@ namespace sw
                     return false;
                 }
 
-                outModifier._scalableMagnitude._baseValue = node.getAttributeFloat( "magnitude", 0.0f );
-                outModifier._scalableMagnitude._perLevel  = node.getAttributeFloat( "perLevel", 0.0f );
-                outModifier._backingAttribute             = GameDataXML::readName( node, "backing" );
-                outModifier._coefficient                  = node.getAttributeFloat( "coefficient", 1.0f );
-                outModifier._preMultiplyAdditive          = node.getAttributeFloat( "pre", 0.0f );
-                outModifier._postMultiplyAdditive         = node.getAttributeFloat( "post", 0.0f );
-                outModifier._setByCallerName              = GameDataXML::readName( node, "name" );
+                // 적지 않은 칸은 모디파이어 구조체의 초기값이다. 깨진 값은 그 모디파이어를 넣지 않는 오류다.
+                constexpr float32 kAny        = MathUtil::kMaxFloat;
+                bool              bValid      = GameDataXML::readOptionalNumber( node, "magnitude", sourceName, -kAny, kAny, outModifier._scalableMagnitude._baseValue );
+                bValid                        = GameDataXML::readOptionalNumber( node, "perLevel", sourceName, -kAny, kAny, outModifier._scalableMagnitude._perLevel ) && bValid;
+                bValid                        = GameDataXML::readOptionalNumber( node, "coefficient", sourceName, -kAny, kAny, outModifier._coefficient ) && bValid;
+                bValid                        = GameDataXML::readOptionalNumber( node, "pre", sourceName, -kAny, kAny, outModifier._preMultiplyAdditive ) && bValid;
+                bValid                        = GameDataXML::readOptionalNumber( node, "post", sourceName, -kAny, kAny, outModifier._postMultiplyAdditive ) && bValid;
+                outModifier._backingAttribute = GameDataXML::readName( node, "backing" );
+                outModifier._setByCallerName  = GameDataXML::readName( node, "name" );
+                if ( bValid == false )
+                {
+                    SW_LOG_ERROR( "%#: effect '%#' has a <Modifier> with invalid numbers - skipped", sourceName, pEffectID );
+                    return false;
+                }
 
                 const utf8* pFrom        = node.findAttribute( "from" );
                 const bool  bFromTarget  = pFrom != nullptr && StringUtil::equals( pFrom, "Target", true );
@@ -84,13 +92,17 @@ namespace sw
                 return true;
             }
 
-            /** @brief 노드의 매개변수로 "Damage" 실행 계산을 만듭니다. */
+            /** @brief 노드의 매개변수로 "Damage" 실행 계산을 만듭니다. 세 매개변수는 필수이고, 빠지거나 깨졌으면 오류를 남기고 nullptr 입니다. */
             static shared_ptr<const IGameplayEffectExecution> createDamageExecution( const XMLNode& node )
             {
+                const std::optional<string>  damageName  = node.readRequiredAttribute<string>( "setByCaller" );
+                const std::optional<float32> coefficient = node.readRequiredAttribute<float32>( "attackPowerCoefficient" );
+                const std::optional<float32> baseDamage  = node.readRequiredAttribute<float32>( "base" );
+                const bool                   bComplete   = damageName.has_value() && coefficient.has_value() && baseDamage.has_value();
+                if ( bComplete == false )
+                    return nullptr;
                 shared_ptr<DamageExecution> pExecution = make_shared<DamageExecution>();
-                const utf8*                 pName      = node.findAttribute( "setByCaller" );
-                const hashed_string         damageName = pName != nullptr ? hashed_string( pName ) : hashed_string( "Damage" );
-                pExecution->setParameters( damageName, node.getAttributeFloat( "attackPowerCoefficient", 0.0f ), node.getAttributeFloat( "base", 0.0f ) );
+                pExecution->setParameters( hashed_string( *damageName ), *coefficient, *baseDamage );
                 return pExecution;
             }
         };
@@ -285,14 +297,19 @@ namespace sw
             SW_LOG_WARNING( "%#: effect '%#' has unknown duration policy '%#' - skipped", sourceName, pID, pDuration );
             return false;
         }
-        outDef._duration._baseValue           = node.getAttributeFloat( "seconds", 0.0f );
-        outDef._duration._perLevel            = node.getAttributeFloat( "secondsPerLevel", 0.0f );
-        outDef._period                        = node.getAttributeFloat( "period", 0.0f );
-        outDef._bExecutePeriodicOnApplication = node.getAttributeBool( "executeOnApplication", true ) ? SW_TRUE : SW_FALSE;
-        outDef._bRefreshDurationOnStack       = node.getAttributeBool( "refreshOnStack", true ) ? SW_TRUE : SW_FALSE;
-        outDef._stackLimit                    = node.getAttributeInt( "stackLimit", 1 );
-        if ( outDef._stackLimit < 1 )
-            outDef._stackLimit = 1;
+        // 적지 않은 칸은 GameplayEffectDef 의 초기값이다. 깨진 값 · 범위 밖 값은 그 이펙트를 넣지 않는 오류다(자르지 않는다).
+        constexpr float32 kAny   = MathUtil::kMaxFloat;
+        bool              bValid = GameDataXML::readOptionalNumber( node, "seconds", sourceName, -kAny, kAny, outDef._duration._baseValue );
+        bValid                   = GameDataXML::readOptionalNumber( node, "secondsPerLevel", sourceName, -kAny, kAny, outDef._duration._perLevel ) && bValid;
+        bValid                   = GameDataXML::readOptionalNumber( node, "period", sourceName, 0.0f, kAny, outDef._period ) && bValid;
+        bValid                   = GameDataXML::readOptionalFlag( node, "executeOnApplication", outDef._bExecutePeriodicOnApplication ) && bValid;
+        bValid                   = GameDataXML::readOptionalFlag( node, "refreshOnStack", outDef._bRefreshDurationOnStack ) && bValid;
+        bValid                   = GameDataXML::readOptionalNumber( node, "stackLimit", sourceName, 1, MathUtil::kMaxInt32, outDef._stackLimit ) && bValid;
+        if ( bValid == false )
+        {
+            SW_LOG_ERROR( "%#: effect '%#' has invalid fields - skipped", sourceName, pID );
+            return false;
+        }
 
         const utf8* pStacking = node.findAttribute( "stacking" );
         if ( pStacking != nullptr && game::getSubsystem<TypeRegistry>().enumFromString( string_view( pStacking ), outDef._stackingPolicy ) == false )
@@ -328,8 +345,12 @@ namespace sw
                 continue;
             }
             shared_ptr<const IGameplayEffectExecution> pExecution = factoryIter->second( executionNode );
-            if ( pExecution != nullptr )
-                outDef._listExecution.push_back( std::move( pExecution ) );
+            if ( pExecution == nullptr )
+            {
+                SW_LOG_ERROR( "%#: effect '%#' has an <Execution class=\"%#\"> with invalid parameters - skipped", sourceName, pID, className.c_str() );
+                return false;
+            }
+            outDef._listExecution.push_back( std::move( pExecution ) );
         }
 
         AbilityCatalogInternal::readTagChildren( node, "AssetTag", outDef._assetTags );
@@ -358,12 +379,12 @@ namespace sw
         }
         // 클래스 이름은 여기서 찾지 않는다. 클래스는 게임 모듈이 등록하므로 데이터를 읽는 순서에 영향받으면 안 된다. 없는 클래스는 만들 때(`createAbility`) 경고한다.
 
-        GameplayAbilityConfig& config      = outDef._config;
-        config._id                         = outDef._id;
-        config._pCostEffect                = resolveEffectReference( node.findAttribute( "cost" ), pID, sourceName );
-        config._pCooldownEffect            = resolveEffectReference( node.findAttribute( "cooldown" ), pID, sourceName );
-        config._bRetriggerInstancedAbility = node.getAttributeBool( "retrigger", false ) ? SW_TRUE : SW_FALSE;
-        config._bActivateOnGranted         = node.getAttributeBool( "activateOnGranted", false ) ? SW_TRUE : SW_FALSE;
+        GameplayAbilityConfig& config = outDef._config;
+        config._id                    = outDef._id;
+        config._pCostEffect           = resolveEffectReference( node.findAttribute( "cost" ), pID, sourceName );
+        config._pCooldownEffect       = resolveEffectReference( node.findAttribute( "cooldown" ), pID, sourceName );
+        bool bValid                   = GameDataXML::readOptionalFlag( node, "retrigger", config._bRetriggerInstancedAbility );
+        bValid                        = GameDataXML::readOptionalFlag( node, "activateOnGranted", config._bActivateOnGranted ) && bValid;
 
         AbilityCatalogInternal::readTagChildren( node, "AbilityTag", config._abilityTags );
         AbilityCatalogInternal::readTagChildren( node, "CancelTag", config._cancelAbilitiesWithTags );
@@ -380,11 +401,20 @@ namespace sw
                 continue;
             const utf8* pText = paramNode.findAttribute( "text" );
             if ( pText != nullptr )
+            {
                 config._mapNameParameter.insert_or_assign( paramName, hashed_string( pText ) );
+                continue;
+            }
+            // 글이 아닌 매개변수는 값을 반드시 적는다 — 빠진 값을 0 으로 두지 않는다.
+            const std::optional<float32> value = paramNode.readRequiredAttribute<float32>( "value" );
+            if ( value.has_value() )
+                config._mapParameter.insert_or_assign( paramName, *value );
             else
-                config._mapParameter.insert_or_assign( paramName, paramNode.getAttributeFloat( "value", 0.0f ) );
+                bValid = false;
         }
-        return true;
+        if ( bValid == false )
+            SW_LOG_ERROR( "%#: ability '%#' has invalid fields - skipped", sourceName, pID );
+        return bValid;
     }
 
     bool AbilityCatalog::readAbilitySet( const XMLNode& node, string_view sourceName, AbilitySetDef& outDef ) const
@@ -402,7 +432,10 @@ namespace sw
             AbilitySetAttributeSetEntry setEntry;
             setEntry._className = GameDataXML::readName( setNode, "class" );
             if ( setEntry._className.empty() )
-                setEntry._className = hashed_string( "Generic" );
+            {
+                SW_LOG_ERROR( "%#: ability set '%#' has an <AttributeSet> without a class - skipped", sourceName, pID );
+                return false;
+            }
 
             for ( XMLNode attributeNode = setNode.findChild( "Attribute" ); attributeNode; attributeNode = attributeNode.findNextSibling( "Attribute" ) )
             {
@@ -410,11 +443,18 @@ namespace sw
                 attributeEntry._attribute = GameDataXML::readName( attributeNode, "name" );
                 if ( attributeEntry._attribute.empty() )
                     continue;
-                attributeEntry._baseValue = attributeNode.getAttributeFloat( "base", 0.0f );
-                const bool bHasRange      = attributeNode.findAttribute( "min" ) != nullptr || attributeNode.findAttribute( "max" ) != nullptr;
-                attributeEntry._bHasRange = bHasRange ? SW_TRUE : SW_FALSE;
-                attributeEntry._minValue  = attributeNode.getAttributeFloat( "min", -3.0e38f );
-                attributeEntry._maxValue  = attributeNode.getAttributeFloat( "max", 3.0e38f );
+                // 범위는 적은 쪽만 막는다 — 적지 않은 쪽은 구조체 초기값(실수의 끝)이라 "제한 없음" 이다.
+                constexpr float32 kAny      = MathUtil::kMaxFloat;
+                const bool        bHasRange = attributeNode.findAttribute( "min" ) != nullptr || attributeNode.findAttribute( "max" ) != nullptr;
+                attributeEntry._bHasRange   = bHasRange ? SW_TRUE : SW_FALSE;
+                bool bAttributeValid        = GameDataXML::readOptionalNumber( attributeNode, "base", sourceName, -kAny, kAny, attributeEntry._baseValue );
+                bAttributeValid             = GameDataXML::readOptionalNumber( attributeNode, "min", sourceName, -kAny, kAny, attributeEntry._minValue ) && bAttributeValid;
+                bAttributeValid             = GameDataXML::readOptionalNumber( attributeNode, "max", sourceName, -kAny, kAny, attributeEntry._maxValue ) && bAttributeValid;
+                if ( bAttributeValid == false )
+                {
+                    SW_LOG_ERROR( "%#: ability set '%#' attribute '%#' has invalid numbers - skipped", sourceName, pID, attributeEntry._attribute.c_str() );
+                    return false;
+                }
                 setEntry._listAttribute.push_back( attributeEntry );
             }
             outDef._listAttributeSet.push_back( std::move( setEntry ) );
@@ -426,8 +466,13 @@ namespace sw
             abilityEntry._abilityID = GameDataXML::readName( abilityNode, "id" );
             if ( abilityEntry._abilityID.empty() )
                 continue;
-            abilityEntry._level   = abilityNode.getAttributeInt( "level", 1 );
-            abilityEntry._inputID = abilityNode.getAttributeInt( "input", -1 );
+            bool bEntryValid = GameDataXML::readOptionalNumber( abilityNode, "level", sourceName, 1, MathUtil::kMaxInt32, abilityEntry._level );
+            bEntryValid      = GameDataXML::readOptionalNumber( abilityNode, "input", sourceName, -1, MathUtil::kMaxInt32, abilityEntry._inputID ) && bEntryValid;
+            if ( bEntryValid == false )
+            {
+                SW_LOG_ERROR( "%#: ability set '%#' grants ability '%#' with invalid fields - skipped", sourceName, pID, abilityEntry._abilityID.c_str() );
+                return false;
+            }
             outDef._listAbility.push_back( abilityEntry );
         }
 
@@ -437,7 +482,11 @@ namespace sw
             effectEntry._effectID = GameDataXML::readName( effectNode, "id" );
             if ( effectEntry._effectID.empty() )
                 continue;
-            effectEntry._level = effectNode.getAttributeInt( "level", 1 );
+            if ( GameDataXML::readOptionalNumber( effectNode, "level", sourceName, 1, MathUtil::kMaxInt32, effectEntry._level ) == false )
+            {
+                SW_LOG_ERROR( "%#: ability set '%#' applies effect '%#' with an invalid level - skipped", sourceName, pID, effectEntry._effectID.c_str() );
+                return false;
+            }
             outDef._listEffect.push_back( effectEntry );
         }
 

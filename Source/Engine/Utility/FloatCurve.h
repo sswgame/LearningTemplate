@@ -8,6 +8,8 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include <optional>
+
 namespace sw
 {
     /** @brief 키에서 다음 키까지의 보간입니다(언리얼 ERichCurveInterpMode · 유니티 키 접선 모드와 같은 셋). */
@@ -47,7 +49,7 @@ namespace sw
 {
     /**
      * @struct FloatCurve
-     * @brief 시간 → 값 커브입니다(언리얼 FRichCurve · 유니티 AnimationCurve). 첫 키 앞과 끝 키 뒤는 끝 값이고, 키가 없으면 대체값입니다.
+     * @brief 시간 → 값 커브입니다(언리얼 FRichCurve · 유니티 AnimationCurve). 첫 키 앞과 끝 키 뒤는 끝 값이고, 키가 없으면 값이 없습니다(부르는 쪽이 그 뜻을 정한다).
      * @details 컴포넌트 · 데이터의 `PROPERTY()` 로 두면 에디터 인스펙터가 미리보기와 편집기를 그립니다(`FloatCurvePropertyDrawer`).
      *          키는 시각 순이어야 합니다. 손으로 고친 뒤에는 `sortAndComputeAutoTangents` 를 부릅니다.
      */
@@ -59,8 +61,8 @@ namespace sw
         PROPERTY( Tooltip = "Keys in time order" )
         vector<FloatCurveKey> _listKey{};
 
-        /** @brief @p time 의 값입니다. 키가 없으면 @p fallback 입니다. */
-        float32 evaluate( float32 time, float32 fallback = 0.0f ) const;
+        /** @brief @p time 의 값입니다. 키가 없으면 비어 있습니다 — 호출부가 대체값을 넘기지 않고 "키 없음" 을 직접 다룬다. */
+        [[nodiscard]] std::optional<float32> evaluate( float32 time ) const;
         /** @brief 키를 시각 순 자리에 넣고 자동 접선을 다시 셉니다. 넣은 자리입니다. */
         uint32 addKey( float32 time, float32 value, CurveInterpolation interpolation = CurveInterpolation::Cubic );
         /** @brief 키를 시각 순으로 정렬하고 `_bAutoTangent` 키의 접선을 이웃 키로 다시 셉니다(가운데 키는 이웃 기울기, 끝 키는 평평). */

@@ -17,7 +17,6 @@ namespace sw
         {
 
             static constexpr int32 kMaxStatusValue = 255;
-            static constexpr int32 kNeverExpires   = 1 << 30;
         };
     } // namespace
 } // namespace sw
@@ -257,7 +256,9 @@ namespace sw
                         case ElementStepRuleKind::Expire:
                         {
                             const ElementMaterialDef& material = _pTable->getMaterials()[static_cast<size_t>( getMaterial( position ) )];
-                            if ( value >= material.getParam( rule._stepsParam, ElementGridInternal::kNeverExpires ) )
+                            // 재질이 수명 수치를 적지 않았으면 이 상태는 그 재질에서 끝나지 않는다.
+                            const std::optional<int32> steps = material.getParam( rule._stepsParam );
+                            if ( steps.has_value() && value >= *steps )
                                 _listPending.push_back( PendingChange{ position, static_cast<int32>( ruleIndex ) } );
                             break;
                         }

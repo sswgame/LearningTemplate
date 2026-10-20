@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
@@ -11,6 +12,7 @@
 
 #include "EngineTest/UI/UITestWidgets.h"
 
+#include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
 
 // UIScreenStackTest — 화면 스택: 층 · 모달(아래 화면 · 게임 입력 막기) · 덮였다 돌아올 때 포커스 복원 · 기본 포커스 · 지연 닫기 · 게임 정지 · 모듈 내리기.
@@ -271,7 +273,7 @@ SW_TEST_CASE( UIScreenStackTest, BackClosesTopScreen )
     input.getInputMap().bind( "Pause", sw::Key::Escape );
     {
         sw::UISystem ui;
-        SW_ASSERT_TRUE( ui.initialize( input, nullptr, "engine/input/ui.input.xml" ) );
+        SW_ASSERT_TRUE( ui.initialize( input, nullptr, ::test::getEngineDefaultAssets()._uiInputMap.c_str() ) );
         const sw::UIScreenHandle menu    = ui.pushScreen( Util::makeScreen( Util::makeDesc( sw::UILayer::Menu ), 0.0f, 0.0f, 800.0f, 600.0f, "menu", 1 ) );
         const sw::UIScreenHandle options = ui.pushScreen( Util::makeScreen( Util::makeDesc( sw::UILayer::Menu ), 0.0f, 0.0f, 800.0f, 600.0f, "options", 1 ) );
         SW_EXPECT_EQUAL( options, ui.getActiveScreen()->getHandle() );

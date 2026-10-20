@@ -258,7 +258,9 @@ namespace sw
         if ( _pSpawnTable == nullptr )
             return;
         const AIDirectorPhaseDef& phase = _pProfile->getPhases()[static_cast<size_t>( _phaseIndex )];
-        _spawnDirector.setBudgetScale( phase._spawnScale * phase._spawnCurve.evaluate( _phaseTime, 1.0f ) );
+        // 단계 곡선이 없으면 단계의 배율만 쓴다(`AIDirectorPhaseDef::_spawnCurve` 의 계약 — 곡선은 배율에 곱하는 선택 항이다).
+        const std::optional<float32> curveScale = phase._spawnCurve.evaluate( _phaseTime );
+        _spawnDirector.setBudgetScale( curveScale.has_value() ? phase._spawnScale * *curveScale : phase._spawnScale );
         (void)_spawnDirector.update( deltaTime );
         drainSpawnEvents();
     }

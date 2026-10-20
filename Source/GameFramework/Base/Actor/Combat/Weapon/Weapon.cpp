@@ -40,30 +40,43 @@ namespace sw
             if ( pID == nullptr )
                 continue;
             WeaponDef weapon;
-            weapon._id                 = hashed_string( pID );
-            const utf8* pName          = node.findAttribute( "name" );
-            weapon._name               = pName != nullptr ? pName : pID;
-            weapon._fireInterval       = MathUtil::max( 0.01f, node.getAttributeFloat( "fireInterval", weapon._fireInterval ) );
-            weapon._reloadTime         = MathUtil::max( 0.0f, node.getAttributeFloat( "reloadTime", weapon._reloadTime ) );
-            weapon._damage             = node.getAttributeFloat( "damage", weapon._damage );
-            weapon._range              = MathUtil::max( 0.1f, node.getAttributeFloat( "range", weapon._range ) );
-            weapon._minSpread          = MathUtil::max( 0.0f, node.getAttributeFloat( "minSpread", weapon._minSpread ) );
-            weapon._maxSpread          = MathUtil::max( weapon._minSpread, node.getAttributeFloat( "maxSpread", weapon._maxSpread ) );
-            weapon._spreadPerShot      = MathUtil::max( 0.0f, node.getAttributeFloat( "spreadPerShot", weapon._spreadPerShot ) );
-            weapon._spreadRecovery     = MathUtil::max( 0.0f, node.getAttributeFloat( "spreadRecovery", weapon._spreadRecovery ) );
-            weapon._recoilPitch        = node.getAttributeFloat( "recoilPitch", weapon._recoilPitch );
-            weapon._magazineSize       = MathUtil::max( 1, node.getAttributeInt( "magazineSize", weapon._magazineSize ) );
-            weapon._maxReserveAmmo     = MathUtil::max( 0, node.getAttributeInt( "maxReserveAmmo", weapon._maxReserveAmmo ) );
-            weapon._pelletCount        = MathUtil::max( 1, node.getAttributeInt( "pelletCount", weapon._pelletCount ) );
-            weapon._bAutomatic         = node.getAttributeBool( "automatic", true ) ? SW_TRUE : SW_FALSE;
-            weapon._falloffStart       = MathUtil::max( 0.0f, node.getAttributeFloat( "falloffStart", weapon._falloffStart ) );
-            weapon._falloffEnd         = MathUtil::max( weapon._falloffStart, node.getAttributeFloat( "falloffEnd", weapon._falloffEnd ) );
-            weapon._falloffMinScale    = MathUtil::clamp( node.getAttributeFloat( "falloffMinScale", weapon._falloffMinScale ), 0.0f, 1.0f );
-            weapon._projectileSpeed    = MathUtil::max( 0.0f, node.getAttributeFloat( "projectileSpeed", weapon._projectileSpeed ) );
-            weapon._projectileGravity  = node.getAttributeFloat( "projectileGravity", weapon._projectileGravity );
-            weapon._headshotMultiplier = MathUtil::max( 0.0f, node.getAttributeFloat( "headshotMultiplier", weapon._headshotMultiplier ) );
-            const utf8* pAmmoID        = node.findAttribute( "ammo" );
-            weapon._ammoID             = pAmmoID != nullptr ? hashed_string( pAmmoID ) : hashed_string{};
+            weapon._id        = hashed_string( pID );
+            const utf8* pName = node.findAttribute( "name" );
+            weapon._name      = pName != nullptr ? pName : pID;
+            // 적지 않은 칸은 WeaponDef 의 초기값이다. 깨진 값 · 범위 밖 값은 그 무기를 넣지 않는 오류다(자르지 않는다).
+            constexpr int32   kAnyInt   = MathUtil::kMaxInt32;
+            constexpr float32 kAnyFloat = MathUtil::kMaxFloat;
+            bool              bValid    = GameDataXML::readOptionalNumber( node, "fireInterval", sourceName, WeaponDef::kMinFireInterval, kAnyFloat, weapon._fireInterval );
+            bValid                      = GameDataXML::readOptionalNumber( node, "reloadTime", sourceName, 0.0f, kAnyFloat, weapon._reloadTime ) && bValid;
+            bValid                      = GameDataXML::readOptionalNumber( node, "damage", sourceName, -kAnyFloat, kAnyFloat, weapon._damage ) && bValid;
+            bValid                      = GameDataXML::readOptionalNumber( node, "range", sourceName, WeaponDef::kMinRange, kAnyFloat, weapon._range ) && bValid;
+            bValid                      = GameDataXML::readOptionalNumber( node, "minSpread", sourceName, 0.0f, kAnyFloat, weapon._minSpread ) && bValid;
+            bValid                      = GameDataXML::readOptionalNumber( node, "maxSpread", sourceName, 0.0f, kAnyFloat, weapon._maxSpread ) && bValid;
+            bValid                      = GameDataXML::readOptionalNumber( node, "spreadPerShot", sourceName, 0.0f, kAnyFloat, weapon._spreadPerShot ) && bValid;
+            bValid                      = GameDataXML::readOptionalNumber( node, "spreadRecovery", sourceName, 0.0f, kAnyFloat, weapon._spreadRecovery ) && bValid;
+            bValid                      = GameDataXML::readOptionalNumber( node, "recoilPitch", sourceName, -kAnyFloat, kAnyFloat, weapon._recoilPitch ) && bValid;
+            bValid                      = GameDataXML::readOptionalNumber( node, "magazineSize", sourceName, 1, kAnyInt, weapon._magazineSize ) && bValid;
+            bValid                      = GameDataXML::readOptionalNumber( node, "maxReserveAmmo", sourceName, 0, kAnyInt, weapon._maxReserveAmmo ) && bValid;
+            bValid                      = GameDataXML::readOptionalNumber( node, "pelletCount", sourceName, 1, kAnyInt, weapon._pelletCount ) && bValid;
+            bValid                      = GameDataXML::readOptionalFlag( node, "automatic", weapon._bAutomatic ) && bValid;
+            bValid                      = GameDataXML::readOptionalNumber( node, "falloffStart", sourceName, 0.0f, kAnyFloat, weapon._falloffStart ) && bValid;
+            bValid                      = GameDataXML::readOptionalNumber( node, "falloffEnd", sourceName, 0.0f, kAnyFloat, weapon._falloffEnd ) && bValid;
+            bValid                      = GameDataXML::readOptionalNumber( node, "falloffMinScale", sourceName, 0.0f, 1.0f, weapon._falloffMinScale ) && bValid;
+            bValid                      = GameDataXML::readOptionalNumber( node, "projectileSpeed", sourceName, 0.0f, kAnyFloat, weapon._projectileSpeed ) && bValid;
+            bValid                      = GameDataXML::readOptionalNumber( node, "projectileGravity", sourceName, -kAnyFloat, kAnyFloat, weapon._projectileGravity ) && bValid;
+            bValid                      = GameDataXML::readOptionalNumber( node, "headshotMultiplier", sourceName, 0.0f, kAnyFloat, weapon._headshotMultiplier ) && bValid;
+            if ( weapon._maxSpread < weapon._minSpread || weapon._falloffEnd < weapon._falloffStart )
+            {
+                SW_LOG_ERROR( "%#: weapon '%#' needs minSpread <= maxSpread and falloffStart <= falloffEnd", sourceName, pID );
+                bValid = false;
+            }
+            if ( bValid == false )
+            {
+                SW_LOG_ERROR( "%#: weapon '%#' has invalid fields - skipped", sourceName, pID );
+                continue;
+            }
+            const utf8* pAmmoID = node.findAttribute( "ammo" );
+            weapon._ammoID      = pAmmoID != nullptr ? hashed_string( pAmmoID ) : hashed_string{};
             add( weapon );
             ++loadedCount;
         }

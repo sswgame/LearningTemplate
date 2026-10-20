@@ -93,10 +93,13 @@ namespace sw
             {
                 (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrDriveAttribute, report, sourceName );
                 CustomizationDriveDef drive;
-                drive._target  = AppearanceXMLUtil::readName( node, "target" );
-                drive._from    = node.getAttributeFloat( "from", inoutParam._min );
-                drive._to      = node.getAttributeFloat( "to", inoutParam._max );
-                drive._channel = node.getAttributeInt( "channel", 0 );
+                drive._target = AppearanceXMLUtil::readName( node, "target" );
+                // 구간을 적지 않으면 매개변수의 범위다(이 데이터의 값). 깨진 값은 오류이고 칸은 그대로다.
+                drive._from = inoutParam._min;
+                drive._to   = inoutParam._max;
+                AppearanceXMLUtil::readOptionalFloat( node, "from", -MathUtil::kMaxFloat, MathUtil::kMaxFloat, drive._from, report, sourceName );
+                AppearanceXMLUtil::readOptionalFloat( node, "to", -MathUtil::kMaxFloat, MathUtil::kMaxFloat, drive._to, report, sourceName );
+                AppearanceXMLUtil::readOptionalInt( node, "channel", MathUtil::kMinInt32, MathUtil::kMaxInt32, drive._channel, report, sourceName );
                 if ( parseDriveKind( node.getAttributeText( "kind" ), drive._kind ) == false )
                 {
                     report.addError( "%#: schema '%#' parameter '%#' has unknown drive kind '%#'", sourceName, schemaID.c_str(), inoutParam._name.c_str(), node.getAttributeText( "kind" ) );
@@ -159,8 +162,10 @@ namespace sw
                 }
                 if ( pTarget->_kind == CustomizationKind::Slider )
                 {
-                    condition._min = node.getAttributeFloat( "min", pTarget->_min );
-                    condition._max = node.getAttributeFloat( "max", pTarget->_max );
+                    condition._min = pTarget->_min;
+                    condition._max = pTarget->_max;
+                    AppearanceXMLUtil::readOptionalFloat( node, "min", -MathUtil::kMaxFloat, MathUtil::kMaxFloat, condition._min, report, sourceName );
+                    AppearanceXMLUtil::readOptionalFloat( node, "max", -MathUtil::kMaxFloat, MathUtil::kMaxFloat, condition._max, report, sourceName );
                 }
                 else if ( pTarget->_kind == CustomizationKind::Color || condition._listOption.empty() )
                 {
@@ -186,8 +191,8 @@ namespace sw
                 param._category = AppearanceXMLUtil::readName( node, "category" );
                 param._symmetry = AppearanceXMLUtil::readName( node, "symmetry" );
                 param._socket   = AppearanceXMLUtil::readName( node, "socket" );
-                param._min      = node.getAttributeFloat( "min", param._min );
-                param._max      = node.getAttributeFloat( "max", param._max );
+                AppearanceXMLUtil::readOptionalFloat( node, "min", -MathUtil::kMaxFloat, MathUtil::kMaxFloat, param._min, report, sourceName );
+                AppearanceXMLUtil::readOptionalFloat( node, "max", -MathUtil::kMaxFloat, MathUtil::kMaxFloat, param._max, report, sourceName );
                 if ( param._name.empty() || inoutSchema.findParameter( param._name ) != nullptr )
                 {
                     report.addError( "%#: schema '%#' has a parameter without a name or a duplicate '%#'", sourceName, inoutSchema._id.c_str(), param._name.c_str() );
@@ -197,10 +202,10 @@ namespace sw
                     report.addError( "%#: schema '%#' slider '%#' needs min < max", sourceName, inoutSchema._id.c_str(), param._name.c_str() );
                 if ( kind == CustomizationKind::Attachment && param._socket.empty() )
                     report.addError( "%#: schema '%#' attachment '%#' needs a socket", sourceName, inoutSchema._id.c_str(), param._name.c_str() );
+                // 슬라이더 기본값을 적지 않으면 범위의 아래 끝이다. 범위 밖 기본값은 자르지 않고 오류다.
+                param._default = param._min;
                 if ( kind == CustomizationKind::Slider )
-                    param._default = MathUtil::clamp( node.getAttributeFloat( "default", param._min ), param._min, param._max );
-                else
-                    param._default = param._min;
+                    AppearanceXMLUtil::readOptionalFloat( node, "default", param._min, param._max, param._default, report, sourceName );
                 if ( kind == CustomizationKind::Color )
                     AppearanceXMLUtil::readOptionalFloat4( node, "default", param._defaultColor, report, sourceName );
                 for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )

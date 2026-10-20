@@ -1,42 +1,37 @@
 <!--
 	Shooter3D 카메라 프리셋 — 시점 카메라(ViewCamera)의 CameraDirectorComponent 가 읽는다. 대상은 플레이어(카메라가 루트라 대상의 자리 = 눈, 보는 쪽 = 시점).
-	C 키가 이 순서로 돌리고, `-gv_cameraPreset=<id>` 가 시작 프리셋을 고른다(스크린샷용). 각은 도, 거리는 m, 시간은 s 다.
+	C 키가 이 순서로 돌리고, `-gv_cameraPreset=<id>` 가 시작 프리셋을 고른다(스크린샷용). 각은 라디안, 거리는 m, 시간은 s 다.
 -->
 <CameraPresets>
 	<DefaultBlend curve="EaseInOut" duration="0.6" exponent="2" />
 	<!-- 1인칭 — 눈 그대로. 손에 든 총 · 조준선은 플레이어 카메라의 자식이라 이 시점과 정확히 겹친다. -->
 	<Preset id="firstperson">
-		<View mode="FirstPerson" offset="0 0 0" />
-		<Lens fieldOfViewY="75" near="0.05" far="120" />
+		<View mode="FirstPerson" offset="0,0,0" />
+		<Lens fieldOfViewY="1.309" nearPlane="0.05" farPlane="120" />
 	</Preset>
 	<!-- 3인칭 어깨 너머 — 시점을 따라가고, 스프링 암이 상자 · 벽 앞으로 당긴다. -->
 	<Preset id="thirdperson">
-		<View mode="ThirdPerson" offset="0.75 0.2 0" distance="3.8" pitch="8" />
-		<Lens fieldOfViewY="70" near="0.05" far="150" />
+		<View mode="ThirdPerson" offset="0.75,0.2,0" distance="3.8" pitch="0.13963" />
+		<Lens fieldOfViewY="1.2217" nearPlane="0.05" farPlane="150" />
 		<Collision radius="0.25" minDistance="0.4" recoverTime="0.35" />
-		<Confiner pitchMin="-60" pitchMax="70" />
+		<Confiner pitchMin="-1.0472" pitchMax="1.2217" />
 	</Preset>
 	<!-- 궤도 — 오른쪽 버튼을 끌어 돌리고 휠로 당긴다. 움직이는 쪽을 조금 미리 본다. -->
 	<Preset id="orbit">
-		<View mode="Orbit" offset="0 -0.6 0" distance="11" pitch="32" yaw="35" />
-		<Lens fieldOfViewY="55" near="0.1" far="200" />
-		<Damping position="0.2" orientation="0.08" />
-		<Input sensitivity="0.004" lookWhileHeld="true" zoomStep="0.85" />
-		<Confiner pitchMin="-5" pitchMax="80" zoomMin="3" zoomMax="30" />
-		<Framing lookAhead="0.25" lookAheadSmoothing="0.3" />
+		<View mode="Orbit" offset="0,-0.6,0" distance="11" pitch="0.55851" yaw="0.61087" />
+		<Lens fieldOfViewY="0.95993" nearPlane="0.1" farPlane="200" />
+		<Damping positionTime="0.2" orientationTime="0.08" />
+		<Input lookSensitivity="0.004" lookWhileHeld="true" zoomStep="0.85" />
+		<Confiner pitchMin="-0.087266" pitchMax="1.3963" zoomMin="3" zoomMax="30" />
+		<Framing lookAheadTime="0.25" lookAheadSmoothing="0.3" />
 		<Collision radius="0.3" minDistance="1" recoverTime="0.5" />
 	</Preset>
 	<!-- CCTV — 아레나 모서리 높이 박힌 카메라가 플레이어를 따라 돈다(데드존 안의 움직임은 놔두고, 손떨림 조금). -->
 	<Preset id="cctv">
-		<View mode="Fixed" offset="17 9 17" aim="Target" />
-		<Lens fieldOfViewY="50" near="0.1" far="200" />
-		<Framing compose="true"
-		         deadZoneWidth="0.15"
-		         deadZoneHeight="0.15"
-		         softZoneWidth="0.7"
-		         softZoneHeight="0.7"
-		         damping="0.5" />
-		<Noise position="0 0 0" rotation="0.15 0.25 0" frequency="0.4" seed="3" />
+		<View mode="Fixed" offset="17,9,17" aim="Target" />
+		<Lens fieldOfViewY="0.87266" nearPlane="0.1" farPlane="200" />
+		<Framing compose="true" deadZone="0.15,0.15" softZone="0.7,0.7" damping="0.5" />
+		<Noise positionAmplitude="0,0,0" rotationAmplitude="0.002618,0.0043633,0" frequency="0.4" seed="3" />
 	</Preset>
 	<!--
 		돌리 — 아레나 북쪽 레일 위에서 플레이어에 가장 가까운 점에 서서 본다(Cinemachine Spline Dolly). 35 mm 렌즈에 8° 더치, 2.39 레터박스.
@@ -44,14 +39,14 @@
 	-->
 	<Preset id="dolly">
 		<View mode="Dolly" />
-		<Lens focalLength="35" sensor="36 24" focusDistance="8" aperture="2.8" dutch="8" near="0.1" far="200" />
-		<Damping position="0.4" orientation="0.15" />
+		<Lens focalLength="35" sensorSize="36,24" focusDistance="8" aperture="2.8" dutch="0.13963" nearPlane="0.1" farPlane="200" />
+		<Damping positionTime="0.4" orientationTime="0.15" />
 		<Dolly type="CatmullRom" closed="false" pathOffset="0">
 			<Point position="-15 5 -15" />
 			<Point position="0 6 -17" />
 			<Point position="15 5 -15" />
 		</Dolly>
-		<PostProcess letterbox="2.39" vignette="0.25" />
+		<PostProcess letterboxAspectRatio="2.39" vignetteIntensity="0.25" />
 	</Preset>
 	<!-- CCTV 로 들어가고 나올 때는 끊어 바꾼다 — 감시 화면은 이어지지 않는다(렌더러가 TAA 기록을 버린다). -->
 	<Blend from="*" to="cctv" curve="Cut" />

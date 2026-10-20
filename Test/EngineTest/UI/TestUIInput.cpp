@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
@@ -15,6 +16,7 @@
 #include "EngineTest/UI/UILayoutTestUtil.h"
 #include "EngineTest/UI/UITestWidgets.h"
 
+#include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
 
 // UIInputTest — 행동 층 입력 → UI 사건: UI 행동 맵(`engine/input/ui.input.xml`)의 확인 · 탐색 · 스틱, UI 가 쓴 물리 입력은 뗄 때까지 먹힌 입력,
@@ -24,8 +26,7 @@ namespace
 {
     struct UIInputTestUtil
     {
-        static constexpr float32     kFrameSeconds = 1.0f / 60.0f;
-        static constexpr const utf8* kUIInputMap   = "engine/input/ui.input.xml";
+        static constexpr float32 kFrameSeconds = 1.0f / 60.0f;
     };
 
     /** @brief 입력 관리자 · UI · 버튼 세로 목록 메뉴입니다. 게임 맵: Jump = 패드 A, Fire = 마우스 왼쪽, MoveForward = W, Move = 왼쪽 스틱. */
@@ -54,7 +55,7 @@ namespace
             gameMap.bind( "Fire", sw::MouseButton::Left );
             gameMap.bind( "MoveForward", sw::Key::W, sw::ActionTrigger::Down );
             gameMap.bindGamepadStick2D( "Move" );
-            SW_EXPECT_TRUE( _ui.initialize( _input, nullptr, UIInputTestUtil::kUIInputMap ) );
+            SW_EXPECT_TRUE( _ui.initialize( _input, nullptr, ::test::getEngineDefaultAssets()._uiInputMap.c_str() ) );
             SW_EXPECT_NOT_NULL( _ui.getInputRouter().getUIInputMap() );
         }
 

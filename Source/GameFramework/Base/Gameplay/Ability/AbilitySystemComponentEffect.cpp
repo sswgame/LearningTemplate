@@ -275,12 +275,13 @@ namespace sw
         {
             if ( modifier._op != AttributeModOp::Add )
                 continue;
-            if ( hasAttribute( modifier._attribute ) == false )
+            const std::optional<float32> current = getAttributeValue( modifier._attribute );
+            if ( current.has_value() == false )
                 return false;
             float32 magnitude = 0.0f;
             if ( computeModifierMagnitude( modifier, spec, magnitude ) == false )
                 return false;
-            if ( getAttributeValue( modifier._attribute ) + magnitude < 0.0f )
+            if ( *current + magnitude < 0.0f )
                 return false;
         }
         return true;
@@ -336,9 +337,10 @@ namespace sw
                 }
                 else
                 {
-                    if ( hasAttribute( modifier._backingAttribute ) == false )
+                    const std::optional<float32> backing = getAttributeValue( modifier._backingAttribute );
+                    if ( backing.has_value() == false )
                         return false;
-                    attributeValue = getAttributeValue( modifier._backingAttribute );
+                    attributeValue = *backing;
                 }
                 outMagnitude = ( attributeValue + modifier._preMultiplyAdditive ) * modifier._coefficient + modifier._postMultiplyAdditive;
                 return true;

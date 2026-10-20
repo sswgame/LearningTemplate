@@ -4,10 +4,12 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceXMLUtil.h"
 
 namespace sw
@@ -28,7 +30,8 @@ namespace sw
             [[nodiscard]] static bool readCondition( const XMLNode& node, AppearanceRuleCondition& outCondition, AppearanceLoadReport& report, string_view sourceName, const hashed_string& ruleID )
             {
                 (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrWhenAttribute, report, sourceName );
-                outCondition._bNegate      = node.getAttributeBool( "not", false ) ? SW_TRUE : SW_FALSE;
+                if ( GameDataXML::readOptionalFlag( node, "not", outCondition._bNegate ) == false )
+                    report.addError( "%#: rule '%#' <When> has an invalid not", sourceName, ruleID.c_str() );
                 outCondition._target       = AppearanceXMLUtil::readName( node, "target" );
                 const utf8* pTag           = node.findAttribute( "tag" );
                 const utf8* pCharacterTag  = node.findAttribute( "characterTag" );
@@ -118,9 +121,9 @@ namespace sw
                 if ( StringUtil::equals( pName, "Morph", true ) )
                 {
                     (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrMorphAttribute, report, sourceName );
-                    outAction._kind   = AppearanceRuleActionKind::ApplyMorph;
-                    outAction._name   = AppearanceXMLUtil::readName( node, "name" );
-                    outAction._weight = node.getAttributeFloat( "weight", 1.0f );
+                    outAction._kind = AppearanceRuleActionKind::ApplyMorph;
+                    outAction._name = AppearanceXMLUtil::readName( node, "name" );
+                    AppearanceXMLUtil::readOptionalFloat( node, "weight", -MathUtil::kMaxFloat, MathUtil::kMaxFloat, outAction._weight, report, sourceName );
                     return outAction._name.empty() == false;
                 }
                 if ( StringUtil::equals( pName, "OverrideSocket", true ) )
@@ -186,8 +189,8 @@ namespace sw
             }
             (void)AppearanceXMLUtil::reportUnknownAttributes( ruleNode, AppearanceRuleInternal::kArrRuleAttribute, report, sourceName );
             AppearanceRuleDef rule;
-            rule._id       = AppearanceXMLUtil::readName( ruleNode, "id" );
-            rule._priority = ruleNode.getAttributeInt( "priority", 0 );
+            rule._id = AppearanceXMLUtil::readName( ruleNode, "id" );
+            AppearanceXMLUtil::readOptionalInt( ruleNode, "priority", MathUtil::kMinInt32, MathUtil::kMaxInt32, rule._priority, report, sourceName );
             if ( rule._id.empty() || findRule( rule._id ) != nullptr )
             {
                 report.addError( "%#: <Rule> without an id or with a duplicate id '%#'", sourceName, rule._id.c_str() );

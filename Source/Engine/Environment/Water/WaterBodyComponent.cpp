@@ -5,6 +5,8 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 
+#include "Engine/Common/EngineServices.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
@@ -118,7 +120,7 @@ namespace sw
 {
     WaterBodyComponent::WaterBodyComponent()
         : _shape{ WaterBodyShape::Lake }
-        , _materialPath{ "engine/materials/water.material" }
+        , _materialPath{}
         , _size{ 64.0f, 64.0f }
         , _cellSize{ 1.0f }
         , _listRiverPoint{}
@@ -296,8 +298,10 @@ namespace sw
             boundsRadius += wave._amplitude * 2.0f;
         }
 
+        // 칸이 비면 엔진 기본 물 머티리얼이다(값의 정본은 엔진 기본 에셋 표).
+        const string& materialPath = _materialPath.empty() ? engine::getSubsystem<EngineDefaultAssets>()._waterMaterial.get() : _materialPath;
         if ( _material.getInstance() == nullptr )
-            (void)_material.acquire( _materialPath ); // 못 잡으면 씬 기본 머티리얼로 그린다(경고는 안에서)
+            (void)_material.acquire( materialPath ); // 못 잡으면 씬 기본 머티리얼로 그린다(경고는 안에서)
         _surfaceVertexCount   = static_cast<uint32>( listVertex.size() );
         shared_ptr<Mesh> mesh = Mesh::create();
         mesh->setVertices( std::move( listVertex ) );

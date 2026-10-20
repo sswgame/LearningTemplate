@@ -180,22 +180,24 @@ namespace sw::editor
         if ( EditorContext* pContext = EditorContext::get(); pContext != nullptr )
             pContext->getSubsystem<EditorAssetValidation>().requestValidation( relPath );
 
-        (void)reloadChangedAsset( relPath ); // 핫 리로드 대상이 아니면 false — 할 일이 없다
+        // 대상이 아닌 파일은 NotTracked, 등록되지 않은 캐시는 Failed(오류를 남겼다) — 어느 쪽이든 감시는 이어 간다.
+        if ( reloadChangedAsset( relPath ) == ReloadOutcome::Failed )
+            SW_LOG_WARNING( "Hot reload skipped %# - the running scene keeps the previous content", relPath.c_str() );
     }
 
-    bool AssetHotReload::reloadChangedAsset( string_view relativePath )
+    ReloadOutcome AssetHotReload::reloadChangedAsset( string_view relativePath )
     {
         const AssetReloadRoute route = EditorAssetTypeRegistry::findReloadRoute( relativePath );
         // 소스를 임포트하는 종류는 임포트하는 것이 리로드다 — 임포트된 결과의 쓰기가 다음 감시 이벤트로 온다(그 결과를 읽는 캐시가 없어도 임포트는 한다).
         if ( route._pfnImportSource != nullptr && route._pfnImportSource( relativePath ) )
-            return true;
+            return ReloadOutcome::Reloaded;
         if ( route._pCacheKindName == nullptr )
-            return false;
+            return ReloadOutcome::NotTracked;
 
-        // 에디터는 `EngineServices.h` 를 볼 수 없다(모듈 경계). 호스트가 넘겨준 서비스를 쓴다.
+        // 에디터는 `EngineServices.h` 를 볼 수 없다(모듈 경계). 호스트가 넘겨준 서비스를 쓴다. 에셋 관리자가 없는 실행(헤드리스 도구)은 든 캐시가 없다.
         AssetManager* pResources = findSubsystem<AssetManager>();
         if ( pResources == nullptr )
-            return false;
+            return ReloadOutcome::NotTracked;
         // 디바이스는 **지금 것을** 넘긴다 — 캐시가 마지막으로 본 디바이스는 백엔드 교체 뒤 사라졌을 수 있다.
         EditorContext* pContext = EditorContext::get();
         IRHIDevice*    pDevice  = ( pContext != nullptr ) ? pContext->getSubsystem<EditorRenderViews>().getRHIDevice() : nullptr;
@@ -203,15 +205,15 @@ namespace sw::editor
         {
             // 모듈이 올린 캐시 — 이름 대신 그 경로를 든 캐시가 다시 읽는다. 아무도 읽지 않은 파일이면 할 일이 없다(다음에 읽는 쪽이 새 내용을 읽는다).
             if ( reloadInCachesHolding( *pResources, relativePath, pDevice ) == 0 )
-                return false;
+                return ReloadOutcome::NotTracked;
         }
         else
         {
             IAssetCache* pCache = pResources->findAssetCache( route._pCacheKindName );
             if ( pCache == nullptr )
             {
-                SW_LOG_WARNING( "Hot reload: no asset cache '%#' is registered for %#", route._pCacheKindName, relativePath );
-                return false;
+                SW_LOG_ERROR( "Hot reload: no asset cache '%#' is registered for %#", route._pCacheKindName, relativePath );
+                return ReloadOutcome::Failed;
             }
             SW_LOG_INFO( "Hot-Reloading asset: %#", relativePath );
             pCache->reload( relativePath, pDevice );
@@ -221,7 +223,7 @@ namespace sw::editor
         GameObjectManager* pObjects = ( pScene != nullptr ) ? pScene->getObjectManager() : nullptr;
         if ( pObjects != nullptr )
             (void)notifyAssetUsers( *pObjects, relativePath );
-        return true;
+        return ReloadOutcome::Reloaded;
     }
 
     uint32 AssetHotReload::reloadInCachesHolding( AssetManager& resources, string_view relativePath, IRHIDevice* pDevice )

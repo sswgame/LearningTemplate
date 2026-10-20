@@ -33,6 +33,7 @@
 #include "Engine/UI/Screen/UISubtitleService.h"
 #include "Engine/UI/Style/UIStyleSheetCache.h"
 #include "Engine/UI/Style/UIThemeController.h"
+#include "Engine/UI/UIEngineDocuments.h"
 
 namespace sw
 {
@@ -158,7 +159,17 @@ namespace sw
         const UIDocumentCache& getDocumentCache() const { return _documentCache; }
 
         // --- 엔진 기본 메뉴(옵션, 일시정지) ---------------------------------------------------
-        /** @brief 옵션 메뉴 문서입니다. 기동 단계 `UI` 가 엔진 기본 `engine/ui/options.ui.xml` 로 정하며, 팩 설정의 `_uiOptionsMenu` 가 덮어씁니다. */
+        /**
+         * @brief 엔진 UI 문서 경로(옵션 메뉴 · 행 견본 · 확인 창 · 알림 · 자막 · 디버그 HUD)를 받습니다. 옵션 메뉴 문서도 그 값으로 정합니다.
+         * @details 기동 단계 `UI` 가 엔진 기본 에셋 표에서 넘긴다. 받지 않으면 모두 비어 그 화면들은 열리지 않는다 — 코드에 기본 경로가 없다.
+         */
+        void setEngineDocuments( const UIEngineDocuments& documents )
+        {
+            _engineDocuments     = documents;
+            _optionsMenuDocument = documents._optionsMenu;
+        }
+        const UIEngineDocuments& getEngineDocuments() const { return _engineDocuments; }
+        /** @brief 옵션 메뉴 문서입니다. 기동 단계 `UI` 가 엔진 기본 에셋(`_uiOptionsMenu`)으로 정하며, 팩 설정의 `_uiOptionsMenu` 가 덮어씁니다. */
         const string& getOptionsMenuDocument() const { return _optionsMenuDocument; }
         void          setOptionsMenuDocument( string_view documentPath ) { _optionsMenuDocument = documentPath; }
         /**
@@ -418,6 +429,7 @@ namespace sw
         vector<WidgetComponent*>  _listWidgetComponent;  ///< 등록된 위젯 컴포넌트입니다(소유하지 않으며, 끝날 때 스스로 뺍니다).
         vector<UIScreenHandle>    _listTickScratch;      ///< `tickScreens` 가 도는 번호입니다(프레임마다 다시 씁니다).
         vector<SwitchScreen>      _listSwitchScreen;     ///< 화면 스위치(`UIScreenSwitches`)마다 연 화면입니다(이름으로 찾습니다).
+        UIEngineDocuments         _engineDocuments;      ///< 엔진 UI 문서 경로입니다(`setEngineDocuments`).
         string                    _optionsMenuDocument;  ///< 옵션 메뉴 문서입니다.
         string                    _pauseMenuDocument;    ///< 일시정지 메뉴 문서입니다(비면 일시정지 메뉴가 없습니다).
         UIScreenHandle            _nextScreenHandle;

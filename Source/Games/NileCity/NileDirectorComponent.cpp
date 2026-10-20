@@ -123,6 +123,7 @@ namespace sw
 {
     NileDirectorComponent::NileDirectorComponent()
         : _cityDataPath{}
+        , _autoPlanPath{}
         , _groundPrefab{}
         , _roadPrefab{}
         , _modelBuildingPrefab{}
@@ -291,7 +292,9 @@ namespace sw
         _city.initialize( &_catalog, NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, citySettings, makeRefs() );
         const NileCityLayout layout = makeCityLayout();
         NileCityPlanner::paintTerrain( _city, layout );
-        _planner.reset( layout );
+        if ( _planner.reset( layout, _autoPlanPath ) == false )
+            return false; // 자동 계획을 읽지 못했다 — 이유는 플래너가 남겼다
+
         _listEvent.clear();
         _monthCount   = 0;
         _evolvedCount = 0;

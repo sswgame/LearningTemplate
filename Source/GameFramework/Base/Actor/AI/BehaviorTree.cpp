@@ -208,13 +208,20 @@ namespace sw
 
     bool BehaviorTree::evaluateCondition( const BehaviorNode& node, const Blackboard& blackboard )
     {
-        const float32 value = blackboard.getFloat( node._key, 0.0f );
+        if ( node._compare == BlackboardCompare::IsSet )
+            return blackboard.isSet( node._key );
+        if ( node._compare == BlackboardCompare::IsNotSet )
+            return blackboard.isSet( node._key ) == false;
+        // 수치 비교는 값이 있을 때만 참일 수 있다 — 없는 키를 0 으로 보고 비교하지 않는다(있는지는 IsSet · IsNotSet 으로 묻는다).
+        const std::optional<float32> number = blackboard.getFloat( node._key );
+        if ( number.has_value() == false )
+            return false;
+        const float32 value = *number;
         switch ( node._compare )
         {
             case BlackboardCompare::IsSet:
-                return blackboard.isSet( node._key );
             case BlackboardCompare::IsNotSet:
-                return blackboard.isSet( node._key ) == false;
+                return false; // 위에서 답했다
             case BlackboardCompare::Equal:
                 return MathUtil::abs( value - node._compareValue ) < 1.0e-5f;
             case BlackboardCompare::NotEqual:
@@ -516,11 +523,12 @@ namespace sw
 
     BehaviorStatus BehaviorTreeRunner::tickMoveTo( int32 index, bool bFirst )
     {
-        const BehaviorNode& node   = _pTree->getNode( index );
-        INavMover*          pMover = _context._pMover;
-        if ( pMover == nullptr || _context._pBlackboard->isSet( node._key ) == false )
+        const BehaviorNode&         node   = _pTree->getNode( index );
+        INavMover*                  pMover = _context._pMover;
+        const std::optional<float3> target = _context._pBlackboard->getVector( node._key );
+        if ( pMover == nullptr || target.has_value() == false )
             return BehaviorStatus::Failure;
-        const float3 destination = _context._pBlackboard->getVector( node._key );
+        const float3 destination = *target;
         float3&      issued      = _listMoveTarget[static_cast<size_t>( index )];
         const bool   bRepath     = bFirst || ( destination - issued ).getLength() > node._compareValue;
         if ( bRepath )

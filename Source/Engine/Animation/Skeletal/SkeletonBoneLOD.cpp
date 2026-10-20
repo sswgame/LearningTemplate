@@ -77,15 +77,16 @@ namespace sw
             const JSONValue level = levels.at( levelIndex );
             if ( AnimationJSONUtil::hasOnlyKnownKeys( level, { "max_screen_size", "remove" }, sourceLabel ) == false )
                 return false;
-            const JSONValue removed          = level.get( "remove" );
-            const bool      bInvalidLODLevel = level.get( "max_screen_size" ).isNumber() == false || removed.isArray() == false || removed.size() == 0;
+            const JSONValue              removed          = level.get( "remove" );
+            const std::optional<float32> maxScreenSize    = level.readRequired<float32>( "max_screen_size" );
+            const bool                   bInvalidLODLevel = maxScreenSize.has_value() == false || removed.isArray() == false || removed.size() == 0;
             if ( bInvalidLODLevel )
             {
                 SW_LOG_ERROR( "Bone LOD '%#': level %# needs 'max_screen_size' (number) and a non-empty 'remove' array", sourceLabel, levelIndex );
                 return false;
             }
             SkeletonBoneLODLevel entry{};
-            entry._maxScreenSize = static_cast<float32>( level.get( "max_screen_size" ).asFloat() );
+            entry._maxScreenSize = *maxScreenSize;
             if ( _listLevel.empty() == false && entry._maxScreenSize >= _listLevel.back()._maxScreenSize )
             {
                 SW_LOG_ERROR( "Bone LOD '%#': level %# max_screen_size %# must be smaller than the previous level's", sourceLabel, levelIndex, entry._maxScreenSize );

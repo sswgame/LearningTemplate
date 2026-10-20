@@ -138,11 +138,12 @@ namespace sw
     {
         if ( _bDocumentFailed )
             return false;
-        _screen           = _uiSystem.openScreen( kDocumentPath );
-        UIScreen* pScreen = _uiSystem.findScreen( _screen );
+        const string& documentPath = _uiSystem.getEngineDocuments()._subtitles;
+        _screen                    = _uiSystem.openScreen( documentPath );
+        UIScreen* pScreen          = _uiSystem.findScreen( _screen );
         if ( pScreen == nullptr )
         {
-            SW_LOG_ERROR( "[UI] Subtitle screen '%#' could not be opened - subtitles are not shown", kDocumentPath );
+            SW_LOG_ERROR( "[UI] Subtitle screen '%#' could not be opened - subtitles are not shown", documentPath.c_str() );
             _screen          = kInvalidUIScreenHandle;
             _bDocumentFailed = true;
             return false;
@@ -155,7 +156,7 @@ namespace sw
         const bool         bMissingSubtitleWidgets = pLine == nullptr || pSpeaker == nullptr || pText == nullptr;
         if ( bMissingSubtitleWidgets )
         {
-            SW_LOG_ERROR( "[UI] Subtitle screen '%#' lacks Line0 / Speaker0 / Text0 - subtitles are not shown", kDocumentPath );
+            SW_LOG_ERROR( "[UI] Subtitle screen '%#' lacks Line0 / Speaker0 / Text0 - subtitles are not shown", documentPath.c_str() );
             closeScreen();
             _bDocumentFailed = true;
             return false;

@@ -241,22 +241,6 @@ namespace sw
                 return {};
             }
 
-            /**
-             * @brief 속성 · 자식 텍스트를 불리언으로 읽습니다. 없거나 비었으면 조용히 `fallback`, 불리언이 아닌 글이면 알리고 `fallback` 입니다.
-             * @details `enabled="ture"` 가 아무 말 없이 기본값이 되지 않게 알린다. 정수 · 실수 형제(`getAttributeInt` · `getAttributeFloat`)와
-             *          같은 규칙이다.
-             * @param pKind 경고에 찍을 자리 종류("Attribute" · "Element").
-             */
-            [[nodiscard]] static bool parseNodeBool( const utf8* pKind, const utf8* pName, const utf8* pText, bool fallback )
-            {
-                if ( pText == nullptr || StringUtil::trim( pText ).empty() )
-                    return fallback;
-                bool value{ fallback };
-                if ( StringUtil::tryParseBool( pText, value ) == false )
-                    SW_LOG_WARNING( "%# '%#' has an unreadable boolean '%#' - using %#", pKind, pName, pText, fallback ? "true" : "false" );
-                return value;
-            }
-
             /** @brief 값 글 하나를 타입으로 읽습니다. 글이 타입이 아니면 false 입니다(없음은 부르는 쪽이 nullptr 로 먼저 가른다). */
             [[nodiscard]] static bool parseText( const utf8* pText, int32& outValue ) { return StringUtil::parseInt( StringUtil::trim( pText ), outValue ); }
             [[nodiscard]] static bool parseText( const utf8* pText, uint32& outValue )
@@ -362,52 +346,6 @@ namespace sw
         return ( pValue != nullptr ) ? string_view( pValue ) : string_view{};
     }
 
-    int32 XMLNode::getAttributeInt( const utf8* pName, int32 fallback, bool bIgnoreCaseKeys ) const
-    {
-        const utf8* pValue = findAttribute( pName, bIgnoreCaseKeys );
-        if ( pValue == nullptr )
-            return fallback;
-        // 글이 있는데 숫자가 아니면 알린다 — "abc" · "1.5" 가 조용히 기본값으로 읽히지 않게.
-        int32 val{ fallback };
-        if ( StringUtil::parseInt( pValue, val ) == false )
-            SW_LOG_WARNING( "Attribute '%#' has an unreadable integer '%#' - using %#", pName, pValue, fallback );
-        return val;
-    }
-
-    bool XMLNode::tryGetAttributeIntInRange( const utf8* pName, int32 fallback, int32 minValue, int32 maxValue, int32& outValue,
-                                             bool bIgnoreCaseKeys ) const
-    {
-        outValue           = fallback;
-        const utf8* pValue = findAttribute( pName, bIgnoreCaseKeys );
-        if ( pValue == nullptr )
-            return true;
-        int32      parsed{ 0 };
-        const bool bInRange = StringUtil::parseInt( pValue, parsed ) && minValue <= parsed && parsed <= maxValue;
-        if ( bInRange == false )
-        {
-            SW_LOG_WARNING( "<%#> attribute '%#' is '%#', not an integer in [%#, %#] - rejected", getName(), pName, pValue, minValue, maxValue );
-            return false;
-        }
-        outValue = parsed;
-        return true;
-    }
-
-    float32 XMLNode::getAttributeFloat( const utf8* pName, float32 fallback, bool bIgnoreCaseKeys ) const
-    {
-        const utf8* pValue = findAttribute( pName, bIgnoreCaseKeys );
-        if ( pValue == nullptr )
-            return fallback;
-        float32 val{ fallback };
-        if ( StringUtil::parseFloat( pValue, val ) == false )
-            SW_LOG_WARNING( "Attribute '%#' has an unreadable number '%#' - using %#", pName, pValue, fallback );
-        return val;
-    }
-
-    bool XMLNode::getAttributeBool( const utf8* pName, bool fallback, bool bIgnoreCaseKeys ) const
-    {
-        return XMLDocumentInternal::parseNodeBool( "Attribute", pName, findAttribute( pName, bIgnoreCaseKeys ), fallback );
-    }
-
 #define SW_XML_NODE_VALUE_READERS( Type )                                                                                         \
     XMLNode::XMLValueRead XMLNode::parseAttributeValue( const utf8* pName, Type& outValue ) const                                 \
     {                                                                                                                             \
@@ -427,6 +365,11 @@ namespace sw
     void XMLNode::reportMissing( const utf8* pKind, const utf8* pName ) const
     {
         SW_LOG_ERROR( "<%#> has no required %# '%#'", getName(), pKind, pName );
+    }
+
+    void XMLNode::reportOutOfRange( const utf8* pName, float64 value, float64 minValue, float64 maxValue ) const
+    {
+        SW_LOG_ERROR( "<%# %#=\"%#\"> is outside [%#, %#]", getName(), pName, value, minValue, maxValue );
     }
 
     XMLNode XMLNode::findChild( const utf8* pName, bool bIgnoreCaseKeys ) const
@@ -456,33 +399,6 @@ namespace sw
         if ( childNode.isValid() == false )
             return nullptr;
         return childNode.getText();
-    }
-
-    int32 XMLNode::getChildInt( const utf8* pName, int32 fallback, bool bIgnoreCaseKeys ) const
-    {
-        const utf8* pText = findChildText( pName, bIgnoreCaseKeys );
-        if ( pText == nullptr )
-            return fallback;
-        int32 val{ fallback };
-        if ( StringUtil::parseInt( pText, val ) == false )
-            SW_LOG_WARNING( "Element '%#' has an unreadable integer '%#' - using %#", pName, pText, fallback );
-        return val;
-    }
-
-    float32 XMLNode::getChildFloat( const utf8* pName, float32 fallback, bool bIgnoreCaseKeys ) const
-    {
-        const utf8* pText = findChildText( pName, bIgnoreCaseKeys );
-        if ( pText == nullptr )
-            return fallback;
-        float32 val{ fallback };
-        if ( StringUtil::parseFloat( pText, val ) == false )
-            SW_LOG_WARNING( "Element '%#' has an unreadable number '%#' - using %#", pName, pText, fallback );
-        return val;
-    }
-
-    bool XMLNode::getChildBool( const utf8* pName, bool fallback, bool bIgnoreCaseKeys ) const
-    {
-        return XMLDocumentInternal::parseNodeBool( "Element", pName, findChildText( pName, bIgnoreCaseKeys ), fallback );
     }
 
     bool XMLNode::takeChildText( const utf8* pName, string& dst, bool bIgnoreCaseKeys ) const

@@ -300,13 +300,13 @@ namespace sw
                 continue;
             const string assetUnderDomain = normalizedMeta.substr( domainRoot.size() + 1, normalizedMeta.size() - domainRoot.size() - 1 - metaExtension.size() );
 
-            KeyValueMap mapData;
-            UUID        guid{};
-            const utf8* pGuidText = nullptr;
-            string      metaText;
+            KeyValueMap   mapData;
+            UUID          guid{};
+            const string* pGuidText = nullptr;
+            string        metaText;
             if ( ResourceIO::readTextFile( metaAbs, metaText ) && KeyValueFile::parse( metaText, mapData ) )
-                pGuidText = KeyValueFile::get( mapData, "guid", nullptr );
-            const bool bUnreadableGuid = pGuidText == nullptr || UUID::tryParse( pGuidText, guid ) == false || guid.isNull();
+                pGuidText = KeyValueFile::find( mapData, "guid" );
+            const bool bUnreadableGuid = pGuidText == nullptr || UUID::tryParse( pGuidText->c_str(), guid ) == false || guid.isNull();
             if ( bUnreadableGuid )
             {
                 SW_LOG_ERROR( "Asset registry: '%#' has no readable guid - the asset is left out of the shipped registry", metaAbs );
@@ -446,12 +446,16 @@ namespace sw
         if ( ResourceIO::readTextResource( metaRel, metaText ) == false || KeyValueFile::parse( metaText, mapData ) == false )
             return false;
 
-        const utf8* pGuidStr     = KeyValueFile::get( mapData, "guid", nullptr );
-        const bool  bInvalidGuid = pGuidStr == nullptr || UUID::tryParse( pGuidStr, outGuid ) == false || outGuid.isNull();
+        const string* pGuidStr     = KeyValueFile::find( mapData, "guid" );
+        const bool    bInvalidGuid = pGuidStr == nullptr || UUID::tryParse( pGuidStr->c_str(), outGuid ) == false || outGuid.isNull();
         if ( bInvalidGuid )
             return false;
+        // `imported` 는 임포트 산출물에만 적는다 — 없으면 원본 에셋(0)이다. 정수가 아니면 메타가 깨진 것이다(읽기가 알린다).
+        int32 imported{ 0 };
+        if ( KeyValueFile::readOptionalInto( mapData, "imported", imported ) == false )
+            return false;
         if ( pOutImported != nullptr )
-            *pOutImported = KeyValueFile::getInt( mapData, "imported", 0 ) != 0;
+            *pOutImported = imported != 0;
         return true;
     }
 } // namespace sw

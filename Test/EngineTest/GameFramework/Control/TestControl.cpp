@@ -13,6 +13,7 @@
 #include "Core/Network/Replication/NetInputWindow.h"
 
 #include "Engine/Automation/AutomationRunner.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
@@ -44,6 +45,7 @@
 #include "GameFramework/Base/Actor/Control/Pawn/CharacterPawnMovementComponent.h"
 #include "GameFramework/Base/Actor/Control/Pawn/PawnComponent.h"
 
+#include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
 
 #include <string>
@@ -1016,7 +1018,7 @@ SW_TEST_CASE( ControlTest, UIConsumedInputDoesNotReachThePawn )
     SW_ASSERT_TRUE( script.addSlot( 7, InputSlot::fromKey( Key::W ), true ) );
     {
         UISystem ui;
-        SW_ASSERT_TRUE( ui.initialize( input, nullptr, "engine/input/ui.input.xml" ) );
+        SW_ASSERT_TRUE( ui.initialize( input, nullptr, ::test::getEngineDefaultAssets()._uiInputMap.c_str() ) );
         auto                 root    = sw::make_unique<uitest::TestPanelWidget>( "menuRoot" );
         auto*                pButton = static_cast<uitest::TestBoxWidget*>( root->addChild( sw::make_unique<uitest::TestBoxWidget>( "play", true ) ) );
         const UIScreenHandle menu    = ui.pushScreen( sw::make_unique<UIScreen>( UIScreenDesc{}, std::move( root ) ) );

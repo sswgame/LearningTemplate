@@ -3,25 +3,11 @@
 #include "Games/HarvestValley/FarmCropComponent.h"
 
 #include "Engine/Graphics/Material/MaterialInstance.h"
-#include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "Games/HarvestValley/FarmDirectorComponent.h"
-
-namespace sw
-{
-    namespace
-    {
-        struct FarmCropComponentInternal
-        {
-            static constexpr const utf8* kArrModelName[] = { "crop_turnip", "crop_carrot", "crop_pumpkin", "crops_corn_stage_a",
-                                                             "crops_corn_stage_b", "crops_corn_stage_c", "crops_corn_stage_d", "crops_leafs_stage_a",
-                                                             "crops_leafs_stage_b" };
-        };
-    } // namespace
-} // namespace sw
 
 namespace sw
 {
@@ -48,39 +34,6 @@ namespace sw
         _director  = director;
         _tileIndex = tileIndex;
         _cropState = -1;
-    }
-
-    void FarmCropComponent::collectModelPaths( vector<string>& outListPath )
-    {
-        for ( const utf8* pName : FarmCropComponentInternal::kArrModelName )
-        {
-            outListPath.push_back( makeModelPath( pName ) );
-        }
-    }
-
-    const utf8* FarmCropComponent::findReadyModel( const hashed_string& cropID )
-    {
-        if ( cropID == hashed_string( "turnip" ) || cropID == hashed_string( "onion" ) )
-            return "crop_turnip";
-        if ( cropID == hashed_string( "carrot" ) )
-            return "crop_carrot";
-        if ( cropID == hashed_string( "pumpkin" ) )
-            return "crop_pumpkin";
-        if ( cropID == hashed_string( "corn" ) )
-            return "crops_corn_stage_d";
-        return nullptr;
-    }
-
-    const utf8* FarmCropComponent::findGrowingModel( const hashed_string& cropID, int32 stage )
-    {
-        if ( cropID == hashed_string( "corn" ) )
-            return stage <= 1 ? "crops_corn_stage_a" : ( stage == 2 ? "crops_corn_stage_b" : "crops_corn_stage_c" );
-        return stage <= 1 ? "crops_leafs_stage_a" : "crops_leafs_stage_b";
-    }
-
-    string FarmCropComponent::makeModelPath( const utf8* pName )
-    {
-        return string( "game/harvestvalley/models/" ) + pName + string( MeshAssetFormat::kExtension );
     }
 
     void FarmCropComponent::onTick( float32 deltaTime )
@@ -122,14 +75,14 @@ namespace sw
             _cropState = cropState;
             return;
         }
-        // 모델은 단계마다 바꾸고, 색은 정점 색 그대로(흰 모습). 시든 작물은 갈색으로, 제 모델이 없는 작물은 다 자라면 잎에 작물 색을 입힌다.
-        const utf8*                         pReadyModel = bReady ? findReadyModel( pTile->_cropID ) : nullptr;
-        const utf8*                         pModel      = pReadyModel != nullptr ? pReadyModel : findGrowingModel( pTile->_cropID, stage );
+        // 모델은 단계마다 바꾸고(디렉터의 작물 모델 표), 색은 정점 색 그대로(흰 모습). 시든 작물은 갈색으로, 제 모델이 없는 작물은 다 자라면 잎에 작물 색을 입힌다.
+        const string*                       pReadyModel = bReady ? pDirector->findReadyModel( pTile->_cropID ) : nullptr;
+        const string&                       model       = pReadyModel != nullptr ? *pReadyModel : pDirector->findGrowingModel( pTile->_cropID, stage );
         const shared_ptr<MaterialInstance>& look        = pDirector->findCropLook( pTile->_cropID, bWithered, bReady && pReadyModel == nullptr );
         if ( look == nullptr )
             return;
         const float32 size = _modelScale * ( bReady ? 1.0f : 0.7f + 0.3f * ratio );
-        pMesh->setMeshID( makeModelPath( pModel ) );
+        pMesh->setMeshID( model );
         pMesh->setMaterialInstance( look );
         pMesh->setLocalScale( float3{ size } );
         pMesh->setLocalPosition( FarmDirectorComponent::computeTileCenter( x, y ) + float3{ 0.0f, _soilTop + _modelFloor * size, 0.0f } );

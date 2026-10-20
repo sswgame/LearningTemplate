@@ -5,6 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Text/FontService.h"
@@ -24,6 +25,7 @@
 
 #include "EngineTest/Text/FakeFontRasterizer.h"
 
+#include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
 
 #include <cstdlib>
@@ -199,6 +201,7 @@ namespace
             _settings.initialize( sw::UserSettingsTargets{} );
             _bReady = _settings.loadSchemaFromXMLText( UIDeterminismTestUtil::kSchemaXML, "test.settings.xml" ) && _input.initialize() &&
                       _fonts.initialize( catalog ) && _ui.initialize( _input, _fonts._fontService.get() );
+            _ui.setEngineDocuments( sw::UIEngineDocuments::makeFromDefaultAssets( ::test::getEngineDefaultAssets() ) );
             _settings.reapplyAll();
             _ui.setUserSettings( &_settings );
             _viewport._physicalSize = sw::float2{ condition._width, condition._height };
@@ -239,7 +242,7 @@ namespace
             {
                 case UIDeterminismSample::Pause:
                 {
-                    return _ui.openScreen( "engine/ui/pause.ui.xml" );
+                    return _ui.openScreen( ::test::getEngineDefaultAssets()._uiPauseMenu.c_str() );
                 }
                 case UIDeterminismSample::Options:
                 {
