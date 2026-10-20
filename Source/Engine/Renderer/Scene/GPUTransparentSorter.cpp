@@ -51,7 +51,7 @@ namespace sw
         return _listViewKey;
     }
 
-    GPUViewTransparentOrder GPUTransparentSorter::computeViewOrder( uint64 viewID, uint32 tailBase, const vector<GPUMeshBatch>& listBatch )
+    GPUViewTransparentOrder GPUTransparentSorter::computeViewOrder( uint64 viewID, uint32 tailBase, vector_reference<const GPUMeshBatch> listBatch )
     {
         const uint32 tailCount = static_cast<uint32>( _listViewKey.size() );
         // 1) 이 뷰의 시점으로 꼬리 전체를 정렬한다. 같은 깊이는 주 순서(꼬리 번호)로 가른다. 전순서라 결정적이다.

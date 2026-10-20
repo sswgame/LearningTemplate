@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Common/Defines.h"
 #include "Core/Common/HashUtil.h"
+#include "Core/Container/span.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
@@ -292,7 +293,7 @@ namespace sw
     {
         shared_ptr<const vector<uint32>> _pListRank;      ///< 꼬리 인스턴스(꼬리 시작 기준)마다 이 뷰에서 그리는 순번(0이면 가장 먼저, 곧 가장 멀다)
         shared_ptr<const vector<uint32>> _pListTailSlot;  ///< 배치마다 안쪽을 이 뷰 순서로 다시 배치한 꼬리 인스턴스 번호(전역). 꼬리 길이와 같다.
-        vector<uint32>                   _listBatchOrder; ///< 이 뷰에서 투명 배치를 그리는 순서(`_listTransparentBatch` 의 번호)
+        vector<uint32>                   _listBatchOrder; ///< 이 뷰에서 투명 배치를 그리는 순서(`GPUSceneSnapshot::getTransparentBatches` 의 번호)
         uint64                           _viewID{ 0 };    ///< `RenderViewRequest::_viewID`
         uint32                           _tailBase{ 0 };  ///< 꼬리의 첫 인스턴스 번호(불투명 인스턴스 수)
     };
@@ -344,11 +345,9 @@ namespace sw
          *          배치와 머티리얼 목록은 그대로 값이다. **RT 가 GPU 핸들을 거기에 덧쓰므로**
          *          공유하면 안 된다(`GPUMeshBatch::_firstVertex`, `_materialCb` 주석 참고). 대신 개수가
          *          적어 복사가 싸다. 큰 것만 공유하고 작은 것은 복사하는 것이 이 타입의 규칙이다.
+         *          배치 목록은 아래 비공개 `_listBatch` 한 벌이다(불투명 · 투명은 그 구간 뷰).
          */
         shared_ptr<const vector<GPUInstance>> _pListInstance;
-        vector<GPUMeshBatch>                  _listOpaqueBatch;
-        vector<GPUMeshBatch>                  _listTransparentBatch;
-        vector<GPUMeshBatch>                  _listAllBatch;      ///< 불투명 배치 다음에 투명 배치가 온다. 간접 슬롯과 일치한다.
         vector<GPUMaterialGroup>              _listMaterialGroup; ///< 셰이더 타입별 머티리얼 원소
         /**
          * @brief 퍼뮤테이션 목록입니다. 배치의 `_shaderPermutation` 이 가리킵니다. **불변 목록을 공유합니다.**
@@ -404,5 +403,47 @@ namespace sw
             static const vector<GPUInstance> s_listEmpty{};
             return ( _pListInstance != nullptr ) ? *_pListInstance : s_listEmpty;
         }
+
+        /** @brief 모든 배치(불투명 다음 투명)를 반환합니다. 간접 슬롯 순서와 같습니다. */
+        const vector<GPUMeshBatch>& getAllBatches() const { return _listBatch; }
+        /** @brief 모든 배치의 원소를 고쳐 쓰는 뷰입니다. RT 가 GPU 필드를 덧쓸 때 씁니다. 배치를 더하거나 빼지는 못합니다. */
+        vector_reference<GPUMeshBatch> getMutableBatches() { return vector_reference<GPUMeshBatch>( _listBatch ); }
+        /** @brief 불투명 배치 구간 `[0, 불투명 수)` 입니다. 목록을 바꾸면 무효입니다. */
+        vector_reference<const GPUMeshBatch> getOpaqueBatches() const { return vector_reference<const GPUMeshBatch>( _listBatch ).first( _opaqueBatchCount ); }
+        /** @brief 투명 배치 구간 `[불투명 수, 끝)` 입니다. 번호는 이 구간 안의 번호입니다(`GPUViewTransparentOrder::_listBatchOrder`). */
+        vector_reference<const GPUMeshBatch> getTransparentBatches() const { return vector_reference<const GPUMeshBatch>( _listBatch ).subspan( _opaqueBatchCount ); }
+        /** @brief 불투명 배치 수입니다. 투명 배치의 전역 번호는 이 값부터 시작합니다. */
+        uint32 getOpaqueBatchCount() const { return _opaqueBatchCount; }
+
+        /**
+         * @brief 배치를 끝에 붙입니다. 불투명 배치는 투명 배치보다 먼저 붙여야 합니다.
+         * @details 투명 배치 뒤에 불투명 배치를 붙이면 구간 경계가 깨지므로 멈춘다(간접 슬롯 순서가 불투명 다음 투명이다).
+         */
+        void appendBatch( GPUMeshBatch&& batch )
+        {
+            if ( batch._blendMode != RHIBlendMode::Transparent )
+            {
+                SW_ASSERT( _opaqueBatchCount == _listBatch.size() );
+                ++_opaqueBatchCount;
+            }
+            _listBatch.push_back( std::move( batch ) );
+        }
+        /** @brief 배치를 모두 지웁니다. */
+        void clearBatches()
+        {
+            _listBatch.clear();
+            _opaqueBatchCount = 0;
+        }
+        /** @brief 투명 배치를 지우고 불투명 배치만 남깁니다(투명 꼬리를 다시 붙이기 전). 용량은 남습니다. */
+        void truncateToOpaqueBatches() { _listBatch.resize( _opaqueBatchCount ); }
+
+    private:
+        /**
+         * @brief 배치 목록 **한 벌**입니다. 불투명 배치 `[0, _opaqueBatchCount)` 다음에 투명 배치가 오며, 간접 슬롯과 일치합니다.
+         * @details 불투명 · 투명 목록을 따로 복사해 두지 않는다. 사본은 패킷마다 함께 복사되고(배치마다 shared_ptr 셋), RT 가 덧쓰는
+         *          GPU 필드를 사본마다 다시 맞춰야 했다. 구간 뷰만 내주므로 어긋날 사본이 없다. 고치는 길은 위 함수뿐이라 경계가 깨지지 않는다.
+         */
+        vector<GPUMeshBatch> _listBatch;
+        uint32               _opaqueBatchCount{ 0 }; ///< 앞쪽 불투명 배치 수
     };
 } // namespace sw
