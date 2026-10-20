@@ -672,6 +672,30 @@ SW_TEST_CASE( NetworkTest, SequencedReplacementTakesNewSizeAndAppendReceiveConca
     SW_EXPECT_TRUE( arena == expected );
 }
 
+SW_TEST_CASE( NetworkTest, ReceivedMessageBuffersAreReusedThroughTheCallerBuffer )
+{
+    // 받는 쪽이 같은 버퍼로 계속 꺼내면 그 옛 용량이 다음 패킷의 메시지 자리로 돌아온다 — 메시지마다 할당하지 않는다.
+    NetConnection sender;
+    NetConnection receiver;
+    vector<uint8> received;
+    const uint8*  pFirstStorage = nullptr;
+    for ( int32 round = 0; round < 3; ++round )
+    {
+        const vector<uint8> message( 100, static_cast<uint8>( round ) );
+        SW_ASSERT_TRUE( sender.sendMessage( NetChannelType::Unreliable, message.data(), static_cast<int32>( message.size() ) ) );
+        BitWriter packet;
+        sender.writePacket( 0.01 * round, packet, 300 );
+        BitReader reader( packet.getBytes().data(), packet.getByteCount() );
+        SW_ASSERT_TRUE( receiver.readPacket( 0.01 * round, reader ) );
+        SW_ASSERT_TRUE( receiver.receiveMessage( NetChannelType::Unreliable, received ) );
+        SW_EXPECT_TRUE( received == message );
+        if ( round == 0 )
+            pFirstStorage = received.data();
+    }
+    // 1 회째 버퍼가 2 회째 꺼낼 때 연결로 돌아가 3 회째 메시지를 담았다.
+    SW_EXPECT_TRUE( received.data() == pFirstStorage );
+}
+
 SW_TEST_CASE( NetworkTest, HostsHandshakeExchangeAndSurviveBadNetworks )
 {
     NetHostConfig settings;

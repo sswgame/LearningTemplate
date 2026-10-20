@@ -36,8 +36,8 @@
 ### GameFrameworkStructureCleanup
 제목: GameFramework 구조 정리의 남은 것
 옛번호: C-4
-왜 필요한가: 2026-10-04 리뷰(사용자 승인)에서 나온 칸 손셈 · 버퍼 정리입니다.
-남은 것: Overworld `TileMap` 의 칸 손셈(`indexOf` · `isInBounds` — 크기는 파일 스키마 `TileMapXMLData` 가 듭니다), `Habitat`(CreatureLife), NetConnection 메시지 버퍼 재사용. 게임 손셈(HarvestValley `FarmCropComponent` · `FarmSoilComponent`, NileCity `NileDirectorComponent` 의 `index % getWidth()`)은 키트가 `getTopology()` 를 열면 같이 합니다. 로드맵상 파일이 겹쳐 미룬 정리입니다.
+왜 필요한가: 2026-10-04 리뷰(사용자 승인)에서 나온 칸 손셈 정리입니다.
+남은 것: Overworld `TileMap` 의 칸 손셈(`indexOf` · `isInBounds` — 크기는 파일 스키마 `TileMapXMLData` 가 듭니다), `Habitat`(CreatureLife). 게임 손셈(HarvestValley `FarmCropComponent` · `FarmSoilComponent`, NileCity `NileDirectorComponent` 의 `index % getWidth()`)은 키트가 `getTopology()` 를 열면 같이 합니다. 로드맵상 파일이 겹쳐 미룬 정리입니다.
 
 ### PerfConditionalCandidates
 제목: 측정해서 이기면 하는 성능 후보 묶음

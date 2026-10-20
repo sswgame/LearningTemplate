@@ -72,6 +72,7 @@ namespace sw
         static constexpr int32   kPacketHeaderBits          = 16 + 16 + 32;
         static constexpr int32   kFastResendGap             = 3;    ///< 이만큼 뒤의 패킷이 확인됐는데 확인이 없으면 잃은 것으로 본다.
         static constexpr float64 kResendMargin              = 0.05; ///< 재전송 간격은 RTT에 이 여유를 더한 값이다(흔들림과 상대의 보내기 간격을 흡수한다).
+        static constexpr int32   kMaxSpareBuffers           = 64;   ///< 다시 쓸 메시지 버퍼를 이만큼까지 둔다(조각 하나 크기라 연결 하나에 64KB 안쪽).
         /**
          * @brief 비신뢰 메시지가 보낼 줄에서 기다릴 수 있는 시간(초)의 기본값입니다. 넘으면 싣지 않고 버립니다.
          * @details 대역폭이 오래 포화되면 옛 비신뢰가 쌓였다가 몰려 나간다. 비신뢰는 늦으면 쓸모가 없으므로(위치 · 효과) 버리는 쪽이 맞다.
@@ -93,7 +94,7 @@ namespace sw
         [[nodiscard]] bool sendMessage( NetChannelType channel, const uint8* pData, int32 size );
         /** @brief 채널 하나의 메시지 상한입니다. 신뢰 순서는 `kMaxReliableMessageSize`, 나머지는 `kMaxSingleMessageSize` 입니다. */
         static int32 getMaxMessageSize( NetChannelType channel );
-        /** @brief 받은 메시지 하나를 꺼냅니다. 없으면 false 를 반환합니다. */
+        /** @brief 받은 메시지 하나를 꺼냅니다. 없으면 false 를 반환합니다. @p outBuffer 의 옛 용량은 연결이 받아 다시 쓴다(같은 버퍼로 계속 받으면 할당이 없다). */
         [[nodiscard]] bool receiveMessage( NetChannelType channel, vector<uint8>& outBuffer );
         /** @brief 받은 메시지 하나를 꺼내 @p inoutBytes 뒤에 덧붙입니다. 여러 메시지를 아레나 하나에 모을 때 중간 버퍼 복사가 없습니다. 없으면 false 이고 그대로 둡니다. */
         [[nodiscard]] bool receiveMessageAppend( NetChannelType channel, vector<uint8>& inoutBytes );
@@ -202,6 +203,11 @@ namespace sw
             float64       _queuedTime{ -1.0 }; ///< 처음 `writePacket` 을 만난 시각. 음수면 아직 만나지 않았다(나이를 세지 않는다)
         };
 
+        /** @brief 다시 쓸 메시지 버퍼 하나를 꺼냅니다. 없으면 빈 버퍼입니다(처음 쓸 때 할당한다). */
+        vector<uint8> acquireBuffer();
+        /** @brief 다 쓴 메시지 버퍼를 비워 다시 쓸 줄에 넣습니다. 용량이 없거나 조각 하나보다 크거나(모은 큰 메시지) 줄이 차면 버립니다. @p buffer 는 빈다. */
+        void recycleBuffer( vector<uint8>& buffer );
+
         void    processAcks( float64 time, uint16 ack, uint32 ackBits );
         void    detectLostPackets( uint16 ack );
         bool    isReliableDue( const OutgoingReliable& message, float64 time, float64 resendDelay ) const;
@@ -223,6 +229,7 @@ namespace sw
         vector<ParsedMessage>                                                    _listParsedScratch;    ///< 받은 패킷을 먼저 다 읽어 두는 스크래치 버퍼(용량을 다시 쓴다).
         vector<SequencedStream>                                                  _listSequencedReceive; ///< 순서만 채널에서 종류마다 마지막으로 넘긴 번호.
         vector<uint8>                                                            _listReliableAssembly; ///< 모으는 중인 신뢰 순서 메시지(앞 조각들). 마지막 조각이 오면 넘긴다.
+        vector<vector<uint8>>                                                    _listSpareBuffer;      ///< 다 쓴 메시지 버퍼(용량만). 받기 · 비신뢰 보내기가 메시지마다 할당하지 않게 한다.
         NetConnectionStats                                                       _stats;
         float64                                                                  _lastStatsTime;
         float64                                                                  _lastAckRequestTime; ///< 확인을 요청한 패킷을 마지막으로 보낸 시각.

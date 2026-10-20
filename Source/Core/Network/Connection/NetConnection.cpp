@@ -77,6 +77,7 @@ namespace sw
         , _listParsedScratch{}
         , _listSequencedReceive{}
         , _listReliableAssembly{}
+        , _listSpareBuffer{}
         , _stats{}
         , _lastStatsTime{ 0.0 }
         , _lastAckRequestTime{ -1.0e9 }
@@ -162,6 +163,7 @@ namespace sw
             case NetChannelType::Unreliable:
             {
                 QueuedUnreliable& queued = _listOutgoingUnreliable.emplace_back();
+                queued._buffer           = acquireBuffer();
                 queued._buffer.assign( pData, pData + size );
                 return true;
             }
@@ -205,7 +207,9 @@ namespace sw
         const bool  bNoIncomingMessage = channelIndex < 0 || channelIndex >= static_cast<int32>( NetChannelType::Count ) || _arrIncoming[channelIndex].empty();
         if ( bNoIncomingMessage )
             return false;
-        outBuffer = std::move( _arrIncoming[channelIndex].front() );
+        // 바꿔 넣어 부른 쪽 버퍼의 옛 용량을 다시 쓴다 — 받는 쪽이 같은 버퍼로 계속 꺼내면 메시지마다 할당하지 않는다.
+        outBuffer.swap( _arrIncoming[channelIndex].front() );
+        recycleBuffer( _arrIncoming[channelIndex].front() );
         _arrIncoming[channelIndex].pop_front();
         return true;
     }
@@ -216,10 +220,33 @@ namespace sw
         const bool  bNoIncomingMessage = channelIndex < 0 || channelIndex >= static_cast<int32>( NetChannelType::Count ) || _arrIncoming[channelIndex].empty();
         if ( bNoIncomingMessage )
             return false;
-        const vector<uint8>& message = _arrIncoming[channelIndex].front();
+        vector<uint8>& message = _arrIncoming[channelIndex].front();
         inoutBytes.insert( inoutBytes.end(), message.begin(), message.end() );
+        recycleBuffer( message );
         _arrIncoming[channelIndex].pop_front();
         return true;
+    }
+
+    vector<uint8> NetConnection::acquireBuffer()
+    {
+        if ( _listSpareBuffer.empty() )
+            return vector<uint8>{};
+        vector<uint8> buffer = std::move( _listSpareBuffer.back() );
+        _listSpareBuffer.pop_back();
+        return buffer;
+    }
+
+    void NetConnection::recycleBuffer( vector<uint8>& buffer )
+    {
+        const size_t capacity    = buffer.capacity();
+        const bool   bReusable   = capacity > 0 && capacity <= static_cast<size_t>( kMaxSingleMessageSize );
+        const bool   bRoomInList = _listSpareBuffer.size() < static_cast<size_t>( kMaxSpareBuffers );
+        if ( bReusable && bRoomInList )
+        {
+            buffer.clear();
+            _listSpareBuffer.push_back( std::move( buffer ) );
+        }
+        buffer = vector<uint8>{};
     }
 
     float64 NetConnection::computeResendDelay() const
@@ -270,6 +297,7 @@ namespace sw
             const bool bOldestUnreliableExpired = maxUnreliableAgeSeconds > 0.0 && _listOutgoingUnreliable.empty() == false && time - _listOutgoingUnreliable.front()._queuedTime > maxUnreliableAgeSeconds;
             if ( bOldestUnreliableExpired == false )
                 break;
+            recycleBuffer( _listOutgoingUnreliable.front()._buffer );
             _listOutgoingUnreliable.pop_front();
             ++_stats._expiredUnreliableCount;
         }
@@ -346,6 +374,7 @@ namespace sw
             {
                 if ( writeMessage( NetChannelType::Unreliable, 0, _listOutgoingUnreliable.front()._buffer, false ) == false )
                     break;
+                recycleBuffer( _listOutgoingUnreliable.front()._buffer );
                 _listOutgoingUnreliable.pop_front();
             }
         };
@@ -390,12 +419,18 @@ namespace sw
 
         // 메시지를 먼저 모두 읽어서 깨진 패킷이면 아무것도 넣지 않는다. 시퀀스도 본문을 다 읽은 뒤에 기록한다.
         // 깨진 패킷을 확인해 버리면 보낸 쪽이 그 안의 신뢰 메시지를 전달된 것으로 알고 지운다.
+        // 메시지 버퍼는 다시 쓸 줄에서 받는다. 넘기지 않은 것(중복 · 깨진 패킷)은 다음 패킷이 줄로 돌린다.
         vector<ParsedMessage>& listParsed = _listParsedScratch;
+        for ( ParsedMessage& parsed : listParsed )
+        {
+            recycleBuffer( parsed._buffer );
+        }
         listParsed.clear();
         while ( reader.readBool() )
         {
-            ParsedMessage message;
-            message._channel = static_cast<NetChannelType>( reader.readBits( NetConnectionInternal::kChannelBits ) );
+            ParsedMessage& message = listParsed.emplace_back();
+            message._buffer        = acquireBuffer();
+            message._channel       = static_cast<NetChannelType>( reader.readBits( NetConnectionInternal::kChannelBits ) );
             if ( message._channel >= NetChannelType::Count )
                 return false; // 채널 슬롯 넷을 모두 쓰면 닿지 않는 분기다. 채널이 늘어도 깨진 값을 거르도록 남겨 둔다.
             message._id      = message._channel != NetChannelType::Unreliable ? static_cast<uint16>( reader.readBits( 16 ) ) : static_cast<uint16>( 0 );
@@ -408,7 +443,6 @@ namespace sw
                 return false;
             if ( reader.hasOverflowed() )
                 return false;
-            listParsed.push_back( std::move( message ) );
         }
         const bool bAckRequested = reader.readBool();
         if ( reader.hasOverflowed() )
@@ -436,8 +470,8 @@ namespace sw
                     IncomingReliable* pIncoming = _incomingReliable.insert( message._id );
                     if ( pIncoming != nullptr )
                     {
-                        pIncoming->_buffer = std::move( message._buffer );
-                        pIncoming->_bMore  = message._bMore;
+                        pIncoming->_buffer.swap( message._buffer ); // 칸의 옛 용량은 받은 메시지 자리로 가 다음 패킷이 줄로 돌린다
+                        pIncoming->_bMore = message._bMore;
                     }
                     break;
                 }
