@@ -1,6 +1,6 @@
 # 페어드 애니메이션(여러 개체가 한 타임라인으로 도는 애니메이션)
 
-> 상태: 구현중 · 선행: 없음 · 영역: gameplay · 옛번호: D4-6 · 진행: 5/6
+> 상태: 구현중 · 선행: 없음 · 영역: gameplay · 옛번호: D4-6 · 진행: 6/6
 
 활과 화살, 잡기 · 처형, 말 타기, 문 열기처럼 **여러 개체가 한 타임라인에 묶여 같이 도는 애니메이션**(언리얼의 Contextual Animation, 흔히 페어드 · 싱크드 · 인터랙션 애니메이션)의 일반 구조다.
 애니메이션 영역의 한 단위다([게임플레이 후보](Candidates-gameplay.md) 의 애니메이션 절과 이웃). 첫 단위(P0 ~ P2)와 상호작용 연결 · 에셋 캐시 · 세트 고르기 · 보폭 보정 쥠은 코드와 테스트(`PairedAnimationTest` · `PairedAnimationDefTest` · `InteractionTest`)로 들어갔다.
@@ -130,9 +130,13 @@ PairedAnimationComponent(시작하는 쪽, 에셋 경로 · 자기 역할)
 - 복원이 클립이 끝난 역할(서버가 게임플레이로 내보낸 선택 역할 포함)에 `exitState` 를 재생하는 규칙은 그대로 둔다. 같은 id 의 상태를 다시 받으면(보정 · 롤백) 클라이언트는 옛 세션을 중단하고 다시 복원한다. 롤백 소유 상태는 게임이 `makeSessionState` → `PairedAnimationNetState::write` 의 바이트를 `setOwnerState` 에 싣고, 되감은 뒤 `PairedAnimationReplicationClient::applyState` 를 부른다.
 - 씬에 `PairedAnimationNetSessionComponent` 하나를 두면 게임 네트워크 세션(`GameNetSession`)의 역할대로 서버(틱 `PostUpdate` 에서 보냄) · 클라이언트(게임 프레임 앞에서 받음)가 된다. 클라이언트의 게임플레이가 세션을 따로 시작하지 않게 막는 일은 게임 권한의 몫이다.
 
-## 8. 에디터(M3, 후속)
+## 8. 에디터(M3)
 
-미리보기 씬에 역할마다 메시를 놓고 한 시계로 문지르기(스크럽) · 정렬 오프셋 기즈모 · 알림 시각 편집. 지금은 데이터를 손으로 쓰고 런타임 검사가 틀린 값을 멈춘다.
+캐릭터 편집 확장의 `PairedAnimationPanel`(미리보기 창) + `PairedAnimationEditModel`(화면 없는 모델, `PairedAnimationEditModelTest`). 계약은 두 파일의 머리말이 정본이다.
+
+- 편집 대상은 파일 한 장의 내용(`PairedAnimationContentDef`)이다. 쓰기는 `PairedAnimationDef::makeXMLText` 하나, 규칙 검사는 그 글을 런타임 로더로 다시 읽는 것 하나다 — 에디터 쪽 사본 규칙이 없다. 규칙에 어긋나면 저장하지 않는다.
+- 미리보기: 앵커는 원점, 정렬 역할은 정렬 목표(`PairedAnimationDef::computeAlignTarget` — 세션과 같은 식), 프롭은 원점(부착하지 않음). 역할마다 고른 프리팹(에셋에 저장하지 않음)의 애니메이터를 재생 속도 0 으로 두고 스크럽 시각의 클립 시각으로 옮긴다.
+- 오프셋 기즈모: 정렬 역할 오브젝트를 창 선택에 놓고 기즈모로 옮기면 그 자리가 앵커 기준 오프셋 · 요로 들어간다(`setRoleOffsetFromWorld`, 연속 편집 한 단계).
 
 ## 9. 모션 매칭과의 관계
 
@@ -147,13 +151,13 @@ PairedAnimationComponent(시작하는 쪽, 에셋 경로 · 자기 역할)
 | P2 | 정렬 `snap` · `warp`(`MotionWarpingComponent` 재사용, 새 노드 없음) | 완료(Debug 빌드 · `PairedAnimationTest` 통과) |
 | P3a | 세션 상태 복사 · 복원(7절 "복제 상태": `PairedAnimationSessionSnapshot` · `captureSnapshot` · `restoreSession`) | 코드와 `PairedAnimationTest` 작성(빌드 · 테스트 미확인, 병합 뒤 한 번 확인) |
 | P3b | 네트워크 계층 연결(서버가 세션 시작 · 상태를 복제, 클라이언트가 복원, 롤백 소유 상태) — 키트 `GF_NetPairedAnimation` | 코드와 `PairedAnimationReplicationTest` 작성(빌드 · 테스트 미확인, 두 프로세스 확인은 아래 "남은 것") |
-| M3 | 에디터 미리보기(8절) | 아래 "남은 것" |
+| M3 | 에디터 미리보기(8절) — `PairedAnimationPanel` · `PairedAnimationEditModel` | 코드와 `PairedAnimationEditModelTest` 작성(빌드 · 테스트 미확인, 창 화면 확인은 아래 "남은 것") |
 | — | 상호작용 단계에서 세션 시작 · 에셋 캐시(핫 리로드) · 세트 고르기(`<Select>`) · 보폭 보정 쥠 | 완료(`InteractionTest` · `PairedAnimationTest`) |
 | — | 시나리오 테스트(Shooter3D 궁수 · 활 · 화살 실제 클립) | 아래 "남은 것" — 클립 · 활 메시가 없다 |
 
 ## 남은 것
 
-- 에디터 미리보기(M3): 역할마다 메시를 놓고 한 시계로 스크럽 · 오프셋 기즈모 · 알림 시각 편집.
+- 에디터 미리보기(M3) 화면 확인: 창을 열어 역할 프리팹을 놓고 스크럽 · 기즈모로 오프셋을 옮기는 에디터 시나리오(`-EnableEditor`, `CaptureEditorUI`).
 - 네트워크(P3b) 두 프로세스 확인: `Server` 와 `App -gv_netConnectAddress` 에서 세션 시작 · 늦은 참가 · 끝이 복제되는지. 씬 문서 밖에서 생긴 참가자(투사체 같은)를 복제하려면 번호표가 아니라 복제 엔티티 id 대응이 필요하다(후속).
 - 시나리오 테스트: Shooter3D 궁수 · 활 · 화살 실제 클립과 활 메시가 리소스에 없다(`data/anim/bow_shoot.pairedanim.xml` 은 형식 검사만 돈다). 클립 · 메시(CC0)가 들어오면 시나리오로 화면 확인까지 한다.
 
