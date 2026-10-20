@@ -1,6 +1,10 @@
 /**
  * @file SceneCooker.h
  * @brief 씬 XML 을 런타임이 바로 읽는 SCN1 바이너리로 쿠킹합니다(엔티티 상태까지 바이너리로).
+ * @details 스트리밍하는 씬(`WorldSettings::_bStreaming`)은 엔티티를 격자로 셀에 나눠 같은 쿠킹본에 싣는다(`SceneDocument::_listStreamingCell`). 자리는 계층 루트의
+ *          primary 씬 컴포넌트이고, 늘 올라 있는 오브젝트(`GameObject::isAlwaysLoaded`)와 자리가 없는 오브젝트는 기본 목록에 남는다. 셀을 넘는 참조는 쿠킹 실패다.
+ *          셀마다 파일을 따로 두지 않는 이유: 쿠킹 기록 · DDC(`CookStore`)는 작업 하나에 출력 하나이고, 기본 파일과 셀 파일이 따로 굽히면 서로 다른
+ *          쿠킹의 것이 섞여 실린다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -47,6 +51,14 @@ namespace sw
         SW_API static uint32 cookEntityState( const SceneEngineServices& services, SceneDocument& inoutDoc, uint32* pOutMissingComponentCount = nullptr );
 
         /**
+         * @brief 스트리밍하는 씬의 엔티티를 격자로 셀에 나눕니다. 늘 올라 있는 엔티티는 `_listSceneObjectNode` 에 남고 나머지는 `_listStreamingCell` 로 갑니다.
+         * @details 문서를 한 번 지어 엔티티마다 자리(계층 루트의 primary 씬 컴포넌트) · 늘 올라 있음 · 다른 엔티티로의 참조(부착 · 핸들)를 읽는다.
+         *          셀을 넘는 참조(`WorldCellGrid::findCrossCellReferences`)나 프리팹을 찾지 못한 엔티티가 있으면 엔티티마다 오류를 남기고 false 이며 문서는 그대로다.
+         *          스트리밍하지 않는 문서면 아무것도 하지 않고 true 입니다.
+         */
+        [[nodiscard]] SW_API static bool splitStreamingCells( const SceneEngineServices& services, SceneDocument& inoutDoc, string_view sceneName );
+
+        /**
          * @brief @p sourceRoot 아래의 모든 `*.scene.xml` 을 `<cookedDir>/<상대경로>/<이름>.scene.bin` 으로 쿠킹합니다(이름은 `AssetCookPath`).
          * @param sourceRoot 리소스 루트(절대 경로)입니다. 쿠킹본의 상대 경로가 여기서 정해집니다.
          * @param cookedDir 산출물 스테이징 디렉터리(절대 경로). 비어 있으면 아무것도 하지 않고 실패 하나로 셉니다. 모든 타입 공급자가 등록을 끝내기
@@ -70,8 +82,11 @@ namespace sw
          */
         SW_API static CookJobDesc makeCookJobDesc( const TypeRegistry& registry );
 
-        /** @brief 씬 쿠커 버전입니다. 쿠킹된 씬의 형식이나 출력을 바꾸는 코드(기본값 · 검증)를 바꾸면 올립니다 — 모든 씬이 다시 구워집니다. */
-        static constexpr uint32 kCookVersion = 1;
+        /**
+         * @brief 씬 쿠커 버전입니다. 쿠킹된 씬의 형식이나 출력을 바꾸는 코드(기본값 · 검증)를 바꾸면 올립니다 — 모든 씬이 다시 구워집니다.
+         * @details 2: 월드 설정과 스트리밍 셀(SCN1 판 4).
+         */
+        static constexpr uint32 kCookVersion = 2;
     };
 
 } // namespace sw

@@ -70,6 +70,11 @@ namespace sw
          *          붙는다. 핸들도 같다. 프리팹의 런타임 id 는 스폰한 실행에서 엉뚱한 오브젝트를 가리킨다.
          */
         bool _bOmitExternalParent{ false };
+        /**
+         * @brief 있으면 이 저장이 가리킨 다른 오브젝트의 런타임 id(0 제외)를 모두 더합니다. 쿠커가 셀을 넘는 참조를 찾는 데 씁니다(`SceneCooker`).
+         * @details 참조는 모두 `getSavedObjectID` 를 거치므로 여기서 모으면 부착 · 핸들 PROPERTY 를 타입마다 따로 훑지 않아도 된다.
+         */
+        vector<uint64>* _pOutListReferencedID{ nullptr };
 
         /**
          * @brief 다른 오브젝트의 런타임 id 를 저장할 id 로 바꿉니다. 부착(`SceneComponent`)과 핸들 PROPERTY 가 모두 이 함수를 거칩니다.
@@ -78,6 +83,8 @@ namespace sw
          */
         uint64 getSavedObjectID( uint64 runtimeID ) const
         {
+            if ( _pOutListReferencedID != nullptr && runtimeID != 0 )
+                _pOutListReferencedID->push_back( runtimeID );
             if ( _pSavedIDMap == nullptr )
                 return runtimeID;
             const auto mapIt = _pSavedIDMap->find( runtimeID );

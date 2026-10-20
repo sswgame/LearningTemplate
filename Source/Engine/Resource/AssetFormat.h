@@ -35,8 +35,10 @@ namespace sw
         static constexpr AssetFormatVersion kMaterial         = 0;
         static constexpr AssetFormatVersion kMaterialInstance = 0;
         static constexpr AssetFormatVersion kPrefab           = 0;
-        /// 1: 프리팹 엔티티가 프리팹 경로 + 덮어쓴 것(`<PrefabOverrides>`)을 싣는다. 판이 0 인(또는 판이 없는) 씬 파일은 읽지 않는다.
-        static constexpr AssetFormatVersion kScene = 1;
+        /// 1: 프리팹 엔티티가 프리팹 경로 + 덮어쓴 것(`<PrefabOverrides>`)을 싣는다.
+        /// 2: 씬 루트에 월드 설정(`<WorldSettings>`, 스트리밍 여부 · 격자)이 반드시 있다. 판이 2 가 아닌 씬 파일은 읽지 않는다 — 이관기를 두지 않고
+        ///    저장소의 씬을 `Scripts/dev/MoveSceneFormat.py` 로 다시 썼다.
+        static constexpr AssetFormatVersion kScene = 2;
     };
 } // namespace sw
 

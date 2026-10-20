@@ -13,11 +13,16 @@
     #include "Core/Container/StringUtil.h"
     #include "Core/String/TagID.h"
 
+    #include "Engine/Common/EngineServices.h"
     #include "Engine/Object/SceneAnimation/AnimationSystem.h"
     #include "Engine/Object/Component/SceneComponent.h"
     #include "Engine/Object/GameObject/GameObject.h"
     #include "Engine/Object/GameObject/GameObjectManager.h"
+    #include "Engine/Scene/Scene.h"
+    #include "Engine/Scene/SceneCooker.h"
+    #include "Engine/Scene/SceneDocument.h"
     #include "Engine/Scene/SceneManager.h"
+    #include "Engine/Scene/WorldStreamingSubsystem.h"
 
 namespace sw
 {
@@ -56,6 +61,48 @@ namespace sw
                 }
                 pObject->addTag( TagID::request( listArgument[1] ) );
                 outReply = "tagged " + listArgument[0] + " with " + listArgument[1];
+                return true;
+            }
+
+            /**
+             * @brief `world.cells` — 스트리밍 중이면 올라 있는 셀 수를, 아니면 활성 씬을 쿠커처럼 셀로 나눠 셀 수 · 늘 올라 있는 엔티티 수를 알립니다.
+             * @details 나누지 못하면(셀을 넘는 참조) 쿠커와 같은 오류가 엔티티마다 로그에 남는다 — 쿠킹 전에 에디터에서 위반을 본다.
+             */
+            static bool runWorldCells( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.empty() == false )
+                    return false;
+                SceneManager* pManager = engine::findSubsystem<SceneManager>();
+                Scene*        pScene   = pManager != nullptr ? pManager->getActiveScene() : nullptr;
+                if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
+                {
+                    outReply = "no active scene";
+                    return false;
+                }
+                const WorldStreamingSubsystem& streaming = pScene->getObjectManager()->getSubsystem<WorldStreamingSubsystem>();
+                if ( streaming.isStreaming() )
+                {
+                    outReply = "streaming: " + to_string( streaming.getLoadedCellCount() ) + " of " + to_string( streaming.getCellCount() ) + " cells loaded";
+                    return true;
+                }
+                if ( pScene->getWorldSettings()._bStreaming == false )
+                {
+                    outReply = "the active scene does not stream";
+                    return true;
+                }
+                SceneDocument doc{};
+                if ( pScene->serializeToDocument( doc ) == false )
+                {
+                    outReply = "the active scene could not be written as a document";
+                    return false;
+                }
+                if ( SceneCooker::splitStreamingCells( pScene->getEngineServices(), doc, pScene->getName() ) == false )
+                {
+                    outReply = "the cook would fail - see the log for the cross-cell references";
+                    return false;
+                }
+                outReply = to_string( static_cast<uint32>( doc._listStreamingCell.size() ) ) + " cells, " +
+                           to_string( static_cast<uint32>( doc._listSceneObjectNode.size() ) ) + " entities always loaded";
                 return true;
             }
 
@@ -139,6 +186,8 @@ namespace sw
     } // namespace
 
     SW_DEV_COMMAND( Teleport, "teleport", "teleport <object> <x> <y> <z>", "Teleport a named object of the active scene", &SceneDevCommandsInternal::runTeleport );
+    SW_DEV_COMMAND( WorldCells, "world.cells", "world.cells", "Show loaded streaming cells, or split the active scene into cells as the cooker would",
+                    &SceneDevCommandsInternal::runWorldCells );
     SW_DEV_COMMAND( TagAdd, "tag.add", "tag.add <object> <tag>", "Add a gameplay tag to a named object of the active scene", &SceneDevCommandsInternal::runTagAdd );
     SW_DEV_COMMAND( AnimationRewind, "anim.rewind", "anim.rewind [on|off]", "Show or switch animation rewind recording (gv_animationRewind)",
                     &SceneDevCommandsInternal::runAnimationRewind );

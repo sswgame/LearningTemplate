@@ -24,6 +24,7 @@
 #include "Engine/Resource/AssetDatabase.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Scene/SceneDocument.h"
+#include "Engine/Scene/WorldStreamingSubsystem.h"
 
 namespace sw
 {
@@ -204,6 +205,7 @@ namespace sw
         : _name{ name }
         , _sourcePath{}
         , _defaultMaterialPath{}
+        , _worldSettings{}
         , _services{ services }
         , _objectManager{ make_unique<GameObjectManager>( services ) }
         , _pMaterial{ nullptr }
@@ -249,9 +251,44 @@ namespace sw
     {
         if ( _objectManager == nullptr )
             return false;
+        if ( doc._worldSettings.validate( _name ) == false )
+            return false;
+        _worldSettings = doc._worldSettings;
         // 내비게이션이 쿠킹한 내비메시(`<씬>.navmesh`)를 찾는 이름이다.
         _objectManager->getSubsystem<SceneNavigation>().setSourcePath( doc._sourcePath.empty() ? string_view{ _sourcePath } : string_view{ doc._sourcePath } );
 
+        if ( instantiateNodes( doc._listSceneObjectNode, false, nullptr ) == false )
+            return false;
+        // 셀로 나눈 쿠킹본이면 셀은 지금 짓지 않는다 — 스트리밍 원점이 다가올 때 서비스가 짓는다(`instantiateCell`).
+        if ( doc._listStreamingCell.empty() )
+            return true;
+        return _objectManager->getSubsystem<WorldStreamingSubsystem>().beginWorld( *this, _worldSettings, doc._listStreamingCell );
+    }
+
+    bool Scene::instantiateCell( const vector<SceneDocument::SceneObjectNode>& listNode, vector<uint64>& outListObjectID )
+    {
+        if ( _objectManager == nullptr )
+            return false;
+        return instantiateNodes( listNode, true, &outListObjectID );
+    }
+
+    void Scene::unloadCell( const vector<uint64>& listObjectID )
+    {
+        if ( _objectManager == nullptr )
+            return;
+        for ( const uint64 objectID : listObjectID )
+        {
+            _mapObjectIDToFileID.erase( objectID );
+            _mapPrefabSource.erase( objectID );
+            GameObject* pGo = _objectManager->findGameObjectByID( objectID );
+            // 자식은 같은 셀의 엔티티이거나 이 엔티티의 중첩 프리팹 부품이다 — 늘 올라 있는 오브젝트는 셀의 오브젝트에 붙지 않는다(쿠커가 검사했다).
+            if ( pGo != nullptr )
+                _objectManager->destroyObject( pGo, true );
+        }
+    }
+
+    bool Scene::instantiateNodes( const vector<SceneDocument::SceneObjectNode>& listNode, bool bStreamingCell, vector<uint64>* pOutListObjectID )
+    {
         // 오브젝트 **사이의** 부착은 모든 엔티티가 생긴 뒤라야 해석할 수 있다. 엔티티를 모두 하나의 배치로 읽고 끝에서 연결한다. 부착은 부모를
         // 그 엔티티의 **파일 id** 로 가리킨다(파일 안에서만 의미가 있는 값이라 배치 안에서만 해석한다). 이름으로 찾으면 이름이 겹친
         // 엔티티(병합)에서 자식이 앞의 것에 붙는다.
@@ -260,7 +297,18 @@ namespace sw
         unordered_map<string, string>       mapPrefabBaseState;
         vector<SceneInternal::PrefabEntity> listPrefabEntity;
 
-        for ( const SceneDocument::SceneObjectNode& entity : doc._listSceneObjectNode )
+        // 셀은 이미 지은 늘 올라 있는 엔티티를 파일 id 로 가리킨다 — 그 오브젝트를 같은 배치에 기록해 둔다(상태는 읽지 않는다).
+        if ( bStreamingCell )
+        {
+            for ( const auto& [objectID, fileID] : _mapObjectIDToFileID )
+            {
+                GameObject* pExisting = _objectManager->findGameObjectByID( objectID );
+                if ( pExisting != nullptr && pExisting->isPendingDestroy() == false )
+                    batch.add( pExisting, fileID, pExisting->getName(), false );
+            }
+        }
+
+        for ( const SceneDocument::SceneObjectNode& entity : listNode )
         {
             SW_LOG_TRACE( "Spawning entity '%#' prefab '%#'", entity._name, entity._prefab );
             GameObject* pGo{ nullptr };
@@ -293,7 +341,8 @@ namespace sw
                     // 다시 써 넣는다(유니티의 "Missing Prefab" 과 같다).
                     SW_LOG_WARNING( "Prefab spawn failed for entity '%#' (%#, guid %#) - kept as-is and written back on save", entity._name, entity._prefab,
                                     entity._prefabGuid.empty() ? "none" : entity._prefabGuid.c_str() );
-                    _listUnresolvedEntity.push_back( entity );
+                    if ( bStreamingCell == false )
+                        _listUnresolvedEntity.push_back( entity );
                 }
             }
             else
@@ -303,6 +352,8 @@ namespace sw
 
             if ( pGo != nullptr )
             {
+                if ( pOutListObjectID != nullptr )
+                    pOutListObjectID->push_back( pGo->getObjectID() );
                 if ( entity._prefab.empty() == false )
                     _mapPrefabSource[pGo->getObjectID()] = entity._prefab;
                 if ( entity._fileID != 0 )
@@ -375,9 +426,17 @@ namespace sw
     {
         if ( _objectManager == nullptr )
             return false;
+        // 셀을 스트리밍하는 씬(쿠킹본)은 내려가 있는 셀의 엔티티를 들고 있지 않다 — 쓰면 그 엔티티가 파일에서 사라진다.
+        if ( _objectManager->getSubsystem<WorldStreamingSubsystem>().isStreaming() )
+        {
+            SW_LOG_ERROR( "Scene '%#' streams cells from a cooked scene - it cannot be written as a document", _name.c_str() );
+            return false;
+        }
 
-        outDoc._name       = _name;
-        outDoc._sourcePath = _sourcePath;
+        outDoc._name          = _name;
+        outDoc._sourcePath    = _sourcePath;
+        outDoc._worldSettings = _worldSettings;
+        outDoc._listStreamingCell.clear();
         outDoc._listSceneObjectNode.clear();
         outDoc._bValid = true;
 
@@ -513,6 +572,9 @@ namespace sw
     void Scene::shutdown()
     {
         releaseDefaultMaterial();
+        // 셀을 버린다 — 내린 씬에 다음 갱신이 셀을 다시 짓지 않게.
+        if ( _objectManager != nullptr )
+            _objectManager->getSubsystem<WorldStreamingSubsystem>().endWorld();
         _mapPrefabSource.clear();
         _mapObjectIDToFileID.clear();
         _listUnresolvedEntity.clear();
@@ -533,6 +595,14 @@ namespace sw
     {
         if ( _objectManager == nullptr )
             return;
+        // 스트리밍 원점은 지난 프레임 끝의 카메라 자리다 — 셀은 프레임 끝(`DestroyPost`)에 오르내린다. 바깥 원점(서버의 접속자)을 쓰면 넣지 않는다.
+        WorldStreamingSubsystem& streaming = _objectManager->getSubsystem<WorldStreamingSubsystem>();
+        if ( streaming.isStreaming() && streaming.usesExternalSources() == false )
+        {
+            const CameraComponent* pCamera = getActiveGameCamera();
+            if ( pCamera != nullptr )
+                streaming.setCameraSource( pCamera->getWorldPosition() );
+        }
         _objectManager->update( deltaTime );
         if ( _bAudioUpdateEnabled == false )
             return;

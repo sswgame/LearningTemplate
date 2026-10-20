@@ -9,6 +9,7 @@
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/MissingComponent.h"
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
@@ -17,6 +18,7 @@
 #include "Engine/Resource/Cook/CookStore.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
+#include "Engine/Scene/WorldCellGrid.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
@@ -161,6 +163,134 @@ namespace sw
                 return HashUtil::computeStringHash64( canonical.c_str(), canonical.size(), false );
             }
 
+            /**
+             * @brief 셀 배치를 정할 때의 오브젝트입니다 — 계층의 루트입니다. 자식은 루트의 셀을 따른다(부착은 같은 셀 안의 참조여야 한다).
+             * @details 루트가 늘 올라 있거나 씬 컴포넌트가 없으면(자리가 없다) 기본 묶음입니다.
+             */
+            static const GameObject* findPlacementRoot( const GameObject* pObject )
+            {
+                const GameObject* pRoot = pObject;
+                while ( pRoot->getParent() != nullptr )
+                {
+                    pRoot = pRoot->getParent();
+                }
+                return pRoot;
+            }
+
+            /**
+             * @brief 스트리밍하는 씬의 엔티티를 셀로 나눕니다. 늘 올라 있는 엔티티는 `_listSceneObjectNode` 에 남고 나머지는 `_listStreamingCell` 로 갑니다.
+             * @details 쿠킹된 문서를 한 번 더 지어 오브젝트마다 자리 · 플래그 · 참조를 읽는다. 셀을 넘는 참조(`WorldCellGrid::findCrossCellReferences`)나
+             *          프리팹을 찾지 못한 엔티티가 있으면 오류를 남기고 false 다 — 런타임에 조용히 끊기는 참조 · 빠지는 엔티티를 쿠킹본에 싣지 않는다.
+             */
+            static bool partitionStreamingCells( const SceneEngineServices& services, SceneDocument& inoutDoc, string_view scenePath )
+            {
+                WorldCellGrid grid;
+                if ( WorldCellGrid::tryCreate( inoutDoc._worldSettings._cellGrid, grid ) == false )
+                {
+                    SW_LOG_ERROR( "Scene cook: '%#' streams but its cell grid is not usable", scenePath );
+                    return false;
+                }
+
+                Scene      placement{ "SceneCooker.Placement", services };
+                const bool bBuilt = placement.instantiate( inoutDoc );
+                if ( bBuilt == false || placement.getUnresolvedEntityCount() > 0 )
+                {
+                    SW_LOG_ERROR( "Scene cook: '%#' could not be built to place its entities in cells (%# entities without a prefab)", scenePath,
+                                  static_cast<uint32>( placement.getUnresolvedEntityCount() ) );
+                    placement.shutdown();
+                    return false;
+                }
+                unordered_map<uint64, GameObject*> mapObjectByFileID;
+                makeObjectByFileID( placement, mapObjectByFileID );
+                ObjectSavedIDMap mapSavedID;
+                placement.collectSavedIDMap( mapSavedID );
+
+                // 엔티티마다 셀 · 플래그, 그리고 그 엔티티가 가리키는 다른 엔티티(파일 id).
+                vector<WorldCellObjectRecord> listRecord;
+                vector<WorldCellReference>    listReference;
+                listRecord.reserve( inoutDoc._listSceneObjectNode.size() );
+                vector<uint64> listReferencedID;
+                for ( const SceneDocument::SceneObjectNode& entity : inoutDoc._listSceneObjectNode )
+                {
+                    const auto objectIt = mapObjectByFileID.find( entity._fileID );
+                    if ( objectIt == mapObjectByFileID.end() )
+                    {
+                        SW_LOG_ERROR( "Scene cook: entity '%#' of '%#' was not built - it cannot be placed in a cell", entity._name, scenePath );
+                        placement.shutdown();
+                        return false;
+                    }
+                    const GameObject*     pObject    = objectIt->second;
+                    const GameObject*     pRoot      = findPlacementRoot( pObject );
+                    const SceneComponent* pRootScene = pRoot->getPrimarySceneComponent();
+                    WorldCellObjectRecord record{};
+                    record._objectID      = entity._fileID;
+                    record._bAlwaysLoaded = pObject->isAlwaysLoaded() || pRoot->isAlwaysLoaded() || pRootScene == nullptr;
+                    record._cell          = pRootScene != nullptr ? grid.computeCell( pRootScene->getWorldPosition() ) : WorldCellCoord{};
+                    listRecord.push_back( record );
+
+                    listReferencedID.clear();
+                    ObjectSaveOptions options{ SerializePurpose::Authoring };
+                    options._pSavedIDMap          = &mapSavedID;
+                    options._pOutListReferencedID = &listReferencedID;
+                    vector<uint8> stateBytes;
+                    (void)ObjectStateSerializer::saveToBinaryBuffer( pObject, stateBytes, options ); // 참조만 모은다 — 바이트는 버린다
+                    for ( const uint64 referencedObjectID : listReferencedID )
+                    {
+                        const auto targetIt = mapSavedID.find( referencedObjectID );
+                        // 파일에 없는 대상(중첩 프리팹 부품)은 그 주인 엔티티와 함께 지어진다 — 엔티티 사이의 참조만 본다. 자기 자신도 뺀다.
+                        if ( targetIt == mapSavedID.end() || targetIt->second == entity._fileID )
+                            continue;
+                        listReference.push_back( WorldCellReference{ entity._fileID, targetIt->second } );
+                    }
+                }
+
+                vector<WorldCellReference> listViolation;
+                WorldCellGrid::findCrossCellReferences( listRecord, listReference, listViolation );
+                if ( listViolation.empty() == false )
+                {
+                    for ( const WorldCellReference& violation : listViolation )
+                    {
+                        const auto fromIt = mapObjectByFileID.find( violation._fromObjectID );
+                        const auto toIt   = mapObjectByFileID.find( violation._toObjectID );
+                        SW_LOG_ERROR( "Scene cook: '%#' - entity '%#' (id %#) refers to '%#' (id %#) in another cell; mark the target always loaded or move it",
+                                      scenePath, fromIt != mapObjectByFileID.end() ? fromIt->second->getName().c_str() : "?", violation._fromObjectID,
+                                      toIt != mapObjectByFileID.end() ? toIt->second->getName().c_str() : "?", violation._toObjectID );
+                    }
+                    placement.shutdown();
+                    return false;
+                }
+                placement.shutdown();
+
+                // 기본 목록에 늘 올라 있는 엔티티를 남기고 나머지를 셀로 옮긴다. 셀은 z, x 오름차순, 셀 안의 엔티티는 문서 순서다(결정적).
+                vector<SceneDocument::SceneObjectNode> listBase;
+                vector<SceneDocument::StreamingCell>   listCell;
+                for ( size_t entityIndex = 0; entityIndex < inoutDoc._listSceneObjectNode.size(); ++entityIndex )
+                {
+                    SceneDocument::SceneObjectNode& entity = inoutDoc._listSceneObjectNode[entityIndex];
+                    const WorldCellObjectRecord&    record = listRecord[entityIndex];
+                    if ( record._bAlwaysLoaded )
+                    {
+                        listBase.push_back( std::move( entity ) );
+                        continue;
+                    }
+                    auto cellIt = std::find_if( listCell.begin(), listCell.end(), [&record]( const SceneDocument::StreamingCell& cell )
+                    { return cell._cell == record._cell; } );
+                    if ( cellIt == listCell.end() )
+                    {
+                        listCell.push_back( SceneDocument::StreamingCell{ record._cell, {} } );
+                        cellIt = listCell.end() - 1;
+                    }
+                    cellIt->_listSceneObjectNode.push_back( std::move( entity ) );
+                }
+                std::sort( listCell.begin(), listCell.end(), []( const SceneDocument::StreamingCell& lhs, const SceneDocument::StreamingCell& rhs )
+                { return lhs._cell._z != rhs._cell._z ? lhs._cell._z < rhs._cell._z : lhs._cell._x < rhs._cell._x; } );
+                inoutDoc._listSceneObjectNode = std::move( listBase );
+                inoutDoc._listStreamingCell   = std::move( listCell );
+                SW_LOG_INFO( "Scene cook: '%#' split into %# cells (%# entities always loaded)", scenePath, static_cast<uint32>( inoutDoc._listStreamingCell.size() ),
+                             static_cast<uint32>( inoutDoc._listSceneObjectNode.size() ) );
+                return true;
+            }
+
             /** @brief 씬 하나를 쿠킹해 @p outputPath 에 씁니다. 작업 범위 안에서 부릅니다 — 씬 · 프리팹 · 그 밖의 읽기가 모두 입력이 된다. */
             static CookStep cookScene( const SceneEngineServices& services, const TypeRegistry& registry, const string& scenePath, string_view relativeScene,
                                        string_view activePackRoot, const string& outputPath )
@@ -203,12 +333,15 @@ namespace sw
                     SW_LOG_WARNING( "Scene '%#': %# of %# entities could not be cooked to binary state - they keep XML.", scenePath, statefulCount - cookedCount,
                                     statefulCount );
                 }
+                // 스트리밍하는 씬은 엔티티를 셀로 나눈다. 셀을 넘는 참조가 있으면 쿠킹 실패다 — 런타임에 조용히 끊기는 참조를 싣지 않는다.
+                if ( SceneCooker::splitStreamingCells( services, doc, scenePath ) == false )
+                    return CookStep::Failed;
                 if ( doc.saveBinary( outputPath ) == false )
                 {
                     SW_LOG_ERROR( "Scene cook failed to write '%#'.", outputPath );
                     return CookStep::Failed;
                 }
-                SW_LOG_INFO( "Cooked '%#' -> '%#' (%# entities, %# as binary state)", scenePath, outputPath, static_cast<uint32>( doc._listSceneObjectNode.size() ),
+                SW_LOG_INFO( "Cooked '%#' -> '%#' (%# entities, %# as binary state)", scenePath, outputPath, static_cast<uint32>( doc.computeTotalEntityCount() ),
                              cookedCount );
                 return CookStep::Written;
             }
@@ -383,6 +516,18 @@ namespace sw
 
         SW_LOG_INFO( "Scene cook: %# reused from the DDC, %# cooked", tally._reusedCount, tally._cookedCount );
         return tally.getWrittenCount();
+    }
+
+    bool SceneCooker::splitStreamingCells( const SceneEngineServices& services, SceneDocument& inoutDoc, string_view sceneName )
+    {
+        if ( inoutDoc._worldSettings._bStreaming == false )
+            return true;
+        if ( inoutDoc._listStreamingCell.empty() == false )
+        {
+            SW_LOG_ERROR( "Scene cook: '%#' is already split into cells", sceneName );
+            return false;
+        }
+        return SceneCookerInternal::partitionStreamingCells( services, inoutDoc, sceneName );
     }
 
     CookJobDesc SceneCooker::makeCookJobDesc( const TypeRegistry& registry )

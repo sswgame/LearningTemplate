@@ -128,6 +128,15 @@ namespace sw
         bool isHiddenInEditor() const { return _bHiddenInEditor.load( std::memory_order_relaxed ); }
 
         /**
+         * @brief 월드 스트리밍이 이 오브젝트를 셀에 넣지 않고 늘 올려 둘지 정합니다(언리얼 `bIsSpatiallyLoaded` 를 끈 것과 같다).
+         * @details 씬 파일에 저장됩니다. 스트리밍하는 씬을 쿠킹할 때 쿠커가 읽어 이 오브젝트를 기본 묶음에 넣고, 다른 셀의 오브젝트가 이것을 가리킬 수
+         *          있게 합니다(`WorldCellGrid::findCrossCellReferences`). 스트리밍하지 않는 씬에서는 아무 일도 하지 않습니다.
+         */
+        void setAlwaysLoaded( bool bAlwaysLoaded ) { _bAlwaysLoaded = bAlwaysLoaded; }
+        /** @brief 월드 스트리밍이 늘 올려 두는 오브젝트면 true 입니다. */
+        bool isAlwaysLoaded() const { return _bAlwaysLoaded; }
+
+        /**
          * @brief 계층까지 반영한 최종 활성 여부를 반환합니다.
          * @details `_bActive && _bIsActiveInHierarchy`. 부모 GameObject 가 비활성이면 자식도 false 입니다.
          */
@@ -439,6 +448,9 @@ namespace sw
          */
         PROPERTY( HideInInspector )
         uint16 _siblingIndex;
+        /** @brief 월드 스트리밍이 셀에 넣지 않고 늘 올려 둔다(`setAlwaysLoaded`). 쿠커만 읽는다 — 틱 · 렌더는 보지 않는다. */
+        PROPERTY( Tooltip = "World streaming keeps this object loaded instead of placing it in a cell" )
+        bool _bAlwaysLoaded;
     };
 
     template <typename T, typename... Args>

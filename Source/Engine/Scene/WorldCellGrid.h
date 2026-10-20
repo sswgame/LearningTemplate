@@ -3,7 +3,7 @@
  * @brief 월드 스트리밍(D1-7)의 런타임 격자입니다. 위치를 셀 좌표로 바꾸고, 스트리밍 원점 둘레의 셀을 고르고, 셀을 넘는 참조를 가립니다.
  *
  * [어디에 쓰는가]
- * 편집은 한 씬으로 하고, 쿠킹이 오브젝트 위치와 이 격자로 셀 파일을 나눈다. 런타임은 플레이어(서버는 접속자마다) 둘레의 셀을 활성 씬에 더해
+ * 편집은 한 씬으로 하고, 쿠킹이 오브젝트 위치와 이 격자로 엔티티를 셀로 나눈다(`SceneCooker`). 런타임은 플레이어(서버는 접속자마다) 둘레의 셀을 활성 씬에 더해
  * 올리고 내린다. 언리얼 World Partition 의 런타임 격자(`UWorldPartitionRuntimeHashSet` 의 셀 크기 · 로딩 반경)와 같은 자리다.
  * 설계와 단위 나눔은 docs/plans/WorldStreaming.md.
  *
@@ -21,6 +21,8 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
+
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
@@ -42,11 +44,16 @@ namespace sw
 {
     /**
      * @struct WorldCellGridDef
-     * @brief 격자 설정입니다(씬 데이터에서 읽습니다). 셀 크기와 로딩 반경의 단위는 월드 단위(미터)입니다.
+     * @brief 격자 설정입니다(씬의 월드 설정 `WorldSettings::_cellGrid` 로 씬 파일에서 읽습니다). 셀 크기와 로딩 반경의 단위는 월드 단위(미터)입니다.
      */
-    struct WorldCellGridDef
+    REFLECT()
+    struct SW_API WorldCellGridDef
     {
-        float32 _cellSize{ 0.0f };      ///< 셀 한 변. 0 이하이면 격자를 만들 수 없다
+        REFLECT_BODY();
+
+        PROPERTY( Min = 0.0, Tooltip = "Cell edge length; a streaming scene needs a positive value", Units = m )
+        float32 _cellSize{ 0.0f }; ///< 셀 한 변. 0 이하이면 격자를 만들 수 없다
+        PROPERTY( Min = 0.0, Tooltip = "Cells within this distance of a streaming source are loaded", Units = m )
         float32 _loadingRadius{ 0.0f }; ///< 스트리밍 원점에서 이 거리 안에 닿는 셀을 올린다
     };
 } // namespace sw

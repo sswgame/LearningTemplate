@@ -50,12 +50,21 @@ namespace sw
          */
         [[nodiscard]] bool instantiate( const SceneDocument& doc );
         /**
+         * @brief 스트리밍 셀 하나의 엔티티를 이 씬에 더해 짓습니다(`WorldStreamingSubsystem` 이 부릅니다). 지은 오브젝트 id 를 @p outListObjectID 에 더합니다.
+         * @details 셀의 엔티티는 같은 셀이나 이미 지은 늘 올라 있는 엔티티를 파일 id 로 가리킨다 — 지금 씬에 있는 파일 id 의 오브젝트를 같은 배치에 기록해
+         *          그 참조를 잇는다. 실패해도 그때까지 지은 오브젝트 id 는 @p outListObjectID 에 남는다(부르는 쪽이 `unloadCell` 로 내린다).
+         */
+        [[nodiscard]] bool instantiateCell( const vector<SceneDocument::SceneObjectNode>& listNode, vector<uint64>& outListObjectID );
+        /** @brief `instantiateCell` 이 지은 오브젝트를 자식(중첩 프리팹 부품)까지 지우고 파일 id · 프리팹 기록을 뺍니다. */
+        void unloadCell( const vector<uint64>& listObjectID );
+        /**
          * @brief 현재 씬의 오브젝트 상태를 씬 문서(SceneDocument)로 직렬화합니다. 부착은 부모의 파일 id 로 적습니다.
          * @details 프리팹 인스턴스는 프리팹 경로와 프리팹 원형과 다른 것만 적습니다(`PrefabOverrides` — 언리얼 · 유니티의 프리팹 인스턴스와 같다).
          *          프리팹을 읽지 못하면 전체 상태를 적습니다(다음 로드가 그 상태로 짓는다).
          *          중첩 프리팹 부품(`PrefabInstanceRegistry`)은 그것을 다시 스폰할 인스턴스 아래에 있으면 적지 않습니다. 인스턴스 밖으로 옮겼거나 인스턴스가
          *          프리팹 연결을 끊었으면 그 부품을 자기 프리팹의 인스턴스 엔티티로 적습니다(유니티의 Unpack 과 같다).
          *          주의: 씬에서 부품을 고친 것은 남지 않고(부품을 고치려면 바깥 프리팹에 적용한다), 부품에 붙인 다른 오브젝트는 다시 열면 루트로 떨어집니다.
+         *          셀로 나눈 쿠킹본에서 지은 씬(셀을 스트리밍하는 씬)은 쓰지 않고 false 입니다 — 내려가 있는 셀의 엔티티가 빠진다.
          */
         [[nodiscard]] bool serializeToDocument( SceneDocument& outDoc ) const;
         /**
@@ -93,6 +102,11 @@ namespace sw
         void setAudioUpdateEnabled( bool bEnabled ) { _bAudioUpdateEnabled = bEnabled; }
         /** @brief 틱이 오디오 엔진을 갱신하면 true 입니다. */
         bool isAudioUpdateEnabled() const { return _bAudioUpdateEnabled; }
+
+        /** @brief 월드 설정을 바꿉니다(에디터). 다음 저장에 적힙니다 — 이미 지은 씬의 스트리밍은 바뀌지 않습니다(셀은 쿠킹이 나눈다). */
+        void setWorldSettings( const WorldSettings& settings ) { _worldSettings = settings; }
+        /** @brief 씬 파일에서 읽은 월드 설정입니다. */
+        const WorldSettings& getWorldSettings() const { return _worldSettings; }
 
         /** @brief 씬 이름을 반환합니다. */
         const string& getName() const { return _name; }
@@ -133,6 +147,13 @@ namespace sw
     private:
         /** @brief 기본 머티리얼 참조를 해제합니다. */
         void releaseDefaultMaterial();
+        /**
+         * @brief 엔티티 목록을 한 배치로 지어 이 씬에 더합니다(`instantiate` · `instantiateCell` 의 본문).
+         * @param bStreamingCell 스트리밍 셀을 짓는다. 지금 씬에 있는 파일 id 의 오브젝트를 배치에 먼저 기록해 엔티티가 그것을 파일 id 로 가리킬 수 있게 하고,
+         *                       프리팹을 찾지 못한 엔티티는 보관하지 않습니다(셀은 다시 지어질 때마다 같은 엔티티를 낸다 — 쿠킹본은 저장하지 않는다).
+         * @param pOutListObjectID 주면 지은 오브젝트 id 를 더합니다(엔티티마다 하나, 중첩 프리팹 부품 제외).
+         */
+        [[nodiscard]] bool instantiateNodes( const vector<SceneDocument::SceneObjectNode>& listNode, bool bStreamingCell, vector<uint64>* pOutListObjectID );
 
         /** @brief 컴포넌트 핸들로 카메라를 다시 찾습니다. */
         CameraComponent* resolveCamera( TComponentHandle<CameraComponent> handle ) const;
@@ -142,7 +163,8 @@ namespace sw
         string                        _name;
         string                        _sourcePath;
         string                        _defaultMaterialPath;
-        SceneEngineServices           _services; ///< 만들 때 받은 엔진 서비스(빌림). 오브젝트 매니저도 같은 묶음으로 만든다
+        WorldSettings                 _worldSettings; ///< 씬 파일의 월드 설정(`instantiate` 가 읽고 `serializeToDocument` 가 쓴다)
+        SceneEngineServices           _services;      ///< 만들 때 받은 엔진 서비스(빌림). 오브젝트 매니저도 같은 묶음으로 만든다
         unique_ptr<GameObjectManager> _objectManager;
         Material*                     _pMaterial;
         unordered_map<uint64, string> _mapPrefabSource;

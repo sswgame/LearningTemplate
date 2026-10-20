@@ -3839,6 +3839,14 @@
    "kind": "시험 · 배포본에도",
    "description": "WildWest: 기수를 가장 가까운 말에 태운다 (1=켜기)",
    "source": "Source/Games/WildWest/WildWestDirectorComponent.cpp"
+  },
+  {
+   "name": "gv_worldCellDebugDraw",
+   "type": "bool",
+   "default": "false",
+   "kind": "일반",
+   "description": "월드 스트리밍 격자를 카메라 둘레에 그린다 — 올라 있는 셀 초록, 로딩 반경 안 노랑, 그 밖 회색",
+   "source": "Source/Engine/Scene/SceneDebugDraw.cpp"
   }
  ],
  "arguments": [
