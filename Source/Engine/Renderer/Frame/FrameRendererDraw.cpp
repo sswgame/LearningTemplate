@@ -256,7 +256,7 @@ namespace sw
         if ( bInstanced )
             registerInstanceBuffer( context );
 
-        const vector<GPUMeshBatch>& batches =
+        const vector_reference<const GPUMeshBatch> batches =
             bTransparentPass ? _gpuScene.getTransparentBatches() : _gpuScene.getOpaqueBatches();
         // 시간만 보면 무엇이 비싼지 알 수 없다. 배치가 몇 개로 묶였는지가 해석의 전제다.
         SW_PROFILE_COUNT( "RT.Draw.gpuBatchCount", batches.size() );
