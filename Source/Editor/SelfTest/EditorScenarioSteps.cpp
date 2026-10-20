@@ -1423,8 +1423,8 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 애니메이션 그래프 패널의 전이 수입니다. @p bConditionOnly 이면 조건이 있는 전이만 셉니다. 패널이 없으면 값을 내지 않습니다. */
-            [[nodiscard]] static bool readAnimationGraphLinks( bool bConditionOnly, float64& outValue )
+            /** @brief 애니메이션 그래프 패널의 개수 하나를 읽습니다(@p count 는 패널의 개수 함수). 패널이 없으면 값을 내지 않습니다. */
+            [[nodiscard]] static bool readAnimationGraphCount( uint32 ( AnimationGraphPanel::*count )() const, float64& outValue )
             {
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
@@ -1432,18 +1432,28 @@ namespace sw::editor
                 const AnimationGraphPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<AnimationGraphPanel>();
                 if ( pPanel == nullptr )
                     return false;
-                outValue = static_cast<float64>( bConditionOnly ? pPanel->countConditionLinks() : pPanel->getLinkCount() );
+                outValue = static_cast<float64>( ( pPanel->*count )() );
                 return true;
             }
 
             [[nodiscard]] static bool readAnimationGraphLinkCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                return readAnimationGraphLinks( false, outValue );
+                return readAnimationGraphCount( &AnimationGraphPanel::getLinkCount, outValue );
             }
 
             [[nodiscard]] static bool readAnimationGraphConditionCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                return readAnimationGraphLinks( true, outValue );
+                return readAnimationGraphCount( &AnimationGraphPanel::countConditionLinks, outValue );
+            }
+
+            [[nodiscard]] static bool readAnimationGraphLayerCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                return readAnimationGraphCount( &AnimationGraphPanel::getLayerCount, outValue );
+            }
+
+            [[nodiscard]] static bool readAnimationGraphBoneMaskCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                return readAnimationGraphCount( &AnimationGraphPanel::getBoneMaskCount, outValue );
             }
 
             /** @brief `-gv_editorProbePanel` 의 패널이 열려 있으면 1 입니다. 그 id 의 패널이 없으면 값을 내지 않습니다. */
@@ -1850,6 +1860,10 @@ namespace sw::editor
                          &EditorScenarioStepsInternal::readAnimationGraphLinkCount );
     SW_AUTOMATION_PROBE( editorAnimationGraphConditionCount, "Editor.AnimationGraphConditionCount", "Transitions with a condition in the open animation graph document",
                          &EditorScenarioStepsInternal::readAnimationGraphConditionCount );
+    SW_AUTOMATION_PROBE( editorAnimationGraphLayerCount, "Editor.AnimationGraphLayerCount", "Layers in the open animation graph document",
+                         &EditorScenarioStepsInternal::readAnimationGraphLayerCount );
+    SW_AUTOMATION_PROBE( editorAnimationGraphBoneMaskCount, "Editor.AnimationGraphBoneMaskCount", "Bone masks in the open animation graph document",
+                         &EditorScenarioStepsInternal::readAnimationGraphBoneMaskCount );
     SW_AUTOMATION_PROBE( editorProbedPanelOpen, "Editor.PanelOpen", "1 when the panel named by gv_editorProbePanel is open",
                          &EditorScenarioStepsInternal::readProbedPanelOpen );
     SW_AUTOMATION_PROBE( editorProbedPanelDirty, "Editor.PanelDirty", "1 when the document of the panel named by gv_editorProbePanel has unsaved edits",

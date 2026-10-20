@@ -82,6 +82,7 @@ namespace sw::editor
         : EditorGraphDocumentPanel{ EditorAssetType::AnimationGraph, "Move Animation Graph Nodes", "animation-graph-layout" }
         , _previewGraph{}
         , _previewPlayer{}
+        , _layerEditor{}
         , _previewStateName{}
         , _nameEditBuffer{}
         , _parameterEditBuffer{}
@@ -128,8 +129,32 @@ namespace sw::editor
         sideDesc._kind  = editor::EditorSectionKind::Child;
         sideDesc._flags = editor::EditorSectionFlags::Border;
         EditorChrome::beginSection( sideDesc );
-        drawGraphInspector();
+        drawInspector();
         EditorChrome::endSection();
+    }
+
+    void AnimationGraphPanel::drawInspector()
+    {
+        // 유니티 Animator 의 Layers 탭처럼 상태 기계(캔버스)와 그 위에 얹는 레이어를 탭으로 나눈다.
+        if ( ImGui::BeginTabBar( "##AnimationGraphInspectorTabs" ) == false )
+            return;
+        const bool bGraphTab = ImGui::BeginTabItem( "Graph" );
+        EditorSelfTestMarks::note( "animationGraph.tab.graph" );
+        if ( bGraphTab )
+        {
+            drawGraphInspector();
+            ImGui::EndTabItem();
+        }
+        const bool bLayersTab = ImGui::BeginTabItem( "Layers" );
+        EditorSelfTestMarks::note( "animationGraph.tab.layers" );
+        if ( bLayersTab )
+        {
+            const utf8* pEdit = _layerEditor.draw( _graph );
+            if ( pEdit != nullptr )
+                notifyDocumentEdited( pEdit );
+            ImGui::EndTabItem();
+        }
+        ImGui::EndTabBar();
     }
 
     void AnimationGraphPanel::drawAnimationToolbar()
@@ -208,9 +233,9 @@ namespace sw::editor
             ImGui::SameLine();
             if ( _previewPlayer.getCurrentStateName().empty() == false )
                 ImGui::TextDisabled( "Preview: %s  Nodes: %zu  Links: %zu", _previewPlayer.getCurrentStateName().c_str(),
-                                     _listNode.size(), _listLink.size() );
+                                     _graph._listNode.size(), _graph._listLink.size() );
             else
-                ImGui::TextDisabled( "Nodes: %zu  Links: %zu  (%s)", _listNode.size(), _listLink.size(),
+                ImGui::TextDisabled( "Nodes: %zu  Links: %zu  (%s)", _graph._listNode.size(), _graph._listLink.size(),
                                      EditorPaths::kAnimationGraphDocumentFileName );
         }
         EditorChrome::endToolbar();
@@ -225,7 +250,7 @@ namespace sw::editor
             return;
         }
 
-        for ( GraphNode& node : _listNode )
+        for ( GraphNode& node : _graph._listNode )
         {
             const ed::NodeId nodeID = toNodeID( node._id );
             ed::BeginNode( nodeID );
@@ -242,7 +267,7 @@ namespace sw::editor
             }
             bool bLinkedIn  = false;
             bool bLinkedOut = false;
-            for ( const GraphLink& link : _listLink )
+            for ( const GraphLink& link : _graph._listLink )
             {
                 bLinkedIn  = bLinkedIn || link._toNode == node._id;
                 bLinkedOut = bLinkedOut || link._fromNode == node._id;
@@ -265,7 +290,7 @@ namespace sw::editor
             applyNodePlacement( node._id );
         }
 
-        for ( const GraphLink& link : _listLink )
+        for ( const GraphLink& link : _graph._listLink )
         {
             // 조건이 있는 전이는 굵게 · 다른 색으로(조건 없는 "끝나면 다음" 과 구별).
             const bool   bConditioned = link._op != AnimationConditionOp::None;
@@ -301,12 +326,12 @@ namespace sw::editor
 
         // 상태 그래프의 첫 노드가 진입이다 — 나머지는 들어오는 전환이 없으면 닿지 않는다.
         vector<int32> listInputNode;
-        for ( size_t index = 1; index < _listNode.size(); ++index )
+        for ( size_t index = 1; index < _graph._listNode.size(); ++index )
         {
-            listInputNode.push_back( _listNode[index]._id );
+            listInputNode.push_back( _graph._listNode[index]._id );
         }
         vector<EditorGraphEdge> listEdge;
-        for ( const GraphLink& link : _listLink )
+        for ( const GraphLink& link : _graph._listLink )
         {
             listEdge.push_back( EditorGraphEdge{ link._fromNode, link._toNode } );
         }
@@ -323,7 +348,7 @@ namespace sw::editor
             link._id       = nextLinkID();
             link._fromNode = AnimationGraphPanelInternal::pinNodeID( fromPin );
             link._toNode   = AnimationGraphPanelInternal::pinNodeID( toPin );
-            _listLink.push_back( link );
+            _graph._listLink.push_back( link );
             notifyDocumentEdited( "Link Animation Graph Nodes" );
         }
 
@@ -351,19 +376,19 @@ namespace sw::editor
 
     void AnimationGraphPanel::ensureDefaults()
     {
-        if ( _listNode.empty() == false )
+        if ( _graph._listNode.empty() == false )
             return;
-        _listNode.push_back( GraphNode{
+        _graph._listNode.push_back( GraphNode{
             "Idle", 1, float2{ 40.0f, 40.0f }
         } );
-        _listNode.push_back( GraphNode{
+        _graph._listNode.push_back( GraphNode{
             "Walk", 2, float2{ 280.0f, 80.0f }
         } );
         GraphLink link{};
         link._id       = 100;
         link._fromNode = 1;
         link._toNode   = 2;
-        _listLink.push_back( link );
+        _graph._listLink.push_back( link );
     }
 
     ToolAssetLoadResult AnimationGraphPanel::loadDocument()
@@ -372,6 +397,7 @@ namespace sw::editor
         const ToolAssetLoadResult result = EditorToolAssetCommands::loadAnimationGraph( data, getLoadedAssetPath() );
         adoptLoadedGraph( std::move( data ), result );
         _previewPlayer.stop();
+        _layerEditor.clearSelection();
         return result;
     }
 
@@ -387,7 +413,7 @@ namespace sw::editor
                 node._position._y = pos.y;
             }
             _nodeGraph.unbind();
-            _listNode = data._listNode;
+            _graph._listNode = data._listNode;
         }
         // **저장이 실패하면 아무것도 지우지 않는다.** 실패를 "저장됨" 으로 표시하면 문서를 바꾸거나 에디터를 닫을 때
         // 종료 확인이 뜨지 않고 편집이 조용히 사라진다.
@@ -417,7 +443,7 @@ namespace sw::editor
         {
             const AnimationGraphNode* pFrom = _previewGraph.findNodeByName( _previewStateName );
             const AnimationGraphNode* pTo   = _previewGraph.findNodeByName( current );
-            for ( const GraphLink& link : _listLink )
+            for ( const GraphLink& link : _graph._listLink )
             {
                 const bool bLinkBetweenNodes = pFrom != nullptr && pTo != nullptr && link._fromNode == pFrom->_id && link._toNode == pTo->_id;
                 if ( bLinkBetweenNodes )
@@ -447,10 +473,10 @@ namespace sw::editor
         GraphNode n{};
         n._id              = nextNodeID();
         n._name            = ( pName != nullptr ) ? pName : "Node";
-        n._position._x     = 40.0f + static_cast<float32>( _listNode.size() ) * 40.0f;
-        n._position._y     = 40.0f + static_cast<float32>( _listNode.size() ) * 30.0f;
+        n._position._x     = 40.0f + static_cast<float32>( _graph._listNode.size() ) * 40.0f;
+        n._position._y     = 40.0f + static_cast<float32>( _graph._listNode.size() ) * 30.0f;
         const int32 nodeID = n._id;
-        _listNode.push_back( std::move( n ) );
+        _graph._listNode.push_back( std::move( n ) );
         return nodeID;
     }
 
@@ -458,7 +484,7 @@ namespace sw::editor
     {
         const int32 nodeID = AnimationGraphPanelInternal::pinNodeID( pinID );
         bool        bKnown = false;
-        for ( const GraphNode& node : _listNode )
+        for ( const GraphNode& node : _graph._listNode )
         {
             bKnown = bKnown || node._id == nodeID;
         }
@@ -523,14 +549,14 @@ namespace sw::editor
         link._id       = nextLinkID();
         link._fromNode = _listSelectionOrder[_listSelectionOrder.size() - 2];
         link._toNode   = _listSelectionOrder.back();
-        _listLink.push_back( link );
+        _graph._listLink.push_back( link );
         _selectedLinkID = link._id;
         notifyDocumentEdited( "Link Animation Graph Nodes" );
     }
 
     void AnimationGraphPanel::duplicateNode( int32 nodeID )
     {
-        for ( const GraphNode& node : _listNode )
+        for ( const GraphNode& node : _graph._listNode )
         {
             if ( node._id != nodeID )
                 continue;
@@ -538,7 +564,7 @@ namespace sw::editor
             copy._id       = nextNodeID();
             copy._position = float2{ node._position._x + 40.0f, node._position._y + 40.0f };
             placeNodeOnNextDraw( copy._id, copy._position );
-            _listNode.push_back( std::move( copy ) );
+            _graph._listNode.push_back( std::move( copy ) );
             notifyDocumentEdited( "Duplicate Animation Graph Node" );
             return;
         }
@@ -547,7 +573,7 @@ namespace sw::editor
     uint32 AnimationGraphPanel::countConditionLinks() const
     {
         uint32 count{ 0 };
-        for ( const GraphLink& link : _listLink )
+        for ( const GraphLink& link : _graph._listLink )
         {
             count += link._op != AnimationConditionOp::None ? 1u : 0u;
         }
@@ -558,7 +584,7 @@ namespace sw::editor
     {
         // 상태(노드): 이름은 클립을 묶는 열쇠다 — 이름이 곧 클립 지정이다(AnimationGraphNode::_name).
         GraphNode* pNode = nullptr;
-        for ( GraphNode& node : _listNode )
+        for ( GraphNode& node : _graph._listNode )
         {
             if ( node._id == _selectedNodeID )
                 pNode = &node;
@@ -595,15 +621,15 @@ namespace sw::editor
 
         // 전이 목록 — 누르면 그 전이를 고른다(캔버스에서 링크를 눌러도 된다).
         ImGui::SeparatorText( "Transitions" );
-        for ( size_t index = 0; index < _listLink.size(); ++index )
+        for ( size_t index = 0; index < _graph._listLink.size(); ++index )
         {
-            const GraphLink&                      link   = _listLink[index];
-            const auto                            itFrom = std::find_if( _listNode.begin(), _listNode.end(), [&link]( const GraphNode& node )
+            const GraphLink&                      link   = _graph._listLink[index];
+            const auto                            itFrom = std::find_if( _graph._listNode.begin(), _graph._listNode.end(), [&link]( const GraphNode& node )
                                        { return node._id == link._fromNode; } );
-            const auto                            itTo   = std::find_if( _listNode.begin(), _listNode.end(), [&link]( const GraphNode& node )
+            const auto                            itTo   = std::find_if( _graph._listNode.begin(), _graph._listNode.end(), [&link]( const GraphNode& node )
                                          { return node._id == link._toNode; } );
             fixed_string<constant::kMaxBuffer128> label;
-            formatstring( label.data(), label.capacity(), "%s -> %s%s", itFrom != _listNode.end() ? itFrom->_name.c_str() : "?", itTo != _listNode.end() ? itTo->_name.c_str() : "?",
+            formatstring( label.data(), label.capacity(), "%s -> %s%s", itFrom != _graph._listNode.end() ? itFrom->_name.c_str() : "?", itTo != _graph._listNode.end() ? itTo->_name.c_str() : "?",
                           link._op != AnimationConditionOp::None ? "  [if]" : "" );
             ImGui::PushID( static_cast<int32>( link._id ) );
             if ( ImGui::Selectable( label.c_str(), link._id == _selectedLinkID ) )
@@ -617,7 +643,7 @@ namespace sw::editor
         }
 
         GraphLink* pLink = nullptr;
-        for ( GraphLink& link : _listLink )
+        for ( GraphLink& link : _graph._listLink )
         {
             if ( link._id == _selectedLinkID )
                 pLink = &link;
@@ -627,7 +653,7 @@ namespace sw::editor
         ImGui::SeparatorText( "Condition" );
         bool bEdited = false;
         if ( ImGui::IsAnyItemActive() == false )
-            _parameterEditBuffer = pLink->_parameter.c_str();
+            _parameterEditBuffer = pLink->_parameter.empty() ? "" : pLink->_parameter.c_str(); // 빈 hashed_string 의 c_str 는 "None" 이다
         ImGui::TextUnformatted( "Param" );
         ImGui::SameLine();
         ImGui::SetNextItemWidth( -FLT_MIN );

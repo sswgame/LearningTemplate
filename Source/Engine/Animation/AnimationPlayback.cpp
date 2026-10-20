@@ -22,6 +22,13 @@ namespace sw
 
 namespace sw
 {
+    void IAnimationPlayable::collectFiredNotifies( const AnimationTimeStep& step, float32 weight, vector<AnimationFiredNotify>& outListFired ) const
+    {
+        const AnimationNotifyTrack* pTrack = findNotifyTrack();
+        if ( pTrack != nullptr )
+            pTrack->collectFired( step, getPlayLength(), weight, this, outListFired );
+    }
+
     void AnimationClipCursor::reset( float32 time )
     {
         _time   = MathUtil::max( time, 0.0f );

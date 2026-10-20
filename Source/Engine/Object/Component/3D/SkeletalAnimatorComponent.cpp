@@ -129,6 +129,45 @@ namespace sw
         return time / _playLength * _listLength[sampleIndex];
     }
 
+    bool SkeletalBlendSpaceState::isNotifySample( uint32 sampleIndex ) const
+    {
+        // 가중치 0 인 표본은 포즈에 없으므로 알림도 내지 않는다(언리얼의 알림 가중치 문턱과 같다).
+        const float32 weight = _listWeight[sampleIndex];
+        switch ( _pDef->_notifyMode )
+        {
+            case AnimationBlendSpaceNotifyMode::All:
+                return weight > 0.0f;
+            case AnimationBlendSpaceNotifyMode::HighestWeight:
+                return weight > 0.0f && std::max_element( _listWeight.begin(), _listWeight.end() ) - _listWeight.begin() == static_cast<ptrdiff_t>( sampleIndex );
+            case AnimationBlendSpaceNotifyMode::None:
+                return false;
+        }
+        return false;
+    }
+
+    void SkeletalBlendSpaceState::collectFiredNotifies( const AnimationTimeStep& step, float32 weight, vector<AnimationFiredNotify>& outListFired ) const
+    {
+        // 표본 클립은 같은 위상으로 돈다 — 걸음의 양 끝을 그 클립의 시각으로 옮기면 감긴 횟수는 그대로다.
+        for ( uint32 sampleIndex = 0; sampleIndex < getSampleCount(); ++sampleIndex )
+        {
+            if ( isNotifySample( sampleIndex ) == false )
+                continue;
+            AnimationTimeStep sampleStep = step;
+            sampleStep._previousTime     = computeSampleTime( sampleIndex, step._previousTime );
+            sampleStep._currentTime      = computeSampleTime( sampleIndex, step._currentTime );
+            _listClip[sampleIndex]->collectFiredNotifies( sampleStep, weight * _listWeight[sampleIndex], outListFired );
+        }
+    }
+
+    void SkeletalBlendSpaceState::appendNotifySources( vector<const IAnimationPlayable*>& inoutListPlayable ) const
+    {
+        for ( uint32 sampleIndex = 0; sampleIndex < getSampleCount(); ++sampleIndex )
+        {
+            if ( isNotifySample( sampleIndex ) )
+                inoutListPlayable.push_back( _listClip[sampleIndex] );
+        }
+    }
+
     SkeletalAnimatorComponent::SkeletalAnimatorComponent()
         : _animationGraphPath{}
         , _clipFolder{}
@@ -542,10 +581,16 @@ namespace sw
     {
         outListPlayable.clear();
         const AnimationPlayer& player = _graphPlayer.getPlayer();
-        if ( player.getCurrentPlayable() != nullptr )
-            outListPlayable.push_back( player.getCurrentPlayable() );
-        if ( player.getNextPlayable() != nullptr )
-            outListPlayable.push_back( player.getNextPlayable() );
+        for ( const IAnimationPlayable* pPlayable : { player.getCurrentPlayable(), player.getNextPlayable() } )
+        {
+            if ( pPlayable == nullptr )
+                continue;
+            outListPlayable.push_back( pPlayable );
+            // 블렌드 스페이스 상태의 알림은 표본 클립이 출처다 — 그 클립이 빠지면 받는 쪽이 열린 구간 알림을 닫는다.
+            const SkeletalBlendSpaceState* pState = findBlendSpaceState( pPlayable );
+            if ( pState != nullptr )
+                pState->appendNotifySources( outListPlayable );
+        }
         for ( const LayerState& layer : _listGraphLayer )
         {
             if ( layer._clip != nullptr )

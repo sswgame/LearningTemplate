@@ -1,0 +1,52 @@
+{
+  "nodes": [
+    {
+      "id": 1,
+      "name": "Idle",
+      "x": 40.0,
+      "y": 80.0,
+      "loop": true
+    },
+    {
+      "id": 2,
+      "name": "Walk",
+      "x": 280.0,
+      "y": 80.0,
+      "loop": true
+    }
+  ],
+  "links": [
+    {
+      "id": 100,
+      "from": 1,
+      "to": 2
+    }
+  ],
+  "bone_masks": [
+    {
+      "name": "Upper",
+      "roots": [
+        {
+          "bone": "spine",
+          "weight": 1.0
+        }
+      ],
+      "bones": [
+        {
+          "bone": "spine",
+          "weight": 0.5
+        }
+      ]
+    }
+  ],
+  "layers": [
+    {
+      "name": "Aim",
+      "clip": "Walk",
+      "mask": "Upper",
+      "weight": 1.0,
+      "blend": "Override",
+      "loop": true
+    }
+  ]
+}

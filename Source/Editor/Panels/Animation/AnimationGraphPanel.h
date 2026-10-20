@@ -4,6 +4,7 @@
 #include "Core/Container/vector.h"
 
 #include "Editor/Common/GUI/EditorGraphDocumentPanel.h"
+#include "Editor/Panels/Animation/AnimationGraphLayerEditor.h"
 
 #include "Engine/Animation/Graph/AnimationGraphAsset.h"
 #include "Engine/Animation/Graph/AnimationGraphPlayer.h"
@@ -36,7 +37,11 @@ namespace sw::editor
         /** @brief 조건이 있는 전이 수를 반환합니다. 프로브 `Editor.AnimationGraphConditionCount` 가 읽습니다. */
         uint32 countConditionLinks() const;
         /** @brief 전이 수를 반환합니다. 프로브 `Editor.AnimationGraphLinkCount` 가 읽습니다. */
-        uint32 getLinkCount() const { return static_cast<uint32>( _listLink.size() ); }
+        uint32 getLinkCount() const { return static_cast<uint32>( _graph._listLink.size() ); }
+        /** @brief 레이어 수를 반환합니다. 프로브 `Editor.AnimationGraphLayerCount` 가 읽습니다. */
+        uint32 getLayerCount() const { return static_cast<uint32>( _graph._listLayer.size() ); }
+        /** @brief 본 마스크 수를 반환합니다. 프로브 `Editor.AnimationGraphBoneMaskCount` 가 읽습니다. */
+        uint32 getBoneMaskCount() const { return static_cast<uint32>( _graph._listBoneMask.size() ); }
 
     private:
         using GraphNode = NodeType;
@@ -61,7 +66,9 @@ namespace sw::editor
         void updatePreview( float32 deltaSeconds );
         /** @brief 미리보기가 상태를 옮겼으면 그 전이 링크에 흐름이 보이도록 기록합니다. */
         void notePreviewTransition();
-        /** @brief 오른쪽의 상태와 전이 편집 영역을 그립니다. 이름이 곧 클립이며, 반복, 전이 조건, 블렌드를 편집합니다. */
+        /** @brief 오른쪽 편집 영역을 그립니다. 그래프 탭(상태와 전이)과 레이어 탭(레이어와 본 마스크, `AnimationGraphLayerEditor`)입니다. */
+        void drawInspector();
+        /** @brief 상태와 전이 편집입니다. 이름이 곧 클립이며, 반복, 전이 조건, 블렌드를 편집합니다. */
         void drawGraphInspector();
         /** @brief 캔버스의 노드와 링크 선택을 선택한 순서대로 따라갑니다. */
         void trackCanvasSelection();
@@ -71,15 +78,16 @@ namespace sw::editor
         void duplicateNode( int32 nodeID );
 
     private:
-        AnimationGraphAsset  _previewGraph;        ///< 미리보기 플레이어가 빌려 쓰는 그래프 복사본이다
-        AnimationGraphPlayer _previewPlayer;       ///< 노드 이름만 넘긴다. 클립 없이 "끝나면 다음" 을 직접 진행한다
-        string               _previewStateName;    ///< 지난번 미리보기 상태다. 전이 흐름을 표시하는 데 쓴다
-        string               _nameEditBuffer;      ///< 상태 이름 입력란의 텍스트
-        string               _parameterEditBuffer; ///< 조건 파라미터 입력란의 텍스트
-        vector<int32>        _listSelectionOrder;  ///< 캔버스에서 선택한 노드를 선택한 순서대로 담는다
-        int32                _selectedNodeID;
-        int32                _selectedLinkID;
-        int32                _canvasLinkID; ///< 지난 프레임에 캔버스에서 선택한 링크다. 바뀐 때만 따라간다
-        int32                _flowLinkID;   ///< 다음 캔버스에서 흐름을 보여 줄 전이다. 0 이면 없다
+        AnimationGraphAsset       _previewGraph;        ///< 미리보기 플레이어가 빌려 쓰는 그래프 복사본이다
+        AnimationGraphPlayer      _previewPlayer;       ///< 노드 이름만 넘긴다. 클립 없이 "끝나면 다음" 을 직접 진행한다
+        AnimationGraphLayerEditor _layerEditor;         ///< 레이어 탭의 레이어 · 본 마스크 편집
+        string                    _previewStateName;    ///< 지난번 미리보기 상태다. 전이 흐름을 표시하는 데 쓴다
+        string                    _nameEditBuffer;      ///< 상태 이름 입력란의 텍스트
+        string                    _parameterEditBuffer; ///< 조건 파라미터 입력란의 텍스트
+        vector<int32>             _listSelectionOrder;  ///< 캔버스에서 선택한 노드를 선택한 순서대로 담는다
+        int32                     _selectedNodeID;
+        int32                     _selectedLinkID;
+        int32                     _canvasLinkID; ///< 지난 프레임에 캔버스에서 선택한 링크다. 바뀐 때만 따라간다
+        int32                     _flowLinkID;   ///< 다음 캔버스에서 흐름을 보여 줄 전이다. 0 이면 없다
     };
 } // namespace sw::editor

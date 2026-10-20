@@ -40,12 +40,6 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션 영역의 
 - 컷 프레임 신호(`RenderViewSettings::_bCut`)는 TAA 기록만 리셋한다 — 렌더러에 모션 벡터 · 자동 노출 · 모션 블러가 생기면 같은 신호로 0 · 즉시 맞춤 · 끔을 붙인다. 대기 뷰 신호(`CameraManagerComponent::setPendingView`)를 듣는 쪽은 [PreloadAndLod](#preloadandlod).
 - 렌더러 쪽: 피사계 심도 패스, 카메라별 후처리 값(`CameraPostProcessValues` — 포즈가 나르기만 한다)을 렌더러가 읽기.
 
-### AnimationGraphLayers
-제목: 블렌드 스페이스 알림과 그래프 에디터 레이어 편집
-옛번호: D4-6
-왜 필요한가: 그래프 레이어 · 본 마스크(`AnimationGraphAsset` "layers" · "bone_masks", 프리셋 `*.bonemask.json`)와 블렌드 스페이스 상태 재생은 들어갔고 Shooter3D 상체 레이어도 그래프 데이터(`Aim` · `Shoot`)다. 남은 조각이 있다.
-남은 것: 블렌드 스페이스 표본 클립의 알림(지금은 내지 않는다), 그래프 에디터의 레이어 · 마스크 편집 화면.
-
 ### RigEditing
 제목: 후처리 리그 편집 저장과 기즈모
 옛번호: D4-6

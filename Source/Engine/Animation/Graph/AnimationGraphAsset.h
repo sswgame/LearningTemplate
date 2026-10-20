@@ -54,16 +54,30 @@ namespace sw
     class JSONValue;
 
     /**
+     * @enum AnimationBlendSpaceNotifyMode
+     * @brief 블렌드 스페이스 상태가 표본 클립의 알림을 내는 방법입니다(JSON "blend_space"."notify": "all", "highest_weight", "none"). 모르는 표기는 로드 오류입니다.
+     * @details 언리얼 블렌드 스페이스의 Notify Trigger Mode 와 같다. 키를 적지 않으면 `All` 이다 — 언리얼의 기본값이고, 유니티 블렌드 트리도 섞이는 클립의 이벤트를 모두 낸다.
+     *          알림의 출처(`AnimationFiredNotify::_pSource`)는 표본 클립이고 시각은 그 클립의 시각이다. 가중치는 상태 가중치 × 표본 가중치다.
+     */
+    enum class AnimationBlendSpaceNotifyMode : uint8
+    {
+        All = 0,       ///< 가중치가 0 보다 큰 표본의 알림을 모두 냅니다(받는 쪽이 가중치로 거릅니다).
+        HighestWeight, ///< 가중치가 가장 큰 표본 하나의 알림만 냅니다(발소리가 두 번 울리지 않습니다).
+        None,          ///< 알림을 내지 않습니다.
+    };
+
+    /**
      * @struct AnimationGraphBlendSpaceDef
      * @brief 블렌드 스페이스 상태의 데이터입니다(JSON 노드의 "blend_space"). 축 파라미터 이름과 표본(클립 이름, 위치)을 가집니다.
-     * @details JSON 형식은 `{ "x": "Speed", "y": "Direction", "samples": [ { "clip": "Idle", "x": 0, "y": 0 }, … ] }` 이다. "y" 를 적지 않으면 1D 다.
-     *          표본이 없거나, 클립 이름이나 "x" 파라미터가 비면 로드 오류다.
+     * @details JSON 형식은 `{ "x": "Speed", "y": "Direction", "notify": "highest_weight", "samples": [ { "clip": "Idle", "x": 0, "y": 0 }, … ] }` 이다. "y" 를 적지 않으면 1D 다.
+     *          표본이 없거나, 클립 이름이나 "x" 파라미터가 비거나, "notify" 표기를 모르면 로드 오류다.
      */
     struct AnimationGraphBlendSpaceDef
     {
-        BlendSpace    _space;      /**< 표본과 축 수입니다. 표본이 없으면 블렌드 스페이스 상태가 아닙니다. */
-        hashed_string _parameterX; /**< x 축 파라미터 이름(`AnimationParameterSet`)입니다. */
-        hashed_string _parameterY; /**< y 축 파라미터 이름입니다. 1D 면 비어 있습니다. */
+        BlendSpace                    _space;                                            /**< 표본과 축 수입니다. 표본이 없으면 블렌드 스페이스 상태가 아닙니다. */
+        hashed_string                 _parameterX;                                       /**< x 축 파라미터 이름(`AnimationParameterSet`)입니다. */
+        hashed_string                 _parameterY;                                       /**< y 축 파라미터 이름입니다. 1D 면 비어 있습니다. */
+        AnimationBlendSpaceNotifyMode _notifyMode{ AnimationBlendSpaceNotifyMode::All }; /**< 표본 클립의 알림을 내는 방법(JSON "notify", 선택)입니다. */
     };
 } // namespace sw
 
@@ -224,6 +238,8 @@ namespace sw
         [[nodiscard]] static bool parseBlendMode( string_view text, AnimationBlendMode& outMode );
         /** @brief 전이 방식 표기를 씁니다. */
         static const utf8* getBlendModeText( AnimationBlendMode mode );
+        /** @brief 레이어 합치기 표기("Override", "Additive")를 씁니다. */
+        static const utf8* getLayerBlendText( AnimationLayerBlend blend );
         /** @brief 이름으로 본 마스크를 찾습니다. 없으면 nullptr 입니다. */
         const AnimationBoneMaskDef* findBoneMask( const hashed_string& name ) const;
         /** @brief 이름으로 레이어를 찾습니다. 없으면 nullptr 입니다. */
