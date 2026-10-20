@@ -14,7 +14,7 @@ namespace sw
 
     /**
      * @struct WindowConfig
-     * @brief 주 창과 기본 렌더링 백엔드 설정입니다. 창 제목은 게임 프리셋(`GameConfig::_windowTitle`)이 정합니다.
+     * @brief 주 창과 기본 렌더링 백엔드 설정입니다. 창 제목은 팩 설정(`PackEngineSettings::_windowTitle`)이 정합니다.
      * @details 값은 `Config/Engine/EngineConfig.json` 에 있습니다(이 헤더는 형식만). 예외는 `_defaultRHI` 하나로, 출처가 쿠킹 표 `default_rhi_backend` 입니다.
      */
     REFLECT()

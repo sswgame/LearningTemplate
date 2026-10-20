@@ -21,6 +21,7 @@
 #include "Engine/Common/EngineSubsystemHost.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/RHI/RHIBackendRegistry.h"
@@ -48,6 +49,7 @@
 #include "Engine/Renderer/SceneRHISubsystem.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
+#include "Engine/Resource/PackEngineSettingsSubsystem.h"
 #include "Engine/Scene/CommandStack.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Telemetry/CrashReportService.h"
@@ -149,6 +151,8 @@ namespace
         engineScope.addSubsystem( make_unique<AssetManager>() );
         const EngineDefaultAssetsSubsystem& defaultAssets = engineScope.addSubsystem( sw::make_unique<EngineDefaultAssetsSubsystem>() );
         (void)engineScope.bind( &defaultAssets.getDefaultAssets() ); // 새 범위 — 겹치지 않는다
+        const PackEngineSettingsSubsystem& packSettings = engineScope.addSubsystem( sw::make_unique<PackEngineSettingsSubsystem>() );
+        (void)engineScope.bind( &packSettings.getSettings() ); // 새 범위 — 겹치지 않는다
         engineScope.addSubsystem( sw::make_unique<ModuleImagesSubsystem>() );
         engineScope.addSubsystem( sw::make_unique<ModuleTypesSubsystem>() );
         engineScope.addSubsystem( IAudioService::createNull() );

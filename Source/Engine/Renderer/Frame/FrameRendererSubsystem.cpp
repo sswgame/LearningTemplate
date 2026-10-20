@@ -11,6 +11,7 @@
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/Packet/RenderPacketBuilder.h"
 #include "Engine/Renderer/RHISubsystem.h"
+#include "Engine/Resource/PackEngineSettingsSubsystem.h"
 
 namespace sw
 {
@@ -52,7 +53,8 @@ namespace sw
 
     span<const utf8* const> FrameRendererSubsystem::getSubsystemDependencies() const
     {
-        static constexpr const utf8* kArrDependency[] = { RHISubsystem::kSubsystemName, TaskManager::kSubsystemName };
+        // 렌더 파이프라인은 팩 설정(`<Engine _renderPipeline>`)이 고를 수 있다.
+        static constexpr const utf8* kArrDependency[] = { PackEngineSettingsSubsystem::kSubsystemName, RHISubsystem::kSubsystemName, TaskManager::kSubsystemName };
         return kArrDependency;
     }
 

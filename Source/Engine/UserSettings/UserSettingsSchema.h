@@ -2,7 +2,7 @@
  * @file UserSettingsSchema.h
  * @brief 사용자 설정(옵션 메뉴)의 스키마와 그 XML 로더를 정의합니다. 스키마는 카테고리, 설정 정의, 그래픽 품질 프리셋, 사용자 파일 버전 올리기 단계로 이루어집니다.
  *
- * 스키마는 사람이 편집하는 데이터(`*.settings.xml`)입니다. 엔진 파일(`engine/settings/engine.settings.xml`) 위에 게임 파일(게임 프리셋의
+ * 스키마는 사람이 편집하는 데이터(`*.settings.xml`)입니다. 엔진 파일(`engine/settings/engine.settings.xml`) 위에 게임 파일(팩 설정의
  * `_userSettingsSchema`)을 덧붙입니다. 코드가 가진 것은 이름으로 고르는 핸들러 등록부(`UserSettingsHandlerRegistry`)뿐입니다.
  */
 #pragma once
@@ -245,7 +245,7 @@ namespace sw
      * @class UserSettingsSchema
      * @brief 엔진 스키마 위에 게임 스키마를 덧붙인 설정 정의 전체입니다.
      * @details 덧붙이기는 새 카테고리, 새 설정, 새 품질 번들, 새 버전 단계만 더한다. 이미 있는 id 를 다시 정의하면 로드 오류다.
-     *          게임마다 다른 기본값은 게임 프리셋(`GameConfig::_mapUserSettingDefault`)이 준다. 모르는 요소, 속성, 열거자 이름도 로드 오류다.
+     *          게임마다 다른 기본값은 팩 설정(`PackEngineSettings::_mapUserSettingDefault`)이 준다. 모르는 요소, 속성, 열거자 이름도 로드 오류다.
      */
     class SW_API UserSettingsSchema
     {

@@ -125,7 +125,7 @@ namespace sw
         // 팩이면 쿠커가 만든 assetregistry.txt 를 도메인마다 읽고(배포본은 .meta 를 싣지 않는다), 없으면(느슨한 트리) .meta 를 훑는다.
         // 유니티의 GUID 표, 언리얼의 AssetRegistry 가 하는 일이다.
         uint32       registered{ 0 };
-        const string gameRoot    = GameConfig::getActive()._packRoot;
+        const string gameRoot    = GameConfig::getActive()._packRoot.get();
         const string arrDomain[] = { "engine", "common", gameRoot };
         for ( const string& domain : arrDomain )
         {

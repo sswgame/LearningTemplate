@@ -26,7 +26,7 @@ namespace sw
     /**
      * @class OptionsMenuScreen
      * @brief 엔진 기본 옵션 메뉴입니다(언리얼 Lyra 의 `UGameSettingRegistry` 와 행 템플릿, 유니티 UI Toolkit 설정 화면에 해당). 게임은 문서와 스타일만 바꿉니다
-     *        (게임 프리셋 `_uiOptionsDocument` 에서 이름 있는 위젯 `Tabs`, `Rows`, `RestartNotice` 와 버튼 명령 `Apply`, `Revert`, `Defaults`, `Close` 를 지키면 됩니다).
+     *        (팩 설정 `_uiOptionsMenu` 의 문서에서 이름 있는 위젯 `Tabs`, `Rows`, `RestartNotice` 와 버튼 명령 `Apply`, `Revert`, `Defaults`, `Close` 를 지키면 됩니다).
      * @details **구성**: 탭은 `getCategories()`(빈 카테고리는 뺀다)이고, 지금 탭의 행은 `collectSettings` 순서다. 행은 형식별 템플릿 조각(`engine/ui/parts/setting_*.ui.xml`)으로 만들어
      *          이름을 `<설정 id>.<안쪽 이름>` 으로 감싸고, 값 위젯(`Value`)에 `{setting:id}` 바인딩을 코드로 연결한다. 스키마가 원본이라 문서에는 행을 적지 않는다.
      *          값, 범위, 선택지, 사용 가능 여부(`enabledWhen`)는 설정 바인딩(6-3)이 채운다. 탭은 `UI.TabNext`, `UI.TabPrevious`(패드 LB, RB)와 탭 버튼으로 옮긴다.

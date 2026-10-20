@@ -38,6 +38,7 @@
 
 #include "EngineTest/TestGameObjectMocks.h"
 
+#include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
 
 namespace sw
@@ -1142,12 +1143,7 @@ SW_TEST_CASE( SceneTest, SceneCookFailsOnAComponentOfUnknownType )
     struct ScopedActivePack
     {
         sw::GameConfig _previous{ sw::GameConfig::getActive() };
-        explicit ScopedActivePack( const utf8* pPackRoot )
-        {
-            sw::GameConfig config = _previous;
-            config._packRoot      = pPackRoot;
-            sw::GameConfig::setActive( config );
-        }
+        explicit ScopedActivePack( const utf8* pPackRoot ) { sw::GameConfig::setActive( test::makeGameConfig( pPackRoot ) ); }
         ~ScopedActivePack() { sw::GameConfig::setActive( _previous ); }
         ScopedActivePack( const ScopedActivePack& )            = delete;
         ScopedActivePack& operator=( const ScopedActivePack& ) = delete;

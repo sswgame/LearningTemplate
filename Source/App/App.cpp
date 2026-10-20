@@ -17,8 +17,8 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
-#include "Engine/Config/GameConfig.h"
 #include "Engine/Config/GameTimeScale.h"
+#include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
@@ -231,7 +231,7 @@ namespace sw
         {
             _window             = IWindow::createPlatformWindow();
             const bool bCreated = _window != nullptr && _window->applyCommandLinePosition( commandLineManager ) &&
-                                  _window->initializeWindow( GameConfig::getActive()._windowTitle.c_str(), width, height );
+                                  _window->initializeWindow( engine::getSubsystem<PackEngineSettings>()._windowTitle.c_str(), width, height );
             if ( bCreated == false )
             {
                 SW_LOG_ERROR( "Failed to create platform window!" );

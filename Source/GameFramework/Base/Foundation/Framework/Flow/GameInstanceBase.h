@@ -47,7 +47,7 @@ namespace sw
 
         /**
          * @brief configureBootstrap 으로 부트스트랩을 채우고 gamesettings 를 읽은 뒤 onInitialize 를 부릅니다.
-         * @details 팩 루트는 게임 프리셋 `Config/Game/<게임>.json` 의 값이다. gamesettings 를 못 읽으면 false 다(기본값 폴백 없음).
+         * @details 팩 루트는 게임 프리셋 `Config/Game/<게임>.json` 의 값이다(그 파일의 유일한 칸). gamesettings 를 못 읽으면 false 다(기본값 폴백 없음).
          *          읽은 `GameSettings` 는 게임 서비스(`game::findSubsystem<GameSettings>()`)로 등록하고, 다국어(`_localizationProject`)와
          *          게임플레이 입력 맵(`_inputMap`)도 여기서 적용한다.
          *          커스텀 칸을 읽는 킷 코드는 이 서비스로 읽는다. 서비스로 등록하지 않으면 제품에서 늘 기본값을 쓴다.

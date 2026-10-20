@@ -285,7 +285,7 @@
        "min": "",
        "max": "",
        "units": "",
-       "description": "런타임 UI 배율 규칙 — 해상도 → 배율(`UIScaleSettings`, 게임 프리셋이 덮어쓴다)"
+       "description": "런타임 UI 배율 규칙 — 해상도 → 배율(`UIScaleSettings`, 팩 설정 `PackEngineSettings` 가 덮어쓴다)"
       },
       {
        "name": "_uiThemes",
@@ -294,7 +294,7 @@
        "min": "",
        "max": "",
        "units": "",
-       "description": "런타임 UI 테마 목록 — 테마 이름 → 스타일 시트들(`UIThemeCatalog`, 게임 프리셋이 덮어쓴다)"
+       "description": "런타임 UI 테마 목록 — 테마 이름 → 스타일 시트들(`UIThemeCatalog`, 팩 설정이 덮어쓴다)"
       },
       {
        "name": "_uiOptionsMenu",
@@ -303,7 +303,7 @@
        "min": "",
        "max": "",
        "units": "",
-       "description": "옵션 메뉴 문서. 설정 스키마에서 탭과 행을 만드는 화면(`OptionsMenuScreen`, 게임 프리셋이 덮어쓴다)"
+       "description": "옵션 메뉴 문서. 설정 스키마에서 탭과 행을 만드는 화면(`OptionsMenuScreen`, 팩 설정이 덮어쓴다)"
       },
       {
        "name": "_uiPauseMenu",
@@ -312,7 +312,7 @@
        "min": "",
        "max": "",
        "units": "",
-       "description": "일시정지 메뉴 문서 — 게임 프리셋이 `_bUIPauseMenu` 를 켤 때 `UI.Pause` 가 연다(`PauseMenuScreen`)"
+       "description": "일시정지 메뉴 문서 — 팩 설정이 `_bUIPauseMenu` 를 켤 때 `UI.Pause` 가 연다(`PauseMenuScreen`)"
       },
       {
        "name": "_defaultForwardPipeline",
@@ -1081,102 +1081,12 @@
      "fields": [
       {
        "name": "_packRoot",
-       "type": "string",
+       "type": "DataPath",
        "default": "",
        "min": "",
        "max": "",
        "units": "",
        "description": "활성 게임 팩의 리소스 경로(`game/<팩 폴더>`) — 팩 마운트 · 게임 도메인 경로가 이것으로 풀린다"
-      },
-      {
-       "name": "_windowTitle",
-       "type": "string",
-       "default": "SWEngine",
-       "min": "",
-       "max": "",
-       "units": "",
-       "description": "주 창 제목 — 게임마다 다르다(언리얼 ProjectName 자리). 창은 팩을 마운트하기 전에 생긴다"
-      },
-      {
-       "name": "_renderPipeline",
-       "type": "string",
-       "default": "",
-       "min": "",
-       "max": "",
-       "units": "",
-       "description": "이 게임이 그리는 렌더 파이프라인 XML 의 리소스 경로(예: `engine/pipeline/forward2dpipeline.xml`)입니다. 비면 엔진 기본(포워드)입니다. 유니티 Graphics 설정의 Render Pipeline Asset · Godot 의 렌더링 방식 프로젝트 설정에 해당합니다. 명령줄(`-gv_renderPipeline` · `-gv_deferred`)이 이보다 우선합니다. 2D 게임은 톤 매핑이 없는 `forward2dpipeline.xml` 을 고릅니다."
-      },
-      {
-       "name": "_userSettingsSchema",
-       "type": "string",
-       "default": "",
-       "min": "",
-       "max": "",
-       "units": "",
-       "description": "엔진 스키마에 덧붙이는 게임의 사용자 설정 스키마(팩 상대 경로, 예: `data/usersettings.settings.xml`)입니다. 비면 없습니다."
-      },
-      {
-       "name": "_telemetrySchema",
-       "type": "string",
-       "default": "",
-       "min": "",
-       "max": "",
-       "units": "",
-       "description": "엔진 스키마에 덧붙이는 게임의 텔레메트리 사건 스키마(팩 상대 경로, 예: `data/mygame.telemetry.xml`)입니다. 비면 없습니다."
-      },
-      {
-       "name": "_uiScaleSettings",
-       "type": "string",
-       "default": "",
-       "min": "",
-       "max": "",
-       "units": "",
-       "description": "엔진 기본(`engine/ui/uiscale.xml`) 대신 쓸 런타임 UI 배율 규칙(팩 상대 경로, 예: `data/uiscale.xml`)입니다. 비면 엔진 기본입니다."
-      },
-      {
-       "name": "_uiThemes",
-       "type": "string",
-       "default": "",
-       "min": "",
-       "max": "",
-       "units": "",
-       "description": "엔진 기본(`engine/ui/uithemes.xml`) 대신 쓸 런타임 UI 테마 목록(팩 상대 경로, 예: `data/uithemes.xml`)입니다. 비면 엔진 기본입니다."
-      },
-      {
-       "name": "_uiOptionsMenu",
-       "type": "string",
-       "default": "",
-       "min": "",
-       "max": "",
-       "units": "",
-       "description": "엔진 기본(`engine/ui/options.ui.xml`) 대신 쓸 옵션 메뉴 문서(팩 상대 경로, 예: `ui/options.ui.xml`)입니다. 비면 엔진 기본입니다."
-      },
-      {
-       "name": "_uiPauseMenu",
-       "type": "string",
-       "default": "",
-       "min": "",
-       "max": "",
-       "units": "",
-       "description": "엔진 기본(`engine/ui/pause.ui.xml`) 대신 쓸 일시정지 메뉴 문서(팩 상대 경로)입니다. 비면 엔진 기본입니다(`_bUIPauseMenu` 가 켜졌을 때만 쓴다)."
-      },
-      {
-       "name": "_bUIPauseMenu",
-       "type": "bool",
-       "default": "false",
-       "min": "",
-       "max": "",
-       "units": "",
-       "description": "화면이 없을 때 Esc · 패드 Start(`UI.Pause`)로 일시정지 메뉴를 연다. 게임 흐름(타이틀 · 경영 화면)이 Esc 를 따로 쓰면 끈다."
-      },
-      {
-       "name": "_mapUserSettingDefault",
-       "type": "map<string, string>",
-       "default": "",
-       "min": "",
-       "max": "",
-       "units": "",
-       "description": "게임마다 다른 사용자 설정 기본값입니다(설정 id → 값). 엔진 스키마의 기본값을 덮어씁니다. 플레이어가 바꾸지 않은 값만 따라갑니다. 모르는 id · 받을 수 없는 값은 기동 오류로 알립니다(`UserSettingsManager::setGameDefault`)."
       }
      ]
     }
@@ -3471,7 +3381,7 @@
    "type": "string",
    "default": "",
    "kind": "일반",
-   "description": "이 파이프라인 XML 로 그린다 (비우면 gv_deferred · 게임 프리셋 · 기본 포워드)",
+   "description": "이 파이프라인 XML 로 그린다 (비우면 gv_deferred · 팩 설정 · 기본 포워드)",
    "source": "Source/Engine/Renderer/Frame/FrameRenderer.cpp"
   },
   {

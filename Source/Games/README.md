@@ -24,7 +24,7 @@ CMake 옵션 `SW_ACTIVE_GAME`(기본 `Empty`)은 `-game=` 이 없을 때의 게�
 Source/Games/<게임>/SWGame.module.json   → 프로젝트: 링크할 키트, 끌 모듈
 Source/Games/<게임>/CMakeLists.txt        → sw_addGameModule(SWGame) 한 줄
 Source/Games/<게임>/*Game.cpp             → 게임 인스턴스(GameInstanceBase 파생)
-Config/Game/<게임>.json                   → 게임 프리셋: 팩 루트, 창 제목
+Config/Game/<게임>.json                   → 게임 프리셋: 팩 루트(창 제목은 팩 gamesettings.xml 의 <Engine>)
 Resource/game/<게임 소문자>/               → 팩: data/gamesettings.xml, maps/, prefabs/, automation/
 ```
 
@@ -88,7 +88,7 @@ ctest --test-dir build/Ninja-Debug -R AppTest_HostOnly --output-on-failure
 2. **벤치 하네스 지우기.** `BenchScene.*`, `BenchSceneRig.cpp`, `BenchMoverComponent.*`, `BenchCombatComponent.*` 를 지우고, `EmptyGame` 의 `_benchScene` 멤버와 그것을 쓰는 곳을 지웁니다.
    이 파일들은 측정용이고 게임 코드가 아닙니다(아래 "Empty 에 벤치가 있는 이유").
 3. **키트 연결.** `<게임>/SWGame.module.json` 의 `_listDependency` 에 쓸 키트를 적습니다. `_kind` 는 `Game` 입니다.
-4. **리소스 폴더와 게임 프리셋.** `Resource/game/<게임 소문자>/` 를 만들고, `Config/Game/<게임>.json` 에 `_packRoot`(`"game/<게임 소문자>"`)와 창 제목 `_windowTitle` 을 적습니다.
+4. **리소스 폴더와 게임 프리셋.** `Resource/game/<게임 소문자>/` 를 만들고, `Config/Game/<게임>.json` 에 `_packRoot`(`"game/<게임 소문자>"`)를 적고, 창 제목은 팩의 `data/gamesettings.xml` 에 `<Engine _windowTitle="…" />` 로 적습니다.
    파일 이름은 게임 폴더 이름과 같아야 하고, 프리셋이 없으면 그 게임을 고른 기동(`-game=`) · configure 가 멈춥니다. 시작 씬은 팩의 `data/gamesettings.xml` 의 `startMap`(타이틀 화면이 있으면 `titleScene`) 하나입니다.
 5. **빌드와 실행.** CMake 프리셋은 더하지 않습니다. `Ninja-Debug` 가 새 게임도 짓고(`SW_GAMES=ALL`) `App.exe -game=<게임>` 으로 돌립니다. 프리셋 · 매니페스트는 `CheckGamePresets.py` 가 검사합니다.
 6. **쓰지 않는 키트 끄기(선택).** `_listModuleOverride` 에 `{ "_name": "GF_…", "_bEnabled": false }` 를 적으면 그 키트는 이 게임의 빌드와 실행에서 빠집니다.

@@ -22,7 +22,7 @@ namespace sw::editor
 
         /**
          * @brief `<게임> — <씬>[*] — SW Editor` 를 씁니다. 씬이 없으면 `<게임> — (no scene) — SW Editor`.
-         * @param gameName 게임 프리셋의 창 제목(`GameConfig::_windowTitle`)
+         * @param gameName 팩 설정의 창 제목(`PackEngineSettings::_windowTitle`)
          * @param scenePath 활성 씬의 소스 경로(저장한 적 없는 씬이면 씬 이름). 마지막 조각에서 `.scene.xml` 을 뗀 이름을 쓴다
          * @param bDirty 씬 또는 열린 문서 중 미저장이 있으면 true — 씬 이름 뒤에 `*`
          * @param pPlayState Play · Simulate 중이면 "Playing" · "Simulating" 같은 글을 끝에 괄호로 붙인다. 편집 중이면 nullptr

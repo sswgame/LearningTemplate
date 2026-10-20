@@ -15,6 +15,7 @@ namespace sw::editor
         string _page;         ///< 목록에 보이는 이름. 설정 색인의 페이지 이름이고, 와일드카드 파일은 `GameConfig/NileCity` 처럼 파일 이름이 붙는다
         string _relativePath; ///< 프로젝트 루트 기준 경로(슬래시). `expandWildcards` 전에는 `*` 가 들어 있을 수 있다
         string _typeName;     ///< 리플렉션 타입 이름(`EngineConfig`)
+        string _elementName;  ///< 비면 파일 전체가 설정(JSON)이다. 있으면 XML 파일 안의 그 요소 하나가 설정이다(팩 `gamesettings.xml` 의 `<Engine>`)
     };
 } // namespace sw::editor
 

@@ -356,7 +356,7 @@ namespace sw
 
         const string      normalizedRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
         const string      normalizedOut  = FileUtil::normalizeSeparators( cookedDir );
-        const string      activePackRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( GameConfig::getActive()._packRoot ) );
+        const string      activePackRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( GameConfig::getActive()._packRoot.get() ) );
         const CookJobDesc desc           = makeCookJobDesc( registry );
 
         CookTally tally;

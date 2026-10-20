@@ -1,6 +1,3 @@
 {
-    "_packRoot": "game/themepark",
-    "_userSettingsSchema": "data/park.settings.xml",
-    "_windowTitle": "Theme Park Tycoon",
-    "_bUIPauseMenu": true
+    "_packRoot": "game/themepark"
 }

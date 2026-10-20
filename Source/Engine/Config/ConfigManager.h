@@ -220,6 +220,12 @@ namespace sw
          *          구조체 필드 안의 모르는 키는 바깥 필드 이름과 본문으로 표시된다.
          */
         [[nodiscard]] static bool readConfigJSON( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr, const utf8* pSourceLabel );
+        /**
+         * @brief 설정 XML 요소 하나(`<Engine _windowTitle="…"/>` — 속성과 자식이 칸)를 @p pInstance 에 엄격하게 읽습니다.
+         * @details 모르는 속성 · 자식, 읽지 못한 값, 빠진 필수 칸(`PROPERTY( Required )`, 맨 위 칸만), 범위 밖 숫자를 **모두** 오류 로그에 남기고 false 를 반환한다.
+         *          요소의 이름은 보지 않는다 — 한 파일 안의 요소 하나를 소유하는 설정(`PackEngineSettings`)과 프로젝트 설정 창이 같은 규칙으로 읽는다.
+         */
+        [[nodiscard]] static bool readConfigXMLElement( void* pInstance, const TypeInfo& typeInfo, string_view elementXML, const utf8* pSourceLabel );
         /** @brief 숫자 칸이 모두 `Min`/`Max` 안이면 true 이고, 밖이면 칸마다 오류를 남기고 false 입니다. */
         [[nodiscard]] static bool isWithinRange( const void* pInstance, const TypeInfo& typeInfo, const utf8* pSourceLabel );
 

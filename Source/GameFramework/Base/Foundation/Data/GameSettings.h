@@ -7,6 +7,7 @@
 #include "Core/Container/map.h"
 #include "Core/Container/string.h"
 
+#include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -68,7 +69,7 @@ namespace sw
     private:
         /**
          * @brief `<GameSettings>` 루트의 표준 칸과 커스텀 칸을 읽습니다(`GameDataXML::loadFile`).
-         * @details 표준 칸, `<custom>`, `<Defaults>`(`ComponentDefaults` 가 같은 파일을 읽는다) 밖의 원소는 로드 오류이다.
+         * @details 표준 칸, `<custom>`, `<Defaults>`(`ComponentDefaults` 가 같은 파일을 읽는다), `<Engine>`(`PackEngineSettings` 가 읽는다) 밖의 원소는 로드 오류이다.
          *          커스텀 값은 `<custom><prop key="…">` 안에만 둔다. 표준 칸 철자가 틀렸을 때 커스텀 값이 되어 조용히 사라지지 않게 하려는 것이다.
          */
         [[nodiscard]] bool loadRoot( const XMLNode& root, string_view sourceName );
@@ -97,6 +98,6 @@ namespace sw
         string resolve( string_view packRelative ) const;
 
         /** @brief `{packRoot}/data/gamesettings.xml` 을 읽고, 그 경로를 컴포넌트 기본값 경로(`Component::setDefaultGameSettingsPath`)로 등록합니다. */
-        [[nodiscard]] bool load( string_view gameSettingsFileName = "data/gamesettings.xml" );
+        [[nodiscard]] bool load( string_view gameSettingsFileName = PackEngineSettings::kPackRelativePath );
     };
 } // namespace sw

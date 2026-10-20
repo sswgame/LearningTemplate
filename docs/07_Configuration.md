@@ -29,8 +29,10 @@
 
 - **엔진 시작 설정**은 창 크기, 기본 백엔드, 프레임 시간, 고정 스텝, 팩 우선순위 같은 값입니다. 구조체는 `EngineConfig` 입니다.
 - **엔진 데이터 테이블**은 물리 레이어와 재질, 내비 에이전트, 2D 정렬 레이어, 기본 에셋 경로, 셸 입력 맵입니다. `PhysicsSettings`, `NavMeshSettings`, `Render2DSettings`, `EngineDefaultAssets`, `InputMap` 이 읽습니다.
-- **게임 프리셋**(`GameConfig`)에는 어떤 게임인지, 팩 루트, 창 제목, 게임이 덧붙이는 스키마처럼 팩을 마운트하기 전에 알아야 하는 것만 둡니다.
-  나머지 게임 데이터는 팩 안의 `gamesettings.xml`(`GameSettings`)이나 키트 자신의 데이터 파일에 둡니다.
+- **게임 프리셋**(`GameConfig`)에는 팩을 찾는 팩 루트(`_packRoot`, 필수) 하나만 둡니다. 팩을 마운트하기 전에 알아야 하는 값은 그것뿐입니다.
+  게임의 나머지 설정은 팩 안의 `gamesettings.xml` 한 파일이 원본입니다. 엔진이 읽는 칸(창 제목, 렌더 파이프라인, 게임이 덧붙이는 사용자 설정 · 텔레메트리 스키마, UI 규칙, 일시정지 메뉴, 사용자 설정 기본값)은
+  `<Engine>` 요소(`PackEngineSettings`, 엔진 소유)에, 시작 씬 · 입력 맵 · 다국어 같은 게임 흐름은 나머지 표준 칸(`GameSettings`, GameFramework 소유)에 둡니다. 요소마다 읽는 계층이 하나입니다.
+  키트 데이터는 키트 자신의 데이터 파일에 둡니다.
 - **옵션 메뉴 값**은 스키마(`UserSettingsSchema`)가 팩에 실리고, 플레이어가 고른 값은 플레이어 PC의 `usersettings.json` 에 저장됩니다.
 - **에디터 상태**는 도킹, 레이아웃, 캔버스, 테마, gv 프리셋처럼 에디터가 직접 쓰는 값입니다. git이 무시하고 사람이 고치지 않습니다.- **개발 PC의 경로**는 LLVM, SDK, 파서 플래그 같은 값입니다. 로컬 파일은 git이 무시하고, 커밋하는 것은 시드 파일(`*.defaults.json`)뿐입니다.
 - **전용 서버 운영 값**(`ServerConfig`)은 주소, 포트, 틱, 저장소, TLS입니다. 운영자가 고치는 파일이라 배포본도 디스크에서 읽습니다.
@@ -39,10 +41,11 @@
 - **모듈 켜고 끄기**는 매니페스트의 `_bEnabledByDefault` 와, 게임 매니페스트의 `_listModuleOverride` 로 정합니다(`ModuleCatalog`).
 - **전역 변수와 명령줄 인자**의 목록은 [`GlobalVariables.md`](Config/GlobalVariables.md)와 [`CommandLine.md`](Config/CommandLine.md)에 있습니다.
 
-어느 줄에도 맞지 않으면 세 가지를 차례로 묻습니다. 런타임이 팩을 마운트하기 전에 알아야 하면 게임 프리셋에 둡니다. 플레이어가 바꾸는 값이면 사용자 설정에 둡니다.
-배포본이 읽어야 하면 팩 데이터에, 그렇지 않으면 `Config/` 에 둡니다.
+어느 줄에도 맞지 않으면 세 가지를 차례로 묻습니다. 팩을 찾는 값이면 게임 프리셋에 둡니다(팩 루트 하나뿐입니다). 플레이어가 바꾸는 값이면 사용자 설정에 둡니다.
+배포본이 읽어야 하면 팩 데이터에, 그렇지 않으면 `Config/` 에 둡니다. 게임별 값을 엔진이 읽어야 하면 팩 `gamesettings.xml` 의 `<Engine>` 요소(`PackEngineSettings`)에 칸을 더합니다.
+창 제목처럼 기동에 필요한 값도 팩에서 읽습니다. 창과 그것을 쓰는 단계는 팩을 마운트하고 그 요소를 읽은 뒤에 섭니다(`PackEngineSettingsSubsystem` 에 의존).
 
-엔진 타입인 `GameConfig` 에는 키트 설정 필드를 두지 않습니다. 키트 설정은 팩 데이터입니다. 엔진이 키트를 알게 되면 계층 방향이 거꾸로 됩니다.
+엔진 타입인 `GameConfig` · `PackEngineSettings` 에는 키트 설정 필드를 두지 않습니다. 키트 설정은 팩 데이터입니다. 엔진이 키트를 알게 되면 계층 방향이 거꾸로 됩니다.
 
 파일마다 언제 읽는지, 배포본에서 어떻게 되는지, 커밋하는지는 생성 문서의 [설정 참조 색인](Config/README.md)에 있습니다. 원본은 `Scripts/common/ConfigCatalog.py` 입니다.
 
@@ -57,7 +60,9 @@
 | RHI 백엔드 | 쿠킹 계약 `default_rhi_backend` → `EngineConfig._window._defaultRHI` → `-dx12`, `-vk` 같은 플래그나 `-gv_rhiBackend=` |
 | 첫 씬 | `startMap` → `titleScene` → `-gv_firstScene` |
 | 고정 스텝 | `EngineConfig._fixedDeltaTime` 하나 |
-| 사용자 설정 값 | 스키마 `default` → `GameConfig._mapUserSettingDefault` → `usersettings.json` |
+| 사용자 설정 값 | 스키마 `default` → 팩 `<Engine>` 의 `_mapUserSettingDefault` → `usersettings.json` |
+| 렌더 파이프라인 | 엔진 기본 포워드 → 팩 `<Engine _renderPipeline>` → `-gv_deferred` → `-gv_renderPipeline` |
+| UI 규칙(배율 · 테마 · 옵션 · 일시정지 메뉴) | `EngineDefaultAssets` → 팩 `<Engine>` 의 `_ui*` |
 | 사용자 설정이 바꾸는 전역 변수 | 코드 기본값 → 사용자 설정 값 → 명령줄 `-gv_*` |
 | 그 밖의 전역 변수 | 코드 기본값 → 명령줄 → 실행 중 변경 |
 | 2D 정렬 테이블 | 엔진 `render2d.xml` → 게임 팩 `data/render2d.xml` |

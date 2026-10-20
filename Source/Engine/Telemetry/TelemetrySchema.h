@@ -1,7 +1,7 @@
 /**
  * @file TelemetrySchema.h
  * @brief 텔레메트리 사건의 스키마(`*.telemetry.xml`) — 사건 id · 분류 · 필드(이름 · 타입 · 필수) · 표본 비율, 그리고 파이프라인 설정(묶음 · 파일 상한 · 회전)입니다.
- * @details 엔진 스키마(`EngineDefaultAssets::_telemetrySchema`)에 게임 스키마(`GameConfig::_telemetrySchema`)를 덧붙입니다. 스키마에 없는 사건 · 필드는
+ * @details 엔진 스키마(`EngineDefaultAssets::_telemetrySchema`)에 게임 스키마(`PackEngineSettings::_telemetrySchema`)를 덧붙입니다. 스키마에 없는 사건 · 필드는
  *          기록되지 않습니다(언리얼 Analytics 의 자유 형식 속성과 달리, 받는 쪽 테이블과 맞는 사건만 나간다 — Unity Analytics 의 사건 스키마와 같은 쪽).
  */
 #pragma once

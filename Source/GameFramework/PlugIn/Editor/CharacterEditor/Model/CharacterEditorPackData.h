@@ -1,7 +1,7 @@
 /**
  * @file CharacterEditorPackData.h
  * @brief 캐릭터 편집 창이 여는 게임 데이터(소켓 · 스켈레톤 · 레퍼런스 포즈 · 아이템 · 외형 폴더)의 경로 표입니다. 게임 팩의 `data/charactereditor.xml` 이 정본입니다.
- * @details 프레임워크의 에디터 확장은 게임 이름을 모른다. 활성 게임의 팩 루트(`GameConfig::getActive()._packRoot`)와 데이터 종류 `kDataKind` 로
+ * @details 프레임워크의 에디터 확장은 게임 이름을 모른다. 활성 게임의 팩 루트(`GameConfig::getActive()._packRoot.get()`)와 데이터 종류 `kDataKind` 로
  *          파일을 찾고(`GamePackDataUtil::tryMakeKindPath`), 파일이 없는 게임은 창이 "캐릭터 편집 데이터 없음" 을 보인다(다른 게임의 경로로 대체하지 않는다).
  *          네 칸은 모두 필수다 — 하나라도 빠지면 읽기가 실패한다. 레퍼런스 포즈는 적지 않고 스켈레톤 경로에서 만든다(창이 저장하는 짝 파일이라 아직 없을 수 있다).
  */

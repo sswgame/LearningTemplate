@@ -9,10 +9,11 @@
 #include "Engine/Common/EngineSubsystemHost.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
-#include "Engine/Config/GameConfig.h"
+#include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Renderer/Capture/RenderDocCapture.h"
+#include "Engine/Resource/PackEngineSettingsSubsystem.h"
 #include "Engine/UserSettings/UserSettingsEngineHandlers.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/Window/IWindow.h"
@@ -60,9 +61,10 @@ namespace sw
             commandLine.getArgument( CommandLineArgument::WIDTH, windowWidth );
             commandLine.getArgument( CommandLineArgument::HEIGHT, windowHeight );
 
+            // 창 제목은 팩 설정(`<Engine _windowTitle>`)이다 — 이 단계는 그 설정을 읽은 뒤에 선다(의존).
             unique_ptr<IWindow> defaultWindow = IWindow::createPlatformWindow();
             const bool          bCreated      = defaultWindow != nullptr && defaultWindow->applyCommandLinePosition( commandLine ) &&
-                                  defaultWindow->initializeWindow( GameConfig::getActive()._windowTitle.c_str(), windowWidth, windowHeight );
+                                  defaultWindow->initializeWindow( engine::getSubsystem<PackEngineSettings>()._windowTitle.c_str(), windowWidth, windowHeight );
             if ( bCreated )
             {
                 // 전체 화면은 스왑체인을 만들기 전에 고른다. 스왑체인이 처음부터 모니터 크기다.
@@ -99,7 +101,7 @@ namespace sw
 
     span<const utf8* const> RHISubsystem::getSubsystemDependencies() const
     {
-        static constexpr const utf8* kArrDependency[] = { ConfigManager::kSubsystemName, UserSettingsManager::kSubsystemName };
+        static constexpr const utf8* kArrDependency[] = { ConfigManager::kSubsystemName, PackEngineSettingsSubsystem::kSubsystemName, UserSettingsManager::kSubsystemName };
         return kArrDependency;
     }
 

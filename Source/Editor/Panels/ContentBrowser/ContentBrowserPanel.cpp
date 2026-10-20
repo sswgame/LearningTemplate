@@ -807,7 +807,7 @@ namespace sw::editor
             _bShowAllPacks            = getPreferences<EditorContentBrowserPreferences>()._bShowAllPacksByDefault ? SW_TRUE : SW_FALSE;
             _bShowAllPacksInitialized = SW_TRUE;
         }
-        const string& packRoot = GameConfig::getActive()._packRoot;
+        const string& packRoot = GameConfig::getActive()._packRoot.get();
         if ( packRoot.empty() == false )
             addRoot( packRoot, ResourcePaths::findLooseDomainFolder( packRoot ).getDiskPath() );
         if ( _bShowAllPacks == SW_TRUE || packRoot.empty() )
@@ -1060,7 +1060,7 @@ namespace sw::editor
         {
             const string fullFavPath = kArrFavorites[favIdx]._bEngine
                                          ? ResourcePaths::findLooseDomainFolder( "engine", kArrFavorites[favIdx]._pRelPath ).getDiskPath()
-                                         : ResourcePaths::findLooseDomainFolder( GameConfig::getActive()._packRoot, kArrFavorites[favIdx]._pRelPath ).getDiskPath();
+                                         : ResourcePaths::findLooseDomainFolder( GameConfig::getActive()._packRoot.get(), kArrFavorites[favIdx]._pRelPath ).getDiskPath();
             const bool   bSelected   = FileUtil::pathsEqualNormalized( fullFavPath, _selectedFolderAbs );
 
             if ( ImGui::Selectable( kArrFavorites[favIdx]._pLabel, bSelected ) )

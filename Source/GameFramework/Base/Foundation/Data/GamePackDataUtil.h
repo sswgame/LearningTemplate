@@ -3,7 +3,7 @@
  * @brief 게임 팩 안 데이터 파일의 경로를 데이터 종류 등록 줄(`SW_RESOURCE_DATA_KIND`)에서 만드는 도우미입니다.
  * @details 카탈로그 경로의 정본은 등록 줄 하나다. `"game/"` 접두와 `"/data/weapons.xml"` 접미를 가진 종류는 팩 루트(`game/shooter3d`)에 접미를 붙인 것이 그 팩의 파일이다.
  *          게임 코드와 에디터 확장은 경로를 적지 않고 카탈로그 타입의 `kDataKind` 와 팩 루트로 경로를 얻는다. 프레임워크는 게임 이름을 모르므로 팩 루트는 부르는 쪽이 넘긴다
- *          (게임 인스턴스는 자기 `BootstrapConfig::_packRoot`, 에디터 확장은 활성 게임의 `GameConfig::getActive()._packRoot`).
+ *          (게임 인스턴스는 자기 `BootstrapConfig::_packRoot`, 에디터 확장은 활성 게임의 `GameConfig::getActive()._packRoot.get()`).
  *          폴더 종류(접미가 확장자뿐이고 포함 규칙이 폴더인 것 — 외형 `"/data/appearance/"`)는 팩 루트에 포함 규칙을 붙인 폴더다.
  */
 #pragma once

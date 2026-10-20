@@ -46,8 +46,8 @@
 
 #include "Engine/Common/EngineSubsystemHost.h"
 #include "Engine/Config/EngineDefaultAssets.h"
-#include "Engine/Config/GameConfig.h"
 #include "Engine/Config/GameTimeScale.h"
+#include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Object/Component/CameraComponent.h"
@@ -725,8 +725,10 @@ namespace sw::editor
         if ( pActiveWindow == nullptr )
             return;
         pActiveWindow->setCloseQueryHandler( {} );
-        // 에디터를 종료하면 창 제목은 게임 프리셋 그대로 돌아간다. 창 제목의 출처는 게임 프리셋 하나뿐이다.
-        pActiveWindow->setTitle( GameConfig::getActive()._windowTitle.c_str() );
+        // 에디터를 종료하면 창 제목은 팩 설정 그대로 돌아간다. 창 제목의 출처는 팩 설정(`<Engine _windowTitle>`) 하나뿐이다.
+        const PackEngineSettings* pPackSettings = editor::findSubsystem<const PackEngineSettings>();
+        if ( pPackSettings != nullptr )
+            pActiveWindow->setTitle( pPackSettings->_windowTitle.c_str() );
     }
 
     void ImGuiEditor::shutdown()

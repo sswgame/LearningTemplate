@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
+#include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -73,6 +74,9 @@ namespace sw
 
             // 컴포넌트 기본값 — `ComponentDefaults` 가 같은 파일을 읽는다.
             if ( StringUtil::equals( pName, "Defaults" ) )
+                continue;
+            // 엔진 칸(창 제목 · 스키마 · UI 규칙) — 엔진의 `PackEngineSettings` 가 같은 파일에서 읽는다. 이 구조체는 읽지 않는다.
+            if ( StringUtil::equals( pName, PackEngineSettings::kElementName ) )
                 continue;
             SW_LOG_ERROR( "GameSettings %#: unknown element <%#> - game data goes in the game's own catalogs (there is no free-form key-value section)", sourceName, pName );
             bUnknownElement = true;

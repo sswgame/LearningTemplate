@@ -1,6 +1,7 @@
 /**
  * @file ProjectSettingsPanel.h
- * @brief 프로젝트 설정 창입니다(Edit > Project Settings). `Config/` 와 팩의 설정 JSON 을 프로퍼티 그리드로 고치고, 저장하면 실행 중인 호스트가 다시 읽습니다.
+ * @brief 프로젝트 설정 창입니다(Edit > Project Settings). `Config/` 와 팩의 설정 JSON, 활성 팩 `gamesettings.xml` 의 `<Engine>` 요소를 프로퍼티 그리드로 고칩니다.
+ * @details JSON 호스트 설정은 저장하면 실행 중인 호스트가 다시 읽습니다. 팩의 `<Engine>` 요소(`PackEngineSettings`)는 다음 기동부터 반영됩니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -23,7 +24,7 @@ namespace sw::editor
     /**
      * @class ProjectSettingsPanel
      * @brief 언리얼 Project Settings · 유니티 Project Settings 에 해당합니다. 왼쪽은 설정 파일 목록, 오른쪽은 고른 파일의 그리드입니다.
-     * @details 목록은 생성 문서 `docs/Config/ConfigReference.json` 에서 만든다(`ProjectSettingsCatalog`). 저장은 Save(또는 Ctrl+S)로 하고, 기본값과 같은 값은 파일에서 지운다.
+     * @details 목록은 활성 팩의 `<Engine>` 요소(맨 앞)와 생성 문서 `docs/Config/ConfigReference.json` 에서 만든다(`ProjectSettingsCatalog`). 저장은 Save(또는 Ctrl+S)로 하고, 기본값과 같은 값은 파일에서 지운다.
      *          저장하면 `ConfigHotReload::reloadChangedFile` 이 호스트 설정을 제자리에서 다시 읽는다(`ConfigManager::reloadConfigFile`).
      *          창 시작 값만 쓰는 필드(창 크기 · 백엔드)는 다음 실행부터 반영된다. 실행 중 반영 여부는 설정 색인 문서(`docs/Config/`)에 있다.
      */

@@ -8,6 +8,7 @@
 #include "Core/Event/EventDispatcher.h"
 #include "Core/File/AsyncFileIO.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Task/TaskManager.h"
 
@@ -27,6 +28,7 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/GameSelection.h"
+#include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/RHI/RHIBackendRegistry.h"
@@ -49,6 +51,7 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
+#include "Engine/Resource/PackEngineSettingsSubsystem.h"
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/CommandStack.h"
 #include "Engine/Scene/SceneManager.h"
@@ -114,6 +117,17 @@ namespace test
     const sw::EngineDefaultAssets& getEngineDefaultAssets()
     {
         return sw::engine::getSubsystem<sw::EngineDefaultAssets>();
+    }
+
+    sw::GameConfig makeGameConfig( sw::string_view packRoot )
+    {
+        sw::GameConfig                                 config;
+        sw::StringBuilder<sw::constant::kMaxBuffer512> json;
+        json.append( R"({ "_packRoot": ")" ).append( packRoot ).append( R"(" })" );
+        const bool bRead = sw::ConfigManager::readConfigJSON( config, sw::string_view( json.c_str(), json.size() ), "test::makeGameConfig" );
+        SW_ASSERT( bRead );
+        (void)bRead;
+        return config;
     }
 
     const utf8* rebindEngineServices( const sw::ISubsystemLocator& subsystems )
@@ -283,6 +297,9 @@ namespace test
         }
         const TestEngineDefaultAssetsSubsystem& defaultAssets = startup.addSubsystem( sw::make_unique<TestEngineDefaultAssetsSubsystem>() );
         (void)startup.bind( &defaultAssets.getDefaultAssets() ); // 새 범위 — 겹치지 않는다
+        // 활성 팩의 `<Engine>` 요소는 앱과 같은 서브시스템이 읽는다(팩 마운트 뒤).
+        const sw::PackEngineSettingsSubsystem& packSettings = startup.addSubsystem( sw::make_unique<sw::PackEngineSettingsSubsystem>() );
+        (void)startup.bind( &packSettings.getSettings() ); // 새 범위 — 겹치지 않는다
         // 하네스의 오디오는 대역 타입이다 — 서비스 표가 찾는 인터페이스로도 건다.
         (void)startup.expose<sw::IAudioService>( startup.addSubsystem( sw::make_unique<TestAudioService>() ) ); // 새 범위 — 겹치지 않는다
         {

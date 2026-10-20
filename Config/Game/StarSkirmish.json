@@ -1,6 +1,3 @@
 {
-    "_packRoot": "game/starskirmish",
-    "_userSettingsSchema": "data/skirmish.settings.xml",
-    "_windowTitle": "Star Skirmish",
-    "_bUIPauseMenu": true
+    "_packRoot": "game/starskirmish"
 }

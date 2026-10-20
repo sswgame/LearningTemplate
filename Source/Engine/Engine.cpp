@@ -41,6 +41,7 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/GameSelection.h"
+#include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/Material/Material.h"
@@ -96,6 +97,7 @@
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Resource/Pack/ResourcePakManager.h"
+#include "Engine/Resource/PackEngineSettingsSubsystem.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/Scene.h"
@@ -337,6 +339,9 @@ namespace sw
                 }
                 const EngineDefaultAssetsSubsystem& defaultAssets = _startup.addSubsystem( sw::make_unique<EngineDefaultAssetsSubsystem>() );
                 (void)_startup.bind( &defaultAssets.getDefaultAssets() ); // 새 범위 — 겹치지 않는다
+                // 활성 팩의 `<Engine>` 요소(창 제목 · 스키마 · UI 규칙) — 팩을 마운트한 뒤에 읽는다. 창 · 사용자 설정 · UI 가 이 뒤에 선다.
+                const PackEngineSettingsSubsystem& packSettings = _startup.addSubsystem( sw::make_unique<PackEngineSettingsSubsystem>() );
+                (void)_startup.bind( &packSettings.getSettings() ); // 새 범위 — 겹치지 않는다
             }
             {
                 SW_MEMORY_SCOPE( Audio );

@@ -34,10 +34,10 @@ enginedefaultassets.xml 의 엔진 셸 경로입니다. 읽기는 `XMLSerializer
 | `_cultureTable` | `DataPath` | — |  |  | 문화권 표 — 복수형 규칙 · 숫자 · 날짜 형식 · 쓰기 방향 · 글꼴 대체(`LocalizationManager`) |
 | `_localizationProject` | `DataPath` | — |  |  | 엔진 문자열(설정 메뉴 등)의 로컬라이제이션 프로젝트 |
 | `_fontCatalog` | `DataPath` | — |  |  | 글꼴 카탈로그 — 저장소 글꼴 가족 · 시스템 글꼴 가족(`FontService`) |
-| `_uiScaleSettings` | `DataPath` | — |  |  | 런타임 UI 배율 규칙 — 해상도 → 배율(`UIScaleSettings`, 게임 프리셋이 덮어쓴다) |
-| `_uiThemes` | `DataPath` | — |  |  | 런타임 UI 테마 목록 — 테마 이름 → 스타일 시트들(`UIThemeCatalog`, 게임 프리셋이 덮어쓴다) |
-| `_uiOptionsMenu` | `DataPath` | — |  |  | 옵션 메뉴 문서. 설정 스키마에서 탭과 행을 만드는 화면(`OptionsMenuScreen`, 게임 프리셋이 덮어쓴다) |
-| `_uiPauseMenu` | `DataPath` | — |  |  | 일시정지 메뉴 문서 — 게임 프리셋이 `_bUIPauseMenu` 를 켤 때 `UI.Pause` 가 연다(`PauseMenuScreen`) |
+| `_uiScaleSettings` | `DataPath` | — |  |  | 런타임 UI 배율 규칙 — 해상도 → 배율(`UIScaleSettings`, 팩 설정 `PackEngineSettings` 가 덮어쓴다) |
+| `_uiThemes` | `DataPath` | — |  |  | 런타임 UI 테마 목록 — 테마 이름 → 스타일 시트들(`UIThemeCatalog`, 팩 설정이 덮어쓴다) |
+| `_uiOptionsMenu` | `DataPath` | — |  |  | 옵션 메뉴 문서. 설정 스키마에서 탭과 행을 만드는 화면(`OptionsMenuScreen`, 팩 설정이 덮어쓴다) |
+| `_uiPauseMenu` | `DataPath` | — |  |  | 일시정지 메뉴 문서 — 팩 설정이 `_bUIPauseMenu` 를 켤 때 `UI.Pause` 가 연다(`PauseMenuScreen`) |
 | `_defaultForwardPipeline` | `DataPath` | — |  |  | 포워드 렌더 파이프라인(프레임 그래프) |
 | `_defaultDeferredPipeline` | `DataPath` | — |  |  | 디퍼드 렌더 파이프라인 |
 | `_defaultRenderPass` | `DataPath` | — |  |  | 기본 렌더 패스 바인드 틀 |
