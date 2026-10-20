@@ -7,7 +7,7 @@
  *          | 프로세스 | 인자 |
  *          |---|---|
  *          | 서버 | `-gv_netListenPort=<포트>` (+ 트레이스면 `-gv_traceSaveOnExit=<폴더>/server.trace.json`) |
- *          | 전용 서버만 | `-gv_debugChannelPort=<TCP 포트> -gv_debugChannelToken=<세션마다 새 토큰>` — Inspector 탭이 이 채널로 붙는다(`getDebugChannelPort`) |
+ *          | 전용 서버만 | `-gv_debugChannelPort=<TCP 포트> -gv_debugChannelToken=<세션마다 새 토큰> -gv_stateHashHistory=<kServerStateHashHistoryTicks>` — Inspector · Sync 탭이 이 채널로 붙는다(`getDebugChannelPort`) |
  *          | 클라이언트 | `-gv_netConnectAddress=127.0.0.1:<포트> -gv_standardInputCommands=1` (+ `-gv_traceSaveOnExit=<폴더>/clientN.trace.json`) |
  *          | `App` 마다(창 배치를 켜면) | `-W=<너비> -H=<높이> -WinX=<x> -WinY=<y>` — 리슨 호스트 · 클라이언트 순서로 나란히(`makeWindowArguments`) |
  *
@@ -85,6 +85,8 @@ namespace sw::editor
         static constexpr int32 kServerProcessIndex = 0;
         /** @brief 합친 트레이스의 파일 이름입니다. */
         static constexpr const utf8* kMergedTraceFileName = "merged.trace.json";
+        /** @brief 세션이 띄운 전용 서버가 남기는 틱별 상태 해시 이력의 길이입니다(`-gv_stateHashHistory`, Sync 탭이 읽는다). 60 Hz 로 1 분입니다. */
+        static constexpr int32 kServerStateHashHistoryTicks = 3600;
         /** @brief `updateUntil` 이 조건을 다시 보는 간격입니다. */
         static constexpr int64 kUpdatePollMilliseconds = 50;
 

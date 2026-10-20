@@ -29,7 +29,7 @@ S1 에서 남은 것은 아래 "남은 것 — S1" 절에 있습니다.
 | Conditions | 프리셋 · 클라이언트별 슬라이더 · 끊기 · 재접속 · 스파이크 — 들어감 | S4 |
 | Inspector | 전용 서버의 하이어라키 · 컴포넌트 값 · 원격 개발 콘솔(이름 자동완성), 주소로 붙기 — 들어감(`EditorRemoteInspector`, 시나리오 `netinspector.scenario.xml`) | S3 |
 | Profiler | 바이트 · 패킷 · 재전송 · RTT · 손실의 시간축 그래프, 받은 메시지 종류별 비중 — 들어감 | S5 |
-| Sync | 틱별 해시 비교 · 처음 어긋난 틱 · 되감기 — 이력 · 비교는 들어감, 탭이 남음 | S7 |
+| Sync | 틱별 해시 이력 두 벌(세션 서버 · 다른 서버 · 저장한 파일)과 처음 어긋난 틱 — 들어감(`EditorStateHashCompare`, 시나리오 `netsync.scenario.xml`). 되감기가 남음 | S7 |
 
 - 창 위쪽의 **대상 고르기**(서버 · 클라이언트 N)가 모든 탭에 같은 대상을 준다(들어감). 에디터가 띄운 세션이 없을 때는 Inspector 탭의 "주소로 붙기"로 실행 중인 서버에 붙는다(들어감).
 - S6(권위 겹쳐 보기)은 창이 아니라 **게임 뷰 툴바의 보기 단추**다 — 화면 위에 겹쳐야 하므로.
@@ -70,11 +70,11 @@ Profiler 탭(시간축 그래프 · 받은 메시지 종류별 비중, `net.stat
 `SceneStateHash` · `StateHashHistory`(`Source/Engine/Scene`)는 들어갔습니다. 서버는 `-gv_stateHashHistory=N` 이면 틱마다 씬 해시(이름 순으로 접은 이름 · 활성 · 월드 위치)를 남기고,
 개발 명령 `state.hashes <from> <count>` 가 읽어 줍니다. `StateHashHistory::findFirstDivergence` 가 두 이력에서 처음 어긋난 틱을 찾습니다.
 확인은 ServerTest `StateHashHistoryFindsTheFirstDivergentTick`(두 서버 중 하나의 오브젝트를 옮기면 처음 어긋난 틱이 옮긴 다음 틱으로 나옴)입니다.
+Sync 탭(2026-10-21)은 세션이 띄운 전용 서버(`-gv_stateHashHistory=3600` 을 늘 준다) · 주소로 붙은 다른 서버 · 저장한 이력 파일을 A · B 칸에 담아 견줍니다. `parseReport` 는 형식이 다른 줄을 건너뛰지 않고 거절합니다.
 
 - 클라이언트 쪽 기록: 기록은 `ServerApp` 에만 있다. 클라이언트(App) 가 서버 틱 번호에 맞춰 같은 해시를 남기는 길(`GameNetSession` 의 틱 번호)이 있어야 서버와 클라이언트를 비교한다.
 - 키트별 해시: 파괴 해시 비교 · 롤백 세션 상태 바이트를 같은 이력에 다른 이름으로 더한다(지금은 씬 트랜스폼뿐).
 - 어긋난 오브젝트 짚기: 지금은 틱만 나온다. 해시를 오브젝트별로 나눠 보관하거나, 어긋난 틱에서 `object.dump` 두 벌을 비교하는 길이 필요하다.
-- Sync 탭: 두 프로세스 이력을 모아 처음 어긋난 틱을 보이는 창.
 - 되감기: 의도 기록(`.swintent`)으로 그 틱까지 서버를 다시 돌려 한 틱씩 진행.
 
 ### S8 한 프로세스 가상 서버를 에디터에서 (장기)
@@ -103,7 +103,7 @@ Profiler 탭(시간축 그래프 · 받은 메시지 종류별 비중, `net.stat
 
 ## 순서
 
-S3 · S6 · S7 의 에디터 쪽(Inspector · Sync 탭) → S8(S2 중단점 친화 · S1 멀티 프로세스 재생 · S4 회선 조절 · S5 프로파일러 탭은 끝났다 — S5 의 남은 것은 그 절에). 나머지는 S1 의 세션 위에서 확인한다 — 에디터 시나리오 `engine/automation/editor/netplay.scenario.xml` 이 바닥이다. S3 · S5 는 디버그 HUD 의 섹션 레지스트리와 같은 원천을 쓴다.
+S6 · S7 의 남은 것(게임 뷰 겹치기 · 클라이언트 쪽 해시 기록) → S8(S2 중단점 친화 · S1 멀티 프로세스 재생 · S4 회선 조절 · S5 프로파일러 탭은 끝났다 — S5 의 남은 것은 그 절에). 나머지는 S1 의 세션 위에서 확인한다 — 에디터 시나리오 `engine/automation/editor/netplay.scenario.xml` 이 바닥이다. S3 · S5 는 디버그 HUD 의 섹션 레지스트리와 같은 원천을 쓴다.
 
 ## 지키는 것
 
