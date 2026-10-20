@@ -5,6 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
+#include "Engine/Config/ConfigManager.h"
 #include "Engine/Serialization/JSON/ConfigKeyDoc.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
@@ -57,16 +58,17 @@ namespace sw::editor
     {
     }
 
-    bool TextureImportConfig::loadFromFile( string_view configPath )
+    ConfigReadResult TextureImportConfig::loadFromFile( string_view configPath )
     {
+        if ( FileUtil::exists( configPath ) == false )
+            return ConfigReadResult::Missing;
         string text;
         if ( FileUtil::readTextFile( configPath, text ) == false || text.empty() )
         {
-            SW_LOG_WARNING( "Failed to read TextureImportConfig file: %#", configPath );
-            return false;
+            SW_LOG_ERROR( "Failed to read TextureImportConfig file: %#", configPath );
+            return ConfigReadResult::Invalid;
         }
-
-        return loadFromJSONString( text );
+        return loadFromJSONString( text ) ? ConfigReadResult::Loaded : ConfigReadResult::Invalid;
     }
 
     bool TextureImportConfig::loadFromJSONString( string_view jsonString )

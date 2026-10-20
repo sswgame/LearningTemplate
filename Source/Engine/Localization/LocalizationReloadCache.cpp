@@ -16,7 +16,7 @@ namespace sw
     void LocalizationReloadCache::reload( string_view relativePath, IRHIDevice* /*pDevice*/ )
     {
         if ( engine::areEngineServicesBound() )
-            (void)engine::getSubsystem<LocalizationManager>().reloadChangedFile( relativePath );
+            (void)engine::getSubsystem<LocalizationManager>().reloadChangedFile( relativePath ); // Failed 는 관리자가 오류로 남겼다 — 캐시 `reload` 는 결과를 돌려주지 않는다
     }
 
     size_t LocalizationReloadCache::getCachedCount() const

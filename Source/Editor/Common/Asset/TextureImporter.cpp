@@ -18,6 +18,7 @@
 #include "Editor/Common/EditorPaths.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
+#include "Engine/Config/ConfigManager.h"
 #include "Engine/Resource/ResourcePaths.h"
 
 #include "sw/config/ConfigConstants.h"
@@ -537,9 +538,10 @@ namespace sw::editor
 
         // 바뀐 파일 하나가 아니라 어긋난 것 전부를 일괄 임포트로 처리한다. 스탬프를 기록하는 경로가 하나여야 에디터에서 임포트한 것과
         // `App --import-textures` 로 임포트한 것이 같은 판정을 받는다. 내용이 그대로이면(저장만 다시 했다) 임포트하지 않는다.
-        // 설정 파일이 없으면 기본 규칙을 쓴다. 파일이 깨졌으면 로드가 알리고 기본 규칙으로 임포트한다.
+        // 설정 파일이 없으면 기본 규칙을 쓴다. 깨졌으면 기본 규칙으로 임포트하지 않는다(결과가 말없이 바뀐다) — 로드가 오류를 남겼다.
         TextureImportConfig config{};
-        (void)config.loadFromFile( makeDefaultImportConfigPath() ); // 없으면 기본 규칙이고, 깨졌으면 로드가 알린다
+        if ( config.loadFromFile( makeDefaultImportConfigPath() ) == ConfigReadResult::Invalid )
+            return true;
         const AssetImportSummary summary = importAllTextures( resourceRoot, config, AssetImportMode::ImportStale );
         for ( const string& problem : summary._listProblem )
         {

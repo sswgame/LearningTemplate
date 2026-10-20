@@ -187,15 +187,15 @@ namespace sw
         return true;
     }
 
-    bool ConfigManager::reloadConfigFile( string_view changedPath )
+    ReloadOutcome ConfigManager::reloadConfigFile( string_view changedPath )
     {
         for ( const auto& [key, source] : _mapSource )
         {
             (void)key;
             if ( source._pReload != nullptr && FileUtil::pathsEqualNormalized( source._resolvedPath, changedPath ) )
-                return source._pReload( *this, source._resolvedPath );
+                return source._pReload( *this, source._resolvedPath ) ? ReloadOutcome::Reloaded : ReloadOutcome::Failed;
         }
-        return false;
+        return ReloadOutcome::NotTracked;
     }
 
     ConfigManager::~ConfigManager()

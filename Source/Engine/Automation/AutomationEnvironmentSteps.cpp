@@ -109,8 +109,11 @@ namespace sw
             {
                 uint32 width  = 0;
                 uint32 height = 0;
-                (void)parseSize( step, "width", width );   // 검사에서 확인했다
-                (void)parseSize( step, "height", height ); // 검사에서 확인했다
+                if ( parseSize( step, "width", width ) == false || parseSize( step, "height", height ) == false )
+                {
+                    runner.recordFailure( step, "width and height must be pixels in 1..16384" ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
+                    return true;
+                }
                 IWindow* pWindow = IWindow::getActiveWindow();
                 if ( pWindow == nullptr || pWindow->setDisplayMode( WindowDisplayMode::Windowed, width, height ) == false )
                     runner.recordFailure( step, "this platform could not resize the window" );

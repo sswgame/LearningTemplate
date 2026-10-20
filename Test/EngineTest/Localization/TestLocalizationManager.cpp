@@ -172,7 +172,7 @@ SW_TEST_CASE( LocalizationManagerTest, ReloadChangedFilePicksUpNewTextAndKeepsOl
     LocalizationTestUtil::writeTranslation( folder, "ko", R"("ui.title": { "text": "수수께끼 섬" })" );
     const sw::string changedPath = sw::FileUtil::joinPath( folder, "ko.translation.json" );
     SW_EXPECT_TRUE( loc.isProjectFile( changedPath ) );
-    SW_EXPECT_TRUE( loc.reloadChangedFile( changedPath ) );
+    SW_EXPECT_TRUE( loc.reloadChangedFile( changedPath ) == sw::ReloadOutcome::Reloaded );
     SW_EXPECT_STREQ( "수수께끼 섬", loc.getString( sw::hashed_string( "ui.title" ) ) );
     SW_EXPECT_STREQ( "신비의 섬", pHeld ); // 들고 있던 포인터는 그대로다
     SW_EXPECT_TRUE( loc.getTextRevision() > revisionBefore );
@@ -182,12 +182,12 @@ SW_TEST_CASE( LocalizationManagerTest, ReloadChangedFilePicksUpNewTextAndKeepsOl
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( changedPath, "{ \"culture\": \"ko\", \"entries\": { " ) );
     {
         SW_TEST_DEFENSIVE_SCOPE( "a half-written translation file" );
-        SW_EXPECT_FALSE( loc.reloadChangedFile( changedPath ) );
+        SW_EXPECT_TRUE( loc.reloadChangedFile( changedPath ) == sw::ReloadOutcome::Failed );
     }
     SW_EXPECT_STREQ( "수수께끼 섬", loc.getString( sw::hashed_string( "ui.title" ) ) );
 
     // 프로젝트 밖의 파일은 다루지 않는다.
-    SW_EXPECT_FALSE( loc.reloadChangedFile( sw::FileUtil::joinPath( folder, "other.json" ) ) );
+    SW_EXPECT_TRUE( loc.reloadChangedFile( sw::FileUtil::joinPath( folder, "other.json" ) ) == sw::ReloadOutcome::NotTracked );
 }
 
 /**

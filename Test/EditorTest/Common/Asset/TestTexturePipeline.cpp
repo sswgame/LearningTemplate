@@ -9,6 +9,7 @@
 #include "Editor/Common/Asset/TextureImportConfig.h"
 #include "Editor/Common/Asset/TextureImporter.h"
 
+#include "Engine/Config/ConfigManager.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Resource/Image/DDSLoader.h"
 #include "Engine/Resource/ResourcePaths.h"
@@ -629,7 +630,7 @@ namespace sw::editor
     {
         SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
         TextureImportConfig config;
-        SW_ASSERT_TRUE( config.loadFromFile( TextureImporter::makeDefaultImportConfigPath() ) );
+        SW_ASSERT_TRUE( config.loadFromFile( TextureImporter::makeDefaultImportConfigPath() ) == ConfigReadResult::Loaded );
 
         const AssetImportSummary summary = TextureImporter::importAllTextures( sw::ResourcePaths::getRootFolderPath(), config, AssetImportMode::CheckOnly );
         string                   problemText;

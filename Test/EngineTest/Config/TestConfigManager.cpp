@@ -188,17 +188,17 @@ SW_TEST_CASE( ConfigManagerTest, ReloadConfigFileUpdatesInPlaceAndNotifies )
     } ) );
 
     SW_ASSERT_TRUE( FileUtil::writeTextFile( path, makeEngineConfigJSON( 1024, 768 ) ) );
-    SW_EXPECT_TRUE( manager.reloadConfigFile( path ) );
+    SW_EXPECT_TRUE( manager.reloadConfigFile( path ) == ReloadOutcome::Reloaded );
     SW_EXPECT_TRUE_MSG( manager.getConfig<EngineConfig>() == pBefore, "다시 읽으며 설정 객체를 바꿨습니다(받아 둔 포인터가 댕글링이 된다)" );
     SW_EXPECT_EQUAL( 1024u, pBefore->_window._width );
     SW_EXPECT_EQUAL( 1u, notifyCount );
     SW_EXPECT_TRUE( notifiedType == EngineConfig::StaticType()->_fullyQualifiedName );
 
     // 모르는 경로는 아무것도 하지 않는다.
-    SW_EXPECT_FALSE( manager.reloadConfigFile( FileUtil::joinPath( rootDir, "Other.json" ) ) );
+    SW_EXPECT_TRUE( manager.reloadConfigFile( FileUtil::joinPath( rootDir, "Other.json" ) ) == ReloadOutcome::NotTracked );
     // 깨진 JSON 은 이전 값을 지킨다.
     SW_ASSERT_TRUE( FileUtil::writeTextFile( path, "{ \"_window\": { \"_width\": " ) );
-    SW_EXPECT_FALSE( manager.reloadConfigFile( path ) );
+    SW_EXPECT_TRUE( manager.reloadConfigFile( path ) == ReloadOutcome::Failed );
     SW_EXPECT_EQUAL( 1024u, pBefore->_window._width );
     SW_EXPECT_EQUAL( 1u, notifyCount );
 }

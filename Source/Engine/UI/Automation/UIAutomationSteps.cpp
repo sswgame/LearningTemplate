@@ -139,8 +139,12 @@ namespace sw
         if ( const string* pCount = step.findAttribute( "screens" ); pCount != nullptr )
         {
             int32 expected = 0;
-            (void)StringUtil::parseInt( string_view{ *pCount }, expected ); // validateExpectUI 가 이미 확인했다
-            if ( ui.getScreenCount() != static_cast<uint32>( expected ) )
+            if ( StringUtil::parseInt( string_view{ *pCount }, expected ) == false )
+            {
+                outFailure += "screens '" + *pCount + "' is not a number. "; // 검사 뒤 단계가 바뀌었다(핫 리로드)
+                bPassed = false;
+            }
+            else if ( ui.getScreenCount() != static_cast<uint32>( expected ) )
             {
                 outFailure += "screen count is " + to_string( ui.getScreenCount() ) + ", expected " + *pCount + ". ";
                 bPassed = false;

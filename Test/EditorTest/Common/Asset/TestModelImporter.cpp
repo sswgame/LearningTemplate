@@ -7,6 +7,7 @@
 #include "Editor/Common/Asset/ModelImportConfig.h"
 #include "Editor/Common/Asset/ModelImporter.h"
 
+#include "Engine/Config/ConfigManager.h"
 #include "Engine/Destruction/FractureAsset.h"
 #include "Engine/Destruction/MeshFracture.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
@@ -434,7 +435,7 @@ SW_TEST_CASE( ModelImporterTest, RepositoryRawModelsMatchTheirMeshes )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::editor::ModelImportConfig config;
-    SW_ASSERT_TRUE( config.loadFromFile( sw::editor::ModelImportConfig::makeDefaultConfigPath() ) );
+    SW_ASSERT_TRUE( config.loadFromFile( sw::editor::ModelImportConfig::makeDefaultConfigPath() ) == sw::ConfigReadResult::Loaded );
 
     const sw::editor::AssetImportSummary summary =
         sw::editor::ModelImporter::importAllModels( sw::ResourcePaths::getRootFolderPath(), config, sw::editor::AssetImportMode::CheckOnly );

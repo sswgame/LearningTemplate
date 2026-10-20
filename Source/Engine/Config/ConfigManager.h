@@ -21,6 +21,7 @@
 
 #include "Engine/Config/IConfig.h"
 #include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Serialization/Base/ReloadOutcome.h"
 
 namespace sw
 {
@@ -134,9 +135,9 @@ namespace sw
          * @brief 파일에서 읽은 설정 중 경로가 @p changedPath 인 것을 **제자리에서** 다시 읽고 `onConfigReloaded` 를 알립니다.
          * @details 설정 객체는 바꾸지 않고 값만 덮어쓴다. 기동 때 받아 둔 포인터(`Engine::_pEngineConfig`)가 그대로 유효하다. JSON 이
          *          깨졌으면 경고를 남기고 이전 값을 그대로 둔다. 경로는 `FileUtil::pathsEqualNormalized` 로 비교한다.
-         * @return 아는 설정이고 다시 읽었으면 true. 모르는 경로나 깨진 파일이면 false
+         * @return 다시 읽었으면 `Reloaded`, 파일에서 읽은 설정이 아닌 경로면 `NotTracked`, 깨진 파일이면(오류를 남겼다) `Failed`
          */
-        [[nodiscard]] bool reloadConfigFile( string_view changedPath );
+        [[nodiscard]] ReloadOutcome reloadConfigFile( string_view changedPath );
         /** @brief 설정을 다시 읽을 때마다 호출되는 델리게이트입니다. */
         ConfigReloadedDelegate& onConfigReloaded() { return _onConfigReloaded; }
         /** @brief 다시 읽을 수 있는(파일에서 읽은) 설정 수입니다. */
