@@ -179,6 +179,11 @@ namespace sw
          * @details 조건이 참이거나 `timeoutFrames` 를 넘으면(실패로 적는다) false 이고, 그 단계는 끝난다.
          */
         [[nodiscard]] bool shouldHoldForCondition( const AutomationStep& step, InputManager& input );
+        /**
+         * @brief 시계 잡기 조건(`SW_AUTOMATION_CLOCK_HOLDER`, 저장 검증 같은 백그라운드 작업)이 참이면 이 프레임을 세지 않고 true 입니다 — 시작 전이면 시작을 미룹니다.
+         * @details 그 프레임은 단계를 돌리지 않고 뒤의 입력 이벤트를 한 프레임 민다(`WaitUntil` 과 같다). 벽시계로 `kClockHoldTimeoutSeconds` 를 넘기면 시간 초과로 끝낸다.
+         */
+        [[nodiscard]] bool holdClockForBackgroundWork( InputManager& input );
         void               runExpectLog( const AutomationStep& step );
         void               runExpectImage( const AutomationStep& step );
         /** @brief 끝 정리를 합니다. 가상 입력과 로그 수집을 떼고 요약 줄과 보고를 씁니다. 한 번만 돕니다. */
@@ -212,11 +217,15 @@ namespace sw
         uint32                  _waitFrameCount; ///< 시작 조건을 기다린 프레임 수입니다.
         uint32                  _screenshotRequestedCount;
         uint32                  _screenshotCompletedCount;
-        uint32                  _imageWaitFrameCount; ///< `<ExpectImage>` 가 스크린샷을 기다린 프레임 수입니다.
-        uint32                  _holdFrameCount;      ///< 지금 단계(`<WaitUntil>` · 마크를 기다리는 에디터 입력)가 시나리오 시계를 붙잡은 프레임(`holdUntilReady`, 그동안 `_frameIndex` 는 그대로다)
+        uint32                  _imageWaitFrameCount;   ///< `<ExpectImage>` 가 스크린샷을 기다린 프레임 수입니다.
+        uint32                  _holdFrameCount;        ///< 지금 단계(`<WaitUntil>` · 마크를 기다리는 에디터 입력)가 시나리오 시계를 붙잡은 프레임(`holdUntilReady`, 그동안 `_frameIndex` 는 그대로다)
+        uint32                  _clockHoldFrameCount;   ///< 시계 잡기 조건이 이어서 붙잡은 프레임(`holdClockForBackgroundWork`)
+        float64                 _clockHoldStartSeconds; ///< 그 붙잡기가 시작된 단조 시계 초
+        string                  _clockHolderName;       ///< 붙잡은 조건의 이름(로그)
         AutomationResult        _result;
-        uint8                   _bStarted : 1;
-        uint8                   _bEnded   : 1;
-        [[maybe_unused]] uint8  _reserved : 6;
+        uint8                   _bStarted   : 1;
+        uint8                   _bEnded     : 1;
+        uint8                   _bClockHeld : 1; ///< 이 프레임을 시계 잡기 조건이 붙잡았다(`onFrameBegin` 이 정하고 `onFrameEnd` 가 단계를 건너뛴다)
+        [[maybe_unused]] uint8  _reserved   : 5;
     };
 } // namespace sw

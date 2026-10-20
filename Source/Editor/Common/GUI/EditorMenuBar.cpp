@@ -75,12 +75,12 @@ namespace sw::editor
 
         if ( ImGui::BeginMenu( "Assets" ) )
         {
-            EditorAssetTypeRegistry::forEachToolPanelTitle( []( const utf8* pTitle )
+            EditorAssetTypeRegistry::forEachToolPanel( []( EditorAssetType kind, const utf8* pTitle )
             {
                 // 람다는 바깥의 `pContext` 를 캡처하지 않는다. 여기서 다시 받아 다시 확인한다.
                 EditorContext* pMenuContext = EditorContext::get();
                 if ( pMenuContext != nullptr && ImGui::MenuItem( pTitle ) )
-                    pMenuContext->getSubsystem<EditorWorkspace>().requestOpenPanel( pTitle );
+                    pMenuContext->getSubsystem<EditorWorkspace>().requestOpenDocumentPanel( kind );
             } );
             ImGui::EndMenu();
         }
@@ -313,11 +313,18 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        string openTitle;
-        if ( pContext->getSubsystem<EditorWorkspace>().consumeOpenPanel( openTitle ) == false )
+        EditorPanelOpenRequest request;
+        if ( pContext->getSubsystem<EditorWorkspace>().consumeOpenPanel( request ) == false )
             return;
-        if ( pContext->getSubsystem<EditorPanelManager>().setPanelOpen( openTitle, true ) )
-            ImGui::SetWindowFocus( openTitle.c_str() );
+        const EditorPanelManager& panelManager = pContext->getSubsystem<EditorPanelManager>();
+        IEditorPanel*             pPanel       = request._documentKind != EditorAssetType::Unknown ? panelManager.findDocumentPanel( request._documentKind ) : panelManager.findPanelByID( request._panelID );
+        if ( pPanel == nullptr )
+        {
+            SW_LOG_ERROR( "Open panel request found no panel (id '%#', document kind %#)", request._panelID.c_str(), static_cast<uint32>( request._documentKind ) );
+            return;
+        }
+        pPanel->setOpen( true );
+        ImGui::SetWindowFocus( pPanel->getPanelTitle() ); // 창 이름은 인스턴스의 제목이다(`IEditorPanel::draw`)
     }
 
     void EditorMenuBar::processPendingSceneLoad()

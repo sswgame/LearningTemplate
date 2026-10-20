@@ -4,7 +4,7 @@
   (탐침 Editor.DirtyDocumentCount) 툴바 Save 와 저장 커맨드(asset.save — Ctrl+S 와 같은 길) 두 길로 저장한다. 저장하면 파일이 생기고
   (Editor.TempAssetExists) 더러움이 걷힌다. 대화 그래프 판(dialoguegraphsave)과 같은 모양이다.
   문서: Saved/Automation/editor.animgraphsave/temp.animgraph.json — 접미사 .animgraph.json 이 애니메이션 그래프 패널을 고른다
-  (EditorAssetTypeRegistry::findPanelTitleForPath 는 가장 긴 접미사가 이긴다). 없는 파일이라 기본 문서(노드 Idle · Walk)로 열리고, 여는 길은
+  (EditorAssetTypeRegistry::findPanelKindForPath 는 가장 긴 접미사가 이긴다). 없는 파일이라 기본 문서(노드 Idle · Walk)로 열리고, 여는 길은
   markDocumentLoaded 로 더러움을 걷으므로 연 직후 DirtyDocumentCount 는 0 이다. 끝에서 asset.removeTemp 로 지운다.
   asset.open 의 패널 열기는 처음 여는 창이라 포커스를 못 잡을 수 있어 panel.focus 를 따로 보낸다(다음 프레임에 SetWindowFocus).
   실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/animgraphsave.scenario.xml -dx12

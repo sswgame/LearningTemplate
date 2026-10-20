@@ -428,10 +428,10 @@ namespace sw::editor
         return pTitle != nullptr ? pTitle : "";
     }
 
-    string_view EditorAssetTypeRegistry::findPanelTitleForPath( string_view assetPath )
+    EditorAssetType EditorAssetTypeRegistry::findPanelKindForPath( string_view assetPath )
     {
         if ( assetPath.empty() )
-            return {};
+            return EditorAssetType::Unknown;
 
         // 가장 긴 접미사가 이긴다. `.animgraph.json` 이 `.json` 보다 구체적이다.
         size_t                               bestLen{ 0 };
@@ -448,9 +448,7 @@ namespace sw::editor
             bestLen  = mapping._suffix.size();
             bestKind = mapping._kind;
         }
-        if ( bestKind == EditorAssetType::Unknown )
-            return {};
-        return getPanelTitle( bestKind );
+        return bestKind;
     }
 
     const EditorAssetPanelMapping* EditorAssetTypeRegistry::getPanelMappings( uint32& outCount )

@@ -89,6 +89,16 @@ namespace sw
         return false;
     }
 
+    const utf8* AutomationStepRegistry::findClockHolder()
+    {
+        for ( const AutomationStartBlocker* pBlocker : AutomationStepRegistryInternal::getStartBlockers().getItems() )
+        {
+            if ( pBlocker->_bHoldsClock && pBlocker->_pIsBlocking() )
+                return pBlocker->_pName;
+        }
+        return nullptr;
+    }
+
     AutomationStepRegistrar::AutomationStepRegistrar( const AutomationStepRegistration* pRegistration )
         : _pRegistration{ AutomationStepRegistry::registerStep( pRegistration ) ? pRegistration : nullptr }
     {

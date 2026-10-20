@@ -81,6 +81,7 @@ namespace sw::editor
             {
                 SW_LOG_WARNING( "Asset validation could not start Python - validation on save is off for this session" );
                 _bDisabled = SW_TRUE;
+                _listPendingPath.clear(); // 꺼진 뒤에는 돌릴 수 없다 — 대기열을 남기면 `isBusy` 가 참으로 남는다
             }
             else if ( result._exitCode == 2 )
             {
@@ -101,6 +102,11 @@ namespace sw::editor
         }
         if ( _pJob->request( makeCommand( _projectRoot, _listPendingPath ), _projectRoot ) )
             _listPendingPath.clear();
+    }
+
+    bool EditorAssetValidation::isBusy() const
+    {
+        return _listPendingPath.empty() == false || _pJob->isPending();
     }
 
     string EditorAssetValidation::makeCommand( string_view projectRoot, const vector<string>& listResourcePath )

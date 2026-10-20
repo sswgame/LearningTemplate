@@ -27,10 +27,9 @@ namespace sw::editor
 
     bool EditorPanelHost::focusPanel( string_view panelID )
     {
-        const IEditorPanel* pPanel = _panelManager.findPanelByID( panelID );
-        if ( pPanel == nullptr )
+        if ( _panelManager.findPanelByID( panelID ) == nullptr )
             return false;
-        _context.getSubsystem<EditorWorkspace>().requestOpenPanel( pPanel->getPanelTitle() );
+        _context.getSubsystem<EditorWorkspace>().requestOpenPanelByID( panelID );
         return true;
     }
 

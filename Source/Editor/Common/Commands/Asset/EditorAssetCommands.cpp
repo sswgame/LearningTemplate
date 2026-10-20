@@ -35,12 +35,12 @@ namespace sw::editor
         if ( pContext == nullptr )
             return false;
 
-        // 전용 도구 패널을 먼저 찾는다(종류 테이블의 패널 제목). 패널이 없는 종류는 그 종류의 동작이 연다(씬).
-        const string_view panelTitle = EditorAssetTypeRegistry::findPanelTitleForPath( relativePath );
-        if ( panelTitle.empty() == false )
+        // 전용 도구 패널을 먼저 찾는다(종류 테이블에 패널 제목이 있는 종류). 패널이 없는 종류는 그 종류의 동작이 연다(씬).
+        const EditorAssetType panelKind = EditorAssetTypeRegistry::findPanelKindForPath( relativePath );
+        if ( panelKind != EditorAssetType::Unknown )
         {
             pContext->getSubsystem<EditorWorkspace>().setFocusedAssetPath( string{ relativePath }.c_str() );
-            pContext->getSubsystem<EditorWorkspace>().requestOpenPanel( string{ panelTitle }.c_str() );
+            pContext->getSubsystem<EditorWorkspace>().requestOpenDocumentPanel( panelKind );
             return true;
         }
 

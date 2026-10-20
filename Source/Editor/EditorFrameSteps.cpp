@@ -21,6 +21,7 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 
+#include "Engine/Automation/AutomationStepRegistry.h"
 #include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Window/IWindow.h"
@@ -104,6 +105,14 @@ namespace sw::editor
                 SW_EDITOR_PROFILE_SCOPE( "GT.Editor.step.screenshot" );
                 EditorScreenshotCommands::update();
             }
+
+            /** @brief 시계 잡기 조건 — 저장 검증(2 단계가 돌린다)이 아직 로그로 남기지 않은 결과가 있으면 참입니다. 에디터가 없으면 잡지 않습니다. */
+            static bool isAssetValidationBusy()
+            {
+                EditorContext*               pContext    = EditorContext::get();
+                const EditorAssetValidation* pValidation = pContext != nullptr ? pContext->findSubsystem<EditorAssetValidation>() : nullptr;
+                return pValidation != nullptr && pValidation->isBusy();
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -116,4 +125,6 @@ namespace sw::editor
     SW_EDITOR_FRAME_STEP( SelfTest, "selfTest", EditorFrameStepOrder::kSelfTest, &EditorFrameStepsInternal::runSelfTest );
     SW_EDITOR_FRAME_STEP( WindowTitle, "windowTitle", EditorFrameStepOrder::kWindowTitle, &EditorFrameStepsInternal::runWindowTitle );
     SW_EDITOR_FRAME_STEP( Screenshot, "screenshot", EditorFrameStepOrder::kScreenshot, &EditorFrameStepsInternal::runScreenshot );
+    // 검증은 저장 뒤 파일을 늦게 읽는다 — 자동화 시계가 앞서 가면 뒤 단계(임시 폴더 지우기)가 바꾼 트리를 읽고 결과가 다음 시나리오 창에 떨어진다.
+    SW_AUTOMATION_CLOCK_HOLDER( editorAssetValidation, "EditorAssetValidation", &EditorFrameStepsInternal::isAssetValidationBusy );
 } // namespace sw::editor

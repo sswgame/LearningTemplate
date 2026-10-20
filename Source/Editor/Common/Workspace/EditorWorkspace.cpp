@@ -35,7 +35,7 @@ namespace sw::editor
         , _scrollToComponentID{ 0 }
         , _selectedComponentKey{}
         , _focusedAssetPath{}
-        , _pendingOpenPanelTitle{}
+        , _pendingOpenPanel{}
         , _pendingScenePath{}
         , _pendingSceneActionPath{}
         , _copiedComponentXML{}
@@ -158,17 +158,22 @@ namespace sw::editor
         }
     }
 
-    void EditorWorkspace::requestOpenPanel( const utf8* pTitle )
+    void EditorWorkspace::requestOpenPanelByID( string_view panelID )
     {
-        _pendingOpenPanelTitle = ( pTitle != nullptr ) ? pTitle : "";
+        _pendingOpenPanel = EditorPanelOpenRequest{ string{ panelID }, EditorAssetType::Unknown };
     }
 
-    bool EditorWorkspace::consumeOpenPanel( string& outTitle )
+    void EditorWorkspace::requestOpenDocumentPanel( EditorAssetType kind )
     {
-        if ( _pendingOpenPanelTitle.empty() )
+        _pendingOpenPanel = EditorPanelOpenRequest{ string{}, kind };
+    }
+
+    bool EditorWorkspace::consumeOpenPanel( EditorPanelOpenRequest& outRequest )
+    {
+        if ( _pendingOpenPanel._panelID.empty() && _pendingOpenPanel._documentKind == EditorAssetType::Unknown )
             return false;
-        outTitle = _pendingOpenPanelTitle;
-        _pendingOpenPanelTitle.clear();
+        outRequest        = std::move( _pendingOpenPanel );
+        _pendingOpenPanel = EditorPanelOpenRequest{};
         return true;
     }
 

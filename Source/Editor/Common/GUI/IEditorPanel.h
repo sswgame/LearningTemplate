@@ -8,6 +8,7 @@
 
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/GUI/EditorChrome.h"
+#include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
 
 namespace sw
@@ -64,6 +65,11 @@ namespace sw::editor
         virtual bool isToolPanel() const { return false; }
         /** @brief 기본 배치에서 붙을 영역입니다. 기본은 떠 있는 창입니다. */
         virtual EditorDockSlot getDefaultDockSlot() const { return EditorDockSlot::Floating; }
+        /**
+         * @brief 이 패널이 여는 문서의 애셋 종류입니다. 문서 패널이 아니면 `Unknown` 입니다.
+         * @details 경로 · 애셋 종류로 여는 요청(`EditorWorkspace::requestOpenDocumentPanel`)이 이것으로 패널을 찾는다 — 종류 표의 패널 제목 글로 찾지 않는다.
+         */
+        virtual EditorAssetType getDocumentKind() const { return EditorAssetType::Unknown; }
         /** @brief 마지막 draw 에서 이 패널 창에 포커스가 있었으면 true 입니다. */
         bool isWindowFocused() const { return _bWindowFocused; }
 

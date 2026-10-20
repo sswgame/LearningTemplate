@@ -150,8 +150,8 @@ namespace sw::editor
 
         /** @brief 도구 패널 제목입니다. 전용 패널이 없으면 빈 문자열입니다. */
         static const utf8* getPanelTitle( EditorAssetType kind );
-        /** @brief 경로에 해당하는 도구 패널 제목을 반환합니다. 없으면 빈 문자열입니다. */
-        static string_view findPanelTitleForPath( string_view assetPath );
+        /** @brief 경로를 여는 도구 패널의 종류입니다(가장 긴 접미사가 이긴다). 전용 패널이 없으면 `Unknown` 입니다. 여는 요청은 `EditorWorkspace::requestOpenDocumentPanel` 입니다. */
+        static EditorAssetType findPanelKindForPath( string_view assetPath );
 
         /** @brief 도구 패널을 여는 접미사 목록을 반환합니다. outCount 에 개수를 씁니다. */
         static const EditorAssetPanelMapping* getPanelMappings( uint32& outCount );
@@ -159,11 +159,11 @@ namespace sw::editor
         static const EditorAssetType* getToolPanelKinds( uint32& outCount );
 
         /**
-         * @brief 도구 패널 제목을 하나씩 콜백에 넘깁니다. 제목이 비어 있는 종류는 건너뜁니다.
-         * @details 순회는 레지스트리가 맡고, 쓰는 쪽(도킹 레이아웃, 메뉴바)은 유효한 제목만 받으면 된다.
+         * @brief 도구 패널이 있는 종류와 그 제목을 하나씩 콜백(`func( kind, pTitle )`)에 넘깁니다. 제목이 비어 있는 종류는 건너뜁니다.
+         * @details 순회는 레지스트리가 맡고, 쓰는 쪽(메뉴바)은 유효한 제목만 받는다. 여는 요청은 제목이 아니라 종류로 한다(`requestOpenDocumentPanel`).
          */
         template <typename Func>
-        static void forEachToolPanelTitle( Func&& func )
+        static void forEachToolPanel( Func&& func )
         {
             uint32                       kindCount{ 0 };
             const EditorAssetType* const pKind = getToolPanelKinds( kindCount );
@@ -172,7 +172,7 @@ namespace sw::editor
                 const utf8* pTitle = getPanelTitle( pKind[index] );
                 if ( StringUtil::isNullOrEmpty( pTitle ) )
                     continue;
-                func( pTitle );
+                func( pKind[index], pTitle );
             }
         }
         /** @brief 콘텐츠 브라우저 타입 필터 목록을 반환합니다. */
