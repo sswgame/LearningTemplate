@@ -15,6 +15,8 @@
 
 namespace sw
 {
+    enum class AudioSpeakerMode : uint8;
+
     class CommandLineManager;
     class GlobalVariableManager;
     class IAudioService;
@@ -58,7 +60,7 @@ namespace sw
      * @class UserSettingsEngineHandlers
      * @brief 엔진 핸들러 모음입니다. `UserSettingsManager` 가 하나 가지고 레지스트리에 등록합니다.
      * @details 이름(스키마의 `target="handler:…"`):
-     *          - `audio.busVolume`(param 은 버스), `audio.mute`
+     *          - `audio.busVolume`(param 은 버스), `audio.mute`, `audio.speakerMode`(`auto`/`stereo`/`surround51`/`surround71`)
      *          - `input.mouseSensitivity`, `input.gamepadSensitivity`, `input.invertX`, `input.invertY`, `input.stickDeadzone`,
      *            `input.toggleMode`(param 은 액션, 값은 `hold`/`toggle`), `input.keyBinding`(키 바인딩 설정의 기본 대상)
      *          - `localization.language`(빈 값은 게임 기본 언어 그대로)
@@ -89,10 +91,13 @@ namespace sw
         [[nodiscard]] static bool tryParseResolution( string_view text, uint32& outWidth, uint32& outHeight );
         /** @brief `windowed` 와 `borderless` 를 읽습니다. */
         [[nodiscard]] static bool tryParseWindowMode( string_view text, WindowDisplayMode& outMode );
+        /** @brief `auto` · `stereo` · `surround51` · `surround71` 을 읽습니다. */
+        [[nodiscard]] static bool tryParseSpeakerMode( string_view text, AudioSpeakerMode& outMode );
 
     private:
         [[nodiscard]] bool applyBusVolume( const UserSettingApplyParams& context );
         [[nodiscard]] bool applyMute( const UserSettingApplyParams& context );
+        [[nodiscard]] bool applySpeakerMode( const UserSettingApplyParams& context );
         [[nodiscard]] bool applyMouseSensitivity( const UserSettingApplyParams& context );
         [[nodiscard]] bool applyGamepadSensitivity( const UserSettingApplyParams& context );
         [[nodiscard]] bool applyInvertX( const UserSettingApplyParams& context );
@@ -110,6 +115,7 @@ namespace sw
         static string formatResolution( int32 width, int32 height );
 
         static bool isToggleModeName( string_view value );
+        static bool isSpeakerModeName( string_view value );
         static bool isWindowModeName( string_view value );
         static bool isResolutionText( string_view value );
 

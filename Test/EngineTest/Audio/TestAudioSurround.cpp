@@ -7,6 +7,8 @@
 #include "Engine/Audio/AudioMixerDesc.h"
 #include "Engine/Audio/AudioPanner.h"
 #include "Engine/Audio/DSP/AudioEffect.h"
+#include "Engine/Audio/IAudioService.h"
+#include "Engine/UserSettings/UserSettingsEngineHandlers.h"
 
 #include "EngineTest/AudioTestUtil.h"
 
@@ -303,4 +305,53 @@ SW_TEST_CASE( AudioSurroundTest, MultichannelClipKeepsTheCenterChannel )
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( clip._channelCount ) );
     SW_EXPECT_NEAR_EQUAL( 0.5f * sw::MathUtil::kInvSqrt2, clip._listSample[0], 1e-6f );
     SW_EXPECT_NEAR_EQUAL( 0.5f * sw::MathUtil::kInvSqrt2, clip._listSample[1], 1e-6f );
+}
+
+/**
+ * @brief [AudioSurroundTest] 레이아웃 협상 — Auto 는 장치 마스크를 따르고(없으면 스테레오), 명시값은 장치 채널이 모자라면 거절하며 장치가 없으면 그대로다
+ */
+SW_TEST_CASE( AudioSurroundTest, SpeakerModeResolvesAgainstTheDevice )
+{
+    using Util = sw::AudioChannelLayoutUtil;
+    sw::AudioOutputDevice none;
+    sw::AudioOutputDevice stereo;
+    stereo._channelCount = 2;
+    stereo._channelMask  = Util::getChannelMask( sw::AudioChannelLayout::Stereo );
+    sw::AudioOutputDevice side51;
+    side51._channelCount = 6;
+    side51._channelMask  = Util::kSpeakerFrontLeft | Util::kSpeakerFrontRight | Util::kSpeakerFrontCenter | Util::kSpeakerLowFrequency | Util::kSpeakerSideLeft | Util::kSpeakerSideRight;
+    sw::AudioOutputDevice full71;
+    full71._channelCount = 8;
+    full71._channelMask  = Util::getChannelMask( sw::AudioChannelLayout::Surround71 );
+
+    sw::AudioChannelLayout layout{ sw::AudioChannelLayout::Stereo };
+    SW_EXPECT_TRUE( sw::IAudioService::resolveLayout( sw::AudioSpeakerMode::Auto, none, layout ) && layout == sw::AudioChannelLayout::Stereo );
+    SW_EXPECT_TRUE( sw::IAudioService::resolveLayout( sw::AudioSpeakerMode::Auto, side51, layout ) && layout == sw::AudioChannelLayout::Surround51 );
+    SW_EXPECT_TRUE( sw::IAudioService::resolveLayout( sw::AudioSpeakerMode::Auto, full71, layout ) && layout == sw::AudioChannelLayout::Surround71 );
+    SW_EXPECT_TRUE( sw::IAudioService::resolveLayout( sw::AudioSpeakerMode::Surround51, full71, layout ) && layout == sw::AudioChannelLayout::Surround51 );
+    SW_EXPECT_TRUE( sw::IAudioService::resolveLayout( sw::AudioSpeakerMode::Surround71, none, layout ) && layout == sw::AudioChannelLayout::Surround71 );
+    SW_EXPECT_FALSE( sw::IAudioService::resolveLayout( sw::AudioSpeakerMode::Surround51, stereo, layout ) );
+
+    sw::AudioSpeakerMode mode{ sw::AudioSpeakerMode::Auto };
+    SW_EXPECT_TRUE( sw::UserSettingsEngineHandlers::tryParseSpeakerMode( "surround71", mode ) && mode == sw::AudioSpeakerMode::Surround71 );
+    SW_EXPECT_FALSE( sw::UserSettingsEngineHandlers::tryParseSpeakerMode( "quad", mode ) );
+}
+
+/**
+ * @brief [AudioSurroundTest] 장치 없는 서비스 — 명시 5.1 로 서고, 실행 중 스테레오로 바꿔도 재생이 이어지며 엔진 레이아웃이 따라간다
+ */
+SW_TEST_CASE( AudioSurroundTest, NullServiceRendersTheChosenLayout )
+{
+    sw::unique_ptr<sw::IAudioService> pService = sw::IAudioService::createNull();
+    SW_ASSERT_TRUE( pService->setSpeakerMode( sw::AudioSpeakerMode::Surround51 ) );
+    SW_ASSERT_TRUE( pService->initialize() );
+    SW_EXPECT_FALSE( pService->isOutputOpen() );
+    SW_EXPECT_TRUE( pService->getEngine().getChannelLayout() == sw::AudioChannelLayout::Surround51 );
+    pService->update( 0.1f );
+
+    SW_EXPECT_TRUE( pService->setSpeakerMode( sw::AudioSpeakerMode::Stereo ) );
+    SW_EXPECT_TRUE( pService->getEngine().getChannelLayout() == sw::AudioChannelLayout::Stereo );
+    SW_EXPECT_TRUE( pService->getSpeakerMode() == sw::AudioSpeakerMode::Stereo );
+    pService->update( 0.1f );
+    pService->shutdown();
 }

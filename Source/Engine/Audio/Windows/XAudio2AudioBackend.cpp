@@ -19,6 +19,13 @@ namespace sw
             static constexpr uint32 kStreamBufferFrameCount = 512;
             /** @brief 장치에 걸어 둘 버퍼 수입니다. 지연은 대략 (수 − 1) × 버퍼 길이입니다. */
             static constexpr uint32 kStreamBufferCount = 3;
+            /** @brief 확장형 형식의 IEEE float 하위 형식(KSDATAFORMAT_SUBTYPE_IEEE_FLOAT)입니다. ksmedia.h 를 끌어오지 않으려고 값을 적습니다. */
+            static constexpr GUID kSubFormatIeeeFloat = {
+                0x00000003,
+                0x0000,
+                0x0010,
+                { 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71 }
+            };
 
             /**
              * @brief Media Foundation · XAudio2 함수 표입니다. 처음 쓸 때 시스템 DLL 을 올려 한 번 채우고 프로세스 끝까지 둡니다.
@@ -289,7 +296,7 @@ namespace sw
         shutdown();
     }
 
-    bool XAudio2AudioBackend::openOutput()
+    bool XAudio2AudioBackend::openDevice( AudioOutputDevice& outDevice )
     {
         HRESULT hr = CoInitializeEx( nullptr, COINIT_MULTITHREADED );
         if ( hr == S_OK || hr == S_FALSE )
@@ -312,7 +319,7 @@ namespace sw
         if ( api._pfnXAudio2Create == nullptr )
         {
             SW_LOG_WARNING( "XAudio2 is not available (xaudio2_9.dll). Rendering offline." );
-            closeOutput();
+            closeDevice();
             return false;
         }
         hr = api._pfnXAudio2Create( &_impl->_pXAudio, 0, XAUDIO2_DEFAULT_PROCESSOR );
@@ -320,11 +327,11 @@ namespace sw
         {
             SW_LOG_WARNING( "XAudio2Create failed (0x%#). Rendering offline.", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
             _impl->_pXAudio = nullptr;
-            closeOutput();
+            closeDevice();
             return false;
         }
-        const uint32 channelCount = AudioChannelLayoutUtil::getChannelCount( getEngine().getChannelLayout() );
-        hr                        = _impl->_pXAudio->CreateMasteringVoice( &_impl->_pMasterVoice, channelCount, audio::kSampleRate );
+        // 마스터링 보이스는 장치의 채널 수 그대로 연다. 엔진 레이아웃은 그 채널 수와 마스크를 보고 서비스가 정한다(협상).
+        hr = _impl->_pXAudio->CreateMasteringVoice( &_impl->_pMasterVoice, XAUDIO2_DEFAULT_CHANNELS, audio::kSampleRate );
         if ( FAILED( hr ) || _impl->_pMasterVoice == nullptr )
         {
             // 출력 장치가 없는 기계(CI 러너, 서버, 원격 세션)는 고장이 아니다. 오프라인 렌더로 동작한다는 것만 알린다. 장치가 있는데 실패한 경우만 경고한다.
@@ -333,23 +340,42 @@ namespace sw
             else
                 SW_LOG_WARNING( "CreateMasteringVoice failed (0x%#). Rendering offline.", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
             _impl->_pMasterVoice = nullptr;
-            closeOutput();
+            closeDevice();
             return false;
         }
+        XAUDIO2_VOICE_DETAILS details{};
+        _impl->_pMasterVoice->GetVoiceDetails( &details );
+        DWORD channelMask = 0;
+        if ( FAILED( _impl->_pMasterVoice->GetChannelMask( &channelMask ) ) )
+            channelMask = 0; // 마스크를 모르는 장치는 Auto 에서 스테레오로, 명시 모드는 채널 수로만 판단한다
+        outDevice._channelCount = details.InputChannels;
+        outDevice._channelMask  = static_cast<uint32>( channelMask );
+        SW_LOG_INFO( "Audio device: %# channels (mask 0x%#).", outDevice._channelCount, Fmt( outDevice._channelMask, Format().hex() ) );
+        return true;
+    }
 
-        WAVEFORMATEX format{};
-        format.wFormatTag      = WAVE_FORMAT_IEEE_FLOAT;
-        format.nChannels       = static_cast<WORD>( channelCount );
-        format.nSamplesPerSec  = audio::kSampleRate;
-        format.wBitsPerSample  = 32;
-        format.nBlockAlign     = static_cast<WORD>( channelCount * sizeof( float32 ) );
-        format.nAvgBytesPerSec = audio::kSampleRate * format.nBlockAlign;
-        hr                     = _impl->_pXAudio->CreateSourceVoice( &_impl->_pStreamVoice, &format, 0, XAUDIO2_DEFAULT_FREQ_RATIO, &_impl->_callback );
+    bool XAudio2AudioBackend::startOutput( AudioChannelLayout layout )
+    {
+        if ( _impl->_pXAudio == nullptr || _impl->_pMasterVoice == nullptr )
+            return false;
+        // 소스 형식에 레이아웃의 채널 마스크를 실어 XAudio2 가 스피커 자리대로 장치 채널에 잇게 한다(장치가 더 많은 채널을 가져도 같은 자리에 간다).
+        const uint32         channelCount = AudioChannelLayoutUtil::getChannelCount( layout );
+        WAVEFORMATEXTENSIBLE format{};
+        format.Format.wFormatTag           = WAVE_FORMAT_EXTENSIBLE;
+        format.Format.nChannels            = static_cast<WORD>( channelCount );
+        format.Format.nSamplesPerSec       = audio::kSampleRate;
+        format.Format.wBitsPerSample       = 32;
+        format.Format.nBlockAlign          = static_cast<WORD>( channelCount * sizeof( float32 ) );
+        format.Format.nAvgBytesPerSec      = audio::kSampleRate * format.Format.nBlockAlign;
+        format.Format.cbSize               = sizeof( WAVEFORMATEXTENSIBLE ) - sizeof( WAVEFORMATEX );
+        format.Samples.wValidBitsPerSample = 32;
+        format.dwChannelMask               = AudioChannelLayoutUtil::getChannelMask( layout );
+        format.SubFormat                   = XAudio2AudioBackendInternal::kSubFormatIeeeFloat;
+        HRESULT hr                         = _impl->_pXAudio->CreateSourceVoice( &_impl->_pStreamVoice, &format.Format, 0, XAUDIO2_DEFAULT_FREQ_RATIO, &_impl->_callback );
         if ( FAILED( hr ) || _impl->_pStreamVoice == nullptr )
         {
             SW_LOG_WARNING( "CreateSourceVoice failed (0x%#). Rendering offline.", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
             _impl->_pStreamVoice = nullptr;
-            closeOutput();
             return false;
         }
 
@@ -367,13 +393,19 @@ namespace sw
         {
             callback.submitNext();
         }
-        _impl->_pStreamVoice->Start( 0 );
-        SW_LOG_INFO( "XAudio2 stream ready (%# Hz, %# frames x %#).", audio::kSampleRate, XAudio2AudioBackendInternal::kStreamBufferFrameCount,
+        hr = _impl->_pStreamVoice->Start( 0 );
+        if ( FAILED( hr ) )
+        {
+            SW_LOG_WARNING( "Starting the XAudio2 stream failed (0x%#).", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
+            stopOutput();
+            return false;
+        }
+        SW_LOG_INFO( "XAudio2 stream ready (%# Hz, %# channels, %# frames x %#).", audio::kSampleRate, channelCount, XAudio2AudioBackendInternal::kStreamBufferFrameCount,
                      XAudio2AudioBackendInternal::kStreamBufferCount );
         return true;
     }
 
-    void XAudio2AudioBackend::closeOutput()
+    void XAudio2AudioBackend::stopOutput()
     {
         if ( _impl == nullptr )
             return;
@@ -381,11 +413,18 @@ namespace sw
         _impl->_callback._bStopping.store( true, std::memory_order_release );
         if ( _impl->_pStreamVoice != nullptr )
         {
-            _impl->_pStreamVoice->Stop( 0 );
+            (void)_impl->_pStreamVoice->Stop( 0 ); // 바로 아래에서 보이스를 파괴한다
             _impl->_pStreamVoice->DestroyVoice();
             _impl->_pStreamVoice = nullptr;
         }
         _impl->_callback._pVoice = nullptr;
+    }
+
+    void XAudio2AudioBackend::closeDevice()
+    {
+        if ( _impl == nullptr )
+            return;
+        stopOutput();
         if ( _impl->_pMasterVoice != nullptr )
         {
             _impl->_pMasterVoice->DestroyVoice();
