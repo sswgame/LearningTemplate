@@ -29,9 +29,9 @@ namespace sw
     class Material;
     class MaterialInstance;
     class Mesh;
-    class MeshComponent;
     class PrimitiveRegistry;
     class Scene;
+    class ScenePrimitive;
 
     /**
      * @class GPUSceneBuilder
@@ -319,7 +319,7 @@ namespace sw
          * @details **전체 수집과 부분 수집이 이 함수를 함께 쓴다.** 채우는 규칙이 두 곳으로 갈리면
          *          부분 갱신만 낡은 필드를 남기는데, 그 화면은 대부분의 프레임에서 멀쩡해 보인다.
          */
-        bool fillCandidateFromPrimitive( MeshComponent* pMeshComp, Scene* pScene, DrawCandidate& candidate );
+        bool fillCandidateFromPrimitive( ScenePrimitive* pPrimitive, Scene* pScene, DrawCandidate& candidate );
         /** @brief 인스턴스 배치의 항목 하나를 후보로 채웁니다. 메시 컴포넌트 버전과 규칙이 같고, 소유권은 배치에 있습니다. */
         bool fillCandidateFromInstanceEntry( const PrimitiveInstanceEntry& entry, Scene* pScene, DrawCandidate& candidate );
         /**

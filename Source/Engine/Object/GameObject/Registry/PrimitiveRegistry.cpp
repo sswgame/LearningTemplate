@@ -5,13 +5,12 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Object/Component/3D/MeshComponent.h"
-#include "Engine/Object/Component/3D/MeshInstanceBatch.h"
 #include "Engine/Object/Component/SceneTransformStorage.h"
+#include "Engine/Object/GameObject/Registry/ScenePrimitive.h"
 
 namespace sw
 {
-    void PrimitiveRegistry::add( MeshComponent* pComp )
+    void PrimitiveRegistry::add( ScenePrimitive* pComp )
     {
         if ( pComp == nullptr )
             return;
@@ -20,7 +19,7 @@ namespace sw
         // 슬롯이 정말 이 레지스트리에서 자기를 가리키고 있을 때만 "이미 등록됨"이다. 인덱스는 컴포넌트가 들고 있어서, 목록이 다른 것을
         // 가리키는데 그대로 믿으면 조용히 미등록으로 남는다(컴포넌트 이동은 막혀 있지만 인덱스를 그대로 믿지 않는다).
         const uint32 existing           = pComp->getPrimitiveIndex();
-        const bool   bAlreadyRegistered = existing != MeshComponent::kInvalidPrimitiveIndex && existing < _listPrimitive.size() &&
+        const bool   bAlreadyRegistered = existing != ScenePrimitive::kInvalidPrimitiveIndex && existing < _listPrimitive.size() &&
                                         _listPrimitive[existing] == pComp;
         if ( bAlreadyRegistered )
             return;
@@ -61,7 +60,7 @@ namespace sw
         _dirtyFlagCapacity     = capacity;
     }
 
-    void PrimitiveRegistry::remove( MeshComponent* pComp )
+    void PrimitiveRegistry::remove( ScenePrimitive* pComp )
     {
         if ( pComp == nullptr )
             return;
@@ -70,7 +69,7 @@ namespace sw
         const uint32            slot = pComp->getPrimitiveIndex();
         // 슬롯이 정말 이 레지스트리의 것인지 확인한다. 인덱스는 컴포넌트가 들고 있어서, 다른 레지스트리가
         // 실수로 불리면 남의 목록을 그럴듯한 인덱스로 훼손할 수 있다.
-        const bool bSlotNotOwned = slot == MeshComponent::kInvalidPrimitiveIndex || slot >= _listPrimitive.size() ||
+        const bool bSlotNotOwned = slot == ScenePrimitive::kInvalidPrimitiveIndex || slot >= _listPrimitive.size() ||
                                    _listPrimitive[slot] != pComp;
         if ( bSlotNotOwned )
             return;
@@ -78,8 +77,8 @@ namespace sw
         // swap-and-pop. 마지막 원소가 이 자리로 오므로 그쪽 인덱스와 **깃발**을 같이 옮긴다(지울 때마다 깃발 전부를 훑지 않는다).
         // 집합 세대가 오르므로 빌더는 어차피 전부 다시 모은다. 옮기지 않은 인스턴스 항목 깃발이 한 칸 어긋나도
         // (`markInstanceDirty` 주석) 답은 틀리지 않는다.
-        MeshComponent* pMoved   = _listPrimitive.back();
-        const uint32   lastSlot = static_cast<uint32>( _listPrimitive.size() - 1 );
+        ScenePrimitive* pMoved   = _listPrimitive.back();
+        const uint32    lastSlot = static_cast<uint32>( _listPrimitive.size() - 1 );
         VectorUtil::removeAtSwap( _listPrimitive, slot );
         VectorUtil::removeAtSwap( _listPrimitiveTransformSlot, slot );
         if ( pMoved != pComp )
@@ -95,17 +94,17 @@ namespace sw
                 storeWordBit( _arrTransformDirtyWord.get(), slot, bMovedTransformDirty );
             }
         }
-        pComp->setPrimitiveIndex( MeshComponent::kInvalidPrimitiveIndex );
+        pComp->setPrimitiveIndex( ScenePrimitive::kInvalidPrimitiveIndex );
         _setGeneration.fetch_add( 1, std::memory_order_relaxed );
     }
 
-    void PrimitiveRegistry::markDirty( MeshComponent* pComp )
+    void PrimitiveRegistry::markDirty( ScenePrimitive* pComp )
     {
         if ( pComp == nullptr )
             return;
-        const vector<MeshComponent*>& listPrimitive     = std::as_const( _listPrimitive );
-        const uint32                  slot              = pComp->getPrimitiveIndex();
-        const bool                    bInvalidDirtySlot = slot == MeshComponent::kInvalidPrimitiveIndex || slot >= listPrimitive.size() || listPrimitive[slot] != pComp;
+        const vector<ScenePrimitive*>& listPrimitive     = std::as_const( _listPrimitive );
+        const uint32                   slot              = pComp->getPrimitiveIndex();
+        const bool                     bInvalidDirtySlot = slot == ScenePrimitive::kInvalidPrimitiveIndex || slot >= listPrimitive.size() || listPrimitive[slot] != pComp;
         if ( bInvalidDirtySlot )
             return;
         markSlotDirty( slot );
@@ -155,21 +154,21 @@ namespace sw
 
     PrimitiveRegistry::~PrimitiveRegistry()
     {
-        for ( MeshInstanceBatch* pBatch : _listInstanceBatch )
+        for ( ScenePrimitiveBatch* pBatch : _listInstanceBatch )
         {
             if ( pBatch != nullptr && pBatch->_pRegistry == this )
                 pBatch->_pRegistry = nullptr;
         }
     }
 
-    void PrimitiveRegistry::addInstanceBatch( MeshInstanceBatch* pBatch )
+    void PrimitiveRegistry::addInstanceBatch( ScenePrimitiveBatch* pBatch )
     {
         if ( pBatch == nullptr )
             return;
         std::scoped_lock<mutex> lock{ _mutex };
         if ( pBatch->_pRegistry == this )
             return;
-        SW_LOG_ASSERT( pBatch->_pRegistry == nullptr, "MeshInstanceBatch is already registered to another registry" );
+        SW_LOG_ASSERT( pBatch->_pRegistry == nullptr, "ScenePrimitiveBatch is already registered to another registry" );
         pBatch->_pRegistry  = this;
         pBatch->_firstEntry = static_cast<uint32>( _listInstanceEntry.size() );
         const uint32 count  = pBatch->getCount();
@@ -183,7 +182,7 @@ namespace sw
         _setGeneration.fetch_add( 1, std::memory_order_relaxed );
     }
 
-    void PrimitiveRegistry::removeInstanceBatch( MeshInstanceBatch* pBatch )
+    void PrimitiveRegistry::removeInstanceBatch( ScenePrimitiveBatch* pBatch )
     {
         if ( pBatch == nullptr )
             return;
@@ -197,7 +196,7 @@ namespace sw
             _listInstanceEntry.erase( _listInstanceEntry.begin() + first, _listInstanceEntry.begin() + first + count );
         for ( size_t batchIndex = 0; batchIndex < _listInstanceBatch.size(); ++batchIndex )
         {
-            MeshInstanceBatch* pOther = _listInstanceBatch[batchIndex];
+            ScenePrimitiveBatch* pOther = _listInstanceBatch[batchIndex];
             if ( pOther == pBatch )
             {
                 VectorUtil::removeAtSwap( _listInstanceBatch, batchIndex );
@@ -213,7 +212,7 @@ namespace sw
         _setGeneration.fetch_add( 1, std::memory_order_relaxed );
     }
 
-    void PrimitiveRegistry::markInstanceDirty( MeshInstanceBatch* pBatch, uint32 index )
+    void PrimitiveRegistry::markInstanceDirty( ScenePrimitiveBatch* pBatch, uint32 index )
     {
         const bool bInvalidInstanceDirty = pBatch == nullptr || pBatch->_pRegistry != this || index >= pBatch->getCount();
         if ( bInvalidInstanceDirty )
