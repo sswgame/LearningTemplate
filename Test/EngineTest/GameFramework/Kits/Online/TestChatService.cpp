@@ -1,6 +1,6 @@
 // 채팅 로직 — 채널 들어가기 규칙 · 채널 상한, 말하기 전달 · 되울림, 채팅 금지(제재 첫 읽기를 기다린 말하기 · 줄 상한 · GM 변경 버스로 다시 읽기), 거르개 · 도배,
 // 귓속말(이 서버 · 차단 · 다른 서버 버스 · 다른 서버 차단 · 접속 없음), 서버 간 채널 전달과 마지막 회원이 떠나면 구독 해지, 기록(묶어 쓰기 · 최근 것부터 · 커서 ·
-// 귓속말은 두 사람만 · 저장소 실패), 보존 기간이 지난 기록 정리.
+// 귓속말은 두 사람만 · 저장소 실패), 보존 기간이 지난 기록 정리, 신고(스냅숏 · 자기 메시지 · 없는 메시지 · 처리해 닫기).
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
@@ -12,6 +12,7 @@
 #include "EngineTest/GameFramework/Online/OnlineMessageTestUtil.h"
 
 #include "GameFramework/Base/Online/Bus/LocalServerBus.h"
+#include "GameFramework/Base/Online/Report/ServiceReport.h"
 #include "GameFramework/Base/Online/Sanction/ServiceSanction.h"
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatService.h"
@@ -557,6 +558,90 @@ SW_TEST_CASE( ChatServiceTest, ProtocolRoundTripsRepliesAndRecords )
 }
 
 /**
+ * @brief [ChatServiceTest] 신고는 그 메시지와 앞 기록을 스냅숏으로 남기고, 자기 메시지와 기록에 없는 메시지는 거절하며, GM 이 처리하면 닫힌 쪽으로 옮겨진다
+ */
+SW_TEST_CASE( ChatServiceTest, ReportSnapshotsTheMessageAndItsContext )
+{
+    MemoryServiceDatabase database;
+    LocalServerBusHub     hub;
+    ChatNode              node( &database, &hub, 1 );
+    node._directory._mapOnline[10] = "alice";
+    node._directory._mapOnline[11] = "bob";
+    node._directory._mapOnline[12] = "eve";
+    node._service.joinChannel( 10, "world.kr", 0, 1 );
+    node._service.joinChannel( 11, "world.kr", 0, 2 );
+    node.step( 0 );
+    for ( int32 index = 0; index < 3; ++index )
+    {
+        node._service.sendMessage( 10, "world.kr", string( "line " ) + static_cast<utf8>( '0' + index ), 1000 * ( index + 1 ), static_cast<uint64>( 10 + index ) );
+    }
+    node.step( 4000 ); // 기록이 저장소에 쓰인다
+    ChatMessage reported;
+    for ( const ChatDelivery& delivery : node._listDelivery )
+    {
+        if ( delivery._recipientID == 11 )
+            reported = delivery._message; // bob 이 받은 마지막 메시지
+    }
+    SW_ASSERT_EQUAL( reported._text, string( "line 2" ) );
+
+    ChatReportRequest request;
+    request._channelID = reported._channelID;
+    request._reason    = "abuse.insult";
+    request._sentMs    = reported._sentMs;
+    request._serverID  = reported._serverID;
+    request._sequence  = reported._sequence;
+    node._listCompletion.clear();
+    node._service.reportMessage( 11, request, 5000, 20 ); // bob 이 신고한다
+    node._service.reportMessage( 10, request, 5000, 21 ); // alice 가 자기 메시지를 신고한다
+    node._service.reportMessage( 12, request, 5000, 22 ); // eve 는 채널에 없다
+    ChatReportRequest missing = request;
+    missing._sequence         = reported._sequence + 100;
+    node._service.reportMessage( 11, missing, 5000, 23 );
+    ChatReportRequest badReason = request;
+    badReason._reason           = "Not A Code";
+    node._service.reportMessage( 11, badReason, 5000, 24 );
+    node.step( 5000 );
+    SW_ASSERT_EQUAL( node._listCompletion.size(), size_t( 5 ) );
+    SW_EXPECT_TRUE( node._listCompletion[0]._reply._result == ChatResult::NotMember ); // 바로 거절한 둘이 먼저
+    SW_EXPECT_TRUE( node._listCompletion[1]._reply._result == ChatResult::Invalid );
+    SW_EXPECT_TRUE( node._listCompletion[2]._reply._result == ChatResult::Ok );
+    SW_EXPECT_TRUE( node._listCompletion[3]._reply._result == ChatResult::Invalid );
+    SW_EXPECT_TRUE( node._listCompletion[4]._reply._result == ChatResult::NotFound );
+    SW_EXPECT_EQUAL( node._listCompletion[2]._method, ChatMethod::kReport );
+
+    vector<ServiceReport> listOpen;
+    string                nextCursor;
+    SW_ASSERT_TRUE( ServiceReportStore::listReports( database, true, "", 10, listOpen, nextCursor ) == ServiceStoreResult::Ok );
+    SW_ASSERT_EQUAL( listOpen.size(), size_t( 1 ) );
+    const ServiceReport& report = listOpen[0];
+    SW_EXPECT_EQUAL( report._reporterID, AccountID( 11 ) );
+    SW_EXPECT_EQUAL( report._targetID, AccountID( 10 ) );
+    SW_EXPECT_EQUAL( report._category, string( "chat" ) );
+    SW_EXPECT_EQUAL( report._context, string( "world.kr" ) );
+    SW_ASSERT_EQUAL( report._listLine.size(), size_t( 3 ) ); // 앞 기록 둘과 신고한 메시지
+    SW_EXPECT_EQUAL( report._listLine[0]._text, string( "line 0" ) );
+    SW_EXPECT_EQUAL( report._listLine[2]._text, string( "line 2" ) ); // 마지막 줄이 신고 대상이다
+
+    ServiceTransaction resolveTransaction;
+    ServiceReport      closed;
+    SW_ASSERT_TRUE( ServiceReportStore::stageResolve( database, report._reportKey, ServiceReportStatus::Resolved, 900, "warned", 6000, resolveTransaction, closed ) ==
+                    ServiceStoreResult::Ok );
+    SW_ASSERT_TRUE( database.commit( resolveTransaction ) == ServiceStoreResult::Ok );
+    ServiceTransaction again;
+    SW_EXPECT_TRUE( ServiceReportStore::stageResolve( database, report._reportKey, ServiceReportStatus::Resolved, 900, "x", 6000, again, closed ) ==
+                    ServiceStoreResult::NotFound ); // 이미 처리했다
+    listOpen.clear();
+    SW_ASSERT_TRUE( ServiceReportStore::listReports( database, true, "", 10, listOpen, nextCursor ) == ServiceStoreResult::Ok );
+    SW_EXPECT_TRUE( listOpen.empty() );
+    vector<ServiceReport> listClosed;
+    SW_ASSERT_TRUE( ServiceReportStore::listReports( database, false, "", 10, listClosed, nextCursor ) == ServiceStoreResult::Ok );
+    SW_ASSERT_EQUAL( listClosed.size(), size_t( 1 ) );
+    SW_EXPECT_TRUE( listClosed[0]._status == ServiceReportStatus::Resolved );
+    SW_EXPECT_EQUAL( listClosed[0]._resolverID, AccountID( 900 ) );
+    SW_EXPECT_EQUAL( listClosed[0]._resolutionMemo, string( "warned" ) );
+}
+
+/**
  * @brief [ChatProtocolTest] 애노테이션은 정수 리터럴만 받으므로, 같은 상한을 적은 `PROPERTY( MaxCount )` 와 상수가 어긋나지 않는지 생성된 코덱의 정규 문자열로 본다
  */
 SW_TEST_CASE( ChatProtocolTest, DeclaredLimitsMatchTheConstants )
@@ -572,6 +657,14 @@ SW_TEST_CASE( ChatProtocolTest, DeclaredLimitsMatchTheConstants )
     SW_EXPECT_EQUAL( Util::declaredMaxCount<ChatReply>( "_nextCursor" ), uint32( ChatProtocol::kMaxCursorSize ) );
     SW_EXPECT_EQUAL( Util::declaredMaxCount<ChatMessage>( "_channelID" ), uint32( ChatLimit::kMaxChannelIDSize ) );
     SW_EXPECT_EQUAL( Util::declaredMaxCount<ChatMessage>( "_text" ), uint32( ChatLimit::kMaxTextSize ) );
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<ChatReportRequest>( "_channelID" ), uint32( ChatLimit::kMaxChannelIDSize ) );
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<ChatReportRequest>( "_reason" ), uint32( ChatLimit::kMaxReasonSize ) );
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<ServiceReport>( "_listLine" ), uint32( ServiceReportConstant::kMaxLineCount ) );
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<ServiceReport>( "_reason" ), uint32( ServiceReportConstant::kMaxReasonSize ) );
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<ServiceReport>( "_context" ), uint32( ServiceReportConstant::kMaxContextSize ) );
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<ServiceReport>( "_reportKey" ), uint32( ServiceReportConstant::kMaxReportKeySize ) );
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<ServiceReportLine>( "_text" ), uint32( ChatLimit::kMaxTextSize ) );
+    SW_EXPECT_TRUE( ChatLimit::kReportContextCount <= ServiceReportConstant::kMaxLineCount );
 }
 
 /**

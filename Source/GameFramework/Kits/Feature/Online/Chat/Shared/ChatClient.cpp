@@ -50,6 +50,17 @@ namespace sw
         return sendRequest( ChatMethod::kHistory, request, NetIdempotencyKey{}, onReply );
     }
 
+    uint64 ChatClient::report( const ChatMessage& message, string_view reason, const ReplyDelegate& onReply )
+    {
+        ChatReportRequest request;
+        request._channelID = message._channelID;
+        request._reason    = string( reason );
+        request._sentMs    = message._sentMs;
+        request._serverID  = message._serverID;
+        request._sequence  = message._sequence;
+        return sendRequest( ChatMethod::kReport, request, NetIdempotencyKey{}, onReply );
+    }
+
     void ChatClient::onServicePush( uint16 kind, BitReader& body )
     {
         if ( kind != ChatMethod::kPushMessage )

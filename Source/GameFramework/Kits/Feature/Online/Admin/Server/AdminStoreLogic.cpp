@@ -8,6 +8,7 @@
 #include "GameFramework/Base/Online/Ledger/Ledger.h"
 #include "GameFramework/Base/Online/Mail/ServiceMail.h"
 #include "GameFramework/Base/Online/Mail/ServiceMailCampaign.h"
+#include "GameFramework/Base/Online/Report/ServiceReport.h"
 #include "GameFramework/Base/Online/Sanction/ServiceSanction.h"
 #include "GameFramework/Base/Online/Store/ServiceIdempotency.h"
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
@@ -193,6 +194,27 @@ namespace sw
             }
 
             /** @brief 상태를 바꾸는 명령 하나의 효과를 @p inoutTransaction 에 붙입니다. 감사 기록도 포함합니다. */
+            static AdminResult stageResolveReport( IServiceStoreConnection& connection, const AdminCommand& command, ServiceTransaction& inoutTransaction, AdminReply& outReply,
+                                                   ServiceAuditEntry& inoutAudit )
+            {
+                const AdminRequest&      request = command._request;
+                ServiceReport            report;
+                const ServiceStoreResult staged = ServiceReportStore::stageResolve( connection, request._reportKey, request._reportStatus, command._adminID, request._memo,
+                                                                                    command._nowMs, inoutTransaction, report );
+                if ( staged == ServiceStoreResult::NotFound )
+                    return AdminResult::UnknownReport;
+                if ( staged == ServiceStoreResult::Invalid )
+                    return AdminResult::InvalidRequest;
+                if ( staged != ServiceStoreResult::Ok )
+                    return AdminResult::Unavailable;
+                inoutAudit._action  = "admin.report";
+                inoutAudit._subject = makeSubject( report._targetID );
+                inoutAudit._before  = request._reportKey;
+                inoutAudit._after   = report._reportKey;
+                outReply._listReport.push_back( std::move( report ) );
+                return AdminResult::Ok;
+            }
+
             static AdminResult stageEffect( IServiceStoreConnection& connection, const AdminCommand& command, ServiceTransaction& inoutTransaction, AdminReply& outReply )
             {
                 const AdminRequest& request = command._request;
@@ -252,6 +274,11 @@ namespace sw
                         staged = stageSetRole( connection, command, inoutTransaction, audit );
                         break;
                     }
+                    case AdminMethod::kResolveReport:
+                    {
+                        staged = stageResolveReport( connection, command, inoutTransaction, outReply, audit );
+                        break;
+                    }
                     default:
                     {
                         break;
@@ -286,6 +313,8 @@ namespace sw
                                request._batchID != 0;
                     case AdminMethod::kSetRole:
                         return bHasAccount;
+                    case AdminMethod::kResolveReport:
+                        return request._reportKey.empty() == false && request._reportStatus != ServiceReportStatus::Open;
                     default:
                         return true;
                 }
@@ -372,6 +401,13 @@ namespace sw
         {
             const ServiceStoreResult listed = ServiceAuditLog::listEntries( connection, command._request._subject, command._request._cursor, command._request._maxCount,
                                                                             outReply._listAudit, outReply._nextCursor );
+            return AdminStoreLogicInternal::finish( outReply, listed == ServiceStoreResult::Ok ? AdminResult::Ok : AdminResult::Unavailable );
+        }
+        if ( command._method == AdminMethod::kListReports )
+        {
+            const bool               bOpen    = command._request._reportStatus == ServiceReportStatus::Open;
+            const int32              maxCount = command._request._maxCount < AdminProtocol::kMaxReportListCount ? command._request._maxCount : AdminProtocol::kMaxReportListCount;
+            const ServiceStoreResult listed   = ServiceReportStore::listReports( connection, bOpen, command._request._cursor, maxCount, outReply._listReport, outReply._nextCursor );
             return AdminStoreLogicInternal::finish( outReply, listed == ServiceStoreResult::Ok ? AdminResult::Ok : AdminResult::Unavailable );
         }
 
