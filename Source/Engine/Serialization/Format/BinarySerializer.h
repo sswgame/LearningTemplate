@@ -11,6 +11,8 @@
 
 namespace sw
 {
+    enum class FieldReadResult : uint8;
+
     struct TypeInfo;
 
     class Archive;
@@ -49,9 +51,23 @@ namespace sw
         [[nodiscard]] static bool serialize( const void* pInstance, const TypeInfo& typeInfo, Archive& outArchive,
                                              const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
 
-        /** @brief 바이너리에서 객체를 역직렬화합니다. **실패해도 되돌리지 않습니다.** 실패하기 전까지 읽은 프로퍼티는 이미 써진 채로 남습니다. */
+        /**
+         * @brief 바이너리에서 객체를 역직렬화합니다. **실패해도 되돌리지 않습니다.** 실패하기 전까지 읽은 프로퍼티는 이미 써진 채로 남습니다.
+         * @details 맨 바깥 객체를 읽는 쪽이 부릅니다. 바깥에 이어 읽을 읽기가 없으므로 필드 실패와 객체 실패는 같은 false 입니다.
+         *          다른 객체의 필드(구조체 칸, 소유 포인터 본문)를 읽을 때는 둘을 가르는 `deserializeNested` 를 씁니다.
+         */
         [[nodiscard]] static bool deserialize( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
                                                const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
+
+        /**
+         * @brief 다른 객체의 필드인 객체(값 구조체 칸, 소유 포인터 본문)를 엄격하게 읽습니다. `deserialize` 와 같은 읽기이고 결과만 셋으로 가릅니다.
+         * @return 저작 파일의 금지된 필드가 있거나 읽지 못한 필드를 되돌리지 못하면 `ObjectRejected` 입니다 — 바깥 읽기는 그 칸을 넘기지 않고 객체째 실패합니다.
+         *         스트림이 깨졌거나(머리 · 태그 · 크기), 읽지 못한 필드가 있는데 컨텍스트가 넘기지 않거나, 선언된 범위 밖이면 `FieldFailed` 입니다.
+         *         페이로드 크기가 있으므로 깨진 스트림도 이 칸의 실패입니다(`ContainerVisitor::toFieldResult` 와 같은 판정).
+         *         예전에는 이 자리가 `deserialize` 의 bool 이어서, 소프트 · 오브젝트 상태 읽기에서 구조체 칸 안의 금지된 필드가 칸 실패(되돌림 · orphan)가 됐다.
+         */
+        [[nodiscard]] static FieldReadResult deserializeNested( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
+                                                                const SerializeContext& context );
 
         /**
          * @brief Archive 의 현재 자리에서 객체를 역직렬화하고, 성공하면 읽기 자리를 그 객체 끝으로 옮깁니다.
@@ -68,6 +84,8 @@ namespace sw
          * @details 읽지 못한 필드도 payload 크기만큼 건너뜁니다. 기록 타입이 다르면 tryCoerceBinaryPayload 로 int32↔string 등의 변환을 시도합니다.
          *          기록 타입이 같은데 payload 를 끝까지 읽지 못한 필드는 이관하지 않고 orphan 입니다(엄격 읽기와 같은 판정).
          * @return 스트림이 비었거나 깨졌으면(머리 · 태그 · 크기) `NotParsed`, 범위 밖 값이 있으면 `Rejected`(orphan 은 끝까지 모은다)입니다(`SoftReadResult`).
+         *         금지된 필드(안쪽 구조체 칸 · 컨테이너 원소인 구조체 · 컴포넌트 포함)가 있거나 읽지 못한 필드를 되돌리지 못하면 그 자리에서 `Rejected` 입니다
+         *         (`FieldReadResult::ObjectRejected`, XML · JSON 과 같다).
          */
         [[nodiscard]] static SoftReadResult deserializeSoft( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
                                                              vector<SchemaOrphanValue>* pOutOrphans = nullptr,

@@ -181,5 +181,7 @@ namespace sw
         [[nodiscard]] static FieldReadResult toFieldResult( ContainerReadResult result ) noexcept;
         /** @brief 원소 하나(값 구조체 · 소유 포인터 객체)의 필드 결과를 원소 결과로 바꿉니다. ObjectRejected 는 그대로 위로 올라갑니다. */
         [[nodiscard]] static ContainerReadResult toElementResult( FieldReadResult result ) noexcept;
+        /** @brief 실패가 한 가지뿐인 읽기(처리기 · 열거형 · 텍스트 값)의 bool 을 필드 결과로 바꿉니다. 그런 읽기는 객체째 실패를 알 수 없으므로 false 는 `FieldFailed` 입니다. */
+        [[nodiscard]] static FieldReadResult fieldResultOf( bool bRead ) noexcept;
     };
 } // namespace sw

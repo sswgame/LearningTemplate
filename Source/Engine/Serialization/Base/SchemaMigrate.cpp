@@ -7,6 +7,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Serialization/Base/ContainerVisitor.h"
 #include "Engine/Serialization/Base/SchemaMigrationRegistry.h"
 #include "Engine/Serialization/Base/SerializeContext.h"
 #include "Engine/Serialization/Base/SerializerUtil.h"
@@ -93,7 +94,7 @@ namespace sw
             {
                 int64  wireValue{ 0 };
                 size_t offset{ 0 };
-                if ( SerializerUtil::deserializeValueBinary( MutableValueAddress{ &wireValue }, wireTypeName, pPayload, payloadSize, offset, context, wireVersion ) == false ||
+                if ( SerializerUtil::deserializeValueBinary( MutableValueAddress{ &wireValue }, wireTypeName, pPayload, payloadSize, offset, context, wireVersion ) != FieldReadResult::Read ||
                      offset != payloadSize )
                     return false;
                 StringBuilder<constant::kMaxBuffer8192> ss;
@@ -224,13 +225,15 @@ namespace sw
                 const uint8* pPayload    = orphan._listBinary.data();
                 const size_t payloadSize = orphan._listBinary.size();
                 // 기록된 버전으로 읽는다. orphan 은 그것을 읽은 스트림의 버전을 가지고 있다. 끝까지 읽혀야 받는다(본 경로의 `SerializerUtil::applyPropertyBinary` 와 같다).
+                // 이관 함수가 bool 로 받으므로 객체째 실패도 적용 실패다(이관이 실패하면 읽기 전체가 실패한다).
                 if ( wireTypeName == propTypeName )
                 {
                     size_t offset{ 0 };
-                    if ( SerializerUtil::deserializeValueBinary( value, propTypeName, pPayload, payloadSize, offset, context, orphan._wireVersion ) && offset == payloadSize )
+                    if ( SerializerUtil::deserializeValueBinary( value, propTypeName, pPayload, payloadSize, offset, context, orphan._wireVersion ) == FieldReadResult::Read &&
+                         offset == payloadSize )
                         return true;
                 }
-                return tryCoerceBinaryPayload( value, propTypeName, pPayload, payloadSize, context, wireTypeName, orphan._wireVersion );
+                return tryCoerceBinaryPayload( value, propTypeName, pPayload, payloadSize, context, wireTypeName, orphan._wireVersion ) == FieldReadResult::Read;
             }
 
             /**
@@ -533,12 +536,12 @@ namespace sw
         return typeName;
     }
 
-    bool tryCoerceBinaryPayload( MutableValueAddress value, hashed_string targetTypeName, const uint8* pPayload, size_t payloadSize,
-                                 const SerializeContext& context, hashed_string wireTypeName, BinaryWireVersion wireVersion )
+    FieldReadResult tryCoerceBinaryPayload( MutableValueAddress value, hashed_string targetTypeName, const uint8* pPayload, size_t payloadSize,
+                                            const SerializeContext& context, hashed_string wireTypeName, BinaryWireVersion wireVersion )
     {
         void* const pValPtr = value.get();
         if ( pValPtr == nullptr || pPayload == nullptr )
-            return false;
+            return FieldReadResult::FieldFailed;
 
         // 값으로만 옮기는 쌍이면(`isValueOnlyCoercion`) 기록 값을 텍스트로 만들어 대상 타입으로 다시 읽는다(JSON, XML 과 같은 규칙이다).
         //  - 기록 타입을 아는 스칼라 → 다른 스칼라나 문자열. 아래의 제 타입 읽기를 먼저 하면 크기가 같은 스칼라는 비트가 그대로 재해석되고
@@ -553,25 +556,40 @@ namespace sw
             const bool bFormatted = bWireEnum ? SchemaMigrateInternal::formatWireEnumToString( pPayload, payloadSize, wireTypeName, context, wireVersion, wireText )
                                               : SchemaMigrateInternal::formatWirePodToString( pPayload, payloadSize, wireTypeName, wireText );
             if ( bFormatted == false )
-                return false;
-            return parseTextValueCoerced( value, targetTypeName, wireText, context );
+                return FieldReadResult::FieldFailed;
+            return ContainerVisitor::fieldResultOf( parseTextValueCoerced( value, targetTypeName, wireText, context ) );
         }
 
         // 값 하나로 읽을 수 없는 대상(컨테이너 프로퍼티의 `map` · `vector` 같은 이름, 처리기 없는 타입)은 이관 대상이 아니다. 값 읽기를 시도하지 않는다.
         if ( SerializerUtil::hasBinaryValueCodec( targetTypeName, context ) == false )
-            return false;
+            return FieldReadResult::FieldFailed;
 
         size_t offset{ 0 };
-        if ( SerializerUtil::deserializeValueBinary( value, targetTypeName, pPayload, payloadSize, offset, context, wireVersion ) &&
-             offset == payloadSize )
-            return true;
+        switch ( SerializerUtil::deserializeValueBinary( value, targetTypeName, pPayload, payloadSize, offset, context, wireVersion ) )
+        {
+            case FieldReadResult::Read:
+            {
+                if ( offset == payloadSize )
+                    return FieldReadResult::Read;
+                break;
+            }
+            case FieldReadResult::FieldFailed:
+            {
+                break;
+            }
+            case FieldReadResult::ObjectRejected:
+            {
+                // 구조체 안의 금지된 필드다. 다른 해석을 더 해 보면 그것이 칸 실패로 낮아진다.
+                return FieldReadResult::ObjectRejected;
+            }
+        }
 
         // POD → 문자열. 기록 타입을 아는 스칼라는 위에서 끝났으므로 여기서는 크기로 짐작한다(정수와 실수를 가르지 못한다).
         if ( SchemaMigrateInternal::isStringType( targetTypeName ) )
         {
             string asText;
             if ( SchemaMigrateInternal::formatPodToString( pPayload, payloadSize, asText ) )
-                return parseTextValueCoerced( value, targetTypeName, asText, context );
+                return ContainerVisitor::fieldResultOf( parseTextValueCoerced( value, targetTypeName, asText, context ) );
 
             // 길이 접두 문자열 blob 은 맨 앞의 제 타입 읽기가 이미 다뤘다. 여기서는 길이가 맞으면 접두 뒤 바이트를 텍스트로 읽어 본다
             if ( payloadSize >= sizeof( uint32 ) )
@@ -581,7 +599,7 @@ namespace sw
                 if ( sizeof( uint32 ) + len == payloadSize )
                 {
                     const string_view textValue{ reinterpret_cast<const utf8*>( pPayload + sizeof( uint32 ) ), len };
-                    return parseTextValueCoerced( value, targetTypeName, textValue, context );
+                    return ContainerVisitor::fieldResultOf( parseTextValueCoerced( value, targetTypeName, textValue, context ) );
                 }
             }
         }
@@ -594,7 +612,7 @@ namespace sw
             if ( sizeof( uint32 ) + len == payloadSize )
             {
                 const string_view textValue{ reinterpret_cast<const utf8*>( pPayload + sizeof( uint32 ) ), len };
-                return parseTextValueCoerced( value, targetTypeName, textValue, context );
+                return ContainerVisitor::fieldResultOf( parseTextValueCoerced( value, targetTypeName, textValue, context ) );
             }
         }
 
@@ -604,10 +622,42 @@ namespace sw
         if ( pReader != nullptr )
         {
             if ( ( *pReader )( pValPtr, pPayload, payloadSize, offset ) && offset == payloadSize )
-                return true;
+                return FieldReadResult::Read;
         }
 
-        return false;
+        return FieldReadResult::FieldFailed;
+    }
+
+    FieldReadResult tryCoercePropertyBinary( const PropertyInfo& prop, const MutableObjectAddress instance, const uint8* pPayload, const size_t payloadSize,
+                                             const SerializeContext& context, const hashed_string wireTypeName, const BinaryWireVersion wireVersion )
+    {
+        void* const pInstance = instance.get();
+        if ( pInstance == nullptr )
+            return FieldReadResult::FieldFailed;
+        if ( prop._bIsBitField == SW_TRUE )
+        {
+            // 비트필드는 주소를 가질 수 없어 임시 bool 에 옮기고 그 비트만 쓴다. 실패하면 비트는 그대로다.
+            bool                  bValue = prop.getValue<bool>( pInstance );
+            const FieldReadResult result = tryCoerceBinaryPayload( MutableValueAddress{ &bValue }, hashed_string( "bool" ), pPayload, payloadSize, context, wireTypeName, wireVersion );
+            switch ( result )
+            {
+                case FieldReadResult::Read:
+                {
+                    prop.setValue<bool>( pInstance, bValue );
+                    return FieldReadResult::Read;
+                }
+                case FieldReadResult::FieldFailed:
+                case FieldReadResult::ObjectRejected:
+                {
+                    return result;
+                }
+            }
+            return FieldReadResult::ObjectRejected;
+        }
+        void* const pValue = prop.getRawPtr( pInstance );
+        if ( pValue == nullptr )
+            return FieldReadResult::FieldFailed;
+        return tryCoerceBinaryPayload( MutableValueAddress{ pValue }, prop._typeName, pPayload, payloadSize, context, wireTypeName, wireVersion );
     }
 
     bool parseTextValueCoerced( MutableValueAddress value, hashed_string typeName, string_view valStr,

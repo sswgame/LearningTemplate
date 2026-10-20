@@ -257,4 +257,9 @@ namespace sw
         }
         return ContainerReadResult::ObjectRejected;
     }
+
+    FieldReadResult ContainerVisitor::fieldResultOf( const bool bRead ) noexcept
+    {
+        return bRead ? FieldReadResult::Read : FieldReadResult::FieldFailed;
+    }
 } // namespace sw

@@ -392,14 +392,16 @@ namespace sw
              *
              * 컨테이너에 넣는 것은 **팩토리가** 합니다(`createOwnedPointer` 가 소유자에 붙입니다).
              * XML, JSON 도 같은 약속이라 여기서 `appendElement` 를 부르지 않습니다.
+             * 본문 크기가 있어 모르는 타입은 건너뛰지만, 아는 타입의 본문을 못 읽으면 스트림이 망가진 것입니다(`StreamBroken`).
+             * 본문 안에 객체째 실패여야 할 것(금지된 필드)이 있으면 `ObjectRejected` 로 올립니다 — 원소 실패로 낮추지 않습니다.
              */
-            [[nodiscard]] static bool readOwnedPointerBinary( const uint8* pData, size_t dataSize, size_t& inoutOffset, const SerializeContext& context )
+            [[nodiscard]] static ContainerReadResult readOwnedPointerBinary( const uint8* pData, size_t dataSize, size_t& inoutOffset, const SerializeContext& context )
             {
                 uint32 nameLen{ 0 };
                 if ( readUint32( pData, dataSize, inoutOffset, nameLen ) == false )
-                    return false;
+                    return ContainerReadResult::StreamBroken;
                 if ( inoutOffset + nameLen > dataSize )
-                    return false;
+                    return ContainerReadResult::StreamBroken;
 
                 // 스트림 위에서 그대로 intern 한다. 이름 하나 읽자고 string 을 만들지 않는다.
                 const string_view typeNameText( reinterpret_cast<const utf8*>( pData + inoutOffset ), nameLen );
@@ -407,15 +409,15 @@ namespace sw
 
                 uint32 bodySize{ 0 };
                 if ( readUint32( pData, dataSize, inoutOffset, bodySize ) == false )
-                    return false;
+                    return ContainerReadResult::StreamBroken;
                 if ( inoutOffset + bodySize > dataSize )
-                    return false;
+                    return ContainerReadResult::StreamBroken;
 
                 const size_t bodyStart = inoutOffset;
                 inoutOffset += bodySize; // 어떤 경우로 빠지든 다음 원소 위치는 여기다.
 
                 if ( nameLen == 0 )
-                    return true;
+                    return ContainerReadResult::Read;
 
                 // 찾기만 한다. 파일의 이름을 intern 하면 전역 테이블이 파일 크기만큼 늘어난다(`hashed_string::findInterned`).
                 const hashed_string typeName = hashed_string::findInterned( typeNameText );
@@ -430,10 +432,19 @@ namespace sw
                     opaque._pBytes    = pData + bodyStart;
                     opaque._byteCount = bodySize;
                     (void)context.keepOpaqueElement( opaque );
-                    return true;
+                    return ContainerReadResult::Read;
                 }
 
-                return BinarySerializer::deserialize( pObj, *pType, pData + bodyStart, bodySize, context );
+                switch ( BinarySerializer::deserializeNested( pObj, *pType, pData + bodyStart, bodySize, context ) )
+                {
+                    case FieldReadResult::Read:
+                        return ContainerReadResult::Read;
+                    case FieldReadResult::FieldFailed:
+                        return ContainerReadResult::StreamBroken;
+                    case FieldReadResult::ObjectRejected:
+                        return ContainerReadResult::ObjectRejected;
+                }
+                return ContainerReadResult::ObjectRejected;
             }
 
             /**
@@ -557,11 +568,7 @@ namespace sw
 
                 ContainerReadResult readMapKey( const MutableValueAddress key, const hashed_string& keyTypeName ) override { return readValue( key, keyTypeName ); }
 
-                // 본문 크기가 있어 모르는 타입은 건너뛰지만, 아는 타입의 본문을 못 읽으면 스트림이 망가진 것이다.
-                ContainerReadResult readOwnedPointer() override
-                {
-                    return readOwnedPointerBinary( _pData, _dataSize, *_pInOutOffset, _context ) ? ContainerReadResult::Read : ContainerReadResult::StreamBroken;
-                }
+                ContainerReadResult readOwnedPointer() override { return readOwnedPointerBinary( _pData, _dataSize, *_pInOutOffset, _context ); }
 
                 ContainerReadResult readValueObject( const MutableValueAddress value, const hashed_string& typeName, const TypeInfo&, ContainerSlot ) override { return readValue( value, typeName ); }
                 ContainerReadResult readScalar( const MutableValueAddress value, const hashed_string& typeName, ContainerSlot ) override { return readValue( value, typeName ); }
@@ -583,12 +590,22 @@ namespace sw
                     return ContainerReadResult::Read;
                 }
 
-                /** @brief 값 하나를 읽습니다. 모르는 열거자는 바이트를 끝까지 읽고 실패하므로 그 원소만 빼고(FieldFailed), 그 밖의 실패는 위치를 알 수 없습니다. */
+                /**
+                 * @brief 값 하나를 읽습니다. 모르는 열거자는 바이트를 끝까지 읽고 실패하므로 그 원소만 빼고(FieldFailed), 그 밖의 실패는 위치를 알 수 없습니다.
+                 *        값 구조체 안의 객체째 실패는 원소 실패로 낮추지 않고 그대로 올립니다(ObjectRejected).
+                 */
                 ContainerReadResult readValue( const MutableValueAddress value, const hashed_string& typeName ) const
                 {
                     const size_t valueStart = *_pInOutOffset;
-                    if ( SerializerUtil::deserializeValueBinary( value, typeName, _pData, _dataSize, *_pInOutOffset, _context, _wireVersion ) )
-                        return ContainerReadResult::Read;
+                    switch ( SerializerUtil::deserializeValueBinary( value, typeName, _pData, _dataSize, *_pInOutOffset, _context, _wireVersion ) )
+                    {
+                        case FieldReadResult::Read:
+                            return ContainerReadResult::Read;
+                        case FieldReadResult::ObjectRejected:
+                            return ContainerReadResult::ObjectRejected;
+                        case FieldReadResult::FieldFailed:
+                            break;
+                    }
                     const bool bAdvanced  = valueStart < *_pInOutOffset && *_pInOutOffset <= _dataSize;
                     const bool bSkippable = bAdvanced && _context.getTypeRegistry().findEnum( typeName ) != nullptr;
                     return bSkippable ? ContainerReadResult::FieldFailed : ContainerReadResult::StreamBroken;
@@ -727,19 +744,19 @@ namespace sw
         return false;
     }
 
-    bool SerializerUtil::deserializeValueBinary( MutableValueAddress value, const hashed_string& typeName,
-                                                 const uint8* pData, size_t dataSize, size_t& offset,
-                                                 const SerializeContext& context, BinaryWireVersion wireVersion )
+    FieldReadResult SerializerUtil::deserializeValueBinary( MutableValueAddress value, const hashed_string& typeName,
+                                                            const uint8* pData, size_t dataSize, size_t& offset,
+                                                            const SerializeContext& context, BinaryWireVersion wireVersion )
     {
         void* const                           pValuePtr = value.get();
         const hashed_string                   resolved  = SerializerUtil::resolveHandlerTypeName( typeName, context );
         const SerializeContext::BinaryReadFn* pReader   = context.findBinaryReader( resolved );
         if ( pReader != nullptr )
-            return ( *pReader )( pValuePtr, pData, dataSize, offset );
+            return ContainerVisitor::fieldResultOf( ( *pReader )( pValuePtr, pData, dataSize, offset ) );
 
         const EnumInfo* pEnumInfo = context.getTypeRegistry().findEnum( typeName );
         if ( pEnumInfo != nullptr )
-            return SerializerUtilInternal::readEnumBinary( *pEnumInfo, value, pData, dataSize, offset, wireVersion );
+            return ContainerVisitor::fieldResultOf( SerializerUtilInternal::readEnumBinary( *pEnumInfo, value, pData, dataSize, offset, wireVersion ) );
 
         const TypeInfo* pStructInfo = context.getTypeRegistry().findType( typeName );
         if ( pStructInfo != nullptr )
@@ -749,8 +766,9 @@ namespace sw
                 size_t blockStart{ 0 };
                 uint32 blockSize{ 0 };
                 if ( SerializerUtilInternal::readSizedBlock( pData, dataSize, offset, blockStart, blockSize ) == false )
-                    return false;
-                return BinarySerializer::deserialize( pValuePtr, *pStructInfo, pData + blockStart, blockSize, context );
+                    return FieldReadResult::FieldFailed;
+                // 구조체 안의 객체째 실패(금지된 필드)는 그대로 올린다. bool 로 접으면 부른 쪽이 이 칸만 되돌리고 orphan 으로 넘긴다.
+                return BinarySerializer::deserializeNested( pValuePtr, *pStructInfo, pData + blockStart, blockSize, context );
             }
         }
 
@@ -760,13 +778,13 @@ namespace sw
             size_t blockStart{ 0 };
             uint32 blockSize{ 0 };
             if ( SerializerUtilInternal::readSizedBlock( pData, dataSize, offset, blockStart, blockSize ) == false )
-                return false;
+                return FieldReadResult::FieldFailed;
             const string text( reinterpret_cast<const utf8*>( pData + blockStart ), blockSize );
-            return ( *pTextReader )( pValuePtr, text );
+            return ContainerVisitor::fieldResultOf( ( *pTextReader )( pValuePtr, text ) );
         }
 
         // 실을 수 없는 타입이다. 바이트를 건너뛰지 않고 실패를 돌려준다. 알림은 부른 쪽의 규칙을 따른다(엄격 읽기는 실패, 소프트 읽기는 orphan).
-        return false;
+        return FieldReadResult::FieldFailed;
     }
 
     bool SerializerUtil::serializeNestedContainerBinary( ValueAddress container, const NestedContainerInfo& nested,
@@ -777,12 +795,12 @@ namespace sw
         return writer.isAllWritten();
     }
 
-    bool SerializerUtil::deserializeNestedContainerBinary( MutableValueAddress container, const NestedContainerInfo& nested,
-                                                           const uint8* pData, size_t dataSize, size_t& offset,
-                                                           const SerializeContext& context, BinaryWireVersion wireVersion )
+    FieldReadResult SerializerUtil::deserializeNestedContainerBinary( MutableValueAddress container, const NestedContainerInfo& nested,
+                                                                      const uint8* pData, size_t dataSize, size_t& offset,
+                                                                      const SerializeContext& context, BinaryWireVersion wireVersion )
     {
         SerializerUtilInternal::ContainerReader reader( pData, dataSize, &offset, context, wireVersion );
-        return ContainerVisitor::read( container, nested, reader, context ) == ContainerReadResult::Read;
+        return ContainerVisitor::toFieldResult( ContainerVisitor::read( container, nested, reader, context ) );
     }
 
     void SerializerUtil::valueToText( StringBuilder<constant::kMaxBuffer8192>& ss, ValueAddress value, const hashed_string& typeName,
@@ -892,8 +910,10 @@ namespace sw
             return true;
         }
 
+        // 같은 컨텍스트로 방금 쓴 바이트다. 쓰기가 다루지 않는 필드(금지된 필드)는 싣지 않으므로 객체째 실패도 이 값의 실패다.
         vector<uint8> bytes;
-        return writePropertyBinary( prop, srcInstance, bytes, context ) && applyPropertyBinary( prop, dstInstance, bytes.data(), bytes.size(), context );
+        return writePropertyBinary( prop, srcInstance, bytes, context ) &&
+               applyPropertyBinary( prop, dstInstance, bytes.data(), bytes.size(), context ) == FieldReadResult::Read;
     }
 
     bool SerializerUtil::writePropertyBinary( const PropertyInfo& prop, ObjectAddress instance, vector<uint8>& outBytes, const SerializeContext& context )
@@ -966,29 +986,40 @@ namespace sw
         return pValue != nullptr && parseTextValue( MutableValueAddress{ pValue }, prop._typeName, text, context );
     }
 
-    bool SerializerUtil::applyPropertyBinary( const PropertyInfo& prop, MutableObjectAddress instance, const uint8* pPayload, size_t payloadSize, const SerializeContext& context,
-                                              BinaryWireVersion wireVersion )
+    FieldReadResult SerializerUtil::applyPropertyBinary( const PropertyInfo& prop, MutableObjectAddress instance, const uint8* pPayload, size_t payloadSize,
+                                                         const SerializeContext& context, BinaryWireVersion wireVersion )
     {
         void* const pInstance = instance.get();
         if ( pInstance == nullptr )
-            return false;
+            return FieldReadResult::FieldFailed;
         size_t offset{ 0 };
         if ( prop._bIsBitField == SW_TRUE )
         {
-            // 비트필드는 주소를 가질 수 없어 값으로 읽고 setter 로 넣는다.
-            bool bValue = false;
-            if ( deserializeValueBinary( MutableValueAddress{ &bValue }, hashed_string( "bool" ), pPayload, payloadSize, offset, context, wireVersion ) == false || offset != payloadSize )
-                return false;
+            // 비트필드는 주소를 가질 수 없어 값으로 읽고 setter 로 넣는다. bool 은 객체째 실패를 알 수 없으므로 실패는 이 필드의 것이다.
+            bool       bValue = false;
+            const bool bRead  = deserializeValueBinary( MutableValueAddress{ &bValue }, hashed_string( "bool" ), pPayload, payloadSize, offset, context, wireVersion ) ==
+                               FieldReadResult::Read;
+            if ( bRead == false || offset != payloadSize )
+                return FieldReadResult::FieldFailed;
             prop.setValue<bool>( pInstance, bValue );
-            return true;
+            return FieldReadResult::Read;
         }
         void* pValue = prop.getRawPtr( pInstance );
         if ( pValue == nullptr )
-            return false;
-        const bool bRead = ( prop._bIsContainer == SW_TRUE && prop.hasContainerWrapper() )
-                             ? deserializeNestedContainerBinary( MutableValueAddress{ pValue }, prop.getContainerShape(), pPayload, payloadSize, offset, context, wireVersion )
-                             : deserializeValueBinary( MutableValueAddress{ pValue }, prop._typeName, pPayload, payloadSize, offset, context, wireVersion );
-        return bRead && offset == payloadSize;
+            return FieldReadResult::FieldFailed;
+        const FieldReadResult valueResult = ( prop._bIsContainer == SW_TRUE && prop.hasContainerWrapper() )
+                                              ? deserializeNestedContainerBinary( MutableValueAddress{ pValue }, prop.getContainerShape(), pPayload, payloadSize, offset, context, wireVersion )
+                                              : deserializeValueBinary( MutableValueAddress{ pValue }, prop._typeName, pPayload, payloadSize, offset, context, wireVersion );
+        switch ( valueResult )
+        {
+            case FieldReadResult::Read:
+                return offset == payloadSize ? FieldReadResult::Read : FieldReadResult::FieldFailed;
+            case FieldReadResult::FieldFailed:
+                return FieldReadResult::FieldFailed;
+            case FieldReadResult::ObjectRejected:
+                return FieldReadResult::ObjectRejected;
+        }
+        return FieldReadResult::ObjectRejected;
     }
 
     bool SerializerUtil::canCarryValueType( hashed_string typeName, const SerializeContext& context )
@@ -1239,7 +1270,7 @@ namespace sw
             return false;
         }
         // 이 빌드가 방금 쓴 바이트라 되읽지 못하면 코덱의 결함이다 — 읽다 만 값을 받지 않고 멈춘다.
-        if ( SerializerUtil::applyPropertyBinary( *_pProperty, instance, _bytes.data(), _bytes.size(), context ) )
+        if ( SerializerUtil::applyPropertyBinary( *_pProperty, instance, _bytes.data(), _bytes.size(), context ) == FieldReadResult::Read )
             return true;
         SW_LOG_ERROR( "%#::%# (%#): the value before the failed read could not be put back - the object is not read", _pOwnerType->_name.c_str(),
                       _pProperty->_name.c_str(), _pProperty->_typeName.c_str() );

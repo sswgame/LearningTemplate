@@ -10,6 +10,8 @@
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/EditorSubsystem.h"
 
+#include "Engine/Reflection/TextAddress.h"
+
 namespace sw
 {
     struct PropertyInfo;
@@ -46,10 +48,10 @@ namespace sw::editor
         void clear();
 
         /**
-         * @brief 프로퍼티 값이 기본값과 같은지 묻습니다. @p pDefaultInstance 가 있으면 프로퍼티 글로 비교하고, 없으면 리플렉션 메타의 기본값 글과 비교합니다.
+         * @brief 프로퍼티 값이 기본값과 같은지 묻습니다. @p defaultInstance 가 nullptr 이 아니면 프로퍼티 글로 비교하고, 없으면 리플렉션 메타의 기본값 글과 비교합니다.
          * @return 기본값을 모르면(인스턴스도 메타도 없음) true 입니다 — 표시할 차이가 없다.
          */
-        static bool isDefaultValue( const PropertyInfo& prop, const void* pInstance, const void* pDefaultInstance );
+        static bool isDefaultValue( const PropertyInfo& prop, ObjectAddress instance, ObjectAddress defaultInstance );
 
     private:
         unique_ptr<GameObjectManager> _pManager;

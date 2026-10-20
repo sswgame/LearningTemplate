@@ -10,6 +10,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/EngineMinimal.h"
+#include "Engine/Reflection/TextAddress.h"
 
 namespace sw
 {
@@ -51,8 +52,8 @@ namespace sw
          */
         [[nodiscard]] static bool parse( const TypeInfo& type, const PropertyInfo& prop, PropertyEditConditionExpr& outExpr, string& outError );
         /** @brief 풀어 둔 식을 인스턴스 값으로 판정합니다. 보는 프로퍼티가 없으면(식 없음) 참입니다. */
-        static bool evaluate( const PropertyEditConditionExpr& expr, const void* pInstance );
+        static bool evaluate( const PropertyEditConditionExpr& expr, ObjectAddress instance );
         /** @brief 인스펙터가 쓰는 한 번에 — 풀고 판정해 보일 상태를 돌려줍니다. 풀지 못하면 `Enabled`(막지 않는다)입니다. */
-        static PropertyEditState getEditState( const TypeInfo& type, const PropertyInfo& prop, const void* pInstance );
+        static PropertyEditState getEditState( const TypeInfo& type, const PropertyInfo& prop, ObjectAddress instance );
     };
 } // namespace sw

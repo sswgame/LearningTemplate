@@ -6,6 +6,8 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 
+#include "Engine/Reflection/TextAddress.h"
+
 namespace sw
 {
     struct PropertyInfo;
@@ -17,7 +19,7 @@ namespace sw::editor
     {
     public:
         /** @brief 방금 그린 위젯의 POD 값 편집을 되돌리기에 남깁니다. 이름은 @p prop 의 표시 이름이다(위젯 라벨 "##value" 를 넘길 수 없게 프로퍼티를 받는다). */
-        static void trackPod( void* pData, size_t size, const PropertyInfo& prop );
+        static void trackPod( MutableValueAddress value, size_t size, const PropertyInfo& prop );
         /** @brief 방금 그린 글 칸의 편집을 되돌리기에 남깁니다. */
         static void trackString( string* pPtr, const PropertyInfo& prop );
         /**

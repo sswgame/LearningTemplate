@@ -14,6 +14,8 @@
 
 namespace sw
 {
+    enum class FieldReadResult : uint8;
+
     /**
      * @struct ScopedScratchInstance
      * @brief 임시 스크래치 인스턴스를 만들고, 범위를 벗어나면 반드시 파괴하는 RAII 래퍼입니다.
@@ -112,11 +114,13 @@ namespace sw
          *          바이트는 끝까지 읽었으므로 부른 쪽이 다음 필드로 갈 수 있다(경고는 enum 과 이름마다 한 번이다).
          *          바이너리 처리기 · 열거형 · 구조체 · 텍스트 처리기 어디에도 없는 타입이면 바이트를 건너뛰지 않고 false 를 반환한다.
          *          여기서는 알리지 않는다. 엄격 읽기는 실패로, 소프트 읽기는 orphan 으로 부른 쪽이 다룬다(프로세스 정적 "한 번만" 로그는 테스트 순서에 따라 결과가 달라진다).
+         * @return 위의 실패는 모두 `FieldFailed` 입니다. 값 구조체 안에 객체째 실패여야 할 것(저작 파일의 금지된 필드, 되돌리지 못한 필드)이 있으면
+         *         `ObjectRejected` 입니다(`BinarySerializer::deserializeNested`) — 부른 쪽이 그 필드만 넘기면 안의 금지된 필드가 orphan 으로 넘어간다.
          */
-        [[nodiscard]] SW_API static bool deserializeValueBinary( MutableValueAddress value, const hashed_string& typeName,
-                                                                 const uint8* pData, size_t dataSize, size_t& offset,
-                                                                 const SerializeContext& context,
-                                                                 BinaryWireVersion       wireVersion = kCurrentBinaryWireVersion );
+        [[nodiscard]] SW_API static FieldReadResult deserializeValueBinary( MutableValueAddress value, const hashed_string& typeName,
+                                                                            const uint8* pData, size_t dataSize, size_t& offset,
+                                                                            const SerializeContext& context,
+                                                                            BinaryWireVersion       wireVersion = kCurrentBinaryWireVersion );
 
         /**
          * @brief 중첩 컨테이너를 바이너리로 직렬화합니다. 원소 · 키 · 값 하나라도 쓰지 못하면(`serializeValueBinary`) false 이고 @p listBuffer 는 쓰면 안 됩니다.
@@ -127,11 +131,12 @@ namespace sw
         /**
          * @brief 바이너리에서 중첩 컨테이너를 역직렬화합니다. 원소, 키, 값은 `wireVersion` 으로 읽습니다(`deserializeValueBinary`).
          * @details 원소와 항목이 실패했을 때의 규칙은 `ContainerVisitor` 를 따른다(모르는 열거자는 그 원소만 빼고 필드 전체는 실패로 처리한다).
+         * @return 컨테이너 결과를 필드 결과로 옮긴 것입니다(`ContainerVisitor::toFieldResult`). 원소 안의 객체째 실패는 `ObjectRejected` 로 올라갑니다.
          */
-        [[nodiscard]] SW_API static bool deserializeNestedContainerBinary( MutableValueAddress container, const NestedContainerInfo& nested,
-                                                                           const uint8* pData, size_t dataSize, size_t& offset,
-                                                                           const SerializeContext& context,
-                                                                           BinaryWireVersion       wireVersion = kCurrentBinaryWireVersion );
+        [[nodiscard]] SW_API static FieldReadResult deserializeNestedContainerBinary( MutableValueAddress container, const NestedContainerInfo& nested,
+                                                                                      const uint8* pData, size_t dataSize, size_t& offset,
+                                                                                      const SerializeContext& context,
+                                                                                      BinaryWireVersion       wireVersion = kCurrentBinaryWireVersion );
 
         /** @brief 값을 텍스트로 씁니다(중첩 타입은 중첩 문자열). 바깥 따옴표는 붙이지 않습니다. XML, JSON, SchemaMigrate 가 함께 쓰는 기본 조각입니다. @p value 는 값 하나 자체의 주소입니다. */
         static void valueToText( StringBuilder<constant::kMaxBuffer8192>& ss, ValueAddress value, const hashed_string& typeName,
@@ -165,14 +170,16 @@ namespace sw
          */
         [[nodiscard]] SW_API static bool writePropertyBinary( const PropertyInfo& prop, ObjectAddress instance, vector<uint8>& outBytes, const SerializeContext& context );
         /**
-         * @brief 바이너리 페이로드 하나(그 프로퍼티 값 전부)를 프로퍼티에 읽어 씁니다. 페이로드를 **끝까지** 읽어야 true 입니다. @p instance 는 프로퍼티를 가진 **객체**의 주소입니다.
+         * @brief 바이너리 페이로드 하나(그 프로퍼티 값 전부)를 프로퍼티에 읽어 씁니다. 페이로드를 **끝까지** 읽어야 `Read` 입니다. @p instance 는 프로퍼티를 가진 **객체**의 주소입니다.
          * @details 바이트가 남으면 스트림이 이 필드를 다른 형태로 적은 것이다(`int32` 0 을 `vector<int32>` 로 읽으면 원소 수 0 으로 성공한다). 그래서 오프셋을
          *          부른 쪽에 돌려주지 않고 여기서 끝을 본다 — 태그 스트림, diff, 값 복사가 "읽힌 만큼" 받는 사본을 따로 두지 않게.
-         *          false 이면 그 필드는 **읽다 만 값**일 수 있다(컨테이너 · 구조체는 원소와 필드를 채운 뒤 끝에서 실패한다). 실패한 뒤에도 이어 읽는 쪽은
+         *          실패하면 그 필드는 **읽다 만 값**일 수 있다(컨테이너 · 구조체는 원소와 필드를 채운 뒤 끝에서 실패한다). 실패한 뒤에도 이어 읽는 쪽은
          *          `PropertyReadRollback` 으로 읽기 전 값을 담아 두고 실패하면 되돌린다.
+         * @return `FieldFailed` 는 이 필드만의 실패이고, `ObjectRejected` 는 안쪽(구조체 칸, 컨테이너 원소인 구조체 · 컴포넌트)에 객체째 실패여야 할 것이 있었다는 뜻입니다.
+         *         받는 쪽은 `default` 없는 `switch` 로 세 값을 다 다룹니다(`FieldReadResult`).
          */
-        [[nodiscard]] SW_API static bool applyPropertyBinary( const PropertyInfo& prop, MutableObjectAddress instance, const uint8* pPayload, size_t payloadSize,
-                                                              const SerializeContext& context, BinaryWireVersion wireVersion = kCurrentBinaryWireVersion );
+        [[nodiscard]] SW_API static FieldReadResult applyPropertyBinary( const PropertyInfo& prop, MutableObjectAddress instance, const uint8* pPayload, size_t payloadSize,
+                                                                         const SerializeContext& context, BinaryWireVersion wireVersion = kCurrentBinaryWireVersion );
         /**
          * @brief 이 프로퍼티의 값을 세 형식(XML, JSON, 바이너리)이 모두 실어 나를 수 있으면 true 입니다. 직렬화기의 분기와 같은 판정입니다.
          * @details 직렬화기는 다룰 줄 모르는 타입을 **조용히** 텍스트 `null`, 바이너리 0 바이트로 쓰고, 읽을 때는 그 필드가 기본값이 된다(저장한 줄 알았던

@@ -1,6 +1,6 @@
 # 직렬화가 조용히 넘기는 곳 (2026-10-21)
 
-> 상태: 구현중 · 선행: 없음 · 영역: engine · 옛번호: C-66 · 진행: 3/3
+> 상태: 구현중 · 선행: 없음 · 영역: engine · 옛번호: C-66 · 진행: 4/4
 
 읽기 · 쓰기가 조용히 넘기면 데이터 결함이 숨습니다. 페이로드를 끝까지 읽었는지는 태그 스트림 두 경로 · diff · 값 복사가 `SerializerUtil::applyPropertyBinary` 하나로 보고, B 코덱 열거형 폭은 이미 열거자 범위입니다(2026-10-20).
 남은 결함은 **읽기가 실패한 필드에 앞부분이 써진 채 남는 것**입니다. 컨테이너 · 구조체는 원소와 필드를 채운 뒤 끝 검사에서 실패합니다. 엄격 읽기는 객체째 실패라 드러나지 않고, 읽지 못한 필드를 넘기고 이어 읽는 읽기에서만 그 필드가 반쯤 읽힌 값이 됩니다.
@@ -21,6 +21,10 @@
   필드의 끝은 형식이 알므로(XML 노드, JSON 값, 바이너리 페이로드 크기) 필드 경계에서 `StreamBroken` 은 그 필드의 실패입니다(`ContainerVisitor::toFieldResult`).
 - 담는 대상은 좁히지 않았습니다(S3 에서 따짐). 스칼라 처리기가 반쯤 쓴다는 반례가 있습니다 — 내장 벡터 글 처리기(`registerVectorTextHandler`)는 앞 축을 쓴 뒤 다음 축에서 실패합니다.
   처리기 등록이 "성공할 때만 쓴다"를 말하지 않으므로 타입으로 가를 근거가 없습니다. 좁히려면 등록 API 가 그 약속을 갖거나 처리기가 임시에 읽고 옮기게 바꿔야 합니다(측정에서 회귀가 보일 때).
+- 바이너리도 같은 형식입니다(S4). `deserializeTagged` · `SerializerUtil::deserializeValueBinary` · `deserializeNestedContainerBinary` · `applyPropertyBinary` · `tryCoerceBinaryPayload` 가 `FieldReadResult` 를 돌려줍니다.
+  다른 객체의 필드인 객체(구조체 칸, 소유 포인터 본문)는 `BinarySerializer::deserializeNested` 로 읽고, 맨 바깥을 읽는 `deserialize` 는 bool 그대로입니다 — 바깥에 이어 읽을 읽기가 없어 두 실패를 가를 쓸 곳이 없고, 부르는 곳이 50 곳이 넘습니다.
+  태그 스트림 안에서는 페이로드 크기를 알므로 깨진 스트림도 그 칸의 `FieldFailed` 이고, 소유 포인터 본문을 못 읽은 것은 예전처럼 원소의 `StreamBroken` 입니다.
+- 기록 타입이 다른 필드의 이관은 프로퍼티 단위(`tryCoercePropertyBinary`, `SchemaMigrate.h`)로 합니다. 태그 스트림 읽기가 `getRawPtr` 로 값 주소를 꺼내 넘기던 때는 비트필드가 그 바이트 주소여서 bool 이 같은 바이트의 다른 비트필드를 덮었습니다(S4 에서 읽어 확인).
 
 ## 2. 단위
 
@@ -29,10 +33,11 @@
 | S1 | 바이너리 태그 스트림(`BinarySerializer` 의 `deserializeTagged`): 읽기 전 값을 담고 실패하면 되돌린다. 프로퍼티 하나를 쓰는 세 갈래(비트필드 · 컨테이너 · 값)를 `SerializerUtil::writePropertyBinary` 하나로 모아 태그 스트림 쓰기 · 값 복사 · 되돌리기가 함께 쓴다 — **들어감**(`ReflectionSerializationTest.UnreadableFieldKeepsItsValueBeforeTheRead`, 빌드 · 실행은 병합 때) | 없음 |
 | S2 | 텍스트 형식의 소프트 읽기: JSON `readObject` 와 XML `readXMLIntoInstance` 도 읽지 못한 필드를 읽기 전 값으로 되돌린다. 담기 · 되돌리기를 `PropertyReadRollback` 으로 모아 바이너리와 함께 쓴다(1절의 단위 규칙) — **들어감**(`ReflectionSerializationTest.JSONSoftReadKeepsUnreadableFieldValueBeforeTheRead` · `XMLSoftReadKeepsUnreadableFieldValueBeforeTheRead`, 빌드 · 실행은 병합 때). 동작 변경은 3절 | S1 |
 | S3 | 원소 · 구조체 읽기 결과가 필드 실패와 객체 실패를 가른다: `FieldReadResult` 를 두고 `ContainerReadResult` 에 `ObjectRejected` 를 더한다. XML `readXMLIntoInstance` · JSON `readObject` · `readProperty` · `readJSONValue` 가 그것을 돌려주고, 컨테이너 원소인 구조체 · 컴포넌트 안의 금지된 필드가 칸 실패로 낮아지지 않고 객체째 실패한다(1절) — **들어감**(`ReflectionPurposeTest.RuntimeStateInAContainerElementRejectsTheSoftRead`, 빌드 · 실행은 병합 때). 동작 변경은 3절 | S2 |
+| S4 | 바이너리도 필드 실패와 객체 실패를 가른다: `deserializeTagged` · `deserializeValueBinary` · `deserializeNestedContainerBinary` · `applyPropertyBinary` · `tryCoerceBinaryPayload` 가 `FieldReadResult` 를 돌려주고, 칸 읽기는 `BinarySerializer::deserializeNested` 로 한다. 기록 타입이 다른 필드의 이관을 프로퍼티 단위(`tryCoercePropertyBinary`)로 옮겨 비트필드가 같은 바이트의 다른 플래그를 덮지 않는다(1절) — **들어감**(`ReflectionPurposeTest.RuntimeStateInAContainerElementRejectsTheBinarySoftRead` · `ReflectionSerializationTest.CoercedBitFieldReadTouchesOnlyItsOwnBit`, 빌드 · 실행은 병합 때). 동작 변경은 3절 | S3 |
 
 ## 3. 확인
 
-- S1 · S2 · S3 은 빌드하지 않았습니다. 병합 때 `ReflectionTest` 의 `ReflectionSerializationTest.*` · `ReflectionPurposeTest.*` 와 오브젝트 상태 테스트(`EngineTest` 의 `ObjectStateRoundTripTest.*`)를 돌리고, 씬을 여는 기존 시나리오 하나로 바이너리 씬 로드와 XML 씬 · 프리팹 로드를 봅니다. 설정 읽기(`ConfigManager::readConfigJSON`, JSON 소프트)도 지납니다.
+- S1 · S2 · S3 · S4 는 빌드하지 않았습니다. 병합 때 `ReflectionTest` 의 `ReflectionSerializationTest.*` · `ReflectionPurposeTest.*` 와 오브젝트 상태 테스트(`EngineTest` 의 `ObjectStateRoundTripTest.*`)를 돌리고, 씬을 여는 기존 시나리오 하나로 바이너리 씬 로드와 XML 씬 · 프리팹 로드를 봅니다. 설정 읽기(`ConfigManager::readConfigJSON`, JSON 소프트)도 지납니다.
 - S2 로 바뀌는 동작(텍스트 형식 소프트 읽기):
   - 읽지 못한 원소가 있는 컨테이너는 읽힌 원소만 남던 것이 이제 읽기 전 값입니다. XML 은 그 칸의 orphan 이 실패한 원소 글들에서 칸 원문 하나로 바뀝니다.
   - 읽다 만 소유 포인터 목록(컴포넌트 목록에서 원소가 금지된 필드 · 범위 밖 값으로 실패)은 반쯤 찬 목록으로 이어 읽던 것이 이제 객체째 실패(`Rejected`)입니다.
@@ -42,6 +47,13 @@
   - 컨테이너 원소인 값 구조체 · 소유 포인터 컴포넌트 안의 금지된 필드는 칸째 되돌려 orphan 으로 넘기던 것이 이제 객체째 실패입니다(소프트 `Rejected`, 엄격 false). 원소를 더 읽지 않고 멈춥니다.
   - JSON 구조체 칸(컨테이너가 아닌 필드) 안의 금지된 필드도 같습니다. 예전에는 그 칸이 orphan 으로 넘어갔습니다(XML 은 S2 에서 이미 객체째 실패).
   - 엄격 읽기의 결과(false)는 그대로입니다. XML 엄격 읽기는 안쪽 객체 실패를 만나면 남은 필드를 더 읽지 않습니다(결과는 같고 오류 줄이 줄 수 있습니다).
-- 바이너리는 아직 가르지 못합니다. 원소 · 구조체 칸은 `BinarySerializer::deserialize`(엄격, `bool`)로 읽혀 안쪽 금지된 필드가 소프트 · 오브젝트 상태 읽기에서 칸 실패(되돌림 · orphan)가 됩니다.
-  바이너리 파일은 금지된 필드를 쓰지 않으므로 이 경로는 저작 목적 바이너리를 옛 데이터로 읽을 때만 탑니다. 닫으려면 `deserializeTagged` · `deserializeValueBinary` · `applyPropertyBinary` 가 `FieldReadResult` 를 돌려줘야 합니다(공개 API, 호출처 다수 — 다음 단위 후보).
+- S4 로 바뀌는 동작(바이너리):
+  - 구조체 칸 · 컨테이너 원소인 값 구조체 · 소유 포인터 컴포넌트 안의 금지된 필드는 저작 목적 소프트 읽기에서 칸째 되돌려 orphan 으로 넘기던 것이 이제 객체째 실패입니다(소프트 `Rejected`, 엄격 false).
+    바이너리 파일은 금지된 필드를 쓰지 않으므로 저작 목적 바이너리를 옛 데이터로 읽을 때만 탑니다.
+  - 맨 바깥 소프트 읽기(`deserializeSoft`)에서 금지된 필드와 담지 · 되돌리지 못한 필드는 `NotParsed` 이던 것이 이제 `Rejected` 입니다(XML · JSON 과 같습니다). 스트림이 깨진 것만 `NotParsed` 입니다.
+  - 기록 타입이 다른 비트필드(옛 빌드의 int32 등)는 이관이 그 비트만 씁니다. 예전에는 같은 바이트의 다른 비트필드가 지워졌습니다.
+  - 이관(`tryCoerceBinaryPayload`)이 구조체 대상 안에서 금지된 필드를 만나면 다른 해석(문자열 · 재해석)을 더 해 보지 않고 객체째 실패입니다.
+  - 스키마 이관의 orphan 적용(`applyOrphanTo` · `applyOrphanToPath`)과 diff 적용 · 값 복사는 bool 계약 그대로라 객체째 실패도 그 적용의 실패입니다.
+- 같은 모양이 남은 곳: 스키마 이관의 점 경로(`resolvePropertyPath`)도 비트필드면 그 바이트 주소를 값 주소로 돌려줘, 이관 함수가 비트필드에 orphan 을 적용하면 같은 바이트의 다른 플래그를 덮을 수 있습니다(읽어서 본 것, 실행 확인 안 함).
+  `PropertyInfo::getRawPtr` 가 비트필드에도 주소를 주는 것이 근본 원인이라, 값 주소를 비트필드에서 받을 수 없게 하는 형식(비트필드 값 주소)은 리플렉션 쪽 후속입니다.
 - 오브젝트 상태 읽기가 필드마다 한 번 더 쓰므로 씬 로드 · 플레이 스냅샷 복원 시간이 늘 수 있습니다. 병합 뒤 측정해 회귀가 보이면 담는 대상을 좁힙니다. 좁히는 조건은 1절 끝(처리기가 성공할 때만 쓴다는 약속)입니다.

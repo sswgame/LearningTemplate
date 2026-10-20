@@ -49,15 +49,15 @@ namespace sw::editor
         }
     }
 
-    bool EditorMultiEditUtil::hasMixedValues( const PropertyInfo& prop, const vector<const void*>& listInstance )
+    bool EditorMultiEditUtil::hasMixedValues( const PropertyInfo& prop, const vector<ObjectAddress>& listInstance )
     {
         if ( listInstance.size() < 2 )
             return false;
         const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring );
-        const string            first   = SerializerUtil::formatPropertyText( prop, ObjectAddress{ listInstance[0] }, context );
+        const string            first   = SerializerUtil::formatPropertyText( prop, listInstance[0], context );
         for ( size_t index = 1; index < listInstance.size(); ++index )
         {
-            if ( SerializerUtil::formatPropertyText( prop, ObjectAddress{ listInstance[index] }, context ) != first )
+            if ( SerializerUtil::formatPropertyText( prop, listInstance[index], context ) != first )
                 return true;
         }
         return false;
