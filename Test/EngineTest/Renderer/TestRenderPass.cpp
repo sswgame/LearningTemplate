@@ -874,10 +874,19 @@ SW_TEST_CASE( RenderPassTest, PipelineExtendedStagesRoundtrip )
     sw::RenderPipelineDesc& desc = pipeRes.getDesc();
     desc._name                   = "UnitTestAllStagesPipeline";
     desc._shadingModel           = "Deferred";
+    // 파일에서 읽는 파이프라인은 검증을 통과해야 올라온다 — 쓰는 첨부를 선언하고 아는 패스 타입을 쓴다(여기서 보는 것은 스테이지 진입점 왕복이다).
+    sw::RenderPassAttachment colorAtt{};
+    colorAtt._name   = "HDRColor";
+    colorAtt._format = "R8G8B8A8_UNORM";
+    desc._listAttachment.push_back( colorAtt );
+    sw::RenderPassAttachment depthAtt{};
+    depthAtt._name   = "DepthBuffer";
+    depthAtt._format = "D24_UNORM_S8_UINT";
+    desc._listAttachment.push_back( depthAtt );
 
     sw::RenderGraphPassDesc pass{};
     pass._name                    = "MegaShaderPass";
-    pass._type                    = "CustomGraphics";
+    pass._type                    = "ForwardOpaque";
     pass._shaderPath              = "engine/shaders/custom.hlsl";
     pass._vertexEntryPoint        = "VSMainCustom";
     pass._pixelEntryPoint         = "PSMainCustom";
@@ -924,6 +933,11 @@ SW_TEST_CASE( RenderPassTest, PipelineEmptyStagesSkipped )
     sw::RenderPipelineDesc& desc = pipeRes.getDesc();
     desc._name                   = "UnitTestCompactPipeline";
     desc._shadingModel           = "Forward";
+    // 파일에서 읽는 파이프라인은 검증을 통과해야 올라온다 — 지오메트리 패스가 그릴 컬러 출력을 선언한다.
+    sw::RenderPassAttachment colorAtt{};
+    colorAtt._name   = "SceneColor";
+    colorAtt._format = "R8G8B8A8_UNORM";
+    desc._listAttachment.push_back( colorAtt );
 
     sw::RenderGraphPassDesc pass{};
     pass._name             = "CompactPass";
@@ -931,6 +945,7 @@ SW_TEST_CASE( RenderPassTest, PipelineEmptyStagesSkipped )
     pass._shaderPath       = test::getEngineDefaultAssets()._shaderForwardLit.get();
     pass._vertexEntryPoint = "VSMain";
     pass._pixelEntryPoint  = "PSMain";
+    pass._listOutput.push_back( "SceneColor" );
     // _computeEntryPoint, _geometryEntryPoint 등은 비어 있음
     desc._listPass.push_back( pass );
 

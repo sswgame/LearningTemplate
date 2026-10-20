@@ -13,6 +13,8 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw
 {
     class Archive;
@@ -45,6 +47,40 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct NileAutoPlanStepDef
+     * @brief 자동 계획 파일(`data/autoplan.xml`)의 `<Road>` · `<Building>` 원소 하나의 칸입니다. 속성 이름은 칸 이름에서 `_` 를 뗀 것이다(`GameDataXML::readFields`).
+     * @details 칸 좌표("x,y", x 는 배치 이름 road · farm 일 수 있다)는 배치를 알아야 풀리므로 글 그대로 둔다 — 푸는 쪽은 `NileCityPlanner::reset` 이다.
+     */
+    REFLECT()
+    struct NileAutoPlanStepDef
+    {
+        REFLECT_BODY();
+        PROPERTY( Required, Tooltip = "First cell \"x,y\" - x may be a layout name (road, farm)" )
+        string _from{};
+        PROPERTY( Tooltip = "Last cell of a road line or a building row; not written means the first cell" )
+        string _to{};
+        PROPERTY( Required, Tooltip = "Block (1..3) whose starting population gates this step" )
+        int32 _block{ 0 };
+        PROPERTY( Min = 0, Tooltip = "People needed beyond the block's starting population" )
+        int32 _extra{ 0 };
+        PROPERTY( Tooltip = "Building id - Building steps only" )
+        string _id{};
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 자동 계획 파일의 한 단계 — 원소 이름(`Road` · `Building`)과 그 칸입니다. */
+    struct NileAutoPlanStep
+    {
+        bool                _bRoad{ false };
+        NileAutoPlanStepDef _def{};
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @class NileCityPlanner
      * @brief 나일 강가 땅을 칠하고, 자동 플레이의 짓기 순서표를 한 단계씩 실행합니다.
      */
@@ -68,6 +104,11 @@ namespace sw
          * @return 파일을 읽지 못했거나 단계 하나라도 모양이 틀리면 오류를 남기고 false 이며 순서표는 빈다.
          */
         [[nodiscard]] bool reset( const NileCityLayout& layout, string_view planPath );
+        /**
+         * @brief 자동 계획 파일 @p planPath 의 단계를 배치 없이 읽습니다(원소 이름 · 칸의 형식과 필수 칸까지). 칸 좌표는 풀지 않는다.
+         * @return 파일이나 단계 하나라도 읽지 못하면 오류를 남기고 false 이며 @p outListStep 은 빈다. 데이터 종류 등록(`NileAutoPlanDataKind.cpp`)도 이것으로 읽어 본다.
+         */
+        [[nodiscard]] static bool readPlanFile( string_view planPath, vector<NileAutoPlanStep>& outListStep );
         /**
          * @brief 돈 · 인구가 되는 데까지 순서표를 실행합니다. 이번에 지은(또는 깐) 단계 수입니다.
          * @details 돈이 모자라거나 인구 임계값에 못 미치면 멈추고 다음 부름에 이어 갑니다. 놓을 수 없는 자리(겹침 · 땅)는 경고 없이 건너뜁니다.

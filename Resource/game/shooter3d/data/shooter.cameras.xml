@@ -39,7 +39,13 @@
 	-->
 	<Preset id="dolly">
 		<View mode="Dolly" />
-		<Lens focalLength="35" sensorSize="36,24" focusDistance="8" aperture="2.8" dutch="0.13963" nearPlane="0.1" farPlane="200" />
+		<Lens focalLength="35"
+		      sensorSize="36,24"
+		      focusDistance="8"
+		      aperture="2.8"
+		      dutch="0.13963"
+		      nearPlane="0.1"
+		      farPlane="200" />
 		<Damping positionTime="0.4" orientationTime="0.15" />
 		<Dolly type="CatmullRom" closed="false" pathOffset="0">
 			<Point position="-15 5 -15" />

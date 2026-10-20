@@ -24,7 +24,6 @@
 	<Building id="juggler" from="24,5" block="1" extra="40" />
 	<Building id="apothecary" from="18,10" block="1" extra="60" />
 	<Building id="fig_farm" from="farm,11" block="1" extra="60" />
-
 	<!-- 2 구역(x 28..36, y 5..13) — 물 공급 · 공방 · 저장 마당 · 두 번째 바자 · 학교. -->
 	<Road from="27,4" to="37,4" block="2" />
 	<Road from="37,4" to="37,14" block="2" />
@@ -44,7 +43,6 @@
 	<Building id="scribe_school" from="35,9" block="2" extra="60" />
 	<Building id="garden" from="31,9" block="2" extra="60" />
 	<Building id="garden" from="33,9" block="2" extra="60" />
-
 	<!-- 3 구역(y 15..23) — 농장을 늘리고 집 네 줄 · 광장 · 둘째 서비스. -->
 	<Road from="road,14" to="road,24" block="3" />
 	<Road from="27,14" to="27,24" block="3" />

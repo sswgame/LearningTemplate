@@ -9,6 +9,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CitySimulation.h"
 
@@ -147,13 +148,9 @@ namespace sw
         _listStep.push_back( step );
     }
 
-    bool NileCityPlanner::reset( const NileCityLayout& layout, string_view planPath )
+    bool NileCityPlanner::readPlanFile( string_view planPath, vector<NileAutoPlanStep>& outListStep )
     {
-        using Internal = NileCityPlannerInternal;
-        _listStep.clear();
-        _nextStep     = 0;
-        _skippedCount = 0;
-
+        outListStep.clear();
         XMLDocument document;
         XMLNode     root;
         if ( XMLReadUtil::loadRoot( document, planPath, "NileAutoPlan", root ) != XMLRootStatus::Found )
@@ -161,38 +158,64 @@ namespace sw
             SW_LOG_ERROR( "[Nile] auto plan '%#' could not be read: %#", planPath, document.getLastError().c_str() );
             return false;
         }
-        // 한 줄이 한 단계다(적힌 순서). Road 는 from → to 의 곧은 길, Building 은 from(과 to 가 있으면 그 사이 모든 칸, 행 우선)의 건물이다.
-        // 인구 임계값은 구역(block)의 시작 인구 + extra 다. 칸의 x 는 수이거나 배치의 이름(road · farm)이다.
+        // 한 줄이 한 단계다(적힌 순서). 칸의 이름 · 필수 · 형식은 스키마(NileAutoPlanStepDef)가 정하고 readFields 가 모르는 속성까지 막는다.
+        bool bValid = true;
         for ( XMLNode node = root.findChild(); node.isValid(); node = node.findNextSibling() )
         {
             const string_view kind = node.getName();
             if ( kind.empty() )
                 continue; // 주석 · 글 노드
-            const bool                  bRoad      = kind == "Road";
-            const std::optional<string> from       = node.readRequiredAttribute<string>( "from" );
-            const std::optional<int32>  block      = node.readRequiredAttribute<int32>( "block" );
-            const std::optional<string> buildingID = bRoad ? std::optional<string>{ string{} } : node.readRequiredAttribute<string>( "id" );
-            std::optional<string>       to;
-            int32                       extra{ 0 }; // 없으면 구역 시작 인구 그대로다
-            int2                        fromCell{};
-            int2                        toCell{};
-            int32                       population{ 0 };
-            const bool                  bAttributesRead = node.readOptionalAttribute( "to", to ) && node.readOptionalAttributeInRange( "extra", 0, MathUtil::kMaxInt32, extra ) &&
-                                         from.has_value() && block.has_value() && buildingID.has_value();
-            const bool bStepRead = ( bRoad || kind == "Building" ) && bAttributesRead && Internal::parseCell( layout, *from, fromCell ) &&
-                                   ( to.has_value() == false || Internal::parseCell( layout, *to, toCell ) ) &&
-                                   Internal::findBlockPopulation( layout, *block, population );
-            if ( bStepRead == false )
+            NileAutoPlanStep step{};
+            step._bRoad             = kind == "Road";
+            const bool bKnownKind   = step._bRoad || kind == "Building";
+            const bool bFieldsRead  = bKnownKind && GameDataXML::readFields( node, step._def, planPath );
+            const bool bBlockInPlan = step._def._block >= 1 && step._def._block <= 3;
+            // 도로는 건물 id 가 없고 건물은 있어야 한다.
+            const bool bShapeValid = bFieldsRead && bBlockInPlan && ( step._bRoad == step._def._id.empty() );
+            if ( bShapeValid == false )
             {
-                SW_LOG_ERROR( "[Nile] auto plan '%#': <%#> needs from=\"x,y\" (to), block 1..3 (extra) and Building an id - %#", planPath, node.getName(),
-                              node.toString().c_str() );
+                SW_LOG_ERROR( "[Nile] auto plan '%#': <%#> needs from=\"x,y\" (to), block 1..3 (extra) and Building an id (Road none) - %#", planPath,
+                              node.getName(), node.toString().c_str() );
+                bValid = false;
+                continue;
+            }
+            outListStep.push_back( step );
+        }
+        if ( bValid == false )
+            outListStep.clear();
+        return bValid;
+    }
+
+    bool NileCityPlanner::reset( const NileCityLayout& layout, string_view planPath )
+    {
+        using Internal = NileCityPlannerInternal;
+        _listStep.clear();
+        _nextStep     = 0;
+        _skippedCount = 0;
+
+        vector<NileAutoPlanStep> listPlanStep;
+        if ( readPlanFile( planPath, listPlanStep ) == false )
+            return false;
+        // Road 는 from → to 의 곧은 길, Building 은 from(과 to 가 있으면 그 사이 모든 칸, 행 우선)의 건물이다.
+        // 인구 임계값은 구역(block)의 시작 인구 + extra 다. 칸의 x 는 수이거나 배치의 이름(road · farm)이다.
+        for ( const NileAutoPlanStep& planStep : listPlanStep )
+        {
+            const NileAutoPlanStepDef& def = planStep._def;
+            int2                       fromCell{};
+            int2                       toCell{};
+            int32                      population{ 0 };
+            const bool                 bResolved = Internal::parseCell( layout, def._from, fromCell ) && ( def._to.empty() || Internal::parseCell( layout, def._to, toCell ) ) &&
+                                   Internal::findBlockPopulation( layout, def._block, population );
+            if ( bResolved == false )
+            {
+                SW_LOG_ERROR( "[Nile] auto plan '%#': step from '%#' to '%#' (block %#) does not resolve on this layout", planPath, def._from, def._to, def._block );
                 _listStep.clear();
                 return false;
             }
-            if ( to.has_value() == false )
+            if ( def._to.empty() )
                 toCell = fromCell;
-            const int32 minPopulation = population + extra;
-            if ( bRoad )
+            const int32 minPopulation = population + def._extra;
+            if ( planStep._bRoad )
             {
                 addRoad( fromCell, toCell, minPopulation );
                 continue;
@@ -201,7 +224,7 @@ namespace sw
             {
                 for ( int32 x = MathUtil::min( fromCell._x, toCell._x ); x <= MathUtil::max( fromCell._x, toCell._x ); ++x )
                 {
-                    addBuilding( buildingID->c_str(), x, y, minPopulation );
+                    addBuilding( def._id.c_str(), x, y, minPopulation );
                 }
             }
         }

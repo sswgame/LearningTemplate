@@ -266,17 +266,20 @@ SW_TEST_CASE( TileMapXMLTest, SizeBeyondTheTileLimitIsRejected )
 }
 
 /**
- * @brief [TileMapXMLTest] 0~255 칸(높이 · 색)이 범위를 넘으면 묶는다 — 잘라 넣지 않는다
- * @details `int32` 로 읽어 그대로 잘라 넣으면 색 "300" 이 44 · "-1" 이 255 가 된다. 유니티 `Color32` 처럼 0 · 255 로 묶는다.
+ * @brief [TileMapXMLTest] 0~255 칸(높이 · 색)이 범위를 넘으면 읽기 실패다 — 잘라 넣지도 묶지도 않는다
+ * @details `int32` 로 읽어 그대로 잘라 넣으면 색 "300" 이 44 · "-1" 이 255 가 된다. 묶어도 데이터의 실수가 조용히 다른 값으로 돈다.
+ *          범위 밖 값은 원소 · 속성 이름과 함께 오류로 멈춘다(데이터 주도 계획 7.3, `XMLNode::readOptionalAttributeInRange`).
  */
-SW_TEST_CASE( TileMapXMLTest, OutOfRangeByteAttributesAreClamped )
+SW_TEST_CASE( TileMapXMLTest, OutOfRangeByteAttributesAreALoadError )
 {
     sw::TileMapXMLData loaded;
     {
         test::ScopedDefensiveTestLog expected( "tile attributes outside 0..255" );
-        SW_ASSERT_TRUE( loaded.loadFromXML( "<TileMap><width>1</width><height>1</height><tiles>"
-                                            "<t h=\"999\" tr=\"300\" tg=\"-1\" tb=\"128\">1</t></tiles></TileMap>" ) );
+        SW_EXPECT_FALSE( loaded.loadFromXML( "<TileMap><width>1</width><height>1</height><tiles>"
+                                             "<t h=\"999\" tr=\"300\" tg=\"-1\" tb=\"128\">1</t></tiles></TileMap>" ) );
     }
+    SW_ASSERT_TRUE( loaded.loadFromXML( "<TileMap><width>1</width><height>1</height><tiles>"
+                                        "<t h=\"255\" tr=\"255\" tg=\"0\" tb=\"128\">1</t></tiles></TileMap>" ) );
     SW_ASSERT_EQUAL( size_t( 1 ), loaded._listVisual.size() );
     const sw::TileMapXMLData::Visual& visual = loaded._listVisual[0];
     SW_EXPECT_EQUAL( 255, static_cast<int32>( visual._height ) );

@@ -725,13 +725,20 @@ SW_TEST_CASE( InputMapTest, GamepadStickAxisFeedsOneDimensionalAction )
     input.shutdown();
 
     const sw::string axisPath = test::makeTempPath( "stick_axis.input.xml" );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( axisPath, "<InputMap><action name=\"Zoom\"><stick stick=\"Right\" axis=\"Y\" scaleY=\"4\" scaleByDelta=\"1\"/></action>"
-                                                           "<action name=\"Bad\"><stick stick=\"Right\" axis=\"Z\"/></action></InputMap>" ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( axisPath, "<InputMap><action name=\"Zoom\"><stick stick=\"Right\" axis=\"Y\" scaleY=\"4\" scaleByDelta=\"1\"/></action></InputMap>" ) );
     sw::InputMap loaded;
     SW_ASSERT_TRUE( loaded.loadFromResource( axisPath ) );
     SW_ASSERT_TRUE( loaded.getBindingCount( "Zoom" ) == 1u );
     SW_EXPECT_TRUE( loaded.getBinding( "Zoom", 0 )->_stickAxis == sw::GamepadStickAxis::Y );
-    SW_EXPECT_EQUAL( 0u, loaded.getBindingCount( "Bad" ) );
+    {
+        // X · Y 가 아닌 성분은 깨진 값이다 — 그 바인딩을 2D 로 바꿔 묶지 않고 파일 읽기가 실패한다(다른 깨진 속성과 같다).
+        SW_TEST_DEFENSIVE_SCOPE( "a stick axis that is neither X nor Y" );
+        const sw::string badPath = test::makeTempPath( "stick_axis_bad.input.xml" );
+        SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( badPath, "<InputMap><action name=\"Bad\"><stick stick=\"Right\" axis=\"Z\"/></action></InputMap>" ) );
+        sw::InputMap bad;
+        SW_EXPECT_FALSE( bad.loadFromResource( badPath ) );
+        SW_EXPECT_EQUAL( 0u, bad.getBindingCount( "Bad" ) );
+    }
     const sw::string savedPath = test::makeTempPath( "stick_axis_saved.input.xml" );
     SW_ASSERT_TRUE( loaded.saveToResource( savedPath ) );
     sw::InputMap reloaded;

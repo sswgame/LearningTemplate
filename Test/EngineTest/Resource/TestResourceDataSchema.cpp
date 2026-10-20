@@ -632,6 +632,51 @@ namespace
             }
         }
 
+        /**
+         * @brief 게임 모듈이 등록하는 데이터 종류(`SW_RESOURCE_DATA_KIND` 줄)의 경로 끝(다섯째 인자)을 모읍니다.
+         * @details 이 실행 파일은 게임 모듈을 올리지 않아 그 등록이 종류 표에 없다. 리플렉션 루트가 아닌 게임 데이터(원소 목록)도 게임 모듈이
+         *          종류로 등록했으면 그 모듈의 것으로 친다 — 등록 줄이 없으면 여전히 "종류 표에 없는 파일" 이다.
+         */
+        static void collectGameModuleDataKindSuffixes( const sw::string& resourceRoot, sw::vector<sw::string>& outListSuffix )
+        {
+            outListSuffix.clear();
+            const sw::string       repositoryRoot = sw::FileUtil::getDirectoryPart( sw::FileUtil::trimTrailingSlashes( resourceRoot ) );
+            sw::vector<sw::string> listSource;
+            if ( sw::FileUtil::collectFiles( sw::FileUtil::joinPath( repositoryRoot, "Source/Games" ), ".cpp", listSource, true ) == false )
+                return;
+            for ( const sw::string& sourcePath : listSource )
+            {
+                sw::string text;
+                if ( sw::FileUtil::readTextFile( sourcePath, text ) == false )
+                    continue;
+                for ( size_t macroPos = text.find( "SW_RESOURCE_DATA_KIND(" ); macroPos != sw::string::npos;
+                      macroPos        = text.find( "SW_RESOURCE_DATA_KIND(", macroPos + 1 ) )
+                {
+                    // 인자: 변수 이름, 라벨, 앞, 포함, 끝, 읽기 — 다섯째(쉼표 넷 뒤)가 경로 끝 문자열이다.
+                    size_t argumentStart = macroPos;
+                    for ( uint32 commaIndex = 0; commaIndex < 4 && argumentStart != sw::string::npos; ++commaIndex )
+                    {
+                        argumentStart = text.find( ',', argumentStart + 1 );
+                    }
+                    const size_t quoteStart = argumentStart != sw::string::npos ? text.find( '"', argumentStart ) : sw::string::npos;
+                    const size_t quoteEnd   = quoteStart != sw::string::npos ? text.find( '"', quoteStart + 1 ) : sw::string::npos;
+                    if ( quoteEnd != sw::string::npos )
+                        outListSuffix.push_back( text.substr( quoteStart + 1, quoteEnd - quoteStart - 1 ) );
+                }
+            }
+        }
+
+        /** @brief @p resourceID 가 게임 모듈이 등록한 데이터 종류의 경로 끝으로 끝나면 true 입니다. */
+        static bool hasGameModuleDataKind( const sw::string& resourceID, const sw::vector<sw::string>& listSuffix )
+        {
+            for ( const sw::string& suffix : listSuffix )
+            {
+                if ( endsWith( resourceID, suffix ) )
+                    return true;
+            }
+            return false;
+        }
+
         /** @brief XML 데이터의 루트 원소 이름이 게임 모듈 타입이면 true 입니다. */
         static bool hasGameModuleRoot( const sw::string& resourceID, const sw::vector<sw::string>& listGameTypeName )
         {
@@ -781,6 +826,8 @@ SW_TEST_CASE( ResourceDataSchemaTest, EveryResourceDataFileLoadsWithoutUnknownNa
 
     sw::vector<sw::string> listGameTypeName;
     ResourceDataSchemaInternal::collectGameModuleTypeNames( resourceRoot, listGameTypeName );
+    sw::vector<sw::string> listGameDataKindSuffix;
+    ResourceDataSchemaInternal::collectGameModuleDataKindSuffixes( resourceRoot, listGameDataKindSuffix );
 
     // 전용 서버 빌드는 서버처럼 읽는다 — 패키지에 없는 종류(텍스처 · 오디오)를 장면이 가리켜도 없는 것으로 친다.
     sw::unique_ptr<test::ScopedHostTarget> pServerHost;
@@ -806,7 +853,9 @@ SW_TEST_CASE( ResourceDataSchemaTest, EveryResourceDataFileLoadsWithoutUnknownNa
         const bool                               bUnambiguous = ResourceDataSchemaInternal::findKind( resourceID, kind, conflict );
         SW_EXPECT_TRUE_MSG( bUnambiguous, ( "한 파일이 두 종류에 맞습니다: " + resourceID + " - " + conflict ).c_str() );
         // 루트가 게임 모듈 타입인 리플렉션 데이터(`benchscene.xml` 의 `BenchSceneSettings`)는 그 게임 모듈이 데이터 종류로 등록한다 — 이 실행 파일은 게임 모듈을 올리지 않는다.
-        const bool bGameModuleData = kind._pLoad == nullptr && ResourceDataSchemaInternal::hasGameModuleRoot( resourceID, listGameTypeName );
+        // 루트가 리플렉션 타입이 아닌 게임 데이터(`autoplan.xml` 의 원소 목록)도 그 게임 모듈이 종류로 등록했으면 같다.
+        const bool bGameModuleData = kind._pLoad == nullptr && ( ResourceDataSchemaInternal::hasGameModuleRoot( resourceID, listGameTypeName ) ||
+                                                                 ResourceDataSchemaInternal::hasGameModuleDataKind( resourceID, listGameDataKindSuffix ) );
         if ( bGameModuleData )
             continue;
         SW_EXPECT_TRUE_MSG( kind._pLoad != nullptr || bUnambiguous == false, ( "종류 표에 없는 데이터 파일입니다: " + resourceID ).c_str() );
