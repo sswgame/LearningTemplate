@@ -1,6 +1,6 @@
 # 간접 조명 구현 단위 (`D2-12`)
 
-> 상태: 구현중 · 선행: ClusteredLighting · 영역: graphics · 옛번호: D2-12 · 진행: 1/7
+> 상태: 구현중 · 선행: ClusteredLighting · 영역: graphics · 옛번호: D2-12 · 진행: 2/7
 
 결정은 [결정 기록](../09_Decisions.md) 5-12 의 `D2-12` 행이 원본입니다. 이 문서는 그 결정을 구현 단위로 나눈 계획과 단위마다의 계약을 적습니다.
 단위가 끝나면 그 단위의 절을 지우고, 남는 교훈은 코드의 헤더 주석으로 옮깁니다.
@@ -18,7 +18,7 @@
 | 단위 | 내용 | 선행 |
 |---|---|---|
 | P0 | SH9 수학(`Core/Math/SphericalHarmonics.h` `SH9Color` — 투영, 평가, 회전 없이 합산, GPU 원소 float4 일곱 개)과 `SphericalHarmonicsTest` — **들어감**. 테스트 실행은 **확인 필요**(빌드 미확인) | 없음 |
-| P1 | `LightProbeVolumeComponent`(격자 범위, 간격)와 `.probes` 형식(버전, 격자 크기, 프로브마다 SH9 RGB 27 실수) | P0 |
+| P1 | `LightProbeVolumeComponent`(축 정렬 상자 `_extent`, 목표 간격 `_spacing`, 베이크 경로 `_probeDataPath`)와 `.probes` 형식(`LightProbeGrid` — 매직 `SWLP`, 버전, 격자 모양, 프로브마다 SH9 RGB 27 실수) — **들어감**. 모양이 다른 베이크는 쓰지 않는다. `LightProbeGridTest` 실행은 **확인 필요** | P0 |
 | P2 | CPU 베이크 도구: 프로브마다 하늘(스카이 컴포넌트 `D3-7.4`)과 방향광, 점광의 직접광을 SH 로 투영합니다. 가림은 물리 레이캐스트로 봅니다 | P1, `D3-7.4` |
 | P3 | 셰이더 소비: 프로브 격자를 클러스터 그리드(`D2-13` S5)의 항목으로 넣고, `swShadeLights` 가 앰비언트 대신 SH 를 평가합니다 | P1, `D2-13` S1 |
 | P4 | 반사 프로브: GPU 베이크(씬을 여섯 면으로 그려 옥타헤드럴로 접고 거칠기 밉을 만듭니다)와 아틀라스 슬롯 | `D2-6.3` 슬롯 지도, P5 |
