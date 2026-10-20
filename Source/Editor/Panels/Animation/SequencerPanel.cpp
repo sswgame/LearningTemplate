@@ -369,48 +369,43 @@ namespace sw::editor
         pDrawList->AddLine( ImVec2( cursorX, origin.y ), ImVec2( cursorX, origin.y + height ), ImGui::GetColorU32( ImGuiCol_CheckMark ) );
     }
 
+    void SequencerPanel::drawTrackTextField( const utf8* pLabel, string& inoutText, const utf8* pTooltip, bool bPreviewOnEdit )
+    {
+        EditorWidgets::drawTextField( pLabel, inoutText );
+        if ( pTooltip != nullptr )
+            EditorWidgets::drawTooltip( pTooltip );
+        if ( ImGui::IsItemDeactivatedAfterEdit() == false )
+            return;
+        notifyDocumentEdited( "Edit Sequence Track", "sequence-track" );
+        if ( bPreviewOnEdit )
+            previewCurrentFrame();
+    }
+
     void SequencerPanel::drawSelectedTrack( SequenceKeyTrack& track )
     {
         ImGui::Separator();
-        EditorWidgets::drawTextField( "Track Name", track._name );
-        if ( ImGui::IsItemDeactivatedAfterEdit() )
-            notifyDocumentEdited( "Edit Sequence Track", "sequence-track" );
-        EditorWidgets::drawTextField( "Track Target", track._targetObject );
-        if ( ImGui::IsItemDeactivatedAfterEdit() )
-        {
-            notifyDocumentEdited( "Edit Sequence Track", "sequence-track" );
-            previewCurrentFrame();
-        }
+        drawTrackTextField( "Track Name", track._name, nullptr, false );
+        drawTrackTextField( "Track Target", track._targetObject, nullptr, true );
         if ( track._kind == SequenceTrackKind::Property )
-        {
-            EditorWidgets::drawTextField( "Property", track._propertyPath );
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "PropertyPathTip" ) );
-            if ( ImGui::IsItemDeactivatedAfterEdit() )
-            {
-                notifyDocumentEdited( "Edit Sequence Track", "sequence-track" );
-                previewCurrentFrame();
-            }
-        }
+            drawTrackTextField( "Property", track._propertyPath, SW_LOCKEY( "EditorSequencer", "PropertyPathTip" ), true );
         else if ( track._kind == SequenceTrackKind::RigSlot )
-        {
-            EditorWidgets::drawTextField( "Rig Slot", track._propertyPath );
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "RigSlotTip" ) );
-            if ( ImGui::IsItemDeactivatedAfterEdit() )
-            {
-                notifyDocumentEdited( "Edit Sequence Track", "sequence-track" );
-                previewCurrentFrame();
-            }
-        }
+            drawTrackTextField( "Rig Slot", track._propertyPath, SW_LOCKEY( "EditorSequencer", "RigSlotTip" ), true );
 
         GameObjectManager* pManager = editor::getActiveObjectManager();
         const float32      frame    = static_cast<float32>( _currentFrame );
         float32            arrCurrent[kSequenceTransformChannelCount]{};
         const bool         bTargetFound = SequenceTimelineUtil::readTrackValues( pManager, track, arrCurrent, kSequenceTransformChannelCount );
 
+        drawKeyButtons( track, frame, arrCurrent, bTargetFound );
+        drawChannelRows( track, frame, arrCurrent );
+    }
+
+    void SequencerPanel::drawKeyButtons( SequenceKeyTrack& track, float32 frame, const float32* pArrCurrent, bool bTargetFound )
+    {
         ImGui::BeginDisabled( bTargetFound == false );
         if ( ImGui::Button( "Key" ) )
         {
-            track.setKey( frame, arrCurrent, kSequenceTransformChannelCount );
+            track.setKey( frame, pArrCurrent, kSequenceTransformChannelCount );
             notifyDocumentEdited( "Add Sequence Key" );
         }
         ImGui::EndDisabled();
@@ -464,14 +459,17 @@ namespace sw::editor
                 pMissing = SW_LOCKEY( "EditorSequencer", "RigSlotTargetNotFound" );
             ImGui::TextDisabled( "%s", pMissing );
         }
+    }
 
+    void SequencerPanel::drawChannelRows( SequenceKeyTrack& track, float32 frame, const float32* pArrCurrent )
+    {
         const uint32 channelCount = static_cast<uint32>( track._listChannel.size() );
         for ( uint32 channelIndex = 0; channelIndex < channelCount; ++channelIndex )
         {
             ImGui::PushID( static_cast<int32>( channelIndex ) );
             const bool    bKeyed     = track.findChannelKey( channelIndex, frame ) != invalid_index::kUint32;
             const bool    bRotation  = SequencerPanelInternal::isRotationChannel( track, channelIndex );
-            const float32 fallback   = channelIndex < kSequenceTransformChannelCount ? arrCurrent[channelIndex] : 0.0f;
+            const float32 fallback   = channelIndex < kSequenceTransformChannelCount ? pArrCurrent[channelIndex] : 0.0f;
             const float32 displayMul = bRotation ? MathUtil::kRadianToDegree : 1.0f;
             float32       value      = track.evaluateChannel( channelIndex, frame, fallback ) * displayMul;
             // 키가 있는 프레임이면 표식을 강조색으로 — 언리얼 Sequencer 채널 줄의 키 마름모 자리.
