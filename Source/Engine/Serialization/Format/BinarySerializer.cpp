@@ -90,7 +90,8 @@ namespace sw
              * @details 엄격(`deserialize`)과 소프트(`deserializeSoft`)가 함께 쓴다. 둘이 다른 것은 정책 두 가지뿐이다.
              *          (1) 모르는 프로퍼티: 엄격은 `skipsUnknownProperties` 이면 건너뛰고 아니면 실패하며, 소프트는 orphan 으로 담는다.
              *          (2) 읽지 못한 프로퍼티(페이로드를 끝까지 읽지 못한 것 포함): 엄격은 `skipsUnreadableProperties` 이면 그 필드만 건너뛰고(XML, JSON 과 같다)
-             *          아니면 실패하며, 소프트는 orphan 으로 담는다.
+             *          아니면 실패하며, 소프트는 orphan 으로 담는다. 건너뛰거나 orphan 으로 담은 필드는 **읽기 전 값**이다(읽다 만 컨테이너 · 구조체를 되돌린다).
+             *          되돌릴 수 없는 소유 포인터 목록(되돌리면 컴포넌트를 새로 만든다)이 읽다 말면 객체째 실패한다.
              *          두 플래그는 따로다. 혼합 빌드 사이의 메시지는 (1) 만 켜서 새 빌드가 더한 필드는 건너뛰고 모르는 열거자는 거절한다. 중첩 구조체도
              *          같은 컨텍스트로 이 루프를 다시 지나므로(`SerializerUtil::deserializeValueBinary`) 모든 깊이에서 정책이 같다.
              *          기록 타입이 다르면 둘 다 이관(`tryCoerceBinaryPayload`)으로 간다. 기록 타입을 아는 스칼라는 이관이 값으로
@@ -122,6 +123,10 @@ namespace sw
                 unordered_set<uint32>       uniqueMatchedPropHashes;
                 if ( numProps > kFastPropBitmaskThreshold )
                     uniqueMatchedPropHashes.reserve( numProps );
+                // 읽지 못한 필드를 넘기고 이어 읽는 읽기(소프트, 오브젝트 상태의 엄격)는 그 필드를 **읽기 전 값**으로 남긴다. 컨테이너 · 구조체는 원소와 필드를
+                // 채운 뒤 끝에서 실패하므로 읽다 만 값이 남는다. 그래서 읽기 전에 값을 바이트로 담아 두고 실패하면 되돌린다. 실패하면 객체째 버리는 엄격 읽기는 담지 않는다.
+                const bool           bContinuesAfterUnreadable = bStrict == false || context.skipsUnreadableProperties();
+                PropertyReadRollback rollback;
 
                 for ( uint32 propIndex = 0; propIndex < propCount; ++propIndex )
                 {
@@ -172,6 +177,9 @@ namespace sw
                         continue;
                     }
 
+                    if ( bContinuesAfterUnreadable && rollback.keepValueBeforeRead( typeInfo, prop, ObjectAddress{ pInstance }, context ) == false )
+                        return false;
+
                     // **기록 타입을 같이 넘긴다.** 태그가 그것을 가지고 있는데 넘기지 않으면 POD -> string 이관이 크기로만
                     // 타입을 짐작한다(정수와 실수를 가르지 못한다).
                     const bool bWireMismatch = ( wireTypeHash != 0 && wireTypeHash != prop._typeName.getHash() );
@@ -183,7 +191,7 @@ namespace sw
                         // 기록 타입을 모르면(지운 enum, 지운 타입) 바이트의 뜻을 모른다. 크기로 짐작해 읽지 않는다(지운 enum 의 열거자 이름 해시
                         // 4 바이트가 int32 로 바뀐 필드에 그대로 읽히게 된다).
                         if ( wireTypeName.empty() == false )
-                            bApplied = tryCoerceBinaryPayload( pPropPtr, prop._typeName, pData + payloadStart, payloadSize, context, wireTypeName, wireVersion );
+                            bApplied = tryCoerceBinaryPayload( MutableValueAddress{ pPropPtr }, prop._typeName, pData + payloadStart, payloadSize, context, wireTypeName, wireVersion );
                     }
                     else
                     {
@@ -194,8 +202,11 @@ namespace sw
                     if ( bApplied == false )
                     {
                         // 엄격한 읽기도 읽지 못한 필드를 받는 컨텍스트(오브젝트 상태)이면 **이 필드만** 건너뛴다. 크기를 알아 다음 필드 위치는 맞다. 모르는 열거자 하나가
-                        // 컴포넌트를, 그래서 그 뒤 컴포넌트까지 버리던 경로다. 혼합 빌드 사이의 메시지는 받지 않는다(그 필드가 기본값으로 남는다).
-                        if ( bStrict && context.skipsUnreadableProperties() == false )
+                        // 컴포넌트를, 그래서 그 뒤 컴포넌트까지 버리던 경로다. 혼합 빌드 사이의 메시지는 받지 않는다(그 필드가 읽기 전 값으로 남는다).
+                        if ( bContinuesAfterUnreadable == false )
+                            return false;
+                        // 읽다 만 값을 읽기 전 값으로 되돌린다. 되돌릴 수 없으면(소유 포인터 목록, 코덱 결함) 객체째 실패다.
+                        if ( rollback.restoreValueBeforeRead( MutableObjectAddress{ pInstance }, context ) == false )
                             return false;
                         if ( bStrict )
                             warnUnreadableFieldOnce( typeInfo, prop );
@@ -217,7 +228,7 @@ namespace sw
                     // 이 목적이 다루지 않는 필드(Transient, 저작의 RuntimeState, 옵트인 세이브의 나머지)는 현재 값 그대로다. 기본값으로 되돌리지 않는다.
                     const bool bOutsidePurpose = SerializerUtil::shouldSerializeProperty( typeInfo, listProp[propIdx], context ) == false;
                     if ( bMatched == false && bOutsidePurpose == false )
-                        SerializerUtil::applyPropertyDefault( listProp[propIdx], pInstance, context );
+                        SerializerUtil::applyPropertyDefault( listProp[propIdx], MutableObjectAddress{ pInstance }, context );
                 }
                 // 선언된 범위는 부르는 두 쪽(`deserialize` · `deserializeSoft`)이 읽기 공통 끝으로 본다 — 소프트 읽기가 "스트림이 깨짐"과 "범위 밖 값"을 가르게.
                 return true;
@@ -373,7 +384,6 @@ namespace sw
         {
             if ( SerializerUtil::shouldSerializeProperty( typeInfo, prop, context ) == false )
                 continue;
-            const void* pPropPtr = prop.getRawPtr( pInstance );
 
             uint32 hashVal = prop.getNameHash();
             writer.write( hashVal );
@@ -387,20 +397,7 @@ namespace sw
 
             size_t payloadStart = writer.getOffset();
 
-            bool bWritten = false;
-            if ( prop._bIsBitField == SW_TRUE )
-            {
-                const bool bVal = prop.getValue<bool>( pInstance );
-                bWritten        = SerializerUtil::serializeValueBinary( ValueAddress{ &bVal }, hashed_string( "bool" ), outListBuffer, context );
-            }
-            else if ( prop._bIsContainer && prop.hasContainerWrapper() )
-            {
-                bWritten = SerializerUtil::serializeNestedContainerBinary( pPropPtr, prop.getContainerShape(), outListBuffer, context );
-            }
-            else
-            {
-                bWritten = SerializerUtil::serializeValueBinary( ValueAddress{ pPropPtr }, prop._typeName, outListBuffer, context );
-            }
+            const bool bWritten = SerializerUtil::writePropertyBinary( prop, ObjectAddress{ pInstance }, outListBuffer, context );
             if ( bWritten == false )
             {
                 // 쓰는 순간 멈춘다. 계속 쓰면 세이브는 써지고 로드에서 이 값이 빠진다. 알림은 호출마다 한다(타입마다 한 번이면 테스트 순서에 따라 결과가 달라진다).

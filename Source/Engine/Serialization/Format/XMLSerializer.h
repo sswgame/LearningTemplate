@@ -231,6 +231,9 @@ namespace sw
         /**
          * @brief Soft 역직렬화입니다. 변환하지 못한 필드를 orphan 으로 모읍니다.
          * @return 문서나 루트를 읽지 못하면 `NotParsed`, 읽지 못한 칸이나 범위 밖 값이 있으면 `Rejected`(루트의 orphan 과 범위는 끝까지 본다)입니다(`SoftReadResult`).
+         *         orphan 목록이 있으면 읽지 못한 필드는 orphan 으로 넘어가고 **읽기 전 값**으로 남습니다(`PropertyReadRollback`, 컨테이너는 칸 원문 하나가 orphan 이다).
+         *         되돌릴 수 없으면(읽다 만 소유 포인터 목록) 그 뒤를 읽지 않고 `Rejected` 입니다. 안쪽(구조체 칸, 컨테이너 원소인 구조체 · 컴포넌트)의
+         *         금지된 필드도 그 칸을 넘기지 않고 `Rejected` 입니다(`FieldReadResult::ObjectRejected`).
          */
         [[nodiscard]] static SoftReadResult deserializeSoft( void* pInstance, const TypeInfo& typeInfo, string_view xmlStr,
                                                              vector<SchemaOrphanValue>* pOutListOrphan = nullptr, uint32* pOutVersion = nullptr,

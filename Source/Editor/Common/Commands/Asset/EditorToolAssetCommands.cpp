@@ -291,7 +291,7 @@ namespace sw::editor
 #endif
                 item._defaultValue    = SerializerUtil::formatPropertyText( prop, ObjectAddress{ pCdoComp }, context );
                 item._overriddenValue = SerializerUtil::formatPropertyText( prop, ObjectAddress{ pInstanceComponent }, context );
-                item._bModified       = ( SerializerUtil::arePropertyValuesEqual( prop, pCdoComp, pInstanceComponent, context ) == false );
+                item._bModified       = ( SerializerUtil::arePropertyValuesEqual( prop, ObjectAddress{ pCdoComp }, ObjectAddress{ pInstanceComponent }, context ) == false );
                 outListOverride.push_back( std::move( item ) );
             },
                 true );

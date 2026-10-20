@@ -218,7 +218,7 @@ namespace sw
              *          먼저 읽으면 구조가 다른 타입(int32 → int16, string 등)에서 그 위치와 이웃 필드를 덮어쓴다.
              * @param wireTypeName 기록 타입. 모르면 비웁니다(그때는 이관이 제 타입 읽기부터 합니다).
              */
-            [[nodiscard]] static bool applyOrphanBinary( void* pPropPtr, hashed_string propTypeName, const SchemaOrphanValue& orphan,
+            [[nodiscard]] static bool applyOrphanBinary( MutableValueAddress value, hashed_string propTypeName, const SchemaOrphanValue& orphan,
                                                          hashed_string wireTypeName, const SerializeContext& context )
             {
                 const uint8* pPayload    = orphan._listBinary.data();
@@ -227,10 +227,10 @@ namespace sw
                 if ( wireTypeName == propTypeName )
                 {
                     size_t offset{ 0 };
-                    if ( SerializerUtil::deserializeValueBinary( MutableValueAddress{ pPropPtr }, propTypeName, pPayload, payloadSize, offset, context, orphan._wireVersion ) && offset == payloadSize )
+                    if ( SerializerUtil::deserializeValueBinary( value, propTypeName, pPayload, payloadSize, offset, context, orphan._wireVersion ) && offset == payloadSize )
                         return true;
                 }
-                return tryCoerceBinaryPayload( pPropPtr, propTypeName, pPayload, payloadSize, context, wireTypeName, orphan._wireVersion );
+                return tryCoerceBinaryPayload( value, propTypeName, pPayload, payloadSize, context, wireTypeName, orphan._wireVersion );
             }
 
             /**
@@ -258,7 +258,7 @@ namespace sw
                 // 기록 타입이 적혀 있는데 모르면(지운 enum, 지운 타입) 바이트의 뜻을 모른다. 크기로 짐작해 옮기지 않는다(바이너리 필드 읽기와 같은 규칙이다).
                 if ( hint.empty() && orphan._wireTypeHash != 0 )
                     return false;
-                return applyOrphanBinary( pPtr, pProp->_typeName, orphan, hint, context );
+                return applyOrphanBinary( MutableValueAddress{ pPtr }, pProp->_typeName, orphan, hint, context );
             }
 
             /** @brief orphan 의 이름 해시입니다. 이름을 intern 하지 않은 orphan 은 해시만 가집니다. */
@@ -533,10 +533,11 @@ namespace sw
         return typeName;
     }
 
-    bool tryCoerceBinaryPayload( void* pPropPtr, hashed_string targetTypeName, const uint8* pPayload, size_t payloadSize,
+    bool tryCoerceBinaryPayload( MutableValueAddress value, hashed_string targetTypeName, const uint8* pPayload, size_t payloadSize,
                                  const SerializeContext& context, hashed_string wireTypeName, BinaryWireVersion wireVersion )
     {
-        if ( pPropPtr == nullptr || pPayload == nullptr )
+        void* const pValPtr = value.get();
+        if ( pValPtr == nullptr || pPayload == nullptr )
             return false;
 
         // 값으로만 옮기는 쌍이면(`isValueOnlyCoercion`) 기록 값을 텍스트로 만들어 대상 타입으로 다시 읽는다(JSON, XML 과 같은 규칙이다).
@@ -553,7 +554,7 @@ namespace sw
                                               : SchemaMigrateInternal::formatWirePodToString( pPayload, payloadSize, wireTypeName, wireText );
             if ( bFormatted == false )
                 return false;
-            return parseTextValueCoerced( MutableValueAddress{ pPropPtr }, targetTypeName, wireText, context );
+            return parseTextValueCoerced( value, targetTypeName, wireText, context );
         }
 
         // 값 하나로 읽을 수 없는 대상(컨테이너 프로퍼티의 `map` · `vector` 같은 이름, 처리기 없는 타입)은 이관 대상이 아니다. 값 읽기를 시도하지 않는다.
@@ -561,7 +562,7 @@ namespace sw
             return false;
 
         size_t offset{ 0 };
-        if ( SerializerUtil::deserializeValueBinary( MutableValueAddress{ pPropPtr }, targetTypeName, pPayload, payloadSize, offset, context, wireVersion ) &&
+        if ( SerializerUtil::deserializeValueBinary( value, targetTypeName, pPayload, payloadSize, offset, context, wireVersion ) &&
              offset == payloadSize )
             return true;
 
@@ -570,7 +571,7 @@ namespace sw
         {
             string asText;
             if ( SchemaMigrateInternal::formatPodToString( pPayload, payloadSize, asText ) )
-                return parseTextValueCoerced( MutableValueAddress{ pPropPtr }, targetTypeName, asText, context );
+                return parseTextValueCoerced( value, targetTypeName, asText, context );
 
             // 길이 접두 문자열 blob 은 맨 앞의 제 타입 읽기가 이미 다뤘다. 여기서는 길이가 맞으면 접두 뒤 바이트를 텍스트로 읽어 본다
             if ( payloadSize >= sizeof( uint32 ) )
@@ -580,7 +581,7 @@ namespace sw
                 if ( sizeof( uint32 ) + len == payloadSize )
                 {
                     const string_view textValue{ reinterpret_cast<const utf8*>( pPayload + sizeof( uint32 ) ), len };
-                    return parseTextValueCoerced( MutableValueAddress{ pPropPtr }, targetTypeName, textValue, context );
+                    return parseTextValueCoerced( value, targetTypeName, textValue, context );
                 }
             }
         }
@@ -593,7 +594,7 @@ namespace sw
             if ( sizeof( uint32 ) + len == payloadSize )
             {
                 const string_view textValue{ reinterpret_cast<const utf8*>( pPayload + sizeof( uint32 ) ), len };
-                return parseTextValueCoerced( MutableValueAddress{ pPropPtr }, targetTypeName, textValue, context );
+                return parseTextValueCoerced( value, targetTypeName, textValue, context );
             }
         }
 
@@ -602,7 +603,7 @@ namespace sw
         const SerializeContext::BinaryReadFn* pReader = context.findBinaryReader( targetTypeName );
         if ( pReader != nullptr )
         {
-            if ( ( *pReader )( pPropPtr, pPayload, payloadSize, offset ) && offset == payloadSize )
+            if ( ( *pReader )( pValPtr, pPayload, payloadSize, offset ) && offset == payloadSize )
                 return true;
         }
 
