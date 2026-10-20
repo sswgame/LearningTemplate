@@ -15,13 +15,24 @@ namespace sw
 {
     namespace
     {
-        /** @brief 바이트 정렬한 뒤의 몸 — 읽은 비트를 바이트로 올림한 자리부터 끝까지입니다. */
-        void findNetRequestPayload( const BitReader& reader, const uint8* pBody, int32 bodySize, const uint8*& pOutPayload, int32& outPayloadSize )
+        struct NetRequestInternal
         {
-            const int32 offset = ( reader.getBitPosition() + 7 ) / 8;
-            pOutPayload        = pBody + offset;
-            outPayloadSize     = bodySize - offset;
-        }
+            /** @brief 바이트 정렬한 뒤의 몸 — 읽은 비트를 바이트로 올림한 위치부터 끝까지입니다. */
+            static void findPayload( const BitReader& reader, const uint8* pBody, int32 bodySize, const uint8*& pOutPayload, int32& outPayloadSize )
+            {
+                const int32 offset = ( reader.getBitPosition() + 7 ) / 8;
+                pOutPayload        = pBody + offset;
+                outPayloadSize     = bodySize - offset;
+            }
+
+            /** @brief 클라이언트가 쓴 순서(위 32비트 먼저)로 64비트 값을 읽습니다. 두 번의 읽기를 한 식에 두면 순서가 정해지지 않아 문장으로 나눈다. */
+            static uint64 readHighFirstUint64( BitReader& reader )
+            {
+                const uint64 high = reader.readBits( 32 );
+                const uint64 low  = reader.readBits( 32 );
+                return ( high << 32 ) | low;
+            }
+        };
     } // namespace
 } // namespace sw
 
@@ -210,7 +221,7 @@ namespace sw
         }
         const uint8* pPayload    = nullptr;
         int32        payloadSize = 0;
-        findNetRequestPayload( reader, pBody, bodySize, pPayload, payloadSize );
+        NetRequestInternal::findPayload( reader, pBody, bodySize, pPayload, payloadSize );
         finish( requestID, std::move( pending ), status, pPayload, payloadSize );
         return true;
     }
@@ -349,135 +360,126 @@ namespace sw
         (void)_pEndpoint->sendFrame( handle, StreamFrameKind::Response, _writer.getBytes().data(), _writer.getByteCount() );
     }
 
+    void NetRequestServer::handleCancelFrame( StreamConnectionHandle handle, const uint8* pBody, int32 bodySize )
+    {
+        BitReader    reader( pBody, bodySize );
+        const uint64 requestID = reader.readVarUint();
+        if ( reader.hasOverflowed() )
+            return;
+        std::scoped_lock<mutex> lock{ _mutex };
+        const auto              found = _mapSerialByRequest.find( RequestKey{ handle.packed(), requestID } );
+        if ( found != _mapSerialByRequest.end() )
+            _mapInFlight[found->second]._bCancelled = SW_TRUE;
+    }
+
+    bool NetRequestServer::readRequestHeader( const uint8* pBody, int32 bodySize, RequestHeader& outHeader )
+    {
+        BitReader reader( pBody, bodySize );
+        outHeader               = RequestHeader{};
+        outHeader._requestID    = reader.readVarUint();
+        outHeader._method       = static_cast<uint16>( reader.readBits( 16 ) );
+        outHeader._timeoutMilli = reader.readVarUint();
+        if ( reader.readBool() )
+        {
+            outHeader._key._high = NetRequestInternal::readHighFirstUint64( reader );
+            outHeader._key._low  = NetRequestInternal::readHighFirstUint64( reader );
+        }
+        if ( reader.readBool() )
+        {
+            outHeader._traceID._high = NetRequestInternal::readHighFirstUint64( reader );
+            outHeader._traceID._low  = NetRequestInternal::readHighFirstUint64( reader );
+        }
+        if ( outHeader._traceID.isValid() == false )
+            outHeader._traceID = LogTraceID::makeRandom(); // 클라이언트가 싣지 않았으면 서버가 만든다 — 서버 쪽 줄은 늘 요청마다 갈린다
+        if ( reader.hasOverflowed() )
+            return false;
+        NetRequestInternal::findPayload( reader, pBody, bodySize, outHeader._pPayload, outHeader._payloadSize );
+        return true;
+    }
+
+    NetRequestServer::RequestAdmission NetRequestServer::admitRequest( StreamConnectionHandle handle, const RequestHeader& header )
+    {
+        RequestAdmission        admission;
+        std::scoped_lock<mutex> lock{ _mutex };
+        const auto              handlerFound  = _mapHandler.find( header._method );
+        int32&                  inFlightCount = _mapInFlightCount[handle.packed()];
+        if ( handlerFound == _mapHandler.end() || inFlightCount >= _settings._maxInFlightPerConnection )
+        {
+            admission._action      = RequestAdmission::Action::Reply;
+            admission._replyStatus = handlerFound == _mapHandler.end() ? NetRequestStatus::UnknownMethod : NetRequestStatus::Overloaded;
+            return admission;
+        }
+        admission._pHandler         = handlerFound->second;
+        const auto   principalFound = _mapPrincipal.find( handle.packed() );
+        const uint64 principalID    = principalFound != _mapPrincipal.end() ? principalFound->second : 0;
+        InFlight     inFlight;
+        inFlight._token = NetRequestToken{ handle, header._requestID, _nextSerial++, header._method };
+        if ( header._key.isValid() )
+        {
+            const bool bPrincipal   = principalID != 0;
+            inFlight._scope         = ScopeKey{ bPrincipal ? principalID : handle.packed(), header._key._high, header._key._low, header._method,
+                                        static_cast<uint8>( bPrincipal ? SW_FALSE : SW_TRUE ) };
+            IdempotencyEntry& entry = _mapIdempotency[inFlight._scope];
+            if ( entry._bDone == SW_TRUE )
+            {
+                admission._action      = RequestAdmission::Action::Reply; // 이미 끝난 키 — 처리하지 않고 기억한 응답
+                admission._replyStatus = entry._status;
+                admission._replyBytes  = entry._body;
+                return admission;
+            }
+            if ( entry._bInProgress == SW_TRUE )
+            {
+                admission._action = RequestAdmission::Action::Wait;
+                entry._listWaiter.push_back( inFlight._token );
+                return admission;
+            }
+            entry._bInProgress    = SW_TRUE;
+            inFlight._bIdempotent = SW_TRUE;
+        }
+        ++inFlightCount;
+        _mapSerialByRequest[RequestKey{ handle.packed(), header._requestID }] = inFlight._token._serial;
+        NetRequestContext& context                                            = admission._context;
+        context._token                                                        = inFlight._token;
+        context._idempotencyKey                                               = header._key;
+        context._traceID                                                      = header._traceID;
+        context._principalID                                                  = principalID;
+        context._deadlineSeconds                                              = static_cast<float64>( MonotonicClock::nowNanoseconds() ) * 1.0e-9 + static_cast<float64>( header._timeoutMilli ) * 1.0e-3;
+        context._pBody                                                        = header._pPayload;
+        context._bodySize                                                     = header._payloadSize;
+        _mapInFlight.emplace( inFlight._token._serial, inFlight );
+        return admission;
+    }
+
     bool NetRequestServer::handleFrame( StreamConnectionHandle handle, StreamFrameKind kind, const uint8* pBody, int32 bodySize )
     {
         if ( kind == StreamFrameKind::Cancel )
         {
-            BitReader    reader( pBody, bodySize );
-            const uint64 requestID = reader.readVarUint();
-            if ( reader.hasOverflowed() )
-                return true;
-            std::scoped_lock<mutex> lock{ _mutex };
-            const auto              found = _mapSerialByRequest.find( RequestKey{ handle.packed(), requestID } );
-            if ( found != _mapSerialByRequest.end() )
-                _mapInFlight[found->second]._bCancelled = SW_TRUE;
+            handleCancelFrame( handle, pBody, bodySize );
             return true;
         }
         if ( kind != StreamFrameKind::Request )
             return false;
-
-        BitReader         reader( pBody, bodySize );
-        const uint64      requestID    = reader.readVarUint();
-        const uint16      method       = static_cast<uint16>( reader.readBits( 16 ) );
-        const uint64      timeoutMilli = reader.readVarUint();
-        const bool        bHasKey      = reader.readBool();
-        NetIdempotencyKey key;
-        if ( bHasKey )
+        RequestHeader header;
+        if ( readRequestHeader( pBody, bodySize, header ) == false )
         {
-            key._high = ( static_cast<uint64>( reader.readBits( 32 ) ) << 32 ) | reader.readBits( 32 );
-            key._low  = ( static_cast<uint64>( reader.readBits( 32 ) ) << 32 ) | reader.readBits( 32 );
-        }
-        const bool bHasTraceID = reader.readBool();
-        LogTraceID traceID;
-        if ( bHasTraceID )
-        {
-            traceID._high = ( static_cast<uint64>( reader.readBits( 32 ) ) << 32 ) | reader.readBits( 32 );
-            traceID._low  = ( static_cast<uint64>( reader.readBits( 32 ) ) << 32 ) | reader.readBits( 32 );
-        }
-        if ( traceID.isValid() == false )
-            traceID = LogTraceID::makeRandom(); // 클라이언트가 싣지 않았으면 서버가 만든다 — 서버 쪽 줄은 늘 요청마다 갈린다
-        if ( reader.hasOverflowed() )
-        {
-            sendResponse( handle, requestID, NetRequestStatus::Malformed, nullptr, 0 ); // id 를 못 읽었으면 0 — 클라이언트는 시한으로 끝낸다
+            sendResponse( handle, header._requestID, NetRequestStatus::Malformed, nullptr, 0 ); // id 를 못 읽었으면 0 — 클라이언트는 시한으로 끝낸다
             return true;
         }
-        const uint8* pPayload    = nullptr;
-        int32        payloadSize = 0;
-        findNetRequestPayload( reader, pBody, bodySize, pPayload, payloadSize );
-
-        enum class RequestAction : uint8
+        const RequestAdmission admission = admitRequest( handle, header );
+        switch ( admission._action )
         {
-            Dispatch = 0, ///< 처리기를 부른다
-            Reply,        ///< 바로 답한다(모르는 메서드 · 과부하 · 기억한 응답)
-            Wait          ///< 처리 중인 같은 키 — 첫 응답을 같이 받는다
-        };
-        RequestAction       action      = RequestAction::Dispatch;
-        NetRequestStatus    replyStatus = NetRequestStatus::Ok;
-        vector<uint8>       replyBytes;
-        NetRequestContext   context;
-        INetRequestHandler* pHandler = nullptr;
-        {
-            std::scoped_lock<mutex> lock{ _mutex };
-            const auto              handlerFound  = _mapHandler.find( method );
-            int32&                  inFlightCount = _mapInFlightCount[handle.packed()];
-            if ( handlerFound == _mapHandler.end() )
+            case RequestAdmission::Action::Dispatch:
             {
-                action      = RequestAction::Reply;
-                replyStatus = NetRequestStatus::UnknownMethod;
-            }
-            else if ( inFlightCount >= _settings._maxInFlightPerConnection )
-            {
-                action      = RequestAction::Reply;
-                replyStatus = NetRequestStatus::Overloaded;
-            }
-            else
-            {
-                pHandler                    = handlerFound->second;
-                const auto   principalFound = _mapPrincipal.find( handle.packed() );
-                const uint64 principalID    = principalFound != _mapPrincipal.end() ? principalFound->second : 0;
-                InFlight     inFlight;
-                inFlight._token = NetRequestToken{ handle, requestID, _nextSerial++, method };
-                if ( key.isValid() )
-                {
-                    const bool bPrincipal   = principalID != 0;
-                    inFlight._scope         = ScopeKey{ bPrincipal ? principalID : handle.packed(), key._high, key._low, method, static_cast<uint8>( bPrincipal ? SW_FALSE : SW_TRUE ) };
-                    IdempotencyEntry& entry = _mapIdempotency[inFlight._scope];
-                    if ( entry._bDone == SW_TRUE )
-                    {
-                        action      = RequestAction::Reply; // 이미 끝난 키 — 처리하지 않고 기억한 응답
-                        replyStatus = entry._status;
-                        replyBytes  = entry._body;
-                    }
-                    else if ( entry._bInProgress == SW_TRUE )
-                    {
-                        action = RequestAction::Wait;
-                        entry._listWaiter.push_back( inFlight._token );
-                    }
-                    else
-                    {
-                        entry._bInProgress    = SW_TRUE;
-                        inFlight._bIdempotent = SW_TRUE;
-                    }
-                }
-                if ( action == RequestAction::Dispatch )
-                {
-                    ++inFlightCount;
-                    _mapSerialByRequest[RequestKey{ handle.packed(), requestID }] = inFlight._token._serial;
-                    context._token                                                = inFlight._token;
-                    context._idempotencyKey                                       = key;
-                    context._traceID                                              = traceID;
-                    context._principalID                                          = principalID;
-                    context._deadlineSeconds                                      = static_cast<float64>( MonotonicClock::nowNanoseconds() ) * 1.0e-9 + static_cast<float64>( timeoutMilli ) * 1.0e-3;
-                    context._pBody                                                = pPayload;
-                    context._bodySize                                             = payloadSize;
-                    _mapInFlight.emplace( inFlight._token._serial, inFlight );
-                }
-            }
-        }
-        switch ( action )
-        {
-            case RequestAction::Dispatch:
-            {
-                ScopedLogContext scope( LogContext{ context._traceID, context._principalID } ); // 처리기 · 그가 맡긴 저장소 일의 줄에 같은 꼬리표
-                pHandler->onNetRequest( *this, context );                                       // 어떤 잠금도 쥐지 않은 채
+                ScopedLogContext scope( LogContext{ admission._context._traceID, admission._context._principalID } ); // 처리기 · 그가 맡긴 저장소 작업의 로그 줄에 같은 태그
+                admission._pHandler->onNetRequest( *this, admission._context );                                       // 어떤 잠금도 쥐지 않은 채
                 break;
             }
-            case RequestAction::Reply:
+            case RequestAdmission::Action::Reply:
             {
-                sendResponse( handle, requestID, replyStatus, replyBytes.data(), static_cast<int32>( replyBytes.size() ) );
+                sendResponse( handle, header._requestID, admission._replyStatus, admission._replyBytes.data(), static_cast<int32>( admission._replyBytes.size() ) );
                 break;
             }
-            case RequestAction::Wait:
+            case RequestAdmission::Action::Wait:
             {
                 break;
             }

@@ -9,9 +9,10 @@
  *          - 전용 서버(`Server`): 서버 설정(`ServerConfig::_gamePort` · `_listenAddress`)의 게임 포트를 늘 연다(언리얼 전용 서버와 같다).
  *            설정은 `ServerServiceRegistry::findHostContext` 로 받는다. 포트 0 은 운영체제가 고른 포트다(한 기계에서 서버를 여럿 띄우는 테스트).
  *          - 서버(개발 덮어쓰기): `-gv_netListenPort=<포트>` 로 연다. 리슨 호스트(`App`)는 이 길뿐이고, 전용 서버에서는 설정보다 우선한다. Shipping 에는 없다.
- *          - 클라이언트: `-gv_netConnectAddress=<호스트:포트>` 로 붙는다. 호스트는 이름이어도 된다(`PlatformSocketUtil::resolveAddress` — HTTP 클라이언트와 같은 해석기,
- *            기동 때 한 번 막고 푼다). 포트를 빼면 `kDefaultPort` 를 쓴다.
+ *          - 클라이언트: `-gv_netConnectAddress=<호스트:포트>` 로 붙는다(Shipping 에도 있다). 호스트는 이름이어도 된다(`PlatformSocketUtil::resolveAddress` — HTTP 클라이언트와 같은 해석기,
+ *            기동 때 한 번 막고 푼다). 포트를 빼면 `kDefaultPort` 를 쓴다. 풀리지 않으면 기동 오류다.
  *          - 전용 서버가 아니고 인자도 없으면 세션을 열지 않는다. 혼자 하는 게임은 이전과 같이 동작한다.
+ *          - 인자 · 설정이 틀렸거나 고른 역할을 열지 못하면 게임 인스턴스가 기동을 멈춘다(`GameNetLaunch::Invalid`) — 혼자 하는 게임으로 대신 뜨지 않는다.
  *
  *          클라이언트는 연결이 시간 초과로 끝나면 다시 시도한다. 서버를 같이 띄우면 클라이언트가 먼저 설 수 있기 때문이다.
  *          거절이나 버전 불일치는 한 번 알리고 멈춘다.
@@ -71,7 +72,18 @@ namespace sw
         NetAddress    _serverAddress{}; ///< 클라이언트 — 붙을 서버
         uint16        _listenPort{ 0 }; ///< 서버 — 열 UDP 포트
         GameNetRole   _role{ GameNetRole::None };
-        bool          _bLoopbackOnly{ true }; ///< 이 기계의 상대만 받는다 — 개발 실행의 기본. 다른 기계와 하려면 `gv_netLoopbackOnly=0`
+        bool          _bLoopbackOnly{ true }; ///< 서버 — 이 기계의 상대만 받는다(설정 `_listenAddress` 또는 `gv_netLoopbackOnly`). 클라이언트는 서버 주소가 정해 읽지 않는다
+    };
+
+    /**
+     * @brief 기동 상태가 세션에 대해 정한 것입니다(`GameNetSession::makeLaunchParams`).
+     * @details 틀린 인자 · 설정은 "세션 없음" 과 다른 값이다 — 고른 역할을 열지 못한 게임을 혼자 하는 게임으로 띄우지 않는다.
+     */
+    enum class GameNetLaunch : uint8
+    {
+        None = 0, ///< 실행 인자도 서버 문맥도 없다 — 혼자 하는 게임
+        Open,     ///< 인자가 정해졌다 — 이 인자로 연다
+        Invalid   ///< 실행 인자나 서버 설정이 틀렸다(로그를 남겼다) — 게임 인스턴스를 세우지 않는다
     };
 } // namespace sw
 
@@ -82,7 +94,7 @@ namespace sw
      * @brief 게임의 네트워크 호스트, 스레드, 메시지 라우터를 들고 있습니다. 엔진이 소유하고 게임 인스턴스가 열고 프레임마다 `update` 합니다.
      * @code
      *     GameNetSessionParams params;
-     *     session.openFromLaunch();                              // 게임 인스턴스 initialize(이미 열렸으면 그대로)
+     *     if ( session.openFromLaunch() == false ) return false; // 게임 인스턴스 initialize(이미 열렸으면 그대로, 틀린 인자면 멈춤)
      *     session.getRouter().registerHandler( &replicationServer ); // 키트
      *     session.update();                                     // 프레임마다(게임 스레드)
      *     session.shutdown();
@@ -100,9 +112,10 @@ namespace sw
         MemoryTag getSubsystemMemoryTag() const override { return MemoryTag::EngineMisc; }
         /**
          * @brief `makeLaunchParams` 가 정한 역할(실행 인자, 없으면 전용 서버 설정)로 세션을 엽니다. 이미 열려 있으면 그대로 둡니다(리로드로 다시 선 게임 인스턴스).
-         * @details 둘 다 없으면 열지 않는다. 포트가 사용 중이라 열지 못해도 게임은 혼자 뜬다 — 실패는 `initialize` 가 로그에 남기고 다음 인스턴스가 다시 시도한다.
+         * @details 둘 다 없으면 열지 않고 true 다(혼자 하는 게임). 인자 · 설정이 틀렸거나 고른 역할을 열지 못하면(포트 사용 중) false 다 —
+         *          게임 인스턴스는 기동을 멈춘다. 서버 · 클라이언트로 띄운 프로세스가 혼자 하는 게임으로 서 있으면 멀티 프로세스 재생과 테스트가 접속 줄을 기다리다 시간 초과로 진다.
          */
-        void openFromLaunch();
+        [[nodiscard]] bool openFromLaunch();
 
         /** @brief 주소에 포트가 없을 때의 기본 게임 포트입니다. 언리얼 기본 포트와 같으며 `ServerConfig::_gamePort` 기본값도 같습니다. */
         static constexpr uint16 kDefaultPort = 7777;
@@ -115,10 +128,10 @@ namespace sw
 
         /**
          * @brief 이 프로세스의 기동 상태에서 세션 인자를 만듭니다. 실행 인자(`-gv_netListenPort`, `-gv_netConnectAddress`)가 먼저이고, 없으면 전용 서버의
-         *        서버 설정(`makeServerParams`)입니다. 어느 것도 없으면 false 이며 세션을 열지 않습니다.
-         * @details 실행 인자가 둘 다 있으면 서버를 고르고 경고한다. 주소를 풀지 못하거나 설정이 틀리면 로그를 남기고 false 를 반환한다.
+         *        서버 설정(`makeServerParams`)입니다. 어느 것도 없으면 `None` 이며 세션을 열지 않습니다.
+         * @details 실행 인자가 둘 다 있거나, 포트가 범위 밖이거나, 주소를 풀지 못하거나, 서버 설정이 틀리면 오류 로그와 `Invalid` 다 — 한쪽을 골라 대신 열지 않는다.
          */
-        [[nodiscard]] static bool makeLaunchParams( GameNetSessionParams& outParams );
+        [[nodiscard]] static GameNetLaunch makeLaunchParams( GameNetSessionParams& outParams );
         /**
          * @brief 전용 서버 설정에서 서버 세션 인자를 만듭니다. `_listenAddress` 가 `127.0.0.1` 이면 루프백만, `0.0.0.0` 이면 모든 인터페이스입니다.
          * @details 다른 주소, 샤드 2 개 이상(`_gamePortShardCount`), 포트 범위 밖은 오류 로그와 false 입니다 — 다른 값으로 대신 열지 않는다.

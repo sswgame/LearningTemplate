@@ -136,7 +136,7 @@ namespace sw
             }
         }
 
-        /** @brief 요청 하나를 준비해 OS 에 겁니다. 걸 수 없으면 그 자리에서 끝냅니다. */
+        /** @brief 요청 하나를 준비해 OS 에 제출합니다. 제출할 수 없으면 바로 끝냅니다. */
         void startRequest( const shared_ptr<AsyncReadRequest>& pRequest )
         {
             const AsyncIOStatus prepareStatus = _pQueue->prepare( *pRequest );
@@ -165,7 +165,7 @@ namespace sw
             issueRead( pOperation );
         }
 
-        /** @brief 남은 구간의 다음 조각을 겁니다. 걸자마자 실패하면(완료 패킷이 오지 않는다) 그 자리에서 끝냅니다. */
+        /** @brief 남은 구간의 다음 조각을 제출합니다. 제출하자마자 실패하면(완료 패킷이 오지 않는다) 바로 끝냅니다. */
         void issueRead( IocpReadOperation* pOperation )
         {
             AsyncReadRequest& request    = *pOperation->_pRequest;

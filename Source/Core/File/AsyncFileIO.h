@@ -1,7 +1,7 @@
 /**
  * @file AsyncFileIO.h
  * @brief 비동기 파일 읽기 — 요청(파일 전체 · 구간) · 우선순위 · 취소 · 완료 콜백 / `TaskFuture` 입니다.
- * @details 상용 엔진의 같은 자리는 언리얼 `IAsyncReadFileHandle` · `IAsyncReadRequest`(+ IoStore 의 우선순위 큐)와 유니티 `AsyncReadManager` 입니다.
+ * @details 상용 엔진에서 이에 해당하는 것은 언리얼 `IAsyncReadFileHandle` · `IAsyncReadRequest`(+ IoStore 의 우선순위 큐)와 유니티 `AsyncReadManager` 입니다.
  *          모양은 그 둘을 따릅니다.
  *          - **요청은 큐에 들어가고, 백엔드가 우선순위 순서로 꺼내 OS 에 넘깁니다.** 동시에 OS 에 걸린 요청 수에는 상한이 있어
  *            (`_maxInFlightCount`) 큐 뒤쪽의 급한 요청이 앞의 대량 요청을 기다리지 않습니다(같은 우선순위 안은 들어온 순서).
@@ -10,7 +10,7 @@
  *            컨테이너에서 꺼 둔 곳)이면 스레드 풀로 내려갑니다.
  *          - 파일 열기 · 크기 확인 · 버퍼 할당은 **백엔드 스레드**가 합니다 — 요청하는 스레드(게임 · 렌더)는 큐에 넣기만 합니다.
  *          - 완료는 요청마다 한 번 `AsyncReadCompleteDelegate` 로 옵니다. `TaskManager` 를 넘겼으면 그 워커에서(우선순위를 태스크
- *            우선순위로 옮겨 싣는다 — Low · Normal 은 `TaskPriority::Low`, High · Critical 은 `Normal`. 파일 일은 렌더 · 물리 몫인 High 줄에 싣지 않는다),
+ *            우선순위로 옮겨 싣는다 — Low · Normal 은 `TaskPriority::Low`, High · Critical 은 `Normal`. 파일 작업은 렌더 · 물리가 쓰는 High 큐에 싣지 않는다),
  *            아니면 IO 스레드에서 부릅니다. 결과 버퍼는 콜백이 옮겨 가져도 됩니다.
  *          - 취소는 큐에 있으면 OS 에 넘기지 않고 `Canceled` 로 끝내고, 이미 OS 에 걸렸으면 읽기가 끝난 뒤 결과를 버리고 `Canceled` 로 끝냅니다
  *            (언리얼 · 유니티도 진행 중인 읽기의 취소는 "최선" 입니다).
@@ -213,7 +213,7 @@ namespace sw
          */
         void shutdown();
 
-        /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
+        /** @brief 서브시스템 이름입니다(다른 선언의 의존 필드가 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "FileIO";
         /** @brief 기동 순서가 `initialize` 에 넘길 설정입니다(완료 콜백을 싣는 태스크 매니저). 기동 전에 호스트가 정한다. */
         void                setSubsystemSettings( const AsyncFileIOConfig& settings ) { _subsystemSettings = settings; }

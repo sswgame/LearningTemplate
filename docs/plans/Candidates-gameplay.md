@@ -23,15 +23,6 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션 영역의 
 착수 조건 / 남은 것: 둘째 조립(RTS + City)의 테스트 게임이 필요해지면 MeadowVillage 모양으로 만든다. 격자 키트를 섞는 게임이 생기면 `SessionStateSettings::_land*` 와 키트의 `bindLand` 를 건다.
 함정: SRPG 는 전투 끝에 `releaseLand`. 공원 놀이기구 발자국은 상태 바이트에 싣지 않는다 — 지은 칸은 땅이 든다.
 
-### RigEditing
-제목: 후처리 리그 편집 저장과 기즈모
-옛번호: D4-6
-왜 필요한가: 후처리 리그(`PoseModifierComponent`)의 시퀀서 `RigSlot` 트랙(`setSlotWeight` 에 키 찍기)과 리그 디버그 창(`RigDebugPanel`)은 들어갔다.
-남은 것:
-- 창에서 고친 가중치 · 켜짐은 런타임 인스턴스의 복제본에만 들어가 저장되지 않는다(리그 에셋에 쓰는 길).
-- 노드 대상 본 기즈모 편집.
-- `Engine/Sequencer` 가 `Engine/Character` 헤더를 새로 include 한다(레이어 검사 확인).
-
 ### AnimationLodAndCrowd
 제목: 애니메이션 LOD 와 군중 공유
 옛번호: D4-6

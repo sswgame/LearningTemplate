@@ -32,8 +32,9 @@ namespace sw
         Invalid,       ///< 빈 글이거나 상한을 넘었거나 잘못된 UTF-8 이거나 규칙에 맞지 않는 채널 id 이다
         Unavailable,   ///< 저장소, 캐시, 전송을 쓸 수 없다
         TooManyChannels,
-        NotSignedIn,   ///< 로그인하지 않은 연결이다(공통 오류 `kUnauthenticated`)
-        UpdateRequired ///< 온라인 스키마 해시가 다르다(`kVersionMismatch`). 클라이언트만 만들고 서버는 보내지 않는다. 다시 접속하지 않으므로 재시도하지 않는다
+        NotSignedIn,    ///< 로그인하지 않은 연결이다(공통 오류 `kUnauthenticated`)
+        UpdateRequired, ///< 온라인 스키마 해시가 다르다(`kVersionMismatch`). 클라이언트만 만들고 서버는 보내지 않는다. 다시 접속하지 않으므로 재시도하지 않는다
+        NotFound        ///< 신고한 메시지가 기록에 없다(아직 쓰이지 않았거나 보존 기간이 지났다)
     };
 
     /** @brief 채널 종류입니다. 채널 id 의 접두어가 정합니다. */
@@ -58,6 +59,8 @@ namespace sw
         static constexpr int32 kMaxChannelIDSize    = 48;
         static constexpr int32 kMaxChannelPerMember = 16; ///< 한 계정이 들어가 있을 수 있는 채널 수이다
         static constexpr int32 kMaxHistoryPage      = 50;
+        static constexpr int32 kReportContextCount  = 10; ///< 신고 스냅숏에 담는 메시지 수(신고한 메시지와 그 앞)이다. `ServiceReportConstant::kMaxLineCount` 이하이다
+        static constexpr int32 kMaxReasonSize       = 64; ///< 신고 사유 코드의 상한이며 `ServiceReportConstant::kMaxReasonSize` 와 같다
     };
 } // namespace sw
 

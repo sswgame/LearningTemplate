@@ -1,9 +1,9 @@
 /**
  * @file SequenceBuffer.h
  * @brief 16 비트 시퀀스로 찾는 고리 버퍼 — 보낸 패킷 · 받은 패킷 · 보낸 메시지를 시퀀스 번호로 기억합니다.
- * @details 감기는 시퀀스라 낡은 것을 거절하고 건너뛴 칸을 비웁니다. 감기지 않는 32 비트 틱 · 프레임은 `TickRingBuffer`(Replication 층 — 낡음은 쓰는 쪽이 본다).
+ * @details 감기는 시퀀스라 낡은 것을 거절하고 건너뛴 슬롯을 비웁니다. 감기지 않는 32 비트 틱 · 프레임은 `TickRingBuffer`(Replication 층 — 낡음은 쓰는 쪽이 본다).
  *          크기는 형식의 일부(템플릿 상수)이고 2 의 거듭제곱이어야 합니다. 크기가 65536 의 약수가 아니면 시퀀스가 65535 → 0 으로 감길 때
- *          자리(시퀀스 % 크기)가 이어지지 않아 감김 직전과 직후의 시퀀스가 같은 칸을 덮습니다. 실행 중 크기(0 이면 1 로 바꾸던 폴백 포함)는 받지 않습니다.
+ *          슬롯 위치(시퀀스 % 크기)가 이어지지 않아 감김 직전과 직후의 시퀀스가 같은 슬롯을 덮습니다. 실행 중 크기(0 이면 1 로 바꾸던 폴백 포함)는 받지 않습니다.
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -15,14 +15,14 @@
 namespace sw
 {
     /**
-     * @brief `SequenceBuffer` 가 칸을 다시 쓸 때(`insert`) 원소를 되돌리는 방법입니다. 원소 형식이 `static constexpr SequenceSlotReset kSlotReset` 로 고릅니다.
+     * @brief `SequenceBuffer` 가 슬롯을 다시 쓸 때(`insert`) 원소를 되돌리는 방법입니다. 원소 형식이 `static constexpr SequenceSlotReset kSlotReset` 로 고릅니다.
      * @details 이름으로 찾아(SFINAE) 고르면 함수 이름을 틀렸을 때 조용히 `T{}` 대입으로 돌아가 버퍼를 놓습니다. 그래서 원소가 방법을 밝히고,
      *          `ReuseBuffer` 를 밝힌 원소에 `resetForReuse` 가 없으면 컴파일 오류로 멈춥니다(`IsSequenceBufferElement`).
      */
     enum class SequenceSlotReset : uint8
     {
         Assign,      ///< `T{}` 를 대입한다. 버퍼가 없는 원소.
-        ReuseBuffer, ///< `void resetForReuse()` 를 부른다. 모든 필드를 기본값으로 되돌리되 버퍼 용량은 남긴다(칸이 돌 때마다 다시 할당하지 않게).
+        ReuseBuffer, ///< `void resetForReuse()` 를 부른다. 모든 필드를 기본값으로 되돌리되 버퍼 용량은 남긴다(슬롯을 다시 쓸 때마다 할당하지 않게).
     };
 
     namespace internal
@@ -53,7 +53,7 @@ namespace sw
         template <typename T>
         constexpr bool isSequenceBufferElement()
         {
-            // 스칼라(정수 · 포인터)는 버퍼도 함수도 가질 수 없어 대입뿐이다 — 이름을 틀릴 자리가 없다.
+            // 스칼라(정수 · 포인터)는 버퍼도 함수도 가질 수 없어 대입뿐이다 — 이름을 틀릴 곳이 없다.
             if constexpr ( std::is_scalar_v<T> )
                 return true;
             else if constexpr ( DeclaresSlotReset<T>::value )
@@ -62,7 +62,7 @@ namespace sw
                 return false;
         }
 
-        /** @brief 원소가 밝힌 칸 재사용 방법입니다. 스칼라는 대입입니다. */
+        /** @brief 원소가 밝힌 슬롯 재사용 방법입니다. 스칼라는 대입입니다. */
         template <typename T>
         constexpr SequenceSlotReset getSlotReset()
         {
@@ -87,9 +87,9 @@ namespace sw
 {
     /**
      * @class SequenceBuffer
-     * @brief 자리 = 시퀀스 & (크기 - 1) 입니다. 자리마다 들어 있는 시퀀스를 같이 적어 두어, 오래된(감겨 덮인) 것을 찾으면 없다고 합니다.
-     * @tparam T 원소입니다. 클래스면 `static constexpr SequenceSlotReset kSlotReset` 로 칸 재사용 방법을 밝혀야 합니다(`SequenceSlotReset`). 스칼라는 대입입니다.
-     * @tparam kSize 칸 수입니다. 2 의 거듭제곱이고 시퀀스 공간의 절반(32768) 이하입니다 — 넘으면 "가장 새 것보다 크기만큼 뒤"가 앞뒤를 가를 수 없습니다.
+     * @brief 슬롯 위치 = 시퀀스 & (크기 - 1) 입니다. 슬롯마다 들어 있는 시퀀스를 같이 적어 두어, 오래된(감겨 덮인) 것을 찾으면 없다고 합니다.
+     * @tparam T 원소입니다. 클래스면 `static constexpr SequenceSlotReset kSlotReset` 로 슬롯 재사용 방법을 밝혀야 합니다(`SequenceSlotReset`). 스칼라는 대입입니다.
+     * @tparam kSize 슬롯 수입니다. 2 의 거듭제곱이고 시퀀스 공간의 절반(32768) 이하입니다 — 넘으면 "가장 새 것보다 크기만큼 뒤"가 앞뒤를 가를 수 없습니다.
      */
     template <typename T, uint32 kSize>
     class SequenceBuffer
@@ -108,14 +108,14 @@ namespace sw
             _listSequence.assign( kSize, kEmpty );
         }
 
-        /** @brief 넣고 그 자리를 돌려줍니다. 지금 가장 새 것보다 크게 낡았으면 nullptr 입니다. */
+        /** @brief 넣고 그 슬롯을 돌려줍니다. 지금 가장 새 것보다 크게 낡았으면 nullptr 입니다. */
         T* insert( uint16 sequence )
         {
             if ( isStale( sequence ) )
                 return nullptr;
             if ( _bHasNewest == false || NetSequence::isGreater( sequence, _newest ) )
             {
-                // 새로 앞선 만큼 사이의 자리를 비운다(건너뛴 시퀀스가 옛 값으로 남지 않게).
+                // 새로 앞선 만큼 사이의 슬롯을 비운다(건너뛴 시퀀스가 옛 값으로 남지 않게).
                 if ( _bHasNewest )
                 {
                     const int32 gap = NetSequence::computeDifference( sequence, _newest );

@@ -3343,7 +3343,7 @@
    "name": "gv_netConnectAddress",
    "type": "string",
    "default": "",
-   "kind": "시험",
+   "kind": "시험 · 배포본에도",
    "description": "클라이언트로 붙을 게임 서버 주소 (주소:포트, 비면 끄기)",
    "source": "Source/Engine/Net/GameNetSession.cpp"
   },

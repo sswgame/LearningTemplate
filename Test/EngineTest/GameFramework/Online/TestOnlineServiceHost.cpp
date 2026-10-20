@@ -51,6 +51,7 @@ namespace
         explicit FakeOnlineService( const OnlineProtocolEntry& protocol )
             : _listLateToken{}
             , _listLateAnswer{}
+            , _listJoinedAccount{}
             , _listLeftAccount{}
             , _listBusMessage{}
             , _listCacheReply{}
@@ -130,6 +131,12 @@ namespace
             }
         }
 
+        void onAccountJoined( OnlineServiceHost& host, AccountID accountID ) override
+        {
+            (void)host;
+            _listJoinedAccount.push_back( accountID );
+        }
+
         void onAccountLeft( OnlineServiceHost& host, AccountID accountID ) override
         {
             (void)host;
@@ -153,6 +160,7 @@ namespace
 
         vector<NetRequestToken>    _listLateToken;
         DynamicBitset              _listLateAnswer;
+        vector<AccountID>          _listJoinedAccount;
         vector<AccountID>          _listLeftAccount;
         vector<ServerBusMessage>   _listBusMessage;
         vector<EphemeralReply>     _listCacheReply;
@@ -717,6 +725,10 @@ SW_TEST_CASE( OnlineServiceHostTest, UnbindAccountClosesTheConnectionAndTellsEve
     rig._listClient.push_back( &client );
     rig.step( 10 );
     (void)rig.call( client, OnlineServiceHostTestInternal::kRangeA + OnlineServiceHostTestInternal::kLogin, 9 );
+    (void)rig.call( client, OnlineServiceHostTestInternal::kRangeA + OnlineServiceHostTestInternal::kLogin, 9 ); // 같은 계정을 다시 붙여도 다시 알리지 않는다
+    SW_ASSERT_EQUAL( size_t( 1 ), rig._serviceA._listJoinedAccount.size() );
+    SW_ASSERT_EQUAL( size_t( 1 ), rig._serviceB._listJoinedAccount.size() );
+    SW_EXPECT_EQUAL( AccountID( 9 ), rig._serviceB._listJoinedAccount[0] );
     StreamConnectionHandle connection;
     SW_ASSERT_TRUE( rig._host.findConnection( 9, connection ) );
     rig._host.unbindAccount( 9 );

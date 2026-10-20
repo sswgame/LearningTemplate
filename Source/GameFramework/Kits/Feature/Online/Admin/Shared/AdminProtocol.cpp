@@ -30,8 +30,13 @@ namespace sw
         {
             case AdminMethod::kLookupAccount:
             case AdminMethod::kListAudit:
+            case AdminMethod::kListReports:
             {
                 return AdminRole::Viewer;
+            }
+            case AdminMethod::kResolveReport:
+            {
+                return AdminRole::Support;
             }
             case AdminMethod::kSetSanction:
             {
@@ -41,6 +46,10 @@ namespace sw
             }
             case AdminMethod::kAdjustAsset:
             case AdminMethod::kSendMail:
+            case AdminMethod::kSetMaintenance:
+            case AdminMethod::kClearMaintenance:
+            case AdminMethod::kPostNotice:
+            case AdminMethod::kRemoveNotice:
             {
                 return AdminRole::Operator;
             }

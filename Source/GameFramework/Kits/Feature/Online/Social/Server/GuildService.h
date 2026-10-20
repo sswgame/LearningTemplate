@@ -8,8 +8,8 @@
  *          - 한 계정은 한 길드에만 들어간다. 계정의 길드를 "없어야 함" 조건으로 쓰기 때문이다. 정원은 100명이다.
  *            길드장은 혼자일 때만 떠날 수 있고 그때 길드가 해산되며 이름도 지운다. 내보내기는 더 높은 역할만 할 수 있다.
  *          - 변경한 뒤 멤버 목록을 한 번 더 읽어 `GuildChanged` 알림을 보낸다. 받는 사람이 오프라인이면 호스트가 버린다.
- *          - 채팅 길드 채널은 이벤트(`GuildEvent`)로 게임 조립 단계가 연결한다(`setEventDelegate`). 이벤트는 가입, 떠남, 로그인한 멤버이며 키트끼리는 서로 모른다.
- *            로그인한 계정의 길드는 조립 단계가 로그인 이벤트에서 `attachAccount` 를 불러 `MemberAttached` 로 받는다.
+ *          - 채팅 길드 채널은 이벤트(`GuildEvent`)로 친구 키트 서버 조립이 연결한다(`setEventDelegate` → 기반 `IGroupChannelMembership`). 이벤트는 가입, 떠남, 로그인한 멤버이며 키트끼리는 서로 모른다.
+ *            로그인한 계정의 길드는 바인딩(`SocialServer::onAccountJoined`)이 다음 틱에 `attachAccount` 를 불러 `MemberAttached` 로 받는다.
  *
  *          - 길드 창고는 원장의 맡김(`esc/guild/<길드 16진>`)이다. 맡기기는 멤버 누구나, 꺼내기는 임원 이상이 하며 둘 다 클라이언트 멱등 키로 만든 분개 키가 필수이다.
  *            이동은 멤버 레코드의 버전 조건과 한 트랜잭션에 들어가므로 그사이 내보내지거나 역할이 바뀌면 충돌로 다시 읽는다.
@@ -64,6 +64,7 @@ namespace sw
 
         AccountID _accountID{ kInvalidAccountID };
         uint64    _guildID{ 0 };
+        int64     _nowMs{ 0 }; ///< 이벤트를 낸 요청의 시각이다
         Kind      _kind{ Kind::Joined };
     };
 
@@ -151,7 +152,7 @@ namespace sw
         void applyOutcome( const GuildRequest& request, uint64 requestTag, GuildOutcome&& outcome );
 
     private:
-        void raiseEvent( AccountID accountID, uint64 guildID, GuildEvent::Kind kind );
+        void raiseEvent( AccountID accountID, uint64 guildID, GuildEvent::Kind kind, int64 nowMs );
 
         EventBuffer<GuildCompletion>    _completionBuffer;
         EventBuffer<SocialNotification> _notificationBuffer;

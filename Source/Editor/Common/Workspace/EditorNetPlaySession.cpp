@@ -7,6 +7,7 @@
 #include "Core/Concurrency/thread.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Network/Transport/UDPNetTransport.h"
 #include "Core/Process/Process.h"
 #include "Core/Time/WallClock.h"
@@ -14,6 +15,7 @@
 #include "Engine/Profiling/ProfilerTraceExport.h"
 #include "Engine/Resource/ResourcePaths.h"
 
+#include <random>
 #include <thread>
 
 namespace sw::editor
@@ -80,6 +82,23 @@ namespace sw::editor
             /** @brief 명령줄 인자 하나를 따옴표로 감쌉니다(경로의 공백). */
             static string quote( string_view text ) { return "\"" + string( text ) + "\""; }
 
+            /** @brief 디버그 채널 토큰을 운영체제 난수로 만듭니다 — 같은 PC 의 다른 프로세스가 짐작해 붙지 못하게 세션마다 새로. */
+            static string makeDebugChannelToken()
+            {
+                std::random_device randomDevice; // 운영체제 난수(Windows RtlGenRandom · 리눅스 getrandom)
+                utf8               arrToken[constant::kMaxBuffer64];
+                formatstring( arrToken, constant::kMaxBuffer64, "netplay-%#-%#-%#-%#", randomDevice(), randomDevice(), randomDevice(), randomDevice() );
+                return string( arrToken );
+            }
+
+            /** @brief 빈 TCP 포트를 고르는 동안만 쓰는 처리기입니다 — 받기만 열고 연결은 받지 않는다. */
+            struct PortProbeHandler final : IStreamHandler
+            {
+                void onStreamOpened( StreamConnectionHandle /*handle*/, const NetAddress& /*remote*/, bool /*bAccepted*/ ) override {}
+                void onStreamReceived( StreamConnectionHandle /*handle*/, const uint8* /*pData*/, int32 /*size*/ ) override {}
+                void onStreamClosed( StreamConnectionHandle /*handle*/, StreamCloseReason /*reason*/ ) override {}
+            };
+
 #if SW_PROFILER_TRACE_ENABLED
             /** @brief 경로를 앞으로 빗금으로 — 명령줄에서 `\"` 가 따옴표를 깨지 않게. 트레이스 폴더 인자에만 쓴다. */
             static string toForwardSlashes( string path )
@@ -118,10 +137,12 @@ namespace sw::editor
         , _listDrainScratch{}
         , _traceDirectory{}
         , _mergedTracePath{}
+        , _debugChannelToken{}
         , _settings{}
         , _pendingSettings{}
         , _presetStore{}
         , _port{ 0 }
+        , _debugChannelPort{ 0 }
         , _bMergedTraceUnopened{ false }
     {
     }
@@ -198,6 +219,19 @@ namespace sw::editor
         return port;
     }
 
+    uint16 EditorNetPlaySession::findFreeStreamPort()
+    {
+        unique_ptr<IStreamTransport>                   probe = StreamTransportFactory::createPlatformTransport();
+        EditorNetPlaySessionInternal::PortProbeHandler handler;
+        if ( probe == nullptr || probe->initialize( &handler, StreamTransportConfig{} ) == false )
+            return 0;
+        uint16 port = 0;
+        if ( probe->listen( NetAddress::makeLoopback( 0 ) ) )
+            port = probe->getListenPort();
+        probe->shutdown();
+        return port;
+    }
+
     string EditorNetPlaySession::makeTracePath( const string& fileStem ) const
     {
         return _traceDirectory.empty() ? string{} : _traceDirectory + "/" + fileStem + EditorNetPlaySessionInternal::kTraceExtension;
@@ -263,8 +297,9 @@ namespace sw::editor
             _traceDirectory = EditorNetPlaySessionInternal::toForwardSlashes( _traceDirectory );
             if ( FileUtil::ensureDirectoryExists( _traceDirectory ) == false )
             {
-                SW_LOG_WARNING( "Trace folder %# could not be created - the session runs without traces", _traceDirectory );
+                SW_LOG_ERROR( "Trace folder %# could not be created - the multiplayer session was not started", _traceDirectory );
                 _traceDirectory.clear();
+                return false;
             }
         }
 #endif
@@ -276,9 +311,24 @@ namespace sw::editor
 
         // 서버를 먼저 띄운다 — 클라이언트는 서버가 늦게 서도 연결을 다시 시도하지만(연결 시한 안), 먼저 서 있으면 첫 시도에 붙는다.
         // `App` 창은 띄우는 순서대로 나란히 놓는다 — 리슨 호스트가 첫 칸이다(전용 서버는 창이 없다).
-        const bool  bDedicated  = settings._mode == EditorNetMode::DedicatedServer;
+        const bool bDedicated = settings._mode == EditorNetMode::DedicatedServer;
+        // 전용 서버는 디버그 채널을 늘 연다 — Inspector 탭이 붙는 곳이다. 고르지 못하면 채널 없는 서버로 띄우지 않는다.
+        _debugChannelPort = bDedicated ? findFreeStreamPort() : 0;
+        _debugChannelToken.clear();
+        if ( bDedicated && _debugChannelPort == 0 )
+        {
+            SW_LOG_ERROR( "No free TCP port for the dedicated server's debug channel" );
+            return false;
+        }
+        string serverArguments = "-gv_netListenPort=" + port;
+        if ( bDedicated )
+        {
+            _debugChannelToken = EditorNetPlaySessionInternal::makeDebugChannelToken();
+            serverArguments += " -gv_debugChannelPort=" + to_string( _debugChannelPort ) + " -gv_debugChannelToken=" + _debugChannelToken +
+                               " -gv_stateHashHistory=" + to_string( kServerStateHashHistoryTicks );
+        }
         int32       windowIndex = 0;
-        bool        bLaunched   = bDedicated ? launchChild( "Server", serverPath, "-gv_netListenPort=" + port, makeTracePath( "server" ) )
+        bool        bLaunched   = bDedicated ? launchChild( "Server", serverPath, serverArguments, makeTracePath( "server" ) )
                                              : launchChild( "Host", clientPath,
                                                             "-gv_netListenPort=" + port + " -gv_standardInputCommands=1 " + settings._clientArguments + " " +
                                                                 makeWindowArguments( settings, windowIndex++ ),
@@ -429,6 +479,8 @@ namespace sw::editor
         _mergedTracePath      = mergeTraces();
         _bMergedTraceUnopened = _mergedTracePath.empty() == false;
         _listProcess.clear();
+        _debugChannelPort = 0;
+        _debugChannelToken.clear();
         SW_LOG_INFO( "Multiplayer session stopped%#", _mergedTracePath.empty() ? string{} : " - merged trace " + _mergedTracePath );
         return _mergedTracePath;
     }

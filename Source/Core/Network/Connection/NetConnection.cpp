@@ -24,7 +24,7 @@ namespace sw
                 return static_cast<float32>( value + ( sample - value ) * factor );
             }
             static constexpr int32   kMessageCountMax = 255;
-            static constexpr float64 kMinLostAge      = 0.5; ///< 확인이 이보다 늦으면 잃은 것으로 센다. 유지 간격(0.25초)보다 길게 잡는다(답을 잃으면 다음 교환의 묶음이 확인한다).
+            static constexpr float64 kMinLostAge      = 0.5; ///< 확인이 이보다 늦으면 잃은 것으로 센다. 유지 간격(0.25초)보다 길게 잡는다(답을 잃으면 다음 교환의 ack 비트가 확인한다).
             static constexpr float64 kBandwidthWindow = 1.0; ///< 대역폭 통계의 윈도우(초).
 
             /** @brief 메시지 하나가 차지하는 비트 수입니다(채널, ID, 조각 비트, 길이, 본문). */
@@ -77,6 +77,7 @@ namespace sw
         , _listParsedScratch{}
         , _listSequencedReceive{}
         , _listReliableAssembly{}
+        , _listSpareBuffer{}
         , _stats{}
         , _lastStatsTime{ 0.0 }
         , _lastAckRequestTime{ -1.0e9 }
@@ -162,6 +163,7 @@ namespace sw
             case NetChannelType::Unreliable:
             {
                 QueuedUnreliable& queued = _listOutgoingUnreliable.emplace_back();
+                queued._buffer           = acquireBuffer();
                 queued._buffer.assign( pData, pData + size );
                 return true;
             }
@@ -205,7 +207,9 @@ namespace sw
         const bool  bNoIncomingMessage = channelIndex < 0 || channelIndex >= static_cast<int32>( NetChannelType::Count ) || _arrIncoming[channelIndex].empty();
         if ( bNoIncomingMessage )
             return false;
-        outBuffer = std::move( _arrIncoming[channelIndex].front() );
+        // 바꿔 넣어 부른 쪽 버퍼의 옛 용량을 다시 쓴다 — 받는 쪽이 같은 버퍼로 계속 꺼내면 메시지마다 할당하지 않는다.
+        outBuffer.swap( _arrIncoming[channelIndex].front() );
+        recycleBuffer( _arrIncoming[channelIndex].front() );
         _arrIncoming[channelIndex].pop_front();
         return true;
     }
@@ -216,10 +220,33 @@ namespace sw
         const bool  bNoIncomingMessage = channelIndex < 0 || channelIndex >= static_cast<int32>( NetChannelType::Count ) || _arrIncoming[channelIndex].empty();
         if ( bNoIncomingMessage )
             return false;
-        const vector<uint8>& message = _arrIncoming[channelIndex].front();
+        vector<uint8>& message = _arrIncoming[channelIndex].front();
         inoutBytes.insert( inoutBytes.end(), message.begin(), message.end() );
+        recycleBuffer( message );
         _arrIncoming[channelIndex].pop_front();
         return true;
+    }
+
+    vector<uint8> NetConnection::acquireBuffer()
+    {
+        if ( _listSpareBuffer.empty() )
+            return vector<uint8>{};
+        vector<uint8> buffer = std::move( _listSpareBuffer.back() );
+        _listSpareBuffer.pop_back();
+        return buffer;
+    }
+
+    void NetConnection::recycleBuffer( vector<uint8>& buffer )
+    {
+        const size_t capacity    = buffer.capacity();
+        const bool   bReusable   = capacity > 0 && capacity <= static_cast<size_t>( kMaxSingleMessageSize );
+        const bool   bRoomInList = _listSpareBuffer.size() < static_cast<size_t>( kMaxSpareBuffers );
+        if ( bReusable && bRoomInList )
+        {
+            buffer.clear();
+            _listSpareBuffer.push_back( std::move( buffer ) );
+        }
+        buffer = vector<uint8>{};
     }
 
     float64 NetConnection::computeResendDelay() const
@@ -258,21 +285,91 @@ namespace sw
         return ackBits;
     }
 
-    void NetConnection::writePacket( float64 time, BitWriter& writer, int32 maxBytes, float64 ackRequestInterval, float64 maxUnreliableAgeSeconds )
+    bool NetConnection::PacketBody::tryWriteMessage( NetChannelType channel, uint16 messageID, const vector<uint8>& buffer, bool bMore )
     {
-        // 비신뢰 줄의 나이를 센다. 처음 만난 메시지는 지금으로 적고, 상한을 넘게 기다린 것은 싣지 않고 버린다 — 포화가 풀릴 때 옛 비신뢰가 몰려 나가지 않게.
+        const int32 bits = 1 + NetConnectionInternal::computeMessageBits( channel, static_cast<int32>( buffer.size() ) );
+        if ( _usedBits + bits > _budgetBits || _written >= NetConnectionInternal::kMessageCountMax )
+            return false;
+        BitWriter& writer = *_pWriter;
+        writer.writeBool( true );
+        writer.writeBits( static_cast<uint32>( channel ), NetConnectionInternal::kChannelBits );
+        if ( channel != NetChannelType::Unreliable )
+            writer.writeBits( messageID, 16 );
+        if ( channel == NetChannelType::ReliableOrdered )
+            writer.writeBool( bMore );
+        writer.writeBits( static_cast<uint32>( buffer.size() ), kMessageSizeBits );
+        if ( buffer.empty() == false )
+            writer.writeBytes( buffer.data(), static_cast<int32>( buffer.size() ) );
+        _usedBits += bits;
+        ++_written;
+        return true;
+    }
+
+    void NetConnection::expireQueuedUnreliable( float64 time, float64 maxAgeSeconds )
+    {
+        // 포화가 풀릴 때 옛 비신뢰가 몰려 나가지 않게 한다.
         for ( auto queuedIt = _listOutgoingUnreliable.rbegin(); queuedIt != _listOutgoingUnreliable.rend() && queuedIt->_queuedTime < 0.0; ++queuedIt )
         {
             queuedIt->_queuedTime = time; // 새 메시지는 뒤에 붙으므로 뒤에서부터 아직 적지 않은 것만 본다
         }
         while ( true )
         {
-            const bool bOldestUnreliableExpired = maxUnreliableAgeSeconds > 0.0 && _listOutgoingUnreliable.empty() == false && time - _listOutgoingUnreliable.front()._queuedTime > maxUnreliableAgeSeconds;
+            const bool bOldestUnreliableExpired = maxAgeSeconds > 0.0 && _listOutgoingUnreliable.empty() == false && time - _listOutgoingUnreliable.front()._queuedTime > maxAgeSeconds;
             if ( bOldestUnreliableExpired == false )
                 break;
+            recycleBuffer( _listOutgoingUnreliable.front()._buffer );
             _listOutgoingUnreliable.pop_front();
             ++_stats._expiredUnreliableCount;
         }
+    }
+
+    void NetConnection::writeReliableMessages( PacketBody& body )
+    {
+        SentPacket& sent = *body._pSent;
+        for ( uint16 messageID = _oldestUnackedReliableID; messageID != _nextReliableSendID; ++messageID )
+        {
+            OutgoingReliable* pMessage = _outgoingReliable.find( messageID );
+            if ( pMessage == nullptr || isReliableDue( *pMessage, body._time, body._resendDelay ) == false )
+                continue;
+            if ( sent._reliableCount >= kMaxReliablePerPacket )
+                break;
+            if ( body.tryWriteMessage( pMessage->_channel, messageID, pMessage->_buffer, pMessage->_bMore != SW_FALSE ) == false )
+                break;
+            if ( pMessage->_lastSentTime >= 0.0 )
+                ++_stats._resentMessageCount;
+            pMessage->_lastSentTime                    = body._time;
+            pMessage->_bResendNow                      = SW_FALSE;
+            sent._arrReliableID[sent._reliableCount++] = messageID;
+        }
+    }
+
+    void NetConnection::writeSequencedMessages( PacketBody& body )
+    {
+        // 쌓을 때 같은 종류의 옛것은 이미 새것으로 바뀌었다.
+        size_t sequencedWritten = 0;
+        while ( sequencedWritten < _listOutgoingSequenced.size() &&
+                body.tryWriteMessage( NetChannelType::UnreliableSequenced, _nextSequencedSendID, _listOutgoingSequenced[sequencedWritten], false ) )
+        {
+            ++_nextSequencedSendID;
+            ++sequencedWritten;
+        }
+        _listOutgoingSequenced.erase( _listOutgoingSequenced.begin(), _listOutgoingSequenced.begin() + static_cast<std::ptrdiff_t>( sequencedWritten ) );
+    }
+
+    void NetConnection::writeUnreliableMessages( PacketBody& body )
+    {
+        while ( _listOutgoingUnreliable.empty() == false )
+        {
+            if ( body.tryWriteMessage( NetChannelType::Unreliable, 0, _listOutgoingUnreliable.front()._buffer, false ) == false )
+                break;
+            recycleBuffer( _listOutgoingUnreliable.front()._buffer );
+            _listOutgoingUnreliable.pop_front();
+        }
+    }
+
+    void NetConnection::writePacket( float64 time, BitWriter& writer, int32 maxBytes, float64 ackRequestInterval, float64 maxUnreliableAgeSeconds )
+    {
+        expireQueuedUnreliable( time, maxUnreliableAgeSeconds );
         const uint16 sequence = _nextPacketSequence++;
         const uint16 ack      = _receivedPackets.hasNewest() ? _receivedPackets.getNewest() : static_cast<uint16>( 0xFFFF );
         writer.writeBits( sequence, 16 );
@@ -286,89 +383,26 @@ namespace sw
         pSent->_reliableCount = 0;
 
         // 메시지 수를 먼저 쓰지 않고, 메시지마다 "더 있다" 1비트를 앞에 둔다. 몇 개가 들어갈지는 쓰면서 정한다.
-        const int32   budgetBits   = maxBytes * 8 - writer.getBitCount() - 8;
-        int32         usedBits     = 0;
-        int32         written      = 0;
-        const float64 resendDelay  = computeResendDelay();
-        const auto    writeMessage = [&]( NetChannelType channel, uint16 messageID, const vector<uint8>& buffer, bool bMore ) -> bool
-        {
-            const int32 bits = 1 + NetConnectionInternal::computeMessageBits( channel, static_cast<int32>( buffer.size() ) );
-            if ( usedBits + bits > budgetBits || written >= NetConnectionInternal::kMessageCountMax )
-                return false;
-            writer.writeBool( true );
-            writer.writeBits( static_cast<uint32>( channel ), NetConnectionInternal::kChannelBits );
-            if ( channel != NetChannelType::Unreliable )
-                writer.writeBits( messageID, 16 );
-            if ( channel == NetChannelType::ReliableOrdered )
-                writer.writeBool( bMore );
-            writer.writeBits( static_cast<uint32>( buffer.size() ), kMessageSizeBits );
-            if ( buffer.empty() == false )
-                writer.writeBytes( buffer.data(), static_cast<int32>( buffer.size() ) );
-            usedBits += bits;
-            ++written;
-            return true;
-        };
-        // 신뢰 메시지는 오래된 것부터 싣는다. 처음 보내거나 재전송 시각이 된 것이 대상이며, 조각 하나가 메시지 하나다.
-        const auto writeReliable = [&]()
-        {
-            for ( uint16 messageID = _oldestUnackedReliableID; messageID != _nextReliableSendID; ++messageID )
-            {
-                OutgoingReliable* pMessage = _outgoingReliable.find( messageID );
-                if ( pMessage == nullptr || isReliableDue( *pMessage, time, resendDelay ) == false )
-                    continue;
-                if ( pSent->_reliableCount >= kMaxReliablePerPacket )
-                    break;
-                if ( writeMessage( pMessage->_channel, messageID, pMessage->_buffer, pMessage->_bMore != SW_FALSE ) == false )
-                    break;
-                if ( pMessage->_lastSentTime >= 0.0 )
-                    ++_stats._resentMessageCount;
-                pMessage->_lastSentTime                        = time;
-                pMessage->_bResendNow                          = SW_FALSE;
-                pSent->_arrReliableID[pSent->_reliableCount++] = messageID;
-            }
-        };
-        // 순서만 채널은 종류마다 가장 새 것 하나씩 싣는다(쌓을 때 옛것은 이미 바뀌었다). 들어가지 않은 것은 다음 패킷에 싣는다.
-        const auto writeSequenced = [&]()
-        {
-            size_t sequencedWritten = 0;
-            while ( sequencedWritten < _listOutgoingSequenced.size() &&
-                    writeMessage( NetChannelType::UnreliableSequenced, _nextSequencedSendID, _listOutgoingSequenced[sequencedWritten], false ) )
-            {
-                ++_nextSequencedSendID;
-                ++sequencedWritten;
-            }
-            _listOutgoingSequenced.erase( _listOutgoingSequenced.begin(), _listOutgoingSequenced.begin() + static_cast<std::ptrdiff_t>( sequencedWritten ) );
-        };
-        // 비신뢰 메시지는 들어가는 만큼 싣고, 못 들어간 것은 다음 패킷으로 넘긴다.
-        const auto writeUnreliable = [&]()
-        {
-            while ( _listOutgoingUnreliable.empty() == false )
-            {
-                if ( writeMessage( NetChannelType::Unreliable, 0, _listOutgoingUnreliable.front()._buffer, false ) == false )
-                    break;
-                _listOutgoingUnreliable.pop_front();
-            }
-        };
+        PacketBody body;
+        body._pWriter     = &writer;
+        body._pSent       = pSent;
+        body._time        = time;
+        body._resendDelay = computeResendDelay();
+        body._budgetBits  = maxBytes * 8 - writer.getBitCount() - 8;
         // 조각(1KB)은 패킷을 거의 채운다. 앞 패킷이 순서만과 비신뢰 메시지를 남겼으면 이번에는 그쪽부터 싣고 번갈아 간다.
         // 그러면 큰 신뢰 전송 동안 스냅샷이 굶지 않고, 비신뢰가 많아도 신뢰가 굶지 않는다. 한 번 앞섰으면 다음은 신뢰부터 싣는다.
         const bool bUnreliableFirst = _bUnreliableFirst != SW_FALSE;
+        if ( bUnreliableFirst == false )
+            writeReliableMessages( body );
+        writeSequencedMessages( body );
+        writeUnreliableMessages( body );
         if ( bUnreliableFirst )
-        {
-            writeSequenced();
-            writeUnreliable();
-            writeReliable();
-        }
-        else
-        {
-            writeReliable();
-            writeSequenced();
-            writeUnreliable();
-        }
+            writeReliableMessages( body );
         const bool bUnreliableLeft = _listOutgoingSequenced.empty() == false || _listOutgoingUnreliable.empty() == false;
         _bUnreliableFirst          = bUnreliableFirst == false && bUnreliableLeft ? SW_TRUE : SW_FALSE;
         writer.writeBool( false );
         // 확인만 담은 답은 확인을 요청하지 않는다(답에 답이 꼬리를 물지 않게). 다만 마지막 요청에서 유지 간격이 지났으면 답이라도 요청한다.
-        const bool bAckRequested = written > 0 || bReplyOnly == false || time - _lastAckRequestTime >= ackRequestInterval;
+        const bool bAckRequested = body._written > 0 || bReplyOnly == false || time - _lastAckRequestTime >= ackRequestInterval;
         if ( bAckRequested )
             _lastAckRequestTime = time;
         writer.writeBool( bAckRequested );
@@ -376,6 +410,94 @@ namespace sw
         pSent->_byteCount     = writer.getByteCount();
         ++_stats._sentPacketCount;
         updateStats( time );
+    }
+
+    bool NetConnection::parseMessages( BitReader& reader )
+    {
+        // 메시지 버퍼는 다시 쓸 줄에서 받는다. 넘기지 않은 것(중복 · 깨진 패킷)은 다음 패킷이 줄로 돌린다.
+        for ( ParsedMessage& parsed : _listParsedScratch )
+        {
+            recycleBuffer( parsed._buffer );
+        }
+        _listParsedScratch.clear();
+        while ( reader.readBool() )
+        {
+            ParsedMessage& message = _listParsedScratch.emplace_back();
+            message._buffer        = acquireBuffer();
+            message._channel       = static_cast<NetChannelType>( reader.readBits( NetConnectionInternal::kChannelBits ) );
+            if ( message._channel >= NetChannelType::Count )
+                return false; // 채널 슬롯 넷을 모두 쓰면 닿지 않는 분기다. 채널이 늘어도 깨진 값을 거르도록 남겨 둔다.
+            message._id      = message._channel != NetChannelType::Unreliable ? static_cast<uint16>( reader.readBits( 16 ) ) : static_cast<uint16>( 0 );
+            message._bMore   = message._channel == NetChannelType::ReliableOrdered && reader.readBool() ? SW_TRUE : SW_FALSE;
+            const int32 size = static_cast<int32>( reader.readBits( kMessageSizeBits ) );
+            if ( size > kMaxSingleMessageSize )
+                return false;
+            message._buffer.resize( static_cast<size_t>( size ) );
+            if ( size > 0 && reader.readBytes( message._buffer.data(), size ) == false )
+                return false;
+            if ( reader.hasOverflowed() )
+                return false;
+        }
+        return true;
+    }
+
+    void NetConnection::dispatchParsedMessage( ParsedMessage& message )
+    {
+        switch ( message._channel )
+        {
+            case NetChannelType::ReliableOrdered:
+            case NetChannelType::ReliableUnordered:
+            {
+                // 이미 넘긴 것과 창 밖의 것은 버린다. 신뢰 순서는 슬롯에 두었다가 순서대로 넘기고(`deliverReliable`), 신뢰 순서 없음은 앞의 신뢰 메시지를
+                // 기다리지 않고 받는 대로 넘기되 슬롯에 "넘겼다" 표시만 남겨 순서 커서가 지나가게 하고 늦게 온 중복을 거른다.
+                const int32 ahead                           = NetSequence::computeDifference( message._id, _nextReliableReceiveID );
+                const bool  bReliableOutOfWindowOrDuplicate = ahead < 0 || ahead >= kReliableWindow || _incomingReliable.exists( message._id );
+                if ( bReliableOutOfWindowOrDuplicate )
+                    return;
+                IncomingReliable* pIncoming = _incomingReliable.insert( message._id );
+                if ( pIncoming == nullptr )
+                    return;
+                if ( message._channel == NetChannelType::ReliableUnordered )
+                {
+                    pIncoming->_bDelivered = SW_TRUE;
+                    _arrIncoming[static_cast<int32>( NetChannelType::ReliableUnordered )].push_back( std::move( message._buffer ) );
+                    return;
+                }
+                pIncoming->_buffer.swap( message._buffer ); // 슬롯의 옛 용량은 받은 메시지 쪽으로 가 다음 패킷이 재사용 목록에 돌려 놓는다
+                pIncoming->_bMore = message._bMore;
+                return;
+            }
+            case NetChannelType::UnreliableSequenced:
+            {
+                // 번호는 연결 하나에서 증가하기만 하므로 종류마다 마지막 번호와 비교한다. 늦게 온 같은 종류의 옛 메시지만 버린다.
+                const uint8      kind    = message._buffer.empty() ? static_cast<uint8>( 0 ) : message._buffer[0];
+                SequencedStream* pStream = nullptr;
+                for ( SequencedStream& stream : _listSequencedReceive )
+                {
+                    if ( stream._kind == kind )
+                        pStream = &stream;
+                }
+                if ( pStream != nullptr && NetSequence::isGreater( message._id, pStream->_lastID ) == false )
+                    return; // 늦게 온 옛 메시지.
+                if ( pStream == nullptr )
+                {
+                    _listSequencedReceive.push_back( SequencedStream{ message._id, kind } );
+                    pStream = &_listSequencedReceive.back();
+                }
+                pStream->_lastID = message._id;
+                _arrIncoming[static_cast<int32>( NetChannelType::UnreliableSequenced )].push_back( std::move( message._buffer ) );
+                return;
+            }
+            case NetChannelType::Unreliable:
+            {
+                _arrIncoming[static_cast<int32>( NetChannelType::Unreliable )].push_back( std::move( message._buffer ) );
+                return;
+            }
+            case NetChannelType::Count:
+            {
+                return;
+            }
+        }
     }
 
     bool NetConnection::readPacket( float64 time, BitReader& reader )
@@ -390,26 +512,8 @@ namespace sw
 
         // 메시지를 먼저 모두 읽어서 깨진 패킷이면 아무것도 넣지 않는다. 시퀀스도 본문을 다 읽은 뒤에 기록한다.
         // 깨진 패킷을 확인해 버리면 보낸 쪽이 그 안의 신뢰 메시지를 전달된 것으로 알고 지운다.
-        vector<ParsedMessage>& listParsed = _listParsedScratch;
-        listParsed.clear();
-        while ( reader.readBool() )
-        {
-            ParsedMessage message;
-            message._channel = static_cast<NetChannelType>( reader.readBits( NetConnectionInternal::kChannelBits ) );
-            if ( message._channel >= NetChannelType::Count )
-                return false; // 채널 슬롯 넷을 모두 쓰면 닿지 않는 분기다. 채널이 늘어도 깨진 값을 거르도록 남겨 둔다.
-            message._id      = message._channel != NetChannelType::Unreliable ? static_cast<uint16>( reader.readBits( 16 ) ) : static_cast<uint16>( 0 );
-            message._bMore   = message._channel == NetChannelType::ReliableOrdered && reader.readBool() ? SW_TRUE : SW_FALSE;
-            const int32 size = static_cast<int32>( reader.readBits( kMessageSizeBits ) );
-            if ( size > kMaxSingleMessageSize )
-                return false;
-            message._buffer.resize( static_cast<size_t>( size ) );
-            if ( size > 0 && reader.readBytes( message._buffer.data(), size ) == false )
-                return false;
-            if ( reader.hasOverflowed() )
-                return false;
-            listParsed.push_back( std::move( message ) );
-        }
+        if ( parseMessages( reader ) == false )
+            return false;
         const bool bAckRequested = reader.readBool();
         if ( reader.hasOverflowed() )
             return false;
@@ -422,70 +526,9 @@ namespace sw
             _bAckPending = SW_TRUE;
         processAcks( time, ack, ackBits );
 
-        for ( ParsedMessage& message : listParsed )
+        for ( ParsedMessage& message : _listParsedScratch )
         {
-            switch ( message._channel )
-            {
-                case NetChannelType::ReliableOrdered:
-                {
-                    // 이미 넘긴 것과 창 밖의 것은 버리고, 나머지는 슬롯에 두었다가 순서대로 넘긴다.
-                    const int32 ahead                           = NetSequence::computeDifference( message._id, _nextReliableReceiveID );
-                    const bool  bReliableOutOfWindowOrDuplicate = ahead < 0 || ahead >= kReliableWindow || _incomingReliable.exists( message._id );
-                    if ( bReliableOutOfWindowOrDuplicate )
-                        break;
-                    IncomingReliable* pIncoming = _incomingReliable.insert( message._id );
-                    if ( pIncoming != nullptr )
-                    {
-                        pIncoming->_buffer = std::move( message._buffer );
-                        pIncoming->_bMore  = message._bMore;
-                    }
-                    break;
-                }
-                case NetChannelType::ReliableUnordered:
-                {
-                    // 받는 대로 넘긴다. 앞의 신뢰 메시지를 기다리지 않는다. 슬롯에는 "넘겼다" 표시만 남겨 순서 커서가 지나가게 하고, 늦게 온 중복을 거른다.
-                    const int32 ahead                           = NetSequence::computeDifference( message._id, _nextReliableReceiveID );
-                    const bool  bReliableOutOfWindowOrDuplicate = ahead < 0 || ahead >= kReliableWindow || _incomingReliable.exists( message._id );
-                    if ( bReliableOutOfWindowOrDuplicate )
-                        break;
-                    IncomingReliable* pIncoming = _incomingReliable.insert( message._id );
-                    if ( pIncoming == nullptr )
-                        break;
-                    pIncoming->_bDelivered = SW_TRUE;
-                    _arrIncoming[static_cast<int32>( NetChannelType::ReliableUnordered )].push_back( std::move( message._buffer ) );
-                    break;
-                }
-                case NetChannelType::UnreliableSequenced:
-                {
-                    // 번호는 연결 하나에서 증가하기만 하므로 종류마다 마지막 번호와 비교한다. 늦게 온 같은 종류의 옛 메시지만 버린다.
-                    const uint8      kind    = message._buffer.empty() ? static_cast<uint8>( 0 ) : message._buffer[0];
-                    SequencedStream* pStream = nullptr;
-                    for ( SequencedStream& stream : _listSequencedReceive )
-                    {
-                        if ( stream._kind == kind )
-                            pStream = &stream;
-                    }
-                    if ( pStream != nullptr && NetSequence::isGreater( message._id, pStream->_lastID ) == false )
-                        break; // 늦게 온 옛 메시지.
-                    if ( pStream == nullptr )
-                    {
-                        _listSequencedReceive.push_back( SequencedStream{ message._id, kind } );
-                        pStream = &_listSequencedReceive.back();
-                    }
-                    pStream->_lastID = message._id;
-                    _arrIncoming[static_cast<int32>( NetChannelType::UnreliableSequenced )].push_back( std::move( message._buffer ) );
-                    break;
-                }
-                case NetChannelType::Unreliable:
-                {
-                    _arrIncoming[static_cast<int32>( NetChannelType::Unreliable )].push_back( std::move( message._buffer ) );
-                    break;
-                }
-                case NetChannelType::Count:
-                {
-                    break;
-                }
-            }
+            dispatchParsedMessage( message );
         }
         for ( IncomingReliable* pIncoming = _incomingReliable.find( _nextReliableReceiveID ); pIncoming != nullptr;
               pIncoming                   = _incomingReliable.find( _nextReliableReceiveID ) )

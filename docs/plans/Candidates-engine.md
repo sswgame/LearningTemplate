@@ -36,8 +36,8 @@
 ### GameFrameworkStructureCleanup
 제목: GameFramework 구조 정리의 남은 것
 옛번호: C-4
-왜 필요한가: 2026-10-04 리뷰(사용자 승인)에서 나온 칸 손셈 · 버퍼 정리입니다.
-남은 것: Overworld `TileMap` 의 칸 손셈(`indexOf` · `isInBounds` — 크기는 파일 스키마 `TileMapXMLData` 가 듭니다), `Habitat`(CreatureLife), NetConnection 메시지 버퍼 재사용. 게임 손셈(HarvestValley `FarmCropComponent` · `FarmSoilComponent`, NileCity `NileDirectorComponent` 의 `index % getWidth()`)은 키트가 `getTopology()` 를 열면 같이 합니다. 로드맵상 파일이 겹쳐 미룬 정리입니다.
+왜 필요한가: 2026-10-04 리뷰(사용자 승인)에서 나온 칸 손셈 정리입니다.
+남은 것: Overworld `TileMap` 의 칸 손셈(`indexOf` · `isInBounds` — 크기는 파일 스키마 `TileMapXMLData` 가 듭니다), `Habitat`(CreatureLife). 게임 손셈(HarvestValley `FarmCropComponent` · `FarmSoilComponent`, NileCity `NileDirectorComponent` 의 `index % getWidth()`)은 키트가 `getTopology()` 를 열면 같이 합니다. 로드맵상 파일이 겹쳐 미룬 정리입니다.
 
 ### PerfConditionalCandidates
 제목: 측정해서 이기면 하는 성능 후보 묶음
@@ -112,31 +112,12 @@
 왜 필요한가: `containers` 가 남긴 후보 58 파일 80 건(`find_if` · `remove_if` · 해시 구조체)이 있습니다.
 남은 것: 디렉터리별로 합니다. 손 멤버 루프를 못 쓰게 하는 형식 또는 린트를 둡니다(형식으로 못 막는 이유를 적습니다).
 
-### NameLookupAndWatchMask
-제목: 이름 조회가 흩어진 곳과 감시 마스크
-옛번호: C-69
-왜 필요한가: `SceneDevCommands` · Sequencer 의 이름 조회가 곳곳에 따로 있습니다. `IFileWatcher` 를 쓰는 곳은 조용히 실패합니다(리눅스 감시 마스크에 `IN_ATTRIB` 없음).
-남은 것: 이름 조회 한 곳으로 모으기, 감시 마스크 보강. `HUDViewModel` 의 슈터 전용 칸은 `D4-15` 가 맡습니다.
-
 ### DiskPathVsResourceId
 제목: 디스크 경로와 리소스 id 가 같은 `string_view` 입구를 쓴다
 옛번호: C-70
 왜 필요한가: 2026-10-19 CI 실패의 근본 원인입니다. 쿠커 · 테스트가 디스크로 훑은 절대 경로를 리소스 id 입구에 넣어 Shipping(낱개 파일 불허)이 거절했습니다. `loadFromDiskFile` 계열로 고쳤으나 입구가 같아 같은 모양이 또 날 수 있습니다.
 남은 것: 경계를 형식으로 표현할 방법을 찾습니다. 경계는 "런타임 읽기만 배포에서 막는다"입니다.
 함정: `DiskFilePath` 형식으로 막는 안은 하지 않았습니다 — Shipping App 이 쿠킹 호스트라 디스크 입구를 컴파일에서 뺄 수는 없습니다.
-
-### NetSettingsRemaining
-제목: 넷 설정의 남은 것
-옛번호: C-71
-왜 필요한가: `gv_netLoopbackOnly` 도 테스트 전역 변수에서만 읽는 같은 모양입니다. Shipping 클라이언트에는 `gv_netConnectAddress` 가 없습니다.
-남은 것: 위 둘을 정리합니다. `_gamePortShardCount` 는 [ServerDebug](ServerDebug.md)(옛 `D7-3` ⑤)가 맡습니다.
-
-### InternalErasureRemaining
-제목: `Internal` 소거의 남은 것
-옛번호: C-72
-왜 필요한가: 병합 때 작업자끼리 겹친 익명 함수 이름이 한 건 났습니다(`makeRandomSeed`).
-남은 것: `-DSW_ENABLE_UNITY_BUILD` 로 익명 함수 이름 충돌을 한 번 봅니다.
-함정: `DuplicateAnonymousFunction` 은 `Source/` 만 보므로 `Test/` 는 직접 확인합니다.
 
 ## 기능
 

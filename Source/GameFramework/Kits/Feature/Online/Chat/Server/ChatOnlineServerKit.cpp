@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "GameFramework/Base/Online/Identity/AccountBlockList.h"
+#include "GameFramework/Base/Online/Identity/GroupChannelMembership.h"
 #include "GameFramework/Base/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Base/Online/Server/OnlineServerKit.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
@@ -8,11 +9,14 @@
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatService.h"
 
 // 채팅 키트의 서버 조립 — 채팅 서비스와 바인딩을 올린다. 표시 이름과 접속 여부는 계정 키트(필수), 다른 서버 귓속말은 접속 상태, 차단은 친구 키트의 차단 목록을 받는다.
+// 길드와 파티 채널의 멤버 창(`IGroupChannelMembership`)을 문맥에 내놓는다. 친구 키트(길드)와 매칭 키트(파티)가 자기 이벤트에서 부른다.
 // 옵션:
 //   bannedWords  금칙어 파일(프로젝트 루트 기준). 기본 `Config/Server/chat_banned_words.txt`. `none` 이면 거르지 않는다.
 
 namespace sw
 {
+    SW_LOG_CALLER( "ChatOnlineServerKit" );
+
     namespace
     {
         struct ChatOnlineServerKitInternal
@@ -36,6 +40,42 @@ namespace sw
             const IAccountBlockList* _pBlockList;
         };
 
+        /** @brief 그룹 채널 멤버 창입니다. 채팅 서비스가 시작하기 전과 내린 뒤에는 무시합니다. */
+        class ChatGroupChannels final : public IGroupChannelMembership
+        {
+        public:
+            ChatGroupChannels()
+                : _pService{ nullptr }
+            {
+            }
+
+            void setService( ChatService* pService ) { _pService = pService; }
+
+            void addGroupMember( GroupChannelKind kind, uint64 groupID, AccountID accountID, int64 nowMs ) override
+            {
+                if ( _pService == nullptr )
+                    return;
+                const string     channelID = makeChannelID( kind, groupID );
+                const ChatResult result    = _pService->addMember( accountID, channelID, nowMs );
+                if ( result != ChatResult::Ok )
+                    SW_LOG_WARNING( "Chat: account %# was not added to %# (%#)", accountID, channelID.c_str(), static_cast<int32>( result ) );
+            }
+
+            void removeGroupMember( GroupChannelKind kind, uint64 groupID, AccountID accountID ) override
+            {
+                if ( _pService != nullptr )
+                    _pService->removeMember( accountID, makeChannelID( kind, groupID ) );
+            }
+
+        private:
+            static string makeChannelID( GroupChannelKind kind, uint64 groupID )
+            {
+                return kind == GroupChannelKind::Guild ? ChatChannelID::makeGuild( groupID ) : ChatChannelID::makeParty( groupID );
+            }
+
+            ChatService* _pService;
+        };
+
         /**
          * @class ChatOnlineServerKit
          * @brief 채팅 키트의 서버 조립입니다.
@@ -46,6 +86,7 @@ namespace sw
             ChatOnlineServerKit()
                 : _service{}
                 , _server{}
+                , _groupChannels{}
                 , _policy{}
                 , _settings{}
                 , _bStarted{ false }
@@ -64,6 +105,7 @@ namespace sw
                     _settings._bannedWordsPath = bannedWords;
                 if ( registerHostService( context, entry, &_server, outError ) == false )
                     return false;
+                context._pGroupChannels = &_groupChannels; // 친구와 매칭 키트가 `start` 에서 읽는다. 부르는 것은 모든 키트가 시작한 뒤다
                 return true;
             }
 
@@ -89,6 +131,7 @@ namespace sw
                     return false;
                 }
                 _server.initialize( &_service );
+                _groupChannels.setService( &_service );
                 _bStarted = true;
                 return true;
             }
@@ -97,6 +140,7 @@ namespace sw
             {
                 if ( _bStarted == false )
                     return;
+                _groupChannels.setService( nullptr );
                 _server.shutdown();
                 _service.shutdown();
                 _bStarted = false;
@@ -105,6 +149,7 @@ namespace sw
         private:
             ChatService                 _service;
             ChatServer                  _server;
+            ChatGroupChannels           _groupChannels;
             unique_ptr<ChatBlockPolicy> _policy;
             ChatServiceConfig           _settings;
             bool                        _bStarted;

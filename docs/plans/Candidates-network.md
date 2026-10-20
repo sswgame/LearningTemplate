@@ -55,7 +55,8 @@
 왜 필요한가: `GF_NetSimulation` · `GF_NetDestruction` 의 파괴 복제는 가상 서버에서 확인했다. 실제 세션 위의 파괴 복제(`DestructionNetSessionComponent` · `DestructionNetSession`)와 해시 로그 비교(`Scripts/dev/CompareDestructionHashLogs.py`)는 들어갔지만 빌드 · 실행 확인 전이다.
 남은 것:
 - 사건 지연 측정: 파괴 사건은 "신뢰 · 순서 없음" 채널(N21b)이다. 250 ms · 손실 15 % 의 사건 지연 평균 · 최대 전/후를 `NetSimDestructionMatrixTest` 로그(`max event lag … mean …`)로 잰다(빌드 뒤). 남은 최대는 한 메시지가 거듭 잃는 몫이다. 덩어리 멈춤 확정(신뢰 자세)도 받는 쪽이 틱으로 끼우므로 옮길 수 있다 — 재고 나서.
-- 컴포넌트를 둘 씬: 쇼케이스 씬(`destructionshowcase.scene.xml`)은 키트 없는 Empty 의 것이고 여러 테스트 · 쿠커가 읽는다. 키트 컴포넌트를 넣을지 · 네트워크용 씬을 따로 둘지 정한다(씬은 에디터로 저장한다).
+- 컴포넌트를 둘 씬: 쇼케이스 씬(`destructionshowcase.scene.xml`)은 키트 없는 Empty 의 것이고 여러 테스트 · 쿠커가 읽는다. 정함(2026-10-21): 쇼케이스는 그대로 두고 네트워크용 씬을 따로 둔다 —
+  에디터에서 쇼케이스를 열고(`scene.open`) 빈 오브젝트 하나에 `DestructionNetSessionComponent` 를 달아(`component.add`) `destructionnet.scene.xml` 로 저장한다(`scene.saveAs`). 손으로 XML 을 쓰지 않는다. 빌드 · 실행이 필요해 남았다.
 - 두 로그 견주기: 서버 `Server -gv_firstScene=<씬> -gv_netListenPort=7777` ↔ 클라이언트 `App -gv_firstScene=<씬> -gv_netConnectAddress=127.0.0.1:7777`. 리눅스 서버 ↔ Windows 클라이언트는 CI 잡 몫이다(결정 기록 5-12).
 함정: 같은 입력의 해시가 구성을 넘어 같은 것은 `DestructionDamageTest.EventLogHashMatchesTheRecordedValueOnEveryBuild`(해시 다섯)가 지킨다. Windows Debug · Release · Shipping 같은 값을 확인했고, 리눅스 clang 에서 다르면 CI 잡이 진다.
 
@@ -67,97 +68,6 @@
 - 서버 빌드에서 렌더러 코드를 아예 빼기(결정 기록 `D7-2.1`, 지금은 컴파일만 되고 돌지 않는다). 렌더러 · RHI 를 빼고 링크 오류를 보며 고친 뒤 실행 파일 크기 · 링크 시간을 전후로 잰다. 렌더러 · RHI 를 Engine CMake 에서 타깃별로 가르는 일이라 Engine 소유 작업이다.
 - 리눅스 서버(`WSL-*-Server`) 빌드 · `readelf -d` 로 libX11 없음 확인 · `ServerTest` — Windows 만 확인했다. 로컬 WSL 빌드는 하지 않기로 해서(사용자 결정) CI 리눅스 잡 몫이다.
 함정: 서버용 크래시 보고 전송 동의(운영 설정)는 `OperationsAndDeployment` 쪽이다.
-
-### OnlineNetworkBaseRename
-제목: 클라이언트 접속 인자 이름 바꾸기
-옛번호: D7-5
-왜 필요한가: 클라이언트 접속 인자 `-gv_netConnectAddress` 의 이름을 바꾼다. `GameNetSession` 의 같은 함수로 바꾸면 된다.
-남은 것: [ServerDebug](ServerDebug.md) 의 `GameNetSession`(`Engine/Net`) 일과 한 작업자가 맡는다.
-
-### OnlineAccountProviders
-제목: 계정 외부 로그인 제공자와 클라이언트 어댑터
-옛번호: D7-5
-왜 필요한가: 계정 키트에 실제 외부 로그인 제공자가 없다. 구성과 원칙은 [결정 기록](../09_Decisions.md) 5-9, 들어간 기반 · 키트 · 서버 조립(`OnlineServerRuntime`, 키트마다 `<키트>OnlineServerKit.cpp`, 서버 설정 옆 `<이름>.online.json`)은 Online README 에 있다.
-남은 것:
-- 실제 외부 로그인 제공자 설정(구글 · 애플 · 카카오 · 네이버 · 스팀 — 앱 등록 · client id 는 쓰는 게임이 생기면).
-- 애플 client secret JWT · 탈퇴 때 토큰 철회(`Provider/Apple/`), 모바일 SDK 클라이언트.
-- OS 브라우저 열기(`IExternalBrowser` 구현 — 게임 몫).
-- 텔레메트리의 `IHTTPClient`(Engine, 막는 창구 · 기본 Null)를 이 HTTP 클라이언트로 연결하는 게임 어댑터(Engine 은 GameFramework 를 모른다).
-
-### OnlineChatModeration
-제목: 채팅 신고 · 채널 샤딩 · UI
-옛번호: D7-5
-왜 필요한가: 채팅 키트에 신고와 대규모 채널 대책이 없다.
-남은 것:
-- 신고(메시지 스냅숏 → GM 도구).
-- 채널 샤딩(world 채널 수천 명) — 부하 봇 수치로 정한다. 거르개 비용은 `ChatService.send` p99.
-- 클라이언트 UI 위젯.
-함정: 판단 근거는 부하 봇 첫 측정이다(`OperationsAndDeployment`).
-
-### OnlineServerDirectoryAdmin
-제목: 서버 디렉터리의 GM 연결과 UI
-옛번호: D7-5
-왜 필요한가: 서버 디렉터리의 점검 · 공지를 바꿀 길이 GM 도구에 없다.
-남은 것: GM 도구 패널에 점검 · 공지 바꾸기 연결, 서버 고르기 UI 위젯.
-
-### OnlineFriendsGuild
-제목: 길드 채널 · 길드 확장 · 친구 UI
-옛번호: D7-5
-왜 필요한가: 친구 · 길드 키트의 마감이 남았다.
-남은 것:
-- 길드 채널(`GuildService::setEventDelegate` → 채팅 키트).
-- 길드 레벨 · 공개 길드 가입 신청.
-- 친구 목록 UI 위젯.
-- 부하 봇의 친구 접속 상태 팬아웃 측정(친구 200 명 × 캐시 읽기).
-
-### OnlineLeaderboardExtras
-제목: 친구 순위표와 업적 표시
-옛번호: D7-5
-왜 필요한가: 순위표 · 업적 키트의 표시 쪽이 남았다.
-남은 것: 친구 순위표(친구 목록 × 점수 — 게임 조립), 업적 진행률 표시 · 숨김 업적 목록.
-
-### OnlineMatchmakingIntegration
-제목: 매칭의 게임 서버 연결과 백필
-옛번호: D7-5
-왜 필요한가: 매칭 키트가 게임 서버 · 접속 인증 · 파티 유지와 아직 이어지지 않았다.
-남은 것:
-- 실력 공급 `IMatchRatingSource` · 게임 서버의 `MatchServerAgent` 를 UDP 접속 인증기에 연결.
-- 백필(경기 중 빈자리).
-- 재접속 유예 중 파티 · 로비 유지(지금은 끊기면 바로 뺀다).
-- 파티 채팅 채널 연결(게임 조립 — 파티 알림 → Chat).
-함정: 다른 서버에서 깨진 파티 표는 낸 서버에 Cancelled 를 버스로 알리지만, 권한 매처에서는 모드를 몰라 모든 모드의 빼기로 뺀다. 팀 나누기 · 채우기는 그리디라 나눌 수 없는 조합은 그 닻을 건너뛴다 — 작은 n 전수 탐색은 부하 봇의 대기 시간 p99 를 보고 정한다. 정산은 페이지 일(600 명씩)로 나뉘고 결과가 있는 사람을 건너뛰는 멱등으로 이어 간다.
-
-### OnlineLiveOps
-제목: 푸시 · A/B 실험 · 이벤트 운영
-옛번호: D7-5
-왜 필요한가: 라이브 운영 키트에 실제 푸시 제공자와 실험 · 운영 화면이 없다.
-남은 것:
-- 실제 푸시 제공자 둘(`Push/Provider/<제품>/` — 공통 HTTPS 클라이언트 위 HTTP/2 · 토큰 인증). 외부 계정 · 비용이라 사용자 결정 전에는 하지 않는다.
-- A/B 실험(원격 설정 출시 비율 + 지표).
-- 이벤트 운영 화면(GF_Admin 패널).
-- 우편 · 이벤트에서 "오프라인이면 푸시" 연결(게임 조립).
-
-### OnlineEconomyReceipts
-제목: 영수증 제공자 · 환불 · 청약철회
-옛번호: D7-5
-왜 필요한가: 경제 키트의 결제 영수증 검증이 계약 + 가짜까지만 있다.
-남은 것:
-- 영수증 제공자 셋(`Receipt/Provider/<제품>/`): Apple App Store Server API 의 서명된 거래 JWS x5c 사슬 검증 + 거래 조회, Google Play Developer API `purchases.products` — 서비스 계정 JWT → OAuth 토큰, Steam `ISteamMicroTxn` InitTxn → FinalizeTxn. 외부 스토어 계정 · 비용이 들어 계약 + 가짜까지만 — 사용자 결정.
-- 환불 · 결제 취소 알림 받기(Apple 서버 알림 v2 · Google RTDN · Steam 환불 → GM 회수와 같은 `refund.revoke` 빚 이동).
-- 유상 재화 청약철회(7 일 · 미사용분) 규칙.
-
-### OnlineEconomyItems
-제목: 인스턴스 아이템 · 우편 · 원장 유지
-옛번호: D7-5
-왜 필요한가: 경제 · 우편함 · GM 키트의 아이템 상태와 유지 보수 일이 남았다.
-남은 것:
-- 인스턴스 아이템(내구도 · 강화): 원장은 개수만 가지므로 `item.<정의>#<id>` 개수 1 + 상태 레코드로 둔다. 거래 다리도 지금 가산 자산만 받고 인벤토리 인스턴스 상태 칸은 거절한다.
-- 잔액 · 새 우편 알림(서버 → 클라이언트 `sendPush`).
-- 원장 보존 검사 · 만료 쓸기를 예약 작업(`ServiceScheduler`)으로(지금 쓸기는 우편함 서비스 틱 주기).
-- 분개 · 감사 보존 기간 정리, `mail_sent` · 멱등 기록 · `econ_purchase` 정리.
-- 접속하지 않은 계정 이름 찾기(계정 키트 저장 부분을 기반 계약으로).
-- GM 전용 호스트 포트를 서버 설정에.
-- 발행 · 소각 총량 지표(보존 검사가 `economy_issued_total{asset}`).
 
 ### OnlineMultiServerLatency
 제목: 서버 여럿의 실제 망 지연 측정

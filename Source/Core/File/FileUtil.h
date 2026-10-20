@@ -174,7 +174,7 @@ namespace sw
          */
         static bool isReadOnlyFile( string_view fileName );
         /**
-         * @brief 쓰기 권한을 바꿉니다. false 면 모든 쓰기 권한을 떼고(Windows 는 읽기 전용 속성), true 면 소유자 쓰기를 더합니다. 디렉터리에도 됩니다.
+         * @brief 쓰기 권한을 바꿉니다. false 면 모든 쓰기 권한을 제거하고(Windows 는 읽기 전용 속성), true 면 소유자 쓰기를 더합니다. 디렉터리에도 됩니다.
          * @return 바꾸지 못했으면 경로와 이유를 알리고 false 입니다.
          */
         [[nodiscard]] static bool setWritable( string_view path, bool bWritable );
@@ -250,7 +250,7 @@ namespace sw
         /**
          * @brief 네이티브 파일 다이얼로그를 엽니다. **결과 델리게이트는 메인 스레드에서 불립니다.**
          * @details 다이얼로그 자체는 분리된(detached) 스레드가 띄웁니다. 네이티브 다이얼로그는 사용자가 닫을 때까지 돌아오지
-         *          않으므로 그 자리에서 기다리면 프레임이 멈추기 때문입니다. 그래서 **결과만** 큐에 담고, `pumpFileDialogResults`
+         *          않으므로 그 호출에서 기다리면 프레임이 멈추기 때문입니다. 그래서 **결과만** 큐에 담고, `pumpFileDialogResults`
          *          가 메인 스레드에서 꺼내 델리게이트를 부릅니다.
          *
          *          그 스레드에서 곧바로 델리게이트를 부르면 콜백이 씬 · 컴포넌트 · 에디터 상태처럼 메인 스레드가 매 프레임

@@ -1,8 +1,8 @@
 # 서버 디버깅 계획 — 에디터에서 서버 · 멀티플레이를 손쉽게 보는 길
 
-> 상태: 구현중 · 선행: 없음 · 영역: network · 옛번호: D7-3 · 진행: 3/15
+> 상태: 구현중 · 선행: 없음 · 영역: network · 옛번호: D7-3 · 진행: 4/15
 
-S3 · S6 · S7 의 프로세스 쪽(디버그 채널 · 씬 검사 명령 · 권위 고스트 · 틱별 해시 이력)은 들어갔고, 남은 것은 각 단위 절에 있습니다. 다음 단위는 에디터 쪽(Inspector · Sync 탭)입니다.
+S3(디버그 채널 · 씬 검사 명령 · Inspector 탭)는 끝났고, S6 · S7 의 프로세스 쪽(권위 고스트 · 틱별 해시 이력)은 들어갔습니다. 남은 것은 각 단위 절에 있습니다.
 방향 결정(여러 프로세스 먼저, 읽기 전용 디버그 채널, Multiplayer 창 하나)은 [결정 기록](../09_Decisions.md) 5-10 에 있습니다.
 S1 에서 남은 것은 아래 "남은 것 — S1" 절에 있습니다.
 
@@ -27,11 +27,11 @@ S1 에서 남은 것은 아래 "남은 것 — S1" 절에 있습니다.
 |---|---|---|
 | Session | Net Mode · 플레이어 수, 프로세스 목록(상태 · 종료 코드 · 마지막 로그), 서버 일시정지 · 한 틱 진행, 프로세스별 로그 필터 — 들어감 | S1 · S2 |
 | Conditions | 프리셋 · 클라이언트별 슬라이더 · 끊기 · 재접속 · 스파이크 — 들어감 | S4 |
-| Inspector | 선택한 프로세스의 하이어라키 · 컴포넌트 값 · 원격 개발 콘솔 — 채널과 명령은 들어감, 탭이 남음 | S3 |
+| Inspector | 전용 서버의 하이어라키 · 컴포넌트 값 · 원격 개발 콘솔(이름 자동완성), 주소로 붙기 — 들어감(`EditorRemoteInspector`, 시나리오 `netinspector.scenario.xml`) | S3 |
 | Profiler | 바이트 · 패킷 · 재전송 · RTT · 손실의 시간축 그래프, 받은 메시지 종류별 비중 — 들어감 | S5 |
-| Sync | 틱별 해시 비교 · 처음 어긋난 틱 · 되감기 — 이력 · 비교는 들어감, 탭이 남음 | S7 |
+| Sync | 틱별 해시 이력 두 벌(세션 서버 · 다른 서버 · 저장한 파일)과 처음 어긋난 틱 — 들어감(`EditorStateHashCompare`, 시나리오 `netsync.scenario.xml`). 되감기가 남음 | S7 |
 
-- 창 위쪽의 **대상 고르기**(서버 · 클라이언트 N)가 모든 탭에 같은 대상을 준다(들어감). 에디터가 띄운 세션이 없을 때의 "주소로 붙기"(실행 중인 서버에 붙음)는 Inspector 탭과 함께 더한다(채널 클라이언트 `DebugChannelClient` 가 있다).
+- 창 위쪽의 **대상 고르기**(서버 · 클라이언트 N)가 모든 탭에 같은 대상을 준다(들어감). 에디터가 띄운 세션이 없을 때는 Inspector 탭의 "주소로 붙기"로 실행 중인 서버에 붙는다(들어감).
 - S6(권위 겹쳐 보기)은 창이 아니라 **게임 뷰 툴바의 보기 단추**다 — 화면 위에 겹쳐야 하므로.
 - 탭은 `Source/Editor/Panels/Multiplayer/Multiplayer<이름>Tab.cpp` 하나에 `SW_EDITOR_MULTIPLAYER_TAB` 한 줄로 단다(들어감 — 사용법은 Editor README "멀티 프로세스 재생"). 확장 모듈도 같은 줄로 게임별 상태 보기(예: MMO 존 상태)를 더한다.
 
@@ -42,24 +42,13 @@ S1 에서 남은 것은 아래 "남은 것 — S1" 절에 있습니다.
 게임 포트 샤딩: 전용 서버는 이제 서버 설정의 게임 포트를 늘 열지만(결정 기록 5-10) 소켓 하나뿐이라 `ServerConfig::_gamePortShardCount` 2 이상은 오류로 열지 않습니다(샤드마다 NetHost · 로그인 토큰의 샤드 포트).
 App · `GameNetSession`(`Engine/Net` — 엔진 수명이라 게임 모듈 리로드를 넘어 연결이 남는다) · 엔진 몫이라 2026-10-17 네트워크 작업(서버 · Core 네트워크 · 온라인 파일 소유)에서 남겼습니다. 같은 일이 `UdpSocketLayerScaling`(후보 문서 [Candidates-network](Candidates-network.md))의 포트 샤딩입니다. 운영 단위 O1 ~ O7 은 `OperationsAndDeployment`(같은 후보 문서, 옛 H-3)에 있습니다.
 
-### S3 서버 검사기 — 남은 것
-
-디버그 채널(`DebugChannel` · `DebugChannelClient`, `Source/Engine/Observability`)과 읽기 전용 개발 명령(`scene.tree` · `object.dump` · `scene.poses` · `state.hash(es)`)은 들어갔습니다.
-서버는 `-gv_debugChannelPort=N -gv_debugChannelToken=T` 로 열고, 루프백이 아닌 주소 · 빈 토큰은 기동이 멈춥니다. 채널이 받는 줄은 개발 명령과 `pause` · `resume` · `step N` 뿐입니다(결정 기록 5-10).
-채널 `help` 는 받는 줄 전부를 답합니다 — 첫 줄 `server loop: pause | resume | step [N]` 뒤에 개발 콘솔의 목록(변수 문법 · 개발 명령 사용법)이 옵니다. Inspector 탭의 이름 자동완성은 이 답을 원천으로 씁니다.
-확인은 ServerTest `DebugChannelReadsObjectValuesAndRejectsAWrongToken` 입니다(서버에서 오브젝트를 옮기고 검사기가 그 값을 읽음, `help` 의 두 부분).
-
-- Inspector 탭: 세션이 띄운 서버에 포트 · 토큰을 주고(`EditorNetPlaySession`) 채널로 붙어 하이어라키(`scene.tree`) · 컴포넌트 값(`object.dump`)을 표로 보이고, 개발 콘솔 입력줄을 채널로 보낸다.
-  "주소로 붙기"(이미 떠 있는 서버)도 이 탭에서 더한다. 입력줄의 이름 자동완성은 연결 때 `help` 를 한 번 물어 채운다.
-
 ### S5 네트워크 프로파일러 — 남은 것
 
-Profiler 탭(시간축 그래프 · 받은 메시지 종류별 비중, `net.stats` 질의)은 들어갔습니다. 사용법은 Editor README "멀티 프로세스 재생" 에 있습니다.
+Profiler 탭(시간축 그래프 · 메시지 종류별 비중, `net.stats` 질의)은 들어갔습니다. 종류별 셈은 받은 쪽(`NetMessageRouter`)과 보낸 쪽(`NetHost::copySentKindTally` — 큐에 넣은 것)이 같은 표(`NetMessageKindTallyTable`)를 쓰고, 보고 줄은 `kinds=` · `sentKinds=` 둘을 싣습니다(탭의 "Sent").
 
 - 트레이스에 메시지 흐름을 남긴다: 보낼 때 · 받을 때 같은 메시지 id 로 흐름 이벤트(`s` · `f`)를 타임라인에 기록하면, 합친 트레이스(S1)에서 뷰어가 프로세스 사이 화살표를 그린다.
   합치기는 흐름 이벤트를 그대로 옮긴다 — 남은 것은 타임라인에 흐름 사건 칸을 두고 송수신 지점에서 찍는 일이다.
 - 스냅숏 크기 · 오브젝트별 복제 빈도: 공통 원천이 없다(복제 키트마다 따로 센다 — 예 `DestructionReplicationStats`). 키트가 셈을 `NetStatsReport` 에 싣는 창구를 정한 뒤 그래프를 더한다.
-- 보낸 쪽 메시지 종류별 셈: 지금 비중은 받은 쪽(`NetMessageRouter` 의 종류별 셈)이다. 보내는 길(`NetHost::sendMessage`)에 셈을 두면 한 프로세스만 보고도 올림 · 내림을 나눠 볼 수 있다.
 - 탭이 보이지 않을 때도 기록하기: 지금은 탭이 보일 때와 `netplay.profile` 동안만 묻는다. 세션 프레임 단계에서 늘 묻게 하면 창을 닫아도 남지만 자식 로그에 2 Hz 줄이 늘 쌓인다.
 - 부하 봇(`Tools/OnlineLoadBot`)을 붙여 숫자가 오르는 시나리오(지금 확인은 `net.traffic` 부하의 `netprofiler.scenario.xml`).
 
@@ -80,11 +69,11 @@ Profiler 탭(시간축 그래프 · 받은 메시지 종류별 비중, `net.stat
 `SceneStateHash` · `StateHashHistory`(`Source/Engine/Scene`)는 들어갔습니다. 서버는 `-gv_stateHashHistory=N` 이면 틱마다 씬 해시(이름 순으로 접은 이름 · 활성 · 월드 위치)를 남기고,
 개발 명령 `state.hashes <from> <count>` 가 읽어 줍니다. `StateHashHistory::findFirstDivergence` 가 두 이력에서 처음 어긋난 틱을 찾습니다.
 확인은 ServerTest `StateHashHistoryFindsTheFirstDivergentTick`(두 서버 중 하나의 오브젝트를 옮기면 처음 어긋난 틱이 옮긴 다음 틱으로 나옴)입니다.
+Sync 탭(2026-10-21)은 세션이 띄운 전용 서버(`-gv_stateHashHistory=3600` 을 늘 준다) · 주소로 붙은 다른 서버 · 저장한 이력 파일을 A · B 칸에 담아 견줍니다. `parseReport` 는 형식이 다른 줄을 건너뛰지 않고 거절합니다.
 
 - 클라이언트 쪽 기록: 기록은 `ServerApp` 에만 있다. 클라이언트(App) 가 서버 틱 번호에 맞춰 같은 해시를 남기는 길(`GameNetSession` 의 틱 번호)이 있어야 서버와 클라이언트를 비교한다.
 - 키트별 해시: 파괴 해시 비교 · 롤백 세션 상태 바이트를 같은 이력에 다른 이름으로 더한다(지금은 씬 트랜스폼뿐).
 - 어긋난 오브젝트 짚기: 지금은 틱만 나온다. 해시를 오브젝트별로 나눠 보관하거나, 어긋난 틱에서 `object.dump` 두 벌을 비교하는 길이 필요하다.
-- Sync 탭: 두 프로세스 이력을 모아 처음 어긋난 틱을 보이는 창.
 - 되감기: 의도 기록(`.swintent`)으로 그 틱까지 서버를 다시 돌려 한 틱씩 진행.
 
 ### S8 한 프로세스 가상 서버를 에디터에서 (장기)
@@ -113,7 +102,7 @@ Profiler 탭(시간축 그래프 · 받은 메시지 종류별 비중, `net.stat
 
 ## 순서
 
-S3 · S6 · S7 의 에디터 쪽(Inspector · Sync 탭) → S8(S2 중단점 친화 · S1 멀티 프로세스 재생 · S4 회선 조절 · S5 프로파일러 탭은 끝났다 — S5 의 남은 것은 그 절에). 나머지는 S1 의 세션 위에서 확인한다 — 에디터 시나리오 `engine/automation/editor/netplay.scenario.xml` 이 바닥이다. S3 · S5 는 디버그 HUD 의 섹션 레지스트리와 같은 원천을 쓴다.
+S6 · S7 의 남은 것(게임 뷰 겹치기 · 클라이언트 쪽 해시 기록) → S8(S2 중단점 친화 · S1 멀티 프로세스 재생 · S4 회선 조절 · S5 프로파일러 탭은 끝났다 — S5 의 남은 것은 그 절에). 나머지는 S1 의 세션 위에서 확인한다 — 에디터 시나리오 `engine/automation/editor/netplay.scenario.xml` 이 바닥이다. S3 · S5 는 디버그 HUD 의 섹션 레지스트리와 같은 원천을 쓴다.
 
 ## 지키는 것
 

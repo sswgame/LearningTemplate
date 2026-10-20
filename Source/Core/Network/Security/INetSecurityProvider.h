@@ -1,6 +1,6 @@
 /**
  * @file INetSecurityProvider.h
- * @brief 네트워크 암호의 창구 — AEAD · X25519 · HKDF-SHA256 · 느린 비밀번호 해시(Argon2id) · 난수 · 메모리 위 TLS 1.3 세션 · 개발용 인증서.
+ * @brief 네트워크 암호 API — AEAD · X25519 · HKDF-SHA256 · 느린 비밀번호 해시(Argon2id) · 난수 · 메모리 위 TLS 1.3 세션 · 개발용 인증서.
  *        Core 는 이 인터페이스만 알고 구현(OpenSSL)은 GameFramework 가 줍니다(`NetSecurity::getProvider()`, `GameFramework/Base/Online/Security`).
  * @details 암호를 직접 짜지 않는다. TLS 세션은 소켓을 모른다 — 엔드포인트가 받은 암호문을 넣고 평문을 꺼낸다(OpenSSL 메모리 BIO · SChannel 버퍼와 같은 모양).
  */
@@ -90,7 +90,7 @@ namespace sw
 {
     /**
      * @class INetSecurityProvider
-     * @brief 암호 원시 연산의 창구입니다. 모든 함수는 아무 스레드에서나 부른다(구현이 스레드 안전).
+     * @brief 암호 원시 연산의 API 입니다. 모든 함수는 아무 스레드에서나 부른다(구현이 스레드 안전).
      */
     class SW_API INetSecurityProvider
     {

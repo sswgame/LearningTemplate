@@ -12,14 +12,21 @@
 
 namespace sw
 {
-    class NetMessageRouter;
+    class NetMessageKindTallyTable;
 
-    /** @brief 메시지 종류 하나의 받은 셈입니다(보고 줄의 `kinds=` 칸 한 항목). */
+    /** @brief 메시지 종류 하나의 셈입니다(보고 줄의 `kinds=`(받은 쪽) · `sentKinds=`(보낸 쪽) 칸 한 항목). */
     struct NetStatsKindEntry
     {
         uint64 _messageCount{ 0 };
         uint64 _byteCount{ 0 };
         uint8  _kind{ 0 };
+    };
+
+    /** @brief 메시지 종류별 셈의 방향입니다. */
+    enum class NetStatsKindDirection : uint8
+    {
+        Received = 0, ///< 라우터가 꺼낸 메시지(`kinds=`)
+        Sent          ///< 호스트가 보내기 큐에 넣은 메시지(`sentKinds=`)
     };
 } // namespace sw
 
@@ -27,7 +34,7 @@ namespace sw
 {
     /**
      * @struct NetStatsReport
-     * @brief `kLinePrefix connections=… sentPackets=… receivedPackets=… sentBps=… receivedBps=… rttMs=… lossPercent=… resent=… kinds=<종류>:<수>:<바이트>,…` 한 줄입니다.
+     * @brief `kLinePrefix connections=… sentPackets=… receivedPackets=… sentBps=… receivedBps=… rttMs=… lossPercent=… resent=… kinds=<종류>:<수>:<바이트>,… sentKinds=…` 한 줄입니다.
      * @details 패킷 수 · 재전송 · 종류별 셈은 누적값이고(읽는 쪽이 두 보고의 차로 비율을 낸다), 바이트는 연결이 이미 세는 최근 1 초 대역폭(초당 바이트)이다.
      *          RTT · 손실은 연결들 가운데 가장 큰 값이다.
      */
@@ -38,7 +45,8 @@ namespace sw
         /** @brief 줄에 싣는 메시지 종류의 상한입니다. 바이트가 큰 종류부터 싣습니다. */
         static constexpr int32 kMaxKindEntry = 8;
 
-        vector<NetStatsKindEntry> _listKindEntry{};            ///< 바이트가 큰 순서
+        vector<NetStatsKindEntry> _listKindEntry{};            ///< 받은 메시지 — 바이트가 큰 순서
+        vector<NetStatsKindEntry> _listSentKindEntry{};        ///< 보낸 메시지(큐에 넣은 것) — 바이트가 큰 순서
         uint64                    _sentPacketCount{ 0 };       ///< 연결들이 보낸 패킷의 합(누적)
         uint64                    _receivedPacketCount{ 0 };   ///< 연결들이 받은 패킷의 합(누적)
         uint64                    _resentMessageCount{ 0 };    ///< 연결들이 다시 보낸 신뢰 메시지의 합(누적)
@@ -48,8 +56,16 @@ namespace sw
         float32                   _lossPercent{ 0.0f };     ///< 연결들이 잰 손실 중 가장 큰 값(%)
         int32                     _connectionCount{ 0 };
 
-        /** @brief 라우터의 종류별 셈에서 바이트가 큰 종류 `kMaxKindEntry` 개로 `_listKindEntry` 를 채웁니다. 한 번도 받지 않은 종류는 뺍니다. */
-        void populateKinds( const NetMessageRouter& router );
+        /**
+         * @brief 받은 쪽(라우터) · 보낸 쪽(호스트) 종류별 셈에서 바이트가 큰 종류 `kMaxKindEntry` 개씩으로 `_listKindEntry` · `_listSentKindEntry` 를 채웁니다.
+         *        한 번도 세지 않은 종류는 뺍니다.
+         */
+        void populateKinds( const NetMessageKindTallyTable& receivedTally, const NetMessageKindTallyTable& sentTally );
+        /** @brief 한 방향의 종류별 셈입니다. */
+        const vector<NetStatsKindEntry>& getKindEntries( NetStatsKindDirection direction ) const
+        {
+            return direction == NetStatsKindDirection::Sent ? _listSentKindEntry : _listKindEntry;
+        }
         /** @brief 보고 한 줄을 만듭니다. */
         string makeLine() const;
         /** @brief @p line 에서 `kLinePrefix` 를 찾아 뒤의 값을 읽습니다. 머리가 없거나 아는 키의 값이 숫자가 아니면 false 이고 @p outReport 를 바꾸지 않습니다. 모르는 키는 건너뜁니다. */

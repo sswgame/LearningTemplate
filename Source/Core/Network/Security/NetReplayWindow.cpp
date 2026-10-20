@@ -40,7 +40,7 @@ namespace sw
     {
         if ( _bHasReceived == SW_FALSE || packetNumber > _highest )
         {
-            // 창이 앞으로 간다 — 새로 창에 들어오는 칸(옛 번호가 쓰던 칸)을 비운다.
+            // 창이 앞으로 간다 — 새로 창에 들어오는 비트(옛 번호가 쓰던 비트)를 비운다.
             const uint64 advance = _bHasReceived == SW_FALSE ? kWindowSize : packetNumber - _highest;
             if ( advance >= kWindowSize )
             {

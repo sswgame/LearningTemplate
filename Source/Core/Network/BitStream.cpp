@@ -19,15 +19,15 @@ namespace sw
             /** @brief 양자화 간격입니다. 0 이하의 간격으로 나누지 않게 아래를 막습니다. */
             static float32 computeQuantizeStep( float32 resolution ) { return MathUtil::max( 1.0e-6f, resolution ); }
 
-            /** @brief 양자화 칸의 마지막 번호입니다. 칸은 0 부터 이 번호까지입니다. */
+            /** @brief 양자화 단계의 마지막 번호입니다. 단계는 0 부터 이 번호까지입니다. */
             static uint32 computeQuantizeMaxIndex( float32 minValue, float32 maxValue, float32 step )
             {
                 return static_cast<uint32>( ( maxValue - minValue ) / step + 0.5f );
             }
 
             /**
-             * @brief @p value 를 가장 가까운 칸 번호로 바꿉니다. 범위 안의 칸으로 반올림되지 않으면(범위 밖, NaN) false 입니다.
-             * @details 반올림이므로 경계에서 반 칸 안쪽으로 넘친 값(정규화한 사원수의 1.0000001)은 끝 칸입니다. 비교가 NaN 에서 거짓이 되도록 범위 안을 묻습니다.
+             * @brief @p value 를 가장 가까운 단계 번호로 바꿉니다. 범위 안의 단계로 반올림되지 않으면(범위 밖, NaN) false 입니다.
+             * @details 반올림이므로 경계에서 반 단계 안쪽으로 넘친 값(정규화한 사원수의 1.0000001)은 마지막 단계입니다. 비교가 NaN 에서 거짓이 되도록 범위 안을 묻습니다.
              */
             [[nodiscard]] static bool tryComputeQuantizeIndex( float32 value, float32 minValue, float32 maxValue, float32 resolution, uint32& outIndex )
             {
@@ -86,7 +86,7 @@ namespace sw
             return;
         if ( bitCount < BitMath::kMaxBitsPerCall )
             value &= ( 1u << bitCount ) - 1u;
-        // 낮은 비트부터 — 바이트 안에서도 낮은 비트부터 채운다. 지금 끝 바이트부터 닿는 바이트(32 비트에 자리 7 이면 5 개)를 64 비트 워드 하나로
+        // 낮은 비트부터 — 바이트 안에서도 낮은 비트부터 채운다. 지금 끝 바이트부터 닿는 바이트(32 비트에 비트 위치 7 이면 5 개)를 64 비트 워드 하나로
         // 모아 바이트로 내보낸다(바이트마다 자르고 옮기던 반복이 없다). 와이어 바이트는 같다(`BitStreamWireTest`). 끝 바이트 위쪽과 새로 늘린 바이트는
         // 0 이라(값을 잘라 쓰고, `resize` 가 0 으로 늘린다) 워드에 끝 바이트만 합치면 된다.
         const int32 newBitCount = _bitCount + bitCount;
@@ -286,10 +286,10 @@ namespace sw
             return false;
         if ( index > maxIndex )
         {
-            _bOverflow = SW_TRUE; // 쓰는 쪽은 범위 밖의 칸을 쓰지 않으므로 깨진 데이터다
+            _bOverflow = SW_TRUE; // 쓰는 쪽은 범위 밖의 단계를 쓰지 않으므로 깨진 데이터다
             return false;
         }
-        // 끝 칸은 간격이 범위를 나누어떨어지지 않을 때 최댓값을 조금 넘는다. 범위 안의 칸이므로 최댓값으로 둔다.
+        // 마지막 단계는 간격이 범위를 나누어떨어지지 않을 때 최댓값을 조금 넘는다. 범위 안의 단계이므로 최댓값으로 둔다.
         outValue = MathUtil::min( maxValue, minValue + static_cast<float32>( index ) * step );
         return true;
     }

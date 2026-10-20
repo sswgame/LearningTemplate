@@ -14,6 +14,8 @@
  *          - 기록은 영속 테이블 `chat_history` 에 둔다. 키는 `<채널 id>/<보낸 시각 16진>.<서버 16진>.<순번 16진>` 이며 키 순서가 시간 순서이다.
  *            틱마다 쌓인 기록을 트랜잭션 하나로 쓰며 최선 노력이다. 실패하면 경고를 남기고 버린다.
  *            순번이 `_historyTrimEvery` 의 배수인 메시지의 채널은 보존 기간이 지난 기록을 64개까지 지운다.
+ *          - 신고(`reportMessage`)는 저장된 기록에서 그 메시지와 앞 메시지(`ChatLimit::kReportContextCount`)를 읽어 신고 레코드(`ServiceReportStore`)로 남긴다.
+ *            기록은 틱마다 쓰이므로 막 받은 메시지는 아직 없을 수 있다(NotFound). GM 키트가 목록을 읽고 처리한다. 계정마다 도배를 제한한다.
  *          - `shutdown` 은 맡긴 저장 작업을 회수하고(최대 5초) 접속 상태 찾기를 취소한다. 호스트(접속 상태, 저장소)보다 먼저 종료해도 늦게 종료해도 된다.
  *
  *          Nakama 의 채널 메시지(DB 기록과 노드 간 클러스터 버스)와 같은 구조이다.
@@ -26,6 +28,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 
+#include "GameFramework/Base/Online/Guard/TokenBucketMap.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatSpamGuard.h"
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatWordFilter.h"
@@ -69,11 +72,13 @@ namespace sw
         ChatFilterMode _filterMode{ ChatFilterMode::Mask };
         int64          _sanctionCacheMs{ 60 * constant::kMillisecondsPerSecond };
         int64          _historyRetentionMs{ 30 * constant::kSecondsPerDay * constant::kMillisecondsPerSecond };
-        int32          _historyFlushMax{ 60 };           ///< 트랜잭션 하나에 쓰는 기록 수이다. 상한 64 안이다
-        int32          _historyTrimEvery{ 64 };          ///< 순번이 이 수의 배수인 메시지의 채널을 정리한다
-        int32          _maxQueuedHistory{ 4096 };        ///< 저장소가 늦을 때 쌓아 둘 기록 수이다. 넘으면 오래된 것부터 버린다
-        int32          _maxPendingSendPerMember{ 4 };    ///< 제재 첫 읽기를 기다리는 말하기 요청의 상한이다
-        int64          _pendingSendRetryAfterMs{ 1000 }; ///< 대기 큐가 찼을 때 클라이언트에 알려 줄 기다릴 시간(ms)이다
+        int32          _historyFlushMax{ 60 };                                           ///< 트랜잭션 하나에 쓰는 기록 수이다. 상한 64 안이다
+        int32          _historyTrimEvery{ 64 };                                          ///< 순번이 이 수의 배수인 메시지의 채널을 정리한다
+        int32          _maxQueuedHistory{ 4096 };                                        ///< 저장소가 늦을 때 쌓아 둘 기록 수이다. 넘으면 오래된 것부터 버린다
+        int32          _maxPendingSendPerMember{ 4 };                                    ///< 제재 첫 읽기를 기다리는 말하기 요청의 상한이다
+        int64          _pendingSendRetryAfterMs{ 1000 };                                 ///< 대기 큐가 찼을 때 클라이언트에 알려 줄 기다릴 시간(ms)이다
+        int64          _reportRefillIntervalMs{ 60 * constant::kMillisecondsPerSecond }; ///< 계정마다 신고 하나가 다시 차는 간격이다
+        int32          _reportBurst{ 3 };                                                ///< 계정마다 한꺼번에 낼 수 있는 신고 수이다
     };
 } // namespace sw
 
@@ -151,6 +156,8 @@ namespace sw
         void sendMessage( AccountID accountID, string_view channelID, string_view text, int64 nowMs, uint64 requestTag );
         void sendWhisper( AccountID accountID, AccountID recipientID, string_view text, int64 nowMs, uint64 requestTag );
         void readHistory( AccountID accountID, string_view channelID, string_view cursor, int32 maxCount, uint64 requestTag );
+        /** @brief 메시지를 신고합니다. 읽을 수 있는 채널이어야 하고 계정마다 도배를 제한합니다. 신고 레코드는 `ServiceReportStore` 형식이며 GM 도구가 읽습니다. */
+        void reportMessage( AccountID accountID, const ChatReportRequest& request, int64 nowMs, uint64 requestTag );
 
         // 서버 시스템(길드, 파티, GM)이 부르는 함수이며 완료는 없다
         [[nodiscard]] ChatResult addMember( AccountID accountID, string_view channelID, int64 nowMs );
@@ -176,6 +183,7 @@ namespace sw
         void applySanction( AccountID accountID, int64 muteUntilMs, bool bReadOk, int64 nowMs );
         void applyHistoryRead( uint64 requestTag, ChatResult result, vector<ChatMessage>&& listMessage, string&& nextCursor );
         void applyHistoryWrite( bool bCommitted, int32 messageCount, int32 rejectedCount );
+        void applyReport( uint64 requestTag, ChatResult result );
 
     private:
         struct PendingSend
@@ -219,6 +227,8 @@ namespace sw
         void       addLocalMember( AccountID accountID, Member& member, const string& channelID );
         void       removeLocalMember( AccountID accountID, Member& member, const string& channelID );
         bool       isWhisperParticipant( AccountID accountID, string_view channelID ) const;
+        /** @brief 기록을 읽고 신고할 수 있는 채널이면 true 입니다. 귓속말은 당사자, 나머지는 이 서버의 멤버입니다. */
+        bool canReadChannel( AccountID accountID, string_view channelID, ChatChannelKind kind ) const;
 
         unordered_map<AccountID, Member>         _mapAccountToMember;
         unordered_map<string, vector<AccountID>> _mapChannelToMember;
@@ -229,10 +239,12 @@ namespace sw
         EventBuffer<ChatBusTopicChange>          _busTopicBuffer;
         ChatWordFilter                           _wordFilter;
         ChatSpamGuard                            _spamGuard;
+        TokenBucketMap                           _reportGuard;
         ChatServiceConfig                        _settings;
         ChatServiceDependencies                  _dependencies;
         string                                   _serverTopic;
         uint32                                   _sequence;
+        uint32                                   _reportSequence; ///< 신고 키의 고유 값(서버 id 와 섞는다)
         int32                                    _pendingStoreCount;
         uint8                                    _bHistoryWriting;
     };

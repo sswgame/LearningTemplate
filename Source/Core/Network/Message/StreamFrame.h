@@ -1,7 +1,7 @@
 /**
  * @file StreamFrame.h
  * @brief 스트림 위의 길이 접두 프레임 — `[u32 길이(LE, 뒤따르는 바이트)][u8 종류][u8 깃발][몸]`. 상한을 넘는 길이 · 모르는 종류 · 모르는 깃발은 거절합니다.
- * @details 길이 칸의 상한 검사는 **몸을 받기 전에** 한다 — 4 바이트만 와도 4 GB 를 잡지 않는다.
+ * @details 길이 필드의 상한 검사는 **몸을 받기 전에** 한다 — 4 바이트만 와도 4 GB 를 잡지 않는다.
  */
 #pragma once
 #include "Core/Common/Defines.h"
