@@ -95,7 +95,16 @@ def buildScene(count: int, shapeCount: int) -> str:
     spacing = 2.0
     origin = -0.5 * float(side - 1) * spacing
 
-    listPart = ['<Scene formatVersion="1" name="StressScene">\n\t<entities>\n', _kCameraEntity, _kLightEntity]
+    # 월드 설정은 씬 형식 판 2부터 필수다(`WorldSettings`) — 측정 씬은 스트리밍하지 않는다.
+    listPart = [
+        '<Scene formatVersion="2" name="StressScene">\n'
+        '\t<WorldSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">\n'
+        '\t\t<_cellGrid _cellSize="0" _loadingRadius="0" />\n'
+        "\t</WorldSettings>\n"
+        "\t<entities>\n",
+        _kCameraEntity,
+        _kLightEntity,
+    ]
     for index in range(count):
         col = index % side
         row = index // side

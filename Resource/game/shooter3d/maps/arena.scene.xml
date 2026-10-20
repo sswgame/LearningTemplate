@@ -1,4 +1,7 @@
-<Scene formatVersion="1" name="Shooter3D">
+<Scene formatVersion="2" name="Shooter3D">
+	<WorldSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</WorldSettings>
 	<entities>
 		<entity id="2" name="Floor">
 			<GameObject _schemaVersion="0" _name="Floor" _bActive="true">

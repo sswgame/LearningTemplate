@@ -1,4 +1,7 @@
-<Scene formatVersion="1" name="SpriteUI">
+<Scene formatVersion="2" name="SpriteUI">
+	<WorldSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</WorldSettings>
 	<entities>
 		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
