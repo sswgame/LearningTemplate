@@ -574,14 +574,16 @@ namespace sw
         pushCommand( std::move( command ) );
     }
 
-    void AudioEngine::setEmitterOcclusion( AudioEmitterID emitterID, float32 occlusion )
+    void AudioEngine::setEmitterPropagation( AudioEmitterID emitterID, const AudioPropagation& propagation )
     {
         if ( emitterID == 0 )
             return;
         Command command;
-        command._type      = CommandType::SetEmitterOcclusion;
-        command._emitterID = emitterID;
-        command._value     = MathUtil::saturate( occlusion );
+        command._type                     = CommandType::SetEmitterPropagation;
+        command._emitterID                = emitterID;
+        command._propagation              = propagation;
+        command._propagation._occlusion   = MathUtil::saturate( propagation._occlusion );
+        command._propagation._diffraction = MathUtil::saturate( propagation._diffraction );
         pushCommand( std::move( command ) );
     }
 
@@ -775,9 +777,14 @@ namespace sw
                 record._bRemoved        = false;
                 break;
             }
-            case CommandType::SetEmitterOcclusion:
+            case CommandType::SetEmitterPropagation:
             {
-                _mapEmitter[command._emitterID]._state._occlusionTarget = command._value;
+                // 가림 · 회절은 엔진이 부드럽게 따라가고(`updateEmitters`), 겉보기 위치는 길이 바뀐 블록부터 쓴다.
+                AudioEmitterState& state = _mapEmitter[command._emitterID]._state;
+                state._occlusionTarget   = command._propagation._occlusion;
+                state._diffractionTarget = command._propagation._diffraction;
+                state._apparentPosition  = command._propagation._apparentPosition;
+                state._bRedirected       = command._propagation._bRedirected;
                 break;
             }
             case CommandType::SetEmitterParameter:
@@ -992,6 +999,7 @@ namespace sw
         {
             AudioEmitterState& emitter = entry.second._state;
             emitter._occlusion += ( emitter._occlusionTarget - emitter._occlusion ) * step;
+            emitter._diffraction += ( emitter._diffractionTarget - emitter._diffraction ) * step;
         }
     }
 

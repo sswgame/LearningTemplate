@@ -33,13 +33,13 @@ namespace sw
         return _pScene->raycast( origin, direction, distance - kListenerSkin - kEmitterSkin, filter, hit );
     }
 
-    float32 PhysicsAudioOcclusionQuery::computeOcclusion( const float3& listener, const float3& emitter ) const
+    AudioPropagation PhysicsAudioOcclusionQuery::computePropagation( const float3& listener, const float3& emitter ) const
     {
         if ( _pScene == nullptr )
-            return 0.0f;
+            return AudioPropagation::makeOcclusion( 0.0f );
         float3 forward = emitter - listener;
         if ( forward.getLengthSquared() <= 1e-6f )
-            return 0.0f;
+            return AudioPropagation::makeOcclusion( 0.0f );
         forward.normalize();
         // 수평으로 옆 방향(위 × 앞). 똑바로 위아래면 X 축을 옆으로 쓴다.
         float3 side = float3( 0.0f, 1.0f, 0.0f ).cross( forward );
@@ -52,6 +52,6 @@ namespace sw
         blockedCount += isBlocked( listener, emitter ) ? 1u : 0u;
         blockedCount += isBlocked( listener + offset, emitter + offset ) ? 1u : 0u;
         blockedCount += isBlocked( listener - offset, emitter - offset ) ? 1u : 0u;
-        return static_cast<float32>( blockedCount ) / 3.0f;
+        return AudioPropagation::makeOcclusion( static_cast<float32>( blockedCount ) / 3.0f );
     }
 } // namespace sw

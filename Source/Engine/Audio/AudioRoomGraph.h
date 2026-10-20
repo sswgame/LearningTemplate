@@ -4,6 +4,8 @@
  * @details 방은 축 정렬 상자이고, 포털은 두 방(또는 방과 바깥)을 잇는 열림 정도(0 = 닫힘 문, 1 = 열린 문)를 가진 통로입니다. 리스너와 에미터가 같은 방이면 가림 0 입니다.
  *          다른 방이면 포털 사슬 가운데 투과율(포털마다 `열림 × (1 − 열린 포털 가림)` 의 곱)이 가장 큰 길을 골라 `가림 = 1 − max(투과율, 벽 누설)` 로 돌려줍니다.
  *          길이 없으면 벽 누설만 남습니다. 문을 여닫는 게임 코드는 `setPortalOpenness` 만 부르면 되고, 엔진의 가림 추종(`_smoothingSeconds`)이 부드럽게 바꿔 줍니다.
+ *          **회절**: 포털은 위치(문 가운데)를 가집니다. 고른 길이 벽 누설보다 많이 통하면 소리는 리스너 쪽 첫 문에서 오는 것으로 봅니다 — 겉보기 위치는 리스너에서
+ *          그 문 방향으로 길 전체 길이(리스너 → 문들 → 에미터)만큼 떨어진 점이고, 회절은 문마다 꺾인 각의 합 / 180° 입니다(Wwise 의 Diffraction).
  *
  *          게임 스레드에서만 부릅니다(`SceneAudio::setOcclusionQuery` 로 물립니다). 길 찾기는 작은 그래프를 O(방²) 로 훑고, 작업 버퍼는 멤버를 재사용해 할당하지 않습니다.
  */
@@ -33,8 +35,11 @@ namespace sw
 
         /** @brief 방(축 정렬 상자)을 더하고 번호를 돌려줍니다. 방이 겹치면 부피가 작은 쪽이 그 점의 방입니다(방 안의 작은 방). */
         uint32 addRoom( const float3& center, const float3& halfExtents );
-        /** @brief 두 방을 잇는 포털을 더하고 번호를 돌려줍니다. 한쪽을 `kOutside` 로 두면 바깥과 이어집니다. 방 번호가 틀리면 `invalid_index::kUint32` 입니다. */
-        uint32 addPortal( uint32 roomA, uint32 roomB, float32 openness = 1.0f );
+        /**
+         * @brief 두 방을 잇는 포털을 더하고 번호를 돌려줍니다. 한쪽을 `kOutside` 로 두면 바깥과 이어집니다. 방 번호가 틀리면 `invalid_index::kUint32` 입니다.
+         * @param position 문 가운데(세계 좌표)입니다. 소리가 이 문을 돌아 올 때 방향과 길 길이를 정합니다.
+         */
+        uint32 addPortal( uint32 roomA, uint32 roomB, const float3& position, float32 openness );
         /** @brief 포털 열림(0..1)을 바꿉니다. 없는 포털이면 false 입니다. */
         bool setPortalOpenness( uint32 portalIndex, float32 openness );
         /** @brief 포털 없이 벽을 통과하는 투과율(0..1, 기본 0)입니다. 가림은 이 값보다 작아지지 않습니다. */
@@ -49,8 +54,8 @@ namespace sw
         /** @brief 포털 수입니다. */
         uint32 getPortalCount() const { return static_cast<uint32>( _listPortal.size() ); }
 
-        /** @brief 리스너 → 에미터의 가림(0 = 같은 방이거나 열린 길, 1 = 길이 없음)입니다. */
-        float32 computeOcclusion( const float3& listener, const float3& emitter ) const override;
+        /** @brief 리스너 → 에미터의 가림(0 = 같은 방이거나 열린 길, 1 = 길이 없음)과, 문을 돌아 오는 길이면 겉보기 위치 · 회절입니다. */
+        AudioPropagation computePropagation( const float3& listener, const float3& emitter ) const override;
 
     private:
         struct Room
@@ -62,6 +67,7 @@ namespace sw
 
         struct Portal
         {
+            float3  _position{};
             uint32  _roomA{ 0 };
             uint32  _roomB{ 0 };
             float32 _openness{ 1.0f };
@@ -79,5 +85,6 @@ namespace sw
         float32                 _wallLeak;
         mutable vector<float32> _listTransmittance; ///< 길 찾기 작업 버퍼(노드마다 지금까지의 최대 투과율)
         mutable vector<uint8>   _listVisited;       ///< 길 찾기 작업 버퍼
+        mutable vector<uint32>  _listViaPortal;     ///< 길 찾기 작업 버퍼(노드마다 가장 좋은 길이 마지막으로 지난 포털, 없으면 `invalid_index::kUint32`)
     };
 } // namespace sw

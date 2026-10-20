@@ -32,8 +32,8 @@ namespace sw
 
         /** @brief 쏠 씬과 레이어 마스크입니다. */
         void setScene( const IPhysicsQueryScene2D* pScene, uint32 layerMask );
-        /** @brief 막힌 레이의 비율(0, 1/3, 2/3, 1)입니다. */
-        float32 computeOcclusion( const float3& listener, const float3& emitter ) const override;
+        /** @brief 가림은 막힌 레이의 비율(0, 1/3, 2/3, 1)입니다. 레이로는 길을 모르므로 회절과 겉보기 위치는 없습니다. */
+        AudioPropagation computePropagation( const float3& listener, const float3& emitter ) const override;
 
     private:
         /** @brief 레이 하나가 에미터 앞에서 막히는지입니다. */

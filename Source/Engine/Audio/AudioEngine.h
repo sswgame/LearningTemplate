@@ -178,8 +178,11 @@ namespace sw
         void setListener( uint32 listenerIndex, const AudioListenerState& state );
         /** @brief 에미터의 위치와 속도를 정합니다. 처음이면 에미터를 만듭니다. */
         void setEmitter( AudioEmitterID emitterID, const float3& position, const float3& velocity );
-        /** @brief 에미터의 가림 값(0..1)을 정합니다. 엔진이 `AudioOcclusionDesc::_smoothingSeconds` 로 따라갑니다. */
-        void setEmitterOcclusion( AudioEmitterID emitterID, float32 occlusion );
+        /**
+         * @brief 에미터까지 소리가 오는 길(가림 0..1, 회절 0..1, 문을 돌아 오는 겉보기 위치)을 정합니다. 가림 · 회절은 엔진이 `AudioOcclusionDesc::_smoothingSeconds` 로 따라갑니다.
+         * @details 가림만 있으면 `AudioPropagation::makeOcclusion( value )` 를 넘깁니다.
+         */
+        void setEmitterPropagation( AudioEmitterID emitterID, const AudioPropagation& propagation );
         /** @brief 에미터를 지웁니다. 그 에미터의 소리는 마지막 위치에 남아 끝까지 재생합니다. */
         void removeEmitter( AudioEmitterID emitterID );
 
@@ -241,7 +244,7 @@ namespace sw
             SetRandomSeed,
             SetListener,
             SetEmitter,
-            SetEmitterOcclusion,
+            SetEmitterPropagation,
             SetEmitterParameter,
             RemoveEmitter,
             SetParameter,
@@ -256,15 +259,16 @@ namespace sw
         /** @brief 게임 스레드가 쌓는 명령 하나입니다. 종류마다 쓰는 필드만 채웁니다. */
         struct Command
         {
-            shared_ptr<AudioMixer>              _pMixer{};     ///< SwapMixer
-            shared_ptr<const AudioEventLibrary> _pLibrary{};   ///< SetLibrary 가 쓴다. nullptr 이면 언로드한다.
-            shared_ptr<const AudioMusicDesc>    _pMusic{};     ///< StartMusic
-            hashed_string                       _name{};       ///< 버스, 이벤트, 파라미터, 스냅샷, 라이브러리의 이름이다.
-            hashed_string                       _path{};       ///< 클립 경로다.
-            AudioClipPlayParams                 _clipParams{}; ///< PlayClip
-            AudioListenerState                  _listener{};   ///< SetListener
-            float3                              _position{};   ///< SetEmitter
-            float3                              _velocity{};   ///< SetEmitter
+            shared_ptr<AudioMixer>              _pMixer{};      ///< SwapMixer
+            shared_ptr<const AudioEventLibrary> _pLibrary{};    ///< SetLibrary 가 쓴다. nullptr 이면 언로드한다.
+            shared_ptr<const AudioMusicDesc>    _pMusic{};      ///< StartMusic
+            hashed_string                       _name{};        ///< 버스, 이벤트, 파라미터, 스냅샷, 라이브러리의 이름이다.
+            hashed_string                       _path{};        ///< 클립 경로다.
+            AudioClipPlayParams                 _clipParams{};  ///< PlayClip
+            AudioListenerState                  _listener{};    ///< SetListener
+            float3                              _position{};    ///< SetEmitter
+            float3                              _velocity{};    ///< SetEmitter
+            AudioPropagation                    _propagation{}; ///< SetEmitterPropagation
             AudioPlayingID                      _playingID{ 0 };
             AudioEmitterID                      _emitterID{ 0 };
             uint64                              _seed{ 0 };     ///< SetRandomSeed

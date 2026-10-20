@@ -225,11 +225,14 @@ namespace sw
     AudioSpatialResult AudioSpatializer::compute( const AudioListenerState& listener, const AudioEmitterState& emitter, const AudioAttenuationDesc& attenuation,
                                                   const AudioOcclusionDesc& occlusion )
     {
+        // 소리가 문을 돌아 오면(회절) 방향과 거리는 겉보기 위치(리스너 쪽 문 방향, 길 전체 길이)로 정한다. 도플러는 에미터 자신의 움직임이다.
+        const bool         bRedirected = attenuation._bOcclusion && emitter._bRedirected;
+        const float3&      heardFrom   = bRedirected ? emitter._apparentPosition : emitter._position;
         AudioSpatialResult result;
-        result._distance = computeDistance( listener, emitter._position );
+        result._distance = computeDistance( listener, heardFrom );
         result._gain     = attenuation.computeGain( result._distance );
         // 리스너 0.5 m 안(최소 거리가 더 작으면 그 절반 안)에서는 팬을 가운데로 모은다. 머리 옆을 지나가는 소리가 좌우로 튀지 않게 하려는 것이다.
-        result._direction  = computeDirection( listener, emitter._position, MathUtil::min( attenuation._minDistance * 0.5f, 0.5f ) );
+        result._direction  = computeDirection( listener, heardFrom, MathUtil::min( attenuation._minDistance * 0.5f, 0.5f ) );
         result._pitchRatio = computeDopplerRatio( listener, emitter, attenuation._dopplerFactor );
         result._lowPassHz  = attenuation.computeLowPassHz( result._distance );
         if ( attenuation._bOcclusion && emitter._occlusion > 0.0f )
@@ -237,6 +240,12 @@ namespace sw
             const float32 amount = MathUtil::saturate( emitter._occlusion );
             result._gain *= AudioMath::dbToLinear( occlusion._volumeDb * amount );
             result._lowPassHz = MathUtil::min( result._lowPassHz, AudioMath::lerpFrequency( audio::kFilterOpenHz, occlusion._lowPassHz, amount ) );
+        }
+        if ( attenuation._bOcclusion && emitter._diffraction > 0.0f )
+        {
+            const float32 amount = MathUtil::saturate( emitter._diffraction );
+            result._gain *= AudioMath::dbToLinear( occlusion._diffractionVolumeDb * amount );
+            result._lowPassHz = MathUtil::min( result._lowPassHz, AudioMath::lerpFrequency( audio::kFilterOpenHz, occlusion._diffractionLowPassHz, amount ) );
         }
         return result;
     }

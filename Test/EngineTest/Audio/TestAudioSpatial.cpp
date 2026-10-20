@@ -179,7 +179,7 @@ SW_TEST_CASE( AudioSpatialTest, OcclusionDimsAndMuffles )
             engine.getClipStore().addClip( sw::hashed_string( "test/tone" ), test::AudioTestUtil::makeSineClip( arrFrequency[toneIndex], 0.5f, 48000 ) );
             engine.setListener( 0, AudioSpatialTestInternal::makeListener() );
             engine.setEmitter( 1, sw::float3( 0.0f, 0.0f, 1.0f ), sw::float3( 0.0f, 0.0f, 0.0f ) );
-            engine.setEmitterOcclusion( 1, caseIndex == 1 ? 1.0f : 0.0f );
+            engine.setEmitterPropagation( 1, sw::AudioPropagation::makeOcclusion( caseIndex == 1 ? 1.0f : 0.0f ) );
             (void)AudioSpatialTestInternal::playAtEmitter( engine, "test/tone" );
             const sw::vector<float32> listSample                  = test::AudioTestUtil::render( engine, 48000 );
             const float32             amplitude                   = test::AudioTestUtil::computeToneAmplitude( listSample, 0, 24000, 24000, arrFrequency[toneIndex] );
