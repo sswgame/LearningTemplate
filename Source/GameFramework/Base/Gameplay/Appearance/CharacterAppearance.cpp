@@ -3,6 +3,7 @@
 #include "GameFramework/Base/Gameplay/Appearance/CharacterAppearance.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -317,22 +318,12 @@ namespace sw
 {
     AppearanceSlotRequest* CharacterAppearanceSpec::findSlot( const hashed_string& slot )
     {
-        for ( AppearanceSlotRequest& request : _listSlot )
-        {
-            if ( request._slot == slot )
-                return &request;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&AppearanceSlotRequest::_slot>( _listSlot, slot );
     }
 
     const AppearanceSlotRequest* CharacterAppearanceSpec::findSlot( const hashed_string& slot ) const
     {
-        for ( const AppearanceSlotRequest& request : _listSlot )
-        {
-            if ( request._slot == slot )
-                return &request;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&AppearanceSlotRequest::_slot>( _listSlot, slot );
     }
 
     bool CharacterAppearanceCatalog::loadFromNode( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName )
@@ -442,12 +433,7 @@ namespace sw
 
     const CharacterAppearanceDef* CharacterAppearanceCatalog::findPreset( const hashed_string& id ) const
     {
-        for ( const CharacterAppearanceDef& def : _listPreset )
-        {
-            if ( def._id == id )
-                return &def;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&CharacterAppearanceDef::_id>( _listPreset, id );
     }
 
     bool CharacterAppearanceCatalog::collectChain( const hashed_string& id, vector<const CharacterAppearanceDef*>& outListChain ) const

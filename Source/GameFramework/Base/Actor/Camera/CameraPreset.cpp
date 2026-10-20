@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Actor/Camera/CameraPreset.h"
 
+#include "Core/Container/CompareUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
@@ -40,10 +41,6 @@ namespace sw
             static constexpr const utf8* kArrCollisionAttribute[] = { "radius", "minDistance", "recoverTime" };
             static constexpr const utf8* kArrNoiseAttribute[]     = { "position", "rotation", "frequency", "seed" };
             static constexpr const utf8* kArrSweepAttribute[]     = { "yaw", "period", "phase" };
-            struct BlendKeyTimeLess
-            {
-                bool operator()( const BlendCurveKey& lhs, const BlendCurveKey& rhs ) const { return lhs._time < rhs._time; }
-            };
 
             /** @brief 표에 없는 속성마다 경고합니다 — 이름을 바꾸고 데이터를 빠뜨리면 조용히 기본값이 되는 것을 막는다. */
             template <size_t Count>
@@ -95,7 +92,7 @@ namespace sw
                 if ( bSorted == false )
                 {
                     SW_LOG_WARNING( "%#: <%#> keys are not in time order - sorted", sourceName, node.getName() );
-                    std::stable_sort( inoutBlend._listCustomKey.begin(), inoutBlend._listCustomKey.end(), BlendKeyTimeLess{} );
+                    std::stable_sort( inoutBlend._listCustomKey.begin(), inoutBlend._listCustomKey.end(), Ascending<&BlendCurveKey::_time>{} );
                 }
             }
 

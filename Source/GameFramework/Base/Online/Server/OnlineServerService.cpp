@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Time/WallClock.h"
 
 #include "Engine/Config/ConfigManager.h"
@@ -28,12 +29,7 @@ namespace sw
             {
                 if ( name.empty() )
                     return listEntry.empty() ? nullptr : &listEntry.front();
-                for ( const TEntry& entry : listEntry )
-                {
-                    if ( entry._name == name )
-                        return &entry;
-                }
-                return nullptr;
+                return VectorUtil::findBy<&TEntry::_name>( listEntry, name );
             }
         };
 

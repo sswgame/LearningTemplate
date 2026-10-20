@@ -3,6 +3,8 @@
 #include "GameFramework/Base/Gameplay/Gimmick/GimmickStateBundle.h"
 
 #include "Core/Common/HashUtil.h"
+#include "Core/Container/CompareUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Network/BitStream.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
@@ -28,8 +30,7 @@ namespace sw
             _listEntry.push_back( std::move( entry ) );
         }
         // 등록 순서에 기대지 않는다 — 키 순이라 같은 씬이면 늘 같은 묶음이다.
-        std::sort( _listEntry.begin(), _listEntry.end(), []( const GimmickStateEntry& lhs, const GimmickStateEntry& rhs )
-        { return lhs._ownerKey < rhs._ownerKey; } );
+        std::sort( _listEntry.begin(), _listEntry.end(), Ascending<&GimmickStateEntry::_ownerKey>{} );
     }
 
     uint32 GimmickStateBundle::apply( GameObjectManager& manager, uint32* pOutSkippedCount ) const
@@ -47,8 +48,7 @@ namespace sw
             if ( pOwner != nullptr && pCircuit->isPendingDestroy() == false )
                 listLive.push_back( Live{ makeOwnerKey( pOwner->getName() ), pCircuit } );
         }
-        std::stable_sort( listLive.begin(), listLive.end(), []( const Live& lhs, const Live& rhs )
-        { return lhs._ownerKey < rhs._ownerKey; } );
+        std::stable_sort( listLive.begin(), listLive.end(), Ascending<&Live::_ownerKey>{} );
 
         uint32 applied = 0;
         uint32 skipped = 0;
@@ -95,11 +95,6 @@ namespace sw
 
     const GimmickStateEntry* GimmickStateBundle::findEntry( uint64 ownerKey ) const
     {
-        for ( const GimmickStateEntry& entry : _listEntry )
-        {
-            if ( entry._ownerKey == ownerKey )
-                return &entry;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&GimmickStateEntry::_ownerKey>( _listEntry, ownerKey );
     }
 } // namespace sw

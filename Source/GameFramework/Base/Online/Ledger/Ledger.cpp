@@ -3,6 +3,7 @@
 #include "GameFramework/Base/Online/Ledger/Ledger.h"
 
 #include "Core/Common/HashUtil.h"
+#include "Core/Container/CompareUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Network/BitStream.h"
 
@@ -32,13 +33,6 @@ namespace sw
                 int32        _firstDebitIndex{ -1 };  ///< 이 보유자가 보낸 첫 다리(모자람 보고)
                 int32        _firstCreditIndex{ -1 }; ///< 이 보유자가 받은 첫 다리(상한 보고)
             };
-
-            static bool isDeltaLess( const Delta& left, const Delta& right )
-            {
-                if ( left._holderKey != right._holderKey )
-                    return left._holderKey < right._holderKey;
-                return left._assetID < right._assetID;
-            }
 
             static LedgerResult finish( LedgerTransferOutcome& outOutcome, LedgerResult result )
             {
@@ -203,7 +197,7 @@ namespace sw
                             credit._firstCreditIndex = static_cast<int32>( postingIndex );
                     }
                 }
-                std::sort( outListDelta.begin(), outListDelta.end(), &LedgerInternal::isDeltaLess );
+                std::sort( outListDelta.begin(), outListDelta.end(), Ascending<&LedgerInternal::Delta::_holderKey, &LedgerInternal::Delta::_assetID>{} );
             }
 
             static int64 computeCap( const LedgerTransferRequest& request, const LedgerHolder& holder, string_view assetID )

@@ -3,6 +3,7 @@
 #include "GameFramework/Base/Online/HTTP/HTTPTypes.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 
 namespace sw
 {
@@ -109,12 +110,7 @@ namespace sw
 
     const HTTPHeader* HTTPServerRequest::findQuery( string_view name ) const
     {
-        for ( const HTTPHeader& pair : _listQuery )
-        {
-            if ( pair._name == name )
-                return &pair;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&HTTPHeader::_name>( _listQuery, name );
     }
 
     bool HTTPAddress::parse( string_view url, HTTPAddress& outAddress )

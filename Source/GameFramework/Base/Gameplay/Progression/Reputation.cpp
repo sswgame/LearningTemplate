@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Gameplay/Progression/Reputation.h"
 
+#include "Core/Container/CompareUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -48,9 +49,7 @@ namespace sw
                 if ( pTierName != nullptr )
                     faction._listTier.push_back( ReputationTier{ hashed_string( pTierName ), child.getAttributeInt( "min", faction._minValue ) } );
             }
-            std::stable_sort( faction._listTier.begin(), faction._listTier.end(),
-                              []( const ReputationTier& lhs, const ReputationTier& rhs )
-            { return lhs._minValue < rhs._minValue; } );
+            std::stable_sort( faction._listTier.begin(), faction._listTier.end(), Ascending<&ReputationTier::_minValue>{} );
             for ( XMLNode child = node.findChild( "Link" ); child; child = child.findNextSibling( "Link" ) )
             {
                 const utf8* pFaction = child.findAttribute( "faction" );

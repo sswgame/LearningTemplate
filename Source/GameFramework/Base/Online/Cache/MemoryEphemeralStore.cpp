@@ -2,6 +2,8 @@
 
 #include "GameFramework/Base/Online/Cache/MemoryEphemeralStore.h"
 
+#include "Core/Container/CompareUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include <algorithm>
@@ -64,13 +66,6 @@ namespace sw
                     return false;
                 outSum = left + right;
                 return true;
-            }
-
-            static bool isRankedBefore( const EphemeralScoredMember& left, const EphemeralScoredMember& right )
-            {
-                if ( left._score != right._score )
-                    return left._score > right._score;
-                return left._member > right._member;
             }
         };
     } // namespace
@@ -147,8 +142,7 @@ namespace sw
         if ( inboxIt == _mapInbox.end() )
             return;
         vector<string>& listChannel = inboxIt->second._listChannel;
-        const auto      channelIt   = std::find( listChannel.begin(), listChannel.end(), channel );
-        if ( channelIt == listChannel.end() )
+        if ( VectorUtil::contains( listChannel, channel ) == false )
             listChannel.push_back( string{ channel } );
     }
 
@@ -159,7 +153,8 @@ namespace sw
         if ( inboxIt == _mapInbox.end() )
             return;
         vector<string>& listChannel = inboxIt->second._listChannel;
-        listChannel.erase( std::remove( listChannel.begin(), listChannel.end(), channel ), listChannel.end() );
+        VectorUtil::removeIf( listChannel, [&channel]( const string& subscribed )
+        { return subscribed == channel; } );
     }
 
     int32 MemoryEphemeralDatabase::takeMessages( uint64 inboxID, vector<EphemeralMessage>& outListMessage )
@@ -253,7 +248,7 @@ namespace sw
             scored._member                = member;
             scored._score                 = score;
         }
-        std::sort( listMember.begin(), listMember.end(), MemoryEphemeralStoreInternal::isRankedBefore );
+        std::sort( listMember.begin(), listMember.end(), Descending<&EphemeralScoredMember::_score, &EphemeralScoredMember::_member>{} );
         return listMember;
     }
 
@@ -454,8 +449,7 @@ namespace sw
         for ( auto& [inboxID, inbox] : _mapInbox )
         {
             (void)inboxID;
-            const auto channelIt = std::find( inbox._listChannel.begin(), inbox._listChannel.end(), request._key );
-            if ( channelIt == inbox._listChannel.end() )
+            if ( VectorUtil::contains( inbox._listChannel, request._key ) == false )
                 continue;
             EphemeralMessage& message = inbox._listMessage.emplace_back();
             message._bytes            = request._value;

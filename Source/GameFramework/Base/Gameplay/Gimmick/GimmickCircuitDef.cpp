@@ -3,6 +3,7 @@
 #include "GameFramework/Base/Gameplay/Gimmick/GimmickCircuitDef.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -151,11 +152,6 @@ namespace sw
 
     const GimmickNodeDef* GimmickCircuitDef::findNode( const hashed_string& id ) const
     {
-        for ( const GimmickNodeDef& node : _listNode )
-        {
-            if ( node._id == id )
-                return &node;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&GimmickNodeDef::_id>( _listNode, id );
     }
 } // namespace sw

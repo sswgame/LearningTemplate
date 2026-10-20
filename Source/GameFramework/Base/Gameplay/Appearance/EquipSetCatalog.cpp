@@ -3,6 +3,7 @@
 #include "GameFramework/Base/Gameplay/Appearance/EquipSetCatalog.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -36,12 +37,7 @@ namespace sw
 
             static bool hasPieceSlot( const vector<EquipSetPieceDef>& listPiece, const hashed_string& slot )
             {
-                for ( const EquipSetPieceDef& piece : listPiece )
-                {
-                    if ( piece._slot == slot )
-                        return true;
-                }
-                return false;
+                return VectorUtil::containsBy<&EquipSetPieceDef::_slot>( listPiece, slot );
             }
         };
     } // namespace
@@ -134,12 +130,7 @@ namespace sw
 
     const EquipSetDef* EquipSetCatalog::findSet( const hashed_string& id ) const
     {
-        for ( const EquipSetDef& def : _listSet )
-        {
-            if ( def._id == id )
-                return &def;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&EquipSetDef::_id>( _listSet, id );
     }
 
     void EquipSetCatalog::computePieces( const EquipSetDef& def, const hashed_string& bodyType, vector<EquipSetPieceDef>& outListPiece ) const

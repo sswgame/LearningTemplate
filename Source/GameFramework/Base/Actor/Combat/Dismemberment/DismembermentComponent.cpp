@@ -2,6 +2,8 @@
 
 #include "GameFramework/Base/Actor/Combat/Dismemberment/DismembermentComponent.h"
 
+#include "Core/Common/HashUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Math/MathUtil.h"
 
@@ -40,17 +42,8 @@ namespace sw
                 int64 _z{ 0 };
 
                 bool operator==( const WeldKey& other ) const { return _x == other._x && _y == other._y && _z == other._z; }
-            };
-
-            struct WeldKeyHash
-            {
-                size_t operator()( const WeldKey& key ) const
-                {
-                    uint64 hash = static_cast<uint64>( key._x ) * 73856093ull;
-                    hash ^= static_cast<uint64>( key._y ) * 19349663ull;
-                    hash ^= static_cast<uint64>( key._z ) * 83492791ull;
-                    return static_cast<size_t>( hash );
-                }
+                /** @brief 키의 해시입니다. `unordered_map` 의 기본 해시 `DefaultHash` 가 부릅니다. */
+                [[nodiscard]] uint64 computeHash() const { return HashUtil::makeHash( _x, _y, _z ); }
             };
 
             static WeldKey makeKey( const float3& position )
@@ -89,7 +82,7 @@ namespace sw
             static void weld( const vector<RHIVertex>& listVertex, const vector<MeshSkinVertex>& listSkin, AppearanceGeometry& outGeometry )
             {
                 outGeometry.clear();
-                unordered_map<WeldKey, uint32, WeldKeyHash> mapVertex;
+                unordered_map<WeldKey, uint32> mapVertex;
                 outGeometry._listIndex.reserve( listVertex.size() );
                 for ( size_t vertexIndex = 0; vertexIndex < listVertex.size(); ++vertexIndex )
                 {
@@ -270,7 +263,7 @@ namespace sw
         if ( bInvalidBodyRegion )
             return;
         const hashed_string region = findRegionOfBone( pAsset->_listBody[static_cast<size_t>( bodyIndex )]._bone );
-        if ( region.empty() || std::find( _listSeverableRegion.begin(), _listSeverableRegion.end(), region ) == _listSeverableRegion.end() )
+        if ( region.empty() || VectorUtil::contains( _listSeverableRegion, region ) == false )
             return;
         (void)severRegion( region, hit._direction * hit._impulse );
     }
@@ -284,7 +277,7 @@ namespace sw
         const bool             bCannotSever = pManager == nullptr || pUnit == nullptr || pUnit->getMesh() == nullptr || pUnit->getMesh()->hasSkin() == false || regionIndex < 0;
         if ( bCannotSever )
             return false;
-        if ( std::find( _listSeveredRegion.begin(), _listSeveredRegion.end(), region ) != _listSeveredRegion.end() )
+        if ( VectorUtil::contains( _listSeveredRegion, region ) )
             return false;
 
         // 1) 위상: 위치로 이은 형상과 정점마다 영역을 구한다.

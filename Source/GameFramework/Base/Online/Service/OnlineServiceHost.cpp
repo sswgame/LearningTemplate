@@ -3,6 +3,7 @@
 #include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
 
 #include "Core/Container/LittleEndianUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Log/LogContext.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 
@@ -444,12 +445,7 @@ namespace sw
     IOnlineHostService* OnlineServiceHost::findService( uint16 method ) const
     {
         const uint16 range = OnlineMethodRange::getRangeBase( method );
-        for ( IOnlineHostService* pService : _listService )
-        {
-            if ( pService->getMethodRange() == range )
-                return pService;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&IOnlineHostService::getMethodRange>( _listService, range );
     }
 
     bool OnlineServiceHost::sendPushToConnection( StreamConnectionHandle connection, uint16 kind, const BitWriter& body )

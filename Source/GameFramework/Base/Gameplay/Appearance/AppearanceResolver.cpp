@@ -3,6 +3,7 @@
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceResolver.h"
 
 #include "Core/Common/HashUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/formatString.h"
 #include "Core/Math/MathUtil.h"
 
@@ -521,12 +522,7 @@ namespace sw
 
     bool ResolvedAppearance::hasOwner( const hashed_string& owner ) const
     {
-        for ( const ResolvedPart& part : _listPart )
-        {
-            if ( part._owner == owner )
-                return true;
-        }
-        return false;
+        return VectorUtil::containsBy<&ResolvedPart::_owner>( _listPart, owner );
     }
 
     bool ResolvedAppearance::isRegionHidden( const hashed_string& region ) const
