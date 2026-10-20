@@ -20,6 +20,7 @@ from dev import ListWorktrees  # noqa: E402
 from dev import RemoveWorktree  # noqa: E402
 from dev import RunFullBuild  # noqa: E402
 from common import SharedLock, Worktree  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 
 
 class SharedLockTest(unittest.TestCase):
@@ -325,7 +326,7 @@ class ListCiJobsTest(unittest.TestCase):
         spec = importlib.util.spec_from_file_location("SessionGuard", hookPath)
         sessionGuard = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(sessionGuard)
-        self.assertEqual(sessionGuard.kCiFailingExitCode, ListCiJobs.kExitCiFailing)
+        self.assertEqual(sessionGuard.kCiFailingExitCode, ExitCode.CiFailing)
 
 
 class CiFailureReportTest(unittest.TestCase):

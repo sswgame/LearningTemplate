@@ -44,9 +44,6 @@ def addAppRunArguments(parser: argparse.ArgumentParser, *, bMultipleBackends: bo
 #: (`kRHIUnusableHereExitCode`, `Source/Engine/Graphics/RHI/RHIInitResult.h` 와 같다).
 kAppRhiUnusableExitCode = 77
 
-#: ctest 가 "건너뜀" 으로 읽는 종료 코드(`SKIP_RETURN_CODE`).
-kSkipExitCode = 77
-
 #: 프로파일 표의 한 줄 — `[Profile] <구간>  avg  p50  p99  min  max  per_frame`(`FrameProfiler::report`).
 _kProfileRowRe = re.compile(r"\[Profile\]\s+(\S+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\.(\d)\s*$")
 #: `[Profile] wall  N frames in M ms  = U us/frame`

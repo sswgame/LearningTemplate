@@ -31,7 +31,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from common.Paths import getProjectRoot  # noqa: E402
 from common.Process import runProcess  # noqa: E402
 from common.BuildTree import BuildTree  # noqa: E402
-from common.AppRun import addAppRunArguments, kBackendSwitch, kSkipExitCode, findUsableBackends, loadGameTable, runApp  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
+from common.AppRun import addAppRunArguments, kBackendSwitch, findUsableBackends, loadGameTable, runApp  # noqa: E402
 from common.ImageMetrics import (ImageMetrics, averageMetrics, compareMetrics, computeMetrics, deriveTolerance, downscale,  # noqa: E402
                                  readPng, readPpm, writePng)
 
@@ -184,7 +185,7 @@ def main(listArgument: list[str] | None = None) -> int:
         return 1
     if not any(status in ("pass", "recorded") for status in mapStatus.values()):
         print(f"[Golden] {gameName}: 견준 것이 없다", flush=True)
-        return kSkipExitCode
+        return ExitCode.Skipped
     return 0
 
 

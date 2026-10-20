@@ -68,6 +68,7 @@ from common.Constants import kNotOurDirNames  # noqa: E402
 from common.Host import getMergeHeadRevisions, runGit  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 from common.Search import collectRepositoryFiles, readTextFiles, resolveFileArguments  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 from common.RuleData import RuleDataError, kExemptionKey, kKindInteger, kKindReason, kRuleDataRelDir, readRuleFile  # noqa: E402
 from lint.SourceScan import FileFindings, LineScope, SourceFile, SourceScanResult, joinFindings, parseAddedLines, scanSourceGates  # noqa: E402
 
@@ -326,29 +327,29 @@ class LintGate:
         return args, (args.root or getProjectRoot()).resolve()
 
     def beginRun(self) -> int:
-        """훑기 전 — 예외 기록을 비우고 규칙 데이터 · 예외 표를 확인합니다. 검사가 서지 않으면 2, 아니면 0."""
+        """훑기 전 — 예외 기록을 비우고 규칙 데이터 · 예외 표를 확인합니다. 검사가 서지 않으면 `CheckInvalid`, 아니면 `Passed`."""
         cls = type(self)
         cls._setSeenExemption = set()
         cls._setUsedExemption = set()
         if self._ruleDataError:
             print(f"[{self.name}] {self._ruleDataError}", file=sys.stderr)
-            return 2
+            return ExitCode.CheckInvalid
         listNoReason = [key for key, reason in self.mapExemption.items() if not reason.strip()]
         if listNoReason:
             print(f"[{self.name}] 이유 없는 예외: {', '.join(listNoReason)} — 이유 없는 예외는 없다", file=sys.stderr)
-            return 2
-        return 0
+            return ExitCode.CheckInvalid
+        return ExitCode.Passed
 
     def main(self, argv: list[str] | None = None) -> int:
         args, repositoryRoot = self.parseArguments(argv)
         returnCode = self.beginRun()
-        if returnCode != 0:
+        if returnCode != ExitCode.Passed:
             return returnCode
         try:
             result = self.scan(repositoryRoot, args)
         except (GateError, RuleDataError) as exception:
             print(f"[{self.name}] {exception}", file=sys.stderr)
-            return 2
+            return ExitCode.CheckInvalid
         return self.endRun(repositoryRoot, args, result)
 
     def endRun(self, repositoryRoot: Path, args: argparse.Namespace, result: GateResult) -> int:
@@ -384,10 +385,10 @@ class LintGate:
             self.printListInternal(result.listViolation, self.maxViolationShown)
             if self.hint:
                 print(self.hint)
-            return 1
+            return ExitCode.Violation
 
         print(f"[{self.name}] OK ({result.summary})" if result.summary else f"[{self.name}] OK")
-        return 0
+        return ExitCode.Passed
 
     # --- 대상 파일 고르기 — `--files` 를 받는 게이트가 함께 쓴다 ---------------
 

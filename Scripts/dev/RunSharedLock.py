@@ -41,6 +41,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common.Paths import getProjectRoot  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 from common.SharedLock import (acquire, getLockDirectory, getSharedSlotCount, kDefaultWaitSeconds, kMapSharedSlotCount, printStatus,  # noqa: E402
                                releaseHeld, runHolding)
 from common.Worktree import findMainRoot, kOwnerPidEnvironment, resolveOwnerProcessId  # noqa: E402
@@ -60,7 +61,7 @@ def main(argv: list[str] | None = None) -> int:
                                                                      "독점은 공유 보유자가 모두 놓을 때까지 기다린다")
     for subParser in (acquireParser, runParser):
         subParser.add_argument("--purpose", default="", help="하려는 일(다른 쪽이 status 로 본다)")
-        subParser.add_argument("--wait", type=int, default=kDefaultWaitSeconds, help=f"기다릴 최대 초(기본 {kDefaultWaitSeconds}). 넘으면 실패(종료 코드 3)")
+        subParser.add_argument("--wait", type=int, default=kDefaultWaitSeconds, help=f"기다릴 최대 초(기본 {kDefaultWaitSeconds}). 넘으면 실패(종료 코드 {int(ExitCode.LimitReached)})")
     acquireParser.add_argument("--pid", type=int, default=None,
                                help=f"소유 프로세스 번호 — 세션처럼 오래 사는 프로세스(기본: 환경 변수 {kOwnerPidEnvironment}). 죽으면 버려진 잠금이 된다. 사람 셸이면 PowerShell 의 $PID")
     runParser.add_argument("--below-normal", dest="belowNormal", action="store_true", help="명령을 낮은 우선순위로 띄운다(도우미 빌드 — 작업 방식 2 절)")

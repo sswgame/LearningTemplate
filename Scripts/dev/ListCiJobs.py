@@ -38,6 +38,7 @@ from typing import Any, Callable
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
+from common.ExitCode import ExitCode  # noqa: E402
 from common.Host import runGit  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 
@@ -53,9 +54,6 @@ _kRunnerNote = (("has exceeded the maximum execution time", "잡 시간 한도 �
 #: `CiFailureReport.py` 가 진 테스트 주석에 붙이는 제목 — `ctest <이름> [<결과>]`.
 _kCtestTitle = re.compile(r"^ctest (?P<name>\S+) \[(?P<result>[^\]]+)\]$")
 _kStepIgnored = ("success", "skipped", None)
-_kExitRateLimited = 3
-#: `--summary` 가 CI 실패를 알리는 종료 코드. 세션 가드 훅이 이 값일 때만 알린다(0 은 정상, 1 · 2 · 3 은 도구 오류 · 한도).
-kExitCiFailing = 4
 #: `--summary` 가 보는 워크플로 파일과 실행 수. 끝난 실행의 잡 목록은 캐시되므로 두 번째부터는 가장 새 실행만 묻는다.
 kSummaryWorkflow = "ci.yml"
 kSummaryRunCount = 5
@@ -373,7 +371,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("run", nargs="?", help="실행 id — 그 실행의 잡을 보인다")
     parser.add_argument("--runs", action="store_true", help="최근 실행 목록")
     parser.add_argument("--summary", action="store_true",
-                        help=f"--branch 의 {kSummaryWorkflow} 가장 새로 끝난 실행 한 줄(실패한 잡과 연속 실패 수). 실패면 종료 코드 {kExitCiFailing}")
+                        help=f"--branch 의 {kSummaryWorkflow} 가장 새로 끝난 실행 한 줄(실패한 잡과 연속 실패 수). 실패면 종료 코드 {int(ExitCode.CiFailing)}")
     parser.add_argument("--branch", default="main", help="--runs 의 브랜치(기본 main)")
     parser.add_argument("--count", type=int, default=20, help="--runs 의 개수(기본 20)")
     parser.add_argument("--annotations", action="store_true", help="실행 id 와 함께: 표에 종료 코드를 더하고 실패한 잡마다 실패 주석")
@@ -401,7 +399,7 @@ def main(argv: list[str] | None = None) -> int:
                               for run in listRun]
             listStreak = collectFailureStreaks(listJobPayload)
             print(formatCiSummary(args.branch, listRun, listStreak))
-            exitCode = kExitCiFailing if listStreak else 0
+            exitCode = ExitCode.CiFailing if listStreak else ExitCode.Passed
         if args.runs:
             payload = client.fetch(f"{kApiRoot}/repos/{repository}/actions/runs?per_page={args.count}&branch={args.branch}")
             print("\n".join(formatRunLines(payload)) or "(실행 없음)")
@@ -430,7 +428,7 @@ def main(argv: list[str] | None = None) -> int:
         reset = f" — {formatClock(error.resetEpoch)} 에 다시 찹니다" if error.resetEpoch is not None else ""
         print(f"[ListCiJobs] GitHub API 시간당 한도({error.limit or '?'} 회)를 다 썼습니다{reset}. "
               "GITHUB_TOKEN 을 두면 시간당 5000 회입니다.", file=sys.stderr)
-        return _kExitRateLimited
+        return ExitCode.LimitReached
     except OSError as error:
         print(f"[ListCiJobs] GitHub API 를 읽지 못했습니다(네트워크 · 없는 id): {error}", file=sys.stderr)
         return 1

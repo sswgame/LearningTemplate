@@ -14,6 +14,7 @@ import sys
 import time
 from pathlib import Path
 
+from .ExitCode import ExitCode
 from .Process import isProcessAlive, runProcess
 
 #: main 체크아웃 기준 잠금 폴더.
@@ -128,7 +129,7 @@ def acquireShared(mainRoot: Path, args: argparse.Namespace) -> int:
             bShownWait = True
         if now >= deadline:
             print(f"[SharedLock] {args.wait} 초를 기다렸지만 {args.resource} 공유 칸이 비지 않았습니다. 사용자에게 알리세요.", file=sys.stderr)
-            return 3
+            return ExitCode.LimitReached
         time.sleep(kPollSeconds)
 
 
@@ -187,7 +188,7 @@ def getSharedSlotCount(resource: str) -> int:
 
 
 def acquire(mainRoot: Path, args: argparse.Namespace) -> int:
-    """`args.shared` 에 따라 공유 칸 또는 독점을 잡습니다. 0 이면 잡았고, 3 이면 시한을 넘겼습니다."""
+    """`args.shared` 에 따라 공유 칸 또는 독점을 잡습니다. `Passed` 면 잡았고, `LimitReached` 면 시한을 넘겼습니다."""
     if args.shared:
         return acquireShared(mainRoot, args)
     lockDirectory = getLockDirectory(mainRoot, args.resource)
@@ -200,7 +201,7 @@ def acquire(mainRoot: Path, args: argparse.Namespace) -> int:
             if not waitForSharedHolders(mainRoot, args, deadline):
                 release(lockDirectory, args.owner)
                 print(f"[SharedLock] {args.wait} 초를 기다렸지만 {args.resource} 공유 보유자가 놓지 않았습니다. 사용자에게 알리세요.", file=sys.stderr)
-                return 3
+                return ExitCode.LimitReached
             print(f"[SharedLock] {args.resource} 를 잡았습니다({args.owner}).")
             return 0
         if not bShownWait:
@@ -208,7 +209,7 @@ def acquire(mainRoot: Path, args: argparse.Namespace) -> int:
             bShownWait = True
         if now >= deadline:
             print(f"[SharedLock] {args.wait} 초를 기다렸지만 {args.resource} 가 비지 않았습니다. 사용자에게 알리세요.", file=sys.stderr)
-            return 3
+            return ExitCode.LimitReached
         time.sleep(kPollSeconds)
 
 

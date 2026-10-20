@@ -43,7 +43,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from common.Paths import getProjectRoot  # noqa: E402
 from common.Process import runProcess  # noqa: E402
 from common.BuildTree import BuildTree  # noqa: E402
-from common.AppRun import kBackendSwitch, kSkipExitCode, computeSlopePerMinute, loadGameTable, parseProfileTable, parseProfileWall, runApp  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
+from common.AppRun import kBackendSwitch, computeSlopePerMinute, loadGameTable, parseProfileTable, parseProfileWall, runApp  # noqa: E402
 from common.ProcessLimits import ProcessLimits  # noqa: E402
 
 kLoadFolder = "Test/Load"
@@ -629,7 +630,7 @@ def commandRun(catalog: LoadCatalog, listPair: list[tuple[str, str]], args: argp
     if args.record:
         saveBaselinesInternal(catalog)
     if all(result["verdict"] == "skip" for result in listResult):
-        return kSkipExitCode
+        return ExitCode.Skipped
     return 1 if any(result["verdict"] == "fail" for result in listResult) else 0
 
 
