@@ -1192,3 +1192,47 @@ namespace sw
         return false;
     }
 } // namespace sw
+
+namespace sw
+{
+    PropertyReadRollback::PropertyReadRollback()
+        : _bytes{}
+        , _pOwnerType{ nullptr }
+        , _pProperty{ nullptr }
+        , _bOwnedPointerList{ false }
+    {
+    }
+
+    bool PropertyReadRollback::keepValueBeforeRead( const TypeInfo& ownerType, const PropertyInfo& prop, ObjectAddress instance, const SerializeContext& context )
+    {
+        _pOwnerType        = &ownerType;
+        _pProperty         = &prop;
+        _bOwnedPointerList = prop._bIsContainer == SW_TRUE && SerializerUtil::isOwnedPointerElementType( prop._elementTypeName );
+        _bytes.clear();
+        // 소유 포인터 목록은 담지 않는다 — 되돌리면 컴포넌트를 새로 만든다. 읽다 말면 `restoreValueBeforeRead` 가 실패다.
+        if ( _bOwnedPointerList )
+            return true;
+        if ( SerializerUtil::writePropertyBinary( prop, instance, _bytes, context ) )
+            return true;
+        SW_LOG_ERROR( "%#::%# (%#): the value before the read cannot be kept, so a failed read could not be undone - the object is not read", ownerType._name.c_str(),
+                      prop._name.c_str(), prop._typeName.c_str() );
+        return false;
+    }
+
+    bool PropertyReadRollback::restoreValueBeforeRead( MutableObjectAddress instance, const SerializeContext& context ) const
+    {
+        SW_ASSERT( _pOwnerType != nullptr && _pProperty != nullptr ); // keepValueBeforeRead 를 먼저 부른다
+        if ( _bOwnedPointerList )
+        {
+            SW_LOG_ERROR( "%#::%# (%#): the owned pointer list could not be read and is half filled - the object is not read", _pOwnerType->_name.c_str(),
+                          _pProperty->_name.c_str(), _pProperty->_typeName.c_str() );
+            return false;
+        }
+        // 이 빌드가 방금 쓴 바이트라 되읽지 못하면 코덱의 결함이다 — 읽다 만 값을 받지 않고 멈춘다.
+        if ( SerializerUtil::applyPropertyBinary( *_pProperty, instance, _bytes.data(), _bytes.size(), context ) )
+            return true;
+        SW_LOG_ERROR( "%#::%# (%#): the value before the failed read could not be put back - the object is not read", _pOwnerType->_name.c_str(),
+                      _pProperty->_name.c_str(), _pProperty->_typeName.c_str() );
+        return false;
+    }
+} // namespace sw
