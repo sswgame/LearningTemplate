@@ -173,6 +173,18 @@ namespace sw
         /** @brief 필수 속성 @p pAttribute 를 "x y z" 세 실수로 읽습니다. 속성이 없거나 정확히 세 실수가 아니면 오류를 알리고 false 입니다. */
         [[nodiscard]] static bool readRequiredFloat3( const XMLNode& node, const utf8* pAttribute, string_view sourceName, float3& outValue );
 
+        /**
+         * @brief 선택 숫자 속성을 손으로 읽습니다(스키마 구조체가 없는 손 읽기용 — 카탈로그 원소는 `readFields`).
+         * @details 없으면 @p inoutValue 를 두고 true 다 — 기본값은 부르는 쪽 Def 의 초기값이고 여기서 정하지 않는다.
+         *          깨진 값이나 [@p minValue, @p maxValue] 밖 값은 원소 · 속성 이름과 함께 오류이고 false 이며 @p inoutValue 는 그대로다(자르지 않는다).
+         */
+        [[nodiscard]] static bool readOptionalNumber( const XMLNode& node, const utf8* pAttribute, string_view sourceName, int32 minValue, int32 maxValue, int32& inoutValue );
+        /** @brief `readOptionalNumber` 의 실수 버전입니다. */
+        [[nodiscard]] static bool readOptionalNumber( const XMLNode& node, const utf8* pAttribute, string_view sourceName, float32 minValue, float32 maxValue,
+                                                      float32& inoutValue );
+        /** @brief 선택 불리언 속성을 손으로 읽습니다. 없으면 @p inoutValue 를 두고 true, 깨졌으면 오류와 false 입니다. */
+        [[nodiscard]] static bool readOptionalBool( const XMLNode& node, const utf8* pAttribute, bool& inoutValue );
+
         /** @brief 루트 읽기가 읽은 항목 수를 성공 여부로 바꿉니다. 0 이면 실패입니다. */
         static constexpr bool isLoaded( uint32 loadedCount ) { return loadedCount > 0; }
         /** @brief 루트 읽기의 성공 여부를 그대로 반환합니다. */

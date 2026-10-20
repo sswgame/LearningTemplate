@@ -210,7 +210,7 @@ SW_TEST_CASE( ScheduleTest, CatalogWarnsAboutEveryBadName )
     const ScheduleNpcDef* pNpc = catalog.findNpc( "x" );
     SW_ASSERT_NOT_NULL( pNpc );
     SW_ASSERT_EQUAL( 1, static_cast<int32>( pNpc->_listRoutine.size() ) );
-    SW_EXPECT_EQUAL( 3, static_cast<int32>( pNpc->_listRoutine[0]._listBlock.size() ) ); // 쓸 수 있는 칸만 남는다
+    SW_EXPECT_EQUAL( 2, static_cast<int32>( pNpc->_listRoutine[0]._listBlock.size() ) ); // 쓸 수 있는 칸만 남는다(조건식이 틀린 칸도 빠진다)
 }
 
 SW_TEST_CASE( ScheduleTest, ResourceSampleScheduleLoadsWithoutWarnings )

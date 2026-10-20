@@ -91,6 +91,25 @@ namespace sw
                 return true;
             }
 
+            /** @brief `GameDataXML::readOptionalNumber` 의 몸통입니다. 범위 밖 값은 자르지 않고 오류입니다. */
+            template <typename T>
+            [[nodiscard]] static bool readOptionalInRange( const XMLNode& node, const utf8* pAttribute, string_view sourceName, T minValue, T maxValue, T& inoutValue )
+            {
+                std::optional<T> value;
+                if ( node.readOptionalAttribute( pAttribute, value ) == false )
+                    return false;
+                if ( value.has_value() == false )
+                    return true;
+                const bool bInRange = minValue <= *value && *value <= maxValue;
+                if ( bInRange == false )
+                {
+                    SW_LOG_ERROR( "%#: <%# %#=\"%#\"> is outside [%#, %#]", sourceName, node.getName(), pAttribute, *value, minValue, maxValue );
+                    return false;
+                }
+                inoutValue = *value;
+                return true;
+            }
+
             static bool isHandRead( string_view attribute, std::initializer_list<string_view> listHandRead )
             {
                 for ( const string_view handRead : listHandRead )
@@ -319,6 +338,26 @@ namespace sw
     bool GameDataXML::readRequiredFloat3( const XMLNode& node, const utf8* pAttribute, string_view sourceName, float3& outValue )
     {
         return GameDataXMLInternal::readFloatAttribute( node, pAttribute, sourceName, true, "x y z", outValue, &GameDataXML::parseFloat3 );
+    }
+
+    bool GameDataXML::readOptionalNumber( const XMLNode& node, const utf8* pAttribute, string_view sourceName, int32 minValue, int32 maxValue, int32& inoutValue )
+    {
+        return GameDataXMLInternal::readOptionalInRange( node, pAttribute, sourceName, minValue, maxValue, inoutValue );
+    }
+
+    bool GameDataXML::readOptionalNumber( const XMLNode& node, const utf8* pAttribute, string_view sourceName, float32 minValue, float32 maxValue, float32& inoutValue )
+    {
+        return GameDataXMLInternal::readOptionalInRange( node, pAttribute, sourceName, minValue, maxValue, inoutValue );
+    }
+
+    bool GameDataXML::readOptionalBool( const XMLNode& node, const utf8* pAttribute, bool& inoutValue )
+    {
+        std::optional<bool> value;
+        if ( node.readOptionalAttribute( pAttribute, value ) == false )
+            return false;
+        if ( value.has_value() )
+            inoutValue = *value;
+        return true;
     }
 
     bool GameDataXML::readFloatCurve( const XMLNode& parent, const utf8* pElement, float32 minValue, FloatCurve& outCurve, string_view sourceName )

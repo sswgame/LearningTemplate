@@ -74,7 +74,7 @@ namespace sw
         _listSignalValue[static_cast<size_t>( signalIndex )] = amount;
         const float32 added                                  = AIDirectorIntensityInternal::clampContribution( signal, MathUtil::max( 0.0f, amount ) * signal._scale );
         _stress                                              = MathUtil::clamp( _stress + added, 0.0f, _pDef->_max );
-        if ( signal._bCombat == SW_TRUE )
+        if ( signal._bCombat )
             noteCombat();
         return true;
     }
@@ -103,7 +103,7 @@ namespace sw
                 continue;
             const float32 perSecond = AIDirectorIntensityInternal::clampContribution( signal, _listSignalValue[index] * signal._scale );
             _stress += perSecond * deltaTime;
-            bCombatNow = bCombatNow || signal._bCombat == SW_TRUE;
+            bCombatNow = bCombatNow || signal._bCombat;
         }
         _calmSeconds = bCombatNow ? 0.0f : _calmSeconds + deltaTime;
         if ( _calmSeconds > _pDef->_decayDelay )

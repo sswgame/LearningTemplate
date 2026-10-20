@@ -167,7 +167,7 @@ SW_TEST_CASE( AIDirectorTest, ProfileRejectsUnknownNames )
         const utf8* _pMessage;
     };
     const BadCase arrBad[] = {
-        {                                                                "<AIDirector><Phase id=\"A\" speed=\"2\"/></AIDirector>",     "unknown attribute 'speed'"},
+        {                                                                "<AIDirector><Phase id=\"A\" speed=\"2\"/></AIDirector>",     "speed=...> is not a field"},
         {                                                            "<AIDirector><Phase id=\"A\"/><Wave id=\"x\"/></AIDirector>",        "unknown element <Wave>"},
         {                                                     "<AIDirector><Phase id=\"A\"><Exit to=\"B\"/></Phase></AIDirector>", "exits to an unknown phase 'B'"},
         {               "<AIDirector><Phase id=\"A\"/><Pool id=\"p\" trigger=\"often\"><Encounter id=\"e\"/></Pool></AIDirector>",       "unknown trigger 'often'"},

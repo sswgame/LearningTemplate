@@ -110,6 +110,8 @@ namespace sw
     /** @brief NPC 하나입니다. 루틴은 자기 것과 묶음 사슬의 것을 읽을 때 모아 둡니다. 같은 id 면 자기 것이 덮습니다. */
     struct ScheduleNpcDef
     {
+        static constexpr float32 kMinUnitsPerMinute = 0.01f; ///< `speed` 의 하한(0 이면 이동이 끝나지 않는다)
+
         hashed_string              _id{};
         hashed_string              _archetype{};
         hashed_string              _home{};
@@ -216,7 +218,8 @@ namespace sw
         uint32 loadRoot( const XMLNode& root, string_view sourceName );
         /** @brief 원소 하나를 읽습니다. 읽은 NPC 수(0 또는 1)를 반환합니다. */
         uint32 loadElement( const XMLNode& node, string_view sourceName );
-        void   readRoutine( const XMLNode& node, string_view sourceName, string_view ownerName, ScheduleRoutineDef& outRoutine ) const;
+        /** @brief 루틴 하나를 읽습니다. id 가 없거나 우선순위 · 조건이 깨졌으면 오류를 남기고 false 입니다(부르는 쪽이 넣지 않는다). */
+        [[nodiscard]] bool readRoutine( const XMLNode& node, string_view sourceName, string_view ownerName, ScheduleRoutineDef& outRoutine ) const;
         /**
          * @brief 칸을 읽어 @p inoutListBlock 에 더합니다. 쓸 수 없는 칸이면 경고하고 더하지 않습니다. @p bInRoutine 이면 `Meet` 를 받습니다.
          * @details 자정을 넘는 칸(`overnight="true" start="22:00" end="6:00"`)은 두 칸 `[22:00, 24:00)` 과 `[0:00, 6:00)` 으로 나눠 더합니다. 조건은 두 칸이 같고 각 칸이 그날에 대해 따로 판정합니다.

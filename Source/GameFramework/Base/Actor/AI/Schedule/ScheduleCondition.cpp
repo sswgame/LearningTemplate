@@ -215,7 +215,7 @@ namespace sw
         return mask;
     }
 
-    void ScheduleCondition::readFromNode( const XMLNode& node, const ScheduleConditionVocabulary& vocabulary, string_view sourceName, string_view ownerName )
+    bool ScheduleCondition::readFromNode( const XMLNode& node, const ScheduleConditionVocabulary& vocabulary, string_view sourceName, string_view ownerName )
     {
         using Internal = ScheduleConditionInternal;
         parseNameList( node.getAttributeText( "days" ), _listWeekday );
@@ -235,16 +235,36 @@ namespace sw
         if ( Internal::parseDate( node.getAttributeText( "to" ), vocabulary._listSeason, _toSeason, _toDay, sourceName, ownerName, "to" ) == false )
             _toDay = 0;
 
-        // 호감도(관계 단계) 범위 — 한쪽만 적어도 된다.
-        _minAffinity = node.getAttributeInt( "minAffinity", MathUtil::kMinInt32 );
-        _maxAffinity = node.getAttributeInt( "maxAffinity", MathUtil::kMaxInt32 );
+        // 호감도(관계 단계) 범위 — 한쪽만 적어도 된다. 적지 않은 쪽은 형식의 끝(초기값 kMinInt32 · kMaxInt32)이라 "제한 없음" 이다.
+        bool                   bValid = true;
+        std::optional<int32>   minAffinity;
+        std::optional<int32>   maxAffinity;
+        std::optional<float32> chance;
+        bValid = node.readOptionalAttribute( "minAffinity", minAffinity ) && bValid;
+        bValid = node.readOptionalAttribute( "maxAffinity", maxAffinity ) && bValid;
+        bValid = node.readOptionalAttribute( "chance", chance ) && bValid;
+        if ( minAffinity.has_value() )
+            _minAffinity = *minAffinity;
+        if ( maxAffinity.has_value() )
+            _maxAffinity = *maxAffinity;
         if ( _minAffinity > _maxAffinity )
-            SW_LOG_WARNING( "%#: '%#' has minAffinity %# above maxAffinity %# - it can never match", sourceName, ownerName, _minAffinity, _maxAffinity );
+        {
+            SW_LOG_ERROR( "%#: '%#' has minAffinity %# above maxAffinity %# - it can never match", sourceName, ownerName, _minAffinity, _maxAffinity );
+            bValid = false;
+        }
 
         _phaseMask = parsePhaseMask( node.getAttributeText( "phases" ), sourceName, ownerName );
         Internal::parseTagList( node.getAttributeText( "tags" ), _listRequiredTag );
         Internal::parseTagList( node.getAttributeText( "notTags" ), _listForbiddenTag );
-        _chance = MathUtil::clamp( node.getAttributeFloat( "chance", _chance ), 0.0f, 1.0f );
+        if ( chance.has_value() )
+        {
+            const bool bChanceInRange = 0.0f <= *chance && *chance <= 1.0f;
+            if ( bChanceInRange )
+                _chance = *chance;
+            else
+                SW_LOG_ERROR( "%#: '%#' has chance %# outside [0, 1]", sourceName, ownerName, *chance );
+            bValid = bChanceInRange && bValid;
+        }
 
         const string_view flags = node.getAttributeText( "flags" );
         _flags.assign( flags.data(), flags.size() );
@@ -253,8 +273,12 @@ namespace sw
             const GameFlags noFlags;
             bool            bIgnored = false;
             if ( GameFlags::parseCondition( _flags, noFlags, bIgnored ) == false )
-                SW_LOG_WARNING( "%#: '%#' has an invalid flags expression '%#'", sourceName, ownerName, _flags );
+            {
+                SW_LOG_ERROR( "%#: '%#' has an invalid flags expression '%#'", sourceName, ownerName, _flags );
+                bValid = false;
+            }
         }
+        return bValid;
     }
 
     bool ScheduleCondition::isEmpty() const
