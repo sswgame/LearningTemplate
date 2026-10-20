@@ -124,8 +124,8 @@ namespace sw
         REFLECT_BODY();
         PROPERTY( MaxCount = 8 )
         vector<ServiceMailAttachment> _listAttachment{}; ///< SendMail, BulkMail, CreateCampaign 에서 쓴다. 상한은 `ServiceMailConstant::kMaxAttachmentCount` 와 같다
-        PROPERTY( MaxCount = 16 )
-        vector<AccountID> _listAccountID{}; ///< BulkMail 에서 쓰며 16개 이하이다
+        PROPERTY( MaxCount = 12 )
+        vector<AccountID> _listAccountID{}; ///< BulkMail 에서 쓰며 12개 이하이다. 우편 하나가 쓰기 넷이라 감사와 멱등 기록까지 한 트랜잭션(64) 안에 든다
         PROPERTY( MaxCount = 256 )
         string _displayName{}; ///< LookupAccount 에서 계정 id 대신 쓴다. 이 프로세스에 접속해 있는 계정만 찾을 수 있다
         PROPERTY( MaxCount = 256 )
@@ -247,7 +247,7 @@ namespace sw
         using MessageTypes = OnlineMessageTypes<AdminRequest, AdminReply>;
 
         static const OnlineProtocolEntry kOnlineEntry; ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
-        static constexpr int32           kMaxBulkCount       = 16;
+        static constexpr int32           kMaxBulkCount       = 12;
         static constexpr int32           kMaxMemoSize        = 1024;
         static constexpr int32           kMaxLookupCount     = 10;
         static constexpr int32           kMaxListCount       = 100;

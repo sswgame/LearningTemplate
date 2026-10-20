@@ -219,13 +219,13 @@ SW_TEST_CASE( LeaderboardSeasonTest, InterruptedSettlementResumesWithoutDuplicat
     SW_ASSERT_TRUE( node._service.registerBoard( Internal::makeSeasonBoard() ) );
     node.submitThirtyPlayers();
 
-    database.armFault( ServiceStoreFault::RejectCommit, 1 ); // 첫 묶음(15 명)은 쓰고 둘째 묶음에서 실패
+    database.armFault( ServiceStoreFault::RejectCommit, 1 ); // 첫 묶음(12 명)은 쓰고 둘째 묶음에서 실패
     SettleRecorder recorder;
     node._service.settleSeason( "arena", 1, 2100, recorder.makeDelegate() );
     node.step();
     SW_ASSERT_EQUAL( recorder._listSucceeded.size(), size_t( 1 ) );
     SW_EXPECT_TRUE( recorder._listSucceeded.back() == SW_FALSE );
-    SW_EXPECT_EQUAL( Internal::countSeasonResults( database ), 15 );
+    SW_EXPECT_EQUAL( Internal::countSeasonResults( database ), 12 ); // 한 트랜잭션은 12 명이다(사람마다 쓰기 다섯)
 
     node._service.settleSeason( "arena", 1, 2200, recorder.makeDelegate() );
     node.step();

@@ -156,6 +156,9 @@ namespace sw
         pending.put( getSentTable(), sentKey, vector<uint8>( reinterpret_cast<const uint8*>( mailKey.data() ), reinterpret_cast<const uint8*>( mailKey.data() ) + mailKey.size() ), ServiceRecord::kAbsentVersion );
         if ( message._expiresMs > 0 )
             pending.put( getExpiryTable(), makeExpiryKey( message._expiresMs, mailKey ), vector<uint8>{}, ServiceRecord::kAbsentVersion );
+        pending.put( getNoticeTable(), makeExpiryKey( message._createdMs, mailKey ), // 키 모양(시각 16 진 + 우편 키)이 만료 색인과 같다
+                     vector<uint8>( reinterpret_cast<const uint8*>( message._titleKey.data() ), reinterpret_cast<const uint8*>( message._titleKey.data() ) + message._titleKey.size() ),
+                     ServiceRecord::kAbsentVersion );
 
         const size_t totalWriteCount = inoutTransaction.getWrites().size() + pending.getWrites().size();
         if ( totalWriteCount > static_cast<size_t>( ServiceTransaction::kMaxWriteCount ) )
@@ -163,6 +166,40 @@ namespace sw
         Ledger::appendWrites( pending, inoutTransaction );
         outMailKey = mailKey;
         return LedgerResult::Ok;
+    }
+
+    const hashed_string& ServiceMail::getNoticeTable()
+    {
+        static const hashed_string s_table{ "mail_notice" };
+        return s_table;
+    }
+
+    ServiceStoreResult ServiceMail::claimNotices( IServiceStoreConnection& connection, int32 maxCount, vector<ServiceMailNotice>& outListNotice )
+    {
+        outListNotice.clear();
+        const int32              batchCount = maxCount < ServiceTransaction::kMaxWriteCount ? maxCount : ServiceTransaction::kMaxWriteCount;
+        vector<ServiceRecord>    listRecord;
+        const ServiceStoreResult listed = connection.listRecords( getNoticeTable(), string_view{}, string_view{}, batchCount, false, listRecord );
+        if ( listed != ServiceStoreResult::Ok || listRecord.empty() )
+            return listed;
+        ServiceTransaction        transaction;
+        vector<ServiceMailNotice> listNotice;
+        for ( const ServiceRecord& record : listRecord )
+        {
+            const size_t separator = record._key.find( '/' );
+            if ( separator == string::npos || record._bytes.size() > static_cast<size_t>( ServiceMailConstant::kMaxTitleSize ) )
+                return ServiceStoreResult::Invalid;
+            ServiceMailNotice& notice = listNotice.emplace_back();
+            notice._mailKey           = record._key.substr( separator + 1 );
+            notice._titleKey.assign( reinterpret_cast<const utf8*>( record._bytes.data() ), record._bytes.size() );
+            if ( parseRecipient( notice._mailKey, notice._recipientAccountID ) == false )
+                return ServiceStoreResult::Invalid;
+            transaction.erase( getNoticeTable(), record._key, record._version );
+        }
+        const ServiceStoreResult committed = connection.commit( transaction );
+        if ( committed == ServiceStoreResult::Ok )
+            outListNotice = std::move( listNotice );
+        return committed;
     }
 
     ServiceMailExpiryAction ServiceMail::getDefaultExpiryAction( const LedgerHolder& fundingHolder )
