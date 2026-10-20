@@ -84,42 +84,21 @@ namespace sw
             count = shaderslot::kMaxFrameLight;
         }
         _count = count;
-        // 점광과 스폿 그림자 타일 원소는 (잘린) 라이트 뒤에 붙는다. 셰이더는 g_SwLightCount + 라이트의 params.w 로 찾는다. 그리드는 그 뒤에 붙는다(update).
+        // 점광과 스폿 그림자 타일 원소는 (잘린) 라이트 뒤에 붙는다. 셰이더는 g_SwLightCount + 라이트의 params.w 로 찾는다. 그리드는 따로 버퍼(t12)다.
         _listUploadScratch.assign( listLight.begin(), listLight.begin() + count );
         _listUploadScratch.insert( _listUploadScratch.end(), listShadowTileElement.begin(), listShadowTileElement.end() );
-        _populatedCount = static_cast<uint32>( _listUploadScratch.size() );
     }
 
-    void GPULightBuffer::update( IRHIDevice* pDevice, const vector<float4x4>& listGridViewProj )
+    void GPULightBuffer::update( IRHIDevice* pDevice, const vector<float4x4>& listGridViewProj, LightGridProducer producer )
     {
         _listGridBase.assign( listGridViewProj.size(), invalid_index::kUint32 );
+        _gpuGridViewCount = 0;
+        _gridProducer     = LightGridProducer::None;
         if ( pDevice == nullptr || _count == 0 )
         {
             // 버퍼는 그대로 둔다. 라이트가 잠깐 0 이 되는 프레임마다 만들고 지우면 그것이 비용이다.
             // 셰이더는 g_SwLightCount 가 0 이면 라이트를 돌지 않는다(앰비언트만).
             return;
-        }
-
-        // 뷰마다 그리드 하나 — 셰이더는 PassCB g_SwLightGridBase(지금 뷰의 첫 원소)로 찾는다.
-        _listUploadScratch.resize( _populatedCount );
-        if ( _listGrid.size() < listGridViewProj.size() )
-            _listGrid.resize( listGridViewProj.size() );
-        for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( listGridViewProj.size() ); ++viewIndex )
-        {
-            LightGrid& grid = _listGrid[viewIndex];
-            if ( grid.populate( listGridViewProj[viewIndex], _listUploadScratch.data(), _count ) == false )
-            {
-                if ( _bWarnedGrid == SW_FALSE )
-                {
-                    _bWarnedGrid = SW_TRUE;
-                    SW_LOG_ERROR( "View %# has no usable projection for the light grid (near/far plane) - it walks every light", viewIndex );
-                }
-                continue;
-            }
-            const uint32 first = static_cast<uint32>( _listUploadScratch.size() );
-            _listUploadScratch.resize( first + grid.getElementCount() );
-            Memory::copy( _listUploadScratch.data() + first, grid.getWords().data(), grid.getWords().size() * sizeof( uint32 ) );
-            _listGridBase[viewIndex] = first;
         }
 
         const GPULight*          pUpload    = _listUploadScratch.data();
@@ -129,15 +108,144 @@ namespace sw
         if ( _buffer.ensureCapacity( pDevice, stride, totalCount, kUsage, true, false, pUpload ) == false )
         {
             _count = 0;
-            _listGridBase.assign( listGridViewProj.size(), invalid_index::kUint32 );
             return;
         }
         _buffer.upload( pDevice, pUpload, totalCount * stride );
+
+        if ( listGridViewProj.empty() )
+            return;
+        switch ( producer )
+        {
+            case LightGridProducer::None:
+            {
+                break;
+            }
+            case LightGridProducer::CPU:
+            {
+                updateCPUGrid( pDevice, listGridViewProj );
+                break;
+            }
+            case LightGridProducer::GPU:
+            {
+                updateGPUGrid( pDevice, listGridViewProj );
+                break;
+            }
+        }
+    }
+
+    void GPULightBuffer::updateCPUGrid( IRHIDevice* pDevice, const vector<float4x4>& listGridViewProj )
+    {
+        // 뷰마다 그리드 하나 — 셰이더는 PassCB g_SwLightGridBase(지금 뷰의 첫 단어)로 찾는다.
+        _listGridWordScratch.clear();
+        if ( _listGrid.size() < listGridViewProj.size() )
+            _listGrid.resize( listGridViewProj.size() );
+        for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( listGridViewProj.size() ); ++viewIndex )
+        {
+            LightGrid& grid = _listGrid[viewIndex];
+            if ( grid.populate( listGridViewProj[viewIndex], _listUploadScratch.data(), _count ) == false )
+            {
+                reportGridFailure( "has no usable projection (near/far plane)", viewIndex );
+                continue;
+            }
+            _listGridBase[viewIndex] = static_cast<uint32>( _listGridWordScratch.size() );
+            _listGridWordScratch.insert( _listGridWordScratch.end(), grid.getWords().begin(), grid.getWords().end() );
+        }
+        if ( _listGridWordScratch.empty() )
+            return;
+
+        constexpr RHIBufferUsage kUsage    = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
+        const uint32             wordCount = static_cast<uint32>( _listGridWordScratch.size() );
+        if ( _cpuGridBuffer.ensureCapacity( pDevice, static_cast<uint32>( sizeof( uint32 ) ), wordCount, kUsage, true, false, _listGridWordScratch.data() ) == false )
+        {
+            reportGridFailure( "could not allocate the CPU grid buffer", 0 );
+            _listGridBase.assign( listGridViewProj.size(), invalid_index::kUint32 );
+            return;
+        }
+        _cpuGridBuffer.upload( pDevice, _listGridWordScratch.data(), wordCount * static_cast<uint32>( sizeof( uint32 ) ) );
+        _gridProducer = LightGridProducer::CPU;
+    }
+
+    void GPULightBuffer::updateGPUGrid( IRHIDevice* pDevice, const vector<float4x4>& listGridViewProj )
+    {
+        namespace grid = shaderslot::lightgrid;
+        // 뷰 정보(bindingslots.hlsli 10 절): 행 넷 · (가까운 면 w, 조각 배율, 원근, 0) · asuint(라이트 수, 그리드 첫 단어, 0, 0). 그룹 번호가 곧 이 목록의 번호다.
+        // 뷰-투영이 깨진 뷰는 목록에서 뺀다 — 그 뷰는 그리드 없이 그린다.
+        _listGridViewScratch.clear();
+        uint32 gridViewCount = 0;
+        for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( listGridViewProj.size() ); ++viewIndex )
+        {
+            LightGridSlicing slicing{};
+            const float4x4&  viewProj = listGridViewProj[viewIndex];
+            if ( LightGrid::computeSlicing( viewProj, slicing ) == false )
+            {
+                reportGridFailure( "has no usable projection (near/far plane)", viewIndex );
+                continue;
+            }
+            const uint32 gridBase = gridViewCount * grid::kGPUWordsPerView;
+            const uint32 arrCount[4]{ _count, gridBase, 0u, 0u };
+            float4       counts{};
+            Memory::copy( &counts, arrCount, sizeof( counts ) );
+            _listGridViewScratch.push_back( float4{ viewProj._11, viewProj._12, viewProj._13, viewProj._14 } );
+            _listGridViewScratch.push_back( float4{ viewProj._21, viewProj._22, viewProj._23, viewProj._24 } );
+            _listGridViewScratch.push_back( float4{ viewProj._31, viewProj._32, viewProj._33, viewProj._34 } );
+            _listGridViewScratch.push_back( float4{ viewProj._41, viewProj._42, viewProj._43, viewProj._44 } );
+            _listGridViewScratch.push_back( float4{ slicing._nearDepth, slicing._sliceScale, slicing._bPerspective == SW_TRUE ? 1.0f : 0.0f, 0.0f } );
+            _listGridViewScratch.push_back( counts );
+            _listGridBase[viewIndex] = gridBase;
+            ++gridViewCount;
+        }
+        static_assert( grid::kGPUViewFloat4Count == 6, "뷰 정보의 float4 수가 위의 push_back 수와 같아야 한다" );
+        if ( gridViewCount == 0 )
+            return;
+
+        constexpr RHIBufferUsage kViewUsage = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
+        constexpr RHIBufferUsage kGridUsage = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource | RHIBufferUsage::UnorderedAccess;
+        const uint32             viewCount  = static_cast<uint32>( _listGridViewScratch.size() );
+        const bool               bViewReady = _gpuGridViewBuffer.ensureCapacity( pDevice, static_cast<uint32>( sizeof( float4 ) ), viewCount, kViewUsage, true, false, _listGridViewScratch.data() );
+        const bool               bGridReady = _gpuGridBuffer.ensureCapacity( pDevice, static_cast<uint32>( sizeof( uint32 ) ), gridViewCount * grid::kGPUWordsPerView, kGridUsage, true, true, nullptr ) &&
+                                _gpuGridBuffer._uav != kInvalidDescriptorIndex;
+        if ( bViewReady == false || bGridReady == false )
+        {
+            reportGridFailure( "could not allocate the GPU grid buffers (UAV)", 0 );
+            _listGridBase.assign( listGridViewProj.size(), invalid_index::kUint32 );
+            return;
+        }
+        _gpuGridViewBuffer.upload( pDevice, _listGridViewScratch.data(), viewCount * static_cast<uint32>( sizeof( float4 ) ) );
+        _gpuGridViewCount = gridViewCount;
+        _gridProducer     = LightGridProducer::GPU;
+    }
+
+    void GPULightBuffer::reportGridFailure( const utf8* pReason, uint32 viewIndex )
+    {
+        if ( _bWarnedGrid == SW_TRUE )
+            return;
+        _bWarnedGrid = SW_TRUE;
+        SW_LOG_ERROR( "Light grid for view %# %# - that view walks every light", viewIndex, pReason );
+    }
+
+    const RHIStructuredBufferSlot* GPULightBuffer::findGridBuffer() const
+    {
+        switch ( _gridProducer )
+        {
+            case LightGridProducer::None:
+                return nullptr;
+            case LightGridProducer::CPU:
+                return &_cpuGridBuffer;
+            case LightGridProducer::GPU:
+                return &_gpuGridBuffer;
+        }
+        return nullptr;
     }
 
     void GPULightBuffer::release( IRHIDevice* pDevice )
     {
         _buffer.release( pDevice );
-        _count = 0;
+        _cpuGridBuffer.release( pDevice );
+        _gpuGridBuffer.release( pDevice );
+        _gpuGridViewBuffer.release( pDevice );
+        _count            = 0;
+        _gpuGridViewCount = 0;
+        _gridProducer     = LightGridProducer::None;
+        _listGridBase.clear();
     }
 } // namespace sw

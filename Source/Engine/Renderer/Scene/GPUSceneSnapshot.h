@@ -127,7 +127,7 @@ namespace sw
         uint32 _materialCount{ 0 };
         /**
          * @brief 머티리얼 텍스처의 백엔드 SRV 인덱스(서수 순서)입니다. 네이티브 bindless 가 아닌 백엔드에서만 씁니다.
-         * @details DX11 과 GL 은 셰이더가 전역 인덱스를 해석하지 못해서 엔진이 t12..t27 에 직접 바인딩해야 한다.
+         * @details DX11 과 GL 은 셰이더가 전역 인덱스를 해석하지 못해서 엔진이 t16..t31 에 직접 바인딩해야 한다.
          *          렌더 스레드는 씬을 볼 수 없으므로(Material* 를 따라갈 수 없다) 값으로 실어 보낸다.
          * @note 초기값은 칸마다 적는다 — 빠진 칸은 0(유효한 SRV 번호)이 되어 다른 텍스처를 건다. 칸 수가 바뀌면 아래 static_assert 가 먼저 멈춘다.
          */
@@ -414,13 +414,21 @@ namespace sw
         vector_reference<const GPUMeshBatch> getTransparentBatches() const { return vector_reference<const GPUMeshBatch>( _listBatch ).subspan( _opaqueBatchCount ); }
         /** @brief 불투명 배치 수입니다. 투명 배치의 전역 번호는 이 값부터 시작합니다. */
         uint32 getOpaqueBatchCount() const { return _opaqueBatchCount; }
+        /**
+         * @brief 불투명 인스턴스 수입니다. 투명 인스턴스(투명 꼬리)는 이 번호부터 시작합니다.
+         * @details 따로 기록하지 않고 마지막 불투명 배치의 인스턴스 구간 끝에서 읽는다. 배치의 인스턴스 구간은 0 부터 빈틈없이 이어지므로
+         *          (`appendBatch` 가 지킨다) 이 값이 곧 불투명 인스턴스 수다.
+         */
+        uint32 getOpaqueInstanceCount() const { return computeInstanceEnd( _opaqueBatchCount ); }
 
         /**
-         * @brief 배치를 끝에 붙입니다. 불투명 배치는 투명 배치보다 먼저 붙여야 합니다.
+         * @brief 배치를 끝에 붙입니다. 불투명 배치는 투명 배치보다 먼저 붙여야 하고, 인스턴스 구간은 앞 배치의 끝에서 시작해야 합니다.
          * @details 투명 배치 뒤에 불투명 배치를 붙이면 구간 경계가 깨지므로 멈춘다(간접 슬롯 순서가 불투명 다음 투명이다).
+         *          인스턴스 구간에 빈틈이 있으면 `getOpaqueInstanceCount` 가 틀리므로 그것도 멈춘다.
          */
         void appendBatch( GPUMeshBatch&& batch )
         {
+            SW_ASSERT( batch._instanceBase == computeInstanceEnd( static_cast<uint32>( _listBatch.size() ) ) );
             if ( batch._blendMode != RHIBlendMode::Transparent )
             {
                 SW_ASSERT( _opaqueBatchCount == _listBatch.size() );
@@ -438,12 +446,21 @@ namespace sw
         void truncateToOpaqueBatches() { _listBatch.resize( _opaqueBatchCount ); }
 
     private:
+        /** @brief 앞쪽 `batchCount` 개 배치가 차지한 인스턴스 구간의 끝입니다(배치가 없으면 0). */
+        uint32 computeInstanceEnd( uint32 batchCount ) const
+        {
+            if ( batchCount == 0 )
+                return 0;
+            const GPUMeshBatch& lastBatch = _listBatch[batchCount - 1];
+            return lastBatch._instanceBase + lastBatch._instanceCount;
+        }
+
         /**
          * @brief 배치 목록 **한 벌**입니다. 불투명 배치 `[0, _opaqueBatchCount)` 다음에 투명 배치가 오며, 간접 슬롯과 일치합니다.
          * @details 불투명 · 투명 목록을 따로 복사해 두지 않는다. 사본은 패킷마다 함께 복사되고(배치마다 shared_ptr 셋), RT 가 덧쓰는
          *          GPU 필드를 사본마다 다시 맞춰야 했다. 구간 뷰만 내주므로 어긋날 사본이 없다. 고치는 길은 위 함수뿐이라 경계가 깨지지 않는다.
          */
         vector<GPUMeshBatch> _listBatch;
-        uint32               _opaqueBatchCount{ 0 }; ///< 앞쪽 불투명 배치 수
+        uint32               _opaqueBatchCount{ 0 }; ///< 앞쪽 불투명 배치 수. 불투명 · 투명의 경계는 이 값 하나다(인스턴스 · 원소의 경계는 여기서 끌어낸다).
     };
 } // namespace sw

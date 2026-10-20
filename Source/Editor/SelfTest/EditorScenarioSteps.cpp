@@ -1891,7 +1891,7 @@ namespace sw::editor
                          &EditorScenarioStepsInternal::readModulePreviewNewlyInactive );
     SW_AUTOMATION_PROBE( editorPanelCount, "Editor.PanelCount", "Panels the panel manager holds (registered panels plus directly added ones)",
                          &EditorScenarioStepsInternal::readPanelCount );
-    SW_AUTOMATION_PROBE( editorSceneViewMode, "Editor.SceneViewMode", "Scene view mode: 0 Lit, 1 Unlit, 2 Wireframe, 3 Normals, 4 Depth, 5 Overdraw, 6 LightingOnly, 7 Roughness, 8 Metallic, 9 Mipmaps",
+    SW_AUTOMATION_PROBE( editorSceneViewMode, "Editor.SceneViewMode", "Scene view mode: 0 Lit, 1 Unlit, 2 Wireframe, 3 Normals, 4 Depth, 5 Overdraw, 6 LightingOnly, 7 Roughness, 8 Metallic, 9 Mipmaps, 10 LightComplexity",
                          &EditorScenarioStepsInternal::readSceneViewMode );
     SW_AUTOMATION_PROBE( editorGameViewMode, "Editor.GameViewMode", "Main output (game view) view mode — stays 0 Lit while the scene view changes",
                          &EditorScenarioStepsInternal::readGameViewMode );

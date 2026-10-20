@@ -223,7 +223,7 @@ namespace sw
         }
 #endif
 
-        // 머티리얼 텍스처: 에뮬 백엔드(DX11 · GL)만. 셰이더가 서수로 t12..t27 을 고르므로 그 순서대로 건다.
+        // 머티리얼 텍스처: 에뮬 백엔드(DX11 · GL)만. 셰이더가 서수로 t16..t31 을 고르므로 그 순서대로 건다.
         // 네이티브 bindless 백엔드는 인덱스가 이미 MaterialCB 에 있어 아무것도 걸 필요가 없다.
         if ( bNativeBindless == false && pMaterialTexSrv != nullptr )
         {
