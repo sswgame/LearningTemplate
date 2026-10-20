@@ -1487,11 +1487,11 @@ SW_TEST_CASE( InputMapTest, KeyHeldWhenTheLayerTurnsOnStartsHeldNotPressed )
 }
 
 /**
- * @brief [InputMapTest] 개발 콘솔이 쥔 채 누른 키를 닫을 때까지 쥐고 있으면 다시 보이는 프레임에 Pressed 가 아니라 Held 로 시작하고, 뗐다 다시 누르면 Pressed 가 나온다
- * @details 변이: 콘솔이 가린 키의 눌림을 추적하지 않으면(`SlotRead::Device`) 콘솔이 닫혀 키가 다시 보이는 프레임에 이미 눌려 있던 키가 새 누름으로 발화한다.
- *          레이어가 켜질 때(`KeyHeldWhenTheLayerTurnsOnStartsHeldNotPressed`)와 같은 규칙이다.
+ * @brief [InputMapTest] 개발 콘솔이 쥔 동안 누른 키는 콘솔이 닫혀도 뗄 때까지 게임에 가려진 채로 남고, 뗐다 다시 누르면 Pressed 가 나온다
+ * @details 가림은 `InputManager` 의 captured 키 마스크가 맡는다(콘솔이 쥔 동안 눌린 키는 뗄 때까지 게임에 안 보인다). 그래서 닫히는 프레임에 새 누름으로 발화하지도, Held 로 이어지지도 않는다.
+ *          레이어가 켜질 때(`KeyHeldWhenTheLayerTurnsOnStartsHeldNotPressed`)는 가림이 없어 Held 로 시작하는 규칙이 따로 필요하다.
  */
-SW_TEST_CASE( InputMapTest, KeyHeldThroughTheConsoleStartsHeldWhenItIsVisibleAgain )
+SW_TEST_CASE( InputMapTest, KeyPressedUnderTheConsoleStaysHiddenUntilReleased )
 {
     sw::InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
@@ -1507,14 +1507,15 @@ SW_TEST_CASE( InputMapTest, KeyHeldThroughTheConsoleStartsHeldWhenItIsVisibleAga
     input.endFrame();
 
     input.setKeyboardFocus( sw::InputKeyboardFocus::Game );
-    input.beginFrame( 1.0f / 60.0f ); // 누른 채 콘솔이 닫혀 다시 보이는 첫 프레임
+    input.beginFrame( 1.0f / 60.0f ); // 누른 채 콘솔이 닫힌 첫 프레임 — 콘솔이 쥔 키는 뗄 때까지 가려진다
     SW_EXPECT_FALSE( inputMap.wasActionTriggered( "Fire" ) );
     SW_EXPECT_FALSE( inputMap.wasActionPressed( "Fire" ) );
-    SW_EXPECT_TRUE( inputMap.isActionDown( "FireHeld" ) ); // 눌려 있는 것은 Held 로 보인다
+    SW_EXPECT_FALSE( inputMap.isActionDown( "FireHeld" ) );
     input.endFrame();
 
     input.beginFrame( 1.0f / 60.0f );
     SW_EXPECT_FALSE( inputMap.wasActionTriggered( "Fire" ) );
+    SW_EXPECT_FALSE( inputMap.isActionDown( "FireHeld" ) );
     input.endFrame();
 
     input.postRawEvent( sw::RawInputEvent::makeKeyUp( sw::Key::F8 ) );
