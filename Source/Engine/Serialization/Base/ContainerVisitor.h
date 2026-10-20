@@ -3,11 +3,14 @@
  * @brief 리플렉션 컨테이너(시퀀스 · 맵 · 중첩 · 소유 포인터)를 도는 순회 하나와, 형식(XML · JSON · 바이너리)이 구현하는 쓰기 · 읽기 계약입니다.
  * @details 원소가 어떤 모양으로 실리는지(중첩 컨테이너 · 소유 포인터 · 값 구조체 · 스칼라)는 순회가 컨테이너마다 한 번 정하고, 형식은 그 모양의 원소
  *          하나를 어떻게 적고 읽는지만 답합니다. 새 컨테이너 종류는 래퍼(`ReflectionContainers.h`)와 이 순회 한 곳만 고칩니다.
+ *          주소는 `TextAddress.h` 형식으로 받습니다. 컨테이너 · 키 · 원소는 값 주소, 소유 포인터 원소는 객체 주소입니다 — `void*` 로 받으면 객체 주소를
+ *          값 자리에 넘겨도 컴파일되어 오프셋이 한 번 더 더해집니다.
  */
 #pragma once
 #include "Core/Delegate/Delegate.h"
 
 #include "Engine/EngineMinimal.h"
+#include "Engine/Serialization/Base/TextAddress.h"
 
 namespace sw
 {
@@ -81,17 +84,17 @@ namespace sw
         virtual void beginMap( size_t entryCount ) = 0;
         virtual void endMap()                      = 0;
         /** @brief 맵 항목 하나를 열고 키를 적습니다. */
-        virtual void beginMapEntry( const void* pKey, const hashed_string& keyTypeName ) = 0;
+        virtual void beginMapEntry( ValueAddress key, const hashed_string& keyTypeName ) = 0;
         virtual void endMapEntry()                                                       = 0;
         /** @brief @p slot 자리의 원소가 컨테이너일 때 그 컨테이너를 적기 전후에 부릅니다. */
         virtual void beginNestedContainer( ContainerSlot slot ) = 0;
         virtual void endNestedContainer( ContainerSlot slot )   = 0;
-        /** @brief 소유 포인터 원소 하나를 적습니다. @p pObject 는 널일 수 있습니다(건너뛸지 빈 자리를 적을지는 형식이 정한다). */
-        virtual void writeOwnedPointer( const void* pObject ) = 0;
-        /** @brief 값 구조체 원소 하나를 적습니다. */
-        virtual void writeValueObject( const void* pValue, const hashed_string& typeName, const TypeInfo& typeInfo, ContainerSlot slot ) = 0;
+        /** @brief 소유 포인터 원소 하나를 적습니다. @p object 는 포인터가 가리키는 객체이고 널일 수 있습니다(건너뛸지 빈 자리를 적을지는 형식이 정한다). */
+        virtual void writeOwnedPointer( ObjectAddress object ) = 0;
+        /** @brief 값 구조체 원소 하나를 적습니다. @p value 는 원소 값 자체의 주소입니다. */
+        virtual void writeValueObject( ValueAddress value, const hashed_string& typeName, const TypeInfo& typeInfo, ContainerSlot slot ) = 0;
         /** @brief 스칼라 원소 하나를 적습니다. */
-        virtual void writeScalar( const void* pValue, const hashed_string& typeName, ContainerSlot slot ) = 0;
+        virtual void writeScalar( ValueAddress value, const hashed_string& typeName, ContainerSlot slot ) = 0;
     };
 } // namespace sw
 
@@ -122,17 +125,17 @@ namespace sw
         [[nodiscard]] virtual ContainerReadResult beginMap( size_t& outCountHint ) = 0;
         /** @brief 방금 연 컨테이너의 원소 · 항목마다 그 자리로 옮겨 @p visit 를 부르고 결과를 합칩니다. StreamBroken 이 나오면 멈춥니다. */
         [[nodiscard]] virtual ContainerReadResult forEachElement( const ContainerElementVisitDelegate& visit ) = 0;
-        /** @brief 지금 항목의 키를 @p pKey(만들어 둔 키)에 읽습니다. */
-        [[nodiscard]] virtual ContainerReadResult readMapKey( void* pKey, const hashed_string& keyTypeName ) = 0;
+        /** @brief 지금 항목의 키를 @p key(만들어 둔 키)에 읽습니다. */
+        [[nodiscard]] virtual ContainerReadResult readMapKey( MutableValueAddress key, const hashed_string& keyTypeName ) = 0;
         /**
          * @brief 지금 원소를 다형 소유 포인터로 읽습니다.
          * @details 만들고 소유자에 붙이는 것은 팩토리(`SerializeContext::createOwnedPointer`)이고, 모르는 타입은 원문을 맡깁니다(`keepOpaqueElement`).
          */
         [[nodiscard]] virtual ContainerReadResult readOwnedPointer() = 0;
         /** @brief 지금 원소 · 맵 값을 값 구조체로 읽습니다. */
-        [[nodiscard]] virtual ContainerReadResult readValueObject( void* pValue, const hashed_string& typeName, const TypeInfo& typeInfo, ContainerSlot slot ) = 0;
+        [[nodiscard]] virtual ContainerReadResult readValueObject( MutableValueAddress value, const hashed_string& typeName, const TypeInfo& typeInfo, ContainerSlot slot ) = 0;
         /** @brief 지금 원소 · 맵 값을 스칼라로 읽습니다. */
-        [[nodiscard]] virtual ContainerReadResult readScalar( void* pValue, const hashed_string& typeName, ContainerSlot slot ) = 0;
+        [[nodiscard]] virtual ContainerReadResult readScalar( MutableValueAddress value, const hashed_string& typeName, ContainerSlot slot ) = 0;
         /** @brief 넣을 칸이 없는 원소(고정 배열보다 많다)를 지나갑니다. 원소 크기를 모르는 형식은 StreamBroken 입니다. */
         [[nodiscard]] virtual ContainerReadResult skipElement( size_t elementIndex ) = 0;
     };
@@ -143,15 +146,15 @@ namespace sw
     /** @brief 컨테이너 순회 하나입니다. 형식은 `IContainerWriter` · `IContainerReader` 로 들어옵니다. */
     struct SW_API ContainerVisitor
     {
-        /** @brief @p pContainer 를 @p writer 의 형식으로 적습니다. 컨테이너나 래퍼가 없으면 아무것도 적지 않습니다. */
-        static void write( const void* pContainer, const NestedContainerInfo& nested, IContainerWriter& writer, const SerializeContext& context );
+        /** @brief @p container(컨테이너 값 자체의 주소)를 @p writer 의 형식으로 적습니다. 컨테이너나 래퍼가 없으면 아무것도 적지 않습니다. */
+        static void write( ValueAddress container, const NestedContainerInfo& nested, IContainerWriter& writer, const SerializeContext& context );
 
         /**
-         * @brief @p reader 의 지금 자리에서 컨테이너를 읽어 @p pContainer 를 채웁니다.
+         * @brief @p reader 의 지금 자리에서 컨테이너를 읽어 @p container(컨테이너 값 자체의 주소)를 채웁니다.
          * @details 소유 포인터 원소의 컨테이너는 비우지 않습니다 — 원소를 넣는 것은 팩토리(소유자)이고, 비우면 팩토리가 방금 붙인 것까지 날아갑니다.
          *          그 밖의 컨테이너는 모양을 확인한 뒤 비우고 채웁니다. 원소를 넣는 방법은 컨테이너가 정합니다(`appendElement`).
          */
-        [[nodiscard]] static ContainerReadResult read( void* pContainer, const NestedContainerInfo& nested, IContainerReader& reader, const SerializeContext& context );
+        [[nodiscard]] static ContainerReadResult read( MutableValueAddress container, const NestedContainerInfo& nested, IContainerReader& reader, const SerializeContext& context );
 
         /** @brief 두 결과 중 나쁜 쪽입니다(StreamBroken > FieldFailed > Read). */
         static ContainerReadResult mergeResult( ContainerReadResult lhs, ContainerReadResult rhs ) noexcept;
