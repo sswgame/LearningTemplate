@@ -629,8 +629,8 @@ SW_TEST_CASE( CameraModeTest, LensPhysicalValuesReachThePose )
     def._postProcess._letterboxAspectRatio = 2.39f;
     const CameraPose pose                  = evaluatePreset( def, CameraTarget{} );
     SW_EXPECT_NEAR_EQUAL( 2.0f * MathUtil::atan2( 12.0f, 50.0f ), pose._fieldOfViewY, 1.0e-5f ); // 50 mm 풀 프레임 ≈ 27°
-    SW_EXPECT_NEAR_EQUAL( 3.5f, pose._focusDistance, 1.0e-6f );
-    SW_EXPECT_NEAR_EQUAL( 1.4f, pose._aperture, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 3.5f, pose._depthOfField._focusDistance, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 1.4f, pose._depthOfField._aperture, 1.0e-6f );
     SW_EXPECT_NEAR_EQUAL( 0.1f, pose._lensShift._y, 1.0e-6f );
     const float3 up = float3::transform( float3{ 0.0f, 1.0f, 0.0f }, pose._rotation );
     SW_EXPECT_NEAR_EQUAL( MathUtil::cos( 20.0f * MathUtil::kDegreeToRadian ), up._y, 1.0e-4f ); // 앞축으로 기울었다

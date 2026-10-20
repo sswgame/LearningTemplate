@@ -11,6 +11,7 @@
 
 #include "Engine/Graphics/RHI/RHIConstantBufferSlot.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Object/Component/CameraDepthOfFieldValues.h"
 #include "Engine/Object/Component/CameraPostProcessValues.h"
 #include "Engine/Renderer/Light/ShadowSetup.h"
 
@@ -120,10 +121,12 @@ namespace sw
         float32 _resolutionScale{ 1.0f };              ///< 출력 크기에 곱하는 내부 해상도
         /// @brief 이 뷰를 그리는 카메라의 후처리 값(노출 · 블룸 배율 · 비네트 · 채도 · 대비 · 레터박스)입니다. 후처리를 끈 뷰와 표면 값을 보이는 보기 모드는 읽지 않습니다.
         CameraPostProcessValues _postProcess{};
-        uint8                   _bShadows{ SW_TRUE };             ///< 그림자를 그린다(끄면 그림자 맵을 지우기만 하므로 모두 밝다).
-        uint8                   _bPostProcess{ SW_TRUE };         ///< 후처리(블룸, 외곽선, 톤맵, TAA)를 적용한다.
-        uint8                   _bCut{ SW_FALSE };                ///< 이번 프레임에 화면이 끊겼다(언리얼 `bCameraCut`). TAA 히스토리를 버린다.
-        RenderViewMode          _viewMode{ RenderViewMode::Lit }; ///< 이 뷰의 보기 모드(에디터 씬 뷰만 바꾸고, 게임 뷰는 Lit 이다).
+        /// @brief 이 뷰를 그리는 카메라의 피사계 심도 렌즈 값(초점 거리 · 조리개)입니다. 읽는 패스는 아직 없습니다(계획 CameraRendererIntegration S2).
+        CameraDepthOfFieldValues _depthOfField{};
+        uint8                    _bShadows{ SW_TRUE };             ///< 그림자를 그린다(끄면 그림자 맵을 지우기만 하므로 모두 밝다).
+        uint8                    _bPostProcess{ SW_TRUE };         ///< 후처리(블룸, 외곽선, 톤맵, TAA)를 적용한다.
+        uint8                    _bCut{ SW_FALSE };                ///< 이번 프레임에 화면이 끊겼다(언리얼 `bCameraCut`). TAA 히스토리를 버린다.
+        RenderViewMode           _viewMode{ RenderViewMode::Lit }; ///< 이 뷰의 보기 모드(에디터 씬 뷰만 바꾸고, 게임 뷰는 Lit 이다).
         /**
          * @brief 정수 업스케일 배율입니다(0 = 끔). N 이면 내부 해상도가 사각형 픽셀 / N(내림)이고 Present 가 점 샘플로 N 배 키워 사각형 가운데에 놓는다.
          * @details 픽셀 아트의 Upscale Render Texture(유니티 Pixel Perfect Camera) — 낮은 해상도에서 그려 자산 픽셀이 화면 픽셀 N × N 으로 고르게 커진다.

@@ -39,7 +39,7 @@ namespace sw
             static constexpr uint32 kMaxVisibilityView = kMaxExtraRenderView + 1;
 
             /**
-             * @brief 카메라 하나의 뷰 설정입니다 — 출력 설정, 후처리 값, 컷 표시(읽고 지운다).
+             * @brief 카메라 하나의 뷰 설정입니다 — 출력 설정, 후처리 값, 피사계 심도 렌즈 값, 컷 표시(읽고 지운다).
              * @details 세 뷰(주 시점 · 추가 뷰 · 호스트 뷰)가 모두 이 함수로 만든다. 카메라에서 뷰로 가는 값이 늘면 여기 한 곳에만 더한다.
              */
             static RenderViewSettings makeSettings( CameraComponent& camera )
@@ -49,6 +49,7 @@ namespace sw
                 settings._screenRect      = output._screenRect;
                 settings._resolutionScale = MathUtil::clamp( output._resolutionScale, 0.1f, 2.0f );
                 settings._postProcess     = camera.getPostProcess();
+                settings._depthOfField    = camera.getDepthOfField();
                 settings._upscaleZoom     = static_cast<uint8>( MathUtil::min( output._upscaleZoom, kMaxUpscaleZoom ) );
                 settings._bShadows        = output._bShadows ? SW_TRUE : SW_FALSE;
                 settings._bPostProcess    = output._bPostProcess ? SW_TRUE : SW_FALSE;

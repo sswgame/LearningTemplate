@@ -37,6 +37,7 @@ namespace sw
         camera.setNearPlane( pose._nearPlane );
         camera.setFarPlane( pose._farPlane );
         camera.setPostProcess( pose._postProcess );
+        camera.setDepthOfField( pose._depthOfField );
     }
 
     void CameraPoseUtil::applyToCameraLocal( CameraComponent& camera, const CameraPose& pose )
@@ -78,6 +79,7 @@ namespace sw
         pose._farPlane      = camera.getFarPlane();
         pose._bOrthographic = camera.isOrthographic() ? SW_TRUE : SW_FALSE;
         pose._postProcess   = camera.getPostProcess();
+        pose._depthOfField  = camera.getDepthOfField();
         return pose;
     }
 } // namespace sw

@@ -16,7 +16,7 @@
 
 ### S2 피사계 심도 패스
 
-- 렌즈 값(`CameraPose::_focusDistance` · `_aperture`)은 포즈가 나르기만 하고 카메라 컴포넌트에 쓰지 않는다. 후처리 값과 같은 길로 간다: 카메라 컴포넌트 프로퍼티 → `RenderViewSettings` → 패스 상수.
+- 렌즈 값은 렌더 뷰까지 와 있다 — `CameraDepthOfFieldValues`(엔진, `Engine/Object/Component/CameraDepthOfFieldValues.h`)를 포즈(`CameraPose::_depthOfField`)가 섞어 나르고, `CameraPoseUtil::applyLensToCamera` 가 카메라 컴포넌트에, 수집기 `makeSettings` 가 `RenderViewSettings::_depthOfField` 에 싣는다(테스트 `RenderViewCollectorTest.CameraDepthOfFieldReachesTheViewSettings`, 빌드 미확인). 남은 것은 패스 상수로 채우는 일이다.
 - 새 패스 종류 `DepthOfField`(`RenderPassType`, `RenderPassTypeInfo` 표, 엔진 기본 셰이더)를 TAA 와 Tonemap 사이에 둔다. 입력은 HDR 색과 `SceneDepth`, 출력은 같은 형식의 색이다. 네 파이프라인 XML(디퍼드 · 포워드 · 포워드 단계 · 프리패스)에 넣는다.
 - 착란원(CoC)은 초점 거리와 조리개(f 값)에서 픽셀 반지름으로 구하고 상한을 둔다. 조리개가 0 이거나 패스를 끈 뷰(`_bPostProcess` 끔, 표면 값 보기 모드)는 원본을 넘긴다(값 선택, early-return 아님).
 - 확인: 네 백엔드 스크린샷(초점 앞 · 뒤가 흐리고 초점면이 선명), 골든 이미지를 다시 찍을 범위, `TestRenderPassGPU` 의 패스 표 테스트.

@@ -305,6 +305,30 @@ SW_TEST_CASE( RenderViewCollectorTest, CameraPostProcessAndCutReachTheViewSettin
 }
 
 /**
+ * @brief [RenderViewCollectorTest] 카메라의 피사계 심도 렌즈 값(초점 거리 · 조리개)이 주 시점과 추가 뷰의 설정에 실린다 — 카메라마다 따로
+ */
+SW_TEST_CASE( RenderViewCollectorTest, CameraDepthOfFieldReachesTheViewSettings )
+{
+    RenderViewCollectorTestScene stage;
+    SW_ASSERT_TRUE( stage.populate( 0.0f ) );
+    CameraDepthOfFieldValues mainLens;
+    mainLens._focusDistance = 3.5f;
+    mainLens._aperture      = 1.4f;
+    stage._pMainCamera->setDepthOfField( mainLens );
+
+    const RenderViewSettings mainSettings = RenderViewCollector::makeMainSettings( stage._pMainCamera );
+    SW_EXPECT_NEAR_EQUAL( 3.5f, mainSettings._depthOfField._focusDistance, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 1.4f, mainSettings._depthOfField._aperture, 1e-6f );
+
+    RenderViewScheduler     scheduler;
+    const RenderViewRequest request = stage.collectAt( float3{ 0.0f, 0.0f, 10.0f }, scheduler, 0.0 );
+    SW_EXPECT_EQUAL( stage._pCapture->getComponentID(), request._viewID );
+    const CameraDepthOfFieldValues defaults;
+    SW_EXPECT_NEAR_EQUAL( defaults._focusDistance, request._settings._depthOfField._focusDistance, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( defaults._aperture, request._settings._depthOfField._aperture, 1e-6f );
+}
+
+/**
  * @brief [RenderViewSchedulerTest] 출력 사각형이 전체인지의 판정 — 주 시점 Present 가 뷰포트를 걸지(사각형) 말지(전체)를 가른다
  */
 SW_TEST_CASE( RenderViewSchedulerTest, FullRectIsDetected )

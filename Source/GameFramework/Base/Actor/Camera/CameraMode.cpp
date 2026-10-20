@@ -386,12 +386,12 @@ namespace sw
     CameraPose evaluateCameraMode( const CameraPresetDef& def, const CameraTarget& target, float32 deltaTime, CameraModeState& inoutState,
                                    const ICameraCollisionProbe* pProbe )
     {
-        CameraPose           pose = CameraModeInternal::evaluateView( def, target, deltaTime, inoutState, pProbe );
-        const CameraLensDef& lens = def._lens;
-        pose._focusDistance       = lens._focusDistance;
-        pose._aperture            = lens._aperture;
-        pose._lensShift           = lens._lensShift;
-        pose._postProcess         = def._postProcess;
+        CameraPose           pose         = CameraModeInternal::evaluateView( def, target, deltaTime, inoutState, pProbe );
+        const CameraLensDef& lens         = def._lens;
+        pose._depthOfField._focusDistance = lens._focusDistance;
+        pose._depthOfField._aperture      = lens._aperture;
+        pose._lensShift                   = lens._lensShift;
+        pose._postProcess                 = def._postProcess;
         // 더치는 모든 모드의 시점 위에 마지막으로 — 카메라 앞축으로 화면을 기울인다.
         if ( lens._dutch != 0.0f )
             pose._rotation = pose._rotation * quaternion::makeFromYawPitchRoll( 0.0f, 0.0f, lens._dutch );

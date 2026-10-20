@@ -30,17 +30,17 @@ namespace sw
     CameraPose blendPoses( const CameraPose& from, const CameraPose& to, float32 weight )
     {
         CameraPose pose;
-        pose._position      = float3::lerp( from._position, to._position, weight );
-        pose._rotation      = quaternion::slerp( from._rotation, to._rotation, weight );
-        pose._fieldOfViewY  = MathUtil::lerp( from._fieldOfViewY, to._fieldOfViewY, weight );
-        pose._orthoHeight   = MathUtil::lerp( from._orthoHeight, to._orthoHeight, weight );
-        pose._nearPlane     = MathUtil::lerp( from._nearPlane, to._nearPlane, weight );
-        pose._farPlane      = MathUtil::lerp( from._farPlane, to._farPlane, weight );
-        pose._focusDistance = MathUtil::lerp( from._focusDistance, to._focusDistance, weight );
-        pose._aperture      = MathUtil::lerp( from._aperture, to._aperture, weight );
-        pose._lensShift     = float2::lerp( from._lensShift, to._lensShift, weight );
-        pose._postProcess   = blendPostProcess( from._postProcess, to._postProcess, weight );
-        pose._bOrthographic = weight < 0.5f ? from._bOrthographic : to._bOrthographic;
+        pose._position                    = float3::lerp( from._position, to._position, weight );
+        pose._rotation                    = quaternion::slerp( from._rotation, to._rotation, weight );
+        pose._fieldOfViewY                = MathUtil::lerp( from._fieldOfViewY, to._fieldOfViewY, weight );
+        pose._orthoHeight                 = MathUtil::lerp( from._orthoHeight, to._orthoHeight, weight );
+        pose._nearPlane                   = MathUtil::lerp( from._nearPlane, to._nearPlane, weight );
+        pose._farPlane                    = MathUtil::lerp( from._farPlane, to._farPlane, weight );
+        pose._depthOfField._focusDistance = MathUtil::lerp( from._depthOfField._focusDistance, to._depthOfField._focusDistance, weight );
+        pose._depthOfField._aperture      = MathUtil::lerp( from._depthOfField._aperture, to._depthOfField._aperture, weight );
+        pose._lensShift                   = float2::lerp( from._lensShift, to._lensShift, weight );
+        pose._postProcess                 = blendPostProcess( from._postProcess, to._postProcess, weight );
+        pose._bOrthographic               = weight < 0.5f ? from._bOrthographic : to._bOrthographic;
         return pose;
     }
 } // namespace sw
