@@ -44,10 +44,10 @@ foreach(candidateRoot IN ITEMS "${swRepoRoot}" "${CMAKE_SOURCE_DIR}" "${CMAKE_CU
 
 	if(EXISTS "${cfgCandidate}")
 		set(swCfgJson "${cfgCandidate}")
-		file(READ "${swCfgJson}" cfgContent)
-		string(JSON swSdkDir ERROR_VARIABLE e1 GET "${cfgContent}" "${SW_KEY_WINDOWS_SDK_DIR}")
-		string(JSON swSdkVer ERROR_VARIABLE e2 GET "${cfgContent}" "${SW_KEY_WINDOWS_SDK_VERSION}")
-		string(JSON swMsvcTools ERROR_VARIABLE e3 GET "${cfgContent}" "${SW_KEY_MSVC_TOOLS_DIR}")
+		# 키가 없으면 변수가 정의되지 않는다(아래 mt · lib 탐색이 빈 값으로 처리한다) — 형식 오류는 구성을 세운다.
+		sw_readOptionalJsonValue( swSdkDir "${swCfgJson}" "${SW_KEY_WINDOWS_SDK_DIR}" )
+		sw_readOptionalJsonValue( swSdkVer "${swCfgJson}" "${SW_KEY_WINDOWS_SDK_VERSION}" )
+		sw_readOptionalJsonValue( swMsvcTools "${swCfgJson}" "${SW_KEY_MSVC_TOOLS_DIR}" )
 		break()
 	endif()
 endforeach()
