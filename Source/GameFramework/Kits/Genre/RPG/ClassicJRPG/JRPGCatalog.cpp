@@ -19,28 +19,6 @@ namespace sw
             static constexpr const utf8* kArrStatName[kJRPGStatCount]   = { "hp", "mp", "str", "agi", "vit", "intellect", "luck" };
             static constexpr const utf8* kArrGrowthName[kJRPGStatCount] = { "growHp", "growMp", "growStr", "growAgi", "growVit", "growIntellect", "growLuck" };
 
-            /** @brief 원소 하나를 스키마 @p TDef 로 읽어 카탈로그에 더합니다. 스키마 오류면 더하지 않고 false 입니다. */
-            template <typename TDef>
-            [[nodiscard]] static bool readInto( const XMLNode& node, string_view sourceName, GameCatalog<TDef>& outCatalog )
-            {
-                TDef def;
-                if ( GameDataXML::readFields( node, def, sourceName ) == false )
-                    return false;
-                (void)outCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
-                return true;
-            }
-
-            /** @brief 원소 하나를 스키마 @p TDef 로 읽어 목록에 더합니다. */
-            template <typename TDef>
-            [[nodiscard]] static bool readInto( const XMLNode& node, string_view sourceName, vector<TDef>& outList )
-            {
-                TDef def;
-                if ( GameDataXML::readFields( node, def, sourceName ) == false )
-                    return false;
-                outList.push_back( def );
-                return true;
-            }
-
             /** @brief 능력치 일곱 칸을 이름(@p arrName)으로 읽습니다. 적지 않은 칸은 Def 의 초기값이고, 깨졌거나 0 보다 작으면 오류입니다. */
             [[nodiscard]] static bool readStats( const XMLNode& node, const utf8* const ( &arrName )[kJRPGStatCount], string_view sourceName,
                                                  int32 ( &inoutArrValue )[kJRPGStatCount] )
@@ -151,7 +129,7 @@ namespace sw
         if ( is( "Class" ) )
             return loadClass( node, sourceName );
         if ( is( "Spell" ) )
-            return JRPGCatalogInternal::readInto( node, sourceName, _spellCatalog );
+            return GameDataXML::readInto( node, sourceName, _spellCatalog );
         if ( is( "Combo" ) )
             return loadCombo( node, sourceName );
         if ( is( "Manual" ) )
@@ -176,7 +154,7 @@ namespace sw
         bValid              = Internal::checkMaxHp( def._arrBase, node, sourceName ) && bValid;
         for ( XMLNode learn = node.findChild( "Learn" ); learn; learn = learn.findNextSibling( "Learn" ) )
         {
-            bValid = Internal::readInto( learn, sourceName, def._listLearn ) && bValid;
+            bValid = GameDataXML::readInto( learn, sourceName, def._listLearn ) && bValid;
         }
         if ( bValid )
             (void)_classCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
@@ -205,7 +183,7 @@ namespace sw
         bool          bValid = GameDataXML::readFields( node, def, sourceName );
         for ( XMLNode stage = node.findChild( "Stage" ); stage; stage = stage.findNextSibling( "Stage" ) )
         {
-            bValid = JRPGCatalogInternal::readInto( stage, sourceName, def._listStage ) && bValid;
+            bValid = GameDataXML::readInto( stage, sourceName, def._listStage ) && bValid;
         }
         if ( bValid )
             (void)_manualCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다

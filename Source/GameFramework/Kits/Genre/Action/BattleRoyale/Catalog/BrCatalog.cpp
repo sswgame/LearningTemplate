@@ -12,34 +12,6 @@
 
 namespace sw
 {
-    namespace
-    {
-        struct BrCatalogInternal
-        {
-            /** @brief 원소 하나를 스키마 @p TDef 로 읽어 카탈로그에 더합니다. 스키마 오류면 더하지 않고 false 입니다. */
-            template <typename TDef>
-            [[nodiscard]] static bool readInto( const XMLNode& node, string_view sourceName, GameCatalog<TDef>& outCatalog )
-            {
-                TDef def;
-                if ( GameDataXML::readFields( node, def, sourceName ) == false )
-                    return false;
-                (void)outCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
-                return true;
-            }
-
-            /** @brief 설정 원소 하나를 읽어 오류가 없을 때만 바꿉니다(기본값은 스키마 초기값 — 앞의 값을 이어받지 않는다). */
-            template <typename TDef>
-            [[nodiscard]] static bool readSetting( const XMLNode& node, string_view sourceName, TDef& outSetting )
-            {
-                TDef def;
-                if ( GameDataXML::readFields( node, def, sourceName ) == false )
-                    return false;
-                outSetting = def;
-                return true;
-            }
-        };
-    } // namespace
-
     SW_LOG_CALLER( "BrCatalog" );
 
     BrCatalog::BrCatalog()
@@ -76,21 +48,20 @@ namespace sw
 
     bool BrCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
     {
-        using Internal = BrCatalogInternal;
-        const auto is  = [name]( const utf8* pName )
+        const auto is = [name]( const utf8* pName )
         { return StringUtil::equals( name, string_view( pName ), true ); };
         if ( is( "Armor" ) )
-            return Internal::readInto( node, sourceName, _armorCatalog );
+            return GameDataXML::readInto( node, sourceName, _armorCatalog );
         if ( is( "Backpack" ) )
-            return Internal::readInto( node, sourceName, _backpackCatalog );
+            return GameDataXML::readInto( node, sourceName, _backpackCatalog );
         if ( is( "LootSpot" ) )
-            return Internal::readInto( node, sourceName, _lootSpotCatalog );
+            return GameDataXML::readInto( node, sourceName, _lootSpotCatalog );
         if ( is( "Player" ) )
-            return Internal::readSetting( node, sourceName, _player );
+            return GameDataXML::readSetting( node, sourceName, _player );
         if ( is( "Flight" ) )
-            return Internal::readSetting( node, sourceName, _flight );
+            return GameDataXML::readSetting( node, sourceName, _flight );
         if ( is( "Fall" ) )
-            return Internal::readSetting( node, sourceName, _fall );
+            return GameDataXML::readSetting( node, sourceName, _fall );
         if ( is( "Zone" ) )
             return loadZone( node, sourceName );
         if ( is( "SupplyDrop" ) )

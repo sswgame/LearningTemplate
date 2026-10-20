@@ -21,28 +21,6 @@ namespace sw
         {
             static constexpr const utf8* kArrStatName[kMonsterStatCount] = { "Hp", "Attack", "Defense", "SpecialAttack", "SpecialDefense", "Speed" };
 
-            /** @brief 원소 하나를 스키마 @p TDef 로 읽어 카탈로그에 더합니다. 스키마 오류면 더하지 않고 false 입니다. */
-            template <typename TDef>
-            [[nodiscard]] static bool readInto( const XMLNode& node, string_view sourceName, GameCatalog<TDef>& outCatalog )
-            {
-                TDef def;
-                if ( GameDataXML::readFields( node, def, sourceName ) == false )
-                    return false;
-                (void)outCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
-                return true;
-            }
-
-            /** @brief 원소 하나를 스키마 @p TDef 로 읽어 목록에 더합니다. */
-            template <typename TDef>
-            [[nodiscard]] static bool readInto( const XMLNode& node, string_view sourceName, vector<TDef>& outList )
-            {
-                TDef def;
-                if ( GameDataXML::readFields( node, def, sourceName ) == false )
-                    return false;
-                outList.push_back( def );
-                return true;
-            }
-
             /**
              * @brief "39 52 43 60 50 65" 같은 정수 여섯 개(HP 공격 방어 특공 특방 스피드 순)를 읽습니다.
              * @details 적었으면 여섯 개가 모두 @p minValue 이상의 정수여야 합니다. 모자라거나 깨진 값은 오류이고 표를 바꾸지 않습니다.
@@ -310,7 +288,7 @@ namespace sw
         if ( is( "Species" ) )
             return loadSpecies( node, sourceName );
         if ( is( "Nature" ) )
-            return Internal::readInto( node, sourceName, _natureCatalog ); // up 과 down 이 같으면(적지 않으면 둘 다 Attack) 보정이 없는 성격이다
+            return GameDataXML::readInto( node, sourceName, _natureCatalog ); // up 과 down 이 같으면(적지 않으면 둘 다 Attack) 보정이 없는 성격이다
         if ( is( "Weather" ) )
         {
             MonsterWeatherDef def;
@@ -363,9 +341,9 @@ namespace sw
         for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
         {
             if ( StringUtil::equals( child.getName(), "Learn", true ) )
-                bValid = Internal::readInto( child, sourceName, def._listLearn ) && bValid;
+                bValid = GameDataXML::readInto( child, sourceName, def._listLearn ) && bValid;
             else if ( StringUtil::equals( child.getName(), "Evolve", true ) )
-                bValid = Internal::readInto( child, sourceName, def._listEvolution ) && bValid;
+                bValid = GameDataXML::readInto( child, sourceName, def._listEvolution ) && bValid;
             else
             {
                 SW_LOG_ERROR( "%#: species '%#' has an unknown child <%#>", sourceName, def._id.c_str(), child.getName() );
@@ -388,7 +366,7 @@ namespace sw
         GameDataXML::appendNameList( node.getAttributeText( "time" ), ",; \t", def._listTime );
         for ( XMLNode child = node.findChild( "Slot" ); child; child = child.findNextSibling( "Slot" ) )
         {
-            bValid = MonsterCollectorCatalogInternal::readInto( child, sourceName, def._listSlot ) && bValid;
+            bValid = GameDataXML::readInto( child, sourceName, def._listSlot ) && bValid;
         }
         if ( bValid )
             (void)_encounterCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다

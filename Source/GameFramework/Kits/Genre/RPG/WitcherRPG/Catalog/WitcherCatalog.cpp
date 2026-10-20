@@ -12,44 +12,18 @@ namespace sw
 {
     namespace
     {
-        struct WitcherCatalogInternal
+        /** @brief 연금술 물건 하나를 읽습니다. 오일은 칼에 바른 뒤 적중 횟수(`hits`)가 1 이상이어야 합니다. */
+        [[nodiscard]] bool readAlchemyItem( const XMLNode& node, string_view sourceName, WitcherAlchemyDef& outItem )
         {
-            /** @brief 원소 하나를 스키마 @p TDef 로 읽어 카탈로그에 더합니다. 스키마 오류면 더하지 않고 false 입니다. */
-            template <typename TDef>
-            [[nodiscard]] static bool readInto( const XMLNode& node, string_view sourceName, GameCatalog<TDef>& outCatalog )
+            if ( GameDataXML::readFields( node, outItem, sourceName ) == false )
+                return false;
+            if ( outItem._kind == WitcherAlchemyKind::Oil && outItem._hits < 1 )
             {
-                TDef def;
-                if ( GameDataXML::readFields( node, def, sourceName ) == false )
-                    return false;
-                (void)outCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
-                return true;
+                SW_LOG_ERROR( "%#: oil '%#' needs hits=\"...\" of 1 or more", sourceName, outItem._id.c_str() );
+                return false;
             }
-
-            /** @brief 설정 원소 하나를 읽어 오류가 없을 때만 바꿉니다(기본값은 스키마 초기값 — 앞의 값을 이어받지 않는다). */
-            template <typename TDef>
-            [[nodiscard]] static bool readSetting( const XMLNode& node, string_view sourceName, TDef& outSetting,
-                                                   std::initializer_list<string_view> listHandRead = {} )
-            {
-                TDef def;
-                if ( GameDataXML::readFields( node, def, sourceName, listHandRead ) == false )
-                    return false;
-                outSetting = def;
-                return true;
-            }
-
-            /** @brief 연금술 물건 하나를 읽습니다. 오일은 칼에 바른 뒤 적중 횟수(`hits`)가 1 이상이어야 합니다. */
-            [[nodiscard]] static bool readAlchemyItem( const XMLNode& node, string_view sourceName, WitcherAlchemyDef& outItem )
-            {
-                if ( GameDataXML::readFields( node, outItem, sourceName ) == false )
-                    return false;
-                if ( outItem._kind == WitcherAlchemyKind::Oil && outItem._hits < 1 )
-                {
-                    SW_LOG_ERROR( "%#: oil '%#' needs hits=\"...\" of 1 or more", sourceName, outItem._id.c_str() );
-                    return false;
-                }
-                return true;
-            }
-        };
+            return true;
+        }
     } // namespace
 
     SW_LOG_CALLER( "WitcherCatalog" );
@@ -97,20 +71,19 @@ namespace sw
 
     bool WitcherCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
     {
-        using Internal = WitcherCatalogInternal;
-        const auto is  = [name]( const utf8* pName )
+        const auto is = [name]( const utf8* pName )
         { return StringUtil::equals( name, string_view( pName ), true ); };
         if ( is( "Alchemy" ) )
         {
             WitcherAlchemyRuleDef rule;
-            if ( Internal::readSetting( node, sourceName, rule, { "alcohol" } ) == false )
+            if ( GameDataXML::readSetting( node, sourceName, rule, { "alcohol" } ) == false )
                 return false;
             GameDataXML::parseNameList( node.getAttributeText( "alcohol" ), ",; ", rule._listAlcohol );
             _alchemy = rule;
             return true;
         }
         if ( is( "Combat" ) )
-            return Internal::readSetting( node, sourceName, _combat );
+            return GameDataXML::readSetting( node, sourceName, _combat );
         if ( is( "SlotGroup" ) )
         {
             WitcherSlotGroupDef group;
@@ -120,21 +93,21 @@ namespace sw
             return true;
         }
         if ( is( "SkillColor" ) )
-            return Internal::readInto( node, sourceName, _skillColorCatalog );
+            return GameDataXML::readInto( node, sourceName, _skillColorCatalog );
         if ( is( "Monster" ) )
             return loadMonster( node, sourceName );
         if ( is( "Item" ) )
         {
             WitcherAlchemyDef item;
-            if ( Internal::readAlchemyItem( node, sourceName, item ) == false )
+            if ( readAlchemyItem( node, sourceName, item ) == false )
                 return false;
             (void)_alchemyCatalog.add( item ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
             return true;
         }
         if ( is( "Sign" ) )
-            return Internal::readInto( node, sourceName, _signCatalog );
+            return GameDataXML::readInto( node, sourceName, _signCatalog );
         if ( is( "Mutagen" ) )
-            return Internal::readInto( node, sourceName, _mutagenCatalog );
+            return GameDataXML::readInto( node, sourceName, _mutagenCatalog );
         if ( is( "Contract" ) )
             return loadContract( node, sourceName );
         SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );

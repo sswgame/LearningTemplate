@@ -17,39 +17,6 @@ namespace sw
     {
         struct WesternCatalogInternal
         {
-            /** @brief 원소 하나를 스키마 @p TDef 로 읽어 카탈로그에 더합니다. 스키마 오류면 더하지 않고 false 입니다. */
-            template <typename TDef>
-            [[nodiscard]] static bool readInto( const XMLNode& node, string_view sourceName, GameCatalog<TDef>& outCatalog )
-            {
-                TDef def;
-                if ( GameDataXML::readFields( node, def, sourceName ) == false )
-                    return false;
-                (void)outCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
-                return true;
-            }
-
-            /** @brief 원소 하나를 스키마 @p TDef 로 읽어 목록에 더합니다. */
-            template <typename TDef>
-            [[nodiscard]] static bool readInto( const XMLNode& node, string_view sourceName, vector<TDef>& outList )
-            {
-                TDef def;
-                if ( GameDataXML::readFields( node, def, sourceName ) == false )
-                    return false;
-                outList.push_back( def );
-                return true;
-            }
-
-            /** @brief 설정 원소 하나를 읽어 오류가 없을 때만 바꿉니다(기본값은 스키마 초기값 — 앞의 값을 이어받지 않는다). */
-            template <typename TDef>
-            [[nodiscard]] static bool readSetting( const XMLNode& node, string_view sourceName, TDef& outSetting )
-            {
-                TDef def;
-                if ( GameDataXML::readFields( node, def, sourceName ) == false )
-                    return false;
-                outSetting = def;
-                return true;
-            }
-
             /** @brief `<PeltGrade scales="0,0.3,0.6,1">` — 0..3 성 네 값이 모두 있어야 합니다. 모자라면 오류이고 표를 바꾸지 않습니다. */
             [[nodiscard]] static bool readGradeScales( const XMLNode& node, string_view sourceName, vector<float32>& outListScale )
             {
@@ -166,7 +133,7 @@ namespace sw
         { return StringUtil::equals( name, string_view( pName ), true ); };
         bool bAdd = false;
         if ( is( "Pursuit" ) )
-            bAdd = Internal::readInto( node, sourceName, _listPursuit );
+            bAdd = GameDataXML::readInto( node, sourceName, _listPursuit );
         else if ( is( "Honor" ) )
             bAdd = loadHonor( node, sourceName );
         else if ( is( "Bond" ) )
@@ -179,27 +146,27 @@ namespace sw
                 _listBondLevel.push_back( bond );
         }
         else if ( is( "BondExperience" ) )
-            bAdd = Internal::readSetting( node, sourceName, _bondExperience );
+            bAdd = GameDataXML::readSetting( node, sourceName, _bondExperience );
         else if ( is( "Survival" ) )
-            bAdd = Internal::readSetting( node, sourceName, _survival );
+            bAdd = GameDataXML::readSetting( node, sourceName, _survival );
         else if ( is( "DeadEye" ) )
-            bAdd = Internal::readInto( node, sourceName, _listDeadEyeLevel );
+            bAdd = GameDataXML::readInto( node, sourceName, _listDeadEyeLevel );
         else if ( is( "PeltGrade" ) )
             bAdd = Internal::readGradeScales( node, sourceName, _listGradeScale );
         else if ( is( "Crime" ) )
-            bAdd = Internal::readInto( node, sourceName, _crimeCatalog );
+            bAdd = GameDataXML::readInto( node, sourceName, _crimeCatalog );
         else if ( is( "Region" ) )
-            bAdd = Internal::readInto( node, sourceName, _regionCatalog );
+            bAdd = GameDataXML::readInto( node, sourceName, _regionCatalog );
         else if ( is( "Horse" ) )
-            bAdd = Internal::readInto( node, sourceName, _horseCatalog );
+            bAdd = GameDataXML::readInto( node, sourceName, _horseCatalog );
         else if ( is( "Food" ) )
-            bAdd = Internal::readInto( node, sourceName, _foodCatalog );
+            bAdd = GameDataXML::readInto( node, sourceName, _foodCatalog );
         else if ( is( "Clothing" ) )
-            bAdd = Internal::readInto( node, sourceName, _clothingCatalog );
+            bAdd = GameDataXML::readInto( node, sourceName, _clothingCatalog );
         else if ( is( "Animal" ) )
-            bAdd = Internal::readInto( node, sourceName, _animalCatalog );
+            bAdd = GameDataXML::readInto( node, sourceName, _animalCatalog );
         else if ( is( "HitZone" ) )
-            bAdd = Internal::readInto( node, sourceName, _hitZoneCatalog );
+            bAdd = GameDataXML::readInto( node, sourceName, _hitZoneCatalog );
         else if ( is( "HuntWeapon" ) )
         {
             WesternHuntWeaponDef weapon;

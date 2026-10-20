@@ -21,28 +21,6 @@ namespace sw
             static constexpr EnumNameTable<HorrorItemKind> kItemKindTable{ kArrItemKindName };
             static_assert( kItemKindTable.getCount() == static_cast<size_t>( HorrorItemKind::Document ) + 1, "item kind names must cover every HorrorItemKind" );
 
-            /** @brief 원소 하나를 스키마 @p TDef 로 읽어 카탈로그에 더합니다. 스키마 오류면 더하지 않고 false 입니다. */
-            template <typename TDef>
-            [[nodiscard]] static bool readInto( const XMLNode& node, string_view sourceName, GameCatalog<TDef>& outCatalog )
-            {
-                TDef def;
-                if ( GameDataXML::readFields( node, def, sourceName ) == false )
-                    return false;
-                (void)outCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
-                return true;
-            }
-
-            /** @brief 설정 원소 하나를 읽어 오류가 없을 때만 바꿉니다(기본값은 스키마 초기값 — 앞의 값을 이어받지 않는다). */
-            template <typename TDef>
-            [[nodiscard]] static bool readSetting( const XMLNode& node, string_view sourceName, TDef& outSetting )
-            {
-                TDef def;
-                if ( GameDataXML::readFields( node, def, sourceName ) == false )
-                    return false;
-                outSetting = def;
-                return true;
-            }
-
             /** @brief `code="3 1 4"` 를 숫자 목록으로 읽습니다. 비었거나 깨진 숫자가 있으면 오류입니다. */
             [[nodiscard]] static bool readDigits( string_view text, vector<int32>& outListDigit, string_view sourceName, const hashed_string& id )
             {
@@ -159,15 +137,15 @@ namespace sw
         const auto is  = [name]( const utf8* pName )
         { return StringUtil::equals( name, string_view( pName ), true ); };
         if ( is( "Rules" ) )
-            return Internal::readSetting( node, sourceName, _rules );
+            return GameDataXML::readSetting( node, sourceName, _rules );
         if ( is( "Item" ) )
-            return Internal::readInto( node, sourceName, _itemCatalog );
+            return GameDataXML::readInto( node, sourceName, _itemCatalog );
         if ( is( "Combine" ) )
             return loadCombine( node, sourceName );
         if ( is( "Monster" ) )
-            return Internal::readInto( node, sourceName, _monsterCatalog );
+            return GameDataXML::readInto( node, sourceName, _monsterCatalog );
         if ( is( "KeyLock" ) )
-            return Internal::readInto( node, sourceName, _keyLockCatalog );
+            return GameDataXML::readInto( node, sourceName, _keyLockCatalog );
         if ( is( "DialLock" ) )
             return loadDialLock( node, sourceName );
         if ( is( "Sequence" ) )

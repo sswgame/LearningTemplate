@@ -12,6 +12,7 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "GameFramework/Base/Foundation/Data/GameCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -98,6 +99,36 @@ namespace sw
         [[nodiscard]] static bool readFields( const XMLNode& node, TDef& outDef, string_view sourceName, std::initializer_list<string_view> listHandRead = {} )
         {
             return readFields( node, &outDef, *TDef::StaticType(), sourceName, listHandRead );
+        }
+        /** @brief 원소 하나를 스키마 @p TDef 로 읽어 카탈로그에 더합니다. 스키마 오류면 더하지 않고 false 입니다. 같은 id 는 카탈로그가 알리고 뒤의 것을 버립니다. */
+        template <typename TDef>
+        [[nodiscard]] static bool readInto( const XMLNode& node, string_view sourceName, GameCatalog<TDef>& outCatalog )
+        {
+            TDef def;
+            if ( readFields( node, def, sourceName ) == false )
+                return false;
+            (void)outCatalog.add( def );
+            return true;
+        }
+        /** @brief 원소 하나를 스키마 @p TDef 로 읽어 목록에 더합니다. 스키마 오류면 더하지 않고 false 입니다. */
+        template <typename TDef>
+        [[nodiscard]] static bool readInto( const XMLNode& node, string_view sourceName, vector<TDef>& outList )
+        {
+            TDef def;
+            if ( readFields( node, def, sourceName ) == false )
+                return false;
+            outList.push_back( def );
+            return true;
+        }
+        /** @brief 설정 원소 하나를 읽어 오류가 없을 때만 @p outSetting 을 바꿉니다(기본값은 스키마 초기값 — 앞의 값을 이어받지 않는다). */
+        template <typename TDef>
+        [[nodiscard]] static bool readSetting( const XMLNode& node, string_view sourceName, TDef& outSetting, std::initializer_list<string_view> listHandRead = {} )
+        {
+            TDef def;
+            if ( readFields( node, def, sourceName, listHandRead ) == false )
+                return false;
+            outSetting = def;
+            return true;
         }
 
         /** @brief `id` 속성을 반환합니다. 없거나 비면 "<원소> without an id - skipped" 를 경고하고 nullptr 를 반환합니다. */

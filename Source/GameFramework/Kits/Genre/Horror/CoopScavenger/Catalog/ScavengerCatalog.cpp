@@ -13,23 +13,6 @@
 
 namespace sw
 {
-    namespace
-    {
-        struct ScavengerCatalogInternal
-        {
-            /** @brief 설정 원소 하나를 읽어 오류가 없을 때만 바꿉니다(기본값은 스키마 초기값 — 앞의 값을 이어받지 않는다). */
-            template <typename TDef>
-            [[nodiscard]] static bool readSetting( const XMLNode& node, string_view sourceName, TDef& outSetting )
-            {
-                TDef def;
-                if ( GameDataXML::readFields( node, def, sourceName ) == false )
-                    return false;
-                outSetting = def;
-                return true;
-            }
-        };
-    } // namespace
-
     SW_LOG_CALLER( "ScavengerCatalog" );
 
     ScavengerCatalog::ScavengerCatalog()
@@ -113,11 +96,10 @@ namespace sw
 
     bool ScavengerCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
     {
-        using Internal = ScavengerCatalogInternal;
-        const auto is  = [name]( const utf8* pName )
+        const auto is = [name]( const utf8* pName )
         { return StringUtil::equals( name, string_view( pName ), true ); };
         if ( is( "Quota" ) )
-            return Internal::readSetting( node, sourceName, _quota );
+            return GameDataXML::readSetting( node, sourceName, _quota );
         if ( is( "BuyRate" ) )
         {
             ScavengerBuyRatePoint point;
@@ -127,13 +109,13 @@ namespace sw
             return true;
         }
         if ( is( "Day" ) )
-            return Internal::readSetting( node, sourceName, _day );
+            return GameDataXML::readSetting( node, sourceName, _day );
         if ( is( "Carry" ) )
-            return Internal::readSetting( node, sourceName, _carry );
+            return GameDataXML::readSetting( node, sourceName, _carry );
         if ( is( "Penalty" ) )
-            return Internal::readSetting( node, sourceName, _penalty );
+            return GameDataXML::readSetting( node, sourceName, _penalty );
         if ( is( "Facility" ) )
-            return Internal::readSetting( node, sourceName, _facility );
+            return GameDataXML::readSetting( node, sourceName, _facility );
         if ( is( "Scrap" ) )
         {
             ScavengerScrapDef def;

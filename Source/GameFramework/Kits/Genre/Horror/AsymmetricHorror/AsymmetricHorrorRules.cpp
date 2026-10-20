@@ -16,17 +16,6 @@ namespace sw
     {
         struct AsymmetricHorrorRulesInternal
         {
-            /** @brief 설정 원소 하나를 읽어 오류가 없을 때만 바꿉니다(기본값은 스키마 초기값 — 앞의 값을 이어받지 않는다). */
-            template <typename TDef>
-            [[nodiscard]] static bool readSetting( const XMLNode& node, string_view sourceName, TDef& outSetting )
-            {
-                TDef def;
-                if ( GameDataXML::readFields( node, def, sourceName ) == false )
-                    return false;
-                outSetting = def;
-                return true;
-            }
-
             /** @brief `scales` 가 있는 설정 원소를 읽습니다. `scales="1,1.7,2.1"` 는 적었으면 모두 0 이상의 수여야 합니다(적지 않으면 빈 목록). */
             template <typename TDef>
             [[nodiscard]] static bool readScaledSetting( const XMLNode& node, string_view sourceName, TDef& outSetting )
@@ -102,15 +91,15 @@ namespace sw
         if ( is( "SkillCheck" ) )
             return loadSkillCheck( node, sourceName );
         if ( is( "Hook" ) )
-            return Internal::readSetting( node, sourceName, _rules._hook );
+            return GameDataXML::readSetting( node, sourceName, _rules._hook );
         if ( is( "Pallet" ) )
-            return Internal::readSetting( node, sourceName, _rules._pallet );
+            return GameDataXML::readSetting( node, sourceName, _rules._pallet );
         if ( is( "Window" ) )
-            return Internal::readSetting( node, sourceName, _rules._window );
+            return GameDataXML::readSetting( node, sourceName, _rules._window );
         if ( is( "Locker" ) )
-            return Internal::readSetting( node, sourceName, _rules._locker );
+            return GameDataXML::readSetting( node, sourceName, _rules._locker );
         if ( is( "Endgame" ) )
-            return Internal::readSetting( node, sourceName, _rules._endgame );
+            return GameDataXML::readSetting( node, sourceName, _rules._endgame );
         if ( is( "Killer" ) )
         {
             HorrorKillerDef killer;

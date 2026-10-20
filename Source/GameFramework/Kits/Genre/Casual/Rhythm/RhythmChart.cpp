@@ -20,17 +20,6 @@ namespace sw
         struct RhythmChartInternal
         {
 
-            /** @brief 원소 하나를 스키마 @p TDef 로 읽어 목록에 더합니다. 스키마 오류면 더하지 않고 false 입니다. */
-            template <typename TDef>
-            [[nodiscard]] static bool readInto( const XMLNode& node, string_view sourceName, vector<TDef>& outList )
-            {
-                TDef def;
-                if ( GameDataXML::readFields( node, def, sourceName ) == false )
-                    return false;
-                outList.push_back( def );
-                return true;
-            }
-
             static bool isNoteBefore( const RhythmNote& lhs, const RhythmNote& rhs )
             {
                 if ( lhs._beat != rhs._beat )
@@ -191,11 +180,11 @@ namespace sw
         {
             const string_view name = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
             if ( name == "Bpm" )
-                bValid = RhythmChartInternal::readInto( node, sourceName, listBpmChange ) && bValid;
+                bValid = GameDataXML::readInto( node, sourceName, listBpmChange ) && bValid;
             else if ( name == "Stop" )
-                bValid = RhythmChartInternal::readInto( node, sourceName, listStop ) && bValid;
+                bValid = GameDataXML::readInto( node, sourceName, listStop ) && bValid;
             else if ( name == "Measure" )
-                bValid = RhythmChartInternal::readInto( node, sourceName, _listMeasureChange ) && bValid;
+                bValid = GameDataXML::readInto( node, sourceName, _listMeasureChange ) && bValid;
             else if ( name == "Note" )
             {
                 RhythmNoteDef          noteDef;

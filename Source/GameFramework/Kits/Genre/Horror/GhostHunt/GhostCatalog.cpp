@@ -10,34 +10,6 @@
 
 namespace sw
 {
-    namespace
-    {
-        struct GhostCatalogInternal
-        {
-            /** @brief 원소 하나를 스키마 @p TDef 로 읽어 카탈로그에 더합니다. 스키마 오류면 더하지 않고 false 입니다. */
-            template <typename TDef>
-            [[nodiscard]] static bool readInto( const XMLNode& node, string_view sourceName, GameCatalog<TDef>& outCatalog )
-            {
-                TDef def;
-                if ( GameDataXML::readFields( node, def, sourceName ) == false )
-                    return false;
-                (void)outCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
-                return true;
-            }
-
-            /** @brief 설정 원소 하나를 읽어 오류가 없을 때만 바꿉니다(기본값은 스키마 초기값 — 앞의 값을 이어받지 않는다). */
-            template <typename TDef>
-            [[nodiscard]] static bool readSetting( const XMLNode& node, string_view sourceName, TDef& outSetting )
-            {
-                TDef def;
-                if ( GameDataXML::readFields( node, def, sourceName ) == false )
-                    return false;
-                outSetting = def;
-                return true;
-            }
-        };
-    } // namespace
-
     SW_LOG_CALLER( "GhostCatalog" );
 
     GhostCatalog::GhostCatalog()
@@ -79,23 +51,22 @@ namespace sw
 
     bool GhostCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
     {
-        using Internal = GhostCatalogInternal;
-        const auto is  = [name]( const utf8* pName )
+        const auto is = [name]( const utf8* pName )
         { return StringUtil::equals( name, string_view( pName ), true ); };
         if ( is( "Flashlight" ) )
-            return Internal::readSetting( node, sourceName, _flashlight );
+            return GameDataXML::readSetting( node, sourceName, _flashlight );
         if ( is( "Vacuum" ) )
             return loadVacuum( node, sourceName );
         if ( is( "Ghost" ) )
-            return Internal::readInto( node, sourceName, _ghostCatalog );
+            return GameDataXML::readInto( node, sourceName, _ghostCatalog );
         if ( is( "Room" ) )
             return loadRoom( node, sourceName );
         if ( is( "Door" ) )
-            return Internal::readInto( node, sourceName, _doorCatalog );
+            return GameDataXML::readInto( node, sourceName, _doorCatalog );
         if ( is( "Furniture" ) )
             return loadFurniture( node, sourceName );
         if ( is( "Boo" ) )
-            return Internal::readInto( node, sourceName, _booCatalog );
+            return GameDataXML::readInto( node, sourceName, _booCatalog );
         SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
         return false;
     }

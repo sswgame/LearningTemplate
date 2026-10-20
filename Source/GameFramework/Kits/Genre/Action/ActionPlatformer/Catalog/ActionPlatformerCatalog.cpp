@@ -21,17 +21,6 @@ namespace sw
             static constexpr const utf8* kNameSeparators = ",; \t";
 
             static bool isGradeHigher( const ActionGradeDef& lhs, const ActionGradeDef& rhs ) { return lhs._minScore > rhs._minScore; }
-
-            /** @brief 설정 원소 하나를 읽어 오류가 없을 때만 바꿉니다(기본값은 스키마 초기값 — 앞의 값을 이어받지 않는다). */
-            template <typename TDef>
-            [[nodiscard]] static bool readSetting( const XMLNode& node, string_view sourceName, TDef& outSetting )
-            {
-                TDef def;
-                if ( GameDataXML::readFields( node, def, sourceName ) == false )
-                    return false;
-                outSetting = def;
-                return true;
-            }
         };
     } // namespace
 
@@ -88,9 +77,9 @@ namespace sw
         if ( is( "Grading" ) )
             return loadGrading( node, sourceName );
         if ( is( "Body" ) )
-            return Internal::readSetting( node, sourceName, _bodySettings );
+            return GameDataXML::readSetting( node, sourceName, _bodySettings );
         if ( is( "Parry" ) )
-            return Internal::readSetting( node, sourceName, _parryRules );
+            return GameDataXML::readSetting( node, sourceName, _parryRules );
         SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
         return false;
     }

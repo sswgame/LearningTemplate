@@ -15,17 +15,6 @@ namespace sw
     {
         struct MetroidvaniaCatalogInternal
         {
-            /** @brief 원소 하나를 스키마 @p TDef 로 읽어 카탈로그에 더합니다. 스키마 오류면 더하지 않고 false 입니다. */
-            template <typename TDef>
-            [[nodiscard]] static bool readInto( const XMLNode& node, string_view sourceName, GameCatalog<TDef>& outCatalog )
-            {
-                TDef def;
-                if ( GameDataXML::readFields( node, def, sourceName ) == false )
-                    return false;
-                (void)outCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
-                return true;
-            }
-
             /** @brief 없어도 되는 원소 @p pName 을 스키마 @p TDef 로 읽습니다. 없으면 @p outDef 는 스키마 초기값이고 true 입니다. */
             template <typename TDef>
             [[nodiscard]] static bool readOptionalChild( const XMLNode& root, const utf8* pName, string_view sourceName, TDef& outDef )
@@ -109,11 +98,11 @@ namespace sw
         }
         for ( XMLNode node = root.findChild( "Map" ); node; node = node.findNextSibling( "Map" ) )
         {
-            loadedCount += Internal::readInto( node, sourceName, _mapCatalog ) ? 1 : 0;
+            loadedCount += GameDataXML::readInto( node, sourceName, _mapCatalog ) ? 1 : 0;
         }
         for ( XMLNode node = root.findChild( "Site" ); node; node = node.findNextSibling( "Site" ) )
         {
-            loadedCount += Internal::readInto( node, sourceName, _siteCatalog ) ? 1 : 0;
+            loadedCount += GameDataXML::readInto( node, sourceName, _siteCatalog ) ? 1 : 0;
         }
         for ( XMLNode node = root.findChild( "Pickup" ); node; node = node.findNextSibling( "Pickup" ) )
         {
