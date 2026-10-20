@@ -4,6 +4,7 @@
 
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
@@ -14,7 +15,9 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Animation/Rig/RigInstance.h"
 #include "Engine/Animation/Rig/RigNode.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
@@ -24,6 +27,7 @@
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include <imgui.h>
 
@@ -88,6 +92,34 @@ namespace sw::editor
                                          "Toggle Rig Node" );
             }
 
+            /**
+             * @brief 인스턴스 노드의 가중치 · 켜짐을 리그 파일에 되써 넣고 상태 줄 글을 돌려줍니다. 다른 키는 그대로 둡니다(`RigAsset::rewriteNodeSettings`).
+             * @details 파일 감시가 쓴 파일을 다시 읽으면 같은 리그를 쓰는 모든 인스턴스가 새 값으로 다시 바인딩된다.
+             */
+            static string saveNodeSettings( const PoseModifierComponent& modifier )
+            {
+                const RigInstance&        instance = modifier.getRigInstance();
+                vector<RigNodeSaveParams> listNode;
+                for ( uint32 nodeIndex = 0; nodeIndex < instance.getNodeCount(); ++nodeIndex )
+                {
+                    const RigNode& node = instance.getNode( nodeIndex );
+                    listNode.push_back( RigNodeSaveParams{ node.getName(), node.getWeight(), node.isEnabled() } );
+                }
+                const string_view rigPath  = modifier.getRigPath();
+                const string      readPath = ResourcePaths::findLooseFile( rigPath ).getDiskPath();
+                string            text;
+                if ( readPath.empty() || FileUtil::readTextFile( readPath, text ) == false )
+                    return string( "The rig file could not be read" );
+                string rewritten;
+                if ( RigAsset::rewriteNodeSettings( text, rigPath, listNode, rewritten ) == false )
+                    return string( "The rig was not saved - see the log" );
+                const string writePath = ResourcePaths::getWritePath( rigPath );
+                if ( writePath.empty() || FileUtil::writeTextFile( writePath, rewritten ) == false )
+                    return string( "The rig file could not be written" );
+                SW_LOG_INFO( "Rig node settings saved to %#", writePath.c_str() );
+                return string( "Saved" );
+            }
+
             /** @brief 노드가 쓰는 본 이름을 "첫 본 (+n)" 꼴로 줄입니다. */
             static string describeBones( const Skeleton& skeleton, const vector<uint32>& listBone )
             {
@@ -120,6 +152,7 @@ namespace sw::editor
 
     RigDebugPanel::RigDebugPanel()
         : IEditorPanel( false ) // 필요할 때 여는 도구라 닫힌 채 시작한다
+        , _status{}
         , _selectedObjectID{ 0 }
         , _selectedNode{ -1 }
         , _weightBeforeEdit{ 0.0f }
@@ -154,6 +187,13 @@ namespace sw::editor
         if ( ImGui::Checkbox( "Bone Markers", &bDrawMarkers ) )
             _bDrawMarkers = bDrawMarkers ? SW_TRUE : SW_FALSE;
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorRigDebug", "BoneMarkersTip" ) );
+        ImGui::SameLine();
+        ImGui::BeginDisabled( pModifier->getRigPath().empty() );
+        if ( ImGui::Button( "Save to rig" ) )
+            _status = RigDebugPanelInternal::saveNodeSettings( *pModifier );
+        ImGui::EndDisabled();
+        EditorSelfTestMarks::note( "rigdebug.save" );
+        EditorWidgets::drawTooltip( "Write the weights and on/off of this instance's nodes into the rig asset (*.rig.json); other keys stay as they are" );
 
         GameObject*                  pObject = pModifier->getOwner();
         const SkeletalMeshComponent* pUnit   = pObject != nullptr ? pObject->getComponent<SkeletalMeshComponent>() : nullptr;
@@ -224,6 +264,7 @@ namespace sw::editor
             ImGui::EndTable();
         }
 
+        EditorWidgets::drawPanelStatus( _status.c_str() );
         DebugDrawQueue* pQueue              = findSubsystem<DebugDrawQueue>();
         const bool      bCanDrawBoneMarkers = _bDrawMarkers == SW_TRUE && pQueue != nullptr && pUnit != nullptr && listSelectedBone.empty() == false;
         if ( bCanDrawBoneMarkers )

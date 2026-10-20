@@ -256,7 +256,7 @@ namespace sw
         const hashed_string& getWeightSlot() const { return _weightSlot; }
         /** @brief 노드를 켜 두는 가장 작은 화면 크기입니다. 0 이면 항상 켭니다. */
         float32 getMinScreenSize() const { return _minScreenSize; }
-        /** @brief 공통 키(name, weight, weight_curve, weight_slot, min_screen_size)를 읽습니다(에셋이 호출합니다). */
+        /** @brief 공통 키(name, weight, weight_curve, weight_slot, min_screen_size, enabled — 적지 않으면 켜짐)를 읽습니다(에셋이 호출합니다). */
         [[nodiscard]] bool parseCommon( RigJSONReader& reader );
 
     protected:

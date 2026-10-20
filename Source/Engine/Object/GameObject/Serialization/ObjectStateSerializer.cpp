@@ -176,7 +176,12 @@ namespace sw
                 return ( token != 0 ) ? token : 1;
             }
 
-            static SerializeContext makeGameObjectXMLContext( GameObject* pGameObject, SerializePurpose purpose )
+            /**
+             * @brief 오브젝트 상태를 읽고 쓰는 문맥입니다. 컴포넌트 핸들 텍스트 처리기는 여기서 한 번만 등록합니다.
+             * @details 읽기는 두 형태(숫자 · 키)를 읽는 처리기이고, 쓰기는 @p componentTextWriter 입니다. 읽기 경로는 런타임 글
+             *          (`ReferenceWriter::writeRuntimeComponentText`)을, 쓰기 경로는 `GameObjectWriteContext` 가 저장 형태를 고르는 쓰기를 넘깁니다.
+             */
+            static SerializeContext makeGameObjectContext( GameObject* pGameObject, SerializePurpose purpose, const SerializeContext::TextWriteFn& componentTextWriter )
             {
                 SerializeContext serializeContext = SerializeContext::deriveFromDefault( purpose );
                 serializeContext.setOuterInstance( pGameObject );
@@ -188,12 +193,8 @@ namespace sw
                 // 버전 붙은 읽기가 이 값을 같은 버전의 orphan 정책으로 읽는다(`SchemaOrphanPolicy::Ignore`). 버전이 다른 상태는 그래도 거절한다.
                 // 버린 필드는 세 형식이 같이 지나는 `runSchemaMigrateStep` 이 이름과 함께 로드마다 한 번 알린다.
                 serializeContext.setAllowUnknownProperties( true );
-                // 컴포넌트 핸들 텍스트는 두 형태를 읽는다(숫자 런타임 id, 파일 형태의 키). 쓰기는 저장할 때 `registerReferenceWriter` 가 바꾼다. 바이너리는 같은 16 바이트다.
-                serializeContext.registerTextHandler(
-                    getComponentHandleTypeName(), []( const void* pPtr )
-                { return ReferenceWriter::writeRuntimeComponentText( *static_cast<const ComponentHandle*>( pPtr ) ); },
-                    []( void* pPtr, string_view text )
-                { return readComponentHandleText( pPtr, text ); } );
+                // 컴포넌트 핸들 텍스트는 두 형태를 읽는다(숫자 런타임 id, 파일 형태의 키). 바이너리는 같은 16 바이트다.
+                serializeContext.registerTextHandler( getComponentHandleTypeName(), componentTextWriter, SW_DELEGATE_FUNCTION( SerializeContext::TextReadFn, &readComponentHandleText ) );
                 return serializeContext;
             }
 
@@ -273,8 +274,9 @@ namespace sw
                 const GameObject*        _pOuter{ nullptr }; ///< 지금 쓰는 오브젝트다. 컴포넌트 핸들의 대상이 이 오브젝트의 것인지(소유자 0) 가린다
 
                 /** @brief 컴포넌트 핸들의 런타임 id 글(`오브젝트:컴포넌트`)입니다. 같은 실행의 스냅샷이 쓰고, 읽기 처리기의 숫자 갈래가 읽는다. */
-                static string writeRuntimeComponentText( const ComponentHandle& handle )
+                static string writeRuntimeComponentText( const void* pValue )
                 {
+                    const ComponentHandle& handle = *static_cast<const ComponentHandle*>( pValue );
                     return sw::to_string( handle.objectID() ) + ":" + sw::to_string( handle.componentID() );
                 }
 
@@ -327,7 +329,7 @@ namespace sw
                 string writeComponent( const void* pValue ) const
                 {
                     if ( writesFileForm() == false )
-                        return writeRuntimeComponentText( *static_cast<const ComponentHandle*>( pValue ) );
+                        return writeRuntimeComponentText( pValue );
                     const ComponentReference reference = computeComponentReference( pValue );
                     return reference._key.empty() ? string{ "0:0" } : sw::to_string( reference._objectID ) + ":" + reference._key;
                 }
@@ -363,29 +365,44 @@ namespace sw
                 }
             };
 
-            /** @brief 오브젝트 상태를 쓰는 컨텍스트에 핸들 텍스트와 바이너리 처리기를 등록합니다. 읽기는 기본 처리기를 그대로 쓰며, 옮기는 일은 배치가 모두 읽은 뒤 합니다(`ObjectStateBatch::finish`). */
-            static void registerReferenceWriter( SerializeContext& serializeContext, const ReferenceWriter& writer )
+            /**
+             * @brief 오브젝트 상태를 쓰는 문맥입니다. 핸들 텍스트와 바이너리 처리기를 `_writer` 로 등록합니다.
+             * @details 처리기가 `_writer` 를 가리키므로 둘을 한 값으로 묶고 복사 · 이동을 막는다. 그래서 문맥을 만들고 처리기 등록을 잊거나,
+             *          쓰기 객체보다 문맥이 오래 사는 모양을 쓸 수 없다. 읽기는 기본 처리기를 그대로 쓰며, 옮기는 일은 배치가 모두 읽은 뒤 한다(`ObjectStateBatch::finish`).
+             */
+            class GameObjectWriteContext
             {
-                // 컴포넌트 핸들: 읽기는 `makeGameObjectXMLContext` 가 이미 두 형태(숫자 · 키)를 읽는 처리기로 바꿔 두었다.
-                const SerializeContext::TextReadFn* pComponentReader = serializeContext.findTextReader( getComponentHandleTypeName() );
-                if ( pComponentReader != nullptr )
-                    serializeContext.registerTextHandler( getComponentHandleTypeName(), SW_DELEGATE_METHOD( SerializeContext::TextWriteFn, &ReferenceWriter::writeComponent, &writer ),
-                                                          *pComponentReader );
-                const SerializeContext::BinaryReadFn* pComponentBinaryReader = serializeContext.findBinaryReader( getComponentHandleTypeName() );
-                if ( pComponentBinaryReader != nullptr )
-                    serializeContext.registerBinaryHandler( getComponentHandleTypeName(),
-                                                            SW_DELEGATE_METHOD( SerializeContext::BinaryWriteFn, &ReferenceWriter::writeComponentBinary, &writer ), *pComponentBinaryReader );
+            public:
+                GameObjectWriteContext( const GameObject* pGameObject, const ObjectSaveOptions& options )
+                    : _writer{ &options, pGameObject }
+                    , _context{ makeGameObjectContext( const_cast<GameObject*>( pGameObject ), options.getPurpose(),
+                                                       SW_DELEGATE_METHOD( SerializeContext::TextWriteFn, &ReferenceWriter::writeComponent, &_writer ) ) }
+                {
+                    const SerializeContext::BinaryReadFn* pComponentBinaryReader = _context.findBinaryReader( getComponentHandleTypeName() );
+                    if ( pComponentBinaryReader != nullptr )
+                        _context.registerBinaryHandler( getComponentHandleTypeName(), SW_DELEGATE_METHOD( SerializeContext::BinaryWriteFn, &ReferenceWriter::writeComponentBinary, &_writer ),
+                                                        *pComponentBinaryReader );
 
-                const SerializeContext::TextReadFn* pReader = serializeContext.findTextReader( getObjectHandleTypeName() );
-                if ( pReader == nullptr )
-                    return;
-                serializeContext.registerTextHandler( getObjectHandleTypeName(), SW_DELEGATE_METHOD( SerializeContext::TextWriteFn, &ReferenceWriter::write, &writer ),
-                                                      *pReader );
-                const SerializeContext::BinaryReadFn* pBinaryReader = serializeContext.findBinaryReader( getObjectHandleTypeName() );
-                if ( pBinaryReader != nullptr )
-                    serializeContext.registerBinaryHandler( getObjectHandleTypeName(),
-                                                            SW_DELEGATE_METHOD( SerializeContext::BinaryWriteFn, &ReferenceWriter::writeBinary, &writer ), *pBinaryReader );
-            }
+                    const SerializeContext::TextReadFn* pReader = _context.findTextReader( getObjectHandleTypeName() );
+                    if ( pReader == nullptr )
+                        return;
+                    _context.registerTextHandler( getObjectHandleTypeName(), SW_DELEGATE_METHOD( SerializeContext::TextWriteFn, &ReferenceWriter::write, &_writer ), *pReader );
+                    const SerializeContext::BinaryReadFn* pBinaryReader = _context.findBinaryReader( getObjectHandleTypeName() );
+                    if ( pBinaryReader != nullptr )
+                        _context.registerBinaryHandler( getObjectHandleTypeName(), SW_DELEGATE_METHOD( SerializeContext::BinaryWriteFn, &ReferenceWriter::writeBinary, &_writer ), *pBinaryReader );
+                }
+
+                GameObjectWriteContext( const GameObjectWriteContext& )            = delete;
+                GameObjectWriteContext& operator=( const GameObjectWriteContext& ) = delete;
+                GameObjectWriteContext( GameObjectWriteContext&& )                 = delete;
+                GameObjectWriteContext& operator=( GameObjectWriteContext&& )      = delete;
+
+                const SerializeContext& getContext() const { return _context; }
+
+            private:
+                const ReferenceWriter _writer;
+                SerializeContext      _context;
+            };
         };
     } // namespace
 } // namespace sw
@@ -407,10 +424,8 @@ namespace sw
         // 텍스트로 저장하는 경로(씬과 프리팹 저작)는 쓰기 전에 검증한다. 결과만 남기고 저장은 그대로 한다. 바이너리(플레이, 되돌리기 스냅샷)는 검증하지 않는다.
         (void)ObjectValidation::reportGameObject( *pGameObject, true );
 
-        SerializeContext                                     serializeContext = ObjectStateSerializerInternal::makeGameObjectXMLContext( const_cast<GameObject*>( pGameObject ), options.getPurpose() );
-        const ObjectStateSerializerInternal::ReferenceWriter referenceWriter{ &options, pGameObject };
-        ObjectStateSerializerInternal::registerReferenceWriter( serializeContext, referenceWriter );
-        return TSerializer::serializeVersioned( kObjectReflectedSchemaVersion, pGameObject, *pTypeInfo, serializeContext );
+        const ObjectStateSerializerInternal::GameObjectWriteContext writeContext( pGameObject, options );
+        return TSerializer::serializeVersioned( kObjectReflectedSchemaVersion, pGameObject, *pTypeInfo, writeContext.getContext() );
     }
 
     template <typename DeserializeStateFunc>
@@ -441,9 +456,10 @@ namespace sw
         pGameObject->clearComponents();
 
         const GameObject::ComponentIDRestoreScope restoreScope( pGameObject, context._pIdentity );
-        const SerializeContext                    serializeContext = ObjectStateSerializerInternal::makeGameObjectXMLContext( pGameObject, context.getPurpose() );
-        uint32                                    version{ 0 };
-        const bool                                bLoaded = deserializeState( version, serializeContext );
+        const SerializeContext                    serializeContext = ObjectStateSerializerInternal::makeGameObjectContext(
+            pGameObject, context.getPurpose(), SW_DELEGATE_FUNCTION( SerializeContext::TextWriteFn, &ObjectStateSerializerInternal::ReferenceWriter::writeRuntimeComponentText ) );
+        uint32     version{ 0 };
+        const bool bLoaded = deserializeState( version, serializeContext );
         if ( bLoaded )
         {
             // 상태에 적힌 이름이다. 매니저가 유일하게 바꾸기(`finishLoad`) 전에 잡는다. 같은 배치의 이름만 남은 참조가 이 이름으로 찾는다.
@@ -521,11 +537,9 @@ namespace sw
         const size_t sizeHeaderPos = writer.getOffset();
         writer.write( static_cast<uint32>( 0 ) );
 
-        const size_t                                         bodyStart        = writer.getOffset();
-        SerializeContext                                     serializeContext = ObjectStateSerializerInternal::makeGameObjectXMLContext( const_cast<GameObject*>( pGameObject ), options.getPurpose() );
-        const ObjectStateSerializerInternal::ReferenceWriter referenceWriter{ &options, pGameObject };
-        ObjectStateSerializerInternal::registerReferenceWriter( serializeContext, referenceWriter );
-        if ( BinarySerializer::serializeVersioned( kObjectReflectedSchemaVersion, pGameObject, *pTypeInfo, outBuffer, serializeContext ) == false )
+        const size_t                                                bodyStart = writer.getOffset();
+        const ObjectStateSerializerInternal::GameObjectWriteContext writeContext( pGameObject, options );
+        if ( BinarySerializer::serializeVersioned( kObjectReflectedSchemaVersion, pGameObject, *pTypeInfo, outBuffer, writeContext.getContext() ) == false )
             return false;
         writer.writeAt( sizeHeaderPos, static_cast<uint32>( writer.getOffset() - bodyStart ) );
 

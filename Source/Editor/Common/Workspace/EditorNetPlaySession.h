@@ -7,6 +7,7 @@
  *          | 프로세스 | 인자 |
  *          |---|---|
  *          | 서버 | `-gv_netListenPort=<포트>` (+ 트레이스면 `-gv_traceSaveOnExit=<폴더>/server.trace.json`) |
+ *          | 전용 서버만 | `-gv_debugChannelPort=<TCP 포트> -gv_debugChannelToken=<세션마다 새 토큰>` — Inspector 탭이 이 채널로 붙는다(`getDebugChannelPort`) |
  *          | 클라이언트 | `-gv_netConnectAddress=127.0.0.1:<포트> -gv_standardInputCommands=1` (+ `-gv_traceSaveOnExit=<폴더>/clientN.trace.json`) |
  *          | `App` 마다(창 배치를 켜면) | `-W=<너비> -H=<높이> -WinX=<x> -WinY=<y>` — 리슨 호스트 · 클라이언트 순서로 나란히(`makeWindowArguments`) |
  *
@@ -139,8 +140,12 @@ namespace sw::editor
         /** @brief 서버에 연결되었다고 로그에 남긴 클라이언트 수입니다. `Net session connected to` 줄을 센 값이며, 프로브와 테스트가 접속 여부를 이 값으로 확인합니다. */
         int32 getConnectedClientCount() const;
         /** @brief 패널과 툴바가 편집하는 다음 세션의 구성입니다. `start` 는 받은 구성을 따로 복사해서 씁니다. */
-        EditorNetPlaySettings&     getSettings() { return _pendingSettings; }
-        uint16                     getPort() const { return _port; }
+        EditorNetPlaySettings& getSettings() { return _pendingSettings; }
+        uint16                 getPort() const { return _port; }
+        /** @brief 전용 서버 세션이면 서버의 디버그 채널 포트(루프백 TCP)입니다. 리슨 호스트 세션 · 멈춘 세션은 0 입니다(Inspector 탭이 붙는다). */
+        uint16 getDebugChannelPort() const { return _debugChannelPort; }
+        /** @brief 위 채널의 토큰입니다. 세션마다 새로 만듭니다. 채널이 없으면 비어 있습니다. */
+        const string&              getDebugChannelToken() const { return _debugChannelToken; }
         int32                      getProcessCount() const { return static_cast<int32>( _listProcess.size() ); }
         EditorNetPlayProcessStatus getProcessStatus( int32 processIndex ) const;
         /** @brief 패널 필터용 최근 줄입니다. `update` 가 채웁니다. */
@@ -165,6 +170,8 @@ namespace sw::editor
         static string makeWindowArguments( const EditorNetPlaySettings& settings, int32 windowIndex );
         /** @brief 비어 있는 UDP 포트 하나를 고릅니다. 포트를 잠깐 열었다 닫으므로 고른 뒤에 다른 프로세스가 가져갈 수 있습니다. 고르지 못하면 0 입니다. */
         static uint16 findFreeUDPPort();
+        /** @brief 루프백의 비어 있는 TCP 포트 하나를 고릅니다(디버그 채널). 고른 뒤에 다른 프로세스가 가져갈 수 있는 것은 UDP 와 같습니다. 고르지 못하면 0 입니다. */
+        static uint16 findFreeStreamPort();
 
     private:
         struct ChildProcess;
@@ -183,10 +190,12 @@ namespace sw::editor
         vector<EditorNetPlayLogLine>     _listDrainScratch;
         string                           _traceDirectory;
         string                           _mergedTracePath;
-        EditorNetPlaySettings            _settings;        ///< 실행 중인 세션의 구성
-        EditorNetPlaySettings            _pendingSettings; ///< 다음 세션의 구성(`getSettings`)
+        string                           _debugChannelToken; ///< 전용 서버의 디버그 채널 토큰(세션마다 새로). 채널이 없으면 비어 있다
+        EditorNetPlaySettings            _settings;          ///< 실행 중인 세션의 구성
+        EditorNetPlaySettings            _pendingSettings;   ///< 다음 세션의 구성(`getSettings`)
         EditorNetPlayPresetStore         _presetStore;
         uint16                           _port;
+        uint16                           _debugChannelPort;     ///< 전용 서버의 디버그 채널 TCP 포트. 채널이 없으면 0
         bool                             _bMergedTraceUnopened; ///< `_mergedTracePath` 를 아직 `takeUnopenedMergedTrace` 가 내주지 않았다
     };
 } // namespace sw::editor

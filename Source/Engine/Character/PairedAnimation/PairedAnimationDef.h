@@ -96,6 +96,23 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct PairedAnimationContentDef
+     * @brief 파일 한 장의 내용 그대로입니다(타임라인 길이 · 역할 · 알림 · 고르기 조건). 에디터는 이것을 고치고 `PairedAnimationDef::makeXMLText` 로 쓴 뒤 다시 읽어 검사합니다.
+     * @details 각(`_yawRadians`, 고르기 방위각)은 라디안이고 파일에는 도로 적힌다. 알림은 읽은 뒤 시각 순서다.
+     */
+    struct PairedAnimationContentDef
+    {
+        vector<PairedAnimationRoleDef>   _listRole{};
+        vector<PairedAnimationNotifyDef> _listNotify{};
+        PairedAnimationSelectDef         _select{};
+        float32                          _duration{ 0.0f };
+        bool                             _bHasSelect{ false };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @class PairedAnimationDef
      * @brief 페어드 애니메이션 에셋 하나입니다. 파일 머리말 참고.
      */
@@ -110,23 +127,42 @@ namespace sw
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
         /** @brief 리소스 파일에서 읽습니다. */
         [[nodiscard]] bool loadFromResource( string_view path );
+        /**
+         * @brief 내용을 파일 형식(`*.pairedanim.xml`)으로 씁니다. 적지 않아도 되는 값(앵커가 아닌 역할의 `anchor`, 0 인 `start` · `yaw`, 빈 `skeleton`)은 쓰지 않습니다.
+         * @details 쓰기는 검사하지 않는다 — 결과를 `loadFromXMLText` 로 다시 읽어야 규칙(앵커 하나, 정렬 속성 등)을 본다. 정렬하지 않는 역할의 오프셋 · 워프 값은 쓰지 않는다.
+         */
+        [[nodiscard]] static string makeXMLText( const PairedAnimationContentDef& content );
+        /** @brief 지금 내용을 파일 형식으로 씁니다(`makeXMLText`). */
+        string saveToXMLText() const { return makeXMLText( _content ); }
+        /** @brief 파일 한 장의 내용입니다. */
+        const PairedAnimationContentDef& getContent() const { return _content; }
 
+        /**
+         * @brief 읽은 리소스 경로입니다(`loadFromResource`). 텍스트에서 읽었거나 코드가 만든 에셋은 비어 있습니다.
+         * @details 네트워크 복제(`GF_NetPairedAnimation`)는 이 경로로 클라이언트가 같은 에셋을 받게 한다 — 경로가 빈 에셋의 세션은 복제할 수 없다(오류).
+         */
+        const string& getSourcePath() const { return _sourcePath; }
         /** @brief 공유 타임라인 길이(초)입니다. 앵커 클립 길이와 같아야 세션이 시작합니다. */
-        float32 getDuration() const { return _duration; }
+        float32 getDuration() const { return _content._duration; }
         /** @brief 역할들입니다(파일 순서). */
-        const vector<PairedAnimationRoleDef>& getRoles() const { return _listRole; }
+        const vector<PairedAnimationRoleDef>& getRoles() const { return _content._listRole; }
         /** @brief 공유 알림들입니다(시각 순서). */
-        const vector<PairedAnimationNotifyDef>& getNotifies() const { return _listNotify; }
+        const vector<PairedAnimationNotifyDef>& getNotifies() const { return _content._listNotify; }
         /** @brief 앵커 역할의 인덱스입니다(읽기에 성공했으면 늘 있습니다). */
         uint32 getAnchorRoleIndex() const { return _anchorRoleIndex; }
         /** @brief 이름의 역할 인덱스입니다. 없으면 `invalid_index::kUint32` 입니다. */
         uint32 findRoleIndex( const hashed_string& roleName ) const;
         /** @brief 세트 고르기 조건입니다. 적지 않았으면(어느 자리에서나 고를 수 있는 세트) nullptr 입니다. */
-        const PairedAnimationSelectDef* findSelect() const { return _bHasSelect ? &_select : nullptr; }
+        const PairedAnimationSelectDef* findSelect() const { return _content._bHasSelect ? &_content._select : nullptr; }
         /**
          * @brief 고르기 조건의 역할 루트가 @p rolePosition 이고 앵커 루트가 @p anchorWorld 일 때 이 세트를 고를 수 있으면 true 입니다. 조건이 없으면 늘 true 입니다.
          */
         bool matchesSelect( const float4x4& anchorWorld, const float3& rolePosition ) const;
+        /**
+         * @brief 앵커 루트가 @p anchorPosition · @p anchorYaw(라디안)일 때 역할 루트의 정렬 목표(자리 · 요)입니다. 오프셋은 앵커 요로 돌린다(+Z 가 앞).
+         * @details 세션의 정렬(`snap` · `warp`)과 에디터 미리보기의 오프셋 기즈모가 같은 식을 쓴다. 같은 축 · 각 규칙을 `MotionWarpingComponent` 가 목표 요로 쓴다.
+         */
+        static void computeAlignTarget( const float3& anchorPosition, float32 anchorYaw, const PairedAnimationRoleDef& role, float3& outPosition, float32& outYaw );
 
     private:
         void readRoot( const XMLNode& root, CharacterDataReader& reader );
@@ -138,11 +174,8 @@ namespace sw
         /** @brief 내용을 비웁니다. */
         void clear();
 
-        vector<PairedAnimationRoleDef>   _listRole;
-        vector<PairedAnimationNotifyDef> _listNotify;
-        PairedAnimationSelectDef         _select;
-        float32                          _duration;
-        uint32                           _anchorRoleIndex;
-        bool                             _bHasSelect;
+        PairedAnimationContentDef _content;
+        string                    _sourcePath;
+        uint32                    _anchorRoleIndex;
     };
 } // namespace sw

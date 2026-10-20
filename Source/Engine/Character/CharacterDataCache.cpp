@@ -8,8 +8,7 @@
 #include "Engine/Character/PairedAnimation/PairedAnimationDef.h"
 #include "Engine/Character/Socket/SocketSet.h"
 #include "Engine/Physics/Asset/PhysicsAsset.h"
-#include "Engine/Resource/Cache/BuiltInAssetCache.h"
-#include "Engine/Resource/Cache/SharedAssetTable.h"
+#include "Engine/Resource/Cache/SharedAssetCacheDefinition.h"
 
 namespace sw
 {
@@ -26,174 +25,67 @@ namespace sw
                 (void)s_bLoaded;
                 return s_kinds;
             }
-
-            [[nodiscard]] static bool loadSocketSet( string_view path, SocketSet& outSocketSet ) { return outSocketSet.loadFromResource( path, loadDefaultKinds() ); }
-            [[nodiscard]] static bool loadNotifyTable( string_view path, AnimationNotifyTable& outTable ) { return outTable.loadFromResource( path, AnimationNotifyHandlerRegistry::getDefault() ); }
-            [[nodiscard]] static bool loadPhysicsAsset( string_view path, PhysicsAsset& outAsset ) { return outAsset.loadFromResource( path ); }
-            [[nodiscard]] static bool loadPairedAnimation( string_view path, PairedAnimationDef& outDef ) { return outDef.loadFromResource( path ); }
-
-            static SharedAssetTable<PairedAnimationDef>& getPairedAnimationTable()
-            {
-                static SharedAssetTable<PairedAnimationDef> s_table;
-                return s_table;
-            }
-
-            static SharedAssetTable<SocketSet>& getSocketSetTable()
-            {
-                static SharedAssetTable<SocketSet> s_table;
-                return s_table;
-            }
-
-            static SharedAssetTable<AnimationNotifyTable>& getNotifyTable()
-            {
-                static SharedAssetTable<AnimationNotifyTable> s_table;
-                return s_table;
-            }
-
-            static SharedAssetTable<PhysicsAsset>& getPhysicsAssetTable()
-            {
-                static SharedAssetTable<PhysicsAsset> s_table;
-                return s_table;
-            }
         };
     } // namespace
 } // namespace sw
 
 namespace sw
 {
-    shared_ptr<const SocketSet> SocketSetCache::acquire( string_view path )
+    template <>
+    struct SharedAssetCacheTraits<SocketSet>
     {
-        SW_MEMORY_SCOPE( Animation );
-        return CharacterDataCacheInternal::getSocketSetTable().acquire( path, &CharacterDataCacheInternal::loadSocketSet );
-    }
+        static constexpr const utf8*           kKindName   = "SocketSet";
+        static constexpr MemoryTag             kMemoryTag  = MemoryTag::Animation;
+        static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
 
-    uint32 SocketSetCache::getReloadCount()
-    {
-        return CharacterDataCacheInternal::getSocketSetTable().getReloadCount();
-    }
-
-    bool SocketSetCache::isCached( string_view relativePath ) const
-    {
-        return CharacterDataCacheInternal::getSocketSetTable().findLive( relativePath ) != nullptr;
-    }
-
-    void SocketSetCache::reload( string_view relativePath, IRHIDevice* pDevice )
-    {
-        (void)pDevice;
-        (void)CharacterDataCacheInternal::getSocketSetTable().reloadShared( relativePath, &CharacterDataCacheInternal::loadSocketSet );
-    }
-
-    size_t SocketSetCache::getCachedCount() const
-    {
-        return CharacterDataCacheInternal::getSocketSetTable().countLive();
-    }
-
-    void SocketSetCache::clear()
-    {
-        CharacterDataCacheInternal::getSocketSetTable().clear();
-    }
-
-    shared_ptr<const AnimationNotifyTable> AnimationNotifyTableCache::acquire( string_view path )
-    {
-        SW_MEMORY_SCOPE( Animation );
-        return CharacterDataCacheInternal::getNotifyTable().acquire( path, &CharacterDataCacheInternal::loadNotifyTable );
-    }
-
-    uint32 AnimationNotifyTableCache::getReloadCount()
-    {
-        return CharacterDataCacheInternal::getNotifyTable().getReloadCount();
-    }
-
-    bool AnimationNotifyTableCache::isCached( string_view relativePath ) const
-    {
-        return CharacterDataCacheInternal::getNotifyTable().findLive( relativePath ) != nullptr;
-    }
-
-    void AnimationNotifyTableCache::reload( string_view relativePath, IRHIDevice* pDevice )
-    {
-        (void)pDevice;
-        (void)CharacterDataCacheInternal::getNotifyTable().reloadShared( relativePath, &CharacterDataCacheInternal::loadNotifyTable );
-    }
-
-    size_t AnimationNotifyTableCache::getCachedCount() const
-    {
-        return CharacterDataCacheInternal::getNotifyTable().countLive();
-    }
-
-    void AnimationNotifyTableCache::clear()
-    {
-        CharacterDataCacheInternal::getNotifyTable().clear();
-    }
-
-    shared_ptr<const PairedAnimationDef> PairedAnimationDefCache::acquire( string_view path )
-    {
-        SW_MEMORY_SCOPE( Animation );
-        return CharacterDataCacheInternal::getPairedAnimationTable().acquire( path, &CharacterDataCacheInternal::loadPairedAnimation );
-    }
-
-    uint32 PairedAnimationDefCache::getReloadCount()
-    {
-        return CharacterDataCacheInternal::getPairedAnimationTable().getReloadCount();
-    }
-
-    bool PairedAnimationDefCache::isCached( string_view relativePath ) const
-    {
-        return CharacterDataCacheInternal::getPairedAnimationTable().findLive( relativePath ) != nullptr;
-    }
-
-    void PairedAnimationDefCache::reload( string_view relativePath, IRHIDevice* pDevice )
-    {
-        (void)pDevice;
-        // 돌고 있는 세션이 옛 에셋의 역할 인덱스를 읽으므로 제자리에서 바꾸지 않는다. 읽지 못하면 로더가 줄마다 오류를 남겼고 옛 에셋이 그대로다.
-        (void)CharacterDataCacheInternal::getPairedAnimationTable().detachShared( relativePath, &CharacterDataCacheInternal::loadPairedAnimation );
-    }
-
-    size_t PairedAnimationDefCache::getCachedCount() const
-    {
-        return CharacterDataCacheInternal::getPairedAnimationTable().countLive();
-    }
-
-    void PairedAnimationDefCache::clear()
-    {
-        CharacterDataCacheInternal::getPairedAnimationTable().clear();
-    }
-
-    shared_ptr<const PhysicsAsset> PhysicsAssetCache::acquire( string_view path )
-    {
-        return CharacterDataCacheInternal::getPhysicsAssetTable().acquire( path, &CharacterDataCacheInternal::loadPhysicsAsset );
-    }
-
-    uint32 PhysicsAssetCache::getReloadCount()
-    {
-        return CharacterDataCacheInternal::getPhysicsAssetTable().getReloadCount();
-    }
-
-    bool PhysicsAssetCache::isCached( string_view relativePath ) const
-    {
-        return CharacterDataCacheInternal::getPhysicsAssetTable().findLive( relativePath ) != nullptr;
-    }
-
-    void PhysicsAssetCache::reload( string_view relativePath, IRHIDevice* pDevice )
-    {
-        (void)pDevice;
-        (void)CharacterDataCacheInternal::getPhysicsAssetTable().reloadShared( relativePath, &CharacterDataCacheInternal::loadPhysicsAsset );
-    }
-
-    size_t PhysicsAssetCache::getCachedCount() const
-    {
-        return CharacterDataCacheInternal::getPhysicsAssetTable().countLive();
-    }
-
-    void PhysicsAssetCache::clear()
-    {
-        CharacterDataCacheInternal::getPhysicsAssetTable().clear();
-    }
+        [[nodiscard]] static bool load( string_view path, SocketSet& outSocketSet ) { return outSocketSet.loadFromResource( path, CharacterDataCacheInternal::loadDefaultKinds() ); }
+    };
 } // namespace sw
 
 namespace sw
 {
-    SW_BUILT_IN_ASSET_CACHE( SocketSetCache );
-    SW_BUILT_IN_ASSET_CACHE( AnimationNotifyTableCache );
-    SW_BUILT_IN_ASSET_CACHE( PairedAnimationDefCache );
-    SW_BUILT_IN_ASSET_CACHE( PhysicsAssetCache );
+    template <>
+    struct SharedAssetCacheTraits<AnimationNotifyTable>
+    {
+        static constexpr const utf8*           kKindName   = "AnimationNotifyTable";
+        static constexpr MemoryTag             kMemoryTag  = MemoryTag::Animation;
+        static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
+
+        [[nodiscard]] static bool load( string_view path, AnimationNotifyTable& outTable ) { return outTable.loadFromResource( path, AnimationNotifyHandlerRegistry::getDefault() ); }
+    };
+} // namespace sw
+
+namespace sw
+{
+    template <>
+    struct SharedAssetCacheTraits<PairedAnimationDef>
+    {
+        static constexpr const utf8* kKindName  = "PairedAnimationDef";
+        static constexpr MemoryTag   kMemoryTag = MemoryTag::Animation;
+        /** @brief 돌고 있는 세션이 옛 에셋의 역할 인덱스를 읽으므로 제자리에서 바꾸지 않는다. */
+        static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::Detach;
+
+        [[nodiscard]] static bool load( string_view path, PairedAnimationDef& outDef ) { return outDef.loadFromResource( path ); }
+    };
+} // namespace sw
+
+namespace sw
+{
+    template <>
+    struct SharedAssetCacheTraits<PhysicsAsset>
+    {
+        static constexpr const utf8*           kKindName   = "PhysicsAsset";
+        static constexpr MemoryTag             kMemoryTag  = MemoryTag::Physics;
+        static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
+
+        [[nodiscard]] static bool load( string_view path, PhysicsAsset& outAsset ) { return outAsset.loadFromResource( path ); }
+    };
+} // namespace sw
+
+namespace sw
+{
+    SW_SHARED_ASSET_CACHE( SocketSet );
+    SW_SHARED_ASSET_CACHE( AnimationNotifyTable );
+    SW_SHARED_ASSET_CACHE( PairedAnimationDef );
+    SW_SHARED_ASSET_CACHE( PhysicsAsset );
 } // namespace sw
