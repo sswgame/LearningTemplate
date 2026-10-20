@@ -441,28 +441,16 @@ SW_TEST_CASE( ServerBootTest, OnlineServicesStartFromTheOnlineConfigBesideTheSer
 }
 
 /**
- * @brief [ServerBootTest] 서버 설정 파일이 없으면 배포 서버는 서지 않는다(기본 포트로 조용히 뜬 서버는 틀린 DB 에 붙는다). Dev 는 기본값으로 선다.
- * @details Dev 의 기본값은 게임 포트 7777 · 모든 인터페이스다 — 나란히 도는 테스트와 부딪히지 않게(방화벽 창도 뜨지 않게) 빈 포트를 `-gv_netListenPort` 로 덮어쓴다(루프백만).
+ * @brief [ServerBootTest] 서버 설정 파일이 없으면 서버는 서지 않는다(기본 포트로 조용히 뜬 서버는 틀린 DB 에 붙는다). Dev 도 같다.
  */
-SW_TEST_CASE( ServerBootTest, MissingServerConfigStopsOnlyTheShippingServer )
+SW_TEST_CASE( ServerBootTest, MissingServerConfigStopsTheServer )
 {
     if ( findServerPath().empty() )
         SW_TEST_SKIP( "Server is not built next to the working directory (run from Bin)" );
-    string arguments = "-server-config=Config/Server/does-not-exist.json -gv_serverExitAfterTicks=10";
-#if !defined( SW_SHIPPING )
-    const uint16 port = findFreeDatagramPort();
-    SW_ASSERT_TRUE( port != 0 );
-    arguments += " -gv_netListenPort=" + to_string( port );
-#endif
-    const ServerRun run = runServer( arguments, ProcessOptions{}, []( Process& ) {} );
-#if defined( SW_SHIPPING )
+    const ServerRun run = runServer( "-server-config=Config/Server/does-not-exist.json -gv_serverExitAfterTicks=10", ProcessOptions{}, []( Process& ) {} );
     SW_EXPECT_TRUE( run._exitCode != 0 );
     SW_EXPECT_TRUE_MSG( run._firstErrorLine.find( "does-not-exist.json" ) != string::npos, run._firstErrorLine.c_str() );
     SW_EXPECT_FALSE( run._bReadySeen );
-#else
-    expectCleanExit( run, "TickLimit" );
-    SW_EXPECT_TRUE( run._output.find( "using built-in defaults" ) != string::npos );
-#endif
 }
 
 #if !defined( SW_SHIPPING )

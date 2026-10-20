@@ -193,15 +193,18 @@ namespace sw
             SW_LOG_ERROR( "The generated EngineConfig JSON does not deserialize - a reflection registrar was dropped at link time" );
             return SubsystemInitResult::Failed;
         }
-        const utf8* const pGameConfigJSON = shipping_host::kGameConfigJSON;
+        // Shipping 은 디스크의 Config/ 를 보지 않고 구운 JSON 만 읽는다. 그 밖은 디스크 파일이 필수다 — 없으면 구운 사본이나 `T{}` 로 서지 않고 멈춘다.
+        const ConfigSource engineSource = ConfigSource::baked( shipping_host::kEngineConfigJSON );
+        const ConfigSource gameSource   = ConfigSource::baked( shipping_host::kGameConfigJSON );
 #else
-        const utf8* const pGameConfigJSON = nullptr;
+        const ConfigSource engineSource = ConfigSource::disk( config::kFileRuntimeEngineConfig );
+        const ConfigSource gameSource   = ConfigSource::disk( GameSelection::getConfigPath() );
 #endif
-        const EngineConfig* pEngineConfig = ensureConfig<EngineConfig>( config::kFileRuntimeEngineConfig, shipping_host::kEngineConfigJSON );
+        const EngineConfig* pEngineConfig = loadHostConfig<EngineConfig>( engineSource );
         if ( pEngineConfig == nullptr )
             return SubsystemInitResult::Failed;
         EngineConfig::setActive( *pEngineConfig );
-        const GameConfig* pGameConfig = ensureConfig<GameConfig>( GameSelection::getConfigPath(), pGameConfigJSON );
+        const GameConfig* pGameConfig = loadHostConfig<GameConfig>( gameSource );
         if ( pGameConfig == nullptr )
             return SubsystemInitResult::Failed;
         GameConfig::setActive( *pGameConfig );

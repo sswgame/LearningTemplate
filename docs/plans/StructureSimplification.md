@@ -1,6 +1,6 @@
 # 구조 단순화 계획 (2026-10-20)
 
-> 상태: 설계 · 선행: 없음 · 영역: engine · 옛번호: 없음 · 진행: 0/21
+> 상태: 설계 · 선행: 없음 · 영역: engine · 옛번호: 없음 · 진행: 1/21
 
 상용 엔진(언리얼 · 유니티 · Godot) 비교에서 나온 구조 단순화 정책 네 개를 한 문서로 묶는다. 네 정책 모두 "같은 사실을 두 곳에 적어 두어서, 한쪽만 바뀌면 조용히 어긋난다"는 같은 근본 원인에서 나왔다.
 순서는 필수 설정(HC) → 팩 쿠킹(PK) → 에셋 종류 등록(AT) → 텍스트 형식(TX)이다. PK 가 끝나면 쿠커 쪽 파이썬 소비자가 사라져 AT 의 접미사 테이블 정리가 싸지고, AT 의 등록 줄 하나가 있으면 TX 의 형식 변환이 종류별 로더 하나를 바꾸는 일이 된다.
@@ -59,7 +59,6 @@
 
 | 단위 | 내용 | 건드릴 폴더 | 선행 | 검증 | 측정 |
 |---|---|---|---|---|---|
-| HC1 | `ConfigSource` · `loadHostConfig` · `loadOptionalConfig` 로 `ensureConfig` 를 바꾸고 `T{}` 대체(175-182 행)와 `ServerApp` 의 Dev 대체를 지웁니다. `ConfigReadResult::Missing` 의 뜻을 "필수면 오류"로 고치고 `TestConfigManager` 의 `GameConfig` C++ 기본값 정상 케이스를 "파일 없으면 실패"로 뒤집습니다 | `Engine/Config/`, `Server/ServerApp.cpp`, `Test/EngineTest/Config/`, `Test/ServerTest/` | 없음 | `ConfigManagerTest`, 서버 설정 테스트, Shipping 구성 컴파일, `-L nogpu` | 없음 |
 | HC2 | `GameInstanceBase` 의 `gamesettings.xml` 읽기 실패 폴백을 지웁니다. 읽기 실패는 게임 초기화 실패로 두고 `_packRoot` 가 비면 건너뛰는 분기도 없앱니다. 팩 없이 게임 인스턴스를 만드는 테스트는 테스트용 XML 문자열(`loadFromXMLText`)을 거치게 고칩니다 | `GameFramework/Base/Foundation/`, `Test/EngineTest/GameFramework/` | HC1 | `GameFramework` 테스트, 11 개 게임 기동, `-L nogpu` | 없음 |
 | HC3 | `PackEngineSettings`(`<Engine>` 요소)를 만들고 `GameConfig` 의 열 필드를 옮깁니다. 소비자 약 58 줄을 `PackEngineSettings` 로 바꾸고 `GameConfig` 를 `Required DataPath _packRoot` 하나로 줄입니다. 11 개 팩의 `gamesettings.xml` 과 11 개 프리셋을 다시 쓰고, `GameSettings` 가 `<Engine>` 을 건너뛰게 합니다. 창 제목은 마운트 뒤에 설정합니다 | `Engine/Config/`, `Engine/UI/`, `Engine/UserSettings/`, `Engine/Telemetry/`, `Engine/Renderer/Frame/`, `App/`, `Editor/`(`ProjectSettings` 패널), `GameFramework/Base/Foundation/`, `Config/Game/`, `Resource/game/*/data/` | HC2, DataDriven P1(권장) | 전 프리셋 컴파일, 11 개 게임 기동과 창 제목 확인, 에디터 설정 패널 테스트, `-L nogpu`, 네 백엔드 × 대표 셋 | 없음 |
 | HC4 | 후속 정리입니다. `GenerateShippingHostDefaults.py` 의 게임 JSON 을 팩 루트만 생성하게 하고, `CheckGamePresets.py` 가 보던 스키마 · 텔레메트리 경로 검사를 팩 설정 쪽 검사로 옮깁니다. 설정 문서와 `Config/README.md` 의 폴백 문장을 고칩니다 | `Scripts/generate/`, `Scripts/lint/gate/`, `Scripts/common/ConfigCatalog.py`, `docs/07_Configuration.md`, `Config/README.md`, `docs/Config/`(생성물) | HC3 | `-L lint`, 생성 문서 점검, Shipping 구성 컴파일 | 없음 |
