@@ -132,6 +132,20 @@ namespace sw
         AppearanceXMLUtilInternal::readVector( node, pAttribute, false, "r g b a", inoutValue, &GameDataXML::parseFloat4, report, sourceName );
     }
 
+    void AppearanceXMLUtil::readOptionalFloat( const XMLNode& node, const utf8* pAttribute, float32 minValue, float32 maxValue, float32& inoutValue, AppearanceLoadReport& report,
+                                               string_view sourceName )
+    {
+        if ( GameDataXML::readOptionalNumber( node, pAttribute, sourceName, minValue, maxValue, inoutValue ) == false )
+            report.addError( "%#: <%#> has an invalid %#", sourceName, node.getName(), pAttribute );
+    }
+
+    void AppearanceXMLUtil::readOptionalInt( const XMLNode& node, const utf8* pAttribute, int32 minValue, int32 maxValue, int32& inoutValue, AppearanceLoadReport& report,
+                                             string_view sourceName )
+    {
+        if ( GameDataXML::readOptionalNumber( node, pAttribute, sourceName, minValue, maxValue, inoutValue ) == false )
+            report.addError( "%#: <%#> has an invalid %#", sourceName, node.getName(), pAttribute );
+    }
+
     void AppearanceXMLUtil::readRequiredFloat4( const XMLNode& node, const utf8* pAttribute, float4& outValue, AppearanceLoadReport& report, string_view sourceName )
     {
         AppearanceXMLUtilInternal::readVector( node, pAttribute, true, "r g b a", outValue, &GameDataXML::parseFloat4, report, sourceName );

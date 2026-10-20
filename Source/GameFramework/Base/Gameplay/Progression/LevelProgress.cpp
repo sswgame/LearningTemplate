@@ -12,6 +12,8 @@
 
 namespace sw
 {
+    SW_LOG_CALLER( "LevelProgress" );
+
     ExperienceCurve::ExperienceCurve()
         : _listXpToNext{}
         , _base{ 100.0f }
@@ -42,24 +44,45 @@ namespace sw
         XMLNode     root;
         if ( GameDataXML::parseRoot( doc, xmlText, sourceName, "ExperienceCurve", root ) == false )
             return false;
-        loadFromNode( root );
-        return true;
+        return loadFromNode( root, sourceName );
     }
 
-    void ExperienceCurve::loadFromNode( const XMLNode& node )
+    bool ExperienceCurve::loadFromNode( const XMLNode& node, string_view sourceName )
     {
+        // 표(`<Level xp>`)가 있으면 표, 없으면 공식이다. 표의 xp 는 필수이고 1 이상, 공식의 빠진 칸은 생성자의 초기값이다.
+        // 깨진 값 · 범위 밖 값은 오류이고 곡선을 바꾸지 않는다(자르지 않는다).
+        bool          bValid = true;
         vector<int64> listXpToNext;
         for ( XMLNode child = node.findChild( "Level" ); child; child = child.findNextSibling( "Level" ) )
         {
-            listXpToNext.push_back( MathUtil::max( 1, child.getAttributeInt( "xp", 1 ) ) );
+            const std::optional<int32> xp = child.readRequiredAttribute<int32>( "xp" );
+            if ( xp.has_value() && *xp >= 1 )
+            {
+                listXpToNext.push_back( *xp );
+                continue;
+            }
+            if ( xp.has_value() )
+                SW_LOG_ERROR( "%#: <Level xp=\"%#\"> must be at least 1", sourceName, *xp );
+            bValid = false;
         }
+        if ( bValid == false )
+            return false;
         if ( listXpToNext.empty() == false )
         {
             setTable( listXpToNext );
-            return;
+            return true;
         }
-        setFormula( node.getAttributeFloat( "base", _base ), node.getAttributeFloat( "exponent", _exponent ), node.getAttributeFloat( "linear", _linear ),
-                    node.getAttributeInt( "maxLevel", _maxLevel ) );
+        float32 base     = _base;
+        float32 exponent = _exponent;
+        float32 linear   = _linear;
+        int32   maxLevel = _maxLevel;
+        bValid           = GameDataXML::readOptionalNumber( node, "base", sourceName, 0.0f, MathUtil::kMaxFloat, base );
+        bValid           = GameDataXML::readOptionalNumber( node, "exponent", sourceName, -MathUtil::kMaxFloat, MathUtil::kMaxFloat, exponent ) && bValid;
+        bValid           = GameDataXML::readOptionalNumber( node, "linear", sourceName, -MathUtil::kMaxFloat, MathUtil::kMaxFloat, linear ) && bValid;
+        bValid           = GameDataXML::readOptionalNumber( node, "maxLevel", sourceName, 1, MathUtil::kMaxInt32, maxLevel ) && bValid;
+        if ( bValid )
+            setFormula( base, exponent, linear, maxLevel );
+        return bValid;
     }
 
     int64 ExperienceCurve::getXpToNext( int32 level ) const

@@ -61,7 +61,7 @@ namespace sw
             /** @brief 단계 속성(mode, prompt, montage, duration, presses, decay, maxParticipants, pairedAnimation, interactorRole, interactableRole)을 읽습니다. 빠진 속성은 @p inoutStep 의 값을 그대로 둡니다. */
             [[nodiscard]] static bool readStep( const XMLNode& node, InteractionStepDef& inoutStep, string_view sourceName )
             {
-                const bool  bValid  = readEnum( node, "mode", inoutStep._mode, sourceName );
+                bool        bValid  = readEnum( node, "mode", inoutStep._mode, sourceName );
                 const utf8* pPrompt = node.findAttribute( "prompt" );
                 if ( pPrompt != nullptr )
                     inoutStep._prompt = hashed_string( pPrompt );
@@ -81,10 +81,10 @@ namespace sw
                 const utf8* pInteractableRole = node.findAttribute( "interactableRole" );
                 if ( pInteractableRole != nullptr )
                     inoutStep._interactableRole = hashed_string( pInteractableRole );
-                inoutStep._duration        = MathUtil::max( 0.0f, node.getAttributeFloat( "duration", inoutStep._duration ) );
-                inoutStep._presses         = MathUtil::max( 1, node.getAttributeInt( "presses", inoutStep._presses ) );
-                inoutStep._decay           = MathUtil::max( 0.0f, node.getAttributeFloat( "decay", inoutStep._decay ) );
-                inoutStep._maxParticipants = MathUtil::max( 1, node.getAttributeInt( "maxParticipants", inoutStep._maxParticipants ) );
+                bValid = GameDataXML::readOptionalNumber( node, "duration", sourceName, 0.0f, MathUtil::kMaxFloat, inoutStep._duration ) && bValid;
+                bValid = GameDataXML::readOptionalNumber( node, "presses", sourceName, 1, MathUtil::kMaxInt32, inoutStep._presses ) && bValid;
+                bValid = GameDataXML::readOptionalNumber( node, "decay", sourceName, 0.0f, MathUtil::kMaxFloat, inoutStep._decay ) && bValid;
+                bValid = GameDataXML::readOptionalNumber( node, "maxParticipants", sourceName, 1, MathUtil::kMaxInt32, inoutStep._maxParticipants ) && bValid;
                 return bValid;
             }
 
@@ -126,13 +126,14 @@ namespace sw
 
     bool InteractionCatalog::readInteraction( const XMLNode& node, InteractionDef& outDef, string_view sourceName ) const
     {
-        using Internal       = InteractionCatalogInternal;
-        bool bValid          = Internal::checkAttributes( node, Internal::kArrInteractionAttribute, sourceName );
-        outDef._id           = hashed_string( node.findAttribute( "id" ) != nullptr ? node.findAttribute( "id" ) : "" );
-        outDef._maxDistance  = MathUtil::max( 0.0f, node.getAttributeFloat( "maxDistance", outDef._maxDistance ) );
-        outDef._maxAngle     = MathUtil::clamp( node.getAttributeFloat( "maxAngle", 0.0f ), 0.0f, 180.0f ) * MathUtil::kDegreeToRadian;
-        outDef._cooldown     = MathUtil::max( 0.0f, node.getAttributeFloat( "cooldown", outDef._cooldown ) );
-        outDef._bLineOfSight = node.getAttributeBool( "lineOfSight", true ) ? SW_TRUE : SW_FALSE;
+        using Internal = InteractionCatalogInternal;
+        bool bValid    = Internal::checkAttributes( node, Internal::kArrInteractionAttribute, sourceName );
+        outDef._id     = hashed_string( node.findAttribute( "id" ) != nullptr ? node.findAttribute( "id" ) : "" );
+        // 적지 않은 칸은 InteractionDef 의 초기값이다. 각은 라디안이다. 범위 밖 값은 자르지 않고 오류다.
+        bValid = GameDataXML::readOptionalNumber( node, "maxDistance", sourceName, 0.0f, MathUtil::kMaxFloat, outDef._maxDistance ) && bValid;
+        bValid = GameDataXML::readOptionalNumber( node, "maxAngle", sourceName, 0.0f, MathUtil::kPi, outDef._maxAngle ) && bValid;
+        bValid = GameDataXML::readOptionalNumber( node, "cooldown", sourceName, 0.0f, MathUtil::kMaxFloat, outDef._cooldown ) && bValid;
+        bValid = GameDataXML::readOptionalFlag( node, "lineOfSight", outDef._bLineOfSight ) && bValid;
         Internal::readTags( node.getAttributeText( "requiredTags" ), outDef._requiredTags );
         Internal::readTags( node.getAttributeText( "forbiddenTags" ), outDef._forbiddenTags );
         const utf8* pAlignment = node.findAttribute( "alignment" );
@@ -186,7 +187,7 @@ namespace sw
 
             slot._id     = hashed_string( slotNode.findAttribute( "id" ) != nullptr ? slotNode.findAttribute( "id" ) : "" );
             slot._offset = offset;
-            slot._yaw    = slotNode.getAttributeFloat( "yaw", 0.0f ) * MathUtil::kDegreeToRadian;
+            bValid       = GameDataXML::readOptionalNumber( slotNode, "yaw", sourceName, -MathUtil::kTwoPi, MathUtil::kTwoPi, slot._yaw ) && bValid;
             Internal::readTags( slotNode.getAttributeText( "tags" ), slot._tags );
             outDef._listSlot.push_back( slot );
         }

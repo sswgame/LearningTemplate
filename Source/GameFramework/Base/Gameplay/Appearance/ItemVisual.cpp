@@ -3,10 +3,12 @@
 #include "GameFramework/Base/Gameplay/Appearance/ItemVisual.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceXMLUtil.h"
 
 namespace sw
@@ -113,7 +115,10 @@ namespace sw
                 else if ( StringUtil::equals( pName, "Morph", true ) && bModification )
                 {
                     (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrMorphAttribute, report, sourceName );
-                    inoutPart._listMorph.push_back( AppearanceMorphDef{ AppearanceXMLUtil::readName( child, "name" ), child.getAttributeFloat( "weight", 1.0f ) } );
+                    AppearanceMorphDef morph;
+                    morph._name = AppearanceXMLUtil::readName( child, "name" );
+                    AppearanceXMLUtil::readOptionalFloat( child, "weight", -MathUtil::kMaxFloat, MathUtil::kMaxFloat, morph._weight, report, sourceName );
+                    inoutPart._listMorph.push_back( morph );
                 }
                 else if ( StringUtil::equals( pName, "Material", true ) && bModification )
                 {
@@ -156,9 +161,12 @@ namespace sw
                 part._skeleton              = AppearanceXMLUtil::readName( node, "skeleton" );
                 part._socketSet             = AppearanceXMLUtil::readName( node, "sockets" );
                 part._breakStage            = AppearanceXMLUtil::readName( node, "breakStage" );
-                part._layer                 = node.getAttributeInt( "layer", 0 );
-                part._bDeforms              = node.getAttributeBool( "deforms", part._kind == AppearancePartKind::Skinned ) ? SW_TRUE : SW_FALSE;
-                part._bBreakable            = node.getAttributeBool( "breakable", part._breakStage.empty() == false ) ? SW_TRUE : SW_FALSE;
+                // 적지 않으면 스킨 파츠만 변형하고, 부서지는 단계를 적은 파츠만 떨어진다(이 파츠의 데이터에서 온 값).
+                part._bDeforms   = part._kind == AppearancePartKind::Skinned ? SW_TRUE : SW_FALSE;
+                part._bBreakable = part._breakStage.empty() == false ? SW_TRUE : SW_FALSE;
+                AppearanceXMLUtil::readOptionalInt( node, "layer", MathUtil::kMinInt32, MathUtil::kMaxInt32, part._layer, report, sourceName );
+                if ( GameDataXML::readOptionalFlag( node, "deforms", part._bDeforms ) == false || GameDataXML::readOptionalFlag( node, "breakable", part._bBreakable ) == false )
+                    report.addError( "%#: visual '%#' part '%#' has an invalid deforms / breakable", sourceName, inoutVisual._id.c_str(), part._name.c_str() );
                 AppearanceXMLUtil::readOptionalFloat3( node, "impulse", part._breakImpulse, report, sourceName );
                 AppearanceXMLUtil::readPlacement( node, "socket", part._placement, report, sourceName );
                 if ( pAssetAttribute != nullptr && part._asset.empty() )
@@ -214,8 +222,14 @@ namespace sw
             {
                 (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrStageAttribute, report, sourceName );
                 AppearanceDamageStageDef stage;
-                stage._name                       = AppearanceXMLUtil::readName( node, "name" );
-                stage._threshold                  = node.getAttributeFloat( "threshold", -1.0f );
+                stage._name                            = AppearanceXMLUtil::readName( node, "name" );
+                const std::optional<float32> threshold = node.readRequiredAttribute<float32>( "threshold" );
+                if ( threshold.has_value() == false )
+                {
+                    report.addError( "%#: visual '%#' damage stage '%#' needs a threshold", sourceName, inoutVisual._id.c_str(), stage._name.c_str() );
+                    return;
+                }
+                stage._threshold                  = *threshold;
                 const float32 previous            = inoutVisual._listDamageStage.empty() ? 0.0f : inoutVisual._listDamageStage.back()._threshold;
                 const bool    bOrdered            = previous < stage._threshold && stage._threshold <= 1.0f;
                 const bool    bInvalidDamageStage = stage._name.empty() || inoutVisual.findDamageStage( stage._name ) != nullptr || bOrdered == false;

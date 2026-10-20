@@ -14,6 +14,8 @@
 
 namespace sw
 {
+    SW_LOG_CALLER( "Reputation" );
+
     namespace
     {
         struct ReputationInternal
@@ -35,27 +37,47 @@ namespace sw
             if ( pID == nullptr )
                 continue;
             FactionDef faction;
-            faction._id         = hashed_string( pID );
-            const utf8* pName   = node.findAttribute( "name" );
-            faction._name       = pName != nullptr ? pName : pID;
-            faction._minValue   = node.getAttributeInt( "min", faction._minValue );
-            faction._maxValue   = MathUtil::max( faction._minValue, node.getAttributeInt( "max", faction._maxValue ) );
-            faction._startValue = MathUtil::clamp( node.getAttributeInt( "start", faction._startValue ), faction._minValue, faction._maxValue );
-            faction._dailyDecay = MathUtil::max( 0, node.getAttributeInt( "decay", faction._dailyDecay ) );
+            faction._id       = hashed_string( pID );
+            const utf8* pName = node.findAttribute( "name" );
+            faction._name     = pName != nullptr ? pName : pID;
+            // 적지 않은 칸은 FactionDef 의 초기값이다. 깨진 값 · 범위 밖 값은 그 세력을 넣지 않는 오류다(자르지 않는다).
+            constexpr int32 kAnyInt = MathUtil::kMaxInt32;
+            bool            bValid  = GameDataXML::readOptionalNumber( node, "min", sourceName, MathUtil::kMinInt32, kAnyInt, faction._minValue );
+            bValid                  = GameDataXML::readOptionalNumber( node, "max", sourceName, faction._minValue, kAnyInt, faction._maxValue ) && bValid;
+            bValid                  = GameDataXML::readOptionalNumber( node, "start", sourceName, faction._minValue, faction._maxValue, faction._startValue ) && bValid;
+            bValid                  = GameDataXML::readOptionalNumber( node, "decay", sourceName, 0, kAnyInt, faction._dailyDecay ) && bValid;
             for ( XMLNode child = node.findChild( "Tier" ); child; child = child.findNextSibling( "Tier" ) )
             {
-                const utf8* pTierName = child.findAttribute( "name" );
-                if ( pTierName != nullptr )
-                    faction._listTier.push_back( ReputationTier{ hashed_string( pTierName ), child.getAttributeInt( "min", faction._minValue ) } );
+                // 단계의 하한을 적지 않으면 세력의 하한이다(이 데이터의 값).
+                ReputationTier tier{ GameDataXML::readName( child, "name" ), faction._minValue };
+                bValid = GameDataXML::readOptionalNumber( child, "min", sourceName, faction._minValue, faction._maxValue, tier._minValue ) && bValid;
+                if ( tier._name.empty() )
+                {
+                    SW_LOG_ERROR( "%#: faction '%#' has a <Tier> without a name", sourceName, pID );
+                    bValid = false;
+                }
+                else
+                {
+                    faction._listTier.push_back( tier );
+                }
             }
             std::stable_sort( faction._listTier.begin(), faction._listTier.end(),
                               []( const ReputationTier& lhs, const ReputationTier& rhs )
             { return lhs._minValue < rhs._minValue; } );
             for ( XMLNode child = node.findChild( "Link" ); child; child = child.findNextSibling( "Link" ) )
             {
-                const utf8* pFaction = child.findAttribute( "faction" );
-                if ( pFaction != nullptr )
-                    faction._listLink.push_back( ReputationLink{ hashed_string( pFaction ), child.getAttributeFloat( "ratio", 0.0f ) } );
+                // 연결은 상대 세력과 비율을 반드시 적는다 — 빠진 비율을 0 으로 두지 않는다.
+                const std::optional<string>  linkedFaction = child.readRequiredAttribute<string>( "faction" );
+                const std::optional<float32> ratio         = child.readRequiredAttribute<float32>( "ratio" );
+                if ( linkedFaction.has_value() && ratio.has_value() )
+                    faction._listLink.push_back( ReputationLink{ hashed_string( *linkedFaction ), *ratio } );
+                else
+                    bValid = false;
+            }
+            if ( bValid == false )
+            {
+                SW_LOG_ERROR( "%#: faction '%#' has invalid fields - skipped", sourceName, pID );
+                continue;
             }
             add( faction );
             ++loadedCount;

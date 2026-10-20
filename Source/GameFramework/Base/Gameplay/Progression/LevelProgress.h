@@ -28,7 +28,8 @@ namespace sw
         void               setFormula( float32 base, float32 exponent, float32 linear, int32 maxLevel );
         void               setTable( const vector<int64>& listXpToNext );
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );
-        void               loadFromNode( const XMLNode& node );
+        /** @brief 표(`<Level xp>`) 또는 공식 속성을 읽습니다. 깨진 값 · 범위 밖 값이면 오류를 남기고 곡선을 바꾸지 않은 채 false 입니다. */
+        [[nodiscard]] bool loadFromNode( const XMLNode& node, string_view sourceName );
 
         /** @brief @p level 에서 다음 레벨까지 필요한 경험치입니다. 최고 레벨이면 0 입니다. */
         int64 getXpToNext( int32 level ) const;

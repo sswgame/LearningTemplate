@@ -49,8 +49,9 @@ namespace sw
     class SW_GF_API TimingJudge
     {
     public:
-        void               setWindows( const vector<TimingWindow>& listWindow );
-        void               loadFromNode( const XMLNode& node );
+        void setWindows( const vector<TimingWindow>& listWindow );
+        /** @brief `<Window>` 자식들을 읽습니다. 깨진 값 · 음수 폭이 있으면 오류를 남기고 창 표를 바꾸지 않은 채 false 입니다. */
+        [[nodiscard]] bool loadFromNode( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );
         /** @brief 모든 창을 곱해 넓히거나 좁힙니다(난이도 · 접근성). */
         void setScale( float32 scale ) { _scale = scale > 0.0f ? scale : 1.0f; }

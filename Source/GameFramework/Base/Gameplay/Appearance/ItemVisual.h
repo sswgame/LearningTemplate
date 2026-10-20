@@ -44,7 +44,7 @@ namespace sw
     struct AppearanceMorphDef
     {
         hashed_string _name{};
-        float32       _weight{ 0.0f };
+        float32       _weight{ 1.0f }; ///< `weight` 를 적지 않으면 모프를 다 건다
     };
 } // namespace sw
 

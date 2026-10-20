@@ -46,6 +46,15 @@ namespace sw
         static void readOptionalFloat3( const XMLNode& node, const utf8* pAttribute, float3& inoutValue, AppearanceLoadReport& report, string_view sourceName );
         /** @brief 선택 속성을 "r g b a" 정확히 네 실수로 읽습니다. 규칙은 `readOptionalFloat3` 와 같습니다. */
         static void readOptionalFloat4( const XMLNode& node, const utf8* pAttribute, float4& inoutValue, AppearanceLoadReport& report, string_view sourceName );
+        /**
+         * @brief 선택 실수 속성을 읽습니다. 없으면 @p inoutValue 를 둡니다(호출부 Def 의 초기값이 기본값).
+         * @details 깨졌거나 [@p minValue, @p maxValue] 밖이면 @p report 에 오류를 더하고 @p inoutValue 는 그대로입니다(자르지 않는다).
+         */
+        static void readOptionalFloat( const XMLNode& node, const utf8* pAttribute, float32 minValue, float32 maxValue, float32& inoutValue, AppearanceLoadReport& report,
+                                       string_view sourceName );
+        /** @brief `readOptionalFloat` 의 정수 버전입니다. */
+        static void readOptionalInt( const XMLNode& node, const utf8* pAttribute, int32 minValue, int32 maxValue, int32& inoutValue, AppearanceLoadReport& report,
+                                     string_view sourceName );
         /** @brief 필수 속성을 "r g b a" 정확히 네 실수로 읽습니다. 속성이 없거나 읽히지 않으면 @p report 에 오류를 더합니다. */
         static void readRequiredFloat4( const XMLNode& node, const utf8* pAttribute, float4& outValue, AppearanceLoadReport& report, string_view sourceName );
         /**

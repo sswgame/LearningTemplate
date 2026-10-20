@@ -19,9 +19,19 @@ namespace sw
     {
         struct FrameDataInternal
         {
-            static HitboxShape parseShape( string_view text )
+            /** @brief `shape` 를 읽습니다. 없으면 @p inoutShape 를 둔다(초기값 Box). 모르는 이름이면 false 입니다. */
+            [[nodiscard]] static bool readShape( const XMLNode& node, HitboxShape& inoutShape )
             {
-                return StringUtil::equals( text, "Capsule", true ) ? HitboxShape::Capsule : HitboxShape::Box;
+                const utf8* pText = node.findAttribute( "shape" );
+                if ( pText == nullptr )
+                    return true;
+                if ( StringUtil::equals( pText, "Capsule", true ) )
+                    inoutShape = HitboxShape::Capsule;
+                else if ( StringUtil::equals( pText, "Box", true ) )
+                    inoutShape = HitboxShape::Box;
+                else
+                    return false;
+                return true;
             }
 
             static int32 computeAdvantage( const MoveFrameData& move, int32 contactFrame, bool bOnBlock )
@@ -50,17 +60,19 @@ namespace sw
     {
     }
 
-    AttackHeight MoveCatalog::parseAttackHeight( string_view text, AttackHeight fallback )
+    bool MoveCatalog::parseAttackHeight( string_view text, AttackHeight& outHeight )
     {
         if ( StringUtil::equals( text, "High", true ) )
-            return AttackHeight::High;
-        if ( StringUtil::equals( text, "Mid", true ) )
-            return AttackHeight::Mid;
-        if ( StringUtil::equals( text, "Low", true ) )
-            return AttackHeight::Low;
-        if ( StringUtil::equals( text, "Throw", true ) )
-            return AttackHeight::Throw;
-        return fallback;
+            outHeight = AttackHeight::High;
+        else if ( StringUtil::equals( text, "Mid", true ) )
+            outHeight = AttackHeight::Mid;
+        else if ( StringUtil::equals( text, "Low", true ) )
+            outHeight = AttackHeight::Low;
+        else if ( StringUtil::equals( text, "Throw", true ) )
+            outHeight = AttackHeight::Throw;
+        else
+            return false;
+        return true;
     }
 
     uint32 MoveCatalog::loadRoot( const XMLNode& root, string_view sourceName )
@@ -72,58 +84,85 @@ namespace sw
             if ( pID == nullptr )
                 continue;
             MoveFrameData move;
-            move._id              = hashed_string( pID );
-            const utf8* pName     = node.findAttribute( "name" );
-            move._name            = pName != nullptr ? pName : pID;
-            move._startup         = MathUtil::max( 1, node.getAttributeInt( "startup", move._startup ) );
-            move._active          = MathUtil::max( 1, node.getAttributeInt( "active", move._active ) );
-            move._recovery        = MathUtil::max( 0, node.getAttributeInt( "recovery", move._recovery ) );
-            move._damage          = node.getAttributeFloat( "damage", move._damage );
-            move._chipDamage      = MathUtil::max( 0.0f, node.getAttributeFloat( "chip", move._chipDamage ) );
-            move._hitstun         = MathUtil::max( 0, node.getAttributeInt( "hitstun", move._hitstun ) );
-            move._blockstun       = MathUtil::max( 0, node.getAttributeInt( "blockstun", move._blockstun ) );
-            move._hitstop         = MathUtil::max( 0, node.getAttributeInt( "hitstop", move._hitstop ) );
-            move._height          = parseAttackHeight( node.getAttributeText( "height" ), move._height );
-            move._bLauncher       = node.getAttributeBool( "launcher", false ) ? SW_TRUE : SW_FALSE;
-            move._bKnockdown      = node.getAttributeBool( "knockdown", false ) ? SW_TRUE : SW_FALSE;
-            move._bWallSplat      = node.getAttributeBool( "wallSplat", false ) ? SW_TRUE : SW_FALSE;
-            move._bUnblockable    = node.getAttributeBool( "unblockable", false ) ? SW_TRUE : SW_FALSE;
+            move._id          = hashed_string( pID );
+            const utf8* pName = node.findAttribute( "name" );
+            move._name        = pName != nullptr ? pName : pID;
+            // 적지 않은 칸은 MoveFrameData 의 초기값이다. 깨진 값 · 범위 밖 값은 그 기술을 넣지 않는 오류다(자르지 않는다).
+            constexpr int32   kAnyInt   = MathUtil::kMaxInt32;
+            constexpr float32 kAnyFloat = MathUtil::kMaxFloat;
+            bool              bValid    = GameDataXML::readOptionalNumber( node, "startup", sourceName, 1, kAnyInt, move._startup );
+            bValid                      = GameDataXML::readOptionalNumber( node, "active", sourceName, 1, kAnyInt, move._active ) && bValid;
+            bValid                      = GameDataXML::readOptionalNumber( node, "recovery", sourceName, 0, kAnyInt, move._recovery ) && bValid;
+            bValid                      = GameDataXML::readOptionalNumber( node, "damage", sourceName, -kAnyFloat, kAnyFloat, move._damage ) && bValid;
+            bValid                      = GameDataXML::readOptionalNumber( node, "chip", sourceName, 0.0f, kAnyFloat, move._chipDamage ) && bValid;
+            bValid                      = GameDataXML::readOptionalNumber( node, "hitstun", sourceName, 0, kAnyInt, move._hitstun ) && bValid;
+            bValid                      = GameDataXML::readOptionalNumber( node, "blockstun", sourceName, 0, kAnyInt, move._blockstun ) && bValid;
+            bValid                      = GameDataXML::readOptionalNumber( node, "hitstop", sourceName, 0, kAnyInt, move._hitstop ) && bValid;
+            bValid                      = GameDataXML::readOptionalFlag( node, "launcher", move._bLauncher ) && bValid;
+            bValid                      = GameDataXML::readOptionalFlag( node, "knockdown", move._bKnockdown ) && bValid;
+            bValid                      = GameDataXML::readOptionalFlag( node, "wallSplat", move._bWallSplat ) && bValid;
+            bValid                      = GameDataXML::readOptionalFlag( node, "unblockable", move._bUnblockable ) && bValid;
+            const utf8* pHeight         = node.findAttribute( "height" );
+            if ( pHeight != nullptr && parseAttackHeight( pHeight, move._height ) == false )
+            {
+                SW_LOG_ERROR( "%#: move '%#' has an unknown height '%#' (High, Mid, Low, Throw)", sourceName, pID, pHeight );
+                bValid = false;
+            }
             const int32 lastFrame = move.getTotalFrames();
 
             for ( XMLNode child = node.findChild( "Hitbox" ); child; child = child.findNextSibling( "Hitbox" ) )
             {
+                // 프레임 구간을 적지 않으면 기술의 활성 구간이다(이 기술의 데이터에서 온 값).
                 MoveHitbox hitbox;
-                hitbox._fromFrame = child.getAttributeInt( "from", move._startup );
-                hitbox._toFrame   = child.getAttributeInt( "to", move.getLastActiveFrame() );
-                hitbox._x         = child.getAttributeFloat( "x", 0.0f );
-                hitbox._y         = child.getAttributeFloat( "y", 0.0f );
-                hitbox._width     = MathUtil::max( 0.0f, child.getAttributeFloat( "w", 0.0f ) );
-                hitbox._height    = MathUtil::max( 0.0f, child.getAttributeFloat( "h", 0.0f ) );
-                hitbox._shape     = FrameDataInternal::parseShape( child.getAttributeText( "shape" ) );
-                if ( hitbox._toFrame < hitbox._fromFrame || hitbox._fromFrame > lastFrame )
+                hitbox._fromFrame = move._startup;
+                hitbox._toFrame   = move.getLastActiveFrame();
+                bool bHitboxValid = GameDataXML::readOptionalNumber( child, "from", sourceName, 0, kAnyInt, hitbox._fromFrame );
+                bHitboxValid      = GameDataXML::readOptionalNumber( child, "to", sourceName, 0, kAnyInt, hitbox._toFrame ) && bHitboxValid;
+                bHitboxValid      = GameDataXML::readOptionalNumber( child, "x", sourceName, -kAnyFloat, kAnyFloat, hitbox._x ) && bHitboxValid;
+                bHitboxValid      = GameDataXML::readOptionalNumber( child, "y", sourceName, -kAnyFloat, kAnyFloat, hitbox._y ) && bHitboxValid;
+                bHitboxValid      = GameDataXML::readOptionalNumber( child, "w", sourceName, 0.0f, kAnyFloat, hitbox._width ) && bHitboxValid;
+                bHitboxValid      = GameDataXML::readOptionalNumber( child, "h", sourceName, 0.0f, kAnyFloat, hitbox._height ) && bHitboxValid;
+                if ( FrameDataInternal::readShape( child, hitbox._shape ) == false )
                 {
-                    SW_LOG_WARNING( "%#: move '%#' has a hitbox outside its frames - skipped", sourceName, pID );
-                    continue;
+                    SW_LOG_ERROR( "%#: move '%#' has a hitbox with an unknown shape '%#' (Box, Capsule)", sourceName, pID, child.getAttributeText( "shape" ) );
+                    bHitboxValid = false;
                 }
-                move._listHitbox.push_back( hitbox );
+                if ( bHitboxValid && ( hitbox._toFrame < hitbox._fromFrame || hitbox._fromFrame > lastFrame ) )
+                {
+                    SW_LOG_ERROR( "%#: move '%#' has a hitbox outside its frames", sourceName, pID );
+                    bHitboxValid = false;
+                }
+                if ( bHitboxValid )
+                    move._listHitbox.push_back( hitbox );
+                bValid = bHitboxValid && bValid;
             }
 
             for ( XMLNode child = node.findChild( "Cancel" ); child; child = child.findNextSibling( "Cancel" ) )
             {
+                // 구간을 적지 않으면 활성 구간 다음부터 기술 끝까지다.
                 MoveCancelWindow window;
-                window._fromFrame  = child.getAttributeInt( "from", move.getLastActiveFrame() + 1 );
-                window._toFrame    = child.getAttributeInt( "to", lastFrame );
-                window._bOnHitOnly = child.getAttributeBool( "onHit", false ) ? SW_TRUE : SW_FALSE;
+                window._fromFrame = move.getLastActiveFrame() + 1;
+                window._toFrame   = lastFrame;
+                bool bWindowValid = GameDataXML::readOptionalNumber( child, "from", sourceName, 0, kAnyInt, window._fromFrame );
+                bWindowValid      = GameDataXML::readOptionalNumber( child, "to", sourceName, 0, kAnyInt, window._toFrame ) && bWindowValid;
+                bWindowValid      = GameDataXML::readOptionalFlag( child, "onHit", window._bOnHitOnly ) && bWindowValid;
                 StringUtil::forEachToken( child.getAttributeText( "moves" ), ",; \t", [&]( string_view token )
                 { window._listMoveID.push_back( hashed_string( token ) ); } );
-                if ( window._listMoveID.empty() || window._toFrame < window._fromFrame )
+                if ( bWindowValid && ( window._listMoveID.empty() || window._toFrame < window._fromFrame ) )
                 {
-                    SW_LOG_WARNING( "%#: move '%#' has an empty cancel window - skipped", sourceName, pID );
-                    continue;
+                    SW_LOG_ERROR( "%#: move '%#' has an empty cancel window", sourceName, pID );
+                    bWindowValid = false;
                 }
-                move._listCancel.push_back( window );
+                if ( bWindowValid )
+                    move._listCancel.push_back( window );
+                bValid = bWindowValid && bValid;
             }
 
+            if ( bValid == false )
+            {
+                SW_LOG_ERROR( "%#: move '%#' has invalid fields - skipped", sourceName, pID );
+                continue;
+            }
             (void)add( move );
             ++loadedCount;
         }

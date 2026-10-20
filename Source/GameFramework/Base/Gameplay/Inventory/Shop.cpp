@@ -187,12 +187,14 @@ namespace sw
             def._id               = hashed_string( pID );
             const utf8* pCurrency = node.findAttribute( "currency" );
             def._currency         = pCurrency != nullptr && pCurrency[0] != '\0' ? hashed_string( pCurrency ) : Wallet::getDefaultCurrency();
-            def._buyMultiplier    = MathUtil::max( 0.0f, node.getAttributeFloat( "buyMultiplier", def._buyMultiplier ) );
-            def._sellMultiplier   = MathUtil::max( 0.0f, node.getAttributeFloat( "sellMultiplier", def._sellMultiplier ) );
-            def._saturation       = MathUtil::max( 0.0f, node.getAttributeFloat( "saturation", def._saturation ) );
-            def._minSellFactor    = MathUtil::saturate( node.getAttributeFloat( "minSellFactor", def._minSellFactor ) );
-            def._recoveryPerDay   = MathUtil::max( 0.0f, node.getAttributeFloat( "recovery", def._recoveryPerDay ) );
-            def._restockDays      = MathUtil::max( 0, node.getAttributeInt( "restockDays", def._restockDays ) );
+            // 적지 않은 칸은 ShopDef 의 초기값이다. 깨진 값 · 범위 밖 값은 그 상점을 넣지 않는 오류다(자르지 않는다).
+            constexpr float32 kAnyFloat = MathUtil::kMaxFloat;
+            bool              bValid    = GameDataXML::readOptionalNumber( node, "buyMultiplier", sourceName, 0.0f, kAnyFloat, def._buyMultiplier );
+            bValid                      = GameDataXML::readOptionalNumber( node, "sellMultiplier", sourceName, 0.0f, kAnyFloat, def._sellMultiplier ) && bValid;
+            bValid                      = GameDataXML::readOptionalNumber( node, "saturation", sourceName, 0.0f, kAnyFloat, def._saturation ) && bValid;
+            bValid                      = GameDataXML::readOptionalNumber( node, "minSellFactor", sourceName, 0.0f, 1.0f, def._minSellFactor ) && bValid;
+            bValid                      = GameDataXML::readOptionalNumber( node, "recovery", sourceName, 0.0f, kAnyFloat, def._recoveryPerDay ) && bValid;
+            bValid                      = GameDataXML::readOptionalNumber( node, "restockDays", sourceName, 0, MathUtil::kMaxInt32, def._restockDays ) && bValid;
             StringUtil::forEachToken( node.getAttributeText( "refuses" ), ",; ", [&]( string_view token )
             {
                 def._listRefusedCategory.push_back( hashed_string( token ) );
@@ -202,18 +204,24 @@ namespace sw
                 const utf8* pItem = stockNode.findAttribute( "item" );
                 if ( pItem == nullptr || pItem[0] == '\0' )
                 {
-                    SW_LOG_WARNING( "%#: shop '%#' has a <Stock> without an item - skipped", sourceName, pID );
+                    SW_LOG_ERROR( "%#: shop '%#' has a <Stock> without an item", sourceName, pID );
+                    bValid = false;
                     continue;
                 }
                 ShopStockDef stock;
                 stock._itemID            = hashed_string( pItem );
-                stock._price             = stockNode.getAttributeInt( "price", stock._price );
-                stock._count             = MathUtil::max( -1, stockNode.getAttributeInt( "count", stock._count ) );
-                stock._restock           = MathUtil::max( 0, stockNode.getAttributeInt( "restock", stock._restock ) );
+                bValid                   = GameDataXML::readOptionalNumber( stockNode, "price", sourceName, MathUtil::kMinInt32, MathUtil::kMaxInt32, stock._price ) && bValid;
+                bValid                   = GameDataXML::readOptionalNumber( stockNode, "count", sourceName, -1, MathUtil::kMaxInt32, stock._count ) && bValid;
+                bValid                   = GameDataXML::readOptionalNumber( stockNode, "restock", sourceName, 0, MathUtil::kMaxInt32, stock._restock ) && bValid;
                 const utf8* pRequirement = stockNode.findAttribute( "requires" );
                 if ( pRequirement != nullptr )
                     stock._requirement = pRequirement;
                 def._listStock.push_back( stock );
+            }
+            if ( bValid == false )
+            {
+                SW_LOG_ERROR( "%#: shop '%#' has invalid fields - skipped", sourceName, pID );
+                continue;
             }
             add( def );
             ++loadedCount;

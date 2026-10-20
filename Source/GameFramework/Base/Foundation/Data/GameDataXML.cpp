@@ -360,6 +360,15 @@ namespace sw
         return true;
     }
 
+    bool GameDataXML::readOptionalFlag( const XMLNode& node, const utf8* pAttribute, uint8& inoutFlag )
+    {
+        bool bValue = inoutFlag != SW_FALSE;
+        if ( readOptionalBool( node, pAttribute, bValue ) == false )
+            return false;
+        inoutFlag = bValue ? SW_TRUE : SW_FALSE;
+        return true;
+    }
+
     bool GameDataXML::readFloatCurve( const XMLNode& parent, const utf8* pElement, float32 minValue, FloatCurve& outCurve, string_view sourceName )
     {
         outCurve._listKey.clear();

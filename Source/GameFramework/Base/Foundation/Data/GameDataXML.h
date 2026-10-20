@@ -184,6 +184,8 @@ namespace sw
                                                       float32& inoutValue );
         /** @brief 선택 불리언 속성을 손으로 읽습니다. 없으면 @p inoutValue 를 두고 true, 깨졌으면 오류와 false 입니다. */
         [[nodiscard]] static bool readOptionalBool( const XMLNode& node, const utf8* pAttribute, bool& inoutValue );
+        /** @brief `readOptionalBool` 의 `uint8` 표시(`SW_TRUE` · `SW_FALSE`) 버전입니다. */
+        [[nodiscard]] static bool readOptionalFlag( const XMLNode& node, const utf8* pAttribute, uint8& inoutFlag );
 
         /** @brief 루트 읽기가 읽은 항목 수를 성공 여부로 바꿉니다. 0 이면 실패입니다. */
         static constexpr bool isLoaded( uint32 loadedCount ) { return loadedCount > 0; }

@@ -191,15 +191,9 @@ namespace sw
     bool SRPGCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
     {
         if ( name == "PilotCurve" )
-        {
-            _pilotCurve.loadFromNode( node );
-            return true;
-        }
+            return _pilotCurve.loadFromNode( node, sourceName );
         if ( name == "UnitCurve" )
-        {
-            _unitCurve.loadFromNode( node );
-            return true;
-        }
+            return _unitCurve.loadFromNode( node, sourceName );
         if ( name == "Terrain" )
             return loadTerrain( node, sourceName );
         if ( name == "Weapon" )

@@ -8,6 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
@@ -49,8 +50,8 @@ namespace sw
     {
         hashed_string _attribute{};
         float32       _baseValue{ 0.0f };
-        float32       _minValue{ 0.0f };
-        float32       _maxValue{ 0.0f };
+        float32       _minValue{ -MathUtil::kMaxFloat }; ///< `min` 을 적지 않으면 아래로 막지 않는다
+        float32       _maxValue{ MathUtil::kMaxFloat };  ///< `max` 를 적지 않으면 위로 막지 않는다
         uint8         _bHasRange{ SW_FALSE };
     };
 } // namespace sw
