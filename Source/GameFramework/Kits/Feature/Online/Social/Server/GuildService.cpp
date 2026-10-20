@@ -671,12 +671,12 @@ namespace sw
         if ( outcome._result != SocialResult::Ok )
             return;
         if ( outcome._attachedID != kInvalidAccountID )
-            raiseEvent( outcome._attachedID, outcome._guildID, GuildEvent::Kind::MemberAttached );
+            raiseEvent( outcome._attachedID, outcome._guildID, GuildEvent::Kind::MemberAttached, request._nowMs );
         if ( outcome._joinedID != kInvalidAccountID )
-            raiseEvent( outcome._joinedID, outcome._guildID, GuildEvent::Kind::Joined );
+            raiseEvent( outcome._joinedID, outcome._guildID, GuildEvent::Kind::Joined, request._nowMs );
         if ( outcome._leftID != kInvalidAccountID )
         {
-            raiseEvent( outcome._leftID, outcome._guildID, GuildEvent::Kind::Left );
+            raiseEvent( outcome._leftID, outcome._guildID, GuildEvent::Kind::Left, request._nowMs );
             if ( outcome._leftID != request._accountID ) // 내보내진 사람이다. 이제 멤버 목록에 없다
                 _notificationBuffer.push( SocialNotification{ SocialPresence{}, outcome._leftID, request._accountID, outcome._guildID, SocialNotificationKind::GuildChanged } );
         }
@@ -691,9 +691,9 @@ namespace sw
         }
     }
 
-    void GuildService::raiseEvent( AccountID accountID, uint64 guildID, GuildEvent::Kind kind )
+    void GuildService::raiseEvent( AccountID accountID, uint64 guildID, GuildEvent::Kind kind, int64 nowMs )
     {
         if ( _onEvent.isBound() )
-            _onEvent( GuildEvent{ accountID, guildID, kind } );
+            _onEvent( GuildEvent{ accountID, guildID, nowMs, kind } );
     }
 } // namespace sw

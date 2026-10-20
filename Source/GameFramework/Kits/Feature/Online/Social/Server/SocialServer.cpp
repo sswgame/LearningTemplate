@@ -73,6 +73,7 @@ namespace sw
         , _listSocialScratch{}
         , _listGuildScratch{}
         , _listNotificationScratch{}
+        , _listJoinedAccount{}
         , _pSocialService{ nullptr }
         , _pGuildService{ nullptr }
         , _pPresence{ nullptr }
@@ -192,6 +193,11 @@ namespace sw
         if ( _pSocialService == nullptr || _pGuildService == nullptr )
             return;
         _pSocialService->update( nowMs );
+        for ( const AccountID accountID : _listJoinedAccount )
+        {
+            _pGuildService->attachAccount( accountID, nowMs ); // 길드 멤버면 MemberAttached 이벤트가 길드 채널에 넣는다
+        }
+        _listJoinedAccount.clear();
 
         _listSocialScratch.clear();
         _pSocialService->drainCompletions( _listSocialScratch );
@@ -216,6 +222,12 @@ namespace sw
             respond( host, completion._requestTag, reply );
         }
         sendNotifications( host );
+    }
+
+    void SocialServer::onAccountJoined( OnlineServiceHost& host, AccountID accountID )
+    {
+        (void)host;
+        _listJoinedAccount.push_back( accountID );
     }
 
     void SocialServer::onAccountLeft( OnlineServiceHost& host, AccountID accountID )

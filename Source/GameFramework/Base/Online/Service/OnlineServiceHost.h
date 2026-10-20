@@ -90,6 +90,12 @@ namespace sw
             (void)host;
             (void)nowMs;
         }
+        /** @brief 계정이 이 프로세스의 연결에 처음 붙었을 때(`bindAccount`) 불립니다. 길드 붙이기처럼 접속한 계정마다 할 일을 맡깁니다. 같은 계정을 다시 붙이면 불리지 않습니다. */
+        virtual void onAccountJoined( OnlineServiceHost& host, AccountID accountID )
+        {
+            (void)host;
+            (void)accountID;
+        }
         /** @brief 계정이 이 프로세스에서 떠났을 때(로그아웃, 끊김, 밀려남) 불립니다. 거래를 취소하고 채널을 떠나는 처리를 합니다. */
         virtual void onAccountLeft( OnlineServiceHost& host, AccountID accountID )
         {
