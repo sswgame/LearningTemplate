@@ -115,10 +115,10 @@ namespace sw
 
         /** @brief 인스턴스 목록을 반환합니다. */
         const vector<GPUInstance>& getInstances() const { return _snapshot.getInstances(); }
-        /** @brief 불투명 배치를 반환합니다. */
-        const vector<GPUMeshBatch>& getOpaqueBatches() const { return _snapshot._listOpaqueBatch; }
-        /** @brief 투명 배치를 반환합니다. */
-        const vector<GPUMeshBatch>& getTransparentBatches() const { return _snapshot._listTransparentBatch; }
+        /** @brief 불투명 배치 구간을 반환합니다. */
+        vector_reference<const GPUMeshBatch> getOpaqueBatches() const { return _snapshot.getOpaqueBatches(); }
+        /** @brief 투명 배치 구간을 반환합니다. */
+        vector_reference<const GPUMeshBatch> getTransparentBatches() const { return _snapshot.getTransparentBatches(); }
         /** @brief 방출기마다의 입자 그리기(주 시점에서 먼 것부터)를 반환합니다. */
         const vector<GPUParticleBatch>& getParticleBatches() const { return _snapshot._listParticleBatch; }
         /** @brief 셰이더 타입별 머티리얼 데이터 그룹(CPU 스냅샷)을 반환합니다. */
@@ -491,9 +491,8 @@ namespace sw
         vector<uint32> _listInstanceSrcIndex;
         /// @brief 마지막 방출이 쓴 투명 정렬 순서입니다. 이 순서가 바뀌면 투명 꼬리를 다시 방출합니다(`rebuildTransparentTail`).
         vector<uint32> _listBuiltTransparentIdx;
-        /// @brief 마지막 전체 빌드에서 불투명이 차지한 인스턴스 수, 배치 수, 원소 테이블 항목 수입니다. 투명 꼬리를 자르는 위치입니다.
+        /// @brief 마지막 전체 빌드에서 불투명이 차지한 인스턴스 수, 원소 테이블 항목 수입니다. 투명 꼬리를 자르는 위치입니다(배치 수는 `GPUSceneSnapshot::getOpaqueBatchCount`).
         uint32 _opaqueInstanceCount{ 0 };
-        uint32 _opaqueBatchCount{ 0 };
         uint32 _opaqueElementEntryCount{ 0 };
         /// @brief 마지막으로 본 `TextureCache::getReloadGeneration()` 입니다. 값이 다르면 머티리얼의 텍스처 인덱스를 새로 받게 합니다.
         uint32 _lastTextureReloadGeneration{ 0 };
