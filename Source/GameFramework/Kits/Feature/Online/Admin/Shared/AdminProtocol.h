@@ -43,6 +43,9 @@ namespace sw
         ClearMaintenance,
         PostNotice,
         RemoveNotice,
+        ListLiveEvents,
+        PutLiveEvent,
+        RemoveLiveEvent,
         Count,
     };
 } // namespace sw
@@ -66,14 +69,24 @@ namespace sw
         static constexpr uint16 kClearMaintenance = toMethod( AdminMethodName::ClearMaintenance ); ///< 점검 창 `_scope` 를 푼다
         static constexpr uint16 kPostNotice       = toMethod( AdminMethodName::PostNotice );       ///< 공지 `_noticeID` 를 올린다(`_body`, `_startMs`, `_endMs`, `_priority`, `_bLiteralText`)
         static constexpr uint16 kRemoveNotice     = toMethod( AdminMethodName::RemoveNotice );     ///< 공지 `_noticeID` 를 내린다
+        static constexpr uint16 kListLiveEvents   = toMethod( AdminMethodName::ListLiveEvents );   ///< 라이브 이벤트 정의를 JSON 글로 돌려준다(`_listLiveEvent`)
+        static constexpr uint16 kPutLiveEvent     = toMethod( AdminMethodName::PutLiveEvent );     ///< `_eventJSON` 정의 하나를 올리거나 덮어쓴다
+        static constexpr uint16 kRemoveLiveEvent  = toMethod( AdminMethodName::RemoveLiveEvent );  ///< 이벤트 `_eventID` 를 지운다
 
         /** @brief 상태를 바꾸는 명령이면 true 입니다. 이 경우 멱등 키와 메모가 필수입니다. */
-        static constexpr bool isMutating( uint16 method ) { return method != kLookupAccount && method != kListAudit && method != kListReports; }
+        static constexpr bool isMutating( uint16 method )
+        {
+            return method != kLookupAccount && method != kListAudit && method != kListReports && method != kListLiveEvents;
+        }
         /** @brief 서버 디렉터리 키트(`IServerDirectoryControl`)가 효과를 쓰는 명령이면 true 입니다. GM 키트는 등급만 확인하고 넘깁니다. */
         static constexpr bool isDirectoryMethod( uint16 method )
         {
             return method == kSetMaintenance || method == kClearMaintenance || method == kPostNotice || method == kRemoveNotice;
         }
+        /** @brief 라이브 운영 키트(`ILiveEventControl`)가 처리하는 명령이면 true 입니다. GM 키트는 등급만 확인하고 넘깁니다. */
+        static constexpr bool isLiveEventMethod( uint16 method ) { return method == kListLiveEvents || method == kPutLiveEvent || method == kRemoveLiveEvent; }
+        /** @brief 다른 키트에 넘기는 명령이면 true 입니다(저장소 작업은 등급과 형식만 확인한다). */
+        static constexpr bool isForwardedMethod( uint16 method ) { return isDirectoryMethod( method ) || isLiveEventMethod( method ); }
     };
 } // namespace sw
 
@@ -146,6 +159,10 @@ namespace sw
         string _scope{}; ///< 점검 범위(`all` 또는 서버 종류)이다. 상한은 `ServerRecord::kMaxNameSize` 와 같다
         PROPERTY( MaxCount = 64 )
         string _messageKey{}; ///< 점검 안내 문구 키이다
+        PROPERTY( MaxCount = 48 )
+        string _eventID{}; ///< RemoveLiveEvent 의 이벤트 id 이다
+        PROPERTY( MaxCount = 8192 )
+        string _eventJSON{}; ///< PutLiveEvent 의 정의(`LiveEventDefinition` 의 리플렉션 JSON)이다. 상한은 `AdminProtocol::kMaxEventJSONSize` 와 같다
         PROPERTY( MaxCount = 96 )
         string _reportKey{}; ///< ResolveReport 의 대상이다. 상한은 `ServiceReportConstant::kMaxReportKeySize` 와 같다
         PROPERTY()
@@ -203,6 +220,18 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 라이브 이벤트 정의 하나입니다. 가변 길이 글의 목록이라 원소를 구조체로 감쌌습니다. */
+    REFLECT()
+    struct AdminLiveEventView
+    {
+        REFLECT_BODY();
+        PROPERTY( MaxCount = 8192 )
+        string _definitionJSON{}; ///< 상한은 `AdminProtocol::kMaxEventJSONSize` 와 같다
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief GM 명령의 응답입니다. */
     REFLECT()
     struct AdminReply
@@ -214,6 +243,8 @@ namespace sw
         vector<AdminJournalLine> _listJournal{}; ///< 상한은 `AdminProtocol::kMaxListCount` 와 같다
         PROPERTY( MaxCount = 100 )
         vector<ServiceAuditEntry> _listAudit{}; ///< 상한은 `AdminProtocol::kMaxListCount` 와 같다
+        PROPERTY( MaxCount = 64 )
+        vector<AdminLiveEventView> _listLiveEvent{}; ///< ListLiveEvents 의 결과이다. 상한은 `AdminProtocol::kMaxLiveEventCount` 와 같다
         PROPERTY( MaxCount = 10 )
         vector<ServiceReport> _listReport{}; ///< ListReports 의 결과이며 ResolveReport 는 닫힌 신고 하나이다. 상한은 `AdminProtocol::kMaxReportListCount` 와 같다
         PROPERTY()
@@ -252,6 +283,8 @@ namespace sw
         static constexpr int32           kMaxLookupCount     = 10;
         static constexpr int32           kMaxListCount       = 100;
         static constexpr int32           kMaxReportListCount = 10; ///< 신고 하나가 문맥 줄 20 개를 담아 커서 한 번에 열 개까지만 싣는다
+        static constexpr int32           kMaxEventJSONSize   = 8192;
+        static constexpr int32           kMaxLiveEventCount  = 64;
 
         /** @brief 공통 오류 코드(`OnlineError`)를 결과로 바꿉니다. */
         static AdminResult fromErrorCode( uint16 errorCode );

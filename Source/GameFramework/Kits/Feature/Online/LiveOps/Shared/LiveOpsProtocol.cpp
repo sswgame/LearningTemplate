@@ -2,6 +2,8 @@
 
 #include "GameFramework/Kits/Feature/Online/LiveOps/Shared/LiveOpsProtocol.h"
 
+#include "Engine/Serialization/Format/JSONSerializer.h"
+
 #include "GameFramework/Base/Online/Store/ServiceRecordUtil.h"
 
 namespace sw
@@ -22,6 +24,20 @@ namespace sw
     bool LiveOpsProtocol::decodeEvent( const string_view key, const vector<uint8>& bytes, LiveEventDefinition& outDefinition )
     {
         return ServiceRecordUtil::readDurable( key, bytes, kLiveOpsRecordVersion, outDefinition );
+    }
+
+    bool LiveOpsProtocol::readEventJSON( string_view definitionJSON, LiveEventDefinition& outDefinition )
+    {
+        LiveEventDefinition definition;
+        if ( JSONSerializer::deserialize( &definition, *LiveEventDefinition::StaticType(), definitionJSON ) == false )
+            return false;
+        outDefinition = std::move( definition );
+        return true;
+    }
+
+    string LiveOpsProtocol::writeEventJSON( const LiveEventDefinition& definition )
+    {
+        return JSONSerializer::serialize( &definition, *LiveEventDefinition::StaticType() );
     }
 
     bool LiveOpsProtocol::encodeDevice( const PushDeviceRegistration& registration, vector<uint8>& outBytes )

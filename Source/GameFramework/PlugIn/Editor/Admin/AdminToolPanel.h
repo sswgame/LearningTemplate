@@ -1,6 +1,6 @@
 /**
  * @file AdminToolPanel.h
- * @brief GM 도구 패널입니다. 계정 조회, 자산 지급과 회수, 제재, 감사 열람을 한 창에서 합니다(언리얼에는 없고, 운영 도구 · Nakama 콘솔의 계정 화면에 해당합니다).
+ * @brief GM 도구 패널입니다. 계정 조회, 자산 지급과 회수, 제재, 감사 열람, 신고 처리, 점검과 공지, 라이브 이벤트 운영을 한 창에서 합니다(언리얼에는 없고, 운영 도구 · Nakama 콘솔의 계정 화면에 해당합니다).
  * @details 명령은 `AdminToolSession` 이 제공자로 보냅니다. 서버가 없으면 메모리 제공자가 같은 모양의 응답을 돌려주므로 창이 비지 않습니다.
  */
 #pragma once
@@ -33,14 +33,26 @@ namespace sw::editor
         void drawAdjustSection();
         void drawSanctionSection();
         void drawAuditSection();
+        void drawReportSection();
+        void drawDirectorySection();
+        void drawLiveEventSection();
 
         string              _accountText;
         string              _assetText;
         string              _memoText;
         string              _reasonText;
         string              _auditSubjectText;
+        string              _scopeText;
+        string              _maintenanceKeyText;
+        string              _noticeText;
+        string              _eventJSONText;
+        string              _eventIDText;
         int64               _amount;
         int64               _sanctionSeconds;
+        int64               _maintenanceSeconds;
+        int64               _noticeSeconds;
+        int64               _noticeID;
+        int32               _noticePriority;
         ServiceSanctionKind _sanctionKind;
         bool                _bRefund;
     };

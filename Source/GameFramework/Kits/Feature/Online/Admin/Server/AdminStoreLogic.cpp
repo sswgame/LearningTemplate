@@ -322,6 +322,10 @@ namespace sw
                     case AdminMethod::kPostNotice:
                     case AdminMethod::kRemoveNotice:
                         return request._noticeID != 0;
+                    case AdminMethod::kPutLiveEvent:
+                        return request._eventJSON.empty() == false;
+                    case AdminMethod::kRemoveLiveEvent:
+                        return request._eventID.empty() == false;
                     default:
                         return true;
                 }
@@ -425,8 +429,8 @@ namespace sw
             return AdminStoreLogicInternal::finish( outReply, AdminResult::Forbidden );
         if ( AdminStoreLogicInternal::isWellFormed( command ) == false )
             return AdminStoreLogicInternal::finish( outReply, AdminResult::InvalidRequest );
-        if ( AdminMethod::isDirectoryMethod( command._method ) )
-            return AdminStoreLogicInternal::finish( outReply, AdminResult::Ok ); // 등급만 확인했다. 효과와 감사 기록은 서비스가 넘긴 서버 디렉터리 키트가 쓴다
+        if ( AdminMethod::isForwardedMethod( command._method ) )
+            return AdminStoreLogicInternal::finish( outReply, AdminResult::Ok ); // 등급과 형식만 확인했다. 효과와 감사 기록은 서비스가 넘긴 키트(서버 디렉터리, 라이브 운영)가 쓴다
         if ( command._method == AdminMethod::kLookupAccount )
             return AdminStoreLogicInternal::finish( outReply, AdminStoreLogicInternal::lookup( connection, command, outReply ) );
         if ( command._method == AdminMethod::kListAudit )

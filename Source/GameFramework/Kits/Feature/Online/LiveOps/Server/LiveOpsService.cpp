@@ -340,6 +340,44 @@ namespace sw
         submitWrite( std::move( work ) );
     }
 
+    void LiveOpsService::putEventJSON( string_view definitionJSON, AccountID actorID, string_view memo, int64 nowMs, uint64 requestTag )
+    {
+        LiveEventDefinition definition;
+        if ( LiveOpsProtocol::readEventJSON( definitionJSON, definition ) == false )
+        {
+            _completionBuffer.push( LiveOpsCompletion{ requestTag, LiveOpsResult::Invalid } ); // JSON 이 아니거나 모르는 필드가 있다
+            return;
+        }
+        putEvent( definition, actorID, memo, nowMs, requestTag ); // 규칙 검사는 같은 길(`LiveEventRules::isValid`)이다
+    }
+
+    void LiveOpsService::collectEventJSON( vector<string>& outListJSON ) const
+    {
+        outListJSON.clear();
+        outListJSON.reserve( _listEvent.size() );
+        for ( const LiveEventDefinition& definition : _listEvent )
+        {
+            outListJSON.push_back( LiveOpsProtocol::writeEventJSON( definition ) );
+        }
+    }
+
+    void LiveOpsService::drainControlCompletions( vector<LiveEventControlCompletion>& outListCompletion )
+    {
+        vector<LiveOpsCompletion> listCompletion;
+        _completionBuffer.drainTo( listCompletion );
+        for ( const LiveOpsCompletion& completion : listCompletion )
+        {
+            LiveEventControlResult result = LiveEventControlResult::Unavailable;
+            if ( completion._result == LiveOpsResult::Ok )
+                result = LiveEventControlResult::Ok;
+            else if ( completion._result == LiveOpsResult::Invalid )
+                result = LiveEventControlResult::Invalid;
+            else if ( completion._result == LiveOpsResult::NotFound )
+                result = LiveEventControlResult::NotFound;
+            outListCompletion.push_back( LiveEventControlCompletion{ completion._requestTag, result } );
+        }
+    }
+
     void LiveOpsService::removeEvent( string_view eventID, AccountID actorID, string_view memo, int64 nowMs, uint64 requestTag )
     {
         if ( LiveOpsLimit::isValidKey( eventID, LiveOpsLimit::kMaxIDSize ) == false )

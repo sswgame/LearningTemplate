@@ -24,6 +24,7 @@ namespace sw
     class IAccountNameIndex;
     class IAccountSessionControl;
     class ILedgerPolicy;
+    class ILiveEventControl;
     class IServerDirectoryControl;
     class IServiceStore;
     class MetricRegistry;
@@ -39,6 +40,7 @@ namespace sw
         const ILedgerPolicy*     _pPolicy{ nullptr };         ///< 지급 상한이다. 게임이 CurrencyCatalog 를 넘긴다
         MetricRegistry*          _pMetricRegistry{ nullptr };
         IServerDirectoryControl* _pDirectoryControl{ nullptr }; ///< 점검과 공지 명령을 넘긴다. 서버 디렉터리 키트가 없으면 null 이고 그 명령은 Unavailable 이다
+        ILiveEventControl*       _pLiveEventControl{ nullptr }; ///< 라이브 이벤트 명령을 넘긴다. 라이브 운영 키트가 없으면 null 이고 그 명령은 Unavailable 이다
     };
 } // namespace sw
 
@@ -96,8 +98,12 @@ namespace sw
         void startCall( AccountID adminID, uint16 method, const AdminRequest& request, const NetIdempotencyKey& idempotencyKey, int64 nowMs, PendingCall pending );
         /** @brief 등급을 확인한 점검과 공지 명령을 서버 디렉터리 키트에 넘깁니다. 넘겼으면 true 이며 완료는 `update` 가 거둔다. */
         [[nodiscard]] bool forwardDirectoryCall( const PendingCall& pending );
-        /** @brief 서버 디렉터리 키트의 완료를 거두어 응답합니다. */
-        void pollDirectoryCompletions();
+        /** @brief 등급을 확인한 라이브 이벤트 명령을 라이브 운영 키트에 넘깁니다. 목록은 바로 @p inoutReply 에 채우고 false, 바꾸기는 넘기고 true 입니다. */
+        [[nodiscard]] bool forwardLiveEventCall( const PendingCall& pending, AdminReply& inoutReply );
+        /** @brief 넘긴 키트(서버 디렉터리, 라이브 운영)의 완료를 거두어 응답합니다. */
+        void pollForwardedCompletions();
+        /** @brief 넘긴 명령 하나를 그 결과로 끝냅니다. */
+        void finishForwardedCall( uint64 callID, AdminResult result );
         void finishCall( size_t pendingIndex, const AdminReply& reply );
 
         vector<PendingCall> _listPendingCall;

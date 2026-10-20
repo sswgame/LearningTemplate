@@ -81,7 +81,8 @@ namespace sw
                 }
                 if ( registerHostService( context, entry, &_server, outError ) == false )
                     return false;
-                context._pOfflinePush = &_offlinePush; // 우편함 키트가 접속하지 않은 계정의 새 우편에 쓴다
+                context._pOfflinePush      = &_offlinePush; // 우편함 키트가 접속하지 않은 계정의 새 우편에 쓴다
+                context._pLiveEventControl = &_service;     // GM 키트의 이벤트 운영이 쓴다. 부르는 것은 모든 키트가 시작한 뒤다
                 return true;
             }
 

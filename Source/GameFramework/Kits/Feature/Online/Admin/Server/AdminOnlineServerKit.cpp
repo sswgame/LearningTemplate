@@ -100,6 +100,7 @@ namespace sw
                 settings._pMetricRegistry   = context._pMetricRegistry;
                 settings._pDirectoryControl = context._pDirectoryControl;
                 settings._pNameIndex        = context._pNameIndex; // 접속하지 않은 계정도 이름으로 찾는다
+                settings._pLiveEventControl = context._pLiveEventControl;
                 if ( _service.initialize( context._pStore, settings ) == false )
                 {
                     outError = "the admin service needs a store";

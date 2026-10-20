@@ -27,6 +27,7 @@ namespace sw::editor
         {
             static constexpr int64 kDefaultAmount          = 100;
             static constexpr int64 kDefaultSanctionSeconds = 3600;
+            static constexpr int64 kDefaultWindowSeconds   = 3600;
 
             /** @brief 편집 칸의 16 진 문자열을 계정 id 로 바꿉니다. 비었거나 16 진이 아니면 false 입니다. */
             [[nodiscard]] static bool parseAccountID( const string& text, AccountID& outAccountID )
@@ -89,8 +90,17 @@ namespace sw::editor
         , _memoText{}
         , _reasonText{ "gm.notice" }
         , _auditSubjectText{}
+        , _scopeText{ "all" }
+        , _maintenanceKeyText{ "maintenance.default" }
+        , _noticeText{}
+        , _eventJSONText{}
+        , _eventIDText{}
         , _amount{ AdminToolPanelInternal::kDefaultAmount }
         , _sanctionSeconds{ AdminToolPanelInternal::kDefaultSanctionSeconds }
+        , _maintenanceSeconds{ AdminToolPanelInternal::kDefaultWindowSeconds }
+        , _noticeSeconds{ AdminToolPanelInternal::kDefaultWindowSeconds }
+        , _noticeID{ 1 }
+        , _noticePriority{ 0 }
         , _sanctionKind{ ServiceSanctionKind::ChatMute }
         , _bRefund{ false }
     {
@@ -105,6 +115,9 @@ namespace sw::editor
         drawAdjustSection();
         drawSanctionSection();
         drawAuditSection();
+        drawReportSection();
+        drawDirectorySection();
+        drawLiveEventSection();
 
         const AdminToolSession* pSession = findSubsystem<AdminToolSession>();
         if ( pSession == nullptr )
@@ -302,6 +315,127 @@ namespace sw::editor
             ImGui::TextUnformatted( entry._memo.c_str() );
         }
         ImGui::EndTable();
+    }
+
+    void AdminToolPanel::drawReportSection()
+    {
+        AdminToolSession* pSession = findSubsystem<AdminToolSession>();
+        if ( pSession == nullptr )
+            return; // 이 확장의 서브시스템이 아직 걸리지 않았다(프레임 앞 sync 전)
+        AdminToolSession& session = *pSession;
+        EditorWidgets::drawSectionHeader( "Reports" );
+        if ( ImGui::Button( "Open reports" ) )
+            session.requestReports( true );
+        EditorSelfTestMarks::note( "admin.report.list" );
+        ImGui::SameLine();
+        if ( ImGui::Button( "Closed reports" ) )
+            session.requestReports( false );
+
+        constexpr ImGuiTableFlags kTableFlags = ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp;
+        if ( ImGui::BeginTable( "##AdminReport", 5, kTableFlags, ImVec2{ 0.0f, 140.0f * EditorThemeUtil::getDpiScale() } ) == false )
+            return;
+        ImGui::TableSetupColumn( "Time (UTC)" );
+        ImGui::TableSetupColumn( "Reason" );
+        ImGui::TableSetupColumn( "Target" );
+        ImGui::TableSetupColumn( "Reported line" );
+        ImGui::TableSetupColumn( "Action" );
+        ImGui::TableHeadersRow();
+        for ( const ServiceReport& report : session.getReports() )
+        {
+            ImGui::PushID( report._reportKey.c_str() );
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex( 0 );
+            ImGui::TextUnformatted( AdminToolPanelInternal::formatClock( report._createdMs ).c_str() );
+            ImGui::TableSetColumnIndex( 1 );
+            ImGui::TextUnformatted( report._reason.c_str() );
+            ImGui::TableSetColumnIndex( 2 );
+            ImGui::TextUnformatted( AdminToolPanelInternal::formatAccountID( report._targetID ).c_str() );
+            ImGui::TableSetColumnIndex( 3 );
+            ImGui::TextUnformatted( report._listLine.empty() ? "" : report._listLine.back()._text.c_str() ); // 마지막 줄이 신고 대상이다
+            ImGui::TableSetColumnIndex( 4 );
+            const bool bOpen = report._status == ServiceReportStatus::Open;
+            ImGui::BeginDisabled( bOpen == false || _memoText.empty() );
+            if ( ImGui::SmallButton( "Resolve" ) )
+                session.requestResolveReport( report._reportKey, ServiceReportStatus::Resolved, _memoText );
+            ImGui::SameLine();
+            if ( ImGui::SmallButton( "Dismiss" ) )
+                session.requestResolveReport( report._reportKey, ServiceReportStatus::Dismissed, _memoText );
+            ImGui::EndDisabled();
+            ImGui::PopID();
+        }
+        ImGui::EndTable();
+    }
+
+    void AdminToolPanel::drawDirectorySection()
+    {
+        AdminToolSession* pSession = findSubsystem<AdminToolSession>();
+        if ( pSession == nullptr )
+            return; // 이 확장의 서브시스템이 아직 걸리지 않았다(프레임 앞 sync 전)
+        AdminToolSession& session = *pSession;
+        EditorWidgets::drawSectionHeader( "Maintenance / Notice" );
+
+        EditorWidgets::drawTextField( "Scope (all or server kind)", _scopeText, 160.0f * EditorThemeUtil::getDpiScale() );
+        EditorWidgets::drawTextField( "Message key", _maintenanceKeyText, 200.0f * EditorThemeUtil::getDpiScale() );
+        ImGui::SetNextItemWidth( 160.0f * EditorThemeUtil::getDpiScale() );
+        ImGui::InputScalar( "Maintenance seconds (0 = until cleared)", ImGuiDataType_S64, &_maintenanceSeconds );
+        ImGui::BeginDisabled( _memoText.empty() );
+        if ( ImGui::Button( "Start maintenance" ) )
+            session.requestSetMaintenance( _scopeText, _maintenanceKeyText, _maintenanceSeconds, _memoText );
+        EditorSelfTestMarks::note( "admin.maintenance.set" );
+        ImGui::SameLine();
+        if ( ImGui::Button( "End maintenance" ) )
+            session.requestClearMaintenance( _scopeText, _memoText );
+        ImGui::EndDisabled();
+
+        ImGui::SetNextItemWidth( 120.0f * EditorThemeUtil::getDpiScale() );
+        ImGui::InputScalar( "Notice id", ImGuiDataType_S64, &_noticeID );
+        ImGui::SetNextItemWidth( 120.0f * EditorThemeUtil::getDpiScale() );
+        ImGui::InputInt( "Priority", &_noticePriority );
+        ImGui::SetNextItemWidth( 160.0f * EditorThemeUtil::getDpiScale() );
+        ImGui::InputScalar( "Notice seconds (0 = until removed)", ImGuiDataType_S64, &_noticeSeconds );
+        EditorWidgets::drawTextField( "Notice text", _noticeText, 360.0f * EditorThemeUtil::getDpiScale() );
+        const bool bNoticeReady = _memoText.empty() == false && _noticeID > 0;
+        ImGui::BeginDisabled( bNoticeReady == false );
+        if ( ImGui::Button( "Post notice" ) )
+            session.requestPostNotice( static_cast<uint64>( _noticeID ), _noticeText, _noticePriority, _noticeSeconds, _memoText );
+        EditorSelfTestMarks::note( "admin.notice.post" );
+        ImGui::SameLine();
+        if ( ImGui::Button( "Remove notice" ) )
+            session.requestRemoveNotice( static_cast<uint64>( _noticeID ), _memoText );
+        ImGui::EndDisabled();
+    }
+
+    void AdminToolPanel::drawLiveEventSection()
+    {
+        AdminToolSession* pSession = findSubsystem<AdminToolSession>();
+        if ( pSession == nullptr )
+            return; // 이 확장의 서브시스템이 아직 걸리지 않았다(프레임 앞 sync 전)
+        AdminToolSession& session = *pSession;
+        EditorWidgets::drawSectionHeader( "Live events" );
+        if ( ImGui::Button( "List live events" ) )
+            session.requestLiveEvents();
+        EditorSelfTestMarks::note( "admin.liveevent.list" );
+        for ( const AdminLiveEventView& view : session.getLiveEvents() )
+        {
+            ImGui::PushID( view._definitionJSON.c_str() );
+            if ( ImGui::SmallButton( "Edit" ) )
+                _eventJSONText = view._definitionJSON; // 고쳐서 다시 올린다(같은 id 는 덮어쓴다)
+            ImGui::SameLine();
+            ImGui::TextUnformatted( view._definitionJSON.c_str() );
+            ImGui::PopID();
+        }
+        EditorWidgets::drawTextFieldMultiline( "Event JSON", _eventJSONText, 6 );
+        ImGui::BeginDisabled( _memoText.empty() || _eventJSONText.empty() );
+        if ( ImGui::Button( "Put live event" ) )
+            session.requestPutLiveEvent( _eventJSONText, _memoText );
+        EditorSelfTestMarks::note( "admin.liveevent.put" );
+        ImGui::EndDisabled();
+        EditorWidgets::drawTextField( "Event id", _eventIDText, 200.0f * EditorThemeUtil::getDpiScale() );
+        ImGui::SameLine();
+        ImGui::BeginDisabled( _memoText.empty() || _eventIDText.empty() );
+        if ( ImGui::Button( "Remove live event" ) )
+            session.requestRemoveLiveEvent( _eventIDText, _memoText );
+        ImGui::EndDisabled();
     }
 
     // 세션의 등록 줄은 여기 둔다 — EngineTest 가 세션 .cpp 를 에디터 없이 직접 컴파일한다.

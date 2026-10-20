@@ -55,18 +55,35 @@ namespace sw::editor
         void requestSanction( AccountID accountID, ServiceSanctionKind kind, int64 durationSeconds, string_view reasonCode, string_view memo );
         /** @brief 감사 기록을 열람합니다. @p subjectPrefix 가 비면 전부입니다. */
         void requestAudit( string_view subjectPrefix );
+        /** @brief 열린 신고(@p bOpen) 또는 처리한 신고를 최근 것부터 읽습니다. 성공하면 `getReports` 가 채워집니다. */
+        void requestReports( bool bOpen );
+        /** @brief 열린 신고를 처리합니다(Resolved 나 Dismissed). 메모가 처리 메모입니다. 성공하면 열린 신고를 다시 읽습니다. */
+        void requestResolveReport( string_view reportKey, ServiceReportStatus status, string_view memo );
+        /** @brief 점검 창을 겁니다. @p durationSeconds 가 0 이면 해제할 때까지입니다. */
+        void requestSetMaintenance( string_view scope, string_view messageKey, int64 durationSeconds, string_view memo );
+        void requestClearMaintenance( string_view scope, string_view memo );
+        /** @brief 공지를 올립니다(GM 이 쓴 문구). @p durationSeconds 가 0 이면 내릴 때까지입니다. */
+        void requestPostNotice( uint64 noticeID, string_view text, int32 priority, int64 durationSeconds, string_view memo );
+        void requestRemoveNotice( uint64 noticeID, string_view memo );
+        /** @brief 라이브 이벤트 정의(JSON)를 읽습니다. 성공하면 `getLiveEvents` 가 채워집니다. */
+        void requestLiveEvents();
+        /** @brief 라이브 이벤트 정의(JSON) 하나를 올리거나 덮어씁니다. 성공하면 목록을 다시 읽습니다. */
+        void requestPutLiveEvent( string_view definitionJSON, string_view memo );
+        void requestRemoveLiveEvent( string_view eventID, string_view memo );
 
         // ------------------------------------------------------------------------------
         // 3) 결과
         // ------------------------------------------------------------------------------
-        bool                             hasLookup() const { return _bHasLookup; }
-        AccountID                        getLookupAccountID() const { return _lookupAccountID; }
-        const AdminReply&                getLookup() const { return _lookup; }
-        const vector<ServiceAuditEntry>& getAuditRows() const { return _lookupAudit._listAudit; }
-        AdminResult                      getLastResult() const { return _lastResult; }
-        uint16                           getLastMethod() const { return _lastMethod; }
-        bool                             wasLastReplayed() const { return _bLastReplayed; }
-        const string&                    getStatusLine() const { return _statusLine; }
+        bool                              hasLookup() const { return _bHasLookup; }
+        AccountID                         getLookupAccountID() const { return _lookupAccountID; }
+        const AdminReply&                 getLookup() const { return _lookup; }
+        const vector<ServiceAuditEntry>&  getAuditRows() const { return _lookupAudit._listAudit; }
+        const vector<ServiceReport>&      getReports() const { return _reports._listReport; }
+        const vector<AdminLiveEventView>& getLiveEvents() const { return _liveEvents._listLiveEvent; }
+        AdminResult                       getLastResult() const { return _lastResult; }
+        uint16                            getLastMethod() const { return _lastMethod; }
+        bool                              wasLastReplayed() const { return _bLastReplayed; }
+        const string&                     getStatusLine() const { return _statusLine; }
         /** @brief 응답을 받은 명령의 수입니다. */
         int32 getCompletedCount() const { return _completedCount; }
         /** @brief 보냈는데 아직 응답이 없는 명령의 수입니다. */
@@ -81,6 +98,8 @@ namespace sw::editor
         IAdminCommandProvider* _pActive;
         AdminReply             _lookup;
         AdminReply             _lookupAudit;
+        AdminReply             _reports;
+        AdminReply             _liveEvents;
         string                 _statusLine;
         int32                  _completedCount;
         int32                  _pendingCount;

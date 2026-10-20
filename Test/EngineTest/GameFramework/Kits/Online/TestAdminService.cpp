@@ -8,6 +8,7 @@
 
 #include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"
 #include "GameFramework/Base/Online/Bus/LocalServerBus.h"
+#include "GameFramework/Base/Online/Config/LiveEventControl.h"
 #include "GameFramework/Base/Online/Directory/ServerDirectoryControl.h"
 #include "GameFramework/Base/Online/Identity/AccountNameIndex.h"
 #include "GameFramework/Base/Online/Identity/AccountSessionControl.h"
@@ -174,6 +175,40 @@ namespace
         }
 
         void drainControlCompletions( vector<ServerDirectoryControlCompletion>& outListCompletion ) override
+        {
+            outListCompletion.insert( outListCompletion.end(), _listPending.begin(), _listPending.end() );
+            _listPending.clear();
+        }
+    };
+
+    /** @brief 이벤트 하나를 가진 가짜 라이브 운영 창입니다. 바꾸기는 다음 거두기에 Ok 로 끝난다. */
+    class FakeLiveEventControl final : public ILiveEventControl
+    {
+    public:
+        vector<LiveEventControlCompletion> _listPending{};
+        vector<string>                     _listPutJSON{};
+
+        void putEventJSON( string_view definitionJSON, AccountID actorID, string_view memo, int64 nowMs, uint64 requestTag ) override
+        {
+            (void)actorID;
+            (void)memo;
+            (void)nowMs;
+            _listPutJSON.push_back( string( definitionJSON ) );
+            _listPending.push_back( LiveEventControlCompletion{ requestTag, LiveEventControlResult::Ok } );
+        }
+
+        void removeEvent( string_view eventID, AccountID actorID, string_view memo, int64 nowMs, uint64 requestTag ) override
+        {
+            (void)eventID;
+            (void)actorID;
+            (void)memo;
+            (void)nowMs;
+            _listPending.push_back( LiveEventControlCompletion{ requestTag, LiveEventControlResult::NotFound } );
+        }
+
+        void collectEventJSON( vector<string>& outListJSON ) const override { outListJSON = { "{\"_eventID\":\"halloween\"}" }; }
+
+        void drainControlCompletions( vector<LiveEventControlCompletion>& outListCompletion ) override
         {
             outListCompletion.insert( outListCompletion.end(), _listPending.begin(), _listPending.end() );
             _listPending.clear();
@@ -472,6 +507,53 @@ SW_TEST_CASE( AdminServiceTest, MaintenanceAndNoticeCommandsAreForwardedAfterThe
     control._nextResult = ServerDirectoryControlResult::NotFound;
     AdminReplyCapture removed;
     service.submitCall( AdminFixture::kOperator, AdminMethod::kRemoveNotice, notice, NetIdempotencyKey{ 1, 4 }, 5000, removed.makeDelegate() );
+    (void)store.pollCompletions();
+    service.update( 5000 );
+    SW_EXPECT_TRUE( removed._reply._result == AdminResult::NotFound );
+    service.shutdown();
+    store.shutdown();
+    (void)store.pollCompletions();
+}
+
+SW_TEST_CASE( AdminServiceTest, LiveEventCommandsGoToTheLiveOpsKit )
+{
+    MemoryServiceDatabase database;
+    MemoryServiceStore    store{ &database };
+    FakeLiveEventControl  control;
+    AdminService          service;
+    AdminServiceConfig    settings;
+    settings._pLiveEventControl = &control;
+    SW_ASSERT_TRUE( service.initialize( &store, settings ) );
+    service.seedRole( AdminFixture::kOperator, AdminRole::Operator, 1 );
+    service.seedRole( AdminFixture::kViewer, AdminRole::Viewer, 1 );
+    (void)store.pollCompletions();
+
+    AdminReplyCapture listed;
+    service.submitCall( AdminFixture::kViewer, AdminMethod::kListLiveEvents, AdminRequest{}, NetIdempotencyKey{}, 5000, listed.makeDelegate() );
+    (void)store.pollCompletions();
+    SW_ASSERT_EQUAL( listed._count, 1 ); // 목록은 넘기지 않고 바로 답한다
+    SW_ASSERT_EQUAL( listed._reply._listLiveEvent.size(), size_t( 1 ) );
+    SW_EXPECT_TRUE( listed._reply._listLiveEvent[0]._definitionJSON.find( "halloween" ) != string::npos );
+
+    AdminRequest put;
+    put._eventJSON = "{\"_eventID\":\"winter\"}";
+    put._memo      = "season";
+    AdminReplyCapture denied;
+    AdminReplyCapture putDone;
+    service.submitCall( AdminFixture::kViewer, AdminMethod::kPutLiveEvent, put, NetIdempotencyKey{ 2, 1 }, 5000, denied.makeDelegate() );
+    service.submitCall( AdminFixture::kOperator, AdminMethod::kPutLiveEvent, put, NetIdempotencyKey{ 2, 2 }, 5000, putDone.makeDelegate() );
+    (void)store.pollCompletions();
+    SW_EXPECT_TRUE( denied._reply._result == AdminResult::Forbidden );
+    SW_EXPECT_EQUAL( putDone._count, 0 );
+    SW_ASSERT_EQUAL( control._listPutJSON.size(), size_t( 1 ) );
+    service.update( 5000 );
+    SW_EXPECT_TRUE( putDone._reply._result == AdminResult::Ok );
+
+    AdminRequest remove;
+    remove._eventID = "nope";
+    remove._memo    = "cleanup";
+    AdminReplyCapture removed;
+    service.submitCall( AdminFixture::kOperator, AdminMethod::kRemoveLiveEvent, remove, NetIdempotencyKey{ 2, 3 }, 5000, removed.makeDelegate() );
     (void)store.pollCompletions();
     service.update( 5000 );
     SW_EXPECT_TRUE( removed._reply._result == AdminResult::NotFound );

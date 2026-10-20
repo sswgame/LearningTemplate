@@ -32,6 +32,7 @@ namespace sw
     class IEphemeralStore;
     class IGroupChannelMembership;
     class ILedgerPolicy;
+    class ILiveEventControl;
     class IOfflinePushSender;
     class IOnlineHostService;
     class IServerDirectoryControl;
@@ -90,6 +91,7 @@ namespace sw
         IGroupChannelMembership*  _pGroupChannels{ nullptr };    ///< 채팅 키트(길드와 파티 채널 멤버)
         const IAccountStatSource* _pStatSource{ nullptr };       ///< 순위표 키트(접속한 계정의 통계, 매칭 실력)
         IOfflinePushSender*       _pOfflinePush{ nullptr };      ///< 라이브 운영 키트(오프라인 계정의 기기 푸시)
+        ILiveEventControl*        _pLiveEventControl{ nullptr }; ///< 라이브 운영 키트(GM 의 이벤트 운영)
     };
 } // namespace sw
 
