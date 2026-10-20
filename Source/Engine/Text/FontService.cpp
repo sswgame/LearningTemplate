@@ -27,7 +27,7 @@ namespace sw
             static constexpr uint64 kCodepointWarningSeed = 2;
 
             /** @brief 이름 해시(대소문자 무시)입니다. */
-            static uint64 hashName( string_view name, uint64 seed = 0 ) { return StringUtil::computeHash64( name.data(), name.size(), true, seed ); }
+            static uint64 hashName( string_view name, uint64 seed = 0 ) { return HashUtil::computeStringHash64( name.data(), name.size(), true, seed ); }
 
             static uint64 hashFamilyFace( string_view family, FontWeight weight, FontSlant slant )
             {

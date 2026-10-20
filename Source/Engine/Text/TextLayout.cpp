@@ -116,7 +116,7 @@ namespace sw
 
             static uint64 hashStyle( const TextLayoutStyle& style )
             {
-                uint64 hash = StringUtil::computeHash64( style._font._family.data(), style._font._family.size(), true, 0 );
+                uint64 hash = HashUtil::computeStringHash64( style._font._family.data(), style._font._family.size(), true, 0 );
                 hash        = HashUtil::combine( hash, static_cast<uint64>( style._font._weight ) );
                 hash        = HashUtil::combine( hash, static_cast<uint64>( style._font._slant ) );
                 hash        = hashFloat( hash, style._fontSize );
@@ -617,7 +617,7 @@ namespace sw
         if ( text.empty() || _fontService.isInitialized() == false )
             return float2{};
         const FontFaceChain chain = _fontService.getFaceChain( style._font );
-        uint64              key   = StringUtil::computeHash64( text.data(), text.size(), false, Internal::hashStyle( style ) );
+        uint64              key   = HashUtil::computeStringHash64( text.data(), text.size(), false, Internal::hashStyle( style ) );
         key                       = Internal::hashFloat( key, maxWidth );
         for ( uint32 index = 0; index < chain._faceCount; ++index )
         {

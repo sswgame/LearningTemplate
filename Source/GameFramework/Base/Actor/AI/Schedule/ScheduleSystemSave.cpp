@@ -13,6 +13,7 @@
 
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleActivity.h"
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleCatalog.h"
+#include "GameFramework/Base/Actor/AI/Schedule/ScheduleHash.h"
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleSaveState.h"
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleSystem.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
@@ -30,43 +31,6 @@ namespace sw
             static constexpr size_t kNetEntrySize  = 26; ///< 자리 3 × float32 + 지역 · 활동 해시 2 × uint32 + NPC uint16 + 칸 int16 + 상태 2 × uint8
 
             static int32 toDay( int32 absoluteMinute ) { return absoluteMinute / kScheduleMinutesPerDay; }
-
-            template <typename T>
-            static uint64 hashValue( uint64 hash, const T& value )
-            {
-                return HashUtil::appendBytes64( hash, &value, sizeof( T ) );
-            }
-
-            static uint64 hashName( uint64 hash, const hashed_string& name )
-            {
-                return HashUtil::appendBytes64( hash, name.c_str(), name.size() );
-            }
-
-            static uint64 hashPosition( uint64 hash, const float3& position )
-            {
-                hash = hashValue( hash, position._x );
-                hash = hashValue( hash, position._y );
-                return hashValue( hash, position._z );
-            }
-
-            static uint32 hashNameToKey( const hashed_string& name ) { return static_cast<uint32>( hashName( HashUtil::kFnvOffset64, name ) ); }
-
-            /** @brief 칸의 정체 — 같은 출처 · 칸 · 시간 · 자리 · 출발이면 같은 값입니다(사건 · 경로 캐시 · 계획 비교). */
-            static uint64 computeSegmentKey( const ScheduleSegment& segment )
-            {
-                uint64 hash = HashUtil::kFnvOffset64;
-                hash        = hashName( hash, segment._sourceID );
-                hash        = hashName( hash, segment._activity );
-                hash        = hashValue( hash, segment._startMinute );
-                hash        = hashValue( hash, segment._endMinute );
-                hash        = hashValue( hash, segment._blockIndex );
-                hash        = hashValue( hash, segment._ownerIndex );
-                hash        = hashValue( hash, segment._source );
-                hash        = hashPosition( hash, segment._target._position );
-                hash        = hashValue( hash, segment._departMinute );
-                hash        = hashValue( hash, segment._travelMinutes );
-                return hash == 0 ? 1 : hash;
-            }
 
             /** @brief 마지막으로 나선 칸 — 나선 시각이 @p minuteOfDay 이하인 마지막 칸입니다(출발 시각은 순서대로 늘어난다). */
             static int32 findActiveSegment( const vector<ScheduleSegment>& listSegment, float32 minuteOfDay )
@@ -229,13 +193,13 @@ namespace sw
             const ScheduleLocation location    = computeLogicLocation( npcIndex, _minute );
             ScheduleNetSummary     summary;
             summary._position          = location._position;
-            summary._areaHash          = ScheduleSystemSaveInternal::hashNameToKey( location._area );
+            summary._areaHash          = ScheduleHash::computeNameKey( location._area );
             summary._npcIndex          = static_cast<uint16>( npcIndex );
             summary._segmentIndex      = static_cast<int16>( active );
             summary._phase             = static_cast<uint8>( active >= 0 ? computePhase( npc, active, minuteOfDay, fraction ) : ScheduleNpcPhase::Performing );
             summary._interruptionDepth = static_cast<uint8>( MathUtil::min( npc._listInterruption.size(), static_cast<size_t>( 255 ) ) );
             if ( active >= 0 )
-                summary._activityHash = ScheduleSystemSaveInternal::hashNameToKey( npc._listSegment[static_cast<size_t>( active )]._activity );
+                summary._activityHash = ScheduleHash::computeNameKey( npc._listSegment[static_cast<size_t>( active )]._activity );
             outListSummary.push_back( summary );
         }
     }
@@ -300,21 +264,21 @@ namespace sw
         uint64 hash = HashUtil::appendBytes64( HashUtil::kFnvOffset64, bytes.data(), bytes.size() );
         for ( const NpcRuntime& npc : _listNpc )
         {
-            hash = Internal::hashValue( hash, npc._originMinute );
-            hash = Internal::hashPosition( hash, npc._origin._position );
+            hash = HashUtil::appendValue64( hash, npc._originMinute );
+            hash = ScheduleHash::appendPosition( hash, npc._origin._position );
             for ( const ScheduleSegment& segment : npc._listSegment )
             {
-                hash = Internal::hashValue( hash, Internal::computeSegmentKey( segment ) );
+                hash = HashUtil::appendValue64( hash, ScheduleHash::computeSegmentKey( segment ) );
             }
             for ( const Interruption& interruption : npc._listInterruption )
             {
-                hash = Internal::hashName( hash, interruption._id );
-                hash = Internal::hashValue( hash, interruption._expireMinute );
+                hash = ScheduleHash::appendName( hash, interruption._id );
+                hash = HashUtil::appendValue64( hash, interruption._expireMinute );
             }
         }
         for ( const int32 appointmentIndex : _listBrokenAppointment )
         {
-            hash = Internal::hashValue( hash, appointmentIndex );
+            hash = HashUtil::appendValue64( hash, appointmentIndex );
         }
         return hash;
     }

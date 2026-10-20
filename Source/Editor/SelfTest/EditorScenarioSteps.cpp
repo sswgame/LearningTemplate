@@ -841,7 +841,7 @@ namespace sw::editor
                     const GameObject* pParent = pObject->getParent();
                     string            key     = string( pObject->getName().c_str() ) + "|" + ( pParent != nullptr ? string( pParent->getName().c_str() ) : string() );
                     const string      state   = ObjectStateSerializer::saveToXMLString( pObject, options );
-                    listEntry.emplace_back( std::move( key ), StringUtil::computeHash64( state, false ) );
+                    listEntry.emplace_back( std::move( key ), HashUtil::computeStringHash64( state, false ) );
                 } );
                 std::sort( listEntry.begin(), listEntry.end() );
                 GlobalVariableManager*    pVariables = editor::findSubsystem<GlobalVariableManager>();
@@ -850,7 +850,7 @@ namespace sw::editor
                 uint64                    hash       = HashUtil::kFnvOffset64;
                 for ( const std::pair<string, uint64>& entry : listEntry )
                 {
-                    hash = HashUtil::combine( hash, StringUtil::computeHash64( entry.first, false ) );
+                    hash = HashUtil::combine( hash, HashUtil::computeStringHash64( entry.first, false ) );
                     hash = HashUtil::combine( hash, entry.second );
                     if ( bDump )
                         SW_LOG_INFO( "[Scenario] scene hash item %# %#", entry.first.c_str(), formatHash( entry.second ).c_str() );
@@ -951,8 +951,8 @@ namespace sw::editor
                     outValue.setText( "no editor state" );
                     return false;
                 }
-                uint64 hash = HashUtil::combine( sceneHash, StringUtil::computeHash64( selected, false ) );
-                hash        = HashUtil::combine( hash, StringUtil::computeHash64( undoState, false ) );
+                uint64 hash = HashUtil::combine( sceneHash, HashUtil::computeStringHash64( selected, false ) );
+                hash        = HashUtil::combine( hash, HashUtil::computeStringHash64( undoState, false ) );
                 hash        = HashUtil::combine( hash, pContext->getSubsystem<EditorWorkspace>().isSceneDirty() ? 1u : 0u );
                 outValue.setText( formatHash( hash ) );
                 return true;

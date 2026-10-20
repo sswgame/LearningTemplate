@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Shared/SQLMigrationRunner.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/map.h"
 #include "Core/File/FileUtil.h"
@@ -318,6 +319,6 @@ namespace sw
 
     string SQLMigrationRunner::computeChecksum( string_view sql )
     {
-        return ServiceKeyUtil::makeHex64( StringUtil::computeHash64( sql.data(), sql.size(), false ) );
+        return ServiceKeyUtil::makeHex64( HashUtil::computeStringHash64( sql.data(), sql.size(), false ) );
     }
 } // namespace sw

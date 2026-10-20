@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
@@ -207,29 +208,29 @@ namespace sw
                 vector<uint8> sourceBytes;
                 (void)FileUtil::readFile( absPathStr, sourceBytes ); // 못 읽으면 내용 없이 해시한다(위 설명)
 
-                uint64 hash = StringUtil::computeHash64( desc._filePath, false );
-                hash        = StringUtil::computeHash64( desc._entryPoint, false, hash );
-                hash        = StringUtil::computeHash64( to_string( static_cast<uint32>( desc._stage ) ), false, hash );
-                hash        = StringUtil::computeHash64( to_string( static_cast<uint32>( desc._targetFormat ) ), false, hash );
+                uint64 hash = HashUtil::computeStringHash64( desc._filePath, false );
+                hash        = HashUtil::computeStringHash64( desc._entryPoint, false, hash );
+                hash        = HashUtil::computeStringHash64( to_string( static_cast<uint32>( desc._stage ) ), false, hash );
+                hash        = HashUtil::computeStringHash64( to_string( static_cast<uint32>( desc._targetFormat ) ), false, hash );
                 for ( const auto& def : desc._listDefine )
                 {
-                    hash = StringUtil::computeHash64( def._name, false, hash );
-                    hash = StringUtil::computeHash64( def._value, false, hash );
+                    hash = HashUtil::computeStringHash64( def._name, false, hash );
+                    hash = HashUtil::computeStringHash64( def._value, false, hash );
                 }
                 if ( sourceBytes.empty() == false )
                 {
                     const string_view sourceStr( reinterpret_cast<const utf8*>( sourceBytes.data() ), sourceBytes.size() );
-                    hash = StringUtil::computeHash64( sourceStr, false, hash );
+                    hash = HashUtil::computeStringHash64( sourceStr, false, hash );
                 }
                 // 주 소스 바이트만 해시하면 **include 된 .hlsli 는 키에 없다**. common.hlsli 의 상수버퍼 바인딩을 고쳐도
                 // 이 캐시가 옛 바이트를 그대로 돌려줬고, ShaderCache 는 그것을 "새로 컴파일한 것" 으로 알고 라이브 캐시에
                 // 다시 써서 GL 이 set 10 짜리 옛 SPIR-V 를 계속 썼다. 스테일 판정 기준은 하나여야 하므로
                 // ShaderCooker 의 유효 소스 해시(모든 .hlsli 포함)를 키에 섞는다.
-                hash = StringUtil::computeHash64( to_string( ShaderCooker::computeEffectiveSourceHash( absPathStr ) ), false, hash );
+                hash = HashUtil::computeStringHash64( to_string( ShaderCooker::computeEffectiveSourceHash( absPathStr ) ), false, hash );
                 // 디버그 코드젠 여부도 키다. 같은 소스라도 바이트코드가 다르다.
                 // string_view 로 넘긴다. 리터럴을 그대로 주면 (pStr, length, bIgnoreCase) 오버로드에 묶여 length=0 · seed 무시로
                 // 키가 상수가 된다(실제로 그래서 모든 셰이더가 한 파일을 공유했다).
-                hash = StringUtil::computeHash64( string_view{ desc._bDebugCodegen != SW_FALSE ? "dbg" : "opt" }, false, hash );
+                hash = HashUtil::computeStringHash64( string_view{ desc._bDebugCodegen != SW_FALSE ? "dbg" : "opt" }, false, hash );
 
                 fixed_string<constant::kMaxBuffer64> buf;
                 formatstring( buf.data(), buf.capacity(), "%#.bin", Fmt( static_cast<uint64>( hash ), Format( 16, Format::Padding::Zero ).hex() ) );

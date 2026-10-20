@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Online/Mail/ServiceMail.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Network/BitStream.h"
 
@@ -25,7 +26,7 @@ namespace sw
                 key.push_back( '/' );
                 ServiceKeyUtil::appendHex64( key, static_cast<uint64>( createdMs < 0 ? 0 : createdMs ) );
                 key.push_back( '.' );
-                ServiceKeyUtil::appendHex64( key, StringUtil::computeHash64( idempotencyKey.data(), idempotencyKey.size(), false ) );
+                ServiceKeyUtil::appendHex64( key, HashUtil::computeStringHash64( idempotencyKey.data(), idempotencyKey.size(), false ) );
                 return key;
             }
 

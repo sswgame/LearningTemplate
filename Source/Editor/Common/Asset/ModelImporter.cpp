@@ -651,30 +651,30 @@ namespace sw::editor
         StringBuilder<constant::kMaxBuffer64> versionText;
         versionText.appendFormat( "importer=%#;format=%#;recenter=%#;clip=%#", ModelImporterInternal::kImporterVersion, MeshAssetFormat::kVersion,
                                   static_cast<uint32>( rule._recenter ), AnimationClip::kVersion );
-        uint64 hash = StringUtil::computeHash64( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size(), false );
-        hash        = StringUtil::computeHash64( versionText.c_str(), versionText.size(), false, hash );
+        uint64 hash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size(), false );
+        hash        = HashUtil::computeStringHash64( versionText.c_str(), versionText.size(), false, hash );
         // 이동은 비트 그대로 섞는다. 문자열로 반올림하면 작은 변경이 같은 해시가 된다.
-        hash                       = StringUtil::computeHash64( reinterpret_cast<const utf8*>( rule._arrTranslation ), sizeof( rule._arrTranslation ), false, hash );
+        hash                       = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( rule._arrTranslation ), sizeof( rule._arrTranslation ), false, hash );
         const string animationText = rule.makeAnimationHashText();
-        hash                       = StringUtil::computeHash64( animationText.c_str(), animationText.size(), false, hash );
+        hash                       = HashUtil::computeStringHash64( animationText.c_str(), animationText.size(), false, hash );
         // VRM 이면 아바타 파일 형식 버전도 섞는다. 그 형식만 바뀌었을 때 VRM 원본만 다시 임포트하게 한다(임포터 버전을 올리면 모든 모델이 어긋난다).
         if ( ModelImporterInternal::containsVrmExtension( bytes ) )
         {
             const string avatarText = "avatar=" + to_string( VrmAvatarImporter::kVersion );
-            hash                    = StringUtil::computeHash64( avatarText.c_str(), avatarText.size(), false, hash );
+            hash                    = HashUtil::computeStringHash64( avatarText.c_str(), avatarText.size(), false, hash );
         }
         const string fractureText = rule.makeFractureHashText();
         if ( fractureText.empty() == false )
         {
             const string fractureVersion = fractureText + ";format=" + to_string( FractureAsset::kVersion ) + ";algorithm=" + to_string( MeshFractureUtil::kAlgorithmVersion );
-            hash                         = StringUtil::computeHash64( fractureVersion.c_str(), fractureVersion.size(), false, hash );
+            hash                         = HashUtil::computeStringHash64( fractureVersion.c_str(), fractureVersion.size(), false, hash );
         }
         // 부가 데이터(클립 반복, 알림, 커브)를 고쳐도 다시 임포트해야 한다.
         vector<uint8> clipDataBytes;
         const string  clipDataPath = makeClipDataPath( sourcePath );
         const bool    bHasClipData = FileUtil::exists( clipDataPath ) && FileUtil::readFile( clipDataPath, clipDataBytes ) && clipDataBytes.empty() == false;
         if ( bHasClipData )
-            hash = StringUtil::computeHash64( reinterpret_cast<const utf8*>( clipDataBytes.data() ), clipDataBytes.size(), false, hash );
+            hash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( clipDataBytes.data() ), clipDataBytes.size(), false, hash );
 
         // `.gltf` 는 버퍼를 옆 파일로 둘 수 있다. 그 바이트가 바뀌어도 어긋남이어야 한다. data URI 는 이미 본문에 있다.
         if ( FileUtil::hasExtension( sourcePath, ".gltf" ) == false )
@@ -695,7 +695,7 @@ namespace sw::editor
                 continue;
             vector<uint8> bufferBytes;
             if ( FileUtil::readFile( FileUtil::joinPath( directory, pUri ), bufferBytes ) && bufferBytes.empty() == false )
-                hash = StringUtil::computeHash64( reinterpret_cast<const utf8*>( bufferBytes.data() ), bufferBytes.size(), false, hash );
+                hash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( bufferBytes.data() ), bufferBytes.size(), false, hash );
         }
         cgltf_free( pData );
         return hash;
@@ -711,7 +711,7 @@ namespace sw::editor
         if ( FileUtil::exists( fracturePath ) )
         {
             const uint64 fractureHash = AssetImportStampUtil::computeFileHash( fracturePath );
-            hash                      = StringUtil::computeHash64( reinterpret_cast<const utf8*>( &fractureHash ), sizeof( fractureHash ), false, hash );
+            hash                      = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( &fractureHash ), sizeof( fractureHash ), false, hash );
         }
         // 옆 폴더의 파일을 이름 순서로 섞는다. 이름도 섞으므로 파일이 사라지거나 바뀌면 다른 값이 된다.
         const string sideFolder = FileUtil::normalizeSeparators( makeImportedSideFolder( importedMeshPath ) );
@@ -729,9 +729,9 @@ namespace sw::editor
             string relative = file;
             if ( relative.size() > sideFolder.size() )
                 relative = relative.substr( sideFolder.size() );
-            hash                  = StringUtil::computeHash64( relative.c_str(), relative.size(), false, hash );
+            hash                  = HashUtil::computeStringHash64( relative.c_str(), relative.size(), false, hash );
             const uint64 fileHash = AssetImportStampUtil::computeFileHash( file );
-            hash                  = StringUtil::computeHash64( reinterpret_cast<const utf8*>( &fileHash ), sizeof( fileHash ), false, hash );
+            hash                  = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( &fileHash ), sizeof( fileHash ), false, hash );
         }
         return hash;
     }

@@ -2,6 +2,7 @@
 
 #include "EngineTest/ResourcePakTestUtil.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Compression/ICompressionCodec.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
@@ -39,7 +40,7 @@ namespace sw::test
 
         for ( const auto& [relPath, content] : listFileContent )
         {
-            const uint64 pathHash   = StringUtil::computeHash64( relPath );
+            const uint64 pathHash   = HashUtil::computeStringHash64( relPath );
             const uint32 uncompSize = static_cast<uint32>( content.size() );
             const uint32 crc        = StringUtil::computeCrc32( content.data(), uncompSize );
 

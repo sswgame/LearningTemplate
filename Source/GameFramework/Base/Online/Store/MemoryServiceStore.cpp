@@ -21,7 +21,7 @@ namespace sw
 
             static uint64 mixHash( uint64 hash, const void* pData, size_t size )
             {
-                return StringUtil::computeHash64( static_cast<const utf8*>( pData ), size, false, hash );
+                return HashUtil::computeStringHash64( static_cast<const utf8*>( pData ), size, false, hash );
             }
 
             /** @brief 내리는 중인 앞의 연결 — 모든 호출이 Unavailable 입니다. */

@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Common/BitUtil.h"
 #include "Core/Common/FourCcUtil.h"
 #include "Core/Container/map.h"
 #include "Core/Diagnostics/MemoryProfiler.h"
@@ -1715,9 +1716,8 @@ SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterCatalogAndStats )
     const PropertyInfo* pInvincibleTimer = ( pStatsTypeInfo != nullptr ) ? pStatsTypeInfo->findProperty( hashed_string( "_invincibilityTime" ) ) : nullptr;
     SW_ASSERT_NOT_NULL( pInvincibleTimer );
     const float32 invincibilityBeforeHit = pInvincibleTimer->getValue<float32>( &stats );
-    uint32        invincibilityBits      = 0;
-    std::memcpy( &invincibilityBits, &invincibilityBeforeHit, sizeof( invincibilityBits ) );
-    utf8 arrStateBeforeHit[192]{};
+    const uint32  invincibilityBits      = BitUtil::floatToBits( invincibilityBeforeHit );
+    utf8          arrStateBeforeHit[192]{};
     (void)std::snprintf( arrStateBeforeHit, sizeof( arrStateBeforeHit ), "before hit: invincibility %.9g (0x%08x), stats %p, owner %p, dead %d, defense %d",
                          static_cast<float64>( invincibilityBeforeHit ), invincibilityBits, static_cast<const void*>( &stats ), static_cast<const void*>( stats.getOwner() ),
                          stats.isDead() ? 1 : 0, stats.getDefense() );

@@ -10,6 +10,7 @@
  *       집합과 질의는 `Engine` 쪽 `Object/Component/TagSystem.h` 에 있습니다.
  */
 #pragma once
+#include "Core/Common/HashUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/StringUtil.h"
@@ -52,7 +53,7 @@ namespace sw
          */
         static constexpr uint64 computeID( const utf8* pStr, size_t length )
         {
-            return StringUtil::computeHash64( pStr, length, true );
+            return HashUtil::computeStringHash64( pStr, length, true );
         }
 
         /** @brief 태그의 문자열을 반환합니다(레지스트리 역조회 포함). */

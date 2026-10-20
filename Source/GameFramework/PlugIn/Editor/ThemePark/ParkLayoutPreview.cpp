@@ -2,6 +2,7 @@
 
 #include "GameFramework/PlugIn/Editor/ThemePark/ParkLayoutPreview.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
@@ -102,7 +103,7 @@ namespace sw::editor
             clearPreview( false );
             return false;
         }
-        const uint64 contentHash       = StringUtil::computeHash64( text.data(), text.size(), false );
+        const uint64 contentHash       = HashUtil::computeStringHash64( text.data(), text.size(), false );
         const bool   bUnchangedContent = bForce == false && _bLoaded && contentHash == _contentHash;
         if ( bUnchangedContent )
             return false;

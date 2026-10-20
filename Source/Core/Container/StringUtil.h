@@ -3,6 +3,7 @@
  * @brief UTF 변환 · 해시 · 분할 · 트림 같은 문자열 유틸리티입니다(입력은 널 종료 utf8* / utf16*).
  */
 #pragma once
+#include "Core/Common/AsciiUtil.h"
 #include "Core/Common/Defines.h"
 #include "Core/Common/HashUtil.h"
 #include "Core/Common/Macros.h"
@@ -104,10 +105,10 @@ namespace sw
         static constexpr bool isDigitChar( const utf8 ch ) { return '0' <= ch && ch <= '9'; }
 
         /** @brief UTF-8 문자 하나를 소문자로 바꿉니다(ASCII 만). */
-        static constexpr utf8 toLowerChar( const utf8 ch ) { return ( 'A' <= ch && ch <= 'Z' ) ? static_cast<utf8>( ch + ( 'a' - 'A' ) ) : ch; }
+        static constexpr utf8 toLowerChar( const utf8 ch ) { return AsciiUtil::toLower( ch ); }
 
         /** @brief UTF-16 문자 하나를 소문자로 바꿉니다(ASCII 만). */
-        static constexpr utf16 toLowerChar( const utf16 ch ) { return ( L'A' <= ch && ch <= L'Z' ) ? static_cast<utf16>( ch + ( L'a' - L'A' ) ) : ch; }
+        static constexpr utf16 toLowerChar( const utf16 ch ) { return AsciiUtil::toLower( ch ); }
 
         /** @brief UTF-8 문자 하나를 대문자로 바꿉니다(ASCII 만). */
         static constexpr utf8 toUpperChar( const utf8 ch ) { return ( 'a' <= ch && ch <= 'z' ) ? static_cast<utf8>( ch - ( 'a' - 'A' ) ) : ch; }
@@ -376,55 +377,6 @@ namespace sw
             }
             pOutBuffer[0] = '\0';
             return 0;
-        }
-
-        /** @brief 64비트 FNV-1a 해시를 계산합니다 (포인터 + 길이). */
-        template <typename CharT>
-        static constexpr uint64 computeHash64( const CharT* pStr, const size_t length, const bool bIgnoreCase = true, const uint64 seed = HashUtil::kFnvOffset64 ) noexcept
-        {
-            uint64 hash = seed;
-            for ( size_t charIndex = 0; charIndex < length; ++charIndex )
-            {
-                // **두 경로 모두 CharT 의 부호 없는 짝 타입을 거친다.** 부호 확장을 막기 위해서다. `char` 가 음수면(UTF-8 의 0x80
-                // 이상 바이트) 0xFFFFFFFFFFFFFF80 같은 값이 섞여 들어가고, `char` 의 부호 여부는 구현 정의라서 **플랫폼이 바뀌면
-                // 해시가 달라진다**(ARM 은 unsigned char 다).
-                //
-                // 다만 `uint8` 로 고정하면 안 된다. 이 템플릿은 `utf16` 으로도 불리는데(`computeHash64( wstring )`), 그러면 넓은
-                // 문자가 **하위 한 바이트로 잘려** 한글처럼 상위 바이트만 다른 문자들이 모두 같은 값으로 해시된다.
-                const uint64 c = static_cast<uint64>(
-                    static_cast<std::make_unsigned_t<CharT>>( bIgnoreCase ? toLowerChar( pStr[charIndex] ) : pStr[charIndex] ) );
-                hash = ( hash ^ c ) * HashUtil::kFnvPrime64;
-            }
-            return hash;
-        }
-
-        /** @brief 64비트 FNV-1a 해시를 계산합니다(string, string_view, fixed_string 등). */
-        template <typename StringType, typename = std::enable_if_t<std::is_class_v<StringType>>>
-        static constexpr uint64 computeHash64( const StringType& str, const bool bIgnoreCase = true, const uint64 seed = HashUtil::kFnvOffset64 ) noexcept
-        {
-            return computeHash64( str.data(), str.size(), bIgnoreCase, seed );
-        }
-
-        /** @brief 32비트 FNV-1a 해시를 계산합니다 (포인터 + 길이). */
-        template <typename CharT>
-        static constexpr uint32 computeHash32( const CharT* pStr, const size_t length, const bool bIgnoreCase = true, const uint32 seed = HashUtil::kFnvOffset32 ) noexcept
-        {
-            uint32 hash = seed;
-            for ( size_t charIndex = 0; charIndex < length; ++charIndex )
-            {
-                // 64비트 쪽과 **같은 규칙**이다(bIgnoreCase 경로 포함) — 다르면 같은 문자열이 두 경로에서 다르게 해시된다.
-                const uint32 c = static_cast<uint32>(
-                    static_cast<std::make_unsigned_t<CharT>>( bIgnoreCase ? toLowerChar( pStr[charIndex] ) : pStr[charIndex] ) );
-                hash = ( hash ^ c ) * HashUtil::kFnvPrime32;
-            }
-            return hash;
-        }
-
-        /** @brief 32비트 FNV-1a 해시를 계산합니다(string, string_view, fixed_string 등). */
-        template <typename StringType, typename = std::enable_if_t<std::is_class_v<StringType>>>
-        static constexpr uint32 computeHash32( const StringType& str, const bool bIgnoreCase = true, const uint32 seed = HashUtil::kFnvOffset32 ) noexcept
-        {
-            return computeHash32( str.data(), str.size(), bIgnoreCase, seed );
         }
 
     private:

@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Online/Ledger/Ledger.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Network/BitStream.h"
 
@@ -63,7 +64,7 @@ namespace sw
                     LedgerUtil::writePosting( writer, posting );
                 }
                 const vector<uint8>& bytes = writer.getBytes();
-                return StringUtil::computeHash64( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size(), false );
+                return HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size(), false );
             }
 
             static vector<uint8> encodeJournal( const LedgerTransferRequest& request, uint64 contentHash, const vector<LedgerTransferOutcome::HolderBalance>& listHolderBalance )

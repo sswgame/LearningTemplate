@@ -10,6 +10,7 @@
  * @note 같은 범위에 같은 타입을 두 번 걸 수 없다(`bind` · `expose` 가 false). 조회는 선형 검색이라 핫 패스에서는 한 번 얻은 포인터를 든다.
  */
 #pragma once
+#include "Core/Common/HashUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/StringUtil.h"
@@ -28,7 +29,7 @@ namespace sw
     template <typename T>
     constexpr uint64 getSubsystemTypeHash() noexcept
     {
-        return StringUtil::computeHash64( SW_FUNCTION_SIGNATURE, sizeof( SW_FUNCTION_SIGNATURE ) - 1, false );
+        return HashUtil::computeStringHash64( SW_FUNCTION_SIGNATURE, sizeof( SW_FUNCTION_SIGNATURE ) - 1, false );
     }
 
     /**

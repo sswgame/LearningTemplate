@@ -909,7 +909,7 @@ namespace sw
     {
         if ( _bShaderPathHashDirty != SW_FALSE )
         {
-            _cachedShaderPathHash = StringUtil::computeHash64( _desc._shaderPath, false, HashUtil::kFnvOffset64 );
+            _cachedShaderPathHash = HashUtil::computeStringHash64( _desc._shaderPath, false, HashUtil::kFnvOffset64 );
             _bShaderPathHashDirty = SW_FALSE;
         }
         return _cachedShaderPathHash;

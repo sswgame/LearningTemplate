@@ -53,7 +53,7 @@ namespace sw
                 return notice._noticeID != 0 && bTextOk && bWindowOk;
             }
 
-            static uint64 combineText( uint64 hash, string_view text ) { return HashUtil::combine( hash, StringUtil::computeHash64( text.data(), text.size(), false ) ); }
+            static uint64 combineText( uint64 hash, string_view text ) { return HashUtil::combine( hash, HashUtil::computeStringHash64( text.data(), text.size(), false ) ); }
 
             static string makeActor( AccountID actorID ) { return actorID == kInvalidAccountID ? string( "system" ) : "gm." + ServiceKeyUtil::makeHex64( actorID ); }
 

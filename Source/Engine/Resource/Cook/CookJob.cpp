@@ -2,6 +2,7 @@
 
 #include "Engine/Resource/Cook/CookJob.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
@@ -145,7 +146,7 @@ namespace sw
         }
         // 빈 목록도 "폴더가 있다" 이므로 0(폴더 없음)과 다르다.
         canonical.append( "listing" );
-        return StringUtil::computeHash64( canonical.c_str(), canonical.size(), false );
+        return HashUtil::computeStringHash64( canonical.c_str(), canonical.size(), false );
     }
 
     void CookJob::recordInput( string_view resourceID, uint64 contentHash )
@@ -193,6 +194,6 @@ namespace sw
             canonical.append( pInput->_kind == CookInputKind::Listing ? "listing\t" : "file\t" ).append( pInput->_resourceID ).append( "\t" );
             canonical.append( pInput->_extension ).append( "\t" ).append( sw::to_string( pInput->_contentHash ) ).append( "\n" );
         }
-        return StringUtil::computeHash64( canonical.c_str(), canonical.size(), false );
+        return HashUtil::computeStringHash64( canonical.c_str(), canonical.size(), false );
     }
 } // namespace sw

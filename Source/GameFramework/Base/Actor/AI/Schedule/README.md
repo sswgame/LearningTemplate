@@ -70,6 +70,7 @@ HarvestValley 의 `FarmVillageDirectorComponent` 가 첫 사용처입니다. 데
 | `ScheduleSystem.h`, `ScheduleSystemPlan.cpp` | 계획 세우기(칸 고르기, 일찍 나서기, 약속) |
 | `ScheduleSystemRuntime.cpp` | 시간 흐르기, 사건, 끼어들기 |
 | `ScheduleSystemSave.cpp`, `ScheduleSaveState.h` | 저장 · 복원 · 네트워크 요약 |
+| `ScheduleHash.h` | 칸 정체 키 · 이름 키 · 키 섞기(계획 · 실행 · 저장 · 디버그가 같이 쓴다) |
 | `ScheduleSystemDebug.cpp` | `explainNpc` · `dumpTimeline` · `gv_scheduleTrace` |
 | `SchedulePathing.{h,cpp}` | 곧은 선 · 내비 격자 · 방 그래프 경로 |
 | `ScheduleLocator.{h,cpp}` | 스팟 예약 |

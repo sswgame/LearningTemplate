@@ -3,6 +3,7 @@
 #include "Engine/Resource/Pack/ResourcePakReader.h"
 
 #include "Core/Common/Defines.h"
+#include "Core/Common/HashUtil.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Compression/CompressionStream.h"
 #include "Core/Compression/ICompressionCodec.h"
@@ -175,7 +176,7 @@ namespace sw
 
     bool ResourcePakReader::hasFile( string_view relativePath ) const
     {
-        return hasFile( StringUtil::computeHash64( relativePath ) );
+        return hasFile( HashUtil::computeStringHash64( relativePath ) );
     }
 
     bool ResourcePakReader::getFileEntry( uint64 pathHash, PackFileEntry& outEntry ) const
@@ -191,7 +192,7 @@ namespace sw
 
     bool ResourcePakReader::getFileEntry( string_view relativePath, PackFileEntry& outEntry ) const
     {
-        return getFileEntry( StringUtil::computeHash64( relativePath ), outEntry );
+        return getFileEntry( HashUtil::computeStringHash64( relativePath ), outEntry );
     }
 
     void ResourcePakReader::collectFolderEntries( string_view folder, vector<string>& outListPath ) const
@@ -291,7 +292,7 @@ namespace sw
 
     bool ResourcePakReader::readFile( string_view relativePath, vector<uint8>& outBytes ) const
     {
-        return readFile( StringUtil::computeHash64( relativePath ), outBytes );
+        return readFile( HashUtil::computeStringHash64( relativePath ), outBytes );
     }
 
     bool ResourcePakReader::readTextFile( string_view relativePath, string& outText ) const
@@ -416,7 +417,7 @@ namespace sw
                 return false;
             }
             memEntry._relativePath.assign( pool.substr( diskEntry._stringPoolOffset, terminator - diskEntry._stringPoolOffset ) );
-            if ( StringUtil::computeHash64( memEntry._relativePath ) != diskEntry._pathHash )
+            if ( HashUtil::computeStringHash64( memEntry._relativePath ) != diskEntry._pathHash )
             {
                 SW_LOG_ERROR( "Pack entry path '%#' does not match its path hash: %#", memEntry._relativePath, _packFilePath );
                 return false;

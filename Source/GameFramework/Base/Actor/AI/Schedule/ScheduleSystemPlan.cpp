@@ -13,6 +13,7 @@
 
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleActivity.h"
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleCatalog.h"
+#include "GameFramework/Base/Actor/AI/Schedule/ScheduleHash.h"
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleSaveState.h"
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleSystem.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
@@ -30,45 +31,6 @@ namespace sw
 
             static int32 toDay( int32 absoluteMinute ) { return absoluteMinute / kScheduleMinutesPerDay; }
             static int32 toMinuteOfDay( int32 absoluteMinute ) { return absoluteMinute % kScheduleMinutesPerDay; }
-
-            template <typename T>
-            static uint64 hashValue( uint64 hash, const T& value )
-            {
-                return HashUtil::appendBytes64( hash, &value, sizeof( T ) );
-            }
-
-            static uint64 hashName( uint64 hash, const hashed_string& name )
-            {
-                return HashUtil::appendBytes64( hash, name.c_str(), name.size() );
-            }
-
-            static uint64 hashPosition( uint64 hash, const float3& position )
-            {
-                hash = hashValue( hash, position._x );
-                hash = hashValue( hash, position._y );
-                return hashValue( hash, position._z );
-            }
-
-            static uint32 hashNameToKey( const hashed_string& name ) { return static_cast<uint32>( hashName( HashUtil::kFnvOffset64, name ) ); }
-
-            static uint32 mixKey( uint32 lhs, uint32 rhs ) { return GameHash::mix32( lhs * 0x9e3779b1u ^ GameHash::mix32( rhs + 0x7f4a7c15u ) ); }
-
-            /** @brief 칸의 정체 — 같은 출처 · 칸 · 시간 · 자리 · 출발이면 같은 값입니다(사건 · 경로 캐시 · 계획 비교). */
-            static uint64 computeSegmentKey( const ScheduleSegment& segment )
-            {
-                uint64 hash = HashUtil::kFnvOffset64;
-                hash        = hashName( hash, segment._sourceID );
-                hash        = hashName( hash, segment._activity );
-                hash        = hashValue( hash, segment._startMinute );
-                hash        = hashValue( hash, segment._endMinute );
-                hash        = hashValue( hash, segment._blockIndex );
-                hash        = hashValue( hash, segment._ownerIndex );
-                hash        = hashValue( hash, segment._source );
-                hash        = hashPosition( hash, segment._target._position );
-                hash        = hashValue( hash, segment._departMinute );
-                hash        = hashValue( hash, segment._travelMinutes );
-                return hash == 0 ? 1 : hash;
-            }
 
             static bool isSamePlace( const ScheduleLocation& lhs, const ScheduleLocation& rhs )
             {
@@ -135,8 +97,8 @@ namespace sw
             bool          bSame       = oldActive == newActive && oldActive >= 0;
             for ( int32 segmentIndex = 0; bSame && segmentIndex <= oldActive; ++segmentIndex )
             {
-                const uint64 oldKey = Internal::computeSegmentKey( npc._listSegment[static_cast<size_t>( segmentIndex )] );
-                bSame               = oldKey == Internal::computeSegmentKey( listTrial[static_cast<size_t>( segmentIndex )] );
+                const uint64 oldKey = ScheduleHash::computeSegmentKey( npc._listSegment[static_cast<size_t>( segmentIndex )] );
+                bSame               = oldKey == ScheduleHash::computeSegmentKey( listTrial[static_cast<size_t>( segmentIndex )] );
             }
             if ( bSame )
             {
@@ -203,13 +165,13 @@ namespace sw
         outListCandidate.clear();
         const NpcRuntime&     npc    = _listNpc[static_cast<size_t>( npcIndex )];
         const ScheduleNpcDef& def    = _pCatalog->getNpcs()[static_cast<size_t>( npc._defIndex )];
-        const uint32          npcKey = Internal::hashNameToKey( def._id );
+        const uint32          npcKey = ScheduleHash::computeNameKey( def._id );
         int32                 order  = 0;
 
         for ( int32 routineIndex = 0; routineIndex < static_cast<int32>( def._listRoutine.size() ); ++routineIndex )
         {
             const ScheduleRoutineDef& routine    = def._listRoutine[static_cast<size_t>( routineIndex )];
-            const uint32              routineKey = Internal::mixKey( npcKey, Internal::hashNameToKey( routine._id ) );
+            const uint32              routineKey = ScheduleHash::mixKey( npcKey, ScheduleHash::computeNameKey( routine._id ) );
             for ( int32 blockIndex = 0; blockIndex < static_cast<int32>( routine._listBlock.size() ); ++blockIndex )
             {
                 const ScheduleBlockDef&  block   = routine._listBlock[static_cast<size_t>( blockIndex )];
@@ -217,7 +179,7 @@ namespace sw
                 context._phase                   = WorldClock::computePhaseAt( _settings._clock, static_cast<float32>( block._startMinute ) / 60.0f );
                 if ( routine._condition.matches( context ) == false )
                     continue;
-                context._chanceKey = Internal::mixKey( routineKey, static_cast<uint32>( blockIndex ) );
+                context._chanceKey = ScheduleHash::mixKey( routineKey, static_cast<uint32>( blockIndex ) );
                 if ( block._condition.matches( context ) == false )
                     continue;
 
@@ -242,7 +204,7 @@ namespace sw
                         continue;
                     const ScheduleAppointmentDef& appointment = _pCatalog->getAppointments()[static_cast<size_t>( appointmentIndex )];
                     // 약속의 확률은 참가자 모두에게 같아야 한다 — 열쇠에 NPC 를 섞지 않는다.
-                    context._chanceKey = Internal::hashNameToKey( appointment._id );
+                    context._chanceKey = ScheduleHash::computeNameKey( appointment._id );
                     if ( appointment._condition.matches( context ) == false )
                         continue;
                     candidate._sourceID   = appointment._id;
@@ -271,7 +233,7 @@ namespace sw
             if ( bAttendee == false )
                 continue;
             // 행사의 확률도 참가자 모두에게 같다(축제는 모두에게 열리거나 아무에게도 열리지 않는다).
-            const uint32 eventKey = Internal::hashNameToKey( event._id );
+            const uint32 eventKey = ScheduleHash::computeNameKey( event._id );
             for ( int32 blockIndex = 0; blockIndex < static_cast<int32>( event._listBlock.size() ); ++blockIndex )
             {
                 const ScheduleBlockDef&  block   = event._listBlock[static_cast<size_t>( blockIndex )];
@@ -279,7 +241,7 @@ namespace sw
                 context._phase                   = WorldClock::computePhaseAt( _settings._clock, static_cast<float32>( block._startMinute ) / 60.0f );
                 if ( event._condition.matches( context ) == false )
                     continue;
-                context._chanceKey = Internal::mixKey( eventKey, static_cast<uint32>( blockIndex ) );
+                context._chanceKey = ScheduleHash::mixKey( eventKey, static_cast<uint32>( blockIndex ) );
                 if ( block._condition.matches( context ) == false )
                     continue;
                 BlockCandidate candidate;
@@ -363,7 +325,7 @@ namespace sw
                 // 돌아다니기 — `every` 분마다 장소 둘레의 새 자리. 자리는 (씨앗, NPC, 날, 시각)의 해시라 몇 번을 다시 세워도 같다.
                 const int32   stepMinutes = pBlock != nullptr ? MathUtil::max( 1, pBlock->_wanderMinutes ) : 20;
                 const float32 radius      = pBlock != nullptr && pBlock->_radius >= 0.0f ? pBlock->_radius : ( pPlace != nullptr ? pPlace->_radius : 0.0f );
-                const uint32  npcKey      = Internal::hashNameToKey( def._id );
+                const uint32  npcKey      = ScheduleHash::computeNameKey( def._id );
                 for ( int32 hopStart = startMinute; hopStart < endMinute; hopStart += stepMinutes )
                 {
                     const uint32    hash   = GameHash::hashCoord( day, hopStart, _settings._seed ^ npcKey );
@@ -488,7 +450,7 @@ namespace sw
         context._affinity     = _listNpc[static_cast<size_t>( npcIndex )]._affinity;
         context._pSeasonOrder = &clock._listSeason;
         context._season       = clock._listSeason[static_cast<size_t>( ( day / clock._daysPerSeason ) % static_cast<int32>( clock._listSeason.size() ) )];
-        context._chanceKey    = ScheduleSystemPlanInternal::mixKey( chanceKey, _settings._seed );
+        context._chanceKey    = ScheduleHash::mixKey( chanceKey, _settings._seed );
         if ( vocabulary._listWeekday.empty() == false )
             context._weekday = vocabulary._listWeekday[static_cast<size_t>( day % static_cast<int32>( vocabulary._listWeekday.size() ) )];
         return context;

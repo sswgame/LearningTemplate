@@ -10,6 +10,7 @@
 
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleActivity.h"
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleCatalog.h"
+#include "GameFramework/Base/Actor/AI/Schedule/ScheduleHash.h"
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleSaveState.h"
 #include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
@@ -26,41 +27,6 @@ namespace sw
         struct ScheduleSystemInternal
         {
             static int32 toDay( int32 absoluteMinute ) { return absoluteMinute / kScheduleMinutesPerDay; }
-
-            template <typename T>
-            static uint64 hashValue( uint64 hash, const T& value )
-            {
-                return HashUtil::appendBytes64( hash, &value, sizeof( T ) );
-            }
-
-            static uint64 hashName( uint64 hash, const hashed_string& name )
-            {
-                return HashUtil::appendBytes64( hash, name.c_str(), name.size() );
-            }
-
-            static uint64 hashPosition( uint64 hash, const float3& position )
-            {
-                hash = hashValue( hash, position._x );
-                hash = hashValue( hash, position._y );
-                return hashValue( hash, position._z );
-            }
-
-            /** @brief 칸의 정체 — 같은 출처 · 칸 · 시간 · 자리 · 출발이면 같은 값입니다(사건 · 경로 캐시 · 계획 비교). */
-            static uint64 computeSegmentKey( const ScheduleSegment& segment )
-            {
-                uint64 hash = HashUtil::kFnvOffset64;
-                hash        = hashName( hash, segment._sourceID );
-                hash        = hashName( hash, segment._activity );
-                hash        = hashValue( hash, segment._startMinute );
-                hash        = hashValue( hash, segment._endMinute );
-                hash        = hashValue( hash, segment._blockIndex );
-                hash        = hashValue( hash, segment._ownerIndex );
-                hash        = hashValue( hash, segment._source );
-                hash        = hashPosition( hash, segment._target._position );
-                hash        = hashValue( hash, segment._departMinute );
-                hash        = hashValue( hash, segment._travelMinutes );
-                return hash == 0 ? 1 : hash;
-            }
 
             /** @brief 마지막으로 나선 칸 — 나선 시각이 @p minuteOfDay 이하인 마지막 칸입니다(출발 시각은 순서대로 늘어난다). */
             static int32 findActiveSegment( const vector<ScheduleSegment>& listSegment, float32 minuteOfDay )
@@ -539,7 +505,7 @@ namespace sw
             case ScheduleNpcPhase::Traveling:
             {
                 view._location               = computePlanningLocationOnRoute( npc, view._segmentIndex, view._travelFraction );
-                const bool bNearRouteCurrent = npc._lod == ScheduleLOD::Near && npc._routeKey == ScheduleSystemInternal::computeSegmentKey( segment );
+                const bool bNearRouteCurrent = npc._lod == ScheduleLOD::Near && npc._routeKey == ScheduleHash::computeSegmentKey( segment );
                 if ( bNearRouteCurrent )
                     view._location._position = SchedulePathingUtil::computePointAlong( npc._listRoutePoint, view._travelFraction );
                 break;

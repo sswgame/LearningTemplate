@@ -2,6 +2,7 @@
 
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/UUID/UUID.h"
@@ -232,7 +233,7 @@ namespace sw
              * @details 최상위 비트(`kComponentKeyHashMarker`)를 세운다. 그래야 읽는 쪽이 값만 보고 파일 형태와 런타임 id 를 가른다 — 같은 세이브를 같은 실행에서
              *          복원(`Live`)하든 다른 실행에서 읽든(`Saved`) 쓴 형태가 맞는다.
              */
-            static uint64 hashComponentKey( string_view key ) { return StringUtil::computeHash64( key.data(), key.size(), false ) | kComponentKeyHashMarker; }
+            static uint64 hashComponentKey( string_view key ) { return HashUtil::computeStringHash64( key.data(), key.size(), false ) | kComponentKeyHashMarker; }
 
             /** @brief 읽은 컴포넌트 자리가 파일 형태(키 해시)인지 가립니다. */
             static bool isComponentKeyHash( uint64 componentID ) { return ( componentID & kComponentKeyHashMarker ) != 0; }

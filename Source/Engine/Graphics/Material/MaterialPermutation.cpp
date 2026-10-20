@@ -65,7 +65,7 @@ namespace sw
         uint64 hash = HashUtil::kFnvOffset64;
         for ( const string& defineStr : listDefine )
         {
-            hash = StringUtil::computeHash64( defineStr, false, hash );
+            hash = HashUtil::computeStringHash64( defineStr, false, hash );
             hash = ( hash ^ 0xFFull ) * HashUtil::kFnvPrime64;
         }
         return hash;

@@ -27,29 +27,6 @@ SW_TEST_CASE( StringTest, SnakeCaseSplitsPascalWords )
 }
 
 /**
- * @brief [StringTest] 넓은 문자가 하위 한 바이트로 잘리지 않는다
- * @details 부호 확장을 막으려고 `uint8` 로 **고정**하면 안 된다. 이 해시 템플릿은 `utf16`
- *          으로도 불리는데(`std::hash<fixed_wstring>`), 그러면 넓은 문자가 하위 한 바이트만 남는다 —
- *          한글처럼 상위 바이트가 의미를 갖는 문자열이 통째로 한 버킷에 뭉친다. 부호 없는 타입은
- *          맞되 **폭은 CharT 를 따라야** 한다.
- * @note 부호 확장 쪽 주장은 `NonAsciiBytesAreUnsigned` 가 든다.
- */
-SW_TEST_CASE( StringTest, WideCharHashIsNotTruncatedToOneByte )
-{
-    // 상위 바이트만 다르고 하위 바이트는 둘 다 0 이다.
-    const utf16 arrWideA[] = { static_cast<utf16>( 0xAC00 ), static_cast<utf16>( 0 ) };
-    const utf16 arrWideB[] = { static_cast<utf16>( 0xAD00 ), static_cast<utf16>( 0 ) };
-
-    SW_EXPECT_TRUE( sw::StringUtil::computeHash64( arrWideA, 1 ) != sw::StringUtil::computeHash64( arrWideB, 1 ) );
-    SW_EXPECT_TRUE( sw::StringUtil::computeHash32( arrWideA, 1 ) != sw::StringUtil::computeHash32( arrWideB, 1 ) );
-
-    // ASCII utf8 값은 바뀌면 안 된다 — 셰이더 쿠킹 스탬프 같은 것이 이 값으로 디스크에 남는다.
-    SW_EXPECT_EQUAL( sw::HashUtil::kFnvOffset64, sw::StringUtil::computeHash64( "", 0, false ) );
-    SW_EXPECT_EQUAL( ( sw::HashUtil::kFnvOffset64 ^ uint64{ 'a' } ) * sw::HashUtil::kFnvPrime64,
-                     sw::StringUtil::computeHash64( "a", 1, false ) );
-}
-
-/**
  * @brief [StringTest] 비워진 intern 테이블은 다시 세워진다 — 빈 채로 남지 않는다
  * @details 테이블 인스턴스는 `HashedStringPool::initialize` 안의 **함수 지역 static** 이라 두 번째
  *          initialize 에서는 생성자가 돌지 않는다. `shutdown` 이 `clear()` 로 0번 청크와 사전 정의
@@ -764,22 +741,10 @@ SW_TEST_CASE( StringTest, StringUtilUtf8Validation )
 }
 
 /**
- * @brief [StringTest] StringUtil 해시 일관성, CRC32 및 공백 트림 유틸리티 검증
+ * @brief [StringTest] CRC32 및 공백 트림 유틸리티 검증
  */
-SW_TEST_CASE( StringTest, StringUtilHashingAndTransform )
+SW_TEST_CASE( StringTest, StringUtilCrcAndTransform )
 {
-    // 64비트 / 32비트 FNV1a 해시 일관성
-    const uint64 h64_1 = sw::StringUtil::computeHash64( std::string_view( "EngineResourcePath" ) );
-    const uint64 h64_2 = sw::StringUtil::computeHash64( std::string_view( "EngineResourcePath" ) );
-    const uint64 h64_3 = sw::StringUtil::computeHash64( std::string_view( "engineResourcePath" ), false );
-
-    SW_EXPECT_EQUAL( h64_1, h64_2 );
-    SW_EXPECT_TRUE( h64_1 != h64_3 );
-
-    const uint32 h32_1 = sw::StringUtil::computeHash32( std::string_view( "EngineResourcePath" ) );
-    const uint32 h32_2 = sw::StringUtil::computeHash32( std::string_view( "EngineResourcePath" ) );
-    SW_EXPECT_EQUAL( h32_1, h32_2 );
-
     // CRC32 체크섬 계산 검증
     const uint32 crc1 = sw::StringUtil::computeCrc32( "123456789", 9 );
     const uint32 crc2 = sw::StringUtil::computeCrc32( "123456789", 9 );
@@ -1377,12 +1342,9 @@ SW_TEST_CASE( StringTest, StristrStopsAtTerminator )
  * @details `char` 의 부호성은 구현 정의이고, UTF-8 의 0x80 이상 바이트는 signed char 에서 음수다.
  *          그대로 int 로 넓히면 두 가지가 깨진다:
  *
- *          1. `compare` 가 한글처럼 비-ASCII 가 섞인 문자열을 ASCII 보다 **작다고** 답한다.
- *             `strcmp` 규약(부호 없는 바이트 비교)의 반대이고, 대소문자 구분 경로는 `uint8` 로
- *             비교하므로 두 모드가 서로 다른 순서를 낸다.
- *          2. `computeHash64` · `computeHash32` 의 `bIgnoreCase` 경로(기본값이 true 다)만 부호 확장되면
- *             같은 바이트가 경로에 따라 다른 값으로 해싱되고, `char` 가 unsigned 인 플랫폼에서는
- *             해시 자체가 달라진다.
+ *          `compare` 가 한글처럼 비-ASCII 가 섞인 문자열을 ASCII 보다 **작다고** 답한다.
+ *          `strcmp` 규약(부호 없는 바이트 비교)의 반대이고, 대소문자 구분 경로는 `uint8` 로
+ *          비교하므로 두 모드가 서로 다른 순서를 낸다. 문자열 해시 쪽은 `TestHashUtil.cpp` 가 든다.
  */
 SW_TEST_CASE( StringTest, NonAsciiBytesAreUnsigned )
 {
@@ -1402,21 +1364,6 @@ SW_TEST_CASE( StringTest, NonAsciiBytesAreUnsigned )
 
     // 포인터 오버로드도 같아야 한다.
     SW_EXPECT_TRUE( sw::StringUtil::compare( korean.c_str(), ascii.c_str(), true ) > 0 );
-
-    // 비-ASCII 에는 대소문자가 없으므로 두 해시 경로가 같은 값을 내야 한다.
-    const uint64 hashIgnore = sw::StringUtil::computeHash64( korean.c_str(), korean.size(), true );
-    const uint64 hashExact  = sw::StringUtil::computeHash64( korean.c_str(), korean.size(), false );
-    SW_EXPECT_EQUAL( hashExact, hashIgnore );
-
-    // **32비트 쌍둥이도 같아야 한다.** `computeHash32` 의 bIgnoreCase 경로가 기본값이고,
-    // `hashed_string` 의 intern 이 바로 그것을 쓴다.
-    const uint32 hash32Ignore = sw::StringUtil::computeHash32( korean.c_str(), korean.size(), true );
-    const uint32 hash32Exact  = sw::StringUtil::computeHash32( korean.c_str(), korean.size(), false );
-    SW_EXPECT_EQUAL( hash32Exact, hash32Ignore );
-
-    // ASCII 는 대문자만 접힌다.
-    SW_EXPECT_EQUAL( sw::StringUtil::computeHash64( "ABC", 3, true ), sw::StringUtil::computeHash64( "abc", 3, true ) );
-    SW_EXPECT_TRUE( sw::StringUtil::computeHash64( "ABC", 3, false ) != sw::StringUtil::computeHash64( "abc", 3, false ) );
 }
 
 /**

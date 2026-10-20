@@ -15,6 +15,7 @@
 
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleActivity.h"
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleCatalog.h"
+#include "GameFramework/Base/Actor/AI/Schedule/ScheduleHash.h"
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleSaveState.h"
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleSystem.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
@@ -29,15 +30,6 @@ namespace sw
         struct ScheduleSystemDebugInternal
         {
             static int32 toMinuteOfDay( int32 absoluteMinute ) { return absoluteMinute % kScheduleMinutesPerDay; }
-
-            static uint64 hashName( uint64 hash, const hashed_string& name )
-            {
-                return HashUtil::appendBytes64( hash, name.c_str(), name.size() );
-            }
-
-            static uint32 hashNameToKey( const hashed_string& name ) { return static_cast<uint32>( hashName( HashUtil::kFnvOffset64, name ) ); }
-
-            static uint32 mixKey( uint32 lhs, uint32 rhs ) { return GameHash::mix32( lhs * 0x9e3779b1u ^ GameHash::mix32( rhs + 0x7f4a7c15u ) ); }
 
             template <uint32 Capacity>
             static void appendClock( StringBuilder<Capacity>& inoutText, int32 minuteOfDay )
@@ -97,7 +89,7 @@ namespace sw
         for ( int32 routineIndex = 0; routineIndex < static_cast<int32>( def._listRoutine.size() ); ++routineIndex )
         {
             const ScheduleRoutineDef& routine    = def._listRoutine[static_cast<size_t>( routineIndex )];
-            const uint32              routineKey = Internal::mixKey( Internal::hashNameToKey( def._id ), Internal::hashNameToKey( routine._id ) );
+            const uint32              routineKey = ScheduleHash::mixKey( ScheduleHash::computeNameKey( def._id ), ScheduleHash::computeNameKey( routine._id ) );
             for ( int32 blockIndex = 0; blockIndex < static_cast<int32>( routine._listBlock.size() ); ++blockIndex )
             {
                 const ScheduleBlockDef& block = routine._listBlock[static_cast<size_t>( blockIndex )];
@@ -106,7 +98,7 @@ namespace sw
                 ScheduleConditionContext blockContext       = makeContext( npcIndex, npc._planDay, routineKey );
                 blockContext._phase                         = WorldClock::computePhaseAt( _settings._clock, static_cast<float32>( block._startMinute ) / 60.0f );
                 const ScheduleConditionResult routineResult = routine._condition.evaluate( blockContext );
-                blockContext._chanceKey                     = Internal::mixKey( routineKey, static_cast<uint32>( blockIndex ) );
+                blockContext._chanceKey                     = ScheduleHash::mixKey( routineKey, static_cast<uint32>( blockIndex ) );
                 const ScheduleConditionResult blockResult   = block._condition.evaluate( blockContext );
                 text.appendFormat( "    %# routine '%#' p%# block #%# %#", routineResult.isPassed() && blockResult.isPassed() ? "+" : "-", routine._id.c_str(),
                                    routine._priority, blockIndex, block._activity.c_str() );
@@ -124,7 +116,7 @@ namespace sw
         const vector<ScheduleEventDef>& listEvent = _pCatalog->getEvents();
         for ( const ScheduleEventDef& event : listEvent )
         {
-            ScheduleConditionContext      eventContext = makeContext( npcIndex, npc._planDay, Internal::hashNameToKey( event._id ) );
+            ScheduleConditionContext      eventContext = makeContext( npcIndex, npc._planDay, ScheduleHash::computeNameKey( event._id ) );
             const ScheduleConditionResult result       = event._condition.evaluate( eventContext );
             text.appendFormat( "    %# event '%#' p%#", result.isPassed() ? "+" : "-", event._id.c_str(), event._priority );
             for ( uint32 clauseIndex = 0; clauseIndex < static_cast<uint32>( ScheduleConditionClause::Count ); ++clauseIndex )

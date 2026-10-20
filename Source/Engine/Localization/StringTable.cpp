@@ -2,6 +2,7 @@
 
 #include "Engine/Localization/StringTable.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Memory/LifetimeScope.h"
@@ -33,7 +34,7 @@ namespace sw
             /** @brief @p text 와 같은 내용의 안정된 C 문자열을 돌려줍니다(없으면 복사해 둡니다). */
             const utf8* store( string_view text )
             {
-                const uint64            contentHash = StringUtil::computeHash64( text );
+                const uint64            contentHash = HashUtil::computeStringHash64( text );
                 std::scoped_lock<mutex> lock{ _mutex };
                 const auto              it = _mapByContent.find( contentHash );
                 if ( it != _mapByContent.end() && string_view{ it->second } == text )

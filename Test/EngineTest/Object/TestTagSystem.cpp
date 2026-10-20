@@ -35,7 +35,7 @@ SW_TEST_CASE( TagSystemTest, ParentHashOnHierarchicalLiteral )
 /**
  * @brief [TagSystemTest] 문자열에서 만든 ID 로도 리터럴 태그를 찾는다
  * @details `""_tag` · `TagID::request` · 에디터 Hierarchy 의 `tag:` 필터가 모두 `TagID::computeID` 를 쓴다. 한 곳이 대소문자 규칙을
- *          달리하면(예: `computeHash64` 를 기본 인자로 불러 무시) 대문자로 시작하는 태그(`Collider` · `Sprite` · `UI` · `Faction.Player` …)를
+ *          달리하면(예: `computeStringHash64` 를 기본 인자로 불러 무시) 대문자로 시작하는 태그(`Collider` · `Sprite` · `UI` · `Faction.Player` …)를
  *          **하나도 찾지 못한다.**
  */
 SW_TEST_CASE( TagSystemTest, IDBuiltFromStringFindsLiteralTag )

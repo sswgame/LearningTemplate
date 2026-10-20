@@ -13,6 +13,7 @@
 
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleActivity.h"
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleCatalog.h"
+#include "GameFramework/Base/Actor/AI/Schedule/ScheduleHash.h"
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleSaveState.h"
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleSystem.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
@@ -30,41 +31,6 @@ namespace sw
 
             static int32 toDay( int32 absoluteMinute ) { return absoluteMinute / kScheduleMinutesPerDay; }
             static int32 toMinuteOfDay( int32 absoluteMinute ) { return absoluteMinute % kScheduleMinutesPerDay; }
-
-            template <typename T>
-            static uint64 hashValue( uint64 hash, const T& value )
-            {
-                return HashUtil::appendBytes64( hash, &value, sizeof( T ) );
-            }
-
-            static uint64 hashName( uint64 hash, const hashed_string& name )
-            {
-                return HashUtil::appendBytes64( hash, name.c_str(), name.size() );
-            }
-
-            static uint64 hashPosition( uint64 hash, const float3& position )
-            {
-                hash = hashValue( hash, position._x );
-                hash = hashValue( hash, position._y );
-                return hashValue( hash, position._z );
-            }
-
-            /** @brief 칸의 정체 — 같은 출처 · 칸 · 시간 · 자리 · 출발이면 같은 값입니다(사건 · 경로 캐시 · 계획 비교). */
-            static uint64 computeSegmentKey( const ScheduleSegment& segment )
-            {
-                uint64 hash = HashUtil::kFnvOffset64;
-                hash        = hashName( hash, segment._sourceID );
-                hash        = hashName( hash, segment._activity );
-                hash        = hashValue( hash, segment._startMinute );
-                hash        = hashValue( hash, segment._endMinute );
-                hash        = hashValue( hash, segment._blockIndex );
-                hash        = hashValue( hash, segment._ownerIndex );
-                hash        = hashValue( hash, segment._source );
-                hash        = hashPosition( hash, segment._target._position );
-                hash        = hashValue( hash, segment._departMinute );
-                hash        = hashValue( hash, segment._travelMinutes );
-                return hash == 0 ? 1 : hash;
-            }
 
             static int32 roundUpToStep( int32 minute, int32 step )
             {
@@ -236,8 +202,8 @@ namespace sw
             const ScheduleSegment& segment  = npc._listSegment[static_cast<size_t>( active )];
             float32                fraction = 1.0f;
             const ScheduleNpcPhase phase    = computePhase( npc, active, minuteOfDay, fraction );
-            const uint64           key      = Internal::computeSegmentKey( segment );
-            const bool             bChanged = npc._bEmitted == SW_FALSE || Internal::computeSegmentKey( npc._emittedSegment ) != key;
+            const uint64           key      = ScheduleHash::computeSegmentKey( segment );
+            const bool             bChanged = npc._bEmitted == SW_FALSE || ScheduleHash::computeSegmentKey( npc._emittedSegment ) != key;
             if ( bChanged )
             {
                 if ( npc._bEmitted != SW_FALSE && npc._emittedPhase == ScheduleNpcPhase::Performing )
@@ -377,7 +343,7 @@ namespace sw
             if ( active < 0 )
                 continue;
             const ScheduleSegment& segment = npc._listSegment[static_cast<size_t>( active )];
-            const uint64           key     = Internal::computeSegmentKey( segment );
+            const uint64           key     = ScheduleHash::computeSegmentKey( segment );
             if ( key == npc._routeKey || segment._travelMinutes <= 0 )
                 continue;
             _pFine->makeRoute( getStartLocation( npc, active ), segment._target, npc._listRoutePoint );

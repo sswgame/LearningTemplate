@@ -2,6 +2,7 @@
 
 #include "Engine/Localization/LocalizationBinaryTable.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Container/LittleEndianUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/String/hashed_string.h"
@@ -19,7 +20,7 @@ namespace sw
 
             static uint64 computeChecksum( const uint8* pData, size_t size )
             {
-                return StringUtil::computeHash64( reinterpret_cast<const utf8*>( pData ), size, false );
+                return HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( pData ), size, false );
             }
 
             static bool fail( string* pOutError, string_view reason )
