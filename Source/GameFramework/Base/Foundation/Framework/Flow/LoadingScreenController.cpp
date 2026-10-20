@@ -54,7 +54,7 @@ namespace sw
         if ( const GameSettings* pSettings = game::findSubsystem<GameSettings>() )
         {
             LoadingScreenSettings settings = _settings;
-            settings._documentPath         = pSettings->_loadingScreen;
+            settings._documentPath         = pSettings->_loadingScreen.isSet() ? pSettings->_loadingScreen.get() : string{}; // 비면 로딩 화면 없음(`_documentPath`)
             setSettings( settings );
         }
         UISystem* pUISystem = game::findSubsystem<UISystem>();
