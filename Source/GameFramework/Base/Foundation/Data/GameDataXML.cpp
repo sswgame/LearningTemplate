@@ -166,7 +166,8 @@ namespace sw
         return parseRoot( doc, xmlText, sourceName, pRootName, root ) && pReadRoot( pCall, root, sourceName );
     }
 
-    bool GameDataXML::readFields( const XMLNode& node, void* pInstance, const TypeInfo& typeInfo, string_view sourceName, std::initializer_list<string_view> listHandRead )
+    bool GameDataXML::readFields( const XMLNode& node, void* pInstance, const TypeInfo& typeInfo, string_view sourceName, std::initializer_list<string_view> listHandRead,
+                                  AcceptAttributeFunction pfnHandRead )
     {
         using Internal = GameDataXMLInternal;
         // 오류 줄에 원소 이름과 id 를 함께 적는다(같은 원소가 여럿이면 어느 것인지 알아야 고친다).
@@ -183,7 +184,8 @@ namespace sw
         for ( XMLAttribute attribute = node.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
         {
             const string_view attributeName{ attribute.getName() != nullptr ? attribute.getName() : "" };
-            if ( Internal::isHandRead( attributeName, listHandRead ) )
+            const bool        bHandRead = Internal::isHandRead( attributeName, listHandRead ) || ( pfnHandRead != nullptr && pfnHandRead( attributeName.data() ) );
+            if ( bHandRead )
                 continue;
             const PropertyInfo* pFound = nullptr;
             for ( const PropertyInfo& prop : listProperty )

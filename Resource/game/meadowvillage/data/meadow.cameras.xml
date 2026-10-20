@@ -1,8 +1,8 @@
-<!-- MeadowVillage 카메라 프리셋 — 카메라 오브젝트의 CameraDirectorComponent 가 읽는다. 각은 도, 거리 · 높이는 m 다.
+<!-- MeadowVillage 카메라 프리셋 — 카메라 오브젝트의 CameraDirectorComponent 가 읽는다. 각은 라디안, 거리 · 높이는 m 다.
      비스듬히 내려다보는 직교 시점이고 입력은 받지 않는다. 초점은 씬의 _focusPoint 에 고정한다. -->
 <CameraPresets>
     <Preset id="meadow">
-        <View mode="OrthoTopDown" pitch="53.130102" yaw="0" distance="20"/>
-        <Lens orthographic="true" orthoHeight="15" near="0.1" far="80"/>
+        <View mode="OrthoTopDown" pitch="0.9273" yaw="0" distance="20"/>
+        <Lens orthographic="true" orthoHeight="15" nearPlane="0.1" farPlane="80"/>
     </Preset>
 </CameraPresets>

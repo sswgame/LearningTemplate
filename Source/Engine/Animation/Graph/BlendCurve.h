@@ -38,9 +38,9 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Min = 0.0, Max = 1.0 )
+        PROPERTY( Required, Min = 0.0, Max = 1.0 )
         float32 _time{ 0.0f };
-        PROPERTY()
+        PROPERTY( Required )
         float32 _value{ 0.0f };
     };
 } // namespace sw

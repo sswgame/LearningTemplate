@@ -3,9 +3,9 @@
      이동 빠르기는 처음 높이(orthoHeight)에서의 값이고 확대할수록 느려진다. 코스터 탑승 시점은 디렉터가 setViewOverride 로 덮는다. -->
 <CameraPresets>
     <Preset id="park">
-        <View mode="OrthoTopDown" pitch="30" yaw="45" distance="250"/>
-        <Lens orthographic="true" orthoHeight="110" near="0.1" far="625"/>
-        <Input zoomStep="0.85" panSpeed="40" rotateStep="90" rotateTime="0.15"/>
+        <View mode="OrthoTopDown" pitch="0.5236" yaw="0.7854" distance="250"/>
+        <Lens orthographic="true" orthoHeight="110" nearPlane="0.1" farPlane="625"/>
+        <Input zoomStep="0.85" panSpeed="40" rotateStep="1.5708" rotateTime="0.15"/>
         <Confiner zoomMin="25" zoomMax="220"/>
     </Preset>
 </CameraPresets>

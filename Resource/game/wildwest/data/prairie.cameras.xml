@@ -1,8 +1,8 @@
-<!-- WildWest 카메라 프리셋 — 카메라 오브젝트의 CameraDirectorComponent 가 읽는다. 각은 도, 거리 · 높이는 m 다.
+<!-- WildWest 카메라 프리셋 — 카메라 오브젝트의 CameraDirectorComponent 가 읽는다. 각은 라디안, 거리 · 높이는 m 다.
      비스듬히 내려다보는 직교 시점이고 입력은 받지 않는다. 초점은 WildWest 디렉터가 기수의 자리로 넣는다(setFocusPoint). -->
 <CameraPresets>
     <Preset id="prairie">
-        <View mode="OrthoTopDown" pitch="53.130102" yaw="0" distance="25"/>
-        <Lens orthographic="true" orthoHeight="18" near="0.1" far="100"/>
+        <View mode="OrthoTopDown" pitch="0.9273" yaw="0" distance="25"/>
+        <Lens orthographic="true" orthoHeight="18" nearPlane="0.1" farPlane="100"/>
     </Preset>
 </CameraPresets>

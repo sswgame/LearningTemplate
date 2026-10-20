@@ -59,7 +59,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 시점 섹션(`<View>`)입니다. 각은 라디안이고 XML 에는 도로 적습니다. 피치는 +가 아래를 보는 쪽이며 `CameraComponent::lookAt` 과 같습니다. */
+    /** @brief 시점 섹션(`<View>`)입니다. 각은 XML 에도 라디안으로 적습니다(`Units = rad`). 피치는 +가 아래를 보는 쪽이며 `CameraComponent::lookAt` 과 같습니다. */
     REFLECT()
     struct SW_GF_API CameraViewDef
     {
@@ -258,7 +258,7 @@ namespace sw
      * @brief 손떨림 섹션(`<Noise>`)입니다. Cinemachine 의 Basic Multi Channel Perlin 에 해당합니다.
      * @details 채널마다 위상이 다른 1D 펄린 잡음이 자리와 회전을 흔든다.
      *          같은 시드와 같은 시간이면 같은 값이 나오므로 테스트와 리플레이에서 쓸 수 있다.
-     *          회전은 피치, 요, 롤이며 단위는 라디안이고 XML 에는 도로 적는다.
+     *          회전은 피치, 요, 롤이며 단위는 XML 에도 라디안이다.
      */
     REFLECT()
     struct SW_GF_API CameraNoiseDef
@@ -360,15 +360,16 @@ namespace sw
      * @brief 프리셋 하나입니다.
      * @code
      *     <Preset id="topdown">
-     *         <View mode="OrthoTopDown" pitch="30" yaw="45" distance="250" offset="0 0 0"/>
-     *         <Lens orthographic="true" orthoHeight="110" near="0.1" far="625"/>
-     *         <Damping position="0.2" orientation="0.1"/>
-     *         <Input zoomStep="0.85" panSpeed="40" rotateStep="90"/>
+     *         <View mode="OrthoTopDown" pitch="0.5236" yaw="0.7854" distance="250" offset="0,0,0"/>
+     *         <Lens orthographic="true" orthoHeight="110" nearPlane="0.1" farPlane="625"/>
+     *         <Damping positionTime="0.2" orientationTime="0.1"/>
+     *         <Input zoomStep="0.85" panSpeed="40" rotateStep="1.5708"/>
      *         <Confiner zoomMin="25" zoomMax="220"/>
      *         <BlendIn curve="EaseInOut" duration="0.6"/>
      *     </Preset>
      * @endcode
-     * @details `<BlendIn>` 이 없으면 카탈로그의 `<DefaultBlend>` 를 쓰며, 읽을 때 채운다.
+     * @details 섹션의 속성 이름은 섹션 구조체의 칸 이름이다(`GameDataXML::readFields`). 각은 라디안, 벡터는 쉼표로 잇는다.
+     *          `<BlendIn>` 이 없으면 카탈로그의 `<DefaultBlend>` 를 쓰며, 읽을 때 채운다.
      */
     REFLECT()
     struct SW_GF_API CameraPresetDef
@@ -458,7 +459,7 @@ namespace sw
      *         <Blend from="topdown" to="orbit" curve="Cut"/>
      *     </CameraPresets>
      * @endcode
-     * @details 모르는 속성, 원소, 열거자 이름은 경고하고 넘어간다. `ResourceDataSchemaTest` 가 그 경고를 잡는다.
+     * @details 모르는 속성, 원소, 열거자 이름과 범위 밖 값은 오류이고 그 프리셋 · 블렌드 줄을 넣지 않는다.
      */
     class SW_GF_API CameraPresetCatalog : public XMLCatalog<CameraPresetCatalog>, public GameCatalog<CameraPresetDef>
     {

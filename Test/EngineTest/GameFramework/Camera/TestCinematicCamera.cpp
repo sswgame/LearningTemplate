@@ -57,11 +57,11 @@ SW_TEST_CASE( CinematicCameraTest, CutsBlendInAndOutOfTheGameCamera )
 {
     GameObjectManager        manager;
     CameraDirectorComponent* pGame = CinematicCameraTestInternal::addDirectedCamera( manager, "GameCam", CameraRole::Game, R"(<CameraPresets>
-        <Preset id="game"><View mode="Fixed" offset="10 0 0"/></Preset>
+        <Preset id="game"><View mode="Fixed" offset="10,0,0"/></Preset>
     </CameraPresets>)" );
     CameraDirectorComponent* pShot = CinematicCameraTestInternal::addDirectedCamera( manager, "ShotA", CameraRole::Custom, R"(<CameraPresets>
-        <Preset id="idle"><View mode="Fixed" offset="0 0 0"/></Preset>
-        <Preset id="wide"><View mode="Fixed" offset="0 20 0"/><BlendIn curve="Cut"/></Preset>
+        <Preset id="idle"><View mode="Fixed" offset="0,0,0"/></Preset>
+        <Preset id="wide"><View mode="Fixed" offset="0,20,0"/><BlendIn curve="Cut"/></Preset>
     </CameraPresets>)" );
     SW_ASSERT_TRUE( pGame != nullptr && pShot != nullptr );
     GameObject* pSequenceObject = manager.createGameObject( hashed_string( "Sequence" ) );
@@ -103,7 +103,7 @@ SW_TEST_CASE( CinematicCameraTest, PrewarmRegistersAPendingViewAndShakesMoveTheC
 {
     GameObjectManager        manager;
     CameraDirectorComponent* pShot = CinematicCameraTestInternal::addDirectedCamera( manager, "ShotB", CameraRole::Custom, R"(<CameraPresets>
-        <Preset id="fixed"><View mode="Fixed" offset="0 2 0"/></Preset>
+        <Preset id="fixed"><View mode="Fixed" offset="0,2,0"/></Preset>
     </CameraPresets>)" );
     SW_ASSERT_NOT_NULL( pShot );
     GameObject* pPlayer = manager.createGameObject( hashed_string( "PlayerCamera" ) );
@@ -167,7 +167,7 @@ SW_TEST_CASE( CinematicCameraTest, ValueTrackDrivesTheDirectorFieldOfView )
 {
     GameObjectManager        manager;
     CameraDirectorComponent* pShot = CinematicCameraTestInternal::addDirectedCamera( manager, "ShotC", CameraRole::Custom, R"(<CameraPresets>
-        <Preset id="fixed"><View mode="Fixed"/><Lens fieldOfViewY="40"/></Preset>
+        <Preset id="fixed"><View mode="Fixed"/><Lens fieldOfViewY="0.69813"/></Preset>
     </CameraPresets>)" );
     SW_ASSERT_NOT_NULL( pShot );
     manager.beginPlay();

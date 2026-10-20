@@ -239,20 +239,23 @@ SW_TEST_CASE( CameraPresetTest, DampingIsFrameRateIndependent )
 }
 
 /**
- * @brief [CameraPresetTest] 카탈로그 — 섹션을 읽고(각은 도 → 라디안), 블렌드는 표(정확히 · from="*" · to="*") → 들어오기 → 기본 순, 모르는 이름은 경고한다
+ * @brief [CameraPresetTest] 카탈로그 — 섹션을 스키마로 읽고(각은 라디안), 블렌드는 표(정확히 · from="*" · to="*") → 들어오기 → 기본 순, 모르는 이름 · 순서가 틀린 키는 그 프리셋을 넣지 않는 오류다
  */
 SW_TEST_CASE( CameraPresetTest, CatalogReadsSectionsAndResolvesBlends )
 {
     const utf8*         pXML = R"(<CameraPresets>
         <DefaultBlend curve="Linear" duration="2"/>
         <Preset id="a">
-            <View mode="Orbit" pitch="30" yaw="90" distance="12" offset="0 1 0"/>
-            <Lens fieldOfViewY="60" near="0.2" far="300"/>
-            <Damping position="0.3" orientation="0.1"/>
+            <View mode="Orbit" pitch="0.5236" yaw="1.5708" distance="12" offset="0,1,0"/>
+            <Lens fieldOfViewY="1.0472" nearPlane="0.2" farPlane="300"/>
+            <Damping positionTime="0.3" orientationTime="0.1"/>
             <BlendIn curve="EaseIn" duration="0.7" exponent="3"/>
         </Preset>
         <Preset id="b"><View mode="Fixed"/></Preset>
         <Preset id="c">
+            <BlendIn curve="Custom" duration="1"><Key time="0" value="0"/><Key time="1" value="1"/></BlendIn>
+        </Preset>
+        <Preset id="unsorted">
             <BlendIn curve="Custom" duration="1"><Key time="1" value="1"/><Key time="0" value="0"/></BlendIn>
         </Preset>
         <Blend from="a" to="b" curve="Cut"/>
@@ -261,10 +264,11 @@ SW_TEST_CASE( CameraPresetTest, CatalogReadsSectionsAndResolvesBlends )
     </CameraPresets>)";
     CameraPresetCatalog catalog;
     {
-        test::ScopedDefensiveTestLog expected( "unsorted custom keys are reported and sorted" );
+        test::ScopedDefensiveTestLog expected( "unsorted custom keys are a load error" );
         SW_ASSERT_TRUE( catalog.loadFromXMLText( pXML, "camera-test" ) );
     }
     SW_ASSERT_EQUAL( size_t{ 3 }, catalog.getAll().size() );
+    SW_EXPECT_TRUE( catalog.find( "unsorted" ) == nullptr );
 
     const CameraPresetDef* pA = catalog.find( "a" );
     SW_ASSERT_NOT_NULL( pA );
@@ -295,10 +299,11 @@ SW_TEST_CASE( CameraPresetTest, CatalogReadsSectionsAndResolvesBlends )
     {
         test::ScopedDefensiveTestLog expected( "unknown camera preset names are reported" );
         CameraPresetCatalog          typo;
-        SW_EXPECT_TRUE( typo.loadFromXMLText( R"(<CameraPresets><Preset id="x"><View mode="Orbitt" pich="3"/><Lense/></Preset></CameraPresets>)", "typo" ) );
+        SW_EXPECT_FALSE( typo.loadFromXMLText( R"(<CameraPresets><Preset id="x"><View mode="Orbitt" pich="3"/><Lense/></Preset></CameraPresets>)", "typo" ) );
+        SW_EXPECT_TRUE( typo.find( "x" ) == nullptr );
     }
-    SW_EXPECT_EQUAL( 1u, logs.countContaining( "unknown attribute 'pich'" ) );
-    SW_EXPECT_EQUAL( 1u, logs.countContaining( "unknown mode 'Orbitt'" ) );
+    SW_EXPECT_EQUAL( 1u, logs.countContaining( "pich=...> is not a field of" ) );
+    SW_EXPECT_EQUAL( 1u, logs.countContaining( "mode=\"Orbitt\"> cannot be read" ) );
     SW_EXPECT_EQUAL( 1u, logs.countContaining( "unknown section <Lense>" ) );
 }
 
@@ -311,9 +316,9 @@ SW_TEST_CASE( CameraPresetTest, CatalogReadsLensDollyAndPostProcess )
     SW_ASSERT_TRUE( catalog.loadFromXMLText( R"(<CameraPresets>
         <Preset id="cine">
             <View mode="Dolly"/>
-            <Lens focalLength="35" sensor="24.89 18.66" focusDistance="4" aperture="2" shift="0 0.05" dutch="12"/>
+            <Lens focalLength="35" sensorSize="24.89,18.66" focusDistance="4" aperture="2" lensShift="0,0.05" dutch="0.20944"/>
             <Dolly type="Linear" closed="false" pathOffset="1.5"><Point position="0 2 0"/><Point position="10 2 0"/></Dolly>
-            <PostProcess exposure="-0.5" bloom="1.5" vignette="0.3" saturation="0.8" contrast="1.1" letterbox="2.39"/>
+            <PostProcess exposureCompensation="-0.5" bloomScale="1.5" vignetteIntensity="0.3" saturation="0.8" contrast="1.1" letterboxAspectRatio="2.39"/>
             <HeadBob verticalAmplitude="0.03" lateralAmplitude="0.015" strideLength="1.8" referenceSpeed="5" blendTime="0.2"/>
         </Preset>
     </CameraPresets>)",
@@ -354,10 +359,10 @@ SW_TEST_CASE( CameraPresetTest, MalformedVectorAttributeSkipsThePreset )
     {
         test::ScopedDefensiveTestLog expected( "malformed vector attributes are load errors" );
         SW_EXPECT_TRUE( catalog.loadFromXMLText( R"(<CameraPresets>
-            <Preset id="shortOffset"><View mode="Fixed" offset="1 2"/></Preset>
-            <Preset id="shortSensor"><Lens sensor="36"/></Preset>
+            <Preset id="shortOffset"><View mode="Fixed" offset="1,2"/></Preset>
+            <Preset id="shortSensor"><Lens sensorSize="36"/></Preset>
             <Preset id="noPoint"><Dolly><Point/></Dolly></Preset>
-            <Preset id="ok"><View mode="Fixed" offset="1 2 3"/></Preset>
+            <Preset id="ok"><View mode="Fixed" offset="1,2,3"/></Preset>
         </CameraPresets>)",
                                                  "malformed-vector" ) );
     }
@@ -365,8 +370,8 @@ SW_TEST_CASE( CameraPresetTest, MalformedVectorAttributeSkipsThePreset )
     SW_EXPECT_TRUE( catalog.find( "shortSensor" ) == nullptr );
     SW_EXPECT_TRUE( catalog.find( "noPoint" ) == nullptr );
     SW_EXPECT_TRUE( catalog.find( "ok" ) != nullptr );
-    SW_EXPECT_EQUAL( 1u, logs.countContaining( "offset=\"1 2\" must be numbers shaped" ) );
-    SW_EXPECT_EQUAL( 1u, logs.countContaining( "sensor=\"36\" must be numbers shaped" ) );
+    SW_EXPECT_EQUAL( 1u, logs.countContaining( "offset=\"1,2\"> cannot be read" ) );
+    SW_EXPECT_EQUAL( 1u, logs.countContaining( "sensorSize=\"36\"> cannot be read" ) );
     SW_EXPECT_EQUAL( 1u, logs.countContaining( "needs position=" ) );
 }
 
@@ -584,8 +589,8 @@ SW_TEST_CASE( CameraPresetTest, DirectorComponentDrivesItsCamera )
     pTargetScene->setLocalRotation( float3{ 0.0f, MathUtil::kHalfPi, 0.0f } );
 
     SW_ASSERT_TRUE( pDirector->getCatalog().loadFromXMLText( R"(<CameraPresets>
-        <Preset id="behind"><View mode="Follow" pitch="0" distance="5" offset="0 2 0"/><Lens fieldOfViewY="60" far="400"/></Preset>
-        <Preset id="above"><View mode="OrthoTopDown" pitch="90" distance="50"/><Lens orthoHeight="30"/><BlendIn curve="SmoothStep" duration="1"/></Preset>
+        <Preset id="behind"><View mode="Follow" pitch="0" distance="5" offset="0,2,0"/><Lens fieldOfViewY="1.0472" farPlane="400"/></Preset>
+        <Preset id="above"><View mode="OrthoTopDown" pitch="1.5708" distance="50"/><Lens orthoHeight="30"/><BlendIn curve="SmoothStep" duration="1"/></Preset>
     </CameraPresets>)",
                                                              "component-test" ) );
     pDirector->setTarget( pTargetObject->getHandle() );
@@ -760,8 +765,8 @@ SW_TEST_CASE( CameraPresetTest, TopDownDirectorPicksTheGroundUnderItsFocusPoint 
     CameraDirectorComponent* pDirector = pCameraObject->addComponent<CameraDirectorComponent>();
     SW_ASSERT_NOT_NULL( pDirector );
     SW_ASSERT_TRUE( pDirector->getCatalog().loadFromXMLText( R"(<CameraPresets>
-        <Preset id="play"><View mode="OrthoTopDown" pitch="60" distance="150"/><Lens orthoHeight="30" far="375"/></Preset>
-        <Preset id="watch"><View mode="OrthoTopDown" pitch="60" distance="150"/><Lens orthoHeight="70" far="375"/></Preset>
+        <Preset id="play"><View mode="OrthoTopDown" pitch="1.0472" distance="150"/><Lens orthoHeight="30" farPlane="375"/></Preset>
+        <Preset id="watch"><View mode="OrthoTopDown" pitch="1.0472" distance="150"/><Lens orthoHeight="70" farPlane="375"/></Preset>
     </CameraPresets>)",
                                                              "topdown-test" ) );
     pDirector->setInputEnabled( false );
@@ -889,8 +894,8 @@ SW_TEST_CASE( CameraPresetTest, PresetWarnsOnceAboutAnActionTheInputMapLacks )
     CameraDirectorComponent* pDirector = pCameraObject->addComponent<CameraDirectorComponent>();
     SW_ASSERT_NOT_NULL( pDirector );
     SW_ASSERT_TRUE( pDirector->getCatalog().loadFromXMLText( R"(<CameraPresets>
-        <Preset id="looker"><View mode="Orbit" distance="5"/><Input sensitivity="0.004"/></Preset>
-        <Preset id="zoomer"><View mode="Orbit" distance="9"/><Input sensitivity="0.004" zoomStep="0.85"/></Preset>
+        <Preset id="looker"><View mode="Orbit" distance="5"/><Input lookSensitivity="0.004"/></Preset>
+        <Preset id="zoomer"><View mode="Orbit" distance="9"/><Input lookSensitivity="0.004" zoomStep="0.85"/></Preset>
     </CameraPresets>)",
                                                              "missing-action-test" ) );
     pDirector->setCycleAction( hashed_string( "CycleCamera" ) );

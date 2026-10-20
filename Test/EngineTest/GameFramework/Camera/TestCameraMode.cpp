@@ -497,8 +497,8 @@ SW_TEST_CASE( CameraModeTest, DirectorComponentMarksTheCameraCutOnce )
     CameraDirectorComponent* pDirector = pObject->addComponent<CameraDirectorComponent>();
     SW_ASSERT_TRUE( pCamera != nullptr && pDirector != nullptr );
     SW_ASSERT_TRUE( pDirector->getCatalog().loadFromXMLText( R"(<CameraPresets>
-        <Preset id="a"><View mode="Fixed" offset="0 0 0"/></Preset>
-        <Preset id="b"><View mode="Fixed" offset="5 0 0"/></Preset>
+        <Preset id="a"><View mode="Fixed" offset="0,0,0"/></Preset>
+        <Preset id="b"><View mode="Fixed" offset="5,0,0"/></Preset>
     </CameraPresets>)",
                                                              "camera-cut-mark-test" ) );
     pDirector->setInputEnabled( false );
@@ -766,7 +766,7 @@ SW_TEST_CASE( CameraModeTest, DirectorComponentPicksTheGroundAndHonoursTheOverri
     CameraDirectorComponent* pDirector = pObject->addComponent<CameraDirectorComponent>();
     SW_ASSERT_NOT_NULL( pDirector );
     SW_ASSERT_TRUE( pDirector->getCatalog().loadFromXMLText( R"(<CameraPresets>
-        <Preset id="topdown"><View mode="OrthoTopDown" pitch="90" yaw="0" distance="50"/><Lens orthographic="true" orthoHeight="20" far="200"/></Preset>
+        <Preset id="topdown"><View mode="OrthoTopDown" pitch="1.5708" yaw="0" distance="50"/><Lens orthographic="true" orthoHeight="20" farPlane="200"/></Preset>
     </CameraPresets>)",
                                                              "ground-pick-test" ) );
     pDirector->setInputEnabled( false );
@@ -808,7 +808,7 @@ SW_TEST_CASE( CameraModeTest, OrthoDirectorStartsAtItsYawAndFollowsTheFocusPoint
     CameraDirectorComponent* pDirector = pObject->addComponent<CameraDirectorComponent>();
     SW_ASSERT_TRUE( pCamera != nullptr && pDirector != nullptr );
     SW_ASSERT_TRUE( pDirector->getCatalog().loadFromXMLText( R"(<CameraPresets>
-        <Preset id="park"><View mode="OrthoTopDown" pitch="30" yaw="45" distance="250"/><Lens orthographic="true" orthoHeight="110" far="625"/></Preset>
+        <Preset id="park"><View mode="OrthoTopDown" pitch="0.5236" yaw="0.7854" distance="250"/><Lens orthographic="true" orthoHeight="110" farPlane="625"/></Preset>
     </CameraPresets>)",
                                                              "ortho-follow-test" ) );
     pDirector->setInputEnabled( false );
