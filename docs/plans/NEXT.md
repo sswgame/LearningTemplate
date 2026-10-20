@@ -16,6 +16,7 @@
 
 ## 1. 지금 상태 (2026-10-20, 오후 세션 끝)
 
+- **병합했지만 push·통합 검증 전(로컬 main 이 origin 보다 앞섬, 가장 먼저 할 일)**: `appexit`(`-gv_screenshotQuit` 으로 사진 뒤 스스로 종료, 종료 코드 14=쓰기 실패, `-gv_screenshotEditor` 도 같은 방법; `-scenario=` 리소스 ID 는 재현되지 않아 실패 메시지를 `[read]`/`[xml]`/`[scenario]` 로 가르기만 함)와 `modalfix`(모달 5 곳을 `EditorWidgets::beginCenteredModal` 로 호스트 뷰포트 가운데에, `.gitattributes` 의 에디터 픽스처 폴더 줄끝을 한 줄 `eol=lf` 로 — 시나리오 실행이 더럽히던 `animgraphlayers.animgraph.json` 해결). 각 작업자 브랜치에서는 `full-build` · `ctest -L nogpu` 64/64 · DX12 시나리오가 통과했다. **병합본에서 해야 할 것**: `py -3 -m Scripts full-build --owner <이름>`, `ctest -L "lint|nogpu|race"`, gpu-verifier 로 DX12 · Vulkan 에디터 시나리오 전체와 Shipping `-L hostgpu` 시한 없이(AppTest Shard4 · 5, QaGoldenImages 포함) 돌린 뒤 push(사용자 지시: 병합 뒤 전체 검증을 한다). `EditorUICapture.cpp/.h` 는 두 브랜치가 겹쳤을 수 있으니 병합본에서 확인. 기존 워크트리는 병합 뒤 `Resource/engine/automation/editor/*/` 를 지우고 `git checkout-index -f` 로 다시 받아야 LF 가 된다. 워크트리 `D:/w/appexit` · `D:/w/modalfix` 는 병합 후 `worktree-remove`.
 - **push 완료**: main `59ec7f76d`. 이번 세션 병합분 — `panelgap`(비문서 패널 · 모든 닫는 길을 `IEditorPanel::requestClose` 한 입구로 · 시나리오 `editor.panelclose`), `vkfix`(Vulkan `vkDestroyBuffer` 사용 중 해제: 근본 원인은 ImGui 백엔드의 정점 · 인덱스 버퍼 링이 3 칸인데 캡처 프레임이 메인 뷰포트를 두 번 그려 쓰는 칸을 지운 것 — `kImGuiDrawBufferRingSize`(인플라이트 × 2)로 Vulkan · DX12 모두 고침, 옛 커밋에서도 4/4 실패해 이번 변경의 회귀가 아니었다. 고친 뒤 Vulkan · DX12 시나리오 89 개 PASS), 그리고 아래 이전 병합분 — IncrementalCook 을 끝으로, GpuVerification V2 일부(리눅스 소프트웨어 렌더러 요구 백엔드에서 `gl` 제외), 문서 패널 닫기 확인을 `EditorDocumentPanel` 기반으로(`drawContent` final, `drawDocumentContent` 필수, `revertDocument` 기본), `TextAddress` 로 객체 주소 · 값 주소 형식 분리(`formatPropertyText` · `applyPropertyText` · `formatValueText` · `parseTextValue`), 결정 기록 5-12 에 "셰이더 바이너리 계속 커밋", "백엔드 등급제 안 함".
 - DX12 플로팅 창을 6 버퍼로 연 화면, DX11 · GL 의 vkfix 뒤 재확인은 하지 않았다. 시나리오 실행이 `animgraphlayers.animgraph.json` 의 줄바꿈만 바꿔 놓는다(내용 변경 없음, 원인 조사 필요).
 - **hostgpu 전체는 못 돌림**(Debug 25 분 시한에 8 항목 중 5 개만 끝남: EngineTest Shard1 · 2, AppTest Shard1 통과). 남은 AppTest Shard4 · 5, QaGoldenImages 는 Shipping 으로 시한 없이 돌릴 것. 확인한 DX12 캡처에서 모달이 캡처 오른쪽 아래 가장자리에 붙어 "Close anyway?" 가 잘려 보이는 점(UX), GL 은 가운데에 뜨는 점이 다르다. 모달 위치를 백엔드와 무관하게 창 가운데로 맞출 것.
@@ -47,7 +48,8 @@
 ## 2. 첫 일
 
 1. 사용자 지침(2026-10-20): 되묻지 않고, 상용 엔진과 우리 엔진이 발전할 방향을 기준으로 구조적 해결을 한다. 각 작업이 끝날 때마다 push 한다(`full-build` 증거 게이트를 지킨다).
-2. `panelgap` · `structplan` 의 보고를 확인해 병합하고, 병합본에서 `full-build` 후 push.
+2. 위 "병합했지만 push·통합 검증 전" 의 검증을 마치고 push. 사용자 결정 대기: 키트 51 개(게임이 이름으로 부르는 것은 9 개)를 견본으로 둘지 기본 빌드에서 뺄지, `StructureSimplification` 8절의 코드로 검증 못 한 권고안(HC3 `<Engine>` 요소 구조 · 창 제목, PK3 셰이더 스탬프 검사가 빌드된 App 을 요구, TX2 플레이어 외형 프리셋을 옛 형식 없이 다시 쓰기).
+   병렬로 띄울 묶음(`[병렬 가능]`, 파일 겹침이 없고 동시 빌드 최대 2): (가) 리팩토링 1.1 "먼저" 묶음 중 Kits 카탈로그 → `GameDataXML`(`worker`), (나) 해시 사본 → `HashUtil` · `computeYaw` · float↔비트 도우미(`worker`), (다) `StructureSimplification` HC(설정 폴백 제거) — 빌드가 큰 쪽이라 (가)·(나) 와 겹치지 않을 때 단독, (라) Vfx V2·V3 · 카메라 디렉터 · 애니메이션은 Roadmap 의 `[병렬 가능]` 대로.
 3. 리팩토링 1.1 의 "먼저" 묶음을 파일이 겹치지 않게 작업자 둘(동시 빌드 최대 2)에게 맡긴다. 그다음 `StructureSimplification` 의 첫 단위(정책 5).
 4. TypedComponents 앱 측정 넷(독점, Release), 그다음 Roadmap 의 `[병렬 가능]` 묶음: Vfx V2 · V3(`gpu-verifier` 와), 카메라 디렉터, 애니메이션(AnimationGraphLayers, PairedAnimation P3), SerializerSilentSkips, AsyncResourceLoading A2(설계 검토 뒤).
 
