@@ -19,6 +19,7 @@
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import os
 import shutil
 import stat
@@ -31,6 +32,8 @@ import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(co
 from common import getProjectRoot, runGit  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "generate"))
+from CookAssets import kCookStampPathPattern  # noqa: E402 — 쿠킹 스탬프 경로의 정본
 from MakeWorktree import (  # noqa: E402
     describeWorktreeOwner,
     findMainRoot,
@@ -62,6 +65,32 @@ def removeDirectoryLink(path: Path) -> None:
         os.rmdir(path)
     else:
         os.unlink(path)
+
+
+def listBlockingChanges(statusPorcelain: str) -> list[str]:
+    """`git status --porcelain` 에서 지우기를 막는 변경의 경로만 돌려줍니다 — 쿠킹 스탬프(생성물)는 뺀다.
+
+    스탬프는 추적되는 파일이라 빌드만 해도 바뀌고, 그 변경은 버려도 되는 것이다. 이름 바꾸기(`a -> b`)는 도착 경로로 본다.
+    """
+    paths: list[str] = []
+    for line in statusPorcelain.splitlines():
+        path = line[3:].split(" -> ")[-1].strip().strip('"').replace("\\", "/")
+        if path and not fnmatch.fnmatch(path, kCookStampPathPattern):
+            paths.append(path)
+    return paths
+
+
+def removeLeftoverDirectory(path: Path, retryCount: int = 5, retrySeconds: float = 0.5) -> bool:
+    """폴더 껍데기가 남았으면 짧게 다시 지워 봅니다. 끝내 남으면 False — 호출한 쪽이 경로를 경고로 보인다."""
+    for attempt in range(retryCount):
+        if not path.exists():
+            return True
+        shutil.rmtree(path, ignore_errors=True)
+        if not path.exists():
+            return True
+        if attempt + 1 < retryCount:
+            time.sleep(retrySeconds)
+    return not path.exists()
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -100,17 +129,20 @@ def main(argv: list[str] | None = None) -> int:
                 failureCount += 1
                 continue
             status = runGit(["status", "--porcelain"], cwd=plan.worktreePath)
-            if status.bSucceeded and status.stdout.strip() and not args.force:
-                print(f"[RemoveWorktree] 커밋하지 않은 변경이 있어 건너뜁니다(--force 로 지운다): {plan.worktreePath}", file=sys.stderr)
+            blocking = listBlockingChanges(status.stdout) if status.bSucceeded else []
+            if blocking and not args.force:
+                shown = ", ".join(blocking[:5]) + (f" 외 {len(blocking) - 5}개" if len(blocking) > 5 else "")
+                print(f"[RemoveWorktree] 커밋하지 않은 변경이 있어 건너뜁니다(--force 로 지운다): {plan.worktreePath} — {shown}", file=sys.stderr)
                 failureCount += 1
                 continue
             for rel in kSharedFolders:
                 linkPath = plan.worktreePath / rel
                 if isDirectoryLink(linkPath):
                     removeDirectoryLink(linkPath)
-            removed = runGit(["worktree", "remove", "--force", str(plan.worktreePath)], cwd=mainRoot)
-            if not removed.bSucceeded and plan.worktreePath.exists():
-                shutil.rmtree(plan.worktreePath, ignore_errors=True)
+            runGit(["worktree", "remove", "--force", str(plan.worktreePath)], cwd=mainRoot)
+            if plan.worktreePath.exists() and not removeLeftoverDirectory(plan.worktreePath):
+                print(f"[RemoveWorktree] 경고: 폴더가 남았습니다(다른 프로세스가 쥐고 있을 수 있습니다): {plan.worktreePath}", file=sys.stderr)
+                failureCount += 1
         if not args.keep_branch:
             # 청소다 — 가지가 이미 없으면 지는 것이 정상이다. 남았으면 이유를 보인다.
             deleted = runGit(["branch", "-D", plan.branch], cwd=mainRoot)
