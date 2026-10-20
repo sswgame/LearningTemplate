@@ -12,6 +12,7 @@
   │     ├── MakeTerrainShowcase.py    # 지형 쇼케이스의 절차 생성 원본(heightfields_raw · textures_raw)
   │     ├── MakeNoiseTexture.py       # 엔진 잡음 텍스처 원본(engine/textures_raw/perlin.png — 이음매 없는 Perlin fBm)
   │     ├── MakeSyntheticRig.py       # 애니메이션 비용 측정용 합성 리그(.glb + .rig.json, 본 수 · 위상 · 모프 · 클립, 대표는 game/empty/rigs_raw)
+  │     ├── MakeBowProps.py           # 페어드 애니메이션 견본의 활 · 화살 프롭(스킨드 .glb, 클립 길이 · 놓는 시각을 bow_shoot.pairedanim.xml 에 맞춤)
   │     ├── MakeBrandImages.py        # 에디터 스플래시 원본과 앱 아이콘(app.ico)을 같은 SW 모노그램에서 그린다
   │     ├── MakePackage.py            # 배포 패키지(Shipping 빌드 → 쿠킹 → 스테이징 → 검사, `[package]` 줄) — 에디터 Packaging 창이 같은 것을 부른다
   │     ├── MakeWorktree.py           # 작업 단위용 git 워크트리 + main 과 나눠 쓰는 도구 · vcpkg 폴더 링크(docs/11_Workflow.md)

@@ -153,20 +153,20 @@ PairedAnimationComponent(시작하는 쪽, 에셋 경로 · 자기 역할)
 | P3b | 네트워크 계층 연결(서버가 세션 시작 · 상태를 복제, 클라이언트가 복원, 롤백 소유 상태) — 키트 `GF_NetPairedAnimation` | 코드와 `PairedAnimationReplicationTest` 작성(빌드 · 테스트 미확인, 두 프로세스 확인은 아래 "남은 것") |
 | M3 | 에디터 미리보기(8절) — `PairedAnimationPanel` · `PairedAnimationEditModel` | 코드와 `PairedAnimationEditModelTest` 작성(빌드 · 테스트 미확인, 창 화면 확인은 아래 "남은 것") |
 | — | 상호작용 단계에서 세션 시작 · 에셋 캐시(핫 리로드) · 세트 고르기(`<Select>`) · 보폭 보정 쥠 | 완료(`InteractionTest` · `PairedAnimationTest`) |
-| — | 시나리오 테스트(Shooter3D 궁수 · 활 · 화살 실제 클립) | 아래 "남은 것" — 클립 · 활 메시가 없다 |
+| — | 시나리오 테스트(Shooter3D 궁수 · 활 · 화살 실제 클립) | 에셋: 궁수는 기사 `2H_Ranged_Shoot`, 활 · 화살은 `Scripts/dev/MakeBowProps.py`(`TestMakeBowProps` 통과). 임포트 · 프리팹 · 시나리오는 아래 "남은 것" |
 
 ## 남은 것
 
 - 에디터 미리보기(M3) 화면 확인: 창을 열어 역할 프리팹을 놓고 스크럽 · 기즈모로 오프셋을 옮기는 에디터 시나리오(`-EnableEditor`, `CaptureEditorUI`).
 - 네트워크(P3b) 두 프로세스 확인: `Server` 와 `App -gv_netConnectAddress` 에서 세션 시작 · 늦은 참가 · 끝이 복제되는지. 씬 문서 밖에서 생긴 참가자(투사체 같은)를 복제하려면 번호표가 아니라 복제 엔티티 id 대응이 필요하다(후속).
-- 시나리오 테스트: Shooter3D 궁수 · 활 · 화살 실제 클립과 활 메시가 리소스에 없다(`data/anim/bow_shoot.pairedanim.xml` 은 형식 검사만 돈다). 클립 · 메시(CC0)가 들어오면 시나리오로 화면 확인까지 한다.
+- 시나리오 테스트: `py -3 Scripts/dev/MakeBowProps.py` → `App --import-models`(활 · 화살 `models/props/` 와 `import.stamp` 를 함께 커밋) → 활 · 화살 · 투사체 프리팹과 활 알림 표(`ReleaseArrow` → `SpawnPrefab`) → 궁수 · 활 · 화살을 둔 씬과 세션을 시작하는 시나리오(세션 상태 탐침과 스크린샷). 임포트에 빌드가 필요해 이번에는 생성기와 에셋 타임라인까지만 했다 — 임포트 없이 glb 를 커밋하면 임포트 스탬프 검사가 깨진다.
 
 ## 11. 알려진 한계
 
 - 재생 속도를 매 프레임 쓰는 컴포넌트는 지금 `LocomotionWarpingComponent` 하나이고 세션이 쥐어 둔다. 재생 속도를 쓰는 새 컴포넌트가 생기면 같은 쥠을 받아야 한다 — 받지 않으면 세션 시각 검사가 어긋남으로 보고 중단한다(조용히 틀어지지는 않는다).
 - 상호작용의 누름(`Press`) 단계는 누름으로 이미 끝나므로, 세션 시작이 거절되면 경고만 남고 상호작용은 끝난 채다. 누르고 있기 · 연타 단계는 취소된다.
 - 애니메이션 되감기(`AnimationRewind`) 스크럽 중에는 시각이 예측과 달라 중단된다(개발 빌드 진단 기능).
-- 샘플 에셋(`Resource/game/shooter3d/data/anim/bow_shoot.pairedanim.xml`)의 클립 · 활 메시는 아직 없다. 데이터 형식 검사(`ResourceDataSchemaTest`)만 돈다.
+- 샘플 에셋(`Resource/game/shooter3d/data/anim/bow_shoot.pairedanim.xml`)의 활 · 화살 메시는 생성기만 있고 아직 임포트하지 않았다. 데이터 형식 검사(`ResourceDataSchemaTest`)와 생성기 대조(`TestMakeBowProps`)만 돈다.
 - 복원(`restoreSession`)은 `warp` 창을 다시 열지 않는다. 창 도중에 이어 받은 클라이언트는 휘어지지 않은 루트 모션으로 가고 서버의 트랜스폼 보정을 받는다(7절).
 
 ## 12. 다른 작업과 겹치는 자리
