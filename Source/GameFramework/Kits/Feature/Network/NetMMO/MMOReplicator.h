@@ -213,6 +213,13 @@ namespace sw
         void updateObserver( int32 connectionID, Observer& observer, float32 deltaTime, ObserverScratch& scratch );
         /** @brief 보이지 않게 된 엔티티를 조각나지 않는 크기(`NetConnection::kMaxSingleMessageSize`)로 쪼개 보내고, 보낸 것만 보이는 목록에서 뺍니다. 못 보낸 엔티티가 시작하는 `_listLeave` 의 인덱스를 반환합니다. */
         size_t sendLeaves( int32 connectionID, Observer& observer, ObserverScratch& scratch );
+        /**
+         * @brief 들어오는 반경 안(과 항상 보이는) 엔티티 중 아직 안 보이는 것을 가까운 것부터 신뢰 메시지 하나로 묶어 보냅니다.
+         * @details 틱마다 `_maxEnterPerTick` 과 신뢰 메시지 크기가 상한이다. 전송이 받아들여진 것만 보이는 목록에 넣는다.
+         */
+        void sendEnters( int32 connectionID, Observer& observer, const float3& center, ObserverScratch& scratch );
+        /** @brief 보이는 엔티티의 우선도를 쌓고 틱 예산 안에서 큰 것부터 비신뢰 갱신으로 보냅니다. `_listLeave` 의 @p pendingLeaveIndex 뒤(못 보낸 사라짐)는 건너뜁니다. */
+        void sendUpdates( int32 connectionID, Observer& observer, const float3& center, size_t pendingLeaveIndex, float32 deltaTime, ObserverScratch& scratch );
         /** @brief 확인을 기다리는 갱신을 판정합니다. 받았으면 확인된 상태로 옮기고, 잃었으면 우선도를 되돌립니다(`NetPrioritizer::resolveSend`). */
         void             resolveInFlightUpdates( Observer& observer ) const;
         const MMOEntity& getEntity( uint32 entityID ) const;

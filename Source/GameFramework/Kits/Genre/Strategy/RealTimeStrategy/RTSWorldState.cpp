@@ -43,6 +43,18 @@ namespace sw
                 return true;
             }
 
+            /** @brief 플레이어 하나의 필드를 읽습니다. 지갑은 싣지 않으므로 부르는 쪽이 지금 플레이어의 것을 넘겨 둡니다. 오류는 아카이브에 남습니다. */
+            static void readPlayer( Archive& archive, RTSPlayer& outPlayer )
+            {
+                archive >> outPlayer._startPosition;
+                archive >> outPlayer._supplyUsed;
+                archive >> outPlayer._supplyCap;
+                archive >> outPlayer._team;
+                archive >> outPlayer._nextUnderAttackTime;
+                archive >> outPlayer._bDefeated;
+                archive >> outPlayer._bHadBuilding;
+            }
+
             /** @brief 유닛의 필드(정의 · 명령 · 생산 줄을 뺀 나머지)를 읽습니다. 열거형이 범위 밖이거나 정의 없이 살아 있으면 false 입니다. */
             [[nodiscard]] static bool readUnitFields( Archive& archive, RTSUnit& outUnit )
             {
@@ -262,13 +274,7 @@ namespace sw
         }
         for ( RTSPlayer& player : listPlayer )
         {
-            archive >> player._startPosition;
-            archive >> player._supplyUsed;
-            archive >> player._supplyCap;
-            archive >> player._team;
-            archive >> player._nextUnderAttackTime;
-            archive >> player._bDefeated;
-            archive >> player._bHadBuilding;
+            Internal::readPlayer( archive, player );
         }
         uint32 teamCount = 0;
         if ( archive.isError() || StateArchiveUtil::readCount( archive, sizeof( uint32 ), teamCount ) == false )
@@ -313,6 +319,13 @@ namespace sw
         const float3  origin   = _grid.getOrigin();
         _grid.initialize( width, height, cellSize, origin );
         repaintGrid();
+        restoreAgents( listFlowFieldOrder );
+        rebuildBuckets();
+        return true;
+    }
+
+    void RTSWorld::restoreAgents( const vector<uint8>& listFlowFieldOrder )
+    {
         size_t flowFieldOrderIndex = 0;
         for ( RTSUnit& unit : _listUnit )
         {
@@ -331,7 +344,5 @@ namespace sw
                     order._pFlowField = acquireFlowField( _grid.computeCell( order._target ) );
             }
         }
-        rebuildBuckets();
-        return true;
     }
 } // namespace sw

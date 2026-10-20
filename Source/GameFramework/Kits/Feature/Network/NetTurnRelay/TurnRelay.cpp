@@ -17,17 +17,47 @@ namespace sw
 
     namespace
     {
-        /** @brief 운영체제 난수 64비트(`UUID::generate`)를 반환합니다. 실행마다, 서버마다 다르고 미리 알 수 없습니다. */
-        uint64 makeTurnRelayTokenSeed()
+        struct TurnRelayInternal
         {
-            const UUID uuid  = UUID::generate();
-            uint64     value = 0;
-            for ( const uint8 byte : uuid._arrBytes )
+            /** @brief 운영체제 난수 64비트(`UUID::generate`)를 반환합니다. 실행마다, 서버마다 다르고 미리 알 수 없습니다. */
+            static uint64 makeTokenSeed()
             {
-                value = HashUtil::mix64( value ^ byte );
+                const UUID uuid  = UUID::generate();
+                uint64     value = 0;
+                for ( const uint8 byte : uuid._arrBytes )
+                {
+                    value = HashUtil::mix64( value ^ byte );
+                }
+                return value != 0 ? value : HashUtil::kGoldenRatio64;
             }
-            return value != 0 ? value : HashUtil::kGoldenRatio64;
-        }
+
+            /** @brief @p token 이 맞는 차지된 자리를 반환합니다. 토큰이 0 이거나 맞는 자리가 없으면 -1 입니다. */
+            static int32 findReturningSeat( const TurnRoom& room, uint32 token )
+            {
+                int32 seatIndex = -1;
+                for ( size_t index = 0; index < room._listSeat.size() && token != 0; ++index )
+                {
+                    if ( room._listSeat[index]._bTaken && room._listSeat[index]._token == token )
+                        seatIndex = static_cast<int32>( index );
+                }
+                return seatIndex;
+            }
+
+            /** @brief 비었으면 원하는 자리(@p wantedSeat), 아니면 앞에서부터 첫 빈 자리를 반환합니다. 다 찼으면 -1 입니다. */
+            static int32 findFreeSeat( const TurnRoom& room, int64 wantedSeat )
+            {
+                const bool bWantedFree = 0 <= wantedSeat && wantedSeat < static_cast<int64>( room._listSeat.size() ) &&
+                                         room._listSeat[static_cast<size_t>( wantedSeat )]._bTaken == SW_FALSE;
+                if ( bWantedFree )
+                    return static_cast<int32>( wantedSeat );
+                for ( size_t index = 0; index < room._listSeat.size(); ++index )
+                {
+                    if ( room._listSeat[index]._bTaken == SW_FALSE )
+                        return static_cast<int32>( index );
+                }
+                return -1;
+            }
+        };
     } // namespace
 } // namespace sw
 
@@ -64,7 +94,7 @@ namespace sw
         _pHost       = pHost;
         _seatCount   = settings._seatCount;
         _pPolicy     = pPolicy != nullptr ? pPolicy : &_defaultPolicy;
-        _tokenSecret = tokenSeed != 0 ? tokenSeed : makeTurnRelayTokenSeed();
+        _tokenSecret = tokenSeed != 0 ? tokenSeed : TurnRelayInternal::makeTokenSeed();
         _tokenCount  = 0;
         _listRoom.clear();
         _listPending.clear();
@@ -242,12 +272,7 @@ namespace sw
             pRoom = &_listRoom.back();
         }
         // 토큰이 맞는 자리는 돌아온 것으로 본다. 그 자리의 연결이 아직 살아 있으면 빼앗지 않는다. 토큰이 없으면 빈 자리를 준다.
-        int32 seatIndex = -1;
-        for ( size_t index = 0; index < pRoom->_listSeat.size() && token != 0; ++index )
-        {
-            if ( pRoom->_listSeat[index]._bTaken && pRoom->_listSeat[index]._token == token )
-                seatIndex = static_cast<int32>( index );
-        }
+        int32      seatIndex  = TurnRelayInternal::findReturningSeat( *pRoom, token );
         const bool bReturning = seatIndex >= 0;
         if ( bReturning && pRoom->_listSeat[static_cast<size_t>( seatIndex )]._connectionID >= 0 )
         {
@@ -255,17 +280,7 @@ namespace sw
             return true;
         }
         if ( seatIndex < 0 )
-        {
-            const bool bWantedFree = 0 <= wantedSeat && wantedSeat < static_cast<int64>( pRoom->_listSeat.size() ) &&
-                                     pRoom->_listSeat[static_cast<size_t>( wantedSeat )]._bTaken == SW_FALSE;
-            if ( bWantedFree )
-                seatIndex = static_cast<int32>( wantedSeat );
-            for ( size_t index = 0; index < pRoom->_listSeat.size() && seatIndex < 0; ++index )
-            {
-                if ( pRoom->_listSeat[index]._bTaken == SW_FALSE )
-                    seatIndex = static_cast<int32>( index );
-            }
-        }
+            seatIndex = TurnRelayInternal::findFreeSeat( *pRoom, wantedSeat );
         if ( seatIndex < 0 )
         {
             sendDenied( connectionID, roomID, TurnRejectReason::RoomFull );
@@ -284,37 +299,40 @@ namespace sw
         event._roomID = roomID;
         event._seat   = seatIndex;
         _eventBuffer.push( event );
+        announceStart( *pRoom, seat, connectionID );
+        return true;
+    }
 
-        // 이미 시작했으면 들어온 사람에게 시작 알림과 놓친 행동을 보낸다. 이번 입장으로 자리가 다 찼으면 모두에게 시작을 알린다.
+    void TurnRelayServer::announceStart( TurnRoom& room, TurnSeat& seat, int32 connectionID )
+    {
         bool bFull = true;
-        for ( const TurnSeat& other : pRoom->_listSeat )
+        for ( const TurnSeat& other : room._listSeat )
         {
             bFull = bFull && other._bTaken;
         }
-        if ( pRoom->_bStarted == SW_FALSE && bFull == false )
-            return true;
-        const bool bStartsNow = pRoom->_bStarted == SW_FALSE;
-        pRoom->_bStarted      = SW_TRUE;
-        for ( const TurnSeat& other : pRoom->_listSeat )
+        if ( room._bStarted == SW_FALSE && bFull == false )
+            return;
+        const bool bStartsNow = room._bStarted == SW_FALSE;
+        room._bStarted        = SW_TRUE;
+        for ( const TurnSeat& other : room._listSeat )
         {
             const bool bTold = other._connectionID >= 0 && ( bStartsNow || other._connectionID == connectionID );
             if ( bTold == false )
                 continue;
             BitWriter& writer = _messageWriter.begin( NetTurnRelayMessage::kStarted );
-            writer.writeVarUint( roomID );
-            writer.writeVarUint( static_cast<uint64>( pRoom->_currentSeat ) );
+            writer.writeVarUint( room._roomID );
+            writer.writeVarUint( static_cast<uint64>( room._currentSeat ) );
             sendOrQueue( other._connectionID );
         }
-        flushSeat( *pRoom, seat );
+        flushSeat( room, seat );
         if ( bStartsNow )
         {
             TurnRelayEvent startEvent;
             startEvent._kind   = TurnRelayEvent::Kind::Started;
-            startEvent._roomID = roomID;
-            startEvent._seat   = pRoom->_currentSeat;
+            startEvent._roomID = room._roomID;
+            startEvent._seat   = room._currentSeat;
             _eventBuffer.push( startEvent );
         }
-        return true;
     }
 
     bool TurnRelayServer::handleAction( int32 connectionID, BitReader& reader )

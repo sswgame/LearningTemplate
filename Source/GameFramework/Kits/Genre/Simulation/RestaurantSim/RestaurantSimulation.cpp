@@ -43,6 +43,23 @@ namespace sw
                 return choice._weight;
             }
 
+            /** @brief 오늘의 집계를 읽습니다. 오류는 아카이브에 남습니다. */
+            static void readDaySummary( Archive& archive, RestaurantDaySummary& outToday )
+            {
+                archive >> outToday._revenue;
+                archive >> outToday._tips;
+                archive >> outToday._ingredientCost;
+                archive >> outToday._wages;
+                archive >> outToday._spoilageCost;
+                archive >> outToday._profit;
+                archive >> outToday._rating;
+                archive >> outToday._arrivals;
+                archive >> outToday._served;
+                archive >> outToday._walkouts;
+                archive >> outToday._noChoice;
+                archive >> outToday._unservedAtClose;
+            }
+
             /** @brief `writeState` 가 쓴 직원 하나를 읽습니다. 역할이 범위 밖이거나 플래그가 깨졌으면 false 입니다. */
             [[nodiscard]] static bool readStaff( Archive& archive, StaffMember& outStaff )
             {
@@ -526,18 +543,7 @@ namespace sw
         const bool bPartRead = archive.isOk() && restored._stock.readState( archive ) && restored._crafter.readState( archive ) && restored._market.readState( archive );
         if ( bPartRead == false )
             return false;
-        archive >> restored._today._revenue;
-        archive >> restored._today._tips;
-        archive >> restored._today._ingredientCost;
-        archive >> restored._today._wages;
-        archive >> restored._today._spoilageCost;
-        archive >> restored._today._profit;
-        archive >> restored._today._rating;
-        archive >> restored._today._arrivals;
-        archive >> restored._today._served;
-        archive >> restored._today._walkouts;
-        archive >> restored._today._noChoice;
-        archive >> restored._today._unservedAtClose;
+        RestaurantSimulationInternal::readDaySummary( archive, restored._today );
         const bool bTailRead = StateArchiveUtil::readStepTimer( archive, restored._stepTimer ) && StateArchiveUtil::readRandom( archive, restored._random ) &&
                                StateArchiveUtil::readName( archive, restored._weatherID );
         archive >> restored._minutes;

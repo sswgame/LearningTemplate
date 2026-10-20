@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Network/NetClientServer/NetSnapshot.h"
 
+#include "Core/Container/CompareUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Network/BitStream.h"
 #include "Core/Network/Message/NetSendBudget.h"
@@ -10,18 +11,47 @@
 
 namespace sw
 {
+    namespace
+    {
+        struct NetSnapshotInternal
+        {
+            /** @brief id 오름차순 목록에서 @p entityID 를 찾는 `lower_bound` 비교자입니다. */
+            static bool isEntityBefore( const NetEntityState& entity, uint32 entityID ) { return entity._entityID < entityID; }
+
+            /**
+             * @brief 사라진 엔티티 id 를 예산이 허락하는 만큼 앞에서부터 씁니다. 개수 필드는 가장 큰 값으로 잡습니다.
+             * @return 실은 개수입니다. 나머지는 다음 델타가 다시 고릅니다.
+             */
+            static size_t writeRemovals( BitWriter& writer, NetSendBudget& budget, const vector<uint32>& listRemoved )
+            {
+                budget.reserveBits( BitMath::computeVarUintBits( listRemoved.size() ) );
+                size_t removedCount = 0;
+                while ( removedCount < listRemoved.size() && budget.tryReserveBits( BitMath::computeVarUintBits( listRemoved[removedCount] ) ) )
+                {
+                    ++removedCount;
+                }
+                writer.writeVarUint( removedCount );
+                for ( size_t index = 0; index < removedCount; ++index )
+                {
+                    writer.writeVarUint( listRemoved[index] );
+                }
+                return removedCount;
+            }
+        };
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
     const NetEntityState* NetSnapshot::findEntity( uint32 entityID ) const
     {
-        const auto entityIter = std::lower_bound( _listEntity.begin(), _listEntity.end(), entityID,
-                                                  []( const NetEntityState& entity, uint32 id )
-        { return entity._entityID < id; } );
+        const auto entityIter = std::lower_bound( _listEntity.begin(), _listEntity.end(), entityID, &NetSnapshotInternal::isEntityBefore );
         return entityIter != _listEntity.end() && entityIter->_entityID == entityID ? &*entityIter : nullptr;
     }
 
     void NetSnapshot::sortEntities()
     {
-        std::sort( _listEntity.begin(), _listEntity.end(), []( const NetEntityState& lhs, const NetEntityState& rhs )
-        { return lhs._entityID < rhs._entityID; } );
+        std::sort( _listEntity.begin(), _listEntity.end(), Ascending<&NetEntityState::_entityID>{} );
     }
 
     void NetSnapshot::writeDelta( BitWriter& writer, const NetSnapshot* pBaseline, int32 maxBytes, NetSnapshot& outWritten, const vector<int32>* pListOrder,
@@ -68,17 +98,7 @@ namespace sw
                     listRemoved.push_back( old._entityID );
             }
         }
-        budget.reserveBits( BitMath::computeVarUintBits( listRemoved.size() ) );
-        size_t removedCount = 0;
-        while ( removedCount < listRemoved.size() && budget.tryReserveBits( BitMath::computeVarUintBits( listRemoved[removedCount] ) ) )
-        {
-            ++removedCount;
-        }
-        writer.writeVarUint( removedCount );
-        for ( size_t index = 0; index < removedCount; ++index )
-        {
-            writer.writeVarUint( listRemoved[index] );
-        }
+        const size_t removedCount = NetSnapshotInternal::writeRemovals( writer, budget, listRemoved );
 
         // 복원 스냅샷의 시작은 기준에서 지금도 있는 엔티티와, 사라졌지만 이번에 못 실은 엔티티이다. 못 실은 엔티티는 받는 쪽이 아직 가지고 있다.
         if ( pBaseline != nullptr )
@@ -122,8 +142,7 @@ namespace sw
             // 붙이면 저장 공간이 옮겨질 수 있으므로 시작 위치는 매번 다시 읽는다.
             NetEntityState* const pBegin = outWritten._listEntity.data();
             NetEntityState* const pEnd   = pBegin + baselineCount;
-            NetEntityState* const pFound = std::lower_bound( pBegin, pEnd, entity._entityID, []( const NetEntityState& written, uint32 entityID )
-            { return written._entityID < entityID; } );
+            NetEntityState* const pFound = std::lower_bound( pBegin, pEnd, entity._entityID, &NetSnapshotInternal::isEntityBefore );
             if ( pFound != pEnd && pFound->_entityID == entity._entityID )
                 *pFound = entity;
             else
@@ -185,8 +204,7 @@ namespace sw
             const uint32          typeID   = static_cast<uint32>( reader.readVarUint() );
             NetEntityState* const pBegin   = outSnapshot._listEntity.data();
             NetEntityState* const pEnd     = pBegin + baselineCount;
-            NetEntityState*       pEntity  = std::lower_bound( pBegin, pEnd, entityID, []( const NetEntityState& existing, uint32 id )
-                   { return existing._entityID < id; } );
+            NetEntityState*       pEntity  = std::lower_bound( pBegin, pEnd, entityID, &NetSnapshotInternal::isEntityBefore );
             if ( pEntity == pEnd || pEntity->_entityID != entityID )
                 pEntity = &outSnapshot._listEntity.emplace_back();
             pEntity->_entityID = entityID;

@@ -294,6 +294,10 @@ namespace sw
         /** @brief 두 몸을 출발 위치로 되돌립니다. 라운드 번호와 시간은 `_series` 가 다시 시작합니다. */
         void startRound();
         void resetFighter( int32 player );
+        /**
+         * @brief 상태마다 한 프레임을 진행합니다.
+         * @note 본문이 100 줄 안팎이지만 상태마다 짧은 switch 디스패처라 더 나누지 않는다(긴 함수 기준의 "유지"). 긴 상태는 `update*` 로 뺐다.
+         */
         void updateFighter( int32 player, uint16 pressedButtons );
         /** @brief 기술을 한 프레임 진행합니다. 끝났으면 `finishMove`, 추적 기술이면 상대 쪽으로 돕니다. */
         void updateAttack( int32 player );

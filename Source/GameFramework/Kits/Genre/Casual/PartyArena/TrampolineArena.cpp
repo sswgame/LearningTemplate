@@ -365,7 +365,6 @@ namespace sw
 
     void TrampolineArena::updatePlayer( int32 player, float32 deltaTime )
     {
-        using Internal         = TrampolineArenaInternal;
         TrampolinePlayer& body = _listPlayer[static_cast<size_t>( player )];
         body._attackCooldown.update( deltaTime );
         body._stunTimer.update( deltaTime );
@@ -395,25 +394,37 @@ namespace sw
             }
             case TrampolinePlayerState::Contact:
             {
-                // 닿기 전 창 안에서 미리 누른 입력이 있으면 그것을, 없으면 닿은 뒤 처음 누른 입력을 쓴다(연타해도 늦어지지 않게 하려는 것이다).
-                const bool bNoPressYet = body._jumpPressTime < body._landTime - _judge.getEarliestWidth();
-                if ( body._input._bJumpPressed == SW_TRUE && bNoPressYet )
-                    body._jumpPressTime = _time;
-                body._contactTimer.update( deltaTime );
-                if ( body._contactTimer.isActive() )
-                    return;
-                // 눌림이 끝났다. 닿은 순간을 목표로 점프 입력을 판정한다.
-                const TimingResult result   = _judge.judge( body._landTime, body._jumpPressTime );
-                const bool         bSuccess = result.isHit() && result._pWindow->_bBreaksCombo == SW_FALSE;
-                launch( player, bSuccess, bSuccess ? result._pWindow->_grade : hashed_string{} );
+                updateContact( player, deltaTime );
                 return;
             }
             case TrampolinePlayerState::Air:
             {
-                break;
+                updateAir( player, deltaTime );
+                return;
             }
         }
+    }
 
+    void TrampolineArena::updateContact( int32 player, float32 deltaTime )
+    {
+        TrampolinePlayer& body = _listPlayer[static_cast<size_t>( player )];
+        // 닿기 전 창 안에서 미리 누른 입력이 있으면 그것을, 없으면 닿은 뒤 처음 누른 입력을 쓴다(연타해도 늦어지지 않게 하려는 것이다).
+        const bool bNoPressYet = body._jumpPressTime < body._landTime - _judge.getEarliestWidth();
+        if ( body._input._bJumpPressed == SW_TRUE && bNoPressYet )
+            body._jumpPressTime = _time;
+        body._contactTimer.update( deltaTime );
+        if ( body._contactTimer.isActive() )
+            return;
+        // 눌림이 끝났다. 닿은 순간을 목표로 점프 입력을 판정한다.
+        const TimingResult result   = _judge.judge( body._landTime, body._jumpPressTime );
+        const bool         bSuccess = result.isHit() && result._pWindow->_bBreaksCombo == SW_FALSE;
+        launch( player, bSuccess, bSuccess ? result._pWindow->_grade : hashed_string{} );
+    }
+
+    void TrampolineArena::updateAir( int32 player, float32 deltaTime )
+    {
+        using Internal               = TrampolineArenaInternal;
+        TrampolinePlayer&      body  = _listPlayer[static_cast<size_t>( player )];
         const TrampolineInput& input = body._input;
         if ( input._bJumpPressed == SW_TRUE )
             body._jumpPressTime = _time;

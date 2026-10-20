@@ -261,6 +261,14 @@ namespace sw
         std::sort( listLeave.begin(), listLeave.end() );
         const size_t pendingLeaveIndex = sendLeaves( connectionID, observer, scratch );
 
+        // 2) 새로 보임 · 3) 갱신
+        sendEnters( connectionID, observer, center, scratch );
+        sendUpdates( connectionID, observer, center, pendingLeaveIndex, deltaTime, scratch );
+    }
+
+    void MMOReplicator::sendEnters( int32 connectionID, Observer& observer, const float3& center, ObserverScratch& scratch )
+    {
+        const bool bAlwaysPolicy = _pPolicy->hasAlwaysRelevant();
         // 2) 새로 보임: 들어오는 반경 안의 엔티티이다. 가까운 것부터 처리하고 틱마다 상한을 둔다.
         vector<SlotHandle>& listNear = scratch._listNear;
         _grid.queryCircle( center._x, center._z, _settings._enterRadius, listNear );
@@ -319,7 +327,12 @@ namespace sw
             }
             // 전송이 거절됐으면(신뢰 창이 찼다) 아무것도 보이는 목록에 넣지 않고, 다음 틱에 다시 고른다.
         }
+    }
 
+    void MMOReplicator::sendUpdates( int32 connectionID, Observer& observer, const float3& center, size_t pendingLeaveIndex, float32 deltaTime,
+                                     ObserverScratch& scratch )
+    {
+        const vector<uint32>& listLeave = scratch._listLeave;
         // 3) 갱신: 우선도를 쌓고 예산 안에서 큰 것부터 보낸다. 보이지 않게 됨을 아직 못 보낸 엔티티는 건너뛴다. 신뢰 창이 찼기 때문이며, 사라진 엔티티일 수 있다.
         resolveInFlightUpdates( observer );
         NetPrioritizer& prioritizer = observer._prioritizer;

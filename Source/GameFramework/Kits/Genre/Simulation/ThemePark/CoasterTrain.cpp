@@ -15,6 +15,55 @@ namespace sw
             static constexpr float32 kInversionUpY  = -0.2f; ///< 좌석 위의 y 가 이보다 작으면 뒤집힌 것이다
             static constexpr float32 kUprightUpY    = 0.2f;  ///< 이보다 크면 바로 선 것이다
             static constexpr uint8   kDrivenFlags   = CoasterSegmentFlag::kLift | CoasterSegmentFlag::kStation | CoasterSegmentFlag::kBooster;
+
+            /** @brief 낙하 세기입니다. 꼭대기에서 `kDropThreshold` 넘게 내려가기 시작해 바닥을 찍고 `kDropRecovery` 올라오면 하나로 셉니다. */
+            struct DropTracker
+            {
+                float32 _peakHeight{ 0.0f };
+                float32 _valleyHeight{ 0.0f };
+                bool    _bFalling{ false };
+
+                /** @brief 이번 걸음의 높이를 보탭니다. 낙하가 끝났으면 @p inoutStats 에 셉니다. */
+                void observe( float32 height, CoasterRideStats& inoutStats )
+                {
+                    if ( _bFalling == false )
+                    {
+                        if ( height > _peakHeight )
+                        {
+                            _peakHeight = height;
+                        }
+                        else if ( _peakHeight - height > kDropThreshold )
+                        {
+                            _bFalling     = true;
+                            _valleyHeight = height;
+                        }
+                        return;
+                    }
+                    if ( height < _valleyHeight )
+                    {
+                        _valleyHeight = height;
+                    }
+                    else if ( height - _valleyHeight > kDropRecovery )
+                    {
+                        countDrop( inoutStats );
+                        _bFalling   = false;
+                        _peakHeight = height;
+                    }
+                }
+
+                /** @brief 끝날 때 아직 떨어지는 중이면 그 낙하도 셉니다. */
+                void finish( CoasterRideStats& inoutStats ) const
+                {
+                    if ( _bFalling )
+                        countDrop( inoutStats );
+                }
+
+                void countDrop( CoasterRideStats& inoutStats ) const
+                {
+                    ++inoutStats._dropCount;
+                    inoutStats._maxDropHeight = MathUtil::max( inoutStats._maxDropHeight, _peakHeight - _valleyHeight );
+                }
+            };
         };
     } // namespace
 } // namespace sw
@@ -164,13 +213,13 @@ namespace sw
         train.initialize( &track, params, 0.0f );
         const float32 deltaTime = MathUtil::clamp( params._fixedStep, 1.0f / 2000.0f, 1.0f / 30.0f ); // `initialize` 와 같은 값으로 자른다. 한 번에 한 번만 적분한다
 
-        float32 travelled    = 0.0f;
-        float32 stillTime    = 0.0f;
-        float32 peakHeight   = train.getFrame()._position._y;
-        float32 valleyHeight = peakHeight;
-        bool    bFalling     = false;
-        bool    bInverted    = false;
-        float32 time         = 0.0f;
+        float32                           travelled = 0.0f;
+        float32                           stillTime = 0.0f;
+        CoasterTrainInternal::DropTracker drop;
+        drop._peakHeight   = train.getFrame()._position._y;
+        drop._valleyHeight = drop._peakHeight;
+        bool    bInverted  = false;
+        float32 time       = 0.0f;
         while ( time < maxTime )
         {
             train.step( deltaTime );
@@ -202,33 +251,7 @@ namespace sw
                 bInverted = false;
             }
 
-            // 낙하: 꼭대기에서 2 m 넘게 내려가기 시작해 바닥을 찍고 1 m 올라오면 하나로 센다.
-            if ( bFalling == false )
-            {
-                if ( height > peakHeight )
-                {
-                    peakHeight = height;
-                }
-                else if ( peakHeight - height > CoasterTrainInternal::kDropThreshold )
-                {
-                    bFalling     = true;
-                    valleyHeight = height;
-                }
-            }
-            else
-            {
-                if ( height < valleyHeight )
-                {
-                    valleyHeight = height;
-                }
-                else if ( height - valleyHeight > CoasterTrainInternal::kDropRecovery )
-                {
-                    ++stats._dropCount;
-                    stats._maxDropHeight = MathUtil::max( stats._maxDropHeight, peakHeight - valleyHeight );
-                    bFalling             = false;
-                    peakHeight           = height;
-                }
-            }
+            drop.observe( height, stats );
 
             const bool bOpenEnd = track.isClosed() == false && train.getDistance() >= track.getLength() - 0.01f;
             if ( train.getLapCount() >= 1 || bOpenEnd )
@@ -245,11 +268,7 @@ namespace sw
                 break;
             }
         }
-        if ( bFalling )
-        {
-            ++stats._dropCount;
-            stats._maxDropHeight = MathUtil::max( stats._maxDropHeight, peakHeight - valleyHeight );
-        }
+        drop.finish( stats );
 
         stats._lapTime      = time;
         stats._averageSpeed = time > 0.0f ? travelled / time : 0.0f;

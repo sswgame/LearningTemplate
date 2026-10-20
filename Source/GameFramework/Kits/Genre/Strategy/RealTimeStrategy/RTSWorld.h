@@ -346,9 +346,11 @@ namespace sw
         void      stepFixed( float32 deltaTime );
         void      recomputeSupply();
         void      rebuildBuckets();
-        void      updateUnit( RTSUnit& unit, float32 deltaTime );
-        void      updateOrder( RTSUnit& unit, float32 deltaTime );
-        void      updateGather( RTSUnit& unit, RTSOrder& order, float32 deltaTime );
+        /** @brief 읽은 뒤 살아 있는 이동 유닛의 길찾기 에이전트를 맞추고, 흐름장을 쓰던 명령(@p listFlowFieldOrder, 유닛 · 명령 순서)에 흐름장을 다시 빌립니다. */
+        void restoreAgents( const vector<uint8>& listFlowFieldOrder );
+        void updateUnit( RTSUnit& unit, float32 deltaTime );
+        void updateOrder( RTSUnit& unit, float32 deltaTime );
+        void updateGather( RTSUnit& unit, RTSOrder& order, float32 deltaTime );
         /** @brief 실은 자원을 가까운 저장소로 가져가 지갑에 넣습니다(채취의 `Returning` 단계). */
         void returnCargo( RTSUnit& unit );
         /** @brief 채취 시간이 차면 @p source 에서 캐 싣고 돌아가는 단계로 넘깁니다. @p target 은 일꾼이 붙은 유닛(광물이나 정제소)입니다. */
