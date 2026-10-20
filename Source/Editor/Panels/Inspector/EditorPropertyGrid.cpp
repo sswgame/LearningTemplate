@@ -156,7 +156,7 @@ namespace sw::editor
 
     void EditorPropertyGrid::drawFavoriteProperties( const EditorPropertyGridTarget& target )
     {
-        const bool bNoFavoritesToDraw = _pFavorites == nullptr || target._pType == nullptr || _pFavorites->hasAnyForType( target._pType->_name.c_str() ) == false;
+        const bool bNoFavoritesToDraw = _pFavorites == nullptr || target._pType == nullptr || _pFavorites->hasAnyForTypeOrBase( *target._pType ) == false;
         if ( bNoFavoritesToDraw )
             return;
         // 본문 그리드와 같은 카테고리 · 프로퍼티 id 를 쓰므로 id 공간을 나눈다.
@@ -240,7 +240,7 @@ namespace sw::editor
             {
                 for ( const PropertyInfo* pProp : group._listProperty )
                 {
-                    if ( _pFavorites->contains( InspectorFavorites::makeKey( pTypeInfo->_name.c_str(), pProp->_name.c_str() ) ) )
+                    if ( _pFavorites->contains( InspectorFavorites::makePropertyKey( *pTypeInfo, *pProp ) ) )
                         favoriteGroup._listProperty.push_back( pProp );
                 }
             }
@@ -270,13 +270,17 @@ namespace sw::editor
         if ( bIsEditedComponent )
             pDefaultInstance = pDefaultContext->getSubsystem<EditorDefaultObjects>().findDefault( *pTypeInfo );
         // 바뀐 것만 보기이면 기본값과 같은 프로퍼티를 뺀다. 남은 것이 없는 카테고리는 머리째 감춘다.
+        // 다중 선택에서 값이 갈린(혼합) 프로퍼티는 남긴다 — 값이 다르면 선택 중 적어도 하나는 기본값이 아니다. 갈리지 않았으면 모두 주 선택과 같으므로 주 선택만 보면 된다.
         if ( _bShowModifiedOnly )
         {
             for ( InspectorPropertyGroup& group : listGroup )
             {
                 auto& props = group._listProperty;
-                props.erase( std::remove_if( props.begin(), props.end(), [pInstance, pDefaultInstance]( const PropertyInfo* pProp )
-                { return EditorDefaultObjects::isDefaultValue( *pProp, pInstance, pDefaultInstance ); } ),
+                props.erase( std::remove_if( props.begin(), props.end(), [this, pInstance, pDefaultInstance]( const PropertyInfo* pProp )
+                {
+                    const bool bMixed = _isMixed.isBound() && _isMixed( *pProp );
+                    return bMixed == false && EditorDefaultObjects::isDefaultValue( *pProp, pInstance, pDefaultInstance );
+                } ),
                              props.end() );
             }
             listGroup.erase( std::remove_if( listGroup.begin(), listGroup.end(), []( const InspectorPropertyGroup& group )
@@ -316,7 +320,7 @@ namespace sw::editor
                         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "MultipleValues" ) );
                         ImGui::SameLine();
                     }
-                    const string favoriteKey = bFavoriteTarget ? InspectorFavorites::makeKey( pTypeInfo->_name.c_str(), prop->_name.c_str() ) : string{};
+                    const string favoriteKey = bFavoriteTarget ? InspectorFavorites::makePropertyKey( *pTypeInfo, *prop ) : string{};
                     const bool   bFavorite   = bFavoriteTarget && _pFavorites->contains( favoriteKey );
                     if ( bFavorite )
                     {

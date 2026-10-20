@@ -127,6 +127,137 @@ namespace sw
                 }
             }
 
+            /// 패드 스틱 축 번호입니다(왼쪽 x · y = 0 · 1, 오른쪽 x · y = 2 · 3). `ActionAxis` 재생(AutomationActionSteps)과 같은 번호다.
+            static constexpr uint16 kStickAxisCount = 4;
+
+            /**
+             * @struct StickTrack
+             * @brief 액션 스틱 하나(패드 · 왼쪽/오른쪽)의 녹화 상태입니다. 값이 바뀔 때마다 앞 구간을 `ActionAxis`(그 값으로 구간 길이만큼)로 닫는다.
+             */
+            struct StickTrack
+            {
+                const hashed_string* _pAction{ nullptr };
+                float32              _arrValue[2]{};   ///< 열린 구간의 값(x, y)
+                float32              _arrPending[2]{}; ///< 이번 프레임까지 받은 최신 값(x, y)
+                uint32               _runStart{ 0 };   ///< 열린 구간이 시작한 녹화 프레임
+                uint8                _pad{ 0 };
+                uint8                _stick{ 0 };        ///< 0 왼쪽, 1 오른쪽
+                bool                 _bChanged{ false }; ///< 이번 프레임에 값이 바뀌었다
+                bool                 _bOpen{ false };    ///< 0 이 아닌 값의 구간이 열려 있다
+            };
+
+            /** @brief 바인딩이 쓰는 장치 종류입니다. `ActionAxis` 재생이 `device` 로 바인딩을 고르는 규칙(AutomationActionSteps `getBindingDevice`)과 같다. */
+            static InputDeviceKind getBindingDevice( const ActionBinding& binding )
+            {
+                switch ( binding._kind )
+                {
+                    case BindingKind::GamepadStick2D:
+                        return InputDeviceKind::Gamepad;
+                    case BindingKind::MouseDelta2D:
+                    case BindingKind::MouseWheel1D:
+                    case BindingKind::VirtualJoystick2D:
+                        return InputDeviceKind::Mouse;
+                    default:
+                        return binding._arrSlot[0]._deviceKind;
+                }
+            }
+
+            /**
+             * @brief 패드 @p pad 의 스틱 @p stick 이 어떤 액션의, `ActionAxis device="gamepad"` 가 고를 바인딩(그 액션의 첫 패드 축 바인딩)이면 그 액션 이름입니다. 없으면 nullptr 입니다.
+             * @details 재생은 그 바인딩의 스틱 두 축에 값을 낸다 — 같은 패드 · 같은 스틱의 2D 바인딩일 때만 같은 입력이 재현된다(한 성분 바인딩은 x 를 그 성분에 낸다).
+             */
+            [[nodiscard]] static const hashed_string* findActionOfStick( const InputMap& inputMap, uint8 pad, uint8 stick )
+            {
+                const GamepadStick wanted = stick == 0 ? GamepadStick::Left : GamepadStick::Right;
+                for ( const hashed_string& action : inputMap.getActionNames() )
+                {
+                    const uint32 bindingCount = inputMap.getBindingCount( action );
+                    for ( uint32 bindIndex = 0; bindIndex < bindingCount; ++bindIndex )
+                    {
+                        const ActionBinding* pBinding = inputMap.getBinding( action, bindIndex );
+                        if ( pBinding == nullptr || getBindingDevice( *pBinding ) != InputDeviceKind::Gamepad )
+                            continue;
+                        const bool bComposite = pBinding->_kind == BindingKind::Axis1DComposite || pBinding->_kind == BindingKind::Vector2DComposite;
+                        if ( bComposite == false && pBinding->_kind != BindingKind::GamepadStick2D )
+                            continue; // 단추 바인딩은 ActionAxis 가 고르지 않는다
+                        const bool bSameStick = pBinding->_kind == BindingKind::GamepadStick2D && pBinding->_stick == wanted && pBinding->_deviceIndex == pad &&
+                                                pBinding->_stickAxis == GamepadStickAxis::Both;
+                        if ( bSameStick )
+                            return &action;
+                        break; // 재생은 이 바인딩에 값을 낸다 — 다른 스틱이면 이 액션으로 쓸 수 없다
+                    }
+                }
+                return nullptr;
+            }
+
+            /**
+             * @brief 패드 스틱 축 이벤트를 액션 스틱의 구간 값으로 받습니다. 액션 스틱이 아니면(입력 맵이 없거나 어느 액션의 그 자리도 아니다, 트리거 축) false 이고 호출자가 `GamepadAxis` 로 쓴다.
+             */
+            [[nodiscard]] static bool trackStickAxis( const RawInputEvent& event, const ScenarioRecordSettings& settings, vector<StickTrack>& inoutListTrack )
+            {
+                const uint16 axis = event._payload._gamepadData._axisIndex;
+                if ( settings._pInputMap == nullptr || axis >= kStickAxisCount )
+                    return false;
+                const uint8 pad    = event._deviceIndex;
+                const uint8 stick  = static_cast<uint8>( axis / 2 );
+                StickTrack* pTrack = nullptr;
+                for ( StickTrack& track : inoutListTrack )
+                {
+                    if ( track._pad == pad && track._stick == stick )
+                        pTrack = &track;
+                }
+                if ( pTrack == nullptr )
+                {
+                    StickTrack track;
+                    track._pAction = findActionOfStick( *settings._pInputMap, pad, stick );
+                    track._pad     = pad;
+                    track._stick   = stick;
+                    inoutListTrack.push_back( track );
+                    pTrack = &inoutListTrack.back();
+                }
+                if ( pTrack->_pAction == nullptr )
+                    return false;
+                pTrack->_arrPending[axis % 2] = event._payload._gamepadData._axisValue;
+                pTrack->_bChanged             = true;
+                return true;
+            }
+
+            /** @brief 열린 구간을 `ActionAxis` 하나로 닫아 그 구간의 첫 프레임 본문에 씁니다. */
+            static void closeStickRun( vector<string>& inoutListBody, StickTrack& inoutTrack, uint32 endFrame, ScenarioRecordOutput& outResult )
+            {
+                if ( inoutTrack._bOpen == false )
+                    return;
+                inoutTrack._bOpen = false;
+                string& body      = inoutListBody[inoutTrack._runStart];
+                body += "<ActionAxis name=\"";
+                appendEscaped( body, inoutTrack._pAction->view() );
+                body += "\" x=\"";
+                appendFloat( body, inoutTrack._arrValue[0] );
+                body += "\" y=\"";
+                appendFloat( body, inoutTrack._arrValue[1] );
+                body += "\" frames=\"" + to_string( endFrame > inoutTrack._runStart ? endFrame - inoutTrack._runStart : 1u ) + "\" device=\"gamepad\"/>";
+                ++outResult._writtenStepCount;
+            }
+
+            /**
+             * @brief 이번 프레임(@p frameIndex)에 값이 바뀐 액션 스틱마다 앞 구간을 닫고, 새 값이 0 이 아니면 새 구간을 엽니다.
+             * @details 재생의 `ActionAxis` 는 구간 끝에 두 축을 0 으로 되돌리고, 같은 프레임에 시작하는 다음 구간이 그 뒤에 값을 낸다(단계는 파일 순서로 준비된다).
+             */
+            static void advanceStickRuns( vector<string>& inoutListBody, vector<StickTrack>& inoutListTrack, uint32 frameIndex, ScenarioRecordOutput& outResult )
+            {
+                for ( StickTrack& track : inoutListTrack )
+                {
+                    if ( track._bChanged == false )
+                        continue;
+                    track._bChanged = false;
+                    closeStickRun( inoutListBody, track, frameIndex, outResult );
+                    track._arrValue[0] = track._arrPending[0];
+                    track._arrValue[1] = track._arrPending[1];
+                    track._runStart    = frameIndex;
+                    track._bOpen       = track._arrValue[0] != 0.0f || track._arrValue[1] != 0.0f;
+                }
+            }
+
             static float32 toFraction( int32 value, uint32 size )
             {
                 if ( size <= 1 )
@@ -136,7 +267,8 @@ namespace sw
             }
 
             /** @brief 한 프레임의 이벤트를 단계 글로 씁니다. 쓴 단계 수를 더하고, 못 쓴 이벤트를 셉니다. */
-            static void appendFrameSteps( string& outBody, const InputReplayFrame& frame, const ScenarioRecordSettings& settings, ScenarioRecordOutput& outResult )
+            static void appendFrameSteps( string& outBody, const InputReplayFrame& frame, const ScenarioRecordSettings& settings, vector<StickTrack>& inoutListTrack,
+                                          ScenarioRecordOutput& outResult )
             {
                 bool    bHasPosition = false;
                 int32   positionX    = 0;
@@ -199,7 +331,8 @@ namespace sw
                         {
                             // Win32 는 두 번째 누름을 Down 대신 DoubleClick 으로 보낸다(Down · Up · DoubleClick · Up).
                             // 입력 관리자도 이를 버튼 눌림으로 다루므로 Press 로 쓴다. 건너뛰면 두 번째 누름이 사라진다.
-                            // 재생은 원시 Down 둘을 내므로 DoubleClick 이벤트 자체에 기대는 코드는 재현되지 않는다.
+                            // 재생은 원시 Down 둘을 낸다. DoubleClick 이벤트 자체를 읽는 쪽은 없다 — 입력 관리자는 Down 으로 다루고, 입력 맵(DoubleClicked)과
+                            // ImGui 는 누름 간격으로 스스로 판정한다. 그 이벤트를 읽는 코드가 생기면 VirtualInputScript 에 DoubleClick 단계를 더한다.
                             appendSlot( "Press", InputSlot::fromMouseButton( event._payload._mouseData._button ) );
                             break;
                         }
@@ -251,6 +384,9 @@ namespace sw
                         }
                         case RawInputEventType::GamepadAxis:
                         {
+                            // 액션의 스틱이면 값 구간을 ActionAxis 로 쓴다(advanceStickRuns) — 스틱 배치를 바꿔도 녹화가 산다.
+                            if ( trackStickAxis( event, settings, inoutListTrack ) )
+                                break;
                             outBody += "<GamepadAxis axis=\"" + to_string( static_cast<uint32>( event._payload._gamepadData._axisIndex ) ) + "\" value=\"";
                             appendFloat( outBody, event._payload._gamepadData._axisValue );
                             outBody += "\"";
@@ -364,18 +500,27 @@ namespace sw
     {
         using Internal = ScenarioRecorderInternal;
 
-        ScenarioRecordOutput result;
-        string               body;
-        string               frameBody;
-        uint32               lastFrame = settings._firstFrame;
+        ScenarioRecordOutput         result;
+        vector<string>               listFrameBody( listFrame.size() );
+        vector<Internal::StickTrack> listStickTrack;
         for ( size_t index = 0; index < listFrame.size(); ++index )
         {
-            frameBody.clear();
-            Internal::appendFrameSteps( frameBody, listFrame[index], settings, result );
-            if ( frameBody.empty() )
+            Internal::appendFrameSteps( listFrameBody[index], listFrame[index], settings, listStickTrack, result );
+            Internal::advanceStickRuns( listFrameBody, listStickTrack, static_cast<uint32>( index ), result );
+        }
+        // 녹화가 끝날 때 기울어 있던 스틱은 마지막 녹화 프레임 다음에 놓는다(재생이 끝 뒤까지 기울인 채 남기지 않는다).
+        for ( Internal::StickTrack& track : listStickTrack )
+        {
+            Internal::closeStickRun( listFrameBody, track, static_cast<uint32>( listFrame.size() ), result );
+        }
+        string body;
+        uint32 lastFrame = settings._firstFrame;
+        for ( size_t index = 0; index < listFrameBody.size(); ++index )
+        {
+            if ( listFrameBody[index].empty() )
                 continue;
             const uint32 frame = settings._firstFrame + static_cast<uint32>( index );
-            body += "\t<At frame=\"" + to_string( frame ) + "\">" + frameBody + "</At>\n";
+            body += "\t<At frame=\"" + to_string( frame ) + "\">" + listFrameBody[index] + "</At>\n";
             lastFrame = frame;
         }
         // 검사점은 마지막 녹화 프레임(값을 읽은 프레임)에 둔다 — 재생도 그 프레임의 씬 틱 뒤에 같은 값을 내야 한다.
