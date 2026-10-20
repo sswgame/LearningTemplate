@@ -52,14 +52,6 @@ namespace sw
                 (void)XMLNameCheck::reportUnknownAttributes( node, arrKnown, sourceName, LogLevel::Warning ); // 경고만 하고 읽기를 잇는다
             }
 
-            /** @brief "x y" 두 실수를 읽습니다. 빠진 성분은 @p fallback 의 것입니다. */
-            static float2 readFloat2( const XMLNode& node, const utf8* pName, const float2& fallback )
-            {
-                float32 arrValue[2] = { fallback._x, fallback._y };
-                (void)GameDataXML::parseFloats( node.getAttributeText( pName ), arrValue, 2 ); // 못 읽은 성분은 대체값이 남는다
-                return float2{ arrValue[0], arrValue[1] };
-            }
-
             static float32 readDegrees( const XMLNode& node, const utf8* pName, float32 fallbackRadians )
             {
                 return node.getAttributeFloat( pName, fallbackRadians * MathUtil::kRadianToDegree ) * MathUtil::kDegreeToRadian;
@@ -107,22 +99,24 @@ namespace sw
                 }
             }
 
-            static void readView( const XMLNode& node, CameraViewDef& outView, string_view sourceName )
+            /** @brief 시점 속성을 읽습니다. 벡터 속성이 틀리면 false 입니다(오류는 `GameDataXML` 이 속성 이름과 함께 알린다). */
+            [[nodiscard]] static bool readView( const XMLNode& node, CameraViewDef& outView, string_view sourceName )
             {
                 warnUnknownAttributes( node, kArrViewAttribute, sourceName );
                 readEnum( node, "mode", outView._mode, sourceName );
                 outView._pitch    = readDegrees( node, "pitch", outView._pitch );
                 outView._yaw      = readDegrees( node, "yaw", outView._yaw );
                 outView._distance = MathUtil::max( 0.0f, node.getAttributeFloat( "distance", outView._distance ) );
-                outView._offset   = GameDataXML::parseFloat3( node.getAttributeText( "offset" ), outView._offset );
+                bool bValid       = GameDataXML::readOptionalFloat3( node, "offset", sourceName, outView._offset );
                 readEnum( node, "aim", outView._aim, sourceName );
                 if ( node.findAttribute( "lookAt" ) != nullptr )
                 {
-                    outView._lookAt = GameDataXML::parseFloat3( node.getAttributeText( "lookAt" ), outView._lookAt );
+                    bValid = GameDataXML::readOptionalFloat3( node, "lookAt", sourceName, outView._lookAt ) && bValid;
                     // 점을 적었으면 그것을 본다 — `aim` 을 따로 적지 않아도 된다.
                     if ( node.findAttribute( "aim" ) == nullptr )
                         outView._aim = CameraAimMode::Point;
                 }
+                return bValid;
             }
 
             static void readInput( const XMLNode& node, CameraInputDef& outInput, string_view sourceName )
@@ -136,7 +130,8 @@ namespace sw
                 outInput._bLookWhileHeld  = node.getAttributeBool( "lookWhileHeld", outInput._bLookWhileHeld );
             }
 
-            static void readConfiner( const XMLNode& node, CameraConfinerDef& outConfiner, string_view sourceName )
+            /** @brief 제한 상자를 읽습니다. 벡터 속성이 틀리면 false 입니다. */
+            [[nodiscard]] static bool readConfiner( const XMLNode& node, CameraConfinerDef& outConfiner, string_view sourceName )
             {
                 warnUnknownAttributes( node, kArrConfinerAttribute, sourceName );
                 outConfiner._pitchMin = readDegrees( node, "pitchMin", outConfiner._pitchMin );
@@ -147,12 +142,14 @@ namespace sw
                 const bool bHasMax    = node.findAttribute( "boundsMax" ) != nullptr;
                 if ( bHasMin != bHasMax )
                     SW_LOG_WARNING( "%#: <Confiner> needs both boundsMin and boundsMax - the box is ignored", sourceName );
+                bool bValid = true;
                 if ( bHasMin && bHasMax )
                 {
-                    outConfiner._boundsMin = GameDataXML::parseFloat3( node.getAttributeText( "boundsMin" ), outConfiner._boundsMin );
-                    outConfiner._boundsMax = GameDataXML::parseFloat3( node.getAttributeText( "boundsMax" ), outConfiner._boundsMax );
-                    outConfiner._bBounds   = true;
+                    bValid               = GameDataXML::readOptionalFloat3( node, "boundsMin", sourceName, outConfiner._boundsMin );
+                    bValid               = GameDataXML::readOptionalFloat3( node, "boundsMax", sourceName, outConfiner._boundsMax ) && bValid;
+                    outConfiner._bBounds = true;
                 }
+                return bValid;
             }
 
             static void readFraming( const XMLNode& node, CameraFramingDef& outFraming, string_view sourceName )
@@ -182,14 +179,19 @@ namespace sw
                 outCollision._recoverTime = MathUtil::max( 0.0f, node.getAttributeFloat( "recoverTime", outCollision._recoverTime ) );
             }
 
-            static void readNoise( const XMLNode& node, CameraNoiseDef& outNoise, string_view sourceName )
+            /** @brief 흔들림을 읽습니다. 벡터 속성이 틀리면 false 입니다. */
+            [[nodiscard]] static bool readNoise( const XMLNode& node, CameraNoiseDef& outNoise, string_view sourceName )
             {
                 warnUnknownAttributes( node, kArrNoiseAttribute, sourceName );
-                outNoise._positionAmplitude  = GameDataXML::parseFloat3( node.getAttributeText( "position" ), outNoise._positionAmplitude );
-                const float3 rotationDegrees = GameDataXML::parseFloat3( node.getAttributeText( "rotation" ), outNoise._rotationAmplitude * MathUtil::kRadianToDegree );
-                outNoise._rotationAmplitude  = rotationDegrees * MathUtil::kDegreeToRadian;
+                bool   bValid          = GameDataXML::readOptionalFloat3( node, "position", sourceName, outNoise._positionAmplitude );
+                float3 rotationDegrees = outNoise._rotationAmplitude * MathUtil::kRadianToDegree;
+                bValid                 = GameDataXML::readOptionalFloat3( node, "rotation", sourceName, rotationDegrees ) && bValid;
+
+                const float3 rotationRadians = rotationDegrees * MathUtil::kDegreeToRadian;
+                outNoise._rotationAmplitude  = rotationRadians;
                 outNoise._frequency          = MathUtil::max( 0.0f, node.getAttributeFloat( "frequency", outNoise._frequency ) );
                 outNoise._seed               = static_cast<uint32>( MathUtil::max( 0, node.getAttributeInt( "seed", static_cast<int32>( outNoise._seed ) ) ) );
+                return bValid;
             }
 
             static void readSweep( const XMLNode& node, CameraSweepDef& outSweep, string_view sourceName )
@@ -200,7 +202,8 @@ namespace sw
                 outSweep._phase        = MathUtil::saturate( node.getAttributeFloat( "phase", outSweep._phase ) );
             }
 
-            static void readLens( const XMLNode& node, CameraLensDef& outLens, string_view sourceName )
+            /** @brief 렌즈를 읽습니다. 벡터 속성(`sensor` · `shift`)이 틀리면 false 입니다. */
+            [[nodiscard]] static bool readLens( const XMLNode& node, CameraLensDef& outLens, string_view sourceName )
             {
                 warnUnknownAttributes( node, kArrLensAttribute, sourceName );
                 outLens._fieldOfViewY  = MathUtil::clamp( readDegrees( node, "fieldOfViewY", outLens._fieldOfViewY ), 0.01f, 3.13f );
@@ -209,15 +212,17 @@ namespace sw
                 outLens._farPlane      = MathUtil::max( outLens._nearPlane + 0.01f, node.getAttributeFloat( "far", outLens._farPlane ) );
                 outLens._bOrthographic = node.getAttributeBool( "orthographic", outLens._bOrthographic );
                 outLens._focalLength   = MathUtil::max( 0.0f, node.getAttributeFloat( "focalLength", outLens._focalLength ) );
-                outLens._sensorSize    = readFloat2( node, "sensor", outLens._sensorSize );
+                bool bValid            = GameDataXML::readOptionalFloat2( node, "sensor", sourceName, outLens._sensorSize );
                 outLens._sensorSize    = float2::max( outLens._sensorSize, float2{ 0.01f, 0.01f } );
                 outLens._focusDistance = MathUtil::max( 0.0f, node.getAttributeFloat( "focusDistance", outLens._focusDistance ) );
                 outLens._aperture      = MathUtil::max( 0.5f, node.getAttributeFloat( "aperture", outLens._aperture ) );
-                outLens._lensShift     = readFloat2( node, "shift", outLens._lensShift );
+                bValid                 = GameDataXML::readOptionalFloat2( node, "shift", sourceName, outLens._lensShift ) && bValid;
                 outLens._dutch         = readDegrees( node, "dutch", outLens._dutch );
+                return bValid;
             }
 
-            static void readDolly( const XMLNode& node, CameraDollyDef& outDolly, string_view sourceName )
+            /** @brief 돌리 경로를 읽습니다. `<Point>` 의 `position` 은 필수이고, 없거나 틀리면 false 입니다. */
+            [[nodiscard]] static bool readDolly( const XMLNode& node, CameraDollyDef& outDolly, string_view sourceName )
             {
                 warnUnknownAttributes( node, kArrDollyAttribute, sourceName );
                 readEnum( node, "type", outDolly._type, sourceName );
@@ -226,13 +231,19 @@ namespace sw
                 XMLNode pointNode    = node.findChild( "Point" );
                 if ( pointNode.isValid() )
                     outDolly._listPoint.clear();
+                bool bValid = true;
                 for ( ; pointNode; pointNode = pointNode.findNextSibling( "Point" ) )
                 {
                     warnUnknownAttributes( pointNode, kArrPointAttribute, sourceName );
-                    outDolly._listPoint.push_back( GameDataXML::parseFloat3( pointNode.getAttributeText( "position" ), float3{} ) );
+                    float3 position{};
+                    if ( GameDataXML::readRequiredFloat3( pointNode, "position", sourceName, position ) )
+                        outDolly._listPoint.push_back( position );
+                    else
+                        bValid = false;
                 }
                 if ( outDolly._listPoint.size() < 2 )
                     SW_LOG_WARNING( "%#: <Dolly> needs at least two <Point> - the camera stays at the view offset", sourceName );
+                return bValid;
             }
 
             static void readPostProcess( const XMLNode& node, CameraPostProcessValues& outValues, string_view sourceName )
@@ -263,11 +274,11 @@ namespace sw
                     const utf8* pName = child.getName();
                     if ( StringUtil::equals( pName, "View", true ) )
                     {
-                        readView( child, inoutDef._view, sourceName );
+                        bValid = readView( child, inoutDef._view, sourceName ) && bValid;
                     }
                     else if ( StringUtil::equals( pName, "Lens", true ) )
                     {
-                        readLens( child, inoutDef._lens, sourceName );
+                        bValid = readLens( child, inoutDef._lens, sourceName ) && bValid;
                     }
                     else if ( StringUtil::equals( pName, "Damping", true ) )
                     {
@@ -284,7 +295,7 @@ namespace sw
                     }
                     else if ( StringUtil::equals( pName, "Confiner", true ) )
                     {
-                        readConfiner( child, inoutDef._confiner, sourceName );
+                        bValid = readConfiner( child, inoutDef._confiner, sourceName ) && bValid;
                     }
                     else if ( StringUtil::equals( pName, "Framing", true ) )
                     {
@@ -296,7 +307,7 @@ namespace sw
                     }
                     else if ( StringUtil::equals( pName, "Noise", true ) )
                     {
-                        readNoise( child, inoutDef._noise, sourceName );
+                        bValid = readNoise( child, inoutDef._noise, sourceName ) && bValid;
                     }
                     else if ( StringUtil::equals( pName, "HeadBob", true ) )
                     {
@@ -309,7 +320,7 @@ namespace sw
                     }
                     else if ( StringUtil::equals( pName, "Dolly", true ) )
                     {
-                        readDolly( child, inoutDef._dolly, sourceName );
+                        bValid = readDolly( child, inoutDef._dolly, sourceName ) && bValid;
                     }
                     else if ( StringUtil::equals( pName, "PostProcess", true ) )
                     {

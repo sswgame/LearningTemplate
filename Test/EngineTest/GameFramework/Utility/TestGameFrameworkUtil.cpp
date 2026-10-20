@@ -394,7 +394,7 @@ SW_TEST_CASE( GameFrameworkUtilTest, RayPlaneAndFirstPersonMoveDirection )
 }
 
 /**
- * @brief [GameFrameworkUtilTest] 데이터 XML — 루트 확인 · id 없는 원소 거르기 · 숫자 목록(빠진 성분은 기본값) · 빈 토큰을 건너뛰는 토큰 목록
+ * @brief [GameFrameworkUtilTest] 데이터 XML — 루트 확인 · id 없는 원소 거르기 · 벡터(정확한 개수가 아니면 실패) · 숫자 목록 · 빈 토큰을 건너뛰는 토큰 목록
  */
 SW_TEST_CASE( GameFrameworkUtilTest, DataXMLReadsRootsIDsNumbersAndTokens )
 {
@@ -409,10 +409,24 @@ SW_TEST_CASE( GameFrameworkUtilTest, DataXMLReadsRootsIDsNumbersAndTokens )
     }
     SW_EXPECT_EQUAL( 1, idCount );
 
-    const float4 color = GameDataXML::parseFloat4( "0.5, 0.25  1", float4{ 9.0f, 9.0f, 9.0f, 0.75f } );
+    // 벡터는 정확히 그 개수의 실수여야 한다 — 모자라거나 남거나 숫자가 아니면 실패이고 값은 그대로다(빠진 성분을 기본값으로 메우지 않는다).
+    float4 color{ 9.0f, 9.0f, 9.0f, 0.75f };
+    SW_EXPECT_TRUE( GameDataXML::parseFloat4( "0.5, 0.25  1 0.125", color ) );
     SW_EXPECT_NEAR_EQUAL( 0.5f, color._x, 1.0e-6f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, color._z, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.125f, color._w, 1.0e-6f );
+    color = float4{ 9.0f, 9.0f, 9.0f, 0.75f };
+    SW_EXPECT_FALSE( GameDataXML::parseFloat4( "0.5, 0.25  1", color ) );
+    SW_EXPECT_FALSE( GameDataXML::parseFloat4( "0.5 0.25 1 0 7", color ) );
+    SW_EXPECT_FALSE( GameDataXML::parseFloat4( "0.5 x 1 0", color ) );
+    SW_EXPECT_NEAR_EQUAL( 9.0f, color._x, 1.0e-6f );
     SW_EXPECT_NEAR_EQUAL( 0.75f, color._w, 1.0e-6f );
+    float3 position{ 1.0f, 2.0f, 3.0f };
+    SW_EXPECT_FALSE( GameDataXML::parseFloat3( "", position ) );
+    SW_EXPECT_FALSE( GameDataXML::parseFloat3( "4 5", position ) );
+    SW_EXPECT_NEAR_EQUAL( 3.0f, position._z, 1.0e-6f );
+    SW_EXPECT_TRUE( GameDataXML::parseFloat3( "-0.5,0,0", position ) );
+    SW_EXPECT_NEAR_EQUAL( -0.5f, position._x, 1.0e-6f );
     float32 arrValue[2] = { -1.0f, -1.0f };
     SW_EXPECT_EQUAL( 1u, GameDataXML::parseFloats( "x;3", arrValue, 2 ) ); // 못 읽은 칸은 그대로
     SW_EXPECT_NEAR_EQUAL( -1.0f, arrValue[0], 1.0e-6f );

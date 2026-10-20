@@ -119,8 +119,8 @@ namespace sw
                 {
                     (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrMaterialAttribute, report, sourceName );
                     AppearanceMaterialValueDef value;
-                    value._name  = AppearanceXMLUtil::readName( child, "name" );
-                    value._value = AppearanceXMLUtil::readFloat4( child, "value", float4::Zero );
+                    value._name = AppearanceXMLUtil::readName( child, "name" );
+                    AppearanceXMLUtil::readRequiredFloat4( child, "value", value._value, report, sourceName );
                     inoutPart._listMaterialValue.push_back( value );
                 }
                 else if ( StringUtil::equals( pName, "HideRegion", true ) && bModification )
@@ -156,11 +156,11 @@ namespace sw
                 part._skeleton              = AppearanceXMLUtil::readName( node, "skeleton" );
                 part._socketSet             = AppearanceXMLUtil::readName( node, "sockets" );
                 part._breakStage            = AppearanceXMLUtil::readName( node, "breakStage" );
-                part._breakImpulse          = AppearanceXMLUtil::readFloat3( node, "impulse", float3::Zero );
                 part._layer                 = node.getAttributeInt( "layer", 0 );
                 part._bDeforms              = node.getAttributeBool( "deforms", part._kind == AppearancePartKind::Skinned ) ? SW_TRUE : SW_FALSE;
                 part._bBreakable            = node.getAttributeBool( "breakable", part._breakStage.empty() == false ) ? SW_TRUE : SW_FALSE;
-                AppearanceXMLUtil::readPlacement( node, "socket", part._placement );
+                AppearanceXMLUtil::readOptionalFloat3( node, "impulse", part._breakImpulse, report, sourceName );
+                AppearanceXMLUtil::readPlacement( node, "socket", part._placement, report, sourceName );
                 if ( pAssetAttribute != nullptr && part._asset.empty() )
                     report.addError( "%#: visual '%#' part '%#' needs '%#'", sourceName, inoutVisual._id.c_str(), part._name.c_str(), pAssetAttribute );
                 if ( part._kind == AppearancePartKind::SocketPrefab && part._placement.isEmpty() )
@@ -191,7 +191,7 @@ namespace sw
                         (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrPlaceAttribute, report, sourceName );
                         AppearanceStateDef::Placement placement;
                         placement._part = AppearanceXMLUtil::readName( child, "part" );
-                        AppearanceXMLUtil::readPlacement( child, "socket", placement._placement );
+                        AppearanceXMLUtil::readPlacement( child, "socket", placement._placement, report, sourceName );
                         if ( hasPart( inoutVisual, placement._part, report, sourceName, "<Place>" ) )
                             state._listPlacement.push_back( placement );
                     }
@@ -243,9 +243,9 @@ namespace sw
                     {
                         (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrStageMaterialAttribute, report, sourceName );
                         AppearanceMaterialValueDef value;
-                        value._part  = AppearanceXMLUtil::readName( child, "part" );
-                        value._name  = AppearanceXMLUtil::readName( child, "name" );
-                        value._value = AppearanceXMLUtil::readFloat4( child, "value", float4::Zero );
+                        value._part = AppearanceXMLUtil::readName( child, "part" );
+                        value._name = AppearanceXMLUtil::readName( child, "name" );
+                        AppearanceXMLUtil::readRequiredFloat4( child, "value", value._value, report, sourceName );
                         if ( value._part.empty() || hasPart( inoutVisual, value._part, report, sourceName, "damage <Material>" ) )
                             stage._listMaterialValue.push_back( value );
                     }

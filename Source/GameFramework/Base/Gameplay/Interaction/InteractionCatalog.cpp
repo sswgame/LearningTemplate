@@ -181,8 +181,11 @@ namespace sw
             }
             bValid = Internal::checkAttributes( slotNode, Internal::kArrSlotAttribute, sourceName ) && bValid;
             SmartObjectSlotDef slot;
+            float3             offset{};
+            bValid = GameDataXML::readOptionalFloat3( slotNode, "offset", sourceName, offset ) && bValid;
+
             slot._id     = hashed_string( slotNode.findAttribute( "id" ) != nullptr ? slotNode.findAttribute( "id" ) : "" );
-            slot._offset = GameDataXML::parseFloat3( slotNode.getAttributeText( "offset" ), float3{} );
+            slot._offset = offset;
             slot._yaw    = slotNode.getAttributeFloat( "yaw", 0.0f ) * MathUtil::kDegreeToRadian;
             Internal::readTags( slotNode.getAttributeText( "tags" ), slot._tags );
             outDef._listSlot.push_back( slot );

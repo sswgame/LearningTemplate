@@ -94,6 +94,10 @@ SW_TEST_CASE( AppearanceTest, UnknownNamesAreLoadErrors )
          "unknown option 'Mohawk'"                                                                                                                                                                                                        },
         {                                                 R"(<CharacterAppearanceCatalog><CharacterAppearance id="P"><Equip slot="Tail" item="sword"/></CharacterAppearance></CharacterAppearanceCatalog>)",         "unknown slot 'Tail'"},
         {                                                    R"(<CharacterAppearanceCatalog><CharacterAppearance id="A" parent="B"/><CharacterAppearance id="B" parent="A"/></CharacterAppearanceCatalog>)",               "forms a cycle"},
+        // 벡터 · 색은 정확한 개수의 실수여야 한다 — 모자란 성분을 기본값으로 메우지 않고 로드 오류로 올린다.
+        {                                                                R"(<ItemVisualCatalog><ItemVisual id="x"><Part name="A" kind="Skinned" mesh="m" impulse="1 2"/></ItemVisual></ItemVisualCatalog>)",      "must be numbers shaped"},
+        {                                                      R"(<ItemVisualCatalog><ItemVisual id="x"><Part name="A" kind="Skinned" mesh="m" socket="s" offset="0 1"/></ItemVisual></ItemVisualCatalog>)",      "must be numbers shaped"},
+        {                                 R"(<CharacterAppearanceCatalog><CharacterAppearance id="P" schema="Human"><Value name="Skin" color="1 1 1"/></CharacterAppearance></CharacterAppearanceCatalog>)",        "must be four numbers"},
     };
     for ( const Case& testCase : arrCase )
     {

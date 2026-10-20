@@ -17,6 +17,36 @@ namespace sw
 {
     SW_LOG_CALLER( "Appearance" );
 
+    namespace
+    {
+        struct AppearanceXMLUtilInternal
+        {
+            /**
+             * @brief 벡터 속성 하나를 @p pParse 로 읽어 @p inoutValue 에 담습니다. 선택 속성(@p bRequired = false)은 없으면 값을 그대로 둡니다.
+             * @details 있는데 읽히지 않거나 필수인데 없으면 @p report 에 오류를 더하고 값을 그대로 둡니다.
+             */
+            template <typename TVector>
+            static void readVector( const XMLNode& node, const utf8* pAttribute, bool bRequired, const utf8* pShape, TVector& inoutValue, bool ( *pParse )( string_view, TVector& ),
+                                    AppearanceLoadReport& report, string_view sourceName )
+            {
+                const utf8* pText = node.findAttribute( pAttribute );
+                if ( pText == nullptr )
+                {
+                    if ( bRequired )
+                        report.addError( "%#: <%#> needs %#=\"%#\"", sourceName, node.getName(), pAttribute, pShape );
+                    return;
+                }
+                TVector parsed{};
+                if ( pParse( string_view( pText ), parsed ) == false )
+                {
+                    report.addError( "%#: <%#> %#=\"%#\" must be numbers shaped \"%#\"", sourceName, node.getName(), pAttribute, pText, pShape );
+                    return;
+                }
+                inoutValue = parsed;
+            }
+        };
+    } // namespace
+
     void AppearanceLoadReport::addMessage( string_view message )
     {
         _listError.push_back( string( message ) );
@@ -72,22 +102,29 @@ namespace sw
         GameDataXML::appendNameList( node.getAttributeText( pAttribute ), ",; ", outListName );
     }
 
-    float3 AppearanceXMLUtil::readFloat3( const XMLNode& node, const utf8* pAttribute, const float3& fallback )
+    void AppearanceXMLUtil::readOptionalFloat3( const XMLNode& node, const utf8* pAttribute, float3& inoutValue, AppearanceLoadReport& report, string_view sourceName )
     {
-        return GameDataXML::parseFloat3( node.getAttributeText( pAttribute ), fallback );
+        AppearanceXMLUtilInternal::readVector( node, pAttribute, false, "x y z", inoutValue, &GameDataXML::parseFloat3, report, sourceName );
     }
 
-    float4 AppearanceXMLUtil::readFloat4( const XMLNode& node, const utf8* pAttribute, const float4& fallback )
+    void AppearanceXMLUtil::readOptionalFloat4( const XMLNode& node, const utf8* pAttribute, float4& inoutValue, AppearanceLoadReport& report, string_view sourceName )
     {
-        return GameDataXML::parseFloat4( node.getAttributeText( pAttribute ), fallback );
+        AppearanceXMLUtilInternal::readVector( node, pAttribute, false, "r g b a", inoutValue, &GameDataXML::parseFloat4, report, sourceName );
     }
 
-    void AppearanceXMLUtil::readPlacement( const XMLNode& node, const utf8* pSocketAttribute, AppearancePlacement& outPlacement )
+    void AppearanceXMLUtil::readRequiredFloat4( const XMLNode& node, const utf8* pAttribute, float4& outValue, AppearanceLoadReport& report, string_view sourceName )
+    {
+        AppearanceXMLUtilInternal::readVector( node, pAttribute, true, "r g b a", outValue, &GameDataXML::parseFloat4, report, sourceName );
+    }
+
+    void AppearanceXMLUtil::readPlacement( const XMLNode& node, const utf8* pSocketAttribute, AppearancePlacement& outPlacement, AppearanceLoadReport& report, string_view sourceName )
     {
         outPlacement._listSocket.clear();
         readNameList( node, pSocketAttribute, outPlacement._listSocket );
-        outPlacement._offset   = readFloat3( node, "offset", float3::Zero );
-        outPlacement._rotation = readFloat3( node, "rotation", float3::Zero );
+        outPlacement._offset   = float3::Zero;
+        outPlacement._rotation = float3::Zero;
+        readOptionalFloat3( node, "offset", outPlacement._offset, report, sourceName );
+        readOptionalFloat3( node, "rotation", outPlacement._rotation, report, sourceName );
     }
 
     void AppearanceXMLUtil::readTags( const XMLNode& node, const utf8* pAttribute, TagContainer& outTags )
