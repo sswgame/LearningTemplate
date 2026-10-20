@@ -36,8 +36,8 @@ namespace sw
             {
                 const bool bCdo      = prop.getValue<bool>( pCdoInstance );
                 const bool bModified = prop.getValue<bool>( pModifiedInstance );
-                bWritten             = SerializerUtil::serializeValueBinary( &bCdo, hashed_string( "bool" ), cdoBytes, context ) &&
-                           SerializerUtil::serializeValueBinary( &bModified, hashed_string( "bool" ), modifiedBytes, context );
+                bWritten             = SerializerUtil::serializeValueBinary( ValueAddress{ &bCdo }, hashed_string( "bool" ), cdoBytes, context ) &&
+                           SerializerUtil::serializeValueBinary( ValueAddress{ &bModified }, hashed_string( "bool" ), modifiedBytes, context );
             }
             else if ( prop._bIsContainer && prop.hasContainerWrapper() )
             {
@@ -46,8 +46,8 @@ namespace sw
             }
             else
             {
-                bWritten = SerializerUtil::serializeValueBinary( pCdoPtr, prop._typeName, cdoBytes, context ) &&
-                           SerializerUtil::serializeValueBinary( pModifiedValue, prop._typeName, modifiedBytes, context );
+                bWritten = SerializerUtil::serializeValueBinary( ValueAddress{ pCdoPtr }, prop._typeName, cdoBytes, context ) &&
+                           SerializerUtil::serializeValueBinary( ValueAddress{ pModifiedValue }, prop._typeName, modifiedBytes, context );
             }
             // 바이트로 옮기지 못한 값이 있으면 diff 전체가 실패다. 그 값만 빼면 받는 쪽이 바뀐 값을 놓친다.
             if ( bWritten == false )
@@ -99,7 +99,7 @@ namespace sw
             if ( pProp != nullptr )
             {
                 // 값 주소가 없거나 페이로드를 끝까지 읽지 못하면 diff 가 틀린 것이다. 건너뛰지 않고 실패한다.
-                if ( SerializerUtil::applyPropertyBinary( *pProp, pTargetInstance, pDiffData + offset, payload, context ) == false )
+                if ( SerializerUtil::applyPropertyBinary( *pProp, MutableObjectAddress{ pTargetInstance }, pDiffData + offset, payload, context ) == false )
                     return false;
             }
             else

@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Engine/EngineMinimal.h"
+#include "Engine/Serialization/Base/TextAddress.h"
 
 namespace sw
 {
@@ -234,8 +235,9 @@ namespace sw
 
     /**
      * @brief 텍스트 토큰을 대상 타입으로 파싱합니다(따옴표 제거, 숫자와 문자열 사이의 강제 변환).
+     * @details 쓰는 곳은 값 하나 자체의 주소입니다(`MutableValueAddress`). 프로퍼티 오프셋을 더한 주소는 `MutableValueAddress{ p }` 로 감싸 넘깁니다.
      */
-    [[nodiscard]] SW_API bool parseTextValueCoerced( void* pValPtr, hashed_string typeName, string_view valStr,
+    [[nodiscard]] SW_API bool parseTextValueCoerced( MutableValueAddress value, hashed_string typeName, string_view valStr,
                                                      const SerializeContext& context );
 
     /** @brief 점 경로로 프로퍼티 포인터를 찾습니다. */

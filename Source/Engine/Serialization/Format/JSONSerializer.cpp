@@ -34,7 +34,7 @@ namespace sw
                 if ( bIsString || bIsEnum )
                 {
                     StringBuilder<constant::kMaxBuffer8192> text;
-                    SerializerUtil::valueToText( text, pValPtr, typeName, context );
+                    SerializerUtil::valueToText( text, ValueAddress{ pValPtr }, typeName, context );
                     dst.setString( text.view() );
                     return;
                 }
@@ -42,7 +42,7 @@ namespace sw
                 if ( bIsBool )
                 {
                     StringBuilder<constant::kMaxBuffer8192> text;
-                    SerializerUtil::valueToText( text, pValPtr, typeName, context );
+                    SerializerUtil::valueToText( text, ValueAddress{ pValPtr }, typeName, context );
                     dst.setBool( StringUtil::parseBool( text.view(), false ) );
                     return;
                 }
@@ -50,7 +50,7 @@ namespace sw
                 if ( context.findTextWriter( resolved ) != nullptr )
                 {
                     StringBuilder<constant::kMaxBuffer8192> text;
-                    SerializerUtil::valueToText( text, pValPtr, typeName, context );
+                    SerializerUtil::valueToText( text, ValueAddress{ pValPtr }, typeName, context );
                     JSONDocument parsed;
                     const bool   bParsedScalar = parsed.tryParse( text.view() ) && parsed.getRoot().isObject() == false && parsed.getRoot().isArray() == false;
                     if ( bParsedScalar )
@@ -73,7 +73,7 @@ namespace sw
                 }
 
                 StringBuilder<constant::kMaxBuffer8192> text;
-                SerializerUtil::valueToText( text, pValPtr, typeName, context );
+                SerializerUtil::valueToText( text, ValueAddress{ pValPtr }, typeName, context );
                 dst.setString( text.view() );
             }
 
@@ -97,7 +97,7 @@ namespace sw
                 void beginMapEntry( const void* pKey, const hashed_string& keyTypeName ) override
                 {
                     StringBuilder<constant::kMaxBuffer8192> keyText;
-                    SerializerUtil::valueToText( keyText, pKey, keyTypeName, _context );
+                    SerializerUtil::valueToText( keyText, ValueAddress{ pKey }, keyTypeName, _context );
                     const JSONValue entry = _listSlot.back().set( keyText.view(), false );
                     _listSlot.push_back( entry );
                 }
@@ -227,7 +227,7 @@ namespace sw
                 // 키는 멤버 이름(글)이다 — XML 의 `key` 속성과 같은 길로 읽는다.
                 ContainerReadResult readMapKey( void* pKey, const hashed_string& keyTypeName ) override
                 {
-                    const bool bRead = _pCurrentKey != nullptr && parseTextValueCoerced( pKey, keyTypeName, *_pCurrentKey, _context );
+                    const bool bRead = _pCurrentKey != nullptr && parseTextValueCoerced( MutableValueAddress{ pKey }, keyTypeName, *_pCurrentKey, _context );
                     return bRead ? ContainerReadResult::Read : ContainerReadResult::FieldFailed;
                 }
 
@@ -342,8 +342,8 @@ namespace sw
                 }
 
                 if ( src.isString() )
-                    return parseTextValueCoerced( pValPtr, typeName, src.asString(), context );
-                return parseTextValueCoerced( pValPtr, typeName, src.dump(), context );
+                    return parseTextValueCoerced( MutableValueAddress{ pValPtr }, typeName, src.asString(), context );
+                return parseTextValueCoerced( MutableValueAddress{ pValPtr }, typeName, src.dump(), context );
             }
             static void writeProperty( JSONValue parent, const PropertyInfo& prop, const void* pInstance, const SerializeContext& context )
             {

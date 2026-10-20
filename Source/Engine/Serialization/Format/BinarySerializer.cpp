@@ -188,7 +188,7 @@ namespace sw
                     else
                     {
                         // 기록 타입이 같은데 끝까지 읽히지 않으면 손상이다. 소프트 읽기도 이관으로 짐작하지 않고 orphan 으로 넘긴다(이관은 크기로 짐작해 4 바이트 페이로드를 수의 텍스트로 문자열에 넣는다).
-                        bApplied = SerializerUtil::applyPropertyBinary( prop, pInstance, pData + payloadStart, payloadSize, context, wireVersion );
+                        bApplied = SerializerUtil::applyPropertyBinary( prop, MutableObjectAddress{ pInstance }, pData + payloadStart, payloadSize, context, wireVersion );
                     }
 
                     if ( bApplied == false )
@@ -391,7 +391,7 @@ namespace sw
             if ( prop._bIsBitField == SW_TRUE )
             {
                 const bool bVal = prop.getValue<bool>( pInstance );
-                bWritten        = SerializerUtil::serializeValueBinary( &bVal, hashed_string( "bool" ), outListBuffer, context );
+                bWritten        = SerializerUtil::serializeValueBinary( ValueAddress{ &bVal }, hashed_string( "bool" ), outListBuffer, context );
             }
             else if ( prop._bIsContainer && prop.hasContainerWrapper() )
             {
@@ -399,7 +399,7 @@ namespace sw
             }
             else
             {
-                bWritten = SerializerUtil::serializeValueBinary( pPropPtr, prop._typeName, outListBuffer, context );
+                bWritten = SerializerUtil::serializeValueBinary( ValueAddress{ pPropPtr }, prop._typeName, outListBuffer, context );
             }
             if ( bWritten == false )
             {

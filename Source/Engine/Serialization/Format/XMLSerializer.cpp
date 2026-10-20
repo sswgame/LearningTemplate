@@ -67,7 +67,7 @@ namespace sw
                 void beginMapEntry( const void* pKey, const hashed_string& keyTypeName ) override
                 {
                     StringBuilder<constant::kMaxBuffer8192> keyText;
-                    SerializerUtil::valueToText( keyText, pKey, keyTypeName, _context );
+                    SerializerUtil::valueToText( keyText, ValueAddress{ pKey }, keyTypeName, _context );
                     _backend.beginMap( kXMLEntryTag );
                     _backend.writeAttribute( kXMLKeyAttr, keyText.c_str() );
                 }
@@ -117,7 +117,7 @@ namespace sw
                 void writeScalar( const void* pValue, const hashed_string& typeName, const ContainerSlot slot ) override
                 {
                     StringBuilder<constant::kMaxBuffer8192> text;
-                    SerializerUtil::valueToText( text, pValue, typeName, _context );
+                    SerializerUtil::valueToText( text, ValueAddress{ pValue }, typeName, _context );
                     if ( slot == ContainerSlot::SequenceElement )
                         _backend.writeValue( kXMLItemTag, text.c_str() );
                     else
@@ -236,7 +236,7 @@ namespace sw
                 /** @brief 글 하나를 값으로 읽습니다. 못 읽으면 그 글을 orphan 으로 남기고 FieldFailed 입니다(조용히 버리지 않는다). */
                 ContainerReadResult readText( void* pValue, const hashed_string& typeName, const string& text ) const
                 {
-                    if ( parseTextValueCoerced( pValue, typeName, text, _context ) )
+                    if ( parseTextValueCoerced( MutableValueAddress{ pValue }, typeName, text, _context ) )
                         return ContainerReadResult::Read;
                     recordDroppedText( _pOutListOrphan, _propForOrphan, text );
                     return ContainerReadResult::FieldFailed;
@@ -286,7 +286,7 @@ namespace sw
                         else
                         {
                             StringBuilder<constant::kMaxBuffer8192> ss;
-                            SerializerUtil::valueToText( ss, pPropPtr, prop._typeName, context );
+                            SerializerUtil::valueToText( ss, ValueAddress{ pPropPtr }, prop._typeName, context );
 
                             // 기본은 "모두 쓴다" 이다. 그래야 파일에 없음과 명시적으로 비어 있음이
                             // 구분된다. 생략해도 좋다고 **스키마가 선언한** 필드만 비었을 때 뺀다.
@@ -404,7 +404,7 @@ namespace sw
                                     recordDroppedText( pOutListOrphan, prop, strValue );
                                 }
                             }
-                            else if ( parseTextValueCoerced( pPropPtr, prop._typeName, strValue, context ) == false )
+                            else if ( parseTextValueCoerced( MutableValueAddress{ pPropPtr }, prop._typeName, strValue, context ) == false )
                             {
                                 bFieldError = true;
                                 recordDroppedText( pOutListOrphan, prop, strValue );

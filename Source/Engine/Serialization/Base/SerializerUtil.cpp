@@ -484,7 +484,7 @@ namespace sw
                 void endMap() override {}
                 void beginMapEntry( const void* pKey, const hashed_string& keyTypeName ) override
                 {
-                    recordWritten( SerializerUtil::serializeValueBinary( pKey, keyTypeName, _listBuffer, _context ) );
+                    recordWritten( SerializerUtil::serializeValueBinary( ValueAddress{ pKey }, keyTypeName, _listBuffer, _context ) );
                 }
                 void endMapEntry() override {}
                 void beginNestedContainer( ContainerSlot ) override {}
@@ -494,12 +494,12 @@ namespace sw
                 // 값 구조체도 값 하나를 적는 경로로 적는다. 등록된 바이너리 핸들러가 구조체보다 먼저다(`serializeValueBinary` 의 순서).
                 void writeValueObject( const void* pValue, const hashed_string& typeName, const TypeInfo&, ContainerSlot ) override
                 {
-                    recordWritten( SerializerUtil::serializeValueBinary( pValue, typeName, _listBuffer, _context ) );
+                    recordWritten( SerializerUtil::serializeValueBinary( ValueAddress{ pValue }, typeName, _listBuffer, _context ) );
                 }
 
                 void writeScalar( const void* pValue, const hashed_string& typeName, ContainerSlot ) override
                 {
-                    recordWritten( SerializerUtil::serializeValueBinary( pValue, typeName, _listBuffer, _context ) );
+                    recordWritten( SerializerUtil::serializeValueBinary( ValueAddress{ pValue }, typeName, _listBuffer, _context ) );
                 }
 
                 /** @brief 원소 · 키 · 값을 하나도 빠짐없이 썼는가입니다. 방문자의 콜백은 결과를 돌려주지 못하므로 여기에 모읍니다. */
@@ -581,7 +581,7 @@ namespace sw
                 ContainerReadResult readValue( void* pValue, const hashed_string& typeName ) const
                 {
                     const size_t valueStart = *_pInOutOffset;
-                    if ( SerializerUtil::deserializeValueBinary( pValue, typeName, _pData, _dataSize, *_pInOutOffset, _context, _wireVersion ) )
+                    if ( SerializerUtil::deserializeValueBinary( MutableValueAddress{ pValue }, typeName, _pData, _dataSize, *_pInOutOffset, _context, _wireVersion ) )
                         return ContainerReadResult::Read;
                     const bool bAdvanced  = valueStart < *_pInOutOffset && *_pInOutOffset <= _dataSize;
                     const bool bSkippable = bAdvanced && _context.getTypeRegistry().findEnum( typeName ) != nullptr;
@@ -666,11 +666,12 @@ namespace sw
         return context.findTextWriter( resolved ) != nullptr && context.findTextReader( resolved ) != nullptr;
     }
 
-    bool SerializerUtil::serializeValueBinary( const void* pValuePtr, const hashed_string& typeName,
+    bool SerializerUtil::serializeValueBinary( ValueAddress value, const hashed_string& typeName,
                                                vector<uint8>& listBuffer, const SerializeContext& context )
     {
-        const hashed_string                    resolved = SerializerUtil::resolveHandlerTypeName( typeName, context );
-        const SerializeContext::BinaryWriteFn* pWriter  = context.findBinaryWriter( resolved );
+        const void* const                      pValuePtr = value.get();
+        const hashed_string                    resolved  = SerializerUtil::resolveHandlerTypeName( typeName, context );
+        const SerializeContext::BinaryWriteFn* pWriter   = context.findBinaryWriter( resolved );
         if ( pWriter != nullptr )
         {
             ( *pWriter )( pValuePtr, listBuffer );
@@ -720,12 +721,13 @@ namespace sw
         return false;
     }
 
-    bool SerializerUtil::deserializeValueBinary( void* pValuePtr, const hashed_string& typeName,
+    bool SerializerUtil::deserializeValueBinary( MutableValueAddress value, const hashed_string& typeName,
                                                  const uint8* pData, size_t dataSize, size_t& offset,
                                                  const SerializeContext& context, BinaryWireVersion wireVersion )
     {
-        const hashed_string                   resolved = SerializerUtil::resolveHandlerTypeName( typeName, context );
-        const SerializeContext::BinaryReadFn* pReader  = context.findBinaryReader( resolved );
+        void* const                           pValuePtr = value.get();
+        const hashed_string                   resolved  = SerializerUtil::resolveHandlerTypeName( typeName, context );
+        const SerializeContext::BinaryReadFn* pReader   = context.findBinaryReader( resolved );
         if ( pReader != nullptr )
             return ( *pReader )( pValuePtr, pData, dataSize, offset );
 
@@ -777,9 +779,10 @@ namespace sw
         return ContainerVisitor::read( pContainerPtr, nested, reader, context ) == ContainerReadResult::Read;
     }
 
-    void SerializerUtil::valueToText( StringBuilder<constant::kMaxBuffer8192>& ss, const void* pValPtr, const hashed_string& typeName,
+    void SerializerUtil::valueToText( StringBuilder<constant::kMaxBuffer8192>& ss, ValueAddress value, const hashed_string& typeName,
                                       const SerializeContext& context )
     {
+        const void* const                    pValPtr     = value.get();
         const hashed_string                  resolved    = SerializerUtil::resolveHandlerTypeName( typeName, context );
         const SerializeContext::TextWriteFn* pTextWriter = context.findTextWriter( resolved );
         if ( pTextWriter != nullptr )
@@ -869,8 +872,10 @@ namespace sw
                             prop._name.c_str(), prop._typeName.c_str() );
     }
 
-    bool SerializerUtil::copyPropertyValue( const PropertyInfo& prop, const void* pSrcInstance, void* pDstInstance, const SerializeContext& context )
+    bool SerializerUtil::copyPropertyValue( const PropertyInfo& prop, ObjectAddress srcInstance, MutableObjectAddress dstInstance, const SerializeContext& context )
     {
+        const void* const pSrcInstance = srcInstance.get();
+        void* const       pDstInstance = dstInstance.get();
         if ( pSrcInstance == nullptr || pDstInstance == nullptr )
             return false;
         if ( prop._bIsBitField == SW_TRUE )
@@ -887,8 +892,8 @@ namespace sw
             return false;
         vector<uint8> bytes;
         const bool    bWritten = ( prop._bIsContainer == SW_TRUE && prop.hasContainerWrapper() ) ? serializeNestedContainerBinary( pSrc, prop.getContainerShape(), bytes, context )
-                                                                                                 : serializeValueBinary( pSrc, prop._typeName, bytes, context );
-        return bWritten && applyPropertyBinary( prop, pDstInstance, bytes.data(), bytes.size(), context );
+                                                                                                 : serializeValueBinary( ValueAddress{ pSrc }, prop._typeName, bytes, context );
+        return bWritten && applyPropertyBinary( prop, dstInstance, bytes.data(), bytes.size(), context );
     }
 
     bool SerializerUtil::arePropertyValuesEqual( const PropertyInfo& prop, const void* pInstanceA, const void* pInstanceB, const SerializeContext& context )
@@ -916,7 +921,7 @@ namespace sw
         }
         else
         {
-            bWritten = serializeValueBinary( pA, prop._typeName, bytesA, context ) && serializeValueBinary( pB, prop._typeName, bytesB, context );
+            bWritten = serializeValueBinary( ValueAddress{ pA }, prop._typeName, bytesA, context ) && serializeValueBinary( ValueAddress{ pB }, prop._typeName, bytesB, context );
         }
         // 바이트로 옮기지 못한 값은 같은지 알 수 없다. 같다고 하면 바뀐 값을 놓치므로 다르다고 본다.
         return bWritten && bytesA == bytesB;
@@ -940,9 +945,10 @@ namespace sw
         return pValue != nullptr && parseTextValue( MutableValueAddress{ pValue }, prop._typeName, text, context );
     }
 
-    bool SerializerUtil::applyPropertyBinary( const PropertyInfo& prop, void* pInstance, const uint8* pPayload, size_t payloadSize, const SerializeContext& context,
+    bool SerializerUtil::applyPropertyBinary( const PropertyInfo& prop, MutableObjectAddress instance, const uint8* pPayload, size_t payloadSize, const SerializeContext& context,
                                               BinaryWireVersion wireVersion )
     {
+        void* const pInstance = instance.get();
         if ( pInstance == nullptr )
             return false;
         size_t offset{ 0 };
@@ -950,7 +956,7 @@ namespace sw
         {
             // 비트필드는 주소를 가질 수 없어 값으로 읽고 setter 로 넣는다.
             bool bValue = false;
-            if ( deserializeValueBinary( &bValue, hashed_string( "bool" ), pPayload, payloadSize, offset, context, wireVersion ) == false || offset != payloadSize )
+            if ( deserializeValueBinary( MutableValueAddress{ &bValue }, hashed_string( "bool" ), pPayload, payloadSize, offset, context, wireVersion ) == false || offset != payloadSize )
                 return false;
             prop.setValue<bool>( pInstance, bValue );
             return true;
@@ -960,7 +966,7 @@ namespace sw
             return false;
         const bool bRead = ( prop._bIsContainer == SW_TRUE && prop.hasContainerWrapper() )
                              ? deserializeNestedContainerBinary( pValue, prop.getContainerShape(), pPayload, payloadSize, offset, context, wireVersion )
-                             : deserializeValueBinary( pValue, prop._typeName, pPayload, payloadSize, offset, context, wireVersion );
+                             : deserializeValueBinary( MutableValueAddress{ pValue }, prop._typeName, pPayload, payloadSize, offset, context, wireVersion );
         return bRead && offset == payloadSize;
     }
 
@@ -1029,7 +1035,7 @@ namespace sw
     string SerializerUtil::formatValueText( ValueAddress value, const hashed_string& typeName, const SerializeContext& context )
     {
         StringBuilder<constant::kMaxBuffer8192> ss;
-        valueToText( ss, value.get(), typeName, context );
+        valueToText( ss, value, typeName, context );
         return ss.c_str();
     }
 
