@@ -64,7 +64,7 @@ namespace sw
      *     </AudioEffectDesc>
      *     <AudioEffectDesc _type="ConvolutionReverb" _impulse="game/mygame/audio/hall_ir.wav" />
      * @endcode
-     * @details 컨볼루션 리버브는 임펄스 응답 클립(`_impulse`)이 필수다. 없거나 읽지 못하면 믹서를 만들 때 오류로 멈춘다.
+     * @details 컨볼루션 리버브는 임펄스 응답 클립(`_impulse`)이 필수다. 없으면 믹서 에셋을 읽을 때(`validate`) 오류로 멈추고, 읽지 못하면 믹서를 만들 때 멈춘다.
      */
     REFLECT()
     struct SW_API AudioEffectDesc

@@ -116,3 +116,11 @@ SW_TEST_CASE( AudioConvolutionTest, ConvolutionReverbAppliesTheImpulseResponse )
     SW_ASSERT_TRUE( loadConvolutionTestEffectDesc( "<AudioEffectDesc _type=\"ConvolutionReverb\" />", missing ) );
     SW_EXPECT_TRUE( sw::AudioEffectRegistry::createEffect( missing, sw::AudioChannelLayout::Stereo ) == nullptr );
 }
+
+SW_TEST_CASE( AudioConvolutionTest, MixerLoadRejectsConvolutionReverbWithoutImpulse )
+{
+    sw::AudioMixerDesc desc;
+    const sw::string   xml = "<AudioMixerDesc><_listBus><AudioBusDesc _name=\"master\"><_listEffect>"
+                             "<AudioEffectDesc _type=\"ConvolutionReverb\" /></_listEffect></AudioBusDesc></_listBus></AudioMixerDesc>";
+    SW_EXPECT_FALSE( desc.loadFromXMLText( xml ) );
+}

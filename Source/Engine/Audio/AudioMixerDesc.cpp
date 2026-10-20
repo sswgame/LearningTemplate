@@ -85,6 +85,12 @@ namespace sw
                         bValid = false;
                     }
                 }
+                // 컨볼루션 리버브의 임펄스 응답은 이 종류에만 필수라 PROPERTY( Required ) 로 못 쓴다(모든 이펙트가 같은 서술 형식). 읽는 단계에서 막는다.
+                if ( effect._type == hashed_string( "ConvolutionReverb" ) && effect._impulse.isSet() == false )
+                {
+                    SW_LOG_ERROR( "%#: effect '%#' on bus '%#' needs an impulse response clip (_impulse)", sourceName, effect.getEffectName().c_str(), bus._name.c_str() );
+                    bValid = false;
+                }
                 for ( const AudioEffectParameterDesc& parameter : effect._listParameter )
                 {
                     bool bKnown = false;
