@@ -384,7 +384,7 @@ namespace sw
         Widget* pValue   = tree.findWidgetByName( hashed_string( prefix + "." + Internal::kValueName ) );
         if ( pValue == nullptr )
         {
-            SW_LOG_ERROR( "[UI] Options row document %# has no '%#' widget", pDocumentPath, Internal::kValueName );
+            SW_LOG_ERROR( "[UI] Options row document %# has no '%#' widget", documentPath, Internal::kValueName );
             return false;
         }
         entry._value            = pValue->getID();

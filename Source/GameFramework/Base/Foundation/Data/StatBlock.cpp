@@ -13,14 +13,14 @@
 
 namespace sw
 {
-    StatValue* StatBlock::findValue( const hashed_string& name )
+    StatValue* StatBlock::findMutableValue( const hashed_string& name )
     {
         return VectorUtil::findBy<&StatValue::_name>( _listValue, name );
     }
 
     void StatBlock::setValue( const hashed_string& name, float32 value )
     {
-        StatValue* pValue = findValue( name );
+        StatValue* pValue = findMutableValue( name );
         if ( pValue != nullptr )
             pValue->_value = value;
         else
@@ -29,7 +29,7 @@ namespace sw
 
     void StatBlock::addValue( const hashed_string& name, float32 value )
     {
-        StatValue* pValue = findValue( name );
+        StatValue* pValue = findMutableValue( name );
         if ( pValue != nullptr )
             pValue->_value += value;
         else

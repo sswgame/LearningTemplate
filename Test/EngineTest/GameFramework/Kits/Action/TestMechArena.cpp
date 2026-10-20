@@ -130,9 +130,9 @@ SW_TEST_CASE( MechArenaTest, CatalogReadsModesAndDeckCostLimit )
     SW_EXPECT_NEAR_EQUAL( pSniper->_listMode[1]._speed, 20.0f, 0.001f );
 
     // 근거리 분류는 근접 1.5 배, 원거리 분류는 받는 다운치 2 배 — 적지 않은 이름은 1.
-    SW_EXPECT_NEAR_EQUAL( catalog.getClassModifier( MechRangeClass::Near ).getValue( hashed_string( "melee" ), 1.0f ), 1.5f, 0.001f );
-    SW_EXPECT_NEAR_EQUAL( catalog.getClassModifier( MechRangeClass::Far ).getValue( hashed_string( "down" ), 1.0f ), 2.0f, 0.001f );
-    SW_EXPECT_NEAR_EQUAL( catalog.getClassModifier( MechRangeClass::Mid ).getValue( hashed_string( "melee" ), 1.0f ), 1.0f, 0.001f );
+    SW_EXPECT_NEAR_EQUAL( catalog.getClassModifier( MechRangeClass::Near ).getScale( hashed_string( "melee" ) ), 1.5f, 0.001f );
+    SW_EXPECT_NEAR_EQUAL( catalog.getClassModifier( MechRangeClass::Far ).getScale( hashed_string( "down" ) ), 2.0f, 0.001f );
+    SW_EXPECT_NEAR_EQUAL( catalog.getClassModifier( MechRangeClass::Mid ).getScale( hashed_string( "melee" ) ), 1.0f, 0.001f );
 
     const MechDef* pStriker = catalog.findMech( hashed_string( "striker" ) );
     SW_ASSERT_TRUE( pStriker != nullptr );

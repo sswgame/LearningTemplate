@@ -257,7 +257,7 @@ namespace sw
             void execute( FitSolveState& state, const FitPairContext& pair ) const override
             {
                 FitPartState&             inner    = state._listPart[pair._innerPart];
-                const float32             distance = FitOperatorInternal::findArgument( pair, "distance", inner._pProfile->_coverageDistance );
+                const float32             distance = FitOperatorInternal::findArgumentOr( pair, "distance", inner._pProfile->_coverageDistance );
                 const SurfaceBvh&         surface  = state.getLayerSurface( pair._outerPart );
                 const AppearanceGeometry& geometry = *inner._pInput->_pGeometry;
                 vector<uint8>             listVertexCovered( inner._listPosition.size(), SW_FALSE );
@@ -297,8 +297,8 @@ namespace sw
 
             void execute( FitSolveState& state, const FitPairContext& pair ) const override
             {
-                const float32  tolerance = FitOperatorInternal::findArgument( pair, "tolerance", FitOperatorInternal::kDefaultTolerance );
-                const float32  search    = FitOperatorInternal::findArgument( pair, "searchDistance", FitOperatorInternal::kDefaultSearchDistance );
+                const float32  tolerance = FitOperatorInternal::findArgumentOr( pair, "tolerance", FitOperatorInternal::kDefaultTolerance );
+                const float32  search    = FitOperatorInternal::findArgumentOr( pair, "searchDistance", FitOperatorInternal::kDefaultSearchDistance );
                 FitPenetration penetration;
                 penetration._partA = pair._innerPart;
                 penetration._partB = pair._outerPart;

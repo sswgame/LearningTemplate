@@ -16,7 +16,6 @@ namespace sw
     {
         struct SkirmishMatchInternal
         {
-            /** @brief 성향별 AI 설정입니다 — 0 러시(일찍 작게) · 1 운영(일꾼 · 병영을 늘려 크게) · 2 사람 상대(그 사이). 유닛 id 는 판 설정(씬 데이터)에서 온다. */
             /** @brief 성향 @p style(씬 데이터)과 판의 유닛 id 로 AI 설정을 만듭니다. 생각 주기 · 방어 반경은 키트의 값이다. */
             static RTSCommanderAISettings makeAISettings( const SkirmishAIStyle& style, const SkirmishMatchSettings& matchSettings )
             {

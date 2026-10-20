@@ -390,7 +390,7 @@ namespace sw
                         const std::optional<bool>  flag   = field.isBool() ? field.read<bool>() : std::nullopt;
                         const std::optional<int64> number = field.isNumber() ? field.read<int64>() : std::nullopt;
                         if ( flag.has_value() == false && number.has_value() == false )
-                            return false;
+                            return FieldReadResult::FieldFailed;
                         bVal = flag.has_value() ? *flag : *number != 0;
                     }
                     else if ( field.isString() == false || StringUtil::tryParseBool( field.asString(), bVal ) == false )
@@ -495,7 +495,7 @@ namespace sw
                 // 판 번호가 부호 없는 정수가 아니면 이관을 고를 수 없다 — 0 판으로 읽지 않고 실패한다(읽기가 값을 알린다).
                 const std::optional<uint32> version = field.read<uint32>();
                 if ( version.has_value() == false )
-                    return false;
+                    return FieldReadResult::ObjectRejected; // 판을 모르면 이관할 수 없다 — 칸 하나가 아니라 객체째 실패다
                 *pOutVersion = *version;
                 continue;
             }

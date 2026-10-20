@@ -18,14 +18,14 @@ SW_TEST_CASE( JSONDocumentTest, ParseAndNavigateIgnoreCaseKeys )
     sw::JSONValue root = doc.getRoot();
     SW_EXPECT_TRUE( root.isObject() );
     SW_EXPECT_EQUAL( sw::string( "Demo" ), root.get( "name" ).asString() );
-    SW_EXPECT_EQUAL( 12, root.get( "_SCORE" ).read<sw::int64>().value() );
+    SW_EXPECT_EQUAL( 12, root.get( "_SCORE" ).read<int64>().value() );
     SW_EXPECT_TRUE( root.get( "missing" ).isValid() == false );
 
     sw::JSONValue items = root.get( "items" );
     SW_EXPECT_TRUE( items.isArray() );
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( items.size() ) );
-    SW_EXPECT_EQUAL( 1, items.at( 0 ).get( "ID" ).read<sw::int64>().value() );
-    SW_EXPECT_EQUAL( 2, items.at( 1 ).get( "id" ).read<sw::int64>().value() );
+    SW_EXPECT_EQUAL( 1, items.at( 0 ).get( "ID" ).read<int64>().value() );
+    SW_EXPECT_EQUAL( 2, items.at( 1 ).get( "id" ).read<int64>().value() );
 }
 
 /**
@@ -85,7 +85,7 @@ SW_TEST_CASE( JSONDocumentTest, WriteAndDumpRoundtrip )
     sw::JSONDocument loaded;
     SW_EXPECT_TRUE( loaded.parse( doc.dump() ) );
     SW_EXPECT_EQUAL( sw::string( "Demo" ), loaded.getRoot().get( "name" ).asString() );
-    SW_EXPECT_EQUAL( 3, loaded.getRoot().get( "count" ).read<sw::int64>().value() );
+    SW_EXPECT_EQUAL( 3, loaded.getRoot().get( "count" ).read<int64>().value() );
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( loaded.getRoot().get( "items" ).size() ) );
 }
 
@@ -111,14 +111,14 @@ SW_TEST_CASE( JSONDocumentTest, BooleanFloatAndDeepNestedObject )
     sw::JSONValue root = doc.getRoot();
     SW_EXPECT_TRUE( root.get( "bEnabled" ).read<bool>().value() );
     SW_EXPECT_FALSE( root.get( "bPaused" ).read<bool>().value() );
-    SW_EXPECT_NEAR_EQUAL( 2.75, root.get( "scale" ).read<sw::float64>().value(), 1e-4 );
+    SW_EXPECT_NEAR_EQUAL( 2.75, root.get( "scale" ).read<float64>().value(), 1e-4 );
 
     sw::JSONValue subArr = root.get( "nested" ).get( "sub" ).get( "array" );
     SW_EXPECT_TRUE( subArr.isArray() );
     SW_EXPECT_EQUAL( 3u, static_cast<uint32>( subArr.size() ) );
-    SW_EXPECT_NEAR_EQUAL( 10.5, subArr.at( 0 ).read<sw::float64>().value(), 1e-4 );
-    SW_EXPECT_NEAR_EQUAL( 20.25, subArr.at( 1 ).read<sw::float64>().value(), 1e-4 );
-    SW_EXPECT_NEAR_EQUAL( 30.125, subArr.at( 2 ).read<sw::float64>().value(), 1e-4 );
+    SW_EXPECT_NEAR_EQUAL( 10.5, subArr.at( 0 ).read<float64>().value(), 1e-4 );
+    SW_EXPECT_NEAR_EQUAL( 20.25, subArr.at( 1 ).read<float64>().value(), 1e-4 );
+    SW_EXPECT_NEAR_EQUAL( 30.125, subArr.at( 2 ).read<float64>().value(), 1e-4 );
 }
 
 /**
@@ -141,15 +141,15 @@ SW_TEST_CASE( JSONDocumentTest, FloatToIntTypeSafetyAndCoercion )
     sw::JSONValue root = doc.getRoot();
     {
         test::ScopedDefensiveTestLog expected( "a float in an integer field" );
-        SW_EXPECT_FALSE( root.get( "floatVal" ).read<sw::int64>().has_value() );
-        SW_EXPECT_FALSE( root.get( "floatVal" ).read<sw::uint64>().has_value() );
-        SW_EXPECT_FALSE( root.get( "negativeFloat" ).read<sw::int64>().has_value() );
-        SW_EXPECT_FALSE( root.get( "zeroVal" ).read<sw::int64>().has_value() );
+        SW_EXPECT_FALSE( root.get( "floatVal" ).read<int64>().has_value() );
+        SW_EXPECT_FALSE( root.get( "floatVal" ).read<uint64>().has_value() );
+        SW_EXPECT_FALSE( root.get( "negativeFloat" ).read<int64>().has_value() );
+        SW_EXPECT_FALSE( root.get( "zeroVal" ).read<int64>().has_value() );
     }
-    SW_EXPECT_EQUAL( sw::int64( 42 ), root.get( "intVal" ).read<sw::int64>().value() );
-    SW_EXPECT_NEAR_EQUAL( 3.75, root.get( "floatVal" ).read<sw::float64>().value(), 1e-9 );
+    SW_EXPECT_EQUAL( int64( 42 ), root.get( "intVal" ).read<int64>().value() );
+    SW_EXPECT_NEAR_EQUAL( 3.75, root.get( "floatVal" ).read<float64>().value(), 1e-9 );
     // 없는 값은 오류 없이 비어 있다 — 없음을 어떻게 다룰지는 부르는 쪽이 정한다.
-    SW_EXPECT_FALSE( root.get( "missing" ).read<sw::int64>().has_value() );
+    SW_EXPECT_FALSE( root.get( "missing" ).read<int64>().has_value() );
 }
 
 /**

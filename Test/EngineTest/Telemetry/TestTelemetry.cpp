@@ -300,17 +300,17 @@ SW_TEST_CASE( TelemetryTest, BatchesRotateAndRespectCaps )
     SW_EXPECT_TRUE( contextLine.getRoot().get( "type" ).asString() == "context" );
     SW_EXPECT_TRUE( contextLine.getRoot().get( "session" ).asString() == "testsession01" );
     SW_EXPECT_TRUE( contextLine.getRoot().get( "buildId" ).asString() == "0123ABCD1" );
-    SW_EXPECT_EQUAL( 2, static_cast<int32>( contextLine.getRoot().get( "schema" ).read<sw::int64>().value() ) );
+    SW_EXPECT_EQUAL( 2, static_cast<int32>( contextLine.getRoot().get( "schema" ).read<int64>().value() ) );
     for ( size_t lineIndex = 1; lineIndex < listLine.size(); ++lineIndex )
     {
         JSONDocument eventLine;
         SW_ASSERT_TRUE( eventLine.parse( listLine[lineIndex], "event" ) );
-        SW_EXPECT_EQUAL( static_cast<int64>( lineIndex - 1 ), eventLine.getRoot().get( "seq" ).read<sw::int64>().value() );
+        SW_EXPECT_EQUAL( static_cast<int64>( lineIndex - 1 ), eventLine.getRoot().get( "seq" ).read<int64>().value() );
     }
     JSONDocument killLine;
     SW_ASSERT_TRUE( killLine.parse( listLine[4], "kill" ) );
     SW_EXPECT_TRUE( killLine.getRoot().get( "event" ).asString() == "game.kill" );
-    SW_EXPECT_NEAR_EQUAL( 3.0, killLine.getRoot().get( "fields" ).get( "distance" ).read<sw::float64>().value(), 1.0e-6 );
+    SW_EXPECT_NEAR_EQUAL( 3.0, killLine.getRoot().get( "fields" ).get( "distance" ).read<float64>().value(), 1.0e-6 );
     SW_EXPECT_TRUE( killLine.getRoot().get( "fields" ).get( "headshot" ).read<bool>().value() );
 
     // 파일 1 KB: 사건을 계속 넣으면 여러 파일로 회전하고, 업로더가 두는(Kept) 동안 파일 수 상한(4)에서 오래된 것부터 버린다.
@@ -433,14 +433,14 @@ SW_TEST_CASE( TelemetryTest, SceneSummariesCarryFramePercentiles )
     SW_ASSERT_EQUAL( 2u, static_cast<uint32>( listSummary.size() ) );
     const JSONValue first = listSummary[0].getRoot().get( "fields" );
     SW_EXPECT_TRUE( first.get( "scene" ).asString() == "game/a.scene.xml" );
-    SW_EXPECT_EQUAL( 100, static_cast<int32>( first.get( "frames" ).read<sw::int64>().value() ) );
-    SW_EXPECT_NEAR_EQUAL( 16.05, first.get( "p50Ms" ).read<sw::float64>().value(), 0.06 );
-    SW_EXPECT_NEAR_EQUAL( 16.05, first.get( "p99Ms" ).read<sw::float64>().value(), 0.06 );
-    SW_EXPECT_NEAR_EQUAL( 100.0, first.get( "maxMs" ).read<sw::float64>().value(), 0.01 );
+    SW_EXPECT_EQUAL( 100, static_cast<int32>( first.get( "frames" ).read<int64>().value() ) );
+    SW_EXPECT_NEAR_EQUAL( 16.05, first.get( "p50Ms" ).read<float64>().value(), 0.06 );
+    SW_EXPECT_NEAR_EQUAL( 16.05, first.get( "p99Ms" ).read<float64>().value(), 0.06 );
+    SW_EXPECT_NEAR_EQUAL( 100.0, first.get( "maxMs" ).read<float64>().value(), 0.01 );
     const JSONValue second = listSummary[1].getRoot().get( "fields" );
     SW_EXPECT_TRUE( second.get( "scene" ).asString() == "game/b.scene.xml" );
-    SW_EXPECT_EQUAL( 50, static_cast<int32>( second.get( "frames" ).read<sw::int64>().value() ) );
-    SW_EXPECT_NEAR_EQUAL( 8.05, second.get( "p50Ms" ).read<sw::float64>().value(), 0.06 );
+    SW_EXPECT_EQUAL( 50, static_cast<int32>( second.get( "frames" ).read<int64>().value() ) );
+    SW_EXPECT_NEAR_EQUAL( 8.05, second.get( "p50Ms" ).read<float64>().value(), 0.06 );
 }
 
 /**
@@ -500,11 +500,11 @@ SW_TEST_CASE( TelemetryTest, FrameObserverRecordsTheActiveSceneAfterSceneTick )
     SW_ASSERT_EQUAL( 2u, static_cast<uint32>( listSummary.size() ) );
     const JSONValue first = listSummary[0].getRoot().get( "fields" );
     SW_EXPECT_TRUE( first.get( "scene" ).asString() == "game/a.scene.xml" );
-    SW_EXPECT_EQUAL( 10, static_cast<int32>( first.get( "frames" ).read<sw::int64>().value() ) ); // 프레임 앞 · 뒤는 기록하지 않는다 — 씬 틱 뒤 한 번씩만
-    SW_EXPECT_NEAR_EQUAL( 16.05, first.get( "p50Ms" ).read<sw::float64>().value(), 0.06 );
+    SW_EXPECT_EQUAL( 10, static_cast<int32>( first.get( "frames" ).read<int64>().value() ) ); // 프레임 앞 · 뒤는 기록하지 않는다 — 씬 틱 뒤 한 번씩만
+    SW_EXPECT_NEAR_EQUAL( 16.05, first.get( "p50Ms" ).read<float64>().value(), 0.06 );
     const JSONValue second = listSummary[1].getRoot().get( "fields" );
     SW_EXPECT_TRUE( second.get( "scene" ).asString() == "game/b.scene.xml" );
-    SW_EXPECT_EQUAL( 5, static_cast<int32>( second.get( "frames" ).read<sw::int64>().value() ) );
+    SW_EXPECT_EQUAL( 5, static_cast<int32>( second.get( "frames" ).read<int64>().value() ) );
 }
 
 /**

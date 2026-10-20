@@ -507,7 +507,8 @@ namespace sw
         NileCityPlanner planner;
         Wallet          wallet;
         WorldClock      clock;
-        planner.reset( makeCityLayout() );
+        if ( planner.reset( makeCityLayout(), _autoPlanPath ) == false )
+            return false; // 자동 계획을 읽지 못했다 — 이유는 플래너가 남겼다
         if ( clock.initialize( makeClockSettings() ) == false )
             return false;
         city.initialize( &_catalog, NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, makeCitySettings(), makeRefs() );

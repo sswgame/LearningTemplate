@@ -397,7 +397,7 @@ namespace sw
                 bOk = Internal::parsePlatforms( child.getAttributeText( "platforms" ), def._platformMask, sourceName, def._id ) && bOk;
 
                 // 적지 않은 칸은 UserSettingDef 의 초기값이다.
-                float64 confirmSeconds = def._confirmSeconds;
+                float64 confirmSeconds = static_cast<float64>( def._confirmSeconds );
                 bOk                    = Internal::readNumberAttribute( child, "min", def._minValue, sourceName ) && bOk;
                 bOk                    = Internal::readNumberAttribute( child, "max", def._maxValue, sourceName ) && bOk;
                 bOk                    = Internal::readNumberAttribute( child, "step", def._step, sourceName ) && bOk;

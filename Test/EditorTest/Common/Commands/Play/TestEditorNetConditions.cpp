@@ -5,8 +5,10 @@
 #include "Editor/Common/Commands/Play/EditorNetConditions.h"
 #include "Editor/Panels/Multiplayer/MultiplayerTab.h"
 
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/NetEmulationPresetTable.h"
 
+#include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
 
 using namespace sw;
@@ -39,7 +41,7 @@ namespace
 SW_TEST_CASE( EditorNetConditionsTest, EveryPresetRowReachesThePanelWithItsValues )
 {
     NetEmulationPresetTable table;
-    SW_ASSERT_TRUE( table.loadFromResource() );
+    SW_ASSERT_TRUE( table.loadFromResource( ::test::getEngineDefaultAssets()._netEmulationPresets.get() ) );
     for ( const NetEmulationPresetDef& preset : table._listPreset )
     {
         SW_EXPECT_TRUE_MSG( preset._label.empty() == false, preset._name.c_str() );

@@ -252,7 +252,7 @@ SW_TEST_CASE( VrmAvatarImporterTest, AvatarJSONIsReadable )
     sw::JSONDocument written;
     SW_ASSERT_TRUE( written.parse( text ) );
     const sw::JSONValue root = written.getRoot();
-    SW_EXPECT_EQUAL( uint64( sw::editor::VrmAvatarImporter::kVersion ), root.get( "_version", false ).read<sw::uint64>().value() );
+    SW_EXPECT_EQUAL( uint64( sw::editor::VrmAvatarImporter::kVersion ), root.get( "_version", false ).read<uint64>().value() );
     SW_EXPECT_STREQ( "Hips", root.get( "_mapHumanBone", false ).get( "hips", false ).asString().c_str() );
     SW_EXPECT_STREQ( "Head", root.get( "_firstPersonBone", false ).asString().c_str() );
     SW_EXPECT_STREQ( "0.06", root.get( "_firstPersonOffset", false ).at( 1 ).dump().c_str() );
@@ -294,7 +294,7 @@ SW_TEST_CASE( VrmAvatarImporterTest, RepositoryVroidSampleResolves )
         const sw::JSONValue children = node.get( "children", false );
         for ( size_t childIndex = 0; childIndex < children.size(); ++childIndex )
         {
-            listChild.push_back( static_cast<uint32>( children.at( childIndex ).read<sw::uint64>().value() ) );
+            listChild.push_back( static_cast<uint32>( children.at( childIndex ).read<uint64>().value() ) );
         }
         names._listNodeChild.push_back( std::move( listChild ) );
     }

@@ -108,7 +108,7 @@ namespace sw
                 SW_LOG_ERROR( "%#: stat '%#' has an invalid max - skipped", sourceName, pID );
                 continue;
             }
-            def._maxValue = maxValue;
+            def._maxValue = static_cast<float64>( maxValue );
             addStat( def );
             ++loadedCount;
         }

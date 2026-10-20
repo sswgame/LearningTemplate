@@ -357,7 +357,6 @@ namespace sw::editor
             inoutMesh._listIndex.push_back( bSwapWinding ? arrCorner[1] : arrCorner[2] );
             inoutMesh._listTriangleMaterial.push_back( primitive.material );
         }
-        return true;
     }
 
     bool ModelImportUtil::readSkinInfluence( const SkinBinding& skin, const cgltf_accessor* pJoint, const float32* pWeight, cgltf_size vertexIndex, ImportVertex& inoutVertex )
