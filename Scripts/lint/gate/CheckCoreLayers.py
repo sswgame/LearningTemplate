@@ -32,16 +32,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — com
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
 from common import blankComments, firstFolderAfter, iterIncludes, normalizePath  # noqa: E402
-from common.RuleData import kKindInteger  # noqa: E402
+from LayerRules import kCoreLayerSchema, readCoreTiers  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 from SourceScan import FileFindings, SourceFile, SourceScanResult, joinFindings  # noqa: E402
 
 _kCorePrefix = "Core/"
 _kSourceCorePrefix = "Source/Core/"
 
-#: `rules/CheckCoreLayers.toml` 에서 예외 표 말고 읽는 것 — 폴더 → 티어(숫자가 큰 쪽이 위).
-_kRuleSchema = {"tier": kKindInteger}
-_kCoreTier: dict[str, int] = LintGate.readRules("CheckCoreLayers", _kRuleSchema, requiredKeys=("tier",))["tier"]
+#: 폴더 → 티어(숫자가 큰 쪽이 위, `rules/CheckCoreLayers.toml` 의 `[tier]`).
+_kCoreTier: dict[str, int] = readCoreTiers()
 
 _kRootAggregate = ("Core/CoreMinimal.h", "Core/pch.h")
 
@@ -94,7 +93,7 @@ def findViolationsInSource(source: SourceFile) -> FileFindings | None:
 class CheckCoreLayersGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다."""
 
-    ruleSchema = _kRuleSchema
+    ruleSchema = kCoreLayerSchema
     description = "Core 폴더 티어(Common → … → LogSink)를 거꾸로 include 하지 않는지 검사"
     buildComment = "Checking the Core folder layers..."
     timeoutSeconds = 30

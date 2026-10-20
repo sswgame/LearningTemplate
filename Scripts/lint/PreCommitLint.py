@@ -13,7 +13,7 @@ C++ 파일이 staged 됐을 때만 돌리면 **`.cmake` 나 `.py` 만 커밋할 
 **병합 커밋은 새 내용만 파일 단위로 본다.** 병합 중(`MERGE_HEAD` 가 있다)이면 병합으로 바뀐 파일이 전부 staged 로 잡히는데,
 그 대부분은 한쪽 부모와 바이트가 같다 — 그 부모 커밋을 만들 때 이 훅이 같은 내용을 이미 검사했다. 그래서 파일 단위 검사
 (`--files` · 위치 인자를 받는 게이트, 픽서, clang-format)에는 **staged 내용이 어느 부모의 같은 경로 blob 과도 다른 파일**만
-넘긴다(`listFilesUnlikeEveryParent`) — 충돌 해결 · 자동 병합으로 내용이 새로 생긴 파일이다. 파일 인자 없이 트리 전체를 보는
+넘긴다(`StagedScope.selectFileScopedStaged`) — 충돌 해결 · 자동 병합으로 내용이 새로 생긴 파일이다. 파일 인자 없이 트리 전체를 보는
 게이트와 셰이더 쿠킹 검증은 staged 전체를 기준으로 그대로 돈다. 두 부모에서 따로 온 파일끼리의 관계(헤더는 한쪽, 짝 `.cpp` 는
 다른 쪽에서 온 생성자 초기화 순서 같은 것)는 파일 단위 검사가 원래 못 보는 것이라, 병합 뒤 `ctest -L lint`(CI 도 같다)가 트리
 전체로 다시 본다.
@@ -47,17 +47,16 @@ sys.path.insert(0, str(scriptDir))
 sys.path.insert(0, str(scriptDir.parent))
 
 from LintCatalog import LintScript, discoverLintScripts
+from StagedScope import selectFileScopedStaged
 from fixer import FormatBranchBraces
 from fixer import FormatForwardDeclarations
 from common import (
     findAppExecutable,
     findShaderCompileFailures,
     getAllStagedFiles,
-    getMergeHeadRevisions,
     getProjectRoot,
     getCpuCount,
     getStagedCppFiles,
-    listFilesUnlikeEveryParent,
     runClangFormatBatch,
     runGit,
     runProcess,
@@ -89,21 +88,6 @@ def _relativeInternal(path: Path, projectRoot: Path) -> str:
         return path.relative_to(projectRoot).as_posix()
     except ValueError:
         return path.as_posix()
-
-
-def selectFileScopedStagedInternal(projectRoot: Path, listStaged: list[Path]) -> list[Path]:
-    """
-    파일 단위 검사에 넘길 staged 파일. 병합 중이 아니면 staged 전체, 병합 중이면 어느 부모와도 내용이 다른 파일만(모듈 머리말).
-    """
-    listMergeHead = getMergeHeadRevisions(projectRoot)
-    if not listMergeHead:
-        return list(listStaged)
-
-    listScoped = listFilesUnlikeEveryParent(listStaged, ["HEAD", *listMergeHead], projectRoot)
-    print(f"[PreCommitLint] 병합 커밋: staged {len(listStaged)}개 중 {len(listScoped)}개만 파일 단위로 검사합니다 "
-          f"(나머지 {len(listStaged) - len(listScoped)}개는 한쪽 부모와 내용이 같아 그 부모 커밋 때 검사됐습니다 — "
-          f"트리 전체 게이트는 그대로 돌고, 병합 뒤 `ctest -L lint` 가 전체를 다시 봅니다).")
-    return listScoped
 
 
 class StagedContentProbe:
@@ -407,7 +391,7 @@ def main(argv: list[str] | None = None) -> int:
     # --- 게이트 — `gate/` 폴더가 목록이다 --------------------------------------
     #
     # 폴더를 훑고, 무엇이 staged 되었을 때 도는지는 게이트가 스스로 답한다(모듈 독스트링 참고).
-    listFileScoped = selectFileScopedStagedInternal(projectRoot, allStagedFiles)
+    listFileScoped = selectFileScopedStaged(projectRoot, allStagedFiles)
     if runGatesInternal(projectRoot, allStagedFiles, listFileScoped, bVerbose):
         hasErrors = True
 
