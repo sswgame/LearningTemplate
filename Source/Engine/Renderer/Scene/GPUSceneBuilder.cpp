@@ -117,9 +117,7 @@ namespace sw
     {
         _instanceRing.clear();
         _snapshot._pListInstance.reset();
-        _snapshot._listOpaqueBatch.clear();
-        _snapshot._listTransparentBatch.clear();
-        _snapshot._listAllBatch.clear();
+        _snapshot.clearBatches();
         _snapshot._listParticleBatch.clear();
         // 머티리얼 레지스트리는 "그룹 목록(스냅샷)" 과 "셰이더 경로에서 인덱스를 찾는 맵" 이 한 몸이다. 목록만 지우면 맵이 옛 인덱스를
         // 반환하고 GPUMaterialRegistry::materialGroupFor 가 범위 밖이라 조용히 건너뛴다. 그러면 배치에 머티리얼 버퍼가 실리지 않아 폴백(0)으로
@@ -755,9 +753,7 @@ namespace sw
             if ( bRefreshed == false )
             {
                 instanceWork().clear();
-                _snapshot._listOpaqueBatch.clear();
-                _snapshot._listTransparentBatch.clear();
-                _snapshot._listAllBatch.clear();
+                _snapshot.clearBatches();
                 populateBatches();
             }
             {
@@ -810,7 +806,7 @@ namespace sw
     void GPUSceneBuilder::requestGPUUploads( GPUUploadQueue& queue ) const
     {
         // 배치가 메시의 소유권을 가지고 있으므로(스냅샷 소유 규칙) 큐에 넘겨도 워커가 도는 동안 사라지지 않는다.
-        for ( const GPUMeshBatch& batch : _snapshot._listAllBatch )
+        for ( const GPUMeshBatch& batch : _snapshot.getAllBatches() )
         {
             queue.requestMesh( batch._mesh );
         }
@@ -901,9 +897,9 @@ namespace sw
     void GPUSceneBuilder::computeViewTransparentOrders( const vector<RenderViewRequest>& listView )
     {
         _snapshot._listViewTransparentOrder.clear();
-        const vector<GPUInstance>*  pInstance          = _instanceRing.getPublished();
-        const vector<GPUMeshBatch>& listBatch          = _snapshot._listTransparentBatch;
-        const bool                  bNoTransparentTail = pInstance == nullptr || listBatch.empty() || listView.empty();
+        const vector<GPUInstance>*                 pInstance          = _instanceRing.getPublished();
+        const vector_reference<const GPUMeshBatch> listBatch          = _snapshot.getTransparentBatches();
+        const bool                                 bNoTransparentTail = pInstance == nullptr || listBatch.empty() || listView.empty();
         if ( bNoTransparentTail )
             return;
         const uint32 instanceCount = static_cast<uint32>( pInstance->size() );
@@ -946,8 +942,8 @@ namespace sw
         // 투명은 카메라 거리로 매 프레임 다시 정렬한다. 그 순서가 바뀌면 투명 인스턴스의 위치가 달라지지만
         // **불투명 접두부는 그대로다**. 접두부만 제자리 갱신하고 꼬리는 새 순서로 다시 방출한다.
         const bool bTransparentOrderChanged = ( _listScratchTransparentIdx != _listBuiltTransparentIdx );
-        if ( bTransparentOrderChanged && ( _opaqueInstanceCount > pPrevious->size() || _opaqueBatchCount > _snapshot._listAllBatch.size() ||
-                                           _opaqueElementEntryCount > _listBatchElementIndex.size() ) )
+        // 불투명 배치 수는 스냅샷이 배치 목록과 함께 지키므로(`GPUSceneSnapshot::appendBatch`) 목록 길이를 넘을 수 없다.
+        if ( bTransparentOrderChanged && ( _opaqueInstanceCount > pPrevious->size() || _opaqueElementEntryCount > _listBatchElementIndex.size() ) )
             return false;
 
         // **바뀐 슬롯만 기록해 둔다.** 받는 쪽이 그 구간만 GPU 에 올린다. 구간이 너무 잘게 흩어지면 작은 업로드가 오히려 비싸므로
@@ -1186,7 +1182,7 @@ namespace sw
         // 원소를 다음 구조 변경까지 붙든다.
         // 스탬프는 원소에 찍는다. 인스턴스 8000개를 돌 필요 없이 배치가 기록해 둔 (배치, 원소) 쌍만 돈다.
         SW_PROFILE_SCOPE( "GT.GPUScene.build.refresh.stamp" );
-        _materialRegistry.stampBatchElements( _snapshot._listAllBatch, _listBatchElementRange, _listBatchElementIndex );
+        _materialRegistry.stampBatchElements( _snapshot.getAllBatches(), _listBatchElementRange, _listBatchElementIndex );
         return true;
     }
 
@@ -1268,9 +1264,8 @@ namespace sw
             }
         }
 
-        // 투명 꼬리를 자르는 위치를 기록해 둔다. 투명 순서만 바뀐 프레임은 여기서부터 다시 방출한다.
+        // 투명 꼬리를 자르는 위치를 기록해 둔다. 투명 순서만 바뀐 프레임은 여기서부터 다시 방출한다. 배치의 자르는 위치는 스냅샷의 불투명 배치 수다.
         _opaqueInstanceCount     = static_cast<uint32>( instanceWork().size() );
-        _opaqueBatchCount        = static_cast<uint32>( _snapshot._listAllBatch.size() );
         _opaqueElementEntryCount = static_cast<uint32>( _listBatchElementIndex.size() );
 
         emitTransparentBatches();
@@ -1324,10 +1319,9 @@ namespace sw
         // 꼬리를 잘라 낸다. 용량은 남아 있으므로 다시 붙일 때 할당이 없다.
         instanceWork().resize( _opaqueInstanceCount );
         _listInstanceSrcIndex.resize( _opaqueInstanceCount );
-        _snapshot._listAllBatch.resize( _opaqueBatchCount );
-        _snapshot._listTransparentBatch.clear();
+        _snapshot.truncateToOpaqueBatches();
         _listBatchElementIndex.resize( _opaqueElementEntryCount );
-        _listBatchElementRange.resize( _opaqueBatchCount );
+        _listBatchElementRange.resize( _snapshot.getOpaqueBatchCount() );
         // 배치 키가 그대로인 프레임에만 오는 경로다. 원소 인덱스는 지난 방출의 것을 그대로 쓴다(영속 ID).
         _bReuseMaterialElement = ( _listCandidateMaterialElement.size() == _listScratchCandidate.size() ) ? SW_TRUE : SW_FALSE;
         emitTransparentBatches();
@@ -1366,7 +1360,7 @@ namespace sw
         // 인스턴스마다 자기 (머티리얼, 인스턴스) 원소를 받는다. 합치기가 켜져 있으면 한 배치에 여러 머티리얼이 들어간다.
         // 배치가 쓰는 원소는 중복 없이 기록해 둔다(회수 스탬프가 인스턴스가 아니라 이 목록을 돈다). 정렬되어 있어 같은
         // 원소는 연속으로 오므로 직전 것과 다를 때만 추가한다.
-        const uint32 batchIndex = static_cast<uint32>( _snapshot._listAllBatch.size() );
+        const uint32 batchIndex = static_cast<uint32>( _snapshot.getAllBatches().size() );
         _listBatchElementRange.push_back( GPUInstanceRun{ static_cast<uint32>( _listBatchElementIndex.size() ), 0 } );
         for ( uint32 entryIndex = begin; entryIndex < end; ++entryIndex )
         {
@@ -1396,10 +1390,7 @@ namespace sw
             work.push_back( gpuInstance );
         }
 
-        // 두 목록이 같은 배치를 가진다. 앞쪽은 복사해야 하지만 마지막 하나는 옮길 수 있다.
-        // 그만큼 배치마다 shared_ptr 셋의 참조 카운트 조작이 한 벌씩 줄어든다.
-        vector<GPUMeshBatch>& listByBlend = ( blendMode == RHIBlendMode::Transparent ) ? _snapshot._listTransparentBatch : _snapshot._listOpaqueBatch;
-        listByBlend.push_back( batch );
-        _snapshot._listAllBatch.push_back( std::move( batch ) );
+        // 배치 목록은 한 벌이다. 불투명 · 투명은 스냅샷이 내주는 구간 뷰다.
+        _snapshot.appendBatch( std::move( batch ) );
     }
 } // namespace sw

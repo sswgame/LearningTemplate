@@ -421,9 +421,21 @@ namespace sw
         if ( BindingKinds::isRelative( binding ) )
         {
             // 이동량으로 쓰는 스틱: 배율과 프레임 시간을 곱하고, 반전은 마우스 이동처럼 여기서 한 번만 적용한다(액션 값 단계는 이동량을 반전하지 않는다).
+            // 한 성분만 내는 스틱(확대 같은 1D 액션)은 시점 반전을 받지 않는다 — 반전 설정은 2D 시점 이동의 것이다.
             const float32 frameScale = binding._bScaleByDelta ? _lastDeltaSeconds : 1.0f;
-            stickX *= binding._axisScale._x * frameScale * ( _playerSettings._bInvertX ? -1.0f : 1.0f );
-            stickY *= binding._axisScale._y * frameScale * ( _playerSettings._bInvertY ? -1.0f : 1.0f );
+            const bool    bLook      = binding._stickAxis == GamepadStickAxis::Both;
+            stickX *= binding._axisScale._x * frameScale * ( bLook && _playerSettings._bInvertX ? -1.0f : 1.0f );
+            stickY *= binding._axisScale._y * frameScale * ( bLook && _playerSettings._bInvertY ? -1.0f : 1.0f );
+        }
+        // 한 성분만 내는 바인딩은 그 성분이 1D 값(x)이다 — getAxis1D 가 x 를 읽는다.
+        if ( binding._stickAxis == GamepadStickAxis::X )
+        {
+            stickY = 0.0f;
+        }
+        else if ( binding._stickAxis == GamepadStickAxis::Y )
+        {
+            stickX = stickY;
+            stickY = 0.0f;
         }
         outValue = float2{ stickX, stickY };
         return ( stickX != 0.0f || stickY != 0.0f );

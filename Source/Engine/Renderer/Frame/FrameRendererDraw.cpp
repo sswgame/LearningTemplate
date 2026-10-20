@@ -211,14 +211,14 @@ namespace sw
         context._lastCbRegistryVersion = registryVersion;
     }
 
-    void FrameRenderer::drawSceneMeshes( FramePassContext& context, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass )
+    void FrameRenderer::drawSceneMeshes( FramePassContext& context, RHIPipelineStateHandle pso, bool bTransparentPass )
     {
         if ( _pDevice == nullptr || context._pCmd == nullptr )
             return;
 
         if ( _gpuScene.isUploaded() )
         {
-            drawGPUBatches( context, pso, cbIndex, bTransparentPass );
+            drawGPUBatches( context, pso, bTransparentPass );
             return;
         }
 
@@ -234,11 +234,10 @@ namespace sw
         commitBindlessTextureBindings( context );
     }
 
-    void FrameRenderer::drawGPUBatches( FramePassContext& context, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass )
+    void FrameRenderer::drawGPUBatches( FramePassContext& context, RHIPipelineStateHandle pso, bool bTransparentPass )
     {
         SW_PROFILE_SCOPE( "RT.Draw.gpuBatches" );
 
-        (void)cbIndex;
         const bool bCannotDraw = _pDevice == nullptr || context._pCmd == nullptr || _gpuScene.isUploaded() == false;
         if ( bCannotDraw )
             return;
@@ -257,7 +256,7 @@ namespace sw
         if ( bInstanced )
             registerInstanceBuffer( context );
 
-        const vector<GPUMeshBatch>& batches =
+        const vector_reference<const GPUMeshBatch> batches =
             bTransparentPass ? _gpuScene.getTransparentBatches() : _gpuScene.getOpaqueBatches();
         // 시간만 보면 무엇이 비싼지 알 수 없다. 배치가 몇 개로 묶였는지가 해석의 전제다.
         SW_PROFILE_COUNT( "RT.Draw.gpuBatchCount", batches.size() );
@@ -387,9 +386,8 @@ namespace sw
         (void)_particleRenderer.drawBatches( *context._pCmd, listBatch, _pDevice->supportsNativeBindlessSampling() );
     }
 
-    void FrameRenderer::drawFullscreen( FramePassContext& context, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex )
+    void FrameRenderer::drawFullscreen( FramePassContext& context, RHIPipelineStateHandle pso )
     {
-        (void)cbIndex;
         if ( context._pCmd == nullptr )
             return;
         setIdentityWorld( context );
