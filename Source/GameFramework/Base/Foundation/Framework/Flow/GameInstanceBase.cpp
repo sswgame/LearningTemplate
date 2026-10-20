@@ -541,9 +541,9 @@ namespace sw
         }
     }
 
-    bool GameInstanceBase::serializeState( void* pOutBuffer, uint32* pInOutSize )
+    bool GameInstanceBase::serializeState( vector<uint8>& outBytes )
     {
-        return writeStateEnvelope( SerializePurpose::Snapshot, pOutBuffer, pInOutSize );
+        return captureSnapshot( SerializePurpose::Snapshot, outBytes );
     }
 
     bool GameInstanceBase::deserializeState( const void* pInBuffer, uint32 size )
@@ -551,11 +551,8 @@ namespace sw
         return readStateEnvelope( SerializePurpose::Snapshot, pInBuffer, size );
     }
 
-    bool GameInstanceBase::writeStateEnvelope( SerializePurpose purpose, void* pOutBuffer, uint32* pInOutSize )
+    bool GameInstanceBase::captureSnapshot( SerializePurpose purpose, vector<uint8>& outBytes )
     {
-        if ( pInOutSize == nullptr )
-            return false;
-
         _pComponentStateStore->clear();
         captureStatefulComponents();
         onBeforeStateSerialize();
@@ -601,18 +598,8 @@ namespace sw
         arch.writeSection( componentArch.getData(), static_cast<uint32>( componentArch.getSize() ) );
         _pComponentStateStore->clear();
 
-        const size_t totalSize = arch.getSize();
-        if ( pOutBuffer == nullptr )
-        {
-            *pInOutSize = static_cast<uint32>( totalSize );
-            return true;
-        }
-
-        if ( *pInOutSize < totalSize )
-            return false;
-
-        Memory::copy( pOutBuffer, arch.getData(), totalSize );
-        *pInOutSize = static_cast<uint32>( totalSize );
+        // 봉투는 한 번 써서 그대로 넘긴다.
+        outBytes.assign( arch.getData(), arch.getData() + arch.getSize() );
         return true;
     }
 
@@ -696,16 +683,6 @@ namespace sw
         onAfterStateDeserialize();
         _pComponentStateStore->clear();
         return true;
-    }
-
-    bool GameInstanceBase::captureSnapshot( SerializePurpose purpose, vector<uint8>& outBytes )
-    {
-        uint32 size = 0;
-        if ( writeStateEnvelope( purpose, nullptr, &size ) == false || size == 0 )
-            return false;
-
-        outBytes.resize( size );
-        return writeStateEnvelope( purpose, outBytes.data(), &size );
     }
 
     bool GameInstanceBase::restoreSnapshot( SerializePurpose purpose, const vector<uint8>& inBytes )
