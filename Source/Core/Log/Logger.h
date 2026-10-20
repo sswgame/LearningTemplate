@@ -185,6 +185,23 @@ static_assert( static_cast<int32>( sw::LogLevel::Trace ) == SW_LOG_VERBOSITY_TRA
 			return true; }(); \
     }
 
+namespace sw
+{
+    /**
+     * @brief 컴파일에서 빠진 로그 수준의 자리가 인자 이름을 "쓴 것"으로 세게 하는 선언입니다.
+     * @details 로그에만 쓰는 지역 변수 · 매개변수는 그 수준이 빠진 빌드(배포본의 Info · Trace)에서 매크로가 통째로 사라지면 미사용 경고가 됩니다.
+     *          `sizeof` 안은 평가되지 않으므로 부작용 · 비용은 없고, 이름만 쓴 것으로 세어집니다. 정의가 없습니다(평가되면 링크 오류).
+     */
+    struct LogDiscardUtil
+    {
+        template <typename... TArgs>
+        static int32 consume( const TArgs&... args );
+    };
+} // namespace sw
+
+/// @brief 컴파일에서 빠진 SW_LOG_* 의 본문입니다. 인자를 평가하지 않지만 이름은 쓴 것으로 셉니다(`LogDiscardUtil`).
+#define SW_LOG_DISCARDED( ... ) ( (void)sizeof( ::sw::LogDiscardUtil::consume( __VA_ARGS__ ) ) )
+
 /**
  * @brief 포맷 문자열(과 인자)을 포맷해 Logger::writeLogGlobal 로 넘기는 핵심 매크로입니다.
  * @details **런타임 상세도를 먼저 확인합니다.** 버려질 줄은 8KB 버퍼 포맷 비용도 치르지 않습니다.
@@ -205,28 +222,28 @@ static_assert( static_cast<int32>( sw::LogLevel::Trace ) == SW_LOG_VERBOSITY_TRA
     /** @brief Error 수준으로 포맷해 남깁니다. 모든 빌드에 남습니다. */
     #define SW_LOG_ERROR( ... ) SW_LOG_INTERNAL( sw::LogLevel::Error, __VA_ARGS__ )
 #else
-    #define SW_LOG_ERROR( ... )
+    #define SW_LOG_ERROR( ... ) SW_LOG_DISCARDED( __VA_ARGS__ )
 #endif
 
 #if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_WARNING )
     /** @brief Warning 수준으로 포맷해 남깁니다. 배포본에도 남습니다. */
     #define SW_LOG_WARNING( ... ) SW_LOG_INTERNAL( sw::LogLevel::Warning, __VA_ARGS__ )
 #else
-    #define SW_LOG_WARNING( ... )
+    #define SW_LOG_WARNING( ... ) SW_LOG_DISCARDED( __VA_ARGS__ )
 #endif
 
 #if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_INFO )
     /** @brief Info 수준으로 포맷해 남깁니다. 배포본에서는 호출이 사라집니다. */
     #define SW_LOG_INFO( ... ) SW_LOG_INTERNAL( sw::LogLevel::Info, __VA_ARGS__ )
 #else
-    #define SW_LOG_INFO( ... )
+    #define SW_LOG_INFO( ... ) SW_LOG_DISCARDED( __VA_ARGS__ )
 #endif
 
 #if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_TRACE )
     /** @brief Trace 수준으로 포맷해 남깁니다. Debug 에만 컴파일됩니다. */
     #define SW_LOG_TRACE( ... ) SW_LOG_INTERNAL( sw::LogLevel::Trace, __VA_ARGS__ )
 #else
-    #define SW_LOG_TRACE( ... )
+    #define SW_LOG_TRACE( ... ) SW_LOG_DISCARDED( __VA_ARGS__ )
 #endif
 
 #if defined( SW_DEBUG )

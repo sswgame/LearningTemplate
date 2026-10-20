@@ -267,8 +267,7 @@ namespace sw
 
     bool MonsterCollectorCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
     {
-        using Internal = MonsterCollectorCatalogInternal;
-        const auto is  = [name]( const utf8* pName )
+        const auto is = [name]( const utf8* pName )
         { return StringUtil::equals( name, string_view( pName ), true ); };
         if ( is( "StatusImmunity" ) )
         {

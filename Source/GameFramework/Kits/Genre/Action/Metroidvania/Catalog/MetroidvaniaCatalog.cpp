@@ -82,7 +82,6 @@ namespace sw
 
     uint32 MetroidvaniaCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        using Internal = MetroidvaniaCatalogInternal;
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
         if ( loadRules( root, sourceName ) == false )
             return 0;
