@@ -21,6 +21,8 @@
 ## 실행 · 코드
 
 - 앱 창을 전경으로 올려 캡처하지 않는다. 게임 뷰는 `-gv_screenshot`, 에디터 UI 는 `-gv_screenshotEditor` · `<CaptureEditorUI>`([에디터 UX 기반](plans/EditorUX.md)).
+- `-gv_screenshot` · `-gv_screenshotEditor` 만 주면 사진 뒤에도 앱이 끝나지 않는다(종료 코드 124 로 죽는다). 사진만 찍을 거면 `-gv_screenshotQuit=1`, 측정과 함께면 `-gv_profileFrames`([검증과 측정](08_Verification.md) 1절).
+- `-scenario=` 는 리소스 ID(`engine/automation/x.scenario.xml`)도 받는다. 읽기 실패 로그는 `[read]`(파일을 못 찾음 — 리소스 루트 · 작업 폴더 · 낱개 파일 금지 구성이 함께 찍힌다) · `[xml]`(문법) · `[scenario]`(형식)로 막힌 단계를 가른다.
 - 정렬 할당 객체를 기반 포인터로 지우면 배포본 힙이 깨진다(Debug 는 조용). 모듈 안 정적 객체의 소멸자에서 스레드를 join 하지 않는다.
 - 무효 bindless 인덱스(`0xFFFFFFFF`)는 DX12 페이지 폴트, Vulkan DEVICE_LOST 다. 셰이더를 바꾼 뒤에는 `App.exe --cook-shaders`.
 - `castTo<Component>( Component*, 타입 )` 은 항상 성공한다. 종류 거르기는 `getTypeInfo()->isDerivedFrom( 타입 )`.

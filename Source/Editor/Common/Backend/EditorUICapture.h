@@ -36,11 +36,12 @@ namespace sw::editor
     /** @struct EditorUICaptureJob @brief UI 스레드가 렌더 스레드로 넘기는 캡처 한 건입니다. 잘림 지표는 UI 스레드가 ImGui 를 닫을 때 잰 값입니다. */
     struct EditorUICaptureJob
     {
-        string _path{};                  ///< 쓸 파일(.png)
-        string _clippedWindowNames{};    ///< 잘린 창 이름들(", " 로 잇는다)
-        uint32 _ticket{ 0 };             ///< `request` 가 돌려준 번호
-        uint32 _clippedWindowCount{ 0 }; ///< 내용이 창보다 큰데 그 방향 스크롤바가 없는 창 수입니다(내용이 잘려 보이지 않는다)
-        uint32 _windowCount{ 0 };        ///< 그린 창 수(자식 창 포함)
+        string _path{};                        ///< 쓸 파일(.png)
+        string _clippedWindowNames{};          ///< 잘린 창 이름들(", " 로 잇는다)
+        uint32 _ticket{ 0 };                   ///< `request` 가 돌려준 번호
+        uint32 _clippedWindowCount{ 0 };       ///< 내용이 창보다 큰데 그 방향 스크롤바가 없는 창 수입니다(내용이 잘려 보이지 않는다)
+        uint32 _windowCount{ 0 };              ///< 그린 창 수(자식 창 포함)
+        bool   _bFromStartupArgument{ false }; ///< `-gv_screenshotEditor` 가 요청한 건이다(`-gv_screenshotQuit` 이 이 건의 결과로 앱을 끝낸다).
     };
 } // namespace sw::editor
 

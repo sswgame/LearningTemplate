@@ -15,6 +15,7 @@
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Renderer/Frame/Capture/RenderTargetImageFile.h"
+#include "Engine/Renderer/RenderThread.h"
 
 #include <cstring>
 #include <imgui.h>
@@ -140,12 +141,15 @@ namespace sw::editor
     bool EditorUICapture::takeJob( EditorUICaptureJob& outJob )
     {
         ++_uiFrameCount;
+        if ( _uiFrameCount == 1u && gv_screenshotEditor.empty() == false )
+            RenderThread::expectCapture( RenderThread::CaptureKind::EditorUI ); // 첫 사진(기본 60 프레임 뒤)보다 앞서 알린다
         const bool bGlobalDue = gv_screenshotEditor.empty() == false && _bGlobalRequested == SW_FALSE &&
                                 _uiFrameCount >= static_cast<uint32>( gv_screenshotEditorFrame > 1 ? gv_screenshotEditorFrame : 1 );
         if ( bGlobalDue )
         {
             _bGlobalRequested = SW_TRUE;
             (void)request( gv_screenshotEditor ); // 결과는 finishJob 이 로그로 남긴다
+            _listQueued.back()._bFromStartupArgument = true;
         }
         if ( _listQueued.empty() )
             return false;
@@ -292,6 +296,9 @@ namespace sw::editor
 
     void EditorUICapture::addResult( const EditorUICaptureResult& result )
     {
+        // 성공이든 실패든 결과가 나온 순간이 끝이다 — `-gv_screenshotQuit` 이 이 결과로 앱을 끝낸다(렌더 스레드 안에서 부른다).
+        if ( result._job._bFromStartupArgument )
+            RenderThread::reportCaptureFinished( RenderThread::CaptureKind::EditorUI, result._bWritten == SW_TRUE );
         const std::scoped_lock<mutex> lock{ _resultMutex };
         if ( _listResult.size() >= EditorUICaptureInternal::kMaxResultCount )
             _listResult.erase( _listResult.begin() );

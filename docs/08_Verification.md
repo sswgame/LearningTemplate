@@ -74,6 +74,14 @@ cd build/Ninja-Debug/Bin
 ./App.exe -dx12 -gv_benchMeshes=8 -gv_benchAnimate=0 -gv_profileFrames=20 -gv_viewMode=2 "-gv_screenshot=wire.ppm"
 ```
 
+**사진만 찍고 끝낼 때는 `-gv_screenshotQuit`.** `-gv_screenshot` · `-gv_screenshotEditor` 는 사진을 쓰고도 앱을 끝내지 않는다(`-gv_profileFrames=N` 이나 시나리오가 끝내거나, 호출자가 표준 입력으로 `quit` 을 보내야 한다).
+호출자가 둘 다 하지 않으면 시한(124)으로 죽는다. `-gv_screenshotQuit=1` 을 더하면 요청한 사진(둘을 함께 주면 둘 다)을 모두 쓴 프레임에 종료 코드 0 으로 끝나고, 파일을 쓰지 못했으면 14 로 끝난다.
+기본은 끄기다 — `-gv_profileFrames` 와 같이 쓰는 측정이 사진 뒤에 일찍 끝나면 프로파일이 잘린다. 사진 인자 없이 이것만 주면 끝낼 근거가 없어 아무 일도 하지 않는다.
+
+```powershell
+./App.exe -dx12 -gv_screenshotQuit=1 "-gv_screenshot=shot.ppm"    # 사진 뒤 스스로 끝난다
+```
+
 **함정**
 
 - 백엔드는 `-dx11 / -dx12 / -vk / -gl` 로 고른다. 명시한 백엔드를 쓸 수 없으면 폴백하지 않고 에러로 선다(`RHIBackendUtil::findCommandLineBackend`

@@ -3611,6 +3611,14 @@
    "source": "Source/Engine/Renderer/RenderThread.cpp"
   },
   {
+   "name": "gv_screenshotQuit",
+   "type": "bool",
+   "default": "false",
+   "kind": "시험 · 배포본에도",
+   "description": "요청한 스크린샷을 모두 찍으면 앱이 스스로 끝난다 (0, 파일을 쓰지 못했으면 14)",
+   "source": "Source/Engine/Renderer/RenderThread.cpp"
+  },
+  {
    "name": "gv_serverExitAfterTicks",
    "type": "int32",
    "default": "0",

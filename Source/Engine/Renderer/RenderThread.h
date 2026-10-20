@@ -99,6 +99,26 @@ namespace sw
         /** @brief 마지막으로 처리한 `requestScreenshot` 이 쓴 파일 경로입니다. 실패했으면 빈 문자열입니다. */
         static string getLastScreenshotPath();
 
+        /** @brief 시작 인자(`-gv_screenshot` · `-gv_screenshotEditor`)가 찍는 사진의 종류입니다. `-gv_screenshotQuit` 은 요청한 종류가 모두 끝나야 앱을 끝냅니다. */
+        enum class CaptureKind : uint32
+        {
+            GameView = 1u << 0, ///< `-gv_screenshot` — 렌더 스레드가 찍는다.
+            EditorUI = 1u << 1, ///< `-gv_screenshotEditor` — 에디터가 찍는다.
+        };
+        /** @brief `-gv_screenshotQuit` 이 앱을 끝낼 때, 사진 파일을 쓰지 못한 경우의 종료 코드입니다(다 썼으면 0). */
+        static constexpr int32 kCaptureWriteFailedExitCode = 14;
+        /** @brief `getCaptureExitCode` 가 "아직 끝낼 때가 아니다" 로 돌려주는 값입니다. */
+        static constexpr int32 kNoCaptureExitCode = -1;
+        /** @brief 이 종류의 사진을 찍겠다고 알립니다. 첫 사진이 끝나기 전(첫 프레임)에 부릅니다. 어느 스레드에서 불러도 됩니다. */
+        static void expectCapture( CaptureKind kind );
+        /** @brief 이 종류의 사진 요청을 모두 처리했음을 알립니다(@p bWritten 이 false 면 파일을 쓰지 못했다). 어느 스레드에서 불러도 됩니다. */
+        static void reportCaptureFinished( CaptureKind kind, bool bWritten );
+        /**
+         * @brief `-gv_screenshotQuit` 이 켜져 있고 요청한 사진을 모두 처리했으면 앱의 종료 코드(0 또는 `kCaptureWriteFailedExitCode`), 아니면 `kNoCaptureExitCode` 입니다.
+         * @details 게임 스레드가 프레임마다 물어 `Engine::requestQuit` 으로 잇습니다. 사진을 요청한 종류가 하나도 없으면 끝낼 근거가 없어 늘 `kNoCaptureExitCode` 입니다.
+         */
+        [[nodiscard]] static int32 getCaptureExitCode();
+
     private:
         /** @brief 렌더 스레드 루프입니다. 패킷을 꺼내 executePacket 합니다. */
         void threadMain();
@@ -134,6 +154,7 @@ namespace sw
         /// @brief 직전 프레임에 디바이스로 전달한 제출 정책입니다. 바뀔 때만 로그를 남기려고 둡니다.
         bool             _bLastImmediateSubmit;
         uint8            _bScreenshotTaken;                 ///< -gv_screenshot 은 한 장만 찍는다.
+        uint8            _bScreenshotWriteFailed;           ///< -gv_screenshot 의 장 중 쓰지 못한 것이 있다(`-gv_screenshotQuit` 의 종료 코드).
         uint32           _screenshotFrameCounter;           ///< 씬이 채워질 때까지 몇 프레임을 기다린다.
         uint32           _screenshotShotCount;              ///< 지금까지 찍은 장 수(`-gv_screenshotCount` 연속 촬영)
         uint32           _budgetFrameCounter;               ///< 드라이버 GPU 메모리 값을 몇 프레임마다 물을지 센다(`_s_kBudgetRefreshFrames`).

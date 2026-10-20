@@ -4,9 +4,14 @@
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/File/FileUtil.h"
 #include "Core/Network/Transport/NetEmulation.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Config/NetEmulationPresetTable.h"
+#include "Engine/Resource/Pack/ResourcePakManager.h"
+#include "Engine/Resource/ResourceIO.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
@@ -18,6 +23,18 @@ namespace sw
             static constexpr float32 kDefaultFixedDelta         = 1.0f / 60.0f;
             static constexpr uint32  kDefaultTimeoutFrames      = 3600;
             static constexpr uint32  kDefaultStartTimeoutFrames = 1200;
+
+            /**
+             * @brief 파일을 찾지 못한 이유를 막힌 단계(`[read]`)와 함께 적습니다. 리소스 ID 가 안 풀리는 원인(리소스 루트 · 작업 폴더 · 낱개 파일 금지 구성)이 로그 한 줄에 보이게 한다.
+             */
+            [[nodiscard]] static string describeReadFailure( string_view path )
+            {
+                const string loosePath = ResourcePaths::findLooseFile( path ).getDiskPath();
+                const bool   bPackOnly = engine::areEngineServicesBound() && ResourceIO::getPackManager().isAllowLooseFiles() == false;
+                return "[read] not found (resource root '" + ResourcePaths::getRootFolderPath() + "', working folder '" + FileUtil::getCurrentPath() + "', " +
+                       ( loosePath.empty() ? string( "loose file unresolved" ) : "loose file '" + loosePath + "' is not a file" ) +
+                       ( bPackOnly ? ", this build reads packs only and the id is in none of them)" : ", the id is in none of the mounted packs)" );
+            }
 
             /** @brief 음이 아닌 정수 속성을 읽습니다. 형식이 틀리면 false 와 이유. */
             [[nodiscard]] static bool readUint( const utf8* pValue, const utf8* pName, uint32& outValue, string& outReason )
@@ -135,10 +152,17 @@ namespace sw
         XMLDocument doc;
         if ( doc.loadResource( path ) == false )
         {
-            outError = string( path ) + ": " + ( doc.getLastError().empty() ? string( "could not read the scenario file" ) : doc.getLastError() );
+            // 단계를 가른다 — 읽기(`[read]`, 리소스 ID 가 안 풀린다)와 XML 문법(`[xml]`)은 고치는 곳이 다르다. 형식 검사(`parse`)의 오류는 `[scenario]` 로 붙는다.
+            const bool bReadable = ResourceIO::hasResource( path );
+            outError             = bReadable ? "[xml] " + doc.getLastError() : AutomationScenarioInternal::describeReadFailure( path );
             return false;
         }
-        return parse( doc.saveToString(), path, outError );
+        if ( parse( doc.saveToString(), path, outError ) == false )
+        {
+            outError = "[scenario] " + outError;
+            return false;
+        }
+        return true;
     }
 
     bool AutomationScenario::parse( string_view xmlText, string_view sourceName, string& outError )

@@ -532,6 +532,45 @@ SW_TEST_CASE( AppSmokeTest, UnwritableScreenshotIsReported )
 }
 
 /**
+ * @brief [AppSmokeTest] `-gv_screenshotQuit` 은 사진을 다 찍은 뒤 앱이 스스로 종료 코드 0 으로 끝나게 한다
+ * @details `-gv_profileFrames` 없이 `-gv_screenshot` 만 주면 예전에는 앱이 사진 뒤에도 돌아, 표준 입력으로 quit 을 보내지 않는 호출자가 시한(124)으로 죽였다.
+ *          시한을 60 초로 줄여 끝나지 않으면 바로 실패로 본다.
+ */
+SW_TEST_CASE( AppSmokeTest, ScreenshotQuitEndsTheAppAfterTheShot )
+{
+    const string screenshotPath = test::makeTempPath( "screenshotquit.ppm" );
+    string       arguments{ "-W=128 -H=72 -dx12 -gv_screenshotQuit=1 \"-gv_screenshot=" };
+    arguments += screenshotPath;
+    arguments += "\"";
+    constexpr uint32          kQuitDeadlineSeconds = 60;
+    const test::AppRunOutcome outcome              = test::AppTestUtil::runAppOnBackend( arguments, kQuitDeadlineSeconds, []( Process&, const string& ) {} );
+    if ( test::hasRunHere( outcome ) == false )
+        SW_TEST_SKIP( "DX12 is not usable on this machine" );
+    SW_EXPECT_TRUE_MSG( outcome == test::AppRunOutcome::Passed, "-gv_screenshotQuit 로 띄운 App 이 종료 코드 0 으로 끝나지 않았습니다" );
+    vector<uint8> screenshotBytes;
+    SW_EXPECT_TRUE_MSG( FileUtil::readFile( screenshotPath, screenshotBytes ) && screenshotBytes.empty() == false, "사진 파일이 없습니다" );
+}
+
+/**
+ * @brief [AppSmokeTest] `-gv_screenshotQuit` 은 사진 파일을 쓰지 못하면 0 이 아닌 종료 코드(14)로 끝낸다
+ * @details 폴더를 파일 경로로 주어 쓰기를 실패시킨다. 종료 코드를 직접 봐야 해서 `runApp`(원본)을 쓰고, 백엔드를 쓸 수 없으면(77) 건너뛴다.
+ */
+SW_TEST_CASE( AppSmokeTest, ScreenshotQuitReportsAnUnwritableShot )
+{
+    const string blockedPath = test::makeTempDirectory( "screenshotquit_is_a_folder" );
+    string       arguments{ "-W=128 -H=72 -dx12 -gv_screenshotQuit=1 \"-gv_screenshot=" };
+    arguments += blockedPath;
+    arguments += "\"";
+    constexpr uint32             kQuitDeadlineSeconds = 60;
+    constexpr int32              kBackendUnusableCode = 77;
+    const test::ProcessRunResult run                  = test::AppTestUtil::runApp( arguments, kQuitDeadlineSeconds, []( Process&, const string& ) {} );
+    if ( run._bLaunched == false || ( run._bTimedOut == false && run._exitCode == kBackendUnusableCode ) )
+        SW_TEST_SKIP( "App could not be launched or DX12 is not usable on this machine" );
+    SW_EXPECT_TRUE_MSG( run._bTimedOut == false, "-gv_screenshotQuit 로 띄운 App 이 쓰기에 실패하고도 끝나지 않았습니다" );
+    SW_EXPECT_EQUAL( 14, run._exitCode );
+}
+
+/**
  * @brief [AppSmokeTest] 백엔드 교체 뒤 디바이스에 매인 설정이 새 디바이스를 따르는지 검증
  * @details 교체는 디바이스에 의존하는 기동 단계를 다시 세운다. 씬 스냅샷 빌더의 "머티리얼을 넘어 배치 합치기" 는 디바이스가
  *          텍스처를 인덱스로 고를 수 있을 때(DX12 · Vulkan 의 네이티브 bindless)만 켜져야 한다 — DX11 · GL 은 머티리얼 텍스처를

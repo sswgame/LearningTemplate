@@ -6,6 +6,7 @@
 gv_profileFrames = "AppSmokeTest(Shipping hostgpu) 가 N 프레임 뒤 스스로 끝나는 배포 실행 파일을 띄운다"
 gv_screenshot = "Scripts/qa/GoldenImages.py 가 배포본(백엔드 하나)으로도 캡처하고, AppSmokeTest.UnwritableScreenshotIsReported 가 Shipping 에서 돈다"
 gv_screenshotFrame = "Scripts/qa/GoldenImages.py 가 배포본 캡처 프레임을 고른다"
+gv_screenshotQuit = "AppSmokeTest.ScreenshotQuit* 가 Shipping 에서 사진 뒤 스스로 끝나는 배포 실행 파일을 띄운다"
 gv_fixedFrameDelta = "AppScenarioTest(Shipping) 의 시나리오가 결정적 시간을 이름으로 건다(AutomationSession)"
 gv_uiDemo = "Shipping AppScenarioTest 가 도는 engine/automation/uidemo.scenario.xml 이 이름으로 켠다"
 gv_uiOptionsMenu = "Shipping AppScenarioTest 가 도는 engine/automation/uinavigation.scenario.xml 이 이름으로 켠다"

@@ -44,6 +44,10 @@ namespace sw
                 RHITextureHandle _pendingTexture{ 0 };
                 RHIFormat        _pendingFormat{ RHIFormat::R8G8B8A8_UNORM };
                 atomic<uint32>   _completedSerial{ 0 };
+                /// @brief `-gv_screenshotQuit` 의 장부입니다(`RenderThread::CaptureKind` 비트). 요청한 종류가 모두 끝났는지, 그중 쓰지 못한 것이 있는지 봅니다.
+                atomic<uint32> _expectedCaptureMask{ 0 };
+                atomic<uint32> _finishedCaptureMask{ 0 };
+                atomic<uint32> _failedCaptureMask{ 0 };
             };
 
             /** @brief 우편함 본체입니다. 엔진 수명 범위가 닫히면(엔진 종료) 마지막 경로와 함께 소멸합니다. */
@@ -96,6 +100,13 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE( int32, gv_screenshotCount, 1, "연속으로 찍을 스크린샷 수 (기본 1)" );
     SW_TEST_GLOBAL_VARIABLE( int32, gv_screenshotInterval, 1, "연속 스크린샷 사이 프레임 수 (기본 1)" );
 
+    /**
+     * @brief `-gv_screenshotQuit` 입니다. `-gv_screenshot` · `-gv_screenshotEditor` 로 요청한 사진을 모두 찍으면 앱이 스스로 끝납니다(종료 코드 0, 파일을 쓰지 못했으면 14).
+     * @details 기본은 끄기입니다. `-gv_profileFrames` 와 함께 쓰는 실행(사진을 찍으며 프로파일을 잰다)이 사진 뒤에 일찍 끝나지 않게 하려는 것이고,
+     *          표준 입력의 quit 으로 끝내던 호출자도 그대로 돕니다. 사진 인자를 주지 않으면 끝낼 근거가 없어 아무 일도 하지 않습니다.
+     */
+    SW_TEST_GLOBAL_VARIABLE_SHIPPED( bool, gv_screenshotQuit, false, "요청한 스크린샷을 모두 찍으면 앱이 스스로 끝난다 (0, 파일을 쓰지 못했으면 14)" );
+
     // 커맨드 리스트를 프레임 끝에 모아 한 번에 제출할지(기본), 잘릴 때마다 바로 제출할지 정한다. 이 파일이 프레임마다 디바이스로 전달한다.
     // 두 모드 모두 기록 순서가 곧 실행 순서다. 즉시 모드도 [세그먼트][리스트] 순서를 지켜 제출하고
     // 제출 '시점'만 달라진다. 즉시 모드는 제출 횟수가 늘어 오버헤드가 크지만, GPU 오류(DEVICE_HUNG,
@@ -116,6 +127,7 @@ namespace sw
         , _bContextBound{ false }
         , _bLastImmediateSubmit{ false }
         , _bScreenshotTaken{ SW_FALSE }
+        , _bScreenshotWriteFailed{ SW_FALSE }
         , _screenshotFrameCounter{ 0 }
         , _screenshotShotCount{ 0 }
         , _budgetFrameCounter{ 0 }
@@ -545,7 +557,9 @@ namespace sw
             const uint32     shotCount                  = gv_screenshotCount > 1 ? static_cast<uint32>( gv_screenshotCount ) : 1u;
             const uint32     interval                   = gv_screenshotInterval > 1 ? static_cast<uint32>( gv_screenshotInterval ) : 1u;
             const uint32     frame                      = ++_screenshotFrameCounter;
-            const bool       bShotDue                   = frame >= targetFrame && ( frame - targetFrame ) % interval == 0u;
+            if ( frame == 1u )
+                expectCapture( CaptureKind::GameView ); // 에디터 사진의 알림(첫 UI 프레임)과 어느 쪽이 먼저든, 첫 사진(10 프레임 뒤)보다 앞선다
+            const bool bShotDue = frame >= targetFrame && ( frame - targetFrame ) % interval == 0u;
             if ( bShotDue )
             {
                 // 연속 촬영이면 장 번호를 확장자 앞에 붙인다.
@@ -564,7 +578,12 @@ namespace sw
                 const string_view attachment{ gv_screenshotAttachment };
                 const bool        bWritten = attachment.empty() == false ? _pFrameRenderer->getCapture().dumpTransientToFile( attachment, path ) : writePresentedImage( path );
                 if ( bWritten == false )
+                {
+                    _bScreenshotWriteFailed = SW_TRUE;
                     SW_LOG_WARNING( "Screenshot was not written: %#", path.c_str() );
+                }
+                if ( _bScreenshotTaken == SW_TRUE )
+                    reportCaptureFinished( CaptureKind::GameView, _bScreenshotWriteFailed == SW_FALSE );
             }
         }
 
@@ -609,6 +628,31 @@ namespace sw
     uint32 RenderThread::getCompletedScreenshotSerial()
     {
         return RenderThreadInternal::getMailbox()._completedSerial.load( std::memory_order_acquire );
+    }
+
+    void RenderThread::expectCapture( CaptureKind kind )
+    {
+        (void)RenderThreadInternal::getMailbox()._expectedCaptureMask.fetch_or( static_cast<uint32>( kind ) );
+    }
+
+    void RenderThread::reportCaptureFinished( CaptureKind kind, bool bWritten )
+    {
+        RenderThreadInternal::ScreenshotMailbox& mailbox = RenderThreadInternal::getMailbox();
+        if ( bWritten == false )
+            (void)mailbox._failedCaptureMask.fetch_or( static_cast<uint32>( kind ) );
+        (void)mailbox._finishedCaptureMask.fetch_or( static_cast<uint32>( kind ) ); // 실패를 먼저 적는다 — 끝났다고 보인 순간 실패도 보여야 한다
+    }
+
+    int32 RenderThread::getCaptureExitCode()
+    {
+        if ( gv_screenshotQuit == false )
+            return kNoCaptureExitCode;
+        const RenderThreadInternal::ScreenshotMailbox& mailbox  = RenderThreadInternal::getMailbox();
+        const uint32                                   expected = mailbox._expectedCaptureMask.load();
+        const bool                                     bAllDone = expected != 0u && ( mailbox._finishedCaptureMask.load() & expected ) == expected;
+        if ( bAllDone == false )
+            return kNoCaptureExitCode;
+        return mailbox._failedCaptureMask.load() != 0u ? kCaptureWriteFailedExitCode : 0;
     }
 
     string RenderThread::getLastScreenshotPath()

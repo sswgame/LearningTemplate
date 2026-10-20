@@ -275,6 +275,24 @@ SW_TEST_CASE( AutomationScenarioTest, EditorRootAttributeMarksEditorScenarios )
 }
 
 /**
+ * @brief [AutomationScenarioTest] 시나리오는 리소스 ID 로 읽히고, 못 읽으면 어느 단계에서 막혔는지가 오류에 든다
+ * @details `-scenario=` 가 리소스 ID 를 받는 길(`loadFromPath`)이 그대로 도는지 잠그고, 없는 파일은 `[read]` 로 시작해 리소스 루트 · 작업 폴더가 함께 보인다.
+ */
+SW_TEST_CASE( AutomationScenarioTest, LoadsByResourceIDAndNamesTheFailingStage )
+{
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+    sw::AutomationScenario scenario;
+    sw::string             error;
+    SW_EXPECT_TRUE_MSG( scenario.loadFromPath( "engine/automation/runner.scenario.xml", error ), error.c_str() );
+    SW_EXPECT_EQUAL( sw::string( "engine.runner" ), scenario.getName() );
+
+    SW_TEST_DEFENSIVE_SCOPE( "a scenario id that resolves to no file is a [read] load error" );
+    SW_EXPECT_FALSE( scenario.loadFromPath( "engine/automation/nothere.scenario.xml", error ) );
+    SW_EXPECT_TRUE_MSG( error.rfind( "[read]", 0 ) == 0, error.c_str() );
+    SW_EXPECT_TRUE_MSG( error.find( sw::ResourcePaths::getRootFolderPath() ) != sw::string::npos, error.c_str() );
+}
+
+/**
  * @brief [AutomationScenarioTest] WaitUntil 은 조건이 참이 될 때까지 시나리오 시계를 붙잡는다 — 뒤 단계 · 입력 사건이 그만큼 밀리고, 시한을 넘으면 실패로 적고 간다
  * @details 부하 걸린 기계에서 고정 프레임 대기가 지던 에디터 시나리오(`sequencerkeys`)의 고침이다. 미는 것을 빼면 Tap 이 붙잡힌 동안 나가 frame 3 의 Expect 가 진다.
  */

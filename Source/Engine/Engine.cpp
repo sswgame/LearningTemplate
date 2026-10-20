@@ -797,6 +797,10 @@ namespace sw
                     requestQuit( observerExitCode ); // 여럿이면 처음 것의 코드다
             }
         }
+        // `-gv_screenshotQuit`: 요청한 사진을 모두 찍었으면 그 결과(0 또는 쓰기 실패)로 끝낸다. 관찰자(시나리오)의 코드가 먼저 요청됐으면 그것이 이긴다.
+        const int32 captureExitCode = RenderThread::getCaptureExitCode();
+        if ( captureExitCode != RenderThread::kNoCaptureExitCode )
+            requestQuit( captureExitCode );
         if ( _pInputManager != nullptr )
             _pInputManager->endFrame();
         // 이번 프레임에 넣은 디버그 도형을 보이는 목록으로 확정하고, 씬이 흘린 시간만큼 지속 시간을 줄인다(일시정지면 그대로 남는다).
