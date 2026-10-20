@@ -9,6 +9,7 @@
 #include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"
 #include "GameFramework/Base/Online/Bus/LocalServerBus.h"
 #include "GameFramework/Base/Online/Directory/ServerDirectoryControl.h"
+#include "GameFramework/Base/Online/Identity/AccountNameIndex.h"
 #include "GameFramework/Base/Online/Identity/AccountSessionControl.h"
 #include "GameFramework/Base/Online/Ledger/Ledger.h"
 #include "GameFramework/Base/Online/Mail/ServiceMail.h"
@@ -34,11 +35,13 @@ namespace
         static constexpr AccountID kSuper    = 0x4;
         static constexpr AccountID kPlayer   = 0x100;
 
-        MemoryServiceDatabase _database;
-        uint64                _nextKey;
+        MemoryServiceDatabase    _database;
+        const IAccountNameIndex* _pNameIndex;
+        uint64                   _nextKey;
 
         AdminFixture()
             : _database{}
+            , _pNameIndex{ nullptr }
             , _nextKey{ 1 }
         {
             (void)AdminStoreLogic::seedRole( _database, kViewer, AdminRole::Viewer, 1 );
@@ -50,11 +53,12 @@ namespace
         AdminResult run( AccountID adminID, uint16 method, AdminRequest request, AdminReply* pOutReply = nullptr, uint64 keyLow = 0 )
         {
             AdminCommand command;
-            command._adminID = adminID;
-            command._method  = method;
-            command._nowMs   = 5000;
-            command._keyHigh = 7;
-            command._keyLow  = keyLow != 0 ? keyLow : _nextKey++;
+            command._adminID    = adminID;
+            command._method     = method;
+            command._pNameIndex = _pNameIndex;
+            command._nowMs      = 5000;
+            command._keyHigh    = 7;
+            command._keyLow     = keyLow != 0 ? keyLow : _nextKey++;
             if ( request._memo.empty() )
                 request._memo = "ticket-1";
             command._request = std::move( request );
@@ -88,6 +92,28 @@ namespace
             string                    cursor;
             (void)ServiceAuditLog::listEntries( _database, subject, "", 100, listEntry, cursor );
             return static_cast<int32>( listEntry.size() );
+        }
+    };
+
+    /** @brief 접속하지 않은 정식 계정 하나("OfflineHero" = kPlayer)만 아는 이름 색인입니다. */
+    class FakeNameIndex final : public IAccountNameIndex
+    {
+    public:
+        ServiceStoreResult readIdentityByDisplayName( IServiceStoreConnection& connection, string_view displayName, AccountIdentity& outIdentity ) const override
+        {
+            (void)connection;
+            if ( displayName != "OfflineHero" )
+                return ServiceStoreResult::NotFound;
+            outIdentity._accountID   = AdminFixture::kPlayer;
+            outIdentity._displayName = "OfflineHero";
+            return ServiceStoreResult::Ok;
+        }
+
+        ServiceStoreResult readIdentity( IServiceStoreConnection& connection, AccountID accountID, AccountIdentity& outIdentity ) const override
+        {
+            if ( accountID != AdminFixture::kPlayer )
+                return ServiceStoreResult::NotFound;
+            return readIdentityByDisplayName( connection, "OfflineHero", outIdentity );
         }
     };
 
@@ -337,6 +363,26 @@ SW_TEST_CASE( AdminServiceTest, AdminCannotChangeOwnRole )
     promote._role      = AdminRole::Operator;
     SW_EXPECT_TRUE( fixture.run( AdminFixture::kSuper, AdminMethod::kSetRole, promote ) == AdminResult::Ok );
     SW_EXPECT_TRUE( fixture.run( AdminFixture::kSupport, AdminMethod::kAdjustAsset, fixture.adjust( 1 ) ) == AdminResult::Ok ); // 다음 명령부터 새 등급
+}
+
+SW_TEST_CASE( AdminServiceTest, LookupFindsOfflineAccountsByNameThroughTheNameIndex )
+{
+    AdminFixture  fixture;
+    FakeNameIndex nameIndex;
+    AdminRequest  byName;
+    byName._displayName = "OfflineHero";
+    SW_EXPECT_TRUE( fixture.run( AdminFixture::kViewer, AdminMethod::kLookupAccount, byName ) == AdminResult::UnknownAccount ); // 색인이 없으면 이름으로 찾지 않는다
+    fixture._pNameIndex = &nameIndex;
+    AdminReply reply;
+    SW_ASSERT_TRUE( fixture.run( AdminFixture::kViewer, AdminMethod::kLookupAccount, byName, &reply ) == AdminResult::Ok );
+    SW_EXPECT_EQUAL( reply._identity._accountID, AdminFixture::kPlayer );
+    SW_EXPECT_EQUAL( reply._identity._displayName, string( "OfflineHero" ) );
+    AdminRequest unknown;
+    unknown._displayName = "Nobody";
+    SW_EXPECT_TRUE( fixture.run( AdminFixture::kViewer, AdminMethod::kLookupAccount, unknown ) == AdminResult::UnknownAccount );
+    AdminRequest byID;
+    byID._accountID = 0x999; // 색인에 없는 계정 id
+    SW_EXPECT_TRUE( fixture.run( AdminFixture::kViewer, AdminMethod::kLookupAccount, byID ) == AdminResult::UnknownAccount );
 }
 
 SW_TEST_CASE( AdminServiceTest, ReportsAreListedAndResolvedOnceByTheSupportRole )

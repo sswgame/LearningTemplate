@@ -5,6 +5,7 @@
 #include "Core/Container/formatString.h"
 
 #include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"
+#include "GameFramework/Base/Online/Identity/AccountNameIndex.h"
 #include "GameFramework/Base/Online/Ledger/Ledger.h"
 #include "GameFramework/Base/Online/Mail/ServiceMail.h"
 #include "GameFramework/Base/Online/Mail/ServiceMailCampaign.h"
@@ -326,11 +327,34 @@ namespace sw
                 }
             }
 
-            static AdminResult lookup( IServiceStoreConnection& connection, const AdminRequest& request, AdminReply& outReply )
+            /**
+             * @brief 계정 하나를 조회합니다. 계정 id 가 없으면 표시 이름으로 계정 키트의 이름 색인에서 찾으므로 접속하지 않은 계정도 찾습니다.
+             * @details 찾은 계정 id 와 공개 신원은 `_identity` 에 담는다. 접속 여부는 서비스가 이 프로세스의 디렉터리로 채운다.
+             */
+            static AdminResult lookup( IServiceStoreConnection& connection, const AdminCommand& command, AdminReply& outReply )
             {
+                AdminRequest request = command._request;
                 if ( request._accountID == kInvalidAccountID )
-                    return AdminResult::UnknownAccount;
-                const LedgerHolder account = LedgerHolder::makeAccount( request._accountID );
+                {
+                    if ( request._displayName.empty() || command._pNameIndex == nullptr )
+                        return AdminResult::UnknownAccount;
+                    const ServiceStoreResult found = command._pNameIndex->readIdentityByDisplayName( connection, request._displayName, outReply._identity );
+                    if ( found == ServiceStoreResult::NotFound )
+                        return AdminResult::UnknownAccount;
+                    if ( found != ServiceStoreResult::Ok )
+                        return AdminResult::Unavailable;
+                    request._accountID = outReply._identity._accountID;
+                }
+                else if ( command._pNameIndex != nullptr )
+                {
+                    const ServiceStoreResult found = command._pNameIndex->readIdentity( connection, request._accountID, outReply._identity );
+                    if ( found == ServiceStoreResult::NotFound )
+                        return AdminResult::UnknownAccount;
+                    if ( found != ServiceStoreResult::Ok )
+                        return AdminResult::Unavailable;
+                }
+                outReply._identity._accountID = request._accountID;
+                const LedgerHolder account    = LedgerHolder::makeAccount( request._accountID );
                 if ( Ledger::listBalances( connection, account, outReply._listBalance ) != ServiceStoreResult::Ok )
                     return AdminResult::Unavailable;
                 if ( ServiceSanction::readState( connection, request._accountID, outReply._sanction ) != ServiceStoreResult::Ok )
@@ -404,7 +428,7 @@ namespace sw
         if ( AdminMethod::isDirectoryMethod( command._method ) )
             return AdminStoreLogicInternal::finish( outReply, AdminResult::Ok ); // 등급만 확인했다. 효과와 감사 기록은 서비스가 넘긴 서버 디렉터리 키트가 쓴다
         if ( command._method == AdminMethod::kLookupAccount )
-            return AdminStoreLogicInternal::finish( outReply, AdminStoreLogicInternal::lookup( connection, command._request, outReply ) );
+            return AdminStoreLogicInternal::finish( outReply, AdminStoreLogicInternal::lookup( connection, command, outReply ) );
         if ( command._method == AdminMethod::kListAudit )
         {
             const ServiceStoreResult listed = ServiceAuditLog::listEntries( connection, command._request._subject, command._request._cursor, command._request._maxCount,

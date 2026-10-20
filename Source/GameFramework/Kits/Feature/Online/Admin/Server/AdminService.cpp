@@ -139,13 +139,14 @@ namespace sw
         const size_t pendingIndex = _listPendingCall.size() - 1;
 
         AdminCommand command;
-        command._request = request;
-        command._pPolicy = _settings._pPolicy;
-        command._adminID = adminID;
-        command._keyHigh = idempotencyKey._high;
-        command._keyLow  = idempotencyKey._low;
-        command._nowMs   = pending._nowMs;
-        command._method  = method;
+        command._request    = request;
+        command._pPolicy    = _settings._pPolicy;
+        command._pNameIndex = _settings._pNameIndex;
+        command._adminID    = adminID;
+        command._keyHigh    = idempotencyKey._high;
+        command._keyLow     = idempotencyKey._low;
+        command._nowMs      = pending._nowMs;
+        command._method     = method;
 
         AdminReply refused;
         refused._result = AdminResult::Ok;
@@ -155,16 +156,6 @@ namespace sw
             refused._result = AdminResult::NotSignedIn;
         else if ( pending._methodIndex < 0 )
             refused._result = AdminResult::Forbidden; // 모르는 명령이므로 누구도 가질 수 없는 등급이 필요하다
-        const bool bByName = method == AdminMethod::kLookupAccount && request._displayName.empty() == false && request._accountID == kInvalidAccountID;
-        if ( refused._result == AdminResult::Ok && bByName )
-        {
-            AccountIdentity identity;
-            if ( _settings._pDirectory == nullptr || _settings._pDirectory->findIdentityByDisplayName( request._displayName, identity ) == false )
-                refused._result = AdminResult::UnknownAccount; // 이 프로세스에 접속한 계정만 이름으로 찾는다
-            else
-                command._request._accountID = identity._accountID;
-            _listPendingCall[pendingIndex]._targetID = command._request._accountID;
-        }
         if ( refused._result != AdminResult::Ok )
         {
             finishCall( pendingIndex, refused );
@@ -217,14 +208,8 @@ namespace sw
             if ( pending._callID != callID )
                 continue;
             const bool bLookupWithDirectory = pending._method == AdminMethod::kLookupAccount && inoutReply._result == AdminResult::Ok && _settings._pDirectory != nullptr;
-            if ( bLookupWithDirectory )
-            {
-                AccountIdentity identity;
-                if ( _settings._pDirectory->findIdentity( pending._targetID, identity ) )
-                    inoutReply._identity = identity;
-                inoutReply._identity._accountID = pending._targetID;
-                inoutReply._bOnline             = _settings._pDirectory->isAccountOnline( pending._targetID ) ? SW_TRUE : SW_FALSE;
-            }
+            if ( bLookupWithDirectory ) // 신원은 저장소 조회가 채웠다(이름으로 찾았으면 계정 id 도). 접속 여부만 이 프로세스로 본다
+                inoutReply._bOnline = _settings._pDirectory->isAccountOnline( inoutReply._identity._accountID ) ? SW_TRUE : SW_FALSE;
             const bool bRevoke = inoutReply._result == AdminResult::Ok && inoutReply._bRevokeSessions == SW_TRUE && inoutReply._bReplayed == SW_FALSE;
             if ( bRevoke && _settings._pSessionControl != nullptr )
             {
