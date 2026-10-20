@@ -49,7 +49,8 @@ namespace sw
      * @brief 그래프의 블렌드 스페이스 상태(노드의 "blend_space") 하나를 재생할 것으로 냅니다. 애니메이터가 노드마다 하나 가지고 상태 기계에 넘깁니다.
      * @details 시간은 표본 길이를 가중치로 평균한 한 바퀴(`BlendSpace::computeBlendedLength`) 위에서 흐르고, 표본 클립은 같은 위상(정규화 시간)으로 샘플한다.
      *          가중치는 매 시간 단계 앞에서 축 파라미터로 다시 구한다(`updateWeights`). 길이가 바뀌면 애니메이터가 현재 슬롯의 위상을 지킨다.
-     *          표본 클립의 알림은 내지 않는다(어느 표본의 알림을 낼지 정하지 않았다). 발소리는 발 닿음 감지(`AnimationFootContactDef`)가 맡는다.
+     *          표본 클립의 알림은 데이터("notify", `AnimationBlendSpaceNotifyMode`)가 고른 표본에서 낸다. 출처는 표본 클립이라 받는 쪽은 클립 하나를 재생할 때와
+     *          같은 규칙으로 구간 알림을 닫는다 — 그래서 애니메이터는 알림을 내는 표본 클립을 재생 중 목록(`appendNotifySources`)에 함께 넣는다.
      */
     class SW_API SkeletalBlendSpaceState final : public IAnimationPlayable
     {
@@ -59,6 +60,10 @@ namespace sw
 
         float32 getPlayLength() const override { return _playLength; }
         bool    isLoopingByDefault() const override { return true; }
+        /** @brief 알림을 내는 표본마다 걸음을 그 클립의 시각으로 옮겨 그 클립의 알림을 냅니다(가중치는 @p weight × 표본 가중치). */
+        void collectFiredNotifies( const AnimationTimeStep& step, float32 weight, vector<AnimationFiredNotify>& outListFired ) const override;
+        /** @brief 지금 알림을 내는 표본 클립을 @p inoutListPlayable 에 덧붙입니다(알림의 출처와 같은 집합). */
+        void appendNotifySources( vector<const IAnimationPlayable*>& inoutListPlayable ) const;
 
         /** @brief 축 파라미터로 표본 가중치와 한 바퀴 길이를 다시 구합니다. */
         void updateWeights( const AnimationParameterSet& parameters );
@@ -71,6 +76,9 @@ namespace sw
         float32 computeSampleTime( uint32 sampleIndex, float32 time ) const;
 
     private:
+        /** @brief 표본 @p sampleIndex 가 지금 알림을 내는지 봅니다(데이터의 알림 방법과 가중치). */
+        bool isNotifySample( uint32 sampleIndex ) const;
+
         hashed_string                      _stateName;
         const AnimationGraphBlendSpaceDef* _pDef; ///< 애니메이터의 그래프 노드 데이터다. 그래프를 다시 읽으면 상태도 다시 만든다
         vector<const AnimationClip*>       _listClip;

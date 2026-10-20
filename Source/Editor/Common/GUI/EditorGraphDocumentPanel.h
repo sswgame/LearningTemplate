@@ -12,6 +12,8 @@
  * [애셋에 요구하는 것]
  * `AssetType` 은 `_listNode` 와 `_listLink` 를 가지고 `toJSON()` 과 `parseJSON()` 을 제공해야 합니다. 노드와 링크 타입은
  * 그 목록에서 추론하므로 애셋이 따로 별칭을 노출할 필요는 없습니다.
+ * 패널은 애셋을 **통째로** 들고 있습니다(`_graph`). 노드와 링크만 따로 들면 캔버스에 없는 필드(애니메이션 그래프의 레이어와 본 마스크)가
+ * 읽기 → 저장 · Undo 를 한 번 지날 때마다 조용히 사라집니다.
  */
 #pragma once
 #include "Core/Common/StdHeaders.h"
@@ -49,8 +51,7 @@ namespace sw::editor
         EditorGraphDocumentPanel( EditorAssetType kind, const utf8* pNodeMoveEditLabel, const utf8* pNodeMoveCoalesceKey )
             : EditorDocumentPanel{ kind, true }
             , _nodeGraph{}
-            , _listNode{}
-            , _listLink{}
+            , _graph{}
             , _pNodeMoveEditLabel{ pNodeMoveEditLabel }
             , _pNodeMoveCoalesceKey{ pNodeMoveCoalesceKey }
             , _previewHoldSeconds{ 0.0f }
@@ -66,18 +67,12 @@ namespace sw::editor
         virtual void ensureDefaults() = 0;
 
         /** @brief 다음에 쓸 노드 ID 입니다. */
-        int32 nextNodeID() const { return nextItemID( _listNode ); }
+        int32 nextNodeID() const { return nextItemID( _graph._listNode ); }
         /** @brief 다음에 쓸 링크 ID 입니다. */
-        int32 nextLinkID() const { return nextItemID( _listLink ); }
+        int32 nextLinkID() const { return nextItemID( _graph._listLink ); }
 
-        /** @brief 현재 목록으로 애셋 하나를 만듭니다. */
-        AssetType captureGraphData() const
-        {
-            AssetType data;
-            data._listNode = _listNode;
-            data._listLink = _listLink;
-            return data;
-        }
+        /** @brief 편집 중인 애셋의 사본입니다. */
+        AssetType captureGraphData() const { return _graph; }
 
         /**
          * @brief 캔버스를 열고 이 이미지의 imgui-node-editor 사본에도 현재 편집기를 바인딩합니다. false 이면 `endGraphCanvas` 를 호출하지 않습니다.
@@ -95,7 +90,7 @@ namespace sw::editor
         /** @brief `beginGraphCanvas` 와 짝입니다. 그린 노드 수를 프로브(`Editor.GraphNodeCount`)에 기록합니다. */
         void endGraphCanvas()
         {
-            EditorNodeGraph::noteDrawnNodeCount( static_cast<uint32>( _listNode.size() ) );
+            EditorNodeGraph::noteDrawnNodeCount( static_cast<uint32>( _graph._listNode.size() ) );
             _nodeGraph.endCanvas();
             ax::NodeEditor::SetCurrentEditor( nullptr );
         }
@@ -131,9 +126,8 @@ namespace sw::editor
             if ( text.empty() == false && restored.parseJSON( text ) == false )
                 SW_LOG_WARNING( "Graph undo snapshot could not be read - showing the default graph" );
 
-            _listNode = std::move( restored._listNode );
-            _listLink = std::move( restored._listLink );
-            if ( _listNode.empty() )
+            _graph = std::move( restored );
+            if ( _graph._listNode.empty() )
                 ensureDefaults();
 
             _bGraphLayoutReady = SW_FALSE;
@@ -147,14 +141,8 @@ namespace sw::editor
          */
         void adoptLoadedGraph( AssetType&& data, ToolAssetLoadResult result )
         {
-            _listNode.clear();
-            _listLink.clear();
-            if ( result == ToolAssetLoadResult::Loaded )
-            {
-                _listNode = std::move( data._listNode );
-                _listLink = std::move( data._listLink );
-            }
-            if ( _listNode.empty() )
+            _graph = result == ToolAssetLoadResult::Loaded ? std::move( data ) : AssetType{};
+            if ( _graph._listNode.empty() )
                 ensureDefaults();
 
             _bGraphLayoutReady = SW_FALSE;
@@ -170,7 +158,7 @@ namespace sw::editor
         void cacheNodeLayout()
         {
             bool bMoved{ false };
-            for ( NodeType& node : _listNode )
+            for ( NodeType& node : _graph._listNode )
             {
                 const ImVec2 position = ax::NodeEditor::GetNodePosition( toNodeID( node._id ) );
                 const bool   bChanged = EditorSessionPolicy::hasNodeMoved( node._position._x, node._position._y, position.x, position.y );
@@ -207,9 +195,9 @@ namespace sw::editor
                 if ( ax::NodeEditor::AcceptDeletedItem() == false )
                     continue;
                 const int32 id = static_cast<int32>( linkID.Get() );
-                _listLink.erase( std::remove_if( _listLink.begin(), _listLink.end(), [id]( const LinkType& link )
+                _graph._listLink.erase( std::remove_if( _graph._listLink.begin(), _graph._listLink.end(), [id]( const LinkType& link )
                 { return link._id == id; } ),
-                                 _listLink.end() );
+                                        _graph._listLink.end() );
                 notifyDocumentEdited( pDeleteLinkLabel );
             }
 
@@ -219,13 +207,13 @@ namespace sw::editor
                 if ( ax::NodeEditor::AcceptDeletedItem() == false )
                     continue;
                 const int32 id = static_cast<int32>( nodeID.Get() );
-                _listNode.erase( std::remove_if( _listNode.begin(), _listNode.end(), [id]( const NodeType& node )
+                _graph._listNode.erase( std::remove_if( _graph._listNode.begin(), _graph._listNode.end(), [id]( const NodeType& node )
                 { return node._id == id; } ),
-                                 _listNode.end() );
-                _listLink.erase( std::remove_if( _listLink.begin(), _listLink.end(),
-                                                 [id, &linkTouchesNode]( const LinkType& link )
+                                        _graph._listNode.end() );
+                _graph._listLink.erase( std::remove_if( _graph._listLink.begin(), _graph._listLink.end(),
+                                                        [id, &linkTouchesNode]( const LinkType& link )
                 { return linkTouchesNode( link, id ); } ),
-                                 _listLink.end() );
+                                        _graph._listLink.end() );
                 onNodeDeleted( id );
                 notifyDocumentEdited( pDeleteNodeLabel );
             }
@@ -234,8 +222,7 @@ namespace sw::editor
 
     protected:
         EditorNodeGraph        _nodeGraph;              /**< 캔버스 컨텍스트. 패널마다 하나씩 소유한다. */
-        NodeList               _listNode;               /**< 편집 중인 노드. 캔버스 위치는 cacheNodeLayout 이 담는다. */
-        LinkList               _listLink;               /**< 편집 중인 링크. */
+        AssetType              _graph;                  /**< 편집 중인 애셋. 노드의 캔버스 위치는 cacheNodeLayout 이 담는다. */
         const utf8*            _pNodeMoveEditLabel;     /**< 노드 이동 Undo 이름. */
         const utf8*            _pNodeMoveCoalesceKey;   /**< 노드 이동을 합치는 키. */
         float32                _previewHoldSeconds;     /**< 미리보기 재생이 현재 노드에 머문 시간. */

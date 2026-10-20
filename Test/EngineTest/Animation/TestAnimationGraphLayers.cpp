@@ -2,12 +2,14 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/String/fixed_string.h"
 
 #include "Engine/Animation/AnimationClip.h"
 #include "Engine/Animation/Codec/AnimationCodec.h"
 #include "Engine/Animation/Codec/Raw/RawAnimationCodec.h"
 #include "Engine/Animation/Graph/AnimationBoneMask.h"
 #include "Engine/Animation/Graph/AnimationGraphAsset.h"
+#include "Engine/Animation/Notify/AnimationNotifyListener.h"
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
@@ -34,7 +36,7 @@ namespace
          * @brief 모든 본의 이동 x 가 @p offsetX + @p slopePerSecond × 시각인 클립을 `<폴더>/<소문자 이름>.animclip` 으로 씁니다. 길이는 (@p sampleCount - 1) / 30 초입니다.
          */
         [[nodiscard]] static bool saveOffsetClip( const Skeleton& skeleton, const string& folder, const utf8* pName, float32 offsetX, uint32 sampleCount,
-                                                  float32 slopePerSecond = 0.0f )
+                                                  float32 slopePerSecond = 0.0f, const AnimationNotifyEvent* pNotify = nullptr )
         {
             AnimationRawClip raw;
             raw._sampleRate  = 30.0f;
@@ -57,6 +59,8 @@ namespace
             clip.setName( hashed_string( pName ) );
             if ( clip.compressFrom( raw, RawAnimationCodec::getInstance(), AnimationCodecSettings{}, nullptr ) == false )
                 return false;
+            if ( pNotify != nullptr )
+                clip.addNotify( *pNotify );
             return clip.saveToFile( FileUtil::joinPath( folder, StringUtil::toLower( pName ) + ".animclip" ) );
         }
 
@@ -70,6 +74,20 @@ namespace
         }
 
         static float32 getBoneX( const SkeletalMeshComponent& unit, uint32 boneIndex ) { return unit.getLocalPose().getBoneTransform( boneIndex )._translation._x; }
+    };
+
+    /** @brief 애니메이터가 넘긴 알림과 재생 중 목록을 모아 두는 받는 쪽입니다. */
+    class RecordingNotifyListener final : public IAnimationNotifyListener
+    {
+    public:
+        void onAnimationNotifiesFired( const AnimationNotifyFrame& frame ) override
+        {
+            _listFired.insert( _listFired.end(), frame._listFired.begin(), frame._listFired.end() );
+            _listActive.assign( frame._listActivePlayable.begin(), frame._listActivePlayable.end() );
+        }
+
+        vector<AnimationFiredNotify>      _listFired;
+        vector<const IAnimationPlayable*> _listActive;
     };
 } // namespace
 
@@ -239,6 +257,87 @@ SW_TEST_CASE( AnimationGraphLayersTest, AnimatorPlaysBlendSpaceStateFromGraph )
     SW_EXPECT_NEAR_EQUAL( 2.0f, TestAnimationGraphLayersInternal::getBoneX( *pUnit, 0 ), 1e-3f );
     SW_EXPECT_NEAR_EQUAL( 0.5f, pPlaying->getPlayLength(), 1e-4f );
     SW_EXPECT_TRUE( pAnimator->getGraphPlayer().getPlayer().getCurrentTime() <= 0.5f );
+}
+
+/**
+ * @brief [AnimationGraphLayersTest] 블렌드 스페이스 상태가 표본 클립의 알림을 데이터("notify")대로 낸다 — 출처는 표본 클립이고 가중치는 표본 가중치다
+ * @details 표본 Slow(x 0, 1 초, 0.5 초에 StepSlow)와 Fast(x 1, 0.5 초, 0.25 초에 StepFast). 둘 다 위상 0.5 에 울린다.
+ *          all 은 Speed 0.5(가중치 반반)에서 둘 다, highest_weight 는 Speed 0.25(Slow 0.75)에서 Slow 하나, none 은 아무것도 내지 않는다.
+ *          알림을 내는 표본 클립은 재생 중 목록에도 있어야 받는 쪽이 구간 알림을 끊긴 것으로 닫지 않는다.
+ */
+SW_TEST_CASE( AnimationGraphLayersTest, BlendSpaceStateFiresSampleClipNotifies )
+{
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
+    const Skeleton       skeleton = test::makeChainSkeleton( 2 );
+    const string         folder   = test::makeTempDirectory( "graph_blendspace_notify" );
+    AnimationNotifyEvent slowStep{};
+    slowStep._name = hashed_string( "StepSlow" );
+    slowStep._time = 0.5f;
+    AnimationNotifyEvent fastStep{};
+    fastStep._name = hashed_string( "StepFast" );
+    fastStep._time = 0.25f;
+    SW_ASSERT_TRUE( TestAnimationGraphLayersInternal::saveOffsetClip( skeleton, folder, "Slow", 0.0f, 31, 0.0f, &slowStep ) );
+    SW_ASSERT_TRUE( TestAnimationGraphLayersInternal::saveOffsetClip( skeleton, folder, "Fast", 2.0f, 16, 0.0f, &fastStep ) );
+
+    struct ModeCase
+    {
+        const utf8* _pMode;
+        const utf8* _pJSON;
+        float32     _speed;
+        uint32      _expectedCount;
+    };
+    const ModeCase arrCase[] = {
+        {           "all",            R"({ "nodes": [ { "id": 1, "name": "Move", "blend_space": { "x": "Speed", "notify": "all",
+              "samples": [ { "clip": "Slow", "x": 0 }, { "clip": "Fast", "x": 1 } ] } } ], "links": [] })",
+         0.5f, 2u },
+        {"highest_weight", R"({ "nodes": [ { "id": 1, "name": "Move", "blend_space": { "x": "Speed", "notify": "highest_weight",
+              "samples": [ { "clip": "Slow", "x": 0 }, { "clip": "Fast", "x": 1 } ] } } ], "links": [] })",
+         0.25f, 1u},
+        {          "none",           R"({ "nodes": [ { "id": 1, "name": "Move", "blend_space": { "x": "Speed", "notify": "none",
+              "samples": [ { "clip": "Slow", "x": 0 }, { "clip": "Fast", "x": 1 } ] } } ], "links": [] })",
+         0.5f, 0u },
+    };
+    for ( const ModeCase& modeCase : arrCase )
+    {
+        AnimationGraphAsset graph;
+        SW_ASSERT_TRUE( graph.parseJSON( modeCase._pJSON ) );
+        fixed_string<constant::kMaxBuffer64> fileName;
+        formatstring( fileName.data(), fileName.capacity(), "%#.animgraph.json", modeCase._pMode );
+        const string graphPath = FileUtil::joinPath( folder, fileName.c_str() );
+        SW_ASSERT_TRUE( graph.saveToFile( graphPath ) );
+
+        GameObjectManager manager;
+        GameObject*       pObject = manager.createGameObject( hashed_string( "Runner" ) );
+        SW_ASSERT_NOT_NULL( pObject );
+        SkeletalMeshComponent*     pUnit     = pObject->addComponent<SkeletalMeshComponent>();
+        SkeletalAnimatorComponent* pAnimator = pObject->addComponent<SkeletalAnimatorComponent>();
+        SW_ASSERT_TRUE( pUnit != nullptr && pAnimator != nullptr );
+        pUnit->setSkeleton( make_shared<Skeleton>( skeleton ) );
+        RecordingNotifyListener listener;
+        pAnimator->setNotifyListener( &listener );
+        pAnimator->setClipFolder( folder );
+        pAnimator->getParameters().setFloat( hashed_string( "Speed" ), modeCase._speed );
+        pAnimator->setAnimationGraphPath( graphPath );
+        pAnimator->setInitialState( "Move" );
+        pAnimator->dispatchBeginPlay();
+        const IAnimationPlayable* pState = pAnimator->getGraphPlayer().getPlayer().getCurrentPlayable();
+        SW_ASSERT_NOT_NULL( pState );
+
+        // 위상 0.5 를 지나도록 한 바퀴의 2/3 쯤 나아간다(한 바퀴 길이는 0.75 · 0.875 초).
+        manager.getSubsystem<AnimationSystem>().evaluate( pState->getPlayLength() * 0.66f );
+        SW_EXPECT_TRUE_MSG( modeCase._expectedCount == static_cast<uint32>( listener._listFired.size() ), modeCase._pMode );
+        for ( const AnimationFiredNotify& fired : listener._listFired )
+        {
+            const bool bSlow = fired._name == hashed_string( "StepSlow" );
+            SW_EXPECT_TRUE( fired._pSource != nullptr && fired._pSource != pState );
+            SW_EXPECT_NEAR_EQUAL( bSlow ? 0.5f : 0.25f, fired._time, 1e-6f );
+            SW_EXPECT_NEAR_EQUAL( bSlow ? 1.0f - modeCase._speed : modeCase._speed, fired._weight, 1e-4f );
+            SW_EXPECT_TRUE( std::find( listener._listActive.begin(), listener._listActive.end(), fired._pSource ) != listener._listActive.end() );
+        }
+        if ( modeCase._expectedCount == 1u )
+            SW_EXPECT_TRUE( listener._listFired[0]._name == hashed_string( "StepSlow" ) );
+        pAnimator->setNotifyListener( nullptr );
+    }
 }
 
 /**

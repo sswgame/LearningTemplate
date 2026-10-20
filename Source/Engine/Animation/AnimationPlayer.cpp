@@ -67,11 +67,9 @@ namespace sw
             Slot& slot = _arrSlot[slotIndex];
             if ( slot._pPlayable == nullptr )
                 continue;
-            const float32 playLength           = slot._pPlayable->getPlayLength();
-            slot._lastStep                     = slot._cursor.advance( delta, playLength, slot._bLoop == SW_TRUE );
-            const AnimationNotifyTrack* pTrack = slot._pPlayable->findNotifyTrack();
-            if ( pTrack != nullptr && pOutListFired != nullptr )
-                pTrack->collectFired( slot._lastStep, playLength, slotIndex == 0 ? 1.0f - alpha : alpha, slot._pPlayable, *pOutListFired );
+            slot._lastStep = slot._cursor.advance( delta, slot._pPlayable->getPlayLength(), slot._bLoop == SW_TRUE );
+            if ( pOutListFired != nullptr )
+                slot._pPlayable->collectFiredNotifies( slot._lastStep, slotIndex == 0 ? 1.0f - alpha : alpha, *pOutListFired );
         }
 
         if ( _arrSlot[1]._pPlayable == nullptr )

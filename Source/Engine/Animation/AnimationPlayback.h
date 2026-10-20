@@ -15,6 +15,9 @@
 
 namespace sw
 {
+    struct AnimationFiredNotify;
+    struct AnimationTimeStep;
+
     class AnimationNotifyTrack;
     class IAnimationPoseNode;
 
@@ -36,6 +39,12 @@ namespace sw
         virtual bool isLoopingByDefault() const = 0;
         /** @brief 알림 트랙입니다. 없으면 nullptr 입니다. */
         virtual const AnimationNotifyTrack* findNotifyTrack() const { return nullptr; }
+        /**
+         * @brief 커서 걸음 @p step 이 지난 알림을 @p outListFired 에 덧붙입니다. @p weight 는 이 재생할 것의 섞임 가중치입니다.
+         * @details 기본은 자기 알림 트랙(`findNotifyTrack`)에서 고르고 출처는 자신이다. 여러 클립을 섞는 것(블렌드 스페이스 상태)은 걸음을
+         *          표본 클립의 시각으로 옮겨 그 클립을 출처로 낸다 — 플레이어는 무엇을 섞는지 모르고 이것만 부른다.
+         */
+        virtual void collectFiredNotifies( const AnimationTimeStep& step, float32 weight, vector<AnimationFiredNotify>& outListFired ) const;
         /**
          * @brief 포즈를 평가해 내는 노드(`IAnimationPoseNode`, 스켈레탈 전용)면 그것을, 클립 · 스프라이트 구간처럼 시각으로 샘플하는 것이면 nullptr 입니다.
          * @details 포즈를 내는 쪽은 이 값으로 클립과 노드를 가른다(재생할 것을 클립으로 캐스팅하기 전에 묻는다).

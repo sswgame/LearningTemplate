@@ -24,6 +24,8 @@ namespace sw
             static constexpr const utf8* kArrPoseNodeTypeText[] = { "", "blend_poses" };
             /** @brief 레이어 합치기 표기 표입니다. 순서는 `AnimationLayerBlend` 와 같습니다. */
             static constexpr const utf8* kArrLayerBlendText[] = { "Override", "Additive" };
+            /** @brief 블렌드 스페이스 알림 방법 표기 표입니다. 순서는 `AnimationBlendSpaceNotifyMode` 와 같습니다. */
+            static constexpr const utf8* kArrBlendSpaceNotifyText[] = { "all", "highest_weight", "none" };
         };
     } // namespace
 } // namespace sw
@@ -99,6 +101,25 @@ namespace sw
         {
             SW_LOG_ERROR( "Animation graph node '%#' has a blend space without an 'x' parameter", inoutNode._name.c_str() );
             return false;
+        }
+        def._notifyMode = AnimationBlendSpaceNotifyMode::All;
+        if ( blendSpaceJSON.has( "notify" ) )
+        {
+            const string notifyText = blendSpaceJSON.get( "notify" ).asString();
+            bool         bKnown     = false;
+            for ( uint32 index = 0; index < static_cast<uint32>( std::size( AnimationGraphAssetInternal::kArrBlendSpaceNotifyText ) ); ++index )
+            {
+                if ( notifyText == AnimationGraphAssetInternal::kArrBlendSpaceNotifyText[index] )
+                {
+                    def._notifyMode = static_cast<AnimationBlendSpaceNotifyMode>( index );
+                    bKnown          = true;
+                }
+            }
+            if ( bKnown == false )
+            {
+                SW_LOG_ERROR( "Animation graph node '%#' blend space has unknown 'notify' '%#' (all, highest_weight, none)", inoutNode._name.c_str(), notifyText.c_str() );
+                return false;
+            }
         }
 
         bool bValid = true;
@@ -384,7 +405,7 @@ namespace sw
             if ( layer._maskName.empty() == false )
                 layerJSON.set( "mask" ).setString( layer._maskName.c_str() );
             layerJSON.set( "weight" ).setFloat( static_cast<float64>( layer._weight ) );
-            layerJSON.set( "blend" ).setString( AnimationGraphAssetInternal::kArrLayerBlendText[static_cast<uint32>( layer._blend )] );
+            layerJSON.set( "blend" ).setString( getLayerBlendText( layer._blend ) );
             layerJSON.set( "loop" ).setBool( layer._bLoop == SW_TRUE );
             if ( layer._weightParameter.empty() == false )
                 layerJSON.set( "weight_param" ).setString( layer._weightParameter.c_str() );
@@ -440,6 +461,9 @@ namespace sw
                 blendSpaceJSON.set( "x" ).setString( def._parameterX.c_str() );
                 if ( def._parameterY.empty() == false )
                     blendSpaceJSON.set( "y" ).setString( def._parameterY.c_str() );
+                // 기본값(all)은 이 키가 생기기 전 파일과 같은 모양으로 쓴다(키가 없으면 all 이다).
+                if ( def._notifyMode != AnimationBlendSpaceNotifyMode::All )
+                    blendSpaceJSON.set( "notify" ).setString( AnimationGraphAssetInternal::kArrBlendSpaceNotifyText[static_cast<uint32>( def._notifyMode )] );
                 const JSONValue samplesJSON = blendSpaceJSON.set( "samples" );
                 samplesJSON.setArray();
                 for ( const BlendSpaceSample& sample : def._space.getSamples() )
@@ -599,6 +623,12 @@ namespace sw
     {
         const uint32 index = static_cast<uint32>( mode );
         return index < static_cast<uint32>( std::size( AnimationGraphAssetInternal::kArrBlendModeText ) ) ? AnimationGraphAssetInternal::kArrBlendModeText[index] : "";
+    }
+
+    const utf8* AnimationGraphAsset::getLayerBlendText( AnimationLayerBlend blend )
+    {
+        const uint32 index = static_cast<uint32>( blend );
+        return index < static_cast<uint32>( std::size( AnimationGraphAssetInternal::kArrLayerBlendText ) ) ? AnimationGraphAssetInternal::kArrLayerBlendText[index] : "";
     }
 
     int32 AnimationGraphAsset::findFirstOutgoingNodeID( int32 fromNodeID ) const

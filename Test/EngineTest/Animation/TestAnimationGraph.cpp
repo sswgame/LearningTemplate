@@ -243,7 +243,7 @@ SW_TEST_CASE( AnimationGraphTest, BlendSpaceNodeAndSyncGroupRoundTrip )
         { "id": 1, "name": "Locomotion", "sync_group": "Feet",
           "blend_space": { "x": "Speed", "samples": [ { "clip": "Running_A", "x": 6 }, { "clip": "Idle", "x": 0 }, { "clip": "Walking_A", "x": 2 } ] } },
         { "id": 2, "name": "Strafe",
-          "blend_space": { "x": "Right", "y": "Forward", "samples": [ { "clip": "Walking_Left", "x": -1, "y": 0 }, { "clip": "Walking_A", "x": 0, "y": 1 } ] } },
+          "blend_space": { "x": "Right", "y": "Forward", "notify": "highest_weight", "samples": [ { "clip": "Walking_Left", "x": -1, "y": 0 }, { "clip": "Walking_A", "x": 0, "y": 1 } ] } },
         { "id": 3, "name": "Jump" } ], "links": [] })";
     AnimationGraphAsset graph;
     SW_ASSERT_TRUE( graph.parseJSON( json ) );
@@ -267,6 +267,8 @@ SW_TEST_CASE( AnimationGraphTest, BlendSpaceNodeAndSyncGroupRoundTrip )
     SW_EXPECT_TRUE( strafe._blendSpace._parameterY == hashed_string( "Forward" ) );
     SW_EXPECT_NEAR_EQUAL( 1.0f, strafe._blendSpace._space.getSamples()[1]._position._y, 1e-6f );
     SW_EXPECT_TRUE( strafe._syncGroup.empty() );
+    SW_EXPECT_TRUE( strafe._blendSpace._notifyMode == AnimationBlendSpaceNotifyMode::HighestWeight );
+    SW_EXPECT_TRUE( locomotion._blendSpace._notifyMode == AnimationBlendSpaceNotifyMode::All ); // 키가 없으면 all 이다
 
     SW_EXPECT_FALSE( parsed._listNode[2].hasBlendSpace() );
 }
@@ -280,6 +282,7 @@ SW_TEST_CASE( AnimationGraphTest, InvalidBlendSpaceIsLoadError )
         R"({ "nodes": [ { "id": 1, "name": "A", "blend_space": { "x": "Speed", "samples": [] } } ] })",
         R"({ "nodes": [ { "id": 1, "name": "A", "blend_space": { "x": "Speed", "samples": [ { "x": 1 } ] } } ] })",
         R"({ "nodes": [ { "id": 1, "name": "A", "blend_space": { "samples": [ { "clip": "Idle", "x": 1 } ] } } ] })",
+        R"({ "nodes": [ { "id": 1, "name": "A", "blend_space": { "x": "Speed", "notify": "loudest", "samples": [ { "clip": "Idle", "x": 1 } ] } } ] })",
     };
     test::ScopedDefensiveTestLog expected( "invalid blend space nodes are rejected" );
     for ( const string_view bad : arrBad )

@@ -151,8 +151,8 @@ namespace sw::editor
             ImGui::SameLine();
             if ( ImGui::Button( "Reset Default" ) )
             {
-                _listNode.clear();
-                _listLink.clear();
+                _graph._listNode.clear();
+                _graph._listLink.clear();
                 ensureDefaults();
                 _nodeGraph.requestContentFit();
                 notifyDocumentEdited( "Reset Dialogue Graph" );
@@ -165,7 +165,7 @@ namespace sw::editor
             drawPreviewToolbar();
 
             ImGui::SameLine();
-            ImGui::TextDisabled( "(Nodes: %zu, Links: %zu)", _listNode.size(), _listLink.size() );
+            ImGui::TextDisabled( "(Nodes: %zu, Links: %zu)", _graph._listNode.size(), _graph._listLink.size() );
         }
         EditorChrome::endToolbar();
     }
@@ -190,7 +190,7 @@ namespace sw::editor
         drawGraphNodes();
 
         // 링크 렌더링
-        for ( const DialogueLink& link : _listLink )
+        for ( const DialogueLink& link : _graph._listLink )
         {
             ed::Link( toLinkID( link._id ), toPinID( link._fromPin ), toPinID( link._toPin ) );
         }
@@ -214,7 +214,7 @@ namespace sw::editor
     void DialogueGraphPanel::drawGraphNodes()
     {
         // 노드 렌더링
-        for ( DialogueNode& node : _listNode )
+        for ( DialogueNode& node : _graph._listNode )
         {
             const ed::NodeId nodeID = toNodeID( node._id );
             ed::BeginNode( nodeID );
@@ -240,7 +240,7 @@ namespace sw::editor
             newLink._id      = nextLinkID();
             newLink._fromPin = fromPin;
             newLink._toPin   = toPin;
-            _listLink.push_back( newLink );
+            _graph._listLink.push_back( newLink );
             notifyDocumentEdited( "Link Dialogue Nodes" );
         }
 
@@ -282,7 +282,7 @@ namespace sw::editor
         EditorChrome::beginSection( inspectorDesc );
 
         DialogueNode* pSelectedNode{ nullptr };
-        for ( DialogueNode& node : _listNode )
+        for ( DialogueNode& node : _graph._listNode )
         {
             if ( node._id == _selectedNodeID )
             {
@@ -306,15 +306,15 @@ namespace sw::editor
 
     void DialogueGraphPanel::ensureDefaults()
     {
-        _listNode.clear();
-        _listLink.clear();
+        _graph._listNode.clear();
+        _graph._listLink.clear();
 
         DialogueNode startNode{};
         startNode._id          = 1;
         startNode._type        = DialogueAssetNodeType::Start;
         startNode._position._x = 50.0f;
         startNode._position._y = 100.0f;
-        _listNode.push_back( startNode );
+        _graph._listNode.push_back( startNode );
 
         DialogueNode dialogueNode{};
         dialogueNode._id          = 2;
@@ -323,7 +323,7 @@ namespace sw::editor
         dialogueNode._text        = "Greetings adventurer! The ancient ruins ahead are full of peril.";
         dialogueNode._position._x = 250.0f;
         dialogueNode._position._y = 100.0f;
-        _listNode.push_back( dialogueNode );
+        _graph._listNode.push_back( dialogueNode );
 
         DialogueNode choiceNode{};
         choiceNode._id          = 3;
@@ -332,7 +332,7 @@ namespace sw::editor
         choiceNode._listChoice  = { "I am ready for any challenge!", "Could you give me some supplies first?" };
         choiceNode._position._x = 650.0f;
         choiceNode._position._y = 100.0f;
-        _listNode.push_back( choiceNode );
+        _graph._listNode.push_back( choiceNode );
 
         DialogueNode actionNode{};
         actionNode._id            = 4;
@@ -340,21 +340,21 @@ namespace sw::editor
         actionNode._actionCommand = "give_item:healing_potion:3";
         actionNode._position._x   = 1050.0f;
         actionNode._position._y   = 220.0f;
-        _listNode.push_back( actionNode );
+        _graph._listNode.push_back( actionNode );
 
         DialogueNode endNode{};
         endNode._id          = 5;
         endNode._type        = DialogueAssetNodeType::End;
         endNode._position._x = 1350.0f;
         endNode._position._y = 120.0f;
-        _listNode.push_back( endNode );
+        _graph._listNode.push_back( endNode );
 
         // 기본 링크 연결
-        _listLink.push_back( DialogueLink{ 1, DialogueGraphPanelInternal::pinOut( 1 ), DialogueGraphPanelInternal::pinIn( 2 ) } );
-        _listLink.push_back( DialogueLink{ 2, DialogueGraphPanelInternal::pinOut( 2 ), DialogueGraphPanelInternal::pinIn( 3 ) } );
-        _listLink.push_back( DialogueLink{ 3, DialogueGraphPanelInternal::pinChoice( 3, 0 ), DialogueGraphPanelInternal::pinIn( 5 ) } );
-        _listLink.push_back( DialogueLink{ 4, DialogueGraphPanelInternal::pinChoice( 3, 1 ), DialogueGraphPanelInternal::pinIn( 4 ) } );
-        _listLink.push_back( DialogueLink{ 5, DialogueGraphPanelInternal::pinOut( 4 ), DialogueGraphPanelInternal::pinIn( 5 ) } );
+        _graph._listLink.push_back( DialogueLink{ 1, DialogueGraphPanelInternal::pinOut( 1 ), DialogueGraphPanelInternal::pinIn( 2 ) } );
+        _graph._listLink.push_back( DialogueLink{ 2, DialogueGraphPanelInternal::pinOut( 2 ), DialogueGraphPanelInternal::pinIn( 3 ) } );
+        _graph._listLink.push_back( DialogueLink{ 3, DialogueGraphPanelInternal::pinChoice( 3, 0 ), DialogueGraphPanelInternal::pinIn( 5 ) } );
+        _graph._listLink.push_back( DialogueLink{ 4, DialogueGraphPanelInternal::pinChoice( 3, 1 ), DialogueGraphPanelInternal::pinIn( 4 ) } );
+        _graph._listLink.push_back( DialogueLink{ 5, DialogueGraphPanelInternal::pinOut( 4 ), DialogueGraphPanelInternal::pinIn( 5 ) } );
     }
 
     ToolAssetLoadResult DialogueGraphPanel::loadDocument()
@@ -531,7 +531,7 @@ namespace sw::editor
         node._position._x = 200.0f + static_cast<float32>( ( node._id % 5 ) * 80 );
         node._position._y = 150.0f + static_cast<float32>( ( node._id % 5 ) * 60 );
         _selectedNodeID   = node._id;
-        _listNode.push_back( std::move( node ) );
+        _graph._listNode.push_back( std::move( node ) );
         return _selectedNodeID;
     }
 
@@ -539,7 +539,7 @@ namespace sw::editor
     {
         const int32 nodeID = DialogueGraphAsset::decodePinNodeID( pinID );
         bool        bKnown = false;
-        for ( const DialogueNode& node : _listNode )
+        for ( const DialogueNode& node : _graph._listNode )
         {
             bKnown = bKnown || node._id == nodeID;
         }
@@ -552,7 +552,7 @@ namespace sw::editor
 
     bool DialogueGraphPanel::isPinLinked( int32 pinID ) const
     {
-        for ( const DialogueLink& link : _listLink )
+        for ( const DialogueLink& link : _graph._listLink )
         {
             if ( link._fromPin == pinID || link._toPin == pinID )
                 return true;
@@ -563,15 +563,15 @@ namespace sw::editor
     void DialogueGraphPanel::updateNodeIssues()
     {
         vector<int32> listInputNode;
-        for ( const DialogueNode& node : _listNode )
+        for ( const DialogueNode& node : _graph._listNode )
         {
             const DialogueNodeInfo* pInfo = DialogueGraphAsset::findNodeInfo( node._type );
             if ( pInfo != nullptr && pInfo->_bHasInputPin )
                 listInputNode.push_back( node._id );
         }
         vector<EditorGraphEdge> listEdge;
-        listEdge.reserve( _listLink.size() );
-        for ( const DialogueLink& link : _listLink )
+        listEdge.reserve( _graph._listLink.size() );
+        for ( const DialogueLink& link : _graph._listLink )
         {
             listEdge.push_back( EditorGraphEdge{ DialogueGraphAsset::decodePinNodeID( link._fromPin ), DialogueGraphAsset::decodePinNodeID( link._toPin ) } );
         }

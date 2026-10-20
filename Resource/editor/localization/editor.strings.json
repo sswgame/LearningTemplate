@@ -845,10 +845,22 @@
                 "Source/Editor/Panels/Animation/AnimationGraphPanel.cpp"
             ]
         },
+        "EditorAnimationGraph.AddBoneMaskTip": {
+            "source": "Add a bone mask that starts at the spine. Rename its bones to match your skeleton.",
+            "origins": [
+                "Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp"
+            ]
+        },
         "EditorAnimationGraph.AddIdleTip": {
             "source": "Add an Idle state node. Its name is the clip it plays; rename it in the inspector.",
             "origins": [
                 "Source/Editor/Panels/Animation/AnimationGraphPanel.cpp"
+            ]
+        },
+        "EditorAnimationGraph.AddLayerTip": {
+            "source": "Add a layer. Layers stack in list order; the last one is on top.",
+            "origins": [
+                "Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp"
             ]
         },
         "EditorAnimationGraph.AddWalkTip": {
@@ -861,6 +873,18 @@
             "source": "Step the preview to the next state by one transition.",
             "origins": [
                 "Source/Editor/Panels/Animation/AnimationGraphPanel.cpp"
+            ]
+        },
+        "EditorAnimationGraph.BoneMaskChildrenTip": {
+            "source": "Checked: the weight spreads to every child bone. Unchecked: only this bone.",
+            "origins": [
+                "Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp"
+            ]
+        },
+        "EditorAnimationGraph.BoneMaskPresetTip": {
+            "source": "Drop a .bonemask.json preset to use it; its bones are then read-only here. Clear it to keep the bones in this graph.",
+            "origins": [
+                "Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp"
             ]
         },
         "EditorAnimationGraph.ConditionOpTip": {
@@ -887,6 +911,48 @@
                 "Source/Editor/Panels/Animation/AnimationGraphPanel.cpp"
             ]
         },
+        "EditorAnimationGraph.LayerBlendTip": {
+            "source": "Override replaces the masked bones; Additive adds the clip's difference from its first frame.",
+            "origins": [
+                "Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp"
+            ]
+        },
+        "EditorAnimationGraph.LayerClipTip": {
+            "source": "Clip this layer plays (its name in the clip folder).",
+            "origins": [
+                "Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp"
+            ]
+        },
+        "EditorAnimationGraph.LayerHalfLifeTip": {
+            "source": "When the layer restarts, blend out of the interrupted pose with this half-life. 0 switches at once.",
+            "origins": [
+                "Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp"
+            ]
+        },
+        "EditorAnimationGraph.LayerMaskTip": {
+            "source": "Bones the layer affects. (all bones) applies it to the whole skeleton.",
+            "origins": [
+                "Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp"
+            ]
+        },
+        "EditorAnimationGraph.LayerOrderTip": {
+            "source": "Move the selected layer up or down. Order changes the result: later layers are applied on top.",
+            "origins": [
+                "Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp"
+            ]
+        },
+        "EditorAnimationGraph.LayerWeightParamTip": {
+            "source": "Animator parameter that drives the weight every frame (clamped to 0..1). Leave empty to use Weight.",
+            "origins": [
+                "Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp"
+            ]
+        },
+        "EditorAnimationGraph.LayerWeightTip": {
+            "source": "How much of the layer pose is applied. Ignored while Weight Param is set.",
+            "origins": [
+                "Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp"
+            ]
+        },
         "EditorAnimationGraph.LinkSelectedTip": {
             "source": "Add a transition between the two selected nodes, from the first selected to the second. Click one node, then Ctrl+click the other.",
             "origins": [
@@ -897,6 +963,18 @@
             "source": "Reload the graph from disk, discarding unsaved edits.",
             "origins": [
                 "Source/Editor/Panels/Animation/AnimationGraphPanel.cpp"
+            ]
+        },
+        "EditorAnimationGraph.NoBoneMasksHint": {
+            "source": "No bone masks. A mask chooses the bones a layer affects and how strongly.",
+            "origins": [
+                "Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp"
+            ]
+        },
+        "EditorAnimationGraph.NoLayersHint": {
+            "source": "No layers. A layer plays one clip over the state machine pose, on the bones of its mask.",
+            "origins": [
+                "Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp"
             ]
         },
         "EditorAnimationGraph.PlayTip": {
