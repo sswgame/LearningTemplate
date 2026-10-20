@@ -77,9 +77,9 @@ namespace sw
         /** @brief 이름 하나짜리 컴포넌트를 든 씬 XML 을 쓰고 옆에 쿠킹된 바이너리도 둡니다(배포 구성은 바이너리만 읽는다). 성공하면 true 입니다. */
         [[nodiscard]] bool writeSceneWithComponent( const string& xmlPath, const string& binPath, const utf8* pSceneName, const utf8* pComponentName )
         {
-            string xmlStr = "<Scene formatVersion=\"1\" name=\"";
+            string xmlStr = "<Scene formatVersion=\"2\" name=\"";
             xmlStr += pSceneName;
-            xmlStr += "\">\n  <entities>\n    <entity id=\"1\" name=\"Speaker\">\n      <GameObject _schemaVersion=\"0\" _name=\"Speaker\" _bActive=\"true\">\n"
+            xmlStr += "\">\n  <WorldSettings _bStreaming=\"false\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"0\"><_cellGrid _cellSize=\"0\" _loadingRadius=\"0\"/></WorldSettings><entities>\n    <entity id=\"1\" name=\"Speaker\">\n      <GameObject _schemaVersion=\"0\" _name=\"Speaker\" _bActive=\"true\">\n"
                       "        <_listComponent>\n          <";
             xmlStr += pComponentName;
             xmlStr += " />\n        </_listComponent>\n      </GameObject>\n    </entity>\n  </entities>\n</Scene>\n";
@@ -117,8 +117,8 @@ SW_TEST_CASE( SceneAsyncTest, AsyncRequestCompletes )
     const sw::string binPath = test::makeTempPath( "sw_test_scene_async.scene.bin" );
     const sw::string xmlStr =
         "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
-        "<Scene formatVersion=\"1\" name=\"AsyncTown\">\n"
-        "  <entities>\n"
+        "<Scene formatVersion=\"2\" name=\"AsyncTown\">\n"
+        "  <WorldSettings _bStreaming=\"false\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"0\"><_cellGrid _cellSize=\"0\" _loadingRadius=\"0\"/></WorldSettings><entities>\n"
         "    <entity id=\"101\" name=\"PlayerSpawn\"/>\n"
         "    <entity id=\"102\" name=\"Npc\"/>\n"
         "  </entities>\n"
@@ -172,7 +172,7 @@ SW_TEST_CASE( SceneAsyncTest, CarriedChildKeepsItsParentWhenTheNextSceneHasTheSa
 {
     const sw::string xmlPath = test::makeTempPath( "sw_test_scene_carry.scene.xml" );
     const sw::string binPath = test::makeTempPath( "sw_test_scene_carry.scene.bin" );
-    const sw::string xmlStr  = "<Scene formatVersion=\"1\" name=\"Dungeon\"><entities><entity id=\"103\" name=\"MusicPlayer\"/></entities></Scene>";
+    const sw::string xmlStr  = "<Scene formatVersion=\"2\" name=\"Dungeon\"><WorldSettings _bStreaming=\"false\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"0\"><_cellGrid _cellSize=\"0\" _loadingRadius=\"0\"/></WorldSettings><entities><entity id=\"103\" name=\"MusicPlayer\"/></entities></Scene>";
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( xmlPath, reinterpret_cast<const uint8*>( xmlStr.data() ), static_cast<uint64>( xmlStr.size() ) ) );
     sw::SceneDocument doc{};
     doc._name = "Dungeon";
@@ -226,7 +226,7 @@ SW_TEST_CASE( SceneAsyncTest, DocumentLoadWithoutGPU )
     const sw::string xmlPath = test::makeTempPath( "sw_test_scene_desc.scene.xml" );
     const sw::string binPath = test::makeTempPath( "sw_test_scene_desc.scene.bin" );
     const sw::string xmlStr =
-        "<Scene formatVersion=\"1\" name=\"DescOnly\"><entities><entity id=\"1\" name=\"A\"/></entities></Scene>";
+        "<Scene formatVersion=\"2\" name=\"DescOnly\"><WorldSettings _bStreaming=\"false\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"0\"><_cellGrid _cellSize=\"0\" _loadingRadius=\"0\"/></WorldSettings><entities><entity id=\"1\" name=\"A\"/></entities></Scene>";
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( xmlPath,
                                              reinterpret_cast<const uint8*>( xmlStr.data() ),
                                              static_cast<uint64>( xmlStr.size() ) ) );
@@ -292,9 +292,9 @@ SW_TEST_CASE( SceneAsyncTest, AsyncWarpSequenceQueuesLatest )
     const sw::string townB = test::makeTempPath( "sw_test_warp_b.scene.xml" );
     const sw::string binB  = test::makeTempPath( "sw_test_warp_b.scene.bin" );
     const sw::string xmlA =
-        "<Scene formatVersion=\"1\" name=\"TownA\"><entities><entity id=\"1\" name=\"A\"/></entities></Scene>";
+        "<Scene formatVersion=\"2\" name=\"TownA\"><WorldSettings _bStreaming=\"false\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"0\"><_cellGrid _cellSize=\"0\" _loadingRadius=\"0\"/></WorldSettings><entities><entity id=\"1\" name=\"A\"/></entities></Scene>";
     const sw::string xmlB =
-        "<Scene formatVersion=\"1\" name=\"TownB\"><entities><entity id=\"104\" name=\"B1\"/><entity id=\"105\" name=\"B2\"/></entities></Scene>";
+        "<Scene formatVersion=\"2\" name=\"TownB\"><WorldSettings _bStreaming=\"false\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"0\"><_cellGrid _cellSize=\"0\" _loadingRadius=\"0\"/></WorldSettings><entities><entity id=\"104\" name=\"B1\"/><entity id=\"105\" name=\"B2\"/></entities></Scene>";
 
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( townA,
                                              reinterpret_cast<const uint8*>( xmlA.data() ),
@@ -346,7 +346,7 @@ SW_TEST_CASE( SceneAsyncTest, AsyncSwapUnloadsPreviousActive )
     const sw::string xmlPath = test::makeTempPath( "sw_test_scene_replace.scene.xml" );
     const sw::string binPath = test::makeTempPath( "sw_test_scene_replace.scene.bin" );
     const sw::string xmlStr =
-        "<Scene formatVersion=\"1\" name=\"Replaced\"><entities><entity id=\"106\" name=\"Only\"/></entities></Scene>";
+        "<Scene formatVersion=\"2\" name=\"Replaced\"><WorldSettings _bStreaming=\"false\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"0\"><_cellGrid _cellSize=\"0\" _loadingRadius=\"0\"/></WorldSettings><entities><entity id=\"106\" name=\"Only\"/></entities></Scene>";
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( xmlPath,
                                              reinterpret_cast<const uint8*>( xmlStr.data() ),
                                              static_cast<uint64>( xmlStr.size() ) ) );
@@ -386,9 +386,9 @@ SW_TEST_CASE( SceneAsyncTest, SceneAsyncLoadCancellationAndRecovery )
     const sw::string binPath2   = test::makeTempPath( "test_rapid_2.scene.bin" );
 
     const sw::string xmlStr1 =
-        "<Scene formatVersion=\"1\" name=\"SceneFirst\"><entities><entity id=\"107\" name=\"E1\"/></entities></Scene>";
+        "<Scene formatVersion=\"2\" name=\"SceneFirst\"><WorldSettings _bStreaming=\"false\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"0\"><_cellGrid _cellSize=\"0\" _loadingRadius=\"0\"/></WorldSettings><entities><entity id=\"107\" name=\"E1\"/></entities></Scene>";
     const sw::string xmlStr2 =
-        "<Scene formatVersion=\"1\" name=\"SceneSecond\"><entities><entity id=\"108\" name=\"E2\"/></entities></Scene>";
+        "<Scene formatVersion=\"2\" name=\"SceneSecond\"><WorldSettings _bStreaming=\"false\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"0\"><_cellGrid _cellSize=\"0\" _loadingRadius=\"0\"/></WorldSettings><entities><entity id=\"108\" name=\"E2\"/></entities></Scene>";
 
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( scenePath1, reinterpret_cast<const uint8*>( xmlStr1.data() ), xmlStr1.size() ) );
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( scenePath2, reinterpret_cast<const uint8*>( xmlStr2.data() ), xmlStr2.size() ) );
@@ -434,8 +434,8 @@ SW_TEST_CASE( SceneAsyncTest, RequestLoadFutureChaining )
     const sw::string binPath = test::makeTempPath( "sw_test_future_scene.scene.bin" );
     const sw::string xmlStr =
         "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
-        "<Scene formatVersion=\"1\" name=\"FutureTown\">\n"
-        "  <entities>\n"
+        "<Scene formatVersion=\"2\" name=\"FutureTown\">\n"
+        "  <WorldSettings _bStreaming=\"false\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"0\"><_cellGrid _cellSize=\"0\" _loadingRadius=\"0\"/></WorldSettings><entities>\n"
         "    <entity id=\"109\" name=\"Hero\"/>\n"
         "  </entities>\n"
         "</Scene>\n";
@@ -496,7 +496,7 @@ SW_TEST_CASE( SceneAsyncTest, RapidConcurrentFutureLoadsAndCancellationsStress )
         const sw::string xmlPath = test::makeTempPath( ( name + ".scene.xml" ).c_str() );
         const sw::string binPath = test::makeTempPath( ( name + ".scene.bin" ).c_str() );
 
-        const sw::string xmlStr = "<Scene formatVersion=\"1\" name=\"" + name + "\"><entities><entity id=\"110\" name=\"E\"/></entities></Scene>";
+        const sw::string xmlStr = "<Scene formatVersion=\"2\" name=\"" + name + "\"><WorldSettings _bStreaming=\"false\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"0\"><_cellGrid _cellSize=\"0\" _loadingRadius=\"0\"/></WorldSettings><entities><entity id=\"110\" name=\"E\"/></entities></Scene>";
         SW_ASSERT_TRUE( sw::FileUtil::writeFile( xmlPath, reinterpret_cast<const uint8*>( xmlStr.data() ), xmlStr.size() ) );
 
         sw::SceneDocument doc{};
@@ -682,7 +682,7 @@ SW_TEST_CASE( SceneAsyncTest, TypesRegisteredDuringLoadAreNotLostWithSamePathQue
 SW_TEST_CASE( SceneAsyncTest, SaveIsRefusedWhileBlocked )
 {
     const sw::string xmlPath = test::makeTempPath( "sw_test_scene_save_block.scene.xml" );
-    const sw::string xmlStr  = "<Scene formatVersion=\"1\" name=\"SaveBlock\"><entities><entity id=\"1\" name=\"A\"/></entities></Scene>";
+    const sw::string xmlStr  = "<Scene formatVersion=\"2\" name=\"SaveBlock\"><WorldSettings _bStreaming=\"false\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"0\"><_cellGrid _cellSize=\"0\" _loadingRadius=\"0\"/></WorldSettings><entities><entity id=\"1\" name=\"A\"/></entities></Scene>";
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( xmlPath, reinterpret_cast<const uint8*>( xmlStr.data() ), static_cast<uint64>( xmlStr.size() ) ) );
     const sw::string  binPath = test::makeTempPath( "sw_test_scene_save_block.scene.bin" );
     sw::SceneDocument cooked{};
@@ -718,7 +718,7 @@ SW_TEST_CASE( SceneAsyncTest, SaveIsRefusedWhileBlocked )
 SW_TEST_CASE( SceneAsyncTest, SavedSceneNamesAreCookable )
 {
     const sw::string xmlPath = test::makeTempPath( "sw_test_scene_save_name.scene.xml" );
-    const sw::string xmlStr  = "<Scene formatVersion=\"1\" name=\"SaveName\"><entities><entity id=\"1\" name=\"A\"/></entities></Scene>";
+    const sw::string xmlStr  = "<Scene formatVersion=\"2\" name=\"SaveName\"><WorldSettings _bStreaming=\"false\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"0\"><_cellGrid _cellSize=\"0\" _loadingRadius=\"0\"/></WorldSettings><entities><entity id=\"1\" name=\"A\"/></entities></Scene>";
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( xmlPath, reinterpret_cast<const uint8*>( xmlStr.data() ), static_cast<uint64>( xmlStr.size() ) ) );
     const sw::string  binPath = test::makeTempPath( "sw_test_scene_save_name.scene.bin" );
     sw::SceneDocument cooked{};

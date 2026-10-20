@@ -212,8 +212,8 @@ SW_TEST_CASE( PrefabOverridesTest, FullStatePrefabEntityIsReadAndResavedAsOverri
         sw::PrefabOverridesTestInternal::makeCratePrefab( sw::float3( 1.0f, 2.0f, 3.0f ), sw::float3( 2.0f, 2.0f, 2.0f ) ), prefabPath ) );
 
     // 인스턴스는 위치를 덮어쓰고 메시를 지운 전체 상태다.
-    const sw::string legacyScene = sw::string( "<Scene formatVersion=\"1\" name=\"Legacy\">\n"
-                                               "\t<entities>\n"
+    const sw::string legacyScene = sw::string( "<Scene formatVersion=\"2\" name=\"Legacy\">\n"
+                                               "\t<WorldSettings _bStreaming=\"false\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"0\"><_cellGrid _cellSize=\"0\" _loadingRadius=\"0\"/></WorldSettings><entities>\n"
                                                "\t\t<entity id=\"1\" name=\"Old\" prefab=\"" ) +
                                    prefabPath +
                                    "\">\n"
@@ -252,7 +252,7 @@ SW_TEST_CASE( PrefabOverridesTest, FullStatePrefabEntityIsReadAndResavedAsOverri
     SW_ASSERT_TRUE( resaved.saveXML( resavedPath ) );
     sw::string resavedText;
     SW_ASSERT_TRUE( sw::FileUtil::readTextFile( resavedPath, resavedText ) );
-    SW_EXPECT_TRUE_MSG( resavedText.find( "formatVersion=\"1\"" ) != sw::string::npos, resavedText.c_str() );
+    SW_EXPECT_TRUE_MSG( resavedText.find( "formatVersion=\"2\"" ) != sw::string::npos, resavedText.c_str() );
 
     sw::SceneDocument reread;
     SW_ASSERT_TRUE( reread.loadXML( resavedPath ) );

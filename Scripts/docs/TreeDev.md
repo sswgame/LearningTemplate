@@ -8,6 +8,7 @@
   │     ├── CiFailureReport.py        # CI 실패(테스트 · 구성 · 크래시 스택)를 GitHub 주석으로 — ci.yml 이 부른다
   │     ├── ConfigureSnapshot.py      # CMake 구성 결과 스냅숏 · 비교(리팩터 전후) · 구성 시간 요약
   │     ├── CompareDestructionHashLogs.py # 서버 · 클라이언트 로그의 파괴 구조 해시(`[DestructionHash]`)를 (번호, 사건 수)로 맞대기 — 컴파일러 · 플랫폼을 넘어 같은지
+  │     ├── MoveSceneFormat.py        # 저장소의 씬(`*.scene.xml`)을 다음 씬 형식 판으로 글 그대로 다시 쓴다(옛 판 리더를 두지 않는다 — 판 1 → 2: 월드 설정)
   │     ├── MakeStressScene.py        # 로드 경로를 재기 위한 큰 씬(사람이 테스트 데이터를 만든다 — `Make*`, 빌드가 만드는 것은 generate/)
   │     ├── MakeTerrainShowcase.py    # 지형 쇼케이스의 절차 생성 원본(heightfields_raw · textures_raw)
   │     ├── MakeNoiseTexture.py       # 엔진 잡음 텍스처 원본(engine/textures_raw/perlin.png — 이음매 없는 Perlin fBm)

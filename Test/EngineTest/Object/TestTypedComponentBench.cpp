@@ -564,7 +564,7 @@ SW_TEST_CASE( TypedComponentBenchTest, QueryWhileAsyncSceneLoad )
     // 로드할 씬: 이름만 있는 오브젝트 kLoadedObjectCount 개. XML 과 바이너리를 같은 내용으로 둔다(어느 쪽을 읽는 구성이든 같은 씬이다).
     const sw::string  xmlPath = test::makeTempPath( "sw_test_typed_bench_async.scene.xml" );
     const sw::string  binPath = test::makeTempPath( "sw_test_typed_bench_async.scene.bin" );
-    sw::string        xmlText = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Scene formatVersion=\"1\" name=\"BenchStream\">\n  <entities>\n";
+    sw::string        xmlText = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Scene formatVersion=\"2\" name=\"BenchStream\">\n  <WorldSettings _bStreaming=\"false\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"0\"><_cellGrid _cellSize=\"0\" _loadingRadius=\"0\"/></WorldSettings><entities>\n";
     sw::SceneDocument doc{};
     doc._name = "BenchStream";
     for ( uint32 index = 0; index < kLoadedObjectCount; ++index )

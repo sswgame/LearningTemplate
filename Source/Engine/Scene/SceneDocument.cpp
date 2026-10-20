@@ -16,6 +16,8 @@
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/BinarySerializer.h"
+#include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
@@ -33,9 +35,73 @@ namespace sw
             static constexpr const utf8* kGameObject    = "GameObject";
             static constexpr const utf8* kDefaultEntity = "Entity";
             static constexpr uint32      kBinMagic      = FourCcUtil::make( "SCN1" );
+            // 배치: 이름 · 월드 설정(리플렉션 바이너리) · 기본 엔티티 목록 · 셀 목록(셀 좌표 x · z, 그 셀의 엔티티 목록).
             // 엔티티 하나: 이름 · 프리팹 · GUID · XML 상태 · 바이너리 상태 · 파일 id · 덮어쓴 것(`_prefabOverrideXML`).
             // 쿠킹본은 쿠커가 매번 다시 쿠킹하는 산출물이라 이 판만 읽는다 — 배치를 바꾸면 판을 올린다.
-            static constexpr uint32 kBinVersion = 3;
+            static constexpr uint32 kBinVersion = 4;
+            // 엔티티 하나는 길이 앞머리(4바이트)를 쓰는 필드 여섯과 파일 id(8바이트)다 — 파일이 말한 개수를 그대로 잡지 않는 데 쓴다.
+            static constexpr uint64 kMinBytesPerEntity = 6u * sizeof( uint32 ) + sizeof( uint64 );
+            // 셀 하나는 좌표 둘과 엔티티 수다.
+            static constexpr uint64 kMinBytesPerCell = 2u * sizeof( int32 ) + sizeof( uint32 );
+
+            /** @brief 엔티티 목록을 씁니다(수, 엔티티마다 필드). 프리팹 GUID 가 비었으면 에셋 DB 에서 풀어 적습니다. */
+            static void writeEntities( Archive& arch, const vector<SceneDocument::SceneObjectNode>& listNode )
+            {
+                arch << static_cast<uint32>( listNode.size() );
+                for ( const SceneDocument::SceneObjectNode& entity : listNode )
+                {
+                    string     prefabGuid         = entity._prefabGuid;
+                    const bool bResolvePrefabGuid = prefabGuid.empty() && entity._prefab.empty() == false && engine::areEngineServicesBound();
+                    if ( bResolvePrefabGuid )
+                    {
+                        UUID resolvedGuid{};
+                        if ( engine::getSubsystem<AssetManager>().getAssetDatabase().tryGetGuid( entity._prefab, resolvedGuid ) && resolvedGuid.isNull() == false )
+                            prefabGuid = resolvedGuid.toString();
+                    }
+
+                    arch << entity._name;
+                    arch << entity._prefab;
+                    arch << prefabGuid;
+                    arch << entity._embeddedXML;
+                    arch << entity._embeddedStateBytes;
+                    arch << entity._fileID;
+                    arch << entity._prefabOverrideXML;
+                }
+            }
+
+            /**
+             * @brief 엔티티 목록을 읽습니다(`writeEntities` 의 짝). 실패하면 오류를 남기고 false 입니다.
+             * @details **파일이 말한 개수를 그대로 잡아 두지 않는다.** 남은 바이트를 엔티티 최소 크기로 나눈 것보다 많은 엔티티는 있을 수 없다 —
+             *          손상된 씬 하나가 수백 기가짜리 `reserve` 가 되는 것을 여기서 막는다.
+             */
+            [[nodiscard]] static bool readEntities( Archive& arch, vector<SceneDocument::SceneObjectNode>& outListNode, string_view absPath )
+            {
+                uint32 entityCount{ 0 };
+                arch >> entityCount;
+                const uint64 maxPossibleEntity = arch.getRemainingBytes() / kMinBytesPerEntity;
+                if ( arch.isError() || static_cast<uint64>( entityCount ) > maxPossibleEntity )
+                {
+                    SW_LOG_ERROR( "Binary scene claims %# entities but only %# can fit in %# remaining bytes: %#", entityCount, maxPossibleEntity,
+                                  arch.getRemainingBytes(), absPath );
+                    return false;
+                }
+
+                outListNode.reserve( entityCount );
+                for ( uint32 entityIndex = 0; entityIndex < entityCount; ++entityIndex )
+                {
+                    SceneDocument::SceneObjectNode node{};
+                    arch >> node._name >> node._prefab >> node._prefabGuid >> node._embeddedXML >> node._embeddedStateBytes >> node._fileID >> node._prefabOverrideXML;
+                    // 잘린 파일에서 남은 횟수를 마저 도는 것은 빈 노드를 쌓는 일일 뿐이다.
+                    if ( arch.isError() )
+                    {
+                        SW_LOG_ERROR( "Binary scene stream corrupted in %#", absPath );
+                        return false;
+                    }
+                    resolvePrefabPathByGuid( node );
+                    outListNode.push_back( std::move( node ) );
+                }
+                return true;
+            }
 
             /**
              * @brief 프리팹 GUID 로 경로를 다시 풉니다. 파일 이동 · 이름 변경을 자동으로 따라갑니다.
@@ -113,6 +179,22 @@ namespace sw
         else
             _name = FileUtil::removeExtension( FileUtil::getFileNamePart( absPath ) );
 
+        // 월드 설정은 판 2부터 필수다 — 없으면 스트리밍 여부를 지어내지 않고 읽지 않는다.
+        const XMLNode worldSettingsNode = root.findChild( WorldSettings::kElementName );
+        if ( worldSettingsNode.isValid() == false )
+        {
+            SW_LOG_ERROR( "Scene has no <%#> in %# - the scene is not loaded", WorldSettings::kElementName, absPath );
+            *this = {};
+            return false;
+        }
+        const bool bWorldSettingsRead = XMLSerializer::deserialize( &_worldSettings, *WorldSettings::StaticType(), worldSettingsNode.toString() );
+        if ( bWorldSettingsRead == false || _worldSettings.validate( _name ) == false )
+        {
+            SW_LOG_ERROR( "Scene <%#> could not be read or is not usable in %# - the scene is not loaded", WorldSettings::kElementName, absPath );
+            *this = {};
+            return false;
+        }
+
         XMLNode entities = root.findChild( SceneDocumentInternal::kEntities );
 
         if ( entities.isValid() )
@@ -172,10 +254,31 @@ namespace sw
 
     bool SceneDocument::saveXML( string_view path ) const
     {
+        // 셀로 나눈 문서는 쿠킹본이다. XML 에는 셀이 없으므로 쓰면 셀의 엔티티가 사라진다.
+        if ( _listStreamingCell.empty() == false )
+        {
+            SW_LOG_ERROR( "Scene '%#' is split into %# streaming cells (a cooked scene) - it is not saved as XML", _name,
+                          static_cast<uint32>( _listStreamingCell.size() ) );
+            return false;
+        }
+        // 읽는 쪽이 받지 않는 월드 설정은 쓰지 않는다.
+        if ( _worldSettings.validate( _name ) == false )
+            return false;
+
         XMLDocument xmlDoc;
         XMLNode     root = xmlDoc.appendRoot( SceneDocumentInternal::kRoot );
         root.appendAttribute( "formatVersion", static_cast<uint32>( AssetFormatVersions::kScene ) );
         root.appendAttribute( "name", _name );
+        {
+            XMLDocument worldSettingsDoc;
+            if ( worldSettingsDoc.parse( XMLSerializer::serialize( &_worldSettings, *WorldSettings::StaticType() ) ) == false ||
+                 worldSettingsDoc.getRoot().isValid() == false )
+            {
+                SW_LOG_ERROR( "Scene '%#' world settings could not be written - the scene is not saved", _name );
+                return false;
+            }
+            root.appendClone( worldSettingsDoc.getRoot() );
+        }
         XMLNode entities = root.appendChild( SceneDocumentInternal::kEntities );
 
         for ( const SceneObjectNode& entity : _listSceneObjectNode )
@@ -275,75 +378,87 @@ namespace sw
         }
 
         arch >> _name;
-
-        uint32 entityCount{ 0 };
-        arch >> entityCount;
-
-        // **파일이 말한 개수를 그대로 잡아 두지 않는다.** 엔티티 하나는 길이 앞머리(4바이트)를 쓰는 필드 여섯과 파일 id(8바이트)이므로,
-        // 남은 바이트를 그 최소치로 나눈 것보다 많은 엔티티는 있을 수 없다. 손상된 씬 하나가 수백 기가짜리 `reserve` 가 되는 것을
-        // 여기서 막는다. 읽기는 어차피 아래에서 실패하지만, 그 전에 할당이 먼저 터진다.
-        const uint64 kMinBytesPerEntity = 6u * sizeof( uint32 ) + sizeof( uint64 );
-        const uint64 maxPossibleEntity  = arch.getRemainingBytes() / kMinBytesPerEntity;
-        if ( static_cast<uint64>( entityCount ) > maxPossibleEntity )
+        if ( BinarySerializer::deserialize( &_worldSettings, *WorldSettings::StaticType(), arch ) == false || _worldSettings.validate( _name ) == false )
         {
-            SW_LOG_ERROR( "Binary scene claims %# entities but only %# can fit in %# remaining bytes: %#",
-                          entityCount, maxPossibleEntity, arch.getRemainingBytes(), absPath );
+            SW_LOG_ERROR( "Binary scene world settings could not be read or are not usable: %#", absPath );
+            *this = {};
             return false;
         }
 
-        _listSceneObjectNode.reserve( entityCount );
-        for ( uint32 entityIndex = 0; entityIndex < entityCount; ++entityIndex )
+        if ( SceneDocumentInternal::readEntities( arch, _listSceneObjectNode, absPath ) == false )
         {
-            SceneObjectNode node{};
-            arch >> node._name >> node._prefab >> node._prefabGuid >> node._embeddedXML >> node._embeddedStateBytes >> node._fileID >> node._prefabOverrideXML;
-            // 잘린 파일에서 남은 횟수를 마저 도는 것은 빈 노드를 쌓는 일일 뿐이다.
-            if ( arch.isError() )
-                break;
+            *this = {};
+            return false;
+        }
 
-            SceneDocumentInternal::resolvePrefabPathByGuid( node );
-
-            _listSceneObjectNode.push_back( std::move( node ) );
+        uint32 cellCount{ 0 };
+        arch >> cellCount;
+        const uint64 maxPossibleCell = arch.getRemainingBytes() / SceneDocumentInternal::kMinBytesPerCell;
+        if ( arch.isError() || static_cast<uint64>( cellCount ) > maxPossibleCell )
+        {
+            SW_LOG_ERROR( "Binary scene claims %# streaming cells but only %# can fit: %#", cellCount, maxPossibleCell, absPath );
+            *this = {};
+            return false;
+        }
+        // 셀은 스트리밍하는 씬에만 있다 — 스트리밍하지 않는 씬에 셀이 있으면 그 엔티티는 아무도 올리지 않는다.
+        if ( cellCount > 0 && _worldSettings._bStreaming == false )
+        {
+            SW_LOG_ERROR( "Binary scene has %# streaming cells but does not stream: %#", cellCount, absPath );
+            *this = {};
+            return false;
+        }
+        _listStreamingCell.resize( cellCount );
+        for ( StreamingCell& cell : _listStreamingCell )
+        {
+            arch >> cell._cell._x >> cell._cell._z;
+            if ( SceneDocumentInternal::readEntities( arch, cell._listSceneObjectNode, absPath ) == false )
+            {
+                *this = {};
+                return false;
+            }
         }
 
         if ( arch.isError() )
         {
             SW_LOG_ERROR( "Binary scene stream corrupted in %#", absPath );
-            _bValid = false;
+            *this = {};
             return false;
         }
 
         _bValid = true;
-        SW_LOG_INFO( "Loaded '%#' (%# entities) from binary %#",
-                     _name, static_cast<uint32>( _listSceneObjectNode.size() ), absPath );
+        // 이 줄의 모양은 `Scripts/qa/SceneLoadBench.py` 가 읽는다 — 셀 수는 따로 적는다.
+        SW_LOG_INFO( "Loaded '%#' (%# entities) from binary %#", _name, static_cast<uint32>( computeTotalEntityCount() ), absPath );
+        if ( cellCount > 0 )
+            SW_LOG_INFO( "Scene '%#' has %# streaming cells", _name, cellCount );
         return true;
     }
 
     bool SceneDocument::saveBinary( string_view path ) const
     {
+        // 읽는 쪽이 받지 않는 월드 설정 · 셀은 쓰지 않는다.
+        if ( _worldSettings.validate( _name ) == false )
+            return false;
+        if ( _listStreamingCell.empty() == false && _worldSettings._bStreaming == false )
+        {
+            SW_LOG_ERROR( "Scene '%#' has streaming cells but does not stream - not saved", _name );
+            return false;
+        }
+
         Archive arch;
         arch << SceneDocumentInternal::kBinMagic;
         arch << SceneDocumentInternal::kBinVersion;
         arch << _name;
-        arch << static_cast<uint32>( _listSceneObjectNode.size() );
-
-        for ( const SceneObjectNode& entity : _listSceneObjectNode )
+        if ( BinarySerializer::serialize( &_worldSettings, *WorldSettings::StaticType(), arch ) == false )
         {
-            string     prefabGuid         = entity._prefabGuid;
-            const bool bResolvePrefabGuid = prefabGuid.empty() && entity._prefab.empty() == false && engine::areEngineServicesBound();
-            if ( bResolvePrefabGuid )
-            {
-                UUID resolvedGuid{};
-                if ( engine::getSubsystem<AssetManager>().getAssetDatabase().tryGetGuid( entity._prefab, resolvedGuid ) && resolvedGuid.isNull() == false )
-                    prefabGuid = resolvedGuid.toString();
-            }
-
-            arch << entity._name;
-            arch << entity._prefab;
-            arch << prefabGuid;
-            arch << entity._embeddedXML;
-            arch << entity._embeddedStateBytes;
-            arch << entity._fileID;
-            arch << entity._prefabOverrideXML;
+            SW_LOG_ERROR( "Scene '%#' world settings could not be written - not saved", _name );
+            return false;
+        }
+        SceneDocumentInternal::writeEntities( arch, _listSceneObjectNode );
+        arch << static_cast<uint32>( _listStreamingCell.size() );
+        for ( const StreamingCell& cell : _listStreamingCell )
+        {
+            arch << cell._cell._x << cell._cell._z;
+            SceneDocumentInternal::writeEntities( arch, cell._listSceneObjectNode );
         }
 
         const string absPath = ResourcePaths::getWritePath( path );
@@ -355,9 +470,19 @@ namespace sw
         FileUtil::ensureParentDirectoryExists( absPath );
         const bool bOk = arch.saveFile( absPath );
         if ( bOk )
-            SW_LOG_INFO( "Saved binary '%#' (%# entities) -> %#",
-                         _name, static_cast<uint32>( _listSceneObjectNode.size() ), absPath );
+            SW_LOG_INFO( "Saved binary '%#' (%# entities, %# streaming cells) -> %#", _name, static_cast<uint32>( computeTotalEntityCount() ),
+                         static_cast<uint32>( _listStreamingCell.size() ), absPath );
         return bOk;
+    }
+
+    size_t SceneDocument::computeTotalEntityCount() const
+    {
+        size_t count = _listSceneObjectNode.size();
+        for ( const StreamingCell& cell : _listStreamingCell )
+        {
+            count += cell._listSceneObjectNode.size();
+        }
+        return count;
     }
 
     bool SceneDocument::load( string_view path )

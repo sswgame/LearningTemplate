@@ -790,8 +790,8 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBasePublishesSceneLoadEvents )
 
     const string scenePath = test::makeTempPath( "level_events.scene.xml" );
     SW_ASSERT_TRUE( FileUtil::writeTextFile( scenePath, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
-                                                        "<Scene formatVersion=\"1\" name=\"LevelEvents\">\n"
-                                                        "  <entities>\n"
+                                                        "<Scene formatVersion=\"2\" name=\"LevelEvents\">\n"
+                                                        "  <WorldSettings _bStreaming=\"false\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"0\"><_cellGrid _cellSize=\"0\" _loadingRadius=\"0\"/></WorldSettings><entities>\n"
                                                         "    <entity id=\"101\" name=\"Hero\"/>\n"
                                                         "  </entities>\n"
                                                         "</Scene>\n" ) );

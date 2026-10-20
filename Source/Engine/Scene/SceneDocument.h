@@ -1,12 +1,16 @@
 /**
  * @file SceneDocument.h
- * @brief 씬 문서 모델과 XML/바이너리 직렬화입니다(씬 이름, 엔티티 노드 목록, 프리팹 · 임베디드 상태).
+ * @brief 씬 문서 모델과 XML/바이너리 직렬화입니다(씬 이름, 월드 설정, 엔티티 노드 목록, 프리팹 · 임베디드 상태, 쿠킹본의 스트리밍 셀).
+ * @details 씬 형식 판(`AssetFormatVersions::kScene`)이 맞지 않는 XML 은 읽지 않습니다 — 옛 판 리더를 두지 않고, 판을 올릴 때 저장소의 씬을
+ *          변환 도구로 다시 씁니다(`Scripts/dev/MoveSceneFormat.py`).
  */
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+
+#include "Engine/Scene/WorldSettings.h"
 
 namespace sw
 {
@@ -43,9 +47,22 @@ namespace sw
             string _prefabOverrideXML;
         };
 
+        /**
+         * @brief 스트리밍하는 씬의 셀 하나와 그 셀에 놓인 엔티티입니다. **쿠킹본에만 있습니다**(`SceneCooker` 가 나눈다).
+         * @details 셀의 엔티티는 같은 셀의 엔티티나 기본 목록(`_listSceneObjectNode`, 늘 올라 있다)의 엔티티만 파일 id 로 가리킨다 — 쿠커가 그 밖의 참조를
+         *          쿠킹 오류로 멈춘다(`WorldCellGrid::findCrossCellReferences`).
+         */
+        struct StreamingCell
+        {
+            WorldCellCoord          _cell{};
+            vector<SceneObjectNode> _listSceneObjectNode;
+        };
+
         string                  _name;
         string                  _sourcePath;
-        vector<SceneObjectNode> _listSceneObjectNode;
+        WorldSettings           _worldSettings{};     ///< 씬 파일의 `<WorldSettings>`(형식 판 2부터 필수)
+        vector<SceneObjectNode> _listSceneObjectNode; ///< 늘 올라 있는 엔티티. 스트리밍하지 않는 씬은 모든 엔티티다
+        vector<StreamingCell>   _listStreamingCell;   ///< 셀로 나눈 엔티티(쿠킹본에만, z · x 오름차순). XML 로는 쓰지 않는다
         bool                    _bValid{ false };
 
         /** @brief 빌드(Shipping/Dev)와 파일 존재 여부에 따라 알맞은 포맷(바이너리 우선)으로 로드합니다. */
@@ -58,12 +75,14 @@ namespace sw
          *          게임 런타임 코드는 쓰지 않습니다(`CheckRuntimeResourceDiskAccess`).
          */
         [[nodiscard]] SW_API bool loadXMLFromDiskFile( string_view diskPath );
-        /** @brief XML 을 리소스 상대/절대 경로에 저장합니다. */
+        /** @brief XML 을 리소스 상대/절대 경로에 저장합니다. 셀로 나눈 문서(쿠킹본, `_listStreamingCell`)는 쓰지 않고 false 입니다 — 셀의 엔티티를 잃는다. */
         [[nodiscard]] SW_API bool saveXML( string_view path ) const;
-        /** @brief 리소스 상대/절대 경로에서 바이너리(SCN1)를 로드합니다. */
+        /** @brief 리소스 상대/절대 경로에서 바이너리(SCN1)를 로드합니다. 월드 설정과 셀까지 읽습니다. */
         [[nodiscard]] SW_API bool loadBinary( string_view path );
-        /** @brief 바이너리(SCN1)를 리소스 상대/절대 경로에 저장합니다. */
+        /** @brief 바이너리(SCN1)를 리소스 상대/절대 경로에 저장합니다. 월드 설정과 셀까지 씁니다. */
         [[nodiscard]] SW_API bool saveBinary( string_view path ) const;
+        /** @brief 셀까지 모든 엔티티 수입니다. */
+        SW_API size_t computeTotalEntityCount() const;
 
     private:
         /** @brief 본문을 어디서 읽는지입니다. 리소스 id(낱개 파일 정책 · 팩) 또는 디스크 파일. */

@@ -1,4 +1,7 @@
-<Scene formatVersion="1" name="ScreenRectView">
+<Scene formatVersion="2" name="ScreenRectView">
+	<WorldSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</WorldSettings>
 	<entities>
 		<entity id="1" name="MainCamera">
 			<GameObject _schemaVersion="0" _name="MainCamera" _bActive="true">

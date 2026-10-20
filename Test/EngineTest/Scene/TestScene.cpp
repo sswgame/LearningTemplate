@@ -861,7 +861,7 @@ SW_TEST_CASE( SceneTest, SceneLightCollectionCarriesTypeAndShadowFlag )
  */
 SW_TEST_CASE( SceneTest, SceneEntityWithoutAnIDIsRejected )
 {
-    const sw::string kHead  = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Scene formatVersion=\"1\" name=\"NoIds\">\n  <entities>\n";
+    const sw::string kHead  = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Scene formatVersion=\"2\" name=\"NoIds\">\n  <WorldSettings _bStreaming=\"false\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"0\"><_cellGrid _cellSize=\"0\" _loadingRadius=\"0\"/></WorldSettings><entities>\n";
     const sw::string kTail  = "  </entities>\n</Scene>\n";
     const sw::string withID = kHead + "    <entity id=\"1\" name=\"Kept\"/>\n" + kTail;
     const sw::string noID   = kHead + "    <entity id=\"1\" name=\"Kept\"/>\n    <entity name=\"NoId\"/>\n" + kTail;
@@ -1738,8 +1738,8 @@ SW_TEST_CASE( SceneTest, BrokenSceneFileSaysWhereNotFileNotFound )
 SW_TEST_CASE( SceneTest, XMLAssetsLoadWithoutEngineServices )
 {
     const sw::string scenePath = test::makeTempPath( "standalone.scene.xml" );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( scenePath, "<Scene formatVersion=\"1\" name=\"Standalone\">\n"
-                                                            "  <entities>\n"
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( scenePath, "<Scene formatVersion=\"2\" name=\"Standalone\">\n"
+                                                            "  <WorldSettings _bStreaming=\"false\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"0\"><_cellGrid _cellSize=\"0\" _loadingRadius=\"0\"/></WorldSettings><entities>\n"
                                                             "    <entity id=\"1\" name=\"Crate\" prefab=\"game/demo/prefabs/crate.prefab.xml\"/>\n"
                                                             "  </entities>\n"
                                                             "</Scene>\n" ) );
@@ -1925,9 +1925,9 @@ SW_TEST_CASE( SceneTest, RepositoryScenesAndPrefabsKeepComponentNames )
 SW_TEST_CASE( SceneTest, SceneDocumentReadsValuesOnlyFromAttributes )
 {
     const sw::string scenePath = test::makeTempPath( "childtext.scene.xml" );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( scenePath, "<Scene formatVersion=\"1\">\n"
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( scenePath, "<Scene formatVersion=\"2\">\n"
                                                             "  <name>FromChild</name>\n"
-                                                            "  <entities>\n"
+                                                            "  <WorldSettings _bStreaming=\"false\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"0\"><_cellGrid _cellSize=\"0\" _loadingRadius=\"0\"/></WorldSettings><entities>\n"
                                                             "    <entity id=\"1\"><name>Crate</name><prefab>game/demo/prefabs/crate.prefab.xml</prefab></entity>\n"
                                                             "  </entities>\n"
                                                             "</Scene>\n" ) );

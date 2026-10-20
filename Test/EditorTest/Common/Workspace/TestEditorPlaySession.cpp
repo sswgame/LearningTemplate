@@ -43,8 +43,8 @@ namespace
     sw::string writeQueuedPlaySceneFile( const utf8* pFileName, const utf8* pSceneName )
     {
         const sw::string path = test::makeTempPath( pFileName );
-        const sw::string text = sw::string( "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Scene formatVersion=\"1\" name=\"" ) + pSceneName +
-                                "\">\n  <entities>\n    <entity id=\"101\" name=\"Boss\"/>\n  </entities>\n</Scene>\n";
+        const sw::string text = sw::string( "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Scene formatVersion=\"2\" name=\"" ) + pSceneName +
+                                "\">\n  <WorldSettings _bStreaming=\"false\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"0\"><_cellGrid _cellSize=\"0\" _loadingRadius=\"0\"/></WorldSettings><entities>\n    <entity id=\"101\" name=\"Boss\"/>\n  </entities>\n</Scene>\n";
         // 쿠킹한 바이너리도 쿠커와 같은 이름으로 둔다(`AssetCookPath`) — Shipping 은 바이너리 씬(.scene.bin)만 읽는다.
         sw::SceneDocument                  doc{};
         sw::SceneDocument::SceneObjectNode boss{};

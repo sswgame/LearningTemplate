@@ -96,7 +96,7 @@ SW_TEST_CASE( MemoryTagTest, AsyncSceneLoadOnWorkerIsTaggedScene )
         SW_TEST_SKIP( "no tracking memory profiler in this host" );
 
     const sw::string xmlPath = test::makeTempPath( "sw_test_memtag_scene.scene.xml" );
-    sw::string       xmlText = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Scene formatVersion=\"1\" name=\"TagTown\">\n  <entities>\n";
+    sw::string       xmlText = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Scene formatVersion=\"2\" name=\"TagTown\">\n  <WorldSettings _bStreaming=\"false\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"0\"><_cellGrid _cellSize=\"0\" _loadingRadius=\"0\"/></WorldSettings><entities>\n";
     for ( uint32 entityIndex = 0; entityIndex < 64; ++entityIndex )
     {
         xmlText += "    <entity id=\"" + sw::to_string( entityIndex + 1 ) + "\" name=\"Villager" + sw::to_string( entityIndex ) + "\"/>\n";
