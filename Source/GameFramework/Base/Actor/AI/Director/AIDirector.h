@@ -35,7 +35,7 @@ namespace sw
     /** @brief 조우 조건을 판정할 때의 세계와 플레이어 상태입니다. 게임이 바뀔 때 `AIDirector::setContext` 로 넘깁니다. */
     struct SW_GF_API AIDirectorContext
     {
-        ScheduleConditionContext _condition{};   ///< 플래그 · 플레이어 태그(`_pNpcTags`) · 세계 태그 · 요일 · 계절 · 날씨 · 하루의 때
+        ScheduleConditionContext _condition{};   ///< 플래그, 플레이어 태그(`_pNpcTags`), 세계 태그, 요일, 계절, 날씨, 하루의 때
         vector<hashed_string>    _listAreaTag{}; ///< 플레이어가 있는 지역의 태그(`areas` 조건)
 
         /** @brief 시계에서 날, 계절의 날, 계절, 하루의 때를 채웁니다. 요일과 날씨는 게임의 달력이 채웁니다. */
@@ -49,11 +49,11 @@ namespace sw
     ENUM()
     enum class AIDirectorEventKind : uint8
     {
-        PhaseChanged = 0, ///< `_id` = 새 단계, `_source` = 앞 단계(시작이면 빈 이름), `_detail` = 나간 길 번호(−1 = 시작 · 강제)
-        Spawned,          ///< `_id` = 스폰 항목 — 게임이 만든다, 죽으면 `_spawnID` 로 `notifyDespawned`
-        Despawned,        ///< `_id` = 스폰 항목, `_cost` = 돌려받은 예산
-        Encounter,        ///< `_id` = 조우 · 사건, `_source` = 풀, `_count` · `_scale` = 데이터의 값
-        Reward            ///< `_id` = 보상, `_source` = 풀, `_count` · `_scale` = 데이터의 값
+        PhaseChanged = 0, ///< `_id` 는 새 단계, `_source` 는 앞 단계(시작이면 빈 이름), `_detail` 은 나간 전환 번호(시작이나 강제면 -1)
+        Spawned,          ///< `_id` 는 스폰 항목이다. 게임이 오브젝트를 만들고, 죽으면 `_spawnID` 로 `notifyDespawned` 를 부른다
+        Despawned,        ///< `_id` 는 스폰 항목, `_cost` 는 돌려받은 예산
+        Encounter,        ///< `_id` 는 조우나 사건, `_source` 는 풀, `_count` 와 `_scale` 은 데이터의 값
+        Reward            ///< `_id` 는 보상, `_source` 는 풀, `_count` 와 `_scale` 은 데이터의 값
     };
 
     /** @brief 감독이 낸 이벤트 하나입니다. 추적(`dumpTrace`)도 이것을 쌓습니다. */
@@ -85,7 +85,7 @@ namespace sw
         static constexpr uint32 kTime      = 1u << 5; ///< 시작 뒤 시간이 모자라다
         static constexpr uint32 kIntensity = 1u << 6; ///< 긴장도 범위 밖
         static constexpr uint32 kArea      = 1u << 7; ///< 지역 태그가 맞지 않는다
-        static constexpr uint32 kCondition = 1u << 8; ///< 일정 조건(요일 · 날씨 · 때 · 플래그 · 태그 · 확률)이 거짓
+        static constexpr uint32 kCondition = 1u << 8; ///< 일정 조건(요일, 날씨, 때, 플래그, 태그, 확률)이 거짓
         static constexpr uint32 kCost      = 1u << 9; ///< 비용이 풀의 예산 상한보다 크다(예산 풀)
         static constexpr uint32 kCount     = 10;
 
@@ -98,30 +98,30 @@ namespace sw
 {
     /**
      * @class AIDirector
-     * @brief 프로필 하나(빌려 쓴다)로 도는 페이싱 감독입니다.
+     * @brief 프로필 하나로 도는 페이싱 감독입니다. 프로필은 빌려 씁니다.
      * @details 게임은 신호를 긴장도 모델에 넣고, `update` 를 부른 뒤 `drainEvents` 로 낼 것을 받아 만든다.
      *          **한 프레임의 순서**는 다음과 같다.
      *          긴장도 모델, 시간, 단계 넘기기, 스폰, 풀(Interval, Budget) 순이다.
-     *          단계 넘기기는 나가는 길을 적은 순서로 보며 한 프레임에 최대 `kMaxTransitionsPerUpdate` 번 넘긴다.
+     *          단계 넘기기는 나가는 전환을 적은 순서로 보며 한 프레임에 최대 `kMaxTransitionsPerUpdate` 번 넘긴다.
      *          스폰은 단계 배율에 단계 곡선을 곱해 `SpawnDirector` 예산에 넣는다.
-     *          PhaseEnter 풀은 단계에 들어선 그 자리에서 고른다.
-     *          **결정성**: 씨앗과 dt, 신호, 문맥이 같으면 같은 단계와 같은 고르기를 같은 때에 낸다(`computeStateHash`).
-     *          스폰 감독의 씨앗은 감독 씨앗에서 나온다. 조건의 확률 절은 (씨앗, 항목, 고른 횟수)의 해시로 굴린다.
+     *          PhaseEnter 풀은 단계에 들어선 즉시 고른다.
+     *          **결정성**: 시드와 dt, 신호, 문맥이 같으면 같은 단계와 같은 고르기를 같은 때에 낸다(`computeStateHash`).
+     *          스폰 감독의 시드는 감독 시드에서 나온다. 조건의 확률 절은 (시드, 항목, 고른 횟수)의 해시로 굴린다.
      */
     class SW_GF_API AIDirector
     {
     public:
-        static constexpr int32 kMaxTransitionsPerUpdate = 4;   ///< 한 프레임에 넘길 단계 수 상한(머무는 시간 0 인 단계가 돌고 돌지 않게)
-        static constexpr int32 kMaxPicksPerUpdate       = 8;   ///< 풀 하나가 한 프레임에 고르는 수 상한(긴 dt)
-        static constexpr int32 kMaxTraceEvent           = 256; ///< 추적이 들고 있는 최근 사건 수
+        static constexpr int32 kMaxTransitionsPerUpdate = 4;   ///< 한 프레임에 넘길 단계 수 상한. 머무는 시간이 0 인 단계끼리 끝없이 돌지 않게 한다
+        static constexpr int32 kMaxPicksPerUpdate       = 8;   ///< 풀 하나가 한 프레임에 고르는 수 상한. dt 가 길 때 한꺼번에 쏟아지지 않게 한다
+        static constexpr int32 kMaxTraceEvent           = 256; ///< 추적이 보관하는 최근 사건 수
 
         AIDirector();
 
-        /** @brief 프로필, 스폰 테이블, 씨앗을 정하고 처음 단계로 시작합니다. 프로필과 테이블은 빌려 쓰며 테이블은 없어도 됩니다. */
+        /** @brief 프로필, 스폰 테이블, 시드를 정하고 처음 단계로 시작합니다. 프로필과 테이블은 빌려 쓰며 테이블은 없어도 됩니다. */
         void initialize( const AIDirectorProfile* pProfile, const SpawnTable* pSpawnTable, uint32 seed );
-        /** @brief 같은 프로필과 씨앗으로 처음부터 다시 시작합니다(판 다시 시작). 기본 긴장도 모델도 처음으로 돌립니다. */
+        /** @brief 같은 프로필과 시드로 판을 처음부터 다시 시작합니다. 기본 긴장도 모델도 처음으로 돌립니다. */
         void restart();
-        /** @brief 게임의 긴장도 모델을 끼웁니다. 빌려 쓰며, nullptr 이면 기본 모델(`getBuiltinIntensityModel`)을 씁니다. */
+        /** @brief 게임의 긴장도 모델로 교체합니다. 빌려 쓰며, nullptr 이면 기본 모델(`getBuiltinIntensityModel`)을 씁니다. */
         void setIntensityModel( IAIDirectorIntensityModel* pModel ) { _pCustomModel = pModel; }
         /** @brief 조우 조건을 판정할 세계와 플레이어 상태를 정합니다. 값은 복사하지만 안의 포인터는 빌려 씁니다. */
         void setContext( const AIDirectorContext& context ) { _context = context; }
@@ -150,22 +150,22 @@ namespace sw
 
         /** @brief 풀 @p poolIndex 의 항목 @p encounterIndex 를 지금 막는 까닭(`AIDirectorBlock` 비트)입니다. 0 이면 고를 수 있다는 뜻입니다. */
         uint32 computeBlockMask( int32 poolIndex, int32 encounterIndex ) const;
-        /** @brief "왜 지금 이 단계와 이 항목인가"에 답하는 문자열입니다. 단계, 긴장도, 나가는 길마다 막은 절, 풀마다 항목의 `+`/`-` 와 까닭을 담습니다. */
+        /** @brief "왜 지금 이 단계와 이 항목인가"에 답하는 문자열입니다. 단계, 긴장도, 나가는 전환마다 막은 절, 풀마다 항목의 `+`/`-` 와 까닭을 담습니다. */
         void explain( string& outText ) const;
         /** @brief 최근 이벤트(최대 `kMaxTraceEvent`)를 시간 순으로 한 줄씩 씁니다. */
         void dumpTrace( string& outText ) const;
         /** @brief 결정성 확인용 상태 해시입니다. 시간, 단계, 긴장도, 난수, 풀, 항목, 스폰 상태를 담습니다. */
         uint64 computeStateHash() const;
         /**
-         * @brief 감독 상태를 씁니다. 표는 'AIDR', 버전은 1 입니다.
-         * @details 시간, 단계, 순환, 긴장도, 고른 횟수, 난수, 프로필 모양, 풀, 항목, 기본 긴장도 모델, 스폰 감독을 싣는다.
+         * @brief 감독 상태를 씁니다. 태그는 'AIDR', 버전은 1 입니다.
+         * @details 시간, 단계, 순환, 긴장도, 고른 횟수, 난수, 프로필 구조, 풀, 항목, 기본 긴장도 모델, 스폰 감독을 싣는다.
          *          핫 리로드와 세이브가 웨이브를 이어 가는 데 쓴다.
          *          게임 긴장도 모델(`setIntensityModel`)과 추적과 쌓인 이벤트는 싣지 않는다.
          */
         void writeState( Archive& outArchive ) const;
         /**
-         * @brief `writeState` 의 바이트로 이어 갑니다. 먼저 같은 프로필 · 테이블로 `initialize` 한 감독에 부릅니다.
-         * @details 프로필 모양(단계, 풀, 항목, 신호 수)이 다르거나 끝까지 읽지 못하면 false 를 반환하고 감독은 그대로이다. 이때 부른 쪽은 처음부터 돈다.
+         * @brief `writeState` 의 바이트로 이어 갑니다. 먼저 같은 프로필과 테이블로 `initialize` 한 감독에 부릅니다.
+         * @details 프로필 구조(단계, 풀, 항목, 신호 수)가 다르거나 끝까지 읽지 못하면 false 를 반환하고 감독은 그대로이다. 이때 부른 쪽은 처음부터 돈다.
          *          쌓인 이벤트와 추적은 비운다.
          */
         [[nodiscard]] bool readState( Archive& archive );
@@ -207,7 +207,7 @@ namespace sw
         SpawnDirector                _spawnDirector;
         vector<PoolState>            _listPoolState;
         EventBuffer<AIDirectorEvent> _eventBuffer;
-        vector<AIDirectorEvent>      _listTrace; ///< 고리 — `_traceHead` 가 가장 오래된 자리
+        vector<AIDirectorEvent>      _listTrace; ///< 링 버퍼. `_traceHead` 가 가장 오래된 위치다
         vector<float32>              _listScratchWeight;
         vector<SpawnEvent>           _listScratchSpawnEvent;
         const AIDirectorProfile*     _pProfile;
@@ -218,7 +218,7 @@ namespace sw
         float32                      _phaseTime;
         float32                      _intensity;
         uint32                       _seed;
-        uint32                       _pickSerial; ///< 고른 횟수(확률 절의 열쇠)
+        uint32                       _pickSerial; ///< 고른 횟수. 확률 절의 해시 키로 쓴다
         int32                        _phaseIndex;
         int32                        _cycle;
         int32                        _traceHead;

@@ -1,6 +1,6 @@
 /**
  * @file NavGridMover.h
- * @brief 격자 행위자(`NavAgent` + `NavGrid` + `GridPathfinder`)를 공통 이동 창구(`INavMover`)로 보입니다 — 내비메시 에이전트와 같은 자리에 꽂힌다.
+ * @brief 격자 행위자(`NavAgent`, `NavGrid`, `GridPathfinder`)를 공통 이동 인터페이스(`INavMover`)로 감쌉니다. 내비메시 에이전트와 같은 곳에 연결됩니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -19,8 +19,8 @@ namespace sw
 
     /**
      * @class NavGridMover
-     * @brief AI(행동 트리의 이동 · 감독)가 격자 게임과 내비메시 게임에서 같은 코드로 걷게 하는 묶음입니다. 격자 · 길찾기 · 행위자는 빌려 씁니다(이것보다 오래 산다).
-     * @details 상태는 행위자의 것을 옮깁니다 — 경로 · 흐름장을 따르는 중이면 `Moving`, 도착이면 `Arrived`, 끼였거나 경로를 못 구했으면 `Failed`.
+     * @brief AI(행동 트리의 이동, 감독)가 격자 게임과 내비메시 게임에서 같은 코드로 걷게 하는 어댑터입니다. 격자, 길찾기, 행위자는 빌려 쓰며 이것보다 오래 살아야 합니다.
+     * @details 상태는 행위자의 것을 옮깁니다. 경로나 흐름장을 따르는 중이면 `Moving`, 도착이면 `Arrived`, 끼였거나 경로를 못 구했으면 `Failed`.
      */
     class SW_GF_API NavGridMover final : public INavMover
     {

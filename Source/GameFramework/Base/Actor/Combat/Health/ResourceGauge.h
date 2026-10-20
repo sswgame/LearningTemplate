@@ -25,9 +25,9 @@ namespace sw
         float32 _regenRate{ 20.0f };           ///< 초당 회복(과열형이면 초당 식는 양)
         float32 _regenDelay{ 1.0f };           ///< 마지막으로 쓴 뒤 이만큼 지나야 차기(식기) 시작한다
         float32 _drainPerSecond{ 10.0f };      ///< 계속 쓰기(`drain( deltaTime )`)의 기본 초당 소비
-        float32 _exhaustThreshold{ 0.0f };     ///< 0 보다 크면 — 0 까지 쓰면 탈진, 이 값까지 다시 차야 다시 쓸 수 있다
-        float32 _overheatCooldown{ 0.0f };     ///< 과열형 — 과열되면 이만큼 더 기다린 뒤 식기 시작한다(벌칙)
-        float32 _overheatRecoverLevel{ 0.0f }; ///< 과열형 — 열이 이 값까지 내려가야 잠금이 풀린다
+        float32 _exhaustThreshold{ 0.0f };     ///< 0 보다 크면 0 까지 쓴 순간 탈진하고, 이 값까지 다시 차야 다시 쓸 수 있다
+        float32 _overheatCooldown{ 0.0f };     ///< 과열형에서 과열되면 이만큼 더 기다린 뒤 식기 시작한다(벌칙)
+        float32 _overheatRecoverLevel{ 0.0f }; ///< 과열형에서 열이 이 값까지 내려가야 잠금이 풀린다
         uint8   _bOverheatMode{ SW_FALSE };    ///< 쓰면 오르고 최대에 닿으면 과열(캡슐파이터 부스트 · 총 과열)
     };
 } // namespace sw
@@ -56,7 +56,7 @@ namespace sw
         /** @brief 한 번에 @p amount 를 씁니다. 구르기, 강공격, 부스트 대시, 한 발에 씁니다. 잠겼거나 모자라면 쓰지 않고 false 를 반환합니다. */
         [[nodiscard]] bool trySpend( float32 amount );
         /**
-         * @brief 계속 씁니다. 달리기, 활공, 부스트 유지에 씁니다. 이번 프레임 몫 @p rate × @p deltaTime 을 씁니다.
+         * @brief 계속 씁니다. 달리기, 활공, 부스트 유지에 씁니다. 이번 프레임에 @p rate × @p deltaTime 만큼 씁니다.
          * @return 다 쓸 수 있었으면 true 이다. 잠겼거나 이번에 바닥(과열)에 닿았으면 false 이며, 게임은 그 행동을 멈춘다.
          */
         bool drain( float32 rate, float32 deltaTime );

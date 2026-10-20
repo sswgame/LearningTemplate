@@ -1,8 +1,8 @@
 /**
  * @file ElementChart.h
- * @brief 속성 상성표 — 공격 속성 × 방어 속성의 피해 배율(복합 타입은 곱), 면역(0), 속성마다의 상태이상 부여 확률입니다.
- * @details 포켓몬(타입 상성 · 복합 타입 · 화상 확률), 위쳐(기름 · 표식), 젤다(불 · 얼음 · 번개), 소울라이크(속성 내성)가 같은 표를 씁니다.
- *          같은 속성 보너스(포켓몬 STAB — 기술 속성이 쓰는 쪽의 타입과 같으면 1.5 배)는 표가 아니라 쓰는 쪽의 속성이 필요하므로 키트가 곱합니다.
+ * @brief 속성 상성 테이블입니다. 공격 속성과 방어 속성의 피해 배율(복합 타입은 곱), 면역(0), 속성마다의 상태이상 부여 확률을 담습니다.
+ * @details 포켓몬(타입 상성, 복합 타입, 화상 확률), 위쳐(기름, 표식), 젤다(불, 얼음, 번개), 소울라이크(속성 내성)가 같은 테이블을 씁니다.
+ *          같은 속성 보너스(포켓몬 STAB: 기술 속성이 쓰는 쪽의 타입과 같으면 1.5 배)는 쓰는 쪽의 속성이 필요하므로 테이블이 아니라 키트가 곱합니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -49,7 +49,7 @@ namespace sw
         bool hasElement( const hashed_string& element ) const;
         /** @brief 쌍의 배율을 둡니다(같은 쌍이면 바꾼다). 음수는 0 으로 자릅니다. */
         void setMultiplier( const hashed_string& attack, const hashed_string& defend, float32 multiplier );
-        /** @brief 상태이상 확률을 더합니다(한 속성에 여럿 — 적은 순서대로 굴린다). */
+        /** @brief 상태이상 확률을 더합니다. 한 속성에 여럿을 둘 수 있고, 적은 순서대로 굴립니다. */
         void addStatusChance( const ElementStatusChance& statusChance );
 
         /** @brief 쌍 하나의 배율입니다. 규칙이 없으면 1 입니다. */
@@ -60,7 +60,7 @@ namespace sw
         bool isImmune( const hashed_string& attack, const vector<hashed_string>& listDefend ) const;
         /**
          * @brief @p element 의 상태이상을 굴립니다. 적은 순서대로 하나씩 굴려 처음 걸린 것을 돌려주고, 없으면 빈 이름입니다.
-         * @details 항목마다 난수를 하나씩 씁니다(걸리면 거기서 멈춘다) — 씨앗이 같으면 같은 결과입니다.
+         * @details 항목마다 난수를 하나씩 쓰고, 걸리면 거기서 멈춥니다. 시드가 같으면 같은 결과입니다.
          */
         hashed_string rollStatus( const hashed_string& element, GameRandom& random ) const;
 

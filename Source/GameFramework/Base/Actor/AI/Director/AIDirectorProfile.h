@@ -25,9 +25,9 @@ namespace sw
     /** @brief 긴장도 신호를 긴장도에 반영하는 방식입니다. */
     enum class AIDirectorSignalKind : uint8
     {
-        Impulse = 0, ///< `addSignal( 양 )` 한 번에 양 × scale 이 더해진다(입은 피해 · 가까이서 쓰러뜨림)
+        Impulse = 0, ///< `addSignal( 양 )` 한 번에 양 × scale 이 더해진다(입은 피해, 가까이서 쓰러뜨림)
         Rate,        ///< `setSignal( 값 )` 이 유지되는 동안 초마다 값 × scale 이 더해진다(가까운 적 수)
-        Level        ///< 긴장도의 바닥 — 긴장도는 Σ 값 × scale(각각 max 까지) 아래로 내려가지 않는다(자원 부족)
+        Level        ///< 긴장도의 하한이다. 긴장도는 Σ 값 × scale(각각 max 까지) 아래로 내려가지 않는다(자원 부족)
     };
 
     SW_GF_API const utf8* toString( AIDirectorSignalKind kind );
@@ -40,9 +40,9 @@ namespace sw
     {
         hashed_string        _id{};
         float32              _scale{ 1.0f };
-        float32              _max{ -1.0f }; ///< 이 신호가 한 번에(Impulse) · 초마다(Rate) · 바닥으로(Level) 더하는 상한. 음수면 없음
+        float32              _max{ -1.0f }; ///< 이 신호가 더하는 값의 상한. Impulse 는 한 번에, Rate 는 초마다, Level 은 하한으로 더한다. 음수면 없음
         AIDirectorSignalKind _kind{ AIDirectorSignalKind::Impulse };
-        uint8                _bCombat{ SW_FALSE }; ///< 싸움 신호 — 들어오면 "싸움 뒤 지난 시간" 이 0 이 되고 식기가 멈춘다
+        uint8                _bCombat{ SW_FALSE }; ///< 싸움 신호다. 들어오면 "싸움 뒤 지난 시간" 이 0 이 되고 긴장도 감소가 멈춘다
     };
 } // namespace sw
 
@@ -53,14 +53,14 @@ namespace sw
     {
         vector<AIDirectorSignalDef> _listSignal{};
         float32                     _max{ 1.0f };
-        float32                     _decayPerSecond{ 0.1f }; ///< 식는 빠르기(초마다 빠지는 양)
-        float32                     _decayDelay{ 3.0f };     ///< 마지막 싸움 신호 뒤 이만큼(s) 지나야 식기 시작한다
+        float32                     _decayPerSecond{ 0.1f }; ///< 긴장도가 초마다 줄어드는 양
+        float32                     _decayDelay{ 3.0f };     ///< 마지막 싸움 신호 뒤 이만큼(s) 지나야 긴장도가 줄기 시작한다
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 단계에서 나가는 길 하나입니다. 적은 절이 모두 참이어야 나가며, 적지 않은 절은 늘 참으로 봅니다. */
+    /** @brief 단계에서 나가는 전환 하나입니다. 적은 절이 모두 참이어야 나가며, 적지 않은 절은 늘 참으로 봅니다. */
     struct AIDirectorExitDef
     {
         hashed_string _to{};
@@ -79,8 +79,8 @@ namespace sw
     {
         hashed_string             _id{};
         vector<hashed_string>     _listSpawnTag{}; ///< 이 단계에서 낼 스폰 항목의 태그(`SpawnDirector::setAllowedTags`). 비면 모두
-        vector<AIDirectorExitDef> _listExit{};     ///< 적은 순서로 본다 — 먼저 맞는 길로 나간다
-        FloatCurve                _spawnCurve{};   ///< 단계 안 시간 → 스폰 배율(곡선이 없으면 1)
+        vector<AIDirectorExitDef> _listExit{};     ///< 적은 순서로 보고, 먼저 맞는 전환으로 나간다
+        FloatCurve                _spawnCurve{};   ///< 단계 안 시간에서 스폰 배율로 가는 곡선(곡선이 없으면 1)
         float32                   _spawnScale{ 1.0f };
         float32                   _rewardScale{ 1.0f };
     };
@@ -91,8 +91,8 @@ namespace sw
     /** @brief 풀이 내는 것의 종류입니다. 게임이 받는 이벤트의 종류와 같습니다. */
     enum class AIDirectorPoolKind : uint8
     {
-        Encounter = 0, ///< 조우 · 사건(호드 · 매복 · 길가의 낯선 이)
-        Reward         ///< 보상 · 보급(탄약 · 회복 · 상자) — 예산 풀은 단계의 rewardScale 로 쌓인다
+        Encounter = 0, ///< 조우나 사건(호드, 매복, 길가의 낯선 이)
+        Reward         ///< 보상이나 보급(탄약, 회복, 상자). 예산 풀은 단계의 rewardScale 만큼 쌓인다
     };
 
     /** @brief 풀이 항목을 고르는 때입니다. */
@@ -113,7 +113,7 @@ namespace sw
     struct SW_GF_API AIDirectorEncounterDef
     {
         hashed_string         _id{};
-        ScheduleCondition     _condition{};  ///< 요일 · 계절 · 날씨 · 하루의 때(`phases`) · 플래그 식 · 태그(플레이어 상태) · 확률
+        ScheduleCondition     _condition{};  ///< 요일, 계절, 날씨, 하루의 때(`phases`), 플래그 식, 태그(플레이어 상태), 확률
         vector<hashed_string> _listArea{};   ///< 지금 지역 태그 중 하나가 이것이어야 한다. 비면 어디서나
         vector<hashed_string> _listPacing{}; ///< 이 페이싱 단계에서만. 비면 늘
         float32               _weight{ 1.0f };
@@ -122,10 +122,10 @@ namespace sw
         float32               _minTime{ 0.0f }; ///< 감독 시작 뒤 이 시간(s) 전에는 내지 않는다
         float32               _minIntensity{ 0.0f };
         float32               _maxIntensity{ -1.0f }; ///< 음수면 상한 없음
-        float32               _scale{ 1.0f };         ///< 게임에 넘기는 값(세기 · 크기)
-        int32                 _count{ 1 };            ///< 게임에 넘기는 수(낼 개체 수)
-        int32                 _maxCount{ -1 };        ///< 한 판에 낼 상한. −1 이면 없음
-        int32                 _minCycle{ 0 };         ///< 페이싱이 이만큼 돌았어야(시작 단계로 돌아온 수)
+        float32               _scale{ 1.0f };         ///< 게임에 넘기는 값(세기나 크기)
+        int32                 _count{ 1 };            ///< 게임에 넘기는 수(낼 오브젝트 수)
+        int32                 _maxCount{ -1 };        ///< 한 판에 낼 상한. -1 이면 없음
+        int32                 _minCycle{ 0 };         ///< 페이싱이 이만큼 돌아야 낸다(시작 단계로 돌아온 횟수)
     };
 } // namespace sw
 
@@ -136,7 +136,7 @@ namespace sw
     {
         hashed_string                  _id{};
         vector<AIDirectorEncounterDef> _listEncounter{};
-        vector<hashed_string>          _listPacing{}; ///< 이 페이싱 단계에서만 돈다(시계 · 예산도 멈춘다). 비면 늘
+        vector<hashed_string>          _listPacing{}; ///< 이 페이싱 단계에서만 돈다(밖에서는 타이머와 예산도 멈춘다). 비면 늘
         hashed_string                  _phase{};      ///< PhaseEnter 의 단계
         hashed_string                  _needSignal{}; ///< Budget 이 읽는 필요 신호(긴장도 모델의 신호 값)
         float32                        _interval{ 10.0f };

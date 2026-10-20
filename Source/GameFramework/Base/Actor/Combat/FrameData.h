@@ -40,7 +40,7 @@ namespace sw
     ENUM()
     enum class GuardStance : uint8
     {
-        None = 0, ///< 가드하지 않는다(공격 · 후딜 중, 또는 앞으로 걷는 중)
+        None = 0, ///< 가드하지 않는다(공격 중, 후딜 중, 앞으로 걷는 중)
         Standing, ///< 서서 가드(뒤로 누름)
         Crouching ///< 앉아 가드(뒤아래)
     };
@@ -57,7 +57,7 @@ namespace sw
     enum class HitboxShape : uint8
     {
         Box = 0, ///< 중심 (x, y), 크기 (w, h)
-        Capsule  ///< 중심 (x, y), 크기 (w, h) 의 둥근 끝 상자 — 반지름 = min(w, h) / 2
+        Capsule  ///< 중심 (x, y), 크기 (w, h) 의 끝이 둥근 상자. 반지름은 min(w, h) / 2 다
     };
 
     /** @brief 프레임 구간 하나의 히트박스입니다. 좌표는 기술을 쓰는 쪽 기준(x 가 앞, y 가 위)이고, 단위는 게임이 정합니다. */
@@ -81,7 +81,7 @@ namespace sw
         vector<hashed_string> _listMoveID{};
         int32                 _fromFrame{ 0 };
         int32                 _toFrame{ 0 };
-        uint8                 _bOnHitOnly{ SW_FALSE }; ///< 맞거나 막혔을 때만(헛치면 캔슬 불가 — 철권 · 스트리트 파이터의 일반기 캔슬)
+        uint8                 _bOnHitOnly{ SW_FALSE }; ///< 맞거나 막혔을 때만 캔슬할 수 있다. 헛치면 캔슬할 수 없다(철권과 스트리트 파이터의 일반기 캔슬)
     };
 } // namespace sw
 
@@ -101,7 +101,7 @@ namespace sw
         int32                    _recovery{ 0 };
         int32                    _hitstun{ 0 };   ///< 맞은 쪽이 못 움직이는 프레임(맞은 프레임 다음부터)
         int32                    _blockstun{ 0 }; ///< 막은 쪽이 못 움직이는 프레임
-        int32                    _hitstop{ 0 };   ///< 닿은 순간 양쪽이 멈추는 프레임(손맛 — 이득 계산에는 들지 않는다)
+        int32                    _hitstop{ 0 };   ///< 닿은 순간 양쪽이 멈추는 프레임(타격감). 이득 계산에는 넣지 않는다
         AttackHeight             _height{ AttackHeight::Mid };
         uint8                    _bLauncher{ SW_FALSE };    ///< 띄운다(콤보 시동)
         uint8                    _bKnockdown{ SW_FALSE };   ///< 눕힌다
@@ -160,7 +160,7 @@ namespace sw
      * @class MoveTimeline
      * @brief 기술 하나를 프레임 단위로 진행합니다.
      * @details 위상, 지금 켜진 히트박스, 캔슬 가능 여부, 프레임 이득, 히트스톱을 관리한다.
-     *          기술 정의는 복사해 들고 있어서 카탈로그가 바뀌어도 진행 중인 기술은 그대로이다.
+     *          기술 정의는 복사해 보관하므로 카탈로그가 바뀌어도 진행 중인 기술은 그대로이다.
      *          히트스톱이 남아 있으면 `advanceFrame` 은 프레임을 넘기지 않고 히트스톱만 줄인다.
      *          맞은 쪽도 같은 수만큼 멈추므로 히트스톱은 프레임 이득에 들지 않는다.
      *          진행 상태(프레임, 히트스톱, 재생, 닿음, 막힘)는 리플렉션 프로퍼티라서 롤백 키트가 고정 배치형(`FixedLayout`)으로 싣는다.
@@ -222,7 +222,7 @@ namespace sw
          * @details - 가드 없음: 다 맞는다.
          *          - 서서 가드: 상단과 중단은 막고, 하단은 맞는다. 잡기는 가드로 막지 못한다(잡기 풀기는 게임이 따로 처리한다).
          *          - 앉아 가드: 상단과 잡기는 머리 위로 헛친다(피함). 하단은 막고, 중단은 맞는다.
-         *          - 가드 불가(@p bUnblockable)는 막힐 자리에서 맞지만, 높이로 피하는 것은 그대로이다.
+         *          - 가드 불가(@p bUnblockable)는 막힐 상황에서 맞지만, 높이로 피하는 것은 그대로이다.
          */
         static GuardOutcome computeGuardOutcome( AttackHeight height, GuardStance stance, bool bUnblockable = false );
         /** @brief `computeGuardOutcome( height, stance )` 가 `Blocked` 이면 true 입니다. */

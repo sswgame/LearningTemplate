@@ -2,7 +2,7 @@
  * @file CinematicCameraComponent.h
  * @brief 시퀀스 플레이어의 카메라 신호를 카메라 디렉터와 카메라 매니저로 옮기는 컴포넌트를 정의합니다.
  * @details 엔진의 시퀀서는 게임 프레임워크의 카메라(프리셋, 블렌드 스택, 흔들림)를 모른다. 그래서 시퀀서는 신호만 내고(`SequenceCameraSignal`),
- *          이 컴포넌트가 들어서 디렉터를 움직인다. 언리얼 Sequencer 의 Camera Cut 트랙이 PlayerCameraManager 에 뷰 타깃을 넣는 것과 같은 자리다.
+ *          이 컴포넌트가 들어서 디렉터를 움직인다. 언리얼 Sequencer 의 Camera Cut 트랙이 PlayerCameraManager 에 뷰 타깃을 넣는 것에 해당한다.
  */
 #pragma once
 #include "Core/Common/Types.h"

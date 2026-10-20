@@ -1,7 +1,7 @@
 /**
  * @file PawnComponent.h
  * @brief 조종 대상(폰)을 정의합니다.
- * @details 조종자가 채운 이번 틱의 의도를 들고 있고, 버튼과 아날로그의 이름(스키마), 플레이어가 빙의했을 때의 입력 레이어를 정한다.
+ * @details 조종자가 채운 이번 틱의 의도를 보관하고, 버튼과 아날로그의 이름(스키마), 플레이어가 빙의했을 때의 입력 레이어를 정한다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -26,9 +26,9 @@ namespace sw
     ENUM()
     enum class PawnAutoPossess : uint8
     {
-        None = 0, ///< 아무도 — 의도 0(멈춤 · 대기). 탑승자가 내린 탈것 · 관전 대상
-        Player0,  ///< 로컬 플레이어 0 의 조종자(없으면 조종 시스템이 하나 세운다)
-        AI,       ///< `_aiControllerPrefab` 을 세워 빙의시킨다(비었으면 기본 AI 조종자 — 서 있다)
+        None = 0, ///< 아무도 빙의하지 않는다. 의도는 0(멈춤, 대기)이다. 탑승자가 내린 탈것이나 관전 대상에 쓴다
+        Player0,  ///< 로컬 플레이어 0 의 조종자(없으면 조종 시스템이 하나 생성한다)
+        AI,       ///< `_aiControllerPrefab` 을 생성해 빙의시킨다. 비었으면 기본 AI 조종자이고 가만히 서 있다
     };
 } // namespace sw
 
@@ -59,9 +59,9 @@ namespace sw
 
         /** @brief 이번 틱의 의도입니다. */
         const ControlIntent& getIntent() const { return _intent; }
-        /** @brief 버튼 이름의 자리(스키마 순서)입니다. 없으면 −1 입니다. 소비자는 시작할 때 한 번 풀어 둡니다. */
+        /** @brief 버튼 이름의 인덱스(스키마 순서)입니다. 없으면 -1 입니다. 사용하는 쪽은 시작할 때 한 번 찾아 둡니다. */
         int32 findButton( const hashed_string& name ) const;
-        /** @brief 아날로그 이름의 자리입니다. 없으면 −1 입니다. */
+        /** @brief 아날로그 이름의 인덱스입니다. 없으면 -1 입니다. */
         int32 findAnalog( const hashed_string& name ) const;
         bool  isButtonDown( int32 buttonIndex ) const { return _intent.isDown( buttonIndex ); }
         bool  wasButtonTriggered( int32 buttonIndex ) const { return _intent.wasTriggered( buttonIndex ); }
@@ -139,7 +139,7 @@ namespace sw
         atomic<int32>                         _pitchOffsetUnits;     ///< 쌓인 피치 오프셋
         atomic<int32>                         _requestedYawUnits;    ///< 요청된 조종 요(오프셋과 같은 단위)
         atomic<int32>                         _requestedPitchUnits;  ///< 요청된 조종 피치
-        atomic<bool>                          _bRotationRequested;   ///< 요청 값이 남아 있다(값을 쓴 뒤 release 로 세운다)
+        atomic<bool>                          _bRotationRequested;   ///< 요청 값이 남아 있다(값을 쓴 뒤 release 로 설정한다)
         uint32                                _inputPeer;            ///< 의도를 내는 연결(0 = 로컬)
         uint8                                 _bAutoPossessDone : 1; ///< 자동 빙의를 한 번 시도했다(실패해도 다시 하지 않는다)
         [[maybe_unused]] uint8                _reserved         : 7;

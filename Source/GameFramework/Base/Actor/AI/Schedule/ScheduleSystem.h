@@ -1,18 +1,18 @@
 /**
  * @file ScheduleSystem.h
  * @brief NPC 의 하루 일정을 돌리는 런타임입니다.
- * @details 시각으로 칸을 고르고, 이동 시간만큼 일찍 나서고, 끼어들기 스택이 끝나면 맞는 칸으로 돌아간다.
+ * @details 시각으로 블록을 고르고, 이동 시간만큼 일찍 나서고, 끼어들기 스택이 끝나면 맞는 블록으로 돌아간다.
  *          축제가 일정을 덮고, NPC 사이의 약속을 판정하고, 화면 밖 NPC 는 지역 단위의 굵은 시간표(LOD)로 돌린다.
  *          잠으로 시간을 건너뛰고, 저장과 복원, 네트워크 요약, "왜 여기 있나" 추적도 지원한다.
  *
- *          **계획은 (그날, 계획을 세운 시각, 그때의 자리)의 함수이다.**
+ *          **계획은 (그날, 계획을 세운 시각, 그때의 위치)의 함수이다.**
  *          하루가 시작될 때, 조건(날씨, 플래그, 태그)이 바뀔 때, 끼어들기가 끝날 때, 약속이 깨질 때만 계획을 다시 세운다.
- *          어느 시각의 상태(어느 칸인지, 가는 중인지, 경로 위 비율)는 그 계획에서 바로 계산한다.
- *          그래서 화면 밖 NPC 는 매 프레임 아무 일도 하지 않고, 몇 시간을 한 번에 건너뛰어도 매 분 돌린 것과 같은 자리에 선다.
+ *          어느 시각의 상태(어느 블록인지, 가는 중인지, 경로 위 비율)는 그 계획에서 바로 계산한다.
+ *          그래서 화면 밖 NPC 는 매 프레임 아무 일도 하지 않고, 몇 시간을 한 번에 건너뛰어도 매 분 돌린 것과 같은 위치에 선다.
  *          시각은 정수 분이고 무작위는 씨앗 해시라서 결정적이다. 위치는 `ISchedulePathing` 이 정하므로 2D 와 3D 를 가리지 않는다.
  *
- *          - 판정 위치(계획의 출발점과 끼어든 자리)는 늘 계획 경로(`setPathing` 의 첫째, 굵은 경로)에서 잰다.
- *            화면 안(`ScheduleLOD::Near`) NPC 의 보이는 자리만 고운 경로(둘째)를 따라가므로, LOD 를 바꿔도 계획이 갈리지 않는다.
+ *          - 판정 위치(계획의 출발점과 끼어든 위치)는 늘 계획 경로(`setPathing` 의 첫째, 굵은 경로)에서 측정한다.
+ *            화면 안(`ScheduleLOD::Near`) NPC 의 보이는 위치만 고운 경로(둘째)를 따라가므로, LOD 를 바꿔도 계획이 달라지지 않는다.
  *          - 시간은 `update( clock )` 이나 `advanceTo( 분 )` 으로만 흐른다.
  *            (지금, 목표] 안의 이벤트(날 시작, 끼어들기 만료, 약속 판정, 상태 바뀜)는 시각 순으로, 같은 시각이면 NPC 순으로 처리한다.
  */
@@ -46,23 +46,23 @@ namespace sw
     ENUM()
     enum class ScheduleLOD : uint8
     {
-        Near = 0, ///< 화면 안 — 고운 경로 위 자리, 애니메이션 훅
-        Far       ///< 화면 밖 · 로드되지 않음 — 지역 단위, 상태 사건은 굵은 시간 간격으로
+        Near = 0, ///< 화면 안. 고운 경로 위 위치를 쓰고 애니메이션 훅을 부른다
+        Far       ///< 화면 밖이거나 로드되지 않음. 지역 단위로 다루고 상태 사건은 굵은 시간 간격으로 낸다
     };
 
     /** @brief NPC 가 지금 하는 일입니다. */
     ENUM()
     enum class ScheduleNpcPhase : uint8
     {
-        Traveling = 0, ///< 다음 칸의 자리로 가는 중
-        Performing,    ///< 칸의 자리에서 활동 중
-        Interrupted    ///< 끼어들기(말 걸기 · 전투 · 경보) 중 — 일정 시계는 그대로 흐른다
+        Traveling = 0, ///< 다음 블록의 위치로 가는 중
+        Performing,    ///< 블록의 위치에서 활동 중
+        Interrupted    ///< 끼어들기(말 걸기, 전투, 경보) 중. 일정 시계는 그대로 흐른다
     };
 
-    /** @brief 계획 칸의 출처입니다. */
+    /** @brief 계획 구간의 출처입니다. */
     enum class ScheduleSegmentSource : uint8
     {
-        Idle = 0, ///< 어느 칸도 없는 시간 — NPC 의 `idle` 활동(집)
+        Idle = 0, ///< 어느 블록도 없는 시간. NPC 의 `idle` 활동(집)을 한다
         Routine,
         Event,
         Appointment
@@ -73,24 +73,24 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 그날 계획의 칸 하나입니다. 시각은 그날의 분입니다. */
+    /** @brief 그날 계획의 구간 하나입니다. 시각은 그날의 분입니다. */
     struct ScheduleSegment
     {
         ScheduleLocation      _target{};
         hashed_string         _activity{};
         hashed_string         _animation{};
-        hashed_string         _sourceID{}; ///< 루틴 · 행사 · 약속 id
+        hashed_string         _sourceID{}; ///< 루틴, 행사, 약속의 id
         uint32                _reservationID{ 0 };
         int32                 _startMinute{ 0 };
         int32                 _endMinute{ 0 };
-        int32                 _departMinute{ 0 }; ///< 이 칸의 자리로 나서는 시각(일찍 나서기 — 시작보다 앞설 수 있다)
+        int32                 _departMinute{ 0 }; ///< 이 구간의 위치로 나서는 시각. 일찍 나서므로 시작보다 앞설 수 있다
         int32                 _travelMinutes{ 0 };
         int32                 _priority{ 0 };
-        int32                 _ownerIndex{ -1 }; ///< 루틴(NPC 의 것) · 행사 · 약속 자리
+        int32                 _ownerIndex{ -1 }; ///< 루틴(NPC 의 것), 행사, 약속의 인덱스
         int32                 _blockIndex{ -1 };
         ScheduleSegmentSource _source{ ScheduleSegmentSource::Idle };
-        uint8                 _bLeaveEarly{ SW_TRUE }; ///< 돌아다니기의 둘째 자리부터는 그 시각에 나선다
-        uint8                 _bPast{ SW_FALSE };      ///< 계획을 세운 시각보다 앞에 끝난 칸(추적 표시용)
+        uint8                 _bLeaveEarly{ SW_TRUE }; ///< 돌아다니기의 둘째 위치부터는 그 시각에 나선다
+        uint8                 _bPast{ SW_FALSE };      ///< 계획을 세운 시각보다 앞에 끝난 구간(추적 표시용)
 
         int32 getArriveMinute() const { return _departMinute + _travelMinutes; }
     };
@@ -120,15 +120,15 @@ namespace sw
     {
         enum class Kind : uint8
         {
-            Departed = 0,      ///< 칸의 자리로 나섰다
-            Arrived,           ///< 칸의 자리에 닿았다
+            Departed = 0,      ///< 구간의 위치로 나섰다
+            Arrived,           ///< 구간의 위치에 닿았다
             ActivityStarted,   ///< 활동을 시작했다(`_animation` 을 재생)
             ActivityEnded,     ///< 활동을 끝냈다
             Interrupted,       ///< 끼어들기가 시작됐다(`_sourceID` = 끼어들기 id)
             Resumed,           ///< 끼어들기가 모두 끝나 일정으로 돌아갔다
             AppointmentMet,    ///< 약속의 참가자가 모두 모였다(`_sourceID` = 약속 id, NPC 는 마지막에 온 이)
             AppointmentBroken, ///< 기다려도 모두 오지 않아 그날 약속이 깨졌다
-            Snapped            ///< 시간 건너뛰기 · 화면 안으로 들어와 그 시각 자리로 옮겨졌다
+            Snapped            ///< 시간을 건너뛰었거나 화면 안으로 들어와 그 시각의 위치로 옮겨졌다
         };
         hashed_string _activity{};
         hashed_string _animation{};
@@ -197,7 +197,7 @@ namespace sw
 {
     /**
      * @brief 시스템 설정입니다.
-     * @details 범위는 칸의 `PROPERTY( Min )` 이고(시계 설정 안까지), 벗어나면 `ScheduleSystem::initialize` 가 오류로 거절한다(`ConfigRangeUtil`).
+     * @details 범위는 필드의 `PROPERTY( Min )` 이고(시계 설정 안까지), 벗어나면 `ScheduleSystem::initialize` 가 오류로 거절한다(`ConfigRangeUtil`).
      *          예전에는 계절 날 수와 화면 밖 간격을 조용히 1 로 올렸다(폴백 금지 원칙).
      */
     REFLECT()
@@ -205,9 +205,9 @@ namespace sw
     {
         REFLECT_BODY();
         PROPERTY()
-        WorldClockSettings _clock{}; ///< 계절 · 하루의 때(조건이 쓴다) — 게임의 `WorldClock` 과 같은 값
+        WorldClockSettings _clock{}; ///< 조건이 쓰는 계절과 하루의 때. 게임의 `WorldClock` 과 같은 값이다
         PROPERTY()
-        uint32 _seed{ 0x5c4ed01eu }; ///< 확률 조건 · 돌아다니기 자리
+        uint32 _seed{ 0x5c4ed01eu }; ///< 확률 조건과 돌아다니기 위치의 시드
         PROPERTY( Min = 1 )
         int32 _farStepMinutes{ 15 }; ///< 화면 밖 NPC 의 상태 사건 간격(계획 · 판정에는 영향이 없다)
     };
@@ -228,7 +228,7 @@ namespace sw
      *     schedules.setWeather( weather.getCurrent() );
      *     schedules.setNpcLOD( npcIndex, bVisible ? ScheduleLOD::Near : ScheduleLOD::Far );
      *     schedules.update( clock );
-     *     const ScheduleNpcView view = schedules.getNpcView( npcIndex ); // 자리 · 활동 · 애니메이션
+     *     const ScheduleNpcView view = schedules.getNpcView( npcIndex ); // 위치, 활동, 애니메이션
      * @endcode
      */
     class SW_GF_API ScheduleSystem
@@ -240,7 +240,7 @@ namespace sw
         ScheduleSystem& operator=( const ScheduleSystem& ) = delete;
 
         /**
-         * @brief 카탈로그의 NPC 를 모두 집에 세우고 @p absoluteMinute(0 일 0:00 부터 센 분)의 계획을 세웁니다.
+         * @brief 카탈로그의 NPC 를 모두 집에 두고 @p absoluteMinute(0 일 0:00 부터 센 분)의 계획을 세웁니다.
          * @return 설정이 선언된 범위 밖이거나 @p absoluteMinute 가 음수이면 오류를 남기고 false 입니다. 시스템은 그대로입니다.
          */
         [[nodiscard]] bool initialize( const ScheduleCatalog* pCatalog, const ScheduleSystemSettings& settings, int32 absoluteMinute );
@@ -253,9 +253,12 @@ namespace sw
         /** @brief 잠을 잡니다. 끼어들기를 모두 지우고 @p absoluteMinute 로 건너뛰며, 그 사이의 이벤트는 버리고 NPC 마다 `Snapped` 를 냅니다. */
         void skipTo( int32 absoluteMinute );
 
-        /** @brief 경로 제공자를 정합니다. @p pPlanning 은 출발 시각, 판정 자리, 지역을 재는 굵은 경로이고, @p pFine 은 화면 안 NPC 의 보이는 자리를 재는 경로입니다(비면 계획 경로). 바꾸면 계획을 다시 세웁니다. */
+        /**
+         * @brief 경로 제공자를 정합니다. 바꾸면 계획을 다시 세웁니다.
+         * @details @p pPlanning 은 출발 시각, 판정 위치, 지역을 계산하는 굵은 경로입니다. @p pFine 은 화면 안 NPC 의 보이는 위치를 계산하는 경로이고, 비면 계획 경로를 씁니다.
+         */
         void setPathing( const ISchedulePathing* pPlanning, const ISchedulePathing* pFine );
-        /** @brief 스마트 오브젝트 자리 제공자입니다. 비면 카탈로그 `<Spot>` 의 기본 제공자를 씁니다. */
+        /** @brief 스마트 오브젝트 슬롯 제공자를 정합니다. 비면 카탈로그 `<Spot>` 의 기본 제공자를 씁니다. */
         void setActivityLocator( IScheduleActivityLocator* pLocator );
         void setActivityAnimator( IScheduleActivityAnimator* pAnimator ) { _pAnimator = pAnimator; }
         /** @brief 플래그 조건이 읽는 플래그입니다. 리비전이 바뀌면 다음 시간 흐름에서 계획을 다시 세웁니다. */
@@ -271,7 +274,7 @@ namespace sw
         void        addNpcTag( int32 npcIndex, const TagID& tag );
         void        removeNpcTag( int32 npcIndex, const TagID& tag );
         /**
-         * @brief NPC 의 호감도(관계 단계 — 하트 수 같은 정수)를 정합니다. 조건의 `minAffinity` · `maxAffinity` 가 읽습니다. 값이 바뀌면 그 NPC 의 계획을 다시 세웁니다.
+         * @brief NPC 의 호감도(하트 수 같은 정수 관계 단계)를 정합니다. 조건의 `minAffinity` 와 `maxAffinity` 가 읽습니다. 값이 바뀌면 그 NPC 의 계획을 다시 세웁니다.
          * @details 기본은 0 입니다. 저장 상태에 실립니다(`ScheduleNpcSaveState::_affinity`).
          */
         void  setNpcAffinity( int32 npcIndex, int32 affinity );
@@ -279,9 +282,9 @@ namespace sw
 
         /** @brief 끼어들기(카탈로그 `<Interrupt>` id)를 쌓습니다. 모르는 id 면 경고하고 false, 이미 있으면 만료만 다시 셉니다. */
         bool pushInterruption( int32 npcIndex, const hashed_string& interruptID );
-        /** @brief 끼어들기를 뺍니다. 모두 빠지면 지금 시각의 칸으로 돌아갑니다. 없던 것이면 false 입니다. */
+        /** @brief 끼어들기를 뺍니다. 모두 빠지면 지금 시각의 블록으로 돌아갑니다. 없던 것이면 false 입니다. */
         bool popInterruption( int32 npcIndex, const hashed_string& interruptID );
-        /** @brief 끼어든 동안 몸이 옮겨진 자리를 알립니다(도망 · 전투). 끼어든 중이 아니면 무시합니다. */
+        /** @brief 끼어든 동안 몸이 옮겨진 위치를 알립니다(도망, 전투). 끼어든 중이 아니면 무시합니다. */
         void reportInterruptedLocation( int32 npcIndex, const ScheduleLocation& location );
 
         int32           getNpcCount() const { return static_cast<int32>( _listNpc.size() ); }
@@ -308,11 +311,11 @@ namespace sw
         /** @brief 상태 해시입니다. 같은 데이터, 씨앗, 입력이면 같은 값이 나오므로 결정성 확인과 동기 어긋남 감지에 씁니다. */
         uint64 computeStateHash() const;
 
-        /** @brief "왜 여기 있나"에 답하는 추적 문자열입니다. 지금 칸과 그 출처, 후보 루틴/행사/약속의 조건 결과, 끼어들기 스택을 담습니다. */
+        /** @brief "왜 여기 있나"에 답하는 추적 문자열입니다. 지금 구간과 그 출처, 후보 루틴/행사/약속의 조건 결과, 끼어들기 스택을 담습니다. */
         void explainNpc( int32 npcIndex, string& outText ) const;
-        /** @brief 오늘 계획의 시간표(출발, 도착, 칸, 출처)입니다. 에디터와 콘솔에 그대로 보여 줍니다. */
+        /** @brief 오늘 계획의 시간표(출발, 도착, 구간, 출처)입니다. 에디터와 콘솔에 그대로 보여 줍니다. */
         void dumpTimeline( int32 npcIndex, string& outText ) const;
-        /** @brief 지금 살아 있는 일정 시스템을 모두 모읍니다(생성자에서 올리고 소멸자에서 내린다). 에디터 일정 디버그 창이 같은 스레드에서 읽기 전용으로 씁니다. */
+        /** @brief 지금 살아 있는 일정 시스템을 모두 모읍니다. 생성자가 목록에 등록하고 소멸자가 해제합니다. 에디터 일정 디버그 창이 같은 스레드에서 읽기 전용으로 씁니다. */
         static void collectLiveSystems( vector<const ScheduleSystem*>& outListSystem );
 
     private:
@@ -330,9 +333,9 @@ namespace sw
             ScheduleLocation        _origin{};
             ScheduleLocation        _held{};
             vector<ScheduleSegment> _listSegment{};
-            vector<Interruption>    _listInterruption{}; ///< 우선순위 오름차순 — 맨 뒤가 맨 위
-            vector<float3>          _listRoutePoint{};   ///< Near 의 고운 경로(지금 칸)
-            ScheduleSegment         _emittedSegment{};   ///< 마지막으로 사건을 낸 칸
+            vector<Interruption>    _listInterruption{}; ///< 우선순위 오름차순이다. 맨 뒤가 스택의 맨 위
+            vector<float3>          _listRoutePoint{};   ///< Near 의 고운 경로(지금 구간)
+            ScheduleSegment         _emittedSegment{};   ///< 마지막으로 사건을 낸 구간
             uint64                  _routeKey{ 0 };
             int32                   _defIndex{ -1 };
             int32                   _originMinute{ 0 }; ///< 0 일 0:00 부터
@@ -341,11 +344,11 @@ namespace sw
             int32                   _wakeMinute{ 0 };
             ScheduleNpcPhase        _emittedPhase{ ScheduleNpcPhase::Performing };
             ScheduleLOD             _lod{ ScheduleLOD::Far };
-            uint8                   _bTagsDirty{ SW_FALSE }; ///< 태그나 호감도가 바뀌었다 — 다음 시간 흐름에서 계획을 다시 세운다
+            uint8                   _bTagsDirty{ SW_FALSE }; ///< 태그나 호감도가 바뀌었다. 다음 시간 흐름에서 계획을 다시 세운다
             uint8                   _bEmitted{ SW_FALSE };   ///< `_emittedSegment` 가 유효한가
         };
 
-        /** @brief 계획 칸 후보 하나(루틴 · 행사의 칸)입니다. */
+        /** @brief 계획 구간 후보 하나입니다. 루틴이나 행사의 블록입니다. */
         struct BlockCandidate
         {
             const ScheduleBlockDef* _pBlock{ nullptr };
@@ -413,11 +416,11 @@ namespace sw
         vector<NpcRuntime>         _listNpc;
         EventBuffer<ScheduleEvent> _eventBuffer;
         vector<AppointmentCheck>   _listAppointmentCheck;
-        vector<int32>              _listBrokenAppointment; ///< 오늘 깨진 약속 자리
-        vector<int32>              _listMetAppointment;    ///< 오늘 모인 약속 자리(사건을 한 번만)
+        vector<int32>              _listBrokenAppointment; ///< 오늘 깨진 약속의 인덱스
+        vector<int32>              _listMetAppointment;    ///< 오늘 모인 약속의 인덱스. 사건을 한 번만 내려고 보관한다
         hashed_string              _weather;
         string                     _lastTraceRequest;
-        float32                    _minuteFraction; ///< `update` 가 준 분 아래 몫(보이는 자리 보간)
+        float32                    _minuteFraction; ///< `update` 가 준 시간 중 분 아래 나머지. 보이는 위치를 보간할 때 쓴다
         int32                      _minute;
         uint32                     _flagsRevision;
         uint8                      _bConditionsDirty;

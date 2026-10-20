@@ -45,7 +45,7 @@ namespace sw
         /** @brief @p manager 의 조종 시스템을 반환합니다. 없으면 nullptr 이며, 씬을 비우는 중에도 시스템이 먼저 떨어지므로 nullptr 입니다. */
         static ControlSystem* find( const GameObjectManager& manager );
         /**
-         * @brief 로컬 플레이어 @p playerIndex 의 조종자를 반환합니다. 없으면 오브젝트 하나를 세워 만듭니다. 언리얼의 GameMode 가 플레이어마다 PlayerController 를 세우는 것과 같습니다.
+         * @brief 로컬 플레이어 @p playerIndex 의 조종자를 반환합니다. 없으면 오브젝트 하나를 생성해 만듭니다. 언리얼의 GameMode 가 플레이어마다 PlayerController 를 생성하는 것과 같습니다.
          * @details 오브젝트를 만들기 때문에 게임 스레드의 틱 밖에서 불러야 한다. 자동 빙의나 자동 플레이를 끌 때 플레이어에게 폰을 돌려주는 곳이 쓴다.
          */
         static PlayerControllerComponent* findOrCreatePlayerController( GameObjectManager& manager, uint32 playerIndex );
@@ -76,12 +76,12 @@ namespace sw
         /**
          * @brief 다음 틱 첫머리에 @p controller 가 @p pawn 을 쥐게 합니다. @p pawn 이 무효면 놓게 합니다.
          * @details 조종자가 의도를 내는 중(`produceIntent`)에 빙의를 옮길 때 쓴다.
-         *          그 자리에서 옮기면 등록 순서에 따라 같은 틱에 두 조종자가 같은 폰을 몰거나 아무도 몰지 않게 된다.
+         *          요청 즉시 옮기면 등록 순서에 따라 같은 틱에 두 조종자가 같은 폰을 몰거나 아무도 몰지 않게 된다.
          */
         void queuePossess( const TComponentHandle<ControllerComponent>& controller, const TComponentHandle<PawnComponent>& pawn );
 
     private:
-        /** @brief 자동 빙의가 걸린 채 쥔 이가 없는 폰을 플레이어 0 이나 AI 조종자에게 쥐어 줍니다. */
+        /** @brief 자동 빙의가 설정됐지만 빙의한 조종자가 없는 폰을 플레이어 0 이나 AI 조종자에게 빙의시킵니다. */
         void autoPossess( GameObjectManager& manager );
         /** @brief `queuePossess` 로 미룬 빙의를 넣은 순서대로 처리합니다. */
         void applyQueuedPossess( GameObjectManager& manager );

@@ -1,7 +1,7 @@
 /**
  * @file CameraManagerComponent.h
  * @brief 로컬 플레이어 하나의 "보는 카메라(뷰 타깃)" 를 블렌드로 바꾸는 컴포넌트입니다(언리얼 PlayerCameraManager `SetViewTargetWithBlend` ·
- *        Cinemachine Brain). 씬의 카메라는 용도(`CameraRole` — 플레이어 시점 · 보조 · 캡처)로 레지스트리(`CameraRegistry`)에 있습니다.
+ *        Cinemachine Brain). 씬의 카메라는 용도(`CameraRole`: 플레이어 시점, 보조, 캡처)별로 레지스트리(`CameraRegistry`)에 있습니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -27,7 +27,7 @@ namespace sw
     /**
      * @brief 곧 볼 시점(대기 뷰)입니다. 컷이나 뷰 타깃 전환 몇 초 전에 등록해, 그 시점에서 보일 것을 미리 준비하게 합니다.
      * @details 언리얼 Sequencer 의 preroll 과 스트리밍 소스(`AddViewLocation`)에 해당한다. 듣는 쪽(LOD 선택, 밉 스트리밍, PSO 미리 만들기, 그림자 캐스케이드)은
-     *          아직 없다 — 시스템이 생기면 `registerPendingViewListener` 로 붙는다.
+     *          아직 없다. 시스템이 생기면 `registerPendingViewListener` 로 등록한다.
      */
     struct CameraPendingView
     {
@@ -44,8 +44,8 @@ namespace sw
     /**
      * @class CameraManagerComponent
      * @brief 같은 오브젝트의 카메라(이 플레이어가 실제로 그리는 카메라)를 뷰 타깃 카메라의 포즈 · 렌즈로 두고, 뷰 타깃을 바꾸면 **지금 화면에서**
-     *        새 타깃으로 블렌드합니다(`CameraPoseBlender` — 블렌드 도중 다시 바꾸면 그 순간의 섞인 포즈에서 이어 간다). 충격(`addImpulse`)은 마지막에 얹습니다.
-     * @details 뷰 타깃은 다른 오브젝트의 `CameraComponent` 입니다 — 그 카메라는 자기 컴포넌트(디렉터 · 리그 · 1인칭)가 움직이고, 매니저는 읽기만 합니다.
+     *        새 타깃으로 블렌드합니다(`CameraPoseBlender`). 블렌드 도중 다시 바꾸면 그 순간의 섞인 포즈에서 이어 갑니다. 충격(`addImpulse`)은 마지막에 더합니다.
+     * @details 뷰 타깃은 다른 오브젝트의 `CameraComponent` 입니다. 그 카메라는 자기 컴포넌트(디렉터, 리그, 1인칭)가 움직이고, 매니저는 읽기만 합니다.
      *          그래서 타깃 카메라는 보통 보조(`CameraRole::Custom`)라 직접 뽑히지 않고, 매니저의 카메라가 플레이어 시점(우선순위가 가장 높은
      *          `Game`)입니다. 틱(`PostUpdate`)에서 일을 틱 뒤로 미뤄, 같은 프레임에 타깃을 움직인 디렉터(`PostPhysics` 에서 미룸) 다음에 읽는다.
      *          블렌드 없는 전환 · 타깃 카메라의 컷은 이 카메라에 컷 표시를 넣습니다.
@@ -70,7 +70,7 @@ namespace sw
         const GameObjectHandle& getViewTarget() const { return _viewTarget; }
         /** @brief 역할이 @p role 인 켜진 카메라 중 지금 타깃 다음 것(등록 순서, 자기 카메라 제외)으로 바꿉니다. 바꾼 타깃을 돌려줍니다. */
         GameObjectHandle cycleViewTarget( CameraRole role );
-        /** @brief 충격을 더합니다(원점 · 모양). 듣는 자리는 이 카메라입니다. */
+        /** @brief 충격을 더합니다(원점과 형태). 충격을 받는 위치는 이 카메라입니다. */
         void addImpulse( const CameraImpulseDef& def, const float3& origin ) { _impulseListener.addImpulse( def, origin ); }
         /** @brief 화면이 지금 @p from 이라고 보고 뷰 타깃으로 @p blend 를 따라 섞습니다. 시네마틱 컷에서 게임 카메라로 돌아올 때 씁니다(언리얼 시퀀스 Blend Out). */
         void blendFromPose( const CameraPose& from, const BlendCurveDef& blend );
@@ -90,7 +90,7 @@ namespace sw
         const CameraPose& getPose() const { return _blender.getPose(); }
         uint32            getLocalPlayerIndex() const { return _localPlayerIndex; }
 
-        /** @brief 매니저의 켜진 카메라 중 역할이 @p role 인 것들입니다(등록 순서). 용도별 목록의 창구입니다. */
+        /** @brief 매니저의 켜진 카메라 중 역할이 @p role 인 것들입니다(등록 순서). 용도별 목록을 얻는 함수입니다. */
         static void findCamerasByRole( const GameObjectManager& manager, CameraRole role, vector<CameraComponent*>& outListCamera );
         /** @brief 로컬 플레이어 @p playerIndex 의 매니저입니다. 없으면 nullptr 입니다. */
         static CameraManagerComponent* findForPlayer( const GameObjectManager& manager, uint32 playerIndex );
@@ -103,7 +103,7 @@ namespace sw
         void resolveCamera();
         /** @brief 핸들의 오브젝트에 있는 카메라입니다. 없거나 자기 오브젝트면 nullptr 입니다. */
         CameraComponent* findTargetCamera( const GameObjectHandle& target ) const;
-        /** @brief 애니메이션 알림(`CameraShake` 처리기)이 카메라 충격을 요청했습니다 — 충격으로 더합니다. */
+        /** @brief 애니메이션 알림(`CameraShake` 처리기)이 카메라 충격을 요청했습니다. 충격으로 더합니다. */
         void onCameraShakeRequested( const CameraShakeRequest& request );
 
     private:

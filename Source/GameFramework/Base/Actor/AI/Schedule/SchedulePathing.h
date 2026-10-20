@@ -1,11 +1,11 @@
 /**
  * @file SchedulePathing.h
  * @brief 일정이 묻는 "어디"에 답하는 타입을 정의합니다.
- * @details 자리(`ScheduleLocation`), 이동 시간 추정과 경로(`ISchedulePathing`), 그 구현 셋(직선, 내비 격자, 방 그래프)이 있다.
- *          일정은 차원을 모른다. 자리는 `float3` 와 지역 id 이고, 평면(XZ 는 3D 지면, XY 는 2D 화면)은 경로 구현이 정한다.
+ * @details 위치(`ScheduleLocation`), 이동 시간 추정과 경로(`ISchedulePathing`), 그 구현 세 가지(직선, 내비 격자, 방 그래프)가 있다.
+ *          일정은 차원을 모른다. 위치는 `float3` 와 지역 id 이고, 평면(XZ 는 3D 지면, XY 는 2D 화면)은 경로 구현이 정한다.
  *          그래서 2D 농장과 생활 게임, 3D 마을이 같은 일정 코드를 쓴다.
  *          출발 시각(일찍 나서기)은 이 추정으로 정한다.
- *          화면 안 NPC 의 걷는 자리는 같은 출발 시각과 도착 시각 사이를 경로 위에서 비율로 나눈다. 화면 밖 NPC 와 같은 시각에 도착한다.
+ *          화면 안 NPC 의 걷는 위치는 같은 출발 시각과 도착 시각 사이를 경로 위에서 비율로 나눈다. 그래서 화면 밖 NPC 와 같은 시각에 도착한다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -23,17 +23,17 @@ namespace sw
     class GridPathfinder;
     class NavGrid;
 
-    /** @brief 자리 하나입니다. 월드 좌표와 지역(`AreaGraph` 방 id)을 담으며, 지역을 모르면 빈 이름입니다. */
+    /** @brief 위치 하나입니다. 월드 좌표와 지역(`AreaGraph` 방 id)을 담으며, 지역을 모르면 빈 이름입니다. */
     struct ScheduleLocation
     {
         float3        _position{};
         hashed_string _area{};
     };
 
-    /** @brief 자리가 놓인 평면입니다. */
+    /** @brief 위치가 놓인 평면입니다. */
     enum class SchedulePlane : uint8
     {
-        XZ = 0, ///< 3D 지면(y 가 높이) — `NavGrid` 의 평면
+        XZ = 0, ///< 3D 지면(y 가 높이). `NavGrid` 의 평면이다
         XY      ///< 2D 화면(z = 0)
     };
 } // namespace sw
@@ -60,7 +60,7 @@ namespace sw
         virtual void makeRoute( const ScheduleLocation& from, const ScheduleLocation& to, vector<float3>& outListPoint ) const = 0;
         /** @brief 이동의 @p fraction(0..1) 지점이 속한 지역입니다. 기본 구현은 반을 넘으면 도착 지역을 반환합니다. */
         virtual hashed_string computeAreaAt( const ScheduleLocation& from, const ScheduleLocation& to, float32 fraction ) const;
-        /** @brief @p center 에서 평면 위로 (@p offsetU, @p offsetV) 만큼 옮긴 자리입니다. 돌아다니기 점에 씁니다. */
+        /** @brief @p center 에서 평면 위로 (@p offsetU, @p offsetV) 만큼 옮긴 위치입니다. 돌아다니기 점에 씁니다. */
         virtual float3 offsetInPlane( const float3& center, float32 offsetU, float32 offsetV ) const;
     };
 } // namespace sw
@@ -72,7 +72,7 @@ namespace sw
     {
         /** @brief 점 목록의 전체 길이입니다. */
         static float32 computeLength( const vector<float3>& listPoint );
-        /** @brief 점 목록을 따라 길이의 @p fraction(0..1) 만큼 간 자리입니다. 목록이 비면 원점입니다. */
+        /** @brief 점 목록을 따라 길이의 @p fraction(0..1) 만큼 간 위치입니다. 목록이 비면 원점입니다. */
         static float3 computePointAlong( const vector<float3>& listPoint, float32 fraction );
         /** @brief 평면 위로 옮깁니다. */
         static float3 offsetInPlane( SchedulePlane plane, const float3& center, float32 offsetU, float32 offsetV );
@@ -83,7 +83,7 @@ namespace sw
 {
     /**
      * @class StraightSchedulePathing
-     * @brief 곧은 선 경로입니다. 시간은 거리를 속도로 나눈 값이며, 갈 길을 모를 때의 기본이고 어느 차원에서도 맞습니다.
+     * @brief 직선 경로입니다. 시간은 거리를 속도로 나눈 값입니다. 경로를 모를 때의 기본이고 어느 차원에서도 맞습니다.
      */
     class SW_GF_API StraightSchedulePathing : public ISchedulePathing
     {
@@ -103,8 +103,8 @@ namespace sw
 {
     /**
      * @class NavGridSchedulePathing
-     * @brief `NavGrid` + `GridPathfinder`(A*) 경로입니다. 시간은 다듬은 칸 경로의 길이 / 속도입니다.
-     * @details 평면이 XY 이면 자리의 (x, y) 를 격자의 (x, z) 로 읽고, 돌려줄 때 되바꾼다. 2D 타일 게임이 같은 격자와 길 찾기를 쓸 수 있다.
+     * @brief `NavGrid` 와 `GridPathfinder`(A*) 경로입니다. 시간은 다듬은 셀 경로의 길이를 속도로 나눈 값입니다.
+     * @details 평면이 XY 이면 위치의 (x, y) 를 격자의 (x, z) 로 읽고, 돌려줄 때 되바꾼다. 그래서 2D 타일 게임이 같은 격자와 길 찾기를 쓸 수 있다.
      *          A* 는 배열을 고쳐 쓰므로 이 객체는 스레드 하나에서만 써야 한다.
      */
     class SW_GF_API NavGridSchedulePathing : public ISchedulePathing
@@ -119,7 +119,7 @@ namespace sw
     private:
         float3 toGrid( const float3& position ) const;
         float3 fromGrid( const float3& position ) const;
-        /** @brief 칸 경로를 찾아 비용 가중 길이를 반환합니다. 길이 없으면 곧은 거리를 반환합니다. */
+        /** @brief 셀 경로를 찾아 비용 가중 길이를 반환합니다. 경로가 없으면 직선 거리를 반환합니다. */
         float32 findRoute( const ScheduleLocation& from, const ScheduleLocation& to, vector<float3>* pOutListPoint ) const;
 
         const NavGrid*  _pGrid;
@@ -133,9 +133,9 @@ namespace sw
     /**
      * @class AreaGraphSchedulePathing
      * @brief 방 그래프 경로입니다. 화면 밖이거나 로드되지 않은 NPC 를 지역 단위로 다룹니다.
-     * @details 다른 방이면 `AreaGraph::findPath` 로 지금 열린 문만 지나 방 가운데를 잇는다. `AreaDef` 의 x, y, 너비, 높이를 평면에 놓는다.
-     *          같은 방이면 곧은 선이다.
-     *          길이 없으면(잠긴 문) 곧은 선으로 추정한다. 일정은 멈추지 않는다.
+     * @details 다른 방이면 `AreaGraph::findPath` 로 지금 열린 문만 지나 방 가운데를 연결한다. `AreaDef` 의 x, y, 너비, 높이를 평면에 놓는다.
+     *          같은 방이면 직선이다.
+     *          경로가 없으면(잠긴 문) 직선으로 추정한다. 일정은 멈추지 않는다.
      */
     class SW_GF_API AreaGraphSchedulePathing : public ISchedulePathing
     {
@@ -148,7 +148,7 @@ namespace sw
         float3        offsetInPlane( const float3& center, float32 offsetU, float32 offsetV ) const override;
 
     private:
-        /** @brief 지나는 방(출발과 도착 포함)과 점을 채웁니다. 같은 방이거나 길이 없으면 방 둘, 점 둘입니다. */
+        /** @brief 지나는 방(출발과 도착 포함)과 점을 채웁니다. 같은 방이거나 경로가 없으면 방 두 개, 점 두 개입니다. */
         void   makeAreaRoute( const ScheduleLocation& from, const ScheduleLocation& to, vector<hashed_string>& outListArea, vector<float3>& outListPoint ) const;
         float3 computeAreaCenter( const hashed_string& areaID, const float3& fallback ) const;
 

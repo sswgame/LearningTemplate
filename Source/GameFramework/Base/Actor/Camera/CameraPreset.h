@@ -34,14 +34,14 @@ namespace sw
     ENUM()
     enum class CameraPresetMode : uint8
     {
-        Fixed = 0,    ///< 오프셋이 곧 월드 자리(CCTV). 회전은 요 · 피치, 또는 `aim` 이 고른 점 · 대상을 본다. `<Sweep>` 으로 좌우로 훑는다
+        Fixed = 0,    ///< 오프셋이 곧 월드 위치다(CCTV). 회전은 요와 피치이거나, `aim` 이 고른 점이나 대상을 본다. `<Sweep>` 으로 좌우로 훑는다
         OrthoTopDown, ///< 월드 고정 요 · 피치로 초점 둘레에서 내려다보는 직교 시점(렌즈가 무엇이든 직교)
         Orbit,        ///< 월드 고정 요 · 피치로 초점 둘레에서 초점을 본다(입력으로 돌리고 당긴다)
         Follow,       ///< 대상의 요에 더한 요로 대상 뒤에서 초점을 본다
-        FirstPerson,  ///< 눈 = 대상 + 대상 요로 돌린 오프셋, 회전 = 대상 요 · 피치 + 프리셋 요 · 피치
-        ThirdPerson,  ///< 어깨 너머 — 대상의 시점(요 · 피치)을 따라 어깨 피벗(대상 요로 돌린 오프셋)에서 거리만큼 물러난다. 스프링 암(`<Collision>`)이 벽 앞으로 당긴다
-        FollowXY,     ///< 2D(XY 평면, +Y 가 위) — 초점의 X · Y 에 오프셋 X · Y 를 더한 자리, Z 는 오프셋 Z(카메라 평면) 그대로. 회전은 요 · 피치(0 이면 +Z 를 본다). 따라가는 빠르기는 `<Damping>`
-        Dolly,        ///< 돌리 레일 — 카메라가 `<Dolly>` 곡선 위에서 대상에 가장 가까운 점에 서서 대상을 본다(Cinemachine Spline Dolly, 언리얼 Rig Rail)
+        FirstPerson,  ///< 눈은 대상 위치에 대상 요로 돌린 오프셋을 더한 곳이다. 회전은 대상의 요와 피치에 프리셋의 요와 피치를 더한다
+        ThirdPerson,  ///< 어깨 너머 시점이다. 대상의 요와 피치를 따라 어깨 피벗(대상 요로 돌린 오프셋)에서 거리만큼 물러난다. 스프링 암(`<Collision>`)이 벽 앞으로 당긴다
+        FollowXY,     ///< 2D(XY 평면, +Y 가 위)다. 초점의 X, Y 에 오프셋 X, Y 를 더한 위치에 서고 Z 는 오프셋 Z(카메라 평면) 그대로다. 회전은 요와 피치(0 이면 +Z 를 본다)이고, 따라가는 속도는 `<Damping>` 이다
+        Dolly,        ///< 돌리 레일이다. 카메라가 `<Dolly>` 곡선 위에서 대상에 가장 가까운 점에 서서 대상을 본다(Cinemachine Spline Dolly, 언리얼 Rig Rail)
     };
 } // namespace sw
 
@@ -86,7 +86,7 @@ namespace sw
 {
     /**
      * @brief 렌즈 섹션(`<Lens>`)입니다.
-     * @details 물리 렌즈 값은 언리얼 CineCameraComponent 의 Filmback · Lens Settings · Focus Settings 에 해당한다.
+     * @details 물리 렌즈 값은 언리얼 CineCameraComponent 의 Filmback, Lens Settings, Focus Settings 에 해당한다.
      *          초점 길이(`_focalLength`)를 적으면 시야각은 센서 높이에서 구하고(`computeFieldOfViewY`), 적지 않으면(0) `_fieldOfViewY` 를 그대로 쓴다.
      *          더치(`_dutch`)는 화면을 기울이는 롤이다. 초점 거리, 조리개, 렌즈 시프트는 포즈에 실려 피사계 심도와 비대칭 투영이 읽는다(렌더러에 아직 없다).
      */
@@ -141,11 +141,11 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 입력 섹션(`<Input>`)입니다. 모드가 입력을 어떻게 받는지 정하며, 값이 0 인 칸은 그 입력을 받지 않습니다.
+     * @brief 입력 섹션(`<Input>`)입니다. 모드가 입력을 어떻게 받는지 정하며, 값이 0 인 필드는 그 입력을 받지 않습니다.
      * @details 마우스 시점은 요와 피치 오프셋에 더한다(1인칭, 3인칭, 궤도).
      *          휠은 원근 시점에서는 거리를, 직교 시점에서는 직교 높이를 배수로 바꾼다.
      *          이동 키는 초점을 요 기준으로 옮긴다.
-     *          회전 키(Q/E)는 요를 한 칸씩 돌리고, `rotateTime` 으로 부드럽게 따라간다.
+     *          회전 키(Q/E)는 요를 한 단계씩 돌리고, `rotateTime` 으로 부드럽게 따라간다.
      *          값의 범위는 `<Confiner>` 가 자른다.
      */
     REFLECT()
@@ -172,7 +172,7 @@ namespace sw
 {
     /**
      * @brief 제약 섹션(`<Confiner>`)입니다. Cinemachine 의 Confiner 와 언리얼의 피치 한계에 해당합니다.
-     * @details 피치와 줌은 입력이 넘지 못하는 범위이다. 상자는 카메라 자리를 그 안에 둔다. 직교 시점에서는 초점의 X, Z 를 둔다.
+     * @details 피치와 줌은 입력이 넘지 못하는 범위이다. 상자는 카메라 위치를 그 안에 둔다. 직교 시점에서는 초점의 X, Z 를 둔다.
      */
     REFLECT()
     struct SW_GF_API CameraConfinerDef
@@ -256,7 +256,7 @@ namespace sw
 {
     /**
      * @brief 손떨림 섹션(`<Noise>`)입니다. Cinemachine 의 Basic Multi Channel Perlin 에 해당합니다.
-     * @details 채널마다 위상이 다른 1D 펄린 잡음이 자리와 회전을 흔든다.
+     * @details 채널마다 위상이 다른 1D 펄린 잡음이 위치와 회전을 흔든다.
      *          같은 시드와 같은 시간이면 같은 값이 나오므로 테스트와 리플레이에서 쓸 수 있다.
      *          회전은 피치, 요, 롤이며 단위는 라디안이고 XML 에는 도로 적는다.
      */
@@ -328,7 +328,7 @@ namespace sw
 {
     /**
      * @brief 돌리 레일 섹션(`<Dolly>`)입니다. `Dolly` 모드의 카메라가 서는 곡선입니다(Cinemachine Spline Dolly, 언리얼 Rig Rail).
-     * @details 조절점은 월드 자리이다. 카메라는 곡선 위에서 대상 초점에 가장 가까운 점에 서고, `_pathOffset` 만큼 곡선을 따라 앞뒤로 옮긴다.
+     * @details 조절점은 월드 위치이다. 카메라는 곡선 위에서 대상 초점에 가장 가까운 점에 서고, `_pathOffset` 만큼 곡선을 따라 앞뒤로 옮긴다.
      *          곡선은 모드 상태가 처음 풀 때 한 번 만들어 둔다(`CameraModeState`). 레일을 따라 미끄러지는 빠르기는 `<Damping>` 이 정한다.
      * @code
      *     <Dolly type="CatmullRom" closed="false" pathOffset="-2">
@@ -421,8 +421,8 @@ namespace sw
 {
     /**
      * @brief 카메라가 따라가는 대상과 그 카메라가 그리는 화면의 비율입니다.
-     * @details 월드 초점, 대상이 보는 요와 피치(라디안, 피치는 +가 아래), 대상 묶음의 반지름을 담는다.
-     *          여러 대상을 담을 때는 `makeGroupCameraTarget` 이 초점을 묶음의 가운데로, 반지름을 묶음을 감싸는 구의 반지름으로 채운다.
+     * @details 월드 초점, 대상이 보는 요와 피치(라디안, 피치는 +가 아래), 대상 그룹의 반지름을 담는다.
+     *          여러 대상을 담을 때는 `makeGroupCameraTarget` 이 초점을 그룹의 가운데로, 반지름을 그룹을 감싸는 구의 반지름으로 채운다.
      *          화면 비율은 프레이밍의 가로 위치와 존을 각으로 바꿀 때 쓴다. 디렉터가 카메라의 출력(렌더 텍스처, 창, 화면 사각형)에서 채운다.
      */
     struct CameraTarget
@@ -439,10 +439,10 @@ namespace sw
 
     /**
      * @brief @p current 를 @p target 쪽으로 @p deltaTime 만큼 지수 감쇠합니다.
-     * @details 곡선은 1 − e^(−dt/시간 상수)이라서 프레임 수와 상관없이 같다. 자리와 회전만 감쇠하고 렌즈는 @p target 의 것을 쓴다.
+     * @details 곡선은 1 - e^(-dt/시간 상수)이라서 프레임 수와 상관없이 같다. 위치와 회전만 감쇠하고 렌즈는 @p target 의 것을 쓴다.
      */
     SW_GF_API CameraPose dampPose( const CameraPose& current, const CameraPose& target, const CameraDampingDef& damping, float32 deltaTime );
-    /** @brief 지수 감쇠의 이번 걸음 비율(1 − e^(−dt/τ))입니다. 시간 상수가 0 이하면 1(바로 붙음)이고, 시간이 0 이하면 0 입니다. */
+    /** @brief 지수 감쇠의 이번 스텝 비율(1 - e^(-dt/τ))입니다. 시간 상수가 0 이하면 1(바로 따라붙음)이고, 시간이 0 이하면 0 입니다. */
     SW_GF_API float32 computeDampingAlpha( float32 timeConstant, float32 deltaTime );
 } // namespace sw
 

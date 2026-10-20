@@ -1,8 +1,8 @@
 /**
  * @file ScheduleSaveState.h
- * @brief 일정 시스템의 저장 상태 — 게임의 `SaveGame` 에 `PROPERTY()` 로 넣는 리플렉션 구조체입니다.
- * @details 계획은 저장하지 않습니다. 계획은 (그날 · 계획을 세운 시각 · 그때의 자리 · 깨진 약속 · 예약)의 함수라서 그것만 담아 다시 세우면
- *          같은 계획이 나옵니다 — 저장 파일이 작고, 데이터를 고친 뒤 불러와도 새 일정으로 이어집니다.
+ * @brief 일정 시스템의 저장 상태입니다. 게임의 `SaveGame` 에 `PROPERTY()` 로 넣는 리플렉션 구조체입니다.
+ * @details 계획은 저장하지 않습니다. 계획은 그날, 계획을 세운 시각, 그때의 위치, 깨진 약속, 예약의 함수라서 그것만 담아 다시 세우면
+ *          같은 계획이 나옵니다. 그래서 저장 파일이 작고, 데이터를 고친 뒤 불러와도 새 일정으로 이어집니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -29,13 +29,13 @@ namespace sw
         PROPERTY()
         int32 _startMinute{ 0 };
         PROPERTY()
-        int32 _expireMinute{ -1 }; ///< −1 = 게임이 끝낼 때까지
+        int32 _expireMinute{ -1 }; ///< -1 이면 게임이 끝낼 때까지
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief NPC 하나 — 오늘 계획을 세운 시각 · 자리, 끼어들기, 태그입니다. */
+    /** @brief NPC 하나의 상태입니다. 오늘 계획을 세운 시각과 위치, 끼어들기, 태그를 담습니다. */
     REFLECT()
     struct SW_GF_API ScheduleNpcSaveState
     {
@@ -54,7 +54,7 @@ namespace sw
         PROPERTY()
         float3 _originPosition{};
         PROPERTY()
-        float3 _heldPosition{}; ///< 끼어든 동안 머문 자리(게임이 알린 자리)
+        float3 _heldPosition{}; ///< 끼어든 동안 머문 위치(게임이 알린 위치)
         PROPERTY()
         int32 _originMinute{ 0 };
         PROPERTY()
@@ -64,7 +64,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 기본 활동 자리 제공자(`ScheduleSpotLocator`)의 예약 하나입니다. */
+    /** @brief 기본 활동 슬롯 제공자(`ScheduleSpotLocator`)의 예약 하나입니다. */
     REFLECT()
     struct SW_GF_API ScheduleReservationSaveState
     {

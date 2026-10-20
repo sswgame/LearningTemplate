@@ -1,6 +1,6 @@
 /**
  * @file CharacterPawnMovementComponent.h
- * @brief 폰 이동 — 의도 → 같은 오브젝트의 캐릭터 컨트롤러(걷기 · 달리기 · 점프 · 가감속 · 몸 방향). 플레이어 · NPC · 자동 플레이 · 재생이 모두 이것으로 걷습니다.
+ * @brief 폰 이동입니다. 의도를 같은 오브젝트의 캐릭터 컨트롤러(걷기, 달리기, 점프, 가감속, 몸 방향)로 옮깁니다. 플레이어, NPC, 자동 플레이, 재생이 모두 이것으로 걷습니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -19,7 +19,7 @@ namespace sw
     ENUM()
     enum class PawnFacingMode : uint8
     {
-        ControlYaw = 0, ///< 조종 요(1인칭 · 슈터 — 옆걸음)
+        ControlYaw = 0, ///< 조종 요(1인칭과 슈터의 옆걸음)
         MoveDirection,  ///< 움직이는 쪽으로 돈다(3인칭 액션 · NPC)
     };
 } // namespace sw
@@ -28,10 +28,10 @@ namespace sw
 {
     /**
      * @class CharacterPawnMovementComponent
-     * @brief 의도 → 같은 오브젝트의 캐릭터 컨트롤러입니다. 걷기 · 달리기(버튼 `_sprintButton` 누름) · 점프(버튼 `_jumpButton` 발동, 땅에서만) · 가감속 · 몸 방향.
-     *        "NPC 와 플레이어의 움직임 차이가 없다" 의 자리입니다(언리얼 `UCharacterMovementComponent` 를 플레이어 입력과 경로 따라가기가 함께 쓰는 것과 같다).
+     * @brief 의도를 같은 오브젝트의 캐릭터 컨트롤러로 옮깁니다. 걷기, 달리기(버튼 `_sprintButton` 누름), 점프(버튼 `_jumpButton` 발동, 땅에서만), 가감속, 몸 방향을 다룹니다.
+     *        NPC 와 플레이어의 움직임이 같은 코드로 움직이게 하는 곳입니다. 언리얼 `UCharacterMovementComponent` 를 플레이어 입력과 경로 따라가기가 함께 쓰는 것과 같습니다.
      * @details PrePhysics 틱에서 폰의 의도를 읽고 `setMoveVelocity` · `jump` 를 부릅니다(컨트롤러 요청은 틱 안에서 불러도 된다). 수평 속도는 목표 속도로
-     *          `_acceleration`(목표가 있을 때) · `_deceleration`(멈출 때)만큼 다가갑니다 — 의도가 0/1 로 끊겨도 미끄럽게.
+     *          `_acceleration`(목표가 있을 때) · `_deceleration`(멈출 때)만큼 다가갑니다. 그래서 의도가 0/1 로 끊겨도 부드럽게 움직입니다.
      *          탑승 중(`setSuspended( true )`)에는 아무것도 하지 않습니다(컨트롤러 속도도 0 으로 둔다).
      */
     REFLECT( Category = "Control", DisplayName = "Character Pawn Movement", Tooltip = "Control intent -> character controller: walk, sprint, jump, facing" )
@@ -43,7 +43,7 @@ namespace sw
         CharacterPawnMovementComponent();
         ~CharacterPawnMovementComponent() override = default;
 
-        /** @brief 버튼 이름의 자리를 풀어 둡니다. */
+        /** @brief 버튼 이름의 인덱스를 미리 찾아 둡니다. */
         void onBeginPlay() override;
         void onTick( float32 deltaTime ) override;
 

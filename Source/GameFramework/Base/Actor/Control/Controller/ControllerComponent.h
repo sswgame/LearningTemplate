@@ -25,8 +25,8 @@ namespace sw
     /** @brief 조종 시스템이 조종자에게 넘기는 이번 틱의 문맥입니다. */
     struct ControlFrameContext
     {
-        InputManager*   _pInput{ nullptr };    ///< 플레이어 조종자가 읽는 입력(없을 수 있다 — 서버 · 헤드리스)
-        const UISystem* _pUISystem{ nullptr }; ///< 런타임 UI — 먹은 입력 · 게임 입력 막기 · 커서를 플레이어 조종자가 본다(없을 수 있다 — 서버)
+        InputManager*   _pInput{ nullptr };    ///< 플레이어 조종자가 읽는 입력. 서버와 헤드리스에서는 없을 수 있다
+        const UISystem* _pUISystem{ nullptr }; ///< 런타임 UI. 플레이어 조종자가 UI 가 소비한 입력, 게임 입력 막기, 커서를 본다. 서버에서는 없을 수 있다
         float32         _deltaTime{ 0.0f };
         uint32          _tick{ 0 }; ///< 조종 시스템이 센 틱(기록 · 네트워크 창의 틱 번호)
     };
@@ -76,7 +76,7 @@ namespace sw
         float32 getControlPitch() const { return _controlPitch; }
         void    setControlRotation( float32 yaw, float32 pitch );
         /**
-         * @brief 이 조종자가 폰 하나를 위해 세워졌는지 나타냅니다. 자동 빙의 `PawnAutoPossess::AI` 로 세워진 조종자가 그렇습니다.
+         * @brief 이 조종자가 폰 하나를 위해 생성됐는지 나타냅니다. 자동 빙의 `PawnAutoPossess::AI` 로 생성된 조종자가 그렇습니다.
          * @details 그런 조종자의 오브젝트는 그 폰이 지워질 때 같이 지운다. 적이 죽어 걷힐 때마다 조종자 오브젝트가 남지 않게 하려는 것이며,
          *          언리얼에서 AI 조종자가 폰과 함께 사라지는 것과 같다.
          */
@@ -85,14 +85,14 @@ namespace sw
 
         /**
          * @brief 이번 틱의 의도를 씁니다. 조종 시스템만 부릅니다.
-         * @details 조종 회전 칸은 부른 뒤에 시스템이 `getControlYaw` 와 `getControlPitch` 로 덮는다. 파생 클래스는 `setControlRotation` 으로 돌려야 한다.
+         * @details 조종 회전 필드는 부른 뒤에 시스템이 `getControlYaw` 와 `getControlPitch` 로 덮는다. 파생 클래스는 `setControlRotation` 으로 돌려야 한다.
          */
         virtual void produceIntent( const ControlFrameContext& context, const PawnComponent& pawn, ControlIntent& outIntent ) = 0;
 
     protected:
         /** @brief 폰을 쥔 직후에 불립니다. */
         virtual void onPossessed( PawnComponent& pawn ) { (void)pawn; }
-        /** @brief 폰을 놓은 직후에 불립니다. 다른 폰으로 갈아타는 중이면 `isSwitchingPawn` 이 true 입니다. */
+        /** @brief 폰을 놓은 직후에 불립니다. 다른 폰으로 바꾸는 중이면 `isSwitchingPawn` 이 true 입니다. */
         virtual void onUnpossessed( PawnComponent& pawn ) { (void)pawn; }
         /** @brief `possess` 가 앞 폰을 놓는 중이면 true 입니다. 곧 새 폰의 `onPossessed` 가 불립니다. */
         bool isSwitchingPawn() const { return _bSwitchingPawn == SW_TRUE; }

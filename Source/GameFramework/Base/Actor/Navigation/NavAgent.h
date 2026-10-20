@@ -1,7 +1,7 @@
 /**
  * @file NavAgent.h
  * @brief 길을 따라 걷는 행위자를 정의합니다.
- * @details 경로점 따라가기, 흐름장 따라가기, 도착 감속, 이웃과 떨어지기(분리), 막힌 칸을 따라 미끄러지기, 끼임 감지를 한다.
+ * @details 경로점 따라가기, 흐름장 따라가기, 도착 감속, 이웃과 떨어지기(분리), 막힌 셀을 따라 미끄러지기, 끼임 감지를 한다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -40,7 +40,7 @@ namespace sw
         FollowingPath,
         FollowingFlow,
         Arrived,
-        Stuck ///< 오래 못 움직였다 — 게임이 다시 경로를 구하거나 포기한다
+        Stuck ///< 오래 못 움직였다. 게임이 다시 경로를 구하거나 포기한다
     };
 
     /**
@@ -55,7 +55,7 @@ namespace sw
         static float3 arrive( const float3& position, const float3& target, float32 maxSpeed, float32 slowDistance );
         /**
          * @brief 이웃과 겹치지 않게 미는 속도를 반환합니다. 가까울수록 세며, 두 반지름 합 안에서만 밀어냅니다.
-         * @param listNeighbor 이웃 자리이다. 자기 자신은 빼고 넘겨야 하며, 같은 자리는 무시한다.
+         * @param listNeighbor 이웃 위치이다. 자기 자신은 빼고 넘겨야 하며, 같은 위치는 무시한다.
          */
         static float3 separate( const float3& position, float32 radius, const vector<float3>& listNeighbor, float32 neighborRadius );
         /** @brief 속도를 원하는 속도로 바꿉니다. 가속 한계 안에서만 바꿉니다. */
@@ -70,7 +70,7 @@ namespace sw
      * @brief 한 행위자입니다. 경로(A*)나 흐름장을 받아 매 틱 조향합니다.
      * @details 언리얼의 `UPathFollowingComponent` 와 `UCrowdFollowingComponent` 의 격자 버전이다.
      *          이웃 목록은 부르는 쪽이 넘긴다. 보통 `SpatialHashGrid2D::queryCircle` 로 구한다.
-     *          움직인 자리가 막힌 칸이면 X 와 Z 를 따로 시도해 벽을 따라 미끄러지고, 그것도 막히면 제자리에 선다.
+     *          움직인 위치가 막힌 셀이면 X 와 Z 를 따로 시도해 벽을 따라 미끄러지고, 그것도 막히면 제자리에 선다.
      *          흐름장은 빌려 쓰므로 행위자보다 오래 살아야 한다.
      */
     class SW_GF_API NavAgent
@@ -79,7 +79,7 @@ namespace sw
         NavAgent();
 
         void setSettings( const NavAgentSettings& settings ) { _settings = settings; }
-        /** @brief 자리를 옮기고 멈춥니다. 소환과 순간이동에 씁니다. */
+        /** @brief 위치를 옮기고 멈춥니다. 소환과 순간이동에 씁니다. */
         void setPosition( const float3& position );
         /** @brief A* 로 @p target 까지의 경로를 구해 따라갑니다. 닿지 못하면 가장 가까운 곳까지 가며, 갈 수 없으면 false 입니다. */
         [[nodiscard]] bool moveTo( const NavGrid& grid, GridPathfinder& pathfinder, const float3& target );
@@ -89,7 +89,7 @@ namespace sw
         void followFlowField( const FlowField* pFlowField, const float3& target );
         void stop();
 
-        /** @brief 한 틱을 돌립니다. 원하는 속도, 분리, 가속, 막힌 칸 미끄러지기, 도착과 끼임 판정 순으로 처리합니다. */
+        /** @brief 한 틱을 돌립니다. 원하는 속도, 분리, 가속, 막힌 셀 미끄러지기, 도착과 끼임 판정 순으로 처리합니다. */
         void update( const NavGrid& grid, const vector<float3>& listNeighbor, float32 deltaTime );
 
         const float3&           getPosition() const { return _position; }

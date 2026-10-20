@@ -27,7 +27,7 @@ namespace sw
     struct ControlIntentTrack
     {
         TickRingBuffer<ControlIntent>   _ring{};
-        hashed_string                   _pawnName{}; ///< 폰 오브젝트 이름 — 재생은 이 이름으로 폰을 찾는다
+        hashed_string                   _pawnName{}; ///< 폰 오브젝트 이름. 재생은 이 이름으로 폰을 찾는다
         TComponentHandle<PawnComponent> _pawn{};     ///< 기록한 폰(읽은 기록이면 무효)
         uint32                          _firstTick{ 0 };
         uint32                          _lastTick{ 0 };
@@ -53,7 +53,7 @@ namespace sw
         static constexpr uint32      kMagic                = FourCcUtil::make( "SWIN" );
         static constexpr uint32      kVersion              = 1;
         static constexpr string_view kExtension            = ".swintent";
-        static constexpr int32       kDefaultCapacityTicks = 3600; ///< 폰마다 기본 고리 — 60 Hz 로 1 분
+        static constexpr int32       kDefaultCapacityTicks = 3600; ///< 폰마다 기본 링 버퍼 크기. 60 Hz 로 1 분이다
         static constexpr int32       kMaxTrackCount        = 4096; ///< 파일 하나의 폰 수 상한(깨진 머리를 큰 할당으로 읽지 않게)
         static constexpr int32       kMaxNameBytes         = 256;  ///< 폰 이름 바이트 상한
 
@@ -83,7 +83,7 @@ namespace sw
         int32 getTrackCount() const { return static_cast<int32>( _listTrack.size() ); }
         /** @brief 트랙 하나를 반환합니다. @p trackIndex 는 0 부터 `getTrackCount` 미만입니다. */
         const ControlIntentTrack& getTrack( int32 trackIndex ) const { return _listTrack[static_cast<size_t>( trackIndex )]; }
-        /** @brief 폰 이름의 트랙 자리를 반환합니다. 없으면 −1 입니다. */
+        /** @brief 폰 이름의 트랙 인덱스를 반환합니다. 없으면 -1 입니다. */
         int32 findTrack( const hashed_string& pawnName ) const;
         /** @brief 그 틱의 의도를 반환합니다. 범위 밖이거나 고리가 덮었으면 nullptr 입니다. */
         const ControlIntent* findIntent( int32 trackIndex, uint32 tick ) const;
@@ -96,7 +96,7 @@ namespace sw
         static uint32 computeOldestTick( const ControlIntentTrack& track );
 
         vector<ControlIntentTrack>   _listTrack;
-        unordered_map<uint64, int32> _mapComponentIDToTrack; ///< 기록한 폰의 컴포넌트 id → 트랙 자리
+        unordered_map<uint64, int32> _mapComponentIDToTrack; ///< 기록한 폰의 컴포넌트 id 에서 트랙 인덱스로 가는 맵
         int32                        _capacityTicks;
     };
 } // namespace sw
