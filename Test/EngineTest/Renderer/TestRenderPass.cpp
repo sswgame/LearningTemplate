@@ -420,13 +420,13 @@ SW_TEST_CASE( RenderPassTest, ShippedPipelinesValidateClean )
 SW_TEST_CASE( RenderPassTest, PipelineChoiceFollowsArgumentCommandLineGameThenDefault )
 {
     sw::FrameRendererUtil::PipelineChoice choice{};
-    choice._forwardPath  = "engine/pipeline/forwardpipeline.xml";
-    choice._deferredPath = "engine/pipeline/deferredpipeline.xml";
-    SW_EXPECT_TRUE( sw::FrameRendererUtil::computePipelinePath( choice ) == "engine/pipeline/forwardpipeline.xml" );
+    choice._forwardPath  = ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str();
+    choice._deferredPath = ::test::getEngineDefaultAssets()._defaultDeferredPipeline.c_str();
+    SW_EXPECT_TRUE( sw::FrameRendererUtil::computePipelinePath( choice ) == ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str() );
     choice._gamePath = "engine/pipeline/forward2dpipeline.xml";
     SW_EXPECT_TRUE( sw::FrameRendererUtil::computePipelinePath( choice ) == "engine/pipeline/forward2dpipeline.xml" );
     choice._bDeferred = true;
-    SW_EXPECT_TRUE( sw::FrameRendererUtil::computePipelinePath( choice ) == "engine/pipeline/deferredpipeline.xml" );
+    SW_EXPECT_TRUE( sw::FrameRendererUtil::computePipelinePath( choice ) == ::test::getEngineDefaultAssets()._defaultDeferredPipeline.c_str() );
     choice._commandLinePath = "engine/pipeline/forwardtoonpipeline.xml";
     SW_EXPECT_TRUE( sw::FrameRendererUtil::computePipelinePath( choice ) == "engine/pipeline/forwardtoonpipeline.xml" );
     choice._argumentPath = "engine/pipeline/forwardpipelinestaged.xml";
@@ -457,8 +457,8 @@ SW_TEST_CASE( RenderPassTest, UpscaleViewExtentFloorsAndCentersTheEnlargedImage 
 SW_TEST_CASE( RenderPassTest, DeferredBloomBrightIsComputedAtHalfResolution )
 {
     sw::RenderPipelineAsset res;
-    SW_ASSERT_TRUE( res.loadFromXMLFile( "engine/pipeline/deferredpipeline.xml" ) );
-    SW_EXPECT_EQUAL( 0u, res.validate( "engine/pipeline/deferredpipeline.xml" ) );
+    SW_ASSERT_TRUE( res.loadFromXMLFile( ::test::getEngineDefaultAssets()._defaultDeferredPipeline.c_str() ) );
+    SW_EXPECT_EQUAL( 0u, res.validate( ::test::getEngineDefaultAssets()._defaultDeferredPipeline.c_str() ) );
 
     const sw::RenderPassAttachment* pBright = nullptr;
     for ( const sw::RenderPassAttachment& attachment : res.getDesc()._listAttachment )
@@ -1143,7 +1143,7 @@ SW_TEST_CASE( RenderPassTest, MeshOutlineDrawsOnlyMaterialsWithOutline )
     sw::shared_ptr<sw::Material> toon = sw::Material::create();
     SW_ASSERT_TRUE( toon->loadFromFile( "engine/materials/toon.material" ) );
     sw::shared_ptr<sw::Material> lit = sw::Material::create();
-    SW_ASSERT_TRUE( lit->loadFromFile( "engine/materials/defaultmaterial.material" ) );
+    SW_ASSERT_TRUE( lit->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) );
 
     SW_EXPECT_FALSE( sw::FrameRendererUtil::drawsMaterialInPass( sw::RenderPassType::MeshOutline, nullptr ) );
     SW_EXPECT_FALSE( sw::FrameRendererUtil::drawsMaterialInPass( sw::RenderPassType::MeshOutline, &toon->getCachedShaderDefines() ) );

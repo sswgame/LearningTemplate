@@ -28,7 +28,7 @@ SW_TEST_CASE( MaterialTest, MaterialLoadAndSave )
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     sw::shared_ptr<sw::Material> material = sw::Material::create();
-    bool                         loadOk   = material->loadFromFile( "engine/materials/defaultmaterial.material" );
+    bool                         loadOk   = material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() );
     if ( loadOk == false )
         loadOk = material->loadFromFile( "materials/defaultmaterial.material" );
     SW_EXPECT_TRUE( loadOk );
@@ -79,7 +79,7 @@ SW_TEST_CASE( MaterialTest, MaterialPermutationDefines )
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     sw::shared_ptr<sw::Material> material = sw::Material::create();
-    SW_EXPECT_TRUE( material->loadFromFile( "engine/materials/defaultmaterial.material" ) );
+    SW_EXPECT_TRUE( material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) );
 
     sw::vector<sw::string> listDef = material->getCachedShaderDefines();
     auto                   has     = [&]( const utf8* pDefine )
@@ -196,7 +196,7 @@ SW_TEST_CASE( MaterialTest, MaterialColorModification )
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     sw::shared_ptr<sw::Material> material = sw::Material::create();
-    SW_EXPECT_TRUE( material->loadFromFile( "engine/materials/defaultmaterial.material" ) );
+    SW_EXPECT_TRUE( material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) );
 
     SW_EXPECT_TRUE( material->setParameter( nullptr, sw::hashed_string( "color" ), "0.25 0.50 0.75 1.0" ) );
     const float32* color = reinterpret_cast<const float32*>( material->getParameterData( "color" ) );
@@ -218,7 +218,7 @@ SW_TEST_CASE( MaterialTest, MaterialColorModification )
 SW_TEST_CASE( MaterialTest, AsyncMaterialLoadTest )
 {
     sw::shared_ptr<sw::Material> mat    = sw::Material::create();
-    sw::TaskHandle               handle = mat->loadFromFileAsync( "engine/materials/defaultmaterial.material" );
+    sw::TaskHandle               handle = mat->loadFromFileAsync( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() );
     SW_EXPECT_TRUE( handle.isValid() );
 
     sw::engine::getSubsystem<sw::TaskManager>().waitAll();
@@ -233,7 +233,7 @@ SW_TEST_CASE( MaterialTest, MaterialDefaultAndInstanceOverride )
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     sw::shared_ptr<sw::Material> material = sw::Material::create();
-    SW_EXPECT_TRUE( material->loadFromFile( "engine/materials/defaultmaterial.material" ) );
+    SW_EXPECT_TRUE( material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) );
 
     const sw::MaterialProperty* colorProp = material->findProperty( sw::hashed_string( "color" ) );
     SW_EXPECT_TRUE( colorProp != nullptr );
@@ -274,7 +274,7 @@ SW_TEST_CASE( MaterialTest, MaterialDefaultAndInstanceOverride )
 SW_TEST_CASE( MaterialTest, MaterialReflectionSchemaSync )
 {
     sw::shared_ptr<sw::Material> material = sw::Material::create();
-    SW_EXPECT_TRUE( material->loadFromFile( "engine/materials/defaultmaterial.material" ) );
+    SW_EXPECT_TRUE( material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) );
 
     sw::ShaderReflectionData reflection{};
     sw::ShaderBufferInfo     cb{};
@@ -333,7 +333,7 @@ SW_TEST_CASE( MaterialTest, MaterialInstanceOverride )
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     sw::shared_ptr<sw::Material> material = sw::Material::create();
-    SW_EXPECT_TRUE( material->loadFromFile( "engine/materials/defaultmaterial.material" ) );
+    SW_EXPECT_TRUE( material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) );
 
     sw::shared_ptr<sw::MaterialInstance> instance = sw::MaterialInstance::create( material.get() );
     sw::float4                           overrideColor{ 0.1f, 0.2f, 0.3f, 0.4f };
@@ -354,7 +354,7 @@ SW_TEST_CASE( MaterialTest, MaterialInstanceOverride )
 SW_TEST_CASE( MaterialTest, MaterialShaderReflectionValidation )
 {
     sw::shared_ptr<sw::Material> material = sw::Material::create();
-    SW_EXPECT_TRUE( material->loadFromFile( "engine/materials/defaultmaterial.material" ) );
+    SW_EXPECT_TRUE( material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) );
 
     sw::ShaderReflectionData reflection{};
     sw::ShaderBufferInfo     cb{};
@@ -385,7 +385,7 @@ SW_TEST_CASE( MaterialTest, FastBytePackingDirectMethods )
     sw::shared_ptr<sw::Material> material = sw::Material::create();
     // 아래 전부가 이 둘에 달려 있다 — 약한 기대로 넘기면 빈 버퍼를 reinterpret_cast 해서 읽는다.
     // (리소스 루트를 못 찾는 작업 폴더에서 돌리면 그렇게 세그폴트한다.)
-    SW_ASSERT_TRUE( material->loadFromFile( "engine/materials/defaultmaterial.material" ) );
+    SW_ASSERT_TRUE( material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) );
 
     sw::vector<uint8> buffer = material->getBuffer();
     SW_ASSERT_TRUE( buffer.size() >= 16 );
@@ -508,7 +508,7 @@ SW_TEST_CASE( MaterialTest, ShaderReflectionDynamicLayoutReorderAndOffsetSync )
 SW_TEST_CASE( MaterialTest, ShaderReflectionSlotChangeValidation )
 {
     sw::shared_ptr<sw::Material> material = sw::Material::create();
-    SW_EXPECT_TRUE( material->loadFromFile( "engine/materials/defaultmaterial.material" ) );
+    SW_EXPECT_TRUE( material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) );
 
     // 1) 리플렉션에 슬롯 변경(t0 -> t2)이 발생했을 때의 리소스 바인딩 정보 구성
     sw::ShaderReflectionData reflection{};

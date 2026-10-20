@@ -3,6 +3,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/UI/Layout/BoxPanel.h"
 #include "Engine/UI/Layout/SafeZonePanel.h"
 #include "Engine/UI/Layout/UIScale.h"
@@ -10,6 +11,7 @@
 
 #include "EngineTest/UI/UILayoutTestUtil.h"
 
+#include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
 
 // UIScaleTest — UI 배율(해상도 규칙 × gv_uiScale) · 글자 배율 · 안전 영역 · 창 콘텐츠 배율. 디바이스 없음(nogpu).
@@ -207,7 +209,7 @@ SW_TEST_CASE( UIScaleTest, ContentScaleIgnoredByDefault )
 SW_TEST_CASE( UIScaleTest, EngineScaleSettingsLoad )
 {
     sw::UIScaleSettings settings{};
-    SW_ASSERT_TRUE( settings.loadFromResource( "engine/ui/uiscale.xml" ) );
+    SW_ASSERT_TRUE( settings.loadFromResource( ::test::getEngineDefaultAssets()._uiScaleSettings.c_str() ) );
     SW_EXPECT_TRUE( settings._rule == sw::UIScaleRule::ShortestSide );
     SW_EXPECT_NEAR_EQUAL( 1080.0f, settings._referenceHeight, 0.001f );
     SW_EXPECT_FALSE( settings._bApplyContentScale );

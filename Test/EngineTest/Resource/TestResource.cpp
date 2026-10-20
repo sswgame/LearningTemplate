@@ -84,7 +84,7 @@ SW_TEST_CASE( ResourceTest, FolderRootsAndKnownShaderPath )
     SW_EXPECT_STREQ( shaderPath.c_str(), shaderPathAgain.c_str() );
 
     // 전역 ID 는 도메인 루트로 간다(Resource/ + 전체 키가 아님).
-    const sw::string viaGlobal = sw::ResourcePaths::findLooseFile( "engine/pipeline/forwardpipeline.xml" ).getDiskPath();
+    const sw::string viaGlobal = sw::ResourcePaths::findLooseFile( ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str() ).getDiskPath();
     SW_EXPECT_TRUE_MSG( viaGlobal.empty() == false, "engine/... global ID should resolve under engine root" );
     const sw::string viaPack = sw::ResourcePaths::findLooseFile( "pipeline/forwardpipeline.xml" ).getDiskPath();
     SW_EXPECT_TRUE_MSG( viaPack.empty() == false, "pack-relative pipeline key should resolve" );
@@ -717,7 +717,7 @@ SW_TEST_CASE( ResourceTest, DeletingAnAssetKeepsItsMetaUntilTheAssetIsGone )
 SW_TEST_CASE( ResourceTest, EnsureMetaNeverRewritesExistingMetaFile )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
-    const utf8*      pAsset      = "engine/materials/defaultmaterial.material";
+    const utf8*      pAsset      = ::test::getEngineDefaultAssets()._defaultMaterial.c_str();
     const sw::string metaAbsPath = sw::ResourcePaths::findLooseFile( "engine/materials/defaultmaterial.material.meta" ).getDiskPath();
     const uint64     mtimeBefore = metaAbsPath.empty() ? 0 : sw::FileUtil::getFileTimestamp( metaAbsPath );
 
@@ -754,7 +754,7 @@ SW_TEST_CASE( ResourceTest, EnsureMetaGivesNoIdentityOutsideTheResourceRoot )
 
     // 루트 안의 에셋은 그대로 식별자를 받는다(개발 빌드 — 배포 빌드는 .meta 가 팩에 없다).
 #if !defined( SW_SHIPPING )
-    SW_EXPECT_FALSE( db.ensureMeta( "engine/materials/defaultmaterial.material" ).isNull() );
+    SW_EXPECT_FALSE( db.ensureMeta( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ).isNull() );
 #endif
 }
 
@@ -787,7 +787,7 @@ SW_TEST_CASE( ResourceTest, EnsureMetaGivesNoIdentityToAMissingAsset )
 SW_TEST_CASE( ResourceTest, EnsureMetaKeysAnAbsolutePathInsideTheRootByItsID )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
-    const utf8*      pAsset   = "engine/materials/defaultmaterial.material";
+    const utf8*      pAsset   = ::test::getEngineDefaultAssets()._defaultMaterial.c_str();
     const sw::string absolute = sw::ResourcePaths::findLooseFile( pAsset ).getDiskPath();
     SW_ASSERT_FALSE( absolute.empty() );
 
@@ -831,7 +831,7 @@ SW_TEST_CASE( ResourceTest, AssetRegistryTextRegistersMappings )
     SW_EXPECT_STREQ( "game/empty/readme.md", outPath.c_str() );
 
     sw::UUID outGuid{};
-    SW_EXPECT_TRUE( db.tryGetGuid( "engine/materials/defaultmaterial.material", outGuid ) );
+    SW_EXPECT_TRUE( db.tryGetGuid( ::test::getEngineDefaultAssets()._defaultMaterial.c_str(), outGuid ) );
     SW_EXPECT_TRUE( outGuid == guidB );
 }
 

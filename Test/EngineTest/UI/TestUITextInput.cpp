@@ -3,6 +3,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/RawInputEvent.h"
@@ -19,6 +20,7 @@
 
 #include "EngineTest/Text/FakeFontRasterizer.h"
 
+#include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
 
 // UITextInputTest — 글 입력 칸의 편집: 커서 이동 · 선택 · 지우기 · 복사 붙여넣기 · 조합 글 · 포인터로 커서 놓기 · 오른쪽에서 왼쪽 방향 · 입력 맵 경로(Shift 조합 가림) · 클립보드 창구.
@@ -43,7 +45,7 @@ namespace
             , _viewport{}
             , _bReady{ false }
         {
-            _bReady = _input.initialize() && _ui.initialize( _input, pFontService, "engine/input/ui.input.xml" );
+            _bReady = _input.initialize() && _ui.initialize( _input, pFontService, ::test::getEngineDefaultAssets()._uiInputMap.c_str() );
             if ( _bReady == false )
                 return;
             sw::unique_ptr<sw::BoxPanel> root = sw::make_unique<sw::BoxPanel>();

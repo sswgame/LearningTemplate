@@ -7,6 +7,7 @@
 
 #include "Engine/Audio/AudioEngineState.h"
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Text/FontService.h"
 #include "Engine/Text/TextLayout.h"
@@ -153,7 +154,7 @@ namespace
             sw::test::FakeFontServiceFixture::addFamily( catalog, "Latin", "test/fonts/latin.ttf" );
             _settings.initialize( sw::UserSettingsTargets{} );
             _bReady = _settings.loadSchemaFromXMLText( kOptionsSchemaXML, "test.settings.xml" ) && _input.initialize() && _fonts.initialize( catalog ) &&
-                      _ui.initialize( _input, _fonts._fontService.get(), "engine/input/ui.input.xml" );
+                      _ui.initialize( _input, _fonts._fontService.get(), ::test::getEngineDefaultAssets()._uiInputMap.c_str() );
             _ui.setEngineDocuments( sw::UIEngineDocuments::makeFromDefaultAssets( ::test::getEngineDefaultAssets() ) );
             _settings.reapplyAll();
             _ui.setUserSettings( &_settings );
@@ -315,7 +316,7 @@ SW_TEST_CASE( UIAccessibilityTest, OptionsMenuFitsAtDoubleTextScale )
             }
         }
 
-        sw::UIScreen* pPause = fixture._ui.findScreen( fixture._ui.openScreen( "engine/ui/pause.ui.xml" ) );
+        sw::UIScreen* pPause = fixture._ui.findScreen( fixture._ui.openScreen( ::test::getEngineDefaultAssets()._uiPauseMenu.c_str() ) );
         SW_ASSERT_NOT_NULL( pPause );
         fixture.runFrames( 1 );
         const sw::Widget* pPauseWindow = pPause->getTree().findWidgetByName( "Window" );

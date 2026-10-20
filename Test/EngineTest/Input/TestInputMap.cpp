@@ -3,11 +3,13 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Engine.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
 
+#include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
 
 #include <thread>
@@ -52,7 +54,7 @@ SW_TEST_CASE( InputMapTest, LoadFromDefaultInputXMLResource )
 
     sw::InputMap inputMap;
     inputMap.setInputManager( &inputManager );
-    SW_EXPECT_TRUE( inputMap.loadFromResource( "engine/input/default.input.xml" ) );
+    SW_EXPECT_TRUE( inputMap.loadFromResource( ::test::getEngineDefaultAssets()._shellInputMap.c_str() ) );
 
     SW_EXPECT_TRUE( inputMap.hasLayer( "Title" ) );
     SW_EXPECT_TRUE( inputMap.hasLayer( "Gameplay" ) );
@@ -609,7 +611,7 @@ namespace
 SW_TEST_CASE( InputMapTest, EditorSavedDefinitionReloadsWithTheSameBindings )
 {
     sw::InputMap edited;
-    SW_ASSERT_TRUE( edited.loadFromResource( "engine/input/default.input.xml" ) );
+    SW_ASSERT_TRUE( edited.loadFromResource( ::test::getEngineDefaultAssets()._shellInputMap.c_str() ) );
     edited.registerLayer( "Vehicle", 5, false, true, false );
     SW_EXPECT_TRUE( edited.rebindKey( "Confirm", sw::Key::F, 0 ) );
     edited.bind( "Fire", sw::MouseButton::Left, sw::ActionTrigger::Down, "Gameplay" );
@@ -1402,7 +1404,7 @@ SW_TEST_CASE( InputMapTest, IntegratedMapIsUpdatedByTheInputFrame )
  */
 SW_TEST_CASE( InputMapTest, ShellInputMapComesFromTheEngineInputMap )
 {
-    const sw::unique_ptr<sw::InputMap> pMap = sw::Engine::createShellInputMap( "engine/input/default.input.xml" );
+    const sw::unique_ptr<sw::InputMap> pMap = sw::Engine::createShellInputMap( ::test::getEngineDefaultAssets()._shellInputMap.c_str() );
     SW_ASSERT_NOT_NULL( pMap.get() );
     SW_EXPECT_TRUE( pMap->hasAction( "ReloadEditor" ) );
     SW_EXPECT_TRUE( pMap->hasAction( "ReloadGame" ) );

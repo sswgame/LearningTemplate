@@ -253,7 +253,7 @@ namespace
                     pLight->setIntensity( 2.0f );
             }
             _material = sw::Material::create();
-            if ( _material->loadFromFile( "engine/materials/defaultmaterial.material" ) == false ||
+            if ( _material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) == false ||
                  _material->setParameter( nullptr, sw::hashed_string( "color" ), "1.0 0.5 0.25 1.0" ) == false )
                 return false;
             _mesh = sw::MeshUtil::createUnitCube();
@@ -402,7 +402,7 @@ namespace
         static sw::shared_ptr<sw::Material> makeMaterial( const utf8* pColor )
         {
             sw::shared_ptr<sw::Material> material = sw::Material::create();
-            if ( material->loadFromFile( "engine/materials/defaultmaterial.material" ) == false ||
+            if ( material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) == false ||
                  material->setParameter( nullptr, sw::hashed_string( "color" ), pColor ) == false )
                 material.reset();
             return material;
@@ -516,7 +516,7 @@ namespace
         static sw::shared_ptr<sw::Material> makeLitMaterial()
         {
             sw::shared_ptr<sw::Material> material = sw::Material::create();
-            if ( material->loadFromFile( "engine/materials/defaultmaterial.material" ) == false ||
+            if ( material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) == false ||
                  material->setParameter( nullptr, sw::hashed_string( "color" ), "0.9 0.5 0.25 1.0" ) == false )
                 material.reset();
             return material;
@@ -727,7 +727,7 @@ namespace
     void expectShadowCastsOnEveryBackend( const utf8* pTestName, float32 shadowExtent, float32 shadowViewDistance = 0.0f, uint32 cascadeCount = 1 )
     {
         sw::string pipelineText;
-        SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( "engine/pipeline/forwardpipeline.xml", pipelineText ) );
+        SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str(), pipelineText ) );
         constexpr sw::string_view kDepthWriteOn  = "_bEnableDepthWrite=\"true\"";
         constexpr sw::string_view kDepthWriteOff = "_bEnableDepthWrite=\"false\"";
         const size_t              shadowPassAt   = pipelineText.find( "_type=\"Shadow\"" );
@@ -765,7 +765,7 @@ namespace
                 }
             }
             if ( bOk )
-                bOk = renderPresentCaptureOf( device.get(), cube._scene, "engine/pipeline/forwardpipeline.xml", listShadow, layoutShadow );
+                bOk = renderPresentCaptureOf( device.get(), cube._scene, ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str(), listShadow, layoutShadow );
             if ( bOk )
                 bOk = renderPresentCaptureOf( device.get(), cube._scene, emptyShadowPath.c_str(), listEmptyShadow, layoutEmptyShadow );
 
@@ -824,7 +824,7 @@ namespace
             pPoint->setCastShadow( bCastShadow );
         }
         cube._scene.getObjectManager()->flushSceneTransforms();
-        return renderPresentCaptureOf( pDevice, cube._scene, "engine/pipeline/forwardpipeline.xml", outByte, outLayout );
+        return renderPresentCaptureOf( pDevice, cube._scene, ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str(), outByte, outLayout );
     }
 
     /**
@@ -1040,7 +1040,7 @@ SW_TEST_CASE( RenderPassGPUTest, ShaderRecompileKeepsTaaHistory )
         SW_TEST_SKIP( "No RHI backend for TAA history test" );
 
     sw::FrameRenderer renderer;
-    SW_ASSERT_TRUE( renderer.initialize( device.get(), "engine/pipeline/deferredpipeline.xml" ) );
+    SW_ASSERT_TRUE( renderer.initialize( device.get(), ::test::getEngineDefaultAssets()._defaultDeferredPipeline.c_str() ) );
     sw::Scene scene( "TaaHistoryScene" );
     SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
 
@@ -1148,7 +1148,7 @@ SW_TEST_CASE( RenderPassGPUTest, MaterialLifetimeFollowsPacket )
 
     // GT 소유: 머티리얼 하나 + 그 인스턴스 하나. 아래에서 둘 다 놓는다.
     sw::shared_ptr<sw::Material> material = sw::Material::create();
-    SW_ASSERT_TRUE( material->loadFromFile( "engine/materials/defaultmaterial.material" ) );
+    SW_ASSERT_TRUE( material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) );
     sw::shared_ptr<sw::MaterialInstance> instance = sw::MaterialInstance::create( material.get() );
     mesh->setMaterial( material.get() );
     mesh->setMaterialInstance( instance );
@@ -1270,7 +1270,7 @@ SW_TEST_CASE( RenderPassGPUTest, FrameRendererDeferredPipelineParallelLevels )
         SW_ASSERT_TRUE( taskManager.initialize( 4 ) );
 
         sw::FrameRenderer renderer;
-        SW_EXPECT_TRUE_MSG( renderer.initialize( device.get(), &taskManager, "engine/pipeline/deferredpipeline.xml" ),
+        SW_EXPECT_TRUE_MSG( renderer.initialize( device.get(), &taskManager, ::test::getEngineDefaultAssets()._defaultDeferredPipeline.c_str() ),
                             ( label + ": FrameRenderer 초기화 실패" ).c_str() );
         SW_EXPECT_TRUE( renderer.isReady() );
 
@@ -1974,7 +1974,7 @@ SW_TEST_CASE( RenderPassGPUTest, PerBatchMaterialColorsReachShader )
         {
             // 반환 대상을 하나로 둔다 — nullptr 과 material 을 섞어 돌려주면 NRVO 가 걸리지 않는다.
             sw::shared_ptr<sw::Material> material = sw::Material::create();
-            if ( material->loadFromFile( "engine/materials/defaultmaterial.material" ) == false ||
+            if ( material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) == false ||
                  material->setParameter( nullptr, sw::hashed_string( "color" ), pColor ) == false )
                 material.reset();
             return material;
@@ -2820,7 +2820,7 @@ SW_TEST_CASE( RenderPassGPUTest, DeferredPipelineDrawsGeometry )
         SW_TEST_SKIP( "No RHI backend for deferred pipeline test" );
 
     sw::FrameRenderer renderer;
-    SW_EXPECT_TRUE( renderer.initialize( device.get(), "engine/pipeline/deferredpipeline.xml" ) );
+    SW_EXPECT_TRUE( renderer.initialize( device.get(), ::test::getEngineDefaultAssets()._defaultDeferredPipeline.c_str() ) );
     SW_EXPECT_TRUE( renderer.isReady() );
 
     // 화면에 나가는 첨부를 파이프라인에 물어본다 — 이름을 테스트에 박아 두면 XML 이 바뀔 때 조용히 어긋난다.
@@ -3090,7 +3090,7 @@ SW_TEST_CASE( RenderPassGPUTest, AmbientOcclusionReachesBloom )
         const sw::string label = sw::string( "backend " ) + sw::to_string( static_cast<uint32>( device.getBackend() ) );
 
         sw::FrameRenderer renderer;
-        bool              bOk = renderer.initialize( device.get(), "engine/pipeline/deferredpipeline.xml" ) && renderer.isReady();
+        bool              bOk = renderer.initialize( device.get(), ::test::getEngineDefaultAssets()._defaultDeferredPipeline.c_str() ) && renderer.isReady();
 
         sw::Scene scene( "AmbientOcclusionScene" );
         if ( bOk )
@@ -3181,7 +3181,7 @@ SW_TEST_CASE( RenderPassGPUTest, RenderTargetsArePublishedForTheEditor )
     sw::RenderTargetRegistry& registry = *pRegistry;
 
     sw::FrameRenderer renderer;
-    SW_EXPECT_TRUE( renderer.initialize( device.get(), "engine/pipeline/deferredpipeline.xml" ) );
+    SW_EXPECT_TRUE( renderer.initialize( device.get(), ::test::getEngineDefaultAssets()._defaultDeferredPipeline.c_str() ) );
     SW_EXPECT_TRUE( renderer.isReady() );
 
     sw::vector<sw::RenderTargetInfo> listTarget;
@@ -4143,7 +4143,7 @@ SW_TEST_CASE( RenderPassGPUTest, InstanceConstantBufferIsRecreatedWhenLayoutGrow
     {
         {
             sw::shared_ptr<sw::Material> parent = sw::Material::create();
-            SW_ASSERT_TRUE( parent->initialize( device.get(), "engine/materials/defaultmaterial.material" ) );
+            SW_ASSERT_TRUE( parent->initialize( device.get(), ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) );
 
             sw::shared_ptr<sw::MaterialInstance> instance = sw::MaterialInstance::create( parent.get() );
             SW_ASSERT_TRUE( instance->updateRHI( device.get() ) );
@@ -4220,7 +4220,7 @@ SW_TEST_CASE( RenderPassGPUTest, ReloadedMaterialIsLaidOutByTheShaderAgain )
 
         {
             sw::shared_ptr<sw::Material> parent = sw::Material::create();
-            SW_ASSERT_TRUE( parent->initialize( device.get(), "engine/materials/defaultmaterial.material" ) );
+            SW_ASSERT_TRUE( parent->initialize( device.get(), ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) );
             SW_ASSERT_TRUE( parent->ensureShaderLayout( device.get() ) );
             SW_ASSERT_TRUE( parent->isShaderLayoutSynced( device.getBackend() ) );
 
@@ -4351,7 +4351,7 @@ SW_TEST_CASE( RenderPassGPUTest, DeferredPresentCopiesTheTonemapResult )
         if ( bOk )
         {
             sw::FrameRenderer renderer;
-            bOk = renderer.initialize( device.get(), "engine/pipeline/deferredpipeline.xml" ) && renderer.isReady();
+            bOk = renderer.initialize( device.get(), ::test::getEngineDefaultAssets()._defaultDeferredPipeline.c_str() ) && renderer.isReady();
             if ( bOk )
             {
                 renderer.getCapture().setPresentEnabled( true );
@@ -4455,7 +4455,7 @@ SW_TEST_CASE( RenderPassGPUTest, FusedPostChainMatchesStaged )
         // 다르게 무너진다.
         sw::shared_ptr<sw::Material> material = sw::Material::create();
         if ( bOk )
-            bOk = material->loadFromFile( "engine/materials/defaultmaterial.material" ) &&
+            bOk = material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) &&
                   material->setParameter( nullptr, sw::hashed_string( "color" ), "1.0 1.0 1.0 1.0" );
 
         constexpr uint32         kCubeCount = 3;
@@ -4517,7 +4517,7 @@ SW_TEST_CASE( RenderPassGPUTest, FusedPostChainMatchesStaged )
         const utf8*           pName = device->getBackendName();
 
         if ( bOk )
-            bOk = renderThrough( "engine/pipeline/forwardpipeline.xml", listFused, layoutFused );
+            bOk = renderThrough( ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str(), listFused, layoutFused );
         if ( bOk )
             bOk = renderThrough( "engine/pipeline/forwardpipelinestaged.xml", listStaged, layoutStaged );
 
@@ -4572,7 +4572,7 @@ SW_TEST_CASE( RenderPassGPUTest, FusedPostChainMatchesStaged )
 SW_TEST_CASE( RenderPassGPUTest, RenamedAttachmentsRenderTheSameImage )
 {
     sw::string pipelineText;
-    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( "engine/pipeline/forwardpipeline.xml", pipelineText ) );
+    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str(), pipelineText ) );
     pipelineText = sw::StringUtil::replace( pipelineText, "SceneColor", "MainColor" );
     pipelineText = sw::StringUtil::replace( pipelineText, "SceneDepth", "MainDepth" );
     // 그림자 맵도 이름을 바꾸고 역할을 적는다 — ForwardOpaque 는 그림자 맵을 이름이 아니라 ShadowMap 역할의 입력으로 찾는다.
@@ -4607,7 +4607,7 @@ SW_TEST_CASE( RenderPassGPUTest, RenamedAttachmentsRenderTheSameImage )
         const utf8*           pName = device->getBackendName();
         bool                  bOk   = cube.populate();
         if ( bOk )
-            bOk = renderPresentCaptureOf( device.get(), cube._scene, "engine/pipeline/forwardpipeline.xml", listReference, layoutReference );
+            bOk = renderPresentCaptureOf( device.get(), cube._scene, ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str(), listReference, layoutReference );
         if ( bOk )
             bOk = renderPresentCaptureOf( device.get(), cube._scene, renamedPath.c_str(), listRenamed, layoutRenamed );
 
@@ -4649,7 +4649,7 @@ SW_TEST_CASE( RenderPassGPUTest, RenamedAttachmentsRenderTheSameImage )
 SW_TEST_CASE( RenderPassGPUTest, RenamedGBufferAttachmentsRenderTheSameImage )
 {
     sw::string pipelineText;
-    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( "engine/pipeline/deferredpipeline.xml", pipelineText ) );
+    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( ::test::getEngineDefaultAssets()._defaultDeferredPipeline.c_str(), pipelineText ) );
     struct AttachmentRename
     {
         const utf8* _pOldName;
@@ -4703,7 +4703,7 @@ SW_TEST_CASE( RenderPassGPUTest, RenamedGBufferAttachmentsRenderTheSameImage )
         const utf8*           pName = device->getBackendName();
         bool                  bOk   = cube.populate();
         if ( bOk )
-            bOk = renderPresentCaptureOf( device.get(), cube._scene, "engine/pipeline/deferredpipeline.xml", listReference, layoutReference );
+            bOk = renderPresentCaptureOf( device.get(), cube._scene, ::test::getEngineDefaultAssets()._defaultDeferredPipeline.c_str(), listReference, layoutReference );
         if ( bOk )
             bOk = renderPresentCaptureOf( device.get(), cube._scene, renamedPath.c_str(), listRenamed, layoutRenamed );
 
@@ -4957,7 +4957,7 @@ SW_TEST_CASE( RenderPassGPUTest, DepthPrepassRendersTheSameImage )
         const utf8*           pName = device->getBackendName();
         bool                  bOk   = cube.populate();
         if ( bOk )
-            bOk = renderPresentCaptureOf( device.get(), cube._scene, "engine/pipeline/forwardpipeline.xml", listReference, layoutReference );
+            bOk = renderPresentCaptureOf( device.get(), cube._scene, ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str(), listReference, layoutReference );
         if ( bOk )
             bOk = renderPresentCaptureOf( device.get(), cube._scene, "engine/pipeline/forwardprepasspipeline.xml", listPrepass, layoutPrepass );
         if ( bOk )
@@ -5020,7 +5020,7 @@ SW_TEST_CASE( RenderPassGPUTest, ShadowMapAttachmentReadsBackAsDepth )
         if ( cube.populate() == false )
             continue;
         sw::FrameRenderer renderer;
-        if ( renderer.initialize( device.get(), "engine/pipeline/forwardpipeline.xml" ) == false )
+        if ( renderer.initialize( device.get(), ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str() ) == false )
             continue;
         bool bRendered = true;
         for ( uint32 frameIndex = 0; frameIndex < 3 && bRendered; ++frameIndex )
@@ -5094,7 +5094,7 @@ SW_TEST_CASE( RenderPassGPUTest, AlphaCutoffClipsTheShadowDepth )
             pMesh->setLocalPosition( sw::float3{ 0.0f, 1.0f, 0.0f } );
 
             sw::FrameRenderer renderer;
-            if ( renderer.initialize( device.get(), "engine/pipeline/forwardpipeline.xml" ) == false )
+            if ( renderer.initialize( device.get(), ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str() ) == false )
                 continue;
             bool bRendered = true;
             for ( uint32 frameIndex = 0; frameIndex < 3 && bRendered; ++frameIndex )
@@ -5227,7 +5227,7 @@ SW_TEST_CASE( RenderPassGPUTest, NormalsStayPerpendicularUnderNonUniformScale )
         const sw::string backendName( device->getBackendName() );
 
         sw::shared_ptr<sw::Material> material = sw::Material::create();
-        SW_ASSERT_TRUE( material->loadFromFile( "engine/materials/defaultmaterial.material" ) );
+        SW_ASSERT_TRUE( material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) );
         sw::shared_ptr<sw::Mesh> quad = sw::MeshUtil::createRectMesh();
         SW_ASSERT_NOT_NULL( quad.get() );
 
@@ -5264,7 +5264,7 @@ SW_TEST_CASE( RenderPassGPUTest, NormalsStayPerpendicularUnderNonUniformScale )
                                     ( label + "배치가 시험이 되지 않는다 — 월드 행렬로 옮긴 노멀이 기대와 거의 같다 " + describeVector( worldMatrixNormal ) ).c_str() );
 
                 sw::FrameRenderer renderer;
-                const bool        bReady = renderer.initialize( device.get(), "engine/pipeline/deferredpipeline.xml" ) && renderer.isReady();
+                const bool        bReady = renderer.initialize( device.get(), ::test::getEngineDefaultAssets()._defaultDeferredPipeline.c_str() ) && renderer.isReady();
                 SW_EXPECT_TRUE_MSG( bReady, ( label + "디퍼드 파이프라인을 만들지 못했다" ).c_str() );
                 if ( bReady )
                 {
@@ -5528,7 +5528,7 @@ SW_TEST_CASE( RenderPassGPUTest, MaterialTexturesAreSampledLinearWrap )
             scene.getObjectManager()->flushSceneTransforms();
 
             sw::FrameRenderer renderer;
-            bOk = renderer.initialize( device.get(), "engine/pipeline/forwardpipeline.xml" ) && renderer.isReady();
+            bOk = renderer.initialize( device.get(), ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str() ) && renderer.isReady();
             SW_EXPECT_TRUE_MSG( bOk, ( label + "포워드 파이프라인을 만들지 못했다" ).c_str() );
             if ( bOk )
             {
@@ -5649,7 +5649,7 @@ SW_TEST_CASE( RenderPassGPUTest, EngineTextureSlotsAreSampledLinearClamp )
         }
         sw::shared_ptr<sw::Material> material = sw::Material::create();
         if ( bOk )
-            bOk = material->loadFromFile( "engine/materials/defaultmaterial.material" ) &&
+            bOk = material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) &&
                   material->setParameter( nullptr, sw::hashed_string( "color" ), "1.0 1.0 1.0 1.0" );
 
         // 큐브 셋(화면 안) + 왼쪽 가장자리를 넘어가는 긴 막대 하나(오른쪽 가장자리는 배경이다).
@@ -6184,7 +6184,7 @@ SW_TEST_CASE( RenderPassGPUTest, DeferredBloomBrightIsHalfResolution )
         if ( bOk )
         {
             sw::FrameRenderer renderer;
-            bOk = renderer.initialize( device.get(), "engine/pipeline/deferredpipeline.xml" ) && renderer.isReady();
+            bOk = renderer.initialize( device.get(), ::test::getEngineDefaultAssets()._defaultDeferredPipeline.c_str() ) && renderer.isReady();
             for ( uint32 frameIndex = 0; frameIndex < 3 && bOk; ++frameIndex )
             {
                 bOk = renderSceneFrame( renderer, device.get(), stage._scene );
@@ -6526,7 +6526,7 @@ SW_TEST_CASE( RenderPassGPUTest, PrototypeGridMaterialIsAnchoredToTheWorld )
                 pMesh->setLocalPosition( sw::float3{ static_cast<float32>( shiftIndex ), 0.0f, 0.0f } ); // 0 m · 1 m
                 scene.getObjectManager()->flushSceneTransforms();
             }
-            bOk = bOk && renderPresentCaptureOf( device.get(), scene, "engine/pipeline/forwardpipeline.xml", arrBytes[shiftIndex], arrLayout[shiftIndex],
+            bOk = bOk && renderPresentCaptureOf( device.get(), scene, ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str(), arrBytes[shiftIndex], arrLayout[shiftIndex],
                                                  sw::RenderViewMode::Unlit );
         }
         SW_EXPECT_TRUE_MSG( bOk, ( label + "격자 바닥 그리기 · 캡처" ).c_str() );

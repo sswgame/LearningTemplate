@@ -14,6 +14,7 @@
 #include "Engine/Compression/Lz4CompressionCodec.h"
 #include "Engine/Compression/ZlibCompressionCodec.h"
 #include "Engine/Compression/ZstdCompressionCodec.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Module/ReflectionSubsystem.h"
@@ -26,6 +27,7 @@
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
+#include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
 
 namespace
@@ -211,7 +213,7 @@ SW_TEST_CASE( MemoryTagTest, ClearedPathCacheReturnsItsTable )
 
     sw::ResourcePaths::clearPathCache();
     const uint64     assetBefore = getLiveBytes( *pProfiler, sw::MemoryTag::Asset );
-    const sw::string resolved    = sw::ResourcePaths::findLooseFile( "engine/pipeline/forwardpipeline.xml" ).getDiskPath();
+    const sw::string resolved    = sw::ResourcePaths::findLooseFile( ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str() ).getDiskPath();
     SW_ASSERT_FALSE( resolved.empty() );
     // 캐시 표가 실제로 자랐어야 아래 비교가 뜻이 있다.
     SW_ASSERT_TRUE( getLiveBytes( *pProfiler, sw::MemoryTag::Asset ) > assetBefore );

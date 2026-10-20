@@ -3,6 +3,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
@@ -37,6 +38,7 @@
 
 #include "EngineTest/Text/FakeFontRasterizer.h"
 
+#include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
 
 // UIPaintTest — 위젯 그리기: 그림 캐시(더러운 위젯만 다시 칠하기) · 조상 불투명도 번짐 · 아틀라스 세대 · 글 위젯 무효화 · 그리기 순서(z 순서) ·
@@ -513,7 +515,7 @@ SW_TEST_CASE( UIPaintTest, SliderTakesLeftRightActions )
     sw::InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
     sw::UISystem ui;
-    SW_ASSERT_TRUE( ui.initialize( input, nullptr, "engine/input/ui.input.xml" ) );
+    SW_ASSERT_TRUE( ui.initialize( input, nullptr, ::test::getEngineDefaultAssets()._uiInputMap.c_str() ) );
     sw::unique_ptr<sw::BoxPanel> root = sw::make_unique<sw::BoxPanel>();
     root->setOrientation( sw::UIOrientation::Vertical );
     sw::SliderWidget* pSlider = static_cast<sw::SliderWidget*>( root->addChild( sw::make_unique<sw::SliderWidget>() ) );
@@ -658,7 +660,7 @@ SW_TEST_CASE( UIPaintTest, TextInputTypesAndDeletes )
     sw::InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
     sw::UISystem ui;
-    SW_ASSERT_TRUE( ui.initialize( input, nullptr, "engine/input/ui.input.xml" ) );
+    SW_ASSERT_TRUE( ui.initialize( input, nullptr, ::test::getEngineDefaultAssets()._uiInputMap.c_str() ) );
     sw::unique_ptr<sw::BoxPanel> root   = sw::make_unique<sw::BoxPanel>();
     sw::TextInputWidget*         pField = static_cast<sw::TextInputWidget*>( root->addChild( sw::make_unique<sw::TextInputWidget>() ) );
     sw::string                   committed;

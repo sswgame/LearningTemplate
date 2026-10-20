@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/UI/Base/PanelWidget.h"
@@ -45,7 +46,7 @@ namespace
             _viewport._size         = sw::float2{ 1920.0f, 1080.0f };
             _viewport._physicalSize = _viewport._size;
             SW_EXPECT_TRUE( _input.initialize() );
-            SW_EXPECT_TRUE( _ui.initialize( _input, nullptr, "engine/input/ui.input.xml" ) );
+            SW_EXPECT_TRUE( _ui.initialize( _input, nullptr, ::test::getEngineDefaultAssets()._uiInputMap.c_str() ) );
             _ui.setEngineDocuments( sw::UIEngineDocuments::makeFromDefaultAssets( ::test::getEngineDefaultAssets() ) );
         }
 

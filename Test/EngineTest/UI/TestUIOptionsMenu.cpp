@@ -2,6 +2,7 @@
 
 #include "Core/File/FileUtil.h"
 
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
@@ -32,7 +33,6 @@ namespace
     struct UIOptionsMenuTestUtil
     {
         static constexpr float32     kFrameSeconds = 1.0f / 60.0f;
-        static constexpr const utf8* kUIInputMap   = "engine/input/ui.input.xml";
         static constexpr const utf8* kSchemaXML    = R"(
 <UserSettingsSchema version="1">
     <Category id="audio" text="t.audio"/>
@@ -81,7 +81,7 @@ namespace
             _viewport._size         = sw::float2{ 1920.0f, 1080.0f };
             _viewport._physicalSize = _viewport._size;
             SW_EXPECT_TRUE( _input.initialize() );
-            SW_EXPECT_TRUE( _ui.initialize( _input, nullptr, UIOptionsMenuTestUtil::kUIInputMap ) );
+            SW_EXPECT_TRUE( _ui.initialize( _input, nullptr, ::test::getEngineDefaultAssets()._uiInputMap.c_str() ) );
             _ui.setEngineDocuments( sw::UIEngineDocuments::makeFromDefaultAssets( ::test::getEngineDefaultAssets() ) );
             _ui.setUserSettings( &_settings );
             _menu = sw::OptionsMenuScreen::open( _ui );
@@ -381,12 +381,12 @@ SW_TEST_CASE( UIOptionsMenuTest, PauseActionOpensPauseMenu )
     fixture.tapKey( sw::Key::Escape ); // 일시정지 메뉴를 켜지 않은 게임 — 아무것도 없다
     SW_EXPECT_EQUAL( 0u, fixture._ui.getScreenCount() );
 
-    fixture._ui.setPauseMenuDocument( "engine/ui/pause.ui.xml" );
+    fixture._ui.setPauseMenuDocument( ::test::getEngineDefaultAssets()._uiPauseMenu.c_str() );
     fixture.tapKey( sw::Key::Escape );
     SW_ASSERT_EQUAL( 1u, fixture._ui.getScreenCount() );
     sw::UIScreen* pPause = fixture._ui.getActiveScreen();
     SW_ASSERT_NOT_NULL( pPause );
-    SW_EXPECT_TRUE( sw::FileUtil::normalizePath( "engine/ui/pause.ui.xml" ) == pPause->getDocumentPath() );
+    SW_EXPECT_TRUE( sw::FileUtil::normalizePath( ::test::getEngineDefaultAssets()._uiPauseMenu.c_str() ) == pPause->getDocumentPath() );
 
     pPause->dispatchCommand( "OpenOptions", *pPause->getTree().findWidgetByName( "Options" ) );
     fixture.runFrame();
@@ -413,7 +413,7 @@ SW_TEST_CASE( UIOptionsMenuTest, HeldPauseKeyDoesNotCloseThePauseMenu )
     fixture.getMenu()->close();
     fixture.runFrame();
     SW_ASSERT_EQUAL( 0u, fixture._ui.getScreenCount() );
-    fixture._ui.setPauseMenuDocument( "engine/ui/pause.ui.xml" );
+    fixture._ui.setPauseMenuDocument( ::test::getEngineDefaultAssets()._uiPauseMenu.c_str() );
 
     SW_EXPECT_TRUE( fixture._input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::Escape ) ) );
     for ( uint32 frame = 0; frame < 6; ++frame )
@@ -441,7 +441,7 @@ SW_TEST_CASE( UIOptionsMenuTest, PauseMenuSessionButtonsFollowGlobalCommands )
     UIOptionsMenuFixture fixture;
     fixture.getMenu()->close();
     fixture.runFrame();
-    fixture._ui.setPauseMenuDocument( "engine/ui/pause.ui.xml" );
+    fixture._ui.setPauseMenuDocument( ::test::getEngineDefaultAssets()._uiPauseMenu.c_str() );
     fixture.tapKey( sw::Key::Escape );
     sw::UIScreen* pPause = fixture._ui.getActiveScreen();
     SW_ASSERT_NOT_NULL( pPause );

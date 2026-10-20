@@ -5,6 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Text/FontService.h"
@@ -241,7 +242,7 @@ namespace
             {
                 case UIDeterminismSample::Pause:
                 {
-                    return _ui.openScreen( "engine/ui/pause.ui.xml" );
+                    return _ui.openScreen( ::test::getEngineDefaultAssets()._uiPauseMenu.c_str() );
                 }
                 case UIDeterminismSample::Options:
                 {
