@@ -8,6 +8,7 @@ SW Engine 통합 CLI 엔트리포인트:
 여러 곳에 적으면 하나를 더할 때 모두 고쳐야 하고, 독스트링이 가장 먼저 낡는다.
 
   py -3 -m Scripts --help     # 무엇이 있는지는 이 명령이 답한다
+  py -3 -m Scripts --list [폴더]   # 파일마다 docstring 첫 줄과 부르는 명령 — 손으로 쓴 파일 목록 문서를 대신한다
   py -3 -m Scripts <명령> ... # 나머지 인자는 그대로 넘어간다
   py -3 -m Scripts gate CheckEngineLayers --files a.h   # lint/ 의 폴더에서 이름으로(gate · fix · report · selftest)
 
@@ -25,6 +26,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))   # Scripts — import 루트는 하나다(docs/plans/ScriptsStructure.md)
 
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
+from common.ScriptCatalog import readScriptSummaries  # noqa: E402
 
 
 @dataclass(frozen=True)
@@ -103,12 +105,40 @@ def runFolderCommand(folderName: str, listArgument: list[str]) -> int:
     return mapScript[listArgument[0]].module.main(listArgument[1:])
 
 
+def printScriptList(listArgument: list[str]) -> int:
+    """`--list [폴더]` — 파일마다 docstring 첫 줄, 이름 있는 명령 · 폴더 명령이면 부르는 법을 붙인다. import 하지 않는다(AST)."""
+    folder = listArgument[0].strip("/") if listArgument else ""
+    try:
+        listSummary = readScriptSummaries(Path(__file__).resolve().parent, folder)
+    except FileNotFoundError as error:
+        print(f"[Scripts] {error}", file=sys.stderr)
+        return 1
+    mapModuleToCommand = {command.modulePath: command.name for command in _kSubcommand}
+    mapFolderToCommand = {f"lint.{folderName}": commandName for commandName, folderName in _kFolderCommand.items()}
+    currentGroup = None
+    for entry in listSummary:
+        group = entry.relPath.rpartition("/")[0] or "."
+        if group != currentGroup:
+            print(f"\n{group}/")
+            currentGroup = group
+        package, _, leaf = entry.moduleName.rpartition(".")
+        if entry.moduleName in mapModuleToCommand:
+            usage = f"  [py -3 -m Scripts {mapModuleToCommand[entry.moduleName]}]"
+        elif package in mapFolderToCommand and leaf != "__init__":
+            usage = f"  [py -3 -m Scripts {mapFolderToCommand[package]} {leaf}]"
+        else:
+            usage = ""
+        print(f"  {entry.relPath.rpartition('/')[2]:<36} {entry.summary}{usage}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="py -3 -m Scripts",
         description="SW Engine 통합 개발 도구체인 CLI",
         epilog="\n".join([*(f"  {command.name:<15} {command.description}" for command in _kSubcommand),
-                          f"  {'|'.join(_kFolderCommand)} <이름>  lint/ 의 폴더(gate · fixer · report · selftest)에서 이름으로 — 이름 없이 부르면 목록"]),
+                          f"  {'|'.join(_kFolderCommand)} <이름>  lint/ 의 폴더(gate · fixer · report · selftest)에서 이름으로 — 이름 없이 부르면 목록",
+                          "  --list [폴더]    파일마다 한 줄 설명과 부르는 명령(docstring 에서 만든다)"]),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("command", choices=[*_kSubcommandByName, *_kFolderCommand], help="실행할 하위 도구 명령")
@@ -118,6 +148,8 @@ def main(argv: list[str] | None = None) -> int:
     if not listArgument:
         parser.print_help()
         return 1
+    if listArgument[0] == "--list":
+        return printScriptList(listArgument[1:])
 
     parsed = parser.parse_args(listArgument[:1])
     if parsed.command in _kFolderCommand:

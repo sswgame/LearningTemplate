@@ -1,6 +1,6 @@
 # Scripts 이름 · 자리 규칙
 
-[목차](../README.md)에서 나눈 문서. 폴더별 파일 목록은 [공용 · 환경 · 생성](TreeCommon.md) · [린트](TreeLint.md) · [개발 · QA · 에셋](TreeDev.md).
+[목차](../README.md)에서 나눈 문서. 폴더별 파일 목록은 `py -3 -m Scripts --list [폴더]` 가 docstring 에서 만든다.
 
 ## Naming
 

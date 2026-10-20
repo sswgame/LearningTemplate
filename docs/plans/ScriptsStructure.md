@@ -51,7 +51,7 @@ Scripts/
 | L2c 이름 하나 테스트 | `Test/PythonTest/TestScriptsImportIdentity.py` — 모든 모듈을 점 이름으로 import 해 같은 파일이 두 이름으로 로드되지 않는지 본다 | 끝남 |
 | L3 층 게이트 | `lint/gate/CheckScriptLayers.py` + `lint/rules/CheckScriptLayers.toml`. sys.path 규칙은 `CheckScriptEntryPoints` 에 | 끝남 |
 | L4 `common` 파사드 제거 | `common/__init__.py` 의 `import *` 를 지우고 `from common import X` 를 `from common.<모듈> import X` 로 | 끝남 |
-| L5 생성 목록 | `py -3 -m Scripts --list`. `Scripts/docs/Tree*.md` 와 `Commands.md` 의 손으로 쓴 목록을 지운다 | 대기 |
+| L5 생성 목록 | `py -3 -m Scripts --list`. `Scripts/docs/Tree*.md` 와 `Commands.md` 의 손으로 쓴 목록을 지운다 | 끝남 |
 | L6 종료 코드 형식 | `common/ExitCode.py` 의 `IntEnum` 을 `LintGate.run` · `AppRun` · `ListCiJobs` 가 쓴다 | 대기 |
 
 진행 중 다른 작업과 겹치는 곳: StructureSimplification PK4 가 `generate/CookAssets.py` · `PackFormat.py` · `GeneratePackFormat.py` 를 지우므로 이 계획은 그 파일을 옮기지 않고 머리 줄 수정만 한다.

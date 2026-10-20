@@ -2,7 +2,7 @@
 
 **규칙의 원본은 [AGENTS.md](../AGENTS.md) 의 목차가 가리키는 `docs/agents/` 파일들입니다.** 이 문서는 규칙을 다시 적지 않고, AGENTS.md 의 절마다 "이렇게 쓴다 / 이렇게 쓰지 않는다" 예시를
 한국어 설명과 함께 모읍니다. 둘이 갈리면 AGENTS.md 가 맞습니다. 규칙을 더하거나 바꿀 때는 AGENTS.md 를 고치고, 예시가 필요하면 같은 커밋에서 여기에 더합니다.
-규칙은 `Scripts/lint/` 의 게이트 · 픽서가 강제합니다(목록은 [Scripts/docs/TreeLint.md](../Scripts/docs/TreeLint.md)).
+규칙은 `Scripts/lint/` 의 게이트 · 픽서가 강제합니다(목록은 `py -3 -m Scripts --list lint`).
 
 ---
 
