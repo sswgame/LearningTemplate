@@ -503,6 +503,9 @@ ctest --test-dir build/Ninja-Release -L load                     # 부하 스위
 - **백엔드 교체 · 장치 제거는 `engine/automation/rhiswap/` 시나리오로 본다**(네 백엔드가 모두 있는 PC 에서만 통과해 AppScenarioTest 가 줍지 않는다). `swapbackends`(네 백엔드 건너기),
   `terrainedits`(저장하지 않은 지형 편집 · 씬 뷰 카메라가 교체를 넘는지), `removedevice`(개발 명령 `rhi.removeDevice` 로 DX12 장치를 제거하거나 Vulkan 장치를 손실 상태로 둔 뒤 프레임 · 종료가 멈추지 않는지 — `-dx12` · `-vk` 로 돌린다).
   교체 전후 그림을 견줄 때는 한 번 먼저 건너 도킹 배치를 안정시킨다 — imgui.ini 가 노드 크기를 정수로 저장해 첫 리로드에서 씬 뷰 너비가 1 픽셀 바뀔 수 있다.
+- **미리보기 창 시나리오와 검증 레이어.** `editor/previewreopen`(머티리얼 · 프리팹 창을 연 채 8 번 여닫기)과 `editor/previewswap`(창을 연 채 `SwapBackend other` → `start`)는 GPU 오류를 직접 못 보고 로그로 본다.
+  검증 레이어를 켜는 `-gv_` 스위치는 없다 — DX12 디버그 레이어와 Vulkan 검증 레이어는 Debug 빌드에서만 켜지므로(Release 에는 없다) 레이어 오류를 보려면 `build/Ninja-Debug` 로 돌린다. 오류는 `[Warning]` · `[Error]` 줄이라 시나리오의 로그 게이트가 지고,
+  손으로 세려면 `Saved/Automation/<이름>_<백엔드>.log` 에서 `D3D12 debug layer` 와 `[Error]` 줄(Vulkan)을 찾는다. 미리보기 타깃의 그림은 `previewswap` 이 저장하는 `Saved/Automation/previewswap_*.ppm` 을 눈으로 본다.
 
 ## 4. CI
 
