@@ -39,8 +39,6 @@ namespace sw
                 uint8                        _externalGroup{ kNoExternalGroup }; ///< 보통 길에서 도는 선행 조건 중 가장 늦은 그룹
             };
 
-            /** @brief 정렬된 id 목록에 @p id 가 있으면 true 입니다. */
-            static bool containsSorted( const vector<uint64>& listSorted, uint64 id ) { return std::binary_search( listSorted.begin(), listSorted.end(), id ); }
             /** @brief 정렬된 id 목록에 @p id 를 넣습니다(이미 있으면 그대로). 새 오브젝트는 id 가 가장 커서 보통 끝에 붙습니다. */
             static void insertSorted( vector<uint64>& inoutListSorted, uint64 id )
             {
@@ -490,8 +488,8 @@ namespace sw
     void TickRegistry::refreshObject( GameObjectManager& manager, GameObject* pObj )
     {
         const uint64  objectID      = pObj->getObjectID();
-        const bool    bWasDependent = TickRegistryInternal::containsSorted( _listDependentObjectID, objectID );
-        const bool    bReferenced   = TickRegistryInternal::containsSorted( _listReferencedObjectID, objectID );
+        const bool    bWasDependent = std::binary_search( _listDependentObjectID.begin(), _listDependentObjectID.end(), objectID );
+        const bool    bReferenced   = std::binary_search( _listReferencedObjectID.begin(), _listReferencedObjectID.end(), objectID );
         TickItemList& listItem      = pObj->_listTickItem;
         listItem.clear();
 
@@ -631,7 +629,7 @@ namespace sw
             for ( const SubTickHandle& prerequisite : *pListPrerequisite )
             {
                 // 선행 조건이 의존 오브젝트(자기 자신 포함)를 가리키면 후보 사이의 간선이 생길 수 있다 — 말단이 아니다.
-                if ( TickRegistryInternal::containsSorted( _listDependentObjectID, prerequisite._objectID ) )
+                if ( std::binary_search( _listDependentObjectID.begin(), _listDependentObjectID.end(), prerequisite._objectID ) )
                     return false;
                 TickRegistryInternal::insertSorted( _listReferencedObjectID, prerequisite._objectID );
                 const uint8 externalGroup = TickRegistryInternal::findExternalGroup( manager, prerequisite );
@@ -843,7 +841,7 @@ namespace sw
         const uint64 objectID = pObj->getObjectID();
         // 스테이지가 이 오브젝트의 항목을 들고 있거나(선행 조건을 가진 쪽) 이 오브젝트를 기다린다(가리켜진 쪽) — 다음 틱 전에 다시 짓는다.
         const bool bWasDependent = TickRegistryInternal::eraseSorted( _listDependentObjectID, objectID );
-        if ( TickRegistryInternal::containsSorted( _listReferencedObjectID, objectID ) )
+        if ( std::binary_search( _listReferencedObjectID.begin(), _listReferencedObjectID.end(), objectID ) )
             ++_stageGeneration;
         else if ( bWasDependent && _builtStageGeneration == _stageGeneration )
             removeStageItems( objectID ); // 아무도 기다리지 않으니 자기 항목만 뺀다(스폰이 잦은 팔로워가 전체 재구축을 부르지 않게)
