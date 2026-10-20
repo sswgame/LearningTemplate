@@ -461,123 +461,145 @@ namespace sw::editor
             if ( pBinding == nullptr )
                 continue;
             ImGui::PushID( static_cast<int32>( bindIndex ) );
-            const float32 rightEdgeX = ImGui::GetCursorScreenPos().x + ImGui::GetContentRegionAvail().x; // 이 줄이 그릴 수 있는 오른쪽 끝(화면 좌표)
-            InputSlot     slot{};
-            const bool    bRebindable = _inputMap.findRebindSlot( action, bindIndex, slot );
-            const string  slotGlyph   = bRebindable ? InputMap::getGlyphForSlot( slot, InputGlyphStyle::KeyboardMouse ) : string{ BindingKinds::toName( pBinding->_kind ) };
-            ImGui::Text( "%u  %s", bindIndex, slotGlyph.c_str() );
-            ImGui::SameLine( ImGui::GetFontSize() * 9.0f );
-            ImGui::TextDisabled( "%s", _inputMap.findBindingLayer( action, bindIndex ).c_str() );
-            ImGui::SameLine( ImGui::GetFontSize() * 15.0f );
-            // 가장 긴 트리거 이름(HoldThreshold · HoldAndRelease)이 잘리지 않을 만큼 — 고정 8 em 이면 "HoldThresho" 로 끊긴다.
-            ImGui::SetNextItemWidth( ImGui::CalcTextSize( "HoldAndRelease" ).x + ImGui::GetFrameHeight() + ImGui::GetStyle().FramePadding.x * 2.0f );
-            const ActionTrigger trigger  = _inputMap.getBindingTrigger( action, bindIndex );
-            const utf8*         pCurrent = InputMap::actionTriggerToName( trigger );
-            const bool          bOpen    = ImGui::BeginCombo( "##trigger", pCurrent != nullptr ? pCurrent : "?" );
-            if ( EditorSelfTestMarks::isEnabled() )
-                EditorSelfTestMarks::note( ( "inputMap.binding." + to_string( static_cast<uint64>( bindIndex ) ) + ".trigger" ).c_str() );
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "TriggerTip" ) );
-            if ( bOpen )
-            {
-                for ( uint32 option = 0; option < static_cast<uint32>( ActionTrigger::Count ); ++option )
-                {
-                    const ActionTrigger value = static_cast<ActionTrigger>( option );
-                    if ( ImGui::Selectable( InputMap::actionTriggerToName( value ), value == trigger ) && _inputMap.setBindingTrigger( action, bindIndex, value ) )
-                        markDocumentDirty();
-                    if ( EditorSelfTestMarks::isEnabled() )
-                        EditorSelfTestMarks::note( ( "inputMap.trigger." + to_string( static_cast<uint64>( option ) ) ).c_str() );
-                }
-                ImGui::EndCombo();
-            }
-            ImGui::SameLine();
-            ImGui::BeginDisabled( bRebindable == false );
-            if ( ImGui::SmallButton( "Rebind" ) )
-            {
-                _capturingBindIndex = bindIndex;
-                _bCapturingKey      = SW_TRUE;
-            }
-            ImGui::EndDisabled();
-            if ( bRebindable == false )
-                EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "NotRebindableTip" ) );
-            else
-                EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "RebindTip" ) );
-            // 바인딩마다 발화 시간(초)과 값 부호 뒤집기. 시간을 쓰지 않는 트리거(Pressed 등)면 시간 칸은 숨긴다.
-            const float32 effectiveTime = _inputMap.getEffectiveTriggerTime( *pBinding );
-            const bool    bUsesTime     = effectiveTime > 0.0f;
-            const bool    bUsesTaps     = pBinding->_trigger == ActionTrigger::MultiTap;
-            // 시간 · 횟수 칸이 들거나 Negate 가 남은 폭에 안 들어가면 패널 오른쪽 밖으로 잘린다 — 콤보와 같은 칸에서 시작하는 다음 줄로 내린다.
-            const float32 negateWidth       = ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize( "Negate" ).x;
-            const bool    bNegateFits       = ImGui::GetItemRectMax().x + ImGui::GetStyle().ItemSpacing.x + negateWidth <= rightEdgeX;
-            bool          bLineStart        = false;
-            const bool    bWrapToSecondLine = bUsesTime || bUsesTaps || bNegateFits == false;
-            if ( bWrapToSecondLine )
-            {
-                ImGui::SetCursorPosX( ImGui::GetFontSize() * 15.0f );
-                bLineStart = true;
-            }
-            if ( bUsesTime )
-            {
-                float32 editTime = effectiveTime;
-                if ( bLineStart == false )
-                    ImGui::SameLine();
-                bLineStart = false;
-                ImGui::SetNextItemWidth( ImGui::GetFontSize() * 4.0f );
-                if ( ImGui::DragFloat( "s##time", &editTime, 0.01f, 0.01f, 10.0f, "%.2f" ) && _inputMap.setBindingTriggerTime( action, bindIndex, editTime ) )
-                    markDocumentDirty();
-            }
-            // MultiTap 만 누름 횟수를 고른다(2 이상).
-            if ( bUsesTaps )
-            {
-                int32 editTaps = static_cast<int32>( pBinding->_tapCount );
-                if ( bLineStart == false )
-                    ImGui::SameLine();
-                bLineStart = false;
-                ImGui::SetNextItemWidth( ImGui::GetFontSize() * 3.0f );
-                if ( ImGui::DragInt( "taps##taps", &editTaps, 0.1f, 2, 9 ) && _inputMap.setBindingTapCount( action, bindIndex, static_cast<uint8>( MathUtil::clamp( editTaps, 2, 9 ) ) ) )
-                    markDocumentDirty();
-            }
-            bool bNegate = pBinding->_bNegate;
-            if ( bLineStart == false )
-                ImGui::SameLine();
-            if ( ImGui::Checkbox( "Negate", &bNegate ) && _inputMap.setBindingNegate( action, bindIndex, bNegate ) )
-                markDocumentDirty();
+            drawBindingRow( action, bindIndex, *pBinding );
             ImGui::PopID();
         }
         if ( bindingCount == 0 )
             ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorInputMap", "NoBindings" ) );
 
-        // 충돌은 같은 레이어에서 같은 키를 쓰는 다른 액션이다. 이쪽을 다시 잡거나 저쪽 바인딩을 비운다.
-        if ( InputMapConflicts::involves( _listConflict, action ) )
-        {
-            ImGui::SeparatorText( "Conflicts" );
-            for ( size_t index = 0; index < _listConflict.size(); ++index )
-            {
-                const InputMapConflict& conflict = _listConflict[index];
-                const bool              bIsA     = conflict._actionA == action;
-                if ( bIsA == false && conflict._actionB != action )
-                    continue;
-                const hashed_string& other      = bIsA ? conflict._actionB : conflict._actionA;
-                const uint32         otherIndex = bIsA ? conflict._bindIndexB : conflict._bindIndexA;
-                ImGui::PushID( static_cast<int32>( index ) );
-                fixed_string<constant::kMaxBuffer256> conflictText;
-                formatstring( conflictText.data(), conflictText.capacity(), "%# on %# (layer %#)", InputMap::getGlyphForSlot( conflict._slot, InputGlyphStyle::KeyboardMouse ).c_str(),
-                              other.c_str(), conflict._layer.c_str() );
-                EditorThemeUtil::textError( conflictText.c_str() );
-                ImGui::SameLine();
-                if ( ImGui::SmallButton( "Rebind this" ) )
-                {
-                    _capturingBindIndex = bIsA ? conflict._bindIndexA : conflict._bindIndexB;
-                    _bCapturingKey      = SW_TRUE;
-                }
-                EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "RebindThisTip" ) );
-                ImGui::SameLine();
-                if ( ImGui::SmallButton( "Unbind other" ) && _inputMap.rebindKey( other, Key::Unknown, otherIndex ) )
-                    markDocumentDirty();
-                EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "UnbindOtherTip" ) );
-                ImGui::PopID();
-            }
-        }
+        drawActionConflicts( action );
+        drawPromptGlyphs( action );
+    }
 
+    void InputMapPanel::drawBindingRow( const hashed_string& action, uint32 bindIndex, const ActionBinding& binding )
+    {
+        const float32 rightEdgeX = ImGui::GetCursorScreenPos().x + ImGui::GetContentRegionAvail().x; // 이 줄이 그릴 수 있는 오른쪽 끝(화면 좌표)
+        InputSlot     slot{};
+        const bool    bRebindable = _inputMap.findRebindSlot( action, bindIndex, slot );
+        const string  slotGlyph   = bRebindable ? InputMap::getGlyphForSlot( slot, InputGlyphStyle::KeyboardMouse ) : string{ BindingKinds::toName( binding._kind ) };
+        ImGui::Text( "%u  %s", bindIndex, slotGlyph.c_str() );
+        ImGui::SameLine( ImGui::GetFontSize() * 9.0f );
+        ImGui::TextDisabled( "%s", _inputMap.findBindingLayer( action, bindIndex ).c_str() );
+        ImGui::SameLine( ImGui::GetFontSize() * 15.0f );
+        drawTriggerCombo( action, bindIndex );
+        ImGui::SameLine();
+        ImGui::BeginDisabled( bRebindable == false );
+        if ( ImGui::SmallButton( "Rebind" ) )
+        {
+            _capturingBindIndex = bindIndex;
+            _bCapturingKey      = SW_TRUE;
+        }
+        ImGui::EndDisabled();
+        if ( bRebindable == false )
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "NotRebindableTip" ) );
+        else
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "RebindTip" ) );
+        drawTriggerOptions( action, bindIndex, binding, rightEdgeX );
+    }
+
+    void InputMapPanel::drawTriggerCombo( const hashed_string& action, uint32 bindIndex )
+    {
+        // 가장 긴 트리거 이름(HoldThreshold · HoldAndRelease)이 잘리지 않을 만큼 — 고정 8 em 이면 "HoldThresho" 로 끊긴다.
+        ImGui::SetNextItemWidth( ImGui::CalcTextSize( "HoldAndRelease" ).x + ImGui::GetFrameHeight() + ImGui::GetStyle().FramePadding.x * 2.0f );
+        const ActionTrigger trigger  = _inputMap.getBindingTrigger( action, bindIndex );
+        const utf8*         pCurrent = InputMap::actionTriggerToName( trigger );
+        const bool          bOpen    = ImGui::BeginCombo( "##trigger", pCurrent != nullptr ? pCurrent : "?" );
+        if ( EditorSelfTestMarks::isEnabled() )
+            EditorSelfTestMarks::note( ( "inputMap.binding." + to_string( static_cast<uint64>( bindIndex ) ) + ".trigger" ).c_str() );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "TriggerTip" ) );
+        if ( bOpen == false )
+            return;
+        for ( uint32 option = 0; option < static_cast<uint32>( ActionTrigger::Count ); ++option )
+        {
+            const ActionTrigger value = static_cast<ActionTrigger>( option );
+            if ( ImGui::Selectable( InputMap::actionTriggerToName( value ), value == trigger ) && _inputMap.setBindingTrigger( action, bindIndex, value ) )
+                markDocumentDirty();
+            if ( EditorSelfTestMarks::isEnabled() )
+                EditorSelfTestMarks::note( ( "inputMap.trigger." + to_string( static_cast<uint64>( option ) ) ).c_str() );
+        }
+        ImGui::EndCombo();
+    }
+
+    void InputMapPanel::drawTriggerOptions( const hashed_string& action, uint32 bindIndex, const ActionBinding& binding, float32 rightEdgeX )
+    {
+        // 바인딩마다 발화 시간(초)과 값 부호 뒤집기. 시간을 쓰지 않는 트리거(Pressed 등)면 시간 칸은 숨긴다.
+        const float32 effectiveTime = _inputMap.getEffectiveTriggerTime( binding );
+        const bool    bUsesTime     = effectiveTime > 0.0f;
+        const bool    bUsesTaps     = binding._trigger == ActionTrigger::MultiTap;
+        // 시간 · 횟수 칸이 들거나 Negate 가 남은 폭에 안 들어가면 패널 오른쪽 밖으로 잘린다 — 콤보와 같은 칸에서 시작하는 다음 줄로 내린다.
+        const float32 negateWidth       = ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize( "Negate" ).x;
+        const bool    bNegateFits       = ImGui::GetItemRectMax().x + ImGui::GetStyle().ItemSpacing.x + negateWidth <= rightEdgeX;
+        bool          bLineStart        = false;
+        const bool    bWrapToSecondLine = bUsesTime || bUsesTaps || bNegateFits == false;
+        if ( bWrapToSecondLine )
+        {
+            ImGui::SetCursorPosX( ImGui::GetFontSize() * 15.0f );
+            bLineStart = true;
+        }
+        if ( bUsesTime )
+        {
+            float32 editTime = effectiveTime;
+            if ( bLineStart == false )
+                ImGui::SameLine();
+            bLineStart = false;
+            ImGui::SetNextItemWidth( ImGui::GetFontSize() * 4.0f );
+            if ( ImGui::DragFloat( "s##time", &editTime, 0.01f, 0.01f, 10.0f, "%.2f" ) && _inputMap.setBindingTriggerTime( action, bindIndex, editTime ) )
+                markDocumentDirty();
+        }
+        // MultiTap 만 누름 횟수를 고른다(2 이상).
+        if ( bUsesTaps )
+        {
+            int32 editTaps = static_cast<int32>( binding._tapCount );
+            if ( bLineStart == false )
+                ImGui::SameLine();
+            bLineStart = false;
+            ImGui::SetNextItemWidth( ImGui::GetFontSize() * 3.0f );
+            if ( ImGui::DragInt( "taps##taps", &editTaps, 0.1f, 2, 9 ) && _inputMap.setBindingTapCount( action, bindIndex, static_cast<uint8>( MathUtil::clamp( editTaps, 2, 9 ) ) ) )
+                markDocumentDirty();
+        }
+        bool bNegate = binding._bNegate;
+        if ( bLineStart == false )
+            ImGui::SameLine();
+        if ( ImGui::Checkbox( "Negate", &bNegate ) && _inputMap.setBindingNegate( action, bindIndex, bNegate ) )
+            markDocumentDirty();
+    }
+
+    void InputMapPanel::drawActionConflicts( const hashed_string& action )
+    {
+        // 충돌은 같은 레이어에서 같은 키를 쓰는 다른 액션이다. 이쪽을 다시 잡거나 저쪽 바인딩을 비운다.
+        if ( InputMapConflicts::involves( _listConflict, action ) == false )
+            return;
+        ImGui::SeparatorText( "Conflicts" );
+        for ( size_t index = 0; index < _listConflict.size(); ++index )
+        {
+            const InputMapConflict& conflict = _listConflict[index];
+            const bool              bIsA     = conflict._actionA == action;
+            if ( bIsA == false && conflict._actionB != action )
+                continue;
+            const hashed_string& other      = bIsA ? conflict._actionB : conflict._actionA;
+            const uint32         otherIndex = bIsA ? conflict._bindIndexB : conflict._bindIndexA;
+            ImGui::PushID( static_cast<int32>( index ) );
+            fixed_string<constant::kMaxBuffer256> conflictText;
+            formatstring( conflictText.data(), conflictText.capacity(), "%# on %# (layer %#)", InputMap::getGlyphForSlot( conflict._slot, InputGlyphStyle::KeyboardMouse ).c_str(),
+                          other.c_str(), conflict._layer.c_str() );
+            EditorThemeUtil::textError( conflictText.c_str() );
+            ImGui::SameLine();
+            if ( ImGui::SmallButton( "Rebind this" ) )
+            {
+                _capturingBindIndex = bIsA ? conflict._bindIndexA : conflict._bindIndexB;
+                _bCapturingKey      = SW_TRUE;
+            }
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "RebindThisTip" ) );
+            ImGui::SameLine();
+            if ( ImGui::SmallButton( "Unbind other" ) && _inputMap.rebindKey( other, Key::Unknown, otherIndex ) )
+                markDocumentDirty();
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "UnbindOtherTip" ) );
+            ImGui::PopID();
+        }
+    }
+
+    void InputMapPanel::drawPromptGlyphs( const hashed_string& action )
+    {
         // 플랫폼 글리프는 화면에 표시할 버튼 아이콘이다. 언리얼 CommonUI 의 입력 표시에 해당한다.
         ImGui::SeparatorText( "Prompt Glyphs" );
         static constexpr InputGlyphStyle kArrStyle[]     = { InputGlyphStyle::KeyboardMouse, InputGlyphStyle::GamepadXbox, InputGlyphStyle::GamepadPlayStation, InputGlyphStyle::GamepadSwitch };

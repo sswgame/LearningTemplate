@@ -54,6 +54,16 @@ namespace sw::editor
         void drawActionList();
         /** @brief 선택한 액션의 바인딩, 발화 규칙, 충돌, 플랫폼 글리프를 그립니다. */
         void drawActionDetails();
+        /** @brief 바인딩 한 줄(키 글리프 · 레이어 · 트리거 콤보 · 다시 잡기 · 시간 · 횟수 · Negate)을 그립니다. */
+        void drawBindingRow( const hashed_string& action, uint32 bindIndex, const ActionBinding& binding );
+        /** @brief 바인딩의 발화 규칙(트리거) 콤보입니다. */
+        void drawTriggerCombo( const hashed_string& action, uint32 bindIndex );
+        /** @brief 트리거 콤보 뒤의 발화 시간 · 누름 횟수 · Negate 칸입니다. 오른쪽 끝 @p rightEdgeX 에 안 들어가면 다음 줄로 내립니다. */
+        void drawTriggerOptions( const hashed_string& action, uint32 bindIndex, const ActionBinding& binding, float32 rightEdgeX );
+        /** @brief 선택한 액션이 낀 키 충돌 목록과 다시 잡기 · 비우기 버튼입니다. */
+        void drawActionConflicts( const hashed_string& action );
+        /** @brief 플랫폼별 버튼 글리프 목록입니다. */
+        void drawPromptGlyphs( const hashed_string& action );
         /** @brief Debug 탭을 그립니다. 장치 상태, 그래프, 뷰포트 HUD, 명령 패턴 테스트를 접을 수 있는 섹션으로 둡니다. */
         void drawDebugTab();
         /** @brief 명령 패턴(숫자 패드 표기) 테스트 섹션을 그립니다. */
