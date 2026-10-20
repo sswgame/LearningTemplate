@@ -62,6 +62,34 @@ namespace sw
                 }
                 return low;
             }
+
+            /**
+             * @brief `<Note>` 하나를 읽어 @p outListNote 끝에 붙입니다. `endBeat` 를 적지 않으면 탭 노트입니다.
+             * @return 칸이 틀렸거나, 레인이 @p laneCount 밖이거나, 끝이 시작보다 앞이면 붙이지 않고 false 입니다(이유는 로그로 남긴다).
+             */
+            [[nodiscard]] static bool readNote( const XMLNode& node, string_view sourceName, int32 laneCount, vector<RhythmNote>& outListNote )
+            {
+                RhythmNoteDef          noteDef;
+                std::optional<float32> endBeat;
+                const bool             bFields = GameDataXML::readFields( node, noteDef, sourceName, { "endBeat" } );
+                const bool             bEnd    = node.readOptionalAttribute( "endBeat", endBeat );
+                const bool             bLane   = noteDef._lane < laneCount;
+                const bool             bOrder  = endBeat.has_value() == false || *endBeat >= noteDef._beat;
+                if ( bLane == false )
+                    SW_LOG_ERROR( "%#: note at beat %# is on lane %# outside 0..%#", sourceName, noteDef._beat, noteDef._lane, laneCount - 1 );
+                if ( bOrder == false )
+                    SW_LOG_ERROR( "%#: note at beat %# ends at %# before it starts", sourceName, noteDef._beat, *endBeat );
+                const bool bNote = bFields && bEnd && bLane && bOrder;
+                if ( bNote == false )
+                    return false;
+                RhythmNote note;
+                note._lane    = noteDef._lane;
+                note._beat    = noteDef._beat;
+                note._endBeat = endBeat.has_value() ? *endBeat : noteDef._beat;
+                note._bLong   = note._endBeat > note._beat ? SW_TRUE : SW_FALSE;
+                outListNote.push_back( note );
+                return true;
+            }
         };
     } // namespace
 } // namespace sw
@@ -173,9 +201,8 @@ namespace sw
 
         vector<RhythmBpmChange> listBpmChange;
         vector<RhythmStop>      listStop;
-        vector<RhythmNoteDef>   listNoteDef;
-        vector<float32>         listNoteEnd;
         _listMeasureChange.clear();
+        _listNote.clear();
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
             const string_view name = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
@@ -186,25 +213,7 @@ namespace sw
             else if ( name == "Measure" )
                 bValid = GameDataXML::readInto( node, sourceName, _listMeasureChange ) && bValid;
             else if ( name == "Note" )
-            {
-                RhythmNoteDef          noteDef;
-                std::optional<float32> endBeat;
-                const bool             bFields = GameDataXML::readFields( node, noteDef, sourceName, { "endBeat" } );
-                const bool             bEnd    = node.readOptionalAttribute( "endBeat", endBeat );
-                const bool             bLane   = noteDef._lane < _laneCount;
-                const bool             bOrder  = endBeat.has_value() == false || *endBeat >= noteDef._beat;
-                if ( bLane == false )
-                    SW_LOG_ERROR( "%#: note at beat %# is on lane %# outside 0..%#", sourceName, noteDef._beat, noteDef._lane, _laneCount - 1 );
-                if ( bOrder == false )
-                    SW_LOG_ERROR( "%#: note at beat %# ends at %# before it starts", sourceName, noteDef._beat, *endBeat );
-                const bool bNote = bFields && bEnd && bLane && bOrder;
-                bValid           = bNote && bValid;
-                if ( bNote )
-                {
-                    listNoteDef.push_back( noteDef );
-                    listNoteEnd.push_back( endBeat.has_value() ? *endBeat : noteDef._beat ); // 적지 않으면 탭 노트다
-                }
-            }
+                bValid = RhythmChartInternal::readNote( node, sourceName, _laneCount, _listNote ) && bValid;
             else
             {
                 SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
@@ -230,16 +239,6 @@ namespace sw
         _baseBpm = baseBpm.has_value() ? *baseBpm : findBpmAt( 0.0f );
         std::stable_sort( _listMeasureChange.begin(), _listMeasureChange.end(), &RhythmChartInternal::isMeasureChangeBefore );
 
-        _listNote.clear();
-        for ( size_t index = 0; index < listNoteDef.size(); ++index )
-        {
-            RhythmNote note;
-            note._lane    = listNoteDef[index]._lane;
-            note._beat    = listNoteDef[index]._beat;
-            note._endBeat = listNoteEnd[index];
-            note._bLong   = note._endBeat > note._beat ? SW_TRUE : SW_FALSE;
-            _listNote.push_back( note );
-        }
         std::stable_sort( _listNote.begin(), _listNote.end(), &RhythmChartInternal::isNoteBefore );
 
         // 같은 레인에서 앞 노트(롱노트면 그 끝)와 겹치는 노트는 칠 수 없다.

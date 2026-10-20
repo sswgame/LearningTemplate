@@ -349,12 +349,16 @@ namespace sw
         void      updateUnit( RTSUnit& unit, float32 deltaTime );
         void      updateOrder( RTSUnit& unit, float32 deltaTime );
         void      updateGather( RTSUnit& unit, RTSOrder& order, float32 deltaTime );
-        void      updateBuild( RTSUnit& unit, RTSOrder& order, float32 deltaTime );
-        void      updateProduction( RTSUnit& building, float32 deltaTime );
-        void      updateMovement( RTSUnit& unit, float32 deltaTime );
-        void      updateCombat( RTSUnit& unit, float32 deltaTime );
-        void      updateVision();
-        void      updateDefeat();
+        /** @brief 실은 자원을 가까운 저장소로 가져가 지갑에 넣습니다(채취의 `Returning` 단계). */
+        void returnCargo( RTSUnit& unit );
+        /** @brief 채취 시간이 차면 @p source 에서 캐 싣고 돌아가는 단계로 넘깁니다. @p target 은 일꾼이 붙은 유닛(광물이나 정제소)입니다. */
+        void updateHarvest( RTSUnit& unit, RTSUnit& target, RTSUnit& source, float32 deltaTime );
+        void updateBuild( RTSUnit& unit, RTSOrder& order, float32 deltaTime );
+        void updateProduction( RTSUnit& building, float32 deltaTime );
+        void updateMovement( RTSUnit& unit, float32 deltaTime );
+        void updateCombat( RTSUnit& unit, float32 deltaTime );
+        void updateVision();
+        void updateDefeat();
 
         RTSCommandResult pushOrder( RTSUnit& unit, const RTSOrder& order, bool bQueue );
         void             finishOrder( RTSUnit& unit );

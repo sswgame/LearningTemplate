@@ -53,6 +53,59 @@ namespace sw
                 return archive.isOk() && combined <= SW_TRUE;
             }
 
+            /**
+             * @brief 조종사의 덱(기체 id)과 스킬 id 를 카탈로그에서 찾아 채우고, 스킬 수만큼 타이머 칸을 잡습니다.
+             * @return 덱이 비었거나 카탈로그에 없는 기체 · 스킬이면 false 입니다.
+             */
+            [[nodiscard]] static bool readLoadout( Archive& archive, const MechCatalog& catalog, MechPilot& outPilot )
+            {
+                uint32 deckCount = 0;
+                if ( StateArchiveUtil::readCount( archive, 4, deckCount ) == false || deckCount == 0 )
+                    return false;
+                for ( uint32 index = 0; index < deckCount; ++index )
+                {
+                    hashed_string mechID;
+                    if ( StateArchiveUtil::readName( archive, mechID ) == false )
+                        return false;
+                    const MechDef* pMech = catalog.findMech( mechID );
+                    if ( pMech == nullptr || pMech->_listMode.empty() )
+                        return false;
+                    outPilot._listDeckMech.push_back( pMech );
+                }
+                uint32 skillCount = 0;
+                if ( StateArchiveUtil::readCount( archive, 4, skillCount ) == false )
+                    return false;
+                for ( uint32 index = 0; index < skillCount; ++index )
+                {
+                    hashed_string skillID;
+                    if ( StateArchiveUtil::readName( archive, skillID ) == false )
+                        return false;
+                    const MechSkillDef* pSkill = catalog.findSkill( skillID );
+                    if ( pSkill == nullptr )
+                        return false;
+                    outPilot._listSkill.push_back( pSkill );
+                }
+                outPilot._listSkillRemaining.resize( skillCount );
+                outPilot._listSkillCooldown.resize( skillCount );
+                outPilot._listSkillSpent.resize( skillCount, SW_FALSE );
+                return true;
+            }
+
+            /** @brief 스킬마다 남은 시간 · 쿨다운 · 쓴 표시를 읽습니다. 칸은 `readLoadout` 이 스킬 수만큼 잡아 두었습니다. */
+            [[nodiscard]] static bool readSkillTimers( Archive& archive, MechPilot& outPilot )
+            {
+                for ( size_t index = 0; index < outPilot._listSkill.size(); ++index )
+                {
+                    const bool bSkillRead = StateArchiveUtil::readCountdown( archive, outPilot._listSkillRemaining[index] ) &&
+                                            StateArchiveUtil::readCountdown( archive, outPilot._listSkillCooldown[index] );
+                    archive >> outPilot._listSkillSpent[index];
+                    const bool bPilotSkillInvalid = bSkillRead == false || archive.isError() || outPilot._listSkillSpent[index] > SW_TRUE;
+                    if ( bPilotSkillInvalid )
+                        return false;
+                }
+                return true;
+            }
+
             static void writePilot( Archive& outArchive, const MechPilot& pilot )
             {
                 outArchive << static_cast<uint32>( pilot._listDeckMech.size() );
@@ -287,35 +340,9 @@ namespace sw
 
     bool MechArenaWorld::readPilot( Archive& archive, int32 pilotIndex, MechPilot& outPilot )
     {
-        uint32 deckCount = 0;
-        if ( StateArchiveUtil::readCount( archive, 4, deckCount ) == false || deckCount == 0 )
+        if ( MechArenaWorldStateInternal::readLoadout( archive, *_pMechCatalog, outPilot ) == false )
             return false;
-        for ( uint32 index = 0; index < deckCount; ++index )
-        {
-            hashed_string mechID;
-            if ( StateArchiveUtil::readName( archive, mechID ) == false )
-                return false;
-            const MechDef* pMech = _pMechCatalog->findMech( mechID );
-            if ( pMech == nullptr || pMech->_listMode.empty() )
-                return false;
-            outPilot._listDeckMech.push_back( pMech );
-        }
-        uint32 skillCount = 0;
-        if ( StateArchiveUtil::readCount( archive, 4, skillCount ) == false )
-            return false;
-        for ( uint32 index = 0; index < skillCount; ++index )
-        {
-            hashed_string skillID;
-            if ( StateArchiveUtil::readName( archive, skillID ) == false )
-                return false;
-            const MechSkillDef* pSkill = _pMechCatalog->findSkill( skillID );
-            if ( pSkill == nullptr )
-                return false;
-            outPilot._listSkill.push_back( pSkill );
-        }
-        outPilot._listSkillRemaining.resize( skillCount );
-        outPilot._listSkillCooldown.resize( skillCount );
-        outPilot._listSkillSpent.resize( skillCount, SW_FALSE );
+        const uint32 deckCount = static_cast<uint32>( outPilot._listDeckMech.size() );
 
         int32 mode           = 0;
         uint8 state          = 0;
@@ -369,17 +396,8 @@ namespace sw
         const bool bTimerRead = StateArchiveUtil::readCountdown( archive, outPilot._dashRemaining ) &&
                                 StateArchiveUtil::readCountdown( archive, outPilot._staggerRemaining ) &&
                                 StateArchiveUtil::readCountdown( archive, outPilot._transformCooldown );
-        if ( bTimerRead == false )
+        if ( bTimerRead == false || MechArenaWorldStateInternal::readSkillTimers( archive, outPilot ) == false )
             return false;
-        for ( uint32 index = 0; index < skillCount; ++index )
-        {
-            const bool bSkillRead = StateArchiveUtil::readCountdown( archive, outPilot._listSkillRemaining[index] ) &&
-                                    StateArchiveUtil::readCountdown( archive, outPilot._listSkillCooldown[index] );
-            archive >> outPilot._listSkillSpent[index];
-            const bool bPilotSkillInvalid = bSkillRead == false || archive.isError() || outPilot._listSkillSpent[index] > SW_TRUE;
-            if ( bPilotSkillInvalid )
-                return false;
-        }
         const bool bBodyRead = MechArenaWorldStateInternal::readInput( archive, outPilot._input ) && MechArenaWorldStateInternal::readInput( archive, outPilot._previousInput ) &&
                                outPilot._vitality.readState( archive ) && outPilot._boost.readState( archive ) && outPilot._lockOn.readState( archive ) &&
                                outPilot._melee.readState( archive, *_pMoveCatalog );
