@@ -4,10 +4,14 @@
 
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
+#include "Engine/Graphics/Shader/Binding/GPULight.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
+#include "Engine/Object/Component/3D/MeshInstanceBatch.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
+#include "Engine/Renderer/Light/GPULightBuffer.h"
 #include "Engine/Renderer/Scene/GPUSceneBuilder.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
@@ -93,12 +97,48 @@ namespace sw
         {
             for ( uint32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
             {
-                simulation.step( kTestStepSeconds );
+                simulation.step( kTestStepSeconds, nullptr );
             }
             vector<GPUParticle> listParticle;
             simulation.writeParticles( listParticle );
             return listParticle;
         }
+
+        /** @brief 라이트 목록의 점광 수입니다. */
+        uint32 countPointLights( const vector<GPULight>& listLight )
+        {
+            uint32 pointLightCount = 0;
+            for ( const GPULight& light : listLight )
+            {
+                pointLightCount += static_cast<uint32>( light._directionType._w ) == shaderslot::kLightTypePoint ? 1u : 0u;
+            }
+            return pointLightCount;
+        }
+
+        /** @brief 방출기 로컬의 평면 y = @p height(위를 보는 면) 하나뿐인 충돌 씬입니다. */
+        class PlaneCollisionScene final : public IVfxCollisionScene
+        {
+        public:
+            explicit PlaneCollisionScene( float32 height )
+                : _height{ height }
+            {
+            }
+
+            bool castSegment( const float3& from, const float3& to, uint32 layerMask, VfxCollisionHit& outHit ) const override
+            {
+                (void)layerMask;
+                const bool bCrossesDownward = from._y >= _height && to._y < _height;
+                if ( bCrossesDownward == false )
+                    return false;
+                const float32 ratio = ( from._y - _height ) / ( from._y - to._y );
+                outHit._point       = from + ( to - from ) * ratio;
+                outHit._normal      = float3( 0.0f, 1.0f, 0.0f );
+                return true;
+            }
+
+        private:
+            float32 _height;
+        };
     } // namespace
 } // namespace sw
 
@@ -250,7 +290,7 @@ SW_TEST_CASE( VfxCPUSimulationTest, ParticlesExpireAndTheEmitterFinishes )
     emitter._listBurst.push_back( sw::makeBurst( 0.0f, 10 ) );
     sw::VfxCPUSimulation simulation( emitter, 1 );
 
-    simulation.step( sw::kTestStepSeconds );
+    simulation.step( sw::kTestStepSeconds, nullptr );
     SW_EXPECT_EQUAL( uint32( 10 ), simulation.getAliveCount() );
     SW_EXPECT_FALSE( simulation.isFinished() );
 
@@ -304,8 +344,8 @@ SW_TEST_CASE( VfxCPUSimulationTest, LongFrameRunsAtMostTheStepLimit )
     sw::VfxCPUSimulation simulation( emitter, 1 );
 
     test::ScopedLogCollector collector;
-    simulation.update( 1.0f ); // 60 단계 몫 — 상한 8 단계만 돈다
-    simulation.update( 1.0f );
+    simulation.update( 1.0f, nullptr ); // 60 단계 몫 — 상한 8 단계만 돈다
+    simulation.update( 1.0f, nullptr );
     SW_EXPECT_NEAR_EQUAL( 16.0f, static_cast<float32>( simulation.getAliveCount() ), 1.0f );
     SW_EXPECT_EQUAL( uint32( 1 ), collector.countContaining( "dropping the rest" ) );
 }
@@ -332,6 +372,107 @@ SW_TEST_CASE( VfxCPUSimulationTest, WrittenParticlesFollowTheLifeCurves )
     SW_EXPECT_NEAR_EQUAL( 0.25f, listParticle[0]._color._y, 0.001f );
     SW_EXPECT_NEAR_EQUAL( 0.5f, listParticle[0]._color._w, 0.001f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, listParticle[0]._positionSize._x, 0.0001f );
+}
+
+/**
+ * @brief [VfxEffectDefTest] 그리는 모양마다 쓰는 칸만 받는다 — 메시는 메시 id 가 있고 텍스처가 없어야 하며, 띠는 입자 둘 이상, 라이트는 반경 · 세기가 있어야 한다
+ */
+SW_TEST_CASE( VfxEffectDefTest, RenderModeFieldsAreChecked )
+{
+    test::ScopedLogSuppressor suppressor;
+    const sw::VfxEmitterDef   billboard = sw::makeValidEmitter( "Billboard" );
+
+    sw::VfxEmitterDef mesh = billboard;
+    mesh._renderMode       = sw::VfxRenderMode::Mesh;
+    mesh._texturePath.clear();
+    mesh._mesh._meshID = "Cube";
+    SW_EXPECT_TRUE( mesh.validate( "mesh" ) );
+
+    sw::VfxEmitterDef meshWithTexture = mesh;
+    meshWithTexture._texturePath      = "game/vfx/spark.png";
+    sw::VfxEmitterDef meshWithoutMesh = mesh;
+    meshWithoutMesh._mesh._meshID.clear();
+    sw::VfxEmitterDef billboardWithMesh  = billboard;
+    billboardWithMesh._mesh._meshID      = "Cube";
+    sw::VfxEmitterDef shortRibbon        = billboard;
+    shortRibbon._renderMode              = sw::VfxRenderMode::Ribbon;
+    shortRibbon._maxParticles            = 1;
+    sw::VfxEmitterDef lightWithoutRadius = billboard;
+    lightWithoutRadius._light._maxLights = 2;
+    lightWithoutRadius._light._intensity = 1.0f;
+
+    const sw::VfxEmitterDef* arrBroken[] = { &meshWithTexture, &meshWithoutMesh, &billboardWithMesh, &shortRibbon, &lightWithoutRadius };
+    for ( const sw::VfxEmitterDef* pBroken : arrBroken )
+    {
+        SW_EXPECT_FALSE( pBroken->validate( pBroken->_name ) );
+    }
+}
+
+/**
+ * @brief [VfxCPUSimulationTest] 띠는 태어난 순서(오래된 것 먼저)로 낸다 — 지우기가 풀 안의 자리를 섞은 뒤에도
+ */
+SW_TEST_CASE( VfxCPUSimulationTest, RibbonParticlesAreWrittenInBirthOrder )
+{
+    sw::VfxEmitterDef emitter = sw::makeValidEmitter( "Trail" );
+    emitter._renderMode       = sw::VfxRenderMode::Ribbon;
+    emitter._lifetimeMin      = 0.5f; // 수명이 같으면 태어난 순서 = 수명 비율이 큰 순서
+    emitter._lifetimeMax      = 0.5f;
+    sw::VfxCPUSimulation simulation( emitter, 3 );
+
+    const sw::vector<sw::GPUParticle> listParticle = sw::runSteps( simulation, 50 ); // 앞 입자들이 죽어 마지막 입자와 자리를 바꾼 뒤
+    SW_ASSERT_TRUE( listParticle.size() > 2 );
+    for ( size_t index = 1; index < listParticle.size(); ++index )
+    {
+        SW_EXPECT_TRUE( listParticle[index - 1]._rotationLife._y > listParticle[index]._rotationLife._y );
+    }
+}
+
+/**
+ * @brief [VfxCPUSimulationTest] 충돌: 튀기는 닿은 면 위로 법선 속도를 반발 계수만큼 뒤집고, 없애기는 닿은 입자를 지운다. 충돌이 꺼진 방출기는 질의를 보지 않는다
+ */
+SW_TEST_CASE( VfxCPUSimulationTest, CollisionBouncesOrKills )
+{
+    sw::VfxEmitterDef emitter = sw::makeValidEmitter( "Drop" );
+    emitter._spawnRate        = 0.0f;
+    emitter._listBurst.push_back( sw::makeBurst( 0.0f, 1 ) );
+    emitter._lifetimeMin = 10.0f;
+    emitter._lifetimeMax = 10.0f;
+    emitter._velocityMin = sw::float3( 0.0f, -6.0f, 0.0f );
+    emitter._velocityMax = sw::float3( 0.0f, -6.0f, 0.0f );
+    emitter._gravity     = sw::float3( 0.0f, 0.0f, 0.0f );
+    const sw::PlaneCollisionScene floor( -0.5f );
+
+    sw::VfxEmitterDef bounce       = emitter;
+    bounce._collision._mode        = sw::VfxCollisionMode::Bounce;
+    bounce._collision._restitution = 0.5f;
+    sw::VfxCPUSimulation bounceSimulation( bounce, 1 );
+    for ( uint32 stepIndex = 0; stepIndex < 30; ++stepIndex ) // 0.5 초 — 0.083 초 뒤에 바닥에 닿는다
+    {
+        bounceSimulation.step( sw::kTestStepSeconds, &floor );
+    }
+    sw::vector<sw::GPUParticle> listBounced;
+    bounceSimulation.writeParticles( listBounced );
+    SW_ASSERT_EQUAL( size_t( 1 ), listBounced.size() );
+    SW_EXPECT_TRUE( listBounced[0]._positionSize._y > -0.5f ); // 바닥 위로 튀어 올라 있다(속도 3 으로 위로)
+
+    sw::VfxEmitterDef kill = emitter;
+    kill._collision._mode  = sw::VfxCollisionMode::Kill;
+    sw::VfxCPUSimulation killSimulation( kill, 1 );
+    for ( uint32 stepIndex = 0; stepIndex < 30; ++stepIndex )
+    {
+        killSimulation.step( sw::kTestStepSeconds, &floor );
+    }
+    SW_EXPECT_EQUAL( uint32( 0 ), killSimulation.getAliveCount() );
+
+    sw::VfxCPUSimulation noCollision( emitter, 1 ); // 충돌이 꺼져 있으면 질의가 있어도 뚫고 내려간다
+    for ( uint32 stepIndex = 0; stepIndex < 30; ++stepIndex )
+    {
+        noCollision.step( sw::kTestStepSeconds, &floor );
+    }
+    sw::vector<sw::GPUParticle> listFallen;
+    noCollision.writeParticles( listFallen );
+    SW_ASSERT_EQUAL( size_t( 1 ), listFallen.size() );
+    SW_EXPECT_NEAR_EQUAL( -3.0f, listFallen[0]._positionSize._y, 0.01f );
 }
 
 /**
@@ -534,4 +675,48 @@ SW_TEST_CASE( VfxComponentTest, ParticlesInterleaveWithTransparentMeshes )
         SW_EXPECT_EQUAL( slotIndex < 2, bNearEffect ); // 이 뷰에서는 z 5 가 가장 멀다
         SW_EXPECT_EQUAL( bNearEffect ? 0u : 1u, slot._drawPosition );
     }
+}
+
+/**
+ * @brief [VfxComponentTest] 띠 · 메시 · 라이트 표본 효과 — 띠는 입자 그리기 하나(띠 표시), 메시 방출기는 풀 크기의 인스턴스 배치로 메시 경로를 타고
+ *        입자 그리기를 내지 않으며, 파티클 라이트는 씬 라이트 목록에 점광으로 붙는다(방출기마다 `_maxLights` 개까지)
+ */
+SW_TEST_CASE( VfxComponentTest, TrailSampleDrivesRibbonMeshAndLights )
+{
+    sw::Scene scene( "VfxTrail" );
+    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    sw::VfxComponent* pVfx = scene.getObjectManager()->createGameObject( sw::hashed_string( "Trail" ) )->addComponent<sw::VfxComponent>();
+    SW_ASSERT_NOT_NULL( pVfx );
+    pVfx->setEffectPath( "engine/vfx/trail.vfx.xml" );
+    SW_ASSERT_EQUAL( uint32( 2 ), pVfx->getEmitterCount() );
+    SW_EXPECT_TRUE( pVfx->getEmitterDef( 0 )._renderMode == sw::VfxRenderMode::Ribbon );
+    SW_EXPECT_TRUE( pVfx->findEmitterMeshBatch( 0 ) == nullptr );
+    const sw::MeshInstanceBatch* pMeshBatch = pVfx->findEmitterMeshBatch( 1 );
+    SW_ASSERT_NOT_NULL( pMeshBatch );
+    SW_EXPECT_EQUAL( pVfx->getEmitterDef( 1 )._maxParticles, pMeshBatch->getCount() );
+    SW_EXPECT_TRUE( pMeshBatch->isRegistered() );
+
+    pVfx->play();
+    sw::tickComponentFor( *pVfx, 0.3f ); // 물리 씬이 없다 — 충돌 없이 돈다
+    SW_ASSERT_NOT_NULL( pVfx->getEmitterParticles( 1 ).get() );
+    SW_EXPECT_EQUAL( size_t( 12 ), pVfx->getEmitterParticles( 1 )->size() );
+    // 살아 있는 자리는 입자 크기 · 위치의 행렬, 남는 자리는 크기 0 이다.
+    SW_EXPECT_TRUE( pMeshBatch->getEntry( 0 )._world.getMaximumAxisScale() > 0.0f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, pMeshBatch->getEntry( 15 )._world.getMaximumAxisScale(), 0.0001f );
+
+    sw::GPUSceneBuilder builder;
+    builder.populateFromScene( &scene, sw::float3( 0.0f, 0.0f, -10.0f ) );
+    SW_ASSERT_EQUAL( size_t( 1 ), builder.getParticleBatches().size() );
+    SW_EXPECT_TRUE( builder.getParticleBatches()[0]._bRibbon == SW_TRUE );
+
+    // 씬에 라이트 컴포넌트가 없으므로 점광은 모두 파티클 라이트다.
+    sw::vector<sw::GPULight> listLight;
+    sw::collectSceneLights( &scene, listLight );
+    SW_EXPECT_EQUAL( pVfx->getEmitterDef( 1 )._light._maxLights, sw::countPointLights( listLight ) );
+
+    // 멈추면 메시 항목은 모두 크기 0, 파티클 라이트도 빠진다.
+    pVfx->stop();
+    SW_EXPECT_NEAR_EQUAL( 0.0f, pMeshBatch->getEntry( 0 )._world.getMaximumAxisScale(), 0.0001f );
+    sw::collectSceneLights( &scene, listLight );
+    SW_EXPECT_EQUAL( uint32( 0 ), sw::countPointLights( listLight ) );
 }

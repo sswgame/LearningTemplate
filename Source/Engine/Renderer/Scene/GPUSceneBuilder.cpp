@@ -863,16 +863,21 @@ namespace sw
             const float32  sizeScale = world.getMaximumAxisScale();
             for ( uint32 emitterIndex = 0; emitterIndex < pVfx->getEmitterCount(); ++emitterIndex )
             {
-                const shared_ptr<const vector<GPUParticle>>& pListParticle = pVfx->getEmitterParticles( emitterIndex );
-                if ( pListParticle == nullptr || pListParticle->empty() )
+                // 메시 방출기는 메시 인스턴스 배치로 메시 경로를 탄다(`VfxComponent`). 띠는 이웃 둘이 있어야 한 마디다.
+                const VfxEmitterDef&                         def            = pVfx->getEmitterDef( emitterIndex );
+                const shared_ptr<const vector<GPUParticle>>& pListParticle  = pVfx->getEmitterParticles( emitterIndex );
+                const bool                                   bRibbon        = def._renderMode == VfxRenderMode::Ribbon;
+                const size_t                                 minParticles   = bRibbon ? 2u : 1u;
+                const bool                                   bNothingToDraw = def._renderMode == VfxRenderMode::Mesh || pListParticle == nullptr || pListParticle->size() < minParticles;
+                if ( bNothingToDraw )
                     continue;
-                const VfxEmitterDef& def   = pVfx->getEmitterDef( emitterIndex );
-                GPUParticleBatch&    batch = listBatch.emplace_back();
-                batch._pListParticle       = pListParticle;
-                batch._world               = world;
-                batch._texturePath         = hashed_string( def._texturePath );
-                batch._sizeScale           = sizeScale;
-                batch._bAdditive           = def._blendMode == VfxBlendMode::Additive ? SW_TRUE : SW_FALSE;
+                GPUParticleBatch& batch = listBatch.emplace_back();
+                batch._bRibbon          = bRibbon ? SW_TRUE : SW_FALSE;
+                batch._pListParticle    = pListParticle;
+                batch._world            = world;
+                batch._texturePath      = hashed_string( def._texturePath );
+                batch._sizeScale        = sizeScale;
+                batch._bAdditive        = def._blendMode == VfxBlendMode::Additive ? SW_TRUE : SW_FALSE;
             }
         }
         if ( listBatch.empty() )

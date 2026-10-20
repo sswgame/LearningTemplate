@@ -332,6 +332,7 @@ namespace sw
         hashed_string                         _texturePath{};         ///< 입자 텍스처(리소스 id)
         float32                               _sizeScale{ 1.0f };     ///< 방출기 행렬의 최대 축 배율 — 입자 크기에 곱한다
         uint8                                 _bAdditive{ SW_FALSE }; ///< 더하기 블렌드(`VfxBlendMode::Additive`)면 SW_TRUE
+        uint8                                 _bRibbon{ SW_FALSE };   ///< 띠(`VfxRenderMode::Ribbon`)면 SW_TRUE — 입자는 태어난 순서이고 이웃끼리 잇는다(입자 둘 이상)
     };
 } // namespace sw
 
