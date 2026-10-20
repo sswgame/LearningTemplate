@@ -9,6 +9,7 @@
 
 namespace sw
 {
+    // X11 KeySym 에서 Key 로 가는 switch 표이고 케이스마다 한 줄이라 나누지 않는다.
     Key InputKeyTable::mapX11KeySym( uint64 keySym )
     {
         switch ( keySym )
