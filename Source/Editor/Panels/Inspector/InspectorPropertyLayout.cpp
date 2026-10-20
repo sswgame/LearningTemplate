@@ -147,12 +147,12 @@ namespace sw::editor
         return format;
     }
 
-    InspectorNumericRange InspectorPropertyLayout::getNumericRange( const PropertyInfo& prop, const void* pInstance )
+    InspectorNumericRange InspectorPropertyLayout::getNumericRange( const PropertyInfo& prop, const ObjectAddress instance )
     {
         const PropertyMetadata& meta = *prop._metadata;
         InspectorNumericRange   range;
         // 허용 범위는 읽기 공통 끝(`SerializerUtil::isWithinDeclaredRanges`)과 같은 함수로 푼다 — 필드 경계는 그 객체의 지금 값이다.
-        const PropertyAllowedRange allowed = meta.computeAllowedRange( pInstance );
+        const PropertyAllowedRange allowed = meta.computeAllowedRange( instance.get() );
         range._bHasClampMin                = allowed._bHasMin;
         range._bHasClampMax                = allowed._bHasMax;
         range._clampMin                    = allowed._min;

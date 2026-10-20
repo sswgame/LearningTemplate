@@ -126,8 +126,8 @@ namespace sw
                     uniqueMatchedPropHashes.reserve( numProps );
                 // 읽지 못한 필드를 넘기고 이어 읽는 읽기(소프트, 오브젝트 상태의 엄격)는 그 필드를 **읽기 전 값**으로 남긴다. 컨테이너 · 구조체는 원소와 필드를
                 // 채운 뒤 끝에서 실패하므로 읽다 만 값이 남는다. 그래서 읽기 전에 값을 바이트로 담아 두고 실패하면 되돌린다. 실패하면 객체째 버리는 엄격 읽기는 담지 않는다.
-                const bool    bContinuesAfterUnreadable = bStrict == false || context.skipsUnreadableProperties();
-                vector<uint8> beforeReadBytes;
+                const bool           bContinuesAfterUnreadable = bStrict == false || context.skipsUnreadableProperties();
+                PropertyReadRollback rollback;
 
                 for ( uint32 propIndex = 0; propIndex < propCount; ++propIndex )
                 {
@@ -178,19 +178,8 @@ namespace sw
                         continue;
                     }
 
-                    // 소유 포인터 목록은 담아 두지 않는다. 되돌리면 팩토리가 컴포넌트를 **새로** 만든다(다른 객체다). 읽다 만 그 목록은 아래에서 읽기 실패로 멈춘다.
-                    const bool bOwnedPointerList  = prop._bIsContainer == SW_TRUE && SerializerUtil::isOwnedPointerElementType( prop._elementTypeName );
-                    const bool bKeepsValueOnError = bContinuesAfterUnreadable && bOwnedPointerList == false;
-                    if ( bKeepsValueOnError )
-                    {
-                        beforeReadBytes.clear();
-                        if ( SerializerUtil::writePropertyBinary( prop, ObjectAddress{ pInstance }, beforeReadBytes, context ) == false )
-                        {
-                            SW_LOG_ERROR( "%#::%# (%#): the value before the read cannot be kept, so a failed read could not be undone - the object is not read",
-                                          typeInfo._name.c_str(), prop._name.c_str(), prop._typeName.c_str() );
-                            return false;
-                        }
-                    }
+                    if ( bContinuesAfterUnreadable && rollback.keepValueBeforeRead( typeInfo, prop, ObjectAddress{ pInstance }, context ) == false )
+                        return false;
 
                     // **기록 타입을 같이 넘긴다.** 태그가 그것을 가지고 있는데 넘기지 않으면 POD -> string 이관이 크기로만
                     // 타입을 짐작한다(정수와 실수를 가르지 못한다).
@@ -217,19 +206,9 @@ namespace sw
                         // 컴포넌트를, 그래서 그 뒤 컴포넌트까지 버리던 경로다. 혼합 빌드 사이의 메시지는 받지 않는다(그 필드가 읽기 전 값으로 남는다).
                         if ( bContinuesAfterUnreadable == false )
                             return false;
-                        if ( bOwnedPointerList )
-                        {
-                            SW_LOG_ERROR( "%#::%# (%#): the owned pointer list could not be read and is half filled - the object is not read", typeInfo._name.c_str(),
-                                          prop._name.c_str(), prop._typeName.c_str() );
+                        // 읽다 만 값을 읽기 전 값으로 되돌린다. 되돌릴 수 없으면(소유 포인터 목록, 코덱 결함) 객체째 실패다.
+                        if ( rollback.restoreValueBeforeRead( MutableObjectAddress{ pInstance }, context ) == false )
                             return false;
-                        }
-                        // 읽다 만 값을 읽기 전 값으로 되돌린다. 이 빌드가 방금 쓴 바이트라 되읽지 못하면 코덱의 결함이다 — 읽다 만 값을 받지 않고 멈춘다.
-                        if ( SerializerUtil::applyPropertyBinary( prop, MutableObjectAddress{ pInstance }, beforeReadBytes.data(), beforeReadBytes.size(), context ) == false )
-                        {
-                            SW_LOG_ERROR( "%#::%# (%#): the value before the failed read could not be put back - the object is not read", typeInfo._name.c_str(),
-                                          prop._name.c_str(), prop._typeName.c_str() );
-                            return false;
-                        }
                         if ( bStrict )
                             warnUnreadableFieldOnce( typeInfo, prop );
                         else
@@ -439,7 +418,7 @@ namespace sw
     {
         // 선언된 범위는 읽기 공통 끝에서 본다(JSON · XML 과 같다). 범위 밖 값은 성공으로 돌아오지 않는다.
         return BinarySerializerInternal::deserializeTagged( pInstance, typeInfo, pData, dataSize, context, nullptr, true ) &&
-               SerializerUtil::isWithinDeclaredRanges( typeInfo, pInstance );
+               SerializerUtil::isWithinDeclaredRanges( typeInfo, ObjectAddress{ pInstance } );
     }
 
     SoftReadResult BinarySerializer::deserializeSoft( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
@@ -451,7 +430,7 @@ namespace sw
         // 소프트 읽기의 태그 루프는 스트림이 깨졌을 때만 실패한다(모르는 · 읽지 못한 칸은 orphan 이다).
         if ( BinarySerializerInternal::deserializeTagged( pInstance, typeInfo, pData, dataSize, context, pOutOrphans, false ) == false )
             return SoftReadResult::NotParsed;
-        return SerializerUtil::isWithinDeclaredRanges( typeInfo, pInstance ) ? SoftReadResult::Read : SoftReadResult::Rejected;
+        return SerializerUtil::isWithinDeclaredRanges( typeInfo, ObjectAddress{ pInstance } ) ? SoftReadResult::Read : SoftReadResult::Rejected;
     }
 
     bool BinarySerializer::serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo, vector<uint8>& outListBuffer,
@@ -481,12 +460,12 @@ namespace sw
         const bool               bIgnoreOrphan = context.skipsUnknownProperties() && context.skipsUnreadableProperties();
         const SchemaOrphanPolicy orphanPolicy  = bIgnoreOrphan ? SchemaOrphanPolicy::Ignore : SchemaOrphanPolicy::Reject;
         return runVersionedDeserialize(
-            outVersion, pInstance, typeInfo, currentVersion, pLegacyTypeInfo, context,
+            outVersion, MutableObjectAddress{ pInstance }, typeInfo, currentVersion, pLegacyTypeInfo, context,
             SchemaVersionSource::Stream, orphanPolicy,
             SW_DELEGATE_LAMBDA( SoftDeserializeFn,
-                                [&]( void* pTarget, const TypeInfo& targetType, vector<SchemaOrphanValue>& listOrphan, uint32& ) -> bool
+                                [&]( const MutableObjectAddress target, const TypeInfo& targetType, vector<SchemaOrphanValue>& listOrphan, uint32& ) -> bool
         {
-            return deserializeSoft( pTarget, targetType, pBody, bodySize, &listOrphan, context ) == SoftReadResult::Read;
+            return deserializeSoft( target.get(), targetType, pBody, bodySize, &listOrphan, context ) == SoftReadResult::Read;
         } ) );
     }
 

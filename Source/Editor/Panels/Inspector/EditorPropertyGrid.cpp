@@ -105,14 +105,14 @@ namespace sw::editor
              * @brief 기본값과 같은 프로퍼티를 빼고, 남은 것이 없는 카테고리는 머리째 뺍니다.
              * @details 다중 선택에서 값이 갈린(혼합) 프로퍼티는 남깁니다 — 값이 다르면 선택 중 적어도 하나는 기본값이 아닙니다. 갈리지 않았으면 모두 주 선택과 같으므로 주 선택만 보면 됩니다.
              */
-            static void removeDefaultValued( void* pInstance, const void* pDefaultInstance, Delegate<bool( const PropertyInfo& )>& isMixed, vector<InspectorPropertyGroup>& inoutListGroup )
+            static void removeDefaultValued( MutableObjectAddress instance, ObjectAddress defaultInstance, Delegate<bool( const PropertyInfo& )>& isMixed, vector<InspectorPropertyGroup>& inoutListGroup )
             {
                 for ( InspectorPropertyGroup& group : inoutListGroup )
                 {
-                    VectorUtil::removeIf( group._listProperty, [pInstance, pDefaultInstance, &isMixed]( const PropertyInfo* pProp )
+                    VectorUtil::removeIf( group._listProperty, [instance, defaultInstance, &isMixed]( const PropertyInfo* pProp )
                     {
                         const bool bMixed = isMixed.isBound() && isMixed( *pProp );
-                        return bMixed == false && EditorDefaultObjects::isDefaultValue( *pProp, pInstance, pDefaultInstance );
+                        return bMixed == false && EditorDefaultObjects::isDefaultValue( *pProp, instance, defaultInstance );
                     } );
                 }
                 VectorUtil::removeIf( inoutListGroup, []( const InspectorPropertyGroup& group )
@@ -303,22 +303,22 @@ namespace sw::editor
         endTarget();
     }
 
-    void EditorPropertyGrid::resetPropertyToDefault( void* pInstance, const PropertyInfo& prop, const void* pDefaultInstance )
+    void EditorPropertyGrid::resetPropertyToDefault( const MutableObjectAddress instance, const PropertyInfo& prop, const ObjectAddress defaultInstance )
     {
-        const string text = pDefaultInstance != nullptr ? SerializerUtil::formatPropertyText( prop, ObjectAddress{ pDefaultInstance }, SerializeContext::getDefault( SerializePurpose::Authoring ) )
-                                                        : prop._metadata->_defaultValue;
-        applyPropertyTextAsEdit( pInstance, prop, text, "Reset to Default" );
+        const string text = defaultInstance.get() != nullptr ? SerializerUtil::formatPropertyText( prop, defaultInstance, SerializeContext::getDefault( SerializePurpose::Authoring ) )
+                                                             : prop._metadata->_defaultValue;
+        applyPropertyTextAsEdit( instance, prop, text, "Reset to Default" );
     }
 
-    void EditorPropertyGrid::applyPropertyTextAsEdit( void* pInstance, const PropertyInfo& prop, string_view text, const utf8* pUndoLabel )
+    void EditorPropertyGrid::applyPropertyTextAsEdit( const MutableObjectAddress instance, const PropertyInfo& prop, string_view text, const utf8* pUndoLabel )
     {
         // 그 프로퍼티 하나만 쓰고(비트필드는 그 비트만) 알린 뒤 되돌리기에 남긴다. `{"이름":값}` 을 JSON 으로 읽히면 읽기에서 빠진
         // 프로퍼티마다 기본값을 채우므로 다른 프로퍼티까지 바뀐다. 그래서 텍스트 하나로 프로퍼티 하나만 쓴다.
         GameObject*  pOwnerObj = _pEditTargetComponent != nullptr ? _pEditTargetComponent->getOwner() : _pEditTargetObject;
         const string value{ text };
-        auto         apply = [this, &prop, pInstance, &value]()
+        auto         apply = [this, &prop, instance, &value]()
         {
-            if ( SerializerUtil::applyPropertyText( prop, MutableObjectAddress{ pInstance }, value, SerializeContext::getDefault( SerializePurpose::Authoring ) ) )
+            if ( SerializerUtil::applyPropertyText( prop, instance, value, SerializeContext::getDefault( SerializePurpose::Authoring ) ) )
                 notifyPropertyEdited( prop );
             else
                 SW_LOG_WARNING( "'%#' could not be applied to %#", value.c_str(), prop._name.c_str() );
@@ -382,15 +382,17 @@ namespace sw::editor
         if ( pSectionTitle != nullptr )
             ImGui::SeparatorText( pSectionTitle );
         // 컴포넌트이면 그 타입의 기본 인스턴스(CDO)와 비교한다. 중첩 구조체와 씬 밖 객체는 메타의 기본값 텍스트만 있다.
-        const void*    pDefaultInstance   = nullptr;
-        EditorContext* pDefaultContext    = EditorContext::get();
-        const bool     bIsEditedComponent = _pEditTargetComponent != nullptr && pInstance == _pEditTargetComponent && pDefaultContext != nullptr;
+        const MutableObjectAddress instance{ pInstance };
+        const void*                pDefaultInstance   = nullptr;
+        EditorContext*             pDefaultContext    = EditorContext::get();
+        const bool                 bIsEditedComponent = _pEditTargetComponent != nullptr && pInstance == _pEditTargetComponent && pDefaultContext != nullptr;
         if ( bIsEditedComponent )
             pDefaultInstance = pDefaultContext->getSubsystem<EditorDefaultObjects>().findDefault( *pTypeInfo );
+        const ObjectAddress defaultInstance{ pDefaultInstance };
         // 바뀐 것만 보기이면 기본값과 같은 프로퍼티를 뺀다. 남은 것이 없는 카테고리는 머리째 감춘다.
         if ( _bShowModifiedOnly )
         {
-            Internal::removeDefaultValued( pInstance, pDefaultInstance, _isMixed, listGroup );
+            Internal::removeDefaultValued( instance, defaultInstance, _isMixed, listGroup );
             if ( listGroup.empty() )
                 return;
         }
@@ -411,18 +413,18 @@ namespace sw::editor
                 for ( const PropertyInfo* prop : props )
                 {
                     // `EditCondition` 이 거짓이면 숨기거나(EditConditionHides) 막는다. 판정은 ImGui 에 의존하지 않는 `PropertyEditCondition` 이 한다.
-                    const PropertyEditState editState = PropertyEditCondition::getEditState( *pTypeInfo, *prop, pInstance );
+                    const PropertyEditState editState = PropertyEditCondition::getEditState( *pTypeInfo, *prop, instance );
                     if ( editState == PropertyEditState::Hidden )
                         continue;
 
-                    drawPropertyRow( pInstance, *pTypeInfo, *prop, editState == PropertyEditState::Disabled, bFavoriteTarget, pDefaultInstance );
+                    drawPropertyRow( instance, *pTypeInfo, *prop, editState == PropertyEditState::Disabled, bFavoriteTarget, defaultInstance );
                 }
                 ImGui::EndTable();
             }
         }
     }
 
-    void EditorPropertyGrid::drawPropertyRow( void* pInstance, const TypeInfo& typeInfo, const PropertyInfo& prop, bool bDisabled, bool bFavoriteTarget, const void* pDefaultInstance )
+    void EditorPropertyGrid::drawPropertyRow( const MutableObjectAddress instance, const TypeInfo& typeInfo, const PropertyInfo& prop, bool bDisabled, bool bFavoriteTarget, const ObjectAddress defaultInstance )
     {
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
@@ -449,14 +451,14 @@ namespace sw::editor
         formatstring( labelMark.data(), labelMark.capacity(), "inspector.label.%#.%#", typeInfo._name.c_str(), prop._name.c_str() );
         EditorSelfTestMarks::note( labelMark.c_str() );
 
-        drawPropertyRowMenu( pInstance, prop, favoriteKey, bFavoriteTarget, bFavorite, pDefaultInstance );
+        drawPropertyRowMenu( instance, prop, favoriteKey, bFavoriteTarget, bFavorite, defaultInstance );
 
         // 기본값과 다르면 이름 영역 끝에 되돌리기 버튼(언리얼의 노란 화살표)을 둔다. 기본값은 컴포넌트의 기본 인스턴스(CDO)이고, 없으면 메타 텍스트다.
-        if ( EditorDefaultObjects::isDefaultValue( prop, pInstance, pDefaultInstance ) == false )
+        if ( EditorDefaultObjects::isDefaultValue( prop, instance, defaultInstance ) == false )
         {
             ImGui::SameLine();
             if ( ImGui::SmallButton( editoricon::kRefresh ) )
-                resetPropertyToDefault( pInstance, prop, pDefaultInstance );
+                resetPropertyToDefault( instance, prop, defaultInstance );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "ResetToDefaultTooltip" ) );
             fixed_string<constant::kMaxBuffer128> resetMark;
             formatstring( resetMark.data(), resetMark.capacity(), "inspector.reset.%#.%#", typeInfo._name.c_str(), prop._name.c_str() );
@@ -474,7 +476,7 @@ namespace sw::editor
         ImGui::PushID( prop._name.c_str() );
         ImGui::SetNextItemWidth( -FLT_MIN );
         ImGui::BeginDisabled( bDisabled );
-        drawPropertyWidget( pInstance, prop );
+        drawPropertyWidget( instance, prop );
         ImGui::EndDisabled();
         // 시나리오가 누를 수 있게 값 입력란에 이름을 남긴다(`inspector.property.<타입>.<프로퍼티>`). 테스트를 켰을 때만 기록한다.
         fixed_string<constant::kMaxBuffer128> mark;
@@ -483,7 +485,7 @@ namespace sw::editor
         ImGui::PopID();
     }
 
-    void EditorPropertyGrid::drawPropertyRowMenu( void* pInstance, const PropertyInfo& prop, const string& favoriteKey, bool bFavoriteTarget, bool bFavorite, const void* pDefaultInstance )
+    void EditorPropertyGrid::drawPropertyRowMenu( const MutableObjectAddress instance, const PropertyInfo& prop, const string& favoriteKey, bool bFavoriteTarget, bool bFavorite, const ObjectAddress defaultInstance )
     {
         if ( ImGui::BeginPopupContextItem( "PropCtx" ) == false )
             return;
@@ -498,24 +500,24 @@ namespace sw::editor
             }
             ImGui::Separator();
         }
-        if ( pDefaultInstance != nullptr || prop._metadata->_defaultValue.empty() == false )
+        if ( defaultInstance.get() != nullptr || prop._metadata->_defaultValue.empty() == false )
         {
             if ( ImGui::MenuItem( "Reset to Default" ) )
-                resetPropertyToDefault( pInstance, prop, pDefaultInstance );
+                resetPropertyToDefault( instance, prop, defaultInstance );
         }
         if ( ImGui::MenuItem( "Copy Value" ) )
-            ImGui::SetClipboardText( SerializerUtil::formatPropertyText( prop, ObjectAddress{ pInstance }, SerializeContext::getDefault( SerializePurpose::Authoring ) ).c_str() );
+            ImGui::SetClipboardText( SerializerUtil::formatPropertyText( prop, instance, SerializeContext::getDefault( SerializePurpose::Authoring ) ).c_str() );
         // 타입 핸들은 선택기만이 입력 길이다. 글로 붙이면 대상 타입을 확인하지 않은 값이 들어간다.
         const bool bPasteAllowed = ImGui::GetClipboardText() != nullptr && prop._handleTargetTypeName.empty();
         if ( ImGui::MenuItem( "Paste Value", nullptr, false, bPasteAllowed ) )
-            applyPropertyTextAsEdit( pInstance, prop, ImGui::GetClipboardText(), "Paste Value" );
+            applyPropertyTextAsEdit( instance, prop, ImGui::GetClipboardText(), "Paste Value" );
         EditorSelfTestMarks::note( "inspector.menu.pasteValue" );
         if ( ImGui::MenuItem( "Copy Property Name" ) )
             ImGui::SetClipboardText( prop._name.c_str() );
         ImGui::EndPopup();
     }
 
-    void EditorPropertyGrid::drawPropertyWidget( void* pInstance, const PropertyInfo& prop )
+    void EditorPropertyGrid::drawPropertyWidget( const MutableObjectAddress instance, const PropertyInfo& prop )
     {
         // ImGui 는 이번 프레임에 활성 아이템이 편집됐는지를 컨텍스트에 전역으로 기록한다. 위젯을
         // 그리기 전후로 그 플래그의 **변화**를 보면 "그 사이에 그린 이 프로퍼티가 편집됐다" 를 정확히
@@ -525,7 +527,7 @@ namespace sw::editor
         const bool    bEditedBefore = g.ActiveIdHasBeenEditedThisFrame;
 
         ++_propertyDrawDepth;
-        drawPropertyWidgetBody( pInstance, prop );
+        drawPropertyWidgetBody( instance, prop );
         --_propertyDrawDepth;
 
         // 컨테이너와 중첩 구조체는 이 함수가 재귀한다. 알림은 가장 바깥에서 한 번만 한다.
@@ -551,7 +553,7 @@ namespace sw::editor
             (void)ObjectValidation::reportGameObject( *pOwner, false );
     }
 
-    void EditorPropertyGrid::drawPropertyWidgetBody( void* pInstance, const PropertyInfo& prop )
+    void EditorPropertyGrid::drawPropertyWidgetBody( const MutableObjectAddress instance, const PropertyInfo& prop )
     {
         EditorContext* pContext = EditorContext::get();
         if ( pContext == nullptr )
@@ -560,7 +562,7 @@ namespace sw::editor
         IInspectorProperty* pProperty = pContext->getSubsystem<InspectorPropertyManager>().find( prop._typeName.c_str() );
         if ( pProperty != nullptr )
         {
-            if ( pProperty->draw( pInstance, prop, *this ) )
+            if ( pProperty->draw( instance, prop, *this ) )
                 return;
         }
 
@@ -573,27 +575,27 @@ namespace sw::editor
         const EnumInfo* pEnumInfo = pRegistry->findEnum( prop._typeName );
         if ( pEnumInfo != nullptr )
         {
-            drawEnumProperty( pInstance, prop, *pEnumInfo, bReadOnly );
+            drawEnumProperty( instance, prop, *pEnumInfo, bReadOnly );
             return;
         }
 
         if ( prop._bIsContainer && prop._containerWrapper != nullptr )
         {
-            drawContainerProperty( pInstance, prop, bReadOnly );
+            drawContainerProperty( instance, prop, bReadOnly );
             return;
         }
 
         const TypeInfo* pFieldType = pRegistry->findType( prop._typeName );
         if ( pFieldType != nullptr || prop._typeName.isPredefinedType( PredefinedNameType::NameType_string ) )
         {
-            drawStructOrStringProperty( pInstance, prop, pFieldType );
+            drawStructOrStringProperty( instance, prop, pFieldType );
             return;
         }
 
         ImGui::TextDisabled( "No inspector for %s", prop._typeName.c_str() );
     }
 
-    void EditorPropertyGrid::drawEnumProperty( void* pInstance, const PropertyInfo& prop, const EnumInfo& enumInfo, bool bReadOnly )
+    void EditorPropertyGrid::drawEnumProperty( const MutableObjectAddress instance, const PropertyInfo& prop, const EnumInfo& enumInfo, bool bReadOnly )
     {
         using Internal = EditorPropertyGridInternal;
 
@@ -604,7 +606,7 @@ namespace sw::editor
         // enum 의 실제 크기(`EnumInfo::_size` 와 부호)로 읽고 쓴다. 항상 int32 로 읽고 쓰면, 엔진의 enum 은 대부분 uint8 이나
         // uint16 이므로 하나를 고를 때마다 뒤의 필드를 덮어쓰고(`CameraComponent::_role` 을 고르면 바로 뒤의 `_bOrthographic` 이 꺼진다),
         // 읽을 때는 이웃 바이트가 섞여 멀쩡한 값이 "<Unknown>" 으로 보인다.
-        void* pEnumMemory = prop.getValuePtr<void>( pInstance );
+        void* pEnumMemory = prop.getValuePtr<void>( instance.get() );
         if ( pEnumMemory == nullptr )
             return;
         const int64 currentValue = enumInfo.readValueFromMemory( pEnumMemory );
@@ -625,14 +627,14 @@ namespace sw::editor
         }
     }
 
-    void EditorPropertyGrid::drawContainerProperty( void* pInstance, const PropertyInfo& prop, bool bReadOnly )
+    void EditorPropertyGrid::drawContainerProperty( const MutableObjectAddress instance, const PropertyInfo& prop, bool bReadOnly )
     {
         const utf8* pLabel = "##value";
 
         // 이 함수의 모든 분기는 무언가를 그리고 끝난다. 아무것도 그리지 않고 반환하면 인스펙터에는 빈 항목 하나만 남아,
         // 값이 비었는지, 그리지 못하는 것인지, 버그인지 화면만 보고는 구분할 수 없다. 모르는 타입도 "No inspector for ..." 라고
         // 알린다. 맵 프로퍼티도 실제로 있다.
-        void* pContainer = prop.getRawPtr( pInstance );
+        void* pContainer = prop.getRawPtr( instance.get() );
         if ( pContainer == nullptr )
         {
             ImGui::TextDisabled( "컨테이너를 읽을 수 없습니다 (%s)", prop._typeName.c_str() );
@@ -649,13 +651,13 @@ namespace sw::editor
                 return;
             }
 
-            drawMapContainer( pContainer, prop, *pMap, bReadOnly );
+            drawMapContainer( MutableValueAddress{ pContainer }, prop, *pMap, bReadOnly );
             return;
         }
         // 원소가 곧 정렬 키이거나 해시 키인 컨테이너(`set`)는 제자리에서 고칠 수 없으므로 지우고 다시 넣는다.
         if ( pSeq->allowsInPlaceElementWrite() == false )
         {
-            drawKeyedSequenceContainer( pContainer, prop, *pSeq, bReadOnly );
+            drawKeyedSequenceContainer( MutableValueAddress{ pContainer }, prop, *pSeq, bReadOnly );
             return;
         }
 
@@ -704,8 +706,9 @@ namespace sw::editor
 
                 const PropertyInfo elemProp = InspectorPropertyLayout::makeElementProperty( prop );
 
+                // 원소 프로퍼티는 오프셋 0 이라 원소의 값 주소가 곧 그 프로퍼티를 가진 객체 주소다.
                 ImGui::SetNextItemWidth( -FLT_MIN );
-                drawPropertyWidget( pElem, elemProp );
+                drawPropertyWidget( MutableObjectAddress{ pElem }, elemProp );
                 ImGui::PopID();
             }
 
@@ -714,9 +717,10 @@ namespace sw::editor
         }
     }
 
-    void EditorPropertyGrid::drawMapContainer( void* pContainer, const PropertyInfo& prop, IMapContainerWrapper& mapWrapper, bool bReadOnly )
+    void EditorPropertyGrid::drawMapContainer( const MutableValueAddress container, const PropertyInfo& prop, IMapContainerWrapper& mapWrapper, bool bReadOnly )
     {
-        const SerializeContext&               context = SerializeContext::getDefault( SerializePurpose::Authoring );
+        void* const                           pContainer = container.get();
+        const SerializeContext&               context    = SerializeContext::getDefault( SerializePurpose::Authoring );
         fixed_string<constant::kMaxBuffer128> headerBuf;
         formatstring( headerBuf.data(), headerBuf.capacity(), "[%# -> %#] (%# entries)", prop._keyTypeName.c_str(), prop._elementTypeName.c_str(),
                       mapWrapper.getSize( pContainer ) );
@@ -743,7 +747,7 @@ namespace sw::editor
             ImGui::SameLine();
             ImGui::BeginDisabled( bElementEditable == false );
             ImGui::SetNextItemWidth( -FLT_MIN );
-            drawPropertyWidget( pValue, valueProp );
+            drawPropertyWidget( MutableObjectAddress{ pValue }, valueProp ); // 값 프로퍼티는 오프셋 0 이라 값 주소가 곧 객체 주소다
             ImGui::EndDisabled();
             ImGui::PopID();
             ++ordinal;
@@ -788,10 +792,11 @@ namespace sw::editor
         ImGui::TreePop();
     }
 
-    void EditorPropertyGrid::drawKeyedSequenceContainer( void* pContainer, const PropertyInfo& prop, ISequenceContainerWrapper& sequence, bool bReadOnly )
+    void EditorPropertyGrid::drawKeyedSequenceContainer( const MutableValueAddress container, const PropertyInfo& prop, ISequenceContainerWrapper& sequence, bool bReadOnly )
     {
-        const SerializeContext&               context = SerializeContext::getDefault( SerializePurpose::Authoring );
-        const size_t                          count   = sequence.getSize( pContainer );
+        void* const                           pContainer = container.get();
+        const SerializeContext&               context    = SerializeContext::getDefault( SerializePurpose::Authoring );
+        const size_t                          count      = sequence.getSize( pContainer );
         fixed_string<constant::kMaxBuffer128> headerBuf;
         formatstring( headerBuf.data(), headerBuf.capacity(), "[%#] (%# elements)", prop._elementTypeName.c_str(), count );
         if ( ImGui::TreeNodeEx( "##value", ImGuiTreeNodeFlags_SpanFullWidth, "%s", headerBuf.c_str() ) == false )
@@ -871,11 +876,11 @@ namespace sw::editor
         return _pEditTargetObject;
     }
 
-    void EditorPropertyGrid::drawStructOrStringProperty( void* pInstance, const PropertyInfo& prop, const TypeInfo* pFieldType )
+    void EditorPropertyGrid::drawStructOrStringProperty( const MutableObjectAddress instance, const PropertyInfo& prop, const TypeInfo* pFieldType )
     {
         const utf8* pLabel = "##value";
 
-        void* pNestedPtr = prop.getRawPtr( pInstance );
+        void* pNestedPtr = prop.getRawPtr( instance.get() );
         if ( pNestedPtr == nullptr )
             return;
 
@@ -887,7 +892,8 @@ namespace sw::editor
         {
             pFieldType->forEachProperty( [&]( const PropertyInfo& nestedProp )
             {
-                const PropertyEditState editState = PropertyEditCondition::getEditState( *pFieldType, nestedProp, pNestedPtr );
+                // 구조체 칸의 값 주소는 그 구조체 타입의 객체 주소다.
+                const PropertyEditState editState = PropertyEditCondition::getEditState( *pFieldType, nestedProp, ObjectAddress{ pNestedPtr } );
                 if ( editState == PropertyEditState::Hidden )
                     return;
                 ImGui::PushID( nestedProp._name.c_str() );
@@ -896,7 +902,7 @@ namespace sw::editor
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth( -FLT_MIN );
                 ImGui::BeginDisabled( editState == PropertyEditState::Disabled );
-                drawPropertyWidget( pNestedPtr, nestedProp );
+                drawPropertyWidget( MutableObjectAddress{ pNestedPtr }, nestedProp );
                 ImGui::EndDisabled();
                 ImGui::PopID();
             }, true ); // 구조체의 기반 필드도 그린다(컴포넌트와 같은 규칙)

@@ -15,6 +15,8 @@
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Panels/Inspector/InspectorBuiltinValue.h"
 
+#include "Engine/Reflection/TextAddress.h"
+
 namespace sw
 {
     struct EnumInfo;
@@ -94,7 +96,7 @@ namespace sw::editor
          * @brief 프로퍼티 하나에 텍스트 값(`SerializerUtil::formatPropertyText` 형식)을 적용하고 편집으로 기록합니다. 변경을 알리고, 주인 오브젝트에 되돌리기 항목을 하나 남깁니다.
          * @details Reset, Paste Value, 그리기 확장(`IInspectorProperty`)의 팝업 편집기가 함께 쓴다. 대상이 설정된 그리는 동안에만 호출한다.
          */
-        void applyPropertyTextAsEdit( void* pInstance, const PropertyInfo& prop, string_view text, const utf8* pUndoLabel );
+        void applyPropertyTextAsEdit( MutableObjectAddress instance, const PropertyInfo& prop, string_view text, const utf8* pUndoLabel );
         /**
          * @brief 즐겨찾기 집합을 연결합니다. 연결하면 프로퍼티 행의 우클릭 메뉴에 즐겨찾기 토글이 생기고 즐겨찾기 행 이름 앞에 별을 그립니다. nullptr 이면 끕니다.
          * @details 집합의 주인은 인스펙터 패널이다. 환경설정 창처럼 즐겨찾기가 없는 그리드는 연결하지 않는다. 토글하면 저장 파일에 바로 쓴다.
@@ -115,8 +117,8 @@ namespace sw::editor
 
     private:
         void beginTarget( const EditorPropertyGridTarget& target );
-        /** @brief 프로퍼티 하나를 기본값으로 되돌립니다. 기본값은 @p pDefaultInstance 의 값이고, 없으면 메타 텍스트입니다. 알림과 되돌리기 기록은 일반 편집과 같습니다. */
-        void resetPropertyToDefault( void* pInstance, const PropertyInfo& prop, const void* pDefaultInstance );
+        /** @brief 프로퍼티 하나를 기본값으로 되돌립니다. 기본값은 @p defaultInstance 의 값이고, nullptr 이면 메타 텍스트입니다. 알림과 되돌리기 기록은 일반 편집과 같습니다. */
+        void resetPropertyToDefault( MutableObjectAddress instance, const PropertyInfo& prop, ObjectAddress defaultInstance );
         void endTarget();
         /**
          * @brief 타입의 리플렉션 프로퍼티를 상속한 것까지 카테고리별로 그립니다(`InspectorPropertyLayout`). 그릴 프로퍼티가 있을 때만 @p pSectionTitle 구분선을 둡니다.
@@ -124,28 +126,31 @@ namespace sw::editor
          */
         void drawTypeProperties( void* pInstance, const TypeInfo* pTypeInfo, const utf8* pSectionTitle, const vector<hashed_string>& listDrawnName );
         /** @brief 속성 표의 한 행을 그립니다 — 이름 칸(혼합 표시 · 즐겨찾기 별 · 이름 · 행 메뉴 · 되돌리기 버튼)과 값 칸(위젯). @p bDisabled 면 값 위젯을 막습니다. */
-        void drawPropertyRow( void* pInstance, const TypeInfo& typeInfo, const PropertyInfo& prop, bool bDisabled, bool bFavoriteTarget, const void* pDefaultInstance );
+        void drawPropertyRow( MutableObjectAddress instance, const TypeInfo& typeInfo, const PropertyInfo& prop, bool bDisabled, bool bFavoriteTarget, ObjectAddress defaultInstance );
         /** @brief 이름 글을 오른쪽 클릭하면 열리는 행 메뉴(즐겨찾기 · 기본값 · 복사 · 붙여넣기)입니다. */
-        void drawPropertyRowMenu( void* pInstance, const PropertyInfo& prop, const string& favoriteKey, bool bFavoriteTarget, bool bFavorite, const void* pDefaultInstance );
-        /** @brief 단일 프로퍼티 위젯을 그립니다. 값이 바뀌면 편집 대상에 통지합니다. */
-        void drawPropertyWidget( void* pInstance, const PropertyInfo& prop );
+        void drawPropertyRowMenu( MutableObjectAddress instance, const PropertyInfo& prop, const string& favoriteKey, bool bFavoriteTarget, bool bFavorite, ObjectAddress defaultInstance );
+        /**
+         * @brief 단일 프로퍼티 위젯을 그립니다. 값이 바뀌면 편집 대상에 통지합니다.
+         * @details @p instance 는 @p prop 을 가진 객체다. 컨테이너 원소 · 맵 값은 오프셋 0 인 프로퍼티(`makeElementProperty`)와 그 값 주소를 객체로 넘긴다.
+         */
+        void drawPropertyWidget( MutableObjectAddress instance, const PropertyInfo& prop );
         /** @brief 위젯 본문을 그립니다. 변경 알림 판정은 이 함수를 감싸는 drawPropertyWidget 이 합니다. */
-        void drawPropertyWidgetBody( void* pInstance, const PropertyInfo& prop );
+        void drawPropertyWidgetBody( MutableObjectAddress instance, const PropertyInfo& prop );
         /** @brief 열거형 프로퍼티 위젯을 그립니다. */
-        void drawEnumProperty( void* pInstance, const PropertyInfo& prop, const EnumInfo& enumInfo, bool bReadOnly );
+        void drawEnumProperty( MutableObjectAddress instance, const PropertyInfo& prop, const EnumInfo& enumInfo, bool bReadOnly );
         /** @brief 컨테이너 프로퍼티 위젯을 그립니다. */
-        void drawContainerProperty( void* pInstance, const PropertyInfo& prop, bool bReadOnly );
+        void drawContainerProperty( MutableObjectAddress instance, const PropertyInfo& prop, bool bReadOnly );
         /**
          * @brief 맵 프로퍼티를 그립니다. 키는 문자열이며 정렬 키나 해시 키이므로 제자리에서 고치지 않습니다. 값은 타입별 위젯으로 제자리에서 편집하고, 항목을 지우거나 추가할 수 있습니다.
          * @details 추가는 키 문자열을 Enter 로 받는다. 같은 키가 이미 있으면 값을 덮어쓰지 않고 추가하지 않는다.
          */
-        void drawMapContainer( void* pContainer, const PropertyInfo& prop, IMapContainerWrapper& mapWrapper, bool bReadOnly );
+        void drawMapContainer( MutableValueAddress container, const PropertyInfo& prop, IMapContainerWrapper& mapWrapper, bool bReadOnly );
         /** @brief 원소가 곧 키인 시퀀스(`set`)를 그립니다. 원소는 텍스트 입력란이며, Enter 로 고치면 지우고 다시 넣습니다(`replaceElement`). */
-        void drawKeyedSequenceContainer( void* pContainer, const PropertyInfo& prop, ISequenceContainerWrapper& sequence, bool bReadOnly );
+        void drawKeyedSequenceContainer( MutableValueAddress container, const PropertyInfo& prop, ISequenceContainerWrapper& sequence, bool bReadOnly );
         /** @brief 컨테이너 끝의 "추가" 텍스트 입력란입니다. Enter 로 비어 있지 않은 값을 입력했으면 true 를 반환하고, @p outText 에 담은 뒤 입력란을 비웁니다. */
         bool drawContainerAddRow( const utf8* pHint, string& outText );
         /** @brief 구조체와 문자열 프로퍼티 위젯을 그립니다. */
-        void drawStructOrStringProperty( void* pInstance, const PropertyInfo& prop, const TypeInfo* pFieldType );
+        void drawStructOrStringProperty( MutableObjectAddress instance, const PropertyInfo& prop, const TypeInfo* pFieldType );
         /**
          * @brief 그리드가 값을 바꿨음을 편집 대상에 알립니다.
          * @details 위젯 대부분이 `getValuePtr<T>()` 로 멤버의 raw 포인터를 ImGui 에 넘기므로 리플렉션 `setValue<T>()` 의 알림 분기를 지나지 않는다.

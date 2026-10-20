@@ -123,7 +123,7 @@ namespace sw
                     const ContainerReadResult keyResult = reader.readMapKey( MutableValueAddress{ keyBytes.data() }, nested._keyTypeName );
                     // 키를 못 읽어도 자리를 알면 값을 읽는다 — 바이너리는 값을 지나야 다음 항목 자리에 선다.
                     ContainerReadResult valueResult{ ContainerReadResult::StreamBroken };
-                    if ( keyResult != ContainerReadResult::StreamBroken )
+                    if ( ContainerVisitor::stopsReading( keyResult ) == false )
                         valueResult = readElementValue( valueBytes.data(), nested, plan, ContainerSlot::MapValue, reader, context );
 
                     const bool bInsert = keyResult == ContainerReadResult::Read && valueResult == ContainerReadResult::Read;
@@ -213,5 +213,48 @@ namespace sw
     ContainerReadResult ContainerVisitor::mergeResult( const ContainerReadResult lhs, const ContainerReadResult rhs ) noexcept
     {
         return ( static_cast<uint8>( rhs ) > static_cast<uint8>( lhs ) ) ? rhs : lhs;
+    }
+
+    bool ContainerVisitor::stopsReading( const ContainerReadResult result ) noexcept
+    {
+        switch ( result )
+        {
+            case ContainerReadResult::Read:
+            case ContainerReadResult::FieldFailed:
+                return false;
+            case ContainerReadResult::StreamBroken:
+            case ContainerReadResult::ObjectRejected:
+                return true;
+        }
+        return true;
+    }
+
+    FieldReadResult ContainerVisitor::toFieldResult( const ContainerReadResult result ) noexcept
+    {
+        switch ( result )
+        {
+            case ContainerReadResult::Read:
+                return FieldReadResult::Read;
+            case ContainerReadResult::FieldFailed:
+            case ContainerReadResult::StreamBroken:
+                return FieldReadResult::FieldFailed;
+            case ContainerReadResult::ObjectRejected:
+                return FieldReadResult::ObjectRejected;
+        }
+        return FieldReadResult::ObjectRejected;
+    }
+
+    ContainerReadResult ContainerVisitor::toElementResult( const FieldReadResult result ) noexcept
+    {
+        switch ( result )
+        {
+            case FieldReadResult::Read:
+                return ContainerReadResult::Read;
+            case FieldReadResult::FieldFailed:
+                return ContainerReadResult::FieldFailed;
+            case FieldReadResult::ObjectRejected:
+                return ContainerReadResult::ObjectRejected;
+        }
+        return ContainerReadResult::ObjectRejected;
     }
 } // namespace sw

@@ -74,6 +74,27 @@ namespace
     }
 
     constexpr PurposeFormat kArrFormat[] = { PurposeFormat::XML, PurposeFormat::JSON, PurposeFormat::Binary };
+
+    /** @brief 원소가 반사된 값 구조체(`PurposePlainSample`)인 목록을 가진 값입니다. 원소 안의 RuntimeState 필드가 바깥 읽기에 어떻게 올라오는지 봅니다. */
+    struct PurposeListHolder
+    {
+        sw::vector<sw::PurposePlainSample> _listSample;
+        int32                              _after{ 0 };
+    };
+
+    sw::TypeInfo makePurposeListHolderType()
+    {
+        sw::TypeInfo holderType;
+        holderType._name               = sw::hashed_string( "PurposeListHolder" );
+        holderType._fullyQualifiedName = sw::hashed_string( "sw::PurposeListHolder" );
+        holderType._size               = sizeof( PurposeListHolder );
+        holderType._listProperty       = {
+            { sw::hashed_string( "_listSample" ), sw::hashed_string( "vector" ), SW_OFFSET_OF( PurposeListHolder, _listSample ), true, sw::ContainerKind::Sequence,
+             sw::PurposePlainSample::StaticType()->_name, sw::hashed_string(), sw::make_shared<sw::VectorWrapper<sw::vector<sw::PurposePlainSample>>>() },
+            { sw::hashed_string( "_after" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( PurposeListHolder, _after ) },
+        };
+        return holderType;
+    }
 } // namespace
 
 /**
@@ -161,4 +182,42 @@ SW_TEST_CASE( ReflectionPurposeTest, RuntimeStateInAnAuthoringFileFailsTheRead )
     // 저작 목적으로 쓴 데이터는 RuntimeState 를 싣지 않으므로 같은 목적으로 다시 읽힌다.
     sw::PurposePlainSample authoringTarget;
     SW_EXPECT_TRUE( sw::XMLSerializer::deserialize( &authoringTarget, typeInfo, sw::XMLSerializer::serialize( &source, typeInfo, authoring ), authoring ) );
+}
+
+/**
+ * @brief [ReflectionPurposeTest] 컨테이너 원소인 값 구조체 안의 RuntimeState 필드도 소프트 읽기를 객체째 실패시킨다(칸째 되돌려 orphan 으로 넘기지 않는다)
+ * @details 예전에는 원소 읽기의 실패가 "필드 실패" 하나로 내려와 그 칸이 읽기 전 값으로 되돌려지고 orphan 이 되어 읽기가 성공했다
+ *          (`docs/plans/SerializerSilentSkips.md` S3). 이제 원소 결과가 `ContainerReadResult::ObjectRejected` 로 올라온다. 바이너리는 아직 가르지 못한다(3절).
+ */
+SW_TEST_CASE( ReflectionPurposeTest, RuntimeStateInAContainerElementRejectsTheSoftRead )
+{
+    const sw::TypeInfo          holderType = makePurposeListHolderType();
+    const sw::SerializeContext& snapshot   = sw::SerializeContext::getDefault( sw::SerializePurpose::Snapshot );
+    const sw::SerializeContext& authoring  = sw::SerializeContext::getDefault( sw::SerializePurpose::Authoring );
+    PurposeListHolder           source;
+    source._listSample.resize( 1 );
+    source._listSample[0]._plain   = 11;
+    source._listSample[0]._runtime = 33;
+    source._after                  = 9;
+
+    test::ScopedLogSuppressor suppressor; // 금지된 필드 오류
+
+    PurposeListHolder                 xmlTarget;
+    sw::vector<sw::SchemaOrphanValue> listXMLOrphan;
+    const sw::string                  xmlText = sw::XMLSerializer::serialize( &source, holderType, snapshot );
+    SW_EXPECT_TRUE( sw::XMLSerializer::deserializeSoft( &xmlTarget, holderType, xmlText, &listXMLOrphan, nullptr, authoring ) == sw::SoftReadResult::Rejected );
+
+    PurposeListHolder                 jsonTarget;
+    sw::vector<sw::SchemaOrphanValue> listJSONOrphan;
+    const sw::string                  jsonText = sw::JSONSerializer::serialize( &source, holderType, snapshot );
+    SW_EXPECT_TRUE( sw::JSONSerializer::deserializeSoft( &jsonTarget, holderType, jsonText, &listJSONOrphan, nullptr, authoring ) == sw::SoftReadResult::Rejected );
+
+    // 저작 목적으로 쓴 데이터는 원소에도 RuntimeState 를 싣지 않으므로 소프트 읽기가 그대로 읽는다.
+    PurposeListHolder                 authoringTarget;
+    sw::vector<sw::SchemaOrphanValue> listAuthoringOrphan;
+    const sw::string                  authoringText = sw::XMLSerializer::serialize( &source, holderType, authoring );
+    SW_EXPECT_TRUE( sw::XMLSerializer::deserializeSoft( &authoringTarget, holderType, authoringText, &listAuthoringOrphan, nullptr, authoring ) == sw::SoftReadResult::Read );
+    SW_ASSERT_EQUAL( size_t( 1 ), authoringTarget._listSample.size() );
+    SW_EXPECT_EQUAL( 11, authoringTarget._listSample[0]._plain );
+    SW_EXPECT_EQUAL( 9, authoringTarget._after );
 }

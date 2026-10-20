@@ -127,7 +127,7 @@ namespace sw::editor
         {
             for ( const PropertyInfo& prop : type.getPropertiesWithBase() )
             {
-                if ( EditorPreferencesStore::isPropertyModified( prop, pInstance, _pSelected->_pfnGetDefault() ) == false )
+                if ( EditorPreferencesStore::isPropertyModified( prop, ObjectAddress{ pInstance }, ObjectAddress{ _pSelected->_pfnGetDefault() } ) == false )
                     listHidden.push_back( prop._name );
             }
         }

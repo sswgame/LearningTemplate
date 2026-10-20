@@ -167,7 +167,7 @@ namespace sw
     bool ConfigManager::isWithinRange( const void* pInstance, const TypeInfo& typeInfo, const utf8* pSourceLabel )
     {
         vector<string> listRangeError;
-        SerializerUtil::collectRangeErrors( typeInfo, pInstance, string(), listRangeError );
+        SerializerUtil::collectRangeErrors( typeInfo, ObjectAddress{ pInstance }, string(), listRangeError );
         for ( const string& rangeError : listRangeError )
         {
             SW_LOG_ERROR( "Config %# (%#): %#", pSourceLabel, typeInfo._fullyQualifiedName.c_str(), rangeError.c_str() );

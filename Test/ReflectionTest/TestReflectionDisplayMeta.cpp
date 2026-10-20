@@ -127,22 +127,22 @@ SW_TEST_CASE( ReflectionDisplayMetaTest, EditConditionFollowsTheOtherProperty )
     const sw::TypeInfo&  type = getDisplayType();
     sw::DisplayMetaActor actor;
 
-    SW_EXPECT_TRUE( sw::PropertyEditCondition::getEditState( type, getDisplayProperty( "_speed" ), &actor ) == sw::PropertyEditState::Disabled );
-    SW_EXPECT_TRUE( sw::PropertyEditCondition::getEditState( type, getDisplayProperty( "_fallback" ), &actor ) == sw::PropertyEditState::Enabled );
-    SW_EXPECT_TRUE( sw::PropertyEditCondition::getEditState( type, getDisplayProperty( "_orbitRadius" ), &actor ) == sw::PropertyEditState::Disabled );
-    SW_EXPECT_TRUE( sw::PropertyEditCondition::getEditState( type, getDisplayProperty( "_blend" ), &actor ) == sw::PropertyEditState::Disabled );
-    SW_EXPECT_TRUE( sw::PropertyEditCondition::getEditState( type, getDisplayProperty( "_height" ), &actor ) == sw::PropertyEditState::Enabled );
+    SW_EXPECT_TRUE( sw::PropertyEditCondition::getEditState( type, getDisplayProperty( "_speed" ), sw::ObjectAddress{ &actor } ) == sw::PropertyEditState::Disabled );
+    SW_EXPECT_TRUE( sw::PropertyEditCondition::getEditState( type, getDisplayProperty( "_fallback" ), sw::ObjectAddress{ &actor } ) == sw::PropertyEditState::Enabled );
+    SW_EXPECT_TRUE( sw::PropertyEditCondition::getEditState( type, getDisplayProperty( "_orbitRadius" ), sw::ObjectAddress{ &actor } ) == sw::PropertyEditState::Disabled );
+    SW_EXPECT_TRUE( sw::PropertyEditCondition::getEditState( type, getDisplayProperty( "_blend" ), sw::ObjectAddress{ &actor } ) == sw::PropertyEditState::Disabled );
+    SW_EXPECT_TRUE( sw::PropertyEditCondition::getEditState( type, getDisplayProperty( "_height" ), sw::ObjectAddress{ &actor } ) == sw::PropertyEditState::Enabled );
 
     actor._bEnabled = true;
     actor._mode     = sw::DisplayMetaMode::Orbit;
-    SW_EXPECT_TRUE( sw::PropertyEditCondition::getEditState( type, getDisplayProperty( "_speed" ), &actor ) == sw::PropertyEditState::Enabled );
-    SW_EXPECT_TRUE( sw::PropertyEditCondition::getEditState( type, getDisplayProperty( "_fallback" ), &actor ) == sw::PropertyEditState::Hidden );
-    SW_EXPECT_TRUE( sw::PropertyEditCondition::getEditState( type, getDisplayProperty( "_orbitRadius" ), &actor ) == sw::PropertyEditState::Enabled );
-    SW_EXPECT_TRUE( sw::PropertyEditCondition::getEditState( type, getDisplayProperty( "_blend" ), &actor ) == sw::PropertyEditState::Enabled );
+    SW_EXPECT_TRUE( sw::PropertyEditCondition::getEditState( type, getDisplayProperty( "_speed" ), sw::ObjectAddress{ &actor } ) == sw::PropertyEditState::Enabled );
+    SW_EXPECT_TRUE( sw::PropertyEditCondition::getEditState( type, getDisplayProperty( "_fallback" ), sw::ObjectAddress{ &actor } ) == sw::PropertyEditState::Hidden );
+    SW_EXPECT_TRUE( sw::PropertyEditCondition::getEditState( type, getDisplayProperty( "_orbitRadius" ), sw::ObjectAddress{ &actor } ) == sw::PropertyEditState::Enabled );
+    SW_EXPECT_TRUE( sw::PropertyEditCondition::getEditState( type, getDisplayProperty( "_blend" ), sw::ObjectAddress{ &actor } ) == sw::PropertyEditState::Enabled );
 
     actor._mode = sw::DisplayMetaMode::Follow;
-    SW_EXPECT_TRUE( sw::PropertyEditCondition::getEditState( type, getDisplayProperty( "_orbitRadius" ), &actor ) == sw::PropertyEditState::Disabled );
-    SW_EXPECT_TRUE( sw::PropertyEditCondition::getEditState( type, getDisplayProperty( "_blend" ), &actor ) == sw::PropertyEditState::Enabled );
+    SW_EXPECT_TRUE( sw::PropertyEditCondition::getEditState( type, getDisplayProperty( "_orbitRadius" ), sw::ObjectAddress{ &actor } ) == sw::PropertyEditState::Disabled );
+    SW_EXPECT_TRUE( sw::PropertyEditCondition::getEditState( type, getDisplayProperty( "_blend" ), sw::ObjectAddress{ &actor } ) == sw::PropertyEditState::Enabled );
 
     // 풀지 못하는 식은 막지 않고 이유를 말한다
     sw::PropertyInfo broken          = getDisplayProperty( "_speed" );
@@ -153,7 +153,7 @@ SW_TEST_CASE( ReflectionDisplayMetaTest, EditConditionFollowsTheOtherProperty )
     SW_EXPECT_TRUE_MSG( error.find( "Sideways" ) != sw::string::npos, error.c_str() );
     broken._metadata->_editCondition = "_noSuchProperty";
     SW_EXPECT_FALSE( sw::PropertyEditCondition::parse( type, broken, expr, error ) );
-    SW_EXPECT_TRUE( sw::PropertyEditCondition::getEditState( type, broken, &actor ) == sw::PropertyEditState::Enabled );
+    SW_EXPECT_TRUE( sw::PropertyEditCondition::getEditState( type, broken, sw::ObjectAddress{ &actor } ) == sw::PropertyEditState::Enabled );
 }
 
 /**

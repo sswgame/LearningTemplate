@@ -59,7 +59,7 @@ namespace sw::editor
             class SelfTestPropertyDrawer final : public IInspectorProperty
             {
             public:
-                bool draw( void* /*pInstance*/, const PropertyInfo& /*prop*/, EditorPropertyGrid& /*grid*/ ) override { return true; }
+                bool draw( MutableObjectAddress /*instance*/, const PropertyInfo& /*prop*/, EditorPropertyGrid& /*grid*/ ) override { return true; }
             };
 
             /** @brief 그리기 확장 등록 항목이 프로퍼티 매니저에 등록되고 내장 위젯은 그대로 남습니다. */

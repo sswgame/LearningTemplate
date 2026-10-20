@@ -8,9 +8,9 @@
 #include "Engine/EngineMinimal.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
+#include "Engine/Reflection/TextAddress.h"
 #include "Engine/Serialization/Base/SchemaMigrate.h"
 #include "Engine/Serialization/Base/SerializeContext.h"
-#include "Engine/Serialization/Base/TextAddress.h"
 
 namespace sw
 {
@@ -67,10 +67,10 @@ namespace sw
 
     /**
      * @brief 공통 절차가 포맷에 맡기는 **유일한 일**입니다. 본문을 읽어 값과 orphan 을 채웁니다.
-     * @details 인자는 (대상, 그 타입, orphan 수집함, 버전 출력)입니다. 버전을 본문에서 얻지 않는
+     * @details 인자는 (대상 객체의 주소, 그 타입, orphan 수집함, 버전 출력)입니다. 버전을 본문에서 얻지 않는
      *          포맷(Binary)은 마지막 인자를 건드리지 않습니다.
      */
-    using SoftDeserializeFn = Delegate<bool( void*, const TypeInfo&, vector<SchemaOrphanValue>&, uint32& )>;
+    using SoftDeserializeFn = Delegate<bool( MutableObjectAddress, const TypeInfo&, vector<SchemaOrphanValue>&, uint32& )>;
 
     /**
      * @brief `deserializeVersioned` 의 **공통 절차**입니다. 세 포맷이 함께 씁니다.
@@ -82,7 +82,7 @@ namespace sw
      * @details 처리 순서는 다음과 같다. 레거시 스테이징 인스턴스를 준비하고, (있으면) 레거시로 soft 역직렬화한 뒤,
      *          현재 타입으로 soft 역직렬화하고, 버전을 확정한 다음 `runSchemaMigrateStep` 을 부른다.
      */
-    SW_API bool runVersionedDeserialize( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo,
+    SW_API bool runVersionedDeserialize( uint32& outVersion, MutableObjectAddress instance, const TypeInfo& typeInfo,
                                          uint32          currentVersion,
                                          const TypeInfo* pLegacyTypeInfo, const SerializeContext& context,
                                          SchemaVersionSource versionSource, SchemaOrphanPolicy orphanPolicy,
@@ -160,7 +160,7 @@ namespace sw
         [[nodiscard]] SW_API static bool applyPropertyText( const PropertyInfo& prop, MutableObjectAddress instance, string_view text, const SerializeContext& context );
         /**
          * @brief 프로퍼티 값 하나(그 프로퍼티 값 전부)를 바이너리 페이로드로 @p outBytes 끝에 덧붙입니다. 짝은 `applyPropertyBinary` 입니다. 비트필드는 `bool` 로 씁니다.
-         * @details 태그 스트림 쓰기, 값 복사, 읽기 실패 되돌리기(`BinarySerializer` 의 태그 스트림 읽기)가 함께 쓴다. 비트필드 · 컨테이너 · 값 세 갈래를 한 벌로 둔다.
+         * @details 태그 스트림 쓰기, 값 복사, 읽기 실패 되돌리기(`PropertyReadRollback`)가 함께 쓴다. 비트필드 · 컨테이너 · 값 세 갈래를 한 벌로 둔다.
          * @return 그 값이나 안의 값에 바이너리 · 열거형 · 구조체 · 텍스트 처리기가 없으면 false 이고, 그때 @p outBytes 는 쓰면 안 됩니다.
          */
         [[nodiscard]] SW_API static bool writePropertyBinary( const PropertyInfo& prop, ObjectAddress instance, vector<uint8>& outBytes, const SerializeContext& context );
@@ -169,7 +169,7 @@ namespace sw
          * @details 바이트가 남으면 스트림이 이 필드를 다른 형태로 적은 것이다(`int32` 0 을 `vector<int32>` 로 읽으면 원소 수 0 으로 성공한다). 그래서 오프셋을
          *          부른 쪽에 돌려주지 않고 여기서 끝을 본다 — 태그 스트림, diff, 값 복사가 "읽힌 만큼" 받는 사본을 따로 두지 않게.
          *          false 이면 그 필드는 **읽다 만 값**일 수 있다(컨테이너 · 구조체는 원소와 필드를 채운 뒤 끝에서 실패한다). 실패한 뒤에도 이어 읽는 쪽은
-         *          읽기 전에 `writePropertyBinary` 로 값을 담아 두고 실패하면 되돌린다(태그 스트림 읽기가 그렇게 한다).
+         *          `PropertyReadRollback` 으로 읽기 전 값을 담아 두고 실패하면 되돌린다.
          */
         [[nodiscard]] SW_API static bool applyPropertyBinary( const PropertyInfo& prop, MutableObjectAddress instance, const uint8* pPayload, size_t payloadSize,
                                                               const SerializeContext& context, BinaryWireVersion wireVersion = kCurrentBinaryWireVersion );
@@ -225,14 +225,15 @@ namespace sw
          *          맵과 중첩 컨테이너는 원소 경로를 하나로 정할 수 없어 보지 않는다.
          *          범위를 어디까지 보는지 부르는 쪽이 고르지 않는다. 고르게 하면 읽기 경로마다 계약이 달라진다(설정 JSON · 데이터 XML · 세이브가 같은 `Min` · `Max` 를 다르게 지켰다).
          *          경계는 인스펙터와 같은 함수로 푼다(`PropertyMetadata::computeAllowedRange`) — 숫자 경계와 필드 경계(`Min = "-_halfSize"`)를 함께 지킨다.
+         *          @p instance 는 @p typeInfo 객체의 주소다(필드 경계를 이 객체에서 읽는다).
          */
-        SW_API static void collectRangeErrors( const TypeInfo& typeInfo, const void* pInstance, const string& prefix, vector<string>& outListError );
+        SW_API static void collectRangeErrors( const TypeInfo& typeInfo, ObjectAddress instance, const string& prefix, vector<string>& outListError );
         /**
          * @brief 읽기를 끝낸 인스턴스가 `Min` · `Max` 를 지키는지 봅니다. 어기면 칸마다 오류 로그를 남기고 false 입니다.
          * @details 세 포맷(바이너리 · JSON · XML)의 읽기 공통 끝이 부릅니다 — 호출부마다 따로 부르면 부르지 않는 경로의 값이 범위 밖인 채 성공으로 돌아온다(A-19).
          *          위반이 없으면 글을 만들지 않고 첫 위반에서 멈추는 빠른 길로 끝납니다.
          */
-        [[nodiscard]] SW_API static bool isWithinDeclaredRanges( const TypeInfo& typeInfo, const void* pInstance );
+        [[nodiscard]] SW_API static bool isWithinDeclaredRanges( const TypeInfo& typeInfo, ObjectAddress instance );
 
         /** @brief 프로퍼티 목록에서 키에 맞는 프로퍼티 메타데이터를 찾습니다. */
         static const PropertyInfo* matchProperty( const vector<PropertyInfo>& listProp, string_view keyRaw,
@@ -295,5 +296,38 @@ namespace sw
         /** @brief 바이너리 데이터를 XML 문자열로 트랜스코딩합니다. */
         SW_API static string transcodeBinaryToXML( const uint8* pData, size_t dataSize, const TypeInfo& typeInfo,
                                                    const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class PropertyReadRollback
+     * @brief 읽지 못한 필드를 넘기고 이어 읽는 읽기가 그 필드를 **읽기 전 값**으로 남기게 합니다. 세 형식(바이너리 태그 스트림, JSON, XML)의 소프트 읽기가 함께 씁니다.
+     * @details 컨테이너 · 구조체는 원소와 필드를 채운 뒤 끝에서 실패하므로, 담지 않고 넘기면 읽다 만 값이 남는다. 그래서 필드를 읽기 전에
+     *          `keepValueBeforeRead` 로 값을 이 빌드의 바이트(`SerializerUtil::writePropertyBinary`)로 담고, 읽기가 실패하면 `restoreValueBeforeRead` 로 되읽는다.
+     *          되돌리는 단위는 실패를 받은 필드 하나다. 구조체 칸 안의 실패는 안쪽 읽기가 같은 규칙으로 그 안쪽 필드만 되돌린다.
+     *          소유 포인터 목록은 담지 않는다. 되돌리면 팩토리가 컴포넌트를 새로 만들어 다른 객체가 된다. 그래서 그 목록의 읽기가 실패하면 되돌리지 않고 실패다.
+     *          두 함수가 false 이면 부른 쪽은 객체째 실패한다(오류는 여기서 남긴다). 읽다 만 값이나 기본값으로 넘어가지 않는다.
+     *          실패하면 객체째 버리는 엄격 읽기는 담지 않는다(담는 비용은 이어 읽는 읽기만 낸다).
+     */
+    class PropertyReadRollback
+    {
+    public:
+        PropertyReadRollback();
+
+        /** @brief @p prop 의 지금 값을 담습니다. 앞서 담은 값은 버립니다. 값을 바이트로 쓰지 못하면 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool keepValueBeforeRead( const TypeInfo& ownerType, const PropertyInfo& prop, ObjectAddress instance, const SerializeContext& context );
+        /**
+         * @brief 마지막으로 담은 필드를 담은 값으로 되돌립니다. 그 필드의 읽기가 실패한 뒤에 부릅니다. @p instance 는 담을 때와 같은 객체입니다.
+         * @return 소유 포인터 목록이거나(되돌릴 수 없다) 담은 바이트를 되읽지 못하면(코덱 결함) 오류를 남기고 false 입니다.
+         */
+        [[nodiscard]] bool restoreValueBeforeRead( MutableObjectAddress instance, const SerializeContext& context ) const;
+
+    private:
+        vector<uint8>       _bytes;
+        const TypeInfo*     _pOwnerType;
+        const PropertyInfo* _pProperty;
+        bool                _bOwnedPointerList;
     };
 } // namespace sw

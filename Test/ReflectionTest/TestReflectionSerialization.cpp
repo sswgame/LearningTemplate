@@ -3,6 +3,8 @@
 #include "Core/String/RegistrationList.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Reflection/PropertyEditCondition.h"
+#include "Engine/Reflection/PropertyRoleUtil.h"
 #include "Engine/Reflection/ReflectAny.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
@@ -412,6 +414,27 @@ namespace
         holder._single = MixedBuildItem{ 3, 30, WireShiftColor::Blue };
         holder._after  = 9;
         return holder;
+    }
+
+    /** @brief 텍스트 형식의 소프트 읽기 테스트가 쓰는 값입니다. 목록의 원소 하나를 읽지 못하게 고친 글을 읽습니다. */
+    struct TextListHolder
+    {
+        sw::vector<int32> _listValue;
+        int32             _after{ 0 };
+    };
+
+    sw::TypeInfo makeTextListHolderType()
+    {
+        sw::TypeInfo holderType;
+        holderType._name               = sw::hashed_string( "TextListHolder" );
+        holderType._fullyQualifiedName = sw::hashed_string( "sw::TextListHolder" );
+        holderType._size               = sizeof( TextListHolder );
+        holderType._listProperty       = {
+            { sw::hashed_string( "_listValue" ), sw::hashed_string( "vector" ), SW_OFFSET_OF( TextListHolder, _listValue ), true, sw::ContainerKind::Sequence,
+             sw::hashed_string( "int32" ), sw::hashed_string(), sw::make_shared<sw::VectorWrapper<sw::vector<int32>>>() },
+            { sw::hashed_string( "_after" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( TextListHolder, _after ) },
+        };
+        return holderType;
     }
 } // namespace
 
@@ -3806,6 +3829,35 @@ SW_TEST_CASE( ReflectionSerializationTest, ValueAddressTextDoesNotAddPropertyOff
     static_assert( std::is_invocable_v<ReaderValueObjectFn, sw::IContainerReader&, sw::MutableValueAddress, const sw::hashed_string&, const sw::TypeInfo&, sw::ContainerSlot> );
     static_assert( !std::is_invocable_v<ReaderValueObjectFn, sw::IContainerReader&, void*, const sw::hashed_string&, const sw::TypeInfo&, sw::ContainerSlot> );
 
+    // 점 경로 · 범위 검사 · 버전 읽기 절차는 객체 주소를 받고, 점 경로가 찾은 것은 값 주소다. 역할 도우미는 객체와 값을 한 함수에 함께 받는다.
+    using ResolvePathFn  = decltype( &sw::resolvePropertyPath );
+    using RangeErrorsFn  = decltype( &sw::SerializerUtil::collectRangeErrors );
+    using WithinRangesFn = decltype( &sw::SerializerUtil::isWithinDeclaredRanges );
+    using RepNotifyFn    = decltype( &sw::PropertyRoleUtil::callRepNotify );
+    using InterpolateFn  = decltype( &sw::PropertyRoleUtil::applyInterpolated );
+    using PropertyPtr    = const sw::PropertyInfo*&;
+    static_assert( std::is_invocable_v<ResolvePathFn, sw::MutableObjectAddress, const sw::TypeInfo&, const utf8*, sw::MutableValueAddress&, PropertyPtr> );
+    static_assert( !std::is_invocable_v<ResolvePathFn, sw::MutableValueAddress, const sw::TypeInfo&, const utf8*, sw::MutableValueAddress&, PropertyPtr> );
+    static_assert( !std::is_invocable_v<ResolvePathFn, sw::MutableObjectAddress, const sw::TypeInfo&, const utf8*, sw::MutableObjectAddress&, PropertyPtr> ); // 찾은 것은 값이다
+    static_assert( !std::is_invocable_v<ResolvePathFn, void*, const sw::TypeInfo&, const utf8*, void*&, PropertyPtr> );
+    static_assert( std::is_invocable_v<RangeErrorsFn, const sw::TypeInfo&, sw::ObjectAddress, const sw::string&, sw::vector<sw::string>&> );
+    static_assert( !std::is_invocable_v<RangeErrorsFn, const sw::TypeInfo&, sw::ValueAddress, const sw::string&, sw::vector<sw::string>&> );
+    static_assert( !std::is_invocable_v<RangeErrorsFn, const sw::TypeInfo&, const void*, const sw::string&, sw::vector<sw::string>&> );
+    static_assert( std::is_invocable_v<WithinRangesFn, const sw::TypeInfo&, sw::MutableObjectAddress> );
+    static_assert( !std::is_invocable_v<WithinRangesFn, const sw::TypeInfo&, const void*> );
+    static_assert( std::is_invocable_v<RepNotifyFn, const sw::PropertyInfo&, sw::MutableObjectAddress, sw::ValueAddress> );
+    static_assert( !std::is_invocable_v<RepNotifyFn, const sw::PropertyInfo&, sw::MutableObjectAddress, sw::ObjectAddress> ); // 옛 값은 객체가 아니다
+    static_assert( !std::is_invocable_v<RepNotifyFn, const sw::PropertyInfo&, void*, const void*> );
+    static_assert( std::is_invocable_v<InterpolateFn, const sw::PropertyInfo&, sw::MutableObjectAddress, sw::ValueAddress, sw::ValueAddress, float32> );
+    static_assert( !std::is_invocable_v<InterpolateFn, const sw::PropertyInfo&, sw::MutableValueAddress, sw::ValueAddress, sw::ValueAddress, float32> );
+    static_assert( !std::is_invocable_v<InterpolateFn, const sw::PropertyInfo&, void*, const void*, const void*, float32> );
+    // 인스펙터의 EditCondition 판정도 프로퍼티를 가진 객체를 받는다(에디터 쪽 `IInspectorProperty::draw` · `EditorPropertyGrid` 와 같은 주소 형식).
+    using EditStateFn = decltype( &sw::PropertyEditCondition::getEditState );
+    static_assert( std::is_invocable_v<EditStateFn, const sw::TypeInfo&, const sw::PropertyInfo&, sw::ObjectAddress> );
+    static_assert( std::is_invocable_v<EditStateFn, const sw::TypeInfo&, const sw::PropertyInfo&, sw::MutableObjectAddress> );
+    static_assert( !std::is_invocable_v<EditStateFn, const sw::TypeInfo&, const sw::PropertyInfo&, sw::ValueAddress> );
+    static_assert( !std::is_invocable_v<EditStateFn, const sw::TypeInfo&, const sw::PropertyInfo&, const void*> );
+
     sw::BitfieldTestActor actor;
     actor._score = 42;
     SW_EXPECT_STREQ( "42", sw::SerializerUtil::formatPropertyText( *pScore, sw::ObjectAddress{ &actor }, context ).c_str() );
@@ -4170,6 +4222,66 @@ SW_TEST_CASE( ReflectionSerializationTest, UnreadableFieldKeepsItsValueBeforeThe
     // 실패하면 객체째 버리는 엄격 읽기는 그대로 실패다.
     ColorListHolder strict;
     SW_EXPECT_FALSE( sw::BinarySerializer::deserialize( &strict, holderType, bytes.data(), bytes.size(), oldBuild.makeContext( true, false ) ) );
+}
+
+/**
+ * @brief [ReflectionSerializationTest] JSON 소프트 읽기도 읽지 못한 필드를 **읽기 전 값**으로 남긴다 — 앞 원소를 채우다 만 목록이 남지 않는다
+ * @details 예전에는 원소 하나를 읽지 못한 목록이 앞 원소가 써진 채로 남고 orphan 으로 넘어갔다(`docs/plans/SerializerSilentSkips.md` S2).
+ *          바이너리(`UnreadableFieldKeepsItsValueBeforeTheRead`)와 같은 `PropertyReadRollback` 을 쓴다. 엄격 읽기는 그대로 실패다.
+ */
+SW_TEST_CASE( ReflectionSerializationTest, JSONSoftReadKeepsUnreadableFieldValueBeforeTheRead )
+{
+    const sw::TypeInfo    holderType = makeTextListHolderType();
+    const sw::string_view text       = R"({"_listValue":[1,"x",3],"_after":9})"; // 둘째 원소를 int32 로 읽지 못한다
+
+    test::ScopedLogSuppressor suppressor; // 읽지 못한 원소 경고
+
+    TextListHolder                    soft;
+    sw::vector<sw::SchemaOrphanValue> listOrphan;
+    soft._listValue = { 7 };
+    SW_EXPECT_TRUE( sw::JSONSerializer::deserializeSoft( &soft, holderType, text, &listOrphan, nullptr ) == sw::SoftReadResult::Read );
+    SW_EXPECT_EQUAL( size_t( 1 ), listOrphan.size() );
+    SW_ASSERT_TRUE_MSG( soft._listValue.size() == size_t( 1 ), "읽다 만 목록(앞 원소가 써진 채)이 남았습니다" );
+    SW_EXPECT_EQUAL( 7, soft._listValue[0] );
+    SW_EXPECT_EQUAL( 9, soft._after );
+
+    TextListHolder strict;
+    SW_EXPECT_FALSE( sw::JSONSerializer::deserialize( &strict, holderType, text ) );
+}
+
+/**
+ * @brief [ReflectionSerializationTest] XML 소프트 읽기도 읽지 못한 필드를 **읽기 전 값**으로 남기고, 그 칸의 원문 하나를 orphan 으로 넘긴다
+ * @details 예전에는 읽지 못한 원소만 빠진 목록이 남고 그 원소 글만 orphan 이었다. 이제 칸째 되돌리므로 읽힌 원소도 버려지고, 버린 값을 다 알리게
+ *          원소 orphan 대신 칸 원문 하나를 남긴다(바이너리 · JSON 이 칸 하나를 orphan 하나로 남기는 것과 같다). 엄격 읽기는 그대로 실패다.
+ */
+SW_TEST_CASE( ReflectionSerializationTest, XMLSoftReadKeepsUnreadableFieldValueBeforeTheRead )
+{
+    const sw::TypeInfo holderType = makeTextListHolderType();
+    TextListHolder     saved;
+    saved._listValue = { 1, 2, 3 };
+    saved._after     = 9;
+    sw::string text  = sw::XMLSerializer::serialize( &saved, holderType );
+    // 둘째 원소를 int32 로 읽지 못하게 고친다
+    const sw::string_view readableItem = "<item>2</item>";
+    const size_t          itemPosition = text.find( readableItem );
+    SW_ASSERT_TRUE_MSG( itemPosition != sw::string::npos, "XML 글의 모양이 짐작과 다릅니다" );
+    text.replace( itemPosition, readableItem.size(), "<item>x</item>" );
+
+    test::ScopedLogSuppressor suppressor; // 읽지 못한 원소 경고
+
+    TextListHolder                    soft;
+    sw::vector<sw::SchemaOrphanValue> listOrphan;
+    soft._listValue = { 7 };
+    SW_EXPECT_TRUE( sw::XMLSerializer::deserializeSoft( &soft, holderType, text, &listOrphan, nullptr ) == sw::SoftReadResult::Read );
+    SW_ASSERT_EQUAL( size_t( 1 ), listOrphan.size() );
+    SW_EXPECT_TRUE( listOrphan[0]._name == sw::hashed_string( "_listValue" ) );
+    SW_EXPECT_TRUE( listOrphan[0]._text.find( "<item>1</item>" ) != sw::string::npos );
+    SW_ASSERT_TRUE_MSG( soft._listValue.size() == size_t( 1 ), "읽다 만 목록(읽힌 원소만 남은 채)이 남았습니다" );
+    SW_EXPECT_EQUAL( 7, soft._listValue[0] );
+    SW_EXPECT_EQUAL( 9, soft._after );
+
+    TextListHolder strict;
+    SW_EXPECT_FALSE( sw::XMLSerializer::deserialize( &strict, holderType, text ) );
 }
 
 /**

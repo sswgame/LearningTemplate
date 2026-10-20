@@ -4,7 +4,7 @@
  */
 #pragma once
 #include "Engine/EngineMinimal.h"
-#include "Engine/Serialization/Base/TextAddress.h"
+#include "Engine/Reflection/TextAddress.h"
 
 namespace sw
 {
@@ -241,8 +241,12 @@ namespace sw
     [[nodiscard]] SW_API bool parseTextValueCoerced( MutableValueAddress value, hashed_string typeName, string_view valStr,
                                                      const SerializeContext& context );
 
-    /** @brief 점 경로로 프로퍼티 포인터를 찾습니다. */
-    SW_API bool resolvePropertyPath( void* pRoot, const TypeInfo& typeInfo, const utf8* pDottedPath,
-                                     void*& pOutPtr, const PropertyInfo*& pOutProp );
+    /**
+     * @brief 점 경로로 프로퍼티 값의 주소를 찾습니다.
+     * @param root @p typeInfo 객체의 주소입니다(첫 프로퍼티 오프셋을 더할 곳).
+     * @param outValue 찾은 프로퍼티 값 자체의 주소입니다. 찾지 못하면 널입니다.
+     */
+    SW_API bool resolvePropertyPath( MutableObjectAddress root, const TypeInfo& typeInfo, const utf8* pDottedPath,
+                                     MutableValueAddress& outValue, const PropertyInfo*& pOutProp );
 
 } // namespace sw
