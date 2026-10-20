@@ -65,6 +65,7 @@
   - 카메라: S3 컷 신호 · S4 가려짐(렌더러 기능이 먼저), GamepadVirtualCursor G2 Nile · Skirmish 바인딩 결정 · G3 실기, 렌즈 시프트(비대칭 투영)를 `CameraDepthOfFieldValues` 방식으로.
   - 네트워크: ServerDebug S1 포트 샤딩(키트 재설계 + 측정이 착수 조건) · S6 게임 뷰 겹치기(디버그 선 패스 신설) · S7 클라이언트 쪽 기록(서버 틱 번호 노출) · S8(EditorMultiWorld 선행), 파괴 쇼케이스 `destructionnet.scene.xml` 저장.
   - 정리: 묶음 3 · 4 · 7 · 8, Online 쪽 FunctorLambda · 긴 함수 5 개 · 주석, Core 나머지 폴더 주석(Math · Process · Delegate · Memory · Diagnostics · CommandLine · Container · Task · LogSink · String), Editor 구역 CommentRewrite 약 240 개, `std::remove_if` 게이트, 조용한 폴백 둘(위), GUI · Widgets 등 EditorModule 폴더의 층 경계를 빌드 형식으로(`listEditorModelDir` 방식), `RunCoreLayerGraph` 숨은 폴백 · `SessionGuard.py:33` 종료 코드 베낌(scriptsstruct 가 하는지 확인).
+  - 직렬화: `resolvePropertyPath`(스키마 이관의 점 경로)가 비트필드에 orphan 을 적용하면 같은 바이트를 덮을 수 있다(읽어서 본 것) — 근본은 `PropertyInfo::getRawPtr` 가 비트필드에도 값 주소를 내주는 것이라 리플렉션에서 비트필드 값 주소를 형식으로 막아야 한다. `wt/serials4`(62ea27371, `SerializerSilentSkips` 4/4)가 바이너리 쪽 비트필드 되돌림(`tryCoercePropertyBinary`)은 고쳤다. 병합 순서 voidstar3 → serials4.
   - 문서: 후보 `OperationsAndDeployment` 외 보류 3 개는 풀지 않는다. `lighting` 이 거절당한 `Roadmap.md` 줄(클러스터드 · 간접 조명)을 직접 고친다. `NetKitMessageRange.h` 의 0x60 이 다른 키트와 겹치지 않는지 병합 때 본다.
 - **C. 확인 대기 · 조건부 · 관찰**: 후보 문서 `## 확인 대기` 21 · `## 조건부` 18 · `## 관찰` 7 개는 측정 · 사용자 결정 · 외부 조건이 필요해 이번에 건드리지 않았다.
 
