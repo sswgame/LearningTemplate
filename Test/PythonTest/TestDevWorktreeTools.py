@@ -135,6 +135,21 @@ class MakeWorktreePlanTest(unittest.TestCase):
             self.assertFalse(link.exists())
             self.assertTrue((target / "keep.txt").is_file())
 
+    def testCookStampOnlyChangesDoNotBlockRemoval(self) -> None:
+        # 쿠킹 스탬프(추적되는 생성물)만 바뀐 워크트리는 지운다. 다른 변경이 하나라도 있으면 그 경로가 막는 이유로 나온다.
+        stamps = " M Resource/engine/shaders/bin/dx12/cook.stamp\n M Resource/game/Foo/shaders/bin/vulkan/cook.stamp\n"
+        self.assertEqual(RemoveWorktree.listBlockingChanges(stamps), [])
+        mixed = stamps + " M Source/a.cpp\n?? notes.txt\nR  old.txt -> new.txt\n"
+        self.assertEqual(RemoveWorktree.listBlockingChanges(mixed), ["Source/a.cpp", "notes.txt", "new.txt"])
+
+    def testLeftoverDirectoryIsRemovedOrReportedFalse(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            folder = Path(temp) / "shell"
+            folder.mkdir()
+            self.assertTrue(RemoveWorktree.removeLeftoverDirectory(folder, retryCount=2, retrySeconds=0))
+            self.assertFalse(folder.exists())
+            self.assertTrue(RemoveWorktree.removeLeftoverDirectory(folder))   # 이미 없으면 참
+
     def testDifferentTripletBytesAreReported(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             mainRoot = Path(temp) / "main"

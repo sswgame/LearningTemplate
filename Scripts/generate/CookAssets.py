@@ -207,6 +207,8 @@ def cookShadersInternal(projectRoot: Path, appExePath: Path | None = None) -> bo
 
 
 _kCookStampFileName = "cook.stamp"
+# 커밋되는 스탬프의 경로 모양(fnmatch, `*` 는 `/` 도 넘는다) — 쿠킹 뒤 바뀌는 생성물을 가려내는 정본이다(`RemoveWorktree` 가 쓴다).
+kCookStampPathPattern = f"Resource/*/shaders/bin/*/{_kCookStampFileName}"
 _kCookStampHeader = "SWCOOK 4"
 _kFnv1a64Offset = 14695981039346656037
 _kFnv1a64Prime = 1099511628211

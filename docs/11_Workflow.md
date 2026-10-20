@@ -21,6 +21,8 @@ py -3 -m Scripts shared-lock release vcpkg --owner <이름>                     
 
 - **워크트리에는 주인이 있습니다.** `worktree-make` 가 주인 이름 · 프로세스 번호(`CLAUDE_PID`, 사람 셸은 `--pid $PID`) · 세션 · 시작 시각을 워크트리의 git 디렉터리에 적습니다.
   `worktree-remove` 는 주인 프로세스가 살아 있고 내 것이 아니면 지우지 않습니다(`--even-if-owned` 는 사용자가 시킨 때만). 주인 기록이 없는 워크트리(이 기능 전)는 누가 쓰는지 모르므로 지우기 전에 사용자에게 묻습니다.
+  `worktree-remove` 는 쿠킹 스탬프(`cook.stamp`)만 바뀐 워크트리를 변경으로 치지 않고 지우고, 다른 변경이 있으면 그 경로를 보이며 건너뜁니다. 폴더가 남으면 다시 지워 보고 끝내 남으면 경로를 경고로 냅니다.
+  워크트리 폴더 밖(`D:/w` 같은 공유 위치)에 검증 출력(로그 · 캡처 · 측정값)을 쌓지 않습니다. 워크트리 안의 임시 폴더나 세션 스크래치패드에 두어, 지우면 함께 사라지게 합니다.
 
 - **`--base` 를 반드시 줍니다.** 주지 않으면 `origin/main` 에서 갈라지는데, 로컬 main 이 push 전이면 낡은 기준입니다. 지울 때는 `git merge-base --is-ancestor wt/<이름> main` 으로 병합을 확인한 뒤 `worktree-remove` 를 씁니다(브랜치도 지웁니다).
 - `.claude/skills` 는 추적하지 않아 새 워크트리에 없습니다. 에이전트가 ponytail · graphify 스킬을 쓰려면 세션을 시작하기 전에 main 체크아웃의 `.claude/skills` 를 워크트리의 같은 위치로 복사합니다. 사용법은 [CLAUDE.md](../CLAUDE.md) "보조 도구" 가 원본입니다.
