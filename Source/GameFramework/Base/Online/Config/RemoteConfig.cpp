@@ -7,6 +7,8 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Network/BitStream.h"
 
+#include "Engine/Observability/MetricRegistry.h"
+
 #include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 
@@ -18,9 +20,10 @@ namespace sw
     {
         struct RemoteConfigInternal
         {
-            static constexpr uint64 kRecordVersion   = 1;
-            static constexpr uint64 kVersion         = 1;
-            static constexpr int32  kTypeBitCount    = 2;
+            static constexpr uint64 kRecordVersion   = 2; ///< 2 에서 값 종류가 3 비트가 됐다(실험). 옛 판 레코드는 다시 쓴다
+            static constexpr uint64 kVersion         = 2;
+            static constexpr int32  kTypeBitCount    = 3;
+            static constexpr int32  kMaxVariantCount = 16;
             static constexpr int32  kListPageSize    = 256;
             static constexpr int32  kMaxKeySize      = 128;
             static constexpr int32  kMaxSnapshotKeys = 4096;
@@ -55,8 +58,25 @@ namespace sw
 
             static bool isValidValue( const RemoteConfigValue& value )
             {
-                return value._text.size() <= static_cast<size_t>( RemoteConfigValue::kMaxTextSize ) && 0 <= value._rolloutBasisPoints &&
-                       value._rolloutBasisPoints <= RemoteConfigValue::kFullRolloutPoints;
+                const bool bBasicOk = value._type <= RemoteConfigValueType::Experiment && value._text.size() <= static_cast<size_t>( RemoteConfigValue::kMaxTextSize ) &&
+                                      0 <= value._rolloutBasisPoints && value._rolloutBasisPoints <= RemoteConfigValue::kFullRolloutPoints;
+                if ( bBasicOk == false )
+                    return false;
+                vector<RemoteConfigVariant> listVariant;
+                return value._type != RemoteConfigValueType::Experiment || RemoteConfig::parseVariants( value._text, listVariant );
+            }
+
+            static bool isCodeText( string_view text )
+            {
+                if ( text.empty() || text.size() > static_cast<size_t>( kMaxKeySize ) )
+                    return false;
+                for ( const utf8 ch : text )
+                {
+                    const bool bAllowed = ( 'a' <= ch && ch <= 'z' ) || ( '0' <= ch && ch <= '9' ) || ch == '_';
+                    if ( bAllowed == false )
+                        return false;
+                }
+                return true;
             }
 
             static vector<uint8> encodeRecord( const RemoteConfigValue& value )
@@ -86,6 +106,44 @@ namespace sw
             }
         };
     } // namespace
+} // namespace sw
+
+namespace sw
+{
+    RemoteConfigExperimentMetrics::RemoteConfigExperimentMetrics( MetricRegistry* pRegistry )
+        : _pRegistry{ pRegistry }
+    {
+    }
+
+    bool RemoteConfigExperimentMetrics::recordExposure( const RemoteConfig& config, string_view experiment, uint64 accountID )
+    {
+        return add( config, experiment, accountID, "exposure" );
+    }
+
+    bool RemoteConfigExperimentMetrics::recordEvent( const RemoteConfig& config, string_view experiment, uint64 accountID, string_view eventName )
+    {
+        if ( RemoteConfigInternal::isCodeText( eventName ) == false )
+            return false;
+        return add( config, experiment, accountID, eventName );
+    }
+
+    bool RemoteConfigExperimentMetrics::add( const RemoteConfig& config, string_view experiment, uint64 accountID, string_view eventName )
+    {
+        string variant;
+        if ( config.findVariant( experiment, accountID, variant ) == false )
+            return false;
+        if ( _pRegistry == nullptr )
+            return true;
+        const vector<MetricLabel> listLabel = {
+            {"experiment", string( experiment )},
+            {   "variant",              variant},
+            {     "event",  string( eventName )}
+        };
+        MetricCounter* pCounter = _pRegistry->registerCounter( "remote_config_experiment_total", "A/B experiment exposures and events per variant", listLabel );
+        if ( pCounter != nullptr )
+            pCounter->add();
+        return true;
+    }
 } // namespace sw
 
 namespace sw
@@ -308,6 +366,59 @@ namespace sw
                 return false;
         }
         return true;
+    }
+
+    bool RemoteConfig::parseVariants( string_view text, vector<RemoteConfigVariant>& outListVariant )
+    {
+        outListVariant.clear();
+        int32 totalWeight = 0;
+        while ( text.empty() == false )
+        {
+            const size_t      separator = text.find( ';' );
+            const string_view part      = text.substr( 0, separator );
+            text                        = separator == string_view::npos ? string_view{} : text.substr( separator + 1 );
+            const size_t colon          = part.find( ':' );
+            if ( colon == string_view::npos )
+                return false;
+            RemoteConfigVariant variant;
+            variant._name        = string( part.substr( 0, colon ) );
+            const bool bParsed   = RemoteConfigInternal::isCodeText( variant._name ) && StringUtil::parseInt( part.substr( colon + 1 ), variant._weightBasisPoints );
+            const bool bWeightOk = bParsed && 0 < variant._weightBasisPoints && variant._weightBasisPoints <= RemoteConfigValue::kFullRolloutPoints - totalWeight;
+            if ( bWeightOk == false )
+                return false;
+            for ( const RemoteConfigVariant& existing : outListVariant )
+            {
+                if ( existing._name == variant._name )
+                    return false;
+            }
+            totalWeight += variant._weightBasisPoints;
+            outListVariant.push_back( std::move( variant ) );
+            if ( static_cast<int32>( outListVariant.size() ) > RemoteConfigInternal::kMaxVariantCount )
+                return false;
+        }
+        return totalWeight == RemoteConfigValue::kFullRolloutPoints;
+    }
+
+    bool RemoteConfig::findVariant( string_view experiment, uint64 accountID, string& outVariant ) const
+    {
+        const Entry* pEntry = findEntry( experiment, RemoteConfigValueType::Experiment );
+        if ( pEntry == nullptr )
+            return false;
+        vector<RemoteConfigVariant> listVariant;
+        if ( parseVariants( pEntry->_value._text, listVariant ) == false )
+            return false; // 읽기와 쓰기가 검사했으므로 생기지 않는다
+        const int32 bucket     = computeRolloutBucket( experiment, accountID );
+        int32       cumulative = 0;
+        for ( const RemoteConfigVariant& variant : listVariant )
+        {
+            cumulative += variant._weightBasisPoints;
+            if ( bucket < cumulative )
+            {
+                outVariant = variant._name;
+                return true;
+            }
+        }
+        return false;
     }
 
     int32 RemoteConfig::computeRolloutBucket( string_view flag, uint64 accountID )
