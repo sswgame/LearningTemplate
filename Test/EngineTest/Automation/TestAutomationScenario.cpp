@@ -32,6 +32,11 @@ namespace
         static inline uint32 s_beforeInputFrame    = 0;
         static inline uint32 s_runFrameCount       = 0; ///< `run` 이 돈 실제 프레임(시나리오 시계가 붙잡혀도 오른다)
         static inline uint32 s_readyAtRunFrame     = 0; ///< `Test.Ready` 가 1 이 되는 실제 프레임
+        static inline uint32 s_busyFromRunFrame    = 0; ///< 시계 잡기 조건이 참이 되는 실제 프레임
+        static inline uint32 s_busyUntilRunFrame   = 0; ///< 그 조건이 다시 거짓이 되는 실제 프레임(같으면 늘 거짓 — 다른 테스트에 걸리지 않는다)
+
+        /** @brief 백그라운드 작업(저장 검증)을 흉내 낸 시계 잡기 조건입니다 — 실제 프레임이 [from, until) 이면 참입니다. */
+        [[nodiscard]] static bool isBackgroundWorkBusy() { return s_busyFromRunFrame <= s_runFrameCount && s_runFrameCount < s_busyUntilRunFrame; }
 
         [[nodiscard]] static bool readSwitchCount( const sw::GameObjectManager* /*pManager*/, float64& outValue )
         {
@@ -118,6 +123,7 @@ namespace
     SW_AUTOMATION_PROBE( testSwitchDown, "Test.SwitchDown", "1 while the Switch action is held", &TestAutomationScenarioInternal::readSwitchDown );
     SW_AUTOMATION_PROBE( testNothing, "Test.Nothing", "never has a value", &TestAutomationScenarioInternal::readNothing );
     SW_AUTOMATION_PROBE( testReady, "Test.Ready", "1 once the harness has run s_readyAtRunFrame frames", &TestAutomationScenarioInternal::readReady );
+    SW_AUTOMATION_CLOCK_HOLDER( testBackgroundWork, "TestBackgroundWork", &TestAutomationScenarioInternal::isBackgroundWorkBusy );
     SW_AUTOMATION_STEP( testMark, "TestMark", &TestAutomationScenarioInternal::runMark, &TestAutomationScenarioInternal::validateMark, true );
     SW_AUTOMATION_STEP_WITH_HOOKS( testLate, "TestLate", &TestAutomationScenarioInternal::runLate, &TestAutomationScenarioInternal::validateMark, nullptr,
                                    &TestAutomationScenarioInternal::holdLate, false );
@@ -309,6 +315,45 @@ SW_TEST_CASE( AutomationScenarioTest, WaitUntilHoldsTheScenarioClock )
         SW_ASSERT_EQUAL( 1u, static_cast<uint32>( runner.getFailures().size() ) );
         SW_EXPECT_TRUE_MSG( runner.getFailures()[0].find( "gave up after 5" ) != sw::string::npos, runner.getFailures()[0].c_str() );
     }
+    input.shutdown();
+}
+
+/**
+ * @brief [AutomationScenarioTest] 시계 잡기 조건(`SW_AUTOMATION_CLOCK_HOLDER`)이 참인 동안 시나리오 시계가 멈추고 입력 사건이 그만큼 밀리며, 참이면 시나리오가 시작하지 않는다
+ * @details 저장 검증의 늦은 결과가 임시 폴더를 지운 뒤 다음 시나리오 창에 떨어지던 경합(GL 에디터 체인 flowimport)의 고침이다.
+ *          변이: 붙잡지 않으면 frame 6 의 `Test.Ready`(실제 프레임 40 부터 1)가 지고, 입력을 밀지 않으면 붙잡힌 동안 Tap 이 나가 frame 5 의 수가 어긋난다.
+ */
+SW_TEST_CASE( AutomationScenarioTest, ClockHolderStopsTheScenarioClock )
+{
+    using Internal = TestAutomationScenarioInternal;
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    Internal::bindSwitch( input );
+    Internal::s_readyAtRunFrame = 40;
+    {
+        Internal::s_busyFromRunFrame  = 3; // 시나리오 frame 2 부터 붙잡는다(실제 프레임 1 이 시작 프레임이다)
+        Internal::s_busyUntilRunFrame = 40;
+        sw::AutomationRunner runner;
+        SW_ASSERT_TRUE( runner.startFromText( R"(<Scenario name="t" startAfter="Immediately" timeoutFrames="20">
+        <At frame="4"><Tap slot="Key.E"/></At>
+        <At frame="5"><Expect probe="Test.SwitchCount" equals="1"/></At>
+        <At frame="6"><Expect probe="Test.Ready" equals="1"/><Pass/></At>
+      </Scenario>)" ) );
+        const sw::AutomationResult result = Internal::run( runner, input );
+        SW_EXPECT_TRUE_MSG( result == sw::AutomationResult::Passed, runner.getFailures().empty() ? runner.getFinishReason().c_str() : runner.getFailures()[0].c_str() );
+        SW_EXPECT_EQUAL( 6u, runner.getFrameIndex() );
+    }
+    {
+        Internal::s_busyFromRunFrame  = 0; // 시작 전부터 참이다 — 앞 시나리오가 남긴 작업
+        Internal::s_busyUntilRunFrame = 40;
+        sw::AutomationRunner runner;
+        SW_ASSERT_TRUE( runner.startFromText( R"(<Scenario name="t" startAfter="Immediately" startTimeoutFrames="5" timeoutFrames="20">
+        <At frame="1"><Expect probe="Test.Ready" equals="1"/><Pass/></At>
+      </Scenario>)" ) );
+        const sw::AutomationResult result = Internal::run( runner, input );
+        SW_EXPECT_TRUE_MSG( result == sw::AutomationResult::Passed, runner.getFailures().empty() ? runner.getFinishReason().c_str() : runner.getFailures()[0].c_str() );
+    }
+    Internal::s_busyUntilRunFrame = 0;
     input.shutdown();
 }
 

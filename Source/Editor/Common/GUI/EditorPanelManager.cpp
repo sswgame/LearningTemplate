@@ -86,6 +86,16 @@ namespace sw::editor
         return nullptr;
     }
 
+    IEditorPanel* EditorPanelManager::findDocumentPanel( EditorAssetType kind ) const
+    {
+        for ( const EditorPanelEntry& entry : _listPanel )
+        {
+            if ( entry._pInstance != nullptr && entry._pInstance->getDocumentKind() == kind )
+                return entry._pInstance.get();
+        }
+        return nullptr;
+    }
+
     bool EditorPanelManager::setPanelOpen( string_view panelID, bool bOpen )
     {
         IEditorPanel* pPanel = findPanelByID( panelID );

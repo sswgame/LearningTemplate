@@ -38,21 +38,6 @@
 - 포토모드: 포토 모드는 게임 HUD 를 그대로 둔다. 의도인지 확인.
 - 팝업잘림: 뷰포트 옵션 팝업은 패널이 화면 오른쪽 끝이면 메인 창 밖으로 나가 클라이언트 캡처에 안 잡힌다.
 
-### AsyncValidationScenarioRace
-제목: 저장 검증의 늦은 결과가 다음 시나리오 창에 찍혀 에디터 체인이 지는 경합
-옛번호: 없음
-왜 필요한가: `editor.flowimport` 가 임시 프리팹을 쓰는 씬을 `Saved/Automation/` 에 저장하면 `EditorAssetValidation` 이 파이썬 검증을 비동기로 띄운다. 시나리오가 끝(frame 140)에서 임시 폴더를 지운 뒤 결과가 오면
-`[prefab-guids] … neither is known` [Error] 가 다음 시나리오(flowprefab · chainreloadeditor)의 창에 떨어져 로그 게이트로 진다. 시간에 달렸다(2026-10-20, 작은 체인 flowimport → reset → flowprefab → reloadeditor: GL 1/1 · DX11 1/1 실패, DX12 1/1 통과,
-전체 `EditorScenariosPassOnOpenGL` 2/2 실패 · DX11 · DX12 · Vulkan 통과). 기본 도킹 배치 수정(`getDefaultDockSlot`)과는 상관없다.
-남은 것: 구조로 막을 곳을 고른다 — 시나리오 경계에서 대기 중인 검증 작업을 기다리기(실행기가 시계를 잡는 단계처럼), 또는 검증 결과가 그 사이 바뀌거나 지워진 파일이면 버리기. 시나리오에 `ExpectLog` 를 더해 덮지 않는다.
-
-### PanelOpenByTitle
-제목: 패널 열기 요청이 창 제목 문자열을 키로 받는 것
-옛번호: 없음
-왜 필요한가: 기본 도킹 배치가 제목 사본을 들다 프리팹 도구 제목이 바뀌자 그 도구가 떠 있는 창이 된 결함(2026-10-20, `getDefaultDockSlot` 로 고침)과 같은 모양이 남았다.
-`EditorWorkspace::requestOpenPanel( const utf8* pTitle )` 은 제목을 받아 `setPanelOpen( 제목 )` · `SetWindowFocus( 제목 )` 로 풀고 실패를 버린다. 상태 막대의 `MapCheckPanel.cpp` 가 "Map Check" 를 글자로 넘긴다.
-남은 것: 요청을 패널 형식(`requestOpenPanel<T>()`, `T::kPanelID`)이나 등록 항목으로 받고 제목은 인스턴스에서 읽게 바꾼다. 찾지 못하면 오류로 남긴다.
-
 ### DesignerDataToolsAudit
 제목: 디자이너용 데이터 도구 점검
 옛번호: D3-13

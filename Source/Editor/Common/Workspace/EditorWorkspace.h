@@ -14,6 +14,7 @@
 
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/EditorSubsystem.h"
+#include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
 
@@ -35,6 +36,16 @@ namespace sw::editor
         float3  _orbitTarget{ 0.0f, 0.0f, 0.0f };
         float32 _orbitDistance{ 5.0f };
         bool    _bValid{ false };
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /** @brief 패널 열기 요청 하나입니다. 패널 id 와 문서 종류 중 하나만 채웁니다(`EditorWorkspace::requestOpenPanel<T>` · `requestOpenDocumentPanel`). */
+    struct EditorPanelOpenRequest
+    {
+        string          _panelID;                                  ///< 등록 id(`T::kPanelID`) 또는 실행 중에 들어온 id
+        EditorAssetType _documentKind{ EditorAssetType::Unknown }; ///< 이 종류의 문서를 여는 도구 패널
     };
 } // namespace sw::editor
 
@@ -92,10 +103,21 @@ namespace sw::editor
         void setGizmoLocalSpace( bool bLocal ) { _bGizmoLocalSpace = ( bLocal ) ? SW_TRUE : SW_FALSE; }
 
         // ------------------------------------------------------------------------------
-        // 4) 창 열기 요청. 메뉴가 넣고 셸이 소비한다
+        // 4) 창 열기 요청. 메뉴가 넣고 셸이 소비한다(`EditorMenuBar::processOpenPanelRequests`). 요청은 창 제목이 아니라 패널을 가리킨다 —
+        //    제목을 키로 받으면 제목이 바뀐 패널의 요청이 말없이 버려진다. 제목은 셸이 찾은 인스턴스에서 읽고, 찾지 못하면 오류로 남긴다
         // ------------------------------------------------------------------------------
-        void requestOpenPanel( const utf8* pTitle );
-        bool consumeOpenPanel( string& outTitle );
+        /** @brief 패널 클래스로 열기를 요청합니다. id 는 그 클래스의 `kPanelID` 하나에서 온다(등록 · `findPanel<T>()` 와 같은 상수). */
+        template <typename TPanel>
+        void requestOpenPanel()
+        {
+            requestOpenPanelByID( TPanel::kPanelID );
+        }
+        /** @brief 실행 중에 들어온 id(콘솔 인자 · 패널 호스트)로 열기를 요청합니다. 코드가 아는 패널은 `requestOpenPanel<T>()` 를 씁니다. */
+        void requestOpenPanelByID( string_view panelID );
+        /** @brief 애셋 종류 @p kind 의 문서를 여는 도구 패널(`IEditorPanel::getDocumentKind`)을 열기를 요청합니다. */
+        void requestOpenDocumentPanel( EditorAssetType kind );
+        /** @brief 쌓인 요청을 꺼냅니다. 없으면 false 입니다. */
+        [[nodiscard]] bool consumeOpenPanel( EditorPanelOpenRequest& outRequest );
 
         // ------------------------------------------------------------------------------
         // 5) 씬 열기. 파일 대화상자는 백그라운드에서 열고, 소비는 메인 스레드에서 한다
@@ -173,7 +195,7 @@ namespace sw::editor
         uint64                   _scrollToComponentID;
         string                   _selectedComponentKey;
         string                   _focusedAssetPath;
-        string                   _pendingOpenPanelTitle;
+        EditorPanelOpenRequest   _pendingOpenPanel;
         string                   _pendingScenePath;
         string                   _pendingSceneActionPath;
         string                   _copiedComponentXML;

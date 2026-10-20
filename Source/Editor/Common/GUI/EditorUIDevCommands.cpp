@@ -73,7 +73,7 @@ namespace sw::editor
                 const IEditorPanel* pPanel   = ( listArgument.size() == 1 && pContext != nullptr ) ? pContext->getSubsystem<EditorPanelManager>().findPanelByID( listArgument[0] ) : nullptr;
                 if ( pPanel == nullptr )
                     return false;
-                pContext->getSubsystem<EditorWorkspace>().requestOpenPanel( pPanel->getPanelTitle() );
+                pContext->getSubsystem<EditorWorkspace>().requestOpenPanelByID( listArgument[0] );
                 outReply = string{ "focusing " } + pPanel->getPanelTitle();
                 return true;
             }

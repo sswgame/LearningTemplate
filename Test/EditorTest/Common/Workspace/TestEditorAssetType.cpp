@@ -88,8 +88,8 @@ SW_TEST_CASE( EditorAssetTypeTest, SceneAndPrefabFollowTheCookersSourceRule )
     SW_EXPECT_FALSE( EditorAssetTypeRegistry::matches( EditorAssetType::Scene, "maps/a.scene" ) );
     SW_EXPECT_FALSE( EditorAssetTypeRegistry::matches( EditorAssetType::Prefab, "prefabs/hero.prefab.bin" ) );
     SW_EXPECT_FALSE( EditorAssetTypeRegistry::matches( EditorAssetType::Prefab, "prefabs/hero.prefab" ) );
-    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findPanelTitleForPath( "prefabs/hero.prefab.bin" ).empty() );
-    SW_EXPECT_STREQ( "Prefab Window", sw::string{ EditorAssetTypeRegistry::findPanelTitleForPath( "prefabs/hero.prefab.json" ) }.c_str() );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findPanelKindForPath( "prefabs/hero.prefab.bin" ) == EditorAssetType::Unknown );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findPanelKindForPath( "prefabs/hero.prefab.json" ) == EditorAssetType::Prefab );
 
     // 접미사를 펼치는 쪽(핫 리로드 감시 · 대화상자 필터)도 같은 표다.
     sw::vector<sw::string> listPrefabSuffix;
@@ -149,16 +149,13 @@ SW_TEST_CASE( EditorAssetTypeTest, PanelTitlesAndToolKinds )
     SW_EXPECT_TRUE( bHasMaterial );
 }
 
-SW_TEST_CASE( EditorAssetTypeTest, FindPanelTitleLongestSuffix )
+SW_TEST_CASE( EditorAssetTypeTest, FindPanelKindLongestSuffix )
 {
-    const auto animationTitle = sw::editor::EditorAssetTypeRegistry::findPanelTitleForPath( "content/hero.animgraph.json" );
-    SW_EXPECT_STREQ( "Animation Graph", sw::string{ animationTitle }.c_str() );
-
-    const auto matTitle = sw::editor::EditorAssetTypeRegistry::findPanelTitleForPath( "content/hero.material" );
-    SW_EXPECT_STREQ( "Material", sw::string{ matTitle }.c_str() );
-
-    const auto unknownTitle = sw::editor::EditorAssetTypeRegistry::findPanelTitleForPath( "readme.md" );
-    SW_EXPECT_TRUE( unknownTitle.empty() );
+    using sw::editor::EditorAssetType;
+    using sw::editor::EditorAssetTypeRegistry;
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findPanelKindForPath( "content/hero.animgraph.json" ) == EditorAssetType::AnimationGraph );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findPanelKindForPath( "content/hero.material" ) == EditorAssetType::Material );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findPanelKindForPath( "readme.md" ) == EditorAssetType::Unknown );
 }
 
 SW_TEST_CASE( EditorAssetTypeTest, DataDoesNotStealAnimationJSON )
@@ -474,13 +471,13 @@ SW_TEST_CASE( EditorAssetTypeTest, UIDocumentOpensTheUIPreviewPanel )
     SW_EXPECT_TRUE( EditorAssetTypeRegistry::matches( EditorAssetType::UIDocument, "game/shooter3d/ui/hud.ui.xml" ) );
     // `matches` 는 종류마다 따로 판정하므로 일반 데이터(.xml)도 UI 문서에 맞는다 — 어느 종류로 보이는지는 첫 일치인 `findKind` 가 정한다.
     SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "engine/ui/pause.ui.xml" ) != EditorAssetType::Data );
-    SW_EXPECT_STREQ( "UI Preview", sw::string{ EditorAssetTypeRegistry::findPanelTitleForPath( "engine/ui/pause.ui.xml" ) }.c_str() );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findPanelKindForPath( "engine/ui/pause.ui.xml" ) == EditorAssetType::UIDocument );
     SW_EXPECT_STREQ( "UI Preview", EditorAssetTypeRegistry::getPanelTitle( EditorAssetType::UIDocument ) );
 
     // 스타일 시트와 일반 데이터는 UI 문서가 아니다.
     SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "engine/ui/styles/default.uistyle.xml" ) == EditorAssetType::Data );
     SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "game/empty/data/table.xml" ) == EditorAssetType::Data );
-    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findPanelTitleForPath( "game/empty/data/table.xml" ).empty() );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findPanelKindForPath( "game/empty/data/table.xml" ) == EditorAssetType::Unknown );
 
     // 문서 캐시 핫 리로드 길이 남아 있다(경로를 가진 모든 캐시가 다시 읽는다).
     sw::vector<sw::string> listSuffix{};

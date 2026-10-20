@@ -57,11 +57,15 @@ namespace sw
     /**
      * @struct AutomationStartBlocker
      * @brief `ScenePlaying` 시작 조건을 미루는 조건 하나입니다. 실행기보다 위 계층(UI 의 로딩 화면)이 아래로 등록하며, 실행기는 그 계층을 include 하지 않습니다.
+     * @details `_bHoldsClock` 이면 시계 잡기 조건이다(`SW_AUTOMATION_CLOCK_HOLDER`) — 참인 동안 어떤 시나리오도 시작하지 않고, 도는 시나리오는 시계를 멈춘다.
+     *          결과를 로그로 늦게 내는 백그라운드 작업(저장 검증)이 쓴다. 시계가 그 작업보다 앞서 가면 뒤 단계(임시 폴더 지우기)가 작업이 읽을 파일을 바꾸고,
+     *          결과 줄이 다음 시나리오 창에 떨어진다. 언리얼 자동화가 셰이더 · 에셋 컴파일을 기다린 뒤 다음 명령을 도는 것과 같다.
      */
     struct AutomationStartBlocker
     {
         const utf8*                  _pName; ///< 로그와 중복 판정에 쓰는 이름입니다.
         AutomationStartBlockFunction _pIsBlocking;
+        bool                         _bHoldsClock{ false }; ///< 시나리오 도중에도 시계를 잡는다
     };
 } // namespace sw
 
@@ -86,6 +90,8 @@ namespace sw
         static void unregisterStartBlocker( const AutomationStartBlocker* pBlocker );
         /** @brief 등록된 조건 중 하나라도 시작을 막으면 true 입니다. */
         static bool isStartBlocked();
+        /** @brief 지금 시계를 잡고 있는 조건(`_bHoldsClock`)의 이름입니다. 없으면 nullptr 입니다. */
+        static const utf8* findClockHolder();
         /** @brief 언로드된 모듈이 키운 두 레지스트리의 용량을 해제합니다. 엔진 종료 끝(`StaticStorageSubsystem::shutdownSubsystem`)이 모듈을 모두 언로드한 뒤 부릅니다. */
         static void releaseUnusedStorage();
     };
@@ -141,4 +147,12 @@ namespace sw
     static const ::sw::AutomationStartBlockerRegistrar sw_automationStartBlockerRegistrar_##id               \
     {                                                                                                        \
         &sw_automationStartBlocker_##id                                                                      \
+    }
+
+/** @brief 시계 잡기 조건을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). 참인 동안 시나리오가 시작하지 않고 도는 시나리오의 시계가 멈춥니다(`AutomationStartBlocker::_bHoldsClock`). */
+#define SW_AUTOMATION_CLOCK_HOLDER( id, pName, pIsHolding )                                                      \
+    static const ::sw::AutomationStartBlocker          sw_automationClockHolder_##id{ pName, pIsHolding, true }; \
+    static const ::sw::AutomationStartBlockerRegistrar sw_automationClockHolderRegistrar_##id                    \
+    {                                                                                                            \
+        &sw_automationClockHolder_##id                                                                           \
     }

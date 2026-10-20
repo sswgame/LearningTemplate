@@ -416,7 +416,7 @@ namespace sw::editor
                     ValidationIssueLog::get().replaceIssues( probe._objectID, { issue } );
                     editor::getMainSceneSelection().clearObjectSelection();
                     (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( MapCheckPanel::kPanelID, true );
-                    pContext->getSubsystem<EditorWorkspace>().requestOpenPanel( pPanel->getPanelTitle() );
+                    pContext->getSubsystem<EditorWorkspace>().requestOpenPanel<MapCheckPanel>();
                     return EditorSelfTestStep::Continue;
                 }
                 if ( stepIndex < kSettleStepCount )

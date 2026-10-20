@@ -89,7 +89,7 @@ namespace sw::editor
 
         EditorWorkspace& workspace = pContext->getSubsystem<EditorWorkspace>();
         workspace.setFocusedAssetPath( string{ prefabPath }.c_str() ); // 문서 패널이 다음 그리기에서 문서를 바꾼다
-        workspace.requestOpenPanel( pWindow->getPanelTitle() );
+        workspace.requestOpenPanel<PrefabEditorPanel>();
         pContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyPrefabTitle" ), SW_LOCKEY( "EdCommon", "NotifyPrefabIsolated" ),
                                                                   NotificationType::Info );
         return true;

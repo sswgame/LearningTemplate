@@ -397,6 +397,16 @@ namespace sw::editor
         _pSession->_pPanel = nullptr; // 쌓여 있는 되돌리기 항목이 사라진 패널을 부르지 않게 한다
     }
 
+    const utf8* UIPreviewPanel::getPanelTitle() const
+    {
+        return EditorAssetTypeRegistry::getPanelTitle( EditorAssetType::UIDocument );
+    }
+
+    EditorAssetType UIPreviewPanel::getDocumentKind() const
+    {
+        return EditorAssetType::UIDocument;
+    }
+
     void UIPreviewPanel::shutdown( IRHIDevice* /*pRHIDevice*/ )
     {
         releaseTexture();

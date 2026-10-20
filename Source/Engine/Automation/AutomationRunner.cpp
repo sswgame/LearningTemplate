@@ -50,6 +50,8 @@ namespace sw
             static constexpr float32 kDefaultExitWithinSeconds = 10.0f;
             /** @brief `WaitUntil` 의 기본 시한(프레임)입니다. 부하가 걸린 기계에서 에디터가 에셋을 여는 데 드는 시간보다 넉넉하게 잡습니다. */
             static constexpr uint32 kDefaultWaitTimeoutFrames = 1200;
+            /** @brief 시계 잡기 조건 하나가 이어서 시계를 붙잡을 수 있는 벽시계 시한(초)입니다. 저장 검증(파이썬)은 쉬는 기계에서 몇 초, 빌드가 겹치면 30 초를 넘긴다. */
+            static constexpr float64 kClockHoldTimeoutSeconds = 180.0;
 
             /**
              * @brief 이 구성에 없는 단계가 들어 있는 시나리오면 그 첫 단계를 반환합니다. 개발 명령(`DevCommand`)은 Shipping 에서 빠집니다.
@@ -944,9 +946,13 @@ namespace sw
         , _screenshotCompletedCount{ 0 }
         , _imageWaitFrameCount{ 0 }
         , _holdFrameCount{ 0 }
+        , _clockHoldFrameCount{ 0 }
+        , _clockHoldStartSeconds{ 0.0 }
+        , _clockHolderName{}
         , _result{ AutomationResult::Running }
         , _bStarted{ SW_FALSE }
         , _bEnded{ SW_FALSE }
+        , _bClockHeld{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -1020,6 +1026,9 @@ namespace sw
                 input.attachVirtualInput( &_inputScript, VirtualInputMode::Exclusive );
                 input.setOsDeviceInputBlocked( true );
             }
+            // 앞 시나리오(체인)가 남긴 백그라운드 작업이 끝나야 시작한다 — 그 결과 줄이 이 시나리오 창에 떨어지지 않게. 시작 시한은 세지 않는다(벽시계 시한이 본다).
+            if ( holdClockForBackgroundWork( input ) )
+                return;
             if ( bReady == false )
             {
                 if ( ++_waitFrameCount > _scenario.getStartTimeoutFrames() )
@@ -1040,6 +1049,10 @@ namespace sw
             SW_LOG_INFO( "[Scenario] %# started after %# frame(s)", _scenario.getName().c_str(), _waitFrameCount );
             startLoadWindow();
         }
+        else if ( holdClockForBackgroundWork( input ) )
+        {
+            return; // 이 프레임은 단계를 돌리지 않는다(`onFrameEnd` 도 `_bClockHeld` 를 본다)
+        }
         _logCapture.setFrameIndex( _frameIndex );
         // 액션 계층 단계(레지스트리의 `_bBeforeInput`)는 그 프레임의 입력 재생과 게임 틱 전에 넣는다.
         const vector<AutomationStep>& listStep = _scenario.getSteps();
@@ -1054,7 +1067,8 @@ namespace sw
 
     AutomationResult AutomationRunner::onFrameEnd( InputManager& input )
     {
-        if ( _result == AutomationResult::Running && _bStarted == SW_TRUE )
+        const bool bRunsSteps = _result == AutomationResult::Running && _bStarted == SW_TRUE && _bClockHeld == SW_FALSE; // 시계 잡기 조건이 붙잡은 프레임은 단계를 돌리지 않는다
+        if ( bRunsSteps )
         {
             sampleWatches();
             const vector<AutomationStep>& listStep = _scenario.getSteps();
@@ -1232,6 +1246,34 @@ namespace sw
         // 이 프레임은 시나리오 프레임으로 세지 않는다. 다음 프레임에 낼 입력 이벤트부터 한 프레임씩 밀어 시나리오 프레임과 맞춘다.
         _inputScript.delayEventsFrom( input.getVirtualFrameIndex(), 1 );
         return AutomationStepHold::Hold;
+    }
+
+    bool AutomationRunner::holdClockForBackgroundWork( InputManager& input )
+    {
+        const utf8* pHolder = AutomationStepRegistry::findClockHolder();
+        if ( pHolder == nullptr )
+        {
+            if ( _clockHoldFrameCount > 0 )
+                SW_LOG_INFO( "[Scenario] %# held the clock for %# frame(s)", _clockHolderName.c_str(), _clockHoldFrameCount );
+            _clockHoldFrameCount = 0;
+            _bClockHeld          = SW_FALSE;
+            return false;
+        }
+        const float64 nowSeconds = static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6;
+        if ( _clockHoldFrameCount == 0 )
+        {
+            _clockHoldStartSeconds = nowSeconds;
+            _clockHolderName       = pHolder;
+        }
+        ++_clockHoldFrameCount;
+        _bClockHeld = SW_TRUE;
+        // 시작한 시나리오는 이 프레임을 세지 않는다. 이 프레임에 낼 입력 이벤트부터 한 프레임씩 밀어 시나리오 프레임과 맞춘다(`holdUntilReady` 와 같다).
+        if ( _bStarted == SW_TRUE )
+            _inputScript.delayEventsFrom( input.getVirtualFrameIndex(), 1 );
+        if ( nowSeconds - _clockHoldStartSeconds > AutomationRunnerInternal::kClockHoldTimeoutSeconds )
+            finish( AutomationResult::TimedOut, _clockHolderName + " held the scenario clock for more than " +
+                                                    to_string( static_cast<uint32>( AutomationRunnerInternal::kClockHoldTimeoutSeconds ) ) + " s" );
+        return true;
     }
 
     bool AutomationRunner::shouldHoldForCondition( const AutomationStep& step, InputManager& input )

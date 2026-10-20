@@ -95,7 +95,7 @@ namespace sw::editor
                 ImGui::PopStyleColor();
                 EditorSelfTestMarks::note( "statusBar.mapCheck" );
                 if ( bOpen && pContext != nullptr )
-                    pContext->getSubsystem<EditorWorkspace>().requestOpenPanel( "Map Check" );
+                    pContext->getSubsystem<EditorWorkspace>().requestOpenPanel<MapCheckPanel>();
                 if ( ImGui::IsItemHovered() )
                 {
                     const string tooltipText = SW_LOCKEYFORMAT( "EditorMapCheck", "StatusTooltip", TextArgumentList().addInteger( "errorCount", counts._errorCount ).addInteger( "warningCount", counts._warningCount ) );
