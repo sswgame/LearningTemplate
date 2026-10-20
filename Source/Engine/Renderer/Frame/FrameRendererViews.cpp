@@ -151,15 +151,18 @@ namespace sw
         view._bUsesViewSlotStream = SW_FALSE;
         view._listTransparentBatchOrder.clear();
         view._listParticleSlot.clear();
-        view._bHasParticleOrder                = SW_FALSE;
-        const GPUViewTransparentOrder* pOrder  = _gpuScene.findViewTransparentOrder( view._viewID );
-        const bool                     bUsable = pOrder != nullptr && pOrder->_pListRank != nullptr && pOrder->_pListTailSlot != nullptr &&
+        view._bHasParticleOrder               = SW_FALSE;
+        const GPUViewTransparentOrder* pOrder = _gpuScene.findViewTransparentOrder( view._viewID );
+        // 배치 순서와 입자 자리는 한 쌍이다 — 입자 자리(`_drawPosition`)는 그 순서 안의 번호라, 뷰의 순서에 주 시점의 자리를 섞으면 입자가 엉뚱한 배치 사이에 끼인다.
+        // 그래서 둘 다 이 뷰의 것을 쓰거나 둘 다 주 시점의 것을 쓴다. 빌더는 입자마다 자리를 싣는다(`computeViewTransparentOrders`) — 수가 다르면 계약 위반이다.
+        const bool bParticleSlotsComplete = pOrder != nullptr && pOrder->_listParticleSlot.size() == _gpuScene.getParticleBatches().size();
+        SW_ASSERT( pOrder == nullptr || bParticleSlotsComplete );
+        const bool bUsable = bParticleSlotsComplete && pOrder->_pListRank != nullptr && pOrder->_pListTailSlot != nullptr &&
                              pOrder->_listBatchOrder.size() == _gpuScene.getTransparentBatches().size() &&
                              pOrder->_tailBase + pOrder->_pListRank->size() == _gpuScene.getInstances().size();
-        // 입자 자리는 이 뷰의 배치 순서 안의 자리라 그 순서를 쓸 때만(또는 메시 투명이 없을 때만) 쓴다. 아니면 주 시점의 자리와 주 배치 순서로 함께 그린다.
-        const bool bParticleOrderOnly = pOrder != nullptr && pOrder->_listBatchOrder.empty() && _gpuScene.getTransparentBatches().empty();
-        const bool bParticleSlotsMatch =
-            pOrder != nullptr && pOrder->_listParticleSlot.size() == _gpuScene.getParticleBatches().size() && ( bUsable || bParticleOrderOnly );
+        // 메시 투명이 없으면 입자 자리만 이 뷰의 것이다(배치 순서가 비어 짝이 될 것이 없다).
+        const bool bParticleOrderOnly  = bParticleSlotsComplete && pOrder->_listBatchOrder.empty() && _gpuScene.getTransparentBatches().empty();
+        const bool bParticleSlotsMatch = bUsable || bParticleOrderOnly;
         if ( bParticleSlotsMatch )
         {
             view._listParticleSlot  = pOrder->_listParticleSlot;
