@@ -79,7 +79,7 @@ namespace sw::editor
             /** @brief 테스트 폴더를 비운 채 새로 만들고 그 안에 파일 하나를 씁니다. */
             static bool makeProbeFolder( ContentBrowserProbe& probe, const utf8* pFileName )
             {
-                probe._folderAbs = FileUtil::joinPath( ResourcePaths::findLooseDomainFolder( GameConfig::getActive()._packRoot ).getDiskPath(), kProbeFolderName );
+                probe._folderAbs = FileUtil::joinPath( ResourcePaths::findLooseDomainFolder( GameConfig::getActive()._packRoot.get() ).getDiskPath(), kProbeFolderName );
                 if ( FileUtil::removeDirectory( probe._folderAbs ) == false ) // 앞 실행이 남긴 폴더다
                     return false;
                 if ( FileUtil::ensureDirectoryExists( probe._folderAbs ) == false )
@@ -355,7 +355,7 @@ namespace sw::editor
                     return EditorSelfTestStep::Continue;
                 if ( stepIndex == kSettleStepCount )
                 {
-                    const string& packRoot = GameConfig::getActive()._packRoot;
+                    const string& packRoot = GameConfig::getActive()._packRoot.get();
                     (void)context.expect( pPanel->hasRoot( packRoot ), "the active game pack is not a content root" );
                     (void)context.expect( pPanel->getGameRootCount() == 1, "the content browser lists game packs other than the active one" );
                     pPanel->setShowAllPacks( true );

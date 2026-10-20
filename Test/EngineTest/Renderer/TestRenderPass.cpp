@@ -413,7 +413,7 @@ SW_TEST_CASE( RenderPassTest, ShippedPipelinesValidateClean )
 }
 
 /**
- * @brief [RenderPassTest] 파이프라인은 인자 → -gv_renderPipeline → -gv_deferred → 게임 프리셋(GameConfig::_renderPipeline) → 엔진 기본 포워드 순서로 고른다
+ * @brief [RenderPassTest] 파이프라인은 인자 → -gv_renderPipeline → -gv_deferred → 팩 설정(PackEngineSettings::_renderPipeline) → 엔진 기본 포워드 순서로 고른다
  * @details 게임은 데이터(프리셋)로 고르고, 명령줄은 측정 · 검증용으로 그것을 덮는다. 게임 프리셋이 디퍼드 스위치보다 앞서면 `-gv_deferred=1` 측정이
  *          2D 게임에서 조용히 무시된다.
  */

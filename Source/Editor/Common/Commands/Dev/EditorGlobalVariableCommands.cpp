@@ -21,14 +21,14 @@ namespace sw::editor
         const string stateDir = EditorPaths::getEditorStateDirectory();
         if ( stateDir.empty() )
             return {};
-        const string packName = FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( GameConfig::getActive()._packRoot ) );
+        const string packName = FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( GameConfig::getActive()._packRoot.get() ) );
         return FileUtil::joinPath( FileUtil::joinPath( stateDir, "GlobalVariablePresets" ), packName );
     }
 
     string EditorGlobalVariableCommands::getComponentPresetFolderPath()
     {
         return ResourcePaths::findLooseDomainFolder(
-                   GameConfig::getActive()._packRoot,
+                   GameConfig::getActive()._packRoot.get(),
                    FileUtil::joinPath( path::kDataFolder, path::kPresetsFolder ) )
             .getDiskPath();
     }

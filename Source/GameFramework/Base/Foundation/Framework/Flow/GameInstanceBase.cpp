@@ -157,7 +157,7 @@ namespace sw
         _pRHIDevice     = pRHIDevice;
         _bResumingWorld = findActiveObjectManager() != nullptr ? SW_TRUE : SW_FALSE;
         configureBootstrap( _bootstrap );
-        _bootstrap._packRoot = GameConfig::getActive()._packRoot;
+        _bootstrap._packRoot = GameConfig::getActive()._packRoot.get();
         // gamesettings.xml 은 필수다. 못 읽으면 기본값으로 서지 않고 게임 초기화를 멈춘다.
         if ( loadGameSettings() == false )
         {

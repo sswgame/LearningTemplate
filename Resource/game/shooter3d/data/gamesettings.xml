@@ -2,6 +2,12 @@
 <!-- Shooter3D 팩의 설정 — 시작 맵은 아레나 씬이다(게임마다 팩의 data/gamesettings.xml 하나다).
      inputMap 은 게임플레이 액션(이동 · 시점 · 사격 · 점프 · 재장전 · 카메라 · 무기)의 기본 바인딩이다. -->
 <GameSettings>
+  <!-- 엔진이 읽는 칸(PackEngineSettings) — 창 제목 · 렌더 파이프라인 · 사용자 설정과 텔레메트리 스키마 · UI 규칙 -->
+  <Engine _windowTitle="Shooter 3D" _userSettingsSchema="game/shooter3d/data/shooter3d.settings.xml" _telemetrySchema="game/shooter3d/data/shooter3d.telemetry.xml" _bUIPauseMenu="true">
+    <_mapUserSettingDefault>
+      <entry key="gameplay.fieldOfView">80</entry>
+    </_mapUserSettingDefault>
+  </Engine>
   <startMap>game/shooter3d/maps/arena.scene.xml</startMap>
   <inputMap>game/shooter3d/data/shooter.input.xml</inputMap>
   <localizationProject>game/shooter3d/data/localization/shooter3d.locproject.json</localizationProject>

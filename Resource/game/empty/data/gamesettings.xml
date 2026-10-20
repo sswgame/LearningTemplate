@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Empty 팩의 설정 — 기본 실기동이 여는 테스트 씬(배포본도 씬 로드 경로 SCN1 · 프리팹 GUID 해석을 거치게). -->
 <GameSettings>
+  <!-- 엔진이 읽는 칸(PackEngineSettings) — 창 제목 · 렌더 파이프라인 · 사용자 설정과 텔레메트리 스키마 · UI 규칙 -->
+  <Engine _windowTitle="SWEngine" />
   <startMap>game/empty/maps/editortest.scene.xml</startMap>
   <loadingScreen>engine/ui/loading.ui.xml</loadingScreen>
 </GameSettings>

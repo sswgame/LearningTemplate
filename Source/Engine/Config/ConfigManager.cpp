@@ -11,7 +11,9 @@
 #include "Engine/Serialization/Base/SchemaMigrate.h"
 #include "Engine/Serialization/Base/SerializerUtil.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
+#include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "sw/config/ConfigConstants.h"
 #include "sw/config/ShippingHostDefaults.h"
@@ -125,6 +127,40 @@ namespace sw
             SW_LOG_ERROR( "Config %#: required key '%#' of %# is missing", pSourceLabel, missingPath.c_str(), typeInfo._fullyQualifiedName.c_str() );
         }
         return bWithinRange && listOrphan.empty() && listMissing.empty();
+    }
+
+    bool ConfigManager::readConfigXMLElement( void* pInstance, const TypeInfo& typeInfo, string_view elementXML, const utf8* pSourceLabel )
+    {
+        XMLDocument document;
+        if ( document.parse( elementXML, pSourceLabel ) == false || document.getRoot().isValid() == false )
+        {
+            SW_LOG_ERROR( "Config %#: not an XML element for %#", pSourceLabel, typeInfo._fullyQualifiedName.c_str() );
+            return false;
+        }
+        // 키는 대소문자까지 맞아야 한다(`readConfigJSON` 과 같다). 범위 밖 값은 칸마다 읽기 공통 끝이 이미 알렸다.
+        SerializeContext context = SerializeContext::deriveFromDefault( SerializePurpose::Authoring );
+        context.setIgnoreCaseKeys( false );
+        vector<SchemaOrphanValue> listOrphan;
+        const bool                bWithinRange = XMLSerializer::deserializeSoft( pInstance, typeInfo, elementXML, &listOrphan, nullptr, context ) == SoftReadResult::Read;
+        for ( const SchemaOrphanValue& orphan : listOrphan )
+        {
+            const utf8* const pName = orphan._writtenName.empty() ? orphan._name.c_str() : orphan._writtenName.c_str();
+            SW_LOG_ERROR( "Config %#: '%#' is unknown to %# or its value %# cannot be read", pSourceLabel, pName, typeInfo._fullyQualifiedName.c_str(), orphan._text.c_str() );
+        }
+        // 필수 칸은 속성이나 자식으로 적혀 있어야 한다 — 초기값은 형식이지 기본값이 아니다.
+        const XMLNode element       = document.getRoot();
+        bool          bRequiredRead = true;
+        for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
+        {
+            if ( prop._metadata._bRequired == SW_FALSE )
+                continue;
+            const bool bWritten = element.findAttribute( prop._name.c_str(), false ) != nullptr || element.findChild( prop._name.c_str(), false ).isValid();
+            if ( bWritten )
+                continue;
+            SW_LOG_ERROR( "Config %#: required '%#' of %# is missing", pSourceLabel, prop._name.c_str(), typeInfo._fullyQualifiedName.c_str() );
+            bRequiredRead = false;
+        }
+        return bWithinRange && listOrphan.empty() && bRequiredRead;
     }
 
     bool ConfigManager::isWithinRange( const void* pInstance, const TypeInfo& typeInfo, const utf8* pSourceLabel )

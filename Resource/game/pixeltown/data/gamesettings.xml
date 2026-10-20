@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- PixelTown 팩의 설정 — 시작 맵은 마을 씬이다(게임마다 팩의 data/gamesettings.xml 하나다). -->
 <GameSettings>
+  <!-- 엔진이 읽는 칸(PackEngineSettings) — 창 제목 · 렌더 파이프라인 · 사용자 설정과 텔레메트리 스키마 · UI 규칙 -->
+  <Engine _windowTitle="Pixel Town" />
   <startMap>game/pixeltown/maps/town.scene.xml</startMap>
   <inputMap>game/pixeltown/data/town.input.xml</inputMap>
 </GameSettings>

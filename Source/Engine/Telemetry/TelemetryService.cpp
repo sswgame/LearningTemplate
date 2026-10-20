@@ -17,6 +17,8 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Config/PackEngineSettings.h"
+#include "Engine/Resource/PackEngineSettingsSubsystem.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Telemetry/CrashReportService.h"
 #include "Engine/Telemetry/TelemetryEvent.h"
@@ -294,33 +296,32 @@ namespace sw
 
     span<const utf8* const> TelemetryService::getSubsystemDependencies() const
     {
-        static constexpr const utf8* kArrDependency[] = { UserSettingsManager::kSubsystemName };
+        static constexpr const utf8* kArrDependency[] = { PackEngineSettingsSubsystem::kSubsystemName, UserSettingsManager::kSubsystemName };
         return kArrDependency;
     }
 
     SubsystemInitResult TelemetryService::initializeSubsystem()
     {
         // 문맥은 파일마다 첫 줄 — 크래시 보고 · 로그와 같은 세션 id, 심볼과 짝지을 빌드 id.
-        const GameConfig&    gameConfig   = GameConfig::getActive();
-        UserSettingsManager& userSettings = engine::getSubsystem<UserSettingsManager>();
-        const string&        engineSchema = engine::getSubsystem<EngineDefaultAssets>()._telemetrySchema.get();
-        TelemetryContext     context;
+        const PackEngineSettings& packSettings = engine::getSubsystem<PackEngineSettings>();
+        UserSettingsManager&      userSettings = engine::getSubsystem<UserSettingsManager>();
+        const string&             engineSchema = engine::getSubsystem<EngineDefaultAssets>()._telemetrySchema.get();
+        TelemetryContext          context;
         context._sessionID   = CrashHandler::getSessionID();
         context._buildConfig = build::kConfigName;
         context._platform    = build::kPlatformName;
         context._buildID     = ModuleBuildID::find( nullptr )._id;
-        context._game        = FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( gameConfig._packRoot ) );
+        context._game        = FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( GameConfig::getActive()._packRoot.get() ) );
         const string folder  = gv_telemetryFolder.empty() ? FileUtil::joinPath( FileUtil::getDirectoryPart( userSettings.getUserFilePath() ), "telemetry" )
                                                           : string( gv_telemetryFolder );
 
         // 스키마가 틀려도 기동은 멈추지 않는다 — 스키마에 없는 사건은 기록되지 않을 뿐이다.
         if ( loadSchema( engineSchema ) == false )
             SW_LOG_ERROR( "Engine telemetry schema '%#' is not loaded", engineSchema.c_str() );
-        if ( gameConfig._telemetrySchema.empty() == false )
+        if ( packSettings._telemetrySchema.isSet() )
         {
-            const string gameSchema = FileUtil::joinPath( FileUtil::trimTrailingSlashes( gameConfig._packRoot ), gameConfig._telemetrySchema );
-            if ( loadSchema( gameSchema ) == false )
-                SW_LOG_ERROR( "Game telemetry schema '%#' is not loaded", gameSchema.c_str() );
+            if ( loadSchema( packSettings._telemetrySchema.get() ) == false )
+                SW_LOG_ERROR( "Game telemetry schema '%#' is not loaded", packSettings._telemetrySchema.c_str() );
         }
         initialize( folder, context );
         // 동의는 플레이어 옵션(기본 꺼짐)이다. 꺼져 있으면 지난 실행이 남긴 스풀까지 지운다.

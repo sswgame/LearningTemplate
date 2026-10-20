@@ -76,7 +76,7 @@ namespace sw::editor
 
     bool ParkLayoutPreview::refresh( bool bForce )
     {
-        const string& packRoot = GameConfig::getActive()._packRoot;
+        const string& packRoot = GameConfig::getActive()._packRoot.get();
         string        coasterPath;
         string        error;
         if ( GamePackDataUtil::tryMakeKindPath( packRoot, ParkLayout::kDataKind, _layoutPath, error ) == false ||

@@ -8,6 +8,7 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 
 #include "TestFramework/TestFramework.h"
@@ -58,9 +59,9 @@ SW_TEST_CASE( ProjectSettingsCatalogTest, ExpandsWildcardsToFiles )
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( root, "Config/Game/Alpha.json" ), "{}" ) );
 
     sw::vector<sw::editor::ProjectSettingsEntry> listEntry;
-    listEntry.push_back( { "GameConfig", "Config/Game/*.json", "GameConfig" } );
-    listEntry.push_back( { "ServerConfig", "Config/Server/*.json", "ServerConfig" } );
-    listEntry.push_back( { "EngineConfig", "Config/Engine/EngineConfig.json", "EngineConfig" } );
+    listEntry.push_back( { "GameConfig", "Config/Game/*.json", "GameConfig", "" } );
+    listEntry.push_back( { "ServerConfig", "Config/Server/*.json", "ServerConfig", "" } );
+    listEntry.push_back( { "EngineConfig", "Config/Engine/EngineConfig.json", "EngineConfig", "" } );
     sw::editor::ProjectSettingsCatalog::expandWildcards( root, listEntry );
     SW_ASSERT_EQUAL( size_t( 3 ), listEntry.size() );
     SW_EXPECT_TRUE( listEntry[0]._page == "GameConfig/Alpha" );
@@ -70,59 +71,113 @@ SW_TEST_CASE( ProjectSettingsCatalogTest, ExpandsWildcardsToFiles )
 }
 
 /**
- * @brief [ProjectSettingsDocumentTest] 파일에는 기본값과 다른 키만 쓰고, 기본값으로 되돌리면 키가 사라지며, 다시 열면 같은 값이다(게임 프리셋 층)
+ * @brief [ProjectSettingsDocumentTest] 팩 설정 요소(`<Engine>`)는 기본값과 다른 칸만 그 요소에 쓰고, 파일의 다른 요소 · 주석은 그대로이며, 다시 열면 같은 값이다
  */
-SW_TEST_CASE( ProjectSettingsDocumentTest, SavesOnlyValuesThatDifferFromTheDefaults )
+SW_TEST_CASE( ProjectSettingsDocumentTest, PackElementKeepsTheRestOfTheFile )
 {
-    if ( hasReflectedDefaultConstructor( *sw::GameConfig::StaticType() ) == false )
-        SW_TEST_SKIP( "GameConfig has no reflected $ctor, so the settings window cannot open it yet" );
-    const sw::string path = sw::FileUtil::joinPath( test::makeTempDirectory( "project_settings_document" ), "GameConfig.json" );
-    (void)sw::FileUtil::removeFile( path ); // 임시 폴더는 실행마다 비워지지 않는다 — 이전 실행이 남긴 파일이 없는 것이 이 테스트의 출발점이다(없어도 괜찮다)
+    const sw::string path     = sw::FileUtil::joinPath( test::makeTempDirectory( "project_settings_pack_element" ), "gamesettings.xml" );
+    const sw::string original = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+                                "<!-- probe pack -->\n"
+                                "<GameSettings>\n"
+                                "  <Engine _windowTitle=\"Probe\" />\n"
+                                "  <startMap>game/probe/maps/start.scene.xml</startMap>\n"
+                                "</GameSettings>\n";
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( path, original ) );
 
     sw::editor::ProjectSettingsDocument document;
-    SW_ASSERT_TRUE( document.open( *sw::GameConfig::StaticType(), path ) == sw::ConfigReadResult::Missing );
-    SW_EXPECT_FALSE( document.isBaseLayer() );
-    SW_EXPECT_FALSE( document.hasFile() );
+    SW_ASSERT_TRUE( document.open( *sw::PackEngineSettings::StaticType(), path, sw::PackEngineSettings::kElementName ) == sw::ConfigReadResult::Loaded );
+    SW_EXPECT_TRUE( document.isElementMode() );
     SW_EXPECT_FALSE( document.isModified() );
-    SW_EXPECT_EQUAL( 0u, document.countNonDefaultKeys() );
+    SW_EXPECT_EQUAL( 1u, document.countNonDefaultKeys() ); // 창 제목만 적혀 있다
 
-    sw::GameConfig* pConfig = static_cast<sw::GameConfig*>( document.getInstance() );
-    SW_ASSERT_TRUE( pConfig != nullptr );
-    pConfig->_windowTitle  = "Probe";
-    pConfig->_bUIPauseMenu = true;
+    sw::PackEngineSettings* pSettings = static_cast<sw::PackEngineSettings*>( document.getInstance() );
+    SW_ASSERT_TRUE( pSettings != nullptr );
+    SW_EXPECT_TRUE( pSettings->_windowTitle == "Probe" );
+    pSettings->_windowTitle                                   = "Probe Two";
+    pSettings->_bUIPauseMenu                                  = true;
+    pSettings->_mapUserSettingDefault["gameplay.fieldOfView"] = "80";
     SW_EXPECT_TRUE( document.isModified() );
-    SW_EXPECT_EQUAL( 2u, document.countNonDefaultKeys() );
+    SW_EXPECT_EQUAL( 3u, document.countNonDefaultKeys() );
     SW_ASSERT_TRUE( document.save() );
     SW_EXPECT_FALSE( document.isModified() );
-    SW_EXPECT_TRUE( document.hasFile() );
 
     sw::string fileText;
     SW_ASSERT_TRUE( sw::FileUtil::readTextFile( path, fileText ) );
-    SW_EXPECT_TRUE( fileText.find( "_windowTitle" ) != sw::string::npos );
-    SW_EXPECT_TRUE( fileText.find( "_bUIPauseMenu" ) != sw::string::npos );
-    SW_EXPECT_TRUE( fileText.find( "_packRoot" ) == sw::string::npos ); // 기본값인 형제는 적지 않는다
+    SW_EXPECT_TRUE( fileText.find( "<!-- probe pack -->" ) != sw::string::npos );                                  // 요소 밖 주석은 그대로다
+    SW_EXPECT_TRUE( fileText.find( "<startMap>game/probe/maps/start.scene.xml</startMap>" ) != sw::string::npos ); // 다른 요소도 그대로다
+    SW_EXPECT_TRUE( fileText.find( "_renderPipeline" ) == sw::string::npos );                                      // 기본값인 칸은 적지 않는다
+    SW_EXPECT_TRUE( fileText.find( "Probe Two" ) != sw::string::npos );
+
+    // 엔진의 읽기 창구가 저장한 파일을 그대로 읽는다.
+    sw::PackEngineSettings loaded;
+    SW_ASSERT_TRUE( loaded.loadFromXMLText( fileText, path ) );
+    SW_EXPECT_TRUE( loaded._windowTitle == "Probe Two" );
+    SW_EXPECT_TRUE( loaded._bUIPauseMenu );
+    SW_EXPECT_TRUE( loaded._mapUserSettingDefault["gameplay.fieldOfView"] == "80" );
 
     sw::editor::ProjectSettingsDocument reopened;
-    SW_ASSERT_TRUE( reopened.open( *sw::GameConfig::StaticType(), path ) == sw::ConfigReadResult::Loaded );
-    const sw::GameConfig* pReopened = static_cast<const sw::GameConfig*>( reopened.getInstance() );
-    SW_EXPECT_TRUE( pReopened->_windowTitle == "Probe" );
+    SW_ASSERT_TRUE( reopened.open( *sw::PackEngineSettings::StaticType(), path, sw::PackEngineSettings::kElementName ) == sw::ConfigReadResult::Loaded );
     SW_EXPECT_FALSE( reopened.isModified() );
 
-    // 기본값으로 되돌리면 키가 모두 사라진다 — 파일에 옛 값이 남아 코드의 기본값을 가리지 않게.
+    // 기본값으로 되돌리면 필수 칸(창 제목)이 비어 다음 기동이 읽지 못한다 — 저장하지 않고 파일은 그대로다.
     reopened.resetToDefault();
-    SW_EXPECT_TRUE( reopened.isModified() );
-    SW_EXPECT_EQUAL( 0u, reopened.countNonDefaultKeys() );
-    SW_ASSERT_TRUE( reopened.save() );
-    sw::string clearedText;
-    SW_ASSERT_TRUE( sw::FileUtil::readTextFile( path, clearedText ) );
-    SW_EXPECT_TRUE( clearedText.find( "_windowTitle" ) == sw::string::npos );
+    SW_EXPECT_FALSE( reopened.save() );
+    sw::string unchangedText;
+    SW_ASSERT_TRUE( sw::FileUtil::readTextFile( path, unchangedText ) );
+    SW_EXPECT_TRUE( unchangedText == fileText );
+}
 
-    // 편집을 버리면 파일 값으로 돌아온다.
-    sw::GameConfig* pEdited = static_cast<sw::GameConfig*>( reopened.getInstance() );
-    pEdited->_packRoot      = "game/probe";
-    SW_EXPECT_TRUE( reopened.isModified() );
-    SW_EXPECT_TRUE( reopened.revert() == sw::ConfigReadResult::Loaded );
-    SW_EXPECT_FALSE( reopened.isModified() );
+/**
+ * @brief [ProjectSettingsDocumentTest] 요소가 없는 팩 파일은 기본값으로 열리고, 저장하면 루트 맨 앞에 요소를 넣는다 · 파일이 없으면 만들지 않는다
+ */
+SW_TEST_CASE( ProjectSettingsDocumentTest, PackElementIsInsertedWhenMissing )
+{
+    const sw::string folder = test::makeTempDirectory( "project_settings_pack_insert" );
+    const sw::string path   = sw::FileUtil::joinPath( folder, "gamesettings.xml" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( path, "<GameSettings>\r\n  <startMap>game/probe/maps/start.scene.xml</startMap>\r\n</GameSettings>\r\n" ) );
+
+    sw::editor::ProjectSettingsDocument document;
+    SW_ASSERT_TRUE( document.open( *sw::PackEngineSettings::StaticType(), path, sw::PackEngineSettings::kElementName ) == sw::ConfigReadResult::Missing );
+    static_cast<sw::PackEngineSettings*>( document.getInstance() )->_windowTitle = "Inserted";
+    SW_ASSERT_TRUE( document.save() );
+
+    sw::string fileText;
+    SW_ASSERT_TRUE( sw::FileUtil::readTextFile( path, fileText ) );
+    SW_EXPECT_TRUE( fileText.find( "<GameSettings>\r\n  <Engine _windowTitle=\"Inserted\"" ) != sw::string::npos ); // 파일의 줄 끝 · 들여쓰기를 따른다
+    sw::PackEngineSettings loaded;
+    SW_ASSERT_TRUE( loaded.loadFromXMLText( fileText, path ) );
+    SW_EXPECT_TRUE( loaded._windowTitle == "Inserted" );
+
+    sw::editor::ProjectSettingsDocument noFile;
+    const sw::string                    missingPath = sw::FileUtil::joinPath( folder, "missing.xml" );
+    (void)sw::FileUtil::removeFile( missingPath ); // 임시 폴더는 실행마다 비워지지 않는다(없어도 괜찮다)
+    SW_ASSERT_TRUE( noFile.open( *sw::PackEngineSettings::StaticType(), missingPath, sw::PackEngineSettings::kElementName ) == sw::ConfigReadResult::Missing );
+    static_cast<sw::PackEngineSettings*>( noFile.getInstance() )->_windowTitle = "Nowhere";
+    SW_EXPECT_FALSE( noFile.save() );
+    SW_EXPECT_FALSE( sw::FileUtil::isRegularFile( missingPath ) );
+}
+
+/**
+ * @brief [ProjectSettingsDocumentTest] 게임 프리셋(JSON)은 팩 루트 하나다 — 기본값과 다른 키만 쓰고, 편집을 버리면 파일 값으로 돌아온다
+ */
+SW_TEST_CASE( ProjectSettingsDocumentTest, GamePresetHoldsOnlyThePackRoot )
+{
+    const sw::string path = sw::FileUtil::joinPath( test::makeTempDirectory( "project_settings_document" ), "GameConfig.json" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( path, "{ \"_packRoot\": \"game/probe\" }" ) );
+
+    sw::editor::ProjectSettingsDocument document;
+    SW_ASSERT_TRUE( document.open( *sw::GameConfig::StaticType(), path ) == sw::ConfigReadResult::Loaded );
+    SW_EXPECT_FALSE( document.isBaseLayer() );
+    SW_EXPECT_FALSE( document.isElementMode() );
+    SW_EXPECT_EQUAL( 1u, document.countNonDefaultKeys() );
+    const sw::GameConfig* pConfig = static_cast<const sw::GameConfig*>( document.getInstance() );
+    SW_EXPECT_TRUE( pConfig->_packRoot == "game/probe" );
+
+    // 편집을 버리면 파일 값으로 돌아온다(팩 루트는 데이터만 넣으므로 기본값으로 되돌려 다르게 만든다).
+    document.resetToDefault();
+    SW_EXPECT_TRUE( document.isModified() );
+    SW_EXPECT_TRUE( document.revert() == sw::ConfigReadResult::Loaded );
+    SW_EXPECT_FALSE( document.isModified() );
 }
 
 /**

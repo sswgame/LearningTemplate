@@ -18,8 +18,11 @@
 
 #include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Config/ConfigManager.h"
+#include "Engine/Config/GameConfig.h"
+#include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include <imgui.h>
 
@@ -109,7 +112,23 @@ namespace sw::editor
     {
         _bCatalogLoaded = true;
         _listPage.clear();
-        _pSelected = nullptr;
+        _pSelected              = nullptr;
+        TypeRegistry* pRegistry = editor::findSubsystem<TypeRegistry>();
+
+        // 활성 팩의 `<Engine>` 요소(창 제목 · 렌더 파이프라인 · 스키마 · UI 규칙) — 게임의 엔진 설정은 프리셋이 아니라 팩 gamesettings.xml 에 있다.
+        // 유니티 · 언리얼의 Project Settings 처럼 열린 프로젝트(활성 게임) 하나만 고친다.
+        const DataPath& packRoot = GameConfig::getActive()._packRoot;
+        if ( packRoot.isSet() )
+        {
+            unique_ptr<Page> pPackPage      = make_unique<Page>();
+            pPackPage->_entry._page         = string( PackEngineSettings::StaticType()->_name.c_str() );
+            pPackPage->_entry._typeName     = pPackPage->_entry._page;
+            pPackPage->_entry._elementName  = PackEngineSettings::kElementName;
+            pPackPage->_entry._relativePath = FileUtil::joinPath( FileUtil::joinPath( "Resource", packRoot.get() ), PackEngineSettings::kPackRelativePath );
+            pPackPage->_absolutePath        = FileUtil::joinPath( ResourcePaths::findLooseDomainFolder( packRoot.get() ).getDiskPath(), PackEngineSettings::kPackRelativePath );
+            pPackPage->_bTypeFound          = pRegistry != nullptr && pRegistry->findType( PackEngineSettings::StaticType()->_name ) != nullptr;
+            _listPage.push_back( std::move( pPackPage ) );
+        }
 
         const string referencePath = EditorPaths::resolveProjectRelativePath( ProjectSettingsPanelInternal::kReferencePath );
         string       referenceText;
@@ -126,7 +145,6 @@ namespace sw::editor
         }
         ProjectSettingsCatalog::expandWildcards( EditorPaths::getProjectRootPath(), listEntry );
 
-        TypeRegistry* pRegistry = editor::findSubsystem<TypeRegistry>();
         for ( ProjectSettingsEntry& entry : listEntry )
         {
             unique_ptr<Page> pPage = make_unique<Page>();
@@ -147,7 +165,7 @@ namespace sw::editor
             page._bTypeFound = false;
             return;
         }
-        if ( page._document.open( *pType, page._absolutePath ) == ConfigReadResult::Invalid )
+        if ( page._document.open( *pType, page._absolutePath, page._entry._elementName ) == ConfigReadResult::Invalid )
             SW_LOG_WARNING( "Project settings: %# could not be opened - see the errors above", page._absolutePath.c_str() );
         page._bDirty = false;
     }

@@ -13,7 +13,7 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Config/GameConfig.h"
+#include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -259,7 +259,6 @@ namespace sw
         BugItInputs inputs;
         inputs._report._note               = string( note );
         inputs._report._buildConfiguration = build::kConfigName;
-        inputs._report._game               = GameConfig::getActive()._windowTitle;
         inputs._root                       = BugItReportInternal::makeDefaultRoot();
         inputs._localTime                  = ScreenshotPathUtil::getLocalTimeNow();
         inputs._bRequestScreenshot         = true;
@@ -271,6 +270,7 @@ namespace sw
 
         if ( engine::areEngineServicesBound() == false )
             return inputs;
+        inputs._report._game           = engine::getSubsystem<PackEngineSettings>()._windowTitle;
         const FrameRenderer* pRenderer = engine::findSubsystem<FrameRenderer>();
         if ( pRenderer != nullptr && pRenderer->getDevice() != nullptr )
             inputs._report._rhiBackend = pRenderer->getDevice()->getBackendName();

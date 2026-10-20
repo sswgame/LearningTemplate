@@ -6,6 +6,7 @@
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Localization/StringTable.h"
 
+#include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
 
 // ------------------------------------------------------------------------------
@@ -203,13 +204,10 @@ SW_TEST_CASE( KeyValueFileTest, GameConfigActiveManagement )
 {
     const sw::GameConfig oldActive = sw::GameConfig::getActive();
 
-    sw::GameConfig customConfig{};
-    customConfig._packRoot = "game/custom_pack";
-
-    sw::GameConfig::setActive( customConfig );
+    sw::GameConfig::setActive( test::makeGameConfig( "game/custom_pack" ) );
 
     const sw::GameConfig& retrieved = sw::GameConfig::getActive();
-    SW_EXPECT_EQUAL( sw::string( "game/custom_pack" ), retrieved._packRoot );
+    SW_EXPECT_EQUAL( sw::string( "game/custom_pack" ), retrieved._packRoot.get() );
 
     // 이전 상태 복구
     sw::GameConfig::setActive( oldActive );

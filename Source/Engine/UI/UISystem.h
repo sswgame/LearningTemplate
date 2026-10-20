@@ -54,7 +54,7 @@ namespace sw
      * @details 언리얼의 `FSlateApplication` 과 CommonUI 의 `UCommonUIActionRouter` 에 해당한다.
      *          틱은 둘로 나뉜다. `processInput` 은 입력 갱신 직후, 게임 틱 앞에서 돌아서 UI 가 처리한 입력을 폰이 보지 못하게 한다.
      *          `update` 는 게임 틱 뒤, 렌더 패킷 앞에서 돌며 이번 프레임의 게임 상태로 애니메이션, 바인딩, 스타일, 레이아웃, 그리기를 순서대로 처리한다.
-     *          엔진에서는 서브시스템 `UI`(Client 대상)입니다 — 배율 규칙 · 테마 · 기본 메뉴를 엔진 데이터(게임 프리셋이 덮어씀)로 정하고
+     *          엔진에서는 서브시스템 `UI`(Client 대상)입니다 — 배율 규칙 · 테마 · 기본 메뉴를 엔진 데이터(팩 설정 `PackEngineSettings` 가 덮어씀)로 정하고
      *          문서 · 스타일 시트 캐시를 에셋 캐시 레지스트리에 올리며, Dev 에서는 디버그 HUD 를 붙입니다(`initializeSubsystem`).
      *
      *          **화면 스택**: 화면은 레이어(`UILayer`)마다 쌓인다. 그리기 순서는 레이어 순서, 같은 레이어 안에서는 쌓인 순서이고, 입력은 그 역순이다.
@@ -158,7 +158,7 @@ namespace sw
         const UIDocumentCache& getDocumentCache() const { return _documentCache; }
 
         // --- 엔진 기본 메뉴(옵션, 일시정지) ---------------------------------------------------
-        /** @brief 옵션 메뉴 문서입니다. 기동 단계 `UI` 가 엔진 기본 `engine/ui/options.ui.xml` 로 정하며, 게임 프리셋의 `_uiOptionsDocument` 가 덮어씁니다. */
+        /** @brief 옵션 메뉴 문서입니다. 기동 단계 `UI` 가 엔진 기본 `engine/ui/options.ui.xml` 로 정하며, 팩 설정의 `_uiOptionsMenu` 가 덮어씁니다. */
         const string& getOptionsMenuDocument() const { return _optionsMenuDocument; }
         void          setOptionsMenuDocument( string_view documentPath ) { _optionsMenuDocument = documentPath; }
         /**
@@ -188,7 +188,7 @@ namespace sw
         /** @brief 스타일 시트 캐시입니다. 기동 단계 `UI` 가 에셋 캐시 레지스트리에 등록합니다. */
         UIStyleSheetCache& getStyleSheetCache() { return _styleSheetCache; }
         /**
-         * @brief 선택할 수 있는 테마를 등록합니다(기동 단계 `UI`, `engine/ui/uithemes.xml`, 게임 프리셋 `_uiThemes`).
+         * @brief 선택할 수 있는 테마를 등록합니다(기동 단계 `UI`, `engine/ui/uithemes.xml`, 팩 설정 `_uiThemes`).
          * @details 사용자 설정 `gv_uiTheme`(accessibility.uiTheme)의 테마가 목록에 있으면 그 테마로, 없으면 목록의 기본 테마로 바꾼다. 그 뒤 설정이 바뀌면
          *          `update` 가 따라간다(모르는 이름이면 경고하고 지금 테마를 유지한다).
          */
@@ -295,7 +295,7 @@ namespace sw
         /** @brief 텍스트 측정 엔진입니다(글꼴이 없으면 nullptr). 레이아웃 컨텍스트가 넘깁니다. */
         TextLayoutEngine* getTextLayout() const { return _textLayout.get(); }
 
-        /** @brief 해상도에서 배율을 구하는 규칙입니다. 기동 단계 `UI` 가 `engine/ui/uiscale.xml` 과 게임 프리셋 `_uiScaleSettings` 로 정합니다. */
+        /** @brief 해상도에서 배율을 구하는 규칙입니다. 기동 단계 `UI` 가 `engine/ui/uiscale.xml` 과 팩 설정 `_uiScaleSettings` 로 정합니다. */
         const UIScaleSettings& getScaleSettings() const { return _scaleSettings; }
         void                   setScaleSettings( const UIScaleSettings& settings ) { _scaleSettings = settings; }
         /**

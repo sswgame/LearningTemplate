@@ -33,7 +33,7 @@ namespace sw
 {
     /**
      * @struct UIScaleSettings
-     * @brief 해상도에서 UI 배율을 구하는 규칙입니다(`engine/ui/uiscale.xml`이며, 게임 프리셋 `_uiScaleSettings` 가 덮어씁니다).
+     * @brief 해상도에서 UI 배율을 구하는 규칙입니다(`engine/ui/uiscale.xml`이며, 팩 설정 `PackEngineSettings::_uiScaleSettings` 가 덮어씁니다).
      * @details 레이아웃은 UI 단위(기준 해상도의 픽셀)로 하고, 화면에 낼 때 배율을 곱한다. 배율 = clamp( 규칙( 물리 크기 ), 최소, 최대 ) × gv_uiScale
      *          (`_bApplyContentScale` 일 때만 × 창 콘텐츠 배율)이다. 게임 창은 해상도 규칙이 이미 창 크기를 따르므로 OS 배율까지 곱하면 두 번 곱하게 된다(UMG 기본과 같다).
      */

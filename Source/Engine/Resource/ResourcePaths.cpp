@@ -443,7 +443,9 @@ namespace sw
             const string token = FileUtil::normalizePath( tokenRaw );
             if ( token == "game" )
             {
-                const string activePack = findLooseDomainFolder( GameConfig::getActive()._packRoot ).getDiskPath();
+                // 게임 프리셋을 읽기 전(기동의 리소스 루트 단계)에는 활성 팩이 아직 없다 — 그때는 game/ 아래 팩만 순서에 넣는다.
+                const DataPath& activePackRoot = GameConfig::getActive()._packRoot;
+                const string    activePack     = activePackRoot.isSet() ? findLooseDomainFolder( activePackRoot.get() ).getDiskPath() : string();
                 if ( activePack.empty() == false && FileUtil::isDirectory( activePack ) )
                 {
                     const string normPack = FileUtil::normalizeSeparators( activePack );

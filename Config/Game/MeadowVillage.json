@@ -1,6 +1,3 @@
 {
-    "_packRoot": "game/meadowvillage",
-    "_userSettingsSchema": "data/meadow.settings.xml",
-    "_windowTitle": "Meadow Village",
-    "_bUIPauseMenu": true
+    "_packRoot": "game/meadowvillage"
 }

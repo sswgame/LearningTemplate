@@ -12,11 +12,13 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Container/string.h"
 #include "Core/Memory/Memory.h"
 
 namespace sw
 {
     struct EngineDefaultAssets;
+    struct GameConfig;
 } // namespace sw
 
 namespace test
@@ -26,6 +28,12 @@ namespace test
      * @details 표는 기본 생성할 수 없다(`EngineDefaultAssets::ConstructKey`). 경로를 리터럴로 다시 적지 말고 여기서 읽는다.
      */
     [[nodiscard]] const sw::EngineDefaultAssets& getEngineDefaultAssets();
+
+    /**
+     * @brief 팩 루트가 @p packRoot 인 게임 프리셋입니다 — 프리셋 JSON 을 읽어 만든다(`GameConfig::_packRoot` 는 `DataPath` 라 데이터 읽기만 값을 넣는다).
+     * @details 읽지 못하면 테스트를 실패로 적고 읽지 않은 프리셋을 돌려준다.
+     */
+    [[nodiscard]] sw::GameConfig makeGameConfig( sw::string_view packRoot );
 
     /** @class TestHostRuntime @brief 하네스 하나 — 프로세스에 하나만 세운다(엔진 서비스 표가 전역이다). */
     class TestHostRuntime

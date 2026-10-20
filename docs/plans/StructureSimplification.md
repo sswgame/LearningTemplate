@@ -1,6 +1,6 @@
 # 구조 단순화 계획 (2026-10-20)
 
-> 상태: 설계 · 선행: 없음 · 영역: engine · 옛번호: 없음 · 진행: 2/21
+> 상태: 설계 · 선행: 없음 · 영역: engine · 옛번호: 없음 · 진행: 3/21
 
 상용 엔진(언리얼 · 유니티 · Godot) 비교에서 나온 구조 단순화 정책 네 개를 한 문서로 묶는다. 네 정책 모두 "같은 사실을 두 곳에 적어 두어서, 한쪽만 바뀌면 조용히 어긋난다"는 같은 근본 원인에서 나왔다.
 순서는 필수 설정(HC) → 팩 쿠킹(PK) → 에셋 종류 등록(AT) → 텍스트 형식(TX)이다. PK 가 끝나면 쿠커 쪽 파이썬 소비자가 사라져 AT 의 접미사 테이블 정리가 싸지고, AT 의 등록 줄 하나가 있으면 TX 의 형식 변환이 종류별 로더 하나를 바꾸는 일이 된다.
@@ -59,8 +59,7 @@
 
 | 단위 | 내용 | 건드릴 폴더 | 선행 | 검증 | 측정 |
 |---|---|---|---|---|---|
-| HC3 | `PackEngineSettings`(`<Engine>` 요소)를 만들고 `GameConfig` 의 열 필드를 옮깁니다. 소비자 약 58 줄을 `PackEngineSettings` 로 바꾸고 `GameConfig` 를 `Required DataPath _packRoot` 하나로 줄입니다. 11 개 팩의 `gamesettings.xml` 과 11 개 프리셋을 다시 쓰고, `GameSettings` 가 `<Engine>` 을 건너뛰게 합니다. 창 제목은 마운트 뒤에 설정합니다 | `Engine/Config/`, `Engine/UI/`, `Engine/UserSettings/`, `Engine/Telemetry/`, `Engine/Renderer/Frame/`, `App/`, `Editor/`(`ProjectSettings` 패널), `GameFramework/Base/Foundation/`, `Config/Game/`, `Resource/game/*/data/` | HC2, DataDriven P1(권장) | 전 프리셋 컴파일, 11 개 게임 기동과 창 제목 확인, 에디터 설정 패널 테스트, `-L nogpu`, 네 백엔드 × 대표 셋 | 없음 |
-| HC4 | 후속 정리입니다. `GenerateShippingHostDefaults.py` 의 게임 JSON 을 팩 루트만 생성하게 하고, `CheckGamePresets.py` 가 보던 스키마 · 텔레메트리 경로 검사를 팩 설정 쪽 검사로 옮깁니다. 설정 문서와 `Config/README.md` 의 폴백 문장을 고칩니다 | `Scripts/generate/`, `Scripts/lint/gate/`, `Scripts/common/ConfigCatalog.py`, `docs/07_Configuration.md`, `Config/README.md`, `docs/Config/`(생성물) | HC3 | `-L lint`, 생성 문서 점검, Shipping 구성 컴파일 | 없음 |
+| HC4 | 후속 정리입니다. `GenerateShippingHostDefaults.py` 의 게임 JSON 을 팩 루트만 생성하게 하고, `CheckGamePresets.py` 가 보던 스키마 · 텔레메트리 경로 검사를 팩 설정 쪽 검사로 옮깁니다. 설정 문서와 `Config/README.md` 의 폴백 문장을 고칩니다. `ConfigCatalog.py` 의 `GameSettings` 항목 옆에 `PackEngineSettings`(같은 파일의 `<Engine>` 요소, XML 속성 키)를 더하고 `GameConfig` 항목의 읽는 곳 문구(`ensureConfig`)를 `loadHostConfig` 로 고칩니다(HC3 은 생성 문서만 다시 만들었다) | `Scripts/generate/`, `Scripts/lint/gate/`, `Scripts/common/ConfigCatalog.py`, `docs/07_Configuration.md`, `Config/README.md`, `docs/Config/`(생성물) | HC3 | `-L lint`, 생성 문서 점검, Shipping 구성 컴파일 | 없음 |
 
 단위가 끝날 때 고칠 문서: `docs/07_Configuration.md` 32-33 · 42 행(프리셋 경계), `Config/README.md`("기본값을 쓰는 것은 파일이 없을 때뿐" 문단), `GameConfig.h` 머리 주석, 결정 기록 5-4 의 해당 항목.
 

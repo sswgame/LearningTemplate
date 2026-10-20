@@ -1,6 +1,3 @@
 {
-    "_packRoot": "game/nilecity",
-    "_userSettingsSchema": "data/nile.settings.xml",
-    "_windowTitle": "Nile City",
-    "_bUIPauseMenu": true
+    "_packRoot": "game/nilecity"
 }

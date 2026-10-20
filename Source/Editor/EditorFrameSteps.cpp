@@ -21,7 +21,7 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 
-#include "Engine/Config/GameConfig.h"
+#include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Window/IWindow.h"
 
@@ -84,8 +84,9 @@ namespace sw::editor
             static void runWindowTitle( EditorContext& context )
             {
                 SW_EDITOR_PROFILE_SCOPE( "GT.Editor.step.windowTitle" );
-                IWindow* pWindow = IWindow::getActiveWindow();
-                if ( pWindow == nullptr )
+                IWindow*                  pWindow       = IWindow::getActiveWindow();
+                const PackEngineSettings* pPackSettings = editor::findSubsystem<const PackEngineSettings>();
+                if ( pWindow == nullptr || pPackSettings == nullptr )
                     return;
                 const Scene* pScene    = editor::getActiveScene();
                 const string scenePath = pScene == nullptr ? string{} : ( pScene->getSourcePath().empty() ? pScene->getName() : pScene->getSourcePath() );
@@ -93,7 +94,7 @@ namespace sw::editor
                 const utf8*  pPlayState{ nullptr };
                 if ( EditorPlaySession::isStopped() == false )
                     pPlayState = EditorPlaySession::isSimulating() ? "Simulating" : ( EditorPlaySession::isPaused() ? "Paused" : "Playing" );
-                const string title = EditorWindowTitleUtil::makeTitle( GameConfig::getActive()._windowTitle, scenePath, bDirty, pPlayState );
+                const string title = EditorWindowTitleUtil::makeTitle( pPackSettings->_windowTitle, scenePath, bDirty, pPlayState );
                 pWindow->setTitle( title.c_str() );
             }
 

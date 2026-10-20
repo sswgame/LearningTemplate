@@ -61,12 +61,12 @@ namespace sw::editor
 
     string EditorDataTableCommands::getLocalizationFolderPath()
     {
-        return ResourcePaths::findLooseDomainFolder( GameConfig::getActive()._packRoot, FileUtil::joinPath( path::kDataFolder, path::kLocalizationFolder ) ).getDiskPath();
+        return ResourcePaths::findLooseDomainFolder( GameConfig::getActive()._packRoot.get(), FileUtil::joinPath( path::kDataFolder, path::kLocalizationFolder ) ).getDiskPath();
     }
 
     string EditorDataTableCommands::getGameDataFolderPath()
     {
-        return ResourcePaths::findLooseDomainFolder( GameConfig::getActive()._packRoot, path::kDataFolder ).getDiskPath();
+        return ResourcePaths::findLooseDomainFolder( GameConfig::getActive()._packRoot.get(), path::kDataFolder ).getDiskPath();
     }
 
     void EditorDataTableCommands::collectLocalizationProjects( vector<string>& outListProjectPath )

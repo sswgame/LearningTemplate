@@ -1,6 +1,3 @@
 {
-    "_packRoot": "game/harvestvalley",
-    "_userSettingsSchema": "data/farm.settings.xml",
-    "_windowTitle": "Harvest Valley",
-    "_bUIPauseMenu": true
+    "_packRoot": "game/harvestvalley"
 }

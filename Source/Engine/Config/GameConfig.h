@@ -1,70 +1,24 @@
 #pragma once
-#include "Core/Container/map.h"
-#include "Core/Container/string.h"
-
 #include "Engine/Config/IConfig.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Base/DataPath.h"
 
 namespace sw
 {
     /**
-     * @brief 돌리는 게임의 프리셋(`Config/Game/<게임>.json`)입니다 — 팩을 마운트하기 전에 알아야 하는 것(팩 루트 · 스키마)만. 시작 씬은 팩의 `data/gamesettings.xml` 하나다.
-     * @details Dev 는 실행할 때 고른 게임(`-game=`, 없으면 빌드의 활성 게임)의 파일을 읽는다(`GameSelection::getConfigPath`). Shipping 은 구운 게임의 파일을 생성 헤더로 구워 넣어
-     *          디스크의 Config/Game 을 요구하지 않습니다. 게임마다 하나라, 게임을 바꿔도 다른 게임의 팩 루트를 읽지 않습니다.
+     * @brief 돌리는 게임의 프리셋(`Config/Game/<게임>.json`)입니다 — 팩을 찾는 팩 루트 하나만 가집니다.
+     * @details 게임의 나머지 설정은 팩의 `data/gamesettings.xml` 하나가 원본이다(엔진이 읽는 칸은 `<Engine>` 요소 — `PackEngineSettings`, 시작 씬 등은
+     *          `GameSettings`). Dev 는 실행할 때 고른 게임(`-game=`, 없으면 빌드의 활성 게임)의 파일을 읽는다(`GameSelection::getConfigPath`).
+     *          Shipping 은 구운 게임의 파일을 생성 헤더로 구워 넣어 디스크의 Config/Game 을 요구하지 않습니다.
+     *          팩 루트는 `DataPath` 라 데이터 읽기만 넣는다 — 파일 없이 만든 `GameConfig{}` 는 쓸 수 있는 값이 아니다(읽기 전에 쓰면 Debug 어서션).
      */
     REFLECT()
     struct SW_API GameConfig : IConfig
     {
         REFLECT_BODY();
 
-        PROPERTY()
-        string _packRoot{}; ///< 활성 게임 팩의 리소스 경로(`game/<팩 폴더>`) — 팩 마운트 · 게임 도메인 경로가 이것으로 풀린다
-
-        PROPERTY()
-        string _windowTitle{ "SWEngine" }; ///< 주 창 제목 — 게임마다 다르다(언리얼 ProjectName 자리). 창은 팩을 마운트하기 전에 생긴다
-
-        /**
-         * @brief 이 게임이 그리는 렌더 파이프라인 XML 의 리소스 경로(예: `engine/pipeline/forward2dpipeline.xml`)입니다. 비면 엔진 기본(포워드)입니다.
-         * @details 유니티 Graphics 설정의 Render Pipeline Asset · Godot 의 렌더링 방식 프로젝트 설정에 해당합니다. 명령줄(`-gv_renderPipeline` ·
-         *          `-gv_deferred`)이 이보다 우선합니다. 2D 게임은 톤 매핑이 없는 `forward2dpipeline.xml` 을 고릅니다.
-         */
-        PROPERTY()
-        string _renderPipeline{};
-
-        /** @brief 엔진 스키마에 덧붙이는 게임의 사용자 설정 스키마(팩 상대 경로, 예: `data/usersettings.settings.xml`)입니다. 비면 없습니다. */
-        PROPERTY()
-        string _userSettingsSchema{};
-
-        /** @brief 엔진 스키마에 덧붙이는 게임의 텔레메트리 사건 스키마(팩 상대 경로, 예: `data/mygame.telemetry.xml`)입니다. 비면 없습니다. */
-        PROPERTY()
-        string _telemetrySchema{};
-
-        /** @brief 엔진 기본(`engine/ui/uiscale.xml`) 대신 쓸 런타임 UI 배율 규칙(팩 상대 경로, 예: `data/uiscale.xml`)입니다. 비면 엔진 기본입니다. */
-        PROPERTY()
-        string _uiScaleSettings{};
-
-        /** @brief 엔진 기본(`engine/ui/uithemes.xml`) 대신 쓸 런타임 UI 테마 목록(팩 상대 경로, 예: `data/uithemes.xml`)입니다. 비면 엔진 기본입니다. */
-        PROPERTY()
-        string _uiThemes{};
-
-        /** @brief 엔진 기본(`engine/ui/options.ui.xml`) 대신 쓸 옵션 메뉴 문서(팩 상대 경로, 예: `ui/options.ui.xml`)입니다. 비면 엔진 기본입니다. */
-        PROPERTY()
-        string _uiOptionsMenu{};
-
-        /** @brief 엔진 기본(`engine/ui/pause.ui.xml`) 대신 쓸 일시정지 메뉴 문서(팩 상대 경로)입니다. 비면 엔진 기본입니다(`_bUIPauseMenu` 가 켜졌을 때만 쓴다). */
-        PROPERTY()
-        string _uiPauseMenu{};
-
-        /** @brief 화면이 없을 때 Esc · 패드 Start(`UI.Pause`)로 일시정지 메뉴를 연다. 게임 흐름(타이틀 · 경영 화면)이 Esc 를 따로 쓰면 끈다. */
-        PROPERTY()
-        bool _bUIPauseMenu{ false };
-
-        /**
-         * @brief 게임마다 다른 사용자 설정 기본값입니다(설정 id → 값). 엔진 스키마의 기본값을 덮어씁니다.
-         * @details 플레이어가 바꾸지 않은 값만 따라갑니다. 모르는 id · 받을 수 없는 값은 기동 오류로 알립니다(`UserSettingsManager::setGameDefault`).
-         */
-        PROPERTY()
-        map<string, string> _mapUserSettingDefault{};
+        PROPERTY( Required )
+        DataPath _packRoot; ///< 활성 게임 팩의 리소스 경로(`game/<팩 폴더>`) — 팩 마운트 · 게임 도메인 경로가 이것으로 풀린다
 
         /** @brief App/Engine 가 읽은 활성 값을 GameInstance 부트스트랩에 전달합니다. */
         static void              setActive( const GameConfig& config );

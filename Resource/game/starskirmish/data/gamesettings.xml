@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- StarSkirmish 팩의 설정 — 시작 맵은 전장 씬이다(게임마다 팩의 data/gamesettings.xml 하나다). -->
 <GameSettings>
+  <!-- 엔진이 읽는 칸(PackEngineSettings) — 창 제목 · 렌더 파이프라인 · 사용자 설정과 텔레메트리 스키마 · UI 규칙 -->
+  <Engine _windowTitle="Star Skirmish" _userSettingsSchema="game/starskirmish/data/skirmish.settings.xml" _bUIPauseMenu="true" />
   <startMap>game/starskirmish/maps/skirmish.scene.xml</startMap>
   <inputMap>game/starskirmish/data/skirmish.input.xml</inputMap>
   <loadingScreen>engine/ui/loading.ui.xml</loadingScreen>

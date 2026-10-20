@@ -9,14 +9,15 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
-#include "Engine/Config/GameConfig.h"
 #include "Engine/Config/GameTimeScale.h"
+#include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Resource/AssetManager.h"
+#include "Engine/Resource/PackEngineSettingsSubsystem.h"
 #include "Engine/Text/FontService.h"
 #include "Engine/Text/GlyphAtlas.h"
 #include "Engine/Text/GlyphCache.h"
@@ -181,19 +182,18 @@ namespace sw
 
     span<const utf8* const> UISystem::getSubsystemDependencies() const
     {
-        static constexpr const utf8* kArrDependency[] = { FontService::kSubsystemName, InputManager::kSubsystemName, UserSettingsManager::kSubsystemName };
+        static constexpr const utf8* kArrDependency[] = { FontService::kSubsystemName, InputManager::kSubsystemName, PackEngineSettingsSubsystem::kSubsystemName,
+                                                          UserSettingsManager::kSubsystemName };
         return kArrDependency;
     }
 
     SubsystemInitResult UISystem::initializeSubsystem()
     {
-        // UI 배율 규칙 — 게임 프리셋이 팩 상대 경로로 덮어쓰면 그것, 아니면 엔진 기본(engine/ui/uiscale.xml). 모르는 키는 기동 오류다.
+        // UI 배율 규칙 — 팩 설정(`<Engine _uiScaleSettings>`)이 덮어쓰면 그것, 아니면 엔진 기본(engine/ui/uiscale.xml). 모르는 키는 기동 오류다.
         const EngineDefaultAssets& defaultAssets = engine::getSubsystem<EngineDefaultAssets>();
-        const GameConfig&          gameConfig    = GameConfig::getActive();
-        const string               packRoot      = FileUtil::trimTrailingSlashes( gameConfig._packRoot );
-        const string               scalePath     = gameConfig._uiScaleSettings.empty() ? string( defaultAssets._uiScaleSettings.get() ) : FileUtil::joinPath( packRoot, gameConfig._uiScaleSettings );
+        const PackEngineSettings&  packSettings  = engine::getSubsystem<PackEngineSettings>();
         UIScaleSettings            scaleSettings{};
-        if ( scaleSettings.loadFromResource( scalePath ) == false )
+        if ( scaleSettings.loadFromResource( PackEngineSettings::resolve( packSettings._uiScaleSettings, defaultAssets._uiScaleSettings ) ) == false )
             return SubsystemInitResult::Failed;
         setScaleSettings( scaleSettings );
         // UI 행동 맵(탐색 · 확인 · 뒤로)을 못 읽으면 메뉴를 패드로 다룰 수 없다 — 데이터 오류라 기동 실패다.
@@ -210,16 +210,15 @@ namespace sw
         AssetManager& assetManager = engine::getSubsystem<AssetManager>();
         assetManager.registerAssetCache( &_documentCache );
         assetManager.registerAssetCache( &_styleSheetCache );
-        // 테마 목록 — 게임 프리셋이 덮어쓰면 그것, 아니면 엔진 기본. 모르는 키는 기동 오류다(배율 규칙과 같다).
-        const string   themePath = gameConfig._uiThemes.empty() ? string( defaultAssets._uiThemes.get() ) : FileUtil::joinPath( packRoot, gameConfig._uiThemes );
+        // 테마 목록 — 팩 설정이 덮어쓰면 그것, 아니면 엔진 기본. 모르는 키는 기동 오류다(배율 규칙과 같다).
         UIThemeCatalog themes{};
-        if ( themes.loadFromResource( themePath ) == false )
+        if ( themes.loadFromResource( PackEngineSettings::resolve( packSettings._uiThemes, defaultAssets._uiThemes ) ) == false )
             return SubsystemInitResult::Failed;
         setThemeCatalog( themes );
-        // 엔진 기본 메뉴(옵션 · 일시정지) — 게임 프리셋이 팩 상대 경로로 문서를 덮어쓴다. 일시정지 메뉴는 게임이 켤 때만.
-        setOptionsMenuDocument( gameConfig._uiOptionsMenu.empty() ? string( defaultAssets._uiOptionsMenu.get() ) : FileUtil::joinPath( packRoot, gameConfig._uiOptionsMenu ) );
-        if ( gameConfig._bUIPauseMenu )
-            setPauseMenuDocument( gameConfig._uiPauseMenu.empty() ? string( defaultAssets._uiPauseMenu.get() ) : FileUtil::joinPath( packRoot, gameConfig._uiPauseMenu ) );
+        // 엔진 기본 메뉴(옵션 · 일시정지) — 팩 설정이 문서를 덮어쓴다. 일시정지 메뉴는 게임이 켤 때만.
+        setOptionsMenuDocument( PackEngineSettings::resolve( packSettings._uiOptionsMenu, defaultAssets._uiOptionsMenu ) );
+        if ( packSettings._bUIPauseMenu )
+            setPauseMenuDocument( PackEngineSettings::resolve( packSettings._uiPauseMenu, defaultAssets._uiPauseMenu ) );
 #if SW_DEV_COMMANDS_ENABLED
         _debugHUD = make_unique<DebugHUD>();
         _debugHUD->initialize( *this, &userSettings );

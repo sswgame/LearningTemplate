@@ -45,7 +45,7 @@ namespace sw
         string _scenePath;          ///< 활성 씬의 원본 경로(사본이 아니라 원래 씬)
         string _rhiBackend;         ///< 디바이스 이름(`IRHIDevice::getBackendName`)
         string _buildConfiguration; ///< `sw::build::kConfigName`
-        string _game;               ///< 게임 프리셋의 창 제목(`GameConfig::_windowTitle`)
+        string _game;               ///< 팩 설정의 창 제목(`PackEngineSettings::_windowTitle`)
         float3 _cameraPosition{};
         float3 _cameraRotationDegrees{}; ///< pitch, yaw, roll(도). 시선은 `(sin yaw cos pitch, -sin pitch, cos yaw cos pitch)` 이며 뷰포트 카메라와 같은 규칙입니다
 
