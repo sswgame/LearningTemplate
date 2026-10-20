@@ -35,6 +35,8 @@ namespace sw
         uint64 whisper( AccountID recipientID, string_view text, const ReplyDelegate& onReply );
         /** @brief @p channelID 는 채널 id 나 귓속말 기록 키(`ChatChannelID::makeWhisper`)이고, @p cursor 는 앞 응답의 `_nextCursor` 입니다. 처음에는 빈 문자열을 넘깁니다. */
         uint64 requestHistory( string_view channelID, string_view cursor, int32 maxCount, const ReplyDelegate& onReply );
+        /** @brief 받은 메시지 @p message 를 사유 코드 @p reason 으로 신고합니다. 서버가 그 메시지와 앞 기록을 스냅숏으로 남깁니다. */
+        uint64 report( const ChatMessage& message, string_view reason, const ReplyDelegate& onReply );
 
         /** @brief 받은 메시지(채널과 귓속말)를 @p outListMessage 끝에 넘깁니다. */
         void drainMessages( vector<ChatMessage>& outListMessage ) { _messageBuffer.drainTo( outListMessage ); }

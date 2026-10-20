@@ -117,6 +117,7 @@ SW_TEST_CASE( GuildServiceTest, CreateIsUniqueByNameAndOnePerAccount )
     node._service.drainCompletions( listCompletion );
     SW_EXPECT_EQUAL( listCompletion.size(), size_t( 0 ) );
     SW_EXPECT_TRUE( node._listEvent.back()._kind == GuildEvent::Kind::MemberAttached && node._listEvent.back()._guildID == guildID );
+    SW_EXPECT_EQUAL( node._listEvent.back()._nowMs, int64( 10 ) ); // 길드 채널 멤버를 넣을 시각이다
 }
 
 SW_TEST_CASE( GuildServiceTest, InviteAcceptRolesKickAndLeave )

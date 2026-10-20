@@ -510,6 +510,46 @@ namespace sw
         submitWrite( std::move( work ) );
     }
 
+    void ServerDirectoryService::setMaintenance( const ServerDirectoryMaintenanceChange& change, AccountID actorID, string_view memo, int64 nowMs, uint64 requestTag )
+    {
+        MaintenanceWindow window;
+        window._listAllowedAccount = change._listAllowedAccount;
+        window._scope              = change._scope;
+        window._messageKey         = change._messageKey;
+        window._startMs            = change._startMs;
+        window._endMs              = change._endMs;
+        setMaintenance( window, actorID, memo, nowMs, requestTag );
+    }
+
+    void ServerDirectoryService::postNotice( const ServerDirectoryNoticeChange& change, AccountID actorID, int64 nowMs, uint64 requestTag )
+    {
+        ServiceNotice notice;
+        notice._text         = change._text;
+        notice._noticeID     = change._noticeID;
+        notice._startMs      = change._startMs;
+        notice._endMs        = change._endMs;
+        notice._priority     = change._priority;
+        notice._bLiteralText = change._bLiteralText;
+        postNotice( notice, actorID, nowMs, requestTag );
+    }
+
+    void ServerDirectoryService::drainControlCompletions( vector<ServerDirectoryControlCompletion>& outListCompletion )
+    {
+        vector<ServerDirectoryCompletion> listCompletion;
+        _completionBuffer.drainTo( listCompletion );
+        for ( const ServerDirectoryCompletion& completion : listCompletion )
+        {
+            ServerDirectoryControlResult result = ServerDirectoryControlResult::Unavailable;
+            if ( completion._result == ServerDirectoryResult::Ok )
+                result = ServerDirectoryControlResult::Ok;
+            else if ( completion._result == ServerDirectoryResult::Invalid )
+                result = ServerDirectoryControlResult::Invalid;
+            else if ( completion._result == ServerDirectoryResult::NotFound )
+                result = ServerDirectoryControlResult::NotFound;
+            outListCompletion.push_back( ServerDirectoryControlCompletion{ completion._requestTag, result } );
+        }
+    }
+
     void ServerDirectoryService::submitWrite( unique_ptr<ServerDirectoryWriteWork> work )
     {
         work->_pService = this;

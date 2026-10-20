@@ -43,6 +43,7 @@ namespace sw
         void                       onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
         void                       onServiceTick( OnlineServiceHost& host, int64 nowMs ) override;
         void                       onHostShutdown( OnlineServiceHost& host ) override;
+        void                       onAccountJoined( OnlineServiceHost& host, AccountID accountID ) override;
         void                       onAccountLeft( OnlineServiceHost& host, AccountID accountID ) override;
         void                       onServerBusMessage( OnlineServiceHost& host, const ServerBusMessage& message ) override;
 
@@ -55,6 +56,7 @@ namespace sw
         vector<SocialCompletion>   _listSocialScratch;
         vector<GuildCompletion>    _listGuildScratch;
         vector<SocialNotification> _listNotificationScratch;
+        vector<AccountID>          _listJoinedAccount; ///< 다음 틱에 길드를 붙일 계정이다(붙이기에 시각이 필요하다)
         SocialService*             _pSocialService;
         GuildService*              _pGuildService;
         IAccountPresence*          _pPresence;

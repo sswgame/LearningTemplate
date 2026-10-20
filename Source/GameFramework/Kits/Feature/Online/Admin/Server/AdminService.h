@@ -4,6 +4,7 @@
  * @details - 경제 서비스와 같은 구조이다. 요청이 들어오는 경로는 둘이며 `onServiceRequest` 는 로그인한 GM 연결의 요청이고 `submitCall` 은 같은 프로세스와 테스트의 요청이다. 작업 하나가 명령 하나이다.
  *          - 조회 결과의 표시 이름과 접속 여부는 이 프로세스의 계정 디렉터리(`IAccountDirectory`)로 채운다. 접속하지 않은 계정을 이름으로 찾는 기능은 아직 없다.
  *          - 세션 끊기는 새로 적용된 정지에서만 한다. 재시도로 받은 지난 결과에서는 다시 끊지 않는다.
+ *          - 점검과 공지 명령은 등급만 저장소에서 확인하고 서버 디렉터리 키트(`IServerDirectoryControl`)에 넘긴다. 효과와 감사 기록은 그 키트가 쓰고, 완료는 `update` 가 거둔다.
  *          - 운영 포트는 GM 전용 호스트로 따로 두는 것을 권한다. 사설망과 TLS 를 쓴다. 첫 관리자는 서버 조립 단계가 기동할 때 `seedRole` 로 넣는다.
  */
 #pragma once
@@ -22,6 +23,7 @@ namespace sw
     class IAccountDirectory;
     class IAccountSessionControl;
     class ILedgerPolicy;
+    class IServerDirectoryControl;
     class IServiceStore;
     class MetricRegistry;
     class ServerBus;
@@ -34,6 +36,7 @@ namespace sw
         ServerBus*               _pBus{ nullptr };            ///< 제재를 쓴 뒤 `ServiceSanctionBus::kChangedTopic` 을 낸다. 없으면 채팅은 캐시 시한이 지난 뒤에 제재를 본다
         const ILedgerPolicy*     _pPolicy{ nullptr };         ///< 지급 상한이다. 게임이 CurrencyCatalog 를 넘긴다
         MetricRegistry*          _pMetricRegistry{ nullptr };
+        IServerDirectoryControl* _pDirectoryControl{ nullptr }; ///< 점검과 공지 명령을 넘긴다. 서버 디렉터리 키트가 없으면 null 이고 그 명령은 Unavailable 이다
     };
 } // namespace sw
 
@@ -81,12 +84,18 @@ namespace sw
             uint64             _callID{ 0 };
             int64              _receivedNanoseconds{ 0 };
             int64              _nowMs{ 0 };
+            AdminRequest       _request{}; ///< 점검과 공지 명령만 쓴다. 등급 확인 뒤 서버 디렉터리 키트에 넘긴다
+            AccountID          _adminID{ kInvalidAccountID };
             AccountID          _targetID{ kInvalidAccountID };
             int32              _methodIndex{ 0 };
             uint16             _method{ 0 };
         };
 
         void startCall( AccountID adminID, uint16 method, const AdminRequest& request, const NetIdempotencyKey& idempotencyKey, int64 nowMs, PendingCall pending );
+        /** @brief 등급을 확인한 점검과 공지 명령을 서버 디렉터리 키트에 넘깁니다. 넘겼으면 true 이며 완료는 `update` 가 거둔다. */
+        [[nodiscard]] bool forwardDirectoryCall( const PendingCall& pending );
+        /** @brief 서버 디렉터리 키트의 완료를 거두어 응답합니다. */
+        void pollDirectoryCompletions();
         void finishCall( size_t pendingIndex, const AdminReply& reply );
 
         vector<PendingCall> _listPendingCall;
