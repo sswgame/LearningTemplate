@@ -510,6 +510,182 @@ namespace sw::editor
                 ImGui::PopID();
             }
 
+            /** @brief 행 앞의 눈(에디터에서만 숨김)과 자물쇠(뷰포트 선택 잠금) 토글을 그립니다. */
+            static void drawRowToggles( EditorContext* pContext, GameObject* pObj, uint64 objectID )
+            {
+                // 1) 눈 아이콘은 에디터에서만 숨긴다. 저장, 되돌리기, 게임 동작에 남지 않는다(언리얼과 유니티). 활성 비트는 인스펙터의 Active 체크박스다.
+                const bool bVisible = pObj->isHiddenInEditor() == false;
+                if ( EditorWidgets::drawToggleIconButton( "##visible", bVisible, editoricon::kEye, editoricon::kEyeSlash, SW_LOCKEY( "EditorScene", "VisibleInEditor" ),
+                                                          SW_LOCKEY( "EditorScene", "HiddenInEditor" ) ) )
+                    EditorSceneCommands::setHiddenInEditor( pObj, bVisible );
+                EditorSelfTestMarks::note( "hierarchy.activeToggle" );
+                if ( EditorSelfTestMarks::isEnabled() )
+                    EditorSelfTestMarks::note( ( string( "hierarchy.toggle." ) + pObj->getName().c_str() ).c_str() );
+                ImGui::SameLine();
+                // 2) 자물쇠 아이콘은 뷰포트에서 선택하지 못하게 한다. Hierarchy 에서는 선택할 수 있다. 저장하지 않는다.
+                const bool bLocked = pContext->getSubsystem<EditorWorkspace>().isObjectLocked( objectID );
+                if ( EditorWidgets::drawToggleIconButton( "##lock", bLocked, editoricon::kLock, editoricon::kUnlock, SW_LOCKEY( "EditorScene", "LockedInViewport" ),
+                                                          SW_LOCKEY( "EditorScene", "PickableInViewport" ) ) )
+                    pContext->getSubsystem<EditorWorkspace>().setObjectLocked( objectID, bLocked == false );
+                if ( EditorSelfTestMarks::isEnabled() )
+                    EditorSelfTestMarks::note( ( string( "hierarchy.lock." ) + pObj->getName().c_str() ).c_str() );
+                ImGui::SameLine();
+            }
+
+            /** @brief 행 라벨(아이콘, 이름, 카테고리 배지, 오브젝트 id 꼬리)을 만듭니다. */
+            static void buildObjectLabel( const GameObject* pObj, uint64 objectID, fixed_string<constant::kMaxBuffer256>& outLabel )
+            {
+                // 배지는 리플렉션 Category 에서 가져온다. 위의 컴포넌트 추가 메뉴가 이미 쓰는 데이터다.
+                // 타입 이름을 비교하면 게임이 추가한 컴포넌트는 배지가 없다.
+                string badgeStr;
+                for ( const Component* pComp : pObj->getComponents() )
+                {
+                    if ( pComp == nullptr )
+                        continue;
+                    const TypeInfo* pTypeInfo = pComp->getTypeInfo();
+                    if ( pTypeInfo == nullptr )
+                        continue;
+                    EditorUtil::appendCategoryBadge( pTypeInfo->getCategory(), badgeStr );
+                }
+
+                // 오브젝트 아이콘은 빌보드 종류 컴포넌트(라이트, 카메라, 오디오)가 있으면 그 아이콘이고, 없으면 기본 오브젝트 아이콘이다.
+                const utf8* pIcon = EditorSiblingOrder::isFolder( *pObj ) ? editoricon::kFolder : EditorComponentIcon::findObjectRow( *pObj )._pGlyph;
+                if ( badgeStr.empty() == false )
+                    formatstring( outLabel.data(), outLabel.capacity(), "%# %# %###go%#", pIcon, pObj->getName().c_str(), badgeStr.c_str(), objectID );
+                else
+                    formatstring( outLabel.data(), outLabel.capacity(), "%# %###go%#", pIcon, pObj->getName().c_str(), objectID );
+            }
+
+            /** @brief 방금 그린 행의 클릭을 선택으로 옮깁니다. Shift 는 지난 프레임에 그린 순서로 범위, Ctrl 은 토글입니다. */
+            static void handleRowClick( EditorContext* pContext, GameObject* pObj, GameObjectManager* pManager, RowState& rowState, uint64 objectID )
+            {
+                if ( ImGui::IsItemClicked() == false )
+                    return;
+
+                ImGuiIO& io                 = ImGui::GetIO();
+                rowState._bClickedThisFrame = true;
+                if ( io.KeyShift == false || rowState._anchorObjectID == 0 )
+                {
+                    pContext->getSubsystem<EditorWorkspace>().selectGameObject( pObj, io.KeyCtrl ? SelectionMode::Toggle : SelectionMode::Replace );
+                    rowState._anchorObjectID = objectID;
+                    return;
+                }
+
+                // Shift 는 시작 행부터 이 행까지(지난 프레임에 그린 순서) 모두 선택한다. 유니티, 언리얼, 윈도 탐색기와 같다.
+                const vector<uint64>& listRow     = rowState._listPreviousRow;
+                size_t                anchorIndex = listRow.size();
+                size_t                clickIndex  = listRow.size();
+                for ( size_t rowIndex = 0; rowIndex < listRow.size(); ++rowIndex )
+                {
+                    if ( listRow[rowIndex] == rowState._anchorObjectID )
+                        anchorIndex = rowIndex;
+                    if ( listRow[rowIndex] == objectID )
+                        clickIndex = rowIndex;
+                }
+                if ( anchorIndex >= listRow.size() || clickIndex >= listRow.size() )
+                {
+                    pContext->getSubsystem<EditorWorkspace>().selectGameObject( pObj, SelectionMode::Add );
+                    return;
+                }
+
+                const size_t first = MathUtil::min( anchorIndex, clickIndex );
+                const size_t last  = MathUtil::max( anchorIndex, clickIndex );
+                if ( io.KeyCtrl == false )
+                    editor::getMainSceneSelection().clearObjectSelection();
+                for ( size_t rowIndex = first; rowIndex <= last; ++rowIndex )
+                {
+                    GameObject* pRow = pManager->findGameObjectByID( listRow[rowIndex] );
+                    if ( pRow != nullptr )
+                        pContext->getSubsystem<EditorWorkspace>().selectGameObject( pRow, SelectionMode::Add );
+                }
+                pContext->getSubsystem<EditorWorkspace>().selectGameObject( pObj, SelectionMode::Add ); // 누른 행이 주 선택이다
+            }
+
+            /** @brief 그 자리에서 이름을 바꾸는 입력입니다. 엔터나 포커스를 잃으면 확정하고 Esc 는 취소합니다. */
+            static void drawInlineRename( GameObject* pObj, uint64 objectID, uint64& renamingObjectID, fixed_string<constant::kMaxBuffer256>& renameBuffer,
+                                          bool& bFocusRenameInput )
+            {
+                if ( renamingObjectID != objectID || EditorPlaySession::areSceneEditsAllowed() == false )
+                    return;
+
+                ImGui::SameLine();
+                ImGui::SetNextItemWidth( 160.0f * EditorThemeUtil::getDpiScale() );
+                if ( bFocusRenameInput )
+                {
+                    ImGui::SetKeyboardFocusHere();
+                    bFocusRenameInput = false;
+                }
+                if ( ImGui::InputText( "##InlineRename", renameBuffer.data(), renameBuffer.capacity(),
+                                       ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll ) )
+                {
+                    (void)EditorSceneCommands::rename( pObj, renameBuffer.c_str() ); // 빈 이름은 거절하므로 이름이 그대로 남는다
+                    renamingObjectID = 0;
+                }
+                if ( ImGui::IsItemDeactivated() && ImGui::IsKeyPressed( ImGuiKey_Escape ) == false )
+                {
+                    (void)EditorSceneCommands::rename( pObj, renameBuffer.c_str() ); // 빈 이름은 거절하므로 이름이 그대로 남는다
+                    renamingObjectID = 0;
+                }
+                if ( ImGui::IsKeyPressed( ImGuiKey_Escape ) )
+                    renamingObjectID = 0;
+            }
+
+            /** @brief 씬 컴포넌트가 아닌 컴포넌트 한 줄을 그립니다. */
+            static void drawPlainComponentRow( EditorContext* pContext, GameObject* pObj, Component* pComp, GameObjectManager* pManager )
+            {
+                ImGui::PushID( static_cast<int32>( pComp->getComponentID() ) );
+
+                EditorWorkspace& ws            = pContext->getSubsystem<EditorWorkspace>();
+                const bool       bCompSelected = ( ws.getSelectedObjectID() == pObj->getObjectID() &&
+                                             ws.getSelectedComponentID() == pComp->getComponentID() );
+
+                const utf8* pCompName = pComp->getComponentName().empty() == false
+                                          ? pComp->getComponentName().c_str()
+                                          : "Component";
+
+                fixed_string<constant::kMaxBuffer256> arrCompLabel;
+                formatstring( arrCompLabel.data(), arrCompLabel.capacity(), "%###c%#", pCompName, pComp->getComponentID() );
+
+                if ( ImGui::Selectable( arrCompLabel.c_str(), bCompSelected ) )
+                    ws.selectComponent( pObj, pComp );
+                drawComponentContextMenu( pObj, pComp, pManager );
+
+                ImGui::PopID();
+            }
+
+            /** @brief 펼친 오브젝트의 자식 오브젝트(형제 순서)와 컴포넌트 줄을 그립니다. */
+            static void drawOpenNodeChildren( EditorContext* pContext, GameObject* pObj, GameObjectManager* pManager, const utf8* pFilter,
+                                              uint64& renamingObjectID, fixed_string<constant::kMaxBuffer256>& renameBuffer, bool& bFocusRenameInput )
+            {
+                vector<GameObject*> listChild;
+                EditorSiblingOrder::collectChildrenInOrder( *pObj, listChild );
+                for ( GameObject* pChild : listChild )
+                {
+                    drawGameObjectNode( pChild, pManager, pFilter, renamingObjectID, renameBuffer,
+                                        bFocusRenameInput );
+                }
+
+                const ComponentList& listComponent = pObj->getComponents();
+                for ( Component* pComp : listComponent )
+                {
+                    if ( pComp == nullptr )
+                        continue;
+
+                    // 노드마다 프레임마다 확인하는 곳이다. 그래서 리플렉션 캐스트 대신 생성자에서 설정한 비트를 본다.
+                    if ( pComp->isSceneComponent() )
+                    {
+                        SceneComponent*       pSceneComp    = static_cast<SceneComponent*>( pComp );
+                        const SceneComponent* pParent       = pSceneComp->getParent();
+                        const bool            bRootOnThisGo = pParent == nullptr || pParent->getOwner() != pObj;
+                        if ( bRootOnThisGo )
+                            drawSceneComponentNode( pObj, pSceneComp, pManager );
+                        continue;
+                    }
+
+                    drawPlainComponentRow( pContext, pObj, pComp, pManager );
+                }
+            }
+
             static void drawGameObjectNode( GameObject* pObj, GameObjectManager* pManager, const utf8* pFilter,
                                             uint64& renamingObjectID, fixed_string<constant::kMaxBuffer256>& renameBuffer,
                                             bool& bFocusRenameInput )
@@ -532,44 +708,10 @@ namespace sw::editor
 
                 ImGui::PushID( static_cast<int32>( objectID ) );
 
-                // 1) 눈 아이콘은 에디터에서만 숨긴다. 저장, 되돌리기, 게임 동작에 남지 않는다(언리얼과 유니티). 활성 비트는 인스펙터의 Active 체크박스다.
-                const bool bVisible = pObj->isHiddenInEditor() == false;
-                if ( EditorWidgets::drawToggleIconButton( "##visible", bVisible, editoricon::kEye, editoricon::kEyeSlash, SW_LOCKEY( "EditorScene", "VisibleInEditor" ),
-                                                          SW_LOCKEY( "EditorScene", "HiddenInEditor" ) ) )
-                    EditorSceneCommands::setHiddenInEditor( pObj, bVisible );
-                EditorSelfTestMarks::note( "hierarchy.activeToggle" );
-                if ( EditorSelfTestMarks::isEnabled() )
-                    EditorSelfTestMarks::note( ( string( "hierarchy.toggle." ) + pObj->getName().c_str() ).c_str() );
-                ImGui::SameLine();
-                // 2) 자물쇠 아이콘은 뷰포트에서 선택하지 못하게 한다. Hierarchy 에서는 선택할 수 있다. 저장하지 않는다.
-                const bool bLocked = pContext->getSubsystem<EditorWorkspace>().isObjectLocked( objectID );
-                if ( EditorWidgets::drawToggleIconButton( "##lock", bLocked, editoricon::kLock, editoricon::kUnlock, SW_LOCKEY( "EditorScene", "LockedInViewport" ),
-                                                          SW_LOCKEY( "EditorScene", "PickableInViewport" ) ) )
-                    pContext->getSubsystem<EditorWorkspace>().setObjectLocked( objectID, bLocked == false );
-                if ( EditorSelfTestMarks::isEnabled() )
-                    EditorSelfTestMarks::note( ( string( "hierarchy.lock." ) + pObj->getName().c_str() ).c_str() );
-                ImGui::SameLine();
+                drawRowToggles( pContext, pObj, objectID );
 
-                // 배지는 리플렉션 Category 에서 가져온다. 위의 컴포넌트 추가 메뉴가 이미 쓰는 데이터다.
-                // 타입 이름을 비교하면 게임이 추가한 컴포넌트는 배지가 없다.
-                string badgeStr;
-                for ( const Component* pComp : pObj->getComponents() )
-                {
-                    if ( pComp == nullptr )
-                        continue;
-                    const TypeInfo* pTypeInfo = pComp->getTypeInfo();
-                    if ( pTypeInfo == nullptr )
-                        continue;
-                    EditorUtil::appendCategoryBadge( pTypeInfo->getCategory(), badgeStr );
-                }
-
-                // 오브젝트 아이콘은 빌보드 종류 컴포넌트(라이트, 카메라, 오디오)가 있으면 그 아이콘이고, 없으면 기본 오브젝트 아이콘이다.
-                const utf8*                           pIcon = EditorSiblingOrder::isFolder( *pObj ) ? editoricon::kFolder : EditorComponentIcon::findObjectRow( *pObj )._pGlyph;
                 fixed_string<constant::kMaxBuffer256> arrLabel;
-                if ( badgeStr.empty() == false )
-                    formatstring( arrLabel.data(), arrLabel.capacity(), "%# %# %###go%#", pIcon, pObj->getName().c_str(), badgeStr.c_str(), objectID );
-                else
-                    formatstring( arrLabel.data(), arrLabel.capacity(), "%# %###go%#", pIcon, pObj->getName().c_str(), objectID );
+                buildObjectLabel( pObj, objectID, arrLabel );
 
                 const bool bHasChildGos   = pObj->hasChildren();
                 const bool bHasComponents = pObj->getComponentCount() > 0;
@@ -602,123 +744,15 @@ namespace sw::editor
                 if ( EditorSelfTestMarks::isEnabled() )
                     EditorSelfTestMarks::note( ( string( "hierarchy.row." ) + pObj->getName().c_str() ).c_str() );
 
-                if ( ImGui::IsItemClicked() )
-                {
-                    ImGuiIO& io                 = ImGui::GetIO();
-                    rowState._bClickedThisFrame = true;
-                    if ( io.KeyShift && rowState._anchorObjectID != 0 )
-                    {
-                        // Shift 는 시작 행부터 이 행까지(지난 프레임에 그린 순서) 모두 선택한다. 유니티, 언리얼, 윈도 탐색기와 같다.
-                        const vector<uint64>& listRow     = rowState._listPreviousRow;
-                        size_t                anchorIndex = listRow.size();
-                        size_t                clickIndex  = listRow.size();
-                        for ( size_t rowIndex = 0; rowIndex < listRow.size(); ++rowIndex )
-                        {
-                            if ( listRow[rowIndex] == rowState._anchorObjectID )
-                                anchorIndex = rowIndex;
-                            if ( listRow[rowIndex] == objectID )
-                                clickIndex = rowIndex;
-                        }
-                        if ( anchorIndex < listRow.size() && clickIndex < listRow.size() )
-                        {
-                            const size_t first = MathUtil::min( anchorIndex, clickIndex );
-                            const size_t last  = MathUtil::max( anchorIndex, clickIndex );
-                            if ( io.KeyCtrl == false )
-                                editor::getMainSceneSelection().clearObjectSelection();
-                            for ( size_t rowIndex = first; rowIndex <= last; ++rowIndex )
-                            {
-                                GameObject* pRow = pManager->findGameObjectByID( listRow[rowIndex] );
-                                if ( pRow != nullptr )
-                                    pContext->getSubsystem<EditorWorkspace>().selectGameObject( pRow, SelectionMode::Add );
-                            }
-                            pContext->getSubsystem<EditorWorkspace>().selectGameObject( pObj, SelectionMode::Add ); // 누른 행이 주 선택이다
-                        }
-                        else
-                        {
-                            pContext->getSubsystem<EditorWorkspace>().selectGameObject( pObj, SelectionMode::Add );
-                        }
-                    }
-                    else
-                    {
-                        pContext->getSubsystem<EditorWorkspace>().selectGameObject( pObj, io.KeyCtrl ? SelectionMode::Toggle : SelectionMode::Replace );
-                        rowState._anchorObjectID = objectID;
-                    }
-                }
-
-                // 그 자리에서 이름을 바꾸는 입력
-                if ( renamingObjectID == objectID && EditorPlaySession::areSceneEditsAllowed() )
-                {
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth( 160.0f * EditorThemeUtil::getDpiScale() );
-                    if ( bFocusRenameInput )
-                    {
-                        ImGui::SetKeyboardFocusHere();
-                        bFocusRenameInput = false;
-                    }
-                    if ( ImGui::InputText( "##InlineRename", renameBuffer.data(), renameBuffer.capacity(),
-                                           ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll ) )
-                    {
-                        (void)EditorSceneCommands::rename( pObj, renameBuffer.c_str() ); // 빈 이름은 거절하므로 이름이 그대로 남는다
-                        renamingObjectID = 0;
-                    }
-                    if ( ImGui::IsItemDeactivated() && ImGui::IsKeyPressed( ImGuiKey_Escape ) == false )
-                    {
-                        (void)EditorSceneCommands::rename( pObj, renameBuffer.c_str() ); // 빈 이름은 거절하므로 이름이 그대로 남는다
-                        renamingObjectID = 0;
-                    }
-                    if ( ImGui::IsKeyPressed( ImGuiKey_Escape ) )
-                        renamingObjectID = 0;
-                }
+                handleRowClick( pContext, pObj, pManager, rowState, objectID );
+                drawInlineRename( pObj, objectID, renamingObjectID, renameBuffer, bFocusRenameInput );
 
                 drawGameObjectContextMenu( pObj, pManager );
                 drawGameObjectDragDrop( pObj, pManager );
 
                 if ( bOpen )
                 {
-                    vector<GameObject*> listChild;
-                    EditorSiblingOrder::collectChildrenInOrder( *pObj, listChild );
-                    for ( GameObject* pChild : listChild )
-                    {
-                        drawGameObjectNode( pChild, pManager, pFilter, renamingObjectID, renameBuffer,
-                                            bFocusRenameInput );
-                    }
-
-                    const ComponentList& listComponent = pObj->getComponents();
-                    for ( Component* pComp : listComponent )
-                    {
-                        if ( pComp == nullptr )
-                            continue;
-
-                        // 노드마다 프레임마다 확인하는 곳이다. 그래서 리플렉션 캐스트 대신 생성자에서 설정한 비트를 본다.
-                        if ( pComp->isSceneComponent() )
-                        {
-                            SceneComponent*       pSceneComp    = static_cast<SceneComponent*>( pComp );
-                            const SceneComponent* pParent       = pSceneComp->getParent();
-                            const bool            bRootOnThisGo = pParent == nullptr || pParent->getOwner() != pObj;
-                            if ( bRootOnThisGo )
-                                drawSceneComponentNode( pObj, pSceneComp, pManager );
-                            continue;
-                        }
-
-                        ImGui::PushID( static_cast<int32>( pComp->getComponentID() ) );
-
-                        EditorWorkspace& ws            = pContext->getSubsystem<EditorWorkspace>();
-                        const bool       bCompSelected = ( ws.getSelectedObjectID() == pObj->getObjectID() &&
-                                                     ws.getSelectedComponentID() == pComp->getComponentID() );
-
-                        const utf8* pCompName = pComp->getComponentName().empty() == false
-                                                  ? pComp->getComponentName().c_str()
-                                                  : "Component";
-
-                        fixed_string<constant::kMaxBuffer256> arrCompLabel;
-                        formatstring( arrCompLabel.data(), arrCompLabel.capacity(), "%###c%#", pCompName, pComp->getComponentID() );
-
-                        if ( ImGui::Selectable( arrCompLabel.c_str(), bCompSelected ) )
-                            ws.selectComponent( pObj, pComp );
-                        drawComponentContextMenu( pObj, pComp, pManager );
-
-                        ImGui::PopID();
-                    }
+                    drawOpenNodeChildren( pContext, pObj, pManager, pFilter, renamingObjectID, renameBuffer, bFocusRenameInput );
                     ImGui::TreePop();
                 }
 
