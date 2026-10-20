@@ -224,3 +224,52 @@ SW_TEST_CASE( ScenarioRecorderTest, MappedButtonsBecomeActionSteps )
     // W(첫 단추가 아님) · F5(맵에 없음)는 키 단계다. 키 이름을 다시 읽지 못하면(엔진 서비스 없음) 건너뛴 입력으로 센다.
     SW_EXPECT_EQUAL( 2u, TestScenarioRecorderInternal::countKind( scenario, "Press" ) + output._skippedEventCount );
 }
+
+/**
+ * @brief [ScenarioRecorderTest] 액션의 스틱(그 액션의 첫 패드 축 바인딩)은 값 구간마다 `ActionAxis`(값 · 구간 길이)로 쓴다. 액션이 없는 스틱과 트리거 축은 `GamepadAxis` 로 남는다
+ * @details 왼쪽 스틱을 프레임 0 에 x 0.5, 프레임 2 에 y 1 로 기울이고 프레임 3 에 놓는다 — 구간은 [0, 2) (0.5, 0) 과 [2, 3) (0.5, 1) 둘이다.
+ */
+SW_TEST_CASE( ScenarioRecorderTest, MappedSticksBecomeActionAxisRuns )
+{
+    sw::InputMap inputMap;
+    inputMap.registerLayer( "Gameplay", 0, true, false, false );
+    inputMap.bindGamepadStick2D( "Move", sw::GamepadStick::Left, 0.15f, "Gameplay" );
+
+    sw::vector<sw::InputReplayFrame> listFrame( 5 );
+    listFrame[0]._listRawEvent.push_back( sw::RawInputEvent::makeGamepadAxis( 0, 0.5f ) );
+    listFrame[1]._listRawEvent.push_back( sw::RawInputEvent::makeGamepadAxis( 2, 0.25f ) ); // 오른쪽 스틱 — 액션이 없다
+    listFrame[2]._listRawEvent.push_back( sw::RawInputEvent::makeGamepadAxis( 1, 1.0f ) );
+    listFrame[3]._listRawEvent.push_back( sw::RawInputEvent::makeGamepadAxis( 0, 0.0f ) );
+    listFrame[3]._listRawEvent.push_back( sw::RawInputEvent::makeGamepadAxis( 1, 0.0f ) );
+    listFrame[4]._listRawEvent.push_back( sw::RawInputEvent::makeGamepadAxis( 4, 0.75f ) ); // 트리거
+
+    sw::ScenarioRecordSettings settings;
+    settings._pInputMap                   = &inputMap;
+    settings._firstFrame                  = 10;
+    const sw::ScenarioRecordOutput output = sw::ScenarioRecorder::toScenarioXML( listFrame, settings );
+
+    sw::AutomationScenario scenario;
+    sw::string             error;
+    SW_ASSERT_TRUE( scenario.parse( output._xmlText, "recorded.scenario.xml", error ) );
+    SW_EXPECT_EQUAL( 2u, TestScenarioRecorderInternal::countKind( scenario, "ActionAxis" ) );
+    SW_EXPECT_EQUAL( 2u, TestScenarioRecorderInternal::countKind( scenario, "GamepadAxis" ) );
+    for ( const sw::AutomationStep& step : scenario.getSteps() )
+    {
+        if ( sw::string_view{ step._kind } != "ActionAxis" )
+            continue;
+        SW_EXPECT_STREQ( "Move", step.findAttribute( "name" )->c_str() );
+        SW_EXPECT_STREQ( "gamepad", step.findAttribute( "device" )->c_str() );
+        SW_EXPECT_NEAR_EQUAL( 0.5f, TestScenarioRecorderInternal::readFloat( step, "x" ), 1.0e-4f );
+        if ( step._frameIndex == 10u )
+        {
+            SW_EXPECT_NEAR_EQUAL( 0.0f, TestScenarioRecorderInternal::readFloat( step, "y" ), 1.0e-4f );
+            SW_EXPECT_NEAR_EQUAL( 2.0f, TestScenarioRecorderInternal::readFloat( step, "frames" ), 1.0e-4f );
+        }
+        else
+        {
+            SW_EXPECT_EQUAL( 12u, step._frameIndex );
+            SW_EXPECT_NEAR_EQUAL( 1.0f, TestScenarioRecorderInternal::readFloat( step, "y" ), 1.0e-4f );
+            SW_EXPECT_NEAR_EQUAL( 1.0f, TestScenarioRecorderInternal::readFloat( step, "frames" ), 1.0e-4f );
+        }
+    }
+}

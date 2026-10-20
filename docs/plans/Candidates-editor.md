@@ -93,10 +93,10 @@ GameFramework 에디터 플러그인의 `setPanelOpen( "admin.tool" )` · `"gimm
 ### ScenarioRecorderAndInspectorGaps
 제목: 시나리오 녹화 · 인스펙터 · 모듈 창의 남은 한계
 옛번호: D3-8
-왜 필요한가: 에디터 보강 묶음에서 들어간 기능마다 알려진 빈틈이 남았다.
+왜 필요한가: 에디터 보강 묶음에서 들어간 기능마다 알려진 빈틈이 남았다. 녹화의 스틱 `ActionAxis`, 즐겨찾기 키의 선언 타입, 다중 선택의 "바뀐 것만 보기" 는 들어갔다(`ScenarioRecorder` · `InspectorFavorites` 헤더).
 착수 조건 / 남은 것:
-- 시나리오녹화: 마우스 휠은 `Wheel` 단계로, 더블클릭은 두 번째 `Press` 로 기록한다. 조합 중 글자 · 포커스 · 포인터 출입 · 패드 연결은 시나리오 의미가 없어 건너뛴 수만 센다. 재생은 원시 Down 을 두 번 내므로 더블클릭 이벤트 자체를 보는 UI 코드는 재현되지 않는다(`DoubleClick` 단계가 필요하면 `VirtualInputScript` 를 고친다). 액션의 단추는 `ActionPress` · `ActionRelease` 로 쓰지만 축(스틱 · 합성 축)은 아직 `GamepadAxis` · 키 단계라 `ActionAxis` 로 쓰지 않는다.
-- 인스펙터: 즐겨찾기(`InspectorFavorites`, `Saved/Editor/InspectorFavorites.txt`)의 키가 가장 파생된 타입 이름이라 기반 클래스에 즐겨찾기한 프로퍼티는 파생 타입마다 따로 저장된다. 디버그 모드(유니티 Debug 인스펙터 — 숨은 필드는 리플렉션 범위 밖)는 하지 않았다. "바뀐 것만 보기" 는 다중 선택에서 주 선택 오브젝트의 값만 기준으로 거른다.
+- 시나리오녹화: 더블클릭은 두 번째 `Press` 로 기록하고 재생은 원시 Down 을 두 번 낸다. 지금 원시 DoubleClick 이벤트를 읽는 쪽이 없다(입력 관리자는 Down, 입력 맵과 ImGui 는 간격으로 판정). 그 이벤트를 읽는 코드가 생기면 `VirtualInputScript` 에 `DoubleClick` 단계를 더한다. 합성 축(키 · D 패드)은 키 단계로 남는다 — 재생의 `ActionAxis` 가 합성 축은 키를 누르기만 하므로 키 단계와 같다.
+- 인스펙터: 디버그 모드(유니티 Debug 인스펙터 — 숨은 필드는 리플렉션 범위 밖)는 하지 않았다. 즐겨찾기 키를 선언 타입으로 바꿔 예전에 파생 타입 이름으로 저장한 기반 프로퍼티 키는 더 맞지 않는다(사용자 파일, 다시 즐겨찾기한다).
 - 모듈창: 모듈 설치 · 제거(파일 복사 · 삭제) · 외부 패키지 받기는 위험이 커서 뺐다. 확인 창이 패널 수준 ID 로 열려 셀프테스트 시나리오가 창 위치에 기댄다면 영향이 있을 수 있다.
 함정: UI 디자이너 손잡이의 가정은 [UIPreviewDesigner](#uipreviewdesigner) 에 있다.
 

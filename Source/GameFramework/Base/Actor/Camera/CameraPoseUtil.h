@@ -29,7 +29,7 @@ namespace sw
          * @details 부모(몸 · 탈것)가 움직이고 돌면 카메라도 계층을 따라간다. 월드로 쓰면 부모를 버리고 원점 근처에 남는다.
          */
         static void applyToCameraLocal( CameraComponent& camera, const CameraPose& pose );
-        /** @brief 렌즈(원근이나 직교, 시야각, 높이, 근평면과 원평면)만 씁니다. */
+        /** @brief 렌즈(원근이나 직교, 시야각, 높이, 근평면과 원평면)와 후처리 값만 씁니다. 위치와 회전은 쓰지 않습니다. */
         static void applyLensToCamera( CameraComponent& camera, const CameraPose& pose );
         /** @brief 카메라의 지금 월드 위치, 회전, 렌즈를 포즈로 읽습니다. 뷰 타깃 블렌드의 입력입니다. */
         static CameraPose makePoseFromCamera( const CameraComponent& camera );

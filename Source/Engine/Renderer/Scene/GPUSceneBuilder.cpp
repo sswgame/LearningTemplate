@@ -118,7 +118,8 @@ namespace sw
         _instanceRing.clear();
         _snapshot._pListInstance.reset();
         _snapshot.clearBatches();
-        _snapshot._listParticleBatch.clear();
+        _snapshot.clearParticles();
+        _batchElementTable.clear(); // 배치 목록과 나란한 표다. 함께 비운다.
         // 머티리얼 레지스트리는 "그룹 목록(스냅샷)" 과 "셰이더 경로에서 인덱스를 찾는 맵" 이 한 몸이다. 목록만 지우면 맵이 옛 인덱스를
         // 반환하고 GPUMaterialRegistry::materialGroupFor 가 범위 밖이라 조용히 건너뛴다. 그러면 배치에 머티리얼 버퍼가 실리지 않아 폴백(0)으로
         // 그려지고, 투명 머티리얼은 알파 0이라 화면에서 사라진다(백엔드 교체 뒤 유리 큐브가 없어지던 원인이다).
@@ -390,7 +391,7 @@ namespace sw
         if ( pObjects != nullptr )
             populateParticleBatches( *pObjects, cameraPos );
         else
-            _snapshot._listParticleBatch.clear();
+            _snapshot.clearParticles();
     }
 
     void GPUSceneBuilder::populateMeshesFromScene( Scene* pScene, const float3& cameraPos )
@@ -851,8 +852,8 @@ namespace sw
 
     void GPUSceneBuilder::populateParticleBatches( const GameObjectManager& objects, const float3& cameraPos )
     {
+        _snapshot.clearParticles();
         vector<GPUParticleBatch>& listBatch = _snapshot._listParticleBatch;
-        listBatch.clear();
         for ( const VfxComponent* pVfx : objects.getComponentRegistry().getAll<VfxComponent>() )
         {
             const bool bHidden = pVfx->isPendingDestroy() || pVfx->isActive() == false;
@@ -862,51 +863,109 @@ namespace sw
             const float32  sizeScale = world.getMaximumAxisScale();
             for ( uint32 emitterIndex = 0; emitterIndex < pVfx->getEmitterCount(); ++emitterIndex )
             {
-                const shared_ptr<const vector<GPUParticle>>& pListParticle = pVfx->getEmitterParticles( emitterIndex );
-                if ( pListParticle == nullptr || pListParticle->empty() )
+                // 메시 방출기는 메시 인스턴스 배치로 메시 경로를 탄다(`VfxComponent`). 띠는 이웃 둘이 있어야 한 마디다.
+                const VfxEmitterDef&                         def            = pVfx->getEmitterDef( emitterIndex );
+                const shared_ptr<const vector<GPUParticle>>& pListParticle  = pVfx->getEmitterParticles( emitterIndex );
+                const bool                                   bRibbon        = def._renderMode == VfxRenderMode::Ribbon;
+                const size_t                                 minParticles   = bRibbon ? 2u : 1u;
+                const bool                                   bNothingToDraw = def._renderMode == VfxRenderMode::Mesh || pListParticle == nullptr || pListParticle->size() < minParticles;
+                if ( bNothingToDraw )
                     continue;
-                const VfxEmitterDef& def   = pVfx->getEmitterDef( emitterIndex );
-                GPUParticleBatch&    batch = listBatch.emplace_back();
-                batch._pListParticle       = pListParticle;
-                batch._world               = world;
-                batch._texturePath         = hashed_string( def._texturePath );
-                batch._sizeScale           = sizeScale;
-                batch._bAdditive           = def._blendMode == VfxBlendMode::Additive ? SW_TRUE : SW_FALSE;
+                GPUParticleBatch& batch = listBatch.emplace_back();
+                batch._bRibbon          = bRibbon ? SW_TRUE : SW_FALSE;
+                batch._pListParticle    = pListParticle;
+                batch._world            = world;
+                batch._texturePath      = hashed_string( def._texturePath );
+                batch._sizeScale        = sizeScale;
+                batch._bAdditive        = def._blendMode == VfxBlendMode::Additive ? SW_TRUE : SW_FALSE;
             }
         }
-        if ( listBatch.size() <= 1 )
+        if ( listBatch.empty() )
             return;
 
-        // 메시 투명 후보와 같은 규칙이다. 깊이는 방출기 위치(행렬의 이동)로 잰다 — 입자 단위 정렬은 하지 않는다(방출기 하나 = 후보 하나).
-        const uint32 defaultSortKey = Render2DSettings::getActive().getDefaultSortKey();
-        _listScratchParticleKey.resize( listBatch.size() );
-        for ( uint32 batchIndex = 0; batchIndex < static_cast<uint32>( listBatch.size() ); ++batchIndex )
-        {
-            _listScratchParticleKey[batchIndex] = GPUTransparentSorter::makeTransparentSortKey( defaultSortKey, listBatch[batchIndex]._world.getTranslation(), cameraPos,
-                                                                                                _transparentSorter.getAxis(), batchIndex );
-        }
-        std::sort( _listScratchParticleKey.begin(), _listScratchParticleKey.end(), &GPUTransparentSorter::isDrawnBefore );
+        // 정렬한 순서로 옮겨 담고, 키의 후보 번호를 옮긴 뒤의 번호로 고친다(자리 목록이 그 번호를 싣는다).
+        fillParticleKeys( cameraPos, _transparentSorter.getAxis(), _listScratchParticleKey );
         _listScratchParticleBatch.clear();
-        for ( const GPUTransparentSortKey& key : _listScratchParticleKey )
+        for ( uint32 sortIndex = 0; sortIndex < static_cast<uint32>( _listScratchParticleKey.size() ); ++sortIndex )
         {
+            GPUTransparentSortKey& key = _listScratchParticleKey[sortIndex];
             _listScratchParticleBatch.push_back( std::move( listBatch[key._candidateIndex] ) );
+            key._candidateIndex = sortIndex;
         }
         listBatch.swap( _listScratchParticleBatch );
+
+        // 메시 투명과 한 순서로 섞는다 — 배치마다 첫 인스턴스의 키와 견줘 입자를 그 앞에 끼운다(언리얼 · 유니티의 프리미티브 단위 정렬).
+        fillMainBatchHeadKeys( cameraPos, _listScratchBatchHeadKey );
+        GPUTransparentSorter::placeParticles( vector_reference<const GPUTransparentSortKey>( _listScratchBatchHeadKey ),
+                                              vector_reference<const GPUTransparentSortKey>( _listScratchParticleKey ), _snapshot._listParticleSlot );
+    }
+
+    void GPUSceneBuilder::fillParticleKeys( const float3& eye, const float3& axis, vector<GPUTransparentSortKey>& outListKey ) const
+    {
+        // 메시 투명 후보와 같은 규칙이다. 깊이는 방출기 위치(행렬의 이동)로 잰다 — 입자 단위 정렬은 하지 않는다(방출기 하나 = 후보 하나).
+        // 레이어는 기본 키다(방출기에는 정렬 레이어가 없다).
+        const vector<GPUParticleBatch>& listBatch      = _snapshot._listParticleBatch;
+        const uint32                    defaultSortKey = Render2DSettings::getActive().getDefaultSortKey();
+        outListKey.resize( listBatch.size() );
+        for ( uint32 batchIndex = 0; batchIndex < static_cast<uint32>( listBatch.size() ); ++batchIndex )
+        {
+            outListKey[batchIndex] = GPUTransparentSorter::makeTransparentSortKey( defaultSortKey, listBatch[batchIndex]._world.getTranslation(), eye, axis, batchIndex );
+        }
+        std::sort( outListKey.begin(), outListKey.end(), &GPUTransparentSorter::isDrawnBefore );
+    }
+
+    void GPUSceneBuilder::fillMainBatchHeadKeys( const float3& cameraPos, vector<GPUTransparentSortKey>& outListKey ) const
+    {
+        outListKey.clear();
+        const vector<GPUInstance>*                 pInstance = _instanceRing.getPublished();
+        const vector_reference<const GPUMeshBatch> listBatch = _snapshot.getTransparentBatches();
+        if ( pInstance == nullptr || listBatch.empty() )
+            return;
+        // 주 순서의 배치는 정렬된 꼬리를 차례로 자른 것이라 첫 인스턴스(`_instanceBase`)가 그 배치에서 가장 먼저 그리는 것이다.
+        const uint32 instanceCount  = static_cast<uint32>( pInstance->size() );
+        const uint32 tailBase       = MathUtil::min( _snapshot.getOpaqueInstanceCount(), instanceCount );
+        const uint32 tailCount      = MathUtil::min( instanceCount - tailBase, static_cast<uint32>( _listBuiltTransparentIdx.size() ) );
+        const uint32 defaultSortKey = Render2DSettings::getActive().getDefaultSortKey();
+        outListKey.resize( listBatch.size() );
+        for ( uint32 batchIndex = 0; batchIndex < static_cast<uint32>( listBatch.size() ); ++batchIndex )
+        {
+            const GPUMeshBatch& batch          = listBatch[batchIndex];
+            const bool          bInsideTheTail = tailBase <= batch._instanceBase && batch._instanceBase < tailBase + tailCount;
+            if ( bInsideTheTail == false )
+            {
+                outListKey[batchIndex]          = GPUTransparentSortKey{};
+                outListKey[batchIndex]._sortKey = GPUTransparentSorter::kNoBatchHeadLayer;
+                continue;
+            }
+            const uint32 tailIndex = batch._instanceBase - tailBase;
+            outListKey[batchIndex] = GPUTransparentSorter::makeTransparentSortKey( resolveTailSortLayer( tailIndex, defaultSortKey ), ( *pInstance )[batch._instanceBase]._boundsCenter,
+                                                                                   cameraPos, _transparentSorter.getAxis(), batchIndex );
+        }
+    }
+
+    uint32 GPUSceneBuilder::resolveTailSortLayer( uint32 tailIndex, uint32 defaultSortKey ) const
+    {
+        const uint32 candidateIndex = _listBuiltTransparentIdx[tailIndex];
+        const uint32 sortKey        = candidateIndex < _listBuiltCandidate.size() ? _listBuiltCandidate[candidateIndex]._sortKey : 0u;
+        return ( sortKey == Render2DSettings::kDefaultSortKeyPlaceholder ) ? defaultSortKey : sortKey;
     }
 
     void GPUSceneBuilder::computeViewTransparentOrders( const vector<RenderViewRequest>& listView )
     {
         _snapshot._listViewTransparentOrder.clear();
-        const vector<GPUInstance>*                 pInstance          = _instanceRing.getPublished();
-        const vector_reference<const GPUMeshBatch> listBatch          = _snapshot.getTransparentBatches();
-        const bool                                 bNoTransparentTail = pInstance == nullptr || listBatch.empty() || listView.empty();
-        if ( bNoTransparentTail )
+        if ( listView.empty() )
             return;
-        const uint32 instanceCount = static_cast<uint32>( pInstance->size() );
-        const uint32 tailBase      = MathUtil::min( _opaqueInstanceCount, instanceCount );
-        const uint32 tailCount     = instanceCount - tailBase;
-        // 꼬리는 투명 후보마다 인스턴스 하나다(`_listBuiltTransparentIdx` 순서). 어긋나면 이 프레임은 주 순서로 그린다.
-        if ( tailCount == 0 || _listBuiltTransparentIdx.size() != tailCount )
+        const vector<GPUInstance>*                 pInstance     = _instanceRing.getPublished();
+        const vector_reference<const GPUMeshBatch> listBatch     = _snapshot.getTransparentBatches();
+        const bool                                 bHasParticles = _snapshot._listParticleBatch.empty() == false;
+        const uint32                               instanceCount = pInstance != nullptr ? static_cast<uint32>( pInstance->size() ) : 0u;
+        const uint32                               tailBase      = MathUtil::min( _snapshot.getOpaqueInstanceCount(), instanceCount );
+        const uint32                               tailCount     = instanceCount - tailBase;
+        // 꼬리는 투명 후보마다 인스턴스 하나다(`_listBuiltTransparentIdx` 순서). 어긋나면 이 프레임은 주 순서로 그린다(입자도 주 자리로).
+        const bool bTailUsable = listBatch.empty() == false && tailCount != 0 && _listBuiltTransparentIdx.size() == tailCount;
+        // 메시 투명이 없으면 입자끼리의 순서만 이 뷰의 시점으로 정한다.
+        const bool bParticlesOnly = listBatch.empty() && bHasParticles;
+        if ( bTailUsable == false && bParticlesOnly == false )
             return;
         SW_PROFILE_SCOPE( "GT.GPUScene.build.viewTransparentOrder" );
 
@@ -915,18 +974,29 @@ namespace sw
         {
             if ( view._bRender == SW_FALSE )
                 continue;
+            vector_reference<const GPUTransparentSortKey> listParticleKey{};
+            if ( bHasParticles )
+            {
+                fillParticleKeys( view._position, view._transparentSortAxis, _listScratchViewParticleKey );
+                listParticleKey = vector_reference<const GPUTransparentSortKey>( _listScratchViewParticleKey );
+            }
+            if ( bParticlesOnly )
+            {
+                GPUViewTransparentOrder& order = _snapshot._listViewTransparentOrder.emplace_back();
+                order._viewID                  = view._viewID;
+                order._tailBase                = tailBase;
+                GPUTransparentSorter::placeParticles( vector_reference<const GPUTransparentSortKey>{}, listParticleKey, order._listParticleSlot );
+                continue;
+            }
             // 이 뷰의 시점으로 꼬리 키를 채운다. 후보 인덱스 칸에는 꼬리 번호를 넣는다(같은 깊이는 주 순서로 가른다).
             // 정렬과 순번 테이블은 `GPUTransparentSorter::computeViewOrder` 가 만든다.
             vector<GPUTransparentSortKey>& listViewSortKey = _transparentSorter.resizeViewKeys( tailCount );
             for ( uint32 tailIndex = 0; tailIndex < tailCount; ++tailIndex )
             {
-                const uint32 candidateIndex = _listBuiltTransparentIdx[tailIndex];
-                const uint32 sortKey        = candidateIndex < _listBuiltCandidate.size() ? _listBuiltCandidate[candidateIndex]._sortKey : 0u;
-                const uint32 sortLayer      = ( sortKey == Render2DSettings::kDefaultSortKeyPlaceholder ) ? defaultSortKey : sortKey;
-                listViewSortKey[tailIndex]  = GPUTransparentSorter::makeTransparentSortKey( sortLayer, ( *pInstance )[tailBase + tailIndex]._boundsCenter,
-                                                                                            view._position, view._transparentSortAxis, tailIndex );
+                listViewSortKey[tailIndex] = GPUTransparentSorter::makeTransparentSortKey(
+                    resolveTailSortLayer( tailIndex, defaultSortKey ), ( *pInstance )[tailBase + tailIndex]._boundsCenter, view._position, view._transparentSortAxis, tailIndex );
             }
-            _snapshot._listViewTransparentOrder.push_back( _transparentSorter.computeViewOrder( view._viewID, tailBase, listBatch ) );
+            _snapshot._listViewTransparentOrder.push_back( _transparentSorter.computeViewOrder( view._viewID, tailBase, listBatch, listParticleKey ) );
         }
     }
 
@@ -942,8 +1012,10 @@ namespace sw
         // 투명은 카메라 거리로 매 프레임 다시 정렬한다. 그 순서가 바뀌면 투명 인스턴스의 위치가 달라지지만
         // **불투명 접두부는 그대로다**. 접두부만 제자리 갱신하고 꼬리는 새 순서로 다시 방출한다.
         const bool bTransparentOrderChanged = ( _listScratchTransparentIdx != _listBuiltTransparentIdx );
-        // 불투명 배치 수는 스냅샷이 배치 목록과 함께 지키므로(`GPUSceneSnapshot::appendBatch`) 목록 길이를 넘을 수 없다.
-        if ( bTransparentOrderChanged && ( _opaqueInstanceCount > pPrevious->size() || _opaqueElementEntryCount > _listBatchElementIndex.size() ) )
+        // 불투명 · 투명의 경계는 스냅샷의 불투명 배치 수 하나다. 배치 수와 원소 항목 수는 그 경계로 자르므로 목록 길이를 넘을 수 없고
+        // (`GPUSceneSnapshot::appendBatch`, `BatchElementTable::truncateToBatches`), 인스턴스 수만 발행본과 견준다.
+        const uint32 opaqueInstanceCount = _snapshot.getOpaqueInstanceCount();
+        if ( bTransparentOrderChanged && opaqueInstanceCount > pPrevious->size() )
             return false;
 
         // **바뀐 슬롯만 기록해 둔다.** 받는 쪽이 그 구간만 GPU 에 올린다. 구간이 너무 잘게 흩어지면 작은 업로드가 오히려 비싸므로
@@ -983,7 +1055,7 @@ namespace sw
             work.resize( pPrevious->size() );
         }
         // 꼬리를 다시 만들 때는 접두부만 제자리 갱신한다.
-        const size_t slotCount = bTransparentOrderChanged ? _opaqueInstanceCount : pPrevious->size();
+        const size_t slotCount = bTransparentOrderChanged ? opaqueInstanceCount : pPrevious->size();
 
         // **전체 훑기는 청크로 나눠 병렬로 돈다.** 슬롯 구간이 연속이라 더티 구간도 청크 안에서 만들고
         // 끝난 뒤 경계만 이어 붙인다. 부분 훑기는 더티 목록 순서라 구간이 흩어지므로 직렬 루프다.
@@ -1014,7 +1086,7 @@ namespace sw
             // 꼬리는 투명 원소마다 인스턴스 하나다.
             if ( bTransparentOrderChanged )
             {
-                const size_t tailCapacity = static_cast<size_t>( _opaqueInstanceCount ) + _listScratchTransparentIdx.size();
+                const size_t tailCapacity = static_cast<size_t>( opaqueInstanceCount ) + _listScratchTransparentIdx.size();
                 work.reserve( tailCapacity );
                 _listInstanceSrcIndex.reserve( tailCapacity );
             }
@@ -1090,16 +1162,16 @@ namespace sw
         if ( bTransparentOrderChanged )
         {
             // 꼬리는 위 병렬 구간에서 이미 다시 만들었다. 통째로 새 값이다. 접두부 구간 뒤에 한 구간으로 이어 붙인다.
-            const uint32 tailCount = static_cast<uint32>( work.size() ) - _opaqueInstanceCount;
+            const uint32 tailCount = static_cast<uint32>( work.size() ) - opaqueInstanceCount;
             if ( bTooManyRuns == false && tailCount > 0 )
             {
                 if ( _snapshot._listDirtyInstanceRun.empty() == false &&
-                     _snapshot._listDirtyInstanceRun.back()._start + _snapshot._listDirtyInstanceRun.back()._count == _opaqueInstanceCount )
+                     _snapshot._listDirtyInstanceRun.back()._start + _snapshot._listDirtyInstanceRun.back()._count == opaqueInstanceCount )
                     _snapshot._listDirtyInstanceRun.back()._count += tailCount;
                 else if ( _snapshot._listDirtyInstanceRun.size() >= kMaxDirtyInstanceRun )
                     bTooManyRuns = true;
                 else
-                    _snapshot._listDirtyInstanceRun.push_back( GPUInstanceRun{ _opaqueInstanceCount, tailCount } );
+                    _snapshot._listDirtyInstanceRun.push_back( GPUInstanceRun{ opaqueInstanceCount, tailCount } );
             }
         }
 
@@ -1182,7 +1254,7 @@ namespace sw
         // 원소를 다음 구조 변경까지 붙든다.
         // 스탬프는 원소에 찍는다. 인스턴스 8000개를 돌 필요 없이 배치가 기록해 둔 (배치, 원소) 쌍만 돈다.
         SW_PROFILE_SCOPE( "GT.GPUScene.build.refresh.stamp" );
-        _materialRegistry.stampBatchElements( _snapshot.getAllBatches(), _listBatchElementRange, _listBatchElementIndex );
+        _materialRegistry.stampBatchElements( _snapshot.getAllBatches(), _batchElementTable.getBatchRanges(), _batchElementTable.getElementIndices() );
         return true;
     }
 
@@ -1236,8 +1308,7 @@ namespace sw
         _listCandidateMaterialElement.assign( _listScratchCandidate.size(), 0u );
         _bReuseMaterialElement       = SW_FALSE;
         _snapshot._spinInstanceCount = 0;
-        _listBatchElementIndex.clear();
-        _listBatchElementRange.clear();
+        _batchElementTable.clear();
 
         // **머티리얼 원소 인덱스는 프레임을 넘어 유지된다**(언리얼 GPUScene 의 영속 PrimitiveID 에 해당한다).
         // 그룹을 통째로 지우고 인스턴스마다 다시 부여하면 O(N·M) 이고, 같은 머티리얼의 인덱스가 프레임마다 달라져
@@ -1264,10 +1335,7 @@ namespace sw
             }
         }
 
-        // 투명 꼬리를 자르는 위치를 기록해 둔다. 투명 순서만 바뀐 프레임은 여기서부터 다시 방출한다. 배치의 자르는 위치는 스냅샷의 불투명 배치 수다.
-        _opaqueInstanceCount     = static_cast<uint32>( instanceWork().size() );
-        _opaqueElementEntryCount = static_cast<uint32>( _listBatchElementIndex.size() );
-
+        // 투명 꼬리를 자르는 위치는 기록하지 않는다. 스냅샷의 불투명 배치 수가 경계이고 인스턴스 · 원소의 위치는 거기서 끌어낸다.
         emitTransparentBatches();
         _listBuiltTransparentIdx = _listScratchTransparentIdx;
     }
@@ -1317,11 +1385,12 @@ namespace sw
     {
         SW_PROFILE_SCOPE( "GT.GPUScene.build.refresh.transparentTail" );
         // 꼬리를 잘라 낸다. 용량은 남아 있으므로 다시 붙일 때 할당이 없다.
-        instanceWork().resize( _opaqueInstanceCount );
-        _listInstanceSrcIndex.resize( _opaqueInstanceCount );
+        // 경계는 스냅샷의 불투명 배치 수 하나다. 인스턴스 수와 원소 항목 수는 거기서 끌어낸다.
+        const uint32 opaqueInstanceCount = _snapshot.getOpaqueInstanceCount();
+        instanceWork().resize( opaqueInstanceCount );
+        _listInstanceSrcIndex.resize( opaqueInstanceCount );
+        _batchElementTable.truncateToBatches( _snapshot.getOpaqueBatchCount() );
         _snapshot.truncateToOpaqueBatches();
-        _listBatchElementIndex.resize( _opaqueElementEntryCount );
-        _listBatchElementRange.resize( _snapshot.getOpaqueBatchCount() );
         // 배치 키가 그대로인 프레임에만 오는 경로다. 원소 인덱스는 지난 방출의 것을 그대로 쓴다(영속 ID).
         _bReuseMaterialElement = ( _listCandidateMaterialElement.size() == _listScratchCandidate.size() ) ? SW_TRUE : SW_FALSE;
         emitTransparentBatches();
@@ -1361,7 +1430,7 @@ namespace sw
         // 배치가 쓰는 원소는 중복 없이 기록해 둔다(회수 스탬프가 인스턴스가 아니라 이 목록을 돈다). 정렬되어 있어 같은
         // 원소는 연속으로 오므로 직전 것과 다를 때만 추가한다.
         const uint32 batchIndex = static_cast<uint32>( _snapshot.getAllBatches().size() );
-        _listBatchElementRange.push_back( GPUInstanceRun{ static_cast<uint32>( _listBatchElementIndex.size() ), 0 } );
+        _batchElementTable.beginBatch();
         for ( uint32 entryIndex = begin; entryIndex < end; ++entryIndex )
         {
             const uint32         srcIdx      = pSrcIdx[entryIndex];
@@ -1374,12 +1443,7 @@ namespace sw
                 gpuInstance._materialIndex = _materialRegistry.assignMaterialElement( candidate._material, candidate._instance, batch._materialGroup, _snapshot );
             if ( srcIdx < _listCandidateMaterialElement.size() )
                 _listCandidateMaterialElement[srcIdx] = gpuInstance._materialIndex;
-            GPUInstanceRun& elementRange = _listBatchElementRange.back();
-            if ( elementRange._count == 0 || _listBatchElementIndex.back() != gpuInstance._materialIndex )
-            {
-                _listBatchElementIndex.push_back( gpuInstance._materialIndex );
-                ++elementRange._count;
-            }
+            _batchElementTable.appendElement( gpuInstance._materialIndex );
             if ( entryIndex == begin )
                 batch._materialIndex = gpuInstance._materialIndex;
             if ( gpuInstance._spinSeed != 0 )

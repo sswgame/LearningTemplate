@@ -28,7 +28,7 @@ namespace sw
     {
         float2  _lookDelta{};           ///< 시점 이동량(`Camera.Look`). 마우스면 픽셀이고, +y 는 화면 아래다
         float2  _pan{};                 ///< 앞 축과 오른쪽 축(-1..1)
-        float32 _zoomNotches{ 0.0f };   ///< 줌 단계 수(`Camera.Zoom`). 휠 한 칸이나 패드 버튼 한 번이 1 이고, + 는 확대다
+        float32 _zoomNotches{ 0.0f };   ///< 줌 단계 수(`Camera.Zoom`). 휠 한 칸이나 패드 버튼 한 번이 1 이고, 스틱은 축 값 × 초당 단계 × 프레임 시간이다(`<stick axis="Y" scaleByDelta>`). + 는 확대다
         int32   _rotateSteps{ 0 };      ///< 회전 키(E 는 +1, Q 는 -1)
         uint8   _bLookHeld{ SW_FALSE }; ///< 시점 돌리기 버튼(오른쪽)을 누르고 있다
     };

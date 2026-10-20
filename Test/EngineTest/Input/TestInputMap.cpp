@@ -695,6 +695,50 @@ SW_TEST_CASE( InputMapTest, GamepadStickScalesByAxisAndFrameTime )
 }
 
 /**
+ * @brief [InputMapTest] 스틱 한 성분(`axis="Y"`)을 1D 액션이 읽는다 — 값은 그 성분 × 배율 × 프레임 시간이고, 저장 · 다시 읽기에 성분이 남으며, 모르는 성분 이름은 바인딩을 버린다
+ * @details 확대(`Camera.Zoom`)처럼 칸 단위 1D 액션에 스틱을 묶는 길이다. 프레임 시간을 곱해 초당 칸으로 적는다(매 프레임 스틱 값을 그대로 넣으면 너무 빠르다).
+ */
+SW_TEST_CASE( InputMapTest, GamepadStickAxisFeedsOneDimensionalAction )
+{
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    sw::GamepadDevice* pPad = input.getGamepad( 0 );
+    if ( pPad == nullptr )
+    {
+        input.shutdown();
+        return; // 이 플랫폼에는 게임패드 장치가 없다
+    }
+    pPad->setVirtualSession( true );
+    pPad->setVirtualConnected( true );
+    pPad->setAxis( 2, 1.0f ); // RX — 1D 값에 섞이면 안 된다
+    pPad->setAxis( 3, 0.5f ); // RY (위)
+
+    sw::InputMap inputMap;
+    inputMap.setInputManager( &input );
+    inputMap.bindGamepadStick2D( "Zoom", sw::GamepadStick::Right, 0.0f, {}, 0, 1.0f, 1.0f, sw::float2{ 1.0f, 4.0f }, true, sw::GamepadStickAxis::Y );
+    inputMap.update( 0.1f );
+    SW_EXPECT_TRUE( inputMap.wasActionTriggered( "Zoom" ) );
+    SW_EXPECT_NEAR_EQUAL( 0.2f, inputMap.getAxis1D( "Zoom" ), 1.0e-4f ); // 0.5 × 4 × 0.1
+    pPad->setVirtualSession( false );
+    input.shutdown();
+
+    const sw::string axisPath = test::makeTempPath( "stick_axis.input.xml" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( axisPath, "<InputMap><action name=\"Zoom\"><stick stick=\"Right\" axis=\"Y\" scaleY=\"4\" scaleByDelta=\"1\"/></action>"
+                                                           "<action name=\"Bad\"><stick stick=\"Right\" axis=\"Z\"/></action></InputMap>" ) );
+    sw::InputMap loaded;
+    SW_ASSERT_TRUE( loaded.loadFromResource( axisPath ) );
+    SW_ASSERT_TRUE( loaded.getBindingCount( "Zoom" ) == 1u );
+    SW_EXPECT_TRUE( loaded.getBinding( "Zoom", 0 )->_stickAxis == sw::GamepadStickAxis::Y );
+    SW_EXPECT_EQUAL( 0u, loaded.getBindingCount( "Bad" ) );
+    const sw::string savedPath = test::makeTempPath( "stick_axis_saved.input.xml" );
+    SW_ASSERT_TRUE( loaded.saveToResource( savedPath ) );
+    sw::InputMap reloaded;
+    SW_ASSERT_TRUE( reloaded.loadFromResource( savedPath ) );
+    SW_ASSERT_TRUE( reloaded.getBindingCount( "Zoom" ) == 1u );
+    SW_EXPECT_TRUE( reloaded.getBinding( "Zoom", 0 )->_stickAxis == sw::GamepadStickAxis::Y );
+}
+
+/**
  * @brief [InputMapTest] 저장소의 InputMap 리소스는 모두 패널 저장(`saveToResource`)을 거쳐도 같은 바인딩으로 다시 읽힌다
  * @details 형식에 자리가 없는 바인딩 종류를 데이터가 쓰기 시작하면 저장이 false 를 돌려 여기서 드러난다.
  */
