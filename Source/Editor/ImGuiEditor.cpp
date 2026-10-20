@@ -892,6 +892,7 @@ namespace sw::editor
                 renderBackend( pRHIDevice, pDrawData );
 
             // 에디터 UI 캡처: 같은 프레임의 모든 뷰포트 합본을 캡처 텍스처에 한 번 더 그린다. GL 의 플로팅 창 렌더(아래)보다 먼저다 — 그것은 컨텍스트를 바꾼다.
+            // `renderJob` 은 자기가 연 패스를 닫고 돌아온다(GL 은 기본 프레임버퍼로 되돌아온다). 아래 플로팅 창이 자기 창에 그리려면 그래야 한다.
             // 합본의 주인은 메인 뷰포트라 백엔드의 메인 버퍼 링을 한 칸 더 쓴다. 링 크기가 이 횟수를 센다(`kImGuiDrawsPerViewportPerFrame`) — 그리는 횟수를 늘리면 그 값도 올린다.
             ImDrawData* const pCaptureDrawData = _arrDrawSnapshot[slot].findCaptureDrawData();
             const bool        bCapture         = pCaptureDrawData != nullptr && _pUICapture != nullptr && _rendererBackend != nullptr;
