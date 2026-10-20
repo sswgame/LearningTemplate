@@ -36,6 +36,14 @@ namespace sw::editor
         void shutdown( IRHIDevice* pRHIDevice ) override;
 
     private:
+        /** @brief 아틀라스 경로 입력, 불러오기 · 저장 단추입니다. */
+        void drawFileBar();
+        /** @brief 프레임 목록과 고른 프레임의 uv · 지속 시간 칸입니다. */
+        void drawFrameSection();
+        /** @brief 변형 키 목록과 고른 키의 시간 · 위치 · 각도 칸입니다. */
+        void drawKeySection();
+        /** @brief 실수 드래그 칸 하나입니다. 손을 떼며 값이 바뀌었으면 편집으로 기록합니다. @p pTooltip 이 nullptr 이면 툴팁이 없습니다. */
+        void            drawEditedDragFloat( const utf8* pLabel, float32* pValue, float32 speed, const utf8* pTooltip, const utf8* pUndoLabel, const utf8* pMergeKey );
         string          captureDocumentText() const override;
         void            applyDocumentText( string_view text ) override;
         SpriteClipAsset captureClipData() const;

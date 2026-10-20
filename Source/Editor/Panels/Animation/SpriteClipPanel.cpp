@@ -57,6 +57,19 @@ namespace sw::editor
         drawDocumentOpenBar( "spriteClip" );
         _atlasThumbnail.update();
 
+        drawFileBar();
+        drawFrameSection();
+        drawAtlasPicker();
+
+        drawAnimationSection();
+
+        drawKeySection();
+
+        EditorWidgets::drawPanelStatus( _status.c_str() );
+    }
+
+    void SpriteClipPanel::drawFileBar()
+    {
         ImGui::InputText( "Atlas", _atlasPath.data(), _atlasPath.capacity() );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             notifyDocumentEdited( "Edit Sprite Clip", "sprite-clip" );
@@ -73,7 +86,19 @@ namespace sw::editor
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "SaveTip" ) );
         ImGui::TextDisabled( "%s/%s (separate from AnimationGraph)", config::kDirSavedEditor, EditorPaths::kSpriteClipDocumentFileName );
+    }
 
+    void SpriteClipPanel::drawEditedDragFloat( const utf8* pLabel, float32* pValue, float32 speed, const utf8* pTooltip, const utf8* pUndoLabel, const utf8* pMergeKey )
+    {
+        ImGui::DragFloat( pLabel, pValue, speed );
+        if ( ImGui::IsItemDeactivatedAfterEdit() )
+            notifyDocumentEdited( pUndoLabel, pMergeKey );
+        if ( pTooltip != nullptr )
+            EditorWidgets::drawTooltip( pTooltip );
+    }
+
+    void SpriteClipPanel::drawFrameSection()
+    {
         ImGui::Separator();
         ImGui::TextUnformatted( "Frames (u,v,w,h,durationMs)" );
         if ( ImGui::Button( "Add Frame" ) )
@@ -103,35 +128,21 @@ namespace sw::editor
             ImGui::PopID();
         }
 
-        if ( 0 <= _selectedFrame && _selectedFrame < static_cast<int32>( _listFrame.size() ) )
-        {
-            Frame& f = _listFrame[static_cast<size_t>( _selectedFrame )];
-            ImGui::DragFloat( "u", &f._uvRect._x, 0.01f );
-            if ( ImGui::IsItemDeactivatedAfterEdit() )
-                notifyDocumentEdited( "Edit Sprite Frame", "sprite-clip-frame" );
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "FrameUTip" ) );
-            ImGui::DragFloat( "v", &f._uvRect._y, 0.01f );
-            if ( ImGui::IsItemDeactivatedAfterEdit() )
-                notifyDocumentEdited( "Edit Sprite Frame", "sprite-clip-frame" );
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "FrameVTip" ) );
-            ImGui::DragFloat( "w", &f._uvRect._z, 0.01f );
-            if ( ImGui::IsItemDeactivatedAfterEdit() )
-                notifyDocumentEdited( "Edit Sprite Frame", "sprite-clip-frame" );
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "FrameWTip" ) );
-            ImGui::DragFloat( "h", &f._uvRect._w, 0.01f );
-            if ( ImGui::IsItemDeactivatedAfterEdit() )
-                notifyDocumentEdited( "Edit Sprite Frame", "sprite-clip-frame" );
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "FrameHTip" ) );
-            ImGui::InputInt( "durationMs", &f._durationMs );
-            if ( ImGui::IsItemDeactivatedAfterEdit() )
-                notifyDocumentEdited( "Edit Sprite Frame", "sprite-clip-frame" );
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "FrameDurationTip" ) );
-        }
+        if ( _selectedFrame < 0 || _selectedFrame >= static_cast<int32>( _listFrame.size() ) )
+            return;
+        Frame& f = _listFrame[static_cast<size_t>( _selectedFrame )];
+        drawEditedDragFloat( "u", &f._uvRect._x, 0.01f, SW_LOCKEY( "EditorSpriteClip", "FrameUTip" ), "Edit Sprite Frame", "sprite-clip-frame" );
+        drawEditedDragFloat( "v", &f._uvRect._y, 0.01f, SW_LOCKEY( "EditorSpriteClip", "FrameVTip" ), "Edit Sprite Frame", "sprite-clip-frame" );
+        drawEditedDragFloat( "w", &f._uvRect._z, 0.01f, SW_LOCKEY( "EditorSpriteClip", "FrameWTip" ), "Edit Sprite Frame", "sprite-clip-frame" );
+        drawEditedDragFloat( "h", &f._uvRect._w, 0.01f, SW_LOCKEY( "EditorSpriteClip", "FrameHTip" ), "Edit Sprite Frame", "sprite-clip-frame" );
+        ImGui::InputInt( "durationMs", &f._durationMs );
+        if ( ImGui::IsItemDeactivatedAfterEdit() )
+            notifyDocumentEdited( "Edit Sprite Frame", "sprite-clip-frame" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "FrameDurationTip" ) );
+    }
 
-        drawAtlasPicker();
-
-        drawAnimationSection();
-
+    void SpriteClipPanel::drawKeySection()
+    {
         ImGui::Separator();
         ImGui::TextUnformatted( "TransformAnimation Keys (optional)" );
         if ( ImGui::Button( "Add Key" ) )
@@ -161,29 +172,19 @@ namespace sw::editor
             ImGui::PopID();
         }
 
-        if ( 0 <= _selectedKey && _selectedKey < static_cast<int32>( _listKey.size() ) )
-        {
-            TransformKey& k = _listKey[static_cast<size_t>( _selectedKey )];
-            ImGui::DragFloat( "time", &k._time, 0.01f );
-            if ( ImGui::IsItemDeactivatedAfterEdit() )
-                notifyDocumentEdited( "Edit Sprite Key", "sprite-clip-key" );
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "KeyTimeTip" ) );
-            ImGui::DragFloat( "x", &k._position._x, 0.1f );
-            if ( ImGui::IsItemDeactivatedAfterEdit() )
-                notifyDocumentEdited( "Edit Sprite Key", "sprite-clip-key" );
-            ImGui::DragFloat( "y", &k._position._y, 0.1f );
-            if ( ImGui::IsItemDeactivatedAfterEdit() )
-                notifyDocumentEdited( "Edit Sprite Key", "sprite-clip-key" );
-            // 키는 라디안으로 담고(엔진의 각도 단위) 편집은 도로 한다.
-            float32 angleDeg = MathUtil::toDegree( k._angle );
-            if ( ImGui::DragFloat( "angleDeg", &angleDeg, 0.5f ) )
-                k._angle = MathUtil::toRadian( angleDeg );
-            if ( ImGui::IsItemDeactivatedAfterEdit() )
-                notifyDocumentEdited( "Edit Sprite Key", "sprite-clip-key" );
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "KeyAngleTip" ) );
-        }
-
-        EditorWidgets::drawPanelStatus( _status.c_str() );
+        if ( _selectedKey < 0 || _selectedKey >= static_cast<int32>( _listKey.size() ) )
+            return;
+        TransformKey& k = _listKey[static_cast<size_t>( _selectedKey )];
+        drawEditedDragFloat( "time", &k._time, 0.01f, SW_LOCKEY( "EditorSpriteClip", "KeyTimeTip" ), "Edit Sprite Key", "sprite-clip-key" );
+        drawEditedDragFloat( "x", &k._position._x, 0.1f, nullptr, "Edit Sprite Key", "sprite-clip-key" );
+        drawEditedDragFloat( "y", &k._position._y, 0.1f, nullptr, "Edit Sprite Key", "sprite-clip-key" );
+        // 키는 라디안으로 담고(엔진의 각도 단위) 편집은 도로 한다.
+        float32 angleDeg = MathUtil::toDegree( k._angle );
+        if ( ImGui::DragFloat( "angleDeg", &angleDeg, 0.5f ) )
+            k._angle = MathUtil::toRadian( angleDeg );
+        if ( ImGui::IsItemDeactivatedAfterEdit() )
+            notifyDocumentEdited( "Edit Sprite Key", "sprite-clip-key" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "KeyAngleTip" ) );
     }
 
     ToolAssetLoadResult SpriteClipPanel::loadDocument()
