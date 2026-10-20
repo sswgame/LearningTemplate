@@ -203,6 +203,35 @@ namespace sw
             float64       _queuedTime{ -1.0 }; ///< 처음 `writePacket` 을 만난 시각. 음수면 아직 만나지 않았다(나이를 세지 않는다)
         };
 
+        /** @brief `writePacket` 이 쓰는 중인 패킷 본문입니다. 채널마다 싣는 함수가 같은 예산과 메시지 수를 나눠 씁니다. */
+        struct PacketBody
+        {
+            BitWriter*  _pWriter{ nullptr };
+            SentPacket* _pSent{ nullptr };
+            float64     _time{ 0.0 };
+            float64     _resendDelay{ 0.0 };
+            int32       _budgetBits{ 0 };
+            int32       _usedBits{ 0 };
+            int32       _written{ 0 };
+
+            /** @brief 메시지 하나를 "더 있다" 1비트와 함께 씁니다. 예산이나 메시지 수 상한을 넘으면 쓰지 않고 false 를 반환합니다. */
+            [[nodiscard]] bool tryWriteMessage( NetChannelType channel, uint16 messageID, const vector<uint8>& buffer, bool bMore );
+        };
+
+        /** @brief 비신뢰 줄의 나이를 셉니다. 처음 만난 메시지는 지금으로 적고, @p maxAgeSeconds 를 넘게 기다린 것은 버립니다. */
+        void expireQueuedUnreliable( float64 time, float64 maxAgeSeconds );
+        /** @brief 처음 보내거나 재전송 시각이 된 신뢰 메시지(조각)를 오래된 것부터 싣습니다. */
+        void writeReliableMessages( PacketBody& body );
+        /** @brief 순서만 메시지를 종류마다 가장 새 것 하나씩 싣습니다. 못 실은 것은 다음 패킷으로 남깁니다. */
+        void writeSequencedMessages( PacketBody& body );
+        /** @brief 비신뢰 메시지를 들어가는 만큼 싣습니다. 못 실은 것은 다음 패킷으로 남깁니다. */
+        void writeUnreliableMessages( PacketBody& body );
+
+        /** @brief 패킷의 메시지를 모두 읽어 `_listParsedScratch` 에 둡니다. 깨졌으면 false 이고, 그때는 아무것도 적용하지 않습니다. */
+        [[nodiscard]] bool parseMessages( BitReader& reader );
+        /** @brief 읽은 메시지 하나를 채널 규칙대로 받은 큐나 신뢰 칸에 넣습니다(중복 · 창 밖 · 늦은 순서만은 버린다). */
+        void dispatchParsedMessage( ParsedMessage& message );
+
         /** @brief 다시 쓸 메시지 버퍼 하나를 꺼냅니다. 없으면 빈 버퍼입니다(처음 쓸 때 할당한다). */
         vector<uint8> acquireBuffer();
         /** @brief 다 쓴 메시지 버퍼를 비워 다시 쓸 줄에 넣습니다. 용량이 없거나 조각 하나보다 크거나(모은 큰 메시지) 줄이 차면 버립니다. @p buffer 는 빈다. */

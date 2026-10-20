@@ -24,6 +24,14 @@ namespace sw
         {
             static constexpr int32 kTypeBits   = 3;
             static constexpr int32 kHeaderSize = 8; ///< 프로토콜 ID 4바이트와 체크섬 4바이트.
+
+            /** @brief `sendControl` 이 쓴 순서(아래 32비트 먼저)로 64비트 값을 읽습니다. 두 번의 읽기를 한 식에 두면 순서가 정해지지 않아 문장으로 나눈다. */
+            static uint64 readLowFirstUint64( BitReader& reader )
+            {
+                const uint64 low  = reader.readBits( 32 );
+                const uint64 high = reader.readBits( 32 );
+                return low | ( high << 32 );
+            }
 #if !defined( SW_SHIPPING )
             /** @brief 디버거 대기 중 `update` 사이가 이 값보다 벌어지면 프로세스가 멈췄던 것으로 보고 연결 시계를 민다. 평소 간격(수 ms)보다 훨씬 길게 잡는다. */
             static constexpr float64 kDebugStallSeconds = 0.5;
@@ -709,85 +717,64 @@ namespace sw
         }
         if ( type == PacketType::Payload )
         {
-            const uint32 token = reader.readBits( 32 );
-            NetHostSlot* pSlot = _slotTable.isValid( slotIndex ) ? &_slotTable.get( slotIndex ) : nullptr;
-            if ( pSlot == nullptr || pSlot->_state != NetConnectionState::Connected )
-            {
-                // 서버는 수락했지만 클라이언트가 Accepted 를 받지 못한 경우다. 수락에만 서버가 지정한 번호가 있으므로, 데이터 패킷으로는 연결로 인정하지 않는다.
-                // 응답을 바로 다시 보내면 서버가 수락을 다시 보낸다. 이 패킷에 든 신뢰 메시지는 확인하지 않았으므로 서버가 다시 보낸다.
-                const bool bClientAwaitingAccept = _bServer == SW_FALSE && pSlot != nullptr && pSlot->_state == NetConnectionState::Connecting && pSlot->_serverSalt != 0 &&
-                                                   token == static_cast<uint32>( pSlot->getConnectionToken() );
-                if ( bClientAwaitingAccept )
-                {
-                    sendChallengeResponse( *pSlot );
-                    pSlot->_lastSendTime = nowSeconds;
-                    return;
-                }
-                ++_rejectedPacketCount;
-                return;
-            }
-            NetHostSlot& slot = *pSlot;
-            if ( token != static_cast<uint32>( slot.getConnectionToken() ) )
-            {
-                ++_rejectedPacketCount;
-                return;
-            }
-            const uint8 bRemoteDebugHold = reader.readBits( 1 ) != 0 ? SW_TRUE : SW_FALSE;
-            if ( slot._connection.readPacket( nowSeconds, reader ) )
-            {
-                slot._lastReceiveTime  = nowSeconds;
-                slot._bRemoteDebugHold = bRemoteDebugHold;
-            }
+            handlePayloadPacket( nowSeconds, slotIndex, reader );
             return;
         }
-
-        const uint64 valueA = static_cast<uint64>( reader.readBits( 32 ) ) | ( static_cast<uint64>( reader.readBits( 32 ) ) << 32 );
-        const uint64 valueB = static_cast<uint64>( reader.readBits( 32 ) ) | ( static_cast<uint64>( reader.readBits( 32 ) ) << 32 );
+        ControlPacket packet;
+        packet._from       = from;
+        packet._nowSeconds = nowSeconds;
+        packet._slotIndex  = slotIndex;
+        packet._valueA     = NetHostInternal::readLowFirstUint64( reader );
+        packet._valueB     = NetHostInternal::readLowFirstUint64( reader );
         if ( reader.hasOverflowed() )
         {
             ++_rejectedPacketCount;
             return;
         }
+        handleControlPacket( type, packet, reader );
+    }
+
+    void NetHost::handlePayloadPacket( float64 nowSeconds, int32 slotIndex, BitReader& reader )
+    {
+        const uint32 token = reader.readBits( 32 );
+        NetHostSlot* pSlot = _slotTable.isValid( slotIndex ) ? &_slotTable.get( slotIndex ) : nullptr;
+        if ( pSlot == nullptr || pSlot->_state != NetConnectionState::Connected )
+        {
+            // 서버는 수락했지만 클라이언트가 Accepted 를 받지 못한 경우다. 수락에만 서버가 지정한 번호가 있으므로, 데이터 패킷으로는 연결로 인정하지 않는다.
+            // 응답을 바로 다시 보내면 서버가 수락을 다시 보낸다. 이 패킷에 든 신뢰 메시지는 확인하지 않았으므로 서버가 다시 보낸다.
+            const bool bClientAwaitingAccept = _bServer == SW_FALSE && pSlot != nullptr && pSlot->_state == NetConnectionState::Connecting && pSlot->_serverSalt != 0 &&
+                                               token == static_cast<uint32>( pSlot->getConnectionToken() );
+            if ( bClientAwaitingAccept )
+            {
+                sendChallengeResponse( *pSlot );
+                pSlot->_lastSendTime = nowSeconds;
+                return;
+            }
+            ++_rejectedPacketCount;
+            return;
+        }
+        NetHostSlot& slot = *pSlot;
+        if ( token != static_cast<uint32>( slot.getConnectionToken() ) )
+        {
+            ++_rejectedPacketCount;
+            return;
+        }
+        const uint8 bRemoteDebugHold = reader.readBits( 1 ) != 0 ? SW_TRUE : SW_FALSE;
+        if ( slot._connection.readPacket( nowSeconds, reader ) )
+        {
+            slot._lastReceiveTime  = nowSeconds;
+            slot._bRemoteDebugHold = bRemoteDebugHold;
+        }
+    }
+
+    void NetHost::handleControlPacket( PacketType type, const ControlPacket& packet, BitReader& reader )
+    {
+        const int32 slotIndex = packet._slotIndex;
         switch ( type )
         {
             case PacketType::ConnectRequest:
             {
-                if ( _bServer == SW_FALSE )
-                    return;
-                const uint32 requestProtocolID = static_cast<uint32>( valueB );
-                if ( requestProtocolID != _protocolID )
-                {
-                    const uint32        requestGameID = static_cast<uint32>( valueB >> 32 );
-                    NetDisconnectReason reason        = requestGameID == _settings._gameID ? NetDisconnectReason::VersionMismatch : NetDisconnectReason::Rejected;
-                    // 같은 게임, 같은 버전인데 기능 마스크만 다르면 한쪽만 암호화나 토큰 결속을 켠 것이다.
-                    for ( uint32 mask = 0; reason == NetDisconnectReason::VersionMismatch && mask <= NetProtocolFeature::kAllMask; ++mask )
-                    {
-                        if ( NetProtocol::makeProtocolID( _settings._gameID, _settings._wireVersion, mask ) == requestProtocolID )
-                            reason = NetDisconnectReason::SecurityMismatch;
-                    }
-                    ++_mismatchLogCount;
-                    if ( ( _mismatchLogCount & ( _mismatchLogCount - 1 ) ) == 0 )
-                        SW_LOG_WARNING( "NetHost: refused a connection from %# (%#) — it speaks protocol 0x%08x (game 0x%08x), this server 0x%08x (game 0x%08x); %# such requests so far",
-                                        from.toString().c_str(), toString( reason ), requestProtocolID, requestGameID, _protocolID, _settings._gameID,
-                                        _mismatchLogCount );
-                    sendDenied( from, reason, valueA );
-                    return;
-                }
-                if ( _slotTable.isValid( slotIndex ) )
-                {
-                    // 이 주소는 이미 연결돼 있다. 같은 요청의 늦은 재전송이면 수락을 다시 보내고, 솔트가 다르면(새로 시작한 클라이언트) 옛 연결이 끝날 때까지 답하지 않는다.
-                    const NetHostSlot& slot = _slotTable.get( slotIndex );
-                    if ( slot._clientSalt == valueA )
-                        sendAccepted( slotIndex );
-                    return;
-                }
-                if ( _slotTable.findFreeSlot() < 0 )
-                {
-                    sendDenied( from, NetDisconnectReason::ServerFull, valueA );
-                    return;
-                }
-                // 슬롯을 할당하지 않고 챌린지 값만 돌려준다. 그 값은 이 주소로 보낸 패킷에만 있으므로, 되돌려 준 응답이 와야 주소가 진짜임이 확인된다.
-                sendControl( from, PacketType::Challenge, valueA, _challenge.makeToken( from, valueA, nowSeconds ) );
+                handleConnectRequest( packet );
                 return;
             }
             case PacketType::Challenge:
@@ -795,60 +782,16 @@ namespace sw
                 if ( _bServer || _slotTable.isValid( slotIndex ) == false )
                     return;
                 NetHostSlot& slot = _slotTable.get( slotIndex );
-                if ( slot._state != NetConnectionState::Connecting || valueA != slot._clientSalt )
+                if ( slot._state != NetConnectionState::Connecting || packet._valueA != slot._clientSalt )
                     return;
-                slot._serverSalt = valueB;
+                slot._serverSalt = packet._valueB;
                 sendChallengeResponse( slot );
-                slot._lastSendTime = nowSeconds;
+                slot._lastSendTime = packet._nowSeconds;
                 return;
             }
             case PacketType::ChallengeResponse:
             {
-                if ( _bServer == SW_FALSE )
-                    return;
-                if ( _slotTable.isValid( slotIndex ) )
-                {
-                    // 이미 연결됐다. 수락을 받지 못한 클라이언트가 요청을 반복한 경우다.
-                    NetHostSlot& slot = _slotTable.get( slotIndex );
-                    if ( slot._clientSalt == valueA && slot._serverSalt == valueB )
-                    {
-                        // 확장 바이트(공개 키와 토큰)는 다시 읽지 않고, 보관해 둔 키 확인 태그로 같은 수락을 보낸다.
-                        slot._lastReceiveTime = nowSeconds;
-                        sendAccepted( slotIndex );
-                    }
-                    return;
-                }
-                // 챌린지 값을 다시 만들어 비교한다. 이번 윈도우나 바로 앞 윈도우에서 만든 값만 유효하다(5~10초).
-                if ( _challenge.isTokenValid( from, valueA, valueB, nowSeconds ) == false )
-                {
-                    ++_rejectedPacketCount; // 위조되었거나 만료된 응답.
-                    return;
-                }
-                const int32 freeIndex = _slotTable.findFreeSlot();
-                if ( freeIndex < 0 )
-                {
-                    sendDenied( from, NetDisconnectReason::ServerFull, valueA );
-                    return;
-                }
-                // 암호화 방식에서는 주소가 확인된(챌린지를 통과한) 응답에만 X25519 를 계산한다. 토큰 결속이면 증명이 맞아야 슬롯을 할당한다.
-                unique_ptr<NetSlotSecurity> security;
-                if ( isEncrypted() && acceptSecureResponse( reader, from, valueA, valueB, security ) == false )
-                    return; // 거절은 그 함수 안에서 이미 보냈다.
-                NetHostSlot& slot = _slotTable.get( freeIndex );
-                slot              = NetHostSlot{};
-                _slotTable.bindAddress( freeIndex, from );
-                slot._clientSalt      = valueA;
-                slot._serverSalt      = valueB;
-                slot._state           = NetConnectionState::Connected;
-                slot._lastReceiveTime = nowSeconds;
-                slot._lastSendTime    = -1.0;
-                slot._connection.reset();
-                slot._security = std::move( security );
-                // 키 확인 태그는 서버에서 클라이언트로 가는 키로 빈 데이터를 봉인한 값이다. 수락을 다시 보낼 때도 같은 태그를 쓴다.
-                if ( slot._security != nullptr )
-                    (void)NetPacketSealer::sealKeyConfirmTag( *slot._security, static_cast<uint32>( freeIndex ), slot._serverSalt ); // 실패하면 0 태그라 클라이언트가 키 확인에서 끊는다.
-                pushEvent( NetHostEvent{ freeIndex, NetDisconnectReason::None, NetHostEvent::Kind::Connected } );
-                sendAccepted( freeIndex );
+                handleChallengeResponse( packet, reader );
                 return;
             }
             case PacketType::Accepted:
@@ -856,15 +799,15 @@ namespace sw
                 if ( _bServer || _slotTable.isValid( slotIndex ) == false )
                     return;
                 NetHostSlot& slot = _slotTable.get( slotIndex );
-                if ( slot._state != NetConnectionState::Connecting || valueB != slot._serverSalt )
+                if ( slot._state != NetConnectionState::Connecting || packet._valueB != slot._serverSalt )
                     return;
-                if ( slot._security != nullptr && acceptSecureAccepted( reader, slot, slotIndex, static_cast<uint32>( valueA ) ) == false )
+                if ( slot._security != nullptr && acceptSecureAccepted( reader, slot, slotIndex, static_cast<uint32>( packet._valueA ) ) == false )
                     return; // 키 확인이 틀렸다. 연결은 그 함수 안에서 닫았다.
                 slot._state           = NetConnectionState::Connected;
-                slot._lastReceiveTime = nowSeconds;
+                slot._lastReceiveTime = packet._nowSeconds;
                 slot._lastSendTime    = -1.0;
                 slot._connection.reset();
-                _clientIndex = static_cast<int32>( valueA );
+                _clientIndex = static_cast<int32>( packet._valueA );
                 pushEvent( NetHostEvent{ 0, NetDisconnectReason::None, NetHostEvent::Kind::Connected } );
                 return;
             }
@@ -873,21 +816,18 @@ namespace sw
                 if ( _bServer || _slotTable.isValid( slotIndex ) == false )
                     return;
                 const NetHostSlot& slot = _slotTable.get( slotIndex );
-                if ( slot._state != NetConnectionState::Connecting || valueB != slot._clientSalt )
+                if ( slot._state != NetConnectionState::Connecting || packet._valueB != slot._clientSalt )
                     return; // 이 요청에 대한 거절이 아니다(옛 요청이나 위조).
-                const NetDisconnectReason reason = NetHostInternal::readDeniedReason( valueA );
+                const NetDisconnectReason reason = NetHostInternal::readDeniedReason( packet._valueA );
                 if ( reason != NetDisconnectReason::ServerFull )
                     SW_LOG_WARNING( "NetHost: server %# refused the connection (%#) — it speaks protocol 0x%08x, this client 0x%08x (game 0x%08x)",
-                                    from.toString().c_str(), toString( reason ), static_cast<uint32>( valueA >> 32 ), _protocolID, _settings._gameID );
+                                    packet._from.toString().c_str(), toString( reason ), static_cast<uint32>( packet._valueA >> 32 ), _protocolID, _settings._gameID );
                 closeSlot( slotIndex, reason, false );
                 return;
             }
             case PacketType::Disconnect:
             {
-                if ( _slotTable.isValid( slotIndex ) == false )
-                    return;
-                const NetHostSlot& slot = _slotTable.get( slotIndex );
-                if ( valueA == slot.getConnectionToken() )
+                if ( _slotTable.isValid( slotIndex ) && packet._valueA == _slotTable.get( slotIndex ).getConnectionToken() )
                     closeSlot( slotIndex, NetDisconnectReason::Remote, false );
                 return;
             }
@@ -897,6 +837,93 @@ namespace sw
                 return;
             }
         }
+    }
+
+    void NetHost::handleConnectRequest( const ControlPacket& packet )
+    {
+        if ( _bServer == SW_FALSE )
+            return;
+        const uint32 requestProtocolID = static_cast<uint32>( packet._valueB );
+        if ( requestProtocolID != _protocolID )
+        {
+            const uint32        requestGameID = static_cast<uint32>( packet._valueB >> 32 );
+            NetDisconnectReason reason        = requestGameID == _settings._gameID ? NetDisconnectReason::VersionMismatch : NetDisconnectReason::Rejected;
+            // 같은 게임, 같은 버전인데 기능 마스크만 다르면 한쪽만 암호화나 토큰 결속을 켠 것이다.
+            for ( uint32 mask = 0; reason == NetDisconnectReason::VersionMismatch && mask <= NetProtocolFeature::kAllMask; ++mask )
+            {
+                if ( NetProtocol::makeProtocolID( _settings._gameID, _settings._wireVersion, mask ) == requestProtocolID )
+                    reason = NetDisconnectReason::SecurityMismatch;
+            }
+            ++_mismatchLogCount;
+            if ( ( _mismatchLogCount & ( _mismatchLogCount - 1 ) ) == 0 )
+                SW_LOG_WARNING( "NetHost: refused a connection from %# (%#) — it speaks protocol 0x%08x (game 0x%08x), this server 0x%08x (game 0x%08x); %# such requests so far",
+                                packet._from.toString().c_str(), toString( reason ), requestProtocolID, requestGameID, _protocolID, _settings._gameID, _mismatchLogCount );
+            sendDenied( packet._from, reason, packet._valueA );
+            return;
+        }
+        if ( _slotTable.isValid( packet._slotIndex ) )
+        {
+            // 이 주소는 이미 연결돼 있다. 같은 요청의 늦은 재전송이면 수락을 다시 보내고, 솔트가 다르면(새로 시작한 클라이언트) 옛 연결이 끝날 때까지 답하지 않는다.
+            if ( _slotTable.get( packet._slotIndex )._clientSalt == packet._valueA )
+                sendAccepted( packet._slotIndex );
+            return;
+        }
+        if ( _slotTable.findFreeSlot() < 0 )
+        {
+            sendDenied( packet._from, NetDisconnectReason::ServerFull, packet._valueA );
+            return;
+        }
+        // 슬롯을 할당하지 않고 챌린지 값만 돌려준다. 그 값은 이 주소로 보낸 패킷에만 있으므로, 되돌려 준 응답이 와야 주소가 진짜임이 확인된다.
+        sendControl( packet._from, PacketType::Challenge, packet._valueA, _challenge.makeToken( packet._from, packet._valueA, packet._nowSeconds ) );
+    }
+
+    void NetHost::handleChallengeResponse( const ControlPacket& packet, BitReader& reader )
+    {
+        if ( _bServer == SW_FALSE )
+            return;
+        if ( _slotTable.isValid( packet._slotIndex ) )
+        {
+            // 이미 연결됐다. 수락을 받지 못한 클라이언트가 요청을 반복한 경우다.
+            NetHostSlot& slot = _slotTable.get( packet._slotIndex );
+            if ( slot._clientSalt == packet._valueA && slot._serverSalt == packet._valueB )
+            {
+                // 확장 바이트(공개 키와 토큰)는 다시 읽지 않고, 보관해 둔 키 확인 태그로 같은 수락을 보낸다.
+                slot._lastReceiveTime = packet._nowSeconds;
+                sendAccepted( packet._slotIndex );
+            }
+            return;
+        }
+        // 챌린지 값을 다시 만들어 비교한다. 이번 윈도우나 바로 앞 윈도우에서 만든 값만 유효하다(5~10초).
+        if ( _challenge.isTokenValid( packet._from, packet._valueA, packet._valueB, packet._nowSeconds ) == false )
+        {
+            ++_rejectedPacketCount; // 위조되었거나 만료된 응답.
+            return;
+        }
+        const int32 freeIndex = _slotTable.findFreeSlot();
+        if ( freeIndex < 0 )
+        {
+            sendDenied( packet._from, NetDisconnectReason::ServerFull, packet._valueA );
+            return;
+        }
+        // 암호화 방식에서는 주소가 확인된(챌린지를 통과한) 응답에만 X25519 를 계산한다. 토큰 결속이면 증명이 맞아야 슬롯을 할당한다.
+        unique_ptr<NetSlotSecurity> security;
+        if ( isEncrypted() && acceptSecureResponse( reader, packet._from, packet._valueA, packet._valueB, security ) == false )
+            return; // 거절은 그 함수 안에서 이미 보냈다.
+        NetHostSlot& slot = _slotTable.get( freeIndex );
+        slot              = NetHostSlot{};
+        _slotTable.bindAddress( freeIndex, packet._from );
+        slot._clientSalt      = packet._valueA;
+        slot._serverSalt      = packet._valueB;
+        slot._state           = NetConnectionState::Connected;
+        slot._lastReceiveTime = packet._nowSeconds;
+        slot._lastSendTime    = -1.0;
+        slot._connection.reset();
+        slot._security = std::move( security );
+        // 키 확인 태그는 서버에서 클라이언트로 가는 키로 빈 데이터를 봉인한 값이다. 수락을 다시 보낼 때도 같은 태그를 쓴다.
+        if ( slot._security != nullptr )
+            (void)NetPacketSealer::sealKeyConfirmTag( *slot._security, static_cast<uint32>( freeIndex ), slot._serverSalt ); // 실패하면 0 태그라 클라이언트가 키 확인에서 끊는다.
+        pushEvent( NetHostEvent{ freeIndex, NetDisconnectReason::None, NetHostEvent::Kind::Connected } );
+        sendAccepted( freeIndex );
     }
 
     void NetHost::handleSealedPacket( float64 nowSeconds, PacketType type, int32 slotIndex, const uint8* pBody, int32 bodySize )
