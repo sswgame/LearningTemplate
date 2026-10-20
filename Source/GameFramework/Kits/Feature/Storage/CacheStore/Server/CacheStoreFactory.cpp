@@ -25,6 +25,13 @@ namespace sw
                 return s_database;
             }
 
+            /** @brief RESP 저장소에 주는 운영 시계입니다. 상태가 없어 저장소들이 나눠 쓴다. */
+            static const RespMonotonicClock& getRespClock()
+            {
+                static const RespMonotonicClock s_clock{};
+                return s_clock;
+            }
+
             [[nodiscard]] static bool applyQueryArgument( string_view name, string_view value, CacheEndpoint& outEndpoint, string& outError )
             {
                 if ( name == "prefix" )
@@ -112,7 +119,7 @@ namespace sw
         transportSettings._ioThreadCount      = 1;
         transportSettings._maxConnections     = 4;
         transportSettings._idleTimeoutSeconds = 0.0; // 캐시 연결은 조용해도 유지한다. 구독 연결이 그렇다
-        unique_ptr<RespEphemeralStore> store  = make_unique<RespEphemeralStore>();
+        unique_ptr<RespEphemeralStore> store  = make_unique<RespEphemeralStore>( CacheStoreFactoryInternal::getRespClock() );
         if ( store->initialize( std::move( transport ), transportSettings, settings, std::move( tlsContext ), outError ) == false )
             return nullptr;
         return store;

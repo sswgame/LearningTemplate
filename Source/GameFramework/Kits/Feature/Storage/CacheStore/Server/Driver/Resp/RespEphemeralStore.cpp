@@ -41,8 +41,14 @@ namespace sw
 
 namespace sw
 {
-    RespEphemeralStore::RespEphemeralStore()
-        : _settings{}
+    int64 RespMonotonicClock::nowNanoseconds() const noexcept
+    {
+        return MonotonicClock::nowNanoseconds();
+    }
+
+    RespEphemeralStore::RespEphemeralStore( const IRespClock& clock )
+        : _clock{ clock }
+        , _settings{}
         , _transportSettings{}
         , _mutex{}
         , _commandConnection{ false }
@@ -281,7 +287,7 @@ namespace sw
     void RespEphemeralStore::onStreamClosed( StreamConnectionHandle handle, StreamCloseReason reason )
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        const int64             nowNanoseconds = MonotonicClock::nowNanoseconds();
+        const int64             nowNanoseconds = _clock.nowNanoseconds();
         if ( _commandConnection.handleClosed( handle, reason ) )
         {
             _nextCommandConnectNanoseconds = nowNanoseconds + _commandBackoffMs * constant::kNanosecondsPerMillisecond;
@@ -327,7 +333,7 @@ namespace sw
     void RespEphemeralStore::sendOperation( Operation& operation )
     {
         operation._bSent             = SW_TRUE;
-        operation._sentAtNanoseconds = MonotonicClock::nowNanoseconds();
+        operation._sentAtNanoseconds = _clock.nowNanoseconds();
         bool bConnected              = false;
         {
             std::scoped_lock<mutex> lock{ _mutex };
@@ -651,13 +657,13 @@ namespace sw
     {
         if ( _commandConnection.getState() != RespConnectionState::Closed )
             return true;
-        if ( MonotonicClock::nowNanoseconds() < _nextCommandConnectNanoseconds )
+        if ( _clock.nowNanoseconds() < _nextCommandConnectNanoseconds )
             return false;
         const RespCommand authCommand = makeAuthCommand();
         const bool        bAuth       = _settings._password.empty() == false;
         if ( _commandConnection.beginConnect( *_transport, _settings._address, _tlsContext.get(), bAuth ? &authCommand : nullptr ) )
             return true;
-        _nextCommandConnectNanoseconds = MonotonicClock::nowNanoseconds() + _commandBackoffMs * constant::kNanosecondsPerMillisecond;
+        _nextCommandConnectNanoseconds = _clock.nowNanoseconds() + _commandBackoffMs * constant::kNanosecondsPerMillisecond;
         _commandBackoffMs              = RespEphemeralStoreInternal::makeNextBackoffMs( _commandBackoffMs, _settings._maxBackoffMs );
         return false;
     }
@@ -666,13 +672,13 @@ namespace sw
     {
         if ( _subscribeConnection.getState() != RespConnectionState::Closed )
             return true;
-        if ( MonotonicClock::nowNanoseconds() < _nextSubscribeConnectNanoseconds )
+        if ( _clock.nowNanoseconds() < _nextSubscribeConnectNanoseconds )
             return false;
         const RespCommand authCommand = makeAuthCommand();
         const bool        bAuth       = _settings._password.empty() == false;
         if ( _subscribeConnection.beginConnect( *_transport, _settings._address, _tlsContext.get(), bAuth ? &authCommand : nullptr ) == false )
         {
-            _nextSubscribeConnectNanoseconds = MonotonicClock::nowNanoseconds() + _subscribeBackoffMs * constant::kNanosecondsPerMillisecond;
+            _nextSubscribeConnectNanoseconds = _clock.nowNanoseconds() + _subscribeBackoffMs * constant::kNanosecondsPerMillisecond;
             _subscribeBackoffMs              = RespEphemeralStoreInternal::makeNextBackoffMs( _subscribeBackoffMs, _settings._maxBackoffMs );
             return false;
         }
@@ -690,7 +696,7 @@ namespace sw
     void RespEphemeralStore::abortTimedOutRequests()
     {
         const int64 timeoutNanoseconds = _settings._timeoutMs * constant::kNanosecondsPerMillisecond;
-        const int64 nowNanoseconds     = MonotonicClock::nowNanoseconds();
+        const int64 nowNanoseconds     = _clock.nowNanoseconds();
         bool        bExpired           = false;
         for ( const Operation& operation : _listOperation )
         {

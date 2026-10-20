@@ -71,8 +71,8 @@ namespace
         FakeRespFixture()
             : _network{ 5u }
             , _server{ _network }
-            , _store{}
-            , _secondStore{}
+            , _store{ _server }
+            , _secondStore{ _server }
         {
             LoopbackStreamConditions conditions;
             conditions._maxChunkBytes = 3;
@@ -103,7 +103,7 @@ SW_TEST_CASE( RespEphemeralStoreFakeServerTest, OneByteChunksGiveTheSameResult )
     conditions._maxChunkBytes = 1;
     network.setConditions( conditions );
     test::FakeRespServer server{ network };
-    RespEphemeralStore   store;
+    RespEphemeralStore   store{ server };
     SW_ASSERT_TRUE( RespStoreHarness::initializeStore( store, server, RespStoreHarness::makeSettings( server.getAddress() ) ) );
 
     vector<uint8> bytes( 4096 );
@@ -125,7 +125,7 @@ SW_TEST_CASE( RespEphemeralStoreFakeServerTest, DroppedConnectionAnswersEveryPen
 {
     LoopbackStreamNetwork network{ 3u };
     test::FakeRespServer  server{ network };
-    RespEphemeralStore    store;
+    RespEphemeralStore    store{ server };
     SW_ASSERT_TRUE( RespStoreHarness::initializeStore( store, server, RespStoreHarness::makeSettings( server.getAddress() ) ) );
     SW_EXPECT_TRUE( test::EphemeralStoreContract::executeResult( store, EphemeralRequest::makeSet( "k", vector<uint8>{ 1 }, 0 ) ) == EphemeralResult::Ok );
 
@@ -157,23 +157,31 @@ SW_TEST_CASE( RespEphemeralStoreFakeServerTest, TimedOutRequestIsUnavailableAndT
 {
     LoopbackStreamNetwork network{ 4u };
     test::FakeRespServer  server{ network };
-    RespEphemeralStore    store;
+    RespEphemeralStore    store{ server };
     RespStoreConfig       settings = RespStoreHarness::makeSettings( server.getAddress() );
     settings._timeoutMs            = 100;
     SW_ASSERT_TRUE( RespStoreHarness::initializeStore( store, server, settings ) );
 
+    // 시한은 가짜 서버의 시계로 잰다 — 시계를 10 ms 씩 밀어 시한(100 ms)을 넘기면 실제 시간과 상관없이 Unavailable 이 된다.
     server.setHoldReplies( true );
-    const Stopwatch stopwatch;
-    EphemeralReply  reply;
-    SW_ASSERT_TRUE( test::EphemeralStoreContract::executeRequest( store, EphemeralRequest::makeIncrement( "n", 1, 0 ), reply ) );
-    SW_EXPECT_TRUE( reply._result == EphemeralResult::Unavailable );
-    SW_EXPECT_TRUE( stopwatch.getElapsedMilliseconds() >= 100 );
+    const int64            startNanoseconds = server.nowNanoseconds();
+    const uint64           requestID        = store.submit( EphemeralRequest::makeIncrement( "n", 1, 0 ) );
+    vector<EphemeralReply> listReply;
+    for ( int32 step = 0; step < 100 && listReply.empty(); ++step )
+    {
+        server.advanceTimeMs( 10 );
+        (void)store.pollReplies( listReply );
+    }
+    SW_ASSERT_EQUAL( size_t( 1 ), listReply.size() );
+    SW_EXPECT_TRUE( listReply[0]._requestID == requestID );
+    SW_EXPECT_TRUE( listReply[0]._result == EphemeralResult::Unavailable );
+    SW_EXPECT_TRUE( server.nowNanoseconds() - startNanoseconds >= 100 * constant::kNanosecondsPerMillisecond );
 
     server.setHoldReplies( false );
-    const Deadline  deadline = Deadline::afterMilliseconds( 3000 );
-    EphemeralResult result   = EphemeralResult::Unavailable;
-    while ( result == EphemeralResult::Unavailable && deadline.isExpired() == false ) // 물러남(첫 번은 0) 동안은 바로 Unavailable
+    EphemeralResult result = EphemeralResult::Unavailable;
+    for ( int32 attempt = 0; attempt < 60 && result == EphemeralResult::Unavailable; ++attempt ) // 물러남(상한 5 s) 동안은 바로 Unavailable 이라 시계를 민다
     {
+        server.advanceTimeMs( 100 );
         result = test::EphemeralStoreContract::executeResult( store, EphemeralRequest::makeSet( "n2", vector<uint8>{ 2 }, 0 ) );
     }
     SW_EXPECT_TRUE( result == EphemeralResult::Ok );
@@ -186,13 +194,13 @@ SW_TEST_CASE( RespEphemeralStoreFakeServerTest, AuthIsSentFirstAndAWrongPassword
     test::FakeRespServer  server{ network };
     server.setPassword( "s3cret" );
 
-    RespEphemeralStore good;
+    RespEphemeralStore good{ server };
     RespStoreConfig    goodSettings = RespStoreHarness::makeSettings( server.getAddress() );
     goodSettings._password          = "s3cret";
     SW_ASSERT_TRUE( RespStoreHarness::initializeStore( good, server, goodSettings ) );
     SW_EXPECT_TRUE( test::EphemeralStoreContract::executeResult( good, EphemeralRequest::makeSet( "a", vector<uint8>{ 1 }, 0 ) ) == EphemeralResult::Ok );
 
-    RespEphemeralStore bad;
+    RespEphemeralStore bad{ server };
     RespStoreConfig    badSettings = RespStoreHarness::makeSettings( server.getAddress() );
     badSettings._password          = "wrong";
     SW_ASSERT_TRUE( RespStoreHarness::initializeStore( bad, server, badSettings ) );
@@ -223,7 +231,7 @@ SW_TEST_CASE( RespEphemeralStoreFakeServerTest, TLSCarriesTheCommands )
 
     LoopbackStreamNetwork network{ 8u };
     test::FakeRespServer  server{ network, serverContext.get() };
-    RespEphemeralStore    store;
+    RespEphemeralStore    store{ server };
     SW_ASSERT_TRUE( RespStoreHarness::initializeStore( store, server, RespStoreHarness::makeSettings( server.getAddress() ), std::move( clientContext ) ) );
     SW_EXPECT_TRUE( test::EphemeralStoreContract::executeResult( store, EphemeralRequest::makeSet( "secure", vector<uint8>{ 9, 8 }, 0 ) ) == EphemeralResult::Ok );
     EphemeralReply reply;
@@ -235,8 +243,8 @@ SW_TEST_CASE( RespEphemeralStoreFakeServerTest, SubscriptionComesBackAfterTheCon
 {
     LoopbackStreamNetwork network{ 2u };
     test::FakeRespServer  server{ network };
-    RespEphemeralStore    publisher;
-    RespEphemeralStore    subscriber;
+    RespEphemeralStore    publisher{ server };
+    RespEphemeralStore    subscriber{ server };
     SW_ASSERT_TRUE( RespStoreHarness::initializeStore( publisher, server, RespStoreHarness::makeSettings( server.getAddress() ) ) );
     SW_ASSERT_TRUE( RespStoreHarness::initializeStore( subscriber, server, RespStoreHarness::makeSettings( server.getAddress() ) ) );
     subscriber.subscribe( "news" );
@@ -247,6 +255,7 @@ SW_TEST_CASE( RespEphemeralStoreFakeServerTest, SubscriptionComesBackAfterTheCon
     vector<EphemeralMessage> listMessage;
     while ( server.getSubscriberCount( "t1:news" ) == 0 && deadline.isExpired() == false )
     {
+        server.advanceTimeMs( 100 );                  // 다시 연결의 백오프도 가짜 시계로 잰다
         (void)subscriber.pollMessages( listMessage ); // 끊긴 것을 보고 다시 연결해 다시 구독한다
         std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
     }
@@ -257,6 +266,7 @@ SW_TEST_CASE( RespEphemeralStoreFakeServerTest, SubscriptionComesBackAfterTheCon
     published._result = EphemeralResult::Unavailable;
     for ( int32 attempt = 0; attempt < 3 && published._result == EphemeralResult::Unavailable; ++attempt )
     {
+        server.advanceTimeMs( 100 );
         SW_ASSERT_TRUE( test::EphemeralStoreContract::executeRequest( publisher, EphemeralRequest::makePublish( "news", vector<uint8>{ 5 } ), published ) );
     }
     SW_EXPECT_TRUE( published._result == EphemeralResult::Ok );
