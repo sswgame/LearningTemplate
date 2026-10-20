@@ -7,6 +7,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Serialization/Base/ContainerVisitor.h"
 #include "Engine/Serialization/Base/SchemaMigrate.h"
 #include "Engine/Serialization/Base/SerializerUtil.h"
@@ -94,10 +95,10 @@ namespace sw
                 void endMap() override {}
 
                 // `JSONValue` 는 빌린 포인터다 — 같은 부모에 새 키 · 원소를 더하면 앞서 꺼낸 형제 핸들이 죽으므로, 꺼낸 자리는 다 채운 뒤 버린다(스택).
-                void beginMapEntry( const void* pKey, const hashed_string& keyTypeName ) override
+                void beginMapEntry( const ValueAddress key, const hashed_string& keyTypeName ) override
                 {
                     StringBuilder<constant::kMaxBuffer8192> keyText;
-                    SerializerUtil::valueToText( keyText, ValueAddress{ pKey }, keyTypeName, _context );
+                    SerializerUtil::valueToText( keyText, key, keyTypeName, _context );
                     const JSONValue entry = _listSlot.back().set( keyText.view(), false );
                     _listSlot.push_back( entry );
                 }
@@ -119,8 +120,9 @@ namespace sw
                         _listSlot.pop_back();
                 }
 
-                void writeOwnedPointer( const void* pObject ) override
+                void writeOwnedPointer( const ObjectAddress object ) override
                 {
+                    const void* const pObject = object.get();
                     if ( pObject == nullptr )
                         return; // 널 원소는 배열에 넣지 않는다
                     const JSONValue dst = _listSlot.back().pushBack();
@@ -145,14 +147,14 @@ namespace sw
                 }
 
                 // 값 구조체는 타입 래핑 없이 본문을 그대로 쓴다(리더도 본문만 받는다).
-                void writeValueObject( const void* pValue, const hashed_string&, const TypeInfo& typeInfo, const ContainerSlot slot ) override
+                void writeValueObject( const ValueAddress value, const hashed_string&, const TypeInfo& typeInfo, const ContainerSlot slot ) override
                 {
-                    JSONSerializer::writeObject( openElementSlot( slot ), pValue, typeInfo, _context );
+                    JSONSerializer::writeObject( openElementSlot( slot ), value.get(), typeInfo, _context );
                 }
 
-                void writeScalar( const void* pValue, const hashed_string& typeName, const ContainerSlot slot ) override
+                void writeScalar( const ValueAddress value, const hashed_string& typeName, const ContainerSlot slot ) override
                 {
-                    writeJSONValue( openElementSlot( slot ), pValue, typeName, _context );
+                    writeJSONValue( openElementSlot( slot ), value.get(), typeName, _context );
                 }
 
             private:
@@ -225,9 +227,9 @@ namespace sw
                 }
 
                 // 키는 멤버 이름(글)이다 — XML 의 `key` 속성과 같은 길로 읽는다.
-                ContainerReadResult readMapKey( void* pKey, const hashed_string& keyTypeName ) override
+                ContainerReadResult readMapKey( const MutableValueAddress key, const hashed_string& keyTypeName ) override
                 {
-                    const bool bRead = _pCurrentKey != nullptr && parseTextValueCoerced( MutableValueAddress{ pKey }, keyTypeName, *_pCurrentKey, _context );
+                    const bool bRead = _pCurrentKey != nullptr && parseTextValueCoerced( key, keyTypeName, *_pCurrentKey, _context );
                     return bRead ? ContainerReadResult::Read : ContainerReadResult::FieldFailed;
                 }
 
@@ -260,16 +262,16 @@ namespace sw
                 }
 
                 // 값 구조체 원소는 본문 그대로다(쓰는 쪽이 타입 이름으로 감싸지 않는다). 감싼 원소는 모르는 키 하나로 읽힌다.
-                ContainerReadResult readValueObject( void* pValue, const hashed_string&, const TypeInfo& typeInfo, ContainerSlot ) override
+                ContainerReadResult readValueObject( const MutableValueAddress value, const hashed_string&, const TypeInfo& typeInfo, ContainerSlot ) override
                 {
                     const JSONValue& element = _listCursor.back();
-                    const bool       bRead   = element.isObject() && JSONSerializer::readObject( element, pValue, typeInfo, nullptr, nullptr, _context );
+                    const bool       bRead   = element.isObject() && JSONSerializer::readObject( element, value.get(), typeInfo, nullptr, nullptr, _context );
                     return bRead ? ContainerReadResult::Read : ContainerReadResult::FieldFailed;
                 }
 
-                ContainerReadResult readScalar( void* pValue, const hashed_string& typeName, ContainerSlot ) override
+                ContainerReadResult readScalar( const MutableValueAddress value, const hashed_string& typeName, ContainerSlot ) override
                 {
-                    return readJSONValue( pValue, typeName, _listCursor.back(), _context ) ? ContainerReadResult::Read : ContainerReadResult::FieldFailed;
+                    return readJSONValue( value.get(), typeName, _listCursor.back(), _context ) ? ContainerReadResult::Read : ContainerReadResult::FieldFailed;
                 }
 
                 ContainerReadResult skipElement( size_t ) override { return ContainerReadResult::FieldFailed; }
@@ -358,7 +360,7 @@ namespace sw
                 {
                     // 프로퍼티 이름 아래에 바로 배열/오브젝트로 쓴다.
                     ContainerWriter writer( parent.set( prop._name.c_str(), false ), context );
-                    ContainerVisitor::write( pPropPtr, prop.getContainerShape(), writer, context );
+                    ContainerVisitor::write( ValueAddress{ pPropPtr }, prop.getContainerShape(), writer, context );
                     return;
                 }
                 writeJSONValue( parent.set( prop._name.c_str(), false ), pPropPtr, prop._typeName, context );
@@ -384,7 +386,7 @@ namespace sw
                 if ( prop._bIsContainer && prop.hasContainerWrapper() )
                 {
                     ContainerReader reader( field, context, pOutListOrphan, prop );
-                    return ContainerVisitor::read( pPropPtr, prop.getContainerShape(), reader, context ) == ContainerReadResult::Read;
+                    return ContainerVisitor::read( MutableValueAddress{ pPropPtr }, prop.getContainerShape(), reader, context ) == ContainerReadResult::Read;
                 }
                 return readJSONValue( pPropPtr, prop._typeName, field, context );
             }
@@ -481,7 +483,7 @@ namespace sw
             if ( bSkipCaseVariantKey )
                 continue;
 
-            if ( pMatched == nullptr || pMatched->_metadata._bTransient == SW_TRUE )
+            if ( pMatched == nullptr || pMatched->_metadata->_bTransient == SW_TRUE )
             {
                 if ( pOutListOrphan != nullptr )
                 {
@@ -530,7 +532,7 @@ namespace sw
                                       SerializerUtil::shouldSerializeProperty( typeInfo, prop, context ) == false;
             if ( bKeepCurrent )
                 continue;
-            SerializerUtil::applyPropertyDefault( prop, pInstance, context );
+            SerializerUtil::applyPropertyDefault( prop, MutableObjectAddress{ pInstance }, context );
         }
 
         // 금지된 필드는 소프트 읽기에서도 실패다(XML · 바이너리와 같다).

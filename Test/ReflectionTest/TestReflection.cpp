@@ -7,6 +7,7 @@
 #include "Engine/Reflection/ReflectAny.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 
@@ -107,8 +108,8 @@ SW_TEST_CASE( ReflectionFunctionMacroTest, CodegenMethodInvoke )
     const sw::FunctionInfo* getHpFn      = typeInfo->findMethod( sw::hashed_string( "getHp" ) );
     SW_ASSERT_NOT_NULL( takeDamageFn );
     SW_ASSERT_NOT_NULL( getHpFn );
-    SW_EXPECT_EQUAL( 0, static_cast<int32>( takeDamageFn->_metadata._bConst ) );
-    SW_EXPECT_EQUAL( 1, static_cast<int32>( getHpFn->_metadata._bConst ) );
+    SW_EXPECT_EQUAL( 0, static_cast<int32>( takeDamageFn->_metadata->_bConst ) );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( getHpFn->_metadata->_bConst ) );
 
     sw::TaskArgs damageArgs;
     damageArgs.add( int32{ 40 } );

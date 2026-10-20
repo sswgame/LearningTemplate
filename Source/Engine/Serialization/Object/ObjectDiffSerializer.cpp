@@ -41,8 +41,8 @@ namespace sw
             }
             else if ( prop._bIsContainer && prop.hasContainerWrapper() )
             {
-                bWritten = SerializerUtil::serializeNestedContainerBinary( pCdoPtr, prop.getContainerShape(), cdoBytes, context ) &&
-                           SerializerUtil::serializeNestedContainerBinary( pModifiedValue, prop.getContainerShape(), modifiedBytes, context );
+                bWritten = SerializerUtil::serializeNestedContainerBinary( ValueAddress{ pCdoPtr }, prop.getContainerShape(), cdoBytes, context ) &&
+                           SerializerUtil::serializeNestedContainerBinary( ValueAddress{ pModifiedValue }, prop.getContainerShape(), modifiedBytes, context );
             }
             else
             {

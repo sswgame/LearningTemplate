@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 
 // 인스펙터는 에디터 기능이라 Shipping 에는 없다 — 에디터 메타데이터(카테고리 · 표시 이름 · 숨김)도 Shipping 빌드에서 빠진다.
@@ -45,7 +46,7 @@ namespace sw::editor
         // 상속분은 기반 → 파생 순으로 온다(파생이 같은 이름을 다시 선언하면 그 자리에서 바뀐다 — `TypeInfo::getPropertiesWithBase`).
         type.forEachProperty( [&]( const PropertyInfo& prop )
         {
-            if ( prop._metadata._bHideInInspector == SW_TRUE )
+            if ( prop._metadata->_bHideInInspector == SW_TRUE )
                 return;
             for ( const hashed_string& drawnName : listDrawnName )
             {
@@ -53,10 +54,10 @@ namespace sw::editor
                     return;
             }
             if ( filter.matchesAny( { string_view{ prop._name.c_str() }, string_view{ getPropertyLabel( prop ) },
-                                      string_view{ prop._metadata._category.c_str() } } ) == false )
+                                      string_view{ prop._metadata->_category.c_str() } } ) == false )
                 return;
 
-            const string_view       category = prop._metadata._category.empty() ? string_view{ "General" } : string_view{ prop._metadata._category.c_str() };
+            const string_view       category = prop._metadata->_category.empty() ? string_view{ "General" } : string_view{ prop._metadata->_category.c_str() };
             InspectorPropertyGroup* pGroup   = nullptr;
             for ( InspectorPropertyGroup& group : outListGroup )
             {
@@ -77,8 +78,8 @@ namespace sw::editor
 
     const utf8* InspectorPropertyLayout::getPropertyLabel( const PropertyInfo& prop )
     {
-        if ( prop._metadata._displayName.empty() == false )
-            return prop._metadata._displayName.c_str();
+        if ( prop._metadata->_displayName.empty() == false )
+            return prop._metadata->_displayName.c_str();
         if ( prop._listAlias.empty() == false && prop._listAlias.front().empty() == false )
             return prop._listAlias.front().c_str();
         return prop._name.c_str();
@@ -148,7 +149,7 @@ namespace sw::editor
 
     InspectorNumericRange InspectorPropertyLayout::getNumericRange( const PropertyInfo& prop, const void* pInstance )
     {
-        const PropertyMetadata& meta = prop._metadata;
+        const PropertyMetadata& meta = *prop._metadata;
         InspectorNumericRange   range;
         // 허용 범위는 읽기 공통 끝(`SerializerUtil::isWithinDeclaredRanges`)과 같은 함수로 푼다 — 필드 경계는 그 객체의 지금 값이다.
         const PropertyAllowedRange allowed = meta.computeAllowedRange( pInstance );
@@ -179,7 +180,7 @@ namespace sw::editor
 
     bool InspectorPropertyLayout::isColorRequested( const PropertyInfo& prop )
     {
-        if ( prop._metadata._bColorHdr != SW_FALSE || prop.findCustomMeta( hashed_string( "Color" ) ) != nullptr )
+        if ( prop._metadata->_bColorHdr != SW_FALSE || prop.findCustomMeta( hashed_string( "Color" ) ) != nullptr )
             return true;
         return StringUtil::stristr( prop._name.c_str(), "color" ) != nullptr;
     }

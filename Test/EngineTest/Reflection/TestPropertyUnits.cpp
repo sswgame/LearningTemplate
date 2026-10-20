@@ -4,6 +4,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
@@ -84,8 +85,8 @@ SW_TEST_CASE( PropertyUnitsTest, UnitsMatchHowValuesAreStored )
             const sw::string* pUnits = prop.findCustomMeta( sw::hashed_string( "Units" ) );
             const sw::string  units  = ( pUnits != nullptr ) ? *pUnits : sw::string{};
             const sw::string  where  = sw::string( pType->_fullyQualifiedName.c_str() ) + "::" + prop._name.c_str() + " (Units=" + units + "): ";
-            const bool        bMax   = prop._metadata._bHasMaxRange != SW_FALSE;
-            const float32     maxAt  = prop._metadata._maxRange;
+            const bool        bMax   = prop._metadata->_bHasMaxRange != SW_FALSE;
+            const float32     maxAt  = prop._metadata->_maxRange;
             if ( pUnits != nullptr )
                 ++unitCount;
             if ( units == "deg" )
@@ -109,7 +110,7 @@ SW_TEST_CASE( PropertyUnitsTest, UnitsMatchHowValuesAreStored )
                 offenders += where + "Max is above 2*pi — the range looks like degrees\n";
             for ( const ConflictingUnitWord& conflict : kArrConflictingUnitWord )
             {
-                if ( units == conflict._pUnits && sw::StringUtil::stristr( prop._metadata._tooltip.c_str(), conflict._pWord ) != nullptr )
+                if ( units == conflict._pUnits && sw::StringUtil::stristr( prop._metadata->_tooltip.c_str(), conflict._pWord ) != nullptr )
                     offenders += where + "the tooltip says '" + conflict._pWord + "' — tooltip and Units must name the same unit\n";
             }
         }

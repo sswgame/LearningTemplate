@@ -8,6 +8,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -337,7 +338,7 @@ namespace sw::editor
 
     bool ProjectSettingsDocument::isBaseLayer() const
     {
-        return _pType != nullptr && _pType->_metadata.findCustomMeta( hashed_string( kBaseLayerMeta ) ) != nullptr;
+        return _pType != nullptr && _pType->_metadata->findCustomMeta( hashed_string( kBaseLayerMeta ) ) != nullptr;
     }
 
     void ProjectSettingsDocument::resetToDefault()

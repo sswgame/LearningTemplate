@@ -7,6 +7,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/Base/ContainerVisitor.h"
 #include "Engine/Serialization/Base/SchemaMigrate.h"
@@ -64,10 +65,10 @@ namespace sw
                 void beginMap( size_t ) override {}
                 void endMap() override {}
 
-                void beginMapEntry( const void* pKey, const hashed_string& keyTypeName ) override
+                void beginMapEntry( const ValueAddress key, const hashed_string& keyTypeName ) override
                 {
                     StringBuilder<constant::kMaxBuffer8192> keyText;
-                    SerializerUtil::valueToText( keyText, ValueAddress{ pKey }, keyTypeName, _context );
+                    SerializerUtil::valueToText( keyText, key, keyTypeName, _context );
                     _backend.beginMap( kXMLEntryTag );
                     _backend.writeAttribute( kXMLKeyAttr, keyText.c_str() );
                 }
@@ -87,8 +88,9 @@ namespace sw
                         _backend.endMap();
                 }
 
-                void writeOwnedPointer( const void* pObject ) override
+                void writeOwnedPointer( const ObjectAddress object ) override
                 {
+                    const void* const pObject = object.get();
                     if ( pObject == nullptr )
                         return;
                     // 맡아 둔 원소(모르는 타입)는 읽은 원문 그대로 다시 쓴다.
@@ -107,17 +109,17 @@ namespace sw
                     _backend.endMap();
                 }
 
-                void writeValueObject( const void* pValue, const hashed_string&, const TypeInfo& typeInfo, ContainerSlot ) override
+                void writeValueObject( const ValueAddress value, const hashed_string&, const TypeInfo& typeInfo, ContainerSlot ) override
                 {
                     _backend.beginMap( typeInfo._name.c_str() );
-                    writeXMLProperties( pValue, typeInfo, _backend, _context );
+                    writeXMLProperties( value.get(), typeInfo, _backend, _context );
                     _backend.endMap();
                 }
 
-                void writeScalar( const void* pValue, const hashed_string& typeName, const ContainerSlot slot ) override
+                void writeScalar( const ValueAddress value, const hashed_string& typeName, const ContainerSlot slot ) override
                 {
                     StringBuilder<constant::kMaxBuffer8192> text;
-                    SerializerUtil::valueToText( text, ValueAddress{ pValue }, typeName, _context );
+                    SerializerUtil::valueToText( text, value, typeName, _context );
                     if ( slot == ContainerSlot::SequenceElement )
                         _backend.writeValue( kXMLItemTag, text.c_str() );
                     else
@@ -170,11 +172,11 @@ namespace sw
                     return total;
                 }
 
-                ContainerReadResult readMapKey( void* pKey, const hashed_string& keyTypeName ) override
+                ContainerReadResult readMapKey( const MutableValueAddress key, const hashed_string& keyTypeName ) override
                 {
                     string keyText;
                     (void)_backend.readAttribute( kXMLKeyAttr, keyText ); // 없으면 빈 키 — 아래 파싱이 거른다
-                    return readText( pKey, keyTypeName, keyText );
+                    return readText( key, keyTypeName, keyText );
                 }
 
                 ContainerReadResult readOwnedPointer() override
@@ -201,8 +203,9 @@ namespace sw
                     return toResult( readNestedXMLIntoInstance( pObject, *pType, _backend, _context, _pOutListOrphan ) );
                 }
 
-                ContainerReadResult readValueObject( void* pValue, const hashed_string&, const TypeInfo& typeInfo, const ContainerSlot slot ) override
+                ContainerReadResult readValueObject( const MutableValueAddress value, const hashed_string&, const TypeInfo& typeInfo, const ContainerSlot slot ) override
                 {
+                    void* const pValue = value.get();
                     if ( slot == ContainerSlot::SequenceElement )
                         return toResult( readNestedXMLIntoInstance( pValue, typeInfo, _backend, _context, _pOutListOrphan ) );
                     // 맵 값의 구조체는 `<entry>` 안의 `<TypeName>` 자식이다. 자식이 없으면 기본값 그대로 넣는다.
@@ -214,11 +217,11 @@ namespace sw
                 }
 
                 // 시퀀스 원소는 `<item>` 의 글, 맵 값은 `<entry>` 의 글이다 — 둘 다 지금 노드의 글이다.
-                ContainerReadResult readScalar( void* pValue, const hashed_string& typeName, ContainerSlot ) override
+                ContainerReadResult readScalar( const MutableValueAddress value, const hashed_string& typeName, ContainerSlot ) override
                 {
                     string text;
                     (void)_backend.readText( text ); // 없으면 빈 글 — 아래 파싱이 실패로 알린다
-                    return readText( pValue, typeName, text );
+                    return readText( value, typeName, text );
                 }
 
                 ContainerReadResult skipElement( const size_t elementIndex ) override
@@ -234,9 +237,9 @@ namespace sw
                 static ContainerReadResult toResult( const bool bRead ) { return bRead ? ContainerReadResult::Read : ContainerReadResult::FieldFailed; }
 
                 /** @brief 글 하나를 값으로 읽습니다. 못 읽으면 그 글을 orphan 으로 남기고 FieldFailed 입니다(조용히 버리지 않는다). */
-                ContainerReadResult readText( void* pValue, const hashed_string& typeName, const string& text ) const
+                ContainerReadResult readText( const MutableValueAddress value, const hashed_string& typeName, const string& text ) const
                 {
-                    if ( parseTextValueCoerced( MutableValueAddress{ pValue }, typeName, text, _context ) )
+                    if ( parseTextValueCoerced( value, typeName, text, _context ) )
                         return ContainerReadResult::Read;
                     recordDroppedText( _pOutListOrphan, _propForOrphan, text );
                     return ContainerReadResult::FieldFailed;
@@ -271,7 +274,7 @@ namespace sw
                         // 프로퍼티 이름이 곧 컨테이너 요소다. 그 안에 원소들이 들어간다.
                         backend.beginMap( prop._name.c_str() );
                         ContainerWriter writer( backend, context );
-                        ContainerVisitor::write( pPropPtr, prop.getContainerShape(), writer, context );
+                        ContainerVisitor::write( ValueAddress{ pPropPtr }, prop.getContainerShape(), writer, context );
                         backend.endMap();
                     }
                     else
@@ -290,7 +293,7 @@ namespace sw
 
                             // 기본은 "모두 쓴다" 이다. 그래야 파일에 없음과 명시적으로 비어 있음이
                             // 구분된다. 생략해도 좋다고 **스키마가 선언한** 필드만 비었을 때 뺀다.
-                            if ( prop._metadata._bSkipIfEmpty == SW_TRUE && ss.size() == 0 )
+                            if ( prop._metadata->_bSkipIfEmpty == SW_TRUE && ss.size() == 0 )
                                 return;
 
                             backend.writeAttribute( prop._name.c_str(), ss.c_str() );
@@ -360,12 +363,12 @@ namespace sw
                         if ( entered )
                         {
                             ContainerReader reader( backend, context, pOutListOrphan, prop );
-                            if ( ContainerVisitor::read( pPropPtr, prop.getContainerShape(), reader, context ) != ContainerReadResult::Read )
+                            if ( ContainerVisitor::read( MutableValueAddress{ pPropPtr }, prop.getContainerShape(), reader, context ) != ContainerReadResult::Read )
                                 bFieldError = true;
                             backend.popChild();
                         }
                         else
-                            SerializerUtil::applyPropertyDefault( prop, pInstance, context );
+                            SerializerUtil::applyPropertyDefault( prop, MutableObjectAddress{ pInstance }, context );
                     }
                     else
                     {
@@ -383,7 +386,7 @@ namespace sw
                                 backend.popChild();
                             }
                             else
-                                SerializerUtil::applyPropertyDefault( prop, pInstance, context );
+                                SerializerUtil::applyPropertyDefault( prop, MutableObjectAddress{ pInstance }, context );
                             return;
                         }
 
@@ -411,7 +414,7 @@ namespace sw
                             }
                         }
                         else
-                            SerializerUtil::applyPropertyDefault( prop, pInstance, context );
+                            SerializerUtil::applyPropertyDefault( prop, MutableObjectAddress{ pInstance }, context );
                     }
                 }, true /* 상속 PROPERTY 포함 */ );
 

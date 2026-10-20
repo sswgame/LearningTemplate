@@ -8,6 +8,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Base/ContainerVisitor.h"
 #include "Engine/Serialization/Base/SchemaMigrate.h"
@@ -131,11 +132,11 @@ namespace sw
                         if ( bSequence == false )
                             continue;
                         const TypeInfo* pElement     = SerializerUtil::findNestedObjectType( prop._elementTypeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
-                        const bool      bNumberRange = pElement == nullptr && prop._metadata.hasAllowedRange();
+                        const bool      bNumberRange = pElement == nullptr && prop._metadata->hasAllowedRange();
                         if ( pElement == nullptr && bNumberRange == false )
                             continue;
                         // 필드 경계는 원소가 아니라 이 프로퍼티를 가진 객체에서 읽는다(인스펙터와 같다).
-                        const PropertyAllowedRange range        = bNumberRange ? prop._metadata.computeAllowedRange( pInstance ) : PropertyAllowedRange{};
+                        const PropertyAllowedRange range        = bNumberRange ? prop._metadata->computeAllowedRange( pInstance ) : PropertyAllowedRange{};
                         ISequenceContainerWrapper* pSequence    = prop._containerWrapper->asSequence();
                         const size_t               elementCount = pSequence->getSize( pValue );
                         for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
@@ -152,7 +153,7 @@ namespace sw
                     float64 value = 0.0;
                     if ( readRangeNumber( prop._typeName.view(), pValue, value ) )
                     {
-                        if ( prop._metadata.hasAllowedRange() && prop._metadata.computeAllowedRange( pInstance ).contains( value ) == false )
+                        if ( prop._metadata->hasAllowedRange() && prop._metadata->computeAllowedRange( pInstance ).contains( value ) == false )
                             return false;
                         continue;
                     }
@@ -482,24 +483,24 @@ namespace sw
                 void endSequence() override {}
                 void beginMap( const size_t entryCount ) override { appendUint32( _listBuffer, static_cast<uint32>( entryCount ) ); }
                 void endMap() override {}
-                void beginMapEntry( const void* pKey, const hashed_string& keyTypeName ) override
+                void beginMapEntry( const ValueAddress key, const hashed_string& keyTypeName ) override
                 {
-                    recordWritten( SerializerUtil::serializeValueBinary( ValueAddress{ pKey }, keyTypeName, _listBuffer, _context ) );
+                    recordWritten( SerializerUtil::serializeValueBinary( key, keyTypeName, _listBuffer, _context ) );
                 }
                 void endMapEntry() override {}
                 void beginNestedContainer( ContainerSlot ) override {}
                 void endNestedContainer( ContainerSlot ) override {}
-                void writeOwnedPointer( const void* pObject ) override { recordWritten( writeOwnedPointerBinary( pObject, _listBuffer, _context ) ); }
+                void writeOwnedPointer( const ObjectAddress object ) override { recordWritten( writeOwnedPointerBinary( object.get(), _listBuffer, _context ) ); }
 
                 // 값 구조체도 값 하나를 적는 경로로 적는다. 등록된 바이너리 핸들러가 구조체보다 먼저다(`serializeValueBinary` 의 순서).
-                void writeValueObject( const void* pValue, const hashed_string& typeName, const TypeInfo&, ContainerSlot ) override
+                void writeValueObject( const ValueAddress value, const hashed_string& typeName, const TypeInfo&, ContainerSlot ) override
                 {
-                    recordWritten( SerializerUtil::serializeValueBinary( ValueAddress{ pValue }, typeName, _listBuffer, _context ) );
+                    recordWritten( SerializerUtil::serializeValueBinary( value, typeName, _listBuffer, _context ) );
                 }
 
-                void writeScalar( const void* pValue, const hashed_string& typeName, ContainerSlot ) override
+                void writeScalar( const ValueAddress value, const hashed_string& typeName, ContainerSlot ) override
                 {
-                    recordWritten( SerializerUtil::serializeValueBinary( ValueAddress{ pValue }, typeName, _listBuffer, _context ) );
+                    recordWritten( SerializerUtil::serializeValueBinary( value, typeName, _listBuffer, _context ) );
                 }
 
                 /** @brief 원소 · 키 · 값을 하나도 빠짐없이 썼는가입니다. 방문자의 콜백은 결과를 돌려주지 못하므로 여기에 모읍니다. */
@@ -549,7 +550,7 @@ namespace sw
                     return total;
                 }
 
-                ContainerReadResult readMapKey( void* pKey, const hashed_string& keyTypeName ) override { return readValue( pKey, keyTypeName ); }
+                ContainerReadResult readMapKey( const MutableValueAddress key, const hashed_string& keyTypeName ) override { return readValue( key, keyTypeName ); }
 
                 // 본문 크기가 있어 모르는 타입은 건너뛰지만, 아는 타입의 본문을 못 읽으면 스트림이 망가진 것이다.
                 ContainerReadResult readOwnedPointer() override
@@ -557,8 +558,8 @@ namespace sw
                     return readOwnedPointerBinary( _pData, _dataSize, *_pInOutOffset, _context ) ? ContainerReadResult::Read : ContainerReadResult::StreamBroken;
                 }
 
-                ContainerReadResult readValueObject( void* pValue, const hashed_string& typeName, const TypeInfo&, ContainerSlot ) override { return readValue( pValue, typeName ); }
-                ContainerReadResult readScalar( void* pValue, const hashed_string& typeName, ContainerSlot ) override { return readValue( pValue, typeName ); }
+                ContainerReadResult readValueObject( const MutableValueAddress value, const hashed_string& typeName, const TypeInfo&, ContainerSlot ) override { return readValue( value, typeName ); }
+                ContainerReadResult readScalar( const MutableValueAddress value, const hashed_string& typeName, ContainerSlot ) override { return readValue( value, typeName ); }
 
                 // 바이너리는 원소 크기를 적지 않는다. 넣을 슬롯이 없는 원소는 지나갈 수 없다.
                 ContainerReadResult skipElement( size_t ) override { return ContainerReadResult::StreamBroken; }
@@ -578,10 +579,10 @@ namespace sw
                 }
 
                 /** @brief 값 하나를 읽습니다. 모르는 열거자는 바이트를 끝까지 읽고 실패하므로 그 원소만 빼고(FieldFailed), 그 밖의 실패는 위치를 알 수 없습니다. */
-                ContainerReadResult readValue( void* pValue, const hashed_string& typeName ) const
+                ContainerReadResult readValue( const MutableValueAddress value, const hashed_string& typeName ) const
                 {
                     const size_t valueStart = *_pInOutOffset;
-                    if ( SerializerUtil::deserializeValueBinary( MutableValueAddress{ pValue }, typeName, _pData, _dataSize, *_pInOutOffset, _context, _wireVersion ) )
+                    if ( SerializerUtil::deserializeValueBinary( value, typeName, _pData, _dataSize, *_pInOutOffset, _context, _wireVersion ) )
                         return ContainerReadResult::Read;
                     const bool bAdvanced  = valueStart < *_pInOutOffset && *_pInOutOffset <= _dataSize;
                     const bool bSkippable = bAdvanced && _context.getTypeRegistry().findEnum( typeName ) != nullptr;
@@ -763,20 +764,20 @@ namespace sw
         return false;
     }
 
-    bool SerializerUtil::serializeNestedContainerBinary( const void* pContainerPtr, const NestedContainerInfo& nested,
+    bool SerializerUtil::serializeNestedContainerBinary( ValueAddress container, const NestedContainerInfo& nested,
                                                          vector<uint8>& listBuffer, const SerializeContext& context )
     {
         SerializerUtilInternal::ContainerWriter writer( listBuffer, context );
-        ContainerVisitor::write( pContainerPtr, nested, writer, context );
+        ContainerVisitor::write( container, nested, writer, context );
         return writer.isAllWritten();
     }
 
-    bool SerializerUtil::deserializeNestedContainerBinary( void* pContainerPtr, const NestedContainerInfo& nested,
+    bool SerializerUtil::deserializeNestedContainerBinary( MutableValueAddress container, const NestedContainerInfo& nested,
                                                            const uint8* pData, size_t dataSize, size_t& offset,
                                                            const SerializeContext& context, BinaryWireVersion wireVersion )
     {
         SerializerUtilInternal::ContainerReader reader( pData, dataSize, &offset, context, wireVersion );
-        return ContainerVisitor::read( pContainerPtr, nested, reader, context ) == ContainerReadResult::Read;
+        return ContainerVisitor::read( container, nested, reader, context ) == ContainerReadResult::Read;
     }
 
     void SerializerUtil::valueToText( StringBuilder<constant::kMaxBuffer8192>& ss, ValueAddress value, const hashed_string& typeName,
@@ -861,14 +862,14 @@ namespace sw
         return false;
     }
 
-    void SerializerUtil::applyPropertyDefault( const PropertyInfo& prop, void* pInstance, const SerializeContext& context )
+    void SerializerUtil::applyPropertyDefault( const PropertyInfo& prop, MutableObjectAddress instance, const SerializeContext& context )
     {
-        if ( pInstance == nullptr || prop._bIsContainer != SW_FALSE )
+        if ( instance.get() == nullptr || prop._bIsContainer != SW_FALSE )
             return;
-        if ( prop._metadata._defaultValue.empty() )
+        if ( prop._metadata->_defaultValue.empty() )
             return;
-        if ( applyPropertyText( prop, MutableObjectAddress{ pInstance }, prop._metadata._defaultValue, context ) == false )
-            SW_LOG_WARNING( "Default '%#' of property '%#' (%#) cannot be read - the field keeps its current value", prop._metadata._defaultValue,
+        if ( applyPropertyText( prop, instance, prop._metadata->_defaultValue, context ) == false )
+            SW_LOG_WARNING( "Default '%#' of property '%#' (%#) cannot be read - the field keeps its current value", prop._metadata->_defaultValue,
                             prop._name.c_str(), prop._typeName.c_str() );
     }
 
@@ -886,18 +887,33 @@ namespace sw
             return true;
         }
 
-        const void* pSrc = prop.getRawPtr( pSrcInstance );
-        void*       pDst = prop.getRawPtr( pDstInstance );
-        if ( pSrc == nullptr || pDst == nullptr )
-            return false;
         vector<uint8> bytes;
-        const bool    bWritten = ( prop._bIsContainer == SW_TRUE && prop.hasContainerWrapper() ) ? serializeNestedContainerBinary( pSrc, prop.getContainerShape(), bytes, context )
-                                                                                                 : serializeValueBinary( ValueAddress{ pSrc }, prop._typeName, bytes, context );
-        return bWritten && applyPropertyBinary( prop, dstInstance, bytes.data(), bytes.size(), context );
+        return writePropertyBinary( prop, srcInstance, bytes, context ) && applyPropertyBinary( prop, dstInstance, bytes.data(), bytes.size(), context );
     }
 
-    bool SerializerUtil::arePropertyValuesEqual( const PropertyInfo& prop, const void* pInstanceA, const void* pInstanceB, const SerializeContext& context )
+    bool SerializerUtil::writePropertyBinary( const PropertyInfo& prop, ObjectAddress instance, vector<uint8>& outBytes, const SerializeContext& context )
     {
+        const void* const pInstance = instance.get();
+        if ( pInstance == nullptr )
+            return false;
+        if ( prop._bIsBitField == SW_TRUE )
+        {
+            // 비트필드는 주소를 가질 수 없어 값으로 꺼내 bool 로 쓴다. 짝(`applyPropertyBinary`)도 bool 로 읽는다.
+            const bool bValue = prop.getValue<bool>( pInstance );
+            return serializeValueBinary( ValueAddress{ &bValue }, hashed_string( "bool" ), outBytes, context );
+        }
+        const void* pValue = prop.getRawPtr( pInstance );
+        if ( pValue == nullptr )
+            return false;
+        if ( prop._bIsContainer == SW_TRUE && prop.hasContainerWrapper() )
+            return serializeNestedContainerBinary( ValueAddress{ pValue }, prop.getContainerShape(), outBytes, context );
+        return serializeValueBinary( ValueAddress{ pValue }, prop._typeName, outBytes, context );
+    }
+
+    bool SerializerUtil::arePropertyValuesEqual( const PropertyInfo& prop, ObjectAddress instanceA, ObjectAddress instanceB, const SerializeContext& context )
+    {
+        const void* const pInstanceA = instanceA.get();
+        const void* const pInstanceB = instanceB.get();
         if ( pInstanceA == nullptr || pInstanceB == nullptr )
             return pInstanceA == pInstanceB;
         if ( prop._bIsBitField == SW_TRUE )
@@ -916,8 +932,8 @@ namespace sw
         bool          bWritten = false;
         if ( prop._bIsContainer == SW_TRUE && prop.hasContainerWrapper() )
         {
-            bWritten = serializeNestedContainerBinary( pA, prop.getContainerShape(), bytesA, context ) &&
-                       serializeNestedContainerBinary( pB, prop.getContainerShape(), bytesB, context );
+            bWritten = serializeNestedContainerBinary( ValueAddress{ pA }, prop.getContainerShape(), bytesA, context ) &&
+                       serializeNestedContainerBinary( ValueAddress{ pB }, prop.getContainerShape(), bytesB, context );
         }
         else
         {
@@ -965,7 +981,7 @@ namespace sw
         if ( pValue == nullptr )
             return false;
         const bool bRead = ( prop._bIsContainer == SW_TRUE && prop.hasContainerWrapper() )
-                             ? deserializeNestedContainerBinary( pValue, prop.getContainerShape(), pPayload, payloadSize, offset, context, wireVersion )
+                             ? deserializeNestedContainerBinary( MutableValueAddress{ pValue }, prop.getContainerShape(), pPayload, payloadSize, offset, context, wireVersion )
                              : deserializeValueBinary( MutableValueAddress{ pValue }, prop._typeName, pPayload, payloadSize, offset, context, wireVersion );
         return bRead && offset == payloadSize;
     }
@@ -1141,7 +1157,7 @@ namespace sw
                 const TypeInfo*            pElement     = findNestedObjectType( prop._elementTypeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
                 const size_t               elementCount = pSequence->getSize( pValue );
                 // 필드 경계는 원소가 아니라 이 프로퍼티를 가진 객체에서 읽는다(인스펙터와 같다).
-                const PropertyAllowedRange range = prop._metadata.hasAllowedRange() ? prop._metadata.computeAllowedRange( pInstance ) : PropertyAllowedRange{};
+                const PropertyAllowedRange range = prop._metadata->hasAllowedRange() ? prop._metadata->computeAllowedRange( pInstance ) : PropertyAllowedRange{};
                 for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
                 {
                     const string      elementPath   = path + "[" + to_string( elementIndex ) + "]";
@@ -1161,8 +1177,8 @@ namespace sw
                 continue;
             }
             float64 value = 0.0;
-            if ( prop._metadata.hasAllowedRange() && Internal::readRangeNumber( prop._typeName.view(), pValue, value ) )
-                Internal::appendRangeError( path, value, prop._metadata.computeAllowedRange( pInstance ), outListError );
+            if ( prop._metadata->hasAllowedRange() && Internal::readRangeNumber( prop._typeName.view(), pValue, value ) )
+                Internal::appendRangeError( path, value, prop._metadata->computeAllowedRange( pInstance ), outListError );
         }
     }
 

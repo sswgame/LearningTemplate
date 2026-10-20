@@ -34,14 +34,18 @@ namespace sw::editor
             int32          _height     = 0;             ///< 세로 텍셀 수
             vector<float4> _listTexel;                  ///< 행 우선, 첫 행이 v = 0 쪽입니다
             atomic<int64>  _lastCheckMilliseconds{ 0 }; ///< 마지막으로 파일 시각을 본 단조 시계(ms)
+            atomic<int64>  _lastUseMilliseconds{ 0 };   ///< 마지막으로 표본한 단조 시계(ms) - 캐시 상한을 넘으면 오래된 것부터 내린다
 
-            bool isValid() const { return _width > 0 && _height > 0 && _listTexel.empty() == false; }
+            bool   isValid() const { return _width > 0 && _height > 0 && _listTexel.empty() == false; }
+            size_t getByteSize() const { return _listTexel.size() * sizeof( float4 ); }
         };
 
         struct MeshModifierTextureSamplerInternal
         {
             /** @brief 파일 시각을 다시 보는 최소 간격입니다. 정점마다 파일 시스템을 묻지 않으려는 것입니다. */
             static constexpr int64 kRecheckIntervalMilliseconds = 1000;
+            /** @brief 디코드한 텍셀 캐시의 상한(바이트)입니다. 넘으면 가장 오래 안 쓴 이미지부터 내린다(방금 읽은 것은 남긴다). 4096² 두 장이 들어간다. */
+            static constexpr size_t kMaxCacheBytes = constant::kBytesPerGigabyte / 2;
 
             static std::shared_mutex& getMutex()
             {
@@ -136,9 +140,55 @@ namespace sw::editor
                     {
                         pTexture                        = decodeFile( assetPath );
                         getCache()[string( assetPath )] = pTexture;
+                        evictOverBudget( *pTexture );
                     }
                 }
+                touch( *pTexture );
                 return pTexture;
+            }
+
+            /** @brief 마지막 사용 시각을 적습니다. 같은 밀리초 안에서는 쓰지 않아 여러 작업 스레드가 한 줄을 두고 다투지 않습니다. */
+            static void touch( DecodedTexture& texture )
+            {
+                const int64 now = getNowMilliseconds();
+                if ( texture._lastUseMilliseconds.load( std::memory_order_relaxed ) != now )
+                    texture._lastUseMilliseconds.store( now, std::memory_order_relaxed );
+            }
+
+            /**
+             * @brief 캐시 합이 상한을 넘으면 최근 1 간격(`kRecheckIntervalMilliseconds`) 동안 안 쓴 이미지를 오래된 것부터 내립니다. 쓰기 잠금 안에서 부릅니다.
+             * @details 지금 적용이 번갈아 쓰는 이미지는 내리지 않는다 — 내리면 정점마다 다시 디코드한다. 그래서 한 적용이 상한보다 많이 쓰면 그 동안은 상한을 넘는다.
+             *          표본 중인 쪽은 shared_ptr 로 들고 있어 내려도 안전하다.
+             */
+            static void evictOverBudget( const DecodedTexture& keep )
+            {
+                unordered_map<string, std::shared_ptr<DecodedTexture>>& cache = getCache();
+                size_t                                                  total = 0;
+                for ( const auto& [path, pTexture] : cache )
+                {
+                    total += pTexture->getByteSize();
+                }
+                const int64 idleBefore = getNowMilliseconds() - kRecheckIntervalMilliseconds;
+                while ( total > kMaxCacheBytes )
+                {
+                    auto  oldest        = cache.end();
+                    int64 oldestLastUse = idleBefore;
+                    for ( auto iter = cache.begin(); iter != cache.end(); ++iter )
+                    {
+                        const int64 lastUse    = iter->second->_lastUseMilliseconds.load( std::memory_order_relaxed );
+                        const bool  bCandidate = iter->second.get() != &keep && lastUse < oldestLastUse;
+                        if ( bCandidate )
+                        {
+                            oldest        = iter;
+                            oldestLastUse = lastUse;
+                        }
+                    }
+                    if ( oldest == cache.end() )
+                        break; // 남은 것은 방금 읽었거나 지금 쓰는 이미지뿐이다
+                    SW_LOG_INFO( "Mesh modifier texture cache over %# MB - dropping '%#'", kMaxCacheBytes / constant::kBytesPerMegabyte, oldest->first.c_str() );
+                    total -= oldest->second->getByteSize();
+                    cache.erase( oldest );
+                }
             }
 
             static int32 wrapIndex( int32 index, int32 size )

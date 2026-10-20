@@ -14,9 +14,14 @@
 PCH 에서 핵심 헤더를 뺀 뒤에도 `ReflectionTypes.h`(1,280 줄, 3 개월 71 번 변경) · `TypeRegistry.h` · `ReflectionCore.h` 는 TU 1,150 ~ 1,250 개가 읽습니다. `REFLECT` 매크로를 쓰는 모든 .cpp 와
 코드젠 `.gen.cpp` 가 필요로 해서입니다. 바뀐 내용 대부분은 이름 · 주석 일괄 치환이지만, 기능 추가(`PROPERTY` 속성 키 등)가 한 번 들어갈 때마다 약 1,200 TU 입니다.
 
-- 할 일: `ReflectionTypes.h` 에서 코드젠 · 런타임 중 한쪽만 쓰는 부분(속성 키 표, 검증, 값 변환)을 헤더로 가르고, `.gen.cpp` 는 앞쪽만 include 하는지 `/clang:-M` 로 후보를 센다.
+- 들어간 것(빌드 · 측정 전): 속성 키 표(`TypeMetadata` · `PropertyMetadata` · `FunctionMetadata`)를 `ReflectionMetadata.h` 로 갈랐다. `ReflectionTypes.h` 는 그 구조를
+  `ReflectMetadataBox`(복사 · 소멸을 만들 때 적은 함수 표로 해서 정의 없이 값처럼 드는 상자)로만 들고, 칸은 `->` 로 읽는다(`prop._metadata->_bTransient`).
+  include 하는 곳은 칸을 읽는 .cpp 약 40 개, `SerializerUtil.h`, 생성 코드(`ReflectGenerated.h`)뿐이다. 속성 키를 더할 때 다시 컴파일되는 TU 가 약 1,200 → 생성 TU + 약 80 으로 줄 것으로 본다.
+- 남은 일: 검증(`ReflectionValidation.h`)과 값 변환(`ReflectValue.h`)은 `ReflectionCore.h` 묶음을 거쳐 `Component.h` · `RHITypes.h` 가 읽는다. 두 헤더가 묶음 대신
+  쓰는 것만 include 하게 바꾸는 것이 다음 후보다(그 헤더에 기대던 TU 를 빌드로 찾아야 해서 빌드할 수 있을 때 한다).
   `GameObjectManager.h`(3 개월 107 번, TU 244 개)의 값 멤버 서브시스템 넷을 `unique_ptr` 로 바꾸는 안(후보 `HeaderIncludeSlimming` ②)도 같은 잣대(바뀐 횟수 × TU 수)로 다시 본다.
-- 확인: 후보 `pch.h` 를 `-I` 맨 앞에 둔 `/clang:-M` 전처리로 헤더별 의존 TU 수를 전후로 견주고, 헤더를 건드린 증분 시간을 잰다.
+- 확인: 후보 `pch.h` 를 `-I` 맨 앞에 둔 `/clang:-M` 전처리로 `ReflectionTypes.h` · `ReflectionMetadata.h` 의 의존 TU 수를 전후로 견주고, `ReflectionMetadata.h` 를 건드린 증분 시간을 잰다.
+  상자가 더한 간접 참조 한 번이 직렬화 벤치 · 씬 로드 시간에 보이는지도 본다.
 
 ## 5. 유니티 범위 확대 — 측정 한 쌍뿐이라 되돌림
 

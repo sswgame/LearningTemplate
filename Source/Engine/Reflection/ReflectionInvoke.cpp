@@ -5,6 +5,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Reflection/EnumName.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 SW_LOG_CALLER( "ReflectionInvoke" );
@@ -120,7 +121,7 @@ namespace sw
             *pOutResult = ReflectValue{};
         if ( function._invoker.isBound() == false )
             return ReflectCallResult::NotBound;
-        if ( pInstance == nullptr && function._metadata._bStatic == SW_FALSE )
+        if ( pInstance == nullptr && function._metadata->_bStatic == SW_FALSE )
             return ReflectCallResult::NullInstance;
 
         TaskArgs                args;

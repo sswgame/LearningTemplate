@@ -8,6 +8,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Resource/ResourcePaths.h"
 
 #include "ReflectionParser/AnnotationMeta.h"
@@ -320,22 +321,22 @@ SW_TEST_CASE( ReflectionParserTest, AssignedFlagFormMatchesBareToken )
 
     const sw::PropertyInfo* pAlbedo = pActor->findProperty( sw::hashed_string( "_albedo" ) );
     SW_ASSERT_NOT_NULL( pAlbedo );
-    SW_EXPECT_TRUE( pAlbedo->_metadata._bAssetPath == SW_TRUE );
+    SW_EXPECT_TRUE( pAlbedo->_metadata->_bAssetPath == SW_TRUE );
 
     const sw::PropertyInfo* pPayload = pActor->findProperty( sw::hashed_string( "_payload" ) );
     SW_ASSERT_NOT_NULL( pPayload );
-    SW_EXPECT_TRUE( pPayload->_metadata._bPolymorphic == SW_TRUE );
+    SW_EXPECT_TRUE( pPayload->_metadata->_bPolymorphic == SW_TRUE );
 
     // 별칭 목록이 한쪽만 늘어나 있던 자리 — 단독 토큰으로는 `xmlAttribute` 가 먹혔다.
     const sw::PropertyInfo* pTag = pActor->findProperty( sw::hashed_string( "_tag" ) );
     SW_ASSERT_NOT_NULL( pTag );
-    SW_EXPECT_TRUE( pTag->_metadata._bXMLAttribute == SW_TRUE );
+    SW_EXPECT_TRUE( pTag->_metadata->_bXMLAttribute == SW_TRUE );
 
     const sw::FunctionInfo* pPing = pActor->findMethod( sw::hashed_string( "ping" ) );
     SW_ASSERT_NOT_NULL( pPing );
-    SW_EXPECT_TRUE( pPing->_metadata._bReliable == SW_TRUE );
-    SW_EXPECT_TRUE( pPing->_metadata._bValidate == SW_TRUE );
-    SW_EXPECT_TRUE( pPing->_metadata._netRole == sw::FunctionNetRole::Server );
+    SW_EXPECT_TRUE( pPing->_metadata->_bReliable == SW_TRUE );
+    SW_EXPECT_TRUE( pPing->_metadata->_bValidate == SW_TRUE );
+    SW_EXPECT_TRUE( pPing->_metadata->_netRole == sw::FunctionNetRole::Server );
 }
 
 /**
@@ -350,10 +351,10 @@ SW_TEST_CASE( ReflectionParserTest, CodegenStaticLibraryAndCtorMetadata )
 
     const sw::FunctionInfo* pFunc = pStaticType->findMethod( sw::hashed_string( "doubleInt" ) );
     SW_ASSERT_NOT_NULL( pFunc );
-    SW_EXPECT_TRUE( pFunc->_metadata._bStatic == SW_TRUE );
+    SW_EXPECT_TRUE( pFunc->_metadata->_bStatic == SW_TRUE );
 #if !defined( SW_SHIPPING )
-    SW_EXPECT_EQUAL( sw::string( "Math" ), pFunc->_metadata._category );
-    SW_EXPECT_EQUAL( sw::string( "Double Int" ), pFunc->_metadata._displayName );
+    SW_EXPECT_EQUAL( sw::string( "Math" ), pFunc->_metadata->_category );
+    SW_EXPECT_EQUAL( sw::string( "Double Int" ), pFunc->_metadata->_displayName );
 #endif
 
     // 2) 명시적 생성자 코드젠 ($ctor, $ctor(int32)) 검증
@@ -362,11 +363,11 @@ SW_TEST_CASE( ReflectionParserTest, CodegenStaticLibraryAndCtorMetadata )
 
     const sw::FunctionInfo* pDefaultCtor = pCtorType->findMethod( sw::hashed_string( "$ctor" ) );
     SW_ASSERT_NOT_NULL( pDefaultCtor );
-    SW_EXPECT_TRUE( pDefaultCtor->_metadata._bConstructor == SW_TRUE );
+    SW_EXPECT_TRUE( pDefaultCtor->_metadata->_bConstructor == SW_TRUE );
 
     const sw::FunctionInfo* pParamCtor = pCtorType->findMethod( sw::hashed_string( "$ctor(int32)" ) );
     SW_ASSERT_NOT_NULL( pParamCtor );
-    SW_EXPECT_TRUE( pParamCtor->_metadata._bConstructor == SW_TRUE );
+    SW_EXPECT_TRUE( pParamCtor->_metadata->_bConstructor == SW_TRUE );
 
     // 3) AbstractDemoBase _bAbstract 검증
     const sw::TypeInfo* pAbstractType = sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::AbstractDemoBase" ) );
@@ -378,8 +379,8 @@ SW_TEST_CASE( ReflectionParserTest, CodegenStaticLibraryAndCtorMetadata )
     SW_ASSERT_NOT_NULL( pAssetPathType );
     const sw::PropertyInfo* pAlbedoProp = pAssetPathType->findProperty( sw::hashed_string( "_albedo" ) );
     SW_ASSERT_NOT_NULL( pAlbedoProp );
-    SW_EXPECT_TRUE( pAlbedoProp->_metadata._bAssetPath == SW_TRUE );
-    SW_EXPECT_EQUAL( sw::string( "Texture" ), pAlbedoProp->_metadata._assetType );
+    SW_EXPECT_TRUE( pAlbedoProp->_metadata->_bAssetPath == SW_TRUE );
+    SW_EXPECT_EQUAL( sw::string( "Texture" ), pAlbedoProp->_metadata->_assetType );
 }
 
 /**
@@ -414,9 +415,9 @@ SW_TEST_CASE( ReflectionParserTest, MultiplePropertyAliasesAndRenameCompat )
     const sw::PropertyInfo* pTitleProp = pDefaultType->findProperty( sw::hashed_string( "_title" ) );
     SW_ASSERT_NOT_NULL( pManaProp );
     SW_ASSERT_NOT_NULL( pTitleProp );
-    SW_EXPECT_EQUAL( sw::string( "75" ), pManaProp->_metadata._defaultValue );
-    SW_EXPECT_EQUAL( sw::string( "Apprentice" ), pTitleProp->_metadata._defaultValue );
-    SW_EXPECT_TRUE( pTitleProp->_metadata._bXMLAttribute == SW_TRUE );
+    SW_EXPECT_EQUAL( sw::string( "75" ), pManaProp->_metadata->_defaultValue );
+    SW_EXPECT_EQUAL( sw::string( "Apprentice" ), pTitleProp->_metadata->_defaultValue );
+    SW_EXPECT_TRUE( pTitleProp->_metadata->_bXMLAttribute == SW_TRUE );
 }
 
 /**
@@ -459,12 +460,12 @@ SW_TEST_CASE( ReflectionParserTest, RPCMethodMetadataAndInvokerExecution )
     const sw::FunctionInfo* pMethod = pRPCType->findMethod( sw::hashed_string( "applyDamage" ) );
     SW_ASSERT_NOT_NULL( pMethod );
 
-    SW_EXPECT_TRUE( pMethod->_metadata._netRole == sw::FunctionNetRole::Server );
-    SW_EXPECT_TRUE( pMethod->_metadata._bReliable == SW_TRUE );
+    SW_EXPECT_TRUE( pMethod->_metadata->_netRole == sw::FunctionNetRole::Server );
+    SW_EXPECT_TRUE( pMethod->_metadata->_bReliable == SW_TRUE );
 #if !defined( SW_SHIPPING )
-    SW_EXPECT_EQUAL( sw::string( "Combat" ), pMethod->_metadata._category );
-    SW_EXPECT_EQUAL( sw::string( "Apply Damage" ), pMethod->_metadata._displayName );
-    SW_EXPECT_EQUAL( sw::string( "Subtracts amount from HP" ), pMethod->_metadata._tooltip );
+    SW_EXPECT_EQUAL( sw::string( "Combat" ), pMethod->_metadata->_category );
+    SW_EXPECT_EQUAL( sw::string( "Apply Damage" ), pMethod->_metadata->_displayName );
+    SW_EXPECT_EQUAL( sw::string( "Subtracts amount from HP" ), pMethod->_metadata->_tooltip );
 #endif
 
     // Invoker 실행 검증
@@ -922,8 +923,8 @@ SW_TEST_CASE( ReflectionParserTest, RuntimeStateContradictionsStopTheBuild )
     SW_ASSERT_TRUE_MSG( goodRun._exitCode == 0, goodRun._log.c_str() );
     SW_ASSERT_TRUE( goodRun._listGeneratedCpp.empty() == false );
     const sw::string& generated = goodRun._listGeneratedCpp[0];
-    SW_EXPECT_TRUE_MSG( generated.find( "p._metadata._bRuntimeState" ) != sw::string::npos, generated.c_str() );
-    SW_EXPECT_TRUE_MSG( generated.find( "p._metadata._bSaveGame" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "p._metadata->_bRuntimeState" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "p._metadata->_bSaveGame" ) != sw::string::npos, generated.c_str() );
 #endif
 }
 
@@ -2193,8 +2194,8 @@ SW_TEST_CASE( ReflectionParserTest, PropertyRoleAnnotationsAreValidated )
     const sw::string& generated = run._listGeneratedCpp[0];
     SW_EXPECT_TRUE_MSG( generated.find( "->onHp( *static_cast<const PropDecl*>( pOldValue ) );" ) != sw::string::npos, generated.c_str() );
     SW_EXPECT_TRUE_MSG( generated.find( "->onMp(); };" ) != sw::string::npos, generated.c_str() );
-    SW_EXPECT_TRUE_MSG( generated.find( "p._metadata._bReplicated = SW_TRUE;" ) != sw::string::npos, generated.c_str() );
-    SW_EXPECT_TRUE_MSG( generated.find( "p._metadata._bSaveGame = SW_TRUE;" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "p._metadata->_bReplicated = SW_TRUE;" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "p._metadata->_bSaveGame = SW_TRUE;" ) != sw::string::npos, generated.c_str() );
 
     SW_EXPECT_TRUE_MSG( run._exitCode != 0, run._log.c_str() );
     for ( size_t brokenIndex = 1; brokenIndex < 4; ++brokenIndex )
@@ -2247,8 +2248,8 @@ SW_TEST_CASE( ReflectionParserTest, DisplayMetadataIsValidated )
 
     const sw::string& generated = run._listGeneratedCpp[0];
     SW_EXPECT_TRUE_MSG( generated.find( "{ ::sw::hashed_string( \"Units\" ), \"m/s\" }," ) != sw::string::npos, generated.c_str() );
-    SW_EXPECT_TRUE_MSG( generated.find( "p._metadata._uiMaxRange   = 30.000000f;" ) != sw::string::npos, generated.c_str() );
-    SW_EXPECT_TRUE_MSG( generated.find( "p._metadata._editCondition = \"!_bLocked\";" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "p._metadata->_uiMaxRange   = 30.000000f;" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "p._metadata->_editCondition = \"!_bLocked\";" ) != sw::string::npos, generated.c_str() );
     const sw::string& generatedLabel = run._listGeneratedCpp[1];
     SW_EXPECT_TRUE_MSG( generatedLabel.find( "{ ::sw::hashed_string( \"Units\" ), \"HP\" }," ) != sw::string::npos, generatedLabel.c_str() );
 
@@ -2303,7 +2304,7 @@ SW_TEST_CASE( ReflectionParserTest, ValidateFunctionsAreChecked )
     SW_EXPECT_TRUE_MSG( generated.find( "info._pValidate = []( const void* pInstance, ::sw::ValidationContext& context )" ) != sw::string::npos, generated.c_str() );
     SW_EXPECT_TRUE_MSG( generated.find( "->checkAll( context ); };" ) != sw::string::npos, generated.c_str() );
     SW_EXPECT_TRUE_MSG( generated.find( "p._pValidate = []( const void* pInstance, ::sw::ValidationContext& context )" ) != sw::string::npos, generated.c_str() );
-    SW_EXPECT_TRUE_MSG( generated.find( "p._metadata._validate = \"checkHp\";" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "p._metadata->_validate = \"checkHp\";" ) != sw::string::npos, generated.c_str() );
 
     SW_EXPECT_TRUE_MSG( run._exitCode != 0, run._log.c_str() );
     SW_EXPECT_TRUE_MSG( run._listGeneratedCpp[1].find( "struct Registrar" ) == sw::string::npos, run._listGeneratedCpp[1].c_str() );

@@ -7,6 +7,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Reflection/ReflectionEnumNames.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
@@ -69,7 +70,7 @@ namespace sw
             /** @brief 프로퍼티의 플래그 · 역할 · 표시 메타를 한 칸에 씁니다. */
             static string makePropertyFlags( const PropertyInfo& prop )
             {
-                const PropertyMetadata& meta = prop._metadata;
+                const PropertyMetadata& meta = *prop._metadata;
                 string                  text;
                 const auto              add = [&text]( const string_view item )
                 {
@@ -135,10 +136,10 @@ namespace sw
         if ( type._addComponent != nullptr )
             out += "- 컴포넌트(이름으로 만들 수 있다)\n";
 #if !defined( SW_SHIPPING )
-        if ( type._metadata._category.empty() == false )
-            out += "- 분류: " + type._metadata._category + "\n";
-        if ( type._metadata._tooltip.empty() == false )
-            out += "- 설명: " + ReflectionDocWriterInternal::escapeCell( type._metadata._tooltip ) + "\n";
+        if ( type._metadata->_category.empty() == false )
+            out += "- 분류: " + type._metadata->_category + "\n";
+        if ( type._metadata->_tooltip.empty() == false )
+            out += "- 설명: " + ReflectionDocWriterInternal::escapeCell( type._metadata->_tooltip ) + "\n";
 #endif
         if ( type._pValidate != nullptr )
             out += "- 타입 검증 함수가 있다\n";
@@ -150,10 +151,10 @@ namespace sw
             {
                 string tooltip;
 #if !defined( SW_SHIPPING )
-                tooltip = prop._metadata._tooltip;
+                tooltip = prop._metadata->_tooltip;
 #endif
                 out += "| `" + string( prop._name.c_str() ) + "` | `" + ReflectionDocWriterInternal::escapeCell( prop._typeName.view() ) + "` | " +
-                       ReflectionDocWriterInternal::escapeCell( prop._metadata._defaultValue ) + " | " + ReflectionDocWriterInternal::makeRange( prop._metadata ) +
+                       ReflectionDocWriterInternal::escapeCell( prop._metadata->_defaultValue ) + " | " + ReflectionDocWriterInternal::makeRange( *prop._metadata ) +
                        " | " + ReflectionDocWriterInternal::makePropertyFlags( prop ) + " | " + ReflectionDocWriterInternal::escapeCell( tooltip ) + " |\n";
             }
         }
@@ -161,7 +162,7 @@ namespace sw
         bool bFunctionHeader = false;
         for ( const FunctionInfo& function : type._listMethod )
         {
-            if ( function._metadata._bConstructor == SW_TRUE )
+            if ( function._metadata->_bConstructor == SW_TRUE )
                 continue;
             if ( bFunctionHeader == false )
             {
@@ -171,8 +172,8 @@ namespace sw
             out += "- `" + ( function._returnTypeName.empty() ? string( "void" ) : function._returnTypeName ) + " " + function._name + "(";
             ReflectionDocWriterInternal::appendParameterList( out, function._listParameter );
             out += ")`";
-            if ( function._metadata._netRole != FunctionNetRole::Local )
-                out += string( " — " ) + toString( function._metadata._netRole );
+            if ( function._metadata->_netRole != FunctionNetRole::Local )
+                out += string( " — " ) + toString( function._metadata->_netRole );
             out += "\n";
         }
 
