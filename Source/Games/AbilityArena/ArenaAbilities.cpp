@@ -12,6 +12,8 @@
 
 namespace sw
 {
+    SW_LOG_CALLER( "ArenaAbilities" );
+
     void ArenaMeleeStrikeAbility::activateAbility( const GameplayEventData* pTriggerEvent )
     {
         (void)pTriggerEvent;
@@ -23,13 +25,22 @@ namespace sw
 
         AbilitySystemComponent*       pAbilitySystem = getAbilitySystem();
         const ArenaDirectorComponent* pDirector      = pAbilitySystem != nullptr ? ArenaDirectorComponent::findForUnit( *pAbilitySystem ) : nullptr;
+        // 사거리 · 피해는 어빌리티 데이터(`<Param>`)가 반드시 적는다.
+        const std::optional<float32> range  = getParameter( "range" );
+        const std::optional<float32> damage = getParameter( "damage" );
+        if ( range.has_value() == false || damage.has_value() == false )
+        {
+            SW_LOG_ERROR( "ability '%#' needs <Param name=\"range\"> and <Param name=\"damage\">", getConfig()._id.c_str() );
+            cancelAbility();
+            return;
+        }
         if ( pDirector != nullptr )
         {
-            AbilitySystemComponent* pTarget = pDirector->findNearestHostile( *pAbilitySystem, getParameter( "range", 2.0f ) );
+            AbilitySystemComponent* pTarget = pDirector->findNearestHostile( *pAbilitySystem, *range );
             GameplayEffectSpec      spec    = makeOutgoingSpec( getNameParameter( "damageEffect" ) );
             if ( pTarget != nullptr && spec.isValid() )
             {
-                spec.setSetByCallerMagnitude( "Damage", getParameter( "damage", 0.0f ) );
+                spec.setSetByCallerMagnitude( "Damage", *damage );
                 (void)applyEffectSpecToTarget( spec, pTarget ); // 무적(BlockedTag)이면 걸리지 않는다
             }
         }
@@ -49,14 +60,25 @@ namespace sw
         const ArenaDirectorComponent* pDirector      = pAbilitySystem != nullptr ? ArenaDirectorComponent::findForUnit( *pAbilitySystem ) : nullptr;
         const GameObject*             pOwner         = pAbilitySystem != nullptr ? pAbilitySystem->getOwner() : nullptr;
         const ArenaUnitComponent*     pUnit          = pOwner != nullptr ? pOwner->getComponent<ArenaUnitComponent>() : nullptr;
+        // 피해 · 속도 · 사거리는 어빌리티 데이터(`<Param>`)가 반드시 적는다.
+        const std::optional<float32> damage    = getParameter( "damage" );
+        const std::optional<float32> speed     = getParameter( "speed" );
+        const std::optional<float32> range     = getParameter( "range" );
+        const bool                   bComplete = damage.has_value() && speed.has_value() && range.has_value();
+        if ( bComplete == false )
+        {
+            SW_LOG_ERROR( "ability '%#' needs <Param name=\"damage\">, \"speed\" and \"range\"", getConfig()._id.c_str() );
+            cancelAbility();
+            return;
+        }
         if ( pDirector != nullptr && pUnit != nullptr )
         {
             GameplayEffectSpec spec = makeOutgoingSpec( getNameParameter( "damageEffect" ) );
             if ( spec.isValid() )
-                spec.setSetByCallerMagnitude( "Damage", getParameter( "damage", 0.0f ) );
+                spec.setSetByCallerMagnitude( "Damage", *damage );
             const hashed_string      extraEffect = getNameParameter( "extraEffect" );
             const GameplayEffectSpec extraSpec   = extraEffect.empty() ? GameplayEffectSpec{} : makeOutgoingSpec( extraEffect );
-            pDirector->launchProjectile( *pAbilitySystem, pUnit->getFacing(), spec, extraSpec, getParameter( "speed", 10.0f ), getParameter( "range", 12.0f ) );
+            pDirector->launchProjectile( *pAbilitySystem, pUnit->getFacing(), spec, extraSpec, *speed, *range );
         }
         endAbility();
     }
@@ -73,7 +95,14 @@ namespace sw
         const hashed_string dashEffect = getNameParameter( "dashEffect" );
         if ( dashEffect.empty() == false )
             (void)applyEffectSpecToOwner( makeOutgoingSpec( dashEffect ) ); // 이펙트가 없어도 대시는 시간만큼 돈다
-        (void)waitDelay( getParameter( "duration", 0.25f ), SW_DELEGATE_METHOD( Delegate<void()>, &ArenaDashAbility::handleDashFinished, this ) );
+        const std::optional<float32> duration = getParameter( "duration" );
+        if ( duration.has_value() == false )
+        {
+            SW_LOG_ERROR( "ability '%#' needs <Param name=\"duration\">", getConfig()._id.c_str() );
+            endAbility();
+            return;
+        }
+        (void)waitDelay( *duration, SW_DELEGATE_METHOD( Delegate<void()>, &ArenaDashAbility::handleDashFinished, this ) );
     }
 
     void ArenaDashAbility::handleDashFinished()

@@ -10,6 +10,8 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 
+#include <optional>
+
 namespace sw
 {
     class Archive;
@@ -33,9 +35,14 @@ namespace sw
     class SW_GF_API StatBlock
     {
     public:
-        void    setValue( const hashed_string& name, float32 value );
-        void    addValue( const hashed_string& name, float32 value );
-        float32 getValue( const hashed_string& name, float32 fallback = 0.0f ) const;
+        void setValue( const hashed_string& name, float32 value );
+        void addValue( const hashed_string& name, float32 value );
+        /** @brief 더하는 값(보너스 · 비용 · 자원)으로 읽습니다. 없는 이름의 기여는 합의 항등원 0 입니다 — 호출부가 다른 기본값을 넣지 않는다. */
+        float32 getValue( const hashed_string& name ) const;
+        /** @brief 이름이 있을 때만 값입니다. 반드시 있어야 하는 값(지속 시간 · 배율)은 이것으로 읽고 없음을 오류로 다룹니다. */
+        [[nodiscard]] std::optional<float32> findValue( const hashed_string& name ) const;
+        /** @brief 곱하는 배율로 읽습니다. 없는 이름은 곱의 항등원 1 입니다(보정이 없음) — 호출부가 다른 기본값을 넣지 않는다. */
+        float32 getScale( const hashed_string& name ) const;
         bool    hasValue( const hashed_string& name ) const;
         /** @brief @p other 의 값을 더합니다(@p scale 배). */
         void merge( const StatBlock& other, float32 scale = 1.0f );

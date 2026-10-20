@@ -217,7 +217,7 @@ namespace sw
         for ( int32 index = 0; index < count; ++index )
         {
             if ( target._listSkillRemaining[static_cast<size_t>( index )].isActive() )
-                scale *= target._listSkill[static_cast<size_t>( index )]->_modifier.getValue( name, 1.0f );
+                scale *= target._listSkill[static_cast<size_t>( index )]->_modifier.getScale( name );
         }
         return scale;
     }

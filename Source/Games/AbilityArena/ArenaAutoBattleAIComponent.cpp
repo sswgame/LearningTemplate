@@ -36,9 +36,11 @@ namespace sw
             stopMoving();
             return;
         }
-        const float32 healthRatio = pAbilitySystem->getAttributeValue( CombatAttributes::health() ) /
-                                    MathUtil::max( 1.0f, pAbilitySystem->getAttributeValue( CombatAttributes::maxHealth() ) );
-        if ( healthRatio < _healBelow )
+        // 체력 어트리뷰트가 없는 유닛은 회복을 판단하지 않는다(전투 세트를 받지 않은 유닛).
+        const std::optional<float32> health     = pAbilitySystem->getAttributeValue( CombatAttributes::health() );
+        const std::optional<float32> maxHealth  = pAbilitySystem->getAttributeValue( CombatAttributes::maxHealth() );
+        const bool                   bHasHealth = health.has_value() && maxHealth.has_value();
+        if ( bHasHealth && *health / MathUtil::max( 1.0f, *maxHealth ) < _healBelow )
             pressButton( hashed_string( "Arena.Heal" ) );
 
         float3 targetPosition{};

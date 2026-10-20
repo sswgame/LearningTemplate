@@ -13,6 +13,28 @@
 
 namespace sw
 {
+    namespace
+    {
+        struct CombatAttributeSetInternal
+        {
+            /** @brief 이 세트가 등록한 어트리뷰트의 base 값입니다. 세트가 늘 가지는 이름만 부르므로 없을 수 없다(없으면 단언). */
+            static float32 readOwnBase( const AttributeSet& set, const hashed_string& name )
+            {
+                const AttributeData* pData = set.findAttribute( name );
+                SW_ASSERT( pData != nullptr );
+                return pData->_baseValue;
+            }
+
+            /** @brief 이 세트가 등록한 어트리뷰트의 current 값입니다. */
+            static float32 readOwnCurrent( const AttributeSet& set, const hashed_string& name )
+            {
+                const AttributeData* pData = set.findAttribute( name );
+                SW_ASSERT( pData != nullptr );
+                return pData->_currentValue;
+            }
+        };
+    } // namespace
+
     const hashed_string& CombatAttributes::health()
     {
         static const hashed_string kName{ "Health" };
@@ -125,7 +147,7 @@ namespace sw
         if ( currentName.empty() )
             return;
 
-        const float32 currentBase = pAbilitySystem->getAttributeBaseValue( currentName );
+        const float32 currentBase = CombatAttributeSetInternal::readOwnBase( *this, currentName );
         if ( currentBase > newValue )
             (void)pAbilitySystem->setAttributeBaseValue( currentName, newValue ); // 이 세트가 가진 어트리뷰트이므로 실패하지 않는다
     }
@@ -145,12 +167,12 @@ namespace sw
         const AbilitySystemComponent* pAbilitySystem = getOwningAbilitySystem();
         if ( name == CombatAttributes::health() )
         {
-            const float32 maxValue = pAbilitySystem != nullptr ? pAbilitySystem->getAttributeValue( CombatAttributes::maxHealth() ) : inoutValue;
+            const float32 maxValue = pAbilitySystem != nullptr ? CombatAttributeSetInternal::readOwnCurrent( *this, CombatAttributes::maxHealth() ) : inoutValue;
             inoutValue             = MathUtil::clamp( inoutValue, 0.0f, MathUtil::max( 0.0f, maxValue ) );
         }
         else if ( name == CombatAttributes::mana() )
         {
-            const float32 maxValue = pAbilitySystem != nullptr ? pAbilitySystem->getAttributeValue( CombatAttributes::maxMana() ) : inoutValue;
+            const float32 maxValue = pAbilitySystem != nullptr ? CombatAttributeSetInternal::readOwnCurrent( *this, CombatAttributes::maxMana() ) : inoutValue;
             inoutValue             = MathUtil::clamp( inoutValue, 0.0f, MathUtil::max( 0.0f, maxValue ) );
         }
         else
@@ -168,14 +190,14 @@ namespace sw
             return;
 
         // 메타 어트리뷰트는 받자마자 비운다. 다음 피해가 이 값 위에 쌓이지 않게 하기 위해서다.
-        const float32 damage = pAbilitySystem->getAttributeBaseValue( CombatAttributes::incomingDamage() );
+        const float32 damage = CombatAttributeSetInternal::readOwnBase( *this, CombatAttributes::incomingDamage() );
         (void)pAbilitySystem->setAttributeBaseValue( CombatAttributes::incomingDamage(), 0.0f );
         if ( damage <= 0.0f || pAbilitySystem->getOwnedTagCounts().hasMatchingTag( getDeadTag() ) )
             return;
 
-        const float32 oldHealth = pAbilitySystem->getAttributeBaseValue( CombatAttributes::health() );
+        const float32 oldHealth = CombatAttributeSetInternal::readOwnBase( *this, CombatAttributes::health() );
         (void)pAbilitySystem->setAttributeBaseValue( CombatAttributes::health(), oldHealth - damage );
-        const float32 newHealth = pAbilitySystem->getAttributeBaseValue( CombatAttributes::health() );
+        const float32 newHealth = CombatAttributeSetInternal::readOwnBase( *this, CombatAttributes::health() );
 
         GameObject* pOwner = pAbilitySystem->getOwner();
         if ( oldHealth > newHealth )
@@ -199,12 +221,12 @@ namespace sw
         if ( pAbilitySystem == nullptr )
             return;
 
-        const float32 healing = pAbilitySystem->getAttributeBaseValue( CombatAttributes::incomingHealing() );
+        const float32 healing = CombatAttributeSetInternal::readOwnBase( *this, CombatAttributes::incomingHealing() );
         (void)pAbilitySystem->setAttributeBaseValue( CombatAttributes::incomingHealing(), 0.0f );
         if ( healing <= 0.0f || pAbilitySystem->getOwnedTagCounts().hasMatchingTag( getDeadTag() ) )
             return;
 
-        const float32 health = pAbilitySystem->getAttributeBaseValue( CombatAttributes::health() );
+        const float32 health = CombatAttributeSetInternal::readOwnBase( *this, CombatAttributes::health() );
         (void)pAbilitySystem->setAttributeBaseValue( CombatAttributes::health(), health + healing ); // 최대치는 훅이 자른다
     }
 

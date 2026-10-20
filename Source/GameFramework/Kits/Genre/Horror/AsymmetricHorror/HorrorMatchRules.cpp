@@ -243,7 +243,7 @@ namespace sw
         if ( pRule == nullptr )
             return;
         const float32 cap   = _pCatalog->getCategoryCap( pRule->_category );
-        float32       value = outScore.getValue( pRule->_category, 0.0f ) + pRule->_points * amount;
+        float32       value = outScore.getValue( pRule->_category ) + pRule->_points * amount;
         if ( cap > 0.0f )
             value = MathUtil::min( value, cap );
         outScore.setValue( pRule->_category, value );

@@ -119,10 +119,12 @@ namespace sw
         finishActivation( true );
     }
 
-    float32 GameplayAbility::getParameter( const hashed_string& name, float32 fallback ) const
+    std::optional<float32> GameplayAbility::getParameter( const hashed_string& name ) const
     {
         const auto mapIter = _config._mapParameter.find( name );
-        return mapIter != _config._mapParameter.end() ? mapIter->second : fallback;
+        if ( mapIter == _config._mapParameter.end() )
+            return std::nullopt;
+        return mapIter->second;
     }
 
     hashed_string GameplayAbility::getNameParameter( const hashed_string& name ) const

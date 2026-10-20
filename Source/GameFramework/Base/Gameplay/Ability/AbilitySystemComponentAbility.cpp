@@ -416,14 +416,17 @@ namespace sw
 
     HealthReading AbilitySystemComponent::getHealthReading() const
     {
-        HealthReading reading;
-        if ( hasAttribute( _healthAttribute ) == false )
+        // 체력과 최대 체력이 둘 다 있어야 읽은 것이다 — 없는 최대 체력을 0 으로 보지 않는다.
+        HealthReading                reading;
+        const std::optional<float32> health    = getAttributeValue( _healthAttribute );
+        const std::optional<float32> maxHealth = getAttributeValue( _maxHealthAttribute );
+        if ( health.has_value() == false || maxHealth.has_value() == false )
         {
             reading._bHasHealth = SW_FALSE;
             return reading;
         }
-        reading._health    = getAttributeValue( _healthAttribute );
-        reading._maxHealth = getAttributeValue( _maxHealthAttribute );
+        reading._health    = *health;
+        reading._maxHealth = *maxHealth;
         reading._bDead     = reading._health <= 0.0f ? SW_TRUE : SW_FALSE;
         return reading;
     }

@@ -32,6 +32,8 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 
+#include <optional>
+
 namespace sw
 {
     class XMLNode;
@@ -69,8 +71,8 @@ namespace sw
         vector<int32>         _listParamValue{};
         uint32                _flags{ 0 };
 
-        /** @brief 이름에 해당하는 수치입니다. 없으면 @p fallback 입니다. */
-        int32 getParam( const hashed_string& name, int32 fallback ) const;
+        /** @brief 이름에 해당하는 수치입니다. 이 재질이 적지 않은 이름이면 비어 있습니다(부르는 쪽이 그 뜻을 정한다). */
+        [[nodiscard]] std::optional<int32> getParam( const hashed_string& name ) const;
     };
 } // namespace sw
 

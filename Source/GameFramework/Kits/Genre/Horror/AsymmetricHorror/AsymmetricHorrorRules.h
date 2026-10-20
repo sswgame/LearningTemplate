@@ -300,7 +300,7 @@ namespace sw
         const vector<HorrorKillerDef>& getKillers() const { return _catalogKiller.getAll(); }
         const HorrorScoreRule*         findScoreRule( const hashed_string& action ) const;
         /** @brief 범주의 상한을 반환합니다(없으면 0 이며 상한이 없다는 뜻입니다). */
-        float32 getCategoryCap( const hashed_string& category ) const { return _categoryCap.getValue( category, 0.0f ); }
+        float32 getCategoryCap( const hashed_string& category ) const { return _categoryCap.getValue( category ); }
 
     private:
         static constexpr const utf8* kXMLRootName = "AsymmetricHorrorRules"; ///< XML 루트 원소 이름이다(`XMLCatalog` 이 사용한다)

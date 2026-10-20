@@ -56,11 +56,11 @@ namespace sw
                 int32 healedCount = 0;
                 for ( AbilitySystemComponent* pComponent : listComponent )
                 {
-                    const hashed_string& health    = pComponent->getHealthAttribute();
-                    const hashed_string& maxHealth = pComponent->getMaxHealthAttribute();
-                    if ( pComponent->hasAttribute( health ) == false || pComponent->hasAttribute( maxHealth ) == false )
+                    const hashed_string&         health    = pComponent->getHealthAttribute();
+                    const std::optional<float32> maxHealth = pComponent->getAttributeValue( pComponent->getMaxHealthAttribute() );
+                    if ( pComponent->hasAttribute( health ) == false || maxHealth.has_value() == false )
                         continue;
-                    if ( pComponent->setAttributeBaseValue( health, pComponent->getAttributeValue( maxHealth ) ) )
+                    if ( pComponent->setAttributeBaseValue( health, *maxHealth ) )
                         ++healedCount;
                 }
                 outReply = "cheat.heal healed " + to_string( healedCount ) + " of " + to_string( listComponent.size() ) + " ability system(s)";

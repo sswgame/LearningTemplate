@@ -145,7 +145,7 @@ namespace sw
                 return;
             const ActiveEffectHandle handle = _pSource->applyGameplayEffectSpecToTarget( _pSource->makeOutgoingSpec( _pEffect ), _pTarget );
             _bHandleWasValid                = handle.isValid() ? SW_TRUE : SW_FALSE;
-            _healthSeenInTick               = _pTarget->getAttributeValue( CombatAttributes::health() );
+            _healthSeenInTick               = _pTarget->getAttributeValue( CombatAttributes::health() ).value();
             _pTarget                        = nullptr;
         }
     };
@@ -309,21 +309,21 @@ SW_TEST_CASE( AbilitySystemTest, DurationEffectsAggregateWithUnrealFormulaAndRev
     SW_ASSERT_TRUE( addHandle.isValid() && mulHandle.isValid() && divHandle.isValid() );
     SW_EXPECT_EQUAL( 4u, pAbilitySystem->getActiveEffectCount() );
 
-    SW_EXPECT_NEAR_EQUAL( 12.75f, pAbilitySystem->getAttributeValue( power ), 0.001f ); // (10 + 5) × 1.7 ÷ 2
-    SW_EXPECT_NEAR_EQUAL( 10.0f, pAbilitySystem->getAttributeBaseValue( power ), 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 12.75f, pAbilitySystem->getAttributeValue( power ).value(), 0.001f ); // (10 + 5) × 1.7 ÷ 2
+    SW_EXPECT_NEAR_EQUAL( 10.0f, pAbilitySystem->getAttributeBaseValue( power ).value(), 0.001f );
 
     SW_EXPECT_TRUE( pAbilitySystem->removeActiveEffect( divHandle ) );
-    SW_EXPECT_NEAR_EQUAL( 25.5f, pAbilitySystem->getAttributeValue( power ), 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 25.5f, pAbilitySystem->getAttributeValue( power ).value(), 0.001f );
 
     const ActiveEffectHandle overrideHandle = pAbilitySystem->applyGameplayEffectSpecToSelf(
         pAbilitySystem->makeOutgoingSpec( makeModifierEffect( "Set3", EffectDurationPolicy::Infinite, 0.0f, power, AttributeModOp::Override, 3.0f ) ) );
-    SW_EXPECT_NEAR_EQUAL( 3.0f, pAbilitySystem->getAttributeValue( power ), 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 3.0f, pAbilitySystem->getAttributeValue( power ).value(), 0.001f );
     SW_EXPECT_TRUE( pAbilitySystem->removeActiveEffect( overrideHandle ) );
 
     SW_EXPECT_TRUE( pAbilitySystem->removeActiveEffect( addHandle ) );
     SW_EXPECT_TRUE( pAbilitySystem->removeActiveEffect( mulHandle ) );
-    SW_EXPECT_NEAR_EQUAL( 12.0f, pAbilitySystem->getAttributeValue( power ), 0.001f ); // ×1.2 하나만 남았다
-    SW_EXPECT_FALSE( pAbilitySystem->removeActiveEffect( mulHandle ) );                // 이미 풀렸다
+    SW_EXPECT_NEAR_EQUAL( 12.0f, pAbilitySystem->getAttributeValue( power ).value(), 0.001f ); // ×1.2 하나만 남았다
+    SW_EXPECT_FALSE( pAbilitySystem->removeActiveEffect( mulHandle ) );                        // 이미 풀렸다
 }
 
 /**
@@ -342,17 +342,17 @@ SW_TEST_CASE( AbilitySystemTest, InstantEffectWritesBaseAndDurationEffectExpires
         pAbilitySystem->makeOutgoingSpec( makeModifierEffect( "Plus10", EffectDurationPolicy::Instant, 0.0f, power, AttributeModOp::Add, 10.0f ) ) );
     SW_EXPECT_TRUE( instantHandle.isValid() );
     SW_EXPECT_FALSE( pAbilitySystem->isActiveEffect( instantHandle ) );
-    SW_EXPECT_NEAR_EQUAL( 20.0f, pAbilitySystem->getAttributeBaseValue( power ), 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 20.0f, pAbilitySystem->getAttributeBaseValue( power ).value(), 0.001f );
 
     const ActiveEffectHandle buffHandle = pAbilitySystem->applyGameplayEffectSpecToSelf(
         pAbilitySystem->makeOutgoingSpec( makeModifierEffect( "Buff", EffectDurationPolicy::HasDuration, 2.0f, power, AttributeModOp::Add, 5.0f ) ) );
-    SW_EXPECT_NEAR_EQUAL( 25.0f, pAbilitySystem->getAttributeValue( power ), 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 25.0f, pAbilitySystem->getAttributeValue( power ).value(), 0.001f );
     pAbilitySystem->advanceTime( 1.5f );
     SW_EXPECT_TRUE( pAbilitySystem->isActiveEffect( buffHandle ) );
     SW_EXPECT_NEAR_EQUAL( 0.5f, pAbilitySystem->getActiveEffectRemainingTime( buffHandle ), 0.001f );
     pAbilitySystem->advanceTime( 0.5f );
     SW_EXPECT_FALSE( pAbilitySystem->isActiveEffect( buffHandle ) );
-    SW_EXPECT_NEAR_EQUAL( 20.0f, pAbilitySystem->getAttributeValue( power ), 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 20.0f, pAbilitySystem->getAttributeValue( power ).value(), 0.001f );
     SW_EXPECT_EQUAL( 0u, pAbilitySystem->getActiveEffectCount() );
 }
 
@@ -376,21 +376,21 @@ SW_TEST_CASE( AbilitySystemTest, PeriodicEffectExecutesEachPeriodUntilItExpires 
     const ActiveEffectHandle smallHandle = pSmallSteps->applyGameplayEffectSpecToSelf( pSmallSteps->makeOutgoingSpec( pDot ) );
     const ActiveEffectHandle bigHandle   = pBigStep->applyGameplayEffectSpecToSelf( pBigStep->makeOutgoingSpec( pDot ) );
     SW_ASSERT_TRUE( smallHandle.isValid() && bigHandle.isValid() );
-    SW_EXPECT_NEAR_EQUAL( 100.0f, pSmallSteps->getAttributeValue( power ), 0.001f ); // 주기 이펙트는 current 에 얹지 않는다
+    SW_EXPECT_NEAR_EQUAL( 100.0f, pSmallSteps->getAttributeValue( power ).value(), 0.001f ); // 주기 이펙트는 current 에 얹지 않는다
 
     advanceRepeatedly( *pSmallSteps, 0.5f, 6 );
     pBigStep->advanceTime( 10.0f );
-    SW_EXPECT_NEAR_EQUAL( 70.0f, pSmallSteps->getAttributeBaseValue( power ), 0.001f );
-    SW_EXPECT_NEAR_EQUAL( 70.0f, pBigStep->getAttributeBaseValue( power ), 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 70.0f, pSmallSteps->getAttributeBaseValue( power ).value(), 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 70.0f, pBigStep->getAttributeBaseValue( power ).value(), 0.001f );
     SW_EXPECT_FALSE( pSmallSteps->isActiveEffect( smallHandle ) );
     SW_EXPECT_FALSE( pBigStep->isActiveEffect( bigHandle ) );
 
     // 걸 때 실행하면 0 · 1 · 2 · 3 초 네 번이다.
     pDot->_bExecutePeriodicOnApplication = SW_TRUE;
     (void)pSmallSteps->applyGameplayEffectSpecToSelf( pSmallSteps->makeOutgoingSpec( pDot ) ); // 핸들은 쓰지 않는다 — 아래 속성 값 단언이 본다
-    SW_EXPECT_NEAR_EQUAL( 60.0f, pSmallSteps->getAttributeBaseValue( power ), 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 60.0f, pSmallSteps->getAttributeBaseValue( power ).value(), 0.001f );
     pSmallSteps->advanceTime( 5.0f );
-    SW_EXPECT_NEAR_EQUAL( 30.0f, pSmallSteps->getAttributeBaseValue( power ), 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 30.0f, pSmallSteps->getAttributeBaseValue( power ).value(), 0.001f );
 }
 
 /**
@@ -418,18 +418,18 @@ SW_TEST_CASE( AbilitySystemTest, StackingAggregatesUpToTheLimitAndExpiresOneStac
 
     SW_EXPECT_EQUAL( 1u, pAbilitySystem->getActiveEffectCount() );
     SW_EXPECT_EQUAL( 3, pAbilitySystem->getActiveEffectStackCount( firstHandle ) );
-    SW_EXPECT_NEAR_EQUAL( 6.0f, pAbilitySystem->getAttributeValue( power ), 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 6.0f, pAbilitySystem->getAttributeValue( power ).value(), 0.001f );
     SW_EXPECT_NEAR_EQUAL( 2.0f, pAbilitySystem->getActiveEffectRemainingTime( firstHandle ), 0.001f ); // 쌓을 때 다시 채웠다
 
     pAbilitySystem->advanceTime( 2.0f );
     SW_EXPECT_EQUAL( 2, pAbilitySystem->getActiveEffectStackCount( firstHandle ) );
-    SW_EXPECT_NEAR_EQUAL( 4.0f, pAbilitySystem->getAttributeValue( power ), 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 4.0f, pAbilitySystem->getAttributeValue( power ).value(), 0.001f );
 
     SW_EXPECT_TRUE( pAbilitySystem->removeActiveEffect( firstHandle, 1 ) );
     SW_EXPECT_EQUAL( 1, pAbilitySystem->getActiveEffectStackCount( firstHandle ) );
     pAbilitySystem->advanceTime( 2.0f );
     SW_EXPECT_FALSE( pAbilitySystem->isActiveEffect( firstHandle ) );
-    SW_EXPECT_NEAR_EQUAL( 0.0f, pAbilitySystem->getAttributeValue( power ), 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, pAbilitySystem->getAttributeValue( power ).value(), 0.001f );
 }
 
 /**
@@ -518,8 +518,8 @@ SW_TEST_CASE( AbilitySystemTest, DamageExecutionMitigatesByArmorAndKillsExactlyO
     } ) );
 
     (void)pAttacker->applyGameplayEffectSpecToTarget( spec, pTarget ); // 핸들은 쓰지 않는다 — 아래 체력 단언이 본다
-    SW_EXPECT_NEAR_EQUAL( 75.0f, pTarget->getAttributeValue( CombatAttributes::health() ), 0.001f );
-    SW_EXPECT_NEAR_EQUAL( 0.0f, pTarget->getAttributeBaseValue( CombatAttributes::incomingDamage() ), 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 75.0f, pTarget->getAttributeValue( CombatAttributes::health() ).value(), 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, pTarget->getAttributeBaseValue( CombatAttributes::incomingDamage() ).value(), 0.001f );
     SW_EXPECT_NEAR_EQUAL( 0.75f, pBar->getTargetRatio(), 0.001f );
     SW_EXPECT_EQUAL( 1, hitCount );
 
@@ -529,7 +529,7 @@ SW_TEST_CASE( AbilitySystemTest, DamageExecutionMitigatesByArmorAndKillsExactlyO
     }
     dispatcher.processEvents();
 
-    SW_EXPECT_NEAR_EQUAL( 0.0f, pTarget->getAttributeValue( CombatAttributes::health() ), 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, pTarget->getAttributeValue( CombatAttributes::health() ).value(), 0.001f );
     SW_EXPECT_TRUE( pTarget->getOwnedTagCounts().hasMatchingTag( CombatAttributeSet::getDeadTag() ) );
     SW_EXPECT_EQUAL( 1, pTarget->getOwnedTagCounts().getCount( CombatAttributeSet::getDeadTag() ) );
     SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), listDied.size() );
@@ -563,20 +563,20 @@ SW_TEST_CASE( AbilitySystemTest, InvulnerableTagKeepsHealthFromGoingDown )
     pTarget->getOwnedTagCounts().updateCount( cheatTag, 1 );
     SW_EXPECT_TRUE( pTarget->isInvulnerable() );
     (void)pAttacker->applyGameplayEffectSpecToTarget( spec, pTarget ); // 핸들은 쓰지 않는다 — 아래 체력 단언이 본다
-    SW_EXPECT_NEAR_EQUAL( 100.0f, pTarget->getAttributeValue( CombatAttributes::health() ), 0.001f );
-    SW_EXPECT_NEAR_EQUAL( 0.0f, pTarget->getAttributeBaseValue( CombatAttributes::incomingDamage() ), 0.001f ); // 메타 값은 늘 0 으로 돌아온다
+    SW_EXPECT_NEAR_EQUAL( 100.0f, pTarget->getAttributeValue( CombatAttributes::health() ).value(), 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, pTarget->getAttributeBaseValue( CombatAttributes::incomingDamage() ).value(), 0.001f ); // 메타 값은 늘 0 으로 돌아온다
     SW_EXPECT_TRUE( pTarget->setAttributeBaseValue( CombatAttributes::health(), 10.0f ) );
-    SW_EXPECT_NEAR_EQUAL( 100.0f, pTarget->getAttributeValue( CombatAttributes::health() ), 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 100.0f, pTarget->getAttributeValue( CombatAttributes::health() ).value(), 0.001f );
     SW_EXPECT_FALSE( pTarget->getOwnedTagCounts().hasMatchingTag( CombatAttributeSet::getDeadTag() ) );
 
     pTarget->getOwnedTagCounts().updateCount( cheatTag, -1 );
     SW_EXPECT_FALSE( pTarget->isInvulnerable() );
     (void)pAttacker->applyGameplayEffectSpecToTarget( spec, pTarget ); // 핸들은 쓰지 않는다 — 아래 체력 단언이 본다
-    SW_EXPECT_NEAR_EQUAL( 75.0f, pTarget->getAttributeValue( CombatAttributes::health() ), 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 75.0f, pTarget->getAttributeValue( CombatAttributes::health() ).value(), 0.001f );
     // 무적이어도 회복(올라가는 쓰기)은 막지 않는다.
     pTarget->getOwnedTagCounts().updateCount( AbilitySystemComponent::getInvulnerableTag(), 1 );
     SW_EXPECT_TRUE( pTarget->setAttributeBaseValue( CombatAttributes::health(), 90.0f ) );
-    SW_EXPECT_NEAR_EQUAL( 90.0f, pTarget->getAttributeValue( CombatAttributes::health() ), 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 90.0f, pTarget->getAttributeValue( CombatAttributes::health() ).value(), 0.001f );
 }
 
 /**
@@ -626,14 +626,14 @@ SW_TEST_CASE( AbilitySystemTest, CommitAppliesCostAndCooldownWhichGateTheNextAct
     SW_ASSERT_TRUE( handle.isValid() );
 
     SW_EXPECT_TRUE( pAbilitySystem->tryActivateAbility( handle ) == AbilityActivationResult::Activated );
-    SW_EXPECT_NEAR_EQUAL( 60.0f, pAbilitySystem->getAttributeValue( CombatAttributes::mana() ), 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 60.0f, pAbilitySystem->getAttributeValue( CombatAttributes::mana() ).value(), 0.001f );
     SW_EXPECT_TRUE( pRaw->isOnCooldown() );
     SW_EXPECT_NEAR_EQUAL( 2.0f, pRaw->getCooldownRemaining(), 0.001f );
     SW_EXPECT_TRUE( pAbilitySystem->tryActivateAbility( handle ) == AbilityActivationResult::OnCooldown );
 
     pAbilitySystem->advanceTime( 2.0f );
     SW_EXPECT_TRUE( pAbilitySystem->tryActivateAbility( handle ) == AbilityActivationResult::Activated );
-    SW_EXPECT_NEAR_EQUAL( 20.0f, pAbilitySystem->getAttributeValue( CombatAttributes::mana() ), 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 20.0f, pAbilitySystem->getAttributeValue( CombatAttributes::mana() ).value(), 0.001f );
 
     pAbilitySystem->advanceTime( 2.0f );
     SW_EXPECT_TRUE( pAbilitySystem->canActivateAbility( handle ) == AbilityActivationResult::CannotAffordCost );
@@ -813,14 +813,14 @@ SW_TEST_CASE( AbilitySystemTest, CatalogXMLGrantsAnAbilitySetAndRunsADataOnlyAbi
     pAbilitySystem->setCatalog( &catalog );
     SW_ASSERT_TRUE( pAbilitySystem->grantAbilitySet( "Hero" ) );
 
-    SW_EXPECT_NEAR_EQUAL( 80.0f, pAbilitySystem->getAttributeValue( CombatAttributes::health() ), 0.001f );
-    SW_EXPECT_NEAR_EQUAL( 120.0f, pAbilitySystem->getAttributeValue( CombatAttributes::maxHealth() ), 0.001f );
-    SW_EXPECT_NEAR_EQUAL( 10.0f, pAbilitySystem->getAttributeValue( CombatAttributes::attackPower() ), 0.001f ); // 묶음 기본값
+    SW_EXPECT_NEAR_EQUAL( 80.0f, pAbilitySystem->getAttributeValue( CombatAttributes::health() ).value(), 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 120.0f, pAbilitySystem->getAttributeValue( CombatAttributes::maxHealth() ).value(), 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 10.0f, pAbilitySystem->getAttributeValue( CombatAttributes::attackPower() ).value(), 0.001f ); // 묶음 기본값
     SW_EXPECT_TRUE( pAbilitySystem->getOwnedTagCounts().hasMatchingTag( "Team.Hero"_tag ) );
     SW_EXPECT_EQUAL( 1u, pAbilitySystem->getAbilityCount() );
     SW_EXPECT_EQUAL( 1u, pAbilitySystem->getActiveEffectCount() );
     SW_EXPECT_TRUE( pAbilitySystem->setAttributeBaseValue( "Stamina", 150.0f ) );
-    SW_EXPECT_NEAR_EQUAL( 100.0f, pAbilitySystem->getAttributeValue( "Stamina" ), 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 100.0f, pAbilitySystem->getAttributeValue( "Stamina" ).value(), 0.001f );
 
     int32 healCueCount = 0;
     (void)pAbilitySystem->registerGameplayCue( SW_DELEGATE_LAMBDA( AbilitySystemComponent::GameplayCueDelegate, [&healCueCount]( const GameplayCueEvent& cue )
@@ -830,16 +830,16 @@ SW_TEST_CASE( AbilitySystemTest, CatalogXMLGrantsAnAbilitySetAndRunsADataOnlyAbi
     } ) );
 
     pAbilitySystem->abilityInputPressed( 3 );
-    SW_EXPECT_NEAR_EQUAL( 110.0f, pAbilitySystem->getAttributeValue( CombatAttributes::health() ), 0.001f );
-    SW_EXPECT_NEAR_EQUAL( 30.0f, pAbilitySystem->getAttributeValue( CombatAttributes::mana() ), 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 110.0f, pAbilitySystem->getAttributeValue( CombatAttributes::health() ).value(), 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 30.0f, pAbilitySystem->getAttributeValue( CombatAttributes::mana() ).value(), 0.001f );
     SW_EXPECT_TRUE( pAbilitySystem->getOwnedTagCounts().hasMatchingTag( "Cooldown.Skill"_tag ) );
     SW_EXPECT_EQUAL( 1, healCueCount );
 
     pAbilitySystem->advanceTime( 1.0f );
-    SW_EXPECT_NEAR_EQUAL( 32.0f, pAbilitySystem->getAttributeValue( CombatAttributes::mana() ), 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 32.0f, pAbilitySystem->getAttributeValue( CombatAttributes::mana() ).value(), 0.001f );
     pAbilitySystem->abilityInputReleased( 3 );
     pAbilitySystem->abilityInputPressed( 3 );
-    SW_EXPECT_NEAR_EQUAL( 110.0f, pAbilitySystem->getAttributeValue( CombatAttributes::health() ), 0.001f ); // 쿨다운 중
+    SW_EXPECT_NEAR_EQUAL( 110.0f, pAbilitySystem->getAttributeValue( CombatAttributes::health() ).value(), 0.001f ); // 쿨다운 중
     SW_EXPECT_EQUAL( 1, healCueCount );
 
     // 정화는 에셋 태그로도 고른다.
@@ -885,8 +885,8 @@ SW_TEST_CASE( AbilitySystemTest, TriggeredApplyEffectsHitsTheOtherPartyOfTheEven
 
     // 핸들은 쓰지 않는다 — 아래 체력 단언이 본다
     (void)pAttacker->applyGameplayEffectSpecToTarget( pAttacker->makeOutgoingSpec( pDamage ), pDefender );
-    SW_EXPECT_NEAR_EQUAL( 90.0f, pDefender->getAttributeValue( CombatAttributes::health() ), 0.001f );
-    SW_EXPECT_NEAR_EQUAL( 98.0f, pAttacker->getAttributeValue( CombatAttributes::health() ), 0.001f ); // 방어 50 을 지나지 않았다
+    SW_EXPECT_NEAR_EQUAL( 90.0f, pDefender->getAttributeValue( CombatAttributes::health() ).value(), 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 98.0f, pAttacker->getAttributeValue( CombatAttributes::health() ).value(), 0.001f ); // 방어 50 을 지나지 않았다
 }
 
 /**
@@ -916,7 +916,7 @@ SW_TEST_CASE( AbilitySystemTest, EffectAppliedToAnotherObjectDuringTickIsDeferre
     manager.update( 0.016f );
     SW_EXPECT_TRUE( pStriker->_bHandleWasValid == SW_FALSE );
     SW_EXPECT_NEAR_EQUAL( 100.0f, pStriker->_healthSeenInTick, 0.001f );
-    SW_EXPECT_NEAR_EQUAL( 85.0f, pTarget->getAttributeValue( CombatAttributes::health() ), 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 85.0f, pTarget->getAttributeValue( CombatAttributes::health() ).value(), 0.001f );
     manager.endPlay();
 }
 
