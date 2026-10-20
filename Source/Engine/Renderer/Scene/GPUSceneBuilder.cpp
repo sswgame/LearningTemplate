@@ -118,8 +118,8 @@ namespace sw
         _instanceRing.clear();
         _snapshot._pListInstance.reset();
         _snapshot.clearBatches();
+        _snapshot.clearParticles();
         _batchElementTable.clear(); // 배치 목록과 나란한 표다. 함께 비운다.
-        _snapshot._listParticleBatch.clear();
         // 머티리얼 레지스트리는 "그룹 목록(스냅샷)" 과 "셰이더 경로에서 인덱스를 찾는 맵" 이 한 몸이다. 목록만 지우면 맵이 옛 인덱스를
         // 반환하고 GPUMaterialRegistry::materialGroupFor 가 범위 밖이라 조용히 건너뛴다. 그러면 배치에 머티리얼 버퍼가 실리지 않아 폴백(0)으로
         // 그려지고, 투명 머티리얼은 알파 0이라 화면에서 사라진다(백엔드 교체 뒤 유리 큐브가 없어지던 원인이다).
@@ -391,7 +391,7 @@ namespace sw
         if ( pObjects != nullptr )
             populateParticleBatches( *pObjects, cameraPos );
         else
-            _snapshot._listParticleBatch.clear();
+            _snapshot.clearParticles();
     }
 
     void GPUSceneBuilder::populateMeshesFromScene( Scene* pScene, const float3& cameraPos )
@@ -852,8 +852,8 @@ namespace sw
 
     void GPUSceneBuilder::populateParticleBatches( const GameObjectManager& objects, const float3& cameraPos )
     {
+        _snapshot.clearParticles();
         vector<GPUParticleBatch>& listBatch = _snapshot._listParticleBatch;
-        listBatch.clear();
         for ( const VfxComponent* pVfx : objects.getComponentRegistry().getAll<VfxComponent>() )
         {
             const bool bHidden = pVfx->isPendingDestroy() || pVfx->isActive() == false;
@@ -863,51 +863,109 @@ namespace sw
             const float32  sizeScale = world.getMaximumAxisScale();
             for ( uint32 emitterIndex = 0; emitterIndex < pVfx->getEmitterCount(); ++emitterIndex )
             {
-                const shared_ptr<const vector<GPUParticle>>& pListParticle = pVfx->getEmitterParticles( emitterIndex );
-                if ( pListParticle == nullptr || pListParticle->empty() )
+                // 메시 방출기는 메시 인스턴스 배치로 메시 경로를 탄다(`VfxComponent`). 띠는 이웃 둘이 있어야 한 마디다.
+                const VfxEmitterDef&                         def            = pVfx->getEmitterDef( emitterIndex );
+                const shared_ptr<const vector<GPUParticle>>& pListParticle  = pVfx->getEmitterParticles( emitterIndex );
+                const bool                                   bRibbon        = def._renderMode == VfxRenderMode::Ribbon;
+                const size_t                                 minParticles   = bRibbon ? 2u : 1u;
+                const bool                                   bNothingToDraw = def._renderMode == VfxRenderMode::Mesh || pListParticle == nullptr || pListParticle->size() < minParticles;
+                if ( bNothingToDraw )
                     continue;
-                const VfxEmitterDef& def   = pVfx->getEmitterDef( emitterIndex );
-                GPUParticleBatch&    batch = listBatch.emplace_back();
-                batch._pListParticle       = pListParticle;
-                batch._world               = world;
-                batch._texturePath         = hashed_string( def._texturePath );
-                batch._sizeScale           = sizeScale;
-                batch._bAdditive           = def._blendMode == VfxBlendMode::Additive ? SW_TRUE : SW_FALSE;
+                GPUParticleBatch& batch = listBatch.emplace_back();
+                batch._bRibbon          = bRibbon ? SW_TRUE : SW_FALSE;
+                batch._pListParticle    = pListParticle;
+                batch._world            = world;
+                batch._texturePath      = hashed_string( def._texturePath );
+                batch._sizeScale        = sizeScale;
+                batch._bAdditive        = def._blendMode == VfxBlendMode::Additive ? SW_TRUE : SW_FALSE;
             }
         }
-        if ( listBatch.size() <= 1 )
+        if ( listBatch.empty() )
             return;
 
-        // 메시 투명 후보와 같은 규칙이다. 깊이는 방출기 위치(행렬의 이동)로 잰다 — 입자 단위 정렬은 하지 않는다(방출기 하나 = 후보 하나).
-        const uint32 defaultSortKey = Render2DSettings::getActive().getDefaultSortKey();
-        _listScratchParticleKey.resize( listBatch.size() );
-        for ( uint32 batchIndex = 0; batchIndex < static_cast<uint32>( listBatch.size() ); ++batchIndex )
-        {
-            _listScratchParticleKey[batchIndex] = GPUTransparentSorter::makeTransparentSortKey( defaultSortKey, listBatch[batchIndex]._world.getTranslation(), cameraPos,
-                                                                                                _transparentSorter.getAxis(), batchIndex );
-        }
-        std::sort( _listScratchParticleKey.begin(), _listScratchParticleKey.end(), &GPUTransparentSorter::isDrawnBefore );
+        // 정렬한 순서로 옮겨 담고, 키의 후보 번호를 옮긴 뒤의 번호로 고친다(자리 목록이 그 번호를 싣는다).
+        fillParticleKeys( cameraPos, _transparentSorter.getAxis(), _listScratchParticleKey );
         _listScratchParticleBatch.clear();
-        for ( const GPUTransparentSortKey& key : _listScratchParticleKey )
+        for ( uint32 sortIndex = 0; sortIndex < static_cast<uint32>( _listScratchParticleKey.size() ); ++sortIndex )
         {
+            GPUTransparentSortKey& key = _listScratchParticleKey[sortIndex];
             _listScratchParticleBatch.push_back( std::move( listBatch[key._candidateIndex] ) );
+            key._candidateIndex = sortIndex;
         }
         listBatch.swap( _listScratchParticleBatch );
+
+        // 메시 투명과 한 순서로 섞는다 — 배치마다 첫 인스턴스의 키와 견줘 입자를 그 앞에 끼운다(언리얼 · 유니티의 프리미티브 단위 정렬).
+        fillMainBatchHeadKeys( cameraPos, _listScratchBatchHeadKey );
+        GPUTransparentSorter::placeParticles( vector_reference<const GPUTransparentSortKey>( _listScratchBatchHeadKey ),
+                                              vector_reference<const GPUTransparentSortKey>( _listScratchParticleKey ), _snapshot._listParticleSlot );
+    }
+
+    void GPUSceneBuilder::fillParticleKeys( const float3& eye, const float3& axis, vector<GPUTransparentSortKey>& outListKey ) const
+    {
+        // 메시 투명 후보와 같은 규칙이다. 깊이는 방출기 위치(행렬의 이동)로 잰다 — 입자 단위 정렬은 하지 않는다(방출기 하나 = 후보 하나).
+        // 레이어는 기본 키다(방출기에는 정렬 레이어가 없다).
+        const vector<GPUParticleBatch>& listBatch      = _snapshot._listParticleBatch;
+        const uint32                    defaultSortKey = Render2DSettings::getActive().getDefaultSortKey();
+        outListKey.resize( listBatch.size() );
+        for ( uint32 batchIndex = 0; batchIndex < static_cast<uint32>( listBatch.size() ); ++batchIndex )
+        {
+            outListKey[batchIndex] = GPUTransparentSorter::makeTransparentSortKey( defaultSortKey, listBatch[batchIndex]._world.getTranslation(), eye, axis, batchIndex );
+        }
+        std::sort( outListKey.begin(), outListKey.end(), &GPUTransparentSorter::isDrawnBefore );
+    }
+
+    void GPUSceneBuilder::fillMainBatchHeadKeys( const float3& cameraPos, vector<GPUTransparentSortKey>& outListKey ) const
+    {
+        outListKey.clear();
+        const vector<GPUInstance>*                 pInstance = _instanceRing.getPublished();
+        const vector_reference<const GPUMeshBatch> listBatch = _snapshot.getTransparentBatches();
+        if ( pInstance == nullptr || listBatch.empty() )
+            return;
+        // 주 순서의 배치는 정렬된 꼬리를 차례로 자른 것이라 첫 인스턴스(`_instanceBase`)가 그 배치에서 가장 먼저 그리는 것이다.
+        const uint32 instanceCount  = static_cast<uint32>( pInstance->size() );
+        const uint32 tailBase       = MathUtil::min( _snapshot.getOpaqueInstanceCount(), instanceCount );
+        const uint32 tailCount      = MathUtil::min( instanceCount - tailBase, static_cast<uint32>( _listBuiltTransparentIdx.size() ) );
+        const uint32 defaultSortKey = Render2DSettings::getActive().getDefaultSortKey();
+        outListKey.resize( listBatch.size() );
+        for ( uint32 batchIndex = 0; batchIndex < static_cast<uint32>( listBatch.size() ); ++batchIndex )
+        {
+            const GPUMeshBatch& batch          = listBatch[batchIndex];
+            const bool          bInsideTheTail = tailBase <= batch._instanceBase && batch._instanceBase < tailBase + tailCount;
+            if ( bInsideTheTail == false )
+            {
+                outListKey[batchIndex]          = GPUTransparentSortKey{};
+                outListKey[batchIndex]._sortKey = GPUTransparentSorter::kNoBatchHeadLayer;
+                continue;
+            }
+            const uint32 tailIndex = batch._instanceBase - tailBase;
+            outListKey[batchIndex] = GPUTransparentSorter::makeTransparentSortKey( resolveTailSortLayer( tailIndex, defaultSortKey ), ( *pInstance )[batch._instanceBase]._boundsCenter,
+                                                                                   cameraPos, _transparentSorter.getAxis(), batchIndex );
+        }
+    }
+
+    uint32 GPUSceneBuilder::resolveTailSortLayer( uint32 tailIndex, uint32 defaultSortKey ) const
+    {
+        const uint32 candidateIndex = _listBuiltTransparentIdx[tailIndex];
+        const uint32 sortKey        = candidateIndex < _listBuiltCandidate.size() ? _listBuiltCandidate[candidateIndex]._sortKey : 0u;
+        return ( sortKey == Render2DSettings::kDefaultSortKeyPlaceholder ) ? defaultSortKey : sortKey;
     }
 
     void GPUSceneBuilder::computeViewTransparentOrders( const vector<RenderViewRequest>& listView )
     {
         _snapshot._listViewTransparentOrder.clear();
-        const vector<GPUInstance>*                 pInstance          = _instanceRing.getPublished();
-        const vector_reference<const GPUMeshBatch> listBatch          = _snapshot.getTransparentBatches();
-        const bool                                 bNoTransparentTail = pInstance == nullptr || listBatch.empty() || listView.empty();
-        if ( bNoTransparentTail )
+        if ( listView.empty() )
             return;
-        const uint32 instanceCount = static_cast<uint32>( pInstance->size() );
-        const uint32 tailBase      = MathUtil::min( _snapshot.getOpaqueInstanceCount(), instanceCount );
-        const uint32 tailCount     = instanceCount - tailBase;
-        // 꼬리는 투명 후보마다 인스턴스 하나다(`_listBuiltTransparentIdx` 순서). 어긋나면 이 프레임은 주 순서로 그린다.
-        if ( tailCount == 0 || _listBuiltTransparentIdx.size() != tailCount )
+        const vector<GPUInstance>*                 pInstance     = _instanceRing.getPublished();
+        const vector_reference<const GPUMeshBatch> listBatch     = _snapshot.getTransparentBatches();
+        const bool                                 bHasParticles = _snapshot._listParticleBatch.empty() == false;
+        const uint32                               instanceCount = pInstance != nullptr ? static_cast<uint32>( pInstance->size() ) : 0u;
+        const uint32                               tailBase      = MathUtil::min( _snapshot.getOpaqueInstanceCount(), instanceCount );
+        const uint32                               tailCount     = instanceCount - tailBase;
+        // 꼬리는 투명 후보마다 인스턴스 하나다(`_listBuiltTransparentIdx` 순서). 어긋나면 이 프레임은 주 순서로 그린다(입자도 주 자리로).
+        const bool bTailUsable = listBatch.empty() == false && tailCount != 0 && _listBuiltTransparentIdx.size() == tailCount;
+        // 메시 투명이 없으면 입자끼리의 순서만 이 뷰의 시점으로 정한다.
+        const bool bParticlesOnly = listBatch.empty() && bHasParticles;
+        if ( bTailUsable == false && bParticlesOnly == false )
             return;
         SW_PROFILE_SCOPE( "GT.GPUScene.build.viewTransparentOrder" );
 
@@ -916,18 +974,29 @@ namespace sw
         {
             if ( view._bRender == SW_FALSE )
                 continue;
+            vector_reference<const GPUTransparentSortKey> listParticleKey{};
+            if ( bHasParticles )
+            {
+                fillParticleKeys( view._position, view._transparentSortAxis, _listScratchViewParticleKey );
+                listParticleKey = vector_reference<const GPUTransparentSortKey>( _listScratchViewParticleKey );
+            }
+            if ( bParticlesOnly )
+            {
+                GPUViewTransparentOrder& order = _snapshot._listViewTransparentOrder.emplace_back();
+                order._viewID                  = view._viewID;
+                order._tailBase                = tailBase;
+                GPUTransparentSorter::placeParticles( vector_reference<const GPUTransparentSortKey>{}, listParticleKey, order._listParticleSlot );
+                continue;
+            }
             // 이 뷰의 시점으로 꼬리 키를 채운다. 후보 인덱스 칸에는 꼬리 번호를 넣는다(같은 깊이는 주 순서로 가른다).
             // 정렬과 순번 테이블은 `GPUTransparentSorter::computeViewOrder` 가 만든다.
             vector<GPUTransparentSortKey>& listViewSortKey = _transparentSorter.resizeViewKeys( tailCount );
             for ( uint32 tailIndex = 0; tailIndex < tailCount; ++tailIndex )
             {
-                const uint32 candidateIndex = _listBuiltTransparentIdx[tailIndex];
-                const uint32 sortKey        = candidateIndex < _listBuiltCandidate.size() ? _listBuiltCandidate[candidateIndex]._sortKey : 0u;
-                const uint32 sortLayer      = ( sortKey == Render2DSettings::kDefaultSortKeyPlaceholder ) ? defaultSortKey : sortKey;
-                listViewSortKey[tailIndex]  = GPUTransparentSorter::makeTransparentSortKey( sortLayer, ( *pInstance )[tailBase + tailIndex]._boundsCenter,
-                                                                                            view._position, view._transparentSortAxis, tailIndex );
+                listViewSortKey[tailIndex] = GPUTransparentSorter::makeTransparentSortKey(
+                    resolveTailSortLayer( tailIndex, defaultSortKey ), ( *pInstance )[tailBase + tailIndex]._boundsCenter, view._position, view._transparentSortAxis, tailIndex );
             }
-            _snapshot._listViewTransparentOrder.push_back( _transparentSorter.computeViewOrder( view._viewID, tailBase, listBatch ) );
+            _snapshot._listViewTransparentOrder.push_back( _transparentSorter.computeViewOrder( view._viewID, tailBase, listBatch, listParticleKey ) );
         }
     }
 

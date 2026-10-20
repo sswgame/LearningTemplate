@@ -3,11 +3,16 @@
  * @brief 방출기마다의 입자 그리기(`GPUParticleBatch`)를 투명 패스에 빌보드로 그립니다(렌더 스레드). `FrameRenderer` 가 소유합니다.
  * @details 캔버스 렌더러(`CanvasRenderer`)와 같은 모양이다: 기록 전(`prepareFrame`)에 입자 버퍼와 텍스처를 갖추고, 기록 중(`drawBatches`)에는 바인딩과 드로우만 한다.
  *          입자는 프레임마다 모든 방출기를 이어 붙인 구조 버퍼 하나로 올리고(패스 전용 슬롯 t11 — `shaderslot::kPassBuffer`), 방출기 하나가 `drawInstanced( 6, 입자 수 )` 하나다.
- *          PSO 와 PassCB 바인딩은 부르는 쪽(`FrameRenderer::drawParticles`)이 한다.
+ *          PSO 와 PassCB 바인딩은 부르는 쪽(`FrameRenderer::drawParticleSlots`)이 한다. 그리는 순서와 메시 투명 배치 사이의 자리는 스냅샷의 자리 목록이 정한다.
+ *          메시 배치 사이에 끼는 자리마다 PSO 를 입자 것으로 바꿨다가 되돌린다(교차 정렬의 비용 — 자리가 이어지는 입자는 한 번에 그린다).
+ *
+ *          주의: 표본 효과의 텍스처(Kenney 파티클)는 RGB 가 알파와 함께 어두워지는 형태라 곧은 알파로 섞으면 가장자리가 두 번 곱해져 흐리다.
+ *          지금은 색 커브(더하기 방출기는 1 보다 큰 HDR 색)로 맞췄다. 텍스처 임포트에 "알파만 마스크" 규칙이 필요해지면 후보로 따로 적는다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/span.h"
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
@@ -18,6 +23,7 @@
 namespace sw
 {
     struct GPUParticleBatch;
+    struct GPUTransparentParticleSlot;
 
     class IRHICommandList;
     class IRHIDevice;
@@ -42,12 +48,15 @@ namespace sw
          */
         void prepareFrame( IRHIDevice& device, const vector<GPUParticleBatch>& listBatch );
         /**
-         * @brief 지금 열린 렌더 패스에 방출기마다 그리기 하나를 기록합니다. PSO 와 PassCB 는 부르는 쪽이 걸어 두었어야 합니다.
+         * @brief 지금 열린 렌더 패스에 @p listSlot 의 방출기마다 그리기 하나를 그 순서로 기록합니다. PSO 와 PassCB 는 부르는 쪽이 걸어 두었어야 합니다.
+         * @details 투명 패스는 메시 투명 배치 사이의 자리마다 그 자리의 구간으로 부른다(`FrameRenderer::drawParticleSlots`).
          * @param listBatch      `prepareFrame` 에 넘긴 것과 같은 목록(같은 프레임)
+         * @param listSlot       그릴 입자 그리기(`GPUTransparentParticleSlot::_particleBatchIndex` 가 @p listBatch 의 번호)
          * @param bNativeBindless DX12 와 Vulkan 이면 텍스처를 bindless 전역 번호로, 아니면 t12 에 서수 0 으로 겁니다
          * @return 그린 방출기 수입니다(텍스처가 없는 방출기는 그리지 않습니다)
          */
-        uint32 drawBatches( IRHICommandList& cmd, const vector<GPUParticleBatch>& listBatch, bool bNativeBindless ) const;
+        uint32 drawBatches( IRHICommandList& cmd, const vector<GPUParticleBatch>& listBatch, vector_reference<const GPUTransparentParticleSlot> listSlot,
+                            bool bNativeBindless ) const;
         /** @brief 버퍼를 지우고 빌린 텍스처를 돌려줍니다(디바이스가 없으면 핸들만 잊습니다). 다음 `prepareFrame` 이 다시 만듭니다. */
         void release( IRHIDevice* pDevice );
 

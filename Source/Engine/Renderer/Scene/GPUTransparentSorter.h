@@ -57,6 +57,27 @@ namespace sw
             return keyA._candidateIndex < keyB._candidateIndex;
         }
         /**
+         * @brief 메시 투명 배치(첫 인스턴스의 키)를 입자 그리기(방출기 위치의 키)보다 먼저 그리면 true 입니다. 레이어 키와 깊이가 같으면 배치가 먼저입니다.
+         * @details 두 키의 후보 번호는 서로 다른 목록의 번호라 비교하지 않는다. 그래서 같은 레이어 · 깊이의 순서는 "메시 먼저" 로 고정한다(결정적).
+         */
+        static bool isBatchDrawnBeforeParticle( const GPUTransparentSortKey& batchKey, const GPUTransparentSortKey& particleKey )
+        {
+            if ( batchKey._sortKey != particleKey._sortKey )
+                return batchKey._sortKey < particleKey._sortKey;
+            return batchKey._depth >= particleKey._depth;
+        }
+        /**
+         * @brief 입자 그리기마다 투명 배치 순서 안의 자리를 정합니다(메시 투명과 입자의 교차 정렬).
+         * @param listBatchHeadKey 그리는 순서로 놓인 배치마다 가장 먼저 그리는 인스턴스의 키. 순서가 `isDrawnBefore` 와 맞아야 한다(정렬된 꼬리를 자른 배치라 그렇다).
+         *                         키를 모르는 배치(꼬리 밖)는 `kNoBatchHeadLayer` 레이어로 둔다 — 모든 입자가 그 앞에 선다.
+         * @param listParticleKey  `isDrawnBefore` 로 정렬된 입자 키. 후보 번호 칸이 입자 그리기 번호다.
+         * @param outListSlot      입자 키 순서의 자리(앞 내용은 지운다)
+         */
+        static void placeParticles( vector_reference<const GPUTransparentSortKey> listBatchHeadKey, vector_reference<const GPUTransparentSortKey> listParticleKey,
+                                    vector<GPUTransparentParticleSlot>& outListSlot );
+        /** @brief 첫 인스턴스의 키를 모르는 배치에 주는 레이어 키입니다. 어떤 입자보다도 뒤에 그린다. */
+        static constexpr uint32 kNoBatchHeadLayer = 0xFFFFFFFFu;
+        /**
          * @brief 투명 인스턴스 하나의 정렬 키를 채웁니다. 주 뷰(`GPUSceneBuilder::sortTransparent`)와 추가 뷰가 같은 규칙을 씁니다.
          * @details 키를 채우는 루프가 원소마다 부르므로 헤더에 둡니다(인라인).
          */
@@ -95,8 +116,10 @@ namespace sw
          * @brief 채워 둔 추가 뷰 키(꼬리 번호 순)로 그 뷰의 투명 순서를 만듭니다.
          * @details 꼬리 전체를 정렬해 꼬리 번호마다 순번을 매기고, 배치 안을 순번 순으로 다시 놓은 꼬리 슬롯(컬링 없는 백엔드의 인스턴스 슬롯 스트림)과
          *          배치 순서(배치마다 가장 먼저 그릴 인스턴스의 순번 순, 같으면 원래 순서)를 만듭니다. 꼬리 안에 온전히 들지 않는 배치는 순서만 따릅니다.
+         *          @p listParticleKey(이 뷰의 시점으로 정렬한 입자 키)는 배치마다 가장 먼저 그릴 인스턴스의 키와 견줘 자리를 받습니다(`placeParticles`).
          */
-        GPUViewTransparentOrder computeViewOrder( uint64 viewID, uint32 tailBase, vector_reference<const GPUMeshBatch> listBatch );
+        GPUViewTransparentOrder computeViewOrder( uint64 viewID, uint32 tailBase, vector_reference<const GPUMeshBatch> listBatch,
+                                                  vector_reference<const GPUTransparentSortKey> listParticleKey );
 
     private:
         /**
@@ -107,6 +130,8 @@ namespace sw
         vector<GPUTransparentSortKey> _listKey;
         /// @brief 추가 뷰 정렬의 임시 배열입니다. 뷰마다 다시 씁니다.
         vector<GPUTransparentSortKey> _listViewKey;
+        /// @brief 추가 뷰의 배치 순서마다 가장 먼저 그리는 인스턴스의 키입니다(입자 자리 정하기). 뷰마다 다시 씁니다.
+        vector<GPUTransparentSortKey> _listViewBatchHeadKey;
         /** @brief 투명 정렬의 깊이 축입니다. 영벡터면 카메라까지의 거리를 씁니다. */
         float3 _axis{};
     };

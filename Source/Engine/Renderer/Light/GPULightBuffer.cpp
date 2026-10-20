@@ -14,6 +14,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Scene/Scene.h"
+#include "Engine/Vfx/VfxComponent.h"
 
 namespace sw
 {
@@ -96,7 +97,14 @@ namespace sw
             }
         }
 
-        // 라이트 프로브 볼륨은 3D 라이트 뒤에 붙는다(IndirectLighting.md P3). 쓸 수 있는 베이크가 없는 볼륨(굽지 않음 · 모양이 다름)은 넣지 않는다 —
+        // 파티클 라이트(점광, 그림자 없음)는 라이트 컴포넌트 뒤 · 2D 가림막 앞에 붙는다. 그리드는 종류를 묻지 않고 같은 목록에서 만든다(LightGrid).
+        for ( const VfxComponent* pVfx : registry.getAll<VfxComponent>() )
+        {
+            if ( pVfx != nullptr && pVfx->isPendingDestroy() == false )
+                pVfx->appendGPULights( outList );
+        }
+
+        // 라이트 프로브 볼륨은 3D 라이트 · 파티클 라이트 뒤에 붙는다(IndirectLighting.md P3). 쓸 수 있는 베이크가 없는 볼륨(굽지 않음 · 모양이 다름)은 넣지 않는다 —
         // 그곳은 볼륨이 없는 곳과 같다(이유는 볼륨이 읽을 때 남긴다).
         if ( pOutListProbeElement != nullptr )
         {

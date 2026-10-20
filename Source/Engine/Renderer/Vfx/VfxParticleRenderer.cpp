@@ -22,16 +22,19 @@ namespace sw
     {
         struct VfxParticleRendererInternal
         {
-            /** @brief 루트 상수 칸입니다 — particle.hlsl 의 SwRootConstants 순서(시작 · 텍스처 · 더하기 · 크기 배율 · 방출기 행렬의 열 0..2). */
+            /** @brief 루트 상수 칸입니다 — particle.hlsl 의 SwRootConstants 순서(시작 · 텍스처 · 플래그 · 크기 배율 · 방출기 행렬의 열 0..2). */
             static constexpr uint32 kRootParticleBase  = 0;
             static constexpr uint32 kRootTexture       = 1;
-            static constexpr uint32 kRootAdditive      = 2;
+            static constexpr uint32 kRootFlags         = 2;
             static constexpr uint32 kRootSizeScale     = 3;
             static constexpr uint32 kRootColumn0       = 4;
             static constexpr uint32 kColumnCount       = 3;
             static constexpr uint32 kFloatsPerColumn   = 4;
             static constexpr uint32 kRootConstantCount = kRootColumn0 + kColumnCount * kFloatsPerColumn;
             static_assert( kRootConstantCount <= shaderslot::kRootConstantDwords, "particle root constants exceed the four-backend budget" );
+            /** @brief 플래그 칸의 비트입니다 — particle.hlsl 의 kParticleFlag* 와 같다. */
+            static constexpr uint32 kFlagAdditive = 1u << 0;
+            static constexpr uint32 kFlagRibbon   = 1u << 1;
 
             /** @brief 입자 하나의 정점 수입니다 — particle.hlsl 이 SV_VertexID 로 모서리 여섯을 만든다. 메시 없는 드로우라 장치 공용 대체 정점 버퍼가 이만큼 담아야 한다. */
             static constexpr uint32 kVerticesPerParticle = 6;
@@ -113,9 +116,11 @@ namespace sw
         _uploadedParticleCount = particleCount;
     }
 
-    uint32 VfxParticleRenderer::drawBatches( IRHICommandList& cmd, const vector<GPUParticleBatch>& listBatch, bool bNativeBindless ) const
+    uint32 VfxParticleRenderer::drawBatches( IRHICommandList& cmd, const vector<GPUParticleBatch>& listBatch, vector_reference<const GPUTransparentParticleSlot> listSlot,
+                                             bool bNativeBindless ) const
     {
-        const bool bNothingToDraw = _uploadedParticleCount == 0 || _particleBuffer.isValid() == false || _listBatchBase.size() != listBatch.size();
+        const bool bNothingToDraw =
+            listSlot.empty() || _uploadedParticleCount == 0 || _particleBuffer.isValid() == false || _listBatchBase.size() != listBatch.size();
         if ( bNothingToDraw )
             return 0;
         SW_PROFILE_SCOPE( "RT.Vfx.Draw" );
@@ -123,8 +128,10 @@ namespace sw
         // 바인딩은 PSO 뒤에 건다(setPipelineState 가 슬롯 상태를 비운다) — 부르는 쪽이 PSO 를 걸고 PassCB 를 바인딩한 뒤 여기로 온다.
         cmd.bindStructuredBuffer( _particleBuffer._srv, shaderslot::kPassBuffer );
         uint32 drawnBatchCount = 0;
-        for ( size_t batchIndex = 0; batchIndex < listBatch.size(); ++batchIndex )
+        for ( const GPUTransparentParticleSlot& slot : listSlot )
         {
+            const uint32 batchIndex = slot._particleBatchIndex;
+            SW_ASSERT( batchIndex < listBatch.size() );
             const GPUParticleBatch&  batch = listBatch[batchIndex];
             const RHIDescriptorIndex srv   = findTextureSrv( batch._texturePath );
             if ( srv == kInvalidDescriptorIndex )
@@ -133,7 +140,7 @@ namespace sw
             using Root = VfxParticleRendererInternal;
             uint32 arrRoot[Root::kRootConstantCount]{};
             arrRoot[Root::kRootParticleBase] = _listBatchBase[batchIndex];
-            arrRoot[Root::kRootAdditive]     = batch._bAdditive == SW_TRUE ? 1u : 0u;
+            arrRoot[Root::kRootFlags]        = ( batch._bAdditive == SW_TRUE ? Root::kFlagAdditive : 0u ) | ( batch._bRibbon == SW_TRUE ? Root::kFlagRibbon : 0u );
             arrRoot[Root::kRootSizeScale]    = Root::toBits( batch._sizeScale );
             if ( bNativeBindless )
             {
@@ -161,7 +168,10 @@ namespace sw
             }
             cmd.setGraphicsRootConstants( 0, Root::kRootConstantCount, arrRoot );
             // 시작 인스턴스는 0 — D3D 는 SV_InstanceID 에 시작 인스턴스를 더하지 않는다. 시작 입자는 루트 상수로 간다.
-            cmd.drawInstanced( Root::kVerticesPerParticle, static_cast<uint32>( batch._pListParticle->size() ), 0, 0 );
+            // 띠는 이웃 입자 둘이 한 마디(사각형 하나)라 인스턴스가 입자 수보다 하나 적다(빌더가 입자 둘 이상만 싣는다).
+            const uint32 particleCount = static_cast<uint32>( batch._pListParticle->size() );
+            const uint32 instanceCount = batch._bRibbon == SW_TRUE ? particleCount - 1u : particleCount;
+            cmd.drawInstanced( Root::kVerticesPerParticle, instanceCount, 0, 0 );
             ++drawnBatchCount;
         }
         return drawnBatchCount;

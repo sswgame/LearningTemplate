@@ -11,7 +11,7 @@
    - E3(E4 가 뒤따름) — [EnginePartition](EnginePartition.md) 6.4. `GameObjectManager.h` 를 바꿔 모든 모듈이 다시 빌드된다. [단독: 모든 모듈 재빌드]
    - V2 — [GpuVerification](GpuVerification.md) 2절. 지는 케이스 수정은 들어갔고(로컬 확인, CI 미확인) 리눅스 `gl` 원인 확인 뒤 해제. [병렬 가능]
 2. **새 시스템**:
-   - Vfx V7(메시 투명과 교차 정렬) · V6, V4 는 `D2-6.3` 슬롯 지도 뒤(V0 ~ V3 들어감) — [Vfx](Vfx.md). [병렬 가능]
+   - Vfx V4 → V5(V0 ~ V3 · V6 · V7 들어감) — [Vfx](Vfx.md). [병렬 가능]
    - 클러스터드 라이팅 S2 → S5 — [ClusteredLighting](ClusteredLighting.md). [단독: 셰이더 재베이크]
    - 간접 조명 P0 부터(ClusteredLighting 뒤) — [IndirectLighting](IndirectLighting.md). [단독: 셰이더 재베이크]
    - 월드 스트리밍 W2 → W7 — [WorldStreaming](WorldStreaming.md) (W1 은 들어갔고 W2 부터). [단독: W2 가 씬 파일 형식 판을 올려 씬 직렬화를 쓰는 모듈이 다시 빌드되고, W7 의 히치 측정은 Release 에서 혼자]
