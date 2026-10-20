@@ -44,12 +44,11 @@ App · `GameNetSession`(`Engine/Net` — 엔진 수명이라 게임 모듈 리�
 
 ### S5 네트워크 프로파일러 — 남은 것
 
-Profiler 탭(시간축 그래프 · 받은 메시지 종류별 비중, `net.stats` 질의)은 들어갔습니다. 사용법은 Editor README "멀티 프로세스 재생" 에 있습니다.
+Profiler 탭(시간축 그래프 · 메시지 종류별 비중, `net.stats` 질의)은 들어갔습니다. 종류별 셈은 받은 쪽(`NetMessageRouter`)과 보낸 쪽(`NetHost::copySentKindTally` — 큐에 넣은 것)이 같은 표(`NetMessageKindTallyTable`)를 쓰고, 보고 줄은 `kinds=` · `sentKinds=` 둘을 싣습니다(탭의 "Sent").
 
 - 트레이스에 메시지 흐름을 남긴다: 보낼 때 · 받을 때 같은 메시지 id 로 흐름 이벤트(`s` · `f`)를 타임라인에 기록하면, 합친 트레이스(S1)에서 뷰어가 프로세스 사이 화살표를 그린다.
   합치기는 흐름 이벤트를 그대로 옮긴다 — 남은 것은 타임라인에 흐름 사건 칸을 두고 송수신 지점에서 찍는 일이다.
 - 스냅숏 크기 · 오브젝트별 복제 빈도: 공통 원천이 없다(복제 키트마다 따로 센다 — 예 `DestructionReplicationStats`). 키트가 셈을 `NetStatsReport` 에 싣는 창구를 정한 뒤 그래프를 더한다.
-- 보낸 쪽 메시지 종류별 셈: 지금 비중은 받은 쪽(`NetMessageRouter` 의 종류별 셈)이다. 보내는 길(`NetHost::sendMessage`)에 셈을 두면 한 프로세스만 보고도 올림 · 내림을 나눠 볼 수 있다.
 - 탭이 보이지 않을 때도 기록하기: 지금은 탭이 보일 때와 `netplay.profile` 동안만 묻는다. 세션 프레임 단계에서 늘 묻게 하면 창을 닫아도 남지만 자식 로그에 2 Hz 줄이 늘 쌓인다.
 - 부하 봇(`Tools/OnlineLoadBot`)을 붙여 숫자가 오르는 시나리오(지금 확인은 `net.traffic` 부하의 `netprofiler.scenario.xml`).
 

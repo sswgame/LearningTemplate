@@ -2706,6 +2706,12 @@
                 "Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp"
             ]
         },
+        "EditorMultiplayer.ProfilerKindsSent": {
+            "source": "Show the message kinds the process queued to send instead of the ones it received (one process shows both directions)",
+            "origins": [
+                "Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp"
+            ]
+        },
         "EditorMultiplayer.ProfilerLoss": {
             "source": "Packet loss (highest connection, %)",
             "origins": [

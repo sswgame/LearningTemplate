@@ -136,16 +136,6 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 라우터가 꺼낸 메시지의 종류 하나 몫 누적 셈입니다(처리기가 없는 메시지도 셉니다). 개발 명령 `net.stats` 의 메시지 종류별 비중이 이 값입니다. */
-    struct NetMessageKindTally
-    {
-        uint64 _messageCount{ 0 };
-        uint64 _byteCount{ 0 }; ///< 종류 바이트를 포함한 메시지 크기의 합(패킷 헤더 · 확인 응답은 빠진다)
-    };
-} // namespace sw
-
-namespace sw
-{
     /**
      * @class NetMessageRouter
      * @brief 받은 메시지를 종류(첫 바이트)마다 맡은 처리기 하나에게 바로 전달합니다(종류 256개짜리 테이블). 연결 사건은 메시지보다 먼저 모든 처리기에 알립니다.
@@ -161,7 +151,7 @@ namespace sw
     class SW_API NetMessageRouter
     {
     public:
-        static constexpr int32 kKindCount = 256;
+        static constexpr int32 kKindCount = NetMessageKindTallyTable::kKindCount;
 
         NetMessageRouter();
 
@@ -191,16 +181,16 @@ namespace sw
          */
         static int32 relayToOtherPeers( NetHost& host, const NetMessageContext& context );
         uint64       getMalformedCount() const { return _malformedCount; }
-        /** @brief `pump` 가 지금까지 꺼낸 그 종류의 메시지 수와 바이트입니다(받은 쪽 셈 — 보낸 메시지는 상대 라우터가 셉니다). */
-        const NetMessageKindTally& getKindTally( uint8 kind ) const { return _arrKindTally[kind]; }
+        /** @brief `pump` 가 지금까지 꺼낸 종류별 메시지 수와 바이트입니다(받은 쪽 셈 — 처리기가 없는 메시지도 센다. 보낸 쪽은 `NetHost::copySentKindTally`). */
+        const NetMessageKindTallyTable& getKindTally() const { return _kindTally; }
 
     private:
         void rebuildKindTable();
 
         vector<INetMessageHandler*> _listHandler; ///< 등록 순서대로 보관한다.
         INetMessageHandler*         _arrKindHandler[kKindCount];
-        NetMessageKindTally         _arrKindTally[kKindCount]; ///< `pump` 가 메시지마다 더한다(꺼내는 반복 안의 덧셈 둘 — 따로 훑지 않는다).
-        NetInbound                  _inbound;                  ///< `pump` 가 다시 쓰는 버퍼.
+        NetMessageKindTallyTable    _kindTally; ///< `pump` 가 메시지마다 더한다(꺼내는 반복 안의 덧셈 둘 — 따로 훑지 않는다).
+        NetInbound                  _inbound;   ///< `pump` 가 다시 쓰는 버퍼.
         uint64                      _malformedCount;
     };
 } // namespace sw

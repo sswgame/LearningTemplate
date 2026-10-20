@@ -1370,15 +1370,27 @@ SW_TEST_CASE( NetworkTest, MessageRouterDispatchesByRangeAndKeepsUnhandled )
     SW_EXPECT_EQUAL( 0, listUnhandled[0]._connectionID );
 
     // 종류별 셈은 처리기가 없는 메시지까지 센다(`net.stats` 의 비중). 0x82 는 두 번(종류 1 바이트 + varint 2 바이트씩)이라 바이트가 가장 크다.
-    SW_EXPECT_EQUAL( router.getKindTally( 0x82 )._messageCount, uint64{ 2 } );
-    SW_EXPECT_EQUAL( router.getKindTally( 0x82 )._byteCount, uint64{ 6 } );
-    SW_EXPECT_EQUAL( router.getKindTally( 0x51 )._messageCount, uint64{ 1 } );
-    SW_EXPECT_EQUAL( router.getKindTally( 0x80 )._messageCount, uint64{ 0 } );
+    SW_EXPECT_EQUAL( router.getKindTally().get( 0x82 )._messageCount, uint64{ 2 } );
+    SW_EXPECT_EQUAL( router.getKindTally().get( 0x82 )._byteCount, uint64{ 6 } );
+    SW_EXPECT_EQUAL( router.getKindTally().get( 0x51 )._messageCount, uint64{ 1 } );
+    SW_EXPECT_EQUAL( router.getKindTally().get( 0x80 )._messageCount, uint64{ 0 } );
+    // 보낸 쪽(클라이언트 호스트)은 큐에 넣은 메시지를 같은 표로 센다 — 받은 쪽 셈과 같아야 한다(신뢰 채널, 잃은 것 없음).
+    NetMessageKindTallyTable sentTally;
+    pair.getClient( 0 ).copySentKindTally( sentTally );
+    SW_EXPECT_EQUAL( sentTally.get( 0x82 )._messageCount, uint64{ 2 } );
+    SW_EXPECT_EQUAL( sentTally.get( 0x82 )._byteCount, uint64{ 6 } );
     NetStatsReport report;
-    report.populateKinds( router );
+    report.populateKinds( router.getKindTally(), sentTally );
     SW_ASSERT_EQUAL( 6, static_cast<int32>( report._listKindEntry.size() ) );
     SW_EXPECT_EQUAL( 0x82, static_cast<int32>( report._listKindEntry[0]._kind ) );
     SW_EXPECT_EQUAL( report._listKindEntry[0]._messageCount, uint64{ 2 } );
+    SW_ASSERT_EQUAL( 6, static_cast<int32>( report._listSentKindEntry.size() ) );
+    SW_EXPECT_EQUAL( 0x82, static_cast<int32>( report._listSentKindEntry[0]._kind ) );
+    // 보고 줄은 두 방향을 다 실어 되읽힌다.
+    NetStatsReport parsed;
+    SW_ASSERT_TRUE( NetStatsReport::tryParseLine( report.makeLine(), parsed ) );
+    SW_EXPECT_EQUAL( 6, static_cast<int32>( parsed._listSentKindEntry.size() ) );
+    SW_EXPECT_EQUAL( parsed._listSentKindEntry[0]._byteCount, uint64{ 6 } );
 
     // 뺀 처리기는 더 묻지 않는다. 빈 메시지는 누구에게도 가지 않는다.
     router.unregisterHandler( &gameFirst );
