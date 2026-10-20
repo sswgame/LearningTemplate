@@ -118,12 +118,6 @@
 왜 필요한가: `containers` 가 남긴 후보 58 파일 80 건(`find_if` · `remove_if` · 해시 구조체)이 있습니다.
 남은 것: 디렉터리별로 합니다. 손 멤버 루프를 못 쓰게 하는 형식 또는 린트를 둡니다(형식으로 못 막는 이유를 적습니다).
 
-### NameLookupAndWatchMask
-제목: 이름 조회가 흩어진 곳과 감시 마스크
-옛번호: C-69
-왜 필요한가: `SceneDevCommands` · Sequencer 의 이름 조회가 곳곳에 따로 있습니다. `IFileWatcher` 를 쓰는 곳은 조용히 실패합니다(리눅스 감시 마스크에 `IN_ATTRIB` 없음).
-남은 것: 이름 조회 한 곳으로 모으기, 감시 마스크 보강. `HUDViewModel` 의 슈터 전용 칸은 `D4-15` 가 맡습니다.
-
 ### DiskPathVsResourceId
 제목: 디스크 경로와 리소스 id 가 같은 `string_view` 입구를 쓴다
 옛번호: C-70
