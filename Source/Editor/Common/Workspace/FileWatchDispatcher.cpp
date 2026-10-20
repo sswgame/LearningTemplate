@@ -3,6 +3,7 @@
 #include "Editor/Common/Workspace/FileWatchDispatcher.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Resource/ResourcePaths.h"
@@ -174,10 +175,8 @@ namespace sw
         if ( handle.isValid() == false )
             return;
 
-        _listWatch.erase( std::remove_if( _listWatch.begin(), _listWatch.end(),
-                                          [&]( const WatchEntry& entry )
-        { return entry._handle == handle; } ),
-                          _listWatch.end() );
+        VectorUtil::removeIf( _listWatch, [&handle]( const WatchEntry& entry )
+        { return entry._handle == handle; } );
     }
 
     bool FileWatchDispatcher::matchesWatch( const WatchEntry& entry, const FileChangeEvent& changeEvent,

@@ -2,6 +2,8 @@
 
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -111,22 +113,12 @@ namespace sw::editor
 
     const EditorPreviewViewTarget* EditorRenderViews::findPreviewTarget( uint32 id ) const
     {
-        for ( const EditorPreviewViewTarget& preview : _listPreviewTarget )
-        {
-            if ( preview._id == id )
-                return &preview;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&EditorPreviewViewTarget::_id>( _listPreviewTarget, id );
     }
 
     EditorPreviewViewTarget* EditorRenderViews::findPreviewTargetMutable( uint32 id )
     {
-        for ( EditorPreviewViewTarget& preview : _listPreviewTarget )
-        {
-            if ( preview._id == id )
-                return &preview;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&EditorPreviewViewTarget::_id>( _listPreviewTarget, id );
     }
 
     void EditorRenderViews::submitPreviewView( uint32 id, uint32 sceneKey, const float4x4& viewProj, const float3& cameraPos )

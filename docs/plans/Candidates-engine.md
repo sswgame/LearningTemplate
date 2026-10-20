@@ -110,7 +110,8 @@
 제목: 함수 객체 · 람다 공통화 2단계
 옛번호: C-68
 왜 필요한가: `containers` 가 남긴 후보 58 파일 80 건(`find_if` · `remove_if` · 해시 구조체)이 있습니다.
-남은 것: 디렉터리별로 합니다. 손 멤버 루프를 못 쓰게 하는 형식 또는 린트를 둡니다(형식으로 못 막는 이유를 적습니다).
+남은 것: 디렉터리별로 합니다(`Editor/Common` 은 2026-10-21 에 `VectorUtil::removeIf` · `findBy` 로 옮겼습니다). 손 멤버 루프를 못 쓰게 하는 형식 또는 린트를 둡니다(형식으로 못 막는 이유를 적습니다).
+`Editor/Common` 에 남은 손 루프는 조건이 둘 이상이거나(`_id == id && _pInstance != nullptr`) C 배열(`kArrKindInfo`)이라 `findBy` 로 옮기지 않았습니다.
 
 ### NameLookupAndWatchMask
 제목: 이름 조회가 흩어진 곳과 감시 마스크

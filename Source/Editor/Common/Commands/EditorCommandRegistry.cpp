@@ -7,6 +7,7 @@
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Module/ModuleUnloadListener.h"
 
 namespace sw::editor
@@ -151,12 +152,7 @@ namespace sw::editor
 
     const EditorMenu* EditorCommandRegistry::findMenu( string_view menuPath ) const
     {
-        for ( const EditorMenu& menu : _listMenu )
-        {
-            if ( menu._path == menuPath )
-                return &menu;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&EditorMenu::_path>( _listMenu, menuPath );
     }
 
     void EditorCommandRegistry::rebuildMenus()
@@ -175,15 +171,7 @@ namespace sw::editor
         for ( const uint32 commandIndex : listPlacedIndex )
         {
             const EditorCommandDesc& desc  = _listCommand[commandIndex];
-            EditorMenu*              pMenu = nullptr;
-            for ( EditorMenu& menu : _listMenu )
-            {
-                if ( menu._path == desc._menuPath )
-                {
-                    pMenu = &menu;
-                    break;
-                }
-            }
+            EditorMenu*              pMenu = VectorUtil::findBy<&EditorMenu::_path>( _listMenu, desc._menuPath );
             if ( pMenu == nullptr )
             {
                 EditorMenu& menu        = _listMenu.emplace_back();
@@ -210,12 +198,7 @@ namespace sw::editor
 
     const EditorCommandDesc* EditorCommandRegistry::find( string_view commandID ) const
     {
-        for ( const EditorCommandDesc& desc : _listCommand )
-        {
-            if ( desc._id == commandID )
-                return &desc;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&EditorCommandDesc::_id>( _listCommand, commandID );
     }
 
     bool EditorCommandRegistry::isEnabled( const EditorCommandDesc& desc )

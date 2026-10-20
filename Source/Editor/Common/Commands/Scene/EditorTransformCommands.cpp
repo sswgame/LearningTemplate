@@ -3,6 +3,7 @@
 #include "Editor/Common/Commands/Scene/EditorTransformCommands.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
@@ -343,12 +344,8 @@ namespace sw::editor
     void EditorTransformCommands::distributeObjects( vector<GameObject*> listSel, AlignAxis axis )
     {
         // 주 SceneComponent 가 없는 오브젝트는 분배 대상에서 뺀다(front/back 역참조 보호).
-        listSel.erase( std::remove_if( listSel.begin(), listSel.end(),
-                                       []( const GameObject* pGo )
-        {
-            return pGo->getPrimarySceneComponent() == nullptr;
-        } ),
-                       listSel.end() );
+        VectorUtil::removeIf( listSel, []( const GameObject* pGo )
+        { return pGo->getPrimarySceneComponent() == nullptr; } );
         if ( listSel.size() < 3 )
             return;
 
