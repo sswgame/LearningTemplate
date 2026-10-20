@@ -43,13 +43,13 @@ namespace sw::editor
     {
         /**
          * @struct ToolDocumentDesc
-         * @brief 도구 문서 종류 하나 — 로그 · 상태 문구의 이름과, 경로가 비었을 때 여는 에디터 기본 파일입니다.
-         * @details 읽기 · 쓰기 · 실패 알림은 `loadToolDocument` / `saveToolDocument` 한 벌이다. 종류마다 다른 것은 이 기술자와
+         * @brief 도구 문서 종류 하나입니다. 로그와 상태 문구에 쓰는 이름, 경로가 비었을 때 여는 에디터 기본 파일을 가지고 있습니다.
+         * @details 읽기, 쓰기, 실패 알림은 `loadToolDocument` 와 `saveToolDocument` 하나씩만 있다. 종류마다 다른 것은 이 기술자와
          *          파일 IO 오버로드(`readDocument` / `writeDocument`)뿐이다.
          */
         struct ToolDocumentDesc
         {
-            const utf8* _pLabel;           ///< "animation graph" — 로그 · 상태 문구에 들어간다
+            const utf8* _pLabel;           ///< "animation graph" 처럼 로그와 상태 문구에 들어가는 이름
             const utf8* _pDefaultFileName; ///< 경로가 비었을 때 여는 기본 파일(`Saved/Editor` 아래 이름). nullptr 이면 기본 문서가 없다
         };
 
@@ -73,7 +73,7 @@ namespace sw::editor
 
             /**
              * @brief 문서 경로입니다. 열린 문서 경로가 비면 기본 문서 경로이고, **둘 다 없으면 빈 문자열**입니다.
-             * @details 빈 경로를 파일 계층까지 내리면 `File not found: ` 처럼 이름이 빈 오류가 남는다. 부르는 쪽(`loadToolDocument` ·
+             * @details 빈 경로를 파일 계층까지 넘기면 `File not found: ` 처럼 이름이 빈 오류가 남는다. 그래서 부르는 쪽(`loadToolDocument`,
              *          `saveToolDocument`)이 빈 경로를 먼저 거른다.
              */
             static string resolveDocumentPath( const ToolDocumentDesc& desc, string_view path )
@@ -101,13 +101,13 @@ namespace sw::editor
 
             [[nodiscard]] static bool writeDocument( const TileMapXMLData& data, const string& resolved ) { return data.save( resolved ); }
 
-            /** @brief 상태 문구에 보일 경로 — 받은 경로가 있으면 그것(리소스 id), 없으면 푼 경로입니다. */
+            /** @brief 상태 문구에 보일 경로입니다. 받은 경로(리소스 id)가 있으면 그것이고, 없으면 해석한 경로입니다. */
             static string makeShownPath( string_view path, const string& resolved ) { return path.empty() ? resolved : string{ path }; }
 
             /**
-             * @brief 도구 문서를 읽고 **어떻게 됐는지** 답합니다 — 파일이 없음(새 문서) · 읽음 · 있는데 읽지 못함(깨졌거나 새 형식).
-             * @details 다섯 종류가 같은 모양으로 알린다. 읽지 못하면 경고 한 줄(`Could not read the <종류> '<경로>'`), @p pOutStatus 가
-             *          있으면 패널 상태 문구(`No file yet: …` · `Failed to read …` · `Loaded …`)를 쓴다.
+             * @brief 도구 문서를 읽고 **어떻게 됐는지** 돌려줍니다. 파일이 없음(새 문서), 읽음, 있는데 읽지 못함(깨졌거나 새 형식) 중 하나입니다.
+             * @details 다섯 종류가 같은 형태로 알린다. 읽지 못하면 경고 한 줄(`Could not read the <종류> '<경로>'`)을 남기고, @p pOutStatus 가
+             *          있으면 패널 상태 문구(`No file yet: …`, `Failed to read …`, `Loaded …`)를 쓴다.
              */
             template <typename TAsset>
             static ToolAssetLoadResult loadToolDocument( const ToolDocumentDesc& desc, TAsset& outData, string_view path, string* pOutStatus )
@@ -131,7 +131,7 @@ namespace sw::editor
                 return ToolAssetLoadResult::Loaded;
             }
 
-            /** @brief 도구 문서를 씁니다. 실패는 두 경우(경로 없음 · 쓰기 실패) 모두 오류 한 줄로 알립니다 — 호출부가 반환값을 버려도 조용하지 않습니다. */
+            /** @brief 도구 문서를 씁니다. 경로 없음과 쓰기 실패를 모두 오류 한 줄로 알리므로, 호출부가 반환값을 버려도 조용히 넘어가지 않습니다. */
             template <typename TAsset>
             [[nodiscard]] static bool saveToolDocument( const ToolDocumentDesc& desc, const TAsset& data, string_view path )
             {
@@ -197,7 +197,7 @@ namespace sw::editor
     ToolAssetLoadResult EditorToolAssetCommands::loadSpriteClip( SpriteClipAsset& outData, string& outStatus, string_view path )
     {
         outData.clear();
-        // 클립 문서가 아닌 이미지는 문서로 읽지 않는다 — 그 이미지를 아틀라스로 새 클립을 시작한다.
+        // 클립 문서가 아닌 이미지는 문서로 읽지 않는다. 그 이미지를 아틀라스로 삼아 새 클립을 시작한다.
         if ( EditorToolAssetInternal::isAtlasImagePath( path ) )
         {
             outData._atlasPath = string{ path };
@@ -235,7 +235,7 @@ namespace sw::editor
         const bool     bCanLookUpPrefabPath = outPrefabPath.empty() && pInstance != nullptr && pContext != nullptr;
         if ( bCanLookUpPrefabPath )
             outPrefabPath = pContext->getSubsystem<EditorWorkspace>().findPrefabPath( pInstance );
-        // 포커스된 에셋으로 넘어가지 않는다 — 머티리얼 · 씬일 수 있어 프리팹으로 읽으면 [Error] 를 남긴다. 프리팹 포커스는 부르는 쪽이 종류를 보고 넘긴다.
+        // 포커스된 에셋으로 넘어가지 않는다. 머티리얼이나 씬일 수 있어 프리팹으로 읽으면 [Error] 를 남긴다. 프리팹 포커스는 부르는 쪽이 종류를 보고 넘긴다.
 
         AssetManager* pResources = editor::findSubsystem<AssetManager>();
         if ( pResources == nullptr || outPrefabPath.empty() )
@@ -250,8 +250,8 @@ namespace sw::editor
         if ( pInstance == nullptr )
             return;
 
-        // 비교용 원형(CDO)은 **씬 밖**에서 만든다 — 언리얼 CDO 처럼 월드에 들지 않는다. 활성 씬 매니저 안에 임시 오브젝트로 만들면
-        // 지울 때까지 씬 쪽(틱 · 계층 · 저장)에 보인다.
+        // 비교용 원형(CDO)은 **씬 밖**에서 만든다. 언리얼 CDO 처럼 월드에 들어가지 않는다. 활성 씬 매니저 안에 임시 오브젝트로 만들면
+        // 지울 때까지 틱, 계층, 저장에 보인다.
         GameObjectManager scratch;
         GameObject*       pCdo = scratch.createGameObject( hashed_string( "__PrefabDiffCdo" ) );
         if ( pLoaded->applyStateTo( pCdo ) == false )
@@ -286,7 +286,7 @@ namespace sw::editor
                 item._propertyName  = prop._name.c_str();
                 item._propertyLabel = prop._name.c_str();
 #if !defined( SW_SHIPPING )
-                // 표시 이름 메타데이터는 Shipping 에서 빠진다(EditorTest 는 Shipping 에서도 이 파일을 짓는다).
+                // 표시 이름 메타데이터는 Shipping 에서 빠진다. EditorTest 는 Shipping 에서도 이 파일을 빌드한다.
                 if ( prop._metadata->_displayName.empty() == false )
                     item._propertyLabel = prop._metadata->_displayName.c_str();
 #endif
@@ -315,7 +315,7 @@ namespace sw::editor
         if ( pLoaded == nullptr )
             return;
 
-        // 비교용 원형(CDO)은 씬 밖에서 만든다(위 `collectPrefabOverrides` 설명). 형식은 프리팹이 안다 — XML 로만 읽으면 JSON 프리팹의
+        // 비교용 원형(CDO)은 씬 밖에서 만든다(위 `collectPrefabOverrides` 설명). 형식은 프리팹이 알고 있다. XML 로만 읽으면 JSON 프리팹의
         // 원형이 비어 되돌릴 값을 찾지 못한다.
         GameObjectManager scratch;
         GameObject*       pCdo = scratch.createGameObject( hashed_string( "__PrefabRevertCdo" ) );

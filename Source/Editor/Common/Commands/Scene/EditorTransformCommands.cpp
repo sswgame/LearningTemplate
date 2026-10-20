@@ -3,6 +3,7 @@
 #include "Editor/Common/Commands/Scene/EditorTransformCommands.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
@@ -65,8 +66,8 @@ namespace sw::editor
             };
 
             /**
-             * @brief 오브젝트를 월드 축 `axis` 의 값이 `targetValue` 가 되도록 옮기고 되돌리기 기록을 남깁니다. 정렬 · 분배가 함께 씁니다.
-             * @details 월드 위치를 바꿔 쓴다(`setWorldPosition`). 월드 차이만큼 **로컬** 위치를 옮기면 부모에 회전 · 크기가 있을 때 틀린다.
+             * @brief 오브젝트를 월드 축 `axis` 의 값이 `targetValue` 가 되도록 옮기고 되돌리기 기록을 남깁니다. 정렬과 분배가 함께 씁니다.
+             * @details 월드 위치를 바꿔 쓴다(`setWorldPosition`). 월드 차이만큼 **로컬** 위치를 옮기면 부모에 회전이나 크기가 있을 때 틀린다.
              *          주 씬 컴포넌트가 없으면 아무것도 하지 않습니다.
              */
             static void moveAlongWorldAxis( GameObject* pGo, AlignAxis axis, float32 targetValue, string_view actionName )
@@ -86,8 +87,8 @@ namespace sw::editor
 
             /**
              * @brief 컴포넌트 값 XML 을 @p pComp 에 덮어쓰고 되돌리기 기록을 남깁니다. 붙여넣기와 프리셋이 함께 쓰는 한 경로입니다.
-             * @details 클립보드와 프리셋 파일은 같은 형식(XML) 하나다 — 두 형식을 두고 하나가 실패하면 다른 것으로 가던 길을 없앴다.
-             *          이름은 값이 아니라 정체다(컴포넌트 키) — 대상의 것을 지킨다(언리얼의 속성 붙여넣기도 컴포넌트 이름을 옮기지 않는다).
+             * @details 클립보드와 프리셋 파일은 같은 형식(XML) 하나다. 두 형식을 두고 하나가 실패하면 다른 것으로 넘어가던 경로는 없앴다.
+             *          이름은 값이 아니라 컴포넌트를 식별하는 키이므로 대상의 이름을 유지한다. 언리얼의 속성 붙여넣기도 컴포넌트 이름을 옮기지 않는다.
              */
             [[nodiscard]] static bool applyComponentXML( Component* pComp, string_view xml, string_view actionName )
             {
@@ -101,8 +102,8 @@ namespace sw::editor
                 pComp->setComponentName( targetName );
                 if ( bSuccess == false )
                     return false;
-                // 직렬화기는 값만 쓴다 — 컴포넌트가 그 값으로 다시 맞추게 알린다. 알리지 않으면 붙여 넣은 위치가 월드 행렬에 들지 않고
-                // (화면 · 기즈모가 옛 자리) 메시 id 를 붙여 넣어도 옛 메시를 그린다.
+                // 직렬화기는 값만 쓰므로, 컴포넌트가 그 값으로 다시 맞추도록 알린다. 알리지 않으면 붙여 넣은 위치가 월드 행렬에 반영되지 않아
+                // 화면과 기즈모가 옛 위치에 남고, 메시 id 를 붙여 넣어도 옛 메시를 그린다.
                 pComp->notifyStateWritten();
                 if ( pOwner != nullptr )
                 {
@@ -143,8 +144,8 @@ namespace sw::editor
         {
             const hashed_string newName  = pNewComp->getComponentName();
             const bool          bSuccess = xml.empty() == false && XMLSerializer::deserialize( pNewComp, *pNewComp->getTypeInfo(), string{ xml } );
-            pNewComp->setComponentName( newName ); // 새 컴포넌트는 제 이름(타입 이름)로 — 원본의 이름을 옮기면 키가 겹친다
-            // 읽지 못했어도 기본값이 그 상태다 — 어느 쪽이든 컴포넌트가 값을 자원으로 바꾸게 한다(`EditorSceneCommands::addComponent` 와 같다).
+            pNewComp->setComponentName( newName ); // 새 컴포넌트는 자기 이름(타입 이름)을 쓴다. 원본의 이름을 옮기면 키가 겹친다
+            // 읽지 못했어도 기본값이 그 상태다. 어느 쪽이든 컴포넌트가 값을 리소스로 바꾸게 한다(`EditorSceneCommands::addComponent` 와 같다).
             pNewComp->notifyStateWritten();
 
             // 이 결과를 버리면 값이 하나도 안 들어간 컴포넌트와 "붙여넣기" 실행 취소 항목만
@@ -229,7 +230,7 @@ namespace sw::editor
 
     void EditorTransformCommands::snapSelectedToGround()
     {
-        // 전역 명령이라 겨누는 창의 선택이다 — 미리보기 창이면 그 씬의 오브젝트이고, 기록은 그 창의 스택에 간다(`EditorTransaction`).
+        // 전역 명령이므로 대상 창의 선택을 쓴다. 미리보기 창이면 그 씬의 오브젝트이고, 기록은 그 창의 스택에 남는다(`EditorTransaction`).
         const EditorSelection* pSelection = editor::getFocusedSelection();
         if ( pSelection == nullptr )
             return;
@@ -254,8 +255,8 @@ namespace sw::editor
 
             const ObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pGo );
 
-            // 월드로 읽고 월드로 쓴다. 크기는 오브젝트의 월드 상자 하나로 측정한다(`GameObject::getWorldBox`) — 종류마다 따로 셈하면("메시면 월드
-            // 스케일 × 단위 상자") 단위 상자가 아닌 메시(구 · 캡슐 · 평면)와 키운 콜라이더가 떠 있거나 파묻힌다.
+            // 월드로 읽고 월드로 쓴다. 크기는 오브젝트의 월드 상자 하나로 측정한다(`GameObject::getWorldBox`). 종류마다 따로 계산하면("메시면 월드
+            // 스케일 × 단위 상자") 단위 상자가 아닌 메시(구, 캡슐, 평면)와 키운 콜라이더가 떠 있거나 파묻힌다.
             float3  pos          = pSc->getWorldPosition();
             float32 bottomOffset = 0.0f;
             AABB    box{};
@@ -274,7 +275,7 @@ namespace sw::editor
 
     void EditorTransformCommands::alignSelectedObjects( AlignAxis axis, AlignType type )
     {
-        // 전역 명령이라 겨누는 창의 선택이다 — 미리보기 창이면 그 씬의 오브젝트이고, 기록은 그 창의 스택에 간다(`EditorTransaction`).
+        // 전역 명령이므로 대상 창의 선택을 쓴다. 미리보기 창이면 그 씬의 오브젝트이고, 기록은 그 창의 스택에 남는다(`EditorTransaction`).
         const EditorSelection* pSelection = editor::getFocusedSelection();
         if ( pSelection == nullptr )
             return;
@@ -330,7 +331,7 @@ namespace sw::editor
 
     void EditorTransformCommands::distributeSelectedObjects( AlignAxis axis )
     {
-        // 전역 명령이라 겨누는 창의 선택이다 — 미리보기 창이면 그 씬의 오브젝트이고, 기록은 그 창의 스택에 간다(`EditorTransaction`).
+        // 전역 명령이므로 대상 창의 선택을 쓴다. 미리보기 창이면 그 씬의 오브젝트이고, 기록은 그 창의 스택에 남는다(`EditorTransaction`).
         const EditorSelection* pSelection = editor::getFocusedSelection();
         if ( pSelection == nullptr )
             return;
@@ -343,12 +344,8 @@ namespace sw::editor
     void EditorTransformCommands::distributeObjects( vector<GameObject*> listSel, AlignAxis axis )
     {
         // 주 SceneComponent 가 없는 오브젝트는 분배 대상에서 뺀다(front/back 역참조 보호).
-        listSel.erase( std::remove_if( listSel.begin(), listSel.end(),
-                                       []( const GameObject* pGo )
-        {
-            return pGo->getPrimarySceneComponent() == nullptr;
-        } ),
-                       listSel.end() );
+        VectorUtil::removeIf( listSel, []( const GameObject* pGo )
+        { return pGo->getPrimarySceneComponent() == nullptr; } );
         if ( listSel.size() < 3 )
             return;
 

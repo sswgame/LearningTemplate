@@ -2,6 +2,7 @@
 
 #include "Editor/Common/GUI/EditorPopupManager.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Module/ModuleUnloadListener.h"
 
 #include "Editor/Common/GUI/IEditorPopup.h"
@@ -16,13 +17,11 @@ namespace sw::editor
         const string popupID = string{ pPopup->getPopupID() };
 
         // 같은 ID 가 이미 등록돼 있으면 교체한다
-        for ( EditorPopupEntry& entry : _listPopup )
+        EditorPopupEntry* pExisting = VectorUtil::findBy<&EditorPopupEntry::_id>( _listPopup, popupID );
+        if ( pExisting != nullptr )
         {
-            if ( entry._id == popupID )
-            {
-                entry._pInstance = std::move( pPopup );
-                return;
-            }
+            pExisting->_pInstance = std::move( pPopup );
+            return;
         }
 
         EditorPopupEntry entry;

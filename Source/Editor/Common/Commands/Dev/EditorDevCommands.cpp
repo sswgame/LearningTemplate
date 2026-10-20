@@ -1,8 +1,9 @@
 /**
  * @file EditorDevCommands.cpp
- * @brief 에디터가 내주는 개발 명령(에디터 커맨드 실행 · 플레이 세션 · 씬 열고 저장 · 임시 에셋 열기 · 선택 · 디버그 그리기 데모)입니다. 에디터 모듈과 함께 올라오고 내려갑니다.
- * @details 임시 에셋(`asset.open` · `asset.removeTemp` · 탐침 `Editor.TempAssetExists`)은 시나리오가 문서 패널의 저장을 저장소 리소스를
- *          바꾸지 않고 시험하는 길이다. 경로는 작업 폴더의 `Saved/Automation/` 아래만 받는다 — 리소스 트리는 거절한다.
+ * @brief 에디터가 제공하는 개발 명령입니다. 에디터 커맨드 실행, 플레이 세션, 씬 열기와 저장, 임시 에셋 열기, 선택, 디버그 그리기 데모가 있습니다.
+ *        에디터 모듈과 함께 로드되고 언로드됩니다.
+ * @details 임시 에셋 명령(`asset.open`, `asset.removeTemp`, 탐침 `Editor.TempAssetExists`)은 시나리오가 저장소 리소스를 바꾸지 않고
+ *          문서 패널의 저장을 테스트하는 경로다. 경로는 작업 폴더의 `Saved/Automation/` 아래만 받고, 리소스 트리는 거절한다.
  */
 #include "pch.h"
 
@@ -42,7 +43,7 @@ namespace sw::editor
     {
         struct EditorDevCommandsInternal
         {
-            /** @brief `asset.import` 가 받는 임시 리소스 폴더(리소스 id)입니다. `.gitignore` 의 `Resource/editor/automationtemp/` 와 같은 자리입니다. */
+            /** @brief `asset.import` 가 받는 임시 리소스 폴더(리소스 id)입니다. `.gitignore` 의 `Resource/editor/automationtemp/` 와 같은 위치입니다. */
             static constexpr const utf8* kImportTempFolder = "editor/automationtemp";
 
             /** @brief 낱말을 양의 정수로 읽습니다. 숫자가 아니면 false 입니다. */
@@ -123,7 +124,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 명령 인자 경로를 절대 경로로 바꿉니다(상대면 작업 폴더 기준 — 시나리오 산출물과 같은 `Saved/`). */
+            /** @brief 명령 인자 경로를 절대 경로로 바꿉니다. 상대 경로면 시나리오 산출물과 같은 작업 폴더(`Saved/`)를 기준으로 합니다. */
             [[nodiscard]] static bool resolveScenePath( const string& path, string& outAbsolutePath )
             {
                 if ( path.empty() )
@@ -133,7 +134,7 @@ namespace sw::editor
                     outAbsolutePath = path;
                     return true;
                 }
-                // 리소스 id(`engine/automation/...`)면 리소스 트리의 그 파일이다 — 시나리오가 작업 폴더를 몰라도 된다.
+                // 리소스 id(`engine/automation/...`)면 리소스 트리의 그 파일이다. 그래서 시나리오가 작업 폴더를 몰라도 된다.
                 const string resourcePath = FileUtil::joinPath( ResourcePaths::getRootFolderPath(), path );
                 if ( FileUtil::exists( resourcePath ) )
                 {
@@ -163,7 +164,7 @@ namespace sw::editor
                 string absolutePath;
                 if ( listArgument.size() != 1 || resolveScenePath( listArgument[0], absolutePath ) == false )
                     return false;
-                // 미저장 씬이면 대화상자를 띄우는 길(tryOpenScene)이 아니라 바로 연다 — 무인 실행에서 대화상자는 아무도 닫지 않는다.
+                // 미저장 씬이 있어도 대화상자를 띄우는 경로(tryOpenScene)를 쓰지 않고 바로 연다. 무인 실행에서는 대화상자를 아무도 닫지 않는다.
                 if ( EditorSceneFileCommands::loadScene( absolutePath ) == false )
                 {
                     outReply = "could not open '" + absolutePath + "'";
@@ -219,7 +220,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 임시 에셋 하나를 새 문서로 엽니다. 남은 옛 파일은 먼저 지워 매번 같은 상태(파일 없음 — 기본 문서)로 시작합니다. */
+            /** @brief 임시 에셋 하나를 새 문서로 엽니다. 남은 옛 파일을 먼저 지워 매번 같은 상태(파일 없이 기본 문서)로 시작합니다. */
             static bool runOpenTempAsset( const vector<string>& listArgument, string& outReply )
             {
                 string absolutePath;
@@ -241,7 +242,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 시나리오 끝 정리 — 임시 에셋 파일을 지웁니다. 없으면 할 일이 없어 성공입니다. */
+            /** @brief 시나리오가 끝날 때 임시 에셋 파일을 지웁니다. 파일이 없으면 할 일이 없으므로 성공입니다. */
             static bool runRemoveTempAsset( const vector<string>& listArgument, string& outReply )
             {
                 string absolutePath;
@@ -258,8 +259,8 @@ namespace sw::editor
 
             /**
              * @brief 임포트 대상 폴더(리소스 id)를 절대 경로로 바꿉니다. 임시 리소스 폴더(`kImportTempFolder`) 아래일 때만 true 입니다.
-             * @details 임포트한 에셋은 리소스 id 가 있어야 씬이 쓴다 — `Saved/Automation` 에는 id 가 없다. 그래서 리소스 트리 안의 한 폴더만 받고,
-             *          그 폴더는 `.gitignore` 가 무시하며 시나리오가 처음과 끝에 지운다(`asset.removeImportFolder`). 저장소 리소스를 바꾸지 않는 문지기다.
+             * @details 임포트한 에셋은 리소스 id 가 있어야 씬이 쓸 수 있는데, `Saved/Automation` 에는 id 가 없다. 그래서 리소스 트리 안의 한 폴더만 받는다.
+             *          그 폴더는 `.gitignore` 가 무시하고 시나리오가 처음과 끝에 지운다(`asset.removeImportFolder`). 이 검사가 저장소 리소스를 지킨다.
              */
             [[nodiscard]] static bool resolveImportFolder( const string& folderID, string& outAbsolutePath, string& outReply )
             {
@@ -276,8 +277,9 @@ namespace sw::editor
             }
 
             /**
-             * @brief 원본 파일 하나를 임시 리소스 폴더로 가져옵니다 — 콘텐츠 브라우저 Import 와 같은 길(`EditorAssetFileCommands::importFiles`, `.meta` 생성)이고
-             *          OS 파일 대화상자만 건너뜁니다. 원본은 작업 폴더 기준 경로나 리소스 id 입니다. 같은 이름이 있으면 새 이름을 받으므로 시나리오는 먼저 폴더를 지운다.
+             * @brief 원본 파일 하나를 임시 리소스 폴더로 가져옵니다. 콘텐츠 브라우저 Import 와 같은 경로(`EditorAssetFileCommands::importFiles`, `.meta` 생성)이고
+             *        OS 파일 대화상자만 건너뜁니다.
+             * @details 원본은 작업 폴더 기준 경로나 리소스 id 다. 같은 이름이 있으면 새 이름을 받으므로 시나리오는 먼저 폴더를 지운다.
              */
             static bool runImportAsset( const vector<string>& listArgument, string& outReply )
             {
@@ -301,7 +303,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 시나리오 처음 · 끝 정리 — 임시 리소스 폴더 하나를 통째로 지웁니다(`.meta` 포함). 없으면 할 일이 없어 성공입니다. */
+            /** @brief 시나리오의 처음과 끝에 임시 리소스 폴더 하나를 `.meta` 까지 통째로 지웁니다. 폴더가 없으면 할 일이 없으므로 성공입니다. */
             static bool runRemoveImportFolder( const vector<string>& listArgument, string& outReply )
             {
                 string folderPath;
@@ -343,10 +345,10 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 고른 오브젝트마다 컴포넌트 하나를 단다(되돌리기 한 줄씩). "Add Component" 메뉴에 숨긴 타입(`HideInMenu`)도 단다 — 시나리오가 테스트 컴포넌트를 단다. */
+            /** @brief 고른 오브젝트마다 컴포넌트 하나를 추가하고 되돌리기를 하나씩 남깁니다. 시나리오가 테스트 컴포넌트를 추가하므로 "Add Component" 메뉴에서 숨긴 타입(`HideInMenu`)도 받습니다. */
             static bool runAddComponent( const vector<string>& listArgument, string& outReply )
             {
-                // 사람이 인스펙터의 "Add Component" 로 하는 일과 같다 — 겨누는 창의 선택에 단다(미리보기 창이면 기록도 그 창의 스택).
+                // 사람이 인스펙터의 "Add Component" 로 하는 일과 같다. 대상 창의 선택에 추가하고, 미리보기 창이면 기록도 그 창의 스택에 남긴다.
                 const EditorSelection* pSelection = editor::getFocusedSelection();
                 if ( listArgument.size() != 1 || pSelection == nullptr )
                     return false;
@@ -363,9 +365,9 @@ namespace sw::editor
             }
 
             /**
-             * @brief 고른 오브젝트(주 선택)를 임시 프리팹 파일로 저장하고 그 오브젝트를 프리팹 인스턴스로 잇습니다(유니티의 "오브젝트를 Project 로 끌어 프리팹 만들기").
+             * @brief 고른 오브젝트(주 선택)를 임시 프리팹 파일로 저장하고 그 오브젝트를 프리팹 인스턴스로 연결합니다(유니티의 "오브젝트를 Project 로 끌어 프리팹 만들기").
              * @details 경로는 `asset.open` 과 같은 임시 에셋 규칙(작업 폴더의 `Saved/Automation/` 아래, 리소스 트리 밖)이고 확장자(`.prefab.xml` · `.prefab.json`)가
-             *          형식을 정한다. 시나리오가 저장소 리소스를 바꾸지 않고 프리팹 만들기 · 고치기 · 적용을 밟는 길이다. 이미 있는 파일은 덮어쓴다(시나리오 반복).
+             *          형식을 정한다. 시나리오가 저장소 리소스를 바꾸지 않고 프리팹 만들기, 고치기, 적용을 거치는 경로다. 시나리오를 반복하므로 이미 있는 파일은 덮어쓴다.
              */
             static bool runCreatePrefab( const vector<string>& listArgument, string& outReply )
             {
@@ -374,7 +376,7 @@ namespace sw::editor
                 const bool     bInvalidArguments = listArgument.size() != 1 || pContext == nullptr || resolveTempAssetPath( listArgument[0], absolutePath, outReply ) == false;
                 if ( bInvalidArguments )
                     return false;
-                // 놓인 프리팹 표(워크스페이스)가 메인 씬의 것이라 메인 선택이다.
+                // 놓인 프리팹 테이블(워크스페이스)이 메인 씬의 것이므로 메인 선택을 쓴다.
                 GameObject* pObject = editor::getMainSceneSelection().getPrimaryObject();
                 if ( pObject == nullptr )
                 {
@@ -400,7 +402,7 @@ namespace sw::editor
             }
 
             /**
-             * @brief 프리팹 인스턴스 하나를 활성 씬 루트에 스폰하고 고릅니다(되돌리기 한 줄 — 콘텐츠 브라우저에서 끌어 놓기와 같은 길).
+             * @brief 프리팹 인스턴스 하나를 활성 씬 루트에 스폰하고 고릅니다. 콘텐츠 브라우저에서 끌어 놓기와 같은 경로이고 되돌리기를 하나 남깁니다.
              * @details `Saved/` 로 시작하는 경로는 `prefab.create` 가 만든 임시 프리팹(작업 폴더 기준)이고, 나머지는 리소스 id 다.
              */
             static bool runSpawnPrefab( const vector<string>& listArgument, string& outReply )
@@ -433,7 +435,7 @@ namespace sw::editor
             }
 
             /**
-             * @brief 씬 뷰 카메라 앞 6 m 에 디버그 도형 넷(상자 · 화살표 · 구 · 글자)과 오버레이 값 하나를 둡니다 — 씬 뷰 시각화 · 게임 뷰 HUD 가 도는지 눈으로 보는 용도.
+             * @brief 씬 뷰 카메라 앞 6 m 에 디버그 도형 네 개(상자, 화살표, 구, 글자)와 오버레이 값 하나를 둡니다. 씬 뷰 시각화와 게임 뷰 HUD 가 동작하는지 눈으로 확인할 때 씁니다.
              */
             static bool runDebugDrawDemo( const vector<string>& listArgument, string& outReply )
             {

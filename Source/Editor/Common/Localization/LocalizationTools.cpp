@@ -127,6 +127,100 @@ namespace sw
                 return true;
             }
 
+            /** @brief 1) 해시가 없는 번역은 현재 원문의 번역으로 받고, 현재 번역은 메모리에 쌓고, 원문이 없는 키의 번역은 뺍니다. */
+            static void reconcileTranslation( const map<string, const SourceTextEntry*>& mapSource, TranslationTable& inoutTranslation, TranslationMemory& inoutMemory,
+                                              LocalizationCultureReport& inoutCultureReport )
+            {
+                vector<string> listOrphan;
+                for ( auto& [key, entry] : inoutTranslation.getMutableEntries() )
+                {
+                    const auto sourceIt = mapSource.find( key );
+                    if ( sourceIt == mapSource.end() )
+                    {
+                        listOrphan.push_back( key );
+                        continue;
+                    }
+                    if ( entry._sourceHash == 0 )
+                    {
+                        entry._sourceHash            = LocalizationTextUtil::computeSourceHash( sourceIt->second->_source );
+                        inoutCultureReport._bChanged = true;
+                    }
+                    if ( inoutTranslation.computeState( key, sourceIt->second ) == TranslationState::Current )
+                        (void)inoutMemory.addPair( sourceIt->second->_source, entry._text );
+                }
+                for ( const string& key : listOrphan )
+                {
+                    (void)inoutTranslation.removeEntry( key ); // 번역이 없던 고아 키면 false — 할 일이 없다
+                    ++inoutCultureReport._orphanCount;
+                    inoutCultureReport._bChanged = true;
+                }
+            }
+
+            /** @brief 2) 없는 번역과 오래된 번역을 메모리로 채웁니다. 같은 원문은 그대로 채우고, 비슷한 원문은 검토 표시를 붙입니다(번역이 없는 항목만). */
+            static void prefillFromMemory( const map<string, const SourceTextEntry*>& mapSource, const TranslationMemory& memory, TranslationTable& inoutTranslation,
+                                           LocalizationCultureReport& inoutCultureReport )
+            {
+                for ( const auto& [key, pSource] : mapSource )
+                {
+                    const TranslationState state = inoutTranslation.computeState( key, pSource );
+                    if ( state != TranslationState::Missing && state != TranslationState::Stale )
+                        continue;
+                    TranslationMemoryMatch match;
+                    if ( memory.findBestMatch( pSource->_source, match ) == false )
+                        continue;
+                    if ( match._bExact == false && state == TranslationState::Stale )
+                        continue; // 오래된 번역은 이전 문구를 그대로 둔다. 번역가가 PO 에서 이전 원문과 함께 본다
+                    TranslationEntry& entry      = inoutTranslation.getOrAddEntry( key );
+                    entry._text                  = match._text;
+                    entry._sourceHash            = LocalizationTextUtil::computeSourceHash( pSource->_source );
+                    entry._bReview               = match._bExact == false;
+                    inoutCultureReport._bChanged = true;
+                    if ( match._bExact )
+                        ++inoutCultureReport._prefilledExact;
+                    else
+                        ++inoutCultureReport._prefilledFuzzy;
+                }
+            }
+
+            /** @brief 3) 원문 키마다 번역 상태를 세고 번역을 검사합니다. */
+            static void countAndValidate( const string& culture, const map<string, const SourceTextEntry*>& mapSource, const TranslationTable& translation,
+                                          LocalizationCultureReport& inoutCultureReport, TextGatherReport& inoutReport )
+            {
+                for ( const auto& [key, pSource] : mapSource )
+                {
+                    const TranslationEntry* pEntry = translation.findEntry( key );
+                    if ( pEntry != nullptr )
+                        validateTranslation( culture, key, *pSource, *pEntry, inoutReport );
+                    switch ( translation.computeState( key, pSource ) )
+                    {
+                        case TranslationState::Current:
+                        {
+                            ++inoutCultureReport._currentCount;
+                            break;
+                        }
+                        case TranslationState::Stale:
+                        {
+                            ++inoutCultureReport._staleCount;
+                            break;
+                        }
+                        case TranslationState::Review:
+                        {
+                            ++inoutCultureReport._reviewCount;
+                            break;
+                        }
+                        case TranslationState::Missing:
+                        {
+                            ++inoutCultureReport._missingCount;
+                            break;
+                        }
+                        case TranslationState::Orphan:
+                        {
+                            break;
+                        }
+                    }
+                }
+            }
+
             /**
              * @brief 문화권 번역 테이블 하나를 수집 결과에 맞춥니다. 해시가 없는 번역에 해시를 기록하고, 현재 번역을 번역 메모리에 쌓고, 원문 테이블에 없는 키의 번역을 빼고,
              *        없거나 오래된 번역을 메모리로 미리 채운 뒤 상태를 세고 검사합니다.
@@ -151,87 +245,9 @@ namespace sw
                     return;
                 const string memoryBefore = memory.toJSONText();
 
-                // 1) 해시가 없는 번역은 현재 원문의 번역으로 받고, 현재 번역은 메모리에 쌓고, 원문이 없는 키의 번역은 뺀다.
-                vector<string> listOrphan;
-                for ( auto& [key, entry] : translation.getMutableEntries() )
-                {
-                    const auto sourceIt = mapSource.find( key );
-                    if ( sourceIt == mapSource.end() )
-                    {
-                        listOrphan.push_back( key );
-                        continue;
-                    }
-                    if ( entry._sourceHash == 0 )
-                    {
-                        entry._sourceHash       = LocalizationTextUtil::computeSourceHash( sourceIt->second->_source );
-                        cultureReport._bChanged = true;
-                    }
-                    if ( translation.computeState( key, sourceIt->second ) == TranslationState::Current )
-                        (void)memory.addPair( sourceIt->second->_source, entry._text );
-                }
-                for ( const string& key : listOrphan )
-                {
-                    (void)translation.removeEntry( key ); // 번역이 없던 고아 키면 false — 할 일이 없다
-                    ++cultureReport._orphanCount;
-                    cultureReport._bChanged = true;
-                }
-
-                // 2) 없는 번역과 오래된 번역을 메모리로 채운다. 같은 원문은 그대로 채우고, 비슷한 원문은 검토 표시를 붙인다(번역이 없는 항목만).
-                for ( const auto& [key, pSource] : mapSource )
-                {
-                    const TranslationState state = translation.computeState( key, pSource );
-                    if ( state != TranslationState::Missing && state != TranslationState::Stale )
-                        continue;
-                    TranslationMemoryMatch match;
-                    if ( memory.findBestMatch( pSource->_source, match ) == false )
-                        continue;
-                    if ( match._bExact == false && state == TranslationState::Stale )
-                        continue; // 오래된 번역은 이전 문구를 그대로 둔다. 번역가가 PO 에서 이전 원문과 함께 본다
-                    TranslationEntry& entry = translation.getOrAddEntry( key );
-                    entry._text             = match._text;
-                    entry._sourceHash       = LocalizationTextUtil::computeSourceHash( pSource->_source );
-                    entry._bReview          = match._bExact == false;
-                    cultureReport._bChanged = true;
-                    if ( match._bExact )
-                        ++cultureReport._prefilledExact;
-                    else
-                        ++cultureReport._prefilledFuzzy;
-                }
-
-                // 3) 상태와 검사
-                for ( const auto& [key, pSource] : mapSource )
-                {
-                    const TranslationEntry* pEntry = translation.findEntry( key );
-                    if ( pEntry != nullptr )
-                        validateTranslation( culture, key, *pSource, *pEntry, inoutResult._report );
-                    switch ( translation.computeState( key, pSource ) )
-                    {
-                        case TranslationState::Current:
-                        {
-                            ++cultureReport._currentCount;
-                            break;
-                        }
-                        case TranslationState::Stale:
-                        {
-                            ++cultureReport._staleCount;
-                            break;
-                        }
-                        case TranslationState::Review:
-                        {
-                            ++cultureReport._reviewCount;
-                            break;
-                        }
-                        case TranslationState::Missing:
-                        {
-                            ++cultureReport._missingCount;
-                            break;
-                        }
-                        case TranslationState::Orphan:
-                        {
-                            break;
-                        }
-                    }
-                }
+                reconcileTranslation( mapSource, translation, memory, cultureReport );
+                prefillFromMemory( mapSource, memory, translation, cultureReport );
+                countAndValidate( culture, mapSource, translation, cultureReport, inoutResult._report );
 
                 const bool bMemoryChanged = memory.toJSONText() != memoryBefore;
                 if ( cultureReport._bChanged == false && bMemoryChanged == false )
@@ -303,7 +319,6 @@ namespace sw
                     return false;
                 }
                 outListTable.assign( outProject._listStringTable.size(), SourceStringTable{} );
-                outMapSource.clear();
                 for ( size_t tableIndex = 0; tableIndex < outListTable.size(); ++tableIndex )
                 {
                     const string tablePath = LocalizationProject::makeSiblingPath( outAbsolutePath, outProject._listStringTable[tableIndex] );
@@ -313,14 +328,100 @@ namespace sw
                         return false;
                     }
                 }
-                for ( const SourceStringTable& table : outListTable )
+                collectSourceEntries( outListTable, outMapSource );
+                return true;
+            }
+
+            /** @brief 원문 테이블들의 키에서 행으로의 대응을 만듭니다. 같은 키가 여러 테이블에 있으면 앞 테이블의 것입니다. */
+            static void collectSourceEntries( const vector<SourceStringTable>& listTable, map<string, const SourceTextEntry*>& outMapSource )
+            {
+                outMapSource.clear();
+                for ( const SourceStringTable& table : listTable )
                 {
                     for ( const auto& [key, entry] : table.getEntries() )
                     {
                         outMapSource.emplace( key, &entry );
                     }
                 }
+            }
+
+            /** @brief 수집이 쓰는 원문 테이블들을 읽습니다. 아직 없는 테이블은 원문 문화권의 빈 테이블입니다(첫 수집이 만든다). 읽지 못하면 false 입니다. */
+            [[nodiscard]] static bool loadGatherTables( const string& absoluteProjectPath, const LocalizationProject& project, vector<SourceStringTable>& outListTable )
+            {
+                outListTable.assign( project._listStringTable.size(), SourceStringTable{} );
+                string error;
+                for ( size_t tableIndex = 0; tableIndex < outListTable.size(); ++tableIndex )
+                {
+                    const string tablePath = LocalizationProject::makeSiblingPath( absoluteProjectPath, project._listStringTable[tableIndex] );
+                    if ( FileUtil::exists( tablePath ) == false )
+                    {
+                        outListTable[tableIndex].setCulture( project._sourceCulture );
+                        continue;
+                    }
+                    if ( outListTable[tableIndex].loadFromFile( tablePath, &error ) == false )
+                    {
+                        SW_LOG_ERROR( "String table is not loaded: %#", error.c_str() );
+                        return false;
+                    }
+                }
                 return true;
+            }
+
+            /** @brief 코드 뿌리 아래의 소스 파일(`kArrCodeExtension`)에서 문구를 모읍니다. 출처는 저장소 기준 상대 경로입니다. */
+            static void gatherCodeRoots( const LocalizationProject& project, string_view repositoryRoot, TextGatherer& gatherer )
+            {
+                for ( const string& codeRoot : project._listCodeRoot )
+                {
+                    const string   codeFolder = FileUtil::joinPath( repositoryRoot, codeRoot );
+                    vector<string> listFile;
+                    if ( FileUtil::isDirectory( codeFolder ) == false || FileUtil::collectFiles( codeFolder, "", listFile, true ) == false )
+                    {
+                        gatherer.addIssue( codeRoot, "code root does not exist", true );
+                        continue;
+                    }
+                    std::sort( listFile.begin(), listFile.end() );
+                    for ( const string& filePath : listFile )
+                    {
+                        bool bCode{ false };
+                        for ( const utf8* pExtension : kArrCodeExtension )
+                        {
+                            bCode = bCode || FileUtil::hasExtension( filePath, pExtension );
+                        }
+                        string text;
+                        if ( bCode == false || FileUtil::readTextFile( filePath, text ) == false )
+                            continue;
+                        string relative;
+                        if ( FileUtil::makeRelativePath( repositoryRoot, filePath, relative ) == false )
+                            relative = filePath;
+                        gatherer.gatherCodeText( text, FileUtil::normalizeSeparators( relative ) );
+                        gatherer.countFile();
+                    }
+                }
+            }
+
+            /** @brief 에셋 뿌리 아래의 XML · 대화 파일에서 문구를 모읍니다. 출처는 리소스 id 입니다. */
+            static void gatherAssetRoots( const LocalizationProject& project, TextGatherer& gatherer )
+            {
+                for ( const string& assetRoot : project._listAssetRoot )
+                {
+                    const string   assetFolder = resolveAbsolutePath( assetRoot );
+                    vector<string> listFile;
+                    if ( FileUtil::isDirectory( assetFolder ) == false || FileUtil::collectFiles( assetFolder, "", listFile, true ) == false )
+                    {
+                        gatherer.addIssue( assetRoot, "asset root does not exist", true );
+                        continue;
+                    }
+                    std::sort( listFile.begin(), listFile.end() );
+                    for ( const string& filePath : listFile )
+                    {
+                        const bool bCandidate = FileUtil::hasExtension( filePath, ".xml" ) || StringUtil::endsWith( filePath, kDialogueSuffix, true );
+                        string     text;
+                        if ( bCandidate == false || FileUtil::readTextFile( filePath, text ) == false )
+                            continue;
+                        LocalizationTools::gatherAssetFile( project, gatherer, FileUtil::skipUtf8Bom( text ), ResourcePaths::toResourceID( filePath ) );
+                        gatherer.countFile();
+                    }
+                }
             }
         };
     } // namespace
@@ -409,8 +510,9 @@ namespace sw
 
     bool LocalizationTools::gatherProject( string_view projectPath, string_view repositoryRoot, bool bWrite, LocalizationGatherResult& outResult )
     {
+        using Internal               = LocalizationToolsInternal;
         outResult                    = LocalizationGatherResult{};
-        const string        absolute = LocalizationToolsInternal::resolveAbsolutePath( projectPath );
+        const string        absolute = Internal::resolveAbsolutePath( projectPath );
         LocalizationProject project;
         string              error;
         if ( project.loadFromFile( absolute, &error ) == false )
@@ -420,21 +522,9 @@ namespace sw
         }
         outResult._projectName = project._name;
 
-        vector<SourceStringTable> listTable( project._listStringTable.size() );
-        for ( size_t tableIndex = 0; tableIndex < listTable.size(); ++tableIndex )
-        {
-            const string tablePath = LocalizationProject::makeSiblingPath( absolute, project._listStringTable[tableIndex] );
-            if ( FileUtil::exists( tablePath ) == false )
-            {
-                listTable[tableIndex].setCulture( project._sourceCulture ); // 첫 수집이 만든다
-                continue;
-            }
-            if ( listTable[tableIndex].loadFromFile( tablePath, &error ) == false )
-            {
-                SW_LOG_ERROR( "String table is not loaded: %#", error.c_str() );
-                return false;
-            }
-        }
+        vector<SourceStringTable> listTable;
+        if ( Internal::loadGatherTables( absolute, project, listTable ) == false )
+            return false;
         SourceStringTable&               gatherTable = listTable.front();
         vector<const SourceStringTable*> listOtherTable;
         for ( size_t tableIndex = 1; tableIndex < listTable.size(); ++tableIndex )
@@ -443,57 +533,10 @@ namespace sw
         }
         outResult._gatherTablePath = LocalizationProject::makeSiblingPath( absolute, project._listStringTable.front() );
 
-        // 1) 코드
+        // 1) 코드 2) 데이터
         TextGatherer gatherer;
-        for ( const string& codeRoot : project._listCodeRoot )
-        {
-            const string   codeFolder = FileUtil::joinPath( repositoryRoot, codeRoot );
-            vector<string> listFile;
-            if ( FileUtil::isDirectory( codeFolder ) == false || FileUtil::collectFiles( codeFolder, "", listFile, true ) == false )
-            {
-                gatherer.addIssue( codeRoot, "code root does not exist", true );
-                continue;
-            }
-            std::sort( listFile.begin(), listFile.end() );
-            for ( const string& filePath : listFile )
-            {
-                bool bCode{ false };
-                for ( const utf8* pExtension : LocalizationToolsInternal::kArrCodeExtension )
-                {
-                    bCode = bCode || FileUtil::hasExtension( filePath, pExtension );
-                }
-                string text;
-                if ( bCode == false || FileUtil::readTextFile( filePath, text ) == false )
-                    continue;
-                string relative;
-                if ( FileUtil::makeRelativePath( repositoryRoot, filePath, relative ) == false )
-                    relative = filePath;
-                gatherer.gatherCodeText( text, FileUtil::normalizeSeparators( relative ) );
-                gatherer.countFile();
-            }
-        }
-
-        // 2) 데이터
-        for ( const string& assetRoot : project._listAssetRoot )
-        {
-            const string   assetFolder = LocalizationToolsInternal::resolveAbsolutePath( assetRoot );
-            vector<string> listFile;
-            if ( FileUtil::isDirectory( assetFolder ) == false || FileUtil::collectFiles( assetFolder, "", listFile, true ) == false )
-            {
-                gatherer.addIssue( assetRoot, "asset root does not exist", true );
-                continue;
-            }
-            std::sort( listFile.begin(), listFile.end() );
-            for ( const string& filePath : listFile )
-            {
-                const bool bCandidate = FileUtil::hasExtension( filePath, ".xml" ) || StringUtil::endsWith( filePath, LocalizationToolsInternal::kDialogueSuffix, true );
-                string     text;
-                if ( bCandidate == false || FileUtil::readTextFile( filePath, text ) == false )
-                    continue;
-                gatherAssetFile( project, gatherer, FileUtil::skipUtf8Bom( text ), ResourcePaths::toResourceID( filePath ) );
-                gatherer.countFile();
-            }
-        }
+        Internal::gatherCodeRoots( project, repositoryRoot, gatherer );
+        Internal::gatherAssetRoots( project, gatherer );
         outResult._fileCount = gatherer.getFileCount();
 
         // 3) 합치기와 쓰기
@@ -511,16 +554,10 @@ namespace sw
 
         // 4) 번역 테이블. 해시 기록, 상태, 검사를 한다
         map<string, const SourceTextEntry*> mapSource;
-        for ( const SourceStringTable& table : listTable )
-        {
-            for ( const auto& [key, entry] : table.getEntries() )
-            {
-                mapSource.emplace( key, &entry );
-            }
-        }
+        Internal::collectSourceEntries( listTable, mapSource );
         for ( const string& culture : project._listCulture )
         {
-            LocalizationToolsInternal::updateTranslation( absolute, culture, mapSource, bWrite, outResult );
+            Internal::updateTranslation( absolute, culture, mapSource, bWrite, outResult );
             outResult._listCulture.back()._bStaged = project.isStagedCulture( culture );
         }
         return true;

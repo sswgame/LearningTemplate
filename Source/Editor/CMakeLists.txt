@@ -23,8 +23,9 @@ if(swSkipEditor)
 	return()
 endif()
 
-# ImGui 를 모르는 층(모델: 에셋 · 커맨드 · 설정 · 로컬라이즈 · 버전 관리)은 아래 2) 의 EditorModel 이 짓고 EditorModule 소스에서는 뺀다.
-set(listEditorModelDir Common/Asset Common/Commands Common/Config Common/Localization Common/SourceControl)
+# ImGui 를 모르는 층(모델: 에셋 · 커맨드 · 설정 · 로컬라이즈 · 버전 관리 · 작업 공간)은 아래 2) 의 EditorModel 이 짓고 EditorModule 소스에서는 뺀다.
+# 모든 매니저(패널 · 팝업 · 인스펙터)를 만드는 조립 파일은 이 폴더들에 두지 않고 셸 옆(`Source/Editor` 바로 아래)에 둔다.
+set(listEditorModelDir Common/Asset Common/Commands Common/Config Common/Localization Common/SourceControl Common/Workspace)
 set(listEditorModelSource "")
 foreach(modelDir IN LISTS listEditorModelDir)
 	file(GLOB_RECURSE listModelDirSource CONFIGURE_DEPENDS "${modelDir}/*.cpp" "${modelDir}/*.h")

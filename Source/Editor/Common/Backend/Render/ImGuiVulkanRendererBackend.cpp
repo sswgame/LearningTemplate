@@ -71,6 +71,77 @@ namespace sw::editor
                     platformIO.Renderer_SetWindowSize = &GuardedVkSetWindowSize;
                 }
             }
+
+            /** @brief ImGui 텍스처 · 보조 뷰포트가 디스크립터 세트를 받는 풀을 만듭니다. 종류마다 1000 개입니다. */
+            [[nodiscard]] static bool createDescriptorPool( VkDevice device, VkDescriptorPool* pOutPool )
+            {
+                VkDescriptorPoolSize pool_sizes[] = {
+                    {               VK_DESCRIPTOR_TYPE_SAMPLER, 1000},
+                    {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000},
+                    {         VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000},
+                    {         VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000},
+                    {  VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000},
+                    {  VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000},
+                    {        VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000},
+                    {        VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000},
+                    {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000},
+                    {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000},
+                    {      VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000}
+                };
+                VkDescriptorPoolCreateInfo pool_info = {};
+                pool_info.sType                      = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+                pool_info.flags                      = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+                pool_info.maxSets                    = 1000 * IM_ARRAYSIZE( pool_sizes );
+                pool_info.poolSizeCount              = static_cast<uint32>( IM_ARRAYSIZE( pool_sizes ) );
+                pool_info.pPoolSizes                 = pool_sizes;
+                return vkCreateDescriptorPool( device, &pool_info, nullptr, pOutPool ) == VK_SUCCESS;
+            }
+
+            /** @brief 보조 뷰포트 창의 Vulkan 표면을 만듭니다(`ImGuiPlatformIO::Platform_CreateVkSurface`). 반환은 VkResult 입니다. */
+            static int32 createViewportSurface( ImGuiViewport* pVp, ImU64 vulkanInstance, const void* pVkAllocators, ImU64* pOutVkSurface )
+            {
+#if defined( SW_PLATFORM_WINDOWS )
+                VkWin32SurfaceCreateInfoKHR create_info = {};
+                create_info.sType                       = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+                create_info.hwnd                        = static_cast<HWND>( pVp->PlatformHandleRaw );
+                create_info.hinstance                   = GetModuleHandleW( nullptr );
+                VkResult result                         = vkCreateWin32SurfaceKHR( reinterpret_cast<VkInstance>( vulkanInstance ), &create_info, static_cast<const VkAllocationCallbacks*>( pVkAllocators ), reinterpret_cast<VkSurfaceKHR*>( pOutVkSurface ) );
+                return result;
+#elif defined( SW_PLATFORM_LINUX )
+                const VkInstance             instance    = reinterpret_cast<VkInstance>( vulkanInstance );
+                const VkAllocationCallbacks* pAllocators = static_cast<const VkAllocationCallbacks*>( pVkAllocators );
+                Display*                     pDpy        = static_cast<Display*>( pVp->PlatformHandle );
+                const xcb_window_t           window      = static_cast<xcb_window_t>( reinterpret_cast<uintptr_t>( pVp->PlatformHandleRaw ) );
+
+                PFN_vkCreateXlibSurfaceKHR pCreateXlib = reinterpret_cast<PFN_vkCreateXlibSurfaceKHR>(
+                    vkGetInstanceProcAddr( instance, "vkCreateXlibSurfaceKHR" ) );
+                if ( pCreateXlib != nullptr )
+                {
+                    VkXlibSurfaceCreateInfoKHR create_info = {};
+                    create_info.sType                      = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
+                    create_info.dpy                        = pDpy;
+                    create_info.window                     = static_cast<Window>( window );
+                    return static_cast<int32>( pCreateXlib( instance, &create_info, pAllocators, reinterpret_cast<VkSurfaceKHR*>( pOutVkSurface ) ) );
+                }
+
+                PFN_vkCreateXcbSurfaceKHR pCreateXcb = reinterpret_cast<PFN_vkCreateXcbSurfaceKHR>(
+                    vkGetInstanceProcAddr( instance, "vkCreateXcbSurfaceKHR" ) );
+                if ( pCreateXcb == nullptr || pDpy == nullptr )
+                    return static_cast<int32>( VK_ERROR_EXTENSION_NOT_PRESENT );
+
+                xcb_connection_t* pConnection = XGetXCBConnection( pDpy );
+                if ( pConnection == nullptr )
+                    return static_cast<int32>( VK_ERROR_INITIALIZATION_FAILED );
+
+                VkXcbSurfaceCreateInfoKHR create_info = {};
+                create_info.sType                     = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
+                create_info.connection                = pConnection;
+                create_info.window                    = window;
+                return static_cast<int32>( pCreateXcb( instance, &create_info, pAllocators, reinterpret_cast<VkSurfaceKHR*>( pOutVkSurface ) ) );
+#else
+    #error "ImGuiVulkanRendererBackend: no Vulkan surface path for this platform"
+#endif
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -98,26 +169,7 @@ namespace sw::editor
         _pDevice     = static_cast<VkDevice>( vkNative._pDevice );
         _pQueueMutex = static_cast<mutex*>( vkNative._pQueueMutex );
 
-        VkDescriptorPoolSize pool_sizes[] = {
-            {               VK_DESCRIPTOR_TYPE_SAMPLER, 1000},
-            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000},
-            {         VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000},
-            {         VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000},
-            {  VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000},
-            {  VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000},
-            {        VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000},
-            {        VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000},
-            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000},
-            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000},
-            {      VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000}
-        };
-        VkDescriptorPoolCreateInfo pool_info = {};
-        pool_info.sType                      = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        pool_info.flags                      = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-        pool_info.maxSets                    = 1000 * IM_ARRAYSIZE( pool_sizes );
-        pool_info.poolSizeCount              = static_cast<uint32>( IM_ARRAYSIZE( pool_sizes ) );
-        pool_info.pPoolSizes                 = pool_sizes;
-        if ( vkCreateDescriptorPool( _pDevice, &pool_info, nullptr, &_pImguiDescriptorPool ) != VK_SUCCESS )
+        if ( ImGuiVulkanRendererBackendInternal::createDescriptorPool( _pDevice, &_pImguiDescriptorPool ) == false )
         {
             SW_LOG_ERROR( "Failed to create Vulkan descriptor pool for ImGui" );
             return false;
@@ -153,52 +205,7 @@ namespace sw::editor
         init_info.Allocator                    = nullptr;
         init_info.CheckVkResultFn              = nullptr;
 
-        ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
-#if defined( SW_PLATFORM_WINDOWS )
-        platform_io.Platform_CreateVkSurface = []( ImGuiViewport* pVp, ImU64 vulkanInstance, const void* pVkAllocators, ImU64* pOutVkSurface ) -> int32
-        {
-            VkWin32SurfaceCreateInfoKHR create_info = {};
-            create_info.sType                       = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-            create_info.hwnd                        = static_cast<HWND>( pVp->PlatformHandleRaw );
-            create_info.hinstance                   = GetModuleHandleW( nullptr );
-            VkResult result                         = vkCreateWin32SurfaceKHR( reinterpret_cast<VkInstance>( vulkanInstance ), &create_info, static_cast<const VkAllocationCallbacks*>( pVkAllocators ), reinterpret_cast<VkSurfaceKHR*>( pOutVkSurface ) );
-            return result;
-        };
-#elif defined( SW_PLATFORM_LINUX )
-        platform_io.Platform_CreateVkSurface = []( ImGuiViewport* pVp, ImU64 vulkanInstance, const void* pVkAllocators, ImU64* pOutVkSurface ) -> int32
-        {
-            const VkInstance             instance    = reinterpret_cast<VkInstance>( vulkanInstance );
-            const VkAllocationCallbacks* pAllocators = static_cast<const VkAllocationCallbacks*>( pVkAllocators );
-            Display*                     pDpy        = static_cast<Display*>( pVp->PlatformHandle );
-            const xcb_window_t           window      = static_cast<xcb_window_t>( reinterpret_cast<uintptr_t>( pVp->PlatformHandleRaw ) );
-
-            PFN_vkCreateXlibSurfaceKHR pCreateXlib = reinterpret_cast<PFN_vkCreateXlibSurfaceKHR>(
-                vkGetInstanceProcAddr( instance, "vkCreateXlibSurfaceKHR" ) );
-            if ( pCreateXlib != nullptr )
-            {
-                VkXlibSurfaceCreateInfoKHR create_info = {};
-                create_info.sType                      = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
-                create_info.dpy                        = pDpy;
-                create_info.window                     = static_cast<Window>( window );
-                return static_cast<int32>( pCreateXlib( instance, &create_info, pAllocators, reinterpret_cast<VkSurfaceKHR*>( pOutVkSurface ) ) );
-            }
-
-            PFN_vkCreateXcbSurfaceKHR pCreateXcb = reinterpret_cast<PFN_vkCreateXcbSurfaceKHR>(
-                vkGetInstanceProcAddr( instance, "vkCreateXcbSurfaceKHR" ) );
-            if ( pCreateXcb == nullptr || pDpy == nullptr )
-                return static_cast<int32>( VK_ERROR_EXTENSION_NOT_PRESENT );
-
-            xcb_connection_t* pConnection = XGetXCBConnection( pDpy );
-            if ( pConnection == nullptr )
-                return static_cast<int32>( VK_ERROR_INITIALIZATION_FAILED );
-
-            VkXcbSurfaceCreateInfoKHR create_info = {};
-            create_info.sType                     = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
-            create_info.connection                = pConnection;
-            create_info.window                    = window;
-            return static_cast<int32>( pCreateXcb( instance, &create_info, pAllocators, reinterpret_cast<VkSurfaceKHR*>( pOutVkSurface ) ) );
-        };
-#endif
+        ImGui::GetPlatformIO().Platform_CreateVkSurface = &ImGuiVulkanRendererBackendInternal::createViewportSurface;
 
         if ( ImGui_ImplVulkan_Init( &init_info ) == false )
             return false;

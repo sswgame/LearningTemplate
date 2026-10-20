@@ -29,9 +29,9 @@ namespace sw::editor
             static constexpr string_view kImportStampHeader = "SWHEIGHTFIELDIMPORT 1";
             static constexpr string_view kHoleSuffix        = "_holes";
             static constexpr string_view kSplatSuffix       = "_splat";
-            /** @brief 임포트 동작을 바꾸면 올린다 — 모든 스탬프가 어긋남이 되어 한 번 다시 임포트한다. */
+            /** @brief 임포트 동작을 바꾸면 올립니다. 모든 스탬프가 어긋나 한 번 다시 임포트합니다. */
             static constexpr uint32 kImporterVersion = 1;
-            /** @brief 스플랫 임포트 동작을 바꾸면 올린다(스플랫 원본의 스탬프만 어긋난다). */
+            /** @brief 스플랫 임포트 동작을 바꾸면 올립니다. 스플랫 원본의 스탬프만 어긋납니다. */
             static constexpr uint32 kSplatImporterVersion = 1;
 
             /** @brief 원본 옆의 구멍 마스크 경로(`x.png` → `x_holes.png`)입니다. */
@@ -56,7 +56,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 곁 구멍 마스크를 읽어 칸 마스크로 씁니다. 없으면 구멍이 없습니다. */
+            /** @brief 옆에 둔 구멍 마스크 파일을 읽어 셀 마스크로 씁니다. 없으면 구멍이 없습니다. */
             [[nodiscard]] static bool readHoles( string_view sourcePath, HeightfieldData& inoutData )
             {
                 const string holePath = makeHolePath( sourcePath );
@@ -86,7 +86,7 @@ namespace sw::editor
                 {
                     for ( uint32 cellX = 0; cellX < cells; ++cellX )
                     {
-                        // 16 비트로 읽었다 — 128 미만(8 비트 기준)이 구멍이다.
+                        // 16 비트로 읽었다. 8 비트 기준으로 128 미만이 구멍이다.
                         const bool bHole                                                      = listSample[static_cast<size_t>( cellZ ) * static_cast<uint32>( width ) + cellX] < 128u * 257u;
                         inoutData._listHoleCell[static_cast<size_t>( cellZ ) * cells + cellX] = bHole ? 1u : 0u;
                         bAnyHole                                                              = bAnyHole || bHole;
@@ -166,7 +166,7 @@ namespace sw::editor
         using Internal = HeightfieldImporterInternal;
         if ( isSourceLayerWeights( rawPath ) == false )
             return {};
-        // `x_splat.png` 의 결과는 높이장과 같은 이름 `x.layerweights` 다 — 접미사를 떼고 같은 길로 바꾼다.
+        // `x_splat.png` 의 결과는 높이장과 같은 이름 `x.layerweights` 다. 접미사를 제거하고 같은 경로로 바꾼다.
         const string stem = FileUtil::removeExtension( rawPath );
         const string name = stem.substr( 0, stem.size() - Internal::kSplatSuffix.size() ) + ".png";
         return AssetImportStampUtil::makeImportedPath( name, Internal::kRawFolder, Internal::kImportedFolder, LayerWeightsData::kExtension );
@@ -214,7 +214,7 @@ namespace sw::editor
     {
         if ( isRawHeightfieldPath( relativePath ) == false )
             return false;
-        // 바뀐 파일 하나가 아니라 어긋난 것 전부를 일괄 임포트로 — 스탬프를 적는 길이 하나여야 명령줄 임포트와 같은 판정을 받는다(구멍 마스크도 원본 해시에 든다).
+        // 바뀐 파일 하나가 아니라 어긋난 것 전부를 일괄 임포트한다. 스탬프를 적는 경로가 하나여야 명령줄 임포트와 같은 판정을 받는다. 구멍 마스크도 원본 해시에 들어간다.
         const AssetImportSummary summary = importAllHeightfields( ResourcePaths::getRootFolderPath(), AssetImportMode::ImportStale );
         for ( const string& problem : summary._listProblem )
         {
@@ -245,7 +245,7 @@ namespace sw::editor
         }
         versionText.appendFormat( "importer=%#;format=%#", Internal::kImporterVersion, HeightfieldData::kVersion );
         hash = HashUtil::computeStringHash64( versionText.c_str(), versionText.size(), false, hash );
-        // 곁 구멍 마스크도 원본이다 — 그것만 고쳐도 어긋남이어야 한다.
+        // 옆에 둔 구멍 마스크도 원본이다. 그것만 고쳐도 어긋난 것으로 판정해야 한다.
         vector<uint8> holeBytes;
         if ( FileUtil::readFile( Internal::makeHolePath( sourcePath ), holeBytes ) && holeBytes.empty() == false )
             hash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( holeBytes.data() ), holeBytes.size(), false, hash );

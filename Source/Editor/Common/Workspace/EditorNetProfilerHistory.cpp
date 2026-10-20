@@ -2,6 +2,7 @@
 
 #include "Editor/Common/Workspace/EditorNetProfilerHistory.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/Workspace/EditorNetPlaySession.h"
@@ -22,17 +23,6 @@ namespace sw::editor
                 if ( current < previous || elapsedSeconds <= 0.0 )
                     return 0.0f;
                 return static_cast<float32>( static_cast<float64>( current - previous ) / elapsedSeconds );
-            }
-
-            /** @brief 종류가 같은 몫을 찾습니다(종류는 많아야 수십 개라 차례로 본다). */
-            static EditorNetKindShare* findShare( vector<EditorNetKindShare>& listShare, uint8 kind )
-            {
-                for ( EditorNetKindShare& share : listShare )
-                {
-                    if ( share._kind == kind )
-                        return &share;
-                }
-                return nullptr;
             }
 
             static bool isLargerShare( const EditorNetKindShare& left, const EditorNetKindShare& right )
@@ -132,7 +122,8 @@ namespace sw::editor
         for ( const NetStatsKindEntry& entry : listEntry )
         {
             totalBytes += entry._byteCount;
-            EditorNetKindShare* pShare = EditorNetProfilerHistoryInternal::findShare( outListShare, entry._kind );
+            // 종류는 많아야 수십 개라 차례로 본다.
+            EditorNetKindShare* pShare = VectorUtil::findBy<&EditorNetKindShare::_kind>( outListShare, entry._kind );
             if ( pShare == nullptr )
             {
                 outListShare.push_back( EditorNetKindShare{ entry._messageCount, entry._byteCount, 0.0f, entry._kind } );

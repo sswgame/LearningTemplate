@@ -18,6 +18,7 @@
 #pragma once
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
@@ -195,9 +196,8 @@ namespace sw::editor
                 if ( ax::NodeEditor::AcceptDeletedItem() == false )
                     continue;
                 const int32 id = static_cast<int32>( linkID.Get() );
-                _graph._listLink.erase( std::remove_if( _graph._listLink.begin(), _graph._listLink.end(), [id]( const LinkType& link )
-                { return link._id == id; } ),
-                                        _graph._listLink.end() );
+                VectorUtil::removeIf( _graph._listLink, [id]( const LinkType& link )
+                { return link._id == id; } );
                 notifyDocumentEdited( pDeleteLinkLabel );
             }
 
@@ -207,13 +207,10 @@ namespace sw::editor
                 if ( ax::NodeEditor::AcceptDeletedItem() == false )
                     continue;
                 const int32 id = static_cast<int32>( nodeID.Get() );
-                _graph._listNode.erase( std::remove_if( _graph._listNode.begin(), _graph._listNode.end(), [id]( const NodeType& node )
-                { return node._id == id; } ),
-                                        _graph._listNode.end() );
-                _graph._listLink.erase( std::remove_if( _graph._listLink.begin(), _graph._listLink.end(),
-                                                        [id, &linkTouchesNode]( const LinkType& link )
-                { return linkTouchesNode( link, id ); } ),
-                                        _graph._listLink.end() );
+                VectorUtil::removeIf( _graph._listNode, [id]( const NodeType& node )
+                { return node._id == id; } );
+                VectorUtil::removeIf( _graph._listLink, [id, &linkTouchesNode]( const LinkType& link )
+                { return linkTouchesNode( link, id ); } );
                 onNodeDeleted( id );
                 notifyDocumentEdited( pDeleteNodeLabel );
             }

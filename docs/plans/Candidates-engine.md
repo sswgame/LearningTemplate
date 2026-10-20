@@ -1,6 +1,6 @@
 # 엔진 후보
 
-> 상태: 후보 · 선행: 없음 · 영역: engine · 옛번호: B-11, B-13, C-4, C-7, C-13, C-19, C-22, C-25, C-34, C-47, C-49, C-63, C-64, C-65, C-67, C-68, C-69, C-70, C-71, C-72, D1-3, D1-4, D1-6, D1-8, G-1, G-5, G-17, H-2 · 진행: 해당없음
+> 상태: 후보 · 선행: 없음 · 영역: engine · 옛번호: B-11, B-13, C-4, C-7, C-13, C-19, C-22, C-25, C-34, C-47, C-49, C-63, C-64, C-65, C-68, C-69, C-70, C-71, C-72, D1-3, D1-4, D1-6, D1-8, G-1, G-5, G-17, H-2 · 진행: 해당없음
 
 엔진 구조 · 물리 · 내비게이션 · 모듈 영역에서 아직 착수하지 않은 일의 목록입니다. 착수하면 그 절을 계획 문서로 옮기고 여기서 지웁니다. 순서는 [로드맵](Roadmap.md)이 가집니다.
 
@@ -94,18 +94,13 @@
 남은 것: ④ `ConfigManager::isWithinRange` 가 `collectRangeErrors` 로 범위를 따로 검사합니다(`C-56` 과 같은 모양, Config 영역). ⑤ `readName` 호출부 357 곳을 전수로 보지 못했습니다.
 함정: 이름을 경로 글로 바꿔 쓰는 `.c_str()`(`hashed_string` 의 FName 규칙: none = 빈 이름, 빈 이름의 `c_str()` = "None")은 형식으로 막지 못하고 이름 읽기 창구에서 글 none 만 막았습니다.
 
-### WorkspaceImGuiSplit
-제목: `Common/Workspace` 의 ImGui 17개를 분리한다
-옛번호: C-67
-왜 필요한가: `EditorModel` 경계를 이 폴더로 넓히는 선행입니다.
-남은 것: `EditorAssetType.h` · `EditorContext.h` · `EditorLayoutStore.*` · `EditorRenderViews.*` 등 ImGui 를 쓰는 17개.
-
 ### FunctorLambdaCommonization
 제목: 함수 객체 · 람다 공통화 2단계
 옛번호: C-68
 왜 필요한가: `containers` 가 남긴 후보 58 파일 80 건(`find_if` · `remove_if` · 해시 구조체)이 있습니다.
-남은 것: 디렉터리별로 합니다. `GameFramework/Kits` 는 끝났습니다(2026-10-21, `wt/kitclean` — `erase( remove_if )` 9 곳은 `VectorUtil::removeIf`, 손 멤버 찾기 18 곳은 `findBy` · `containsBy`. `Feature/Online` 은 `wt/onlinekits` 와 겹쳐 남겼습니다). `GameFramework/Base` 도 끝났습니다(2026-10-21, `wt/baseclean` — 멤버 찾기 손 루프 34 곳, erase-remove, 단일 · 여러 키 정렬 비교자, 해시 구조체 1 개). 손 멤버 루프를 못 쓰게 하는 형식 또는 린트를 둡니다(형식으로 못 막는 이유를 적습니다). `std::remove_if` 는 표준 함수라 형식으로 막을 수 없으므로 마지막 디렉터리가 끝난 뒤 `VectorUtil.h` 밖의 `erase( std::remove_if` 를 막는 게이트를 둡니다.
+남은 것: 디렉터리별로 합니다. `GameFramework/Kits` 는 끝났습니다(2026-10-21, `wt/kitclean` — `erase( remove_if )` 9 곳은 `VectorUtil::removeIf`, 손 멤버 찾기 18 곳은 `findBy` · `containsBy`. `Feature/Online` 은 `wt/onlinekits` 와 겹쳐 남겼습니다). `GameFramework/Base` 도 끝났습니다(2026-10-21, `wt/baseclean` — 멤버 찾기 손 루프 34 곳, erase-remove, 단일 · 여러 키 정렬 비교자, 해시 구조체 1 개). `Editor/Common` 도 끝났습니다(2026-10-21, `wt/editorcommon` — `VectorUtil::removeIf` · `findBy`). 손 멤버 루프를 못 쓰게 하는 형식 또는 린트를 둡니다(형식으로 못 막는 이유를 적습니다). `std::remove_if` 는 표준 함수라 형식으로 막을 수 없으므로 마지막 디렉터리가 끝난 뒤 `VectorUtil.h` 밖의 `erase( std::remove_if` 를 막는 게이트를 둡니다.
 Base 에 남긴 것: 계산한 키로 정렬하는 람다(`TimingJudge` 폭 합, `Inventory` 카탈로그 조회, `ScheduleCatalog` 인덱스 간접 정렬), `hashed_string` 키 정렬(`GameFlags`, `Crafting` 은 대소문자를 구분하는 저장 순서라 그대로), 반복자를 쓰는 `std::find`(`OnlineServiceClient` 지우기), 조건이 둘인 찾기 루프(`TimerQueue::findTimer`). `CompareUtil` 에 비교 함수를 받는 키 비교자(`hashed_string` 키용)가 생기면 `GameFlags` 를 옮깁니다.
+`Editor/Common` 에 남은 손 루프는 조건이 둘 이상이거나(`_id == id && _pInstance != nullptr`) C 배열(`kArrKindInfo`)이라 `findBy` 로 옮기지 않았습니다.
 
 ### DiskPathVsResourceId
 제목: 디스크 경로와 리소스 id 가 같은 `string_view` 입구를 쓴다

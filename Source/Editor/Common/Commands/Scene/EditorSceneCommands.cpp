@@ -51,7 +51,7 @@ namespace sw::editor
                 outListObject.push_back( pObj );
             }
 
-            /** @brief @p pObj 의 조상이 @p listObject 안에 있으면 true 입니다(그 조상의 서브트리로 이미 복사된다). */
+            /** @brief @p pObj 의 조상이 @p listObject 안에 있으면 true 입니다. 그 조상의 서브트리를 복사할 때 이미 함께 복사됩니다. */
             static bool hasSelectedAncestor( const GameObject* pObj, const vector<GameObject*>& listObject )
             {
                 for ( const GameObject* pParent = pObj->getParent(); pParent != nullptr; pParent = pParent->getParent() )
@@ -97,8 +97,8 @@ namespace sw::editor
         if ( pManager == nullptr || pSrc == nullptr )
             return nullptr;
 
-        // **서브트리 전체를 복제한다**(유니티 Ctrl+D · 언리얼 Duplicate). 씬은 자식을 자기 엔티티로 저장하므로, 선택한 것만 복제하면
-        // 자식은 원본 밑에 남는다. 부모부터 모은다 — 되돌리기 묶음의 다시 하기가 부모를 먼저 복원한다.
+        // **서브트리 전체를 복제한다**(유니티 Ctrl+D, 언리얼 Duplicate). 씬은 자식을 별도 엔티티로 저장하므로, 선택한 것만 복제하면
+        // 자식은 원본 밑에 남는다. 부모부터 모은다. 되돌리기 배치의 다시 하기가 부모를 먼저 복원하기 때문이다.
         vector<GameObject*> listSource;
         EditorSceneCommandsInternal::collectSubtreeChildFirst( pSrc, listSource );
         std::reverse( listSource.begin(), listSource.end() );
@@ -110,9 +110,9 @@ namespace sw::editor
                 return nullptr;
         }
 
-        // 복제본끼리의 부착(자식 → 복제된 부모 · 오브젝트 안)은 묶음이 **원본 id** 로 잇는다. 복제한 루트의 부모(묶음 밖)는 같은 실행의 id 로
-        // 원본과 같은 부모 · 같은 소켓에 붙는다. 주의: 이름으로 찾으면 이름이 유일하게 바뀐 복제본(`Rig` → `Rig_2`)의 메시가 **원본**의
-        // 루트에 붙고, 루트는 원본 부모의 primary 에 다시 붙어 소켓을 잃는다.
+        // 복제본끼리의 부착(자식에서 복제된 부모로, 또는 한 오브젝트 안)은 배치가 **원본 id** 로 연결한다. 복제한 루트의 부모는 배치 밖에 있으므로
+        // 같은 실행의 id 로 원본과 같은 부모, 같은 소켓에 붙는다. 이름으로 찾으면 안 된다. 이름이 유일하게 바뀐 복제본(`Rig` 에서 `Rig_2`)의
+        // 메시가 **원본**의 루트에 붙고, 루트는 원본 부모의 primary 에 다시 붙어 소켓을 잃는다.
         ObjectStateBatch    batch( ObjectIDSpace::Live );
         vector<GameObject*> listCopy;
         listCopy.reserve( listSource.size() );
@@ -180,7 +180,7 @@ namespace sw::editor
             return false;
 
         const ObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pChild );
-        // 끌어 놓은 자리에 그대로 있게 월드를 지킨다(유니티 계층 창 · 언리얼 아웃라이너와 같다). 로컬을 지키면 새 부모만큼 튄다.
+        // 끌어 놓은 위치에 그대로 있도록 월드 트랜스폼을 유지한다(유니티 계층 창, 언리얼 아웃라이너와 같다). 로컬을 유지하면 새 부모만큼 튄다.
         if ( pChild->attachToParent( pNewParent, AttachRule::KeepWorld ) == false )
             return false;
 
@@ -209,7 +209,7 @@ namespace sw::editor
     {
         if ( EditorSceneCommandsInternal::canMutateScene() == false || pManager == nullptr )
             return 0;
-        // 고른 조상이 있으면 건너뛴다 — 조상을 지우면 자식도 지워지고, 먼저 지운 자식을 다시 지우지 않는다.
+        // 고른 조상이 있으면 건너뛴다. 조상을 지우면 자식도 지워지므로, 먼저 지운 자식을 다시 지우지 않는다.
         vector<GameObject*> listRoot;
         for ( GameObject* pObj : listObject )
         {
@@ -275,13 +275,13 @@ namespace sw::editor
         if ( pManager == nullptr || pObj == nullptr )
             return false;
 
-        // 삭제는 자식까지 지운다(`destroyObject` 기본). 그러니 기록도 서브트리 전체다 — 이 오브젝트 하나의 스냅샷만 남기면
-        // 되돌릴 때 부모만 돌아오고 자식은 영영 사라진다(그대로 저장하면 파일에서도). **자식부터** 기록해 한 묶음으로 넣는다: 묶음의
-        // 되돌리기는 역순이라 부모가 먼저 (원래 id 로) 살아나고, 자식은 그 id 로 부모를 찾아 다시 붙는다.
+        // 삭제는 자식까지 지운다(`destroyObject` 기본). 그래서 기록도 서브트리 전체를 남긴다. 이 오브젝트 하나의 스냅샷만 남기면
+        // 되돌릴 때 부모만 돌아오고 자식은 영영 사라진다(그대로 저장하면 파일에서도). **자식부터** 기록해 한 배치로 넣는다.
+        // 배치의 되돌리기는 역순이라 부모가 원래 id 로 먼저 복원되고, 자식은 그 id 로 부모를 찾아 다시 붙는다.
         vector<GameObject*> listSubtree;
         EditorSceneCommandsInternal::collectSubtreeChildFirst( pObj, listSubtree );
 
-        // 지울 것은 그 씬의 선택에서 뺀다 — 미리보기 창의 오브젝트면 창의 선택이다(`findSelectionOf`).
+        // 지울 것은 그 씬의 선택에서 뺀다. 미리보기 창의 오브젝트면 창의 선택에서 뺀다(`findSelectionOf`).
         EditorSelection* pSelection = editor::findSelectionOf( *pManager );
         if ( pSelection != nullptr )
         {
@@ -367,8 +367,8 @@ namespace sw::editor
             }
         }
 
-        // 기록을 남긴다 — 기록도 dirty 도 없으면 되돌릴 수 없고, 그대로 다른 씬을 열면 묻지도 않고 사라진다. 삭제 대기 컴포넌트는
-        // 스냅샷에 실리지 않으므로(지우기 전 · 후 스냅샷이 다르다) 되돌리면 그 컴포넌트가 원래 id 로 돌아온다.
+        // 기록을 남긴다. 기록도 dirty 도 없으면 되돌릴 수 없고, 그대로 다른 씬을 열면 묻지도 않고 사라진다. 삭제 대기 컴포넌트는
+        // 스냅샷에 들어가지 않으므로 지우기 전과 후의 스냅샷이 다르다. 그래서 되돌리면 그 컴포넌트가 원래 id 로 돌아온다.
         const ObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pObj );
         pManager->destroyComponent( pComp );
         commitModify( pObj, beforeSnapshot, "Remove Component" );
@@ -476,7 +476,7 @@ namespace sw::editor
         if ( pObj == nullptr )
             return;
 
-        // 크기는 월드 상자 하나로 측정한다(`GameObject::getWorldBox`). 기준점(primary 의 월드 자리)에서 바닥까지를 지금 상자에서 얻는다.
+        // 크기는 월드 상자 하나로 측정한다(`GameObject::getWorldBox`). 기준점(primary 의 월드 위치)에서 바닥까지의 거리를 지금 상자에서 얻는다.
         float32               bottomOffset = 0.0f;
         const SceneComponent* pMyScene     = pObj->getPrimarySceneComponent();
         AABB                  myBox{};
@@ -493,7 +493,7 @@ namespace sw::editor
         GameObjectManager* pManager = pScene->getObjectManager();
         float32            hitY     = 0.0f;
         bool               bHit     = false;
-        // 바닥은 모든 오브젝트의 월드 상자 윗면으로 찾는다 — 편집 중에는 물리 바디가 없다(콜라이더도 플레이 중에만 2D 씬에 든다).
+        // 바닥은 모든 오브젝트의 월드 상자 윗면으로 찾는다. 편집 중에는 물리 바디가 없고, 콜라이더도 플레이 중에만 2D 씬에 들어간다.
 
         // 반환값을 const& 로 받으면 복사가 없어 보이지만, 값으로 반환하는 함수라 그때마다 벡터를 하나 할당한다. 그래서
         // 채워 넣는 쪽 오버로드를 쓴다.
@@ -504,8 +504,8 @@ namespace sw::editor
             if ( pOther == nullptr || pOther == pObj )
                 continue;
 
-            // 다른 오브젝트의 윗면 · 발자국도 월드 상자로 본다. 메시의 **로컬** 스케일 × 단위 상자로 셈하면 부모가 키운 바닥 · 단위 상자가
-            // 아닌 메시(평면 · 구)의 윗면을 틀리게 잡는다.
+            // 다른 오브젝트의 윗면과 바닥 면적도 월드 상자로 본다. 메시의 **로컬** 스케일에 단위 상자를 곱해 계산하면, 부모가 키운 바닥이나
+            // 단위 상자가 아닌 메시(평면, 구)의 윗면을 틀리게 잡는다.
             AABB otherBox{};
             if ( pOther->isActiveInHierarchy() && pOther->getWorldBox( otherBox ) )
             {
@@ -540,7 +540,7 @@ namespace sw::editor
         if ( pManager == nullptr )
             return stats;
 
-        // 타입 이름 → 인스턴스 수. 이름으로 묶으므로 등록된 어떤 컴포넌트든(게임·키트 것 포함) 잡힌다.
+        // 타입 이름에서 인스턴스 수로의 대응이다. 이름으로 묶으므로 게임과 키트의 것을 포함해 등록된 모든 컴포넌트가 잡힌다.
         map<string, uint32> mapTypeToCount;
 
         pManager->forEachGameObject( [&]( GameObject* pObj )
@@ -615,7 +615,7 @@ namespace sw::editor
                 continue;
             vector<GameObject*> listSubtree;
             EditorSceneCommandsInternal::collectSubtreeChildFirst( pRoot, listSubtree );
-            std::reverse( listSubtree.begin(), listSubtree.end() ); // 부모부터 — 붙여 넣을 때 자식이 먼저 만든 부모에 붙는다
+            std::reverse( listSubtree.begin(), listSubtree.end() ); // 부모부터 둔다. 붙여 넣을 때 자식이 먼저 만든 부모에 붙는다
             for ( GameObject* pObj : listSubtree )
             {
                 ObjectCopyEntry copied{};
@@ -647,14 +647,14 @@ namespace sw::editor
         const bool                     bNothingToPaste = EditorSceneCommandsInternal::canMutateScene() == false || pManager == nullptr || listCopied.empty();
         if ( bNothingToPaste )
             return;
-        // 복제와 같은 길이다 — 묶음이 **복사한 때의 id** 로 사본끼리 잇는다. 루트는 씬의 루트로 둔다(다른 씬이면 원래 부모가 없다).
+        // 복제와 같은 경로다. 배치가 **복사할 때의 id** 로 사본끼리 연결한다. 루트는 씬의 루트로 둔다. 다른 씬에는 원래 부모가 없기 때문이다.
         ObjectStateBatch    batch( ObjectIDSpace::Live );
         vector<GameObject*> listCopy;
         listCopy.reserve( listCopied.size() );
         bool bAllLoaded = true;
         for ( const ObjectCopyEntry& copied : listCopied )
         {
-            // 같은 씬에 붙이면 이름이 겹친다 — 저장소가 번호를 붙인다(`<이름>_2`, 유니티의 붙여 넣기와 같다).
+            // 같은 씬에 붙이면 이름이 겹치므로 저장소가 번호를 붙인다(`<이름>_2`, 유니티의 붙여 넣기와 같다).
             GameObject* pCopy = pManager->createGameObject( copied._name );
             if ( pCopy == nullptr )
             {
@@ -698,7 +698,7 @@ namespace sw::editor
             EditorTransaction::recordCreation( pCopy, label );
         }
         EditorTransaction::endTransaction();
-        // 붙여 넣은 것은 그 씬의 선택에 놓는다 — 미리보기 창에 붙이면 창의 선택이다.
+        // 붙여 넣은 것은 그 씬의 선택에 놓는다. 미리보기 창에 붙이면 창의 선택에 놓는다.
         EditorSelection* pSelection = editor::findSelectionOf( *pManager );
         if ( pSelection != nullptr )
         {

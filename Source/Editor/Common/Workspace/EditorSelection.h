@@ -34,15 +34,15 @@ namespace sw::editor
 
     /**
      * @class EditorSelection
-     * @brief 에디터의 게임 오브젝트 · 애셋 다중 선택 상태를 관리합니다.
-     * @details 선택은 프레임을 넘겨 드는 참조라 핸들(`GameObjectHandle`)로 보관하고, 쓸 때마다 자기 범위의 씬에서 풉니다(`findObject`).
-     *          입력도 `GameObject*` 로 받고 반환하는 것도 푼 포인터입니다. 이번 호출 안에서만 쓰십시오. 되돌리기 · 플레이 세션 복원은
-     *          같은 id 로 오브젝트를 복원하므로 그 너머로도 선택이 이어집니다.
+     * @brief 에디터의 게임 오브젝트와 애셋 다중 선택 상태를 관리합니다.
+     * @details 선택은 여러 프레임에 걸쳐 보관하는 참조이므로 핸들(`GameObjectHandle`)로 보관하고, 쓸 때마다 자기 범위의 씬에서 대상을 찾는다(`findObject`).
+     *          입력은 `GameObject*` 로 받고, 반환하는 것도 찾은 포인터다. 이번 호출 안에서만 써야 한다. 되돌리기와 플레이 세션 복원은
+     *          같은 id 로 오브젝트를 복원하므로 그 뒤에도 선택이 이어진다.
      *
      *          **범위**: 에디터 컨텍스트가 가진 하나(메인 선택)는 편집 중인 씬(`editor::findGameObject`)과 전역 Undo 스택을 쓴다. 미리보기 창
-     *          (`EditorPreviewPanel`)은 자기 인스턴스를 자기 씬 · 자기 스택에 묶는다(`bindPreviewScope`, `docs/plans/EditorMultiWorld.md` 2.3).
-     *          인스펙터 · 기즈모처럼 "지금 겨누는 선택" 을 쓰는 곳은 `editor::getFocusedSelection` 하나로 묻는다 — 가장 최근에 바뀌거나 포커스를 얻은
-     *          선택이다(메인 선택이 바뀌거나 메인 씬 창이 포커스를 얻으면 메인으로 돌아온다). 타입 조회로는 얻지 못한다(`kAccessorOnly`) —
+     *          (`EditorPreviewPanel`)은 자기 인스턴스를 자기 씬과 자기 스택에 묶는다(`bindPreviewScope`, `docs/plans/EditorMultiWorld.md` 2.3).
+     *          인스펙터와 기즈모처럼 "지금 대상인 선택" 을 쓰는 곳은 `editor::getFocusedSelection` 하나로 묻는다. 가장 최근에 바뀌었거나 포커스를 얻은
+     *          선택이며, 메인 선택이 바뀌거나 메인 씬 창이 포커스를 얻으면 메인으로 돌아온다. 타입 조회로는 얻지 못한다(`kAccessorOnly`).
      *          `EditorService.h` 의 세 접근자 중 하나를 골라 호출부에 어느 선택인지 적는다.
      */
     class SW_EDITOR_API EditorSelection : public EditorSubsystem
@@ -51,13 +51,13 @@ namespace sw::editor
         EditorSelection()                                    = default;
         EditorSelection( const EditorSelection& )            = delete;
         EditorSelection& operator=( const EditorSelection& ) = delete;
-        /** @brief 미리보기 씬에 묶인 채 사라지면 묶음을 풉니다(`unbindPreviewScope`) — 목록(`editor::getPreviewSelections`)에 빈 포인터를 남기지 않는다. */
+        /** @brief 미리보기 씬에 묶인 채 사라지면 묶음을 풉니다(`unbindPreviewScope`). 그래야 목록(`editor::getPreviewSelections`)에 빈 포인터가 남지 않습니다. */
         ~EditorSelection() override;
 
-        // EditorSubsystem — EditorContext 가 의존 순서로 초기화하고 역순으로 종료 · 소멸한다.
-        /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
+        // EditorSubsystem. EditorContext 가 의존 순서로 초기화하고 역순으로 종료하고 소멸한다.
+        /** @brief 서브시스템 이름입니다. 다른 선언의 의존 필드가 이 상수를 가리킵니다. */
         static constexpr const utf8* kSubsystemName = "EditorSelection";
-        /** @brief 타입으로 찾지 못한다 — 메인 · 창마다 여럿이라 `editor::getMainSceneSelection` · `getFocusedSelection` · `findSelectionOf` 로 얻는다(`kIsAccessorOnlySubsystem`). */
+        /** @brief 타입으로 찾지 못합니다. 메인과 창마다 여럿이므로 `editor::getMainSceneSelection`, `getFocusedSelection`, `findSelectionOf` 로 얻습니다(`kIsAccessorOnlySubsystem`). */
         static constexpr bool kAccessorOnly = true;
         const utf8*           getSubsystemName() const override { return kSubsystemName; }
 
@@ -70,7 +70,7 @@ namespace sw::editor
         /** @brief 처음 선택한 오브젝트입니다. 선택이 없거나 사라졌으면 nullptr 입니다. */
         GameObject* getPrimaryObject() const;
         uint64      getPrimaryObjectID() const;
-        /** @brief 선택한 순서의 핸들입니다. 사라진 대상이 섞여 있을 수 있으니, 풀어 쓰려면 `getSelectedObjects` 를 쓰십시오. */
+        /** @brief 선택한 순서의 핸들입니다. 사라진 대상이 섞여 있을 수 있으므로, 대상 포인터가 필요하면 `getSelectedObjects` 를 쓰십시오. */
         const vector<GameObjectHandle>& getSelectedHandles() const { return _listSelectedObject; }
         /** @brief 아직 살아 있는 선택 오브젝트를 선택한 순서로 @p outListObject 에 채웁니다(먼저 비웁니다). */
         void   getSelectedObjects( vector<GameObject*>& outListObject ) const;
@@ -89,26 +89,26 @@ namespace sw::editor
         Delegate<void()>& onSelectionChanged() { return _onSelectionChanged; }
 
         // ------------------------------------------------------------------------------
-        // 범위 — 메인 선택(묶지 않음) 또는 미리보기 창의 씬 · 스택
+        // 범위. 메인 선택(묶지 않음) 또는 미리보기 창의 씬과 스택
         // ------------------------------------------------------------------------------
         /**
-         * @brief 이 선택을 미리보기 씬 @p scene 과 창의 Undo 스택 @p stack 에 묶습니다. 핸들은 그 씬에서 풀고, 편집 기록(`recordModify`)은 그 스택에 남습니다.
-         * @details 창이 씬을 만든 직후 부르고, 창이 내려갈 때 `unbindPreviewScope` 로 풉니다. 묶인 동안 둘 다 이 선택보다 오래 살아야 합니다.
+         * @brief 이 선택을 미리보기 씬 @p scene 과 창의 Undo 스택 @p stack 에 묶습니다. 핸들의 대상은 그 씬에서 찾고, 편집 기록(`recordModify`)은 그 스택에 남습니다.
+         * @details 창이 씬을 만든 직후 부르고, 창이 닫힐 때 `unbindPreviewScope` 로 해제한다. 묶인 동안 씬과 스택은 이 선택보다 오래 살아야 한다.
          */
         void bindPreviewScope( Scene& scene, CommandStack& stack );
-        /** @brief 묶음을 풀고 선택을 비웁니다. 이 선택이 겨누는 선택이었으면 메인 선택으로 돌립니다(`editor::setFocusedSelection`). */
+        /** @brief 묶음을 해제하고 선택을 비웁니다. 이 선택이 대상 선택이었으면 메인 선택으로 되돌립니다(`editor::setFocusedSelection`). */
         void unbindPreviewScope();
         /** @brief 미리보기 씬에 묶인 선택이면 true 입니다. */
         bool isPreviewScope() const { return _pPreviewScene != nullptr; }
-        /** @brief 묶인 창의 Undo 스택입니다. 메인 선택이면 nullptr 입니다(메인은 에디터 전역 스택 — `EditorTransaction`). */
+        /** @brief 묶인 창의 Undo 스택입니다. 메인 선택은 에디터 전역 스택(`EditorTransaction`)을 쓰므로 nullptr 입니다. */
         CommandStack* findPreviewCommandStack() const { return _pPreviewStack; }
-        /** @brief 이 선택의 오브젝트가 사는 씬입니다 — 묶인 미리보기 씬, 아니면 편집 중인 씬입니다. 없으면 nullptr 입니다. */
+        /** @brief 이 선택의 오브젝트가 있는 씬입니다. 묶인 미리보기 씬이고, 아니면 편집 중인 씬입니다. 없으면 nullptr 입니다. */
         Scene* getScene() const;
-        /** @brief 이 선택의 범위에서 핸들을 풉니다. 사라졌으면 nullptr 입니다. */
+        /** @brief 이 선택의 범위에서 핸들이 가리키는 오브젝트를 찾습니다. 사라졌으면 nullptr 입니다. */
         GameObject* findObject( GameObjectHandle handle ) const;
         /**
-         * @brief @p obj 의 수정 전후 상태를 이 선택의 범위에 기록합니다 — 미리보기 선택은 묶인 스택(그 씬의 키를 기억하는 명령), 메인 선택은
-         *        에디터 트랜잭션(`EditorTransaction::recordModify`)입니다.
+         * @brief @p obj 의 수정 전후 상태를 이 선택의 범위에 기록합니다. 미리보기 선택은 묶인 스택에 그 씬의 키를 기억하는 명령으로 남기고,
+         *        메인 선택은 에디터 트랜잭션(`EditorTransaction::recordModify`)에 남깁니다.
          */
         void recordModify( GameObject& obj, const ObjectSnapshot& before, const ObjectSnapshot& after, string_view label ) const;
 

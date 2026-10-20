@@ -4,6 +4,7 @@
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -199,10 +200,8 @@ namespace sw::editor
     void EditorReferenceIndex::refreshFile( string_view resourceRoot, string_view resourcePath )
     {
         const string resourceID = FileUtil::normalizePath( resourcePath );
-        _data._listReference.erase( std::remove_if( _data._listReference.begin(), _data._listReference.end(),
-                                                    [&resourceID]( const EditorAssetReference& reference )
-        { return reference._referrerPath == resourceID; } ),
-                                    _data._listReference.end() );
+        VectorUtil::removeIf( _data._listReference, [&resourceID]( const EditorAssetReference& reference )
+        { return reference._referrerPath == resourceID; } );
 
         const bool bExists = FileUtil::exists( FileUtil::joinPath( resourceRoot, resourceID ) );
         const auto itKnown = std::lower_bound( _data._listKnownID.begin(), _data._listKnownID.end(), resourceID );

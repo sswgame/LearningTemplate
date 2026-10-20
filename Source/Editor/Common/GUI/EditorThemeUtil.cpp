@@ -157,6 +157,121 @@ namespace sw::editor
                     inoutTheme._bRadiusOverridden = SW_TRUE;
                 }
             }
+
+            /** @brief 1 단계: 지오메트리와 레이아웃 메트릭(토큰)을 스타일에 씁니다. 여백 · 간격에는 밀도를, 크기에는 모니터 배율을 곱합니다. */
+            static void applyMetrics( const EditorThemeConfig& config, ImGuiStyle& style )
+            {
+                const EditorThemeRadiusDef&  radius  = config._radius;
+                const EditorThemeSpacingDef& spacing = config._spacing;
+                const EditorThemeStrokeDef&  stroke  = config._stroke;
+                const float32                density = config._density;
+                style.WindowRounding                 = radius._window;
+                style.ChildRounding                  = radius._frame;
+                style.FrameRounding                  = radius._frame;
+                style.PopupRounding                  = radius._popup;
+                style.ScrollbarRounding              = radius._scrollbar;
+                style.GrabRounding                   = radius._grab;
+                style.TabRounding                    = radius._tab;
+
+                style.WindowBorderSize = stroke._window;
+                style.ChildBorderSize  = stroke._child;
+                style.PopupBorderSize  = stroke._popup;
+                style.FrameBorderSize  = stroke._frame;
+                style.TabBorderSize    = stroke._tab;
+
+                style.WindowPadding    = ImVec2( spacing._windowPaddingX * density, spacing._windowPaddingY * density );
+                style.FramePadding     = ImVec2( spacing._framePaddingX * density, spacing._framePaddingY * density );
+                style.ItemSpacing      = ImVec2( spacing._itemSpacingX * density, spacing._itemSpacingY * density );
+                style.ItemInnerSpacing = ImVec2( spacing._itemInnerSpacingX * density, spacing._itemInnerSpacingY * density );
+                style.IndentSpacing    = spacing._indent * density;
+                style.ScrollbarSize    = spacing._scrollbarSize;
+                style.GrabMinSize      = spacing._grabMinSize;
+                // 위 크기는 96 DPI 기준이다. 모니터 배율을 곱한다(`setDpiScale`).
+                if ( EditorThemeInternal::dpiScale() != 1.0f )
+                    style.ScaleAllSizes( EditorThemeInternal::dpiScale() );
+                // 글자 크기도 토큰이다. ImGui 1.92 동적 글꼴이라 다음 프레임부터 그 크기로 래스터한다(배율은 `FontScaleDpi` 가 따로 곱한다).
+                style.FontSizeBase = config._typography._fontSize;
+            }
+
+            /** @brief 2 단계: 컬러 팔레트를 스타일에 씁니다. 상태(호버 · 활성)는 토큰에서 밝기와 알파로 만듭니다. */
+            static void applyPalette( const EditorThemeConfig& config, ImGuiStyle& style )
+            {
+                ImVec4* pColors = style.Colors;
+
+                const Color& accent   = config._accentColor;
+                const Color& winBg    = config._windowBg;
+                const Color& panBg    = config._panelBg;
+                const Color& headerBg = config._headerBg;
+                const Color& frmBg    = config._frameBg;
+                const Color& border   = config._border;
+
+                // 텍스트
+                pColors[ImGuiCol_Text]         = EditorThemeInternal::toImVec4( config._text );
+                pColors[ImGuiCol_TextDisabled] = EditorThemeInternal::toImVec4( config._textMuted, 1.0f );
+
+                // 창 및 배경
+                pColors[ImGuiCol_WindowBg]     = EditorThemeInternal::toImVec4( winBg, 1.0f );
+                pColors[ImGuiCol_ChildBg]      = EditorThemeInternal::toImVec4( panBg, 1.0f );
+                pColors[ImGuiCol_PopupBg]      = EditorThemeInternal::adjustBrightness( winBg, 1.15f, 0.98f );
+                pColors[ImGuiCol_Border]       = EditorThemeInternal::toImVec4( border, 1.0f );
+                pColors[ImGuiCol_BorderShadow] = EditorThemeInternal::toImVec4( border, 0.0f );
+                pColors[ImGuiCol_MenuBarBg]    = EditorThemeInternal::adjustBrightness( winBg, 0.85f, 1.0f );
+
+                // 입력 프레임
+                pColors[ImGuiCol_FrameBg]        = EditorThemeInternal::toImVec4( frmBg, 1.0f );
+                pColors[ImGuiCol_FrameBgHovered] = EditorThemeInternal::adjustBrightness( frmBg, 1.25f, 1.0f );
+                pColors[ImGuiCol_FrameBgActive]  = EditorThemeInternal::adjustBrightness( frmBg, 1.45f, 1.0f );
+
+                // 타이틀바
+                pColors[ImGuiCol_TitleBg]          = EditorThemeInternal::adjustBrightness( winBg, 0.9f, 1.0f );
+                pColors[ImGuiCol_TitleBgActive]    = EditorThemeInternal::toImVec4( headerBg, 1.0f );
+                pColors[ImGuiCol_TitleBgCollapsed] = EditorThemeInternal::toImVec4( winBg, 0.75f );
+
+                // 스크롤바
+                pColors[ImGuiCol_ScrollbarBg]          = EditorThemeInternal::toImVec4( config._scrollbarBg );
+                pColors[ImGuiCol_ScrollbarGrab]        = EditorThemeInternal::adjustBrightness( border, 1.1f, 0.8f );
+                pColors[ImGuiCol_ScrollbarGrabHovered] = EditorThemeInternal::adjustBrightness( border, 1.4f, 1.0f );
+                pColors[ImGuiCol_ScrollbarGrabActive]  = EditorThemeInternal::toImVec4( accent, 0.9f );
+
+                // 버튼
+                pColors[ImGuiCol_Button]        = EditorThemeInternal::adjustBrightness( frmBg, 1.1f, 1.0f );
+                pColors[ImGuiCol_ButtonHovered] = EditorThemeInternal::toImVec4( accent, 0.85f );
+                pColors[ImGuiCol_ButtonActive]  = EditorThemeInternal::adjustBrightness( accent, 1.15f, 1.0f );
+
+                // 헤더
+                pColors[ImGuiCol_Header]        = EditorThemeInternal::toImVec4( headerBg, 1.0f );
+                pColors[ImGuiCol_HeaderHovered] = EditorThemeInternal::toImVec4( accent, 0.75f );
+                pColors[ImGuiCol_HeaderActive]  = EditorThemeInternal::toImVec4( accent, 0.95f );
+
+                // 탭 & 도킹
+                pColors[ImGuiCol_Tab]                = EditorThemeInternal::adjustBrightness( winBg, 0.95f, 1.0f );
+                pColors[ImGuiCol_TabHovered]         = EditorThemeInternal::toImVec4( accent, 0.80f );
+                pColors[ImGuiCol_TabActive]          = EditorThemeInternal::toImVec4( panBg, 1.0f );
+                pColors[ImGuiCol_TabUnfocused]       = EditorThemeInternal::adjustBrightness( winBg, 0.80f, 1.0f );
+                pColors[ImGuiCol_TabUnfocusedActive] = EditorThemeInternal::adjustBrightness( panBg, 0.90f, 1.0f );
+                pColors[ImGuiCol_DockingPreview]     = EditorThemeInternal::toImVec4( accent, 0.45f );
+                pColors[ImGuiCol_DockingEmptyBg]     = EditorThemeInternal::toImVec4( config._dockingEmptyBg );
+
+                // 구분선 & 기타
+                pColors[ImGuiCol_Separator]         = EditorThemeInternal::toImVec4( border, 0.85f );
+                pColors[ImGuiCol_SeparatorHovered]  = EditorThemeInternal::toImVec4( accent, 0.85f );
+                pColors[ImGuiCol_SeparatorActive]   = EditorThemeInternal::toImVec4( accent, 1.0f );
+                pColors[ImGuiCol_ResizeGrip]        = EditorThemeInternal::toImVec4( accent, 0.0f );
+                pColors[ImGuiCol_ResizeGripHovered] = EditorThemeInternal::toImVec4( accent, 0.60f );
+                pColors[ImGuiCol_ResizeGripActive]  = EditorThemeInternal::toImVec4( accent, 0.90f );
+                pColors[ImGuiCol_CheckMark]         = EditorThemeInternal::toImVec4( accent, 1.0f );
+                pColors[ImGuiCol_SliderGrab]        = EditorThemeInternal::toImVec4( accent, 0.85f );
+                pColors[ImGuiCol_SliderGrabActive]  = EditorThemeInternal::adjustBrightness( accent, 1.2f, 1.0f );
+                pColors[ImGuiCol_TextSelectedBg]    = EditorThemeInternal::toImVec4( accent, 0.35f );
+                pColors[ImGuiCol_NavHighlight]      = EditorThemeInternal::toImVec4( accent, 0.85f );
+
+                // 테이블
+                pColors[ImGuiCol_TableHeaderBg]     = EditorThemeInternal::toImVec4( headerBg, 1.0f );
+                pColors[ImGuiCol_TableBorderStrong] = EditorThemeInternal::toImVec4( border, 1.0f );
+                pColors[ImGuiCol_TableBorderLight]  = EditorThemeInternal::toImVec4( border, 0.5f );
+                pColors[ImGuiCol_TableRowBg]        = EditorThemeInternal::toImVec4( config._tableRowBgAlt, 0.0f );
+                pColors[ImGuiCol_TableRowBgAlt]     = EditorThemeInternal::toImVec4( config._tableRowBgAlt );
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -202,114 +317,8 @@ namespace sw::editor
         ImGuiStyle& style = ImGui::GetStyle();
         EditorThemeInternal::resetSizesToDefault( style );
 
-        // 1. 지오메트리와 레이아웃 메트릭(토큰). 여백 · 간격에는 밀도를 곱한다.
-        const EditorThemeRadiusDef&  radius  = config._radius;
-        const EditorThemeSpacingDef& spacing = config._spacing;
-        const EditorThemeStrokeDef&  stroke  = config._stroke;
-        const float32                density = config._density;
-        style.WindowRounding                 = radius._window;
-        style.ChildRounding                  = radius._frame;
-        style.FrameRounding                  = radius._frame;
-        style.PopupRounding                  = radius._popup;
-        style.ScrollbarRounding              = radius._scrollbar;
-        style.GrabRounding                   = radius._grab;
-        style.TabRounding                    = radius._tab;
-
-        style.WindowBorderSize = stroke._window;
-        style.ChildBorderSize  = stroke._child;
-        style.PopupBorderSize  = stroke._popup;
-        style.FrameBorderSize  = stroke._frame;
-        style.TabBorderSize    = stroke._tab;
-
-        style.WindowPadding    = ImVec2( spacing._windowPaddingX * density, spacing._windowPaddingY * density );
-        style.FramePadding     = ImVec2( spacing._framePaddingX * density, spacing._framePaddingY * density );
-        style.ItemSpacing      = ImVec2( spacing._itemSpacingX * density, spacing._itemSpacingY * density );
-        style.ItemInnerSpacing = ImVec2( spacing._itemInnerSpacingX * density, spacing._itemInnerSpacingY * density );
-        style.IndentSpacing    = spacing._indent * density;
-        style.ScrollbarSize    = spacing._scrollbarSize;
-        style.GrabMinSize      = spacing._grabMinSize;
-        // 위 크기는 96 DPI 기준이다. 모니터 배율을 곱한다(`setDpiScale`).
-        if ( EditorThemeInternal::dpiScale() != 1.0f )
-            style.ScaleAllSizes( EditorThemeInternal::dpiScale() );
-        // 글자 크기도 토큰이다. ImGui 1.92 동적 글꼴이라 다음 프레임부터 그 크기로 래스터한다(배율은 `FontScaleDpi` 가 따로 곱한다).
-        style.FontSizeBase = config._typography._fontSize;
-
-        // 2. 컬러 팔레트. 상태(호버 · 활성)는 토큰에서 밝기와 알파로 만든다.
-        ImVec4* pColors = style.Colors;
-
-        const Color& accent   = config._accentColor;
-        const Color& winBg    = config._windowBg;
-        const Color& panBg    = config._panelBg;
-        const Color& headerBg = config._headerBg;
-        const Color& frmBg    = config._frameBg;
-        const Color& border   = config._border;
-
-        // 텍스트
-        pColors[ImGuiCol_Text]         = EditorThemeInternal::toImVec4( config._text );
-        pColors[ImGuiCol_TextDisabled] = EditorThemeInternal::toImVec4( config._textMuted, 1.0f );
-
-        // 창 및 배경
-        pColors[ImGuiCol_WindowBg]     = EditorThemeInternal::toImVec4( winBg, 1.0f );
-        pColors[ImGuiCol_ChildBg]      = EditorThemeInternal::toImVec4( panBg, 1.0f );
-        pColors[ImGuiCol_PopupBg]      = EditorThemeInternal::adjustBrightness( winBg, 1.15f, 0.98f );
-        pColors[ImGuiCol_Border]       = EditorThemeInternal::toImVec4( border, 1.0f );
-        pColors[ImGuiCol_BorderShadow] = EditorThemeInternal::toImVec4( border, 0.0f );
-        pColors[ImGuiCol_MenuBarBg]    = EditorThemeInternal::adjustBrightness( winBg, 0.85f, 1.0f );
-
-        // 입력 프레임
-        pColors[ImGuiCol_FrameBg]        = EditorThemeInternal::toImVec4( frmBg, 1.0f );
-        pColors[ImGuiCol_FrameBgHovered] = EditorThemeInternal::adjustBrightness( frmBg, 1.25f, 1.0f );
-        pColors[ImGuiCol_FrameBgActive]  = EditorThemeInternal::adjustBrightness( frmBg, 1.45f, 1.0f );
-
-        // 타이틀바
-        pColors[ImGuiCol_TitleBg]          = EditorThemeInternal::adjustBrightness( winBg, 0.9f, 1.0f );
-        pColors[ImGuiCol_TitleBgActive]    = EditorThemeInternal::toImVec4( headerBg, 1.0f );
-        pColors[ImGuiCol_TitleBgCollapsed] = EditorThemeInternal::toImVec4( winBg, 0.75f );
-
-        // 스크롤바
-        pColors[ImGuiCol_ScrollbarBg]          = EditorThemeInternal::toImVec4( config._scrollbarBg );
-        pColors[ImGuiCol_ScrollbarGrab]        = EditorThemeInternal::adjustBrightness( border, 1.1f, 0.8f );
-        pColors[ImGuiCol_ScrollbarGrabHovered] = EditorThemeInternal::adjustBrightness( border, 1.4f, 1.0f );
-        pColors[ImGuiCol_ScrollbarGrabActive]  = EditorThemeInternal::toImVec4( accent, 0.9f );
-
-        // 버튼
-        pColors[ImGuiCol_Button]        = EditorThemeInternal::adjustBrightness( frmBg, 1.1f, 1.0f );
-        pColors[ImGuiCol_ButtonHovered] = EditorThemeInternal::toImVec4( accent, 0.85f );
-        pColors[ImGuiCol_ButtonActive]  = EditorThemeInternal::adjustBrightness( accent, 1.15f, 1.0f );
-
-        // 헤더
-        pColors[ImGuiCol_Header]        = EditorThemeInternal::toImVec4( headerBg, 1.0f );
-        pColors[ImGuiCol_HeaderHovered] = EditorThemeInternal::toImVec4( accent, 0.75f );
-        pColors[ImGuiCol_HeaderActive]  = EditorThemeInternal::toImVec4( accent, 0.95f );
-
-        // 탭 & 도킹
-        pColors[ImGuiCol_Tab]                = EditorThemeInternal::adjustBrightness( winBg, 0.95f, 1.0f );
-        pColors[ImGuiCol_TabHovered]         = EditorThemeInternal::toImVec4( accent, 0.80f );
-        pColors[ImGuiCol_TabActive]          = EditorThemeInternal::toImVec4( panBg, 1.0f );
-        pColors[ImGuiCol_TabUnfocused]       = EditorThemeInternal::adjustBrightness( winBg, 0.80f, 1.0f );
-        pColors[ImGuiCol_TabUnfocusedActive] = EditorThemeInternal::adjustBrightness( panBg, 0.90f, 1.0f );
-        pColors[ImGuiCol_DockingPreview]     = EditorThemeInternal::toImVec4( accent, 0.45f );
-        pColors[ImGuiCol_DockingEmptyBg]     = EditorThemeInternal::toImVec4( config._dockingEmptyBg );
-
-        // 구분선 & 기타
-        pColors[ImGuiCol_Separator]         = EditorThemeInternal::toImVec4( border, 0.85f );
-        pColors[ImGuiCol_SeparatorHovered]  = EditorThemeInternal::toImVec4( accent, 0.85f );
-        pColors[ImGuiCol_SeparatorActive]   = EditorThemeInternal::toImVec4( accent, 1.0f );
-        pColors[ImGuiCol_ResizeGrip]        = EditorThemeInternal::toImVec4( accent, 0.0f );
-        pColors[ImGuiCol_ResizeGripHovered] = EditorThemeInternal::toImVec4( accent, 0.60f );
-        pColors[ImGuiCol_ResizeGripActive]  = EditorThemeInternal::toImVec4( accent, 0.90f );
-        pColors[ImGuiCol_CheckMark]         = EditorThemeInternal::toImVec4( accent, 1.0f );
-        pColors[ImGuiCol_SliderGrab]        = EditorThemeInternal::toImVec4( accent, 0.85f );
-        pColors[ImGuiCol_SliderGrabActive]  = EditorThemeInternal::adjustBrightness( accent, 1.2f, 1.0f );
-        pColors[ImGuiCol_TextSelectedBg]    = EditorThemeInternal::toImVec4( accent, 0.35f );
-        pColors[ImGuiCol_NavHighlight]      = EditorThemeInternal::toImVec4( accent, 0.85f );
-
-        // 테이블
-        pColors[ImGuiCol_TableHeaderBg]     = EditorThemeInternal::toImVec4( headerBg, 1.0f );
-        pColors[ImGuiCol_TableBorderStrong] = EditorThemeInternal::toImVec4( border, 1.0f );
-        pColors[ImGuiCol_TableBorderLight]  = EditorThemeInternal::toImVec4( border, 0.5f );
-        pColors[ImGuiCol_TableRowBg]        = EditorThemeInternal::toImVec4( config._tableRowBgAlt, 0.0f );
-        pColors[ImGuiCol_TableRowBgAlt]     = EditorThemeInternal::toImVec4( config._tableRowBgAlt );
+        EditorThemeInternal::applyMetrics( config, style );
+        EditorThemeInternal::applyPalette( config, style );
     }
 
     void EditorThemeUtil::setDpiScale( float32 dpiScale )

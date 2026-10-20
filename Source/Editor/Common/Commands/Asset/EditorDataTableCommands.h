@@ -1,6 +1,6 @@
 /**
  * @file EditorDataTableCommands.h
- * @brief 로컬라이제이션 프로젝트(원문 표 · 문화권 번역 표) / 게임 데이터 XML 파일 IO 커맨드
+ * @brief 로컬라이제이션 프로젝트(원문 테이블과 문화권별 번역 테이블)와 게임 데이터 XML 파일을 읽고 쓰는 커맨드입니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -11,7 +11,7 @@
 
 namespace sw::editor
 {
-    /** @brief 표 한 줄 — 키 하나의 원문 · 메타데이터와 문화권마다의 번역입니다. */
+    /** @brief 테이블의 한 줄입니다. 키 하나의 원문과 메타데이터, 문화권마다의 번역을 가지고 있습니다. */
     struct LocalizationRecord
     {
         string                   _key;
@@ -19,16 +19,16 @@ namespace sw::editor
         string                   _context;
         string                   _comment;
         vector<string>           _listTranslation; ///< `LocalizationSheet::_listCulture` 와 같은 순서
-        vector<TranslationState> _listState;       ///< 읽었을 때의 상태(낡음 · 검토 · 없음)
+        vector<TranslationState> _listState;       ///< 읽었을 때의 상태(낡음, 검토, 없음)
         uint32                   _maxLength{ 0 };
-        uint32                   _tableIndex{ 0 }; ///< 이 키가 사는 원문 표(`LocalizationSheet::_listTablePath`)
+        uint32                   _tableIndex{ 0 }; ///< 이 키가 있는 원문 테이블(`LocalizationSheet::_listTablePath`)
         bool                     _bModified{ false };
     };
 } // namespace sw::editor
 
 namespace sw::editor
 {
-    /** @brief 프로젝트 하나를 표로 편 것입니다. */
+    /** @brief 프로젝트 하나를 테이블로 펼친 것입니다. */
     struct LocalizationSheet
     {
         string                     _projectPath;
@@ -36,7 +36,7 @@ namespace sw::editor
         vector<string>             _listCulture;
         vector<string>             _listTablePath;
         vector<LocalizationRecord> _listRecord;
-        vector<string>             _listRemovedKey; ///< 표에서 지운 키 — 저장이 원문 표 · 번역 표에서 지운다
+        vector<string>             _listRemovedKey; ///< 테이블에서 지운 키. 저장할 때 원문 테이블과 번역 테이블에서 지운다
     };
 } // namespace sw::editor
 
@@ -59,15 +59,16 @@ namespace sw::editor
     class EditorDataTableCommands
     {
     public:
-        /** @brief 편집할 수 있는 로컬라이제이션 프로젝트(엔진 · 활성 게임 팩의 `data/localization` 의 프로젝트 파일)의 절대 경로입니다. */
+        /** @brief 편집할 수 있는 로컬라이제이션 프로젝트의 절대 경로입니다. 엔진과 활성 게임 팩의 `data/localization` 에 있는 프로젝트 파일입니다. */
         static void collectLocalizationProjects( vector<string>& outListProjectPath );
         /**
-         * @brief 프로젝트 하나를 표로 읽습니다. 번역 표가 없으면 그 문화권은 빈 칸이고, 있는데 못 읽으면 경고하고 false 입니다(읽은 데까지 채운다).
+         * @brief 프로젝트 하나를 테이블로 읽습니다. 번역 테이블이 없으면 그 문화권은 빈 항목이고, 있는데 못 읽으면 읽은 데까지 채운 뒤 경고하고 false 입니다.
          */
         [[nodiscard]] static bool loadLocalizationProject( string_view projectPath, LocalizationSheet& outSheet );
         /**
-         * @brief 고친 줄을 원문 표 · 번역 표에 씁니다. 번역을 고친 칸은 지금 원문의 해시를 받고 검토 표시가 풀립니다 — 원문만 고친 줄의 번역은 낡은 것이 됩니다.
-         * @details **읽지 못한 기존 파일은 덮지 않습니다** — 하나라도 못 썼으면 false 이고 고친 표시가 남습니다(깨진 번역 표를 덮으면 그 문화권의 번역이 모두 지워진다).
+         * @brief 고친 줄을 원문 테이블과 번역 테이블에 씁니다. 번역을 고친 항목은 지금 원문의 해시를 받고 검토 표시가 해제됩니다. 원문만 고친 줄의 번역은 낡은 것이 됩니다.
+         * @details **읽지 못한 기존 파일은 덮어쓰지 않는다.** 깨진 번역 테이블을 덮어쓰면 그 문화권의 번역이 모두 지워지기 때문이다.
+         *          하나라도 못 썼으면 false 이고 고친 표시가 남는다.
          *          다 쓰면 실행 중인 `LocalizationManager` 가 그 프로젝트를 다시 읽습니다(핫 리로드).
          */
         [[nodiscard]] static bool saveLocalizationProject( LocalizationSheet& inoutSheet );

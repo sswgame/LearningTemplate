@@ -1,6 +1,6 @@
 /**
  * @file DrawSnapshotHandoff.h
- * @brief UI 스레드가 낸 draw 스냅샷 슬롯을 렌더 스레드에 넘기는 약속(게시 · 렌더 시작 · 렌더 끝 · 포기)을 한 곳에 둔 상태 기계입니다.
+ * @brief UI 스레드가 만든 draw 스냅샷 슬롯을 렌더 스레드에 넘기는 약속을 한 곳에 둔 상태 기계입니다. 약속은 게시, 렌더 시작, 렌더 끝, 포기입니다.
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -15,14 +15,14 @@ namespace sw::editor
      * @class DrawSnapshotHandoff
      * @brief draw 스냅샷 슬롯 `constant::kMaxFrameCountInFlight` 개를 두고, UI 스레드가 쓰는 슬롯과 렌더 스레드가 읽는 슬롯이 겹치지 않게 합니다.
      * @details 값은 둘이다. 게시 슬롯(UI 가 마지막으로 다 쓴 슬롯)과 in-flight 슬롯(렌더 대기 또는 렌더 중인 슬롯, 없으면 `kInvalidSlot`).
-     *          게시 슬롯은 UI 스레드만 바꾸고, in-flight 슬롯은 UI 의 게시 · 렌더 스레드의 시작과 끝 · 포기가 바꾼다.
+     *          게시 슬롯은 UI 스레드만 바꾼다. in-flight 슬롯은 UI 의 게시, 렌더 스레드의 시작과 끝, 포기가 바꾼다.
      *
      *          한 프레임의 흐름은 이렇다.
-     *          1. UI 스레드: `waitForIdle` — 지난 프레임을 렌더 스레드가 끝낼 때(`endRender`)까지 기다린다.
-     *          2. UI 스레드: `waitForWriteSlot` — 게시 슬롯의 다음 슬롯을 받는다. 그 슬롯이 in-flight 이면 풀릴 때까지 기다린다.
-     *          3. UI 스레드: 그 슬롯에 스냅샷을 쓴 뒤 `publish` — 게시 슬롯과 in-flight 슬롯을 그 슬롯으로 둔다("렌더 대기").
-     *          4. 렌더 스레드: `beginRender` — 게시 슬롯을 읽어 in-flight 로 표시하고 그 슬롯을 그린다.
-     *          5. 렌더 스레드: present 뒤 `endRender` — in-flight 표시를 푼다. 1 에서 막힌 UI 스레드가 풀린다.
+     *          1. UI 스레드: `waitForIdle`. 렌더 스레드가 지난 프레임을 끝낼 때(`endRender`)까지 기다린다.
+     *          2. UI 스레드: `waitForWriteSlot`. 게시 슬롯의 다음 슬롯을 받는다. 그 슬롯이 in-flight 이면 해제될 때까지 기다린다.
+     *          3. UI 스레드: 그 슬롯에 스냅샷을 쓴 뒤 `publish`. 게시 슬롯과 in-flight 슬롯을 그 슬롯으로 둔다("렌더 대기").
+     *          4. 렌더 스레드: `beginRender`. 게시 슬롯을 읽어 in-flight 로 표시하고 그 슬롯을 그린다.
+     *          5. 렌더 스레드: present 뒤 `endRender`. in-flight 표시를 해제하면 1 에서 막힌 UI 스레드가 풀린다.
      *
      *          **불변식 1. 렌더 스레드가 읽는 슬롯은 UI 스레드가 쓰지 않는다.** 렌더 스레드는 게시 슬롯만 읽고, UI 스레드는 게시 슬롯의 다음 슬롯만 쓴다.
      *          슬롯이 둘 이상이라 두 값은 다르고, 게시 슬롯은 UI 스레드만 바꾸므로 UI 가 쓰는 동안 렌더 스레드가 읽을 슬롯이 바뀌지 않는다.

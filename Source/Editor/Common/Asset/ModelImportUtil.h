@@ -204,6 +204,14 @@ namespace sw::editor
         static void appendPrimitive( const cgltf_primitive& primitive, const cgltf_mesh* pSourceMesh, const float32 ( &arrWorld )[16], const SkinBinding* pSkin,
                                      MergedMesh& inoutMesh );
 
+        /**
+         * @brief 프리미티브의 삼각형을 @p baseVertex 부터 더한 정점에 이어 @p inoutMesh 에 더합니다(`appendPrimitive` 의 마지막 단계).
+         * @details 인덱스가 없으면 정점 순서가 삼각형입니다. 범위 밖 모서리가 있는 삼각형은 버립니다. X 를 뒤집은 거울상이 감김을 한 번 뒤집고,
+         *          노드 변환이 거울상(행렬식 < 0)이면 한 번 더 뒤집습니다(glTF 규약).
+         */
+        static void appendPrimitiveTriangles( const cgltf_primitive& primitive, const float32 ( &arrWorld )[16], uint32 baseVertex, cgltf_size vertexCount,
+                                              MergedMesh& inoutMesh );
+
         /** @brief 정점 하나의 JOINTS_0, WEIGHTS_0 를 본 번호와 합이 1 인 가중치로 읽습니다. 관절 번호가 범위 밖이면 가중치는 0 입니다. */
         static void readSkinInfluence( const SkinBinding& skin, const cgltf_accessor* pJoint, const cgltf_accessor* pWeight, cgltf_size vertexIndex, ImportVertex& inoutVertex );
 

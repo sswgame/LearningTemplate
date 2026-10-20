@@ -1032,7 +1032,8 @@
 - **에디터 폴더는 층이고 틀은 아래 · 구체는 위입니다**(2026-10-11, `CheckEditorLayers`). 패널 · 팝업 매니저는 인터페이스 옆(`Common/GUI`), 에셋 종류 동작 등록부는 `Workspace`,
   커맨드가 패널을 여는 일은 창구 `IEditorPanelHost`, UI 를 만지는 명령의 등록 줄은 그 UI 의 .cpp 입니다. 상태 막대 항목은 등록 줄(`SW_EDITOR_STATUS_BAR_ITEM`)로 더합니다.
   예외는 어느 층에서 include 해도 되는 잎 헤더(`prelude:`)와 모든 매니저를 만드는 조립 파일(`wiring:`)뿐입니다. 큰 패널은 `Panels/<패널>/`, 혼자인 패널은 영역 폴더(`Scene/` · `Animation/` · `Data/` · `Settings/`)에 둡니다.
-- **ImGui 를 모르는 층(Common 의 Asset · Commands · Config · Localization · SourceControl)은 OBJECT 라이브러리 `EditorModel` 로 짓고 오브젝트를 EditorModule DLL 에 그대로 넣습니다**(2026-10-17, `sw_addModulePart`).
+- **ImGui 를 모르는 층(Common 의 Asset · Commands · Config · Localization · SourceControl · Workspace)은 OBJECT 라이브러리 `EditorModel` 로 짓고 오브젝트를 EditorModule DLL 에 그대로 넣습니다**(2026-10-17, `sw_addModulePart`. Workspace 는 2026-10-21).
+  모든 매니저를 만드는 조립 파일(`EditorContextLifecycle.cpp` · `EditorModuleUnloadListener.*`)은 셸 옆 `Source/Editor` 바로 아래에 두어 모델 폴더가 패널 · 팝업 매니저를 include 하지 않습니다.
   정적 라이브러리나 별도 DLL 로 떼지 않습니다. 확장 모듈이 따로 링크하면 정적 상태가 두 벌이 되고 export 가 빠질 수 있습니다.
   vcpkg 가 모든 패키지 헤더를 한 include 자리에 두어 include 자리로는 imgui.h 를 숨길 수 없으므로, `IMGUI_USER_CONFIG` 에 `#error` 헤더를 주어 imgui.h 를 거치는 include 를 컴파일 오류로 만듭니다(린트 게이트가 아님).
 - **패널과 커맨드의 `EditorContext::get()`(62 파일 224 곳)은 생성자 · 인자 주입으로 바꾸지 않습니다**(2026-10-11). 패널은 레지스트리가 인자 없이 만들고(`createEditorPanel<T>`),

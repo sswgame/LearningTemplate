@@ -3,6 +3,7 @@
 #include "Editor/Common/Workspace/EditorSelection.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -250,14 +251,9 @@ namespace sw::editor
 
     void EditorSelection::pruneInvalid()
     {
-        const size_t previousCount = _listSelectedObject.size();
-        _listSelectedObject.erase(
-            std::remove_if( _listSelectedObject.begin(), _listSelectedObject.end(),
-                            [this]( GameObjectHandle handle )
-        { return findObject( handle ) == nullptr; } ),
-            _listSelectedObject.end() );
-
-        if ( _listSelectedObject.size() != previousCount )
+        const size_t removeCount = VectorUtil::removeIf( _listSelectedObject, [this]( GameObjectHandle handle )
+        { return findObject( handle ) == nullptr; } );
+        if ( removeCount > 0 )
             notifyChanged();
     }
 

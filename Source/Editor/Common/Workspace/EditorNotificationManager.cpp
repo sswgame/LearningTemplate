@@ -3,6 +3,7 @@
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Container/VectorUtil.h"
 
 namespace sw::editor
 {
@@ -30,10 +31,7 @@ namespace sw::editor
             item._elapsedSec += deltaTime;
         }
 
-        _listNotification.erase(
-            std::remove_if( _listNotification.begin(), _listNotification.end(),
-                            []( const NotificationItem& item )
-        { return item._elapsedSec >= item._durationSec; } ),
-            _listNotification.end() );
+        VectorUtil::removeIf( _listNotification, []( const NotificationItem& item )
+        { return item._elapsedSec >= item._durationSec; } );
     }
 } // namespace sw::editor

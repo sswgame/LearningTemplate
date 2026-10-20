@@ -214,6 +214,52 @@ namespace sw::editor
         }
 
         /**
+         * @brief 원본 한 장에서 밉 체인을 만들고(`bGenerateMips` 가 아니면 한 장 그대로) @p targetFormat 으로 압축하거나 변환해 @p outFinalImage 에 담습니다.
+         * @details 8비트 경로와 HDR 경로가 함께 씁니다. WIC 필터는 Windows 에만 있고 결과가 OS 구현에 따라 달라집니다. 임포트된 DDS 를 커밋하고 그 해시를
+         *          스탬프에 기록하므로, 어디서 임포트하든 같은 바이트가 나오는 DirectXTex 자체 필터만 씁니다. 실패하면 단계와 HRESULT 를 남기고 false 입니다.
+         */
+        [[nodiscard]] bool encodeTextureMipsInternal( const DirectX::Image& baseImage, bool bGenerateMips, DXGI_FORMAT targetFormat, string_view sourcePath,
+                                                      DirectX::ScratchImage& outFinalImage )
+        {
+            constexpr DirectX::TEX_FILTER_FLAGS kFilterFlags = DirectX::TEX_FILTER_DEFAULT | DirectX::TEX_FILTER_FORCE_NON_WIC;
+
+            DirectX::ScratchImage mipChain;
+            HRESULT               hr = bGenerateMips ? DirectX::GenerateMipMaps( baseImage, kFilterFlags, 0, mipChain ) : mipChain.InitializeFromImage( baseImage );
+            if ( FAILED( hr ) )
+            {
+                SW_LOG_ERROR( "%# failed (hr=0x%#) for %#", bGenerateMips ? "DirectX::GenerateMipMaps" : "DirectX::InitializeFromImage",
+                              Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ), sourcePath );
+                return false;
+            }
+
+            if ( DirectX::IsCompressed( targetFormat ) )
+            {
+                hr = BandCompressJob::compress( mipChain, targetFormat, outFinalImage );
+                if ( FAILED( hr ) )
+                {
+                    SW_LOG_ERROR( "DirectX::Compress failed (hr=0x%#) for format %# (%#)", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ),
+                                  static_cast<uint32>( targetFormat ), sourcePath );
+                    return false;
+                }
+                return true;
+            }
+            if ( targetFormat == mipChain.GetMetadata().format )
+            {
+                outFinalImage = std::move( mipChain );
+                return true;
+            }
+            hr = DirectX::Convert( mipChain.GetImages(), mipChain.GetImageCount(), mipChain.GetMetadata(), targetFormat, kFilterFlags, DirectX::TEX_THRESHOLD_DEFAULT,
+                                   outFinalImage );
+            if ( FAILED( hr ) )
+            {
+                SW_LOG_ERROR( "DirectX::Convert failed (hr=0x%#) for format %# (%#)", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ),
+                              static_cast<uint32>( targetFormat ), sourcePath );
+                return false;
+            }
+            return true;
+        }
+
+        /**
          * @brief `.hdr`(Radiance RGBE)을 부동소수점으로 읽어 BC6H_UF16 또는 R16G16B16A16_FLOAT 로 임포트합니다.
          * @details 규칙의 포맷이 다른 것(8비트)이면 실패로 알린다. 1 을 넘는 값을 자르지 않기 위해서다. 밉은 선형 값 그대로 섞으며 sRGB 가 아니다.
          */
@@ -235,25 +281,9 @@ namespace sw::editor
                               sourcePath );
                 return false;
             }
-            // 8비트 경로와 같은 자체 필터를 쓴다. 어디서 임포트해도 같은 바이트가 나온다.
-            constexpr DirectX::TEX_FILTER_FLAGS kFilterFlags = DirectX::TEX_FILTER_DEFAULT | DirectX::TEX_FILTER_FORCE_NON_WIC;
-            DirectX::ScratchImage               mipChain;
-            hr = ( rule._bGenerateMips == SW_TRUE ) ? DirectX::GenerateMipMaps( *sourceImage.GetImage( 0, 0, 0 ), kFilterFlags, 0, mipChain )
-                                                    : mipChain.InitializeFromImage( *sourceImage.GetImage( 0, 0, 0 ) );
             DirectX::ScratchImage finalImage;
-            if ( SUCCEEDED( hr ) )
-            {
-                hr = ( targetFormat == DXGI_FORMAT_BC6H_UF16 )
-                       ? BandCompressJob::compress( mipChain, targetFormat, finalImage )
-                       : DirectX::Convert( mipChain.GetImages(), mipChain.GetImageCount(), mipChain.GetMetadata(), targetFormat, kFilterFlags,
-                                           DirectX::TEX_THRESHOLD_DEFAULT, finalImage );
-            }
-            if ( FAILED( hr ) )
-            {
-                SW_LOG_ERROR( "HDR mip/compress failed (hr=0x%#) for %#", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ),
-                              sourcePath );
+            if ( encodeTextureMipsInternal( *sourceImage.GetImage( 0, 0, 0 ), rule._bGenerateMips == SW_TRUE, targetFormat, sourcePath, finalImage ) == false )
                 return false;
-            }
             // Radiance RGBE 는 알파 없는 RGB 세 채널이다.
             constexpr uint32 kHdrSourceChannelCount = 3;
             return saveImportedDDSInternal( finalImage, kHdrSourceChannelCount, sourcePath, outputPath, pOutResult );
@@ -415,75 +445,10 @@ namespace sw::editor
         baseImage.slicePitch           = baseImage.rowPitch * static_cast<size_t>( rawImage._height );
         baseImage.pixels               = rawImage._bytes.data();
 
-        // WIC 필터는 Windows 에만 있고 결과가 OS 구현에 따라 달라진다. 임포트된 DDS 를 커밋하고 그 해시를 스탬프에 기록하므로, 어디서 임포트하든 같은
-        // 바이트가 나오는 DirectXTex 자체 필터만 쓴다.
-        constexpr DirectX::TEX_FILTER_FLAGS kFilterFlags = DirectX::TEX_FILTER_DEFAULT | DirectX::TEX_FILTER_FORCE_NON_WIC;
-
-        // 3) 켜져 있으면 밉맵을 생성한다
-        DirectX::ScratchImage mipChain;
-        if ( rule._bGenerateMips == SW_TRUE )
-        {
-            const HRESULT hr = DirectX::GenerateMipMaps( baseImage, kFilterFlags, 0, mipChain );
-            if ( FAILED( hr ) )
-            {
-                SW_LOG_ERROR(
-                    "DirectX::GenerateMipMaps failed (hr=0x%#) for %#",
-                    Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ),
-                    sourcePath.data() );
-                return false;
-            }
-        }
-        else
-        {
-            const HRESULT hr = mipChain.InitializeFromImage( baseImage );
-            if ( FAILED( hr ) )
-            {
-                SW_LOG_ERROR(
-                    "DirectX::InitializeFromImage failed (hr=0x%#) for %#",
-                    Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ),
-                    sourcePath.data() );
-                return false;
-            }
-        }
-
-        // 4) 압축 또는 포맷 변환
+        // 3) 밉맵(켜져 있으면)과 4) 압축 또는 포맷 변환
         DirectX::ScratchImage finalImage;
-
-        if ( DirectX::IsCompressed( targetFormat ) )
-        {
-            const HRESULT hr = BandCompressJob::compress( mipChain, targetFormat, finalImage );
-            if ( FAILED( hr ) )
-            {
-                SW_LOG_ERROR(
-                    "DirectX::Compress failed (hr=0x%#) for format %#",
-                    Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ),
-                    static_cast<uint32>( targetFormat ) );
-                return false;
-            }
-        }
-        else if ( targetFormat != mipChain.GetMetadata().format )
-        {
-            const HRESULT hr = DirectX::Convert(
-                mipChain.GetImages(),
-                mipChain.GetImageCount(),
-                mipChain.GetMetadata(),
-                targetFormat,
-                kFilterFlags,
-                DirectX::TEX_THRESHOLD_DEFAULT,
-                finalImage );
-            if ( FAILED( hr ) )
-            {
-                SW_LOG_ERROR(
-                    "DirectX::Convert failed (hr=0x%#) for format %#",
-                    Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ),
-                    static_cast<uint32>( targetFormat ) );
-                return false;
-            }
-        }
-        else
-        {
-            finalImage = std::move( mipChain );
-        }
+        if ( encodeTextureMipsInternal( baseImage, rule._bGenerateMips == SW_TRUE, targetFormat, sourcePath, finalImage ) == false )
+            return false;
 
         // 5) DDS 파일로 저장한다
         return saveImportedDDSInternal( finalImage, static_cast<uint32>( rawImage._sourceChannelCount ), sourcePath, outputPath, pOutResult );

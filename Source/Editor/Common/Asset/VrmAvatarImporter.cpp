@@ -657,6 +657,88 @@ namespace sw::editor
                 }
                 return true;
             }
+
+            /** @brief 표정 목록(`_listExpression`)을 @p root 에 씁니다. */
+            static void writeExpressions( const JSONValue& root, const VrmAvatarDef& def )
+            {
+                const JSONValue list = root.set( "_listExpression", false );
+                list.setArray();
+                for ( const VrmExpression& expression : def._listExpression )
+                {
+                    const JSONValue entry = list.pushBack();
+                    entry.setObject();
+                    entry.set( "_name", false ).setString( expression._name );
+                    entry.set( "_bPreset", false ).setBool( expression._bPreset == SW_TRUE );
+                    entry.set( "_bBinary", false ).setBool( expression._bBinary == SW_TRUE );
+                    entry.set( "_overrideBlink", false ).setString( makeOverrideName( expression._overrideBlink ) );
+                    entry.set( "_overrideLookAt", false ).setString( makeOverrideName( expression._overrideLookAt ) );
+                    entry.set( "_overrideMouth", false ).setString( makeOverrideName( expression._overrideMouth ) );
+                    const JSONValue listBind = entry.set( "_listBind", false );
+                    listBind.setArray();
+                    for ( const VrmExpressionBind& bind : expression._listBind )
+                    {
+                        const JSONValue bindEntry = listBind.pushBack();
+                        bindEntry.setObject();
+                        bindEntry.set( "_morphTarget", false ).setString( bind._morphTarget );
+                        writeNumber( bindEntry.set( "_weight", false ), bind._weight );
+                    }
+                }
+            }
+
+            /** @brief 스프링 본(콜라이더 · 콜라이더 묶음 · 스프링)을 @p root 에 씁니다. 묶음과 스프링은 앞 목록의 번호로 가리킵니다. */
+            static void writeSprings( const JSONValue& root, const VrmAvatarDef& def )
+            {
+                {
+                    const JSONValue list = root.set( "_listCollider", false );
+                    list.setArray();
+                    for ( const VrmSpringCollider& collider : def._listCollider )
+                    {
+                        const JSONValue entry = list.pushBack();
+                        entry.setObject();
+                        entry.set( "_bone", false ).setString( collider._bone );
+                        entry.set( "_bCapsule", false ).setBool( collider._bCapsule == SW_TRUE );
+                        writeNumber( entry.set( "_radius", false ), collider._radius );
+                        writeVector( entry.set( "_offset", false ), collider._offset );
+                        writeVector( entry.set( "_tail", false ), collider._tail );
+                    }
+                }
+                {
+                    const JSONValue list = root.set( "_listColliderGroup", false );
+                    list.setArray();
+                    for ( const VrmSpringColliderGroup& group : def._listColliderGroup )
+                    {
+                        const JSONValue entry = list.pushBack();
+                        entry.setObject();
+                        entry.set( "_name", false ).setString( group._name );
+                        writeIndices( entry.set( "_listCollider", false ), group._listCollider );
+                    }
+                }
+                {
+                    const JSONValue list = root.set( "_listSpring", false );
+                    list.setArray();
+                    for ( const VrmSpring& spring : def._listSpring )
+                    {
+                        const JSONValue entry = list.pushBack();
+                        entry.setObject();
+                        entry.set( "_name", false ).setString( spring._name );
+                        entry.set( "_centerBone", false ).setString( spring._centerBone );
+                        writeIndices( entry.set( "_listColliderGroup", false ), spring._listColliderGroup );
+                        const JSONValue listJoint = entry.set( "_listJoint", false );
+                        listJoint.setArray();
+                        for ( const VrmSpringJoint& joint : spring._listJoint )
+                        {
+                            const JSONValue jointEntry = listJoint.pushBack();
+                            jointEntry.setObject();
+                            jointEntry.set( "_bone", false ).setString( joint._bone );
+                            writeNumber( jointEntry.set( "_hitRadius", false ), joint._hitRadius );
+                            writeNumber( jointEntry.set( "_stiffness", false ), joint._stiffness );
+                            writeNumber( jointEntry.set( "_gravityPower", false ), joint._gravityPower );
+                            writeVector( jointEntry.set( "_gravityDirection", false ), joint._gravityDirection );
+                            writeNumber( jointEntry.set( "_dragForce", false ), joint._dragForce );
+                        }
+                    }
+                }
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -807,80 +889,8 @@ namespace sw::editor
                 entry.set( "_mode", false ).setString( Internal::makeFirstPersonModeName( mesh._mode ) );
             }
         }
-        {
-            const JSONValue list = root.set( "_listExpression", false );
-            list.setArray();
-            for ( const VrmExpression& expression : def._listExpression )
-            {
-                const JSONValue entry = list.pushBack();
-                entry.setObject();
-                entry.set( "_name", false ).setString( expression._name );
-                entry.set( "_bPreset", false ).setBool( expression._bPreset == SW_TRUE );
-                entry.set( "_bBinary", false ).setBool( expression._bBinary == SW_TRUE );
-                entry.set( "_overrideBlink", false ).setString( Internal::makeOverrideName( expression._overrideBlink ) );
-                entry.set( "_overrideLookAt", false ).setString( Internal::makeOverrideName( expression._overrideLookAt ) );
-                entry.set( "_overrideMouth", false ).setString( Internal::makeOverrideName( expression._overrideMouth ) );
-                const JSONValue listBind = entry.set( "_listBind", false );
-                listBind.setArray();
-                for ( const VrmExpressionBind& bind : expression._listBind )
-                {
-                    const JSONValue bindEntry = listBind.pushBack();
-                    bindEntry.setObject();
-                    bindEntry.set( "_morphTarget", false ).setString( bind._morphTarget );
-                    Internal::writeNumber( bindEntry.set( "_weight", false ), bind._weight );
-                }
-            }
-        }
-        {
-            const JSONValue list = root.set( "_listCollider", false );
-            list.setArray();
-            for ( const VrmSpringCollider& collider : def._listCollider )
-            {
-                const JSONValue entry = list.pushBack();
-                entry.setObject();
-                entry.set( "_bone", false ).setString( collider._bone );
-                entry.set( "_bCapsule", false ).setBool( collider._bCapsule == SW_TRUE );
-                Internal::writeNumber( entry.set( "_radius", false ), collider._radius );
-                Internal::writeVector( entry.set( "_offset", false ), collider._offset );
-                Internal::writeVector( entry.set( "_tail", false ), collider._tail );
-            }
-        }
-        {
-            const JSONValue list = root.set( "_listColliderGroup", false );
-            list.setArray();
-            for ( const VrmSpringColliderGroup& group : def._listColliderGroup )
-            {
-                const JSONValue entry = list.pushBack();
-                entry.setObject();
-                entry.set( "_name", false ).setString( group._name );
-                Internal::writeIndices( entry.set( "_listCollider", false ), group._listCollider );
-            }
-        }
-        {
-            const JSONValue list = root.set( "_listSpring", false );
-            list.setArray();
-            for ( const VrmSpring& spring : def._listSpring )
-            {
-                const JSONValue entry = list.pushBack();
-                entry.setObject();
-                entry.set( "_name", false ).setString( spring._name );
-                entry.set( "_centerBone", false ).setString( spring._centerBone );
-                Internal::writeIndices( entry.set( "_listColliderGroup", false ), spring._listColliderGroup );
-                const JSONValue listJoint = entry.set( "_listJoint", false );
-                listJoint.setArray();
-                for ( const VrmSpringJoint& joint : spring._listJoint )
-                {
-                    const JSONValue jointEntry = listJoint.pushBack();
-                    jointEntry.setObject();
-                    jointEntry.set( "_bone", false ).setString( joint._bone );
-                    Internal::writeNumber( jointEntry.set( "_hitRadius", false ), joint._hitRadius );
-                    Internal::writeNumber( jointEntry.set( "_stiffness", false ), joint._stiffness );
-                    Internal::writeNumber( jointEntry.set( "_gravityPower", false ), joint._gravityPower );
-                    Internal::writeVector( jointEntry.set( "_gravityDirection", false ), joint._gravityDirection );
-                    Internal::writeNumber( jointEntry.set( "_dragForce", false ), joint._dragForce );
-                }
-            }
-        }
+        Internal::writeExpressions( root, def );
+        Internal::writeSprings( root, def );
         return document.dump( 1 );
     }
 } // namespace sw::editor
