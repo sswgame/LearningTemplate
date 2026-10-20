@@ -461,6 +461,9 @@ namespace sw
         unordered_set<uint32>       uniqueMatched;
         bool                        bFieldError{ false };
         bool                        bForbiddenField{ false };
+        // 소프트 읽기(orphan 목록이 있음)는 읽지 못한 필드를 orphan 으로 넘기고 이어 읽는다. 그 필드는 **읽기 전 값**이다(바이너리 · XML 과 같다).
+        const bool           bContinuesAfterUnreadable = pOutListOrphan != nullptr;
+        PropertyReadRollback rollback;
 
         if ( pOutVersion != nullptr )
             *pOutVersion = 0;
@@ -510,10 +513,15 @@ namespace sw
                 continue;
 
             uniqueMatched.insert( pMatched->getNameHash() );
+            if ( bContinuesAfterUnreadable && rollback.keepValueBeforeRead( typeInfo, *pMatched, ObjectAddress{ pInstance }, context ) == false )
+                return false;
             if ( JSONSerializerInternal::readProperty( field, *pMatched, pInstance, context, pOutListOrphan ) == false )
             {
                 if ( pOutListOrphan != nullptr )
                 {
+                    // 읽다 만 값(원소를 채우다 만 컨테이너, 필드를 채우다 만 구조체)을 읽기 전 값으로 되돌린다. 되돌릴 수 없으면 객체째 실패다.
+                    if ( rollback.restoreValueBeforeRead( MutableObjectAddress{ pInstance }, context ) == false )
+                        return false;
                     SchemaOrphanValue orphan;
                     orphan._name     = pMatched->_name;
                     orphan._nameHash = pMatched->getNameHash();

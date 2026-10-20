@@ -60,6 +60,7 @@ namespace sw
          * @brief Soft 역직렬화입니다. 변환하지 못한 필드를 orphan 으로 모읍니다.
          * @param pOutVersion nullptr 가 아니면 kSchemaVersionKey 값을 적습니다(없으면 0).
          * @return 본문이 JSON 객체가 아니면 `NotParsed`, 범위 밖 값이 있으면 `Rejected`(orphan 은 끝까지 모은다)입니다(`SoftReadResult`).
+         *         읽지 못한 필드는 orphan 으로 넘어가고 **읽기 전 값**으로 남습니다(`PropertyReadRollback`). 되돌릴 수 없으면(읽다 만 소유 포인터 목록) 그 자리에서 `Rejected` 입니다.
          */
         [[nodiscard]] static SoftReadResult deserializeSoft( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr,
                                                              vector<SchemaOrphanValue>* pOutListOrphan = nullptr, uint32* pOutVersion = nullptr,
