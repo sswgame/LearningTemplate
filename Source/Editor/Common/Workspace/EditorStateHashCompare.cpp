@@ -58,6 +58,7 @@ namespace sw::editor
         return true;
     }
 
+#if SW_DEV_COMMANDS_ENABLED
     bool EditorStateHashCompare::loadFromChannel( int32 sourceIndex, const NetAddress& remote, string_view token )
     {
         if ( isSourceIndexValid( sourceIndex ) == false )
@@ -79,6 +80,7 @@ namespace sw::editor
         }
         return loadFromReport( sourceIndex, remote.toString(), body );
     }
+#endif
 
     bool EditorStateHashCompare::loadFromFile( int32 sourceIndex, string_view path )
     {

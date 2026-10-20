@@ -8,6 +8,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Console/DevCommandsEnabled.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Network/NetTypes.h"
@@ -55,8 +56,13 @@ namespace sw::editor
 
         EditorStateHashCompare();
 
-        /** @brief 디버그 채널로 붙은 서버의 이력 전부(`state.hashes 0 <상한>`)를 칸 @p sourceIndex 에 담습니다. 실패하면 false 이고 칸은 그대로입니다. */
+#if SW_DEV_COMMANDS_ENABLED
+        /**
+         * @brief 디버그 채널로 붙은 서버의 이력 전부(`state.hashes 0 <상한>`)를 칸 @p sourceIndex 에 담습니다. 실패하면 false 이고 칸은 그대로입니다.
+         * @details 디버그 채널은 개발 명령과 함께만 있다(배포 구성에는 없다 — `DebugChannel.h`).
+         */
         [[nodiscard]] bool loadFromChannel( int32 sourceIndex, const NetAddress& remote, string_view token );
+#endif
         /** @brief 이력 파일을 칸에 담습니다. 형식이 다른 줄이 있으면 false 입니다. */
         [[nodiscard]] bool loadFromFile( int32 sourceIndex, string_view path );
         /** @brief 이력 글을 칸에 담습니다(`writeReport` 형식). 형식이 다르거나 비어 있으면 false 입니다. */

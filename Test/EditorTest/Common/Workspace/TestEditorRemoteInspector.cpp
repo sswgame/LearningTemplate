@@ -1,8 +1,13 @@
 #include "pch.h"
 
+#include "Core/Console/DevCommandsEnabled.h"
+
 #include "Editor/Common/Workspace/EditorRemoteInspector.h"
 
 #include "TestFramework/TestFramework.h"
+
+// 원격 인스펙터는 디버그 채널과 함께 개발 구성에만 있다.
+#if SW_DEV_COMMANDS_ENABLED
 
 using namespace sw;
 using namespace sw::editor;
@@ -72,3 +77,5 @@ SW_TEST_CASE( EditorRemoteInspectorTest, RequestsWithoutAConnectionFail )
     SW_ASSERT_EQUAL( size_t{ 2 }, inspector.getConsoleLines().size() );
     SW_EXPECT_TRUE( inspector.getConsoleLines()[0] == "> scene.tree" );
 }
+
+#endif // SW_DEV_COMMANDS_ENABLED

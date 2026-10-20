@@ -2,11 +2,15 @@
 
 #include "Editor/Common/Workspace/EditorRemoteInspector.h"
 
+#include "Core/Console/DevCommandsEnabled.h"
 #include "Core/Container/StringUtil.h"
 
 #include "Engine/Observability/DebugChannel.h"
 
 #include <algorithm>
+
+// 원격 인스펙터는 디버그 채널을 쓴다 — 채널은 개발 명령과 함께만 있다(배포 구성에는 없다, `DebugChannel.h`).
+#if SW_DEV_COMMANDS_ENABLED
 
 namespace sw::editor
 {
@@ -243,3 +247,5 @@ namespace sw::editor
         return true;
     }
 } // namespace sw::editor
+
+#endif // SW_DEV_COMMANDS_ENABLED
