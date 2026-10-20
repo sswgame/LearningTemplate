@@ -8,19 +8,30 @@ using namespace sw;
 using namespace sw::editor;
 
 /**
- * @brief [MaterialPreviewShadingTest] 값 글은 빈 칸 · 쉼표가 섞여도 읽고, 모자란 칸은 0 이다
+ * @brief [MaterialPreviewShadingTest] 값 글은 빈 칸 · 쉼표가 섞여도 읽고, 개수가 형식과 다르거나 숫자가 아니면 거절하고 칸을 건드리지 않는다
  * @details `MaterialProperty` 는 Engine 이 내보내지 않는 타입이라 `readInputs` 는 시나리오 `editor/materialpreview` 가 본다.
  */
-SW_TEST_CASE( MaterialPreviewShadingTest, ParsesMixedSeparators )
+SW_TEST_CASE( MaterialPreviewShadingTest, ParsesExactCountOnly )
 {
-    float32      arrValue[4]{};
-    const uint32 filled = MaterialPreviewShading::parseFloats( "1, 0.5  0", arrValue, 4 );
-    SW_EXPECT_EQUAL( 3u, filled );
+    float32 arrValue[3]{};
+    SW_EXPECT_TRUE( MaterialPreviewShading::parseFloats( "1, 0.5  0", arrValue ) );
     SW_EXPECT_NEAR_EQUAL( 1.0f, arrValue[0], 1e-6f );
     SW_EXPECT_NEAR_EQUAL( 0.5f, arrValue[1], 1e-6f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, arrValue[2], 1e-6f );
-    SW_EXPECT_NEAR_EQUAL( 0.0f, arrValue[3], 1e-6f );
-    SW_EXPECT_EQUAL( 0u, MaterialPreviewShading::parseFloats( "", arrValue, 4 ) );
+
+    float32 arrUntouched[3]{ 7.0f, 7.0f, 7.0f };
+    SW_EXPECT_FALSE( MaterialPreviewShading::parseFloats( "", arrUntouched ) );
+    SW_EXPECT_FALSE( MaterialPreviewShading::parseFloats( "1 2", arrUntouched ) );
+    SW_EXPECT_FALSE( MaterialPreviewShading::parseFloats( "1 2 3 4", arrUntouched ) );
+    SW_EXPECT_FALSE( MaterialPreviewShading::parseFloats( "1 2 x", arrUntouched ) );
+    SW_EXPECT_NEAR_EQUAL( 7.0f, arrUntouched[0], 1e-6f );
+
+    float32 arrColor[4]{};
+    SW_EXPECT_TRUE( MaterialPreviewShading::parseColor( "1 0 0", arrColor ) );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, arrColor[3], 1e-6f ); // 적지 않은 알파는 1 — 엔진 묶기와 같다
+    SW_EXPECT_TRUE( MaterialPreviewShading::parseColor( "1 0 0 0.25", arrColor ) );
+    SW_EXPECT_NEAR_EQUAL( 0.25f, arrColor[3], 1e-6f );
+    SW_EXPECT_FALSE( MaterialPreviewShading::parseColor( "1 0", arrColor ) );
 }
 
 /**

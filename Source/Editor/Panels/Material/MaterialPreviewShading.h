@@ -36,8 +36,21 @@ namespace sw::editor
      */
     struct MaterialPreviewShading
     {
-        /** @brief 글(`"1 0 0 1"` · `"1,0,0,1"`)에서 실수를 @p count 개까지 읽고 읽은 수를 돌려줍니다. 먼저 모든 원소를 0 으로 채우고, 숫자가 아닌 토큰에서 멈춥니다. */
-        static uint32 parseFloats( string_view text, float32* pOut, uint32 count );
+        /**
+         * @brief 글(`"1 0 0 1"` · `"1,0,0,1"`)에서 실수를 정확히 @p N 개 읽습니다. 개수는 배열 형식이 정한다.
+         * @details 모자라거나 남거나 숫자가 아닌 토큰이 있으면 false 이고 @p outArrValue 은 그대로다 — 빠진 칸을 0 으로 메우지 않는다.
+         *          값을 못 읽은 행은 패널이 원문 칸으로 보여 사용자가 고치게 한다.
+         */
+        template <uint32 N>
+        [[nodiscard]] static bool parseFloats( string_view text, float32 ( &outArrValue )[N] )
+        {
+            return parseExactFloats( text, outArrValue, N );
+        }
+        /**
+         * @brief 색 값(RGB 또는 RGBA)을 읽습니다. 알파를 적지 않은 글은 알파 1 이다 — 엔진이 색을 묶는 규칙(`MaterialPacking`)과 같은 형식이다.
+         * @details 셋도 넷도 아니거나 숫자가 아닌 토큰이 있으면 false 이고 @p outArrValue 은 그대로다.
+         */
+        [[nodiscard]] static bool parseColor( string_view text, float32 ( &outArrValue )[4] );
         /** @brief 머티리얼 값 목록에서 미리보기 값을 모읍니다(지금 값, 비었으면 기본값). */
         static MaterialPreviewInputs readInputs( const vector<MaterialProperty>& listProperty );
         /**
@@ -48,5 +61,9 @@ namespace sw::editor
         static float3 shadePoint( const MaterialPreviewInputs& inputs, float32 nx, float32 ny );
         /** @brief 원 안을 고르게 짚은 점들의 평균 (R - B) 입니다(0..255 — 탐침이 머티리얼 색을 따르는지 본다). */
         static float32 computeMeanRedMinusBlue( const MaterialPreviewInputs& inputs );
+
+    private:
+        /** @brief `parseFloats` 의 몸체입니다 — 토큰이 정확히 @p count 개이고 모두 숫자일 때만 @p pOut 에 쓴다. */
+        [[nodiscard]] static bool parseExactFloats( string_view text, float32* pOut, uint32 count );
     };
 } // namespace sw::editor

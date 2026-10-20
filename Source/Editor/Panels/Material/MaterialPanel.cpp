@@ -62,6 +62,18 @@ namespace sw::editor
             }
 
             /**
+             * @brief 값 글을 형식대로 읽지 못한 행입니다. 0 으로 메운 슬라이더 대신 경고 표시와 원문 칸을 보여 사용자가 글을 고치게 한다.
+             * @return 원문 칸을 고쳤으면 true 입니다(다른 행과 같이 편집으로 알린다).
+             */
+            static bool drawUnreadableValue( const utf8* pLabel, MaterialProperty& prop )
+            {
+                ImGui::TextColored( EditorColorUtil::toImVec4( EditorThemeUtil::getWarningColor() ), "!" );
+                EditorWidgets::drawTooltip( "This value does not match its type (wrong count of numbers or a non-number) - fix the text" );
+                ImGui::SameLine();
+                return EditorWidgets::drawTextField( pLabel, prop._value );
+            }
+
+            /**
              * @brief 머티리얼 프로퍼티 하나를 타입에 맞는 위젯으로 그립니다. 바뀌었으면 true 입니다.
              * @details 경우마다 짧은 `switch` 디스패처라 나누지 않습니다(`LongFunctions` 의 유지 기준). 타입을 더하면 `switch` 에 경우가 없다는 경고가 서므로 빠뜨릴 수 없습니다.
              */
@@ -86,21 +98,23 @@ namespace sw::editor
                     case MaterialPropertyType::Float:
                     case MaterialPropertyType::Range:
                     {
-                        float32 fVal{ 0.0f };
-                        MaterialPreviewShading::parseFloats( prop._value, &fVal, 1 );
+                        float32 arrVal[1]{};
+                        if ( MaterialPreviewShading::parseFloats( prop._value, arrVal ) == false )
+                            return drawUnreadableValue( pLabel, prop );
                         bool bChanged{ false };
                         if ( prop._type == MaterialPropertyType::Range && prop._min < prop._max )
-                            bChanged = ImGui::SliderFloat( pLabel, &fVal, prop._min, prop._max );
+                            bChanged = ImGui::SliderFloat( pLabel, &arrVal[0], prop._min, prop._max );
                         else
-                            bChanged = ImGui::DragFloat( pLabel, &fVal, 0.01f );
+                            bChanged = ImGui::DragFloat( pLabel, &arrVal[0], 0.01f );
                         if ( bChanged )
-                            writeFloats( prop._value, &fVal, 1 );
+                            writeFloats( prop._value, arrVal, 1 );
                         return bChanged;
                     }
                     case MaterialPropertyType::Float2:
                     {
-                        float32 arrVal[2]{ 0.0f, 0.0f };
-                        MaterialPreviewShading::parseFloats( prop._value, arrVal, 2 );
+                        float32 arrVal[2]{};
+                        if ( MaterialPreviewShading::parseFloats( prop._value, arrVal ) == false )
+                            return drawUnreadableValue( pLabel, prop );
                         const bool bChanged = ImGui::DragFloat2( pLabel, arrVal, 0.01f );
                         if ( bChanged )
                             writeFloats( prop._value, arrVal, 2 );
@@ -108,8 +122,9 @@ namespace sw::editor
                     }
                     case MaterialPropertyType::Float3:
                     {
-                        float32 arrVal[3]{ 0.0f, 0.0f, 0.0f };
-                        MaterialPreviewShading::parseFloats( prop._value, arrVal, 3 );
+                        float32 arrVal[3]{};
+                        if ( MaterialPreviewShading::parseFloats( prop._value, arrVal ) == false )
+                            return drawUnreadableValue( pLabel, prop );
                         const bool bChanged = ImGui::DragFloat3( pLabel, arrVal, 0.01f );
                         if ( bChanged )
                             writeFloats( prop._value, arrVal, 3 );
@@ -118,8 +133,11 @@ namespace sw::editor
                     case MaterialPropertyType::Color:
                     case MaterialPropertyType::Float4:
                     {
-                        float32 arrVal[4]{ 1.0f, 1.0f, 1.0f, 1.0f };
-                        MaterialPreviewShading::parseFloats( prop._value, arrVal, 4 );
+                        float32    arrVal[4]{};
+                        const bool bRead = prop._type == MaterialPropertyType::Color ? MaterialPreviewShading::parseColor( prop._value, arrVal )
+                                                                                     : MaterialPreviewShading::parseFloats( prop._value, arrVal );
+                        if ( bRead == false )
+                            return drawUnreadableValue( pLabel, prop );
                         Color      color{ arrVal[0], arrVal[1], arrVal[2], arrVal[3] };
                         const bool bChanged = EditorWidgets::drawColorEdit( pLabel, color );
                         if ( bChanged )
