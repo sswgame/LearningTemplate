@@ -157,11 +157,13 @@ namespace sw
         _pRHIDevice     = pRHIDevice;
         _bResumingWorld = findActiveObjectManager() != nullptr ? SW_TRUE : SW_FALSE;
         configureBootstrap( _bootstrap );
-        const GameConfig& gameCfg = GameConfig::getActive();
-        if ( gameCfg._packRoot.empty() == false )
-            _bootstrap._packRoot = gameCfg._packRoot;
-        if ( _bootstrap.load( path::kGameSettingsFile ) == false )
-            SW_LOG_TRACE( "No custom bootstrap in pack '%#' — using defaults.", _bootstrap._packRoot );
+        _bootstrap._packRoot = GameConfig::getActive()._packRoot;
+        // gamesettings.xml 은 필수다. 못 읽으면 기본값으로 서지 않고 게임 초기화를 멈춘다.
+        if ( loadGameSettings() == false )
+        {
+            SW_LOG_ERROR( "Game instance cannot start - gamesettings could not be loaded from pack '%#'", _bootstrap._packRoot.c_str() );
+            return false;
+        }
         // 이 인스턴스의 범위를 지금 게임 범위로 건다 — 파생의 onInitialize 가 거는 카탈로그와 이 설정을 게임 서비스가 찾는다.
         // 앞 범위(테스트가 건 범위 · 리로드에서 아직 안 내려간 옛 인스턴스의 범위)를 상위로 이어, 거기 걸린 것도 찾힌다.
         if ( game::findGameScope() != &_gameScope )
@@ -203,6 +205,11 @@ namespace sw
         _pUISystem     = nullptr;
         _pUserSettings = nullptr;
         _pInput        = nullptr;
+    }
+
+    bool GameInstanceBase::loadGameSettings()
+    {
+        return _bootstrap.load( path::kGameSettingsFile );
     }
 
     bool GameInstanceBase::applyBootstrap()

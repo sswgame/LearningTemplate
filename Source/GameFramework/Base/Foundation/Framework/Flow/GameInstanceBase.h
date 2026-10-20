@@ -47,7 +47,7 @@ namespace sw
 
         /**
          * @brief configureBootstrap 으로 부트스트랩을 채우고 gamesettings 를 읽은 뒤 onInitialize 를 부릅니다.
-         * @details 게임 프리셋 `Config/Game/<게임>.json` 에 팩 루트가 있으면 그것이 우선한다.
+         * @details 팩 루트는 게임 프리셋 `Config/Game/<게임>.json` 의 값이다. gamesettings 를 못 읽으면 false 다(기본값 폴백 없음).
          *          읽은 `GameSettings` 는 게임 서비스(`game::findSubsystem<GameSettings>()`)로 등록하고, 다국어(`_localizationProject`)와
          *          게임플레이 입력 맵(`_inputMap`)도 여기서 적용한다.
          *          커스텀 칸을 읽는 킷 코드는 이 서비스로 읽는다. 서비스로 등록하지 않으면 제품에서 늘 기본값을 쓴다.
@@ -139,6 +139,8 @@ namespace sw
     protected:
         /** @brief 파생 클래스가 팩 루트 · 부트스트랩을 설정합니다. */
         virtual void configureBootstrap( BootstrapConfig& outConfig ) { (void)outConfig; }
+        /** @brief 팩의 gamesettings 를 `_bootstrap` 으로 읽습니다. 실패하면 게임 초기화가 실패합니다(기본값으로 서지 않는다). 팩 없이 만드는 테스트만 XML 문자열(`loadFromXMLText`)로 오버라이드합니다. */
+        [[nodiscard]] virtual bool loadGameSettings();
         /** @brief 부트스트랩을 읽은 뒤 부르는 파생 초기화 훅입니다. */
         virtual bool onInitialize() { return true; }
         /** @brief 파생 종료 훅입니다. */

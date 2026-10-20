@@ -1175,7 +1175,8 @@ SW_TEST_CASE( GameFrameworkTest, RecreatedGameInstanceKeepsTheLiveScene )
         bool _bRequested{ false };
 
     protected:
-        void configureBootstrap( BootstrapConfig& outConfig ) override { outConfig._data._startMap = "game/none/maps/first.scene.xml"; }
+        // 팩 없이 만드는 테스트 — gamesettings 는 XML 문자열로 준다.
+        bool loadGameSettings() override { return _bootstrap._data.loadFromXMLText( "<GameSettings><startMap>game/none/maps/first.scene.xml</startMap></GameSettings>", "test" ); }
         bool onInitialize() override
         {
             _bRequested = requestFirstScene();
@@ -2862,11 +2863,6 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameSettingsIsBoundAndApplied )
     };
     ScopedRunState runState;
 
-    // 팩에 gamesettings.xml 이 없다 — configureBootstrap 이 채운 값이 그대로 남는다.
-    GameConfig runConfig = runState._oldConfig;
-    runConfig._packRoot  = "game/no_such_pack";
-    GameConfig::setActive( runConfig );
-
     const string localeDir = test::makeTempDirectory( "bootstrap_locale" );
     SW_ASSERT_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( localeDir, "boot.locproject.json" ),
                                              R"({ "name": "boot", "sourceCulture": "en_us", "cultures": [ "ko_kr" ], "stringTables": [ "boot.strings.json" ] })" ) );
@@ -2881,16 +2877,21 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameSettingsIsBoundAndApplied )
         string _savePath;
 
     protected:
-        void configureBootstrap( BootstrapConfig& outConfig ) override
+        // 팩 없이 만드는 테스트 — gamesettings 는 XML 문자열로 준다.
+        bool loadGameSettings() override
         {
-            GameSettings& data        = outConfig._data;
-            data._startMap            = "game/test/maps/start.scene.xml";
-            data._titleScene          = "game/test/maps/title.scene.xml";
-            data._inputMap            = "engine/input/default.input.xml";
-            data._localizationProject = FileUtil::joinPath( _localeDir, "boot.locproject.json" );
-            data._defaultLanguage     = "ko_KR"; // 파일 이름(ko_kr)과 철자가 다르다
-            data._fallbackLanguage    = "en-US";
-            data._defaultSavePath     = _savePath;
+            const string xml = "<GameSettings>"
+                               "<startMap>game/test/maps/start.scene.xml</startMap>"
+                               "<titleScene>game/test/maps/title.scene.xml</titleScene>"
+                               "<inputMap>engine/input/default.input.xml</inputMap>"
+                               "<localizationProject>" +
+                               FileUtil::joinPath( _localeDir, "boot.locproject.json" ) + "</localizationProject>"
+                                                                                          "<defaultLanguage>ko_KR</defaultLanguage>" // 파일 이름(ko_kr)과 철자가 다르다
+                                                                                          "<fallbackLanguage>en-US</fallbackLanguage>"
+                                                                                          "<defaultSavePath>" +
+                               _savePath + "</defaultSavePath>"
+                                           "</GameSettings>";
+            return _bootstrap._data.loadFromXMLText( xml, "test" );
         }
     };
 
