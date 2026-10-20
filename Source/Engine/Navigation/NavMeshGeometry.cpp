@@ -30,7 +30,7 @@ namespace sw
             {
                 if ( pData == nullptr || size == 0 )
                     return hash;
-                return StringUtil::computeHash64( static_cast<const utf8*>( pData ), size, false, hash );
+                return HashUtil::computeStringHash64( static_cast<const utf8*>( pData ), size, false, hash );
             }
 
             /** @brief 셰이프 점들의 로컬 경계 상자의 반 크기와 중심을 구합니다. 점이 없으면 false 를 반환합니다. */

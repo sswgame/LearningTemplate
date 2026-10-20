@@ -155,7 +155,7 @@ namespace sw
             ServiceTransaction transaction;
             transaction.put( getTable(), _key, RemoteConfigInternal::encodeRecord( _value ), _expectedVersion );
             // 같은 판 위의 같은 키 바꾸기는 같은 감사 키 — 재시도가 줄을 둘 만들지 않는다
-            ServiceAuditLog::stageEntry( transaction, _audit, _expectedVersion, StringUtil::computeHash64( _key.data(), _key.size(), false ) );
+            ServiceAuditLog::stageEntry( transaction, _audit, _expectedVersion, HashUtil::computeStringHash64( _key.data(), _key.size(), false ) );
             ServiceCommitInfo info;
             _result        = connection.commit( transaction, &info );
             _commitVersion = info._commitVersion;
@@ -317,8 +317,8 @@ namespace sw
         {
             arrAccountByte[byteIndex] = static_cast<uint8>( accountID >> ( byteIndex * 8 ) );
         }
-        uint64 hash = StringUtil::computeHash64( flag.data(), flag.size(), false );
-        hash        = StringUtil::computeHash64( reinterpret_cast<const utf8*>( arrAccountByte ), sizeof( arrAccountByte ), false, hash );
+        uint64 hash = HashUtil::computeStringHash64( flag.data(), flag.size(), false );
+        hash        = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( arrAccountByte ), sizeof( arrAccountByte ), false, hash );
         return static_cast<int32>( RemoteConfigInternal::mixBits( hash ) % static_cast<uint64>( RemoteConfigValue::kFullRolloutPoints ) );
     }
 
@@ -335,7 +335,7 @@ namespace sw
         BitWriter writer;
         writeClientSnapshot( writer );
         const vector<uint8>& bytes = writer.getBytes();
-        _snapshotHash              = StringUtil::computeHash64( reinterpret_cast<const utf8*>( bytes.data() ), static_cast<size_t>( writer.getByteCount() ), false );
+        _snapshotHash              = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( bytes.data() ), static_cast<size_t>( writer.getByteCount() ), false );
     }
 
     void RemoteConfig::onReloadCompleted( ServiceStoreResult result, map<string, Entry>& inoutMapEntry )

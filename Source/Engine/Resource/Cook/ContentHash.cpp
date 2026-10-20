@@ -2,6 +2,7 @@
 
 #include "Engine/Resource/Cook/ContentHash.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/unordered_map.h"
@@ -47,7 +48,7 @@ namespace sw
             if ( pData[index] != static_cast<uint8>( '\r' ) )
                 normalizedByte.push_back( pData[index] );
         }
-        return StringUtil::computeHash64( reinterpret_cast<const utf8*>( normalizedByte.data() ), normalizedByte.size(), false );
+        return HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( normalizedByte.data() ), normalizedByte.size(), false );
     }
 
     uint64 ContentHash::computeFile( string_view absPath )

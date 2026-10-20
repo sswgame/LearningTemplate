@@ -249,8 +249,8 @@ namespace sw::editor
 
     string ModelImportUtil::makeImportedGuid( string_view resourceID )
     {
-        const uint64 high = StringUtil::computeHash64( resourceID.data(), resourceID.size(), false );
-        const uint64 low  = StringUtil::computeHash64( resourceID.data(), resourceID.size(), false, high ^ HashUtil::kGoldenRatio64 );
+        const uint64 high = HashUtil::computeStringHash64( resourceID.data(), resourceID.size(), false );
+        const uint64 low  = HashUtil::computeStringHash64( resourceID.data(), resourceID.size(), false, high ^ HashUtil::kGoldenRatio64 );
         // 8-4-4-4-12 자리 16 진. 셋째 묶음 첫 자리는 버전 4, 넷째 묶음 첫 자리는 변형(8..b)이다.
         auto appendHex = []( string& inoutText, uint64 value, uint32 digitCount )
         {

@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginTicketAuthority.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Container/LittleEndianUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Memory/Memory.h"
@@ -21,7 +22,7 @@ namespace sw
             static constexpr int32 kNonceSize     = 16;
 
             /** @brief 서버 id 는 `hashed_string` 규칙대로 대소문자를 구분하지 않습니다. */
-            static uint64 computeServerHash( const hashed_string& serverID ) { return StringUtil::computeHash64( serverID.c_str(), serverID.size(), true ); }
+            static uint64 computeServerHash( const hashed_string& serverID ) { return HashUtil::computeStringHash64( serverID.c_str(), serverID.size(), true ); }
 
             /** @brief 상수 시간으로 비교합니다. 처음 다른 바이트에서 멈추지 않습니다. */
             static bool isEqualConstantTime( const uint8* pFirst, const uint8* pSecond, int32 size )

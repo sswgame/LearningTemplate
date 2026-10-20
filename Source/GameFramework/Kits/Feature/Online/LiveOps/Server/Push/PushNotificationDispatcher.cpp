@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushNotificationDispatcher.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Network/BitStream.h"
 
@@ -194,7 +195,7 @@ namespace sw
     string PushNotificationDispatcher::makeDeviceKey( AccountID accountID, string_view providerID, string_view token )
     {
         // 토큰은 키 규칙 밖의 글자를 가질 수 있다. 그래서 키에는 해시만 쓰고 토큰은 값에 둔다
-        return makeAccountPrefix( accountID ) + string( providerID ) + "." + ServiceKeyUtil::makeHex64( StringUtil::computeHash64( token.data(), token.size(), false ) );
+        return makeAccountPrefix( accountID ) + string( providerID ) + "." + ServiceKeyUtil::makeHex64( HashUtil::computeStringHash64( token.data(), token.size(), false ) );
     }
 
     IPushNotificationProvider* PushNotificationDispatcher::findProvider( string_view providerID ) const

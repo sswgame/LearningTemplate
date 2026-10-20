@@ -30,9 +30,9 @@ namespace sw
 
     uint64 AnnotationMeta::hashScopeAndKey( string_view scope, string_view key ) noexcept
     {
-        const uint64 scopeHash = StringUtil::computeHash64( scope, false );
+        const uint64 scopeHash = HashUtil::computeStringHash64( scope, false );
         const uint64 delimHash = ( scopeHash ^ static_cast<uint64>( ':' ) ) * HashUtil::kFnvPrime64;
-        return StringUtil::computeHash64( key, false, delimHash );
+        return HashUtil::computeStringHash64( key, false, delimHash );
     }
 
     void AnnotationMeta::addAlias( const string_view scope, const string_view alias, AnnotationBinding binding )

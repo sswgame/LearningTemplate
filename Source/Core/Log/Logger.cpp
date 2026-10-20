@@ -2,6 +2,7 @@
 
 #include "Core/Log/Logger.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
@@ -39,7 +40,7 @@ namespace sw
                 const utf8 character = filePath[cut + index];
                 arrSuffix[index]     = character == '\\' ? '/' : character;
             }
-            return StringUtil::computeHash64( string_view{ arrSuffix, length } );
+            return HashUtil::computeStringHash64( string_view{ arrSuffix, length } );
         }
 
         /** @brief 경로 키(`computeCallerKey`)별 로그 Caller 이름 항목입니다(힙 할당 없음). */

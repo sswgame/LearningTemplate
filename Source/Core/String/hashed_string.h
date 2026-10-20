@@ -21,6 +21,7 @@
  * - intern 생성 · 조회에는 32개로 나눈 샤드 뮤텍스를 써서 여러 스레드가 동시에 만들 수 있습니다.
  */
 #pragma once
+#include "Core/Common/HashUtil.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
@@ -179,9 +180,9 @@ namespace sw
             if ( text.empty() )
                 return static_cast<hash_type>( 0 );
             if constexpr ( std::is_same_v<hash_type, uint32> )
-                return StringUtil::computeHash32( text.data(), text.size() );
+                return HashUtil::computeStringHash32( text.data(), text.size() );
             else
-                return StringUtil::computeHash64( text.data(), text.size() );
+                return HashUtil::computeStringHash64( text.data(), text.size() );
         }
 
         /**
@@ -642,9 +643,9 @@ namespace sw
 
         hash_type hash{};
         if constexpr ( std::is_same_v<hash_type, uint32> )
-            hash = StringUtil::computeHash32( str, length );
+            hash = HashUtil::computeStringHash32( str, length );
         else if constexpr ( std::is_same_v<hash_type, uint64> )
-            hash = StringUtil::computeHash64( str, length );
+            hash = HashUtil::computeStringHash64( str, length );
 
         const uint32 shardIndex = ( hash ^ ( hash >> 16 ) ) % kNumShards;
         auto&        shard      = info._arrShard[shardIndex];

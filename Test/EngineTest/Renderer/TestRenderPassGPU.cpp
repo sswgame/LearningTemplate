@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Common/BitUtil.h"
 #include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/FrameArenaAllocator.h"
@@ -7648,8 +7649,8 @@ SW_TEST_CASE( RenderPassGPUTest, WaterWaveShaderMatchesCPU )
             uint32 arrRoot[16]{};
             arrRoot[0] = device->supportsNativeBindlessSampling() ? static_cast<uint32>( uav ) : 0u;
             arrRoot[1] = kSampleCount;
-            std::memcpy( &arrRoot[2], &kTime, sizeof( float32 ) );
-            std::memcpy( &arrRoot[3], &kGravity, sizeof( float32 ) );
+            arrRoot[2] = sw::BitUtil::floatToBits( kTime );
+            arrRoot[3] = sw::BitUtil::floatToBits( kGravity );
             std::memcpy( &arrRoot[4], arrWave, sizeof( sw::float4 ) * 3 );
             cmdList->beginCommandList();
             cmdList->prepareTextureForUnorderedAccess( texture );
@@ -7679,7 +7680,7 @@ SW_TEST_CASE( RenderPassGPUTest, WaterWaveShaderMatchesCPU )
                         const uint8* pLow  = pRow + ( component * 2 ) * 4;
                         const uint8* pHigh = pRow + ( component * 2 + 1 ) * 4;
                         const uint32 bits  = ( static_cast<uint32>( pLow[1] ) << 8 | pLow[3] ) | ( ( static_cast<uint32>( pHigh[1] ) << 8 | pHigh[3] ) << 16 );
-                        std::memcpy( &arrGPU[component], &bits, sizeof( float32 ) );
+                        arrGPU[component]  = sw::BitUtil::bitsToFloat( bits );
                     }
                     const sw::float2 origin{ -20.0f + static_cast<float32>( sampleIndex % 8u ) * 5.25f, -15.0f + static_cast<float32>( sampleIndex / 8u ) * 4.125f };
                     const sw::float3 cpu = sw::WaterWaveMath::computeDisplacement( origin, kTime, kGravity, arrWave );

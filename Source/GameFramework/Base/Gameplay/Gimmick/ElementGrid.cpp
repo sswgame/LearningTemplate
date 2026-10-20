@@ -341,11 +341,11 @@ namespace sw
         uint32 hash = HashUtil::kFnvOffset32;
         for ( const Cell& cell : _listCell )
         {
-            hash = ( hash ^ cell._material ) * HashUtil::kFnvPrime32;
-            hash = ( hash ^ cell._statusBits ) * HashUtil::kFnvPrime32;
+            hash = HashUtil::fnvStep32( hash, cell._material );
+            hash = HashUtil::fnvStep32( hash, cell._statusBits );
             for ( const uint8 value : cell._arrStatusValue )
             {
-                hash = ( hash ^ value ) * HashUtil::kFnvPrime32;
+                hash = HashUtil::fnvStep32( hash, value );
             }
         }
         return hash;

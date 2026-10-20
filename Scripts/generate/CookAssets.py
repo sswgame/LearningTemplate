@@ -213,7 +213,7 @@ _kFnv1a64Prime = 1099511628211
 
 
 def computeFnv1a64Internal(data: bytes) -> int:
-    """StringUtil::computeHash64(bIgnoreCase=false) 와 같은 FNV-1a 64비트 해시입니다."""
+    """HashUtil::computeStringHash64(bIgnoreCase=false) 와 같은 FNV-1a 64비트 해시입니다."""
     h = _kFnv1a64Offset
     for b in data:
         h = ((h ^ b) * _kFnv1a64Prime) & 0xFFFFFFFFFFFFFFFF

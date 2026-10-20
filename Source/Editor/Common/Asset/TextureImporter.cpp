@@ -2,6 +2,7 @@
 
 #include "Editor/Common/Asset/TextureImporter.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
@@ -578,8 +579,8 @@ namespace sw::editor
                                static_cast<uint32>( layout._bForceOpaqueAlpha ), static_cast<uint32>( rule._bGenerateMips ), static_cast<uint32>( rule._bSrgb ),
                                static_cast<uint32>( rule._bInvertGreen ) );
 
-        const uint64 contentHash = StringUtil::computeHash64( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size(), false );
-        return StringUtil::computeHash64( ruleText.c_str(), ruleText.size(), false, contentHash );
+        const uint64 contentHash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size(), false );
+        return HashUtil::computeStringHash64( ruleText.c_str(), ruleText.size(), false, contentHash );
     }
 
     string TextureImporter::makeDefaultImportConfigPath()

@@ -7,6 +7,7 @@
  */
 #include "pch.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
@@ -319,7 +320,7 @@ namespace sw
             for ( const string& headerPath : listHeader )
             {
                 const string norm = StringUtil::toLower( FileUtil::normalizeSeparators( headerPath ).c_str() );
-                combined += StringUtil::computeHash64( norm, false, ContentHash::computeFile( headerPath ) );
+                combined += HashUtil::computeStringHash64( norm, false, ContentHash::computeFile( headerPath ) );
             }
         }
 
@@ -338,15 +339,15 @@ namespace sw
         if ( sourceHash == 0 )
             return 0;
         // 도구 지문도 섞는다. 디스크 캐시 키가 이 값을 쓰므로, 빠지면 DXC 를 바꿔도 옛 바이트를 돌려준다.
-        const uint64 headerHash = StringUtil::computeHash64( to_string( getSharedHeaderContentHash( resourceRoot ) ), false, sourceHash );
-        return StringUtil::computeHash64( to_string( getToolchainFingerprint() ), false, headerHash );
+        const uint64 headerHash = HashUtil::computeStringHash64( to_string( getSharedHeaderContentHash( resourceRoot ) ), false, sourceHash );
+        return HashUtil::computeStringHash64( to_string( getToolchainFingerprint() ), false, headerHash );
     }
 
     uint64 ShaderCooker::makeToolchainFingerprint( uint32 compileOptionsRevision, uint32 vulkanTargetVersion, string_view compilerVersion )
     {
-        uint64 hash = StringUtil::computeHash64( to_string( compileOptionsRevision ), false );
-        hash        = StringUtil::computeHash64( to_string( vulkanTargetVersion ), false, hash );
-        return StringUtil::computeHash64( string( compilerVersion ), false, hash );
+        uint64 hash = HashUtil::computeStringHash64( to_string( compileOptionsRevision ), false );
+        hash        = HashUtil::computeStringHash64( to_string( vulkanTargetVersion ), false, hash );
+        return HashUtil::computeStringHash64( string( compilerVersion ), false, hash );
     }
 
     uint64 ShaderCooker::getToolchainFingerprint()

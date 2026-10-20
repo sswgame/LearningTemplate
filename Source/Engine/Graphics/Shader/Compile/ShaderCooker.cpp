@@ -95,7 +95,7 @@ namespace sw
         {
             if ( define.empty() )
                 continue;
-            hash = StringUtil::computeHash64( define, false, hash );
+            hash = HashUtil::computeStringHash64( define, false, hash );
         }
         return hash;
     }

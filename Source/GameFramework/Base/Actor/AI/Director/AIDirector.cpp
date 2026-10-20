@@ -43,15 +43,10 @@ namespace sw
                 return false;
             }
 
-            static uint64 hashBytes( uint64 hash, const void* pData, size_t size )
-            {
-                return StringUtil::computeHash64( static_cast<const utf8*>( pData ), size, false, hash );
-            }
-
             template <typename T>
             static uint64 hashValue( uint64 hash, const T& value )
             {
-                return hashBytes( hash, &value, sizeof( T ) );
+                return HashUtil::appendBytes64( hash, &value, sizeof( T ) );
             }
 
             static float32 identityWeight( float32 weight ) { return weight; }

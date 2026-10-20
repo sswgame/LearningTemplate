@@ -88,7 +88,7 @@ namespace sw::editor
                 // 2) 태그 문법 "tag:TagName"
                 if ( StringUtil::startsWith( pFilter, "tag:", true ) )
                 {
-                    // ID 의 원본은 `TagID::computeID` 다. `computeHash64` 를 기본 인자로 호출하면 대소문자를 무시해서
+                    // ID 의 원본은 `TagID::computeID` 다. `computeStringHash64` 를 기본 인자로 호출하면 대소문자를 무시해서
                     // 대소문자를 구별하는 태그 쪽과 어긋나고, 대문자로 시작하는 태그를 하나도 찾지 못한다.
                     //
                     // 문자열도 함께 넘긴다. `isSubtagOf` 가 문자열을 보므로 `tag:Faction` 이 `Faction.Player` 까지

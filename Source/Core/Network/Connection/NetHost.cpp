@@ -142,13 +142,9 @@ namespace sw
         uint32 hash = HashUtil::kFnvOffset32;
         for ( int32 shift = 0; shift < 32; shift += 8 )
         {
-            hash = ( hash ^ ( ( headerID >> shift ) & 0xFFu ) ) * HashUtil::kFnvPrime32;
+            hash = HashUtil::fnvStep32( hash, ( headerID >> shift ) & 0xFFu );
         }
-        for ( int32 index = 0; index < size; ++index )
-        {
-            hash = ( hash ^ pBody[index] ) * HashUtil::kFnvPrime32;
-        }
-        return hash;
+        return HashUtil::appendBytes32( hash, pBody, size > 0 ? static_cast<size_t>( size ) : 0 );
     }
 
     uint32 NetHost::computeFeatureMask() const

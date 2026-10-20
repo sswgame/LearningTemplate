@@ -2,6 +2,7 @@
 
 #include "Engine/Scene/SceneCooker.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
@@ -157,7 +158,7 @@ namespace sw
                 {
                     canonical.append( text ).append( "\n" );
                 }
-                return StringUtil::computeHash64( canonical.c_str(), canonical.size(), false );
+                return HashUtil::computeStringHash64( canonical.c_str(), canonical.size(), false );
             }
 
             /** @brief 씬 하나를 쿠킹해 @p outputPath 에 씁니다. 작업 범위 안에서 부릅니다 — 씬 · 프리팹 · 그 밖의 읽기가 모두 입력이 된다. */

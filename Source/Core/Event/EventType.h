@@ -3,6 +3,7 @@
  * @brief 엔진 이벤트 타입 ID 입니다(게임플레이 이벤트는 GameFramework 의 해시 ID 를 씁니다).
  */
 #pragma once
+#include "Core/Common/HashUtil.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/StringUtil.h"
@@ -36,7 +37,7 @@ namespace sw
         {
             ++len;
         }
-        uint32 hash = StringUtil::computeHash32( pStr, len, false );
+        uint32 hash = HashUtil::computeStringHash32( pStr, len, false );
         // 엔진 예약 ID 구간(0..255)과 겹치지 않게 한다.
         if ( hash < 256u )
             hash += 256u;

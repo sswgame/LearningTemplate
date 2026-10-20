@@ -2,6 +2,7 @@
 
 #include "Engine/Resource/ResourcePaths.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
@@ -270,9 +271,9 @@ namespace sw
         if ( hasParentDirectoryComponent( filePath ) )
             return {};
 
-        uint64 cacheKeyHash = StringUtil::computeHash64( filePath );
+        uint64 cacheKeyHash = HashUtil::computeStringHash64( filePath );
         if ( folderName.empty() == false )
-            cacheKeyHash = StringUtil::computeHash64( folderName, true, cacheKeyHash );
+            cacheKeyHash = HashUtil::computeStringHash64( folderName, true, cacheKeyHash );
 
         {
             std::scoped_lock<mutex> lock( ResourcePathsInternal::_s_pathCacheMutex );

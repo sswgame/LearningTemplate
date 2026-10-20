@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Common/BitUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Math/MathUtil.h"
 
@@ -107,10 +108,8 @@ namespace
                     continue;
                 const float32 worldY = vertex._arrPosition[1] + translation._y;
                 const float32 worldZ = vertex._arrPosition[2] + translation._z;
-                uint32        bitsY{ 0 };
-                uint32        bitsZ{ 0 };
-                std::memcpy( &bitsY, &worldY, sizeof( bitsY ) );
-                std::memcpy( &bitsZ, &worldZ, sizeof( bitsZ ) );
+                const uint32  bitsY  = BitUtil::floatToBits( worldY );
+                const uint32  bitsZ  = BitUtil::floatToBits( worldZ );
                 outListKey.push_back( ( static_cast<uint64>( bitsZ ) << 32 ) | bitsY );
             }
             std::sort( outListKey.begin(), outListKey.end() );

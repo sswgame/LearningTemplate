@@ -2,6 +2,7 @@
 
 #include "Engine/Localization/LocalizationDocuments.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
@@ -118,7 +119,7 @@ namespace sw
 {
     uint64 LocalizationTextUtil::computeSourceHash( string_view sourceText )
     {
-        const uint64 hash = StringUtil::computeHash64( sourceText, false );
+        const uint64 hash = HashUtil::computeStringHash64( sourceText, false );
         return hash == 0 ? 1u : hash;
     }
 

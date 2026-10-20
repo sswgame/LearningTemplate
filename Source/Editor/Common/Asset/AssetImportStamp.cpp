@@ -2,6 +2,7 @@
 
 #include "Editor/Common/Asset/AssetImportStamp.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/map.h"
@@ -266,6 +267,6 @@ namespace sw::editor
         const bool    bUnreadableFile = FileUtil::exists( path ) == false || FileUtil::readFile( path, bytes ) == false || bytes.empty();
         if ( bUnreadableFile )
             return 0;
-        return StringUtil::computeHash64( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size(), false );
+        return HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size(), false );
     }
 } // namespace sw::editor

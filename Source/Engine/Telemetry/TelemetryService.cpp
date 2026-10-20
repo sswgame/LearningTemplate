@@ -3,6 +3,7 @@
 #include "Engine/Telemetry/TelemetryService.h"
 
 #include "Core/Common/BuildInfo.h"
+#include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Diagnostics/CrashContext.h"
 #include "Core/Diagnostics/CrashHandler.h"
@@ -249,7 +250,7 @@ namespace sw
         _bConsent          = SW_FALSE;
         _bInitialized      = SW_TRUE;
         _listEventOccurrence.assign( _schema.getEvents().size(), 0u );
-        _bSessionSampled = Internal::passes( _schema.getSettings()._sessionSampleRate, Internal::toUnit( StringUtil::computeHash64( _context._sessionID ) ) ) ? SW_TRUE : SW_FALSE;
+        _bSessionSampled = Internal::passes( _schema.getSettings()._sessionSampleRate, Internal::toUnit( HashUtil::computeStringHash64( _context._sessionID ) ) ) ? SW_TRUE : SW_FALSE;
 
         // 지난 실행이 닫지 못하고 남긴 파일까지 이어 받는다 — 동의가 켜지면 올리고, 동의가 꺼지면 `setConsent( false )` 가 지운다.
         vector<string> listFile;
@@ -485,9 +486,9 @@ namespace sw
     {
         if ( def._sampleRate >= 1.0f )
             return true;
-        uint64 hash = StringUtil::computeHash64( _context._sessionID );
-        hash        = StringUtil::computeHash64( def._id.c_str(), def._id.size(), true, hash );
-        hash        = StringUtil::computeHash64( reinterpret_cast<const utf8*>( &occurrence ), sizeof( occurrence ), false, hash );
+        uint64 hash = HashUtil::computeStringHash64( _context._sessionID );
+        hash        = HashUtil::computeStringHash64( def._id.c_str(), def._id.size(), true, hash );
+        hash        = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( &occurrence ), sizeof( occurrence ), false, hash );
         return TelemetryServiceInternal::passes( def._sampleRate, TelemetryServiceInternal::toUnit( hash ) );
     }
 

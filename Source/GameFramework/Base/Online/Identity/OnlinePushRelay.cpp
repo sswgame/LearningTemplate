@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Online/Identity/OnlinePushRelay.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/unordered_set.h"
@@ -34,8 +35,8 @@ namespace sw
                 getRejectedCounter().fetch_add( 1, std::memory_order_relaxed );
                 static mutex                 s_mutex;
                 static unordered_set<uint64> s_uniqueLoggedKeys;
-                const uint64                 key = ( StringUtil::computeHash64( relay._pushEnum.data(), relay._pushEnum.size() ) * 31u ) ^
-                                   StringUtil::computeHash64( relay._pushName.data(), relay._pushName.size() ) ^ StringUtil::computeHash64( pReason, StringUtil::strlen( pReason ) );
+                const uint64                 key = ( HashUtil::computeStringHash64( relay._pushEnum.data(), relay._pushEnum.size() ) * 31u ) ^
+                                   HashUtil::computeStringHash64( relay._pushName.data(), relay._pushName.size() ) ^ HashUtil::computeStringHash64( pReason, StringUtil::strlen( pReason ) );
                 {
                     std::lock_guard<mutex> lock( s_mutex );
                     if ( s_uniqueLoggedKeys.insert( key ).second == false )

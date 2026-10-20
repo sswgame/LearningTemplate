@@ -2,6 +2,7 @@
 
 #include "Engine/Navigation/NavMeshSettings.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
@@ -23,12 +24,12 @@ namespace sw
 
             static uint64 mixFloat( uint64 hash, float32 value )
             {
-                return StringUtil::computeHash64( reinterpret_cast<const utf8*>( &value ), sizeof( value ), false, hash );
+                return HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( &value ), sizeof( value ), false, hash );
             }
 
             static uint64 mixUint( uint64 hash, uint32 value )
             {
-                return StringUtil::computeHash64( reinterpret_cast<const utf8*>( &value ), sizeof( value ), false, hash );
+                return HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( &value ), sizeof( value ), false, hash );
             }
 
             static bool isAgentTypeInRange( const NavAgentTypeDef& agentType )
@@ -189,7 +190,7 @@ namespace sw
     uint64 NavMeshSettings::computeAgentTypeHash( const NavAgentTypeDef& agentType )
     {
         using Internal = NavMeshSettingsInternal;
-        uint64 hash    = StringUtil::computeHash64( agentType._name.c_str(), agentType._name.size(), true );
+        uint64 hash    = HashUtil::computeStringHash64( agentType._name.c_str(), agentType._name.size(), true );
         hash           = Internal::mixFloat( hash, agentType._radius );
         hash           = Internal::mixFloat( hash, agentType._height );
         hash           = Internal::mixFloat( hash, agentType._maxClimb );

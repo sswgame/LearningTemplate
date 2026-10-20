@@ -2,6 +2,7 @@
 
 #include "GameFramework/PlugIn/Editor/Base/Gimmick/GimmickGraphModel.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/String/StringBuilder.h"
 
@@ -148,7 +149,7 @@ namespace sw::editor
             text += wire._bInvert ? "!" : "";
             text += '\n';
         }
-        return StringUtil::computeHash64( text.c_str(), text.size(), false );
+        return HashUtil::computeStringHash64( text.c_str(), text.size(), false );
     }
 
     int32 GimmickGraphModel::findNodeIndex( int32 graphID ) const

@@ -6,6 +6,7 @@
 
 #include "Engine/Profiling/ProfilerBackend.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
@@ -119,7 +120,7 @@ namespace sw
                 };
                 thread_local SiteCacheEntry t_arrSiteCache[kTaskSiteCacheSize]{};
 
-                const uint64    key   = StringUtil::computeHash64( pName, StringUtil::strlen( pName ), false, static_cast<uint64>( kind ) + 1 ) | 1;
+                const uint64    key   = HashUtil::computeStringHash64( pName, StringUtil::strlen( pName ), false, static_cast<uint64>( kind ) + 1 ) | 1;
                 SiteCacheEntry& entry = t_arrSiteCache[key % kTaskSiteCacheSize];
                 if ( entry._key == key )
                     return entry._pSite;

@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/Compression/ICompressionCodec.h"
 #include "Core/Compression/RleCompressionCodec.h"
@@ -1323,7 +1324,7 @@ SW_TEST_CASE( ResourcePakTest, AsyncReadRejectsCrcMismatch )
     sw::vector<uint8> received;
     {
         test::ScopedLogSuppressor suppressor;
-        const sw::AsyncReadHandle handle = reader.readFileAsync( sw::engine::getSubsystem<sw::AsyncFileIO>(), sw::StringUtil::computeHash64( sw::string_view{ entryPath } ), sw::AsyncIOPriority::High,
+        const sw::AsyncReadHandle handle = reader.readFileAsync( sw::engine::getSubsystem<sw::AsyncFileIO>(), sw::HashUtil::computeStringHash64( sw::string_view{ entryPath } ), sw::AsyncIOPriority::High,
                                                                  SW_DELEGATE_LAMBDA( sw::ResourceReadCompleteDelegate, [&]( bool bRead, sw::vector<uint8>& bytes )
         {
             bCalled  = true;

@@ -2,6 +2,7 @@
 
 #include "Editor/Common/Asset/HeightfieldImporter.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
@@ -236,18 +237,18 @@ namespace sw::editor
         if ( FileUtil::readFile( sourcePath, bytes ) == false || bytes.empty() )
             return 0;
         StringBuilder<constant::kMaxBuffer64> versionText;
-        uint64                                hash = StringUtil::computeHash64( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size(), false );
+        uint64                                hash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size(), false );
         if ( isSourceLayerWeights( sourcePath ) )
         {
             versionText.appendFormat( "splat=%#;format=%#", Internal::kSplatImporterVersion, LayerWeightsData::kVersion );
-            return StringUtil::computeHash64( versionText.c_str(), versionText.size(), false, hash );
+            return HashUtil::computeStringHash64( versionText.c_str(), versionText.size(), false, hash );
         }
         versionText.appendFormat( "importer=%#;format=%#", Internal::kImporterVersion, HeightfieldData::kVersion );
-        hash = StringUtil::computeHash64( versionText.c_str(), versionText.size(), false, hash );
+        hash = HashUtil::computeStringHash64( versionText.c_str(), versionText.size(), false, hash );
         // 곁 구멍 마스크도 원본이다 — 그것만 고쳐도 어긋남이어야 한다.
         vector<uint8> holeBytes;
         if ( FileUtil::readFile( Internal::makeHolePath( sourcePath ), holeBytes ) && holeBytes.empty() == false )
-            hash = StringUtil::computeHash64( reinterpret_cast<const utf8*>( holeBytes.data() ), holeBytes.size(), false, hash );
+            hash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( holeBytes.data() ), holeBytes.size(), false, hash );
         return hash;
     }
 

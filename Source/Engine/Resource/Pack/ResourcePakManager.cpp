@@ -2,6 +2,7 @@
 
 #include "Engine/Resource/Pack/ResourcePakManager.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Container/CompareUtil.h"
 #include "Core/Container/StringUtil.h"
@@ -147,7 +148,7 @@ namespace sw
             template <typename VisitFn>
             static bool visitPacksWithFile( const vector<MountedPack>& listMountedPack, string_view relativePath, VisitFn&& visit )
             {
-                const uint64 pathHash = StringUtil::computeHash64( relativePath );
+                const uint64 pathHash = HashUtil::computeStringHash64( relativePath );
                 for ( const MountedPack& mounted : listMountedPack )
                 {
                     const bool bPackHasFile = mounted._pReader != nullptr && mounted._pReader->hasFile( pathHash ) && visit( mounted, pathHash, relativePath );
@@ -160,7 +161,7 @@ namespace sw
                 if ( trySplitDomainPrefix( relativePath, queryDomain, subPath ) == false )
                     return false;
 
-                const uint64 subHash = StringUtil::computeHash64( subPath );
+                const uint64 subHash = HashUtil::computeStringHash64( subPath );
                 for ( const MountedPack& mounted : listMountedPack )
                 {
                     if ( mounted._pReader == nullptr || matchPackDomain( mounted._domainName, queryDomain ) == false )
