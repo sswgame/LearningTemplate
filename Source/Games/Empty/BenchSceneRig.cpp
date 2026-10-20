@@ -116,6 +116,130 @@ namespace sw
         return static_cast<uint32>( MathUtil::max( gv_benchRig, 0 ) );
     }
 
+    void BenchScene::spawnRigSlope( Scene* pScene, GameObjectManager& objects, float32 halfWidth )
+    {
+        // 기울기 — 물리(정적 상자, 발 디딤의 광선이 맞는다)와 그림(같은 자리 · 크기의 큐브).
+        const float3  slopeRotation{ 0.0f, 0.0f, _settings._rigSlopeAngle };
+        const float3& slopeCenter = _settings._rigSlopeCenter;
+        GameObject*   pSlope      = objects.createGameObject( "RigSlope" );
+        if ( pSlope == nullptr )
+            return;
+        RigidBodyComponent* pBody = pSlope->addComponent<RigidBodyComponent>();
+        if ( pBody != nullptr )
+        {
+            PhysicsShapeDesc3D box{};
+            box._halfExtents = float3{ halfWidth, _settings._rigSlopeHalfThickness, _settings._rigSlopeHalfDepth };
+            pBody->setShape( box );
+            pBody->setBodyType( PhysicsBodyType::Static );
+            pBody->setLocalPosition( slopeCenter );
+            pBody->setLocalRotation( slopeRotation );
+            _listBenchExtra.push_back( pBody->getHandle() );
+        }
+        MeshComponent* pVisual = pSlope->addComponent<MeshComponent>();
+        if ( pVisual != nullptr )
+        {
+            pVisual->setMesh( MeshUtil::createPrimitive( "Cube" ) );
+            pVisual->setMaterial( pScene->getMaterial() );
+            pVisual->setLocalPosition( slopeCenter );
+            pVisual->setLocalRotation( slopeRotation );
+            pVisual->setLocalScale( float3{ halfWidth * 2.0f, _settings._rigSlopeHalfThickness * 2.0f, _settings._rigSlopeHalfDepth * 2.0f } );
+            pVisual->setVisible( true );
+        }
+    }
+
+    void BenchScene::spawnRigLookTarget( Scene* pScene, GameObjectManager& objects )
+    {
+        // 시선 목표 — 작은 구. update 가 기사 앞에서 원을 그린다.
+        GameObject* pLook = objects.createGameObject( "RigLookTarget" );
+        if ( pLook == nullptr )
+            return;
+        MeshComponent* pBall = pLook->addComponent<MeshComponent>();
+        if ( pBall == nullptr )
+            return;
+        pBall->setMesh( MeshUtil::createPrimitive( "Sphere" ) );
+        pBall->setMaterial( pScene->getMaterial() );
+        pBall->setLocalScale( float3{ _settings._rigLookTargetScale } );
+        pBall->setLocalPosition( _settings._rigLookTargetStart );
+        pBall->setVisible( true );
+        _rigLookTarget = TComponentHandle<MeshComponent>{ pBall };
+        _listBenchExtra.push_back( pBall->getHandle() );
+    }
+
+    SkeletalMeshComponent* BenchScene::spawnRigWeapon( GameObjectManager& objects, GameObject* pKnight, SkeletalMeshComponent* pBody, bool bRig )
+    {
+        // 무기 유닛 — 오른손 소켓 자리를 리그(CopyTransform)가 따른다. 스킨 없는 쇠뇌를 뿌리 본에 묶은 사본으로 그린다.
+        GameObject*            pWeapon     = objects.createGameObject( "RigWeapon" );
+        SkeletalMeshComponent* pWeaponUnit = ( pWeapon != nullptr ) ? BenchSceneRigInternal::addUnit( *pWeapon, _settings._rigWeaponMesh ) : nullptr;
+        if ( pWeaponUnit == nullptr || pWeaponUnit->getMesh() == nullptr )
+            return pWeaponUnit;
+        (void)pWeapon->attachToParent( pKnight ); // 방금 만든 오브젝트끼리라 순환이 없어 실패하지 않는다
+        pWeaponUnit->setMesh( BenchSceneRigInternal::createRigidSkinnedCopy( *pWeaponUnit->getMesh() ) );
+        pWeaponUnit->resolveRenderAssets();
+        PoseModifierComponent* pWeaponRig = pWeapon->addComponent<PoseModifierComponent>();
+        if ( pWeaponRig != nullptr )
+        {
+            pWeaponRig->setRigPath( _settings._rigWeaponRig.c_str() );
+            pWeaponRig->bindUnit( "Body", pBody );
+            pWeaponRig->setRigEnabled( bRig );
+        }
+        _listBenchExtra.push_back( pWeaponUnit->getHandle() );
+        return pWeaponUnit;
+    }
+
+    void BenchScene::spawnRigCape( GameObjectManager& objects, GameObject* pKnight, SkeletalMeshComponent* pBody, bool bRig )
+    {
+        // 망토 유닛 — 데모 데이터의 사슬 뼈 넷. 뿌리는 가슴 자리를 따르고(CopyTransform) 나머지는 스프링이다.
+        GameObject*            pCape     = objects.createGameObject( "RigCape" );
+        SkeletalMeshComponent* pCapeUnit = ( pCape != nullptr ) ? BenchSceneRigInternal::addUnit( *pCape, _settings._rigCapeMesh ) : nullptr;
+        if ( pCapeUnit == nullptr || pCapeUnit->getMesh() == nullptr )
+            return;
+        (void)pCape->attachToParent( pKnight ); // 방금 만든 오브젝트끼리라 순환이 없어 실패하지 않는다
+        pCapeUnit->setSkeletonPath( _settings._rigCapeSkeleton.c_str() );
+        pCapeUnit->setMesh( BenchSceneRigInternal::createCapeSkinnedCopy( *pCapeUnit->getMesh(), pCapeUnit->getSkeleton() ) );
+        pCapeUnit->resolveRenderAssets();
+        PoseModifierComponent* pCapeRig = pCape->addComponent<PoseModifierComponent>();
+        if ( pCapeRig != nullptr )
+        {
+            pCapeRig->setRigPath( _settings._rigCapeRig.c_str() );
+            pCapeRig->bindUnit( "Body", pBody );
+            pCapeRig->setRigEnabled( bRig );
+        }
+        _listBenchExtra.push_back( pCapeUnit->getHandle() );
+    }
+
+    void BenchScene::spawnRigKnight( GameObjectManager& objects, uint32 index, float32 origin, bool bRig, const shared_ptr<SocketSet>& weaponSockets )
+    {
+        StringBuilder<constant::kMaxBuffer64> name;
+        name.append( "RigKnight_" ).append( index );
+        GameObject* pKnight = objects.createGameObject( hashed_string( name.c_str(), name.size() ) );
+        if ( pKnight == nullptr )
+            return;
+        SkeletalMeshComponent*     pBody     = BenchSceneRigInternal::addUnit( *pKnight, _settings._knightMesh );
+        SkeletalAnimatorComponent* pAnimator = pKnight->addComponent<SkeletalAnimatorComponent>();
+        if ( pBody == nullptr || pAnimator == nullptr )
+            return;
+        pBody->setSkeletonPath( _settings._knightSkeleton.c_str() );
+        // 기사는 +Z 를 본다 — 카메라(-Z 쪽)를 보게 돌린다. 줄은 X 로 — 기울기라 사람마다 땅 높이가 다르다.
+        const float32 x = origin + static_cast<float32>( index ) * _settings._rigSpacing;
+        pBody->setLocalPosition( float3{ x, MathUtil::tan( _settings._rigSlopeAngle ) * x, 0.0f } );
+        pBody->setLocalRotation( float3{ 0.0f, MathUtil::kPi, 0.0f } );
+        pAnimator->setClipFolder( _settings._knightClips.c_str() );
+        pAnimator->setInitialState( _settings._rigAimState.c_str() );
+        _listRigBody.push_back( TComponentHandle<SkeletalMeshComponent>{ pBody } );
+        _listBenchExtra.push_back( pBody->getHandle() );
+
+        SkeletalMeshComponent* pWeaponUnit = spawnRigWeapon( objects, pKnight, pBody, bRig );
+        spawnRigCape( objects, pKnight, pBody, bRig );
+
+        PoseModifierComponent* pBodyRig = pKnight->addComponent<PoseModifierComponent>();
+        if ( pBodyRig != nullptr )
+        {
+            pBodyRig->setRigPath( _settings._rigKnightRig.c_str() );
+            pBodyRig->bindUnit( "Weapon", pWeaponUnit, weaponSockets );
+            pBodyRig->setRigEnabled( bRig );
+        }
+    }
+
     void BenchScene::spawnRigCharacters( uint32 characterCount )
     {
         SceneManager* pSceneManager = game::findSubsystem<SceneManager>();
@@ -128,51 +252,10 @@ namespace sw
         GameObjectManager& objects = *pScene->getObjectManager();
         const bool         bRig    = gv_benchRigEnabled != 0;
 
-        // 기울기 — 물리(정적 상자, 발 디딤의 광선이 맞는다)와 그림(같은 자리 · 크기의 큐브).
         const float32 halfWidth =
             MathUtil::max( _settings._rigSlopeMinHalfWidth, 0.5f * static_cast<float32>( characterCount ) * _settings._rigSpacing + _settings._rigSlopeEndMargin );
-        const float3  slopeRotation{ 0.0f, 0.0f, _settings._rigSlopeAngle };
-        const float3& slopeCenter = _settings._rigSlopeCenter;
-        if ( GameObject* pSlope = objects.createGameObject( "RigSlope" ) )
-        {
-            RigidBodyComponent* pBody = pSlope->addComponent<RigidBodyComponent>();
-            if ( pBody != nullptr )
-            {
-                PhysicsShapeDesc3D box{};
-                box._halfExtents = float3{ halfWidth, _settings._rigSlopeHalfThickness, _settings._rigSlopeHalfDepth };
-                pBody->setShape( box );
-                pBody->setBodyType( PhysicsBodyType::Static );
-                pBody->setLocalPosition( slopeCenter );
-                pBody->setLocalRotation( slopeRotation );
-                _listBenchExtra.push_back( pBody->getHandle() );
-            }
-            MeshComponent* pVisual = pSlope->addComponent<MeshComponent>();
-            if ( pVisual != nullptr )
-            {
-                pVisual->setMesh( MeshUtil::createPrimitive( "Cube" ) );
-                pVisual->setMaterial( pScene->getMaterial() );
-                pVisual->setLocalPosition( slopeCenter );
-                pVisual->setLocalRotation( slopeRotation );
-                pVisual->setLocalScale( float3{ halfWidth * 2.0f, _settings._rigSlopeHalfThickness * 2.0f, _settings._rigSlopeHalfDepth * 2.0f } );
-                pVisual->setVisible( true );
-            }
-        }
-
-        // 시선 목표 — 작은 구. update 가 기사 앞에서 원을 그린다.
-        if ( GameObject* pLook = objects.createGameObject( "RigLookTarget" ) )
-        {
-            MeshComponent* pBall = pLook->addComponent<MeshComponent>();
-            if ( pBall != nullptr )
-            {
-                pBall->setMesh( MeshUtil::createPrimitive( "Sphere" ) );
-                pBall->setMaterial( pScene->getMaterial() );
-                pBall->setLocalScale( float3{ _settings._rigLookTargetScale } );
-                pBall->setLocalPosition( _settings._rigLookTargetStart );
-                pBall->setVisible( true );
-                _rigLookTarget = TComponentHandle<MeshComponent>{ pBall };
-                _listBenchExtra.push_back( pBall->getHandle() );
-            }
-        }
+        spawnRigSlope( pScene, objects, halfWidth );
+        spawnRigLookTarget( pScene, objects );
 
         SocketKindTable       kinds;
         shared_ptr<SocketSet> weaponSockets = make_shared<SocketSet>();
@@ -183,69 +266,7 @@ namespace sw
         const float32 origin = -0.5f * static_cast<float32>( characterCount - 1 ) * _settings._rigSpacing;
         for ( uint32 index = 0; index < characterCount; ++index )
         {
-            StringBuilder<constant::kMaxBuffer64> name;
-            name.append( "RigKnight_" ).append( index );
-            GameObject* pKnight = objects.createGameObject( hashed_string( name.c_str(), name.size() ) );
-            if ( pKnight == nullptr )
-                continue;
-            SkeletalMeshComponent*     pBody     = BenchSceneRigInternal::addUnit( *pKnight, _settings._knightMesh );
-            SkeletalAnimatorComponent* pAnimator = pKnight->addComponent<SkeletalAnimatorComponent>();
-            if ( pBody == nullptr || pAnimator == nullptr )
-                continue;
-            pBody->setSkeletonPath( _settings._knightSkeleton.c_str() );
-            // 기사는 +Z 를 본다 — 카메라(-Z 쪽)를 보게 돌린다. 줄은 X 로 — 기울기라 사람마다 땅 높이가 다르다.
-            const float32 x = origin + static_cast<float32>( index ) * _settings._rigSpacing;
-            pBody->setLocalPosition( float3{ x, MathUtil::tan( _settings._rigSlopeAngle ) * x, 0.0f } );
-            pBody->setLocalRotation( float3{ 0.0f, MathUtil::kPi, 0.0f } );
-            pAnimator->setClipFolder( _settings._knightClips.c_str() );
-            pAnimator->setInitialState( _settings._rigAimState.c_str() );
-            _listRigBody.push_back( TComponentHandle<SkeletalMeshComponent>{ pBody } );
-            _listBenchExtra.push_back( pBody->getHandle() );
-
-            // 무기 유닛 — 오른손 소켓 자리를 리그(CopyTransform)가 따른다. 스킨 없는 쇠뇌를 뿌리 본에 묶은 사본으로 그린다.
-            GameObject*            pWeapon     = objects.createGameObject( "RigWeapon" );
-            SkeletalMeshComponent* pWeaponUnit = ( pWeapon != nullptr ) ? BenchSceneRigInternal::addUnit( *pWeapon, _settings._rigWeaponMesh ) : nullptr;
-            if ( pWeaponUnit != nullptr && pWeaponUnit->getMesh() != nullptr )
-            {
-                (void)pWeapon->attachToParent( pKnight ); // 방금 만든 오브젝트끼리라 순환이 없어 실패하지 않는다
-                pWeaponUnit->setMesh( BenchSceneRigInternal::createRigidSkinnedCopy( *pWeaponUnit->getMesh() ) );
-                pWeaponUnit->resolveRenderAssets();
-                PoseModifierComponent* pWeaponRig = pWeapon->addComponent<PoseModifierComponent>();
-                if ( pWeaponRig != nullptr )
-                {
-                    pWeaponRig->setRigPath( _settings._rigWeaponRig.c_str() );
-                    pWeaponRig->bindUnit( "Body", pBody );
-                    pWeaponRig->setRigEnabled( bRig );
-                }
-                _listBenchExtra.push_back( pWeaponUnit->getHandle() );
-            }
-
-            // 망토 유닛 — 데모 데이터의 사슬 뼈 넷. 뿌리는 가슴 자리를 따르고(CopyTransform) 나머지는 스프링이다.
-            GameObject*            pCape     = objects.createGameObject( "RigCape" );
-            SkeletalMeshComponent* pCapeUnit = ( pCape != nullptr ) ? BenchSceneRigInternal::addUnit( *pCape, _settings._rigCapeMesh ) : nullptr;
-            if ( pCapeUnit != nullptr && pCapeUnit->getMesh() != nullptr )
-            {
-                (void)pCape->attachToParent( pKnight ); // 방금 만든 오브젝트끼리라 순환이 없어 실패하지 않는다
-                pCapeUnit->setSkeletonPath( _settings._rigCapeSkeleton.c_str() );
-                pCapeUnit->setMesh( BenchSceneRigInternal::createCapeSkinnedCopy( *pCapeUnit->getMesh(), pCapeUnit->getSkeleton() ) );
-                pCapeUnit->resolveRenderAssets();
-                PoseModifierComponent* pCapeRig = pCape->addComponent<PoseModifierComponent>();
-                if ( pCapeRig != nullptr )
-                {
-                    pCapeRig->setRigPath( _settings._rigCapeRig.c_str() );
-                    pCapeRig->bindUnit( "Body", pBody );
-                    pCapeRig->setRigEnabled( bRig );
-                }
-                _listBenchExtra.push_back( pCapeUnit->getHandle() );
-            }
-
-            PoseModifierComponent* pBodyRig = pKnight->addComponent<PoseModifierComponent>();
-            if ( pBodyRig != nullptr )
-            {
-                pBodyRig->setRigPath( _settings._rigKnightRig.c_str() );
-                pBodyRig->bindUnit( "Weapon", pWeaponUnit, weaponSockets );
-                pBodyRig->setRigEnabled( bRig );
-            }
+            spawnRigKnight( objects, index, origin, bRig, weaponSockets );
         }
 
         const float32 halfExtent = MathUtil::max( _settings._rigMinHalfExtent, halfWidth );

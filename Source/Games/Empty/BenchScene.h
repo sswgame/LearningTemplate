@@ -31,6 +31,7 @@ namespace sw
     class RagdollComponent;
     class Scene;
     class SkeletalMeshComponent;
+    class SocketSet;
 
     /**
      * @class BenchScene
@@ -75,6 +76,31 @@ namespace sw
     private:
         /** @brief 씬을 확보하고 큐브 meshCount 개를 격자로 채웁니다. */
         void spawn( uint32 meshCount );
+        /** @brief 활성 씬을 반환합니다. 없으면 빈 씬을 만들고 기본 카메라를 보장합니다. 만들지 못하면 오류를 남기고 nullptr 입니다. */
+        static Scene* ensureBenchScene();
+        /** @brief 메시 종류(도형을 섞은 같은 기하의 사본) @p variantCount 개를 `_listMeshVariant` 에 만듭니다. 도형을 만들지 못하면 false 입니다. */
+        [[nodiscard]] bool createMeshVariants( uint32 variantCount, uint32 shapeCount );
+        /** @brief 투명 큐브가 돌려 쓸 머티리얼 인스턴스 3 개를 만듭니다(유리 머티리얼을 읽지 못하면 비어 있는 채로 둡니다). */
+        void createTransparentMaterials( vector<shared_ptr<MaterialInstance>>& outList );
+        /** @brief `-gv_benchInstanced=1`: 씬 컴포넌트 없이 메시 종류마다 인스턴스 배치 하나로 큐브 격자를 채웁니다. */
+        void spawnInstancedGrid( GameObjectManager* pObjects, Material* pSceneMaterial, uint32 meshCount, uint32 meshVariantCount, uint32 side, float32 origin );
+        /** @brief 큐브마다 오브젝트를 만들어 격자를 채웁니다. 큐브별 머티리얼과 투명 비율은 이 경로에만 있습니다. */
+        void spawnCubeGrid( GameObjectManager* pObjects, Material* pSceneMaterial, uint32 meshCount, uint32 side, float32 origin, uint32 transparentPercent,
+                            const vector<shared_ptr<MaterialInstance>>& listTransparentMaterial );
+        /** @brief 지금 만든 것(얼굴 · 리그 · 래그돌 · 캐릭터 · 격자)에 맞춰 카메라를 다시 맞춥니다. */
+        void refreshFraming();
+        /** @brief 격자 둘레의 광원 · 바닥 · 카메라 · 뷰를 만듭니다(두 격자 경로가 함께 씁니다). */
+        void finishGrid( Scene* pScene, uint32 side );
+        /** @brief 리그 데모의 기울기(물리 상자와 같은 자리 · 크기의 큐브)를 만듭니다. */
+        void spawnRigSlope( Scene* pScene, GameObjectManager& objects, float32 halfWidth );
+        /** @brief 리그 데모의 시선 목표(작은 구)를 만듭니다. */
+        void spawnRigLookTarget( Scene* pScene, GameObjectManager& objects );
+        /** @brief 리그 데모의 기사 한 명(몸 · 무기 · 망토 유닛과 리그)을 세웁니다. */
+        void spawnRigKnight( GameObjectManager& objects, uint32 index, float32 origin, bool bRig, const shared_ptr<SocketSet>& weaponSockets );
+        /** @brief 기사에게 붙는 무기 유닛을 만들고 유닛 컴포넌트를 반환합니다(없으면 nullptr). 오른손 소켓 자리를 리그가 따릅니다. */
+        SkeletalMeshComponent* spawnRigWeapon( GameObjectManager& objects, GameObject* pKnight, SkeletalMeshComponent* pBody, bool bRig );
+        /** @brief 기사에게 붙는 망토 유닛을 만듭니다. 뿌리는 가슴 자리를 따르고 나머지 사슬 뼈는 스프링입니다. */
+        void spawnRigCape( GameObjectManager& objects, GameObject* pKnight, SkeletalMeshComponent* pBody, bool bRig );
         /** @brief `-gv_benchCharacters=N`: 스킨드 캐릭터 N 명을 한 줄로 스폰하고 Idle 과 Walking_A 를 번갈아 재생합니다. */
         void spawnCharacters( uint32 characterCount );
         /** @brief `-gv_benchCombat=1`: 전투 연출(KayKit 스켈레톤 적, 칼, 강체 바닥, 연출 컴포넌트)을 스폰합니다. */

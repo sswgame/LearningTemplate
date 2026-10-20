@@ -384,11 +384,11 @@ namespace sw
         _keyLight = {};
     }
 
-    void BenchScene::spawn( uint32 meshCount )
+    Scene* BenchScene::ensureBenchScene()
     {
         SceneManager* pSceneManager = game::findSubsystem<SceneManager>();
         if ( pSceneManager == nullptr )
-            return;
+            return nullptr;
 
         // createScene 은 Scene::initialize 를 부르지 않는다 — 기본 머티리얼 획득, 기본 카메라,
         // 메시 기본값 바인딩이 전부 그 안에 있다. 그래서 createScene 으로 만든 씬의 메시는
@@ -399,62 +399,37 @@ namespace sw
         if ( pScene == nullptr )
         {
             SW_LOG_ERROR( "[Bench] 씬을 만들지 못했습니다." );
-            return;
+            return nullptr;
         }
         pScene->ensureDefaultCameras();
+        return pScene;
+    }
 
-        GameObjectManager* pObjects = pScene->getObjectManager();
-        if ( pObjects == nullptr )
-            return;
-
-        Material* pSceneMaterial = pScene->getMaterial();
-        if ( pSceneMaterial == nullptr )
-            SW_LOG_WARNING( "[Bench] 씬 기본 머티리얼이 없습니다 — 큐브가 보이지 않을 수 있습니다." );
-
-        // 메시 종류 수. 배치 키에 메시가 들어가므로 종류가 곧 **배치 수**다 — 1 이면 배치가 하나로 묶여
-        // 드로우 경로(드로우별 상수·바인딩)를 전혀 측정하지 못한다. 실제 씬은 늘 여러 메시를 쓴다.
-        uint32 meshVariantCount = static_cast<uint32>( MathUtil::max( 1, gv_benchMeshVariants ) );
-        meshVariantCount        = MathUtil::min( meshVariantCount, meshCount );
-
-        // 도형을 몇 종 섞을지. 1 이면 큐브만 쓴다(기존 측정·스크린샷 보존).
-        const uint32 shapeCount = static_cast<uint32>(
-            MathUtil::clamp( gv_benchMeshShapes, 1, static_cast<int32>( SW_COUNT_OF( kArrBenchShape ) ) ) );
-
+    bool BenchScene::createMeshVariants( uint32 variantCount, uint32 shapeCount )
+    {
         // 같은 기하를 여러 객체로 만든다 — 배치만 갈린다. 도형을 섞으면 배치마다 정점 수가 달라져
         // 간접 인자·정점 버퍼 바인딩·바운드 반경이 전부 다른 값을 탄다.
-        vector<shared_ptr<Mesh>>& listMeshVariant = _listMeshVariant;
-        listMeshVariant.clear();
-        listMeshVariant.reserve( meshVariantCount );
-        for ( uint32 variantIndex = 0; variantIndex < meshVariantCount; ++variantIndex )
+        _listMeshVariant.clear();
+        _listMeshVariant.reserve( variantCount );
+        for ( uint32 variantIndex = 0; variantIndex < variantCount; ++variantIndex )
         {
             const utf8*      pShapeID = kArrBenchShape[variantIndex % shapeCount];
             shared_ptr<Mesh> variant  = MeshUtil::createPrimitive( pShapeID, PrimitiveVertexColor::Diagnostic );
             if ( variant == nullptr )
             {
                 SW_LOG_ERROR( "[Bench] 도형 '%#' 을 만들지 못했습니다.", pShapeID );
-                return;
+                return false;
             }
             // GPU 모프 옵트인 — 유니티의 vertexBufferTarget 옵트인과 같은 자리다. 켠 메시만 풀에 들어간다.
             if ( gv_benchMeshMorph != 0 )
                 variant->setGPUMorphEnabled( true );
-            listMeshVariant.push_back( std::move( variant ) );
+            _listMeshVariant.push_back( std::move( variant ) );
         }
+        return true;
+    }
 
-        // 정사각에 가까운 격자로 흩는다. 전부 같은 메시·머티리얼이라 배치가 하나로 묶이는데,
-        // 그게 지금 렌더러의 기본 경로(배치당 drawInstanced 한 번)를 측정하는 조건이다.
-        const uint32  side   = static_cast<uint32>( MathUtil::sqrt( static_cast<float32>( meshCount ) ) ) + 1;
-        const float32 origin = -0.5f * static_cast<float32>( side - 1 ) * _settings._cubeSpacing;
-
-        _listBenchMesh.clear();
-        _listBenchMesh.reserve( meshCount );
-        _listBenchExtra.clear();
-
-        // 큐브별 머티리얼 인스턴스는 배치를 가르는 부하라 기본 측정에서는 꺼 둔다(`gv_benchMaterialInstances`).
-        const bool bPerCubeMaterial = ( gv_benchMaterialInstances != 0 );
-
-        const uint32 transparentPercent =
-            ( gv_benchTransparent > 0 ) ? static_cast<uint32>( MathUtil::min( gv_benchTransparent, 100 ) ) : 0u;
-
+    void BenchScene::createTransparentMaterials( vector<shared_ptr<MaterialInstance>>& outList )
+    {
         // 투명은 **별도 머티리얼 에셋**이다 — 블렌드 모드가 머티리얼의 성질이고 알파 사용 여부가
         // 셰이더 퍼뮤테이션(MATERIAL_BLEND_TRANSLUCENT)을 가르기 때문이다. 주의: 메시에 플래그를 세우면
         // 불투명으로 컴파일된 머티리얼을 블렌딩으로 그리는 어긋난 상태가 된다.
@@ -462,71 +437,64 @@ namespace sw
         // 인스턴스는 **소수만 만들어 돌려 쓴다** — 큐브마다 하나씩 주면 배치가 인스턴스마다 갈려 한
         // 배치에 투명 인스턴스가 하나뿐이 되고, 그러면 배치 안의 정렬(instancesort 가 되돌리는 그 순서)이
         // 한 번도 검사되지 않는다.
-        constexpr uint32             kTransparentMaterialCount = 3;
-        shared_ptr<MaterialInstance> arrTransparentMaterial[kTransparentMaterialCount];
-        if ( transparentPercent > 0 )
+        constexpr uint32 kTransparentMaterialCount = 3;
+        outList.assign( kTransparentMaterialCount, nullptr );
+        if ( _glassMaterial == nullptr )
         {
-            if ( _glassMaterial == nullptr )
+            _glassMaterial = Material::create();
+            if ( _glassMaterial->loadFromFile( _settings._glassMaterial.c_str() ) == false )
             {
-                _glassMaterial = Material::create();
-                if ( _glassMaterial->loadFromFile( _settings._glassMaterial.c_str() ) == false )
-                {
-                    SW_LOG_WARNING( "[Bench] 투명 머티리얼을 읽지 못했습니다 — 투명 큐브를 건너뜁니다." );
-                    _glassMaterial.reset();
-                }
-            }
-            for ( uint32 slot = 0; slot < kTransparentMaterialCount && _glassMaterial != nullptr; ++slot )
-            {
-                shared_ptr<MaterialInstance> instance = MaterialInstance::create( _glassMaterial.get() );
-                const float4                 tint     = makeBenchColor( slot * 977u + 13u );
-                // 알파를 눈에 띄게 낮춘다 — 1.0 에 가까우면 블렌딩이 됐는지 그림으로 구분할 수 없다.
-                const float32 alpha = _settings._transparentAlphaBase + _settings._transparentAlphaStep * static_cast<float32>( slot );
-                instance->setVectorParameter( hashed_string( kMaterialColorParameter ), float4{ tint._x, tint._y, tint._z, alpha } );
-                _listChurnInstance.push_back( instance );
-                arrTransparentMaterial[slot] = std::move( instance );
+                SW_LOG_WARNING( "[Bench] 투명 머티리얼을 읽지 못했습니다 — 투명 큐브를 건너뜁니다." );
+                _glassMaterial.reset();
             }
         }
-
-        if ( gv_benchInstanced != 0 )
+        for ( uint32 slot = 0; slot < kTransparentMaterialCount && _glassMaterial != nullptr; ++slot )
         {
-            // 씬 컴포넌트 없이 — 메시 종류마다 배치 하나, 큐브 i 는 배치 i % 종류수 의 항목 i / 종류수. 격자·시드는 컴포넌트
-            // 경로와 같아 그림이 같아야 한다(픽셀 비교로 검증). 큐브별 머티리얼 인스턴스와 투명 비율은 이 모드에 없다.
-            if ( bPerCubeMaterial || transparentPercent > 0 )
-                SW_LOG_WARNING( "[Bench] -gv_benchInstanced=1 은 큐브별 머티리얼 인스턴스·투명 비율을 지원하지 않습니다 — 무시합니다." );
-            _listInstanceBatch.clear();
-            _listInstanceBatch.reserve( meshVariantCount );
-            for ( uint32 variantIndex = 0; variantIndex < meshVariantCount; ++variantIndex )
-            {
-                const uint32 entryCount = ( meshCount - variantIndex + meshVariantCount - 1 ) / meshVariantCount;
-                _listInstanceBatch.push_back( sw::make_shared<MeshInstanceBatch>( listMeshVariant[variantIndex], pSceneMaterial, nullptr, entryCount ) );
-            }
-            for ( uint32 index = 0; index < meshCount; ++index )
-            {
-                const uint32       col = index % side;
-                const uint32       row = index / side;
-                const float3       position{ origin + static_cast<float32>( col ) * _settings._cubeSpacing, 0.0f, origin + static_cast<float32>( row ) * _settings._cubeSpacing };
-                MeshInstanceBatch& batch = *_listInstanceBatch[index % meshVariantCount];
-                const uint32       entry = index / meshVariantCount;
-                batch.setWorld( entry, float4x4::makeTrs( position, float3{ 0.0f, 0.0f, 0.0f }, float3{ 1.0f, 1.0f, 1.0f } ) );
-                if ( gv_benchAnimate != 0 )
-                    batch.setSpinSeed( entry, index + 1u );
-            }
-            for ( const shared_ptr<MeshInstanceBatch>& batch : _listInstanceBatch )
-            {
-                pObjects->getPrimitiveRegistry().addInstanceBatch( batch.get() );
-            }
-            _instanceCubeCount = meshCount;
-            spawnLight( pScene, halfExtentOf( side, _settings._cubeSpacing ) );
-            spawnBenchLights( pScene, halfExtentOf( side, _settings._cubeSpacing ) );
-            spawnGround( pScene, halfExtentOf( side, _settings._cubeSpacing ) );
-            _benchGridSide = side;
-            frameCameras( pScene, side, _settings._cubeSpacing );
-            spawnBenchViews( pScene, halfExtentOf( side, _settings._cubeSpacing ) );
-            SW_LOG_INFO( "[Bench] 씬 '%#' 에 큐브 %#개를 인스턴스 배치 %#개로 만들었습니다 (%#×%# 격자, GameObject 없음).",
-                         pScene->getName(), meshCount, meshVariantCount, side, side );
-            return;
+            shared_ptr<MaterialInstance> instance = MaterialInstance::create( _glassMaterial.get() );
+            const float4                 tint     = makeBenchColor( slot * 977u + 13u );
+            // 알파를 눈에 띄게 낮춘다 — 1.0 에 가까우면 블렌딩이 됐는지 그림으로 구분할 수 없다.
+            const float32 alpha = _settings._transparentAlphaBase + _settings._transparentAlphaStep * static_cast<float32>( slot );
+            instance->setVectorParameter( hashed_string( kMaterialColorParameter ), float4{ tint._x, tint._y, tint._z, alpha } );
+            _listChurnInstance.push_back( instance );
+            outList[slot] = std::move( instance );
         }
+    }
 
+    void BenchScene::spawnInstancedGrid( GameObjectManager* pObjects, Material* pSceneMaterial, uint32 meshCount, uint32 meshVariantCount, uint32 side, float32 origin )
+    {
+        // 씬 컴포넌트 없이 — 메시 종류마다 배치 하나, 큐브 i 는 배치 i % 종류수 의 항목 i / 종류수. 격자·시드는 컴포넌트
+        // 경로와 같아 그림이 같아야 한다(픽셀 비교로 검증). 큐브별 머티리얼 인스턴스와 투명 비율은 이 모드에 없다.
+        _listInstanceBatch.clear();
+        _listInstanceBatch.reserve( meshVariantCount );
+        for ( uint32 variantIndex = 0; variantIndex < meshVariantCount; ++variantIndex )
+        {
+            const uint32 entryCount = ( meshCount - variantIndex + meshVariantCount - 1 ) / meshVariantCount;
+            _listInstanceBatch.push_back( sw::make_shared<MeshInstanceBatch>( _listMeshVariant[variantIndex], pSceneMaterial, nullptr, entryCount ) );
+        }
+        for ( uint32 index = 0; index < meshCount; ++index )
+        {
+            const uint32       col = index % side;
+            const uint32       row = index / side;
+            const float3       position{ origin + static_cast<float32>( col ) * _settings._cubeSpacing, 0.0f, origin + static_cast<float32>( row ) * _settings._cubeSpacing };
+            MeshInstanceBatch& batch = *_listInstanceBatch[index % meshVariantCount];
+            const uint32       entry = index / meshVariantCount;
+            batch.setWorld( entry, float4x4::makeTrs( position, float3{ 0.0f, 0.0f, 0.0f }, float3{ 1.0f, 1.0f, 1.0f } ) );
+            if ( gv_benchAnimate != 0 )
+                batch.setSpinSeed( entry, index + 1u );
+        }
+        for ( const shared_ptr<MeshInstanceBatch>& batch : _listInstanceBatch )
+        {
+            pObjects->getPrimitiveRegistry().addInstanceBatch( batch.get() );
+        }
+        _instanceCubeCount = meshCount;
+    }
+
+    void BenchScene::spawnCubeGrid( GameObjectManager* pObjects, Material* pSceneMaterial, uint32 meshCount, uint32 side, float32 origin, uint32 transparentPercent,
+                                    const vector<shared_ptr<MaterialInstance>>& listTransparentMaterial )
+    {
+        // 큐브별 머티리얼 인스턴스는 배치를 가르는 부하라 기본 측정에서는 꺼 둔다(`gv_benchMaterialInstances`).
+        const bool bPerCubeMaterial = ( gv_benchMaterialInstances != 0 );
+        const bool bHasTransparent  = listTransparentMaterial.empty() == false && listTransparentMaterial[0] != nullptr;
         for ( uint32 index = 0; index < meshCount; ++index )
         {
             MeshComponent* pMesh = spawnCube( pObjects, pSceneMaterial, index, side, origin );
@@ -547,20 +515,79 @@ namespace sw
             }
             // 일부를 투명으로 — 블렌드 모드가 배치를 가르고, 컬링이 압축한 순서를 instancesort 가
             // 깊이순으로 되돌린다. 투명 큐브끼리는 머티리얼 인스턴스를 나눠 쓰므로 한 배치에 여럿 들어간다.
-            if ( isBenchTransparent( index, transparentPercent ) && arrTransparentMaterial[0] != nullptr )
+            if ( isBenchTransparent( index, transparentPercent ) && bHasTransparent )
             {
                 // 블렌드 모드는 머티리얼이 정한다 — 메시에 따로 세우지 않는다.
                 pMesh->setMaterial( _glassMaterial.get() );
-                pMesh->setMaterialInstance( arrTransparentMaterial[index % kTransparentMaterialCount] );
+                pMesh->setMaterialInstance( listTransparentMaterial[index % listTransparentMaterial.size()] );
             }
         }
+    }
 
-        spawnLight( pScene, halfExtentOf( side, _settings._cubeSpacing ) );
-        spawnBenchLights( pScene, halfExtentOf( side, _settings._cubeSpacing ) );
-        spawnGround( pScene, halfExtentOf( side, _settings._cubeSpacing ) );
+    void BenchScene::finishGrid( Scene* pScene, uint32 side )
+    {
+        const float32 halfExtent = halfExtentOf( side, _settings._cubeSpacing );
+        spawnLight( pScene, halfExtent );
+        spawnBenchLights( pScene, halfExtent );
+        spawnGround( pScene, halfExtent );
         _benchGridSide = side;
         frameCameras( pScene, side, _settings._cubeSpacing );
-        spawnBenchViews( pScene, halfExtentOf( side, _settings._cubeSpacing ) );
+        spawnBenchViews( pScene, halfExtent );
+    }
+
+    void BenchScene::spawn( uint32 meshCount )
+    {
+        Scene* pScene = ensureBenchScene();
+        if ( pScene == nullptr )
+            return;
+
+        GameObjectManager* pObjects = pScene->getObjectManager();
+        if ( pObjects == nullptr )
+            return;
+
+        Material* pSceneMaterial = pScene->getMaterial();
+        if ( pSceneMaterial == nullptr )
+            SW_LOG_WARNING( "[Bench] 씬 기본 머티리얼이 없습니다 — 큐브가 보이지 않을 수 있습니다." );
+
+        // 메시 종류 수. 배치 키에 메시가 들어가므로 종류가 곧 **배치 수**다 — 1 이면 배치가 하나로 묶여
+        // 드로우 경로(드로우별 상수·바인딩)를 전혀 측정하지 못한다. 실제 씬은 늘 여러 메시를 쓴다.
+        uint32 meshVariantCount = static_cast<uint32>( MathUtil::max( 1, gv_benchMeshVariants ) );
+        meshVariantCount        = MathUtil::min( meshVariantCount, meshCount );
+
+        // 도형을 몇 종 섞을지. 1 이면 큐브만 쓴다(기존 측정·스크린샷 보존).
+        const uint32 shapeCount = static_cast<uint32>(
+            MathUtil::clamp( gv_benchMeshShapes, 1, static_cast<int32>( SW_COUNT_OF( kArrBenchShape ) ) ) );
+        if ( createMeshVariants( meshVariantCount, shapeCount ) == false )
+            return;
+
+        // 정사각에 가까운 격자로 흩는다. 전부 같은 메시·머티리얼이라 배치가 하나로 묶이는데,
+        // 그게 지금 렌더러의 기본 경로(배치당 drawInstanced 한 번)를 측정하는 조건이다.
+        const uint32  side   = static_cast<uint32>( MathUtil::sqrt( static_cast<float32>( meshCount ) ) ) + 1;
+        const float32 origin = -0.5f * static_cast<float32>( side - 1 ) * _settings._cubeSpacing;
+
+        _listBenchMesh.clear();
+        _listBenchMesh.reserve( meshCount );
+        _listBenchExtra.clear();
+
+        const uint32 transparentPercent =
+            ( gv_benchTransparent > 0 ) ? static_cast<uint32>( MathUtil::min( gv_benchTransparent, 100 ) ) : 0u;
+        vector<shared_ptr<MaterialInstance>> listTransparentMaterial;
+        if ( transparentPercent > 0 )
+            createTransparentMaterials( listTransparentMaterial );
+
+        if ( gv_benchInstanced != 0 )
+        {
+            if ( gv_benchMaterialInstances != 0 || transparentPercent > 0 )
+                SW_LOG_WARNING( "[Bench] -gv_benchInstanced=1 은 큐브별 머티리얼 인스턴스·투명 비율을 지원하지 않습니다 — 무시합니다." );
+            spawnInstancedGrid( pObjects, pSceneMaterial, meshCount, meshVariantCount, side, origin );
+            finishGrid( pScene, side );
+            SW_LOG_INFO( "[Bench] 씬 '%#' 에 큐브 %#개를 인스턴스 배치 %#개로 만들었습니다 (%#×%# 격자, GameObject 없음).",
+                         pScene->getName(), meshCount, meshVariantCount, side, side );
+            return;
+        }
+
+        spawnCubeGrid( pObjects, pSceneMaterial, meshCount, side, origin, transparentPercent, listTransparentMaterial );
+        finishGrid( pScene, side );
 
         SW_LOG_INFO( "[Bench] 메시 종류 %#개 (= 배치 수), 도형 %#종. -gv_benchMeshVariants · -gv_benchMeshShapes 로 바꾼다.",
                      meshVariantCount, shapeCount );
@@ -570,18 +597,9 @@ namespace sw
 
     void BenchScene::spawnCharacters( uint32 characterCount )
     {
-        SceneManager* pSceneManager = game::findSubsystem<SceneManager>();
-        if ( pSceneManager == nullptr )
-            return;
-        Scene* pScene = pSceneManager->getActiveScene();
+        Scene* pScene = ensureBenchScene();
         if ( pScene == nullptr )
-            pScene = pSceneManager->createEmptyActiveScene( "BenchScene" );
-        if ( pScene == nullptr )
-        {
-            SW_LOG_ERROR( "[Bench] 씬을 만들지 못했습니다." );
             return;
-        }
-        pScene->ensureDefaultCameras();
         GameObjectManager* pObjects = pScene->getObjectManager();
         if ( pObjects == nullptr )
             return;
@@ -1163,6 +1181,24 @@ namespace sw
                      static_cast<int32>( -( distance + halfExtent * 0.5f ) ) );
     }
 
+    void BenchScene::refreshFraming()
+    {
+        SceneManager* pSceneManager = game::findSubsystem<SceneManager>();
+        Scene*        pScene        = pSceneManager != nullptr ? pSceneManager->getActiveScene() : nullptr;
+        if ( pScene == nullptr )
+            return;
+        if ( _bFaceFraming == SW_TRUE )
+            frameFaceCameras( pScene );
+        else if ( _listRigBody.empty() == false )
+            frameRigCameras( pScene );
+        else if ( _listRagdoll.empty() == false )
+            frameCharacterCameras( pScene, _ragdollHalfExtent );
+        else if ( _bCharacterFraming == SW_TRUE )
+            frameCharacterCameras( pScene, computeCharacterHalfExtent( static_cast<uint32>( MathUtil::max( gv_benchCharacters, 1 ) ) ) );
+        else
+            frameCameras( pScene, _benchGridSide, _settings._cubeSpacing );
+    }
+
     void BenchScene::update( float32 deltaTime )
     {
         _benchElapsed += deltaTime;
@@ -1171,22 +1207,7 @@ namespace sw
         if ( _bRefreshedCameras == SW_FALSE && _benchElapsed > _settings._cameraRefreshDelay )
         {
             _bRefreshedCameras = SW_TRUE;
-            if ( SceneManager* pSceneManager = game::findSubsystem<SceneManager>() )
-            {
-                if ( Scene* pScene = pSceneManager->getActiveScene() )
-                {
-                    if ( _bFaceFraming == SW_TRUE )
-                        frameFaceCameras( pScene );
-                    else if ( _listRigBody.empty() == false )
-                        frameRigCameras( pScene );
-                    else if ( _listRagdoll.empty() == false )
-                        frameCharacterCameras( pScene, _ragdollHalfExtent );
-                    else if ( _bCharacterFraming == SW_TRUE )
-                        frameCharacterCameras( pScene, computeCharacterHalfExtent( static_cast<uint32>( MathUtil::max( gv_benchCharacters, 1 ) ) ) );
-                    else
-                        frameCameras( pScene, _benchGridSide, _settings._cubeSpacing );
-                }
-            }
+            refreshFraming();
         }
 
         // 큐브는 씬이 소유한다. 여기 있는 것은 핸들뿐이라 씬이 통째로 바뀌어도(상태 복원) 죽은 주소를
