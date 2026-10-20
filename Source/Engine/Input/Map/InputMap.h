@@ -700,6 +700,35 @@ namespace sw
 
         string getGlyphForActionInternal( const hashed_string& action, InputGlyphStyle device ) const;
         bool   evaluateBindingDown( const ActionBinding& binding, float2& outValue, SlotRead read = SlotRead::Game ) const;
+        /** @brief 단일 키 바인딩이 수정 키(Ctrl · Alt)가 눌린 동안 물러나야 하는지 봅니다(`_bSuppressBaseActionOnChord`). */
+        bool isBaseKeySuppressedByModifier( const ActionBinding& binding, SlotRead read ) const;
+        /** @brief 게임패드 스틱 바인딩의 값을 데드존 · 응답 곡선 · 감도를 적용해 읽습니다. 연결이 없으면 false 입니다. */
+        bool evaluateGamepadStick( const ActionBinding& binding, float2& outValue ) const;
+        /** @brief 가상 조이스틱 바인딩의 값을 읽습니다. 활성화 버튼을 처음 누른 지점이 앵커입니다. */
+        bool evaluateVirtualJoystick( const ActionBinding& binding, float2& outValue, SlotRead read ) const;
+        /** @brief 단축키 바인딩이 요구하는 수정 키가 모두 눌려 있는지 봅니다. */
+        bool areShortcutModifiersHeld( const ActionBinding& binding, SlotRead read ) const;
+
+        /** @brief 한 프레임 동안 액션 하나의 바인딩들을 합산한 값입니다. */
+        struct ActionFrameAccum
+        {
+            bool    _bAnyDown{ false };
+            bool    _bAnyPressed{ false };
+            bool    _bAnyReleased{ false };
+            bool    _bAnyTriggered{ false };
+            bool    _bAnyHoldReached{ false }; ///< 어떤 바인딩이든 자기 홀드 시간을 채웠는지입니다.
+            float32 _maxHold{ 0.0f };
+            float2  _totalValue{ 0.0f, 0.0f };
+            float2  _relativeValue{ 0.0f, 0.0f }; ///< 마우스 이동량입니다. 묶지 않습니다.
+        };
+        /** @brief 바인딩 하나의 프레임 상태(눌림 · 홀드 · 연타)를 갱신하고 액션 합산에 더합니다. */
+        void updateBinding( const ActionBinding& binding, ActionBindingState& state, float32 deltaSeconds, const int2& mousePos, ActionFrameAccum& accum ) const;
+        /** @brief 눌림이 시작된 프레임에 연타 횟수를 세어 `_bDoubleClicked` 를 정합니다. */
+        void advanceTapStreak( const ActionBinding& binding, ActionBindingState& state, uint32 requiredTaps, float32 doubleWindow, const int2& mousePos ) const;
+        /** @brief 이번 프레임 합산으로 ActionPhase 를 전이합니다. */
+        static void advanceActionPhase( ActionEntry& actionEntry, bool bPrevDown, bool bAnyHoldReached );
+        /** @brief Triggered · Phase · 2D 벡터 델리게이트를 부릅니다. */
+        static void dispatchActionCallbacks( const ActionEntry& actionEntry, bool bPrevDown );
         /**
          * @brief 새로 만드는 바인딩 상태입니다. 지금 장치가 눌려 있으면 `_bPhysicalDown` 을 미리 채워, 첫 `update` 에서 Pressed 가 아니라 Held 로 시작하게 합니다.
          * @details 바인딩 상태를 만드는 길(`commitBinding`, 리바인딩, 기본값 복원)은 모두 이 함수 하나를 거친다 — 빈 `ActionBindingState{}` 를 직접 넣는 길이 남으면

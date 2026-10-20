@@ -96,7 +96,7 @@ namespace sw
         const VoxelDirectorComponent* pDirector = pManager != nullptr ? GameDirectorComponent::resolve<VoxelDirectorComponent>( *pManager, _director ) : nullptr;
         if ( pDirector == nullptr || pDirector->isStarted() == false )
             return;
-        // 메싱은 월드를 읽기만 한다 — 같은 그룹의 다른 청크와 나란히 돈다. 블록은 틱 뒤에만 바뀐다.
+        // 메싱은 월드를 읽기만 하므로 같은 그룹의 다른 청크와 나란히 실행됩니다. 블록은 틱이 끝난 뒤에만 바뀝니다.
         _bRebuildRequested = SW_FALSE;
         VoxelMesher::fillChunkMesh( pDirector->getWorld(), _chunkX, _chunkZ, _scratchMesh );
         _bApplyScheduled = SW_TRUE;

@@ -212,16 +212,12 @@ namespace sw
             }
 
             /**
-             * @brief 조각을 평면 n·x ≤ c 쪽만 남기고 자릅니다. 자른 단면은 안쪽 면(태그 @p tag)으로 막습니다.
-             * @return 닫히지 않은 고리 수입니다(입력이 닫혔으면 0).
+             * @brief 삼각형들을 평면 n·x ≤ c 쪽만 남기고 자릅니다. 평면에 걸친 삼각형은 서덜랜드-호지먼 알고리즘으로 자르고, 자른 곳의 선분을 모읍니다.
              */
-            static uint32 clipPiece( const vector<Triangle>& listInput, const float3& normal, float32 offset, int32 tag, const FractureSettings& settings,
-                                     vector<Triangle>& outListOutput, bool& outbNearDuplicate, bool bCap = true )
+            static void clipTriangles( const vector<Triangle>& listInput, const float3& normal, float32 offset, vector<Triangle>& outListOutput, vector<Segment>& outListSegment )
             {
-                outbNearDuplicate = false;
                 outListOutput.clear();
                 outListOutput.reserve( listInput.size() + 16 );
-                vector<Segment> listSegment;
                 for ( const Triangle& triangle : listInput )
                 {
                     float32 arrDistance[3];
@@ -279,27 +275,19 @@ namespace sw
                     const float3 exitPoint  = getPosition( exitVertex );
                     const float3 entryPoint = getPosition( entryVertex );
                     if ( isSamePoint( exitPoint, entryPoint ) == false )
-                        listSegment.push_back( Segment{ exitPoint, entryPoint } );
+                        outListSegment.push_back( Segment{ exitPoint, entryPoint } );
                 }
-                const bool bNoCapNeeded = listSegment.empty() || outListOutput.empty() || bCap == false;
-                if ( bNoCapNeeded )
-                    return 0;
+            }
 
-                // 자른 곳에 아주 가까운 두 점이 생겼는지 확인한다. 셀 꼭짓점(세 평면이 만나는 점)은 서로 다른 모서리에서 따로 구해져 1e-7 m 쯤 어긋난
-                // 두 점이 된다. 그대로 두면 다음 자르기에서 그 둘을 다른 점으로 다뤄 한 모서리에 면이 넷 붙는다. 생겼으면 이 자르기 뒤에 조각 전체를 다듬는다.
-                PositionWelder welder;
-                for ( const Segment& segment : listSegment )
-                {
-                    const float3 weldedFrom = weldPosition( welder, segment._from );
-                    const float3 weldedTo   = weldPosition( welder, segment._to );
-                    if ( isSamePoint( weldedFrom, segment._from ) == false || isSamePoint( weldedTo, segment._to ) == false )
-                        outbNearDuplicate = true;
-                }
-
+            /**
+             * @brief 자른 곳의 선분으로 단면을 막는 삼각형을 만들어 더합니다. 남는 면의 경계는 나가는 점에서 들어오는 점 방향이므로, 캡은 그 반대로 감습니다(메시 앞면 규약과 같아진다).
+             * @return 닫히지 않은 고리 수입니다.
+             */
+            static uint32 appendCap( const vector<Segment>& listSegment, const float3& normal, int32 tag, const FractureSettings& settings, vector<Triangle>& inoutListOutput )
+            {
                 vector<vector<float3>> listLoop;
                 const uint32           openCount = linkSegments( listSegment, listLoop );
 
-                // 막기: 남는 면의 경계는 나가는 점에서 들어오는 점 방향이므로, 캡은 그 반대로 감는다(메시 앞면 규약과 같아진다).
                 float3 axisU{};
                 float3 axisV{};
                 makePlaneBasis( normal, axisU, axisV );
@@ -308,18 +296,18 @@ namespace sw
                 vector<vector<uint32>> listLoopIndex;
                 for ( vector<float3>& listLoopPoint : listLoop )
                 {
-                    vector<uint32> loopIndex;
+                    vector<uint32> listCornerIndex;
                     for ( size_t index = listLoopPoint.size(); index > 0; --index )
                     {
                         const float3& point = listLoopPoint[index - 1];
-                        loopIndex.push_back( static_cast<uint32>( listPoint3.size() ) );
+                        listCornerIndex.push_back( static_cast<uint32>( listPoint3.size() ) );
                         listPoint3.push_back( point );
                         listPoint2.push_back( float2{ point.dot( axisU ), point.dot( axisV ) } );
                     }
-                    listLoopIndex.push_back( std::move( loopIndex ) );
+                    listLoopIndex.push_back( std::move( listCornerIndex ) );
                 }
                 vector<uint32> listIndex;
-                (void)PolygonTriangulationUtil::triangulate( listPoint2, listLoopIndex, listIndex );
+                (void)PolygonTriangulationUtil::triangulate( listPoint2, listLoopIndex, listIndex ); // 실패하면 빈 목록이라 단면이 비고, 열린 고리 수로 알린다
                 for ( size_t index = 0; index + 2 < listIndex.size(); index += 3 )
                 {
                     Triangle cap;
@@ -344,9 +332,44 @@ namespace sw
                     }
                     // 넓이가 0 에 가까워도 남긴다. 일직선 세 점의 삼각형이 빠지면 옆면과의 이음이 끊긴다. 같은 점이 겹친 것만 뺀다.
                     if ( hasDistinctCorners( cap ) )
-                        outListOutput.push_back( cap );
+                        inoutListOutput.push_back( cap );
                 }
                 return openCount;
+            }
+
+            /**
+             * @brief 자른 곳에 아주 가까운 두 점이 생겼는지 확인합니다. 셀 꼭짓점(세 평면이 만나는 점)은 서로 다른 모서리에서 따로 구해져 1e-7 m 쯤 어긋난
+             *        두 점이 됩니다. 그대로 두면 다음 자르기에서 그 둘을 다른 점으로 다뤄 한 모서리에 면이 넷 붙습니다. 생겼으면 이 자르기 뒤에 조각 전체를 다듬습니다.
+             */
+            static bool hasNearDuplicate( const vector<Segment>& listSegment )
+            {
+                PositionWelder welder;
+                bool           bNearDuplicate = false;
+                for ( const Segment& segment : listSegment )
+                {
+                    const float3 weldedFrom = weldPosition( welder, segment._from );
+                    const float3 weldedTo   = weldPosition( welder, segment._to );
+                    if ( isSamePoint( weldedFrom, segment._from ) == false || isSamePoint( weldedTo, segment._to ) == false )
+                        bNearDuplicate = true;
+                }
+                return bNearDuplicate;
+            }
+
+            /**
+             * @brief 조각을 평면 n·x ≤ c 쪽만 남기고 자릅니다. 자른 단면은 안쪽 면(태그 @p tag)으로 막습니다.
+             * @return 닫히지 않은 고리 수입니다(입력이 닫혔으면 0).
+             */
+            static uint32 clipPiece( const vector<Triangle>& listInput, const float3& normal, float32 offset, int32 tag, const FractureSettings& settings,
+                                     vector<Triangle>& outListOutput, bool& outbNearDuplicate, bool bCap = true )
+            {
+                outbNearDuplicate = false;
+                vector<Segment> listSegment;
+                clipTriangles( listInput, normal, offset, outListOutput, listSegment );
+                const bool bNoCapNeeded = listSegment.empty() || outListOutput.empty() || bCap == false;
+                if ( bNoCapNeeded )
+                    return 0;
+                outbNearDuplicate = hasNearDuplicate( listSegment );
+                return appendCap( listSegment, normal, tag, settings, outListOutput );
             }
 
             static void collectBounds( vector_reference<const RHIVertex> listVertex, float3& outMin, float3& outMax )
@@ -594,6 +617,282 @@ namespace sw
                 }
             }
 
+            /** @brief `simplifyCaps` 가 단계마다 넘겨 쓰는 값입니다. 안쪽 면 삼각형을 태그(평면)마다 그룹으로 묶어 둡니다. */
+            struct CapState
+            {
+                vector<int32>                  _listTag;           ///< 그룹마다 태그
+                vector<vector<uint32>>         _listGroupTriangle; ///< 그룹마다 삼각형 번호
+                unordered_map<uint64, uint8>   _mapSurfaceUse;     ///< 점마다 겉면이 쓰는지
+                unordered_map<uint64, float3>  _mapPoint;
+                vector<vector<vector<uint64>>> _listGroupLoop; ///< 그룹마다 경계 고리(점 키)
+                unordered_map<uint64, uint8>   _mapKeep;       ///< 빼면 안 되는 점
+                vector<uint8>                  _listRebuild;   ///< 다시 만들 그룹
+
+                /** @brief 점을 뺄 수 있는지 반환합니다. 겉면이 쓰지 않고 남길 점으로 표시되지 않은 점만 뺍니다. */
+                bool isRemovable( uint64 key ) { return _mapKeep.find( key ) == _mapKeep.end() && _mapSurfaceUse[key] == SW_FALSE; }
+
+                /** @brief 그룹 삼각형이 쓰는 점을 모두 남길 점으로 표시합니다. */
+                void keepGroupPoints( const vector<Triangle>& listTriangle, size_t group )
+                {
+                    for ( const uint32 index : _listGroupTriangle[group] )
+                    {
+                        for ( const RHIVertex& vertex : listTriangle[index]._arrVertex )
+                        {
+                            _mapKeep[makePointKey( getPosition( vertex ) )] = SW_TRUE;
+                        }
+                    }
+                }
+            };
+
+            /** @brief 안쪽 면(태그가 0 이상) 삼각형을 태그마다 그룹으로 묶습니다. */
+            static void groupCapTriangles( const vector<Triangle>& listTriangle, CapState& outState )
+            {
+                for ( uint32 index = 0; index < static_cast<uint32>( listTriangle.size() ); ++index )
+                {
+                    const int32 tag = listTriangle[index]._tag;
+                    if ( tag < 0 )
+                        continue;
+                    size_t group = 0;
+                    while ( group < outState._listTag.size() && outState._listTag[group] != tag )
+                    {
+                        ++group;
+                    }
+                    if ( group == outState._listTag.size() )
+                    {
+                        outState._listTag.push_back( tag );
+                        outState._listGroupTriangle.push_back( vector<uint32>{} );
+                    }
+                    outState._listGroupTriangle[group].push_back( index );
+                }
+            }
+
+            /** @brief 점의 위치를 키로 모으고, 겉면 삼각형이 쓰는 점을 기록합니다. */
+            static void recordPoints( const vector<Triangle>& listTriangle, CapState& outState )
+            {
+                for ( const Triangle& triangle : listTriangle )
+                {
+                    for ( const RHIVertex& vertex : triangle._arrVertex )
+                    {
+                        const float3 point = getPosition( vertex );
+                        const uint64 key   = makePointKey( point );
+                        outState._mapPoint.emplace( key, point );
+                        uint8& bOuter = outState._mapSurfaceUse[key];
+                        if ( triangle._tag < 0 )
+                            bOuter = SW_TRUE;
+                    }
+                }
+            }
+
+            /**
+             * @brief 그룹의 경계 고리(점 키)를 만듭니다. 그룹 안에서 반대 방향이 없는 모서리를 잇습니다.
+             * @details 경계가 갈라지거나(한 점에서 나가는 경계가 둘 이상) 닫히지 않으면 이 그룹의 고리는 비워 둔다(건드리지 않는다).
+             */
+            static void buildGroupLoops( const vector<Triangle>& listTriangle, size_t group, CapState& inoutState )
+            {
+                unordered_map<uint64, uint32> mapEdge;
+                for ( const uint32 index : inoutState._listGroupTriangle[group] )
+                {
+                    for ( uint32 corner = 0; corner < 3; ++corner )
+                    {
+                        const uint64 from = makePointKey( getPosition( listTriangle[index]._arrVertex[corner] ) );
+                        const uint64 to   = makePointKey( getPosition( listTriangle[index]._arrVertex[( corner + 1 ) % 3] ) );
+                        ++mapEdge[makeEdgeKey( from, to )];
+                    }
+                }
+                unordered_map<uint64, vector<uint64>> mapNext;
+                for ( const uint32 index : inoutState._listGroupTriangle[group] )
+                {
+                    for ( uint32 corner = 0; corner < 3; ++corner )
+                    {
+                        const uint64 from = makePointKey( getPosition( listTriangle[index]._arrVertex[corner] ) );
+                        const uint64 to   = makePointKey( getPosition( listTriangle[index]._arrVertex[( corner + 1 ) % 3] ) );
+                        if ( mapEdge.find( makeEdgeKey( to, from ) ) == mapEdge.end() )
+                            mapNext[from].push_back( to );
+                    }
+                }
+                // 분기(한 점에서 나가는 경계가 둘 이상)가 있으면 이 그룹은 건드리지 않는다.
+                bool bSimple = true;
+                for ( const auto& [key, listTo] : mapNext )
+                {
+                    bSimple = bSimple && listTo.size() == 1;
+                }
+                if ( bSimple == false )
+                    return;
+                unordered_map<uint64, uint8> mapUsed;
+                for ( const auto& [start, listTo] : mapNext )
+                {
+                    if ( mapUsed.find( start ) != mapUsed.end() )
+                        continue;
+                    vector<uint64> listLoopKey;
+                    uint64         current = start;
+                    bool           bClosed = false;
+                    for ( size_t guard = 0; guard <= mapNext.size(); ++guard )
+                    {
+                        mapUsed[current] = SW_TRUE;
+                        listLoopKey.push_back( current );
+                        const auto iter = mapNext.find( current );
+                        if ( iter == mapNext.end() )
+                            break;
+                        current = iter->second[0];
+                        if ( current == start )
+                        {
+                            bClosed = true;
+                            break;
+                        }
+                    }
+                    if ( bClosed == false )
+                    {
+                        inoutState._listGroupLoop[group].clear();
+                        return;
+                    }
+                    inoutState._listGroupLoop[group].push_back( std::move( listLoopKey ) );
+                }
+            }
+
+            /** @brief 고리를 못 만든 그룹의 점과, 고리에서 일직선이 아닌 점을 남길 점으로 표시합니다. */
+            static void markKeptPoints( const vector<Triangle>& listTriangle, CapState& inoutState )
+            {
+                for ( size_t group = 0; group < inoutState._listTag.size(); ++group )
+                {
+                    if ( inoutState._listGroupLoop[group].empty() )
+                    {
+                        inoutState.keepGroupPoints( listTriangle, group );
+                        continue;
+                    }
+                    for ( const vector<uint64>& loop : inoutState._listGroupLoop[group] )
+                    {
+                        const size_t count = loop.size();
+                        for ( size_t index = 0; index < count; ++index )
+                        {
+                            const float3& prev   = inoutState._mapPoint[loop[( index + count - 1 ) % count]];
+                            const float3& cur    = inoutState._mapPoint[loop[index]];
+                            const float3& next   = inoutState._mapPoint[loop[( index + 1 ) % count]];
+                            const float32 span   = ( next - prev ).getLength();
+                            const float32 offset = span > 0.0f ? ( cur - prev ).cross( next - prev ).getLength() / span : 1.0f;
+                            const bool    bLine  = offset <= 1.0e-5f && ( cur - prev ).dot( next - cur ) > 0.0f;
+                            if ( bLine == false )
+                                inoutState._mapKeep[loop[index]] = SW_TRUE;
+                        }
+                    }
+                }
+            }
+
+            /** @brief 다시 만들 그룹을 정합니다. 고리에 없고 삼각형에만 있는 점(그룹 안쪽 점)이 있는 그룹은 다시 만들지 않고 점을 모두 남깁니다. */
+            static void markRebuildGroups( const vector<Triangle>& listTriangle, CapState& inoutState )
+            {
+                inoutState._listRebuild.assign( inoutState._listTag.size(), SW_FALSE );
+                for ( size_t group = 0; group < inoutState._listTag.size(); ++group )
+                {
+                    if ( inoutState._listGroupLoop[group].empty() )
+                        continue;
+                    unordered_map<uint64, uint8> mapOnLoop;
+                    for ( const vector<uint64>& loop : inoutState._listGroupLoop[group] )
+                    {
+                        for ( const uint64 key : loop )
+                        {
+                            mapOnLoop[key] = SW_TRUE;
+                        }
+                    }
+                    bool bInnerPoint = false;
+                    for ( const uint32 index : inoutState._listGroupTriangle[group] )
+                    {
+                        for ( const RHIVertex& vertex : listTriangle[index]._arrVertex )
+                        {
+                            bInnerPoint = bInnerPoint || mapOnLoop.find( makePointKey( getPosition( vertex ) ) ) == mapOnLoop.end();
+                        }
+                    }
+                    if ( bInnerPoint )
+                    {
+                        inoutState.keepGroupPoints( listTriangle, group );
+                        inoutState._listGroupLoop[group].clear();
+                        continue;
+                    }
+                    inoutState._listRebuild[group] = SW_TRUE;
+                }
+            }
+
+            /** @brief 다시 만들 고리 중에 뺄 점이 하나라도 있는지 반환합니다. */
+            static bool hasRemovablePoint( CapState& inoutState )
+            {
+                bool bAnyRemoved = false;
+                for ( size_t group = 0; group < inoutState._listTag.size(); ++group )
+                {
+                    for ( const vector<uint64>& loop : inoutState._listGroupLoop[group] )
+                    {
+                        for ( const uint64 key : loop )
+                        {
+                            bAnyRemoved = bAnyRemoved || inoutState.isRemovable( key );
+                        }
+                    }
+                }
+                return bAnyRemoved;
+            }
+
+            /**
+             * @brief 그룹 하나를 다시 만듭니다. 고리에서 뺄 점을 빼고 평면 기준 축으로 귀 자르기를 합니다.
+             * @return 귀 자르기가 막히면 그 그룹의 점을 모두 남길 점으로 돌리고 false 입니다(호출한 쪽이 처음부터 다시 합니다).
+             */
+            static bool rebuildGroup( const vector<Triangle>& listTriangle, size_t group, const FractureSettings& settings, CapState& inoutState, vector<uint8>& inoutListDrop,
+                                      vector<Triangle>& inoutListNew )
+            {
+                const Triangle& sample = listTriangle[inoutState._listGroupTriangle[group][0]];
+                const float3    normal{ sample._arrVertex[0]._arrNormal[0], sample._arrVertex[0]._arrNormal[1], sample._arrVertex[0]._arrNormal[2] };
+                float3          axisU{};
+                float3          axisV{};
+                makePlaneBasis( normal, axisU, axisV );
+                vector<float3>         listPoint3;
+                vector<float2>         listPoint2;
+                vector<vector<uint32>> listLoopIndex;
+                for ( const vector<uint64>& loop : inoutState._listGroupLoop[group] )
+                {
+                    vector<uint32> listLoopCorner;
+                    for ( const uint64 key : loop )
+                    {
+                        if ( inoutState.isRemovable( key ) )
+                            continue;
+                        const float3& point = inoutState._mapPoint[key];
+                        listLoopCorner.push_back( static_cast<uint32>( listPoint3.size() ) );
+                        listPoint3.push_back( point );
+                        listPoint2.push_back( float2{ point.dot( axisU ), point.dot( axisV ) } );
+                    }
+                    listLoopIndex.push_back( std::move( listLoopCorner ) );
+                }
+                vector<uint32> listIndex;
+                if ( PolygonTriangulationUtil::triangulate( listPoint2, listLoopIndex, listIndex ) == false )
+                {
+                    for ( const vector<uint64>& loop : inoutState._listGroupLoop[group] )
+                    {
+                        for ( const uint64 key : loop )
+                        {
+                            inoutState._mapKeep[key] = SW_TRUE;
+                        }
+                    }
+                    inoutState._listRebuild[group] = SW_FALSE;
+                    return false;
+                }
+                for ( const uint32 index : inoutState._listGroupTriangle[group] )
+                {
+                    inoutListDrop[index] = 1;
+                }
+                for ( size_t index = 0; index + 2 < listIndex.size(); index += 3 )
+                {
+                    Triangle cap;
+                    cap._tag = inoutState._listTag[group];
+                    for ( uint32 corner = 0; corner < 3; ++corner )
+                    {
+                        const uint32 pointIndex = listIndex[index + corner];
+                        RHIVertex&   vertex     = cap._arrVertex[corner];
+                        vertex                  = sample._arrVertex[0];
+                        setPosition( vertex, listPoint3[pointIndex] );
+                        vertex._arrUv[0] = listPoint2[pointIndex]._x * settings._interiorUvScale;
+                        vertex._arrUv[1] = listPoint2[pointIndex]._y * settings._interiorUvScale;
+                    }
+                    if ( hasDistinctCorners( cap ) )
+                        inoutListNew.push_back( cap );
+                }
+                return true;
+            }
+
             /**
              * @brief 안쪽 면(평면마다 한 그룹)의 삼각형을 다시 만듭니다. 그룹 경계 고리에서 일직선 위의 점을 빼고 귀 자르기로 다시 나눕니다.
              * @details 자를 때마다 앞서 막은 면의 대각선을 가로질러 교점이 생기고, 그 점들이 다음 막음의 고리에 일직선으로 쌓인다.
@@ -603,194 +902,23 @@ namespace sw
              */
             static void simplifyCaps( vector<Triangle>& inoutListTriangle, const FractureSettings& settings )
             {
-                // 그룹(태그)마다 삼각형 번호다.
-                vector<int32>          listTag;
-                vector<vector<uint32>> listGroupTriangle;
-                for ( uint32 index = 0; index < static_cast<uint32>( inoutListTriangle.size() ); ++index )
-                {
-                    const int32 tag = inoutListTriangle[index]._tag;
-                    if ( tag < 0 )
-                        continue;
-                    size_t group = 0;
-                    while ( group < listTag.size() && listTag[group] != tag )
-                    {
-                        ++group;
-                    }
-                    if ( group == listTag.size() )
-                    {
-                        listTag.push_back( tag );
-                        listGroupTriangle.push_back( vector<uint32>{} );
-                    }
-                    listGroupTriangle[group].push_back( index );
-                }
-                if ( listTag.empty() )
+                CapState state;
+                groupCapTriangles( inoutListTriangle, state );
+                if ( state._listTag.empty() )
                     return;
-                // 점마다 겉면이 쓰는지 기록한다.
-                unordered_map<uint64, uint8>  mapSurfaceUse;
-                unordered_map<uint64, float3> mapPoint;
-                for ( const Triangle& triangle : inoutListTriangle )
+                recordPoints( inoutListTriangle, state );
+                state._listGroupLoop.resize( state._listTag.size() );
+                for ( size_t group = 0; group < state._listTag.size(); ++group )
                 {
-                    for ( const RHIVertex& vertex : triangle._arrVertex )
-                    {
-                        const float3 point = getPosition( vertex );
-                        const uint64 key   = makePointKey( point );
-                        mapPoint.emplace( key, point );
-                        uint8& bOuter = mapSurfaceUse[key];
-                        if ( triangle._tag < 0 )
-                            bOuter = SW_TRUE;
-                    }
-                }
-                // 그룹마다 경계 고리(점 키)를 만든다. 그룹 안에서 반대 방향이 없는 모서리를 잇는다.
-                vector<vector<vector<uint64>>> listGroupLoop( listTag.size() );
-                for ( size_t group = 0; group < listTag.size(); ++group )
-                {
-                    unordered_map<uint64, uint32> mapEdge;
-                    for ( const uint32 index : listGroupTriangle[group] )
-                    {
-                        for ( uint32 corner = 0; corner < 3; ++corner )
-                        {
-                            const uint64 from = makePointKey( getPosition( inoutListTriangle[index]._arrVertex[corner] ) );
-                            const uint64 to   = makePointKey( getPosition( inoutListTriangle[index]._arrVertex[( corner + 1 ) % 3] ) );
-                            ++mapEdge[makeEdgeKey( from, to )];
-                        }
-                    }
-                    unordered_map<uint64, vector<uint64>> mapNext;
-                    for ( const uint32 index : listGroupTriangle[group] )
-                    {
-                        for ( uint32 corner = 0; corner < 3; ++corner )
-                        {
-                            const uint64 from = makePointKey( getPosition( inoutListTriangle[index]._arrVertex[corner] ) );
-                            const uint64 to   = makePointKey( getPosition( inoutListTriangle[index]._arrVertex[( corner + 1 ) % 3] ) );
-                            if ( mapEdge.find( makeEdgeKey( to, from ) ) == mapEdge.end() )
-                                mapNext[from].push_back( to );
-                        }
-                    }
-                    // 분기(한 점에서 나가는 경계가 둘 이상)가 있으면 이 그룹은 건드리지 않는다.
-                    bool bSimple = true;
-                    for ( const auto& [key, listTo] : mapNext )
-                    {
-                        bSimple = bSimple && listTo.size() == 1;
-                    }
-                    if ( bSimple == false )
-                        continue;
-                    unordered_map<uint64, uint8> mapUsed;
-                    for ( const auto& [start, listTo] : mapNext )
-                    {
-                        if ( mapUsed.find( start ) != mapUsed.end() )
-                            continue;
-                        vector<uint64> listLoopKey;
-                        uint64         current = start;
-                        bool           bClosed = false;
-                        for ( size_t guard = 0; guard <= mapNext.size(); ++guard )
-                        {
-                            mapUsed[current] = SW_TRUE;
-                            listLoopKey.push_back( current );
-                            const auto iter = mapNext.find( current );
-                            if ( iter == mapNext.end() )
-                                break;
-                            current = iter->second[0];
-                            if ( current == start )
-                            {
-                                bClosed = true;
-                                break;
-                            }
-                        }
-                        if ( bClosed == false )
-                        {
-                            listGroupLoop[group].clear();
-                            break;
-                        }
-                        listGroupLoop[group].push_back( std::move( listLoopKey ) );
-                    }
+                    buildGroupLoops( inoutListTriangle, group, state );
                 }
                 // 뺄 점은 겉면이 쓰지 않고, 그 점이 있는 모든 고리에서 일직선이고, 모든 그룹이 고리를 만든 점이다.
-                unordered_map<uint64, uint32> mapLoopCount;
-                unordered_map<uint64, uint8>  mapKeep;
-                for ( size_t group = 0; group < listTag.size(); ++group )
-                {
-                    if ( listGroupLoop[group].empty() )
-                    {
-                        for ( const uint32 index : listGroupTriangle[group] )
-                        {
-                            for ( const RHIVertex& vertex : inoutListTriangle[index]._arrVertex )
-                            {
-                                mapKeep[makePointKey( getPosition( vertex ) )] = SW_TRUE;
-                            }
-                        }
-                        continue;
-                    }
-                    for ( const vector<uint64>& loop : listGroupLoop[group] )
-                    {
-                        const size_t count = loop.size();
-                        for ( size_t index = 0; index < count; ++index )
-                        {
-                            const float3& prev   = mapPoint[loop[( index + count - 1 ) % count]];
-                            const float3& cur    = mapPoint[loop[index]];
-                            const float3& next   = mapPoint[loop[( index + 1 ) % count]];
-                            const float32 span   = ( next - prev ).getLength();
-                            const float32 offset = span > 0.0f ? ( cur - prev ).cross( next - prev ).getLength() / span : 1.0f;
-                            const bool    bLine  = offset <= 1.0e-5f && ( cur - prev ).dot( next - cur ) > 0.0f;
-                            if ( bLine == false )
-                                mapKeep[loop[index]] = SW_TRUE;
-                            ++mapLoopCount[loop[index]];
-                        }
-                    }
-                }
-                // 고리에 없고 삼각형에만 있는 점(그룹 안쪽 점)은 남긴다. 그런 그룹은 다시 만들지 않는다.
-                vector<uint8> listRebuild( listTag.size(), SW_FALSE );
-                bool          bAnyRemoved = false;
-                for ( size_t group = 0; group < listTag.size(); ++group )
-                {
-                    if ( listGroupLoop[group].empty() )
-                        continue;
-                    unordered_map<uint64, uint8> mapOnLoop;
-                    for ( const vector<uint64>& loop : listGroupLoop[group] )
-                    {
-                        for ( const uint64 key : loop )
-                        {
-                            mapOnLoop[key] = SW_TRUE;
-                        }
-                    }
-                    bool bInnerPoint = false;
-                    for ( const uint32 index : listGroupTriangle[group] )
-                    {
-                        for ( const RHIVertex& vertex : inoutListTriangle[index]._arrVertex )
-                        {
-                            bInnerPoint = bInnerPoint || mapOnLoop.find( makePointKey( getPosition( vertex ) ) ) == mapOnLoop.end();
-                        }
-                    }
-                    if ( bInnerPoint )
-                    {
-                        for ( const uint32 index : listGroupTriangle[group] )
-                        {
-                            for ( const RHIVertex& vertex : inoutListTriangle[index]._arrVertex )
-                            {
-                                mapKeep[makePointKey( getPosition( vertex ) )] = SW_TRUE;
-                            }
-                        }
-                        listGroupLoop[group].clear();
-                        continue;
-                    }
-                    listRebuild[group] = SW_TRUE;
-                }
-                const auto isRemovable = [&mapKeep, &mapSurfaceUse]( uint64 key )
-                {
-                    return mapKeep.find( key ) == mapKeep.end() && mapSurfaceUse[key] == SW_FALSE;
-                };
-                for ( size_t group = 0; group < listTag.size(); ++group )
-                {
-                    for ( const vector<uint64>& loop : listGroupLoop[group] )
-                    {
-                        for ( const uint64 key : loop )
-                        {
-                            bAnyRemoved = bAnyRemoved || isRemovable( key );
-                        }
-                    }
-                }
-                if ( bAnyRemoved == false )
+                markKeptPoints( inoutListTriangle, state );
+                markRebuildGroups( inoutListTriangle, state );
+                if ( hasRemovablePoint( state ) == false )
                     return;
 
-                // 다시 만들기: 고리에서 뺄 점을 빼고 평면 기준 축으로 귀 자르기를 한다. 한 그룹이라도 막히면 그 그룹의 점을 모두 남기고 처음부터 다시 한다
+                // 다시 만들기: 한 그룹이라도 막히면 그 그룹의 점을 모두 남기고 처음부터 다시 한다
                 // (그 그룹만 원래 삼각형을 두면 이웃이 뺀 점과 T 자 이음이 생긴다).
                 vector<uint8>    listDrop( inoutListTriangle.size(), 0 );
                 vector<Triangle> listNew;
@@ -799,66 +927,11 @@ namespace sw
                     listDrop.assign( inoutListTriangle.size(), 0 );
                     listNew.clear();
                     bool bFailed = false;
-                    for ( size_t group = 0; group < listTag.size() && bFailed == false; ++group )
+                    for ( size_t group = 0; group < state._listTag.size() && bFailed == false; ++group )
                     {
-                        if ( listRebuild[group] == SW_FALSE )
+                        if ( state._listRebuild[group] == SW_FALSE )
                             continue;
-                        const Triangle& sample = inoutListTriangle[listGroupTriangle[group][0]];
-                        const float3    normal{ sample._arrVertex[0]._arrNormal[0], sample._arrVertex[0]._arrNormal[1], sample._arrVertex[0]._arrNormal[2] };
-                        float3          axisU{};
-                        float3          axisV{};
-                        makePlaneBasis( normal, axisU, axisV );
-                        vector<float3>         listPoint3;
-                        vector<float2>         listPoint2;
-                        vector<vector<uint32>> listLoopIndex;
-                        for ( const vector<uint64>& loop : listGroupLoop[group] )
-                        {
-                            vector<uint32> listLoopCorner;
-                            for ( const uint64 key : loop )
-                            {
-                                if ( isRemovable( key ) )
-                                    continue;
-                                const float3& point = mapPoint[key];
-                                listLoopCorner.push_back( static_cast<uint32>( listPoint3.size() ) );
-                                listPoint3.push_back( point );
-                                listPoint2.push_back( float2{ point.dot( axisU ), point.dot( axisV ) } );
-                            }
-                            listLoopIndex.push_back( std::move( listLoopCorner ) );
-                        }
-                        vector<uint32> listIndex;
-                        if ( PolygonTriangulationUtil::triangulate( listPoint2, listLoopIndex, listIndex ) == false )
-                        {
-                            for ( const vector<uint64>& loop : listGroupLoop[group] )
-                            {
-                                for ( const uint64 key : loop )
-                                {
-                                    mapKeep[key] = SW_TRUE;
-                                }
-                            }
-                            listRebuild[group] = SW_FALSE;
-                            bFailed            = true;
-                            break;
-                        }
-                        for ( const uint32 index : listGroupTriangle[group] )
-                        {
-                            listDrop[index] = 1;
-                        }
-                        for ( size_t index = 0; index + 2 < listIndex.size(); index += 3 )
-                        {
-                            Triangle cap;
-                            cap._tag = listTag[group];
-                            for ( uint32 corner = 0; corner < 3; ++corner )
-                            {
-                                const uint32 pointIndex = listIndex[index + corner];
-                                RHIVertex&   vertex     = cap._arrVertex[corner];
-                                vertex                  = sample._arrVertex[0];
-                                setPosition( vertex, listPoint3[pointIndex] );
-                                vertex._arrUv[0] = listPoint2[pointIndex]._x * settings._interiorUvScale;
-                                vertex._arrUv[1] = listPoint2[pointIndex]._y * settings._interiorUvScale;
-                            }
-                            if ( hasDistinctCorners( cap ) )
-                                listNew.push_back( cap );
-                        }
+                        bFailed = rebuildGroup( inoutListTriangle, group, settings, state, listDrop, listNew ) == false;
                     }
                     if ( bFailed == false )
                         break;
@@ -888,6 +961,346 @@ namespace sw
                     }
                 }
                 return outListScratch;
+            }
+
+            struct Face
+            {
+                uint32 _arrIndex[3];
+                uint8  _bAlive;
+            };
+
+            /**
+             * @brief 처음 사면체의 네 점을 가장 먼 점들로 고릅니다.
+             * @return 네 점이 한 평면 위에 있어 부피가 없으면 false 입니다.
+             */
+            [[nodiscard]] static bool pickSeedTetrahedron( const vector<float3>& listPoint, float32 epsilon, uint32 ( &outStart )[4] )
+            {
+                outStart[0] = outStart[1] = outStart[2] = outStart[3] = 0;
+                for ( uint32 index = 1; index < static_cast<uint32>( listPoint.size() ); ++index )
+                {
+                    if ( listPoint[index]._x < listPoint[outStart[0]]._x )
+                        outStart[0] = index;
+                }
+                float32 best = -1.0f;
+                for ( uint32 index = 0; index < static_cast<uint32>( listPoint.size() ); ++index )
+                {
+                    const float32 distance = float3::getDistanceSquared( listPoint[index], listPoint[outStart[0]] );
+                    if ( distance > best )
+                    {
+                        best        = distance;
+                        outStart[1] = index;
+                    }
+                }
+                best = -1.0f;
+                for ( uint32 index = 0; index < static_cast<uint32>( listPoint.size() ); ++index )
+                {
+                    const float32 area = ( listPoint[outStart[1]] - listPoint[outStart[0]] ).cross( listPoint[index] - listPoint[outStart[0]] ).getLengthSquared();
+                    if ( area > best )
+                    {
+                        best        = area;
+                        outStart[2] = index;
+                    }
+                }
+                const float3 baseNormal = ( listPoint[outStart[1]] - listPoint[outStart[0]] ).cross( listPoint[outStart[2]] - listPoint[outStart[0]] );
+                best                    = -1.0f;
+                for ( uint32 index = 0; index < static_cast<uint32>( listPoint.size() ); ++index )
+                {
+                    const float32 height = MathUtil::abs( baseNormal.dot( listPoint[index] - listPoint[outStart[0]] ) );
+                    if ( height > best )
+                    {
+                        best        = height;
+                        outStart[3] = index;
+                    }
+                }
+                return best > epsilon * baseNormal.getLength();
+            }
+
+            /** @brief 면을 바깥(@p inside 의 반대쪽)을 향하게 감아 더합니다. */
+            static void addFaceOutward( vector<Face>& inoutListFace, const vector<float3>& listPoint, const float3& inside, uint32 a, uint32 b, uint32 c )
+            {
+                const float3 normal = ( listPoint[b] - listPoint[a] ).cross( listPoint[c] - listPoint[a] );
+                if ( normal.dot( listPoint[a] - inside ) < 0.0f )
+                    inoutListFace.push_back( Face{
+                        { a, c, b },
+                        SW_TRUE
+                    } );
+                else
+                    inoutListFace.push_back( Face{
+                        { a, b, c },
+                        SW_TRUE
+                    } );
+            }
+
+            /** @brief 점마다 보이는 면을 지우고, 지평선 모서리마다 그 점과 새 면을 잇습니다. */
+            static void growHull( const vector<float3>& listPoint, float32 epsilon, vector<Face>& inoutListFace )
+            {
+                unordered_map<uint64, uint32> mapEdgeFace;
+                for ( uint32 point = 0; point < static_cast<uint32>( listPoint.size() ); ++point )
+                {
+                    vector<uint32> listVisible;
+                    for ( uint32 face = 0; face < static_cast<uint32>( inoutListFace.size() ); ++face )
+                    {
+                        if ( inoutListFace[face]._bAlive == SW_FALSE )
+                            continue;
+                        const float3& a      = listPoint[inoutListFace[face]._arrIndex[0]];
+                        const float3  normal = ( listPoint[inoutListFace[face]._arrIndex[1]] - a ).cross( listPoint[inoutListFace[face]._arrIndex[2]] - a );
+                        if ( normal.dot( listPoint[point] - a ) > epsilon * normal.getLength() )
+                            listVisible.push_back( face );
+                    }
+                    if ( listVisible.empty() )
+                        continue;
+                    mapEdgeFace.clear();
+                    for ( const uint32 face : listVisible )
+                    {
+                        for ( uint32 corner = 0; corner < 3; ++corner )
+                        {
+                            const uint64 from                = inoutListFace[face]._arrIndex[corner];
+                            const uint64 to                  = inoutListFace[face]._arrIndex[( corner + 1 ) % 3];
+                            mapEdgeFace[( from << 32 ) | to] = face;
+                        }
+                    }
+                    vector<std::pair<uint32, uint32>> listHorizon;
+                    for ( const uint32 face : listVisible )
+                    {
+                        for ( uint32 corner = 0; corner < 3; ++corner )
+                        {
+                            const uint32 from = inoutListFace[face]._arrIndex[corner];
+                            const uint32 to   = inoutListFace[face]._arrIndex[( corner + 1 ) % 3];
+                            if ( mapEdgeFace.find( ( static_cast<uint64>( to ) << 32 ) | from ) == mapEdgeFace.end() )
+                                listHorizon.emplace_back( from, to );
+                        }
+                    }
+                    for ( const uint32 face : listVisible )
+                    {
+                        inoutListFace[face]._bAlive = SW_FALSE;
+                    }
+                    for ( const std::pair<uint32, uint32>& edge : listHorizon )
+                    {
+                        inoutListFace.push_back( Face{
+                            { edge.first, edge.second, point },
+                            SW_TRUE
+                        } );
+                    }
+                }
+            }
+
+            /** @brief `MeshFractureUtil::fracture` 의 단계 함수들입니다. 단계마다 앞 단계의 결과를 값으로 받습니다. */
+
+            /** @brief 시드마다 자른 조각과, 대리 부피일 때 원래 겉면의 조각입니다. */
+            struct SiteCut
+            {
+                vector<vector<Triangle>> _listSitePiece;
+                vector<vector<Triangle>> _listSiteSurface;
+                uint32                   _openLoopCount{ 0 };
+            };
+
+            /** @brief 부피가 있는 조각의 번호표와 그래프입니다. */
+            struct PieceSet
+            {
+                vector<uint32> _listPieceOfSite;
+                vector<uint32> _listSiteOfPiece;
+                FractureGraph  _graph;
+            };
+
+            static void makeTriangles( const vector<RHIVertex>& listInput, int32 tag, vector<Triangle>& outListTriangle )
+            {
+                outListTriangle.reserve( listInput.size() / 3 );
+                for ( size_t index = 0; index + 2 < listInput.size(); index += 3 )
+                {
+                    Triangle triangle;
+                    triangle._arrVertex[0] = listInput[index];
+                    triangle._arrVertex[1] = listInput[index + 1];
+                    triangle._arrVertex[2] = listInput[index + 2];
+                    triangle._tag          = tag;
+                    outListTriangle.push_back( triangle );
+                }
+            }
+
+            /** @brief 조각의 정점이 시드에서 가장 멀리 떨어진 거리의 제곱입니다. */
+            static float32 computeRadiusSquared( const vector<Triangle>& listTriangle, const float3& site )
+            {
+                float32 radiusSquared = 0.0f;
+                for ( const Triangle& triangle : listTriangle )
+                {
+                    for ( const RHIVertex& vertex : triangle._arrVertex )
+                    {
+                        radiusSquared = MathUtil::max( radiusSquared, float3::getDistanceSquared( MeshFractureInternal::getPosition( vertex ), site ) );
+                    }
+                }
+                return radiusSquared;
+            }
+
+            /**
+             * @brief 쪼갤 부피를 고릅니다. 메시 자체이거나 닫힌 대리(경계 상자, 볼록 껍질)입니다.
+             * @details 대리면 원래 겉면은 따로 막지 않고 자른다.
+             */
+            static void pickVolume( const vector<RHIVertex>& listWelded, const FractureSettings& settings, bool bProxy, vector<RHIVertex>& outListVolume )
+            {
+                if ( settings._volume == FractureVolume::Hull )
+                    MeshFractureUtil::makeConvexHull( listWelded, outListVolume );
+                if ( settings._volume == FractureVolume::Bounds || ( settings._volume == FractureVolume::Hull && outListVolume.empty() ) )
+                    MeshFractureInternal::makeBoundsVolume( listWelded, outListVolume );
+                if ( bProxy == false )
+                    outListVolume = listWelded;
+            }
+
+            /** @brief 시드 하나의 셀을 가까운 이웃부터 이등분 평면으로 자릅니다. 자른 조각과 겉면 조각을 @p outCut 에 넣습니다. */
+            static void cutSite( uint32 site, const vector<float3>& listSite, const vector<Triangle>& listSource, const vector<Triangle>& listSurfaceSource, const FractureSettings& settings,
+                                 vector<Triangle>& inoutListScratch, vector<std::pair<float32, uint32>>& inoutListOrder, SiteCut& inoutCut )
+            {
+                const uint32     siteCount           = static_cast<uint32>( listSite.size() );
+                vector<Triangle> listPieceTriangle   = listSource;
+                vector<Triangle> listSurfaceTriangle = listSurfaceSource;
+                if ( siteCount > 1 )
+                {
+                    inoutListOrder.clear();
+                    for ( uint32 other = 0; other < siteCount; ++other )
+                    {
+                        if ( other != site )
+                            inoutListOrder.emplace_back( float3::getDistanceSquared( listSite[site], listSite[other] ), other );
+                    }
+                    std::sort( inoutListOrder.begin(), inoutListOrder.end() );
+                    float32 radiusSquared = computeRadiusSquared( listPieceTriangle, listSite[site] );
+                    for ( const std::pair<float32, uint32>& entry : inoutListOrder )
+                    {
+                        // 이등분 평면까지의 거리는 시드 거리 / 2 다. 조각 반경보다 멀면 이 평면도, 뒤의 평면도 닿지 않는다.
+                        if ( entry.first * 0.25f > radiusSquared )
+                            break;
+                        const float3  delta       = listSite[entry.second] - listSite[site];
+                        const float3  normal      = delta / MathUtil::sqrt( entry.first );
+                        const float32 offset      = normal.dot( ( listSite[entry.second] + listSite[site] ) * 0.5f );
+                        float32       maxDistance = -MathUtil::kMaxFloat;
+                        for ( const Triangle& triangle : listPieceTriangle )
+                        {
+                            for ( const RHIVertex& vertex : triangle._arrVertex )
+                            {
+                                maxDistance = MathUtil::max( maxDistance, normal.dot( MeshFractureInternal::getPosition( vertex ) ) - offset );
+                            }
+                        }
+                        if ( maxDistance <= 0.0f )
+                            continue;
+                        bool bNearDuplicate = false;
+                        inoutCut._openLoopCount += MeshFractureInternal::clipPiece( listPieceTriangle, normal, offset, static_cast<int32>( entry.second ), settings, inoutListScratch, bNearDuplicate );
+                        if ( bNearDuplicate )
+                            MeshFractureInternal::cleanPiece( inoutListScratch );
+                        listPieceTriangle.swap( inoutListScratch );
+                        if ( listSurfaceTriangle.empty() == false )
+                        {
+                            (void)MeshFractureInternal::clipPiece( listSurfaceTriangle, normal, offset, MeshFractureInternal::kSurfaceTag, settings, inoutListScratch, bNearDuplicate,
+                                                                   false ); // 겉면은 막지 않고 자르므로 열린 고리 수는 셀 필요가 없다
+                            listSurfaceTriangle.swap( inoutListScratch );
+                        }
+                        if ( listPieceTriangle.empty() )
+                            break;
+                        radiusSquared = computeRadiusSquared( listPieceTriangle, listSite[site] );
+                    }
+                }
+                MeshFractureInternal::simplifyCaps( listPieceTriangle, settings );
+                inoutCut._listSitePiece[site]   = std::move( listPieceTriangle );
+                inoutCut._listSiteSurface[site] = std::move( listSurfaceTriangle );
+            }
+
+            /** @brief 부피가 있는 조각만 번호를 매기고 그래프 노드(무게중심 · 부피)를 만듭니다. 빈 셀과 부피 0 은 뺍니다. */
+            static void numberPieces( const SiteCut& cut, PieceSet& outPieces )
+            {
+                const uint32      siteCount = static_cast<uint32>( cut._listSitePiece.size() );
+                vector<RHIVertex> listScratchVertex;
+                outPieces._listPieceOfSite.assign( siteCount, 0xFFFFFFFFu );
+                for ( uint32 site = 0; site < siteCount; ++site )
+                {
+                    if ( cut._listSitePiece[site].empty() )
+                        continue;
+                    float3        centroid{};
+                    const float32 volume = MeshFractureUtil::computeVolume( MeshFractureInternal::asVertices( cut._listSitePiece[site], listScratchVertex ), centroid );
+                    if ( volume <= 0.0f )
+                        continue;
+                    outPieces._listPieceOfSite[site] = static_cast<uint32>( outPieces._listSiteOfPiece.size() );
+                    outPieces._listSiteOfPiece.push_back( site );
+                    FractureNode node;
+                    node._centroid = centroid;
+                    node._volume   = volume;
+                    outPieces._graph._listNode.push_back( node );
+                }
+                outPieces._graph._leafCount = static_cast<uint32>( outPieces._listSiteOfPiece.size() );
+            }
+
+            /** @brief 연결: 조각 i 에 j 쪽 평면이 만든 안쪽 면 넓이다. 두 쪽 중 작은 값을 쓴다(둘 다 닿아야 연결이다). */
+            static void linkPieces( const SiteCut& cut, PieceSet& inoutPieces )
+            {
+                const uint32                   pieceCount = static_cast<uint32>( inoutPieces._listSiteOfPiece.size() );
+                unordered_map<uint64, float32> mapArea;
+                for ( uint32 piece = 0; piece < pieceCount; ++piece )
+                {
+                    for ( const Triangle& triangle : cut._listSitePiece[inoutPieces._listSiteOfPiece[piece]] )
+                    {
+                        if ( triangle._tag < 0 || inoutPieces._listPieceOfSite[static_cast<uint32>( triangle._tag )] == 0xFFFFFFFFu )
+                            continue;
+                        const uint32 other = inoutPieces._listPieceOfSite[static_cast<uint32>( triangle._tag )];
+                        const uint64 key   = ( static_cast<uint64>( piece ) << 32 ) | other;
+                        mapArea[key] += MeshFractureInternal::computeTriangleArea( MeshFractureInternal::getPosition( triangle._arrVertex[0] ),
+                                                                                   MeshFractureInternal::getPosition( triangle._arrVertex[1] ),
+                                                                                   MeshFractureInternal::getPosition( triangle._arrVertex[2] ) );
+                    }
+                }
+                for ( uint32 pieceA = 0; pieceA < pieceCount; ++pieceA )
+                {
+                    for ( uint32 pieceB = pieceA + 1; pieceB < pieceCount; ++pieceB )
+                    {
+                        const auto iterAb = mapArea.find( ( static_cast<uint64>( pieceA ) << 32 ) | pieceB );
+                        const auto iterBa = mapArea.find( ( static_cast<uint64>( pieceB ) << 32 ) | pieceA );
+                        if ( iterAb == mapArea.end() || iterBa == mapArea.end() )
+                            continue;
+                        inoutPieces._graph._listLink.push_back( FractureLink{ pieceA, pieceB, MathUtil::min( iterAb->second, iterBa->second ) } );
+                    }
+                }
+                FractureGraphUtil::normalizeLinks( inoutPieces._graph._listLink );
+            }
+
+            /** @brief 조각 하나의 렌더링 삼각형을 에셋에 더합니다. 메시 부피면 조각 그대로, 대리 부피면 원래 겉면 조각과 대리의 안쪽 면을 씁니다(대리의 바깥 면은 그리지 않는다). */
+            static void appendPieceMesh( const vector<Triangle>& listTriangle, const vector<Triangle>& listSurface, bool bProxy, FractureAsset& inoutAsset )
+            {
+                const auto appendTriangle = [&inoutAsset]( const Triangle& triangle, FractureSurfaceSlot slot )
+                {
+                    for ( const RHIVertex& vertex : triangle._arrVertex )
+                    {
+                        inoutAsset._listVertex.push_back( vertex );
+                    }
+                    inoutAsset._listTriangleSlot.push_back( static_cast<uint8>( slot ) );
+                };
+                for ( const Triangle& triangle : listSurface )
+                {
+                    appendTriangle( triangle, FractureSurfaceSlot::Outer );
+                }
+                for ( const Triangle& triangle : listTriangle )
+                {
+                    if ( triangle._tag >= 0 )
+                        appendTriangle( triangle, FractureSurfaceSlot::Interior );
+                    else if ( bProxy == false )
+                        appendTriangle( triangle, FractureSurfaceSlot::Outer );
+                }
+            }
+
+            /** @brief 잎 조각마다 정점 · 경계 · 껍질 점을 에셋에 채웁니다. 잎 순서는 계층 구성(`populateHierarchy`)이 정합니다. */
+            static void fillPieces( const SiteCut& cut, const PieceSet& pieces, const vector<uint32>& listLeafOrder, const FractureSettings& settings, bool bProxy, FractureAsset& inoutAsset )
+            {
+                const uint32 pieceCount = static_cast<uint32>( pieces._listSiteOfPiece.size() );
+                for ( uint32 leaf = 0; leaf < pieceCount; ++leaf )
+                {
+                    const uint32            site         = pieces._listSiteOfPiece[listLeafOrder[leaf]];
+                    const vector<Triangle>& listTriangle = cut._listSitePiece[site];
+                    FracturePiece           piece;
+                    piece._firstVertex = static_cast<uint32>( inoutAsset._listVertex.size() );
+                    appendPieceMesh( listTriangle, cut._listSiteSurface[site], bProxy, inoutAsset );
+                    piece._vertexCount = static_cast<uint32>( inoutAsset._listVertex.size() ) - piece._firstVertex;
+                    MeshFractureInternal::collectBounds( vector_reference<const RHIVertex>{ inoutAsset._listVertex.data() + piece._firstVertex, piece._vertexCount }, piece._boundsMin,
+                                                         piece._boundsMax );
+                    vector<float3> listHull;
+                    MeshFractureInternal::makeHull( listTriangle, inoutAsset._graph._listNode[leaf]._centroid, MathUtil::max( settings._maxHullPoint, 8u ), listHull );
+                    piece._firstHullPoint = static_cast<uint32>( inoutAsset._listHullPoint.size() );
+                    piece._hullPointCount = static_cast<uint32>( listHull.size() );
+                    inoutAsset._listHullPoint.insert( inoutAsset._listHullPoint.end(), listHull.begin(), listHull.end() );
+                    inoutAsset._listPiece.push_back( piece );
+                }
             }
         };
     } // namespace
@@ -984,123 +1397,18 @@ namespace sw
         float3 hi{};
         MeshFractureInternal::collectBounds( listVertex, lo, hi );
         const float32 epsilon = MathUtil::max( ( hi - lo ).getLength(), 1.0e-3f ) * 1.0e-6f;
-        // 처음 사면체는 가장 먼 점들로 만든다.
-        uint32 arrStart[4] = { 0, 0, 0, 0 };
-        for ( uint32 index = 1; index < static_cast<uint32>( listPoint.size() ); ++index )
-        {
-            if ( listPoint[index]._x < listPoint[arrStart[0]]._x )
-                arrStart[0] = index;
-        }
-        float32 best = -1.0f;
-        for ( uint32 index = 0; index < static_cast<uint32>( listPoint.size() ); ++index )
-        {
-            const float32 distance = float3::getDistanceSquared( listPoint[index], listPoint[arrStart[0]] );
-            if ( distance > best )
-            {
-                best        = distance;
-                arrStart[1] = index;
-            }
-        }
-        best = -1.0f;
-        for ( uint32 index = 0; index < static_cast<uint32>( listPoint.size() ); ++index )
-        {
-            const float32 area = ( listPoint[arrStart[1]] - listPoint[arrStart[0]] ).cross( listPoint[index] - listPoint[arrStart[0]] ).getLengthSquared();
-            if ( area > best )
-            {
-                best        = area;
-                arrStart[2] = index;
-            }
-        }
-        const float3 baseNormal = ( listPoint[arrStart[1]] - listPoint[arrStart[0]] ).cross( listPoint[arrStart[2]] - listPoint[arrStart[0]] );
-        best                    = -1.0f;
-        for ( uint32 index = 0; index < static_cast<uint32>( listPoint.size() ); ++index )
-        {
-            const float32 height = MathUtil::abs( baseNormal.dot( listPoint[index] - listPoint[arrStart[0]] ) );
-            if ( height > best )
-            {
-                best        = height;
-                arrStart[3] = index;
-            }
-        }
-        if ( best <= epsilon * baseNormal.getLength() )
+        uint32        arrStart[4];
+        if ( MeshFractureInternal::pickSeedTetrahedron( listPoint, epsilon, arrStart ) == false )
             return;
 
-        struct Face
-        {
-            uint32 _arrIndex[3];
-            uint8  _bAlive;
-        };
-        vector<Face> listFace;
-        const float3 inside         = ( listPoint[arrStart[0]] + listPoint[arrStart[1]] + listPoint[arrStart[2]] + listPoint[arrStart[3]] ) * 0.25f;
-        const auto   addFaceOutward = [&listFace, &listPoint, &inside]( uint32 a, uint32 b, uint32 c )
-        {
-            const float3 normal = ( listPoint[b] - listPoint[a] ).cross( listPoint[c] - listPoint[a] );
-            if ( normal.dot( listPoint[a] - inside ) < 0.0f )
-                listFace.push_back( Face{
-                    { a, c, b },
-                    SW_TRUE
-                } );
-            else
-                listFace.push_back( Face{
-                    { a, b, c },
-                    SW_TRUE
-                } );
-        };
-        addFaceOutward( arrStart[0], arrStart[1], arrStart[2] );
-        addFaceOutward( arrStart[0], arrStart[1], arrStart[3] );
-        addFaceOutward( arrStart[0], arrStart[2], arrStart[3] );
-        addFaceOutward( arrStart[1], arrStart[2], arrStart[3] );
-
-        // 점마다 보이는 면을 지우고, 지평선 모서리마다 그 점과 새 면을 잇는다.
-        unordered_map<uint64, uint32> mapEdgeFace;
-        for ( uint32 point = 0; point < static_cast<uint32>( listPoint.size() ); ++point )
-        {
-            vector<uint32> listVisible;
-            for ( uint32 face = 0; face < static_cast<uint32>( listFace.size() ); ++face )
-            {
-                if ( listFace[face]._bAlive == SW_FALSE )
-                    continue;
-                const float3& a      = listPoint[listFace[face]._arrIndex[0]];
-                const float3  normal = ( listPoint[listFace[face]._arrIndex[1]] - a ).cross( listPoint[listFace[face]._arrIndex[2]] - a );
-                if ( normal.dot( listPoint[point] - a ) > epsilon * normal.getLength() )
-                    listVisible.push_back( face );
-            }
-            if ( listVisible.empty() )
-                continue;
-            mapEdgeFace.clear();
-            for ( const uint32 face : listVisible )
-            {
-                for ( uint32 corner = 0; corner < 3; ++corner )
-                {
-                    const uint64 from                = listFace[face]._arrIndex[corner];
-                    const uint64 to                  = listFace[face]._arrIndex[( corner + 1 ) % 3];
-                    mapEdgeFace[( from << 32 ) | to] = face;
-                }
-            }
-            vector<std::pair<uint32, uint32>> listHorizon;
-            for ( const uint32 face : listVisible )
-            {
-                for ( uint32 corner = 0; corner < 3; ++corner )
-                {
-                    const uint32 from = listFace[face]._arrIndex[corner];
-                    const uint32 to   = listFace[face]._arrIndex[( corner + 1 ) % 3];
-                    if ( mapEdgeFace.find( ( static_cast<uint64>( to ) << 32 ) | from ) == mapEdgeFace.end() )
-                        listHorizon.emplace_back( from, to );
-                }
-            }
-            for ( const uint32 face : listVisible )
-            {
-                listFace[face]._bAlive = SW_FALSE;
-            }
-            for ( const std::pair<uint32, uint32>& edge : listHorizon )
-            {
-                listFace.push_back( Face{
-                    { edge.first, edge.second, point },
-                    SW_TRUE
-                } );
-            }
-        }
-        for ( const Face& face : listFace )
+        vector<MeshFractureInternal::Face> listFace;
+        const float3                       inside = ( listPoint[arrStart[0]] + listPoint[arrStart[1]] + listPoint[arrStart[2]] + listPoint[arrStart[3]] ) * 0.25f;
+        MeshFractureInternal::addFaceOutward( listFace, listPoint, inside, arrStart[0], arrStart[1], arrStart[2] );
+        MeshFractureInternal::addFaceOutward( listFace, listPoint, inside, arrStart[0], arrStart[1], arrStart[3] );
+        MeshFractureInternal::addFaceOutward( listFace, listPoint, inside, arrStart[0], arrStart[2], arrStart[3] );
+        MeshFractureInternal::addFaceOutward( listFace, listPoint, inside, arrStart[1], arrStart[2], arrStart[3] );
+        MeshFractureInternal::growHull( listPoint, epsilon, listFace );
+        for ( const MeshFractureInternal::Face& face : listFace )
         {
             if ( face._bAlive == SW_TRUE )
                 MeshFractureInternal::addFace( outListVertex, listPoint[face._arrIndex[0]], listPoint[face._arrIndex[1]], listPoint[face._arrIndex[2]] );
@@ -1221,6 +1529,7 @@ namespace sw
     bool MeshFractureUtil::fracture( vector_reference<const RHIVertex> listVertex, const FractureSettings& settings, FractureAsset& outAsset, string& outError )
     {
         using Triangle = MeshFractureInternal::Triangle;
+        using Build    = MeshFractureInternal;
         outAsset.clear();
         outError.clear();
         if ( listVertex.size() < 3 || listVertex.size() % 3 != 0 )
@@ -1238,32 +1547,13 @@ namespace sw
         // 용접: 허용 오차 안의 위치를 한 점으로 맞춘다. 자르기는 위치가 비트까지 같아야 이웃 삼각형의 교점이 같다.
         vector<RHIVertex> listWelded( listVertex.begin(), listVertex.end() );
         MeshFractureInternal::weldPositions( listWelded );
-        // 쪼갤 부피는 메시 자체이거나 닫힌 대리(경계 상자, 볼록 껍질)다. 대리면 원래 겉면은 따로 막지 않고 자른다.
         vector<RHIVertex> listVolume;
-        if ( settings._volume == FractureVolume::Hull )
-            makeConvexHull( listWelded, listVolume );
-        if ( settings._volume == FractureVolume::Bounds || ( settings._volume == FractureVolume::Hull && listVolume.empty() ) )
-            MeshFractureInternal::makeBoundsVolume( listWelded, listVolume );
-        if ( bProxy == false )
-            listVolume = listWelded;
-        const auto makeTriangles = []( const vector<RHIVertex>& listInput, int32 tag, vector<Triangle>& outListTriangle )
-        {
-            outListTriangle.reserve( listInput.size() / 3 );
-            for ( size_t index = 0; index + 2 < listInput.size(); index += 3 )
-            {
-                Triangle triangle;
-                triangle._arrVertex[0] = listInput[index];
-                triangle._arrVertex[1] = listInput[index + 1];
-                triangle._arrVertex[2] = listInput[index + 2];
-                triangle._tag          = tag;
-                outListTriangle.push_back( triangle );
-            }
-        };
+        Build::pickVolume( listWelded, settings, bProxy, listVolume );
         vector<Triangle> listSource;
         vector<Triangle> listSurfaceSource;
-        makeTriangles( listVolume, MeshFractureInternal::kOuterTag, listSource );
+        Build::makeTriangles( listVolume, MeshFractureInternal::kOuterTag, listSource );
         if ( bProxy )
-            makeTriangles( listWelded, MeshFractureInternal::kSurfaceTag, listSurfaceSource );
+            Build::makeTriangles( listWelded, MeshFractureInternal::kSurfaceTag, listSurfaceSource );
 
         vector<float3> listSite;
         MeshFractureInternal::placeSites( listVolume, settings, listSite );
@@ -1271,179 +1561,34 @@ namespace sw
             listSite.push_back( float3{} );
         const uint32 siteCount = static_cast<uint32>( listSite.size() );
 
-        // 셀마다 가까운 이웃부터 이등분 평면으로 자른다.
-        vector<vector<Triangle>>           listSitePiece( siteCount );
-        vector<vector<Triangle>>           listSiteSurface( siteCount );
-        uint32                             openLoopCount = 0;
+        Build::SiteCut cut;
+        cut._listSitePiece.resize( siteCount );
+        cut._listSiteSurface.resize( siteCount );
         vector<Triangle>                   listScratch;
         vector<std::pair<float32, uint32>> listOrder;
         for ( uint32 site = 0; site < siteCount; ++site )
         {
-            vector<Triangle> listPieceTriangle   = listSource;
-            vector<Triangle> listSurfaceTriangle = listSurfaceSource;
-            if ( siteCount > 1 )
-            {
-                listOrder.clear();
-                for ( uint32 other = 0; other < siteCount; ++other )
-                {
-                    if ( other != site )
-                        listOrder.emplace_back( float3::getDistanceSquared( listSite[site], listSite[other] ), other );
-                }
-                std::sort( listOrder.begin(), listOrder.end() );
-                float32 radiusSquared = 0.0f;
-                for ( const Triangle& triangle : listPieceTriangle )
-                {
-                    for ( const RHIVertex& vertex : triangle._arrVertex )
-                    {
-                        radiusSquared = MathUtil::max( radiusSquared, float3::getDistanceSquared( MeshFractureInternal::getPosition( vertex ), listSite[site] ) );
-                    }
-                }
-                for ( const std::pair<float32, uint32>& entry : listOrder )
-                {
-                    // 이등분 평면까지의 거리는 시드 거리 / 2 다. 조각 반경보다 멀면 이 평면도, 뒤의 평면도 닿지 않는다.
-                    if ( entry.first * 0.25f > radiusSquared )
-                        break;
-                    const float3  delta       = listSite[entry.second] - listSite[site];
-                    const float3  normal      = delta / MathUtil::sqrt( entry.first );
-                    const float32 offset      = normal.dot( ( listSite[entry.second] + listSite[site] ) * 0.5f );
-                    float32       maxDistance = -MathUtil::kMaxFloat;
-                    for ( const Triangle& triangle : listPieceTriangle )
-                    {
-                        for ( const RHIVertex& vertex : triangle._arrVertex )
-                        {
-                            maxDistance = MathUtil::max( maxDistance, normal.dot( MeshFractureInternal::getPosition( vertex ) ) - offset );
-                        }
-                    }
-                    if ( maxDistance <= 0.0f )
-                        continue;
-                    bool bNearDuplicate = false;
-                    openLoopCount += MeshFractureInternal::clipPiece( listPieceTriangle, normal, offset, static_cast<int32>( entry.second ), settings, listScratch, bNearDuplicate );
-                    if ( bNearDuplicate )
-                        MeshFractureInternal::cleanPiece( listScratch );
-                    listPieceTriangle.swap( listScratch );
-                    if ( listSurfaceTriangle.empty() == false )
-                    {
-                        (void)MeshFractureInternal::clipPiece( listSurfaceTriangle, normal, offset, MeshFractureInternal::kSurfaceTag, settings, listScratch, bNearDuplicate,
-                                                               false );
-                        listSurfaceTriangle.swap( listScratch );
-                    }
-                    if ( listPieceTriangle.empty() )
-                        break;
-                    radiusSquared = 0.0f;
-                    for ( const Triangle& triangle : listPieceTriangle )
-                    {
-                        for ( const RHIVertex& vertex : triangle._arrVertex )
-                        {
-                            radiusSquared = MathUtil::max( radiusSquared, float3::getDistanceSquared( MeshFractureInternal::getPosition( vertex ), listSite[site] ) );
-                        }
-                    }
-                }
-            }
-            MeshFractureInternal::simplifyCaps( listPieceTriangle, settings );
-            listSitePiece[site]   = std::move( listPieceTriangle );
-            listSiteSurface[site] = std::move( listSurfaceTriangle );
+            Build::cutSite( site, listSite, listSource, listSurfaceSource, settings, listScratch, listOrder, cut );
         }
-        if ( openLoopCount > 0 )
-            SW_LOG_WARNING( "Fracture left %# cut loops open (non-manifold input) - those pieces may have holes", openLoopCount );
+        if ( cut._openLoopCount > 0 )
+            SW_LOG_WARNING( "Fracture left %# cut loops open (non-manifold input) - those pieces may have holes", cut._openLoopCount );
 
-        // 조각: 빈 셀과 부피 0 은 뺀다.
-        vector<uint32>    listPieceOfSite( siteCount, 0xFFFFFFFFu );
-        vector<uint32>    listSiteOfPiece;
-        FractureGraph     graph;
-        vector<RHIVertex> listScratchVertex;
-        for ( uint32 site = 0; site < siteCount; ++site )
-        {
-            if ( listSitePiece[site].empty() )
-                continue;
-            float3        centroid{};
-            const float32 volume = computeVolume( MeshFractureInternal::asVertices( listSitePiece[site], listScratchVertex ), centroid );
-            if ( volume <= 0.0f )
-                continue;
-            listPieceOfSite[site] = static_cast<uint32>( listSiteOfPiece.size() );
-            listSiteOfPiece.push_back( site );
-            FractureNode node;
-            node._centroid = centroid;
-            node._volume   = volume;
-            graph._listNode.push_back( node );
-        }
-        if ( listSiteOfPiece.empty() )
+        Build::PieceSet pieces;
+        Build::numberPieces( cut, pieces );
+        if ( pieces._listSiteOfPiece.empty() )
         {
             outError = "no piece has volume";
             return false;
         }
-        const uint32 pieceCount = static_cast<uint32>( listSiteOfPiece.size() );
-        graph._leafCount        = pieceCount;
-
-        // 연결: 조각 i 에 j 쪽 평면이 만든 안쪽 면 넓이다. 두 쪽 중 작은 값을 쓴다(둘 다 닿아야 연결이다).
-        unordered_map<uint64, float32> mapArea;
-        for ( uint32 piece = 0; piece < pieceCount; ++piece )
-        {
-            for ( const Triangle& triangle : listSitePiece[listSiteOfPiece[piece]] )
-            {
-                if ( triangle._tag < 0 || listPieceOfSite[static_cast<uint32>( triangle._tag )] == 0xFFFFFFFFu )
-                    continue;
-                const uint32 other = listPieceOfSite[static_cast<uint32>( triangle._tag )];
-                const uint64 key   = ( static_cast<uint64>( piece ) << 32 ) | other;
-                mapArea[key] += MeshFractureInternal::computeTriangleArea( MeshFractureInternal::getPosition( triangle._arrVertex[0] ),
-                                                                           MeshFractureInternal::getPosition( triangle._arrVertex[1] ),
-                                                                           MeshFractureInternal::getPosition( triangle._arrVertex[2] ) );
-            }
-        }
-        for ( uint32 pieceA = 0; pieceA < pieceCount; ++pieceA )
-        {
-            for ( uint32 pieceB = pieceA + 1; pieceB < pieceCount; ++pieceB )
-            {
-                const auto iterAb = mapArea.find( ( static_cast<uint64>( pieceA ) << 32 ) | pieceB );
-                const auto iterBa = mapArea.find( ( static_cast<uint64>( pieceB ) << 32 ) | pieceA );
-                if ( iterAb == mapArea.end() || iterBa == mapArea.end() )
-                    continue;
-                graph._listLink.push_back( FractureLink{ pieceA, pieceB, MathUtil::min( iterAb->second, iterBa->second ) } );
-            }
-        }
-        FractureGraphUtil::normalizeLinks( graph._listLink );
+        Build::linkPieces( cut, pieces );
 
         vector<uint32> listLeafOrder;
-        FractureGraphUtil::populateHierarchy( graph, settings._listLevelCount, listLeafOrder );
+        FractureGraphUtil::populateHierarchy( pieces._graph, settings._listLevelCount, listLeafOrder );
 
-        outAsset._graph = std::move( graph );
+        outAsset._graph = std::move( pieces._graph );
         outAsset._seed  = settings._seed;
         MeshFractureInternal::collectBounds( listWelded, outAsset._boundsMin, outAsset._boundsMax );
-        for ( uint32 leaf = 0; leaf < pieceCount; ++leaf )
-        {
-            const uint32            site         = listSiteOfPiece[listLeafOrder[leaf]];
-            const vector<Triangle>& listTriangle = listSitePiece[site];
-            FracturePiece           piece;
-            piece._firstVertex = static_cast<uint32>( outAsset._listVertex.size() );
-            // 렌더링: 메시 부피면 조각 그대로, 대리 부피면 원래 겉면 조각과 대리의 안쪽 면을 쓴다(대리의 바깥 면은 그리지 않는다).
-            const auto appendTriangle = [&outAsset]( const Triangle& triangle, FractureSurfaceSlot slot )
-            {
-                for ( const RHIVertex& vertex : triangle._arrVertex )
-                {
-                    outAsset._listVertex.push_back( vertex );
-                }
-                outAsset._listTriangleSlot.push_back( static_cast<uint8>( slot ) );
-            };
-            for ( const Triangle& triangle : listSiteSurface[site] )
-            {
-                appendTriangle( triangle, FractureSurfaceSlot::Outer );
-            }
-            for ( const Triangle& triangle : listTriangle )
-            {
-                if ( triangle._tag >= 0 )
-                    appendTriangle( triangle, FractureSurfaceSlot::Interior );
-                else if ( bProxy == false )
-                    appendTriangle( triangle, FractureSurfaceSlot::Outer );
-            }
-            piece._vertexCount = static_cast<uint32>( outAsset._listVertex.size() ) - piece._firstVertex;
-            MeshFractureInternal::collectBounds( vector_reference<const RHIVertex>{ outAsset._listVertex.data() + piece._firstVertex, piece._vertexCount }, piece._boundsMin,
-                                                 piece._boundsMax );
-            vector<float3> listHull;
-            MeshFractureInternal::makeHull( listTriangle, outAsset._graph._listNode[leaf]._centroid, MathUtil::max( settings._maxHullPoint, 8u ), listHull );
-            piece._firstHullPoint = static_cast<uint32>( outAsset._listHullPoint.size() );
-            piece._hullPointCount = static_cast<uint32>( listHull.size() );
-            outAsset._listHullPoint.insert( outAsset._listHullPoint.end(), listHull.begin(), listHull.end() );
-            outAsset._listPiece.push_back( piece );
-        }
+        Build::fillPieces( cut, pieces, listLeafOrder, settings, bProxy, outAsset );
         string validation;
         if ( outAsset.isValid( &validation ) == false )
         {

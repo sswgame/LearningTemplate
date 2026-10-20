@@ -1,7 +1,7 @@
 /**
  * @file BenchSceneProbes.cpp
- * @brief 벤치 탐침입니다. 측정 창 안의 정해진 프레임에 한 번 일어나는 일(새 한글 글리프 수백 개, 비동기 씬 로드)과
- *        월드 공간 UI 대량(RTS 이름표 · HP 막대)을 걸어, 그 비용을 프로파일 표(`GT.Frame` max · p99, `GT.UI.*`, `RT.Canvas.*`)로 읽게 합니다.
+ * @brief 벤치 탐침입니다. 측정 구간 안의 정해진 프레임에 한 번 일어나는 일(새 한글 글리프 수백 개, 비동기 씬 로드)과
+ *        월드 공간 UI 대량(RTS 이름표와 HP 막대)을 켜고, 그 비용을 프로파일 목록(`GT.Frame` 의 max와 p99, `GT.UI.*`, `RT.Canvas.*`)에서 읽을 수 있게 합니다.
  */
 #include "pch.h"
 
@@ -27,24 +27,26 @@
 namespace sw
 {
     /**
-     * @brief `-gv_benchUiNameplates=K`: 앞쪽 벤치 큐브 K 개에 RTS 이름표(이름 글 한 줄 + HP 막대)를 붙입니다.
-     * @details 월드 공간 UI 를 대량으로 그리는 비용(마커 투영 · 그리기 목록은 게임 스레드, 캔버스 업로드 · 그리기는 렌더 스레드)을 잰다.
-     *          기준은 RTS 유닛 2,000 개이고, 게임 스레드 `GT.UI.*` 합이 0.5 ms 를 넘으면 투영 · 컬링 · 간접 드로우를 컴퓨트로 옮길지 정한다.
-     *          HP 는 큐브마다 다른 고정값이다(바뀌지 않는 트리 출력 재사용이 어디까지 덮는지 같이 본다). `-gv_benchUiMarkers` 와 함께 주면 이름표가 이긴다.
+     * @brief `-gv_benchUiNameplates=K`: 앞쪽 벤치 큐브 K 개에 RTS 이름표(이름 한 줄과 HP 막대)를 붙입니다.
+     * @details 월드 공간 UI 를 대량으로 그리는 비용을 측정합니다. 마커 투영과 그리기 목록 만들기는 게임 스레드에서, 캔버스 업로드와 그리기는 렌더 스레드에서 합니다.
+     *          기준은 RTS 유닛 2,000개입니다. 게임 스레드 `GT.UI.*` 의 합이 0.5ms 를 넘으면 투영, 컬링, 간접 드로우를 컴퓨트로 옮길지 결정합니다.
+     *          HP 는 큐브마다 다른 고정값입니다. 바뀌지 않는 트리 출력을 재사용하는 방식이 어디까지 적용되는지도 함께 봅니다.
+     *          `-gv_benchUiMarkers` 와 함께 주면 이름표가 우선합니다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_benchUiNameplates, 0, "앞쪽 벤치 큐브 K 개에 RTS 이름표(이름 글 + HP 막대)를 붙인다 (0=사용 안 함)" );
 
     /**
      * @brief `-gv_benchUiHangulGlyphs=N`: `gv_benchProbeFrame` 프레임에 서로 다른 한글 음절 N 개로 된 긴 글을 화면에 띄웁니다.
-     * @details 새 글리프 수백 개를 처음 그리는 프레임(래스터화 · SDF · 아틀라스 업로드)의 최악 시간을 잰다. 표의 `GT.Frame` max 와 `RT.Canvas.Upload` max 를 본다.
-     *          히치가 4 ms 를 넘으면 SDF 를 컴퓨트(점프 플러딩)로 만들지 정한다. `-lang=ko` 로 띄운다 — 영어 문화권의 대체 글꼴 사슬에는 한글 글꼴이 없어 두부만 그려지고 측정이 아니다(시스템 한글 글꼴도 있어야 한다).
+     * @details 새 글리프 수백 개를 처음 그리는 프레임(래스터화, SDF, 아틀라스 업로드)의 최악 시간을 측정합니다. 프로파일 목록의 `GT.Frame` max 와 `RT.Canvas.Upload` max 를 봅니다.
+     *          히치가 4ms 를 넘으면 SDF 를 컴퓨트(점프 플러딩)로 만들지 결정합니다.
+     *          `-lang=ko` 로 실행해야 합니다. 영어 문화권의 대체 글꼴 체인에는 한글 글꼴이 없어서 글자가 두부(□)로만 그려지고, 그러면 측정이 되지 않습니다. 시스템에도 한글 글꼴이 있어야 합니다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_benchUiHangulGlyphs, 0, "탐침 프레임에 서로 다른 한글 음절 N 개의 긴 글을 띄운다(새 글리프 첫 프레임 측정, 0=사용 안 함)" );
 
     /**
      * @brief `-gv_benchSceneLoadPath=<리소스 경로>`: `gv_benchProbeFrame` 프레임에 이 씬을 비동기로 엽니다.
-     * @details 워커가 파싱 · 생성하는 동안과 활성 씬을 바꾸는 프레임의 최악 시간을 잰다(`GT.Frame` p99 · max). 로드 자체 시간은 로그
-     *          `'Scene.load.parse'` · `'Scene.load.instantiate'` 이다. 쿠킹본을 재려면 `--cooked-dir` 로 쿠킹한 폴더를 마운트한다(`Scripts/qa/SceneLoadBench.py`).
+     * @details 워커가 파싱하고 오브젝트를 생성하는 동안과, 활성 씬을 바꾸는 프레임의 최악 시간을 측정합니다(`GT.Frame` 의 p99와 max). 로드 자체에 걸린 시간은
+     *          로그의 `'Scene.load.parse'` 와 `'Scene.load.instantiate'` 에 나옵니다. 쿠킹한 결과를 측정하려면 `--cooked-dir` 로 쿠킹 폴더를 마운트합니다(`Scripts/qa/SceneLoadBench.py`).
      */
     SW_TEST_GLOBAL_VARIABLE( sw::string, gv_benchSceneLoadPath, "", "탐침 프레임에 이 씬을 비동기로 연다(로드 중 최악 프레임 측정, 비우면 사용 안 함)" );
 

@@ -1,6 +1,6 @@
 /**
  * @file VoxelAutoPlayControllerComponent.h
- * @brief VoxelCraft 의 자동 플레이 — 플레이어 폰에 빙의하는 AI 조종자입니다(걷다가 막히면 뛰고, 앞 블록을 부수고 놓는다).
+ * @brief VoxelCraft 의 자동 플레이를 맡는 AI 조종자입니다. 플레이어 폰에 빙의해 걷다가 막히면 점프하고, 앞 블록을 부수고 놓습니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -14,10 +14,14 @@ namespace sw
 {
     /**
      * @class VoxelAutoPlayControllerComponent
-     * @brief 자동 플레이가 켜지면 디렉터가 세워 플레이어 폰에 빙의시킵니다(`gv_voxelAutoPlay` · 에디터 툴바 스위치 하나 — 끄면 플레이어 조종자가 다시 쥔다).
-     * @details 몸(`VoxelPlayerComponent`)에는 자동 플레이 분기가 없습니다 — 이 조종자가 플레이어와 같은 의도(이동 · 조종 회전 · `Voxel.Jump` · `Voxel.Break` ·
-     *          `Voxel.Place`)를 냅니다. 한 주기(기본 12 초) 동안 앞으로 걸으며 천천히 돌고(앞 절반은 오른쪽, 뒤는 왼쪽), 아래를 조금 보며 주기의 정해진 구간에 부수고 한 번 놓는다(시각은 PROPERTY).
-     *          앞이 막혔거나 물 속이면 점프를 누른다(월드는 판단만 위해 읽는다). 판단 상태(`setStateName`, 탐침 `AI.State`)는 `Walk` · `Break` · `Place` 다.
+     * @brief 자동 플레이가 켜지면 디렉터가 스폰해서 플레이어 폰에 빙의시키는 조종자입니다.
+     *        `gv_voxelAutoPlay` 와 에디터 툴바의 스위치가 같은 스위치를 켜고 끕니다. 끄면 플레이어 조종자가 폰을 다시 가져갑니다.
+     * @details 몸(`VoxelPlayerComponent`)에는 자동 플레이용 분기가 없습니다. 이 조종자가 플레이어와 같은 의도를 냅니다.
+     *          의도는 이동, 조종 회전, `Voxel.Jump`, `Voxel.Break`, `Voxel.Place` 입니다.
+     *          한 주기(기본 12초) 동안 앞으로 걸으면서 천천히 돕니다. 주기의 앞 절반은 오른쪽으로, 뒤 절반은 왼쪽으로 돕니다.
+     *          아래를 조금 보며, 주기 안의 정해진 구간에 블록을 부수고 한 번 놓습니다. 구간의 시각은 PROPERTY 로 정합니다.
+     *          앞이 막혔거나 물 속이면 점프 버튼을 누릅니다. 월드는 이 판단을 위해서만 읽습니다.
+     *          판단 상태(`setStateName`, 탐침 `AI.State`)는 `Walk`, `Break`, `Place` 중 하나입니다.
      */
     REFLECT( Category = "VoxelCraft", DisplayName = "Voxel Auto Play Controller", Tooltip = "AI controller that walks, breaks and places blocks with the player pawn when auto play is on" )
     class VoxelAutoPlayControllerComponent : public AIControllerComponent

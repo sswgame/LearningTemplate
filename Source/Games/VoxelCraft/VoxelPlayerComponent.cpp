@@ -33,12 +33,12 @@ namespace sw
             static constexpr uint32 kStateTag     = FourCcUtil::make( "PLYR" );
             static constexpr uint32 kStateVersion = 1;
 
-            // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 voxelcraft.audioevents.xml 이 정한다.
+            // 사운드 이벤트 이름입니다. 클립, 범위, 동시 재생 상한은 voxelcraft.audioevents.xml 이 정합니다.
             static constexpr const utf8* kEventLand  = "Land";
             static constexpr const utf8* kEventBreak = "BlockBreak";
             static constexpr const utf8* kEventPlace = "BlockPlace";
 
-            /** @brief 부순 블록에서 얻는 블록입니다. 블록 데이터의 `drop` 이고(풀 → 흙, 돌 → 조약돌), 없으면 자기 자신, 부수지 못하는 블록이면 없음입니다. */
+            /** @brief 블록을 부수면 얻는 블록입니다. 블록 데이터의 `drop` 값이고(풀은 흙, 돌은 조약돌), 없으면 자기 자신입니다. 부수지 못하는 블록이면 공기 블록을 반환합니다. */
             static VoxelBlockIndex findDrop( const VoxelBlockCatalog& catalog, VoxelBlockIndex block )
             {
                 const VoxelBlockDef* pBlock = catalog.findBlock( block );
@@ -47,7 +47,7 @@ namespace sw
                 return pBlock->_dropID.empty() ? block : catalog.findBlockIndex( pBlock->_dropID );
             }
 
-            /** @brief 씬의 첫 복셀 플레이어입니다(탐침 — 프레임 경로가 아니다). */
+            /** @brief 씬의 첫 복셀 플레이어입니다. 탐침에서만 쓰고, 프레임 경로에서는 쓰지 않습니다. */
             static const VoxelPlayerComponent* findFirstPlayer( const GameObjectManager* pManager )
             {
                 const VoxelPlayerComponent* pFound = nullptr;
@@ -101,7 +101,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 플레이어 폰을 누가 쥐었나 — 0 플레이어 조종자, 1 자동 플레이 AI, −1 아무도. */
+            /** @brief 플레이어 폰을 누가 조종하는지 반환합니다. 0은 플레이어 조종자, 1은 자동 플레이 AI, −1은 아무도 조종하지 않는 경우입니다. */
             [[nodiscard]] static bool readControllerKind( const GameObjectManager* pManager, float64& outValue )
             {
                 const VoxelPlayerComponent* pPlayer       = findFirstPlayer( pManager );
@@ -175,7 +175,7 @@ namespace sw
         Component::onBeginPlay();
         _bBodyPlaced = SW_FALSE;
         _hotbar      = VoxelHotbar{};
-        // 물 블록과 처음 핫바는 씬 데이터의 블록 이름이다. 카탈로그나 이름이 틀리면 플레이어가 서지 않는다(이유는 오류 로그).
+        // 물 블록과 처음 핫바는 씬 데이터에 적힌 블록 이름입니다. 카탈로그나 이름이 틀리면 플레이어를 만들지 않고, 이유는 오류 로그에 남깁니다.
         const VoxelBlockCatalog* pCatalog = game::findSubsystem<VoxelBlockCatalog>();
         if ( pCatalog == nullptr )
         {
@@ -192,7 +192,7 @@ namespace sw
         GameObjectManager*            pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
         FirstPersonCameraComponent*   pCamera   = pOwner != nullptr ? pOwner->getComponent<FirstPersonCameraComponent>() : nullptr;
         const VoxelDirectorComponent* pDirector = pManager != nullptr ? GameDirectorComponent::resolve<VoxelDirectorComponent>( *pManager, _director ) : nullptr;
-        // 자동 플레이는 플레이어 조종자가 폰을 쥐지 않는다(마우스를 잠그지 않는다) — 시점은 AI 가 정한다(`setAngles` → 조종 회전 요청).
+        // 자동 플레이에서는 플레이어 조종자가 폰을 조종하지 않으므로 마우스도 잠그지 않습니다. 시점은 AI 가 정하며 `setAngles` 가 조종 회전을 요청합니다.
         PawnComponent* pPawn = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
         if ( pPawn != nullptr )
         {
@@ -201,7 +201,7 @@ namespace sw
                 setCanEverTick( false );
                 return;
             }
-            // 자동 플레이면 플레이어 조종자가 먼저 쥐지 않게 한다(잠금이 한 프레임 걸렸다 풀리지 않게) — 디렉터가 AI 를 빙의시킨다.
+            // 자동 플레이면 플레이어 조종자가 먼저 폰을 가져가지 못하게 합니다. 가져가면 마우스 잠금이 한 프레임 걸렸다 풀립니다. 디렉터가 AI 를 빙의시킵니다.
             if ( pDirector != nullptr && pDirector->isAutoPlayOn() )
                 pPawn->setAutoPossess( PawnAutoPossess::None );
         }
@@ -256,7 +256,7 @@ namespace sw
         _placedCount = placedCount;
         if ( bBodyPlaced != SW_FALSE )
         {
-            // 몸을 놓기 전에 찍은 것이면 처음 자리(다음 틱)로 둔다.
+            // 몸을 놓기 전에 기록한 상태라면 처음 위치(다음 틱)에서 시작합니다.
             _body.setPosition( position );
             _bBodyPlaced = SW_TRUE;
         }
@@ -289,14 +289,14 @@ namespace sw
         _body.step( pDirector->getWorld(), wish, bJump, bSprint, step );
         if ( bWasOnGround == false && _body.isOnGround() )
             _soundQueue.queueEvent( VoxelPlayerComponentInternal::kEventLand );
-        // 월드 밖으로 떨어지면 처음 자리로.
+        // 월드 밖으로 떨어지면 처음 위치로 되돌립니다.
         if ( _body.getPosition()._y < -10.0f )
             _body.setPosition( pDirector->findSpawnPosition() );
         pCamera->setEyePosition( _body.getEyePosition() );
 
         updateTarget( *pDirector, *pCamera );
         updateBreaking( step, *pCatalog, bBreak );
-        // 누르고 있으면 간격마다 하나 — 지나친 몫을 이어 놓기 빈도가 걸음 크기에 매이지 않는다(`Countdown::updateRepeat`).
+        // 버튼을 누르고 있으면 간격마다 하나씩 놓습니다. 지나간 시간을 이어서 세므로 놓기 빈도가 프레임 시간에 좌우되지 않습니다(`Countdown::updateRepeat`).
         if ( _placeCooldown.updateRepeat( step, _placeInterval, bPlace ) )
             placeBlock( *pDirector, *pCatalog );
         if ( _listPendingEdit.empty() == false || _soundQueue.isEmpty() == false )
@@ -312,7 +312,7 @@ namespace sw
     }
 
     // ------------------------------------------------------------------------------
-    // 몸 · 손(DuringPhysics — 자기 오브젝트, 월드는 읽기만)
+    // 몸과 손(DuringPhysics): 자기 오브젝트를 바꾸고, 월드는 읽기만 합니다.
     // ------------------------------------------------------------------------------
     void VoxelPlayerComponent::initializeBody( const VoxelDirectorComponent& director )
     {
@@ -378,7 +378,7 @@ namespace sw
         {
             const VoxelBlockIndex index = find( blockID );
             if ( index != kVoxelAirBlock )
-                (void)_hotbar.addBlock( index, 64 ); // 핫바 칸보다 많으면 넘친 것은 버린다(칸 수는 핫바가 정한다)
+                (void)_hotbar.addBlock( index, 64 ); // 핫바 슬롯보다 많으면 넘친 블록은 버립니다. 슬롯 수는 핫바가 정합니다.
         }
         return bKnown;
     }
@@ -386,14 +386,14 @@ namespace sw
     void VoxelPlayerComponent::readIntent( const PawnComponent& pawn, const VoxelBlockCatalog& catalog, float3& outWish, bool& outJump, bool& outSprint,
                                            bool& outBreak, bool& outPlace )
     {
-        // 이동 축은 조종 요 기준이다 — 1인칭 카메라가 앞 그룹에서 같은 조종 회전으로 시점을 두었다. 위아래 칸은 쓰지 않는다(물에서는 점프가 헤엄).
+        // 이동 축은 조종 요(yaw)를 기준으로 합니다. 1인칭 카메라가 앞쪽 그룹에서 같은 조종 회전으로 시점을 정해 두었습니다. 위아래 축은 쓰지 않으며, 물에서는 점프가 헤엄이 됩니다.
         const ControlIntent& intent = pawn.getIntent();
         const float3         move   = intent.computeWorldMove();
         outWish                     = float3{ move._x, 0.0f, move._z };
         outJump                     = pawn.isButtonDown( _intentSlots._jump );
         outSprint                   = pawn.isButtonDown( _intentSlots._sprint );
         outBreak                    = pawn.isButtonDown( _intentSlots._break );
-        outPlace                    = pawn.isButtonDown( _intentSlots._place ); // 처음 누름도 누름이다 — 간격은 `_placeCooldown` 이 거른다
+        outPlace                    = pawn.isButtonDown( _intentSlots._place ); // 처음 누른 틱도 누른 것으로 봅니다. 놓기 간격은 `_placeCooldown` 이 거릅니다.
 
         const int32 previousSlot = _hotbar.getSelectedIndex();
         for ( int32 slotIndex = 0; slotIndex < VoxelHotbar::kSlotCount; ++slotIndex )
@@ -418,7 +418,7 @@ namespace sw
         const bool  bHit             = VoxelRaycast::raycast( director.getWorld(), _body.getEyePosition(), camera.getLook().getForward(), _reachDistance, hit );
         const bool  bBreakTargetLost = bHit == false || hit._block != _target._block || _bHasTarget == SW_FALSE;
         if ( bBreakTargetLost )
-            _breakProgress = 0.0f; // 다른 블록을 보면 처음부터
+            _breakProgress = 0.0f; // 다른 블록을 보면 처음부터 다시 부숩니다.
         _bHasTarget = bHit ? SW_TRUE : SW_FALSE;
         if ( bHit )
             _target = hit;
@@ -438,7 +438,7 @@ namespace sw
         if ( _breakProgress < 1.0f )
             return;
 
-        // 월드는 틱 뒤에 바뀐다(디렉터) — 여기서는 손에 든 것과 셈만 바로 바꾼다.
+        // 월드는 틱이 끝난 뒤 디렉터가 바꿉니다. 여기서는 손에 든 블록과 개수만 바로 바꿉니다.
         const VoxelBlockIndex drop = VoxelPlayerComponentInternal::findDrop( catalog, _target._blockIndex );
         _listPendingEdit.push_back( BlockEdit{ _target._block, kVoxelAirBlock } );
         _soundQueue.queueEvent( VoxelPlayerComponentInternal::kEventBreak );
@@ -456,7 +456,7 @@ namespace sw
         const VoxelWorld& world = director.getWorld();
         const VoxelCoord  cell  = _target._previous;
         if ( _body.overlapsBlock( cell ) || world.isInside( cell._x, cell._y, cell._z ) == false )
-            return; // 몸 안 · 월드 밖에는 놓지 않는다
+            return; // 몸과 겹치는 곳이나 월드 밖에는 놓지 않습니다.
         const VoxelBlockIndex existing = world.getBlock( cell );
         if ( existing != kVoxelAirBlock && catalog.isSolid( existing ) )
             return;
@@ -469,7 +469,7 @@ namespace sw
     }
 
     // ------------------------------------------------------------------------------
-    // 틱 뒤(게임 스레드)
+    // 틱이 끝난 뒤(게임 스레드)
     // ------------------------------------------------------------------------------
     void VoxelPlayerComponent::scheduleFlush()
     {
@@ -492,7 +492,7 @@ namespace sw
         for ( const BlockEdit& edit : _listPendingEdit )
         {
             if ( pDirector != nullptr )
-                (void)pDirector->applyBlockEdit( edit._coord, edit._block ); // 월드 밖은 이미 걸렀다
+                (void)pDirector->applyBlockEdit( edit._coord, edit._block ); // 월드 밖의 좌표는 앞에서 이미 걸러졌습니다.
         }
         _listPendingEdit.clear();
         _soundQueue.playAll();

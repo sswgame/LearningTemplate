@@ -207,6 +207,139 @@ namespace sw
                 }
                 inoutListGroup = std::move( listSplit );
             }
+
+            /** @brief 깊이 우선 순서로 매긴 최종 노드 번호입니다. 잎은 잎 순서, 묶음은 자식이 먼저고 뿌리가 마지막입니다. */
+            struct DepthFirstOrder
+            {
+                vector<uint32> _listFinalOf;      ///< 만드는 노드 번호에서 최종 노드 번호
+                vector<uint32> _listClusterOrder; ///< 묶음의 뒤 순서(만드는 노드 번호)
+            };
+
+            /** @brief 아래 단계부터 노드를 묶어 올립니다. 연결로 이어진 덩어리끼리만 묶고, 뿌리 노드의 번호를 반환합니다. */
+            static uint32 clusterLevels( vector<BuildNode>& inoutListBuild, const vector<FractureLink>& listLink, uint32 leafCount, vector_reference<const uint32> listLevelCount )
+            {
+                vector<uint32> listCurrent( leafCount );
+                for ( uint32 leaf = 0; leaf < leafCount; ++leaf )
+                {
+                    listCurrent[leaf] = leaf;
+                }
+
+                for ( size_t level = listLevelCount.size(); level > 0; --level )
+                {
+                    const uint32 clusterCount = listLevelCount[level - 1];
+                    if ( clusterCount <= 1 || clusterCount >= listCurrent.size() )
+                        continue;
+                    vector<vector<uint32>> listGroup;
+                    partitionNodes( inoutListBuild, listCurrent, clusterCount, listGroup );
+                    splitDisconnected( inoutListBuild, listLink, leafCount, listGroup );
+                    vector<uint32> listNext;
+                    for ( vector<uint32>& group : listGroup )
+                    {
+                        if ( group.size() == 1 )
+                            listNext.push_back( group[0] );
+                        else
+                            listNext.push_back( makeCluster( inoutListBuild, std::move( group ) ) );
+                    }
+                    listCurrent = std::move( listNext );
+                }
+                return listCurrent.size() == 1 ? listCurrent[0] : makeCluster( inoutListBuild, listCurrent );
+            }
+
+            /** @brief 깊이 우선으로 잎 순서와 묶음의 뒤 순서(자식이 먼저, 뿌리가 마지막)를 함께 매깁니다. */
+            static void orderDepthFirst( const vector<BuildNode>& listBuild, uint32 buildRoot, uint32 leafCount, vector<uint32>& outListLeafOrder, DepthFirstOrder& outOrder )
+            {
+                struct Frame
+                {
+                    uint32 _node;
+                    uint32 _nextChild;
+                };
+                outOrder._listFinalOf.assign( listBuild.size(), 0xFFFFFFFFu );
+                outOrder._listClusterOrder.clear();
+                vector<Frame> listStack;
+                listStack.push_back( Frame{ buildRoot, 0 } );
+                while ( listStack.empty() == false )
+                {
+                    Frame&           frame = listStack.back();
+                    const BuildNode& build = listBuild[frame._node];
+                    if ( build._listChild.empty() )
+                    {
+                        outOrder._listFinalOf[frame._node] = static_cast<uint32>( outListLeafOrder.size() );
+                        outListLeafOrder.push_back( build._leaf );
+                        listStack.pop_back();
+                        continue;
+                    }
+                    if ( frame._nextChild < build._listChild.size() )
+                    {
+                        const uint32 child = build._listChild[frame._nextChild];
+                        ++frame._nextChild;
+                        listStack.push_back( Frame{ child, 0 } );
+                        continue;
+                    }
+                    outOrder._listClusterOrder.push_back( frame._node );
+                    listStack.pop_back();
+                }
+                for ( uint32 order = 0; order < static_cast<uint32>( outOrder._listClusterOrder.size() ); ++order )
+                {
+                    outOrder._listFinalOf[outOrder._listClusterOrder[order]] = leafCount + order;
+                }
+            }
+
+            /** @brief 잎 노드를 잎 순서로 놓고, 묶음 노드에 자식 · 부모 · 잎 구간 · 깊이를 채워 그래프를 만듭니다. */
+            static FractureGraph assembleGraph( const vector<BuildNode>& listBuild, const vector<FractureNode>& listLeafNode, const DepthFirstOrder& order,
+                                                const vector<uint32>& listLeafOrder, uint32 leafCount )
+            {
+                const uint32  nodeCount = leafCount + static_cast<uint32>( order._listClusterOrder.size() );
+                FractureGraph result;
+                result._leafCount = leafCount;
+                result._listNode.assign( nodeCount, FractureNode{} );
+                for ( uint32 leaf = 0; leaf < leafCount; ++leaf )
+                {
+                    FractureNode& node = result._listNode[leaf];
+                    node               = listLeafNode[listLeafOrder[leaf]];
+                    node._firstLeaf    = leaf;
+                    node._leafCount    = 1;
+                    node._firstChild   = 0;
+                    node._childCount   = 0;
+                    node._parent       = -1;
+                }
+                for ( const uint32 buildIndex : order._listClusterOrder )
+                {
+                    const BuildNode& build = listBuild[buildIndex];
+                    FractureNode&    node  = result._listNode[order._listFinalOf[buildIndex]];
+                    node._centroid         = build._centroid;
+                    node._volume           = build._volume;
+                    node._firstChild       = static_cast<uint32>( result._listChildNode.size() );
+                    node._childCount       = static_cast<uint32>( build._listChild.size() );
+                    for ( const uint32 child : build._listChild )
+                    {
+                        result._listChildNode.push_back( order._listFinalOf[child] );
+                        result._listNode[order._listFinalOf[child]]._parent = static_cast<int32>( order._listFinalOf[buildIndex] );
+                    }
+                }
+                // 잎 구간과 깊이를 채운다. 묶음은 자식 뒤에 있으므로 앞에서부터 구간을, 뒤에서부터 깊이를 채운다.
+                for ( uint32 nodeIndex = leafCount; nodeIndex < nodeCount; ++nodeIndex )
+                {
+                    FractureNode& node   = result._listNode[nodeIndex];
+                    uint32        first  = 0xFFFFFFFFu;
+                    uint32        summed = 0;
+                    for ( uint32 offset = 0; offset < node._childCount; ++offset )
+                    {
+                        const FractureNode& child = result._listNode[result._listChildNode[node._firstChild + offset]];
+                        first                     = MathUtil::min( first, child._firstLeaf );
+                        summed += child._leafCount;
+                    }
+                    node._firstLeaf = first;
+                    node._leafCount = summed;
+                }
+                result._listNode[nodeCount - 1]._depth = 0;
+                for ( uint32 nodeIndex = nodeCount; nodeIndex > 0; --nodeIndex )
+                {
+                    FractureNode& node = result._listNode[nodeIndex - 1];
+                    if ( node._parent >= 0 )
+                        node._depth = static_cast<uint8>( result._listNode[static_cast<uint32>( node._parent )]._depth + 1 );
+                }
+                return result;
+            }
         };
     } // namespace
 } // namespace sw
@@ -320,13 +453,13 @@ namespace sw
 
     void FractureGraphUtil::populateHierarchy( FractureGraph& inoutGraph, vector_reference<const uint32> listLevelCount, vector<uint32>& outListLeafOrder )
     {
-        using BuildNode        = FractureGraphInternal::BuildNode;
+        using Internal         = FractureGraphInternal;
         const uint32 leafCount = inoutGraph._leafCount;
         outListLeafOrder.clear();
         if ( leafCount == 0 )
             return;
 
-        vector<BuildNode> listBuild( leafCount );
+        vector<Internal::BuildNode> listBuild( leafCount );
         for ( uint32 leaf = 0; leaf < leafCount; ++leaf )
         {
             listBuild[leaf]._centroid = inoutGraph._listNode[leaf]._centroid;
@@ -335,120 +468,10 @@ namespace sw
         }
         const vector<FractureNode> listLeafNode( inoutGraph._listNode.begin(), inoutGraph._listNode.begin() + static_cast<std::ptrdiff_t>( leafCount ) );
 
-        vector<uint32> listCurrent( leafCount );
-        for ( uint32 leaf = 0; leaf < leafCount; ++leaf )
-        {
-            listCurrent[leaf] = leaf;
-        }
-
-        for ( size_t level = listLevelCount.size(); level > 0; --level )
-        {
-            const uint32 clusterCount = listLevelCount[level - 1];
-            if ( clusterCount <= 1 || clusterCount >= listCurrent.size() )
-                continue;
-            vector<vector<uint32>> listGroup;
-            FractureGraphInternal::partitionNodes( listBuild, listCurrent, clusterCount, listGroup );
-            FractureGraphInternal::splitDisconnected( listBuild, inoutGraph._listLink, leafCount, listGroup );
-            vector<uint32> listNext;
-            for ( vector<uint32>& group : listGroup )
-            {
-                if ( group.size() == 1 )
-                    listNext.push_back( group[0] );
-                else
-                    listNext.push_back( FractureGraphInternal::makeCluster( listBuild, std::move( group ) ) );
-            }
-            listCurrent = std::move( listNext );
-        }
-        const uint32 buildRoot = listCurrent.size() == 1 ? listCurrent[0] : FractureGraphInternal::makeCluster( listBuild, listCurrent );
-
-        // 깊이 우선으로 잎 순서와 묶음의 뒤 순서(자식이 먼저, 뿌리가 마지막)를 함께 매긴다.
-        vector<uint32> listFinalOf( listBuild.size(), 0xFFFFFFFFu );
-        vector<uint32> listClusterOrder;
-        {
-            struct Frame
-            {
-                uint32 _node;
-                uint32 _nextChild;
-            };
-            vector<Frame> listStack;
-            listStack.push_back( Frame{ buildRoot, 0 } );
-            while ( listStack.empty() == false )
-            {
-                Frame&           frame = listStack.back();
-                const BuildNode& build = listBuild[frame._node];
-                if ( build._listChild.empty() )
-                {
-                    listFinalOf[frame._node] = static_cast<uint32>( outListLeafOrder.size() );
-                    outListLeafOrder.push_back( build._leaf );
-                    listStack.pop_back();
-                    continue;
-                }
-                if ( frame._nextChild < build._listChild.size() )
-                {
-                    const uint32 child = build._listChild[frame._nextChild];
-                    ++frame._nextChild;
-                    listStack.push_back( Frame{ child, 0 } );
-                    continue;
-                }
-                listClusterOrder.push_back( frame._node );
-                listStack.pop_back();
-            }
-        }
-        for ( uint32 order = 0; order < static_cast<uint32>( listClusterOrder.size() ); ++order )
-        {
-            listFinalOf[listClusterOrder[order]] = leafCount + order;
-        }
-
-        const uint32  nodeCount = leafCount + static_cast<uint32>( listClusterOrder.size() );
-        FractureGraph result;
-        result._leafCount = leafCount;
-        result._listNode.assign( nodeCount, FractureNode{} );
-        for ( uint32 leaf = 0; leaf < leafCount; ++leaf )
-        {
-            FractureNode& node = result._listNode[leaf];
-            node               = listLeafNode[outListLeafOrder[leaf]];
-            node._firstLeaf    = leaf;
-            node._leafCount    = 1;
-            node._firstChild   = 0;
-            node._childCount   = 0;
-            node._parent       = -1;
-        }
-        for ( const uint32 buildIndex : listClusterOrder )
-        {
-            const BuildNode& build = listBuild[buildIndex];
-            FractureNode&    node  = result._listNode[listFinalOf[buildIndex]];
-            node._centroid         = build._centroid;
-            node._volume           = build._volume;
-            node._firstChild       = static_cast<uint32>( result._listChildNode.size() );
-            node._childCount       = static_cast<uint32>( build._listChild.size() );
-            for ( const uint32 child : build._listChild )
-            {
-                result._listChildNode.push_back( listFinalOf[child] );
-                result._listNode[listFinalOf[child]]._parent = static_cast<int32>( listFinalOf[buildIndex] );
-            }
-        }
-        // 잎 구간과 깊이를 채운다. 묶음은 자식 뒤에 있으므로 앞에서부터 구간을, 뒤에서부터 깊이를 채운다.
-        for ( uint32 nodeIndex = leafCount; nodeIndex < nodeCount; ++nodeIndex )
-        {
-            FractureNode& node   = result._listNode[nodeIndex];
-            uint32        first  = 0xFFFFFFFFu;
-            uint32        summed = 0;
-            for ( uint32 offset = 0; offset < node._childCount; ++offset )
-            {
-                const FractureNode& child = result._listNode[result._listChildNode[node._firstChild + offset]];
-                first                     = MathUtil::min( first, child._firstLeaf );
-                summed += child._leafCount;
-            }
-            node._firstLeaf = first;
-            node._leafCount = summed;
-        }
-        result._listNode[nodeCount - 1]._depth = 0;
-        for ( uint32 nodeIndex = nodeCount; nodeIndex > 0; --nodeIndex )
-        {
-            FractureNode& node = result._listNode[nodeIndex - 1];
-            if ( node._parent >= 0 )
-                node._depth = static_cast<uint8>( result._listNode[static_cast<uint32>( node._parent )]._depth + 1 );
-        }
+        const uint32              buildRoot = Internal::clusterLevels( listBuild, inoutGraph._listLink, leafCount, listLevelCount );
+        Internal::DepthFirstOrder order;
+        Internal::orderDepthFirst( listBuild, buildRoot, leafCount, outListLeafOrder, order );
+        FractureGraph result = Internal::assembleGraph( listBuild, listLeafNode, order, outListLeafOrder, leafCount );
 
         vector<uint32> listNewOfOld( leafCount, 0 );
         for ( uint32 leaf = 0; leaf < leafCount; ++leaf )

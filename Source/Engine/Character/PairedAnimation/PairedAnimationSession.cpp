@@ -147,14 +147,9 @@ namespace sw
         return ( target - pRoot->getWorldPosition() ).getLength() <= roleDef._maxAlignDistance;
     }
 
-    PairedAnimationStartResult PairedAnimationSession::bindParticipants( GameObjectManager& manager, const vector<PairedAnimationBinding>& listBinding )
+    PairedAnimationStartResult PairedAnimationSession::bindRoles( const vector<PairedAnimationBinding>& listBinding )
     {
-        SW_ASSERT( _state == PairedAnimationSessionState::Idle );
-        const PairedAnimationDef&             def         = *_def;
-        const vector<PairedAnimationRoleDef>& listRoleDef = def.getRoles();
-        _listRole.assign( listRoleDef.size(), RoleState{} );
-
-        // 1) 바인딩 — 모르는 역할, 같은 역할 두 번, 같은 애니메이터 두 번은 부르는 쪽의 결함이다.
+        const PairedAnimationDef& def = *_def;
         for ( const PairedAnimationBinding& binding : listBinding )
         {
             const uint32 roleIndex = def.findRoleIndex( binding._role );
@@ -178,68 +173,72 @@ namespace sw
             }
             _listRole[roleIndex]._animator = binding._animator;
         }
+        return PairedAnimationStartResult::Started;
+    }
 
-        // 2) 참가자 — 해석, 스켈레톤, 클립과 길이, 워핑.
-        for ( size_t roleIndex = 0; roleIndex < listRoleDef.size(); ++roleIndex )
+    PairedAnimationStartResult PairedAnimationSession::validateParticipant( GameObjectManager& manager, uint32 roleIndex )
+    {
+        const PairedAnimationDef&     def     = *_def;
+        const PairedAnimationRoleDef& roleDef = def.getRoles()[roleIndex];
+        RoleState&                    role    = _listRole[roleIndex];
+        if ( role._animator.isValid() == false )
         {
-            const PairedAnimationRoleDef& roleDef = listRoleDef[roleIndex];
-            RoleState&                    role    = _listRole[roleIndex];
-            if ( role._animator.isValid() == false )
+            if ( roleDef._bRequired == false )
+                return PairedAnimationStartResult::Started; // 선택 역할은 비어 있어도 된다
+            SW_LOG_ERROR( "Paired animation needs required role '%#'", roleDef._name.c_str() );
+            return PairedAnimationStartResult::MissingRequiredRole;
+        }
+        SkeletalAnimatorComponent* pAnimator = resolveAnimator( manager, role );
+        if ( pAnimator == nullptr )
+            return PairedAnimationStartResult::ParticipantMissing;
+        const hashed_string ownerName = PairedAnimationSessionInternal::findOwnerName( *pAnimator );
+        if ( roleDef._skeletonPath.empty() == false )
+        {
+            const SkeletalMeshComponent* pMesh         = PairedAnimationSessionInternal::findSibling<SkeletalMeshComponent>( *pAnimator );
+            const bool                   bSameSkeleton = pMesh != nullptr && pMesh->getSkeletonPath() == roleDef._skeletonPath;
+            if ( bSameSkeleton == false )
             {
-                if ( roleDef._bRequired == false )
-                    continue;
-                SW_LOG_ERROR( "Paired animation needs required role '%#'", roleDef._name.c_str() );
-                return PairedAnimationStartResult::MissingRequiredRole;
+                SW_LOG_ERROR( "'%#': role '%#' needs skeleton '%#'", ownerName.c_str(), roleDef._name.c_str(), roleDef._skeletonPath.c_str() );
+                return PairedAnimationStartResult::SkeletonMismatch;
             }
-            SkeletalAnimatorComponent* pAnimator = resolveAnimator( manager, role );
-            if ( pAnimator == nullptr )
-                return PairedAnimationStartResult::ParticipantMissing;
-            const hashed_string ownerName = PairedAnimationSessionInternal::findOwnerName( *pAnimator );
-            if ( roleDef._skeletonPath.empty() == false )
+        }
+        const AnimationClip* pClip = pAnimator->preloadClip( roleDef._clip ) ? pAnimator->findClip( roleDef._clip ) : nullptr;
+        if ( pClip == nullptr )
+        {
+            SW_LOG_ERROR( "'%#': role '%#' clip '%#' was not found in '%#'", ownerName.c_str(), roleDef._name.c_str(), roleDef._clip.c_str(), pAnimator->getClipFolder().c_str() );
+            return PairedAnimationStartResult::ClipNotFound;
+        }
+        role._pClip       = pClip;
+        role._clipSeconds = pClip->getDuration();
+        const bool bClipLengthMismatch =
+            roleDef._bAnchor ? MathUtil::abs( role._clipSeconds - def.getDuration() ) > kTimeToleranceSeconds : roleDef._startSeconds + role._clipSeconds > def.getDuration() + kTimeToleranceSeconds;
+        if ( bClipLengthMismatch )
+        {
+            SW_LOG_ERROR( "'%#': role '%#' clip '%#' (%# s) does not fit the %# s timeline", ownerName.c_str(), roleDef._name.c_str(), roleDef._clip.c_str(), role._clipSeconds, def.getDuration() );
+            return PairedAnimationStartResult::ClipLengthMismatch;
+        }
+        if ( roleDef._align == PairedAnimationAlign::Warp )
+        {
+            if ( PairedAnimationSessionInternal::findSibling<MotionWarpingComponent>( *pAnimator ) == nullptr )
             {
-                const SkeletalMeshComponent* pMesh         = PairedAnimationSessionInternal::findSibling<SkeletalMeshComponent>( *pAnimator );
-                const bool                   bSameSkeleton = pMesh != nullptr && pMesh->getSkeletonPath() == roleDef._skeletonPath;
-                if ( bSameSkeleton == false )
-                {
-                    SW_LOG_ERROR( "'%#': role '%#' needs skeleton '%#'", ownerName.c_str(), roleDef._name.c_str(), roleDef._skeletonPath.c_str() );
-                    return PairedAnimationStartResult::SkeletonMismatch;
-                }
+                SW_LOG_ERROR( "'%#': role '%#' aligns by warp but has no MotionWarpingComponent", ownerName.c_str(), roleDef._name.c_str() );
+                return PairedAnimationStartResult::WarpingUnavailable;
             }
-            const AnimationClip* pClip = pAnimator->preloadClip( roleDef._clip ) ? pAnimator->findClip( roleDef._clip ) : nullptr;
-            if ( pClip == nullptr )
+            if ( roleDef._warpEndSeconds > role._clipSeconds + kTimeToleranceSeconds )
             {
-                SW_LOG_ERROR( "'%#': role '%#' clip '%#' was not found in '%#'", ownerName.c_str(), roleDef._name.c_str(), roleDef._clip.c_str(), pAnimator->getClipFolder().c_str() );
-                return PairedAnimationStartResult::ClipNotFound;
-            }
-            role._pClip       = pClip;
-            role._clipSeconds = pClip->getDuration();
-            const bool bClipLengthMismatch =
-                roleDef._bAnchor ? MathUtil::abs( role._clipSeconds - def.getDuration() ) > kTimeToleranceSeconds : roleDef._startSeconds + role._clipSeconds > def.getDuration() + kTimeToleranceSeconds;
-            if ( bClipLengthMismatch )
-            {
-                SW_LOG_ERROR( "'%#': role '%#' clip '%#' (%# s) does not fit the %# s timeline", ownerName.c_str(), roleDef._name.c_str(), roleDef._clip.c_str(), role._clipSeconds, def.getDuration() );
+                SW_LOG_ERROR( "'%#': role '%#' warp ends after its clip", ownerName.c_str(), roleDef._name.c_str() );
                 return PairedAnimationStartResult::ClipLengthMismatch;
             }
-            if ( roleDef._align == PairedAnimationAlign::Warp )
-            {
-                if ( PairedAnimationSessionInternal::findSibling<MotionWarpingComponent>( *pAnimator ) == nullptr )
-                {
-                    SW_LOG_ERROR( "'%#': role '%#' aligns by warp but has no MotionWarpingComponent", ownerName.c_str(), roleDef._name.c_str() );
-                    return PairedAnimationStartResult::WarpingUnavailable;
-                }
-                if ( roleDef._warpEndSeconds > role._clipSeconds + kTimeToleranceSeconds )
-                {
-                    SW_LOG_ERROR( "'%#': role '%#' warp ends after its clip", ownerName.c_str(), roleDef._name.c_str() );
-                    return PairedAnimationStartResult::ClipLengthMismatch;
-                }
-            }
-            role._stage = PairedAnimationRoleStage::Waiting;
         }
+        role._stage = PairedAnimationRoleStage::Waiting;
+        return PairedAnimationStartResult::Started;
+    }
 
-        // 3) 공유 알림 — 받을 역할이 묶였으면 그 오브젝트의 표에 항목이 있어야 한다(조용히 건너뛰지 않는다).
-        for ( const PairedAnimationNotifyDef& notify : def.getNotifies() )
+    PairedAnimationStartResult PairedAnimationSession::validateNotifyTargets( GameObjectManager& manager ) const
+    {
+        for ( const PairedAnimationNotifyDef& notify : _def->getNotifies() )
         {
-            const RoleState& role = _listRole[def.findRoleIndex( notify._role )];
+            const RoleState& role = _listRole[_def->findRoleIndex( notify._role )];
             if ( role._stage == PairedAnimationRoleStage::Unbound )
                 continue;
             const SkeletalAnimatorComponent* pAnimator = resolveAnimator( manager, role );
@@ -252,6 +251,28 @@ namespace sw
             }
         }
         return PairedAnimationStartResult::Started;
+    }
+
+    PairedAnimationStartResult PairedAnimationSession::bindParticipants( GameObjectManager& manager, const vector<PairedAnimationBinding>& listBinding )
+    {
+        SW_ASSERT( _state == PairedAnimationSessionState::Idle );
+        _listRole.assign( _def->getRoles().size(), RoleState{} );
+
+        // 1) 바인딩 — 모르는 역할, 같은 역할 두 번, 같은 애니메이터 두 번은 부르는 쪽의 결함이다.
+        const PairedAnimationStartResult bound = bindRoles( listBinding );
+        if ( bound != PairedAnimationStartResult::Started )
+            return bound;
+
+        // 2) 참가자 — 해석, 스켈레톤, 클립과 길이, 워핑.
+        for ( uint32 roleIndex = 0; roleIndex < static_cast<uint32>( _listRole.size() ); ++roleIndex )
+        {
+            const PairedAnimationStartResult checked = validateParticipant( manager, roleIndex );
+            if ( checked != PairedAnimationStartResult::Started )
+                return checked;
+        }
+
+        // 3) 공유 알림 — 받을 역할이 묶였으면 그 오브젝트의 표에 항목이 있어야 한다(조용히 건너뛰지 않는다).
+        return validateNotifyTargets( manager );
     }
 
     PairedAnimationStartResult PairedAnimationSession::start( GameObjectManager& manager, const vector<PairedAnimationBinding>& listBinding )
@@ -528,15 +549,8 @@ namespace sw
             SW_LOG_ERROR( "Paired animation notify '%#' lost its entry in the notify table of role '%#'", notify._name.c_str(), notify._role.c_str() );
     }
 
-    void PairedAnimationSession::update( GameObjectManager& manager, float32 deltaSeconds )
+    bool PairedAnimationSession::loseVanishedRoles( GameObjectManager& manager )
     {
-        if ( _state != PairedAnimationSessionState::Playing )
-            return;
-        const PairedAnimationDef&             def         = *_def;
-        const vector<PairedAnimationRoleDef>& listRoleDef = def.getRoles();
-        const uint32                          anchorIndex = def.getAnchorRoleIndex();
-
-        // 1) 잃은 역할 — 애니메이터가 없거나 세션 클립을 재생하지 않는다(게임플레이가 다른 것을 재생했다).
         for ( size_t roleIndex = 0; roleIndex < _listRole.size(); ++roleIndex )
         {
             RoleState& role = _listRole[roleIndex];
@@ -549,8 +563,78 @@ namespace sw
             if ( bMissing == false && bHijacked == false )
                 continue;
             if ( loseRole( manager, static_cast<uint32>( roleIndex ), bMissing ? "is gone" : "stopped playing its clip" ) )
-                return;
+                return true;
         }
+        return false;
+    }
+
+    bool PairedAnimationSession::abortOnRoleClockDrift( GameObjectManager& manager, float32 anchorTime )
+    {
+        const uint32 anchorIndex = _def->getAnchorRoleIndex();
+        for ( size_t roleIndex = 0; roleIndex < _listRole.size(); ++roleIndex )
+        {
+            const RoleState& role = _listRole[roleIndex];
+            if ( role._stage != PairedAnimationRoleStage::Playing || roleIndex == anchorIndex )
+                continue;
+            float32 clipTime = 0.0f;
+            (void)tryGetClipTime( *resolveAnimator( manager, role ), role, clipTime ); // loseVanishedRoles 에서 재생 중임을 확인했다
+            const float32 expected = MathUtil::min( anchorTime - role._entryAnchorTime, role._clipSeconds );
+            if ( MathUtil::abs( clipTime - expected ) > kTimeToleranceSeconds )
+            {
+                SW_LOG_ERROR( "Paired animation %# aborts: role '%#' time %# differs from the expected %#", _sessionID, _def->getRoles()[roleIndex]._name.c_str(), clipTime, expected );
+                end( manager, PairedAnimationSessionState::Aborted );
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool PairedAnimationSession::advanceRoles( GameObjectManager& manager, float32 anchorTime )
+    {
+        const vector<PairedAnimationRoleDef>& listRoleDef = _def->getRoles();
+        const uint32                          anchorIndex = _def->getAnchorRoleIndex();
+        for ( size_t roleIndex = 0; roleIndex < _listRole.size(); ++roleIndex )
+        {
+            const PairedAnimationRoleDef& roleDef = listRoleDef[roleIndex];
+            RoleState&                    role    = _listRole[roleIndex];
+            const uint32                  index   = static_cast<uint32>( roleIndex );
+            if ( role._stage == PairedAnimationRoleStage::Waiting && roleDef._startSeconds <= anchorTime + kTimeToleranceSeconds )
+            {
+                if ( isWithinAlignDistance( manager, index ) == false )
+                {
+                    if ( loseRole( manager, index, "is too far from its alignment target" ) )
+                        return true;
+                    continue;
+                }
+                enterRole( manager, index, anchorTime );
+                continue;
+            }
+            if ( role._stage != PairedAnimationRoleStage::Playing || roleIndex == anchorIndex )
+                continue;
+            const float32 roleTime = anchorTime - role._entryAnchorTime;
+            if ( role._bWarpOpen )
+            {
+                if ( roleTime + kTimeToleranceSeconds >= roleDef._warpEndSeconds )
+                    closeWarpWindow( manager, index, true );
+                else
+                    refreshWarpTarget( manager, index );
+            }
+            if ( roleTime + kTimeToleranceSeconds >= role._clipSeconds )
+                exitRole( manager, index );
+        }
+        return false;
+    }
+
+    void PairedAnimationSession::update( GameObjectManager& manager, float32 deltaSeconds )
+    {
+        if ( _state != PairedAnimationSessionState::Playing )
+            return;
+        const PairedAnimationDef& def         = *_def;
+        const uint32              anchorIndex = def.getAnchorRoleIndex();
+
+        // 1) 잃은 역할 — 애니메이터가 없거나 세션 클립을 재생하지 않는다(게임플레이가 다른 것을 재생했다).
+        if ( loseVanishedRoles( manager ) )
+            return;
 
         // 2) 시계 — 앵커 시각이 정본이다. 지난 갱신의 예측과 다르면 누가 속도 · 시각을 바꾼 것이다.
         const SkeletalAnimatorComponent* pAnchor    = resolveAnimator( manager, _listRole[anchorIndex] );
@@ -570,21 +654,8 @@ namespace sw
         _anchorTime    = anchorTime;
 
         // 3) 다른 역할의 시각 — 진입 때 앵커 시각만큼 뒤에서 같은 속도로 흐른다.
-        for ( size_t roleIndex = 0; roleIndex < _listRole.size(); ++roleIndex )
-        {
-            const RoleState& role = _listRole[roleIndex];
-            if ( role._stage != PairedAnimationRoleStage::Playing || roleIndex == anchorIndex )
-                continue;
-            float32 clipTime = 0.0f;
-            (void)tryGetClipTime( *resolveAnimator( manager, role ), role, clipTime ); // 1) 에서 재생 중임을 확인했다
-            const float32 expected = MathUtil::min( anchorTime - role._entryAnchorTime, role._clipSeconds );
-            if ( MathUtil::abs( clipTime - expected ) > kTimeToleranceSeconds )
-            {
-                SW_LOG_ERROR( "Paired animation %# aborts: role '%#' time %# differs from the expected %#", _sessionID, listRoleDef[roleIndex]._name.c_str(), clipTime, expected );
-                end( manager, PairedAnimationSessionState::Aborted );
-                return;
-            }
-        }
+        if ( abortOnRoleClockDrift( manager, anchorTime ) )
+            return;
 
         // 4) 이번 프레임 평가가 갈 시각까지의 공유 알림 — 클립 알림(평가 끝)과 같은 프레임에 보인다.
         const float32 predicted = MathUtil::min( anchorTime + deltaSeconds * pAnchor->getPlayRate(), def.getDuration() );
@@ -595,35 +666,8 @@ namespace sw
         }
 
         // 5) 늦은 역할 진입, 워프 목표 · 창, 클립이 끝난 역할 나감.
-        for ( size_t roleIndex = 0; roleIndex < _listRole.size(); ++roleIndex )
-        {
-            const PairedAnimationRoleDef& roleDef = listRoleDef[roleIndex];
-            RoleState&                    role    = _listRole[roleIndex];
-            const uint32                  index   = static_cast<uint32>( roleIndex );
-            if ( role._stage == PairedAnimationRoleStage::Waiting && roleDef._startSeconds <= anchorTime + kTimeToleranceSeconds )
-            {
-                if ( isWithinAlignDistance( manager, index ) == false )
-                {
-                    if ( loseRole( manager, index, "is too far from its alignment target" ) )
-                        return;
-                    continue;
-                }
-                enterRole( manager, index, anchorTime );
-                continue;
-            }
-            if ( role._stage != PairedAnimationRoleStage::Playing || roleIndex == anchorIndex )
-                continue;
-            const float32 roleTime = anchorTime - role._entryAnchorTime;
-            if ( role._bWarpOpen )
-            {
-                if ( roleTime + kTimeToleranceSeconds >= roleDef._warpEndSeconds )
-                    closeWarpWindow( manager, index, true );
-                else
-                    refreshWarpTarget( manager, index );
-            }
-            if ( roleTime + kTimeToleranceSeconds >= role._clipSeconds )
-                exitRole( manager, index );
-        }
+        if ( advanceRoles( manager, anchorTime ) )
+            return;
 
         // 6) 앵커가 끝에 닿았다 — 남은 역할을 모두 내보낸다.
         if ( anchorTime + kTimeToleranceSeconds >= def.getDuration() )

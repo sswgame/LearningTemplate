@@ -78,6 +78,85 @@ namespace sw
             return true;
         }
 
+        /**
+         * @brief WM_CHAR 의 UTF-16 코드 유닛 하나를 UTF-8 글자로 바꿉니다. 글자가 아직 완성되지 않았거나 제어 문자면 빈 문자열입니다.
+         * @details BMP 밖 글자(이모지, 확장 한자)는 높은 서로게이트와 낮은 서로게이트, 두 개의 WM_CHAR 로 온다. 높은 반쪽은 다음 WM_CHAR 까지
+         *          @p pendingHighSurrogate 에 보관했다가 짝과 합쳐 한 글자(UTF-8 4 바이트)로 보낸다. 짝 없는 반쪽은 U+FFFD 한 글자로 처리한다
+         *          (`StringUtil::utf16ToUtf8` 과 같은 규칙).
+         */
+        string decodeCharMessageInternal( uint32 codeUnit, uint16& pendingHighSurrogate )
+        {
+            const uint32 highSurrogate    = pendingHighSurrogate;
+            const bool   bIsHighSurrogate = 0xD800 <= codeUnit && codeUnit <= 0xDBFF;
+            const bool   bIsLowSurrogate  = 0xDC00 <= codeUnit && codeUnit <= 0xDFFF;
+            pendingHighSurrogate          = bIsHighSurrogate ? static_cast<uint16>( codeUnit ) : uint16{ 0 };
+
+            string text;
+            uint32 codepoint = codeUnit;
+            if ( highSurrogate != 0 && bIsLowSurrogate )
+                codepoint = 0x10000 + ( ( highSurrogate - 0xD800 ) << 10 ) + ( codeUnit - 0xDC00 );
+            else if ( highSurrogate != 0 )
+                StringUtil::appendUtf8( text, 0xFFFD ); // 짝을 잃은 앞 반쪽
+            else if ( bIsLowSurrogate )
+                codepoint = 0xFFFD;
+
+            const bool bIsText = bIsHighSurrogate == false && ( codepoint >= 32 || codepoint == '\t' || codepoint == '\n' || codepoint == '\r' );
+            if ( bIsText )
+                StringUtil::appendUtf8( text, codepoint );
+            return text;
+        }
+
+        /**
+         * @brief 활성 창의 IME 조합 중인 문자열을 UTF-8 로 읽습니다.
+         * @return 읽었으면 true 입니다(빈 조합 문자열도 읽은 것입니다). 활성 창 · IME 컨텍스트가 없거나 길이가 버퍼를 넘으면 false 입니다.
+         */
+        [[nodiscard]] bool readImeCompositionInternal( LPARAM lParam, fixed_string<constant::kMaxBuffer512>& outUtf8, int32& outLength )
+        {
+            IWindow* pWindow = IWindow::getActiveWindow();
+            if ( pWindow == nullptr )
+                return false;
+            HWND pHwnd = static_cast<HWND>( pWindow->getNativeHandle() );
+            if ( pHwnd == nullptr || ( lParam & GCS_COMPSTR ) == 0 )
+                return false;
+            HIMC hImc = ImmGetContext( pHwnd );
+            if ( hImc == nullptr )
+                return false;
+
+            // `ImmGetCompositionStringW` 가 반환하는 값은 바이트 수이고 버퍼는
+            // 와이드 문자 배열이다. 그래서 상한을 버퍼 길이에서 직접 계산한다(바이트 상수와 문자 상수를
+            // 따로 두면 어느 한쪽만 고칠 때 조용히 넘친다).
+            using CompositionBuffer                  = fixed_wstring<constant::kMaxBuffer256>;
+            constexpr LONG kMaxCompositionByteLength = static_cast<LONG>( constant::kMaxBuffer256 * sizeof( utf16 ) );
+
+            bool       bRead = false;
+            const LONG size  = ImmGetCompositionStringW( hImc, GCS_COMPSTR, nullptr, 0 );
+            if ( size > 0 && size < kMaxCompositionByteLength )
+            {
+                CompositionBuffer wstrBuf;
+                ImmGetCompositionStringW( hImc, GCS_COMPSTR, wstrBuf.data(), static_cast<DWORD>( size ) );
+                wstrBuf.data()[static_cast<size_t>( size ) / sizeof( utf16 )] = L'\0';
+                const int32 utf8Len                                           = WideCharToMultiByte( CP_UTF8, 0, wstrBuf.data(), -1, outUtf8.data(), static_cast<int32>( outUtf8.capacity() ), nullptr, nullptr );
+                if ( utf8Len > 0 )
+                {
+                    outLength = utf8Len - 1;
+                    bRead     = true;
+                }
+            }
+            ImmReleaseContext( pHwnd, hImc );
+            return bRead;
+        }
+
+        /** @brief 활성 창이 마우스를 붙잡게 합니다(창 밖으로 끌어도 뗌이 도착한다). */
+        void captureMouseOnActiveWindowInternal()
+        {
+            IWindow* pWindow = IWindow::getActiveWindow();
+            if ( pWindow == nullptr )
+                return;
+            HWND pHwnd = static_cast<HWND>( pWindow->getNativeHandle() );
+            if ( pHwnd != nullptr )
+                SetCapture( pHwnd );
+        }
+
         /** @brief 포인터 이탈 알림(WM_MOUSELEAVE)을 요청해 둔 상태인지 나타냅니다. TrackMouseEvent 는 이탈을 한 번 알리고 해제됩니다. */
         bool s_bTrackingLeave{ false };
 
@@ -96,6 +175,8 @@ namespace sw
         processNativeEvent( event );
     }
 
+    // 긴 케이스(글자 조합 · IME · 마우스 붙잡기)는 함수로 뺐다. 남은 것은 메시지마다 짧은 switch 디스패처이고,
+    // 포인터 · 포커스 훅이 InputManager 의 비공개 멤버라 케이스를 밖으로 더 뺄 수 없어 나누지 않는다.
     void InputManager::processNativeEvent( const NativeWindowEvent& event )
     {
         switch ( event._message )
@@ -156,13 +237,7 @@ namespace sw
                     readMouseEventPositionInternal( event._lParam, mouseX, mouseY );
                     const uint8 modifierMask = getWin32ModifierMaskInternal();
 
-                    IWindow* pWindow = IWindow::getActiveWindow();
-                    if ( pWindow != nullptr )
-                    {
-                        HWND pHwnd = static_cast<HWND>( pWindow->getNativeHandle() );
-                        if ( pHwnd != nullptr )
-                            SetCapture( pHwnd );
-                    }
+                    captureMouseOnActiveWindowInternal();
 
                     postRawEvent( RawInputEvent::makeMouseButtonDown( btn, mouseX, mouseY, modifierMask ) );
                 }
@@ -249,67 +324,19 @@ namespace sw
             }
             case WM_CHAR:
             {
-                // BMP 밖 글자(이모지, 확장 한자)는 높은 서로게이트와 낮은 서로게이트, 두 개의 WM_CHAR 로 온다. 높은 반쪽은 다음 WM_CHAR 까지 보관했다가
-                // 짝과 합쳐 한 글자(UTF-8 4 바이트)로 보낸다. 짝 없는 반쪽은 U+FFFD 한 글자로 처리한다(`StringUtil::utf16ToUtf8` 과 같은 규칙).
                 if ( event._wParam == 0 || event._wParam >= 0x10000 )
                     break;
-                const uint32 codeUnit         = static_cast<uint32>( event._wParam );
-                const uint32 highSurrogate    = _pendingHighSurrogate;
-                const bool   bIsHighSurrogate = 0xD800 <= codeUnit && codeUnit <= 0xDBFF;
-                const bool   bIsLowSurrogate  = 0xDC00 <= codeUnit && codeUnit <= 0xDFFF;
-                _pendingHighSurrogate         = bIsHighSurrogate ? static_cast<uint16>( codeUnit ) : uint16{ 0 };
-
-                string text;
-                uint32 codepoint = codeUnit;
-                if ( highSurrogate != 0 && bIsLowSurrogate )
-                    codepoint = 0x10000 + ( ( highSurrogate - 0xD800 ) << 10 ) + ( codeUnit - 0xDC00 );
-                else if ( highSurrogate != 0 )
-                    StringUtil::appendUtf8( text, 0xFFFD ); // 짝을 잃은 앞 반쪽
-                else if ( bIsLowSurrogate )
-                    codepoint = 0xFFFD;
-
-                const bool bIsText = bIsHighSurrogate == false && ( codepoint >= 32 || codepoint == '\t' || codepoint == '\n' || codepoint == '\r' );
-                if ( bIsText )
-                    StringUtil::appendUtf8( text, codepoint );
+                const string text = decodeCharMessageInternal( static_cast<uint32>( event._wParam ), _pendingHighSurrogate );
                 if ( text.empty() == false )
                     postRawEvent( RawInputEvent::makeTextInput( text ) );
                 break;
             }
             case WM_IME_COMPOSITION:
             {
-                IWindow* pWindow = IWindow::getActiveWindow();
-                if ( pWindow != nullptr )
-                {
-                    HWND pHwnd = static_cast<HWND>( pWindow->getNativeHandle() );
-                    if ( pHwnd != nullptr && ( event._lParam & GCS_COMPSTR ) != 0 )
-                    {
-                        HIMC hImc = ImmGetContext( pHwnd );
-                        if ( hImc != nullptr )
-                        {
-                            // `ImmGetCompositionStringW` 가 반환하는 값은 바이트 수이고 버퍼는
-                            // 와이드 문자 배열이다. 그래서 상한을 버퍼 길이에서 직접 계산한다(바이트 상수와 문자 상수를
-                            // 따로 두면 어느 한쪽만 고칠 때 조용히 넘친다).
-                            using CompositionBuffer                  = fixed_wstring<constant::kMaxBuffer256>;
-                            constexpr LONG kMaxCompositionByteLength = static_cast<LONG>( constant::kMaxBuffer256 * sizeof( utf16 ) );
-
-                            const LONG size = ImmGetCompositionStringW( hImc, GCS_COMPSTR, nullptr, 0 );
-                            if ( size > 0 && size < kMaxCompositionByteLength )
-                            {
-                                CompositionBuffer wstrBuf;
-                                ImmGetCompositionStringW( hImc, GCS_COMPSTR, wstrBuf.data(), static_cast<DWORD>( size ) );
-                                wstrBuf.data()[static_cast<size_t>( size ) / sizeof( utf16 )] = L'\0';
-                                fixed_string<constant::kMaxBuffer512> utf8Buf;
-                                const int32                           utf8Len = WideCharToMultiByte( CP_UTF8, 0, wstrBuf.data(), -1, utf8Buf.data(), static_cast<int32>( utf8Buf.capacity() ), nullptr, nullptr );
-                                if ( utf8Len > 0 )
-                                {
-                                    const string_view svComp( utf8Buf.data(), static_cast<size_t>( utf8Len - 1 ) );
-                                    postRawEvent( RawInputEvent::makeTextComposition( svComp ) );
-                                }
-                            }
-                            ImmReleaseContext( pHwnd, hImc );
-                        }
-                    }
-                }
+                fixed_string<constant::kMaxBuffer512> utf8Buf;
+                int32                                 utf8Length{ 0 };
+                if ( readImeCompositionInternal( event._lParam, utf8Buf, utf8Length ) )
+                    postRawEvent( RawInputEvent::makeTextComposition( string_view( utf8Buf.data(), static_cast<size_t>( utf8Length ) ) ) );
                 break;
             }
             // 포커스: OS 쪽 일(커서 가두기와 풀기)은 지금 하고, 장치 상태 리셋은 큐 순서 안에서 한다(`beginFrame` 참고).

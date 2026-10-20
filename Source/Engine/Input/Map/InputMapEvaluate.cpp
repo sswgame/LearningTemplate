@@ -32,7 +32,7 @@ namespace sw
 
         const int2 curMousePos = _pInput->getMousePosition();
 
-        // 3) 액션마다 런타임 평가와 ActionPhase 상태 머신을 돌린다
+        // 액션마다 런타임 평가와 ActionPhase 상태 머신을 돌린다
         for ( auto& [actionName, actIndex] : _mapAction )
         {
             ActionEntry& actionEntry = _listActionEntry[actIndex];
@@ -41,170 +41,23 @@ namespace sw
             if ( actionEntry._listBindingState.size() != bindCount )
                 rebuildBindingStates( actionEntry );
 
-            bool    anyDown{ false };
-            bool    anyPressed{ false };
-            bool    anyReleased{ false };
-            bool    anyTriggered{ false };
-            float32 maxHold{ 0.0f };
-            bool    anyHoldReached{ false }; ///< 어떤 바인딩이든 자기 홀드 시간을 채웠는지입니다.
-            float2  totalAccumValue{ 0.0f, 0.0f };
-            float2  relativeValue{ 0.0f, 0.0f }; ///< 마우스 이동량입니다. 묶지 않습니다.
-
+            ActionFrameAccum accum{};
             for ( size_t bindIndex = 0; bindIndex < bindCount; ++bindIndex )
             {
-                const ActionBinding& binding = actionEntry._listBinding[bindIndex];
-                ActionBindingState&  state   = actionEntry._listBindingState[bindIndex];
-
-                // 꺼진 레이어의 바인딩이나 콘솔이 가린 키도 장치를 읽어 눌림을 추적한다. 다시 보이는 프레임에 이미 눌려 있던 입력을 새 누름으로 읽지 않기 위해서다(아래 `_bWasDown`).
-                const bool bLayerActive = isBindingLayerActive( binding );
-                float2     deviceValue{ 0.0f, 0.0f };
-                float2     bindingValue{ 0.0f, 0.0f };
-                const bool bPhysicalDown = evaluateBindingDown( binding, deviceValue, SlotRead::Device );
-                const bool bRawDown      = bLayerActive && evaluateBindingDown( binding, bindingValue, SlotRead::Game );
-                // 장치는 눌려 있는데 레이어가 켜진 게임이 안 눌림으로 보면 콘솔 · 포커스가 눌린 키를 가린 것이다.
-                const bool bLive = bLayerActive && ( bPhysicalDown == false || bRawDown );
-                if ( binding._bNegate )
-                {
-                    bindingValue._x = -bindingValue._x;
-                    bindingValue._y = -bindingValue._y;
-                }
-                // 바인딩마다 시간(`_triggerTime`)이 있으면 홀드 판정과 더블 판정 창도 그 시간을 쓴다. 다른 트리거는 맵 값 그대로다.
-                const bool    bHoldTrigger   = binding._trigger == ActionTrigger::HoldThreshold || binding._trigger == ActionTrigger::HoldAndRelease;
-                const uint32  requiredTaps   = getRequiredTapCount( binding );
-                const bool    bDoubleTrigger = requiredTaps > 0;
-                const float32 holdTime       = bHoldTrigger ? getEffectiveTriggerTime( binding ) : _holdThreshold;
-                const float32 doubleWindow   = bDoubleTrigger ? getEffectiveTriggerTime( binding ) : _doubleClickTime;
-
-                state._bWasDown = state._bDown;
-                state._bDown    = bRawDown ? SW_TRUE : SW_FALSE;
-                // 바인딩이 막 보이게 됐고(레이어가 켜짐, 콘솔이 닫혀 키가 다시 보임, 리바인딩 · 복원 · 새 바인딩으로 상태가 새로 만들어짐) 그 전부터 눌려 있었으면
-                // Pressed 가 아니라 Held 로 시작한다(눌린 채 켜진 입력을 새 누름으로 읽으면 일시정지를 연 Esc 가 층 안 Back 이 된다).
-                // 눌린 채 보이게 된 프레임에 뗐으면 아무 일도 아니다. 보인 뒤 뗐다 다시 누른 입력은 새 누름이다.
-                const bool bJustBecameLive = bLive && state._bLive == SW_FALSE;
-                if ( bJustBecameLive && state._bPhysicalDown == SW_TRUE )
-                    state._bWasDown = state._bDown;
-                state._bPhysicalDown = bPhysicalDown ? SW_TRUE : SW_FALSE;
-                state._bLive         = bLive ? SW_TRUE : SW_FALSE;
-
-                state._bPressed       = ( state._bDown == SW_TRUE && state._bWasDown == SW_FALSE ) ? SW_TRUE : SW_FALSE;
-                state._bReleased      = ( state._bDown == SW_FALSE && state._bWasDown == SW_TRUE ) ? SW_TRUE : SW_FALSE;
-                state._bDoubleClicked = SW_FALSE;
-                state._bHoldThreshold = SW_FALSE;
-
-                if ( state._timeSinceLastPress < InputMapDefaults::kNeverPressedSentinel * 0.5f )
-                    state._timeSinceLastPress += deltaSeconds;
-
-                if ( state._bDown == SW_TRUE )
-                {
-                    state._holdDuration += deltaSeconds;
-                    if ( state._holdDuration >= holdTime )
-                        state._bHoldThreshold = SW_TRUE;
-                    state._pulseTimer += deltaSeconds;
-                }
-
-                if ( state._bPressed == SW_TRUE )
-                {
-                    const bool bIsMouseBinding  = ( binding._arrSlot[0]._deviceKind == InputDeviceKind::Mouse );
-                    bool       bContinuesStreak = false;
-
-                    if ( state._timeSinceLastPress <= doubleWindow )
-                    {
-                        if ( bIsMouseBinding )
-                        {
-                            const int2    pressDelta = curMousePos - state._lastPress;
-                            const float32 distSq     = static_cast<float32>( pressDelta._x * pressDelta._x + pressDelta._y * pressDelta._y );
-                            if ( distSq <= ( _doubleClickMaxDistance * _doubleClickMaxDistance ) )
-                                bContinuesStreak = true;
-                        }
-                        else
-                        {
-                            bContinuesStreak = true;
-                        }
-                    }
-
-                    // 간격 안에 이어진 누름을 센다. 필요한 수(DoubleTap · DoubleClicked 는 2, MultiTap 은 `_tapCount`)에 닿으면
-                    // 발화하고 처음부터 다시 센다. 2 일 때는 옛 더블 판정과 같다. 다른 트리거도 `_bDoubleClicked` 는 2 연타로 둔다.
-                    const uint32 streakGoal = ( requiredTaps > 0 ) ? requiredTaps : 2u;
-                    state._tapStreak        = bContinuesStreak ? static_cast<uint8>( state._tapStreak + 1 ) : static_cast<uint8>( 1 );
-                    if ( state._tapStreak >= streakGoal )
-                    {
-                        state._bDoubleClicked     = SW_TRUE;
-                        state._timeSinceLastPress = InputMapDefaults::kNeverPressedSentinel;
-                        state._tapStreak          = 0;
-                    }
-                    else
-                    {
-                        state._timeSinceLastPress = 0.0f;
-                    }
-                    state._lastPress = curMousePos;
-                }
-
-                const bool bTriggerFired = evaluateTrigger( binding, state, deltaSeconds );
-                state._bTriggered        = bTriggerFired ? SW_TRUE : SW_FALSE;
-
-                if ( state._bDown == SW_TRUE )
-                    anyDown = true;
-                if ( state._bPressed == SW_TRUE )
-                    anyPressed = true;
-                if ( state._bReleased == SW_TRUE )
-                    anyReleased = true;
-                if ( state._bTriggered == SW_TRUE )
-                    anyTriggered = true;
-                if ( state._holdDuration > maxHold )
-                    maxHold = state._holdDuration;
-                // 뗀 순간 Completed/Canceled 판정은 바인딩마다 시간(`getEffectiveTriggerTime`)으로 본다. 맵 값과 견주면 짧은 차지가 Canceled 로 나온다.
-                if ( state._holdDuration >= holdTime )
-                    anyHoldReached = true;
-
-                if ( state._bDown == SW_FALSE )
-                {
-                    state._holdDuration = 0.0f;
-                    state._pulseTimer   = 0.0f;
-                }
-
-                if ( bRawDown )
-                {
-                    float2& accumulator = BindingKinds::isRelative( binding ) ? relativeValue : totalAccumValue;
-                    accumulator._x += bindingValue._x;
-                    accumulator._y += bindingValue._y;
-                }
+                updateBinding( actionEntry._listBinding[bindIndex], actionEntry._listBindingState[bindIndex], deltaSeconds, curMousePos, accum );
             }
 
             const bool bPrevDown      = actionEntry._bDown == SW_TRUE;
-            actionEntry._bDown        = anyDown ? SW_TRUE : SW_FALSE;
-            actionEntry._bPressed     = anyPressed ? SW_TRUE : SW_FALSE;
-            actionEntry._bReleased    = anyReleased ? SW_TRUE : SW_FALSE;
-            actionEntry._bTriggered   = anyTriggered ? SW_TRUE : SW_FALSE;
-            actionEntry._holdDuration = maxHold;
+            actionEntry._bDown        = accum._bAnyDown ? SW_TRUE : SW_FALSE;
+            actionEntry._bPressed     = accum._bAnyPressed ? SW_TRUE : SW_FALSE;
+            actionEntry._bReleased    = accum._bAnyReleased ? SW_TRUE : SW_FALSE;
+            actionEntry._bTriggered   = accum._bAnyTriggered ? SW_TRUE : SW_FALSE;
+            actionEntry._holdDuration = accum._maxHold;
 
             // 모디파이어를 적용한다(축 반전, 클램핑 또는 원형 정규화 — 마우스 이동량은 빼고).
-            actionEntry._currentValue = composeActionValue( totalAccumValue, relativeValue );
+            actionEntry._currentValue = composeActionValue( accum._totalValue, accum._relativeValue );
 
-            // --------------------------------------------------------------------------
-            // ActionPhase 상태 머신 전이
-            // --------------------------------------------------------------------------
-            if ( actionEntry._bTriggered == SW_TRUE )
-            {
-                actionEntry._currentPhase = ActionPhase::Triggered;
-            }
-            else if ( actionEntry._bPressed == SW_TRUE || ( bPrevDown == false && actionEntry._bDown == SW_TRUE ) )
-            {
-                actionEntry._currentPhase = ActionPhase::Started;
-            }
-            else if ( actionEntry._bDown == SW_TRUE )
-            {
-                actionEntry._currentPhase = ActionPhase::Ongoing;
-            }
-            else if ( actionEntry._bReleased == SW_TRUE )
-            {
-                actionEntry._currentPhase = ( actionEntry._currentPhase == ActionPhase::Triggered || actionEntry._currentPhase == ActionPhase::Ongoing || anyHoldReached )
-                                              ? ActionPhase::Completed
-                                              : ActionPhase::Canceled;
-            }
-            else
-            {
-                actionEntry._currentPhase = ActionPhase::None;
-            }
+            advanceActionPhase( actionEntry, bPrevDown, accum._bAnyHoldReached );
 
             // 접근성 토글 처리
             if ( actionEntry._bPressed == SW_TRUE && actionEntry._bToggleMode == SW_TRUE )
@@ -214,35 +67,185 @@ namespace sw
             if ( actionEntry._bTriggered == SW_TRUE )
                 _actionBuffer.recordTriggered( actionName );
 
-            // 델리게이트 이벤트 디스패치(Triggered)
-            if ( actionEntry._bTriggered == SW_TRUE )
-            {
-                for ( const ActionCallbackEntry& cbEntry : actionEntry._listActionCallback )
-                {
-                    if ( cbEntry._callback.isBound() )
-                        cbEntry._callback();
-                }
-            }
+            dispatchActionCallbacks( actionEntry, bPrevDown );
+        }
+    }
 
-            // 페이즈 델리게이트 디스패치(Phase)
-            if ( actionEntry._currentPhase != ActionPhase::None )
-            {
-                for ( const PhaseCallbackEntry& phaseEntry : actionEntry._listPhaseCallback )
-                {
-                    if ( phaseEntry._phase == actionEntry._currentPhase && phaseEntry._callback.isBound() )
-                        phaseEntry._callback();
-                }
-            }
+    void InputMap::updateBinding( const ActionBinding& binding, ActionBindingState& state, float32 deltaSeconds, const int2& mousePos, ActionFrameAccum& accum ) const
+    {
+        // 꺼진 레이어의 바인딩이나 콘솔이 가린 키도 장치를 읽어 눌림을 추적한다. 다시 보이는 프레임에 이미 눌려 있던 입력을 새 누름으로 읽지 않기 위해서다(아래 `_bWasDown`).
+        const bool bLayerActive = isBindingLayerActive( binding );
+        float2     deviceValue{ 0.0f, 0.0f };
+        float2     bindingValue{ 0.0f, 0.0f };
+        const bool bPhysicalDown = evaluateBindingDown( binding, deviceValue, SlotRead::Device );
+        const bool bRawDown      = bLayerActive && evaluateBindingDown( binding, bindingValue, SlotRead::Game );
+        // 장치는 눌려 있는데 레이어가 켜진 게임이 안 눌림으로 보면 콘솔 · 포커스가 눌린 키를 가린 것이다.
+        const bool bLive = bLayerActive && ( bPhysicalDown == false || bRawDown );
+        if ( binding._bNegate )
+        {
+            bindingValue._x = -bindingValue._x;
+            bindingValue._y = -bindingValue._y;
+        }
+        // 바인딩마다 시간(`_triggerTime`)이 있으면 홀드 판정과 더블 판정 창도 그 시간을 쓴다. 다른 트리거는 맵 값 그대로다.
+        const bool    bHoldTrigger   = binding._trigger == ActionTrigger::HoldThreshold || binding._trigger == ActionTrigger::HoldAndRelease;
+        const uint32  requiredTaps   = getRequiredTapCount( binding );
+        const bool    bDoubleTrigger = requiredTaps > 0;
+        const float32 holdTime       = bHoldTrigger ? getEffectiveTriggerTime( binding ) : _holdThreshold;
+        const float32 doubleWindow   = bDoubleTrigger ? getEffectiveTriggerTime( binding ) : _doubleClickTime;
 
-            // 2D 벡터 델리게이트 디스패치
-            if ( ( actionEntry._currentValue._x != 0.0f || actionEntry._currentValue._y != 0.0f ) ||
-                 ( bPrevDown && actionEntry._bDown == SW_FALSE ) )
+        state._bWasDown = state._bDown;
+        state._bDown    = bRawDown ? SW_TRUE : SW_FALSE;
+        // 바인딩이 막 보이게 됐고(레이어가 켜짐, 콘솔이 닫혀 키가 다시 보임, 리바인딩 · 복원 · 새 바인딩으로 상태가 새로 만들어짐) 그 전부터 눌려 있었으면
+        // Pressed 가 아니라 Held 로 시작한다(눌린 채 켜진 입력을 새 누름으로 읽으면 일시정지를 연 Esc 가 층 안 Back 이 된다).
+        // 눌린 채 보이게 된 프레임에 뗐으면 아무 일도 아니다. 보인 뒤 뗐다 다시 누른 입력은 새 누름이다.
+        const bool bJustBecameLive = bLive && state._bLive == SW_FALSE;
+        if ( bJustBecameLive && state._bPhysicalDown == SW_TRUE )
+            state._bWasDown = state._bDown;
+        state._bPhysicalDown = bPhysicalDown ? SW_TRUE : SW_FALSE;
+        state._bLive         = bLive ? SW_TRUE : SW_FALSE;
+
+        state._bPressed       = ( state._bDown == SW_TRUE && state._bWasDown == SW_FALSE ) ? SW_TRUE : SW_FALSE;
+        state._bReleased      = ( state._bDown == SW_FALSE && state._bWasDown == SW_TRUE ) ? SW_TRUE : SW_FALSE;
+        state._bDoubleClicked = SW_FALSE;
+        state._bHoldThreshold = SW_FALSE;
+
+        if ( state._timeSinceLastPress < InputMapDefaults::kNeverPressedSentinel * 0.5f )
+            state._timeSinceLastPress += deltaSeconds;
+
+        if ( state._bDown == SW_TRUE )
+        {
+            state._holdDuration += deltaSeconds;
+            if ( state._holdDuration >= holdTime )
+                state._bHoldThreshold = SW_TRUE;
+            state._pulseTimer += deltaSeconds;
+        }
+
+        if ( state._bPressed == SW_TRUE )
+            advanceTapStreak( binding, state, requiredTaps, doubleWindow, mousePos );
+
+        const bool bTriggerFired = evaluateTrigger( binding, state, deltaSeconds );
+        state._bTriggered        = bTriggerFired ? SW_TRUE : SW_FALSE;
+
+        if ( state._bDown == SW_TRUE )
+            accum._bAnyDown = true;
+        if ( state._bPressed == SW_TRUE )
+            accum._bAnyPressed = true;
+        if ( state._bReleased == SW_TRUE )
+            accum._bAnyReleased = true;
+        if ( state._bTriggered == SW_TRUE )
+            accum._bAnyTriggered = true;
+        if ( state._holdDuration > accum._maxHold )
+            accum._maxHold = state._holdDuration;
+        // 뗀 순간 Completed/Canceled 판정은 바인딩마다 시간(`getEffectiveTriggerTime`)으로 본다. 맵 값과 견주면 짧은 차지가 Canceled 로 나온다.
+        if ( state._holdDuration >= holdTime )
+            accum._bAnyHoldReached = true;
+
+        if ( state._bDown == SW_FALSE )
+        {
+            state._holdDuration = 0.0f;
+            state._pulseTimer   = 0.0f;
+        }
+
+        if ( bRawDown )
+        {
+            float2& accumulator = BindingKinds::isRelative( binding ) ? accum._relativeValue : accum._totalValue;
+            accumulator._x += bindingValue._x;
+            accumulator._y += bindingValue._y;
+        }
+    }
+
+    void InputMap::advanceTapStreak( const ActionBinding& binding, ActionBindingState& state, uint32 requiredTaps, float32 doubleWindow, const int2& mousePos ) const
+    {
+        const bool bIsMouseBinding  = ( binding._arrSlot[0]._deviceKind == InputDeviceKind::Mouse );
+        bool       bContinuesStreak = false;
+
+        if ( state._timeSinceLastPress <= doubleWindow )
+        {
+            if ( bIsMouseBinding )
             {
-                for ( const Vector2DCallbackDelegate& vecCb : actionEntry._listVector2DCallback )
-                {
-                    if ( vecCb.isBound() )
-                        vecCb( actionEntry._currentValue );
-                }
+                const int2    pressDelta = mousePos - state._lastPress;
+                const float32 distSq     = static_cast<float32>( pressDelta._x * pressDelta._x + pressDelta._y * pressDelta._y );
+                if ( distSq <= ( _doubleClickMaxDistance * _doubleClickMaxDistance ) )
+                    bContinuesStreak = true;
+            }
+            else
+            {
+                bContinuesStreak = true;
+            }
+        }
+
+        // 간격 안에 이어진 누름을 센다. 필요한 수(DoubleTap · DoubleClicked 는 2, MultiTap 은 `_tapCount`)에 닿으면
+        // 발화하고 처음부터 다시 센다. 2 일 때는 옛 더블 판정과 같다. 다른 트리거도 `_bDoubleClicked` 는 2 연타로 둔다.
+        const uint32 streakGoal = ( requiredTaps > 0 ) ? requiredTaps : 2u;
+        state._tapStreak        = bContinuesStreak ? static_cast<uint8>( state._tapStreak + 1 ) : static_cast<uint8>( 1 );
+        if ( state._tapStreak >= streakGoal )
+        {
+            state._bDoubleClicked     = SW_TRUE;
+            state._timeSinceLastPress = InputMapDefaults::kNeverPressedSentinel;
+            state._tapStreak          = 0;
+        }
+        else
+        {
+            state._timeSinceLastPress = 0.0f;
+        }
+        state._lastPress = mousePos;
+    }
+
+    void InputMap::advanceActionPhase( ActionEntry& actionEntry, bool bPrevDown, bool bAnyHoldReached )
+    {
+        if ( actionEntry._bTriggered == SW_TRUE )
+        {
+            actionEntry._currentPhase = ActionPhase::Triggered;
+        }
+        else if ( actionEntry._bPressed == SW_TRUE || ( bPrevDown == false && actionEntry._bDown == SW_TRUE ) )
+        {
+            actionEntry._currentPhase = ActionPhase::Started;
+        }
+        else if ( actionEntry._bDown == SW_TRUE )
+        {
+            actionEntry._currentPhase = ActionPhase::Ongoing;
+        }
+        else if ( actionEntry._bReleased == SW_TRUE )
+        {
+            actionEntry._currentPhase = ( actionEntry._currentPhase == ActionPhase::Triggered || actionEntry._currentPhase == ActionPhase::Ongoing || bAnyHoldReached )
+                                          ? ActionPhase::Completed
+                                          : ActionPhase::Canceled;
+        }
+        else
+        {
+            actionEntry._currentPhase = ActionPhase::None;
+        }
+    }
+
+    void InputMap::dispatchActionCallbacks( const ActionEntry& actionEntry, bool bPrevDown )
+    {
+        // 델리게이트 이벤트 디스패치(Triggered)
+        if ( actionEntry._bTriggered == SW_TRUE )
+        {
+            for ( const ActionCallbackEntry& cbEntry : actionEntry._listActionCallback )
+            {
+                if ( cbEntry._callback.isBound() )
+                    cbEntry._callback();
+            }
+        }
+
+        // 페이즈 델리게이트 디스패치(Phase)
+        if ( actionEntry._currentPhase != ActionPhase::None )
+        {
+            for ( const PhaseCallbackEntry& phaseEntry : actionEntry._listPhaseCallback )
+            {
+                if ( phaseEntry._phase == actionEntry._currentPhase && phaseEntry._callback.isBound() )
+                    phaseEntry._callback();
+            }
+        }
+
+        // 2D 벡터 델리게이트 디스패치
+        if ( ( actionEntry._currentValue._x != 0.0f || actionEntry._currentValue._y != 0.0f ) || ( bPrevDown && actionEntry._bDown == SW_FALSE ) )
+        {
+            for ( const Vector2DCallbackDelegate& vecCb : actionEntry._listVector2DCallback )
+            {
+                if ( vecCb.isBound() )
+                    vecCb( actionEntry._currentValue );
             }
         }
     }
@@ -345,6 +348,138 @@ namespace sw
         return false;
     }
 
+    bool InputMap::isBaseKeySuppressedByModifier( const ActionBinding& binding, SlotRead read ) const
+    {
+        if ( _bSuppressBaseActionOnChord == SW_FALSE || binding._arrSlot[0]._deviceKind != InputDeviceKind::Keyboard )
+            return false;
+        const Key  key            = static_cast<Key>( binding._arrSlot[0]._controlIndex );
+        const bool bIsModifierKey = ( key == Key::LeftControl || key == Key::RightControl || key == Key::LeftShift || key == Key::RightShift || key == Key::LeftAlt || key == Key::RightAlt || key == Key::LeftSuper || key == Key::RightSuper );
+        if ( bIsModifierKey )
+            return false;
+        const bool bCtrlHeld = isKeyboardKeyDown( Key::LeftControl, read ) || isKeyboardKeyDown( Key::RightControl, read );
+        const bool bAltHeld  = isKeyboardKeyDown( Key::LeftAlt, read ) || isKeyboardKeyDown( Key::RightAlt, read );
+        return bCtrlHeld || bAltHeld;
+    }
+
+    namespace
+    {
+        /** @brief 데드존 밖 크기(0 ~ 1)를 [안쪽 데드존, 바깥 데드존] 구간으로 펴고 응답 지수를 적용합니다. */
+        float32 shapeStickMagnitude( float32 magnitude, float32 inDeadzone, float32 deadRange, float32 responseExponent )
+        {
+            float32 norm = deadRange > 0.0001f ? MathUtil::clamp( ( magnitude - inDeadzone ) / deadRange, 0.0f, 1.0f ) : 1.0f;
+            if ( responseExponent != 1.0f && responseExponent > 0.0f )
+                norm = MathUtil::pow( norm, responseExponent );
+            return norm;
+        }
+
+        /** @brief 축마다 따로 데드존을 적용합니다(Axial). */
+        float32 applyAxialDeadzone( float32 val, float32 inDeadzone, float32 deadRange, float32 responseExponent )
+        {
+            const float32 absVal = MathUtil::abs( val );
+            if ( absVal <= inDeadzone )
+                return 0.0f;
+            return ( val > 0.0f ? 1.0f : -1.0f ) * shapeStickMagnitude( absVal, inDeadzone, deadRange, responseExponent );
+        }
+    } // namespace
+
+    bool InputMap::evaluateGamepadStick( const ActionBinding& binding, float2& outValue ) const
+    {
+        GamepadDevice* pPad = _pInput->getGamepad( binding._deviceIndex );
+        if ( pPad == nullptr || pPad->isConnected() == false )
+            return false;
+        const float2 stick  = ( binding._stick == GamepadStick::Left ) ? pPad->getLeftStick() : pPad->getRightStick();
+        float32      stickX = stick._x;
+        float32      stickY = stick._y;
+
+        const float32 inDeadzone  = _playerSettings._stickDeadzoneOverride >= 0.0f ? _playerSettings._stickDeadzoneOverride : binding._deadzone;
+        const float32 outDeadzone = binding._outerDeadzone > inDeadzone ? binding._outerDeadzone : 1.0f;
+        const float32 deadRange   = outDeadzone - inDeadzone;
+
+        if ( _playerSettings._deadzoneShape == DeadzoneShape::Radial )
+        {
+            const float32 mag = MathUtil::sqrt( stickX * stickX + stickY * stickY );
+            if ( mag <= inDeadzone )
+            {
+                stickX = 0.0f;
+                stickY = 0.0f;
+            }
+            else
+            {
+                const float32 norm = shapeStickMagnitude( mag, inDeadzone, deadRange, binding._responseExponent );
+                stickX             = ( stickX / mag ) * norm;
+                stickY             = ( stickY / mag ) * norm;
+            }
+        }
+        else // Axial
+        {
+            stickX = applyAxialDeadzone( stickX, inDeadzone, deadRange, binding._responseExponent );
+            stickY = applyAxialDeadzone( stickY, inDeadzone, deadRange, binding._responseExponent );
+        }
+
+        stickX *= _playerSettings._gamepadSensitivity._x;
+        stickY *= _playerSettings._gamepadSensitivity._y;
+        if ( BindingKinds::isRelative( binding ) )
+        {
+            // 이동량으로 쓰는 스틱: 배율과 프레임 시간을 곱하고, 반전은 마우스 이동처럼 여기서 한 번만 적용한다(액션 값 단계는 이동량을 반전하지 않는다).
+            // 한 성분만 내는 스틱(확대 같은 1D 액션)은 시점 반전을 받지 않는다 — 반전 설정은 2D 시점 이동의 것이다.
+            const float32 frameScale = binding._bScaleByDelta ? _lastDeltaSeconds : 1.0f;
+            const bool    bLook      = binding._stickAxis == GamepadStickAxis::Both;
+            stickX *= binding._axisScale._x * frameScale * ( bLook && _playerSettings._bInvertX ? -1.0f : 1.0f );
+            stickY *= binding._axisScale._y * frameScale * ( bLook && _playerSettings._bInvertY ? -1.0f : 1.0f );
+        }
+        // 한 성분만 내는 바인딩은 그 성분이 1D 값(x)이다 — getAxis1D 가 x 를 읽는다.
+        if ( binding._stickAxis == GamepadStickAxis::X )
+        {
+            stickY = 0.0f;
+        }
+        else if ( binding._stickAxis == GamepadStickAxis::Y )
+        {
+            stickX = stickY;
+            stickY = 0.0f;
+        }
+        outValue = float2{ stickX, stickY };
+        return ( stickX != 0.0f || stickY != 0.0f );
+    }
+
+    bool InputMap::evaluateVirtualJoystick( const ActionBinding& binding, float2& outValue, SlotRead read ) const
+    {
+        const bool bActivationDown = isSlotDown( binding._arrSlot[0], read );
+
+        if ( bActivationDown == false )
+        {
+            binding._bJoystickAnchored = false;
+            return false;
+        }
+
+        const int2   curTilePos = _pInput->getMousePosition();
+        const float2 curPos     = curTilePos.toFloat2();
+
+        // 앵커는 고정 좌표가 아니라 활성화 버튼을 처음 누른 지점에 놓는다(모바일 온스크린 스틱에서 흔한 방식).
+        if ( binding._bJoystickAnchored == false )
+        {
+            binding._joystickAnchor    = curPos;
+            binding._bJoystickAnchored = true;
+        }
+
+        outValue = VirtualJoystick::computeVector( binding._joystickAnchor, curPos, binding._scale, binding._deadzone, binding._outerDeadzone );
+        return ( outValue._x != 0.0f || outValue._y != 0.0f );
+    }
+
+    bool InputMap::areShortcutModifiersHeld( const ActionBinding& binding, SlotRead read ) const
+    {
+        bool bModifierMatch = true;
+        if ( ( binding._modifierMask & ModifierKey::Ctrl ) != 0 )
+            bModifierMatch = bModifierMatch && ( isKeyboardKeyDown( Key::LeftControl, read ) || isKeyboardKeyDown( Key::RightControl, read ) );
+        if ( ( binding._modifierMask & ModifierKey::Shift ) != 0 )
+            bModifierMatch = bModifierMatch && ( isKeyboardKeyDown( Key::LeftShift, read ) || isKeyboardKeyDown( Key::RightShift, read ) );
+        if ( ( binding._modifierMask & ModifierKey::Alt ) != 0 )
+            bModifierMatch = bModifierMatch && ( isKeyboardKeyDown( Key::LeftAlt, read ) || isKeyboardKeyDown( Key::RightAlt, read ) );
+        if ( ( binding._modifierMask & ModifierKey::Super ) != 0 )
+            bModifierMatch = bModifierMatch && ( isKeyboardKeyDown( Key::LeftSuper, read ) || isKeyboardKeyDown( Key::RightSuper, read ) );
+        return bModifierMatch;
+    }
+
+    // 긴 케이스(스틱 · 가상 조이스틱 · 단축키 수정 키)는 함수로 뺐고, 남은 것은 종류마다 짧은 switch 디스패처라 나누지 않는다.
     bool InputMap::evaluateBindingDown( const ActionBinding& binding, float2& outValue, SlotRead read ) const
     {
         if ( _pInput == nullptr )
@@ -364,20 +499,8 @@ namespace sw
         {
             case BindingKind::SingleSlot:
             {
-                if ( isSlotHeldThisFrame( binding._arrSlot[0] ) )
+                if ( isSlotHeldThisFrame( binding._arrSlot[0] ) && isBaseKeySuppressedByModifier( binding, read ) == false )
                 {
-                    if ( _bSuppressBaseActionOnChord == SW_TRUE && binding._arrSlot[0]._deviceKind == InputDeviceKind::Keyboard )
-                    {
-                        const Key  key            = static_cast<Key>( binding._arrSlot[0]._controlIndex );
-                        const bool bIsModifierKey = ( key == Key::LeftControl || key == Key::RightControl || key == Key::LeftShift || key == Key::RightShift || key == Key::LeftAlt || key == Key::RightAlt || key == Key::LeftSuper || key == Key::RightSuper );
-                        if ( bIsModifierKey == false )
-                        {
-                            const bool bCtrlHeld = isKeyboardKeyDown( Key::LeftControl, read ) || isKeyboardKeyDown( Key::RightControl, read );
-                            const bool bAltHeld  = isKeyboardKeyDown( Key::LeftAlt, read ) || isKeyboardKeyDown( Key::RightAlt, read );
-                            if ( bCtrlHeld || bAltHeld )
-                                return false;
-                        }
-                    }
                     outValue = float2{ 1.0f, 0.0f };
                     return true;
                 }
@@ -417,75 +540,7 @@ namespace sw
             }
             case BindingKind::GamepadStick2D:
             {
-                GamepadDevice* pPad = _pInput->getGamepad( binding._deviceIndex );
-                if ( pPad != nullptr && pPad->isConnected() )
-                {
-                    const float2 stick  = ( binding._stick == GamepadStick::Left ) ? pPad->getLeftStick() : pPad->getRightStick();
-                    float32      stickX = stick._x;
-                    float32      stickY = stick._y;
-
-                    const float32 inDeadzone  = _playerSettings._stickDeadzoneOverride >= 0.0f ? _playerSettings._stickDeadzoneOverride : binding._deadzone;
-                    const float32 outDeadzone = binding._outerDeadzone > inDeadzone ? binding._outerDeadzone : 1.0f;
-                    const float32 deadRange   = outDeadzone - inDeadzone;
-
-                    if ( _playerSettings._deadzoneShape == DeadzoneShape::Radial )
-                    {
-                        const float32 mag = MathUtil::sqrt( stickX * stickX + stickY * stickY );
-                        if ( mag <= inDeadzone )
-                        {
-                            stickX = 0.0f;
-                            stickY = 0.0f;
-                        }
-                        else
-                        {
-                            float32 norm = deadRange > 0.0001f ? MathUtil::clamp( ( mag - inDeadzone ) / deadRange, 0.0f, 1.0f ) : 1.0f;
-                            if ( binding._responseExponent != 1.0f && binding._responseExponent > 0.0f )
-                                norm = MathUtil::pow( norm, binding._responseExponent );
-                            stickX = ( stickX / mag ) * norm;
-                            stickY = ( stickY / mag ) * norm;
-                        }
-                    }
-                    else // Axial
-                    {
-                        auto applyAxialDeadzone = [&]( float32 val ) -> float32
-                        {
-                            const float32 absVal = MathUtil::abs( val );
-                            if ( absVal <= inDeadzone )
-                                return 0.0f;
-                            float32 norm = deadRange > 0.0001f ? MathUtil::clamp( ( absVal - inDeadzone ) / deadRange, 0.0f, 1.0f ) : 1.0f;
-                            if ( binding._responseExponent != 1.0f && binding._responseExponent > 0.0f )
-                                norm = MathUtil::pow( norm, binding._responseExponent );
-                            return ( val > 0.0f ? 1.0f : -1.0f ) * norm;
-                        };
-                        stickX = applyAxialDeadzone( stickX );
-                        stickY = applyAxialDeadzone( stickY );
-                    }
-
-                    stickX *= _playerSettings._gamepadSensitivity._x;
-                    stickY *= _playerSettings._gamepadSensitivity._y;
-                    if ( BindingKinds::isRelative( binding ) )
-                    {
-                        // 이동량으로 쓰는 스틱: 배율과 프레임 시간을 곱하고, 반전은 마우스 이동처럼 여기서 한 번만 적용한다(액션 값 단계는 이동량을 반전하지 않는다).
-                        // 한 성분만 내는 스틱(확대 같은 1D 액션)은 시점 반전을 받지 않는다 — 반전 설정은 2D 시점 이동의 것이다.
-                        const float32 frameScale = binding._bScaleByDelta ? _lastDeltaSeconds : 1.0f;
-                        const bool    bLook      = binding._stickAxis == GamepadStickAxis::Both;
-                        stickX *= binding._axisScale._x * frameScale * ( bLook && _playerSettings._bInvertX ? -1.0f : 1.0f );
-                        stickY *= binding._axisScale._y * frameScale * ( bLook && _playerSettings._bInvertY ? -1.0f : 1.0f );
-                    }
-                    // 한 성분만 내는 바인딩은 그 성분이 1D 값(x)이다 — getAxis1D 가 x 를 읽는다.
-                    if ( binding._stickAxis == GamepadStickAxis::X )
-                    {
-                        stickY = 0.0f;
-                    }
-                    else if ( binding._stickAxis == GamepadStickAxis::Y )
-                    {
-                        stickX = stickY;
-                        stickY = 0.0f;
-                    }
-                    outValue = float2{ stickX, stickY };
-                    return ( stickX != 0.0f || stickY != 0.0f );
-                }
-                return false;
+                return evaluateGamepadStick( binding, outValue );
             }
             case BindingKind::Chord:
             {
@@ -513,40 +568,11 @@ namespace sw
             }
             case BindingKind::VirtualJoystick2D:
             {
-                const bool bActivationDown = isSlotDown( binding._arrSlot[0], read );
-
-                if ( bActivationDown == false )
-                {
-                    binding._bJoystickAnchored = false;
-                    return false;
-                }
-
-                const int2   curTilePos = _pInput->getMousePosition();
-                const float2 curPos     = curTilePos.toFloat2();
-
-                // 앵커는 고정 좌표가 아니라 활성화 버튼을 처음 누른 지점에 놓는다(모바일 온스크린 스틱에서 흔한 방식).
-                if ( binding._bJoystickAnchored == false )
-                {
-                    binding._joystickAnchor    = curPos;
-                    binding._bJoystickAnchored = true;
-                }
-
-                outValue = VirtualJoystick::computeVector( binding._joystickAnchor, curPos, binding._scale, binding._deadzone, binding._outerDeadzone );
-                return ( outValue._x != 0.0f || outValue._y != 0.0f );
+                return evaluateVirtualJoystick( binding, outValue, read );
             }
             case BindingKind::Shortcut:
             {
-                bool bModifierMatch = true;
-                if ( ( binding._modifierMask & ModifierKey::Ctrl ) != 0 )
-                    bModifierMatch = bModifierMatch && ( isKeyboardKeyDown( Key::LeftControl, read ) || isKeyboardKeyDown( Key::RightControl, read ) );
-                if ( ( binding._modifierMask & ModifierKey::Shift ) != 0 )
-                    bModifierMatch = bModifierMatch && ( isKeyboardKeyDown( Key::LeftShift, read ) || isKeyboardKeyDown( Key::RightShift, read ) );
-                if ( ( binding._modifierMask & ModifierKey::Alt ) != 0 )
-                    bModifierMatch = bModifierMatch && ( isKeyboardKeyDown( Key::LeftAlt, read ) || isKeyboardKeyDown( Key::RightAlt, read ) );
-                if ( ( binding._modifierMask & ModifierKey::Super ) != 0 )
-                    bModifierMatch = bModifierMatch && ( isKeyboardKeyDown( Key::LeftSuper, read ) || isKeyboardKeyDown( Key::RightSuper, read ) );
-
-                if ( bModifierMatch == false )
+                if ( areShortcutModifiersHeld( binding, read ) == false )
                     return false;
 
                 if ( isSlotDown( binding._arrSlot[0], read ) )

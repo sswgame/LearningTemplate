@@ -149,6 +149,129 @@ namespace sw
         return -1;
     }
 
+    int32 AudioEngine::findStealVictim( const AudioEventDesc& event, uint32& outLiveCount ) const
+    {
+        outLiveCount      = 0;
+        int32 victimIndex = -1;
+        for ( size_t instanceIndex = 0; instanceIndex < _listInstance.size(); ++instanceIndex )
+        {
+            const EventInstance& instance                = _listInstance[instanceIndex];
+            const bool           bNotLiveInstanceOfEvent = instance._bInUse == false || instance._bStopping || instance._pDesc == nullptr || instance._pDesc->_name != event._name;
+            if ( bNotLiveInstanceOfEvent )
+                continue;
+            ++outLiveCount;
+            if ( victimIndex < 0 )
+            {
+                victimIndex = static_cast<int32>( instanceIndex );
+                continue;
+            }
+            const EventInstance& victim  = _listInstance[static_cast<size_t>( victimIndex )];
+            bool                 bBetter = false;
+            switch ( event._steal )
+            {
+                case AudioStealPolicy::Reject:
+                {
+                    break;
+                }
+                case AudioStealPolicy::Oldest:
+                {
+                    bBetter = instance._startFrame < victim._startFrame || ( instance._startFrame == victim._startFrame && instance._playingID < victim._playingID );
+                    break;
+                }
+                case AudioStealPolicy::Quietest:
+                {
+                    bBetter = instance._audibility < victim._audibility;
+                    break;
+                }
+                case AudioStealPolicy::Farthest:
+                {
+                    bBetter = instance._distance > victim._distance;
+                    break;
+                }
+            }
+            if ( bBetter )
+                victimIndex = static_cast<int32>( instanceIndex );
+        }
+        return victimIndex;
+    }
+
+    bool AudioEngine::tryAdmitEvent( const EventState& state, const AudioEventDesc& event )
+    {
+        // 쿨다운은 오디오 시각(렌더한 프레임)으로 측정한다.
+        const uint64 cooldownFrames = static_cast<uint64>( event._cooldownSeconds * static_cast<float32>( audio::kSampleRate ) );
+        const bool   bInCooldown    = cooldownFrames > 0 && state._bPostedOnce && _renderedFrameCount - state._lastPostFrame < cooldownFrames;
+        if ( bInCooldown )
+        {
+            ++_droppedEventCount;
+            return false;
+        }
+
+        // 동시 재생 상한과 뺏기다(Wwise 의 Playback Limit, 언리얼의 Sound Concurrency).
+        if ( event._maxInstances > 0 )
+        {
+            uint32      liveCount{ 0 };
+            const int32 victimIndex = findStealVictim( event, liveCount );
+            if ( liveCount >= event._maxInstances )
+            {
+                if ( event._steal == AudioStealPolicy::Reject || victimIndex < 0 )
+                {
+                    ++_droppedEventCount;
+                    return false;
+                }
+                EventInstance& victim = _listInstance[static_cast<size_t>( victimIndex )];
+                victim._bStopping     = true;
+                stopVoices( victim._playingID, 0, event._fadeOutSeconds );
+            }
+        }
+        return true;
+    }
+
+    void AudioEngine::pickEventClips( EventState& inoutState, const AudioEventDesc& event, uint32& outFirstClip, uint32& outPickCount )
+    {
+        const uint32 clipCount = static_cast<uint32>( event._listClip.size() );
+        outFirstClip           = 0;
+        outPickCount           = 1;
+        switch ( event._container )
+        {
+            case AudioContainerType::Random:
+            {
+                // 가중치로 하나를 고른다. 클립이 둘 이상이면 바로 앞에 낸 것은 뺀다.
+                const bool bSkipLast = event._bAvoidRepeat && clipCount > 1 && inoutState._lastRandomIndex >= 0;
+                float32    total     = 0.0f;
+                for ( uint32 clipIndex = 0; clipIndex < clipCount; ++clipIndex )
+                {
+                    if ( bSkipLast && static_cast<int32>( clipIndex ) == inoutState._lastRandomIndex )
+                        continue;
+                    total += MathUtil::max( 0.0f, event._listClip[clipIndex]._weight );
+                }
+                float32 pick = _random.nextUnit() * total;
+                for ( uint32 clipIndex = 0; clipIndex < clipCount; ++clipIndex )
+                {
+                    if ( bSkipLast && static_cast<int32>( clipIndex ) == inoutState._lastRandomIndex )
+                        continue;
+                    outFirstClip = clipIndex;
+                    pick -= MathUtil::max( 0.0f, event._listClip[clipIndex]._weight );
+                    if ( pick < 0.0f )
+                        break;
+                }
+                inoutState._lastRandomIndex = static_cast<int32>( outFirstClip );
+                break;
+            }
+            case AudioContainerType::Sequence:
+            {
+                outFirstClip               = inoutState._sequenceCursor % clipCount;
+                inoutState._sequenceCursor = ( outFirstClip + 1 ) % clipCount;
+                break;
+            }
+            case AudioContainerType::Layer:
+            {
+                outFirstClip = 0;
+                outPickCount = clipCount;
+                break;
+            }
+        }
+    }
+
     void AudioEngine::applyPostEvent( const Command& command )
     {
         const auto stateIt = _mapEventState.find( command._name );
@@ -156,73 +279,8 @@ namespace sw
             return;
         EventState&           state = stateIt->second;
         const AudioEventDesc& event = *state._pDesc;
-
-        // 쿨다운은 오디오 시각(렌더한 프레임)으로 측정한다.
-        const uint64 cooldownFrames = static_cast<uint64>( event._cooldownSeconds * static_cast<float32>( audio::kSampleRate ) );
-        const bool   bInCooldown    = cooldownFrames > 0 && state._bPostedOnce && _renderedFrameCount - state._lastPostFrame < cooldownFrames;
-        if ( bInCooldown )
-        {
-            ++_droppedEventCount;
+        if ( tryAdmitEvent( state, event ) == false )
             return;
-        }
-
-        // 동시 재생 상한과 뺏기다(Wwise 의 Playback Limit, 언리얼의 Sound Concurrency).
-        if ( event._maxInstances > 0 )
-        {
-            uint32 liveCount   = 0;
-            int32  victimIndex = -1;
-            for ( size_t instanceIndex = 0; instanceIndex < _listInstance.size(); ++instanceIndex )
-            {
-                const EventInstance& instance                = _listInstance[instanceIndex];
-                const bool           bNotLiveInstanceOfEvent = instance._bInUse == false || instance._bStopping || instance._pDesc == nullptr || instance._pDesc->_name != event._name;
-                if ( bNotLiveInstanceOfEvent )
-                    continue;
-                ++liveCount;
-                if ( victimIndex < 0 )
-                {
-                    victimIndex = static_cast<int32>( instanceIndex );
-                    continue;
-                }
-                const EventInstance& victim  = _listInstance[static_cast<size_t>( victimIndex )];
-                bool                 bBetter = false;
-                switch ( event._steal )
-                {
-                    case AudioStealPolicy::Reject:
-                    {
-                        break;
-                    }
-                    case AudioStealPolicy::Oldest:
-                    {
-                        bBetter = instance._startFrame < victim._startFrame ||
-                                  ( instance._startFrame == victim._startFrame && instance._playingID < victim._playingID );
-                        break;
-                    }
-                    case AudioStealPolicy::Quietest:
-                    {
-                        bBetter = instance._audibility < victim._audibility;
-                        break;
-                    }
-                    case AudioStealPolicy::Farthest:
-                    {
-                        bBetter = instance._distance > victim._distance;
-                        break;
-                    }
-                }
-                if ( bBetter )
-                    victimIndex = static_cast<int32>( instanceIndex );
-            }
-            if ( liveCount >= event._maxInstances )
-            {
-                if ( event._steal == AudioStealPolicy::Reject || victimIndex < 0 )
-                {
-                    ++_droppedEventCount;
-                    return;
-                }
-                EventInstance& victim = _listInstance[static_cast<size_t>( victimIndex )];
-                victim._bStopping     = true;
-                stopVoices( victim._playingID, 0, event._fadeOutSeconds );
-            }
-        }
 
         const int32 instanceIndex = allocateInstance();
         if ( instanceIndex < 0 )
@@ -245,49 +303,9 @@ namespace sw
         const float32 volumeDb  = _random.nextRange( event._volumeDbMin, event._volumeDbMax );
         const float32 semitones = _random.nextRange( event._pitchMin, event._pitchMax );
 
-        const uint32 clipCount = static_cast<uint32>( event._listClip.size() );
-        uint32       firstClip = 0;
-        uint32       pickCount = 1;
-        switch ( event._container )
-        {
-            case AudioContainerType::Random:
-            {
-                // 가중치로 하나를 고른다. 클립이 둘 이상이면 바로 앞에 낸 것은 뺀다.
-                const bool bSkipLast = event._bAvoidRepeat && clipCount > 1 && state._lastRandomIndex >= 0;
-                float32    total     = 0.0f;
-                for ( uint32 clipIndex = 0; clipIndex < clipCount; ++clipIndex )
-                {
-                    if ( bSkipLast && static_cast<int32>( clipIndex ) == state._lastRandomIndex )
-                        continue;
-                    total += MathUtil::max( 0.0f, event._listClip[clipIndex]._weight );
-                }
-                float32 pick = _random.nextUnit() * total;
-                firstClip    = 0;
-                for ( uint32 clipIndex = 0; clipIndex < clipCount; ++clipIndex )
-                {
-                    if ( bSkipLast && static_cast<int32>( clipIndex ) == state._lastRandomIndex )
-                        continue;
-                    firstClip = clipIndex;
-                    pick -= MathUtil::max( 0.0f, event._listClip[clipIndex]._weight );
-                    if ( pick < 0.0f )
-                        break;
-                }
-                state._lastRandomIndex = static_cast<int32>( firstClip );
-                break;
-            }
-            case AudioContainerType::Sequence:
-            {
-                firstClip             = state._sequenceCursor % clipCount;
-                state._sequenceCursor = ( firstClip + 1 ) % clipCount;
-                break;
-            }
-            case AudioContainerType::Layer:
-            {
-                firstClip = 0;
-                pickCount = clipCount;
-                break;
-            }
-        }
+        uint32 firstClip = 0;
+        uint32 pickCount = 1;
+        pickEventClips( state, event, firstClip, pickCount );
 
         const uint32 busIndex         = resolveBusIndex( event._bus );
         const int32  attenuationIndex = resolveAttenuationIndex( event._attenuation );

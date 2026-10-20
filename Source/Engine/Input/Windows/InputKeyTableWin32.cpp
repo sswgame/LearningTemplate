@@ -184,6 +184,7 @@ namespace sw
 
 namespace sw
 {
+    // 가상 키 코드에서 Key 로 가는 switch 표이고 케이스마다 한 줄이라 나누지 않는다.
     Key InputKeyTable::mapWin32VirtualKey( uintptr_t vk, intptr_t lParam )
     {
         if ( 'A' <= vk && vk <= 'Z' )

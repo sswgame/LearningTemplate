@@ -308,6 +308,7 @@ namespace sw
         return static_cast<GamepadDevice*>( pDev );
     }
 
+    // 프레임 단계(폴링 → 큐 비우기 → 가상 입력 → 적용 → 마무리 → 글리프 감지 → 맵 갱신)의 순서가 곧 의미인 선형 본문이라 나누지 않는다.
     void InputManager::beginFrame( float32 deltaSeconds )
     {
         SW_MEMORY_SCOPE( EngineMisc );
@@ -436,6 +437,7 @@ namespace sw
         _virtualCursor.setSettings( settings );
     }
 
+    // 이벤트 종류마다 장치 한 곳에 적용하는 짧은 switch 디스패처라 나누지 않는다.
     void InputManager::dispatchRawEvent( const RawInputEvent& rawEvent )
     {
         switch ( rawEvent._type )

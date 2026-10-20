@@ -100,6 +100,89 @@ namespace sw
                 return s_pInputContext;
             }
 
+            /** @brief X11 버튼 번호를 마우스 버튼으로 바꿉니다. 휠 번호(4 ~ 7)나 모르는 번호면 Count 입니다. */
+            static MouseButton mapButton( uint32 xButton )
+            {
+                switch ( xButton )
+                {
+                    case Button1:
+                    {
+                        return MouseButton::Left;
+                    }
+                    case Button2:
+                    {
+                        return MouseButton::Middle;
+                    }
+                    case Button3:
+                    {
+                        return MouseButton::Right;
+                    }
+                    case 8:
+                    {
+                        return MouseButton::X1;
+                    }
+                    case 9:
+                    {
+                        return MouseButton::X2;
+                    }
+                    default:
+                    {
+                        return MouseButton::Count;
+                    }
+                }
+            }
+
+            /** @brief 휠 버튼 번호(4 ~ 7)가 눌렸을 때 그에 맞는 휠 이벤트를 큐에 넣습니다. 그 밖의 번호는 무시합니다. */
+            static void postWheelButton( InputManager& manager, uint32 xButton )
+            {
+                switch ( xButton )
+                {
+                    case Button4:
+                    {
+                        manager.postRawEvent( RawInputEvent::makeMouseWheel( 1.0f ) );
+                        break;
+                    }
+                    case Button5:
+                    {
+                        manager.postRawEvent( RawInputEvent::makeMouseWheel( -1.0f ) );
+                        break;
+                    }
+                    case 6:
+                    {
+                        manager.postRawEvent( RawInputEvent::makeMouseHorizontalWheel( -1.0f ) );
+                        break;
+                    }
+                    case 7:
+                    {
+                        manager.postRawEvent( RawInputEvent::makeMouseHorizontalWheel( 1.0f ) );
+                        break;
+                    }
+                    default:
+                    {
+                        break;
+                    }
+                }
+            }
+
+            /** @brief 텍스트 입력: XIC 로 커밋된 UTF-8 문자열을 얻어 큐에 넣습니다(완전한 프리에딧 후보 창 렌더링은 구현하지 않음). */
+            static void postTextInput( InputManager& manager, const XEvent& xev )
+            {
+                XIC pInputContext = getOrCreateInputContext();
+                if ( pInputContext == nullptr )
+                    return;
+                fixed_string<constant::kMaxBuffer32> utf8Buf;
+                KeySym                               lookupKeySym{};
+                Status                               lookupStatus{};
+                const int32                          byteCount = Xutf8LookupString( pInputContext, const_cast<XKeyPressedEvent*>( &xev.xkey ),
+                                                                                    utf8Buf.data(), static_cast<int32>( utf8Buf.capacity() ), &lookupKeySym, &lookupStatus );
+                if ( ( lookupStatus == XLookupChars || lookupStatus == XLookupBoth ) && byteCount > 0 )
+                {
+                    utf8Buf.data()[byteCount] = '\0';
+                    const string_view svText( utf8Buf.data(), static_cast<size_t>( byteCount ) );
+                    manager.postRawEvent( RawInputEvent::makeTextInput( svText ) );
+                }
+            }
+
             /** @brief 1x1 완전 투명 픽스맵으로 "보이지 않는 커서" 를 만들어 캐시합니다. */
             static Cursor getOrCreateInvisibleCursor( Display* pDisplay, Window x11Window )
             {
@@ -216,25 +299,8 @@ namespace sw
                 else
                     postRawEvent( RawInputEvent::makeKeyUp( key ) );
 
-                // 텍스트 입력: XIC 로 커밋된 UTF-8 문자열을 얻는다(완전한 프리에딧 후보 창 렌더링은 구현하지 않음).
                 if ( bDown )
-                {
-                    XIC pInputContext = X11InputInternal::getOrCreateInputContext();
-                    if ( pInputContext != nullptr )
-                    {
-                        fixed_string<constant::kMaxBuffer32> utf8Buf;
-                        KeySym                               lookupKeySym{};
-                        Status                               lookupStatus{};
-                        const int32                          byteCount = Xutf8LookupString( pInputContext, const_cast<XKeyPressedEvent*>( &pXev->xkey ),
-                                                                                            utf8Buf.data(), static_cast<int32>( utf8Buf.capacity() ), &lookupKeySym, &lookupStatus );
-                        if ( ( lookupStatus == XLookupChars || lookupStatus == XLookupBoth ) && byteCount > 0 )
-                        {
-                            utf8Buf.data()[byteCount] = '\0';
-                            const string_view svText( utf8Buf.data(), static_cast<size_t>( byteCount ) );
-                            postRawEvent( RawInputEvent::makeTextInput( svText ) );
-                        }
-                    }
-                }
+                    X11InputInternal::postTextInput( *this, *pXev );
                 break;
             }
             case ButtonPress:
@@ -244,65 +310,13 @@ namespace sw
                 const int32 mouseX = static_cast<int32>( pXev->xbutton.x );
                 const int32 mouseY = static_cast<int32>( pXev->xbutton.y );
                 // 버튼 이벤트에도 좌표를 실어 보낸다. 좌표 없이(0, 0) 보내면 클릭할 때마다 커서가 창 왼쪽 위로 튄다.
-                MouseButton button = MouseButton::Count;
-                switch ( pXev->xbutton.button )
-                {
-                    case Button1:
-                    {
-                        button = MouseButton::Left;
-                        break;
-                    }
-                    case Button2:
-                    {
-                        button = MouseButton::Middle;
-                        break;
-                    }
-                    case Button3:
-                    {
-                        button = MouseButton::Right;
-                        break;
-                    }
-                    case 8:
-                    {
-                        button = MouseButton::X1;
-                        break;
-                    }
-                    case 9:
-                    {
-                        button = MouseButton::X2;
-                        break;
-                    }
-                    case Button4:
-                    {
-                        if ( bDown )
-                            postRawEvent( RawInputEvent::makeMouseWheel( 1.0f ) );
-                        break;
-                    }
-                    case Button5:
-                    {
-                        if ( bDown )
-                            postRawEvent( RawInputEvent::makeMouseWheel( -1.0f ) );
-                        break;
-                    }
-                    case 6:
-                    {
-                        if ( bDown )
-                            postRawEvent( RawInputEvent::makeMouseHorizontalWheel( -1.0f ) );
-                        break;
-                    }
-                    case 7:
-                    {
-                        if ( bDown )
-                            postRawEvent( RawInputEvent::makeMouseHorizontalWheel( 1.0f ) );
-                        break;
-                    }
-                    default:
-                    {
-                        break;
-                    }
-                }
+                const MouseButton button = X11InputInternal::mapButton( pXev->xbutton.button );
                 if ( button == MouseButton::Count )
+                {
+                    if ( bDown )
+                        X11InputInternal::postWheelButton( *this, pXev->xbutton.button );
                     break;
+                }
                 // 창 안의 누름만 여기로 온다(창 관리자의 제목 표시줄은 우리 창 밖이다). 포커스를 잃었다 돌아온 뒤 잠금을 다시 잡는 지점이다.
                 // 잠금을 건 그 누름과 짝인 뗌은 게임에 넘기지 않는다(Win32 와 같은 규칙).
                 if ( bDown ? onPlatformPointerPressed( button ) : onPlatformPointerReleased( button ) )

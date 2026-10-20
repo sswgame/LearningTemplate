@@ -206,6 +206,48 @@ namespace sw
         return _settings._listMaterial[static_cast<size_t>( materialIndex )]._name;
     }
 
+    bool Box2DPhysicsScene::attachChain( BodyRecord& record, const PhysicsShapeDesc2D& shape, const PhysicsMaterialDef& material, PhysicsBodyHandle handle )
+    {
+        const b2Vec2 center    = Box2DUtil::toBox2D( shape._localPosition );
+        const b2Rot  rotation  = b2MakeRot( shape._localAngle );
+        void* const  pUserData = Box2DUtil::toUserData( handle );
+        if ( shape._listPoint.size() < 4 )
+        {
+            SW_LOG_ERROR( "A chain shape needs at least 4 points (Box2D)" );
+            return false;
+        }
+        vector<b2Vec2> listPoint;
+        listPoint.reserve( shape._listPoint.size() );
+        for ( const float2& point : shape._listPoint )
+        {
+            listPoint.push_back( b2TransformPoint( b2Transform{ center, rotation }, Box2DUtil::toBox2D( point ) ) );
+        }
+        b2SurfaceMaterial surface   = b2DefaultSurfaceMaterial();
+        surface.friction            = material._friction;
+        surface.restitution         = material._restitution;
+        surface.userMaterialId      = findMaterialIndex( material._name );
+        b2ChainDef chainDef         = b2DefaultChainDef();
+        chainDef.points             = listPoint.data();
+        chainDef.count              = static_cast<int32>( listPoint.size() );
+        chainDef.materials          = &surface;
+        chainDef.materialCount      = 1;
+        chainDef.filter             = makeFilter( record._layer, false ); // 체인은 센서가 될 수 없다
+        chainDef.isLoop             = shape._bLoop;
+        chainDef.enableSensorEvents = true;
+        chainDef.userData           = pUserData;
+        const b2ChainId chainID     = b2CreateChain( record._bodyID, &chainDef );
+        record._listChainID.push_back( chainID );
+        const int32       segmentCount = b2Chain_GetSegmentCount( chainID );
+        vector<b2ShapeId> listSegment( static_cast<size_t>( segmentCount ) );
+        b2Chain_GetSegments( chainID, listSegment.data(), segmentCount );
+        for ( const b2ShapeId& segment : listSegment )
+        {
+            record._listShapeID.push_back( segment );
+            _mapShapeToBody[Box2DUtil::makeShapeKey( segment )] = handle;
+        }
+        return true;
+    }
+
     bool Box2DPhysicsScene::attachShape( BodyRecord& record, const PhysicsShapeDesc2D& shape, const hashed_string& defaultMaterial, PhysicsBodyHandle handle )
     {
         const PhysicsMaterialDef& material  = resolveMaterial( shape._material, defaultMaterial );
@@ -214,43 +256,7 @@ namespace sw
         void* const               pUserData = Box2DUtil::toUserData( handle );
 
         if ( shape._type == PhysicsShapeType2D::Chain )
-        {
-            if ( shape._listPoint.size() < 4 )
-            {
-                SW_LOG_ERROR( "A chain shape needs at least 4 points (Box2D)" );
-                return false;
-            }
-            vector<b2Vec2> listPoint;
-            listPoint.reserve( shape._listPoint.size() );
-            for ( const float2& point : shape._listPoint )
-            {
-                listPoint.push_back( b2TransformPoint( b2Transform{ center, rotation }, Box2DUtil::toBox2D( point ) ) );
-            }
-            b2SurfaceMaterial surface   = b2DefaultSurfaceMaterial();
-            surface.friction            = material._friction;
-            surface.restitution         = material._restitution;
-            surface.userMaterialId      = findMaterialIndex( material._name );
-            b2ChainDef chainDef         = b2DefaultChainDef();
-            chainDef.points             = listPoint.data();
-            chainDef.count              = static_cast<int32>( listPoint.size() );
-            chainDef.materials          = &surface;
-            chainDef.materialCount      = 1;
-            chainDef.filter             = makeFilter( record._layer, false ); // 체인은 센서가 될 수 없다
-            chainDef.isLoop             = shape._bLoop;
-            chainDef.enableSensorEvents = true;
-            chainDef.userData           = pUserData;
-            const b2ChainId chainID     = b2CreateChain( record._bodyID, &chainDef );
-            record._listChainID.push_back( chainID );
-            const int32       segmentCount = b2Chain_GetSegmentCount( chainID );
-            vector<b2ShapeId> listSegment( static_cast<size_t>( segmentCount ) );
-            b2Chain_GetSegments( chainID, listSegment.data(), segmentCount );
-            for ( const b2ShapeId& segment : listSegment )
-            {
-                record._listShapeID.push_back( segment );
-                _mapShapeToBody[Box2DUtil::makeShapeKey( segment )] = handle;
-            }
-            return true;
-        }
+            return attachChain( record, shape, material, handle );
 
         b2ShapeDef shapeDef              = b2DefaultShapeDef();
         shapeDef.userData                = pUserData;

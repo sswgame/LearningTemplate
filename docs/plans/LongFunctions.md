@@ -28,7 +28,7 @@
 |---|---|---|---|---|---|
 | L3 이후 | 영역(폴더)마다 기준 1 ~ 4 를 적용합니다. 영역 하나가 단위 하나이고, 그 폴더를 다른 작업이 건드리는 중이면 미룹니다 | 영역마다 다름 | 그 영역의 다른 계획 단위(예: 자동화는 데이터 주도 D8) | 그 영역의 테스트, 동작 변경 없음 | 핫 패스 함수를 나눌 때만 Release 전후 측정 |
 
-L3 의 단순한 중복 합치기는 `mech-worker` 에 맡길 수 있습니다. 끝난 영역: `Source/Editor/Viewport`(2026-10-18 — 페이스 버튼 표, 기즈모 설정 · 단일 조작, 바 손잡이를 단계 함수로. 격자 `drawAdaptiveGrid` 는 람다를 옮기면 숫자 색 리터럴이 새 줄로 잡혀, 테마 토큰 작업(editorux) 때 함께 나눈다), `Source/Core/Network`(2026-10-21 — 패킷 읽기 · 쓰기와 제어 패킷 처리, 요청 프레임을 단계 함수로), `Source/Core/File`(2026-10-21 — 감시 워커의 이벤트 처리를 따로), `Source/GameFramework/Kits`(2026-10-21, `wt/kitclean` — 상태 읽기는 원소 하나 읽기 함수로, 상태 디스패처의 긴 경우는 `update*` 로, 낙하 세기 · 격자 다시 칠하기 중복은 하나로. 유지: `FightingMatch::updateFighter` · `RespEphemeralStore::sendOperation`(짧은 switch 디스패처, 헤더에 이유). `Feature/Online` 5 개는 `wt/onlinekits` 와 겹쳐 남겼다), `Source/GameFramework/Base`(2026-10-21 — 14 개 중 12 개를 단계 함수로 나눴다. 카메라 평가, 외형 해석, 외형 부품 내보내기, 기믹 회로 만들기, 행동 트리 합성 노드, 플랫포머 이동, HTTP 파서 단계, 기믹 액추에이터, 절단, 상호작용 틱, 원소 격자 스텝, 외형 프리셋 펼치기다. `MemoryEphemeralDatabase::executeValue` 와 나눈 뒤 남은 `BehaviorTreeRunner::tickNode` · `CameraModeInternal::placeByMode` 는 짧은 분기의 switch 디스패처라 유지하고 이유를 주석에 적었다). 남은 것: `ScheduleCatalog::loadElement` 는 원소별 함수로 옮기면 속성 기본값 리터럴(`getAttributeFloat( "radius", ... )` 등 5 곳)이 새 줄로 잡혀 `CheckDataDrivenLiterals` 가 막는다. 일정 Def 를 리플렉션 Def 와 `GameDataXML::readFields` 로 읽게 바꾸는 일과 함께 나눈다. 영역을 맡기 전에 3절 목록을 같은 명령으로 다시 뽑습니다.
+L3 의 단순한 중복 합치기는 `mech-worker` 에 맡길 수 있습니다. 끝난 영역: `Source/Engine/Input` · `Destruction` · `Character` · `Audio` · `Localization` · `Physics` · `Source/Games/Empty`(2026-10-21 — XML 읽기 · 평가 · 쪼개기 · 핏 · 믹서 검사 · 이벤트 재생 · 벤치 씬 생성을 단계 함수로 나눴다. 남긴 것은 유지 판정이다: `InputKeyTable` 세 표(케이스마다 한 줄), `InputManager::beginFrame`(프레임 단계 순서가 곧 의미), `InputManager::dispatchRawEvent` · `InputManager::processNativeEvent` Win32 · `InputMap::evaluateBindingDown` · `AudioEngine::applyCommand`(긴 케이스는 빼고 남은 짧은 switch 디스패처). 빌드와 테스트는 아직 하지 않았다),  `Source/Editor/Viewport`(2026-10-18 — 페이스 버튼 표, 기즈모 설정 · 단일 조작, 바 손잡이를 단계 함수로. 격자 `drawAdaptiveGrid` 는 람다를 옮기면 숫자 색 리터럴이 새 줄로 잡혀, 테마 토큰 작업(editorux) 때 함께 나눈다), `Source/Core/Network`(2026-10-21 — 패킷 읽기 · 쓰기와 제어 패킷 처리, 요청 프레임을 단계 함수로), `Source/Core/File`(2026-10-21 — 감시 워커의 이벤트 처리를 따로), `Source/GameFramework/Kits`(2026-10-21, `wt/kitclean` — 상태 읽기는 원소 하나 읽기 함수로, 상태 디스패처의 긴 경우는 `update*` 로, 낙하 세기 · 격자 다시 칠하기 중복은 하나로. 유지: `FightingMatch::updateFighter` · `RespEphemeralStore::sendOperation`(짧은 switch 디스패처, 헤더에 이유). `Feature/Online` 5 개는 `wt/onlinekits` 와 겹쳐 남겼다), `Source/GameFramework/Base`(2026-10-21 — 14 개 중 12 개를 단계 함수로 나눴다. 카메라 평가, 외형 해석, 외형 부품 내보내기, 기믹 회로 만들기, 행동 트리 합성 노드, 플랫포머 이동, HTTP 파서 단계, 기믹 액추에이터, 절단, 상호작용 틱, 원소 격자 스텝, 외형 프리셋 펼치기다. `MemoryEphemeralDatabase::executeValue` 와 나눈 뒤 남은 `BehaviorTreeRunner::tickNode` · `CameraModeInternal::placeByMode` 는 짧은 분기의 switch 디스패처라 유지하고 이유를 주석에 적었다). 남은 것: `ScheduleCatalog::loadElement` 는 원소별 함수로 옮기면 속성 기본값 리터럴(`getAttributeFloat( "radius", ... )` 등 5 곳)이 새 줄로 잡혀 `CheckDataDrivenLiterals` 가 막는다. 일정 Def 를 리플렉션 Def 와 `GameDataXML::readFields` 로 읽게 바꾸는 일과 함께 나눈다. 영역을 맡기 전에 3절 목록을 같은 명령으로 다시 뽑습니다.
 
 ## 3. 목록
 
@@ -52,38 +52,17 @@ L3 의 단순한 중복 합치기는 `mech-worker` 에 맡길 수 있습니다. 
 | `Source/GameFramework/Base` | 14 | `CameraModeInternal::evaluateView` (`Actor/Camera/CameraMode.cpp:171`) 213 · 4 · 4 · 0 | 3 |
 |  |  | `AppearanceResolver::resolve` (`Gameplay/Appearance/AppearanceResolver.cpp:565`) 204 · 4 · 0 · 3 | 2 · 3 |
 |  |  | `GimmickCircuit::populate` (`Gameplay/Gimmick/GimmickCircuit.cpp:93`) 189 · 4 · 3 · 0 | 2 · 3 |
-| `Source/Engine/Input` | 13 | `InputMap::loadFromResource` (`Map/InputMapSerialization.cpp:436`) 340 · 5 · 5 · 252 | 3(람다를 단계 함수로) |
-|  |  | `InputKeyTable::mapWin32VirtualKey` (`Windows/InputKeyTableWin32.cpp:188`) 302 · 2 · 75 · 0 | 유지(switch 디스패처) |
-|  |  | `InputKeyTable::mapX11KeySym` (`Linux/InputKeyTableX11.cpp:13`) 252 · 1 · 105 · 0 | 유지(switch 디스패처) |
 | `Source/Editor/Common` | 12 | `VrmMaterialImporter::readVrm0Material` (`Asset/VrmMaterialImporter.cpp:290`) 220 · 3 · 16 · 7 | 2 · 3 |
 |  |  | `ImGuiVulkanRendererBackend::initialize` (`Backend/Render/ImGuiVulkanRendererBackend.cpp:83`) 123 · 3 · 7 · 38 | 3 |
 |  |  | `LocalizationTools::gatherProject` (`Localization/LocalizationTools.cpp:411`) 116 · 3 · 3 · 0 | 3 |
-| `Source/Engine/Destruction` | 9 | `simplifyCaps` (`MeshFracture.cpp:606`) 272 · 5 · 3 · 2 | 4 |
-|  |  | `MeshFractureUtil::fracture` (`MeshFracture.cpp:1223`) 233 · 5 · 5 · 17 | 4 |
-|  |  | `PolygonFractureUtil::fracture` (`PolygonFracture.cpp:180`) 199 · 3 · 4 · 0 | 3 |
 | `Source/Engine/Object` | 5 | `SceneAudio::update` (`Component/Audio/SceneAudio.cpp:131`) 136 · 3 · 1 · 0 | 3 |
 |  |  | `DirectionalLightComponent::computeShadowProjectionForView` (`Component/3D/DirectionalLightComponent.cpp:285`) 127 · 2 · 3 · 0 | 3 |
 |  |  | `TickRegistry::applyStageDelta` (`GameObject/Tick/TickRegistry.cpp:609`) 119 · 5 · 3 · 4 | 4 |
 |  |  | `NetRequestServer::handleFrame` (`Message/NetRequest.cpp:353`) 133 · 4 · 5 · 0 | 3 |
 |  |  | `NetConnection::writePacket` (`Connection/NetConnection.cpp:262`) 117 · 2 · 0 · 48 | 3 |
-| `Source/Engine/Character` | 4 | `FitSolver::solve` (`Fit/FitSolver.cpp:254`) 148 · 4 · 3 · 0 | 3 |
-|  |  | `PairedAnimationSession::start` (`PairedAnimation/PairedAnimationSession.cpp:160`) 122 · 3 · 13 · 0 | 3 |
-|  |  | `PairedAnimationSession::update` (`PairedAnimation/PairedAnimationSession.cpp:428`) 103 · 3 · 7 · 0 | 3 |
 | `Source/Engine` | 3 | `Engine::initialize` (`Engine.cpp:183`) 250 · 3 · 8 · 0 | 유지(순서가 곧 의미) |
 |  |  | `Engine::update` (`Engine.cpp:606`) 160 · 3 · 2 · 0 | 유지(순서가 곧 의미) |
 |  |  | `HeadlessSubsystem::initializeSubsystem` (`HeadlessSubsystem.cpp:42`) 155 · 3 · 8 · 0 | 유지(순서가 곧 의미) |
-| `Source/Engine/Audio` | 3 | `AudioEngine::applyCommand` (`AudioEngine.cpp:624`) 212 · 4 · 0 · 0 | 3 |
-|  |  | `AudioEngine::applyPostEvent` (`AudioEngineEvents.cpp:153`) 170 · 4 · 4 · 0 | 3 |
-|  |  | `AudioMixerDesc::validate` (`AudioMixerDesc.cpp:36`) 123 · 4 · 1 · 0 | 4 |
-| `Source/Engine/Localization` | 3 | `applyFields` (`CultureInfo.cpp:239`) 121 · 2 · 12 · 0 | 3 |
-|  |  | `PortableObjectFile::parse` (`PortableObjectFile.cpp:133`) 119 · 3 · 2 · 0 | 2 · 3 |
-|  |  | `CultureInfo::formatDateTime` (`CultureInfo.cpp:599`) 101 · 3 · 1 · 0 | 3 |
-| `Source/Engine/Physics` | 3 | `JoltPhysicsScene::createJoint` (`Jolt/JoltPhysicsSceneQuery.cpp:136`) 120 · 3 · 3 · 0 | 3 |
-|  |  | `Box2DPhysicsScene::attachShape` (`Box2D/Box2DPhysicsScene.cpp:210`) 109 · 4 · 5 · 0 | 3 |
-|  |  | `Box2DPhysicsScene::createJoint` (`Box2D/Box2DPhysicsSceneQuery.cpp:199`) 102 · 3 · 5 · 0 | 3 |
-| `Source/Games/Empty` | 3 | `BenchScene::spawn` (`BenchScene.cpp:388`) 181 · 3 · 5 · 0 | 3 |
-|  |  | `BenchScene::spawnRigCharacters` (`BenchSceneRig.cpp:120`) 135 · 3 · 1 · 0 | 3 |
-|  |  | `BenchScene::update` (`BenchScene.cpp:1167`) 105 · 3 · 4 · 0 | 3 |
 |  |  | `LinuxFileWatcher::workerThreadMain` (`Linux/LinuxFileWatcher.cpp:151`) 116 · 5 · 3 · 0 | 4 |
 | `Source/Core/Process` | 2 | `Process::launch` (`Posix/PosixProcess.cpp:91`) 120 · 2 · 5 · 0 | 3 |
 |  |  | `Process::launch` (`Windows/WindowsProcess.cpp:59`) 118 · 2 · 5 · 0 | 3 |

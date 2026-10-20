@@ -4,6 +4,7 @@
 
 namespace sw
 {
+    // 스캔 코드에서 Key 로 가는 switch 표(확장 여부별)이고 케이스마다 한 줄이라 나누지 않는다.
     Key InputKeyTable::mapScanCodeToKey( uint32 scanCode, bool bExtended )
     {
         if ( bExtended )

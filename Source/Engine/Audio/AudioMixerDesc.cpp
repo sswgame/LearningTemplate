@@ -32,111 +32,143 @@ namespace sw
         return validate( sourceName );
     }
 
+    namespace
+    {
+        struct AudioMixerDescInternal
+        {
+            /** @brief 버스의 이펙트를 검사합니다. 알 수 없는 종류 · 겹치는 이름 · 모르는 파라미터를 알립니다. */
+            [[nodiscard]] static bool validateEffects( const AudioBusDesc& bus, string_view sourceName )
+            {
+                bool bValid = true;
+                for ( size_t effectIndex = 0; effectIndex < bus._listEffect.size(); ++effectIndex )
+                {
+                    const AudioEffectDesc&     effect    = bus._listEffect[effectIndex];
+                    const AudioEffectTypeInfo* pTypeInfo = AudioEffectRegistry::findType( effect._type );
+                    if ( pTypeInfo == nullptr )
+                    {
+                        SW_LOG_ERROR( "%#: bus '%#' names unknown effect type '%#'", sourceName, bus._name.c_str(), effect._type.c_str() );
+                        bValid = false;
+                        continue;
+                    }
+                    for ( size_t otherIndex = effectIndex + 1; otherIndex < bus._listEffect.size(); ++otherIndex )
+                    {
+                        if ( bus._listEffect[otherIndex].getEffectName() == effect.getEffectName() )
+                        {
+                            SW_LOG_ERROR( "%#: bus '%#' has two effects named '%#' - give one a _name", sourceName, bus._name.c_str(), effect.getEffectName().c_str() );
+                            bValid = false;
+                        }
+                    }
+                    // 컨볼루션 리버브의 임펄스 응답은 이 종류에만 필수라 PROPERTY( Required ) 로 못 쓴다(모든 이펙트가 같은 서술 형식). 읽는 단계에서 막는다.
+                    if ( effect._type == hashed_string( "ConvolutionReverb" ) && effect._impulse.isSet() == false )
+                    {
+                        SW_LOG_ERROR( "%#: effect '%#' on bus '%#' needs an impulse response clip (_impulse)", sourceName, effect.getEffectName().c_str(), bus._name.c_str() );
+                        bValid = false;
+                    }
+                    for ( const AudioEffectParameterDesc& parameter : effect._listParameter )
+                    {
+                        bool bKnown = false;
+                        for ( uint32 parameterIndex = 0; parameterIndex < pTypeInfo->_parameterCount; ++parameterIndex )
+                        {
+                            bKnown = bKnown || parameter._name == hashed_string( pTypeInfo->_pParameter[parameterIndex]._pName );
+                        }
+                        if ( bKnown == false )
+                        {
+                            SW_LOG_ERROR( "%#: effect '%#' on bus '%#' has no parameter '%#'", sourceName, effect._type.c_str(), bus._name.c_str(), parameter._name.c_str() );
+                            bValid = false;
+                        }
+                    }
+                }
+                return bValid;
+            }
+
+            /** @brief 버스의 덕킹과 센드를 검사합니다. 모르는 버스 · 자기 자신 · 잘못된 설정을 알립니다. */
+            [[nodiscard]] static bool validateRouting( const AudioMixerDesc& mixer, const AudioBusDesc& bus, string_view sourceName )
+            {
+                bool bValid = true;
+                for ( const AudioDuckDesc& duck : bus._listDuck )
+                {
+                    if ( mixer.findBusIndex( duck._sourceBus ) < 0 )
+                    {
+                        SW_LOG_ERROR( "%#: bus '%#' is ducked by unknown bus '%#'", sourceName, bus._name.c_str(), duck._sourceBus.c_str() );
+                        bValid = false;
+                    }
+                    else if ( duck._sourceBus == bus._name )
+                    {
+                        SW_LOG_ERROR( "%#: bus '%#' ducks itself", sourceName, bus._name.c_str() );
+                        bValid = false;
+                    }
+                    const bool bInvalidDuckSettings = 0.0f < duck._depthDb || duck._attackSeconds < 0.0f || duck._releaseSeconds < 0.0f;
+                    if ( bInvalidDuckSettings )
+                    {
+                        SW_LOG_ERROR( "%#: bus '%#' has a duck with a positive depth or a negative time", sourceName, bus._name.c_str() );
+                        bValid = false;
+                    }
+                }
+                for ( const AudioSendDesc& send : bus._listSend )
+                {
+                    if ( mixer.findBusIndex( send._bus ) < 0 )
+                    {
+                        SW_LOG_ERROR( "%#: bus '%#' sends to unknown bus '%#'", sourceName, bus._name.c_str(), send._bus.c_str() );
+                        bValid = false;
+                    }
+                    else if ( send._bus == bus._name )
+                    {
+                        SW_LOG_ERROR( "%#: bus '%#' sends to itself", sourceName, bus._name.c_str() );
+                        bValid = false;
+                    }
+                }
+                return bValid;
+            }
+
+            /** @brief 버스 하나를 검사합니다(이름, 중복, 부모, 이펙트, 덕킹 · 센드). 뿌리 버스면 @p inoutRootCount 를 올립니다. */
+            [[nodiscard]] static bool validateBus( const AudioMixerDesc& mixer, size_t busIndex, string_view sourceName, uint32& inoutRootCount )
+            {
+                const AudioBusDesc& bus = mixer._listBus[busIndex];
+                if ( bus._name.empty() )
+                {
+                    SW_LOG_ERROR( "%#: bus %# has no name", sourceName, busIndex );
+                    return false;
+                }
+                bool bValid = true;
+                for ( size_t otherIndex = busIndex + 1; otherIndex < mixer._listBus.size(); ++otherIndex )
+                {
+                    if ( mixer._listBus[otherIndex]._name == bus._name )
+                    {
+                        SW_LOG_ERROR( "%#: bus '%#' is declared twice", sourceName, bus._name.c_str() );
+                        bValid = false;
+                    }
+                }
+                if ( bus._parent.empty() )
+                {
+                    ++inoutRootCount;
+                    if ( bus._name != hashed_string( AudioBusNames::kMaster ) )
+                    {
+                        SW_LOG_ERROR( "%#: bus '%#' has no parent - only '%#' may be the root", sourceName, bus._name.c_str(), AudioBusNames::kMaster );
+                        bValid = false;
+                    }
+                }
+                else if ( mixer.findBusIndex( bus._parent ) < 0 )
+                {
+                    SW_LOG_ERROR( "%#: bus '%#' names unknown parent '%#'", sourceName, bus._name.c_str(), bus._parent.c_str() );
+                    bValid = false;
+                }
+                if ( validateEffects( bus, sourceName ) == false )
+                    bValid = false;
+                if ( validateRouting( mixer, bus, sourceName ) == false )
+                    bValid = false;
+                return bValid;
+            }
+        };
+    } // namespace
+
     bool AudioMixerDesc::validate( string_view sourceName ) const
     {
         bool   bValid    = true;
         uint32 rootCount = 0;
         for ( size_t busIndex = 0; busIndex < _listBus.size(); ++busIndex )
         {
-            const AudioBusDesc& bus = _listBus[busIndex];
-            if ( bus._name.empty() )
-            {
-                SW_LOG_ERROR( "%#: bus %# has no name", sourceName, busIndex );
+            if ( AudioMixerDescInternal::validateBus( *this, busIndex, sourceName, rootCount ) == false )
                 bValid = false;
-                continue;
-            }
-            for ( size_t otherIndex = busIndex + 1; otherIndex < _listBus.size(); ++otherIndex )
-            {
-                if ( _listBus[otherIndex]._name == bus._name )
-                {
-                    SW_LOG_ERROR( "%#: bus '%#' is declared twice", sourceName, bus._name.c_str() );
-                    bValid = false;
-                }
-            }
-            if ( bus._parent.empty() )
-            {
-                ++rootCount;
-                if ( bus._name != hashed_string( AudioBusNames::kMaster ) )
-                {
-                    SW_LOG_ERROR( "%#: bus '%#' has no parent - only '%#' may be the root", sourceName, bus._name.c_str(), AudioBusNames::kMaster );
-                    bValid = false;
-                }
-            }
-            else if ( findBusIndex( bus._parent ) < 0 )
-            {
-                SW_LOG_ERROR( "%#: bus '%#' names unknown parent '%#'", sourceName, bus._name.c_str(), bus._parent.c_str() );
-                bValid = false;
-            }
-            for ( size_t effectIndex = 0; effectIndex < bus._listEffect.size(); ++effectIndex )
-            {
-                const AudioEffectDesc&     effect    = bus._listEffect[effectIndex];
-                const AudioEffectTypeInfo* pTypeInfo = AudioEffectRegistry::findType( effect._type );
-                if ( pTypeInfo == nullptr )
-                {
-                    SW_LOG_ERROR( "%#: bus '%#' names unknown effect type '%#'", sourceName, bus._name.c_str(), effect._type.c_str() );
-                    bValid = false;
-                    continue;
-                }
-                for ( size_t otherIndex = effectIndex + 1; otherIndex < bus._listEffect.size(); ++otherIndex )
-                {
-                    if ( bus._listEffect[otherIndex].getEffectName() == effect.getEffectName() )
-                    {
-                        SW_LOG_ERROR( "%#: bus '%#' has two effects named '%#' - give one a _name", sourceName, bus._name.c_str(), effect.getEffectName().c_str() );
-                        bValid = false;
-                    }
-                }
-                // 컨볼루션 리버브의 임펄스 응답은 이 종류에만 필수라 PROPERTY( Required ) 로 못 쓴다(모든 이펙트가 같은 서술 형식). 읽는 단계에서 막는다.
-                if ( effect._type == hashed_string( "ConvolutionReverb" ) && effect._impulse.isSet() == false )
-                {
-                    SW_LOG_ERROR( "%#: effect '%#' on bus '%#' needs an impulse response clip (_impulse)", sourceName, effect.getEffectName().c_str(), bus._name.c_str() );
-                    bValid = false;
-                }
-                for ( const AudioEffectParameterDesc& parameter : effect._listParameter )
-                {
-                    bool bKnown = false;
-                    for ( uint32 parameterIndex = 0; parameterIndex < pTypeInfo->_parameterCount; ++parameterIndex )
-                    {
-                        bKnown = bKnown || parameter._name == hashed_string( pTypeInfo->_pParameter[parameterIndex]._pName );
-                    }
-                    if ( bKnown == false )
-                    {
-                        SW_LOG_ERROR( "%#: effect '%#' on bus '%#' has no parameter '%#'", sourceName, effect._type.c_str(), bus._name.c_str(), parameter._name.c_str() );
-                        bValid = false;
-                    }
-                }
-            }
-            for ( const AudioDuckDesc& duck : bus._listDuck )
-            {
-                if ( findBusIndex( duck._sourceBus ) < 0 )
-                {
-                    SW_LOG_ERROR( "%#: bus '%#' is ducked by unknown bus '%#'", sourceName, bus._name.c_str(), duck._sourceBus.c_str() );
-                    bValid = false;
-                }
-                else if ( duck._sourceBus == bus._name )
-                {
-                    SW_LOG_ERROR( "%#: bus '%#' ducks itself", sourceName, bus._name.c_str() );
-                    bValid = false;
-                }
-                const bool bInvalidDuckSettings = 0.0f < duck._depthDb || duck._attackSeconds < 0.0f || duck._releaseSeconds < 0.0f;
-                if ( bInvalidDuckSettings )
-                {
-                    SW_LOG_ERROR( "%#: bus '%#' has a duck with a positive depth or a negative time", sourceName, bus._name.c_str() );
-                    bValid = false;
-                }
-            }
-            for ( const AudioSendDesc& send : bus._listSend )
-            {
-                if ( findBusIndex( send._bus ) < 0 )
-                {
-                    SW_LOG_ERROR( "%#: bus '%#' sends to unknown bus '%#'", sourceName, bus._name.c_str(), send._bus.c_str() );
-                    bValid = false;
-                }
-                else if ( send._bus == bus._name )
-                {
-                    SW_LOG_ERROR( "%#: bus '%#' sends to itself", sourceName, bus._name.c_str() );
-                    bValid = false;
-                }
-            }
         }
         if ( rootCount != 1 || findBusIndex( hashed_string( AudioBusNames::kMaster ) ) < 0 )
         {
