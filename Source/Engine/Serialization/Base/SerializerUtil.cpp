@@ -886,14 +886,27 @@ namespace sw
             return true;
         }
 
-        const void* pSrc = prop.getRawPtr( pSrcInstance );
-        void*       pDst = prop.getRawPtr( pDstInstance );
-        if ( pSrc == nullptr || pDst == nullptr )
-            return false;
         vector<uint8> bytes;
-        const bool    bWritten = ( prop._bIsContainer == SW_TRUE && prop.hasContainerWrapper() ) ? serializeNestedContainerBinary( pSrc, prop.getContainerShape(), bytes, context )
-                                                                                                 : serializeValueBinary( ValueAddress{ pSrc }, prop._typeName, bytes, context );
-        return bWritten && applyPropertyBinary( prop, dstInstance, bytes.data(), bytes.size(), context );
+        return writePropertyBinary( prop, srcInstance, bytes, context ) && applyPropertyBinary( prop, dstInstance, bytes.data(), bytes.size(), context );
+    }
+
+    bool SerializerUtil::writePropertyBinary( const PropertyInfo& prop, ObjectAddress instance, vector<uint8>& outBytes, const SerializeContext& context )
+    {
+        const void* const pInstance = instance.get();
+        if ( pInstance == nullptr )
+            return false;
+        if ( prop._bIsBitField == SW_TRUE )
+        {
+            // 비트필드는 주소를 가질 수 없어 값으로 꺼내 bool 로 쓴다. 짝(`applyPropertyBinary`)도 bool 로 읽는다.
+            const bool bValue = prop.getValue<bool>( pInstance );
+            return serializeValueBinary( ValueAddress{ &bValue }, hashed_string( "bool" ), outBytes, context );
+        }
+        const void* pValue = prop.getRawPtr( pInstance );
+        if ( pValue == nullptr )
+            return false;
+        if ( prop._bIsContainer == SW_TRUE && prop.hasContainerWrapper() )
+            return serializeNestedContainerBinary( pValue, prop.getContainerShape(), outBytes, context );
+        return serializeValueBinary( ValueAddress{ pValue }, prop._typeName, outBytes, context );
     }
 
     bool SerializerUtil::arePropertyValuesEqual( const PropertyInfo& prop, const void* pInstanceA, const void* pInstanceB, const SerializeContext& context )
