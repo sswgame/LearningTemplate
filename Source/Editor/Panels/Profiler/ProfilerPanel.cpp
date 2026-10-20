@@ -115,6 +115,103 @@ namespace sw::editor
                     (void)ProfilerPanel::openTraceInTimeline( context.getSubsystem<EditorPanelManager>(), mergedTracePath ); // 실패 이유는 그 함수가 로그에 남긴다
             }
 #endif
+
+            /** @brief 슬롯에서 구간 이름을 찾습니다. 불러온 트레이스의 슬롯은 `kLoadedSlotBase` 이상이므로 그 테이블을 봅니다. 없으면 nullptr 입니다. */
+            static const utf8* findSlotName( const FrameProfiler* pProfiler, const vector<string>* pLoadedSlotName, uint32 slot )
+            {
+                if ( slot >= kLoadedSlotBase )
+                {
+                    const size_t loadedIndex = slot - kLoadedSlotBase;
+                    return ( pLoadedSlotName != nullptr && loadedIndex < pLoadedSlotName->size() ) ? ( *pLoadedSlotName )[loadedIndex].c_str() : nullptr;
+                }
+                return pProfiler != nullptr ? pProfiler->findScopeName( slot ) : nullptr;
+            }
+
+            /** @brief 태그별 메모리 통계 표입니다. */
+            static void drawMemoryTagTable( MemoryProfiler& profiler )
+            {
+                if ( ImGui::BeginTable( "MemoryStatsTable", 5,
+                                        ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable ) == false )
+                    return;
+                ImGui::TableSetupColumn( "Tag" );
+                ImGui::TableSetupColumn( "Current Bytes" );
+                ImGui::TableSetupColumn( "Share" );
+                ImGui::TableSetupColumn( "Current Count" );
+                ImGui::TableSetupColumn( "Total Allocated" );
+                ImGui::TableHeadersRow();
+
+                fixed_string<constant::kMaxBuffer32> arrBytesBuf;
+                fixed_string<constant::kMaxBuffer32> arrTotalBuf;
+
+                // 현재 살아 있는 바이트가 큰 태그부터 표시한다. 한 번도 할당하지 않은 태그는 행을 만들지 않는다. Unknown 은 항상 만든다. 태그가 지정되지 않은 진입점의 할당량이기 때문이다.
+                const uint64 liveBytes = profiler.getLiveAllocatedBytes();
+                for ( const MemoryTag tag : profiler.makeTagOrderByLiveBytes() )
+                {
+                    const auto& stats = profiler.getStats( tag );
+                    if ( tag != MemoryTag::Unknown && stats._totalAllocatedBytes == 0 )
+                        continue;
+
+                    const uint64 currentBytes = stats._currentAllocatedBytes;
+                    formatBytes( currentBytes, arrBytesBuf );
+                    formatBytes( stats._totalAllocatedBytes, arrTotalBuf );
+
+                    ImGui::TableNextRow();
+                    ImGui::TableNextColumn();
+                    ImGui::Text( "%s", MemoryProfiler::getMemoryTagName( tag ) );
+                    ImGui::TableNextColumn();
+                    ImGui::Text( "%s", arrBytesBuf.c_str() );
+                    ImGui::TableNextColumn();
+                    ImGui::Text( "%.1f%%", liveBytes == 0 ? 0.0 : static_cast<float64>( currentBytes ) * 100.0 / static_cast<float64>( liveBytes ) );
+                    ImGui::TableNextColumn();
+                    ImGui::Text( "%u", static_cast<uint32>( stats._currentAllocationCount ) );
+                    ImGui::TableNextColumn();
+
+                    ImGui::Text( "%s", arrTotalBuf.c_str() );
+                }
+                ImGui::EndTable();
+            }
+
+            /** @brief 살아 있는 할당이 큰 호출 스택 표입니다(최대 100 개). */
+            static void drawTopCallStacks( MemoryProfiler& profiler )
+            {
+                vector<CallStackAllocInfo> listTopStack = profiler.getTopCallStacks();
+
+                if ( listTopStack.empty() )
+                {
+                    ImGui::Text( "No detailed call stack data available or all freed." );
+                    return;
+                }
+                if ( ImGui::BeginTable( "CallStackTable", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable ) == false )
+                    return;
+                ImGui::TableSetupColumn( "Bytes (Count)" );
+                ImGui::TableSetupColumn( "Call Stack" );
+                ImGui::TableHeadersRow();
+
+                int32 displayCount{ 0 };
+                for ( const auto& info : listTopStack )
+                {
+                    if ( displayCount++ > 100 )
+                        break; // 최대 100개만 표시한다
+
+                    ImGui::TableNextRow();
+                    ImGui::TableNextColumn();
+                    fixed_string<constant::kMaxBuffer64> allocBuf;
+                    formatstring( allocBuf.data(), allocBuf.capacity(), "%# B (%# allocs)", info._currentBytes, info._currentCount );
+                    ImGui::TextUnformatted( allocBuf.c_str() );
+
+                    ImGui::TableNextColumn();
+
+                    // 호출 스택을 펼쳐 볼 수 있도록 트리로 만든다
+                    string treeLabel = "Stack Hash: " + to_string( info._stack._hash );
+                    if ( ImGui::TreeNode( treeLabel.c_str() ) )
+                    {
+                        string stackStr = CallStackCapture::symbolize( info._stack );
+                        ImGui::TextUnformatted( stackStr.c_str() );
+                        ImGui::TreePop();
+                    }
+                }
+                ImGui::EndTable();
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -252,6 +349,12 @@ namespace sw::editor
 
     void ProfilerPanel::drawCaptureControls()
     {
+        drawCaptureHistoryControls();
+        drawExternalProfilerControls();
+    }
+
+    void ProfilerPanel::drawCaptureHistoryControls()
+    {
         bool bCollect = _bCollect == SW_TRUE;
         if ( ImGui::Checkbox( "Collect", &bCollect ) )
         {
@@ -322,7 +425,10 @@ namespace sw::editor
         }
         EditorSelfTestMarks::note( "profiler.capture.load" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "LoadCapture" ) );
+    }
 
+    void ProfilerPanel::drawExternalProfilerControls()
+    {
         // Tracy. 시간축 분석은 외부 뷰어가 한다. 상태 한 줄과 여는 버튼을 둔다.
         ImGui::SameLine();
         ImGui::TextUnformatted( "|" );
@@ -364,16 +470,8 @@ namespace sw::editor
             ImGui::SetTooltip( "%s", SW_LOCKEY( "EditorProfiler", "RenderDocNotAttached" ) );
     }
 
-    void ProfilerPanel::drawTimelineTab()
+    void ProfilerPanel::drawTimelineToolbar( FrameProfiler& profiler, ProfilerTimeline& timeline, bool bRecording )
     {
-        FrameProfiler* pProfiler = editor::findSubsystem<FrameProfiler>();
-        if ( pProfiler == nullptr )
-        {
-            ImGui::TextDisabled( "Engine profiler is not available" );
-            return;
-        }
-        ProfilerTimeline& timeline   = pProfiler->getTimeline();
-        const bool        bRecording = timeline.isRecording();
         if ( ImGui::Button( bRecording ? "Stop Recording" : "Record" ) )
         {
             // 녹화는 계측이 켜져 있어야 쌓인다. 스코프가 시계를 읽어야 하기 때문이다. 켤 때 지난 이벤트를 비운다.
@@ -381,7 +479,7 @@ namespace sw::editor
             {
                 timeline.clear();
                 _bCollect = SW_TRUE;
-                pProfiler->setEnabled( true );
+                profiler.setEnabled( true );
                 _bTimelineZoomed = SW_FALSE;
             }
             timeline.setRecording( bRecording == false );
@@ -417,7 +515,7 @@ namespace sw::editor
         {
             string     savedPath;
             string     reply;
-            const bool bSaved = ProfilerTraceExport::saveRecentFrames( *pProfiler, _timelineFrameCount, {}, "Editor", savedPath, reply );
+            const bool bSaved = ProfilerTraceExport::saveRecentFrames( profiler, _timelineFrameCount, {}, "Editor", savedPath, reply );
             if ( bSaved )
                 SW_LOG_INFO( "Timeline trace: %#", reply );
             else
@@ -430,6 +528,19 @@ namespace sw::editor
 #endif
         ImGui::SameLine();
         ImGui::TextDisabled( "| wheel = zoom, drag = pan, deep analysis: Tracy" );
+    }
+
+    void ProfilerPanel::drawTimelineTab()
+    {
+        FrameProfiler* pProfiler = editor::findSubsystem<FrameProfiler>();
+        if ( pProfiler == nullptr )
+        {
+            ImGui::TextDisabled( "Engine profiler is not available" );
+            return;
+        }
+        ProfilerTimeline& timeline   = pProfiler->getTimeline();
+        const bool        bRecording = timeline.isRecording();
+        drawTimelineToolbar( *pProfiler, timeline, bRecording );
 
         if ( _bTimelineFrozen == SW_FALSE )
         {
@@ -584,67 +695,84 @@ namespace sw::editor
     }
 #endif
 
-    void ProfilerPanel::drawTimelineCanvas( const vector<ProfilerTimelineThread>& listThread, const vector<string>* pLoadedSlotName )
+    struct ProfilerPanel::TimelineGeometry
     {
-        const FrameProfiler* pProfiler  = editor::findSubsystem<FrameProfiler>();
-        const float32        dpiScale   = EditorThemeUtil::getDpiScale();
-        const float32        labelWidth = ProfilerPanelInternal::kTimelineLabelWidth * dpiScale;
-        const float32        laneHeight = ImGui::GetTextLineHeight() + 4.0f * dpiScale;
-        const float32        rowGap     = 2.0f * dpiScale;
-        const ImVec2         origin     = ImGui::GetCursorScreenPos();
-        const float32        totalWidth = MathUtil::max( ImGui::GetContentRegionAvail().x, labelWidth + 1.0f );
-        const float32        trackWidth = totalWidth - labelWidth;
-        const float32        trackLeft  = origin.x + labelWidth;
+        ImVec2  _origin{}; ///< 캔버스 왼쪽 위(화면 좌표)
+        float32 _labelWidth{ 0.0f };
+        float32 _laneHeight{ 0.0f };
+        float32 _rowGap{ 0.0f };
+        float32 _totalWidth{ 0.0f };
+        float32 _totalHeight{ 0.0f };
+        float32 _trackWidth{ 0.0f };
+        float32 _trackLeft{ 0.0f }; ///< 이벤트가 놓이는 칸의 왼쪽(화면 좌표)
+    };
 
-        ProfilerTimelineLayout::layoutRects( listThread, _timelineViewBegin, _timelineViewEnd, trackWidth, _listTimelineRect, _listTimelineLaneCount );
-        float32 totalHeight{ 0.0f };
+    ProfilerPanel::TimelineGeometry ProfilerPanel::layoutTimeline( const vector<ProfilerTimelineThread>& listThread )
+    {
+        const float32    dpiScale = EditorThemeUtil::getDpiScale();
+        TimelineGeometry geometry;
+        geometry._labelWidth = ProfilerPanelInternal::kTimelineLabelWidth * dpiScale;
+        geometry._laneHeight = ImGui::GetTextLineHeight() + 4.0f * dpiScale;
+        geometry._rowGap     = 2.0f * dpiScale;
+        geometry._origin     = ImGui::GetCursorScreenPos();
+        geometry._totalWidth = MathUtil::max( ImGui::GetContentRegionAvail().x, geometry._labelWidth + 1.0f );
+        geometry._trackWidth = geometry._totalWidth - geometry._labelWidth;
+        geometry._trackLeft  = geometry._origin.x + geometry._labelWidth;
+
+        ProfilerTimelineLayout::layoutRects( listThread, _timelineViewBegin, _timelineViewEnd, geometry._trackWidth, _listTimelineRect, _listTimelineLaneCount );
         for ( const uint16 laneCount : _listTimelineLaneCount )
         {
-            totalHeight += static_cast<float32>( laneCount ) * laneHeight + rowGap;
+            geometry._totalHeight += static_cast<float32>( laneCount ) * geometry._laneHeight + geometry._rowGap;
         }
+        return geometry;
+    }
 
-        ImGui::InvisibleButton( "##TimelineCanvas", ImVec2{ totalWidth, MathUtil::max( totalHeight, laneHeight ) } );
+    bool ProfilerPanel::handleTimelineInput( const TimelineGeometry& geometry )
+    {
+        ImGui::InvisibleButton( "##TimelineCanvas", ImVec2{ geometry._totalWidth, MathUtil::max( geometry._totalHeight, geometry._laneHeight ) } );
         const bool   bHovered = ImGui::IsItemHovered();
         const ImVec2 mouse    = ImGui::GetIO().MousePos;
         if ( bHovered && ImGui::GetIO().MouseWheel != 0.0f )
         {
             const float32 factor = ImGui::GetIO().MouseWheel > 0.0f ? ProfilerPanelInternal::kTimelineWheelZoomFactor
                                                                     : 1.0f / ProfilerPanelInternal::kTimelineWheelZoomFactor;
-            ProfilerTimelineLayout::zoom( _timelineViewBegin, _timelineViewEnd, mouse.x - trackLeft, trackWidth, factor, _timelineWindowBegin, _timelineWindowEnd );
+            ProfilerTimelineLayout::zoom( _timelineViewBegin, _timelineViewEnd, mouse.x - geometry._trackLeft, geometry._trackWidth, factor, _timelineWindowBegin, _timelineWindowEnd );
             _bTimelineZoomed = SW_TRUE;
         }
         if ( ImGui::IsItemActive() && ImGui::IsMouseDragging( ImGuiMouseButton_Left ) )
         {
-            ProfilerTimelineLayout::pan( _timelineViewBegin, _timelineViewEnd, ImGui::GetIO().MouseDelta.x, trackWidth, _timelineWindowBegin, _timelineWindowEnd );
+            ProfilerTimelineLayout::pan( _timelineViewBegin, _timelineViewEnd, ImGui::GetIO().MouseDelta.x, geometry._trackWidth, _timelineWindowBegin, _timelineWindowEnd );
             _bTimelineZoomed = SW_TRUE;
         }
+        return bHovered;
+    }
 
+    vector<float32> ProfilerPanel::drawTimelineRows( const vector<ProfilerTimelineThread>& listThread, const TimelineGeometry& geometry )
+    {
         ImDrawList*     pDrawList = ImGui::GetWindowDrawList();
         vector<float32> listRowTop( listThread.size(), 0.0f );
-        float32         rowTop = origin.y;
+        float32         rowTop = geometry._origin.y;
         for ( size_t threadIndex = 0; threadIndex < listThread.size(); ++threadIndex )
         {
             listRowTop[threadIndex] = rowTop;
-            const float32 rowHeight = static_cast<float32>( _listTimelineLaneCount[threadIndex] ) * laneHeight;
-            pDrawList->AddRectFilled( ImVec2{ origin.x, rowTop }, ImVec2{ origin.x + totalWidth, rowTop + rowHeight },
+            const float32 rowHeight = static_cast<float32>( _listTimelineLaneCount[threadIndex] ) * geometry._laneHeight;
+            pDrawList->AddRectFilled( ImVec2{ geometry._origin.x, rowTop }, ImVec2{ geometry._origin.x + geometry._totalWidth, rowTop + rowHeight },
                                       ImGui::GetColorU32( ImGuiCol_FrameBg, ( threadIndex % 2 == 0 ) ? 0.6f : 0.3f ) );
-            pDrawList->AddText( ImVec2{ origin.x + rowGap * 2.0f, rowTop + rowGap }, ImGui::GetColorU32( ImGuiCol_Text ),
+            pDrawList->AddText( ImVec2{ geometry._origin.x + geometry._rowGap * 2.0f, rowTop + geometry._rowGap }, ImGui::GetColorU32( ImGuiCol_Text ),
                                 listThread[threadIndex]._name.c_str() );
-            rowTop += rowHeight + rowGap;
+            rowTop += rowHeight + geometry._rowGap;
         }
+        return listRowTop;
+    }
 
-        pDrawList->PushClipRect( ImVec2{ trackLeft, origin.y }, ImVec2{ origin.x + totalWidth, origin.y + totalHeight }, true );
+    const ProfilerTimelineRect* ProfilerPanel::drawTimelineEvents( const vector<ProfilerTimelineThread>& listThread, const TimelineGeometry& geometry, const vector<float32>& listRowTop,
+                                                                   const vector<string>* pLoadedSlotName, bool bHovered )
+    {
+        const FrameProfiler* pProfiler = editor::findSubsystem<FrameProfiler>();
+        const ImVec2         mouse     = ImGui::GetIO().MousePos;
+        ImDrawList*          pDrawList = ImGui::GetWindowDrawList();
+        pDrawList->PushClipRect( ImVec2{ geometry._trackLeft, geometry._origin.y }, ImVec2{ geometry._origin.x + geometry._totalWidth, geometry._origin.y + geometry._totalHeight }, true );
         const ProfilerTimelineRect* pHoveredRect = nullptr;
-        // 슬롯에서 이름을 찾는다. 불러온 트레이스의 슬롯은 `kLoadedSlotBase` 이상이므로 그 테이블을 본다.
-        const auto findName = [&]( uint32 slot ) -> const utf8*
-        {
-            if ( slot >= ProfilerPanelInternal::kLoadedSlotBase )
-            {
-                const size_t loadedIndex = slot - ProfilerPanelInternal::kLoadedSlotBase;
-                return ( pLoadedSlotName != nullptr && loadedIndex < pLoadedSlotName->size() ) ? ( *pLoadedSlotName )[loadedIndex].c_str() : nullptr;
-            }
-            return pProfiler != nullptr ? pProfiler->findScopeName( slot ) : nullptr;
-        };
 #if SW_PROFILER_TRACE_ENABLED
         const bool bSearching = _arrTraceSearch[0] != '\0';
         _traceSearchMatched   = 0;
@@ -652,9 +780,9 @@ namespace sw::editor
         for ( const ProfilerTimelineRect& rect : _listTimelineRect )
         {
             const ProfilerTimelineEvent& event = listThread[rect._threadIndex]._listEvent[rect._eventIndex];
-            const ImVec2                 minPoint{ trackLeft + rect._x0, listRowTop[rect._threadIndex] + static_cast<float32>( rect._depth ) * laneHeight };
-            const ImVec2                 maxPoint{ trackLeft + rect._x1, minPoint.y + laneHeight - 1.0f };
-            const utf8*                  pName     = findName( event._slot );
+            const ImVec2                 minPoint{ geometry._trackLeft + rect._x0, listRowTop[rect._threadIndex] + static_cast<float32>( rect._depth ) * geometry._laneHeight };
+            const ImVec2                 maxPoint{ geometry._trackLeft + rect._x1, minPoint.y + geometry._laneHeight - 1.0f };
+            const utf8*                  pName     = ProfilerPanelInternal::findSlotName( pProfiler, pLoadedSlotName, event._slot );
             ImU32                        slotColor = ProfilerPanelInternal::computeSlotColor( event._slot );
 #if SW_PROFILER_TRACE_ENABLED
             // 검색어가 있으면 일치하는 구간만 또렷하게 두고 나머지는 흐리게 한다.
@@ -674,7 +802,7 @@ namespace sw::editor
             if ( rect._bShowsLabel == SW_TRUE && pName != nullptr )
             {
                 pDrawList->PushClipRect( minPoint, maxPoint, true );
-                pDrawList->AddText( ImVec2{ minPoint.x + rowGap, minPoint.y + rowGap }, EditorColorUtil::toImU32( ProfilerPanelInternal::kTimelineLabel ), pName );
+                pDrawList->AddText( ImVec2{ minPoint.x + geometry._rowGap, minPoint.y + geometry._rowGap }, EditorColorUtil::toImU32( ProfilerPanelInternal::kTimelineLabel ), pName );
                 pDrawList->PopClipRect();
             }
             const bool bUnderMouse = bHovered && minPoint.x <= mouse.x && mouse.x <= maxPoint.x && minPoint.y <= mouse.y && mouse.y <= maxPoint.y;
@@ -684,37 +812,49 @@ namespace sw::editor
         // 프레임 경계는 세로선으로 그린다.
         for ( const uint64 frameBegin : _listTimelineFrameBegin )
         {
-            const float32 lineX = trackLeft + ProfilerTimelineLayout::computeX( frameBegin, _timelineViewBegin, _timelineViewEnd, trackWidth );
-            pDrawList->AddLine( ImVec2{ lineX, origin.y }, ImVec2{ lineX, origin.y + totalHeight }, EditorColorUtil::toImU32( ProfilerPanelInternal::kFrameBoundary ), 1.0f );
+            const float32 lineX = geometry._trackLeft + ProfilerTimelineLayout::computeX( frameBegin, _timelineViewBegin, _timelineViewEnd, geometry._trackWidth );
+            pDrawList->AddLine( ImVec2{ lineX, geometry._origin.y }, ImVec2{ lineX, geometry._origin.y + geometry._totalHeight }, EditorColorUtil::toImU32( ProfilerPanelInternal::kFrameBoundary ), 1.0f );
         }
         pDrawList->PopClipRect();
-
-        if ( pHoveredRect != nullptr )
-        {
-            const ProfilerTimelineEvent& event = listThread[pHoveredRect->_threadIndex]._listEvent[pHoveredRect->_eventIndex];
-            const utf8*                  pName = findName( event._slot );
-            ImGui::BeginTooltip();
-            ImGui::TextUnformatted( pName != nullptr ? pName : "?" );
-            ImGui::Text( "%.1f us, depth %u", static_cast<float64>( event._endNanos - event._beginNanos ) / constant::kNanosecondsPerMicrosecond, static_cast<uint32>( event._depth ) );
-            ImGui::TextDisabled( "%s", listThread[pHoveredRect->_threadIndex]._name.c_str() );
-            // 같은 구간(같은 스레드, 같은 슬롯)의 횟수, 합계, 최대를 구한다. 어느 구간이 늘었는지 한눈에 볼 수 있다.
-            uint32  sameCount{ 0 };
-            float64 sameTotalUs{ 0.0 };
-            float64 sameMaxUs{ 0.0 };
-            for ( const ProfilerTimelineEvent& other : listThread[pHoveredRect->_threadIndex]._listEvent )
-            {
-                if ( other._slot != event._slot )
-                    continue;
-                const float64 micros = static_cast<float64>( other._endNanos - other._beginNanos ) / constant::kNanosecondsPerMicrosecond;
-                ++sameCount;
-                sameTotalUs += micros;
-                sameMaxUs = MathUtil::max( sameMaxUs, micros );
-            }
-            ImGui::TextDisabled( "same scope here: %u x, total %.1f us, max %.1f us", sameCount, sameTotalUs, sameMaxUs );
-            ImGui::EndTooltip();
-        }
+        return pHoveredRect;
     }
 
+    void ProfilerPanel::drawTimelineTooltip( const vector<ProfilerTimelineThread>& listThread, const ProfilerTimelineRect& hoveredRect, const vector<string>* pLoadedSlotName )
+    {
+        const FrameProfiler*         pProfiler = editor::findSubsystem<FrameProfiler>();
+        const ProfilerTimelineEvent& event     = listThread[hoveredRect._threadIndex]._listEvent[hoveredRect._eventIndex];
+        const utf8*                  pName     = ProfilerPanelInternal::findSlotName( pProfiler, pLoadedSlotName, event._slot );
+        ImGui::BeginTooltip();
+        ImGui::TextUnformatted( pName != nullptr ? pName : "?" );
+        ImGui::Text( "%.1f us, depth %u", static_cast<float64>( event._endNanos - event._beginNanos ) / constant::kNanosecondsPerMicrosecond, static_cast<uint32>( event._depth ) );
+        ImGui::TextDisabled( "%s", listThread[hoveredRect._threadIndex]._name.c_str() );
+        // 같은 구간(같은 스레드, 같은 슬롯)의 횟수, 합계, 최대를 구한다. 어느 구간이 늘었는지 한눈에 볼 수 있다.
+        uint32  sameCount{ 0 };
+        float64 sameTotalUs{ 0.0 };
+        float64 sameMaxUs{ 0.0 };
+        for ( const ProfilerTimelineEvent& other : listThread[hoveredRect._threadIndex]._listEvent )
+        {
+            if ( other._slot != event._slot )
+                continue;
+            const float64 micros = static_cast<float64>( other._endNanos - other._beginNanos ) / constant::kNanosecondsPerMicrosecond;
+            ++sameCount;
+            sameTotalUs += micros;
+            sameMaxUs = MathUtil::max( sameMaxUs, micros );
+        }
+        ImGui::TextDisabled( "same scope here: %u x, total %.1f us, max %.1f us", sameCount, sameTotalUs, sameMaxUs );
+        ImGui::EndTooltip();
+    }
+
+    void ProfilerPanel::drawTimelineCanvas( const vector<ProfilerTimelineThread>& listThread, const vector<string>* pLoadedSlotName )
+    {
+        const TimelineGeometry geometry = layoutTimeline( listThread );
+        const bool             bHovered = handleTimelineInput( geometry );
+
+        const vector<float32>       listRowTop   = drawTimelineRows( listThread, geometry );
+        const ProfilerTimelineRect* pHoveredRect = drawTimelineEvents( listThread, geometry, listRowTop, pLoadedSlotName, bHovered );
+        if ( pHoveredRect != nullptr )
+            drawTimelineTooltip( listThread, *pHoveredRect, pLoadedSlotName );
+    }
     void ProfilerPanel::drawFrameGraph()
     {
         // 게임 스레드, 렌더 스레드, GPU 세 줄을 그린다. 같은 축(ms)으로 그려야 어느 쪽이 프레임 시간을 정하는지 보인다.
@@ -1059,96 +1199,15 @@ namespace sw::editor
         ImGui::Separator();
 
         if ( ImGui::CollapsingHeader( "Global Statistics By Tag", ImGuiTreeNodeFlags_DefaultOpen ) )
-        {
-            if ( ImGui::BeginTable( "MemoryStatsTable", 5,
-                                    ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable ) )
-            {
-                ImGui::TableSetupColumn( "Tag" );
-                ImGui::TableSetupColumn( "Current Bytes" );
-                ImGui::TableSetupColumn( "Share" );
-                ImGui::TableSetupColumn( "Current Count" );
-                ImGui::TableSetupColumn( "Total Allocated" );
-                ImGui::TableHeadersRow();
-
-                fixed_string<constant::kMaxBuffer32> arrBytesBuf;
-                fixed_string<constant::kMaxBuffer32> arrTotalBuf;
-
-                // 현재 살아 있는 바이트가 큰 태그부터 표시한다. 한 번도 할당하지 않은 태그는 행을 만들지 않는다. Unknown 은 항상 만든다. 태그가 지정되지 않은 진입점의 할당량이기 때문이다.
-                const uint64 liveBytes = profiler.getLiveAllocatedBytes();
-                for ( const MemoryTag tag : profiler.makeTagOrderByLiveBytes() )
-                {
-                    const auto& stats = profiler.getStats( tag );
-                    if ( tag != MemoryTag::Unknown && stats._totalAllocatedBytes == 0 )
-                        continue;
-
-                    const uint64 currentBytes = stats._currentAllocatedBytes;
-                    ProfilerPanelInternal::formatBytes( currentBytes, arrBytesBuf );
-                    ProfilerPanelInternal::formatBytes( stats._totalAllocatedBytes, arrTotalBuf );
-
-                    ImGui::TableNextRow();
-                    ImGui::TableNextColumn();
-                    ImGui::Text( "%s", MemoryProfiler::getMemoryTagName( tag ) );
-                    ImGui::TableNextColumn();
-                    ImGui::Text( "%s", arrBytesBuf.c_str() );
-                    ImGui::TableNextColumn();
-                    ImGui::Text( "%.1f%%", liveBytes == 0 ? 0.0 : static_cast<float64>( currentBytes ) * 100.0 / static_cast<float64>( liveBytes ) );
-                    ImGui::TableNextColumn();
-                    ImGui::Text( "%u", static_cast<uint32>( stats._currentAllocationCount ) );
-                    ImGui::TableNextColumn();
-
-                    ImGui::Text( "%s", arrTotalBuf.c_str() );
-                }
-                ImGui::EndTable();
-            }
-        }
+            ProfilerPanelInternal::drawMemoryTagTable( profiler );
 
         ImGui::Separator();
 
         if ( bDetailed && ImGui::CollapsingHeader( "Top Memory Allocations By Call Stack", ImGuiTreeNodeFlags_DefaultOpen ) )
-        {
-            vector<CallStackAllocInfo> listTopStack = profiler.getTopCallStacks();
-
-            if ( listTopStack.empty() )
-                ImGui::Text( "No detailed call stack data available or all freed." );
-            else
-            {
-                if ( ImGui::BeginTable( "CallStackTable", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable ) )
-                {
-                    ImGui::TableSetupColumn( "Bytes (Count)" );
-                    ImGui::TableSetupColumn( "Call Stack" );
-                    ImGui::TableHeadersRow();
-
-                    int32 displayCount{ 0 };
-                    for ( const auto& info : listTopStack )
-                    {
-                        if ( displayCount++ > 100 )
-                            break; // 최대 100개만 표시한다
-
-                        ImGui::TableNextRow();
-                        ImGui::TableNextColumn();
-                        fixed_string<constant::kMaxBuffer64> allocBuf;
-                        formatstring( allocBuf.data(), allocBuf.capacity(), "%# B (%# allocs)", info._currentBytes, info._currentCount );
-                        ImGui::TextUnformatted( allocBuf.c_str() );
-
-                        ImGui::TableNextColumn();
-
-                        // 호출 스택을 펼쳐 볼 수 있도록 트리로 만든다
-                        string treeLabel = "Stack Hash: " + to_string( info._stack._hash );
-                        if ( ImGui::TreeNode( treeLabel.c_str() ) )
-                        {
-                            string stackStr = CallStackCapture::symbolize( info._stack );
-                            ImGui::TextUnformatted( stackStr.c_str() );
-                            ImGui::TreePop();
-                        }
-                    }
-                    ImGui::EndTable();
-                }
-            }
-        }
+            ProfilerPanelInternal::drawTopCallStacks( profiler );
         else if ( bDetailed == false )
             ImGui::Text( "Detailed CallStack tracking is disabled." );
     }
-
     void ProfilerPanel::pauseOnSpike()
     {
         float32    frameMicro{ 0.0f };
