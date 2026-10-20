@@ -52,7 +52,9 @@ namespace sw
         Stats,
         StatChange,
         Achievements,
-        SeasonResult
+        SeasonResult,
+        ScoresOf,
+        AchievementProgress
     };
 } // namespace sw
 
@@ -61,14 +63,15 @@ namespace sw
     /** @brief 요청 하나의 완료입니다. */
     struct LeaderboardCompletion
     {
-        vector<LeaderboardEntry> _listEntry{};
-        vector<LeaderboardStat>  _listStat{};
-        vector<AchievementState> _listAchievement{};
-        uint64                   _periodID{ 0 };
-        uint64                   _requestTag{ 0 };
-        int64                    _score{ 0 }; ///< Submit 과 StatChange 의 적용 뒤 값이다
-        LeaderboardResult        _result{ LeaderboardResult::Ok };
-        LeaderboardOperation     _operation{ LeaderboardOperation::Submit };
+        vector<LeaderboardEntry>    _listEntry{};
+        vector<LeaderboardStat>     _listStat{};
+        vector<AchievementState>    _listAchievement{};
+        vector<AchievementProgress> _listProgress{};
+        uint64                      _periodID{ 0 };
+        uint64                      _requestTag{ 0 };
+        int64                       _score{ 0 }; ///< Submit 과 StatChange 의 적용 뒤 값이다
+        LeaderboardResult           _result{ LeaderboardResult::Ok };
+        LeaderboardOperation        _operation{ LeaderboardOperation::Submit };
     };
 } // namespace sw
 
@@ -133,6 +136,14 @@ namespace sw
         /** @brief 업적을 등록합니다. 기동할 때 게임 데이터로 부르며, 규칙에 맞지 않으면 false 를 반환합니다. */
         [[nodiscard]] bool registerAchievement( const AchievementDefinition& definition );
         void               readAchievements( AccountID accountID, uint64 requestTag );
+        /** @brief 등록한 업적마다 진행률(연결된 통계 값)과 달성 시각을 읽습니다. 숨긴 업적은 달성 전에 가립니다. id 순서입니다. */
+        void readAchievementProgress( AccountID accountID, uint64 requestTag );
+        /**
+         * @brief 계정 목록의 이번 기간 점수를 읽어 목록 안 순위로 돌려줍니다(친구 순위표). 점수가 없는 계정은 빠집니다.
+         * @details 전체 순위가 아니라 목록 안의 순위입니다. 영속 점수(`lb_score`)를 계정마다 읽으므로 캐시를 잃어도 같은 결과입니다.
+         *          같은 점수는 계정 id 오름차순입니다(정산과 같은 규칙). 목록이 비었거나 상한을 넘으면 Invalid 입니다.
+         */
+        void readScoresOf( string_view boardID, const vector<AccountID>& listAccountID, int64 nowMs, uint64 requestTag );
         /** @brief 시즌 결과 하나를 조회합니다. 점수와 순위이며 완료의 항목 하나이고 기간 id 가 시즌입니다. 정산 전이거나 점수가 없었으면 NotRanked 입니다. */
         void readSeasonResult( string_view boardID, uint32 seasonID, AccountID accountID, uint64 requestTag );
         /** @brief 시즌 하나를 정산합니다. 예약 작업이 부르며 테스트와 운영은 직접 부릅니다. 끝나면 @p onDone 을 부르며 인자는 모두 정산했는지 여부입니다. */
@@ -164,6 +175,8 @@ namespace sw
         void applyRebuildRead( const string& rankKey, vector<LeaderboardScoreRow>&& listScore, bool bReadOk );
         void applyAchievementUnlock( AccountID accountID, const AchievementState& achievement, bool bUnlocked );
         void applyAchievements( uint64 requestTag, LeaderboardResult result, vector<AchievementState>&& listAchievement );
+        void applyAchievementProgress( uint64 requestTag, LeaderboardResult result, vector<AchievementProgress>&& listProgress );
+        void applyScoresOf( uint64 requestTag, uint64 periodID, LeaderboardResult result, vector<LeaderboardEntry>&& listEntry );
         void applySeasonResult( uint64 requestTag, uint32 seasonID, LeaderboardResult result, const LeaderboardEntry& entry );
         /** @brief 정산의 순위 읽기가 끝났습니다. 순위대로 정렬한 점수를 받아 첫 페이지를 맡깁니다. */
         void applySettlementRanking( uint64 settlementID, bool bReadOk, vector<LeaderboardScoreRow>&& listRanked );

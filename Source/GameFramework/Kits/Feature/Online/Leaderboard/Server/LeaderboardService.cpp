@@ -127,6 +127,19 @@ namespace sw
                 return writer.getBytes();
             }
 
+            static bool isAchievementIDLess( const AchievementDefinition& left, const AchievementDefinition& right ) { return left._achievementID < right._achievementID; }
+
+            /** @brief 점수와 표시 이름을 읽습니다. 계정 목록 조회가 씁니다. */
+            [[nodiscard]] static bool decodeScoreWithName( const vector<uint8>& bytes, int64& outScore, string& outDisplayName )
+            {
+                BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
+                if ( reader.readBits( 8 ) != kFormatVersion )
+                    return false;
+                outScore                               = reader.readVarInt();
+                [[maybe_unused]] const int64 updatedMs = reader.readVarInt(); // 쓰지 않지만 읽어야 이름 필드에 닿는다. 넘쳤는지는 아래 hasOverflowed 가 본다
+                return ServiceKeyUtil::readString( reader, RequestLimits::kMaxDisplayNameSize, outDisplayName ) && reader.hasOverflowed() == false;
+            }
+
             [[nodiscard]] static bool decodeScore( const vector<uint8>& bytes, int64& outScore )
             {
                 BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
@@ -397,6 +410,149 @@ namespace sw
             LeaderboardService*      _pService;
             AccountID                _accountID;
             uint64                   _requestTag;
+            LeaderboardResult        _result;
+        };
+
+        /** @brief 업적 진행률을 읽는 작업입니다. 통계와 달성 기록을 읽어 등록한 업적(복사본)마다 한 줄을 만듭니다. */
+        class AchievementProgressWork final : public IServiceStoreWork
+        {
+        public:
+            AchievementProgressWork( LeaderboardService* pService, vector<AchievementDefinition>&& listDefinition, AccountID accountID, uint64 requestTag )
+                : _listDefinition{ std::move( listDefinition ) }
+                , _listProgress{}
+                , _pService{ pService }
+                , _accountID{ accountID }
+                , _requestTag{ requestTag }
+                , _result{ LeaderboardResult::Unavailable }
+            {
+            }
+
+            void run( IServiceStoreConnection& connection ) override
+            {
+                using Internal = LeaderboardServiceInternal;
+                vector<ServiceRecord> listStatRecord;
+                vector<ServiceRecord> listAchievementRecord;
+                const string          prefix  = ServiceKeyUtil::makeHex64( _accountID ) + "/";
+                const bool            bReadOk = connection.listRecords( Internal::getStatTable(), prefix, "", LeaderboardLimit::kMaxStatCount, false, listStatRecord ) ==
+                                         ServiceStoreResult::Ok &&
+                                     connection.listRecords( Internal::getAchievementTable(), prefix, "", LeaderboardLimit::kMaxAchievementCount, false,
+                                                             listAchievementRecord ) == ServiceStoreResult::Ok;
+                if ( bReadOk == false )
+                    return;
+                for ( const AchievementDefinition& definition : _listDefinition )
+                {
+                    AchievementProgress progress;
+                    if ( findValue( listAchievementRecord, prefix.size(), definition._achievementID, progress._unlockedMs ) == false )
+                    {
+                        _listProgress.clear(); // 손상된 달성 기록은 건너뛰지 않고 이 읽기를 실패로 돌려준다
+                        return;
+                    }
+                    if ( definition._bHidden && progress._unlockedMs == 0 )
+                    {
+                        progress._bHidden = SW_TRUE;
+                        _listProgress.push_back( std::move( progress ) );
+                        continue;
+                    }
+                    if ( findValue( listStatRecord, prefix.size(), definition._statName, progress._progress ) == false )
+                    {
+                        _listProgress.clear(); // 손상된 통계는 건너뛰지 않고 이 읽기를 실패로 돌려준다
+                        return;
+                    }
+                    progress._achievementID = definition._achievementID;
+                    progress._threshold     = definition._threshold;
+                    progress._bHidden       = definition._bHidden ? SW_TRUE : SW_FALSE;
+                    _listProgress.push_back( std::move( progress ) );
+                }
+                _result = LeaderboardResult::Ok;
+            }
+
+            void complete() override { _pService->applyAchievementProgress( _requestTag, _result, std::move( _listProgress ) ); }
+
+        private:
+            /** @brief @p listRecord 에서 키 꼬리가 @p name 인 값을 읽습니다. 없으면 @p outValue 는 그대로이고 true, 있는데 읽지 못하면 false 입니다. */
+            [[nodiscard]] static bool findValue( const vector<ServiceRecord>& listRecord, size_t prefixSize, string_view name, int64& outValue )
+            {
+                for ( const ServiceRecord& record : listRecord )
+                {
+                    if ( string_view( record._key ).substr( prefixSize ) == name )
+                        return LeaderboardServiceInternal::decodeScore( record._bytes, outValue );
+                }
+                return true;
+            }
+
+            vector<AchievementDefinition> _listDefinition;
+            vector<AchievementProgress>   _listProgress;
+            LeaderboardService*           _pService;
+            AccountID                     _accountID;
+            uint64                        _requestTag;
+            LeaderboardResult             _result;
+        };
+
+        /** @brief 계정 목록의 점수를 읽어 목록 안 순위를 매기는 작업입니다. */
+        class ScoresOfReadWork final : public IServiceStoreWork
+        {
+        public:
+            ScoresOfReadWork( LeaderboardService* pService, string&& prefix, vector<AccountID>&& listAccountID, LeaderboardOrder order, uint64 periodID, uint64 requestTag )
+                : _listAccountID{ std::move( listAccountID ) }
+                , _listEntry{}
+                , _prefix{ std::move( prefix ) }
+                , _pService{ pService }
+                , _periodID{ periodID }
+                , _requestTag{ requestTag }
+                , _order{ order }
+                , _result{ LeaderboardResult::Unavailable }
+            {
+            }
+
+            void run( IServiceStoreConnection& connection ) override
+            {
+                for ( const AccountID accountID : _listAccountID )
+                {
+                    ServiceRecord            record;
+                    const ServiceStoreResult read = connection.readRecord( LeaderboardServiceInternal::getScoreTable(), _prefix + ServiceKeyUtil::makeHex64( accountID ), record );
+                    if ( read == ServiceStoreResult::NotFound )
+                        continue; // 이 기간에 점수가 없다
+                    LeaderboardEntry entry;
+                    entry._accountID = accountID;
+                    if ( read != ServiceStoreResult::Ok || LeaderboardServiceInternal::decodeScoreWithName( record._bytes, entry._score, entry._displayName ) == false )
+                    {
+                        _listEntry.clear(); // 손상된 점수는 건너뛰지 않고 이 읽기를 실패로 돌려준다
+                        return;
+                    }
+                    _listEntry.push_back( std::move( entry ) );
+                }
+                if ( _order == LeaderboardOrder::Descending )
+                    std::sort( _listEntry.begin(), _listEntry.end(), isHigherFirst );
+                else
+                    std::sort( _listEntry.begin(), _listEntry.end(), isLowerFirst );
+                for ( size_t index = 0; index < _listEntry.size(); ++index )
+                {
+                    _listEntry[index]._rank = static_cast<int32>( index ) + 1;
+                }
+                _result = LeaderboardResult::Ok;
+            }
+
+            void complete() override { _pService->applyScoresOf( _requestTag, _periodID, _result, std::move( _listEntry ) ); }
+
+        private:
+            /** @brief 같은 점수는 계정 id 오름차순입니다(정산과 같은 규칙). */
+            static bool isHigherFirst( const LeaderboardEntry& left, const LeaderboardEntry& right )
+            {
+                return left._score != right._score ? left._score > right._score : left._accountID < right._accountID;
+            }
+
+            static bool isLowerFirst( const LeaderboardEntry& left, const LeaderboardEntry& right )
+            {
+                return left._score != right._score ? left._score < right._score : left._accountID < right._accountID;
+            }
+
+            vector<AccountID>        _listAccountID;
+            vector<LeaderboardEntry> _listEntry;
+            string                   _prefix;
+            LeaderboardService*      _pService;
+            uint64                   _periodID;
+            uint64                   _requestTag;
+            LeaderboardOrder         _order;
             LeaderboardResult        _result;
         };
 
@@ -1180,6 +1336,65 @@ namespace sw
         completion._operation       = LeaderboardOperation::Achievements;
         completion._result          = result;
         completion._listAchievement = std::move( listAchievement );
+        _completionBuffer.push( std::move( completion ) );
+    }
+
+    void LeaderboardService::readAchievementProgress( AccountID accountID, uint64 requestTag )
+    {
+        vector<AchievementDefinition> listDefinition;
+        listDefinition.reserve( _mapAchievement.size() );
+        for ( const auto& [achievementID, definition] : _mapAchievement )
+        {
+            (void)achievementID;
+            listDefinition.push_back( definition );
+        }
+        std::sort( listDefinition.begin(), listDefinition.end(), LeaderboardServiceInternal::isAchievementIDLess );
+        ++_pendingCount;
+        _dependencies._pStore->submit( sw::make_unique<AchievementProgressWork>( this, std::move( listDefinition ), accountID, requestTag ) );
+    }
+
+    void LeaderboardService::applyAchievementProgress( uint64 requestTag, LeaderboardResult result, vector<AchievementProgress>&& listProgress )
+    {
+        --_pendingCount;
+        LeaderboardCompletion completion;
+        completion._requestTag   = requestTag;
+        completion._operation    = LeaderboardOperation::AchievementProgress;
+        completion._result       = result;
+        completion._listProgress = std::move( listProgress );
+        _completionBuffer.push( std::move( completion ) );
+    }
+
+    void LeaderboardService::readScoresOf( string_view boardID, const vector<AccountID>& listAccountID, int64 nowMs, uint64 requestTag )
+    {
+        const LeaderboardDefinition* pBoard = findBoard( boardID );
+        if ( pBoard == nullptr )
+        {
+            pushCompletion( requestTag, LeaderboardOperation::ScoresOf, LeaderboardResult::UnknownBoard );
+            return;
+        }
+        if ( listAccountID.empty() || listAccountID.size() > static_cast<size_t>( LeaderboardLimit::kMaxScoresOfCount ) )
+        {
+            pushCompletion( requestTag, LeaderboardOperation::ScoresOf, LeaderboardResult::Invalid );
+            return;
+        }
+        vector<AccountID> listUnique = listAccountID;
+        std::sort( listUnique.begin(), listUnique.end() );
+        listUnique.erase( std::unique( listUnique.begin(), listUnique.end() ), listUnique.end() ); // 같은 계정을 두 번 세지 않는다
+        const uint64 periodID = computePeriodID( *pBoard, nowMs );
+        ++_pendingCount;
+        _dependencies._pStore->submit(
+            sw::make_unique<ScoresOfReadWork>( this, LeaderboardServiceInternal::makeScorePrefix( boardID, periodID ), std::move( listUnique ), pBoard->_order, periodID, requestTag ) );
+    }
+
+    void LeaderboardService::applyScoresOf( uint64 requestTag, uint64 periodID, LeaderboardResult result, vector<LeaderboardEntry>&& listEntry )
+    {
+        --_pendingCount;
+        LeaderboardCompletion completion;
+        completion._requestTag = requestTag;
+        completion._operation  = LeaderboardOperation::ScoresOf;
+        completion._result     = result;
+        completion._periodID   = periodID;
+        completion._listEntry  = std::move( listEntry );
         _completionBuffer.push( std::move( completion ) );
     }
 
