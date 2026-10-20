@@ -70,6 +70,22 @@ namespace sw::editor
         void drawInspector();
         /** @brief 상태와 전이 편집입니다. 이름이 곧 클립이며, 반복, 전이 조건, 블렌드를 편집합니다. */
         void drawGraphInspector();
+        /** @brief 고른 상태(노드)의 클립 이름과 반복 설정입니다. */
+        void drawStateInspector();
+        /** @brief 전이 목록입니다. 누르면 그 전이를 고릅니다. */
+        void drawTransitionList();
+        /** @brief 고른 전이의 조건(파라미터 · 비교 · 값)과 블렌드 시간입니다. */
+        void drawTransitionCondition();
+        /** @brief 캔버스에 상태 노드와 입출력 핀을 그립니다. */
+        void drawStateNodes();
+        /** @brief 캔버스에 전이 링크를 그리고, 미리보기가 탄 전이에 흐름을 보입니다. */
+        void drawTransitionLinks();
+        /** @brief 노드 오른쪽 클릭 메뉴(복제 · 지우기)입니다. */
+        void drawNodeContextMenu();
+        /** @brief 진입 노드에서 닿지 않는 노드를 찾아 캔버스에 표시합니다. */
+        void updateUnreachableIssues();
+        /** @brief 캔버스 편집(새 링크 잇기, 노드 추가, 지우기)을 처리합니다. */
+        void handleCanvasEdits();
         /** @brief 캔버스의 노드와 링크 선택을 선택한 순서대로 따라갑니다. */
         void trackCanvasSelection();
         /** @brief 선택한 노드 둘을 먼저 선택한 것에서 나중에 선택한 것으로 연결합니다. */
