@@ -4255,7 +4255,7 @@ SW_TEST_CASE( ReflectionSerializationTest, XMLSoftReadKeepsUnreadableFieldValueB
     sw::string text  = sw::XMLSerializer::serialize( &saved, holderType );
     // 둘째 원소를 int32 로 읽지 못하게 고친다
     const sw::string_view readableItem = "<item>2</item>";
-    const size_t          itemPosition = text.find( readableItem );
+    const size_t          itemPosition = text.find( readableItem.data(), 0, readableItem.size() );
     SW_ASSERT_TRUE_MSG( itemPosition != sw::string::npos, "XML 글의 모양이 짐작과 다릅니다" );
     text.replace( itemPosition, readableItem.size(), "<item>x</item>" );
 
