@@ -31,6 +31,10 @@ namespace sw
         uint64 submitScore( string_view boardID, int64 score, const ReplyDelegate& onReply );
         uint64 requestAchievements( const ReplyDelegate& onReply );
         uint64 requestSeasonResult( string_view boardID, uint32 seasonID, const ReplyDelegate& onReply );
+        /** @brief 친구 순위표입니다. @p listAccountID 는 친구 키트의 친구 목록에 자기를 더한 것이며 응답의 순위는 목록 안 순위입니다. */
+        uint64 requestScoresOf( string_view boardID, const vector<AccountID>& listAccountID, const ReplyDelegate& onReply );
+        /** @brief 등록한 업적마다 진행률입니다. 숨긴 업적은 달성 전에 가려져 옵니다. */
+        uint64 requestAchievementProgress( const ReplyDelegate& onReply );
 
         /** @brief 쌓인 업적 달성 알림을 꺼냅니다. */
         void drainAchievementUnlocks( vector<AchievementState>& outListAchievement ) { _unlockBuffer.drainTo( outListAchievement ); }

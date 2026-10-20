@@ -7,6 +7,7 @@
  *          - 갱신 방식은 Best, Latest, Sum 이고 기간은 None, Daily, Weekly 이다. 기간은 `ServiceScheduler::computeLatestOccurrence` 라는 같은 규칙 하나로 구하며 기간 id 는 기간 시작 시각이다.
  *          - 통계 `lb_stat`(`<계정>/<이름>`)이 바뀌면 그 통계에 연결된 보드에 같은 값을 낸다.
  *          - 상위와 내 주변 조회는 표시 이름을 캐시 `lb/name/<계정>`(30일)에서 함께 읽는다.
+ *          - 이 서버에 접속한 계정의 통계는 접속 때 읽어 메모리에 두고(`loadAccountStats`) 바뀌면 같이 고친다. 매칭 실력(`IAccountStatSource`)이 이것을 읽는다.
  *          - 업적은 통계가 임계값을 넘으면 `lb_achievement` 를 "없어야 함" 조건으로 쓰고 보상 우편(`ServiceMail::stageSend`, 재원 발행, 멱등 키 `ach.<계정>.<업적>`)을 한 트랜잭션에 넣는다. 두 번 넘어도 한 번만 처리된다.
  *          - 시즌 정산은 예약 작업(`lb.settle.<보드>.<시즌 16진 8자리>`, 창 [끝, 끝 + 7일))이 한다. 점수를 모두 읽어 순위(같은 점수는 계정 id 오름차순)대로 결과 `lb_season_result`("없어야 함")와 구간 보상 우편을 15명씩 한 트랜잭션에 쓴다.
  *            결과가 이미 있는 사람은 건너뛰므로 다시 돌아도 한 번만 처리된다.
@@ -22,6 +23,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 
+#include "GameFramework/Base/Online/Identity/AccountStatSource.h"
 #include "GameFramework/Base/Online/Schedule/ServiceScheduler.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Shared/LeaderboardTypes.h"
@@ -52,7 +54,9 @@ namespace sw
         Stats,
         StatChange,
         Achievements,
-        SeasonResult
+        SeasonResult,
+        ScoresOf,
+        AchievementProgress
     };
 } // namespace sw
 
@@ -61,14 +65,15 @@ namespace sw
     /** @brief 요청 하나의 완료입니다. */
     struct LeaderboardCompletion
     {
-        vector<LeaderboardEntry> _listEntry{};
-        vector<LeaderboardStat>  _listStat{};
-        vector<AchievementState> _listAchievement{};
-        uint64                   _periodID{ 0 };
-        uint64                   _requestTag{ 0 };
-        int64                    _score{ 0 }; ///< Submit 과 StatChange 의 적용 뒤 값이다
-        LeaderboardResult        _result{ LeaderboardResult::Ok };
-        LeaderboardOperation     _operation{ LeaderboardOperation::Submit };
+        vector<LeaderboardEntry>    _listEntry{};
+        vector<LeaderboardStat>     _listStat{};
+        vector<AchievementState>    _listAchievement{};
+        vector<AchievementProgress> _listProgress{};
+        uint64                      _periodID{ 0 };
+        uint64                      _requestTag{ 0 };
+        int64                       _score{ 0 }; ///< Submit 과 StatChange 의 적용 뒤 값이다
+        LeaderboardResult           _result{ LeaderboardResult::Ok };
+        LeaderboardOperation        _operation{ LeaderboardOperation::Submit };
     };
 } // namespace sw
 
@@ -100,7 +105,7 @@ namespace sw
      * @class LeaderboardService
      * @brief 순위표 로직입니다. 서비스 스레드에서 씁니다.
      */
-    class SW_KIT_SERVER_API LeaderboardService final : public IScheduledJobHandler
+    class SW_KIT_SERVER_API LeaderboardService final : public IScheduledJobHandler, public IAccountStatSource
     {
     public:
         LeaderboardService();
@@ -127,12 +132,26 @@ namespace sw
         /** @brief 통계를 바꿉니다. @p update 방식을 따르며 Best 는 큰 값을 씁니다. 그 통계에 연결된 보드에 같은 값을 냅니다. */
         void changeStat( AccountID accountID, string_view displayName, string_view statName, int64 value, LeaderboardUpdate update, int64 nowMs, uint64 requestTag );
         void readStats( AccountID accountID, uint64 requestTag );
+        /** @brief 접속한 계정의 통계를 읽어 메모리에 둡니다. 바인딩이 계정이 붙을 때 부릅니다. 읽기가 끝나기 전에는 `findStat` 이 NotLoaded 입니다. */
+        void loadAccountStats( AccountID accountID );
+        /** @brief 떠난 계정의 통계를 메모리에서 지웁니다. */
+        void dropAccountStats( AccountID accountID );
+        // IAccountStatSource
+        AccountStatLookup findStat( AccountID accountID, string_view statName, int64& outValue ) const override;
 
         /** @brief 시즌 정산 작업을 등록할 예약 테이블을 지정합니다. 빌려 쓰며 `registerBoard` 전에 지정합니다. 없으면 `settleSeason` 을 부르는 쪽이 정산합니다. */
         void setScheduler( ServiceScheduler* pScheduler ) { _pScheduler = pScheduler; }
         /** @brief 업적을 등록합니다. 기동할 때 게임 데이터로 부르며, 규칙에 맞지 않으면 false 를 반환합니다. */
         [[nodiscard]] bool registerAchievement( const AchievementDefinition& definition );
         void               readAchievements( AccountID accountID, uint64 requestTag );
+        /** @brief 등록한 업적마다 진행률(연결된 통계 값)과 달성 시각을 읽습니다. 숨긴 업적은 달성 전에 가립니다. id 순서입니다. */
+        void readAchievementProgress( AccountID accountID, uint64 requestTag );
+        /**
+         * @brief 계정 목록의 이번 기간 점수를 읽어 목록 안 순위로 돌려줍니다(친구 순위표). 점수가 없는 계정은 빠집니다.
+         * @details 전체 순위가 아니라 목록 안의 순위입니다. 영속 점수(`lb_score`)를 계정마다 읽으므로 캐시를 잃어도 같은 결과입니다.
+         *          같은 점수는 계정 id 오름차순입니다(정산과 같은 규칙). 목록이 비었거나 상한을 넘으면 Invalid 입니다.
+         */
+        void readScoresOf( string_view boardID, const vector<AccountID>& listAccountID, int64 nowMs, uint64 requestTag );
         /** @brief 시즌 결과 하나를 조회합니다. 점수와 순위이며 완료의 항목 하나이고 기간 id 가 시즌입니다. 정산 전이거나 점수가 없었으면 NotRanked 입니다. */
         void readSeasonResult( string_view boardID, uint32 seasonID, AccountID accountID, uint64 requestTag );
         /** @brief 시즌 하나를 정산합니다. 예약 작업이 부르며 테스트와 운영은 직접 부릅니다. 끝나면 @p onDone 을 부르며 인자는 모두 정산했는지 여부입니다. */
@@ -161,9 +180,12 @@ namespace sw
         void applyScoreWrite( const string& boardID, uint64 periodID, AccountID accountID, const string& displayName, int64 finalScore, bool bChanged,
                               LeaderboardResult result, uint64 requestTag, LeaderboardOperation operation, int64 nowMs );
         void applyStats( uint64 requestTag, LeaderboardResult result, vector<LeaderboardStat>&& listStat );
+        void applyStatCache( AccountID accountID, bool bReadOk, vector<LeaderboardStat>&& listStat );
         void applyRebuildRead( const string& rankKey, vector<LeaderboardScoreRow>&& listScore, bool bReadOk );
         void applyAchievementUnlock( AccountID accountID, const AchievementState& achievement, bool bUnlocked );
         void applyAchievements( uint64 requestTag, LeaderboardResult result, vector<AchievementState>&& listAchievement );
+        void applyAchievementProgress( uint64 requestTag, LeaderboardResult result, vector<AchievementProgress>&& listProgress );
+        void applyScoresOf( uint64 requestTag, uint64 periodID, LeaderboardResult result, vector<LeaderboardEntry>&& listEntry );
         void applySeasonResult( uint64 requestTag, uint32 seasonID, LeaderboardResult result, const LeaderboardEntry& entry );
         /** @brief 정산의 순위 읽기가 끝났습니다. 순위대로 정렬한 점수를 받아 첫 페이지를 맡깁니다. */
         void applySettlementRanking( uint64 settlementID, bool bReadOk, vector<LeaderboardScoreRow>&& listRanked );
@@ -181,6 +203,13 @@ namespace sw
             int32                _offset{ 0 };
             int32                _count{ 0 };
             LeaderboardOperation _operation{ LeaderboardOperation::Top };
+        };
+
+        /** @brief 접속한 계정 하나의 통계입니다. 읽기가 끝나야 `_bLoaded` 가 켜진다. */
+        struct AccountStats
+        {
+            unordered_map<string, int64> _mapValue{};
+            uint8                        _bLoaded{ SW_FALSE };
         };
 
         struct RankQuery
@@ -230,6 +259,7 @@ namespace sw
         unordered_map<uint64, int32>                       _mapNameRequestToIndex;
         unordered_map<uint64, RankQuery>                   _mapQuery;
         unordered_map<string, AchievementDefinition>       _mapAchievement;
+        unordered_map<AccountID, AccountStats>             _mapAccountStats;        ///< 이 서버에 접속한 계정의 통계이다
         unordered_map<string, ScheduledRun>                _mapJobToRun;            ///< 정산 작업 id 에서 차지한 회차로 가는 맵이다. 끝나면 completeRun 을 부른다
         unordered_map<uint64, SettlementProgress>          _mapSettlement;          ///< 진행 중인 정산(정산 번호 → 진행)
         unordered_set<string>                              _uniqueExpiringRankKeys; ///< 이 프로세스가 만료를 건 기간 순위 키(기간마다 한 번)

@@ -1,5 +1,5 @@
 // 순위표 — Best · Latest · Sum, 오름차순 표, 상위 · 내 둘레(이름 포함 · 점수 없으면 NotRanked), 일간 표의 기간 경계, 캐시를 통째로 잃어도 영속에서 다시 채운
-// 같은 순위(그동안 온 읽기는 줄을 서고 다음 읽기는 다시 채우지 않는다), 통계 → 연동 표 · 통계 조회, 규칙 밖 값 · 저장소 실패.
+// 같은 순위(그동안 온 읽기는 줄을 서고 다음 읽기는 다시 채우지 않는다), 통계 → 연동 표 · 통계 조회, 규칙 밖 값 · 저장소 실패, 친구 순위표(목록 안 순위).
 #include "pch.h"
 
 #include "EngineTest/GameFramework/Online/OnlineMessageTestUtil.h"
@@ -110,6 +110,62 @@ SW_TEST_CASE( LeaderboardServiceTest, BestKeepsHighestAndTopListsWithNames )
     SW_EXPECT_TRUE( node._listCompletion[lastIndex - 2]._result == LeaderboardResult::UnknownBoard );
     SW_EXPECT_TRUE( node._listCompletion[lastIndex - 1]._result == LeaderboardResult::Invalid );
     SW_EXPECT_TRUE( node._listCompletion[lastIndex]._result == LeaderboardResult::Invalid );
+}
+
+SW_TEST_CASE( LeaderboardServiceTest, ScoresOfRanksOnlyTheGivenAccounts )
+{
+    using Internal = LeaderboardServiceTestInternal;
+    MemoryServiceDatabase   database;
+    MemoryEphemeralDatabase cacheDatabase;
+    BoardNode               node( &database, &cacheDatabase );
+    SW_ASSERT_TRUE( node._service.registerBoard( Internal::makeBoard( "kills", LeaderboardUpdate::Best ) ) );
+    node._service.submitScore( "kills", 1, "alice", 10, 0, 1 );
+    node._service.submitScore( "kills", 2, "bob", 30, 0, 2 );
+    node._service.submitScore( "kills", 3, "carol", 20, 0, 3 );
+    node._service.submitScore( "kills", 4, "dave", 20, 0, 4 );
+    node.step();
+
+    node._service.readScoresOf( "kills", { 4, 1, 3, 9, 3 }, 0, 5 ); // 9 는 점수가 없고 3 은 두 번 왔다
+    node.step();
+    SW_ASSERT_TRUE( node.getLast()._result == LeaderboardResult::Ok );
+    const vector<LeaderboardEntry>& listEntry = node.getLast()._listEntry;
+    SW_ASSERT_EQUAL( listEntry.size(), size_t( 3 ) );           // bob 은 목록에 없다
+    SW_EXPECT_EQUAL( listEntry[0]._accountID, AccountID( 3 ) ); // 같은 점수는 계정 id 오름차순
+    SW_EXPECT_EQUAL( listEntry[0]._rank, 1 );
+    SW_EXPECT_STREQ( listEntry[0]._displayName.c_str(), "carol" );
+    SW_EXPECT_EQUAL( listEntry[1]._accountID, AccountID( 4 ) );
+    SW_EXPECT_EQUAL( listEntry[2]._accountID, AccountID( 1 ) );
+    SW_EXPECT_EQUAL( listEntry[2]._rank, 3 );
+
+    node._service.readScoresOf( "nope", { 1 }, 0, 6 );
+    node._service.readScoresOf( "kills", {}, 0, 7 );
+    node.step();
+    const size_t lastIndex = node._listCompletion.size() - 1;
+    SW_EXPECT_TRUE( node._listCompletion[lastIndex - 1]._result == LeaderboardResult::UnknownBoard );
+    SW_EXPECT_TRUE( node._listCompletion[lastIndex]._result == LeaderboardResult::Invalid );
+}
+
+SW_TEST_CASE( LeaderboardServiceTest, JoinedAccountStatsAreKeptInMemoryForMatchmaking )
+{
+    MemoryServiceDatabase   database;
+    MemoryEphemeralDatabase cacheDatabase;
+    BoardNode               node( &database, &cacheDatabase );
+    node._service.changeStat( 7, "p", "mmr_duo", 1700, LeaderboardUpdate::Latest, 0, 1 );
+    node.step();
+    int64 value = 0;
+    SW_EXPECT_TRUE( node._service.findStat( 7, "mmr_duo", value ) == AccountStatLookup::NotLoaded ); // 접속하지 않았다
+    node._service.loadAccountStats( 7 );
+    SW_EXPECT_TRUE( node._service.findStat( 7, "mmr_duo", value ) == AccountStatLookup::NotLoaded ); // 읽는 중이다
+    node.step();
+    SW_ASSERT_TRUE( node._service.findStat( 7, "mmr_duo", value ) == AccountStatLookup::Found );
+    SW_EXPECT_EQUAL( value, int64( 1700 ) );
+    SW_EXPECT_TRUE( node._service.findStat( 7, "wins", value ) == AccountStatLookup::Missing );
+    node._service.changeStat( 7, "p", "mmr_duo", 1750, LeaderboardUpdate::Latest, 0, 2 );
+    node.step();
+    SW_ASSERT_TRUE( node._service.findStat( 7, "mmr_duo", value ) == AccountStatLookup::Found );
+    SW_EXPECT_EQUAL( value, int64( 1750 ) ); // 바뀐 통계가 메모리에도 들어간다
+    node._service.dropAccountStats( 7 );
+    SW_EXPECT_TRUE( node._service.findStat( 7, "mmr_duo", value ) == AccountStatLookup::NotLoaded );
 }
 
 SW_TEST_CASE( LeaderboardServiceTest, AscendingSumAndLatest )

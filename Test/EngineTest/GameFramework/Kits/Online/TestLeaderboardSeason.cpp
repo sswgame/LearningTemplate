@@ -126,6 +126,49 @@ SW_TEST_CASE( LeaderboardSeasonTest, AchievementUnlocksOnceWithOneRewardMail )
     SW_EXPECT_STREQ( node._listCompletion.back()._listAchievement[0]._achievementID.c_str(), "ten_wins" );
 }
 
+SW_TEST_CASE( LeaderboardSeasonTest, AchievementProgressShowsStatsAndHidesSecretOnesUntilUnlocked )
+{
+    MemoryServiceDatabase   database;
+    MemoryEphemeralDatabase cacheDatabase;
+    SeasonNode              node( &database, &cacheDatabase );
+    AchievementDefinition   wins;
+    wins._achievementID = "ten_wins";
+    wins._statName      = "wins";
+    wins._threshold     = 10;
+    AchievementDefinition secret;
+    secret._achievementID = "secret_room";
+    secret._statName      = "rooms";
+    secret._threshold     = 1;
+    secret._bHidden       = true;
+    SW_ASSERT_TRUE( node._service.registerAchievement( wins ) );
+    SW_ASSERT_TRUE( node._service.registerAchievement( secret ) );
+
+    node._service.changeStat( 7, "p", "wins", 4, LeaderboardUpdate::Latest, 100, 1 );
+    node.step();
+    node._service.readAchievementProgress( 7, 2 );
+    node.step();
+    SW_ASSERT_TRUE( node._listCompletion.back()._result == LeaderboardResult::Ok );
+    const vector<AchievementProgress>& listBefore = node._listCompletion.back()._listProgress;
+    SW_ASSERT_EQUAL( listBefore.size(), size_t( 2 ) );
+    SW_EXPECT_TRUE( listBefore[0]._bHidden == SW_TRUE ); // "secret_room" 이 id 순서로 먼저다
+    SW_EXPECT_TRUE( listBefore[0]._achievementID.empty() );
+    SW_EXPECT_EQUAL( listBefore[0]._threshold, int64( 0 ) );
+    SW_EXPECT_STREQ( listBefore[1]._achievementID.c_str(), "ten_wins" );
+    SW_EXPECT_EQUAL( listBefore[1]._progress, int64( 4 ) );
+    SW_EXPECT_EQUAL( listBefore[1]._threshold, int64( 10 ) );
+    SW_EXPECT_EQUAL( listBefore[1]._unlockedMs, int64( 0 ) );
+
+    node._service.changeStat( 7, "p", "rooms", 1, LeaderboardUpdate::Latest, 200, 3 );
+    node.step();
+    node._service.readAchievementProgress( 7, 4 );
+    node.step();
+    const vector<AchievementProgress>& listAfter = node._listCompletion.back()._listProgress;
+    SW_ASSERT_EQUAL( listAfter.size(), size_t( 2 ) );
+    SW_EXPECT_STREQ( listAfter[0]._achievementID.c_str(), "secret_room" ); // 달성하면 드러난다
+    SW_EXPECT_EQUAL( listAfter[0]._unlockedMs, int64( 200 ) );
+    SW_EXPECT_TRUE( listAfter[0]._bHidden == SW_TRUE );
+}
+
 SW_TEST_CASE( LeaderboardSeasonTest, SettlementRanksRewardsAndIsIdempotent )
 {
     using Internal = LeaderboardSeasonTestInternal;

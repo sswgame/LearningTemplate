@@ -1,6 +1,6 @@
 // 길드 — 만들기(이름 유일 · 대소문자 무시 · 한 계정 한 길드 · 이름 규칙), 초대 → 수락(정원 · 만료), 역할(임원만 초대, 길드장 넘기기), 내보내기,
 // 떠나기(길드장은 혼자일 때 해산 — 이름이 다시 비게), 사건(가입 · 떠남 · 로그인한 회원) · 알림, 저장소 실패는 아무것도 쓰지 않음,
-// 길드 창고(맡기기 · 임원만 꺼내기 · 멱등 · 잔액 부족 · 남은 창고는 해산 막음).
+// 길드 창고(맡기기 · 임원만 꺼내기 · 멱등 · 잔액 부족 · 남은 창고는 해산 막음), 레벨(경험치와 레벨 표), 공개 길드 가입 신청(받아들이기 · 지우기 · 비공개 거절).
 #include "pch.h"
 
 #include "GameFramework/Base/Online/Ledger/Ledger.h"
@@ -155,6 +155,66 @@ SW_TEST_CASE( GuildServiceTest, InviteAcceptRolesKickAndLeave )
     SW_EXPECT_TRUE( node.run( GuildOperation::Leave, 2, 700 ) == SocialResult::Ok );                                    // 혼자 — 해산
     SW_EXPECT_TRUE( node.run( GuildOperation::Create, 3, 800, kInvalidAccountID, 0, "knights" ) == SocialResult::Ok );  // 이름이 다시 비었다
     SW_EXPECT_TRUE( node.run( GuildOperation::Accept, 4, 800, kInvalidAccountID, guildID ) == SocialResult::NotFound ); // 초대 없음
+}
+
+SW_TEST_CASE( GuildServiceTest, LevelFollowsExperienceAndTheLevelTable )
+{
+    MemoryServiceDatabase database;
+    GuildNode             node( &database );
+    SW_EXPECT_FALSE( node._service.setLevelTable( { 100, 100 } ) ); // 늘어나야 한다
+    SW_EXPECT_FALSE( node._service.setLevelTable( { 0 } ) );
+    SW_ASSERT_TRUE( node._service.setLevelTable( { 100, 300 } ) );
+    SW_ASSERT_TRUE( node.run( GuildOperation::Create, 1, 0, kInvalidAccountID, 0, "Lead" ) == SocialResult::Ok );
+    const uint64 guildID = node.getLastGuildID();
+    SW_EXPECT_EQUAL( node._listCompletion.back()._info._level, 1 );
+    node._service.addExperience( guildID, 150, 10 );
+    (void)node._store.pollCompletions();
+    SW_ASSERT_TRUE( node.run( GuildOperation::Get, 1, 20 ) == SocialResult::Ok );
+    SW_EXPECT_EQUAL( node._listCompletion.back()._info._experience, int64( 150 ) );
+    SW_EXPECT_EQUAL( node._listCompletion.back()._info._level, 2 );
+    node._service.addExperience( guildID, 1000, 30 );
+    (void)node._store.pollCompletions();
+    SW_ASSERT_TRUE( node.run( GuildOperation::Get, 1, 40 ) == SocialResult::Ok );
+    SW_EXPECT_EQUAL( node._listCompletion.back()._info._level, 3 ); // 표의 끝이다
+    SW_ASSERT_TRUE( node._service.setLevelTable( { 2000 } ) );      // 표가 바뀌면 저장된 경험치는 그대로이고 레벨만 따라간다
+    SW_ASSERT_TRUE( node.run( GuildOperation::Get, 1, 50 ) == SocialResult::Ok );
+    SW_EXPECT_EQUAL( node._listCompletion.back()._info._level, 1 );
+}
+
+SW_TEST_CASE( GuildServiceTest, OpenGuildTakesApplicationsThatOfficersApproveOrReject )
+{
+    MemoryServiceDatabase database;
+    GuildNode             node( &database );
+    SW_ASSERT_TRUE( node.run( GuildOperation::Create, 1, 0, kInvalidAccountID, 0, "Lead" ) == SocialResult::Ok );
+    const uint64 guildID = node.getLastGuildID();
+    SW_EXPECT_TRUE( node.run( GuildOperation::Apply, 2, 10, kInvalidAccountID, guildID ) == SocialResult::GuildClosed );
+
+    GuildRequest open;
+    open._operation = GuildOperation::SetJoinPolicy;
+    open._accountID = 1;
+    open._bOpen     = SW_TRUE;
+    open._nowMs     = 20;
+    node._service.submit( open, 1 );
+    (void)node._store.pollCompletions();
+    SW_EXPECT_TRUE( node.run( GuildOperation::Apply, 2, 30, kInvalidAccountID, guildID ) == SocialResult::Ok );
+    SW_EXPECT_TRUE( node.run( GuildOperation::Apply, 3, 30, kInvalidAccountID, guildID ) == SocialResult::Ok );
+    SW_EXPECT_TRUE( node.run( GuildOperation::Apply, 2, 40, kInvalidAccountID, guildID ) == SocialResult::Ok ); // 다시 내면 기한만 늘어난다
+    SW_EXPECT_TRUE( node.run( GuildOperation::Apply, 1, 40, kInvalidAccountID, guildID ) == SocialResult::AlreadyInGuild );
+
+    SW_EXPECT_TRUE( node.run( GuildOperation::ListApplications, 2, 50 ) == SocialResult::NotInGuild ); // 신청자는 멤버가 아니다
+    SW_ASSERT_TRUE( node.run( GuildOperation::ListApplications, 1, 50 ) == SocialResult::Ok );
+    SW_EXPECT_EQUAL( node._listCompletion.back()._listApplication.size(), size_t( 2 ) );
+
+    SW_ASSERT_TRUE( node.run( GuildOperation::Approve, 1, 60, 2 ) == SocialResult::Ok );
+    SW_EXPECT_TRUE( node._listEvent.back()._kind == GuildEvent::Kind::Joined && node._listEvent.back()._accountID == AccountID( 2 ) );
+    SW_EXPECT_TRUE( node.run( GuildOperation::Approve, 1, 60, 2 ) == SocialResult::NotFound );   // 신청은 지워졌다
+    SW_EXPECT_TRUE( node.run( GuildOperation::Approve, 2, 70, 3 ) == SocialResult::NotAllowed ); // 새 멤버는 임원이 아니다
+    SW_ASSERT_TRUE( node.run( GuildOperation::Reject, 1, 70, 3 ) == SocialResult::Ok );
+    SW_ASSERT_TRUE( node.run( GuildOperation::ListApplications, 1, 80 ) == SocialResult::Ok );
+    SW_EXPECT_TRUE( node._listCompletion.back()._listApplication.empty() );
+
+    SW_EXPECT_TRUE( node.run( GuildOperation::Apply, 4, 90, kInvalidAccountID, guildID ) == SocialResult::Ok );
+    SW_EXPECT_TRUE( node.run( GuildOperation::Approve, 1, 90 + GuildLimit::kApplicationLifetimeMs, 4 ) == SocialResult::InviteExpired ); // 죽은 신청이다
 }
 
 SW_TEST_CASE( GuildServiceTest, FullGuildAndStoreFailure )

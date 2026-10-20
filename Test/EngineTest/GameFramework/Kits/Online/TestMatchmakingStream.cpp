@@ -64,7 +64,7 @@ namespace
             dependencies._pBus        = server._host.getServerBus();
             dependencies._pPartyLobby = &_partyLobby;
             dependencies._serverID    = server.getServerID();
-            _queue.initialize( dependencies, vector<MatchModeDefinition>{ mode } );
+            SW_EXPECT_TRUE( _queue.initialize( dependencies, vector<MatchModeDefinition>{ mode } ) );
             _binding.initialize( &_partyLobby, &_queue, nullptr, &server._presence );
         }
     };

@@ -12,6 +12,7 @@
 
 #include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"
 #include "GameFramework/Base/Online/Config/RemoteConfig.h"
+#include "GameFramework/Base/Online/Identity/ConnectAdmission.h"
 #include "GameFramework/Base/Online/Local/MemoryLocalStore.h"
 #include "GameFramework/Base/Online/Security/NetSecurity.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceClient.h"
@@ -222,6 +223,8 @@ namespace
         }
     };
 
+    const AdmitEveryAccount kAdmitEveryAccount{}; ///< 이 테스트의 게임 서버는 매칭 배정 없이 티켓이 맞으면 받는다
+
     /** @brief UDP 게임 서버 + 클라이언트 한 쌍(루프백 데이터그램). */
     struct UDPPair
     {
@@ -232,7 +235,7 @@ namespace
         float64                     _time{ 0.0 };
 
         UDPPair( const LoginTicketAuthority& authority, const utf8* pServerID, int64 nowMs )
-            : _authenticator{ &authority, hashed_string( pServerID ) }
+            : _authenticator{ &authority, hashed_string( pServerID ), kAdmitEveryAccount }
         {
             _authenticator.setNowMs( nowMs );
             NetHostConfig serverSettings;

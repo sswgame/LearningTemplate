@@ -44,6 +44,7 @@ namespace sw
         CapExceeded,       ///< 길드 창고 — 꺼내면 계정 잔액 상한을 넘는다
         StorageNotEmpty,   ///< 길드 창고에 남은 것이 있어 길드를 해산할 수 없다(먼저 꺼낸다)
         UpdateRequired,    ///< 온라인 스키마 해시가 다르다(`kVersionMismatch`). 클라이언트만 만들고 서버는 보내지 않는다. 다시 접속하지 않으므로 재시도하지 않는다
+        GuildClosed,       ///< 가입 신청을 받지 않는 길드이다
         Count
     };
 } // namespace sw
@@ -215,6 +216,12 @@ namespace sw
         int64 _createdMs{ 0 };
         PROPERTY()
         int32 _memberCount{ 0 };
+        PROPERTY()
+        int64 _experience{ 0 }; ///< 길드 경험치이다. 서버 시스템(`GuildService::addExperience`)만 올린다
+        PROPERTY()
+        int32 _level{ 1 }; ///< 경험치와 서버 설정의 레벨 표(`guildLevelExperience`)로 응답할 때 정한다. 저장하지 않는다
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bOpenToApply{ SW_FALSE }; ///< 누구나 가입 신청을 낼 수 있는 공개 길드이면 1 이다
     };
 } // namespace sw
 
@@ -235,12 +242,29 @@ namespace sw
 namespace sw
 {
     /** @brief 길드 상한 값들입니다. */
+    /** @brief 공개 길드의 가입 신청 하나입니다. 임원 이상이 목록으로 받습니다. */
+    REFLECT()
+    struct GuildApplication
+    {
+        REFLECT_BODY();
+        PROPERTY()
+        AccountID _accountID{ kInvalidAccountID };
+        PROPERTY()
+        int64 _appliedMs{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
     struct GuildLimit
     {
-        static constexpr int32 kMaxStorageItem   = 128; ///< 창고 목록 응답의 자산 수 상한이다
-        static constexpr int32 kMaxMember        = 100;
-        static constexpr int32 kMaxNameSize      = 24;        ///< UTF-8 바이트 수이다
-        static constexpr int32 kMaxNoticeSize    = 256;       ///< UTF-8 바이트 수이다
-        static constexpr int64 kInviteLifetimeMs = 604800000; ///< 7일이다
+        static constexpr int32 kMaxStorageItem        = 128; ///< 창고 목록 응답의 자산 수 상한이다
+        static constexpr int32 kMaxMember             = 100;
+        static constexpr int32 kMaxNameSize           = 24;        ///< UTF-8 바이트 수이다
+        static constexpr int32 kMaxNoticeSize         = 256;       ///< UTF-8 바이트 수이다
+        static constexpr int64 kInviteLifetimeMs      = 604800000; ///< 7일이다
+        static constexpr int64 kApplicationLifetimeMs = 604800000; ///< 가입 신청이 남는 기간이며 7일이다
+        static constexpr int32 kMaxApplication        = 50;        ///< 길드 하나가 쌓아 두는 살아 있는 신청 수이다
+        static constexpr int32 kMaxLevelCount         = 100;       ///< 레벨 표의 길이 상한이다
     };
 } // namespace sw
