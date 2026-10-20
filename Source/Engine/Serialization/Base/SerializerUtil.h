@@ -9,6 +9,7 @@
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Serialization/Base/SchemaMigrate.h"
 #include "Engine/Serialization/Base/SerializeContext.h"
+#include "Engine/Serialization/Base/TextAddress.h"
 
 namespace sw
 {
@@ -86,67 +87,24 @@ namespace sw
                                          SchemaVersionSource versionSource, SchemaOrphanPolicy orphanPolicy,
                                          const SoftDeserializeFn& softDeserialize );
 
-    /** @brief `TextAddress` 가 가리키는 것의 종류입니다. */
-    enum class TextAddressKind : uint8
-    {
-        Object, ///< 프로퍼티를 가진 객체. 프로퍼티 오프셋(또는 접근자)으로 값을 찾는다.
-        Value,  ///< 값 하나 자체. 오프셋이 없다.
-    };
-
-    /**
-     * @class TextAddress
-     * @brief 텍스트 변환 함수에 넘기는 주소에 "객체 주소인가, 값 주소인가"를 형식으로 붙입니다.
-     * @details `const void*` 로 받으면 값 주소를 객체 주소 자리에 넘겨도 컴파일된다. 프로퍼티 쪽이 오프셋을 한 번 더 더해 엉뚱한 곳을 읽고 쓴다
-     *          (인스펙터 핸들 선택기가 고른 값이 `0:0` 으로 써졌다). 두 종류는 서로 바뀌지 않고 `void*` 에서 암묵 변환도 되지 않아,
-     *          잘못 넘기면 컴파일이 안 되고 넘기는 쪽은 `ObjectAddress{ p }` · `ValueAddress{ p }` 로 어느 쪽인지 적는다.
-     *          쓰기 주소(`void`)는 읽기 주소(`const void`)로 변환된다.
-     */
-    template <TextAddressKind kKind, typename TVoid>
-    class TextAddress
-    {
-    public:
-        explicit constexpr TextAddress( TVoid* pAddress ) noexcept
-            : _pAddress{ pAddress }
-        {
-        }
-
-        template <typename TOther, typename = std::enable_if_t<std::is_const_v<TVoid> && std::is_same_v<TOther, std::remove_const_t<TVoid>>>>
-        constexpr TextAddress( TextAddress<kKind, TOther> other ) noexcept
-            : _pAddress{ other.get() }
-        {
-        }
-
-        [[nodiscard]] constexpr TVoid* get() const noexcept { return _pAddress; }
-
-    private:
-        TVoid* _pAddress{ nullptr };
-    };
-} // namespace sw
-
-namespace sw
-{
-    using ObjectAddress        = TextAddress<TextAddressKind::Object, const void>; ///< 프로퍼티를 가진 객체의 주소(읽기)
-    using MutableObjectAddress = TextAddress<TextAddressKind::Object, void>;       ///< 프로퍼티를 가진 객체의 주소(쓰기)
-    using ValueAddress         = TextAddress<TextAddressKind::Value, const void>;  ///< 값 하나의 주소(읽기)
-    using MutableValueAddress  = TextAddress<TextAddressKind::Value, void>;        ///< 값 하나의 주소(쓰기)
-
     /** @brief 직렬화기 TU 들이 함께 쓰는 도우미입니다. */
     struct SerializerUtil
     {
         /**
-         * @brief 값을 바이너리로 직렬화합니다(이 빌드의 버전, `kCurrentBinaryWireVersion`).
+         * @brief 값을 바이너리로 직렬화합니다(이 빌드의 버전, `kCurrentBinaryWireVersion`). @p value 는 값 하나 자체의 주소입니다(프로퍼티 오프셋을 더하지 않는다).
          * @details enum 은 **열거자 정체성**으로 적는다. 값이 아니라 열거자 이름의 해시(uint32)를 적고, 비트플래그는 켜진 이름의 수(uint32)와 그 해시들을
          *          (해시 오름차순이므로 같은 값이면 같은 바이트다) 적는다. 이름이 없는 값이나 이름이 덮지 못한 비트는 해시 위치에 0 을 두고 int64 값을 이어 붙인다.
          *          XML 과 JSON 이 이름을 적는 것과 같은 규칙이라, 열거자 순서를 바꾸거나 사이에 넣어도 저장된 뜻이 그대로다.
          * @return 바이너리 처리기 · 열거형 · 구조체 · 텍스트 처리기 어디에도 없는 타입이면(`hasBinaryValueCodec` 이 거짓) 아무 바이트도 쓰지 않고 false 입니다.
          *         예전에는 0 바이트 하나를 쓰고 성공해, 세이브는 써지고 로드에서 값이 빠졌습니다. 구조체 안의 값이 실패해도 false 입니다.
          */
-        [[nodiscard]] SW_API static bool serializeValueBinary( const void* pValuePtr, const hashed_string& typeName,
+        [[nodiscard]] SW_API static bool serializeValueBinary( ValueAddress value, const hashed_string& typeName,
                                                                vector<uint8>& listBuffer, const SerializeContext& context );
         /** @brief 값 하나를 바이너리로 쓰고 읽을 수 있는 타입인가입니다. `serializeValueBinary` · `deserializeValueBinary` 가 고르는 순서와 같습니다. */
         [[nodiscard]] SW_API static bool hasBinaryValueCodec( const hashed_string& typeName, const SerializeContext& context );
         /**
          * @brief 바이너리에서 값을 역직렬화합니다.
+         * @param value 값 하나 자체의 주소입니다(프로퍼티 오프셋을 더하지 않는다). 프로퍼티는 `applyPropertyBinary` 로 읽습니다.
          * @param wireVersion 바이트가 적힌 버전입니다(스트림 머리가 알려 줍니다). 지금은 버전이 하나라 분기가 없고, 버전을 올리면 여기서 분기합니다.
          *                    기본값은 이 빌드가 방금 쓴 바이트(복사, 비교, diff)에만 맞습니다.
          * @details 모르는 열거자 이름(`Removed` 없이 지웠거나 `ValueAlias` 없이 이름을 바꾼 경우)이면 그 필드는 현재 값을 유지하고 false 를 반환한다. XML 의 모르는 이름과 같다.
@@ -154,7 +112,7 @@ namespace sw
          *          바이너리 처리기 · 열거형 · 구조체 · 텍스트 처리기 어디에도 없는 타입이면 바이트를 건너뛰지 않고 false 를 반환한다.
          *          여기서는 알리지 않는다. 엄격 읽기는 실패로, 소프트 읽기는 orphan 으로 부른 쪽이 다룬다(프로세스 정적 "한 번만" 로그는 테스트 순서에 따라 결과가 달라진다).
          */
-        [[nodiscard]] SW_API static bool deserializeValueBinary( void* pValuePtr, const hashed_string& typeName,
+        [[nodiscard]] SW_API static bool deserializeValueBinary( MutableValueAddress value, const hashed_string& typeName,
                                                                  const uint8* pData, size_t dataSize, size_t& offset,
                                                                  const SerializeContext& context,
                                                                  BinaryWireVersion       wireVersion = kCurrentBinaryWireVersion );
@@ -171,8 +129,8 @@ namespace sw
                                                                            const SerializeContext& context,
                                                                            BinaryWireVersion       wireVersion = kCurrentBinaryWireVersion );
 
-        /** @brief 값을 텍스트로 씁니다(중첩 타입은 중첩 문자열). 바깥 따옴표는 붙이지 않습니다. XML, JSON, SchemaMigrate 가 함께 쓰는 기본 조각입니다. */
-        static void valueToText( StringBuilder<constant::kMaxBuffer8192>& ss, const void* pValPtr, const hashed_string& typeName,
+        /** @brief 값을 텍스트로 씁니다(중첩 타입은 중첩 문자열). 바깥 따옴표는 붙이지 않습니다. XML, JSON, SchemaMigrate 가 함께 쓰는 기본 조각입니다. @p value 는 값 하나 자체의 주소입니다. */
+        static void valueToText( StringBuilder<constant::kMaxBuffer8192>& ss, ValueAddress value, const hashed_string& typeName,
                                  const SerializeContext& context );
 
         /** @brief 텍스트 토큰을 값 하나 자체(객체 주소가 아니다)에 읽어 씁니다. 값 주소 쪽 텍스트 쓰기이며, 짝은 `formatValueText` 입니다. */
@@ -190,18 +148,18 @@ namespace sw
         // 프로퍼티 값 하나: 비트필드, 컨테이너, 값 세 경우를 한 벌로 처리한다. 직렬화기 셋, 프리팹 오버라이드 도구, 인스펙터가 함께 쓴다
         // (비트필드를 바이트째 비교하고 옮기면 같은 바이트의 다른 플래그까지 바뀐다).
         // ------------------------------------------------------------------------------
-        /** @brief 한 인스턴스의 프로퍼티 값을 다른 인스턴스로 옮깁니다(같은 타입). 비트필드는 그 비트만, 컨테이너는 원소째 옮깁니다. */
-        [[nodiscard]] SW_API static bool copyPropertyValue( const PropertyInfo& prop, const void* pSrcInstance, void* pDstInstance, const SerializeContext& context );
+        /** @brief 한 인스턴스의 프로퍼티 값을 다른 인스턴스로 옮깁니다(같은 타입). 비트필드는 그 비트만, 컨테이너는 원소째 옮깁니다. 두 주소는 프로퍼티를 가진 **객체**의 주소입니다. */
+        [[nodiscard]] SW_API static bool copyPropertyValue( const PropertyInfo& prop, ObjectAddress srcInstance, MutableObjectAddress dstInstance, const SerializeContext& context );
         /** @brief 두 인스턴스의 프로퍼티 값이 같은지 확인합니다. 비트필드는 그 비트만 비교합니다. */
         SW_API static bool arePropertyValuesEqual( const PropertyInfo& prop, const void* pInstanceA, const void* pInstanceB, const SerializeContext& context );
         /** @brief 텍스트 하나를 프로퍼티 값으로 씁니다(비트필드는 그 비트만). 읽지 못하면 false 이고 값은 그대로입니다. 컨테이너는 받지 않습니다. */
         [[nodiscard]] SW_API static bool applyPropertyText( const PropertyInfo& prop, MutableObjectAddress instance, string_view text, const SerializeContext& context );
         /**
-         * @brief 바이너리 페이로드 하나(그 프로퍼티 값 전부)를 프로퍼티에 읽어 씁니다. 페이로드를 **끝까지** 읽어야 true 입니다.
+         * @brief 바이너리 페이로드 하나(그 프로퍼티 값 전부)를 프로퍼티에 읽어 씁니다. 페이로드를 **끝까지** 읽어야 true 입니다. @p instance 는 프로퍼티를 가진 **객체**의 주소입니다.
          * @details 바이트가 남으면 스트림이 이 필드를 다른 형태로 적은 것이다(`int32` 0 을 `vector<int32>` 로 읽으면 원소 수 0 으로 성공한다). 그래서 오프셋을
          *          부른 쪽에 돌려주지 않고 여기서 끝을 본다 — 태그 스트림, diff, 값 복사가 "읽힌 만큼" 받는 사본을 따로 두지 않게.
          */
-        [[nodiscard]] SW_API static bool applyPropertyBinary( const PropertyInfo& prop, void* pInstance, const uint8* pPayload, size_t payloadSize,
+        [[nodiscard]] SW_API static bool applyPropertyBinary( const PropertyInfo& prop, MutableObjectAddress instance, const uint8* pPayload, size_t payloadSize,
                                                               const SerializeContext& context, BinaryWireVersion wireVersion = kCurrentBinaryWireVersion );
         /**
          * @brief 이 프로퍼티의 값을 세 형식(XML, JSON, 바이너리)이 모두 실어 나를 수 있으면 true 입니다. 직렬화기의 분기와 같은 판정입니다.

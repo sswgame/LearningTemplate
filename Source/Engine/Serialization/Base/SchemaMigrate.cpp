@@ -93,11 +93,11 @@ namespace sw
             {
                 int64  wireValue{ 0 };
                 size_t offset{ 0 };
-                if ( SerializerUtil::deserializeValueBinary( &wireValue, wireTypeName, pPayload, payloadSize, offset, context, wireVersion ) == false ||
+                if ( SerializerUtil::deserializeValueBinary( MutableValueAddress{ &wireValue }, wireTypeName, pPayload, payloadSize, offset, context, wireVersion ) == false ||
                      offset != payloadSize )
                     return false;
                 StringBuilder<constant::kMaxBuffer8192> ss;
-                SerializerUtil::valueToText( ss, &wireValue, wireTypeName, context );
+                SerializerUtil::valueToText( ss, ValueAddress{ &wireValue }, wireTypeName, context );
                 outText = ss.c_str();
                 return true;
             }
@@ -227,7 +227,7 @@ namespace sw
                 if ( wireTypeName == propTypeName )
                 {
                     size_t offset{ 0 };
-                    if ( SerializerUtil::deserializeValueBinary( pPropPtr, propTypeName, pPayload, payloadSize, offset, context, orphan._wireVersion ) && offset == payloadSize )
+                    if ( SerializerUtil::deserializeValueBinary( MutableValueAddress{ pPropPtr }, propTypeName, pPayload, payloadSize, offset, context, orphan._wireVersion ) && offset == payloadSize )
                         return true;
                 }
                 return tryCoerceBinaryPayload( pPropPtr, propTypeName, pPayload, payloadSize, context, wireTypeName, orphan._wireVersion );
@@ -248,7 +248,7 @@ namespace sw
                     return false;
 
                 if ( orphan._text.empty() == false )
-                    return parseTextValueCoerced( pPtr, pProp->_typeName, orphan._text, context );
+                    return parseTextValueCoerced( MutableValueAddress{ pPtr }, pProp->_typeName, orphan._text, context );
                 if ( orphan._listBinary.empty() )
                     return false;
 
@@ -494,8 +494,8 @@ namespace sw
             return false;
 
         StringBuilder<constant::kMaxBuffer8192> ss;
-        SerializerUtil::valueToText( ss, pSrcPtr, pSrcProp->_typeName, context );
-        return parseTextValueCoerced( pDstPtr, pDstProp->_typeName, ss.view(), context );
+        SerializerUtil::valueToText( ss, ValueAddress{ pSrcPtr }, pSrcProp->_typeName, context );
+        return parseTextValueCoerced( MutableValueAddress{ pDstPtr }, pDstProp->_typeName, ss.view(), context );
     }
 
     bool SchemaMigrateContext::setPropertyFromText( hashed_string propName, string_view text ) const
@@ -507,7 +507,7 @@ namespace sw
         if ( resolvePropertyPath( _pInstance, *_pTypeInfo, propName.c_str(), pPtr, pProp ) == false )
             return false;
         const SerializeContext& context = _serializeContext;
-        return parseTextValueCoerced( pPtr, pProp->_typeName, text, context );
+        return parseTextValueCoerced( MutableValueAddress{ pPtr }, pProp->_typeName, text, context );
     }
 
     bool isValueOnlyCoercion( hashed_string targetTypeName, hashed_string wireTypeName )
@@ -553,7 +553,7 @@ namespace sw
                                               : SchemaMigrateInternal::formatWirePodToString( pPayload, payloadSize, wireTypeName, wireText );
             if ( bFormatted == false )
                 return false;
-            return parseTextValueCoerced( pPropPtr, targetTypeName, wireText, context );
+            return parseTextValueCoerced( MutableValueAddress{ pPropPtr }, targetTypeName, wireText, context );
         }
 
         // 값 하나로 읽을 수 없는 대상(컨테이너 프로퍼티의 `map` · `vector` 같은 이름, 처리기 없는 타입)은 이관 대상이 아니다. 값 읽기를 시도하지 않는다.
@@ -561,7 +561,7 @@ namespace sw
             return false;
 
         size_t offset{ 0 };
-        if ( SerializerUtil::deserializeValueBinary( pPropPtr, targetTypeName, pPayload, payloadSize, offset, context, wireVersion ) &&
+        if ( SerializerUtil::deserializeValueBinary( MutableValueAddress{ pPropPtr }, targetTypeName, pPayload, payloadSize, offset, context, wireVersion ) &&
              offset == payloadSize )
             return true;
 
@@ -570,7 +570,7 @@ namespace sw
         {
             string asText;
             if ( SchemaMigrateInternal::formatPodToString( pPayload, payloadSize, asText ) )
-                return parseTextValueCoerced( pPropPtr, targetTypeName, asText, context );
+                return parseTextValueCoerced( MutableValueAddress{ pPropPtr }, targetTypeName, asText, context );
 
             // 길이 접두 문자열 blob 은 맨 앞의 제 타입 읽기가 이미 다뤘다. 여기서는 길이가 맞으면 접두 뒤 바이트를 텍스트로 읽어 본다
             if ( payloadSize >= sizeof( uint32 ) )
@@ -580,7 +580,7 @@ namespace sw
                 if ( sizeof( uint32 ) + len == payloadSize )
                 {
                     const string_view textValue{ reinterpret_cast<const utf8*>( pPayload + sizeof( uint32 ) ), len };
-                    return parseTextValueCoerced( pPropPtr, targetTypeName, textValue, context );
+                    return parseTextValueCoerced( MutableValueAddress{ pPropPtr }, targetTypeName, textValue, context );
                 }
             }
         }
@@ -593,7 +593,7 @@ namespace sw
             if ( sizeof( uint32 ) + len == payloadSize )
             {
                 const string_view textValue{ reinterpret_cast<const utf8*>( pPayload + sizeof( uint32 ) ), len };
-                return parseTextValueCoerced( pPropPtr, targetTypeName, textValue, context );
+                return parseTextValueCoerced( MutableValueAddress{ pPropPtr }, targetTypeName, textValue, context );
             }
         }
 
@@ -609,18 +609,19 @@ namespace sw
         return false;
     }
 
-    bool parseTextValueCoerced( void* pValPtr, hashed_string typeName, string_view valStr,
+    bool parseTextValueCoerced( MutableValueAddress value, hashed_string typeName, string_view valStr,
                                 const SerializeContext& context )
     {
+        void* const pValPtr = value.get();
         if ( pValPtr == nullptr )
             return false;
 
         const string_view stripped = SchemaMigrateInternal::stripJSONQuotes( valStr );
-        if ( SerializerUtil::parseTextValue( MutableValueAddress{ pValPtr }, typeName, valStr, context ) )
+        if ( SerializerUtil::parseTextValue( value, typeName, valStr, context ) )
             return true;
         if ( stripped.data() != valStr.data() || stripped.size() != valStr.size() )
         {
-            if ( SerializerUtil::parseTextValue( MutableValueAddress{ pValPtr }, typeName, stripped, context ) )
+            if ( SerializerUtil::parseTextValue( value, typeName, stripped, context ) )
                 return true;
         }
 

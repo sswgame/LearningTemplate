@@ -3519,7 +3519,7 @@ SW_TEST_CASE( ReflectionSerializationTest, BinaryBoolReadNormalizesTheByte )
     const uint8 arrByte[1] = { 0x02 };
     bool        value{ false };
     size_t      offset{ 0 };
-    SW_ASSERT_TRUE( sw::SerializerUtil::deserializeValueBinary( &value, sw::hashed_string( "bool" ), arrByte, sizeof( arrByte ), offset,
+    SW_ASSERT_TRUE( sw::SerializerUtil::deserializeValueBinary( sw::MutableValueAddress{ &value }, sw::hashed_string( "bool" ), arrByte, sizeof( arrByte ), offset,
                                                                 sw::SerializeContext::getDefault( sw::SerializePurpose::Authoring ) ) );
     uint8 rawValue{ 0 };
     sw::Memory::copy( &rawValue, &value, sizeof( rawValue ) );
@@ -3654,7 +3654,7 @@ SW_TEST_CASE( ReflectionSerializationTest, PropertyValueHelpersTouchOnlyTheirOwn
     SW_EXPECT_FALSE( sw::SerializerUtil::arePropertyValuesEqual( *pActive, &source, &target, context ) );
 
     // 옮기면 그 비트만 바뀐다.
-    SW_ASSERT_TRUE( sw::SerializerUtil::copyPropertyValue( *pActive, &source, &target, context ) );
+    SW_ASSERT_TRUE( sw::SerializerUtil::copyPropertyValue( *pActive, sw::ObjectAddress{ &source }, sw::MutableObjectAddress{ &target }, context ) );
     SW_EXPECT_EQUAL( 1, static_cast<int32>( target._bActive ) );
     SW_EXPECT_EQUAL( 0, static_cast<int32>( target._bCanJump ) );
     SW_EXPECT_EQUAL( 0, static_cast<int32>( target._bInvulnerable ) );
@@ -3680,7 +3680,7 @@ SW_TEST_CASE( ReflectionSerializationTest, PropertyValueHelpersTouchOnlyTheirOwn
     };
     sw::NestedContainerActor gridTarget;
     SW_EXPECT_FALSE( sw::SerializerUtil::arePropertyValuesEqual( *pGrid, &gridSource, &gridTarget, context ) );
-    SW_ASSERT_TRUE( sw::SerializerUtil::copyPropertyValue( *pGrid, &gridSource, &gridTarget, context ) );
+    SW_ASSERT_TRUE( sw::SerializerUtil::copyPropertyValue( *pGrid, sw::ObjectAddress{ &gridSource }, sw::MutableObjectAddress{ &gridTarget }, context ) );
     SW_ASSERT_EQUAL( size_t( 2 ), gridTarget._grid.size() );
     SW_EXPECT_EQUAL( 3, gridTarget._grid[1][0] );
     SW_EXPECT_TRUE( sw::SerializerUtil::arePropertyValuesEqual( *pGrid, &gridSource, &gridTarget, context ) );
@@ -3715,6 +3715,38 @@ SW_TEST_CASE( ReflectionSerializationTest, ValueAddressTextDoesNotAddPropertyOff
     static_assert( !std::is_invocable_v<FormatValueFn, sw::ObjectAddress, const sw::hashed_string&, const sw::SerializeContext&> );
     static_assert( !std::is_invocable_v<FormatValueFn, const void*, const sw::hashed_string&, const sw::SerializeContext&> );
     static_assert( !std::is_invocable_v<ParseValueFn, sw::MutableObjectAddress, const sw::hashed_string&, std::string_view, const sw::SerializeContext&> );
+
+    // 값 하나를 받는 나머지 함수(텍스트 · 바이너리 · 강제 변환 읽기)는 값 주소만, 프로퍼티 오프셋을 더하는 두 함수는 객체 주소만 받는다.
+    using SerializeValueFn   = decltype( &sw::SerializerUtil::serializeValueBinary );
+    using DeserializeValueFn = decltype( &sw::SerializerUtil::deserializeValueBinary );
+    using ValueToTextFn      = decltype( &sw::SerializerUtil::valueToText );
+    using ParseCoercedFn     = decltype( &sw::parseTextValueCoerced );
+    using CopyPropertyFn     = decltype( &sw::SerializerUtil::copyPropertyValue );
+    using ApplyBinaryFn      = decltype( &sw::SerializerUtil::applyPropertyBinary );
+    using ValueBuilder       = sw::StringBuilder<sw::constant::kMaxBuffer8192>;
+    using ByteBuffer         = sw::vector<uint8>;
+    static_assert( std::is_invocable_v<SerializeValueFn, sw::ValueAddress, const sw::hashed_string&, ByteBuffer&, const sw::SerializeContext&> );
+    static_assert( std::is_invocable_v<SerializeValueFn, sw::MutableValueAddress, const sw::hashed_string&, ByteBuffer&, const sw::SerializeContext&> );
+    static_assert( !std::is_invocable_v<SerializeValueFn, sw::ObjectAddress, const sw::hashed_string&, ByteBuffer&, const sw::SerializeContext&> );
+    static_assert( !std::is_invocable_v<SerializeValueFn, const void*, const sw::hashed_string&, ByteBuffer&, const sw::SerializeContext&> );
+    static_assert( std::is_invocable_v<DeserializeValueFn, sw::MutableValueAddress, const sw::hashed_string&, const uint8*, size_t, size_t&, const sw::SerializeContext&, sw::BinaryWireVersion> );
+    static_assert( !std::is_invocable_v<DeserializeValueFn, sw::ValueAddress, const sw::hashed_string&, const uint8*, size_t, size_t&, const sw::SerializeContext&, sw::BinaryWireVersion> ); // 읽기 주소로는 쓰지 못한다
+    static_assert( !std::is_invocable_v<DeserializeValueFn, sw::MutableObjectAddress, const sw::hashed_string&, const uint8*, size_t, size_t&, const sw::SerializeContext&, sw::BinaryWireVersion> );
+    static_assert( !std::is_invocable_v<DeserializeValueFn, void*, const sw::hashed_string&, const uint8*, size_t, size_t&, const sw::SerializeContext&, sw::BinaryWireVersion> );
+    static_assert( std::is_invocable_v<ValueToTextFn, ValueBuilder&, sw::ValueAddress, const sw::hashed_string&, const sw::SerializeContext&> );
+    static_assert( !std::is_invocable_v<ValueToTextFn, ValueBuilder&, sw::ObjectAddress, const sw::hashed_string&, const sw::SerializeContext&> );
+    static_assert( !std::is_invocable_v<ValueToTextFn, ValueBuilder&, const void*, const sw::hashed_string&, const sw::SerializeContext&> );
+    static_assert( std::is_invocable_v<ParseCoercedFn, sw::MutableValueAddress, sw::hashed_string, std::string_view, const sw::SerializeContext&> );
+    static_assert( !std::is_invocable_v<ParseCoercedFn, sw::ValueAddress, sw::hashed_string, std::string_view, const sw::SerializeContext&> );
+    static_assert( !std::is_invocable_v<ParseCoercedFn, sw::MutableObjectAddress, sw::hashed_string, std::string_view, const sw::SerializeContext&> );
+    static_assert( !std::is_invocable_v<ParseCoercedFn, void*, sw::hashed_string, std::string_view, const sw::SerializeContext&> );
+    static_assert( std::is_invocable_v<CopyPropertyFn, const sw::PropertyInfo&, sw::ObjectAddress, sw::MutableObjectAddress, const sw::SerializeContext&> );
+    static_assert( !std::is_invocable_v<CopyPropertyFn, const sw::PropertyInfo&, sw::ValueAddress, sw::MutableValueAddress, const sw::SerializeContext&> );
+    static_assert( !std::is_invocable_v<CopyPropertyFn, const sw::PropertyInfo&, sw::ObjectAddress, sw::ObjectAddress, const sw::SerializeContext&> ); // 대상은 쓰기 주소
+    static_assert( !std::is_invocable_v<CopyPropertyFn, const sw::PropertyInfo&, const void*, void*, const sw::SerializeContext&> );
+    static_assert( std::is_invocable_v<ApplyBinaryFn, const sw::PropertyInfo&, sw::MutableObjectAddress, const uint8*, size_t, const sw::SerializeContext&, sw::BinaryWireVersion> );
+    static_assert( !std::is_invocable_v<ApplyBinaryFn, const sw::PropertyInfo&, sw::MutableValueAddress, const uint8*, size_t, const sw::SerializeContext&, sw::BinaryWireVersion> );
+    static_assert( !std::is_invocable_v<ApplyBinaryFn, const sw::PropertyInfo&, void*, const uint8*, size_t, const sw::SerializeContext&, sw::BinaryWireVersion> );
 
     sw::BitfieldTestActor actor;
     actor._score = 42;
@@ -3926,10 +3958,10 @@ SW_TEST_CASE( ReflectionSerializationTest, UncarriedValueTypeFailsTheReadAndTheW
     const sw::vector<uint8> arrPayload = { 1, 2, 3, 4 };
     UncarriedHost           host;
     size_t                  offset{ 0 };
-    SW_EXPECT_FALSE( sw::SerializerUtil::deserializeValueBinary( &host._value, kUncarriedType, arrPayload.data(), arrPayload.size(), offset, context ) );
+    SW_EXPECT_FALSE( sw::SerializerUtil::deserializeValueBinary( sw::MutableValueAddress{ &host._value }, kUncarriedType, arrPayload.data(), arrPayload.size(), offset, context ) );
     SW_EXPECT_EQUAL( size_t( 0 ), offset );
     sw::vector<uint8> valueBytes;
-    SW_EXPECT_FALSE( sw::SerializerUtil::serializeValueBinary( &host._value, kUncarriedType, valueBytes, context ) );
+    SW_EXPECT_FALSE( sw::SerializerUtil::serializeValueBinary( sw::ValueAddress{ &host._value }, kUncarriedType, valueBytes, context ) );
     SW_EXPECT_TRUE( valueBytes.empty() );
 
     // 객체와 아카이브: 쓰기 실패가 올라오고, 아카이브는 오류 상태이며 반쯤 쓴 바이트가 남지 않는다.
