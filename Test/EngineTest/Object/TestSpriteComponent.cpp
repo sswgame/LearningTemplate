@@ -235,7 +235,7 @@ SW_TEST_CASE( SpriteComponentTest, ReloadedClipReachesSpritesThatHoldIt )
     clip._atlasPath            = kTextureB;
     clip._listFrame[1]._uvRect = sw::float4{ 0.5f, 0.5f, 0.5f, 0.5f };
     SW_ASSERT_TRUE( clip.saveToFile( clipPath ) );
-    SW_EXPECT_NEAR_EQUAL( 0.0f, sw::SpriteClipCache::acquire( clipPath )->findFrame( 1 )->_uvRect._x, 1e-4f ); // 사용 중에는 캐시가 옛 내용을 준다
+    SW_EXPECT_NEAR_EQUAL( 0.0f, sw::SharedAssetCache<sw::SpriteClipAsset>::acquire( clipPath )->findFrame( 1 )->_uvRect._x, 1e-4f ); // 사용 중에는 캐시가 옛 내용을 준다
 
     sw::AssetManager resources;
     sw::IAssetCache* pCache = resources.findAssetCache( "SpriteClip" );
@@ -251,7 +251,7 @@ SW_TEST_CASE( SpriteComponentTest, ReloadedClipReachesSpritesThatHoldIt )
     SW_EXPECT_STREQ( kTextureB, pSprite->getRawMaterialInstance()->getTextureParameter( sw::hashed_string( "albedoMap" ) ).c_str() );
 
     // 아무도 쓰지 않는 경로는 다시 읽을 것이 없다(다음 `acquire` 가 새 내용을 읽는다).
-    SW_EXPECT_FALSE( sw::SpriteClipCache::reloadShared( test::makeTempPath( "nobody_holds.sprite.json" ) ) );
+    SW_EXPECT_FALSE( sw::SharedAssetCache<sw::SpriteClipAsset>::reloadShared( test::makeTempPath( "nobody_holds.sprite.json" ) ) );
     SW_EXPECT_FALSE( pCache->isCached( test::makeTempPath( "nobody_holds.sprite.json" ) ) );
 }
 

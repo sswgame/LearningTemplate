@@ -72,6 +72,21 @@ namespace sw
                 reader.addError( node, string( "attribute 'align' must be none, snap or warp: '" ) + pText + "'" );
                 return PairedAnimationAlign::None;
             }
+
+            /** @brief `align` 값의 파일 글입니다(`parseAlign` 의 반대). */
+            static const utf8* formatAlign( PairedAnimationAlign align )
+            {
+                switch ( align )
+                {
+                    case PairedAnimationAlign::None:
+                        return "none";
+                    case PairedAnimationAlign::Snap:
+                        return "snap";
+                    case PairedAnimationAlign::Warp:
+                        return "warp";
+                }
+                return "none";
+            }
         };
     } // namespace
 } // namespace sw
@@ -79,42 +94,92 @@ namespace sw
 namespace sw
 {
     PairedAnimationDef::PairedAnimationDef()
-        : _listRole{}
-        , _listNotify{}
-        , _select{}
+        : _content{}
         , _sourcePath{}
-        , _duration{ 0.0f }
         , _anchorRoleIndex{ invalid_index::kUint32 }
-        , _bHasSelect{ false }
     {
     }
 
     void PairedAnimationDef::clear()
     {
-        _listRole.clear();
-        _listNotify.clear();
-        _select = PairedAnimationSelectDef{};
+        _content = PairedAnimationContentDef{};
         _sourcePath.clear();
-        _duration        = 0.0f;
         _anchorRoleIndex = invalid_index::kUint32;
-        _bHasSelect      = false;
+    }
+
+    string PairedAnimationDef::makeXMLText( const PairedAnimationContentDef& content )
+    {
+        XMLDocument document;
+        XMLNode     root = document.appendRoot( PairedAnimationDefInternal::kRootName );
+        root.appendAttribute( "duration", CharacterDataReader::formatFloat( content._duration ).c_str() );
+        for ( const PairedAnimationRoleDef& role : content._listRole )
+        {
+            XMLNode node = root.appendChild( "Role" );
+            node.appendAttribute( "name", role._name.view() );
+            if ( role._bAnchor )
+                node.appendAttribute( "anchor", "true" );
+            node.appendAttribute( "required", role._bRequired ? "true" : "false" );
+            node.appendAttribute( "clip", role._clip.view() );
+            if ( role._startSeconds != 0.0f )
+                node.appendAttribute( "start", CharacterDataReader::formatFloat( role._startSeconds ).c_str() );
+            if ( role._skeletonPath.empty() == false )
+                node.appendAttribute( "skeleton", role._skeletonPath.c_str() );
+            if ( role._bAnchor == false )
+                node.appendAttribute( "align", PairedAnimationDefInternal::formatAlign( role._align ) );
+            const bool bAligned = role._bAnchor == false && role._align != PairedAnimationAlign::None;
+            if ( bAligned )
+            {
+                node.appendAttribute( "offset", CharacterDataReader::formatFloat3( role._offset ).c_str() );
+                if ( role._yawRadians != 0.0f )
+                    node.appendAttribute( "yaw", CharacterDataReader::formatFloat( role._yawRadians * MathUtil::kRadianToDegree ).c_str() );
+                node.appendAttribute( "maxAlignDistance", CharacterDataReader::formatFloat( role._maxAlignDistance ).c_str() );
+            }
+            if ( role._bAnchor == false && role._align == PairedAnimationAlign::Warp )
+                node.appendAttribute( "warpEnd", CharacterDataReader::formatFloat( role._warpEndSeconds ).c_str() );
+            node.appendAttribute( "enterBlend", CharacterDataReader::formatFloat( role._enterBlendSeconds ).c_str() );
+            node.appendAttribute( "exitState", role._exitState.view() );
+            node.appendAttribute( "exitBlend", CharacterDataReader::formatFloat( role._exitBlendSeconds ).c_str() );
+        }
+        for ( const PairedAnimationNotifyDef& notify : content._listNotify )
+        {
+            XMLNode node = root.appendChild( "Notify" );
+            node.appendAttribute( "name", notify._name.view() );
+            node.appendAttribute( "time", CharacterDataReader::formatFloat( notify._time ).c_str() );
+            node.appendAttribute( "role", notify._role.view() );
+        }
+        if ( content._bHasSelect )
+        {
+            XMLNode node = root.appendChild( "Select" );
+            node.appendAttribute( "role", content._select._role.view() );
+            node.appendAttribute( "minAngle", CharacterDataReader::formatFloat( content._select._minBearingRadians * MathUtil::kRadianToDegree ).c_str() );
+            node.appendAttribute( "maxAngle", CharacterDataReader::formatFloat( content._select._maxBearingRadians * MathUtil::kRadianToDegree ).c_str() );
+            node.appendAttribute( "maxDistance", CharacterDataReader::formatFloat( content._select._maxDistance ).c_str() );
+        }
+        return document.saveToString();
     }
 
     bool PairedAnimationDef::matchesSelect( const float4x4& anchorWorld, const float3& rolePosition ) const
     {
-        if ( _bHasSelect == false )
+        if ( _content._bHasSelect == false )
             return true;
         const float3  forward   = float3::transformVector( float3{ 0.0f, 0.0f, 1.0f }, anchorWorld );
         const float32 anchorYaw = MathUtil::atan2( forward._x, forward._z );
         float3        offset    = rolePosition - anchorWorld.getTranslation();
         offset._y               = 0.0f;
-        if ( offset.getLength() > _select._maxDistance )
+        if ( offset.getLength() > _content._select._maxDistance )
             return false;
         const float32 bearing = MathUtil::wrapAngle( MathUtil::atan2( offset._x, offset._z ) - anchorYaw );
         // 최소가 최대보다 크면 ±180° 를 지나는 구간(뒤쪽)이다.
-        if ( _select._minBearingRadians <= _select._maxBearingRadians )
-            return _select._minBearingRadians <= bearing && bearing <= _select._maxBearingRadians;
-        return bearing >= _select._minBearingRadians || bearing <= _select._maxBearingRadians;
+        if ( _content._select._minBearingRadians <= _content._select._maxBearingRadians )
+            return _content._select._minBearingRadians <= bearing && bearing <= _content._select._maxBearingRadians;
+        return bearing >= _content._select._minBearingRadians || bearing <= _content._select._maxBearingRadians;
+    }
+
+    void PairedAnimationDef::computeAlignTarget( const float3& anchorPosition, float32 anchorYaw, const PairedAnimationRoleDef& role, float3& outPosition, float32& outYaw )
+    {
+        const quaternion turn = quaternion::makeFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, anchorYaw );
+        outPosition           = anchorPosition + float3::transform( role._offset, turn );
+        outYaw                = MathUtil::wrapAngle( anchorYaw + role._yawRadians );
     }
 
     bool PairedAnimationDef::loadFromXMLText( string_view xmlText, string_view sourceName )
@@ -151,9 +216,9 @@ namespace sw
 
     uint32 PairedAnimationDef::findRoleIndex( const hashed_string& roleName ) const
     {
-        for ( size_t roleIndex = 0; roleIndex < _listRole.size(); ++roleIndex )
+        for ( size_t roleIndex = 0; roleIndex < _content._listRole.size(); ++roleIndex )
         {
-            if ( _listRole[roleIndex]._name == roleName )
+            if ( _content._listRole[roleIndex]._name == roleName )
                 return static_cast<uint32>( roleIndex );
         }
         return invalid_index::kUint32;
@@ -162,9 +227,9 @@ namespace sw
     void PairedAnimationDef::readRoot( const XMLNode& root, CharacterDataReader& reader )
     {
         reader.reportUnknownAttributes( root, PairedAnimationDefInternal::kArrRootAttribute );
-        _duration = reader.readFloat( root, "duration" );
-        PairedAnimationDefInternal::requireFinite( reader, root, "duration", _duration );
-        if ( _duration <= 0.0f )
+        _content._duration = reader.readFloat( root, "duration" );
+        PairedAnimationDefInternal::requireFinite( reader, root, "duration", _content._duration );
+        if ( _content._duration <= 0.0f )
             reader.addError( root, "attribute 'duration' must be positive" );
         for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
@@ -244,7 +309,7 @@ namespace sw
             reader.addError( node, string( "repeats role '" ) + role._name.c_str() + "'" );
             return;
         }
-        _listRole.push_back( std::move( role ) );
+        _content._listRole.push_back( std::move( role ) );
     }
 
     void PairedAnimationDef::readNotify( const XMLNode& node, CharacterDataReader& reader )
@@ -255,36 +320,36 @@ namespace sw
         notify._role = reader.readName( node, "role", true );
         notify._time = reader.readFloat( node, "time" );
         PairedAnimationDefInternal::requireNonNegative( reader, node, "time", notify._time );
-        _listNotify.push_back( notify );
+        _content._listNotify.push_back( notify );
     }
 
     void PairedAnimationDef::readSelect( const XMLNode& node, CharacterDataReader& reader )
     {
         reader.reportUnknownAttributes( node, PairedAnimationDefInternal::kArrSelectAttribute );
-        if ( _bHasSelect )
+        if ( _content._bHasSelect )
         {
             reader.addError( node, "repeats <Select> (a paired animation has at most one)" );
             return;
         }
-        _bHasSelect                = true;
-        _select._role              = reader.readName( node, "role", true );
-        const float32 minDegrees   = reader.readFloat( node, "minAngle" );
-        const float32 maxDegrees   = reader.readFloat( node, "maxAngle" );
-        _select._maxDistance       = reader.readFloat( node, "maxDistance" );
-        _select._minBearingRadians = minDegrees * MathUtil::kDegreeToRadian;
-        _select._maxBearingRadians = maxDegrees * MathUtil::kDegreeToRadian;
+        _content._bHasSelect                = true;
+        _content._select._role              = reader.readName( node, "role", true );
+        const float32 minDegrees            = reader.readFloat( node, "minAngle" );
+        const float32 maxDegrees            = reader.readFloat( node, "maxAngle" );
+        _content._select._maxDistance       = reader.readFloat( node, "maxDistance" );
+        _content._select._minBearingRadians = minDegrees * MathUtil::kDegreeToRadian;
+        _content._select._maxBearingRadians = maxDegrees * MathUtil::kDegreeToRadian;
         PairedAnimationDefInternal::requireHalfTurn( reader, node, "minAngle", minDegrees );
         PairedAnimationDefInternal::requireHalfTurn( reader, node, "maxAngle", maxDegrees );
-        PairedAnimationDefInternal::requireNonNegative( reader, node, "maxDistance", _select._maxDistance );
+        PairedAnimationDefInternal::requireNonNegative( reader, node, "maxDistance", _content._select._maxDistance );
     }
 
     void PairedAnimationDef::validate( CharacterDataReader& reader )
     {
         // 앵커는 정확히 하나 — 세션 시계가 앵커 플레이어의 시각이다.
         uint32 anchorCount = 0;
-        for ( size_t roleIndex = 0; roleIndex < _listRole.size(); ++roleIndex )
+        for ( size_t roleIndex = 0; roleIndex < _content._listRole.size(); ++roleIndex )
         {
-            const PairedAnimationRoleDef& role = _listRole[roleIndex];
+            const PairedAnimationRoleDef& role = _content._listRole[roleIndex];
             if ( role._bAnchor == false )
                 continue;
             ++anchorCount;
@@ -297,33 +362,33 @@ namespace sw
         if ( anchorCount != 1 )
             reader.addError( anchorCount == 0 ? "has no anchor role (exactly one role needs anchor=\"true\")" : "has more than one anchor role" );
 
-        for ( const PairedAnimationRoleDef& role : _listRole )
+        for ( const PairedAnimationRoleDef& role : _content._listRole )
         {
-            if ( role._startSeconds >= _duration )
+            if ( role._startSeconds >= _content._duration )
                 reader.addError( string( "role '" ) + role._name.c_str() + "' starts at or after the end of the timeline" );
         }
-        for ( const PairedAnimationNotifyDef& notify : _listNotify )
+        for ( const PairedAnimationNotifyDef& notify : _content._listNotify )
         {
-            if ( notify._time > _duration )
+            if ( notify._time > _content._duration )
                 reader.addError( string( "notify '" ) + notify._name.c_str() + "' is after the end of the timeline" );
             if ( notify._role.empty() == false && findRoleIndex( notify._role ) == invalid_index::kUint32 )
                 reader.addError( string( "notify '" ) + notify._name.c_str() + "' names unknown role '" + notify._role.c_str() + "'" );
         }
         // 고르기 조건은 앵커 밖의 역할을 앵커에서 본다.
-        if ( _bHasSelect && _select._role.empty() == false )
+        if ( _content._bHasSelect && _content._select._role.empty() == false )
         {
-            const uint32 selectRoleIndex = findRoleIndex( _select._role );
+            const uint32 selectRoleIndex = findRoleIndex( _content._select._role );
             utf8         arrMessage[constant::kMaxBuffer256];
             arrMessage[0] = '\0';
             if ( selectRoleIndex == invalid_index::kUint32 )
-                formatstring( arrMessage, constant::kMaxBuffer256, "<Select> names unknown role '%#'", _select._role.c_str() );
-            else if ( _listRole[selectRoleIndex]._bAnchor )
-                formatstring( arrMessage, constant::kMaxBuffer256, "<Select> role '%#' is the anchor (select measures another role from the anchor)", _select._role.c_str() );
+                formatstring( arrMessage, constant::kMaxBuffer256, "<Select> names unknown role '%#'", _content._select._role.c_str() );
+            else if ( _content._listRole[selectRoleIndex]._bAnchor )
+                formatstring( arrMessage, constant::kMaxBuffer256, "<Select> role '%#' is the anchor (select measures another role from the anchor)", _content._select._role.c_str() );
             if ( arrMessage[0] != '\0' )
                 reader.addError( arrMessage );
         }
         // 세션이 시각 순서로 한 커서를 지나며 낸다.
-        std::stable_sort( _listNotify.begin(), _listNotify.end(), []( const PairedAnimationNotifyDef& lhs, const PairedAnimationNotifyDef& rhs )
+        std::stable_sort( _content._listNotify.begin(), _content._listNotify.end(), []( const PairedAnimationNotifyDef& lhs, const PairedAnimationNotifyDef& rhs )
         { return lhs._time < rhs._time; } );
     }
 } // namespace sw

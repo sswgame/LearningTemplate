@@ -121,6 +121,49 @@ namespace sw
         return false;
     }
 
+    bool RigAsset::rewriteNodeSettings( string_view jsonText, string_view sourceLabel, const vector<RigNodeSaveParams>& listNode, string& outJSONText )
+    {
+        JSONDocument document;
+        if ( document.parse( jsonText, sourceLabel ) == false )
+        {
+            SW_LOG_ERROR( "Rig '%#': malformed JSON, node settings not saved", sourceLabel );
+            return false;
+        }
+        const JSONValue nodes = document.getRoot().get( "nodes" );
+        if ( nodes.isValid() == false )
+        {
+            SW_LOG_ERROR( "Rig '%#': no 'nodes', node settings not saved", sourceLabel );
+            return false;
+        }
+        for ( const RigNodeSaveParams& params : listNode )
+        {
+            bool bFound = false;
+            for ( size_t index = 0; index < nodes.size(); ++index )
+            {
+                const JSONValue node   = nodes.at( index );
+                const bool      bNamed = hashed_string( node.get( "name" ).asString() ) == params._name;
+                if ( bNamed == false )
+                    continue;
+                bFound = true;
+                node.set( "weight" ).setFloat( static_cast<float64>( params._weight ) );
+                const bool bWriteEnabled = params._bEnabled == false || node.has( "enabled" );
+                if ( bWriteEnabled )
+                    node.set( "enabled" ).setBool( params._bEnabled );
+            }
+            if ( bFound == false )
+            {
+                SW_LOG_ERROR( "Rig '%#': node '%#' is not in the file, node settings not saved", sourceLabel, params._name.c_str() );
+                return false;
+            }
+        }
+        const string text = document.dump( 2 );
+        RigAsset     check;
+        if ( check.parseJSON( text, sourceLabel ) == false )
+            return false; // 다시 읽기가 이유를 남겼다
+        outJSONText = text;
+        return true;
+    }
+
     bool RigAsset::loadFromResource( string_view path )
     {
         string text;

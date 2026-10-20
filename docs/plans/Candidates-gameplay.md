@@ -40,15 +40,6 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션 영역의 
 - 컷 프레임 신호는 카메라 쪽이 끝났다(디렉터 `consumeCut` → `CameraComponent::markCut` → `RenderViewSettings::_bCut`, 테스트 `CameraModeTest.DirectorComponentMarksTheCameraCutOnce`). 남은 것은 렌더러 쪽뿐이다: `_bCut` 는 TAA 기록만 리셋한다 — 렌더러에 모션 벡터 · 자동 노출 · 모션 블러가 생기면 같은 신호로 0 · 즉시 맞춤 · 끔을 붙인다. 대기 뷰 신호(`CameraManagerComponent::setPendingView`)를 듣는 쪽은 [PreloadAndLod](#preloadandlod).
 - 렌더러 쪽: 피사계 심도 패스, 카메라별 후처리 값(`CameraPostProcessValues` — 포즈가 나르기만 한다)을 렌더러가 읽기.
 
-### RigEditing
-제목: 후처리 리그 편집 저장과 기즈모
-옛번호: D4-6
-왜 필요한가: 후처리 리그(`PoseModifierComponent`)의 시퀀서 `RigSlot` 트랙(`setSlotWeight` 에 키 찍기)과 리그 디버그 창(`RigDebugPanel`)은 들어갔다.
-남은 것:
-- 창에서 고친 가중치 · 켜짐은 런타임 인스턴스의 복제본에만 들어가 저장되지 않는다(리그 에셋에 쓰는 길).
-- 노드 대상 본 기즈모 편집.
-- `Engine/Sequencer` 가 `Engine/Character` 헤더를 새로 include 한다(레이어 검사 확인).
-
 ### AnimationLodAndCrowd
 제목: 애니메이션 LOD 와 군중 공유
 옛번호: D4-6

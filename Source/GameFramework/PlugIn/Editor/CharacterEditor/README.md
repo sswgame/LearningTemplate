@@ -14,6 +14,8 @@
 | `Model/FitCheckSummary.{h,cpp}` | 푼 피팅 결과(`FitResult`)를 부품별 잘린 면 · 조임 강도, 관통 점 수 · 깊이로 요약(보기 전용) |
 | `Model/SaveReloadGuard.h` | 우리가 쓴 파일의 핫 리로드를 외부 변경으로 착각하지 않게 거르는 판정기 |
 | `Model/AppearanceEditModel.{h,cpp}` | 외형 선택(`AppearanceSelection`) 편집. 슬롯 아이템 · 세트 입히기 · 체형 · 얼굴 · 꾸미기 값 · 시드, 입혀 보기(규칙 설명), 프리셋 저장소 · 파일 저장 |
+| `Model/PairedAnimationEditModel.{h,cpp}` | 페어드 애니메이션(`*.pairedanim.xml`) 편집. 길이 · 역할 시작 · 블렌드 · 정렬 오프셋(기즈모 역변환 포함) · 워프 끝 · 공유 알림, 되돌리기, 한 시계 미리보기 계산. 쓰기는 `PairedAnimationDef::makeXMLText`, 규칙 검사는 그 글을 런타임 로더로 다시 읽는다 |
+| `PairedAnimationPanel` | 미리보기 창 `charactereditor.pairedanimation`(커맨드 `charactereditor.openPairedAnimation`). 역할마다 프리팹을 놓고(저장하지 않는 미리보기 설정) 스크럽, 정렬 역할을 기즈모로 옮기면 오프셋으로 들어간다 |
 | `CharacterEditorPanel` / `CharacterEditorCommands.cpp` | 패널 `charactereditor.main`(소켓 탭, 스켈레톤 탭, 외형 탭)과 메뉴 커맨드 `charactereditor.openPanel` |
 
 - **편집 대상은 원본 데이터 파일**이다. 조립 결과(병합 메시, 펼친 외형)는 저장하지 않는다.

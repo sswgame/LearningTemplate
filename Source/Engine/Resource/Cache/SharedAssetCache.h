@@ -4,11 +4,25 @@
  *        파쇄 · 소켓 · 알림 표 · 페어드 애니메이션 · 물리 에셋).
  * @details 표(`SharedAssetTable`)는 종류마다 프로세스에 하나이고 Engine.dll 안의 함수 정적 객체입니다. 그래서 멤버 정의는 이 헤더에 두지 않고
  *          `SharedAssetCacheDefinition.h` 에 두며, 에셋 종류의 .cpp 하나가 그것을 포함해 명시적으로 인스턴스화합니다. 쓰는 쪽 헤더는
- *          `extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<에셋>;` 과 별칭(`using SkeletonCache = …`)만 둡니다 — 모듈(게임 · 키트 · 에디터)이
- *          표를 자기 이미지에 따로 만들 수 없습니다.
+ *          `extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<에셋>;` 만 둡니다 — 모듈(게임 · 키트 · 에디터)이 표를 자기 이미지에 따로 만들 수
+ *          없습니다. 별칭(`using SkeletonCache = …`)은 두지 않고 쓰는 쪽이 `SharedAssetCache<Skeleton>` 으로 부릅니다(이름이 둘이면 찾기가 갈라집니다).
  *
  *          종류마다 다른 것(종류 이름 · 읽는 함수 · 메모리 태그 · 다시 읽기 방식)은 `SharedAssetCacheTraits<에셋>` 특수화 하나에 모읍니다. 특수화는 인스턴스화하는
- *          .cpp 에만 있고, 값이 빠지면 인스턴스화가 컴파일 오류로 멈춥니다.
+ *          .cpp 에만 있고, 값이 빠지면 인스턴스화가 컴파일 오류로 멈춥니다. 인스턴스화와 등록은 `SW_SHARED_ASSET_CACHE( 에셋 )` 한 줄입니다.
+ *
+ *          이 템플릿으로 합치지 않은 캐시와 그 이유입니다(모양이 "경로 → 공유 `const` 에셋, 디바이스 없음, 자체 상태 없음" 이 아닙니다).
+ *          - `MeshCache`: 쓰는 쪽이 고치는 `shared_ptr<Mesh>`(const 아님)를 `WeakInternTable` 에 두고, `reloadShared( path, pDevice )` 가 정점을 바꾸기 전에
+ *            `waitIdle` 하며, 경고한 경로 집합과 물리 셰이프 캐시(`PhysicsMeshShapeCache`) 읽기 함수 등록 · 비우기를 함께 가집니다(MeshCache.cpp).
+ *          - `TextureCache`: `acquire( path, pDevice )` 가 GPU 텍스처를 만들어 `Texture2D*` 를 참조 횟수로 빌려 주고(`release` 짝), 렌더 타깃 크기 바꾸기 ·
+ *            영역 갱신 큐를 매니저마다의 `Impl` 에 둡니다(TextureCache.h).
+ *          - `MaterialCache`: `acquire( path, pDevice )` 가 `Material*` 를 돌려주고 디바이스 초기화를 미뤄 두는 큐(`initializePending`)를 매니저마다 가집니다
+ *            (MaterialCache.h).
+ *          - `PrefabCache`: `loadPrefab` 이 매니저 소유 `PrefabAsset*` 를 돌려주고 스폰 · 되돌리기 · 중첩 펼치기를 함께 가진 매니저마다의 객체입니다
+ *            (PrefabAsset.h).
+ *          - `UITextAssetCache`: 문서 · 스타일 시트 캐시의 기반 클래스(final 아님)이고 메모리 글(`registerMemoryText`), 다시 읽기 알림 델리게이트, 파싱 횟수를
+ *            인스턴스마다 가집니다. 실패를 남기지 않는 정책도 다릅니다(UITextAssetCache.h).
+ *          - `AudioReloadCache` · `LocalizationReloadCache`: 표가 없는 어댑터입니다. 데이터는 `IAudioService` · `LocalizationManager` 가 가지고 이 캐시는
+ *            바뀐 파일을 넘기기만 합니다(각 .cpp).
  */
 #pragma once
 #include "Core/Common/Macros.h"
