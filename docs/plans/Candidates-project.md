@@ -21,7 +21,7 @@
 왜 필요한가: 새 문체로 다시 쓰는 주석 작업이 아래 구역에서 끝나지 않았습니다. 같은 방식으로 `py -3 -m Scripts worktree-make c6<이름>` 후 이어서 합니다.
 남은 것:
 - Engine: Graphics · Renderer 의 13KB 넘는 큰 파일 약 100 개(작은 파일은 끝났다), Object · Scene · Resource · Serialization · Spatial · Common 대부분, UI 의 `Console`, Compression · Observability · Profiling · Telemetry 전부. `SceneNavigation.h` · `GameObjectManager.h` 는 충돌 때문에 다시 쓰지 못했다.
-- Editor: 주석 25 줄 이상인 약 45 개(`Common/GUI`, `Commands`, `Panels/Animation` · `TileMap` · `Viewport` 등)와 그보다 짧은 파일. `EditorIconGlyphs.h` 는 생성 파일이라 제외한다.
+- Editor: 주석 25 줄 이상인 약 45 개(`Common/GUI`, `Commands`, `Viewport` 등)와 그보다 짧은 파일. `Panels` 는 옛 어휘가 많던 23 개 파일을 다시 썼고(2026-10-21), 나머지 약 120 개는 파일마다 한두 곳이 남았다. `EditorIconGlyphs.h` 는 생성 파일이라 제외한다.
 - GameFramework: Base 의 짧은 헤더 약 230 개와 .cpp · .inl, Kits/Feature 의 옛 어휘(꼬리표, 그새, 거두다, 짓다)가 남은 약 35 개(Network · Online · Voxel 등), Kits/Feature/Online 의 Account 밖 폴더.
 - Core: Math, File, Process, Delegate, Memory, Diagnostics, CommandLine, Container, Task, Network 나머지, LogSink, String. RuntimeAPI 는 손대지 않았다. Games 는 Empty 벤치 씬 일부와 VoxelCraft 전체.
 - 용어 '시험' → '테스트': `Scripts/**` · `Test/**` · `docs/Config/**` 약 300 곳(2026-10-13 셈)과 셰이더 주석 2 곳(`waterwaveprobe.hlsl` · `lighting2d.hlsli`). 셰이더는 바꾸면 `App --cook-shaders` 로 다시 쿠킹한다.
