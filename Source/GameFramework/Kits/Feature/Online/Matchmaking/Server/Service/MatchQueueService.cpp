@@ -61,6 +61,11 @@ namespace sw
         return MatchQueueBus::kCancelTopic.makeTopic( modeID );
     }
 
+    string MatchQueueService::makeBackfillTopic( string_view modeID )
+    {
+        return MatchQueueBus::kBackfillTopic.makeTopic( modeID );
+    }
+
     string MatchQueueService::makeResultTopic( uint64 serverID )
     {
         return MatchQueueBus::kResultTopic.makeTopic( ServiceKeyUtil::makeHex64( serverID ) );
@@ -229,6 +234,7 @@ namespace sw
         pState->_bAuthority = bHold ? SW_TRUE : SW_FALSE;
         _topicBuffer.push( MatchQueueTopicChange{ makeQueueTopic( modeID ), static_cast<uint8>( bHold ? SW_TRUE : SW_FALSE ) } );
         _topicBuffer.push( MatchQueueTopicChange{ makeCancelTopic( modeID ), static_cast<uint8>( bHold ? SW_TRUE : SW_FALSE ) } );
+        _topicBuffer.push( MatchQueueTopicChange{ makeBackfillTopic( modeID ), static_cast<uint8>( bHold ? SW_TRUE : SW_FALSE ) } );
         if ( bHold == false )
         {
             // 권한을 잃었으므로 매처를 비운다. 티켓은 새 권한 서버가 모르는 채 사라지며, 티켓을 낸 서버의 시한이 이를 알린다.
@@ -359,6 +365,12 @@ namespace sw
 
     void MatchQueueService::placeMatches( ModeState& state, int64 nowMs )
     {
+        vector<MatchBackfilled> listBackfilled;
+        state._maker.processBackfills( nowMs, listBackfilled ); // 경기 중 빈자리를 새 경기보다 먼저 채운다
+        for ( const MatchBackfilled& backfilled : listBackfilled )
+        {
+            deliverBackfill( backfilled );
+        }
         vector<MatchFormed> listFormed;
         vector<MatchTicket> listTimedOut;
         state._maker.process( nowMs, listFormed, listTimedOut );
@@ -386,6 +398,53 @@ namespace sw
             }
             state._listUnplaced.erase( state._listUnplaced.begin() + static_cast<ptrdiff_t>( index ) );
         }
+    }
+
+    void MatchQueueService::deliverBackfill( const MatchBackfilled& backfilled )
+    {
+        const MatchBackfillRequest& request = backfilled._request;
+        MatchFormed                 joined;
+        joined._matchID       = request._matchID;
+        joined._modeID        = request._modeID;
+        joined._region        = request._region;
+        joined._averageRating = request._averageRating;
+        joined._listTeam.resize( request._listOpenSlot.size() );
+        joined._listTeam[static_cast<size_t>( backfilled._team )]._listMember = backfilled._ticket._listMember;
+        joined._listTicket.push_back( backfilled._ticket );
+        if ( _dependencies._pBus != nullptr )                                                                                          // 게임 서버가 들어올 사람을 먼저 안다. 같은 경기 id 에 더해진다
+            (void)MatchQueueBus::kAssignTopic.publish( *_dependencies._pBus, ServiceKeyUtil::makeHex64( request._serverID ), joined ); // 실패는 발행이 로그에 남겼다
+        MatchAssignment assignment;
+        assignment._ticketID = backfilled._ticket._ticketID;
+        assignment._matchID  = request._matchID;
+        assignment._modeID   = request._modeID;
+        assignment._outcome  = MatchQueueOutcome::Found;
+        assignment._serverID = request._serverID;
+        assignment._address  = request._address;
+        assignment._port     = request._port;
+        assignment._team     = backfilled._team;
+        for ( const MatchMember& member : backfilled._ticket._listMember )
+        {
+            assignment._listTeammate.push_back( member._accountID ); // 경기 중인 팀원은 게임 서버가 알려 준다
+        }
+        deliverToTicket( backfilled._ticket._originServerID, assignment );
+    }
+
+    void MatchQueueService::submitBackfill( const MatchBackfillRequest& request )
+    {
+        ModeState* pState = findModeState( request._modeID );
+        if ( pState == nullptr )
+        {
+            SW_LOG_WARNING( "MatchQueue: backfill for unknown mode '%#' (match %#) refused", request._modeID, request._matchID );
+            return;
+        }
+        if ( pState->_bAuthority != SW_FALSE )
+        {
+            if ( pState->_maker.addBackfill( request ) != MatchmakingResult::Ok )
+                SW_LOG_WARNING( "MatchQueue: backfill for match %# does not fit mode '%#' - refused", request._matchID, request._modeID );
+            return;
+        }
+        if ( _dependencies._pBus != nullptr )
+            (void)MatchQueueBus::kBackfillTopic.publish( *_dependencies._pBus, request._modeID, request ); // 실패는 발행이 로그에 남겼다. 게임 서버가 다시 보낸다
     }
 
     void MatchQueueService::fillTeam( const MatchFormed& match, AccountID accountID, MatchAssignment& inoutAssignment )
@@ -554,6 +613,13 @@ namespace sw
             const bool        bAcceptCancel = pState != nullptr && pState->_bAuthority != SW_FALSE && MatchQueueBus::kCancelTopic.read( message, cancel ) == ServerBusReadResult::Read;
             if ( bAcceptCancel )
                 (void)pState->_maker.removeTicket( cancel._ticketID ); // 이미 짝지어졌거나 없는 표면 false — 지울 것이 없다
+            return;
+        }
+        if ( MatchQueueBus::kBackfillTopic.matches( message ) )
+        {
+            MatchBackfillRequest request;
+            if ( MatchQueueBus::kBackfillTopic.read( message, request ) == ServerBusReadResult::Read )
+                submitBackfill( request ); // 권한을 잃은 사이에 왔으면 다시 보내지 않고 게임 서버의 재요청을 기다린다
             return;
         }
         if ( message.getTopic() == makeResultTopic( _dependencies._serverID ) )

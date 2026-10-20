@@ -44,6 +44,13 @@ namespace sw
         return true;
     }
 
+    bool MatchServerAgent::requestBackfill( ServerBus& bus, const MatchBackfillRequest& request ) const
+    {
+        MatchBackfillRequest sent = request;
+        sent._serverID            = _serverID;
+        return MatchQueueBus::kBackfillTopic.publish( bus, sent._modeID, sent );
+    }
+
     void MatchServerAgent::update( int64 nowMs )
     {
         std::scoped_lock<mutex> lock{ _mutex };
