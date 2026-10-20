@@ -29,7 +29,7 @@ namespace sw
         [[nodiscard]] static string describeRangeErrors( const TConfig& config )
         {
             vector<string> listError;
-            SerializerUtil::collectRangeErrors( *TConfig::StaticType(), &config, string(), listError );
+            SerializerUtil::collectRangeErrors( *TConfig::StaticType(), ObjectAddress{ &config }, string(), listError );
             string joined;
             for ( const string& rangeError : listError )
             {

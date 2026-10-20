@@ -18,7 +18,7 @@
 
 namespace sw
 {
-    bool runVersionedDeserialize( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo,
+    bool runVersionedDeserialize( uint32& outVersion, const MutableObjectAddress instance, const TypeInfo& typeInfo,
                                   uint32          currentVersion,
                                   const TypeInfo* pLegacyTypeInfo, const SerializeContext& context,
                                   SchemaVersionSource versionSource, SchemaOrphanPolicy orphanPolicy,
@@ -38,14 +38,14 @@ namespace sw
         if ( pLegacyTypeInfo != nullptr && pLegacyTypeInfo->_size > 0 )
         {
             uint32 legacyVersion{ 0 };
-            if ( pLegacyPtr == nullptr || softDeserialize( pLegacyPtr, *pLegacyTypeInfo, listOrphan, legacyVersion ) == false )
+            if ( pLegacyPtr == nullptr || softDeserialize( MutableObjectAddress{ pLegacyPtr }, *pLegacyTypeInfo, listOrphan, legacyVersion ) == false )
                 return false;
             if ( versionSource == SchemaVersionSource::Payload )
                 outVersion = legacyVersion;
         }
 
         uint32 softVersion{ 0 };
-        if ( softDeserialize( pInstance, typeInfo, listOrphan, softVersion ) == false )
+        if ( softDeserialize( instance, typeInfo, listOrphan, softVersion ) == false )
             return false;
 
         // 레거시를 읽지 않았거나(그러면 이쪽이 유일한 출처다) 이번에 실제로 버전이 나왔으면 그것을 쓴다.
@@ -56,7 +56,7 @@ namespace sw
         const bool bOrphanBlocks = ( orphanPolicy == SchemaOrphanPolicy::Reject ) && ( listOrphan.empty() == false );
         const bool bNeedsMigrate = ( outVersion != currentVersion ) || bOrphanBlocks;
 
-        return runSchemaMigrateStep( outVersion, currentVersion, pInstance, typeInfo, pLegacyPtr, pLegacyTypeInfo,
+        return runSchemaMigrateStep( outVersion, currentVersion, instance.get(), typeInfo, pLegacyPtr, pLegacyTypeInfo,
                                      listOrphan, bNeedsMigrate, context );
     }
 
@@ -65,8 +65,9 @@ namespace sw
         struct SerializerUtilInternal
         {
             /** @brief 숫자 칸 하나를 float64 로 읽습니다. 숫자 타입이 아니면 false 입니다(범위 검사가 보지 않는 칸). */
-            [[nodiscard]] static bool readRangeNumber( const string_view typeName, const void* pValue, float64& outValue )
+            [[nodiscard]] static bool readRangeNumber( const string_view typeName, const ValueAddress value, float64& outValue )
             {
+                const void* const pValue = value.get();
                 if ( typeName == "float32" || typeName == "float" )
                     outValue = static_cast<float64>( *static_cast<const float32*>( pValue ) );
                 else if ( typeName == "float64" || typeName == "double" )
@@ -102,13 +103,13 @@ namespace sw
                 outListError.push_back( path + " = " + to_string( value ) + " is outside [" + lower + ", " + upper + "]" );
             }
 
-            /** @brief @p pValue(@p typeName 의 숫자)가 @p range 안인지입니다. 숫자가 아니면 범위가 없으므로 true 입니다. */
-            static bool isNumberWithinRange( const string_view typeName, const void* pValue, const PropertyAllowedRange& range )
+            /** @brief @p value(@p typeName 의 숫자)가 @p range 안인지입니다. 숫자가 아니면 범위가 없으므로 true 입니다. */
+            static bool isNumberWithinRange( const string_view typeName, const ValueAddress value, const PropertyAllowedRange& range )
             {
-                float64 value = 0.0;
-                if ( readRangeNumber( typeName, pValue, value ) == false )
+                float64 number = 0.0;
+                if ( readRangeNumber( typeName, value, number ) == false )
                     return true;
-                return range.contains( value );
+                return range.contains( number );
             }
 
             /**
@@ -116,8 +117,9 @@ namespace sw
              * @details 범위를 선언하지 않은 숫자 칸은 값을 읽지 않습니다. 위반이 있을 때만 `collectRangeErrors` 가 경로가 붙은 글을 만듭니다.
              *          범위는 저장 목적과 관계없이 모든 칸을 본다 — 중첩 타입 판정(`findNestedObjectType`)에 내장 핸들러 표만 쓰므로 저작 목적의 기본 문맥을 쓴다.
              */
-            static bool isEveryValueWithinRange( const TypeInfo& typeInfo, const void* pInstance )
+            static bool isEveryValueWithinRange( const TypeInfo& typeInfo, const ObjectAddress instance )
             {
+                const void* const pInstance = instance.get();
                 for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
                 {
                     const bool bSkipProperty = prop._bIsBitField == SW_TRUE || prop.hasValueAccessor();
@@ -140,9 +142,10 @@ namespace sw
                         const size_t               elementCount = pSequence->getSize( pValue );
                         for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
                         {
+                            // 구조체 원소의 값 주소는 그 원소 타입의 객체 주소다.
                             const void* const pElementValue = pSequence->getElementConst( pValue, elementIndex );
-                            const bool        bWithin       = pElement != nullptr ? isEveryValueWithinRange( *pElement, pElementValue )
-                                                                                  : isNumberWithinRange( prop._elementTypeName.view(), pElementValue, range );
+                            const bool        bWithin       = pElement != nullptr ? isEveryValueWithinRange( *pElement, ObjectAddress{ pElementValue } )
+                                                                                  : isNumberWithinRange( prop._elementTypeName.view(), ValueAddress{ pElementValue }, range );
                             if ( bWithin == false )
                                 return false;
                         }
@@ -150,14 +153,14 @@ namespace sw
                     }
                     // 숫자 칸은 범위를 선언했을 때만 본다. 숫자가 아닌 칸만 중첩 구조체인지 찾는다(숫자 칸마다 타입 조회를 하지 않는다).
                     float64 value = 0.0;
-                    if ( readRangeNumber( prop._typeName.view(), pValue, value ) )
+                    if ( readRangeNumber( prop._typeName.view(), ValueAddress{ pValue }, value ) )
                     {
                         if ( prop._metadata.hasAllowedRange() && prop._metadata.computeAllowedRange( pInstance ).contains( value ) == false )
                             return false;
                         continue;
                     }
                     const TypeInfo* pNested = SerializerUtil::findNestedObjectType( prop._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
-                    if ( pNested != nullptr && isEveryValueWithinRange( *pNested, pValue ) == false )
+                    if ( pNested != nullptr && isEveryValueWithinRange( *pNested, ObjectAddress{ pValue } ) == false )
                         return false;
                 }
                 return true;
@@ -213,9 +216,9 @@ namespace sw
              * @details 비트플래그의 이름은 텍스트(`toStringFlags`)와 같은 규칙으로 모으고(`EnumInfo::collectFlagNames`) 해시 오름차순으로 적는다. 같은 값은
              *          같은 바이트라 바이트 비교(`arePropertyValuesEqual`, diff)가 맞는다. 이름의 해시가 0 이면(사실상 없다) 값 전체를 값으로 싣는다.
              */
-            static void writeEnumBinary( const EnumInfo& enumInfo, const void* pValuePtr, vector<uint8>& buffer )
+            static void writeEnumBinary( const EnumInfo& enumInfo, const ValueAddress address, vector<uint8>& buffer )
             {
-                const int64 value = enumInfo.readValueFromMemory( pValuePtr );
+                const int64 value = enumInfo.readValueFromMemory( address.get() );
                 if ( enumInfo._bIsBitFlag == SW_FALSE )
                 {
                     appendEnumEntry( buffer, enumInfo.toString( value ).getHash(), value );
@@ -279,7 +282,7 @@ namespace sw
              * @return 바이트가 모자라면 false 입니다. 모르는 열거자 이름이면 **값은 그대로 두고** false 입니다(바이트는 끝까지 읽었으며, XML 의 모르는 이름과 같은 필드
              *         실패입니다).
              */
-            [[nodiscard]] static bool readEnumBinary( const EnumInfo& enumInfo, void* pValuePtr, const uint8* pData, size_t dataSize, size_t& inoutOffset,
+            [[nodiscard]] static bool readEnumBinary( const EnumInfo& enumInfo, const MutableValueAddress address, const uint8* pData, size_t dataSize, size_t& inoutOffset,
                                                       BinaryWireVersion wireVersion )
             {
                 (void)wireVersion; // 현재 읽는 버전은 하나뿐이다(`BinaryWireVersion`). 버전이 늘면 여기서 분기한다
@@ -311,7 +314,7 @@ namespace sw
                 }
                 if ( bKnown == false )
                     return false;
-                enumInfo.writeValueToMemory( pValuePtr, value );
+                enumInfo.writeValueToMemory( address.get(), value );
                 return true;
             }
 
@@ -339,8 +342,10 @@ namespace sw
              * 건너뛰기 위해서입니다.** 없으면 낯선 컴포넌트 하나가 그 뒤 스트림을 통째로 어긋나게 합니다.
              * 빈 이름은 빈 슬롯을 뜻합니다(원소 개수를 앞에서 이미 적었으므로 슬롯은 남겨야 합니다).
              */
-            [[nodiscard]] static bool writeOwnedPointerBinary( const void* pObject, vector<uint8>& buffer, const SerializeContext& context )
+            [[nodiscard]] static bool writeOwnedPointerBinary( const ObjectAddress object, vector<uint8>& buffer, const SerializeContext& context )
             {
+                // 주소는 소유 포인터가 가리키는 객체다(널이면 빈 슬롯).
+                const void* const pObject = object.get();
                 // 보관해 둔 원소(모르는 타입)는 읽은 이름과 본문 그대로 다시 쓴다.
                 SerializeContext::OpaqueElementView opaque{};
                 if ( context.queryOpaqueElement( pObject, opaque ) && opaque._format == SerializeContext::OpaqueFormat::Binary )
@@ -489,7 +494,7 @@ namespace sw
                 void endMapEntry() override {}
                 void beginNestedContainer( ContainerSlot ) override {}
                 void endNestedContainer( ContainerSlot ) override {}
-                void writeOwnedPointer( const ObjectAddress object ) override { recordWritten( writeOwnedPointerBinary( object.get(), _listBuffer, _context ) ); }
+                void writeOwnedPointer( const ObjectAddress object ) override { recordWritten( writeOwnedPointerBinary( object, _listBuffer, _context ) ); }
 
                 // 값 구조체도 값 하나를 적는 경로로 적는다. 등록된 바이너리 핸들러가 구조체보다 먼저다(`serializeValueBinary` 의 순서).
                 void writeValueObject( const ValueAddress value, const hashed_string& typeName, const TypeInfo&, ContainerSlot ) override
@@ -682,7 +687,7 @@ namespace sw
         if ( pEnumInfo != nullptr )
         {
             // 값이 아니라 열거자 정체성(이름 해시)으로 싣는다. 값으로 실으면 열거자 순서가 바뀔 때 세이브와 스냅샷의 뜻이 바뀐다.
-            SerializerUtilInternal::writeEnumBinary( *pEnumInfo, pValuePtr, listBuffer );
+            SerializerUtilInternal::writeEnumBinary( *pEnumInfo, value, listBuffer );
             return true;
         }
 
@@ -733,7 +738,7 @@ namespace sw
 
         const EnumInfo* pEnumInfo = context.getTypeRegistry().findEnum( typeName );
         if ( pEnumInfo != nullptr )
-            return SerializerUtilInternal::readEnumBinary( *pEnumInfo, pValuePtr, pData, dataSize, offset, wireVersion );
+            return SerializerUtilInternal::readEnumBinary( *pEnumInfo, value, pData, dataSize, offset, wireVersion );
 
         const TypeInfo* pStructInfo = context.getTypeRegistry().findType( typeName );
         if ( pStructInfo != nullptr )
@@ -1135,9 +1140,10 @@ namespace sw
         } );
     }
 
-    void SerializerUtil::collectRangeErrors( const TypeInfo& typeInfo, const void* pInstance, const string& prefix, vector<string>& outListError )
+    void SerializerUtil::collectRangeErrors( const TypeInfo& typeInfo, const ObjectAddress instance, const string& prefix, vector<string>& outListError )
     {
-        using Internal = SerializerUtilInternal;
+        using Internal              = SerializerUtilInternal;
+        const void* const pInstance = instance.get();
         for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
         {
             const bool bSkipProperty = prop._bIsBitField == SW_TRUE || prop.hasValueAccessor();
@@ -1162,9 +1168,10 @@ namespace sw
                     const string      elementPath   = path + "[" + to_string( elementIndex ) + "]";
                     const void* const pElementValue = pSequence->getElementConst( pValue, elementIndex );
                     float64           value         = 0.0;
+                    // 구조체 원소의 값 주소는 그 원소 타입의 객체 주소다.
                     if ( pElement != nullptr )
-                        collectRangeErrors( *pElement, pElementValue, elementPath, outListError );
-                    else if ( Internal::readRangeNumber( prop._elementTypeName.view(), pElementValue, value ) )
+                        collectRangeErrors( *pElement, ObjectAddress{ pElementValue }, elementPath, outListError );
+                    else if ( Internal::readRangeNumber( prop._elementTypeName.view(), ValueAddress{ pElementValue }, value ) )
                         Internal::appendRangeError( elementPath, value, range, outListError );
                 }
                 continue;
@@ -1172,21 +1179,21 @@ namespace sw
             const TypeInfo* pNested = findNestedObjectType( prop._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
             if ( pNested != nullptr )
             {
-                collectRangeErrors( *pNested, pValue, path, outListError );
+                collectRangeErrors( *pNested, ObjectAddress{ pValue }, path, outListError );
                 continue;
             }
             float64 value = 0.0;
-            if ( prop._metadata.hasAllowedRange() && Internal::readRangeNumber( prop._typeName.view(), pValue, value ) )
+            if ( prop._metadata.hasAllowedRange() && Internal::readRangeNumber( prop._typeName.view(), ValueAddress{ pValue }, value ) )
                 Internal::appendRangeError( path, value, prop._metadata.computeAllowedRange( pInstance ), outListError );
         }
     }
 
-    bool SerializerUtil::isWithinDeclaredRanges( const TypeInfo& typeInfo, const void* pInstance )
+    bool SerializerUtil::isWithinDeclaredRanges( const TypeInfo& typeInfo, const ObjectAddress instance )
     {
-        if ( SerializerUtilInternal::isEveryValueWithinRange( typeInfo, pInstance ) )
+        if ( SerializerUtilInternal::isEveryValueWithinRange( typeInfo, instance ) )
             return true;
         vector<string> listRangeError;
-        collectRangeErrors( typeInfo, pInstance, string(), listRangeError );
+        collectRangeErrors( typeInfo, instance, string(), listRangeError );
         for ( const string& rangeError : listRangeError )
         {
             SW_LOG_ERROR( "%#: %# - the read fails", typeInfo._fullyQualifiedName.c_str(), rangeError.c_str() );

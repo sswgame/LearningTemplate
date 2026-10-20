@@ -3,6 +3,7 @@
 #include "Core/String/RegistrationList.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Reflection/PropertyRoleUtil.h"
 #include "Engine/Reflection/ReflectAny.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/ReflectionRPC.h"
@@ -3825,6 +3826,29 @@ SW_TEST_CASE( ReflectionSerializationTest, ValueAddressTextDoesNotAddPropertyOff
     static_assert( !std::is_invocable_v<ReaderScalarFn, sw::IContainerReader&, void*, const sw::hashed_string&, sw::ContainerSlot> );
     static_assert( std::is_invocable_v<ReaderValueObjectFn, sw::IContainerReader&, sw::MutableValueAddress, const sw::hashed_string&, const sw::TypeInfo&, sw::ContainerSlot> );
     static_assert( !std::is_invocable_v<ReaderValueObjectFn, sw::IContainerReader&, void*, const sw::hashed_string&, const sw::TypeInfo&, sw::ContainerSlot> );
+
+    // 점 경로 · 범위 검사 · 버전 읽기 절차는 객체 주소를 받고, 점 경로가 찾은 것은 값 주소다. 역할 도우미는 객체와 값을 한 함수에 함께 받는다.
+    using ResolvePathFn  = decltype( &sw::resolvePropertyPath );
+    using RangeErrorsFn  = decltype( &sw::SerializerUtil::collectRangeErrors );
+    using WithinRangesFn = decltype( &sw::SerializerUtil::isWithinDeclaredRanges );
+    using RepNotifyFn    = decltype( &sw::PropertyRoleUtil::callRepNotify );
+    using InterpolateFn  = decltype( &sw::PropertyRoleUtil::applyInterpolated );
+    using PropertyPtr    = const sw::PropertyInfo*&;
+    static_assert( std::is_invocable_v<ResolvePathFn, sw::MutableObjectAddress, const sw::TypeInfo&, const utf8*, sw::MutableValueAddress&, PropertyPtr> );
+    static_assert( !std::is_invocable_v<ResolvePathFn, sw::MutableValueAddress, const sw::TypeInfo&, const utf8*, sw::MutableValueAddress&, PropertyPtr> );
+    static_assert( !std::is_invocable_v<ResolvePathFn, sw::MutableObjectAddress, const sw::TypeInfo&, const utf8*, sw::MutableObjectAddress&, PropertyPtr> ); // 찾은 것은 값이다
+    static_assert( !std::is_invocable_v<ResolvePathFn, void*, const sw::TypeInfo&, const utf8*, void*&, PropertyPtr> );
+    static_assert( std::is_invocable_v<RangeErrorsFn, const sw::TypeInfo&, sw::ObjectAddress, const sw::string&, sw::vector<sw::string>&> );
+    static_assert( !std::is_invocable_v<RangeErrorsFn, const sw::TypeInfo&, sw::ValueAddress, const sw::string&, sw::vector<sw::string>&> );
+    static_assert( !std::is_invocable_v<RangeErrorsFn, const sw::TypeInfo&, const void*, const sw::string&, sw::vector<sw::string>&> );
+    static_assert( std::is_invocable_v<WithinRangesFn, const sw::TypeInfo&, sw::MutableObjectAddress> );
+    static_assert( !std::is_invocable_v<WithinRangesFn, const sw::TypeInfo&, const void*> );
+    static_assert( std::is_invocable_v<RepNotifyFn, const sw::PropertyInfo&, sw::MutableObjectAddress, sw::ValueAddress> );
+    static_assert( !std::is_invocable_v<RepNotifyFn, const sw::PropertyInfo&, sw::MutableObjectAddress, sw::ObjectAddress> ); // 옛 값은 객체가 아니다
+    static_assert( !std::is_invocable_v<RepNotifyFn, const sw::PropertyInfo&, void*, const void*> );
+    static_assert( std::is_invocable_v<InterpolateFn, const sw::PropertyInfo&, sw::MutableObjectAddress, sw::ValueAddress, sw::ValueAddress, float32> );
+    static_assert( !std::is_invocable_v<InterpolateFn, const sw::PropertyInfo&, sw::MutableValueAddress, sw::ValueAddress, sw::ValueAddress, float32> );
+    static_assert( !std::is_invocable_v<InterpolateFn, const sw::PropertyInfo&, void*, const void*, const void*, float32> );
 
     sw::BitfieldTestActor actor;
     actor._score = 42;

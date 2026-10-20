@@ -10,7 +10,7 @@
 #include "Core/Delegate/Delegate.h"
 
 #include "Engine/EngineMinimal.h"
-#include "Engine/Serialization/Base/TextAddress.h"
+#include "Engine/Reflection/TextAddress.h"
 
 namespace sw
 {

@@ -417,7 +417,7 @@ namespace sw
     {
         // 선언된 범위는 읽기 공통 끝에서 본다(JSON · XML 과 같다). 범위 밖 값은 성공으로 돌아오지 않는다.
         return BinarySerializerInternal::deserializeTagged( pInstance, typeInfo, pData, dataSize, context, nullptr, true ) &&
-               SerializerUtil::isWithinDeclaredRanges( typeInfo, pInstance );
+               SerializerUtil::isWithinDeclaredRanges( typeInfo, ObjectAddress{ pInstance } );
     }
 
     SoftReadResult BinarySerializer::deserializeSoft( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
@@ -429,7 +429,7 @@ namespace sw
         // 소프트 읽기의 태그 루프는 스트림이 깨졌을 때만 실패한다(모르는 · 읽지 못한 칸은 orphan 이다).
         if ( BinarySerializerInternal::deserializeTagged( pInstance, typeInfo, pData, dataSize, context, pOutOrphans, false ) == false )
             return SoftReadResult::NotParsed;
-        return SerializerUtil::isWithinDeclaredRanges( typeInfo, pInstance ) ? SoftReadResult::Read : SoftReadResult::Rejected;
+        return SerializerUtil::isWithinDeclaredRanges( typeInfo, ObjectAddress{ pInstance } ) ? SoftReadResult::Read : SoftReadResult::Rejected;
     }
 
     bool BinarySerializer::serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo, vector<uint8>& outListBuffer,
@@ -459,12 +459,12 @@ namespace sw
         const bool               bIgnoreOrphan = context.skipsUnknownProperties() && context.skipsUnreadableProperties();
         const SchemaOrphanPolicy orphanPolicy  = bIgnoreOrphan ? SchemaOrphanPolicy::Ignore : SchemaOrphanPolicy::Reject;
         return runVersionedDeserialize(
-            outVersion, pInstance, typeInfo, currentVersion, pLegacyTypeInfo, context,
+            outVersion, MutableObjectAddress{ pInstance }, typeInfo, currentVersion, pLegacyTypeInfo, context,
             SchemaVersionSource::Stream, orphanPolicy,
             SW_DELEGATE_LAMBDA( SoftDeserializeFn,
-                                [&]( void* pTarget, const TypeInfo& targetType, vector<SchemaOrphanValue>& listOrphan, uint32& ) -> bool
+                                [&]( const MutableObjectAddress target, const TypeInfo& targetType, vector<SchemaOrphanValue>& listOrphan, uint32& ) -> bool
         {
-            return deserializeSoft( pTarget, targetType, pBody, bodySize, &listOrphan, context ) == SoftReadResult::Read;
+            return deserializeSoft( target.get(), targetType, pBody, bodySize, &listOrphan, context ) == SoftReadResult::Read;
         } ) );
     }
 

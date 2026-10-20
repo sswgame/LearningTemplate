@@ -104,14 +104,15 @@ namespace sw
                     if ( pRuntimeType == nullptr )
                         return;
                     _backend.beginMap( pRuntimeType->_name.c_str() );
-                    writeXMLProperties( pObject, *pRuntimeType, _backend, _context );
+                    writeXMLProperties( object, *pRuntimeType, _backend, _context );
                     _backend.endMap();
                 }
 
                 void writeValueObject( const ValueAddress value, const hashed_string&, const TypeInfo& typeInfo, ContainerSlot ) override
                 {
                     _backend.beginMap( typeInfo._name.c_str() );
-                    writeXMLProperties( value.get(), typeInfo, _backend, _context );
+                    // 값 구조체 원소의 값 주소는 그 구조체 타입의 객체 주소다.
+                    writeXMLProperties( ObjectAddress{ value.get() }, typeInfo, _backend, _context );
                     _backend.endMap();
                 }
 
@@ -199,18 +200,19 @@ namespace sw
                         return ContainerReadResult::Read;
                     }
                     // 원소 안의 못 읽은 칸 — orphan 목록이 있으면 거기 남고 Read, 엄격 읽기면 FieldFailed 다.
-                    return toResult( readNestedXMLIntoInstance( pObject, *pType, _backend, _context, _pOutListOrphan ) );
+                    return toResult( readNestedXMLIntoInstance( MutableObjectAddress{ pObject }, *pType, _backend, _context, _pOutListOrphan ) );
                 }
 
                 ContainerReadResult readValueObject( const MutableValueAddress value, const hashed_string&, const TypeInfo& typeInfo, const ContainerSlot slot ) override
                 {
-                    void* const pValue = value.get();
+                    // 값 구조체 원소의 값 주소는 그 구조체 타입의 객체 주소다.
+                    const MutableObjectAddress element{ value.get() };
                     if ( slot == ContainerSlot::SequenceElement )
-                        return toResult( readNestedXMLIntoInstance( pValue, typeInfo, _backend, _context, _pOutListOrphan ) );
+                        return toResult( readNestedXMLIntoInstance( element, typeInfo, _backend, _context, _pOutListOrphan ) );
                     // 맵 값의 구조체는 `<entry>` 안의 `<TypeName>` 자식이다. 자식이 없으면 기본값 그대로 넣는다.
                     if ( _backend.pushFirstChild() == false )
                         return ContainerReadResult::Read;
-                    const bool bRead = readNestedXMLIntoInstance( pValue, typeInfo, _backend, _context, _pOutListOrphan );
+                    const bool bRead = readNestedXMLIntoInstance( element, typeInfo, _backend, _context, _pOutListOrphan );
                     _backend.popChild();
                     return toResult( bRead );
                 }
@@ -251,9 +253,11 @@ namespace sw
                 string_view                _currentTagName;
             };
 
-            static void writeXMLProperties( const void* pInstance, const TypeInfo& typeInfo, IXMLBackend& backend,
+            // 주소는 프로퍼티를 가진 객체다. 구조체 칸은 그 값 주소를 안쪽 타입의 객체 주소로 적어 다시 부른다.
+            static void writeXMLProperties( const ObjectAddress instance, const TypeInfo& typeInfo, IXMLBackend& backend,
                                             const SerializeContext& context )
             {
+                const void* const pInstance = instance.get();
                 typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
                 {
                     if ( SerializerUtil::shouldSerializeProperty( typeInfo, prop, context ) == false )
@@ -266,14 +270,14 @@ namespace sw
                         return;
                     }
 
-                    const void* pPropPtr = prop.getRawPtr( pInstance );
+                    const ValueAddress propValue{ prop.getRawPtr( pInstance ) };
 
                     if ( prop._bIsContainer && prop.hasContainerWrapper() )
                     {
                         // 프로퍼티 이름이 곧 컨테이너 요소다. 그 안에 원소들이 들어간다.
                         backend.beginMap( prop._name.c_str() );
                         ContainerWriter writer( backend, context );
-                        ContainerVisitor::write( ValueAddress{ pPropPtr }, prop.getContainerShape(), writer, context );
+                        ContainerVisitor::write( propValue, prop.getContainerShape(), writer, context );
                         backend.endMap();
                     }
                     else
@@ -282,13 +286,13 @@ namespace sw
                         if ( pNestedType != nullptr )
                         {
                             backend.beginMap( prop._name.c_str() );
-                            writeXMLProperties( pPropPtr, *pNestedType, backend, context );
+                            writeXMLProperties( ObjectAddress{ propValue.get() }, *pNestedType, backend, context );
                             backend.endMap();
                         }
                         else
                         {
                             StringBuilder<constant::kMaxBuffer8192> ss;
-                            SerializerUtil::valueToText( ss, ValueAddress{ pPropPtr }, prop._typeName, context );
+                            SerializerUtil::valueToText( ss, propValue, prop._typeName, context );
 
                             // 기본은 "모두 쓴다" 이다. 그래야 파일에 없음과 명시적으로 비어 있음이
                             // 구분된다. 생략해도 좋다고 **스키마가 선언한** 필드만 비었을 때 뺀다.
@@ -323,10 +327,10 @@ namespace sw
              * @details 루트 원소는 `deserializeSoft` 가 따로 훑는다. 안쪽 원소의 모르는 이름은 타입 이름을 붙여 적는다(`SpriteComponent._clipPth`) —
              *          로드가 끝난 뒤 `runSchemaMigrateStep` 이 루트 타입 이름과 함께 경고한다.
              */
-            [[nodiscard]] static bool readNestedXMLIntoInstance( void* pInstance, const TypeInfo& typeInfo, IXMLBackend& backend, const SerializeContext& context,
-                                                                 vector<SchemaOrphanValue>* pOutListOrphan )
+            [[nodiscard]] static bool readNestedXMLIntoInstance( const MutableObjectAddress instance, const TypeInfo& typeInfo, IXMLBackend& backend,
+                                                                 const SerializeContext& context, vector<SchemaOrphanValue>* pOutListOrphan )
             {
-                const bool bRead = readXMLIntoInstance( pInstance, typeInfo, backend, context, pOutListOrphan );
+                const bool bRead = readXMLIntoInstance( instance, typeInfo, backend, context, pOutListOrphan );
                 if ( pOutListOrphan != nullptr )
                     appendUnknownXMLChildOrphans( backend.getCurrentNode(), typeInfo, backend.ignoresCaseKeys(), pOutListOrphan, typeInfo._name.c_str() );
                 return bRead;
@@ -354,11 +358,12 @@ namespace sw
                 return true;
             }
 
-            [[nodiscard]] static bool readXMLIntoInstance( void* pInstance, const TypeInfo& typeInfo, IXMLBackend& backend, const SerializeContext& context,
-                                                           vector<SchemaOrphanValue>* pOutListOrphan )
+            [[nodiscard]] static bool readXMLIntoInstance( const MutableObjectAddress instance, const TypeInfo& typeInfo, IXMLBackend& backend,
+                                                           const SerializeContext& context, vector<SchemaOrphanValue>* pOutListOrphan )
             {
-                bool bFieldError{ false };
-                bool bForbiddenField{ false };
+                void* const pInstance = instance.get();
+                bool        bFieldError{ false };
+                bool        bForbiddenField{ false };
                 // 소프트 읽기(orphan 목록이 있음)는 읽지 못한 필드를 orphan 으로 넘기고 이어 읽는다. 그 필드는 **읽기 전 값**이다(바이너리 · JSON 과 같다).
                 // 되돌리는 단위는 필드 하나다. 구조체 칸은 안쪽 읽기가 같은 규칙으로 안쪽 필드만 되돌리므로, 칸 자신은 담지 않는다.
                 // 되돌릴 수 없으면(소유 포인터 목록, 코덱 결함) 그 뒤를 읽지 않고 객체째 실패한다.
@@ -423,7 +428,7 @@ namespace sw
                             if ( entered )
                             {
                                 // 소프트 읽기의 안쪽 실패는 안쪽 필드가 이미 되돌렸다. 안쪽이 false 이면 금지된 필드이거나 되돌리지 못한 것이라 객체째 실패다.
-                                if ( readNestedXMLIntoInstance( pPropPtr, *pNestedType, backend, context, pOutListOrphan ) == false )
+                                if ( readNestedXMLIntoInstance( MutableObjectAddress{ pPropPtr }, *pNestedType, backend, context, pOutListOrphan ) == false )
                                 {
                                     bFieldError   = true;
                                     bObjectFailed = bContinuesAfterUnreadable;
@@ -823,7 +828,7 @@ namespace sw
                                      IXMLBackend& backend, const SerializeContext& context )
     {
         backend.initializeXMLSerialization( typeInfo._name.c_str() );
-        XMLSerializerInternal::writeXMLProperties( pInstance, typeInfo, backend, context );
+        XMLSerializerInternal::writeXMLProperties( ObjectAddress{ pInstance }, typeInfo, backend, context );
         return backend.endSerialize();
     }
 
@@ -839,14 +844,14 @@ namespace sw
         if ( backend.initializeXMLDeserialization( xmlStr, typeInfo._name.c_str() ) == false )
             return false;
 
-        if ( XMLSerializerInternal::readXMLIntoInstance( pInstance, typeInfo, backend, context, nullptr ) == false )
+        if ( XMLSerializerInternal::readXMLIntoInstance( MutableObjectAddress{ pInstance }, typeInfo, backend, context, nullptr ) == false )
             return false;
 
         vector<SchemaOrphanValue> listOrphan;
         if ( XMLSerializerInternal::tryAppendUnknownXMLChildOrphans( xmlStr, typeInfo, context, &listOrphan ) && listOrphan.empty() == false )
             return false;
         // 선언된 범위는 읽기 공통 끝에서 본다(바이너리 · JSON 과 같다).
-        return SerializerUtil::isWithinDeclaredRanges( typeInfo, pInstance );
+        return SerializerUtil::isWithinDeclaredRanges( typeInfo, ObjectAddress{ pInstance } );
     }
 
     string XMLSerializer::serialize( const void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context )
@@ -913,13 +918,13 @@ namespace sw
         }
 
         // 칸 하나를 읽지 못해도 멈추지 않는다 — 루트의 모르는 자식과 범위 밖 값까지 모아야 부르는 쪽이 한 번에 다 알린다(C-60).
-        const bool bFieldsRead = XMLSerializerInternal::readXMLIntoInstance( pInstance, typeInfo, backend, context, pOutListOrphan );
+        const bool bFieldsRead = XMLSerializerInternal::readXMLIntoInstance( MutableObjectAddress{ pInstance }, typeInfo, backend, context, pOutListOrphan );
 
         if ( pOutListOrphan != nullptr )
             XMLSerializerInternal::appendUnknownXMLChildOrphans( root, typeInfo, bIgnore, pOutListOrphan );
 
         // 선언된 범위는 읽기 공통 끝에서 본다(바이너리 · JSON 과 같다).
-        const bool bWithinRange = SerializerUtil::isWithinDeclaredRanges( typeInfo, pInstance );
+        const bool bWithinRange = SerializerUtil::isWithinDeclaredRanges( typeInfo, ObjectAddress{ pInstance } );
         return bFieldsRead && bWithinRange ? SoftReadResult::Read : SoftReadResult::Rejected;
     }
 
@@ -937,7 +942,7 @@ namespace sw
     {
         const string verStr = to_string( version );
         backend.writeAttribute( kSchemaVersionKey, verStr.c_str() );
-        XMLSerializerInternal::writeXMLProperties( pInstance, typeInfo, backend, context );
+        XMLSerializerInternal::writeXMLProperties( ObjectAddress{ pInstance }, typeInfo, backend, context );
     }
 
     bool XMLSerializer::deserializeVersioned( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo,
@@ -947,12 +952,12 @@ namespace sw
         // 절차는 JSON · XML · Binary 가 공통이다(`runVersionedDeserialize`). 여기서 정하는 것은 두 가지뿐이다.
         // **버전이 어디서 오는가**(본문 안의 `_schemaVersion`)와 **orphan 만 있을 때의 정책**이다.
         return runVersionedDeserialize(
-            outVersion, pInstance, typeInfo, currentVersion, pLegacyTypeInfo, context,
+            outVersion, MutableObjectAddress{ pInstance }, typeInfo, currentVersion, pLegacyTypeInfo, context,
             SchemaVersionSource::Payload, SchemaOrphanPolicy::Ignore,
             SW_DELEGATE_LAMBDA( SoftDeserializeFn,
-                                [&]( void* pTarget, const TypeInfo& targetType, vector<SchemaOrphanValue>& listOrphan, uint32& outSoftVersion ) -> bool
+                                [&]( const MutableObjectAddress target, const TypeInfo& targetType, vector<SchemaOrphanValue>& listOrphan, uint32& outSoftVersion ) -> bool
         {
-            return deserializeSoft( pTarget, targetType, xmlStr, &listOrphan, &outSoftVersion, context ) == SoftReadResult::Read;
+            return deserializeSoft( target.get(), targetType, xmlStr, &listOrphan, &outSoftVersion, context ) == SoftReadResult::Read;
         } ) );
     }
 

@@ -771,7 +771,7 @@ namespace sw
                     continue;
                 for ( const PropertyInfo& prop : pTypeInfo->getPropertiesWithBase() )
                 {
-                    if ( walk.walkProperty( pComp, *pTypeInfo, prop ) )
+                    if ( walk.walkProperty( MutableObjectAddress{ pComp }, *pTypeInfo, prop ) )
                         continue;
                     // 같은 실행의 상태면 런타임 id 그대로가 맞다. 파일 id 는 이 실행에서 다른 오브젝트일 수 있으므로 옮기지 못한 것은 로드 오류다.
                     // 비우지 않는다 — 값이 조용히 사라지는 폴백이다.

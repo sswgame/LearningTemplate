@@ -17,6 +17,7 @@
 
 #include "Engine/Reflection/ReflectionContainers.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/TextAddress.h"
 
 #include <type_traits>
 
@@ -42,29 +43,29 @@ namespace sw
         {
         }
 
-        /** @brief @p pInstance (타입 @p type)의 거른 필드를 모든 깊이까지 내려가 잎을 바꿉니다. 고칠 수 없는 잎이 있으면 false 입니다(나머지는 바꾼다). */
-        [[nodiscard]] bool walkObject( void* pInstance, const TypeInfo& type )
+        /** @brief @p instance (타입 @p type 객체의 주소)의 거른 필드를 모든 깊이까지 내려가 잎을 바꿉니다. 고칠 수 없는 잎이 있으면 false 입니다(나머지는 바꾼다). */
+        [[nodiscard]] bool walkObject( const MutableObjectAddress instance, const TypeInfo& type )
         {
-            if ( pInstance == nullptr || typeHoldsLeaf( type ) == false )
+            if ( instance.get() == nullptr || typeHoldsLeaf( type ) == false )
                 return true;
             bool bAllWalked = true;
             for ( const PropertyInfo& prop : type.getPropertiesWithBase() )
             {
-                bAllWalked = walkProperty( pInstance, type, prop ) && bAllWalked;
+                bAllWalked = walkProperty( instance, type, prop ) && bAllWalked;
             }
             return bAllWalked;
         }
 
         /**
-         * @brief @p pInstance (타입 @p owner)의 필드 하나를 내려가 잎을 바꿉니다. 거른 필드 · 비트 필드는 건드리지 않고 true 입니다.
+         * @brief @p instance (타입 @p owner 객체의 주소)의 필드 하나를 내려가 잎을 바꿉니다. 거른 필드 · 비트 필드는 건드리지 않고 true 입니다.
          * @details 부르는 쪽이 고칠 수 없는 필드의 이름을 알리려고 최상위 필드마다 부를 때 씁니다.
          */
-        [[nodiscard]] bool walkProperty( void* pInstance, const TypeInfo& owner, const PropertyInfo& prop )
+        [[nodiscard]] bool walkProperty( const MutableObjectAddress instance, const TypeInfo& owner, const PropertyInfo& prop )
         {
             if ( prop._bIsBitField == SW_TRUE || _filter( owner, prop ) == false )
                 return true;
-            void* pValue = prop.getRawPtr( pInstance );
-            if ( pValue == nullptr )
+            const MutableValueAddress value{ prop.getRawPtr( instance.get() ) };
+            if ( value.get() == nullptr )
                 return true;
             // 이 필드 아래의 잎은 모두 이 필드의 것이다 — 구조체 안으로 내려가면 안쪽 필드가 자기 것으로 바꿨다가 돌아올 때 되돌린다.
             const PropertyInfo* pOuterProperty = _pLeafProperty;
@@ -75,12 +76,12 @@ namespace sw
                 if ( prop._containerWrapper != nullptr )
                 {
                     const NestedContainerInfo shape = prop.getContainerShape();
-                    bWalked                         = walkContainer( pValue, shape );
+                    bWalked                         = walkContainer( value, shape );
                 }
             }
             else
             {
-                bWalked = walkValue( pValue, prop._typeName );
+                bWalked = walkValue( value, prop._typeName );
             }
             _pLeafProperty = pOuterProperty;
             return bWalked;
@@ -89,10 +90,11 @@ namespace sw
         /** @brief 타입 @p type 이 어느 깊이에든 잎을 품을 수 있으면 true 입니다(타입 그래프로 판정하고 기억한다). false 면 내려갈 필요가 없습니다. */
         bool holdsLeaf( const TypeInfo& type ) { return typeHoldsLeaf( type ); }
 
-        /** @brief 컨테이너 @p pContainer (모양 @p shape)의 원소 · 키 · 값을 내려가 잎을 바꿉니다. */
-        [[nodiscard]] bool walkContainer( void* pContainer, const NestedContainerInfo& shape )
+        /** @brief 컨테이너 @p container (컨테이너 값 자체의 주소, 모양 @p shape)의 원소 · 키 · 값을 내려가 잎을 바꿉니다. */
+        [[nodiscard]] bool walkContainer( const MutableValueAddress container, const NestedContainerInfo& shape )
         {
-            const bool bNothingToWalk = pContainer == nullptr || shape._wrapper == nullptr || shapeHoldsLeaf( shape ) == false;
+            void* const pContainer     = container.get();
+            const bool  bNothingToWalk = pContainer == nullptr || shape._wrapper == nullptr || shapeHoldsLeaf( shape ) == false;
             if ( bNothingToWalk )
                 return true;
             ISequenceContainerWrapper* pSequence = shape._wrapper->asSequence();
@@ -106,16 +108,17 @@ namespace sw
 
     private:
         /** @brief 컨테이너가 아닌 값 하나(잎이거나 잎을 품은 구조체)를 바꿉니다. */
-        bool walkValue( void* pValue, const hashed_string& typeName )
+        bool walkValue( const MutableValueAddress value, const hashed_string& typeName )
         {
             if ( typeName == _leafTypeName )
             {
-                TLeaf* pLeaf = static_cast<TLeaf*>( pValue );
+                TLeaf* pLeaf = static_cast<TLeaf*>( value.get() );
                 *pLeaf       = _remap( *pLeaf, *_pLeafProperty );
                 return true;
             }
+            // 구조체 값의 주소는 그 구조체 타입의 객체 주소다.
             const TypeInfo* pStruct = findStruct( typeName );
-            return pStruct == nullptr || walkObject( pValue, *pStruct );
+            return pStruct == nullptr || walkObject( MutableObjectAddress{ value.get() }, *pStruct );
         }
 
         bool walkSequence( void* pContainer, ISequenceContainerWrapper& sequence, const NestedContainerInfo& shape )
@@ -149,11 +152,11 @@ namespace sw
             bool bAllWalked = true;
             for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
             {
-                void* pElement = sequence.getElement( pContainer, elementIndex );
+                const MutableValueAddress element{ sequence.getElement( pContainer, elementIndex ) };
                 if ( shape._elementNested != nullptr )
-                    bAllWalked = walkContainer( pElement, *shape._elementNested ) && bAllWalked;
+                    bAllWalked = walkContainer( element, *shape._elementNested ) && bAllWalked;
                 else
-                    bAllWalked = walkValue( pElement, shape._elementTypeName ) && bAllWalked;
+                    bAllWalked = walkValue( element, shape._elementTypeName ) && bAllWalked;
             }
             return bAllWalked;
         }
@@ -164,10 +167,11 @@ namespace sw
             bool bAllWalked = true;
             map.forEachMutable( pContainer, MapForEachMutableDelegate::create( [this, &shape, &bAllWalked]( const void*, void* pValue )
             {
+                const MutableValueAddress value{ pValue };
                 if ( shape._elementNested != nullptr )
-                    bAllWalked = walkContainer( pValue, *shape._elementNested ) && bAllWalked;
+                    bAllWalked = walkContainer( value, *shape._elementNested ) && bAllWalked;
                 else
-                    bAllWalked = walkValue( pValue, shape._elementTypeName ) && bAllWalked;
+                    bAllWalked = walkValue( value, shape._elementTypeName ) && bAllWalked;
             } ) );
             if ( shape._keyTypeName == _leafTypeName )
                 return reinsertLeafKeys( pContainer, map ) && bAllWalked;
