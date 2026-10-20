@@ -703,9 +703,9 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
             pass._name = "Removed";
             pass._type = pRemovedType;
             desc._listPass.push_back( pass );
-            res.validate( "unit-test" );
-            // 여기서 보는 것은 **이름 해석**뿐이다 — 입력 계약 위반(입력 없는 Tonemap)은 다른 케이스가 본다.
-            return desc._listPass[0]._resolvedType == sw::RenderPassType::Invalid;
+            // 여기서 보는 것은 **이름 해석**뿐이다 — 입력 계약 위반(입력 없는 Tonemap)은 다른 케이스가 본다. 모르는 타입이면 문제가 하나 이상이다.
+            const bool bHasIssues = res.validate( "unit-test" ) > 0u;
+            return bHasIssues && desc._listPass[0]._resolvedType == sw::RenderPassType::Invalid;
         };
         SW_EXPECT_TRUE( removedTypeIsRejected( "Shading" ) );
         SW_EXPECT_TRUE( removedTypeIsRejected( "PostBloom" ) );

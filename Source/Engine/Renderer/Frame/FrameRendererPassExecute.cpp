@@ -916,16 +916,6 @@ namespace sw
         return _pLastSwapchainWriter == nullptr || pPassDesc == nullptr || pPassDesc == _pLastSwapchainWriter;
     }
 
-    RHIFormat FrameRenderer::attachmentFormatOrDefault( string_view attachmentName, RHIFormat fallback ) const
-    {
-        for ( const RenderPassAttachment& attachment : _pipelineResource.getDesc()._listAttachment )
-        {
-            if ( attachment._name == attachmentName )
-                return FrameRendererUtil::parseAttachmentFormat( attachment._format );
-        }
-        return fallback;
-    }
-
     const RenderGraphPassDesc* FrameRenderer::findPassDescByType( RenderPassType passType ) const
     {
         // 표기 흔들림은 로드 시점의 _resolvedType 이 이미 흡수했다. 여기서는 값만 비교하면 된다.

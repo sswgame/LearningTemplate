@@ -60,12 +60,10 @@ namespace sw
             return passCount > kGPUTimedPassCapacity ? static_cast<uint32>( passCount - kGPUTimedPassCapacity ) : 0u;
         }
         static_assert( kGPUTimestampSlotFrameBegin < constant::kMaxGPUTimestampSlot, "타임스탬프 예약 칸이 백엔드 칸 수를 넘는다" );
-        static constexpr auto   kDefaultMainPassName = "DefaultMainPass";
-        static constexpr float4 kBlackClear          = { 0.0f, 0.0f, 0.0f, 1.0f };
-        static constexpr float4 kSceneClear          = { 0.12f, 0.15f, 0.18f, 1.0f };
-        static constexpr float4 kDepthClear          = { 1.0f, 0.0f, 0.0f, 0.0f };
-        static constexpr float4 kBloomClear          = { 0.0f, 0.0f, 0.0f, 1.0f };
-        static constexpr float4 kNormalClear         = { 0.5f, 0.5f, 1.0f, 1.0f };
+        static constexpr auto kDefaultMainPassName = "DefaultMainPass";
+        // 첨부의 클리어 색은 파이프라인 XML 의 선언이 정본이다 — 이름으로 짐작해 첨부를 만들 때 쓰던 색(SceneColor · 깊이 · 블룸)은 지웠다.
+        static constexpr float4 kBlackClear  = { 0.0f, 0.0f, 0.0f, 1.0f };
+        static constexpr float4 kNormalClear = { 0.5f, 0.5f, 1.0f, 1.0f };
 
         /**
          * @brief 뷰의 내부 해상도 한 축(픽셀)을 냅니다. 정수 업스케일(`RenderViewSettings::_upscaleZoom`)이면 출력 사각형 픽셀 / 배율의 내림이고, 아니면

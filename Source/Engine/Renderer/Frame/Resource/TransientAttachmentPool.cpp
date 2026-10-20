@@ -56,7 +56,7 @@ namespace sw
             return false;
         }
         const RHIDescriptorIndex srv = pDevice->getResourceFactory()->registerBindlessTexture( handle );
-        _mapAttachment.emplace( name, Attachment{ handle, srv, desc._width, desc._height } );
+        _mapAttachment.emplace( name, Attachment{ handle, srv, desc._width, desc._height, format, clearColor } );
         return true;
     }
 

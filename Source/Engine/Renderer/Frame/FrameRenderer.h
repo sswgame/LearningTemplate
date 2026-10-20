@@ -423,12 +423,6 @@ namespace sw
         /** @brief 컴퓨트 상수 버퍼 테이블을 채웁니다. 새 컴퓨트 상수 버퍼는 여기에 한 줄만 추가하면 됩니다. 생성과 해제를 따로 적지 않습니다. */
         void collectComputeConstantBuffers( ComputeConstantBufferRow ( &outArrRow )[_s_kComputeConstantBufferCount] );
         /**
-         * @brief 파이프라인 XML 에 선언된 첨부의 포맷을 반환합니다. 선언이 없으면 fallback 을 반환합니다.
-         * @details 첨부와 같은 크기와 포맷이어야 하는 보조 텍스처(TAA 히스토리 등)를 만들 때 쓴다.
-         *          포맷을 상수로 박아 두면 파이프라인이 HDR 첨부를 쓰는 순간 어긋난다.
-         */
-        RHIFormat attachmentFormatOrDefault( string_view attachmentName, RHIFormat fallback ) const;
-        /**
          * @brief 이 첨부를 이번 프레임에 처음 건드리는 것이면 표시하고 true 를 반환합니다.
          * @details 반환값은 곧 "Clear 로 열어도 되는가" 다. 같은 레벨의 패스들이 동시에 부르므로
          *          조회와 표시가 한 임계 구역 안에 있어야 한다. 나누면 두 패스가 같은 첨부를 둘 다
