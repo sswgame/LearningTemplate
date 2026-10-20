@@ -8,7 +8,7 @@
 |---|---|
 | 파일 | `Config/Engine/EngineConfig.json` |
 | 층 | 엔진 기본값 |
-| 읽는 곳 | `ConfigManager::ensureConfig<EngineConfig>` (`Engine` Config 단계) |
+| 읽는 곳 | `ConfigManager::loadHostConfig<EngineConfig>` (`Engine` Config 단계) |
 | 언제 | 기동 · 에디터 핫 리로드(창 크기 · 백엔드처럼 기동 때만 쓰는 값은 다음 실행부터) |
 | 배포본 | configure 때 exe 에 구워 넣음(`ShippingHostDefaults.h`) — 디스크의 파일은 읽지 않는다 |
 | 커밋 | 한다 |

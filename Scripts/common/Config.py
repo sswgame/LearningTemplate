@@ -74,15 +74,15 @@ def mergeJsonDictInternal(base: dict[str, Any], override: dict[str, Any]) -> dic
     return merged
 
 
-def loadToolchainConfig() -> dict[str, Any]:
+def loadToolchainConfig() -> dict[str, Any] | None:
     """
     개발 환경 툴체인 경로 캐시 파일(Config/Environment/toolchain_config.json)을 읽어 반환합니다.
 
-    이 파일은 SetupEnvironment 가 채우는 **캐시**라 처음 실행에는 없다 — 없으면 빈 캐시다. 깨졌으면 멈춘다.
+    이 파일은 SetupEnvironment 가 채우는 **캐시**라 처음 실행에는 없다 — 없으면 None 이다. 빈 사전으로 바꾸지 않는다:
+    호출부의 `.get(키, 기본값)` 이 "캐시 없음" 을 조용히 삼키지 못하게 호출부가 None 을 직접 다룬다. 깨졌으면 멈춘다.
     """
     configFile = getProjectRoot() / kDirConfigEnv / kFileToolchainConfig
-    cached = readOptionalConfig(configFile, kFileToolchainConfig)
-    return {} if cached is None else cached
+    return readOptionalConfig(configFile, kFileToolchainConfig)
 
 
 def updateToolchainConfig(key: str, value: Any) -> None:
@@ -93,7 +93,8 @@ def updateToolchainConfig(key: str, value: Any) -> None:
     configDir = getProjectRoot() / kDirConfigEnv
     configFile = configDir / kFileToolchainConfig
     configDir.mkdir(parents=True, exist_ok=True)
-    configData = loadToolchainConfig()
+    cached = loadToolchainConfig()
+    configData = {} if cached is None else cached  # 처음 기록이면 새 캐시를 만든다
     normalizedValue = normalizePath(str(value)) if isinstance(value, (str, Path)) else value
     if configData.get(key) == normalizedValue:
         return
@@ -158,7 +159,9 @@ def loadSearchPaths() -> dict[str, Any]:
             sys.stderr.write(f"[Config] {kFileSearchPaths} 를 만들지 못했습니다(defaults 만 씁니다): {exception}\n")
 
     local = readOptionalConfig(jsonPath, kFileSearchPaths)
-    return expandSelfReferencesInternal(mergeJsonDictInternal(defaults, {} if local is None else local))
+    if local is None:
+        return expandSelfReferencesInternal(defaults)  # 오버라이드는 선택이다 — 없으면 defaults 만 쓴다
+    return expandSelfReferencesInternal(mergeJsonDictInternal(defaults, local))
 
 
 def recordEnginePath(key: str, path: str | Path) -> str:

@@ -78,7 +78,7 @@ kListConfigFile: tuple[ConfigFileEntry, ...] = (
     # --- 엔진 기본값 ---------------------------------------------------------------------------------------------------------
     ConfigFileEntry(
         page="EngineConfig", pathPattern=kFileRuntimeEngineConfig, layer=kLayerEngineDefault, fileFormat="json",
-        reader="`ConfigManager::ensureConfig<EngineConfig>` (`Engine` Config 단계)",
+        reader="`ConfigManager::loadHostConfig<EngineConfig>` (`Engine` Config 단계)",
         readWhen="기동 · 에디터 핫 리로드(창 크기 · 백엔드처럼 기동 때만 쓰는 값은 다음 실행부터)",
         shipping="configure 때 exe 에 구워 넣음(`ShippingHostDefaults.h`) — 디스크의 파일은 읽지 않는다", bCommitted=True,
         typeName="EngineConfig", header="Source/Engine/Config/EngineConfig.h", keyStyle=kKeyStyleJsonMember, bBaseLayer=True,
@@ -144,7 +144,7 @@ kListConfigFile: tuple[ConfigFileEntry, ...] = (
     # --- 게임 프리셋 --------------------------------------------------------------------------------------------------------
     ConfigFileEntry(
         page="GameConfig", pathPattern="Config/Game/*.json", layer=kLayerGamePreset, fileFormat="json",
-        reader="`ConfigManager::ensureConfig<GameConfig>` (`Engine` Config 단계)",
+        reader="`ConfigManager::loadHostConfig<GameConfig>` (`Engine` Config 단계)",
         readWhen="기동 · 에디터 핫 리로드 — Dev 는 `-game=<이름>`(없으면 빌드의 활성 게임 `SW_ACTIVE_GAME`)이 파일 하나를 고른다(`GameSelection`)",
         shipping="configure 때 exe 에 구워 넣음(`ShippingGameDefaults.h`)", bCommitted=True,
         typeName="GameConfig", header="Source/Engine/Config/GameConfig.h", keyStyle=kKeyStyleJsonMember,
@@ -155,7 +155,13 @@ kListConfigFile: tuple[ConfigFileEntry, ...] = (
         reader="`GameSettings::loadFromResource` (`GameInstanceBase::initialize`)", readWhen="게임 인스턴스 초기화 · 게임 모듈 핫 리로드",
         shipping="게임 팩에 실림", bCommitted=True,
         typeName="GameSettings", header="Source/GameFramework/Base/Foundation/Data/GameSettings.h", keyStyle=kKeyStyleXmlElementBare,
-        note="시작 씬(`startMap` · `titleScene`)은 이 파일 하나다 — 모르는 원소는 로드 오류, 커스텀 값은 `<custom><prop key>`"),
+        note="시작 씬(`startMap` · `titleScene`)은 이 파일 하나다 — 모르는 원소는 로드 오류, 커스텀 값은 `<custom><prop key>`. `<Engine>` 요소는 아래 `PackEngineSettings` 가 읽는다"),
+    ConfigFileEntry(
+        page="PackEngineSettings", pathPattern="Resource/game/*/data/gamesettings.xml", layer=kLayerPackData, fileFormat="xml",
+        reader="`PackEngineSettings::loadFromPack` (`PackEngineSettingsSubsystem`, 팩을 마운트한 뒤)", readWhen="기동",
+        shipping="게임 팩에 실림", bCommitted=True,
+        typeName="PackEngineSettings", header="Source/Engine/Config/PackEngineSettings.h", keyStyle=kKeyStyleXmlMember,
+        note="`gamesettings.xml` 의 `<Engine>` 요소 하나(XML 속성 키) — 창 제목 · 렌더 파이프라인 · 사용자 설정과 텔레메트리 스키마 · UI 규칙. `GameSettings` 는 이 요소를 건너뛴다"),
     ConfigFileEntry(
         page="", pathPattern="Resource/game/*/data/render2d.xml", layer=kLayerPackData, fileFormat="xml",
         reader="`Render2DSettings::getActive`", readWhen="처음 쓸 때 · `reloadActive`", shipping="게임 팩에 실림", bCommitted=True,

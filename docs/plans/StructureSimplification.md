@@ -59,7 +59,7 @@
 
 | 단위 | 내용 | 건드릴 폴더 | 선행 | 검증 | 측정 |
 |---|---|---|---|---|---|
-| HC4 | 후속 정리입니다. `GenerateShippingHostDefaults.py` 의 게임 JSON 을 팩 루트만 생성하게 하고, `CheckGamePresets.py` 가 보던 스키마 · 텔레메트리 경로 검사를 팩 설정 쪽 검사로 옮깁니다. 설정 문서와 `Config/README.md` 의 폴백 문장을 고칩니다. `ConfigCatalog.py` 의 `GameSettings` 항목 옆에 `PackEngineSettings`(같은 파일의 `<Engine>` 요소, XML 속성 키)를 더하고 `GameConfig` 항목의 읽는 곳 문구(`ensureConfig`)를 `loadHostConfig` 로 고칩니다(HC3 은 생성 문서만 다시 만들었다) | `Scripts/generate/`, `Scripts/lint/gate/`, `Scripts/common/ConfigCatalog.py`, `docs/07_Configuration.md`, `Config/README.md`, `docs/Config/`(생성물) | HC3 | `-L lint`, 생성 문서 점검, Shipping 구성 컴파일 | 없음 |
+| HC4 | **일부 끝(`wt/hc4`): `ConfigCatalog.py` 에 `PackEngineSettings` 항목과 `loadHostConfig` 문구, `Config/README.md` 의 폴백 · `ensureConfig` 문장, 생성 문서, `Config.py` 의 `loadToolchainConfig` 가 `{}` 대신 `None`(W5 중 이 함수).** 남은 것: 아래 중 `GenerateShippingHostDefaults.py` · `CheckGamePresets.py` 와 Shipping 구성 컴파일. 후속 정리입니다. `GenerateShippingHostDefaults.py` 의 게임 JSON 을 팩 루트만 생성하게 하고, `CheckGamePresets.py` 가 보던 스키마 · 텔레메트리 경로 검사를 팩 설정 쪽 검사로 옮깁니다. 설정 문서와 `Config/README.md` 의 폴백 문장을 고칩니다. `ConfigCatalog.py` 의 `GameSettings` 항목 옆에 `PackEngineSettings`(같은 파일의 `<Engine>` 요소, XML 속성 키)를 더하고 `GameConfig` 항목의 읽는 곳 문구(`ensureConfig`)를 `loadHostConfig` 로 고칩니다(HC3 은 생성 문서만 다시 만들었다) | `Scripts/generate/`, `Scripts/lint/gate/`, `Scripts/common/ConfigCatalog.py`, `docs/07_Configuration.md`, `Config/README.md`, `docs/Config/`(생성물) | HC3 | `-L lint`, 생성 문서 점검, Shipping 구성 컴파일 | 없음 |
 
 단위가 끝날 때 고칠 문서: `docs/07_Configuration.md` 32-33 · 42 행(프리셋 경계), `Config/README.md`("기본값을 쓰는 것은 파일이 없을 때뿐" 문단), `GameConfig.h` 머리 주석, 결정 기록 5-4 의 해당 항목.
 

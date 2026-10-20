@@ -1199,6 +1199,111 @@
    "enums": []
   },
   {
+   "page": "PackEngineSettings",
+   "path": "Resource/game/*/data/gamesettings.xml",
+   "layer": "팩 데이터",
+   "type": "PackEngineSettings",
+   "types": [
+    {
+     "name": "PackEngineSettings",
+     "source": "Source/Engine/Config/PackEngineSettings.h",
+     "fields": [
+      {
+       "name": "_windowTitle",
+       "type": "string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "주 창 제목(언리얼 ProjectName · 유니티 productName 자리). 창은 이 설정을 읽은 뒤에 만들어진다(`RHISubsystem`)"
+      },
+      {
+       "name": "_renderPipeline",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "이 게임이 그리는 렌더 파이프라인 XML(예: `engine/pipeline/forward2dpipeline.xml`)입니다. 없으면 엔진 기본(포워드)입니다. 명령줄(`-gv_renderPipeline` · `-gv_deferred`)이 이보다 우선합니다(`FrameRendererUtil::computePipelinePath`)."
+      },
+      {
+       "name": "_userSettingsSchema",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "엔진 스키마에 덧붙이는 게임의 사용자 설정 스키마입니다. 없으면 덧붙이지 않습니다"
+      },
+      {
+       "name": "_telemetrySchema",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "엔진 스키마에 덧붙이는 게임의 텔레메트리 사건 스키마입니다. 없으면 덧붙이지 않습니다"
+      },
+      {
+       "name": "_uiScaleSettings",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "런타임 UI 배율 규칙입니다. 없으면 엔진 기본(`EngineDefaultAssets::_uiScaleSettings`)입니다"
+      },
+      {
+       "name": "_uiThemes",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "런타임 UI 테마 목록입니다. 없으면 엔진 기본(`EngineDefaultAssets::_uiThemes`)입니다"
+      },
+      {
+       "name": "_uiOptionsMenu",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "옵션 메뉴 문서입니다. 없으면 엔진 기본(`EngineDefaultAssets::_uiOptionsMenu`)입니다"
+      },
+      {
+       "name": "_uiPauseMenu",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "일시정지 메뉴 문서입니다. 없으면 엔진 기본(`EngineDefaultAssets::_uiPauseMenu`)이고, `_bUIPauseMenu` 가 켜졌을 때만 씁니다"
+      },
+      {
+       "name": "_bUIPauseMenu",
+       "type": "bool",
+       "default": "false",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "화면이 없을 때 Esc · 패드 Start(`UI.Pause`)로 일시정지 메뉴를 연다. 게임 흐름(타이틀 · 경영 화면)이 Esc 를 따로 쓰면 끈다."
+      },
+      {
+       "name": "_mapUserSettingDefault",
+       "type": "map<string, string>",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "게임마다 다른 사용자 설정 기본값입니다(설정 id → 값). 엔진 스키마의 기본값을 덮어씁니다. 플레이어가 바꾸지 않은 값만 따라갑니다. 모르는 id · 받을 수 없는 값은 기동 오류로 알립니다(`UserSettingsManager::setGameDefault`)."
+      }
+     ]
+    }
+   ],
+   "enums": []
+  },
+  {
    "page": "FacialRig",
    "path": "Resource/game/*/models/*.facial.json",
    "layer": "팩 데이터",

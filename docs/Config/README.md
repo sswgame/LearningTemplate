@@ -16,7 +16,7 @@
 
 | 파일 | 읽는 곳과 시점 | 배포본 | 커밋 | 문서 |
 |---|---|---|---|---|
-| `Config/Engine/EngineConfig.json` | `ConfigManager::ensureConfig<EngineConfig>` (`Engine` Config 단계) — 기동 · 에디터 핫 리로드(창 크기 · 백엔드처럼 기동 때만 쓰는 값은 다음 실행부터). 바탕 층 — 모든 키를 적는다(헤더는 형식만, `_window._defaultRHI` 는 쿠킹 표가 정본) | configure 때 exe 에 구워 넣음(`ShippingHostDefaults.h`) — 디스크의 파일은 읽지 않는다 | 한다 | [EngineConfig](EngineConfig.md) |
+| `Config/Engine/EngineConfig.json` | `ConfigManager::loadHostConfig<EngineConfig>` (`Engine` Config 단계) — 기동 · 에디터 핫 리로드(창 크기 · 백엔드처럼 기동 때만 쓰는 값은 다음 실행부터). 바탕 층 — 모든 키를 적는다(헤더는 형식만, `_window._defaultRHI` 는 쿠킹 표가 정본) | configure 때 exe 에 구워 넣음(`ShippingHostDefaults.h`) — 디스크의 파일은 읽지 않는다 | 한다 | [EngineConfig](EngineConfig.md) |
 | `Config/Engine/MemoryBudget.json` | `MemoryBudgetMonitor::loadBudgetFile` (`Engine` Config 단계) — 기동 | 읽지 않음(배포본에는 메모리 프로파일러가 없다) | 한다 | [MemoryBudget](MemoryBudget.md) |
 | `Resource/engine/data/enginedefaultassets.xml` | `EngineDefaultAssets::loadFromResource` (`Engine` 엔진 셸 단계) — 기동 | 엔진 팩에 실림 | 한다 | [EngineDefaultAssets](EngineDefaultAssets.md) |
 | `Resource/engine/physics/physicssettings.xml` | `PhysicsSettings::loadFromResource` (`PhysicsSystem`) — 기동(씬 물리를 처음 세울 때) | 엔진 팩에 실림 | 한다 | [PhysicsSettings](PhysicsSettings.md) |
@@ -34,13 +34,14 @@
 
 | 파일 | 읽는 곳과 시점 | 배포본 | 커밋 | 문서 |
 |---|---|---|---|---|
-| `Config/Game/*.json` | `ConfigManager::ensureConfig<GameConfig>` (`Engine` Config 단계) — 기동 · 에디터 핫 리로드 — Dev 는 `-game=<이름>`(없으면 빌드의 활성 게임 `SW_ACTIVE_GAME`)이 파일 하나를 고른다(`GameSelection`). 게임마다 하나 — `CheckGamePresets` 가 팩 · CMake 프리셋과 대조한다 | configure 때 exe 에 구워 넣음(`ShippingGameDefaults.h`) | 한다 | [GameConfig](GameConfig.md) |
+| `Config/Game/*.json` | `ConfigManager::loadHostConfig<GameConfig>` (`Engine` Config 단계) — 기동 · 에디터 핫 리로드 — Dev 는 `-game=<이름>`(없으면 빌드의 활성 게임 `SW_ACTIVE_GAME`)이 파일 하나를 고른다(`GameSelection`). 게임마다 하나 — `CheckGamePresets` 가 팩 · CMake 프리셋과 대조한다 | configure 때 exe 에 구워 넣음(`ShippingGameDefaults.h`) | 한다 | [GameConfig](GameConfig.md) |
 
 ## 팩 데이터
 
 | 파일 | 읽는 곳과 시점 | 배포본 | 커밋 | 문서 |
 |---|---|---|---|---|
-| `Resource/game/*/data/gamesettings.xml` | `GameSettings::loadFromResource` (`GameInstanceBase::initialize`) — 게임 인스턴스 초기화 · 게임 모듈 핫 리로드. 시작 씬(`startMap` · `titleScene`)은 이 파일 하나다 — 모르는 원소는 로드 오류, 커스텀 값은 `<custom><prop key>` | 게임 팩에 실림 | 한다 | [GameSettings](GameSettings.md) |
+| `Resource/game/*/data/gamesettings.xml` | `GameSettings::loadFromResource` (`GameInstanceBase::initialize`) — 게임 인스턴스 초기화 · 게임 모듈 핫 리로드. 시작 씬(`startMap` · `titleScene`)은 이 파일 하나다 — 모르는 원소는 로드 오류, 커스텀 값은 `<custom><prop key>`. `<Engine>` 요소는 아래 `PackEngineSettings` 가 읽는다 | 게임 팩에 실림 | 한다 | [GameSettings](GameSettings.md) |
+| `Resource/game/*/data/gamesettings.xml` | `PackEngineSettings::loadFromPack` (`PackEngineSettingsSubsystem`, 팩을 마운트한 뒤) — 기동. `gamesettings.xml` 의 `<Engine>` 요소 하나(XML 속성 키) — 창 제목 · 렌더 파이프라인 · 사용자 설정과 텔레메트리 스키마 · UI 규칙. `GameSettings` 는 이 요소를 건너뛴다 | 게임 팩에 실림 | 한다 | [PackEngineSettings](PackEngineSettings.md) |
 | `Resource/game/*/data/render2d.xml` | `Render2DSettings::getActive` — 처음 쓸 때 · `reloadActive`. 엔진 기본 `render2d.xml` 을 통째로 대신한다 | 게임 팩에 실림 | 한다 | [형식 설명](../../Source/Engine/Graphics/2D/Render2DSettings.h) |
 | `Resource/game/*/data/*.settings.xml` | `UserSettingsManager::loadSchema` (게임 프리셋 `_userSettingsSchema`) — 기동. 엔진 스키마에 덧붙는 게임 설정 | 게임 팩에 실림 | 한다 | [UserSettings](UserSettings.md) |
 | `Resource/game/*/data/*.input.xml` | `InputMap::loadFromResource` (`GameSettings::_inputMap`) — 게임 인스턴스 초기화 | 게임 팩에 실림 | 한다 |  |

@@ -12,7 +12,7 @@
 | 언제 | 게임 인스턴스 초기화 · 게임 모듈 핫 리로드 |
 | 배포본 | 게임 팩에 실림 |
 | 커밋 | 한다 |
-| 참고 | 시작 씬(`startMap` · `titleScene`)은 이 파일 하나다 — 모르는 원소는 로드 오류, 커스텀 값은 `<custom><prop key>` |
+| 참고 | 시작 씬(`startMap` · `titleScene`)은 이 파일 하나다 — 모르는 원소는 로드 오류, 커스텀 값은 `<custom><prop key>`. `<Engine>` 요소는 아래 `PackEngineSettings` 가 읽는다 |
 
 XML 자식 요소 이름은 아래 필드 이름에서 앞의 `_` 를 뗀 것입니다(`_startMap` → `<startMap>`). 모르는 요소는 로드 오류입니다.
 
