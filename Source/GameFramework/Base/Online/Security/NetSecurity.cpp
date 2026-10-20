@@ -22,16 +22,6 @@ namespace sw
             static constexpr int32 kDevCertificateValidDays = 825; ///< 브라우저 상한과 같은 값 — 개발 PC 에서 2 년 남짓 쓰고 지워 다시 만든다
 #endif
 
-            /** @brief 상대 경로를 프로젝트 루트 기준으로 펼칩니다(서버 설정과 같은 기준). 루트를 모르면(테스트) 그대로. */
-            static string makeProjectPath( string_view path )
-            {
-                const string& projectFolder = ResourcePaths::getProjectFolderPath();
-                const bool    bKeepPathAsIs = path.empty() || projectFolder.empty() || FileUtil::isAbsolutePath( path );
-                if ( bKeepPathAsIs )
-                    return string( path );
-                return FileUtil::joinPath( projectFolder, path );
-            }
-
             [[nodiscard]] static bool readPem( const string& fileName, string& outText, string& outError )
             {
                 if ( FileUtil::readTextFile( fileName, outText ) )
@@ -45,6 +35,15 @@ namespace sw
 
 namespace sw
 {
+    string NetSecurity::makeProjectPath( string_view path )
+    {
+        const string& projectFolder = ResourcePaths::getProjectFolderPath();
+        const bool    bKeepPathAsIs = path.empty() || projectFolder.empty() || FileUtil::isAbsolutePath( path );
+        if ( bKeepPathAsIs )
+            return string( path );
+        return FileUtil::joinPath( projectFolder, path );
+    }
+
     INetSecurityProvider& NetSecurity::getProvider()
     {
         static OpenSSLNetSecurityProvider s_provider; // GameFramework 안 — 게임 · 키트 모듈 리로드에 살아남는다
@@ -85,8 +84,8 @@ namespace sw
                                                                  string& outError )
     {
         using Internal         = NetSecurityInternal;
-        string certificatePath = Internal::makeProjectPath( certificateFile );
-        string privateKeyPath  = Internal::makeProjectPath( privateKeyFile );
+        string certificatePath = makeProjectPath( certificateFile );
+        string privateKeyPath  = makeProjectPath( privateKeyFile );
         if ( certificatePath.empty() != privateKeyPath.empty() )
         {
             outError = "the TLS certificate and private key files must be configured together";
@@ -111,7 +110,7 @@ namespace sw
         TLSContextConfig settings;
         settings._role       = TLSRole::Client;
         settings._serverName = string( serverName );
-        string trustPath     = Internal::makeProjectPath( trustFile );
+        string trustPath     = makeProjectPath( trustFile );
         if ( trustPath.empty() )
         {
             string privateKeyPath;

@@ -31,6 +31,16 @@ namespace sw
         struct ModuleHostInternal
         {
             static constexpr ModuleAPISymbols kGameSymbols{ "getGameModuleAbiVersion", "getGameModuleAbiStamp", "exportGameAPI", "Game" };
+
+            /** @brief `StateBufferSink::allocate` — @p pContext 의 바이트 벡터를 @p size 로 맞춰 그 메모리를 돌려준다. */
+            static void* allocateStateBuffer( void* pContext, uint32 size )
+            {
+                vector<uint8>* pBytes = static_cast<vector<uint8>*>( pContext );
+                if ( pBytes == nullptr || size == 0 )
+                    return nullptr;
+                pBytes->resize( size );
+                return pBytes->data();
+            }
         };
     } // namespace
 } // namespace sw
@@ -463,16 +473,14 @@ namespace sw
         if ( _game == nullptr || _gameAPI.serializeState == nullptr )
             return true;
 
-        uint32 size{ 0 };
-        if ( _gameAPI.serializeState( _game, nullptr, &size ) == false )
+        // 모듈이 직렬화를 한 번 돌리고 크기가 정해진 뒤 싱크로 버퍼를 받는다. 실패하면 이전 저장본을 그대로 둔다.
+        vector<uint8>         bytes;
+        const StateBufferSink sink{ &bytes, &ModuleHostInternal::allocateStateBuffer };
+        if ( _gameAPI.serializeState( _game, &sink ) == false )
             return false;
-        if ( size == 0 )
+        if ( bytes.empty() )
             return true;
-
-        vector<uint8> tempState( size );
-        if ( _gameAPI.serializeState( _game, tempState.data(), &size ) == false )
-            return false;
-        _listGameSavedState = std::move( tempState );
+        _listGameSavedState = std::move( bytes );
         return true;
     }
 
