@@ -55,6 +55,57 @@ namespace sw
                 }
                 return false;
             }
+
+            /** @brief 밀도 × 면적의 후보 수입니다. 영역이 비었거나 밀도가 0 이면 0 이고, 상한을 넘으면 잘라 @p outClamped 를 켭니다. */
+            static uint32 computeCandidateCount( const PlacementRule& rule, const PlacementRegion& region, bool& outClamped )
+            {
+                outClamped         = false;
+                const float32 area = ( region._max._x - region._min._x ) * ( region._max._y - region._min._y );
+                if ( area <= 0.0f || rule._density <= 0.0f )
+                    return 0;
+                const float64 wantedCount = static_cast<float64>( rule._density ) * static_cast<float64>( area );
+                if ( wantedCount < static_cast<float64>( PlacementScatter::kMaxCandidateCount ) )
+                    return static_cast<uint32>( MathUtil::ceil( wantedCount ) );
+                outClamped = true;
+                return PlacementScatter::kMaxCandidateCount;
+            }
+
+            /** @brief 후보 @p candidateIndex 의 평면 위치입니다. 판정과 최소 거리가 같은 식으로 다시 구한다. */
+            static float2 computeCandidatePosition( const PlacementRule& rule, const PlacementRegion& region, uint32 candidateIndex )
+            {
+                const float2 size{ region._max._x - region._min._x, region._max._y - region._min._y };
+                return float2{ region._min._x + PlacementScatter::toUnit( PlacementScatter::hashCandidate( rule._seed, candidateIndex, kLaneU ) ) * size._x,
+                               region._min._y + PlacementScatter::toUnit( PlacementScatter::hashCandidate( rule._seed, candidateIndex, kLaneV ) ) * size._y };
+            }
+
+            /** @brief 후보 하나를 최소 거리 앞까지 판정합니다. 통과하지 못하면 `_bPassed` 만 끈다. */
+            static void evaluateCandidate( const PlacementRule& rule, const IPlacementSurface* pSurface, const vector<PlacementExclusion>& listExclusion,
+                                           const float2& position, uint32 candidateIndex, PlacementCandidate& outCandidate )
+            {
+                outCandidate = PlacementCandidate{};
+                if ( PlacementScatter::isExcluded( listExclusion, position ) )
+                    return;
+
+                PlacementSurfaceSample sample;
+                if ( pSurface != nullptr && ( pSurface->sampleSurface( position, sample ) == false || sample._bValid == SW_FALSE ) )
+                    return;
+
+                const float32 slope = PlacementScatter::computeSlope( sample._normal );
+                if ( slope < rule._slopeMin || rule._slopeMax < slope )
+                    return;
+                if ( sample._height < rule._heightMin || rule._heightMax < sample._height )
+                    return;
+                const float32 arrWeight[4] = { sample._layerWeight._x, sample._layerWeight._y, sample._layerWeight._z, sample._layerWeight._w };
+                const bool    bLayerFilter = 0 <= rule._layerIndex && rule._layerIndex < 4;
+                if ( bLayerFilter && arrWeight[rule._layerIndex] < rule._layerMinWeight )
+                    return;
+                const bool bDensityLayer = 0 <= rule._densityLayerIndex && rule._densityLayerIndex < 4;
+                if ( bDensityLayer && PlacementScatter::toUnit( PlacementScatter::hashCandidate( rule._seed, candidateIndex, kLaneDensity ) ) >= arrWeight[rule._densityLayerIndex] )
+                    return;
+                outCandidate._normal  = sample._normal;
+                outCandidate._height  = sample._height;
+                outCandidate._bPassed = SW_TRUE;
+            }
         };
     } // namespace
 } // namespace sw
@@ -141,19 +192,50 @@ namespace sw
                                     const vector<PlacementExclusion>& listExclusion, const vector<float32>& listEntryWeight,
                                     vector<PlacementInstance>& outListInstance )
     {
+        vector<PlacementCandidate> listCandidate;
+        sampleCandidates( rule, region, pSurface, listExclusion, listCandidate );
+        resolveCandidates( rule, region, listCandidate, listEntryWeight, outListInstance );
+    }
+
+    void PlacementScatter::sampleCandidates( const PlacementRule& rule, const PlacementRegion& region, const IPlacementSurface* pSurface,
+                                             const vector<PlacementExclusion>& listExclusion, vector<PlacementCandidate>& outListCandidate )
+    {
+        using Internal = PlacementRuleInternal;
+        bool         bClamped{ false };
+        const uint32 candidateCount = Internal::computeCandidateCount( rule, region, bClamped );
+        if ( bClamped )
+            SW_LOG_WARNING( "Placement asks for more than %# candidates (density %# over the region) - clamped", kMaxCandidateCount, rule._density );
+        outListCandidate.resize( candidateCount );
+        for ( uint32 candidateIndex = 0; candidateIndex < candidateCount; ++candidateIndex )
+        {
+            const float2 position = Internal::computeCandidatePosition( rule, region, candidateIndex );
+            Internal::evaluateCandidate( rule, pSurface, listExclusion, position, candidateIndex, outListCandidate[candidateIndex] );
+        }
+    }
+
+    bool PlacementScatter::resampleCandidates( const PlacementRule& rule, const PlacementRegion& region, const IPlacementSurface* pSurface,
+                                               const vector<PlacementExclusion>& listExclusion, const PlacementRegion& dirtyArea,
+                                               vector<PlacementCandidate>& inoutListCandidate )
+    {
+        using Internal = PlacementRuleInternal;
+        bool         bClamped{ false };
+        const uint32 candidateCount = Internal::computeCandidateCount( rule, region, bClamped );
+        if ( inoutListCandidate.size() != candidateCount )
+            return false;
+        for ( uint32 candidateIndex = 0; candidateIndex < candidateCount; ++candidateIndex )
+        {
+            const float2 position = Internal::computeCandidatePosition( rule, region, candidateIndex );
+            if ( dirtyArea.contains( position ) )
+                Internal::evaluateCandidate( rule, pSurface, listExclusion, position, candidateIndex, inoutListCandidate[candidateIndex] );
+        }
+        return true;
+    }
+
+    void PlacementScatter::resolveCandidates( const PlacementRule& rule, const PlacementRegion& region, const vector<PlacementCandidate>& listCandidate,
+                                              const vector<float32>& listEntryWeight, vector<PlacementInstance>& outListInstance )
+    {
         using Internal = PlacementRuleInternal;
         outListInstance.clear();
-        const float2  size{ region._max._x - region._min._x, region._max._y - region._min._y };
-        const float32 area = size._x * size._y;
-        if ( area <= 0.0f || rule._density <= 0.0f )
-            return;
-
-        const float64 wantedCount = static_cast<float64>( rule._density ) * static_cast<float64>( area );
-        uint32        candidateCount{ kMaxCandidateCount };
-        if ( wantedCount < static_cast<float64>( kMaxCandidateCount ) )
-            candidateCount = static_cast<uint32>( MathUtil::ceil( wantedCount ) );
-        else
-            SW_LOG_WARNING( "Placement asks for %# candidates - clamped to %#", static_cast<uint64>( wantedCount ), kMaxCandidateCount );
 
         // 최소 거리 격자: 셀 = 최소 거리 / √2 라 셀 하나에 점이 많아야 하나다. 셀 반경 2 를 보면 최소 거리 안의 모든 점을 본다.
         const bool                  bPoisson = rule._minDistance > 0.0f;
@@ -161,31 +243,15 @@ namespace sw
         unordered_map<int64, int32> mapCellToPoint;
         vector<float2>              listPoint;
 
-        const float32 scaleMin = MathUtil::min( rule._scaleMin, rule._scaleMax );
-        const float32 scaleMax = MathUtil::max( rule._scaleMin, rule._scaleMax );
+        const float32 scaleMin       = MathUtil::min( rule._scaleMin, rule._scaleMax );
+        const float32 scaleMax       = MathUtil::max( rule._scaleMin, rule._scaleMax );
+        const uint32  candidateCount = static_cast<uint32>( listCandidate.size() );
         for ( uint32 candidateIndex = 0; candidateIndex < candidateCount; ++candidateIndex )
         {
-            const float2 position{ region._min._x + toUnit( hashCandidate( rule._seed, candidateIndex, Internal::kLaneU ) ) * size._x,
-                                   region._min._y + toUnit( hashCandidate( rule._seed, candidateIndex, Internal::kLaneV ) ) * size._y };
-            if ( isExcluded( listExclusion, position ) )
+            const PlacementCandidate& candidate = listCandidate[candidateIndex];
+            if ( candidate._bPassed == SW_FALSE )
                 continue;
-
-            PlacementSurfaceSample sample;
-            if ( pSurface != nullptr && ( pSurface->sampleSurface( position, sample ) == false || sample._bValid == SW_FALSE ) )
-                continue;
-
-            const float32 slope = computeSlope( sample._normal );
-            if ( slope < rule._slopeMin || rule._slopeMax < slope )
-                continue;
-            if ( sample._height < rule._heightMin || rule._heightMax < sample._height )
-                continue;
-            const float32 arrWeight[4] = { sample._layerWeight._x, sample._layerWeight._y, sample._layerWeight._z, sample._layerWeight._w };
-            const bool    bLayerFilter = 0 <= rule._layerIndex && rule._layerIndex < 4;
-            if ( bLayerFilter && arrWeight[rule._layerIndex] < rule._layerMinWeight )
-                continue;
-            const bool bDensityLayer = 0 <= rule._densityLayerIndex && rule._densityLayerIndex < 4;
-            if ( bDensityLayer && toUnit( hashCandidate( rule._seed, candidateIndex, Internal::kLaneDensity ) ) >= arrWeight[rule._densityLayerIndex] )
-                continue;
+            const float2 position = Internal::computeCandidatePosition( rule, region, candidateIndex );
             if ( bPoisson && Internal::isTooClose( mapCellToPoint, listPoint, position, cellSize, rule._minDistance ) )
                 continue;
 
@@ -203,8 +269,8 @@ namespace sw
 
             PlacementInstance instance;
             instance._planePosition = position;
-            instance._height        = sample._height + rule._heightOffset;
-            instance._normal        = sample._normal;
+            instance._height        = candidate._height + rule._heightOffset;
+            instance._normal        = candidate._normal;
             instance._scale         = scaleMin + toUnit( hashCandidate( rule._seed, candidateIndex, Internal::kLaneScale ) ) * ( scaleMax - scaleMin );
             instance._yaw           = rule._yawMin + toUnit( hashCandidate( rule._seed, candidateIndex, Internal::kLaneYaw ) ) * ( rule._yawMax - rule._yawMin );
             instance._alignToNormal = MathUtil::saturate( rule._alignToNormal );

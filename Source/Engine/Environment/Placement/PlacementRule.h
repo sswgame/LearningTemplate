@@ -147,6 +147,31 @@ namespace sw
     {
         float2 _min{};
         float2 _max{};
+
+        /** @brief 비트까지 같은 사각형이면 true 입니다(후보 위치가 이 값으로 정해지므로 근사 비교를 하지 않는다). */
+        bool matchesExactly( const PlacementRegion& other ) const
+        {
+            return _min._x == other._min._x && _min._y == other._min._y && _max._x == other._max._x && _max._y == other._max._y;
+        }
+        /** @brief 평면 좌표 @p planePosition 이 사각형 안(경계 포함)이면 true 입니다. */
+        bool contains( const float2& planePosition ) const
+        {
+            return _min._x <= planePosition._x && planePosition._x <= _max._x && _min._y <= planePosition._y && planePosition._y <= _max._y;
+        }
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief 후보 하나의 표면 판정(최소 거리 앞까지)입니다. 위치는 (시드, 번호) 해시로 다시 구하므로 담지 않습니다.
+     * @details 표면이 바뀐 곳의 후보만 다시 판정하고(`PlacementScatter::resampleCandidates`) 최소 거리부터는 전부 다시 푸는 데 쓴다.
+     */
+    struct PlacementCandidate
+    {
+        float3  _normal{ 0.0f, 1.0f, 0.0f };
+        float32 _height{ 0.0f };
+        uint8   _bPassed{ SW_FALSE }; ///< 제외 영역 · 표면 · 경사 · 높이 · 레이어 필터 · 밀도 레이어를 모두 통과했다
     };
 } // namespace sw
 
@@ -172,6 +197,26 @@ namespace sw
         static void scatter( const PlacementRule& rule, const PlacementRegion& region, const IPlacementSurface* pSurface,
                              const vector<PlacementExclusion>& listExclusion, const vector<float32>& listEntryWeight,
                              vector<PlacementInstance>& outListInstance );
+
+        /**
+         * @brief `scatter` 의 앞 절반입니다. 후보마다 최소 거리 앞까지의 판정(제외 영역 · 표면 · 경사 · 높이 · 레이어 필터 · 밀도 레이어)과 표면 값을 채웁니다.
+         * @details `sampleCandidates` 뒤 `resolveCandidates` 는 `scatter` 와 비트까지 같은 결과를 낸다. 표면을 고친 뒤에는 `resampleCandidates` 로 바뀐 곳만 다시 판정한다.
+         */
+        static void sampleCandidates( const PlacementRule& rule, const PlacementRegion& region, const IPlacementSurface* pSurface,
+                                      const vector<PlacementExclusion>& listExclusion, vector<PlacementCandidate>& outListCandidate );
+        /**
+         * @brief 위치가 @p dirtyArea 안인 후보만 다시 판정합니다. 표면이 그 사각형 밖에서는 그대로일 때 `sampleCandidates` 를 다시 부른 것과 같습니다.
+         * @return 후보 수가 이 규칙 · 영역의 후보 수와 다르면(다른 규칙이나 영역으로 판정한 목록) 아무것도 바꾸지 않고 false 입니다 — 쓰는 쪽은 `sampleCandidates` 로 처음부터 판정한다.
+         */
+        [[nodiscard]] static bool resampleCandidates( const PlacementRule& rule, const PlacementRegion& region, const IPlacementSurface* pSurface,
+                                                      const vector<PlacementExclusion>& listExclusion, const PlacementRegion& dirtyArea,
+                                                      vector<PlacementCandidate>& inoutListCandidate );
+        /**
+         * @brief `scatter` 의 뒤 절반입니다. 통과한 후보에 최소 거리(번호 순서의 다트 던지기)를 적용하고 항목 · 크기 · 요를 정합니다.
+         * @details 최소 거리는 앞 번호가 이기는 순서 규칙이라 후보 하나의 판정이 바뀌면 그 뒤의 이웃이 연쇄로 바뀔 수 있다. 그래서 이 단계는 늘 전부 다시 푼다.
+         */
+        static void resolveCandidates( const PlacementRule& rule, const PlacementRegion& region, const vector<PlacementCandidate>& listCandidate,
+                                       const vector<float32>& listEntryWeight, vector<PlacementInstance>& outListInstance );
 
         /** @brief 노멀의 경사(위쪽과 이루는 각, 라디안)입니다. */
         static float32 computeSlope( const float3& normal );

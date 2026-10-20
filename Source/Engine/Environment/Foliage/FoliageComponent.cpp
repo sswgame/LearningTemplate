@@ -2,6 +2,7 @@
 
 #include "Engine/Environment/Foliage/FoliageComponent.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
@@ -50,6 +51,30 @@ namespace sw
             {
                 return MeshAssetFormat::isMeshAssetPath( meshID ) ? MeshCache::acquire( meshID ) : MeshUtil::acquirePrimitive( meshID );
             }
+
+            /** @brief 레이어 메시들의 비중(배치의 항목 비중)입니다. */
+            static vector<float32> makeMeshWeights( const FoliageLayer& layer )
+            {
+                vector<float32> listWeight;
+                listWeight.reserve( layer._listMesh.size() );
+                for ( const FoliageMesh& mesh : layer._listMesh )
+                {
+                    listWeight.push_back( mesh._weight );
+                }
+                return listWeight;
+            }
+
+            /** @brief 셀 하나의 인스턴스들(@p listIndex 순서)의 내용 해시입니다. 같으면 셀 배치를 다시 만들지 않는다. */
+            static uint64 computeCellHash( const vector<PlacementInstance>& listInstance, const vector<uint32>& listIndex )
+            {
+                static_assert( sizeof( PlacementInstance ) == sizeof( float32 ) * 9 + sizeof( uint32 ) * 2, "PlacementInstance has padding - hash the fields instead of the bytes" );
+                uint64 hash = HashUtil::kFnvOffset64;
+                for ( const uint32 instanceIndex : listIndex )
+                {
+                    hash = HashUtil::appendBytes64( hash, &listInstance[instanceIndex], sizeof( PlacementInstance ) );
+                }
+                return hash;
+            }
         };
     } // namespace
 } // namespace sw
@@ -63,15 +88,19 @@ namespace sw
         , _cellSize{ 32.0f }
         , _listCell{}
         , _listLayerMaterial{}
+        , _listLayerCandidate{}
+        , _builtRegion{}
         , _pPrimitiveRegistry{ nullptr }
         , _time{ 0.0f }
         , _terrainSettleTime{ 0.0f }
         , _instanceCount{ 0 }
+        , _lastRebuiltBatchCount{ 0 }
         , _builtTerrainGeneration{ 0 }
         , _builtSplatRevision{ 0 }
         , _seenTerrainGeneration{ 0 }
         , _seenSplatRevision{ 0 }
         , _bBuiltOnTerrain{ SW_FALSE }
+        , _bTerrainRefreshPending{ SW_FALSE }
         , _reserved{ 0 }
     {
         setCanEverTick( true );
@@ -93,6 +122,7 @@ namespace sw
     {
         releaseCells();
         _listLayerMaterial.clear();
+        _listLayerCandidate.clear();
         _pPrimitiveRegistry = nullptr;
         SceneComponent::onUnregister( manager );
     }
@@ -175,13 +205,49 @@ namespace sw
         }
         const bool bStale = generation != _builtTerrainGeneration || revision != _builtSplatRevision;
         _terrainSettleTime += deltaTime;
-        if ( bStale == false || _terrainSettleTime < kTerrainSettleSeconds )
+        const bool bReadyToRefresh = bStale && kTerrainSettleSeconds <= _terrainSettleTime && _bTerrainRefreshPending == SW_FALSE;
+        if ( bReadyToRefresh == false )
             return;
-        // 같은 세대로 다시 미루지 않게 지금 표시해 둔다. 다시 만들기는 레지스트리를 바꾸므로 틱 뒤에 한다.
-        _builtTerrainGeneration = generation;
-        _builtSplatRevision     = revision;
+        // 같은 편집으로 다시 걸지 않게 표시해 둔다. 계산한 세대는 다시 계산이 적는다(편집 사각형을 그 세대부터 찾는다). 레지스트리를 바꾸므로 틱 뒤에 한다.
+        _bTerrainRefreshPending = SW_TRUE;
         manager.executeOrDeferPostTickOnComponent( *this, []( FoliageComponent& foliage )
-        { foliage.rebuildFoliage(); } );
+        { foliage.refreshFromTerrainEdits(); } );
+    }
+
+    void FoliageComponent::refreshFromTerrainEdits()
+    {
+        _bTerrainRefreshPending = SW_FALSE;
+        [[maybe_unused]] const Stopwatch stopwatch; // 아래 로그에만 쓴다. Shipping 은 로그가 빠진다.
+        const float3                     origin   = getWorldPosition();
+        GameObject*                      pOwner   = getOwner();
+        const GameObjectManager*         pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        const TerrainComponent*          pTerrain = pManager != nullptr ? TerrainComponent::findTerrainAt( *pManager, origin._x, origin._z ) : nullptr;
+        // 지형을 다시 읽으면 스플랫 세대가 0 으로 돌아간다. 영역이 바뀌면 후보 위치가 모두 바뀐다. 그때는 들고 있는 판정을 쓸 수 없다.
+        const bool bCandidatesUsable = pTerrain != nullptr && _pPrimitiveRegistry != nullptr && _listLayerCandidate.size() == _listLayer.size() &&
+                                       _listLayerMaterial.size() == _listLayer.size() && computeRegion().matchesExactly( _builtRegion ) &&
+                                       pTerrain->getSplatRevision() >= _builtSplatRevision;
+        if ( bCandidatesUsable == false )
+        {
+            rebuildFoliage();
+            return;
+        }
+        PlacementRegion dirtyArea{};
+        const bool      bEdited = pTerrain->findEditedArea( _builtTerrainGeneration, _builtSplatRevision, dirtyArea._min, dirtyArea._max );
+        _builtTerrainGeneration = pTerrain->getHeightfieldGeneration();
+        _builtSplatRevision     = pTerrain->getSplatRevision();
+        _seenTerrainGeneration  = _builtTerrainGeneration;
+        _seenSplatRevision      = _builtSplatRevision;
+        _lastRebuiltBatchCount  = 0;
+        if ( bEdited == false )
+            return;
+        vector<PlacementInstance> listInstance;
+        for ( uint32 layerIndex = 0; layerIndex < _listLayer.size(); ++layerIndex )
+        {
+            computeLayerInstances( layerIndex, pTerrain, &dirtyArea, listInstance );
+            applyLayerInstances( layerIndex, listInstance );
+        }
+        SW_LOG_INFO( "Foliage: refreshed %# of %# cell batches after a terrain edit (%# instances, %# us)", _lastRebuiltBatchCount, static_cast<uint32>( _listCell.size() ),
+                     _instanceCount, stopwatch.getElapsedMicroseconds() );
     }
 
     PlacementRegion FoliageComponent::computeRegion() const
@@ -217,12 +283,7 @@ namespace sw
         const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         const TerrainComponent*  pTerrain = pManager != nullptr ? TerrainComponent::findTerrainAt( *pManager, origin._x, origin._z ) : nullptr;
 
-        vector<float32> listWeight;
-        listWeight.reserve( layer._listMesh.size() );
-        for ( const FoliageMesh& mesh : layer._listMesh )
-        {
-            listWeight.push_back( mesh._weight );
-        }
+        const vector<float32> listWeight = FoliageComponentInternal::makeMeshWeights( layer );
         if ( pTerrain != nullptr )
         {
             const TerrainPlacementSurface surface( pTerrain->getHeightfield() );
@@ -246,8 +307,9 @@ namespace sw
 
     void FoliageComponent::rebuildFoliage()
     {
-        using Internal = FoliageComponentInternal;
         releaseCells();
+        _listLayerCandidate.clear();
+        _lastRebuiltBatchCount = 0;
         if ( _pPrimitiveRegistry == nullptr )
             return;
         [[maybe_unused]] const Stopwatch stopwatch; // 아래 로그에만 쓴다. Shipping 은 로그가 빠진다.
@@ -260,11 +322,13 @@ namespace sw
         _builtSplatRevision                       = pTerrain != nullptr ? pTerrain->getSplatRevision() : 0u;
         _seenTerrainGeneration                    = _builtTerrainGeneration;
         _seenSplatRevision                        = _builtSplatRevision;
+        _builtRegion                              = computeRegion();
+        if ( pTerrain != nullptr )
+            _listLayerCandidate.resize( _listLayer.size() );
 
         // 레이어 머티리얼은 레이어마다 자기 인스턴스를 가진다(바람 반응과 페이드가 레이어 값이다).
         _listLayerMaterial.clear();
         _listLayerMaterial.reserve( _listLayer.size() );
-        const float32             cellSize = MathUtil::max( _cellSize, 4.0f );
         vector<PlacementInstance> listInstance;
         for ( uint32 layerIndex = 0; layerIndex < _listLayer.size(); ++layerIndex )
         {
@@ -274,77 +338,147 @@ namespace sw
             (void)material.acquire( layer._materialPath ); // 못 잡으면 씬 기본 머티리얼(경고는 안에서)
             material.setVector( hashed_string( "tint" ), layer._tint );
 
-            if ( computeLayerPlacements( layerIndex, listInstance ) == false || listInstance.empty() )
-                continue;
-
-            // 메시마다 셀마다 묶는다. 키는 메시 번호 × 2^32 + 셀 (x, z) 해시다.
-            vector<shared_ptr<Mesh>> listMesh;
-            vector<float32>          listMeshRadius;
-            for ( const FoliageMesh& foliageMesh : layer._listMesh )
-            {
-                shared_ptr<Mesh> mesh = Internal::acquireMesh( foliageMesh._meshID );
-                if ( mesh == nullptr )
-                    SW_LOG_WARNING( "Foliage layer '%#': mesh '%#' could not be acquired - its instances are skipped", layer._name.c_str(), foliageMesh._meshID.c_str() );
-                listMeshRadius.push_back( mesh != nullptr ? Internal::computeOriginRadius( *mesh ) : 0.0f );
-                listMesh.push_back( std::move( mesh ) );
-            }
-            unordered_map<uint64, vector<uint32>> mapCellToInstance;
-            for ( uint32 instanceIndex = 0; instanceIndex < listInstance.size(); ++instanceIndex )
-            {
-                const PlacementInstance& instance            = listInstance[instanceIndex];
-                const bool               bMissingFoliageMesh = instance._entryIndex < 0 || static_cast<size_t>( instance._entryIndex ) >= listMesh.size() || listMesh[static_cast<size_t>( instance._entryIndex )] == nullptr;
-                if ( bMissingFoliageMesh )
-                    continue;
-                const int32  cellX = static_cast<int32>( MathUtil::floor( instance._planePosition._x / cellSize ) );
-                const int32  cellZ = static_cast<int32>( MathUtil::floor( instance._planePosition._y / cellSize ) );
-                const uint64 key   = ( static_cast<uint64>( instance._entryIndex ) << 48 ) ^ ( static_cast<uint64>( static_cast<uint16>( cellX ) ) << 16 ) ^
-                                   static_cast<uint64>( static_cast<uint16>( cellZ ) );
-                mapCellToInstance[key].push_back( instanceIndex );
-            }
-
-            // 셀 순서를 정렬해 등록 순서를 결정적으로 만든다. 해시 맵 순회 순서는 실행마다 같다는 보장이 없다.
-            vector<uint64> listKey;
-            listKey.reserve( mapCellToInstance.size() );
-            for ( const auto& [key, listIndex] : mapCellToInstance )
-            {
-                listKey.push_back( key );
-            }
-            std::sort( listKey.begin(), listKey.end() );
-            for ( const uint64 key : listKey )
-            {
-                const vector<uint32>&    listIndex = mapCellToInstance[key];
-                const PlacementInstance& first     = listInstance[listIndex.front()];
-                const size_t             meshIndex = static_cast<size_t>( first._entryIndex );
-                Cell                     cell;
-                cell._layerIndex = layerIndex;
-                cell._batch      = sw::make_unique<MeshInstanceBatch>( listMesh[meshIndex], material.getMaterial(), material.getInstance(), static_cast<uint32>( listIndex.size() ) );
-                cell._batch->setOwnerComponent( this );
-                float3  minimum{ MathUtil::kMaxFloat, MathUtil::kMaxFloat, MathUtil::kMaxFloat };
-                float3  maximum{ MathUtil::kMinFloat, MathUtil::kMinFloat, MathUtil::kMinFloat };
-                float32 maxScale{ 0.0f };
-                for ( uint32 entry = 0; entry < listIndex.size(); ++entry )
-                {
-                    const PlacementInstance& instance = listInstance[listIndex[entry]];
-                    const float4x4           world    = PlacementScatter::makeWorldMatrix( instance, float3::Zero );
-                    cell._batch->setWorld( entry, world );
-                    cell._batch->setBoundsRadius( entry, listMeshRadius[meshIndex] );
-                    // 밝기 흔들기는 인스턴스 색 필드로 한다(머티리얼을 가르지 않는다).
-                    const float32 shade = 1.0f - layer._tintVariation * PlacementScatter::toUnit( instance._hash );
-                    cell._batch->setSprite( entry, GPUSpriteInstanceData::make( float4{ 0.0f, 0.0f, 1.0f, 1.0f }, float4{ shade, shade, shade, 1.0f } ) );
-                    const float3 position = world.getTranslation();
-                    minimum               = float3{ MathUtil::min( minimum._x, position._x ), MathUtil::min( minimum._y, position._y ), MathUtil::min( minimum._z, position._z ) };
-                    maximum               = float3{ MathUtil::max( maximum._x, position._x ), MathUtil::max( maximum._y, position._y ), MathUtil::max( maximum._z, position._z ) };
-                    maxScale              = MathUtil::max( maxScale, instance._scale );
-                }
-                cell._center = ( minimum + maximum ) * 0.5f;
-                cell._radius = ( maximum - minimum ).getLength() * 0.5f + listMeshRadius[meshIndex] * maxScale;
-                _instanceCount += static_cast<uint32>( listIndex.size() );
-                _pPrimitiveRegistry->addInstanceBatch( cell._batch.get() );
-                _listCell.push_back( std::move( cell ) );
-            }
+            computeLayerInstances( layerIndex, pTerrain, nullptr, listInstance );
+            applyLayerInstances( layerIndex, listInstance );
         }
         SW_LOG_INFO( "Foliage: %# instances in %# cell batches across %# layers (%# us, %#)", _instanceCount, static_cast<uint32>( _listCell.size() ),
                      static_cast<uint32>( _listLayer.size() ), stopwatch.getElapsedMicroseconds(), _bBuiltOnTerrain == SW_TRUE ? "on terrain" : "flat" );
+    }
+
+    void FoliageComponent::computeLayerInstances( uint32 layerIndex, const TerrainComponent* pTerrain, const PlacementRegion* pDirtyArea,
+                                                  vector<PlacementInstance>& outListInstance )
+    {
+        if ( pTerrain == nullptr )
+        {
+            (void)computeLayerPlacements( layerIndex, outListInstance ); // 부르는 쪽이 레이어 번호를 범위 안에서 돈다
+            return;
+        }
+        const FoliageLayer&   layer          = _listLayer[layerIndex];
+        const vector<float32> listMeshWeight = FoliageComponentInternal::makeMeshWeights( layer );
+        // 들고 있는 판정이 이 규칙 · 영역의 것이 아니면(후보 수가 다르다) 처음부터 판정한다.
+        const TerrainPlacementSurface surface( pTerrain->getHeightfield() );
+        vector<PlacementCandidate>&   listCandidate = _listLayerCandidate[layerIndex];
+        const bool                    bResampled    = pDirtyArea != nullptr &&
+                                PlacementScatter::resampleCandidates( layer._rule, _builtRegion, &surface, _listExclusion, *pDirtyArea, listCandidate );
+        if ( bResampled == false )
+            PlacementScatter::sampleCandidates( layer._rule, _builtRegion, &surface, _listExclusion, listCandidate );
+        PlacementScatter::resolveCandidates( layer._rule, _builtRegion, listCandidate, listMeshWeight, outListInstance );
+    }
+
+    void FoliageComponent::applyLayerInstances( uint32 layerIndex, const vector<PlacementInstance>& listInstance )
+    {
+        using Internal                = FoliageComponentInternal;
+        const FoliageLayer&  layer    = _listLayer[layerIndex];
+        EnvironmentMaterial& material = *_listLayerMaterial[layerIndex];
+        const float32        cellSize = MathUtil::max( _cellSize, 4.0f );
+
+        // 메시마다 셀마다 묶는다. 키는 메시 번호 × 2^48 + 셀 (x, z) 다.
+        vector<shared_ptr<Mesh>> listMesh;
+        vector<float32>          listMeshRadius;
+        for ( const FoliageMesh& foliageMesh : layer._listMesh )
+        {
+            shared_ptr<Mesh> mesh = Internal::acquireMesh( foliageMesh._meshID );
+            if ( mesh == nullptr )
+                SW_LOG_WARNING( "Foliage layer '%#': mesh '%#' could not be acquired - its instances are skipped", layer._name.c_str(), foliageMesh._meshID.c_str() );
+            listMeshRadius.push_back( mesh != nullptr ? Internal::computeOriginRadius( *mesh ) : 0.0f );
+            listMesh.push_back( std::move( mesh ) );
+        }
+        unordered_map<uint64, vector<uint32>> mapCellToInstance;
+        for ( uint32 instanceIndex = 0; instanceIndex < listInstance.size(); ++instanceIndex )
+        {
+            const PlacementInstance& instance            = listInstance[instanceIndex];
+            const bool               bMissingFoliageMesh = instance._entryIndex < 0 || static_cast<size_t>( instance._entryIndex ) >= listMesh.size() || listMesh[static_cast<size_t>( instance._entryIndex )] == nullptr;
+            if ( bMissingFoliageMesh )
+                continue;
+            const int32  cellX = static_cast<int32>( MathUtil::floor( instance._planePosition._x / cellSize ) );
+            const int32  cellZ = static_cast<int32>( MathUtil::floor( instance._planePosition._y / cellSize ) );
+            const uint64 key   = ( static_cast<uint64>( instance._entryIndex ) << 48 ) ^ ( static_cast<uint64>( static_cast<uint16>( cellX ) ) << 16 ) ^
+                               static_cast<uint64>( static_cast<uint16>( cellZ ) );
+            mapCellToInstance[key].push_back( instanceIndex );
+        }
+
+        // 이 레이어의 지금 셀을 키로 찾는다. 내용 해시가 같은 셀은 그대로 두고(레지스트리도 그대로), 다른 셀만 새 배치로 바꾼다.
+        unordered_map<uint64, uint32> mapKeyToCell;
+        for ( uint32 cellIndex = 0; cellIndex < _listCell.size(); ++cellIndex )
+        {
+            if ( _listCell[cellIndex]._layerIndex == layerIndex )
+                mapKeyToCell.emplace( _listCell[cellIndex]._key, cellIndex );
+        }
+        vector<uint8> listKeep( _listCell.size(), SW_FALSE );
+
+        // 새 셀은 키 순서로 등록해 등록 순서를 결정적으로 만든다. 해시 맵 순회 순서는 실행마다 같다는 보장이 없다.
+        vector<uint64> listKey;
+        listKey.reserve( mapCellToInstance.size() );
+        for ( const auto& [key, listIndex] : mapCellToInstance )
+        {
+            listKey.push_back( key );
+        }
+        std::sort( listKey.begin(), listKey.end() );
+        vector<Cell> listAddedCell;
+        for ( const uint64 key : listKey )
+        {
+            const vector<uint32>& listIndex   = mapCellToInstance[key];
+            const uint64          contentHash = Internal::computeCellHash( listInstance, listIndex );
+            const auto            iter        = mapKeyToCell.find( key );
+            const bool            bUnchanged  = iter != mapKeyToCell.end() && _listCell[iter->second]._contentHash == contentHash;
+            if ( bUnchanged )
+            {
+                listKeep[iter->second] = SW_TRUE;
+                continue;
+            }
+            const PlacementInstance& first     = listInstance[listIndex.front()];
+            const size_t             meshIndex = static_cast<size_t>( first._entryIndex );
+            Cell                     cell;
+            cell._layerIndex  = layerIndex;
+            cell._key         = key;
+            cell._contentHash = contentHash;
+            cell._batch       = sw::make_unique<MeshInstanceBatch>( listMesh[meshIndex], material.getMaterial(), material.getInstance(), static_cast<uint32>( listIndex.size() ) );
+            cell._batch->setOwnerComponent( this );
+            float3  minimum{ MathUtil::kMaxFloat, MathUtil::kMaxFloat, MathUtil::kMaxFloat };
+            float3  maximum{ MathUtil::kMinFloat, MathUtil::kMinFloat, MathUtil::kMinFloat };
+            float32 maxScale{ 0.0f };
+            for ( uint32 entry = 0; entry < listIndex.size(); ++entry )
+            {
+                const PlacementInstance& instance = listInstance[listIndex[entry]];
+                const float4x4           world    = PlacementScatter::makeWorldMatrix( instance, float3::Zero );
+                cell._batch->setWorld( entry, world );
+                cell._batch->setBoundsRadius( entry, listMeshRadius[meshIndex] );
+                // 밝기 흔들기는 인스턴스 색 필드로 한다(머티리얼을 가르지 않는다).
+                const float32 shade = 1.0f - layer._tintVariation * PlacementScatter::toUnit( instance._hash );
+                cell._batch->setSprite( entry, GPUSpriteInstanceData::make( float4{ 0.0f, 0.0f, 1.0f, 1.0f }, float4{ shade, shade, shade, 1.0f } ) );
+                const float3 position = world.getTranslation();
+                minimum               = float3{ MathUtil::min( minimum._x, position._x ), MathUtil::min( minimum._y, position._y ), MathUtil::min( minimum._z, position._z ) };
+                maximum               = float3{ MathUtil::max( maximum._x, position._x ), MathUtil::max( maximum._y, position._y ), MathUtil::max( maximum._z, position._z ) };
+                maxScale              = MathUtil::max( maxScale, instance._scale );
+            }
+            cell._center = ( minimum + maximum ) * 0.5f;
+            cell._radius = ( maximum - minimum ).getLength() * 0.5f + listMeshRadius[meshIndex] * maxScale;
+            _pPrimitiveRegistry->addInstanceBatch( cell._batch.get() );
+            listAddedCell.push_back( std::move( cell ) );
+        }
+
+        // 바뀌었거나 없어진 이 레이어의 셀을 놓는다(배치의 소멸자가 레지스트리에서 뺀다). 다른 레이어의 셀은 그대로다.
+        size_t keptCount{ 0 };
+        for ( size_t cellIndex = 0; cellIndex < _listCell.size(); ++cellIndex )
+        {
+            const bool bKeep = _listCell[cellIndex]._layerIndex != layerIndex || listKeep[cellIndex] == SW_TRUE;
+            if ( bKeep == false )
+                continue;
+            if ( keptCount != cellIndex )
+                _listCell[keptCount] = std::move( _listCell[cellIndex] );
+            ++keptCount;
+        }
+        _listCell.resize( keptCount );
+        _lastRebuiltBatchCount += static_cast<uint32>( listAddedCell.size() );
+        for ( Cell& cell : listAddedCell )
+        {
+            _listCell.push_back( std::move( cell ) );
+        }
+        _instanceCount = 0;
+        for ( const Cell& cell : _listCell )
+        {
+            _instanceCount += cell._batch->getCount();
+        }
     }
 
     void FoliageComponent::updateView( const float3& viewPosition )

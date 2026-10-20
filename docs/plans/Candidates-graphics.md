@@ -37,9 +37,8 @@
 - 강 경로: 경로가 점 목록이다. 스플라인 컴포넌트가 Engine 에 들어오면 그것을 경로로 받는다.
 - 하늘 · 시간 · 높이 안개와 물속 안개 패스: 값은 `WaterBodyComponent::findUnderwaterFog` 가 이미 준다. 다중 뷰 병합 뒤. 볼륨 안개 · 대기 산란은 [RealtimeGlobalIllumination](Candidates-graphics.md)과 합친다(옛 D2-5.2).
 - 물의 굴절 · 화면 공간 두께: 반투명 패스가 장면 색 사본 · 장면 깊이를 입력으로 받는 계약이 있어야 한다(지금은 지형 깊이를 정점에 굽는다).
-- 지형 LOD 교체 프레임 시간: 최악이 기준(GT 2 ms)을 넘는다(측정값은 [검증과 측정](../08_Verification.md) 2절 "지형 LOD 교체"). 메시 집합이 바뀌어 RT 는 정점 풀을 통째로 다시 만든다(`RT.GPUScene.vertexPool`, 벤치에는 없다 — App 표로). LOD 메시를 미리 만들어 두거나 청크 정점을 풀에서 부분 갱신한다(옛 D2-5.6).
 - 지오모프(LOD 튐)와 레이어 다섯 이상: 머티리얼 텍스처 칸은 16 개로 늘었지만 `.layerweights` · 스플랫 업로드 · 브러시 · 셰이더가 레이어 넷이다. 두 번째 스플랫이 필요하다.
-- 지형 쓰기(결정은 [결정 기록](../09_Decisions.md) 5-5)의 남은 것(옛 D2-5.7): 측정이 Debug 뿐이라 `TerrainBenchTest.ColliderRebuildAfterBrushWrite` · `WriteHeightsRectSizes` 를 Release 로 다시 재고 `TerrainComponent` 의 청크 재생성 예산(쓰기 · 틱마다 넷)을 GT 2 ms 에 맞춘다. 식생은 드래그가 끝나면 숲 전체를 다시 뿌린다(쇼케이스 Debug 약 0.86 s) — 바뀐 셀만 다시 계산한다. 내비는 런타임 내비메시 타일만 다시 굽는다(에디터가 구운 내비 에셋은 다시 굽기 명령으로). 에디터 편집 모드에서도 틱이 남은 청크를 만드는지 확인하지 않았다(브러시 한 번은 쓰기에서 끝난다). 브러시 선택은 레이 전진이 걸음마다 `findTerrainAt` 으로 지형을 훑는다(측정 안 함).
+- 지형 LOD 교체 · 지형 쓰기의 비용과 식생 부분 계산은 계획 [TerrainEditCost](TerrainEditCost.md) 에 있다.
 함정: 머티리얼 텍스처 칸 16 — 에뮬 슬롯을 SRV 띠 밖 t12..t27 로 옮기고 DX11 은 정적 머티리얼 샘플러로 읽는다(옛 D2-6.3, 정본은 `ShaderBindingSlots.h` 헤더).
 
 ### ToonShadingCompletion
