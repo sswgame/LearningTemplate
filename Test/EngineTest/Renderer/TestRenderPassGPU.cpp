@@ -1407,7 +1407,7 @@ SW_TEST_CASE( RenderPassGPUTest, MaterialPermutationDrivesBatchPSO )
         const sw::string label = sw::string( device->getBackendName() );
         if ( bOk )
         {
-            const sw::vector<sw::GPUMeshBatch>& batches = renderer.getGPUScene().getTransparentBatches();
+            const sw::vector_reference<const sw::GPUMeshBatch> batches = renderer.getGPUScene().getTransparentBatches();
             SW_EXPECT_TRUE_MSG( batches.empty() == false,
                                 ( label + ": 반투명 머티리얼인데 반투명 배치가 없다" ).c_str() );
 
@@ -1522,7 +1522,7 @@ SW_TEST_CASE( RenderPassGPUTest, SpriteDrawsWithTheSpriteShader )
             }
             if ( bOk )
             {
-                const sw::vector<sw::GPUMeshBatch>& batches = renderer.getGPUScene().getTransparentBatches();
+                const sw::vector_reference<const sw::GPUMeshBatch> batches = renderer.getGPUScene().getTransparentBatches();
                 SW_EXPECT_TRUE_MSG( batches.empty() == false, ( label + ": 스프라이트(반투명 머티리얼)인데 반투명 배치가 없다" ).c_str() );
                 const sw::RHIPipelineStateHandle passPSO = renderer.getEnginePSO( sw::RenderPassType::Transparent );
                 if ( batches.empty() == false && passPSO != 0 )
@@ -2480,7 +2480,7 @@ SW_TEST_CASE( RenderPassGPUTest, ViewModeSelectsDistinctPipelineStates )
 
         if ( bOk )
         {
-            const sw::vector<sw::GPUMeshBatch>& batches = renderer.getGPUScene().getOpaqueBatches();
+            const sw::vector_reference<const sw::GPUMeshBatch> batches = renderer.getGPUScene().getOpaqueBatches();
             SW_EXPECT_TRUE_MSG( batches.empty() == false, ( label + ": 불투명 배치가 없다" ).c_str() );
 
             const sw::RHIPipelineStateHandle passPSO   = renderer.getEnginePSO( sw::RenderPassType::ForwardOpaque );
@@ -5826,7 +5826,7 @@ SW_TEST_CASE( RenderPassGPUTest, SpriteFramesAndTintsArePerInstance )
             if ( bOk )
             {
                 // 여섯이 반투명 배치 하나다 — 프레임 · 색이 배치를 가르지 않는다.
-                const sw::vector<sw::GPUMeshBatch>& batches = renderer.getGPUScene().getTransparentBatches();
+                const sw::vector_reference<const sw::GPUMeshBatch> batches = renderer.getGPUScene().getTransparentBatches();
                 SW_EXPECT_TRUE_MSG( batches.size() == 1u && batches[0]._instanceCount == kSpriteCount,
                                     ( label + "스프라이트 여섯이 반투명 배치 하나가 아니다 (배치 " + sw::to_string( batches.size() ) + ")" ).c_str() );
 
