@@ -31,7 +31,7 @@ namespace sw::editor
         VfxPreviewPanel();
 
         const utf8* getPanelTitle() const override { return "VFX Preview"; }
-        void        drawContent() override;
+        void        drawDocumentContent() override;
         /** @brief 보기 전용이라 저장하지 않습니다(효과는 카탈로그 편집기가 고친다). */
         [[nodiscard]] bool saveDocument() override { return false; }
         bool               canSaveDocument() const override { return false; }

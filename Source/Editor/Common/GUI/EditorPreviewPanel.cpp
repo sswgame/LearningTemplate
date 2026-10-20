@@ -19,6 +19,7 @@ namespace sw::editor
         , _commandStack{}
         , _selection{}
         , _bFocusApplied{ false }
+        , _seenCommandCount{ 0 }
     {
     }
 
@@ -32,9 +33,24 @@ namespace sw::editor
     void EditorPreviewPanel::shutdown( IRHIDevice* /*pRHIDevice*/ )
     {
         applyWindowFocus( false );
-        _commandStack.clear();
+        resetPreviewEdits();
         _selection.unbindPreviewScope();
         _viewport.shutdown();
+    }
+
+    void EditorPreviewPanel::resetPreviewEdits()
+    {
+        _commandStack.clear();
+        _seenCommandCount = 0;
+    }
+
+    void EditorPreviewPanel::syncDocumentDirty()
+    {
+        const size_t count = _commandStack.getCommandCount();
+        if ( count == _seenCommandCount )
+            return;
+        _seenCommandCount = count;
+        markDocumentDirty();
     }
 
     ScenePreviewPolicy EditorPreviewPanel::getPreviewPolicy() const

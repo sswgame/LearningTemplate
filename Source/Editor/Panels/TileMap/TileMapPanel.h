@@ -39,7 +39,7 @@ namespace sw::editor
         // 1) IEditorPanel: 제목과 그리기
         // ------------------------------------------------------------------------------
         /** @brief 타일맵 페인트 UI 를 그립니다. */
-        void drawContent() override;
+        void drawDocumentContent() override;
 
         /** @brief 경로, 이름, 크기와 읽기와 쓰기 컨트롤을 그립니다. */
         void drawTileMapFileControls();

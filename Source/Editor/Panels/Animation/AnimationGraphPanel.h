@@ -28,7 +28,7 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         void shutdown( IRHIDevice* pRHIDevice ) override;
         /** @brief 애니메이션 그래프 UI 를 그립니다. */
-        void drawContent() override;
+        void drawDocumentContent() override;
         /** @brief 노드 추가, 저장, 줌 툴바를 그립니다. */
         void drawAnimationToolbar();
         /** @brief 노드 그래프 캔버스를 그립니다. */

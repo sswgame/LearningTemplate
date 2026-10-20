@@ -36,6 +36,7 @@ namespace sw::editor
         , _bLoaded{ SW_FALSE }
         , _bConfirmSwitch{ SW_FALSE }
         , _bLoadFailed{ SW_FALSE }
+        , _bConfirmClose{ SW_FALSE }
         , _reserved{ 0 }
     {
         if ( bLoadOnOpen == false )
@@ -45,6 +46,36 @@ namespace sw::editor
     EditorDocumentPanel::~EditorDocumentPanel()
     {
         *_pUndoTarget = nullptr;
+    }
+
+    void EditorDocumentPanel::drawContent()
+    {
+        syncDocumentDirty();
+        if ( shouldAskBeforeClosing( isOpen(), isDocumentDirty(), _bConfirmClose == SW_TRUE ) )
+        {
+            setOpen( true ); // X 가 내린 열림을 확인이 끝날 때까지 되돌린다
+            _bConfirmClose = SW_TRUE;
+            drawCloseConfirm();
+        }
+        drawDocumentContent();
+    }
+
+    void EditorDocumentPanel::drawCloseConfirm()
+    {
+        constexpr const utf8* kPopupID = "##UnsavedDocumentClose";
+        if ( ImGui::IsPopupOpen( kPopupID ) == false )
+            ImGui::OpenPopup( kPopupID );
+        const EditorUnsavedChoice choice = EditorWidgets::drawUnsavedChangesModal( kPopupID, "This document has unsaved changes. Close anyway?" );
+        if ( choice == EditorUnsavedChoice::None )
+            return;
+
+        _bConfirmClose = SW_FALSE;
+        if ( EditorSessionPolicy::shouldSaveBeforeAction( choice ) && saveDocumentAndClearDirty() == false )
+            return; // 저장하지 못하면 닫지 않는다 — 닫으면 편집이 사라진다
+        if ( EditorSessionPolicy::shouldClearDirtyWithoutSave( choice ) )
+            discardDirtyDocument();
+        if ( EditorSessionPolicy::shouldProceedWithAction( choice ) )
+            setOpen( false );
     }
 
     bool EditorDocumentPanel::hasNewFocusedDocument() const

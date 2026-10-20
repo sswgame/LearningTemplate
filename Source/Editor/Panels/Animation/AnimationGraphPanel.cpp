@@ -102,7 +102,7 @@ namespace sw::editor
         _nodeGraph.shutdown();
     }
 
-    void AnimationGraphPanel::drawContent()
+    void AnimationGraphPanel::drawDocumentContent()
     {
         updateFocusedDocument();
         ensureDocumentLoaded();

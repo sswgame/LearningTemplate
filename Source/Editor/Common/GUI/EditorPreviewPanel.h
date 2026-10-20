@@ -37,6 +37,8 @@ namespace sw::editor
      *          - 선택은 창마다다(`getPreviewSelection`, 이 창의 씬 · 스택에 묶인 `EditorSelection`). 창이 포커스를 얻거나 선택이 바뀌면 인스펙터가
      *            그것을 겨눈다(`editor::getFocusedSelection`). 인스펙터의 값 · 구조 편집과 전역 명령(삭제 · 정렬 …)의 기록은 이 창의 스택에 남는다
      *            (`EditorTransaction` 이 오브젝트가 사는 씬으로 스택을 고른다).
+     *          - 창 스택이 늘거나 줄면 기반이 문서를 dirty 로 표시한다(`syncDocumentDirty`, 닫기 확인보다 앞선다) — 파생이 미리보기 씬 편집을 따로 알릴 필요가 없다.
+     *            저장에 성공하면 `acknowledgePreviewEdits`, 문서를 다시 세우면 `resetPreviewEdits` 를 부른다. 닫기 확인은 `EditorDocumentPanel` 이 한다.
      *          - 창을 내릴 때(`shutdown`) 씬 · 타깃 · 초점을 놓는다. 파생이 `shutdown` 을 재정의하면 기반의 것을 부른다.
      */
     class SW_EDITOR_API EditorPreviewPanel : public EditorDocumentPanel
@@ -75,6 +77,10 @@ namespace sw::editor
 
         /** @brief 그리기 앞부분에서 부릅니다. 씬을 (처음이면) 만들고, 창 포커스에 따라 초점 씬 · Undo 스택을 걸거나 풉니다. */
         void beginPreviewFrame();
+        /** @brief 창 Undo 스택의 지금 길이까지를 "저장했거나 버린 편집"으로 삼습니다. 파생이 저장에 성공한 직후 부릅니다(그 뒤의 편집만 다시 dirty 로 만든다). */
+        void acknowledgePreviewEdits() { _seenCommandCount = _commandStack.getCommandCount(); }
+        /** @brief 창 Undo 스택을 비우고 편집 기록을 처음으로 돌립니다. 파생이 문서를 다시 세울 때 부릅니다. */
+        void resetPreviewEdits();
         /**
          * @brief 뷰포트를 @p size 로 그립니다. 창이 포커스 · 호버면 카메라 입력을 받습니다.
          * @param bOrbitBlocked 기즈모가 마우스를 가졌으면 true 입니다(`EditorPreviewGizmo::hasMouse`). 기즈모를 쓰지 않는 창은 false 입니다.
@@ -84,10 +90,13 @@ namespace sw::editor
     private:
         /** @brief 초점 씬 · 창 스택을 이 창의 것으로 걸거나(@p bFocused) 이 창이 걸어 둔 것이면 풉니다. */
         void applyWindowFocus( bool bFocused );
+        /** @brief 창 Undo 스택이 늘었거나 줄었으면 문서를 dirty 로 표시합니다 — 미리보기 씬의 편집은 모두 이 스택을 거치므로 파생이 따로 알릴 필요가 없다. */
+        void syncDocumentDirty() override;
 
         EditorPreviewViewport _viewport;
         CommandStack          _commandStack;
         EditorSelection       _selection;
-        bool                  _bFocusApplied; ///< 이 창이 초점 씬 · 스택을 걸어 두었다
+        bool                  _bFocusApplied;    ///< 이 창이 초점 씬 · 스택을 걸어 두었다
+        size_t                _seenCommandCount; ///< 지난 그리기의 창 Undo 스택 길이 — 달라지면 문서를 고친 것이다
     };
 } // namespace sw::editor

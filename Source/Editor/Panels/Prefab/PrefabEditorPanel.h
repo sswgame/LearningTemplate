@@ -43,20 +43,10 @@ namespace sw::editor
          */
         [[nodiscard]] static bool openWindow( string_view prefabPath );
 
-        /**
-         * @brief X 로 닫으려는 순간 미저장 확인을 그려야 하면 true 입니다.
-         * @details ImGui 는 X 를 누르면 그 프레임에 열림 표시만 내리므로, 열림이 내려갔는데 편집이 남았거나 이미 확인 중이면 묻는다.
-         *          결정을 한 곳에 모아 두어 닫는 길(X)이 확인 없이 문서를 잃는 일이 없게 한다.
-         */
-        [[nodiscard]] static constexpr bool shouldAskBeforeClosing( bool bOpen, bool bDirty, bool bConfirming )
-        {
-            return bConfirming || ( bOpen == false && bDirty );
-        }
-
         /** @brief 창 제목은 종류 테이블(`EditorAssetTypeRegistry`)의 프리팹 패널 제목이다 — 콘텐츠 브라우저가 이 제목으로 연다. 오버라이드 도구(`PrefabPanel`)는 따로 둔 제목을 쓴다. */
         float2 getInitialPanelSize() const override { return float2{ 560.0f, 520.0f }; }
 
-        void               drawContent() override;
+        void               drawDocumentContent() override;
         [[nodiscard]] bool saveDocument() override;
         /** @brief 저장하지 않고 닫을 때 쓴다 — 디스크의 프리팹으로 문서 루트를 다시 세워 편집을 버린다. */
         void revertDocument() override;
@@ -87,11 +77,7 @@ namespace sw::editor
         GameObjectManager* findPreviewManager() const;
         /** @brief 문서가 바뀌었으면 문서 루트를 다시 세웁니다. */
         void syncDocumentRoot();
-        /** @brief 창의 편집 기록이 늘었거나 줄었으면 미저장 표시를 합니다. */
-        void trackEdits();
         void drawIsolationBar();
-        /** @brief X 로 닫기 전의 Save / Don't Save / Cancel 확인을 그립니다. 선택이 나면 창을 닫거나(Save · Don't Save) 열어 둡니다(Cancel · 저장 실패). */
-        void drawCloseConfirm();
         void drawChildTree( GameObject& object, int32 depth );
 
         EditorPrefabIsolation _isolation;
@@ -99,7 +85,5 @@ namespace sw::editor
         string                _pendingNestedPath;
         string                _spawnedDocumentPath; ///< 문서 루트를 마지막으로 스폰한 프리팹 경로
         string                _status;
-        bool                  _bConfirmClose;    ///< X 로 닫으려다 미저장 확인을 기다리는 중
-        size_t                _seenCommandCount; ///< 지난 그리기의 창 Undo 스택 길이 — 달라지면 문서를 고친 것이다
     };
 } // namespace sw::editor

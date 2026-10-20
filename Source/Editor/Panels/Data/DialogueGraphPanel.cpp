@@ -97,7 +97,7 @@ namespace sw::editor
         _nodeGraph.shutdown();
     }
 
-    void DialogueGraphPanel::drawContent()
+    void DialogueGraphPanel::drawDocumentContent()
     {
         updateFocusedDocument();
         ensureDocumentLoaded();

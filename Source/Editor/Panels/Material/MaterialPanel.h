@@ -25,7 +25,7 @@ namespace sw::editor
 
         MaterialPanel();
 
-        void               drawContent() override;
+        void               drawDocumentContent() override;
         [[nodiscard]] bool saveDocument() override;
 
     private:

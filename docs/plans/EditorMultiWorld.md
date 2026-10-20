@@ -174,7 +174,10 @@ Undo 를 창마다 두는 것은 두 엔진과 다릅니다. 두 엔진 모두 �
 단계 1~4 와 머티리얼 창은 들어갔습니다(각 단계의 "구현됨"). 규모가 XL 이라 에디터 보강 묶음에서 뺐고 설계부터 따로 짰습니다(2026-10-14 사용자 결정).
 
 1. **프리팹 창의 남은 것** — 본체는 단계 5 의 "구현됨". 콘텐츠 브라우저의 프리팹 열기는 새 창으로 돌렸고(종류 테이블의 프리팹 패널 제목 = "Prefab Window", 오버라이드 도구 `PrefabPanel` 은 "Prefab Overrides" 로 따로 둠),
-   X 로 닫을 때의 미저장 확인(Save / Don't Save / Cancel, 저장 실패면 열어 둠, Don't Save 는 디스크 프리팹으로 문서 루트를 다시 세움)도 들어갔다. 둘 다 GPU 없이 테스트(`EditorPrefabIsolationTest.CloseAsksOnlyWhenEditsRemain` · `EditorAssetType` 제목 단언)했다.
+   X 로 닫을 때의 미저장 확인(Save / Don't Save / Cancel, 저장 실패면 열어 둠)도 들어갔다. 둘 다 GPU 없이 테스트(`EditorPrefabIsolationTest.CloseAsksOnlyWhenEditsRemain` · `EditorAssetType` 제목 단언)했다.
+   **닫기 확인은 프리팹 창 것이 아니라 문서 패널 공통이다**(2026-10-20). `EditorDocumentPanel::drawContent` 를 `final` 로 막고 파생이 `drawDocumentContent` 를 구현하게 했으므로 머티리얼 · 시퀀서 · 타일맵 · 그래프 · VFX 창도 X 로 닫을 때 같은 확인을 받고, 확인을 건너뛰는 문서 패널은 컴파일되지 않는다.
+   "Don't Save" 는 `revertDocument` 로 편집을 버린다 — 기본은 문서를 다시 읽기(`reloadDocument`), 프리팹 창은 디스크 프리팹으로 문서 루트를 다시 세움(재정의). 미리보기 씬의 편집은 창 Undo 스택이 늘고 줄 때 기반(`EditorPreviewPanel::syncDocumentDirty`)이 dirty 로 표시하므로 파생이 따로 알리지 않는다.
+   확인하지 않은 것: 프리팹 창 밖 문서 패널의 닫기 확인 화면(머티리얼 창 등) — 프리팹 창만 DX12 화면으로 확인했다.
    확인함(2026-10-20, DX12, `editor.prefabwindow`): 콘텐츠 브라우저 더블클릭이 "Prefab Window" 탭(가운데 도크)을 열고, 편집 뒤 X 는 Save / Don't Save / Cancel 모달을 띄우며 Cancel 은 열어 두고 Don't Save 는 닫고 다시 열면 깨끗하고 그때의 X 는 묻지 않는다. 남은 것: 다른 세 백엔드 화면, 패널 메뉴 토글 등 X 가 아닌 닫는 길(확인하지 않는다).
    고침(2026-10-20): 제목을 나눈 뒤 기본 배치가 종류 테이블 제목("Prefab Window")만 붙여 열린 채 시작하는 "Prefab Overrides" 가 떠 있는 큰 창으로 씬 뷰를 덮었다. 패널이 영역을 밝히게(`getDefaultDockSlot`) 바꿔 가운데 탭으로 돌렸다(결정 기록 5-11).
 3. **스카이** — 엔진에 스카이 컴포넌트가 없어 조명 환경 프리셋(`EditorPreviewEnvironment`)은 방향광 · 바닥뿐이다.
