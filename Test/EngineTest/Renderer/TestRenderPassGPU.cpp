@@ -3975,7 +3975,7 @@ SW_TEST_CASE( RenderPassGPUTest, MorphPoolUploadsOnlyChangedMeshes )
  *          목록에 **덧붙인다.**
  *
  *          그러면 `ordinal`(= `_listMaterialTextureSrv.size()`)이 0 이 아닌 값에서 시작한다.
- *          네이티브 bindless 가 없는 백엔드(DX11 · GL)는 그 서수를 **t12..t27 고정 슬롯 번호**로
+ *          네이티브 bindless 가 없는 백엔드(DX11 · GL)는 그 서수를 **t16..t31 고정 슬롯 번호**로
  *          쓰므로 엉뚱한 텍스처를 읽거나, 한도(`kMaterialTextureCount`)를 넘어 흰색으로 남는다 —
  *          "백엔드를 바꾸면 화면이 이상해진다" 로만 보이는 종류다.
  *
@@ -5158,6 +5158,93 @@ SW_TEST_CASE( RenderPassGPUTest, PointLightShadowCastsOnEveryBackend )
 }
 
 /**
+ * @brief [RenderPassGPUTest] 라이트 컬링 세 방식(그리드 없음 · CPU 그리드 · GPU 그리드)이 같은 그림을 그린다 — 네 백엔드 모두
+ * @details 그리드는 비용만 바꾸고 그림은 바꾸지 않는다(ClusteredLighting.md). 큐브 둘레에 점광 · 스폿 여럿을 흩어 두고 `gv_lightCulling` 0 · 1 · 2 의
+ *          Present 캡처를 견준다. 클러스터 경계에서 라이트가 빠지면(범위 식이 셋 중 하나에서 갈렸다) 그 픽셀이 어두워져 다르다. GPU 생산자는 클러스터 안의
+ *          라이트 순서가 원자 연산의 순서라 더하기 순서가 달라 마지막 비트가 다를 수 있다 — `isSameImage` 의 허용(채널 1, 화소 1%) 안이다.
+ */
+SW_TEST_CASE( RenderPassGPUTest, LightCullingProducersDrawTheSameImage )
+{
+#if defined( SW_SHIPPING )
+    SW_TEST_SKIP( "gv_lightCulling is a development-build switch" );
+#else
+    sw::GlobalVariableInfo* pSwitch = sw::engine::getSubsystem<sw::GlobalVariableManager>().findVariable( "gv_lightCulling" );
+    SW_ASSERT_TRUE( pSwitch != nullptr );
+    constexpr uint32      kModeCount          = 3;
+    constexpr uint32      kLightCount         = 12;
+    const int32           arrMode[kModeCount] = { 0, 1, 2 };
+    uint32                comparedCount{ 0 };
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const utf8*           pName = device->getBackendName();
+        sw::vector<uint8>     arrCapture[kModeCount];
+        sw::RHITextureMipSpan arrLayout[kModeCount]{};
+        bool                  bOk = true;
+        for ( uint32 modeIndex = 0; modeIndex < kModeCount && bOk; ++modeIndex )
+        {
+            bOk = pSwitch->setValueAsInt( arrMode[modeIndex] );
+            LitCubeScene cube;
+            bOk = bOk && cube.populate();
+            for ( uint32 lightIndex = 0; lightIndex < kLightCount && bOk; ++lightIndex )
+            {
+                // 큐브 둘레의 고리 — 반경이 작아 클러스터 몇 개씩만 덮는다(경계가 화면 안에 많이 생긴다). 셋째마다 스폿이다.
+                const float32 angle = static_cast<float32>( lightIndex ) * ( sw::MathUtil::kTwoPi / static_cast<float32>( kLightCount ) );
+                utf8          arrName[sw::constant::kMaxBuffer64];
+                sw::formatstring( arrName, sw::constant::kMaxBuffer64, "GridLight%#", lightIndex );
+                sw::GameObject* pObject = cube._scene.getObjectManager()->createGameObject( sw::hashed_string( arrName ) );
+                bOk                     = pObject != nullptr;
+                const bool bSpot        = ( lightIndex % 3u ) == 2u;
+                if ( bOk && bSpot )
+                {
+                    sw::SpotLightComponent* pSpot = pObject->addComponent<sw::SpotLightComponent>();
+                    bOk                           = pSpot != nullptr;
+                    if ( bOk )
+                    {
+                        pSpot->setLocalPosition( sw::float3{ sw::MathUtil::cos( angle ) * 1.6f, 2.5f, sw::MathUtil::sin( angle ) * 1.6f } );
+                        pSpot->setRadius( 4.0f );
+                        pSpot->setOuterConeAngle( 0.7f );
+                        pSpot->setInnerConeAngle( 0.4f );
+                        pSpot->setIntensity( 3.0f );
+                    }
+                }
+                else if ( bOk )
+                {
+                    sw::PointLightComponent* pPoint = pObject->addComponent<sw::PointLightComponent>();
+                    bOk                             = pPoint != nullptr;
+                    if ( bOk )
+                    {
+                        pPoint->setLocalPosition( sw::float3{ sw::MathUtil::cos( angle ) * 1.4f, 0.6f, sw::MathUtil::sin( angle ) * 1.4f } );
+                        pPoint->setRadius( 1.8f );
+                        pPoint->setIntensity( 2.5f );
+                    }
+                }
+            }
+            if ( bOk )
+            {
+                cube._scene.getObjectManager()->flushSceneTransforms();
+                bOk = renderPresentCaptureOf( device.get(), cube._scene, "engine/pipeline/forwardpipeline.xml", arrCapture[modeIndex], arrLayout[modeIndex] );
+            }
+        }
+        if ( bOk == false )
+        {
+            SW_LOG_WARNING( "LightCullingProducersDrawTheSameImage: %# 에서 그리지 못했습니다.", pName );
+            continue;
+        }
+        ++comparedCount;
+        const CaptureDifference cpuDifference = compareCaptures( arrCapture[0], arrCapture[1] );
+        const CaptureDifference gpuDifference = compareCaptures( arrCapture[0], arrCapture[2] );
+        SW_EXPECT_TRUE_MSG( cpuDifference._notBackgroundCount > 0, ( sw::string( pName ) + ": 기준 그림이 배경뿐입니다" ).c_str() );
+        SW_EXPECT_TRUE_MSG( cpuDifference.isSameImage(), ( sw::string( pName ) + ": CPU 그리드가 목록 전체와 다르게 그린다 (" + cpuDifference.describe() + ")" ).c_str() );
+        SW_EXPECT_TRUE_MSG( gpuDifference.isSameImage(), ( sw::string( pName ) + ": GPU 그리드가 목록 전체와 다르게 그린다 (" + gpuDifference.describe() + ")" ).c_str() );
+    }
+    SW_EXPECT_TRUE( pSwitch->setValueAsInt( 2 ) );
+    if ( comparedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could run the light culling comparison" );
+#endif
+}
+
+/**
  * @brief [RenderPassGPUTest] 스폿 그림자가 그림을 바꾼다 — 아틀라스 칸 하나, 네 백엔드 모두
  */
 SW_TEST_CASE( RenderPassGPUTest, SpotLightShadowCastsOnEveryBackend )
@@ -5436,7 +5523,7 @@ SW_TEST_CASE( RenderPassGPUTest, MirroredMeshShowsItsOuterFaces )
 /**
  * @brief [RenderPassGPUTest] 머티리얼 텍스처는 네 백엔드 모두 선형 필터 · 랩 주소로 읽힌다 — 체커 칸 경계의 섞인 픽셀 수가 같다
  * @details 계약은 네이티브 bindless(DX12 · Vulkan)의 `swSampleMaterialTexture` → `swSampleIndex` = SW_SAMPLER_LINEAR_WRAP 이다. 슬롯 결합
- *          샘플러를 쓰는 백엔드는 엔진이 머티리얼 슬롯(t12..t27)에 샘플러를 직접 건다 — 걸지 않으면 GL 은 기본 샘플러(NEAREST · CLAMP)로 칸 경계가
+ *          샘플러를 쓰는 백엔드는 엔진이 머티리얼 슬롯(t16..t31)에 샘플러를 직접 건다 — 걸지 않으면 GL 은 기본 샘플러(NEAREST · CLAMP)로 칸 경계가
  *          계단이 되고, CLAMP 면 텍스처 가장자리에서 반대편 텍셀과 섞이지 않는다. 64x64 체커(8 텍셀 칸, 양 끝 열 색이 다르다)를
  *          화면에 크게 깔고 조명을 컴파일 아웃(Unlit)한 뒤, 쿼드 픽셀 가운데 두 색 사이(25~75%)인 픽셀을 센다 — 최근접은 0 이고, CLAMP 는
  *          가장자리의 랩 경계만큼 적다. 기준은 첫 네이티브 bindless 백엔드의 수다.

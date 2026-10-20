@@ -111,7 +111,16 @@ SW_TEST_CASE( GPUTransparentSorterTest, ViewOrderRanksTailAndBatches )
     listBatch[1]._instanceBase  = kTailBase + 2;
     listBatch[1]._instanceCount = 2;
 
-    const sw::GPUViewTransparentOrder order = sorter.computeViewOrder( 77u, kTailBase, listBatch );
+    // 입자 셋(이 뷰의 시점으로 정렬한 키, 후보 번호 = 입자 그리기 번호). 깊이 5 는 모든 배치 앞, 3.5 는 배치 1(첫 깊이 4)과 배치 0(첫 깊이 3) 사이,
+    // 3 은 배치 0 의 첫 키와 깊이가 같아 메시 먼저라 모든 배치 뒤다.
+    const sw::vector<sw::GPUTransparentSortKey> listParticleKey{
+        sw::GPUTransparentSortKey{0u, 5.0f, 2u},
+        sw::GPUTransparentSortKey{0u, 3.5f, 0u},
+        sw::GPUTransparentSortKey{0u, 3.0f, 1u}
+    };
+
+    const sw::GPUViewTransparentOrder order =
+        sorter.computeViewOrder( 77u, kTailBase, listBatch, sw::vector_reference<const sw::GPUTransparentSortKey>( listParticleKey ) );
     SW_EXPECT_EQUAL( order._viewID, static_cast<uint64>( 77u ) );
     SW_EXPECT_EQUAL( order._tailBase, kTailBase );
 
@@ -136,4 +145,56 @@ SW_TEST_CASE( GPUTransparentSorterTest, ViewOrderRanksTailAndBatches )
     SW_ASSERT_EQUAL( order._listBatchOrder.size(), static_cast<size_t>( 2 ) );
     SW_EXPECT_EQUAL( order._listBatchOrder[0], 1u );
     SW_EXPECT_EQUAL( order._listBatchOrder[1], 0u );
+
+    // 입자 자리는 이 뷰의 배치 순서 안의 자리다(주 순서가 아니다).
+    SW_ASSERT_EQUAL( order._listParticleSlot.size(), static_cast<size_t>( 3 ) );
+    SW_EXPECT_EQUAL( order._listParticleSlot[0]._particleBatchIndex, 2u );
+    SW_EXPECT_EQUAL( order._listParticleSlot[0]._drawPosition, 0u );
+    SW_EXPECT_EQUAL( order._listParticleSlot[1]._particleBatchIndex, 0u );
+    SW_EXPECT_EQUAL( order._listParticleSlot[1]._drawPosition, 1u );
+    SW_EXPECT_EQUAL( order._listParticleSlot[2]._particleBatchIndex, 1u );
+    SW_EXPECT_EQUAL( order._listParticleSlot[2]._drawPosition, 2u );
+}
+
+/**
+ * @brief [GPUTransparentSorterTest] 입자 자리: 레이어 키가 먼저이고, 키를 모르는 배치(꼬리 밖) 앞에는 모든 입자가 선다
+ */
+SW_TEST_CASE( GPUTransparentSorterTest, ParticlePlacementFollowsLayerAndDepth )
+{
+    // 배치 넷(그리는 순서): 레이어 0 깊이 10, 레이어 0 깊이 2, 레이어 1 깊이 50, 키 없음.
+    const sw::vector<sw::GPUTransparentSortKey> listBatchHeadKey{
+        sw::GPUTransparentSortKey{                                         0u, 10.0f, 0u},
+        sw::GPUTransparentSortKey{                                         0u,  2.0f, 1u},
+        sw::GPUTransparentSortKey{                                         1u, 50.0f, 2u},
+        sw::GPUTransparentSortKey{sw::GPUTransparentSorter::kNoBatchHeadLayer,  0.0f, 3u}
+    };
+    // 입자 넷(정렬됨): 레이어 0 깊이 20(맨 앞), 레이어 0 깊이 1(레이어 0 배치 뒤), 레이어 1 깊이 99(레이어 1 배치 앞), 레이어 1 깊이 0(키 없는 배치 앞).
+    const sw::vector<sw::GPUTransparentSortKey> listParticleKey{
+        sw::GPUTransparentSortKey{0u, 20.0f, 3u},
+        sw::GPUTransparentSortKey{0u,  1.0f, 0u},
+        sw::GPUTransparentSortKey{1u, 99.0f, 2u},
+        sw::GPUTransparentSortKey{1u,  0.0f, 1u}
+    };
+    sw::vector<sw::GPUTransparentParticleSlot> listSlot;
+    sw::GPUTransparentSorter::placeParticles( sw::vector_reference<const sw::GPUTransparentSortKey>( listBatchHeadKey ),
+                                              sw::vector_reference<const sw::GPUTransparentSortKey>( listParticleKey ), listSlot );
+
+    SW_ASSERT_EQUAL( listSlot.size(), static_cast<size_t>( 4 ) );
+    SW_EXPECT_EQUAL( listSlot[0]._particleBatchIndex, 3u );
+    SW_EXPECT_EQUAL( listSlot[0]._drawPosition, 0u );
+    SW_EXPECT_EQUAL( listSlot[1]._particleBatchIndex, 0u );
+    SW_EXPECT_EQUAL( listSlot[1]._drawPosition, 2u );
+    SW_EXPECT_EQUAL( listSlot[2]._particleBatchIndex, 2u );
+    SW_EXPECT_EQUAL( listSlot[2]._drawPosition, 2u );
+    SW_EXPECT_EQUAL( listSlot[3]._particleBatchIndex, 1u );
+    SW_EXPECT_EQUAL( listSlot[3]._drawPosition, 3u );
+
+    // 배치가 없으면 모두 자리 0 이고 입자 순서는 그대로다.
+    sw::GPUTransparentSorter::placeParticles( sw::vector_reference<const sw::GPUTransparentSortKey>(),
+                                              sw::vector_reference<const sw::GPUTransparentSortKey>( listParticleKey ), listSlot );
+    SW_ASSERT_EQUAL( listSlot.size(), static_cast<size_t>( 4 ) );
+    for ( const sw::GPUTransparentParticleSlot& slot : listSlot )
+    {
+        SW_EXPECT_EQUAL( slot._drawPosition, 0u );
+    }
 }

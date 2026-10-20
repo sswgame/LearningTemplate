@@ -280,7 +280,7 @@ namespace sw
             _pState->_arrPixelSrvTexture[slot] = ( pSrv != nullptr ) ? texture : 0;
         // 엔진 슬롯(t0..t3 — 풀스크린 입력 · 그림자 맵)만 샘플러를 **텍스처와 같은 번호**에 건다. 셰이더가 t#/s# 짝으로 선언하기 때문이다
         // (common.hlsli 의 SW_DECLARE_TEXTURE2D_SAMPLER). 샘플러는 shaderslot::kEngineTextureSampler(선형 · 클램프) — 네이티브 bindless 가 고르는 것과 같다.
-        // 머티리얼 슬롯(t12..t27)은 짝 샘플러가 없다 — DX11 샘플러 슬롯은 16 개뿐이라 셰이더가 정적 세트의 머티리얼 샘플러(s9 + kMaterialTextureSampler)로 읽는다.
+        // 머티리얼 슬롯(t16..t31)은 짝 샘플러가 없다 — DX11 샘플러 슬롯은 16 개뿐이라 셰이더가 정적 세트의 머티리얼 샘플러(s9 + kMaterialTextureSampler)로 읽는다.
         const bool bEngineSlot = ( slot - shaderslot::kEngineTexture0 ) < shaderslot::kEngineTextureCount; // 부호 없는 뺄셈 — 시작보다 앞이면 감겨 커진다
         if ( _pDevice->_arrStaticSampler[shaderslot::kEngineTextureSampler] != nullptr )
         {
