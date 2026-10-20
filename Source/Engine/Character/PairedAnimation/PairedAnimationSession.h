@@ -9,6 +9,7 @@
  *          - **정렬**: `Snap` 은 진입 때 트랜스폼을 맞추고, `Warp` 는 같은 오브젝트의 `MotionWarpingComponent` 에 목표 · 창을 넣는다(목표는 매 프레임 앵커에서 다시 구함).
  *          - **스레드**: 시작 · 갱신 · 중단은 모두 게임 스레드, 틱 밖(`PairedAnimationSystem` 의 프레임 시스템 단계)에서 부른다. 애니메이션 평가는 세션을 읽지 않는다.
  *          - **잃음**: 필수 역할(앵커 포함)의 애니메이터가 사라지거나 다른 것을 재생하면 중단, 선택 역할이면 그 역할만 빠진다.
+ *          - **복제**: 상태는 `captureSnapshot` 으로 복사하고 `restore` 로 이어 받는다(늦게 들어온 클라이언트, 롤백). 설계는 `docs/plans/PairedAnimation.md` 7절.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -18,6 +19,8 @@
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
+
+#include "Engine/Character/PairedAnimation/PairedAnimationSnapshot.h"
 
 namespace sw
 {
@@ -47,6 +50,8 @@ namespace sw
         NotifyTargetMissing, ///< 공유 알림을 받을 역할의 알림 표에 그 항목이 없다(오류 로그)
         TooFarToAlign,       ///< 진입 조건 — 정렬할 역할이 목표에서 `maxAlignDistance` 보다 멀다(게임플레이의 정상 거절)
         NoMatchingSet,       ///< 세트 고르기 — 지금 자리에 맞는 세트가 없다(게임플레이의 정상 거절, `PairedAnimationSystem::startMatchingSession`)
+        InvalidSnapshot,     ///< 복원 — 스냅샷이 에셋 · 바인딩과 맞지 않는다(역할 수, 시각 범위, 앵커 단계 등. 복제 계층의 결함, 오류 로그)
+        SessionIDInUse,      ///< 복원 — 같은 id 의 세션이 아직 재생 중이다(먼저 중단해야 한다)
     };
 
     /** @enum PairedAnimationSessionState @brief 세션의 상태입니다. */
@@ -90,6 +95,18 @@ namespace sw
          * @param listBinding 역할 → 애니메이터. 선택 역할은 빠져도 된다.
          */
         [[nodiscard]] PairedAnimationStartResult start( GameObjectManager& manager, const vector<PairedAnimationBinding>& listBinding );
+        /**
+         * @brief 스냅샷(`captureSnapshot` 이나 `PairedAnimationSessionSnapshot::makeAtElapsedTime`)의 상태로 이어 받습니다(게임 스레드, 틱 밖). `start` 와 같이 모두 검사한 뒤에 바꿉니다.
+         * @details 서버의 상태에 맞추는 일이라 진입 블렌드 없이(0 초) 재생하고 앵커 시각으로 옮긴 뒤, 들어와 있는 역할은 `snapshot` 의 진입 시각에 맞는 클립 시각으로 옮깁니다.
+         *          이미 나간 역할은 종료 상태로 보냅니다. 트랜스폼은 서버 권위라 정렬(`Snap` · `Warp`)과 진입 거리 검사를 하지 않습니다.
+         *          아직 들어오지 않은 역할은 다음 갱신이 `start` 를 보고 들여보냅니다. 바인딩이 없는 선택 역할은 비워 둡니다.
+         *          바인딩은 있는데 스냅샷이 `Unbound` 이면 `InvalidSnapshot` 입니다.
+         */
+        [[nodiscard]] PairedAnimationStartResult restore( GameObjectManager& manager, const vector<PairedAnimationBinding>& listBinding, const PairedAnimationSessionSnapshot& snapshot );
+        /**
+         * @brief 지금 상태를 스냅샷으로 복사합니다. 재생 중이 아니면 false 입니다. 상태는 마지막 갱신 때의 것입니다(`PairedAnimationSessionSnapshot` 머리말).
+         */
+        [[nodiscard]] bool captureSnapshot( PairedAnimationSessionSnapshot& outSnapshot ) const;
         /** @brief 한 프레임을 갱신합니다(게임 스레드, 애니메이션 평가 앞). @p deltaSeconds 는 이번 프레임 평가에 넘길 그 값입니다. */
         void update( GameObjectManager& manager, float32 deltaSeconds );
         /** @brief 중단합니다. 남은 역할은 종료 상태로 블렌드합니다. 재생 중이 아니면 할 일이 없습니다. */
@@ -109,15 +126,6 @@ namespace sw
         bool isRolePlaying( const hashed_string& roleName ) const;
 
     private:
-        /** @brief 역할 하나의 실행 단계입니다. */
-        enum class RoleStage : uint8
-        {
-            Unbound = 0, ///< 바인딩이 없는 선택 역할
-            Waiting,     ///< 바인딩은 있고 `start` 를 기다린다
-            Playing,
-            Exited,
-        };
-
         /** @brief 역할 하나의 실행 상태입니다(에셋의 역할과 인덱스가 같다). */
         struct RoleState
         {
@@ -126,7 +134,7 @@ namespace sw
             float32                                     _clipSeconds{ 0.0f };
             float32                                     _entryAnchorTime{ 0.0f };
             float32                                     _previousPlayRate{ 1.0f };
-            RoleStage                                   _stage{ RoleStage::Unbound };
+            PairedAnimationRoleStage                    _stage{ PairedAnimationRoleStage::Unbound };
             bool                                        _bWarpOpen{ false };
         };
 
@@ -138,6 +146,13 @@ namespace sw
         [[nodiscard]] bool tryComputeAlignTarget( GameObjectManager& manager, const PairedAnimationRoleDef& roleDef, float3& outPosition, float32& outYaw ) const;
         /** @brief 진입 조건(정렬 거리)을 봅니다. 맞추지 않는 역할이면 늘 true 입니다. */
         bool isWithinAlignDistance( GameObjectManager& manager, uint32 roleIndex ) const;
+        /**
+         * @brief 바인딩을 역할에 묶고 모두 검사합니다(바인딩, 참가자, 스켈레톤, 클립과 길이, 워핑, 공유 알림 대상). 아무것도 바꾸지 않습니다. 통과하면 `Started` 입니다.
+         * @details 통과한 역할은 `Waiting` 이고 클립 포인터와 길이를 읽어 두었습니다. `start` 와 `restore` 가 함께 씁니다.
+         */
+        [[nodiscard]] PairedAnimationStartResult bindParticipants( GameObjectManager& manager, const vector<PairedAnimationBinding>& listBinding );
+        /** @brief 역할의 재생을 시작합니다 — 보폭 보정 쥠, 속도 1, 클립 `play`. 진입(`enterRole`)과 복원이 함께 씁니다. */
+        void startRolePlayback( SkeletalAnimatorComponent& animator, uint32 roleIndex, float32 blendSeconds );
         /** @brief 역할을 들여보냅니다 — 속도 1, `play`, 정렬. */
         void enterRole( GameObjectManager& manager, uint32 roleIndex, float32 anchorTime );
         /** @brief 역할을 내보냅니다 — 아직 세션 클립을 재생 중이면 종료 상태로 블렌드, 속도 되돌림, 워프 창 닫기. */

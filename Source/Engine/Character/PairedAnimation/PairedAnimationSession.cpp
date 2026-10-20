@@ -99,7 +99,7 @@ namespace sw
     {
         for ( const RoleState& role : _listRole )
         {
-            const bool bActive = role._stage == RoleStage::Waiting || role._stage == RoleStage::Playing;
+            const bool bActive = role._stage == PairedAnimationRoleStage::Waiting || role._stage == PairedAnimationRoleStage::Playing;
             if ( bActive && role._animator == animator )
                 return true;
         }
@@ -111,7 +111,7 @@ namespace sw
         uint32 playingCount = 0;
         for ( const RoleState& role : _listRole )
         {
-            if ( role._stage == RoleStage::Playing )
+            if ( role._stage == PairedAnimationRoleStage::Playing )
                 ++playingCount;
         }
         return playingCount;
@@ -120,7 +120,7 @@ namespace sw
     bool PairedAnimationSession::isRolePlaying( const hashed_string& roleName ) const
     {
         const uint32 roleIndex = _def->findRoleIndex( roleName );
-        return roleIndex < _listRole.size() && _listRole[roleIndex]._stage == RoleStage::Playing;
+        return roleIndex < _listRole.size() && _listRole[roleIndex]._stage == PairedAnimationRoleStage::Playing;
     }
 
     bool PairedAnimationSession::tryComputeAlignTarget( GameObjectManager& manager, const PairedAnimationRoleDef& roleDef, float3& outPosition, float32& outYaw ) const
@@ -151,7 +151,7 @@ namespace sw
         return ( target - pRoot->getWorldPosition() ).getLength() <= roleDef._maxAlignDistance;
     }
 
-    PairedAnimationStartResult PairedAnimationSession::start( GameObjectManager& manager, const vector<PairedAnimationBinding>& listBinding )
+    PairedAnimationStartResult PairedAnimationSession::bindParticipants( GameObjectManager& manager, const vector<PairedAnimationBinding>& listBinding )
     {
         SW_ASSERT( _state == PairedAnimationSessionState::Idle );
         const PairedAnimationDef&             def         = *_def;
@@ -237,14 +237,14 @@ namespace sw
                     return PairedAnimationStartResult::ClipLengthMismatch;
                 }
             }
-            role._stage = RoleStage::Waiting;
+            role._stage = PairedAnimationRoleStage::Waiting;
         }
 
         // 3) 공유 알림 — 받을 역할이 묶였으면 그 오브젝트의 표에 항목이 있어야 한다(조용히 건너뛰지 않는다).
         for ( const PairedAnimationNotifyDef& notify : def.getNotifies() )
         {
             const RoleState& role = _listRole[def.findRoleIndex( notify._role )];
-            if ( role._stage == RoleStage::Unbound )
+            if ( role._stage == PairedAnimationRoleStage::Unbound )
                 continue;
             const SkeletalAnimatorComponent* pAnimator = resolveAnimator( manager, role );
             const AnimationNotifyComponent*  pNotify   = pAnimator != nullptr ? PairedAnimationSessionInternal::findSibling<AnimationNotifyComponent>( *pAnimator ) : nullptr;
@@ -255,11 +255,22 @@ namespace sw
                 return PairedAnimationStartResult::NotifyTargetMissing;
             }
         }
+        return PairedAnimationStartResult::Started;
+    }
+
+    PairedAnimationStartResult PairedAnimationSession::start( GameObjectManager& manager, const vector<PairedAnimationBinding>& listBinding )
+    {
+        // 1) ~ 3) 바인딩 · 참가자 · 공유 알림 대상 — 아무것도 바꾸지 않는 검사다.
+        const PairedAnimationStartResult bound = bindParticipants( manager, listBinding );
+        if ( bound != PairedAnimationStartResult::Started )
+            return bound;
+        const PairedAnimationDef&             def         = *_def;
+        const vector<PairedAnimationRoleDef>& listRoleDef = def.getRoles();
 
         // 4) 진입 조건 — 처음부터 들어오는 정렬 역할이 목표 가까이 있어야 한다.
         for ( size_t roleIndex = 0; roleIndex < listRoleDef.size(); ++roleIndex )
         {
-            const bool bEntersNow = _listRole[roleIndex]._stage == RoleStage::Waiting && listRoleDef[roleIndex]._startSeconds <= 0.0f;
+            const bool bEntersNow = _listRole[roleIndex]._stage == PairedAnimationRoleStage::Waiting && listRoleDef[roleIndex]._startSeconds <= 0.0f;
             if ( bEntersNow && isWithinAlignDistance( manager, static_cast<uint32>( roleIndex ) ) == false )
                 return PairedAnimationStartResult::TooFarToAlign;
         }
@@ -269,11 +280,115 @@ namespace sw
         enterRole( manager, def.getAnchorRoleIndex(), 0.0f );
         for ( size_t roleIndex = 0; roleIndex < listRoleDef.size(); ++roleIndex )
         {
-            const bool bEntersNow = _listRole[roleIndex]._stage == RoleStage::Waiting && listRoleDef[roleIndex]._startSeconds <= 0.0f;
+            const bool bEntersNow = _listRole[roleIndex]._stage == PairedAnimationRoleStage::Waiting && listRoleDef[roleIndex]._startSeconds <= 0.0f;
             if ( bEntersNow )
                 enterRole( manager, static_cast<uint32>( roleIndex ), 0.0f );
         }
         return PairedAnimationStartResult::Started;
+    }
+
+    bool PairedAnimationSession::captureSnapshot( PairedAnimationSessionSnapshot& outSnapshot ) const
+    {
+        if ( _state != PairedAnimationSessionState::Playing )
+            return false;
+        outSnapshot                  = PairedAnimationSessionSnapshot{};
+        outSnapshot._sessionID       = _sessionID;
+        outSnapshot._anchorTime      = _anchorTime;
+        outSnapshot._nextNotifyIndex = _nextNotifyIndex;
+        outSnapshot._listRole.resize( _listRole.size() );
+        for ( size_t roleIndex = 0; roleIndex < _listRole.size(); ++roleIndex )
+        {
+            outSnapshot._listRole[roleIndex]._stage           = _listRole[roleIndex]._stage;
+            outSnapshot._listRole[roleIndex]._entryAnchorTime = _listRole[roleIndex]._entryAnchorTime;
+        }
+        return true;
+    }
+
+    PairedAnimationStartResult PairedAnimationSession::restore( GameObjectManager& manager, const vector<PairedAnimationBinding>& listBinding, const PairedAnimationSessionSnapshot& snapshot )
+    {
+        // 1) 바인딩 · 참가자 · 공유 알림 대상 — `start` 와 같은 검사다.
+        const PairedAnimationStartResult bound = bindParticipants( manager, listBinding );
+        if ( bound != PairedAnimationStartResult::Started )
+            return bound;
+        const PairedAnimationDef&             def         = *_def;
+        const vector<PairedAnimationRoleDef>& listRoleDef = def.getRoles();
+        const uint32                          anchorIndex = def.getAnchorRoleIndex();
+
+        // 2) 스냅샷 — 에셋과 맞아야 한다. 맞지 않는 것은 복제 계층의 결함이라 조용히 고치지 않는다.
+        const bool bShapeValid       = snapshot._listRole.size() == listRoleDef.size() && snapshot._nextNotifyIndex <= def.getNotifies().size();
+        const bool bAnchorStageValid = bShapeValid && snapshot._listRole[anchorIndex]._stage == PairedAnimationRoleStage::Playing;
+        const bool bAnchorTimeFinite = MathUtil::isFinite( snapshot._anchorTime );
+        const bool bAnchorTimeInside = 0.0f <= snapshot._anchorTime && snapshot._anchorTime < def.getDuration();
+        const bool bAnchorTimeValid  = bAnchorTimeFinite && bAnchorTimeInside;
+        if ( bAnchorStageValid == false || bAnchorTimeValid == false )
+        {
+            SW_LOG_ERROR( "Paired animation %# snapshot does not fit the asset (roles %#/%#, notify cursor %#, anchor time %#)", snapshot._sessionID, static_cast<uint32>( snapshot._listRole.size() ),
+                          static_cast<uint32>( listRoleDef.size() ), snapshot._nextNotifyIndex, snapshot._anchorTime );
+            return PairedAnimationStartResult::InvalidSnapshot;
+        }
+        for ( size_t roleIndex = 0; roleIndex < _listRole.size(); ++roleIndex )
+        {
+            if ( _listRole[roleIndex]._stage == PairedAnimationRoleStage::Unbound )
+                continue; // 바인딩이 없는 선택 역할은 스냅샷이 무엇을 말하든 비워 둔다
+            const PairedAnimationRoleSnapshot& saved = snapshot._listRole[roleIndex];
+            // 들어와 있던 역할의 진입 시각은 지금 앵커 시각 이전이다(앵커는 진입 시각 0 으로 보고 읽지 않는다).
+            const bool bEntryFinite = MathUtil::isFinite( saved._entryAnchorTime );
+            const bool bEntryInside = 0.0f <= saved._entryAnchorTime && saved._entryAnchorTime <= snapshot._anchorTime + kTimeToleranceSeconds;
+            const bool bEntryValid  = roleIndex == anchorIndex || ( bEntryFinite && bEntryInside );
+            const bool bStageValid  = saved._stage != PairedAnimationRoleStage::Unbound;
+            const bool bPlayingBad  = saved._stage == PairedAnimationRoleStage::Playing && bEntryValid == false;
+            if ( bStageValid == false || bPlayingBad )
+            {
+                SW_LOG_ERROR( "Paired animation %# snapshot has an invalid state for role '%#' (entry anchor time %#)", snapshot._sessionID, listRoleDef[roleIndex]._name.c_str(), saved._entryAnchorTime );
+                return PairedAnimationStartResult::InvalidSnapshot;
+            }
+        }
+
+        // 3) 바꾼다 — 서버의 앵커 시각과 알림 커서를 이어 받고, 역할마다 단계에 맞게 재생을 맞춘다. 트랜스폼은 서버 권위라 건드리지 않는다.
+        _state               = PairedAnimationSessionState::Playing;
+        _anchorTime          = snapshot._anchorTime;
+        _predictedAnchorTime = snapshot._anchorTime;
+        _nextNotifyIndex     = snapshot._nextNotifyIndex;
+        for ( size_t roleIndex = 0; roleIndex < _listRole.size(); ++roleIndex )
+        {
+            RoleState& role = _listRole[roleIndex];
+            if ( role._stage == PairedAnimationRoleStage::Unbound || snapshot._listRole[roleIndex]._stage == PairedAnimationRoleStage::Waiting )
+                continue; // 기다리는 역할은 다음 갱신이 `start` 를 보고 들여보낸다
+            SkeletalAnimatorComponent* pAnimator = resolveAnimator( manager, role );
+            SW_ASSERT( pAnimator != nullptr ); // `bindParticipants` 가 해석했다
+            const bool    bAnchor   = roleIndex == anchorIndex;
+            const float32 entryTime = bAnchor ? 0.0f : snapshot._listRole[roleIndex]._entryAnchorTime;
+            const float32 roleTime  = MathUtil::max( snapshot._anchorTime - entryTime, 0.0f );
+            // 앵커는 끝나지 않았다(앵커 시각 < 타임라인 길이). 다른 역할은 클립이 이미 끝났거나 서버가 내보낸 것이다.
+            const bool bClipDone = snapshot._listRole[roleIndex]._stage == PairedAnimationRoleStage::Exited || roleTime + kTimeToleranceSeconds >= role._clipSeconds;
+            if ( bAnchor == false && bClipDone )
+            {
+                role._stage = PairedAnimationRoleStage::Exited;
+                (void)pAnimator->play( listRoleDef[roleIndex]._exitState, true, 0.0f ); // 못 찾은 종료 상태는 `play` 가 오류로 남긴다
+                continue;
+            }
+            startRolePlayback( *pAnimator, static_cast<uint32>( roleIndex ), 0.0f );
+            role._entryAnchorTime = entryTime;
+            // 앵커 클립 길이는 타임라인 길이와 허용치 안에서 같다. 그 안에서 클립 끝을 넘는 시각만 끝으로 맞춘다.
+            const bool bSought = pAnimator->seekCurrentTime( MathUtil::min( roleTime, role._clipSeconds ) );
+            SW_ASSERT( bSought ); // 시각은 0 이상이고 클립 길이를 넘지 않는다
+            (void)bSought;
+        }
+        return PairedAnimationStartResult::Started;
+    }
+
+    void PairedAnimationSession::startRolePlayback( SkeletalAnimatorComponent& animator, uint32 roleIndex, float32 blendSeconds )
+    {
+        // 모든 역할이 같은 속도로 흘러야 앵커 시각에서 역할 시각을 정확히 안다. 끝나면 되돌린다. 속도를 매 프레임 쓰는 보폭 보정은 그동안 쥐어 둔다.
+        LocomotionWarpingComponent* pLocomotion = PairedAnimationSessionInternal::findSibling<LocomotionWarpingComponent>( animator );
+        if ( pLocomotion != nullptr )
+            pLocomotion->setPlayRateHeld( true );
+        RoleState& role        = _listRole[roleIndex];
+        role._previousPlayRate = animator.getPlayRate();
+        animator.setPlayRate( 1.0f );
+        // 클립은 시작 검사에서 읽어 두었다 — 여기서 못 찾으면 `play` 가 오류를 남긴다.
+        (void)animator.play( _def->getRoles()[roleIndex]._clip, false, blendSeconds ); // 시작 검사에서 클립을 읽었고, 실패는 `play` 가 로그로 남긴다
+        role._stage = PairedAnimationRoleStage::Playing;
     }
 
     void PairedAnimationSession::enterRole( GameObjectManager& manager, uint32 roleIndex, float32 anchorTime )
@@ -282,16 +397,8 @@ namespace sw
         RoleState&                    role      = _listRole[roleIndex];
         SkeletalAnimatorComponent*    pAnimator = resolveAnimator( manager, role );
         SW_ASSERT( pAnimator != nullptr );
-        // 모든 역할이 같은 속도로 흘러야 앵커 시각에서 역할 시각을 정확히 안다. 끝나면 되돌린다. 속도를 매 프레임 쓰는 보폭 보정은 그동안 쥐어 둔다.
-        LocomotionWarpingComponent* pLocomotion = PairedAnimationSessionInternal::findSibling<LocomotionWarpingComponent>( *pAnimator );
-        if ( pLocomotion != nullptr )
-            pLocomotion->setPlayRateHeld( true );
-        role._previousPlayRate = pAnimator->getPlayRate();
-        pAnimator->setPlayRate( 1.0f );
-        // 클립은 시작 검사에서 읽어 두었다 — 여기서 못 찾으면 `play` 가 오류를 남긴다.
-        (void)pAnimator->play( roleDef._clip, false, roleDef._enterBlendSeconds ); // 시작 검사에서 클립을 읽었고, 실패는 `play` 가 로그로 남긴다
+        startRolePlayback( *pAnimator, roleIndex, roleDef._enterBlendSeconds );
         role._entryAnchorTime = anchorTime;
-        role._stage           = RoleStage::Playing;
 
         float3  target{};
         float32 targetYaw = 0.0f;
@@ -353,14 +460,14 @@ namespace sw
     void PairedAnimationSession::exitRole( GameObjectManager& manager, uint32 roleIndex )
     {
         RoleState& role = _listRole[roleIndex];
-        if ( role._stage != RoleStage::Playing )
+        if ( role._stage != PairedAnimationRoleStage::Playing )
         {
-            if ( role._stage == RoleStage::Waiting )
-                role._stage = RoleStage::Exited;
+            if ( role._stage == PairedAnimationRoleStage::Waiting )
+                role._stage = PairedAnimationRoleStage::Exited;
             return;
         }
         closeWarpWindow( manager, roleIndex, false );
-        role._stage                          = RoleStage::Exited;
+        role._stage                          = PairedAnimationRoleStage::Exited;
         SkeletalAnimatorComponent* pAnimator = resolveAnimator( manager, role );
         if ( pAnimator == nullptr )
             return;
@@ -408,7 +515,7 @@ namespace sw
     {
         const PairedAnimationNotifyDef&  notify    = _def->getNotifies()[notifyIndex];
         const RoleState&                 role      = _listRole[_def->findRoleIndex( notify._role )];
-        const bool                       bBound    = role._stage == RoleStage::Waiting || role._stage == RoleStage::Playing;
+        const bool                       bBound    = role._stage == PairedAnimationRoleStage::Waiting || role._stage == PairedAnimationRoleStage::Playing;
         const SkeletalAnimatorComponent* pAnimator = bBound ? resolveAnimator( manager, role ) : nullptr;
         AnimationNotifyComponent*        pNotify   = pAnimator != nullptr ? PairedAnimationSessionInternal::findSibling<AnimationNotifyComponent>( *pAnimator ) : nullptr;
         if ( pNotify == nullptr )
@@ -437,12 +544,12 @@ namespace sw
         for ( size_t roleIndex = 0; roleIndex < _listRole.size(); ++roleIndex )
         {
             RoleState& role = _listRole[roleIndex];
-            if ( role._stage != RoleStage::Waiting && role._stage != RoleStage::Playing )
+            if ( role._stage != PairedAnimationRoleStage::Waiting && role._stage != PairedAnimationRoleStage::Playing )
                 continue;
             const SkeletalAnimatorComponent* pAnimator = resolveAnimator( manager, role );
             float32                          clipTime  = 0.0f;
             const bool                       bMissing  = pAnimator == nullptr;
-            const bool                       bHijacked = bMissing == false && role._stage == RoleStage::Playing && tryGetClipTime( *pAnimator, role, clipTime ) == false;
+            const bool                       bHijacked = bMissing == false && role._stage == PairedAnimationRoleStage::Playing && tryGetClipTime( *pAnimator, role, clipTime ) == false;
             if ( bMissing == false && bHijacked == false )
                 continue;
             if ( loseRole( manager, static_cast<uint32>( roleIndex ), bMissing ? "is gone" : "stopped playing its clip" ) )
@@ -470,7 +577,7 @@ namespace sw
         for ( size_t roleIndex = 0; roleIndex < _listRole.size(); ++roleIndex )
         {
             const RoleState& role = _listRole[roleIndex];
-            if ( role._stage != RoleStage::Playing || roleIndex == anchorIndex )
+            if ( role._stage != PairedAnimationRoleStage::Playing || roleIndex == anchorIndex )
                 continue;
             float32 clipTime = 0.0f;
             (void)tryGetClipTime( *resolveAnimator( manager, role ), role, clipTime ); // 1) 에서 재생 중임을 확인했다
@@ -497,7 +604,7 @@ namespace sw
             const PairedAnimationRoleDef& roleDef = listRoleDef[roleIndex];
             RoleState&                    role    = _listRole[roleIndex];
             const uint32                  index   = static_cast<uint32>( roleIndex );
-            if ( role._stage == RoleStage::Waiting && roleDef._startSeconds <= anchorTime + kTimeToleranceSeconds )
+            if ( role._stage == PairedAnimationRoleStage::Waiting && roleDef._startSeconds <= anchorTime + kTimeToleranceSeconds )
             {
                 if ( isWithinAlignDistance( manager, index ) == false )
                 {
@@ -508,7 +615,7 @@ namespace sw
                 enterRole( manager, index, anchorTime );
                 continue;
             }
-            if ( role._stage != RoleStage::Playing || roleIndex == anchorIndex )
+            if ( role._stage != PairedAnimationRoleStage::Playing || roleIndex == anchorIndex )
                 continue;
             const float32 roleTime = anchorTime - role._entryAnchorTime;
             if ( role._bWarpOpen )
