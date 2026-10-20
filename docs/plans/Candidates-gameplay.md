@@ -70,7 +70,7 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션 영역의 
 제목: Shooter3D 발 미끄러짐 연결
 옛번호: D4-6
 왜 필요한가: 앞으로 걷기 · 달리기는 재생 속도 매칭(`LocomotionSpeedUtil`, 범위 0.6 ~ 1.8)으로 맞췄고, 범위를 넘는 몫은 리그 노드 `StrideWarping`(+ `LocomotionSpeedUtil::computeStrideScale`)이 맡는다.
-남은 것: Shooter3D 연결(`knight.rig.json` 에 노드를 두고 `ShooterAvatarComponent` 가 프레임마다 `stride_scale` · 이동 방향을 `setNodeControl` 로 넣기)과 화면 확인. 뒷걸음 · 옆걸음은 [ShooterCharacterIntegration](#shootercharacterintegration).
+남은 것: Shooter3D 연결(`knight.rig.json` 에 노드를 두고 `ShooterAvatarComponent` 가 프레임마다 `stride_scale` · 이동 방향을 `setNodeControl` 로 넣기)과 화면 확인. 뒷걸음 · 옆걸음은 [ShooterCharacterIntegration](ShooterCharacterIntegration.md).
 
 ### AnimationAdvancedFeatures
 제목: 애니메이션 고급 기능 후보
@@ -109,15 +109,6 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션 영역의 
 - 중간(M): 대역폭 프로파일러 · 게임플레이 디버거 · 비주얼 로거 · 모듈 패키지 관리(옛 D3-8) · HZB 가림 컬링 · 로딩 흐름의 남은 것(로딩 화면 · 페이드는 `LoadingScreenController` — 진행률(씬 매니저에 진행 질의가 없다 — 스트리밍 큐 바이트로) · 프리로드 세트 연결 · 팁 목록 데이터(`LoadingScreenSettings::_listTip` 은 있으나 gamesettings 칸 · 글 수집 규칙이 없다)) · 에셋 DCC 내보내기 · SSR · 업스케일러 · HDR 출력 · 데칼 · 2D 스켈레탈 · 학습용 몫(장르 시작 템플릿 · 튜토리얼 · API 문서).
 - 큼(L): 제약 · 파티클/VFX · 에셋 레지스트리 · DDC · 증분 쿠킹 · 월드 편집 도구 · 전술 AI · 볼류메트릭 안개/빛/구름 · 캐릭터 셰이딩 · 모션 캡처 공정 · 대규모 좌표 · PCG 저작 그래프 · GI/반사 프로브 · 플랫폼 서비스 · 패치/DLC · 모드/UGC.
 - 아주 큼(XL): 비주얼 스크립팅 · 월드 파티션/스트리밍/HLOD · 음성 채팅(온라인 구성은 옛 D7-5).
-
-### ShooterCharacterIntegration
-제목: Shooter3D 캐릭터 통합의 남은 것
-옛번호: D4-10
-왜 필요한가: KayKit 기사 플레이어 · 스켈레톤 적 · 외형 프리셋 · 입력 맵 · 탄도선 풀은 들어갔다(`Source/Games/Shooter3D/`). 리그와 게임플레이 쪽이 남았다.
-남은 것:
-- 리그: 왼손을 총에 붙이는 손 IK(목표는 무기 소켓 `MainHand.SupportHand`), 1인칭에서 머리만 숨기기(리그 노드 `ScaleBone` 은 있다 — 플레이어 몸에 연결하고 1인칭 화면으로 확인; 지금은 몸 전체를 숨긴다), 스프링 본(망토).
-- 게임플레이: 래그돌 쓰러짐(지금은 클립), 부위 히트박스(지금은 발에서 키까지 캡슐 하나, 중심 소켓 `Chest`), 물리 질의 히트스캔 · 시야(지금 상자 목록 · 캡슐), 쓰러질 때 무기 떨어뜨리기(`SocketBindingComponent::release( Physics )` — 무기 프리팹에 강체를 더하면 된다), 알림으로 휘두름 피해 · 발소리(지금 휘두름 피해는 `_attackHitTime` 초).
-- 그 밖: 외형 부품 풀(스켈레톤마다 프리팹을 세우고 지운다), 뒷걸음 · 옆걸음 발 미끄러짐([ShooterStrideWarping](#shooterstridewarping)).
 
 ### AbilitySystemExtensions
 제목: 어빌리티 시스템의 다음 조각
