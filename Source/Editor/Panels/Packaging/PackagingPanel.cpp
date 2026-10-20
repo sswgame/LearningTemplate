@@ -45,6 +45,21 @@ namespace sw::editor
 
             static string quote( string_view text ) { return "\"" + string{ text } + "\""; }
 
+            /** @brief 이름 목록에서 하나를 고르는 콤보입니다. @p getName 이 순번의 이름을 돌려주고, 고르면 @p inoutIndex 를 바꿉니다. */
+            template <typename GetName>
+            static void drawOptionCombo( const utf8* pLabel, float32 width, const utf8* pPreview, uint32 count, GetName&& getName, uint32& inoutIndex )
+            {
+                ImGui::SetNextItemWidth( width );
+                if ( ImGui::BeginCombo( pLabel, pPreview ) == false )
+                    return;
+                for ( uint32 index = 0; index < count; ++index )
+                {
+                    if ( ImGui::Selectable( getName( index ), index == inoutIndex ) )
+                        inoutIndex = index;
+                }
+                ImGui::EndCombo();
+            }
+
             /** @brief 오류처럼 보이는 줄입니다(빨강). */
             static bool isErrorLine( string_view line )
             {
@@ -174,49 +189,37 @@ namespace sw::editor
 
     void PackagingPanel::drawContent()
     {
-        using Internal = PackagingPanelInternal;
         if ( _bGamesLoaded == SW_FALSE )
             refreshGames();
         collectResult();
+        const bool bBusy = _pJob->isPending();
+
+        drawOptionRows( bBusy );
+        drawActionRow( bBusy );
+        drawProgressBar();
+        drawLogList();
+    }
+
+    void PackagingPanel::drawOptionRows( bool bBusy )
+    {
+        using Internal         = PackagingPanelInternal;
         const float32 dpiScale = EditorThemeUtil::getDpiScale();
-        const bool    bBusy    = _pJob->isPending();
 
         ImGui::BeginDisabled( bBusy );
-        ImGui::SetNextItemWidth( 120.0f * dpiScale );
-        if ( ImGui::BeginCombo( "Target", Internal::kArrTarget[_targetIndex] ) )
-        {
-            for ( uint32 index = 0; index < static_cast<uint32>( std::size( Internal::kArrTarget ) ); ++index )
-            {
-                if ( ImGui::Selectable( Internal::kArrTarget[index], index == _targetIndex ) )
-                    _targetIndex = index;
-            }
-            ImGui::EndCombo();
-        }
+        Internal::drawOptionCombo( "Target", 120.0f * dpiScale, Internal::kArrTarget[_targetIndex], static_cast<uint32>( std::size( Internal::kArrTarget ) ),
+                                   []( uint32 index )
+        { return Internal::kArrTarget[index]; }, _targetIndex );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorPackaging", "Target" ) );
         ImGui::SameLine();
-        ImGui::SetNextItemWidth( 160.0f * dpiScale );
         const utf8* pGamePreview = _gameIndex < _listGame.size() ? _listGame[_gameIndex].c_str() : "(none)";
-        if ( ImGui::BeginCombo( "Game", pGamePreview ) )
-        {
-            for ( uint32 index = 0; index < static_cast<uint32>( _listGame.size() ); ++index )
-            {
-                if ( ImGui::Selectable( _listGame[index].c_str(), index == _gameIndex ) )
-                    _gameIndex = index;
-            }
-            ImGui::EndCombo();
-        }
+        Internal::drawOptionCombo( "Game", 160.0f * dpiScale, pGamePreview, static_cast<uint32>( _listGame.size() ),
+                                   [this]( uint32 index )
+        { return _listGame[index].c_str(); }, _gameIndex );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorPackaging", "Game" ) );
         ImGui::SameLine();
-        ImGui::SetNextItemWidth( 150.0f * dpiScale );
-        if ( ImGui::BeginCombo( "RHI", Internal::kArrBackend[_rhiIndex] ) )
-        {
-            for ( uint32 index = 0; index < static_cast<uint32>( std::size( Internal::kArrBackend ) ); ++index )
-            {
-                if ( ImGui::Selectable( Internal::kArrBackend[index], index == _rhiIndex ) )
-                    _rhiIndex = index;
-            }
-            ImGui::EndCombo();
-        }
+        Internal::drawOptionCombo( "RHI", 150.0f * dpiScale, Internal::kArrBackend[_rhiIndex], static_cast<uint32>( std::size( Internal::kArrBackend ) ),
+                                   []( uint32 index )
+        { return Internal::kArrBackend[index]; }, _rhiIndex );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorPackaging", "RHIBackend" ) );
 
         ImGui::SetNextItemWidth( 320.0f * dpiScale );
@@ -235,7 +238,10 @@ namespace sw::editor
         EditorSelfTestMarks::note( "packaging.skipCook" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorPackaging", "SkipCook" ) );
         ImGui::EndDisabled();
+    }
 
+    void PackagingPanel::drawActionRow( bool bBusy )
+    {
         ImGui::BeginDisabled( bBusy );
         const bool bPackage = ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kBuildAll, "Package" ) );
         ImGui::EndDisabled();
@@ -250,7 +256,10 @@ namespace sw::editor
             (void)EditorAssetFileCommands::showInFileExplorer( _progress._outputFolder ); // 탐색기를 못 띄우면 경고가 남는다
         ImGui::EndDisabled();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorPackaging", "OpenFolder" ) );
+    }
 
+    void PackagingPanel::drawProgressBar()
+    {
         // 진행 — 단계 줄은 끝난 뒤 한꺼번에 오므로 도는 동안은 움직이는 막대다.
         fixed_string<constant::kMaxBuffer256> overlay;
         float32                               fraction = _progress.computeFraction();
@@ -283,7 +292,11 @@ namespace sw::editor
             EditorThemeUtil::textError( _progress._failure.c_str() );
         else if ( _progress._state == PackagingState::Succeeded )
             ImGui::TextDisabled( "%s", _progress._outputFolder.c_str() );
+    }
 
+    void PackagingPanel::drawLogList()
+    {
+        using Internal = PackagingPanelInternal;
         ImGui::Separator();
         if ( ImGui::BeginChild( "##packaging_log", ImVec2( 0.0f, 0.0f ), ImGuiChildFlags_Borders ) )
         {

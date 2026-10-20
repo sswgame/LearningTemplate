@@ -233,7 +233,7 @@ namespace sw::editor
 {
     /**
      * @class MultiplayerConditionsTab
-     * @brief Conditions 탭 — 고른 대상 프로세스의 회선 흉내를 실행 중에 바꿉니다(서버 디버깅 S4, 언리얼 Net Emulation · 유니티 Network Simulator 의 자리).
+     * @brief Conditions 탭 — 고른 대상 프로세스의 회선 흉내를 실행 중에 바꿉니다(서버 디버깅 S4, 언리얼 Net Emulation · 유니티 Network Simulator 에 해당합니다).
      * @details 프리셋, 올림 · 내림 슬라이더(지연 · 흔들림 · 손실 · 대역폭), 끊기 · 재접속 · 스파이크를 그 프로세스의 표준 입력에 개발 명령(`net.emulation` …)으로 보낸다.
      *          패널 값은 프로세스마다 따로 들고, 세션이 새로 서면(포트가 바뀌면) 지운다 — 자식은 `-gv_netEmu*` 기본값(꺼짐)으로 다시 뜬다.
      */
@@ -254,7 +254,7 @@ namespace sw::editor
 
         /** @brief 대상(또는 모두)에 명령 한 줄을 보냅니다. */
         void sendToTargets( EditorNetPlaySession& session, int32 targetIndex, const string& command );
-        /** @brief 한 방향 슬라이더 묶음을 그립니다. 손을 뗐을 때 바뀌었으면 true 입니다. */
+        /** @brief 한 방향 슬라이더 그룹을 그립니다. 손을 뗐을 때 바뀌었으면 true 입니다. */
         static bool drawLinkSliders( const utf8* pID, EditorNetLinkSettings& inoutSettings );
         /** @brief 대상의 마지막 보고(`net.emulation stats` 의 답)를 한 줄로 그립니다. */
         static void drawReport( const EditorNetPlayProcessStatus& status );
@@ -264,7 +264,7 @@ namespace sw::editor
         float32                 _spikeSeconds;
         uint16                  _sessionPort;           ///< `_listLink` 가 맞춰진 세션(포트) — 바뀌면 지운다
         bool                    _bApplyToAll;           ///< 대상 대신 모든 프로세스에 보낸다
-        bool                    _bPresetTableAttempted; ///< 표를 읽어 봤다(실패도 한 번만 알린다)
+        bool                    _bPresetTableAttempted; ///< 테이블을 읽어 봤다(실패도 한 번만 알린다)
     };
 } // namespace sw::editor
 
@@ -315,7 +315,7 @@ namespace sw::editor
             ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorMultiplayer", "ConditionsNoStats" ) );
             return;
         }
-        // 보고 줄을 그대로 보인다 — 키 이름이 곧 칸 이름이다(connections · sent · dropped · resent · lossPercent · rttMs).
+        // 보고 줄을 그대로 보인다 — 키 이름이 곧 필드 이름이다(connections · sent · dropped · resent · lossPercent · rttMs).
         ImGui::TextUnformatted( status._emulationReport.makeLine().c_str() );
     }
 
@@ -343,11 +343,11 @@ namespace sw::editor
         ImGui::SameLine();
         ImGui::TextDisabled( "%s", _bApplyToAll ? "every process" : status._label.c_str() );
 
-        // 프리셋 — 두 방향을 같은 값으로(왕복이 그 회선이 된다). 단추는 엔진 프리셋 표의 줄이다.
+        // 프리셋 — 두 방향을 같은 값으로(왕복이 그 회선이 된다). 단추는 엔진 프리셋 테이블의 항목이다.
         if ( _bPresetTableAttempted == false )
         {
             _bPresetTableAttempted = true;
-            (void)_presetTable.loadFromResource(); // 실패는 표가 알린다 — 단추가 없을 뿐 슬라이더는 그대로 쓴다
+            (void)_presetTable.loadFromResource(); // 실패는 테이블이 알린다 — 단추가 없을 뿐 슬라이더는 그대로 쓴다
         }
         for ( const NetEmulationPresetDef& preset : _presetTable._listPreset )
         {

@@ -63,6 +63,12 @@ namespace sw::editor
         void drawKeyStrip( const SequenceKeyTrack& track, int32 trackIndex );
         /** @brief 고른 트랙의 이름 · 대상 · 키 단추 · 채널 값을 그립니다. */
         void drawSelectedTrack( SequenceKeyTrack& track );
+        /** @brief 트랙 글 칸 하나입니다. 손을 떼며 바뀌었으면 편집으로 기록하고, @p bPreviewOnEdit 이면 현재 프레임을 다시 미리 봅니다. */
+        void drawTrackTextField( const utf8* pLabel, string& inoutText, const utf8* pTooltip, bool bPreviewOnEdit );
+        /** @brief 키 추가 · 삭제 · 이전 · 다음 키 이동 단추와 대상을 못 찾았다는 안내입니다. @p pArrCurrent 는 대상의 지금 채널 값입니다. */
+        void drawKeyButtons( SequenceKeyTrack& track, float32 frame, const float32* pArrCurrent, bool bTargetFound );
+        /** @brief 채널마다 키 표식 · 값 드래그 칸 · 곡선 열기 단추 한 줄을 그립니다. */
+        void drawChannelRows( SequenceKeyTrack& track, float32 frame, const float32* pArrCurrent );
         /** @brief 커브 단추로 고른 채널의 커브 편집기를 그립니다. */
         void drawChannelCurve();
         /** @brief 새 키 트랙을 더하고 고릅니다. 대상은 에디터에서 고른 오브젝트입니다(없으면 비워 둔다). */

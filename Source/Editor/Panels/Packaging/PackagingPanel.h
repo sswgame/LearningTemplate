@@ -50,6 +50,14 @@ namespace sw::editor
         void collectResult();
         /** @brief `Config/Game/` 의 게임 설정 파일 이름을 모으고 활성 팩의 게임을 고릅니다. */
         void refreshGames();
+        /** @brief 타깃 · 게임 · RHI 콤보, 출력 폴더, 건너뛰기 체크칸입니다. 패키징이 도는 동안은 막습니다. */
+        void drawOptionRows( bool bBusy );
+        /** @brief 패키징 시작과 출력 폴더 열기 단추입니다. */
+        void drawActionRow( bool bBusy );
+        /** @brief 진행 막대와 실패 · 성공 안내입니다. */
+        void drawProgressBar();
+        /** @brief 최근 로그 줄을 그립니다(오류처럼 보이는 줄은 빨강). */
+        void drawLogList();
 
     private:
         unique_ptr<EditorExternalToolJob> _pJob;

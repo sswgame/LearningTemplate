@@ -105,7 +105,7 @@ namespace sw::editor
         {
             static constexpr float32     kLeftWidth            = 340.0f;
             static constexpr float32     kIndentPerLevel       = 12.0f;
-            static constexpr float32     kTreeRatio            = 0.28f; ///< 왼쪽 칸에서 위젯 트리가 차지하는 높이 비율
+            static constexpr float32     kTreeRatio            = 0.28f; ///< 왼쪽 영역에서 위젯 트리가 차지하는 높이 비율
             static constexpr float32     kPaletteRatio         = 0.22f; ///< 팔레트가 차지하는 높이 비율(나머지는 인스펙터)
             static constexpr float32     kHandleSize           = 9.0f;  ///< 슬롯 손잡이 한 변(96 DPI 픽셀)
             static constexpr uint32      kPaletteRefreshFrames = 180;   ///< 팔레트를 다시 모으는 간격(게임 모듈이 위젯 타입을 더하거나 뺄 수 있다)
@@ -113,7 +113,7 @@ namespace sw::editor
             static constexpr Color       kLayoutColor{ Color::fromBytes( 90, 200, 255, 110 ) };
             static constexpr Color       kSafeZoneColor{ Color::fromBytes( 255, 80, 80, 200 ) };
 
-            /** @brief 시나리오가 누를 이름표 `<접두어>.<접미어>` 를 남깁니다. 테스트를 켰을 때만 문자열을 만듭니다. */
+            /** @brief 시나리오가 누를 레이블 `<접두어>.<접미어>` 를 남깁니다. 테스트를 켰을 때만 문자열을 만듭니다. */
             static void noteMark( const utf8* pPrefix, const utf8* pSuffix )
             {
                 if ( EditorSelfTestMarks::isEnabled() == false )
@@ -339,7 +339,7 @@ namespace sw::editor
         , _paletteFilter{}
         , _slotDragBaseline{}
         , _paletteType{}
-        , _documentPath{ getEditorToolDefaults()._uiPreviewDocument.get() } // 처음 여는 문서 — 정본은 editortooldefaults.json
+        , _documentPath{ getEditorToolDefaults()._uiPreviewDocument.get() } // 처음 여는 문서 — 원본은 editortooldefaults.json
         , _openedDocument{}
         , _targetPath{}
         , _error{}
@@ -475,7 +475,7 @@ namespace sw::editor
         if ( _bResolutionTableAttempted == false )
         {
             _bResolutionTableAttempted = true;
-            (void)_resolutionTable.loadFromResource(); // 실패는 표가 알린다 — 목록이 비어 미리보기를 세우지 않는다
+            (void)_resolutionTable.loadFromResource(); // 실패는 테이블이 알린다 — 목록이 비어 미리보기를 만들지 않는다
         }
         if ( _resolutionTable._listResolution.empty() )
             return nullptr;
@@ -497,12 +497,12 @@ namespace sw::editor
         const bool   bReopen             = _screen == kInvalidUIScreenHandle || ui.getOffscreenScreens().findScreen( _screen ) == nullptr || _openedDocument != _documentPath;
         const bool   bPreviousOpenFailed = bReopen && _documentPath.empty() == false && _error.empty() == false && _openedDocument == _documentPath;
         if ( bPreviousOpenFailed )
-            return; // 같은 문서가 지난번에 짓지 못했다 — 고칠 때까지(경로를 바꾸거나 다시 열기) 프레임마다 다시 시도하지 않는다
+            return; // 같은 문서가 지난번에 만들지 못했다 — 고칠 때까지(경로를 바꾸거나 다시 열기) 프레임마다 다시 시도하지 않는다
         if ( bReopen )
         {
             const string documentPath = _documentPath;
             releaseTexture(); // 크기가 바뀌면 렌더 텍스처도 새것이다
-            closePreview();   // 포인터 · 포커스를 놓고 화면을 닫는다(되돌리기 세대도 올린다)
+            closePreview();   // 포인터 · 포커스를 놓고 화면을 닫는다(되돌리기 세대도 증가시킨다)
             _screen             = documentPath.empty() ? kInvalidUIScreenHandle : ui.openOffscreenScreen( documentPath, targetPath );
             _openedDocument     = documentPath;
             _targetPath         = targetPath;
@@ -544,7 +544,7 @@ namespace sw::editor
         _selected       = _selectedOrdinal != UIPreviewLogic::kNoOrdinal ? UIPreviewLogic::findWidgetByOrdinal( tree, _selectedOrdinal ) : kInvalidWidgetID;
         if ( bRebuilt )
         {
-            // 다시 지은 트리는 디스크 문서 그대로다 — 고친 값과 입력 흉내의 흔적이 모두 사라졌다.
+            // 다시 만든 트리는 디스크 문서 그대로다 — 고친 값과 입력 흉내의 흔적이 모두 사라졌다.
             _bMutated = false;
             clearDocumentDirty();
             if ( _bAwaitReload )
@@ -577,7 +577,7 @@ namespace sw::editor
             return;
         }
 
-        // 문화권이 전역이라 게임 UI 의 언어는 건드리지 않는다 — 게임 관리자의 사본을 이 화면에만 건다. 게임 텍스트가 다시 읽히면(번역 핫 리로드) 사본도 다시 만든다.
+        // 문화권이 전역이라 게임 UI 의 언어는 건드리지 않는다 — 게임 관리자의 사본을 이 화면에만 적용한다. 게임 텍스트가 다시 읽히면(번역 핫 리로드) 사본도 다시 만든다.
         const uint32 gameRevision = pGame->getTextRevision();
         const bool   bNeedCopy    = _pLocalization == nullptr || gameRevision != _gameTextRevision;
         if ( bNeedCopy )
@@ -1191,7 +1191,7 @@ namespace sw::editor
                     (void)addWidget( screen, _paletteType, screen.getTree().findWidgetByID( _selected ) );
             }
             Internal::noteMark( "uipreview.palette", pName );
-            // 끌어서 트리 줄이나 그림에 놓는다 — 놓는 쪽이 받는 패널을 고른다(`UIPreviewLogic::findDropContainer`).
+            // 끌어서 트리 줄이나 이미지에 놓는다 — 놓는 쪽이 받는 패널을 고른다(`UIPreviewLogic::findDropContainer`).
             if ( ImGui::BeginDragDropSource( ImGuiDragDropFlags_None ) )
             {
                 ImGui::SetDragDropPayload( Internal::kPaletteDragPayload, pName, StringUtil::strlen( pName ) + 1 );
@@ -1228,7 +1228,7 @@ namespace sw::editor
             { UIPreviewSlotHandle::Right,  "right",  float2{ origin._x + box._right, center._y }},
             {UIPreviewSlotHandle::Bottom, "bottom", float2{ center._x, origin._y + box._bottom }},
         };
-        // 마우스 이동량(화면 픽셀)을 UI 단위로 옮기는 배율 — 그림이 뷰포트보다 작게 그려진다.
+        // 마우스 이동량(화면 픽셀)을 UI 단위로 옮기는 배율 — 이미지가 뷰포트보다 작게 그려진다.
         const float32 toUIX = _viewport._size._x / drawSize._x;
         const float32 toUIY = _viewport._size._y / drawSize._y;
         for ( const HandleRow& row : arrHandle )
@@ -1292,7 +1292,7 @@ namespace sw::editor
         if ( ImGui::IsItemActivated() )
             _bLayoutDragging = true;
         if ( ImGui::IsItemActive() && _bLayoutDragging )
-            ImGui::GetWindowDrawList()->AddLine( center, ImGui::GetMousePos(), color, 2.0f ); // 놓일 자리 — 놓을 때까지 트리는 그대로다
+            ImGui::GetWindowDrawList()->AddLine( center, ImGui::GetMousePos(), color, 2.0f ); // 놓일 위치 — 놓을 때까지 트리는 그대로다
         const bool bDropped = ImGui::IsItemDeactivated() && _bLayoutDragging;
         ImGui::PopID();
         if ( bDropped == false )
@@ -1302,7 +1302,7 @@ namespace sw::editor
         const float2 point = UIPreviewLogic::mapImageToUI( float2{ mouse.x - origin._x, mouse.y - origin._y }, drawSize, _viewport );
         if ( pBox != nullptr )
         {
-            // 상자: 자식 가운데(상자 축)와 놓은 점을 견줘 사이 자리를 고르고, 떼어 다시 끼운다 — 구조 편집이라 부모 번호와 자식 번호로 되돌린다.
+            // 상자: 자식 가운데(상자 축)와 놓은 점을 비교해 사이 위치를 고르고, 분리해 다시 끼운다 — 구조 편집이라 부모 번호와 자식 번호로 되돌린다.
             const bool      bVertical = pBox->getOrientation() == UIOrientation::Vertical;
             vector<float32> listCenter;
             for ( uint32 childIndex = 0; childIndex < pParent->getChildCount(); ++childIndex )
@@ -1391,95 +1391,78 @@ namespace sw::editor
         _baselineWidget = kInvalidWidgetID; // 인스펙터의 기준 값을 다시 잡는다
     }
 
-    void UIPreviewPanel::drawSlotSection( Widget& widget )
+    struct UIPreviewPanel::SlotFieldPass
     {
-        using Internal                   = UIPreviewPanelInternal;
-        const UIPreviewSlotFields fields = UIPreviewLogic::findSlotFields( widget );
-        if ( fields._bSizeOverride == false )
-            return; // 루트 — 부모가 없어 슬롯을 읽는 쪽이 없다
-        const PropertyInfo* pSlotProp = UIPreviewLogic::findWidgetProperty( widget, "_slot" );
-        if ( pSlotProp == nullptr )
-            return;
-        const EditorListFilter filter{ _grid.getFilterText() };
-        const TypeInfo*        pParentType = widget.getParent()->getTypeInfo();
-        const string           header      = string{ SW_LOCKEY( "EditorUIPreview", "SlotHeader" ) } + " (" + ( pParentType != nullptr ? pParentType->_name.c_str() : "Panel" ) + ")###uipreviewslot";
-        if ( ImGui::CollapsingHeader( header.c_str(), ImGuiTreeNodeFlags_DefaultOpen ) == false )
-            return;
+        static constexpr float32 kDragSpeed   = 0.5f;
+        static constexpr float32 kAnchorSpeed = 0.005f;
+        static constexpr uint16  kOneSpan     = 1;
 
-        static const utf8* const kArrAlignment[] = { "Fill", "Start", "Center", "End" };
-        static const utf8* const kArrSizeRule[]  = { "Auto", "Fill" };
-        static const utf8* const kArrGrow[]      = { "End", "Begin", "Both" };
-        constexpr float32        kDragSpeed      = 0.5f;
-        constexpr float32        kAnchorSpeed    = 0.005f;
-        const uint16             kOneSpan        = 1;
+        UIPreviewPanel&     _panel;
+        Widget&             _widget;
+        const PropertyInfo& _slotProp;
+        EditorListFilter    _filter;
+        WidgetLayoutSlot    _slot;            ///< 컨트롤 하나가 고치는 슬롯 사본. 컨트롤마다 위젯의 현재 슬롯으로 다시 채운다
+        bool                _bDrawn{ false }; ///< 바로 앞 field 를 그렸다 — 그리지 않았으면 뒤의 툴팁이 남의 위젯에 붙지 않게 건너뛴다
 
-        // 컨트롤 하나 = 슬롯 사본을 draw 가 고치고(고쳤으면 true), 바뀌면 바로 위젯에 넣고(레이아웃이 따라 움직인다), 편집을 맺는다.
-        WidgetLayoutSlot slot   = widget.getLayoutSlot();
-        bool             bDrawn = false; ///< 바로 앞 field 를 그렸다 — 그리지 않았으면 뒤의 툴팁이 남의 위젯에 붙지 않게 건너뛴다
-        auto             field  = [&]( const utf8* pMark, const utf8* pLabel, bool bImmediate, auto&& draw )
+        /** @brief 컨트롤 하나 = 슬롯 사본을 @p draw 가 고치고(고쳤으면 true), 바뀌면 바로 위젯에 넣고(레이아웃이 따라 움직인다), 편집을 맺는다. */
+        template <typename Draw>
+        void field( const utf8* pMark, const utf8* pLabel, bool bImmediate, Draw&& draw )
         {
-            // 인스펙터 검색어가 이름표에 없으면 그리지 않는다(언리얼 Details 의 검색이 슬롯 범주의 행도 거르는 것과 같다).
-            bDrawn = filter.matches( pLabel );
-            if ( bDrawn == false )
+            // 인스펙터 검색어가 레이블에 없으면 그리지 않는다(언리얼 Details 의 검색이 슬롯 범주의 행도 거르는 것과 같다).
+            _bDrawn = _filter.matches( pLabel );
+            if ( _bDrawn == false )
                 return;
-            const string beforeText = UIPreviewLogic::formatWidgetProperty( widget, *pSlotProp );
-            slot                    = widget.getLayoutSlot();
-            const bool bChanged     = draw( slot, pLabel );
+            const string beforeText = UIPreviewLogic::formatWidgetProperty( _widget, _slotProp );
+            _slot                   = _widget.getLayoutSlot();
+            const bool bChanged     = draw( _slot, pLabel );
             if ( bChanged )
-                widget.setLayoutSlot( slot );
-            Internal::noteMark( "uipreview.slot", pMark );
-            finishSlotField( widget, *pSlotProp, beforeText, bChanged, bImmediate );
-        };
-        auto fieldTooltip = [&bDrawn]( const utf8* pTooltip )
-        {
-            if ( bDrawn )
-                EditorWidgets::drawTooltip( pTooltip );
-        };
-        auto combo = [&]( const utf8* pLabel, int32 current, const utf8* const* ppArrName, int32 count, int32& outIndex )
-        {
-            outIndex = current;
-            return ImGui::Combo( pLabel, &outIndex, ppArrName, count );
-        };
+                _widget.setLayoutSlot( _slot );
+            UIPreviewPanelInternal::noteMark( "uipreview.slot", pMark );
+            _panel.finishSlotField( _widget, _slotProp, beforeText, bChanged, bImmediate );
+        }
 
-        if ( fields._bPaddingAlignment )
+        void tooltip( const utf8* pTooltip ) const
         {
+            if ( _bDrawn )
+                EditorWidgets::drawTooltip( pTooltip );
+        }
+
+        /** @brief 열거값 하나를 콤보로 고릅니다. 고르면 @p inoutValue 를 바꾸고 true 입니다. */
+        template <typename Enum>
+        static bool comboEnum( const utf8* pLabel, Enum& inoutValue, const utf8* const* ppArrName, int32 count )
+        {
+            int32 index = static_cast<int32>( inoutValue );
+            if ( ImGui::Combo( pLabel, &index, ppArrName, count ) == false )
+                return false;
+            inoutValue = static_cast<Enum>( index );
+            return true;
+        }
+
+        void drawPaddingAlignment()
+        {
+            static const utf8* const kArrAlignment[] = { "Fill", "Start", "Center", "End" };
             field( "padding", SW_LOCKEY( "EditorUIPreview", "SlotPadding" ), false, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
             { return ImGui::DragFloat4( pLabel, &s._padding._x, kDragSpeed ); } );
-            fieldTooltip( SW_LOCKEY( "EditorUIPreview", "SlotPaddingTip" ) );
+            tooltip( SW_LOCKEY( "EditorUIPreview", "SlotPaddingTip" ) );
             field( "halign", SW_LOCKEY( "EditorUIPreview", "SlotHorizontalAlignment" ), true, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
-            {
-                int32 index = 0;
-                if ( combo( pLabel, static_cast<int32>( s._horizontalAlignment ), kArrAlignment, 4, index ) == false )
-                    return false;
-                s._horizontalAlignment = static_cast<UIAlignment>( index );
-                return true;
-            } );
+            { return comboEnum( pLabel, s._horizontalAlignment, kArrAlignment, 4 ); } );
             field( "valign", SW_LOCKEY( "EditorUIPreview", "SlotVerticalAlignment" ), true, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
-            {
-                int32 index = 0;
-                if ( combo( pLabel, static_cast<int32>( s._verticalAlignment ), kArrAlignment, 4, index ) == false )
-                    return false;
-                s._verticalAlignment = static_cast<UIAlignment>( index );
-                return true;
-            } );
+            { return comboEnum( pLabel, s._verticalAlignment, kArrAlignment, 4 ); } );
         }
-        if ( fields._bBoxSize )
+
+        void drawBoxSize()
         {
+            static const utf8* const kArrSizeRule[] = { "Auto", "Fill" };
             field( "sizerule", SW_LOCKEY( "EditorUIPreview", "SlotSizeRule" ), true, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
-            {
-                int32 index = 0;
-                if ( combo( pLabel, static_cast<int32>( s._sizeRule ), kArrSizeRule, 2, index ) == false )
-                    return false;
-                s._sizeRule = static_cast<UISizeRule>( index );
-                return true;
-            } );
-            fieldTooltip( SW_LOCKEY( "EditorUIPreview", "SlotSizeRuleTip" ) );
-            ImGui::BeginDisabled( slot._sizeRule != UISizeRule::Fill );
+            { return comboEnum( pLabel, s._sizeRule, kArrSizeRule, 2 ); } );
+            tooltip( SW_LOCKEY( "EditorUIPreview", "SlotSizeRuleTip" ) );
+            ImGui::BeginDisabled( _slot._sizeRule != UISizeRule::Fill );
             field( "fillweight", SW_LOCKEY( "EditorUIPreview", "SlotFillWeight" ), false, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
             { return ImGui::DragFloat( pLabel, &s._fillWeight, 0.01f, 0.0f, 1000.0f ); } );
             ImGui::EndDisabled();
         }
-        if ( fields._bGrid )
+
+        void drawGrid()
         {
             field( "row", SW_LOCKEY( "EditorUIPreview", "SlotRow" ), false, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
             { return ImGui::DragScalar( pLabel, ImGuiDataType_U16, &s._row, 0.1f ); } );
@@ -1490,9 +1473,10 @@ namespace sw::editor
             field( "columnspan", SW_LOCKEY( "EditorUIPreview", "SlotColumnSpan" ), false, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
             { return ImGui::DragScalar( pLabel, ImGuiDataType_U16, &s._columnSpan, 0.1f, &kOneSpan ); } );
         }
-        if ( fields._bCanvas )
+
+        /** @brief 앵커 프리셋(UMG 의 앵커 드롭다운)입니다. 앵커만 바꾸고 위젯은 제자리에 둡니다. 지금 앵커와 맞는 프리셋이 없으면 빈 항목입니다. */
+        void drawAnchorPreset()
         {
-            // 앵커 프리셋(UMG 의 앵커 드롭다운) — 앵커만 바꾸고 위젯은 제자리에 둔다. 지금 앵커와 맞는 프리셋이 없으면 빈 칸이다.
             field( "anchorpreset", SW_LOCKEY( "EditorUIPreview", "SlotAnchorPreset" ), true, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
             {
                 const utf8* const arrPresetName[] = {
@@ -1524,14 +1508,20 @@ namespace sw::editor
                 }
                 if ( ImGui::Combo( pLabel, &picked, arrPresetName, kPresetCount ) == false || picked < 0 )
                     return false;
-                const WidgetGeometry& geometry       = widget.getGeometry();
-                const WidgetGeometry& parentGeometry = widget.getParent()->getGeometry();
+                const WidgetGeometry& geometry       = _widget.getGeometry();
+                const WidgetGeometry& parentGeometry = _widget.getParent()->getGeometry();
                 const float32         left           = geometry._position._x - parentGeometry._position._x;
                 const float32         top            = geometry._position._y - parentGeometry._position._y;
                 const UIRect          localRect      = UIRect::makeFromPositionSize( left, top, geometry._size._x, geometry._size._y );
                 return UIPreviewLogic::applyAnchorPreset( s, static_cast<UIPreviewAnchorPreset>( picked ), localRect, parentGeometry._size );
             } );
-            fieldTooltip( SW_LOCKEY( "EditorUIPreview", "SlotAnchorPresetTip" ) );
+            tooltip( SW_LOCKEY( "EditorUIPreview", "SlotAnchorPresetTip" ) );
+        }
+
+        void drawCanvas()
+        {
+            static const utf8* const kArrGrow[] = { "End", "Begin", "Both" };
+            drawAnchorPreset();
             field( "anchormin", SW_LOCKEY( "EditorUIPreview", "SlotAnchorMin" ), false, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
             { return ImGui::DragFloat2( pLabel, &s._anchorMin._x, kAnchorSpeed, 0.0f, 1.0f ); } );
             field( "anchormax", SW_LOCKEY( "EditorUIPreview", "SlotAnchorMax" ), false, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
@@ -1543,35 +1533,52 @@ namespace sw::editor
             field( "autosize", SW_LOCKEY( "EditorUIPreview", "SlotAutoSize" ), true, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
             { return ImGui::Checkbox( pLabel, &s._bAutoSize ); } );
             field( "growh", SW_LOCKEY( "EditorUIPreview", "SlotGrowHorizontal" ), true, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
-            {
-                int32 index = 0;
-                if ( combo( pLabel, static_cast<int32>( s._growHorizontal ), kArrGrow, 3, index ) == false )
-                    return false;
-                s._growHorizontal = static_cast<UIGrowDirection>( index );
-                return true;
-            } );
+            { return comboEnum( pLabel, s._growHorizontal, kArrGrow, 3 ); } );
             field( "growv", SW_LOCKEY( "EditorUIPreview", "SlotGrowVertical" ), true, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
-            {
-                int32 index = 0;
-                if ( combo( pLabel, static_cast<int32>( s._growVertical ), kArrGrow, 3, index ) == false )
-                    return false;
-                s._growVertical = static_cast<UIGrowDirection>( index );
-                return true;
-            } );
+            { return comboEnum( pLabel, s._growVertical, kArrGrow, 3 ); } );
             field( "zorder", SW_LOCKEY( "EditorUIPreview", "SlotZOrder" ), false, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
             { return ImGui::DragScalar( pLabel, ImGuiDataType_S16, &s._zOrder, 0.1f ); } );
         }
-        // 크기 덮어쓰기 · 최소 · 최대는 모든 패널이 읽는다(UMG 의 SizeBox 를 슬롯 필드로 옮긴 것).
-        field( "width", SW_LOCKEY( "EditorUIPreview", "SlotWidthOverride" ), false, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
-        { return ImGui::DragFloat( pLabel, &s._widthOverride, kDragSpeed, 0.0f, 100000.0f ); } );
-        field( "height", SW_LOCKEY( "EditorUIPreview", "SlotHeightOverride" ), false, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
-        { return ImGui::DragFloat( pLabel, &s._heightOverride, kDragSpeed, 0.0f, 100000.0f ); } );
-        fieldTooltip( SW_LOCKEY( "EditorUIPreview", "SlotOverrideTip" ) );
-        field( "minsize", SW_LOCKEY( "EditorUIPreview", "SlotMinSize" ), false, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
-        { return ImGui::DragFloat2( pLabel, &s._minSize._x, kDragSpeed, 0.0f, 100000.0f ); } );
-        field( "maxsize", SW_LOCKEY( "EditorUIPreview", "SlotMaxSize" ), false, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
-        { return ImGui::DragFloat2( pLabel, &s._maxSize._x, kDragSpeed, 0.0f, 100000.0f ); } );
-        fieldTooltip( SW_LOCKEY( "EditorUIPreview", "SlotMaxSizeTip" ) );
+
+        /** @brief 크기 덮어쓰기 · 최소 · 최대입니다. 모든 패널이 읽습니다(UMG 의 SizeBox 를 슬롯 필드로 옮긴 것). */
+        void drawSizeOverrides()
+        {
+            field( "width", SW_LOCKEY( "EditorUIPreview", "SlotWidthOverride" ), false, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
+            { return ImGui::DragFloat( pLabel, &s._widthOverride, kDragSpeed, 0.0f, 100000.0f ); } );
+            field( "height", SW_LOCKEY( "EditorUIPreview", "SlotHeightOverride" ), false, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
+            { return ImGui::DragFloat( pLabel, &s._heightOverride, kDragSpeed, 0.0f, 100000.0f ); } );
+            tooltip( SW_LOCKEY( "EditorUIPreview", "SlotOverrideTip" ) );
+            field( "minsize", SW_LOCKEY( "EditorUIPreview", "SlotMinSize" ), false, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
+            { return ImGui::DragFloat2( pLabel, &s._minSize._x, kDragSpeed, 0.0f, 100000.0f ); } );
+            field( "maxsize", SW_LOCKEY( "EditorUIPreview", "SlotMaxSize" ), false, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
+            { return ImGui::DragFloat2( pLabel, &s._maxSize._x, kDragSpeed, 0.0f, 100000.0f ); } );
+            tooltip( SW_LOCKEY( "EditorUIPreview", "SlotMaxSizeTip" ) );
+        }
+    };
+
+    void UIPreviewPanel::drawSlotSection( Widget& widget )
+    {
+        const UIPreviewSlotFields fields = UIPreviewLogic::findSlotFields( widget );
+        if ( fields._bSizeOverride == false )
+            return; // 루트 — 부모가 없어 슬롯을 읽는 쪽이 없다
+        const PropertyInfo* pSlotProp = UIPreviewLogic::findWidgetProperty( widget, "_slot" );
+        if ( pSlotProp == nullptr )
+            return;
+        const TypeInfo* pParentType = widget.getParent()->getTypeInfo();
+        const string    header      = string{ SW_LOCKEY( "EditorUIPreview", "SlotHeader" ) } + " (" + ( pParentType != nullptr ? pParentType->_name.c_str() : "Panel" ) + ")###uipreviewslot";
+        if ( ImGui::CollapsingHeader( header.c_str(), ImGuiTreeNodeFlags_DefaultOpen ) == false )
+            return;
+
+        SlotFieldPass pass{ *this, widget, *pSlotProp, EditorListFilter{ _grid.getFilterText() }, widget.getLayoutSlot() };
+        if ( fields._bPaddingAlignment )
+            pass.drawPaddingAlignment();
+        if ( fields._bBoxSize )
+            pass.drawBoxSize();
+        if ( fields._bGrid )
+            pass.drawGrid();
+        if ( fields._bCanvas )
+            pass.drawCanvas();
+        pass.drawSizeOverrides();
         ImGui::Separator();
     }
 
@@ -1685,7 +1692,7 @@ namespace sw::editor
                 _bPointerPressed = true;
                 markPreviewMutated();
             }
-            // 이미지 밖에서 뗀 버튼도 위젯이 잡고 있으면 Up 을 보낸다(슬라이더를 끌다가 바깥에서 놓는 경우).
+            // 이미지 밖에서 놓은 버튼도 위젯이 잡고 있으면 Up 을 보낸다(슬라이더를 끌다가 바깥에서 놓는 경우).
             if ( ImGui::IsMouseReleased( map._imguiButton ) && ( bHovered || _bPointerPressed ) )
             {
                 event._kind = UIPointerEventKind::Up;
@@ -1735,7 +1742,7 @@ namespace sw::editor
         EditorSelfTestMarks::note( "uipreview.image" );
         if ( _bInteract == false && ImGui::BeginDragDropTarget() )
         {
-            // 팔레트 항목을 그림 위에 놓는다 — 놓은 점 아래 위젯이 받는 쪽을 정한다(패널이면 그 안, 아니면 그 뒤).
+            // 팔레트 항목을 이미지 위에 놓는다 — 놓은 점 아래 위젯이 받는 쪽을 정한다(패널이면 그 안, 아니면 그 뒤).
             const ImGuiPayload* pPayload = ImGui::AcceptDragDropPayload( Internal::kPaletteDragPayload );
             if ( pPayload != nullptr && pPayload->Data != nullptr )
             {
@@ -1746,13 +1753,13 @@ namespace sw::editor
             }
             ImGui::EndDragDropTarget();
         }
-        // 그림 클릭으로 고르기는 손잡이를 그린 뒤에 정한다 — 손잡이는 그림 위에 겹쳐 있어, 여기서 바로 고르면 손잡이를 누른 클릭이 그 아래 위젯(자식)을
+        // 이미지 클릭으로 고르기는 손잡이를 그린 뒤에 정한다 — 손잡이는 이미지 위에 겹쳐 있어, 여기서 바로 고르면 손잡이를 누른 클릭이 그 아래 위젯(자식)을
         // 골라 손잡이가 사라지고 끌기가 시작되지 않는다.
         const bool bImageClicked = _bInteract == false && ImGui::IsItemClicked();
         if ( _bInteract )
             feedPointer( screen, drawSize, origin, bImageHovered );
 
-        // 겹쳐 그리기 — 레이아웃 사각형 · 고른 위젯 · 안전 영역(그림 위 ImGui 선, 캔버스는 바꾸지 않는다).
+        // 겹쳐 그리기 — 레이아웃 사각형 · 고른 위젯 · 안전 영역(이미지 위 ImGui 선, 캔버스는 바꾸지 않는다).
         ImDrawList* pDraw   = ImGui::GetWindowDrawList();
         const auto  drawBox = [pDraw, origin]( const UIRect& rect, ImU32 color, float32 thickness )
         {
@@ -1883,7 +1890,7 @@ namespace sw::editor
             return;
         }
 
-        // 왼쪽 칸: 위젯 트리, 팔레트, 고른 위젯의 프로퍼티(인스펙터)를 위에서 아래로. 오른쪽: 미리보기 그림.
+        // 왼쪽 영역: 위젯 트리, 팔레트, 고른 위젯의 프로퍼티(인스펙터)를 위에서 아래로. 오른쪽: 미리보기 이미지.
         const float32 dpi = EditorThemeUtil::getDpiScale();
         ImGui::BeginChild( "##uipreviewleft", ImVec2{ Internal::kLeftWidth * dpi, 0.0f }, ImGuiChildFlags_None );
         const float32 treeHeight    = ImGui::GetContentRegionAvail().y * Internal::kTreeRatio;

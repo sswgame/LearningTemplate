@@ -19,6 +19,11 @@
 
 #include "Engine/Profiling/ProfilerTraceExport.h"
 
+namespace sw
+{
+    class FrameProfiler;
+} // namespace sw
+
 namespace sw::editor
 {
     class EditorPanelManager;
@@ -57,18 +62,37 @@ namespace sw::editor
         void drawScopeTab( ProfilerScopeKind kind );
         /** @brief 계측 켜기, 창 크기, Tracy 상태, "Open Tracy" 버튼이 있는 행을 그립니다. */
         void drawCaptureControls();
+        /** @brief 계측 켜기 · 지우기 · 정지 · 스파이크 · 캡처 저장 · 불러오기 단추입니다. */
+        void drawCaptureHistoryControls();
+        /** @brief Tracy 상태와 RenderDoc 캡처 단추입니다. */
+        void drawExternalProfilerControls();
         /** @brief 최근 N 프레임의 GT.Frame · RT.Frame · GPU.Frame 그래프를 그립니다. */
         void drawFrameGraph();
         /** @brief 현재 조건으로 구간 테이블을 그립니다. 헤더를 눌러 정렬을 바꿉니다. */
         void drawScopeTable( ProfilerScopeKind kind );
         /** @brief 스레드 미니 타임라인 탭을 그립니다. 녹화, 최근 프레임 수, Freeze, 휠 확대, 드래그 이동, 툴팁, 프레임 경계선을 지원합니다. */
         void drawTimelineTab();
+        /** @brief 타임라인 탭의 위쪽 막대(녹화 · 프레임 수 · Freeze · Fit · 트레이스 저장)입니다. */
+        void drawTimelineToolbar( FrameProfiler& profiler, ProfilerTimeline& timeline, bool bRecording );
         /**
          * @brief 타임라인 캔버스를 그립니다. 스레드 행, 사각형, 프레임 경계선, 툴팁이 포함됩니다.
          * @param listThread 그릴 스레드 목록입니다. 살아 있는 기록에 불러온 트레이스를 겹친 것입니다.
          * @param pLoadedSlotName 불러온 트레이스의 구간 이름 테이블입니다. 없으면 nullptr 이며, `kLoadedSlotBase` 이상인 슬롯이 이 테이블을 가리킵니다.
          */
         void drawTimelineCanvas( const vector<ProfilerTimelineThread>& listThread, const vector<string>* pLoadedSlotName );
+        /** @brief 타임라인 캔버스 한 번 그리기의 크기와 위치(화면 좌표)입니다. */
+        struct TimelineGeometry;
+        /** @brief 캔버스 크기를 정하고 이벤트 사각형을 배치합니다(배치 결과 멤버와 스레드별 레인 수 멤버를 채운다). */
+        TimelineGeometry layoutTimeline( const vector<ProfilerTimelineThread>& listThread );
+        /** @brief 캔버스 위 휠 확대와 드래그 이동을 처리합니다. 캔버스 위에 마우스가 있으면 true 입니다. */
+        bool handleTimelineInput( const TimelineGeometry& geometry );
+        /** @brief 스레드 행의 배경과 이름을 그리고 행마다 위쪽 y 를 돌려줍니다. */
+        vector<float32> drawTimelineRows( const vector<ProfilerTimelineThread>& listThread, const TimelineGeometry& geometry );
+        /** @brief 이벤트 사각형과 프레임 경계선을 그리고, 마우스 아래의 사각형(없으면 nullptr)을 돌려줍니다. */
+        const ProfilerTimelineRect* drawTimelineEvents( const vector<ProfilerTimelineThread>& listThread, const TimelineGeometry& geometry, const vector<float32>& listRowTop,
+                                                        const vector<string>* pLoadedSlotName, bool bHovered );
+        /** @brief 마우스 아래 구간의 이름 · 길이 · 같은 구간의 횟수 · 합계 · 최대를 툴팁으로 보입니다. */
+        void drawTimelineTooltip( const vector<ProfilerTimelineThread>& listThread, const ProfilerTimelineRect& hoveredRect, const vector<string>* pLoadedSlotName );
 #if SW_PROFILER_TRACE_ENABLED
         /** @brief 저장한 트레이스를 불러오고 지우는 행과 구간 이름 검색란을 그립니다. */
         void drawTraceControls();

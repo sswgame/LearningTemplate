@@ -59,44 +59,7 @@ namespace sw::editor
             return;
         EditorCommandRegistry& registry = pContext->getSubsystem<EditorCommandRegistry>();
 
-        // 조합 받기 — 수정자만 누른 동안은 기다린다. Esc 는 취소, Backspace 는 지운다(유니티 · 언리얼과 같다).
-        if ( _captureCommandID.empty() == false && _conflictCommandID.empty() )
-        {
-            EditorCommandShortcut pressed{};
-            if ( EditorCommandGUI::findPressedShortcut( pressed ) )
-            {
-                const EditorCommandDesc* pTarget               = registry.find( _captureCommandID );
-                const bool               bClearShortcutPressed = pTarget != nullptr && pressed._key == EditorCommandKey::Backspace && pressed._modifier == commandmodifier::kNone;
-                if ( pressed._key == EditorCommandKey::Escape && pressed._modifier == commandmodifier::kNone )
-                    finishCapture();
-                else if ( bClearShortcutPressed )
-                {
-                    applyShortcut( *pTarget, EditorCommandShortcut{} );
-                    finishCapture();
-                }
-                else if ( pTarget != nullptr )
-                {
-                    const EditorCommandDesc* pOther = nullptr;
-                    for ( const EditorCommandDesc& desc : registry.getCommands() )
-                    {
-                        const bool bClash = desc._id != _captureCommandID && ( EditorCommandRegistry::isSameShortcut( desc._shortcut, pressed ) ||
-                                                                               EditorCommandRegistry::isSameShortcut( desc._altShortcut, pressed ) );
-                        if ( bClash && pOther == nullptr )
-                            pOther = &desc;
-                    }
-                    if ( pOther != nullptr )
-                    {
-                        _conflictCommandID = pOther->_id;
-                        _pendingShortcut   = pressed;
-                    }
-                    else
-                    {
-                        applyShortcut( *pTarget, pressed );
-                        finishCapture();
-                    }
-                }
-            }
-        }
+        pollShortcutCapture( registry );
         ShortcutsPanelInternal::getPendingConflictCount() = _conflictCommandID.empty() ? 0u : 1u;
 
         // 단추를 먼저 둔다 — 검색 칸이 남은 폭을 다 쓰므로 뒤에 두면 창 밖으로 밀린다.
@@ -110,29 +73,82 @@ namespace sw::editor
         ImGui::SameLine();
         EditorWidgets::drawSearchField( "##ShortcutFilter", _filter, SW_LOCKEY( "EditorSettings", "SearchShortcutsHint" ), 0.0f, false );
 
-        if ( _conflictCommandID.empty() == false )
-        {
-            const EditorCommandDesc* pOther = registry.find( _conflictCommandID );
-            EditorThemeUtil::textError( SW_LOCKEY( "EditorSettings", "ShortcutInUse" ) );
-            if ( ImGui::Button( "Replace" ) && pOther != nullptr )
-            {
-                const EditorCommandDesc*    pTarget = registry.find( _captureCommandID );
-                const EditorCommandShortcut kNone{};
-                const bool                  bOtherAlt = EditorCommandRegistry::isSameShortcut( pOther->_altShortcut, _pendingShortcut );
-                EditorCommandGUI::getShortcutOverrides().setOverride( pOther->_id, bOtherAlt ? pOther->_shortcut : kNone, bOtherAlt ? kNone : pOther->_altShortcut,
-                                                                      pOther->_defaultShortcut, pOther->_defaultAltShortcut );
-                if ( pTarget != nullptr )
-                    applyShortcut( *pTarget, _pendingShortcut );
-                finishCapture();
-            }
-            EditorSelfTestMarks::note( "shortcuts.replace" );
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "ReplaceShortcut" ) );
-            ImGui::SameLine();
-            if ( ImGui::Button( "Cancel" ) )
-                finishCapture();
-            EditorSelfTestMarks::note( "shortcuts.cancel" );
-        }
+        drawConflictPrompt( registry );
+        drawShortcutTable( registry );
+    }
 
+    void ShortcutsPanel::pollShortcutCapture( EditorCommandRegistry& registry )
+    {
+        // 조합 받기 — 수정자만 누른 동안은 기다린다. Esc 는 취소, Backspace 는 지운다(유니티 · 언리얼과 같다).
+        if ( _captureCommandID.empty() || _conflictCommandID.empty() == false )
+            return;
+        EditorCommandShortcut pressed{};
+        if ( EditorCommandGUI::findPressedShortcut( pressed ) == false )
+            return;
+
+        const EditorCommandDesc* pTarget               = registry.find( _captureCommandID );
+        const bool               bClearShortcutPressed = pTarget != nullptr && pressed._key == EditorCommandKey::Backspace && pressed._modifier == commandmodifier::kNone;
+        if ( pressed._key == EditorCommandKey::Escape && pressed._modifier == commandmodifier::kNone )
+        {
+            finishCapture();
+            return;
+        }
+        if ( bClearShortcutPressed )
+        {
+            applyShortcut( *pTarget, EditorCommandShortcut{} );
+            finishCapture();
+            return;
+        }
+        if ( pTarget == nullptr )
+            return;
+
+        const EditorCommandDesc* pOther = nullptr;
+        for ( const EditorCommandDesc& desc : registry.getCommands() )
+        {
+            const bool bClash = desc._id != _captureCommandID && ( EditorCommandRegistry::isSameShortcut( desc._shortcut, pressed ) ||
+                                                                   EditorCommandRegistry::isSameShortcut( desc._altShortcut, pressed ) );
+            if ( bClash && pOther == nullptr )
+                pOther = &desc;
+        }
+        if ( pOther != nullptr )
+        {
+            _conflictCommandID = pOther->_id;
+            _pendingShortcut   = pressed;
+        }
+        else
+        {
+            applyShortcut( *pTarget, pressed );
+            finishCapture();
+        }
+    }
+
+    void ShortcutsPanel::drawConflictPrompt( EditorCommandRegistry& registry )
+    {
+        if ( _conflictCommandID.empty() )
+            return;
+        const EditorCommandDesc* pOther = registry.find( _conflictCommandID );
+        EditorThemeUtil::textError( SW_LOCKEY( "EditorSettings", "ShortcutInUse" ) );
+        if ( ImGui::Button( "Replace" ) && pOther != nullptr )
+        {
+            const EditorCommandDesc*    pTarget = registry.find( _captureCommandID );
+            const EditorCommandShortcut kNone{};
+            const bool                  bOtherAlt = EditorCommandRegistry::isSameShortcut( pOther->_altShortcut, _pendingShortcut );
+            EditorCommandGUI::getShortcutOverrides().setOverride( pOther->_id, bOtherAlt ? pOther->_shortcut : kNone, bOtherAlt ? kNone : pOther->_altShortcut,
+                                                                  pOther->_defaultShortcut, pOther->_defaultAltShortcut );
+            if ( pTarget != nullptr )
+                applyShortcut( *pTarget, _pendingShortcut );
+            finishCapture();
+        }
+        EditorSelfTestMarks::note( "shortcuts.replace" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "ReplaceShortcut" ) );
+        ImGui::SameLine();
+        if ( ImGui::Button( "Cancel" ) )
+            finishCapture();
+        EditorSelfTestMarks::note( "shortcuts.cancel" );
+    }
+
+    void ShortcutsPanel::drawShortcutTable( EditorCommandRegistry& registry )
+    {
         const EditorListFilter filter{ _filter.c_str() };
         if ( ImGui::BeginTable( "##Shortcuts", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY ) == false )
             return;
@@ -147,47 +163,56 @@ namespace sw::editor
             EditorCommandRegistry::formatShortcutLabel( desc, label );
             if ( filter.matchesAny( { desc._label, desc._id, desc._category, label.c_str() } ) == false )
                 continue;
-            const bool bConflict = desc._id == _conflictCommandID || ( _conflictCommandID.empty() == false && desc._id == _captureCommandID );
-            ImGui::PushID( desc._id.c_str() );
-            ImGui::TableNextRow();
-            if ( bConflict )
-                ImGui::TableSetBgColor( ImGuiTableBgTarget_RowBg0, ImGui::GetColorU32( EditorColorUtil::toImVec4( ShortcutsPanelInternal::kConflictRowBg ) ) );
-            ImGui::TableSetColumnIndex( 0 );
-            ImGui::TextUnformatted( desc._label.c_str() );
-            ImGui::TableSetColumnIndex( 1 );
-            ImGui::TextDisabled( "%s", desc._category.c_str() );
-            ImGui::TableSetColumnIndex( 2 );
-            if ( desc._id == _captureCommandID )
-                EditorThemeUtil::textAccent( SW_LOCKEY( "EditorSettings", "PressKeyCombo" ) );
-            else
-                ImGui::TextUnformatted( label.c_str() );
-            ImGui::TableSetColumnIndex( 3 );
-            if ( ImGui::SmallButton( "Set" ) )
+            if ( drawShortcutRow( desc, label.c_str() ) )
             {
-                _captureCommandID  = desc._id;
-                _conflictCommandID = {};
-                EditorCommandGUI::setHotkeysSuspended( true );
+                ImGui::EndTable();
+                saveAndRebuild();
+                return; // 레지스트리를 다시 만들었다 — 이 프레임의 표는 낡았다
             }
-            EditorSelfTestMarks::note( ShortcutsPanelInternal::makeMark( "set", desc._id ).c_str() );
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "SetShortcut" ) );
-            const bool bModified = EditorCommandRegistry::isSameShortcut( desc._shortcut, desc._defaultShortcut ) == false ||
-                                   EditorCommandRegistry::isSameShortcut( desc._altShortcut, desc._defaultAltShortcut ) == false;
-            if ( bModified )
-            {
-                ImGui::SameLine();
-                if ( ImGui::SmallButton( "Reset" ) )
-                {
-                    EditorCommandGUI::getShortcutOverrides().removeOverride( desc._id );
-                    ImGui::PopID();
-                    ImGui::EndTable();
-                    saveAndRebuild();
-                    return; // 레지스트리를 다시 만들었다 — 이 프레임의 표는 낡았다
-                }
-                EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "ResetShortcut" ) );
-            }
-            ImGui::PopID();
         }
         ImGui::EndTable();
+    }
+
+    bool ShortcutsPanel::drawShortcutRow( const EditorCommandDesc& desc, const utf8* pShortcutLabel )
+    {
+        const bool bConflict = desc._id == _conflictCommandID || ( _conflictCommandID.empty() == false && desc._id == _captureCommandID );
+        ImGui::PushID( desc._id.c_str() );
+        ImGui::TableNextRow();
+        if ( bConflict )
+            ImGui::TableSetBgColor( ImGuiTableBgTarget_RowBg0, ImGui::GetColorU32( EditorColorUtil::toImVec4( ShortcutsPanelInternal::kConflictRowBg ) ) );
+        ImGui::TableSetColumnIndex( 0 );
+        ImGui::TextUnformatted( desc._label.c_str() );
+        ImGui::TableSetColumnIndex( 1 );
+        ImGui::TextDisabled( "%s", desc._category.c_str() );
+        ImGui::TableSetColumnIndex( 2 );
+        if ( desc._id == _captureCommandID )
+            EditorThemeUtil::textAccent( SW_LOCKEY( "EditorSettings", "PressKeyCombo" ) );
+        else
+            ImGui::TextUnformatted( pShortcutLabel );
+        ImGui::TableSetColumnIndex( 3 );
+        if ( ImGui::SmallButton( "Set" ) )
+        {
+            _captureCommandID  = desc._id;
+            _conflictCommandID = {};
+            EditorCommandGUI::setHotkeysSuspended( true );
+        }
+        EditorSelfTestMarks::note( ShortcutsPanelInternal::makeMark( "set", desc._id ).c_str() );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "SetShortcut" ) );
+        const bool bModified = EditorCommandRegistry::isSameShortcut( desc._shortcut, desc._defaultShortcut ) == false ||
+                               EditorCommandRegistry::isSameShortcut( desc._altShortcut, desc._defaultAltShortcut ) == false;
+        if ( bModified )
+        {
+            ImGui::SameLine();
+            if ( ImGui::SmallButton( "Reset" ) )
+            {
+                EditorCommandGUI::getShortcutOverrides().removeOverride( desc._id );
+                ImGui::PopID();
+                return true;
+            }
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "ResetShortcut" ) );
+        }
+        ImGui::PopID();
+        return false;
     }
 
     void ShortcutsPanel::shutdown( IRHIDevice* /*pRHIDevice*/ )

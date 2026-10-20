@@ -105,7 +105,7 @@ namespace sw::editor
                 value = bCounter ? static_cast<float32>( count ) : static_cast<float32>( static_cast<float64>( profiler.getLastFrameNanos( slot ) ) / constant::kNanosecondsPerMicrosecond );
             track._listValue[_writeIndex] = value;
         }
-        // 이번 프레임에 레지스트리에 없던 트랙(아직 이름이 안 실린 칸)도 한 칸 비워 둔다 — 고리의 칸 번호가 모든 트랙에서 같아야 한다.
+        // 이번 프레임에 레지스트리에 없던 트랙(아직 이름이 안 실린 항목)도 항목 하나를 비워 둔다 — 고리의 항목 번호가 모든 트랙에서 같아야 한다.
         for ( size_t slot = scopeCount; slot < _listTrack.size(); ++slot )
         {
             if ( _listTrack[slot]._listValue.empty() == false )
@@ -161,7 +161,7 @@ namespace sw::editor
         {
             if ( track._listValue.empty() || track._name != scopeName )
                 continue;
-            // 오래된 것부터 — 다음에 쓸 칸이 가장 오래된 칸이다.
+            // 오래된 것부터 — 다음에 쓸 항목이 가장 오래된 항목이다.
             outListValue.reserve( _windowFrame );
             for ( uint32 offset = 0; offset < _windowFrame; ++offset )
             {
@@ -207,7 +207,7 @@ namespace sw::editor
             text += "\t";
             text += track._name;
             text += "\t";
-            // 오래된 것부터 — 다음에 쓸 칸이 가장 오래된 칸이다.
+            // 오래된 것부터 — 다음에 쓸 항목이 가장 오래된 항목이다.
             for ( uint32 offset = 0; offset < _windowFrame; ++offset )
             {
                 formatstring( number.data(), number.capacity(), "%s%.3f", offset == 0 ? "" : ",",
@@ -263,7 +263,7 @@ namespace sw::editor
             }
             listTrack.push_back( std::move( track ) );
         }
-        // 값은 오래된 것부터 0 칸에 놓였다 — 다음에 쓸 칸(가장 오래된 칸)이 0 이다.
+        // 값은 오래된 것부터 0번 항목에 놓였다 — 다음에 쓸 항목(가장 오래된 항목)이 0 이다.
         _listTrack.swap( listTrack );
         _windowFrame        = static_cast<uint32>( windowFrame );
         _writeIndex         = 0;
@@ -292,7 +292,7 @@ namespace sw::editor
         outRow._p99                 = kNoSample;
         outRow._max                 = kNoSample;
 
-        // 가장 최근 칸은 다음에 쓸 칸의 바로 앞이다. 고른 프레임은 거기서 뒤로 간다.
+        // 가장 최근 항목은 다음에 쓸 항목의 바로 앞이다. 고른 프레임은 거기서 뒤로 간다.
         const uint32 offset    = MathUtil::min( frameOffset, _windowFrame - 1 );
         const uint32 lastIndex = ( _writeIndex + _windowFrame * 2 - 1 - offset ) % _windowFrame;
         outRow._last           = static_cast<float64>( track._listValue[lastIndex] );

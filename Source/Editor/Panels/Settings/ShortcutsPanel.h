@@ -34,9 +34,17 @@ namespace sw::editor
         static uint32 getPendingConflictCount();
 
     private:
-        void finishCapture();
-        void applyShortcut( const EditorCommandDesc& desc, const EditorCommandShortcut& shortcut );
-        void saveAndRebuild();
+        /** @brief 조합을 받는 중이면 눌린 조합을 읽어 적용하거나, 겹치면 충돌을 묻는 상태로 넘깁니다. */
+        void pollShortcutCapture( EditorCommandRegistry& registry );
+        /** @brief 충돌을 묻는 줄(바꾸기 · 취소)입니다. */
+        void drawConflictPrompt( EditorCommandRegistry& registry );
+        /** @brief 커맨드별 조합 표입니다. 표를 그리다 레지스트리를 다시 만들면 그 자리에서 그만둡니다. */
+        void drawShortcutTable( EditorCommandRegistry& registry );
+        /** @brief 표의 한 줄을 그립니다. 되돌리기 단추를 눌러 조합을 지웠으면 true 입니다(호출한 쪽이 저장하고 레지스트리를 다시 만든다). */
+        [[nodiscard]] bool drawShortcutRow( const EditorCommandDesc& desc, const utf8* pShortcutLabel );
+        void               finishCapture();
+        void               applyShortcut( const EditorCommandDesc& desc, const EditorCommandShortcut& shortcut );
+        void               saveAndRebuild();
 
         fixed_string<constant::kMaxBuffer64> _filter;
         string                               _captureCommandID;  ///< 조합을 받는 중인 커맨드(비면 받지 않는다)

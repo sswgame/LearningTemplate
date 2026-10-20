@@ -61,6 +61,10 @@ namespace sw::editor
                 out = buf.c_str();
             }
 
+            /**
+             * @brief 머티리얼 프로퍼티 하나를 타입에 맞는 위젯으로 그립니다. 바뀌었으면 true 입니다.
+             * @details 경우마다 짧은 `switch` 디스패처라 나누지 않습니다(`LongFunctions` 의 유지 기준). 타입을 더하면 `switch` 에 경우가 없다는 경고가 서므로 빠뜨릴 수 없습니다.
+             */
             static bool drawTypedProperty( MaterialProperty& prop )
             {
                 const utf8* pLabel = prop._displayName.empty() ? prop._name.c_str() : prop._displayName.c_str();
@@ -325,7 +329,7 @@ namespace sw::editor
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMaterial", "NameTip" ) );
         string shaderPath = _shaderPath.c_str();
-        ImGui::BeginGroup(); // 슬롯은 항목 여럿이라 툴팁을 묶음 전체에 건다
+        ImGui::BeginGroup(); // 슬롯은 항목 여럿이라 툴팁을 그룹 전체에 붙인다
         if ( EditorWidgets::drawAssetSlot( "Shader", shaderPath, ".hlsl" ) )
         {
             _shaderPath = shaderPath;
@@ -465,7 +469,7 @@ namespace sw::editor
         MeshComponent* pMesh = findPreviewSubject();
         if ( pMesh == nullptr )
             return;
-        // 캐시의 머티리얼을 건다 — 편집은 `applyLivePreview` 가 캐시 사본에 옮기므로 구도 따라온다.
+        // 캐시의 머티리얼을 바인딩한다 — 편집은 `applyLivePreview` 가 캐시 사본에 옮기므로 구도 따라온다.
         pMesh->setMaterialPath( getLoadedAssetPath() );
         _previewMaterialPath = getLoadedAssetPath();
     }

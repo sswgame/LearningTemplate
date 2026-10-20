@@ -922,112 +922,125 @@ namespace sw::editor
     {
         if ( EditorChrome::beginToolbar( "##cb_toolbar" ) )
         {
-            const bool bCanBack = _history.canNavigateBack();
-            if ( bCanBack == false )
-                ImGui::BeginDisabled();
-            if ( ImGui::Button( "<##cb_nav_back" ) )
-                navigateBack();
-            if ( bCanBack == false )
-                ImGui::EndDisabled();
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "NavigateBack" ) );
-
-            ImGui::SameLine();
-            const bool bCanForward = _history.canNavigateForward();
-            if ( bCanForward == false )
-                ImGui::BeginDisabled();
-            if ( ImGui::Button( ">##cb_nav_forward" ) )
-                navigateForward();
-            if ( bCanForward == false )
-                ImGui::EndDisabled();
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "NavigateForward" ) );
-
-            ImGui::SameLine();
-            if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kPlus, "Add" ) ) )
-                ImGui::OpenPopup( "##cb_add" );
-            EditorSelfTestMarks::note( "contentBrowser.add" );
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "AddAsset" ) );
-            drawAddMenu();
-
-            ImGui::SameLine();
-            EditorWidgets::drawSearchField( "##cb_search", _searchBuffer, SW_LOCKEY( "EditorContentBrowser", "SearchHint" ), 160.0f, false );
-            EditorSelfTestMarks::note( "contentBrowser.search" );
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "SearchTooltip" ) );
-
-            ImGui::SameLine();
-            uint32                          filterCount{ 0 };
-            const EditorAssetBrowserFilter* pFilter  = EditorAssetTypeRegistry::getBrowserFilters( filterCount );
-            const utf8*                     pPreview = "All";
-            if ( _filterIndex < filterCount )
-                pPreview = pFilter[_filterIndex]._pLabel;
-            ImGui::SetNextItemWidth( 110.0f * EditorThemeUtil::getDpiScale() );
-            if ( ImGui::BeginCombo( "##cb_type", pPreview ) )
-            {
-                for ( uint32 filterIdx = 0; filterIdx < filterCount; ++filterIdx )
-                {
-                    const bool bSelected = ( _filterIndex == filterIdx );
-                    if ( ImGui::Selectable( pFilter[filterIdx]._pLabel, bSelected ) )
-                        _filterIndex = filterIdx;
-                    if ( bSelected )
-                        ImGui::SetItemDefaultFocus();
-                }
-                ImGui::EndCombo();
-            }
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "TypeFilter" ) );
-
-            ImGui::SameLine();
-            if ( ImGui::RadioButton( "Tiles", _viewMode == ViewMode::Tiles ) )
-                _viewMode = ViewMode::Tiles;
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "TilesView" ) );
-
-            ImGui::SameLine();
-            if ( ImGui::RadioButton( "List", _viewMode == ViewMode::List ) )
-                _viewMode = ViewMode::List;
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "ListView" ) );
-
-            if ( _viewMode == ViewMode::Tiles )
-            {
-                ImGui::SameLine();
-                ImGui::SetNextItemWidth( 80.0f * EditorThemeUtil::getDpiScale() );
-                ImGui::SliderFloat( "##cb_tile", &_tileSize, 64.0f, 160.0f, "%.0f" );
-                EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "TileSize" ) );
-            }
-
-            ImGui::SameLine();
-            const bool canImport = _selectedFolderAbs.empty() == false;
-            if ( canImport == false )
-                ImGui::BeginDisabled();
-            const bool importClicked = ImGui::Button( "Import..." );
-            if ( canImport == false )
-            {
-                ImGui::EndDisabled();
-                EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "ImportNeedsFolder" ) );
-            }
-            else
-            {
-                EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "Import" ) );
-            }
-            if ( importClicked )
-                importFilesFromDialog();
-
-            ImGui::SameLine();
-            if ( ImGui::Button( "Refresh" ) )
-            {
-                _folderCache.clear();
-                _listEntry.clear();
-                _selectedAssetAbs.clear();
-                refreshRoots();
-                refreshCurrentFolder();
-            }
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "Refresh" ) );
-
-            ImGui::SameLine();
-            bool bShowAllPacks = _bShowAllPacks == SW_TRUE;
-            if ( ImGui::Checkbox( "All packs", &bShowAllPacks ) )
-                setShowAllPacks( bShowAllPacks );
-            EditorSelfTestMarks::note( "contentBrowser.allPacks" );
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "AllPacks" ) );
+            drawNavigationControls();
+            drawViewControls();
+            drawFileControls();
         }
         EditorChrome::endToolbar();
+    }
+
+    void ContentBrowserPanel::drawNavigationControls()
+    {
+        const bool bCanBack = _history.canNavigateBack();
+        if ( bCanBack == false )
+            ImGui::BeginDisabled();
+        if ( ImGui::Button( "<##cb_nav_back" ) )
+            navigateBack();
+        if ( bCanBack == false )
+            ImGui::EndDisabled();
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "NavigateBack" ) );
+
+        ImGui::SameLine();
+        const bool bCanForward = _history.canNavigateForward();
+        if ( bCanForward == false )
+            ImGui::BeginDisabled();
+        if ( ImGui::Button( ">##cb_nav_forward" ) )
+            navigateForward();
+        if ( bCanForward == false )
+            ImGui::EndDisabled();
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "NavigateForward" ) );
+
+        ImGui::SameLine();
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kPlus, "Add" ) ) )
+            ImGui::OpenPopup( "##cb_add" );
+        EditorSelfTestMarks::note( "contentBrowser.add" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "AddAsset" ) );
+        drawAddMenu();
+
+        ImGui::SameLine();
+        EditorWidgets::drawSearchField( "##cb_search", _searchBuffer, SW_LOCKEY( "EditorContentBrowser", "SearchHint" ), 160.0f, false );
+        EditorSelfTestMarks::note( "contentBrowser.search" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "SearchTooltip" ) );
+    }
+
+    void ContentBrowserPanel::drawViewControls()
+    {
+        ImGui::SameLine();
+        uint32                          filterCount{ 0 };
+        const EditorAssetBrowserFilter* pFilter  = EditorAssetTypeRegistry::getBrowserFilters( filterCount );
+        const utf8*                     pPreview = "All";
+        if ( _filterIndex < filterCount )
+            pPreview = pFilter[_filterIndex]._pLabel;
+        ImGui::SetNextItemWidth( 110.0f * EditorThemeUtil::getDpiScale() );
+        if ( ImGui::BeginCombo( "##cb_type", pPreview ) )
+        {
+            for ( uint32 filterIdx = 0; filterIdx < filterCount; ++filterIdx )
+            {
+                const bool bSelected = ( _filterIndex == filterIdx );
+                if ( ImGui::Selectable( pFilter[filterIdx]._pLabel, bSelected ) )
+                    _filterIndex = filterIdx;
+                if ( bSelected )
+                    ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
+        }
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "TypeFilter" ) );
+
+        ImGui::SameLine();
+        if ( ImGui::RadioButton( "Tiles", _viewMode == ViewMode::Tiles ) )
+            _viewMode = ViewMode::Tiles;
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "TilesView" ) );
+
+        ImGui::SameLine();
+        if ( ImGui::RadioButton( "List", _viewMode == ViewMode::List ) )
+            _viewMode = ViewMode::List;
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "ListView" ) );
+
+        if ( _viewMode == ViewMode::Tiles )
+        {
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth( 80.0f * EditorThemeUtil::getDpiScale() );
+            ImGui::SliderFloat( "##cb_tile", &_tileSize, 64.0f, 160.0f, "%.0f" );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "TileSize" ) );
+        }
+    }
+
+    void ContentBrowserPanel::drawFileControls()
+    {
+        ImGui::SameLine();
+        const bool canImport = _selectedFolderAbs.empty() == false;
+        if ( canImport == false )
+            ImGui::BeginDisabled();
+        const bool importClicked = ImGui::Button( "Import..." );
+        if ( canImport == false )
+        {
+            ImGui::EndDisabled();
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "ImportNeedsFolder" ) );
+        }
+        else
+        {
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "Import" ) );
+        }
+        if ( importClicked )
+            importFilesFromDialog();
+
+        ImGui::SameLine();
+        if ( ImGui::Button( "Refresh" ) )
+        {
+            _folderCache.clear();
+            _listEntry.clear();
+            _selectedAssetAbs.clear();
+            refreshRoots();
+            refreshCurrentFolder();
+        }
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "Refresh" ) );
+
+        ImGui::SameLine();
+        bool bShowAllPacks = _bShowAllPacks == SW_TRUE;
+        if ( ImGui::Checkbox( "All packs", &bShowAllPacks ) )
+            setShowAllPacks( bShowAllPacks );
+        EditorSelfTestMarks::note( "contentBrowser.allPacks" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "AllPacks" ) );
     }
 
     void ContentBrowserPanel::drawSourcesSection()

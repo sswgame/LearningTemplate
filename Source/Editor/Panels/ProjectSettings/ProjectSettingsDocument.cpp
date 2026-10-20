@@ -63,7 +63,7 @@ namespace sw::editor
 
             /**
              * @brief @p source 의 말단을 @p destination 으로 옮기되 @p listEqual 에 든 경로는 뺍니다.
-             * @details 말단이 하나도 남지 않는 구조체 칸은 만들지 않는다. JSONValue 핸들은 형제를 더하면 무효가 되므로, 칸 하나를 다 채운 뒤에 다음 칸을 받는다.
+             * @details 말단이 하나도 남지 않는 구조체 필드는 만들지 않는다. JSONValue 핸들은 형제를 더하면 무효가 되므로, 필드 하나를 다 채운 뒤에 다음 필드를 받는다.
              */
             static void copyDifference( const JSONValue& source, const JSONValue& destination, const string& prefix, const vector<string>& listEqual )
             {
@@ -86,7 +86,7 @@ namespace sw::editor
                 }
             }
 
-            /** @brief 요소의 속성과 자식 수입니다(요소 모드의 "기본값과 다른 키" — 맵 칸은 자식 하나로 센다). */
+            /** @brief 요소의 속성과 자식 수입니다(요소 모드의 "기본값과 다른 키" — 맵 항목은 자식 하나로 센다). */
             static uint32 countElementKeys( const XMLNode& element )
             {
                 uint32 keyCount{ 0 };
@@ -345,7 +345,7 @@ namespace sw::editor
     {
         if ( _pType == nullptr || _pCurrent == nullptr )
             return;
-        // 바탕 층은 값의 정본이 파일이다 — 기본값으로 되돌리기는 파일 값으로 되돌리기다(헤더의 형식은 값이 아니다).
+        // 바탕 층은 값의 원본이 파일이다 — 기본값으로 되돌리기는 파일 값으로 되돌리기다(헤더의 형식은 값이 아니다).
         const bool bRevertToFile = isBaseLayer() && FileUtil::isRegularFile( _path );
         if ( bRevertToFile )
         {
@@ -357,7 +357,7 @@ namespace sw::editor
             return;
         destroyInstance( *_pType, _pCurrent );
         _pCurrent = pFresh;
-        // 읽지 못한 파일은 기본값으로 덮어 고치라는 뜻이다 — 저장을 막던 상태를 푼다.
+        // 읽지 못한 파일은 기본값으로 덮어 고치라는 뜻이다 — 저장을 막던 상태를 해제한다.
         if ( _readResult == ConfigReadResult::Invalid )
             _readResult = ConfigReadResult::Missing;
     }
@@ -375,7 +375,7 @@ namespace sw::editor
         JSONDocument fullDocument;
         if ( fullDocument.parse( fullText ) == false || fullDocument.getRoot().isObject() == false )
             return {};
-        // 바탕 층(`ConfigBaseLayer`)은 파일이 값의 정본이라 모든 키를 쓴다(언리얼 `BaseEngine.ini` 와 같은 층).
+        // 바탕 층(`ConfigBaseLayer`)은 파일이 값의 원본이라 모든 키를 쓴다(언리얼 `BaseEngine.ini` 와 같은 층).
         if ( isBaseLayer() )
             return fullDocument.dump( 4 );
         vector<string> listEqual;
@@ -447,7 +447,7 @@ namespace sw::editor
             SW_LOG_WARNING( "Project settings: %# is missing - the <%#> element lives in that file", _path.c_str(), _elementName.c_str() );
             return false;
         }
-        // 쓸 요소가 다음 기동에서 읽히는지 먼저 본다 — 필수 칸이 빠진 요소(Reset to Default 뒤)는 쓰지 않는다.
+        // 쓸 요소가 다음 기동에서 읽히는지 먼저 본다 — 필수 필드가 빠진 요소(Reset to Default 뒤)는 쓰지 않는다.
         void* pCheck = createInstance( *_pType );
         if ( pCheck == nullptr )
             return false;

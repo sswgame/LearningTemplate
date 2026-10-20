@@ -125,6 +125,10 @@ namespace sw::editor
          * @param listDrawnName 인스펙터 확장이 이미 그린 프로퍼티 이름입니다. 다시 그리지 않습니다.
          */
         void drawTypeProperties( void* pInstance, const TypeInfo* pTypeInfo, const utf8* pSectionTitle, const vector<hashed_string>& listDrawnName );
+        /** @brief 속성 표의 한 행을 그립니다 — 이름 칸(혼합 표시 · 즐겨찾기 별 · 이름 · 행 메뉴 · 되돌리기 버튼)과 값 칸(위젯). @p bDisabled 면 값 위젯을 막습니다. */
+        void drawPropertyRow( MutableObjectAddress instance, const TypeInfo& typeInfo, const PropertyInfo& prop, bool bDisabled, bool bFavoriteTarget, ObjectAddress defaultInstance );
+        /** @brief 이름 글을 오른쪽 클릭하면 열리는 행 메뉴(즐겨찾기 · 기본값 · 복사 · 붙여넣기)입니다. */
+        void drawPropertyRowMenu( MutableObjectAddress instance, const PropertyInfo& prop, const string& favoriteKey, bool bFavoriteTarget, bool bFavorite, ObjectAddress defaultInstance );
         /**
          * @brief 단일 프로퍼티 위젯을 그립니다. 값이 바뀌면 편집 대상에 통지합니다.
          * @details @p instance 는 @p prop 을 가진 객체다. 컨테이너 원소 · 맵 값은 오프셋 0 인 프로퍼티(`makeElementProperty`)와 그 값 주소를 객체로 넘긴다.

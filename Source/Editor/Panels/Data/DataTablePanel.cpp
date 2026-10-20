@@ -311,19 +311,11 @@ namespace sw::editor
         return bChanged;
     }
 
-    void DataTablePanel::drawLocalizationTable()
+    void DataTablePanel::collectVisibleLocalizationRecords( const EditorListFilter& filter, vector<size_t>& outListVisibleIndex ) const
     {
-        constexpr ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY |
-                                          ImGuiTableFlags_SizingStretchProp;
-
-        // 표를 열기 **전에** 걸러 둔다. 표가 남은 영역을 모두 차지하므로 0건 안내를 표 뒤에 그리면
-        // 화면 밖으로 밀린다. 표를 아예 열지 않아야 보인다. 행마다 필터를 다시 만들지 않는 효과도 있다.
-        const EditorListFilter filter{ _localizationFilter.c_str() };
-
-        // **멤버 버퍼를 다시 쓴다** — 지역 `vector` 면 프레임마다 할당하고 해제한다.
-        vector<size_t>& listVisibleIndex = _listVisibleLocalizationIndex;
-        listVisibleIndex.clear();
-        listVisibleIndex.reserve( _localizationSheet._listRecord.size() );
+        // 호출한 쪽이 **멤버 버퍼를 다시 쓴다** — 지역 `vector` 면 프레임마다 할당하고 해제한다.
+        outListVisibleIndex.clear();
+        outListVisibleIndex.reserve( _localizationSheet._listRecord.size() );
         for ( size_t recordIndex = 0; recordIndex < _localizationSheet._listRecord.size(); ++recordIndex )
         {
             const LocalizationRecord& record   = _localizationSheet._listRecord[recordIndex];
@@ -333,8 +325,21 @@ namespace sw::editor
                 bMatches = bMatches || filter.matchesAny( { translation } );
             }
             if ( bMatches )
-                listVisibleIndex.push_back( recordIndex );
+                outListVisibleIndex.push_back( recordIndex );
         }
+    }
+
+    void DataTablePanel::drawLocalizationTable()
+    {
+        constexpr ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY |
+                                          ImGuiTableFlags_SizingStretchProp;
+
+        // 표를 열기 **전에** 걸러 둔다. 표가 남은 영역을 모두 차지하므로 0건 안내를 표 뒤에 그리면
+        // 화면 밖으로 밀린다. 표를 아예 열지 않아야 보인다. 행마다 필터를 다시 만들지 않는 효과도 있다.
+        const EditorListFilter filter{ _localizationFilter.c_str() };
+
+        vector<size_t>& listVisibleIndex = _listVisibleLocalizationIndex;
+        collectVisibleLocalizationRecords( filter, listVisibleIndex );
 
         if ( listVisibleIndex.empty() )
         {
@@ -362,49 +367,8 @@ namespace sw::editor
             int32 deleteIndex = -1;
             for ( const size_t recordIndex : listVisibleIndex )
             {
-                LocalizationRecord& record = _localizationSheet._listRecord[recordIndex];
-                record._listTranslation.resize( cultureCount );
-
-                ImGui::PushID( static_cast<int32>( recordIndex ) );
-                ImGui::TableNextRow();
-
-                ImGui::TableSetColumnIndex( 0 );
-                ImGui::TextUnformatted( record._key.c_str() );
-                if ( ImGui::IsItemHovered() && ( record._context.empty() == false || record._comment.empty() == false ) )
-                {
-                    const string tooltip = SW_LOCKEYFORMAT( "EditorDataTable", "KeyTip",
-                                                            TextArgumentList()
-                                                                .addText( "context", record._context )
-                                                                .addText( "comment", record._comment )
-                                                                .addInteger( "maxLength", static_cast<int64>( record._maxLength ) ) );
-                    ImGui::SetTooltip( "%s", tooltip.c_str() );
-                }
-
-                ImGui::TableSetColumnIndex( 1 );
-                if ( EditorWidgets::drawTextField( "##source", record._source, -1.0f ) )
-                {
-                    record._bModified = true;
-                    markLocalizationDirty();
-                }
-
-                for ( size_t cultureIndex = 0; cultureIndex < cultureCount; ++cultureIndex )
-                {
-                    ImGui::TableSetColumnIndex( static_cast<int32>( 2 + cultureIndex ) );
-                    ImGui::PushID( static_cast<int32>( cultureIndex ) );
-                    if ( drawTranslationCell( record, cultureIndex ) )
-                    {
-                        record._bModified = true;
-                        markLocalizationDirty();
-                    }
-                    ImGui::PopID();
-                }
-
-                ImGui::TableSetColumnIndex( static_cast<int32>( 2 + cultureCount ) );
-                if ( ImGui::SmallButton( "Del" ) )
+                if ( drawLocalizationRow( recordIndex, cultureCount ) )
                     deleteIndex = static_cast<int32>( recordIndex );
-                EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "DeleteKeyTip" ) );
-
-                ImGui::PopID();
             }
 
             if ( 0 <= deleteIndex && static_cast<size_t>( deleteIndex ) < _localizationSheet._listRecord.size() )
@@ -416,6 +380,55 @@ namespace sw::editor
 
             ImGui::EndTable();
         }
+    }
+
+    bool DataTablePanel::drawLocalizationRow( size_t recordIndex, size_t cultureCount )
+    {
+        bool                bDeleteRequested = false;
+        LocalizationRecord& record           = _localizationSheet._listRecord[recordIndex];
+        record._listTranslation.resize( cultureCount );
+
+        ImGui::PushID( static_cast<int32>( recordIndex ) );
+        ImGui::TableNextRow();
+
+        ImGui::TableSetColumnIndex( 0 );
+        ImGui::TextUnformatted( record._key.c_str() );
+        if ( ImGui::IsItemHovered() && ( record._context.empty() == false || record._comment.empty() == false ) )
+        {
+            const string tooltip = SW_LOCKEYFORMAT( "EditorDataTable", "KeyTip",
+                                                    TextArgumentList()
+                                                        .addText( "context", record._context )
+                                                        .addText( "comment", record._comment )
+                                                        .addInteger( "maxLength", static_cast<int64>( record._maxLength ) ) );
+            ImGui::SetTooltip( "%s", tooltip.c_str() );
+        }
+
+        ImGui::TableSetColumnIndex( 1 );
+        if ( EditorWidgets::drawTextField( "##source", record._source, -1.0f ) )
+        {
+            record._bModified = true;
+            markLocalizationDirty();
+        }
+
+        for ( size_t cultureIndex = 0; cultureIndex < cultureCount; ++cultureIndex )
+        {
+            ImGui::TableSetColumnIndex( static_cast<int32>( 2 + cultureIndex ) );
+            ImGui::PushID( static_cast<int32>( cultureIndex ) );
+            if ( drawTranslationCell( record, cultureIndex ) )
+            {
+                record._bModified = true;
+                markLocalizationDirty();
+            }
+            ImGui::PopID();
+        }
+
+        ImGui::TableSetColumnIndex( static_cast<int32>( 2 + cultureCount ) );
+        if ( ImGui::SmallButton( "Del" ) )
+            bDeleteRequested = true;
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "DeleteKeyTip" ) );
+
+        ImGui::PopID();
+        return bDeleteRequested;
     }
 
     void DataTablePanel::drawGameDataTab()

@@ -2,6 +2,7 @@
 
 #include "Editor/Panels/Inspector/EditorPropertyGrid.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Task/TaskTypes.h"
 
@@ -80,6 +81,131 @@ namespace sw::editor
                 PropertyInfo valueProp{};
                 valueProp._typeName = typeName;
                 return valueProp;
+            }
+
+            /** @brief 즐겨찾기한 프로퍼티만 타입 표시 이름 머리 하나로 모아 @p inoutListGroup 을 바꿉니다. 하나도 없으면 비웁니다. */
+            static void keepFavoriteProperties( const TypeInfo& typeInfo, const InspectorFavorites& favorites, vector<InspectorPropertyGroup>& inoutListGroup )
+            {
+                InspectorPropertyGroup favoriteGroup;
+                favoriteGroup._category = typeInfo.getDisplayName();
+                for ( const InspectorPropertyGroup& group : inoutListGroup )
+                {
+                    for ( const PropertyInfo* pProp : group._listProperty )
+                    {
+                        if ( favorites.contains( InspectorFavorites::makePropertyKey( typeInfo, *pProp ) ) )
+                            favoriteGroup._listProperty.push_back( pProp );
+                    }
+                }
+                inoutListGroup.clear();
+                if ( favoriteGroup._listProperty.empty() == false )
+                    inoutListGroup.push_back( std::move( favoriteGroup ) );
+            }
+
+            /**
+             * @brief 기본값과 같은 프로퍼티를 빼고, 남은 것이 없는 카테고리는 머리째 뺍니다.
+             * @details 다중 선택에서 값이 갈린(혼합) 프로퍼티는 남깁니다 — 값이 다르면 선택 중 적어도 하나는 기본값이 아닙니다. 갈리지 않았으면 모두 주 선택과 같으므로 주 선택만 보면 됩니다.
+             */
+            static void removeDefaultValued( MutableObjectAddress instance, ObjectAddress defaultInstance, Delegate<bool( const PropertyInfo& )>& isMixed, vector<InspectorPropertyGroup>& inoutListGroup )
+            {
+                for ( InspectorPropertyGroup& group : inoutListGroup )
+                {
+                    VectorUtil::removeIf( group._listProperty, [instance, defaultInstance, &isMixed]( const PropertyInfo* pProp )
+                    {
+                        const bool bMixed = isMixed.isBound() && isMixed( *pProp );
+                        return bMixed == false && EditorDefaultObjects::isDefaultValue( *pProp, instance, defaultInstance );
+                    } );
+                }
+                VectorUtil::removeIf( inoutListGroup, []( const InspectorPropertyGroup& group )
+                { return group._listProperty.empty(); } );
+            }
+
+            /** @brief 비트 플래그 열거형을 콤보로 그립니다. 전체 선택 · 해제 · 항목 체크는 @p inoutEditedValue 만 바꿉니다. */
+            static void drawBitFlagEnum( const EnumInfo& enumInfo, int64 currentValue, bool bReadOnly, int64& inoutEditedValue )
+            {
+                const utf8* pLabel = "##value";
+                string      previewStr;
+                for ( const auto& [val, nameHashed] : enumInfo._mapValueToName )
+                {
+                    if ( val != 0 && ( currentValue & val ) == val )
+                    {
+                        if ( previewStr.empty() == false )
+                            previewStr += " | ";
+                        previewStr += nameHashed.c_str();
+                    }
+                }
+                if ( previewStr.empty() )
+                    previewStr = ( currentValue == 0 ) ? "None" : "<Unknown>";
+
+                if ( bReadOnly )
+                {
+                    ImGui::TextDisabled( "%s", pLabel );
+                    ImGui::SameLine();
+                    ImGui::TextUnformatted( previewStr.c_str() );
+                    return;
+                }
+
+                if ( ImGui::BeginCombo( pLabel, previewStr.c_str() ) == false )
+                    return;
+                if ( ImGui::SmallButton( "Select All" ) )
+                {
+                    for ( const auto& [val, _] : enumInfo._mapValueToName )
+                    {
+                        inoutEditedValue |= val;
+                    }
+                }
+                ImGui::SameLine();
+                if ( ImGui::SmallButton( "Clear All" ) )
+                    inoutEditedValue = 0;
+                ImGui::Separator();
+
+                for ( const auto& [val, nameHashed] : enumInfo._mapValueToName )
+                {
+                    if ( val == 0 )
+                        continue;
+                    bool bChecked = ( ( inoutEditedValue & val ) == val );
+                    if ( ImGui::Checkbox( nameHashed.c_str(), &bChecked ) )
+                    {
+                        if ( bChecked )
+                            inoutEditedValue |= val;
+                        else
+                            inoutEditedValue &= ~val;
+                    }
+                }
+                ImGui::EndCombo();
+            }
+
+            /** @brief 하나만 고르는 열거형을 콤보로 그립니다. 고른 값은 @p outEditedValue 에 둡니다. */
+            static void drawPlainEnum( const TypeRegistry& registry, const EnumInfo& enumInfo, const PropertyInfo& prop, int64 currentValue, bool bReadOnly, int64& outEditedValue )
+            {
+                const utf8* pLabel   = "##value";
+                const utf8* pName    = registry.enumToString( prop._typeName, currentValue );
+                const utf8* pPreview = ( pName != nullptr ) ? pName : "<Unknown>";
+                if ( bReadOnly )
+                {
+                    ImGui::TextDisabled( "%s", pLabel );
+                    ImGui::SameLine();
+                    ImGui::TextUnformatted( pPreview );
+                    return;
+                }
+
+                if ( ImGui::BeginCombo( pLabel, pPreview ) == false )
+                    return;
+                for ( const auto& [val, nameHashed] : enumInfo._mapValueToName )
+                {
+                    const bool bSelected = ( val == currentValue );
+                    if ( ImGui::Selectable( nameHashed.c_str(), bSelected ) )
+                        outEditedValue = val;
+                    if ( EditorSelfTestMarks::isEnabled() )
+                    {
+                        // 시나리오가 콤보 항목을 누를 수 있게 한다(`inspector.enum.<프로퍼티>.<열거자>`) — 콤보를 연 프레임에만 그려진다.
+                        fixed_string<constant::kMaxBuffer128> itemMark;
+                        formatstring( itemMark.data(), itemMark.capacity(), "inspector.enum.%#.%#", prop._name.c_str(), nameHashed.c_str() );
+                        EditorSelfTestMarks::note( itemMark.c_str() );
+                    }
+                    if ( bSelected )
+                        ImGui::SetItemDefaultFocus();
+                }
+                ImGui::EndCombo();
             }
         };
     } // namespace
@@ -221,6 +347,8 @@ namespace sw::editor
 
     void EditorPropertyGrid::drawTypeProperties( void* pInstance, const TypeInfo* pTypeInfo, const utf8* pSectionTitle, const vector<hashed_string>& listDrawnName )
     {
+        using Internal = EditorPropertyGridInternal;
+
         // 즐겨찾기 거르기는 이번 한 번만이다. 중첩 그리기가 다시 들어와도 거르지 않게 먼저 지운다.
         const bool bFavoritesOnly = _bFavoritesOnly && _pFavorites != nullptr;
         _bFavoritesOnly           = false;
@@ -235,20 +363,9 @@ namespace sw::editor
         // 즐겨찾기 구역이면 즐겨찾기한 프로퍼티만 타입 이름 머리 하나로 모은다.
         if ( bFavoritesOnly )
         {
-            InspectorPropertyGroup favoriteGroup;
-            favoriteGroup._category = pTypeInfo->getDisplayName();
-            for ( const InspectorPropertyGroup& group : listGroup )
-            {
-                for ( const PropertyInfo* pProp : group._listProperty )
-                {
-                    if ( _pFavorites->contains( InspectorFavorites::makePropertyKey( *pTypeInfo, *pProp ) ) )
-                        favoriteGroup._listProperty.push_back( pProp );
-                }
-            }
-            listGroup.clear();
-            if ( favoriteGroup._listProperty.empty() )
+            Internal::keepFavoriteProperties( *pTypeInfo, *_pFavorites, listGroup );
+            if ( listGroup.empty() )
                 return;
-            listGroup.push_back( std::move( favoriteGroup ) );
         }
 
         // 검색어가 아무 프로퍼티도 맞히지 못하면 그렇다고 알려 준다.
@@ -273,22 +390,9 @@ namespace sw::editor
             pDefaultInstance = pDefaultContext->getSubsystem<EditorDefaultObjects>().findDefault( *pTypeInfo );
         const ObjectAddress defaultInstance{ pDefaultInstance };
         // 바뀐 것만 보기이면 기본값과 같은 프로퍼티를 뺀다. 남은 것이 없는 카테고리는 머리째 감춘다.
-        // 다중 선택에서 값이 갈린(혼합) 프로퍼티는 남긴다 — 값이 다르면 선택 중 적어도 하나는 기본값이 아니다. 갈리지 않았으면 모두 주 선택과 같으므로 주 선택만 보면 된다.
         if ( _bShowModifiedOnly )
         {
-            for ( InspectorPropertyGroup& group : listGroup )
-            {
-                auto& props = group._listProperty;
-                props.erase( std::remove_if( props.begin(), props.end(), [this, instance, defaultInstance]( const PropertyInfo* pProp )
-                {
-                    const bool bMixed = _isMixed.isBound() && _isMixed( *pProp );
-                    return bMixed == false && EditorDefaultObjects::isDefaultValue( *pProp, instance, defaultInstance );
-                } ),
-                             props.end() );
-            }
-            listGroup.erase( std::remove_if( listGroup.begin(), listGroup.end(), []( const InspectorPropertyGroup& group )
-            { return group._listProperty.empty(); } ),
-                             listGroup.end() );
+            Internal::removeDefaultValued( instance, defaultInstance, _isMixed, listGroup );
             if ( listGroup.empty() )
                 return;
         }
@@ -313,94 +417,104 @@ namespace sw::editor
                     if ( editState == PropertyEditState::Hidden )
                         continue;
 
-                    ImGui::TableNextRow();
-                    ImGui::TableNextColumn();
-
-                    ImGui::AlignTextToFramePadding();
-                    if ( _isMixed.isBound() && _isMixed( *prop ) )
-                    {
-                        ImGui::TextDisabled( "\xe2\x80\x94" ); // — (혼합)
-                        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "MultipleValues" ) );
-                        ImGui::SameLine();
-                    }
-                    const string favoriteKey = bFavoriteTarget ? InspectorFavorites::makePropertyKey( *pTypeInfo, *prop ) : string{};
-                    const bool   bFavorite   = bFavoriteTarget && _pFavorites->contains( favoriteKey );
-                    if ( bFavorite )
-                    {
-                        ImGui::TextUnformatted( editoricon::kStar );
-                        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "FavoriteProperty" ) );
-                        ImGui::SameLine();
-                    }
-                    ImGui::TextUnformatted( InspectorPropertyLayout::getPropertyLabel( *prop ) );
-                    EditorWidgets::drawTooltip( prop->_metadata->_tooltip.c_str() );
-                    // 시나리오가 행 메뉴를 오른쪽 클릭으로 열 수 있게 이름 글에 이름표를 남긴다(`inspector.label.<타입>.<프로퍼티>`).
-                    fixed_string<constant::kMaxBuffer128> labelMark;
-                    formatstring( labelMark.data(), labelMark.capacity(), "inspector.label.%#.%#", pTypeInfo->_name.c_str(), prop->_name.c_str() );
-                    EditorSelfTestMarks::note( labelMark.c_str() );
-
-                    if ( ImGui::BeginPopupContextItem( "PropCtx" ) )
-                    {
-                        // 언리얼 Details 의 행 메뉴 Add to Favorites · Remove from Favorites 에 해당한다. 바꾸면 바로 저장한다.
-                        if ( bFavoriteTarget )
-                        {
-                            if ( ImGui::MenuItem( bFavorite ? SW_LOCKEY( "EditorInspector", "RemoveFromFavorites" ) : SW_LOCKEY( "EditorInspector", "AddToFavorites" ) ) )
-                            {
-                                (void)_pFavorites->toggle( favoriteKey );
-                                (void)_pFavorites->saveFile( InspectorFavorites::getDefaultFilePath() ); // 실패는 saveFile 이 경고한다
-                            }
-                            ImGui::Separator();
-                        }
-                        if ( pDefaultInstance != nullptr || prop->_metadata->_defaultValue.empty() == false )
-                        {
-                            if ( ImGui::MenuItem( "Reset to Default" ) )
-                                resetPropertyToDefault( instance, *prop, defaultInstance );
-                        }
-                        if ( ImGui::MenuItem( "Copy Value" ) )
-                            ImGui::SetClipboardText( SerializerUtil::formatPropertyText( *prop, instance, SerializeContext::getDefault( SerializePurpose::Authoring ) ).c_str() );
-                        // 타입 핸들은 선택기만이 입력 길이다. 글로 붙이면 대상 타입을 확인하지 않은 값이 들어간다.
-                        const bool bPasteAllowed = ImGui::GetClipboardText() != nullptr && prop->_handleTargetTypeName.empty();
-                        if ( ImGui::MenuItem( "Paste Value", nullptr, false, bPasteAllowed ) )
-                            applyPropertyTextAsEdit( instance, *prop, ImGui::GetClipboardText(), "Paste Value" );
-                        EditorSelfTestMarks::note( "inspector.menu.pasteValue" );
-                        if ( ImGui::MenuItem( "Copy Property Name" ) )
-                            ImGui::SetClipboardText( prop->_name.c_str() );
-                        ImGui::EndPopup();
-                    }
-
-                    // 기본값과 다르면 이름 영역 끝에 되돌리기 버튼(언리얼의 노란 화살표)을 둔다. 기본값은 컴포넌트의 기본 인스턴스(CDO)이고, 없으면 메타 텍스트다.
-                    if ( EditorDefaultObjects::isDefaultValue( *prop, instance, defaultInstance ) == false )
-                    {
-                        ImGui::SameLine();
-                        if ( ImGui::SmallButton( editoricon::kRefresh ) )
-                            resetPropertyToDefault( instance, *prop, defaultInstance );
-                        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "ResetToDefaultTooltip" ) );
-                        fixed_string<constant::kMaxBuffer128> resetMark;
-                        formatstring( resetMark.data(), resetMark.capacity(), "inspector.reset.%#.%#", pTypeInfo->_name.c_str(), prop->_name.c_str() );
-                        EditorSelfTestMarks::note( resetMark.c_str() );
-                    }
-
-                    if ( prop->_metadata->_bTransient == SW_TRUE )
-                    {
-                        ImGui::SameLine();
-                        ImGui::TextDisabled( "(T)" );
-                        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "TransientProperty" ) );
-                    }
-
-                    ImGui::TableNextColumn();
-                    ImGui::PushID( prop->_name.c_str() );
-                    ImGui::SetNextItemWidth( -FLT_MIN );
-                    ImGui::BeginDisabled( editState == PropertyEditState::Disabled );
-                    drawPropertyWidget( instance, *prop );
-                    ImGui::EndDisabled();
-                    // 시나리오가 누를 수 있게 값 입력란에 이름을 남긴다(`inspector.property.<타입>.<프로퍼티>`). 테스트를 켰을 때만 기록한다.
-                    fixed_string<constant::kMaxBuffer128> mark;
-                    formatstring( mark.data(), mark.capacity(), "inspector.property.%#.%#", pTypeInfo->_name.c_str(), prop->_name.c_str() );
-                    EditorSelfTestMarks::note( mark.c_str() );
-                    ImGui::PopID();
+                    drawPropertyRow( instance, *pTypeInfo, *prop, editState == PropertyEditState::Disabled, bFavoriteTarget, defaultInstance );
                 }
                 ImGui::EndTable();
             }
         }
+    }
+
+    void EditorPropertyGrid::drawPropertyRow( const MutableObjectAddress instance, const TypeInfo& typeInfo, const PropertyInfo& prop, bool bDisabled, bool bFavoriteTarget, const ObjectAddress defaultInstance )
+    {
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+
+        ImGui::AlignTextToFramePadding();
+        if ( _isMixed.isBound() && _isMixed( prop ) )
+        {
+            ImGui::TextDisabled( "\xe2\x80\x94" ); // — (혼합)
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "MultipleValues" ) );
+            ImGui::SameLine();
+        }
+        const string favoriteKey = bFavoriteTarget ? InspectorFavorites::makePropertyKey( typeInfo, prop ) : string{};
+        const bool   bFavorite   = bFavoriteTarget && _pFavorites->contains( favoriteKey );
+        if ( bFavorite )
+        {
+            ImGui::TextUnformatted( editoricon::kStar );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "FavoriteProperty" ) );
+            ImGui::SameLine();
+        }
+        ImGui::TextUnformatted( InspectorPropertyLayout::getPropertyLabel( prop ) );
+        EditorWidgets::drawTooltip( prop._metadata->_tooltip.c_str() );
+        // 시나리오가 행 메뉴를 오른쪽 클릭으로 열 수 있게 이름 글에 레이블을 남긴다(`inspector.label.<타입>.<프로퍼티>`).
+        fixed_string<constant::kMaxBuffer128> labelMark;
+        formatstring( labelMark.data(), labelMark.capacity(), "inspector.label.%#.%#", typeInfo._name.c_str(), prop._name.c_str() );
+        EditorSelfTestMarks::note( labelMark.c_str() );
+
+        drawPropertyRowMenu( instance, prop, favoriteKey, bFavoriteTarget, bFavorite, defaultInstance );
+
+        // 기본값과 다르면 이름 영역 끝에 되돌리기 버튼(언리얼의 노란 화살표)을 둔다. 기본값은 컴포넌트의 기본 인스턴스(CDO)이고, 없으면 메타 텍스트다.
+        if ( EditorDefaultObjects::isDefaultValue( prop, instance, defaultInstance ) == false )
+        {
+            ImGui::SameLine();
+            if ( ImGui::SmallButton( editoricon::kRefresh ) )
+                resetPropertyToDefault( instance, prop, defaultInstance );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "ResetToDefaultTooltip" ) );
+            fixed_string<constant::kMaxBuffer128> resetMark;
+            formatstring( resetMark.data(), resetMark.capacity(), "inspector.reset.%#.%#", typeInfo._name.c_str(), prop._name.c_str() );
+            EditorSelfTestMarks::note( resetMark.c_str() );
+        }
+
+        if ( prop._metadata->_bTransient == SW_TRUE )
+        {
+            ImGui::SameLine();
+            ImGui::TextDisabled( "(T)" );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "TransientProperty" ) );
+        }
+
+        ImGui::TableNextColumn();
+        ImGui::PushID( prop._name.c_str() );
+        ImGui::SetNextItemWidth( -FLT_MIN );
+        ImGui::BeginDisabled( bDisabled );
+        drawPropertyWidget( instance, prop );
+        ImGui::EndDisabled();
+        // 시나리오가 누를 수 있게 값 입력란에 이름을 남긴다(`inspector.property.<타입>.<프로퍼티>`). 테스트를 켰을 때만 기록한다.
+        fixed_string<constant::kMaxBuffer128> mark;
+        formatstring( mark.data(), mark.capacity(), "inspector.property.%#.%#", typeInfo._name.c_str(), prop._name.c_str() );
+        EditorSelfTestMarks::note( mark.c_str() );
+        ImGui::PopID();
+    }
+
+    void EditorPropertyGrid::drawPropertyRowMenu( const MutableObjectAddress instance, const PropertyInfo& prop, const string& favoriteKey, bool bFavoriteTarget, bool bFavorite, const ObjectAddress defaultInstance )
+    {
+        if ( ImGui::BeginPopupContextItem( "PropCtx" ) == false )
+            return;
+
+        // 언리얼 Details 의 행 메뉴 Add to Favorites · Remove from Favorites 에 해당한다. 바꾸면 바로 저장한다.
+        if ( bFavoriteTarget )
+        {
+            if ( ImGui::MenuItem( bFavorite ? SW_LOCKEY( "EditorInspector", "RemoveFromFavorites" ) : SW_LOCKEY( "EditorInspector", "AddToFavorites" ) ) )
+            {
+                (void)_pFavorites->toggle( favoriteKey );
+                (void)_pFavorites->saveFile( InspectorFavorites::getDefaultFilePath() ); // 실패는 saveFile 이 경고한다
+            }
+            ImGui::Separator();
+        }
+        if ( defaultInstance.get() != nullptr || prop._metadata->_defaultValue.empty() == false )
+        {
+            if ( ImGui::MenuItem( "Reset to Default" ) )
+                resetPropertyToDefault( instance, prop, defaultInstance );
+        }
+        if ( ImGui::MenuItem( "Copy Value" ) )
+            ImGui::SetClipboardText( SerializerUtil::formatPropertyText( prop, instance, SerializeContext::getDefault( SerializePurpose::Authoring ) ).c_str() );
+        // 타입 핸들은 선택기만이 입력 길이다. 글로 붙이면 대상 타입을 확인하지 않은 값이 들어간다.
+        const bool bPasteAllowed = ImGui::GetClipboardText() != nullptr && prop._handleTargetTypeName.empty();
+        if ( ImGui::MenuItem( "Paste Value", nullptr, false, bPasteAllowed ) )
+            applyPropertyTextAsEdit( instance, prop, ImGui::GetClipboardText(), "Paste Value" );
+        EditorSelfTestMarks::note( "inspector.menu.pasteValue" );
+        if ( ImGui::MenuItem( "Copy Property Name" ) )
+            ImGui::SetClipboardText( prop._name.c_str() );
+        ImGui::EndPopup();
     }
 
     void EditorPropertyGrid::drawPropertyWidget( const MutableObjectAddress instance, const PropertyInfo& prop )
@@ -483,8 +597,9 @@ namespace sw::editor
 
     void EditorPropertyGrid::drawEnumProperty( const MutableObjectAddress instance, const PropertyInfo& prop, const EnumInfo& enumInfo, bool bReadOnly )
     {
-        const utf8* pLabel    = "##value";
-        auto*       pRegistry = editor::findSubsystem<TypeRegistry>();
+        using Internal = EditorPropertyGridInternal;
+
+        auto* pRegistry = editor::findSubsystem<TypeRegistry>();
         if ( pRegistry == nullptr )
             return;
 
@@ -496,104 +611,20 @@ namespace sw::editor
             return;
         const int64 currentValue = enumInfo.readValueFromMemory( pEnumMemory );
         int64       editedValue  = currentValue;
-        const auto  commitEdit   = [&enumInfo, pEnumMemory, currentValue, &editedValue, &prop]()
-        {
-            // 콤보에서 고른 값은 고르는 순간 바뀐다 — 콤보 단추의 활성화 · 해제로는 잡히지 않으므로 쓰기 직전에 편집 전을 찍어 남긴다.
-            if ( editedValue != currentValue )
-            {
-                InspectorPropertyUndo::recordImmediateEdit( prop );
-                enumInfo.writeValueToMemory( pEnumMemory, editedValue );
-            }
-        };
 
         if ( enumInfo._bIsBitFlag )
-        {
-            string previewStr;
-            for ( const auto& [val, nameHashed] : enumInfo._mapValueToName )
-            {
-                if ( val != 0 && ( currentValue & val ) == val )
-                {
-                    if ( previewStr.empty() == false )
-                        previewStr += " | ";
-                    previewStr += nameHashed.c_str();
-                }
-            }
-            if ( previewStr.empty() )
-                previewStr = ( currentValue == 0 ) ? "None" : "<Unknown>";
-
-            if ( bReadOnly )
-            {
-                ImGui::TextDisabled( "%s", pLabel );
-                ImGui::SameLine();
-                ImGui::TextUnformatted( previewStr.c_str() );
-                return;
-            }
-
-            if ( ImGui::BeginCombo( pLabel, previewStr.c_str() ) )
-            {
-                if ( ImGui::SmallButton( "Select All" ) )
-                {
-                    for ( const auto& [val, _] : enumInfo._mapValueToName )
-                    {
-                        editedValue |= val;
-                    }
-                }
-                ImGui::SameLine();
-                if ( ImGui::SmallButton( "Clear All" ) )
-                    editedValue = 0;
-                ImGui::Separator();
-
-                for ( const auto& [val, nameHashed] : enumInfo._mapValueToName )
-                {
-                    if ( val == 0 )
-                        continue;
-                    bool bChecked = ( ( editedValue & val ) == val );
-                    if ( ImGui::Checkbox( nameHashed.c_str(), &bChecked ) )
-                    {
-                        if ( bChecked )
-                            editedValue |= val;
-                        else
-                            editedValue &= ~val;
-                    }
-                }
-                ImGui::EndCombo();
-            }
-            commitEdit();
-            return;
-        }
-
-        const utf8* pName = pRegistry->enumToString( prop._typeName, currentValue );
+            Internal::drawBitFlagEnum( enumInfo, currentValue, bReadOnly, editedValue );
+        else
+            Internal::drawPlainEnum( *pRegistry, enumInfo, prop, currentValue, bReadOnly, editedValue );
         if ( bReadOnly )
-        {
-            ImGui::TextDisabled( "%s", pLabel );
-            ImGui::SameLine();
-            ImGui::TextUnformatted( pName != nullptr ? pName : "<Unknown>" );
             return;
-        }
 
-        const utf8* pPreview = ( pName != nullptr ) ? pName : "<Unknown>";
-
-        if ( ImGui::BeginCombo( pLabel, pPreview ) )
+        // 콤보에서 고른 값은 고르는 순간 바뀐다 — 콤보 단추의 활성화 · 해제로는 잡히지 않으므로 쓰기 직전에 편집 전을 찍어 남긴다.
+        if ( editedValue != currentValue )
         {
-            for ( const auto& [val, nameHashed] : enumInfo._mapValueToName )
-            {
-                const bool bSelected = ( val == currentValue );
-                if ( ImGui::Selectable( nameHashed.c_str(), bSelected ) )
-                    editedValue = val;
-                if ( EditorSelfTestMarks::isEnabled() )
-                {
-                    // 시나리오가 콤보 항목을 누를 수 있게 한다(`inspector.enum.<프로퍼티>.<열거자>`) — 콤보를 연 프레임에만 그려진다.
-                    fixed_string<constant::kMaxBuffer128> itemMark;
-                    formatstring( itemMark.data(), itemMark.capacity(), "inspector.enum.%#.%#", prop._name.c_str(), nameHashed.c_str() );
-                    EditorSelfTestMarks::note( itemMark.c_str() );
-                }
-                if ( bSelected )
-                    ImGui::SetItemDefaultFocus();
-            }
-            ImGui::EndCombo();
+            InspectorPropertyUndo::recordImmediateEdit( prop );
+            enumInfo.writeValueToMemory( pEnumMemory, editedValue );
         }
-        commitEdit();
-        return;
     }
 
     void EditorPropertyGrid::drawContainerProperty( const MutableObjectAddress instance, const PropertyInfo& prop, bool bReadOnly )
@@ -701,7 +732,7 @@ namespace sw::editor
         valueProp._metadata         = prop._metadata;
         const bool bElementEditable = EditorSessionPolicy::areContainerElementEditsAllowed( bReadOnly, true );
 
-        // 값은 맵 노드 안에서 그 자리에서 고친다. 되돌리기는 위젯 하나 단위다(`drawPropertyWidget`). 삭제는 순회가 끝난 뒤에 한다.
+        // 값은 맵 노드 안에서 바로 고친다. 되돌리기는 위젯 하나 단위다(`drawPropertyWidget`). 삭제는 순회가 끝난 뒤에 한다.
         size_t eraseOrdinal = static_cast<size_t>( -1 );
         size_t ordinal      = 0;
         mapWrapper.forEachMutable( pContainer, SW_DELEGATE_LAMBDA( MapForEachMutableDelegate, [&]( const void* pKey, void* pValue )
@@ -861,7 +892,7 @@ namespace sw::editor
         {
             pFieldType->forEachProperty( [&]( const PropertyInfo& nestedProp )
             {
-                // 구조체 칸의 값 주소는 그 구조체 타입의 객체 주소다.
+                // 구조체 필드의 값 주소는 그 구조체 타입의 객체 주소다.
                 const PropertyEditState editState = PropertyEditCondition::getEditState( *pFieldType, nestedProp, ObjectAddress{ pNestedPtr } );
                 if ( editState == PropertyEditState::Hidden )
                     return;
