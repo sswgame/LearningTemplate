@@ -84,7 +84,8 @@ namespace sw
         /**
          * @brief 추가 뷰마다 투명 꼬리를 그 뷰의 시점으로 다시 정렬해 스냅샷에 싣습니다. `populateFromScene` **뒤**, 내보내기 전에 부릅니다.
          * @details 씬이 그대로인 프레임에도 부른다. 뷰 카메라만 움직여도 순서가 바뀌기 때문이다. 그리지 않는 뷰(`_bRender` 0)는 건너뛴다.
-         *          정렬 키는 주 뷰와 같은 규칙(`GPUTransparentSorter::makeTransparentSortKey`, `isDrawnBefore`)을 쓴다.
+         *          정렬 키는 주 뷰와 같은 규칙(`GPUTransparentSorter::makeTransparentSortKey`, `isDrawnBefore`)을 쓴다. 입자 그리기도 그 뷰의 시점으로 정렬해
+         *          그 뷰의 배치 순서 안에 자리를 준다(`GPUViewTransparentOrder::_listParticleSlot`). 메시 투명이 없으면 입자 자리만 싣는다.
          */
         void computeViewTransparentOrders( const vector<RenderViewRequest>& listView );
         /** @brief 투명 정렬의 깊이 축입니다. 영벡터면 거리를 씁니다. */
@@ -121,6 +122,10 @@ namespace sw
         vector_reference<const GPUMeshBatch> getTransparentBatches() const { return _snapshot.getTransparentBatches(); }
         /** @brief 방출기마다의 입자 그리기(주 시점에서 먼 것부터)를 반환합니다. */
         const vector<GPUParticleBatch>& getParticleBatches() const { return _snapshot._listParticleBatch; }
+        /** @brief 주 시점에서 입자 그리기의 메시 투명 배치 사이 자리(`getParticleBatches` 와 같은 순서)를 반환합니다. */
+        const vector<GPUTransparentParticleSlot>& getParticleSlots() const { return _snapshot._listParticleSlot; }
+        /** @brief 마지막 `computeViewTransparentOrders` 가 만든 추가 뷰마다의 투명 순서입니다. */
+        const vector<GPUViewTransparentOrder>& getViewTransparentOrders() const { return _snapshot._listViewTransparentOrder; }
         /** @brief 셰이더 타입별 머티리얼 데이터 그룹(CPU 스냅샷)을 반환합니다. */
         const vector<GPUMaterialGroup>& getMaterialGroups() const { return _snapshot._listMaterialGroup; }
         /** @brief 퍼뮤테이션 하나를 반환합니다. 인덱스가 없으면 nullptr 입니다. */
@@ -172,8 +177,18 @@ namespace sw
         /**
          * @brief 씬의 `VfxComponent` 가 낸 입자로 방출기마다 그리기 하나(`GPUParticleBatch`)를 채우고 주 시점에서 먼 것부터 놓습니다.
          * @details 정렬 규칙은 메시 투명 후보와 같다(`GPUTransparentSorter::makeTransparentSortKey` · `isDrawnBefore`, 깊이는 방출기 위치). 입자가 없는 방출기는 싣지 않는다.
+         *          메시 투명 배치(발행된 꼬리)와 견줘 입자마다 주 투명 순서 안의 자리(`GPUSceneSnapshot::_listParticleSlot`)도 정한다. 메시 쪽이 끝난 **뒤** 부른다.
          */
         void populateParticleBatches( const GameObjectManager& objects, const float3& cameraPos );
+        /** @brief 입자 그리기마다 @p eye · @p axis 의 정렬 키를 채우고 그리는 순서로 정렬합니다. 키의 후보 번호 칸은 `_listParticleBatch` 의 번호입니다. */
+        void fillParticleKeys( const float3& eye, const float3& axis, vector<GPUTransparentSortKey>& outListKey ) const;
+        /**
+         * @brief 주 투명 배치마다 첫 인스턴스(주 순서에서 가장 먼저 그리는 것)의 키를 채웁니다. 발행된 인스턴스와 꼬리 순서(`_listBuiltTransparentIdx`)를 읽습니다.
+         * @details 꼬리 안에서 찾지 못하는 배치는 `GPUTransparentSorter::kNoBatchHeadLayer` 키를 받는다(모든 입자가 그 앞에 선다).
+         */
+        void fillMainBatchHeadKeys( const float3& cameraPos, vector<GPUTransparentSortKey>& outListKey ) const;
+        /** @brief 투명 꼬리 원소 @p tailIndex(꼬리 시작 기준)의 정렬 레이어 키입니다. 기본 키 표시는 @p defaultSortKey 로 풉니다. */
+        uint32 resolveTailSortLayer( uint32 tailIndex, uint32 defaultSortKey ) const;
         /**
          * @brief 배치를 다시 나누지 않고 인스턴스 값만 제자리에서 갱신합니다.
          * @details 배치 키가 그대로일 때 쓴다. 그러면 불투명 접두부의 배치와 각 원소의
@@ -433,6 +448,10 @@ namespace sw
         vector<GPUTransparentSortKey> _listScratchParticleKey;
         /// @brief 입자 그리기를 정렬 순서로 옮겨 담는 작업 배열입니다(`_snapshot._listParticleBatch` 와 맞바꾼다).
         vector<GPUParticleBatch> _listScratchParticleBatch;
+        /// @brief 주 투명 배치마다 첫 인스턴스의 키입니다(`fillMainBatchHeadKeys` — 입자 자리 정하기).
+        vector<GPUTransparentSortKey> _listScratchBatchHeadKey;
+        /// @brief 추가 뷰 하나의 입자 정렬 키입니다(`computeViewTransparentOrders` 가 뷰마다 다시 쓴다).
+        vector<GPUTransparentSortKey> _listScratchViewParticleKey;
         /**
          * @brief 부분 업로드로 나눌 구간 수의 상한입니다. 넘으면 전체를 올립니다.
          *

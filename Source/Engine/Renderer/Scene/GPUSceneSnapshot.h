@@ -284,18 +284,36 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct GPUTransparentParticleSlot
+     * @brief 입자 그리기 하나가 투명 큐에서 그려지는 자리입니다. 메시 투명 배치와 방출기를 한 순서로 섞는 단위입니다(언리얼 · 유니티의 프리미티브 단위 정렬).
+     * @details 목록은 그리는 순서로 놓이고 `_drawPosition` 이 줄지 않는다. 투명 패스는 그 뷰의 배치 순서에서 `_drawPosition` 번째 배치를 그리기 **전에**
+     *          이 입자를 그린다(배치 수와 같으면 모든 배치 뒤). 배치와 방출기는 배치의 첫 인스턴스(그 뷰에서 가장 먼저 그리는 것)의 키와
+     *          방출기 위치의 키로 비교한다(`GPUTransparentSorter::placeParticles`) — 배치 안을 가르지 않는다.
+     */
+    struct GPUTransparentParticleSlot
+    {
+        uint32 _particleBatchIndex{ 0 }; ///< `GPUSceneSnapshot::_listParticleBatch` 의 번호
+        uint32 _drawPosition{ 0 };       ///< 이 뷰의 투명 배치 순서에서 이 입자보다 먼저 그리는 배치 수
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @struct GPUViewTransparentOrder
      * @brief 추가 뷰 하나의 투명 그리기 순서입니다. 주 뷰의 순서(꼬리 인스턴스 배치)는 그대로 두고, 이 뷰가 다르게 그릴 것만 싣습니다.
      * @details GT 가 그 뷰의 시점과 시선 축으로 꼬리를 다시 정렬해 만든다(`GPUSceneBuilder::computeViewTransparentOrders`). RT 는 순번 테이블을 정렬 디스패치에,
      *          꼬리 슬롯 테이블을 컬링이 없는 백엔드의 인스턴스 슬롯 스트림에, 배치 순서를 투명 패스 드로우 순서에 쓴다.
+     *          메시 투명 배치가 없고 입자만 있는 뷰는 순번 · 꼬리 슬롯이 nullptr 이고 배치 순서가 비며 입자 자리만 싣는다.
      */
     struct GPUViewTransparentOrder
     {
-        shared_ptr<const vector<uint32>> _pListRank;      ///< 꼬리 인스턴스(꼬리 시작 기준)마다 이 뷰에서 그리는 순번(0이면 가장 먼저, 곧 가장 멀다)
-        shared_ptr<const vector<uint32>> _pListTailSlot;  ///< 배치마다 안쪽을 이 뷰 순서로 다시 배치한 꼬리 인스턴스 번호(전역). 꼬리 길이와 같다.
-        vector<uint32>                   _listBatchOrder; ///< 이 뷰에서 투명 배치를 그리는 순서(`GPUSceneSnapshot::getTransparentBatches` 의 번호)
-        uint64                           _viewID{ 0 };    ///< `RenderViewRequest::_viewID`
-        uint32                           _tailBase{ 0 };  ///< 꼬리의 첫 인스턴스 번호(불투명 인스턴스 수)
+        shared_ptr<const vector<uint32>>   _pListRank;        ///< 꼬리 인스턴스(꼬리 시작 기준)마다 이 뷰에서 그리는 순번(0이면 가장 먼저, 곧 가장 멀다)
+        shared_ptr<const vector<uint32>>   _pListTailSlot;    ///< 배치마다 안쪽을 이 뷰 순서로 다시 배치한 꼬리 인스턴스 번호(전역). 꼬리 길이와 같다.
+        vector<uint32>                     _listBatchOrder;   ///< 이 뷰에서 투명 배치를 그리는 순서(`GPUSceneSnapshot::getTransparentBatches` 의 번호)
+        vector<GPUTransparentParticleSlot> _listParticleSlot; ///< 이 뷰에서 입자 그리기의 순서와 자리(`_drawPosition` 은 `_listBatchOrder` 안의 자리)
+        uint64                             _viewID{ 0 };      ///< `RenderViewRequest::_viewID`
+        uint32                             _tailBase{ 0 };    ///< 꼬리의 첫 인스턴스 번호(불투명 인스턴스 수)
     };
 } // namespace sw
 
@@ -303,7 +321,7 @@ namespace sw
 {
     /**
      * @struct GPUParticleBatch
-     * @brief 방출기 하나의 입자 그리기입니다. 투명 정렬 후보 하나이며, 투명 패스가 메시 투명 배치 뒤에 빌보드로 그립니다(`VfxParticleRenderer`).
+     * @brief 방출기 하나의 입자 그리기입니다. 투명 정렬 후보 하나이며, 투명 패스가 메시 투명 배치 사이의 제자리(`GPUTransparentParticleSlot`)에 빌보드로 그립니다(`VfxParticleRenderer`).
      * @details 입자는 방출기 로컬 좌표이고 `_world` 가 월드로 옮깁니다. 입자 배열은 **공유합니다** — 방출기가 단계마다 새 배열을 내므로(`VfxComponent`)
      *          RT 가 읽는 동안 GT 가 고쳐 쓰지 않습니다. 텍스처는 경로로 싣고 RT 가 텍스처 캐시에서 빌립니다(캔버스 경로 이미지와 같다).
      */
@@ -396,6 +414,18 @@ namespace sw
          * @details 메시 배치와 달리 씬이 그대로인 프레임에도 매번 다시 모은다(입자는 단계마다 움직인다 — `GPUSceneBuilder::populateParticleBatches`).
          */
         vector<GPUParticleBatch> _listParticleBatch;
+        /**
+         * @brief 주 시점에서 입자 그리기의 자리입니다. `_listParticleBatch` 와 길이 · 순서가 같고, `_drawPosition` 은 주 투명 배치 순서 안의 자리입니다.
+         * @details 메시 배치가 그대로인 프레임에도 카메라와 방출기가 움직이므로 입자 그리기와 함께 매번 다시 정한다(`GPUSceneBuilder::populateParticleBatches`).
+         */
+        vector<GPUTransparentParticleSlot> _listParticleSlot;
+
+        /** @brief 입자 그리기와 그 자리를 함께 비웁니다(둘은 길이 · 순서가 같아야 한다). */
+        void clearParticles()
+        {
+            _listParticleBatch.clear();
+            _listParticleSlot.clear();
+        }
 
         /** @brief 인스턴스 배열을 반환합니다. 아직 발행 전이면 빈 배열입니다. */
         const vector<GPUInstance>& getInstances() const

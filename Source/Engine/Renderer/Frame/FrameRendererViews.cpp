@@ -150,10 +150,21 @@ namespace sw
         view._bHasTransparentRank = SW_FALSE;
         view._bUsesViewSlotStream = SW_FALSE;
         view._listTransparentBatchOrder.clear();
+        view._listParticleSlot.clear();
+        view._bHasParticleOrder                = SW_FALSE;
         const GPUViewTransparentOrder* pOrder  = _gpuScene.findViewTransparentOrder( view._viewID );
         const bool                     bUsable = pOrder != nullptr && pOrder->_pListRank != nullptr && pOrder->_pListTailSlot != nullptr &&
                              pOrder->_listBatchOrder.size() == _gpuScene.getTransparentBatches().size() &&
                              pOrder->_tailBase + pOrder->_pListRank->size() == _gpuScene.getInstances().size();
+        // 입자 자리는 이 뷰의 배치 순서 안의 자리라 그 순서를 쓸 때만(또는 메시 투명이 없을 때만) 쓴다. 아니면 주 시점의 자리와 주 배치 순서로 함께 그린다.
+        const bool bParticleOrderOnly = pOrder != nullptr && pOrder->_listBatchOrder.empty() && _gpuScene.getTransparentBatches().empty();
+        const bool bParticleSlotsMatch =
+            pOrder != nullptr && pOrder->_listParticleSlot.size() == _gpuScene.getParticleBatches().size() && ( bUsable || bParticleOrderOnly );
+        if ( bParticleSlotsMatch )
+        {
+            view._listParticleSlot  = pOrder->_listParticleSlot;
+            view._bHasParticleOrder = SW_TRUE;
+        }
         if ( bUsable == false )
             return;
         view._listTransparentBatchOrder = pOrder->_listBatchOrder;
@@ -202,6 +213,8 @@ namespace sw
         view._instanceSlotStream = 0;
         view._listInstanceSlot.clear();
         view._listTransparentBatchOrder.clear();
+        view._listParticleSlot.clear();
+        view._bHasParticleOrder   = SW_FALSE;
         view._bHasTransparentRank = SW_FALSE;
         view._bUsesViewSlotStream = SW_FALSE;
     }

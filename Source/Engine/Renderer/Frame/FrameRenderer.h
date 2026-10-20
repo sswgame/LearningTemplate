@@ -363,9 +363,12 @@ namespace sw
             RHIDescriptorIndex          _taaHistorySrv{ kInvalidDescriptorIndex };
             RHIStructuredBufferSlot     _transparentRank;           ///< 이 뷰의 투명 순번 테이블(정렬 디스패치 t2). GPU 정렬 백엔드에서 쓴다.
             vector<uint32>              _listTransparentBatchOrder; ///< 이번 프레임 이 뷰의 투명 배치 순서(비면 주 순서를 쓴다)
-            vector<uint32>              _listInstanceSlot;          ///< 지금 `_instanceSlotStream` 에 들어 있는 내용(같으면 다시 만들지 않는다)
-            RHIBufferHandle             _instanceSlotStream{ 0 };   ///< 이 뷰의 인스턴스 슬롯 스트림(꼬리만 뷰 순서). 컬링이 없는 백엔드(DX11)에서 쓴다.
-            uint32                      _transparentTailBase{ 0 };  ///< 순번 테이블 0번의 인스턴스 번호
+            /// @brief 이번 프레임 이 뷰의 입자 그리기 순서와 자리(`_listTransparentBatchOrder` 안의 자리)입니다. `_bHasParticleOrder` 가 0 이면 주 시점의 것을 쓴다.
+            vector<GPUTransparentParticleSlot> _listParticleSlot;
+            uint8                              _bHasParticleOrder{ SW_FALSE }; ///< `_listParticleSlot` 이 이 뷰의 배치 순서와 짝인지
+            vector<uint32>                     _listInstanceSlot;              ///< 지금 `_instanceSlotStream` 에 들어 있는 내용(같으면 다시 만들지 않는다)
+            RHIBufferHandle                    _instanceSlotStream{ 0 };       ///< 이 뷰의 인스턴스 슬롯 스트림(꼬리만 뷰 순서). 컬링이 없는 백엔드(DX11)에서 쓴다.
+            uint32                             _transparentTailBase{ 0 };      ///< 순번 테이블 0번의 인스턴스 번호
             /**
              * @brief 이 뷰의 방향광 그림자(셰이더 상수 · 캐스케이드 타일 · 컬링 절두체)입니다. 주 시점은 프레임의 것, 추가 뷰는 자기 카메라에 맞춘 것이다.
              * @details 추가 뷰가 주 시점 볼륨을 쓰면 다른 곳을 보는 CCTV · 분할 화면은 그림자가 빠진다(언리얼의 뷰별 그림자 뷰).
@@ -569,15 +572,32 @@ namespace sw
         void registerMaterialBuffer( FramePassContext& context, const GPUMeshBatch& batch, RHIPipelineStateHandle pso );
         /** @brief 씬 메시를 그립니다. GPUScene 이 올라가 있으면 drawGPUBatches 로 넘기고, 아니면 상태만 맞춥니다. */
         void drawSceneMeshes( FramePassContext& context, RHIPipelineStateHandle pso, bool bTransparentPass );
-        /** @brief GPUScene 배치를 간접 드로우로 그립니다. */
-        void drawGPUBatches( FramePassContext& context, RHIPipelineStateHandle pso, bool bTransparentPass );
+        /**
+         * @brief GPUScene 배치를 간접 드로우로 그립니다.
+         * @param pParticleSlot 투명 패스의 입자 자리(`findActiveParticleSlots`). 주면 배치 순서의 그 자리마다 입자를 끼우고 멀티 드로우 묶음을 그 자리에서 끊으며,
+         *                      남은 입자는 모든 배치 뒤에 그린다. 투명 큐가 아닌 패스(외곽선 · 그림자 등)는 nullptr 이다.
+         */
+        void drawGPUBatches( FramePassContext& context, RHIPipelineStateHandle pso, bool bTransparentPass, const vector<GPUTransparentParticleSlot>* pParticleSlot );
+        /** @brief 투명 큐(메시 투명 배치와 입자 그리기를 한 순서로)를 지금 열린 투명 패스에 그립니다. */
+        void drawTransparentQueue( FramePassContext& context, RHIPipelineStateHandle pso );
+        /** @brief 지금 그리는 뷰의 입자 자리입니다. 추가 뷰는 자기 순서가 있으면 그것, 없으면 주 시점의 것(그 뷰도 주 배치 순서로 그린다)입니다. */
+        const vector<GPUTransparentParticleSlot>& findActiveParticleSlots() const;
         /** @brief 풀스크린 삼각형을 그립니다. */
         void drawFullscreen( FramePassContext& context, RHIPipelineStateHandle pso );
         /**
-         * @brief 방출기마다의 입자 그리기(`GPUScene::getParticleBatches`)를 지금 열린 투명 패스에 그립니다. 메시 투명 배치 **뒤**에 부릅니다.
-         * @details 입자 PSO(`ensureParticlePSO`)를 걸고 PassCB 를 바인딩한 뒤 `VfxParticleRenderer::drawBatches` 로 넘긴다. 순서는 주 시점의 정렬 순서다(추가 뷰도 같은 순서로 그린다).
+         * @brief 입자 그리기 구간 @p listSlot 을 지금 열린 투명 패스에 그 순서로 그립니다.
+         * @details 입자 PSO(`ensureParticlePSO`)를 걸고 PassCB 를 바인딩한 뒤 `VfxParticleRenderer::drawBatches` 로 넘긴다. PSO · 정점 버퍼 슬롯을 바꾸므로
+         *          메시 드로우로 돌아가는 쪽(`drawGPUBatches`)이 그 상태를 다시 건다.
+         * @return 입자 상태를 걸었으면 true 입니다(그릴 것이 없거나 PSO 가 없으면 false — 상태도 그대로다)
          */
-        void drawParticles( FramePassContext& context );
+        bool drawParticleSlots( FramePassContext& context, vector_reference<const GPUTransparentParticleSlot> listSlot );
+        /**
+         * @brief @p listSlot 의 @p inOutCursor 부터 자리가 @p position 이하인 입자를 그리고 커서를 그 뒤로 옮깁니다. 메시 드로우로 돌아갈 패스 상태(인스턴스 슬롯
+         *        스트림 @p slotStream, 에뮬 텍스처 슬롯)를 다시 겁니다.
+         * @return 입자 상태를 걸었으면 true 입니다 — 부르는 쪽은 자기가 기억한 PSO · 정점 버퍼를 잊어야 한다
+         */
+        bool drawParticleRun( FramePassContext& context, vector_reference<const GPUTransparentParticleSlot> listSlot, uint32& inOutCursor, uint32 position,
+                              RHIBufferHandle slotStream );
         /** @brief 뷰의 풀에서 트랜지언트 텍스처를 할당합니다. */
         void allocateTransient( TransientAttachmentPool& pool, string_view name, RHIFormat format, bool bDepth, const float4& clearColor,
                                 uint32 resolutionDivisor = 1 );

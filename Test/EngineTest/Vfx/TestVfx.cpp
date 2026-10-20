@@ -2,8 +2,12 @@
 
 #include "Core/File/FileUtil.h"
 
+#include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Graphics/Mesh/MeshUtil.h"
+#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Scene/GPUSceneBuilder.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
@@ -462,4 +466,72 @@ SW_TEST_CASE( VfxComponentTest, SceneSnapshotCarriesOneBatchPerEmitterFarFirst )
     builder.populateFromScene( &scene, sw::float3( 0.0f, 0.0f, 0.0f ) );
     SW_EXPECT_TRUE( builder.getParticleBatches()[2]._pListParticle == arrVfx[0]->getEmitterParticles( 0 ) ||
                     builder.getParticleBatches()[3]._pListParticle == arrVfx[0]->getEmitterParticles( 0 ) );
+}
+
+/**
+ * @brief [VfxComponentTest] 입자 그리기는 메시 투명 배치와 한 순서로 섞인다 — 주 시점은 주 배치 순서 안에, 추가 뷰는 그 뷰의 배치 순서 안에 자리를 받는다
+ * @details 메시 투명 둘(z 30 · 10, 메시가 달라 배치 둘)과 효과 둘(z 20 · 5, 방출기 둘씩). 주 시점(원점)에서는 30 → 20 → 10 → 5 순이고,
+ *          z 40 의 추가 뷰에서는 5 → 10 → 20 → 30 순이다(배치는 첫 인스턴스의 키, 방출기는 위치의 키로 견준다).
+ */
+SW_TEST_CASE( VfxComponentTest, ParticlesInterleaveWithTransparentMeshes )
+{
+    sw::Scene scene( "VfxInterleave" );
+    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    sw::GameObjectManager* pObjects = scene.getObjectManager();
+    SW_ASSERT_NOT_NULL( pObjects );
+
+    const float32 arrMeshDistance[2] = { 30.0f, 10.0f };
+    for ( uint32 index = 0; index < 2; ++index )
+    {
+        sw::MeshComponent* pMesh = pObjects->createGameObject( sw::hashed_string( "Glass" ) )->addComponent<sw::MeshComponent>();
+        SW_ASSERT_NOT_NULL( pMesh );
+        pMesh->setMesh( sw::MeshUtil::createUnitCube() ); // 메시마다 따로 만들어 배치가 합쳐지지 않는다
+        pMesh->setLocalPosition( sw::float3( 0.0f, 0.0f, arrMeshDistance[index] ) );
+        pMesh->setBlendMode( sw::RHIBlendMode::Transparent );
+        pMesh->setVisible( true );
+    }
+    const float32 arrVfxDistance[2] = { 20.0f, 5.0f };
+    for ( uint32 index = 0; index < 2; ++index )
+    {
+        sw::VfxComponent* pVfx = pObjects->createGameObject( sw::hashed_string( "Vfx" ) )->addComponent<sw::VfxComponent>();
+        SW_ASSERT_NOT_NULL( pVfx );
+        pVfx->setWorldPosition( sw::float3( 0.0f, 0.0f, arrVfxDistance[index] ) );
+        pVfx->setEffectPath( sw::kVfxSampleEffectPath );
+        pVfx->play();
+        sw::tickComponentFor( *pVfx, 0.5f );
+    }
+
+    sw::GPUSceneBuilder builder;
+    builder.populateFromScene( &scene, sw::float3( 0.0f, 0.0f, 0.0f ) );
+    SW_ASSERT_EQUAL( size_t( 2 ), builder.getTransparentBatches().size() );
+    const sw::vector<sw::GPUParticleBatch>&           listBatch = builder.getParticleBatches();
+    const sw::vector<sw::GPUTransparentParticleSlot>& listSlot  = builder.getParticleSlots();
+    SW_ASSERT_EQUAL( size_t( 4 ), listBatch.size() );
+    SW_ASSERT_EQUAL( listBatch.size(), listSlot.size() );
+    // 주 시점: 자리 목록은 입자 그리기 순서 그대로이고, z 20 의 방출기는 첫 배치(z 30) 뒤, z 5 의 방출기는 모든 배치 뒤다.
+    for ( uint32 slotIndex = 0; slotIndex < 4; ++slotIndex )
+    {
+        SW_EXPECT_EQUAL( slotIndex, listSlot[slotIndex]._particleBatchIndex );
+        const bool bNearEffect = listBatch[slotIndex]._world.getTranslation()._z < 10.0f;
+        SW_EXPECT_EQUAL( bNearEffect ? 2u : 1u, listSlot[slotIndex]._drawPosition );
+    }
+
+    // 추가 뷰(z 40, 원점 쪽을 본다): 배치 순서가 뒤집히고, z 5 의 방출기가 모든 배치 앞, z 20 의 방출기는 z 10 배치 뒤다.
+    sw::vector<sw::RenderViewRequest> listView( 1 );
+    listView[0]._viewID   = 7u;
+    listView[0]._position = sw::float3( 0.0f, 0.0f, 40.0f );
+    builder.computeViewTransparentOrders( listView );
+    SW_ASSERT_EQUAL( size_t( 1 ), builder.getViewTransparentOrders().size() );
+    const sw::GPUViewTransparentOrder& order = builder.getViewTransparentOrders()[0];
+    SW_ASSERT_EQUAL( size_t( 2 ), order._listBatchOrder.size() );
+    SW_EXPECT_EQUAL( 1u, order._listBatchOrder[0] );
+    SW_EXPECT_EQUAL( 0u, order._listBatchOrder[1] );
+    SW_ASSERT_EQUAL( size_t( 4 ), order._listParticleSlot.size() );
+    for ( uint32 slotIndex = 0; slotIndex < 4; ++slotIndex )
+    {
+        const sw::GPUTransparentParticleSlot& slot        = order._listParticleSlot[slotIndex];
+        const bool                            bNearEffect = listBatch[slot._particleBatchIndex]._world.getTranslation()._z < 10.0f;
+        SW_EXPECT_EQUAL( slotIndex < 2, bNearEffect ); // 이 뷰에서는 z 5 가 가장 멀다
+        SW_EXPECT_EQUAL( bNearEffect ? 0u : 1u, slot._drawPosition );
+    }
 }
