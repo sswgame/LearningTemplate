@@ -87,17 +87,21 @@ namespace sw
 
 namespace sw
 {
-    NetSimWorld::NetSimWorld( NetSimRole role, int32 worldIndex, INetTransport* pTransport, const NetHostConfig& hostSettings )
+    NetSimWorld::NetSimWorld( NetSimRole role, int32 worldIndex, INetTransport* pTransport, const NetHostConfig& hostSettings, INetSimSceneSource* pSceneSource,
+                              Scene* pBorrowedScene )
         : _counter{ pTransport }
         , _host{}
         , _router{}
-        , _pScene{ make_unique<Scene>( role == NetSimRole::Server ? "NetSimServer" : "NetSimClient" ) }
+        , _pOwnedScene{ pBorrowedScene == nullptr ? make_unique<Scene>( role == NetSimRole::Server ? "NetSimServer" : "NetSimClient" ) : unique_ptr<Scene>{} }
+        , _pSceneSource{ pBorrowedScene != nullptr ? pSceneSource : nullptr }
+        , _pScene{ pBorrowedScene != nullptr ? pBorrowedScene : _pOwnedScene.get() }
         , _pSession{}
         , _listUnhandled{}
         , _listEvent{}
         , _worldIndex{ worldIndex }
         , _localTick{ 0 }
         , _role{ role }
+        , _bInputFocus{ false }
     {
         _host.initialize( &_counter, hostSettings );
     }
@@ -157,7 +161,11 @@ namespace sw
             manager.update( 0.0f ); // 끝난 플레이의 물리 바디를 해제한다
         }
         _pSession.reset();
-        _pScene.reset();
+        if ( _pSceneSource != nullptr )
+            _pSceneSource->releaseScene( *_pScene );
+        _pOwnedScene.reset();
+        _pScene       = nullptr;
+        _pSceneSource = nullptr;
     }
 } // namespace sw
 
@@ -200,6 +208,11 @@ namespace sw
         if ( pLink == nullptr )
             return false;
         _pServer = unique_ptr<NetSimWorld>( createWorld( NetSimRole::Server, 0, *pLink ) );
+        if ( _pServer == nullptr )
+        {
+            shutdown();
+            return false; // 씬을 빌리지 못했다 — createWorld 가 알렸다
+        }
         if ( _pServer->getHost().listen() == false )
         {
             SW_LOG_ERROR( "NetSimHarness: server host failed to listen" );
@@ -254,7 +267,17 @@ namespace sw
         hostSettings._saltSeed     = mixNetSimSeed( _settings._seed, 0x10000u + static_cast<uint64>( worldIndex ) ) | 1u;
         // 송신 간격이 틱의 배수일 때 틱 시각(틱 × 간격)의 반올림 오차로 한 틱 늦게 나갈 수 있다. 반 틱 앞당겨서 "k 틱마다 한 번" 이 정확히 지켜지게 한다.
         hostSettings._sendInterval = MathUtil::max( 0.0, hostSettings._sendInterval - _settings._tickInterval * 0.5 );
-        return sw_new NetSimWorld( role, worldIndex, link._pEmulation.get(), hostSettings );
+        Scene* pBorrowedScene      = nullptr;
+        if ( _settings._pSceneSource != nullptr )
+        {
+            pBorrowedScene = _settings._pSceneSource->acquireScene( role, worldIndex );
+            if ( pBorrowedScene == nullptr )
+            {
+                SW_LOG_ERROR( "NetSimHarness: the scene source gave no scene for world %#", worldIndex );
+                return nullptr;
+            }
+        }
+        return sw_new NetSimWorld( role, worldIndex, link._pEmulation.get(), hostSettings, _settings._pSceneSource, pBorrowedScene );
     }
 
     int32 NetSimHarness::addClient( const NetSimLinkConditions& conditions )
@@ -269,6 +292,8 @@ namespace sw
         ++_nextWorldIndex;
         applyLinkConditions( worldIndex, conditions );
         unique_ptr<NetSimWorld> pWorld = unique_ptr<NetSimWorld>( createWorld( NetSimRole::Client, worldIndex, *pLink ) );
+        if ( pWorld == nullptr )
+            return -1; // 씬을 빌리지 못했다 — createWorld 가 알렸다
         if ( pWorld->getHost().connect( _pServer->getAddress() ) == false )
         {
             SW_LOG_ERROR( "NetSimHarness: client %# failed to start connecting", worldIndex );
@@ -298,6 +323,38 @@ namespace sw
     void NetSimHarness::setLinkConditions( int32 worldIndex, const NetSimLinkConditions& conditions )
     {
         applyLinkConditions( worldIndex, conditions );
+    }
+
+    bool NetSimHarness::setInputFocus( int32 worldIndex )
+    {
+        NetSimWorld* pTarget = nullptr;
+        if ( worldIndex == 0 && _pServer != nullptr )
+            pTarget = _pServer.get();
+        else if ( worldIndex > 0 )
+            pTarget = findClient( worldIndex );
+        if ( worldIndex != -1 && pTarget == nullptr )
+            return false;
+        if ( _pServer != nullptr )
+            _pServer->_bInputFocus = false;
+        for ( unique_ptr<NetSimWorld>& pWorld : _listClient )
+        {
+            pWorld->_bInputFocus = false;
+        }
+        if ( pTarget != nullptr )
+            pTarget->_bInputFocus = true;
+        return true;
+    }
+
+    int32 NetSimHarness::getInputFocus() const
+    {
+        if ( _pServer != nullptr && _pServer->_bInputFocus )
+            return 0;
+        for ( const unique_ptr<NetSimWorld>& pWorld : _listClient )
+        {
+            if ( pWorld->_bInputFocus )
+                return pWorld->getWorldIndex();
+        }
+        return -1;
     }
 
     void NetSimHarness::applyLinkConditions( int32 worldIndex, const NetSimLinkConditions& conditions )

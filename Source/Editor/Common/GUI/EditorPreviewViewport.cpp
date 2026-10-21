@@ -66,6 +66,7 @@ namespace sw::editor
         , _sceneKey{ kInvalidSceneKey }
         , _targetID{ 0 }
         , _submittedFrameCount{ 0 }
+        , _bOwnsScene{ false }
     {
     }
 
@@ -84,9 +85,23 @@ namespace sw::editor
         _pScene = pSceneManager->createPreviewScene( sceneName, policy );
         if ( _pScene == nullptr )
             return false;
-        _sceneKey = pSceneManager->getPreviewSceneKey( _pScene );
+        _sceneKey   = pSceneManager->getPreviewSceneKey( _pScene );
+        _bOwnsScene = true;
         (void)spawnEnvironment( *_pScene, environment ); // 환경이 없어도 씬은 그려진다(키 라이트 폴백)
 
+        EditorContext* pContext = EditorContext::get();
+        if ( pContext != nullptr )
+            _targetID = pContext->getSubsystem<EditorRenderViews>().allocatePreviewTarget();
+        return true;
+    }
+
+    bool EditorPreviewViewport::attachScene( Scene& scene, uint32 sceneKey )
+    {
+        if ( _pScene != nullptr || sceneKey == kInvalidSceneKey )
+            return false;
+        _pScene                 = &scene;
+        _sceneKey               = sceneKey;
+        _bOwnsScene             = false;
         EditorContext* pContext = EditorContext::get();
         if ( pContext != nullptr )
             _targetID = pContext->getSubsystem<EditorRenderViews>().allocatePreviewTarget();
@@ -100,10 +115,12 @@ namespace sw::editor
             pContext->getSubsystem<EditorRenderViews>().freePreviewTarget( _targetID );
         _targetID = 0;
 
-        SceneManager* pSceneManager = findSubsystem<SceneManager>();
-        if ( _pScene != nullptr && pSceneManager != nullptr )
+        SceneManager* pSceneManager      = findSubsystem<SceneManager>();
+        const bool    bDestroyOwnedScene = _bOwnsScene && _pScene != nullptr && pSceneManager != nullptr; // 붙인 씬은 가진 쪽이 내린다
+        if ( bDestroyOwnedScene )
             (void)pSceneManager->destroyPreviewScene( _pScene ); // 매니저가 먼저 내려갔으면 그 shutdown 이 이미 내렸다
         _pScene              = nullptr;
+        _bOwnsScene          = false;
         _sceneKey            = kInvalidSceneKey;
         _submittedFrameCount = 0;
     }
