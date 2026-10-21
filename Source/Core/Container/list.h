@@ -428,14 +428,14 @@ namespace sw
             Base::pop_front();
         }
 
-        /** @brief 크기를 바꿉니다. 늘어난 자리는 기본값으로 채웁니다. */
+        /** @brief 크기를 바꿉니다. 늘어난 위치는 기본값으로 채웁니다. */
         void resize( size_type count )
         {
             SW_SCOPED_RACE_WRITE();
             Base::resize( count );
         }
 
-        /** @brief 크기를 바꿉니다. 늘어난 자리는 value 로 채웁니다. */
+        /** @brief 크기를 바꿉니다. 늘어난 위치는 value 로 채웁니다. */
         void resize( size_type count, const value_type& value )
         {
             SW_SCOPED_RACE_WRITE();

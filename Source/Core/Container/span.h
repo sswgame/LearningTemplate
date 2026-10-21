@@ -2,12 +2,12 @@
  * @file span.h
  * @brief 연속 구간을 소유하지 않고 가리키는 뷰입니다(C++20 `std::span` 과 같은 API, 동적 길이만). 함수 인자로 받을 때 씁니다.
  *        **코드에서는 별칭 `vector_reference<T>` 로 씁니다**(이름만 보고 "vector 류를 참조로 받는다" 가 읽히도록). `span` 은 그 구현이고,
- *        표준으로 옮길 때 `std::span` 과 바꿔 끼우는 자리입니다.
+ *        표준으로 옮길 때 `std::span` 과 교체할 대상입니다.
  *
  * @details `sw::vector<T>` · `small_vector<T, N>` · `sw::array<T, N>` · `std::vector<T>` · `std::array<T, N>` · C 배열 · 포인터 + 개수를
  *          **모두 같은 인자 하나로** 받습니다. `const vector<T>&` 로 받으면 `small_vector` 는 할당자가 달라 다른 타입이라 넘길 수 없고,
  *          `array` 도 마찬가지입니다(포인터와 개수를 따로 받거나 vector 로 복사해 넘기지 않아도 됩니다).
- *          언리얼의 `TArrayView` · `TConstArrayView` 와 같은 자리입니다.
+ *          언리얼의 `TArrayView` · `TConstArrayView` 에 해당합니다.
  *
  *          - 읽기만 하면 `vector_reference<const T>`, 원소를 고쳐 쓰면 `vector_reference<T>` 로 받습니다. 쓰기 쪽은 읽기 쪽으로 바뀝니다.
  *          - 원소를 더하거나 지우지는 못합니다(길이는 고정입니다). 그런 일은 컨테이너를 받거나 `VectorUtil` 을 씁니다.

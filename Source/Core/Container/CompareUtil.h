@@ -88,7 +88,7 @@ namespace sw
 {
     /**
      * @class Lexicographic
-     * @brief 비교자를 차례로 잇는 비교자입니다. 앞 비교자가 두 원소를 같다고 볼 때만 다음 비교자를 봅니다.
+     * @brief 비교자를 차례로 연결하는 비교자입니다. 앞 비교자가 두 원소를 같다고 볼 때만 다음 비교자를 봅니다.
      * @details 방향이 섞인 여러 키 정렬에 씁니다(`Lexicographic<Descending<&T::_priority>, Ascending<&T::_id>>`). 방향이 모두 같으면
      *          `Ascending<&T::_a, &T::_b>` 가 짧습니다. 각 비교자는 엄격한 약순서(strict weak ordering)여야 합니다.
      */

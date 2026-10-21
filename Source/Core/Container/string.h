@@ -782,7 +782,7 @@ namespace sw
 
     /**
      * @brief sw::string 을 해시 컨테이너 키로 쓸 때의 기본 해시(`sw::RuntimeStringHash`)입니다. 세 오버로드가 같은 바이트에 같은 값을 내므로 이종 조회가 됩니다.
-     * @details 정본은 `std::hash` 특수화가 아니라 이 `DefaultHash` 특수화입니다. `SW_ENABLE_STL_CONTAINER` 이면 sw::string 이 std::string 그 자체라
+     * @details 원본은 `std::hash` 특수화가 아니라 이 `DefaultHash` 특수화입니다. `SW_ENABLE_STL_CONTAINER` 이면 sw::string 이 std::string 그 자체라
      *          `std::hash` 를 특수화할 수 없고, 표준 해시에는 `string_view` 오버로드가 없습니다. 여기 두면 두 구성이 같은 해시 · 같은 이종 조회를 갖습니다.
      */
     template <>

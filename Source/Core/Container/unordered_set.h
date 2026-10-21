@@ -3,7 +3,7 @@
  * @brief 밀집 배열 해시 집합(sw::unordered_set)입니다.
  * @details 순회는 밀집 배열 순서입니다.
  *          `SW_ENABLE_STL_CONTAINER` 구성도 같은 구현이고 바뀌는 것은 안쪽 `vector` 의 할당자뿐입니다. 순회 순서(넣은 순서, `erase` 는 마지막 원소를
- *          빈 자리로 옮긴다)와 무효화 규칙이 구성마다 달라지지 않게 하려고 `std::` 해시 컨테이너로 바꾸지 않습니다.
+ *          빈 슬롯으로 옮긴다)와 무효화 규칙이 구성마다 달라지지 않게 하려고 `std::` 해시 컨테이너로 바꾸지 않습니다.
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -51,7 +51,7 @@ namespace sw
         const hasher&    get_hasher() const noexcept { return _traits.first(); }
         const key_equal& get_equal() const noexcept { return _traits.second(); }
 
-        /** @brief 빈 버킷 슬롯 표시(모든 비트 1)입니다. */
+        /** @brief 빈 버킷 슬롯 표식(모든 비트 1)입니다. */
         static constexpr size_t kEmptySlot = invalid_index::kUint64;
 
         /** @brief 버킷 수의 최솟값입니다. 버킷 수는 항상 2의 거듭제곱입니다(`bucketIndexOf` 가 마스크로 자르기 때문입니다). */

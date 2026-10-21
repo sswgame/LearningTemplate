@@ -2,7 +2,7 @@
  * @file ConcurrentQueue.h
  * @brief 고정 용량 MPMC lock-free 큐입니다(Vyukov 방식의 시퀀스 번호 링).
  * @note 뮤텍스를 쓰지 않습니다. 이 큐는 막히지 않는 대신, **가득 차면 `enqueue` 가 false 를
- *       반환합니다**(그 처리는 호출하는 쪽의 몫입니다).
+ *       반환합니다**(그 처리는 호출하는 쪽의 책임입니다).
  */
 #pragma once
 #include "Core/Common/Macros.h"

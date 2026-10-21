@@ -34,7 +34,7 @@ namespace sw
         [[nodiscard]] constexpr uint64 objectID() const noexcept { return _objectID; }
         /** @brief 컴포넌트 인스턴스의 ID 를 반환합니다. */
         [[nodiscard]] constexpr uint64 componentID() const noexcept { return _componentID; }
-        /** @brief objectID 와 componentID 가 모두 있으면 true 입니다. 대상이 살아 있는지는 매니저로 풀어 봐야 압니다. */
+        /** @brief objectID 와 componentID 가 모두 있으면 true 입니다. 대상이 살아 있는지는 매니저로 조회해 봐야 압니다. */
         [[nodiscard]] constexpr bool     isValid() const noexcept { return _objectID != 0 && _componentID != 0; }
         [[nodiscard]] constexpr explicit operator bool() const noexcept { return isValid(); }
 
@@ -71,9 +71,9 @@ namespace sw
 {
     /**
      * @brief 대상 타입 @p T 를 컴파일 시간 정보로 실은 컴포넌트 핸들입니다. 크기와 복사 규칙은 `ComponentHandle` 과 같습니다(16 B, trivially copyable).
-     * @details 핸들은 id 만 담으므로, 타입 없는 핸들을 찾은 뒤 `static_cast` 하면 다른 타입의 칸을 그 타입으로 읽을 수 있다. 타입 핸들은 그 실수를 형식으로 막는다.
+     * @details 핸들은 id 만 담으므로, 타입 없는 핸들을 찾은 뒤 `static_cast` 하면 다른 타입의 슬롯을 그 타입으로 읽을 수 있다. 타입 핸들은 그 실수를 형식으로 막는다.
      *          - `T*` 에서 만들면 확인이 없다(타입이 컴파일 시간에 정해진다). 파생 타입 핸들은 기반 타입 핸들로 암시적으로 바뀐다(업캐스트).
-     *          - 타입 없는 핸들이나 기반 타입 핸들에서 만드는 길은 `GameObjectManager::makeTypedHandle` 뿐이다(대상의 타입을 확인한다).
+     *          - 타입 없는 핸들이나 기반 타입 핸들에서 만드는 경로는 `GameObjectManager::makeTypedHandle` 뿐이다(대상의 타입을 확인한다).
      *          - 찾기는 `GameObjectManager::resolveComponent( TComponentHandle<T> )` 이고 `T*` 를 돌려준다.
      *          - 타입 없는 `ComponentHandle` 과의 `==` 는 허용한다. 비교는 id 만 보고 주소를 만들지 않는다. 서로 관계없는 두 타입 핸들의 비교는 컴파일 오류다.
      *          Core 는 `Component` 를 모른다. `T` 의 멤버는 템플릿이 인스턴스화될 때만 본다.
@@ -112,7 +112,7 @@ namespace sw
         [[nodiscard]] constexpr uint64 objectID() const noexcept { return _handle.objectID(); }
         /** @brief 컴포넌트 인스턴스의 ID 를 반환합니다. */
         [[nodiscard]] constexpr uint64 componentID() const noexcept { return _handle.componentID(); }
-        /** @brief objectID 와 componentID 가 모두 있으면 true 입니다. 대상이 살아 있는지는 매니저로 풀어 봐야 압니다. */
+        /** @brief objectID 와 componentID 가 모두 있으면 true 입니다. 대상이 살아 있는지는 매니저로 조회해 봐야 압니다. */
         [[nodiscard]] constexpr bool     isValid() const noexcept { return _handle.isValid(); }
         [[nodiscard]] constexpr explicit operator bool() const noexcept { return isValid(); }
 

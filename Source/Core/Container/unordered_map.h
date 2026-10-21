@@ -16,7 +16,7 @@
  *    같은 코드가 빌드 옵션에 따라 달라졌을 것입니다.
  * 6. 구성: 두 구성이 같은 구현입니다.
  *          `SW_ENABLE_STL_CONTAINER` 구성도 같은 구현이고 바뀌는 것은 안쪽 `vector` 의 할당자뿐입니다. 순회 순서(넣은 순서, `erase` 는 마지막 원소를
- *          빈 자리로 옮긴다)와 무효화 규칙이 구성마다 달라지지 않게 하려고 `std::` 해시 컨테이너로 바꾸지 않습니다.
+ *          빈 슬롯으로 옮긴다)와 무효화 규칙이 구성마다 달라지지 않게 하려고 `std::` 해시 컨테이너로 바꾸지 않습니다.
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -34,7 +34,7 @@ namespace sw
      * @class unordered_map
      * @brief 데이터 지향(DoD) 밀집 배열 기반의 해시맵입니다.
      *
-     * 주의: `erase` 는 마지막 원소를 빈 자리로 옮기는 방식(swap-and-pop)이라, 기존 이터레이터가 무효화될 수 있습니다(두 구성 같음).
+     * 주의: `erase` 는 마지막 원소를 빈 슬롯으로 옮기는 방식(swap-and-pop)이라, 기존 이터레이터가 무효화될 수 있습니다(두 구성 같음).
      */
     template <typename Key, typename T, typename Hash = DefaultHash<Key>, typename KeyEqual = std::equal_to<>, typename Allocator = Allocator<pair<const Key, T>>>
     class unordered_map
@@ -626,7 +626,7 @@ namespace sw
             {
                 if ( get_equal()( _listDenseData[currentIndex]._keyValuePair.first, key ) )
                 {
-                    // 버킷 체인에서 뗀다
+                    // 버킷 체인에서 분리한다
                     if ( previousIndex == kEmptySlot )
                         _listBucket[bucketIndex] = _listDenseData[currentIndex]._next;
                     else
@@ -635,7 +635,7 @@ namespace sw
                     const size_t lastIndex = _listDenseData.size() - 1;
                     if ( currentIndex != lastIndex )
                     {
-                        // 마지막 원소를 currentIndex 자리로 옮긴다.
+                        // 마지막 원소를 currentIndex 위치로 옮긴다.
                         _listDenseData[currentIndex] = std::move( _listDenseData[lastIndex] );
 
                         // lastIndex 를 가리키던 버킷 체인이 currentIndex 를 가리키게 바꾼다.
@@ -688,7 +688,7 @@ namespace sw
             rebuild_buckets( bucketCount );
         }
 
-        /** @brief 버킷 표를 bucketCount(2의 거듭제곱) 개로 다시 만들고 밀집 배열의 체인을 다시 잇습니다. */
+        /** @brief 버킷 테이블을 bucketCount(2의 거듭제곱) 개로 다시 만들고 밀집 배열의 체인을 다시 연결합니다. */
         void rebuild_buckets( size_t bucketCount )
         {
             _listBucket.assign( bucketCount, kEmptySlot );
@@ -705,7 +705,7 @@ namespace sw
         void reserve( size_type count ) { rehash( count ); }
 
         /**
-         * @brief 남는 용량을 놓습니다. 비었으면 버킷 표와 밀집 배열의 버퍼를 모두 놓아 처음 상태로 돌아갑니다.
+         * @brief 남는 용량을 놓습니다. 비었으면 버킷 테이블과 밀집 배열의 버퍼를 모두 놓아 처음 상태로 돌아갑니다.
          * @details `clear()` 는 용량을 남긴다(다시 채울 때 할당하지 않도록). 버퍼까지 놓는 비우기는 `clear()` + `shrink_to_fit()` 이다.
          *          원소가 있으면 버킷 수를 원소 수 이상인 가장 작은 2의 거듭제곱(최소 `kMinBucketCount`)으로 줄인다.
          */

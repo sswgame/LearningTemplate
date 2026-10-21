@@ -99,7 +99,7 @@ namespace sw
             while ( curOffset < dataSize && shift < 64 )
             {
                 const uint8 byte = pData[curOffset++];
-                // 10번째 바이트(shift == 63)에 남은 자리는 1비트뿐이다. 나머지 비트가 켜져 있으면 64비트를 넘는 값이거나
+                // 10번째 바이트(shift == 63)에 남은 비트는 1비트뿐이다. 나머지 비트가 켜져 있으면 64비트를 넘는 값이거나
                 // 불필요하게 긴 인코딩이다 — 조용히 버리지 말고 거절한다. 정상 인코더는 여기서 0 이나 1 만 낸다
                 // (encodeVarUint64 의 마지막 바이트).
                 if ( shift == 63 && ( byte & 0x7E ) != 0 )

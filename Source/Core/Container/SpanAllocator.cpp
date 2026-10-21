@@ -50,7 +50,7 @@ namespace sw
         if ( count == 0 )
             return kInvalidOffset;
 
-        // 가장 잘 맞는 빈 구간 — 크기가 같으면 곧바로, 아니면 가장 작게 남는 것. 큰 구간을 아껴 큰 메시가 들어갈 자리를 남긴다.
+        // 가장 잘 맞는 빈 구간 — 크기가 같으면 곧바로, 아니면 가장 작게 남는 것. 큰 구간을 아껴 큰 메시가 들어갈 공간을 남긴다.
         size_t bestIndex = _listFreeSpan.size();
         for ( size_t index = 0; index < _listFreeSpan.size(); ++index )
         {
@@ -152,14 +152,14 @@ namespace sw
             return false;
         }
 
-        // 시작 오름차순 자리 — 첫 번째로 offset 보다 뒤에서 시작하는 빈 구간 앞이다.
+        // 시작 오름차순 위치 — 첫 번째로 offset 보다 뒤에서 시작하는 빈 구간 앞이다.
         size_t insertIndex = 0;
         while ( insertIndex < _listFreeSpan.size() && _listFreeSpan[insertIndex]._offset < offset )
         {
             ++insertIndex;
         }
 
-        // 앞 · 뒤 빈 구간과 겹치면 이미 빈 자리를 다시 돌려받는 것이다(이중 반납). 받으면 다음 두 할당이 같은 자리를 서로 다른 대상에 준다.
+        // 앞 · 뒤 빈 구간과 겹치면 이미 빈 구간을 다시 돌려받는 것이다(이중 반납). 받으면 다음 두 할당이 같은 구간을 서로 다른 대상에 준다.
         const bool bOverlapsPrevious = insertIndex > 0 && _listFreeSpan[insertIndex - 1]._offset + _listFreeSpan[insertIndex - 1]._count > offset;
         const bool bOverlapsNext     = insertIndex < _listFreeSpan.size() && offset + count > _listFreeSpan[insertIndex]._offset;
         if ( bOverlapsPrevious || bOverlapsNext )

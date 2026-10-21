@@ -147,7 +147,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 잘못된 UTF-8 자리에 넣는 대체 문자(U+FFFD)입니다. */
+            /** @brief 잘못된 UTF-8 위치에 넣는 대체 문자(U+FFFD)입니다. */
             static constexpr uint32 kReplacementCodepoint = 0xFFFD;
 
             struct DecodedCodepoint
@@ -160,7 +160,7 @@ namespace sw
             /**
              * @brief UTF-8 한 글자를 읽습니다. 잘못된 입력은 U+FFFD 한 글자로 바꾸고, **읽을 수 있는 다음 바이트부터** 다시 시작합니다.
              * @details 주의: 검증 없이 비트만 이어 붙이면 선두가 될 수 없는 바이트(0x80~0xBF · 0xF8~0xFF)가 U+0000 이 되어 Win32
-             *          경로 API 에서 문자열이 그 자리에서 끊기고, 연속 바이트를 확인하지 않으면 잘린 시퀀스 뒤의 ASCII(`/` · `.`)를 삼킵니다
+             *          경로 API 에서 문자열이 그 위치에서 끊기고, 연속 바이트를 확인하지 않으면 잘린 시퀀스 뒤의 ASCII(`/` · `.`)를 삼킵니다
              *          (CP949 로 된 한글 경로가 UTF-8 로 잘못 들어오면 경로가 조용히 다른 파일을 가리킵니다). 대체 방식은 유니코드 권고(최대
              *          부분 시퀀스마다 U+FFFD 하나)를 따릅니다.
              */
@@ -289,7 +289,7 @@ namespace sw
 
             /**
              * @brief 부동소수 토큰을 `from_chars` 로 **유한한 수로만** 읽습니다(`parseFloat` · `parseDouble`).
-             * @details 앞의 `+` 하나는 받는다(`from_chars` 가 받지 않는다). 그 뒤에 또 부호가 오면 숫자가 아니다 — `+` 를 떼고 그냥
+             * @details 앞의 `+` 하나는 받는다(`from_chars` 가 받지 않는다). 그 뒤에 또 부호가 오면 숫자가 아니다 — `+` 를 제거하고 그냥
              *          넘기면 `"+-5"` 가 -5 가 된다(`parseInt` 는 거절한다). 그리고 `from_chars` 는 "nan" · "inf" 를 받는데, 설정 · 에셋의
              *          그 글자가 트랜스폼 · 물리 값으로 조용히 흘러들면 원인을 찾기 어렵다(NaN 은 비교마다 거짓이라 범위 검사도 지나간다).
              *          float32 는 float32 로 바로 읽는다(배 정밀도를 거치면 드물게 반올림이 두 번 일어난다).
@@ -318,7 +318,7 @@ namespace sw
             }
 
             /**
-             * @brief 정수 토큰의 앞부분(공백 · 부호(`+`, 허용하면 `-`) · 기수 접두사(`0x`))을 떼어 냅니다.
+             * @brief 정수 토큰의 앞부분(공백 · 부호(`+`, 허용하면 `-`) · 기수 접두사(`0x`))을 잘라 냅니다.
              * @details `parseInt` · `parseInt64` · `parseUint64` 가 함께 씁니다. 기수가 0 이면 접두사로 정하고
              *          (없으면 10), 기수 16 은 `0x` 가 있어도 되고 없어도 됩니다. 부호를 허용하지 않는 쪽(`uint64`)은 `-` 를 남겨 두어
              *          `from_chars` 가 거부하게 합니다.
@@ -1090,7 +1090,7 @@ namespace sw
                 pos += decoded._byteCount;
                 continue;
             }
-            // 잘못된 바이트 하나를 `\xNN` 으로. 디코더가 몇 바이트를 묶었든 첫 바이트만 적고 한 칸 간다 — 뒤 바이트가 올바른 글자의 시작일 수 있다.
+            // 잘못된 바이트 하나를 `\xNN` 으로. 디코더가 몇 바이트를 묶었든 첫 바이트만 적고 한 바이트 간다 — 뒤 바이트가 올바른 글자의 시작일 수 있다.
             const uint8 byte = static_cast<uint8>( text[pos] );
             result.append( "\\x" );
             result.push_back( kHexDigit[byte >> 4] );
