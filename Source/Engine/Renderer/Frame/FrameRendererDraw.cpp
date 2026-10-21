@@ -298,9 +298,7 @@ namespace sw
         SW_PROFILE_COUNT( "RT.Draw.gpuBatchCount", batches.size() );
 
         // 간접 인자 슬롯은 업로드 순서대로 불투명 다음 투명으로 놓인다.
-        uint32 batchOffset{ 0 };
-        if ( bTransparentPass )
-            batchOffset = static_cast<uint32>( _gpuScene.getOpaqueBatches().size() );
+        const uint32 batchOffset = bTransparentPass ? static_cast<uint32>( _gpuScene.getOpaqueBatches().size() ) : 0u;
 
         // **같은 PSO · 정점 버퍼 · 머티리얼(버퍼 · CB · 텍스처 · 원소 수)의 연속 배치는 drawIndirect 한 번(멀티 드로우)이다.** 배치마다
         // 다른 값은 배치 표(g_SwBatches)와 인스턴스 슬롯 스트림(슬롯 1)이 준다. 간접 인자의 startInstance 가 배치 시작이라 입력
@@ -308,35 +306,8 @@ namespace sw
         // 상수 주입도 없다(DX12 커맨드 시그니처에 루트 상수를 넣으면 ExecuteIndirect 가 두 배 느려진다. 실측이다). 멀티 드로우가 없는
         // 백엔드(DX11)는 하나씩 부른다. 드로우 루프의 비용은 호출 수라, 배치가 많은 씬에서는 RT 프레임의 큰 몫이 된다.
         const bool bMerge = isDrawMergeEnabled() && _pDevice->getCapabilities()._bMultiDrawIndirect != SW_FALSE;
-
-        // 머티리얼 CB 는 그 슬롯을 실제로 거는 셰이더에서만 병합 키다(`GPUMeshBatch::canShareMaterialBinding`).
-        auto layoutBindsMaterialCb = [this]( RHIPipelineStateHandle batchPSO ) -> bool
-        {
-            const ShaderBindingLayout* pLayout = layoutForPSO( batchPSO );
-            if ( pLayout == nullptr )
-                return false;
-            static const hashed_string s_materialCbName{ shaderslot::cbname::kMaterial };
-            for ( const ShaderBindingSlot& slot : pLayout->getSlots() )
-            {
-                if ( slot._name == s_materialCbName )
-                    return true;
-            }
-            return false;
-        };
-
         // 패스가 머티리얼로 배치를 거르면(메시 외곽선 — 외곽선을 켠 머티리얼만) 그 밖의 배치는 그리지도 묶지도 않는다.
-        const RenderPassType passType      = context._passType;
-        auto                 sameDrawGroup = [this, pso, passType, &layoutBindsMaterialCb]( const GPUMeshBatch& head, const GPUMeshBatch& other ) -> bool
-        {
-            const bool bOtherBatchNotDrawable = other._vertexBuffer == 0 || other._instanceCount == 0 || drawsBatchInPass( passType, other ) == false;
-            if ( bOtherBatchNotDrawable )
-                return false;
-            if ( other._vertexBuffer != head._vertexBuffer || psoForBatch( pso, other ) != psoForBatch( pso, head ) )
-                return false;
-            // 레이아웃을 보는 것은 CB 가 다를 때만(대부분 같다).
-            const bool bCbDiffers = other._materialCb != head._materialCb;
-            return GPUMeshBatch::canShareMaterialBinding( head, other, bCbDiffers && layoutBindsMaterialCb( psoForBatch( pso, head ) ) );
-        };
+        const RenderPassType passType = context._passType;
 
         const RHIBufferHandle argsBuffer = _gpuScene.getCullView( context._cullViewIndex )._indirectArgs._buffer;
         // 추가 뷰의 투명 패스는 그 뷰의 순서로 배치를 돈다(GPUViewTransparentOrder). 묶기는 그 순서에서 이웃이고 번호도 이어진 것만 — 간접 인자는 번호 순으로 놓여 있다.
@@ -385,35 +356,14 @@ namespace sw
                     const bool bParticleInside = particleSlotCursor < listParticleSlot.size() &&
                                                  listParticleSlot[particleSlotCursor]._drawPosition <= orderIndex + groupCount;
                     const bool bGroupEnds = nextBatchIndex != batchIndex + groupCount || bParticleInside;
-                    if ( bGroupEnds || sameDrawGroup( head, batches[nextBatchIndex] ) == false )
+                    if ( bGroupEnds || isSameDrawGroup( pso, passType, head, batches[nextBatchIndex] ) == false )
                         break;
                     ++groupCount;
                 }
             }
-
-            // 정점 풀 하나라 보통 패스당 한 번 걸린다. 풀 밖 메시(예산 초과)만 자기 버퍼를 건다.
-            if ( head._vertexBuffer != boundVertexBuffer )
-            {
-                context._pCmd->setVertexBuffer( 0, head._vertexBuffer, sizeof( RHIVertex ), 0 );
-                boundVertexBuffer = head._vertexBuffer;
-            }
-
-            // **이 머티리얼의 퍼뮤테이션**으로 그린다. 주의: 패스 PSO 하나로 모두 그리면 머티리얼이 선언한
-            // 정적 스위치(유리의 MATERIAL_BLEND_TRANSLUCENT 같은)가 쿠킹되기만 하고 한 번도 걸리지 않는다.
-            // 캐시는 ensureMaterialPSOs 가 기록 전에 채운다. 여기서는 조회만 한다.
-            const RHIPipelineStateHandle batchPSO = psoForBatch( pso, head );
-            if ( batchPSO != boundPSO && batchPSO != 0 )
-            {
-                context._pCmd->setPipelineState( batchPSO );
-                boundPSO = batchPSO;
-            }
-
-            // 루트 상수 = { 머티리얼 원소 수 }. 그룹 안에서 같다.
-            registerMaterialBuffer( context, head, batchPSO );
-            bindForDraw( context, batchPSO, head._materialCb, head._arrMaterialTexSrv );
             // **이 패스의 뷰**가 만든 인자를 쓴다. 그림자 패스가 메인 카메라 인자를 쓰면 화면 밖에서
             // 화면 안으로 그림자를 드리우는 물체가 사라진다.
-            context._pCmd->drawIndirect( argsBuffer, ( batchOffset + batchIndex ) * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ), groupCount );
+            drawBatchGroup( context, pso, head, boundPSO, boundVertexBuffer, argsBuffer, batchOffset + batchIndex, groupCount );
             ++drawCallCount;
             orderIndex += groupCount;
         }
@@ -421,6 +371,59 @@ namespace sw
         (void)drawParticleRun( context, listParticleSlot, particleSlotCursor, MathUtil::kMaxUInt32, slotStream );
         SW_PROFILE_COUNT( "RT.Draw.indirectCalls", drawCallCount );
         _indirectDrawCallCount.fetch_add( drawCallCount, std::memory_order_relaxed );
+    }
+
+    bool FrameRenderer::layoutBindsMaterialCb( RHIPipelineStateHandle batchPSO ) const
+    {
+        // 머티리얼 CB 는 그 슬롯을 실제로 거는 셰이더에서만 병합 키다(`GPUMeshBatch::canShareMaterialBinding`).
+        const ShaderBindingLayout* pLayout = layoutForPSO( batchPSO );
+        if ( pLayout == nullptr )
+            return false;
+        static const hashed_string s_materialCbName{ shaderslot::cbname::kMaterial };
+        for ( const ShaderBindingSlot& slot : pLayout->getSlots() )
+        {
+            if ( slot._name == s_materialCbName )
+                return true;
+        }
+        return false;
+    }
+
+    bool FrameRenderer::isSameDrawGroup( RHIPipelineStateHandle pso, RenderPassType passType, const GPUMeshBatch& head, const GPUMeshBatch& other ) const
+    {
+        const bool bOtherBatchNotDrawable = other._vertexBuffer == 0 || other._instanceCount == 0 || drawsBatchInPass( passType, other ) == false;
+        if ( bOtherBatchNotDrawable )
+            return false;
+        if ( other._vertexBuffer != head._vertexBuffer || psoForBatch( pso, other ) != psoForBatch( pso, head ) )
+            return false;
+        // 레이아웃을 보는 것은 CB 가 다를 때만(대부분 같다).
+        const bool bCbDiffers = other._materialCb != head._materialCb;
+        return GPUMeshBatch::canShareMaterialBinding( head, other, bCbDiffers && layoutBindsMaterialCb( psoForBatch( pso, head ) ) );
+    }
+
+    void FrameRenderer::drawBatchGroup( FramePassContext& context, RHIPipelineStateHandle pso, const GPUMeshBatch& head, RHIPipelineStateHandle& ioBoundPSO,
+                                        RHIBufferHandle& ioBoundVertexBuffer, RHIBufferHandle argsBuffer, uint32 argIndex, uint32 groupCount )
+    {
+        // 정점 풀 하나라 보통 패스당 한 번 걸린다. 풀 밖 메시(예산 초과)만 자기 버퍼를 건다.
+        if ( head._vertexBuffer != ioBoundVertexBuffer )
+        {
+            context._pCmd->setVertexBuffer( 0, head._vertexBuffer, sizeof( RHIVertex ), 0 );
+            ioBoundVertexBuffer = head._vertexBuffer;
+        }
+
+        // **이 머티리얼의 퍼뮤테이션**으로 그린다. 주의: 패스 PSO 하나로 모두 그리면 머티리얼이 선언한
+        // 정적 스위치(유리의 MATERIAL_BLEND_TRANSLUCENT 같은)가 쿠킹되기만 하고 한 번도 걸리지 않는다.
+        // 캐시는 ensureMaterialPSOs 가 기록 전에 채운다. 여기서는 조회만 한다.
+        const RHIPipelineStateHandle batchPSO = psoForBatch( pso, head );
+        if ( batchPSO != ioBoundPSO && batchPSO != 0 )
+        {
+            context._pCmd->setPipelineState( batchPSO );
+            ioBoundPSO = batchPSO;
+        }
+
+        // 루트 상수 = { 머티리얼 원소 수 }. 그룹 안에서 같다.
+        registerMaterialBuffer( context, head, batchPSO );
+        bindForDraw( context, batchPSO, head._materialCb, head._arrMaterialTexSrv );
+        context._pCmd->drawIndirect( argsBuffer, argIndex * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ), groupCount );
     }
 
     bool FrameRenderer::drawParticleRun( FramePassContext& context, vector_reference<const GPUTransparentParticleSlot> listSlot, uint32& inOutCursor, uint32 position,

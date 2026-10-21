@@ -622,6 +622,13 @@ namespace sw
          *                      남은 입자는 모든 배치 뒤에 그린다. 투명 큐가 아닌 패스(외곽선 · 그림자 등)는 nullptr 이다.
          */
         void drawGPUBatches( FramePassContext& context, RHIPipelineStateHandle pso, bool bTransparentPass, const vector<GPUTransparentParticleSlot>* pParticleSlot );
+        /** @brief 그 PSO 의 레이아웃이 머티리얼 CB 슬롯을 거는지입니다. 거는 셰이더에서만 머티리얼 CB 가 멀티 드로우 병합 키다. */
+        bool layoutBindsMaterialCb( RHIPipelineStateHandle batchPSO ) const;
+        /** @brief @p other 가 @p head 와 같은 멀티 드로우 묶음에 들 수 있는지입니다(그릴 수 있고 정점 버퍼 · PSO · 머티리얼 바인딩이 같다). */
+        bool isSameDrawGroup( RHIPipelineStateHandle pso, RenderPassType passType, const GPUMeshBatch& head, const GPUMeshBatch& other ) const;
+        /** @brief 묶음 하나를 그립니다 — 바뀐 정점 버퍼 · 배치 PSO 만 다시 걸고, 머티리얼 바인딩 뒤 간접 인자 @p argIndex 부터 @p groupCount 개를 부릅니다. */
+        void drawBatchGroup( FramePassContext& context, RHIPipelineStateHandle pso, const GPUMeshBatch& head, RHIPipelineStateHandle& ioBoundPSO,
+                             RHIBufferHandle& ioBoundVertexBuffer, RHIBufferHandle argsBuffer, uint32 argIndex, uint32 groupCount );
         /** @brief 투명 큐(메시 투명 배치와 입자 그리기를 한 순서로)를 지금 열린 투명 패스에 그립니다. */
         void drawTransparentQueue( FramePassContext& context, RHIPipelineStateHandle pso );
         /** @brief 지금 그리는 뷰의 입자 자리입니다. 추가 뷰는 자기 순서가 있으면 그것, 없으면 주 시점의 것(그 뷰도 주 배치 순서로 그린다)입니다. */
