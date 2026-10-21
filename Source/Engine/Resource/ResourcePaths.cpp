@@ -34,6 +34,20 @@ namespace sw
             inline static std::once_flag _s_initOnce{};
 
             /**
+             * @brief 정규화한 경로 @p normalized 가 제외 줄 하나(확장자 또는 폴더 조각)에 맞으면 true 입니다.
+             * @details 폴더 조각은 경로 처음이거나 '/' 뒤에서 시작해 '/' 로 끝나야 한다(`shaders/bin` 이 `myshaders/binary` 에 맞지 않게).
+             */
+            static bool matchesAssetExclusion( string_view normalized, string_view extension, string_view folder )
+            {
+                if ( extension.empty() == false )
+                    return StringUtil::endsWith( normalized, extension );
+                const size_t position            = normalized.find( folder );
+                const bool   bFolderSegmentMatch = folder.empty() == false && position != string_view::npos && ( position == 0 || normalized[position - 1] == '/' ) &&
+                                                 position + folder.size() < normalized.size() && normalized[position + folder.size()] == '/';
+                return bFolderSegmentMatch;
+            }
+
+            /**
              * @brief 구성 때 구운 `EngineConfig.json` 사본의 `_listResourcePriority` 입니다. 읽지 못하면 오류를 남기고 빈 목록입니다.
              * @details 빈 목록은 "읽지 못함" 의 표식이다 — `initialize()` 가 보고 실패로 멈춘다(빈 검색 목록으로 계속하지 않는다).
              */
@@ -628,18 +642,27 @@ namespace sw
         const string normalized = FileUtil::normalizePath( resourcePath );
         for ( const string& extension : _s_listHostExcludedExtension )
         {
-            if ( StringUtil::endsWith( normalized, extension ) )
+            if ( ResourcePathsInternal::matchesAssetExclusion( normalized, extension, string_view{} ) )
                 return true;
         }
         for ( const string& folder : _s_listHostExcludedFolder )
         {
-            // 폴더 조각은 경로 처음이거나 '/' 뒤에서 시작해 '/' 로 끝나야 한다(`shaders/bin` 이 `myshaders/binary` 에 맞지 않게).
-            const size_t position            = normalized.find( folder );
-            const bool   bFolderSegmentMatch = position != string::npos && ( position == 0 || normalized[position - 1] == '/' ) && position + folder.size() < normalized.size() &&
-                                             normalized[position + folder.size()] == '/';
-            if ( bFolderSegmentMatch )
+            if ( ResourcePathsInternal::matchesAssetExclusion( normalized, string_view{}, folder ) )
                 return true;
         }
+        return false;
+    }
+
+    bool ResourcePaths::isExcludedForTarget( string_view buildTargetName, string_view resourcePath )
+    {
+        if ( buildTargetName.empty() )
+            return false;
+        const string normalized = FileUtil::normalizePath( resourcePath );
+#define SW_MATCH_TARGET_EXCLUSION( Target, Kind, Extension, Folder )                                                   \
+    if ( buildTargetName == #Target && ResourcePathsInternal::matchesAssetExclusion( normalized, Extension, Folder ) ) \
+        return true;
+        SW_TARGET_ASSET_EXCLUSION_TABLE( SW_MATCH_TARGET_EXCLUSION )
+#undef SW_MATCH_TARGET_EXCLUSION
         return false;
     }
 

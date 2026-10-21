@@ -3,6 +3,7 @@
 #include "Editor/Common/Asset/AssetImportPathFilter.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -44,7 +45,7 @@ namespace sw::editor
             {
                 for ( const string& pattern : listPattern )
                 {
-                    if ( AssetImportPathFilter::matchesWildcard( pattern, fileName ) || AssetImportPathFilter::matchesWildcard( pattern, normalized ) )
+                    if ( StringUtil::matchesWildcard( pattern, fileName ) || StringUtil::matchesWildcard( pattern, normalized ) )
                         return true;
                 }
                 return false;
@@ -90,45 +91,5 @@ namespace sw::editor
     bool AssetImportPathFilter::isCatchAll() const
     {
         return _listIncludePattern.empty() && _listIncludePath.empty() && _listExcludePattern.empty() && _listExcludePath.empty();
-    }
-
-    bool AssetImportPathFilter::matchesWildcard( string_view pattern, string_view text )
-    {
-        const utf8* pPattern    = pattern.data();
-        const utf8* pText       = text.data();
-        const utf8* pPatternEnd = pPattern + pattern.size();
-        const utf8* pTextEnd    = pText + text.size();
-        const utf8* pStar       = nullptr;
-        const utf8* pMatch      = nullptr;
-
-        while ( pText < pTextEnd )
-        {
-            if ( pPattern < pPatternEnd && ( *pPattern == '?' || std::tolower( static_cast<uint8>( *pPattern ) ) == std::tolower( static_cast<uint8>( *pText ) ) ) )
-            {
-                ++pPattern;
-                ++pText;
-            }
-            else if ( pPattern < pPatternEnd && *pPattern == '*' )
-            {
-                pStar  = pPattern++;
-                pMatch = pText;
-            }
-            else if ( pStar != nullptr )
-            {
-                pPattern = pStar + 1;
-                pText    = ++pMatch;
-            }
-            else
-            {
-                return false;
-            }
-        }
-
-        while ( pPattern < pPatternEnd && *pPattern == '*' )
-        {
-            ++pPattern;
-        }
-
-        return pPattern == pPatternEnd;
     }
 } // namespace sw::editor

@@ -49,6 +49,18 @@ def runShaderCook(
     return runHeadlessTask(appExe, ["--cook-shaders"], cwd=cwd, bCapture=bCapture)
 
 
+def runShaderVerify(
+    appExe: Path,
+    *,
+    cwd: Path | None = None,
+) -> subprocess.CompletedProcess:
+    """
+    `App.exe --verify-shaders` 를 돌립니다 — 커밋된 셰이더 바이너리가 쿠킹 표의 모든 백엔드에서 지금 소스와 맞는지 엔진의 판정
+    (`ShaderCooker::verifyCookedShaders`) 하나로 본다. 출력을 붙잡아 돌려준다(커밋 훅이 문제 줄을 보인다).
+    """
+    return runHeadlessTask(appExe, ["--verify-shaders"], cwd=cwd, bCapture=True)
+
+
 def runSceneCook(
     appExe: Path,
     cookedDir: Path,

@@ -45,4 +45,3 @@
 "Scripts/lint/selftest/CheckServiceAccessSelfTest.py|lint.gate.CheckServiceAccess" = "셀프테스트가 자기 게이트를 부른다"
 "Scripts/dev/MakePackage.py|generate.CookAssets" = "generate.CookAssets 의 팩 이름 목록. StructureSimplification PK4 가 쿠커를 C++ 로 옮겨 generate/CookAssets.py 를 지우면 이 줄도 지운다"
 "Scripts/dev/RemoveWorktree.py|generate.CookAssets" = "쿠킹 스탬프 경로의 정본(kCookStampPathPattern). StructureSimplification PK4 가 쿠커를 C++ 로 옮겨 generate/CookAssets.py 를 지우면 이 줄도 지운다"
-"Scripts/lint/gate/CheckShaderStamps.py|generate.CookAssets" = "쿠커의 셰이더 스탬프 판정을 부른다. StructureSimplification PK4 가 쿠커를 C++ 로 옮겨 generate/CookAssets.py 를 지우면 이 줄도 지운다"

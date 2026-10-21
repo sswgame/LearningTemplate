@@ -173,6 +173,11 @@ namespace sw
          * @return 있으면 true. `sub` 가 비어 있으면 true 입니다(표준 `find` 와 같습니다).
          */
         static bool contains( string_view str, string_view sub, bool bIgnoreCase = false ) noexcept;
+        /**
+         * @brief `*`(0 글자 이상, '/' 도 넘는다) · `?`(한 글자) 와일드카드 @p pattern 이 @p text 전체에 맞는지 봅니다(ASCII 대소문자 무시).
+         * @details 팩 쿠커의 제외 패턴(`PackConfig`)과 에디터 임포트 규칙(`AssetImportPathFilter`)이 같은 규칙으로 맞춘다.
+         */
+        static bool matchesWildcard( string_view pattern, string_view text ) noexcept;
 
         /** @brief string_view 의 앞 공백을 뗀 뷰를 반환합니다. */
         static string_view trimStart( string_view input );

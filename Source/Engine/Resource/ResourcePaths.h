@@ -91,6 +91,11 @@ namespace sw
         static void setHostTarget( string_view buildTargetName );
         /** @brief @p resourcePath(리소스 id, 팩 상대 키, 절대 경로)가 이 호스트가 읽지 않는 에셋 종류면 true 입니다(`setHostTarget`). */
         static bool isExcludedForHost( string_view resourcePath );
+        /**
+         * @brief @p resourcePath 가 빌드 타깃 @p buildTargetName(`Game` · `Client` · `Server`)이 패키지에서 빼는 에셋 종류면 true 입니다. 빈 타깃은 아무것도 빼지 않습니다.
+         * @details 팩 쿠커(`PackCooker`)가 그 타깃의 팩을 구울 때 쓴다. 호스트 상태(`setHostTarget`)를 바꾸지 않고 같은 표 · 같은 맞춤 규칙을 쓴다.
+         */
+        static bool isExcludedForTarget( string_view buildTargetName, string_view resourcePath );
 
         /**
          * @brief 도메인의 하위 폴더 절대 경로를 반환합니다(`Resource/<domainName>/<subFolder>`).

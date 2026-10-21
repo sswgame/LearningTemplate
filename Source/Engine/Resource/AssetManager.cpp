@@ -286,10 +286,18 @@ namespace sw
     {
         if ( initialize() == false )
             return SubsystemInitResult::Failed;
-        bool bCookScenes = false;
+        // 쿠킹(씬 · 팩)은 소스 트리를 읽는다 — 팩은 쿠킹의 산출물이라 자기 팩을 읽으면 순환이다.
+        bool bCooking = false;
         if ( engine::areEngineServicesBound() )
-            (void)engine::getSubsystem<CommandLineManager>().getArgument( CommandLineArgument::COOK_SCENES, bCookScenes );                      // 없으면 false 그대로
-        (void)mountContent( EngineConfig::getActive()._listResourcePriority, bCookScenes ? ContentSource::SourceTree : ContentSource::Cooked ); // 느슨한 트리만 있어도 기동한다
+        {
+            const CommandLineManager& commandLine = engine::getSubsystem<CommandLineManager>();
+            for ( const CommandLineArgument argument : { CommandLineArgument::COOK_SCENES, CommandLineArgument::COOK_PACKS, CommandLineArgument::COOK_ALL } )
+            {
+                bool bGiven = false;
+                bCooking    = ( commandLine.getArgument( argument, bGiven ) && bGiven ) || bCooking;
+            }
+        }
+        (void)mountContent( EngineConfig::getActive()._listResourcePriority, bCooking ? ContentSource::SourceTree : ContentSource::Cooked ); // 느슨한 트리만 있어도 기동한다
         return SubsystemInitResult::Succeeded;
     }
 

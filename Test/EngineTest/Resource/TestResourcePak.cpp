@@ -15,6 +15,8 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
+#include "Engine/Resource/Cook/PackConfig.h"
+#include "Engine/Resource/Cook/PackCooker.h"
 #include "Engine/Resource/Pack/ResourcePakCompressionUtil.h"
 #include "Engine/Resource/Pack/ResourcePakManager.h"
 #include "Engine/Resource/Pack/ResourcePakReader.h"
@@ -1411,4 +1413,49 @@ SW_TEST_CASE( ResourcePakTest, WriterRejectsTheSamePathTwice )
     test::ScopedLogSuppressor suppressor;
     SW_EXPECT_FALSE( writer.makePackBytes( bytes ) );
     SW_EXPECT_TRUE( bytes.empty() );
+}
+
+/**
+ * @brief [PackCookerTest] 팩에 담을 파일을 팩 설정 · 셰이더 폴더 · 빌드 타깃으로 고른다 — 예전 파이썬 쿠커(`shouldIncludeFile`)와 같은 판정
+ */
+SW_TEST_CASE( PackCookerTest, SelectsFilesByConfigShaderFolderAndTarget )
+{
+    sw::PackConfig config;
+    config._bExcludeRawShaderSource = true;
+    config._listGlobalExcludeDirectory.push_back( "docs" );
+    config._listGlobalExcludePattern.push_back( "*.meta" );
+    sw::PackExcludeRule rule;
+    rule._name = "TopOnly";
+    rule._listExcludeDirectory.push_back( "textures_raw" );
+    rule._bRecursive = false;
+    config._listRule.push_back( rule );
+
+    SW_EXPECT_TRUE( sw::PackCooker::shouldIncludeFile( "textures/a.dds", config, "dx12", "Client" ) );
+    SW_EXPECT_FALSE( sw::PackCooker::shouldIncludeFile( "textures/a.dds", config, "dx12", "Server" ) ); // 서버는 텍스처를 읽지 않는다
+    SW_EXPECT_FALSE( sw::PackCooker::shouldIncludeFile( "docs/readme.md", config, "dx12", "" ) );
+    SW_EXPECT_FALSE( sw::PackCooker::shouldIncludeFile( "maps/Docs/readme.md", config, "dx12", "" ) ); // 폴더 이름은 대소문자를 가리지 않는다
+    SW_EXPECT_FALSE( sw::PackCooker::shouldIncludeFile( "maps/x.scene.xml.meta", config, "dx12", "" ) );
+    SW_EXPECT_FALSE( sw::PackCooker::shouldIncludeFile( "textures_raw/a.png", config, "dx12", "" ) );
+    SW_EXPECT_TRUE( sw::PackCooker::shouldIncludeFile( "sub/textures_raw/a.png", config, "dx12", "" ) ); // 재귀가 아닌 규칙은 맨 위 폴더만 뺀다
+    SW_EXPECT_FALSE( sw::PackCooker::shouldIncludeFile( "shaders/forward.hlsl", config, "dx12", "" ) );
+    SW_EXPECT_TRUE( sw::PackCooker::shouldIncludeFile( "shaders/bin/dx12/forward_vs.dxil", config, "dx12", "" ) );
+    SW_EXPECT_FALSE( sw::PackCooker::shouldIncludeFile( "shaders/bin/vulkan/forward_vs.spv", config, "dx12", "" ) );
+
+    SW_EXPECT_EQUAL( sw::string( "engine.pack" ), sw::PackCooker::makePackFileName( "engine" ) );
+    SW_EXPECT_EQUAL( sw::string( "game_empty.pack" ), sw::PackCooker::makePackFileName( "game/empty" ) );
+}
+
+/**
+ * @brief [StringUtilTest] 와일드카드는 `*`(0 글자 이상, '/' 포함) · `?`(한 글자)이고 대소문자를 가리지 않으며 글 전체에 맞아야 한다
+ */
+SW_TEST_CASE( StringUtilTest, MatchesWildcard )
+{
+    SW_EXPECT_TRUE( sw::StringUtil::matchesWildcard( "*.meta", "a.PNG.META" ) );
+    SW_EXPECT_TRUE( sw::StringUtil::matchesWildcard( "*.sources.json", "data/x.sources.json" ) );
+    SW_EXPECT_TRUE( sw::StringUtil::matchesWildcard( "thumbs.db", "Thumbs.db" ) );
+    SW_EXPECT_TRUE( sw::StringUtil::matchesWildcard( "a?c", "abc" ) );
+    SW_EXPECT_TRUE( sw::StringUtil::matchesWildcard( "*", "" ) );
+    SW_EXPECT_FALSE( sw::StringUtil::matchesWildcard( "*.meta", "a.metadata" ) );
+    SW_EXPECT_FALSE( sw::StringUtil::matchesWildcard( "a?c", "ac" ) );
+    SW_EXPECT_FALSE( sw::StringUtil::matchesWildcard( "", "a" ) );
 }

@@ -43,7 +43,12 @@ namespace sw
                          pChanged != nullptr ? pChanged->_resourceID : string{} );
             return false;
         }
+        // 출력 파일이 이미 기록의 바이트면 다시 쓰지 않는다 — 무변경 재쿠킹이 파일(큰 팩)을 건드리지 않는다.
         vector<uint8> bytes;
+        const bool    bOutputCurrent = FileUtil::isRegularFile( outputPath ) && FileUtil::readFile( outputPath, bytes ) && ContentHash::computeBytes( bytes ) == record._outputHash;
+        if ( bOutputCurrent )
+            return true;
+        bytes.clear();
         if ( _derivedDataCache.find( record._key, bytes ) == false )
         {
             SW_LOG_INFO( "Cook: '%#' has a fresh record but no DDC entry - cooked again", outputID );

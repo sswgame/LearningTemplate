@@ -18,6 +18,8 @@
 #include "Engine/Resource/Cook/ContentHash.h"
 #include "Engine/Resource/ResourcePaths.h"
 
+#include <algorithm>
+
 namespace sw
 {
     namespace
@@ -270,6 +272,132 @@ namespace sw
                 if ( FileUtil::writeTextFile( stampPath, text ) == false )
                     SW_LOG_WARNING( "쿠킹 스탬프 쓰기 실패: %#", stampPath.c_str() );
             }
+
+            /** @brief 문제 한 줄을 서식으로 만들어 더합니다. */
+            template <typename... Args>
+            static void appendProblem( vector<string>& outListProblem, const utf8* pFormat, const Args&... args )
+            {
+                StringBuilder<constant::kMaxBuffer512> sb;
+                sb.appendFormat( pFormat, args... );
+                outListProblem.emplace_back( sb.c_str(), sb.size() );
+            }
+
+            /** @brief 쿠킹한 셰이더 바이너리의 확장자이면 true 입니다. */
+            static bool isShaderBinaryFile( string_view path )
+            {
+                return StringUtil::endsWith( path, ".dxil", true ) || StringUtil::endsWith( path, ".dxbc", true ) || StringUtil::endsWith( path, ".spv", true );
+            }
+
+            /** @brief 셰이더를 가진 도메인(`engine` · `common` · `game/<팩>`)을 모읍니다. */
+            static void collectShaderDomains( string_view resourceRoot, vector<string>& outListDomain )
+            {
+                outListDomain.clear();
+                outListDomain.emplace_back( "engine" );
+                outListDomain.emplace_back( "common" );
+                vector<string> listGameFolder;
+                (void)FileUtil::collectFolders( FileUtil::joinPath( resourceRoot, "game" ), listGameFolder, false ); // 게임 폴더가 없으면 공용 도메인만 본다
+                std::sort( listGameFolder.begin(), listGameFolder.end() );
+                for ( const string& gameFolder : listGameFolder )
+                {
+                    outListDomain.push_back( string( "game/" ) + FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( gameFolder ) ) );
+                }
+            }
+
+            /** @brief 도메인 하나의 `bin/<폴더>` 를 판정합니다(`ShaderCooker::verifyCookedShaders` 의 본체). */
+            static void verifyDomain( string_view resourceRoot, const string& domain, string_view shaderFolder, vector<string>& outListProblem )
+            {
+                const string shadersDir = FileUtil::normalizeSeparators( FileUtil::joinPath( FileUtil::joinPath( resourceRoot, domain ), "shaders" ) );
+                if ( FileUtil::isDirectory( shadersDir ) == false )
+                    return;
+                vector<StampedSource> listSource;
+                collectStampedSources( resourceRoot, shadersDir, false, listSource );
+                const bool bHasOwnSource = std::any_of( listSource.begin(), listSource.end(), []( const StampedSource& source )
+                { return source._key.find( ':' ) == string::npos; } );
+                if ( bHasOwnSource == false )
+                    return;
+
+                const string label  = domain + "/shaders";
+                const string binDir = FileUtil::joinPath( FileUtil::joinPath( shadersDir, "bin" ), shaderFolder );
+                if ( FileUtil::isDirectory( binDir ) == false )
+                {
+                    appendProblem( outListProblem, "%#: no '%#' binary folder (never cooked)", label, shaderFolder );
+                    return;
+                }
+                string text;
+                if ( FileUtil::readTextFile( FileUtil::joinPath( binDir, "cook.stamp" ), text ) == false )
+                {
+                    appendProblem( outListProblem, "%#: '%#' has no cook.stamp (the cooker writes it)", label, shaderFolder );
+                    return;
+                }
+                if ( StringUtil::startsWith( text, kCookStampHeader ) == false )
+                {
+                    appendProblem( outListProblem, "%#: '%#' cook.stamp has an unknown header", label, shaderFolder );
+                    return;
+                }
+
+                unordered_map<string, uint64> mapStamped;
+                StringUtil::forEachLine( text, [&mapStamped]( string_view line )
+                {
+                    line = StringUtil::trimEnd( line );
+                    if ( line.size() > 17 && line[16] == ' ' )
+                        mapStamped.emplace( string( line.substr( 17 ) ), parseHex64( line.substr( 0, 16 ) ) );
+                } );
+                const auto toolchainIter = mapStamped.find( string( kToolchainKey ) );
+                if ( toolchainIter == mapStamped.end() || toolchainIter->second != computeToolchainFingerprint() )
+                    appendProblem( outListProblem, "%#: '%#' was cooked with another toolchain (compiler or options changed)", label, shaderFolder );
+
+                unordered_map<string, uint64> mapCurrent;
+                for ( const StampedSource& source : listSource )
+                {
+                    const uint64 hash = ContentHash::computeFile( source._absPath );
+                    mapCurrent.emplace( source._key, hash );
+                    const auto stampedIter = mapStamped.find( source._key );
+                    if ( stampedIter == mapStamped.end() )
+                        appendProblem( outListProblem, "%#/%#: never cooked for '%#'", label, source._key, shaderFolder );
+                    else if ( stampedIter->second != hash )
+                        appendProblem( outListProblem, "%#/%#: source changed but '%#' was not cooked again", label, source._key, shaderFolder );
+                }
+                for ( const auto& [key, hash] : mapStamped )
+                {
+                    const bool bToolchainLine = key.empty() == false && key.front() == '@';
+                    if ( bToolchainLine == false && mapCurrent.find( key ) == mapCurrent.end() )
+                        appendProblem( outListProblem, "%#/%#: removed shader is still in the '%#' stamp", label, key, shaderFolder );
+                }
+
+                vector<string> listBinary;
+                vector<string> listFile;
+                (void)FileUtil::collectFiles( binDir, "", listFile, false ); // 방금 본 폴더다
+                for ( const string& filePath : listFile )
+                {
+                    if ( isShaderBinaryFile( filePath ) )
+                        listBinary.push_back( FileUtil::getFileNamePart( filePath ) );
+                }
+                if ( listBinary.empty() )
+                    appendProblem( outListProblem, "%#: '%#' has no shader binaries", label, shaderFolder );
+
+                // 바이너리는 있는데 매니페스트에 그 키가 없는 조합을 잡는다. 스탬프는 소스가 바뀌었는지만 보므로 쿠커의 레시피가 늘어난 경우(새 퍼뮤테이션 축)는
+                // 여기가 아니면 못 잡는다 — 리플렉션 없이 바인딩한 DX12 가 DEVICE_HUNG 으로 죽었다. 매니페스트 키는 바이너리 파일 이름 그대로다.
+                vector<uint8> manifestBytes;
+                const string  manifestPath = FileUtil::joinPath( binDir, "reflection.manifest" );
+                if ( FileUtil::isRegularFile( manifestPath ) == false || FileUtil::readFile( manifestPath, manifestBytes ) == false )
+                {
+                    appendProblem( outListProblem, "%#: '%#' has no reflection manifest", label, shaderFolder );
+                    return;
+                }
+                const string_view manifest{ reinterpret_cast<const utf8*>( manifestBytes.data() ), manifestBytes.size() };
+                vector<string>    listUncovered;
+                for ( const string& binaryName : listBinary )
+                {
+                    if ( manifest.find( binaryName ) == string_view::npos )
+                        listUncovered.push_back( binaryName );
+                }
+                if ( listUncovered.empty() == false )
+                {
+                    std::sort( listUncovered.begin(), listUncovered.end() );
+                    appendProblem( outListProblem, "%#: '%#' manifest misses %# binaries (first: %#) - cook again or delete the stale files", label, shaderFolder,
+                                   listUncovered.size(), listUncovered.front() );
+                }
+            }
         };
     } // namespace
 } // namespace sw
@@ -382,5 +510,20 @@ namespace sw
         const string stampKey = ShaderCookStampInternal::makeStampKey( normSource, shadersDir );
         const auto   iter     = stamp._mapHash.find( stampKey );
         return iter != stamp._mapHash.end() && iter->second == sourceHash;
+    }
+
+    void ShaderCooker::verifyCookedShaders( string_view resourceRoot, string_view shaderFolder, vector<string>& outListProblem )
+    {
+        if ( resourceRoot.empty() || shaderFolder.empty() )
+        {
+            ShaderCookStampInternal::appendProblem( outListProblem, "shader verification needs a resource root and a shader folder (got '%#', '%#')", resourceRoot, shaderFolder );
+            return;
+        }
+        vector<string> listDomain;
+        ShaderCookStampInternal::collectShaderDomains( resourceRoot, listDomain );
+        for ( const string& domain : listDomain )
+        {
+            ShaderCookStampInternal::verifyDomain( resourceRoot, domain, shaderFolder, outListProblem );
+        }
     }
 } // namespace sw

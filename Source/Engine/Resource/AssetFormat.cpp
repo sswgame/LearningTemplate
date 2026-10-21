@@ -60,6 +60,16 @@ namespace sw
         return false;
     }
 
+    bool AssetCookPath::isCookedOutput( string_view path )
+    {
+        for ( const AssetFormatInternal::CookSuffix& suffix : AssetFormatInternal::kArrCookSuffix )
+        {
+            if ( StringUtil::endsWith( path, suffix._cooked, true ) )
+                return true;
+        }
+        return false;
+    }
+
     bool AssetCookPath::isCookableSource( string_view path, AssetKind kind )
     {
         for ( const AssetFormatInternal::CookSuffix& suffix : AssetFormatInternal::kArrCookSuffix )

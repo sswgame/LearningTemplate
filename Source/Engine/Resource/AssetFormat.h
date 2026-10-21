@@ -60,6 +60,8 @@ namespace sw
         static string toCookedPath( string_view path );
         /** @brief 쿠커가 쿠킹하는 저작 소스(`.scene.xml` · `.prefab.xml` · `.prefab.json`)이면 true 입니다. */
         static bool isCookableSource( string_view path );
+        /** @brief 쿠커가 만드는 쿠킹본 이름(`.scene.bin` · `.prefab.bin`)이면 true 입니다. 소스 트리에서 보이면 낡은 잔재입니다(팩 쿠커가 넣지 않는다). */
+        static bool isCookedOutput( string_view path );
         /**
          * @brief @p path 가 @p kind(`Scene` · `Prefab`)의 저작 소스이면 true 입니다. 다른 종류는 늘 false 입니다.
          * @details 에디터가 "이것은 씬 · 프리팹인가" 를 이것으로 묻는다(`EditorAssetTypeRegistry`). 에디터가 접미사 표를 따로 들면
