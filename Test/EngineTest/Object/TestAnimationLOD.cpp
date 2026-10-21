@@ -341,6 +341,36 @@ SW_TEST_CASE( AnimationLODTest, FrustumVisibilityAcrossViews )
 }
 
 /**
+ * @brief [AnimationLODTest] 대기 뷰(컷 프리롤) — 지금 뷰에는 없어도 곧 넘어갈 카메라에 보이면 포즈를 만들고, 대기 뷰를 지우면 다시 쉰다
+ */
+SW_TEST_CASE( AnimationLODTest, PendingViewWarmsUnitsOfTheNextCut )
+{
+    GameObjectManager      manager;
+    SkeletalMeshComponent* pUnit = TestAnimationLODInternal::createUnit( manager, "NextCut", 3, float3{ 0.0f, 0.0f, -10.0f } );
+    SW_ASSERT_NOT_NULL( pUnit );
+    manager.flushSceneTransforms();
+    TestAnimationLODInternal::CountingTask task( 0.1f );
+    pUnit->registerAnimationPhaseTask( &task );
+    AnimationSystem& system = manager.getSubsystem<AnimationSystem>();
+    system.setLODSettings( AnimationLODSettings::makeDefault() );
+    system.evaluate( 0.016f );
+    system.setLODViews( vector<AnimationLODView>{ TestAnimationLODInternal::makeForwardView( float3{}, float3{ 0.0f, 0.0f, 1.0f } ) } );
+    system.evaluate( 0.016f );
+    SW_EXPECT_FALSE( pUnit->isVisibleHint() );
+
+    system.setPendingLODView( TestAnimationLODInternal::makeForwardView( float3{}, float3{ 0.0f, 0.0f, -1.0f } ) );
+    const uint32 before = pUnit->getPoseEvaluationCount();
+    system.evaluate( 0.016f );
+    SW_EXPECT_TRUE( pUnit->isVisibleHint() );
+    SW_EXPECT_EQUAL( before + 1u, pUnit->getPoseEvaluationCount() );
+
+    system.clearPendingLODView();
+    system.evaluate( 0.016f );
+    SW_EXPECT_FALSE( pUnit->isVisibleHint() );
+    pUnit->unregisterAnimationPhaseTask( &task );
+}
+
+/**
  * @brief [AnimationLODTest] 숨긴 유닛 — 뷰 한가운데 있어도 포즈를 만들지 않고(1인칭에서 숨긴 몸), 다시 보이면 만들며, 화면 밖 애니메이션을 켜면 숨겨도 만든다
  */
 SW_TEST_CASE( AnimationLODTest, HiddenUnitSkipsPoseUntilShown )

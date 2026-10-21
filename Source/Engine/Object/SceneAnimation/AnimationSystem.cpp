@@ -61,6 +61,7 @@ namespace sw
         , _listLevelStart{}
         , _listLODClient{}
         , _listLODView{}
+        , _pendingLODView{}
         , _listScratchLODState{}
         , _listScratchBudgetItem{}
         , _lodSettings{}
@@ -87,6 +88,7 @@ namespace sw
         , _bCrowdSettingsReady{ SW_FALSE }
         , _bCrowdSettingsFailed{ SW_FALSE }
         , _bHasLODViewPosition{ SW_FALSE }
+        , _bHasPendingLODView{ SW_FALSE }
     {
     }
 
@@ -178,6 +180,17 @@ namespace sw
         _bLODViewsSet = SW_FALSE;
     }
 
+    void AnimationSystem::setPendingLODView( const AnimationLODView& view )
+    {
+        _pendingLODView     = view;
+        _bHasPendingLODView = SW_TRUE;
+    }
+
+    void AnimationSystem::clearPendingLODView()
+    {
+        _bHasPendingLODView = SW_FALSE;
+    }
+
     void AnimationSystem::setLODSettings( const AnimationLODSettings& settings )
     {
         _lodSettings       = settings;
@@ -238,6 +251,9 @@ namespace sw
                 {
                     screenSize = MathUtil::max( screenSize, AnimationLODUtil::computeScreenSize( view, center, radius ) );
                 }
+                // 대기 뷰(곧 넘어갈 컷)에서 보일 유닛도 지금부터 그 크기로 판정한다 — 컷 첫 프레임에 낮은 LOD · 지난 포즈로 보이지 않게.
+                if ( _bHasPendingLODView == SW_TRUE )
+                    screenSize = MathUtil::max( screenSize, AnimationLODUtil::computeScreenSize( _pendingLODView, center, radius ) );
                 bVisible = screenSize > 0.0f;
             }
             AnimationLODState& state = _listScratchLODState[clientIndex];

@@ -19,4 +19,4 @@
 
 ## L4 본 LOD 를 메시 LOD 와 묶기
 
-- 메시 LOD([PreloadAndLod](Candidates-gameplay.md#preloadandlod) 의 메시 LOD)가 들어오면 본 LOD 단계를 메시 LOD 단계에 맞춘다(낮은 메시 LOD 에서 쓰지 않는 본은 평가하지 않는다).
+- 메시 LOD([PreloadAndLod](PreloadAndLod.md) P5)가 들어오면 본 LOD 단계를 메시 LOD 단계에 맞춘다(낮은 메시 LOD 에서 쓰지 않는 본은 평가하지 않는다).

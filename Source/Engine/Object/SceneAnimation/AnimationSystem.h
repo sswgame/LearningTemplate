@@ -229,6 +229,13 @@ namespace sw
         void setLODViews( const vector<AnimationLODView>& listView );
         /** @brief 뷰를 지워 LOD 를 끕니다. */
         void clearLODViews();
+        /**
+         * @brief 곧 넘어갈 시점(대기 뷰 — 컷 프리롤)을 LOD 판정에 더합니다. 유닛의 화면 크기는 뷰들과 이 뷰 중 큰 쪽이라, 그 시점에서 보일 유닛이 컷 전부터 포즈를 만든다.
+         * @details 게임(카메라 관리자의 `setPendingView`)이 프레임마다 그 카메라의 뷰-투영으로 넣고, 컷이 끝나면 지운다. 뷰 목록(`setLODViews`)을 넣지 않은 실행에서는 LOD 가 꺼져 있어 쓰이지 않는다.
+         */
+        void setPendingLODView( const AnimationLODView& view );
+        void clearPendingLODView();
+        bool hasPendingLODView() const { return _bHasPendingLODView == SW_TRUE; }
         /** @brief LOD 테이블을 정합니다(테스트, 게임). 정하지 않으면 처음 판정할 때 `AnimationLODSettings::kResourcePath` 를 읽습니다. */
         void                        setLODSettings( const AnimationLODSettings& settings );
         const AnimationLODSettings& getLODSettings() const { return _lodSettings; }
@@ -300,6 +307,7 @@ namespace sw
         vector<uint32>                         _listLevelStart; ///< `_listActive` 안의 레벨 시작 위치다. 끝 위치를 하나 더 둔다
         vector<IAnimationLODClient*>           _listLODClient;
         vector<AnimationLODView>               _listLODView;
+        AnimationLODView                       _pendingLODView;        ///< 대기 뷰(`setPendingLODView`) — `_bHasPendingLODView` 일 때만 판정에 든다
         vector<AnimationLODState>              _listScratchLODState;   ///< 판정 중 클라이언트별 상태다(재사용)
         vector<AnimationBudgetItem>            _listScratchBudgetItem; ///< 예산 배분 입력(재사용)
         AnimationLODSettings                   _lodSettings;
@@ -326,5 +334,6 @@ namespace sw
         uint8              _bCrowdSettingsReady;  ///< 군중 테이블을 정했거나 읽었다
         uint8              _bCrowdSettingsFailed; ///< 군중 테이블 파일을 못 읽었다 — 군중을 묶지 않는다
         uint8              _bHasLODViewPosition;  ///< 거리 LOD 기준점을 정했다
+        uint8              _bHasPendingLODView;   ///< 대기 뷰가 있다
     };
 } // namespace sw

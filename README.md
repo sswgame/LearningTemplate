@@ -39,6 +39,7 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [LongFunctions](docs/plans/LongFunctions.md) — 긴 함수 정리 기준 (2026-10-18) | 구현중 | 해당없음 | 없음 | project | C-18 |
 | - | [OnlineKits](docs/plans/OnlineKits.md) — 온라인 키트 마감 계획 (2026-10-21) | 구현중 | 22/34 | 없음 | network | D7-5 |
 | - | [PairedAnimation](docs/plans/PairedAnimation.md) — 페어드 애니메이션(여러 개체가 한 타임라인으로 도는 애니메이션) | 구현중 | 6/6 | 없음 | gameplay | D4-6 |
+| - | [PreloadAndLod](docs/plans/PreloadAndLod.md) — 프리로딩 · LOD · 사전 준비 | 구현중 | 3/7 | 없음 | gameplay | D4-7 |
 | - | [RigEditing](docs/plans/RigEditing.md) — 후처리 리그 편집 저장과 기즈모 | 구현중 | 2/3 | 없음 | gameplay | D4-6 |
 | - | [ServerDebug](docs/plans/ServerDebug.md) — 서버 디버깅 계획 — 에디터에서 서버 · 멀티플레이를 손쉽게 보는 길 | 구현중 | 4/15 | 없음 | network | D7-3 |
 | - | [ShooterCharacterIntegration](docs/plans/ShooterCharacterIntegration.md) — Shooter3D 캐릭터 통합의 남은 것 | 구현중 | 1/4 | 없음 | gameplay | D4-10 |
@@ -51,7 +52,7 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [StructuralOptimization](docs/plans/StructuralOptimization.md) — 구조 최적화 측정 표 (A · B) | 측정대기 | 해당없음 | 없음 | engine | 없음 |
 | - | [MotionMatching](docs/plans/MotionMatching.md) — 모션 매칭 (보류) | 보류 | 해당없음 | 없음 | gameplay | D4-16 |
 
-후보 문서 9개 · 후보 절 124개
+후보 문서 9개 · 후보 절 123개
 <!-- status-board:end -->
 
 이 저장소에서 볼 수 있는 것은 다음과 같습니다.

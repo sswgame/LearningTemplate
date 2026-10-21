@@ -10,6 +10,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
+#include "Engine/Object/SceneAnimation/AnimationLOD.h"
+#include "Engine/Object/SceneAnimation/AnimationSystem.h"
 #include "Engine/UI/Input/UIInputMapView.h"
 #include "Engine/UI/UISystem.h"
 
@@ -220,5 +222,26 @@ namespace sw
         const bool bTargetCut = pTargetCamera != nullptr && pTargetCamera->consumeCut();
         if ( _blender.consumeCut() || bTargetCut )
             pCamera->markCut();
+        updatePendingLODView();
+    }
+
+    void CameraManagerComponent::updatePendingLODView()
+    {
+        // 대기 뷰(컷 프리롤)의 카메라를 애니메이션 LOD 에 넣는다 — 그 시점에서 보일 캐릭터가 컷 첫 프레임부터 제 LOD · 새 포즈다.
+        GameObject*        pOwner   = getOwner();
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        if ( pManager == nullptr )
+            return;
+        AnimationSystem&       animation      = pManager->getSubsystem<AnimationSystem>();
+        const CameraComponent* pPendingCamera = hasPendingView() ? findTargetCamera( _pendingView._camera ) : nullptr;
+        if ( pPendingCamera == nullptr )
+        {
+            if ( animation.hasPendingLODView() )
+                animation.clearPendingLODView();
+            return;
+        }
+        // shortcut: 대기 카메라가 그릴 화면의 가로세로 비를 모르므로 이 카메라와 같은 화면이라고 보고 16:9 로 잡는다 — 분할 화면 · 세로 화면이 생기면 뷰의 비를 받는다.
+        constexpr float32 kPendingViewAspect = 16.0f / 9.0f;
+        animation.setPendingLODView( AnimationLODView::make( pPendingCamera->getViewProjectionMatrix( kPendingViewAspect ), pPendingCamera->getCameraPosition() ) );
     }
 } // namespace sw

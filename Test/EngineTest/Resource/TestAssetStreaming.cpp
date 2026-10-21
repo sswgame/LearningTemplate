@@ -7,6 +7,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
+#include "Engine/Resource/PreloadSet.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Resource/ResourcePaths.h"
 
@@ -98,6 +99,41 @@ SW_TEST_CASE( AssetStreamingTest, FailedRequestIsNotLoadedAndRetries )
     SW_EXPECT_TRUE( bSecondSuccess );
     SW_EXPECT_TRUE( queue.isLoaded( missingPath ) );
 
+    queue.shutdown();
+}
+
+/**
+ * @brief [AssetStreamingTest] 프리로드 묶음은 예산(동시 요청 1) 안에서 경로를 차례로 걸고, 실패를 건너뛰며 끝까지 가서 진행률 1 · 실패 목록을 낸다
+ * @details 없는 경로 셋 — 모두 실패로 끝난다. 경로가 없는 묶음은 처음부터 끝났다(진행률 1).
+ */
+SW_TEST_CASE( AssetStreamingTest, PreloadSetWalksEveryPathWithinTheBudget )
+{
+    sw::AssetStreamingQueue queue;
+    queue.initialize();
+    sw::vector<sw::string> listPath;
+    for ( const utf8* pName : { "sw_preload_missing_a.dat", "sw_preload_missing_b.dat", "sw_preload_missing_c.dat" } )
+    {
+        listPath.push_back( test::makeTempPath( pName ) );
+        (void)sw::FileUtil::removeFile( listPath.back() ); // 없는 파일이어야 한다 — 이미 없으면 지우지 못해도 된다
+    }
+    sw::PreloadSet set( listPath, sw::StreamingPriority::Normal, 1u );
+    SW_EXPECT_EQUAL( 3u, set.getTotalCount() );
+    SW_EXPECT_FALSE( set.isComplete() );
+    for ( int32 attempt = 0; attempt < 300 && set.isComplete() == false; ++attempt )
+    {
+        set.update( queue );
+        queue.update();
+        if ( set.isComplete() )
+            break;
+        std::this_thread::sleep_for( std::chrono::milliseconds( 2 ) );
+    }
+    SW_EXPECT_TRUE( set.isComplete() );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, set.getProgress(), 1e-6f );
+    SW_EXPECT_EQUAL( size_t( 3 ), set.getFailedAssets().size() );
+
+    const sw::PreloadSet empty( {}, sw::StreamingPriority::Normal, 1u );
+    SW_EXPECT_TRUE( empty.isComplete() );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, empty.getProgress(), 0.0f );
     queue.shutdown();
 }
 
