@@ -20,6 +20,9 @@
  *
  *          머티리얼 define: `MATERIAL_OUTLINE`(외곽선 패스에 들어간다) · `MATERIAL_ALPHA_CUTOFF`(알파 컷오프) · `MATERIAL_TWO_SIDED`(양면 —
  *          컬링을 끄는 것은 PSO 변형이 하고, 셰이더는 뒷면의 노멀을 뒤집는다) · `MATERIAL_BLEND_TRANSLUCENT`(반투명, 머티리얼 blendMode 와 짝).
+ *          `MATERIAL_FORWARD_ONLY` 는 늘 있어야 한다 — G버퍼 퍼뮤테이션은 `#error` 로 쿠킹에서 멈춘다.
+ *
+ *          UV 애니메이션(MToon uvAnimation*)은 PassCB `g_SwMaterialTime` 으로 픽셀에서 UV 를 스크롤 · 회전한다(computeAnimatedUv).
  */
 #include "lighting.hlsli"
 
@@ -58,8 +61,18 @@ SW_MATERIAL_BEGIN
 	uint   shadingShiftMap;    // 셰이딩 시프트 텍스처(shadingShiftTexture) — r 을 쓴다. 없으면 0 을 더한다
 	uint   rimMultiplyMap;     // 림 곱 텍스처(rimMultiplyTexture · 0.x _RimTexture) — 림(프레넬 + 맷캡)에 rgb 를 곱한다
 	uint   outlineWidthMap;    // 외곽선 두께 곱 텍스처(outlineWidthMultiplyTexture · 0.x _OutlineWidthTexture) — 정점에서 g 를 두께에 곱한다
+	float  uvAnimationScrollSpeedX;  // UV 스크롤 u 속도(uvAnimationScrollXSpeedFactor, UV / 초)
+	float  uvAnimationScrollSpeedY;  // UV 스크롤 v 속도(uvAnimationScrollYSpeedFactor, glTF UV — v 는 아래가 +)
+	float  uvAnimationRotationSpeed; // UV 회전 속도(uvAnimationRotationSpeedFactor, 라디안 / 초, 중심 (0.5, 0.5))
+	uint   uvAnimationMaskMap;       // UV 애니메이션 마스크(uvAnimationMaskTexture · 0.x _UvAnimMaskTexture) — b 를 쓴다. 없으면 흰색이라 전체가 움직인다
 }
 SW_MATERIAL_END
+
+// 포워드 전용이다 — 계단 · 림 · 맷캡은 G버퍼로 나타낼 수 없다. 머티리얼에 MATERIAL_FORWARD_ONLY 가 있으면 디퍼드의 G버퍼 패스가 이 배치를 빼고
+// ForwardOnlyOpaque 패스가 포워드로 그린다. 그 define 을 빠뜨린 머티리얼이 G버퍼에서 조용히 램버트로 칠해지지 않게 쿠킹에서 멈춘다.
+#if defined( SW_PASS_GBUFFER )
+#error "toon.hlsl is forward-only: the material must list MATERIAL_FORWARD_ONLY in _alwaysDefines (deferred draws it in ForwardOnlyOpaque)"
+#endif
 
 #if defined( SW_PASS_SHADOW ) || defined( SW_PASS_DEPTH_PREPASS )
 #define SW_TOON_DEPTH_PASS 1
@@ -72,6 +85,7 @@ struct PSInput
 	float4 color                       : COLOR;
 	float2 uv                          : TEXCOORD0;
 	nointerpolation uint materialIndex : TEXCOORD1;
+	SW_APPEARANCE_VARYING // 등장 디더 변형만 등장 비율을 넘긴다(binding.hlsli 8-1)
 };
 #elif defined( SW_PASS_MESH_OUTLINE )
 struct PSInput
@@ -85,6 +99,7 @@ struct PSInput
 	nointerpolation float4 outlineColor   : TEXCOORD3; // rgb 색 · a 빛 섞기
 	nointerpolation float4 alphaParams    : TEXCOORD4; // x 기본색 알파 · y 컷오프
 	nointerpolation uint   baseColorMap   : TEXCOORD5;
+	SW_APPEARANCE_VARYING
 };
 #else
 struct PSInput
@@ -96,12 +111,13 @@ struct PSInput
 	nointerpolation uint materialIndex : TEXCOORD2;
 	float3 worldPosition               : TEXCOORD3;
 	float4 tangent                     : TEXCOORD4; // xyz 월드 탄젠트 · w 바이탄젠트 부호(정점 탄젠트 그대로)
+	SW_APPEARANCE_VARYING
 };
 #endif
 
 /**
  * @brief 로컬 탄젠트를 월드로 옮깁니다. 탄젠트는 표면을 따라가는 방향이라 노멀(여인수 행렬)과 달리 월드 행렬 그대로 곱한다.
- * @note 스킨 · 모프 메시는 레스트 탄젠트다(스키닝이 탄젠트를 돌리지 않는다) — 픽셀이 변형된 노멀에 다시 직교화한다.
+ * @note 스킨 · 모프 메시는 컴퓨트가 돌린 탄젠트다(swLoadMorphedTangent) — 픽셀이 보간된 노멀에 한 번 더 직교화한다.
  */
 float3 computeWorldTangent( float3 localTangent, float4x4 world )
 {
@@ -218,6 +234,23 @@ float2 computeMatcapUv( float3 normal, float3 viewDirection )
 	return float2( matcapUv.x, 1.0f - matcapUv.y );
 }
 
+/**
+ * @brief MToon UV 애니메이션을 적용한 UV 입니다 — (0.5, 0.5) 를 중심으로 돌린 뒤 스크롤한다. 마스크(b)가 0 인 텍셀은 움직이지 않습니다.
+ * @details 시계는 PassCB g_SwMaterialTime(장면 애니메이션 시계)이다. 맷캡 UV 와 외곽선(정점이 머티리얼을 읽는 퍼뮤테이션)에는 적용하지 않는다.
+ */
+float2 computeAnimatedUv( SwMaterialData material, float2 uv )
+{
+	// VRMC_materials_mtoon-1.0 "Transform Order" 의 식 그대로다(three-vrm mtoon.frag 와 같다): 먼저 (0.5, 0.5) 중심으로 돌리고 그 뒤에 스크롤한다.
+	// 회전 행렬은 [ cos sin ; -sin cos ] — U 오른쪽 · V 아래 공간에서 반시계(KHR_texture_transform 과 같은 방향)다. 마스크는 각과 스크롤 양 모두에 곱한다.
+	const float  mask     = swSampleMaterialTexture( material.uvAnimationMaskMap, uv ).b;
+	const float  angle    = material.uvAnimationRotationSpeed * g_SwMaterialTime * mask;
+	const float  cosAngle = cos( angle );
+	const float  sinAngle = sin( angle );
+	const float2 centered = uv - 0.5f;
+	const float2 rotated  = float2( cosAngle * centered.x + sinAngle * centered.y, -sinAngle * centered.x + cosAngle * centered.y ) + 0.5f;
+	return rotated + float2( material.uvAnimationScrollSpeedX, material.uvAnimationScrollSpeedY ) * ( g_SwMaterialTime * mask );
+}
+
 #if defined( SW_TOON_DEPTH_PASS )
 
 PSInput VSMain( SwVertexInput input, uint vertexId : SV_VertexID )
@@ -237,14 +270,16 @@ PSInput VSMain( SwVertexInput input, uint vertexId : SV_VertexID )
 	output.color         = input.color;
 	output.uv            = input.uv;
 	output.materialIndex = instance.materialIndex;
+	SW_APPEARANCE_WRITE( output, instance )
 	return output;
 }
 
 void PSMain( PSInput input )
 {
+	SW_APPEARANCE_CLIP( input )
 	// 기본 패스와 같은 알파(정점 색 × 기본색 × 기본 텍스처)로 같은 자리를 버린다.
 	const SwMaterialData material = SW_MATERIAL( input.materialIndex );
-	const float alpha = input.color.a * material.baseColor.a * swSampleMaterialTexture( material.baseColorMap, input.uv ).a;
+	const float alpha = input.color.a * material.baseColor.a * swSampleMaterialTexture( material.baseColorMap, computeAnimatedUv( material, input.uv ) ).a;
 	clip( alpha - material.alphaCutoff );
 }
 
@@ -293,8 +328,10 @@ PSInput VSMain( SwVertexInput input, uint vertexId : SV_VertexID )
 	output.position      = swComputeClipPosition( worldPosition, g_ViewProj );
 	output.worldPosition = worldPosition.xyz;
 	output.materialIndex = instance.materialIndex;
-	output.tangent       = float4( computeWorldTangent( input.tangent.xyz, instance.world ), input.tangent.w );
+	const float4 localTangent = swLoadMorphedTangent( instance.meshBatchIndex, vertexId, input.tangent );
+	output.tangent       = float4( computeWorldTangent( localTangent.xyz, instance.world ), localTangent.w );
 #endif
+	SW_APPEARANCE_WRITE( output, instance )
 	return output;
 }
 
@@ -302,6 +339,7 @@ PSInput VSMain( SwVertexInput input, uint vertexId : SV_VertexID )
 
 float4 PSMain( PSInput input ) : SV_TARGET
 {
+	SW_APPEARANCE_CLIP( input )
 #if defined( MATERIAL_ALPHA_CUTOFF )
 	// 머리카락 카드처럼 알파로 오린 면은 외곽선도 같은 모양으로 오린다.
 	const float alpha = input.color.a * input.alphaParams.x * swSampleMaterialTexture( input.baseColorMap, input.uv ).a;
@@ -317,8 +355,11 @@ float4 PSMain( PSInput input ) : SV_TARGET
 
 SW_SURFACE_OUTPUT PSMain( PSInput input, bool bFrontFace : SV_IsFrontFace )
 {
+	SW_APPEARANCE_CLIP( input )
 	const SwMaterialData material = SW_MATERIAL( input.materialIndex );
-	float4 litColor = input.color * material.baseColor * swSampleMaterialTexture( material.baseColorMap, input.uv );
+	// UV 애니메이션(MToon uvAnimation*)은 모든 머티리얼 텍스처에 같은 UV 로 적용한다 — 맷캡만 시선 UV 다.
+	const float2 uv = computeAnimatedUv( material, input.uv );
+	float4 litColor = input.color * material.baseColor * swSampleMaterialTexture( material.baseColorMap, uv );
 #if defined( MATERIAL_ALPHA_CUTOFF )
 	clip( litColor.a - material.alphaCutoff );
 #endif
@@ -328,14 +369,11 @@ SW_SURFACE_OUTPUT PSMain( PSInput input, bool bFrontFace : SV_IsFrontFace )
 	// 양면 머티리얼의 뒷면은 노멀이 반대다 — 뒤집지 않으면 머리카락 안쪽이 바깥 빛으로 칠해진다.
 	normal = bFrontFace ? normal : -normal;
 #endif
-	normal = applyNormalMap( material.normalMap, material.normalScale, input.uv, normal, input.tangent );
+	normal = applyNormalMap( material.normalMap, material.normalScale, uv, normal, input.tangent );
 	// 셰이딩 시프트 텍스처(MToon shadingShiftTexture) — 없으면 더하지 않는다(흰색을 더하면 배율만큼 밀린다).
-	const float shadingShift = material.shadingShift + ( ( material.shadingShiftMap == kInvalidIndex ) ? 0.0f : swSampleMaterialTexture( material.shadingShiftMap, input.uv ).r * material.shadingShiftTextureScale );
+	const float shadingShift = material.shadingShift + ( ( material.shadingShiftMap == kInvalidIndex ) ? 0.0f : swSampleMaterialTexture( material.shadingShiftMap, uv ).r * material.shadingShiftTextureScale );
 
-#if defined( SW_PASS_GBUFFER )
-	// 디퍼드의 G버퍼는 표면만 적는다 — 계단 셰이딩은 포워드 경로의 것이다(디퍼드 조명은 램버트로 칠한다).
-	return swStoreSurface( float4( 0.0f, 0.0f, 0.0f, 0.0f ), litColor, normal, input.worldPosition, kSurfaceRoughness, kSurfaceMetallic );
-#elif SW_VIEWMODE_SKIPS_LIGHTING
+#if SW_VIEWMODE_SKIPS_LIGHTING
 	return swStoreSurface( float4( litColor.rgb, litColor.a ), litColor, normal, input.worldPosition, kSurfaceRoughness, kSurfaceMetallic );
 #else
 #if defined( SW_VIEWMODE_LIGHTINGONLY )
@@ -343,7 +381,7 @@ SW_SURFACE_OUTPUT PSMain( PSInput input, bool bFrontFace : SV_IsFrontFace )
 	litColor.rgb            = SW_VIEWMODE_LIGHTINGONLY_ALBEDO;
 	const float3 shadeColor = SW_VIEWMODE_LIGHTINGONLY_ALBEDO;
 #else
-	const float3 shadeColor = input.color.rgb * material.shadeColor.rgb * swSampleMaterialTexture( material.shadeMap, input.uv ).rgb;
+	const float3 shadeColor = input.color.rgb * material.shadeColor.rgb * swSampleMaterialTexture( material.shadeMap, uv ).rgb;
 #endif
 	const float  shadow     = swSampleShadowAtWorld( input.worldPosition, normal );
 
@@ -359,10 +397,10 @@ SW_SURFACE_OUTPUT PSMain( PSInput input, bool bFrontFace : SV_IsFrontFace )
 	float3       rim           = pow( fresnelBase, max( material.rimFresnelPower, 1e-4f ) ) * material.rimColor.rgb;
 	if ( material.matcapMap != kInvalidIndex )
 		rim += material.matcapColor.rgb * swSampleMaterialTexture( material.matcapMap, computeMatcapUv( normal, viewDirection ) ).rgb;
-	rim *= swSampleMaterialTexture( material.rimMultiplyMap, input.uv ).rgb; // 림 곱 텍스처(rimMultiplyTexture) — 없으면 흰색이라 그대로
+	rim *= swSampleMaterialTexture( material.rimMultiplyMap, uv ).rgb; // 림 곱 텍스처(rimMultiplyTexture) — 없으면 흰색이라 그대로
 	color += rim * lerp( float3( 1.0f, 1.0f, 1.0f ), directLighting + ambient, material.rimLightingMix );
 
-	color += material.emissiveColor.rgb * material.emissiveStrength * swSampleMaterialTexture( material.emissiveMap, input.uv ).rgb;
+	color += material.emissiveColor.rgb * material.emissiveStrength * swSampleMaterialTexture( material.emissiveMap, uv ).rgb;
 
 #if defined( MATERIAL_BLEND_TRANSLUCENT )
 	return swStoreSurface( float4( color, litColor.a ), litColor, normal, input.worldPosition, kSurfaceRoughness, kSurfaceMetallic );

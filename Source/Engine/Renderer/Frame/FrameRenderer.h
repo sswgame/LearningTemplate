@@ -27,6 +27,7 @@
 #include "Engine/Renderer/Frame/View/RenderViewScheduler.h"
 #include "Engine/Renderer/Graph/RenderGraph.h"
 #include "Engine/Renderer/Light/GPULightBuffer.h"
+#include "Engine/Renderer/Light/Light2DCookieAtlas.h"
 #include "Engine/Renderer/Light/ShadowSetup.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
@@ -251,8 +252,9 @@ namespace sw
          * @brief 이 배치를 그릴 PSO 입니다. 머티리얼 퍼뮤테이션, 뷰 모드, 컬 반전을 적용한 변형이 있으면 그것을, 없으면 패스 PSO 를 그대로 반환합니다.
          * @details 드로우 경로가 배치마다 부르는 읽기 전용 조회다. 캐시는 `ensureMaterialPSOs` 가 기록 전에 채운다.
          *          거울 변환을 건 배치(`GPUMeshBatch::_bReverseCulling`)는 패스의 컬 모드를 뒤집은 변형으로 그린다.
+         * @param viewMode 이 드로우의 보기 모드입니다. 보통 지금 그리는 뷰의 설정이고, 겹침 모드(ShadedWireframe)의 첫 드로우는 Lit 입니다.
          */
-        RHIPipelineStateHandle psoForBatch( RHIPipelineStateHandle passPSO, const GPUMeshBatch& batch ) const;
+        RHIPipelineStateHandle psoForBatch( RHIPipelineStateHandle passPSO, const GPUMeshBatch& batch, RenderViewMode viewMode ) const;
         /**
          * @brief 이 패스가 이 배치를 그리는지 반환합니다. 패스가 머티리얼 define 으로 배치를 거르면(메시 외곽선) 퍼뮤테이션에 그 define 이 있어야 합니다.
          * @details 판정은 `FrameRendererUtil::drawsMaterialInPass` 하나로 한다. 머티리얼 PSO 변형과 셰이더 쿠커도 같은 판정을 쓴다.
@@ -392,18 +394,22 @@ namespace sw
              */
             ViewShadowData _shadow;
             /// @brief 추가 뷰의 그림자 패스 컬링 입력(행렬 · 절두체 · 자기 컬링 상수 버퍼)입니다. 주 시점은 `_arrView[Shadow]` 를 씁니다.
-            RenderView           _shadowCullInput;
-            uint32               _cullSlot{ 0 };
-            uint32               _shadowCullSlot{ static_cast<uint32>( RenderViewType::Shadow ) }; ///< 그림자 패스가 쓰는 컬링 슬롯(주 시점은 1, 추가 뷰는 자기 슬롯)
-            uint32               _outputWidth{ 0 };                                                ///< 출력 크기(렌더 텍스처, 화면 사각형)
-            uint32               _outputHeight{ 0 };
-            uint32               _shadowMapResolution{ 0 };                 ///< 풀이 가진 그림자 맵 한 변(0이면 아직 없음). 품질이 바뀌면 풀을 다시 만든다.
-            uint32               _lightGridIndex{ invalid_index::kUint32 }; ///< 이번 프레임 이 뷰의 라이트 그리드 번호(`GPULightBuffer::getGridBase`). 없으면 셰이더는 목록 전체를 돈다
+            RenderView _shadowCullInput;
+            uint32     _cullSlot{ 0 };
+            uint32     _shadowCullSlot{ static_cast<uint32>( RenderViewType::Shadow ) }; ///< 그림자 패스가 쓰는 컬링 슬롯(주 시점은 1, 추가 뷰는 자기 슬롯)
+            uint32     _outputWidth{ 0 };                                                ///< 출력 크기(렌더 텍스처, 화면 사각형)
+            uint32     _outputHeight{ 0 };
+            uint32     _shadowMapResolution{ 0 };                 ///< 풀이 가진 그림자 맵 한 변(0이면 아직 없음). 품질이 바뀌면 풀을 다시 만든다.
+            uint32     _lightGridIndex{ invalid_index::kUint32 }; ///< 이번 프레임 이 뷰의 라이트 그리드 번호(`GPULightBuffer::getGridBase`). 없으면 셰이더는 목록 전체를 돈다
+            /// @brief 지난번 이 뷰를 그린 뷰-투영입니다(모션 블러의 `g_PrevViewProj`). `_prevViewID` 가 지금 뷰와 다르거나 컷이면 이번 것으로 둔다(속도 0).
+            float4x4             _prevViewProj{};
+            uint64               _prevViewID{ 0 };
             RenderViewOutputKind _outputKind{ RenderViewOutputKind::ScreenRect };
             uint8                _bRenderThisFrame{ SW_FALSE };
             uint8                _bSeenThisFrame{ SW_FALSE };
             uint8                _bHasTransparentRank{ SW_FALSE }; ///< 이번 프레임에 `_transparentRank` 로 정렬한다.
             uint8                _bUsesViewSlotStream{ SW_FALSE }; ///< 이번 프레임에 `_instanceSlotStream` 으로 그린다.
+            uint8                _bHasPrevViewProj{ SW_FALSE };    ///< `_prevViewProj` 가 그려 본 값이다(처음 그리는 뷰는 아니다).
         };
 
         /** @brief 주 출력에 그리는 패스(Present, Canvas)의 대상입니다. 지금 뷰가 정하며 `resolvePresentTarget` 이 구합니다. */
@@ -566,6 +572,8 @@ namespace sw
         void executeTransparentPass( const PassExecuteInput& input );
         /** @brief 인버티드 헐 외곽선입니다. 와이어프레임 · 표면 값 보기에서는 빠집니다. */
         void executeMeshOutlinePass( const PassExecuteInput& input );
+        /** @brief 인스턴스 강조 외곽선 패스(HighlightOutline · HighlightSense)를 실행합니다 — 패스의 강조 방식인 인스턴스만 정점이 남습니다. */
+        void executeHighlightPass( const PassExecuteInput& input );
         /** @brief 하늘입니다. 씬에 하늘이 없거나 뎁스 · 컬러 출력이 없으면 그리지 않습니다. */
         void executeSkyPass( const PassExecuteInput& input );
         /** @brief TAA 와 히스토리 갱신입니다. 후처리를 끈 뷰와 컷 프레임은 원본을 넘깁니다. */
@@ -662,9 +670,12 @@ namespace sw
         /** @brief 그 PSO 의 레이아웃이 머티리얼 CB 슬롯을 거는지입니다. 거는 셰이더에서만 머티리얼 CB 가 멀티 드로우 병합 키다. */
         bool layoutBindsMaterialCb( RHIPipelineStateHandle batchPSO ) const;
         /** @brief @p other 가 @p head 와 같은 멀티 드로우 묶음에 들 수 있는지입니다(그릴 수 있고 정점 버퍼 · PSO · 머티리얼 바인딩이 같다). */
-        bool isSameDrawGroup( RHIPipelineStateHandle pso, RenderPassType passType, const GPUMeshBatch& head, const GPUMeshBatch& other ) const;
-        /** @brief 묶음 하나를 그립니다 — 바뀐 정점 버퍼 · 배치 PSO 만 다시 걸고, 머티리얼 바인딩 뒤 간접 인자 @p argIndex 부터 @p groupCount 개를 부릅니다. */
-        void drawBatchGroup( FramePassContext& context, RHIPipelineStateHandle pso, const GPUMeshBatch& head, RHIPipelineStateHandle& ioBoundPSO,
+        bool isSameDrawGroup( RHIPipelineStateHandle pso, RenderPassType passType, RenderViewMode drawMode, const GPUMeshBatch& head, const GPUMeshBatch& other ) const;
+        /**
+         * @brief 묶음 하나를 그립니다 — 바뀐 정점 버퍼 · 배치 PSO 만 다시 걸고, 머티리얼 바인딩 뒤 간접 인자 @p argIndex 부터 @p groupCount 개를 부릅니다.
+         * @return 그렸으면 true 입니다. 그 보기 모드의 머티리얼 변형이 없으면(만들 때 오류를 남겼다) 그리지 않고 false 입니다.
+         */
+        bool drawBatchGroup( FramePassContext& context, RHIPipelineStateHandle pso, RenderViewMode drawMode, const GPUMeshBatch& head, RHIPipelineStateHandle& ioBoundPSO,
                              RHIBufferHandle& ioBoundVertexBuffer, RHIBufferHandle argsBuffer, uint32 argIndex, uint32 groupCount );
         /** @brief 투명 큐(메시 투명 배치와 입자 그리기를 한 순서로)를 지금 열린 투명 패스에 그립니다. */
         void drawTransparentQueue( FramePassContext& context, RHIPipelineStateHandle pso );
@@ -710,6 +721,8 @@ namespace sw
         void registerPassTexture( FramePassContext& context, const hashed_string& canonicalName, string_view attachmentName );
         /** @brief bindless 텍스처 바인딩을 커밋합니다. PassConstantValues 를 갱신하고, 에뮬레이션 백엔드에는 폴백 바인딩을 합니다. */
         void commitBindlessTextureBindings( FramePassContext& context );
+        /** @brief 새로 칸을 받은 쿠키를 아틀라스 칸에 그립니다(프레임 프리패스 리스트, `submitGraph`). 그릴 칸이 없으면 아무것도 하지 않습니다. */
+        void drawLight2DCookieAtlas();
 
         // ------------------------------------------------------------------------------
         // 5) 커맨드 리스트와 그래프 제출
@@ -947,7 +960,10 @@ namespace sw
         /// @brief 씬 직접 경로에서 라이트를 모으는 버퍼입니다. 프레임마다 할당하지 않으려고 보관합니다.
         vector<GPULight> _listScratchLight;
         /// @brief 씬 직접 경로에서 라이트 프로브 SH9 원소를 모으는 버퍼입니다(`collectSceneLights`). 프레임마다 재사용합니다.
-        vector<float4> _listScratchLightProbe;
+        vector<float4>         _listScratchLightProbe;
+        vector<GPULightCookie> _listScratchLightCookie; ///< 직접 경로의 쿠키 목록(`collectSceneLights`)
+        /** @brief 2D 빛 쿠키 아틀라스입니다(칸 나누기 · 쿠키 텍스처 수명 · 아틀라스 렌더 타깃). */
+        Light2DCookieAtlas _cookieAtlas;
         /// @brief 씬 직접 경로에서 그림자를 켠 점광 · 스폿의 라이트 원소 번호입니다. 프레임마다 재사용합니다.
         vector<uint32> _listScratchShadowLightIndex;
         /**

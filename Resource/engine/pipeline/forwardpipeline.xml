@@ -75,6 +75,27 @@
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
+		<!-- 강조 외곽선(highlightoutline.hlsl) — 강조 방식이 Outline 인 인스턴스만 뒤집은 껍질로 깊이 테스트해 그린다(상호작용 대상). 두께는 화면 높이 비율. -->
+		<RenderGraphPassDesc _name="HighlightOutline"
+		                     _type="HighlightOutline"
+		                     _depthAttachment="SceneDepth"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="Front"
+		                     _bEnableDepthTest="true"
+		                     _bEnableDepthWrite="false"
+		                     _bEnableBlend="false">
+			<_listInput>
+				<item>SceneColor</item>
+				<item>SceneDepth</item>
+			</_listInput>
+			<_listOutput>
+				<item>SceneColor</item>
+			</_listOutput>
+			<_listPermutation>
+				<item>SW_HIGHLIGHT_WIDTH=0.004</item>
+			</_listPermutation>
+		</RenderGraphPassDesc>
 		<!-- 하늘(SkyComponent) — 불투명 · 외곽선 뒤, 반투명 앞. 깊이 1 의 풀스크린 삼각형을 깊이 테스트로 그려 빈 곳만 칠한다(쓰기 없음). 씬에 하늘이 없으면 돌지 않는다. -->
 		<RenderGraphPassDesc _name="Sky"
 		                     _type="Sky"
@@ -113,6 +134,27 @@
 			</_listOutput>
 			<_listPermutation>
 				<item>SW_TRANSPARENT=1</item>
+			</_listPermutation>
+		</RenderGraphPassDesc>
+		<!-- 감각 모드 외곽선 — 강조 방식이 Sense 인 인스턴스만 깊이 테스트 없이 그려 벽 너머에서도 보인다. 반투명 뒤. -->
+		<RenderGraphPassDesc _name="HighlightSense"
+		                     _type="HighlightSense"
+		                     _depthAttachment="SceneDepth"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="Front"
+		                     _bEnableDepthTest="false"
+		                     _bEnableDepthWrite="false"
+		                     _bEnableBlend="false">
+			<_listInput>
+				<item>SceneColor</item>
+				<item>SceneDepth</item>
+			</_listInput>
+			<_listOutput>
+				<item>SceneColor</item>
+			</_listOutput>
+			<_listPermutation>
+				<item>SW_HIGHLIGHT_WIDTH=0.004</item>
 			</_listPermutation>
 		</RenderGraphPassDesc>
 		<!-- 피사계 심도 — 후처리 체인(Present) 앞에서 장면 색을 착란원만큼 흐린다. 흐림은 이웃 픽셀을 읽어 체인 한 패스에 합칠 수 없다.

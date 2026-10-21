@@ -1,8 +1,5 @@
 #include "lighting.hlsli"
 
-// 금속도 칸이 없다 — 모든 표면이 유전체다(보기 모드 Metallic 이 0 을 보인다).
-static const float kSurfaceMetallic = 0.0f;
-
 struct PSInput
 {
 	float4 position                    : SV_POSITION;
@@ -13,14 +10,17 @@ struct PSInput
 	// 월드 위치를 넘긴다 — 점광의 거리 감쇠와 그림자 투영이 둘 다 이걸 쓴다(로컬 좌표로 만든 UV 로 그림자를 읽으면
 	// 그림자가 아니라 무늬다).
 	float3 worldPosition : TEXCOORD3;
+	SW_APPEARANCE_VARYING // 등장 디더 변형만 등장 비율을 넘긴다(binding.hlsli 8-1)
 };
 
-// defaultmaterial.material 의 프로퍼티 순서·타입과 1:1 (color/roughness/albedoMap). 머티리얼 패커는
+// defaultmaterial.material 의 프로퍼티 순서·타입과 1:1 (color/roughness/metallic/albedoMap). 머티리얼 패커는
 // 리플렉션 오프셋(StructuredBuffer 원소 레이아웃)으로 채우므로 여기 순서를 바꾸면 에셋도 같이 바꿔야 한다.
+// 금속도 · 거칠기는 PBR 조명 식(lighting.hlsli swShadeLights)과 G버퍼 머티리얼 칸(swStoreSurface)이 읽는다.
 SW_MATERIAL_BEGIN
 {
 	float4 color;
 	float  roughness;
+	float  metallic;
 	uint   albedoMap;
 }
 SW_MATERIAL_END
@@ -46,6 +46,7 @@ PSInput VSMain(SwVertexInput input, uint vertexId : SV_VertexID)
 	// 비균등 스케일을 받으므로 월드 행렬을 그대로 곱하면 늘린 메시의 조명이 틀린다.
 	output.normal = swComputeWorldNormal(localNormal, instance.world);
 	output.materialIndex = instance.materialIndex;
+	SW_APPEARANCE_WRITE( output, instance )
 	return output;
 }
 
@@ -72,6 +73,7 @@ float4 sampleWorldTriplanar(uint textureIndex, float3 worldPosition, float3 worl
 // 타깃이 클리어 값 그대로** 남는다(binding.hlsli 12 절 '픽셀 출력').
 SW_SURFACE_OUTPUT PSMain(PSInput input)
 {
+	SW_APPEARANCE_CLIP( input )
 	float3 normal = normalize(input.normal);
 
 	// 정점 색 x 머티리얼 색 x 알베도 텍스처. 머티리얼은 인스턴스의 materialIndex 로 버퍼에서 읽는다 — 드로우별 바인딩 없음.
@@ -88,7 +90,7 @@ SW_SURFACE_OUTPUT PSMain(PSInput input)
 #if defined( SW_PASS_GBUFFER )
 	// G버퍼 패스는 **조명을 계산하지 않는다** — 표면만 적어 두고 셰이딩은 디퍼드 조명 패스가 한다.
 	// 조명 코드가 통째로 컴파일 아웃되므로 런타임 분기가 아니다(언리얼의 베이스 패스와 같은 구성).
-	return swStoreSurface(float4(0, 0, 0, 0), albedo, normal, input.worldPosition, material.roughness, kSurfaceMetallic);
+	return swStoreSurface(float4(0, 0, 0, 0), albedo, normal, input.worldPosition, material.roughness, material.metallic);
 #else
 #if SW_VIEWMODE_SKIPS_LIGHTING
 	// 보기 모드 Unlit — 조명 · 그림자 · 림 없이 알베도 그대로.
@@ -96,7 +98,7 @@ SW_SURFACE_OUTPUT PSMain(PSInput input)
 #else
 	// 조명 식은 디퍼드와 **같은 함수**다(lighting.hlsli). 두 벌로 두면 두 경로의 그림이 갈라진다.
 	float  shadow = swSampleShadowAtWorld(input.worldPosition, normal);
-	float3 lit = swShadeLights(albedo.rgb, input.worldPosition, normal, shadow);
+	float3 lit = swShadeLights(albedo.rgb, input.worldPosition, normal, shadow, material.roughness, material.metallic);
 	float rim = pow(1.0f - saturate(dot(normal, float3(0, 0, 1))), 2.0f) * 0.15f;
 	lit += rim * g_KeyLightColor.rgb;
 #endif
@@ -105,9 +107,9 @@ SW_SURFACE_OUTPUT PSMain(PSInput input)
 	// 으로 들고 있고(glassmaterial.material), 불투명 변형은 알파 경로가 아예 컴파일되지 않는다 — 불투명
 	// 패스에서 머티리얼 알파가 새어 나오는 일이 없다. 언리얼도 블렌드 모드가 머티리얼의 퍼뮤테이션이다.
 #if defined( MATERIAL_BLEND_TRANSLUCENT )
-	return swStoreSurface(float4(lit, albedo.a), albedo, normal, input.worldPosition, material.roughness, kSurfaceMetallic);
+	return swStoreSurface(float4(lit, albedo.a), albedo, normal, input.worldPosition, material.roughness, material.metallic);
 #else
-	return swStoreSurface(float4(lit, 1.0f), albedo, normal, input.worldPosition, material.roughness, kSurfaceMetallic);
+	return swStoreSurface(float4(lit, 1.0f), albedo, normal, input.worldPosition, material.roughness, material.metallic);
 #endif
 #endif
 }

@@ -83,10 +83,12 @@ enginedefaultassets.xml 의 엔진 셸 경로입니다. 읽기는 `XMLSerializer
 | `_shaderFullscreenTriangle` | `DataPath` | — |  |  | 전체 화면 삼각형 정점 셰이더 |
 | `_shaderSsao` | `DataPath` | — |  |  | SSAO |
 | `_shaderTaa` | `DataPath` | — |  |  | TAA |
+| `_shaderMotionBlur` | `DataPath` | — |  |  | 카메라 모션 블러(지난 프레임 뷰-투영으로 구한 화면 속도) |
 | `_shaderTonemap` | `DataPath` | — |  |  | 톤 매핑 |
 | `_shaderDepthOfField` | `DataPath` | — |  |  | 피사계 심도 — 장면 깊이에서 착란원을 구해 HDR 색을 흐린다 |
 | `_shaderSky` | `DataPath` | — |  |  | 하늘 그러데이션(스카이 패스) — 깊이 1 의 풀스크린 삼각형 |
 | `_shaderToon` | `DataPath` | — |  |  | 셀 셰이딩 머티리얼 셰이더 — 메시 외곽선 패스의 기본 셰이더이기도 하다 |
+| `_shaderHighlightOutline` | `DataPath` | — |  |  | 인스턴스 강조 외곽선(상호작용 대상 · 감각 모드) — 강조 패스 둘의 셰이더 |
 | `_shaderCanvas` | `DataPath` | — |  |  | 화면 2D(UI · 월드 글자) 사각형 — 사각형 하나 = 인스턴스 하나, SDF 모양 · 글리프 |
 | `_shaderSprite2D` | `DataPath` | — |  |  | 스프라이트(2D) 머티리얼 셰이더 — 머티리얼 없이 쿠킹 목록에도 든다 |
 | `_shaderSprite2DLit` | `DataPath` | — |  |  | 빛 받는 스프라이트(2D 빛 · 그림자) 머티리얼 셰이더 — 머티리얼 없이 쿠킹 목록에도 든다 |

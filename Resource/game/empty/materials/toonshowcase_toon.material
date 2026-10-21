@@ -30,6 +30,10 @@
 		<item name="shadingShiftMap" type="Texture2D" displayName="Shading Shift" group="Shading" bSrgb="0"/>
 		<item name="rimMultiplyMap" type="Texture2D" displayName="Rim Multiply" group="Rim" bSrgb="1"/>
 		<item name="outlineWidthMap" type="Texture2D" displayName="Outline Width Multiply" group="Outline" bSrgb="0"/>
+		<item name="uvAnimationScrollSpeedX" type="Range" shaderType="Float" defaultValue="0.0" min="-10.0" max="10.0" displayName="UV Scroll X Speed (UV/s)" group="UV Animation"/>
+		<item name="uvAnimationScrollSpeedY" type="Range" shaderType="Float" defaultValue="0.0" min="-10.0" max="10.0" displayName="UV Scroll Y Speed (UV/s)" group="UV Animation"/>
+		<item name="uvAnimationRotationSpeed" type="Range" shaderType="Float" defaultValue="0.0" min="-10.0" max="10.0" displayName="UV Rotation Speed (rad/s)" group="UV Animation"/>
+		<item name="uvAnimationMaskMap" type="Texture2D" displayName="UV Animation Mask" group="UV Animation" bSrgb="0"/>
 	</_properties>
 	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
 		<_alwaysDefines>

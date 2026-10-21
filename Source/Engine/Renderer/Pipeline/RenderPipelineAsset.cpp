@@ -484,7 +484,7 @@ namespace sw
                     }
                     else if ( pass._minPostQuality > 0 && bSkippable == false )
                     {
-                        SW_LOG_ERROR( "[%#] pass '%#'(%#): _minPostQuality 는 후처리를 건너뛸 수 있는 타입(SSAO · Bloom · Outline)만 받습니다", sourcePath, pass._name, pass._type );
+                        SW_LOG_ERROR( "[%#] pass '%#'(%#): _minPostQuality 는 후처리를 건너뛸 수 있는 타입(SSAO · Bloom · Outline · MotionBlur)만 받습니다", sourcePath, pass._name, pass._type );
                         ++issueCount;
                     }
                 }

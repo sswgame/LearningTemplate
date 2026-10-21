@@ -65,12 +65,12 @@ namespace sw
 #endif
 
     /**
-     * @brief `-gv_viewMode=<n>` 은 주 출력(게임 창)의 보기 모드입니다(0 Lit, 1 Unlit, 2 Wireframe, 3 Normals, 4 Depth, 5 Overdraw, 6 LightingOnly, 7 Roughness, 8 Metallic, 9 Mipmaps, 10 LightComplexity).
+     * @brief `-gv_viewMode=<n>` 은 주 출력(게임 창)의 보기 모드입니다(0 Lit, 1 Unlit, 2 Wireframe, 3 Normals, 4 Depth, 5 Overdraw, 6 LightingOnly, 7 Roughness, 8 Metallic, 9 Mipmaps, 10 LightComplexity, 11 ShadedWireframe).
      * @details 에디터 씬 뷰 툴바와 같은 값을 가리킨다(`RenderViewMode`). 여기 있는 이유는 **검증**이다.
      *          뷰 모드가 정말로 픽셀을 바꾸는지 `-gv_screenshot` 으로 확인하려면 에디터를 띄우지 않고
      *          모드를 고를 수 있어야 한다. 없으면 이 기능은 사람 눈으로만 확인되는 기능이 된다.
      */
-    SW_GLOBAL_VARIABLE( int32, gv_viewMode, 0, "주 출력 보기 모드 (0 Lit / 1 Unlit / 2 Wireframe / 3 Normals / 4 Depth / 5 Overdraw / 6 LightingOnly / 7 Roughness / 8 Metallic / 9 Mipmaps / 10 LightComplexity)" );
+    SW_GLOBAL_VARIABLE( int32, gv_viewMode, 0, "주 출력 보기 모드 (0 Lit / 1 Unlit / 2 Wireframe / 3 Normals / 4 Depth / 5 Overdraw / 6 LightingOnly / 7 Roughness / 8 Metallic / 9 Mipmaps / 10 LightComplexity / 11 ShadedWireframe)" );
 
     FrameRenderer::FrameRenderer()
         : _pDevice{ nullptr }
@@ -453,6 +453,8 @@ namespace sw
         dispatchLightGrid();
         // 월드 공간 UI 의 렌더 텍스처다. 장면 뷰가 그 텍스처를 읽기 전에 먼저 제출하는 프리패스 리스트(같은 큐)로 그린다.
         _canvasRenderer.drawTargets( *_pCmd, *pDevice, _canvasFrame, *_pPSOCache, getEnginePSO( RenderPassType::Canvas ) );
+        // 2D 빛 쿠키 아틀라스 — 새로 칸을 받은 쿠키만 그 칸에 그린다. 빛 받는 스프라이트 패스가 읽기 전에 같은 프리패스 리스트에서 끝난다.
+        drawLight2DCookieAtlas();
 
 #if SW_PROFILE_COMPILED
         if ( bWriteGPUTime )
@@ -555,7 +557,7 @@ namespace sw
         _mainView._settings._viewMode = getViewMode(); // 직접 경로(테스트)는 주 출력 모드를 쓴다. 패킷 경로는 Engine 가 싣는다.
         // 씬 직접 경로(에디터, 테스트)도 패킷 경로와 **같은 라이트 버퍼**를 쓴다. 경로마다 조명이
         // 다르면 에디터에서 본 이미지와 게임 화면이 달라진다.
-        collectSceneLights( pScene, _listScratchLight, &_listScratchShadowLightIndex, &_listScratchLightProbe );
+        collectSceneLights( pScene, _listScratchLight, &_listScratchShadowLightIndex, &_listScratchLightProbe, &_listScratchLightCookie );
         // 주 광원(그림자 배치, 앰비언트)도 패킷 경로(Engine)와 **같은 규칙**으로
         // 씬에서 읽는다. 주의: 이 경로가 주 광원을 채우지 않으면 테스트가 씬에 둔 방향광이 이미지에 반영되지 않아,
         // 조명이 필요한 픽셀 검증(블룸이 1을 넘는 위치)이 불가능해진다.
@@ -586,6 +588,8 @@ namespace sw
         ShadowSetupUtil::populateFrame( pKeyLight != nullptr ? pShadowLight : nullptr, &mainCameraViewProj, getShadowMapResolution(), _listScratchShadowLightIndex, _listScratchLight,
                                         _frameShadow );
         applyFrameShadow();
+        // 쿠키를 쓰는 2D 빛에 아틀라스 칸을 나눠 원소에 적는다(업로드 전). 칸에 그리는 것은 기록 중 프리패스(drawLight2DCookieAtlas)다.
+        _cookieAtlas.assignCells( pDevice, _listScratchLightCookie, _listScratchLight );
         _lightBuffer.populate( _listScratchLight, _frameShadow._listTileElement, _listScratchLightProbe );
         resetPassCbRing();
         setIdentityWorld( _frameContext );
@@ -677,6 +681,7 @@ namespace sw
         applyFrameShadow();
         // 씬의 모든 라이트다. 방향광과 점광이 한 버퍼에 섞여 올라가고 포워드와 디퍼드가 같이 읽는다. 점광 · 스폿 그림자 타일은 그 뒤에 붙는다.
         // 비어 있으면 셰이더는 앰비언트만 더한다 — 라이트 컴포넌트가 없는 씬은 어둡다(키 라이트로 대신 비추지 않는다).
+        _cookieAtlas.assignCells( pDevice, packet._listLightCookie, packet._listLight );
         _lightBuffer.populate( packet._listLight, _frameShadow._listTileElement, packet._listLightProbe );
 
         ensurePassResources();

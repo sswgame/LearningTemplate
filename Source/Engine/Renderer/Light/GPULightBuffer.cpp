@@ -86,9 +86,12 @@ namespace sw
         static_assert( shaderslot::kLightProbeFloat4Count == SH9Color::kGPUFloat4Count, "셰이더의 프로브 원소 수와 SH9Color 의 GPU 원소 수가 같아야 한다" );
     } // namespace
 
-    void collectSceneLights( const Scene* pScene, vector<GPULight>& outList, vector<uint32>* pOutListShadowLightIndex, vector<float4>* pOutListProbeElement )
+    void collectSceneLights( const Scene* pScene, vector<GPULight>& outList, vector<uint32>* pOutListShadowLightIndex, vector<float4>* pOutListProbeElement,
+                             vector<GPULightCookie>* pOutListCookie )
     {
         outList.clear();
+        if ( pOutListCookie != nullptr )
+            pOutListCookie->clear();
         if ( pOutListProbeElement != nullptr )
             pOutListProbeElement->clear();
         if ( pOutListShadowLightIndex != nullptr )
@@ -116,7 +119,12 @@ namespace sw
                 // 그림자를 드리우는 점광과 스폿은 번호만 적는다. 아틀라스 슬롯(`_params.x`, `_params.w`)은 슬롯 수를 아는 쪽이 나눠 준다(ShadowSetupUtil).
                 if ( pOutListShadowLightIndex != nullptr && GPULightBufferInternal::castsLocalShadow( *pLight ) )
                     pOutListShadowLightIndex->push_back( static_cast<uint32>( outList.size() ) );
+                const hashed_string cookiePath = pLight->getCookieTexturePath();
+                if ( pOutListCookie != nullptr && cookiePath.empty() == false )
+                    pOutListCookie->push_back( GPULightCookie{ static_cast<uint32>( outList.size() ), cookiePath } );
                 outList.push_back( light );
+                // 빛 원소 바로 뒤에 붙는 원소(자유 모양 2D 빛의 변) — 셰이더가 그 빛의 개수 칸만큼 뒤를 읽는다.
+                pLight->appendGPUTrailingElements( outList );
             }
         }
 

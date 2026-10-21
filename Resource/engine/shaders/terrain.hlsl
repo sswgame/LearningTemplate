@@ -103,7 +103,7 @@ SW_SURFACE_OUTPUT PSMain( PSInput input )
 	return swStoreSurface( float4( albedo, 1.0f ), float4( albedo, 1.0f ), normal, input.worldPosition, kSurfaceRoughness, kSurfaceMetallic );
 #else
 	const float  shadow = swSampleShadowAtWorld( input.worldPosition, normal );
-	const float3 lit    = swShadeLights( albedo, input.worldPosition, normal, shadow );
+	const float3 lit    = swShadeLights( albedo, input.worldPosition, normal, shadow, kSurfaceRoughness, kSurfaceMetallic );
 	return swStoreSurface( float4( lit, 1.0f ), float4( albedo, 1.0f ), normal, input.worldPosition, kSurfaceRoughness, kSurfaceMetallic );
 #endif
 }

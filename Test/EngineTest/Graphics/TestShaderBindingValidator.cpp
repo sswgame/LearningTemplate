@@ -15,6 +15,7 @@
 #include "Engine/Graphics/Material/MaterialUtil.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/RHI/Support/RHIShaderRequest.h"
+#include "Engine/Graphics/Shader/Binding/GPULight.h"
 #include "Engine/Graphics/Shader/Binding/GPUSpriteInstanceData.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingValidator.h"
@@ -668,6 +669,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, InstanceElementLayoutMatchesCPUStruct 
         { "tint", static_cast<uint32>( offsetof( sw::GPUInstance, _sprite ) + offsetof( sw::GPUSpriteInstanceData, _tint ) ) },
         { "pixelSnap", static_cast<uint32>( offsetof( sw::GPUInstance, _sprite ) + offsetof( sw::GPUSpriteInstanceData, _pixelSnap ) ) },
         { "vertexAnimationPhase", static_cast<uint32>( offsetof( sw::GPUInstance, _vertexAnimationPhase ) ) },
+        { "highlight", static_cast<uint32>( offsetof( sw::GPUInstance, _highlight ) ) },
         { "appearance", static_cast<uint32>( offsetof( sw::GPUInstance, _appearance ) ) },
     };
     // 인스턴스 원소를 담는 버퍼 이름 — 그래픽스(t4)와 컴퓨트 셋(읽기 g_Instances · 고쳐 쓰기 g_InstancesRW).
@@ -742,6 +744,90 @@ SW_TEST_CASE( ShaderBindingValidatorTest, InstanceElementLayoutMatchesCPUStruct 
     for ( uint32 nameIndex = 0; nameIndex < 3; ++nameIndex )
     {
         SW_EXPECT_TRUE_MSG( arrCheckedPerName[nameIndex] > 0, ( sw::string( arrInstanceBufferName[nameIndex] ) + " 를 담은 쿠킹된 셰이더가 없다 — 이름이 바뀌어 검사가 눈을 감았다" ).c_str() );
+    }
+}
+
+/**
+ * @brief [ShaderBindingValidatorTest] 라이트 원소 레이아웃이 C++ `GPULight` 와 같다 (쿠킹된 바이너리, 4 백엔드, 그래픽스 g_SwLights · 컴퓨트 g_LightGridLights).
+ * @details 둘 다 lightdata.hlsli 의 SwLightData 하나를 쓴다. 구조체를 셰이더마다 베끼면 칸을 더할 때 한 곳만 고쳐 원소 1 부터 어긋나므로, stride 와 칸 오프셋을
+ *          리플렉션에서 읽어 C++ 구조체와 대조한다. 이름마다 적어도 한 바이너리가 있어야 한다(없으면 이름이 바뀌어 검사가 눈을 감은 것이다).
+ */
+SW_TEST_CASE( ShaderBindingValidatorTest, LightElementLayoutMatchesCPUStruct )
+{
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+    const sw::string shaderDir = sw::ResourcePaths::findLooseDomainFolder( "engine", "shaders" ).getDiskPath();
+    if ( shaderDir.empty() )
+        SW_TEST_SKIP( "engine/shaders 를 찾지 못했습니다" );
+
+    struct ExpectedField
+    {
+        const utf8* _pName;
+        uint32      _offset;
+    };
+    const ExpectedField arrExpected[] = {
+        {"positionRadius", static_cast<uint32>( offsetof( sw::GPULight, _positionRadius ) )},
+        {"colorIntensity", static_cast<uint32>( offsetof( sw::GPULight, _colorIntensity ) )},
+        { "directionType", static_cast<uint32>( offsetof( sw::GPULight,  _directionType ) )},
+        {        "params", static_cast<uint32>( offsetof( sw::GPULight,         _params ) )},
+        {         "extra", static_cast<uint32>( offsetof( sw::GPULight,          _extra ) )},
+    };
+    const utf8* arrLightBufferName[] = { "g_SwLights", "g_LightGridLights" };
+    uint32      arrCheckedPerName[2] = {};
+
+    constexpr uint32             kFormatCount            = 4;
+    const sw::ShaderTargetFormat arrFormat[kFormatCount] = {
+        sw::ShaderTargetFormat::DXBC_D3D11, sw::ShaderTargetFormat::DXIL_D3D12, sw::ShaderTargetFormat::SPIRV_Vulkan, sw::ShaderTargetFormat::SPIRV_OpenGL };
+    const utf8* arrFormatName[kFormatCount] = { "dx11", "dx12", "vulkan", "opengl" };
+    for ( uint32 formatIndex = 0; formatIndex < kFormatCount; ++formatIndex )
+    {
+        const sw::ShaderTargetFormat format = arrFormat[formatIndex];
+        const sw::string             binDir = sw::FileUtil::joinPath( sw::FileUtil::joinPath( shaderDir, "bin" ),
+                                                                      sw::string( sw::ShaderCooker::getSubfolderForFormat( format ) ) );
+        sw::vector<sw::string>       listFile;
+        if ( sw::FileUtil::isDirectory( binDir ) )
+            sw::FileUtil::collectFiles( binDir, sw::string( sw::ShaderCooker::getExtensionForFormat( format ) ), listFile, false );
+        for ( const sw::string& path : listFile )
+        {
+            sw::vector<uint8> bytecode;
+            if ( sw::FileUtil::readFile( path, bytecode ) == false || bytecode.empty() )
+                continue;
+            const sw::ShaderReflectionData reflection = sw::ShaderReflection::reflect( bytecode, format );
+            for ( const sw::ShaderBufferInfo& element : reflection._listStructuredElement )
+            {
+                uint32 nameIndex = 0;
+                while ( nameIndex < 2 && element._name != arrLightBufferName[nameIndex] )
+                {
+                    ++nameIndex;
+                }
+                if ( nameIndex == 2 )
+                    continue;
+                ++arrCheckedPerName[nameIndex];
+                const sw::string label = sw::string( arrFormatName[formatIndex] ) + "/" + sw::FileUtil::getFileNamePart( path ) + " " + element._name;
+                SW_EXPECT_TRUE_MSG( element._totalSize == static_cast<uint32>( sizeof( sw::GPULight ) ),
+                                    ( label + " stride " + sw::to_string( element._totalSize ) + " != sizeof(GPULight) " + sw::to_string( static_cast<uint32>( sizeof( sw::GPULight ) ) ) ).c_str() );
+                for ( const ExpectedField& expected : arrExpected )
+                {
+                    const sw::ShaderVariableInfo* pFound = nullptr;
+                    for ( const sw::ShaderVariableInfo& var : element._listVariable )
+                    {
+                        if ( var._name == expected._pName )
+                        {
+                            pFound = &var;
+                            break;
+                        }
+                    }
+                    SW_EXPECT_TRUE_MSG( pFound != nullptr, ( label + " 에 " + expected._pName + " 가 없습니다" ).c_str() );
+                    if ( pFound != nullptr )
+                        SW_EXPECT_TRUE_MSG( pFound->_offset == expected._offset, ( label + "." + expected._pName + " 오프셋 " + sw::to_string( pFound->_offset ) + " != C++ " + sw::to_string( expected._offset ) ).c_str() );
+                }
+            }
+        }
+    }
+    if ( arrCheckedPerName[0] == 0 && arrCheckedPerName[1] == 0 )
+        SW_TEST_SKIP( "라이트 버퍼를 선언한 쿠킹된 셰이더가 없습니다 (--cook-shaders 를 먼저 돌리세요)" );
+    for ( uint32 nameIndex = 0; nameIndex < 2; ++nameIndex )
+    {
+        SW_EXPECT_TRUE_MSG( arrCheckedPerName[nameIndex] > 0, ( sw::string( arrLightBufferName[nameIndex] ) + " 를 담은 쿠킹된 셰이더가 없다 — 이름이 바뀌어 검사가 눈을 감았다" ).c_str() );
     }
 }
 
@@ -850,6 +936,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, EveryBoundNameIsInCookedReflection )
         &passNames._swLightCount,
         &passNames._swVertexAnimationCount,
         &passNames._swVertexAnimationTime,
+        &passNames._swMaterialTime,
     };
     for ( const sw::hashed_string* pName : arrMemberName )
     {

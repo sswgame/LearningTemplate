@@ -366,6 +366,12 @@ namespace sw
                     executeMeshOutlinePass( input );
                     break;
                 }
+                case RenderPassType::HighlightOutline:
+                case RenderPassType::HighlightSense:
+                {
+                    executeHighlightPass( input );
+                    break;
+                }
                 case RenderPassType::Sky:
                 {
                     executeSkyPass( input );
@@ -396,6 +402,7 @@ namespace sw
                 case RenderPassType::Tonemap:
                 case RenderPassType::Module:
                 case RenderPassType::DepthOfField:
+                case RenderPassType::MotionBlur:
                 case RenderPassType::ForwardOpaqueNoDepthWrite:
                 case RenderPassType::GPUCull:
                 case RenderPassType::InstanceAnimation:
@@ -456,7 +463,9 @@ namespace sw
         // 다르면 그 패스 셰이더가 SW_PASS_FLAG_SKIP_POST 를 보고 원본을 그대로 낸다(복사는 같은 포맷끼리만 된다). 원본 색을 읽지 않는 효과(SSAO)는
         // 기본 클리어로 지우기만 한다(SSAO 의 흰색은 가림 없음).
         // 후처리 품질(gv_postQuality)이 패스의 최소 품질(`_minPostQuality`, 검증이 건너뛸 수 있는 타입에만 허락한다)보다 낮아도 같은 길로 건너뛴다.
-        const bool bBelowPostQuality = passDesc._minPostQuality > static_cast<int32>( gv_postQuality );
+        // 모션 블러는 사용자 설정(gv_motionBlur)으로 켜고 끈다 — 끄면 품질로 건너뛸 때와 같은 길이다.
+        const bool bMotionBlurOff    = input._passType == RenderPassType::MotionBlur && static_cast<bool>( gv_motionBlur ) == false;
+        const bool bBelowPostQuality = passDesc._minPostQuality > static_cast<int32>( gv_postQuality ) || bMotionBlurOff;
         const bool bPostOff          = _pActiveView->_settings.usesPostProcess() == false || bBelowPostQuality;
         const bool bSkipEffect       = info.hasFlag( RenderPassTraitFlag::kSkipsWithoutPostProcess ) && bPostOff;
         if ( bSkipEffect == false )
@@ -580,7 +589,7 @@ namespace sw
         // 인버티드 헐(inverted hull) 외곽선이다. 불투명 패스가 그린 색과 깊이 위에, 외곽선을 켠 머티리얼의 배치만 앞면을 컬링해 그린다(drawsBatchInPass).
         // 와이어프레임과 표면 값 보기(Normals, Depth, Overdraw)에서는 빠진다(껍질이 선과 값 위를 덮는다). 타깃은 선언한 컬러 출력이다(불투명 패스와 같은 규칙).
         const RenderViewModeInfo& viewModeInfo = getRenderViewModeInfo( _pActiveView->_settings._viewMode );
-        if ( viewModeInfo._bWireframe || viewModeInfo._bShowsBuffer )
+        if ( ( viewModeInfo._bWireframe && viewModeInfo._bOverlay == false ) || viewModeInfo._bShowsBuffer ) // 겹침(ShadedWireframe)은 Lit 그림이라 그린다
             return;
         FramePassContext&    context     = input._context;
         const hashed_string& passDepth   = input._passDepth;
@@ -592,6 +601,23 @@ namespace sw
         context._pCmd->endRenderPass();
     }
 
+    void FrameRenderer::executeHighlightPass( const PassExecuteInput& input )
+    {
+        // 인스턴스 강조 외곽선이다(highlightoutline.hlsl). 불투명 배치를 모두 그리되 이 패스의 강조 방식인 인스턴스만 정점이 남는다 —
+        // 배치를 CPU 에서 거르지 않으므로 강조를 켜고 꺼도 배치가 다시 나뉘지 않는다. 와이어프레임과 표면 값 보기에서는 빠진다(메시 외곽선과 같다).
+        const RenderViewModeInfo& viewModeInfo = getRenderViewModeInfo( _pActiveView->_settings._viewMode );
+        if ( ( viewModeInfo._bWireframe && viewModeInfo._bOverlay == false ) || viewModeInfo._bShowsBuffer )
+            return;
+        FramePassContext&    context     = input._context;
+        const hashed_string& passDepth   = input._passDepth;
+        const hashed_string& colorTarget = input._declaredColor[0]._attachment;
+        const float4         sceneClear  = getTargetClearColor( colorTarget.view() );
+        if ( beginColorPass( context, colorTarget.view(), passDepth.view(), sceneClear, colorLoadFor( colorTarget ), colorLoadFor( passDepth ) ) == false )
+            return;
+        drawSceneMeshes( context, getEnginePSO( input._passType ), false );
+        context._pCmd->endRenderPass();
+    }
+
     void FrameRenderer::executeSkyPass( const PassExecuteInput& input )
     {
         // 하늘이다. 깊이 1 의 풀스크린 삼각형을 깊이 테스트(LessEqual, 쓰기 없음)로 그려 아무것도 그리지 않은 곳만 칠한다(sky.hlsl).
@@ -600,7 +626,7 @@ namespace sw
         // 앞의 불투명 패스가 색과 깊이를 이미 썼으므로 둘 다 불러온다(지우지 않는다).
         const RenderViewModeInfo&    viewModeInfo = getRenderViewModeInfo( _pActiveView->_settings._viewMode );
         const RHIPipelineStateHandle skyPSO       = getEnginePSO( RenderPassType::Sky );
-        const bool                   bShowsSky    = viewModeInfo._bWireframe == false && viewModeInfo._bShowsBuffer == false;
+        const bool                   bShowsSky    = ( viewModeInfo._bWireframe == false || viewModeInfo._bOverlay ) && viewModeInfo._bShowsBuffer == false;
         const bool                   bHasTargets  = input._passDepth.empty() == false;
         const bool                   bDrawsSky    = _bHasFrameSky == SW_TRUE && bHasTargets && skyPSO != 0 && bShowsSky;
         if ( bDrawsSky == false )
@@ -973,21 +999,22 @@ namespace sw
         const RHIDescriptorIndex source = srvOf( names._sourceColor );
         const RHIDescriptorIndex ao     = srvOf( names._ambientOcclusion );
         const RHIDescriptorIndex bloom  = srvOf( names._bloomBright );
+        const RHIDescriptorIndex cookie = srvOf( names._light2DCookieAtlas );
         // G버퍼 머티리얼 칸은 t0..t3 밖의 자기 슬롯이다(조명 패스가 다섯째로 읽는다 — shaderslot::kEngineGBufferMaterialTexture).
         const RHIDescriptorIndex material = srvOf( names._gbufferMaterial );
         if ( material != kInvalidDescriptorIndex )
             context._pCmd->bindShaderResource( material, shaderslot::kEngineGBufferMaterialTexture );
 
-        // 슬롯 테이블은 binding.hlsli 의 swSampleIndex 와 같아야 한다: [shadow|source, albedo|ao, normal|bloom, depth|shadow].
-        // 한 슬롯을 나눠 쓰는 둘은 같은 패스에 함께 바인딩되지 않는다(알베도 · 노멀은 Lighting · SSAO, AO · 반해상도 블룸은 Bloom).
+        // 슬롯 테이블은 binding.hlsli 의 swSampleIndex 와 같아야 한다: [shadow|source, albedo|ao|light2dCookie, normal|bloom, depth|shadow].
+        // 한 슬롯을 나눠 쓰는 것들은 같은 패스에서 함께 읽히지 않는다(알베도 · 노멀은 Lighting · SSAO, AO · 반해상도 블룸은 Bloom, 쿠키는 빛 받는 스프라이트 — 2D 패스엔 알베도 · AO 가 없다).
         const RHIDescriptorIndex slot0 = ( shadow != kInvalidDescriptorIndex ) ? shadow : source;
-        const RHIDescriptorIndex slot1 = ( albedo != kInvalidDescriptorIndex ) ? albedo : ao;
+        const RHIDescriptorIndex slot1 = ( albedo != kInvalidDescriptorIndex ) ? albedo : ( ao != kInvalidDescriptorIndex ? ao : cookie );
         const RHIDescriptorIndex slot2 = ( normal != kInvalidDescriptorIndex ) ? normal : bloom;
         const RHIDescriptorIndex slot3 = ( depth != kInvalidDescriptorIndex ) ? depth : shadow;
 
         if ( shadow != kInvalidDescriptorIndex || source != kInvalidDescriptorIndex )
             context._pCmd->bindShaderResource( slot0, 0 );
-        if ( albedo != kInvalidDescriptorIndex || ao != kInvalidDescriptorIndex )
+        if ( slot1 != kInvalidDescriptorIndex )
             context._pCmd->bindShaderResource( slot1, 1 );
         if ( normal != kInvalidDescriptorIndex || bloom != kInvalidDescriptorIndex )
             context._pCmd->bindShaderResource( slot2, 2 );

@@ -62,14 +62,18 @@ namespace sw::editor
         float32         _alphaCutoff{ 0.5f };
         float32         _normalScale{ 1.0f };              ///< glTF normalTexture.scale · 0.x _BumpScale
         float32         _shadingShiftTextureScale{ 1.0f }; ///< MToon shadingShiftTexture.scale
+        float32         _uvAnimationScrollXSpeed{ 0.0f };  ///< MToon uvAnimationScrollXSpeedFactor(glTF UV / 초)
+        float32         _uvAnimationScrollYSpeed{ 0.0f };  ///< MToon uvAnimationScrollYSpeedFactor(glTF UV / 초, v 는 아래가 +)
+        float32         _uvAnimationRotationSpeed{ 0.0f }; ///< MToon uvAnimationRotationSpeedFactor(라디안 / 초, UV 중심 (0.5, 0.5) 기준)
         int32           _baseColorTexture{ -1 };
         int32           _shadeTexture{ -1 };
         int32           _emissiveTexture{ -1 };
         int32           _matcapTexture{ -1 };
-        int32           _normalTexture{ -1 };       ///< glTF normalTexture · 0.x _BumpMap
-        int32           _shadingShiftTexture{ -1 }; ///< MToon shadingShiftTexture
-        int32           _rimMultiplyTexture{ -1 };  ///< MToon rimMultiplyTexture · 0.x _RimTexture
-        int32           _outlineWidthTexture{ -1 }; ///< MToon outlineWidthMultiplyTexture · 0.x _OutlineWidthTexture
+        int32           _normalTexture{ -1 };          ///< glTF normalTexture · 0.x _BumpMap
+        int32           _shadingShiftTexture{ -1 };    ///< MToon shadingShiftTexture
+        int32           _rimMultiplyTexture{ -1 };     ///< MToon rimMultiplyTexture · 0.x _RimTexture
+        int32           _outlineWidthTexture{ -1 };    ///< MToon outlineWidthMultiplyTexture · 0.x _OutlineWidthTexture
+        int32           _uvAnimationMaskTexture{ -1 }; ///< MToon uvAnimationMaskTexture · 0.x _UvAnimMaskTexture(b 채널)
         ToonOutlineMode _outlineMode{ ToonOutlineMode::None };
         ToonAlphaMode   _alphaMode{ ToonAlphaMode::Opaque };
         uint8           _bTwoSided{ SW_FALSE };
@@ -81,7 +85,7 @@ namespace sw::editor
     /**
      * @struct VrmMaterialImporter
      * @brief VRM 머티리얼 읽기와 엔진 툰 머티리얼 쓰기를 담당합니다. 모든 함수가 static 입니다. 지원하는 키의 정본은 `VrmMaterialImporter.cpp` 의 키 표(`kArrVrm0Float` · `kArrVrm0Texture` · `kArrVrm0Color` · `kArrMtoon1Key`)입니다.
-     * @details 모르는 키는 오류다. 철자가 틀린 키가 조용히 기본값이 되지 않게 하는 이 저장소의 규칙이다. 아는데 지원하지 않는 키(UV 애니메이션 등)는
+     * @details 모르는 키는 오류다. 철자가 틀린 키가 조용히 기본값이 되지 않게 하는 이 저장소의 규칙이다. 아는데 지원하지 않는 키(텍스처 확장 · 0 이 아닌 texCoord 등)는
      *          @p pOutListIgnored 에 이름을 모은다. 값이 효과 없는 기본값이면 모으지 않는다. 호출하는 쪽이 경고로 알린다.
      */
     struct VrmMaterialImporter
@@ -103,7 +107,7 @@ namespace sw::editor
         [[nodiscard]] static bool readMtoon1Material( const JSONValue& gltfMaterial, ToonMaterialDesc& outDesc, vector<string>* pOutListIgnored, string& outError );
 
         /**
-         * @brief 엔진 툰 머티리얼(`engine/materials/toon.material`)을 템플릿으로 @p desc 의 값을 넣은 `.material` 문자열을 만듭니다. 템플릿을 읽지 못하면 빈 문자열입니다.
+         * @brief 엔진 툰 머티리얼(`engine/materials/toon.material`)을 템플릿으로 @p desc 의 값을 넣은 `.material` 문자열을 만듭니다. 템플릿을 읽지 못하거나 템플릿에 쓸 프로퍼티가 없으면 빈 문자열입니다.
          * @param listTexturePath glTF 텍스처 번호에서 리소스 경로(DDS)로의 대응입니다. 비어 있는 항목은 그 텍스처가 없는 것으로 씁니다.
          */
         static string makeMaterialXML( const ToonMaterialDesc& desc, const vector<string>& listTexturePath );

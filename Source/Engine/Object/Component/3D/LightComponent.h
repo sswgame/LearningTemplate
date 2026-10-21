@@ -5,6 +5,8 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/vector.h"
+#include "Core/String/hashed_string.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -57,6 +59,16 @@ namespace sw
          *          모으는 쪽이 켭니다. @p outLight 의 다른 칸은 모두 덮어씁니다.
          */
         void writeGPULight( GPULight& outLight ) const;
+        /**
+         * @brief 이 빛 원소 **바로 뒤**에 붙는 원소를 씁니다(자유 모양 2D 빛의 변). 기본은 없습니다.
+         * @details 셰이더는 빛 원소의 개수 칸(자유 모양은 `_extra.z`)만큼 뒤 원소를 읽는다 — 모으는 쪽(`collectSceneLights`)이 `writeGPULight` 바로 다음에 부른다.
+         */
+        virtual void appendGPUTrailingElements( vector<GPULight>& /*inoutListLight*/ ) const {}
+        /**
+         * @brief 빛 텍스처(쿠키)의 텍스처 경로입니다. 비면 쿠키가 없습니다. 2D 점 · 스폿 빛만 씁니다(`PointLight2DComponent`).
+         * @details 렌더러가 프레임마다 모아(`collectSceneLights` 의 쿠키 목록) 쿠키 아틀라스(`Light2DCookieAtlas`)의 칸에 그리고, 빛 원소의 `_extra.w` 에 칸 번호를 적는다.
+         */
+        virtual hashed_string getCookieTexturePath() const { return {}; }
 
         /** @brief 씬에 붙을 때 빛 레지스트리의 자기 종류 칸에 자기를 등록합니다. */
         void onRegister( GameObjectManager& manager ) override;

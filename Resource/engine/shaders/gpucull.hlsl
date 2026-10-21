@@ -1,4 +1,5 @@
 #include "common.hlsli"
+#include "batchdata.hlsli"
 
 /**
  * gpucull.hlsl — GPU 컬링 + **드로우 커맨드 생성** (언리얼 FInstanceCullingContext 와 같은 자리).
@@ -37,17 +38,7 @@ struct RHIDrawIndirectCommand
  * firstInstance 를 포함하므로 셰이더가 루트 상수로 더한다) 컬링이 그 값을 배치 시작점으로 쓸 수 없다.
  * 그래서 시작점은 이 버퍼가 따로 알려준다 — 언리얼이 드로우 커맨드마다 인스턴스 구간을 들고 있는 것과 같다.
  */
-struct GPUBatchInfo
-{
-	uint instanceBase;
-	uint instanceCount;
-	uint sortMode;        // 0 = 없음(불투명), 1 = CPU 순서 유지, 2 = 압축 뒤 CPU 순서로 되돌림
-	uint morphVertexBase; // 정점 셰이더용 — 여기서는 안 읽는다 (binding.hlsli SwBatchData 와 같은 표)
-	uint firstVertex;     // 정점 셰이더용 — 여기서는 안 읽는다
-	uint pad0;
-	uint pad1;
-	uint pad2;
-};
+// 배치 표 원소는 binding.hlsli 와 같은 SwBatchData(batchdata.hlsli) 다.
 
 SW_DECLARE_CBUFFER( CullParams, SW_SLOT_COMPUTE_CB )
 {
@@ -58,7 +49,7 @@ SW_DECLARE_CBUFFER( CullParams, SW_SLOT_COMPUTE_CB )
 };
 
 SW_DECLARE_STRUCTURED_BUFFER( SwInstanceData, g_Instances, 0 );
-SW_DECLARE_STRUCTURED_BUFFER( GPUBatchInfo, g_BatchInfo, 1 );
+SW_DECLARE_STRUCTURED_BUFFER( SwBatchData, g_BatchInfo, 1 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( RHIDrawIndirectCommand, g_IndirectArgs, 0 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( uint, g_VisibleInstanceIDs, 1 );
 

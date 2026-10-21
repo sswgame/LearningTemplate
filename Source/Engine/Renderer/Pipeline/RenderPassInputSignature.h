@@ -29,7 +29,7 @@ namespace sw
         ShadowMap,        ///< 그림자 깊이
         AmbientOcclusion, ///< SSAO 결과 (AOColor)
         BloomBright,      ///< 반해상도 블룸의 밝은 부분(BloomDownsample 패스 출력). Bloom 패스가 있으면 업샘플해 더하고, 없으면 원본에서 직접 구한다.
-        GBufferMaterial,  ///< G버퍼 머티리얼 칸(r 금속도, g 거칠기 — binding.hlsli swEncodeGBufferMaterial)
+        GBufferMaterial,  ///< G버퍼 머티리얼 칸(r 금속도, g 거칠기 — binding.hlsli swEncodeGbufferMaterial)
         Count,
     };
 

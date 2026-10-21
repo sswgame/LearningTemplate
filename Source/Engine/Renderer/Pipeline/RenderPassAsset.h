@@ -76,6 +76,19 @@ namespace sw
          *        디퍼드는 TAA 와 Tonemap 사이, 포워드는 후처리 체인(Present) 앞에 둡니다.
          */
         DepthOfField,
+        /**
+         * @brief 카메라 모션 블러입니다. 깊이로 복원한 월드 위치를 지난 프레임 뷰-투영(`g_PrevViewProj`)으로 다시 투영해 화면 속도를 구하고, 그 방향으로 원본을 섞습니다(motionblur.hlsl).
+         *        사용자 설정 `graphics.motionBlur`(`gv_motionBlur`)를 끄거나 후처리를 끈 뷰면 원본을 그대로 넘기고, 컷 프레임은 지난 행렬을 이번 것으로 둬 속도가 0 입니다.
+         *        움직이는 물체의 속도 버퍼는 아직 없다(카메라 움직임만 흐린다). 디퍼드는 피사계 심도와 Tonemap 사이에 둡니다.
+         */
+        MotionBlur,
+        /**
+         * @brief 인스턴스 강조 외곽선입니다(highlightoutline.hlsl). 강조 방식이 Outline 인 인스턴스(`GPUInstance::_highlight`)만 뒤집은 껍질로 깊이 테스트해 그립니다.
+         *        상호작용 대상의 외곽선(언리얼 CustomDepth + 외곽선 후처리, 유니티 Render Objects 의 자리)이며 불투명 패스 뒤에 둡니다.
+         */
+        HighlightOutline,
+        /** @brief 감각 모드 외곽선입니다. 강조 방식이 Sense 인 인스턴스만 깊이 테스트 없이 그려 벽 너머에서도 보입니다(반투명 뒤, 톤맵 앞에 둡니다). */
+        HighlightSense,
 
         // --- 엔진 내부 PSO 슬롯. 파이프라인 XML 에는 나올 수 없다(검증이 거부한다). ---
         ForwardOpaqueNoDepthWrite,
@@ -107,7 +120,7 @@ namespace sw
     /** @brief 파이프라인 XML 의 `_type` 으로 쓸 수 있는 값인지 확인합니다(내부 슬롯과 Invalid 는 제외합니다). */
     constexpr bool isPipelinePassType( RenderPassType type )
     {
-        return type != RenderPassType::Invalid && static_cast<uint32>( type ) <= static_cast<uint32>( RenderPassType::DepthOfField );
+        return type != RenderPassType::Invalid && static_cast<uint32>( type ) <= static_cast<uint32>( RenderPassType::HighlightSense );
     }
 
     /// @brief 렌더 패스 어태치먼트 하나(이름, 포맷, 클리어 색, 클리어 여부)입니다.

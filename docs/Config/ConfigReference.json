@@ -720,6 +720,15 @@
        "description": "TAA"
       },
       {
+       "name": "_shaderMotionBlur",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "카메라 모션 블러(지난 프레임 뷰-투영으로 구한 화면 속도)"
+      },
+      {
        "name": "_shaderTonemap",
        "type": "DataPath",
        "default": "",
@@ -754,6 +763,15 @@
        "max": "",
        "units": "",
        "description": "셀 셰이딩 머티리얼 셰이더 — 메시 외곽선 패스의 기본 셰이더이기도 하다"
+      },
+      {
+       "name": "_shaderHighlightOutline",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "인스턴스 강조 외곽선(상호작용 대상 · 감각 모드) — 강조 패스 둘의 셰이더"
       },
       {
        "name": "_shaderCanvas",
@@ -3666,7 +3684,7 @@
    "type": "bool",
    "default": "true",
    "kind": "일반",
-   "description": "모션 블러 (사용자 설정 graphics.motionBlur, 렌더러 미구현 — UserSettingsConsumers U3 패치)",
+   "description": "모션 블러 (사용자 설정 graphics.motionBlur, MotionBlur 패스가 읽는다)",
    "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
   },
   {
@@ -4266,7 +4284,7 @@
    "type": "int32",
    "default": "0",
    "kind": "일반",
-   "description": "주 출력 보기 모드 (0 Lit / 1 Unlit / 2 Wireframe / 3 Normals / 4 Depth / 5 Overdraw / 6 LightingOnly / 7 Roughness / 8 Metallic / 9 Mipmaps / 10 LightComplexity)",
+   "description": "주 출력 보기 모드 (0 Lit / 1 Unlit / 2 Wireframe / 3 Normals / 4 Depth / 5 Overdraw / 6 LightingOnly / 7 Roughness / 8 Metallic / 9 Mipmaps / 10 LightComplexity / 11 ShadedWireframe)",
    "source": "Source/Engine/Renderer/Frame/FrameRenderer.cpp"
   },
   {

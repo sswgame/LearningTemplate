@@ -51,6 +51,9 @@ namespace sw
             const bool                bMissing = info._pDefaultShader != nullptr && _pPSOCache->findEnginePSO( passType ) == 0;
             if ( bMissing == false )
                 continue;
+            // 셰이더가 파이프라인의 퍼뮤테이션을 요구하는 패스는 그 파이프라인에 있을 때만 만든다(없으면 실행도 없다).
+            if ( info.hasFlag( RenderPassTraitFlag::kRequiresPassDesc ) && findPassDescByType( passType ) == nullptr )
+                continue;
 
             RHIPipelineStateHandle pso{ 0 };
             if ( info.hasFlag( RenderPassTraitFlag::kCompute ) )
@@ -151,6 +154,7 @@ namespace sw
         _deform._meshMorphPool.release( _pDevice );
         _deform._vertexAnimationPool.release( _pDevice );
         _lightBuffer.release( _pDevice );
+        _cookieAtlas.release( _pDevice );
         for ( MaterialFallback& fallback : _listMaterialFallback )
         {
             fallback._buffer.release( _pDevice );

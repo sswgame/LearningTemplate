@@ -186,7 +186,7 @@
 | `gv_screenshotQuit` | `bool` | `false` | 테스트 · 배포본에도 | 요청한 스크린샷을 모두 찍으면 앱이 스스로 끝난다 (0, 파일을 쓰지 못했으면 14) | [RenderThread.cpp](../../Source/Engine/Renderer/RenderThread.cpp) |
 | `gv_useRenderThread` | `bool` | `true` | 일반 | 전용 RenderThread 사용 (false = 게임 스레드 인라인 submit) | [RenderThread.cpp](../../Source/Engine/Renderer/RenderThread.cpp) |
 | `gv_vertexPool` | `int32` | `1` | 일반 | 씬 메시 정점 풀 (0=메시마다 정점 버퍼, 진단용) | [FrameRenderer.cpp](../../Source/Engine/Renderer/Frame/FrameRenderer.cpp) |
-| `gv_viewMode` | `int32` | `0` | 일반 | 주 출력 보기 모드 (0 Lit / 1 Unlit / 2 Wireframe / 3 Normals / 4 Depth / 5 Overdraw / 6 LightingOnly / 7 Roughness / 8 Metallic / 9 Mipmaps / 10 LightComplexity) | [FrameRenderer.cpp](../../Source/Engine/Renderer/Frame/FrameRenderer.cpp) |
+| `gv_viewMode` | `int32` | `0` | 일반 | 주 출력 보기 모드 (0 Lit / 1 Unlit / 2 Wireframe / 3 Normals / 4 Depth / 5 Overdraw / 6 LightingOnly / 7 Roughness / 8 Metallic / 9 Mipmaps / 10 LightComplexity / 11 ShadedWireframe) | [FrameRenderer.cpp](../../Source/Engine/Renderer/Frame/FrameRenderer.cpp) |
 
 ## `Source/Engine/Resource`
 
@@ -240,7 +240,7 @@
 | `gv_debugHUDSections` | `string` | — | 일반 | 디버그 HUD 섹션 켬 · 끔 — 공백으로 나눈 '이름'(켬) · '-이름'(끔), 적지 않은 섹션은 기본 (사용자 설정 debug.hudSections) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_emulatedGPUMemoryMb` | `int32` | `0` | 테스트 | 하드웨어 흉내: 사양 조사가 보고하는 비디오 메모리 상한(MB, 0=실제 값) | [HardwareProbe.cpp](../../Source/Engine/UserSettings/HardwareProbe.cpp) |
 | `gv_foliageDensity` | `float32` | `1.0` | 일반 | 식생 밀도 배율 (사용자 설정 graphics.foliageDensity) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
-| `gv_motionBlur` | `bool` | `true` | 일반 | 모션 블러 (사용자 설정 graphics.motionBlur, 렌더러 미구현 — UserSettingsConsumers U3 패치) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
+| `gv_motionBlur` | `bool` | `true` | 일반 | 모션 블러 (사용자 설정 graphics.motionBlur, MotionBlur 패스가 읽는다) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_postQuality` | `int32` | `2` | 일반 | 후처리 품질 0~3 — 패스의 _minPostQuality 보다 낮으면 건너뛴다 (사용자 설정 graphics.postQuality) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_reduceFlashing` | `bool` | `false` | 일반 | 번쩍임 줄이기 (사용자 설정 accessibility.reduceFlashing) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_renderScale` | `float32` | `1.0` | 일반 | 3D 렌더 해상도 배율 0.5~1 (사용자 설정 graphics.renderScale, 화면 출력 뷰) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |

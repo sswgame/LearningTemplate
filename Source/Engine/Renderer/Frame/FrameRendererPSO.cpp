@@ -38,6 +38,17 @@ namespace sw
                 desc._cullMode = RHICullMode::None;
                 bChanged       = true;
             }
+            if ( info._bOverlay )
+            {
+                // 겹침(ShadedWireframe)은 Lit 으로 그린 같은 삼각형 위에 선을 그린다. 선의 래스터 깊이는 면과 조금씩 달라 LessEqual 만으로는
+                // z-fighting 한다 — 카메라 쪽으로 미는 바이어스를 걸고, 선이 면의 깊이를 바꾸지 않게 깊이 쓰기를 끈다.
+                static constexpr int32   kOverlayDepthBias            = -4;
+                static constexpr float32 kOverlaySlopeScaledDepthBias = -1.0f;
+                desc._depthBias                                       = kOverlayDepthBias;
+                desc._slopeScaledDepthBias                            = kOverlaySlopeScaledDepthBias;
+                desc._bEnableDepthWrite                               = 0;
+                bChanged                                              = true;
+            }
             if ( info._bAdditiveNoDepth )
             {
                 // 겹쳐 그린 수를 세려면 가려진 것도 그려야 한다. 깊이를 쓰지 않고 단색을 더한다(유니티 Overdraw 와 같다).
@@ -231,7 +242,11 @@ namespace sw
         // 패스가 정한 렌더 상태를 통째로 물려받는다. 블렌드, 뎁스, RT 포맷은 패스의 사실이지 머티리얼의 것이 아니다.
         RHIPipelineStateDesc desc{};
         if ( _pPSOCache->findDesc( passPSO, desc ) == false )
-            return entry; // desc 를 모르는 PSO 다. 변형을 만들 근거가 없다.
+        {
+            // desc 를 모르는 PSO 다 — 변형을 만들 근거가 없다. 패스 PSO 로 다른 그림을 그리지 않고 이 조합은 그리지 않는다.
+            SW_LOG_ERROR( "Material PSO variant: pass PSO of pass type %# has no recorded desc - these batches are not drawn", static_cast<uint32>( passType ) );
+            return RenderPSOCache::MaterialPSOEntry{ 0, 0 };
+        }
 
         bool bChanged{ false };
         if ( pPermutation != nullptr )
@@ -300,7 +315,12 @@ namespace sw
 
         const RHIPipelineStateHandle handle = _pDevice->getResourceFactory()->createPipelineState( desc );
         if ( handle == 0 )
-            return entry; // 컴파일 실패다. 패스 PSO 로 그린다(화면이 비는 것보다 낫다).
+        {
+            // 컴파일 실패다. 패스 PSO(다른 셰이더 · 다른 보기 모드)로 그리면 틀린 그림이 통과하므로 이 조합은 그리지 않고 오류를 남긴다.
+            SW_LOG_ERROR( "Material PSO variant '%#' (view mode %#) failed to build - these batches are not drawn", desc._vertexShaderPath,
+                          getRenderViewModeInfo( viewMode )._pName );
+            return RenderPSOCache::MaterialPSOEntry{ 0, 0 };
+        }
         registerPSOLayout( handle, desc );
         entry._pso    = handle;
         entry._bOwned = 1;
@@ -350,11 +370,17 @@ namespace sw
     {
         // 이번 프레임에 만들 변형은 (패스, 퍼뮤테이션, 뷰 모드)로 정해진다. 보기 모드는 뷰마다의 설정이라 이번 프레임에 그리는 뷰들의 모드를 모은다.
         // 뷰 설정은 프레임 시작에 정해지고 기록 중에 바뀌지 않으므로, 드로우가 고르는 PSO 는 여기서 준비한 집합 안에 있다.
-        uint32 viewModeMask = 1u << static_cast<uint32>( _mainView._settings._viewMode );
+        // 겹침 모드(ShadedWireframe)는 배치를 Lit 으로 한 번 더 그리므로 Lit 변형도 모은다.
+        auto viewModeBits = []( RenderViewMode viewMode ) -> uint32
+        {
+            const uint32 bit = 1u << static_cast<uint32>( viewMode );
+            return getRenderViewModeInfo( viewMode )._bOverlay ? ( bit | ( 1u << static_cast<uint32>( RenderViewMode::Lit ) ) ) : bit;
+        };
+        uint32 viewModeMask = viewModeBits( _mainView._settings._viewMode );
         for ( const unique_ptr<ViewTarget>& pView : _listExtraView )
         {
             if ( pView->_bRenderThisFrame == SW_TRUE )
-                viewModeMask |= 1u << static_cast<uint32>( pView->_settings._viewMode );
+                viewModeMask |= viewModeBits( pView->_settings._viewMode );
         }
         return viewModeMask;
     }
@@ -473,13 +499,10 @@ namespace sw
         return _pPSOCache->findDesc( pso, outDesc );
     }
 
-    RHIPipelineStateHandle FrameRenderer::psoForBatch( RHIPipelineStateHandle passPSO, const GPUMeshBatch& batch ) const
+    RHIPipelineStateHandle FrameRenderer::psoForBatch( RHIPipelineStateHandle passPSO, const GPUMeshBatch& batch, RenderViewMode viewMode ) const
     {
         if ( passPSO == 0 )
             return passPSO;
-
-        // 보기 모드는 지금 그리는 뷰의 설정이다(씬 뷰만 Normals 이고 게임 뷰는 Lit 일 수 있다).
-        const RenderViewMode viewMode = _pActiveView->_settings._viewMode;
 
         uint64 permutationHash{ 0 };
         if ( batch._shaderPermutation != kInvalidShaderPermutation )
@@ -497,10 +520,9 @@ namespace sw
         if ( bDefaultPassPSO )
             return passPSO;
 
-        // 찾지 못하면 패스 PSO 로 그린다. ensureMaterialPSOs 가 기록 전에 채우므로 정상 경로에서는 항상 있다.
-        const RHIPipelineStateHandle variant =
-            _pPSOCache->findMaterialPSO( RenderPSOCache::materialPSOKey( passPSO, permutationHash, viewMode, bReverseCulling ) );
-        return ( variant != 0 ) ? variant : passPSO;
+        // 찾지 못하거나 만들지 못한 변형(0)은 그리지 않는다 — 패스 PSO 로 바꿔 그리면 머티리얼 · 보기 모드가 다른 그림이 된다. ensureMaterialPSOs 가 기록 전에
+        // 채우므로 정상 경로에서는 항상 있고, 만들지 못한 것은 그때 오류를 남겼다.
+        return _pPSOCache->findMaterialPSO( RenderPSOCache::materialPSOKey( passPSO, permutationHash, viewMode, bReverseCulling ) );
     }
 
     bool FrameRenderer::drawsBatchInPass( RenderPassType passType, const GPUMeshBatch& batch ) const

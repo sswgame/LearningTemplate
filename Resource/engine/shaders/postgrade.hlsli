@@ -8,13 +8,15 @@
 #ifndef SW_ENGINE_POSTGRADE_HLSLI
 #define SW_ENGINE_POSTGRADE_HLSLI
 
+#include "colorvision.hlsli"
+
 /** @brief 톤맵 앞의 HDR 색에 카메라 노출 배율을 곱합니다. */
 float3 swApplyCameraExposure( float3 hdrColor )
 {
 	return hdrColor * g_CameraGrade.x;
 }
 
-/** @brief 톤맵 뒤의 [0,1] 색에 채도 · 대비 · 비네트 · 레터박스를 적용합니다. */
+/** @brief 톤맵 뒤의 [0,1] 색에 채도 · 대비 · 비네트 · 색각 보정 · 레터박스를 적용합니다. */
 float3 swApplyCameraGrade( float2 uv, float3 color )
 {
 	// 채도: 휘도(Rec.709)에서 멀어지는 정도를 곱한다. 대비: 화면 중간 회색(0.5)을 축으로 늘린다.
@@ -27,6 +29,9 @@ float3 swApplyCameraGrade( float2 uv, float3 color )
 	const float2 centered = ( uv - 0.5f ) * float2( aspect, 1.0f ) / max( aspect, 1.0f );
 	const float  falloff  = saturate( dot( centered, centered ) * 2.0f );
 	color *= 1.0f - g_CameraGrade.w * falloff;
+
+	// 색각 보정(gv_colorVisionMode) — 화면 · 호스트 출력 뷰만 z 에 방식이 실리고 렌더 텍스처 뷰는 0 이다(주 화면에서 그 텍스처가 다시 보정되므로).
+	color = swApplyColorVisionCorrection( color, (uint)g_CameraFrame.z );
 
 	// 레터박스: 남길 비율이 화면보다 넓으면 위아래, 좁으면 좌우를 검게 지운다. 0 이면 끈다. 고르기는 early-return 이 아니라 값 선택이다.
 	const float targetAspect = g_CameraFrame.x;

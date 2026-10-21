@@ -38,8 +38,8 @@
  *   ├────────┼──────────────────┼─────────────────────────────────────────┼──────────────────────────────────────────┤
  *   │ DX12   │ 네이티브 bindless│ t0 space1 무제한 배열(힙 전체 테이블)   │ 배열 원소 번호                           │
  *   │ Vulkan │ 네이티브 bindless│ set 1 binding 0 무제한 배열             │ 배열 원소 번호                           │
- *   │ DX11   │ 슬롯 에뮬        │ 엔진 텍스처 t0..t3 · 머티리얼 t16..t31    │ 엔진: PassCB 인덱스와 값 비교로 슬롯 선택│
- *   │ OpenGL │ 슬롯 에뮬        │ 텍스처 유닛 0..3 · 5..8 (결합 샘플러)   │ 머티리얼: 서수 0..3 (DX11 과 같다)       │
+ *   │ DX11   │ 슬롯 에뮬        │ 엔진 t0..t3 · t15 · 머티리얼 t16..t31   │ 엔진: PassCB 인덱스와 값 비교로 슬롯 선택│
+ *   │ OpenGL │ 슬롯 에뮬        │ 텍스처 유닛 0..3 · 15 · 16..31(결합)    │ 머티리얼: 서수 0..15 (DX11 과 같다)      │
  *   └────────┴──────────────────┴─────────────────────────────────────────┴──────────────────────────────────────────┘
  *   네이티브인지는 common.hlsli 의 `SW_NATIVE_BINDLESS` 가 정한다(ShaderCompiler 가 DX12 · Vulkan 에만 SW_BINDLESS=1 을 준다).
  *   에뮬 백엔드는 엔진이 아는 텍스처(PassCB 의 g_*Index)만 찾을 수 있다 — 모르는 인덱스는 슬롯 0 을 읽는다.
@@ -92,6 +92,8 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
 	// 따로 저장하지 않는다: 첨부 하나를 통째로 아끼고, 언리얼도 깊이에서 복원한다). 점광은 위치가
 	// 있어야 거리 감쇠를 계산할 수 있으므로 이게 없으면 디퍼드에 점광을 넣을 수 없다.
 	float4x4 g_InvViewProj;
+	// 지난번 이 뷰를 그린 뷰-투영 — 모션 블러가 깊이로 복원한 월드 위치를 다시 투영해 화면 속도를 구한다(motionblur.hlsl). 처음 · 컷 프레임은 g_ViewProj 와 같다.
+	float4x4 g_PrevViewProj;
 	float4x4 g_World;
 	float4   g_KeyLightDirIntensity;
 	float4   g_KeyLightColor;
@@ -105,7 +107,8 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
 	float4   g_ShadowCascade3;
 	float4   g_BloomParams;
 	float4   g_CameraGrade;   // 카메라별 색 보정 — x 노출 배율(2^EV), y 채도, z 대비, w 비네트 세기(CameraPostProcessValues, postgrade.hlsli)
-	float4   g_CameraFrame;   // 카메라별 화면 틀 — x 레터박스로 남길 가로/세로 비율(0 = 없음), y 지금 뷰의 가로/세로 비율
+	float4   g_CameraFrame;   // 카메라별 화면 틀 — x 레터박스로 남길 가로/세로 비율(0 = 없음), y 지금 뷰의 가로/세로 비율, z 색각 보정 방식(colorvision.hlsli, 렌더 텍스처 뷰는 0)
+	float4   g_CameraLens;    // 카메라별 피사계 심도 — x 초점 거리(m), y 착란원 반지름 배율(px, 반지름 = y · |1 - x / 깊이|), z 반지름 상한(px), w 켬 1 · 끔 0(depthoffield.hlsl)
 	float4   g_OutlineColor;
 	float4   g_OutlineParams;
 	float4   g_SourceTexel;   // xy = 1 / 원본(SourceColor 역할 입력) 크기, zw = 그 크기. 원본이 없는 패스는 프레임 크기 — 반해상도 첨부를 읽는 패스가 비켜 읽는 거리
@@ -116,10 +119,12 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
 	uint     g_ShadowMapIndex;
 	uint     g_GBufferAlbedoIndex;
 	uint     g_GBufferNormalIndex;
+	uint     g_GBufferMaterialIndex;  // G버퍼 머티리얼 칸(금속도 · 거칠기) — 디퍼드 조명이 읽는다(swLoadGbufferMaterial)
 	uint     g_SceneDepthIndex;
 	uint     g_SourceColorIndex;
 	uint     g_AmbientOcclusionIndex; // SSAO 결과(AOColor)가 걸려 있으면 유효, 아니면 kInvalidIndex (AO = 1 로 폴백)
 	uint     g_BloomBrightIndex;      // 반해상도 블룸 밝은 부분(BloomDownsample 출력)이 걸려 있으면 유효, 아니면 kInvalidIndex (원본에서 직접 구한다)
+	uint     g_Light2DCookieAtlasIndex; // 2D 빛 쿠키 아틀라스(Light2DCookieAtlas)가 걸려 있으면 유효, 아니면 kInvalidIndex — 쿠키를 쓴 2D 빛이 있는 프레임에만 걸린다
 	uint     g_Flags;
 	uint     g_SwInstancesIndex; // 인스턴스 구조버퍼가 걸려 있으면 유효, kInvalidIndex 면 g_World 폴백 (풀스크린·픽스처)
 	uint     g_SwInstanceCount;  // 인스턴스 버퍼 원소 수 — 범위 밖 인덱스를 막는다 (DX12 루트 SRV 는 경계 검사가 없다)
@@ -136,6 +141,7 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
 	uint     g_SwVertexAnimationIndex;    // 정점 애니메이션(VAT) 표가 걸려 있으면 유효, 아니면 kInvalidIndex
 	uint     g_SwVertexAnimationCount;    // 그 표의 원소 수 — 범위 밖 번호를 막는다
 	float    g_SwVertexAnimationTime;     // VAT 시계(초) — 게임 스레드의 군중 시계와 같은 값이라 인스턴스 위상이 CPU 시각과 맞는다
+	float    g_SwMaterialTime;            // 머티리얼 애니메이션 시계(초, 툰 UV 애니메이션) — VAT 시계와 같은 값이지만 VAT 표가 없어도 늘 걸린다
 };
 
 // ------------------------------------------------------------------------------
@@ -167,20 +173,11 @@ SW_ROOT_CONSTANTS_END
 SW_DECLARE_STRUCTURED_BUFFER( SwInstanceData, g_SwInstances, SW_SLOT_INSTANCE_SRV );
 
 // ------------------------------------------------------------------------------
-// 4) 씬 배치 테이블 — C++ GPUBatchInfo · gpucull.hlsl GPUBatchInfo 와 레이아웃 일치(uint 여덟, 32바이트).
+// 4) 씬 배치 테이블 — C++ GPUBatchInfo 와 레이아웃 일치(uint 여덟, 32바이트, batchdata.hlsli).
 //    배치마다 다른 값은 전부 여기 있다. 정점은 인스턴스(swLoadInstance)의 meshBatchIndex 로 자기 배치를 찾는다.
 // ------------------------------------------------------------------------------
-struct SwBatchData
-{
-	uint instanceBase;    // 인스턴스 버퍼(또는 가시 목록)에서 이 배치의 시작
-	uint instanceCount;   // CPU 가 센 개수 (컬링은 간접 인자에 자기 개수를 따로 만든다)
-	uint sortMode;        // 컬링 전용 (GPUBatchSortMode)
-	uint morphVertexBase; // 모프 정점 풀에서 이 메시의 시작. kInvalidIndex = 모프 안 함
-	uint firstVertex;     // 정점 풀에서 이 메시의 시작 (간접 인자의 startVertex). SV_VertexID 가 이 값을 포함하는지는 API 마다 다르다 — swComputeMorphElement 참고
-	uint vertexAnimationBase; // 정점 애니메이션(VAT) 표에서 이 메시의 머리 원소. kInvalidIndex = VAT 없음 (swLoadAnimatedVertex)
-	uint pad1;
-	uint pad2;
-};
+// 원소 정의는 batchdata.hlsli 하나다(컬링 컴퓨트도 같은 파일을 쓴다).
+#include "batchdata.hlsli"
 
 SW_DECLARE_STRUCTURED_BUFFER( SwBatchData, g_SwBatches, SW_SLOT_BATCH_SRV );
 
@@ -197,7 +194,7 @@ SwBatchData swLoadBatch( uint batchIndex )
 	batch.morphVertexBase = kInvalidIndex;
 	batch.firstVertex     = 0u;
 	batch.vertexAnimationBase = kInvalidIndex;
-	batch.pad1            = 0u;
+	batch.sectionVertexOffset = 0u;
 	batch.pad2            = 0u;
 	const bool bValid = ( g_SwBatchesIndex != kInvalidIndex ) && ( batchIndex < g_SwBatchCount );
 	if ( bValid )
@@ -206,11 +203,11 @@ SwBatchData swLoadBatch( uint batchIndex )
 }
 
 // ------------------------------------------------------------------------------
-// 5) 모프 정점 풀 — GPU 가 변형한 정점. C++ `GPUMorphVertex` 와 바이트 배치 일치(float4 둘).
+// 5) 모프 정점 풀 — GPU 가 변형한 정점. C++ `GPUMorphVertex` 와 바이트 배치 일치(float4 셋).
 //    메시마다 버퍼를 따로 두지 않고 **풀 하나에 구간을 나눠 쓴다** — 언리얼 GPU Skin Cache 가 캐시
 //    버퍼 하나를 할당해 나눠 쓰는 것과 같다. 그래야 드로우 사이에 바인딩이 바뀌지 않는다(이 엔진의 규약).
 // ------------------------------------------------------------------------------
-// **구조체가 아니라 평면 float4 배열이다.** 정점 하나가 원소 둘 — [2i] 위치, [2i+1] 노멀(w 는 안 쓴다).
+// **구조체가 아니라 평면 float4 배열이다.** 정점 하나가 원소 셋 — [3i] 위치, [3i+1] 노멀(w 는 안 쓴다), [3i+2] 탄젠트(xyz, w 부호).
 // 주의: `struct { float4 pos; float4 nrm; }` 로 두면 레이아웃이 네 백엔드에서 같아도(ArrayStride 32 · 오프셋 0/16)
 // OpenGL 만 **같은 원소의 두 멤버를 다른 원소에서 읽는다**(셰이더 모양에 따라 달라진다 — 드라이버의 SPIR-V 경로가
 // 구조체 멤버 로드를 다루는 방식). 평면 배열은 멤버가 없으니 그 자리가 아예 없다.
@@ -264,6 +261,17 @@ void swLoadMorphedVertex( uint batchIndex, uint vertexId, float3 restPosition, f
 }
 
 /**
+ * @brief 이 정점의 탄젠트(xyz 로컬 방향, w 바이탄젠트 부호) — 모프 · 스킨 대상이면 컴퓨트가 돌린 값을, 아니면 입력 스트림 값을 돌려준다.
+ * @details 부호는 변형으로 바뀌지 않아 입력 스트림 값을 쓴다. 노멀 맵을 읽는 셰이더만 부른다 — 부르지 않는 패스는 이 로드가 빠진다.
+ *          early-return 이 없다 — GL 드라이버 사연은 swComputeMorphElement 참고.
+ */
+float4 swLoadMorphedTangent( uint batchIndex, uint vertexId, float4 restTangent )
+{
+	const uint element = swComputeMorphElement( batchIndex, vertexId );
+	return ( element == kInvalidIndex ) ? restTangent : float4( g_SwMorphVertices[element * SW_MORPH_FLOAT4_PER_VERTEX + 2u].xyz, restTangent.w );
+}
+
+/**
  * @brief 위치만 필요한 패스(그림자·뎁스 프리패스)를 위한 짧은 형태.
  * @note 노멀을 읽지 않으므로 그 로드가 통째로 빠진다 — 뎁스 전용 패스는 그게 비용의 전부다.
  */
@@ -308,6 +316,8 @@ void swComputeVertexAnimationElements( SwInstanceData instance, uint vertexId, o
 #else
 	const uint local = vertexId - batch.firstVertex;
 #endif
+	// VAT 표는 메시 전체의 정점 순서다 — 구간 배치는 배치 안 번호에 구간의 첫 정점을 더해 메시 안 번호로 돌린다(모프 풀은 시작에 이미 더해 두었다).
+	const uint   meshLocal   = local + batch.sectionVertexOffset;
 	const uint   base        = batch.vertexAnimationBase;
 	const bool   bTable      = ( base != kInvalidIndex ) && ( g_SwVertexAnimationIndex != kInvalidIndex ) && ( base < g_SwVertexAnimationCount );
 	const float4 header      = bTable ? g_SwVertexAnimation[base] : float4( 0.0f, 0.0f, 0.0f, 0.0f );
@@ -319,10 +329,10 @@ void swComputeVertexAnimationElements( SwInstanceData instance, uint vertexId, o
 	const float  wrapped     = bLoop ? ( framePosition - floor( framePosition / frameTotal ) * frameTotal ) : min( framePosition, frameTotal - 1.0f );
 	const uint   frame       = min( (uint)wrapped, frameCount - 1u );
 	const uint   nextFrame   = bLoop ? ( ( frame + 1u ) % frameCount ) : min( frame + 1u, frameCount - 1u );
-	outFirstElement          = base + 1u + frame * vertexCount + local;
-	outSecondElement         = base + 1u + nextFrame * vertexCount + local;
+	outFirstElement          = base + 1u + frame * vertexCount + meshLocal;
+	outSecondElement         = base + 1u + nextFrame * vertexCount + meshLocal;
 	outAlpha                 = wrapped - (float)frame;
-	outValid                 = bTable && ( header.x > 0.5f ) && ( local < vertexCount ) && ( outFirstElement < g_SwVertexAnimationCount ) &&
+	outValid                 = bTable && ( header.x > 0.5f ) && ( meshLocal < vertexCount ) && ( outFirstElement < g_SwVertexAnimationCount ) &&
 	                           ( outSecondElement < g_SwVertexAnimationCount );
 }
 
@@ -456,9 +466,9 @@ SwInstanceData swLoadInstance( uint instanceSlot )
 	instance.tint           = 0xFFFFFFFFu; // 흰색 불투명
 	instance.pixelSnap      = 0.0f;        // 스냅 없음
 	instance.vertexAnimationPhase = 0.0f;
-	instance.reserved0      = 0u;
+	instance.highlight      = 0u;          // 강조 없음
+	instance.appearance     = 1.0f;        // 다 보인다
 	instance.reserved1      = 0u;
-	instance.reserved2      = 0u;
 	return instance;
 }
 
@@ -466,6 +476,42 @@ float4x4 swLoadInstanceWorld( uint instanceSlot )
 {
 	return swLoadInstance( instanceSlot ).world;
 }
+
+// ------------------------------------------------------------------------------
+// 8-1) 등장 디더 — 로드가 끝난 메시 · 텔레포트 · 사라지기가 한 프레임에 튀지 않고 서서히 나타나게 한다(언리얼 Dithered LOD Transition 과 같은 기법).
+//
+//      등장 중인 인스턴스(appearance < 1)만 디더 변형(`SW_APPEARANCE_DITHER`)으로 그린다 — 다 보이는 인스턴스는 그 변형이 아니라서 픽셀 버리기가 없고
+//      조기 깊이 검사를 잃지 않는다(배치 키가 퍼뮤테이션 해시라 등장 중인 것만 따로 배치된다, GPUSceneBuilder). 문턱은 화면 픽셀의 4x4 Bayer 행렬이라
+//      깊이 프리패스 · 그림자 · 기본 패스가 **같은 픽셀**을 버린다 — 프리패스가 쓴 깊이와 기본 패스가 남긴 픽셀이 어긋나 구멍이 나지 않는다.
+//      TAA 가 꺼진 품질 단계에서도 그대로 디더다: 등장 시간이 짧고(MeshComponent `_appearSeconds`), 알파 페이드는 불투명 정렬 · 깊이 쓰기를 깨기 때문이다.
+//
+//      쓰는 셰이더: VS 출력 구조체에 `SW_APPEARANCE_VARYING`, VS 끝에 `SW_APPEARANCE_WRITE( output, instance )`, PS 처음에 `SW_APPEARANCE_CLIP( input )`.
+//      변형이 아니면 셋 다 비어 바이트코드가 그대로다.
+// ------------------------------------------------------------------------------
+
+/** @brief 화면 픽셀 @p pixelPosition(SV_POSITION.xy)의 디더 문턱(0 ~ 1)입니다. 4x4 Bayer 행렬 — 16 단계가 화면에 고르게 흩어진다. */
+float swAppearanceDitherThreshold( float2 pixelPosition )
+{
+	static const float arrBayer4x4[16] = { 0.0f, 8.0f, 2.0f, 10.0f, 12.0f, 4.0f, 14.0f, 6.0f, 3.0f, 11.0f, 1.0f, 9.0f, 15.0f, 7.0f, 13.0f, 5.0f };
+	const uint2        cell          = uint2( pixelPosition ) & 3u;
+	return ( arrBayer4x4[cell.y * 4u + cell.x] + 0.5f ) / 16.0f;
+}
+
+/** @brief 등장 비율 @p appearance 보다 문턱이 높은 픽셀을 버린다(0 이면 모두, 1 이면 하나도 버리지 않는다). */
+void swClipAppearanceDither( float appearance, float2 pixelPosition )
+{
+	clip( appearance - swAppearanceDitherThreshold( pixelPosition ) );
+}
+
+#if defined( SW_APPEARANCE_DITHER )
+#define SW_APPEARANCE_VARYING nointerpolation float appearance : TEXCOORD15;
+#define SW_APPEARANCE_WRITE( output, instance ) ( output ).appearance = ( instance ).appearance;
+#define SW_APPEARANCE_CLIP( input ) swClipAppearanceDither( ( input ).appearance, ( input ).position.xy );
+#else
+#define SW_APPEARANCE_VARYING
+#define SW_APPEARANCE_WRITE( output, instance )
+#define SW_APPEARANCE_CLIP( input )
+#endif
 
 // ------------------------------------------------------------------------------
 // 9) 머티리얼 데이터 — 셰이더가 구조체를 선언하면 엔진이 그 타입의 머티리얼들을 StructuredBuffer 원소로 쌓는다.
@@ -644,6 +690,12 @@ SW_DECLARE_TEXTURE2D_SAMPLER( g_SwSlot0, g_SwSlot0Sampler, SW_SLOT_ENGINE_TEX0 )
 SW_DECLARE_TEXTURE2D_SAMPLER( g_SwSlot1, g_SwSlot1Sampler, SW_SLOT_ENGINE_TEX1 );
 SW_DECLARE_TEXTURE2D_SAMPLER( g_SwSlot2, g_SwSlot2Sampler, SW_SLOT_ENGINE_TEX2 );
 SW_DECLARE_TEXTURE2D_SAMPLER( g_SwSlot3, g_SwSlot3Sampler, SW_SLOT_ENGINE_TEX3 );
+// G버퍼 머티리얼 칸 t15 — 조명 패스의 다섯째 엔진 텍스처라 t0..t3 밖이다(bindingslots.hlsli SW_SLOT_ENGINE_GBUFFER_MATERIAL). DX11 은 s15 가 정적 세트라 짝 샘플러가 없다.
+#if defined( DX11 )
+SW_DECLARE_TEXTURE2D( g_SwSlotGBufferMaterial, SW_SLOT_ENGINE_GBUFFER_MATERIAL );
+#else
+SW_DECLARE_TEXTURE2D_SAMPLER( g_SwSlotGBufferMaterial, g_SwSlotGBufferMaterialSampler, SW_SLOT_ENGINE_GBUFFER_MATERIAL );
+#endif
 
 // 머티리얼 텍스처 고정 슬롯 t16..t31(16 칸) — 번호는 bindingslots.hlsli 가 정한다 (C++ shaderslot::kMaterialTexture0 와 같은 파일).
 // DX11 은 샘플러 슬롯이 16 개뿐이라 머티리얼 슬롯에 짝 샘플러를 두지 않는다 — 정적 세트의 머티리얼 샘플러(SW_MATERIAL_TEXTURE_SAMPLER)로 읽는다.
@@ -710,19 +762,31 @@ float4 swSampleSlotWith( Texture2D slotTexture, uint samplerId, float2 uv )
 }
 #endif
 
+/** @brief G버퍼 머티리얼 칸의 슬롯(t15)을 엔진 텍스처 샘플러로 읽습니다 — DX11 은 짝 샘플러가 없어 정적 세트에서 고른다. */
+float4 swSampleGbufferMaterialSlot( float2 uv )
+{
+#if defined( DX11 )
+	return swSampleSlotWith( g_SwSlotGBufferMaterial, SW_ENGINE_TEXTURE_SAMPLER, uv );
+#else
+	return g_SwSlotGBufferMaterial.Sample( g_SwSlotGBufferMaterialSampler, uv );
+#endif
+}
+
 float4 swSampleIndex( uint index, float2 uv )
 {
 	if ( index == kInvalidIndex )
 		return float4( 0, 0, 0, 1 );
-	// FrameRenderer 가 [shadow/source, albedo/ao, normal/bloomBright, depth] 순으로 t0..t3 에 바인딩 (commitBindlessTextureBindings 와 같은 표).
+	// FrameRenderer 가 [shadow/source, albedo/ao/light2dCookie, normal/bloomBright, depth] 순으로 t0..t3 에, G버퍼 머티리얼을 t15 에 바인딩 (commitBindlessTextureBindings 와 같은 표).
 	if ( index == g_ShadowMapIndex || index == g_SourceColorIndex )
 		return g_SwSlot0.Sample( g_SwSlot0Sampler, uv );
-	if ( index == g_GBufferAlbedoIndex || index == g_AmbientOcclusionIndex )
+	if ( index == g_GBufferAlbedoIndex || index == g_AmbientOcclusionIndex || index == g_Light2DCookieAtlasIndex )
 		return g_SwSlot1.Sample( g_SwSlot1Sampler, uv );
 	if ( index == g_GBufferNormalIndex || index == g_BloomBrightIndex )
 		return g_SwSlot2.Sample( g_SwSlot2Sampler, uv );
 	if ( index == g_SceneDepthIndex )
 		return g_SwSlot3.Sample( g_SwSlot3Sampler, uv );
+	if ( index == g_GBufferMaterialIndex )
+		return swSampleGbufferMaterialSlot( uv );
 	return g_SwSlot0.Sample( g_SwSlot0Sampler, uv );
 }
 /**
@@ -744,12 +808,14 @@ float4 swSampleIndexWith( uint index, uint samplerId, float2 uv )
 		return float4( 0, 0, 0, 1 );
 	if ( index == g_ShadowMapIndex || index == g_SourceColorIndex )
 		return swSampleSlotWith( g_SwSlot0, samplerId, uv );
-	if ( index == g_GBufferAlbedoIndex || index == g_AmbientOcclusionIndex )
+	if ( index == g_GBufferAlbedoIndex || index == g_AmbientOcclusionIndex || index == g_Light2DCookieAtlasIndex )
 		return swSampleSlotWith( g_SwSlot1, samplerId, uv );
 	if ( index == g_GBufferNormalIndex || index == g_BloomBrightIndex )
 		return swSampleSlotWith( g_SwSlot2, samplerId, uv );
 	if ( index == g_SceneDepthIndex )
 		return swSampleSlotWith( g_SwSlot3, samplerId, uv );
+	if ( index == g_GBufferMaterialIndex )
+		return swSampleSlotWith( g_SwSlotGBufferMaterial, samplerId, uv );
 	return swSampleSlotWith( g_SwSlot0, samplerId, uv );
 }
 #else
@@ -774,12 +840,14 @@ float4 swSampleIndexWith( uint index, uint samplerId, float2 uv )
 		return float4( 0, 0, 0, 1 );
 	if ( index == g_ShadowMapIndex || index == g_SourceColorIndex )
 		return swSampleSlotPoint( g_SwSlot0, uv );
-	if ( index == g_GBufferAlbedoIndex || index == g_AmbientOcclusionIndex )
+	if ( index == g_GBufferAlbedoIndex || index == g_AmbientOcclusionIndex || index == g_Light2DCookieAtlasIndex )
 		return swSampleSlotPoint( g_SwSlot1, uv );
 	if ( index == g_GBufferNormalIndex || index == g_BloomBrightIndex )
 		return swSampleSlotPoint( g_SwSlot2, uv );
 	if ( index == g_SceneDepthIndex )
 		return swSampleSlotPoint( g_SwSlot3, uv );
+	if ( index == g_GBufferMaterialIndex )
+		return swSampleSlotPoint( g_SwSlotGBufferMaterial, uv );
 	return swSampleSlotPoint( g_SwSlot0, uv );
 }
 #endif
@@ -832,6 +900,29 @@ float4 swLoadRwTexture2D( uint index, uint2 texelPosition )
 
 // ---- 11-3) 공통 진입 함수 (네 백엔드) -----------------------------------------
 #if defined( SW_NATIVE_BINDLESS ) || !defined( SW_STAGE_COMPUTE )
+/**
+ * @brief 2D 빛 쿠키 아틀라스(패스 역할 `Light2DCookieAtlas`)를 밉 0 으로 읽습니다. 빛 반복 안에서 부르므로 암시 미분을 쓰지 않는다.
+ * @details 미분이 든 샘플을 길이가 정해지지 않은 반복에 두면 FXC(DX11)가 반복을 펼치려다 실패한다(X3511). 아틀라스는 밉이 없는 렌더 타깃이라
+ *          밉 0 이 곧 그 값이다. 에뮬 백엔드는 아틀라스를 슬롯 1 에 건다(`swSampleIndex` 의 표). 아틀라스가 없으면 `swSampleIndex` 와 같이 검정이다.
+ */
+#if SW_ENGINE_TEXTURE_SAMPLER != 1
+#error swSampleLight2dCookieAtlas 는 엔진 텍스처 샘플러가 정적 샘플러 1 번(g_SwSampler1)이라고 가정한다
+#endif
+float4 swSampleLight2dCookieAtlas( float2 uv )
+{
+	if ( g_Light2DCookieAtlasIndex == kInvalidIndex )
+		return float4( 0, 0, 0, 1 );
+#if defined( SW_NATIVE_BINDLESS )
+	const uint slot = swBindlessTextureSlot( g_Light2DCookieAtlasIndex );
+#if defined( __spirv__ )
+	return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].SampleLevel( SW_SAMPLER_STATE( SW_ENGINE_TEXTURE_SAMPLER ), uv, 0.0f );
+#else
+	return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].SampleLevel( g_SwSampler1, uv, 0.0f );
+#endif
+#else
+	return g_SwSlot1.SampleLevel( g_SwSlot1Sampler, uv, 0.0f );
+#endif
+}
 /**
  * @brief 머티리얼이 준 텍스처 인덱스를 샘플링합니다 (머티리얼 데이터의 uint 슬롯).
  * @details swSampleIndex 와 나누는 이유: 그쪽은 **엔진이 아는 인덱스**(그림자·G버퍼 등) 전용이다.
@@ -1074,6 +1165,14 @@ float4 swSampleMaterialTexturePoint( uint index, float2 uv )
 float4 swSampleShadow( float2 uv )      { return swSampleIndex( g_ShadowMapIndex, uv ); }
 float4 swSampleAlbedo( float2 uv )      { return swSampleIndex( g_GBufferAlbedoIndex, uv ); }
 float4 swSampleNormal( float2 uv )      { return swSampleIndex( g_GBufferNormalIndex, uv ); }
+float4 swSampleGbufferMaterial( float2 uv ) { return swSampleIndex( g_GBufferMaterialIndex, uv ); }
+/** @brief G버퍼 머티리얼 칸을 읽어 푼다 — 쓰는 쪽은 12 절 swEncodeGbufferMaterial 하나다(r 금속도, g 거칠기). */
+void swLoadGbufferMaterial( float2 uv, out float outRoughness, out float outMetallic )
+{
+	const float4 encoded = swSampleGbufferMaterial( uv );
+	outMetallic          = encoded.r;
+	outRoughness         = encoded.g;
+}
 float4 swSampleDepth( float2 uv )       { return swSampleIndex( g_SceneDepthIndex, uv ); }
 float4 swSampleSource( float2 uv )      { return swSampleIndex( g_SourceColorIndex, uv ); }
 /**
@@ -1126,8 +1225,9 @@ float swSampleAmbientOcclusion( float2 uv )
 #if defined( SW_PASS_GBUFFER )
 struct SwSurfaceOutput
 {
-	float4 albedo : SV_TARGET0;
-	float4 normal : SV_TARGET1;
+	float4 albedo   : SV_TARGET0;
+	float4 normal   : SV_TARGET1;
+	float4 material : SV_TARGET2; // swEncodeGbufferMaterial
 };
 #else
 struct SwSurfaceOutput
@@ -1206,7 +1306,8 @@ uint swComputeLightVisitCount( float3 worldPosition )
 // 내보낼 색은 swStoreSurface 가 보기 모드대로 바꾼다(swComputeViewModeColor). C++ 정본은 RenderView.h 의 보기 모드 표(kArrRenderViewModeInfo)다 —
 // 이름이 어긋나면 컴파일은 되고 그림만 안 바뀐다(RenderPassGPUTest.ViewModesProduceDistinctPictures).
 #if defined( SW_VIEWMODE_UNLIT ) || defined( SW_VIEWMODE_NORMALS ) || defined( SW_VIEWMODE_DEPTH ) || defined( SW_VIEWMODE_OVERDRAW ) || \
-	defined( SW_VIEWMODE_ROUGHNESS ) || defined( SW_VIEWMODE_METALLIC ) || defined( SW_VIEWMODE_MIPMAPS ) || defined( SW_VIEWMODE_LIGHTCOMPLEXITY )
+	defined( SW_VIEWMODE_ROUGHNESS ) || defined( SW_VIEWMODE_METALLIC ) || defined( SW_VIEWMODE_MIPMAPS ) || defined( SW_VIEWMODE_LIGHTCOMPLEXITY ) || \
+	defined( SW_VIEWMODE_WIREOVERLAY )
 #define SW_VIEWMODE_SKIPS_LIGHTING 1
 #else
 #define SW_VIEWMODE_SKIPS_LIGHTING 0
@@ -1219,6 +1320,7 @@ uint swComputeLightVisitCount( float3 worldPosition )
 static const float kViewModeDepthRange   = 100.0f; // Depth 보기: 이 뷰 공간 깊이(m)에서 흰색
 static const float kViewModeOverdrawStep = 0.08f;  // Overdraw 보기: 한 번 그릴 때 더하는 밝기(12 겹이면 흰색)
 static const float kViewModeLightComplexityMax = 16.0f; // Light Complexity 보기: 이 라이트 수부터 빨강
+static const float3 kViewModeWireOverlayColor = float3( 0.02f, 0.02f, 0.02f ); // ShadedWireframe 의 선 색(셰이딩한 면 위에 겹친다)
 
 /** @brief 라이트 수를 색 띠로 바꿉니다 — 0 은 검정, 1 부터 파랑 · 초록 · 노랑 · 빨강(kViewModeLightComplexityMax 이상)이다. */
 float3 swComputeLightComplexityColor( uint visitCount )
@@ -1248,6 +1350,9 @@ float4 swComputeViewModeColor( float4 shadedColor, float4 albedo, float3 worldNo
 	return float4( saturate( viewDepth / kViewModeDepthRange ).xxx, 1.0f );
 #elif defined( SW_VIEWMODE_OVERDRAW )
 	return float4( kViewModeOverdrawStep, kViewModeOverdrawStep * 0.5f, kViewModeOverdrawStep * 0.15f, 0.0f );
+#elif defined( SW_VIEWMODE_WIREOVERLAY )
+	// ShadedWireframe 의 두 번째 드로우 — PSO 가 삼각형을 선으로 그리므로 단색이면 외곽선이다.
+	return float4( kViewModeWireOverlayColor, 1.0f );
 #elif defined( SW_VIEWMODE_LIGHTCOMPLEXITY )
 	// 조명 식이 이 위치에서 도는 라이트 수 — 커서(swBeginLights)와 같은 그리드를 읽는다. 표면에서 세므로 디퍼드도 G버퍼가 색을 넘긴다.
 	return float4( swComputeLightComplexityColor( swComputeLightVisitCount( worldPosition ) ), 1.0f );
@@ -1268,9 +1373,18 @@ float4 swComputeViewModeColor( float4 shadedColor, float4 albedo, float3 worldNo
 #endif
 
 /**
+ * @brief G버퍼 머티리얼 칸(첨부 GBufferMaterial, R8G8B8A8_UNORM)에 적을 값 — r 금속도, g 거칠기(지각 거칠기, 제곱 전), b · a 는 쓰지 않는다(0).
+ * @details 읽는 쪽은 11-3 절 swLoadGbufferMaterial 하나다. 셰이딩 모델은 알베도 칸의 알파(SW_GBUFFER_SHADING)에 그대로 둔다.
+ */
+float4 swEncodeGbufferMaterial( float roughness, float metallic )
+{
+	return float4( saturate( metallic ), saturate( roughness ), 0.0f, 0.0f );
+}
+
+/**
  * @brief 표면을 **패스가 원하는 모양**으로 내보낸다.
  * @param roughness · metallic 보기 모드 Roughness · Metallic 이 보이는 값이다. 기본값을 두지 않는다 — 셰이더마다 자기 값(머티리얼 칸이나 그 셰이더의 정의)을 넘긴다.
- * @details 포워드는 셰이딩한 색 하나, G버퍼는 알베도(알파 = 셰이딩 모델)와 월드 노멀 둘. 노멀 인코딩은 한 군데뿐이어야
+ * @details 포워드는 셰이딩한 색 하나, G버퍼는 알베도(알파 = 셰이딩 모델) · 월드 노멀 · 머티리얼(금속도 · 거칠기) 셋. 노멀 인코딩은 한 군데뿐이어야
  *          한다 — 쓰는 쪽(여기)과 읽는 쪽(deferredlighting)이 어긋나면 조명이 조용히 틀린다.
  *          보기 모드(Unlit · Normals · Depth · Overdraw)의 색도 여기서 바꾼다. G버퍼는 그 색을 알베도 칸에 셰이딩 모델 Unlit 으로 적어
  *          디퍼드 조명 패스가 그대로 낸다 — 조명 패스는 보기 모드 변형이 없다.
@@ -1285,8 +1399,9 @@ SW_SURFACE_OUTPUT swStoreSurface( float4 litColor, float4 albedo, float3 worldNo
 #endif
 #if defined( SW_PASS_GBUFFER )
 	SwSurfaceOutput output;
-	output.albedo = float4( albedo.rgb, SW_GBUFFER_SHADING );
-	output.normal = float4( saturate( normalize( worldNormal ) * 0.5f + 0.5f ), 1.0f );
+	output.albedo   = float4( albedo.rgb, SW_GBUFFER_SHADING );
+	output.normal   = float4( saturate( normalize( worldNormal ) * 0.5f + 0.5f ), 1.0f );
+	output.material = swEncodeGbufferMaterial( roughness, metallic );
 	return output;
 #else
 	SwSurfaceOutput output;

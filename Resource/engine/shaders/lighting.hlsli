@@ -17,18 +17,8 @@
 
 #include "binding.hlsli"
 
-/**
- * 씬 라이트 한 개. C++ `GPULight` 와 레이아웃이 같아야 한다(float4 넷 = 64바이트).
- * float4 로만 채운 이유는 모프 정점 풀에서 물렸던 것과 같다 — std430 은 vec4 를 16바이트 경계에
- * 맞추는데 DX/Vulkan 은 DXC 가 명시 오프셋을 적어 넘어간다. 그러면 **OpenGL 만** 값이 어긋난다.
- */
-struct SwLightData
-{
-	float4 positionRadius; // xyz 월드 위치(점광·스폿), w 반경 — 방향광은 0
-	float4 colorIntensity; // rgb 빛 색, a 세기
-	float4 directionType;  // xyz 빛이 나아가는 방향(방향광·스폿), w 타입 (SW_LIGHT_TYPE_*)
-	float4 params;         // x 그림자를 받는가(0/1), y cos(바깥 원뿔각), z cos(안쪽 원뿔각), w 점광 · 스폿 그림자의 첫 타일 원소(g_SwLightCount 기준 상대 번호)
-};
+// 씬 라이트 한 개(SwLightData)의 정의는 lightdata.hlsli 하나다 — 컴퓨트(lightgrid.hlsl)도 같은 파일을 쓴다. float4 로만 채운 이유는 그 파일 머리 주석.
+#include "lightdata.hlsli"
 
 SW_DECLARE_STRUCTURED_BUFFER( SwLightData, g_SwLights, SW_SLOT_LIGHT_SRV );
 // 라이트 프로브의 SH9(프로브 하나가 float4 일곱 개). 볼륨 원소(SW_LIGHT_TYPE_PROBE_VOLUME)가 첫 프로브 번호를 싣는다 — 읽는 함수는 swLoadProbe 하나다.
@@ -243,12 +233,18 @@ bool swComputeLightIncidence( SwLightData light, float3 worldPosition, out float
 	return bLight3d;
 }
 
+/** @brief 라이트 프로브 버퍼(g_SwLightProbes, t13)의 원소 하나입니다 — 이 함수만 그 버퍼를 읽는다(SH9 · 반사 프로브 텍셀이 같은 버퍼다). */
+float4 swLoadProbeElement( uint elementIndex )
+{
+	return g_SwLightProbes[elementIndex];
+}
+
 /**
  * @brief 라이트 프로브 하나의 SH9 원소 @p element(0..SW_LIGHT_PROBE_FLOAT4_COUNT-1)를 읽습니다. 이 함수만 프로브의 위치를 안다(g_SwLightProbes, t13).
  */
 float4 swLoadProbe( uint probeIndex, uint element )
 {
-	return g_SwLightProbes[probeIndex * SW_LIGHT_PROBE_FLOAT4_COUNT + element];
+	return swLoadProbeElement( probeIndex * SW_LIGHT_PROBE_FLOAT4_COUNT + element );
 }
 
 /**
@@ -303,6 +299,63 @@ float4 swSampleProbeVolume( SwLightData volume, float3 worldPosition, float3 nor
 		}
 	}
 	return float4( result, bInside ? 1.0f : 0.0f );
+}
+
+/**
+ * @brief 길이 1 의 방향을 옥타헤드럴 사각형의 UV([0, 1]²)로 접습니다(+Y 가 가운데). C++ `ReflectionProbeData::encodeOctahedral` 과 같은 식이다.
+ * @details 부호는 0 을 양수로 친다 — HLSL `sign` 은 0 에서 0 이라 쓰지 않는다(C++ 와 갈린다).
+ */
+float2 swEncodeOctahedral( float3 direction )
+{
+	const float3 folded   = direction / max( abs( direction.x ) + abs( direction.y ) + abs( direction.z ), 1e-8f );
+	const float2 signXz   = float2( folded.x >= 0.0f ? 1.0f : -1.0f, folded.z >= 0.0f ? 1.0f : -1.0f );
+	const float2 lower    = ( 1.0f - abs( folded.zx ) ) * signXz;
+	const float2 octahedral = ( folded.y >= 0.0f ) ? folded.xz : lower;
+	return octahedral * 0.5f + 0.5f;
+}
+
+/** @brief 반사 프로브의 한 거칠기 단계를 방향 @p direction 으로 쌍선형 샘플합니다. 사각형 가장자리는 자른다(C++ `ReflectionProbeData::sampleLevel` 과 같다). */
+float3 swSampleReflectionProbeLevel( uint firstTexel, uint resolution, uint level, float2 uv )
+{
+	const float  lastTexel = (float)( resolution - 1u );
+	const float2 texel     = clamp( uv * (float)resolution - 0.5f, 0.0f, lastTexel );
+	const uint2  low       = uint2( floor( texel ) );
+	const uint2  high      = min( low + 1u, uint2( resolution - 1u, resolution - 1u ) );
+	const float2 blend     = texel - float2( low );
+	const uint   levelBase = firstTexel + level * resolution * resolution;
+	const float3 topLeft   = swLoadProbeElement( levelBase + low.y * resolution + low.x ).rgb;
+	const float3 topRight  = swLoadProbeElement( levelBase + low.y * resolution + high.x ).rgb;
+	const float3 lowLeft   = swLoadProbeElement( levelBase + high.y * resolution + low.x ).rgb;
+	const float3 lowRight  = swLoadProbeElement( levelBase + high.y * resolution + high.x ).rgb;
+	return lerp( lerp( topLeft, topRight, blend.x ), lerp( lowLeft, lowRight, blend.x ), blend.y );
+}
+
+/**
+ * @brief 반사 프로브 원소 하나(bindingslots.hlsli 8 절의 SW_LIGHT_TYPE_REFLECTION_PROBE 배치)에서 이 위치 · 반사 방향의 빛을 구합니다.
+ * @return rgb = 거칠기에 맞게 거른 빛(두 단계 사이를 섞는다), a = 가중치 — 상자 안 깊이 들어가면 1, 경계 안쪽 섞는 폭에서 0 으로 떨어지고 상자 밖은 0.
+ *         프로브 버퍼가 안 걸렸으면 0 이다. 텍셀은 단계마다 같은 크기라 거칠기 단계를 고르는 것은 번호 식 하나다.
+ */
+float4 swSampleReflectionProbe( SwLightData probe, float3 worldPosition, float3 reflectDirection, float roughness )
+{
+	const float3 halfExtent  = probe.colorIntensity.xyz;
+	const float  blendWidth  = max( probe.colorIntensity.w, 1e-3f );
+	const float3 inside      = halfExtent - abs( worldPosition - probe.positionRadius.xyz ); // 축마다 경계까지 남은 거리(음수면 밖)
+	const float  weight      = saturate( min( inside.x, min( inside.y, inside.z ) ) / blendWidth );
+	const uint   resolution  = (uint)( probe.params.x + 0.5f );
+	const uint   levelCount  = (uint)( probe.params.y + 0.5f );
+	const uint   firstTexel  = (uint)( probe.params.z + 0.5f );
+	const bool   bUsable     = weight > 0.0f && resolution > 0u && levelCount > 1u && g_SwLightProbesIndex != kInvalidIndex;
+	float3       radiance    = float3( 0.0f, 0.0f, 0.0f );
+	if ( bUsable )
+	{
+		const float2 uv        = swEncodeOctahedral( reflectDirection );
+		const float  levelPick = saturate( roughness ) * (float)( levelCount - 1u );
+		const uint   lowLevel  = min( (uint)levelPick, levelCount - 1u );
+		const uint   highLevel = min( lowLevel + 1u, levelCount - 1u );
+		radiance = lerp( swSampleReflectionProbeLevel( firstTexel, resolution, lowLevel, uv ), swSampleReflectionProbeLevel( firstTexel, resolution, highLevel, uv ),
+		                 levelPick - (float)lowLevel );
+	}
+	return float4( radiance, bUsable ? weight : 0.0f );
 }
 
 /**
@@ -369,6 +422,7 @@ bool swNextLight( inout SwLightCursor inoutCursor, out SwLightData outLight )
 	outLight.colorIntensity = float4( 0.0f, 0.0f, 0.0f, 0.0f );
 	outLight.directionType  = float4( 0.0f, 0.0f, 0.0f, (float)SW_LIGHT_TYPE_SHADOW2D );
 	outLight.params         = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+	outLight.extra          = float4( 0.0f, 0.0f, 0.0f, 0.0f );
 	if ( bHasLight && lightIndex < g_SwLightCount )
 		outLight = g_SwLights[lightIndex];
 	inoutCursor.position += bFirst ? 1u : 0u;
@@ -376,28 +430,110 @@ bool swNextLight( inout SwLightCursor inoutCursor, out SwLightData outLight )
 	return bHasLight;
 }
 
+// ------------------------------------------------------------------------------
+// 금속도 · 거칠기 PBR (IndirectLighting.md P5) — 언리얼 기본 셰이딩 모델과 같은 모양이다: 확산은 램버트, 반사는 GGX 분포 · 스미스 결합 가시성(근사) · 슐릭 프레넬.
+// 단위: 이 엔진의 확산 항은 π 로 나누지 않는다(빛 세기가 π 를 품는다). 반사 항도 같은 단위가 되게 BRDF 에 π 를 곱한다 — 두 항의 비는 물리식과 같다.
+// 툰(toon.hlsl)은 이 식을 쓰지 않는다(결정 기록 5-12 D2-12 — 툰은 별도 경로).
+// ------------------------------------------------------------------------------
+static const float kDielectricSpecular = 0.04f;  // 유전체의 수직 반사율 F0(언리얼 Specular 0.5)
+static const float kMinRoughness       = 0.045f; // 거칠기 0 의 GGX 는 점 하나라 반짝임이 사라지고 나눗셈이 터진다(필라멘트의 하한)
+
+/** @brief PBR 표면 — 금속도가 기본 색을 확산색과 F0 로 나눈다(언리얼 DiffuseColor · SpecularColor). */
+struct SwSurfacePBR
+{
+	float3 diffuseColor;
+	float3 specularColor; // F0
+	float  roughness;     // 지각 거칠기(하한을 건 값)
+	float  alpha;         // GGX α = 거칠기²
+};
+
+SwSurfacePBR swMakeSurfacePbr( float3 baseColor, float roughness, float metallic )
+{
+	const float  clampedMetallic = saturate( metallic );
+	SwSurfacePBR surface;
+	surface.diffuseColor  = baseColor * ( 1.0f - clampedMetallic );
+	surface.specularColor = lerp( float3( kDielectricSpecular, kDielectricSpecular, kDielectricSpecular ), baseColor, clampedMetallic );
+	surface.roughness     = max( saturate( roughness ), kMinRoughness );
+	surface.alpha         = surface.roughness * surface.roughness;
+	return surface;
+}
+
 /**
- * @brief 이 표면을 이 위치를 비추는 **모든 라이트**로 셰이딩합니다.
- * @param albedo   표면 색 (앰비언트에도 곱해진다)
- * @param worldPosition 월드 위치 — 점광의 거리 감쇠에 쓴다
+ * @brief 이 월드 위치에서 카메라로 가는 단위 방향입니다. 원근 · 직교 둘 다 맞다 — 이 위치를 지나는 시선의 가까운 면 점과 먼 면 점을 잇는다.
+ * @details PassCB 에 카메라 위치 칸을 두지 않고 뷰-투영(g_ViewProj · g_InvViewProj)에서 구한다 — 직교 카메라는 위치가 시선 방향을 정하지 않는다.
+ */
+float3 swComputeToView( float3 worldPosition )
+{
+	const float4 clip      = mul( float4( worldPosition, 1.0f ), g_ViewProj );
+	const float2 ndcXy     = clip.xy / clip.w;
+	const float4 nearPoint = mul( float4( ndcXy, 0.0f, 1.0f ), g_InvViewProj );
+	const float4 farPoint  = mul( float4( ndcXy, 1.0f, 1.0f ), g_InvViewProj );
+	return normalize( nearPoint.xyz / nearPoint.w - farPoint.xyz / farPoint.w );
+}
+
+/** @brief 빛 하나의 반사 BRDF × π(엔진 단위) × N·L 입니다. 언리얼 `SpecularGGX` 의 D_GGX · Vis_SmithJointApprox · F_Schlick 과 같다. */
+float3 swEvaluateSpecular( SwSurfacePBR surface, float3 normal, float3 toView, float3 toLight, float normalDotLight )
+{
+	const float3 halfway       = normalize( toView + toLight );
+	const float  normalDotHalf = saturate( dot( normal, halfway ) );
+	const float  normalDotView = max( saturate( dot( normal, toView ) ), 1e-4f );
+	const float  viewDotHalf   = saturate( dot( toView, halfway ) );
+	const float  alphaSquared  = surface.alpha * surface.alpha;
+	const float  denominator   = normalDotHalf * normalDotHalf * ( alphaSquared - 1.0f ) + 1.0f;
+	// D · π — 분포의 1/π 와 엔진 단위의 π 가 지워진다.
+	const float  distributionTimesPi = alphaSquared / max( denominator * denominator, 1e-8f );
+	const float  visibility          = 0.5f / max( normalDotLight * ( normalDotView * ( 1.0f - surface.alpha ) + surface.alpha ) +
+	                                                   normalDotView * ( normalDotLight * ( 1.0f - surface.alpha ) + surface.alpha ),
+	                                               1e-5f );
+	const float  fresnelWeight       = pow( 1.0f - viewDotHalf, 5.0f );
+	const float3 fresnel             = surface.specularColor + ( 1.0f - surface.specularColor ) * fresnelWeight;
+	return distributionTimesPi * visibility * fresnel * normalDotLight;
+}
+
+/**
+ * @brief 고른 환경광 아래의 반사 비율(반구 적분)의 근사입니다 — 언리얼 모바일 `EnvBRDFApprox`(Karis 2014).
+ * @details 환경 반사의 빛은 반사 프로브(IndirectLighting.md P4)가 덮는 곳은 그 프로브의 빛, 아니면 앰비언트 색 하나다. 이 비율을 곱해야 금속이 그늘에서 검게 죽지 않는다.
+ */
+float3 swComputeEnvironmentSpecular( SwSurfacePBR surface, float normalDotView )
+{
+	const float4 c0     = float4( -1.0f, -0.0275f, -0.572f, 0.022f );
+	const float4 c1     = float4( 1.0f, 0.0425f, 1.04f, -0.04f );
+	const float4 fitted = surface.roughness * c0 + c1;
+	const float  a004   = min( fitted.x * fitted.x, exp2( -9.28f * normalDotView ) ) * fitted.x + fitted.y;
+	const float2 scaleBias = float2( -1.04f, 1.04f ) * a004 + fitted.zw;
+	return surface.specularColor * scaleBias.x + scaleBias.y;
+}
+
+/**
+ * @brief 이 표면을 이 위치를 비추는 **모든 라이트**로 셰이딩합니다(금속도 · 거칠기 PBR).
+ * @param albedo   기본 색(언리얼 BaseColor) — 금속도가 확산색과 F0 로 나눈다
+ * @param worldPosition 월드 위치 — 점광의 거리 감쇠와 시선 방향에 쓴다
  * @param normal   월드 노멀 (정규화되어 있어야 한다)
  * @param shadow   `swSampleShadowAtWorld` 가 준 방향광 값 — `params.x` 가 켜진 방향광에만 곱한다(점광 · 스폿은 `swComputeLightShadow` 가 자기 타일을 읽는다)
+ * @param roughness · metallic 머티리얼 칸(포워드) 또는 G버퍼 머티리얼 칸(디퍼드)의 값. 기본값을 두지 않는다 — 셰이더마다 자기 값을 넘긴다
  * @details 3D 라이트가 하나도 없으면 앰비언트만 남습니다. 키 라이트로 대신 비추지 않습니다. 3D 씬은 방향광이나 스카이를 데이터로 가집니다(결정 기록 5-12 D2-13).
- *          이 위치를 덮는 라이트 프로브 볼륨(커서가 도는 SW_LIGHT_TYPE_PROBE_VOLUME 원소)이 있으면 앰비언트 대신 그 볼륨들의 SH 를 가중 평균해 쓴다
- *          (IndirectLighting.md P3). 볼륨이 없는 곳은 지금까지의 앰비언트 그대로다 — 스카이(D3-7.4)가 생기면 전역 항목으로 그 자리를 잇는다.
- *          볼륨이 없는 씬은 연산 순서까지 예전과 같다(골든 바이트 비교).
+ *          이 위치를 덮는 라이트 프로브 볼륨(커서가 도는 SW_LIGHT_TYPE_PROBE_VOLUME 원소)이 있으면 확산 앰비언트 대신 그 볼륨들의 SH 를 가중 평균해 쓴다
+ *          (IndirectLighting.md P3). 볼륨이 없는 곳은 지금까지의 앰비언트 그대로다. 이 위치를 덮는 반사 프로브(SW_LIGHT_TYPE_REFLECTION_PROBE 원소)가 있으면
+ *          반사 앰비언트를 그 프로브가 찍어 거른 빛으로 바꾼다(P4 — 거칠기로 단계를 고르고 반사 방향으로 읽는다). 프로브가 없는 곳은 앰비언트 색 그대로다.
  */
-float3 swShadeLights( float3 albedo, float3 worldPosition, float3 normal, float shadow )
+float3 swShadeLights( float3 albedo, float3 worldPosition, float3 normal, float shadow, float roughness, float metallic )
 {
 #if defined( SW_VIEWMODE_LIGHTINGONLY )
 	// 보기 모드 LightingOnly — 포워드 셰이더의 표면 색을 회색으로 바꾼다(binding.hlsli 의 SW_VIEWMODE_LIGHTINGONLY_ALBEDO).
 	albedo = SW_VIEWMODE_LIGHTINGONLY_ALBEDO;
 #endif
+	const SwSurfacePBR surface       = swMakeSurfacePbr( albedo, roughness, metallic );
+	const float3       toView        = swComputeToView( worldPosition );
+	const float        normalDotView = max( saturate( dot( normal, toView ) ), 1e-4f );
 	// 앰비언트는 빛 목록과 무관하게 **한 번만** 더한다 — 라이트마다 더하면 빛을 늘릴수록 화면이 바랜다.
-	const float3 ambient = g_KeyLightColor.rgb * g_KeyLightColor.a;
-	float3       lit     = albedo * ambient;
-	float3       probeSum    = float3( 0.0f, 0.0f, 0.0f );
-	float        probeWeight = 0.0f;
+	const float3 ambient             = g_KeyLightColor.rgb * g_KeyLightColor.a;
+	const float3 environmentSpecular = swComputeEnvironmentSpecular( surface, normalDotView );
+	const float3 reflectDirection    = reflect( -toView, normal );
+	float3       lit                 = ( surface.diffuseColor + environmentSpecular ) * ambient;
+	float3       probeSum            = float3( 0.0f, 0.0f, 0.0f );
+	float        probeWeight         = 0.0f;
+	float3       reflectionSum       = float3( 0.0f, 0.0f, 0.0f );
+	float        reflectionWeight    = 0.0f;
 
 	SwLightCursor cursor = swBeginLights( worldPosition );
 	SwLightData   light;
@@ -411,6 +547,13 @@ float3 swShadeLights( float3 albedo, float3 worldPosition, float3 normal, float 
 			probeWeight += probe.a;
 			continue;
 		}
+		if ( lightType == SW_LIGHT_TYPE_REFLECTION_PROBE )
+		{
+			const float4 reflection = swSampleReflectionProbe( light, worldPosition, reflectDirection, surface.roughness );
+			reflectionSum += reflection.rgb * reflection.a;
+			reflectionWeight += reflection.a;
+			continue;
+		}
 		float3 toLight;
 		float  attenuation;
 		if ( swComputeLightIncidence( light, worldPosition, toLight, attenuation ) == false )
@@ -420,12 +563,20 @@ float3 swShadeLights( float3 albedo, float3 worldPosition, float3 normal, float 
 		if ( normalDotLight * attenuation <= 0.0f )
 			continue;
 
-		const float shadowTerm = swComputeLightShadow( light, worldPosition, normal, shadow );
-		lit += albedo * normalDotLight * attenuation * light.colorIntensity.a * light.colorIntensity.rgb * shadowTerm;
+		const float  shadowTerm = swComputeLightShadow( light, worldPosition, normal, shadow );
+		const float3 response   = surface.diffuseColor * normalDotLight + swEvaluateSpecular( surface, normal, toView, toLight, normalDotLight );
+		lit += response * attenuation * light.colorIntensity.a * light.colorIntensity.rgb * shadowTerm;
 	}
-	// 볼륨이 덮는 곳은 앰비언트를 프로브의 간접광으로 바꾼다(겹친 볼륨은 가중 평균). 덮지 않으면 아무 연산도 더하지 않는다.
+	// 볼륨이 덮는 곳은 확산 앰비언트를 프로브의 간접광으로 바꾼다(겹친 볼륨은 가중 평균). 덮지 않으면 아무 연산도 더하지 않는다.
 	if ( probeWeight > 0.0f )
-		lit += albedo * ( probeSum / probeWeight - ambient );
+		lit += surface.diffuseColor * ( probeSum / probeWeight - ambient );
+	// 반사 프로브가 덮는 곳은 반사 앰비언트를 프로브의 빛으로 바꾼다(IndirectLighting.md P4). 겹친 프로브는 가중 평균이고, 가중치 합이 1 보다 작은 경계는
+	// 모자란 몫을 앰비언트로 채워 상자 밖과 이어진다. 덮지 않으면 아무 연산도 더하지 않는다.
+	if ( reflectionWeight > 0.0f )
+	{
+		const float3 environment = ( reflectionSum + ambient * max( 1.0f - reflectionWeight, 0.0f ) ) / max( reflectionWeight, 1.0f );
+		lit += environmentSpecular * ( environment - ambient );
+	}
 	return lit;
 }
 

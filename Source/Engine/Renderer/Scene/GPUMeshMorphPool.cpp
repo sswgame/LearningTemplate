@@ -25,13 +25,15 @@ namespace sw
             /// @brief 버퍼 원소는 float4 / uint4 다. 셰이더 선언과 stride 가 같아야 DX11 이 SRV 를 받는다.
             static constexpr uint32 kElementStride = static_cast<uint32>( sizeof( float4 ) );
 
-            /** @brief 정점의 위치 · 노멀을 float4 둘로 담습니다(레스트). */
+            /** @brief 정점의 위치 · 노멀 · 탄젠트를 float4 셋으로 담습니다(레스트). */
             static GPUMorphVertex makeRestVertex( const RHIVertex& vertex )
             {
                 GPUMorphVertex restVertex{};
                 restVertex._position = float4{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2], 1.0f };
                 // 레스트 노멀도 함께 올린다. 컴퓨트가 변형된 노멀을 만들려면 원래 노멀이 있어야 한다.
                 restVertex._normal = float4{ vertex._arrNormal[0], vertex._arrNormal[1], vertex._arrNormal[2], 0.0f };
+                // 탄젠트도 — 컴퓨트가 노멀과 같은 행렬로 돌린다. w(바이탄젠트 부호)는 변형으로 바뀌지 않는다.
+                restVertex._tangent = float4{ vertex._arrTangent[0], vertex._arrTangent[1], vertex._arrTangent[2], vertex._arrTangent[3] };
                 return restVertex;
             }
 
@@ -168,7 +170,7 @@ namespace sw
             }
             _skinSourceVertexCount += vertexCount;
         }
-        // 레스트 버퍼 = [원본 레스트 정점][모프 차이] — 둘 다 float4 둘이라 한 버퍼에 잇는다(컴퓨트 SRV 슬롯은 넷뿐이다).
+        // 레스트 버퍼 = [원본 레스트 정점][모프 차이] — 둘 다 GPUMorphVertex(float4 셋)라 한 버퍼에 잇는다(컴퓨트 SRV 슬롯은 넷뿐이다). 차이의 탄젠트 칸은 비어 있다(탄젠트 차이는 없다).
         _skinDeltaBase = static_cast<uint32>( listRest.size() ) * shaderslot::kMorphFloat4PerVertex;
         listRest.insert( listRest.end(), listDelta.begin(), listDelta.end() );
         GPUMeshMorphPoolInternal::uploadAll( pDevice, _skinRest, listRest.data(), static_cast<uint32>( listRest.size() ) * shaderslot::kMorphFloat4PerVertex );

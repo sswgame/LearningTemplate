@@ -3,6 +3,7 @@
 struct PSInput
 {
 	float4 position : SV_POSITION;
+	SW_APPEARANCE_VARYING // 등장 디더 변형만 — 깊이만 쓰는 패스도 이 변형에는 픽셀 스테이지가 붙는다(FrameRendererUtil::addsAppearanceDitherPixelStage)
 };
 
 PSInput VSMain(SwVertexInput input, uint vertexId : SV_VertexID)
@@ -27,10 +28,13 @@ PSInput VSMain(SwVertexInput input, uint vertexId : SV_VertexID)
 #elif !defined(SW_PASS_DEPTH_PREPASS) && defined(MATERIAL_SHADOW_CAST_OFF)
 	output.position = float4(0.0f, 0.0f, -1.0f, 1.0f);
 #endif
+	SW_APPEARANCE_WRITE( output, instance )
 	return output;
 }
 
 float4 PSMain(PSInput input) : SV_TARGET
 {
+	// 기본 패스와 같은 픽셀을 버린다 — 프리패스 깊이 · 그림자가 등장 중인 물체의 남은 픽셀과 맞는다.
+	SW_APPEARANCE_CLIP( input )
 	return float4(input.position.z, 0, 0, 1);
 }

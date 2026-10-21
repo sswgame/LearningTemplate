@@ -1,4 +1,5 @@
 #include "common.hlsli"
+#include "lightdata.hlsli"
 #include "lightgridcommon.hlsli"
 
 /**
@@ -21,14 +22,7 @@
  * C++: bindComputeShaderResource( lights, 0 ) / ( views, 1 ) / bindComputeUav( grid, 0 ) / dispatchCompute( 뷰 수, 1, 1 ) — FrameRendererCompute.cpp dispatchLightGrid.
  */
 
-/** @brief 씬 라이트 한 개. lighting.hlsli 의 SwLightData · C++ `GPULight` 와 레이아웃이 같다(float4 넷). */
-struct GridLight
-{
-	float4 positionRadius; // xyz 월드 위치, w 반경
-	float4 colorIntensity;
-	float4 directionType;  // w 타입 (SW_LIGHT_TYPE_*)
-	float4 params;
-};
+// 씬 라이트 한 개는 lighting.hlsli 와 같은 SwLightData(lightdata.hlsli) 다 — 원소 간격이 같아야 번호가 맞는다.
 
 /** @brief 뷰 하나의 생산 입력입니다(g_LightGridViews 의 float4 여섯 개, 배치는 bindingslots.hlsli 10 절). */
 struct GridView
@@ -41,7 +35,7 @@ struct GridView
 	uint     gridBase;
 };
 
-SW_DECLARE_STRUCTURED_BUFFER( GridLight, g_LightGridLights, 0 );
+SW_DECLARE_STRUCTURED_BUFFER( SwLightData, g_LightGridLights, 0 );
 SW_DECLARE_STRUCTURED_BUFFER( float4, g_LightGridViews, 1 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( uint, g_LightGridRW, 0 );
 
@@ -84,7 +78,7 @@ uint clampSlice( float slicePosition )
  *          XY 범위는 월드 AABB 모서리 여덟 개의 NDC 범위다. 원근에서 모서리 하나라도 카메라 면을 넘으면 화면 전체다.
  * @note early-return 이 없다 — GL 드라이버가 early-return 모양을 잘못 컴파일한 적이 있다(binding.hlsli swComputeMorphElement).
  */
-bool computeLightRange( GridView view, GridLight light, out uint3 outMinimum, out uint3 outMaximum )
+bool computeLightRange( GridView view, SwLightData light, out uint3 outMinimum, out uint3 outMaximum )
 {
 	const float3 center        = light.positionRadius.xyz;
 	const float  radius        = light.positionRadius.w;
@@ -126,11 +120,11 @@ bool computeLightRange( GridView view, GridLight light, out uint3 outMinimum, ou
 	return radius > 0.0f && bBehind == false && bBeyond == false && bOffScreen == false;
 }
 
-/** @brief 라이트 하나의 생산 방식입니다 — 0 은 그리드에 넣지 않음(2D 라이트 · 2D 그림자 세그먼트 · 화면 밖), 1 은 전역 구간(방향광), 2 는 클러스터 범위(점광 · 스폿 · 라이트 프로브 볼륨)입니다. */
-uint classifyLight( GridView view, GridLight light, out uint3 outMinimum, out uint3 outMaximum )
+/** @brief 라이트 하나의 생산 방식입니다 — 0 은 그리드에 넣지 않음(2D 라이트 · 2D 그림자 세그먼트 · 화면 밖), 1 은 전역 구간(방향광), 2 는 클러스터 범위(SW_LIGHT_GRID_LOCAL_TYPE_MASK 의 타입 — 점광 · 스폿 · 반사 프로브 · 라이트 프로브 볼륨)입니다. */
+uint classifyLight( GridView view, SwLightData light, out uint3 outMinimum, out uint3 outMaximum )
 {
 	const uint lightType = (uint)( light.directionType.w + 0.5f );
-	const bool bLocal    = lightType == SW_LIGHT_TYPE_POINT || lightType == SW_LIGHT_TYPE_SPOT || lightType == SW_LIGHT_TYPE_PROBE_VOLUME;
+	const bool bLocal    = lightType < 32u && ( ( SW_LIGHT_GRID_LOCAL_TYPE_MASK >> lightType ) & 1u ) != 0u;
 	const bool bInRange  = computeLightRange( view, light, outMinimum, outMaximum );
 	return ( lightType == SW_LIGHT_TYPE_DIRECTIONAL ) ? 1u : ( ( bLocal && bInRange ) ? 2u : 0u );
 }

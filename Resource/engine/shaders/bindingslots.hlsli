@@ -11,7 +11,7 @@
  * 번호 지도 (그래픽스 셰이더, space0 — 절 번호는 이 파일의 1~10 절):
  *   b0 PassCB · b1 MaterialCB(픽스처) · b2 루트 상수 에뮬(DX11/GL) | b0 space2 루트 상수(DX12 · Vulkan 푸시 상수) — 1 절
  *   t0..t3 엔진 텍스처(에뮬) · t4 인스턴스 · t5 머티리얼 데이터 · t6 가시 인스턴스 ID · t7 모프 정점 · t8 라이트 ·
- *   t9 배치 테이블 · t10 VAT · t11 패스 전용(캔버스 사각형 · 입자) · t12 라이트 그리드 · t13 라이트 프로브 | t14..t15 빈 자리(띠 안) |
+ *   t9 배치 테이블 · t10 VAT · t11 패스 전용(캔버스 사각형 · 입자) · t12 라이트 그리드 · t13 라이트 프로브 | t14 빈 자리(띠 안) | t15 G버퍼 머티리얼(에뮬) |
  *   t16..t31 머티리얼 텍스처(에뮬 — DX11 · GL 만, 띠 밖) — 2 절
  *   컴퓨트는 따로: b0 · t0..t3 읽기 버퍼 · u0..u3 쓰기 버퍼 · u4..u7 RW 텍스처(에뮬) — 3 절
  *   s0..s6 정적 샘플러 · s7 그림자 비교(DX12 · Vulkan) | DX11 은 s0..s3 엔진 슬롯 결합 샘플러 + s9..s15 정적 세트 — 4 절
@@ -92,7 +92,7 @@
 // 슬롯이 곧 인스턴스 번호다(컬링 없음 경로).
 #define SW_SLOT_VISIBLE_INSTANCE_SRV   6
 
-// GPU 가 변형한 정점 (StructuredBuffer<float4> g_SwMorphVertices — 정점당 float4 둘). 정점 셰이더가
+// GPU 가 변형한 정점 (StructuredBuffer<float4> g_SwMorphVertices — 정점당 float4 셋). 정점 셰이더가
 // g_SwMorphVertices[(배치.morphVertexBase + 로컬 정점 번호) * 2] 로 **입력 스트림 대신** 위치를 읽는다 —
 // 언리얼 GPU Skin Cache 가 컴퓨트 결과를 정점 스트림으로 물리는 자리와 같은 목적이고, 방법만
 // 정점 풀링이다(이 엔진은 인스턴스·머티리얼·가시 목록이 이미 전부 구조버퍼라 그 결이 맞고,
@@ -132,6 +132,12 @@
 #define SW_SLOT_LIGHT_PROBE_SRV        13
 
 #define SW_SRV_SLOT_COUNT              14  // t0..t13 — DX12 t 테이블 크기. Vulkan set 0 의 t 밴드 폭(16)까지 늘릴 수 있다 — 머티리얼 슬롯은 밴드 뒤라 밀리지 않는다
+
+// G버퍼 머티리얼 칸(첨부 GBufferMaterial — r 금속도, g 거칠기)의 엔진 텍스처 슬롯(에뮬 — DX11 · GL 만). 디퍼드 조명 패스는 그림자 · 알베도 · 노멀 · 깊이와 함께
+// 이것을 다섯째로 읽어 t0..t3 에 자리가 없다. t4 부터는 네 백엔드 공통 띠라 띠의 꼭대기(t15)에 둔다 — 띠는 아래부터 자라고(지금 t13 까지), 이 칸에 닿으면
+// ShaderBindingSlots.h 가 컴파일에서 막는다. DX12 · Vulkan 은 bindless 라 이 슬롯을 선언하지 않는다.
+// DX11 은 s15 가 정적 샘플러 세트(SW_DX11_STATIC_SAMPLER6)라 짝 샘플러를 두지 않고 셰이더가 정적 세트의 엔진 텍스처 샘플러로 읽는다. GL 은 유닛 15 의 결합 샘플러에 엔진이 엔진 텍스처 샘플러를 건다.
+#define SW_SLOT_ENGINE_GBUFFER_MATERIAL 15
 
 // 머티리얼 텍스처 고정 슬롯 t16..t31(16 칸). DX11/GL 은 bindless 가 없어 머티리얼이 준 전역 인덱스를 풀 수 없으므로
 // 엔진이 텍스처를 이 슬롯에 걸고 머티리얼 데이터에는 **서수(0..N-1)** 를 넣는다. DX12/Vulkan 은 전역 인덱스라 이 슬롯을 선언하지 않는다.
@@ -263,7 +269,23 @@
 // 2D 빛 — 빛 받는 스프라이트(sprite2dlit.hlsl)만 읽는다. 3D 조명 식(swShadeLights)은 건너뛴다.
 #define SW_LIGHT_TYPE_POINT2D          3 // 점 · 스폿(원뿔) 2D 빛 — 안 · 바깥 반경, 감쇠 지수, 노멀 맵 높이
 #define SW_LIGHT_TYPE_GLOBAL2D         4 // 전역 2D 빛 — 빛 받는 스프라이트의 바탕 밝기
-#define SW_LIGHT_TYPE_COUNT            5
+#define SW_LIGHT_TYPE_FREEFORM2D       5 // 자유 모양 2D 빛 — 다각형 안은 1, 밖은 감쇠 거리까지 줄어든다. 변은 바로 뒤의 FREEFORM2D_EDGE 원소들이다
+#define SW_LIGHT_TYPE_COUNT            6
+// 빛이 아니라 자유 모양 2D 빛의 변 하나(그 빛 원소 바로 뒤에 extra.z 개가 붙는다). 등록부의 빛 종류가 아니라 COUNT 밖이다.
+#define SW_LIGHT_TYPE_FREEFORM2D_EDGE  12
+// 자유 모양 2D 빛 하나의 변 수 상한 — 셰이더 루프의 끝이다. C++ FreeformLight2DComponent::setPoints 가 넘는 다각형을 받지 않는다.
+#define SW_LIGHT2D_MAX_FREEFORM_EDGES  64
+// 2D 빛의 섞는 방식(extra.y) — 유니티 Light 2D 의 Blend Style 자리. 더하기 · 빼기를 모두 더한 뒤 곱하기를 곱하므로 빛의 순서와 무관하다.
+#define SW_LIGHT2D_BLEND_ADDITIVE      0
+#define SW_LIGHT2D_BLEND_MULTIPLY      1
+#define SW_LIGHT2D_BLEND_SUBTRACTIVE   2
+// 2D 빛 쿠키 아틀라스(패스 역할 텍스처 `Light2DCookieAtlas`, PassCB g_Light2DCookieAtlasIndex) — 한 변 SW_LIGHT2D_COOKIE_ATLAS_SIZE 텍셀, 한 줄에 SW_LIGHT2D_COOKIE_CELLS_PER_ROW 칸.
+// 빛 원소의 extra.w 가 칸 번호이고 SW_LIGHT2D_NO_COOKIE_CELL 이면 쿠키가 없다. C++ Light2DCookieAtlas 가 칸을 나눠 그린다.
+#define SW_LIGHT2D_COOKIE_ATLAS_SIZE    1024
+#define SW_LIGHT2D_COOKIE_CELLS_PER_ROW 4
+#define SW_LIGHT2D_NO_COOKIE_CELL       -1
+// 부드러운 2D 그림자의 표본 수 — 빛 원천(반경 = extra.x)을 가로지르는 점마다 가림막을 한 번 더 본다.
+#define SW_LIGHT2D_SOFT_SHADOW_SAMPLES 5
 // 빛이 아니라 2D 그림자 가림막 토막 하나(빛 목록 뒤에 붙는다). 등록부의 빛 종류가 아니라 COUNT 밖이다.
 #define SW_LIGHT_TYPE_SHADOW2D         15
 // 빛이 아니라 라이트 프로브 볼륨 하나(IndirectLighting.md P3). 3D 라이트 뒤, 2D 그림자 토막 앞에 붙고 라이트 그리드가 경계 구로 클러스터에 넣는다.
@@ -272,6 +294,15 @@
 #define SW_LIGHT_TYPE_PROBE_VOLUME     14
 // 프로브 하나의 g_SwLightProbes 원소 수(SH9 RGB 를 조도 / π 로 접은 float4 일곱 개).
 #define SW_LIGHT_PROBE_FLOAT4_COUNT    7u
+// 빛이 아니라 반사 프로브 하나(IndirectLighting.md P4). 프로브 볼륨처럼 경계 구로 그리드에 들고, 옥타헤드럴 텍셀(선형 RGB, 텍셀 하나가 float4 하나)은
+// g_SwLightProbes(t13)에 SH9 원소와 함께 이어 붙는다 — 텍스처 슬롯을 쓰지 않아 네 백엔드가 같은 길로 읽는다. 읽는 함수는 lighting.hlsli swSampleReflectionProbe 하나다.
+// 원소: positionRadius = (상자 중심 xyz, 상자 대각선 반) · colorIntensity = (상자 반 크기 xyz, 경계에서 섞는 폭 m) · directionType = (찍은 위치 xyz, 이 타입) ·
+//       params = (옥타헤드럴 한 변 텍셀 수, 거칠기 단계 수, g_SwLightProbes 의 첫 원소 번호, 0) — 수와 번호는 정확한 정수 실수(2^24 안)다.
+//       텍셀 순서는 단계 → 행 → 열(단계 l 의 (x, y) 는 첫 원소 + (l × 변 + y) × 변 + x). 단계 l 의 거칠기는 l / (단계 수 − 1) 이다.
+#define SW_LIGHT_TYPE_REFLECTION_PROBE 13
+// 라이트 그리드가 경계 구로 클러스터에 넣는 타입의 비트(1 << 타입) — 점광 1 · 스폿 2 · 반사 프로브 13 · 프로브 볼륨 14. 생산자 둘(C++ LightGrid · lightgrid.hlsl)이
+// 이 하나를 본다(타입을 더할 때 두 곳을 고치지 않는다). 값이 위 타입과 맞는지는 ShaderBindingSlots.h 가 확인한다.
+#define SW_LIGHT_GRID_LOCAL_TYPE_MASK  0x6006u
 
 // 한 프레임에 GPU 로 보내는 라이트 수 상한(2D 그림자 토막 포함). 넘으면 엔진이 잘라 보내고 경고한다 —
 // 셰이더 루프가 이 수를 넘게 도는 일은 없다(g_SwLightCount 가 이 값으로 클램프된다).
@@ -290,9 +321,9 @@
 // 10) 버퍼 배치 · 식 상수 — 슬롯 번호는 아니지만 C++ 와 셰이더가 같아야 하는 수. 정본은 여기 하나다(이 파일이 양쪽에서 include 된다).
 //     숫자 리터럴만 둔다(정수 · `u` 접미) — C++ 컴파일러도 읽는다.
 // ------------------------------------------------------------------------------
-// 모프 결과 · 레스트 버퍼 — 정점 하나 = float4 둘([2i] 위치, [2i+1] 노멀). 레스트 버퍼 뒤쪽(g_SkinDeltaBase 부터)은 모프 차이 하나 = float4 둘
-// ([0] 위치 차이 + w 에 타깃 번호, [1] 노멀 차이). 구조체가 아니라 평면 배열인 이유는 binding.hlsli 의 g_SwMorphVertices 주석(GL 이 멤버를 옆 원소에서 읽는다).
-#define SW_MORPH_FLOAT4_PER_VERTEX     2u
+// 모프 결과 · 레스트 버퍼 — 정점 하나 = float4 셋([3i] 위치, [3i+1] 노멀, [3i+2] 탄젠트 xyz · w 바이탄젠트 부호). 레스트 버퍼 뒤쪽(g_SkinDeltaBase 부터)은 모프 차이 하나 = float4 셋
+// ([0] 위치 차이 + w 에 타깃 번호, [1] 노멀 차이, [2] 비어 있음 — 탄젠트 차이는 없고 컴퓨트가 변형된 노멀에 다시 직교화한다). 구조체가 아니라 평면 배열인 이유는 binding.hlsli 의 g_SwMorphVertices 주석(GL 이 멤버를 옆 원소에서 읽는다).
+#define SW_MORPH_FLOAT4_PER_VERTEX     3u
 // 스킨 가중치 버퍼 — 원본 정점 하나 = float4 셋([3i] 가중치 넷, [3i+1] 원본 스켈레톤 본 번호 넷, [3i+2] 모프 차이 구간(시작 · 수)).
 #define SW_SKIN_FLOAT4_PER_VERTEX      3u
 // 스킨 팔레트 — 본 하나 = float4 셋(행벡터 규약 4x4 행렬의 0 · 1 · 2 열). 위치 = dot( float4( p, 1 ), 열 ). 본 행 뒤에 모프 가중치가 float4 로 이어진다.

@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Common/FourCcUtil.h"
+#include "Core/Common/HashUtil.h"
 #include "Core/Math/MatrixMath.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -12,6 +14,8 @@
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/Support/BindlessIndexValidator.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingLayout.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
+#include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -19,6 +23,7 @@
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Renderer/Frame/Resource/RenderPSOCache.h"
 #include "Engine/Renderer/Frame/Resource/ShaderParameterBinder.h"
 
 namespace sw
@@ -103,6 +108,8 @@ namespace sw
             context._passValues.setUint( passConstantNames()._swVertexAnimationCount, _deform._vertexAnimationPool.getElementCount() );
             context._passValues.setFloat( passConstantNames()._swVertexAnimationTime, _gpuScene.getVertexAnimationTime() );
         }
+        // 머티리얼 애니메이션 시계(툰 UV 애니메이션) — VAT 와 같은 장면 애니메이션 시계지만 VAT 표와 무관하게 늘 건다.
+        context._passValues.setFloat( passConstantNames()._swMaterialTime, _gpuScene.getVertexAnimationTime() );
 
         // 컬링이 실제로 목록을 만들었을 때만 건다. 안 걸리면 셰이더가 g_SwVisibleInstanceIDsIndex 로 알아채고
         // 배치 시작 + 서수를 쓴다(컬링 없음 경로). 반대로 목록만 걸고 컬링을 안 돌리면 **비어 있는
@@ -119,6 +126,10 @@ namespace sw
 
     void FrameRenderer::registerLightBuffer( FramePassContext& context )
     {
+        // 2D 빛 쿠키 아틀라스 — 쿠키를 쓴 빛이 있는 프레임에만 역할 텍스처로 건다(셰이더는 g_Light2DCookieAtlasIndex 로 걸렸는지 본다).
+        const Texture2D* pCookieAtlas = _cookieAtlas.hasCookies() ? _cookieAtlas.findAtlas() : nullptr;
+        if ( pCookieAtlas != nullptr )
+            context._resourceRegistry.registerTexture( attachmentNames()._light2DCookieAtlas, pCookieAtlas->getHandle(), pCookieAtlas->getSrv() );
         // 개수는 버퍼가 없어도 채운다. 셰이더는 0 이면 빛을 돌지 않는다(앰비언트만).
         context._passValues.setUint( passConstantNames()._swLightCount, _lightBuffer.isBindable() ? _lightBuffer.getCount() : 0u );
         // 지금 그리는 뷰의 라이트 그리드(t12). 없으면(gv_lightCulling 0, 투영이 깨진 뷰) 셰이더는 목록 전체를 돈다.
@@ -320,10 +331,15 @@ namespace sw
             ( bExtraView && _pActiveView->_bUsesViewSlotStream == SW_TRUE ) ? _pActiveView->_instanceSlotStream : _gpuScene.getInstanceSlotStream();
         if ( slotStream != 0 )
             context._pCmd->setVertexBuffer( constant::kInstanceSlotStreamSlot, slotStream, constant::kInstanceSlotStreamStride, 0 );
-        RHIBufferHandle boundVertexBuffer{ 0 };
-        uint32          drawCallCount{ 0 };
-        uint32          orderIndex{ 0 };
-        const uint32    batchCount = static_cast<uint32>( batches.size() );
+        // 겹침 모드(ShadedWireframe)는 배치를 두 번 그린다 — Lit PSO 로 한 번, 그 모드의 PSO(선 · 깊이 바이어스)로 한 번. 입자는 첫 번째에만 끼운다.
+        // 보기 모드는 지금 그리는 뷰의 설정이다(씬 뷰만 ShadedWireframe 이고 게임 뷰는 Lit 일 수 있다).
+        const RenderViewMode viewMode       = _pActiveView->_settings._viewMode;
+        const bool           bOverlayDraw   = getRenderViewModeInfo( viewMode )._bOverlay && FrameRendererUtil::appliesViewMode( passType );
+        const RenderViewMode arrDrawMode[]  = { bOverlayDraw ? RenderViewMode::Lit : viewMode, viewMode };
+        const uint32         drawRoundCount = bOverlayDraw ? 2u : 1u;
+        RHIBufferHandle      boundVertexBuffer{ 0 };
+        uint32               drawCallCount{ 0 };
+        const uint32         batchCount = static_cast<uint32>( batches.size() );
 
         // 투명 큐의 입자는 배치 순서의 자기 자리(`GPUTransparentParticleSlot::_drawPosition`) 앞에 끼운다. 입자 그리기가 PSO 와 정점 슬롯을 바꾸므로
         // 메시로 돌아올 때 PSO · 정점 버퍼를 다시 건다(`drawParticleRun` 이 슬롯 스트림과 에뮬 텍스처 슬롯을, bindForDraw 가 PSO 가 바뀐 바인딩을 다시 건다).
@@ -331,41 +347,47 @@ namespace sw
             ( pParticleSlot != nullptr ) ? vector_reference<const GPUTransparentParticleSlot>( *pParticleSlot ) : vector_reference<const GPUTransparentParticleSlot>{};
         uint32 particleSlotCursor{ 0 };
 
-        while ( orderIndex < batchCount )
+        for ( uint32 drawRound = 0; drawRound < drawRoundCount; ++drawRound )
         {
-            if ( drawParticleRun( context, listParticleSlot, particleSlotCursor, orderIndex, slotStream ) )
+            const RenderViewMode drawMode        = arrDrawMode[drawRound];
+            const bool           bDrawsParticles = drawRound == 0;
+            uint32               orderIndex{ 0 };
+            while ( orderIndex < batchCount )
             {
-                boundPSO          = 0;
-                boundVertexBuffer = 0;
-            }
-            const uint32        batchIndex       = ( pOrder != nullptr ) ? ( *pOrder )[orderIndex] : orderIndex;
-            const GPUMeshBatch& head             = batches[batchIndex];
-            const bool          bHeadNotDrawable = head._vertexBuffer == 0 || head._instanceCount == 0 || drawsBatchInPass( passType, head ) == false;
-            if ( bHeadNotDrawable )
-            {
-                ++orderIndex;
-                continue;
-            }
-            uint32 groupCount = 1;
-            if ( bMerge )
-            {
-                while ( orderIndex + groupCount < batchCount )
+                if ( bDrawsParticles && drawParticleRun( context, listParticleSlot, particleSlotCursor, orderIndex, slotStream ) )
                 {
-                    const uint32 nextBatchIndex = ( pOrder != nullptr ) ? ( *pOrder )[orderIndex + groupCount] : orderIndex + groupCount;
-                    // 다음 입자의 자리가 묶음 안에 들면 멀티 드로우 묶음을 그 자리에서 끊는다.
-                    const bool bParticleInside = particleSlotCursor < listParticleSlot.size() &&
-                                                 listParticleSlot[particleSlotCursor]._drawPosition <= orderIndex + groupCount;
-                    const bool bGroupEnds = nextBatchIndex != batchIndex + groupCount || bParticleInside;
-                    if ( bGroupEnds || isSameDrawGroup( pso, passType, head, batches[nextBatchIndex] ) == false )
-                        break;
-                    ++groupCount;
+                    boundPSO          = 0;
+                    boundVertexBuffer = 0;
                 }
+                const uint32        batchIndex       = ( pOrder != nullptr ) ? ( *pOrder )[orderIndex] : orderIndex;
+                const GPUMeshBatch& head             = batches[batchIndex];
+                const bool          bHeadNotDrawable = head._vertexBuffer == 0 || head._instanceCount == 0 || drawsBatchInPass( passType, head ) == false;
+                if ( bHeadNotDrawable )
+                {
+                    ++orderIndex;
+                    continue;
+                }
+                uint32 groupCount = 1;
+                if ( bMerge )
+                {
+                    while ( orderIndex + groupCount < batchCount )
+                    {
+                        const uint32 nextBatchIndex = ( pOrder != nullptr ) ? ( *pOrder )[orderIndex + groupCount] : orderIndex + groupCount;
+                        // 다음 입자의 자리가 묶음 안에 들면 멀티 드로우 묶음을 그 자리에서 끊는다.
+                        const bool bParticleInside = bDrawsParticles && particleSlotCursor < listParticleSlot.size() &&
+                                                     listParticleSlot[particleSlotCursor]._drawPosition <= orderIndex + groupCount;
+                        const bool bGroupEnds = nextBatchIndex != batchIndex + groupCount || bParticleInside;
+                        if ( bGroupEnds || isSameDrawGroup( pso, passType, drawMode, head, batches[nextBatchIndex] ) == false )
+                            break;
+                        ++groupCount;
+                    }
+                }
+                // **이 패스의 뷰**가 만든 인자를 쓴다. 그림자 패스가 메인 카메라 인자를 쓰면 화면 밖에서
+                // 화면 안으로 그림자를 드리우는 물체가 사라진다.
+                if ( drawBatchGroup( context, pso, drawMode, head, boundPSO, boundVertexBuffer, argsBuffer, batchOffset + batchIndex, groupCount ) )
+                    ++drawCallCount;
+                orderIndex += groupCount;
             }
-            // **이 패스의 뷰**가 만든 인자를 쓴다. 그림자 패스가 메인 카메라 인자를 쓰면 화면 밖에서
-            // 화면 안으로 그림자를 드리우는 물체가 사라진다.
-            drawBatchGroup( context, pso, head, boundPSO, boundVertexBuffer, argsBuffer, batchOffset + batchIndex, groupCount );
-            ++drawCallCount;
-            orderIndex += groupCount;
         }
         // 모든 배치보다 가까운 입자(자리 = 배치 수)를 마저 그린다.
         (void)drawParticleRun( context, listParticleSlot, particleSlotCursor, MathUtil::kMaxUInt32, slotStream );
@@ -388,19 +410,21 @@ namespace sw
         return false;
     }
 
-    bool FrameRenderer::isSameDrawGroup( RHIPipelineStateHandle pso, RenderPassType passType, const GPUMeshBatch& head, const GPUMeshBatch& other ) const
+    bool FrameRenderer::isSameDrawGroup( RHIPipelineStateHandle pso, RenderPassType passType, RenderViewMode drawMode, const GPUMeshBatch& head,
+                                         const GPUMeshBatch& other ) const
     {
         const bool bOtherBatchNotDrawable = other._vertexBuffer == 0 || other._instanceCount == 0 || drawsBatchInPass( passType, other ) == false;
         if ( bOtherBatchNotDrawable )
             return false;
-        if ( other._vertexBuffer != head._vertexBuffer || psoForBatch( pso, other ) != psoForBatch( pso, head ) )
+        if ( other._vertexBuffer != head._vertexBuffer || psoForBatch( pso, other, drawMode ) != psoForBatch( pso, head, drawMode ) )
             return false;
         // 레이아웃을 보는 것은 CB 가 다를 때만(대부분 같다).
         const bool bCbDiffers = other._materialCb != head._materialCb;
-        return GPUMeshBatch::canShareMaterialBinding( head, other, bCbDiffers && layoutBindsMaterialCb( psoForBatch( pso, head ) ) );
+        return GPUMeshBatch::canShareMaterialBinding( head, other, bCbDiffers && layoutBindsMaterialCb( psoForBatch( pso, head, drawMode ) ) );
     }
 
-    void FrameRenderer::drawBatchGroup( FramePassContext& context, RHIPipelineStateHandle pso, const GPUMeshBatch& head, RHIPipelineStateHandle& ioBoundPSO,
+    bool FrameRenderer::drawBatchGroup( FramePassContext& context, RHIPipelineStateHandle pso, RenderViewMode drawMode, const GPUMeshBatch& head,
+                                        RHIPipelineStateHandle& ioBoundPSO,
                                         RHIBufferHandle& ioBoundVertexBuffer, RHIBufferHandle argsBuffer, uint32 argIndex, uint32 groupCount )
     {
         // 정점 풀 하나라 보통 패스당 한 번 걸린다. 풀 밖 메시(예산 초과)만 자기 버퍼를 건다.
@@ -413,8 +437,11 @@ namespace sw
         // **이 머티리얼의 퍼뮤테이션**으로 그린다. 주의: 패스 PSO 하나로 모두 그리면 머티리얼이 선언한
         // 정적 스위치(유리의 MATERIAL_BLEND_TRANSLUCENT 같은)가 쿠킹되기만 하고 한 번도 걸리지 않는다.
         // 캐시는 ensureMaterialPSOs 가 기록 전에 채운다. 여기서는 조회만 한다.
-        const RHIPipelineStateHandle batchPSO = psoForBatch( pso, head );
-        if ( batchPSO != ioBoundPSO && batchPSO != 0 )
+        const RHIPipelineStateHandle batchPSO = psoForBatch( pso, head, drawMode );
+        // 변형을 만들지 못한 묶음(0)은 그리지 않는다 — 앞 묶음의 PSO 로 그리면 틀린 그림이다(만들 때 오류를 남겼다).
+        if ( batchPSO == 0 )
+            return false;
+        if ( batchPSO != ioBoundPSO )
         {
             context._pCmd->setPipelineState( batchPSO );
             ioBoundPSO = batchPSO;
@@ -424,6 +451,7 @@ namespace sw
         registerMaterialBuffer( context, head, batchPSO );
         bindForDraw( context, batchPSO, head._materialCb, head._arrMaterialTexSrv );
         context._pCmd->drawIndirect( argsBuffer, argIndex * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ), groupCount );
+        return true;
     }
 
     bool FrameRenderer::drawParticleRun( FramePassContext& context, vector_reference<const GPUTransparentParticleSlot> listSlot, uint32& inOutCursor, uint32 position,
@@ -463,6 +491,91 @@ namespace sw
         bindForDraw( context, pso, kInvalidDescriptorIndex );
         (void)_particleRenderer.drawBatches( *context._pCmd, listBatch, listSlot, _pDevice->supportsNativeBindlessSampling() );
         return true;
+    }
+
+    void FrameRenderer::drawLight2DCookieAtlas()
+    {
+        const vector<Light2DCookieAtlas::CellDraw>& listDraw       = _cookieAtlas.getPendingDraws();
+        const Texture2D*                            pAtlas         = _cookieAtlas.findAtlas();
+        const bool                                  bNothingToDraw = listDraw.empty() || pAtlas == nullptr || _pDevice == nullptr || _pCmd == nullptr;
+        if ( bNothingToDraw )
+        {
+            _cookieAtlas.clearPendingDraws();
+            return;
+        }
+
+        // 칸에 옮겨 그리는 PSO — 전체 화면 블릿 셰이더(쿠킹되는 Present 기본 셰이더)를 아틀라스 포맷으로. 머티리얼 변형 캐시의 키 공간을 빌려 캐시가 소유한다
+        // (입자 PSO 와 같은 방식 — 디바이스를 바꾸면 캐시가 비고 여기서 다시 만든다).
+        const string& shaderPath = engine::getSubsystem<EngineDefaultAssets>()._shaderFullscreenBlit.get();
+        const uint64  psoKey     = RenderPSOCache::materialPSOKey( 0, HashUtil::combine( hashed_string( shaderPath ).getHash(), FourCcUtil::make( "CKAT" ) ), RenderViewMode::Lit, false );
+        if ( _pPSOCache->hasMaterialPSO( psoKey ) == false )
+        {
+            RHIPipelineStateDesc desc{};
+            desc._vertexShaderPath              = shaderPath;
+            desc._pixelShaderPath               = shaderPath;
+            desc._vertexEntryPoint              = string( resolveEntryPoint( string_view{}, ShaderStage::Vertex ) );
+            desc._pixelEntryPoint               = string( resolveEntryPoint( string_view{}, ShaderStage::Pixel ) );
+            desc._numRenderTargets              = 1;
+            desc._arrRtvFormat[0]               = pAtlas->getFormat();
+            desc._depthStencilFormat            = RHIFormat::Unknown;
+            desc._bEnableDepthTest              = 0;
+            desc._bEnableDepthWrite             = 0;
+            desc._cullMode                      = RHICullMode::None;
+            const RHIPipelineStateHandle handle = _pDevice->getResourceFactory()->createPipelineState( desc );
+            if ( handle == 0 )
+                SW_LOG_ERROR( "The 2D light cookie atlas PSO could not be created from '%#' - cookie lights draw without cookies", shaderPath );
+            else
+                registerPSOLayout( handle, desc );
+            _pPSOCache->setMaterialPSO( psoKey, RenderPSOCache::MaterialPSOEntry{ handle, static_cast<uint8>( handle != 0 ? 1 : 0 ) } );
+        }
+        const RHIPipelineStateHandle pso = _pPSOCache->findMaterialPSO( psoKey );
+        if ( pso == 0 )
+        {
+            _cookieAtlas.clearPendingDraws();
+            return;
+        }
+
+        // 상태 전이는 렌더 패스 밖에서 — 쿠키는 읽기, 아틀라스는 그리기.
+        for ( const Light2DCookieAtlas::CellDraw& draw : listDraw )
+        {
+            _pCmd->prepareTextureForShaderRead( draw._pTexture->getHandle() );
+        }
+        _pCmd->prepareTextureForRenderTarget( pAtlas->getHandle() );
+
+        RHIRenderPassBeginInfo beginInfo{};
+        beginInfo._bBindColor        = SW_TRUE;
+        beginInfo._colorTargetCount  = 1;
+        beginInfo._arrColorTarget[0] = pAtlas->getHandle();
+        beginInfo._arrLoadOp[0]      = RHIRenderPassLoadOp::Load; // 다른 칸은 지난 프레임에 그린 그대로다
+        beginInfo._depthTarget       = 0;
+        beginInfo._depthLoadOp       = RHIRenderPassLoadOp::DontCare;
+        beginInfo._width             = shaderslot::kLight2DCookieAtlasSize;
+        beginInfo._height            = shaderslot::kLight2DCookieAtlasSize;
+        _pCmd->beginRenderPass( beginInfo );
+
+        // 칸마다 뷰포트를 그 칸으로 잡고 쿠키를 원본(SourceColor)으로 걸어 블릿한다. 원본이 칸마다 달라 상수 슬롯도 칸마다 새로 잡는다(그림자 타일과 같은 이유).
+        FramePassContext context = _frameContext;
+        context._pCmd            = _pCmd;
+        for ( const Light2DCookieAtlas::CellDraw& draw : listDraw )
+        {
+            uint32 cellX{ 0 };
+            uint32 cellY{ 0 };
+            uint32 cellSize{ 0 };
+            Light2DCookieAtlas::computeCellRect( draw._cell, cellX, cellY, cellSize );
+            RHIViewport viewport{};
+            viewport._x      = static_cast<float32>( cellX );
+            viewport._y      = static_cast<float32>( cellY );
+            viewport._width  = static_cast<float32>( cellSize );
+            viewport._height = static_cast<float32>( cellSize );
+            _pCmd->setViewport( viewport );
+            context._resourceRegistry.reset();
+            context._resourceRegistry.registerTexture( attachmentNames()._sourceColor, draw._pTexture->getHandle(), draw._pTexture->getSrv() );
+            acquirePassCb( context );
+            drawFullscreen( context, pso );
+        }
+        _pCmd->endRenderPass();
+        _pCmd->prepareTextureForShaderRead( pAtlas->getHandle() );
+        _cookieAtlas.clearPendingDraws();
     }
 
     void FrameRenderer::drawFullscreen( FramePassContext& context, RHIPipelineStateHandle pso )

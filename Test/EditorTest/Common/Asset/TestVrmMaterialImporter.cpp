@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Math/MathUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "Editor/Common/Asset/VrmMaterialImporter.h"
@@ -42,7 +43,8 @@ namespace
       "shadingShiftFactor": -0.2, "shadingToonyFactor": 0.95, "matcapFactor": [0.5, 0.5, 0.5], "matcapTexture": { "index": 7 },
       "parametricRimColorFactor": [0.3, 0.2, 0.1], "parametricRimFresnelPowerFactor": 4, "parametricRimLiftFactor": 0.2, "rimLightingMixFactor": 0.25,
       "outlineWidthMode": "screenCoordinates", "outlineWidthFactor": 0.004, "outlineColorFactor": [0.05, 0.0, 0.1], "outlineLightingMixFactor": 0.75,
-      "uvAnimationScrollXSpeedFactor": 0.5 } } })";
+      "uvAnimationScrollXSpeedFactor": 0.5, "uvAnimationScrollYSpeedFactor": -0.25, "uvAnimationRotationSpeedFactor": 1.5,
+      "uvAnimationMaskTexture": { "index": 8 } } } })";
 
         static sw::JSONValue parse( sw::JSONDocument& document, const utf8* pText )
         {
@@ -111,7 +113,9 @@ SW_TEST_CASE( VrmMaterialImporterTest, Vrm0ScreenOutlineAndHardStep )
     sw::string                   error;
     const utf8*                  pText = R"({ "name": "Hair", "shader": "VRM/MToon",
       "floatProperties": { "_ShadeShift": 0.2, "_ShadeToony": 1.0, "_OutlineWidth": 0.4, "_OutlineWidthMode": 2, "_OutlineColorMode": 1,
-                           "_OutlineLightingMix": 0.6, "_OutlineScaledMaxDistance": 3 } })";
+                           "_OutlineLightingMix": 0.6, "_OutlineScaledMaxDistance": 3,
+                           "_UvAnimScrollX": 0.5, "_UvAnimScrollY": 0.25, "_UvAnimRotation": 0.5 },
+      "textureProperties": { "_UvAnimMaskTexture": 4 } })";
     SW_ASSERT_TRUE_MSG( sw::editor::VrmMaterialImporter::readVrm0Material( Internal::parse( document, pText ), Internal::parse( gltfDocument, "{}" ), desc, nullptr, error ),
                         error.c_str() );
     SW_EXPECT_TRUE( desc._outlineMode == sw::editor::ToonOutlineMode::Screen );
@@ -122,6 +126,11 @@ SW_TEST_CASE( VrmMaterialImporterTest, Vrm0ScreenOutlineAndHardStep )
     SW_EXPECT_NEAR_EQUAL( 1.0f, desc._shadingToony, 1e-6f );
     SW_EXPECT_NEAR_EQUAL( -0.2f, desc._shadingShift, 1e-6f );
     SW_EXPECT_TRUE( desc._bTwoSided == SW_FALSE ); // _CullMode 가 없으면 후면 컬링(2)이다
+    // UV 애니메이션 — UniVRM 이관과 같이 v 스크롤만 뒤집고 회전(초당 바퀴)에 2π 를 곱한다.
+    SW_EXPECT_NEAR_EQUAL( 0.5f, desc._uvAnimationScrollXSpeed, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( -0.25f, desc._uvAnimationScrollYSpeed, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( sw::MathUtil::kPi, desc._uvAnimationRotationSpeed, 1e-5f );
+    SW_EXPECT_EQUAL( 4, desc._uvAnimationMaskTexture );
 }
 
 /**
@@ -190,8 +199,12 @@ SW_TEST_CASE( VrmMaterialImporterTest, Mtoon1ValuesMapDirectly )
     SW_EXPECT_EQUAL( 2, desc._shadeTexture );
     SW_EXPECT_EQUAL( 6, desc._emissiveTexture );
     SW_EXPECT_EQUAL( 7, desc._matcapTexture );
-    // UV 스크롤은 아는데 옮기지 않는 키다.
-    SW_EXPECT_TRUE( listIgnored.size() == 1 && listIgnored[0] == "uvAnimationScrollXSpeedFactor" );
+    // UV 애니메이션은 glTF UV · 라디안 그대로 옮긴다.
+    SW_EXPECT_NEAR_EQUAL( 0.5f, desc._uvAnimationScrollXSpeed, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( -0.25f, desc._uvAnimationScrollYSpeed, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 1.5f, desc._uvAnimationRotationSpeed, 1e-6f );
+    SW_EXPECT_EQUAL( 8, desc._uvAnimationMaskTexture );
+    SW_EXPECT_TRUE( listIgnored.empty() );
 
     // 모르는 키는 오류다.
     sw::JSONDocument             badDocument;
@@ -214,6 +227,8 @@ SW_TEST_CASE( VrmMaterialImporterTest, MaterialXMLLoadsAsToonMaterial )
     desc._alphaMode                              = sw::editor::ToonAlphaMode::Cutout;
     desc._bTwoSided                              = SW_TRUE;
     desc._baseColorTexture                       = 1;
+    desc._uvAnimationScrollXSpeed                = 0.5f;
+    desc._uvAnimationMaskTexture                 = 1;
     const sw::vector<sw::string> listTexturePath = { "", "game/test/textures/hair.dds" };
 
     sw::shared_ptr<sw::Material> material = sw::Material::create();
@@ -225,6 +240,12 @@ SW_TEST_CASE( VrmMaterialImporterTest, MaterialXMLLoadsAsToonMaterial )
     const sw::MaterialProperty* pBaseMap = material->findProperty( sw::hashed_string( "baseColorMap" ) );
     SW_ASSERT_NOT_NULL( pBaseMap );
     SW_EXPECT_STREQ( "game/test/textures/hair.dds", pBaseMap->_assetPath.c_str() );
+    float32 scrollX{ 0.0f };
+    SW_EXPECT_TRUE( material->getScalarParameter( sw::hashed_string( "uvAnimationScrollSpeedX" ), scrollX ) );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, scrollX, 1e-5f );
+    const sw::MaterialProperty* pMaskMap = material->findProperty( sw::hashed_string( "uvAnimationMaskMap" ) );
+    SW_ASSERT_NOT_NULL( pMaskMap );
+    SW_EXPECT_STREQ( "game/test/textures/hair.dds", pMaskMap->_assetPath.c_str() );
     const sw::vector<sw::string>& listDefine = material->getCachedShaderDefines();
     auto                          hasDefine  = [&listDefine]( const utf8* pDefine )
     { return std::find( listDefine.begin(), listDefine.end(), sw::string( pDefine ) ) != listDefine.end(); };

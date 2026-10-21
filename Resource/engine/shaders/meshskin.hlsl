@@ -93,6 +93,7 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
 
 	float3       position   = g_RestVertices[source * SW_MORPH_FLOAT4_PER_VERTEX].xyz;
 	float3       normal     = g_RestVertices[source * SW_MORPH_FLOAT4_PER_VERTEX + 1u].xyz;
+	const float4 tangent    = g_RestVertices[source * SW_MORPH_FLOAT4_PER_VERTEX + 2u];
 	const float4 weights    = g_SkinWeights[source * SW_SKIN_FLOAT4_PER_VERTEX];
 	const float4 joints     = g_SkinWeights[source * SW_SKIN_FLOAT4_PER_VERTEX + 1u];
 	const float4 deltaRange = g_SkinWeights[source * SW_SKIN_FLOAT4_PER_VERTEX + 2u];
@@ -113,6 +114,7 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
 
 	float3 skinnedPosition = float3( 0.0f, 0.0f, 0.0f );
 	float3 skinnedNormal   = float3( 0.0f, 0.0f, 0.0f );
+	float3 skinnedTangent  = float3( 0.0f, 0.0f, 0.0f );
 	[unroll]
 	for ( uint influence = 0u; influence < 4u; ++influence )
 	{
@@ -120,10 +122,16 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
 		const float weight = weights[influence];
 		skinnedPosition += transformPoint( bone, position ) * weight;
 		skinnedNormal   += transformDirection( bone, normal ) * weight;
+		skinnedTangent  += transformDirection( bone, tangent.xyz ) * weight;
 	}
 
 	const uint  element      = ( g_SkinVertexBase + skinIndex ) * SW_MORPH_FLOAT4_PER_VERTEX;
 	const float normalLength = length( skinnedNormal );
 	g_MorphVerticesRW[element]      = float4( skinnedPosition, 1.0f );
-	g_MorphVerticesRW[element + 1u] = float4( normalLength > 1e-6f ? skinnedNormal / normalLength : normal, 0.0f );
+	const float3 outNormal    = normalLength > 1e-6f ? skinnedNormal / normalLength : normal;
+	g_MorphVerticesRW[element + 1u] = float4( outNormal, 0.0f );
+	// 탄젠트는 노멀과 같은 행렬로 돌린다. 모프 차이가 노멀만 바꾸므로 변형된 노멀에 다시 직교화한다(픽셀도 한 번 더 한다 — toon.hlsl applyNormalMap).
+	const float3 orthogonal    = skinnedTangent - outNormal * dot( outNormal, skinnedTangent );
+	const float  tangentLength = length( orthogonal );
+	g_MorphVerticesRW[element + 2u] = float4( tangentLength > 1e-6f ? orthogonal / tangentLength : tangent.xyz, tangent.w );
 }

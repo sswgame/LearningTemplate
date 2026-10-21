@@ -461,6 +461,8 @@ namespace sw
         hashed_string _sourceColor{ "SourceColor" };
         hashed_string _ambientOcclusion{ "AmbientOcclusion" };
         hashed_string _bloomBright{ "BloomBright" };
+        /// 2D 빛 쿠키 아틀라스(Light2DCookieAtlas) — 파이프라인 첨부가 아니라 렌더러가 소유한 텍스처를 역할 이름으로 건다.
+        hashed_string _light2DCookieAtlas{ "Light2DCookieAtlas" };
     };
 } // namespace sw
 
@@ -487,6 +489,8 @@ namespace sw
         hashed_string _viewProj{ "g_ViewProj" };
         /// @brief 뷰-투영의 역행렬입니다. 디퍼드 조명이 깊이에서 월드 위치를 복원합니다.
         hashed_string _invViewProj{ "g_InvViewProj" };
+        /// @brief 지난번 이 뷰를 그린 뷰-투영입니다(모션 블러가 화면 속도를 구한다, motionblur.hlsl). 처음 · 컷 프레임은 이번 것과 같다.
+        hashed_string _prevViewProj{ "g_PrevViewProj" };
         hashed_string _world{ "g_World" };
         hashed_string _keyLightDirIntensity{ "g_KeyLightDirIntensity" };
         hashed_string _keyLightColor{ "g_KeyLightColor" };
@@ -544,6 +548,8 @@ namespace sw
         hashed_string _swVertexAnimationCount{ "g_SwVertexAnimationCount" };
         /// @brief VAT 시계(초)입니다. PassCB g_SwVertexAnimationTime 에 대응합니다.
         hashed_string _swVertexAnimationTime{ "g_SwVertexAnimationTime" };
+        /// @brief 머티리얼 애니메이션 시계(초)입니다. PassCB g_SwMaterialTime 에 대응하며, VAT 표가 없어도 패스마다 겁니다(툰 UV 애니메이션).
+        hashed_string _swMaterialTime{ "g_SwMaterialTime" };
     };
 
     /**

@@ -8,7 +8,7 @@ namespace sw
 {
     namespace
     {
-        /// G버퍼 MRT 의 고정 포맷입니다: [0] 알베도(알파 = 셰이딩 모델), [1] 노멀, [2] 머티리얼(r 금속도, g 거칠기 — binding.hlsli swEncodeGBufferMaterial).
+        /// G버퍼 MRT 의 고정 포맷입니다: [0] 알베도(알파 = 셰이딩 모델), [1] 노멀, [2] 머티리얼(r 금속도, g 거칠기 — binding.hlsli swEncodeGbufferMaterial).
         constexpr RHIFormat kArrGBufferColorFormat[] = { RHIFormat::R8G8B8A8_UNORM, RHIFormat::R16G16B16A16_FLOAT, RHIFormat::R8G8B8A8_UNORM };
 
         /// 깊이 히스토리의 고정 포맷입니다(깊이 하나 — 컴퓨트가 RW 텍스처로 읽는다. R32 실수는 네 백엔드 모두 형식 있는 UAV 읽기가 된다).
@@ -207,6 +207,30 @@ namespace sw
                     {
                         // 효과 패스다 — 후처리를 끈 뷰는 원본을 복사한다(입력 · 출력 형식이 같다). 렌즈가 핀홀(조리개 0)이면 셰이더가 원본을 고른다.
                         info._pDefaultShader = &EngineDefaultAssets::_shaderDepthOfField;
+                        info._inputContract  = makeContract( { Role::SourceColor, Role::SceneDepth }, {} );
+                        info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess;
+                        break;
+                    }
+                    case RenderPassType::HighlightOutline:
+                    {
+                        // 강조 외곽선 — 머티리얼과 무관한 엔진 셰이더로 모든 불투명 배치를 그리고, 강조가 Outline 인 인스턴스만 정점이 남는다.
+                        // 깊이는 테스트만 한다(쓰면 뒤의 반투명이 껍질에 가려진다). 앞면을 컬링한 껍질이라 몸 둘레만 보인다. 타깃은 선언한 컬러 출력이다.
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderHighlightOutline;
+                        info._flags          = Flag::kDepthTest | Flag::kDrawsSceneMeshes | Flag::kCullFront | Flag::kDrawsDeclaredColor | Flag::kRequiresPassDesc;
+                        break;
+                    }
+                    case RenderPassType::HighlightSense:
+                    {
+                        // 감각 모드 — 같은 셰이더의 Sense 퍼뮤테이션을 깊이 테스트 없이 그려 벽 너머의 대상도 보인다.
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderHighlightOutline;
+                        info._pPassDefine    = kPassHighlightSenseDefine;
+                        info._flags          = Flag::kDrawsSceneMeshes | Flag::kCullFront | Flag::kDrawsDeclaredColor | Flag::kRequiresPassDesc;
+                        break;
+                    }
+                    case RenderPassType::MotionBlur:
+                    {
+                        // 원본 색과 장면 깊이를 읽는 효과 패스다. 꺼지면(후처리를 끈 뷰 · gv_motionBlur) 원본을 넘긴다 — 그 길은 kSkipsWithoutPostProcess 다.
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderMotionBlur;
                         info._inputContract  = makeContract( { Role::SourceColor, Role::SceneDepth }, {} );
                         info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess;
                         break;

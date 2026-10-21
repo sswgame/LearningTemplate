@@ -2,7 +2,7 @@
     "_name": "SWGame",
     "_version": "1.0.0",
     "_kind": "Game",
-    "_description": "FrontierTown — 키트 조립 둘째 시험 게임(도시 + RTS) — GF_CityBuilder · GF_RealTimeStrategy 를 한 씬 · 한 공유 상태(땅 · 지갑 · 시계)에 섞는다",
+    "_description": "FrontierTown — 키트 조립 둘째 테스트 게임(도시 + RTS) — GF_CityBuilder · GF_RealTimeStrategy 를 한 씬 · 한 공유 상태(땅 · 지갑 · 시계)에 섞는다",
     "_listDependency": [
         {
             "_name": "GameFramework"

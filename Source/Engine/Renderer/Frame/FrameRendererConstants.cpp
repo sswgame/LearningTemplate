@@ -138,6 +138,14 @@ namespace sw
         context._passValues.setMatrix( passConstantNames()._invViewProj, viewProj.invert() );
         // 컬링은 기록 시작 전에 도는데 그때는 상수 버퍼에서 도로 꺼낼 수 없다. 지금 그리는 뷰에 같은 값을 남긴다.
         activeCullInput().setViewProjection( viewProj );
+
+        // 모션 블러의 지난 뷰-투영 — 뷰마다 프레임에 한 번 이 함수를 지난다. 처음 그리는 뷰 · 다른 카메라가 쓰던 칸 · 컷 프레임은 이번 것으로 둬 속도가 0 이다.
+        ViewTarget& view          = *_pActiveView;
+        const bool  bFreshHistory = view._bHasPrevViewProj == SW_FALSE || view._prevViewID != view._viewID || view._settings._bCut == SW_TRUE;
+        context._passValues.setMatrix( passConstantNames()._prevViewProj, bFreshHistory ? viewProj : view._prevViewProj );
+        view._prevViewProj     = viewProj;
+        view._prevViewID       = view._viewID;
+        view._bHasPrevViewProj = SW_TRUE;
     }
 
     void FrameRenderer::setIdentityWorld( FramePassContext& context )

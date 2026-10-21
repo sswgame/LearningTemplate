@@ -80,4 +80,9 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
 
 	g_MorphVerticesRW[element]      = float4(position, 1.0f);
 	g_MorphVerticesRW[element + 1u] = float4(normal, 0.0f);
+	// 탄젠트 — 변형은 노멀만 바꾸므로 레스트 탄젠트를 새 노멀에 다시 직교화한다. w(바이탄젠트 부호)는 레스트 그대로다.
+	const float4 restTangent   = g_RestVertices[element + 2u];
+	const float3 orthogonal    = restTangent.xyz - normal * dot(normal, restTangent.xyz);
+	const float  tangentLength = length(orthogonal);
+	g_MorphVerticesRW[element + 2u] = float4(tangentLength > 1e-6f ? orthogonal / tangentLength : restTangent.xyz, restTangent.w);
 }

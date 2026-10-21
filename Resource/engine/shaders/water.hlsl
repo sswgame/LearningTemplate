@@ -3,6 +3,8 @@
 // 보기 모드 Roughness · Metallic 이 보이는 값 — 물은 매끈한 유전체다.
 static const float kSurfaceRoughness = 0.0f;
 static const float kSurfaceMetallic  = 0.0f;
+// 물 몸통(swShadeLights)의 거칠기 — 몸통은 확산만 받고 반사는 프레넬 · 주광 반사가 따로 한다(같은 빛이 두 번 반짝이지 않게 가장 거친 값).
+static const float kBodyRoughness    = 1.0f;
 #include "gerstner.hlsli"
 
 /**
@@ -99,7 +101,7 @@ SW_SURFACE_OUTPUT PSMain( PSInput input )
 	const float  specular = 0.0f;
 #else
 	const float  shadow  = swSampleShadowAtWorld( input.worldPosition, normal );
-	const float3 body    = swShadeLights( input.waterColor.rgb, input.worldPosition, normal, shadow );
+	const float3 body    = swShadeLights( input.waterColor.rgb, input.worldPosition, normal, shadow, kBodyRoughness, kSurfaceMetallic );
 
 	// 주광의 반사(블린-퐁) — 물은 매끈하다.
 	const float3 toLight  = normalize( -g_KeyLightDirIntensity.xyz );

@@ -70,6 +70,12 @@ namespace sw
          *          G버퍼가 표면에서 셈하므로 디퍼드 조명 패스에 보기 모드 변형이 필요 없다.
          */
         LightComplexity,
+        /**
+         * @brief Lit 으로 그린 위에 같은 배치의 삼각형 외곽선을 단색으로 겹친다(언리얼 Lighting + Wireframe, 유니티 Shaded Wireframe).
+         * @details 지오메트리 패스가 배치를 두 번 그린다 — Lit PSO 로 한 번, 이 모드의 PSO(와이어프레임 채우기 · 깊이 바이어스 · 깊이 쓰기 끔 · 단색 define)로 한 번.
+         *          G버퍼에는 선을 셰이딩 모델 Unlit 으로 적어 디퍼드 조명 패스가 그대로 낸다.
+         */
+        ShadedWireframe,
 
         Count
     };
@@ -82,21 +88,27 @@ namespace sw
         bool        _bWireframe;       ///< 채우기 모드를 와이어프레임으로 하고 컬링을 끈다.
         bool        _bAdditiveNoDepth; ///< Overdraw 용이다. 더하기 블렌드(알파 0 의 프리멀티플라이), 깊이 쓰기 끔(클리어 값 1이 남아 모든 면이 통과), 컬링 끔
         bool        _bShowsBuffer;     ///< 표면 값을 그대로 보인다(Normals, Depth, Overdraw). 후처리, 톤맵, 외곽선 껍질을 건너뛴다.
+        /**
+         * @brief 겹침 모드다(ShadedWireframe). 배치를 Lit PSO 로 먼저 그리고, 이 모드의 PSO 로 한 번 더 그린다.
+         * @details 이 모드의 PSO 는 깊이 쓰기를 끄고 카메라 쪽 깊이 바이어스를 걸어(`FrameRendererPSO.cpp` applyViewModeToDesc) 같은 삼각형 위에서 선이 LessEqual 을 통과한다.
+         */
+        bool _bOverlay;
     };
 
     /** @brief 보기 모드 테이블입니다. 쿠커, PSO 변형, 툴바, 로그가 모두 이것을 읽습니다. 항목 순서가 열거값입니다. */
     inline constexpr RenderViewModeInfo kArrRenderViewModeInfo[] = {
-        {            "Lit",                         nullptr, false, false, false},
-        {          "Unlit",           "SW_VIEWMODE_UNLIT=1", false, false, false},
-        {      "Wireframe",                         nullptr,  true, false, false},
-        {        "Normals",         "SW_VIEWMODE_NORMALS=1", false, false,  true},
-        {          "Depth",           "SW_VIEWMODE_DEPTH=1", false, false,  true},
-        {       "Overdraw",        "SW_VIEWMODE_OVERDRAW=1", false,  true,  true},
-        {   "LightingOnly",    "SW_VIEWMODE_LIGHTINGONLY=1", false, false, false},
-        {      "Roughness",       "SW_VIEWMODE_ROUGHNESS=1", false, false,  true},
-        {       "Metallic",        "SW_VIEWMODE_METALLIC=1", false, false,  true},
-        {        "Mipmaps",         "SW_VIEWMODE_MIPMAPS=1", false, false,  true},
-        {"LightComplexity", "SW_VIEWMODE_LIGHTCOMPLEXITY=1", false, false,  true},
+        {            "Lit",                         nullptr, false, false, false, false},
+        {          "Unlit",           "SW_VIEWMODE_UNLIT=1", false, false, false, false},
+        {      "Wireframe",                         nullptr,  true, false, false, false},
+        {        "Normals",         "SW_VIEWMODE_NORMALS=1", false, false,  true, false},
+        {          "Depth",           "SW_VIEWMODE_DEPTH=1", false, false,  true, false},
+        {       "Overdraw",        "SW_VIEWMODE_OVERDRAW=1", false,  true,  true, false},
+        {   "LightingOnly",    "SW_VIEWMODE_LIGHTINGONLY=1", false, false, false, false},
+        {      "Roughness",       "SW_VIEWMODE_ROUGHNESS=1", false, false,  true, false},
+        {       "Metallic",        "SW_VIEWMODE_METALLIC=1", false, false,  true, false},
+        {        "Mipmaps",         "SW_VIEWMODE_MIPMAPS=1", false, false,  true, false},
+        {"LightComplexity", "SW_VIEWMODE_LIGHTCOMPLEXITY=1", false, false,  true, false},
+        {"ShadedWireframe",     "SW_VIEWMODE_WIREOVERLAY=1",  true, false, false,  true},
     };
     static_assert( sizeof( kArrRenderViewModeInfo ) / sizeof( kArrRenderViewModeInfo[0] ) == static_cast<size_t>( RenderViewMode::Count ),
                    "보기 모드 표와 열거형의 개수가 다릅니다" );

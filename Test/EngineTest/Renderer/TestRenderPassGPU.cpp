@@ -1427,7 +1427,7 @@ SW_TEST_CASE( RenderPassGPUTest, MaterialPermutationDrivesBatchPSO )
                 }
 
                 // 배치가 고르는 PSO 는 패스 PSO 와 **달라야** 하고, 그 안에 머티리얼의 define 이 있어야 한다.
-                const sw::RHIPipelineStateHandle batchPSO = renderer.psoForBatch( passPSO, batches[0] );
+                const sw::RHIPipelineStateHandle batchPSO = renderer.psoForBatch( passPSO, batches[0], sw::RenderViewMode::Lit );
                 SW_EXPECT_TRUE_MSG( batchPSO != passPSO,
                                     ( label + ": 유리 배치가 패스 PSO 를 그대로 쓴다 — 머티리얼 퍼뮤테이션이 안 걸렸다" ).c_str() );
 
@@ -1451,7 +1451,7 @@ SW_TEST_CASE( RenderPassGPUTest, MaterialPermutationDrivesBatchPSO )
                 sw::RHIPipelineStateDesc         shadowDesc{};
                 if ( shadowPSO != 0 && renderer.findPSODesc( shadowPSO, shadowDesc ) )
                 {
-                    const sw::RHIPipelineStateHandle shadowBatchPSO = renderer.psoForBatch( shadowPSO, batches[0] );
+                    const sw::RHIPipelineStateHandle shadowBatchPSO = renderer.psoForBatch( shadowPSO, batches[0], sw::RenderViewMode::Lit );
                     sw::RHIPipelineStateDesc         shadowBatchDesc{};
                     if ( renderer.findPSODesc( shadowBatchPSO, shadowBatchDesc ) )
                     {
@@ -1529,7 +1529,7 @@ SW_TEST_CASE( RenderPassGPUTest, SpriteDrawsWithTheSpriteShader )
                 if ( batches.empty() == false && passPSO != 0 )
                 {
                     sw::RHIPipelineStateDesc batchDesc{};
-                    SW_EXPECT_TRUE_MSG( renderer.findPSODesc( renderer.psoForBatch( passPSO, batches[0] ), batchDesc ),
+                    SW_EXPECT_TRUE_MSG( renderer.findPSODesc( renderer.psoForBatch( passPSO, batches[0], sw::RenderViewMode::Lit ), batchDesc ),
                                         ( label + ": 스프라이트 배치 PSO 의 디스크립터를 찾을 수 없다" ).c_str() );
                     SW_EXPECT_TRUE_MSG( batchDesc._pixelShaderPath.find( test::getEngineDefaultAssets()._shaderSprite2D.get() ) != sw::string::npos,
                                         ( label + ": 스프라이트 배치가 스프라이트 셰이더가 아니다 — " + batchDesc._pixelShaderPath ).c_str() );
@@ -2493,7 +2493,7 @@ SW_TEST_CASE( RenderPassGPUTest, ViewModeSelectsDistinctPipelineStates )
                 const sw::GPUMeshBatch& batch = batches[0];
 
                 // ── Lit: 패스 PSO 그대로, Solid ──────────────────────────────
-                const sw::RHIPipelineStateHandle litPSO = renderer.psoForBatch( passPSO, batch );
+                const sw::RHIPipelineStateHandle litPSO = renderer.psoForBatch( passPSO, batch, sw::RenderViewMode::Lit );
                 sw::RHIPipelineStateDesc         litDesc{};
                 SW_EXPECT_TRUE_MSG( renderer.findPSODesc( litPSO, litDesc ),
                                     ( label + ": Lit PSO 의 디스크립터를 찾을 수 없다" ).c_str() );
@@ -2506,7 +2506,7 @@ SW_TEST_CASE( RenderPassGPUTest, ViewModeSelectsDistinctPipelineStates )
                 renderer.setViewMode( sw::RenderViewMode::Wireframe );
                 SW_EXPECT_TRUE_MSG( renderOneFrame(), ( label + ": 와이어프레임 프레임 실행 실패" ).c_str() );
 
-                const sw::RHIPipelineStateHandle wirePSO = renderer.psoForBatch( passPSO, batch );
+                const sw::RHIPipelineStateHandle wirePSO = renderer.psoForBatch( passPSO, batch, sw::RenderViewMode::Wireframe );
                 SW_EXPECT_TRUE_MSG( wirePSO != litPSO,
                                     ( label + ": 와이어프레임인데 드로우가 Lit 과 같은 PSO 를 고른다 — 모드가 화면에 닿지 않는다" )
                                         .c_str() );
@@ -2528,7 +2528,7 @@ SW_TEST_CASE( RenderPassGPUTest, ViewModeSelectsDistinctPipelineStates )
 
                 // 그림자 패스는 뷰 모드를 받지 않는다.
                 sw::RHIPipelineStateDesc shadowDesc{};
-                if ( shadowPSO != 0 && renderer.findPSODesc( renderer.psoForBatch( shadowPSO, batch ), shadowDesc ) )
+                if ( shadowPSO != 0 && renderer.findPSODesc( renderer.psoForBatch( shadowPSO, batch, sw::RenderViewMode::Wireframe ), shadowDesc ) )
                 {
                     SW_EXPECT_TRUE_MSG( shadowDesc._fillMode == sw::RHIFillMode::Solid,
                                         ( label + ": 그림자 패스가 와이어프레임으로 만들어진다" ).c_str() );
@@ -2538,7 +2538,7 @@ SW_TEST_CASE( RenderPassGPUTest, ViewModeSelectsDistinctPipelineStates )
                 renderer.setViewMode( sw::RenderViewMode::Unlit );
                 SW_EXPECT_TRUE_MSG( renderOneFrame(), ( label + ": Unlit 프레임 실행 실패" ).c_str() );
 
-                const sw::RHIPipelineStateHandle unlitPSO = renderer.psoForBatch( passPSO, batch );
+                const sw::RHIPipelineStateHandle unlitPSO = renderer.psoForBatch( passPSO, batch, sw::RenderViewMode::Unlit );
                 SW_EXPECT_TRUE_MSG( unlitPSO != litPSO && unlitPSO != wirePSO,
                                     ( label + ": Unlit 이 다른 모드와 같은 PSO 를 고른다" ).c_str() );
                 sw::RHIPipelineStateDesc unlitDesc{};
@@ -2557,7 +2557,7 @@ SW_TEST_CASE( RenderPassGPUTest, ViewModeSelectsDistinctPipelineStates )
                 // ── 되돌리기: 캐시에서 같은 PSO 가 나와야 한다 ────────────────
                 renderer.setViewMode( sw::RenderViewMode::Lit );
                 SW_EXPECT_TRUE_MSG( renderOneFrame(), ( label + ": Lit 복귀 프레임 실행 실패" ).c_str() );
-                SW_EXPECT_TRUE_MSG( renderer.psoForBatch( passPSO, batch ) == litPSO,
+                SW_EXPECT_TRUE_MSG( renderer.psoForBatch( passPSO, batch, sw::RenderViewMode::Lit ) == litPSO,
                                     ( label + ": Lit 로 돌아왔는데 다른 PSO 가 나온다 — 캐시가 모드를 구분하지 못한다" ).c_str() );
             }
         }
@@ -5220,7 +5220,7 @@ SW_TEST_CASE( RenderPassGPUTest, LightProbeVolumeReplacesAmbient )
 /**
  * @brief [RenderPassGPUTest] 머티리얼 금속도가 포워드와 디퍼드 모두에서 그림을 바꾼다 — 네 백엔드 모두(IndirectLighting.md P5)
  * @details 금속은 확산이 없고 F0 가 기본 색이라 같은 큐브가 다른 그림이어야 한다. 디퍼드에서 같으면 금속도가 G버퍼 머티리얼 칸(GBufferMaterial,
- *          에뮬 슬롯 t15)을 지나 조명 패스까지 오지 못한 것이다 — 쓰는 쪽 swStoreSurface · 실행의 셋째 MRT · 바인딩 · swLoadGBufferMaterial 중 하나다.
+ *          에뮬 슬롯 t15)을 지나 조명 패스까지 오지 못한 것이다 — 쓰는 쪽 swStoreSurface · 실행의 셋째 MRT · 바인딩 · swLoadGbufferMaterial 중 하나다.
  */
 SW_TEST_CASE( RenderPassGPUTest, MetallicChangesForwardAndDeferredPictures )
 {
@@ -7715,7 +7715,7 @@ SW_TEST_CASE( RenderPassGPUTest, CrowdSharingAndVertexAnimationMatchPerUnitSkinn
             sw::SkeletalAnimatorComponent* pAnimator = pObject->addComponent<sw::SkeletalAnimatorComponent>();
             if ( pAnimator == nullptr )
                 return result;
-            pAnimator->setClipFolder( folder );
+            pAnimator->setClipFolder( ::test::makeTempResourceID( folder ) );
             pAnimator->setInitialState( "Wave" );
             pAnimator->setInitialTime( arrStart[index] );
             pAnimator->dispatchBeginPlay();

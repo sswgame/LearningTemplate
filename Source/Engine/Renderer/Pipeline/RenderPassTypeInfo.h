@@ -41,6 +41,9 @@ namespace sw
      */
     inline constexpr const utf8* kPassMeshOutlineDefine = "SW_PASS_MESH_OUTLINE=1";
 
+    /** @brief 감각 모드 강조 패스가 강조 셰이더(highlightoutline.hlsl)에 추가하는 define 입니다. Sense 인스턴스만 남기는 퍼뮤테이션을 고릅니다. */
+    inline constexpr const utf8* kPassHighlightSenseDefine = "SW_PASS_HIGHLIGHT_SENSE=1";
+
     /**
      * @brief 블룸 다운샘플 패스가 블룸 셰이더(postbloom.hlsl)에 추가하는 define 입니다. 합성 대신 반해상도의 밝은 부분만 내는 퍼뮤테이션을 고릅니다.
      * @details 언리얼의 블룸 셋업과 다운샘플 체인처럼 밝은 부분은 낮은 해상도에서 구하고, Bloom 패스가 원래 해상도에서 업샘플해 더합니다.
@@ -123,6 +126,12 @@ namespace sw
          *          `kGenericFullscreen` 패스도 같은 규칙이다(표의 `makeInfo` 가 함께 붙인다).
          */
         static constexpr uint32 kDrawsDeclaredColor = SW_BIT( 15 );
+        /**
+         * @brief 패스 셰이더가 파이프라인 XML 의 패스 퍼뮤테이션(데이터)을 요구한다 — 패스 서술 없이 표만으로 PSO 를 만들지 않는다.
+         * @details 엔진 PSO 등록(`FrameRenderer` 의 패스 자원 준비)과 쿠커의 표 단계(`ShaderCookRequest` 2단계)가 이 비트를 보고 건너뛴다.
+         *          그 패스가 없는 파이프라인에서는 PSO 가 없고 실행도 없다. 강조 외곽선의 두께(`SW_HIGHLIGHT_WIDTH`)처럼 기본값을 코드에 두지 않는 값이 그 예다.
+         */
+        static constexpr uint32 kRequiresPassDesc = SW_BIT( 16 );
     };
 } // namespace sw
 

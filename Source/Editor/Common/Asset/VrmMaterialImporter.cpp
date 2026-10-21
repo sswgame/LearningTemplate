@@ -49,6 +49,9 @@ namespace sw::editor
                 Vrm0OutlineColorMode,
                 Vrm0OutlineLightingMix,
                 Vrm0BumpScale,
+                Vrm0UvAnimScrollX,
+                Vrm0UvAnimScrollY,
+                Vrm0UvAnimRotation,
                 Vrm0FloatCount,
             };
             /** @brief 0.x 에서 옮기는 실수 키와 그 기본값입니다. 기본값의 원본은 이 테이블 하나다(읽는 코드에 폴백을 적지 않는다). */
@@ -68,6 +71,9 @@ namespace sw::editor
                 {        "_OutlineColorMode", 0.0f},
                 {      "_OutlineLightingMix", 1.0f},
                 {               "_BumpScale", 1.0f},
+                {           "_UvAnimScrollX", 0.0f},
+                {           "_UvAnimScrollY", 0.0f},
+                {          "_UvAnimRotation", 0.0f},
             };
             static_assert( sizeof( kArrVrm0Float ) / sizeof( kArrVrm0Float[0] ) == Vrm0FloatCount, "Vrm0FloatSlot 과 kArrVrm0Float 의 줄 수가 같아야 한다" );
             /** @brief 화면 외곽선이 아닐 때의 외곽선 최대 거리입니다(`ToonMaterialDesc::_outlineMaxDistance` 의 초기값과 같은 "제한 없음"). */
@@ -87,9 +93,6 @@ namespace sw::editor
                 { "_LightColorAttenuation", 0.0f, false},
                 {"_IndirectLightIntensity", 0.1f,  true}, // 환경광이 균일하므로 섞을 것이 없다
                 {       "_OutlineCullMode", 1.0f, false}, // 외곽선은 항상 앞면을 컬링한다
-                {         "_UvAnimScrollX", 0.0f, false},
-                {         "_UvAnimScrollY", 0.0f, false},
-                {        "_UvAnimRotation", 0.0f, false},
                 {             "_DebugMode", 0.0f,  true},
                 {              "_SrcBlend", 0.0f,  true},
                 {              "_DstBlend", 0.0f,  true},
@@ -99,42 +102,43 @@ namespace sw::editor
             };
             /** @brief 0.x 에서 옮기는 색 키입니다. */
             static constexpr string_view kArrVrm0Color[] = { "_Color", "_ShadeColor", "_EmissionColor", "_RimColor", "_OutlineColor" };
-            /** @brief 0.x 텍스처 키입니다. 옮기는 일곱 개와 알지만 옮기지 않는 것들이 있습니다. 같은 이름의 벡터 키는 텍스처 타일링([x, y, 크기 x, 크기 y])입니다. */
-            static constexpr string_view kArrVrm0Texture[]        = { "_MainTex", "_ShadeTexture", "_EmissionMap", "_SphereAdd", "_BumpMap", "_RimTexture", "_OutlineWidthTexture" };
+            /** @brief 0.x 텍스처 키입니다. 옮기는 여덟 개와 알지만 옮기지 않는 것들이 있습니다. 같은 이름의 벡터 키는 텍스처 타일링([x, y, 크기 x, 크기 y])입니다. */
+            static constexpr string_view kArrVrm0Texture[]        = { "_MainTex", "_ShadeTexture", "_EmissionMap", "_SphereAdd",
+                                                                      "_BumpMap", "_RimTexture", "_OutlineWidthTexture", "_UvAnimMaskTexture" };
             static constexpr size_t      kVrm0TextureCount        = sizeof( kArrVrm0Texture ) / sizeof( kArrVrm0Texture[0] );
-            static constexpr string_view kArrVrm0IgnoredTexture[] = { "_ReceiveShadowTexture", "_ShadingGradeTexture", "_UvAnimMaskTexture" };
+            static constexpr string_view kArrVrm0IgnoredTexture[] = { "_ReceiveShadowTexture", "_ShadingGradeTexture" };
             /** @brief 0.x 의 MToon 이 아닌 셰이더입니다. glTF 기본 머티리얼을 평면 툰으로 옮깁니다. */
             static constexpr string_view kArrVrm0FlatShader[] = { "VRM_USE_GLTFSHADER", "VRM/UnlitTexture", "VRM/UnlitCutout", "VRM/UnlitTransparent",
                                                                   "VRM/UnlitTransparentZWrite" };
 
             /** @brief 1.0 `VRMC_materials_mtoon` 의 키입니다. 옮기는 것과 알지만 옮기지 않는 것이 있습니다. */
-            static constexpr string_view kArrMtoon1Key[]        = { "specVersion",
-                                                                    "transparentWithZWrite",
-                                                                    "renderQueueOffsetNumber",
-                                                                    "shadeColorFactor",
-                                                                    "shadeMultiplyTexture",
-                                                                    "shadingShiftFactor",
-                                                                    "shadingToonyFactor",
-                                                                    "giEqualizationFactor",
-                                                                    "matcapFactor",
-                                                                    "matcapTexture",
-                                                                    "parametricRimColorFactor",
-                                                                    "rimLightingMixFactor",
-                                                                    "parametricRimFresnelPowerFactor",
-                                                                    "parametricRimLiftFactor",
-                                                                    "outlineWidthMode",
-                                                                    "outlineWidthFactor",
-                                                                    "outlineColorFactor",
-                                                                    "outlineLightingMixFactor",
-                                                                    "shadingShiftTexture",
-                                                                    "rimMultiplyTexture",
-                                                                    "outlineWidthMultiplyTexture",
-                                                                    "extensions",
-                                                                    "extras" };
-            static constexpr string_view kArrMtoon1IgnoredKey[] = { "uvAnimationMaskTexture",
-                                                                    "uvAnimationScrollXSpeedFactor",
-                                                                    "uvAnimationScrollYSpeedFactor",
-                                                                    "uvAnimationRotationSpeedFactor" };
+            static constexpr string_view kArrMtoon1Key[] = { "specVersion",
+                                                             "transparentWithZWrite",
+                                                             "renderQueueOffsetNumber",
+                                                             "shadeColorFactor",
+                                                             "shadeMultiplyTexture",
+                                                             "shadingShiftFactor",
+                                                             "shadingToonyFactor",
+                                                             "giEqualizationFactor",
+                                                             "matcapFactor",
+                                                             "matcapTexture",
+                                                             "parametricRimColorFactor",
+                                                             "rimLightingMixFactor",
+                                                             "parametricRimFresnelPowerFactor",
+                                                             "parametricRimLiftFactor",
+                                                             "outlineWidthMode",
+                                                             "outlineWidthFactor",
+                                                             "outlineColorFactor",
+                                                             "outlineLightingMixFactor",
+                                                             "shadingShiftTexture",
+                                                             "rimMultiplyTexture",
+                                                             "outlineWidthMultiplyTexture",
+                                                             "uvAnimationMaskTexture",
+                                                             "uvAnimationScrollXSpeedFactor",
+                                                             "uvAnimationScrollYSpeedFactor",
+                                                             "uvAnimationRotationSpeedFactor",
+                                                             "extensions",
+                                                             "extras" };
 
             static const IgnoredFloat* findIgnoredFloat( string_view key )
             {
@@ -481,8 +485,8 @@ namespace sw::editor
 
         // 텍스처(glTF 텍스처 번호)
         const JSONValue textures = materialProperty.get( "textureProperties", false );
-        int32           arrTexture[Internal::kVrm0TextureCount]{ -1, -1, -1, -1, -1, -1, -1 };
-        static_assert( Internal::kVrm0TextureCount == 7, "arrTexture 초기값을 텍스처 키 수만큼 적는다" );
+        int32           arrTexture[Internal::kVrm0TextureCount]{ -1, -1, -1, -1, -1, -1, -1, -1 };
+        static_assert( Internal::kVrm0TextureCount == 8, "arrTexture 초기값을 텍스처 키 수만큼 적는다" );
         for ( const string& key : textures.isObject() ? textures.getMemberNames() : vector<string>{} )
         {
             const std::optional<int32> textureIndex = textures.get( key, false ).read<int32>();
@@ -509,19 +513,25 @@ namespace sw::editor
             Internal::appendIgnored( pOutListIgnored, key );
         }
 
-        outDesc._baseColor           = arrColor[0];
-        outDesc._shadeColor          = arrColor[1];
-        outDesc._emissiveColor       = arrColor[2];
-        outDesc._rimColor            = arrColor[3];
-        outDesc._outlineColor        = arrColor[4];
-        outDesc._baseColorTexture    = arrTexture[0];
-        outDesc._shadeTexture        = arrTexture[1];
-        outDesc._emissiveTexture     = arrTexture[2];
-        outDesc._matcapTexture       = arrTexture[3];
-        outDesc._normalTexture       = arrTexture[4];
-        outDesc._rimMultiplyTexture  = arrTexture[5];
-        outDesc._outlineWidthTexture = arrTexture[6];
-        outDesc._normalScale         = arrFloat[Internal::Vrm0BumpScale];
+        outDesc._baseColor              = arrColor[0];
+        outDesc._shadeColor             = arrColor[1];
+        outDesc._emissiveColor          = arrColor[2];
+        outDesc._rimColor               = arrColor[3];
+        outDesc._outlineColor           = arrColor[4];
+        outDesc._baseColorTexture       = arrTexture[0];
+        outDesc._shadeTexture           = arrTexture[1];
+        outDesc._emissiveTexture        = arrTexture[2];
+        outDesc._matcapTexture          = arrTexture[3];
+        outDesc._normalTexture          = arrTexture[4];
+        outDesc._rimMultiplyTexture     = arrTexture[5];
+        outDesc._outlineWidthTexture    = arrTexture[6];
+        outDesc._uvAnimationMaskTexture = arrTexture[7];
+        outDesc._normalScale            = arrFloat[Internal::Vrm0BumpScale];
+        // UV 애니메이션 — UniVRM 의 0.x → 1.0 이관(VRM10 MigrationMToonMaterial)과 같다: 스크롤 y 는 부호를 뒤집고, 회전은 초당 바퀴 수 × 2π(라디안)이며
+        // 방향은 그대로다. three-vrm 의 VRMMaterialsV0CompatPlugin 도 스크롤 y 만 뒤집는다(회전 배율은 UniVRM 을 따른다).
+        outDesc._uvAnimationScrollXSpeed  = arrFloat[Internal::Vrm0UvAnimScrollX];
+        outDesc._uvAnimationScrollYSpeed  = -arrFloat[Internal::Vrm0UvAnimScrollY];
+        outDesc._uvAnimationRotationSpeed = arrFloat[Internal::Vrm0UvAnimRotation] * MathUtil::kTwoPi;
 
         // 블렌드 · 컬
         const int32 blendMode = static_cast<int32>( arrFloat[Internal::Vrm0BlendMode] + 0.5f );
@@ -601,17 +611,8 @@ namespace sw::editor
             Internal::makeFlat( outDesc );
             return true;
         }
-        for ( const string& key : mtoon.getMemberNames() )
-        {
-            if ( VectorUtil::contains( Internal::kArrMtoon1Key, key ) )
-                continue;
-            if ( VectorUtil::contains( Internal::kArrMtoon1IgnoredKey, key ) == false )
-            {
-                outError = context + ": unknown VRMC_materials_mtoon key '" + key + "'";
-                return false;
-            }
-            Internal::appendIgnored( pOutListIgnored, key );
-        }
+        if ( Internal::checkKeys( mtoon, Internal::kArrMtoon1Key, context + ": VRMC_materials_mtoon", outError ) == false )
+            return false;
 
         // 키가 없으면 `ToonMaterialDesc` 의 초기값이다 — 그 값이 1.0 의 기본값(VRMC_materials_mtoon 스키마)이다.
         auto readFactor = [&]( string_view key, float4& inoutColor ) -> bool
@@ -630,6 +631,8 @@ namespace sw::editor
                                    Internal::readTextureIndex( mtoon.get( "rimMultiplyTexture", false ), "rimMultiplyTexture", outDesc._rimMultiplyTexture, pOutListIgnored, outError ) &&
                                    Internal::readTextureIndex( mtoon.get( "outlineWidthMultiplyTexture", false ), "outlineWidthMultiplyTexture", outDesc._outlineWidthTexture, pOutListIgnored,
                                                                outError ) &&
+                                   Internal::readTextureIndex( mtoon.get( "uvAnimationMaskTexture", false ), "uvAnimationMaskTexture", outDesc._uvAnimationMaskTexture, pOutListIgnored,
+                                                               outError ) &&
                                    Internal::readTextureIndex( shiftTexture, "shadingShiftTexture", outDesc._shadingShiftTexture, pOutListIgnored, outError ) &&
                                    ( shiftTexture.isObject() == false || Internal::readFloat( shiftTexture, "scale", outDesc._shadingShiftTextureScale, outError ) );
         const bool bFactorsRead = Internal::readFloat( mtoon, "shadingShiftFactor", outDesc._shadingShift, outError ) &&
@@ -638,7 +641,10 @@ namespace sw::editor
                                   Internal::readFloat( mtoon, "parametricRimFresnelPowerFactor", outDesc._rimFresnelPower, outError ) &&
                                   Internal::readFloat( mtoon, "parametricRimLiftFactor", outDesc._rimLift, outError ) &&
                                   Internal::readFloat( mtoon, "outlineWidthFactor", outDesc._outlineWidth, outError ) &&
-                                  Internal::readFloat( mtoon, "outlineLightingMixFactor", outDesc._outlineLightingMix, outError );
+                                  Internal::readFloat( mtoon, "outlineLightingMixFactor", outDesc._outlineLightingMix, outError ) &&
+                                  Internal::readFloat( mtoon, "uvAnimationScrollXSpeedFactor", outDesc._uvAnimationScrollXSpeed, outError ) &&
+                                  Internal::readFloat( mtoon, "uvAnimationScrollYSpeedFactor", outDesc._uvAnimationScrollYSpeed, outError ) &&
+                                  Internal::readFloat( mtoon, "uvAnimationRotationSpeedFactor", outDesc._uvAnimationRotationSpeed, outError );
         if ( bTexturesRead == false || bFactorsRead == false )
         {
             outError = context + ": " + outError;
@@ -677,17 +683,28 @@ namespace sw::editor
         root.setAttribute( "name", string_view( desc._name.empty() ? "Toon" : desc._name.c_str() ) );
         root.setAttribute( "blendMode", desc._alphaMode == ToonAlphaMode::Transparent ? "Transparent" : "Opaque" );
 
-        auto setValue = [&]( string_view name, const string& value )
+        // 템플릿에 없는 프로퍼티는 조용히 건너뛰지 않는다 — 템플릿과 이 표가 어긋나면 값이 기본값으로 남은 머티리얼이 나온다.
+        bool bMissingProperty = false;
+        auto setValue         = [&]( string_view name, const string& value )
         {
             const XMLNode item = Internal::findProperty( properties, name );
-            if ( item.isValid() )
-                item.setAttribute( "defaultValue", string_view( value ) );
+            if ( item.isValid() == false )
+            {
+                bMissingProperty = true;
+                return;
+            }
+            item.setAttribute( "defaultValue", string_view( value ) );
         };
         auto setTexture = [&]( string_view name, int32 textureIndex )
         {
-            const XMLNode item              = Internal::findProperty( properties, name );
-            const bool    bInRange          = 0 <= textureIndex && static_cast<size_t>( textureIndex ) < listTexturePath.size();
-            const bool    bCanAssignTexture = item.isValid() && bInRange && listTexturePath[static_cast<size_t>( textureIndex )].empty() == false;
+            const XMLNode item = Internal::findProperty( properties, name );
+            if ( item.isValid() == false )
+            {
+                bMissingProperty = true;
+                return;
+            }
+            const bool bInRange          = 0 <= textureIndex && static_cast<size_t>( textureIndex ) < listTexturePath.size();
+            const bool bCanAssignTexture = bInRange && listTexturePath[static_cast<size_t>( textureIndex )].empty() == false;
             if ( bCanAssignTexture )
                 item.setAttribute( "assetPath", string_view( listTexturePath[static_cast<size_t>( textureIndex )] ) );
         };
@@ -711,6 +728,9 @@ namespace sw::editor
         setValue( "alphaCutoff", Internal::formatNumber( desc._alphaCutoff ) );
         setValue( "normalScale", Internal::formatNumber( desc._normalScale ) );
         setValue( "shadingShiftTextureScale", Internal::formatNumber( desc._shadingShiftTextureScale ) );
+        setValue( "uvAnimationScrollSpeedX", Internal::formatNumber( desc._uvAnimationScrollXSpeed ) );
+        setValue( "uvAnimationScrollSpeedY", Internal::formatNumber( desc._uvAnimationScrollYSpeed ) );
+        setValue( "uvAnimationRotationSpeed", Internal::formatNumber( desc._uvAnimationRotationSpeed ) );
         setTexture( "baseColorMap", desc._baseColorTexture );
         setTexture( "shadeMap", desc._shadeTexture );
         setTexture( "emissiveMap", desc._emissiveTexture );
@@ -719,6 +739,9 @@ namespace sw::editor
         setTexture( "shadingShiftMap", desc._shadingShiftTexture );
         setTexture( "rimMultiplyMap", desc._rimMultiplyTexture );
         setTexture( "outlineWidthMap", desc._outlineWidthTexture );
+        setTexture( "uvAnimationMaskMap", desc._uvAnimationMaskTexture );
+        if ( bMissingProperty )
+            return {};
 
         const XMLNode permutations = root.findChild( "_permutations" );
         const XMLNode switches     = permutations.findChild( "_staticSwitches" );

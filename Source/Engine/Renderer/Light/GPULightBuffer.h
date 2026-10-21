@@ -19,6 +19,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/String/hashed_string.h"
 
 #include "Engine/Graphics/RHI/RHIStructuredBufferSlot.h"
 #include "Engine/Graphics/Shader/Binding/GPULight.h"
@@ -30,6 +31,16 @@ namespace sw
     class IRHIDevice;
     class Scene;
 
+    /** @brief 쿠키(빛 텍스처)를 쓰는 빛 하나입니다 — 라이트 목록의 원소 번호와 텍스처 경로입니다. 렌더러가 칸을 나눠 그 원소의 `_extra.w` 에 적습니다(`Light2DCookieAtlas`). */
+    struct GPULightCookie
+    {
+        uint32        _lightIndex{ 0 };
+        hashed_string _texturePath{};
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @brief 씬의 활성 라이트를 GPU 원소로 모읍니다(게임 스레드).
      * @details 레지스트리(`ComponentRegistry`)만 봅니다. 주의: 모든 GameObject 를 도는 경로를 만들지 않습니다
@@ -43,9 +54,11 @@ namespace sw
      *                             그 프로브들의 SH9 원소(프로브 하나가 float4 `kLightProbeFloat4Count` 개)를 지우고 채웁니다. 반사 프로브도 같은 길이다 — 볼륨 뒤에
      *                             반사 프로브 원소(`kLightTypeReflectionProbe`)를 넣고 그 옥타헤드럴 텍셀(텍셀 하나가 float4 하나)을 같은 목록에 붙입니다.
      *                             nullptr 이면 볼륨도 반사 프로브도 모으지 않습니다.
+     * @param pOutListCookie 비지 않으면 쿠키 텍스처를 쓰는 빛(`LightComponent::getCookieTexturePath`)마다 원소 번호와 경로를 지우고 채웁니다. nullptr 이면
+     *                       그 빛은 쿠키 없이 그려진다 — 아틀라스를 만들지 않는 경로(라이트 프로브 굽기)만 넘긴다.
      */
     SW_API void collectSceneLights( const Scene* pScene, vector<GPULight>& outList, vector<uint32>* pOutListShadowLightIndex = nullptr,
-                                    vector<float4>* pOutListProbeElement = nullptr );
+                                    vector<float4>* pOutListProbeElement = nullptr, vector<GPULightCookie>* pOutListCookie = nullptr );
 
     /**
      * @enum LightGridProducer

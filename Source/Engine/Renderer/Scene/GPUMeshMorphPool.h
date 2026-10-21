@@ -59,22 +59,23 @@ namespace sw
 
     /**
      * @struct GPUMorphVertex
-     * @brief 모프 풀의 정점 하나입니다. GPU 에서는 **float4 둘**로 보입니다(`g_SwMorphVertices`, binding.hlsli).
+     * @brief 모프 풀의 정점 하나입니다. GPU 에서는 **float4 셋**(위치 · 노멀 · 탄젠트)으로 보입니다(`g_SwMorphVertices`, binding.hlsli).
      * @details 셰이더 쪽은 구조체가 아니라 `StructuredBuffer<float4>` 다. 주의: 구조체로 선언하면 레이아웃이 네 백엔드에서
      *          같아도 OpenGL 만 같은 원소의 두 멤버를 **다른 원소**에서 읽는다. 그래서 버퍼의 원소는 float4 이고 정점당
      *          `shaderslot::kMorphFloat4PerVertex` 개다.
-     *          이 구조체는 CPU 가 채우는 형태일 뿐이며, 바이트 배치는 float4 둘과 같다.
+     *          이 구조체는 CPU 가 채우는 형태일 뿐이며, 바이트 배치는 float4 셋과 같다.
      */
     struct GPUMorphVertex
     {
         float4 _position{}; ///< w 는 쓰지 않습니다(정렬용).
         float4 _normal{};   ///< 변형된 노멀입니다. 컴퓨트가 위치와 **같이** 다시 만듭니다. w 는 쓰지 않습니다.
+        float4 _tangent{};  ///< 변형된 탄젠트(xyz)입니다. 노멀과 같이 돌립니다 — 없으면 노멀 맵이 레스트 탄젠트로 칠해진다. w 는 레스트의 바이탄젠트 부호입니다.
     };
 } // namespace sw
 
 namespace sw
 {
-    static_assert( sizeof( GPUMorphVertex ) == 2 * sizeof( float4 ), "모프 풀 정점은 float4 둘(32바이트)이어야 한다 — 셰이더가 [2i], [2i+1] 로 읽는다" );
+    static_assert( sizeof( GPUMorphVertex ) == shaderslot::kMorphFloat4PerVertex * sizeof( float4 ), "모프 풀 정점은 SW_MORPH_FLOAT4_PER_VERTEX 개의 float4 여야 한다 — 셰이더가 [3i], [3i+1], [3i+2] 로 읽는다" );
 
 } // namespace sw
 
@@ -174,7 +175,7 @@ namespace sw
         uint32 getSkinSourceCount() const { return static_cast<uint32>( _listSourceDataID.size() ); }
         /** @brief 업로드한 스킨 원본의 정점 수 합입니다. */
         uint32 getSkinSourceVertexCount() const { return _skinSourceVertexCount; }
-        /** @brief 스킨 원본의 레스트 정점 버퍼입니다(정점 하나가 float4 둘이고, 그 뒤에 모프 차이 하나가 float4 둘입니다). */
+        /** @brief 스킨 원본의 레스트 정점 버퍼입니다(정점 하나가 float4 셋이고, 그 뒤에 모프 차이 하나가 float4 셋입니다). */
         const RHIStructuredBufferSlot& getSkinRestBuffer() const { return _skinRest; }
         /** @brief 레스트 버퍼에서 모프 차이가 시작하는 원소(float4)입니다. */
         uint32 getSkinDeltaBase() const { return _skinDeltaBase; }

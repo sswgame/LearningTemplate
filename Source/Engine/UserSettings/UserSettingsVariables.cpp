@@ -9,7 +9,7 @@ SW_GLOBAL_VARIABLE( int32, gv_upscaler, 0, "업스케일러 (0 끔, 사용자 �
 SW_GLOBAL_VARIABLE( int32, gv_shadowMapResolution, 2048, "그림자 맵 한 변 텍셀 수 (사용자 설정 graphics.shadowQuality 의 targetValue)" );
 SW_GLOBAL_VARIABLE( float32, gv_foliageDensity, 1.0f, "식생 밀도 배율 (사용자 설정 graphics.foliageDensity)" );
 SW_GLOBAL_VARIABLE( int32, gv_postQuality, 2, "후처리 품질 0~3 — 패스의 _minPostQuality 보다 낮으면 건너뛴다 (사용자 설정 graphics.postQuality)" );
-SW_GLOBAL_VARIABLE( bool, gv_motionBlur, true, "모션 블러 (사용자 설정 graphics.motionBlur, 렌더러 미구현 — UserSettingsConsumers U3 패치)" );
+SW_GLOBAL_VARIABLE( bool, gv_motionBlur, true, "모션 블러 (사용자 설정 graphics.motionBlur, MotionBlur 패스가 읽는다)" );
 // 아래 층(Object · Graphics · Vfx)이 읽는 설정 변수는 읽는 쪽에 둔다 — 그 층은 이 층을 include 하지 못한다:
 // gv_viewDistanceScale(CameraComponent.cpp) · gv_textureMipDrop(Texture2D.cpp) · gv_effectsSpawnScale(VfxComponent.cpp).
 

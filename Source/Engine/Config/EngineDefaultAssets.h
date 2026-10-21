@@ -158,6 +158,8 @@ namespace sw
         PROPERTY( Required )
         DataPath _shaderTaa; ///< TAA
         PROPERTY( Required )
+        DataPath _shaderMotionBlur; ///< 카메라 모션 블러(지난 프레임 뷰-투영으로 구한 화면 속도)
+        PROPERTY( Required )
         DataPath _shaderTonemap; ///< 톤 매핑
         PROPERTY( Required )
         DataPath _shaderDepthOfField; ///< 피사계 심도 — 장면 깊이에서 착란원을 구해 HDR 색을 흐린다
@@ -165,6 +167,8 @@ namespace sw
         DataPath _shaderSky; ///< 하늘 그러데이션(스카이 패스) — 깊이 1 의 풀스크린 삼각형
         PROPERTY( Required )
         DataPath _shaderToon; ///< 셀 셰이딩 머티리얼 셰이더 — 메시 외곽선 패스의 기본 셰이더이기도 하다
+        PROPERTY( Required )
+        DataPath _shaderHighlightOutline; ///< 인스턴스 강조 외곽선(상호작용 대상 · 감각 모드) — 강조 패스 둘의 셰이더
         PROPERTY( Required )
         DataPath _shaderCanvas; ///< 화면 2D(UI · 월드 글자) 사각형 — 사각형 하나 = 인스턴스 하나, SDF 모양 · 글리프
         PROPERTY( Required )

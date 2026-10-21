@@ -1,4 +1,5 @@
 #include "common.hlsli"
+#include "batchdata.hlsli"
 
 /**
  * instancesort.hlsl — 배치 안의 **가시 인스턴스를 CPU 정렬 순서로 되돌린다** (컴퓨트).
@@ -40,17 +41,7 @@ struct RHIDrawIndirectCommand
 	uint startInstanceLocation;
 };
 
-struct GPUBatchInfo
-{
-	uint instanceBase;
-	uint instanceCount;
-	uint sortMode;        // 0 = 없음(불투명), 1 = CPU 순서 유지, 2 = 압축 뒤 CPU 순서로 되돌림
-	uint morphVertexBase; // 정점 셰이더용 — 여기서는 안 읽는다 (binding.hlsli SwBatchData 와 같은 표)
-	uint firstVertex;     // 정점 셰이더용 — 여기서는 안 읽는다
-	uint pad0;
-	uint pad1;
-	uint pad2;
-};
+// 배치 표 원소는 binding.hlsli 와 같은 SwBatchData(batchdata.hlsli) 다.
 
 SW_DECLARE_CBUFFER( SortParams, SW_SLOT_COMPUTE_CB )
 {
@@ -62,7 +53,7 @@ SW_DECLARE_CBUFFER( SortParams, SW_SLOT_COMPUTE_CB )
 };
 
 SW_DECLARE_STRUCTURED_BUFFER( SwInstanceData, g_Instances, 0 );
-SW_DECLARE_STRUCTURED_BUFFER( GPUBatchInfo, g_BatchInfo, 1 );
+SW_DECLARE_STRUCTURED_BUFFER( SwBatchData, g_BatchInfo, 1 );
 SW_DECLARE_STRUCTURED_BUFFER( uint, g_ViewRank, 2 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( RHIDrawIndirectCommand, g_IndirectArgs, 0 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( uint, g_VisibleInstanceIDs, 1 );
@@ -77,7 +68,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint3 groupThreadId : SV_GroupThreadID)
 	if (batchIndex >= g_BatchCount)
 		return;
 
-	const GPUBatchInfo info = g_BatchInfo[batchIndex];
+	const SwBatchData info = g_BatchInfo[batchIndex];
 	if (info.sortMode != 2u) // 이 배치는 여기서 정렬하지 않는다
 		return;
 

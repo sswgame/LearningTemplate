@@ -250,7 +250,8 @@ namespace sw
                 {
                     const RenderPassType      passType = static_cast<RenderPassType>( typeIndex );
                     const RenderPassTypeInfo& info     = getRenderPassTypeInfo( passType );
-                    if ( info._pDefaultShader == nullptr )
+                    // 파이프라인 퍼뮤테이션을 요구하는 패스는 1) 의 파이프라인 패스로만 쿠킹한다(런타임도 서술 없이는 만들지 않는다).
+                    if ( info._pDefaultShader == nullptr || info.hasFlag( RenderPassTraitFlag::kRequiresPassDesc ) )
                         continue;
                     const string& defaultShader = ( engineDefaultAssets.*info._pDefaultShader ).get();
                     if ( info.hasFlag( RenderPassTraitFlag::kCompute ) )

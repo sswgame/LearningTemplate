@@ -2,7 +2,7 @@
 	<_listAttachment>
 		<RenderPassAttachment _name="GBufferAlbedo" _format="R8G8B8A8_UNORM" _clearColor="0,0,0,0" _bClear="true" />
 		<RenderPassAttachment _name="GBufferNormal" _format="R16G16B16A16_FLOAT" _clearColor="0.5,0.5,1,0" _bClear="true" />
-		<!-- G버퍼 머티리얼 칸 — r 금속도, g 거칠기(binding.hlsli swEncodeGBufferMaterial). 디퍼드 조명이 PBR 식에 넘긴다. -->
+		<!-- G버퍼 머티리얼 칸 — r 금속도, g 거칠기(binding.hlsli swEncodeGbufferMaterial). 디퍼드 조명이 PBR 식에 넘긴다. -->
 		<RenderPassAttachment _name="GBufferMaterial" _format="R8G8B8A8_UNORM" _clearColor="0,0,0,0" _bClear="true" />
 		<RenderPassAttachment _name="SceneDepth" _format="D24_UNORM_S8_UINT" _clearColor="1,0,0,0" _bClear="true" />
 		<RenderPassAttachment _name="ShadowMap" _format="D24_UNORM_S8_UINT" _clearColor="1,0,0,0" _bClear="true" />
@@ -17,6 +17,7 @@
 		<RenderPassAttachment _name="BloomColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _bClear="true" />
 		<RenderPassAttachment _name="TaaColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _bClear="true" />
 		<RenderPassAttachment _name="DepthOfFieldColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _bClear="true" />
+		<RenderPassAttachment _name="MotionBlurColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _bClear="true" />
 		<RenderPassAttachment _name="OutlineColor" _format="R8G8B8A8_UNORM" _clearColor="0.12,0.15,0.18,1" _bClear="true" />
 		<RenderPassAttachment _name="TonemapColor" _format="R8G8B8A8_UNORM" _clearColor="0.12,0.15,0.18,1" _bClear="true" />
 	</_listAttachment>
@@ -136,6 +137,27 @@
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
+		<!-- 강조 외곽선(highlightoutline.hlsl) — 강조 방식이 Outline 인 인스턴스만 뒤집은 껍질로 깊이 테스트해 그린다(상호작용 대상). 두께는 화면 높이 비율. -->
+		<RenderGraphPassDesc _name="HighlightOutline"
+		                     _type="HighlightOutline"
+		                     _depthAttachment="SceneDepth"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="Front"
+		                     _bEnableDepthTest="true"
+		                     _bEnableDepthWrite="false"
+		                     _bEnableBlend="false">
+			<_listInput>
+				<item>LitColor</item>
+				<item>SceneDepth</item>
+			</_listInput>
+			<_listOutput>
+				<item>LitColor</item>
+			</_listOutput>
+			<_listPermutation>
+				<item>SW_HIGHLIGHT_WIDTH=0.004</item>
+			</_listPermutation>
+		</RenderGraphPassDesc>
 		<!-- 하늘(SkyComponent) — 불투명 · 외곽선 뒤, 반투명 앞. 깊이 1 의 풀스크린 삼각형을 깊이 테스트로 그려 빈 곳만 칠한다(쓰기 없음). 씬에 하늘이 없으면 돌지 않는다. -->
 		<RenderGraphPassDesc _name="Sky"
 		                     _type="Sky"
@@ -172,6 +194,27 @@
 				<item>LitColor</item>
 			</_listOutput>
 			<_listPermutation />
+		</RenderGraphPassDesc>
+		<!-- 감각 모드 외곽선 — 강조 방식이 Sense 인 인스턴스만 깊이 테스트 없이 그려 벽 너머에서도 보인다. 반투명 뒤. -->
+		<RenderGraphPassDesc _name="HighlightSense"
+		                     _type="HighlightSense"
+		                     _depthAttachment="SceneDepth"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="Front"
+		                     _bEnableDepthTest="false"
+		                     _bEnableDepthWrite="false"
+		                     _bEnableBlend="false">
+			<_listInput>
+				<item>LitColor</item>
+				<item>SceneDepth</item>
+			</_listInput>
+			<_listOutput>
+				<item>LitColor</item>
+			</_listOutput>
+			<_listPermutation>
+				<item>SW_HIGHLIGHT_WIDTH=0.004</item>
+			</_listPermutation>
 		</RenderGraphPassDesc>
 		<RenderGraphPassDesc _name="BloomDownsample"
 		                     _type="BloomDownsample"
@@ -260,6 +303,25 @@
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
+		<!-- 카메라 모션 블러 — 사용자 설정 graphics.motionBlur 를 끄거나 후처리 품질이 medium 아래면 DepthOfFieldColor 를 그대로 복사한다(같은 포맷). -->
+		<RenderGraphPassDesc _name="MotionBlur"
+		                     _type="MotionBlur"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="Back"
+		                     _bEnableDepthTest="true"
+		                     _bEnableDepthWrite="true"
+		                     _bEnableBlend="false"
+		                     _minPostQuality="1">
+			<_listInput>
+				<item>DepthOfFieldColor</item>
+				<item>SceneDepth</item>
+			</_listInput>
+			<_listOutput>
+				<item>MotionBlurColor</item>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
 		<RenderGraphPassDesc _name="Tonemap"
 		                     _type="Tonemap"
 		                     _vertexEntryPoint="VSMain"
@@ -269,7 +331,7 @@
 		                     _bEnableDepthWrite="true"
 		                     _bEnableBlend="false">
 			<_listInput>
-				<item>DepthOfFieldColor</item>
+				<item>MotionBlurColor</item>
 			</_listInput>
 			<_listOutput>
 				<item>TonemapColor</item>

@@ -125,7 +125,21 @@ namespace sw
         inline constexpr uint32 kLightTypeSpot        = SW_LIGHT_TYPE_SPOT;
         inline constexpr uint32 kLightTypePoint2D     = SW_LIGHT_TYPE_POINT2D;
         inline constexpr uint32 kLightTypeGlobal2D    = SW_LIGHT_TYPE_GLOBAL2D;
+        inline constexpr uint32 kLightTypeFreeform2D  = SW_LIGHT_TYPE_FREEFORM2D;
         inline constexpr uint32 kLightTypeCount       = SW_LIGHT_TYPE_COUNT;
+        /// @brief 자유 모양 2D 빛의 변 원소 종류입니다. 빛 종류가 아니라서 `kLightTypeCount` 밖입니다.
+        inline constexpr uint32 kLightTypeFreeform2DEdge = SW_LIGHT_TYPE_FREEFORM2D_EDGE;
+        /// @brief 자유 모양 2D 빛 하나의 변 수 상한입니다(셰이더 루프의 끝).
+        inline constexpr uint32 kLight2DMaxFreeformEdges = SW_LIGHT2D_MAX_FREEFORM_EDGES;
+        /// @brief 2D 빛의 섞는 방식 값입니다(GPU `extra.y`).
+        inline constexpr uint32 kLight2DBlendAdditive    = SW_LIGHT2D_BLEND_ADDITIVE;
+        inline constexpr uint32 kLight2DBlendMultiply    = SW_LIGHT2D_BLEND_MULTIPLY;
+        inline constexpr uint32 kLight2DBlendSubtractive = SW_LIGHT2D_BLEND_SUBTRACTIVE;
+        /// @brief 2D 빛 쿠키 아틀라스의 한 변(텍셀)과 한 줄의 칸 수, 칸 수 전체, 쿠키 없음 값(빛 원소 `_extra.w`)입니다.
+        inline constexpr uint32 kLight2DCookieAtlasSize   = SW_LIGHT2D_COOKIE_ATLAS_SIZE;
+        inline constexpr uint32 kLight2DCookieCellsPerRow = SW_LIGHT2D_COOKIE_CELLS_PER_ROW;
+        inline constexpr uint32 kLight2DCookieCellCount   = SW_LIGHT2D_COOKIE_CELLS_PER_ROW * SW_LIGHT2D_COOKIE_CELLS_PER_ROW;
+        inline constexpr int32  kLight2DNoCookieCell      = SW_LIGHT2D_NO_COOKIE_CELL;
 
         // 패스 플래그: PassCB `g_Flags` 의 비트(bindingslots.hlsli 9).
         inline constexpr uint32 kPassFlagNativeBindless = SW_PASS_FLAG_NATIVE_BINDLESS;
@@ -365,8 +379,11 @@ namespace sw
         static_assert( kLightProbeBuffer == kLightGridBuffer + 1 && kLightProbeBuffer + 1 == kSrvSlotCount, "라이트 프로브는 라이트 그리드 다음이고 SRV 슬롯의 마지막이다" );
         static_assert( kLightTypeDirectional < kLightTypeCount && kLightTypePoint < kLightTypeCount &&
                            kLightTypeSpot < kLightTypeCount && kLightTypePoint2D < kLightTypeCount && kLightTypeGlobal2D < kLightTypeCount &&
-                           kLightTypeShadow2D >= kLightTypeCount && kLightTypeProbeVolume >= kLightTypeCount && kLightTypeProbeVolume != kLightTypeShadow2D &&
-                           kLightTypeReflectionProbe >= kLightTypeCount && kLightTypeReflectionProbe != kLightTypeShadow2D && kLightTypeReflectionProbe != kLightTypeProbeVolume,
+                           kLightTypeFreeform2D < kLightTypeCount && kLightTypeShadow2D >= kLightTypeCount && kLightTypeProbeVolume >= kLightTypeCount &&
+                           kLightTypeProbeVolume != kLightTypeShadow2D && kLightTypeReflectionProbe >= kLightTypeCount && kLightTypeReflectionProbe != kLightTypeShadow2D &&
+                           kLightTypeReflectionProbe != kLightTypeProbeVolume && kLightTypeFreeform2DEdge >= kLightTypeCount &&
+                           kLightTypeFreeform2DEdge != kLightTypeShadow2D && kLightTypeFreeform2DEdge != kLightTypeProbeVolume &&
+                           kLightTypeFreeform2DEdge != kLightTypeReflectionProbe,
                        "라이트 타입 값이 타입 수 안에 있어야 한다" );
         static_assert( SW_SLOT_ENGINE_TEX3 == kEngineTexture0 + kEngineTextureCount - 1, "엔진 텍스처 슬롯은 연속이어야 한다" );
         static_assert( kEngineGBufferMaterialTexture >= kSrvSlotCount && kEngineGBufferMaterialTexture < vk::kRangeSize && kEngineGBufferMaterialTexture < kMaterialTexture0,

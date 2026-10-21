@@ -48,12 +48,9 @@ float4 PSMain(PSInput input) : SV_TARGET
 	float3 color  = source;
 
 #if defined( SW_POST_BLOOM )
+	// 자르지 않는다 — 장면 색 · 단계 파이프라인의 중간 타깃이 모두 `R16G16B16A16_FLOAT` 라 1.0 을 넘는 값이 톤맵까지 간다.
+	// 여기서 [0,1] 로 자르면 톤맵 `x / (x + 1)` 의 최대가 0.5 가 되어 밝은 바닥 위의 더하기 블렌드(입자)가 보이지 않는다.
 	color = swApplyBloom(input.uv, sourceTexel, color);
-	// **여기서 자르는 이유.** 패스를 나눠 두었을 때는 블룸 결과가 `R8G8B8A8_UNORM` 중간 타깃에
-	// 쓰이면서 [0,1] 로 잘렸다. 합치면 그 자름이 사라져 밝은 부분이 달라 보인다 — 합치기는
-	// **성능 변경이지 룩 변경이 아니어야** 하므로 같은 자리에서 똑같이 자른다.
-	// (톤맵까지 HDR 로 가져가고 싶다면 이 줄을 지우면 된다. 그건 의도적인 룩 변경이다.)
-	color = saturate(color);
 #endif
 #if defined( SW_POST_OUTLINE )
 	color = swApplyOutline(input.uv, depthTexel, color);

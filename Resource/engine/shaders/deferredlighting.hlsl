@@ -39,8 +39,13 @@ float4 PSMain(PSInput input) : SV_TARGET
 	float3 worldPosition = swComputeWorldPositionFromDepth(input.uv, depth);
 
 	// 그림자는 월드 위치를 **라이트 클립 공간으로 투영해** 읽는다(화면 UV 로 샘플하면 그늘이 물체를 따라오지 않고 화면에 붙는다).
+	// 금속도 · 거칠기는 G버퍼 머티리얼 칸이다(binding.hlsli swEncodeGbufferMaterial 이 적는다).
+	float roughness;
+	float metallic;
+	swLoadGbufferMaterial(input.uv, roughness, metallic);
+
 	float  shadow = swSampleShadowAtWorld(worldPosition, normal);
-	float3 lit    = swShadeLights(albedo, worldPosition, normal, shadow);
+	float3 lit    = swShadeLights(albedo, worldPosition, normal, shadow, roughness, metallic);
 
 	// 아무것도 안 그린 곳(깊이 원경이고 노멀 칸의 알파가 클리어 값 0)은 **쓰지 않고 버린다**. G버퍼가 비어 있어 셰이딩할 표면이
 	// 없고, 그대로 계산하면 검은 알베도에 림 라이트만 남아 배경이 이상한 색이 된다.
