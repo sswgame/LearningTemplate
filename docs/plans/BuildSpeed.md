@@ -19,7 +19,8 @@ PCH 에서 핵심 헤더를 뺀 뒤에도 `ReflectionTypes.h`(1,280 줄, 3 개�
   include 하는 곳은 칸을 읽는 .cpp 약 40 개, `SerializerUtil.h`, 생성 코드(`ReflectGenerated.h`)뿐이다. 속성 키를 더할 때 다시 컴파일되는 TU 가 약 1,200 → 생성 TU + 약 80 으로 줄 것으로 본다.
 - 남은 일: 검증(`ReflectionValidation.h`)과 값 변환(`ReflectValue.h`)은 `ReflectionCore.h` 묶음을 거쳐 `Component.h` · `RHITypes.h` 가 읽는다. 두 헤더가 묶음 대신
   쓰는 것만 include 하게 바꾸는 것이 다음 후보다(그 헤더에 기대던 TU 를 빌드로 찾아야 해서 빌드할 수 있을 때 한다).
-  `GameObjectManager.h`(3 개월 107 번, TU 244 개)의 값 멤버 서브시스템 넷을 `unique_ptr` 로 바꾸는 안(후보 `HeaderIncludeSlimming` ②)도 같은 잣대(바뀐 횟수 × TU 수)로 다시 본다.
+  `GameObjectManager.h` 의 값 멤버 레지스트리를 `unique_ptr` 로 바꾸는 안은 같은 잣대(바뀐 횟수 × TU 수)로 하지 않기로 했다(2026-10-21). `AnimationSystem` 은 이미 씬 서비스로 나갔고,
+  남은 레지스트리 셋은 Core 만 include 하며 3 개월 동안 1 ~ 3 번 바뀌어 줄일 것이 없다. 이유는 그 멤버 주석에 있다.
 - 확인: 후보 `pch.h` 를 `-I` 맨 앞에 둔 `/clang:-M` 전처리로 `ReflectionTypes.h` · `ReflectionMetadata.h` 의 의존 TU 수를 전후로 견주고, `ReflectionMetadata.h` 를 건드린 증분 시간을 잰다.
   상자가 더한 간접 참조 한 번이 직렬화 벤치 · 씬 로드 시간에 보이는지도 본다.
 

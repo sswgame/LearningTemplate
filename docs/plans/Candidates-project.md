@@ -49,7 +49,7 @@
 옛번호: C-74
 왜 필요한가: 빌드 조건이 바뀌어 근거가 무효가 된 측정을 다시 잰다. 2026-10-20 조사로 폐기 · 태그 · 낡은 값 표시는 끝냈고, 아래는 실제로 재야 하는 것이다(각각의 후보 절에 자세한 조건이 있다).
 남은 것:
-- `HalfResolutionBloomMeasurement`(옛 D2-9) · `TerrainWaterVegetationRemainders`(옛 D2-5 ⑹ · ⑺, Debug 값을 Release 로) · `HeaderIncludeSlimming` ②(옛 C-13, 2026-10-05 측정 기준이라 지금 TU 수로 다시 판정) · `RuntimeQualityAdjust` ②(옛 C-29, 13 ~ 20 ms 프레임의 Tracy) · `BuildSpeed` 5 단계(옛 C-2, 공유 설치가 조용할 때).
+- `HalfResolutionBloomMeasurement`(옛 D2-9) · `TerrainWaterVegetationRemainders`(옛 D2-5 ⑹ · ⑺, Debug 값을 Release 로) · `RuntimeQualityAdjust` ②(옛 C-29, 13 ~ 20 ms 프레임의 Tracy) · `BuildSpeed` 5 단계(옛 C-2, 공유 설치가 조용할 때).
 - `UdpSocketLayerScaling`(옛 B-10): Windows 서버 스레드 % 는 다른 빌드의 CPU 부하가 섞여 무효로 표시했다. 다른 빌드가 없을 때 다시 잰다.
 - 부하 기준선(`Test/Load/Baselines.json` 의 connect · replication · soak 은 커밋 `14c775c55`, 2026-10-15)은 온라인 B([리플렉션 형식 계획](ReflectionFormats.md)) 이전 값이다. B 가 들어간 뒤 `py -3 -m Scripts load suite baseline --runs 3 --record` 로 다시 뜬다(옛 C-29 ⑤).
 함정: 항목이 이름 체계로 옮겨지는 중이라 옛 번호는 `py -3 -m Scripts plans --find` 로 새 이름을 먼저 찾는다.
