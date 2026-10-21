@@ -2526,3 +2526,53 @@ SW_TEST_CASE( GPUSceneTest, MaterialCbIsAMergeKeyOnlyWhenTheShaderBindsIt )
     other._materialBuffer = 8;
     SW_EXPECT_FALSE( sw::GPUMeshBatch::canShareMaterialBinding( head, other, false ) );
 }
+
+/**
+ * @brief [GPUSceneTest] 메시만 바뀐 인스턴스 하나짜리 배치는 다시 나누지 않고 배치의 메시만 바꾼다(지형 LOD 교체 — TerrainEditCost T4)
+ * @details 배치 수 · 인스턴스 자리는 그대로이고 바뀐 인스턴스 구간 하나만 더럽다. 옛 메시를 가리키는 배치가 남으면 안 된다.
+ */
+SW_TEST_CASE( GPUSceneTest, MeshSwapOfSingleInstanceBatchKeepsTheBatches )
+{
+    sw::Scene scene( "MeshSwapScene" );
+    SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+
+    sw::vector<sw::MeshComponent*> listComp;
+    for ( uint32 index = 0; index < 8; ++index )
+    {
+        sw::GameObject* pObj = scene.getObjectManager()->createGameObject( sw::hashed_string( ( "Chunk" + sw::to_string( index ) ).c_str() ) );
+        SW_ASSERT_NOT_NULL( pObj );
+        sw::MeshComponent* pComp = pObj->addComponent<sw::MeshComponent>();
+        SW_ASSERT_NOT_NULL( pComp );
+        pComp->setMesh( sw::MeshUtil::createUnitCube() ); // 청크마다 자기 메시
+        pComp->setLocalPosition( sw::float3{ static_cast<float32>( index ) * 2.0f, 0.0f, 0.0f } );
+        listComp.push_back( pComp );
+    }
+    scene.getObjectManager()->flushSceneTransforms();
+
+    sw::GPUSceneBuilder builder;
+    const sw::float3    cameraPos{ 0.0f, 0.0f, -10.0f };
+    builder.populateFromScene( &scene, cameraPos );
+    sw::GPUSceneSnapshot first;
+    builder.exportCPUSnapshot( first );
+    SW_ASSERT_EQUAL( 8u, static_cast<uint32>( first.getAllBatches().size() ) );
+
+    sw::shared_ptr<sw::Mesh> oldMesh = listComp[2]->getMesh();
+    sw::shared_ptr<sw::Mesh> newMesh = sw::MeshUtil::createUnitCube();
+    SW_ASSERT_NOT_NULL( newMesh.get() );
+    listComp[2]->setMesh( newMesh );
+    builder.populateFromScene( &scene, cameraPos );
+    sw::GPUSceneSnapshot swapped;
+    builder.exportCPUSnapshot( swapped );
+
+    SW_ASSERT_EQUAL( 8u, static_cast<uint32>( swapped.getAllBatches().size() ) );
+    SW_EXPECT_TRUE( swapped._bAllInstancesDirty == SW_FALSE );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( swapped._listDirtyInstanceRun.size() ) );
+    bool bNewMeshDrawn = false;
+    for ( const sw::GPUMeshBatch& batch : swapped.getAllBatches() )
+    {
+        SW_EXPECT_TRUE( batch._mesh != oldMesh );
+        bNewMeshDrawn = bNewMeshDrawn || batch._mesh == newMesh;
+        SW_EXPECT_EQUAL( 1u, batch._instanceCount );
+    }
+    SW_EXPECT_TRUE( bNewMeshDrawn );
+}

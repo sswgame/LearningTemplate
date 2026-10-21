@@ -47,13 +47,13 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [ServerDebug](docs/plans/ServerDebug.md) — 서버 디버깅 계획 — 에디터에서 서버 · 멀티플레이를 손쉽게 보는 길 | 구현중 | 9/15 | 없음 | network | D7-3 |
 | - | [ShooterCharacterIntegration](docs/plans/ShooterCharacterIntegration.md) — Shooter3D 캐릭터 통합의 남은 것 | 구현중 | 1/4 | 없음 | gameplay | D4-10 |
 | - | [SubtickInput](docs/plans/SubtickInput.md) — CS2 식 서브틱 입력 | 구현중 | 4/6 | 없음 | network | G-2 |
-| - | [TerrainEditCost](docs/plans/TerrainEditCost.md) — 지형 LOD 교체 · 지형 쓰기 · 식생 다시 계산의 비용 (2026-10-21) | 구현중 | 2/4 | 없음 | graphics | D2-5.6, D2-5.7 |
+| - | [TerrainEditCost](docs/plans/TerrainEditCost.md) — 지형 LOD 교체 · 지형 쓰기 · 식생 다시 계산의 비용 (2026-10-21) | 구현중 | 3/4 | 없음 | graphics | D2-5.6, D2-5.7 |
 | - | [UiInputRemaining](docs/plans/UiInputRemaining.md) — 런타임 UI 입력의 남은 것 | 구현중 | 2/3 | 없음 | ui | D6-2 |
 | - | [UiNotificationRemaining](docs/plans/UiNotificationRemaining.md) — 알림 · 힌트 · 목표 마커의 남은 것 | 구현중 | 1/2 | 없음 | ui | D6-5 |
 | - | [UiTooltipAndCursor](docs/plans/UiTooltipAndCursor.md) — 런타임 UI 툴팁과 커서 모양 | 구현중 | 3/4 | 없음 | ui | 없음 |
 | - | [UiTransitionCurveEvents](docs/plans/UiTransitionCurveEvents.md) — 전환의 곡선 위 사건 | 구현중 | 1/2 | 없음 | ui | D6-1 |
 | - | [WaylandWindowLayer](docs/plans/WaylandWindowLayer.md) — Wayland 창 계층 | 구현중 | 1/3 | 없음 | engine | D1-6 |
-| - | [WorldStreaming](docs/plans/WorldStreaming.md) — 월드 스트리밍(D1-7) — 설계와 구현 단위 | 구현중 | 5/7 | 없음 | engine | D1-7 |
+| - | [WorldStreaming](docs/plans/WorldStreaming.md) — 월드 스트리밍(D1-7) — 설계와 구현 단위 | 구현중 | 6/7 | 없음 | engine | D1-7 |
 | - | [AudioChannelLayout](docs/plans/AudioChannelLayout.md) — 오디오 채널 레이아웃 계획 (2026-10-20) | 측정대기 | 5/5 | 없음 | audio-ai-localization | D5-1 |
 | - | [ClothFollowups](docs/plans/ClothFollowups.md) — 천(`ClothComponent`)의 남은 것 | 측정대기 | 3/3 | 없음 | engine | D1-4 |
 | - | [NetChannelSchemaHashHandshake](docs/plans/NetChannelSchemaHashHandshake.md) — 넷 채널 등록 API 로 스키마 해시를 핸드셰이크 버전에 섞기 | 측정대기 | 2/2 | 없음 | network | D7-7 |

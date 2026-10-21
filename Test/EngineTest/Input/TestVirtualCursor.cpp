@@ -11,7 +11,10 @@ namespace
 {
     struct TestVirtualCursorInternal
     {
-        static constexpr sw::int2 kClientSize{ 800, 600 };
+        static constexpr sw::InputViewRect kClientSize{
+            sw::int2{  0,   0},
+            sw::int2{800, 600}
+        };
 
         static sw::VirtualCursor makeCursor()
         {

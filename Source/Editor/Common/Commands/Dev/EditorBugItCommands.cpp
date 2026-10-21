@@ -35,5 +35,5 @@ namespace sw::editor
     SW_EDITOR_COMMAND( ReportBug, "help.reportBug", 2900, "Report Bug (BugIt)", editoricon::kBug, "Editor",
                        "스크린샷 · 로그 · 씬 사본 · 카메라 자리 · 재현 명령을 Saved/BugIt/<시각>/ 에 모읍니다(bugitgo 로 그 자리에 돌아간다)",
                        "Collect a bug report folder", ( EditorCommandShortcut{ EditorCommandKey::F12, static_cast<uint8>( commandmodifier::kCtrl | commandmodifier::kShift ) } ),
-                       &runReportBug, nullptr, "MainMenu/Edit" );
+                       &runReportBug, nullptr, NoScene, "MainMenu/Edit" );
 } // namespace sw::editor

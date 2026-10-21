@@ -10,6 +10,8 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Module/ModuleUnloadListener.h"
 
+#include "Editor/Common/Workspace/EditorPlaySession.h"
+
 namespace sw::editor
 {
     namespace
@@ -203,6 +205,9 @@ namespace sw::editor
 
     bool EditorCommandRegistry::isEnabled( const EditorCommandDesc& desc )
     {
+        // 씬을 바꾸는 커맨드는 편집 허용 답을 먼저 묻는다 — 플레이 중 · 편집을 막는 작업(굽기) 중이면 꺼진다.
+        if ( desc._edit == EditorCommandEdit::Scene && EditorPlaySession::areSceneEditsAllowed() == false )
+            return false;
         if ( desc._enabledPredicate.isBound() == false )
             return true;
         return desc._enabledPredicate();
@@ -389,6 +394,7 @@ namespace sw::editor
                 desc._action = row._pfnAction;
             if ( row._pfnEnabled != nullptr )
                 desc._enabledPredicate = row._pfnEnabled;
+            desc._edit = row._edit;
             registry.registerCommand( std::move( desc ) );
         }
         return excludedCount;

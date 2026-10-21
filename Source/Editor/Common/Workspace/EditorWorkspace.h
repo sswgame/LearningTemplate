@@ -135,8 +135,13 @@ namespace sw::editor
         uint64 getObservedSceneGeneration() const { return _observedSceneGeneration; }
         void   setObservedSceneGeneration( uint64 generation ) { _observedSceneGeneration = generation; }
 
-        /** @brief 활성 씬에 저장되지 않은 에디터 변경이 있음을 표시합니다. */
-        void markSceneDirty() { _bSceneDirty = SW_TRUE; }
+        /**
+         * @brief 활성 씬에 저장되지 않은 에디터 변경이 있음을 표시합니다.
+         * @details 씬을 바꾼 모든 편집이 지나는 한 곳이다(기록 · 되돌리기 · 개발 명령). 편집을 막는 작업(`EditorPlaySession::holdSceneEdits`) 중에 오면
+         *          편집 허용 답을 묻지 않은 경로가 씬을 바꾼 것이다 — 오류를 남기고 그 작업이 알게 한다(`EditorPlaySession::noteSceneEditWhileHeld`,
+         *          굽기는 결과를 버리고 멈춘다). 막는 작업 자신은 잠금을 푼 뒤에 표시한다.
+         */
+        void markSceneDirty();
         /** @brief 씬 dirty 플래그를 지웁니다. 저장이나 로드에 성공했을 때 호출합니다. */
         void clearSceneDirty() { _bSceneDirty = SW_FALSE; }
         /** @brief 저장하지 않은 씬 변경이 있으면 true 입니다. */

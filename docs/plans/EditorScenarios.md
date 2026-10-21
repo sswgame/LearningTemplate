@@ -35,6 +35,7 @@
 | 모듈 리로드 | `modules`(창) · 체인 사이 `chain/reload*` | `flowboundaries`(게임 모듈 · 에디터 모듈) |
 | 백엔드 교체 | `rhiswap/swapbackends` · `rhiswap/removedevice`(손으로) | `flowboundaries` · `flowterrain`(`SwapBackend other` → `start`) |
 | 레이아웃 저장 · 복원 | `defaultlayout` · `savedstate.1/.2` | `flowboundaries`(이름 붙인 레이아웃 저장 → 초기화 → 불러오기) |
+| 라이트 프로브 굽기 | `lightprobebake`(볼륨 없음 · 굽기 전) · `lightprobebakecancel`(나눠 굽기 진행 탐침 · 상태줄 Cancel, 실행 미확인) | — |
 | 설정 · 단축키 · 테마 | `preferences` · `shortcuts` · `projectconfigedit` · `commandpalette` | — |
 | 프로파일러 · 디버그 | `profilercapture` · `profilertimeline` · `rendertargetview` · `debughudcontrols` · `outputlog` · `testrunner` | — |
 

@@ -637,9 +637,14 @@ namespace sw
     {
         // 주 출력 — 게임 뷰가 있으면 그것(게임 카메라 · 화면 UI · 화면 사각형 뷰), 씬 뷰만 있으면 씬 뷰, 둘 다 없으면 백버퍼다.
         const HostViewTarget& mainOutput = views.getMainOutput();
-        const uint32          vpWidth    = mainOutput._width;
-        const uint32          vpHeight   = mainOutput._height;
         const bool            bSceneMain = views.isSceneViewMain();
+        // 게임이 그려지는 픽셀 크기 — 주 출력이 있으면 그 크기(에디터 게임 뷰의 이미지), 없으면 백버퍼(게임 창)다. 창 크기가 아니다:
+        // 에디터의 게임 뷰는 창의 일부라 창 크기로 종횡비를 세면 카메라가 늘어난다. 카메라(종횡비 · 픽셀 퍼펙트)와 런타임 UI 가 이 값 하나를 쓴다.
+        const IWindow* const pMainWindow = IWindow::getActiveWindow();
+        const bool           bHasDevice  = _pRHI != nullptr && _pRHI->hasDevice();
+        const bool           bHasOutput  = mainOutput._width > 0 && mainOutput._height > 0;
+        const uint32         vpWidth     = bHasOutput ? mainOutput._width : ( bHasDevice ? _pRHI->getDevice().getBackBufferWidth() : ( pMainWindow != nullptr ? pMainWindow->getWidth() : 0 ) );
+        const uint32         vpHeight    = bHasOutput ? mainOutput._height : ( bHasDevice ? _pRHI->getDevice().getBackBufferHeight() : ( pMainWindow != nullptr ? pMainWindow->getHeight() : 0 ) );
         _frameDeltaSeconds               = deltaTime;
 
         if ( _headlessState._bHeadless )
@@ -688,6 +693,12 @@ namespace sw
             Scene* pTickScene = ( _pSceneManager != nullptr ) ? _pSceneManager->getActiveScene() : nullptr;
             if ( pTickScene != nullptr && pTickScene->getObjectManager() != nullptr )
                 pTickScene->getObjectManager()->getCameraRegistry().setViewportSize( vpWidth, vpHeight );
+            // 입력의 게임 화면도 같은 값이다(포인터 비율 · 가상 커서 영역). 창 안 위치는 주 출력이 그린 이미지의 위치다(HostViewTarget::_windowX · _windowY, 백버퍼면 0).
+            if ( _pInputManager != nullptr )
+                _pInputManager->setGameViewRect( InputViewRect{
+                    int2{          mainOutput._windowX,            mainOutput._windowY},
+                    int2{static_cast<int32>( vpWidth ), static_cast<int32>( vpHeight )}
+                } );
             if ( _pSceneManager != nullptr && bTickScene )
                 _pSceneManager->update( deltaTime );
             // 미리보기 씬은 활성 씬의 정지 · 재생과 무관하게 자기 정책으로 돈다(에디터가 멈춘 중에도 애니메이션 창은 돈다).
@@ -725,18 +736,9 @@ namespace sw
                 pDebugHUD->update( _shellActions.getInputMap() );
 #endif
             // 뷰포트 0 은 "백버퍼 전체"(게임 창 — 패킷 · 캔버스 테스트 그림과 같은 규칙)다.
-            const IWindow* const pWindow      = IWindow::getActiveWindow();
-            const float32        contentScale = pWindow != nullptr ? pWindow->getContentScale() : 1.0f;
-            const bool           bHasDevice   = _pRHI != nullptr && _pRHI->hasDevice();
-            uint32               uiWidth      = vpWidth;
-            uint32               uiHeight     = vpHeight;
-            if ( uiWidth == 0 || uiHeight == 0 )
-            {
-                uiWidth  = bHasDevice ? _pRHI->getDevice().getBackBufferWidth() : ( pWindow != nullptr ? pWindow->getWidth() : 0 );
-                uiHeight = bHasDevice ? _pRHI->getDevice().getBackBufferHeight() : ( pWindow != nullptr ? pWindow->getHeight() : 0 );
-            }
-            UIViewport viewport     = _pUISystem->computeViewport( float2{ static_cast<float32>( uiWidth ), static_cast<float32>( uiHeight ) }, contentScale );
-            viewport._pointerOrigin = int2{ mainOutput._windowX, mainOutput._windowY }; // 백버퍼면 빈 출력이라 0 이다
+            const float32 contentScale = pMainWindow != nullptr ? pMainWindow->getContentScale() : 1.0f;
+            UIViewport    viewport     = _pUISystem->computeViewport( float2{ static_cast<float32>( vpWidth ), static_cast<float32>( vpHeight ) }, contentScale );
+            viewport._pointerOrigin    = int2{ mainOutput._windowX, mainOutput._windowY }; // 백버퍼면 빈 출력이라 0 이다
             // 음성 이벤트의 자막 — 오디오 스레드가 시작한 클립의 자막 키를 쌓아 두고, 가져가는 곳은 여기 하나다.
             if ( _pAudioService != nullptr && _pAudioService->isInitialized() )
             {

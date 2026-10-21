@@ -1638,3 +1638,27 @@ SW_TEST_CASE( InputManagerTest, TextInputGoesToFocusOwner )
     input.setTextInputCallback( {}, sw::InputKeyboardFocus::DevConsole );
     input.shutdown();
 }
+
+/**
+ * @brief [InputManagerTest] 포인터 비율은 창이 아니라 엔진이 정한 게임 화면 사각형 기준이다 — 에디터 게임 뷰처럼 창의 일부여도 그 안의 비율이다
+ */
+SW_TEST_CASE( InputManagerTest, NormalizedMouseFollowsTheGameView )
+{
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    // 게임 화면이 없으면(엔진이 정하기 전) 0 이다 — 창 크기로 대신 세지 않는다.
+    SW_ASSERT_TRUE( input.postRawEvent( sw::RawInputEvent::makeMouseMove( 200, 100 ) ) );
+    input.beginFrame( 0.016f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, input.getMousePositionNormalized()._x, 1e-6f );
+    input.endFrame();
+
+    input.setGameViewRect( sw::InputViewRect{
+        sw::int2{100,  50},
+        sw::int2{200, 100}
+    } );
+    input.beginFrame( 0.016f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, input.getMousePositionNormalized()._x, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, input.getMousePositionNormalized()._y, 1e-6f );
+    input.endFrame();
+    input.shutdown();
+}

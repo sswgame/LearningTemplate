@@ -208,6 +208,45 @@ namespace sw
         }
     }
 
+    bool GPUSceneBuilder::swapSingleInstanceBatchMeshes()
+    {
+        SW_PROFILE_SCOPE( "GT.GPUScene.build.meshSwap" );
+        const vector<GPUInstance>* pPrevious           = _instanceRing.getPublished();
+        const uint32               opaqueInstanceCount = _snapshot.getOpaqueInstanceCount();
+        // 불투명 인스턴스 자리 = 나누기 항목 자리(항목 순서로 방출했다). 둘의 수가 다르면 그 대응을 쓸 수 없다.
+        const bool bNoMapping = pPrevious == nullptr || pPrevious->size() < opaqueInstanceCount || _listScratchOpaqueEntry.size() != opaqueInstanceCount ||
+                                _listCandidateToInstance.size() != _listScratchCandidate.size();
+        if ( bNoMapping )
+            return false;
+        const uint32 opaqueBatchCount = _snapshot.getOpaqueBatchCount();
+        // 먼저 모두 본다 — 하나라도 안 되면 아무것도 바꾸지 않는다(다시 나누기가 처음부터 만든다).
+        for ( const uint32 candidateIndex : _listMeshSwapCandidate )
+        {
+            const uint32 slot = candidateIndex < _listCandidateToInstance.size() ? _listCandidateToInstance[candidateIndex] : kInvalidCandidateIndex;
+            if ( slot >= opaqueInstanceCount || _listScratchOpaqueEntry[slot]._srcIdx != candidateIndex )
+                return false;
+            const uint32 batchIndex = ( *pPrevious )[slot]._meshBatchIndex;
+            if ( batchIndex >= opaqueBatchCount )
+                return false;
+            const GPUMeshBatch& batch           = _snapshot.getAllBatches()[batchIndex];
+            const bool          bSingleInstance = batch._instanceCount == 1 && batch._instanceBase == slot;
+            if ( bSingleInstance == false )
+                return false;
+        }
+        vector_reference<GPUMeshBatch> listBatch = _snapshot.getMutableBatches();
+        for ( const uint32 candidateIndex : _listMeshSwapCandidate )
+        {
+            const DrawCandidate& candidate            = _listScratchCandidate[candidateIndex];
+            const uint32         slot                 = _listCandidateToInstance[candidateIndex];
+            GPUMeshBatch&        batch                = listBatch[( *pPrevious )[slot]._meshBatchIndex];
+            batch._mesh                               = candidate._mesh; // 소유권은 후보의 것을 함께 싣는다(`emitBatch` 와 같다)
+            batch._vertexCount                        = candidate._mesh->getVertexCount();
+            _listScratchOpaqueEntry[slot]._key._pMesh = candidate._mesh.get();
+        }
+        SW_PROFILE_COUNT( "GT.GPUScene.build.meshSwapCount", _listMeshSwapCandidate.size() );
+        return true;
+    }
+
     bool GPUSceneBuilder::fillCandidateFromPrimitive( ScenePrimitive* pPrimitive, Scene* pScene, DrawCandidate& candidate )
     {
         // 레지스트리는 코어 기반만 알고, 들어오는 타입은 메시 계열뿐이다(`ScenePrimitive.h` 의 불변식). 인스턴스 배치도 같다.
@@ -467,6 +506,7 @@ namespace sw
                                  _lastCandidateCount <= _listScratchCandidate.size() + _listBuiltCandidate.size() &&
                                  _listDirtyPrimitive.size() * 4 < input._slotCount;
         MeshCollectResult collect{};
+        _listMeshSwapCandidate.clear();
         if ( bCanPartial )
             collect = collectDirtyCandidatesInPlace( input );
         // 채우기와 제자리 갱신은 렌더 상태와 트랜스폼을 가리지 않고 "바뀐 슬롯" 목록 하나를 본다.
@@ -505,6 +545,11 @@ namespace sw
         {
             SW_PROFILE_SCOPE( "GT.GPUScene.build.batchKeys" );
             bBatchKeysSame = bContentSame == false && collect._bKeysSame;
+            // 메시만 바뀐 후보가 있으면 그 배치의 메시를 바꿔야 키가 그대로라고 할 수 있다. 못 바꾸면 다시 나눈다.
+            // 부분 수집이 아니면 목록은 비어 있다(전체 수집은 메시가 바뀐 후보를 키 비교로 이미 갈랐다).
+            const bool bTryMeshSwap = collect._bPartialDone && bBatchKeysSame && _listMeshSwapCandidate.empty() == false;
+            if ( bTryMeshSwap )
+                bBatchKeysSame = swapSingleInstanceBatchMeshes();
         }
         const uint32 count = static_cast<uint32>( _listScratchCandidate.size() );
         // 크기가 그대로면 raw 의 지난 프레임 값이 살아 있다. 부분 채우기의 전제다(전체 수집은 raw 를 통째로 새로 썼다).
@@ -572,7 +617,15 @@ namespace sw
 
             DrawCandidate& candidate = _listScratchCandidate[candidateIndex];
             if ( candidate.hasSameBatchKey( _candidateProbe ) == false )
-                bKeysSame = false;
+            {
+                // 메시만 바뀐 불투명 후보는 배치의 메시만 바꿔 볼 수 있다(`swapSingleInstanceBatchMeshes`). 그 밖의 키 변경은 다시 나눈다.
+                const bool bMeshOnlyOpaque = candidate.hasSameBatchKeyExceptMesh( _candidateProbe ) &&
+                                             static_cast<RHIBlendMode>( _candidateProbe._blendMode ) != RHIBlendMode::Transparent;
+                if ( bMeshOnlyOpaque )
+                    _listMeshSwapCandidate.push_back( candidateIndex );
+                else
+                    bKeysSame = false;
+            }
             if ( candidate != _candidateProbe )
             {
                 bAnyChange = true;

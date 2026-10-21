@@ -11,7 +11,6 @@
 #include "Engine/Input/Devices/KeyboardDevice.h"
 #include "Engine/Input/Devices/MouseDevice.h"
 #include "Engine/Input/Map/InputMap.h"
-#include "Engine/Window/IWindow.h"
 #include "Engine/Window/NativeWindowEvent.h"
 
 // 이 파일은 플랫폼에 독립적이다. 플랫폼별 구현(게임패드 백엔드, 커서 잠금과 표시,
@@ -436,16 +435,12 @@ namespace sw
         const bool bVirtualCursorActive = _virtualCursor.isEnabled() && _pVirtualInput == nullptr && _pMouse != nullptr;
         if ( bVirtualCursorActive )
         {
-            const IWindow* pWindow = IWindow::getActiveWindow();
-            if ( pWindow != nullptr )
+            // 커서는 게임 화면 안에 머문다(창 전체가 아니다 — 에디터 게임 뷰는 창의 일부다).
+            const size_t firstCursorEvent = _listDrainedEvent.size();
+            _virtualCursor.emitFrame( getGamepad( _virtualCursor.getSettings()._padIndex ), _pMouse->getPosition(), _gameView, deltaSeconds, _listDrainedEvent );
+            for ( size_t eventIndex = firstCursorEvent; eventIndex < _listDrainedEvent.size(); ++eventIndex )
             {
-                const size_t firstCursorEvent = _listDrainedEvent.size();
-                _virtualCursor.emitFrame( getGamepad( _virtualCursor.getSettings()._padIndex ), _pMouse->getPosition(),
-                                          int2{ static_cast<int32>( pWindow->getWidth() ), static_cast<int32>( pWindow->getHeight() ) }, deltaSeconds, _listDrainedEvent );
-                for ( size_t eventIndex = firstCursorEvent; eventIndex < _listDrainedEvent.size(); ++eventIndex )
-                {
-                    _listDrainedEvent[eventIndex]._frameFraction = 1.0f; // 패드를 지금 폴링해 만든 이벤트다 — 프레임 끝의 순간이다
-                }
+                _listDrainedEvent[eventIndex]._frameFraction = 1.0f; // 패드를 지금 폴링해 만든 이벤트다 — 프레임 끝의 순간이다
             }
         }
 
@@ -897,17 +892,12 @@ namespace sw
 
     float2 InputManager::getMousePositionNormalized() const
     {
-        IWindow* pWindow = IWindow::getActiveWindow();
-        if ( pWindow == nullptr || _pMouse == nullptr )
+        if ( _pMouse == nullptr || _gameView.isEmpty() )
             return float2{};
-
-        const uint32 width  = pWindow->getWidth();
-        const uint32 height = pWindow->getHeight();
-        if ( width == 0 || height == 0 )
-            return float2{};
-
-        return float2{ MathUtil::clamp( static_cast<float32>( _pMouse->getPositionX() ) / static_cast<float32>( width ), 0.0f, 1.0f ),
-                       MathUtil::clamp( static_cast<float32>( _pMouse->getPositionY() ) / static_cast<float32>( height ), 0.0f, 1.0f ) };
+        const float32 localX = static_cast<float32>( _pMouse->getPositionX() - _gameView._origin._x );
+        const float32 localY = static_cast<float32>( _pMouse->getPositionY() - _gameView._origin._y );
+        return float2{ MathUtil::clamp( localX / static_cast<float32>( _gameView._size._x ), 0.0f, 1.0f ),
+                       MathUtil::clamp( localY / static_cast<float32>( _gameView._size._y ), 0.0f, 1.0f ) };
     }
 
     int2 InputManager::getMouseDelta() const

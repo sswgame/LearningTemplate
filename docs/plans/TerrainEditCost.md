@@ -1,6 +1,6 @@
 # 지형 LOD 교체 · 지형 쓰기 · 식생 다시 계산의 비용 (2026-10-21)
 
-> 상태: 구현중 · 선행: 없음 · 영역: graphics · 옛번호: D2-5.6, D2-5.7 · 진행: 2/4
+> 상태: 구현중 · 선행: 없음 · 영역: graphics · 옛번호: D2-5.6, D2-5.7 · 진행: 3/4
 
 후보 [TerrainWaterVegetationRemainders](Candidates-graphics.md#terrainwatervegetationremainders)의 "지형 LOD 교체 프레임 시간"과 "지형 쓰기의 남은 것" 조각을 계획으로 올린 문서입니다. 강 경로 · 안개 · 물 굴절 · 지오모프는 후보에 남깁니다.
 지형 쓰기의 결정은 [결정 기록](../09_Decisions.md) 5-5, 측정값은 [검증과 측정](../08_Verification.md) 2절 "지형 LOD 교체" · "지형 높이 쓰기" 입니다.
@@ -27,9 +27,15 @@
 - 식생 부분 계산: 쇼케이스에서 브러시 한 번 뒤 `Foliage: refreshed N of M cell batches` 로그의 시간(Debug 0.86 s 와 견준다). 최소 거리 풀이가 전부 다시 도는 몫이 크면 그 비용을 따로 잰다.
 - 렌더 스레드 `RT.GPUScene.vertexPool` 의 교체 프레임 최대값(App 프로파일 표, 벤치에는 없다).
 
-### T4 교체 프레임의 GPUScene 수집
+- 절차(Release, VSync 끔, 혼자 도는 시간대): `cmake --build build/Ninja-Release --target EngineTest` 뒤 `cd build/Ninja-Release/Bin && ../TestBin/EngineTest.exe --test_filter=TerrainBenchTest.* --load_suites=only --host_suites=all` 를 3 회. 표에 PC(코어 수)와 커밋을 함께 적는다.
+- App 프로파일 표에서 볼 구간: `GT.GPUScene.build.partition` · `GT.GPUScene.build.batches` · 새 `GT.GPUScene.build.meshSwap`(T4 의 길)과 횟수 `GT.GPUScene.build.meshSwapCount`, `RT.GPUScene.vertexPool`. 교체 프레임은 `meshSwapCount` 가 0 이 아닌 프레임이다.
+- 결과는 [검증과 측정](../08_Verification.md) 2절 "지형 LOD 교체" 에 숫자로 남기고 `kMaxChunkMeshRebuildsPerFrame` 을 고친다.
 
-- 청크 메시가 바뀌면 배치 키(`DrawCandidate::hasSameBatchKey` 의 메시)가 달라져 나누기 · 배치 목록을 통째로 다시 만든다(최악 5 ms). `GPUSceneBuilder` 는 `wt/oparity` 가 고치는 중이라 그 뒤에 한다. 정점 풀 안의 메시는 같은 정점 버퍼를 쓰므로 메시를 배치 키에서 빼고 시작 오프셋만 인스턴스 값으로 싣는 쪽을 먼저 본다(언리얼 GPUScene 의 프리미티브 구간과 같은 모양).
+### T4 교체 프레임의 GPUScene 수집 — 들어감(빌드 미확인)
+
+- 메시만 바뀐 불투명 후보(`DrawCandidate::hasSameBatchKeyExceptMesh`)는 그 배치가 인스턴스 하나면 다시 나누지 않고 배치의 메시만 바꾼다(`GPUSceneBuilder::swapSingleInstanceBatchMeshes`). 지형 청크는 청크마다 인스턴스 배치 하나라 LOD 교체 프레임이 제자리 갱신으로 끝난다. 나누기 항목의 메시 키도 함께 바꿔 다음 전체 방출이 낡은 포인터(해제 뒤 같은 주소에 새 메시가 올 수 있다)로 묶지 않게 했다. 계약은 헤더 주석이 정본이다.
+- 테스트 `GPUSceneTest.MeshSwapOfSingleInstanceBatchKeepsTheBatches` — 실행 미확인.
+- 남은 것: 부분 수집 문턱(더티 4분의 1) 밖의 교체 프레임(청크가 적은 씬)은 여전히 전체 수집이다. 여러 인스턴스가 한 메시를 쓰는 배치의 메시 교체는 나누기가 맡는다. 메시를 배치 키에서 빼고 시작 오프셋을 인스턴스에 싣는 쪽(셰이더 · 간접 인자 변경)은 T3 측정에서 교체 프레임이 여전히 넘으면 후보로 올린다.
 
 ## 4. 확인하지 않은 것
 

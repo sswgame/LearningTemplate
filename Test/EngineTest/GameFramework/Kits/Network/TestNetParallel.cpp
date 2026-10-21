@@ -133,7 +133,12 @@ namespace
         mmoSettings._leaveRadius       = 60.0f;
         mmoSettings._updateBudgetBytes = 120;
         mmoSettings._maxEnterPerTick   = 6;
-        SW_EXPECT_TRUE( server.initialize( &cluster.getServer(), mmoSettings ) );
+        WorldCellGridDef cellGridDef;
+        cellGridDef._cellSize      = 32.0f;
+        cellGridDef._loadingRadius = 100.0f;
+        WorldCellGrid cellGrid;
+        SW_EXPECT_TRUE( WorldCellGrid::tryCreate( cellGridDef, cellGrid ) );
+        SW_EXPECT_TRUE( server.initialize( &cluster.getServer(), mmoSettings, cellGrid ) );
         server.setTaskManager( pTaskManager, 1 );
         const auto placeEntities = [&server]( uint32 tick )
         {

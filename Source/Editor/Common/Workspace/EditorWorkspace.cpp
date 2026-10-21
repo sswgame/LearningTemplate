@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 
+#include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
@@ -20,6 +21,8 @@
 
 namespace sw::editor
 {
+    SW_LOG_CALLER( "EditorWorkspace" );
+
     span<const utf8* const> EditorWorkspace::getSubsystemDependencies() const
     {
         static constexpr const utf8* kArrDependency[] = { EditorSelection::kSubsystemName };
@@ -289,5 +292,15 @@ namespace sw::editor
         }
         if ( bLocked )
             _listLockedObjectID.push_back( objectID );
+    }
+
+    void EditorWorkspace::markSceneDirty()
+    {
+        if ( EditorPlaySession::areSceneEditsHeld() )
+        {
+            SW_LOG_ERROR( "The scene was edited while scene edits are held (a light probe bake) - the edit path did not ask EditorPlaySession::areSceneEditsAllowed" );
+            EditorPlaySession::noteSceneEditWhileHeld();
+        }
+        _bSceneDirty = SW_TRUE;
     }
 } // namespace sw::editor

@@ -8,6 +8,8 @@
 #include "Core/Network/Message/NetSendBudget.h"
 #include "Core/Network/NetTypes.h"
 
+#include "Engine/Scene/WorldStreamingSubsystem.h"
+
 #include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
 
 #include <algorithm>
@@ -74,7 +76,7 @@ namespace sw
     {
     }
 
-    bool MMOReplicator::initialize( INetPeers* pHost, const MMOReplicatorConfig& settings, const IInterestPolicy* pPolicy )
+    bool MMOReplicator::initialize( INetPeers* pHost, const MMOReplicatorConfig& settings, const WorldCellGrid& cellGrid, const IInterestPolicy* pPolicy )
     {
         // 실패하면 호스트 없는 복제기로 남기고 지난 설정을 그대로 둔다. 값을 범위 안으로 맞춰 돌지 않는다.
         _pHost                  = nullptr;
@@ -84,9 +86,21 @@ namespace sw
             SW_LOG_ERROR( "MMOReplicator: refused to start - settings '%#'", rangeError.c_str() );
             return false;
         }
-        // 반경 관계(나가는 >= 들어오는)는 관심 영역 격자 한 곳이 거절한다 — 클라이언트-서버 키트의 관심 영역도 같은 규칙이다.
+        // 기본값 격자(셀 크기 0)는 `WorldCellGrid::tryCreate` 를 지나지 않은 것이다 — 칸 크기를 대신 정하지 않는다.
+        if ( ( cellGrid.getCellSize() > 0.0f ) == false )
+        {
+            SW_LOG_ERROR( "MMOReplicator: refused to start - world cell grid was not created (cell size %#)", cellGrid.getCellSize() );
+            return false;
+        }
+        if ( settings._leaveRadius > cellGrid.getLoadingRadius() )
+        {
+            SW_LOG_ERROR( "MMOReplicator: refused to start - leave radius %# is larger than the world loading radius %# (visible entities could sit in unloaded cells)",
+                          settings._leaveRadius, cellGrid.getLoadingRadius() );
+            return false;
+        }
+        // 반경 관계(나가는 >= 들어오는)는 관심 영역 격자 한 곳이 거절한다 — 클라이언트-서버 키트의 관심 영역도 같은 규칙이다. 칸은 월드 격자의 셀 크기다.
         string interestError;
-        if ( _interest.initialize( settings._cellSize, settings._enterRadius, settings._leaveRadius, interestError ) == false )
+        if ( _interest.initialize( cellGrid.getCellSize(), settings._enterRadius, settings._leaveRadius, interestError ) == false )
         {
             SW_LOG_ERROR( "MMOReplicator: refused to start - %# (enter %#, leave %#)", interestError.c_str(), settings._enterRadius, settings._leaveRadius );
             return false;
@@ -179,6 +193,25 @@ namespace sw
         return connectionID >= 0 && connectionID < static_cast<int32>( _listObserver.size() )
                  ? static_cast<int32>( _listObserver[static_cast<size_t>( connectionID )]._mapVisible.size() )
                  : 0;
+    }
+
+    void MMOReplicator::collectObserverPositions( vector<float3>& outListPosition ) const
+    {
+        outListPosition.clear();
+        for ( const Observer& observer : _listObserver )
+        {
+            if ( observer._bActive == SW_FALSE )
+                continue;
+            const auto entityIter = _mapEntity.find( observer._entityID );
+            if ( entityIter != _mapEntity.end() )
+                outListPosition.push_back( entityIter->second._position );
+        }
+    }
+
+    void MMOReplicator::feedStreamingSources( WorldStreamingSubsystem& streaming )
+    {
+        collectObserverPositions( _listScratchSource );
+        streaming.setExternalSources( span<const float3>( _listScratchSource.data(), _listScratchSource.size() ) );
     }
 
     void MMOReplicator::setTaskManager( TaskManager* pTaskManager, uint32 serialThreshold )

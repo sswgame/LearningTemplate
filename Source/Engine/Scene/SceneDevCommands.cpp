@@ -20,7 +20,6 @@
     #include "Engine/Object/GameObject/GameObjectManager.h"
     #include "Engine/Scene/Scene.h"
     #include "Engine/Scene/SceneCooker.h"
-    #include "Engine/Scene/SceneDocument.h"
     #include "Engine/Scene/SceneManager.h"
     #include "Engine/Scene/WorldStreamingSubsystem.h"
 
@@ -90,19 +89,20 @@ namespace sw
                     outReply = "the active scene does not stream";
                     return true;
                 }
-                SceneDocument doc{};
-                if ( pScene->serializeToDocument( doc ) == false )
+                StreamingCellPreview preview{};
+                if ( SceneCooker::previewStreamingCells( *pScene, preview ) == false )
                 {
-                    outReply = "the active scene could not be written as a document";
+                    outReply = "the active scene could not be split into cells - see the log";
                     return false;
                 }
-                if ( SceneCooker::splitStreamingCells( pScene->getEngineServices(), doc, pScene->getName() ) == false )
+                if ( preview._listViolation.empty() == false )
                 {
-                    outReply = "the cook would fail - see the log for the cross-cell references";
+                    outReply = "the cook would fail - " + to_string( static_cast<uint32>( preview._listViolation.size() ) ) +
+                               " cross-cell references (see the log or the World Cells window)";
                     return false;
                 }
-                outReply = to_string( static_cast<uint32>( doc._listStreamingCell.size() ) ) + " cells, " +
-                           to_string( static_cast<uint32>( doc._listSceneObjectNode.size() ) ) + " entities always loaded";
+                outReply = to_string( static_cast<uint32>( preview._listCell.size() ) ) + " cells, " +
+                           to_string( static_cast<uint32>( preview._listAlwaysLoadedID.size() ) ) + " entities always loaded";
                 return true;
             }
 

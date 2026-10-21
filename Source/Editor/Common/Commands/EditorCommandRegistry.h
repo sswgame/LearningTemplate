@@ -151,6 +151,20 @@ namespace sw::editor
 namespace sw::editor
 {
     /**
+     * @brief 커맨드가 씬을 바꾸는지입니다. 모든 커맨드가 정한다(테이블 줄 · `SW_EDITOR_COMMAND` 의 필수 칸 — 빠뜨리면 컴파일되지 않는다).
+     * @details `Scene` 이면 레지스트리가 커맨드 자신의 켜짐 조건과 함께 편집 허용 답(`EditorPlaySession::areSceneEditsAllowed` — 플레이 중 · 굽기처럼 편집을
+     *          막는 작업 중이면 false)을 묻는다(`EditorCommandRegistry::isEnabled`). 커맨드마다 그 답을 기억해 묻지 않게 하는 한 창구다.
+     */
+    enum class EditorCommandEdit : uint8
+    {
+        NoScene, ///< 씬을 바꾸지 않는다(창 열기 · 저장 · 빌드 · 플레이 조작)
+        Scene,   ///< 활성 씬의 오브젝트를 바꾼다(붙여넣기 · 정렬 · 굽기 · Undo)
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /**
      * @brief 에디터 커맨드 하나의 정의입니다.
      * @details 한 커맨드는 메뉴바, 전역 단축키, 커맨드 팔레트의 최대 세 곳에 나타난다. 곳마다 따로 적으면 서로 어긋나므로
      *          정의는 여기에 한 번만 둔다.
@@ -171,9 +185,10 @@ namespace sw::editor
          * @brief 메뉴 안의 순서입니다. 작을수록 위이고, 백의 자리(`commandmenu::kGroupSpan`)가 바뀌는 위치에 구분선이 들어갑니다.
          * @details 메뉴바에서 메뉴끼리의 순서(왼쪽에서 오른쪽)도 이 값으로 정한다. 가장 작은 값이 더 작은 메뉴가 앞에 온다.
          */
-        int32            _menuOrder{ 0 };
-        Delegate<void()> _action;
-        Delegate<bool()> _enabledPredicate; ///< 바인딩하지 않으면 항상 활성이다
+        int32             _menuOrder{ 0 };
+        Delegate<void()>  _action;
+        Delegate<bool()>  _enabledPredicate;                   ///< 바인딩하지 않으면 항상 활성이다
+        EditorCommandEdit _edit{ EditorCommandEdit::NoScene }; ///< `Scene` 이면 편집 허용 답도 묻는다(`EditorCommandEdit`)
         /** @brief 이 커맨드가 놓일 메뉴 경로(`"MainMenu/File"`)입니다. 비어 있으면 어느 메뉴에도 나오지 않습니다. */
         string _menuPath;
         bool   _bPaletteVisible{ true };
@@ -299,7 +314,8 @@ namespace sw::editor
         EditorCommandShortcut _shortcut;
         void ( *_pfnAction )();
         bool ( *_pfnEnabled )();
-        const utf8* _pMenuPath; ///< nullptr 이면 메뉴에 나오지 않는다(팔레트와 단축키만 쓴다)
+        EditorCommandEdit _edit;      ///< 씬을 바꾸는지(필수 — `EditorCommandEdit`)
+        const utf8*       _pMenuPath; ///< nullptr 이면 메뉴에 나오지 않는다(팔레트와 단축키만 쓴다)
     };
 } // namespace sw::editor
 
@@ -324,6 +340,6 @@ namespace sw::editor
  * @code SW_EDITOR_COMMAND( ParkReload, "themepark.reloadLayout", 9100, "Reload Park Layout", editoricon::kRefresh, "ThemePark", "배치 파일을 다시 읽습니다",
  *                          "Reload rides.xml", {}, &reloadLayout, nullptr, "MainMenu/ThemePark" ); @endcode
  */
-#define SW_EDITOR_COMMAND( name, pID, menuOrder, pLabel, pIcon, pCategory, pTooltip, pDetail, shortcut, pfnAction, pfnEnabled, pMenuPath )        \
+#define SW_EDITOR_COMMAND( name, pID, menuOrder, pLabel, pIcon, pCategory, pTooltip, pDetail, shortcut, pfnAction, pfnEnabled, edit, pMenuPath )  \
     SW_EDITOR_REGISTER( ::sw::editor::EditorCommandRegistration, Command_##name, { pID, menuOrder }, pLabel, pIcon, pCategory, pTooltip, pDetail, \
-                        shortcut, pfnAction, pfnEnabled, pMenuPath )
+                        shortcut, pfnAction, pfnEnabled, ::sw::editor::EditorCommandEdit::edit, pMenuPath )

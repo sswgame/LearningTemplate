@@ -9,6 +9,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Input/GamepadButtonUtil.h"
+#include "Engine/Input/InputViewRect.h"
 #include "Engine/Input/RawInputEvent.h"
 
 namespace sw
@@ -54,10 +55,10 @@ namespace sw
          * @brief 이번 프레임의 마우스 이동 · 버튼 이벤트를 @p outListEvent 끝에 더합니다. 꺼져 있거나 패드가 없거나 연결되지 않았으면 아무것도 하지 않습니다.
          * @param pPad 스틱과 버튼을 읽을 패드입니다.
          * @param mousePosition 지금 마우스 위치입니다. 지난 프레임에 낸 위치와 다르면 실제 마우스가 움직인 것이라 거기서 이어 움직입니다.
-         * @param clientSize 커서가 머무는 영역(창 클라이언트)의 크기입니다.
+         * @param view 커서가 머무는 영역 — 게임 화면의 창 안 사각형입니다(`InputManager::getGameViewRect`, 창 전체가 아니다).
          * @param deltaSeconds 프레임 시간입니다.
          */
-        void emitFrame( const GamepadDevice* pPad, int2 mousePosition, int2 clientSize, float32 deltaSeconds, vector<RawInputEvent>& outListEvent );
+        void emitFrame( const GamepadDevice* pPad, int2 mousePosition, const InputViewRect& view, float32 deltaSeconds, vector<RawInputEvent>& outListEvent );
 
         /** @brief 가장 최근 `emitFrame` 이 이벤트를 냈는지 묻습니다. 패드가 낸 마우스 이벤트를 "마우스를 만졌다" 로 읽지 않게 하는 데 씁니다. */
         bool didEmitLastFrame() const { return _bEmittedLastFrame; }

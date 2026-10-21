@@ -32,6 +32,17 @@ namespace
 
     constexpr uint32 kMMOObserverID = 1;
 
+    /** @brief 테스트의 월드 격자 — 칸 32 m, 로딩 반경 100 m(테스트 설정의 나가는 반경보다 크다). */
+    WorldCellGrid makeMMOCellGrid()
+    {
+        WorldCellGridDef def;
+        def._cellSize      = 32.0f;
+        def._loadingRadius = 100.0f;
+        WorldCellGrid grid;
+        SW_EXPECT_TRUE( WorldCellGrid::tryCreate( def, grid ) );
+        return grid;
+    }
+
     /** @brief 테스트가 틱 사이에 바꾸는 서버 쪽 엔티티 표입니다. 표의 엔티티를 틱마다 `setEntity` 하고, 빠진 것은 지운다. */
     struct MMOTable
     {
@@ -49,7 +60,7 @@ namespace
             : _server{}
             , _pTable{ pTable }
         {
-            SW_EXPECT_TRUE( _server.initialize( &world.getPeers(), pTable->_settings ) );
+            SW_EXPECT_TRUE( _server.initialize( &world.getPeers(), pTable->_settings, makeMMOCellGrid() ) );
             world.getRouter().registerHandler( &_server );
         }
 
@@ -210,7 +221,7 @@ SW_TEST_CASE( NetMMOTest, ObserversSeeNearbyEntitiesWithinBudgetAndHysteresis )
     settings._enterRadius       = 50.0f;
     settings._leaveRadius       = 60.0f;
     settings._updateBudgetBytes = 150;
-    SW_EXPECT_TRUE( server.initialize( &serverHost, settings, &policy ) );
+    SW_EXPECT_TRUE( server.initialize( &serverHost, settings, makeMMOCellGrid(), &policy ) );
 
     // 400 개를 400 × 400 에 고르게. 플레이어(1000)는 (100, 100). 파티원(1001)은 멀리.
     for ( uint32 index = 0; index < 400; ++index )
@@ -601,26 +612,62 @@ SW_TEST_CASE( NetMMOTest, LostUpdateIsResentSoonAfterTheLossNotice )
 /**
  * @brief [NetMMOTest] 범위 밖 설정과 들어오는 반경보다 작은 나가는 반경은 조용히 맞추지 않고 오류로 거절한다. 예산 경계(`NetConnection::kMaxSingleMessageSize`)는 받는다
  * @details 예전에는 나가는 반경을 들어오는 반경으로 올려 돌았다. 경계 값 확인은 `PROPERTY( Max )` 리터럴과 상수가 어긋나지 않는지 본다.
+ *          월드 격자 — 만들지 않은 격자(칸 0)와 로딩 반경보다 큰 나가는 반경도 거절한다(보이는 엔티티가 내려간 셀에 있을 수 있다).
  */
 SW_TEST_CASE( NetMMOTest, MMORefusesOutOfRangeSettings )
 {
     test::ScopedDefensiveTestLog expected( "out-of-range MMO replicator settings are refused" );
+    const WorldCellGrid          cellGrid = makeMMOCellGrid();
     MMOReplicator                server;
     MMOReplicatorConfig          shrinkingLeave;
     shrinkingLeave._enterRadius = 60.0f;
     shrinkingLeave._leaveRadius = 50.0f;
-    SW_EXPECT_FALSE( server.initialize( nullptr, shrinkingLeave ) );
-    MMOReplicatorConfig noCell;
-    noCell._cellSize = 0.0f;
-    SW_EXPECT_FALSE( server.initialize( nullptr, noCell ) );
+    SW_EXPECT_FALSE( server.initialize( nullptr, shrinkingLeave, cellGrid ) );
+    SW_EXPECT_FALSE( server.initialize( nullptr, MMOReplicatorConfig{}, WorldCellGrid{} ) );
+    MMOReplicatorConfig leaveBeyondLoading;
+    leaveBeyondLoading._leaveRadius = cellGrid.getLoadingRadius() + 1.0f;
+    SW_EXPECT_FALSE( server.initialize( nullptr, leaveBeyondLoading, cellGrid ) );
     MMOReplicatorConfig tooLargeBudget;
     tooLargeBudget._updateBudgetBytes = NetConnection::kMaxSingleMessageSize + 1;
-    SW_EXPECT_FALSE( server.initialize( nullptr, tooLargeBudget ) );
+    SW_EXPECT_FALSE( server.initialize( nullptr, tooLargeBudget, cellGrid ) );
     MMOReplicatorConfig noEnter;
     noEnter._maxEnterPerTick = 0;
-    SW_EXPECT_FALSE( server.initialize( nullptr, noEnter ) );
+    SW_EXPECT_FALSE( server.initialize( nullptr, noEnter, cellGrid ) );
     MMOReplicatorConfig atLimit;
     atLimit._updateBudgetBytes = NetConnection::kMaxSingleMessageSize;
     atLimit._leaveRadius       = atLimit._enterRadius;
-    SW_EXPECT_TRUE( server.initialize( nullptr, atLimit ) );
+    SW_EXPECT_TRUE( server.initialize( nullptr, atLimit, cellGrid ) );
+}
+
+/**
+ * @brief [NetMMOTest] 서버의 월드 스트리밍 원점은 활성 관찰자가 조종하는 엔티티 자리다(연결 번호 순). 엔티티가 없거나 지운 관찰자는 빠진다
+ * @details `feedStreamingSources` 가 이 목록을 `WorldStreamingSubsystem::setExternalSources` 로 넘긴다(그 뒤는 `WorldStreamingTest.CellsFollowStreamingSources`).
+ */
+SW_TEST_CASE( NetMMOTest, ObserverPositionsAreTheStreamingSources )
+{
+    MMOReplicator server;
+    SW_ASSERT_TRUE( server.initialize( nullptr, MMOReplicatorConfig{}, makeMMOCellGrid() ) );
+    server.setEntity( MMOEntity{
+        vector<uint8>{},
+        float3{ 10.0f, 0.0f, 20.0f },
+        100, 0, 1.0f
+    } );
+    server.setEntity( MMOEntity{
+        vector<uint8>{},
+        float3{ -30.0f, 0.0f, 5.0f },
+        200, 0, 1.0f
+    } );
+    server.setObserver( 3, 200 );
+    server.setObserver( 1, 100 );
+    server.setObserver( 2, 999 ); // 엔티티가 없다
+    server.setObserver( 4, 100 );
+    server.removeObserver( 4 );
+
+    vector<float3> listPosition;
+    server.collectObserverPositions( listPosition );
+    SW_ASSERT_EQUAL( size_t{ 2 }, listPosition.size() );
+    SW_EXPECT_EQUAL( 10.0f, listPosition[0]._x );
+    SW_EXPECT_EQUAL( 20.0f, listPosition[0]._z );
+    SW_EXPECT_EQUAL( -30.0f, listPosition[1]._x );
+    SW_EXPECT_EQUAL( 5.0f, listPosition[1]._z );
 }

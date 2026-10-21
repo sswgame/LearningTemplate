@@ -4457,6 +4457,66 @@
             "origins": [
                 "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
             ]
+        },
+        "EditorWorldCells.AlwaysLoadedTip": {
+            "source": "Select the entities the cook keeps in the base list (always loaded, or without a position).",
+            "origins": [
+                "Source/Editor/Panels/Scene/WorldCellsPanel.cpp"
+            ]
+        },
+        "EditorWorldCells.CookedScene": {
+            "source": "This scene was built from a cooked file and is already split into cells. Open the scene file to preview the split.",
+            "origins": [
+                "Source/Editor/Panels/Scene/WorldCellsPanel.cpp"
+            ]
+        },
+        "EditorWorldCells.NoActiveScene": {
+            "source": "No active scene.",
+            "origins": [
+                "Source/Editor/Panels/Scene/WorldCellsPanel.cpp"
+            ]
+        },
+        "EditorWorldCells.NoGameCamera": {
+            "source": "No game camera - the load and unload column needs one.",
+            "origins": [
+                "Source/Editor/Panels/Scene/WorldCellsPanel.cpp"
+            ]
+        },
+        "EditorWorldCells.NoPreview": {
+            "source": "Press Preview Split to split the scene into cells as the cook would.",
+            "origins": [
+                "Source/Editor/Panels/Scene/WorldCellsPanel.cpp"
+            ]
+        },
+        "EditorWorldCells.NotStreaming": {
+            "source": "The active scene does not stream. Turn on streaming in its World Settings to split it into cells.",
+            "origins": [
+                "Source/Editor/Panels/Scene/WorldCellsPanel.cpp"
+            ]
+        },
+        "EditorWorldCells.PreviewTip": {
+            "source": "Split the scene into cells exactly as the scene cook does, and list the cells or the references that would fail the cook. Same as 'world.cells'.",
+            "origins": [
+                "Source/Editor/Panels/Scene/WorldCellsPanel.cpp"
+            ]
+        },
+        "EditorWorldCells.SplitFailed": {
+            "source": "The scene could not be split - see the log.",
+            "origins": [
+                "Source/Editor/Panels/Scene/WorldCellsPanel.cpp"
+            ]
+        },
+        "EditorWorldCells.ViolationHeader": {
+            "source": "Cross-cell references that fail the cook:",
+            "origins": [
+                "Source/Editor/Panels/Scene/WorldCellsPanel.cpp"
+            ]
+        },
+        "EditorWorldCells.ViolationTip": {
+            "source": "Selects both objects. Mark the target always loaded or move it into the same cell.",
+            "origins": [
+                "Source/Editor/Panels/Scene/WorldCellsPanel.cpp"
+            ]
         }
     }
 }

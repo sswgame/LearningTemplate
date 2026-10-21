@@ -82,11 +82,11 @@ namespace sw
         float32 _suspensionDamping;
         PROPERTY( Category = "Steering", DisplayName = "Max Steer Angle", Min = 0.0, Max = 1.5, Units = rad )
         float32 _maxSteerAngle;
-        PROPERTY( Category = "Brakes", DisplayName = "Max Brake Torque", Min = 0.0, Units = N * m )
+        PROPERTY( Category = "Brakes", DisplayName = "Max Brake Torque", Min = 0.0, Units = "N*m" )
         float32 _maxBrakeTorque;
-        PROPERTY( Category = "Brakes", DisplayName = "Max Hand Brake Torque", Min = 0.0, Tooltip = "Rear wheels only", Units = N * m )
+        PROPERTY( Category = "Brakes", DisplayName = "Max Hand Brake Torque", Min = 0.0, Tooltip = "Rear wheels only", Units = "N*m" )
         float32 _maxHandBrakeTorque;
-        PROPERTY( Category = "Engine", DisplayName = "Max Torque", Min = 0.0, Units = N * m )
+        PROPERTY( Category = "Engine", DisplayName = "Max Torque", Min = 0.0, Units = "N*m" )
         float32 _engineMaxTorque;
         PROPERTY( Category = "Engine", DisplayName = "Max RPM", Min = 0.0 )
         float32 _engineMaxRpm;

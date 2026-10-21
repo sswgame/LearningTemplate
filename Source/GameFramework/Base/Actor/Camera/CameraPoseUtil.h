@@ -35,8 +35,9 @@ namespace sw
         static CameraPose makePoseFromCamera( const CameraComponent& camera );
         /**
          * @brief 카메라가 그리는 화면의 가로/세로 비율입니다.
-         * @details 렌더 텍스처 출력이면 그 텍스처 크기, 화면 출력이면 활성 창 크기에 화면 사각형을 곱한 크기로 센다.
-         *          창이 없으면(테스트, 서버) `CameraTarget::kDefaultAspectRatio` 이다.
+         * @details 렌더 텍스처 출력이면 그 텍스처 크기, 화면 출력이면 게임이 그려지는 뷰포트(`CameraRegistry::getViewportWidth/Height` — 에디터 게임 뷰의
+         *          이미지 또는 게임 창의 백버퍼, 엔진이 틱 전에 적는다)에 화면 사각형을 곱한 크기로 센다. 창 크기를 쓰지 않는다 — 에디터 게임 뷰는 창의 일부다.
+         *          뷰포트를 모르면(씬 밖 카메라, 엔진 루프 없는 테스트 · 서버) `CameraTarget::kDefaultAspectRatio` 이다.
          */
         static float32 computeAspectRatio( const CameraComponent& camera );
     };
