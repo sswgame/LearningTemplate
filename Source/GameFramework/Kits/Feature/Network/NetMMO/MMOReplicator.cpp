@@ -20,12 +20,6 @@ namespace sw
     {
         struct MMOReplicatorInternal
         {
-            /**
-             * @brief 엔티티 id 를 공간 해시의 키로 바꿉니다.
-             * @details 격자는 키를 비교하고 해시하기만 하므로 세대는 항상 1이다. 세대 0은 무효 핸들이라 격자가 받지 않는다.
-             */
-            static SlotHandle makeGridKey( uint32 entityID ) { return SlotHandle::make( entityID, 1u ); }
-
             static void writeEntity( BitWriter& writer, const MMOEntity& entity, bool bWithType )
             {
                 writer.writeVarUint( entity._entityID );
@@ -110,10 +104,11 @@ namespace sw
                           settings._leaveRadius, cellGrid.getLoadingRadius() );
             return false;
         }
+        if ( _grid.reset( cellGrid.getCellSize() ) == false )
+            return false;
         _pHost    = pHost;
         _settings = settings;
         _pPolicy  = pPolicy != nullptr ? pPolicy : &_defaultPolicy;
-        _grid     = SpatialHashGrid2D{ cellGrid.getCellSize() };
         _mapEntity.clear();
         _listObserver.clear();
         _sentUpdateCount = 0;
@@ -132,14 +127,13 @@ namespace sw
             return;
         }
         _mapEntity[entity._entityID] = entity;
-        _grid.update( MMOReplicatorInternal::makeGridKey( entity._entityID ), entity._position._x, entity._position._z, entity._position._x,
-                      entity._position._z );
+        _grid.setPosition( entity._entityID, entity._position );
     }
 
     void MMOReplicator::removeEntity( uint32 entityID )
     {
         _mapEntity.erase( entityID );
-        _grid.remove( MMOReplicatorInternal::makeGridKey( entityID ) );
+        _grid.remove( entityID );
     }
 
     void MMOReplicator::setObserver( int32 connectionID, uint32 entityID )
@@ -304,22 +298,21 @@ namespace sw
     {
         const bool bAlwaysPolicy = _pPolicy->hasAlwaysRelevant();
         // 2) 새로 보임: 들어오는 반경 안의 엔티티이다. 가까운 것부터 처리하고 틱마다 상한을 둔다.
-        vector<SlotHandle>& listNear = scratch._listNear;
-        _grid.queryCircle( center._x, center._z, _settings._enterRadius, listNear );
+        vector<uint32>& listNear = scratch._listNear;
+        _grid.queryCircle( center, _settings._enterRadius, scratch._listNearKey, listNear );
         if ( bAlwaysPolicy )
         {
             for ( const auto& entity : _mapEntity )
             {
                 if ( _pPolicy->isAlwaysRelevant( connectionID, entity.second ) )
-                    listNear.push_back( MMOReplicatorInternal::makeGridKey( entity.first ) );
+                    listNear.push_back( entity.first );
             }
         }
         // 거리는 한 번만 계산하고 (거리, id) 로 정렬한다. 비교마다 해시를 찾지 않으려는 것이다. 이미 보이는 엔티티는 뺀다.
         vector<std::pair<float32, uint32>>& listRank = scratch._listRank;
         listRank.clear();
-        for ( const SlotHandle nearKey : listNear )
+        for ( const uint32 entityID : listNear )
         {
-            const uint32 entityID = nearKey.index();
             if ( observer._mapVisible.find( entityID ) != observer._mapVisible.end() )
                 continue;
             const auto entityIter = _mapEntity.find( entityID );

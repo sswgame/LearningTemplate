@@ -8,12 +8,16 @@
 
 #include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
 
+#include <algorithm>
+
 namespace sw
 {
     ReplicationServer::ReplicationServer()
         : _listClient{}
         , _world{}
         , _settings{}
+        , _interest{}
+        , _interestGrid{}
         , _pHost{ nullptr }
         , _pPolicy{ nullptr }
         , _defaultPolicy{}
@@ -88,6 +92,7 @@ namespace sw
 
     void ReplicationServer::beginTick( uint32 tick )
     {
+        _interestGrid.clearPositions(); // 자리는 틱마다 다시 받는다 — 지난 틱의 자리로 거르지 않는다
         _world._tick      = tick;
         _worldEntityCount = 0; // 항목은 지우지 않는다. `setEntity` 가 덮어쓰고 `endTick` 이 남는 항목을 자르므로 버퍼 용량을 재사용한다
     }
@@ -154,8 +159,78 @@ namespace sw
         }
     }
 
+    bool ReplicationServer::setInterestArea( const ReplicationInterestConfig& config, const WorldCellGrid& cellGrid )
+    {
+        const string rangeError = ConfigRangeUtil::describeRangeErrors( config );
+        if ( rangeError.empty() == false )
+        {
+            SW_LOG_ERROR( "ReplicationServer: refused the interest area - settings '%#'", rangeError.c_str() );
+            return false;
+        }
+        if ( config._leaveRadius < config._enterRadius )
+        {
+            SW_LOG_ERROR( "ReplicationServer: refused the interest area - leave radius %# is smaller than enter radius %#", config._leaveRadius, config._enterRadius );
+            return false;
+        }
+        if ( config._leaveRadius > cellGrid.getLoadingRadius() )
+        {
+            SW_LOG_ERROR( "ReplicationServer: refused the interest area - leave radius %# is larger than the world loading radius %#", config._leaveRadius,
+                          cellGrid.getLoadingRadius() );
+            return false;
+        }
+        if ( _interestGrid.reset( cellGrid.getCellSize() ) == false ) // 만들지 않은 격자(칸 0)는 여기서 거절된다
+            return false;
+        _interest = config;
+        for ( ClientState& client : _listClient )
+        {
+            client._listInterestVisible.clear();
+        }
+        return true;
+    }
+
+    void ReplicationServer::setEntityPosition( uint32 entityID, const float3& position )
+    {
+        _interestGrid.setPosition( entityID, position );
+    }
+
+    void ReplicationServer::setObserverPosition( int32 connectionID, const float3& position )
+    {
+        if ( connectionID < 0 )
+            return;
+        ClientState& client          = acquireClient( connectionID );
+        client._observerPosition     = position;
+        client._bHasObserverPosition = SW_TRUE;
+    }
+
+    bool ReplicationServer::passesInterest( const ClientState& client, const NetEntityState& entity, SnapshotScratch& scratch ) const
+    {
+        if ( _interestGrid.isReady() == false )
+            return true;
+        const float3* pPosition = _interestGrid.findPosition( entity._entityID );
+        if ( pPosition == nullptr )
+            return true; // 공간 밖 엔티티 — 늘 관련
+        if ( client._bHasObserverPosition == SW_FALSE )
+            return false;
+        // 나감 반경 안의 후보에 없으면 히스테리시스와 상관없이 밖이다(격자 질의가 이미 거리로 걸렀다).
+        if ( std::binary_search( scratch._listInterestNear.begin(), scratch._listInterestNear.end(), entity._entityID ) == false )
+            return false;
+        const bool bWasVisible = std::binary_search( client._listInterestVisible.begin(), client._listInterestVisible.end(), entity._entityID );
+        if ( NetInterestGrid::isInInterest( client._observerPosition, *pPosition, _interest._enterRadius, _interest._leaveRadius, bWasVisible ) == false )
+            return false;
+        scratch._listInterestVisible.push_back( entity._entityID );
+        return true;
+    }
+
     void ReplicationServer::sendSnapshot( int32 connectionID, ClientState& client, SnapshotScratch& scratch )
     {
+        // 관심 영역: 나감 반경 안의 후보를 한 번 질의해 두고 엔티티마다 이분 탐색한다(격자는 이 틱 동안 읽기만 한다).
+        scratch._listInterestVisible.clear();
+        scratch._listInterestNear.clear();
+        if ( _interestGrid.isReady() && client._bHasObserverPosition == SW_TRUE )
+        {
+            _interestGrid.queryCircle( client._observerPosition, _interest._leaveRadius, scratch._listInterestKey, scratch._listInterestNear );
+            std::sort( scratch._listInterestNear.begin(), scratch._listInterestNear.end() );
+        }
         // 이 클라이언트에 관련 있는 엔티티만 넣는다. 엔티티 버퍼는 제자리에 덮어써서 용량을 남긴다.
         NetSnapshot& filtered           = scratch._filtered;
         filtered._tick                  = _world._tick;
@@ -166,7 +241,7 @@ namespace sw
         size_t relevantCount = 0;
         for ( const NetEntityState& entity : std::as_const( _world._listEntity ) ) // 여러 워커가 함께 읽는다
         {
-            if ( _pPolicy->isRelevant( connectionID, entity ) == false )
+            if ( _pPolicy->isRelevant( connectionID, entity ) == false || passesInterest( client, entity, scratch ) == false )
                 continue;
             if ( relevantCount < filtered._listEntity.size() )
                 filtered._listEntity[relevantCount] = entity;
@@ -176,6 +251,8 @@ namespace sw
             prioritizer.accumulate( entity._entityID, _pPolicy->computePriority( connectionID, entity ), 1.0f ); // 스냅샷 하나에 한 번 누적한다
         }
         filtered._listEntity.resize( relevantCount );
+        // 월드 엔티티는 id 순이라 보임 목록도 id 오름차순이다. 다음 스냅샷의 히스테리시스가 이 목록을 본다(이 클라이언트만 쓰는 상태 — 워커 하나가 맡는다).
+        client._listInterestVisible.swap( scratch._listInterestVisible );
         prioritizer.removeUntouched(); // 더는 관련 없는 엔티티는 잊는다. 다시 관련되면 0부터 쌓는다
         resolveUnconfirmedSends( client, filtered );
         // 쌓인 우선도가 큰 것부터 처리한다. 관련 엔티티는 id 순으로 정렬돼 있으므로 이분 탐색으로 찾는다.

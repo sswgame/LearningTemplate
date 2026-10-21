@@ -7,15 +7,18 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/SlotHandle.h"
 #include "Core/Container/vector.h"
 #include "Core/Network/Message/NetMessage.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Replication/NetInputWindow.h"
+#include "Core/Network/Replication/NetInterestGrid.h"
 #include "Core/Network/Replication/NetParallel.h"
 #include "Core/Network/Replication/NetPrioritizer.h"
 #include "Core/Network/Replication/TickRingBuffer.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Scene/WorldCellGrid.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Network/NetClientServer/NetSnapshot.h"
@@ -89,7 +92,28 @@ namespace sw
 namespace sw
 {
     /**
+     * @brief 관심 영역 설정입니다(`ReplicationServer::setInterestArea`). 범위 밖이면 거절합니다(`ConfigRangeUtil`).
+     * @details 나감 >= 들어옴, 나감 <= 월드 격자의 로딩 반경은 칸 사이 · 격자와의 관계라 `setInterestArea` 가 따로 본다(MMO 복제기와 같은 규칙).
+     */
+    REFLECT()
+    struct SW_KIT_API ReplicationInterestConfig
+    {
+        REFLECT_BODY();
+        PROPERTY( Min = 0, Units = m )
+        float32 _enterRadius{ 0.0f }; ///< 관찰자에서 이 안에 들어오면 보내기 시작한다
+        PROPERTY( Min = 0, Units = m )
+        float32 _leaveRadius{ 0.0f }; ///< 이 밖으로 나가야 보내지 않는다(히스테리시스). `_enterRadius` 이상이어야 한다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @class ReplicationServer
+     * @details [관심 영역] `setInterestArea` 를 부르면 자리가 있는 엔티티(틱마다 `setEntityPosition`)는 관찰자(`setObserverPosition`) 둘레의 것만 보낸다.
+     *          격자는 Core 의 `NetInterestGrid`(MMO 복제기와 같은 부품)이고 칸은 월드 셀 격자의 셀 크기다. 자리가 없는 엔티티(게임 상태 · 점수판)는 공간 밖이라
+     *          늘 관련이다. 관찰자 자리를 받지 않은 연결에는 자리가 있는 엔티티를 보내지 않는다(대신 정할 자리가 없다). 정책(`IReplicationPolicy::isRelevant`)은
+     *          관심 영역 앞에서 함께 거른다 — 둘 다 통과해야 보낸다.
      * @code
      *     server.beginTick( tick );
      *     for ( each entity ) server.setEntity( id, typeID, bytes );
@@ -146,6 +170,18 @@ namespace sw
         /** @brief 상한을 넘어서 복제하지 않은 `setEntity` 호출 수입니다. */
         uint64 getOversizedEntityCount() const;
 
+        /**
+         * @brief 관심 영역으로 거르기를 켭니다(클래스 머리말의 [관심 영역]).
+         * @return 설정이 범위 밖이거나, 나감 < 들어옴이거나, 격자가 만들어지지 않았거나(칸 0), 나감이 격자의 로딩 반경보다 크면 오류를 남기고 false 이며 거르기는 그대로다.
+         */
+        [[nodiscard]] bool setInterestArea( const ReplicationInterestConfig& config, const WorldCellGrid& cellGrid );
+        /** @brief 관심 영역으로 거르고 있으면 true 입니다. */
+        bool usesInterestArea() const { return _interestGrid.isReady(); }
+        /** @brief 이 틱 엔티티의 자리입니다. `setEntity` 와 같은 틱에 부르며, 부르지 않은 엔티티는 공간 밖(늘 관련)입니다. 거르기가 꺼져 있으면 아무것도 하지 않습니다. */
+        void setEntityPosition( uint32 entityID, const float3& position );
+        /** @brief 연결 @p connectionID 의 관찰자 자리(보통 그 연결이 조종하는 폰)입니다. 틱마다 넣습니다. */
+        void setObserverPosition( int32 connectionID, const float3& position );
+
     private:
         struct ClientState
         {
@@ -153,9 +189,12 @@ namespace sw
             TickRingBuffer<NetSnapshot> _listSent{};    ///< 보낸 스냅샷(재구성한 것). 클라이언트가 확인한 틱의 스냅샷을 델타의 기준으로 찾는다
             NetInputReceiveBuffer       _input{};       ///< 받은 입력. 받은 가장 새 틱을 따라가는 창이며 꺼낸 틱은 버린다
             vector<uint8>               _lastInput{};
-            NetOwnerState               _ownerState{}; ///< 이 클라이언트가 조종하는 엔티티의 상태와 그 입력 틱. 스냅샷마다 싣는다
+            NetOwnerState               _ownerState{};          ///< 이 클라이언트가 조종하는 엔티티의 상태와 그 입력 틱. 스냅샷마다 싣는다
+            vector<uint32>              _listInterestVisible{}; ///< 지난 스냅샷에 실은 자리 있는 엔티티(id 오름차순) — 나감 반경을 쓸지 정한다
+            float3                      _observerPosition{};
             float32                     _viewTick{ 0.0f };
             uint32                      _ackedTick{ 0 };
+            uint8                       _bHasObserverPosition{ SW_FALSE };
             uint8                       _bHasAck{ SW_FALSE };
             uint8                       _bHasInput{ SW_FALSE };
             uint8                       _bActive{ SW_FALSE };
@@ -164,16 +203,21 @@ namespace sw
         /** @brief 작업 스레드 하나가 스냅샷 하나를 만드는 데 쓰는 스크래치 버퍼입니다. 틱마다 다시 사용합니다. */
         struct SnapshotScratch
         {
-            NetSnapshot      _filtered{}; ///< 클라이언트 하나에 관련된 엔티티
-            vector<uint32>   _listOrderEntity{};
-            vector<int32>    _listOrder{};   ///< 위 순서를 `_filtered` 의 인덱스로 바꾼 것
-            vector<uint8>    _listCurrent{}; ///< `_filtered` 의 항목마다 `writeDelta` 가 낸 결과(`NetSnapshot::kEntity*`)
-            NetMessageWriter _messageWriter{};
+            NetSnapshot        _filtered{}; ///< 클라이언트 하나에 관련된 엔티티
+            vector<uint32>     _listOrderEntity{};
+            vector<int32>      _listOrder{};           ///< 위 순서를 `_filtered` 의 인덱스로 바꾼 것
+            vector<uint8>      _listCurrent{};         ///< `_filtered` 의 항목마다 `writeDelta` 가 낸 결과(`NetSnapshot::kEntity*`)
+            vector<uint32>     _listInterestNear{};    ///< 관찰자 나감 반경 안의 엔티티(id 오름차순)
+            vector<SlotHandle> _listInterestKey{};     ///< 격자 질의의 작업 버퍼
+            vector<uint32>     _listInterestVisible{}; ///< 이번 스냅샷에 실을 자리 있는 엔티티 — 끝나면 연결 상태와 맞바꾼다
+            NetMessageWriter   _messageWriter{};
         };
 
         ClientState& acquireClient( int32 connectionID );
         void         sendSnapshotRange( uint32 start, uint32 end );
         void         sendSnapshot( int32 connectionID, ClientState& client, SnapshotScratch& scratch );
+        /** @brief 관심 영역이 이 엔티티를 이 클라이언트에 보내라고 하면 true 입니다(거르기가 꺼져 있거나 자리가 없으면 true). 자리 있는 관련 엔티티는 @p scratch 의 보임 목록에 더합니다. */
+        bool passesInterest( const ClientState& client, const NetEntityState& entity, SnapshotScratch& scratch ) const;
         /** @brief 이 클라이언트가 확인을 기다리는 전송을 판정합니다. 확인한 틱이 보낸 틱을 지났는데 확인된 스냅샷에 그때 보낸 상태가 없으면 잃은 것으로 보고 우선도를 되돌립니다. */
         void               resolveUnconfirmedSends( ClientState& client, const NetSnapshot& filtered ) const;
         [[nodiscard]] bool handleInput( ClientState& client, BitReader& reader );
@@ -182,6 +226,8 @@ namespace sw
         vector<ClientState>                 _listClient;
         NetSnapshot                         _world;
         ReplicationServerConfig             _settings;
+        ReplicationInterestConfig           _interest;
+        NetInterestGrid                     _interestGrid; ///< 이 틱 엔티티의 자리. `beginTick` 이 비운다
         NetHost*                            _pHost;
         const IReplicationPolicy*           _pPolicy;
         IReplicationPolicy                  _defaultPolicy;

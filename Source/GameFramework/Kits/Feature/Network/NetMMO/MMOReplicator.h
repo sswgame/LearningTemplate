@@ -2,7 +2,7 @@
  * @file MMOReplicator.h
  * @brief 엔티티가 수천 개여도 관찰자(플레이어)마다 근처의 중요한 엔티티를 정해진 바이트 안에서 보냅니다.
  * @details 동작은 세 부분으로 나뉜다.
- *          1. 관심 영역: 엔진의 공간 해시(`SpatialHashGrid2D`, XZ 평면의 점)로 근처 엔티티를 찾는다.
+ *          1. 관심 영역: Core 의 관심 영역 격자(`NetInterestGrid` — XZ 공간 해시, `ReplicationServer` 와 같은 부품)로 근처 엔티티를 찾는다.
  *             나가는 반경을 들어오는 반경보다 크게 잡아서 경계에서 엔티티가 들락날락하지 않게 한다(히스테리시스).
  *             해시의 칸은 월드 스트리밍 격자(`WorldCellGrid`, D1-7)와 같은 것이다 — `initialize` 가 격자를 받고 칸 크기를 따로 두지 않는다.
  *             서버는 관찰자 둘레의 셀만 올리므로(`feedStreamingSources` → `WorldStreamingSubsystem::setExternalSources`) 나가는 반경이
@@ -30,10 +30,10 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 #include "Core/Network/Message/NetMessage.h"
+#include "Core/Network/Replication/NetInterestGrid.h"
 #include "Core/Network/Replication/NetParallel.h"
 #include "Core/Network/Replication/NetPrioritizer.h"
 #include "Core/Network/Replication/TickRingBuffer.h"
-#include "Core/Spatial/SpatialHashGrid2D.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Scene/WorldCellGrid.h"
@@ -216,9 +216,10 @@ namespace sw
         struct ObserverScratch
         {
             vector<uint32>                     _listLeave{};
-            vector<SlotHandle>                 _listNear{};  ///< 들어오는 반경 안의 엔티티와 항상 보이는 엔티티. 격자 키이며 엔티티 id 를 담은 SlotHandle 이다
-            vector<std::pair<float32, uint32>> _listRank{};  ///< (거리, id)
-            vector<uint32>                     _listOrder{}; ///< 쌓인 우선도 순서
+            vector<uint32>                     _listNear{};    ///< 들어오는 반경 안의 엔티티와 항상 보이는 엔티티(id)
+            vector<SlotHandle>                 _listNearKey{}; ///< 격자 질의의 작업 버퍼(`NetInterestGrid::queryCircle`)
+            vector<std::pair<float32, uint32>> _listRank{};    ///< (거리, id)
+            vector<uint32>                     _listOrder{};   ///< 쌓인 우선도 순서
             vector<uint32>                     _listSent{};
             vector<uint32>                     _listEnter{}; ///< 이번 틱의 새로 보임 메시지에 실은 엔티티. 전송이 받아들여져야 보이는 목록에 넣는다
             NetMessageWriter                   _messageWriter{};
@@ -242,7 +243,7 @@ namespace sw
 
         unordered_map<uint32, MMOEntity>    _mapEntity;
         vector<Observer>                    _listObserver;
-        SpatialHashGrid2D                   _grid;              ///< 엔티티 위치(XZ 평면의 점). 칸은 `initialize` 가 받은 월드 격자의 셀 크기다. 키는 `MMOReplicatorInternal::makeGridKey` 로 만든다
+        NetInterestGrid                     _grid;              ///< 엔티티 위치(XZ 평면의 점). 칸은 `initialize` 가 받은 월드 격자의 셀 크기다
         vector<float3>                      _listScratchSource; ///< `feedStreamingSources` 가 틱마다 다시 쓴다
         MMOReplicatorConfig                 _settings;
         IInterestPolicy                     _defaultPolicy;

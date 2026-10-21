@@ -998,3 +998,120 @@ SW_TEST_CASE( NetClientServerTest, ClientRefusesOutOfRangeSettings )
     atLimit._historySize = 4;
     SW_EXPECT_TRUE( client.initialize( nullptr, atLimit ) );
 }
+
+/**
+ * @brief [NetClientServerTest] 관심 영역 — 자리 있는 엔티티는 관찰자 들어옴 반경 안이면 실리고 나감 반경 밖으로 가야 빠진다. 자리 없는 엔티티는 늘 실린다
+ * @details 격자는 Core 의 `NetInterestGrid`(MMO 복제기와 같은 부품)이고 칸은 월드 셀 격자의 셀 크기다. 들어옴 50 m, 나감 60 m.
+ */
+SW_TEST_CASE( NetClientServerTest, InterestAreaFiltersSpatialEntitiesWithHysteresis )
+{
+    LoopbackNetwork       network;
+    NetEmulationTransport serverTransport( network.createEndpoint( 4000 ), 21u );
+    NetEmulationTransport clientTransport( network.createEndpoint( 5000 ), 22u );
+    NetHostConfig         hostSettings;
+    hostSettings._sendInterval = 1.0 / 60.0;
+    NetHost serverHost;
+    NetHost clientHost;
+    serverHost.initialize( &serverTransport, hostSettings );
+    clientHost.initialize( &clientTransport, hostSettings );
+    SW_ASSERT_TRUE( serverHost.listen() );
+    SW_ASSERT_TRUE( clientHost.connect( NetAddress::makeLoopback( 4000 ) ) );
+
+    ReplicationServer       server;
+    ReplicationClient       client;
+    ReplicationClientConfig clientSettings;
+    clientSettings._tickInterval = 1.0f / 30.0f;
+    SW_ASSERT_TRUE( server.initialize( &serverHost, ReplicationServerConfig{} ) );
+    SW_ASSERT_TRUE( client.initialize( &clientHost, clientSettings ) );
+    WorldCellGrid cellGrid;
+    SW_ASSERT_TRUE( WorldCellGrid::tryCreate( WorldCellGridDef{ 16.0f, 100.0f }, cellGrid ) );
+    ReplicationInterestConfig interest;
+    interest._enterRadius = 50.0f;
+    interest._leaveRadius = 60.0f;
+    SW_ASSERT_TRUE( server.setInterestArea( interest, cellGrid ) );
+    SW_EXPECT_TRUE( server.usesInterestArea() );
+
+    float64       time       = 0.0;
+    uint32        serverTick = 0;
+    float32       movingX    = 55.0f; // 엔티티 4 — 처음에는 들어옴 반경 밖, 나감 반경 안
+    vector<uint8> buffer;
+    const auto    runFrames = [&]( int32 frameCount )
+    {
+        for ( int32 frame = 0; frame < frameCount; ++frame )
+        {
+            time += 1.0 / 60.0;
+            serverTransport.update( time );
+            clientTransport.update( time );
+            serverHost.update( time );
+            clientHost.update( time );
+            int32          connectionID = -1;
+            NetChannelType channel      = NetChannelType::Unreliable;
+            while ( serverHost.receiveMessage( connectionID, channel, buffer ) )
+            {
+                (void)server.handleMessage( connectionID, buffer );
+            }
+            while ( clientHost.receiveMessage( connectionID, channel, buffer ) )
+            {
+                (void)client.handleMessage( 0, buffer );
+            }
+            if ( clientHost.getConnectionState( 0 ) != NetConnectionState::Connected )
+                continue;
+            server.setObserverPosition( 0, float3{ 0.0f, 0.0f, 0.0f } );
+            server.beginTick( serverTick++ );
+            server.setEntity( 1, 1, makeFloatBytes( 1.0f ) );
+            server.setEntityPosition( 1, float3{ 5.0f, 0.0f, 0.0f } );
+            server.setEntity( 2, 1, makeFloatBytes( 2.0f ) );
+            server.setEntityPosition( 2, float3{ 100.0f, 0.0f, 0.0f } );
+            server.setEntity( 3, 2, makeFloatBytes( 3.0f ) ); // 자리 없음(게임 상태) — 늘 실린다
+            server.setEntity( 4, 1, makeFloatBytes( movingX ) );
+            server.setEntityPosition( 4, float3{ movingX, 0.0f, 0.0f } );
+            server.endTick();
+            server.sendSnapshots();
+            client.update( 1.0f / 60.0f );
+        }
+    };
+
+    runFrames( 60 );
+    const NetSnapshot* pLatest = client.getLatest();
+    SW_ASSERT_NOT_NULL( pLatest );
+    SW_EXPECT_NOT_NULL( pLatest->findEntity( 1 ) );
+    SW_EXPECT_NULL( pLatest->findEntity( 2 ) );
+    SW_EXPECT_NOT_NULL( pLatest->findEntity( 3 ) );
+    SW_EXPECT_NULL( pLatest->findEntity( 4 ) ); // 55 m — 들어옴 반경(50) 밖
+
+    movingX = 45.0f;
+    runFrames( 20 );
+    SW_EXPECT_NOT_NULL( client.getLatest()->findEntity( 4 ) ); // 들어왔다
+    movingX = 55.0f;
+    runFrames( 20 );
+    SW_EXPECT_NOT_NULL( client.getLatest()->findEntity( 4 ) ); // 나감 반경(60) 안이라 남는다
+    movingX = 65.0f;
+    runFrames( 20 );
+    SW_EXPECT_NULL( client.getLatest()->findEntity( 4 ) ); // 나갔다
+}
+
+/**
+ * @brief [NetClientServerTest] 관심 영역 설정은 조용히 맞추지 않고 거절한다 — 나감 < 들어옴, 로딩 반경보다 큰 나감, 만들지 않은 격자
+ */
+SW_TEST_CASE( NetClientServerTest, InterestAreaRefusesInconsistentSettings )
+{
+    test::ScopedDefensiveTestLog expected( "inconsistent interest area settings are refused" );
+    ReplicationServer            server;
+    SW_ASSERT_TRUE( server.initialize( nullptr, ReplicationServerConfig{} ) );
+    WorldCellGrid cellGrid;
+    SW_ASSERT_TRUE( WorldCellGrid::tryCreate( WorldCellGridDef{ 16.0f, 100.0f }, cellGrid ) );
+    ReplicationInterestConfig shrinking;
+    shrinking._enterRadius = 60.0f;
+    shrinking._leaveRadius = 50.0f;
+    SW_EXPECT_FALSE( server.setInterestArea( shrinking, cellGrid ) );
+    ReplicationInterestConfig beyondLoading;
+    beyondLoading._enterRadius = 10.0f;
+    beyondLoading._leaveRadius = 101.0f;
+    SW_EXPECT_FALSE( server.setInterestArea( beyondLoading, cellGrid ) );
+    ReplicationInterestConfig fine;
+    fine._enterRadius = 10.0f;
+    fine._leaveRadius = 20.0f;
+    SW_EXPECT_FALSE( server.setInterestArea( fine, WorldCellGrid{} ) );
+    SW_EXPECT_FALSE( server.usesInterestArea() );
+    SW_EXPECT_TRUE( server.setInterestArea( fine, cellGrid ) );
+}

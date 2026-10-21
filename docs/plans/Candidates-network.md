@@ -88,7 +88,6 @@
 옛번호: D7-8
 왜 필요한가: 상태 동기화와 파괴 동기화는 있지만 입력 예측 · 서버 보정 · 롤백, 그리고 관심 영역(relevancy)으로 복제 대상을 거르는 층이 없다. 설계는 결정 기록 5-12 `D7-8` 행으로 정했다(서버 권위 + 내 폰만 재시뮬레이션 + 허용 오차 비교, 64인 이하 30 Hz, 첫 게임 Shooter3D). 선행 잠복 결함 셋(`NetOwnerState`, `PredictionReconcileResult`, `RollbackConfig` 범위 거절)은 고쳤다.
 남은 것:
-- `MMOReplicator` 의 관심 영역 격자를 Core 부품으로 빼 두 키트가 함께 쓴다.
 - Shooter3D 의 내 폰을 `ClientPrediction` + `findOwnerState` 로 예측한다.
 - 보정 오차를 부드럽게 녹이는 시각 보정(언리얼 smoothing).
 함정: 월드 전체 롤백은 `NetworkExtensionIdeas` 쪽이다. 규모 방향은 `UdpSocketLayerScaling` 이다.
