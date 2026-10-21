@@ -35,46 +35,13 @@ namespace sw::editor
 
     void EditorVisualizerGeometryUtil::appendDebugDrawSegments( const DebugDrawQueue& queue, bool bFlat2D, vector<EditorWorldSegment>& outListSegment )
     {
-        for ( const DebugLine& line : queue.getVisibleLines() )
+        // 펼치는 규칙(구는 축마다 대원 하나)은 큐 한 곳에 있다 — 게임 뷰 겹치기(DebugDrawCanvasUtil)와 같은 선분을 그린다.
+        static vector<DebugLine> s_listLine;
+        s_listLine.clear();
+        queue.appendVisibleSegments( bFlat2D, s_listLine );
+        for ( const DebugLine& line : s_listLine )
         {
             outListSegment.push_back( EditorWorldSegment{ line._from, line._to, line._color } );
-        }
-
-        // 구는 축마다 대원 하나씩 — 어느 방향에서 봐도 윤곽이 보인다. 2D 뷰는 XY 원 하나다.
-        constexpr float32 kStep       = ( MathUtil::kPi * 2.0f ) / static_cast<float32>( kSphereCircleSegmentCount );
-        const uint32      circleCount = bFlat2D ? 1u : 3u;
-        for ( const DebugSphere& sphere : queue.getVisibleSpheres() )
-        {
-            for ( uint32 axisIndex = 0; axisIndex < circleCount; ++axisIndex )
-            {
-                for ( uint32 segmentIndex = 0; segmentIndex < kSphereCircleSegmentCount; ++segmentIndex )
-                {
-                    const float32 angleA = kStep * static_cast<float32>( segmentIndex );
-                    const float32 angleB = kStep * static_cast<float32>( segmentIndex + 1 );
-                    const float32 cosA   = MathUtil::cos( angleA ) * sphere._radius;
-                    const float32 sinA   = MathUtil::sin( angleA ) * sphere._radius;
-                    const float32 cosB   = MathUtil::cos( angleB ) * sphere._radius;
-                    const float32 sinB   = MathUtil::sin( angleB ) * sphere._radius;
-                    float3        offsetA{};
-                    float3        offsetB{};
-                    if ( axisIndex == 0 )
-                    {
-                        offsetA = float3{ cosA, sinA, 0.0f };
-                        offsetB = float3{ cosB, sinB, 0.0f };
-                    }
-                    else if ( axisIndex == 1 )
-                    {
-                        offsetA = float3{ cosA, 0.0f, sinA };
-                        offsetB = float3{ cosB, 0.0f, sinB };
-                    }
-                    else
-                    {
-                        offsetA = float3{ 0.0f, cosA, sinA };
-                        offsetB = float3{ 0.0f, cosB, sinB };
-                    }
-                    outListSegment.push_back( EditorWorldSegment{ sphere._center + offsetA, sphere._center + offsetB, sphere._color } );
-                }
-            }
         }
     }
 

@@ -80,7 +80,7 @@ SW_TEST_CASE( EditorVisualizerGeometryTest, DebugDrawQueueBecomesWorldSegments )
 
     vector<EditorWorldSegment> listSegment;
     EditorVisualizerGeometryUtil::appendDebugDrawSegments( queue, false, listSegment );
-    SW_ASSERT_EQUAL( size_t( 1 + 3 * EditorVisualizerGeometryUtil::kSphereCircleSegmentCount ), listSegment.size() );
+    SW_ASSERT_EQUAL( size_t( 1 + 3 * DebugDrawQueue::kSphereCircleSegmentCount ), listSegment.size() );
     SW_EXPECT_NEAR_EQUAL( 3.0f, listSegment[0]._to._z, 1e-6f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, listSegment[0]._color._x, 1e-6f );
 
@@ -103,7 +103,7 @@ SW_TEST_CASE( EditorVisualizerGeometryTest, DebugDrawQueueBecomesWorldSegments )
 
     // 뒤에 붙인다(부르는 쪽이 비운다).
     EditorVisualizerGeometryUtil::appendDebugDrawSegments( queue, false, listSegment );
-    SW_EXPECT_EQUAL( size_t( 2 * ( 1 + 3 * EditorVisualizerGeometryUtil::kSphereCircleSegmentCount ) ), listSegment.size() );
+    SW_EXPECT_EQUAL( size_t( 2 * ( 1 + 3 * DebugDrawQueue::kSphereCircleSegmentCount ) ), listSegment.size() );
 }
 
 /**
@@ -118,7 +118,7 @@ SW_TEST_CASE( EditorVisualizerGeometryTest, DebugDrawSphereIsOneCircleInA2DView 
 
     vector<EditorWorldSegment> listSegment;
     EditorVisualizerGeometryUtil::appendDebugDrawSegments( queue, true, listSegment );
-    SW_ASSERT_EQUAL( size_t( EditorVisualizerGeometryUtil::kSphereCircleSegmentCount ), listSegment.size() );
+    SW_ASSERT_EQUAL( size_t( DebugDrawQueue::kSphereCircleSegmentCount ), listSegment.size() );
     for ( const EditorWorldSegment& segment : listSegment )
     {
         SW_EXPECT_NEAR_EQUAL( 0.0f, segment._from._z, 1e-6f );

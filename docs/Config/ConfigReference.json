@@ -3129,6 +3129,14 @@
    "source": "Source/Server/ServerApp.cpp"
   },
   {
+   "name": "gv_debugDrawGameView",
+   "type": "bool",
+   "default": "false",
+   "kind": "시험",
+   "description": "디버그 드로우 큐를 게임 화면 위에 겹쳐 그린다 — 선 · 구 · 글자(캔버스)",
+   "source": "Source/Engine/Graphics/Canvas/DebugDrawCanvas.cpp"
+  },
+  {
    "name": "gv_debugHUD",
    "type": "bool",
    "default": "false",
