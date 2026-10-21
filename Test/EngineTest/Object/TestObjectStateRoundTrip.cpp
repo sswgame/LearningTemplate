@@ -245,7 +245,7 @@ SW_TEST_CASE( ObjectStateRoundTripTest, MeshMaterialReferenceSurvivesXML )
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     constexpr const utf8* kPath = "engine/materials/benchtextured.material";
     sw::MaterialCache&    cache = sw::engine::getSubsystem<sw::AssetManager>().getAssetCache<sw::MaterialCache>();
-    SW_ASSERT_TRUE_MSG( cache.isCached( kPath ) == false, "다른 시험이 이 머티리얼을 잡고 있다 — 참조 검사가 비었다" );
+    SW_ASSERT_TRUE_MSG( cache.isCached( kPath ) == false, "다른 테스트가 이 머티리얼을 잡고 있다 — 참조 검사가 비었다" );
 
     sw::GameObjectManager manager;
     sw::GameObject*       pSource = manager.createGameObject( sw::hashed_string( "Painted" ) );

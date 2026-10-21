@@ -238,7 +238,7 @@ class StyleScanInternal:
             if (isDottedNameInternal(call.func, "sys.exit") and len(call.args) == 1 and isinstance(call.args[0], ast.Call)
                     and isDottedNameInternal(call.args[0].func, "main")):
                 return
-        self.addViolation("mainGuard", node.lineno, "`__main__` 가드의 몸은 `sys.exit(main())` 한 줄입니다(시험은 `unittest.main()`)")
+        self.addViolation("mainGuard", node.lineno, "`__main__` 가드의 몸은 `sys.exit(main())` 한 줄입니다(테스트는 `unittest.main()`)")
 
     def checkAnnotation(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
         """매개변수(`self` · `cls` 빼고)와 반환 타입을 모두 적는다."""
@@ -396,7 +396,7 @@ class CheckPythonConventionsGate(LintGate):
         {"name": "raise SystemExit", "expectedViolation": "Scripts/Probe/RaiseExit.py:5 [exit] `raise SystemExit`", "files": {"Scripts/Probe/RaiseExit.py": _kProbeHead + "def probe() -> None:\n    raise SystemExit(1)\n"}},
         {
             "name": "__main__ 가드 모양",
-            "expectedViolation": "Scripts/Probe/Guard.py:8 [mainGuard] `__main__` 가드의 몸은 `sys.exit(main())` 한 줄입니다(시험은 `unittest.main()`)",
+            "expectedViolation": "Scripts/Probe/Guard.py:8 [mainGuard] `__main__` 가드의 몸은 `sys.exit(main())` 한 줄입니다(테스트는 `unittest.main()`)",
             "files": {"Scripts/Probe/Guard.py": _kProbeHead + "def main() -> int:\n    return 0\n\n\nif __name__ == '__main__':\n    main()\n"},
         },
         {

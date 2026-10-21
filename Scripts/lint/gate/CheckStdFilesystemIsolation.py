@@ -74,7 +74,7 @@ class CheckStdFilesystemIsolationGate(LintGate):
             "files": {"Source/Engine/Resource/Probe.cpp": "#include <filesystem>\nint probe() { return 0; }\n"},
         },
         {
-            "name": "시험이 include 없이 std::filesystem 으로 시각을 바꾼다",
+            "name": "테스트가 include 없이 std::filesystem 으로 시각을 바꾼다",
             "expectedViolation": "Test/EngineTest/TestProbe.cpp:1: std::filesystem -> FileUtil 로 묻습니다(Source/Core/File/Std/ 밖에서는 쓰지 않습니다)",
             "files": {"Test/EngineTest/TestProbe.cpp": "void probe() { std::filesystem::last_write_time( \"a\", {} ); }\n"},
         },

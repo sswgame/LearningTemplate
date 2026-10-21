@@ -427,8 +427,8 @@ def parseKeyTableInternal(repositoryRoot: Path, sourcePath: str, tableName: str)
 _kGlobalVariableRe = re.compile(r"\b(SW_GLOBAL_VARIABLE|SW_TEST_GLOBAL_VARIABLE_SHIPPED|SW_TEST_GLOBAL_VARIABLE)\s*\(")
 _kMapGlobalVariableKind = {
     "SW_GLOBAL_VARIABLE": "일반",
-    "SW_TEST_GLOBAL_VARIABLE": "시험",
-    "SW_TEST_GLOBAL_VARIABLE_SHIPPED": "시험 · 배포본에도",
+    "SW_TEST_GLOBAL_VARIABLE": "테스트",
+    "SW_TEST_GLOBAL_VARIABLE_SHIPPED": "테스트 · 배포본에도",
 }
 
 
@@ -847,8 +847,8 @@ def makeGlobalVariablePage(listVariable: list[GlobalVariableDoc], outMetadata: d
     """전역 변수 표입니다(폴더별)."""
     lines = [_kGeneratedBanner, "", "# 전역 변수 (`-gv_*`)", "", "[설정 색인](README.md)", "",
              "값은 명령줄 `-gv_<이름>=<값>`, 에디터의 Global Variables 패널, 개발 콘솔로 바꿉니다. "
-             "종류는 셋입니다. **일반** 은 배포본에도 있습니다. **시험** 은 배포본에서 등록되지 않아 기본값으로만 읽힙니다. "
-             "**시험 · 배포본에도** 는 스크립트가 배포 실행 파일을 조종할 때 쓰는 스위치입니다. "
+             "종류는 셋입니다. **일반** 은 배포본에도 있습니다. **테스트** 는 배포본에서 등록되지 않아 기본값으로만 읽힙니다. "
+             "**테스트 · 배포본에도** 는 스크립트가 배포 실행 파일을 조종할 때 쓰는 스위치입니다. "
              "사용자 설정이 값을 넣는 변수는 `UserSettingsVariables.cpp` 에 있고, 시작할 때는 명령줄 `-gv_*` 가 플레이어 값보다 우선합니다(`docs/07_Configuration.md`).", ""]
     mapGroup: dict[str, list[GlobalVariableDoc]] = {}
     for variable in listVariable:

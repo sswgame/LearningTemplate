@@ -249,7 +249,7 @@ class CheckFallibleNodiscardGate(LintGate):
     ]
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
-        self.addFilesArgument(parser, "검사할 특정 파일 (생략 시 린트 대상(시험 제외)의 .h · .cpp · .inl 전체)")
+        self.addFilesArgument(parser, "검사할 특정 파일 (생략 시 린트 대상(테스트 제외)의 .h · .cpp · .inl 전체)")
 
     def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
         return FileFindings(listViolation=findFallibleDeclarationsWithoutNodiscard(source))

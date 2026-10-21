@@ -154,7 +154,7 @@ class CheckThirdPartyIsolationGate(LintGate):
             "files": {"Source/Engine/Object/Component/Probe.cpp": "#include <Jolt/Jolt.h>\nint probe() { return 0; }\n"},
         },
         {
-            "name": "Box2D 헤더를 시험에서 include 한다",
+            "name": "Box2D 헤더를 테스트에서 include 한다",
             "expectedViolation": "Test/EngineTest/TestProbe.cpp:1: <box2d/box2d.h> -> Box2D 헤더는 Source/Engine/Physics/Box2D/ 안에서만 include 합니다",
             "files": {"Test/EngineTest/TestProbe.cpp": '#include "box2d/box2d.h"\nint probe() { return 0; }\n'},
         },

@@ -42,7 +42,7 @@ namespace
             float3      _value{ 0.0f, 0.0f, 0.0f };
         };
 
-        /** @brief 시험 사례 하나 — 종류 id 와 눈에 띄지만 화면 밖으로 나가지 않는 매개변수입니다(상자 2 x 4 x 2, 모디파이어 공간 원점이 상자 가운데). */
+        /** @brief 테스트 사례 하나 — 종류 id 와 눈에 띄지만 화면 밖으로 나가지 않는 매개변수입니다(상자 2 x 4 x 2, 모디파이어 공간 원점이 상자 가운데). */
         struct Case
         {
             const utf8* _pTypeID{ nullptr };

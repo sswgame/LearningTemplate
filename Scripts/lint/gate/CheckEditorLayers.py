@@ -145,7 +145,7 @@ class CheckEditorLayersGate(LintGate):
             "files": {"Source/Editor/Common/Workspace/Probe.h": '#pragma once\n#include "Editor/Common/GUI/EditorMenuBar.h"\n'},
         },
         {
-            "name": "패널이 자체 시험을 include",
+            "name": "패널이 자체 테스트를 include",
             "expectedViolation": "Source/Editor/Panels/Probe.cpp:3: <Editor/SelfTest/EditorSelfTest.h> -> 티어 6('Panels')가 티어 7('SelfTest')를 include 합니다",
             "files": {"Source/Editor/Panels/Probe.cpp": '#include "pch.h"\n\n#include "Editor/SelfTest/EditorSelfTest.h"\n'},
         },

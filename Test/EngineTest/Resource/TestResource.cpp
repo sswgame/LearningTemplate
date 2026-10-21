@@ -770,7 +770,7 @@ SW_TEST_CASE( ResourceTest, EnsureMetaGivesNoIdentityToAMissingAsset )
     SW_ASSERT_TRUE( resourceRoot.writeTextFile( "engine/materials/placeholder.txt", "" ) ); // 도메인 폴더가 있어야 경로가 풀린다
     const utf8*      pMissing      = "engine/materials/ensuremeta_missing_probe.material";
     const sw::string metaWritePath = resourceRoot.makePath( "engine/materials/ensuremeta_missing_probe.material.meta" );
-    SW_ASSERT_TRUE_MSG( sw::ResourcePaths::findLooseFile( pMissing ).getDiskPath().empty(), "탐침 경로에 실제 파일이 있다 — 시험 전제가 깨졌다" );
+    SW_ASSERT_TRUE_MSG( sw::ResourcePaths::findLooseFile( pMissing ).getDiskPath().empty(), "탐침 경로에 실제 파일이 있다 — 테스트 전제가 깨졌다" );
 
     sw::AssetDatabase db;
     SW_EXPECT_TRUE_MSG( db.ensureMeta( pMissing ).isNull(), "없는 에셋에 GUID 를 지었다" );

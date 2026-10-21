@@ -2,7 +2,7 @@
     "_name": "SWGame",
     "_version": "1.0.0",
     "_kind": "Game",
-    "_description": "ThemeParkTycoon — 놀이공원 경영 시험 게임(롤러코스터 타이쿤 장르) — GF_ThemePark 키트를 쓴다",
+    "_description": "ThemeParkTycoon — 놀이공원 경영 테스트 게임(롤러코스터 타이쿤 장르) — GF_ThemePark 키트를 쓴다",
     "_listDependency": [
         {
             "_name": "GameFramework"

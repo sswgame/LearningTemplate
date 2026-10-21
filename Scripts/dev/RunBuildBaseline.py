@@ -220,7 +220,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--jobs", type=int, default=0, help="빌드 병렬 수(0 이면 ninja 기본)")
     parser.add_argument("--header", default=kDefaultHeader, help=f"header 시나리오가 건드릴 헤더(기본 {kDefaultHeader})")
     parser.add_argument("--source", default=kDefaultSource, help=f"cpp 시나리오가 건드릴 소스(기본 {kDefaultSource})")
-    parser.add_argument("--with-tests", action="store_true", help="기본 타깃(all)에 시험(AllTests)까지 짓는다")
+    parser.add_argument("--with-tests", action="store_true", help="기본 타깃(all)에 테스트(AllTests)까지 짓는다")
     parser.add_argument("--keep-worktree", action="store_true", help="worktree 시나리오의 워크트리를 지우지 않는다")
     parser.add_argument("--force", action="store_true", help="다른 빌드 프로세스가 보여도 잰다(숫자가 오염된다)")
     parser.add_argument("--out", type=Path, default=None, help="표를 남길 파일(Markdown)")

@@ -142,7 +142,7 @@ def compareInternal(appPath: Path, game: dict, table: dict, backend: str, golden
 
 
 def main(listArgument: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="시험 게임 자동 플레이의 골든 이미지 회귀 — RHI 백엔드마다")
+    parser = argparse.ArgumentParser(description="테스트 게임 자동 플레이의 골든 이미지 회귀 — RHI 백엔드마다")
     addAppRunArguments(parser, bMultipleBackends=True)
     parser.add_argument("--record", action="store_true", help="견주지 않고 새 기준을 뜬다")
     parser.add_argument("--runs", type=int, default=3, help="기준을 뜰 때 백엔드마다 돌리는 횟수(흩어짐이 허용 오차를 정한다)")

@@ -24,7 +24,7 @@
 - Editor: 주석 25 줄 이상인 파일(`Common/GUI`, `Commands`, `Viewport` 등)과 그보다 짧은 파일. `Common` 은 옛 어휘가 가장 많던 22 개를 2026-10-21 에 다시 썼고(서비스, 선택, 컨텍스트, 미리보기 창, 씬과 변환 커맨드, 로컬라이즈 테이블, 높이장 임포터 등), `Panels` 는 옛 어휘가 많던 23 개 파일을 다시 썼다(2026-10-21). 나머지는 옛 어휘가 파일당 10 곳 미만이다. `EditorIconGlyphs.h` 는 생성 파일이라 제외한다.
 - GameFramework: Base 헤더는 끝났다(2026-10-21). 다른 작업이 고치던 헤더 열한 개(`GameInstanceBase.h`, `IGame.h`, `GameSettings.h`, `GameDataXML.h`, Online 의 `ServerDirectoryControl.h`, `BlockingHTTPClient.h`, `GroupChannelMembership.h`, `ServiceReport.h`, `NetSecurity.h`, `OnlineServerKit.h`, `OnlineServiceHost.h`)와 Base 의 .cpp · .inl 이 남았다. Kits/Feature/Online 의 Account 밖 폴더(옛 어휘 꼬리표 · 그새 · 거두다 · 짓다 · 정본 · 견주다는 2026-10-21 `wt/kitclean` 에서 Kits/Feature 전체를 고쳤다. `NetPairedAnimation` 은 `wt/animation` 이 새로 만든 파일이라 남겼다).
 - Core: Math, Process, Delegate, Memory, Diagnostics, CommandLine, Container, Task, LogSink, String(Network · File 은 대조표 용어만 2026-10-21 정리). RuntimeAPI 는 손대지 않았다. Games 는 Empty 벤치 씬 일부와 VoxelCraft 전체.
-- 용어 '시험' → '테스트': `Scripts/**` · `Test/**` · `docs/Config/**` 약 300 곳(2026-10-13 셈)과 셰이더 주석 2 곳(`waterwaveprobe.hlsl` · `lighting2d.hlsli`). 셰이더는 바꾸면 `App --cook-shaders` 로 다시 쿠킹한다.
+- 용어 '시험' → '테스트': 문서 · 스크립트 · 테스트 · 소스 · 생성 설정 문서는 끝났다(2026-10-22, `wt/cleanup347`). 남은 것은 셰이더 주석 2 곳(`waterwaveprobe.hlsl` · `lighting2d.hlsli`)이고, 바꾸면 `App --cook-shaders` 로 다시 쿠킹하므로 셰이더를 다시 쿠킹하는 작업과 함께 한다. 대조표 자체(`10_WritingDocs.md`)와 `CLAUDE.md` · `.claude/agents` 는 고치지 않았다.
 함정: 파일이 겹쳐 미뤄진 정리입니다. 같은 폴더를 다른 작업이 건드리는 중이면 미룹니다.
 
 ### NamingAuditNext

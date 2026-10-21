@@ -69,7 +69,7 @@ class CheckProductNamesGate(LintGate):
     preCommitFileArgument = "--files"
     sourceScanRoots = kLintTargetRelDirs
     sourceSuffixes = _kSuffixes
-    sourceSummary = "린트 대상(시험 제외)의 제품 이름 식별자"
+    sourceSummary = "린트 대상(테스트 제외)의 제품 이름 식별자"
     violationHeader = "드라이버 · 백엔드 폴더 밖의 제품 이름"
     hint = ("  인터페이스(ISQLDriver · INetSecurityProvider · IAudioService …)와 등록부(SQLDriverRegistry::findDriver 등)로 고릅니다.\n"
             "  제품을 골라 올리는 조립점이면 Scripts/lint/rules/CheckProductNames.toml 의 [exemption] 에 이유와 함께 한 줄.")

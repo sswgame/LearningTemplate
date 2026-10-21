@@ -870,7 +870,7 @@ SW_TEST_CASE( ResourceDataSchemaTest, EveryResourceDataFileLoadsWithoutUnknownNa
         {
             uint32 validationLineCount{ 0 };
             warnings = ResourceDataSchemaInternal::removeValidationLines( warnings, validationLineCount );
-            SW_EXPECT_TRUE_MSG( validationLineCount > 0, ( resourceID + " 는 검증 결과를 내야 하는 시험 데이터인데 결과가 없습니다" ).c_str() );
+            SW_EXPECT_TRUE_MSG( validationLineCount > 0, ( resourceID + " 는 검증 결과를 내야 하는 테스트 데이터인데 결과가 없습니다" ).c_str() );
         }
         SW_EXPECT_TRUE_MSG( warnings.empty(), ( resourceID + " 를 읽으며 경고가 났습니다:" + warnings ).c_str() );
         ++loadedCount;

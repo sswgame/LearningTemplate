@@ -117,14 +117,14 @@ Figma 값이 필요하면 사용자가 변수 JSON을 내려받아 `import-figma
   이 문서의 절차는 `get_variable_defs` 와 `get_design_context` 를 씁니다. `get_code` 라는 도구는 없습니다.
 - Figma 도움말은 변수의 JSON 가져오기와 내보내기를 기본 기능으로 소개하지 않고, 플러그인으로 만들 수 있다고만 적습니다. REST API에는 변수 조회, 생성, 수정, 삭제 엔드포인트가 있습니다.
 
-추정한 것(직접 시험하지 못함):
+추정한 것(직접 테스트하지 못함):
 
 - Figma 변수의 REST 응답 모양(`meta.variables`, `meta.variableCollections`, `valuesByMode`, `VARIABLE_ALIAS`, 색 `{r,g,b,a}` 0에서 1)은 REST 문서에 대한 지식에 따랐고, 실제 계정의 응답으로 확인하지 않았습니다.
   테스트는 같은 모양으로 직접 만든 응답을 씁니다.
 - `export-figma` 가 쓰는 DTCG JSON을 Figma에 가져오는 방법은 확인하지 못했습니다. Figma가 직접 읽지는 않을 가능성이 높고, DTCG를 읽는 변수 가져오기 플러그인(예: Tokens Studio 계열)을 거칠 것으로 추정합니다.
   그래서 수 값은 단위 문자열 대신 `number` 로 썼습니다. 가져오기가 안 되면 형식을 플러그인에 맞춰 바꿉니다.
 - 변수 REST 엔드포인트가 모든 요금제에서 열려 있는지는 확인하지 못했습니다. 막혀 있으면 MCP의 `get_variable_defs` 결과를 DTCG 모양으로 옮겨 `import-figma` 에 주는 방법이 남습니다.
-- 원격 서버가 Figma 링크의 노드 ID로 프레임을 고르는지, 데스크톱 선택에 의존하는지는 확인하지 못했습니다. 첫 사용 때 프레임 링크를 붙여 넣어 시험합니다.
+- 원격 서버가 Figma 링크의 노드 ID로 프레임을 고르는지, 데스크톱 선택에 의존하는지는 확인하지 못했습니다. 첫 사용 때 프레임 링크를 붙여 넣어 테스트합니다.
 
 ## 5. 에이전트 절차
 

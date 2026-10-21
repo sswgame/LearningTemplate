@@ -69,7 +69,7 @@ def _describeName(name: str) -> str:
 class CheckClockReadsGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다 — 규칙과 증거가 한 자리에 있다."""
 
-    description = "엔진 · 시험 코드가 std::chrono 시계가 아니라 MonotonicClock · Stopwatch · Deadline 을 읽는지 검사"
+    description = "엔진 · 테스트 코드가 std::chrono 시계가 아니라 MonotonicClock · Stopwatch · Deadline 을 읽는지 검사"
     buildComment = "Checking that code reads time through MonotonicClock, not std::chrono clocks..."
     timeoutSeconds = 30
     preCommitPattern = tuple(f"{root}/*" for root in _kListScanRoot)
