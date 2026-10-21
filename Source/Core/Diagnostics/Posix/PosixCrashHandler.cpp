@@ -44,7 +44,7 @@ namespace sw
 
         /**
          * @brief 보고가 시한을 넘겼다(`alarm`) — 보고를 버리고 곧장 끝냅니다.
-         * @details 시그널 안이라 async-signal-safe 한 것(`write` · `_exit`)만 쓴다. **stdio 를 거치지 않는다** — 보고가 막힌 자리가 바로
+         * @details 시그널 안이라 async-signal-safe 한 것(`write` · `_exit`)만 쓴다. **stdio 를 거치지 않는다** — 보고가 막힌 지점이 바로
          *          stderr 의 락일 수 있다(CrashTestKind::StderrHeld).
          */
         void onReportDeadlineInternal( int32 )
@@ -75,7 +75,7 @@ namespace sw
                 return;
             }
 
-            // 시한을 건다(CrashHandler::setReportDeadline). 보고는 죽어 가는 프로세스 안에서 돈다 — glibc 는 힙 손상을 malloc 의 락을
+            // 시한을 설정한다(CrashHandler::setReportDeadline). 보고는 죽어 가는 프로세스 안에서 돈다 — glibc 는 힙 손상을 malloc 의 락을
             // 쥔 채 abort 하고, 아래의 할당은 그 락을 **같은 스레드에서** 영영 기다린다(시한이 없으면 그대로 서 있다).
             // (Windows 는 폴트 스레드가 보고 스레드를 시한까지만 기다린다.) 핸들러의 sa_mask 가 비어 있어 SIGALRM 은 여기서도 들어온다.
             s_reportSignalNumber.store( signalNumber );
@@ -180,7 +180,7 @@ namespace sw
             sigaction( signalNumber, &restoreAction, nullptr );
         }
 
-        // 이 스레드의 대체 스택도 걷어 낸다. 커널이 들고 있는 등록을 지워 두는 편이 뒤에 오는 핸들러(테스트 · 도구)와 엉키지 않는다.
+        // 이 스레드의 대체 스택도 해제한다. 커널이 보관한 등록을 지워 두는 편이 뒤에 오는 핸들러(테스트 · 도구)와 엉키지 않는다.
         // 다른 스레드의 것은 그 스레드가 끝날 때 돌려준다.
         ThreadCrashStack::releaseCurrentThread();
 

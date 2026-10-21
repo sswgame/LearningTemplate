@@ -88,7 +88,7 @@ namespace sw
         if ( cache._generation == _generation )
             return static_cast<ThreadBuffer*>( cache._pBuffer );
 
-        // 캐시가 다른 타임라인을 가리킨다. 이 스레드의 버퍼가 이미 있으면 그것을 쓴다(스레드 하나가 타임라인 둘을 오가도 자리가 늘지 않게).
+        // 캐시가 다른 타임라인을 가리킨다. 이 스레드의 버퍼가 이미 있으면 그것을 쓴다(스레드 하나가 타임라인 둘을 오가도 슬롯이 늘지 않게).
         cache._generation                   = _generation;
         cache._pBuffer                      = nullptr;
         const std::thread::id currentThread = std::this_thread::get_id();
@@ -103,7 +103,7 @@ namespace sw
             }
         }
 
-        // 처음 기록하는 스레드다. 자리를 하나 잡고 버퍼를 만든다. 자리가 없으면 이 스레드는 기록하지 않는다(캐시에 nullptr 을 남겨 다시 찾지 않는다).
+        // 처음 기록하는 스레드다. 슬롯을 하나 잡고 버퍼를 만든다. 슬롯이 없으면 이 스레드는 기록하지 않는다(캐시에 nullptr 을 남겨 다시 찾지 않는다).
         const uint32 index = _threadCount.fetch_add( 1, std::memory_order_acq_rel );
         if ( index >= kMaxThread )
         {
@@ -297,7 +297,7 @@ namespace sw
                 thread._listEvent.push_back( event );
                 listIndex.push_back( eventIndex );
             }
-            // 복사하는 동안 쓰는 스레드가 앞지른 칸은 다른 사건으로 바뀌었을 수 있다. 지금 쓰는 중일 수 있는 칸(다음 번호의 자리)까지 버린다.
+            // 복사하는 동안 쓰는 스레드가 앞지른 항목은 다른 사건으로 바뀌었을 수 있다. 지금 쓰는 중일 수 있는 항목(다음 번호)까지 버린다.
             const uint64 writtenAfter = pBuffer->_writeCount.load( std::memory_order_acquire );
             const uint64 validFirst   = ( writtenAfter + 1 > kEventCapacity ) ? writtenAfter + 1 - kEventCapacity : 0;
             if ( validFirst > first )

@@ -160,7 +160,7 @@ namespace sw
         void* pProbe = _malloc_dbg( 1, _NORMAL_BLOCK, __FILE__, __LINE__ );
         if ( pProbe == nullptr )
             return false;
-        LONG       requestNumber{ 0 }; // _CrtIsMemoryBlock 이 long* 을 받는다(Windows 갈래만)
+        LONG       requestNumber{ 0 }; // _CrtIsMemoryBlock 이 long* 을 받는다(Windows 분기만)
         const bool bKnown = _CrtIsMemoryBlock( pProbe, 1, &requestNumber, nullptr, nullptr ) != 0;
         _free_dbg( pProbe, _NORMAL_BLOCK );
         if ( bKnown == false || requestNumber <= 0 )
@@ -325,7 +325,7 @@ namespace sw
         if ( tagIdx >= static_cast<uint32>( MemoryTag::MaxTags ) )
             tagIdx = 0;
 
-        // 지금 스레드 칸에만 더한다 — 다른 스레드와 캐시 라인을 다투지 않는다. 최고치는 합을 읽는 쪽이 올린다(`computeTagLive`).
+        // 지금 스레드 슬롯에만 더한다 — 다른 스레드와 캐시 라인을 다투지 않는다. 최고치는 합을 읽는 쪽이 올린다(`computeTagLive`).
         MemoryTagShardCounter& counter = _shard.getCurrentThreadShard()._arrTag[tagIdx];
         counter._liveBytes.fetch_add( static_cast<int64>( size ), std::memory_order_relaxed );
         counter._liveCount.fetch_add( 1, std::memory_order_relaxed );
@@ -527,7 +527,7 @@ namespace sw
         uint32 newlyExceededCount{ 0 };
         for ( uint32 tagIndex = 0; tagIndex < kMemoryTagCount; ++tagIndex )
         {
-            // 프레임마다 한 번 부르는 곳이라 예산이 없는 태그도 합을 읽어 최고치를 올린다(최고치를 프레임마다 보는 자리).
+            // 프레임마다 한 번 부르는 곳이라 예산이 없는 태그도 합을 읽어 최고치를 올린다(최고치를 프레임마다 보는 곳).
             uint64 liveBytes = 0;
             uint64 liveCount = 0;
             computeTagLive( tagIndex, liveBytes, liveCount );

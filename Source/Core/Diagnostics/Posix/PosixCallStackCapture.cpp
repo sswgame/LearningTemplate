@@ -141,7 +141,7 @@ namespace sw
         // glibc 의 backtrace() 는 시그널 트램폴린에 CFI 가 있어 **폴트 지점까지** 따라 내려간다. 문제는 그 위에 핸들러
         // 프레임(이 함수 · reportCrash · onFatalSignal · 트램폴린)이 얹혀 있다는 것뿐이다. 그래서 컨텍스트에서 폴트 PC 를
         // 꺼내 그 프레임을 찾고 **거기서부터** 담는다. 그러면 스택이 폴트 지점에서 시작하는 Windows(StackWalk64 + CONTEXT)
-        // 와 같은 모양이 된다.
+        // 와 같은 형태가 된다.
         void*       arrTempFrame[DeepCallStack::kMaxFrames + 16];
         const int32 count = backtrace( arrTempFrame, static_cast<int32>( DeepCallStack::kMaxFrames + 16 ) );
         if ( count <= 0 )
@@ -152,7 +152,7 @@ namespace sw
         int32 startIndex = 0;
         if ( pFaultPc != nullptr )
         {
-            // 폴트 PC 와 정확히 같은 프레임을 찾는다. 찾지 못하면(트램폴린 모양이 다른 환경) 폴트 PC 를 0번 프레임으로 직접
+            // 폴트 PC 와 정확히 같은 프레임을 찾는다. 찾지 못하면(트램폴린 형태가 다른 환경) 폴트 PC 를 0번 프레임으로 직접
             // 넣어, 적어도 어디서 죽었는지는 리포트에 남게 한다.
             int32 matchIndex = -1;
             for ( int32 frameIndex = 0; frameIndex < count; ++frameIndex )

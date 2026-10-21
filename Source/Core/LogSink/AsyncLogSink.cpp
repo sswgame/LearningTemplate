@@ -21,7 +21,7 @@ namespace sw
 {
     namespace
     {
-        /// @brief 이 스레드가 지금 리스너를 부르는 중인 방송 깊이입니다(리스너 안에서 또 로그를 쓰면 겹친다). 떼기가 자기 자신을 기다리지 않게 한다.
+        /// @brief 이 스레드가 지금 리스너를 부르는 중인 방송 깊이입니다(리스너 안에서 또 로그를 쓰면 겹친다). 리스너 제거가 자기 자신을 기다리지 않게 한다.
         thread_local uint32 t_broadcastDepth{ 0 };
 
         /**
@@ -348,7 +348,7 @@ namespace sw
 
     void AsyncLogSink::writeLogInternal( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line )
     {
-        // 로그 레코드는 부른 쪽이 아니라 로거의 몫이다. 리스너(에디터 콘솔 등)는 자기 태그를 건다.
+        // 로그 레코드는 부른 쪽이 아니라 로거의 몫이다. 리스너(에디터 콘솔 등)는 자기 태그를 붙인다.
         SW_MEMORY_SCOPE( EngineMisc );
         // 1단계: 타임스탬프를 계산하고 포맷한다(같은 초 안에서는 캐시한 문자열을 재사용한다)
         int32 year{ 0 }, month{ 0 }, day{ 0 }, hour{ 0 };
@@ -402,7 +402,7 @@ namespace sw
         const LogContext& context = LogContext::getCurrent();
         utf8              arrContextTag[LogContext::kMaxTagSize];
         (void)context.formatTag( arrContextTag, LogContext::kMaxTagSize );
-        // 시계 꼬리표(`Logger::setClockNumber` — 전용 서버의 틱, 리슨 호스트의 프레임)도 같은 자리에 붙는다. 정하지 않았으면 빈 글이다.
+        // 시계 레이블(`Logger::setClockNumber` — 전용 서버의 틱, 리슨 호스트의 프레임)도 같은 위치에 붙는다. 정하지 않았으면 빈 글이다.
         fixed_string<32> tickTag{};
         LogClock         clock{ LogClock::Tick };
         uint64           clockNumber{ 0 };
@@ -433,7 +433,7 @@ namespace sw
         }
 
         // 4단계: 메모리 리스너(에디터 콘솔 UI · 테스트 캡처)의 불변 사본 참조를 잡고 락 밖에서 알린다(줄마다 목록을 복사하지 않는다). 그 세대 칸에
-        //        "부르는 중" 을 올려 두어, 떼기가 이 방송이 끝날 때까지 기다리게 한다(`waitForRetiredBroadcasts`). 리스너가 없으면 락도 잡지 않는다.
+        //        "부르는 중" 을 올려 두어, 리스너 제거가 이 방송이 끝날 때까지 기다리게 한다(`waitForRetiredBroadcasts`). 리스너가 없으면 락도 잡지 않는다.
         shared_ptr<const LogWrittenMulticast> listenerSnapshot;
         uint32                                broadcastSlot{ 0 };
         if ( _bHasListener.load( std::memory_order_acquire ) )

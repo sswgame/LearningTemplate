@@ -68,7 +68,7 @@ namespace sw
              * @brief `-key` 처럼 **값 없이** 적을 수 있는 인자인지 확인합니다.
              * @details 그럴 수 있는 것은 bool 뿐입니다. 값 없는 `-dx12` 는 "true" 라는 뜻이 되지만, 값 없는 `-W` 나
              *          `-gv_benchMeshes` 에는 그런 뜻이 없습니다. 판단은 타입이 합니다(별도 칸을 두지 않습니다) — 값을 빠뜨린
-             *          `-gv_benchMeshes` 를 받아 주면 int32 자리에 bool 이 들어가고, `readValue` 의 `get_if<int32>` 가 nullptr 을
+             *          `-gv_benchMeshes` 를 받아 주면 int32 항목에 bool 이 들어가고, `readValue` 의 `get_if<int32>` 가 nullptr 을
              *          반환해 **경고 한 줄 없이 아무 일도 일어나지 않습니다.**
              */
             bool isFlagArgument() const { return std::holds_alternative<bool>( _defaultValue ); }
@@ -116,7 +116,7 @@ namespace sw
         /**
          * @brief 문자열 키로 파싱된 인자 값을 찾습니다.
          * @tparam T 가져올 값의 타입(bool, 정수, 부동소수, sw::string, string_view)
-         * @param key 등록된 명령줄 철자(예: "W", "lang"). 앞의 하이픈은 파싱할 때 떼어 내므로 **조회 키에는 붙이지
+         * @param key 등록된 명령줄 철자(예: "W", "lang"). 앞의 하이픈은 파싱할 때 제거하므로 **조회 키에는 붙이지
          *            않습니다.** `"--W"` 로는 찾지 못합니다. 열거자 이름("WIDTH")은 키가 아닙니다.
          * @param outValue 찾은 값을 받을 변수
          * @return 키가 있고 타입 변환에 성공하면 true
@@ -259,7 +259,7 @@ namespace sw
     template <typename T>
     void CommandLineManager::addArgument( const std::initializer_list<string_view>& listAlias, T defaultValue, const bool bUseDefaultValue )
     {
-        // 먼저 모두 검사한다. 겹치는 이름을 만난 자리에서 돌아가면 그 앞에서 이미 넣은 별칭들이 끝내 만들어지지
+        // 먼저 모두 검사한다. 겹치는 이름을 만난 즉시 돌아가면 그 앞에서 이미 넣은 별칭들이 끝내 만들어지지
         // 않는 인덱스를 가리킨 채 남고, 그 별칭으로 조회하면 _listArgument 범위 밖을 읽는다.
         for ( string_view alias : listAlias )
         {

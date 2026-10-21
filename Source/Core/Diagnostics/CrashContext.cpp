@@ -134,7 +134,7 @@ namespace sw
         }
         /**
          * @brief 버퍼 뒤에 포맷한 한 줄을 이어 붙입니다. **할당하지 않습니다.**
-         * @details formatstring 은 버퍼의 **처음부터** 쓰므로, 이어 붙이려면 남은 자리를 직접 넘겨야 합니다.
+         * @details formatstring 은 버퍼의 **처음부터** 쓰므로, 이어 붙이려면 남은 공간을 직접 넘겨야 합니다.
          * @param inOutLength 현재 길이. 쓴 만큼 늘려서 돌려줍니다.
          */
         template <typename... Args>
@@ -210,7 +210,7 @@ namespace sw
                 return;
             }
         }
-        // 자리가 없으면 조용히 버린다. 크래시 진단을 돕자고 넣은 것이 실패를 키우면 안 된다.
+        // 공간이 없으면 조용히 버린다. 크래시 진단을 돕자고 넣은 것이 실패를 키우면 안 된다.
         if ( _entryCount >= CrashHandler::kMaxContextEntry )
             return;
 
@@ -304,7 +304,7 @@ namespace sw
         }
 
         writeWholeFile( arrPath, arrReport, length );
-        // 빵부스러기도 할당 없는 단계에서 쓴다 — 컨텍스트 파일과 같은 자리(심볼 변환 · 스택 보고보다 먼저).
+        // 빵부스러기도 할당 없는 단계에서 쓴다 — 컨텍스트 파일과 같은 단계(심볼 변환 · 스택 보고보다 먼저).
         writeCrashBreadcrumbFile();
     }
 
@@ -375,7 +375,7 @@ namespace sw
         std::fflush( stderr );
         SW_LOG_ERROR( "%#", builder.c_str() );
         // 로그는 작업 스레드가 비동기로 쓴다. 이대로 프로세스가 끝나면 큐에 남은 줄(크래시 직전의 경고 · 방금 쓴 리포트)과 파일 버퍼가 사라진다.
-        // 언리얼이 크래시 때 GLog->Panic 으로 동기 비우기를 하는 것과 같은 자리다.
+        // 언리얼이 크래시 때 GLog->Panic 으로 동기 비우기를 하는 것과 같은 역할이다.
         Logger::flushGlobalForCrash();
     }
 

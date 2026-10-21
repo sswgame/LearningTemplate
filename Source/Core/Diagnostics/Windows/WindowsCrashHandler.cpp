@@ -49,7 +49,7 @@ namespace sw
          * @brief 크래시 보고를 맡는 스레드입니다. 설치할 때 미리 띄워 두고 신호를 기다립니다.
          * @details **죽은 스레드에서 덤프를 쓰지 않는다.** 스택 오버플로는 넘친 스택의 보증 공간(64KB)만으로 필터를 돈다. 그 위에서
          *          `MiniDumpWriteDump` 와 심볼 변환을 하면 크래시 자식 프로세스가 **간헐적으로 멈춘다**(하나씩은 드물고, 여럿을 겹쳐 돌리면 수백 번에
-         *          몇 번 정도). 브레이크패드와 언리얼(`FCrashReportingThread`)도 같은 이유로 미리 띄운 스레드에서 보고한다. 그 스레드는
+         *          몇 번 정도). 브레이크패드와 언리얼(`FCrashReportingThread`)도 같은 이유로 미리 시작한 스레드에서 보고한다. 그 스레드는
          *          멀쩡한 스택을 가지고 있다.
          *          폴트 스레드는 **시한까지만**(`CrashHandler::setReportDeadline`) 기다린다. 보고가 어디서 멈추든(힙이나 stdio 락)
          *          프로세스는 끝난다. 크래시가 난 게임이 창을 띄운 채 서 있는 것보다 보고 없이 끝나는 편이 낫다.
@@ -395,7 +395,7 @@ namespace sw
         if ( s_hDumpModule != nullptr )
             s_pfnMiniDumpWriteDump = reinterpret_cast<PfnMiniDumpWriteDump>( GetProcAddress( s_hDumpModule, "MiniDumpWriteDump" ) );
 
-        // 보고 스레드는 **크래시 전에** 띄워 둔다. 크래시 순간에 스레드를 만들면 로더 락과 힙을 그 자리에서 쓰게 된다.
+        // 보고 스레드는 **크래시 전에** 시작해 둔다. 크래시 순간에 스레드를 만들면 로더 락과 힙을 그 자리에서 쓰게 된다.
         s_bStopReportThread.store( false );
         s_hReportRequested = CreateEventW( nullptr, FALSE, FALSE, nullptr );
         s_hReportFinished  = CreateEventW( nullptr, FALSE, FALSE, nullptr );
