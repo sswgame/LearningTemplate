@@ -5258,6 +5258,76 @@ SW_TEST_CASE( RenderPassGPUTest, MetallicChangesForwardAndDeferredPictures )
 }
 
 /**
+ * @brief [RenderPassGPUTest] CPU 와 GPU 입자 시뮬레이션이 같은 씨앗 · 같은 단계 수에서 같은 그림을 그린다 — 네 백엔드 모두(Vfx.md V5)
+ * @details 표본 효과(sparks — 연기 알파 · 불꽃 더하기, CPU 전용 모듈 없음)를 `gv_vfxSimulation` CPU 와 GPU 로 각각 읽어 같은 틱 수만큼 돌리고 Present 를 견준다.
+ *          두 시뮬레이션은 같은 시계(`VfxEmitterClock`)와 같은 난수 수열(splitmix64)을 쓰므로 입자 수와 위치가 같아야 한다. 입자 하나가 빠지거나 위치가 틀리면
+ *          빌보드 하나만큼의 픽셀이 바뀐다. 허용: 다른 칸이 1% 이하 — 부동소수 순서(FMA)가 다르면 빌보드 가장자리 픽셀이 한두 칸 바뀔 수 있어 차이의 크기는 보지 않는다.
+ *          GPU 의 살아 있는 수는 RHI 에 버퍼 되읽기가 없어 직접 세지 않는다(그림이 수를 대신한다).
+ */
+SW_TEST_CASE( RenderPassGPUTest, CPUAndGPUParticleSimulationsDrawTheSameImage )
+{
+#if defined( SW_SHIPPING )
+    SW_TEST_SKIP( "gv_vfxSimulation is a development-build switch" );
+#else
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+    sw::GlobalVariableManager& variables     = sw::engine::getSubsystem<sw::GlobalVariableManager>();
+    constexpr uint32           kTargetCount  = 2;
+    constexpr uint32           kTickCount    = 45;
+    const utf8*                arrTarget[]   = { "CPU", "GPU" };
+    uint32                     comparedCount = 0;
+    test::RHIBackendSweep      sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const utf8*           pName = device->getBackendName();
+        sw::vector<uint8>     arrCapture[kTargetCount];
+        sw::RHITextureMipSpan arrLayout[kTargetCount]{};
+        bool                  bOk = true;
+        for ( uint32 targetIndex = 0; targetIndex < kTargetCount && bOk; ++targetIndex )
+        {
+            // 대상은 효과를 읽을 때 정해진다(VfxComponent) — 읽기 전에 바꾼다.
+            bOk = variables.setValueFromString( "gv_vfxSimulation", arrTarget[targetIndex] );
+            sw::Scene scene( "ParticleCompareScene" );
+            bOk                                = bOk && scene.ensureDefaultCameras();
+            const sw::CameraComponent* pCamera = bOk ? scene.getActiveGameCamera() : nullptr;
+            sw::GameObject*            pObject = pCamera != nullptr ? scene.getObjectManager()->createGameObject( sw::hashed_string( "Effect" ) ) : nullptr;
+            sw::VfxComponent*          pVfx    = pObject != nullptr ? pObject->addComponent<sw::VfxComponent>() : nullptr;
+            bOk                                = bOk && pVfx != nullptr;
+            if ( bOk )
+            {
+                pVfx->setWorldPosition( pCamera->getCameraPosition() + pCamera->getCameraForward() * 4.0f - sw::float3( 0.0f, 0.5f, 0.0f ) );
+                pVfx->setEffectPath( "engine/vfx/sparks.vfx.xml" );
+                pVfx->play();
+                for ( uint32 tickIndex = 0; tickIndex < kTickCount; ++tickIndex )
+                {
+                    pVfx->onTick( sw::VfxEmitterClock::kFixedStepSeconds );
+                }
+                bOk = pVfx->getSpawnedParticleCount() > 0;
+            }
+            if ( bOk )
+            {
+                scene.getObjectManager()->flushSceneTransforms();
+                bOk = renderPresentCaptureOf( device.get(), scene, ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str(), arrCapture[targetIndex],
+                                              arrLayout[targetIndex] );
+            }
+        }
+        if ( bOk == false )
+        {
+            SW_LOG_WARNING( "CPUAndGPUParticleSimulationsDrawTheSameImage: %# 에서 그리지 못했습니다.", pName );
+            continue;
+        }
+        ++comparedCount;
+        const CaptureDifference difference = compareCaptures( arrCapture[0], arrCapture[1] );
+        SW_EXPECT_TRUE_MSG( difference._notBackgroundCount > 0, ( sw::string( pName ) + ": CPU 그림이 배경뿐입니다 — 입자가 그려지지 않았다" ).c_str() );
+        SW_EXPECT_TRUE_MSG( difference._differCount * 100u <= difference._compareCount,
+                            ( sw::string( pName ) + ": CPU 와 GPU 시뮬레이션의 그림이 다르다 (" + difference.describe() + ")" ).c_str() );
+    }
+    SW_EXPECT_TRUE( variables.setValueFromString( "gv_vfxSimulation", "GPU" ) );
+    if ( comparedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could run the particle simulation comparison" );
+#endif
+}
+
+/**
  * @brief [RenderPassGPUTest] 라이트 컬링 세 방식(그리드 없음 · CPU 그리드 · GPU 그리드)이 같은 그림을 그린다 — 네 백엔드 모두
  * @details 그리드는 비용만 바꾸고 그림은 바꾸지 않는다(ClusteredLighting.md). 큐브 둘레에 점광 · 스폿 여럿을 흩어 두고 `gv_lightCulling` 0 · 1 · 2 의
  *          Present 캡처를 견준다. 클러스터 경계에서 라이트가 빠지면(범위 식이 셋 중 하나에서 갈렸다) 그 픽셀이 어두워져 다르다. GPU 생산자는 클러스터 안의
