@@ -29,7 +29,8 @@ namespace sw
      *          맞음 · 쓰러짐 동안은 가중치를 내려 온몸 클립이 보이게 합니다. 이동 방향은 히스테리시스 +
      *          최소 유지 시간(`LocomotionDirectionFilter`)으로 골라 대각선에서 상태가 오가지 않습니다.
      *          발 미끄러짐은 재생 속도 매칭으로 줄입니다. 지금 이동 클립의 발 속도(`LocomotionSpeedUtil::computeFootSpeed`, 클립마다 한 번 측정)로 실제 수평 속도를 나눠
-     *          [`_minPlayRate`, `_maxPlayRate`] 로 자른 값을 애니메이터 재생 속도로 씁니다. 범위를 넘는 몫(빠른 뒷걸음)은 보폭 워핑이 없어 남습니다.
+     *          [`_minPlayRate`, `_maxPlayRate`] 로 자른 값을 애니메이터 재생 속도로 씁니다. 범위를 넘는 몫은 같은 오브젝트의 `PoseModifierComponent` 리그
+     *          (`rigs/player_body.rig.json`)의 보폭 워핑 노드(`_strideNode`)에 `stride_scale` · 모델 공간 이동 방향으로 넣습니다. 노드가 없으면 오류입니다.
      *          왼손을 총에 붙이는 손 IK · 맞은 부위 · 래그돌은 PoseModifier · 물리 쪽이 들어오면 그 자리(무기 소켓 `MainHand.SupportHand`)를 씁니다.
      */
     REFLECT( Category = "Shooter3D", DisplayName = "Shooter Avatar", Tooltip = "Visible player body: follows the player and drives the animator from its movement and firing" )
@@ -48,8 +49,10 @@ namespace sw
         void setPlayer( GameObjectHandle player ) { _player = player; }
 
     private:
-        /** @brief 지금 상태 클립의 발 속도에 수평 이동 속도를 맞춘 재생 속도입니다. 서 있거나 공중이거나 이동 클립이 아니면 1 입니다. */
-        float32 computeLocomotionPlayRate( const SkeletalAnimatorComponent& animator, LocomotionDirection direction, float32 moveSpeed );
+        /** @brief 지금 상태 클립의 발 속도(m/s)입니다. 서 있거나 공중이거나 이동 클립이 아니면 0 입니다(재생 속도 · 보폭을 바꾸지 않는다). */
+        float32 computeLocomotionFootSpeed( const SkeletalAnimatorComponent& animator, LocomotionDirection direction );
+        /** @brief 보폭 워핑 노드에 배율과 모델 공간 이동 방향(+Z 앞, +X 오른쪽)을 넣습니다. */
+        void applyStrideWarping( float32 strideScale, const float2& localVelocity );
 
     private:
         PROPERTY( Category = "Avatar", DisplayName = "Player", Tooltip = "Object with the ShooterPlayerComponent this body follows" )
@@ -74,6 +77,8 @@ namespace sw
         float32 _maxPlayRate;
         PROPERTY( Category = "Avatar", DisplayName = "Min Locomotion Foot Speed", Tooltip = "A clip whose feet move slower than this is not a locomotion clip and keeps its play rate", Min = 0.0, Units = "m/s" )
         float32 _minLocomotionFootSpeed;
+        PROPERTY( Category = "Avatar", DisplayName = "Stride Node", Tooltip = "StrideWarping node of this body's pose modifier rig that takes the rest of the speed matching" )
+        string _strideNode;
 
         LocomotionDirectionFilter                    _locomotion;
         unordered_map<const AnimationClip*, float32> _mapClipFootSpeed; ///< 클립마다 한 번 측정한 발 속도(m/s)
@@ -83,7 +88,8 @@ namespace sw
         float32 _hitTimer;
         float32 _bodyYaw; ///< 몸이 보는 요 — 시점을 각속도 상한으로 따라간다
         uint32  _lastHitReaction;
-        uint8   _bYawReady : 1;
-        uint8   _reserved  : 7;
+        uint8   _bYawReady         : 1;
+        uint8   _bStrideErrorShown : 1; ///< 노드가 없다는 오류를 한 번만 남긴다
+        uint8   _reserved          : 6;
     };
 } // namespace sw

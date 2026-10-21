@@ -52,12 +52,6 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션 영역의 
 왜 필요한가: 원본 GLB 에 든 `knight_texture` 등을 `textures_raw/` 로 옮겨 머티리얼을 만들어야 한다. 지금 캐릭터는 씬 기본 머티리얼(흰색)로 그려진다.
 착수 조건 / 남은 것: Shooter3D 팩에는 이미 꺼낸 아틀라스(`textures_raw/kaykit_*.png`) · `materials/kaykit_*.material` 이 있다. 나머지 게임에 같은 일을 한다.
 
-### ShooterStrideWarping
-제목: Shooter3D 발 미끄러짐 연결
-옛번호: D4-6
-왜 필요한가: 앞으로 걷기 · 달리기는 재생 속도 매칭(`LocomotionSpeedUtil`, 범위 0.6 ~ 1.8)으로 맞췄고, 범위를 넘는 몫은 리그 노드 `StrideWarping`(+ `LocomotionSpeedUtil::computeStrideScale`)이 맡는다.
-남은 것: Shooter3D 연결(`knight.rig.json` 에 노드를 두고 `ShooterAvatarComponent` 가 프레임마다 `stride_scale` · 이동 방향을 `setNodeControl` 로 넣기)과 화면 확인. 뒷걸음 · 옆걸음은 [ShooterCharacterIntegration](ShooterCharacterIntegration.md).
-
 ### AnimationAdvancedFeatures
 제목: 애니메이션 고급 기능 후보
 옛번호: D4-16
