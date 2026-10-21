@@ -7,12 +7,6 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션 영역의 
 
 ## 기능
 
-### AnimationAdvancedFeatures
-제목: 애니메이션 고급 기능 후보
-옛번호: D4-16
-왜 필요한가: 전신 IK, 리타게팅 도구, 애니메이션 압축 · 샘플링 최적화. 모션 매칭은 보류라 [MotionMatching](MotionMatching.md) 에 따로 있다.
-착수 조건 / 남은 것: 합성 리그 벤치(`도구 - 합성 리그 생성기`)가 비용 곡선을 낸 뒤 병목이 확인되는 것부터 한다.
-
 ### CharacterAppearanceIntegration
 제목: 캐릭터 외형의 통합 · 쿠킹 · 장비 잇기
 옛번호: D4-8

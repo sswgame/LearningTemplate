@@ -48,11 +48,12 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [TerrainEditCost](docs/plans/TerrainEditCost.md) — 지형 LOD 교체 · 지형 쓰기 · 식생 다시 계산의 비용 (2026-10-21) | 구현중 | 2/4 | 없음 | graphics | D2-5.6, D2-5.7 |
 | - | [UserSettingsConsumers](docs/plans/UserSettingsConsumers.md) — 사용자 설정 값을 읽는 쪽 잇기 | 구현중 | 2/4 | 없음 | gameplay | D4-2 |
 | - | [WorldStreaming](docs/plans/WorldStreaming.md) — 월드 스트리밍(D1-7) — 설계와 구현 단위 | 구현중 | 5/7 | 없음 | engine | D1-7 |
+| - | [AnimationAdvancedFeatures](docs/plans/AnimationAdvancedFeatures.md) — 애니메이션 고급 기능 | 측정대기 | 0/4 | 없음 | gameplay | D4-16 |
 | - | [AudioChannelLayout](docs/plans/AudioChannelLayout.md) — 오디오 채널 레이아웃 계획 (2026-10-20) | 측정대기 | 5/5 | 없음 | audio-ai-localization | D5-1 |
 | - | [StructuralOptimization](docs/plans/StructuralOptimization.md) — 구조 최적화 측정 표 (A · B) | 측정대기 | 해당없음 | 없음 | engine | 없음 |
 | - | [MotionMatching](docs/plans/MotionMatching.md) — 모션 매칭 (보류) | 보류 | 해당없음 | 없음 | gameplay | D4-16 |
 
-후보 문서 9개 · 후보 절 123개
+후보 문서 9개 · 후보 절 122개
 <!-- status-board:end -->
 
 이 저장소에서 볼 수 있는 것은 다음과 같습니다.
