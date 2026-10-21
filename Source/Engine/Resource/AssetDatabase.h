@@ -6,6 +6,8 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/UUID/UUID.h"
 
+#include "Engine/Resource/AssetMeta.h"
+
 #include <shared_mutex>
 
 namespace sw
@@ -102,7 +104,7 @@ namespace sw
 
         /**
          * @brief `<resourceRoot>/<domain>` 아래 `.meta` 마다 `<guid> <domain/상대 경로>` 한 줄을 만듭니다(경로 순). 쿠커가 배포본에 싣습니다.
-         * @details 경로는 **`.meta` 가 놓인 자리**입니다 — Dev 의 `scanMetaFiles` · `ensureMeta` 와 같은 규칙. `.meta` 안의 `sourcePath=` 칸은
+         * @details 경로는 **`.meta` 가 놓인 자리**입니다 — Dev 의 `scanMetaFiles` · `ensureMeta` 와 같은 규칙. `.meta` 안의 `_sourcePath` 칸은
          *          사람이 읽으라고 남기고 아무도 읽지 않습니다(그 칸을 믿으면 탐색기 · git 으로 옮긴 에셋이 배포본에서만 **옛 경로**를 가리킨다). GUID 를 읽지 못한 `.meta` 는 @p outFailedCount 에 셉니다.
          */
         static string makeRegistryText( string_view resourceRoot, string_view domain, uint32& outFailedCount );
@@ -124,11 +126,11 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 4) .meta I/O
         // ------------------------------------------------------------------------------
-        /** @brief .meta 파일을 씁니다. */
+        /** @brief .meta 파일을 씁니다(`AssetMeta::toXML`). */
         [[nodiscard]] bool writeMetaFile( string_view relativePath, const UUID& guid, bool bImported ) const;
 
-        /** @brief .meta 파일을 로드합니다. */
-        [[nodiscard]] bool loadMetaFile( string_view relativePath, UUID& outGuid, bool* pOutImported = nullptr ) const;
+        /** @brief .meta 파일을 읽습니다(`AssetMeta::parseXML`). 없는 것과 깨진 것을 가릅니다 — 깨진 것은 이유를 오류로 남깁니다. */
+        AssetMetaReadResult loadMetaFile( string_view relativePath, UUID& outGuid, bool* pOutImported = nullptr ) const;
 
     private:
         mutable std::shared_mutex      _mutex;

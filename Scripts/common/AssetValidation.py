@@ -265,17 +265,18 @@ class ValidationContext:
 
 
 def readMetaFile(path: Path) -> dict[str, str]:
-    """`key=value` 줄로 된 `.meta` 를 읽습니다(# 주석 · 빈 줄은 넘깁니다)."""
-    result: dict[str, str] = {}
-    # 못 읽으면 OSError 로 멈춘다 — 빈 사전으로 돌려주면 "guid 없음" 이라는 엉뚱한 위반이 된다.
+    """`.meta`(`<AssetMeta _guid="…" _sourcePath="…" _bImported="…"/>`, 엔진 `AssetMeta`)의 칸을 앞 밑줄 없는 이름(`guid` · `sourcePath` · `bImported`)으로 돌려줍니다.
+
+    못 읽으면 OSError, `<AssetMeta>` 요소가 아니면 ValueError 로 멈춘다 — 빈 사전으로 돌려주면 "guid 없음" 이라는 엉뚱한 위반이 된다.
+    """
     text = path.read_text(encoding="utf-8", errors="replace")
-    for line in text.splitlines():
-        line = line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, value = line.split("=", 1)
-        result[key.strip()] = value.strip()
-    return result
+    try:
+        element = ElementTree.fromstring(text)
+    except ElementTree.ParseError as error:
+        raise ValueError(f"{path}: .meta is not XML ({error})") from error
+    if element.tag != "AssetMeta":
+        raise ValueError(f"{path}: .meta root is <{element.tag}>, not <AssetMeta>")
+    return {key.removeprefix("_"): value for key, value in element.attrib.items()}
 
 
 # ------------------------------------------------------------------------------

@@ -15,6 +15,7 @@
 #include "Editor/Common/Asset/VrmMaterialImporter.h"
 
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
+#include "Engine/Resource/AssetMeta.h"
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
@@ -234,7 +235,11 @@ namespace sw::editor
             // 머티리얼 캐시는 잡을 때 `.meta` 를 지어 붙인다 — 옆 폴더에 실행마다 다른 GUID 가 생기면 임포트 결과 해시가 어긋난다.
             // 그래서 임포터가 경로에서 정해지는 GUID 로 미리 쓴다(언리얼 · 유니티의 임포트 부산물도 임포터가 식별자를 정한다).
             const string resourceID = ResourcePaths::toResourceID( materialPath );
-            if ( FileUtil::writeTextFile( materialPath + path::kMetaExtension, "guid=" + makeImportedGuid( resourceID ) + "\nsourcePath=" + resourceID + "\nimported=1\n" ) == false )
+            AssetMeta    meta;
+            meta._guid       = makeImportedGuid( resourceID );
+            meta._sourcePath = resourceID;
+            meta._bImported  = true;
+            if ( FileUtil::writeTextFile( materialPath + path::kMetaExtension, meta.toXML() ) == false )
             {
                 SW_LOG_ERROR( "Failed to write %#.meta", materialPath.c_str() );
                 return false;

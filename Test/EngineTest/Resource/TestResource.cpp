@@ -13,6 +13,7 @@
 #include "Engine/Resource/AssetDatabase.h"
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/Resource/AssetManager.h"
+#include "Engine/Resource/AssetMeta.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Resource/Cook/CookStore.h"
 #include "Engine/Resource/Image/DDSLoader.h"
@@ -689,7 +690,10 @@ SW_TEST_CASE( ResourceTest, DeletingAnAssetKeepsItsMetaUntilTheAssetIsGone )
     const sw::string assetPath = sw::FileUtil::joinPath( dir, "crate.png" );
     const sw::string metaPath  = assetPath + ".meta";
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( assetPath, "png" ) );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( metaPath, "guid=0b7c2a9e-4f1d-4c3a-9e8b-1d2c3b4a5f61\n" ) );
+    sw::AssetMeta deleteMeta;
+    deleteMeta._guid       = "0b7c2a9e-4f1d-4c3a-9e8b-1d2c3b4a5f61";
+    deleteMeta._sourcePath = "crate.png";
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( metaPath, deleteMeta.toXML() ) );
     {
         // 지울 수 없게 만든다 — Windows 는 열어 둔 파일(공유 삭제 없이)을, POSIX 는 쓰기 권한이 없는 폴더의 항목을 지우지 못한다.
 #if defined( SW_PLATFORM_WINDOWS )
@@ -854,12 +858,21 @@ SW_TEST_CASE( ResourceTest, ShippedAssetRegistryNamesTheAssetWhereItsMetaLives )
     // 프리팹을 하위 폴더로 옮긴다 — .meta 는 따라오지만 안의 sourcePath 는 옛 경로 그대로다.
     const sw::string movedMeta = sw::FileUtil::joinPath( root, "game/demo/prefabs/moved/Crate.prefab.xml.meta" );
     sw::FileUtil::ensureParentDirectoryExists( movedMeta );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( movedMeta, sw::string( "guid=" ) + moved.toString() + "\nsourcePath=game/demo/prefabs/crate.prefab.xml\n" ) );
+    sw::AssetMeta movedMetaData;
+    movedMetaData._guid       = sw::string( moved.toString().c_str() );
+    movedMetaData._sourcePath = "game/demo/prefabs/crate.prefab.xml";
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( movedMeta, movedMetaData.toXML() ) );
     const sw::string engineMeta = sw::FileUtil::joinPath( root, "engine/materials/default.material.meta" );
     sw::FileUtil::ensureParentDirectoryExists( engineMeta );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( engineMeta, sw::string( "guid=" ) + stayed.toString() + "\n" ) );
+    sw::AssetMeta engineMetaData;
+    engineMetaData._guid       = sw::string( stayed.toString().c_str() );
+    engineMetaData._sourcePath = "engine/materials/default.material";
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( engineMeta, engineMetaData.toXML() ) );
     const sw::string brokenMeta = sw::FileUtil::joinPath( root, "engine/materials/broken.material.meta" );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( brokenMeta, "guid=not-a-guid\n" ) );
+    sw::AssetMeta    brokenMetaData;
+    brokenMetaData._guid       = "not-a-guid";
+    brokenMetaData._sourcePath = "engine/materials/broken.material";
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( brokenMeta, brokenMetaData.toXML() ) );
 
     uint32 failedCount = 0;
     {
@@ -948,18 +961,11 @@ SW_TEST_CASE( ResourceTest, AssetDatabaseKnowsAssetsBeforeTheyAreLoaded )
     if ( metaAbs.empty() )
         return;
 
-    sw::string metaText;
+    sw::string    metaText;
+    sw::AssetMeta meta;
     SW_EXPECT_TRUE( sw::FileUtil::readTextFile( metaAbs, metaText ) );
-    const size_t keyPos = metaText.find( "guid=" );
-    SW_EXPECT_TRUE( keyPos != sw::string::npos );
-    size_t lineEnd = metaText.find( '\n', keyPos );
-    if ( lineEnd == sw::string::npos )
-        lineEnd = metaText.size();
-    sw::string expected = metaText.substr( keyPos + 5, lineEnd - keyPos - 5 );
-    while ( expected.empty() == false && ( expected.back() == '\r' || expected.back() == ' ' ) )
-    {
-        expected.pop_back();
-    }
+    SW_EXPECT_TRUE( meta.parseXML( metaText, metaAbs.c_str() ) );
+    const sw::string expected = meta._guid;
 
     sw::UUID   guid{};
     const bool bFound = sw::engine::getSubsystem<sw::AssetManager>().getAssetDatabase().tryGetGuid( pAsset, guid );

@@ -157,7 +157,10 @@ SW_TEST_CASE( CookJobTest, RegistryCookFollowsTheMetaListing )
     const auto       writeMeta = []( const sw::string& path )
     {
         SW_EXPECT_TRUE( sw::FileUtil::ensureParentDirectoryExists( path ) );
-        TestCookJobInternal::writeText( path, sw::string( "guid=" ) + sw::UUID::generate().toString() + "\n" );
+        sw::AssetMeta meta;
+        meta._guid       = sw::string( sw::UUID::generate().toString().c_str() );
+        meta._sourcePath = path;
+        TestCookJobInternal::writeText( path, meta.toXML() );
     };
     writeMeta( sw::FileUtil::joinPath( root, "engine/materials/a.material.meta" ) );
     writeMeta( sw::FileUtil::joinPath( root, "game/demo/prefabs/b.prefab.xml.meta" ) );
