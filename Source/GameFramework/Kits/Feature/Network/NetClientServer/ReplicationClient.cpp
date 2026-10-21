@@ -8,6 +8,7 @@
 #include "Core/Network/Message/NetSendBudget.h"
 #include "Core/Network/Replication/InterpolationBuffer.h"
 
+#include "GameFramework/Base/Actor/Control/Intent/ControlIntent.h"
 #include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
 
 namespace sw
@@ -201,5 +202,18 @@ namespace sw
         (void)_inputWindow.write( writer, budget ); // 실은 수는 쓰지 않는다. 못 실은 입력은 다음 메시지가 싣는다
         (void)_pHost->sendMessage( 0, NetChannelType::Unreliable, writer.getBytes() );
         return true;
+    }
+
+    bool ReplicationClient::sendIntent( uint32 tick, const ControlIntent& intent )
+    {
+        BitWriter intentWriter;
+        if ( intent.write( intentWriter ) == false )
+        {
+            SW_LOG_ERROR( "ReplicationClient: control intent for tick %# could not be written - not sent", tick );
+            return false;
+        }
+        const uint8*        pBytes = intentWriter.getBytes().data();
+        const vector<uint8> listInput( pBytes, pBytes + intentWriter.getByteCount() );
+        return sendInput( tick, listInput );
     }
 } // namespace sw

@@ -443,9 +443,13 @@ namespace sw
         // 결정: 움직이는 바닥의 속도는 호출하는 쪽이 아니라 여기서 더한다(3D 와 같다). 직전 스텝에 디딘 바디(`_groundBody`)의 발 밑 점 속도(선속도 + 회전)다.
         // 바디가 사라졌으면(`findBody` 가 null) 실을 것이 없다.
         float2            carriedVelocity{};
-        const BodyRecord* pGround = findBody( state._groundBody );
+        float32           groundYawRate = 0.0f;
+        const BodyRecord* pGround       = findBody( state._groundBody );
         if ( pGround != nullptr )
+        {
             carriedVelocity = Box2DUtil::toEngine( b2Body_GetWorldPointVelocity( pGround->_bodyID, Box2DUtil::toBox2D( start ) ) );
+            groundYawRate   = b2Body_GetAngularVelocity( pGround->_bodyID );
+        }
         if ( deltaTime > 0.0f )
         {
             // Box2D 무버는 겹친 면을 모아(`b2World_CollideMover`) 그 면들을 지키는 이동을 풀고(`b2SolvePlanes`), 그만큼 쓸어(`b2World_CastMover`) 옮긴다.
@@ -482,8 +486,10 @@ namespace sw
                 break;
             }
         }
-        state._position = position;
-        state._velocity = deltaTime > 0.0f ? ( position - start ) * ( 1.0f / deltaTime ) - carriedVelocity : float2{};
+        state._position        = position;
+        state._velocity        = deltaTime > 0.0f ? ( position - start ) * ( 1.0f / deltaTime ) - carriedVelocity : float2{};
+        state._carriedVelocity = deltaTime > 0.0f ? carriedVelocity : float2{};
+        state._groundYawRate   = groundYawRate;
         return state;
     }
 

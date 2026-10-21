@@ -56,6 +56,8 @@ namespace sw
         const ResolvedAppearance&      getResolved() const { return _resolved; }
         const CharacterAppearanceSpec& getSpec() const { return _spec; }
         uint32                         getResolveCount() const { return _resolveCount; }
+        /** @brief `initialize` 로 받은 외형 데이터입니다. 아직 받지 않았으면 nullptr 입니다. */
+        const AppearanceDatabase* getDatabase() const { return _pDatabase; }
 
     private:
         void collectDetachEvents( const ResolvedAppearance& previous, const ResolvedAppearance& current );

@@ -484,18 +484,19 @@ namespace sw
             }
         }
 
+        // 걸린 동안의 태그 조건을 지금 못 맞추면 멈춘 채로 건다 — 태그가 생기면 `refreshOngoingTagRequirements` 가 붙인다.
+        pNewEffect->_bInhibited = _ownedTagCounts.hasAllMatchingTags( def._ongoingRequiredTags ) ? SW_FALSE : SW_TRUE;
+
         ActiveGameplayEffect* pActiveEffect = pNewEffect.get();
         _listActiveEffect.push_back( std::move( pNewEffect ) );
 
-        _ownedTagCounts.updateCounts( pActiveEffect->_grantedTags, 1 );
-        for ( const EvaluatedModifier& modifier : pActiveEffect->_listEvaluatedModifier )
-        {
-            recomputeAttribute( modifier._attribute );
-        }
+        if ( pActiveEffect->_bInhibited == SW_FALSE )
+            engageActiveEffect( *pActiveEffect );
         dispatchCues( pActiveEffect->_spec, GameplayCuePhase::Added, 1.0f );
         _effectAppliedMulticast.broadcast( *pActiveEffect );
 
-        const bool bExecuteNow = def.isPeriodic() && def._bExecutePeriodicOnApplication == SW_TRUE && pActiveEffect->_bPendingRemove == SW_FALSE;
+        const bool bExecuteNow = def.isPeriodic() && def._bExecutePeriodicOnApplication == SW_TRUE && pActiveEffect->_bPendingRemove == SW_FALSE &&
+                                 pActiveEffect->_bInhibited == SW_FALSE;
         if ( bExecuteNow )
             executeSpec( pActiveEffect->_spec, pActiveEffect->_stackCount );
         return pActiveEffect->_handle;
@@ -508,13 +509,40 @@ namespace sw
         activeEffect._bPendingRemove = SW_TRUE;
         _bHasPendingRemoval          = SW_TRUE;
 
-        _ownedTagCounts.updateCounts( activeEffect._grantedTags, -1 );
+        // 멈춘 이펙트는 이미 뗐다.
+        if ( activeEffect._bInhibited == SW_FALSE )
+            disengageActiveEffect( activeEffect );
+        dispatchCues( activeEffect._spec, GameplayCuePhase::Removed, 0.0f );
+        _effectRemovedMulticast.broadcast( activeEffect );
+    }
+
+    void AbilitySystemComponent::engageActiveEffect( ActiveGameplayEffect& activeEffect )
+    {
+        _ownedTagCounts.updateCounts( activeEffect._grantedTags, 1 );
+        for ( const hashed_string& abilityID : activeEffect._spec._pDef->_listGrantedAbility )
+        {
+            const AbilitySpecHandle handle = giveAbilityByID( abilityID, activeEffect._spec._level );
+            if ( handle.isValid() )
+                activeEffect._listGrantedAbilityHandle.push_back( handle );
+        }
         for ( const EvaluatedModifier& modifier : activeEffect._listEvaluatedModifier )
         {
             recomputeAttribute( modifier._attribute );
         }
-        dispatchCues( activeEffect._spec, GameplayCuePhase::Removed, 0.0f );
-        _effectRemovedMulticast.broadcast( activeEffect );
+    }
+
+    void AbilitySystemComponent::disengageActiveEffect( ActiveGameplayEffect& activeEffect )
+    {
+        _ownedTagCounts.updateCounts( activeEffect._grantedTags, -1 );
+        for ( const AbilitySpecHandle& handle : activeEffect._listGrantedAbilityHandle )
+        {
+            (void)clearAbility( handle ); // 게임이 먼저 거뒀으면 없다 — 거둔 것이 뜻이다
+        }
+        activeEffect._listGrantedAbilityHandle.clear();
+        for ( const EvaluatedModifier& modifier : activeEffect._listEvaluatedModifier )
+        {
+            recomputeAttribute( modifier._attribute );
+        }
     }
 
     ActiveGameplayEffect* AbilitySystemComponent::findActiveEffectMutable( ActiveEffectHandle handle )
@@ -570,7 +598,9 @@ namespace sw
                     if ( pActiveEffect->_periodTimer <= AbilitySystemComponentEffectInternal::kTimeEpsilon )
                     {
                         pActiveEffect->_periodTimer += def._period;
-                        executeSpec( pActiveEffect->_spec, pActiveEffect->_stackCount );
+                        // 멈춘 이펙트는 주기를 세되 실행하지 않는다(언리얼 Inhibition 과 같다).
+                        if ( pActiveEffect->_bInhibited == SW_FALSE )
+                            executeSpec( pActiveEffect->_spec, pActiveEffect->_stackCount );
                     }
                 }
                 if ( bTimed && pActiveEffect->_bPendingRemove == SW_FALSE )

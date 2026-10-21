@@ -359,6 +359,25 @@ namespace sw
         AbilityCatalogInternal::readTagChildren( node, "BlockedTag", outDef._applicationBlockedTags );
         AbilityCatalogInternal::readTagChildren( node, "RemoveEffectsWithTag", outDef._removeEffectsWithTags );
         AbilityCatalogInternal::readTagChildren( node, "Cue", outDef._cueTags );
+        AbilityCatalogInternal::readTagChildren( node, "OngoingRequiredTag", outDef._ongoingRequiredTags );
+        for ( XMLNode grantNode = node.findChild( "GrantAbility" ); grantNode; grantNode = grantNode.findNextSibling( "GrantAbility" ) )
+        {
+            const hashed_string abilityID = GameDataXML::readName( grantNode, "id" );
+            if ( abilityID.empty() )
+            {
+                SW_LOG_ERROR( "%#: effect '%#' has a <GrantAbility> without an id - skipped", sourceName, pID );
+                return false;
+            }
+            outDef._listGrantedAbility.push_back( abilityID );
+        }
+        // 즉시 이펙트는 걸려 있지 않으므로 줄 동안이 없다 — 적은 것을 조용히 버리지 않고 오류로 둔다.
+        const bool bInstantWithLasting = outDef._durationPolicy == EffectDurationPolicy::Instant &&
+                                         ( outDef._listGrantedAbility.empty() == false || outDef._ongoingRequiredTags.getTagCount() > 0 );
+        if ( bInstantWithLasting )
+        {
+            SW_LOG_ERROR( "%#: effect '%#' is Instant but has <GrantAbility> or <OngoingRequiredTag> - skipped", sourceName, pID );
+            return false;
+        }
         return true;
     }
 
@@ -393,6 +412,7 @@ namespace sw
         AbilityCatalogInternal::readTagChildren( node, "RequiredTag", config._activationRequiredTags );
         AbilityCatalogInternal::readTagChildren( node, "BlockedTag", config._activationBlockedTags );
         AbilityCatalogInternal::readTagChildren( node, "TriggerTag", config._triggerEventTags );
+        AbilityCatalogInternal::readTagChildren( node, "OwnedTagTrigger", config._ownedTagTriggerTags );
 
         for ( XMLNode paramNode = node.findChild( "Param" ); paramNode; paramNode = paramNode.findNextSibling( "Param" ) )
         {

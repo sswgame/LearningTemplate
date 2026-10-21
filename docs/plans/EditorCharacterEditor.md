@@ -2,7 +2,7 @@
 
 > 상태: 구현대기 · 선행: EditorMultiWorld · 영역: gameplay · 옛번호: D4-8 · 진행: 0/6
 
-캐릭터 외형 편집 창의 설계 근거입니다(외형 통합 쪽은 [게임플레이 후보](Candidates-gameplay.md) 의 `CharacterAppearanceIntegration`). 다른 PC 에서 병합할 때 판단 기준으로 씁니다. 코드는 아직 바꾸지 않았습니다.
+캐릭터 외형 편집 창의 설계 근거입니다(외형 통합 쪽은 [CharacterAppearanceIntegration](CharacterAppearanceIntegration.md)). 다른 PC 에서 병합할 때 판단 기준으로 씁니다. 코드는 아직 바꾸지 않았습니다.
 파일 · 함수 이름은 2026-10-14 `wt/editor` 기준으로 읽은 것입니다.
 
 ## 1. 선행 조건

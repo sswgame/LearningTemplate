@@ -211,7 +211,8 @@ namespace sw
         AbilitySystemComponentAttributeInternal::Aggregation aggregation;
         for ( const unique_ptr<ActiveGameplayEffect>& pActiveEffect : _listActiveEffect )
         {
-            if ( pActiveEffect->_bPendingRemove == SW_TRUE )
+            const bool bContributes = pActiveEffect->_bPendingRemove == SW_FALSE && pActiveEffect->_bInhibited == SW_FALSE;
+            if ( bContributes == false )
                 continue;
             const float32 stackScale = static_cast<float32>( pActiveEffect->_stackCount );
             for ( const EvaluatedModifier& modifier : pActiveEffect->_listEvaluatedModifier )

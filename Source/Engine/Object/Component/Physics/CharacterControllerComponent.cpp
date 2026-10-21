@@ -35,6 +35,7 @@ namespace sw
         , _writtenRotation{}
         , _verticalSpeed{ 0.0f }
         , _pendingJumpSpeed{ 0.0f }
+        , _pendingGroundYaw{ 0.0f }
         , _bHasWritten{ false }
     {
     }
@@ -183,6 +184,8 @@ namespace sw
 
         _previousPosition = _state._position;
         _state            = pScene->moveCharacter( _character, float3{ moveVelocity._x, _verticalSpeed, moveVelocity._z }, fixedDeltaTime );
+        // 결정: 바닥이 돌면 위치만이 아니라 방향(yaw)도 같이 돈다 — 이번 스텝에 바닥이 돈 각을 모아 두고 트랜스폼을 쓸 때 얹는다.
+        _pendingGroundYaw += _state._groundYawRate * fixedDeltaTime;
         // 천장에 막혔으면 오르던 속도가 줄었다 — 실제로 난 수직 속도를 잇는다. 디디면 수직 속도는 0 이다.
         if ( _state._bGrounded && _verticalSpeed <= 0.0f )
         {
@@ -191,6 +194,16 @@ namespace sw
         }
         else if ( _verticalSpeed > 0.0f && _state._velocity._y < _verticalSpeed )
             _verticalSpeed = _state._velocity._y;
+        // 결정: 바닥을 떠나는 스텝(점프 · 걸어 내려섬)에 바닥이 실어 나르던 속도를 관성으로 잇는다 — 수평은 `_airVelocity` 로, 오르는 바닥이면 수직 속도에도.
+        // 바닥 속도는 딛고 있는 스텝에만 얹히므로(`moveCharacter`), 이을 곳은 떠나는 순간을 아는 여기뿐이다. 위의 천장 판정 뒤에 둔다
+        // (`_velocity` 는 바닥 몫을 뺀 값이라 앞에 두면 더한 수직 속도를 도로 깎는다).
+        const bool bLeftGround = _state._bGrounded == false && _state._carriedVelocity.getLengthSquared() > 0.0f;
+        if ( bLeftGround )
+        {
+            _airVelocity += float3{ _state._carriedVelocity._x, 0.0f, _state._carriedVelocity._z };
+            if ( _state._carriedVelocity._y > 0.0f )
+                _verticalSpeed += _state._carriedVelocity._y;
+        }
     }
 
     void CharacterControllerComponent::endPhysicsFrame( ScenePhysics& physics, float32 alpha )
@@ -203,6 +216,11 @@ namespace sw
         quaternion   rotation{};
         float3       scale{};
         PhysicsComponentUtil::readWorldPose( *this, current, rotation, scale );
+        if ( _pendingGroundYaw != 0.0f )
+        {
+            rotation          = quaternion::concatenate( rotation, quaternion::makeFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, _pendingGroundYaw ) ).normalize();
+            _pendingGroundYaw = 0.0f;
+        }
         PhysicsComponentUtil::writeWorldPose( *this, position, rotation, _writtenPosition, _writtenRotation );
         _bHasWritten = true;
     }

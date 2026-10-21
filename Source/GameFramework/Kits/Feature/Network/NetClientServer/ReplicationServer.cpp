@@ -6,6 +6,7 @@
 #include "Core/Network/Connection/NetHost.h"
 #include "Core/Network/Message/NetSendBudget.h"
 
+#include "GameFramework/Base/Actor/Control/Intent/ControlIntent.h"
 #include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
 
 namespace sw
@@ -297,6 +298,26 @@ namespace sw
         if ( client._bHasInput == SW_FALSE )
             return false;
         outInputBuffer = client._lastInput;
+        return true;
+    }
+
+    bool ReplicationServer::popIntent( int32 connectionID, uint32 tick, ControlIntent& outIntent, bool& outbExact )
+    {
+        vector<uint8> listInput;
+        if ( popInput( connectionID, tick, listInput, outbExact ) == false )
+            return false;
+        BitReader     reader( listInput.data(), static_cast<int32>( listInput.size() ) );
+        ControlIntent received;
+        if ( received.read( reader ) == false )
+        {
+            SW_LOG_WARNING( "ReplicationServer: connection %# sent a malformed control intent for tick %# (%# byte(s))", connectionID, tick,
+                            static_cast<int32>( listInput.size() ) );
+            return false;
+        }
+        // 되풀이한 입력이면 한 번 누름이 두 번 되지 않게 발동 비트를 지운다(`RemoteControllerComponent` 와 같다).
+        if ( outbExact == false )
+            received._buttonTriggered = 0;
+        outIntent = received;
         return true;
     }
 

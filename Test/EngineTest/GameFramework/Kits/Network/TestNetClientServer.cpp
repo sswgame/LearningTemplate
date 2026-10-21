@@ -11,6 +11,7 @@
 
 #include "Engine/Common/EngineServices.h"
 
+#include "GameFramework/Base/Actor/Control/Intent/ControlIntent.h"
 #include "GameFramework/Kits/Feature/Network/NetClientServer/ClientPrediction.h"
 #include "GameFramework/Kits/Feature/Network/NetClientServer/LagCompensation.h"
 #include "GameFramework/Kits/Feature/Network/NetClientServer/NetSnapshot.h"
@@ -997,4 +998,41 @@ SW_TEST_CASE( NetClientServerTest, ClientRefusesOutOfRangeSettings )
     ReplicationClientConfig atLimit;
     atLimit._historySize = 4;
     SW_EXPECT_TRUE( client.initialize( nullptr, atLimit ) );
+}
+
+/**
+ * @brief [NetClientServerTest] 의도 입력은 한 형식(`ControlIntent::write`)으로 오가고, 서버가 못 받은 틱을 되풀이할 때는 발동 비트를 지운다
+ */
+SW_TEST_CASE( NetClientServerTest, ControlIntentRoundTripsAsInput )
+{
+    ControlIntent intent;
+    intent._move       = float2{ 0.5f, -1.0f };
+    intent._controlYaw = 1.25f;
+    intent.setButton( 3, true, true );
+    ReplicationClient offline;
+    SW_EXPECT_TRUE( offline.initialize( nullptr, ReplicationClientConfig{} ) );
+    SW_EXPECT_TRUE( offline.sendIntent( 7, intent ) );
+
+    BitWriter writer;
+    SW_ASSERT_TRUE( intent.write( writer ) );
+    const vector<uint8> bytes( writer.getBytes().data(), writer.getBytes().data() + writer.getByteCount() );
+    ReplicationServer   server;
+    SW_ASSERT_TRUE( server.initialize( nullptr, ReplicationServerConfig{}, nullptr ) );
+    SW_EXPECT_TRUE( NetHandleResult::Handled == server.handleMessage( 0, makeInputMessage( 7, { bytes } ) ) );
+
+    ControlIntent expected = intent;
+    expected.quantize();
+    ControlIntent received;
+    bool          bExact = false;
+    SW_ASSERT_TRUE( server.popIntent( 0, 7, received, bExact ) );
+    SW_EXPECT_TRUE( bExact );
+    SW_EXPECT_NEAR_EQUAL( expected._move._x, received._move._x, 0.0001f );
+    SW_EXPECT_NEAR_EQUAL( expected._controlYaw, received._controlYaw, 0.0001f );
+    SW_EXPECT_TRUE( received.isDown( 3 ) && received.wasTriggered( 3 ) );
+
+    // 틱 8 은 오지 않았다 — 마지막 의도를 되풀이하되 한 번 누름이 두 번 되지 않는다.
+    SW_ASSERT_TRUE( server.popIntent( 0, 8, received, bExact ) );
+    SW_EXPECT_FALSE( bExact );
+    SW_EXPECT_TRUE( received.isDown( 3 ) );
+    SW_EXPECT_FALSE( received.wasTriggered( 3 ) );
 }

@@ -91,6 +91,7 @@ namespace sw
         quaternion              _writtenRotation;
         float32                 _verticalSpeed;
         float32                 _pendingJumpSpeed; ///< 0 이 아니면 다음 스텝에 준다(`_commandLock`)
+        float32                 _airVelocity;      ///< 떠난 바닥이 실어 나르던 수평 속도 — 땅에 다시 닿으면 0
         bool                    _bHasWritten;
     };
 } // namespace sw
