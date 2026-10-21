@@ -667,6 +667,12 @@ namespace sw
             Scene* pTickScene = ( _pSceneManager != nullptr ) ? _pSceneManager->getActiveScene() : nullptr;
             if ( pTickScene != nullptr && pTickScene->getObjectManager() != nullptr )
                 pTickScene->getObjectManager()->getCameraRegistry().setViewportSize( vpWidth, vpHeight );
+            // 입력의 게임 화면도 같은 값이다(포인터 비율 · 가상 커서 영역). 창 안 자리는 주 출력이 그 값을 들 때(HostViewTarget 의 창 안 자리) 여기에 넣는다 — 지금은 0 이다.
+            if ( _pInputManager != nullptr )
+                _pInputManager->setGameViewRect( InputViewRect{
+                    int2{                            0,                              0},
+                    int2{static_cast<int32>( vpWidth ), static_cast<int32>( vpHeight )}
+                } );
             if ( _pSceneManager != nullptr && bTickScene )
                 _pSceneManager->update( deltaTime );
             // 미리보기 씬은 활성 씬의 정지 · 재생과 무관하게 자기 정책으로 돈다(에디터가 멈춘 중에도 애니메이션 창은 돈다).

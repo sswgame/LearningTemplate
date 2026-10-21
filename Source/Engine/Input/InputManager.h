@@ -17,6 +17,7 @@
 #include "Engine/Input/Devices/MouseDevice.h"
 #include "Engine/Input/GamepadButtonUtil.h"
 #include "Engine/Input/IInputDevice.h"
+#include "Engine/Input/InputViewRect.h"
 #include "Engine/Input/KeyCodeUtil.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Input/Virtual/IVirtualInputSource.h"
@@ -191,10 +192,15 @@ namespace sw
         bool wasMouseButtonPressed( MouseButton button ) const { return _pMouse != nullptr ? _pMouse->wasButtonPressed( button ) : false; }
         bool wasMouseButtonReleased( MouseButton button ) const { return _pMouse != nullptr ? _pMouse->wasButtonReleased( button ) : false; }
 
-        int2    getMousePosition() const { return _pMouse != nullptr ? _pMouse->getPosition() : int2{}; }
-        float2  getMousePositionNormalized() const;
-        int2    getMouseDelta() const;
-        float32 getMouseWheel() const { return _pMouse != nullptr ? _pMouse->getMouseWheel() : 0.0f; }
+        int2 getMousePosition() const { return _pMouse != nullptr ? _pMouse->getPosition() : int2{}; }
+        /** @brief 포인터의 게임 화면 안 비율(0 ~ 1, 왼쪽 위 원점)입니다. 게임 화면은 `getGameViewRect` 이고 창 전체가 아니다. 게임 화면이 없으면 0 입니다. */
+        float2 getMousePositionNormalized() const;
+        /** @brief 게임 화면의 창 안 사각형을 정합니다(엔진이 프레임마다 — `InputViewRect`). */
+        void setGameViewRect( const InputViewRect& view ) { _gameView = view; }
+        /** @brief 게임 화면의 창 안 사각형입니다. */
+        const InputViewRect& getGameViewRect() const { return _gameView; }
+        int2                 getMouseDelta() const;
+        float32              getMouseWheel() const { return _pMouse != nullptr ? _pMouse->getMouseWheel() : 0.0f; }
 
         /**
          * @brief 포인터가 창 안에 있고 주어진 사각형(픽셀) 위에 있으면 true 입니다.
@@ -360,6 +366,7 @@ namespace sw
         vector<RawInputEvent>                _listDrainedEvent;     /**< beginFrame() 에서 큐를 비워 담아 두는 임시 버퍼입니다(매 프레임 재사용). */
         IVirtualInputSource*                 _pVirtualInput;        /**< 붙인 가상 입력 원천입니다(빌림). nullptr 이면 OS 입력만 받습니다. */
         VirtualCursor                        _virtualCursor;        /**< 패드 스틱으로 마우스 커서를 움직이는 가상 커서입니다. */
+        InputViewRect                        _gameView;             ///< 게임 화면의 창 안 사각형(`setGameViewRect`)
         uint32                               _virtualFrameIndex;    /**< 붙인 뒤 `beginFrame` 횟수이며, 원천에 넘기는 프레임 번호입니다. */
         uint32                               _beginFrameCount;      /**< `beginFrame` 을 부른 횟수입니다. */
         InputGlyphStyle                      _activeGlyphStyle;     /**< 마지막으로 조작이 감지된 장치 종류입니다(UI 글리프 자동 전환용). */

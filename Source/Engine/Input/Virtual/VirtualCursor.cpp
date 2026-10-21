@@ -32,10 +32,10 @@ namespace sw
         return float2{ ( stick._x / magnitude ) * pixelsPerSecond, -( stick._y / magnitude ) * pixelsPerSecond };
     }
 
-    void VirtualCursor::emitFrame( const GamepadDevice* pPad, int2 mousePosition, int2 clientSize, float32 deltaSeconds, vector<RawInputEvent>& outListEvent )
+    void VirtualCursor::emitFrame( const GamepadDevice* pPad, int2 mousePosition, const InputViewRect& view, float32 deltaSeconds, vector<RawInputEvent>& outListEvent )
     {
         _bEmittedLastFrame         = false;
-        const bool bCursorInactive = _bEnabled == false || pPad == nullptr || pPad->isConnected() == false || clientSize._x <= 0 || clientSize._y <= 0;
+        const bool bCursorInactive = _bEnabled == false || pPad == nullptr || pPad->isConnected() == false || view.isEmpty();
         if ( bCursorInactive )
             return;
 
@@ -49,9 +49,10 @@ namespace sw
         int2         target   = mousePosition;
         if ( velocity._x != 0.0f || velocity._y != 0.0f )
         {
-            _position._x = MathUtil::clamp( _position._x + velocity._x * deltaSeconds, 0.0f, static_cast<float32>( clientSize._x - 1 ) );
-            _position._y = MathUtil::clamp( _position._y + velocity._y * deltaSeconds, 0.0f, static_cast<float32>( clientSize._y - 1 ) );
-            target       = int2{ static_cast<int32>( MathUtil::round( _position._x ) ), static_cast<int32>( MathUtil::round( _position._y ) ) };
+            const float2 minCorner = view._origin.toFloat2();
+            _position._x           = MathUtil::clamp( _position._x + velocity._x * deltaSeconds, minCorner._x, minCorner._x + static_cast<float32>( view._size._x - 1 ) );
+            _position._y           = MathUtil::clamp( _position._y + velocity._y * deltaSeconds, minCorner._y, minCorner._y + static_cast<float32>( view._size._y - 1 ) );
+            target                 = int2{ static_cast<int32>( MathUtil::round( _position._x ) ), static_cast<int32>( MathUtil::round( _position._y ) ) };
             if ( target != mousePosition )
                 outListEvent.push_back( RawInputEvent::makeMouseMove( target._x, target._y ) );
         }
