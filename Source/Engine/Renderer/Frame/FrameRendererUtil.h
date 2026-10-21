@@ -412,22 +412,7 @@ namespace sw
         {
             return getRenderPassTypeInfo( passType )._colorTargetCount > 0;
         }
-
-        /**
-         * @brief 이름 목록에서 맵에 실제로 있는 첫 이름을 반환합니다(없으면 nullptr).
-         * @details 키 존재만 보고 값은 건드리지 않으므로 어떤 어태치먼트 맵이든 받는다.
-         */
-        template <typename TAttachmentMap>
-        static const utf8* pickFirstExisting( const TAttachmentMap&              mapAttachment,
-                                              std::initializer_list<const utf8*> listName )
-        {
-            for ( const utf8* pName : listName )
-            {
-                if ( mapAttachment.find( pName ) != mapAttachment.end() )
-                    return pName;
-            }
-            return nullptr;
-        }
+        // 이름 목록에서 있는 첫 첨부를 고르던 도우미(`pickFirstExisting`)는 지웠다 — 선언 대신 이름으로 짐작하는 모양이라 다시 쓰지 못하게 했다.
     };
 } // namespace sw
 

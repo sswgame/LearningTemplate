@@ -1,6 +1,6 @@
 # 데이터 주도 구조 정리 계획 (2026-10-16)
 
-> 상태: 구현중 · 선행: 없음 · 영역: engine · 옛번호: C-30, C-36 · 진행: 12/14
+> 상태: 구현중 · 선행: 없음 · 영역: engine · 옛번호: C-30, C-36 · 진행: 13/14
 
 값의 정본은 데이터 파일이고 코드 · 헤더는 형식만 가진다. 필수 값이 없으면 조용히 기본값 · 대체로 가지 않고 오류로 멈춘다. 결정은 [결정 기록](../09_Decisions.md) 5-4 "유지보수성을 위한 데이터화"이고, 이 문서는 6 영역 조사(2026-10-16)가 드러낸 위반을 근본 원인부터 없애는 순서다. 진행 표는 린트 게이트 `CheckDataDrivenStructure`의 `--summary` 가 정본이다(기준선이 줄면 진척).
 
@@ -144,11 +144,13 @@ D6 의 데이터 다시 쓰기는 키트가 읽는 데이터 파일만 건드립
 - P2(일부): 파이프라인 검증 문제를 로드 실패로 바꾸고 `ensureNamed` · `attachmentFormatOrDefault` 를 지웠다(풀이 선언의 포맷 · 클리어 색을 든다).
   2026-10-22(`wt/planleftA`, 빌드 미확인): `getAttachmentClearColorOrDefault` 를 지우고 `getTargetClearColor( name )` 하나로 바꿨다 — 값은 풀이 든 선언이고, 풀에 없는 이름(백버퍼)은 렌더러 클리어 색(SceneColor 선언)이다. 호출부가 기본값을 넘기지 않으므로 패스마다 적던 값(뎁스 1, 노멀 `kNormalClear`, SSAO 의 테이블 `_pDefaultClear`)이 함께 지워졌다.
   엔진 파이프라인 XML 6 개는 모든 첨부에 `_clearColor` 와 `_bClear="true"` 를 적으므로 그림은 같아야 한다(바뀔 수 있는 곳은 `_bClear="false"` 첨부 — 데이터에 없다). 네 백엔드 골든 확인이 남았다.
-  남은 것: "선언이 없을 때만 원본 이름" 단계(`pDeclaredColor == nullptr` · 패스 서술 없는 실행의 이름 후보). 검증이 지오메트리 패스의 컬러 출력 선언을 아직 요구하지 않으므로, 검증에 그 조건을 더하고 이름 후보를 지우는 일을 골든 확인과 함께 한다.
+  같은 날 "선언이 없을 때만 원본 이름" 단계도 지웠다. `executePass` 가 패스 서술을 참조(`const RenderGraphPassDesc&`)로 받아 서술 없는 실행이 형식으로 막혔고, 컬러를 그리는 패스는 표의 `kDrawsDeclaredColor`(지오메트리 · 하늘 · 외곽선 껍질 · TAA · 일반 풀스크린)로 로드가 컬러 출력 선언을 요구한다(검증 3-1).
+  이름 후보(SceneColor · GBufferAlbedo/Normal · TransparentColor/LitColor · TaaColor · 그림자 맵 이름)와 Present 원본의 "가장 나중 컬러" 후보(`pickFirstExisting` — 도우미째 지움)도 없앴다. Present 는 SourceColor 를 필수 입력으로 받는다(계약). 엔진 파이프라인 6 개는 모두 선언을 갖추고 있다. 네 백엔드 골든 확인이 남았다.
 - P4: 엔진 기본 에셋 경로를 리터럴로 적던 테스트 약 130 곳이 `test::getEngineDefaultAssets()` 를 거친다. 실린 파일을 늘어놓은 목록 · 테스트 데이터 글 안의 경로는 그대로다.
 - G1: NileCity 계획표는 `data/autoplan.xml`, HarvestValley 작물 모델 표 · 해 곡선과 StarSkirmish 성향은 디렉터 PROPERTY(씬 데이터)다. 값은 옛 코드 그대로다.
-- G2(남음): 배포본 그림 비교는 구운 팩 시나리오의 `Screenshot` · `ExpectImage` 기준값(또는 골든)이 필요하고, 그 값은 실행해 재야 한다. 빌드 뒤 Empty 게임 팩 시나리오로 잰다.
-  기준값 없이 시나리오만 먼저 넣지 않는다 — 기준 파일이 없으면 Shipping `-L hostgpu` 가 실패하고(폴백 금지), 느슨한 `meanLuma` 하한은 이미 `runner.scenario.xml` 이 한다. 모양은 `ExpectImage metric="differentFrom" reference="<골든>.ppm" atMost="…"` 이다.
+- G2(코드 · 데이터 끝, 2026-10-22, 빌드 미확인): Empty 팩 시나리오 `game/empty/automation/shippingframe.scenario.xml`(고정 틱 30 프레임 스크린샷)과 AppTest `AppSmokeTest.ShippingSceneMatchesGoldenImage`(Shipping 에서만 — 그림을 `Test/AppTest/Golden/shippingframe_<백엔드>.ppm.z` 와 견준다, 채널 차이 2).
+  남은 것은 기준 그림을 뜨는 일 하나다 — Shipping 빌드에서 `SW_UPDATE_GOLDEN=1` 로 그 케이스를 돌린다. 뜨기 전에는 윈도우 Shipping `-L hostgpu` 에서 그 케이스가 실패한다(벤치 골든과 같은 규칙, 폴백 금지).
+  첫 씬이 고정 틱에서 결정적인지(입자 난수 등)는 기준을 뜰 때 두 번 돌려 확인한다.
 
 ### 7.6 사용자 결정
 

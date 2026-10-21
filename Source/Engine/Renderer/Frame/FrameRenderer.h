@@ -500,9 +500,12 @@ namespace sw
          *          않는다. 주의: 병렬 기록 스레드가 배리어를 정하게 하면 중복 배리어와 레이아웃 불일치가 생긴다.
          */
         void onGraphLevelPrologue( const RenderGraphLevelContext& context );
-        /** @brief 패스 타입에 맞는 실행 함수를 부릅니다. */
-        void executePass( FramePassContext& context, RenderPassType passType, string_view passName, const hashed_string& depthAttachment,
-                          const RenderGraphPassDesc* pPassDesc );
+        /**
+         * @brief 패스 타입에 맞는 실행 함수를 부릅니다.
+         * @details 패스 서술을 참조로 받는다 — 서술 없이 원본 이름(SceneColor · TaaColor 등)으로 타깃을 짐작하던 길을 형식으로 막았다.
+         *          컬러 타깃은 서술의 `_listResolvedColorOutput` 이고 로드가 그 선언을 요구한다(`RenderPassTraitFlag::kDrawsDeclaredColor`).
+         */
+        void executePass( FramePassContext& context, const RenderGraphPassDesc& passDesc );
         /**
          * @brief XML 이 선언한 입력을 **역할 이름으로** 모두 바인딩합니다. 풀스크린 패스가 공통으로 씁니다.
          * @details 역할은 로드 시점에 해석해 둔다(`_listResolvedInput`). 여기서 바인딩하는 목록과 검증이 대조한 목록이 같으므로
@@ -696,7 +699,7 @@ namespace sw
          */
         PresentTarget resolvePresentTarget() const;
         /** @brief 이 패스가 Swapchain 을 쓰는 마지막 패스면 true 입니다. 스크린샷 캡처를 백버퍼로 복사하는 일을 이 패스 끝에서 합니다. */
-        bool isLastSwapchainWriter( const RenderGraphPassDesc* pPassDesc ) const;
+        bool isLastSwapchainWriter( const RenderGraphPassDesc& passDesc ) const;
         /** @brief 패스 타입으로 파이프라인의 패스 서술을 찾습니다. */
         const RenderGraphPassDesc* findPassDescByType( RenderPassType passType ) const;
 
