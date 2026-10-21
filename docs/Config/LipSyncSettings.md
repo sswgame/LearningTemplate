@@ -32,6 +32,8 @@ JSON 키는 아래 필드 이름 그대로입니다(앞의 `_` 포함). 적지 �
 | `_silenceRms` | `float32` | `0.02` | 0.0 ~ - |  | RMS below this is silence |
 | `_fullRms` | `float32` | `0.25` | 0.0 ~ - |  | RMS at which the mouth is fully open (above the silence RMS) |
 | `_sharpness` | `float32` | `8.0` | 0.0 ~ - |  | Sharpness of the band shape comparison (inverse softmax temperature) |
+| `_formantWeight` | `float32` | `6.0` | 0.0 ~ - |  | Score a vowel viseme gains when the frame's measured formants match its _formantHz (voiced frames only) |
+| `_unvoicedHighBandRatio` | `float32` | `0.5` | 0.0 ~ 1.0 |  | High band energy ratio above which a frame is unvoiced (hiss) and formants are not compared |
 | `_fallbackViseme` | `hashed_string` | — |  |  | Viseme the amplitude drives when there is no track |
 
 ## `LipSyncViseme`
@@ -44,3 +46,4 @@ JSON 키는 아래 필드 이름 그대로입니다(앞의 `_` 포함). 적지 �
 |---|---|---|---|---|---|
 | `_name` | `hashed_string` | — |  |  | Viseme name - the facial rig maps it to morph targets |
 | `_bandShape` | `float3` | `0.0, 0.0, 0.0` |  |  | Energy ratio of the low, mid and high band (x, y, z) this viseme looks like |
+| `_formantHz` | `float2` | `0.0, 0.0` |  | Hz | First and second formant of a vowel viseme (0,0: not a vowel - the band shape alone decides) |

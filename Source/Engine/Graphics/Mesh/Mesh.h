@@ -113,6 +113,12 @@ namespace sw
          *          레스트 정점과 가중치가 같으므로 모프 풀은 스킨 데이터 번호(`getSkinDataID`)로 원본 데이터를 **한 번만** 올리고 사본은 결과 구간만 받는다.
          */
         static shared_ptr<Mesh> createSkinInstance( const Mesh& source );
+        /**
+         * @brief 스킨 없는 모프 메시(블렌드 셰이프만 있는 소품 · 얼굴)를 본 하나에 가중치 1 로 묶은 스킨 원본으로 만듭니다(정점 · 모프 타깃 복사).
+         * @details 모프 가중치는 GPU 스키닝 컴퓨트가 스키닝 앞에 건다. 스킨이 없으면 그 길에 들지 못하므로 고정 본 하나를 준다(임포트가 몸에 합칠 때와 같은 규칙).
+         *          `SkeletalMeshComponent` 가 이런 메시를 받으면 이 함수로 원본을 바꿔 그린다 — 스켈레톤이 없으면 암묵 스켈레톤(본 하나)이다.
+         */
+        static shared_ptr<Mesh> createRigidSkinSource( const Mesh& source );
 
         /**
          * @brief CPU 정점 배열을 설정합니다. 탄젠트는 받은 값을 버리고 `computeTangents` 로 다시 구합니다.

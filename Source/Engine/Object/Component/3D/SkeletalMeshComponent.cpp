@@ -301,9 +301,16 @@ namespace sw
 
     void SkeletalMeshComponent::resolveSkinInstanceMesh()
     {
-        const shared_ptr<Mesh>& current = getMesh();
-        if ( current == nullptr || current->hasSkin() == false )
+        if ( getMesh() == nullptr )
             return;
+        // 스킨 없는 모프 메시 — 본 하나의 스킨 원본으로 바꿔 GPU 스키닝 컴퓨트(모프 가중치를 거는 곳)에 들게 한다. 모프도 스킨도 없으면 고정 메시라 둔다.
+        if ( getMesh()->hasSkin() == false )
+        {
+            if ( getMesh()->getMorphTargetCount() == 0 )
+                return;
+            setMesh( Mesh::createRigidSkinSource( *getMesh() ) );
+        }
+        const shared_ptr<Mesh>& current = getMesh();
         if ( _bShareCrowdPose == SW_TRUE )
         {
             // 군중 공유 — 사본을 두지 않는다. 지금 메시가 원본이거나 군중이 준 것(묶음 · 사본)이고 원본이 그대로면 둔다.

@@ -7,6 +7,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/XorShift32.h"
 
+#include "Engine/Animation/Facial/FacialLiveSource.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Audio/AudioClip.h"
 #include "Engine/Audio/AudioClipDecoder.h"
@@ -62,6 +63,23 @@ namespace sw
                rig.getGaze()._listEyeBone.empty() == false;
     }
 
+    void FacialAnimationBinding::prepareAnimationFrame( SkeletalMeshComponent& unit, const AnimationFrameContext& context )
+    {
+        (void)unit;
+        (void)context;
+        // 실시간 입력은 게임 스레드에서 표정 순서대로 옮겨 둔다 — 워커의 얼굴 단계는 이 값만 읽는다.
+        const vector<FacialPose>& listExpression = _owner._rig.getExpressions();
+        _owner._listLiveWeight.assign( listExpression.size(), 0.0f );
+        if ( _owner._pLiveSource == nullptr )
+            return;
+        for ( size_t poseIndex = 0; poseIndex < listExpression.size(); ++poseIndex )
+        {
+            float32 weight = 0.0f;
+            if ( _owner._pLiveSource->tryGetChannel( listExpression[poseIndex]._name, weight ) )
+                _owner._listLiveWeight[poseIndex] = weight;
+        }
+    }
+
     void FacialAnimationBinding::runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context )
     {
         if ( phase == AnimationPhase::Time )
@@ -98,6 +116,8 @@ namespace sw
         , _speechTrack{}
         , _listSpeechSample{}
         , _listExpressionWeight{}
+        , _listLiveWeight{}
+        , _pLiveSource{ nullptr }
         , _listExpressionTarget{}
         , _listVisemeTarget{}
         , _listBlinkTarget{}
@@ -219,6 +239,20 @@ namespace sw
         if ( _pUnit != nullptr )
             _pUnit->markPoseDirty();
         return true;
+    }
+
+    void FacialAnimationComponent::registerLiveSource( const IFacialLiveSource* pSource )
+    {
+        _pLiveSource = pSource;
+        if ( _pUnit != nullptr )
+            _pUnit->markPoseDirty();
+    }
+
+    void FacialAnimationComponent::unregisterLiveSource()
+    {
+        _pLiveSource = nullptr;
+        if ( _pUnit != nullptr )
+            _pUnit->markPoseDirty();
     }
 
     void FacialAnimationComponent::setLookAtTarget( const float3& worldPosition )
@@ -457,6 +491,8 @@ namespace sw
         for ( size_t poseIndex = 0; poseIndex < listExpression.size(); ++poseIndex )
         {
             float32 weight = _listExpressionWeight[poseIndex];
+            if ( poseIndex < _listLiveWeight.size() )
+                weight += _listLiveWeight[poseIndex]; // 실시간 입력(게임 스레드가 옮겨 둔 값)
             if ( pAnimator != nullptr )
                 weight += pAnimator->getCurveValue( listExpression[poseIndex]._name );
             addPose( unit, _listExpressionTarget[poseIndex], listExpression[poseIndex], weight );

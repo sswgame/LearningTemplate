@@ -114,6 +114,17 @@ namespace sw
         return instance;
     }
 
+    shared_ptr<Mesh> Mesh::createRigidSkinSource( const Mesh& source )
+    {
+        shared_ptr<Mesh>  rigid      = create();
+        vector<RHIVertex> listVertex = source._listVertex;
+        rigid->setVerticesWithTangents( std::move( listVertex ) );
+        // 기본 영향이 본 0 에 가중치 1 이다(`MeshSkinVertex`).
+        rigid->setSkin( vector<MeshSkinVertex>( source._listVertex.size() ), 1u );
+        rigid->setMorphTargets( source._listMorphTarget );
+        return rigid;
+    }
+
     void Mesh::setVertices( const vector<RHIVertex>& listVertex )
     {
         vector<RHIVertex> listCopy = listVertex;
