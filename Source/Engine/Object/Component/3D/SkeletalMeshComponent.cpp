@@ -477,13 +477,68 @@ namespace sw
         { return weight != 0.0f; } );
     }
 
+    IAnimationPhaseTask* SkeletalMeshComponent::findSolePoseWriter() const
+    {
+        IAnimationPhaseTask* pWriter = nullptr;
+        for ( IAnimationPhaseTask* pTask : _listTask )
+        {
+            if ( pTask->getPoseAccess() != AnimationPoseAccess::Writes )
+                continue;
+            if ( pWriter != nullptr )
+                return nullptr;
+            pWriter = pTask;
+        }
+        return pWriter;
+    }
+
+    bool SkeletalMeshComponent::hasPoseWriter() const
+    {
+        return std::any_of( _listTask.begin(), _listTask.end(), []( const IAnimationPhaseTask* pTask )
+        { return pTask->getPoseAccess() == AnimationPoseAccess::Writes; } );
+    }
+
     bool SkeletalMeshComponent::describeSharedPose( AnimationSharedPoseRequest& outRequest ) const
     {
-        // 리더를 따르거나 후처리 일이 있으면 유닛마다 포즈가 다르다 — 나눌 수 없다. 모프 가중치(얼굴 · 커브)도 묶음이 나누지 않는다.
-        const bool bPoseNotShareable = _listTask.size() != 1 || _leader.isValid() || hasActiveMorphWeights();
+        // 리더를 따르거나 포즈를 쓰는 작업이 둘 이상(후처리 IK 등)이면 유닛마다 포즈가 다르다 — 나눌 수 없다. 모프 가중치(얼굴 · 커브)도 묶음이 나누지 않는다.
+        // 읽기 작업(외형 소켓)은 세지 않는다 — 묶음을 나누면 묶음의 포즈를 읽는다(`getModelSpaceTransforms`).
+        const bool bPoseNotShareable = _leader.isValid() || hasActiveMorphWeights();
         if ( bPoseNotShareable )
             return false;
-        return _listTask[0]->describeSharedPose( outRequest );
+        const IAnimationPhaseTask* pWriter = findSolePoseWriter();
+        return pWriter != nullptr && pWriter->describeSharedPose( outRequest );
+    }
+
+    bool SkeletalMeshComponent::joinLeaderCrowdBucket( AnimationCrowd& crowd, bool bVisible )
+    {
+        // 리더를 따르는 부품은 리더가 묶음을 나눌 때만 나눈다 — 리더가 혼자 평가하면 그 포즈를 옮겨야 하므로 부품도 혼자다.
+        // 자기 포즈를 쓰는 작업이 있거나 모프 가중치가 있으면 리더와 포즈가 달라 나눌 수 없다.
+        const SkeletalMeshComponent* pLeader         = findLeaderPose();
+        const bool                   bLeaderShared   = pLeader != nullptr && pLeader->_crowdMode == AnimationCrowdMode::Shared && pLeader->_pCrowdBucket != nullptr;
+        const bool                   bOwnPoseDiffers = hasPoseWriter() || hasActiveMorphWeights();
+        if ( bLeaderShared == false || bOwnPoseDiffers )
+            return false;
+        AnimationCrowdBucket* pBucket = crowd.joinFollowerBucket( _pCrowdBucket, *pLeader->_pCrowdBucket, _skeleton, _skinSourceMesh );
+        if ( pBucket == nullptr )
+            return false;
+        enterCrowdBucket( crowd, *pBucket, bVisible );
+        return true;
+    }
+
+    void SkeletalMeshComponent::enterCrowdBucket( AnimationCrowd& crowd, AnimationCrowdBucket& bucket, bool bVisible )
+    {
+        if ( &bucket != _pCrowdBucket )
+        {
+            leaveCrowd( &crowd );
+            AnimationCrowd::addReference( &bucket );
+            _pCrowdBucket = &bucket;
+        }
+        _crowdMode = AnimationCrowdMode::Shared;
+        if ( getMesh() != bucket.getMesh() )
+            setMesh( bucket.getMesh() );
+        AnimationCrowd::countMember( bucket, bVisible );
+        // 묶음이 포즈를 만든다 — 이 유닛은 포즈 단계를 돌지 않는다.
+        _frameContext._bPoseNeeded = SW_FALSE;
+        _bInterpolateFrame         = SW_FALSE;
     }
 
     void SkeletalMeshComponent::leaveCrowd( AnimationCrowd* pCrowd )
@@ -511,13 +566,32 @@ namespace sw
                 setShareCrowdPose( false );
             return;
         }
-        const bool                      bVisible = _bVisibleHint == SW_TRUE || _bAnimateWhenOffscreen == SW_TRUE;
+        const bool bVisible = _bVisibleHint == SW_TRUE || _bAnimateWhenOffscreen == SW_TRUE;
+        if ( _leader.isValid() && joinLeaderCrowdBucket( crowd, bVisible ) )
+            return;
         AnimationSharedPoseRequest      request{};
         shared_ptr<const AnimationClip> clip;
+        shared_ptr<const AnimationClip> nextClip;
         if ( describeSharedPose( request ) )
-            clip = _listTask[0]->findSharedPoseClip( request._pClip );
+        {
+            const IAnimationPhaseTask* pWriter = findSolePoseWriter();
+            clip                               = pWriter->findSharedPoseClip( request._pClip );
+            if ( request._pNextClip != nullptr )
+                nextClip = pWriter->findSharedPoseClip( request._pNextClip );
+        }
 
-        if ( clip != nullptr )
+        const bool bBlending = request._pNextClip != nullptr;
+        if ( clip != nullptr && bBlending )
+        {
+            // 반복 클립 둘 사이의 페이드 — 같은 프레임에 같은 전이를 시작한 유닛과 섞기 묶음을 나눈다(VAT 로 가지 않는다).
+            AnimationCrowdBucket* pBlendBucket = nextClip != nullptr ? crowd.joinBlendBucket( _pCrowdBucket, request, _skeleton, _skinSourceMesh, clip, nextClip ) : nullptr;
+            if ( pBlendBucket != nullptr )
+            {
+                enterCrowdBucket( crowd, *pBlendBucket, bVisible );
+                return;
+            }
+        }
+        else if ( clip != nullptr )
         {
             // 아주 멀면 VAT — 따르는 유닛이 없고 재생 속도가 1 일 때(셰이더는 VAT 시계를 그대로 흘린다).
             const bool bUseVertexAnimation = _lodState._bVertexAnimation == SW_TRUE && _bHasDependents == SW_FALSE && request._playRate == 1.0f;
@@ -544,19 +618,7 @@ namespace sw
             AnimationCrowdBucket* pBucket = crowd.joinBucket( _pCrowdBucket, request, _skeleton, _skinSourceMesh, clip );
             if ( pBucket != nullptr )
             {
-                if ( pBucket != _pCrowdBucket )
-                {
-                    leaveCrowd( &crowd );
-                    AnimationCrowd::addReference( pBucket );
-                    _pCrowdBucket = pBucket;
-                }
-                _crowdMode = AnimationCrowdMode::Shared;
-                if ( getMesh() != pBucket->getMesh() )
-                    setMesh( pBucket->getMesh() );
-                AnimationCrowd::countMember( *pBucket, bVisible );
-                // 묶음이 포즈를 만든다 — 이 유닛은 포즈 단계를 돌지 않는다.
-                _frameContext._bPoseNeeded = SW_FALSE;
-                _bInterpolateFrame         = SW_FALSE;
+                enterCrowdBucket( crowd, *pBucket, bVisible );
                 return;
             }
         }

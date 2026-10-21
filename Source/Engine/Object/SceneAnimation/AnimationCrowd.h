@@ -4,7 +4,8 @@
  * @details 묶음(`AnimationCrowdBucket`)의 키는 (스켈레톤, 스킨 원본 메시, 클립, 재생 속도, 루트 고정, 변형 번호)입니다. 변형 번호는 클립 한 바퀴를
  *          `variations_per_clip` 개의 위상으로 나눈 것이고, 묶음의 시간은 군중 시계에 그 위상을 더한 값이라 어긋나지 않습니다(캐릭터의 시간과 반 구간 안쪽).
  *          묶음은 렌더 메시(스킨 원본의 사본) 하나를 가지고, 멤버는 그 메시를 그려 한 배치, 한 결과 구간, 한 팔레트가 됩니다.
- *          블렌드 중, 레이어, 시퀀서 덮어쓰기, 반복하지 않는 클립처럼 나눌 수 없는 프레임의 유닛은 사본 풀(`acquireSoloMesh`)에서 메시를 빌려
+ *          반복 클립 둘 사이를 섞는 중인 유닛은 섞기 묶음(언리얼 Animation Sharing 의 블렌드 액터)을 나눈다 — 같은 출발 묶음에서 같은 프레임에 같은 전이를
+ *          시작한 유닛들이 한 묶음이다(`joinBlendBucket`). 레이어, 시퀀서 덮어쓰기, 반복하지 않는 클립처럼 나눌 수 없는 프레임의 유닛은 사본 풀(`acquireSoloMesh`)에서 메시를 빌려
  *          혼자 평가합니다. LOD 가 아주 멀다고 판단한 유닛은 정점 애니메이션(VAT) 메시로 넘어가 CPU 포즈도 GPU 스키닝도 없습니다(`findVertexAnimationMesh`).
  */
 #pragma once
@@ -48,6 +49,10 @@ namespace sw
         float32              _time{ 0.0f };                  ///< 유닛 자신의 클립 시간(초)이다. 변형 구간을 고르는 데 쓴다
         float32              _playRate{ 1.0f };              ///< 재생 속도 배율(키의 일부)
         uint8                _bAnchorRootMotion{ SW_FALSE }; ///< 루트 모션 본을 시작 위치에 고정하는지 나타낸다(키의 일부)
+        const AnimationClip* _pNextClip{ nullptr };          ///< 섞는 중이면 들어가는 반복 클립(아니면 nullptr)
+        float32              _nextTime{ 0.0f };              ///< 들어가는 클립의 유닛 시각(초)
+        float32              _blendAlpha{ 0.0f };            ///< 들어가는 클립의 섞임 가중치(0..1, 플레이어의 `getBlendAlpha`)
+        float32              _fadeSeconds{ 0.0f };           ///< 섞기 길이(초, 키의 일부 — 같이 시작한 유닛은 같은 가중치로 간다)
     };
 } // namespace sw
 
@@ -90,17 +95,17 @@ namespace sw
         float32              _playRate{ 1.0f };
         uint32               _variation{ 0 };
         uint8                _bAnchorRootMotion{ SW_FALSE };
+        const AnimationClip* _pNextClip{ nullptr }; ///< 섞기 묶음이면 들어가는 클립(아니면 nullptr)
+        float32              _fadeSeconds{ 0.0f };  ///< 섞기 묶음의 섞기 길이
+        uint32               _blendStartFrame{ 0 }; ///< 섞기 묶음이 생긴 군중 프레임 — 같은 프레임에 같은 전이를 시작한 유닛만 같은 가중치다
 
-        bool operator==( const AnimationCrowdBucketKey& other ) const
-        {
-            return _pSkeleton == other._pSkeleton && _skinDataID == other._skinDataID && _pClip == other._pClip && _playRate == other._playRate &&
-                   _variation == other._variation && _bAnchorRootMotion == other._bAnchorRootMotion;
-        }
+        bool operator==( const AnimationCrowdBucketKey& other ) const { return isSameState( other ) && _variation == other._variation; }
         /** @brief 변형 번호만 다르면 true 입니다(같은 상태). */
         bool isSameState( const AnimationCrowdBucketKey& other ) const
         {
+            const bool bSameBlend = _pNextClip == other._pNextClip && _fadeSeconds == other._fadeSeconds && _blendStartFrame == other._blendStartFrame;
             return _pSkeleton == other._pSkeleton && _skinDataID == other._skinDataID && _pClip == other._pClip && _playRate == other._playRate &&
-                   _bAnchorRootMotion == other._bAnchorRootMotion;
+                   _bAnchorRootMotion == other._bAnchorRootMotion && bSameBlend;
         }
     };
 } // namespace sw
@@ -116,6 +121,7 @@ namespace sw
             hash ^= static_cast<size_t>( key._skinDataID ) + HashUtil::kGoldenRatio32 + ( hash << 6 ) + ( hash >> 2 );
             hash ^= reinterpret_cast<size_t>( key._pClip ) + HashUtil::kGoldenRatio32 + ( hash << 6 ) + ( hash >> 2 );
             hash ^= static_cast<size_t>( key._variation * 2u + key._bAnchorRootMotion ) + HashUtil::kGoldenRatio32 + ( hash << 6 ) + ( hash >> 2 );
+            hash ^= reinterpret_cast<size_t>( key._pNextClip ) + static_cast<size_t>( key._blendStartFrame ) + HashUtil::kGoldenRatio32 + ( hash << 6 ) + ( hash >> 2 );
             return hash;
         }
     };
@@ -130,7 +136,9 @@ namespace sw
     class SW_API AnimationCrowdBucket
     {
     public:
-        AnimationCrowdBucket( const AnimationCrowdBucketKey& key, shared_ptr<const Skeleton> skeleton, shared_ptr<const AnimationClip> clip, shared_ptr<Mesh> mesh );
+        /** @brief @p nextClip 이 있으면 섞기 묶음입니다(@p clip 에서 @p nextClip 으로). */
+        AnimationCrowdBucket( const AnimationCrowdBucketKey& key, shared_ptr<const Skeleton> skeleton, shared_ptr<const AnimationClip> clip,
+                              shared_ptr<const AnimationClip> nextClip, shared_ptr<Mesh> mesh );
         AnimationCrowdBucket( const AnimationCrowdBucket& )            = delete;
         AnimationCrowdBucket& operator=( const AnimationCrowdBucket& ) = delete;
 
@@ -145,8 +153,14 @@ namespace sw
         const vector<float4x4>& getSkinPalette() const { return _listSkinPalette; }
         const Skeleton&         getSkeleton() const { return *_skeleton; }
         const AnimationClip&    getClip() const { return *_clip; }
-        /** @brief 군중 시계 @p clock 에서 이 묶음의 클립 시간을 반환합니다. */
+        /** @brief 군중 시계 @p clock 에서 이 묶음의 클립 시간을 반환합니다(섞기 묶음이면 나가는 클립). */
         float32 computeTime( float64 clock ) const;
+        /** @brief 섞기 묶음이면 true 입니다. */
+        bool isBlend() const { return _nextClip != nullptr; }
+        /** @brief 섞기 묶음의 들어가는 클립 시간입니다(시작한 시각부터 같은 속도로 흐른다). 섞기 묶음이 아니면 0 입니다. */
+        float32 computeNextTime( float64 clock ) const;
+        /** @brief 섞기 묶음의 지금 가중치입니다(멤버가 프레임마다 정한다 — 같이 시작해 같은 값이다). */
+        float32 getBlendAlpha() const { return _blendAlpha; }
         /** @brief 이번 프레임 멤버 수(나눔, VAT 아님)와 그중 보이는 수입니다. */
         uint32 getMemberCount() const { return _memberCount; }
         uint32 getVisibleMemberCount() const { return _visibleMemberCount; }
@@ -161,14 +175,20 @@ namespace sw
         AnimationCrowdBucketKey         _key;
         shared_ptr<const Skeleton>      _skeleton;
         shared_ptr<const AnimationClip> _clip;
+        shared_ptr<const AnimationClip> _nextClip; ///< 섞기 묶음의 들어가는 클립(아니면 nullptr)
         shared_ptr<Mesh>                _mesh;
         vector<int32>                   _listTrackToBone;
+        vector<int32>                   _listNextTrackToBone;
         Pose                            _localPose;
+        Pose                            _nextPose;
         Pose                            _scratchTrackPose;
         vector<float4x4>                _listModelSpace;
         vector<float4x4>                _listSkinPalette;
         float64                         _idleSince;
-        float64                         _variationSpan; ///< 변형 한 구간의 시간 폭이다(클립 길이 / 구간 수)
+        float64                         _variationSpan;   ///< 변형 한 구간의 시간 폭이다(클립 길이 / 구간 수)
+        float64                         _blendStartClock; ///< 섞기 묶음이 생긴 군중 시계
+        float32                         _nextStartTime;   ///< 섞기 묶음이 생길 때 들어가는 클립의 시각
+        float32                         _blendAlpha;
         uint32                          _memberCount;
         uint32                          _visibleMemberCount;
         uint32                          _referenceCount;
@@ -202,6 +222,23 @@ namespace sw
          */
         AnimationCrowdBucket* joinBucket( AnimationCrowdBucket* pCurrent, const AnimationSharedPoseRequest& request, const shared_ptr<const Skeleton>& skeleton,
                                           const shared_ptr<Mesh>& sourceMesh, const shared_ptr<const AnimationClip>& clip );
+        /**
+         * @brief 반복 클립 둘 사이를 섞는 유닛이 섞기 묶음에 듭니다(@p request 의 `_pNextClip`). 같은 출발 상태 · 칸에서 같은 프레임에 같은 전이를 시작한 유닛이 한 묶음입니다.
+         * @details @p pCurrent 가 같은 전이의 섞기 묶음이면 그대로 둔다. 출발 칸은 @p pCurrent 가 같은 출발 상태의 묶음이면 그 칸(보이던 포즈에서 이어 간다), 아니면
+         *          유닛 시각에 가까운 칸이다. 가중치는 멤버가 프레임마다 정한다. 섞기가 끝나면 유닛은 들어간 클립의 묶음으로 간다(반 칸 안쪽 시각 차이).
+         * @return 묶음(소유는 군중). 클립 · 스킨 원본이 없거나 길이가 0 이면 nullptr 입니다.
+         */
+        AnimationCrowdBucket* joinBlendBucket( AnimationCrowdBucket* pCurrent, const AnimationSharedPoseRequest& request, const shared_ptr<const Skeleton>& skeleton,
+                                               const shared_ptr<Mesh>& sourceMesh, const shared_ptr<const AnimationClip>& clip,
+                                               const shared_ptr<const AnimationClip>& nextClip );
+        /**
+         * @brief 리더 포즈를 따르는 유닛(옷 · 머리 부품)이 리더 묶음과 같은 클립 · 변형 칸의 묶음에 듭니다. 스켈레톤과 스킨 원본만 따르는 유닛의 것입니다.
+         * @details 리더 포즈가 클립 하나이므로 그 포즈를 본 이름으로 옮긴 결과(`SkeletalMeshComponent::copyLeaderPose`)와 같은 클립을 같은 시각에 자기 스켈레톤으로
+         *          샘플한 결과가 같다. 그래서 부품도 묶음 하나 · 결과 구간 하나를 나눈다.
+         * @return 묶음(소유는 군중). 스켈레톤이나 스킨 원본이 없으면 nullptr 입니다.
+         */
+        AnimationCrowdBucket* joinFollowerBucket( AnimationCrowdBucket* pCurrent, const AnimationCrowdBucket& leaderBucket, const shared_ptr<const Skeleton>& skeleton,
+                                                  const shared_ptr<Mesh>& sourceMesh );
         /** @brief 유닛이 묶음을 가리키기 시작하거나 그쳤음을 알립니다(참조 수이며, 가리키는 묶음은 지우지 않습니다). */
         static void addReference( AnimationCrowdBucket* pBucket );
         static void releaseReference( AnimationCrowdBucket* pBucket );
@@ -243,6 +280,9 @@ namespace sw
     private:
         /** @brief 클립 한 바퀴 안에서 유닛 시간에 가장 가까운 변형 구간을 고릅니다. */
         uint32 selectVariation( const AnimationSharedPoseRequest& request, float32 duration ) const;
+        /** @brief 키의 묶음을 찾고, 없으면 스킨 원본의 사본 메시로 만듭니다. */
+        AnimationCrowdBucket* findOrCreateBucket( const AnimationCrowdBucketKey& key, const shared_ptr<const Skeleton>& skeleton, const shared_ptr<const AnimationClip>& clip,
+                                                  const shared_ptr<const AnimationClip>& nextClip, const Mesh& sourceMesh );
 
         /** @brief 베이크한 VAT 메시 하나입니다. */
         struct VertexAnimationEntry
@@ -261,6 +301,7 @@ namespace sw
         unordered_map<uint64, vector<shared_ptr<Mesh>>>                                            _mapFreeSoloMesh; ///< 스킨 데이터 번호에서 돌려받은 사본 목록으로 가는 맵이다
         vector<VertexAnimationEntry>                                                               _listVertexAnimation;
         float64                                                                                    _clock;
+        uint32                                                                                     _frameIndex; ///< `beginFrame` 마다 오른다(섞기 묶음의 시작 프레임)
         uint32                                                                                     _evaluatedBucketCount;
         uint32                                                                                     _cookedVertexAnimationCount;
     };

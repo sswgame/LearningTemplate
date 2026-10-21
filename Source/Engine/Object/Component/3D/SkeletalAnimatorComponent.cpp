@@ -557,17 +557,23 @@ namespace sw
     {
         const AnimationPlayer&    player   = _graphPlayer.getPlayer();
         const IAnimationPlayable* pPlaying = player.getCurrentPlayable();
-        // 섞는 중(끊긴 페이드를 이어 섞는 중 포함) · 레이어 · 블렌드 스페이스(파라미터가 캐릭터마다 다르다) · 시퀀서 덮어쓰기는 캐릭터마다 다르다.
-        // 반복하지 않는 클립은 시작 시각이 캐릭터마다 달라 칸으로 묶지 않는다.
-        const bool bLayered      = _listLayer.empty() == false || _listGraphLayer.empty() == false;
-        const bool bNotClip      = pPlaying == nullptr || findBlendSpaceState( pPlaying ) != nullptr;
-        const bool bNotShareable = bNotClip || player.isCrossfading() || _bCarryingOver == SW_TRUE || player.isCurrentLooping() == false || bLayered || _sequencerWeight > 0.0f;
+        // 끊긴 페이드를 이어 섞는 중 · 레이어 · 블렌드 스페이스(파라미터가 캐릭터마다 다르다) · 시퀀서 덮어쓰기는 캐릭터마다 다르다.
+        // 반복하지 않는 클립은 시작 시각이 캐릭터마다 달라 칸으로 묶지 않는다. 반복 클립 둘 사이의 페이드는 섞기 묶음으로 나눈다(`AnimationCrowd::joinBlendBucket`).
+        const IAnimationPlayable* pNext         = player.getNextPlayable();
+        const bool                bLayered      = _listLayer.empty() == false || _listGraphLayer.empty() == false;
+        const bool                bNotClip      = pPlaying == nullptr || findBlendSpaceState( pPlaying ) != nullptr;
+        const bool                bNextNotClip  = pNext != nullptr && ( findBlendSpaceState( pNext ) != nullptr || player.isNextLooping() == false );
+        const bool                bNotShareable = bNotClip || bNextNotClip || _bCarryingOver == SW_TRUE || player.isCurrentLooping() == false || bLayered || _sequencerWeight > 0.0f;
         if ( bNotShareable )
             return false;
         outRequest._pClip             = static_cast<const AnimationClip*>( pPlaying );
         outRequest._time              = player.getCurrentTime();
         outRequest._playRate          = _playRate * player.getSpeed();
         outRequest._bAnchorRootMotion = _bExtractRootMotion;
+        outRequest._pNextClip         = static_cast<const AnimationClip*>( pNext );
+        outRequest._nextTime          = pNext != nullptr ? player.getNextTime() : 0.0f;
+        outRequest._blendAlpha        = pNext != nullptr ? player.getBlendAlpha() : 0.0f;
+        outRequest._fadeSeconds       = pNext != nullptr ? player.getFadeDuration() : 0.0f;
         return true;
     }
 

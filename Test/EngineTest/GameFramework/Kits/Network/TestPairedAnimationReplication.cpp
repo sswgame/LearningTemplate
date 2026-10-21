@@ -16,6 +16,7 @@
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Service/NetObjectTable.h"
 #include "Engine/Object/SceneAnimation/AnimationSystem.h"
 #include "Engine/Resource/ResourcePaths.h"
 
@@ -92,7 +93,7 @@ namespace
 } // namespace
 
 /**
- * @brief [PairedAnimationReplicationTest] 상태 메시지 — 서버가 만든 상태(에셋 경로 · 이름순 오브젝트 번호 · 실제 진입 시각)로 클라이언트가 같은 세션을 이어 받고,
+ * @brief [PairedAnimationReplicationTest] 상태 메시지 — 서버가 만든 상태(에셋 경로 · 이름 해시 오브젝트 번호 · 실제 진입 시각)로 클라이언트가 같은 세션을 이어 받고,
  *        한 프레임 뒤 두 씬의 시각이 같으며, 끝 메시지에 중단한다
  */
 SW_TEST_CASE( PairedAnimationReplicationTest, StateMessageRestoresSessionAndEndAbortsIt )
@@ -109,7 +110,8 @@ SW_TEST_CASE( PairedAnimationReplicationTest, StateMessageRestoresSessionAndEndA
     SW_ASSERT_TRUE( pServerLeader != nullptr && pServerFollower != nullptr && pServerProp != nullptr );
     PairedAnimationReplicationServer server;
     server.initialize( nullptr, &serverManager );
-    SW_EXPECT_EQUAL( 3u, server.getObjectTable().getCount() );
+    const NetObjectTable& serverTable = serverManager.getSubsystem<NetObjectTable>();
+    SW_EXPECT_EQUAL( NetObjectTable::computeSceneID( *pServerLeader->getOwner() ), serverTable.findID( *pServerLeader->getOwner() ) );
 
     const shared_ptr<const PairedAnimationDef> def = SharedAssetCache<PairedAnimationDef>::acquire( assetPath );
     SW_ASSERT_NOT_NULL( def.get() );
@@ -133,22 +135,23 @@ SW_TEST_CASE( PairedAnimationReplicationTest, StateMessageRestoresSessionAndEndA
     PairedAnimationNetState state{};
     SW_ASSERT_TRUE( server.makeSessionState( *pServerSession, state ) );
     SW_EXPECT_TRUE( state._assetPath == assetPath );
-    // 이름순 번호 — Follower 1, Leader 2, Prop 3. 역할 순서(Leader, Follower, Prop)로 싣는다.
+    // 씬 번호(이름 해시)를 역할 순서(Leader, Follower, Prop)로 싣는다.
     SW_ASSERT_EQUAL( static_cast<size_t>( 3 ), state._listRoleNetID.size() );
-    SW_EXPECT_EQUAL( 2u, state._listRoleNetID[0] );
-    SW_EXPECT_EQUAL( 1u, state._listRoleNetID[1] );
-    SW_EXPECT_EQUAL( 3u, state._listRoleNetID[2] );
+    SW_EXPECT_EQUAL( NetObjectTable::computeSceneID( *pServerLeader->getOwner() ), state._listRoleNetID[0] );
+    SW_EXPECT_EQUAL( NetObjectTable::computeSceneID( *pServerFollower->getOwner() ), state._listRoleNetID[1] );
+    SW_EXPECT_EQUAL( NetObjectTable::computeSceneID( *pServerProp->getOwner() ), state._listRoleNetID[2] );
     SW_EXPECT_EQUAL( sessionID, state._snapshot._sessionID );
 
     NetMessageWriter message;
     SW_ASSERT_TRUE( state.write( message.begin( NetPairedAnimationMessage::kSessionState ) ) );
 
-    // 클라이언트 씬은 같은 이름의 오브젝트를 다른 순서로 만든다 — 번호는 이름순이라 같다.
+    // 클라이언트 씬은 같은 이름의 오브젝트를 다른 순서로 만들고 서버에 없는 오브젝트도 하나 더 있다 — 번호는 이름 해시라 같다.
     GameObjectManager          clientManager;
     SkeletalAnimatorComponent* pClientProp     = TestPairedAnimationReplicationInternal::addParticipant( clientManager, "Prop", folder );
     SkeletalAnimatorComponent* pClientLeader   = TestPairedAnimationReplicationInternal::addParticipant( clientManager, "Leader", folder );
     SkeletalAnimatorComponent* pClientFollower = TestPairedAnimationReplicationInternal::addParticipant( clientManager, "Follower", folder );
     SW_ASSERT_TRUE( pClientLeader != nullptr && pClientFollower != nullptr && pClientProp != nullptr );
+    SW_ASSERT_NOT_NULL( TestPairedAnimationReplicationInternal::addParticipant( clientManager, "ClientOnlyBystander", folder ) );
     PairedAnimationReplicationClient client;
     client.initialize( &clientManager );
     SW_EXPECT_TRUE( client.handleMessage( 0, message.getBytes() ) == NetHandleResult::Handled );
@@ -217,13 +220,16 @@ SW_TEST_CASE( PairedAnimationReplicationTest, RefusesUnreplicableSessionsAndBadS
     client.initialize( &manager );
     PairedAnimationNetState state{};
     state._assetPath     = assetPath;
-    state._listRoleNetID = { 7u, 1u, 0u };
+    state._listRoleNetID = { NetObjectTable::kSpawnedBit | 7u, 1u, 0u }; // 묶지 않은 생성 번호
     state._snapshot      = PairedAnimationSessionSnapshot::makeAtElapsedTime( *textDef, 40, 0.25f );
     SW_EXPECT_TRUE( client.applyState( state ) == PairedAnimationStartResult::ParticipantMissing );
-    state._listRoleNetID = { 2u, 1u };
+    const NetObjectTable& table      = manager.getSubsystem<NetObjectTable>();
+    const uint32          leaderID   = table.findID( *pLeader->getOwner() );
+    const uint32          followerID = table.findID( *pFollower->getOwner() );
+    state._listRoleNetID             = { leaderID, followerID };
     SW_EXPECT_TRUE( client.applyState( state ) == PairedAnimationStartResult::InvalidSnapshot );
     state._assetPath     = FileUtil::joinPath( folder, "missing.pairedanim.xml" );
-    state._listRoleNetID = { 2u, 1u, 0u };
+    state._listRoleNetID = { leaderID, followerID, 0u };
     SW_EXPECT_TRUE( client.applyState( state ) == PairedAnimationStartResult::AssetNotLoaded );
     SW_EXPECT_EQUAL( 3u, client.getStats()._rejectedCount );
     SW_EXPECT_TRUE( system.findSession( 40 ) == nullptr );

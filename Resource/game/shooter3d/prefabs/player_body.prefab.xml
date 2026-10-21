@@ -32,6 +32,12 @@
 			                           _syncWeight="1"
 			                           _bExtractRootMotion="false"
 			                           _bPlayOnBegin="true" />
+			<PoseModifierComponent _componentName="PoseModifierComponent"
+			                       _bActive="true"
+			                       _rigPath="game/shooter3d/rigs/knight_firstperson.rig.json"
+			                       _socketSetPath=""
+			                       _physicsAssetPath=""
+			                       _bRigEnabled="true" />
 			<CharacterAppearanceComponent _componentName="CharacterAppearanceComponent"
 			                              _bActive="true"
 			                              _presetID="ShooterPlayer"
@@ -41,7 +47,13 @@
 			                        _player="0"
 			                        _walkThreshold="0.4"
 			                        _runThreshold="3"
-			                        _hitPause="0.45" />
+			                        _hitPause="0.45"
+			                        _firstPersonHeadSlot="FirstPersonHead">
+				<_listFirstPersonHiddenSlot>
+					<item>Head</item>
+					<item>MainHand</item>
+				</_listFirstPersonHiddenSlot>
+			</ShooterAvatarComponent>
 		</_listComponent>
 	</GameObject>
 </Prefab>

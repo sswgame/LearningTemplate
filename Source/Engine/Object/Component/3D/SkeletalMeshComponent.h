@@ -177,7 +177,8 @@ namespace sw
         /**
          * @brief 군중 공유를 켭니다. 켜면 컴포넌트마다 스킨 사본을 두지 않고, 같은 상태와 같은 위상의 캐릭터와 포즈 하나와 결과 구간 하나를 나눕니다.
          * @details 나눌 수 없는 프레임(블렌드 중, 레이어, 반복하지 않는 클립, 후처리 작업)은 사본 풀의 메시로 혼자 평가하고, LOD 가 VAT 거리로 판정하면
-         *          VAT 메시로 넘어간다(따르는 유닛이 없을 때만).
+         *          VAT 메시로 넘어간다(따르는 유닛이 없을 때만). 리더를 따르는 유닛은 리더가 묶음을 나눌 때 리더와 같은 클립 · 위상의 자기 묶음을 나눈다
+         *          (따르는 유닛도 공유를 켜야 한다).
          */
         void setShareCrowdPose( bool bShare );
         bool isShareCrowdPose() const { return _bShareCrowdPose == SW_TRUE; }
@@ -222,8 +223,19 @@ namespace sw
         void refreshBoneLODMasks();
         /** @brief 보간 프레임의 포즈를 만듭니다(직전 표시 포즈에서 마지막 평가 포즈로). 스킨 팔레트 단계에서 부릅니다. */
         void applySkippedFrameInterpolation( bool bEvaluatedThisFrame );
-        /** @brief 이번 프레임 포즈를 묶음과 나눌 수 있으면 요청을 채웁니다. 조건은 작업이 애니메이터 하나이고 리더가 없으며 그 작업이 나눌 수 있다고 답하는 것입니다. */
+        /**
+         * @brief 이번 프레임 포즈를 묶음과 나눌 수 있으면 요청을 채웁니다. 조건은 포즈를 쓰는 작업이 하나뿐이고(읽기 작업은 세지 않는다) 리더가 없으며
+         *        그 작업이 나눌 수 있다고 답하는 것입니다.
+         */
         bool describeSharedPose( AnimationSharedPoseRequest& outRequest ) const;
+        /** @brief 포즈를 쓰는 작업(`AnimationPoseAccess::Writes`)이 꼭 하나면 그 작업을, 없거나 둘 이상이면 nullptr 을 반환합니다. */
+        IAnimationPhaseTask* findSolePoseWriter() const;
+        /** @brief 포즈를 쓰는 작업이 하나라도 있으면 true 입니다. */
+        bool hasPoseWriter() const;
+        /** @brief 리더가 묶음을 나누면 리더 묶음과 같은 클립 · 위상의 묶음에 듭니다(`AnimationCrowd::joinFollowerBucket`). 들었으면 true 입니다. */
+        bool joinLeaderCrowdBucket( AnimationCrowd& crowd, bool bVisible );
+        /** @brief 묶음에 들어 묶음의 메시를 그리고 이번 프레임 포즈 단계를 건너뜁니다. */
+        void enterCrowdBucket( AnimationCrowd& crowd, AnimationCrowdBucket& bucket, bool bVisible );
         /** @brief 묶음 참조와 사본을 해제합니다(@p pCrowd 가 있으면 사본을 풀에 반환합니다). */
         void leaveCrowd( AnimationCrowd* pCrowd );
 

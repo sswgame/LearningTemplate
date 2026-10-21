@@ -53,8 +53,7 @@ namespace sw
             _pRouter = nullptr;
             return;
         }
-        SW_LOG_INFO( "Paired animation net session started as %# with %# animated objects", _bServer == SW_TRUE ? "server" : "client",
-                     _bServer == SW_TRUE ? _server.getObjectTable().getCount() : _client.getObjectTable().getCount() );
+        SW_LOG_INFO( "Paired animation net session started as %#", _bServer == SW_TRUE ? "server" : "client" );
     }
 
     void PairedAnimationNetSessionComponent::onEndPlay()

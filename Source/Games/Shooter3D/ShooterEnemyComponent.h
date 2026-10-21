@@ -7,6 +7,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Math/Math.h"
+#include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -21,7 +22,7 @@ namespace sw
     {
         Rising = 0, ///< 땅에서 일어나는 중(스폰 클립) — 움직이지 않는다
         Chasing,    ///< 플레이어 쪽으로 온다
-        Attacking,  ///< 휘두르는 중 — 클립의 맞는 시각에 손이 닿으면 플레이어를 때린다
+        Attacking,  ///< 휘두르는 중 — 클립의 맞는 알림(`_attackHitEvent`)이 오면 손이 닿을 때 플레이어를 때린다
         Staggered,  ///< 맞아 움찔 — 잠깐 멈춘다
         Dying,      ///< 쓰러지는 중 — 시체 시간이 지나면 디렉터가 걷는다
     };
@@ -39,6 +40,8 @@ namespace sw
      *          씁니다(위치 · 요 · 애니메이터 파라미터 · HP 바 — 체력 원천 알림 `notifyHealthChanged`). 내비메시 에이전트(`SteerOnly`)는 그 위치를 다음 갱신에서 받는다.
      *          애니메이터 그래프(`data/anim/skeleton.animgraph.json`)는 파라미터 `Move`(0 서기 · 1 걷기 · 2 달리기) ·
      *          `Attack` · `Hit`(트리거) · `Dead` 로 움직입니다. 플레이어를 때리는 것은 다른 오브젝트에 쓰는 일이라 틱 뒤로 미룹니다.
+     *          휘두름이 맞는 시각은 클립 데이터다 — 클립 알림 `Impact` → 알림 표(`characters/skeleton_minion/skeleton_minion.notifies.xml`)의 `GameplayEvent` →
+     *          `onAnimationNotify` 가 이벤트 `_attackHitEvent` 를 받으면 다음 틱에 손이 닿는지 보고 때린다. 휘두름이 끝날 때까지 이벤트가 없으면 데이터 오류로 알린다.
      *          맞음(`applyDamage`)은 플레이어의 사격이 틱 뒤에 겁니다. 히트박스는 발에서 `_height` 까지의 캡슐(반지름 `_radius`)입니다 —
      *          물리 질의 · 부위 히트박스가 들어오면 그쪽으로 옮긴다(소켓 `Chest` 가 히트박스 중심 위치).
      */
@@ -52,6 +55,8 @@ namespace sw
         virtual ~ShooterEnemyComponent() override = default;
 
         void onTick( float32 deltaTime ) override;
+        /** @brief 휘두름 클립의 맞는 알림(`_attackHitEvent`)을 받습니다(게임 스레드, 애니메이션 평가 뒤). 휘두르는 중이면 다음 틱이 맞힘을 처리합니다. */
+        void onAnimationNotify( const AnimationNotifyInfo& notify ) override;
 
         /** @brief 스폰합니다 — 디렉터 · 발 위치 · 요 · 체력 · 속도(게임 스레드). */
         void launch( GameObjectHandle director, const float3& position, float32 yaw, float32 health, float32 speed );
@@ -103,8 +108,8 @@ namespace sw
         float32 _damage;
         PROPERTY( Category = "Enemy", DisplayName = "Attack Interval", Tooltip = "Seconds between swings", Min = 0.0, Units = s )
         float32 _attackInterval;
-        PROPERTY( Category = "Enemy", DisplayName = "Attack Hit Time", Tooltip = "Seconds into the swing when the blade lands", Min = 0.0, Units = s )
-        float32 _attackHitTime;
+        PROPERTY( Category = "Enemy", DisplayName = "Attack Hit Event", Tooltip = "Gameplay event (notify table) the swing clip sends when the blade lands" )
+        hashed_string _attackHitEvent;
         PROPERTY( Category = "Enemy", DisplayName = "Attack Length", Tooltip = "Seconds the swing locks movement", Min = 0.0, Units = s )
         float32 _attackLength;
         PROPERTY( Category = "Enemy", DisplayName = "Rise Time", Tooltip = "Seconds spent rising from the ground before chasing", Min = 0.0, Units = s )
@@ -127,10 +132,12 @@ namespace sw
         float32           _phaseTime;
         Countdown         _attackCooldown; ///< 휘두르기 간격(늦음을 잇는다)
         ShooterEnemyPhase _phase;
-        uint8             _bLaunched       : 1;
-        uint8             _bHitPending     : 1; ///< 다음 틱에 애니메이터에 Hit 트리거를 건다
-        uint8             _bAttackLanded   : 1; ///< 이번 휘두름이 이미 맞았다
-        uint8             _bAttackStarting : 1; ///< 다음 틱에 애니메이터에 Attack 트리거를 건다
-        uint8             _reserved        : 4;
+        uint8             _bLaunched                : 1;
+        uint8             _bHitPending              : 1; ///< 다음 틱에 애니메이터에 Hit 트리거를 건다
+        uint8             _bAttackLanded            : 1; ///< 이번 휘두름이 이미 맞았다
+        uint8             _bAttackStarting          : 1; ///< 다음 틱에 애니메이터에 Attack 트리거를 건다
+        uint8             _bAttackHitEvent          : 1; ///< 이번 휘두름의 맞는 알림을 받았다(다음 틱이 맞힘을 처리한다)
+        uint8             _bHitEventMissingReported : 1; ///< 맞는 알림 없이 끝난 휘두름을 이미 오류로 알렸다(한 번만)
+        uint8             _reserved                 : 2;
     };
 } // namespace sw

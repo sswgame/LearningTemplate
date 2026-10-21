@@ -12,6 +12,10 @@
     <Equip slot="MainHand" item="blaster_rifle"/>
   </CharacterAppearance>
 
+  <CharacterAppearance id="ShooterArcher" parent="Adventurer" tags="Faction.Player">
+    <Equip slot="MainHand" item="bow_long"/>
+  </CharacterAppearance>
+
   <CharacterAppearance id="ShooterRogue" parent="Adventurer" body="body_rogue" tags="Faction.Player">
     <Value name="OutfitDye" colors="1 1 1 1; 1 0.85 0.7 1"/>
     <Equip slot="Back" item="cape_rogue"/>

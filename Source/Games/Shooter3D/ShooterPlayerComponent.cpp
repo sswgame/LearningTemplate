@@ -807,10 +807,8 @@ namespace sw
         pAvatar->setPlayer( pOwner->getHandle() );
         CharacterAppearanceComponent* pAppearance = pBody->getComponent<CharacterAppearanceComponent>();
         if ( pAppearance != nullptr )
-        {
             pAppearance->setSlotItem( hashed_string( "MainHand" ), getWeaponItem( _weaponIndex ) );
-            pAppearance->setPartsVisible( _bFirstPerson == SW_FALSE );
-        }
+        pAvatar->setFirstPerson( _bFirstPerson == SW_TRUE );
         _body = pBody->getHandle();
     }
 
@@ -822,11 +820,11 @@ namespace sw
         MeshComponent* pWeapon = pOwner != nullptr ? Internal::findNamed<MeshComponent>( *pOwner, Internal::kViewWeaponName ) : nullptr;
         if ( pWeapon != nullptr )
             pWeapon->setVisible( _bFirstPerson == SW_TRUE );
-        // 1인칭에서는 몸을 숨긴다. 눈이 머리 안에 있기 때문이다(머리만 숨기는 본 숨김은 PoseModifier 가 들어오면 처리한다).
-        GameObject*                   pBody       = findBodyObject();
-        CharacterAppearanceComponent* pAppearance = pBody != nullptr ? pBody->getComponent<CharacterAppearanceComponent>() : nullptr;
-        if ( pAppearance != nullptr )
-            pAppearance->setPartsVisible( _bFirstPerson == SW_FALSE );
+        // 1인칭에서는 머리만 숨긴다(눈이 머리 안에 있다). 몸 · 다리는 보이고, 몸 무기 대신 시점 무기가 보인다(`ShooterAvatarComponent::setFirstPerson`).
+        GameObject*             pBody   = findBodyObject();
+        ShooterAvatarComponent* pAvatar = pBody != nullptr ? pBody->getComponent<ShooterAvatarComponent>() : nullptr;
+        if ( pAvatar != nullptr )
+            pAvatar->setFirstPerson( _bFirstPerson == SW_TRUE );
     }
 
     GameObject* ShooterPlayerComponent::findBodyObject() const

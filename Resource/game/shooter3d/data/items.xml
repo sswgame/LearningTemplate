@@ -13,4 +13,5 @@
   <Item id="shield_skeleton" name="Bone Shield" category="Armor" slot="Shield" visual="shield_skeleton" tags="Armor.Light"/>
   <Item id="blade_skeleton" name="Notched Blade" category="Weapon" slot="Weapon" visual="blade_skeleton"/>
   <Item id="axe_skeleton" name="Bone Axe" category="Weapon" slot="Weapon" visual="axe_skeleton"/>
+  <Item id="bow_long" name="Longbow" category="Weapon" slot="Weapon" visual="bow_long"/>
 </ItemCatalog>

@@ -54,10 +54,11 @@ namespace sw
     public:
         explicit RagdollAnimationBinding( RagdollComponent& owner );
 
-        bool isAnimationActive() const override;
-        void runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override;
-        void finishAnimationFrame( SkeletalMeshComponent& unit ) override;
-        void onAnimationUnitDetached( SkeletalMeshComponent& unit ) override;
+        bool                isAnimationActive() const override;
+        AnimationPoseAccess getPoseAccess() const override { return AnimationPoseAccess::Writes; }
+        void                runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override;
+        void                finishAnimationFrame( SkeletalMeshComponent& unit ) override;
+        void                onAnimationUnitDetached( SkeletalMeshComponent& unit ) override;
 
     private:
         RagdollComponent& _owner;

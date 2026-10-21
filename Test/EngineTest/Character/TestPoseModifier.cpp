@@ -35,8 +35,9 @@ namespace
         class RootTurnTask final : public IAnimationPhaseTask
         {
         public:
-            bool isAnimationActive() const override { return true; }
-            void runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override
+            bool                isAnimationActive() const override { return true; }
+            AnimationPoseAccess getPoseAccess() const override { return AnimationPoseAccess::Writes; }
+            void                runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override
             {
                 (void)context;
                 if ( phase != AnimationPhase::BasePose )
@@ -397,8 +398,9 @@ SW_TEST_CASE( PoseModifierTest, PoseDriverCorrectiveMorphDrivesMeshMorphWeight )
     class ElbowTask final : public IAnimationPhaseTask
     {
     public:
-        bool isAnimationActive() const override { return true; }
-        void runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override
+        bool                isAnimationActive() const override { return true; }
+        AnimationPoseAccess getPoseAccess() const override { return AnimationPoseAccess::Writes; }
+        void                runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override
         {
             (void)context;
             if ( phase != AnimationPhase::BasePose )

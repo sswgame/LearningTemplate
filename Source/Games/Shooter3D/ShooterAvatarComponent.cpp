@@ -6,6 +6,7 @@
 
 #include "Engine/Animation/AnimationClip.h"
 #include "Engine/Animation/Skeletal/LocomotionSpeedUtil.h"
+#include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 #include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -13,6 +14,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Base/Foundation/Utility/Math/OrientationUtil.h"
+#include "GameFramework/Base/Gameplay/Appearance/CharacterAppearanceComponent.h"
 
 #include "Games/Shooter3D/ShooterAnimationParameter.h"
 #include "Games/Shooter3D/ShooterPlayerComponent.h"
@@ -58,6 +60,8 @@ namespace sw
         , _minPlayRate{ 0.6f }
         , _maxPlayRate{ 1.8f }
         , _minLocomotionFootSpeed{ 0.3f }
+        , _firstPersonHeadSlot{}
+        , _listFirstPersonHiddenSlot{}
         , _locomotion{ 0.25f }
         , _mapClipFootSpeed{}
         , _aimWeight{ 0.0f }
@@ -77,6 +81,39 @@ namespace sw
         // 플레이어(DuringPhysics)가 움직인 뒤에 읽는다.
         setTickGroup( TickGroup::PostPhysics );
         _mapClipFootSpeed.clear(); // 클립을 다시 읽었을 수 있다(핫 리로드)
+    }
+
+    void ShooterAvatarComponent::setFirstPerson( bool bFirstPerson )
+    {
+        GameObject* pOwner = getOwner();
+        if ( pOwner == nullptr )
+            return;
+        PoseModifierComponent* pRig = pOwner->getComponent<PoseModifierComponent>();
+        if ( pRig == nullptr || _firstPersonHeadSlot.empty() )
+        {
+            SW_LOG_ERROR( "[Shooter] body '%#' needs a PoseModifierComponent and _firstPersonHeadSlot to hide the head in first person", pOwner->getName().c_str() );
+        }
+        else
+        {
+            // 묶인 리그에 그 슬롯을 쓰는 노드가 없으면 데이터 오류다 — 슬롯 가중치는 아무 노드에도 닿지 않고 머리가 보인다.
+            const RigInstance& instance = pRig->getRigInstance();
+            bool               bFound   = instance.isInitialized() == false;
+            for ( uint32 nodeIndex = 0; bFound == false && nodeIndex < instance.getNodeCount(); ++nodeIndex )
+            {
+                bFound = instance.getNode( nodeIndex ).getWeightSlot() == _firstPersonHeadSlot;
+            }
+            if ( bFound == false )
+                SW_LOG_ERROR( "[Shooter] rig '%#' has no node with weight_slot '%#' - the head stays visible in first person", pRig->getRigPath().c_str(),
+                              _firstPersonHeadSlot.c_str() );
+            // 슬롯 가중치 1 = ScaleBone 이 머리를 0 으로 모은다, 0 = 그대로.
+            pRig->setSlotWeight( _firstPersonHeadSlot, bFirstPerson ? 1.0f : 0.0f );
+        }
+        CharacterAppearanceComponent* pAppearance = pOwner->getComponent<CharacterAppearanceComponent>();
+        if ( pAppearance != nullptr )
+        {
+            pAppearance->setPartsVisible( true );
+            pAppearance->setHiddenSlots( bFirstPerson ? _listFirstPersonHiddenSlot : vector<hashed_string>{} );
+        }
     }
 
     float32 ShooterAvatarComponent::computeLocomotionPlayRate( const SkeletalAnimatorComponent& animator, LocomotionDirection direction, float32 moveSpeed )

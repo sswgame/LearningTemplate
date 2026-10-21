@@ -125,7 +125,7 @@ PairedAnimationComponent(시작하는 쪽, 에셋 경로 · 자기 역할)
 
 **네트워크 계층(키트 `GF_NetPairedAnimation`, 메시지 영역 `0x60`)**: 계약은 `PairedAnimationReplication.h` 머리말이 정본이다. 정한 것은 이렇다.
 
-- 역할 → 오브젝트 대응은 파괴 복제(`DestructionNetSession`)의 규칙을 그대로 쓴다 — 애니메이터가 있는 씬 오브젝트를 복제 시작 때 이름순으로 1 부터 매긴다(`PairedAnimationNetObjectTable`). 표에 없는 오브젝트(나중에 생긴 것)가 참가한 세션, 리소스 경로 없이 만든 에셋(`PairedAnimationDef::getSourcePath` 가 빔)의 세션은 서버가 오류를 남기고 보내지 않는다.
+- 역할 → 오브젝트 대응은 씬의 번호표 `NetObjectTable`(Engine/Net, 파괴 복제와 같은 표)이다 — 씬 오브젝트는 이름 해시(이름순 몇 번째가 아니라 한쪽에만 있는 오브젝트가 번호를 밀지 않는다), 플레이 중에 생긴 오브젝트(투사체)는 서버의 `registerSpawned` 번호를 게임의 스폰 복제가 클라이언트에서 `bindSpawned` 로 묶은 것이다. 번호가 없는 오브젝트가 참가한 세션, 리소스 경로 없이 만든 에셋(`PairedAnimationDef::getSourcePath` 가 빔)의 세션은 서버가 오류를 남기고 보내지 않는다.
 - 늦게 들어온 클라이언트에도 서버는 `captureSnapshot` 의 실제 진입 시각을 보낸다(`makeAtElapsedTime` 의 추정은 쓰지 않는다). 상태 메시지는 세션을 처음 본 갱신에 모두에게, 연결이 열리면 그 연결에 한 번 간다. 끝(`Finished` · `Aborted` · 목록에서 빠짐)은 끝 메시지로 가고 클라이언트는 아직 재생 중이면 중단한다.
 - 복원이 클립이 끝난 역할(서버가 게임플레이로 내보낸 선택 역할 포함)에 `exitState` 를 재생하는 규칙은 그대로 둔다. 같은 id 의 상태를 다시 받으면(보정 · 롤백) 클라이언트는 옛 세션을 중단하고 다시 복원한다. 롤백 소유 상태는 게임이 `makeSessionState` → `PairedAnimationNetState::write` 의 바이트를 `setOwnerState` 에 싣고, 되감은 뒤 `PairedAnimationReplicationClient::applyState` 를 부른다.
 - 씬에 `PairedAnimationNetSessionComponent` 하나를 두면 게임 네트워크 세션(`GameNetSession`)의 역할대로 서버(틱 `PostUpdate` 에서 보냄) · 클라이언트(게임 프레임 앞에서 받음)가 된다. 클라이언트의 게임플레이가 세션을 따로 시작하지 않게 막는 일은 게임 권한의 몫이다.
@@ -153,20 +153,22 @@ PairedAnimationComponent(시작하는 쪽, 에셋 경로 · 자기 역할)
 | P3b | 네트워크 계층 연결(서버가 세션 시작 · 상태를 복제, 클라이언트가 복원, 롤백 소유 상태) — 키트 `GF_NetPairedAnimation` | 코드와 `PairedAnimationReplicationTest` 작성(빌드 · 테스트 미확인, 두 프로세스 확인은 아래 "남은 것") |
 | M3 | 에디터 미리보기(8절) — `PairedAnimationPanel` · `PairedAnimationEditModel` | 코드와 `PairedAnimationEditModelTest` 작성(빌드 · 테스트 미확인, 창 화면 확인은 아래 "남은 것") |
 | — | 상호작용 단계에서 세션 시작 · 에셋 캐시(핫 리로드) · 세트 고르기(`<Select>`) · 보폭 보정 쥠 | 완료(`InteractionTest` · `PairedAnimationTest`) |
-| — | 시나리오 테스트(Shooter3D 궁수 · 활 · 화살 실제 클립) | 에셋: 궁수는 기사 `2H_Ranged_Shoot`, 활 · 화살은 `Scripts/dev/MakeBowProps.py`(`TestMakeBowProps` 통과). 임포트 · 프리팹 · 시나리오는 아래 "남은 것" |
+| — | 시나리오 테스트(Shooter3D 궁수 · 활 · 화살 실제 클립) | 에셋: 궁수는 기사 `2H_Ranged_Shoot`, 활 · 화살은 `Scripts/dev/MakeBowProps.py`(`TestMakeBowProps` 통과). 활 · 화살 임포트(`models/props/`), 프리팹(`prefabs/props/bow` · `arrow` · `arrow_projectile` — 투사체는 동적 강체 + `LaunchVelocityComponent` 30 m/s), 활 알림 표(`characters/bow/bow.notifies.xml`), 외형 아이템 `bow_long` · 프리셋 `ShooterArcher`, 씬 `maps/bowshowcase.scene.xml`, 시나리오 `automation/showcase/bowshoot.scenario.xml`(자동 수집 밖) 작성(빌드 · 실행 미확인). 화면 확인은 아래 "남은 것" |
+| — | 프롭 역할을 데이터로 묶기 — 넘기지 않은 역할은 같은 에셋 · 그 역할을 적은 다른 `PairedAnimationComponent` 로(둘이면 오류), `_bStartOnPlay`, 탐침 `PairedAnimation.SessionState` | 코드와 `PairedAnimationTest.ComponentBindsRolesNamedByOtherComponents` 작성(빌드 미확인) |
 
 ## 남은 것
 
 - 에디터 미리보기(M3) 화면 확인: 창을 열어 역할 프리팹을 놓고 스크럽 · 기즈모로 오프셋을 옮기는 에디터 시나리오(`-EnableEditor`, `CaptureEditorUI`).
-- 네트워크(P3b) 두 프로세스 확인: `Server` 와 `App -gv_netConnectAddress` 에서 세션 시작 · 늦은 참가 · 끝이 복제되는지. 씬 문서 밖에서 생긴 참가자(투사체 같은)를 복제하려면 번호표가 아니라 복제 엔티티 id 대응이 필요하다(후속).
-- 시나리오 테스트: `py -3 Scripts/dev/MakeBowProps.py` → `App --import-models`(활 · 화살 `models/props/` 와 `import.stamp` 를 함께 커밋) → 활 · 화살 · 투사체 프리팹과 활 알림 표(`ReleaseArrow` → `SpawnPrefab`) → 궁수 · 활 · 화살을 둔 씬과 세션을 시작하는 시나리오(세션 상태 탐침과 스크린샷). 임포트에 빌드가 필요해 이번에는 생성기와 에셋 타임라인까지만 했다 — 임포트 없이 glb 를 커밋하면 임포트 스탬프 검사가 깨진다.
+- 네트워크(P3b) 두 프로세스 확인: `Server` 와 `App -gv_netConnectAddress` 에서 세션 시작 · 늦은 참가 · 끝이 복제되는지. 씬 문서 밖에서 생긴 참가자는 번호표의 생성 번호(`NetObjectTable::registerSpawned` · `bindSpawned`)로 부를 수 있게 됐다 — 스폰 자체를 복제하는 것(무엇을 스폰했는지 클라이언트에 알리고 묶는 일)은 게임의 몫이고 아직 쓰는 게임이 없다.
+- 쇼케이스 확인(빌드 뒤): `App -game=Shooter3D "-gv_firstScene=game/shooter3d/maps/bowshowcase.scene.xml" -scenario=game/shooter3d/automation/showcase/bowshoot.scenario.xml` 를 네 백엔드로 돌리고 스크린샷 둘(당김 · 놓음)을 본다. 손 소켓(`Gun`)에 붙인 활의 자리 · 방향, 시위 본(`string`)에서 나간 투사체의 방향(프리팹의 `_localDirection` 0,0,1 이 화살 앞인지)을 확인하고 프리팹 값을 고친다. 날아가는 동안 화살 머리가 속도 쪽을 보게 하는 것(지금은 처음 자세 그대로 물리가 돌린다)은 그때 정한다.
 
 ## 11. 알려진 한계
 
 - 재생 속도를 매 프레임 쓰는 컴포넌트는 지금 `LocomotionWarpingComponent` 하나이고 세션이 쥐어 둔다. 재생 속도를 쓰는 새 컴포넌트가 생기면 같은 쥠을 받아야 한다 — 받지 않으면 세션 시각 검사가 어긋남으로 보고 중단한다(조용히 틀어지지는 않는다).
 - 상호작용의 누름(`Press`) 단계는 누름으로 이미 끝나므로, 세션 시작이 거절되면 경고만 남고 상호작용은 끝난 채다. 누르고 있기 · 연타 단계는 취소된다.
 - 애니메이션 되감기(`AnimationRewind`) 스크럽 중에는 시각이 예측과 달라 중단된다(개발 빌드 진단 기능).
-- 샘플 에셋(`Resource/game/shooter3d/data/anim/bow_shoot.pairedanim.xml`)의 활 · 화살 메시는 생성기만 있고 아직 임포트하지 않았다. 데이터 형식 검사(`ResourceDataSchemaTest`)와 생성기 대조(`TestMakeBowProps`)만 돈다.
+- 샘플 에셋(`Resource/game/shooter3d/data/anim/bow_shoot.pairedanim.xml`)의 쇼케이스(`maps/bowshowcase.scene.xml`)는 실행으로 확인하지 않았다. 데이터 형식 검사(`ResourceDataSchemaTest`)와 생성기 대조(`TestMakeBowProps`)만 돈다.
+- 프롭 역할 묶기는 매니저 전체를 훑는다(시작할 때 한 번). 같은 에셋 · 같은 역할을 적은 프롭이 씬에 둘 이상이면(궁수 둘이 같은 활 프리팹) 고를 수 없어 거절한다 — 그때는 부르는 쪽이 바인딩을 넘긴다.
 - 복원(`restoreSession`)은 `warp` 창을 다시 열지 않는다. 창 도중에 이어 받은 클라이언트는 휘어지지 않은 루트 모션으로 가고 서버의 트랜스폼 보정을 받는다(7절).
 
 ## 12. 다른 작업과 겹치는 자리

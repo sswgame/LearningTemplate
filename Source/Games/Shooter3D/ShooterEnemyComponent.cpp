@@ -50,7 +50,7 @@ namespace sw
         , _stopFraction{ 0.85f }
         , _damage{ 9.0f }
         , _attackInterval{ 1.5f }
-        , _attackHitTime{ 0.45f }
+        , _attackHitEvent{}
         , _attackLength{ 1.0f }
         , _riseTime{ 1.6f }
         , _staggerTime{ 0.4f }
@@ -69,6 +69,8 @@ namespace sw
         , _bHitPending{ SW_FALSE }
         , _bAttackLanded{ SW_FALSE }
         , _bAttackStarting{ SW_FALSE }
+        , _bAttackHitEvent{ SW_FALSE }
+        , _bHitEventMissingReported{ SW_FALSE }
         , _reserved{ 0 }
     {
         setCanEverTick( true );
@@ -154,7 +156,16 @@ namespace sw
         {
             _bAttackLanded   = SW_FALSE;
             _bAttackStarting = SW_TRUE;
+            _bAttackHitEvent = SW_FALSE;
         }
+    }
+
+    void ShooterEnemyComponent::onAnimationNotify( const AnimationNotifyInfo& notify )
+    {
+        HealthSourceComponent::onAnimationNotify( notify );
+        const bool bSwingLands = _phase == ShooterEnemyPhase::Attacking && _attackHitEvent.empty() == false && notify._event == _attackHitEvent;
+        if ( bSwingLands )
+            _bAttackHitEvent = SW_TRUE;
     }
 
     void ShooterEnemyComponent::onTick( float32 deltaTime )
@@ -196,15 +207,24 @@ namespace sw
             }
             case ShooterEnemyPhase::Attacking:
             {
-                // 클립의 맞는 시각에 손이 닿는 거리면 한 번 맞힌다.
-                if ( _bAttackLanded == SW_FALSE && _phaseTime >= _attackHitTime )
+                // 클립의 맞는 알림이 왔고 손이 닿는 거리면 한 번 맞힌다 — 시각의 정본은 클립 데이터다.
+                if ( _bAttackLanded == SW_FALSE && _bAttackHitEvent == SW_TRUE )
                 {
                     _bAttackLanded = SW_TRUE;
                     if ( distance < _reach * 1.25f )
                         requestPlayerDamage( pDirector->getPlayer() );
                 }
                 if ( _phaseTime >= _attackLength )
+                {
+                    // 맞는 알림 없이 휘두름이 끝났다 — 클립에 알림이 없거나 알림 표 · 이벤트 이름이 어긋난 데이터 오류다(조용히 시각으로 대신하지 않는다).
+                    if ( _bAttackLanded == SW_FALSE && _bHitEventMissingReported == SW_FALSE )
+                    {
+                        _bHitEventMissingReported = SW_TRUE;
+                        SW_LOG_ERROR( "[Shooter] enemy '%#' finished a swing without the '%#' notify event - check the attack clip's notifies and the notify table",
+                                      pOwner->getName().c_str(), _attackHitEvent.c_str() );
+                    }
                     enterPhase( ShooterEnemyPhase::Chasing );
+                }
                 break;
             }
             case ShooterEnemyPhase::Staggered:

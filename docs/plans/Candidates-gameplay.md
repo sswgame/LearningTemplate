@@ -3,7 +3,7 @@
 > 상태: 후보 · 선행: 없음 · 영역: gameplay · 옛번호: D4-2,D4-4,D4-6,D4-7,D4-8,D4-9,D4-10,D4-11,D4-12,D4-13,D4-14,D4-15,D4-16,D4-17,G-4,G-6,G-7 · 진행: 해당없음
 
 GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션 영역의 착수 전 후보 목록입니다. 착수하면 그 절을 계획 문서로 옮기고 여기서 지웁니다.
-이미 계획 문서가 있는 일의 남은 것은 그 문서에 있습니다: [PairedAnimation](PairedAnimation.md) · [EditorCharacterEditor](EditorCharacterEditor.md) · [MotionMatching](MotionMatching.md).
+이미 계획 문서가 있는 일의 남은 것은 그 문서에 있습니다: [PairedAnimation](PairedAnimation.md) · [AnimationLodAndCrowd](AnimationLodAndCrowd.md) · [EditorCharacterEditor](EditorCharacterEditor.md) · [MotionMatching](MotionMatching.md).
 
 ## 기능
 
@@ -22,17 +22,6 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션 영역의 
 왜 필요한가: 틀 · 키트 전부 · 조립 테스트 둘(`KitCompositionTest`)과 `MeadowVillage` 는 들어갔다(규칙: `Source/GameFramework/Kits/` "키트 여럿을 한 게임에"). 필요해지기 전까지 남긴 몫이다.
 착수 조건 / 남은 것: 둘째 조립(RTS + City)의 테스트 게임이 필요해지면 MeadowVillage 모양으로 만든다. 격자 키트를 섞는 게임이 생기면 `SessionStateSettings::_land*` 와 키트의 `bindLand` 를 건다.
 함정: SRPG 는 전투 끝에 `releaseLand`. 공원 놀이기구 발자국은 상태 바이트에 싣지 않는다 — 지은 칸은 땅이 든다.
-
-### AnimationLodAndCrowd
-제목: 애니메이션 LOD 와 군중 공유
-옛번호: D4-6
-왜 필요한가: 애니메이션 LOD(`AnimationLOD.h` — 리그 노드도 화면 크기 `min_screen_size` 로 꺼진다)와 군중 공유(`AnimationCrowd.h`)는 들어갔다.
-남은 것:
-- 메시 LOD 가 생기면 본 LOD 를 메시 LOD 와 묶기([PreloadAndLod](#preloadandlod)).
-- 군중의 섞기 묶음(언리얼 Animation Sharing 의 블렌드 액터 — 지금 섞는 유닛은 사본으로 혼자 평가), Shooter3D 군중 켜기.
-- Shooter3D 군중 켜기의 선행(2026-10-21 코드로 확인): 적 몸에는 애니메이터 작업 말고 외형의 소켓 작업(`CharacterAppearanceSocketTask`)이 붙어 `SkeletalMeshComponent::describeSharedPose` 가 늘 거짓이고(작업 수 ≠ 1),
-  옷 · 머리 부품은 몸을 리더로 따라 몸에 따르는 유닛이 있다. 프리팹의 `_bShareCrowdPose` 만 켜면 모두 사본(`Solo`)으로 돌 뿐이다. 먼저 작업이 포즈를 쓰는지 읽기만 하는지를 형식으로 나누고(읽기 작업은 묶음의 포즈를 읽게),
-  리더를 따르는 부품이 묶음 포즈를 따르게 해야 한다.
 
 ### FacialAnimation
 제목: 얼굴 애니메이션의 남은 것

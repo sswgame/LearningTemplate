@@ -16,6 +16,7 @@
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceDatabase.h"
+#include "GameFramework/Base/Gameplay/Appearance/AppearanceXMLUtil.h"
 #include "GameFramework/Base/Gameplay/Appearance/CharacterAppearance.h"
 
 namespace sw
@@ -141,6 +142,7 @@ namespace sw
         , _bodyBones{}
         , _listSpawnedPart{}
         , _listSlotOverride{}
+        , _listHiddenSlot{}
         , _taskUnit{}
         , _previewSelection{}
         , _pPreviewDatabase{ nullptr }
@@ -220,6 +222,19 @@ namespace sw
         if ( pManager == nullptr )
             return;
         // 메시 보임은 렌더 상태이므로, 틱 안이면 틱 뒤에 적용한다.
+        pManager->executeOrDeferPostTickOnComponent( *this,
+                                                     []( CharacterAppearanceComponent& appearance, GameObjectManager& manager )
+        { appearance.applyVisibility( manager ); } );
+    }
+
+    void CharacterAppearanceComponent::setHiddenSlots( const vector<hashed_string>& listSlot )
+    {
+        if ( _listHiddenSlot == listSlot )
+            return;
+        _listHiddenSlot             = listSlot;
+        GameObjectManager* pManager = findManager();
+        if ( pManager == nullptr )
+            return;
         pManager->executeOrDeferPostTickOnComponent( *this,
                                                      []( CharacterAppearanceComponent& appearance, GameObjectManager& manager )
         { appearance.applyVisibility( manager ); } );
@@ -446,6 +461,8 @@ namespace sw
                 // 몸을 리더로 따르는 스킨드 부품(옷, 머리카락)이다. 몸의 자식이 되고 위치는 몸과 같다.
                 pObject                         = manager.createGameObject( part._partName );
                 SkeletalMeshComponent* pSkinned = pObject->addComponent<SkeletalMeshComponent>();
+                // 군중 공유는 몸을 따른다 — 몸이 묶음을 나누면 부품도 같은 클립 · 위상의 자기 묶음을 나눈다(`AnimationCrowd::joinFollowerBucket`). 값의 정본은 몸 프리팹이다.
+                pSkinned->setShareCrowdPose( body.isShareCrowdPose() );
                 pSkinned->setSkeletonPath( part._skeleton.empty() ? string_view( body.getSkeletonPath() ) : string_view( part._skeleton.c_str() ) );
                 pSkinned->setMeshID( part._asset.c_str() );
                 if ( part._material.empty() == false )
@@ -525,9 +542,13 @@ namespace sw
         for ( const SpawnedPart& spawned : _listSpawnedPart )
         {
             GameObject* pObject = manager.resolveGameObject( spawned._object );
-            if ( pObject != nullptr )
-                Internal::forEachMesh( *pObject, [this]( MeshComponent& mesh )
-                { mesh.setVisible( _bPartsVisible ); } );
+            if ( pObject == nullptr )
+                continue;
+            // 숨기는 칸의 부품은 몸이 보여도 숨긴다(1인칭의 머리 · 손 무기).
+            const hashed_string& owner    = _resolved._listPart[spawned._partIndex]._owner;
+            const bool           bVisible = _bPartsVisible && ( owner.empty() || AppearanceXMLUtil::containsName( _listHiddenSlot, owner ) == false );
+            Internal::forEachMesh( *pObject, [bVisible]( MeshComponent& mesh )
+            { mesh.setVisible( bVisible ); } );
         }
     }
 

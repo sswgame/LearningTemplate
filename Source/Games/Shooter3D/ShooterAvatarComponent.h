@@ -8,6 +8,8 @@
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Container/vector.h"
+#include "Core/String/hashed_string.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -46,6 +48,13 @@ namespace sw
 
         /** @brief 따라갈 플레이어(`ShooterPlayerComponent` 를 가진 오브젝트)입니다. */
         void setPlayer( GameObjectHandle player ) { _player = player; }
+        /**
+         * @brief 1인칭이면 몸은 보이고 머리만 숨깁니다 — 같은 오브젝트의 리그(`PoseModifierComponent`)의 슬롯 `_firstPersonHeadSlot`(머리 `ScaleBone`)을 켜고,
+         *        외형의 칸 `_listFirstPersonHiddenSlot`(머리 장비 · 손 무기) 부품을 숨깁니다. 3인칭이면 둘 다 되돌립니다.
+         * @details 몸 무기는 1인칭에서 숨기고 시점 무기(플레이어의 `ViewWeapon`)가 보인다 — 조준선과 총구가 카메라 기준이어야 하기 때문이다.
+         *          리그나 슬롯이 없으면 오류로 알린다(머리를 숨기지 못하면 눈이 머리 안에 있다).
+         */
+        void setFirstPerson( bool bFirstPerson );
 
     private:
         /** @brief 지금 상태 클립의 발 속도에 수평 이동 속도를 맞춘 재생 속도입니다. 서 있거나 공중이거나 이동 클립이 아니면 1 입니다. */
@@ -74,6 +83,10 @@ namespace sw
         float32 _maxPlayRate;
         PROPERTY( Category = "Avatar", DisplayName = "Min Locomotion Foot Speed", Tooltip = "A clip whose feet move slower than this is not a locomotion clip and keeps its play rate", Min = 0.0, Units = "m/s" )
         float32 _minLocomotionFootSpeed;
+        PROPERTY( Category = "First Person", DisplayName = "Head Rig Slot", Tooltip = "Rig weight slot of the ScaleBone node that hides the head in first person" )
+        hashed_string _firstPersonHeadSlot;
+        PROPERTY( Category = "First Person", DisplayName = "Hidden Appearance Slots", Tooltip = "Appearance slots whose parts are hidden in first person (head gear, the body's weapon)" )
+        vector<hashed_string> _listFirstPersonHiddenSlot;
 
         LocomotionDirectionFilter                    _locomotion;
         unordered_map<const AnimationClip*, float32> _mapClipFootSpeed; ///< 클립마다 한 번 측정한 발 속도(m/s)
