@@ -93,6 +93,12 @@ namespace
         return writer.getBytes();
     }
 
+    /** @brief 보던 틱이 모두 0 인 입력 메시지입니다(`makeStampedInputMessage`). */
+    vector<uint8> makeInputMessage( uint32 firstTick, const vector<vector<uint8>>& listPayload )
+    {
+        return makeStampedInputMessage( firstTick, listPayload, vector<float32>{} );
+    }
+
     /** @brief 흉내 거르개 — `_bDropping` 인 동안 보내는 패킷을 모두 버립니다(한 방향 연속 손실). */
     struct InputBurstDropper
     {
