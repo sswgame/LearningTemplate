@@ -473,26 +473,7 @@ namespace sw
         if ( bOffscreen )
             pFrameStream->prepareTextureForShaderRead( packet._outputRenderTarget );
 
-        // 미리보기 씬(에디터 툴 창)은 씬마다 자기 렌더러로 자기 타깃에 그린다. 타깃의 열기 · 읽기 전환은 게임 뷰와 같은 규칙이다.
-        const bool bCanDrawPreviews = _pFrameRenderer != nullptr && _pFrameRenderer->isReady() && pFrameStream != nullptr;
-        if ( bCanDrawPreviews )
-        {
-            SW_PROFILE_SCOPE( "RT.ScenePreviews" );
-            for ( uint32 previewIndex = 0; previewIndex < packet._scenePreviewCount; ++previewIndex )
-            {
-                RenderFramePacket&     preview = *packet._listScenePreview[previewIndex];
-                RHIRenderPassBeginInfo previewPass{};
-                previewPass._bBindColor        = SW_TRUE;
-                previewPass._colorTargetCount  = 1;
-                previewPass._arrColorTarget[0] = preview._outputRenderTarget;
-                previewPass._arrLoadOp[0]      = RHIRenderPassLoadOp::Clear;
-                previewPass._arrClearColor[0]  = preview._clearColor;
-                pFrameStream->beginRenderPass( previewPass );
-                (void)_pFrameRenderer->executeScenePreviewPacket( _pDevice, preview ); // 실패는 렌더러가 로그로 남기고, 타깃은 클리어 색으로 남는다
-                pFrameStream->prepareTextureForShaderRead( preview._outputRenderTarget );
-            }
-            _pFrameRenderer->retireScenePreviews( packet );
-        }
+        drawScenePreviews( packet, pFrameStream );
 
         // UI(presentHook)는 백버퍼에 그린다. 그래프가 오프스크린이나 백버퍼 어디에 그렸든, 여기서 타깃을
         // 명시적으로 백버퍼로 되돌린다. 그래프가 백버퍼에 그린 경우도 있으므로 Load 여야 한다.
@@ -541,6 +522,50 @@ namespace sw
             }
         }
 
+        takeCommandLineScreenshotIfDue();
+
+        // 자동화 시나리오의 `<Screenshot>` 이다. 이 패킷(그 게임 프레임)이 그린 이미지를 찍는다. gv_screenshot 의 대기 프레임 규칙은 적용하지 않는다(시나리오가 시작 조건 뒤에 찍는다).
+        if ( packet._screenshotPath.empty() == false )
+        {
+            if ( _pFrameRenderer == nullptr || writePresentedImage( packet._screenshotPath ) == false )
+                SW_LOG_WARNING( "Scenario screenshot was not written: %#", packet._screenshotPath.c_str() );
+            _completedScenarioScreenshotCount.fetch_add( 1, std::memory_order_acq_rel );
+        }
+
+        // 실행 중 요청(`requestScreenshot`: 개발 명령 screenshot, 에디터 버튼)을 처리한다.
+        writeRequestedScreenshot();
+        // 에디터 렌더 타깃 창의 CPU 읽기 요청이다. 스크린샷과 같은 위치에서 처리하며, endFrame 뒤라 이 프레임이 그린 내용이 들어 있다.
+        readRequestedRenderTarget();
+
+        return true;
+    }
+
+    void RenderThread::drawScenePreviews( RenderFramePacket& packet, IRHICommandContext* pFrameStream )
+    {
+        // 미리보기 씬(에디터 툴 창)은 씬마다 자기 렌더러로 자기 타깃에 그린다. 타깃의 열기 · 읽기 전환은 게임 뷰와 같은 규칙이다.
+        const bool bCanDrawPreviews = _pFrameRenderer != nullptr && _pFrameRenderer->isReady() && pFrameStream != nullptr;
+        if ( bCanDrawPreviews )
+        {
+            SW_PROFILE_SCOPE( "RT.ScenePreviews" );
+            for ( uint32 previewIndex = 0; previewIndex < packet._scenePreviewCount; ++previewIndex )
+            {
+                RenderFramePacket&     preview = *packet._listScenePreview[previewIndex];
+                RHIRenderPassBeginInfo previewPass{};
+                previewPass._bBindColor        = SW_TRUE;
+                previewPass._colorTargetCount  = 1;
+                previewPass._arrColorTarget[0] = preview._outputRenderTarget;
+                previewPass._arrLoadOp[0]      = RHIRenderPassLoadOp::Clear;
+                previewPass._arrClearColor[0]  = preview._clearColor;
+                pFrameStream->beginRenderPass( previewPass );
+                (void)_pFrameRenderer->executeScenePreviewPacket( _pDevice, preview ); // 실패는 렌더러가 로그로 남기고, 타깃은 클리어 색으로 남는다
+                pFrameStream->prepareTextureForShaderRead( preview._outputRenderTarget );
+            }
+            _pFrameRenderer->retireScenePreviews( packet );
+        }
+    }
+
+    void RenderThread::takeCommandLineScreenshotIfDue()
+    {
         // -gv_screenshot=<path>: 한 장(또는 -gv_screenshotCount 장)을 찍는다.
         //  - **endFrame 뒤여야 한다.** 그 전에는 커맨드 리스트가 기록만 되었고 아직 큐에 나가지 않아,
         //    읽어 보면 클리어 색만 나온다.
@@ -586,21 +611,6 @@ namespace sw
                     reportCaptureFinished( CaptureKind::GameView, _bScreenshotWriteFailed == SW_FALSE );
             }
         }
-
-        // 자동화 시나리오의 `<Screenshot>` 이다. 이 패킷(그 게임 프레임)이 그린 이미지를 찍는다. gv_screenshot 의 대기 프레임 규칙은 적용하지 않는다(시나리오가 시작 조건 뒤에 찍는다).
-        if ( packet._screenshotPath.empty() == false )
-        {
-            if ( _pFrameRenderer == nullptr || writePresentedImage( packet._screenshotPath ) == false )
-                SW_LOG_WARNING( "Scenario screenshot was not written: %#", packet._screenshotPath.c_str() );
-            _completedScenarioScreenshotCount.fetch_add( 1, std::memory_order_acq_rel );
-        }
-
-        // 실행 중 요청(`requestScreenshot`: 개발 명령 screenshot, 에디터 버튼)을 처리한다.
-        writeRequestedScreenshot();
-        // 에디터 렌더 타깃 창의 CPU 읽기 요청이다. 스크린샷과 같은 위치에서 처리하며, endFrame 뒤라 이 프레임이 그린 내용이 들어 있다.
-        readRequestedRenderTarget();
-
-        return true;
     }
 
     bool RenderThread::writePresentedImage( const string& path )

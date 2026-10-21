@@ -19,6 +19,7 @@
 namespace sw
 {
     class FrameRenderer;
+    class IRHICommandContext;
     class IRHIDevice;
     class Scene;
 
@@ -126,9 +127,14 @@ namespace sw
         void executePacket( RenderFramePacket& packet );
         /**
          * @brief 씬 렌더부터 present 훅, Present 까지의 프레임 본문입니다.
+         * @details 남은 본문은 프레임 단계의 순서(컨텍스트 → beginFrame → 게임 뷰 → 미리보기 → 백버퍼 → 훅 → Present → 촬영)가 곧 의미라 더 나누지 않는다.
          * @return 프레임을 실제로 그렸으면 true 이고, 유효하지 않은 패킷이나 리소스라 건너뛰었으면 false 입니다.
          */
         bool executeFrameBody( RenderFramePacket& packet );
+        /** @brief 에디터 미리보기 씬마다 자기 타깃을 열고 그린 뒤 읽기 상태로 둡니다. 렌더러가 준비 전이거나 프레임 스트림이 없으면 건너뜁니다. */
+        void drawScenePreviews( RenderFramePacket& packet, IRHICommandContext* pFrameStream );
+        /** @brief `-gv_screenshot` 촬영 차례(대기 프레임 · 간격 · 장 수)면 화면이나 지정 첨부를 파일로 씁니다. `endFrame` 뒤에 부릅니다. */
+        void takeCommandLineScreenshotIfDue();
         /** @brief 화면에 나간 이미지(Present 캡처, 없으면 Present 가 읽는 첨부)를 @p path 에 씁니다(`.png` 면 PNG, 아니면 PPM). `endFrame` 뒤에 부릅니다. */
         [[nodiscard]] bool writePresentedImage( const string& path );
         /** @brief 우편함의 `requestScreenshot` 요청을 이번 프레임의 작업으로 받습니다. 프레임 본문 앞에서 부릅니다. */
