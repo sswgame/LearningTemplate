@@ -1,6 +1,6 @@
 # 파티클 · VFX 구현 단위 (`D2-11`)
 
-> 상태: 구현중 · 선행: 없음 · 영역: graphics · 옛번호: D2-11 · 진행: 12/12
+> 상태: 구현중 · 선행: 없음 · 영역: graphics · 옛번호: D2-11 · 진행: 11/12
 
 결정은 [결정 기록](../09_Decisions.md) 5-12 의 `D2-11` 행들과 옛 `D2-11` 본문의 사용자 결정이 원본입니다. 이 문서는 그 결정을 구현 단위로 나눈 계획과 단위마다의 계약을 적습니다.
 단위가 끝나면 그 단위의 절을 지우고, 남는 교훈은 코드의 헤더 주석으로 옮깁니다.
@@ -22,7 +22,7 @@
 | V2 | 렌더 경로: 방출기마다 입자 그리기 하나(`GPUParticleBatch`, 스냅샷의 `_listParticleBatch`)를 투명 패스가 빌보드로 그립니다(`VfxParticleRenderer`, `particle.hlsl` — `SV_VertexID` 와 패스 전용 슬롯 t11 의 입자 버퍼) — **들어감**(`VfxComponentTest`, 시나리오 `editor/vfxpreview` 네 백엔드) | V1 |
 | V3 | `VfxComponent`(효과 경로, 재생, 정지, 씨앗)와 에디터 미리보기 창(`VfxPreviewPanel` — 보기 전용, 효과 편집은 카탈로그 편집기) — **들어감**(표본 효과 `engine/vfx/sparks.vfx.xml`) | V2 |
 | V4 | GPU 시뮬레이션 `vfxsimulate.hlsl`(그룹 하나 = 방출기 하나, 단계마다 생성 → 적분 → 안정 압축, 간접 드로우 인자)과 방출기마다의 시뮬레이션 대상 — **들어감**(`VfxEmitterClock` 이 두 시뮬레이션의 생성 일정, 게임 스레드 `VfxGPUEmitter` → 요청 `VfxGPUEmitterRequest` → 렌더 스레드 `VfxGPUSimulation`, 패스 종류 `VfxSimulation`; `VfxEmitterClockTest.ScheduleMatchesTheCPUSimulation` · `VfxGPUEmitterTest.FinishesAfterTheLongestLifetimeAndRestartsWithANewRun` · `VfxComponentTest.EmittersPickTheirSimulationTarget`, `RenderPassGPUTest.ParticlesDrawInTheTransparentPass` 가 기본 GPU 경로를 그린다. **빌드 · 셰이더 컴파일 · 쿠킹 · 화면 확인 전**). 계약에서 바꾼 것: 생존 수는 원자적 카운터가 아니라 그룹 공유 메모리 접두사 합의 안정 압축이다 — 버퍼가 늘 태어난 순서라 띠가 정렬 없이 잇는다. DX11 의 "복사 단계" 는 필요 없다 — 입자 상태 · 렌더 입력은 구조 버퍼, 간접 인자는 따로 둔 버퍼(DX11 은 RAW UAV, 셰이더가 `#if defined( DX11 )` 로 바이트 주소에 쓴다)라 같은 디스패치가 쓴다. GL `drawIndirect` 는 메시 없는 드로우를 장치 공용 VAO 로 그리게 고쳤다. GPU 풀이 차서 버린 입자는 인자 버퍼에 센다(`SW_VFX_ARGS_WORD_DROPPED` — RHI 에 버퍼를 읽어 오는 길이 없어 아직 경고로 올리지 못한다). 풀이 찰 수 있는 데이터(생성률 × 가장 긴 수명 + 버스트 > 풀)는 읽을 때 경고한다. 렌더 스레드가 늦으면 디스패치마다 단계 상한(`SW_VFX_MAX_STEPS_PER_DISPATCH`)까지만 따라잡는다 | V2, `D2-6.3` 슬롯 지도 |
-| V5 | CPU 와 GPU 비교 테스트: 같은 씨앗, 같은 단계 수에서 입자 수가 같고 위치가 허용 오차 안입니다(hostgpu) — **들어감**(`RenderPassGPUTest.CPUAndGPUParticleSimulationsDrawTheSameImage` 네 백엔드, hostgpu 실행 전) | V4 |
+| V5 | CPU 와 GPU 비교 테스트: 같은 씨앗, 같은 단계 수에서 입자 수가 같고 위치가 허용 오차 안입니다(hostgpu) — 테스트는 들어갔고(`RenderPassGPUTest.CPUAndGPUParticleSimulationsDrawTheSameImage` 네 백엔드) **Vulkan · OpenGL 에서 진다**(아래 "V4 남은 확인") | V4 |
 | V6 | 메시 입자(`VfxRenderMode::Mesh` — 메시 인스턴스 배치), 리본(`Ribbon` — 태어난 순서의 띠, `particle.hlsl`), 충돌(`VfxCollisionDef` — 물리 레이캐스트, `IVfxCollisionScene`), 파티클 라이트(`VfxLightDef` — 씬 라이트 목록 · CPU 라이트 그리드) — **들어감**(`VfxEffectDefTest.RenderModeFieldsAreChecked` · `VfxCPUSimulationTest.RibbonParticlesAreWrittenInBirthOrder` · `CollisionBouncesOrKills` · `VfxComponentTest.TrailSampleDrivesRibbonMeshAndLights`, 표본 `engine/vfx/trail.vfx.xml`, 빌드 · 화면 확인 전). 띠의 셰이더 경로(`particle.hlsl` 플래그 칸)는 커밋 훅(`CheckShaderStamps`)이 쿠킹한 바이너리와 함께 커밋하라고 막아 **아직 커밋되지 않았다** — 빌드 뒤 `App --cook-shaders` 와 함께 넣는다(그 전까지 띠는 더하기 빌보드로 잘못 그려진다). GPU 라이트 그리드에 넣는 일은 `ClusteredLighting` S5 | V3 |
 | V7 | 메시 투명과 입자의 교차 정렬: 방출기를 메시 투명 배치와 한 순서로 섞고(프리미티브 단위, 결정 기록 5-12 `D2-11`), 추가 뷰는 그 뷰의 순서로 그립니다(`GPUTransparentParticleSlot`) — **들어감**(`GPUTransparentSorterTest.ParticlePlacementFollowsLayerAndDepth` · `VfxComponentTest.ParticlesInterleaveWithTransparentMeshes`, 빌드 · 화면 확인 전). 추가 뷰는 배치 순서와 입자 자리를 한 쌍으로만 쓴다(`FrameRenderer::applyViewTransparentOrder` — 뷰 순서에 주 시점 자리를 섞지 않는다). 패스 끝에 붙여 그리는 다른 경로는 정렬 대상이 아니다: 캔버스 패스는 화면 HUD(마지막이 의도), 월드 UI(`WidgetSpace::World`)는 렌더 텍스처를 메시에 붙여 메시 투명 배치로 정렬되고, `MeshOutline` 은 모든 파이프라인에서 투명 앞이며 불투명 배치만, `Outline` · 디버그 도형은 선택 · 에디터 겹침이다 | V2 |
 | VfxModuleTargets | 손으로 적은 "CPU 전용 모듈 목록" 대신 모듈마다 대상 집합(`VfxSimulationTargetSet`, 모듈 구조체의 `getSupportedTargets`)을 선언하고 방출기는 교집합을 쓴다(`VfxEmitterDef::computeSupportedTargets` — 칸마다 한 줄인 모듈 표, 비면 로드 오류). 충돌에 `_method`(`PhysicsRaycast` = CPU, `SceneDepth` = GPU)와 `_depthThickness`. `selectSimulationTarget` 은 모듈 집합 ∩ 빌드가 원하는 곳(교집합이 비면 모듈이 허락한 곳 — `gv_vfxSimulation` 은 둘 다 되는 방출기만 고른다). "수명을 늘리는 모듈이 없다"(GPU 방출기의 "끝났다" 의 근거)도 모듈 표가 선언한다(`isLifetimeBoundedByMax`) — **들어감**(`VfxEffectDefTest.ModuleTargetsIntersect` · `EveryEmitterFieldDeclaresItsTargets` — 리플렉션의 칸 목록과 표를 맞춘다, 빌드 전) | V4 |
@@ -34,6 +34,11 @@
 
 - **셰이더 커밋은 쿠킹과 함께.** `vfxsimulate.hlsl` · `vfxsimulate.hlsli` · `vfxmeshinstance.hlsl` · `depthhistory.hlsl` 은 커밋 훅(`CheckShaderStamps`)이 네 백엔드의 쿠킹 바이너리와 함께 커밋하라고 막는다. 빌드를 허락받은 작업자가 `App --cook-shaders` 뒤 함께 넣는다. 그 전에는 엔진 기본 자산이 가리키는 파일이 없어 GPU 방출기와 깊이 히스토리가 없다(오류 한 번). C++ 쪽 `VfxGPUSimulation.cpp` 가 `vfxsimulate.hlsli` 를 include 하므로 셰이더 패치 없이는 빌드되지 않는다.
 - FXC(DX11 cs_5_0)가 동기화를 낀 반복(덩어리 · 접두사 합)을 받는지, 네 백엔드에서 `ParticlesDrawInTheTransparentPass` 와 `editor/vfxpreview` 시나리오를 본다. `gv_vfxSimulation=CPU` 와 그림이 같아야 한다(V5 가 수로 견준다).
+- **V5 결과(2026-10-22, Debug hostgpu)**: DX11 · DX12 는 CPU 와 같다. **Vulkan · OpenGL 은 다르다**(다른 칸 10.5 %, 둘이 거의 같은 수). 셰이더 실험(렌더 입력 색에 수명 비율 · 크기 커브 값 · 키 수를 실어 그림)으로
+  입자 위치 · 수명 비율 · 크기 커브 값은 두 백엔드가 같음을 봤다 — 시뮬레이션은 맞다. 다른 것은 그려진 모양이다: 불꽃(원 텍스처, 작게 줄어듦)이 연기 텍스처처럼 크고 부드럽게,
+  연기가 작게 그려져 **방출기 둘의 텍스처(또는 루트 상수)가 서로 바뀐 것처럼** 보인다. 두 SPIR-V 백엔드의 GPU 방출기 간접 드로우(`VfxParticleRenderer::drawBatches` 의 `drawIndirect`)만 그렇고
+  CPU 방출기(`drawInstanced`)는 맞다. 다음 확인: 방출기마다 텍스처를 흰색으로 바꿔 크기만 견주기, 두 방출기 순서를 바꿔 보기, Vulkan 검증 레이어의 디스크립터 경고.
+  DX11 의 오류 두 줄(깊이 히스토리 RT 가 컴퓨트 UAV 로 걸림)은 고쳤다(`D3D11RHICommandContext::bindComputeUav`).
 - GL 의 R32 실수 RW 텍스처 읽기(형식 없는 이미지 읽기)와 DX11 RAW 인자 버퍼의 SRV(메시 인스턴스 쓰기가 살아 있는 수를 읽는다)를 확인한다.
 
 ### GPU 본체 + 라이트 CPU 방출기 (VfxGPULights 전의 패턴)
