@@ -30,6 +30,8 @@ namespace sw
         static constexpr bool kSupportsVehicle = true;
         /** @brief 씬이 소프트 바디(`IPhysicsSoftBodyScene`)를 구현하는지입니다. */
         static constexpr bool kSupportsSoftBody = true;
+        /** @brief 씬이 부력(`IPhysicsBuoyancyScene`)을 구현하는지입니다. */
+        static constexpr bool kSupportsBuoyancy = true;
 
         /** @brief 이 차원이 만들 수 있는 관절 종류인지 봅니다. 3D 는 모든 종류를 만듭니다. */
         static constexpr bool supportsJoint( PhysicsJointType ) { return true; }
@@ -50,6 +52,8 @@ namespace sw
         static constexpr bool kSupportsVehicle = false;
         /** @brief 평면 물리에는 소프트 바디가 없습니다(Box2D 에 없다). 씬은 `IPhysicsSoftBodyScene` 을 상속하지 않습니다. */
         static constexpr bool kSupportsSoftBody = false;
+        /** @brief 평면 물리에는 부력이 없습니다(Box2D 에 잠긴 넓이 계산이 없다). 씬은 `IPhysicsBuoyancyScene` 을 상속하지 않습니다. */
+        static constexpr bool kSupportsBuoyancy = false;
 
         /** @brief 이 차원이 만들 수 있는 관절 종류인지 봅니다. 평면에는 스윙이 없어 Cone 을 만들지 않습니다. */
         static constexpr bool supportsJoint( PhysicsJointType type ) { return type != PhysicsJointType::Cone; }
@@ -157,6 +161,11 @@ namespace sw
         float32 _mass{ 70.0f };                             ///< 밀어낼 때의 질량이다(3D).
         float32 _maxStrength{ 100.0f };                     ///< 동적 바디를 미는 가장 큰 힘이다(3D, 뉴턴).
         uint8   _layer{ 0 };
+        /**
+         * @brief 캐릭터를 따라다니는 속 바디(키네마틱, 같은 캡슐)를 둔다(3D, Jolt `mInnerBodyShape`). 천 · 헤어 같은 소프트 바디와 센서가 캐릭터를 몸으로 느낀다.
+         * @details 끄면(기본) 캐릭터는 이동 질의로만 세계와 닿아 소프트 바디가 몸을 뚫고 지나간다. 켜면 속 바디가 다른 움직이는 바디를 더 세게 밀 수 있어 쓰는 게임이 고른다.
+         */
+        bool _bInnerBody{ false };
     };
 
     using PhysicsCharacterDesc3D = PhysicsCharacterDesc<PhysicsDimension3D>;

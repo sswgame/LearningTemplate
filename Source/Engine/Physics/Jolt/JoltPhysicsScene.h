@@ -197,6 +197,7 @@ namespace sw
         bool               isJointValid( PhysicsJointHandle joint ) const override;
         void               setJointMotor( PhysicsJointHandle joint, const PhysicsJointMotor& motor ) override;
         float32            getJointPosition( PhysicsJointHandle joint ) const override;
+        void               driveJointToRotation( PhysicsJointHandle joint, const quaternion& targetRotationA, const quaternion& targetRotationB, float32 maxTorque ) override;
 
         PhysicsCharacterHandle  createCharacter( const PhysicsCharacterDesc3D& desc ) override;
         void                    destroyCharacter( PhysicsCharacterHandle character ) override;
@@ -216,6 +217,8 @@ namespace sw
         bool                  getSoftBodyVertices( PhysicsSoftBodyHandle softBody, vector<float3>& outListPosition ) const override;
         void                  setSoftBodyPinnedTransform( PhysicsSoftBodyHandle softBody, const float3& position, const quaternion& rotation ) override;
         void                  setSoftBodySkinningPose( PhysicsSoftBodyHandle softBody, const vector<float4x4>& listJointWorld, bool bHardSkinAll ) override;
+
+        [[nodiscard]] bool applyBuoyancy( PhysicsBodyHandle body, const PhysicsBuoyancyDesc& desc, float32 deltaSeconds ) override;
 
         bool   raycast( const float3& origin, const float3& direction, float32 maxDistance, const PhysicsQueryFilter& filter, PhysicsCastHit3D& outHit ) const override;
         bool   shapeCast( const PhysicsShapeDesc3D& shape, const float3& position, const quaternion& rotation, const float3& direction, float32 maxDistance,

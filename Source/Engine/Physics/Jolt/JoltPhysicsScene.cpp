@@ -774,6 +774,21 @@ namespace sw
             _system.GetBodyInterface().AddImpulse( pRecord->_bodyID, JoltUtil::toJolt( impulse ), JoltUtil::toJolt( point ) );
     }
 
+    bool JoltPhysicsScene::applyBuoyancy( PhysicsBodyHandle body, const PhysicsBuoyancyDesc& desc, float32 deltaSeconds )
+    {
+        const BodyRecord* pRecord = findBody( body );
+        if ( pRecord == nullptr )
+            return false;
+        JPH::BodyInterface& bodyInterface = _system.GetBodyInterface();
+        // 고정 · 키네마틱 바디는 힘을 받지 않는다(Jolt 가 단언한다) — 움직이는 바디만.
+        if ( bodyInterface.GetMotionType( pRecord->_bodyID ) != JPH::EMotionType::Dynamic )
+            return false;
+        // 잠긴 부피 · 부력 중심은 셰이프에서 구한다. 바디 인터페이스 판은 자는 바디를 깨운다(물에 떨어진 상자가 잠든 채 떠 있지 않게).
+        return bodyInterface.ApplyBuoyancyImpulse( pRecord->_bodyID, JPH::RVec3( JoltUtil::toJolt( desc._surfacePoint ) ), JoltUtil::toJolt( desc._surfaceNormal ),
+                                                   desc._buoyancy, desc._linearDrag, desc._angularDrag, JoltUtil::toJolt( desc._fluidVelocity ),
+                                                   _system.GetGravity(), deltaSeconds );
+    }
+
     void JoltPhysicsScene::addTorque( PhysicsBodyHandle body, const float3& torque )
     {
         const BodyRecord* pRecord = findBody( body );

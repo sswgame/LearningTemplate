@@ -18,6 +18,7 @@
  *          | 질의 | `IPhysicsQueryScene` | 맞힘 판정, 소리 가림, 발 IK, 탈것 |
  *          | 바퀴 차(3D 만) | `IPhysicsVehicleScene` | 바퀴 차 컴포넌트 |
  *          | 소프트 바디(3D 만) | `IPhysicsSoftBodyScene` | 천 컴포넌트 |
+ *          | 부력(3D 만) | `IPhysicsBuoyancyScene` | 부력 부피 컴포넌트 |
  *          | 월드 | `IPhysicsScene` | `ScenePhysics`(스텝, 이벤트), 디버그 그리기 |
  *
  *          **스레드.** 씬 하나는 한 스레드(게임 스레드)에서 다룬다. `step` 안에서만 백엔드가 작업을 나눠 돌린다. step 중에 다른 스레드가 바디를
@@ -35,6 +36,7 @@
 
 #include "Engine/Physics/Collision/PhysicsContact.h"
 #include "Engine/Physics/IPhysicsBodyScene.h"
+#include "Engine/Physics/IPhysicsBuoyancyScene.h"
 #include "Engine/Physics/IPhysicsCharacterScene.h"
 #include "Engine/Physics/IPhysicsJointScene.h"
 #include "Engine/Physics/IPhysicsQueryScene.h"
@@ -59,7 +61,8 @@ namespace sw
                           public IPhysicsCharacterScene<TDimension>,
                           public IPhysicsQueryScene<TDimension>,
                           public std::conditional_t<TDimension::kSupportsVehicle, IPhysicsVehicleScene, PhysicsNoVehicleScene>,
-                          public std::conditional_t<TDimension::kSupportsSoftBody, IPhysicsSoftBodyScene, PhysicsNoSoftBodyScene>
+                          public std::conditional_t<TDimension::kSupportsSoftBody, IPhysicsSoftBodyScene, PhysicsNoSoftBodyScene>,
+                          public std::conditional_t<TDimension::kSupportsBuoyancy, IPhysicsBuoyancyScene, PhysicsNoBuoyancyScene>
     {
     public:
         using Vector         = typename TDimension::Vector;

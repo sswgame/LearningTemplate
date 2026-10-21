@@ -88,6 +88,13 @@ namespace sw
         static void driveToPose( IPhysicsBodyScene3D& scene, const PhysicsRagdoll& ragdoll, const PhysicsSkeletonView& skeleton, const float4x4& worldFromModel,
                                  float32 deltaTime );
         /**
+         * @brief 파워드 래그돌 — 움직이는(Dynamic) 바디는 그대로 두고, Cone 관절의 모터가 이웃 바디의 상대 자세를 애니메이션 포즈로 끕니다(`driveJointToRotation`).
+         * @details 몸 전체의 자리는 중력 · 충돌이 정하고 팔다리의 꺾임만 포즈를 따른다(맞아서 휘청이다 서는 캐릭터 · 언리얼 Physical Animation). Cone 이 아닌
+         *          관절(Hinge 무릎 · 팔꿈치)은 끌지 않는다 — 모터가 없는 채 한계만 지킨다. @p maxTorque 가 0 이하면 모든 모터를 끈다(축 늘어진 래그돌).
+         */
+        static void driveToPoseWithMotors( IPhysicsScene3D& scene, const PhysicsAsset& asset, const PhysicsRagdoll& ragdoll, const PhysicsSkeletonView& skeleton,
+                                           const float4x4& worldFromModel, float32 maxTorque );
+        /**
          * @brief 바디 자세를 모델 공간 뼈 행렬로 다시 읽습니다. 바디가 있는 뼈는 바디 자세를 쓰고(뼈의 배율은 입력 포즈의 것), 바디가 없는 뼈는 입력 포즈의 부모 상대
          *        변환을 새 부모에 붙입니다(손가락이 손을 따라갑니다).
          * @param skeleton 입력 포즈입니다(바디 없는 뼈의 로컬 변환을 여기서 가져옵니다).

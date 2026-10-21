@@ -377,6 +377,15 @@ namespace sw
         b2Joint_WakeBodies( jointID );
     }
 
+    void Box2DPhysicsScene::driveJointToRotation( PhysicsJointHandle joint, const float32& targetRotationA, const float32& targetRotationB, float32 maxTorque )
+    {
+        (void)targetRotationA;
+        (void)targetRotationB;
+        (void)maxTorque;
+        SW_LOG_ERROR( "driveJointToRotation drives Cone joints, which 2D physics does not have (joint slot %#) - use setJointMotor on the revolute joint",
+                      joint.getSlot() );
+    }
+
     float32 Box2DPhysicsScene::getJointPosition( PhysicsJointHandle joint ) const
     {
         const JointRecord* pRecord = _joints.get( joint.getSlot() );

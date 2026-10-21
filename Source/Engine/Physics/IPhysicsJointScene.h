@@ -18,6 +18,7 @@ namespace sw
     {
     public:
         using JointDesc = PhysicsJointDesc<TDimension>;
+        using Rotation  = typename TDimension::Rotation;
 
         virtual ~IPhysicsJointScene() = default;
 
@@ -34,6 +35,12 @@ namespace sw
         virtual void setJointMotor( PhysicsJointHandle joint, const PhysicsJointMotor& motor ) = 0;
         /** @brief Hinge 면 현재 각(라디안), Slider 면 현재 거리, Distance 면 현재 길이를 반환합니다. 나머지는 0 입니다. */
         virtual float32 getJointPosition( PhysicsJointHandle joint ) const = 0;
+        /**
+         * @brief Cone 관절의 스윙 · 비틀림 모터로 두 바디의 상대 자세를 목표(@p targetRotationA 에 대한 @p targetRotationB, 둘 다 월드)로 끕니다 — 파워드 래그돌.
+         * @details 언리얼 Physical Animation 의 각 구동 · 유니티 ConfigurableJoint 의 targetRotation 자리다. 상대 자세만 쓰므로 몸 전체의 자리는 중력 · 충돌이 정한다.
+         *          @p maxTorque(뉴턴미터)가 0 이하면 모터를 끈다(축 늘어진 래그돌). Cone 이 아닌 관절이면 오류를 남기고 아무것도 하지 않는다(2D 에는 Cone 이 없다).
+         */
+        virtual void driveJointToRotation( PhysicsJointHandle joint, const Rotation& targetRotationA, const Rotation& targetRotationB, float32 maxTorque ) = 0;
     };
 
     using IPhysicsJointScene3D = IPhysicsJointScene<PhysicsDimension3D>;

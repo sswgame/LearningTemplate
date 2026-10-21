@@ -213,6 +213,36 @@ namespace sw
         }
     }
 
+    void PhysicsRagdollBuilder::driveToPoseWithMotors( IPhysicsScene3D& scene, const PhysicsAsset& asset, const PhysicsRagdoll& ragdoll, const PhysicsSkeletonView& skeleton,
+                                                       const float4x4& worldFromModel, float32 maxTorque )
+    {
+        const bool bAssetMismatch = asset._listBody.size() != ragdoll._listBody.size() || ragdoll._listJoint.size() != ragdoll._listBody.size();
+        if ( bAssetMismatch )
+        {
+            SW_LOG_ERROR( "driveToPoseWithMotors: the asset and the ragdoll disagree on the body count" );
+            return;
+        }
+        for ( size_t bodyIndex = 0; bodyIndex < ragdoll._listBody.size(); ++bodyIndex )
+        {
+            const int32 parentBody = ragdoll._listParentBody[bodyIndex];
+            const bool  bDriven    = parentBody >= 0 && ragdoll._listJoint[bodyIndex].isValid() && asset._listBody[bodyIndex]._joint._type == PhysicsJointType::Cone;
+            if ( bDriven == false )
+                continue; // 뿌리 · Cone 이 아닌 관절은 모터가 없다(파일 머리말)
+            const size_t boneIndex       = static_cast<size_t>( ragdoll._listBoneIndex[bodyIndex] );
+            const size_t parentBoneIndex = static_cast<size_t>( ragdoll._listBoneIndex[static_cast<size_t>( parentBody )] );
+            if ( boneIndex >= skeleton._listModelSpaceBone.size() || parentBoneIndex >= skeleton._listModelSpaceBone.size() )
+                continue;
+            // 바디의 좌표계가 곧 뼈의 좌표계다(`create`) — 두 뼈의 월드 자세가 두 바디의 목표 자세다.
+            float3     parentPosition{};
+            quaternion parentRotation{};
+            float3     childPosition{};
+            quaternion childRotation{};
+            PhysicsRagdollInternal::decomposePose( skeleton._listModelSpaceBone[parentBoneIndex] * worldFromModel, parentPosition, parentRotation );
+            PhysicsRagdollInternal::decomposePose( skeleton._listModelSpaceBone[boneIndex] * worldFromModel, childPosition, childRotation );
+            scene.driveJointToRotation( ragdoll._listJoint[bodyIndex], parentRotation, childRotation, maxTorque );
+        }
+    }
+
     void PhysicsRagdollBuilder::readBoneTransforms( const IPhysicsBodyScene3D& scene, const PhysicsRagdoll& ragdoll, const PhysicsSkeletonView& skeleton,
                                                     const float4x4& worldFromModel, span<float4x4> outListModelSpaceBone )
     {

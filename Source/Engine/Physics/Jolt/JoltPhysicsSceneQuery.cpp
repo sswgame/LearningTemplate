@@ -293,6 +293,34 @@ namespace sw
         wakeBody( pRecord->_bodyB );
     }
 
+    void JoltPhysicsScene::driveJointToRotation( PhysicsJointHandle joint, const quaternion& targetRotationA, const quaternion& targetRotationB, float32 maxTorque )
+    {
+        JointRecord* pRecord = _joints.get( joint.getSlot() );
+        if ( pRecord == nullptr || pRecord->_pConstraint == nullptr )
+            return;
+        if ( pRecord->_type != PhysicsJointType::Cone )
+        {
+            SW_LOG_ERROR( "driveJointToRotation drives Cone joints only - this joint is not one" );
+            return;
+        }
+        JPH::SwingTwistConstraint& constraint = *static_cast<JPH::SwingTwistConstraint*>( pRecord->_pConstraint.GetPtr() );
+        if ( maxTorque <= 0.0f )
+        {
+            constraint.SetSwingMotorState( JPH::EMotorState::Off );
+            constraint.SetTwistMotorState( JPH::EMotorState::Off );
+            return;
+        }
+        // 바디 기준 목표 — B 의 자세를 A 의 자세로 나눈 상대 회전(Jolt 의 열-벡터 순서: qB = qA × q상대). 관절 프레임으로 옮기는 것은 Jolt 가 한다(`SetTargetOrientationBS`).
+        const JPH::Quat relative = ( JoltUtil::toJolt( targetRotationA ).Conjugated() * JoltUtil::toJolt( targetRotationB ) ).Normalized();
+        constraint.GetSwingMotorSettings().SetTorqueLimit( maxTorque );
+        constraint.GetTwistMotorSettings().SetTorqueLimit( maxTorque );
+        constraint.SetSwingMotorState( JPH::EMotorState::Position );
+        constraint.SetTwistMotorState( JPH::EMotorState::Position );
+        constraint.SetTargetOrientationBS( relative );
+        wakeBody( pRecord->_bodyA );
+        wakeBody( pRecord->_bodyB );
+    }
+
     float32 JoltPhysicsScene::getJointPosition( PhysicsJointHandle joint ) const
     {
         const JointRecord* pRecord = _joints.get( joint.getSlot() );
@@ -358,6 +386,12 @@ namespace sw
         settings.mMaxStrength   = desc._maxStrength;
         // 캡슐 아래 반구에서 닿은 것만 디딤으로 본다(옆구리에 닿은 턱은 바닥이 아니다).
         settings.mSupportingVolume = JPH::Plane{ JPH::Vec3::sAxisY(), -desc._radius };
+        // 속 바디 — 천(소프트 바디)과 센서가 캐릭터를 몸으로 느낀다(`PhysicsCharacterDesc::_bInnerBody`). Jolt 가 캐릭터 갱신 끝마다 그 자리로 옮기고 캐릭터와 함께 지운다.
+        if ( desc._bInnerBody )
+        {
+            settings.mInnerBodyShape = result.Get();
+            settings.mInnerBodyLayer = JoltLayerUtil::makeObjectLayer( desc._layer, true );
+        }
 
         CharacterRecord record;
         record._pCharacter      = JoltUtil::createObject<JPH::CharacterVirtual>( &settings, JoltUtil::toJolt( desc._position ), JPH::Quat::sIdentity(), desc._userData,

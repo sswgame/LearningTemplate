@@ -134,13 +134,6 @@ Base 에 남긴 것: 계산한 키로 정렬하는 람다(`TimingJudge` 폭 합,
 설계 메모(2026-10-22): `IWindow::createPlatformWindow` 가 `WAYLAND_DISPLAY` 를 보고 `WaylandWindow`(`Engine/Window/Linux/Wayland/`)를 고르고, 없으면 X11 이다 — 고른 결과를 로그 한 줄로 남긴다. 의존은 `wayland-client` · `xkbcommon` · `wayland-protocols`(xdg-shell · xdg-decoration, `wayland-scanner` 로 구성 때 만든다)이고 Linux 클라이언트 타깃에만 링크한다(서버는 X11 처럼 찾지도 않는다). Vulkan 표면은 `VK_KHR_wayland_surface`, GL 은 EGL 이라 `IRenderSurface::getSurfaceDisplay` 가 `wl_display` 를 낸다. 착수 조건은 CI 리눅스 잡에 Wayland 컴포지터(weston headless)를 둘 수 있는가이다 — 확인할 길 없이 짓지 않는다.
 함정: 리눅스 확인은 CI 잡에서만 합니다(결정 기록 5-12).
 
-### PhysicsExtensions
-제목: 물리 확장 후보
-옛번호: D1-8
-왜 필요한가: 차량 물리, 부력 · 유체, 천과 캐릭터의 상호작용, 파워드 래그돌(옛 `D4-6.6` 보류와 같은 일). 쓰는 게임이 생기면 설계합니다.
-남은 것: Jolt 의 플랫폼 간 결정성 옵션이 꺼져 있어(옛 `D7-8` 검토) 롤백을 물리 객체로 넓히려면 이 옵션 결정이 먼저입니다.
-설계 메모: 센서 규칙(옛 `D1-2.1`, 2D 는 들어감) — 센서끼리 서로를 봅니다(box2d `sensor.c` 3.1.1). 막는 콜라이더도 센서입니다. 겹침은 고정 스텝에서만 납니다. 무버 캐스트가 센서를 거르도록 비센서 셰이프 마스크에 전용 비트를 둡니다. 결정은 [결정 기록](../09_Decisions.md) 의 `D1-2.1` 줄입니다.
-
 ## 조건부
 
 ### ModuleRenderPass
