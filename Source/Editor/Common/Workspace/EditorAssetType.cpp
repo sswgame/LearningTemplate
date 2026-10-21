@@ -60,7 +60,7 @@ namespace sw::editor
         constexpr string_view kArrMaterialExt[]        = { Material::kExtension };
         constexpr string_view kArrShaderExt[]          = { ".hlsl", ".hlsli" };
         constexpr string_view kArrAudioExt[]           = { ".wav" };
-        constexpr string_view kArrDataExt[]            = { ".xml", ".json", ".ini", ".kv" };
+        constexpr string_view kArrDataExt[]            = { ".xml", ".json" };
         constexpr string_view kArrAnimationSuffix[]    = { AnimationGraphAsset::kExtension };
         constexpr string_view kArrDialogueSuffix[]     = { DialogueGraphAsset::kExtension };
         constexpr string_view kArrSpriteDocSuffix[]    = { SpriteClipAsset::kExtension };

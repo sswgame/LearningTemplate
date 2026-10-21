@@ -97,7 +97,7 @@ C-30(데이터 속성의 리터럴 기본값)과 C-36(경로 리터럴, 조용�
   1. 스키마 읽기: `GameDataXML::readFields` 가 리플렉션 Def 를 읽습니다. 기본값은 Def 의 초기값이고, `PROPERTY( Required )` 와 `Min` · `Max` 가 검사됩니다. 데이터 카탈로그는 모두 이 길로 갑니다.
   2. 필수 손 읽기: `[[nodiscard]] std::optional<T> readRequiredAttribute<T>( name )` 입니다. 없거나 값이 깨지면 원소와 속성 이름으로 오류를 남기고 `nullopt` 를 돌려줍니다.
   3. 선택 손 읽기: `[[nodiscard]] bool readOptionalAttribute<T>( name, std::optional<T>& out )` 입니다. 없으면 `out` 이 비고 true 이며, 깨진 값은 오류와 false 입니다. "없음"은 기본값이 아니라 형식(`std::optional` 필드)으로 남습니다.
-  `JSONValue` 와 `KeyValueFile` 도 같은 세 길로 맞춥니다. 마지막 단위(D9)에서 폴백 인자를 받는 함수를 지우면 남은 호출부는 컴파일 오류가 됩니다. 그 뒤 `AttributeFallback` 종류와 해당 `fallbackParameter` 줄은 게이트에서 뺍니다.
+  `JSONValue` 도 같은 세 길로 맞춥니다(`KeyValueFile` 은 [구조 단순화](StructureSimplification.md) TX3 에서 지웠다 — `.meta` 는 XML, 에디터 · 사용자 상태는 JSON). 마지막 단위(D9)에서 폴백 인자를 받는 함수를 지우면 남은 호출부는 컴파일 오류가 됩니다. 그 뒤 `AttributeFallback` 종류와 해당 `fallbackParameter` 줄은 게이트에서 뺍니다.
 - **이름으로 찾는 값은 로드할 때 키를 확인합니다.** 데이터가 이름을 적은 곳은 로드할 때 이름을 핸들로 바꾸고, 대상 테이블에 없으면 로드 오류입니다. 실행 중 찾기는 핸들로 하므로 "모르는 이름"이 생기지 않습니다.
   핸들로 바꿀 수 없는 찾기(블랙보드처럼 실행 중에 키가 생기는 것)는 `std::optional<T>` 을 돌려주고, 호출부가 없음을 직접 처리합니다.
 - **로드 결과는 세 값입니다.** `[[nodiscard]] enum class LoadOutcome { Loaded, Absent, Failed }` 와 `ReloadOutcome { Reloaded, NotTracked, Failed }` 를 둡니다. 정상인 `Absent` · `NotTracked` 가 따로 있으므로 `(void)` 로 버릴 이유가 없어집니다.

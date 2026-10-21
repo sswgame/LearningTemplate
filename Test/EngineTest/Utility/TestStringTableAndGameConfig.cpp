@@ -1,7 +1,6 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
-#include "Core/File/KeyValueFile.h"
 
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Localization/StringTable.h"
@@ -10,75 +9,13 @@
 #include "TestFramework/TestFramework.h"
 
 // ------------------------------------------------------------------------------
-// KeyValueFileTest -- KeyValue 텍스트 파싱 및 데이터 변환 검증
+// 문자열 표 언어 전환과 활성 게임 설정(예전 TestKeyValueFile.cpp 에 같이 있던 두 케이스)
 // ------------------------------------------------------------------------------
 
-SW_TEST_CASE( KeyValueFileTest, ParseBasicAndComments )
-{
-    const utf8* kSampleConfig =
-        "# Engine Sample Configuration\n"
-        "; Another comment style\n"
-        "[GeneralSection]\n"
-        "map=Assets/Scenes/Stage1.scene\n"
-        "x=150\n"
-        "y=250\n"
-        "speed=3.75\n"
-        "enable_vsync=true\n"
-        "enable_shadow=1\n"
-        "disable_fog=false\n"
-        "flag.quest_cleared=1\n"
-        "flag.gold=9999\n";
-
-    sw::KeyValueMap map;
-    SW_EXPECT_TRUE( sw::KeyValueFile::parse( kSampleConfig, map ) );
-
-    // 문자열 조회 — 없는 키는 nullptr 이다(폴백 글을 돌려주지 않는다).
-    SW_ASSERT_TRUE( sw::KeyValueFile::find( map, "map" ) != nullptr );
-    SW_EXPECT_STREQ( "Assets/Scenes/Stage1.scene", sw::KeyValueFile::find( map, "map" )->c_str() );
-    SW_EXPECT_TRUE( sw::KeyValueFile::find( map, "missing_map" ) == nullptr );
-
-    // 정수형 조회
-    SW_EXPECT_EQUAL( 150, sw::KeyValueFile::readRequired<int32>( map, "x" ).value() );
-    SW_EXPECT_EQUAL( 250, sw::KeyValueFile::readRequired<int32>( map, "y" ).value() );
-    SW_EXPECT_EQUAL( 9999, sw::KeyValueFile::readRequired<int32>( map, "flag.gold" ).value() );
-    SW_EXPECT_EQUAL( 1, sw::KeyValueFile::readRequired<int32>( map, "flag.quest_cleared" ).value() );
-    // 없는 선택 키는 넣어 둔 값(형식의 초기값) 그대로다.
-    int32 missingValue{ 42 };
-    SW_EXPECT_TRUE( sw::KeyValueFile::readOptionalInto( map, "missing_val", missingValue ) );
-    SW_EXPECT_EQUAL( 42, missingValue );
-
-    // 부동소수점 조회
-    SW_EXPECT_NEAR_EQUAL( 3.75f, sw::KeyValueFile::readRequired<float32>( map, "speed" ).value(), 0.001f );
-
-    // 불리언 조회(1/true/yes/on 과 0/false/no/off)
-    SW_EXPECT_TRUE( sw::KeyValueFile::readRequired<bool>( map, "enable_vsync" ).value() );
-    SW_EXPECT_TRUE( sw::KeyValueFile::readRequired<bool>( map, "enable_shadow" ).value() );
-    SW_EXPECT_FALSE( sw::KeyValueFile::readRequired<bool>( map, "disable_fog" ).value() );
-}
-
-SW_TEST_CASE( KeyValueFileTest, EmptyAndMalformedLines )
-{
-    const utf8* kMalformedText =
-        "\n\n"
-        "# Only comments\n"
-        "NoEqualsSignLine\n"
-        "=EmptyKey\n"
-        "EmptyVal=\n"
-        "   spacedKey   =   spacedVal   \n";
-
-    sw::KeyValueMap map;
-    SW_EXPECT_TRUE( sw::KeyValueFile::parse( kMalformedText, map ) );
-
-    SW_ASSERT_TRUE( sw::KeyValueFile::find( map, "EmptyVal" ) != nullptr );
-    SW_EXPECT_STREQ( "", sw::KeyValueFile::find( map, "EmptyVal" )->c_str() );
-    SW_ASSERT_TRUE( sw::KeyValueFile::find( map, "spacedKey" ) != nullptr );
-    SW_EXPECT_STREQ( "spacedVal", sw::KeyValueFile::find( map, "spacedKey" )->c_str() );
-}
-
 /**
- * @brief [KeyValueFileTest] 동일한 UI Key에 대해 언어 선택/전환 시 값 치환(한국어->영어->일본어->독일어->중국어->스페인어->러시아어->프랑스어) 검증
+ * @brief [StringTableTest] 동일한 UI Key에 대해 언어 선택/전환 시 값 치환(한국어->영어->일본어->독일어->중국어->스페인어->러시아어->프랑스어) 검증
  */
-SW_TEST_CASE( KeyValueFileTest, StringTableRuntimeLanguageSwitchingOnSameUIKeys )
+SW_TEST_CASE( StringTableTest, RuntimeLanguageSwitchingOnSameUIKeys )
 {
     sw::StringTable stringTable;
     SW_EXPECT_TRUE( stringTable.empty() );
@@ -203,9 +140,9 @@ SW_TEST_CASE( KeyValueFileTest, StringTableRuntimeLanguageSwitchingOnSameUIKeys 
     SW_EXPECT_EQUAL( size_t( 0 ), stringTable.size() );
 }
 /**
- * @brief [KeyValueFileTest] GameConfig 활성 싱글톤 설정 및 조회 검증
+ * @brief [GameConfigTest] GameConfig 활성 싱글톤 설정 및 조회 검증
  */
-SW_TEST_CASE( KeyValueFileTest, GameConfigActiveManagement )
+SW_TEST_CASE( GameConfigTest, ActiveManagement )
 {
     const sw::GameConfig oldActive = sw::GameConfig::getActive();
 
@@ -216,42 +153,4 @@ SW_TEST_CASE( KeyValueFileTest, GameConfigActiveManagement )
 
     // 이전 상태 복구
     sw::GameConfig::setActive( oldActive );
-}
-
-/**
- * @brief [KeyValueFileTest] 같은 키가 두 번 나오면 뒤에 적힌 것이 이긴다
- * @details `emplace` 는 이미 있는 키를 **덮지 않는다.** 그것으로 읽으면 손으로 고친 설정 파일에서 같은 키를 아래에
- *          다시 적을 때 위의 옛 값이 그대로 읽힌다 — 고쳤는데 아무 일도 일어나지 않는 모양이다.
- */
-SW_TEST_CASE( KeyValueFileTest, DuplicateKeyTakesTheLastValue )
-{
-    sw::KeyValueMap map;
-    SW_ASSERT_TRUE( sw::KeyValueFile::parse( "width=800\nheight=600\nwidth=1920\n", map ) );
-
-    SW_EXPECT_EQUAL( 1920, sw::KeyValueFile::readRequired<int32>( map, "width" ).value() );
-    SW_EXPECT_EQUAL( 600, sw::KeyValueFile::readRequired<int32>( map, "height" ).value() );
-    SW_EXPECT_EQUAL( size_t( 2 ), map.size() );
-}
-
-/**
- * @brief [KeyValueFileTest] 못 읽은 불리언은 폴백이 되지 않고 읽기 실패다 — 빈 값과 없는 키는 넣어 둔 값 그대로다
- * @details 폴백을 받던 `getBool` 은 "ture" 를 경고 한 줄과 함께 폴백으로 읽었다(D9 에서 지웠다).
- */
-SW_TEST_CASE( KeyValueFileTest, UnreadableBooleanIsAReadFailure )
-{
-    sw::KeyValueMap map;
-    SW_ASSERT_TRUE( sw::KeyValueFile::parse( "fullscreen=yes\nvsync=ture\nempty=\n", map ) );
-
-    test::ScopedLogCollector logs;
-    bool                     bValue = false;
-    SW_EXPECT_TRUE( sw::KeyValueFile::readOptionalInto( map, "fullscreen", bValue ) && bValue );
-    SW_EXPECT_TRUE( sw::KeyValueFile::readOptionalInto( map, "empty", bValue ) && bValue );
-    SW_EXPECT_TRUE( sw::KeyValueFile::readOptionalInto( map, "missing", bValue ) && bValue );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "is not a boolean" ) == 0, logs.joined().c_str() );
-    {
-        test::ScopedDefensiveTestLog expected( "a boolean key with a typo" );
-        SW_EXPECT_FALSE( sw::KeyValueFile::readOptionalInto( map, "vsync", bValue ) );
-    }
-    SW_EXPECT_TRUE( bValue ); // 깨진 값은 넣어 둔 값을 바꾸지 않는다
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "Key 'vsync' is not a boolean: 'ture'" ) == 1, logs.joined().c_str() );
 }
