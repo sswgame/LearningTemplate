@@ -232,6 +232,46 @@ namespace sw
         }
     }
 
+    namespace
+    {
+        struct FrameRendererPassExecuteInternal
+        {
+            /**
+             * @brief 선언한 컬러 출력에서 역할로 고르고, 그 역할을 받은 출력이 없으면 선언 순서(@p fallbackIndex)로 고릅니다.
+             * @param pTaken 이미 다른 역할로 고른 출력(건너뛴다). 선언이 없으면 nullptr 입니다.
+             */
+            static const hashed_string* pickColorOutput( const vector<RenderGraphPassDesc::ResolvedAttachment>* pDeclaredColor, RenderPassInputRole role,
+                                                         size_t fallbackIndex, const hashed_string* pTaken )
+            {
+                if ( pDeclaredColor == nullptr )
+                    return nullptr;
+                for ( const RenderGraphPassDesc::ResolvedAttachment& output : *pDeclaredColor )
+                {
+                    if ( static_cast<RenderPassInputRole>( output._role ) == role )
+                        return &output._attachment;
+                }
+                if ( fallbackIndex >= pDeclaredColor->size() || &( *pDeclaredColor )[fallbackIndex]._attachment == pTaken )
+                    return nullptr;
+                return &( *pDeclaredColor )[fallbackIndex]._attachment;
+            }
+
+            /** @brief 선언한 입력 중 @p role 인 첫 첨부입니다. 패스 서술이 없거나 그 역할이 없으면 nullptr 입니다. */
+            static const RenderGraphPassDesc::ResolvedAttachment* findInputByRole( const RenderGraphPassDesc* pPassDesc, RenderPassInputRole role )
+            {
+                if ( pPassDesc == nullptr )
+                    return nullptr;
+                for ( const RenderGraphPassDesc::ResolvedAttachment& input : pPassDesc->_listResolvedInput )
+                {
+                    if ( static_cast<RenderPassInputRole>( input._role ) == role )
+                        return &input;
+                }
+                return nullptr;
+            }
+        };
+    } // namespace
+
+    // 일반 풀스크린 패스는 테이블의 플래그로 고르고, 전용 실행 코드가 있는 패스만 아래 switch 의 case 를 가진다(짧은 디스패처라 나누지 않는다).
+    // 열거자를 추가하고 case 를 빠뜨리면 -Wswitch-enum 이 이 함수를 알려 준다.
     void FrameRenderer::executePass( FramePassContext& context, RenderPassType passType, string_view passName, const hashed_string& depthAttachment,
                                      const RenderGraphPassDesc* pPassDesc )
     {
@@ -257,23 +297,6 @@ namespace sw
         // 그래서 인스턴스 버퍼(지오메트리 패스 전용)와 달리 여기서 모든 패스에 바인딩한다.
         registerLightBuffer( context );
 
-        // 이름은 **이미 intern 된 것**만 받는다. string_view 를 받으면 패스마다 여기서 다시 intern 하게
-        // 된다(FNV + 32-way 샤드 뮤텍스). 타깃 이름은 모두 코드 리터럴이라 attachmentNames() 캐시로 충분하다.
-        auto colorLoadFor = [this]( const hashed_string& name, bool bForceLoad ) -> RHIRenderPassLoadOp
-        {
-            if ( bForceLoad )
-                return RHIRenderPassLoadOp::Load;
-            return markAttachmentCleared( name ) ? RHIRenderPassLoadOp::Clear : RHIRenderPassLoadOp::Load;
-        };
-
-        auto executeFullscreenPass = [&]( RHIPipelineStateHandle pso, const hashed_string& targetName, const float4& passClearColor )
-        {
-            if ( beginColorPass( context, targetName.view(), "", passClearColor, colorLoadFor( targetName, false ), RHIRenderPassLoadOp::Load ) == false )
-                return;
-            drawFullscreen( context, pso );
-            context._pCmd->endRenderPass();
-        };
-
         // 이 패스가 바인딩할 뎁스다. 파이프라인 XML 의 `_depthAttachment` 가 기준이고, 비어 있으면
         // 뎁스 없이 연다. "이 패스는 일부러 뎁스를 쓰지 않는다" 를 선언으로 표현할 수 있어야 한다.
         // 선언한 이름이 이번 프레임에 실제로 없으면(트랜지언트가 할당되지 않았으면) 뎁스 없이 진행한다.
@@ -287,82 +310,12 @@ namespace sw
         // 부르거나, 검증이 이미 오류를 낸 파이프라인) 원본 이름으로 간다.
         const vector<RenderGraphPassDesc::ResolvedAttachment>* pDeclaredColor =
             ( pPassDesc != nullptr && pPassDesc->_listResolvedColorOutput.empty() == false ) ? &pPassDesc->_listResolvedColorOutput : nullptr;
-        // 선언한 컬러 출력에서 역할로 고르고, 그 역할을 받은 출력이 없으면 선언 순서(fallbackIndex)로 고른다. 이미 다른 역할로 고른 출력은 건너뛴다.
-        auto pickColorOutput = [pDeclaredColor]( RenderPassInputRole role, size_t fallbackIndex, const hashed_string* pTaken ) -> const hashed_string*
-        {
-            if ( pDeclaredColor == nullptr )
-                return nullptr;
-            for ( const RenderGraphPassDesc::ResolvedAttachment& output : *pDeclaredColor )
-            {
-                if ( static_cast<RenderPassInputRole>( output._role ) == role )
-                    return &output._attachment;
-            }
-            if ( fallbackIndex >= pDeclaredColor->size() || &( *pDeclaredColor )[fallbackIndex]._attachment == pTaken )
-                return nullptr;
-            return &( *pDeclaredColor )[fallbackIndex]._attachment;
-        };
 
-        // 일반 풀스크린 패스는 테이블의 플래그로 고르고, 전용 실행 코드가 있는 패스만 아래 switch 의 case 를 가진다.
-        // 열거자를 추가하고 case 를 빠뜨리면 -Wswitch-enum 이 이 함수를 알려 준다.
-        const RenderPassTypeInfo& info              = getRenderPassTypeInfo( passType );
-        const bool                bTransparentBatch = info.hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch );
+        const RenderPassTypeInfo& info = getRenderPassTypeInfo( passType );
+        const PassExecuteInput    input{ context, passType, pPassDesc, pDeclaredColor, passDepth, info.hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch ) };
         if ( info.hasFlag( RenderPassTraitFlag::kGenericFullscreen ) && pPassDesc != nullptr )
         {
-            // 일반 풀스크린 패스(테이블의 kGenericFullscreen: Lighting, SSAO, Bloom, BloomDownsample, Outline, Tonemap)다. **선언이 곧 바인딩**이다.
-            // 입력은 역할 이름으로 모두 바인딩하고, 타깃은 선언한 출력 중 첫 번째로 있는 것이다. 계약(RenderPassInputSignature)이
-            // 로드 시점에 같은 목록을 검사했다. 새 포스트 패스는 테이블의 한 줄로 여기를 탄다.
-            registerDeclaredInputs( context, *pPassDesc );
-
-            const AttachmentNames& names   = attachmentNames();
-            const hashed_string*   pTarget = &names._sceneColor;
-            for ( const hashed_string& output : pPassDesc->_listResolvedOutput )
-            {
-                if ( findTransient( output.view() ) != 0 )
-                {
-                    pTarget = &output;
-                    break;
-                }
-            }
-
-            // PSO 가 0이면 `drawFullscreen` 이 파이프라인 설정을 건너뛴다. 대체할 PSO 는 테이블이 정한 것만 쓴다(Tonemap 은 Present).
-            const RHIPipelineStateHandle pso = findPassPSO( passType );
-
-            // 기본 클리어는 테이블의 값(SSAO 는 흰색이며 가림 없음)이고 없으면 렌더러의 클리어 색이다. 첨부가 클리어 색을 선언했으면 그것이 우선한다.
-            const float4 defaultClear = info._pDefaultClear != nullptr ? *info._pDefaultClear : _clearColor;
-            const float4 targetClear  = getAttachmentClearColorOrDefault( pTarget->view(), defaultClear );
-            // 후처리를 끈 뷰(CCTV, 표면 값 보기 모드)에서 효과 패스(테이블의 kSkipsWithoutPostProcess)는 효과를 적용하지 않는다. 포맷이 같으면 원본을 복사하고,
-            // 다르면 그 패스 셰이더가 SW_PASS_FLAG_SKIP_POST 를 보고 원본을 그대로 낸다(복사는 같은 포맷끼리만 된다). 원본 색을 읽지 않는 효과(SSAO)는
-            // 기본 클리어로 지우기만 한다(SSAO 의 흰색은 가림 없음).
-            const bool bSkipEffect = info.hasFlag( RenderPassTraitFlag::kSkipsWithoutPostProcess ) && _pActiveView->_settings.usesPostProcess() == false;
-            if ( bSkipEffect )
-            {
-                RHITextureHandle source{ 0 };
-                for ( const RenderGraphPassDesc::ResolvedAttachment& input : pPassDesc->_listResolvedInput )
-                {
-                    if ( static_cast<RenderPassInputRole>( input._role ) == RenderPassInputRole::SourceColor )
-                        source = findTransient( input._attachment.view() );
-                }
-                const RHITextureHandle target = findTransient( pTarget->view() );
-                const bool             bCopy  = source != 0 && target != 0 && source != target &&
-                                   _pDevice->getResourceFactory()->getTextureFormat( source ) == _pDevice->getResourceFactory()->getTextureFormat( target );
-                if ( bCopy )
-                {
-                    context._pCmd->blitTexture( source, target );
-                    (void)markAttachmentCleared( *pTarget );
-                }
-                else if ( info._inputContract.reads( RenderPassInputRole::SourceColor ) && source != 0 )
-                {
-                    executeFullscreenPass( pso, *pTarget, targetClear );
-                }
-                else if ( beginColorPass( context, pTarget->view(), "", targetClear, RHIRenderPassLoadOp::Clear, RHIRenderPassLoadOp::Load ) )
-                {
-                    context._pCmd->endRenderPass();
-                }
-            }
-            else
-            {
-                executeFullscreenPass( pso, *pTarget, targetClear );
-            }
+            executeGenericFullscreenPass( input, info );
         }
         else
         {
@@ -372,18 +325,18 @@ namespace sw
                 {
                     // 클리어 값은 실제로 바인딩하는 뎁스 첨부의 선언에서 읽는다(이름 ShadowMap 으로 찾지 않는다).
                     const float4 clearVal = getAttachmentClearColorOrDefault( passDepth.view(), float4{ 1.0f, 0.0f, 0.0f, 0.0f } );
-                    beginDepthOnlyPass( context, passDepth.view(), clearVal._x, colorLoadFor( passDepth, false ) );
+                    beginDepthOnlyPass( context, passDepth.view(), clearVal._x, colorLoadFor( passDepth ) );
                     // 그림자를 끈 뷰는 지우기만 한다. 깊이 1(가장 멀다)이면 모두 빛을 받는다.
                     if ( _pActiveView->_settings._bShadows == SW_TRUE )
-                        drawShadowTiles( context, bTransparentBatch );
+                        drawShadowTiles( context, input._bTransparentBatch );
                     context._pCmd->endRenderPass();
                     break;
                 }
                 case RenderPassType::DepthPrepass:
                 {
                     const float4 clearVal = getAttachmentClearColorOrDefault( passDepth.view(), float4{ 1.0f, 0.0f, 0.0f, 0.0f } );
-                    beginDepthOnlyPass( context, passDepth.view(), clearVal._x, colorLoadFor( passDepth, false ) );
-                    drawSceneMeshes( context, findPassPSO( RenderPassType::DepthPrepass ), bTransparentBatch );
+                    beginDepthOnlyPass( context, passDepth.view(), clearVal._x, colorLoadFor( passDepth ) );
+                    drawSceneMeshes( context, findPassPSO( RenderPassType::DepthPrepass ), input._bTransparentBatch );
                     context._pCmd->endRenderPass();
                     _bHasExecutedDepthPrepass.store( 1 );
                     break;
@@ -391,307 +344,42 @@ namespace sw
                 case RenderPassType::ForwardOpaque:
                 case RenderPassType::ForwardOnlyOpaque:
                 {
-                    // ForwardOnlyOpaque 는 디퍼드의 G버퍼가 뺀 배치(MATERIAL_FORWARD_ONLY — 툰)만 조명 패스가 쓴 색과 장면 깊이 위에 그린다(거르기는 drawsBatchInPass).
-                    // 첨부는 앞 패스가 이미 썼으므로 colorLoadFor 가 Load 를 고른다.
-                    // 그림자 맵은 선언한 입력 중 ShadowMap 역할이다(첨부의 `_role` 또는 원본 이름). 선언이 없을 때만 원본 이름으로 찾는다.
-                    const RenderGraphPassDesc::ResolvedAttachment* pShadowInput = nullptr;
-                    if ( pPassDesc != nullptr )
-                    {
-                        for ( const RenderGraphPassDesc::ResolvedAttachment& input : pPassDesc->_listResolvedInput )
-                        {
-                            if ( static_cast<RenderPassInputRole>( input._role ) == RenderPassInputRole::ShadowMap )
-                            {
-                                pShadowInput = &input;
-                                break;
-                            }
-                        }
-                    }
-                    registerPassTexture( context, attachmentNames()._shadowMap,
-                                         pShadowInput != nullptr ? pShadowInput->_attachment.view() : string_view{ FrameRendererUtil::Attachment::kShadowMap } );
-                    const hashed_string& colorTarget = pDeclaredColor != nullptr ? ( *pDeclaredColor )[0]._attachment : attachmentNames()._sceneColor;
-                    const float4         sceneClear  = getAttachmentClearColorOrDefault( colorTarget.view(), _clearColor );
-                    if ( beginColorPass( context, colorTarget.view(), passDepth.view(), sceneClear, colorLoadFor( colorTarget, false ), colorLoadFor( passDepth, false ) ) )
-                    {
-                        const bool bDepthAlreadyWritten = passType == RenderPassType::ForwardOpaque && _bHasExecutedDepthPrepass.load() != 0 &&
-                                                          getEnginePSO( RenderPassType::ForwardOpaqueNoDepthWrite ) != 0;
-                        const RHIPipelineStateHandle psoForward = bDepthAlreadyWritten ? getEnginePSO( RenderPassType::ForwardOpaqueNoDepthWrite ) : getEnginePSO( passType );
-                        drawSceneMeshes( context, psoForward, bTransparentBatch );
-                        context._pCmd->endRenderPass();
-                    }
+                    executeForwardOpaquePass( input );
                     break;
                 }
                 case RenderPassType::GBuffer:
                 {
-                    // 알베도와 노멀은 역할로 고른다(첨부의 `_role` 또는 원본 이름). 역할이 없으면 선언 순서([0] 알베도, [1] 노멀)를 따른다.
-                    // 한 MRT 패스로 둘 다 쓴다(네 백엔드 모두 MRT 를 보장한다). 노멀 출력이 없는 G버퍼는 검증이 거부하므로 여기서는 그리지 않는다.
-                    const AttachmentNames& names         = attachmentNames();
-                    const hashed_string*   pAlbedoTarget = pickColorOutput( RenderPassInputRole::GBufferAlbedo, 0, nullptr );
-                    const hashed_string&   albedoTarget  = pAlbedoTarget != nullptr ? *pAlbedoTarget : names._gbufferAlbedo;
-                    const hashed_string*   pNormalTarget = pDeclaredColor != nullptr ? pickColorOutput( RenderPassInputRole::GBufferNormal, 1, pAlbedoTarget )
-                                                                                     : &names._gbufferNormal;
-                    const bool             bHasNormal    = pNormalTarget != nullptr && findTransient( pNormalTarget->view() ) != 0;
-                    if ( bHasNormal == false || getEnginePSO( RenderPassType::GBuffer ) == 0 )
-                        break;
-                    const float4              clearColor   = getAttachmentClearColorOrDefault( albedoTarget.view(), float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
-                    const float4              normalClear  = getAttachmentClearColorOrDefault( pNormalTarget->view(), FrameRendererUtil::kNormalClear );
-                    const string_view         arrNames[]   = { albedoTarget.view(), pNormalTarget->view() };
-                    const float4              arrClears[2] = { clearColor, normalClear };
-                    const RHIRenderPassLoadOp arrLoads[]   = { colorLoadFor( albedoTarget, false ), colorLoadFor( *pNormalTarget, false ) };
-                    if ( beginColorPassMrt( context, arrNames, arrClears, arrLoads, 2, passDepth.view(), colorLoadFor( passDepth, false ) ) )
-                    {
-                        drawSceneMeshes( context, getEnginePSO( RenderPassType::GBuffer ), bTransparentBatch );
-                        context._pCmd->endRenderPass();
-                    }
+                    executeGBufferPass( input );
                     break;
                 }
                 case RenderPassType::Transparent:
                 {
-                    // 선언한 컬러 출력이 기준이다. 선언이 없을 때만 원본 이름 후보(TransparentColor, LitColor, SceneColor 순서)로 간다.
-                    const AttachmentNames& names       = attachmentNames();
-                    const hashed_string&   colorTarget = pDeclaredColor != nullptr                            ? ( *pDeclaredColor )[0]._attachment
-                                                       : findTransient( names._transparentColor.view() ) != 0 ? names._transparentColor
-                                                       : findTransient( names._litColor.view() ) != 0         ? names._litColor
-                                                                                                              : names._sceneColor;
-
-                    if ( colorTarget == names._transparentColor )
-                    {
-                        const RHITextureHandle litColor = findTransient( FrameRendererUtil::Attachment::kLitColor );
-                        const RHITextureHandle src      = litColor != 0 ? litColor : findTransient( FrameRendererUtil::Attachment::kSceneColor );
-                        if ( src != 0 )
-                            context._pCmd->blitTexture( src, findTransient( FrameRendererUtil::Attachment::kTransparentColor ) );
-                        markAttachmentCleared( attachmentNames()._transparentColor );
-                    }
-
-                    if ( beginColorPass( context, colorTarget.view(), passDepth.view(), _clearColor, RHIRenderPassLoadOp::Load, RHIRenderPassLoadOp::Load ) )
-                    {
-                        // 메시 투명 배치와 입자(방출기 하나 = 후보 하나)를 그 뷰의 한 순서로 섞어 그린다(GPUSceneBuilder::populateParticleBatches · computeViewTransparentOrders).
-                        SW_ASSERT( bTransparentBatch );
-                        drawTransparentQueue( context, findPassPSO( RenderPassType::Transparent ) );
-                        context._pCmd->endRenderPass();
-                    }
+                    executeTransparentPass( input );
                     break;
                 }
                 case RenderPassType::MeshOutline:
                 {
-                    // 인버티드 헐(inverted hull) 외곽선이다. 불투명 패스가 그린 색과 깊이 위에, 외곽선을 켠 머티리얼의 배치만 앞면을 컬링해 그린다(drawsBatchInPass).
-                    // 와이어프레임과 표면 값 보기(Normals, Depth, Overdraw)에서는 빠진다(껍질이 선과 값 위를 덮는다). 타깃은 선언한 컬러 출력이다(불투명 패스와 같은 규칙).
-                    const RenderViewModeInfo& viewModeInfo = getRenderViewModeInfo( _pActiveView->_settings._viewMode );
-                    if ( viewModeInfo._bWireframe || viewModeInfo._bShowsBuffer )
-                        break;
-                    const hashed_string& colorTarget = pDeclaredColor != nullptr ? ( *pDeclaredColor )[0]._attachment : attachmentNames()._sceneColor;
-                    const float4         sceneClear  = getAttachmentClearColorOrDefault( colorTarget.view(), _clearColor );
-                    if ( beginColorPass( context, colorTarget.view(), passDepth.view(), sceneClear, colorLoadFor( colorTarget, false ), colorLoadFor( passDepth, false ) ) )
-                    {
-                        drawSceneMeshes( context, getEnginePSO( RenderPassType::MeshOutline ), bTransparentBatch );
-                        context._pCmd->endRenderPass();
-                    }
+                    executeMeshOutlinePass( input );
                     break;
                 }
                 case RenderPassType::Sky:
                 {
-                    // 하늘이다. 깊이 1 의 풀스크린 삼각형을 깊이 테스트(LessEqual, 쓰기 없음)로 그려 아무것도 그리지 않은 곳만 칠한다(sky.hlsl).
-                    // 씬에 하늘이 없으면 그리지 않는다 — 배경은 컬러 첨부의 클리어 색이다. 와이어프레임과 표면 값 보기에서도 빠진다(값 위를 덮는다).
-                    // 뎁스나 선언한 컬러 출력이 없으면 그리지 않는다(장면을 통째로 덮거나 백버퍼에 그린다 — 그런 파이프라인은 검증이 거부한다).
-                    // 앞의 불투명 패스가 색과 깊이를 이미 썼으므로 둘 다 불러온다(지우지 않는다).
-                    const RenderViewModeInfo&    viewModeInfo = getRenderViewModeInfo( _pActiveView->_settings._viewMode );
-                    const RHIPipelineStateHandle skyPSO       = getEnginePSO( RenderPassType::Sky );
-                    const bool                   bShowsSky    = viewModeInfo._bWireframe == false && viewModeInfo._bShowsBuffer == false;
-                    const bool                   bHasTargets  = passDepth.empty() == false && pDeclaredColor != nullptr;
-                    const bool                   bDrawsSky    = _bHasFrameSky == SW_TRUE && bHasTargets && skyPSO != 0 && bShowsSky;
-                    if ( bDrawsSky == false )
-                        break;
-                    const hashed_string& colorTarget = ( *pDeclaredColor )[0]._attachment;
-                    if ( beginColorPass( context, colorTarget.view(), passDepth.view(), _clearColor, RHIRenderPassLoadOp::Load, RHIRenderPassLoadOp::Load ) )
-                    {
-                        drawFullscreen( context, skyPSO );
-                        context._pCmd->endRenderPass();
-                    }
+                    executeSkyPass( input );
                     break;
                 }
                 case RenderPassType::TAA:
                 {
-                    // 타깃은 선언한 출력 중 있는 것이다(풀스크린 패스와 같은 규칙이며 히스토리도 같은 규칙으로 만든다. ensureTaaHistory).
-                    // 선언이 없을 때만 이름(TaaColor, SceneColor 순서)으로 짐작한다.
-                    const AttachmentNames& names      = attachmentNames();
-                    const hashed_string*   pTaaTarget = findTransient( names._taaColor.view() ) != 0 ? &names._taaColor : &names._sceneColor;
-                    if ( pPassDesc != nullptr )
-                    {
-                        for ( const hashed_string& output : pPassDesc->_listResolvedOutput )
-                        {
-                            if ( findTransient( output.view() ) != 0 )
-                            {
-                                pTaaTarget = &output;
-                                break;
-                            }
-                        }
-                    }
-                    const hashed_string& taaTarget = *pTaaTarget;
-                    const utf8*          pSrcName{ nullptr };
-                    if ( pPassDesc != nullptr )
-                    {
-                        registerDeclaredInputs( context, *pPassDesc );
-                        for ( const RenderGraphPassDesc::ResolvedAttachment& input : pPassDesc->_listResolvedInput )
-                        {
-                            if ( static_cast<RenderPassInputRole>( input._role ) == RenderPassInputRole::SourceColor )
-                                pSrcName = input._attachment.c_str();
-                        }
-                    }
-                    // 히스토리 생성과 bindless 등록은 ensureTaaHistory() 가 셋업 단계에서 끝냈다. 이 콜백은
-                    // 병렬 기록에서 태스크 스레드가 실행하므로 여기서 레지스트리를 건드리면 안 된다. 히스토리는 뷰마다 하나다.
-                    const ViewTarget&      activeView = *_pActiveView;
-                    const RHITextureHandle source     = pSrcName != nullptr ? findTransient( pSrcName ) : RHITextureHandle{ 0 };
-                    // 후처리를 끈 뷰는 시간 누적 없이 원본을 넘긴다(히스토리도 건드리지 않는다). 포맷이 같으면 복사하고, 다르면(원본 R8G8B8A8, 출력
-                    // R16G16B16A16이며 D3D 의 복사는 같은 포맷만 받는다) 아래 컷 프레임과 같이 히스토리 슬롯에 원본을 바인딩해 TAA 셰이더가 원본을 옮기게 한다.
-                    const bool bSkipPost = activeView._settings.usesPostProcess() == false;
-                    if ( bSkipPost )
-                    {
-                        const RHITextureHandle target              = findTransient( taaTarget.view() );
-                        IRHIResourceFactory*   pFactory            = _pDevice->getResourceFactory();
-                        const bool             bSameFormat         = source != 0 && target != 0 && pFactory->getTextureFormat( source ) == pFactory->getTextureFormat( target );
-                        const bool             bNoShaderPassNeeded = bSameFormat || source == 0 || target == 0 || source == target;
-                        if ( bNoShaderPassNeeded )
-                        {
-                            if ( bSameFormat && source != target )
-                                context._pCmd->blitTexture( source, target );
-                            break;
-                        }
-                    }
-                    // 컷 프레임(언리얼 `bCameraCut`)에서는 지난 화면의 히스토리를 버린다. 이번 프레임은 히스토리 슬롯에 **이번 원본**을 바인딩해 섞어도 이번 이미지만 남게
-                    // 한다. 원본을 히스토리 텍스처에 복사하지 않는 것은 포맷이 다를 수 있어서다(원본 R8G8B8A8, 히스토리 R16G16B16A16이며 D3D 의 복사는 같은
-                    // 포맷만 받는다). 패스 끝의 복사(TAA 출력에서 히스토리로)가 히스토리를 새로 채운다.
-                    const bool bCut = ( activeView._settings._bCut == SW_TRUE || bSkipPost ) && pSrcName != nullptr;
-                    if ( bCut )
-                        registerPassTexture( context, attachmentNames()._gbufferAlbedo, pSrcName );
-                    else if ( activeView._taaHistory != 0 )
-                        context._resourceRegistry.registerTexture( attachmentNames()._gbufferAlbedo, activeView._taaHistory, activeView._taaHistorySrv );
-                    if ( beginColorPass( context, taaTarget.view(), "", _clearColor, colorLoadFor( taaTarget, false ), RHIRenderPassLoadOp::Load ) )
-                    {
-                        const RHIPipelineStateHandle taaPSO = getEnginePSO( RenderPassType::TAA );
-                        if ( taaPSO != 0 )
-                            drawFullscreen( context, taaPSO );
-                        else if ( pSrcName != nullptr && taaTarget.view() != pSrcName )
-                            context._pCmd->blitTexture( findTransient( pSrcName ), findTransient( taaTarget.view() ) );
-                        context._pCmd->endRenderPass();
-                    }
-
-                    const RHITextureHandle taaOut              = findTransient( taaTarget.view() );
-                    const bool             bTaaHistoryWritable = taaOut != 0 && activeView._taaHistory != 0 && bSkipPost == false;
-                    if ( bTaaHistoryWritable )
-                        context._pCmd->blitTexture( taaOut, activeView._taaHistory );
+                    executeTaaPass( input );
                     break;
                 }
                 case RenderPassType::Present:
                 {
-                    const string_view      srcName = resolvePresentSource();
-                    const RHITextureHandle src     = srcName.empty() ? 0 : findTransient( srcName );
-                    // 출력은 뷰가 정한다(resolvePresentTarget. Canvas 와 같은 판단). 스크린샷 실행이면 백버퍼 대신 캡처 텍스처에 그리고,
-                    // Swapchain 을 쓰는 마지막 패스(보통 Canvas) 끝에서 백버퍼로 복사한다. 여기서 복사하면 뒤의 UI 가 캡처에 없다.
-                    const ViewTarget&      activeView     = *_pActiveView;
-                    const PresentTarget    target         = resolvePresentTarget();
-                    const bool             bOwnOutput     = target._bOwnOutput == SW_TRUE;
-                    const bool             bCaptureToBack = target._bCaptureToBack == SW_TRUE && isLastSwapchainWriter( pPassDesc );
-                    const RHITextureHandle dstTarget      = target._texture;
-                    const uint32           outputWidth    = target._width;
-                    const uint32           outputHeight   = target._height;
-                    // 정수 업스케일(픽셀 퍼펙트)은 주 출력에만 있다 — 원본(사각형 픽셀 / 배율)을 배율만큼 키워 사각형 가운데에 놓으므로 사각형 전체가 아니다.
-                    const uint32 upscaleZoom = bOwnOutput ? 0u : static_cast<uint32>( activeView._settings._upscaleZoom );
-                    const bool   bFullRect   = ( bOwnOutput || activeView._settings.isFullRect() ) && upscaleZoom == 0;
-                    // 주 시점이 사각형 하나만 쓰면 바깥은 지운다(업스케일의 남는 띠는 검게). 화면 사각형 뷰는 주 시점 위에 겹치므로 남긴다.
-                    const RHIRenderPassLoadOp outputLoad  = ( isRenderingExtraView() && bOwnOutput == false ) ? RHIRenderPassLoadOp::Load
-                                                          : bFullRect                                         ? RHIRenderPassLoadOp::DontCare
-                                                                                                              : RHIRenderPassLoadOp::Clear;
-                    const float4&             outputClear = upscaleZoom > 0 ? FrameRendererUtil::kBlackClear : _clearColor;
-                    // PSO 는 대상의 실제 포맷으로 고른다. 렌더 타깃 포맷은 PSO 의 일부라 대상마다 PSO 가 다르다.
-                    const RHIPipelineStateHandle psoBlit = findOutputPSO( RenderPassType::Present, target._format );
-                    if ( src != 0 && psoBlit != 0 )
-                    {
-                        registerPassTexture( context, attachmentNames()._sourceColor, srcName );
-                        // 선언한 입력을 **모두** 바인딩한다. Present 가 후처리 체인을 겸하면 깊이(외곽선)와 AO 가 필요하고,
-                        // 그냥 블릿이면 선언이 컬러 하나뿐이라 위 등록을 덮어쓸 뿐이다.
-                        if ( pPassDesc != nullptr )
-                            registerDeclaredInputs( context, *pPassDesc );
-                        RHIRenderPassBeginInfo beginInfo{};
-                        beginInfo._bBindColor        = SW_TRUE;
-                        beginInfo._arrColorTarget[0] = dstTarget;
-                        beginInfo._colorTargetCount  = 1;
-                        beginInfo._arrLoadOp[0]      = outputLoad;
-                        beginInfo._arrClearColor[0]  = outputClear;
-                        beginInfo._width             = outputWidth;
-                        beginInfo._height            = outputHeight;
-                        context._pCmd->beginRenderPass( beginInfo );
-                        // 사각형이면 뷰포트로 그 안에만 그린다. 전체 화면 삼각형이 사각형을 채우고 원본 전체를 그 안에 늘인다.
-                        // 정수 업스케일이면 원본 크기 × 배율을 사각형 가운데에 놓는다 — 셰이더가 점 샘플(SW_PASS_FLAG_POINT_UPSCALE)이라 원본 픽셀이 배율 × 배율 칸이다.
-                        if ( bFullRect == false )
-                        {
-                            const float4& rect = activeView._settings._screenRect;
-                            RHIViewport   viewport{};
-                            viewport._x      = rect._x * static_cast<float32>( outputWidth );
-                            viewport._y      = rect._y * static_cast<float32>( outputHeight );
-                            viewport._width  = rect._z * static_cast<float32>( outputWidth );
-                            viewport._height = rect._w * static_cast<float32>( outputHeight );
-                            if ( upscaleZoom > 0 )
-                            {
-                                const TransientAttachmentPool& pool = activePool();
-                                viewport._x                         = static_cast<float32>( FrameRendererUtil::computeUpscaleOffset(
-                                    static_cast<uint32>( viewport._x ), static_cast<uint32>( viewport._width ), pool.getWidth(), upscaleZoom ) );
-                                viewport._y                         = static_cast<float32>( FrameRendererUtil::computeUpscaleOffset(
-                                    static_cast<uint32>( viewport._y ), static_cast<uint32>( viewport._height ), pool.getHeight(), upscaleZoom ) );
-                                viewport._width                     = static_cast<float32>( pool.getWidth() * upscaleZoom );
-                                viewport._height                    = static_cast<float32>( pool.getHeight() * upscaleZoom );
-                            }
-                            context._pCmd->setViewport( viewport );
-                        }
-                        drawFullscreen( context, psoBlit );
-                        context._pCmd->endRenderPass();
-                        if ( bCaptureToBack )
-                            context._pCmd->blitTexture( dstTarget, 0 );
-                    }
-                    else if ( src != 0 )
-                    {
-                        context._pCmd->blitTexture( src, dstTarget );
-                        if ( bCaptureToBack )
-                            context._pCmd->blitTexture( dstTarget, 0 );
-                    }
-                    else
-                    {
-                        RHIRenderPassBeginInfo beginInfo{};
-                        beginInfo.setColorTarget( dstTarget, _clearColor, RHIRenderPassLoadOp::Load );
-                        beginInfo._bBindColor = SW_TRUE;
-                        context._pCmd->beginRenderPass( beginInfo );
-                        drawFullscreen( context, 0 );
-                        context._pCmd->endRenderPass();
-                    }
-                    if ( target._bCaptureFromOutput == SW_TRUE && isLastSwapchainWriter( pPassDesc ) )
-                        _capture.copyPresentFromOutput( *context._pCmd, target._texture, target._width, target._height, target._format );
+                    executePresentPass( input );
                     break;
                 }
                 case RenderPassType::Canvas:
                 {
-                    // 화면 2D 를 주 출력(Present 가 그린 것)에 기존 내용을 유지한 채(Load) 그린다. 주 출력에 **마지막으로 그리는 뷰**만 그린다
-                    // (`_pMainOutputCanvasView` — 화면 사각형 뷰가 있으면 그 마지막 것, 없으면 주 시점). 그래야 PiP · 분할 화면이 UI 를 덮지 않는다.
-                    // 렌더 텍스처 · 호스트 타깃 뷰에는 그리지 않는다. 그릴 것이 없으면 렌더 패스를 열지 않는다. 대상 전체가 뷰포트다(화면 사각형 설정과 무관).
-                    const PresentTarget target = resolvePresentTarget();
-                    const bool          bDraw  = _pActiveView == _pMainOutputCanvasView && _canvasFrame._mainOutput.isEmpty() == false && target._width > 0 &&
-                                       target._height > 0;
-                    const RHIPipelineStateHandle psoCanvas = bDraw ? findOutputPSO( RenderPassType::Canvas, target._format ) : RHIPipelineStateHandle{ 0 };
-                    if ( psoCanvas != 0 )
-                    {
-                        RHIRenderPassBeginInfo beginInfo{};
-                        beginInfo._bBindColor        = SW_TRUE;
-                        beginInfo._arrColorTarget[0] = target._texture;
-                        beginInfo._colorTargetCount  = 1;
-                        beginInfo._arrLoadOp[0]      = RHIRenderPassLoadOp::Load;
-                        beginInfo._width             = target._width;
-                        beginInfo._height            = target._height;
-                        context._pCmd->beginRenderPass( beginInfo );
-                        (void)_canvasRenderer.drawList( *context._pCmd, _canvasFrame._mainOutput, _canvasRenderer.getMainQuadBase(), psoCanvas, target._width, target._height,
-                                                        _pDevice->supportsNativeBindlessSampling(), _canvasFrame._colorVisionMode );
-                        context._pCmd->endRenderPass();
-                    }
-                    if ( target._bCaptureToBack == SW_TRUE && isLastSwapchainWriter( pPassDesc ) )
-                        context._pCmd->blitTexture( target._texture, 0 );
-                    if ( target._bCaptureFromOutput == SW_TRUE && isLastSwapchainWriter( pPassDesc ) )
-                        _capture.copyPresentFromOutput( *context._pCmd, target._texture, target._width, target._height, target._format );
+                    executeCanvasPass( input );
                     break;
                 }
                 // 실행 코드가 없는 타입이다. 패스 서술이 없는 일반 풀스크린 패스이거나, PSO 슬롯만 있는 엔진 내부 타입이다.
@@ -717,6 +405,385 @@ namespace sw
         }
 
         context._pCmd->endEventMarker();
+    }
+
+    RHIRenderPassLoadOp FrameRenderer::colorLoadFor( const hashed_string& name )
+    {
+        // 이름은 **이미 intern 된 것**만 받는다. string_view 를 받으면 패스마다 여기서 다시 intern 하게
+        // 된다(FNV + 32-way 샤드 뮤텍스). 타깃 이름은 모두 코드 리터럴이라 attachmentNames() 캐시로 충분하다.
+        return markAttachmentCleared( name ) ? RHIRenderPassLoadOp::Clear : RHIRenderPassLoadOp::Load;
+    }
+
+    void FrameRenderer::executeFullscreenInto( FramePassContext& context, RHIPipelineStateHandle pso, const hashed_string& targetName, const float4& passClearColor )
+    {
+        if ( beginColorPass( context, targetName.view(), "", passClearColor, colorLoadFor( targetName ), RHIRenderPassLoadOp::Load ) == false )
+            return;
+        drawFullscreen( context, pso );
+        context._pCmd->endRenderPass();
+    }
+
+    void FrameRenderer::executeGenericFullscreenPass( const PassExecuteInput& input, const RenderPassTypeInfo& info )
+    {
+        // 일반 풀스크린 패스(테이블의 kGenericFullscreen: Lighting, SSAO, Bloom, BloomDownsample, Outline, Tonemap)다. **선언이 곧 바인딩**이다.
+        // 입력은 역할 이름으로 모두 바인딩하고, 타깃은 선언한 출력 중 첫 번째로 있는 것이다. 계약(RenderPassInputSignature)이
+        // 로드 시점에 같은 목록을 검사했다. 새 포스트 패스는 테이블의 한 줄로 여기를 탄다.
+        FramePassContext&          context  = input._context;
+        const RenderGraphPassDesc& passDesc = *input._pPassDesc;
+        registerDeclaredInputs( context, passDesc );
+
+        const AttachmentNames& names   = attachmentNames();
+        const hashed_string*   pTarget = &names._sceneColor;
+        for ( const hashed_string& output : passDesc._listResolvedOutput )
+        {
+            if ( findTransient( output.view() ) != 0 )
+            {
+                pTarget = &output;
+                break;
+            }
+        }
+
+        // PSO 가 0이면 `drawFullscreen` 이 파이프라인 설정을 건너뛴다. 대체할 PSO 는 테이블이 정한 것만 쓴다(Tonemap 은 Present).
+        const RHIPipelineStateHandle pso = findPassPSO( input._passType );
+
+        // 기본 클리어는 테이블의 값(SSAO 는 흰색이며 가림 없음)이고 없으면 렌더러의 클리어 색이다. 첨부가 클리어 색을 선언했으면 그것이 우선한다.
+        const float4 defaultClear = info._pDefaultClear != nullptr ? *info._pDefaultClear : _clearColor;
+        const float4 targetClear  = getAttachmentClearColorOrDefault( pTarget->view(), defaultClear );
+        // 후처리를 끈 뷰(CCTV, 표면 값 보기 모드)에서 효과 패스(테이블의 kSkipsWithoutPostProcess)는 효과를 적용하지 않는다. 포맷이 같으면 원본을 복사하고,
+        // 다르면 그 패스 셰이더가 SW_PASS_FLAG_SKIP_POST 를 보고 원본을 그대로 낸다(복사는 같은 포맷끼리만 된다). 원본 색을 읽지 않는 효과(SSAO)는
+        // 기본 클리어로 지우기만 한다(SSAO 의 흰색은 가림 없음).
+        const bool bSkipEffect = info.hasFlag( RenderPassTraitFlag::kSkipsWithoutPostProcess ) && _pActiveView->_settings.usesPostProcess() == false;
+        if ( bSkipEffect == false )
+        {
+            executeFullscreenInto( context, pso, *pTarget, targetClear );
+            return;
+        }
+        RHITextureHandle source{ 0 };
+        for ( const RenderGraphPassDesc::ResolvedAttachment& sourceInput : passDesc._listResolvedInput )
+        {
+            if ( static_cast<RenderPassInputRole>( sourceInput._role ) == RenderPassInputRole::SourceColor )
+                source = findTransient( sourceInput._attachment.view() );
+        }
+        const RHITextureHandle target = findTransient( pTarget->view() );
+        const bool             bCopy  = source != 0 && target != 0 && source != target &&
+                           _pDevice->getResourceFactory()->getTextureFormat( source ) == _pDevice->getResourceFactory()->getTextureFormat( target );
+        if ( bCopy )
+        {
+            context._pCmd->blitTexture( source, target );
+            (void)markAttachmentCleared( *pTarget );
+        }
+        else if ( info._inputContract.reads( RenderPassInputRole::SourceColor ) && source != 0 )
+        {
+            executeFullscreenInto( context, pso, *pTarget, targetClear );
+        }
+        else if ( beginColorPass( context, pTarget->view(), "", targetClear, RHIRenderPassLoadOp::Clear, RHIRenderPassLoadOp::Load ) )
+        {
+            context._pCmd->endRenderPass();
+        }
+    }
+
+    void FrameRenderer::executeForwardOpaquePass( const PassExecuteInput& input )
+    {
+        // ForwardOnlyOpaque 는 디퍼드의 G버퍼가 뺀 배치(MATERIAL_FORWARD_ONLY — 툰)만 조명 패스가 쓴 색과 장면 깊이 위에 그린다(거르기는 drawsBatchInPass).
+        // 첨부는 앞 패스가 이미 썼으므로 colorLoadFor 가 Load 를 고른다.
+        // 그림자 맵은 선언한 입력 중 ShadowMap 역할이다(첨부의 `_role` 또는 원본 이름). 선언이 없을 때만 원본 이름으로 찾는다.
+        using Internal                                              = FrameRendererPassExecuteInternal;
+        FramePassContext&                              context      = input._context;
+        const hashed_string&                           passDepth    = input._passDepth;
+        const RenderGraphPassDesc::ResolvedAttachment* pShadowInput = Internal::findInputByRole( input._pPassDesc, RenderPassInputRole::ShadowMap );
+        registerPassTexture( context, attachmentNames()._shadowMap,
+                             pShadowInput != nullptr ? pShadowInput->_attachment.view() : string_view{ FrameRendererUtil::Attachment::kShadowMap } );
+        const hashed_string& colorTarget = input._pDeclaredColor != nullptr ? ( *input._pDeclaredColor )[0]._attachment : attachmentNames()._sceneColor;
+        const float4         sceneClear  = getAttachmentClearColorOrDefault( colorTarget.view(), _clearColor );
+        if ( beginColorPass( context, colorTarget.view(), passDepth.view(), sceneClear, colorLoadFor( colorTarget ), colorLoadFor( passDepth ) ) == false )
+            return;
+        const bool bDepthAlreadyWritten = input._passType == RenderPassType::ForwardOpaque && _bHasExecutedDepthPrepass.load() != 0 &&
+                                          getEnginePSO( RenderPassType::ForwardOpaqueNoDepthWrite ) != 0;
+        const RHIPipelineStateHandle psoForward = bDepthAlreadyWritten ? getEnginePSO( RenderPassType::ForwardOpaqueNoDepthWrite ) : getEnginePSO( input._passType );
+        drawSceneMeshes( context, psoForward, input._bTransparentBatch );
+        context._pCmd->endRenderPass();
+    }
+
+    void FrameRenderer::executeGBufferPass( const PassExecuteInput& input )
+    {
+        // 알베도와 노멀은 역할로 고른다(첨부의 `_role` 또는 원본 이름). 역할이 없으면 선언 순서([0] 알베도, [1] 노멀)를 따른다.
+        // 한 MRT 패스로 둘 다 쓴다(네 백엔드 모두 MRT 를 보장한다). 노멀 출력이 없는 G버퍼는 검증이 거부하므로 여기서는 그리지 않는다.
+        using Internal                       = FrameRendererPassExecuteInternal;
+        FramePassContext&      context       = input._context;
+        const hashed_string&   passDepth     = input._passDepth;
+        const AttachmentNames& names         = attachmentNames();
+        const hashed_string*   pAlbedoTarget = Internal::pickColorOutput( input._pDeclaredColor, RenderPassInputRole::GBufferAlbedo, 0, nullptr );
+        const hashed_string&   albedoTarget  = pAlbedoTarget != nullptr ? *pAlbedoTarget : names._gbufferAlbedo;
+        const hashed_string*   pNormalTarget = input._pDeclaredColor != nullptr
+                                                 ? Internal::pickColorOutput( input._pDeclaredColor, RenderPassInputRole::GBufferNormal, 1, pAlbedoTarget )
+                                                 : &names._gbufferNormal;
+        const bool             bHasNormal    = pNormalTarget != nullptr && findTransient( pNormalTarget->view() ) != 0;
+        if ( bHasNormal == false || getEnginePSO( RenderPassType::GBuffer ) == 0 )
+            return;
+        const float4              clearColor   = getAttachmentClearColorOrDefault( albedoTarget.view(), float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+        const float4              normalClear  = getAttachmentClearColorOrDefault( pNormalTarget->view(), FrameRendererUtil::kNormalClear );
+        const string_view         arrNames[]   = { albedoTarget.view(), pNormalTarget->view() };
+        const float4              arrClears[2] = { clearColor, normalClear };
+        const RHIRenderPassLoadOp arrLoads[]   = { colorLoadFor( albedoTarget ), colorLoadFor( *pNormalTarget ) };
+        if ( beginColorPassMrt( context, arrNames, arrClears, arrLoads, 2, passDepth.view(), colorLoadFor( passDepth ) ) == false )
+            return;
+        drawSceneMeshes( context, getEnginePSO( RenderPassType::GBuffer ), input._bTransparentBatch );
+        context._pCmd->endRenderPass();
+    }
+
+    void FrameRenderer::executeTransparentPass( const PassExecuteInput& input )
+    {
+        // 선언한 컬러 출력이 기준이다. 선언이 없을 때만 원본 이름 후보(TransparentColor, LitColor, SceneColor 순서)로 간다.
+        FramePassContext&      context     = input._context;
+        const AttachmentNames& names       = attachmentNames();
+        const hashed_string&   colorTarget = input._pDeclaredColor != nullptr                     ? ( *input._pDeclaredColor )[0]._attachment
+                                           : findTransient( names._transparentColor.view() ) != 0 ? names._transparentColor
+                                           : findTransient( names._litColor.view() ) != 0         ? names._litColor
+                                                                                                  : names._sceneColor;
+
+        if ( colorTarget == names._transparentColor )
+        {
+            const RHITextureHandle litColor = findTransient( FrameRendererUtil::Attachment::kLitColor );
+            const RHITextureHandle src      = litColor != 0 ? litColor : findTransient( FrameRendererUtil::Attachment::kSceneColor );
+            if ( src != 0 )
+                context._pCmd->blitTexture( src, findTransient( FrameRendererUtil::Attachment::kTransparentColor ) );
+            markAttachmentCleared( names._transparentColor );
+        }
+
+        if ( beginColorPass( context, colorTarget.view(), input._passDepth.view(), _clearColor, RHIRenderPassLoadOp::Load, RHIRenderPassLoadOp::Load ) == false )
+            return;
+        // 메시 투명 배치와 입자(방출기 하나 = 후보 하나)를 그 뷰의 한 순서로 섞어 그린다(GPUSceneBuilder::populateParticleBatches · computeViewTransparentOrders).
+        SW_ASSERT( input._bTransparentBatch );
+        drawTransparentQueue( context, findPassPSO( RenderPassType::Transparent ) );
+        context._pCmd->endRenderPass();
+    }
+
+    void FrameRenderer::executeMeshOutlinePass( const PassExecuteInput& input )
+    {
+        // 인버티드 헐(inverted hull) 외곽선이다. 불투명 패스가 그린 색과 깊이 위에, 외곽선을 켠 머티리얼의 배치만 앞면을 컬링해 그린다(drawsBatchInPass).
+        // 와이어프레임과 표면 값 보기(Normals, Depth, Overdraw)에서는 빠진다(껍질이 선과 값 위를 덮는다). 타깃은 선언한 컬러 출력이다(불투명 패스와 같은 규칙).
+        const RenderViewModeInfo& viewModeInfo = getRenderViewModeInfo( _pActiveView->_settings._viewMode );
+        if ( viewModeInfo._bWireframe || viewModeInfo._bShowsBuffer )
+            return;
+        FramePassContext&    context     = input._context;
+        const hashed_string& passDepth   = input._passDepth;
+        const hashed_string& colorTarget = input._pDeclaredColor != nullptr ? ( *input._pDeclaredColor )[0]._attachment : attachmentNames()._sceneColor;
+        const float4         sceneClear  = getAttachmentClearColorOrDefault( colorTarget.view(), _clearColor );
+        if ( beginColorPass( context, colorTarget.view(), passDepth.view(), sceneClear, colorLoadFor( colorTarget ), colorLoadFor( passDepth ) ) == false )
+            return;
+        drawSceneMeshes( context, getEnginePSO( RenderPassType::MeshOutline ), input._bTransparentBatch );
+        context._pCmd->endRenderPass();
+    }
+
+    void FrameRenderer::executeSkyPass( const PassExecuteInput& input )
+    {
+        // 하늘이다. 깊이 1 의 풀스크린 삼각형을 깊이 테스트(LessEqual, 쓰기 없음)로 그려 아무것도 그리지 않은 곳만 칠한다(sky.hlsl).
+        // 씬에 하늘이 없으면 그리지 않는다 — 배경은 컬러 첨부의 클리어 색이다. 와이어프레임과 표면 값 보기에서도 빠진다(값 위를 덮는다).
+        // 뎁스나 선언한 컬러 출력이 없으면 그리지 않는다(장면을 통째로 덮거나 백버퍼에 그린다 — 그런 파이프라인은 검증이 거부한다).
+        // 앞의 불투명 패스가 색과 깊이를 이미 썼으므로 둘 다 불러온다(지우지 않는다).
+        const RenderViewModeInfo&    viewModeInfo = getRenderViewModeInfo( _pActiveView->_settings._viewMode );
+        const RHIPipelineStateHandle skyPSO       = getEnginePSO( RenderPassType::Sky );
+        const bool                   bShowsSky    = viewModeInfo._bWireframe == false && viewModeInfo._bShowsBuffer == false;
+        const bool                   bHasTargets  = input._passDepth.empty() == false && input._pDeclaredColor != nullptr;
+        const bool                   bDrawsSky    = _bHasFrameSky == SW_TRUE && bHasTargets && skyPSO != 0 && bShowsSky;
+        if ( bDrawsSky == false )
+            return;
+        FramePassContext&    context     = input._context;
+        const hashed_string& colorTarget = ( *input._pDeclaredColor )[0]._attachment;
+        if ( beginColorPass( context, colorTarget.view(), input._passDepth.view(), _clearColor, RHIRenderPassLoadOp::Load, RHIRenderPassLoadOp::Load ) == false )
+            return;
+        drawFullscreen( context, skyPSO );
+        context._pCmd->endRenderPass();
+    }
+
+    void FrameRenderer::executeTaaPass( const PassExecuteInput& input )
+    {
+        // 타깃은 선언한 출력 중 있는 것이다(풀스크린 패스와 같은 규칙이며 히스토리도 같은 규칙으로 만든다. ensureTaaHistory).
+        // 선언이 없을 때만 이름(TaaColor, SceneColor 순서)으로 짐작한다.
+        FramePassContext&          context    = input._context;
+        const RenderGraphPassDesc* pPassDesc  = input._pPassDesc;
+        const AttachmentNames&     names      = attachmentNames();
+        const hashed_string*       pTaaTarget = findTransient( names._taaColor.view() ) != 0 ? &names._taaColor : &names._sceneColor;
+        if ( pPassDesc != nullptr )
+        {
+            for ( const hashed_string& output : pPassDesc->_listResolvedOutput )
+            {
+                if ( findTransient( output.view() ) != 0 )
+                {
+                    pTaaTarget = &output;
+                    break;
+                }
+            }
+        }
+        const hashed_string& taaTarget = *pTaaTarget;
+        const utf8*          pSrcName{ nullptr };
+        if ( pPassDesc != nullptr )
+        {
+            registerDeclaredInputs( context, *pPassDesc );
+            for ( const RenderGraphPassDesc::ResolvedAttachment& sourceInput : pPassDesc->_listResolvedInput )
+            {
+                if ( static_cast<RenderPassInputRole>( sourceInput._role ) == RenderPassInputRole::SourceColor )
+                    pSrcName = sourceInput._attachment.c_str();
+            }
+        }
+        // 히스토리 생성과 bindless 등록은 ensureTaaHistory() 가 셋업 단계에서 끝냈다. 이 콜백은
+        // 병렬 기록에서 태스크 스레드가 실행하므로 여기서 레지스트리를 건드리면 안 된다. 히스토리는 뷰마다 하나다.
+        const ViewTarget&      activeView = *_pActiveView;
+        const RHITextureHandle source     = pSrcName != nullptr ? findTransient( pSrcName ) : RHITextureHandle{ 0 };
+        // 후처리를 끈 뷰는 시간 누적 없이 원본을 넘긴다(히스토리도 건드리지 않는다). 포맷이 같으면 복사하고, 다르면(원본 R8G8B8A8, 출력
+        // R16G16B16A16이며 D3D 의 복사는 같은 포맷만 받는다) 아래 컷 프레임과 같이 히스토리 슬롯에 원본을 바인딩해 TAA 셰이더가 원본을 옮기게 한다.
+        const bool bSkipPost = activeView._settings.usesPostProcess() == false;
+        if ( bSkipPost )
+        {
+            const RHITextureHandle target              = findTransient( taaTarget.view() );
+            IRHIResourceFactory*   pFactory            = _pDevice->getResourceFactory();
+            const bool             bSameFormat         = source != 0 && target != 0 && pFactory->getTextureFormat( source ) == pFactory->getTextureFormat( target );
+            const bool             bNoShaderPassNeeded = bSameFormat || source == 0 || target == 0 || source == target;
+            if ( bNoShaderPassNeeded )
+            {
+                if ( bSameFormat && source != target )
+                    context._pCmd->blitTexture( source, target );
+                return;
+            }
+        }
+        // 컷 프레임(언리얼 `bCameraCut`)에서는 지난 화면의 히스토리를 버린다. 이번 프레임은 히스토리 슬롯에 **이번 원본**을 바인딩해 섞어도 이번 이미지만 남게
+        // 한다. 원본을 히스토리 텍스처에 복사하지 않는 것은 포맷이 다를 수 있어서다(원본 R8G8B8A8, 히스토리 R16G16B16A16이며 D3D 의 복사는 같은
+        // 포맷만 받는다). 패스 끝의 복사(TAA 출력에서 히스토리로)가 히스토리를 새로 채운다.
+        const bool bCut = ( activeView._settings._bCut == SW_TRUE || bSkipPost ) && pSrcName != nullptr;
+        if ( bCut )
+            registerPassTexture( context, names._gbufferAlbedo, pSrcName );
+        else if ( activeView._taaHistory != 0 )
+            context._resourceRegistry.registerTexture( names._gbufferAlbedo, activeView._taaHistory, activeView._taaHistorySrv );
+        if ( beginColorPass( context, taaTarget.view(), "", _clearColor, colorLoadFor( taaTarget ), RHIRenderPassLoadOp::Load ) )
+        {
+            const RHIPipelineStateHandle taaPSO = getEnginePSO( RenderPassType::TAA );
+            if ( taaPSO != 0 )
+                drawFullscreen( context, taaPSO );
+            else if ( pSrcName != nullptr && taaTarget.view() != pSrcName )
+                context._pCmd->blitTexture( findTransient( pSrcName ), findTransient( taaTarget.view() ) );
+            context._pCmd->endRenderPass();
+        }
+
+        const RHITextureHandle taaOut              = findTransient( taaTarget.view() );
+        const bool             bTaaHistoryWritable = taaOut != 0 && activeView._taaHistory != 0 && bSkipPost == false;
+        if ( bTaaHistoryWritable )
+            context._pCmd->blitTexture( taaOut, activeView._taaHistory );
+    }
+
+    void FrameRenderer::executePresentPass( const PassExecuteInput& input )
+    {
+        FramePassContext&          context   = input._context;
+        const RenderGraphPassDesc* pPassDesc = input._pPassDesc;
+        const string_view          srcName   = resolvePresentSource();
+        const RHITextureHandle     src       = srcName.empty() ? 0 : findTransient( srcName );
+        // 출력은 뷰가 정한다(resolvePresentTarget. Canvas 와 같은 판단). 스크린샷 실행이면 백버퍼 대신 캡처 텍스처에 그리고,
+        // Swapchain 을 쓰는 마지막 패스(보통 Canvas) 끝에서 백버퍼로 복사한다. 여기서 복사하면 뒤의 UI 가 캡처에 없다.
+        const ViewTarget&      activeView     = *_pActiveView;
+        const PresentTarget    target         = resolvePresentTarget();
+        const bool             bOwnOutput     = target._bOwnOutput == SW_TRUE;
+        const bool             bCaptureToBack = target._bCaptureToBack == SW_TRUE && isLastSwapchainWriter( pPassDesc );
+        const RHITextureHandle dstTarget      = target._texture;
+        const uint32           outputWidth    = target._width;
+        const uint32           outputHeight   = target._height;
+        // 정수 업스케일(픽셀 퍼펙트)은 주 출력에만 있다 — 원본(사각형 픽셀 / 배율)을 배율만큼 키워 사각형 가운데에 놓으므로 사각형 전체가 아니다.
+        const uint32 upscaleZoom = bOwnOutput ? 0u : static_cast<uint32>( activeView._settings._upscaleZoom );
+        const bool   bFullRect   = ( bOwnOutput || activeView._settings.isFullRect() ) && upscaleZoom == 0;
+        // 주 시점이 사각형 하나만 쓰면 바깥은 지운다(업스케일의 남는 띠는 검게). 화면 사각형 뷰는 주 시점 위에 겹치므로 남긴다.
+        const RHIRenderPassLoadOp outputLoad  = ( isRenderingExtraView() && bOwnOutput == false ) ? RHIRenderPassLoadOp::Load
+                                              : bFullRect                                         ? RHIRenderPassLoadOp::DontCare
+                                                                                                  : RHIRenderPassLoadOp::Clear;
+        const float4&             outputClear = upscaleZoom > 0 ? FrameRendererUtil::kBlackClear : _clearColor;
+        // PSO 는 대상의 실제 포맷으로 고른다. 렌더 타깃 포맷은 PSO 의 일부라 대상마다 PSO 가 다르다.
+        const RHIPipelineStateHandle psoBlit = findOutputPSO( RenderPassType::Present, target._format );
+        if ( src != 0 && psoBlit != 0 )
+        {
+            registerPassTexture( context, attachmentNames()._sourceColor, srcName );
+            // 선언한 입력을 **모두** 바인딩한다. Present 가 후처리 체인을 겸하면 깊이(외곽선)와 AO 가 필요하고,
+            // 그냥 블릿이면 선언이 컬러 하나뿐이라 위 등록을 덮어쓸 뿐이다.
+            if ( pPassDesc != nullptr )
+                registerDeclaredInputs( context, *pPassDesc );
+            RHIRenderPassBeginInfo beginInfo{};
+            beginInfo._bBindColor        = SW_TRUE;
+            beginInfo._arrColorTarget[0] = dstTarget;
+            beginInfo._colorTargetCount  = 1;
+            beginInfo._arrLoadOp[0]      = outputLoad;
+            beginInfo._arrClearColor[0]  = outputClear;
+            beginInfo._width             = outputWidth;
+            beginInfo._height            = outputHeight;
+            context._pCmd->beginRenderPass( beginInfo );
+            // 사각형이면 뷰포트로 그 안에만 그린다. 전체 화면 삼각형이 사각형을 채우고 원본 전체를 그 안에 늘인다.
+            // 정수 업스케일이면 원본 크기 × 배율을 사각형 가운데에 놓는다 — 셰이더가 점 샘플(SW_PASS_FLAG_POINT_UPSCALE)이라 원본 픽셀이 배율 × 배율 칸이다.
+            if ( bFullRect == false )
+            {
+                const float4& rect = activeView._settings._screenRect;
+                RHIViewport   viewport{};
+                viewport._x      = rect._x * static_cast<float32>( outputWidth );
+                viewport._y      = rect._y * static_cast<float32>( outputHeight );
+                viewport._width  = rect._z * static_cast<float32>( outputWidth );
+                viewport._height = rect._w * static_cast<float32>( outputHeight );
+                if ( upscaleZoom > 0 )
+                {
+                    const TransientAttachmentPool& pool = activePool();
+                    viewport._x                         = static_cast<float32>( FrameRendererUtil::computeUpscaleOffset(
+                        static_cast<uint32>( viewport._x ), static_cast<uint32>( viewport._width ), pool.getWidth(), upscaleZoom ) );
+                    viewport._y                         = static_cast<float32>( FrameRendererUtil::computeUpscaleOffset(
+                        static_cast<uint32>( viewport._y ), static_cast<uint32>( viewport._height ), pool.getHeight(), upscaleZoom ) );
+                    viewport._width                     = static_cast<float32>( pool.getWidth() * upscaleZoom );
+                    viewport._height                    = static_cast<float32>( pool.getHeight() * upscaleZoom );
+                }
+                context._pCmd->setViewport( viewport );
+            }
+            drawFullscreen( context, psoBlit );
+            context._pCmd->endRenderPass();
+            if ( bCaptureToBack )
+                context._pCmd->blitTexture( dstTarget, 0 );
+        }
+        else if ( src != 0 )
+        {
+            context._pCmd->blitTexture( src, dstTarget );
+            if ( bCaptureToBack )
+                context._pCmd->blitTexture( dstTarget, 0 );
+        }
+        else
+        {
+            RHIRenderPassBeginInfo beginInfo{};
+            beginInfo.setColorTarget( dstTarget, _clearColor, RHIRenderPassLoadOp::Load );
+            beginInfo._bBindColor = SW_TRUE;
+            context._pCmd->beginRenderPass( beginInfo );
+            drawFullscreen( context, 0 );
+            context._pCmd->endRenderPass();
+        }
+        if ( target._bCaptureFromOutput == SW_TRUE && isLastSwapchainWriter( pPassDesc ) )
+            _capture.copyPresentFromOutput( *context._pCmd, target._texture, target._width, target._height, target._format );
+    }
+
+    void FrameRenderer::executeCanvasPass( const PassExecuteInput& input )
+    {
+        // 화면 2D 를 주 출력(Present 가 그린 것)에 기존 내용을 유지한 채(Load) 그린다. 주 출력에 **마지막으로 그리는 뷰**만 그린다
+        // (`_pMainOutputCanvasView` — 화면 사각형 뷰가 있으면 그 마지막 것, 없으면 주 시점). 그래야 PiP · 분할 화면이 UI 를 덮지 않는다.
+        // 렌더 텍스처 · 호스트 타깃 뷰에는 그리지 않는다. 그릴 것이 없으면 렌더 패스를 열지 않는다. 대상 전체가 뷰포트다(화면 사각형 설정과 무관).
+        FramePassContext&            context   = input._context;
+        const PresentTarget          target    = resolvePresentTarget();
+        const bool                   bDraw     = _pActiveView == _pMainOutputCanvasView && _canvasFrame._mainOutput.isEmpty() == false && target._width > 0 && target._height > 0;
+        const RHIPipelineStateHandle psoCanvas = bDraw ? findOutputPSO( RenderPassType::Canvas, target._format ) : RHIPipelineStateHandle{ 0 };
+        if ( psoCanvas != 0 )
+        {
+            RHIRenderPassBeginInfo beginInfo{};
+            beginInfo._bBindColor        = SW_TRUE;
+            beginInfo._arrColorTarget[0] = target._texture;
+            beginInfo._colorTargetCount  = 1;
+            beginInfo._arrLoadOp[0]      = RHIRenderPassLoadOp::Load;
+            beginInfo._width             = target._width;
+            beginInfo._height            = target._height;
+            context._pCmd->beginRenderPass( beginInfo );
+            (void)_canvasRenderer.drawList( *context._pCmd, _canvasFrame._mainOutput, _canvasRenderer.getMainQuadBase(), psoCanvas, target._width, target._height,
+                                            _pDevice->supportsNativeBindlessSampling(), _canvasFrame._colorVisionMode );
+            context._pCmd->endRenderPass();
+        }
+        const bool bLastWriter = isLastSwapchainWriter( input._pPassDesc );
+        if ( target._bCaptureToBack == SW_TRUE && bLastWriter )
+            context._pCmd->blitTexture( target._texture, 0 );
+        if ( target._bCaptureFromOutput == SW_TRUE && bLastWriter )
+            _capture.copyPresentFromOutput( *context._pCmd, target._texture, target._width, target._height, target._format );
     }
 
     bool FrameRenderer::beginColorPass( FramePassContext& context, string_view colorName, string_view depthName, const float4& clearColor,

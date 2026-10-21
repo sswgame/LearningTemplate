@@ -39,6 +39,7 @@
 namespace sw
 {
     struct RenderFramePacket;
+    struct RenderPassTypeInfo;
     struct ShaderCompileResult;
     struct SkyGradient;
 
@@ -500,9 +501,42 @@ namespace sw
          *          않는다. 주의: 병렬 기록 스레드가 배리어를 정하게 하면 중복 배리어와 레이아웃 불일치가 생긴다.
          */
         void onGraphLevelPrologue( const RenderGraphLevelContext& context );
-        /** @brief 패스 타입에 맞는 실행 함수를 부릅니다. */
+        /** @brief 패스 타입에 맞는 실행 함수를 부릅니다. 공통 입력(`PassExecuteInput`)을 한 번 정하고 패스별 `execute*Pass` 로 나눠 줍니다. */
         void executePass( FramePassContext& context, RenderPassType passType, string_view passName, const hashed_string& depthAttachment,
                           const RenderGraphPassDesc* pPassDesc );
+
+        /** @brief 패스 하나를 실행할 때 패스별 실행 함수가 함께 쓰는 입력입니다. `executePass` 가 한 번 정합니다. */
+        struct PassExecuteInput
+        {
+            FramePassContext&                                      _context;
+            RenderPassType                                         _passType;
+            const RenderGraphPassDesc*                             _pPassDesc;         ///< 패스 서술(없으면 nullptr — 원본 이름으로 간다)
+            const vector<RenderGraphPassDesc::ResolvedAttachment>* _pDeclaredColor;    ///< 선언한 컬러 출력(선언 순서, 없으면 nullptr)
+            hashed_string                                          _passDepth;         ///< 바인딩할 뎁스. 선언이 없거나 이번 프레임에 없으면 빈 이름
+            bool                                                   _bTransparentBatch; ///< 이 패스가 투명 배치를 그리는지(테이블 플래그)
+        };
+        /** @brief 첨부의 이번 프레임 첫 사용이면 Clear, 아니면 Load 입니다(`markAttachmentCleared`). */
+        RHIRenderPassLoadOp colorLoadFor( const hashed_string& name );
+        /** @brief @p targetName 하나에 풀스크린 삼각형을 그립니다. 열지 못하면 아무것도 하지 않습니다. */
+        void executeFullscreenInto( FramePassContext& context, RHIPipelineStateHandle pso, const hashed_string& targetName, const float4& passClearColor );
+        /** @brief 일반 풀스크린 패스(테이블의 kGenericFullscreen)입니다. 선언한 입력을 모두 바인딩하고 선언한 출력 중 첫 번째로 있는 것에 그립니다. */
+        void executeGenericFullscreenPass( const PassExecuteInput& input, const RenderPassTypeInfo& info );
+        /** @brief ForwardOpaque · ForwardOnlyOpaque 입니다. 그림자 맵 입력을 바인딩하고 선언한 첫 컬러 출력에 그립니다. */
+        void executeForwardOpaquePass( const PassExecuteInput& input );
+        /** @brief G버퍼(알베도 · 노멀 MRT)입니다. 노멀 출력이 없거나 PSO 가 없으면 그리지 않습니다. */
+        void executeGBufferPass( const PassExecuteInput& input );
+        /** @brief 투명 큐(메시 투명 배치와 입자)입니다. */
+        void executeTransparentPass( const PassExecuteInput& input );
+        /** @brief 인버티드 헐 외곽선입니다. 와이어프레임 · 표면 값 보기에서는 빠집니다. */
+        void executeMeshOutlinePass( const PassExecuteInput& input );
+        /** @brief 하늘입니다. 씬에 하늘이 없거나 뎁스 · 컬러 출력이 없으면 그리지 않습니다. */
+        void executeSkyPass( const PassExecuteInput& input );
+        /** @brief TAA 와 히스토리 갱신입니다. 후처리를 끈 뷰와 컷 프레임은 원본을 넘깁니다. */
+        void executeTaaPass( const PassExecuteInput& input );
+        /** @brief 최종 출력(백버퍼 · 캡처 · 렌더 텍스처)으로의 블릿입니다. 화면 사각형 · 정수 업스케일 뷰포트를 적용합니다. */
+        void executePresentPass( const PassExecuteInput& input );
+        /** @brief 화면 2D 를 주 출력에 그립니다. 주 출력에 마지막으로 그리는 뷰만 그립니다. */
+        void executeCanvasPass( const PassExecuteInput& input );
         /**
          * @brief XML 이 선언한 입력을 **역할 이름으로** 모두 바인딩합니다. 풀스크린 패스가 공통으로 씁니다.
          * @details 역할은 로드 시점에 해석해 둔다(`_listResolvedInput`). 여기서 바인딩하는 목록과 검증이 대조한 목록이 같으므로
