@@ -14,6 +14,33 @@
 
 한 일은 `git log` 가 정본입니다.
 
+## 00. 2026-10-22 세션 끝 — 구현 브랜치 약 30 개가 병합을 기다린다 (이것부터 읽는다)
+
+아래 0절의 `wt/integA` 묶음(40 개 브랜치)은 **main 에 병합 완료**(원격보다 294 커밋 앞섬, push 는 사용자가 직접). 이 절은 그 뒤 새로 구현한 브랜치다. 사용자 지시: "남은 기능은 전부 구현하고 **병합한 뒤 한 번에 확인**한다. 설계만 하지 말고 구현까지 한다. 조건부 후보는 MetalMobileConsole · StoreProviderIntegration 만 빼고 구현한다. GPU 입자 라이트는 하지 않는다." **전부 빌드 · 테스트 · 측정을 한 번도 안 돌렸다**(컴파일 오류가 상당수 있을 것이다 — 가장 큰 위험).
+
+**먼저**: 세션이 끊기면 실행 중이던 작업자가 멈춘다. `git worktree list` 와 브랜치별 `git log main..wt/<이름> --oneline`, `git -C D:\w\<이름> status --short` 로 **커밋 안 된 변경**을 읽고(`apprestruct` 는 커밋 0 에 변경 53 개), 훅을 통과시켜 커밋한 뒤 병합한다. 파일이 0 바이트나 NUL 바이트로 깨진 일이 두 번 있었다(`cleanup347` ShaderCompiler.cpp, `onlineclean` Editor 주석 240 개) — 병합 전에 모든 브랜치에서 NUL 바이트 검사. 작업자의 상대 경로 쓰기가 main 체크아웃을 더럽힌 일이 5 번 있었다(0 바이트 빈 파일 포함) — 병합 전 `git status` 로 main 이 깨끗한지 본다.
+
+**브랜치와 내용** (커밋 수는 2026-10-22 낮 기준, 각 브랜치의 계획 문서가 정본):
+| 브랜치 | 내용 | 병합 주의 |
+|---|---|---|
+| fallbackfix · hc4done · corecomments · gatesleft | 조용한 폴백 4 개와 `parseExactFloats` · HC4 끝 · Core 주석 용어 정리(문체는 Container 헤더만, 나머지 9 폴더 남음) · `CheckStdRemoveIf` 게이트 | 먼저 병합(작은 것) |
+| serials5 | `getRawPtr` 가 비트필드에 nullptr, `applyPropertyTextCoerced` | Reflection 전 모듈 재빌드 |
+| cleanup347 | EngineServiceInjection · 그래픽 긴 함수 3 · 시험→테스트 약 390 곳 · DiskPath 안 B(D1~D3, 진행 중) | **시험→테스트 치환은 마지막에**(56 파일, 다른 브랜치 문서와 충돌) |
+| onlineclean | 손 루프 69 곳 · I4 보존 기간 · I7 잔액 알림 | 약 60 파일 줄 단위 충돌, 스키마 해시가 바뀜 |
+| apprestruct | App · Server 호스트 구조 개편(형식 10→8, 정적 창구 8 개 → `_host.bind`) | `App.cpp` · `ServerApp.cpp` · `Engine.cpp` 가 netcand · uicand · wsT4 와 겹침 — **netcand · uicand 보다 먼저** |
+| netcand | S1 포트 샤딩(`INetPeers` 창구), S6, S7, 후보 셋 | `NetHost*` → `INetPeers*` 키트 전부 |
+| uicand | 게임 뷰 포인터(ABI v8), X11 클립보드 | `ModuleAbi.h` 버전 충돌 가능 |
+| gfxcand · camdof · vfx4 · asyncload · planleftB | 셰이더 패치 보관(커밋 훅 `CheckShaderStamps` 가 막음): `D:\w\gfxcand-patches\`, 스크래치패드의 `camdof-shaders.patch` · `vfx4-shaders.patch` | **병합해 `binding.hlsli` 슬롯 · `GPULight` 80 바이트(lightgrid.hlsl 구조체 중복) 충돌을 푼 뒤 `--cook-shaders` 로 한 번에 굽고 소스와 함께 커밋**. `RenderPassType` 끝 열거자를 camdof · gfxcand · vfx4 가 모두 건드림 |
+| gpA · gpB · animleft · edcand · engcand · audiocand · wsT4 · planleftA · structpk · condA · condB | 기능 후보 구현(계획 문서가 정본) | README 표는 병합 뒤 `status-board --write` 로 다시 만든다 |
+
+**남은 기능 중 구현을 못 끝낸 것**: 작업자가 설계만 했거나 이어서 하라고 보낸 것 — gfxcand(2D 빛 쿠키 · VRM 1인칭 메시 숨김 · 프리팹 연결), planleftA(ServerDebug S8 · OnlineKits 결정 대기 단위), animleft(활 · 화살 에셋 · 휘두름 피해 사이드카), netcand(RollbackPrediction R2~R4 · 스키마 해시 핸드셰이크), uicand · audiocand(E8) · onlineclean · gatesleft(에디터 층 경계) · wsT4(편집 잠금 전수 · 물리 굽기 테스트) · camdof(S3 · S4 · Shooter S2~S4). Vfx `vfx4` 는 design-reviewer 검토를 반영하는 중(모듈 `getSupportedTargets` 마스크 · GPU 메시 · 깊이 히스토리 · GPU 깊이 충돌). 라이트의 GPU 시뮬레이션은 **하지 않기로 했다**(Light Renderer 의 GPU 지원은 Unreal 문서로 확인 못 함).
+**아직 맡기지 못한 것**: Core 나머지 9 폴더 문체 다듬기(폴더별 작업자로 나눠), 근접 판정 통합(HitWindow 스윕 하나로, 서버 권위 검사 추가 — 병합 뒤 리팩토링 파동), 묶음 8 NamingAuditNext(마지막 단독). 사용자 결정 대기: 없음(권고안으로 감).
+**사람 · 장비가 필요해 구현으로 못 끝내는 것**: 말 모델 에셋, 실제 패드 G3, 측정(BuildSpeed 남은 7 단위 · GpuVerification V2 · AudioChannelLayout U1 · EncryptedTickCost 등), 보류 둘(MotionMatching · OperationsAndDeployment), 확인 대기 20 · 관찰 7 후보(검증 성격 — 병합 뒤 한 번에 처리).
+
+**병합 뒤 순서**: ① `integrator`(opus, high)로 위 순서대로 병합하며 단계마다 `full-build` ② 셰이더 병합 · 쿠킹 ③ 전체 빌드(Debug · Release · Shipping) · 테스트 · 골든 · 네 백엔드 화면 · 확인 대기 후보 ④ **구조 리팩토링 파동**(근접 판정 통합 · 정적 활성 창구 게이트 · `_offset` 직접 사용 · 캐시를 `AssetHandle` 로 · `createMaterialPSOVariant` 폴백 · `IWindow` 크기 직접 읽기 · 키트 엔티티 번호) ⑤ 워크트리 정리(`py -3 -m Scripts worktree-remove`) ⑥ push(사용자).
+**CI**: main CI 실행 39519439369 의 Linux ASan 만 실패 — ALSA 전역 설정 캐시 누수(`audiocand` 가 `snd_config_update_free_global` 로 고침, Linux CI 에서만 확인 가능).
+**환경**: PowerShell 작업 폴더가 main 체크아웃이라 작업자의 `[IO.File]` 상대 경로가 main 을 건드린다. 스크래치패드는 작업자끼리 공유라 `msg1.txt` 같은 이름이 덮인 일이 있다(작업자별 이름 사용). 동시 작업자 한도 20 명(`CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS`).
+
 ## 0. 2026-10-21 세션 끝 — 구현만 끝낸 브랜치 약 40 개가 병합을 기다린다 (이것부터 읽는다)
 
 사용자 지시: "모두 다 해 · 미루지 말 것 · 측정은 나중, 구현 먼저 · 별칭은 없앤다". **전부 구현만 했고 빌드 · 테스트 · 측정 · GPU 검증은 한 번도 안 돌렸다(빌드 미확인). push 도 없다.** main 은 이 세션에서 문서 하나(이 절)만 늘었다.
