@@ -37,7 +37,8 @@ namespace sw
      *
      *          **몸**: 플레이가 시작되면 몸 프리팹(`_bodyPrefab`, 스킨드 메시, 애니메이터, 외형, `ShooterAvatarComponent`)을 스폰한다. 몸이 이 컴포넌트의
      *          상태(발, 요, 속도, 사격, 맞음, 쓰러짐, 무기)를 읽어 스스로 움직이고, 무기는 외형의 MainHand 슬롯 아이템(`_listWeaponItem`)이 된다.
-     *          시점 카메라의 프리셋이 1인칭(`CameraPresetMode::FirstPerson`)이면 몸을 숨기고 손에 든 총과 조준선을 보이며, 아니면 반대로 한다. 눈높이는 몸 소켓
+     *          시점 카메라의 프리셋이 1인칭(`CameraPresetMode::FirstPerson`)이면 몸의 머리 · 머리 장비 · 몸 무기만 숨기고(`ShooterAvatarComponent::setFirstPerson`)
+     *          손에 든 총과 조준선을 보이며, 아니면 반대로 한다. 눈높이는 몸 소켓
      *          `Eyes` 의 바인드 포즈 높이다(없으면 `_eyeHeight`).
      *
      *          **HUD**: 같은 오브젝트의 `HUDControllerComponent` 에 게임의 뷰모델(`ShooterHUDViewModel`)을 걸고 틱이 끝난 뒤 값을 넣는다. 조준선(1인칭이고 살아 있을 때),

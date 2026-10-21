@@ -146,7 +146,8 @@ cd build/Ninja-Debug/Bin
 | 감시 카메라와 모니터 | `CctvCamera` 가 렌더 텍스처 `rendertarget/shooter_cctv` 에 `cctv_sweep` 프리셋으로 그리고, 북쪽 벽 `CctvMonitor` 가 그 텍스처를 읽습니다 |
 
 HUD 의 위젯 값은 문서의 `{bind:필드}` 가 연결합니다. 무기 이름은 현지화 키 그대로 넣고, 글 위젯이 문화권에 맞게 바꿉니다. 적 HP 바는 스켈레톤 프리팹의 화면 마커와 `HealthBarComponent` 입니다.
-1인칭 프리셋이면 플레이어가 몸을 숨기고 손에 든 총과 조준선을 보이며, 다른 프리셋에서는 반대입니다.
+1인칭 프리셋이면 플레이어가 몸의 머리만 숨기고(리그 `rigs/knight_firstperson.rig.json` 의 `ScaleBone` 과 외형 칸 `Head` · `MainHand`, 값은 `player_body.prefab.xml`) 손에 든 총과 조준선을 보이며, 다른 프리셋에서는 반대입니다.
+적 몸(`skeleton.prefab.xml`)은 군중 공유(`_bShareCrowdPose`)를 켜 같은 반복 클립의 적끼리 포즈 하나를 나눕니다. 스킨드 외형 부품은 몸의 값을 따릅니다.
 내비메시는 쿠킹이 `maps/arena.navmesh` 로 쓰고, Dev 는 플레이 첫 프레임에 베이크합니다.
 
 **틱.** 디렉터는 `PrePhysics` 에서 쓰러진 적을 세고 시체를 정리하고 이번 프레임의 적과 플레이어 위치를 적습니다.
