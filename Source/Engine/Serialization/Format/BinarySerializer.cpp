@@ -384,9 +384,31 @@ namespace sw
     bool BinarySerializer::serialize( const void* pInstance, const TypeInfo& typeInfo, vector<uint8>& outListBuffer,
                                       const SerializeContext& context )
     {
-        BinaryStreamWriter          writer( outListBuffer );
+        static const vector<SchemaOrphanValue> s_listNoUnknown;
+        return serializeKeepingUnknown( pInstance, typeInfo, s_listNoUnknown, outListBuffer, context );
+    }
+
+    bool BinarySerializer::serializeKeepingUnknown( const void* pInstance, const TypeInfo& typeInfo, const vector<SchemaOrphanValue>& listUnknown, vector<uint8>& outListBuffer,
+                                                    const SerializeContext& context )
+    {
         const vector<PropertyInfo>& listProp = typeInfo.getPropertiesWithBase();
-        uint32                      propCount{ 0 };
+        // 다시 싣는 칸은 이 빌드가 모르는 칸(읽을 때 이름이 없었다)이고 같은 와이어 버전으로 적힌 것뿐이다. 아는 칸이나 다른 버전의 값을 그대로 실으면
+        // 같은 이름이 두 번 적히거나 읽는 쪽이 값의 뜻을 잘못 안다 — 고쳐 싣지 않고 쓰기를 멈춘다.
+        for ( const SchemaOrphanValue& unknown : listUnknown )
+        {
+            // 읽기와 같은 짝짓기다 — Transient 칸을 가리키는 이름은 읽기도 모르는 칸으로 담는다.
+            const size_t knownIndex  = SerializerUtil::findPropertyIndexByNameHash( listProp, unknown._nameHash );
+            const bool   bKnownName  = knownIndex < listProp.size() && listProp[knownIndex]._metadata->_bTransient == SW_FALSE;
+            const bool   bCannotKeep = unknown._name.empty() == false || bKnownName || unknown._wireVersion != kCurrentBinaryWireVersion;
+            if ( bCannotKeep )
+            {
+                SW_LOG_ERROR( "%#: a kept unknown field (name hash %#) is a known field or another wire version - the object is not written", typeInfo._name.c_str(),
+                              unknown._nameHash );
+                return false;
+            }
+        }
+        BinaryStreamWriter writer( outListBuffer );
+        uint32             propCount{ static_cast<uint32>( listUnknown.size() ) };
         for ( const PropertyInfo& prop : listProp )
         {
             if ( SerializerUtil::shouldSerializeProperty( typeInfo, prop, context ) == false )
@@ -426,6 +448,14 @@ namespace sw
 
             uint32 payloadSize = static_cast<uint32>( writer.getOffset() - payloadStart );
             writer.writeAt( sizeHeaderPos, payloadSize );
+        }
+        // 모르는 칸은 읽을 때의 (이름 해시, 기록 타입 해시, 크기, 값) 그대로 뒤에 싣는다 — 이 칸을 아는 빌드가 다시 읽으면 제 값이다.
+        for ( const SchemaOrphanValue& unknown : listUnknown )
+        {
+            writer.write( unknown._nameHash );
+            writer.write( unknown._wireTypeHash );
+            writer.write( static_cast<uint32>( unknown._listBinary.size() ) );
+            outListBuffer.insert( outListBuffer.end(), unknown._listBinary.begin(), unknown._listBinary.end() );
         }
         return true;
     }
@@ -479,6 +509,14 @@ namespace sw
         BinaryStreamWriter writer( outListBuffer );
         writer.write( version );
         return serialize( pInstance, typeInfo, outListBuffer, context );
+    }
+
+    bool BinarySerializer::serializeVersionedKeepingUnknown( uint32 version, const void* pInstance, const TypeInfo& typeInfo, const vector<SchemaOrphanValue>& listUnknown,
+                                                             vector<uint8>& outListBuffer, const SerializeContext& context )
+    {
+        BinaryStreamWriter writer( outListBuffer );
+        writer.write( version );
+        return serializeKeepingUnknown( pInstance, typeInfo, listUnknown, outListBuffer, context );
     }
 
     bool BinarySerializer::deserializeVersioned( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
