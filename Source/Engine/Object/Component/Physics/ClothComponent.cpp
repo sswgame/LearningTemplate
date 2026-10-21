@@ -5,6 +5,7 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
+#include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/Component/ComponentNameValidation.h"
 #include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -47,6 +48,7 @@ namespace sw
         , _columnCount{ 11 }
         , _rowCount{ 11 }
         , _pinMode{ ClothPinMode::TopEdge }
+        , _pinBone{}
         , _mass{ 1.0f }
         , _stretchCompliance{ 0.0f }
         , _shearCompliance{ 0.0f }
@@ -59,6 +61,7 @@ namespace sw
         , _layer{}
         , _listVertex{}
         , _softBody{}
+        , _bPinBoneErrorReported{ SW_FALSE }
     {
     }
 
@@ -66,6 +69,36 @@ namespace sw
     {
         _pinMode = pinMode;
         requestRebuild();
+    }
+
+    void ClothComponent::setPinBone( const hashed_string& boneName )
+    {
+        _pinBone               = boneName;
+        _bPinBoneErrorReported = SW_FALSE;
+        requestRebuild();
+    }
+
+    bool ClothComponent::findPinPose( float3& outPosition, quaternion& outRotation ) const
+    {
+        if ( _pinBone.empty() )
+        {
+            float3 scale;
+            PhysicsComponentUtil::readWorldPose( *this, outPosition, outRotation, scale );
+            return true;
+        }
+        // 본 — 이 오브젝트부터 부모로 올라가며 처음 만난 스켈레탈 메시가 마지막으로 구한 모델 공간 본 행렬 × 그 컴포넌트의 월드 행렬
+        // (헤어 카드 · 망토 오브젝트를 캐릭터의 자식으로 두면 목 · 등 본을 따른다). 천을 그리는 메시는 이 오브젝트의 스켈레탈이 아닌 메시 컴포넌트다.
+        const SkeletalMeshComponent* pSkeletal = nullptr;
+        for ( const GameObject* pObject = getOwner(); pObject != nullptr && pSkeletal == nullptr; pObject = pObject->getParent() )
+        {
+            pSkeletal = pObject->getComponent<SkeletalMeshComponent>();
+        }
+        float4x4 boneModel;
+        if ( pSkeletal == nullptr || pSkeletal->findBoneModelTransform( _pinBone, boneModel ) == false )
+            return false;
+        const float4x4 boneWorld = boneModel * pSkeletal->getWorldMatrix(); // 행-벡터 규격: 로컬 다음 부모
+        float3         scale;
+        return boneWorld.decompose( scale, outRotation, outPosition );
     }
 
     PhysicsSoftBodyDesc ClothComponent::makeSoftBodyDesc( const float3& position, const quaternion& rotation, uint8 layer ) const
@@ -153,8 +186,15 @@ namespace sw
             releasePhysics( physics );
         float3     position;
         quaternion rotation;
-        float3     scale;
-        PhysicsComponentUtil::readWorldPose( *this, position, rotation, scale );
+        if ( findPinPose( position, rotation ) == false )
+        {
+            // 정한 본이 없다 — 오브젝트 자세로 대신 걸면 엉뚱한 자리에서 흔들린다. 천을 내리고 한 번 알린다.
+            if ( _bPinBoneErrorReported == SW_FALSE )
+                SW_LOG_ERROR( "Cloth pin bone '%#' is not on this object's skeletal mesh - the cloth is not simulated", _pinBone.c_str() );
+            _bPinBoneErrorReported = SW_TRUE;
+            releasePhysics( physics );
+            return;
+        }
         if ( _softBody.isValid() == false )
         {
             _softBody = pScene->createSoftBody( makeSoftBodyDesc( position, rotation, physics.resolveLayer( _layer ) ) );
@@ -252,6 +292,14 @@ namespace sw
         MeshComponent* pMesh  = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
         if ( pMesh == nullptr || _listVertex.empty() )
             return;
+        // 스켈레탈 메시는 캐릭터 몸이다 — 천 메시로 덮어쓰지 않는다(천 오브젝트를 캐릭터의 자식으로 두고 거기에 메시 컴포넌트를 둔다).
+        if ( pOwner->getComponent<SkeletalMeshComponent>() == pMesh )
+        {
+            if ( _bPinBoneErrorReported == SW_FALSE )
+                SW_LOG_ERROR( "Cloth would replace the skeletal mesh of '%#' - put the cloth on a child object with its own mesh component", pOwner->getName().c_str() );
+            _bPinBoneErrorReported = SW_TRUE;
+            return;
+        }
         vector<RHIVertex> listVertex;
         if ( makeRenderVertices( _listVertex, pMesh->getWorldMatrix().invert(), listVertex ) == false )
         {

@@ -35,14 +35,15 @@ namespace sw
     /**
      * @class ClothComponent
      * @brief 물리 천입니다(유니티 `Cloth` · 언리얼 Chaos Cloth 의 자리). 오브젝트 로컬의 XY 평면에 폭 × 높이 격자를 걸고(윗변이 오브젝트 자리,
-     *        아래로 −Y), 고정 정점(`_pinMode`)은 프레임마다 오브젝트의 월드 자세를 따르며 나머지는 중력 · 충돌 · 구속으로 움직입니다.
+     *        아래로 −Y), 고정 정점(`_pinMode`)은 프레임마다 오브젝트의 월드 자세(또는 `_pinBone` 을 정하면 이 오브젝트나 조상의 스켈레탈 메시의
+     *        그 본)를 따르며 나머지는 중력 · 충돌 · 구속으로 움직입니다.
      * @details 시작한 뒤 첫 물리 프레임에 소프트 바디를 만들고, 값이 바뀌거나 순간이동하면 다시 만듭니다. 정점 위치(`getVertices`)는 물리 프레임 끝의
      *          월드 위치이고 격자 순서(행 우선, 윗줄부터)입니다. 오브젝트 배율은 쓰지 않습니다(크기는 `_width` · `_height`). 2D 물리에는 없습니다.
      *
      *          그리기: 같은 오브젝트에 `MeshComponent` 가 있으면 물리 프레임마다 정점으로 양면 삼각형 메시를 새로 만들어 건다(`makeRenderVertices` — 노멀은 격자
-     *          이웃 면의 합, UV 는 격자 0..1, 정점 색 1). 머티리얼은 그 메시 컴포넌트가 정한다. 메시는 동적(`Mesh::setDynamic`)이라 씬 정점 풀에 들지 않는다.
-     *          메시 컴포넌트가 없으면 그리지 않는다(물리만 — 물리 디버그 그리기로 보인다).
-     * @note 프레임마다 정점 (열 − 1) × (행 − 1) × 12 개를 새 정점 버퍼로 올린다(기본 11 × 11 은 1200 개). 제자리 갱신 버퍼는 정점 풀 부분 갱신(`C-43`)과 같이 본다.
+     *          이웃 면의 합, UV 는 격자 0..1, 정점 색 1). 머티리얼은 그 메시 컴포넌트가 정한다. 메시는 동적(`Mesh::setDynamic`)이라 업로드 큐를 거치지 않고
+     *          씬 정점 풀이 그 구간만 올린다(정점 버퍼를 프레임마다 만들지 않는다). 메시 컴포넌트가 없으면 그리지 않는다(물리만 — 물리 디버그 그리기로 보인다).
+     * @note 프레임마다 정점 (열 − 1) × (행 − 1) × 12 개를 풀의 새 구간으로 올린다(기본 11 × 11 은 1200 개). 옛 구간은 앞 프레임이 끝난 뒤 돌아간다.
      */
     REFLECT( Category = "Physics", DisplayName = "Cloth", Tooltip = "Grid soft body hanging from this object; pinned vertices follow the transform", Meta = "Icon=Physics" )
     class SW_API ClothComponent : public PhysicsComponent
@@ -81,6 +82,15 @@ namespace sw
         void endPhysicsFrame( ScenePhysics& physics, float32 alpha ) override;
         void releasePhysics( ScenePhysics& physics ) override;
 
+    public:
+        /** @brief 고정 정점이 따를 본을 정합니다(빈 이름은 오브젝트 자체). 다음 물리 프레임에 천을 다시 만듭니다. */
+        void setPinBone( const hashed_string& boneName );
+        /**
+         * @brief 고정 정점이 따르는 월드 자세입니다. `_pinBone` 이 비면 오브젝트의 자세, 아니면 같은 오브젝트 `SkeletalMeshComponent` 의 그 본입니다.
+         * @return 본을 정했는데 스켈레탈 메시나 본이 없으면 false 입니다(천을 만들지 않는다 — 오브젝트 자세로 대신하지 않는다).
+         */
+        [[nodiscard]] bool findPinPose( float3& outPosition, quaternion& outRotation ) const;
+
     private:
         /** @brief 같은 오브젝트의 `MeshComponent` 에 이번 정점으로 만든 동적 메시를 겁니다. 메시 컴포넌트나 정점이 없으면 아무것도 하지 않습니다. */
         void updateRenderMesh();
@@ -97,6 +107,8 @@ namespace sw
         uint32 _rowCount;
         PROPERTY( Category = "Cloth", Tooltip = "Which vertices follow this object" )
         ClothPinMode _pinMode;
+        PROPERTY( Category = "Cloth", Tooltip = "Bone of this object's skeletal mesh the pinned vertices follow; empty follows the object itself" )
+        hashed_string _pinBone;
         PROPERTY( Category = "Cloth", Min = 0.001, Tooltip = "Total mass of the free vertices", Units = kg )
         float32 _mass;
         PROPERTY( Category = "Stiffness", Min = 0.0, Tooltip = "Edge stretch compliance (inverse stiffness); 0 does not stretch" )
@@ -120,5 +132,6 @@ namespace sw
 
         vector<float3>        _listVertex; ///< 마지막 물리 프레임 끝의 정점 월드 위치(게임 스레드가 쓴다)
         PhysicsSoftBodyHandle _softBody;
+        uint8                 _bPinBoneErrorReported; ///< 설정 오류(본 없음 · 스켈레탈 메시 덮어쓰기)를 이미 냈다(본을 바꾸면 다시 낸다)
     };
 } // namespace sw

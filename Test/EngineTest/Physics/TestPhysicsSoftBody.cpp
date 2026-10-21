@@ -155,6 +155,29 @@ SW_TEST_CASE( PhysicsSoftBodyTest, PinnedVerticesFollowTheObject )
 }
 
 /**
+ * @brief [PhysicsSoftBodyTest] 고정 본을 정했는데 스켈레탈 메시가 없으면 천을 만들지 않는다 — 오브젝트 자세로 대신 걸지 않는다(ClothFollowups C3)
+ * @details 본을 비우면 고정 자세는 오브젝트의 월드 자세다.
+ */
+SW_TEST_CASE( PhysicsSoftBodyTest, MissingPinBoneLeavesTheClothUnsimulated )
+{
+    using Internal = PhysicsSoftBodyTestInternal;
+    sw::GameObjectManager manager;
+    sw::ClothComponent*   pCloth = Internal::spawnCloth( manager, sw::float3{ 1.0f, 3.0f, 0.0f }, sw::ClothPinMode::TopEdge );
+    sw::float3            position;
+    sw::quaternion        rotation;
+    SW_ASSERT_TRUE( pCloth->findPinPose( position, rotation ) );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, position._x, 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( 3.0f, position._y, 1.0e-5f );
+
+    pCloth->setPinBone( sw::hashed_string( "neck" ) );
+    SW_EXPECT_FALSE( pCloth->findPinPose( position, rotation ) );
+    manager.beginPlay();
+    test::updateFrames( manager, 10 );
+    SW_EXPECT_FALSE( pCloth->isClothCreated() );
+    manager.endPlay();
+}
+
+/**
  * @brief [PhysicsSoftBodyTest] 그릴 정점 — 격자 칸마다 앞뒤 삼각형 넷(정점 12), 메시 공간으로 옮기고, 감김의 면 노멀이 정점 노멀과 같은 쪽(앞면 +Z · 뒷면 −Z), UV 0..1
  * @details 정점 수가 격자와 다르면 만들지 않는다(다른 격자로 짐작해 그리지 않는다).
  */
