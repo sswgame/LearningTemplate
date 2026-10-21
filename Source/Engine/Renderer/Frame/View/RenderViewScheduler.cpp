@@ -3,6 +3,7 @@
 #include "Engine/Renderer/Frame/View/RenderViewScheduler.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 namespace sw
@@ -120,9 +121,8 @@ namespace sw
             ++entry._renderCount;
         }
         // 이번 후보에 없는 뷰(카메라가 사라졌다)는 잊는다.
-        _listEntry.erase( std::remove_if( _listEntry.begin(), _listEntry.end(), []( const Entry& entry )
-        { return entry._bSeen == SW_FALSE; } ),
-                          _listEntry.end() );
+        VectorUtil::removeIf( _listEntry, []( const Entry& entry )
+        { return entry._bSeen == SW_FALSE; } );
         return chosenCount;
     }
 } // namespace sw

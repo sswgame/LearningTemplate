@@ -2,6 +2,7 @@
 
 #include "Engine/Sequencer/SequenceAsset.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
@@ -274,11 +275,9 @@ namespace sw
         bool bRemoved = false;
         for ( FloatCurve& channel : _listChannel )
         {
-            const size_t keyCountBefore = channel._listKey.size();
-            const auto   itRemoved      = std::remove_if( channel._listKey.begin(), channel._listKey.end(), [frame]( const FloatCurveKey& key )
-                   { return MathUtil::abs( key._time - frame ) < kSequenceKeyFrameTolerance; } );
-            channel._listKey.erase( itRemoved, channel._listKey.end() );
-            if ( channel._listKey.size() != keyCountBefore )
+            const size_t removeCount = VectorUtil::removeIf( channel._listKey, [frame]( const FloatCurveKey& key )
+            { return MathUtil::abs( key._time - frame ) < kSequenceKeyFrameTolerance; } );
+            if ( removeCount > 0 )
             {
                 bRemoved = true;
                 channel.sortAndComputeAutoTangents();

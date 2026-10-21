@@ -1029,9 +1029,9 @@
   생성자에 두어(AGENTS) 리플렉션 메타의 기본값 글이 대부분 비어 있으므로, 계획의 메타 글 비교로는 표시할 것이 거의 없습니다. 메타 글은 중첩 구조체처럼 인스턴스가 없을 때만 씁니다.
 - **환경설정 · 단축키 · 모듈 창의 세부**(2026-10-10): 환경설정 값은 프로퍼티 글 형식(`formatPropertyText`)의 문자열로 저장합니다(형식마다 JSON 타입을 맞추지 않아도 왕복이 같다).
   단축키 키 이름은 낱말(`Comma` · `0`)이고 저장 파일은 `{ "id": [ "주 조합", "보조" ] }` 입니다. 모듈 창은 매니페스트를 고치고 Build 단추만 두며 다시 시작은 손으로 합니다(실행 인자를 이어받는 재시작은 하지 않았다).
-- **에디터 폴더는 층이고 틀은 아래 · 구체는 위입니다**(2026-10-11, `CheckEditorLayers`). 패널 · 팝업 매니저는 인터페이스 옆(`Common/GUI`), 에셋 종류 동작 등록부는 `Workspace`,
+- **에디터 폴더는 층이고 틀은 아래 · 구체는 위입니다**(2026-10-11). 층 경계는 린트가 아니라 빌드 형식이 막습니다(2026-10-22, 린트 `CheckEditorLayers` 를 지움): 티어마다 OBJECT 부분 `EditorTier<N>Model` · `EditorTier<N>View` 를 짓고, 부분마다 자기 티어보다 위 층의 모든 헤더 자리에 `#error` 껍데기(`<빌드>/generated/sw/EditorLayerStubs/tier<N>`)를 include 자리 맨 앞에 둡니다. 위 층 헤더를 include 하면 컴파일이 멈추고 전이 include 도 같습니다. 표는 `Scripts/lint/rules/GenerateEditorLayers.toml` 이고 폴더와 어긋나면 configure 가 멈춥니다. 에디터를 짓지 않는 구성(배포 · 에디터 끈 모듈)에서는 이 검사가 돌지 않는데, 개발 구성 CI 가 에디터를 짓기 때문에 따로 린트를 두지 않았습니다. 패널 · 팝업 매니저는 인터페이스 옆(`Common/GUI`), 에셋 종류 동작 등록부는 `Workspace`,
   커맨드가 패널을 여는 일은 창구 `IEditorPanelHost`, UI 를 만지는 명령의 등록 줄은 그 UI 의 .cpp 입니다. 상태 막대 항목은 등록 줄(`SW_EDITOR_STATUS_BAR_ITEM`)로 더합니다.
-  예외는 어느 층에서 include 해도 되는 잎 헤더(`prelude:`)와 모든 매니저를 만드는 조립 파일(`wiring:`)뿐입니다. 큰 패널은 `Panels/<패널>/`, 혼자인 패널은 영역 폴더(`Scene/` · `Animation/` · `Data/` · `Settings/`)에 둡니다.
+  예외는 어느 층에서 include 해도 되는 잎 헤더(`[prelude]`)뿐이고, 모든 매니저를 만드는 조립 파일은 EditorModule 자신(`Source/Editor` 바로 아래)이 가집니다. 큰 패널은 `Panels/<패널>/`, 혼자인 패널은 영역 폴더(`Scene/` · `Animation/` · `Data/` · `Settings/`)에 둡니다.
 - **ImGui 를 모르는 층(Common 의 Asset · Commands · Config · Localization · SourceControl · Workspace)은 OBJECT 라이브러리 `EditorModel` 로 짓고 오브젝트를 EditorModule DLL 에 그대로 넣습니다**(2026-10-17, `sw_addModulePart`. Workspace 는 2026-10-21).
   모든 매니저를 만드는 조립 파일(`EditorContextLifecycle.cpp` · `EditorModuleUnloadListener.*`)은 셸 옆 `Source/Editor` 바로 아래에 두어 모델 폴더가 패널 · 팝업 매니저를 include 하지 않습니다.
   정적 라이브러리나 별도 DLL 로 떼지 않습니다. 확장 모듈이 따로 링크하면 정적 상태가 두 벌이 되고 export 가 빠질 수 있습니다.

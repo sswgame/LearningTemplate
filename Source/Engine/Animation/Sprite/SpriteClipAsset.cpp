@@ -2,6 +2,7 @@
 
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
@@ -120,9 +121,8 @@ namespace sw
             if ( bRangeKept == false )
                 ++clampedCount;
             // 알림은 이름으로 찾으므로 이름이 빈 알림은 울릴 곳이 없다.
-            const auto itUnnamed = std::remove_if( animation._listNotify.begin(), animation._listNotify.end(), []( const AnimationNotifyEvent& event )
+            VectorUtil::removeIf( animation._listNotify, []( const AnimationNotifyEvent& event )
             { return event._name.empty(); } );
-            animation._listNotify.erase( itUnnamed, animation._listNotify.end() );
             if ( animation._name.empty() || animation._frameCount <= 0 )
                 continue;
             listKept.push_back( std::move( animation ) );

@@ -2,6 +2,8 @@
 
 #include "Core/Network/Replication/NetPrioritizer.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include <algorithm>
 
 namespace sw
@@ -57,9 +59,8 @@ namespace sw
 
     void NetPrioritizer::removeUntouched()
     {
-        _listEntry.erase( std::remove_if( _listEntry.begin(), _listEntry.end(), []( const Entry& entry )
-        { return entry._bTouched == SW_FALSE; } ),
-                          _listEntry.end() );
+        VectorUtil::removeIf( _listEntry, []( const Entry& entry )
+        { return entry._bTouched == SW_FALSE; } );
     }
 
     void NetPrioritizer::collectOrder( vector<uint32>& outListEntity )

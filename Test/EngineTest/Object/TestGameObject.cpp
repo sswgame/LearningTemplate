@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Common/Defines.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/TagID.h"
@@ -2517,10 +2518,8 @@ SW_TEST_CASE( GameObjectTest, ChaoticHierarchyMutationAndActiveToggleStressTest 
             {
                 // 4) 임의 오브젝트 삭제 (지연 큐 등록)
                 manager.destroyObject( pObjA, true );
-                listAliveObject.erase(
-                    std::remove_if( listAliveObject.begin(), listAliveObject.end(), []( sw::GameObject* pObj )
-                { return pObj == nullptr || pObj->isPendingDestroy(); } ),
-                    listAliveObject.end() );
+                VectorUtil::removeIf( listAliveObject, []( sw::GameObject* pObj )
+                { return pObj == nullptr || pObj->isPendingDestroy(); } );
             }
             else
             {

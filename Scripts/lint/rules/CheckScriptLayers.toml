@@ -22,6 +22,7 @@
 [exemption]
 "Scripts/generate/GenerateConfigureFiles.py|generate.GenerateCMakeConstants" = "configure 생성기 다섯을 한 프로세스로 돌리는 조립 명령(docs/09_Decisions.md 5-2, 2026-10-06)"
 "Scripts/generate/GenerateConfigureFiles.py|generate.GenerateCookContract" = "configure 생성기 다섯을 한 프로세스로 돌리는 조립 명령(docs/09_Decisions.md 5-2, 2026-10-06)"
+"Scripts/generate/GenerateConfigureFiles.py|generate.GenerateEditorLayers" = "configure 생성기를 한 프로세스로 돌리는 조립 명령(docs/09_Decisions.md 5-2, 2026-10-06)"
 "Scripts/generate/GenerateConfigureFiles.py|generate.GenerateLintTargets" = "configure 생성기 다섯을 한 프로세스로 돌리는 조립 명령(docs/09_Decisions.md 5-2, 2026-10-06)"
 "Scripts/generate/GenerateConfigureFiles.py|generate.GeneratePackFormat" = "configure 생성기 다섯을 한 프로세스로 돌리는 조립 명령(docs/09_Decisions.md 5-2, 2026-10-06)"
 "Scripts/generate/GenerateConfigureFiles.py|generate.GenerateShippingHostDefaults" = "configure 생성기 다섯을 한 프로세스로 돌리는 조립 명령(docs/09_Decisions.md 5-2, 2026-10-06)"

@@ -3,6 +3,7 @@
 #include "Engine/UI/Screen/UISubtitleService.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
@@ -83,9 +84,8 @@ namespace sw
         {
             line._remainingSeconds -= deltaSeconds;
         }
-        _listActive.erase( std::remove_if( _listActive.begin(), _listActive.end(), []( const UISubtitleLine& line )
-        { return line._remainingSeconds <= 0.0f; } ),
-                           _listActive.end() );
+        VectorUtil::removeIf( _listActive, []( const UISubtitleLine& line )
+        { return line._remainingSeconds <= 0.0f; } );
         // 2) 대기열: 자리가 나면 먼저 온 줄부터 올린다. 시간은 보이기 시작한 이 프레임부터 센다.
         while ( _listActive.size() < kMaxVisibleLineCount && _listQueued.empty() == false )
         {

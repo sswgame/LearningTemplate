@@ -3,6 +3,7 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 
 #include "Core/Concurrency/atomic.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Task/TaskManager.h"
 
@@ -229,10 +230,8 @@ namespace sw
         const uint32 vertexCount = static_cast<uint32>( _listVertex.size() );
         for ( MeshMorphTarget& target : listTarget )
         {
-            target._listDelta.erase( std::remove_if( target._listDelta.begin(), target._listDelta.end(),
-                                                     [vertexCount]( const MeshMorphDelta& delta )
-            { return delta._vertexIndex >= vertexCount; } ),
-                                     target._listDelta.end() );
+            VectorUtil::removeIf( target._listDelta, [vertexCount]( const MeshMorphDelta& delta )
+            { return delta._vertexIndex >= vertexCount; } );
         }
         _listMorphTarget  = std::move( listTarget );
         _contentID        = allocateContentID();
