@@ -213,6 +213,18 @@ namespace sw
             SW_LOG_WARNING( "[UI] Animation '%#': %# — the track is skipped", animation._name.c_str(), error.c_str() );
             return false;
         }
+        // 곡선 위 사건은 실수 성분을 본다. 볼 성분이 없는 트랙의 사건은 조용히 안 보내지 않고 트랙째 뺀다(문서가 틀렸다는 뜻이다).
+        for ( const UIAnimationCurveEvent& curveEvent : track._listCurveEvent )
+        {
+            const bool bComponentExists = outTrack._property._kind == UIAnimatedValueKind::Float && curveEvent._component >= 0 &&
+                                          curveEvent._component < static_cast<int32>( outTrack._property._componentCount );
+            if ( bComponentExists == false )
+            {
+                SW_LOG_WARNING( "[UI] Animation '%#': curve event '%#' on '%#.%#' needs float component %# — the track is skipped", animation._name.c_str(),
+                                curveEvent._command.c_str(), track._widget.c_str(), track._property.c_str(), curveEvent._component );
+                return false;
+            }
+        }
         outTrack._listValue.resize( track._listKey.size() );
         for ( size_t index = 0; index < track._listKey.size(); ++index )
         {
@@ -390,11 +402,63 @@ namespace sw
             if ( bInside )
                 _listPendingEvent.push_back( PendingEvent{ event._command, event._time } );
         }
+        for ( const ResolvedTrack& track : active._listTrack )
+        {
+            if ( track._pTrack->_listCurveEvent.empty() == false )
+                fireCurveEvents( track, from, to );
+        }
         // 지나간 순서대로(거꾸로 재생이면 늦은 것부터).
         const bool bForward = from <= to;
         std::stable_sort( _listPendingEvent.begin() + static_cast<ptrdiff_t>( first ), _listPendingEvent.end(),
                           [bForward]( const PendingEvent& lhs, const PendingEvent& rhs )
         { return bForward ? lhs._time < rhs._time : lhs._time > rhs._time; } );
+    }
+
+    void UIAnimationPlayer::fireCurveEvents( const ResolvedTrack& track, float32 from, float32 to )
+    {
+        const vector<UIAnimationKey>& listKey  = track._pTrack->_listKey;
+        const bool                    bForward = from <= to;
+        float32                       previousTime{ from };
+        UIAnimatedValue               previousValue = evaluateTrack( track, from );
+        // 한 구간(@p time 까지)에서 문턱을 지난 사건을 둡니다. 키 사이 곡선은 한 방향이라 두 끝 값만 보면 되고, 지난 시각은 두 끝 사이를 선형으로 나눠 정렬에 쓴다.
+        const auto checkSegment = [&]( float32 time )
+        {
+            const UIAnimatedValue value = evaluateTrack( track, time );
+            for ( const UIAnimationCurveEvent& curveEvent : track._pTrack->_listCurveEvent )
+            {
+                const float32 before   = previousValue._arrComponent[curveEvent._component];
+                const float32 after    = value._arrComponent[curveEvent._component];
+                const float32 limit    = curveEvent._threshold;
+                const bool    bRising  = before < limit && after >= limit;
+                const bool    bFalling = before > limit && after <= limit;
+                const bool    bCrossed = ( curveEvent._crossing == UICurveCrossing::Rising && bRising ) || ( curveEvent._crossing == UICurveCrossing::Falling && bFalling ) ||
+                                      ( curveEvent._crossing == UICurveCrossing::Either && ( bRising || bFalling ) );
+                if ( bCrossed == false )
+                    continue;
+                const float32 crossedTime = previousTime + ( time - previousTime ) * ( ( limit - before ) / ( after - before ) ); // 지났으면 after != before 다
+                _listPendingEvent.push_back( PendingEvent{ curveEvent._command, crossedTime } );
+            }
+            previousTime  = time;
+            previousValue = value;
+        };
+        if ( bForward )
+        {
+            for ( const UIAnimationKey& key : listKey )
+            {
+                if ( key._time > from && key._time < to )
+                    checkSegment( key._time );
+            }
+        }
+        else
+        {
+            for ( size_t index = listKey.size(); index > 0; --index )
+            {
+                const float32 keyTime = listKey[index - 1]._time;
+                if ( keyTime < from && keyTime > to )
+                    checkSegment( keyTime );
+            }
+        }
+        checkSegment( to );
     }
 
     void UIAnimationPlayer::dispatchPendingEvents()

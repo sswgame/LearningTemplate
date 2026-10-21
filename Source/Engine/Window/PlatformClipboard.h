@@ -14,7 +14,7 @@ namespace sw
      * @brief 운영체제 클립보드의 UTF-8 글 창구입니다. 언리얼 `FPlatformApplicationMisc::ClipboardCopy/Paste`, Godot `DisplayServer.clipboard_get/set` 자리다.
      * @details Windows 는 `CF_UNICODETEXT` 를 쓴다. 쓰기는 활성 창(`IWindow::getActiveWindow`)을 클립보드 주인으로 둔다 — 주인 없이 비우면 `SetClipboardData` 가 실패한다.
      *          X11 은 CLIPBOARD 선택이다. 쓰기는 활성 창을 선택 주인으로 두고 글을 창에 맡기며, 다른 프로그램의 요청(`SelectionRequest`)은 창의 메시지 루프가 답한다.
-     *          읽기는 주인에게 UTF8_STRING 변환을 청하고 답을 최대 200 ms 기다린다(큰 글의 INCR 전송은 받지 않는다). 창이 없는 서버 빌드는 `isAvailable` 이 false 다.
+     *          읽기는 주인에게 UTF8_STRING 변환을 청하고 답을 최대 200 ms 기다린다(큰 글은 INCR 조각으로 받는다. 내줄 때는 X 요청 한 번보다 큰 글을 거절한다). 창이 없는 서버 빌드는 `isAvailable` 이 false 다.
      *          Wayland 는 없다(XWayland 로 뜬 창은 X11 길을 쓴다). 메인(창) 스레드에서만 부른다.
      */
     struct SW_API PlatformClipboard

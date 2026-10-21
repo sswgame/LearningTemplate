@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Gameplay/Quest/QuestCatalog.h"
 #include "GameFramework/Base/Gameplay/Quest/QuestLog.h"
+#include "GameFramework/Base/Gameplay/SessionState/QuestObjectiveMarkerComponent.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -110,4 +111,35 @@ SW_TEST_CASE( QuestTest, TimeLimitsFailAndAbandonedOrRepeatableQuestsRestart )
     (void)log.notify( hashed_string( "Talk" ), hashed_string( "elder" ) );
     SW_EXPECT_TRUE( log.choose( hashed_string( "wolves" ), hashed_string( "kill" ) ) );
     SW_EXPECT_TRUE( log.getStatus( hashed_string( "wolves" ) ) == QuestStatus::Failed );
+}
+
+/**
+ * @brief [QuestTest] 월드 목표 마커(`QuestObjectiveMarkerComponent` → `QuestLog::isObjectiveOpen`)는 지금 단계에 그 종류 · 대상의 목표가 남아 있을 때만 열린다 — 받기 전 · 다 센 뒤 · 다른 단계 · 선택 대기는 닫힘
+ * @details 변이: `QuestLog::isObjectiveOpen` 이 개수를 보지 않으면 늑대 3 마리를 잡은 뒤에도 열림, 선택 대기를 보지 않으면 decide 의 elder 를 말한 뒤에도 열림이다.
+ */
+SW_TEST_CASE( QuestTest, ObjectiveTargetIsOpenOnlyWhileItsObjectiveRemains )
+{
+    QuestCatalog catalog;
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kQuestTestXML, "QuestTest" ) );
+    QuestLog log;
+    log.initialize( &catalog );
+    QuestObjectiveMarkerComponent wolf;
+    wolf.configure( hashed_string( "wolves" ), hashed_string( "Kill" ), hashed_string( "wolf" ) );
+    QuestObjectiveMarkerComponent elder;
+    elder.configure( hashed_string( "wolves" ), hashed_string( "Talk" ), hashed_string( "elder" ) );
+    QuestObjectiveMarkerComponent unconfigured;
+
+    SW_EXPECT_FALSE( wolf.isObjectiveOpen( log ) ); // 받기 전
+    SW_EXPECT_TRUE( log.start( hashed_string( "intro" ), 1 ) == QuestStartResult::Ok );
+    (void)log.notify( hashed_string( "Talk" ), hashed_string( "elder" ) );
+    SW_EXPECT_TRUE( log.start( hashed_string( "wolves" ), 2 ) == QuestStartResult::Ok );
+    SW_EXPECT_TRUE( wolf.isObjectiveOpen( log ) );
+    SW_EXPECT_FALSE( elder.isObjectiveOpen( log ) ); // elder 는 다음 단계의 목표다
+    SW_EXPECT_FALSE( unconfigured.isObjectiveOpen( log ) );
+
+    (void)log.notify( hashed_string( "Kill" ), hashed_string( "wolf" ), 3 );
+    SW_EXPECT_FALSE( wolf.isObjectiveOpen( log ) );
+    SW_EXPECT_TRUE( elder.isObjectiveOpen( log ) ); // report 를 건너뛰어 decide 다
+    (void)log.notify( hashed_string( "Talk" ), hashed_string( "elder" ) );
+    SW_EXPECT_FALSE( elder.isObjectiveOpen( log ) ); // 선택을 기다린다
 }

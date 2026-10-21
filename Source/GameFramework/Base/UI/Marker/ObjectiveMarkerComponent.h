@@ -16,7 +16,8 @@ namespace sw
     /**
      * @class ObjectiveMarkerComponent
      * @brief 퀘스트 목표나 웨이포인트 오브젝트에 붙이는 화면 마커입니다. 언리얼과 유니티 게임들이 직접 만드는 목표 표시이며, Lyra 에는 없습니다.
-     * @details 시작할 때 내용(방향 막대, 이름, 거리 글)을 코드로 만들고 가장자리 붙이기를 켭니다. 매 프레임 마커를 놓은 뒤(`onMarkerPlaced`) 거리 글을 쓰고,
+     * @details 늘 보인다(웨이포인트). 퀘스트 목표가 열린 동안만 보이려면 게임플레이 층의 `QuestObjectiveMarkerComponent` 를 쓴다(UI 층은 퀘스트를 모른다).
+     *          시작할 때 내용(방향 막대, 이름, 거리 글)을 코드로 만들고 가장자리 붙이기를 켭니다. 매 프레임 마커를 놓은 뒤(`onMarkerPlaced`) 거리 글을 쓰고,
      *          가장자리에 붙었으면 막대를 `WidgetMarkerPlacement::_edgeAngle` 로 돌려 보입니다(화면 안이면 숨긴다).
      */
     REFLECT( Category = "UI", DisplayName = "Objective Marker", Tooltip = "Screen marker with a name, the distance and an edge arrow when the objective is off screen" )

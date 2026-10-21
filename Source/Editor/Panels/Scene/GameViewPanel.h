@@ -42,9 +42,16 @@ namespace sw::editor
     private:
         /** @brief 화면 비율 고르기와 HUD 토글을 그립니다. */
         void drawToolbar();
+        /**
+         * @brief 패널이 다른 OS 창(ImGui 보조 뷰포트)에 있으면 그 창의 마우스(이동 · 단추 · 휠)를 주 창 클라이언트 좌표로 옮겨 게임 입력에 넣습니다.
+         * @details 보조 창의 마우스 메시지는 ImGui 백엔드의 창 프로시저만 받아 게임 입력(`InputManager`)에 닿지 않는다. 입력 장치의 좌표 약속은 "주 창 클라이언트 픽셀" 이므로
+         *          ImGui 화면 좌표에서 주 뷰포트 자리를 빼서 넣는다 — 이미지 자리(`markViewDrawn`)와 같은 기준이라 런타임 UI 포인터가 맞는다. 주 창에 있으면 주 창 메시지가 이미 간다.
+         */
+        void forwardDetachedPointer();
 
     private:
-        EditorGameViewAspect _aspect;             ///< 이미지 화면 비율(자유 · 16:9)
-        bool                 _bNoCameraHintShown; ///< 마지막 프레임에 카메라 없음 안내를 띄웠다
+        EditorGameViewAspect _aspect;              ///< 이미지 화면 비율(자유 · 16:9)
+        bool                 _bNoCameraHintShown;  ///< 마지막 프레임에 카메라 없음 안내를 띄웠다
+        uint8                _forwardedButtonMask; ///< 보조 창에서 게임으로 누름을 넣은 단추(비트 = `kForwardedButtons` 순서). 패널 밖에서 떼도 뗌을 넣는다
     };
 } // namespace sw::editor

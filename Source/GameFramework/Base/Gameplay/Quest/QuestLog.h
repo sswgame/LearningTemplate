@@ -118,6 +118,11 @@ namespace sw
         QuestStatus          getStatus( const hashed_string& questID ) const;
         const QuestProgress* findProgress( const hashed_string& questID ) const;
         const QuestStage*    findCurrentStage( const hashed_string& questID ) const;
+        /**
+         * @brief 퀘스트 @p questID 의 지금 단계에 종류 @p kind · 대상 @p target 의 목표가 아직 다 세지 않은 채 남아 있으면 true 입니다.
+         * @details 퀘스트가 진행 중이고 선택을 기다리지 않을 때만이다. 월드 목표 마커(`QuestObjectiveMarkerComponent`)가 보일지 묻는다.
+         */
+        bool isObjectiveOpen( const hashed_string& questID, const hashed_string& kind, const hashed_string& target ) const;
         /** @brief 진행 중인 퀘스트의 id 목록입니다. 받은 순서입니다. */
         void collectActive( vector<hashed_string>& outListQuest ) const;
         void drainEvents( vector<QuestEvent>& outListEvent );

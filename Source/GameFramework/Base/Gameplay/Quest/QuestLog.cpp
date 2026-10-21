@@ -51,6 +51,27 @@ namespace sw
         return pProgress != nullptr && pQuest != nullptr ? pQuest->findStage( pProgress->_stageID ) : nullptr;
     }
 
+    bool QuestLog::isObjectiveOpen( const hashed_string& questID, const hashed_string& kind, const hashed_string& target ) const
+    {
+        const QuestProgress* pProgress = findProgress( questID );
+        const QuestStage*    pStage    = findCurrentStage( questID );
+        if ( pProgress == nullptr || pStage == nullptr )
+            return false;
+        const bool bCountingObjectives = pProgress->_status == QuestStatus::Active && pProgress->_bAwaitingChoice == SW_FALSE;
+        if ( bCountingObjectives == false )
+            return false;
+        for ( size_t index = 0; index < pStage->_listObjective.size(); ++index )
+        {
+            const QuestObjective& objective = pStage->_listObjective[index];
+            if ( objective._kind != kind || objective._target != target )
+                continue;
+            const int32 counted = index < pProgress->_listCount.size() ? pProgress->_listCount[index] : 0;
+            if ( counted < objective._count )
+                return true;
+        }
+        return false;
+    }
+
     QuestStartResult QuestLog::evaluateStart( const hashed_string& questID, int32 level ) const
     {
         const QuestDef* pQuest = _pCatalog != nullptr ? _pCatalog->find( questID ) : nullptr;

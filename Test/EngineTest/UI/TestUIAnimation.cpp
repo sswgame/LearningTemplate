@@ -230,6 +230,60 @@ SW_TEST_CASE( UIAnimationTest, EventsFireOnce )
     SW_EXPECT_FALSE( pScreen->getAnimationPlayer().isPlaying( "Pulse" ) );
 }
 
+/**
+ * @brief [UIAnimationTest] 곡선 위 사건은 트랙 값이 문턱을 지날 때 한 번 — 0 → 1 → 0 에서 0.5 를 오를 때 Up, 내릴 때 Down. 거꾸로 재생은 재생 방향의 오르내림을 본다
+ * @details 변이: `UIAnimationPlayer::fireEvents` 가 `fireCurveEvents` 를 부르지 않으면 둘 다 0, 오르내림을 바꿔 보면 거꾸로 재생 뒤 수가 어긋난다.
+ *          성분이 없는 사건(불투명도의 성분 1)은 트랙째 빠져 값이 움직이지 않는다.
+ */
+SW_TEST_CASE( UIAnimationTest, CurveEventsFireWhenValueCrossesThreshold )
+{
+    using Util = UIAnimationTestUtil;
+    UIAnimationScreenFixture fixture;
+    sw::UIScreen*            pScreen = fixture._ui.findScreen( fixture.open( "test/curveevents.ui.xml", "" ) );
+    SW_ASSERT_NOT_NULL( pScreen );
+    uint32 upCount   = 0;
+    uint32 downCount = 0;
+    pScreen->registerCommand( "Up", SW_DELEGATE_LAMBDA( sw::UICommandDelegate, [&upCount]( const sw::hashed_string&, sw::Widget& )
+    { ++upCount; } ) );
+    pScreen->registerCommand( "Down", SW_DELEGATE_LAMBDA( sw::UICommandDelegate, [&downCount]( const sw::hashed_string&, sw::Widget& )
+    { ++downCount; } ) );
+
+    sw::UIAnimation animation = Util::makeAnimation( "Blink", "Box", "_opacity", "0", "1", 0.5f );
+    animation._listTrack[0]._listKey.push_back( sw::UIAnimationKey{ 1.0f, "0", sw::BlendCurve::Linear } );
+    animation._listTrack[0]._listCurveEvent.push_back( sw::UIAnimationCurveEvent{ 0.5f, 0, sw::UICurveCrossing::Rising, "Up" } );
+    animation._listTrack[0]._listCurveEvent.push_back( sw::UIAnimationCurveEvent{ 0.5f, 0, sw::UICurveCrossing::Falling, "Down" } );
+    sw::UIAnimation broken = Util::makeAnimation( "Broken", "Box", "_opacity", "0.3", "1", 1.0f );
+    broken._listTrack[0]._listCurveEvent.push_back( sw::UIAnimationCurveEvent{ 0.5f, 1, sw::UICurveCrossing::Either, "Up" } );
+    sw::vector<sw::UIAnimation> listAnimation;
+    listAnimation.push_back( std::move( animation ) );
+    listAnimation.push_back( std::move( broken ) );
+    pScreen->getAnimationPlayer().setAnimations( std::move( listAnimation ) );
+
+    SW_ASSERT_TRUE( pScreen->getAnimationPlayer().play( "Blink" ) );
+    for ( uint32 frame = 0; frame < 30; ++frame )
+    {
+        fixture.runFrame( 0.05f ); // 1.5 초 — 0.25 에 오르고 0.75 에 내린다
+    }
+    SW_EXPECT_EQUAL( 1u, upCount );
+    SW_EXPECT_EQUAL( 1u, downCount );
+
+    SW_ASSERT_TRUE( pScreen->getAnimationPlayer().playReverse( "Blink" ) );
+    for ( uint32 frame = 0; frame < 30; ++frame )
+    {
+        fixture.runFrame( 0.05f );
+    }
+    SW_EXPECT_EQUAL( 2u, upCount );
+    SW_EXPECT_EQUAL( 2u, downCount );
+
+    sw::Widget* pBox = pScreen->getTree().findWidgetByName( "Box" );
+    SW_ASSERT_NOT_NULL( pBox );
+    const float32 opacityBefore = pBox->getOpacity();
+    SW_ASSERT_TRUE( pScreen->getAnimationPlayer().play( "Broken" ) );
+    fixture.runFrame( 0.5f );
+    SW_EXPECT_NEAR_EQUAL( opacityBefore, pBox->getOpacity(), Util::kTolerance );
+    SW_EXPECT_EQUAL( 2u, upCount );
+}
+
 /** @brief [UIAnimationTest] 거꾸로 재생은 끝에서 처음으로, 재생 중 reverse 는 그 자리에서 돌아서고, 반복은 바퀴마다 처음부터 */
 SW_TEST_CASE( UIAnimationTest, ReverseAndLoop )
 {

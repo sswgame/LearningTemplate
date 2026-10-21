@@ -23,7 +23,8 @@ namespace sw
      * @brief 위젯 트리 하나의 애니메이션과 트윈 재생기입니다(UMG 위젯 애니메이션 재생기, Godot 의 `Tween` 에 해당). `UIScreen` 이 하나씩 가집니다.
      * @details 애니메이션은 여럿이 함께 돌 수 있고, 같은 이름을 다시 재생하면 처음부터 시작한다. 트랙의 위젯과 경로는 재생할 때 해석하고(해석하지 못하면 경고하고 그 트랙만 뺀다),
      *          값은 리플렉션으로 써서 필드의 무효화를 건다(렌더 변환과 불투명도는 `kTransform` 이며 레이아웃은 건드리지 않는다). 이벤트는 재생이 그 시각을 지날 때 한 번
-     *          (반복이면 한 바퀴에 한 번) 화면의 `dispatchCommand` 로 보낸다. 트리가 화면에 없으면 이벤트는 버린다.
+     *          (반복이면 한 바퀴에 한 번) 화면의 `dispatchCommand` 로 보낸다. 트랙의 곡선 위 사건(`UIAnimationCurveEvent`)은 값이 문턱을 지날 때 같은 길로 보낸다.
+     *          트리가 화면에 없으면 이벤트는 버린다.
      *
      *          `gv_uiReduceMotion`(사용자 설정 `accessibility.reduceMotion`)이 켜져 있으면 애니메이션과 트윈의 길이는 0 이다. 끝 값을 바로 쓰고 이벤트를 모두 보낸다.
      *          시간은 게임 시간 배율과 무관한 실제 프레임 시간이다(정지 메뉴도 움직인다). 게임 스레드에서만 쓴다.
@@ -138,6 +139,8 @@ namespace sw
         void applyAnimation( const ActiveAnimation& active ) const;
         /** @brief 시각 [@p from, @p to)(거꾸로면 (@p to, @p from])의 이벤트를 보낼 목록에 둡니다. @p bIncludeEnd 면 @p to 의 이벤트도 포함합니다. */
         void fireEvents( const ActiveAnimation& active, float32 from, float32 to, bool bIncludeEnd );
+        /** @brief 트랙 @p track 의 곡선 위 사건 중 시각 @p from → @p to 사이에 값이 문턱을 지난 것을 보낼 목록에 둡니다. 키 시각마다 끊어 봅니다(키 사이 곡선은 한 방향이다). */
+        void fireCurveEvents( const ResolvedTrack& track, float32 from, float32 to );
         /** @brief 모아 둔 이벤트를 화면 명령으로 보냅니다. */
         void dispatchPendingEvents();
         /** @brief 트랙 값입니다. 시각 @p time 의 보간 값을 반환합니다. */
