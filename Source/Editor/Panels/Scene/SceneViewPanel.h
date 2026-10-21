@@ -7,6 +7,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Editor/Common/GUI/IEditorPanel.h"
+#include "Editor/Common/Workspace/EditorPanelID.h"
 #include "Editor/Viewport/EditorViewportClient.h"
 
 namespace sw::editor
@@ -20,7 +21,9 @@ namespace sw::editor
     {
     public:
         /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>` · `setPanelOpen<…>`)가 모두 이 상수에서 온다. */
-        static constexpr const utf8* kPanelID = "scene_view";
+        static constexpr const utf8* kPanelID = editorpanel::kSceneView.c_str();
+        /** @brief 창 제목입니다(ImGui 창 이름 — 자체 테스트가 창을 찾을 때 이 상수를 쓴다). */
+        static constexpr const utf8* kPanelTitle = "Scene";
 
         /** @brief Scene 창을 만듭니다. */
         SceneViewPanel();
@@ -29,7 +32,7 @@ namespace sw::editor
         // 1) IEditorPanel — 제목/그리기
         // ------------------------------------------------------------------------------
         /** @brief 창 제목을 반환합니다. */
-        const utf8*    getPanelTitle() const override { return "Scene"; }
+        const utf8*    getPanelTitle() const override { return kPanelTitle; }
         EditorDockSlot getDefaultDockSlot() const override { return EditorDockSlot::CenterFront; }
         /** @brief 뷰포트 툴바 · 씬 뷰 캔버스 · 기즈모를 그립니다. */
         void drawContent() override;

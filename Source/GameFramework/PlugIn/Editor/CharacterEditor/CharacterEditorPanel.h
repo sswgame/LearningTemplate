@@ -39,6 +39,9 @@ namespace sw::editor
     class CharacterEditorPanel final : public IEditorPanel
     {
     public:
+        /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 열기(`EditorPanelManager::setPanelOpen<…>`)가 모두 이 상수에서 온다. */
+        static constexpr const utf8* kPanelID = "charactereditor.main";
+
         CharacterEditorPanel();
 
         const utf8* getPanelTitle() const override { return "Character Editor"; }

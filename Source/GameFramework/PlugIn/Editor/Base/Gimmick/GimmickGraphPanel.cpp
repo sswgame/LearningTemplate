@@ -819,5 +819,5 @@ namespace sw::editor
         commitEdit( circuit, before, "Invert Gimmick Wire" );
     }
 
-    SW_EDITOR_PANEL( GimmickGraphPanel, "gimmick_graph", EditorPanelCategory::Custom, 9300 );
+    SW_EDITOR_PANEL( GimmickGraphPanel, GimmickGraphPanel::kPanelID, EditorPanelCategory::Custom, 9300 );
 } // namespace sw::editor

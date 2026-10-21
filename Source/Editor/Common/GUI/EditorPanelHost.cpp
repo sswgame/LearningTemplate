@@ -25,15 +25,15 @@ namespace sw::editor
     {
     }
 
-    bool EditorPanelHost::focusPanel( string_view panelID )
+    bool EditorPanelHost::focusPanel( EditorPanelID panelID )
     {
-        if ( _panelManager.findPanelByID( panelID ) == nullptr )
+        if ( _panelManager.findPanelByID( panelID.getView() ) == nullptr )
             return false;
-        _context.getSubsystem<EditorWorkspace>().requestOpenPanelByID( panelID );
+        _context.getSubsystem<EditorWorkspace>().requestOpenPanelByID( panelID.getView() );
         return true;
     }
 
-    bool EditorPanelHost::maximizePanel( string_view keepPanelID )
+    bool EditorPanelHost::maximizePanel( EditorPanelID keepPanelID )
     {
         EditorDockLayout* pDock = _context.findSubsystem<EditorDockLayout>();
         if ( pDock == nullptr )
@@ -45,7 +45,7 @@ namespace sw::editor
         vector<string> listCloseID;
         for ( const EditorPanelEntry& entry : _panelManager.getPanels() )
         {
-            const bool bPanelToClose = entry._id != keepPanelID && entry._pInstance != nullptr && entry._pInstance->isOpen();
+            const bool bPanelToClose = entry._id != keepPanelID.getView() && entry._pInstance != nullptr && entry._pInstance->isOpen();
             if ( bPanelToClose )
                 listCloseID.push_back( entry._id );
         }

@@ -9,6 +9,8 @@
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 
+#include "GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.h"
+
 namespace sw::editor
 {
     namespace
@@ -16,7 +18,7 @@ namespace sw::editor
         void openMeshModifiersPanel()
         {
             EditorContext* pContext = EditorContext::get();
-            if ( pContext != nullptr && pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "meshmodifiers.stack", true ) )
+            if ( pContext != nullptr && pContext->getSubsystem<EditorPanelManager>().setPanelOpen<MeshModifiersPanel>( true ) )
                 SW_LOG_INFO( "Mesh Modifiers panel opened" );
         }
     } // namespace

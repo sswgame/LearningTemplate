@@ -28,6 +28,8 @@ namespace sw::editor
     public:
         /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>` · `setPanelOpen<…>`)가 모두 이 상수에서 온다. */
         static constexpr const utf8* kPanelID = "content_browser";
+        /** @brief 창 제목입니다(ImGui 창 이름 — 자체 테스트가 창을 찾을 때 이 상수를 쓴다). */
+        static constexpr const utf8* kPanelTitle = "Content Browser";
 
         /** @brief 콘텐츠 브라우저 창을 만듭니다. */
         ContentBrowserPanel() noexcept;
@@ -36,7 +38,7 @@ namespace sw::editor
         // 1) IEditorPanel: 제목과 그리기
         // ------------------------------------------------------------------------------
         /** @brief 창 제목을 반환합니다. */
-        const utf8*    getPanelTitle() const override { return "Content Browser"; }
+        const utf8*    getPanelTitle() const override { return kPanelTitle; }
         EditorDockSlot getDefaultDockSlot() const override { return EditorDockSlot::Bottom; }
         /** @brief 소스 트리, 브레드크럼, 애셋 타일/리스트를 그립니다. */
         void drawContent() override;

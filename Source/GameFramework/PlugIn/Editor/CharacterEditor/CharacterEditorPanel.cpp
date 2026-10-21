@@ -128,7 +128,7 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_EDITOR_PANEL( CharacterEditorPanel, "charactereditor.main", EditorPanelCategory::Custom, 9020 );
+    SW_EDITOR_PANEL( CharacterEditorPanel, CharacterEditorPanel::kPanelID, EditorPanelCategory::Custom, 9020 );
 
     SW_AUTOMATION_PROBE( editorCharacterEditorBoneCount, "Editor.CharacterEditorBoneCount", "Bones of the skeleton the Character Editor has loaded", &CharacterEditorPanelInternal::readBoneCount );
     SW_AUTOMATION_PROBE( editorCharacterEditorSocketCount, "Editor.CharacterEditorSocketCount", "Sockets in the socket file the Character Editor has loaded", &CharacterEditorPanelInternal::readSocketCount );

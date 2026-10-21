@@ -9,6 +9,7 @@
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 
+#include "GameFramework/PlugIn/Editor/CharacterEditor/CharacterEditorPanel.h"
 #include "GameFramework/PlugIn/Editor/CharacterEditor/PairedAnimationPanel.h"
 
 namespace sw::editor
@@ -20,7 +21,7 @@ namespace sw::editor
             static void openCharacterEditorPanel()
             {
                 EditorContext* pContext = EditorContext::get();
-                if ( pContext != nullptr && pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "charactereditor.main", true ) )
+                if ( pContext != nullptr && pContext->getSubsystem<EditorPanelManager>().setPanelOpen<CharacterEditorPanel>( true ) )
                     SW_LOG_INFO( "Character Editor panel opened" );
             }
 

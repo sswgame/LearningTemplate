@@ -7,6 +7,7 @@
 #include "Core/Container/vector.h"
 
 #include "Editor/Common/GUI/IEditorPanel.h"
+#include "Editor/Common/Workspace/EditorPanelID.h"
 #include "Editor/Common/Workspace/EditorViewTargetUtil.h"
 
 namespace sw::editor
@@ -20,7 +21,7 @@ namespace sw::editor
     {
     public:
         /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>` · `setPanelOpen<…>`)가 모두 이 상수에서 온다. */
-        static constexpr const utf8* kPanelID = "game_view";
+        static constexpr const utf8* kPanelID = editorpanel::kGameView.c_str();
 
         /** @brief Game 창을 만듭니다. */
         GameViewPanel();

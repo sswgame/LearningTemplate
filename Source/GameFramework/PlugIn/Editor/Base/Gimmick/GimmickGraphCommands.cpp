@@ -9,6 +9,8 @@
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 
+#include "GameFramework/PlugIn/Editor/Base/Gimmick/GimmickGraphPanel.h"
+
 namespace sw::editor
 {
     namespace
@@ -16,7 +18,7 @@ namespace sw::editor
         void openGimmickGraphPanel()
         {
             EditorContext* pContext = EditorContext::get();
-            if ( pContext != nullptr && pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "gimmick_graph", true ) )
+            if ( pContext != nullptr && pContext->getSubsystem<EditorPanelManager>().setPanelOpen<GimmickGraphPanel>( true ) )
                 SW_LOG_INFO( "Gimmick Graph panel opened" );
         }
     } // namespace

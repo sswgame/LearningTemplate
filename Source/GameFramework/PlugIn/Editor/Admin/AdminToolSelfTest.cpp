@@ -9,6 +9,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 
+#include "GameFramework/PlugIn/Editor/Admin/AdminToolPanel.h"
 #include "GameFramework/PlugIn/Editor/Admin/AdminToolSession.h"
 
 #include <imgui.h>
@@ -39,14 +40,14 @@ namespace sw::editor
                 if ( context.getStepIndex() == 0 )
                 {
                     context.expect( findSubsystem<AdminToolSession>() != nullptr, "the extension subsystem AdminToolSession is not bound in the editor scope" );
-                    context.expect( pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "admin.tool", true ), "GM tool panel is not registered" );
+                    context.expect( pContext->getSubsystem<EditorPanelManager>().setPanelOpen<AdminToolPanel>( true ), "GM tool panel is not registered" );
                     return EditorSelfTestStep::Continue;
                 }
                 if ( context.getStepIndex() < 3 )
                     return EditorSelfTestStep::Continue;
                 const ImGuiWindow* pWindow = ImGui::FindWindowByName( "GM Tool" );
                 context.expect( pWindow != nullptr && pWindow->DrawList->VtxBuffer.Size > 0, "GM tool panel drew nothing in the editor's ImGui context" );
-                (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "admin.tool", false ); // 닫기 실패는 위의 expect 가 이미 알렸다
+                (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen<AdminToolPanel>( false ); // 닫기 실패는 위의 expect 가 이미 알렸다
                 return EditorSelfTestStep::Done;
             }
 

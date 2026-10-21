@@ -70,6 +70,6 @@ namespace sw::editor
     }
 
     // [doc:panel-register]
-    SW_EDITOR_PANEL( ParkLayoutPanel, "themepark.layout", EditorPanelCategory::Custom, 9000 );
+    SW_EDITOR_PANEL( ParkLayoutPanel, ParkLayoutPanel::kPanelID, EditorPanelCategory::Custom, 9000 );
     // [/doc:panel-register]
 } // namespace sw::editor

@@ -565,7 +565,7 @@ namespace sw::editor
                 destroyProbe( pManager, _s_overlayProbeObjectID );
                 _s_overlayProbeObjectID = 0;
                 // 다음 테스트가 기본 탭(씬 뷰)에서 시작하게 되돌린다.
-                ImGui::SetWindowFocus( "Scene" );
+                ImGui::SetWindowFocus( SceneViewPanel::kPanelTitle );
                 return EditorSelfTestStep::Done;
             }
         };

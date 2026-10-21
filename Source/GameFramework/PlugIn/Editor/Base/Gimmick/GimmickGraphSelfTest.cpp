@@ -9,6 +9,7 @@
 #include "Editor/SelfTest/EditorSelfTest.h"
 
 #include "GameFramework/PlugIn/Editor/Base/Gimmick/GimmickGraphModel.h"
+#include "GameFramework/PlugIn/Editor/Base/Gimmick/GimmickGraphPanel.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -27,14 +28,14 @@ namespace sw::editor
                     return EditorSelfTestStep::Done;
                 if ( context.getStepIndex() == 0 )
                 {
-                    context.expect( pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "gimmick_graph", true ), "gimmick graph panel is not registered" );
+                    context.expect( pContext->getSubsystem<EditorPanelManager>().setPanelOpen<GimmickGraphPanel>( true ), "gimmick graph panel is not registered" );
                     return EditorSelfTestStep::Continue;
                 }
                 if ( context.getStepIndex() < 3 )
                     return EditorSelfTestStep::Continue;
                 const ImGuiWindow* pWindow = ImGui::FindWindowByName( "Gimmick Graph" );
                 context.expect( pWindow != nullptr && pWindow->DrawList->VtxBuffer.Size > 0, "gimmick graph panel drew nothing in the editor's ImGui context" );
-                (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "gimmick_graph", false ); // 닫기 실패는 위의 expect 가 이미 알렸다
+                (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen<GimmickGraphPanel>( false ); // 닫기 실패는 위의 expect 가 이미 알렸다
                 return EditorSelfTestStep::Done;
             }
 

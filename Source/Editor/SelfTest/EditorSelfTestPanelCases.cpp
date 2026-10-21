@@ -20,6 +20,7 @@
 #include "Editor/Panels/MapCheck/MapCheckPanel.h"
 #include "Editor/Panels/RenderTarget/RenderTargetPanel.h"
 #include "Editor/Panels/Scene/HistoryPanel.h"
+#include "Editor/Panels/Scene/SceneViewPanel.h"
 #include "Editor/Panels/Settings/GlobalVariablesPanel.h"
 #include "Editor/Panels/Settings/UserSettingsPanel.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
@@ -44,7 +45,7 @@ namespace sw::editor
         struct EditorSelfTestPanelCasesInternal
         {
             static constexpr const utf8* kContentBrowserPanelID    = ContentBrowserPanel::kPanelID;
-            static constexpr const utf8* kContentBrowserPanelTitle = "Content Browser";
+            static constexpr const utf8* kContentBrowserPanelTitle = ContentBrowserPanel::kPanelTitle;
             static constexpr const utf8* kProbeFolderName          = "__editorselftest"; ///< 활성 게임 팩 아래의 테스트 폴더. 끝나면 지운다
             static constexpr uint32      kMaxWaitStepCount         = 180;                ///< 폴더 목록(워커)과 파일 감시를 기다리는 최대 프레임 수
 
@@ -654,7 +655,7 @@ namespace sw::editor
 
             static EditorSelfTestStep runOverlaysStayInsideTheCanvas( EditorSelfTestContext& context )
             {
-                constexpr const utf8* kSceneViewTitle  = "Scene";
+                constexpr const utf8* kSceneViewTitle  = SceneViewPanel::kPanelTitle;
                 constexpr uint32      kMaxStepCount    = 30;
                 constexpr float32     kRectTolerancePx = 1.0f;
 
