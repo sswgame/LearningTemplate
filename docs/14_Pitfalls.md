@@ -10,7 +10,6 @@
 - 서버 구성 빌드 폴더의 낡은 컴파일러 런처 캐시(없는 `sccache.exe`)는 `cmake --preset <이름> -UCMAKE_CXX_COMPILER_LAUNCHER -UCMAKE_C_COMPILER_LAUNCHER` 로 지우고 다시 구성한다.
 - 병합 비용: 작업자 둘을 따로 통과시킨 뒤 합치면 의미 충돌이 난다. 병합마다 전체 빌드를 돌리고 관련 스위트를 Release 와 Debug 둘 다 돌린다. 빌드 전 컴파일러 프로세스 수를 본다.
 - 새 .cpp 가 "incomplete type" 으로 서면 `Component.h` · `GameObject.h` · `Scene.h` · `SceneManager.h` · `RHITypes.h` 는 PCH 에 없으니 직접 include 한다.
-- 에디터 모듈의 새 REFLECT 헤더는 `Source/Editor/CMakeLists.txt` 의 `REFLECTION_HEADERS` 에 넣는다(안 넣으면 `StaticType` 미정의 링크 오류).
 
 ## 워크트리 · 편집
 

@@ -75,4 +75,3 @@ SW_TEST_CASE( CookContractTest, EveryBackendCommandLineNameSelectsItsBackend )
         SW_EXPECT_FALSE_MSG( findBackendForFlag( name, backend ), name.data() );
     }
 }
-}

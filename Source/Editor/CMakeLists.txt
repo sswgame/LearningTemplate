@@ -85,14 +85,7 @@ sw_addModuleLibrary(EditorModule
 	SOURCES ${listEditorSource}
 	LINK_PRIVATE Engine RuntimeAPI imgui imgui_nodeeditor imgui_notify imguizmo implot Microsoft::DirectXTex cgltf meshoptimizer stb sw_graphics_libs
 	UNITY_BATCH 8
-	REFLECTION_HEADERS
-		"${CMAKE_CURRENT_SOURCE_DIR}/Common/Config/EditorConfig.h"
-		"${CMAKE_CURRENT_SOURCE_DIR}/Common/Config/EditorPreferences.h"
-		"${CMAKE_CURRENT_SOURCE_DIR}/Common/Config/EditorThemeTokens.h"
-		"${CMAKE_CURRENT_SOURCE_DIR}/Common/Config/EditorToolDefaults.h"
-		"${CMAKE_CURRENT_SOURCE_DIR}/Common/GUI/EditorChrome.h"
-		"${CMAKE_CURRENT_SOURCE_DIR}/Common/Workspace/EditorNetPlaySettings.h"
-		"${CMAKE_CURRENT_SOURCE_DIR}/SelfTest/EditorCurveProbeComponent.h"
+	# REFLECTION_HEADERS 를 주지 않는다 — 리플렉션 입력은 폴더를 훑어 REFLECT · ENUM 매크로가 있는 헤더로 정한다(손 목록에 빠뜨리면 StaticType 링크 오류).
 )
 
 # ------------------------------------------------------------------------------
