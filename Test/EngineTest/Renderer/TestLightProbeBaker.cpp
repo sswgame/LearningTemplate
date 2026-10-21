@@ -4,7 +4,12 @@
 
 #include "Engine/Graphics/Shader/Binding/GPULight.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
+#include "Engine/Object/Component/Physics/RigidBodyComponent.h"
+#include "Engine/Object/Component/Physics/ScenePhysics.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Collision/PhysicsQuery.h"
+#include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Renderer/Light/LightProbeBaker.h"
 
 #include "TestFramework/TestFramework.h"
@@ -209,4 +214,66 @@ SW_TEST_CASE( LightProbeBakerTest, SteppedBakeMatchesOneShotBake )
     }
     sw::LightProbeGrid again{};
     SW_EXPECT_FALSE( job.takeGrid( again ) ); // 넘긴 뒤 작업은 비어 있다
+}
+
+/**
+ * @brief [LightProbeBakerTest] 실제 물리 씬(정적 바디 — 바닥과 닫힌 방)으로 굽는다 — 열린 자리의 프로브는 하늘과 바닥 튕김을, 방 안의 프로브는 아무 빛도 받지 않는다
+ * @details 방은 바닥 위 x 4..6 · y 0..2 · z −1..1 을 지붕과 벽 넷으로 닫는다. 빛은 위에서 오고 지붕이 가리므로 방 안의 면은 직접광이 0 이고,
+ *          하늘 방향은 모두 벽에 닿는다 — 방 안 프로브의 계수는 정확히 0 이어야 한다(가림이 새면 하늘 · 튕김이 섞인다).
+ */
+SW_TEST_CASE( LightProbeBakerTest, PhysicsSceneOccludesTheEnclosedProbe )
+{
+    sw::GameObjectManager manager;
+    const auto            spawnBox = [&manager]( const utf8* pName, const sw::float3& center, const sw::float3& halfExtents )
+    {
+        sw::GameObject*         pObject = manager.createGameObject( sw::hashed_string( pName ) );
+        sw::RigidBodyComponent* pBody   = pObject->addComponent<sw::RigidBodyComponent>();
+        sw::PhysicsShapeDesc3D  box;
+        box._halfExtents = halfExtents;
+        pBody->setShape( box );
+        pBody->setBodyType( sw::PhysicsBodyType::Static );
+        pBody->setLocalPosition( center );
+    };
+    spawnBox( "Floor", sw::float3{ 0.0f, -0.5f, 0.0f }, sw::float3{ 20.0f, 0.5f, 20.0f } );
+    spawnBox( "Roof", sw::float3{ 5.0f, 2.1f, 0.0f }, sw::float3{ 1.2f, 0.1f, 1.2f } );
+    spawnBox( "WallWest", sw::float3{ 3.9f, 1.0f, 0.0f }, sw::float3{ 0.1f, 1.2f, 1.2f } );
+    spawnBox( "WallEast", sw::float3{ 6.1f, 1.0f, 0.0f }, sw::float3{ 0.1f, 1.2f, 1.2f } );
+    spawnBox( "WallSouth", sw::float3{ 5.0f, 1.0f, -1.1f }, sw::float3{ 1.2f, 1.2f, 0.1f } );
+    spawnBox( "WallNorth", sw::float3{ 5.0f, 1.0f, 1.1f }, sw::float3{ 1.2f, 1.2f, 0.1f } );
+    manager.beginPlay();
+    manager.update( 1.0f / 60.0f ); // 바디가 물리 씬에 들어간 뒤 굽는다
+    const sw::IPhysicsScene3D* pPhysics = manager.getSubsystem<sw::ScenePhysics>().findScene3D();
+    SW_ASSERT_NOT_NULL( pPhysics );
+
+    sw::LightProbeBakeInput input{};
+    input._pPhysics       = pPhysics;
+    input._sampleCount    = 512;
+    input._bounceAlbedo   = 0.5f;
+    sw::GPULight light    = sw::LightProbeBakerTestInternal::makeDirectionalLight( sw::float3{ 0.0f, -1.0f, 0.0f }, 2.0f );
+    light._colorIntensity = sw::float4{ 1.0f, 0.0f, 0.0f, 2.0f };
+    input._listLight.push_back( light );
+    input._sky._zenithColor  = sw::float3{ 0.0f, 0.0f, 1.0f };
+    input._sky._horizonColor = sw::float3{ 0.0f, 0.0f, 1.0f };
+    input._sky._groundColor  = sw::float3{ 0.0f, 0.0f, 1.0f };
+    input._sky._intensity    = 1.0f;
+    sw::LightProbeGridLayout layout{};
+    layout._origin  = sw::float3{ -5.0f, 1.0f, 0.0f }; // 프로브 0 은 열린 자리, 프로브 1 은 방 안(5, 1, 0)
+    layout._spacing = sw::float3{ 10.0f, 1.0f, 1.0f };
+    layout._countX  = 2;
+    layout._countY  = 1;
+    layout._countZ  = 1;
+    sw::LightProbeGrid grid{};
+    sw::string         error;
+    SW_ASSERT_TRUE( sw::LightProbeBaker::bakeGrid( layout, input, grid, &error ) );
+    SW_ASSERT_EQUAL( size_t( 2 ), grid._listProbe.size() );
+
+    const sw::float3 openUp   = grid._listProbe[0].evaluateRadiance( sw::float3{ 0.0f, 1.0f, 0.0f } );
+    const sw::float3 openDown = grid._listProbe[0].evaluateRadiance( sw::float3{ 0.0f, -1.0f, 0.0f } );
+    SW_EXPECT_TRUE( openUp._z > 0.8f );   // 하늘
+    SW_EXPECT_TRUE( openDown._x > 0.5f ); // 빛을 받은 바닥의 튕김(반사율 0.5 × 2)
+    for ( uint32 index = 0; index < sw::SH9Color::kCoefficientCount; ++index )
+    {
+        SW_EXPECT_EQUAL( 0.0f, grid._listProbe[1]._arrCoefficient[index] ); // 방 안 — 하늘도 직접광도 닿지 않는다
+    }
+    manager.endPlay();
 }
