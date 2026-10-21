@@ -83,5 +83,17 @@
         "openssl"
       ]
     }
-  ]
+  ],
+  "features": {
+    "complex-text": {
+      "description": "Complex text shaping: HarfBuzz shaper and SheenBidi bidi levels (SW_ENABLE_COMPLEX_TEXT)",
+      "dependencies": [
+        {
+          "name": "harfbuzz",
+          "default-features": false
+        },
+        "sheenbidi"
+      ]
+    }
+  }
 }

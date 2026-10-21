@@ -16,7 +16,6 @@
 #include "Engine/Text/FontService.h"
 #include "Engine/Text/ITextShaper.h"
 #include "Engine/Text/RichTextParser.h"
-#include "Engine/Text/SimpleTextShaper.h"
 #include "Engine/Text/TextTypes.h"
 
 namespace sw
@@ -167,7 +166,7 @@ namespace sw
         bool resolveGlyphLevels( string_view text, TextDirection paragraphDirection );
 
         FontService&                  _fontService;
-        SimpleTextShaper              _shaper;
+        unique_ptr<ITextShaper>       _pShaper;               ///< 이 빌드의 셰이퍼(`ITextShaper::createDefault` — 단순 또는 복합 문자)
         vector<ShapingRun>            _listRunScratch;        ///< 런 나누기 결과입니다.
         vector<ShapedGlyph>           _listShapedScratch;     ///< 셰이핑 결과(논리 순서)
         vector<uint8>                 _listBreakScratch;      ///< 글리프마다 뒤의 줄 바꿈 기회(TextLayout.cpp 의 BreakKind)

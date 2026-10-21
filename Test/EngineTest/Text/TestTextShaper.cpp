@@ -75,6 +75,30 @@ SW_TEST_CASE( TextShaperTest, ClustersAreByteOffsets )
     SW_EXPECT_EQUAL( 14u, listGlyph[2]._cluster );
 }
 
+/**
+ * @brief [TextShaperTest] 이 빌드의 셰이퍼(`ITextShaper::createDefault`)가 있다 — 기본 빌드는 단순 셰이퍼와 같은 결과다
+ * @details 복합 문자 빌드(`SW_ENABLE_COMPLEX_TEXT`)는 실제 폰트 바이트가 있어야 셰이핑하므로 가짜 래스터라이저로는 비교하지 않는다.
+ */
+SW_TEST_CASE( TextShaperTest, DefaultShaperIsChosenByTheBuild )
+{
+    const sw::unique_ptr<sw::ITextShaper> pShaper = sw::ITextShaper::createDefault();
+    SW_ASSERT_NOT_NULL( pShaper.get() );
+#if !defined( SW_TEXT_COMPLEX_SHAPING )
+    sw::test::FakeFontServiceFixture fixture;
+    SW_ASSERT_TRUE( TextShaperTestUtil::initializeAllCoverage( fixture ) );
+    const sw::FontFaceChain chain = fixture._fontService->getFaceChain( sw::FontSpec{} );
+    sw::ShapingRun          run{};
+    run._text = "AB";
+    run._face = chain._arrFace[0];
+    sw::vector<sw::ShapedGlyph> listDefault;
+    sw::vector<sw::ShapedGlyph> listSimple;
+    pShaper->shape( fixture._fontService->getRasterizer(), run, listDefault );
+    sw::SimpleTextShaper{}.shape( fixture._fontService->getRasterizer(), run, listSimple );
+    SW_ASSERT_EQUAL( listSimple.size(), listDefault.size() );
+    SW_EXPECT_EQUAL( listSimple[1]._glyphIndex, listDefault[1]._glyphIndex );
+#endif
+}
+
 /** @brief [TextShaperTest] 커닝은 앞 글리프의 전진에 더한다 — ('A','V') = -0.1 이면 첫 전진 0.4 · 결합 분음은 글리프를 내지 않는다 */
 SW_TEST_CASE( TextShaperTest, KerningAddsToPreviousAdvance )
 {

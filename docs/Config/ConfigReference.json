@@ -4559,6 +4559,14 @@
    "presets": []
   },
   {
+   "name": "SW_ENABLE_COMPLEX_TEXT",
+   "type": "BOOL",
+   "default": "OFF",
+   "choices": [],
+   "description": "HarfBuzz + SheenBidi 복합 문자 셰이핑(아랍어 연결형 · 전체 양방향). 끄면 단순 셰이퍼 · 단순 양방향",
+   "presets": []
+  },
+  {
    "name": "SW_ENABLE_DEADLOCK_DETECTION",
    "type": "BOOL",
    "default": "OFF",
