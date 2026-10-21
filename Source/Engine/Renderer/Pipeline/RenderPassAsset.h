@@ -63,6 +63,12 @@ namespace sw
          *        G버퍼 패스는 그 배치를 빼므로 조명 패스 뒤에 두고 같은 장면 깊이를 테스트 · 쓰기 합니다(유니티 URP 디퍼드의 `UniversalForwardOnly` 패스와 같은 자리).
          */
         ForwardOnlyOpaque,
+        /**
+         * @brief 피사계 심도입니다. HDR 색(`SourceColor`)과 장면 깊이(`SceneDepth`)를 읽어 초점면에서 먼 픽셀을 착란원 반지름만큼 흐린 같은 형식의 색을 냅니다(depthoffield.hlsl).
+         *        렌즈 값은 뷰 카메라의 `CameraDepthOfFieldValues` 이고 패스 상수 `g_CameraLens` 로 받습니다. 조리개 0 · 직교 · 후처리를 끈 뷰는 원본을 그대로 냅니다.
+         *        디퍼드는 TAA 와 Tonemap 사이, 포워드는 후처리 체인(Present) 앞에 둡니다.
+         */
+        DepthOfField,
 
         // --- 엔진 내부 PSO 슬롯. 파이프라인 XML 에는 나올 수 없다(검증이 거부한다). ---
         ForwardOpaqueNoDepthWrite,
@@ -88,7 +94,7 @@ namespace sw
     /** @brief 파이프라인 XML 의 `_type` 으로 쓸 수 있는 값인지 확인합니다(내부 슬롯과 Invalid 는 제외합니다). */
     constexpr bool isPipelinePassType( RenderPassType type )
     {
-        return type != RenderPassType::Invalid && static_cast<uint32>( type ) <= static_cast<uint32>( RenderPassType::ForwardOnlyOpaque );
+        return type != RenderPassType::Invalid && static_cast<uint32>( type ) <= static_cast<uint32>( RenderPassType::DepthOfField );
     }
 
     /// @brief 렌더 패스 어태치먼트 하나(이름, 포맷, 클리어 색, 클리어 여부)입니다.

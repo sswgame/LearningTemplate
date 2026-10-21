@@ -16,7 +16,7 @@ namespace sw
         struct CameraDirectorInternal
         {
             static constexpr uint32 kStateTag      = FourCcUtil::make( "CDIR" );
-            static constexpr uint32 kStateVersion  = 1;
+            static constexpr uint32 kStateVersion  = 2;  ///< 2: 포즈에 센서 높이(피사계 심도)가 붙었다
             static constexpr uint32 kLayerMinBytes = 64; ///< 층 하나의 최소 바이트(이름 · 블렌드 · 진행 · 포즈 둘 · 상태)
 
             static bool isCut( const BlendCurveDef& blend ) { return blend._curve == BlendCurve::Cut || blend._duration <= 0.0f; }
@@ -31,6 +31,7 @@ namespace sw
                 outArchive << pose._farPlane;
                 outArchive << pose._depthOfField._focusDistance;
                 outArchive << pose._depthOfField._aperture;
+                outArchive << pose._depthOfField._sensorHeight;
                 outArchive << pose._lensShift;
                 outArchive << pose._postProcess._exposureCompensation;
                 outArchive << pose._postProcess._bloomScale;
@@ -53,6 +54,7 @@ namespace sw
                 archive >> outPose._farPlane;
                 archive >> outPose._depthOfField._focusDistance;
                 archive >> outPose._depthOfField._aperture;
+                archive >> outPose._depthOfField._sensorHeight;
                 archive >> outPose._lensShift;
                 archive >> outPose._postProcess._exposureCompensation;
                 archive >> outPose._postProcess._bloomScale;

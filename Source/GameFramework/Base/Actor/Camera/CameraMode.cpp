@@ -437,6 +437,7 @@ namespace sw
         const CameraLensDef& lens         = def._lens;
         pose._depthOfField._focusDistance = lens._focusDistance;
         pose._depthOfField._aperture      = lens._aperture;
+        pose._depthOfField._sensorHeight  = lens._sensorSize._y;
         pose._lensShift                   = lens._lensShift;
         pose._postProcess                 = def._postProcess;
         // 더치는 모든 모드의 시점 위에 마지막으로 — 카메라 앞축으로 화면을 기울인다.

@@ -12,6 +12,19 @@
 
 namespace sw
 {
+    CameraDepthOfFieldValues CameraDepthOfFieldValues::blend( const CameraDepthOfFieldValues& from, const CameraDepthOfFieldValues& to, float32 weight )
+    {
+        // 흐림은 구경(초점 길이 / f 값)에 비례하므로 f 값의 역수를 섞는다. 0 은 역수 0(핀홀)이라 켜고 끄는 블렌드가 점점 흐려지고 점점 맑아진다.
+        const float32            fromOpening = from._aperture > 0.0f ? 1.0f / from._aperture : 0.0f;
+        const float32            toOpening   = to._aperture > 0.0f ? 1.0f / to._aperture : 0.0f;
+        const float32            opening     = MathUtil::lerp( fromOpening, toOpening, weight );
+        CameraDepthOfFieldValues values;
+        values._focusDistance = MathUtil::lerp( from._focusDistance, to._focusDistance, weight );
+        values._aperture      = opening > 0.0f ? 1.0f / opening : 0.0f;
+        values._sensorHeight  = MathUtil::lerp( from._sensorHeight, to._sensorHeight, weight );
+        return values;
+    }
+
     CameraComponent::CameraComponent()
         : _fovY{ kDefaultFovY }
         , _nearZ{ kDefaultNearZ }
@@ -23,6 +36,7 @@ namespace sw
         , _renderOutput{}
         , _postProcess{}
         , _depthOfField{}
+        , _lensShift{ 0.0f, 0.0f }
         , _bOrthographic{ false }
         , _bCutPending{ SW_FALSE }
     {
@@ -131,14 +145,22 @@ namespace sw
         const float32 nearZ  = _nearZ > 1e-4f ? _nearZ : 0.1f;
         const float32 farZ   = _farZ > nearZ + 1e-4f ? _farZ : ( nearZ + 100.0f );
 
+        float4x4 projection{};
         if ( _bOrthographic )
         {
             const float32 height = _orthoHeight > 1e-4f ? _orthoHeight : 10.0f;
             const float32 width  = height * aspect;
-            return float4x4::makeOrthographic( width, height, nearZ, farZ );
+            projection           = float4x4::makeOrthographic( width, height, nearZ, farZ );
         }
-        const float32 fov = _fovY > 1e-4f ? _fovY : 0.70f;
-        return float4x4::makePerspectiveFieldOfView( fov, aspect, nearZ, farZ );
+        else
+        {
+            const float32 fov = _fovY > 1e-4f ? _fovY : 0.70f;
+            projection        = float4x4::makePerspectiveFieldOfView( fov, aspect, nearZ, farZ );
+        }
+        // 렌즈 시프트 — 클립 공간에서 x · y 를 w 만큼 옮긴다(clip.xy -= 2 · shift · clip.w). NDC 가 -1..1 이라 화면 비율 shift 는 NDC 2 · shift 다.
+        // 원근 · 직교 모두 같은 식이다(직교는 w = 1). 행 벡터 규약(`p · M`)이라 이동 행렬을 오른쪽에 곱하고, 시프트가 0 이면 행렬이 그대로다.
+        const float4x4 shift{ 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, -2.0f * _lensShift._x, -2.0f * _lensShift._y, 0.0f, 1.0f };
+        return projection * shift;
     }
 
     float4x4 CameraComponent::getViewProjectionMatrix( float32 aspectRatio ) const

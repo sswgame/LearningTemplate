@@ -684,6 +684,15 @@
        "description": "톤 매핑"
       },
       {
+       "name": "_shaderDepthOfField",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "피사계 심도 — 장면 깊이에서 착란원을 구해 HDR 색을 흐린다"
+      },
+      {
        "name": "_shaderSky",
        "type": "DataPath",
        "default": "",

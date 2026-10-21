@@ -88,7 +88,8 @@ namespace sw
      * @brief 렌즈 섹션(`<Lens>`)입니다.
      * @details 물리 렌즈 값은 언리얼 CineCameraComponent 의 Filmback, Lens Settings, Focus Settings 에 해당한다.
      *          초점 길이(`_focalLength`)를 적으면 시야각은 센서 높이에서 구하고(`computeFieldOfViewY`), 적지 않으면(0) `_fieldOfViewY` 를 그대로 쓴다.
-     *          더치(`_dutch`)는 화면을 기울이는 롤이다. 초점 거리, 조리개, 렌즈 시프트는 포즈에 실려 피사계 심도와 비대칭 투영이 읽는다(렌더러에 아직 없다).
+     *          더치(`_dutch`)는 화면을 기울이는 롤이다. 초점 거리, 조리개, 센서 높이는 포즈에 실려 피사계 심도 패스가 읽고(조리개 0 = 피사계 심도 없음),
+     *          렌즈 시프트는 카메라 컴포넌트의 투영 행렬을 비대칭으로 옮긴다(`CameraComponent::getProjectionMatrix`).
      */
     REFLECT()
     struct SW_GF_API CameraLensDef
@@ -111,9 +112,9 @@ namespace sw
         float2 _sensorSize{ 36.0f, 24.0f };
         PROPERTY( Min = 0.0, Tooltip = "Distance the lens focuses at (depth of field)", Units = m )
         float32 _focusDistance{ 10.0f };
-        PROPERTY( Min = 0.5, Tooltip = "Aperture f-number; smaller is a shallower depth of field" )
-        float32 _aperture{ 2.8f };
-        PROPERTY( Tooltip = "Projection centre shift as a fraction of the screen (shift lens)" )
+        PROPERTY( Min = 0.0, Tooltip = "Aperture f-number; smaller is a shallower depth of field, 0 is a pinhole (no depth of field)" )
+        float32 _aperture{ 0.0f };
+        PROPERTY( Tooltip = "Projection centre shift as a fraction of the screen (shift lens); +x moves the view right, +y up" )
         float2 _lensShift{};
         PROPERTY( Tooltip = "Roll of the view (Dutch angle)", Units = rad )
         float32 _dutch{ 0.0f };

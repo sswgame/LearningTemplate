@@ -193,6 +193,14 @@ namespace sw
                         info._flags                   = Flag::kDepthTest | Flag::kDepthWrite | kSceneColorPassFlags;
                         break;
                     }
+                    case RenderPassType::DepthOfField:
+                    {
+                        // 효과 패스다 — 후처리를 끈 뷰는 원본을 복사한다(입력 · 출력 형식이 같다). 렌즈가 핀홀(조리개 0)이면 셰이더가 원본을 고른다.
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderDepthOfField;
+                        info._inputContract  = makeContract( { Role::SourceColor, Role::SceneDepth }, {} );
+                        info._flags          = Flag::kGenericFullscreen | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess;
+                        break;
+                    }
                     case RenderPassType::ForwardOpaqueNoDepthWrite:
                     {
                         // 깊이 프리패스가 돈 프레임의 불투명 패스다. 깊이는 테스트만 한다.

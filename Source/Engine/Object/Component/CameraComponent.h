@@ -194,6 +194,15 @@ namespace sw
         void setDepthOfField( const CameraDepthOfFieldValues& values ) { _depthOfField = values; }
 
         /**
+         * @brief 렌즈 시프트(투영 중심을 화면 크기 비율만큼 옮기는 값)입니다. +x 는 보는 곳을 오른쪽으로, +y 는 위로 옮긴다(유니티 `Camera.lensShift`).
+         * @details 투영 행렬(`getProjectionMatrix`)이 비대칭이 되므로 뷰-투영을 쓰는 모든 곳(렌더 뷰 · 컬링 절두체 · 피킹 · 월드 UI)이 같은 값을 본다.
+         *          건축 사진의 시프트 렌즈처럼 카메라를 기울이지 않고 위를 더 보게 해 세로선이 모이지 않는다.
+         */
+        const float2& getLensShift() const { return _lensShift; }
+        /** @brief 렌즈 시프트를 바꿉니다. 카메라 프리셋 · 블렌드를 쓰는 게임은 포즈가 매 프레임 씁니다(`CameraPoseUtil::applyLensToCamera`). */
+        void setLensShift( const float2& shift ) { _lensShift = shift; }
+
+        /**
          * @brief 이 카메라의 화면이 이번 프레임에 **끊어** 바뀌었다고 표시합니다(언리얼의 `bCameraCut`). 렌더러가 시간 누적(TAA 기록)을 버립니다.
          * @details 블렌드 없는 프리셋과 뷰 타깃 전환이 부른다. 게임 스레드에서 쓰고 패킷을 만드는 쪽이 `consumeCut` 으로 한 번 읽어 지운다.
          */
@@ -230,6 +239,8 @@ namespace sw
         CameraPostProcessValues _postProcess;
         PROPERTY( Category = "Lens", DisplayName = "Depth Of Field", Tooltip = "Focus distance and aperture read by depth of field" )
         CameraDepthOfFieldValues _depthOfField;
+        PROPERTY( Category = "Lens", DisplayName = "Lens Shift", Tooltip = "Projection centre shift as a fraction of the screen; +x moves the view right, +y up" )
+        float2 _lensShift;
         PROPERTY( Category = "Projection", DisplayName = "Orthographic", Tooltip = "Toggle orthographic projection" )
         bool  _bOrthographic;
         uint8 _bCutPending; ///< `markCut` 이 켜고 `consumeCut` 이 지운다(저장하지 않는다)

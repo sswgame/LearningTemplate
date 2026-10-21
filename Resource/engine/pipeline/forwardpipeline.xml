@@ -14,6 +14,7 @@
 		<RenderPassAttachment _name="SceneColor" _format="R8G8B8A8_UNORM" _clearColor="0.12,0.15,0.18,1" _bClear="true" />
 		<RenderPassAttachment _name="SceneDepth" _format="D24_UNORM_S8_UINT" _clearColor="1,0,0,0" _bClear="true" />
 		<RenderPassAttachment _name="ShadowMap" _format="D24_UNORM_S8_UINT" _clearColor="1,0,0,0" _bClear="true" />
+		<RenderPassAttachment _name="DepthOfFieldColor" _format="R8G8B8A8_UNORM" _clearColor="0.12,0.15,0.18,1" _bClear="true" />
 	</_listAttachment>
 	<_listPass>
 		<RenderGraphPassDesc _name="Shadow"
@@ -114,6 +115,25 @@
 				<item>SW_TRANSPARENT=1</item>
 			</_listPermutation>
 		</RenderGraphPassDesc>
+		<!-- 피사계 심도 — 후처리 체인(Present) 앞에서 장면 색을 착란원만큼 흐린다. 흐림은 이웃 픽셀을 읽어 체인 한 패스에 합칠 수 없다.
+		     카메라 조리개가 0(기본)이거나 후처리를 끈 뷰는 원본을 그대로 낸다. -->
+		<RenderGraphPassDesc _name="DepthOfField"
+		                     _type="DepthOfField"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="None"
+		                     _bEnableDepthTest="false"
+		                     _bEnableDepthWrite="false"
+		                     _bEnableBlend="false">
+			<_listInput>
+				<item>SceneColor</item>
+				<item>SceneDepth</item>
+			</_listInput>
+			<_listOutput>
+				<item>DepthOfFieldColor</item>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
 		<RenderGraphPassDesc _name="Present"
 		                     _type="Present"
 		                     _shaderPath="engine/shaders/postchain.hlsl"
@@ -124,7 +144,7 @@
 		                     _bEnableDepthWrite="false"
 		                     _bEnableBlend="false">
 			<_listInput>
-				<item>SceneColor</item>
+				<item>DepthOfFieldColor</item>
 				<item>SceneDepth</item>
 			</_listInput>
 			<_listOutput>

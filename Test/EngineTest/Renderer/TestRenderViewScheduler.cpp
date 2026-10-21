@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Math/MathUtil.h"
+
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -319,6 +321,11 @@ SW_TEST_CASE( RenderViewCollectorTest, CameraDepthOfFieldReachesTheViewSettings 
     const RenderViewSettings mainSettings = RenderViewCollector::makeMainSettings( stage._pMainCamera );
     SW_EXPECT_NEAR_EQUAL( 3.5f, mainSettings._depthOfField._focusDistance, 1e-6f );
     SW_EXPECT_NEAR_EQUAL( 1.4f, mainSettings._depthOfField._aperture, 1e-6f );
+    // 착란원의 화면 크기는 시야각에서 나온 투영 배율을 함께 쓴다(원근이면 1 / tan( fovY / 2 ), 직교면 0 — 피사계 심도 없음).
+    SW_EXPECT_NEAR_EQUAL( 1.0f / MathUtil::tan( stage._pMainCamera->getFieldOfViewY() * 0.5f ), mainSettings._projectionScaleY, 1e-5f );
+    stage._pMainCamera->setOrthographic( true );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, RenderViewCollector::makeMainSettings( stage._pMainCamera )._projectionScaleY, 1e-6f );
+    stage._pMainCamera->setOrthographic( false );
 
     RenderViewScheduler     scheduler;
     const RenderViewRequest request = stage.collectAt( float3{ 0.0f, 0.0f, 10.0f }, scheduler, 0.0 );

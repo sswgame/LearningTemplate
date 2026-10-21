@@ -702,6 +702,7 @@ namespace sw
                 case RenderPassType::BloomDownsample:
                 case RenderPassType::Outline:
                 case RenderPassType::Tonemap:
+                case RenderPassType::DepthOfField:
                 case RenderPassType::ForwardOpaqueNoDepthWrite:
                 case RenderPassType::GPUCull:
                 case RenderPassType::InstanceAnimation:
