@@ -110,7 +110,7 @@ namespace sw
         bool _bClear{ true };
 
         /**
-         * @brief 이 첨부가 패스에 바인딩될 때의 역할입니다(`RenderPassInputRole` 이름: GBufferAlbedo, GBufferNormal, ShadowMap, AmbientOcclusion,
+         * @brief 이 첨부가 패스에 바인딩될 때의 역할입니다(`RenderPassInputRole` 이름: GBufferAlbedo, GBufferNormal, GBufferMaterial, ShadowMap, AmbientOcclusion,
          *        BloomBright, SceneDepth, SourceColor). 비어 있으면 원본 이름(GBufferAlbedo 등)과 포맷으로 정합니다.
          * @details 역할을 **이름으로만** 정하면 G버퍼, 그림자 맵, AO 첨부의 이름을 바꿀 때 Lighting 의 입력 계약이 깨진다(역할 없는 컬러는
          *          모두 SourceColor). 언리얼 RDG 는 패스 파라미터 구조체의 멤버로, 유니티 RenderGraph 는 셰이더 프로퍼티 이름으로 텍스처를 바인딩한다.
@@ -205,7 +205,7 @@ namespace sw
          * @brief `_listOutput` 중 **컬러 첨부**만 선언 순서대로 모은 목록입니다(뎁스 포맷, 스왑체인, 선언되지 않은 이름은 빠집니다). 역할도 함께 가집니다.
          *        XML 로드 시 RenderPipelineAsset 가 채웁니다.
          * @details 지오메트리 패스(ForwardOpaque, GBuffer, Transparent)는 이 목록에서 컬러 타깃을 고른다. GBuffer 는 역할(GBufferAlbedo,
-         *          GBufferNormal)로 고르고, 역할이 없으면 선언 순서([0] 알베도, [1] 노멀)로 고른다. 주의: 첨부 이름(SceneColor, GBufferAlbedo 등)을 코드에
+         *          GBufferNormal, GBufferMaterial)로 고르고, 역할이 없으면 선언 순서([0] 알베도, [1] 노멀, [2] 머티리얼)로 고른다. 주의: 첨부 이름(SceneColor, GBufferAlbedo 등)을 코드에
          *          박으면 다른 이름을 쓰는 파이프라인에서 없는 첨부를 열고, 없는 첨부의 핸들 0은 백버퍼라 화면에 그린다.
          */
         vector<ResolvedAttachment> _listResolvedColorOutput;

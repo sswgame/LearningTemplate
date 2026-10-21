@@ -350,7 +350,7 @@ namespace sw
         uint32 _meshVao;         ///< 씬 메시 드로우용 VAO
         uint32 _defaultSampler;  ///< 엔진과 머티리얼 유닛 밖의 모든 텍스처 유닛(최근접, 클램프)
         uint32 _materialSampler; ///< 머티리얼 텍스처 유닛 t16..t31 (선형, 랩, shaderslot::kMaterialTextureSampler)
-        uint32 _engineSampler;   ///< 엔진 텍스처 유닛 t0..t3 (선형, 클램프, shaderslot::kEngineTextureSampler)
+        uint32 _engineSampler;   ///< 엔진 텍스처 유닛 t0..t3 · t15(G버퍼 머티리얼) (선형, 클램프, shaderslot::kEngineTextureSampler)
         uint32 _defaultTexture;
         /// @brief 지금 컨텍스트를 가진 스레드(없으면 기본값)와 가진 시각입니다. 잡기에 실패했을 때 누가 가지고 있었는지 로그에 적습니다(진단 전용).
         atomic<std::thread::id> _contextOwnerThread;

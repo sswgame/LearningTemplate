@@ -6,8 +6,8 @@ namespace sw
 {
     namespace
     {
-        /// G버퍼 MRT 의 고정 포맷입니다: [0] 알베도, [1] 노멀.
-        constexpr RHIFormat kArrGBufferColorFormat[] = { RHIFormat::R8G8B8A8_UNORM, RHIFormat::R16G16B16A16_FLOAT };
+        /// G버퍼 MRT 의 고정 포맷입니다: [0] 알베도(알파 = 셰이딩 모델), [1] 노멀, [2] 머티리얼(r 금속도, g 거칠기 — binding.hlsli swEncodeGBufferMaterial).
+        constexpr RHIFormat kArrGBufferColorFormat[] = { RHIFormat::R8G8B8A8_UNORM, RHIFormat::R16G16B16A16_FLOAT, RHIFormat::R8G8B8A8_UNORM };
 
         /// SSAO 의 기본 클리어(가림 없음)입니다.
         constexpr float4 kNoOcclusionClear{ 1.0f, 1.0f, 1.0f, 1.0f };
@@ -80,14 +80,14 @@ namespace sw
                         info._pPassDefine             = kPassGBufferDefine;
                         info._pExcludedMaterialDefine = kMaterialForwardOnlyDefine;
                         info._pColorFormat            = kArrGBufferColorFormat;
-                        info._colorTargetCount        = 2;
+                        info._colorTargetCount        = static_cast<uint32>( sizeof( kArrGBufferColorFormat ) / sizeof( kArrGBufferColorFormat[0] ) );
                         info._flags                   = Flag::kDepthTest | Flag::kDepthWrite | kSceneColorPassFlags;
                         break;
                     }
                     case RenderPassType::Lighting:
                     {
                         info._pDefaultShader = &EngineDefaultAssets::_shaderDeferredLighting;
-                        info._inputContract  = makeContract( { Role::GBufferAlbedo, Role::GBufferNormal, Role::SceneDepth }, { Role::ShadowMap } );
+                        info._inputContract  = makeContract( { Role::GBufferAlbedo, Role::GBufferNormal, Role::GBufferMaterial, Role::SceneDepth }, { Role::ShadowMap } );
                         info._flags          = Flag::kGenericFullscreen | Flag::kHasInputContract;
                         break;
                     }

@@ -96,8 +96,8 @@ namespace sw
             RenderPassInputRole declaredRole{ RenderPassInputRole::Invalid };
             if ( attachment._role.empty() == false && tryParseRenderPassInputRole( attachment._role, declaredRole ) == false )
             {
-                SW_LOG_ERROR( "[%#] attachment '%#': 알 수 없는 역할 '%#' — SourceColor · SceneDepth · GBufferAlbedo · GBufferNormal · ShadowMap · "
-                              "AmbientOcclusion · BloomBright 중 하나입니다",
+                SW_LOG_ERROR( "[%#] attachment '%#': 알 수 없는 역할 '%#' — SourceColor · SceneDepth · GBufferAlbedo · GBufferNormal · GBufferMaterial · "
+                              "ShadowMap · AmbientOcclusion · BloomBright 중 하나입니다",
                               sourcePath, attachment._name, attachment._role );
                 ++issueCount;
             }
@@ -277,8 +277,8 @@ namespace sw
             ++issueCount;
         }
 
-        // 3-2) GBuffer 는 알베도 · 노멀을 한 MRT 패스로 쓴다(컬러 타깃 수는 패스 타입 표의 값). 수가 다르면 PSO 와 렌더 패스가 어긋나거나,
-        //      노멀이 없어 Lighting · SSAO 가 읽을 것이 없다.
+        // 3-2) GBuffer 는 알베도 · 노멀 · 머티리얼을 한 MRT 패스로 쓴다(컬러 타깃 수는 패스 타입 표의 값). 수가 다르면 PSO 와 렌더 패스가 어긋나거나,
+        //      노멀 · 머티리얼이 없어 Lighting · SSAO 가 읽을 것이 없다.
         for ( const RenderGraphPassDesc& pass : _desc._listPass )
         {
             const uint32 expectedColorCount      = getRenderPassTypeInfo( RenderPassType::GBuffer )._colorTargetCount;
@@ -286,7 +286,7 @@ namespace sw
                                                  pass._listResolvedColorOutput.size() == expectedColorCount;
             if ( bSkipGBufferOutputCheck )
                 continue;
-            SW_LOG_ERROR( "[%#] pass '%#'(%#): 컬러 출력이 %#개입니다 — G버퍼는 알베도 · 노멀 %#개를 한 MRT 패스로 씁니다",
+            SW_LOG_ERROR( "[%#] pass '%#'(%#): 컬러 출력이 %#개입니다 — G버퍼는 알베도 · 노멀 · 머티리얼 %#개를 한 MRT 패스로 씁니다",
                           sourcePath, pass._name, pass._type, static_cast<uint32>( pass._listResolvedColorOutput.size() ), expectedColorCount );
             ++issueCount;
         }

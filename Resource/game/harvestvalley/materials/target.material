@@ -4,6 +4,7 @@
 	<_properties>
 		<item name="color" type="Color" shaderType="Float4" defaultValue="1.0 0.95 0.3 0.45" displayName="Base Color" group="Surface" bHdr="0" bSrgb="1"/>
 		<item name="roughness" type="Range" shaderType="Float" defaultValue="0.5" min="0.0" max="1.0" group="Surface"/>
+		<item name="metallic" type="Range" shaderType="Float" defaultValue="0.0" min="0.0" max="1.0" group="Surface"/>
 		<item name="albedoMap" type="Texture2D" displayName="Albedo" group="Surface" bSrgb="1"/>
 	</_properties>
 	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">

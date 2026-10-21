@@ -373,6 +373,11 @@ namespace sw
                     add( s_arrEngineName[slotIndex].c_str(), ShaderBindingKind::Texture, slotB( reg ), none(), none(), slotB( reg ) );
                     add( s_arrEngineSamplerName[slotIndex].c_str(), ShaderBindingKind::Sampler, slotB( reg ), none(), none(), slotB( reg ) );
                 }
+                // G버퍼 머티리얼 칸 t15: 에뮬 백엔드만. DX11 은 짝 샘플러가 없고(s15 는 정적 세트) GL 은 결합 샘플러다(binding.hlsli).
+                add( shaderslot::resname::kEngineGBufferMaterialTexture, ShaderBindingKind::Texture, slotB( shaderslot::kEngineGBufferMaterialTexture ), none(), none(),
+                     slotB( shaderslot::kEngineGBufferMaterialTexture ) );
+                add( shaderslot::resname::kEngineGBufferMaterialSampler, ShaderBindingKind::Sampler, none(), none(), none(),
+                     slotB( shaderslot::kEngineGBufferMaterialTexture ) );
                 for ( uint32 slotIndex = 0; slotIndex < shaderslot::kMaterialTextureCount; ++slotIndex )
                 {
                     s_arrMaterialName[slotIndex] = string( shaderslot::resname::kMaterialTexture ) + to_string( slotIndex );

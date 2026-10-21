@@ -4645,7 +4645,7 @@ SW_TEST_CASE( RenderPassGPUTest, RenamedAttachmentsRenderTheSameImage )
  * @details 역할을 **이름으로만** 정하면(GBufferAlbedo · GBufferNormal · ShadowMap · AOColor) 이름을 바꿀 때 Lighting 의 입력이 모두
  *          SourceColor · SceneDepth 로 읽혀 계약이 깨지고 G버퍼가 걸리지 않는다. 언리얼 RDG · 유니티 RenderGraph 처럼 바인딩을 이름에서
  *          떼어, 첨부가 `_role` 로 자기 역할을 선언한다.
- *          `deferredpipeline.xml` 의 다섯 첨부 이름을 바꾸고 역할을 적어 같은 씬을 그려 픽셀을 맞춘다.
+ *          `deferredpipeline.xml` 의 여섯 첨부 이름을 바꾸고 역할을 적어 같은 씬을 그려 픽셀을 맞춘다.
  */
 SW_TEST_CASE( RenderPassGPUTest, RenamedGBufferAttachmentsRenderTheSameImage )
 {
@@ -4658,11 +4658,12 @@ SW_TEST_CASE( RenderPassGPUTest, RenamedGBufferAttachmentsRenderTheSameImage )
         const utf8* _pRole; ///< 비면 역할을 적지 않는다(깊이 포맷은 이름 없이도 SceneDepth 다)
     };
     constexpr AttachmentRename arrRename[] = {
-        {"GBufferAlbedo", "MainAlbedo",    "GBufferAlbedo"},
-        {"GBufferNormal", "MainNormal",    "GBufferNormal"},
-        {    "ShadowMap",  "SunShadow",        "ShadowMap"},
-        {      "AOColor",  "Occlusion", "AmbientOcclusion"},
-        {   "SceneDepth",  "MainDepth",                 ""},
+        {  "GBufferAlbedo",  "MainAlbedo",    "GBufferAlbedo"},
+        {  "GBufferNormal",  "MainNormal",    "GBufferNormal"},
+        {"GBufferMaterial", "MainSurface",  "GBufferMaterial"},
+        {      "ShadowMap",   "SunShadow",        "ShadowMap"},
+        {        "AOColor",   "Occlusion", "AmbientOcclusion"},
+        {     "SceneDepth",   "MainDepth",                 ""},
     };
     for ( const AttachmentRename& rename : arrRename )
     {
@@ -5210,6 +5211,50 @@ SW_TEST_CASE( RenderPassGPUTest, LightProbeVolumeReplacesAmbient )
     }
     if ( comparedCount == 0 )
         SW_TEST_SKIP( "No RHI backend could run the light probe volume test" );
+}
+
+/**
+ * @brief [RenderPassGPUTest] 머티리얼 금속도가 포워드와 디퍼드 모두에서 그림을 바꾼다 — 네 백엔드 모두(IndirectLighting.md P5)
+ * @details 금속은 확산이 없고 F0 가 기본 색이라 같은 큐브가 다른 그림이어야 한다. 디퍼드에서 같으면 금속도가 G버퍼 머티리얼 칸(GBufferMaterial,
+ *          에뮬 슬롯 t15)을 지나 조명 패스까지 오지 못한 것이다 — 쓰는 쪽 swStoreSurface · 실행의 셋째 MRT · 바인딩 · swLoadGBufferMaterial 중 하나다.
+ */
+SW_TEST_CASE( RenderPassGPUTest, MetallicChangesForwardAndDeferredPictures )
+{
+    const utf8*           arrPipeline[] = { ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str(), ::test::getEngineDefaultAssets()._defaultDeferredPipeline.c_str() };
+    uint32                comparedCount{ 0 };
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const utf8* pName = device->getBackendName();
+        for ( const utf8* pPipeline : arrPipeline )
+        {
+            sw::vector<uint8>     arrCapture[2];
+            sw::RHITextureMipSpan arrLayout[2]{};
+            bool                  bOk = true;
+            for ( uint32 caseIndex = 0; caseIndex < 2u && bOk; ++caseIndex )
+            {
+                LitCubeScene cube;
+                bOk = cube.populate() && cube._material->setParameter( nullptr, sw::hashed_string( "metallic" ), caseIndex == 0u ? "0.0" : "1.0" );
+                if ( bOk )
+                {
+                    cube._scene.getObjectManager()->flushSceneTransforms();
+                    bOk = renderPresentCaptureOf( device.get(), cube._scene, pPipeline, arrCapture[caseIndex], arrLayout[caseIndex] );
+                }
+            }
+            if ( bOk == false )
+            {
+                SW_LOG_WARNING( "MetallicChangesForwardAndDeferredPictures: %# 에서 '%#' 를 그리지 못했습니다.", pName, pPipeline );
+                continue;
+            }
+            ++comparedCount;
+            const CaptureDifference difference = compareCaptures( arrCapture[0], arrCapture[1] );
+            SW_EXPECT_TRUE_MSG( difference._notBackgroundCount > 0, ( sw::string( pName ) + " " + pPipeline + ": 기준 그림이 배경뿐입니다" ).c_str() );
+            SW_EXPECT_FALSE_MSG( difference.isSameImage(),
+                                 ( sw::string( pName ) + " " + pPipeline + ": 금속도 0 과 1 의 그림이 같다 (" + difference.describe() + ")" ).c_str() );
+        }
+    }
+    if ( comparedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could run the metallic test" );
 }
 
 /**

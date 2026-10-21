@@ -8,6 +8,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/IRHITimestampProvider.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
@@ -215,6 +216,8 @@ namespace sw
                 return names._ambientOcclusion;
             case RenderPassInputRole::BloomBright:
                 return names._bloomBright;
+            case RenderPassInputRole::GBufferMaterial:
+                return names._gbufferMaterial;
             case RenderPassInputRole::Invalid:
             case RenderPassInputRole::Count:
                 return names._sourceColor;
@@ -422,22 +425,27 @@ namespace sw
                 }
                 case RenderPassType::GBuffer:
                 {
-                    // 알베도와 노멀은 역할로 고른다(첨부의 `_role` 또는 원본 이름). 역할이 없으면 선언 순서([0] 알베도, [1] 노멀)를 따른다.
-                    // 한 MRT 패스로 둘 다 쓴다(네 백엔드 모두 MRT 를 보장한다). 노멀 출력이 없는 G버퍼는 검증이 거부하므로 여기서는 그리지 않는다.
-                    const AttachmentNames& names         = attachmentNames();
-                    const hashed_string*   pAlbedoTarget = pickColorOutput( RenderPassInputRole::GBufferAlbedo, 0, nullptr );
-                    const hashed_string&   albedoTarget  = pAlbedoTarget != nullptr ? *pAlbedoTarget : names._gbufferAlbedo;
-                    const hashed_string*   pNormalTarget = pDeclaredColor != nullptr ? pickColorOutput( RenderPassInputRole::GBufferNormal, 1, pAlbedoTarget )
-                                                                                     : &names._gbufferNormal;
-                    const bool             bHasNormal    = pNormalTarget != nullptr && findTransient( pNormalTarget->view() ) != 0;
-                    if ( bHasNormal == false || getEnginePSO( RenderPassType::GBuffer ) == 0 )
+                    // 알베도 · 노멀 · 머티리얼은 역할로 고른다(첨부의 `_role` 또는 원본 이름). 역할이 없으면 선언 순서([0] 알베도, [1] 노멀, [2] 머티리얼)를 따른다.
+                    // 한 MRT 패스로 셋 다 쓴다(네 백엔드 모두 MRT 를 보장한다). 셋 중 하나라도 없는 G버퍼는 검증이 거부하므로 여기서는 그리지 않는다.
+                    const AttachmentNames& names           = attachmentNames();
+                    const hashed_string*   pAlbedoTarget   = pickColorOutput( RenderPassInputRole::GBufferAlbedo, 0, nullptr );
+                    const hashed_string&   albedoTarget    = pAlbedoTarget != nullptr ? *pAlbedoTarget : names._gbufferAlbedo;
+                    const hashed_string*   pNormalTarget   = pDeclaredColor != nullptr ? pickColorOutput( RenderPassInputRole::GBufferNormal, 1, pAlbedoTarget )
+                                                                                       : &names._gbufferNormal;
+                    const hashed_string*   pMaterialTarget = pDeclaredColor != nullptr ? pickColorOutput( RenderPassInputRole::GBufferMaterial, 2, pNormalTarget )
+                                                                                       : &names._gbufferMaterial;
+                    // 머티리얼 칸의 클리어 색은 첨부 선언(데이터)에서만 온다 — 선언에 없는 첨부면 그리지 않는다.
+                    float4     materialClear{};
+                    const bool bHasTargets = pNormalTarget != nullptr && findTransient( pNormalTarget->view() ) != 0 && pMaterialTarget != nullptr &&
+                                             findTransient( pMaterialTarget->view() ) != 0 && tryGetAttachmentClearColor( pMaterialTarget->view(), materialClear );
+                    if ( bHasTargets == false || getEnginePSO( RenderPassType::GBuffer ) == 0 )
                         break;
-                    const float4              clearColor   = getAttachmentClearColorOrDefault( albedoTarget.view(), float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
-                    const float4              normalClear  = getAttachmentClearColorOrDefault( pNormalTarget->view(), FrameRendererUtil::kNormalClear );
-                    const string_view         arrNames[]   = { albedoTarget.view(), pNormalTarget->view() };
-                    const float4              arrClears[2] = { clearColor, normalClear };
-                    const RHIRenderPassLoadOp arrLoads[]   = { colorLoadFor( albedoTarget, false ), colorLoadFor( *pNormalTarget, false ) };
-                    if ( beginColorPassMrt( context, arrNames, arrClears, arrLoads, 2, passDepth.view(), colorLoadFor( passDepth, false ) ) )
+                    const float4              clearColor  = getAttachmentClearColorOrDefault( albedoTarget.view(), float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+                    const float4              normalClear = getAttachmentClearColorOrDefault( pNormalTarget->view(), FrameRendererUtil::kNormalClear );
+                    const string_view         arrNames[]  = { albedoTarget.view(), pNormalTarget->view(), pMaterialTarget->view() };
+                    const float4              arrClears[] = { clearColor, normalClear, materialClear };
+                    const RHIRenderPassLoadOp arrLoads[]  = { colorLoadFor( albedoTarget, false ), colorLoadFor( *pNormalTarget, false ), colorLoadFor( *pMaterialTarget, false ) };
+                    if ( beginColorPassMrt( context, arrNames, arrClears, arrLoads, 3, passDepth.view(), colorLoadFor( passDepth, false ) ) )
                     {
                         drawSceneMeshes( context, getEnginePSO( RenderPassType::GBuffer ), bTransparentBatch );
                         context._pCmd->endRenderPass();
@@ -880,6 +888,10 @@ namespace sw
         const RHIDescriptorIndex source = srvOf( names._sourceColor );
         const RHIDescriptorIndex ao     = srvOf( names._ambientOcclusion );
         const RHIDescriptorIndex bloom  = srvOf( names._bloomBright );
+        // G버퍼 머티리얼 칸은 t0..t3 밖의 자기 슬롯이다(조명 패스가 다섯째로 읽는다 — shaderslot::kEngineGBufferMaterialTexture).
+        const RHIDescriptorIndex material = srvOf( names._gbufferMaterial );
+        if ( material != kInvalidDescriptorIndex )
+            context._pCmd->bindShaderResource( material, shaderslot::kEngineGBufferMaterialTexture );
 
         // 슬롯 테이블은 binding.hlsli 의 swSampleIndex 와 같아야 한다: [shadow|source, albedo|ao, normal|bloom, depth|shadow].
         // 한 슬롯을 나눠 쓰는 둘은 같은 패스에 함께 바인딩되지 않는다(알베도 · 노멀은 Lighting · SSAO, AO · 반해상도 블룸은 Bloom).
