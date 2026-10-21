@@ -102,8 +102,8 @@ namespace sw
         , _pModuleImageHost{ nullptr }
         , _engine{}
         , _moduleHost{ nullptr }
+        , _moduleReload{}
 #if !defined( SW_SHIPPING )
-        , _liveReloadManager{ nullptr }
         , _devConsole{ nullptr }
 #endif
         , _moduleCatalog{}
@@ -117,7 +117,6 @@ namespace sw
         , _serverServices{ nullptr }
         , _serverConfigPath{}
         , _serverServiceContext{}
-        , _listPendingCommand{}
         , _pServerConfig{ nullptr }
         , _pTickHistogram{ nullptr }
         , _pDroppedTickCounter{ nullptr }
@@ -158,18 +157,9 @@ namespace sw
     {
         _startNanoseconds = MonotonicClock::nowNanoseconds();
         // 호스트 범위를 먼저 세운다 — 엔진 범위의 부모다. 엔진의 `ModuleTypes` 단계가 여기서 모듈 이미지 창구를 찾아 서버 대상 모듈을 올린다(`loadModuleImages`).
-        {
-            SW_MEMORY_SCOPE( EngineMisc );
-            _pModuleImageHost   = &_host.addSubsystem( make_unique<ModuleImageHostSubsystem>( SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &ServerApp::loadModuleImages, this ) ) );
-            const bool bExposed = _host.expose<IModuleImageHost>( *_pModuleImageHost );
-            SW_ASSERT( bExposed );
-            (void)bExposed;
-            if ( _host.getCollection().initializeAll( SubsystemHostMask::All ) == false ) // 로거 앞이라 로그를 남기지 않는다
-            {
-                std::fprintf( stderr, "[ServerApp] host scope failed: %s\n", _host.getCollection().getError().c_str() );
-                return false;
-            }
-        }
+        _pModuleImageHost = ModuleImageHostSubsystem::initializeHostScope( _host, SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &ServerApp::loadModuleImages, this ), "ServerApp" );
+        if ( _pModuleImageHost == nullptr )
+            return false;
         if ( _engine.initialize( argc, pArgv, EngineHostRole::DedicatedServer, &_host ) == false )
         {
             SW_LOG_ERROR( "Engine initialization failed (dedicated server)" );
@@ -195,7 +185,7 @@ namespace sw
 
         if ( _moduleHost == nullptr )
             _moduleHost = make_unique<ModuleHost>();
-        if ( _moduleHost->initializeDedicatedServer( getLiveReloadManager() ) == false )
+        if ( _moduleHost->initializeDedicatedServer( _moduleReload.getLiveReloadManager() ) == false )
         {
             SW_LOG_ERROR( "The game module could not be started on the dedicated server" );
             return false;
@@ -232,35 +222,19 @@ namespace sw
         // 전용 서버는 Server 대상 모듈만 로드한다. Game 빌드에서도 에디터와 RHI 모듈을 로드하지 않는다.
         if ( ModuleCatalogLoader::loadAndResolve( static_cast<uint8>( ModuleTarget::Server ), _moduleCatalog, _moduleResolution ) == false )
             return false;
-        _liveReloadManager = make_unique<LiveReloadManager>();
-        // 모듈 DLL 을 언로드할 수 있는 곳은 "씬은 사라졌고 서비스는 아직 있는" 구간뿐이다(App 과 같은 훅).
-        _pModuleImageHost->setScenesReleasedHook( SW_DELEGATE_LAMBDA( Delegate<void()>, [this]()
-        {
-            if ( _liveReloadManager != nullptr )
-                _liveReloadManager->shutdown();
-        } ) );
+        // 리로드 구동기(App 과 같은 것)가 매니저를 만들고 자신을 호스트 범위에 걸며, 매니저 종료를 "씬은 사라졌고 서비스는 아직 있는" 구간의 훅에 건다.
+        _moduleReload.initialize( _host, *_pModuleImageHost );
 #endif
         _moduleHost = make_unique<ModuleHost>();
-        if ( _moduleHost->loadModuleImages( getLiveReloadManager(), _moduleCatalog, _moduleResolution ) == false )
+        if ( _moduleHost->loadModuleImages( _moduleReload.getLiveReloadManager(), _moduleCatalog, _moduleResolution ) == false )
             return false;
 #if !defined( SW_SHIPPING )
         // 모듈 호스트가 건 리로드 직전 콜백을 감싼다. 서버 서비스 코드가 리로드될 모듈 안에 있으므로 서비스를 먼저 멈춘다.
-        if ( _liveReloadManager != nullptr )
-        {
-            _liveReloadManager->setOnBeforeCommitBatch(
-                SW_DELEGATE_METHOD( LiveReloadManager::OnBeforeCommitBatchDelegate, &ServerApp::onBeforeModuleReload, this ) );
-        }
+        LiveReloadManager* pLiveReloadManager = _moduleReload.getLiveReloadManager();
+        if ( pLiveReloadManager != nullptr )
+            pLiveReloadManager->setOnBeforeCommitBatch( SW_DELEGATE_METHOD( LiveReloadManager::OnBeforeCommitBatchDelegate, &ServerApp::onBeforeModuleReload, this ) );
 #endif
         return true;
-    }
-
-    LiveReloadManager* ServerApp::getLiveReloadManager() const
-    {
-#if defined( SW_SHIPPING )
-        return nullptr;
-#else
-        return _liveReloadManager.get();
-#endif
     }
 
     bool ServerApp::loadServerConfig()
@@ -403,12 +377,8 @@ namespace sw
         int64         deadline     = MonotonicClock::nowNanoseconds();
         while ( true )
         {
-            _console.drainLines( _listPendingCommand );
-            for ( const string& line : _listPendingCommand )
-            {
-                executeCommand( line );
-            }
-            _listPendingCommand.clear();
+            if ( _console.poll( SW_DELEGATE_METHOD( StandardInputCommandDelegate, &ServerApp::executeCommand, this ) ) )
+                ShutdownSignal::request( ShutdownCause::ConsoleCommand );
 #if !defined( SW_SHIPPING )
             if ( _debugChannel != nullptr )
                 (void)_debugChannel->pump(); // 일시정지 중에도 돈다 - 멈춘 상태의 값을 읽는 것이 쓰임이다
@@ -498,9 +468,8 @@ namespace sw
             SW_PROFILE_SCOPE( "GT.Game.update" );
             _moduleHost->updateGame( deltaSeconds );
         }
+        _moduleReload.update();
 #if !defined( SW_SHIPPING )
-        if ( _liveReloadManager != nullptr )
-            _liveReloadManager->update();
         if ( _bRestartServerServices == SW_TRUE )
         {
             // 리로드가 끝났다(취소됐어도 서비스는 멈춰 있다). 새 모듈의 팩토리로 다시 시작한다.
@@ -514,16 +483,8 @@ namespace sw
         _engine.endFrame();
     }
 
-    void ServerApp::executeCommand( string_view line )
+    void ServerApp::executeCommand( string_view command )
     {
-        const string_view command = StringUtil::trim( line );
-        if ( command.empty() )
-            return;
-        if ( command == "quit" || command == "stop" )
-        {
-            ShutdownSignal::request( ShutdownCause::ConsoleCommand );
-            return;
-        }
         if ( command == "status" )
         {
             logStatus();
@@ -654,7 +615,8 @@ namespace sw
 
     void ServerApp::shutdown()
     {
-        _console.stop();
+        _console.stop(); // 읽기 스레드를 멈추고, 줄 버퍼도 엔진 종료의 누수 보고 전에 해제한다
+
 #if !defined( SW_SHIPPING )
         if ( _debugChannel != nullptr )
             _debugChannel->shutdown();
@@ -662,7 +624,6 @@ namespace sw
         _debugTransport.reset();
         StateHashHistory::get().setCapacity( 0 );
 #endif
-        vector<string>{}.swap( _listPendingCommand ); // 엔진 종료의 누수 보고 전에 해제한다(기동 뒤에 잡은 용량).
 #if SW_DEV_COMMANDS_ENABLED
         _devConsole.reset();
 #endif

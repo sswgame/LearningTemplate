@@ -23,18 +23,22 @@
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
 #include "Engine/Input/InputManager.h"
-#include "Engine/Module/ModuleImageHost.h"
+#include "Engine/Input/Map/InputMap.h"
 #include "Engine/Net/GameNetSession.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
 #include "Engine/Renderer/RenderThread.h"
+#include "Engine/UI/UISystem.h"
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/NativeWindowEvent.h"
+#include "Engine/Window/PlatformClipboard.h"
 #include "Engine/Window/SplashWindow.h"
 
 #include "ModuleHost/ModuleCatalogLoader.h"
 #include "ModuleHost/ModuleImageHostSubsystem.h"
+
+#include "sw/config/ConfigConstants.h"
 
 namespace sw
 {
@@ -45,6 +49,8 @@ namespace sw
             /** @brief 에디터 창의 최소 클라이언트 크기입니다. 메뉴바, 도크 다섯 개, 게임 뷰 툴바가 겹치지 않는 하한입니다. */
             static constexpr uint32 kEditorMinClientWidth  = 960;
             static constexpr uint32 kEditorMinClientHeight = 540;
+            /** @brief 에디터 모듈(EditorModule) 핫 리로드 단축키의 액션 이름(`default.input.xml` 의 Debug 레이어). 에디터를 아는 App 만 쓴다. */
+            static constexpr const utf8* kReloadEditorAction = "ReloadEditor";
 
             /** @brief 이 기계 · 빌드가 그 백엔드를 못 돌린다는(환경) 결과면 true 입니다. 결함일 수 있는 `Failed` 는 false 입니다. */
             static constexpr bool isRHIUnusableHere( RHIInitResult result )
@@ -88,11 +94,11 @@ namespace sw
         , _fixedTimestep{}
         , _backendSwap{}
         , _userSettingsHost{}
-        , _runtimeUIHost{}
         , _sceneViewCameraProvider{}
         , _initializeStartMicro{ 0 }
         , _bEnableEditor{ SW_FALSE }
         , _bQuitAfterInitialize{ SW_FALSE }
+        , _bQuitCommandRegistered{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -202,19 +208,13 @@ namespace sw
 
     bool App::initializeHostScope()
     {
-        SW_MEMORY_SCOPE( EngineMisc );
-        // 이 범위의 서브시스템은 초기화할 일이 없다(창구는 델리게이트만 들고, 자동화 구동기는 엔진이 선 뒤 `begin` 으로 시작한다) — 로거 앞이라 로그를 남기지 않는다.
-        _pModuleImageHost   = &_host.addSubsystem( make_unique<ModuleImageHostSubsystem>( SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &App::loadModuleImages, this ) ) );
-        const bool bExposed = _host.expose<IModuleImageHost>( *_pModuleImageHost );
-        SW_ASSERT( bExposed );
-        (void)bExposed;
-        _pAutomationSession = &_host.addSubsystem( make_unique<AutomationSession>() );
-        if ( _host.getCollection().initializeAll( SubsystemHostMask::All ) == false )
+        // 자동화 구동기는 App 만 든다 — 범위를 세우기(Server 와 같은 한 곳) 전에 더한다. 엔진이 선 뒤 `begin` 으로 시작한다.
         {
-            std::fprintf( stderr, "[App] host scope failed: %s\n", _host.getCollection().getError().c_str() );
-            return false;
+            SW_MEMORY_SCOPE( EngineMisc );
+            _pAutomationSession = &_host.addSubsystem( make_unique<AutomationSession>() );
         }
-        return true;
+        _pModuleImageHost = ModuleImageHostSubsystem::initializeHostScope( _host, SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &App::loadModuleImages, this ), "App" );
+        return _pModuleImageHost != nullptr;
     }
 
     bool App::acquireMainWindow( const EngineConfig& engineConfig, const CommandLineManager& commandLineManager )
@@ -262,7 +262,8 @@ namespace sw
             return false;
 
         // 모듈 감시자는 모듈을 로드하는 ModuleHost 보다 먼저 있어야 한다. ModuleHost 가 이 포인터로 모듈을 로드하고 리로드 콜백을 등록한다.
-        _moduleReload.initialize( *_pModuleImageHost );
+        // 구동기는 자신을 호스트 범위에 건다(개발 명령 `module.reload` · 탐침 `Module.*` 가 찾는다).
+        _moduleReload.initialize( _host, *_pModuleImageHost );
 #endif
 
         _moduleHost = make_unique<EditorModuleHost>();
@@ -346,8 +347,12 @@ namespace sw
         }
 
         _backendSwap.initialize( &_engine, _moduleHost.get(), _bEnableEditor == SW_TRUE );
+        // 시나리오 단계 `SwapBackend` 와 탐침 `RHI.*` 가 `engine::findSubsystem<RHIBackendSwitcher>()` 로 찾는다(엔진 범위 → 호스트 범위).
+        const bool bSwitcherBound = _host.bind( &_backendSwap );
+        SW_ASSERT( bSwitcherBound );
+        (void)bSwitcherBound;
         _userSettingsHost.initialize( &_engine, _window.get() );
-        _runtimeUIHost.initialize( &_engine, _bEnableEditor == SW_TRUE );
+        installRuntimeUIHooks();
 
         _engine.setPresentHook( SW_DELEGATE_METHOD( PresentHookDelegate, &App::onEditorRender, this ) );
         _engine.setPostPresentHook( SW_DELEGATE_METHOD( PresentHookDelegate, &App::onEditorPostPresent, this ) );
@@ -356,10 +361,11 @@ namespace sw
     void App::shutdown()
     {
         // 전역 변수 훅은 그 변수를 소유한 GlobalVariableManager(Engine 소유)가 사라지기 전에 해제한다. 헤드리스 부팅처럼
-        // 연결되지 않은 경우에는 아무것도 하지 않는다.
+        // 연결되지 않은 경우에는 아무것도 하지 않는다. 교체기는 범위에서 먼저 풀어 자동화가 내려간 교체기를 찾지 않게 한다.
+        _host.unbind<RHIBackendSwitcher>();
         _backendSwap.shutdown();
         _userSettingsHost.shutdown();
-        _runtimeUIHost.shutdown();
+        removeRuntimeUIHooks();
 
         // 헤드리스 부팅은 창도 ModuleHost 도 만들지 않는다. 아래 경로가 그대로 아무 일도 하지 않으므로 모드 분기를 따로 두지 않는다.
         // 주의: ModuleHost 를 Engine 보다 먼저 종료해야 한다. 에디터 shutdown 이 씬 뷰와 게임 뷰 RT 를 해제할 때 RenderThread 와
@@ -453,7 +459,7 @@ namespace sw
 #if !defined( SW_SHIPPING )
             _engine.updateShellActions( frameTime._deltaTime );
 #endif
-            _moduleReload.pollReloadTriggers( _engine, _bEnableEditor == SW_TRUE );
+            pollReloadHotkeys();
             _devConsole.update( _engine.getShellInputMap() );
 
             // **게임 모듈의 시간도 테이블에 올린다.** 이 셋이 계측 밖이면 "frame breakdown" 테이블에 게임 코드가 쓰는 시간이 한 줄도 없어
@@ -493,6 +499,60 @@ namespace sw
         }
         // 창이 닫혀 끝났으면 자동화 시나리오가 그 결과를 종료 코드로 정한다(시나리오가 이미 끝냈으면 아무 일도 없다).
         _engine.onWindowClosed();
+    }
+
+    void App::installRuntimeUIHooks()
+    {
+        UISystem* pUI = engine::findSubsystem<UISystem>();
+        if ( pUI == nullptr )
+            return;
+        if ( PlatformClipboard::isAvailable() )
+        {
+            UIClipboardAPI api{};
+            api._pRead  = &PlatformClipboard::readText;
+            api._pWrite = &PlatformClipboard::writeText;
+            pUI->getClipboard().setAPI( api );
+        }
+        if ( _bEnableEditor == SW_TRUE )
+            return;
+        pUI->getGlobalCommands().registerCommand( hashed_string( UIGlobalCommandRegistry::kQuitGame ), SW_DELEGATE_METHOD( UICommandDelegate, &App::onQuitGameCommand, this ) );
+        _bQuitCommandRegistered = SW_TRUE;
+    }
+
+    void App::removeRuntimeUIHooks()
+    {
+        UISystem* pUI = engine::findSubsystem<UISystem>();
+        if ( pUI == nullptr )
+            return;
+        pUI->getClipboard().setAPI( UIClipboardAPI{} );
+        if ( _bQuitCommandRegistered == SW_FALSE )
+            return;
+        pUI->getGlobalCommands().unregisterCommand( hashed_string( UIGlobalCommandRegistry::kQuitGame ), SW_DELEGATE_METHOD( UICommandDelegate, &App::onQuitGameCommand, this ) );
+        _bQuitCommandRegistered = SW_FALSE;
+    }
+
+    void App::onQuitGameCommand( [[maybe_unused]] const hashed_string& command, [[maybe_unused]] Widget& source )
+    {
+        SW_LOG_INFO( "Quit requested from the pause menu" );
+        _engine.requestQuit( 0 );
+    }
+
+    void App::pollReloadHotkeys()
+    {
+#if !defined( SW_SHIPPING )
+        // 모듈을 다시 로드하는 장치는 호스트(App)에 있다. Engine 에는 "이 액션이 눌렸나"만 묻는다.
+        if ( _engine.wasDebugActionTriggered( InputMapDefaults::kReloadGameAction ) )
+        {
+            _moduleReload.requestReload( config::kTargetGameModule );
+            SW_LOG_INFO( "%#: force SWGame reload", InputMapDefaults::kReloadGameAction );
+        }
+        if ( _bEnableEditor == SW_TRUE && _engine.wasDebugActionTriggered( AppInternal::kReloadEditorAction ) )
+        {
+            _moduleReload.requestReload( config::kTargetEditorModule );
+            SW_LOG_INFO( "%#: force EditorModule reload", AppInternal::kReloadEditorAction );
+        }
+#endif
+        // Shipping 에는 리로드할 모듈이 없다. 그 입력 상태를 묻는 코드가 없으므로 셸 InputMap 도 로드하지 않는다.
     }
 
     int32 App::getInitFailureExitCode() const

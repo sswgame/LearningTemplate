@@ -575,16 +575,16 @@ SW_TEST_CASE( AppSmokeTest, ScreenshotQuitReportsAnUnwritableShot )
  * @details 교체는 디바이스에 의존하는 기동 단계를 다시 세운다. 씬 스냅샷 빌더의 "머티리얼을 넘어 배치 합치기" 는 디바이스가
  *          텍스처를 인덱스로 고를 수 있을 때(DX12 · Vulkan 의 네이티브 bindless)만 켜져야 한다 — DX11 · GL 은 머티리얼 텍스처를
  *          고정 슬롯에 걸므로 합친 배치가 한 머티리얼의 텍스처로 그려진다. 교체 뒤 `Active backend is now` 줄의 두 값이 같아야 한다.
+ *          교체는 시나리오 `swapother`(단계 `SwapBackend backend="other"` — DirectX 12 면 DirectX 11, DirectX 11 이면 DirectX 12)가 건다.
  */
 SW_TEST_CASE( AppSmokeTest, BackendSwapFollowsTheNewDevice )
 {
-    // -gv_rhiSwapTo 는 RHIBackend 값이다(0 = DirectX11, 1 = DirectX12).
-    constexpr const utf8* kArrSwapArgument[] = { "-dx12 -gv_rhiSwapTo=0", "-dx11 -gv_rhiSwapTo=1" };
+    constexpr const utf8* kArrSwapArgument[] = { "-dx12", "-dx11" };
 
     uint32 checkedCount = 0;
     for ( const utf8* pSwapArgument : kArrSwapArgument )
     {
-        string arguments{ "-gv_profileFrames=30 -gv_rhiSwapAtFrame=10 " };
+        string arguments{ "-scenario=engine/automation/rhiswap/swapother.scenario.xml " };
         arguments += pSwapArgument;
         const AppRunResult result = runApp( arguments, "Active backend is now" );
         if ( test::hasRunHere( result._outcome ) == false )
@@ -611,19 +611,18 @@ SW_TEST_CASE( AppSmokeTest, BackendSwapFollowsTheNewDevice )
 /**
  * @brief [AppSmokeTest] 백엔드 교체 뒤 인스턴스를 기동과 같은 순서(게임 → 에디터)로 다시 세운다
  * @details 에디터는 게임이 등록한 타입 · 서비스를 보며 선다. 기동은 게임 → 에디터인데 교체 경로만 에디터 → 게임이면 교체 뒤 에디터가 게임 없이
- *          선다. 인스턴스를 세울 때마다 찍는 `Module instance initialized: <모듈>` 줄의 순서를 본다.
+ *          선다. 인스턴스를 세울 때마다 찍는 `Module instance initialized: <모듈>` 줄의 순서를 본다. 교체는 시나리오 `swapother` 가 건다.
  */
 SW_TEST_CASE( AppSmokeTest, BackendSwapRebuildsGameBeforeEditor )
 {
-    // -gv_rhiSwapTo 는 RHIBackend 값이다(0 = DirectX11, 1 = DirectX12).
-    constexpr const utf8* kArrSwapArgument[]  = { "-dx12 -gv_rhiSwapTo=0", "-dx11 -gv_rhiSwapTo=1" };
+    constexpr const utf8* kArrSwapArgument[]  = { "-dx12", "-dx11" };
     constexpr const utf8* kArrExpectedLabel[] = { "Module instance initialized: Game", "Module instance initialized: Editor", "Module instance initialized: Game",
                                                   "Module instance initialized: Editor" };
 
     uint32 checkedCount = 0;
     for ( const utf8* pSwapArgument : kArrSwapArgument )
     {
-        string arguments{ "-gv_profileFrames=30 -gv_rhiSwapAtFrame=10 -EnableEditor " };
+        string arguments{ "-scenario=engine/automation/rhiswap/swapother.scenario.xml -EnableEditor " };
         arguments += pSwapArgument;
         const AppRunResult result = runApp( arguments, "Module instance initialized: " );
         if ( test::hasRunHere( result._outcome ) == false )

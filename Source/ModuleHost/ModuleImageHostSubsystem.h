@@ -13,6 +13,8 @@
 
 namespace sw
 {
+    class SubsystemScope;
+
     /** @brief 호스트의 타입 공급자 로더입니다. 이미지를 올리고 타입을 등록하면 true 입니다. */
     SW_DECLARE_DELEGATE( bool, ModuleTypeLoaderDelegate, void );
 } // namespace sw
@@ -31,6 +33,14 @@ namespace sw
 
         /** @brief @p moduleTypeLoader 는 타입 공급자 로더입니다. 묶이지 않았으면 올릴 것이 없습니다. */
         explicit ModuleImageHostSubsystem( ModuleTypeLoaderDelegate moduleTypeLoader );
+
+        /**
+         * @brief 호스트 범위를 세웁니다 — 이 창구를 @p hostScope 에 더해 `IModuleImageHost` 로 드러내고, 범위의 서브시스템을 모두 초기화합니다. 엔진을 세우기 전에 부릅니다.
+         * @details App 과 Server 가 같은 순서로 세우는 곳은 여기 하나입니다. 호스트가 더 넣을 서브시스템(App 의 자동화 구동기)은 이 함수 **전에** 범위에 더합니다.
+         *          로거가 서기 전이라 실패는 표준 오류에 @p pHostName 을 붙여 남깁니다.
+         * @return 세운 창구(범위 소유 — 빌려 쓴다)입니다. 초기화에 실패하면 nullptr 입니다.
+         */
+        [[nodiscard]] static ModuleImageHostSubsystem* initializeHostScope( SubsystemScope& hostScope, ModuleTypeLoaderDelegate moduleTypeLoader, const utf8* pHostName );
 
         /** @brief 씬이 사라진 뒤 불릴 훅(모듈 DLL 내리기)을 겁니다. 엔진 범위가 종료하기 전에 겁니다. */
         void setScenesReleasedHook( Delegate<void()> hook );

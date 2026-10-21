@@ -5,8 +5,6 @@
 #pragma once
 #include "Core/Common/Types.h"
 
-#include "Engine/Utility/EngineFrameObserver.h"
-
 namespace sw
 {
     enum class RHIBackend : uint32;
@@ -22,21 +20,21 @@ namespace sw
      * @details 교체는 "렌더 워커 비우기 → 모듈 인스턴스 파괴 → 디바이스 재생성 → 모듈 재생성" 순서를 어기면 바로 죽습니다.
      *          그 순서를 아는 곳을 하나로 둡니다. 상용 엔진이 디바이스 상실 · 어댑터 변경 · 전체 화면 전환을 모두 같은 재생성
      *          경로로 모으는 것과 같은 이유입니다. 사유는 늘어도 순서를 아는 코드는 하나여야 합니다. 쓰는 곳은 App 뿐입니다.
-     *          진단 스위치 `-gv_rhiSwapAtFrame=N -gv_rhiSwapTo=<backend>` 도 여기서 받습니다. 엔진 루프에 프레임 관찰자로 붙어(`initialize`) N 번째 프레임의
-     *          시작(`onFrameBegin`)에 메뉴 · 콘솔과 같은 경로로 교체를 요청하고, 교체는 그 프레임의 `applyIfPending` 이 합니다.
+     *          요청은 메뉴 · 콘솔(`gv_rhiBackend`)과 시나리오 단계 `SwapBackend` 가 같은 길로 합니다. App 이 이 객체를 호스트 범위에 걸어 두고(`SubsystemScope::bind`)
+     *          단계와 탐침은 `engine::findSubsystem<RHIBackendSwitcher>()` 로 찾습니다 — 정적 포인터 창구를 두지 않습니다.
      */
-    class RHIBackendSwitcher : public IEngineFrameObserver
+    class RHIBackendSwitcher
     {
     public:
         RHIBackendSwitcher();
-        ~RHIBackendSwitcher() override = default;
+        ~RHIBackendSwitcher() = default;
 
         RHIBackendSwitcher( const RHIBackendSwitcher& )            = delete;
         RHIBackendSwitcher& operator=( const RHIBackendSwitcher& ) = delete;
 
         /**
          * @brief 협력 객체를 연결하고 gv_rhiBackend 변경 훅을 설치합니다.
-         * @param pEngine RHI 와 LiveReloadManager 를 소유한 루프
+         * @param pEngine RHI 를 소유한 루프
          * @param pModuleHost 교체 전후로 내리고 다시 세울 모듈 호스트
          * @param bEnableEditor 에디터 모드면, 에디터를 지원하지 않는 백엔드 요청을 되돌립니다.
          */
@@ -52,8 +50,6 @@ namespace sw
         void applyIfPending();
 
         // --- 자동화 창구(시나리오 단계 `SwapBackend` 와 탐침 `RHI.*` — `RHIBackendSwitcherAutomation.cpp`) -------------------------------------------------
-        /** @brief `initialize` 한 교체기입니다. 시나리오 단계와 탐침이 이것으로 교체를 요청하고 읽습니다. 없으면 nullptr 입니다. */
-        static RHIBackendSwitcher* findActive();
         /** @brief 지금 확정된(디바이스가 실제로 쓰는) 백엔드입니다. RHI 가 없으면 false 입니다. */
         [[nodiscard]] bool findCommittedBackend( RHIBackend& outBackend ) const;
         /** @brief 요청했지만 아직 적용하지 않은 교체가 있으면 true 입니다. */
@@ -61,19 +57,12 @@ namespace sw
         /** @brief 이 프로세스에서 교체에 실패한 횟수입니다(실패하면 이전 백엔드로 복구한다). */
         uint32 getFailedSwapCount() const { return _failedSwapCount; }
         /**
-         * @brief 백엔드 교체를 요청합니다 — 메뉴 · 콘솔 · `-gv_rhiSwapAtFrame` 과 같은 길(`gv_rhiBackend` 의 `setValueAsInt` → 변경 콜백)이며, 적용은 이 프레임 끝의 `applyIfPending` 입니다.
+         * @brief 백엔드 교체를 요청합니다 — 메뉴 · 콘솔과 같은 길(`gv_rhiBackend` 의 `setValueAsInt` → 변경 콜백)이며, 적용은 이 프레임 끝의 `applyIfPending` 입니다.
          * @return 요청했으면(이미 그 백엔드이면 요청 없이도) true 입니다. 변수를 찾지 못하면 false 입니다.
          */
         [[nodiscard]] bool requestSwap( RHIBackend backend );
         /** @brief 지금 디바이스를 제거된 상태로 만듭니다(개발 명령 `rhi.removeDevice`, `IRHIDevice::debugRemoveDevice`). 할 수 없는 백엔드면 false 입니다. */
         [[nodiscard]] bool removeDeviceForTest();
-
-        // IEngineFrameObserver — 프레임 시작만 쓴다(`-gv_rhiSwapAtFrame` 진단). 나머지는 아무것도 하지 않고 종료를 정하지 않는다.
-        /** @brief `-gv_rhiSwapAtFrame` 의 프레임이면 `gv_rhiBackend` 를 `-gv_rhiSwapTo` 로 바꿔 교체를 요청합니다(한 번만). Shipping 에서는 아무것도 하지 않습니다. */
-        void                onFrameBegin( const EngineFrameContext& context ) override;
-        [[nodiscard]] int32 onFrameEnd( const EngineFrameContext& context ) override;
-        [[nodiscard]] int32 onWindowClosed( const EngineFrameContext& context ) override;
-        void                onBuildRenderPacket( EngineRenderPacketContext& inoutContext ) override;
 
     private:
         /** @brief gv_rhiBackend 변경 이벤트 훅입니다. */
