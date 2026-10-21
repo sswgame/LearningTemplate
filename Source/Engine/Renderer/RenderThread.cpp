@@ -347,12 +347,9 @@ namespace sw
             // 링 슬롯에서 그대로 처리한다. 옮겨 오면 링 슬롯의 저장소가 비어 GT 가 다음에 다시 할당한다. 생산자는
             // tail 이 앞으로 갈 때까지 이 슬롯을 덮어쓰지 않는다.
             executePacket( _arrRingBuffer[currentTail] );
-            // 기록과 제출이 끝났다(병렬 기록 밖). 그동안 다른 스레드가 미룬 핸들을 여기서 해제한다.
+            // 기록과 제출이 끝났다(병렬 기록 밖). 이 프레임까지 기다리던 핸들을 해제한다 — 뒤 패킷이 읽을 수 있는 것은 남는다.
             if ( _pDevice != nullptr )
-            {
-                _pDevice->flushDeferredHandleReleases();
                 _pDevice->notifyRenderFrameRetired();
-            }
 
             {
                 std::scoped_lock<mutex> lock{ _mutex };

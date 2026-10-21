@@ -177,19 +177,20 @@ namespace sw
         void setRenderThreadDrain( RenderThreadDrainFunction pfnDrain, void* pContext, std::thread::id renderThreadID );
 
         /**
-         * @brief 자원 핸들 하나를 해제합니다. 렌더 스레드가 프레임을 잡고 있는 동안 다른 스레드가 부르면, 그 프레임이 끝날 때(병렬 기록 밖)까지 미룹니다.
+         * @brief 자원 핸들 하나를 해제합니다. 렌더 스레드가 떠 있을 때 다른 스레드가 부르면, **다음에 넘길 프레임**이 끝날 때(병렬 기록 밖)까지 미룹니다.
          * @details 게임 스레드는 GPU 자원을 가진 객체(`Material`, `MaterialInstance`, `Texture2D`)의 마지막 소유를 아무 때나 놓을 수 있다.
-         *          GPUScene 후보를 덮는 수집 잡이나 핫 리로드로 정리한 뷰가 그 예다. 그 순간 렌더 스레드가 지난 프레임을 병렬로 기록 중이면 bindless 테이블을 바꾸면 안 된다
-         *          (`setParallelRecording`). 그래서 객체의 소멸은 그 자리에서, 핸들의 반환은 렌더 스레드가 프레임을 끝낸 뒤에 한다.
-         *          언리얼의 `FDeferredCleanupInterface`, `BeginReleaseResource` 에 해당한다. 렌더 스레드가 쉬고 있거나(잡고 있는 프레임이 없음) 렌더 스레드 자신이면 바로 해제한다.
-         *          객체는 이미 사라졌으므로 핸들만 가진다. 마지막 소유를 놓는 쪽은 그 핸들을 쓰는 프레임이 없다(패킷이 소유를 함께 싣는다).
+         *          GPUScene 후보를 덮는 수집 잡, 핫 리로드로 정리한 뷰, 로드 중 텍스처를 진짜로 바꾸는 머티리얼이 그 예다. 그 순간 렌더 스레드가 기록 중이면 bindless 테이블을
+         *          바꾸면 안 되고(`setParallelRecording`), 게임 스레드가 이미 지었지만 아직 넘기지 않은 패킷도 옛 인덱스를 값으로 들고 있다(배치의 머티리얼 텍스처 SRV).
+         *          그래서 객체의 소멸은 그 자리에서, 핸들의 반환은 해제 시점의 "넘긴 수 + 1" 번째 프레임이 끝난 뒤에 한다 — 렌더 스레드가 쉬고 있어도 미룬다.
+         *          언리얼의 `FDeferredCleanupInterface`, `BeginReleaseResource` 에 해당한다. 렌더 스레드 자신이 부르거나, 렌더 스레드가 없고 넘긴 프레임도 없으면 바로 해제한다.
+         *          주의: 게임 스레드가 프레임을 넘기지 않는 동안에는 미룬 핸들이 쌓인다 — `waitIdle` · 렌더 스레드 해제 · `shutdown` 이 모두 내린다.
          */
         void releaseHandle( RHIHandleKind kind, uint64 handle );
-        /** @brief 미뤄 둔 핸들을 모두 해제합니다. 렌더 스레드가 프레임을 끝낸 뒤, `waitIdle` 에서, 렌더 스레드를 해제할 때, `shutdown` 에서 부릅니다. */
+        /** @brief 미뤄 둔 핸들을 기한과 무관하게 모두 해제합니다. `waitIdle` 에서, 렌더 스레드를 세우거나 해제할 때, `shutdown` 에서 부릅니다. */
         void flushDeferredHandleReleases();
-        /** @brief 렌더 스레드에 프레임 하나를 넘겼음을 알립니다(`RenderThread::submit`). 프레임이 끝날 때까지 다른 스레드의 `releaseHandle` 은 미뤄집니다. */
+        /** @brief 렌더 스레드에 프레임 하나를 넘겼음을 알립니다(`RenderThread::submit`). */
         void notifyRenderFrameQueued();
-        /** @brief 렌더 스레드가 프레임 하나를 끝냈음을 알립니다. */
+        /** @brief 렌더 스레드가 프레임 하나를 끝냈음을 알리고, 그 프레임까지 기다리던 핸들을 해제합니다. 렌더 스레드(기록 밖)에서 부릅니다. */
         void notifyRenderFrameRetired();
         /** @brief 아직 해제하지 않고 미뤄 둔 핸들 수입니다(진단과 테스트용). */
         size_t getDeferredHandleCount() const;
@@ -480,7 +481,11 @@ namespace sw
         bool _bShutDown;
         /// @brief GPU 자원 장부입니다(getMemoryLedger 참고). 기반 클래스 멤버이므로 해제 큐를 비우는 백엔드 소멸자보다 오래 삽니다.
         unique_ptr<RHIMemoryLedger> _memoryLedger;
-        /// @brief 렌더 스레드가 프레임을 끝낼 때까지 미룬 핸들 반환과, 렌더 스레드가 잡고 있는 프레임 수입니다(releaseHandle 참고).
+        /// @brief 렌더 스레드가 프레임을 끝낼 때까지 미룬 핸들 반환과, 넘긴 · 끝낸 프레임 수입니다(releaseHandle 참고).
         unique_ptr<RHIDeferredHandleQueue> _pDeferredHandleQueue;
+
+    private:
+        /** @brief 미룬 핸들 중 기다리던 프레임이 끝난 것만 해제합니다(`notifyRenderFrameRetired`). */
+        void releaseRetiredHandles();
     };
 } // namespace sw

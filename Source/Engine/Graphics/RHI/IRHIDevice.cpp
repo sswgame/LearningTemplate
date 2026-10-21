@@ -58,16 +58,19 @@ namespace sw
         {
             uint64        _handle{ 0 };
             RHIHandleKind _kind{ RHIHandleKind::BindlessResource };
+            uint64        _releaseAfterFrame{ 0 }; ///< 렌더 스레드에 넘긴 프레임 번호(1부터) — 이 프레임이 끝나야 내린다
         };
 
         mutable mutex  _mutex;
-        vector<Entry>  _listHandle;     ///< `_mutex` 아래
-        atomic<uint32> _framesInFlight; ///< 렌더 스레드에 넘겼고 아직 끝나지 않은 프레임 수
+        vector<Entry>  _listHandle;        ///< `_mutex` 아래
+        atomic<uint64> _queuedFrameCount;  ///< 렌더 스레드에 넘긴 프레임 수(누적)
+        atomic<uint64> _retiredFrameCount; ///< 렌더 스레드가 끝낸 프레임 수(누적, 넘긴 수를 넘지 않는다)
 
         RHIDeferredHandleQueue()
             : _mutex{}
             , _listHandle{}
-            , _framesInFlight{ 0 }
+            , _queuedFrameCount{ 0 }
+            , _retiredFrameCount{ 0 }
         {
         }
     };
@@ -160,8 +163,8 @@ namespace sw
         _pfnRenderThreadDrain      = pfnDrain;
         _pRenderThreadDrainContext = ( pfnDrain != nullptr ) ? pContext : nullptr;
         _renderThreadID            = ( pfnDrain != nullptr ) ? renderThreadID : std::thread::id{};
-        // 렌더 스레드가 서거나 풀리는 자리다 — 든 프레임이 없으니 미룬 것을 내리고 셈을 처음부터 한다.
-        _pDeferredHandleQueue->_framesInFlight.store( 0, std::memory_order_release );
+        // 렌더 스레드가 서거나 풀리는 자리다 — 든 프레임이 없으니 미룬 것을 내리고 셈을 맞춘다.
+        _pDeferredHandleQueue->_retiredFrameCount.store( _pDeferredHandleQueue->_queuedFrameCount.load( std::memory_order_acquire ), std::memory_order_release );
         flushDeferredHandleReleases();
     }
 
@@ -169,11 +172,15 @@ namespace sw
     {
         if ( handle == 0 && ( kind == RHIHandleKind::Buffer || kind == RHIHandleKind::Texture ) )
             return;
-        const bool bRenderThreadBusy = _pDeferredHandleQueue->_framesInFlight.load( std::memory_order_acquire ) != 0;
-        if ( bRenderThreadBusy && std::this_thread::get_id() != _renderThreadID )
+        // 미루는 기준은 "지금 든 프레임" 이 아니라 "이 해제 전에 만든 패킷" 이다. 게임 스레드가 짓고 아직 넘기지 않은 패킷도 옛 인덱스를 값으로 들고 있다
+        // (GPUScene 배치의 머티리얼 텍스처 SRV). 그래서 다음에 넘길 프레임(넘긴 수 + 1)이 끝난 뒤에 내린다 — 렌더 스레드가 쉬고 있어도 그렇다.
+        const uint64 queuedFrameCount = _pDeferredHandleQueue->_queuedFrameCount.load( std::memory_order_acquire );
+        const bool   bFrameInFlight   = queuedFrameCount != _pDeferredHandleQueue->_retiredFrameCount.load( std::memory_order_acquire );
+        const bool   bRenderThreadUp  = _pfnRenderThreadDrain != nullptr;
+        if ( ( bRenderThreadUp || bFrameInFlight ) && std::this_thread::get_id() != _renderThreadID )
         {
             std::scoped_lock<mutex> lock{ _pDeferredHandleQueue->_mutex };
-            _pDeferredHandleQueue->_listHandle.push_back( RHIDeferredHandleQueue::Entry{ handle, kind } );
+            _pDeferredHandleQueue->_listHandle.push_back( RHIDeferredHandleQueue::Entry{ handle, kind, queuedFrameCount + 1 } );
             return;
         }
         IRHIResourceFactory* pFactory = getResourceFactory();
@@ -201,15 +208,44 @@ namespace sw
 
     void IRHIDevice::notifyRenderFrameQueued()
     {
-        _pDeferredHandleQueue->_framesInFlight.fetch_add( 1, std::memory_order_acq_rel );
+        _pDeferredHandleQueue->_queuedFrameCount.fetch_add( 1, std::memory_order_acq_rel );
     }
 
     void IRHIDevice::notifyRenderFrameRetired()
     {
-        // 셈이 0 이면 내리지 않는다 — 렌더 스레드를 다시 세운 뒤(셈을 비웠다) 앞 프레임의 통보가 늦게 오는 일.
-        uint32 current = _pDeferredHandleQueue->_framesInFlight.load( std::memory_order_acquire );
-        while ( current != 0 && _pDeferredHandleQueue->_framesInFlight.compare_exchange_weak( current, current - 1, std::memory_order_acq_rel ) == false )
+        // 끝낸 수는 넘긴 수를 넘지 않는다 — 렌더 스레드를 다시 세운 뒤(셈을 맞췄다) 앞 프레임의 통보가 늦게 오는 일.
+        const uint64 queuedFrameCount = _pDeferredHandleQueue->_queuedFrameCount.load( std::memory_order_acquire );
+        uint64       current          = _pDeferredHandleQueue->_retiredFrameCount.load( std::memory_order_acquire );
+        while ( current < queuedFrameCount && _pDeferredHandleQueue->_retiredFrameCount.compare_exchange_weak( current, current + 1, std::memory_order_acq_rel ) == false )
         {
+        }
+        releaseRetiredHandles();
+    }
+
+    void IRHIDevice::releaseRetiredHandles()
+    {
+        // 기한이 지난 것만 꺼낸다. 아직 끝나지 않은 프레임(또는 짓는 중인 패킷)이 읽을 수 있는 것은 남긴다.
+        const uint64                          retiredFrameCount = _pDeferredHandleQueue->_retiredFrameCount.load( std::memory_order_acquire );
+        vector<RHIDeferredHandleQueue::Entry> listDue;
+        {
+            std::scoped_lock<mutex>                lock{ _pDeferredHandleQueue->_mutex };
+            vector<RHIDeferredHandleQueue::Entry>& listHandle = _pDeferredHandleQueue->_listHandle;
+            size_t                                 keptCount  = 0;
+            for ( RHIDeferredHandleQueue::Entry& entry : listHandle )
+            {
+                if ( entry._releaseAfterFrame <= retiredFrameCount )
+                    listDue.push_back( entry );
+                else
+                    listHandle[keptCount++] = entry;
+            }
+            listHandle.resize( keptCount );
+        }
+        IRHIResourceFactory* pFactory = getResourceFactory();
+        if ( pFactory == nullptr )
+            return; // 팩터리가 이미 없다 — 백엔드 자원과 함께 갔다
+        for ( const RHIDeferredHandleQueue::Entry& entry : listDue )
+        {
+            releaseNow( *pFactory, entry._kind, entry._handle );
         }
     }
 

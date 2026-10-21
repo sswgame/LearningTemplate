@@ -428,6 +428,39 @@ SW_TEST_CASE( RHIDeferredHandleTest, ReleasesWaitForTheRenderThreadFrame )
     SW_EXPECT_EQUAL( size_t( 1 ), device.getDeferredHandleCount() );
     device.waitIdle();
     SW_EXPECT_EQUAL( size_t( 0 ), device.getDeferredHandleCount() );
+    device.notifyRenderFrameRetired(); // 위에서 넘긴 프레임을 끝낸다
+}
+
+/**
+ * @brief [RHIDeferredHandleTest] 해제는 그때 든 프레임이 아니라 **다음에 넘길 프레임**이 끝나야 내린다 — 렌더 스레드가 쉬고 있어도 미룬다
+ * @details 게임 스레드가 지었지만 아직 넘기지 않은 패킷도 옛 인덱스를 값으로 들고 있다(배치의 머티리얼 텍스처 SRV). 로드 중 텍스처를 진짜로 바꾼 머티리얼이
+ *          그 텍스처를 놓자 바로 내려, 다음 패킷의 그림자 · 불투명 패스가 죽은 슬롯을 읽었다(DX11 HarvestValley, BindlessIndexValidator, 3 번 중 2 번).
+ */
+SW_TEST_CASE( RHIDeferredHandleTest, ReleasesWaitForThePacketBeingBuilt )
+{
+    test::FakeRHIDevice device;
+
+    // 프레임 A 가 든 동안 해제한다 — 게임 스레드는 다음 패킷 B 를 짓는 중이다. A 가 끝나도 B 가 남았다.
+    device.notifyRenderFrameQueued();
+    device.releaseHandle( sw::RHIHandleKind::BindlessTexture, 12 );
+    device.notifyRenderFrameRetired();
+    SW_EXPECT_EQUAL( size_t( 1 ), device.getDeferredHandleCount() );
+    device.notifyRenderFrameQueued();
+    device.notifyRenderFrameRetired();
+    SW_EXPECT_EQUAL( size_t( 0 ), device.getDeferredHandleCount() );
+
+    // 렌더 스레드가 떠 있으면 든 프레임이 없어도 미룬다(짓는 중인 패킷이 있다). 다음 프레임이 끝나면 내린다.
+    device.setRenderThreadDrain( []( void* ) {}, nullptr, std::thread::id{} );
+    device.releaseHandle( sw::RHIHandleKind::Texture, 13 );
+    SW_EXPECT_EQUAL( size_t( 1 ), device.getDeferredHandleCount() );
+    device.notifyRenderFrameQueued();
+    device.notifyRenderFrameRetired();
+    SW_EXPECT_EQUAL( size_t( 0 ), device.getDeferredHandleCount() );
+
+    // 렌더 스레드를 풀면 남은 것을 모두 내린다.
+    device.releaseHandle( sw::RHIHandleKind::Texture, 14 );
+    device.setRenderThreadDrain( nullptr, nullptr, std::thread::id{} );
+    SW_EXPECT_EQUAL( size_t( 0 ), device.getDeferredHandleCount() );
 }
 
 /**
