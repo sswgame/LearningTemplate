@@ -235,26 +235,6 @@ namespace sw
             }
 
             /**
-             * @brief 텍스트를 프로퍼티 하나에 강제 변환해 씁니다(`parseTextValueCoerced` 의 프로퍼티 판). 비트필드는 임시 bool 에 읽어 그 비트만 씁니다.
-             * @return 읽지 못하면 false 이고 값은 그대로입니다.
-             */
-            [[nodiscard]] static bool applyTextCoerced( const ResolvedPropertyPath& target, string_view text, const SerializeContext& context )
-            {
-                const PropertyInfo& prop   = *target._pProp;
-                void* const         pOwner = target._owner.get();
-                if ( prop._bIsBitField == SW_TRUE )
-                {
-                    bool bValue = prop.getValue<bool>( pOwner );
-                    if ( parseTextValueCoerced( MutableValueAddress{ &bValue }, hashed_string( "bool" ), text, context ) == false )
-                        return false;
-                    prop.setValue<bool>( pOwner, bValue );
-                    return true;
-                }
-                void* const pValue = prop.getRawPtr( pOwner );
-                return pValue != nullptr && parseTextValueCoerced( MutableValueAddress{ pValue }, prop._typeName, text, context );
-            }
-
-            /**
              * @brief 프로퍼티 하나의 값을 텍스트로 씁니다(`SerializerUtil::valueToText` 의 프로퍼티 판). 비트필드는 그 비트를 bool 로 씁니다.
              * @return 값 주소가 없으면(접근자만 있는 프로퍼티) false 입니다.
              */
@@ -289,7 +269,7 @@ namespace sw
                     return false;
 
                 if ( orphan._text.empty() == false )
-                    return applyTextCoerced( target, orphan._text, context );
+                    return applyPropertyTextCoerced( *target._pProp, target._owner, orphan._text, context );
                 if ( orphan._listBinary.empty() )
                     return false;
 
@@ -535,7 +515,7 @@ namespace sw
         StringBuilder<constant::kMaxBuffer8192> ss;
         if ( SchemaMigrateInternal::propertyValueToText( ss, source, context ) == false )
             return false;
-        return SchemaMigrateInternal::applyTextCoerced( target, ss.view(), context );
+        return applyPropertyTextCoerced( *target._pProp, target._owner, ss.view(), context );
     }
 
     bool SchemaMigrateContext::setPropertyFromText( hashed_string propName, string_view text ) const
@@ -545,7 +525,7 @@ namespace sw
         ResolvedPropertyPath target;
         if ( resolvePropertyPath( MutableObjectAddress{ _pInstance }, *_pTypeInfo, propName.c_str(), target ) == false )
             return false;
-        return SchemaMigrateInternal::applyTextCoerced( target, text, _serializeContext );
+        return applyPropertyTextCoerced( *target._pProp, target._owner, text, _serializeContext );
     }
 
     bool isValueOnlyCoercion( hashed_string targetTypeName, hashed_string wireTypeName )
@@ -693,6 +673,23 @@ namespace sw
         if ( pValue == nullptr )
             return FieldReadResult::FieldFailed;
         return tryCoerceBinaryPayload( MutableValueAddress{ pValue }, prop._typeName, pPayload, payloadSize, context, wireTypeName, wireVersion );
+    }
+
+    bool applyPropertyTextCoerced( const PropertyInfo& prop, const MutableObjectAddress instance, const string_view valStr, const SerializeContext& context )
+    {
+        void* const pInstance = instance.get();
+        if ( pInstance == nullptr )
+            return false;
+        if ( prop._bIsBitField == SW_TRUE )
+        {
+            bool bValue = prop.getValue<bool>( pInstance );
+            if ( parseTextValueCoerced( MutableValueAddress{ &bValue }, hashed_string( "bool" ), valStr, context ) == false )
+                return false;
+            prop.setValue<bool>( pInstance, bValue );
+            return true;
+        }
+        void* const pValue = prop.getRawPtr( pInstance );
+        return pValue != nullptr && parseTextValueCoerced( MutableValueAddress{ pValue }, prop._typeName, valStr, context );
     }
 
     bool parseTextValueCoerced( MutableValueAddress value, hashed_string typeName, string_view valStr,

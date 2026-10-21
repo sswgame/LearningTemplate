@@ -3790,6 +3790,21 @@ SW_TEST_CASE( ReflectionSerializationTest, OrphanAppliedToBitFieldTouchesOnlyIts
     expectOnlyItsBit( textOrphan, false );
     expectOnlyItsBit( textOrphan, true );
 
+    // 비트필드는 값 주소가 없다 — 그 바이트 주소를 값 주소로 받아 쓰는 길이 없다.
+    const sw::PropertyInfo* pInvuln = pBits->findPropertyInHierarchy( sw::hashed_string( "_bInvulnerable" ) );
+    SW_ASSERT_NOT_NULL( pInvuln );
+    sw::BitfieldTestActor probe;
+    SW_EXPECT_TRUE( pInvuln->getRawPtr( static_cast<void*>( &probe ) ) == nullptr );
+    SW_EXPECT_TRUE( pInvuln->getRawPtr( static_cast<const void*>( &probe ) ) == nullptr );
+
+    // 프로퍼티 단위 텍스트 쓰기(컴포넌트 기본값 패치가 쓴다)도 그 비트만 바꾼다.
+    probe._bActive  = SW_TRUE;
+    probe._bCanJump = SW_TRUE;
+    SW_EXPECT_TRUE( sw::applyPropertyTextCoerced( *pInvuln, sw::MutableObjectAddress{ &probe }, "true", context ) );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( probe._bInvulnerable ) );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( probe._bActive ) );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( probe._bCanJump ) );
+
     // 이름으로 텍스트를 쓰는 이관 도우미도 같다.
     sw::BitfieldTestActor target;
     target._bActive  = SW_TRUE;

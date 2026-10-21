@@ -356,8 +356,6 @@ namespace sw
         template <typename T>
         T* getValuePtr( void* pInstance ) const
         {
-            if ( _bIsBitField == SW_TRUE )
-                return nullptr;
             return static_cast<T*>( getRawPtr( pInstance ) );
         }
 
@@ -365,8 +363,6 @@ namespace sw
         template <typename T>
         const T* getValuePtr( const void* pInstance ) const
         {
-            if ( _bIsBitField == SW_TRUE )
-                return nullptr;
             return static_cast<const T*>( getRawPtr( pInstance ) );
         }
 
@@ -374,20 +370,26 @@ namespace sw
         bool hasValueAccessor() const noexcept { return _pValueAccessor != nullptr; }
 
         /**
-         * @brief 인스턴스 기준 프로퍼티 값의 원시 메모리 시작 포인터를 반환합니다.
+         * @brief 인스턴스 기준 프로퍼티 값의 원시 메모리 시작 포인터를 반환합니다. **비트필드는 nullptr 입니다.**
          * @details 보통은 `인스턴스 + _offset` 이다. 값이 객체 밖에 있는 프로퍼티는 `_pValueAccessor` 가 찾은 주소다.
          *          `getValue`, `setValue`, `getValuePtr`, 직렬화기는 모두 이 함수를 거쳐 값에 접근한다.
+         *          비트필드는 값 주소가 없다. 예전에는 그 비트가 든 바이트 주소를 줘서, 그 주소를 값 주소로 받은 쓰기(스키마 이관의 점 경로,
+         *          컴포넌트 기본값 패치)가 bool 을 통째로 써 같은 바이트의 다른 비트필드를 지웠다. 비트필드는 `getValue` · `setValue` 로만 읽고 쓴다.
          */
-        void* getRawPtr( void* pInstance ) const noexcept
+        [[nodiscard]] void* getRawPtr( void* pInstance ) const noexcept
         {
+            if ( _bIsBitField == SW_TRUE )
+                return nullptr;
             if ( _pValueAccessor != nullptr )
                 return _pValueAccessor( pInstance );
             return reinterpret_cast<utf8*>( pInstance ) + _offset;
         }
 
-        /** @brief 인스턴스 기준 프로퍼티 값의 원시 메모리 const 시작 포인터를 반환합니다. */
-        const void* getRawPtr( const void* pInstance ) const noexcept
+        /** @brief 인스턴스 기준 프로퍼티 값의 원시 메모리 const 시작 포인터를 반환합니다. 비트필드는 nullptr 입니다. */
+        [[nodiscard]] const void* getRawPtr( const void* pInstance ) const noexcept
         {
+            if ( _bIsBitField == SW_TRUE )
+                return nullptr;
             if ( _pValueAccessor != nullptr )
                 return _pValueAccessor( const_cast<void*>( pInstance ) );
             return reinterpret_cast<const utf8*>( pInstance ) + _offset;

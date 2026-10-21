@@ -252,10 +252,18 @@ namespace sw
 
     /**
      * @brief 텍스트 토큰을 대상 타입으로 파싱합니다(따옴표 제거, 숫자와 문자열 사이의 강제 변환).
-     * @details 쓰는 곳은 값 하나 자체의 주소입니다(`MutableValueAddress`). 프로퍼티 오프셋을 더한 주소는 `MutableValueAddress{ p }` 로 감싸 넘깁니다.
+     * @details 쓰는 곳은 값 하나 자체의 주소입니다(`MutableValueAddress`). 프로퍼티 값에 쓰려면 `applyPropertyTextCoerced` 를 씁니다(비트필드는 값 주소가 없습니다).
      */
     [[nodiscard]] SW_API bool parseTextValueCoerced( MutableValueAddress value, hashed_string typeName, string_view valStr,
                                                      const SerializeContext& context );
+
+    /**
+     * @brief 텍스트를 프로퍼티 하나에 강제 변환해 씁니다(`parseTextValueCoerced` 의 프로퍼티 판). @p instance 는 프로퍼티를 가진 **객체**의 주소입니다.
+     * @details 비트필드는 값 주소가 없어(`PropertyInfo::getRawPtr`) 임시 bool 에 읽은 뒤 그 비트만 씁니다.
+     * @return 읽지 못하거나 값 주소가 없으면 false 이고 값은 그대로입니다.
+     */
+    [[nodiscard]] SW_API bool applyPropertyTextCoerced( const PropertyInfo& prop, MutableObjectAddress instance, string_view valStr,
+                                                        const SerializeContext& context );
 
     /**
      * @brief 점 경로가 가리키는 프로퍼티와 그 프로퍼티를 가진 객체입니다(`resolvePropertyPath`).

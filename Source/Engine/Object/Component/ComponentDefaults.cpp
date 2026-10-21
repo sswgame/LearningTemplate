@@ -306,13 +306,20 @@ namespace sw
 
     void ComponentDefaults::applyPatch( void* pInstance, const DefaultPatch& patch )
     {
-        void* pPropPtr = patch._pProperty->getRawPtr( pInstance );
         if ( patch._bMemcpy == SW_TRUE )
         {
+            // 비트필드는 바이트로 담지 않는다(`isMemcpyProperty`). 값 주소가 없으면 패치를 만들 때 고른 갈래와 맞지 않는 것이라 쓰지 않는다.
+            void* const pPropPtr = patch._pProperty->getRawPtr( pInstance );
+            if ( pPropPtr == nullptr )
+            {
+                SW_LOG_ERROR( "Component default '%#' of '%#' has no value address - the field keeps its constructor value", patch._text, patch._pProperty->_name.c_str() );
+                return;
+            }
             Memory::copy( pPropPtr, patch._arrByte.data(), patch._arrByte.size() );
             return;
         }
-        if ( parseTextValueCoerced( MutableValueAddress{ pPropPtr }, patch._pProperty->_typeName, patch._text, SerializeContext::getDefault( SerializePurpose::Authoring ) ) == false )
+        // 프로퍼티 단위로 쓴다. 비트필드는 그 비트만 바뀐다(값 주소로 쓰면 같은 바이트의 다른 플래그를 덮었다).
+        if ( applyPropertyTextCoerced( *patch._pProperty, MutableObjectAddress{ pInstance }, patch._text, SerializeContext::getDefault( SerializePurpose::Authoring ) ) == false )
             SW_LOG_WARNING( "Component default '%#' of '%#' cannot be read - the field keeps its constructor value", patch._text, patch._pProperty->_name.c_str() );
     }
 
