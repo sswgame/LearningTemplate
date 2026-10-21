@@ -396,6 +396,7 @@ namespace sw
             _snapshot.clearParticles();
     }
 
+    // 길이 유지(긴 함수 정리 기준): 수집 · 압축 · 페이로드 · 배치 단계는 이미 나뉘어 있고, 남은 본문은 단계를 고르는 결정 순서와 그 이유 주석이다.
     void GPUSceneBuilder::populateMeshesFromScene( Scene* pScene, const float3& cameraPos )
     {
         GameObjectManager* pObjects = pScene != nullptr ? pScene->getObjectManager() : nullptr;

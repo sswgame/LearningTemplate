@@ -83,6 +83,58 @@ namespace sw
             }
             return false;
         }
+
+        /** @brief 패스의 깊이 · 블렌드 상태를 정합니다. 테이블이 구조적 사실이고 XML 은 그 안의 조정입니다. */
+        void applyPassDepthAndBlend( RHIPipelineStateDesc& desc, const RenderPassTypeInfo& info, const RenderGraphPassDesc* pPassDesc )
+        {
+            const bool bDepthTest         = info.hasFlag( RenderPassTraitFlag::kDepthTest );
+            const bool bDefaultDepthWrite = info.hasFlag( RenderPassTraitFlag::kDepthWrite );
+            const bool bDefaultBlend      = info.hasFlag( RenderPassTraitFlag::kBlend );
+            // 테이블의 깊이 테스트는 "이 패스가 지오메트리인가 풀스크린인가" 라는 구조적 사실이고 XML 은 그 안에서의 조정이다.
+            // 그래서 덮어쓰기가 아니라 AND 다. XML 로 끌 수는 있어도 켤 수는 없다(RenderGraphPassDesc 의 기본값이 true 라
+            // 덮어쓰면 풀스크린 패스에 깊이 테스트가 켜지고, DSV 없이 그리는 드로우마다 검증 오류가 난다).
+            const bool bPassDepthTest  = ( pPassDesc == nullptr ) || ( pPassDesc->_bEnableDepthTest != 0 );
+            const bool bPassDepthWrite = ( pPassDesc == nullptr ) || ( pPassDesc->_bEnableDepthWrite != 0 );
+            desc._bEnableDepthTest     = ( bDepthTest && bPassDepthTest ) ? 1 : 0;
+            desc._bEnableDepthWrite    = ( bDefaultDepthWrite && bPassDepthWrite ) ? 1 : 0;
+            desc._bEnableBlend         = pPassDesc != nullptr ? ( pPassDesc->_bEnableBlend != 0 ? 1 : 0 ) : ( bDefaultBlend ? 1 : 0 );
+            // 프리멀티플라이는 셰이더의 출력 규약이라 테이블이 정한다(XML 이 바꿀 수 없다. 곧은 알파로 섞으면 알파가 두 번 곱해진다).
+            const bool bPremultiplied = desc._bEnableBlend != 0 && info.hasFlag( RenderPassTraitFlag::kPremultipliedAlpha );
+            desc._bPremultipliedAlpha = bPremultiplied ? SW_TRUE : SW_FALSE;
+
+            // 뎁스를 쓰지 않는 패스(풀스크린)는 렌더 패스에 DSV 를 붙이지 않는데, desc 의 기본값이 D24 라서
+            // PSO 는 "뎁스 있음" 으로 만들어졌다. DX12 는 null DSV 를 PSO 뎁스 포맷이 UNKNOWN 일 때만
+            // 허용하므로 그런 패스의 드로우마다 검증 오류가 났다. 뎁스 테스트가 꺼져 있으면 뎁스 쓰기도
+            // 의미가 없으니 같이 끈다.
+            desc._depthStencilFormat = ( desc._bEnableDepthTest != 0 ) ? constant::kDepthStencilFormat : RHIFormat::Unknown;
+            if ( desc._bEnableDepthTest == 0 )
+                desc._bEnableDepthWrite = 0;
+        }
+
+        /**
+         * @brief 패스의 컬 모드를 정합니다. 뎁스와 같은 구조다. **패스가 무엇을 그리는가**가 먼저고 XML 은 그 안의 조정이다.
+         * @details 풀스크린 패스는 SV_VertexID 로 삼각형 하나를 만들어 화면을 덮는다. 그 삼각형의 와인딩은
+         *          셰이더가 정한 것이고 "앞/뒤" 라는 의미가 없으므로, 컬링을 걸면 화면이 통째로 비거나 그대로
+         *          나오거나 둘 중 하나다. 고를 값이 아니다.
+         *
+         *          주의: 이 기본값은 XML 에 패스를 적어 둔 경우에도 풀스크린 패스에 적용되어야 한다. XML 의 `Back` 을
+         *          그대로 따르면 풀스크린 패스(Shading, SSAO, Bloom, Outline, TAA, Tonemap, Present)가 오류도
+         *          경고도 없이 아무것도 그리지 않아 화면이 배경색뿐이다.
+         *          인버티드 헐(inverted hull) 외곽선은 앞면을 컬링한다(테이블의 kCullFront). XML 의 "Back" 은 그 기본값을 바꾸지 않는다.
+         */
+        void applyPassCullMode( RHIPipelineStateDesc& desc, const RenderPassTypeInfo& info, const RenderGraphPassDesc* pPassDesc, RenderPassType passType )
+        {
+            const bool        bFullscreenPass = ( FrameRendererUtil::drawsSceneMeshes( passType ) == false );
+            const RHICullMode meshCullMode    = info.hasFlag( RenderPassTraitFlag::kCullFront ) ? RHICullMode::Front : RHICullMode::Back;
+            desc._cullMode                    = bFullscreenPass ? RHICullMode::None : meshCullMode;
+            if ( pPassDesc == nullptr || bFullscreenPass )
+                return;
+            const string& cull = pPassDesc->_cullMode;
+            if ( cull == "None" || cull == "none" )
+                desc._cullMode = RHICullMode::None;
+            else if ( cull == "Front" || cull == "front" )
+                desc._cullMode = RHICullMode::Front;
+        }
     } // namespace
 
     RHIPipelineStateHandle FrameRenderer::createPSOForPassType( RenderPassType passType, const RHIFormat* pRtvFormatOverride )
@@ -92,65 +144,37 @@ namespace sw
 
         // 셰이더, define, 기본 렌더 상태는 패스 종류 테이블(RenderPassTypeInfo)이 정하고, 파이프라인 XML 의 패스 서술이 그 위를 조정한다.
         // 셰이더와 define 은 쿠커와 **같은 함수**(selectRenderPassShader)로 정한다. 어긋나면 Shipping 에서 매니페스트 미스가 난다.
-        const RenderPassTypeInfo&       info               = getRenderPassTypeInfo( passType );
-        const RenderGraphPassDesc*      pPassDesc          = findPassDescByType( passType );
-        const RenderPassShaderSelection shader             = selectRenderPassShader( passType, pPassDesc, engine::getSubsystem<EngineDefaultAssets>() );
-        const bool                      bDepthTest         = info.hasFlag( RenderPassTraitFlag::kDepthTest );
-        const bool                      bDefaultDepthWrite = info.hasFlag( RenderPassTraitFlag::kDepthWrite );
-        const bool                      bDefaultBlend      = info.hasFlag( RenderPassTraitFlag::kBlend );
-        const uint32                    numRenderTargets   = info._colorTargetCount;
-        const RHIFormat*                pRtvFormats        = pRtvFormatOverride != nullptr ? pRtvFormatOverride : info._pColorFormat;
+        const RenderPassTypeInfo&       info      = getRenderPassTypeInfo( passType );
+        const RenderGraphPassDesc*      pPassDesc = findPassDescByType( passType );
+        const RenderPassShaderSelection shader    = selectRenderPassShader( passType, pPassDesc, engine::getSubsystem<EngineDefaultAssets>() );
 
         RHIPipelineStateDesc desc{};
         desc._vertexShaderPath = shader._shaderPath;
         desc._pixelShaderPath  = desc._vertexShaderPath;
         desc._vertexEntryPoint = string( resolveEntryPoint( pPassDesc != nullptr ? string_view( pPassDesc->_vertexEntryPoint ) : string_view{}, ShaderStage::Vertex ) );
         desc._pixelEntryPoint  = string( resolveEntryPoint( pPassDesc != nullptr ? string_view( pPassDesc->_pixelEntryPoint ) : string_view{}, ShaderStage::Pixel ) );
-        // 테이블의 깊이 테스트는 "이 패스가 지오메트리인가 풀스크린인가" 라는 구조적 사실이고 XML 은 그 안에서의 조정이다.
-        // 그래서 덮어쓰기가 아니라 AND 다. XML 로 끌 수는 있어도 켤 수는 없다(RenderGraphPassDesc 의 기본값이 true 라
-        // 덮어쓰면 풀스크린 패스에 깊이 테스트가 켜지고, DSV 없이 그리는 드로우마다 검증 오류가 난다).
-        const bool bPassDepthTest  = ( pPassDesc == nullptr ) || ( pPassDesc->_bEnableDepthTest != 0 );
-        const bool bPassDepthWrite = ( pPassDesc == nullptr ) || ( pPassDesc->_bEnableDepthWrite != 0 );
-        desc._bEnableDepthTest     = ( bDepthTest && bPassDepthTest ) ? 1 : 0;
-        desc._bEnableDepthWrite    = ( bDefaultDepthWrite && bPassDepthWrite ) ? 1 : 0;
-        desc._bEnableBlend         = pPassDesc != nullptr ? ( pPassDesc->_bEnableBlend != 0 ? 1 : 0 ) : ( bDefaultBlend ? 1 : 0 );
-        // 프리멀티플라이는 셰이더의 출력 규약이라 테이블이 정한다(XML 이 바꿀 수 없다. 곧은 알파로 섞으면 알파가 두 번 곱해진다).
-        const bool bPremultiplied = desc._bEnableBlend != 0 && info.hasFlag( RenderPassTraitFlag::kPremultipliedAlpha );
-        desc._bPremultipliedAlpha = bPremultiplied ? SW_TRUE : SW_FALSE;
-
-        // 뎁스를 쓰지 않는 패스(풀스크린)는 렌더 패스에 DSV 를 붙이지 않는데, desc 의 기본값이 D24 라서
-        // PSO 는 "뎁스 있음" 으로 만들어졌다. DX12 는 null DSV 를 PSO 뎁스 포맷이 UNKNOWN 일 때만
-        // 허용하므로 그런 패스의 드로우마다 검증 오류가 났다. 뎁스 테스트가 꺼져 있으면 뎁스 쓰기도
-        // 의미가 없으니 같이 끈다.
-        desc._depthStencilFormat = ( desc._bEnableDepthTest != 0 ) ? constant::kDepthStencilFormat : RHIFormat::Unknown;
-        if ( desc._bEnableDepthTest == 0 )
-            desc._bEnableDepthWrite = 0;
-
-        // 컬 모드도 뎁스와 같은 구조다. **패스가 무엇을 그리는가**가 먼저고 XML 은 그 안의 조정이다.
-        // 풀스크린 패스는 SV_VertexID 로 삼각형 하나를 만들어 화면을 덮는다. 그 삼각형의 와인딩은
-        // 셰이더가 정한 것이고 "앞/뒤" 라는 의미가 없으므로, 컬링을 걸면 화면이 통째로 비거나 그대로
-        // 나오거나 둘 중 하나다. 고를 값이 아니다.
-        //
-        // 주의: 이 기본값은 XML 에 패스를 적어 둔 경우에도 풀스크린 패스에 적용되어야 한다. XML 의 `Back` 을
-        // 그대로 따르면 풀스크린 패스(Shading, SSAO, Bloom, Outline, TAA, Tonemap, Present)가 오류도
-        // 경고도 없이 아무것도 그리지 않아 화면이 배경색뿐이다.
-        // 인버티드 헐(inverted hull) 외곽선은 앞면을 컬링한다(테이블의 kCullFront). XML 의 "Back" 은 그 기본값을 바꾸지 않는다.
-        const bool        bFullscreenPass = ( FrameRendererUtil::drawsSceneMeshes( passType ) == false );
-        const RHICullMode meshCullMode    = info.hasFlag( RenderPassTraitFlag::kCullFront ) ? RHICullMode::Front : RHICullMode::Back;
-        desc._cullMode                    = bFullscreenPass ? RHICullMode::None : meshCullMode;
-        if ( pPassDesc != nullptr )
-        {
-            if ( bFullscreenPass == false )
-            {
-                const string& cull = pPassDesc->_cullMode;
-                if ( cull == "None" || cull == "none" )
-                    desc._cullMode = RHICullMode::None;
-                else if ( cull == "Front" || cull == "front" )
-                    desc._cullMode = RHICullMode::Front;
-            }
-        }
+        applyPassDepthAndBlend( desc, info, pPassDesc );
+        applyPassCullMode( desc, info, pPassDesc, passType );
         desc._listShaderDefine = shader._listDefine;
+        fillPassRenderTargetFormats( desc, pPassDesc, pRtvFormatOverride != nullptr ? pRtvFormatOverride : info._pColorFormat, info._colorTargetCount );
 
+        // 컬러 출력이 없는 패스(그림자, 뎁스 프리패스)는 픽셀 스테이지가 없다. 셰이더에 PSMain 이 있어도 붙이지
+        // 않는다. 주의: 여기서 정하지 않으면 백엔드마다 판단이 갈리고, 그 위에 머티리얼 define 을 적용한 변형
+        // (createMaterialPSOVariant 는 이 desc 를 그대로 물려받는다)은 쿠커가 쿠킹하지 않아 Shipping 에서 매니페스트 미스로
+        // 실패한다. 쿠커 쪽 같은 규칙은 FrameRendererUtil::hasPixelStage 다.
+        if ( desc._numRenderTargets == 0 )
+        {
+            desc._pixelShaderPath.clear();
+            desc._pixelEntryPoint.clear();
+        }
+        const RHIPipelineStateHandle handle = _pDevice->getResourceFactory()->createPipelineState( desc );
+        registerPSOLayout( handle, desc );
+        return handle;
+    }
+
+    void FrameRenderer::fillPassRenderTargetFormats( RHIPipelineStateDesc& desc, const RenderGraphPassDesc* pPassDesc, const RHIFormat* pRtvFormats,
+                                                     uint32 numRenderTargets ) const
+    {
         desc._numRenderTargets = numRenderTargets;
         if ( desc._numRenderTargets > kMaxColorAttachments )
             desc._numRenderTargets = kMaxColorAttachments;
@@ -175,19 +199,6 @@ namespace sw
                 desc._arrRtvFormat[rtIndex] = RHIFormat::R8G8B8A8_UNORM;
             }
         }
-
-        // 컬러 출력이 없는 패스(그림자, 뎁스 프리패스)는 픽셀 스테이지가 없다. 셰이더에 PSMain 이 있어도 붙이지
-        // 않는다. 주의: 여기서 정하지 않으면 백엔드마다 판단이 갈리고, 그 위에 머티리얼 define 을 적용한 변형
-        // (createMaterialPSOVariant 는 이 desc 를 그대로 물려받는다)은 쿠커가 쿠킹하지 않아 Shipping 에서 매니페스트 미스로
-        // 실패한다. 쿠커 쪽 같은 규칙은 FrameRendererUtil::hasPixelStage 다.
-        if ( desc._numRenderTargets == 0 )
-        {
-            desc._pixelShaderPath.clear();
-            desc._pixelEntryPoint.clear();
-        }
-        const RHIPipelineStateHandle handle = _pDevice->getResourceFactory()->createPipelineState( desc );
-        registerPSOLayout( handle, desc );
-        return handle;
     }
 
     RenderPSOCache::MaterialPSOEntry FrameRenderer::createMaterialPSOVariant( RHIPipelineStateHandle passPSO, RenderPassType passType,
@@ -276,93 +287,27 @@ namespace sw
         if ( _pDevice == nullptr )
             return;
 
-        // 이번 프레임에 만들 변형은 (패스, 퍼뮤테이션, 뷰 모드)로 정해진다. 보기 모드는 뷰마다의 설정이라 이번 프레임에 그리는 뷰들의 모드를 모은다.
-        // 뷰 설정은 프레임 시작에 정해지고 기록 중에 바뀌지 않으므로, 드로우가 고르는 PSO 는 여기서 준비한 집합 안에 있다.
-        uint32 viewModeMask = 1u << static_cast<uint32>( _mainView._settings._viewMode );
-        for ( const unique_ptr<ViewTarget>& pView : _listExtraView )
-        {
-            if ( pView->_bRenderThisFrame == SW_TRUE )
-                viewModeMask |= 1u << static_cast<uint32>( pView->_settings._viewMode );
-        }
-
         // 이번 프레임 배치가 실제로 쓰는 (퍼뮤테이션, 컬 반전) 조합만 본다. 불투명 패스와 반투명 패스는 배치 목록이 다르므로
         // 유리 머티리얼의 변형을 그림자 패스까지 만들어 두는 낭비가 없다.
-        // 퍼뮤테이션이 없는 배치(머티리얼을 붙이지 않은 메시)도 모은다. Lit 이 아니거나 거울 배치면 그 배치에도
-        // 변형이 필요하다. 그냥 건너뛰면 머티리얼 없는 메시만 뷰 모드와 컬 반전이 적용되지 않아 화면이 섞인다.
-        auto collect = []( vector_reference<const GPUMeshBatch> listBatch, vector<MaterialPSORequest>& outList )
-        {
-            for ( const GPUMeshBatch& batch : listBatch )
-            {
-                bool bFound{ false };
-                for ( const MaterialPSORequest& existing : outList )
-                {
-                    if ( existing._shaderPermutation == batch._shaderPermutation && existing._bReverseCulling == batch._bReverseCulling )
-                    {
-                        bFound = true;
-                        break;
-                    }
-                }
-                if ( bFound == false )
-                    outList.push_back( MaterialPSORequest{ batch._shaderPermutation, batch._bReverseCulling } );
-            }
-        };
-
-        bool                        bCreatedVariant{ false };
         vector<MaterialPSORequest>& listOpaqueRequest      = _listOpaquePSORequestScratch;
         vector<MaterialPSORequest>& listTransparentRequest = _listTransparentPSORequestScratch;
-        listOpaqueRequest.clear();
-        listTransparentRequest.clear();
-        collect( _gpuScene.getOpaqueBatches(), listOpaqueRequest );
-        collect( _gpuScene.getTransparentBatches(), listTransparentRequest );
+        collectMaterialPSORequests( _gpuScene.getOpaqueBatches(), listOpaqueRequest );
+        collectMaterialPSORequests( _gpuScene.getTransparentBatches(), listTransparentRequest );
         if ( listOpaqueRequest.empty() && listTransparentRequest.empty() )
             return;
 
-        // 만드는 것은 락 밖에서, 넣는 것만 락 안에서 한다. 셰이더 컴파일이 낄 수 있어 드로우 경로의
-        // 조회를 붙잡으면 안 된다. 세 곳이 같은 절차를 반복하던 것을 여기 하나로 모았다.
-        auto ensureVariant = [this, &bCreatedVariant]( RHIPipelineStateHandle passPSO, RenderPassType passType, const GPUShaderPermutation* pPermutation,
-                                                       uint64 permutationHash, bool bReverseCulling, RenderViewMode viewMode )
-        {
-            const uint64 key = RenderPSOCache::materialPSOKey( passPSO, permutationHash, viewMode, bReverseCulling );
-            if ( _pPSOCache->hasMaterialPSO( key ) )
-                return;
-            const RenderPSOCache::MaterialPSOEntry entry = createMaterialPSOVariant( passPSO, passType, pPermutation, viewMode, bReverseCulling );
-            _pPSOCache->setMaterialPSO( key, entry );
-            bCreatedVariant = true;
-        };
-
+        const uint32 viewModeMask = collectFrameViewModeMask();
+        bool         bCreatedVariant{ false };
         for ( const auto& [passType, passPSO] : _pPSOCache->getEnginePSOs() )
         {
             if ( passPSO == 0 || FrameRendererUtil::drawsSceneMeshes( passType ) == false )
                 continue;
             const bool                        bTransparentPass = getRenderPassTypeInfo( passType ).hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch );
             const vector<MaterialPSORequest>& listRequest      = bTransparentPass ? listTransparentRequest : listOpaqueRequest;
-
             for ( const MaterialPSORequest& request : listRequest )
             {
-                const bool bReverseCulling = ( request._bReverseCulling != SW_FALSE );
-                // 이 패스가 그리지 않는 배치(외곽선을 켜지 않은 머티리얼)의 변형은 만들지 않는다. 쿠커도 그것을 쿠킹하지 않는다.
-                const GPUShaderPermutation* pRequestPermutation =
-                    ( request._shaderPermutation == kInvalidShaderPermutation ) ? nullptr : _gpuScene.findShaderPermutation( request._shaderPermutation );
-                if ( FrameRendererUtil::drawsMaterialInPass( passType, pRequestPermutation != nullptr ? &pRequestPermutation->_listDefine : nullptr ) == false )
-                    continue;
-                for ( uint32 modeIndex = 0; modeIndex < static_cast<uint32>( RenderViewMode::Count ); ++modeIndex )
-                {
-                    if ( ( viewModeMask & ( 1u << modeIndex ) ) == 0 )
-                        continue;
-                    const RenderViewMode viewMode = static_cast<RenderViewMode>( modeIndex );
-                    if ( request._shaderPermutation == kInvalidShaderPermutation )
-                    {
-                        // 퍼뮤테이션이 없는 배치를 위한 변형이다. 적용하는 것이 뷰 모드와 컬 반전뿐이다. Lit 이고 거울이 아니면 만들 것이 없다
-                        // (그때는 패스 PSO 가 그대로 정답이고 psoForBatch 도 캐시를 보지 않는다).
-                        const bool bAppliesViewMode = ( viewMode != RenderViewMode::Lit ) && FrameRendererUtil::appliesViewMode( passType );
-                        if ( bAppliesViewMode || bReverseCulling )
-                            ensureVariant( passPSO, passType, nullptr, 0, bReverseCulling, viewMode );
-                        continue;
-                    }
-                    if ( pRequestPermutation == nullptr )
-                        continue;
-                    ensureVariant( passPSO, passType, pRequestPermutation, pRequestPermutation->_hash, bReverseCulling, viewMode );
-                }
+                if ( ensureRequestMaterialPSOs( passPSO, passType, request, viewModeMask ) )
+                    bCreatedVariant = true;
             }
         }
 
@@ -373,6 +318,84 @@ namespace sw
         // 여기는 아직 기록 시작 전이라 버퍼를 만들 수 있다. 새 변형을 만든 프레임에만 돈다.
         if ( bCreatedVariant )
             ensureMaterialFallbackBuffers();
+    }
+
+    uint32 FrameRenderer::collectFrameViewModeMask() const
+    {
+        // 이번 프레임에 만들 변형은 (패스, 퍼뮤테이션, 뷰 모드)로 정해진다. 보기 모드는 뷰마다의 설정이라 이번 프레임에 그리는 뷰들의 모드를 모은다.
+        // 뷰 설정은 프레임 시작에 정해지고 기록 중에 바뀌지 않으므로, 드로우가 고르는 PSO 는 여기서 준비한 집합 안에 있다.
+        uint32 viewModeMask = 1u << static_cast<uint32>( _mainView._settings._viewMode );
+        for ( const unique_ptr<ViewTarget>& pView : _listExtraView )
+        {
+            if ( pView->_bRenderThisFrame == SW_TRUE )
+                viewModeMask |= 1u << static_cast<uint32>( pView->_settings._viewMode );
+        }
+        return viewModeMask;
+    }
+
+    void FrameRenderer::collectMaterialPSORequests( vector_reference<const GPUMeshBatch> listBatch, vector<MaterialPSORequest>& outListRequest )
+    {
+        // 퍼뮤테이션이 없는 배치(머티리얼을 붙이지 않은 메시)도 모은다. Lit 이 아니거나 거울 배치면 그 배치에도
+        // 변형이 필요하다. 그냥 건너뛰면 머티리얼 없는 메시만 뷰 모드와 컬 반전이 적용되지 않아 화면이 섞인다.
+        outListRequest.clear();
+        for ( const GPUMeshBatch& batch : listBatch )
+        {
+            bool bFound{ false };
+            for ( const MaterialPSORequest& existing : outListRequest )
+            {
+                if ( existing._shaderPermutation == batch._shaderPermutation && existing._bReverseCulling == batch._bReverseCulling )
+                {
+                    bFound = true;
+                    break;
+                }
+            }
+            if ( bFound == false )
+                outListRequest.push_back( MaterialPSORequest{ batch._shaderPermutation, batch._bReverseCulling } );
+        }
+    }
+
+    bool FrameRenderer::ensureRequestMaterialPSOs( RHIPipelineStateHandle passPSO, RenderPassType passType, const MaterialPSORequest& request, uint32 viewModeMask )
+    {
+        const bool bReverseCulling = ( request._bReverseCulling != SW_FALSE );
+        // 이 패스가 그리지 않는 배치(외곽선을 켜지 않은 머티리얼)의 변형은 만들지 않는다. 쿠커도 그것을 쿠킹하지 않는다.
+        const GPUShaderPermutation* pRequestPermutation =
+            ( request._shaderPermutation == kInvalidShaderPermutation ) ? nullptr : _gpuScene.findShaderPermutation( request._shaderPermutation );
+        if ( FrameRendererUtil::drawsMaterialInPass( passType, pRequestPermutation != nullptr ? &pRequestPermutation->_listDefine : nullptr ) == false )
+            return false;
+        bool bCreatedVariant{ false };
+        for ( uint32 modeIndex = 0; modeIndex < static_cast<uint32>( RenderViewMode::Count ); ++modeIndex )
+        {
+            if ( ( viewModeMask & ( 1u << modeIndex ) ) == 0 )
+                continue;
+            const RenderViewMode viewMode = static_cast<RenderViewMode>( modeIndex );
+            if ( request._shaderPermutation == kInvalidShaderPermutation )
+            {
+                // 퍼뮤테이션이 없는 배치를 위한 변형이다. 적용하는 것이 뷰 모드와 컬 반전뿐이다. Lit 이고 거울이 아니면 만들 것이 없다
+                // (그때는 패스 PSO 가 그대로 정답이고 psoForBatch 도 캐시를 보지 않는다).
+                const bool bAppliesViewMode = ( viewMode != RenderViewMode::Lit ) && FrameRendererUtil::appliesViewMode( passType );
+                const bool bNeedsVariant    = bAppliesViewMode || bReverseCulling;
+                if ( bNeedsVariant && ensureMaterialPSOVariant( passPSO, passType, nullptr, 0, bReverseCulling, viewMode ) )
+                    bCreatedVariant = true;
+                continue;
+            }
+            if ( pRequestPermutation == nullptr )
+                continue;
+            if ( ensureMaterialPSOVariant( passPSO, passType, pRequestPermutation, pRequestPermutation->_hash, bReverseCulling, viewMode ) )
+                bCreatedVariant = true;
+        }
+        return bCreatedVariant;
+    }
+
+    bool FrameRenderer::ensureMaterialPSOVariant( RHIPipelineStateHandle passPSO, RenderPassType passType, const GPUShaderPermutation* pPermutation,
+                                                  uint64 permutationHash, bool bReverseCulling, RenderViewMode viewMode )
+    {
+        // 만드는 것은 락 밖에서, 넣는 것만 락 안에서 한다. 셰이더 컴파일이 낄 수 있어 드로우 경로의 조회를 붙잡으면 안 된다.
+        const uint64 key = RenderPSOCache::materialPSOKey( passPSO, permutationHash, viewMode, bReverseCulling );
+        if ( _pPSOCache->hasMaterialPSO( key ) )
+            return false;
+        const RenderPSOCache::MaterialPSOEntry entry = createMaterialPSOVariant( passPSO, passType, pPermutation, viewMode, bReverseCulling );
+        _pPSOCache->setMaterialPSO( key, entry );
+        return true;
     }
 
     void FrameRenderer::ensureParticlePSO()

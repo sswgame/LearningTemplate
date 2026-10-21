@@ -44,104 +44,89 @@ namespace sw
                 name = name.substr( 0, name.size() - 5 );
             return name;
         }
-    } // namespace
 
-    ShaderBindingKind ShaderBindingLayout::kindFromTypeLabel( string_view typeLabel )
-    {
-        return shaderBindingKindFromTypeLabel( typeLabel );
-    }
-
-    ShaderBindingLayout ShaderBindingLayout::make( const vector<pair<ShaderStage, const ShaderReflectionData*>>& listStageReflection )
-    {
-        ShaderBindingLayout layout;
-
-        auto slotKey = []( ShaderBindingKind kind, uint32 space, uint32 reg ) -> uint64
+        /** @brief (종류, space, register) 가 같은 바인딩을 한 슬롯으로 모읍니다. 스테이지마다 가시성만 더합니다. */
+        class ShaderBindingSlotCollector
         {
-            return ( static_cast<uint64>( kind ) << 48 ) ^ ( static_cast<uint64>( space ) << 24 ) ^ static_cast<uint64>( reg );
-        };
+        public:
+            explicit ShaderBindingSlotCollector( vector<ShaderBindingSlot>& listSlot )
+                : _listSlot{ listSlot } {}
 
-        unordered_map<uint64, uint32> mapKeyToIndex;
-
-        auto touchSlot = [&]( ShaderBindingKind kind, const hashed_string& name, uint32 space, uint32 reg,
-                              uint32 arrayCount, ShaderStageFlag visibility ) -> ShaderBindingSlot&
-        {
-            const uint64 key = slotKey( kind, space, reg );
-            auto         it  = mapKeyToIndex.find( key );
-            if ( it != mapKeyToIndex.end() )
+            ShaderBindingSlot& touch( ShaderBindingKind kind, const hashed_string& name, uint32 space, uint32 reg, uint32 arrayCount, ShaderStageFlag visibility )
             {
-                ShaderBindingSlot& slot = layout._listSlot[it->second];
-                slot._visibility        = static_cast<ShaderStageFlag>( static_cast<uint8>( slot._visibility ) | static_cast<uint8>( visibility ) );
-                if ( slot._name.getHash() == 0 )
-                    slot._name = name;
-                return slot;
+                const uint64 key = ( static_cast<uint64>( kind ) << 48 ) ^ ( static_cast<uint64>( space ) << 24 ) ^ static_cast<uint64>( reg );
+                const auto   it  = _mapKeyToIndex.find( key );
+                if ( it != _mapKeyToIndex.end() )
+                {
+                    ShaderBindingSlot& slot = _listSlot[it->second];
+                    slot._visibility        = static_cast<ShaderStageFlag>( static_cast<uint8>( slot._visibility ) | static_cast<uint8>( visibility ) );
+                    if ( slot._name.getHash() == 0 )
+                        slot._name = name;
+                    return slot;
+                }
+
+                ShaderBindingSlot slot{};
+                slot._name          = name;
+                slot._kind          = kind;
+                slot._space         = space;
+                slot._registerIndex = reg;
+                slot._arrayCount    = arrayCount;
+                slot._visibility    = visibility;
+
+                const uint32 index = static_cast<uint32>( _listSlot.size() );
+                _listSlot.push_back( std::move( slot ) );
+                _mapKeyToIndex[key] = index;
+                return _listSlot[index];
             }
 
-            ShaderBindingSlot slot{};
-            slot._name          = name;
-            slot._kind          = kind;
-            slot._space         = space;
-            slot._registerIndex = reg;
-            slot._arrayCount    = arrayCount;
-            slot._visibility    = visibility;
-
-            const uint32 index = static_cast<uint32>( layout._listSlot.size() );
-            layout._listSlot.push_back( std::move( slot ) );
-            mapKeyToIndex[key] = index;
-            return layout._listSlot[index];
-        };
-
-        for ( const auto& [stage, pReflection] : listStageReflection )
-        {
-            if ( pReflection == nullptr )
-                continue;
-            const ShaderStageFlag visibility = toShaderStageFlag( stage );
-
-            // 1) 상수 버퍼: 멤버 오프셋까지 채운다.
-            for ( const ShaderBufferInfo& cb : pReflection->_listConstantBuffer )
+            /** @brief 1) 상수 버퍼: 멤버 오프셋까지 채운다. */
+            void collectConstantBuffers( const ShaderReflectionData& reflection, ShaderStageFlag visibility )
             {
-                ShaderBindingSlot& slot = touchSlot( ShaderBindingKind::ConstantBuffer, hashed_string( static_cast<string_view>( cb._name ) ),
+                for ( const ShaderBufferInfo& cb : reflection._listConstantBuffer )
+                {
+                    ShaderBindingSlot& slot = touch( ShaderBindingKind::ConstantBuffer, hashed_string( static_cast<string_view>( cb._name ) ),
                                                      cb._registerSpace, cb._bindPoint, 1, visibility );
-                if ( slot._listCbMember.empty() )
-                {
-                    slot._listCbMember = cb._listVariable;
-                    slot._cbTotalSize  = cb._totalSize;
-                }
-                else if ( slot._cbTotalSize == 0 )
-                {
-                    slot._cbTotalSize = cb._totalSize;
+                    if ( slot._listCbMember.empty() )
+                    {
+                        slot._listCbMember = cb._listVariable;
+                        slot._cbTotalSize  = cb._totalSize;
+                    }
+                    else if ( slot._cbTotalSize == 0 )
+                    {
+                        slot._cbTotalSize = cb._totalSize;
+                    }
                 }
             }
 
-            // 2) 텍스처, 샘플러, 버퍼 바인딩
-            for ( const ShaderReflectedBinding& res : pReflection->_listResource )
+            /** @brief 2) 텍스처, 샘플러, 버퍼 바인딩. */
+            void collectResources( const ShaderReflectionData& reflection, ShaderStageFlag visibility )
             {
-                const ShaderBindingKind kind = shaderBindingKindFromTypeLabel( static_cast<string_view>( res._type ) );
-                if ( kind == ShaderBindingKind::Unknown )
-                    continue;
-                // CB 는 위에서 이미 멤버 정보까지 등록했으므로 가시성만 갱신한다.
-                if ( kind == ShaderBindingKind::ConstantBuffer )
+                for ( const ShaderReflectedBinding& res : reflection._listResource )
                 {
-                    touchSlot( kind, hashed_string( static_cast<string_view>( res._name ) ),
-                               res._registerSpace, res._bindPoint, 1, visibility );
-                    continue;
+                    const ShaderBindingKind kind = shaderBindingKindFromTypeLabel( static_cast<string_view>( res._type ) );
+                    if ( kind == ShaderBindingKind::Unknown )
+                        continue;
+                    // CB 는 위에서 이미 멤버 정보까지 등록했으므로 가시성만 갱신한다.
+                    const uint32 arrayCount = kind == ShaderBindingKind::ConstantBuffer ? 1u : res._bindCount;
+                    touch( kind, hashed_string( static_cast<string_view>( res._name ) ), res._registerSpace, res._bindPoint, arrayCount, visibility );
                 }
-                touchSlot( kind, hashed_string( static_cast<string_view>( res._name ) ),
-                           res._registerSpace, res._bindPoint, res._bindCount, visibility );
             }
-        }
 
-        // 3) 구조 버퍼 원소 stride: 리플렉션의 원소 레이아웃(_listStructuredElement)을 같은 이름의 슬롯에 붙인다.
-        //    이 슬롯에 설정하는 버퍼(GPUScene 머티리얼 데이터, 폴백 원소)는 이 stride 로 만들어야 한다.
-        for ( const auto& [stage, pReflection] : listStageReflection )
+        private:
+            vector<ShaderBindingSlot>&    _listSlot;
+            unordered_map<uint64, uint32> _mapKeyToIndex;
+        };
+
+        /** @brief 3) 구조 버퍼 원소 stride: 리플렉션의 원소 레이아웃(_listStructuredElement)을 같은 이름의 슬롯에 붙인다.
+         *  이 슬롯에 설정하는 버퍼(GPUScene 머티리얼 데이터, 폴백 원소)는 이 stride 로 만들어야 한다. */
+        void attachStructuredElementStrides( const ShaderReflectionData& reflection, vector<ShaderBindingSlot>& listSlot )
         {
-            if ( pReflection == nullptr )
-                continue;
-            for ( const ShaderBufferInfo& element : pReflection->_listStructuredElement )
+            for ( const ShaderBufferInfo& element : reflection._listStructuredElement )
             {
                 if ( element._totalSize == 0 )
                     continue;
                 const hashed_string name{ static_cast<string_view>( element._name ) };
-                for ( ShaderBindingSlot& slot : layout._listSlot )
+                for ( ShaderBindingSlot& slot : listSlot )
                 {
                     const bool bStructured         = ( slot._kind == ShaderBindingKind::StructuredBuffer || slot._kind == ShaderBindingKind::RwStructuredBuffer );
                     const bool bNeedsElementStride = bStructured && slot._name == name && slot._elementStride == 0;
@@ -152,6 +137,31 @@ namespace sw
                     }
                 }
             }
+        }
+    } // namespace
+
+    ShaderBindingKind ShaderBindingLayout::kindFromTypeLabel( string_view typeLabel )
+    {
+        return shaderBindingKindFromTypeLabel( typeLabel );
+    }
+
+    ShaderBindingLayout ShaderBindingLayout::make( const vector<pair<ShaderStage, const ShaderReflectionData*>>& listStageReflection )
+    {
+        ShaderBindingLayout        layout;
+        ShaderBindingSlotCollector collector( layout._listSlot );
+        for ( const auto& [stage, pReflection] : listStageReflection )
+        {
+            if ( pReflection == nullptr )
+                continue;
+            const ShaderStageFlag visibility = toShaderStageFlag( stage );
+            collector.collectConstantBuffers( *pReflection, visibility );
+            collector.collectResources( *pReflection, visibility );
+        }
+        // 원소 stride 는 모든 스테이지의 슬롯이 모인 뒤에 붙인다.
+        for ( const auto& [stage, pReflection] : listStageReflection )
+        {
+            if ( pReflection != nullptr )
+                attachStructuredElementStrides( *pReflection, layout._listSlot );
         }
 
         layout.rebuildIndex();

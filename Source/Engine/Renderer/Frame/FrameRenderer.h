@@ -855,6 +855,17 @@ namespace sw
         /// @brief `ensureMaterialPSOs` 가 이번 프레임 배치에서 모으는 변형 조건입니다. 중복이 없고, 프레임마다 다시 채웁니다.
         vector<MaterialPSORequest> _listOpaquePSORequestScratch;
         vector<MaterialPSORequest> _listTransparentPSORequestScratch;
+        /** @brief 이번 프레임에 그리는 뷰들의 보기 모드를 비트 집합으로 모읍니다(주 시점은 늘 들어갑니다). */
+        uint32 collectFrameViewModeMask() const;
+        /** @brief 배치 목록에서 (퍼뮤테이션, 컬 반전) 조합을 중복 없이 모읍니다. 퍼뮤테이션이 없는 배치도 넣습니다. */
+        static void collectMaterialPSORequests( vector_reference<const GPUMeshBatch> listBatch, vector<MaterialPSORequest>& outListRequest );
+        /** @brief 요청 하나에 대해 이번 프레임의 보기 모드마다 변형을 만들어 둡니다. @return 새 변형을 하나라도 만들었으면 true 입니다. */
+        bool ensureRequestMaterialPSOs( RHIPipelineStateHandle passPSO, RenderPassType passType, const MaterialPSORequest& request, uint32 viewModeMask );
+        /** @brief 변형 하나가 캐시에 없으면 만들어 넣습니다. @return 새로 만들었으면 true 입니다. */
+        bool ensureMaterialPSOVariant( RHIPipelineStateHandle passPSO, RenderPassType passType, const GPUShaderPermutation* pPermutation, uint64 permutationHash,
+                                       bool bReverseCulling, RenderViewMode viewMode );
+        /** @brief 패스 PSO 의 컬러 RT 수와 포맷을 정합니다. 고정 배열이 있으면 그것을, 없으면 출력 선언 순서를, 둘 다 없으면 RGBA8 을 씁니다. */
+        void fillPassRenderTargetFormats( RHIPipelineStateDesc& desc, const RenderGraphPassDesc* pPassDesc, const RHIFormat* pRtvFormats, uint32 numRenderTargets ) const;
         /// @brief 배치 하나가 한 프레임에 몇 개의 지오메트리 패스(그림자, 프리패스, 불투명, 반투명)에서 그려지는지의 어림값입니다.
         static constexpr uint32 _s_kDrawCbPassEstimate = 4;
         /// @brief 패스와 드로우별 상수 버퍼 슬롯 링입니다. 병렬 기록에서 드로우마다 하나씩 가져갑니다.
