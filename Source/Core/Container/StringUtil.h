@@ -84,7 +84,7 @@ namespace sw
          */
         static string escapeInvalidUtf8( string_view text );
         /**
-         * @brief @p text 의 @p inoutOffset 자리에서 UTF-8 글자 하나를 읽어 코드 포인트를 돌려주고, 오프셋을 그 글자 뒤로 옮깁니다.
+         * @brief @p text 의 @p inoutOffset 위치에서 UTF-8 글자 하나를 읽어 코드 포인트를 돌려주고, 오프셋을 그 글자 뒤로 옮깁니다.
          * @details 잘못된 바이트는 U+FFFD 로 읽고 한 바이트 이상 넘깁니다(무한 반복이 없습니다). 오프셋이 끝이면 0 을 돌려주고 옮기지 않습니다.
          */
         static uint32 decodeUtf8( string_view text, size_t& inoutOffset );
@@ -92,7 +92,7 @@ namespace sw
         static void appendUtf8( string& inoutText, uint32 codepoint );
         /**
          * @brief 바이트 오프셋이 몇째 줄 · 몇째 글자인지 셉니다(둘 다 1 부터). 열은 바이트가 아니라 UTF-8 글자 수입니다.
-         * @details 파서 오류를 `경로:줄:열` 로 적을 때 쓴다 — IDE 터미널은 그 꼴을 눌러 그 자리로 간다. 오프셋이 글 밖이면 끝 자리입니다.
+         * @details 파서 오류를 `경로:줄:열` 로 적을 때 쓴다 — IDE 터미널은 그 형식을 눌러 그 위치로 간다. 오프셋이 글 밖이면 끝 위치입니다.
          */
         static void getLineAndColumn( string_view text, size_t byteOffset, uint32& outLine, uint32& outColumn );
 
@@ -174,24 +174,24 @@ namespace sw
          */
         static bool contains( string_view str, string_view sub, bool bIgnoreCase = false ) noexcept;
 
-        /** @brief string_view 의 앞 공백을 뗀 뷰를 반환합니다. */
+        /** @brief string_view 의 앞 공백을 제거한 뷰를 반환합니다. */
         static string_view trimStart( string_view input );
-        /** @brief wstring_view 의 앞 공백을 뗀 뷰를 반환합니다. */
+        /** @brief wstring_view 의 앞 공백을 제거한 뷰를 반환합니다. */
         static wstring_view trimStart( wstring_view input );
 
-        /** @brief string_view 의 뒤 공백을 뗀 뷰를 반환합니다. */
+        /** @brief string_view 의 뒤 공백을 제거한 뷰를 반환합니다. */
         static string_view trimEnd( string_view input );
-        /** @brief wstring_view 의 뒤 공백을 뗀 뷰를 반환합니다. */
+        /** @brief wstring_view 의 뒤 공백을 제거한 뷰를 반환합니다. */
         static wstring_view trimEnd( wstring_view input );
 
-        /** @brief string_view 의 앞뒤 공백을 뗀 뷰를 반환합니다(할당 없음). */
+        /** @brief string_view 의 앞뒤 공백을 제거한 뷰를 반환합니다(할당 없음). */
         static string_view trim( string_view input );
-        /** @brief wstring_view 의 앞뒤 공백을 뗀 뷰를 반환합니다(할당 없음). */
+        /** @brief wstring_view 의 앞뒤 공백을 제거한 뷰를 반환합니다(할당 없음). */
         static wstring_view trim( wstring_view input );
 
         /**
          * @brief @p text 를 줄마다 나눠 @p callback( string_view line ) 을 부릅니다. 할당하지 않습니다.
-         * @details 줄 끝의 `\r` 하나를 떼므로 CRLF 글도 같은 줄을 냅니다. 빈 줄도 넘기지만, 글이 `\n` 으로 끝나면 그 뒤에 빈 줄을
+         * @details 줄 끝의 `\r` 하나를 제거하므로 CRLF 글도 같은 줄을 냅니다. 빈 줄도 넘기지만, 글이 `\n` 으로 끝나면 그 뒤에 빈 줄을
          *          하나 더 만들지 않습니다(빈 글은 줄이 없습니다). 콜백이 `bool` 을 돌려주면 false 에서 멈춥니다.
          */
         template <typename TCallback>
@@ -259,7 +259,7 @@ namespace sw
 
         /**
          * @brief 원본을 목적지에 복사합니다. **항상 NUL 로 끝나고**, 들어가지 않으면 자릅니다.
-         * @param length 목적지 **버퍼의 크기**(문자 수)입니다. 종료 문자 자리를 포함합니다.
+         * @param length 목적지 **버퍼의 크기**(문자 수)입니다. 종료 문자 몫을 포함합니다.
          * @details 플랫폼 함수에 맡기지 않습니다 — Windows 의 `strncpy_s( dst, length, src, length )` 는 원본이 종료 문자까지
          *          들어가지 않으면 목적지를 **빈 문자열로 만들고** 잘못된 매개변수 핸들러를 부르고, `::strncpy` 는 `length` 글자를
          *          복사하고 **종료 문자를 붙이지 않습니다.** 잘라 낼 때도 반드시 끝을 맺는 하나의 규칙으로 맞춥니다.
@@ -290,7 +290,7 @@ namespace sw
         [[nodiscard]] static bool parseBool( string_view token, bool bFallback = false );
         /**
          * @brief 불리언 토큰(`true` · `false` · `1` · `0` · `yes` · `no` · `on` · `off`, 대소문자 무시)을 읽습니다. 아니면 false 이고 값은 그대로입니다.
-         * @details `parseBool` 은 읽지 못한 글을 폴백으로 돌려줘 "ture" 가 조용히 false 가 됩니다 — 실패를 알아야 하는 자리는 이것을 씁니다.
+         * @details `parseBool` 은 읽지 못한 글을 폴백으로 돌려줘 "ture" 가 조용히 false 가 됩니다 — 실패를 알아야 하는 곳은 이것을 씁니다.
          */
         [[nodiscard]] static bool tryParseBool( string_view token, bool& outValue );
 

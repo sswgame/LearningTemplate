@@ -2,7 +2,7 @@
  * @file StandardInputReader.h
  * @brief 표준 입력의 명령 줄을 읽습니다 — 읽기 스레드가 줄을 모으고, 게임 스레드가 틱 · 프레임마다 꺼내 처리합니다.
  * @details 전용 서버의 콘솔 명령과, 부모 프로세스(에디터의 멀티 프로세스 재생)가 띄운 App 의 명령 채널이 같이 씁니다.
- *          표준 입력이 닫혀도(EOF — systemd · 서비스 · `< /dev/null`) 읽기 스레드만 끝나고 프로세스는 계속 돕니다(그 환경에서 서버가 기동 직후 내려간다).
+ *          표준 입력이 닫혀도(EOF — systemd · 서비스 · `< /dev/null`) 읽기 스레드만 끝나고 프로세스는 계속 돕니다(그 환경에서 서버가 기동 직후 종료된다).
  *          읽기 스레드는 멈출 수 있어야 합니다: POSIX 는 `poll( 0, 100 ms )` 뒤 `read`, Windows 는 표준 입력 종류마다 —
  *          콘솔이면 `WaitForSingleObject( 입력, 100 ms )` 로 키 입력이 있을 때만 읽고, 파이프면 `PeekNamedPipe` 를 50 ms 마다,
  *          그 밖(파일 · NUL)은 끝까지 읽고 스레드를 끝냅니다.
@@ -41,9 +41,9 @@ namespace sw
 
     private:
         void readLoop();
-        /** @brief 한 줄을 읽습니다. 멈춤 요청 · EOF 면 false — EOF 는 `_endOfInput` 을 세운다(종료가 아니다). 플랫폼 파일이 정의한다. */
+        /** @brief 한 줄을 읽습니다. 멈춤 요청 · EOF 면 false — EOF 는 `_endOfInput` 을 켠다(종료가 아니다). 플랫폼 파일이 정의한다. */
         [[nodiscard]] bool readLinePlatform( string& outLine );
-        /** @brief 쌓인 조각에서 줄 하나를 떼어 냅니다(끝의 CR 은 버린다). 줄이 아직 없으면 false 입니다. */
+        /** @brief 쌓인 조각에서 줄 하나를 분리합니다(끝의 CR 은 버린다). 줄이 아직 없으면 false 입니다. */
         bool takeLine( string& outLine );
 
     private:

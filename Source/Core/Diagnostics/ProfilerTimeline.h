@@ -2,7 +2,7 @@
  * @file ProfilerTimeline.h
  * @brief 계측 구간(`SW_PROFILE_SCOPE`)을 스레드마다 링 버퍼에 남기는 미니 타임라인입니다 — 켤 때만 기록합니다.
  * @details 에디터 프로파일러 패널의 Timeline 탭이 읽습니다. 빠른 확인(스레드 사이 겹침 · 기다림)은 이것으로, 긴 분석은 Tracy 로 합니다.
- *          유니티 Profiler 의 Timeline 보기가 에디터 안에 있는 것과 같은 자리입니다.
+ *          유니티 Profiler 의 Timeline 보기가 에디터 안에 있는 것에 해당합니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -47,7 +47,7 @@ namespace sw
     /**
      * @class ProfilerTimeline
      * @brief 계측 구간을 스레드마다 링 버퍼(스레드당 `kEventCapacity` 사건)에 남깁니다. 꺼져 있으면 스코프의 비용은 bool 하나 읽기입니다.
-     * @details 쓰는 쪽은 자기 스레드 버퍼 하나뿐이라 잠금이 없습니다. 버퍼는 그 스레드가 처음 기록할 때 만들고 타임라인이 내려갈 때까지 둡니다
+     * @details 쓰는 쪽은 자기 스레드 버퍼 하나뿐이라 잠금이 없습니다. 버퍼는 그 스레드가 처음 기록할 때 만들고 타임라인이 종료될 때까지 둡니다
      *          (스레드가 끝나도 남은 사건을 읽을 수 있게). 읽는 쪽(에디터 패널)은 버퍼마다 쓰기 수를 읽고 그 앞을 복사한 뒤, 복사하는 동안 덮였을 수
      *          있는 사건을 쓰기 수로 다시 골라 버립니다. 사건 칸은 relaxed 원자라 덮이는 중에 읽어도 데이터 레이스가 아닙니다.
      *          프레임 경계는 게임 스레드의 `FrameProfiler::beginFrame` 이 시작 시각 링에 남깁니다.
@@ -94,7 +94,7 @@ namespace sw
         /**
          * @brief 긴 캡처를 시작합니다 — 링과 따로, 스레드마다 @p maxEventsPerThread 사건까지 **처음부터** 모읍니다(오래된 것을 버리지 않는다).
          * @details 기록이 꺼져 있으면 켭니다(끝날 때 원래대로). 예산을 넘은 스레드는 더 담지 않고 잘림 표지만 남깁니다. 프레임 경계도 같은 수까지 담습니다.
-         *          켜 두는 동안 사건마다 벡터 덧붙이기 한 번이 더 듭니다(링 기록과 같은 자리에서). 이미 진행 중이면 처음부터 다시 시작합니다.
+         *          켜 두는 동안 사건마다 벡터 덧붙이기 한 번이 더 듭니다(링 기록과 같은 위치에서). 이미 진행 중이면 처음부터 다시 시작합니다.
          */
         void beginLongCapture( uint32 maxEventsPerThread );
         /** @brief 긴 캡처를 멈춥니다. 모은 사건은 `collectLongCapture` 로 읽습니다. 기록 상태는 시작 전으로 되돌립니다. */
@@ -116,7 +116,7 @@ namespace sw
     private:
         struct ThreadBuffer;
 
-        /** @brief 이 스레드의 버퍼입니다. 처음이면 만들어 등록합니다. 자리가 없으면 nullptr 입니다. */
+        /** @brief 이 스레드의 버퍼입니다. 처음이면 만들어 등록합니다. 슬롯이 없으면 nullptr 입니다. */
         ThreadBuffer* ensureThreadBuffer();
 
     private:
@@ -124,7 +124,7 @@ namespace sw
         atomic<uint64>        _arrFrameBeginNanos[kFrameCapacity];
         atomic<uint64>        _frameWriteCount;
         atomic<uint32>        _threadCount;
-        uint32                _generation; ///< 이 타임라인의 고유 번호 — 스레드 지역 캐시가 다른(이미 내려간) 타임라인의 버퍼를 쓰지 않게 한다
+        uint32                _generation; ///< 이 타임라인의 고유 번호 — 스레드 지역 캐시가 다른(이미 종료된) 타임라인의 버퍼를 쓰지 않게 한다
         atomic<bool>          _bRecording;
 #if SW_PROFILER_TRACE_ENABLED
         atomic<uint32> _longLimit; ///< 긴 캡처의 스레드당 사건 수 상한(0 = 꺼짐)

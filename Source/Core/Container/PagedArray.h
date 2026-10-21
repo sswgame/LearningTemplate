@@ -15,14 +15,14 @@ namespace sw
      * @brief 고정 크기 청크에 원소를 담아, 청크를 더 붙여도 이미 있는 원소의 주소가 바뀌지 않는 배열입니다.
      * @details `vector` 는 커질 때 재할당하면서 이미 넘겨준 원소 주소를 전부 무효로 만듭니다. 인덱스로 찾아 주소를
      *          돌려주는 표가 그 위에 있으면, 한 스레드가 원소를 더하는 순간 다른 스레드가 들고 있던 주소가 해제된
-     *          메모리를 가리킵니다. 이 배열은 청크를 따로 할당하고 청크 표 자체는 고정 크기라서 그런 무효화가 없습니다.
+     *          메모리를 가리킵니다. 이 배열은 청크를 따로 할당하고 청크 테이블 자체는 고정 크기라서 그런 무효화가 없습니다.
      *
      *          원소는 인덱스로 바로 씁니다(`ensure`). 청크는 처음 닿을 때 sw 할당자로(`sw_new_array`, 그때의 메모리 태그로 세입니다) 만들어지며, 모든 원소를 값 초기화한 뒤에
      *          청크 포인터를 release 로 발행합니다. 그래서 읽는 쪽(`find`)은 청크 포인터 하나만 acquire 로 읽으면 되고,
      *          아직 없는 청크면 nullptr 을 받습니다.
      *
      *          쓰는 곳은 둘입니다. `SlotHandleTable` 은 슬롯을 여기에 두고 RHI 가 드로우마다 락 없이 찾습니다.
-     *          `GameObjectManager` 는 objectID → GameObject* 표를 여기에 두고 핸들을 풀 때마다 락 없이 읽습니다.
+     *          `GameObjectManager` 는 objectID → GameObject* 테이블을 여기에 두고 핸들을 조회할 때마다 락 없이 읽습니다.
      *
      *          **동시성 계약**
      *          - `find` 는 락이 없고, 쓰기와 동시에 불러도 안전합니다.
@@ -34,7 +34,7 @@ namespace sw
      *
      * @tparam T                원소 타입. 값 초기화할 수 있어야 합니다.
      * @tparam kElementPerChunk 청크 하나의 원소 수. 2의 거듭제곱이면 인덱스 계산이 시프트와 마스크가 됩니다.
-     * @tparam kMaxChunk        청크 표의 칸 수. `kElementPerChunk * kMaxChunk` 가 다룰 수 있는 인덱스 범위입니다.
+     * @tparam kMaxChunk        청크 테이블의 슬롯 수. `kElementPerChunk * kMaxChunk` 가 다룰 수 있는 인덱스 범위입니다.
      */
     template <typename T, uint32 kElementPerChunk = 256, uint32 kMaxChunk = 4096>
     class PagedArray
@@ -109,7 +109,7 @@ namespace sw
             }
         }
 
-        /** @brief 모든 청크를 해제하고 청크 표를 비웁니다. 읽는 스레드가 없을 때만 부릅니다. */
+        /** @brief 모든 청크를 해제하고 청크 테이블을 비웁니다. 읽는 스레드가 없을 때만 부릅니다. */
         void releaseChunks()
         {
             for ( atomic<T*>& chunkSlot : _arrChunk )
@@ -121,7 +121,7 @@ namespace sw
         }
 
     private:
-        /** @brief 청크 포인터 표입니다. 한 번 발행한 청크는 `releaseChunks` 전까지 그 자리에 있습니다. */
+        /** @brief 청크 포인터 테이블입니다. 한 번 발행한 청크는 `releaseChunks` 전까지 그 위치에 있습니다. */
         atomic<T*> _arrChunk[kMaxChunk];
     };
 } // namespace sw

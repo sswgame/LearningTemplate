@@ -324,7 +324,7 @@ namespace sw
     inline void vector<T, Allocator>::valueInitializeRangeInternal( size_t first, size_t last )
     {
         constexpr bool bZeroBytesIsValue = std::is_arithmetic_v<T> || std::is_enum_v<T> || std::is_pointer_v<T>;
-        // 이보다 짧은 구간은 원소 루프로 둔다. 크기가 변수인 memset 은 함수 호출이라 한 칸씩 늘리는 `resize( size() + 1 )` 이
+        // 이보다 짧은 구간은 원소 루프로 둔다. 크기가 변수인 memset 은 함수 호출이라 한 개씩 늘리는 `resize( size() + 1 )` 이
         // 두 배 느려졌다(ContainerBenchTest Release 1.3 → 2.5 ns/op). 최적화 빌드는 짧은 루프를 저장 몇 개로 펼친다.
         constexpr size_t kMinBulkInitializeCount = 64;
         if constexpr ( bZeroBytesIsValue )
@@ -877,7 +877,7 @@ namespace sw
 
         // `value` 가 이 벡터 안의 원소일 수 있다. 형제 함수들(`push_back` 두 개 · `emplace_back` · `insert( pos, count, value )`)처럼
         // 손대기 전에 값을 떠 둔다. 여기서는 재할당이 없어도 위험하다. 아래 밀기 루프가
-        // `value` 가 가리키는 칸을 **먼저** 덮어쓰므로(`v.insert( v.begin(), std::move( v[2] ) )`) 엉뚱한 값이 들어간다.
+        // `value` 가 가리키는 슬롯을 **먼저** 덮어쓰므로(`v.insert( v.begin(), std::move( v[2] ) )`) 엉뚱한 값이 들어간다.
         // 재할당까지 겹치면 옛 버퍼가 해제된 뒤라 이미 해제된 메모리를 읽는다.
         T movedValue( std::move( value ) );
 
@@ -917,7 +917,7 @@ namespace sw
         if ( count == 0 )
             return _pData + offset;
 
-        // `value` 가 이 벡터 안의 원소일 수 있다(`v.insert( v.begin(), 3, v[0] )` 는 적법하다). 아래에서 그 자리를 덮어쓰고,
+        // `value` 가 이 벡터 안의 원소일 수 있다(`v.insert( v.begin(), 3, v[0] )` 는 적법하다). 아래에서 그 슬롯을 덮어쓰고,
         // 그 전에 reserveInternal 이 버퍼를 통째로 옮길 수도 있다. 그래서 손대기 전에 값으로 복사해 둔다.
         const T valueCopy = value;
 
@@ -929,8 +929,8 @@ namespace sw
         if ( _size + count > _capacity )
             reserveInternal( MathUtil::max( _capacity * 2, _size + count ) );
 
-        // 1) 뒤쪽 원소들을 count 칸 뒤로 민다. **뒤에서부터** 옮겨야 아직 읽지 않은 원소를 덮지 않는다.
-        //    목적지가 이미 살아 있는 칸이면 이동 대입, 초기화되지 않은 칸이면 placement new 다.
+        // 1) 뒤쪽 원소들을 count 개 뒤로 민다. **뒤에서부터** 옮겨야 아직 읽지 않은 원소를 덮지 않는다.
+        //    목적지가 이미 살아 있는 슬롯이면 이동 대입, 초기화되지 않은 슬롯이면 placement new 다.
         //    주의: 이 구분을 `itemIndex - count >= offset` 으로 하면 `count > _size` 일 때 그 뺄셈이 언더플로해 조건이
         //    언제나 참이 되고, **존재하지 않는 원소에서 이동해 온다**(`{10}` 에 `insert( begin, 2, 7 )` 이면 바로 걸린다).
         const size_t tailCount = _size - offset;
@@ -944,7 +944,7 @@ namespace sw
                 _pData[toIndex] = std::move( _pData[fromIndex] );
         }
 
-        // 2) 빈 자리 [offset, offset + count) 를 채운다. 원래 살아 있던 칸은 대입하고, 그 뒤 칸은 생성한다.
+        // 2) 빈 슬롯 [offset, offset + count) 를 채운다. 원래 살아 있던 슬롯은 대입하고, 그 뒤 슬롯은 생성한다.
         for ( size_t index = 0; index < count; ++index )
         {
             const size_t targetIndex = offset + index;
@@ -1106,7 +1106,7 @@ namespace sw
         else if ( count > _size )
         {
             // 용량을 넘으면 **두 배 이상**으로 늘린다. 그래야 `resize( size() + 1 )` 을 되풀이해도 재할당이 로그 횟수로 끝난다.
-            // 딱 `count` 만큼만 잡으면 한 칸 늘릴 때마다 통째로 옮겨서 N번에 O(N^2) 이 된다(std::vector 도 resize 에서 기하급수로 키운다).
+            // 딱 `count` 만큼만 잡으면 한 개 늘릴 때마다 통째로 옮겨서 N번에 O(N^2) 이 된다(std::vector 도 resize 에서 기하급수로 키운다).
             if ( count > _capacity )
                 reserveInternal( MathUtil::max( count, _capacity * 2 ) );
             valueInitializeRangeInternal( _size, count );

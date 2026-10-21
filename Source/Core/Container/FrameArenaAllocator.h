@@ -145,7 +145,7 @@ namespace sw
 
         /**
          * @brief minSize 이상을 담는 새 청크를 할당하고 현재 청크로 바꿉니다.
-         * @return 할당에 실패하면 false 이고, 그때 청크 표에는 **아무것도 넣지 않습니다.**
+         * @return 할당에 실패하면 false 이고, 그때 청크 테이블에는 **아무것도 넣지 않습니다.**
          */
         bool allocateNewChunk( size_t minSize );
 

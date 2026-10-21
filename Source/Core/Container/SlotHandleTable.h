@@ -1,6 +1,6 @@
 /**
  * @file SlotHandleTable.h
- * @brief SlotHandle 로 T 슬롯을 보관하는 표입니다. 핸들의 기본값은 무효입니다.
+ * @brief SlotHandle 로 T 슬롯을 보관하는 테이블입니다. 핸들의 기본값은 무효입니다.
  */
 #pragma once
 #include "Core/Common/StdHeaders.h"
@@ -216,7 +216,7 @@ namespace sw
             // "점유 중 + 옛 세대" 를 보고 비워지는 중인 값의 주소를 받아 간다.
             uint32 nextGeneration = ( slot.generation( std::memory_order_relaxed ) + 1u ) & Slot::kGenerationMask;
             if ( nextGeneration == 0 )
-                nextGeneration = 1; // 세대 0 은 무효 핸들 몫이다. 한 바퀴 돌면 건너뛴다.
+                nextGeneration = 1; // 세대 0 은 무효 핸들용으로 예약한다. 한 바퀴 돌면 건너뛴다.
             slot._state.store( nextGeneration, std::memory_order_release );
             _listFree.push_back( index );
         }

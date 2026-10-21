@@ -97,7 +97,7 @@ namespace sw
     class ScopeOwned : private LifetimeScopeEntry
     {
     public:
-        /** @brief @p pScope 가 소유하는 빈 자리입니다. nullptr 이면 전역 범위(`LifetimeScope::getGlobal`)입니다. */
+        /** @brief @p pScope 가 소유하는 빈 슬롯입니다. nullptr 이면 전역 범위(`LifetimeScope::getGlobal`)입니다. */
         constexpr explicit ScopeOwned( LifetimeScope* pScope = nullptr )
             : LifetimeScopeEntry{ &ScopeOwned::destroyValue }
             , _pScope{ pScope }
@@ -148,7 +148,7 @@ namespace sw
         T* find() const { return _pValue.load( std::memory_order_acquire ); }
 
     private:
-        /** @brief 범위가 닫힐 때 불립니다. 값을 소멸시키고 자리를 비웁니다. */
+        /** @brief 범위가 닫힐 때 불립니다. 값을 소멸시키고 슬롯을 비웁니다. */
         static void destroyValue( LifetimeScopeEntry& entry ) noexcept
         {
             ScopeOwned& owned = static_cast<ScopeOwned&>( entry );

@@ -1,7 +1,7 @@
 /**
  * @file RegistrationList.h
- * @brief 레지스트리의 공통 모양 둘입니다. `RegistrationList` 는 소유하지 않는 포인터 목록(중복 거절 · 정렬 · 이름 찾기 · 훑기 · 이름 사본),
- *        `NameRegistry` 는 이름 → 값을 소유하는 표(중복 거절 또는 덮어쓰기 · 이름 찾기 · 등록 순서 훑기 · 조건 빼기)입니다.
+ * @brief 레지스트리의 공통 구조 둘입니다. `RegistrationList` 는 소유하지 않는 포인터 목록(중복 거절 · 정렬 · 이름 찾기 · 훑기 · 이름 사본),
+ *        `NameRegistry` 는 이름 → 값을 소유하는 테이블(중복 거절 또는 덮어쓰기 · 이름 찾기 · 등록 순서 훑기 · 조건 제거)입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -16,11 +16,11 @@ namespace sw
 {
     /**
      * @struct RegistrationReloadScope
-     * @brief 핫 리로드가 **교체 이미지**를 올리는 동안 켜 두는 표지입니다(`LiveReloadManager` 가 새 이미지를 올리는 동안 잡는다). 켜진 동안 `RegistrationList::add` 는
+     * @brief 핫 리로드가 **교체 이미지**를 올리는 동안 켜 두는 플래그입니다(`LiveReloadManager` 가 새 이미지를 올리는 동안 잡는다). 켜진 동안 `RegistrationList::add` 는
      *        같은 이름의 등록을 거절하지 않고 **대체**합니다.
      * @details 새 이미지의 정적 등록자는 옛 이미지가 아직 도는 동안 돈다. 옛 등록이 이름을 쥐고 있어 새 등록이 거절되면, 옛 이미지가 내려간 뒤 그 이름이 아무것도 가리키지 않는다
      *          (리로드한 개발 명령 · 탐침 · 시나리오 단계가 사라진다). 대체된 옛 등록은 목록이 그림자로 보관한다 — 옛 이미지가 내려가며 빼면 버리고, 새 이미지가 취소되면 되살린다.
-     *          표지는 프로세스에 하나이고 게임 스레드에서만 쓴다(정적 초기화가 로드하는 스레드에서 돈다). 중첩할 수 있다.
+     *          플래그는 프로세스에 하나이고 게임 스레드에서만 쓴다(정적 초기화가 로드하는 스레드에서 돈다). 중첩할 수 있다.
      */
     struct SW_API RegistrationReloadScope
     {
@@ -49,7 +49,7 @@ namespace sw
         RegistrationListBase( const RegistrationListBase& )            = delete;
         RegistrationListBase& operator=( const RegistrationListBase& ) = delete;
 
-        /** @brief 목록의 이름입니다(만든 곳이 정한 영문 식별자 — 정적 표는 소유 레지스트리 이름, 인스턴스 표는 멤버 역할). */
+        /** @brief 목록의 이름입니다(만든 곳이 정한 영문 식별자 — 정적 테이블은 소유 레지스트리 이름, 인스턴스 테이블은 멤버 역할). */
         const utf8* getListName() const { return _pListName; }
 
         /** @brief 올라 있는 항목 수입니다. */
@@ -99,7 +99,7 @@ namespace sw
 
     /**
      * @class RegistrationList
-     * @brief 엔진 · 에디터 레지스트리가 같은 모양으로 드는 목록입니다. 항목은 소유하지 않습니다(수명은 등록한 쪽).
+     * @brief 엔진 · 에디터 레지스트리가 같은 구조로 보관하는 목록입니다. 항목은 소유하지 않습니다(수명은 등록한 쪽).
      * @details 레지스트리마다 다시 짜기 쉬운 다섯 가지를 한 곳에 둡니다:
      *          - **중복 거절**: 같은 객체는 한 번만 오르고(`AlreadyPresent`), 이름을 주면 같은 이름의 다른 객체를 거절합니다(`DuplicateName`).
      *          - **정렬**: 등록 순서 또는 (순서 값, 이름). 빼기는 순서를 지킵니다.
@@ -115,7 +115,7 @@ namespace sw
      *
      *          **잠금은 들지 않습니다.** 여러 스레드가 만지는 레지스트리(카메라 · 빛 · 모듈 언로드 리스너)는 자기 잠금 안에서 부릅니다 — 그 잠금이
      *          "가장 안쪽" 이라는 각자의 규칙을 그대로 지키게 하려는 것입니다. 항목 수가 많고 슬롯 인덱스로 O(1) 빼기를 하는 레지스트리(프리미티브 ·
-     *          틱 · 콜라이더)는 이 모양이 아닙니다.
+     *          틱 · 콜라이더)는 이 구조가 아닙니다.
      */
     template <typename T>
     class RegistrationList final : public RegistrationListBase
@@ -216,7 +216,7 @@ namespace sw
             return true;
         }
 
-        /** @brief 모두 뺍니다(그림자도). */
+        /** @brief 모두 제거합니다(그림자도). */
         void clear()
         {
             _listItem.clear();
@@ -229,7 +229,7 @@ namespace sw
 
         /**
          * @brief 저장소를 지금 항목 수에 맞춰 다시 잡습니다(비었으면 놓기만 합니다). 순서와 이름은 그대로입니다.
-         * @details 엔진 종료 끝이 부릅니다 — 내려간 모듈이 키운 용량과, Debug STL 이 원소를 옮길 때 그 자리 태그로 새로 잡은 문자열 프록시를 돌려놓습니다.
+         * @details 엔진 종료 끝이 부릅니다 — 언로드된 모듈이 키운 용량과, Debug STL 이 원소를 옮길 때 그 자리 태그로 새로 잡은 문자열 프록시를 돌려놓습니다.
          */
         void shrinkToFit()
         {
@@ -321,7 +321,7 @@ namespace sw
             return false;
         }
 
-        /** @brief 올라 있던 항목이 빠졌고 그 이름의 그림자가 있으면 가장 나중 것을 되살립니다(새 이미지가 취소돼 옛 등록이 돌아온다). */
+        /** @brief 올라 있던 항목이 제거됐고 그 이름의 그림자가 있으면 가장 나중 것을 복원합니다(새 이미지가 취소돼 옛 등록이 돌아온다). */
         void restoreShadow( const string& name )
         {
             for ( size_t index = _listShadowItem.size(); index > 0; --index )
@@ -365,8 +365,8 @@ namespace sw
 
     private:
         vector<T*>        _listItem;        ///< 항목(순서대로). 훑기가 이것만 읽는다
-        vector<string>    _listName;        ///< 항목마다 올릴 때 복사한 이름(같은 자리)
-        vector<int32>     _listOrder;       ///< 항목마다 정렬 값(같은 자리)
+        vector<string>    _listName;        ///< 항목마다 올릴 때 복사한 이름(같은 인덱스)
+        vector<int32>     _listOrder;       ///< 항목마다 정렬 값(같은 인덱스)
         vector<T*>        _listShadowItem;  ///< 리로드의 교체 등록에 이름을 내준 옛 항목(옛 이미지가 내려갈 때까지 보관)
         vector<string>    _listShadowName;  ///< 그림자 항목의 이름
         vector<int32>     _listShadowOrder; ///< 그림자 항목의 정렬 값
@@ -381,7 +381,7 @@ namespace sw
     /**
      * @class NameRegistry
      * @brief 이름(`hashed_string`, 대소문자 무시) → 값을 **소유하는** 레지스트리입니다. 값은 등록 순서로 연속 배열에 둡니다.
-     * @details 값을 들고 있어야 하는 표(변환기 · 활동 종류 · 연산 · 패널 그리기 함수)가 같은 모양으로 씁니다. 빈 이름은 받지 않습니다.
+     * @details 값을 보관해야 하는 테이블(변환기 · 활동 종류 · 연산 · 패널 그리기 함수)가 같은 구조로 씁니다. 빈 이름은 받지 않습니다.
      *          `find` 가 돌려준 포인터는 다음 `add` · `addOrReplace`(새 이름) · `removeIf` · `clear` 까지만 유효합니다.
      *          잠금은 들지 않습니다 — 여러 스레드가 만지면 쓰는 쪽이 자기 잠금 안에서 부릅니다.
      */
@@ -405,7 +405,7 @@ namespace sw
             return true;
         }
 
-        /** @brief 값을 올립니다. 같은 이름이 있으면 그 자리(순서)에서 값을 바꿉니다. 빈 이름은 무시합니다. */
+        /** @brief 값을 올립니다. 같은 이름이 있으면 그 위치(순서)에서 값을 바꿉니다. 빈 이름은 무시합니다. */
         void addOrReplace( const hashed_string& name, T value )
         {
             if ( name.empty() )
@@ -435,7 +435,7 @@ namespace sw
             return index == kNotFound ? nullptr : &_listValue[index];
         }
 
-        /** @brief @p predicate( const T& ) 가 true 인 값을 모두 뺍니다(남은 것의 순서는 그대로). 뺀 수입니다. */
+        /** @brief @p predicate( const T& ) 가 true 인 값을 모두 제거합니다(남은 것의 순서는 그대로). 뺀 수입니다. */
         template <typename Predicate>
         uint32 removeIf( Predicate predicate )
         {
@@ -451,7 +451,7 @@ namespace sw
             return removedCount;
         }
 
-        /** @brief 모두 뺍니다. */
+        /** @brief 모두 제거합니다. */
         void clear()
         {
             _listName.clear();
@@ -481,7 +481,7 @@ namespace sw
         }
 
     private:
-        vector<hashed_string> _listName;  ///< 값마다 올린 이름(같은 자리)
+        vector<hashed_string> _listName;  ///< 값마다 올린 이름(같은 인덱스)
         vector<T>             _listValue; ///< 값(등록 순서)
     };
 } // namespace sw

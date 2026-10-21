@@ -16,7 +16,7 @@
  *    같은 코드가 빌드 옵션에 따라 달라졌을 것입니다.
  * 6. 구성: 두 구성이 같은 구현입니다.
  *          `SW_ENABLE_STL_CONTAINER` 구성도 같은 구현이고 바뀌는 것은 안쪽 `vector` 의 할당자뿐입니다. 순회 순서(넣은 순서, `erase` 는 마지막 원소를
- *          빈 자리로 옮긴다)와 무효화 규칙이 구성마다 달라지지 않게 하려고 `std::` 해시 컨테이너로 바꾸지 않습니다.
+ *          빈 슬롯으로 옮긴다)와 무효화 규칙이 구성마다 달라지지 않게 하려고 `std::` 해시 컨테이너로 바꾸지 않습니다.
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -34,7 +34,7 @@ namespace sw
      * @class unordered_map
      * @brief 데이터 지향(DoD) 밀집 배열 기반의 해시맵입니다.
      *
-     * 주의: `erase` 는 마지막 원소를 빈 자리로 옮기는 방식(swap-and-pop)이라, 기존 이터레이터가 무효화될 수 있습니다(두 구성 같음).
+     * 주의: `erase` 는 마지막 원소를 빈 슬롯으로 옮기는 방식(swap-and-pop)이라, 기존 이터레이터가 무효화될 수 있습니다(두 구성 같음).
      */
     template <typename Key, typename T, typename Hash = DefaultHash<Key>, typename KeyEqual = std::equal_to<>, typename Allocator = Allocator<pair<const Key, T>>>
     class unordered_map
@@ -114,26 +114,20 @@ namespace sw
             using pointer           = value_type*;
             using reference         = value_type&;
 
-            /** @brief 맵과 밀집 배열 인덱스로 만듭니다. */
             iterator( unordered_map* pMap, size_t index )
                 : _pMap{ pMap }
                 , _index{ index } {}
 
-            /** @brief 다음 원소로 넘어갑니다. */
             iterator& operator++()
             {
                 ++_index;
                 return *this;
             }
 
-            /** @brief 같은지 비교합니다. */
-            bool operator==( const iterator& other ) const { return _index == other._index; }
-            /** @brief 다른지 비교합니다. */
-            bool operator!=( const iterator& other ) const { return _index != other._index; }
-            /** @brief 역참조합니다. */
+            bool      operator==( const iterator& other ) const { return _index == other._index; }
+            bool      operator!=( const iterator& other ) const { return _index != other._index; }
             reference operator*() const { return *reinterpret_cast<pointer>( const_cast<pair<Key, T>*>( &std::as_const( _pMap->_listDenseData ).data()[_index]._keyValuePair ) ); }
-            /** @brief 멤버에 접근합니다. */
-            pointer operator->() const { return reinterpret_cast<pointer>( const_cast<pair<Key, T>*>( &std::as_const( _pMap->_listDenseData ).data()[_index]._keyValuePair ) ); }
+            pointer   operator->() const { return reinterpret_cast<pointer>( const_cast<pair<Key, T>*>( &std::as_const( _pMap->_listDenseData ).data()[_index]._keyValuePair ) ); }
 
             unordered_map* _pMap;
             size_t         _index;
@@ -149,7 +143,6 @@ namespace sw
             using pointer           = const value_type*;
             using reference         = const value_type&;
 
-            /** @brief 맵과 밀집 배열 인덱스로 만듭니다. */
             const_iterator( const unordered_map* pMap, size_t index )
                 : _pMap{ pMap }
                 , _index{ index } {}
@@ -164,14 +157,10 @@ namespace sw
                 return *this;
             }
 
-            /** @brief 같은지 비교합니다. */
-            bool operator==( const const_iterator& other ) const { return _index == other._index; }
-            /** @brief 다른지 비교합니다. */
-            bool operator!=( const const_iterator& other ) const { return _index != other._index; }
-            /** @brief 역참조합니다. */
+            bool      operator==( const const_iterator& other ) const { return _index == other._index; }
+            bool      operator!=( const const_iterator& other ) const { return _index != other._index; }
             reference operator*() const { return *reinterpret_cast<pointer>( &std::as_const( _pMap->_listDenseData ).data()[_index]._keyValuePair ); }
-            /** @brief 멤버에 접근합니다. */
-            pointer operator->() const { return reinterpret_cast<pointer>( &std::as_const( _pMap->_listDenseData ).data()[_index]._keyValuePair ); }
+            pointer   operator->() const { return reinterpret_cast<pointer>( &std::as_const( _pMap->_listDenseData ).data()[_index]._keyValuePair ); }
 
             const unordered_map* _pMap;
             size_t               _index;
@@ -216,7 +205,6 @@ namespace sw
             SW_SCOPED_RACE_WRITE_OTHER( other );
         }
 
-        /** @brief 복사 대입합니다. */
         unordered_map& operator=( const unordered_map& other )
         {
             if ( this != &other )
@@ -230,7 +218,6 @@ namespace sw
             return *this;
         }
 
-        /** @brief 이동 대입합니다. */
         unordered_map& operator=( unordered_map&& other ) noexcept
         {
             if ( this != &other )
@@ -244,14 +231,12 @@ namespace sw
             return *this;
         }
 
-        /** @brief 시작 이터레이터를 반환합니다. */
         iterator begin() noexcept
         {
             SW_SCOPED_RACE_READ();
             return iterator( this, 0 );
         }
 
-        /** @brief 끝 이터레이터를 반환합니다. */
         iterator end() noexcept
         {
             SW_SCOPED_RACE_READ();
@@ -285,14 +270,12 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 2) 조회 — 밀집 순회 · 버킷 검색
         // ------------------------------------------------------------------------------
-        /** @brief 비어 있는지 반환합니다. */
         bool empty() const noexcept
         {
             SW_SCOPED_RACE_READ();
             return _listDenseData.empty();
         }
 
-        /** @brief 원소 개수를 반환합니다. */
         size_type size() const noexcept
         {
             SW_SCOPED_RACE_READ();
@@ -313,7 +296,6 @@ namespace sw
             }
         }
 
-        /** @brief 키를 찾습니다. */
         iterator find( const Key& key )
         {
             SW_SCOPED_RACE_READ();
@@ -333,7 +315,6 @@ namespace sw
             return end();
         }
 
-        /** @brief 키를 찾습니다. */
         const_iterator find( const Key& key ) const
         {
             SW_SCOPED_RACE_READ();
@@ -418,14 +399,11 @@ namespace sw
         template <typename K, typename = std::enable_if_t<!std::is_same_v<std::decay_t<K>, Key>>>
         size_type count( const K& key ) const { return find( key ) != end() ? 1 : 0; }
 
-        /** @brief 키가 있는지 반환합니다. */
         bool contains( const Key& key ) const { return find( key ) != end(); }
 
-        /** @brief 이종 키가 있는지 반환합니다. */
         template <typename K, typename = std::enable_if_t<!std::is_same_v<std::decay_t<K>, Key>>>
         bool contains( const K& key ) const { return find( key ) != end(); }
 
-        /** @brief 키에 해당하는 값을 반환합니다. 없으면 기본값으로 만들어 넣습니다. */
         T& operator[]( const Key& key )
         {
             SW_SCOPED_RACE_WRITE();
@@ -446,7 +424,6 @@ namespace sw
             return _listDenseData[newIndex]._keyValuePair.second;
         }
 
-        /** @brief 키에 해당하는 값을 반환합니다. 없으면 기본값으로 만들어 넣습니다. */
         T& operator[]( Key&& key )
         {
             SW_SCOPED_RACE_WRITE();
@@ -467,7 +444,6 @@ namespace sw
             return _listDenseData[newIndex]._keyValuePair.second;
         }
 
-        /** @brief 원소를 삽입합니다. */
         pair<iterator, bool> insert( const value_type& value )
         {
             SW_SCOPED_RACE_WRITE();
@@ -512,7 +488,6 @@ namespace sw
             return emplace( std::move( k ), T( std::forward<Args>( args )... ) );
         }
 
-        /** @brief 원소를 제자리에서 생성해 넣습니다. */
         template <typename... Args>
         pair<iterator, bool> emplace( Args&&... args )
         {
@@ -542,7 +517,6 @@ namespace sw
             return { iterator( this, newIndex ), true };
         }
 
-        /** @brief pos 가 가리키는 원소를 제거합니다. */
         iterator erase( iterator pos )
         {
             if ( pos == end() )
@@ -551,7 +525,6 @@ namespace sw
             return iterator( this, pos._index );
         }
 
-        /** @brief pos 가 가리키는 원소를 제거합니다. */
         iterator erase( const_iterator pos )
         {
             if ( pos == end() )
@@ -610,7 +583,6 @@ namespace sw
             return { iterator( this, newIndex ), true };
         }
 
-        /** @brief 키와 같은 원소를 제거하고, 제거한 개수를 반환합니다. */
         size_type erase( const Key& key )
         {
             SW_SCOPED_RACE_WRITE();
@@ -626,7 +598,7 @@ namespace sw
             {
                 if ( get_equal()( _listDenseData[currentIndex]._keyValuePair.first, key ) )
                 {
-                    // 버킷 체인에서 뗀다
+                    // 버킷 체인에서 분리한다
                     if ( previousIndex == kEmptySlot )
                         _listBucket[bucketIndex] = _listDenseData[currentIndex]._next;
                     else
@@ -635,7 +607,7 @@ namespace sw
                     const size_t lastIndex = _listDenseData.size() - 1;
                     if ( currentIndex != lastIndex )
                     {
-                        // 마지막 원소를 currentIndex 자리로 옮긴다.
+                        // 마지막 원소를 currentIndex 위치로 옮긴다.
                         _listDenseData[currentIndex] = std::move( _listDenseData[lastIndex] );
 
                         // lastIndex 를 가리키던 버킷 체인이 currentIndex 를 가리키게 바꾼다.
@@ -688,7 +660,7 @@ namespace sw
             rebuild_buckets( bucketCount );
         }
 
-        /** @brief 버킷 표를 bucketCount(2의 거듭제곱) 개로 다시 만들고 밀집 배열의 체인을 다시 잇습니다. */
+        /** @brief 버킷 테이블을 bucketCount(2의 거듭제곱) 개로 다시 만들고 밀집 배열의 체인을 다시 연결합니다. */
         void rebuild_buckets( size_t bucketCount )
         {
             _listBucket.assign( bucketCount, kEmptySlot );
@@ -705,7 +677,7 @@ namespace sw
         void reserve( size_type count ) { rehash( count ); }
 
         /**
-         * @brief 남는 용량을 놓습니다. 비었으면 버킷 표와 밀집 배열의 버퍼를 모두 놓아 처음 상태로 돌아갑니다.
+         * @brief 남는 용량을 놓습니다. 비었으면 버킷 테이블과 밀집 배열의 버퍼를 모두 놓아 처음 상태로 돌아갑니다.
          * @details `clear()` 는 용량을 남긴다(다시 채울 때 할당하지 않도록). 버퍼까지 놓는 비우기는 `clear()` + `shrink_to_fit()` 이다.
          *          원소가 있으면 버킷 수를 원소 수 이상인 가장 작은 2의 거듭제곱(최소 `kMinBucketCount`)으로 줄인다.
          */

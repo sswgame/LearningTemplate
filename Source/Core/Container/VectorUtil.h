@@ -48,8 +48,8 @@ namespace sw
 
     public:
         /**
-         * @brief `index` 자리의 원소를 지우고 마지막 원소를 그 자리로 옮깁니다. 순서를 지키지 않는 O(1) 삭제입니다(언리얼 `TArray::RemoveAtSwap`).
-         * @details 옮겨 온 원소는 이제 `index` 에 있습니다. 원소가 제 자리를 따로 기억한다면 부르는 쪽이 그것을 고칩니다. 마지막 원소를 지울 때는
+         * @brief `index` 위치의 원소를 지우고 마지막 원소를 그 위치로 옮깁니다. 순서를 지키지 않는 O(1) 삭제입니다(언리얼 `TArray::RemoveAtSwap`).
+         * @details 옮겨 온 원소는 이제 `index` 에 있습니다. 원소가 제 위치를 따로 기억한다면 부르는 쪽이 그것을 고칩니다. 마지막 원소를 지울 때는
          *          옮기지 않습니다. 옮기기는 이동이라 이동만 되는 원소(`unique_ptr`)도 됩니다.
          */
         template <typename TVector>
@@ -133,7 +133,7 @@ namespace sw
         /**
          * @brief `predicate` 가 true 인 원소를 모두 지우고 지운 개수를 돌려줍니다. 남은 원소의 순서는 지킵니다(erase-remove, C++20 `std::erase_if`).
          * @details `list.erase( std::remove_if( ... ), list.end() )` 에서 `erase` 의 둘째 인자를 빠뜨리면 한 개만 지워지는데도 컴파일됩니다.
-         *          그 모양을 손으로 적지 않고 이것을 씁니다. 순서가 상관없으면 `removeAtSwap` 이 원소를 덜 옮깁니다.
+         *          그 형태를 손으로 적지 않고 이것을 씁니다. 순서가 상관없으면 `removeAtSwap` 이 원소를 덜 옮깁니다.
          *          지운 개수는 알림이라 버려도 됩니다(`[[nodiscard]]` 가 아닙니다).
          */
         template <typename TVector, typename TPredicate>

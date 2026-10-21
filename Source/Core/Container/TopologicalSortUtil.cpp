@@ -33,7 +33,7 @@ namespace sw
                         continue;
                     if ( listState[dependency] == VisitState::OnPath )
                     {
-                        // 경로에서 그 노드가 처음 나온 자리부터가 순환이다. 시작 노드로 닫는다.
+                        // 경로에서 그 노드가 처음 나온 위치부터가 순환이다. 시작 노드로 닫는다.
                         size_t start = 0;
                         while ( listPath[start] != dependency )
                         {

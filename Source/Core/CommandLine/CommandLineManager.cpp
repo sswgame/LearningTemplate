@@ -14,7 +14,7 @@ namespace sw
     // 미리 정의된 커맨드라인 인자 표(ArgumentList.xxx)를 읽어, 모든 인자의 초기 정보와 명령줄 철자를 _mapArgument 에 등록한다.
     // 열거자 이름(WIDTH · COOK_SHADERS …)은 등록하지 않는다 — 명령줄 철자는 표의 줄마다 적은 것 하나다.
     //
-    // 줄마다 "지금 넣는 자리 == 그 줄의 열거값" 인지 확인한다. 이 일치 덕분에 findArgument(enum) 이 이름 없이 O(1)
+    // 줄마다 "지금 넣는 위치 == 그 줄의 열거값" 인지 확인한다. 이 일치 덕분에 findArgument(enum) 이 이름 없이 O(1)
     // 인덱싱으로 끝난다. 이 일치가 깨지는 경우는 하나뿐이다. initialize 를 두 번 부르거나, 그 전에 addArgument 를
     // 먼저 부르는 것이다.
     //
@@ -101,14 +101,14 @@ namespace sw
         const string_view rawKey   = bHasValue ? line.substr( 0, eqPos ) : line;
         const string_view valueStr = bHasValue ? line.substr( eqPos + 1 ) : string_view{};
 
-        // 3단계: 앞의 하이픈('-') 떼기
+        // 3단계: 앞의 하이픈('-') 제거
         string_view cleanKey = rawKey;
         while ( cleanKey.empty() == false && cleanKey.front() == '-' )
         {
             cleanKey.remove_prefix( 1 );
         }
 
-        // 4단계: 등록된 인자 표에서 찾기(하이픈을 뗀 키로 먼저 찾고, 없으면 원래 키로)
+        // 4단계: 등록된 인자 목록에서 찾기(하이픈을 제거한 키로 먼저 찾고, 없으면 원래 키로)
         auto iter = _mapArgument.find( cleanKey );
         if ( iter == _mapArgument.end() )
             iter = _mapArgument.find( rawKey );
@@ -136,7 +136,7 @@ namespace sw
 
         // 필수 값이 빠졌는지 검사한다. 값 없이 적어도 되는 것은 bool 뿐이다. `-dx12` 는 "true" 라는 뜻이지만 `-W` 나
         // `-gv_benchMeshes` 에는 그런 뜻이 없다. 판단은 타입이 한다(`isFlagArgument`) — 받아 주면 값을 빠뜨린 `-gv_benchMeshes` 가
-        // int32 자리에 bool 을 밀어 넣고 **경고 한 줄 없이 아무 일도 하지 않는다**(readValue 의 get_if 가 nullptr).
+        // int32 항목에 bool 을 밀어 넣고 **경고 한 줄 없이 아무 일도 하지 않는다**(readValue 의 get_if 가 nullptr).
         if ( bHasValue == false && argument.isFlagArgument() == false )
         {
             SW_LOG_WARNING( "Value가 입력되지 않았습니다 : %#. 무시됩니다", string( rawKey ).c_str() );

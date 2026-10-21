@@ -61,10 +61,10 @@ namespace sw
      * @tparam N 담을 수 있는 최대 문자 수(널 종료 문자 `\0` 자리 하나는 안에서 따로 잡습니다)
      * @details
      * - **길이 필드가 없습니다**:
-     *   객체는 배열 하나뿐이라 `sizeof` 는 `(N + 1) * sizeof( T )` 입니다. `size()` 는 앞 N 칸에서 첫 널을 찾는 경계 있는
+     *   객체는 배열 하나뿐이라 `sizeof` 는 `(N + 1) * sizeof( T )` 입니다. `size()` 는 앞 N 개 문자에서 첫 널을 찾는 경계 있는
      *   검색이고(O(길이)), const 호출은 아무것도 쓰지 않아 여러 스레드가 동시에 읽어도 됩니다.
      * - **`data()` 로 바로 써도 됩니다**:
-     *   바깥(ImGui 입력칸 · `formatstring` · Win32 API)은 `data()` 에 `max_size()` 자까지 널 종료 여부와 상관없이 쓸 수 있고, 그 뒤
+     *   바깥(ImGui 입력 필드 · `formatstring` · Win32 API)은 `data()` 에 `max_size()` 자까지 널 종료 여부와 상관없이 쓸 수 있고, 그 뒤
      *   `size()` 가 맞습니다. 이를 위해 모든 생성자가 배열 전체를 0 으로 채우고, 길이를 정하는 연산(대입 · `clear` · `erase` ·
      *   `pop_back`)은 새 끝 뒤의 꼬리를 0 으로 채웁니다. 끝 칸(`_arrData[N]`)은 늘 널이라 `c_str()` 은 언제나 종료됩니다.
      * - **용량을 넘으면 자릅니다**:
@@ -209,7 +209,7 @@ namespace sw
 
         /**
          * @brief 현재 문자 수(널 제외)를 반환합니다.
-         * @details 앞 N 칸에서 첫 널을 찾습니다(O(길이)). `data()` 로 N 자를 널 없이 채웠어도 N 을 넘지 않고, 아무것도 쓰지 않습니다.
+         * @details 앞 N 개 문자에서 첫 널을 찾습니다(O(길이)). `data()` 로 N 자를 널 없이 채웠어도 N 을 넘지 않고, 아무것도 쓰지 않습니다.
          */
         uint32 size() const noexcept
         {
@@ -267,7 +267,7 @@ namespace sw
         [[nodiscard]] bool try_assign( const T* pStr ) noexcept;
         [[nodiscard]] bool try_assign( const std::basic_string_view<T>& str ) noexcept;
 
-        /** @brief 남은 자리에 들어가면 끝에 붙이고 true 를 반환합니다. 넘치면 바꾸지 않고 false 를 반환하며 경고를 남기지 않습니다. */
+        /** @brief 남은 공간에 들어가면 끝에 붙이고 true 를 반환합니다. 넘치면 바꾸지 않고 false 를 반환하며 경고를 남기지 않습니다. */
         [[nodiscard]] bool try_append( const T* pStr ) noexcept;
         [[nodiscard]] bool try_append( const std::basic_string_view<T>& str ) noexcept;
 
@@ -354,7 +354,7 @@ namespace sw
             return backOffToCharacterStart( pSource, N );
         }
 
-        /** @brief 남은 자리(N - currentSize)에 맞게 추가할 길이를 잘라 반환합니다. `pSource` 는 글자 경계를 보려고 받습니다(채우기는 nullptr). */
+        /** @brief 남은 공간(N - currentSize)에 맞게 추가할 길이를 잘라 반환합니다. `pSource` 는 글자 경계를 보려고 받습니다(채우기는 nullptr). */
         static uint32 clampToRemaining( uint32 currentSize, const T* pSource, size_t length )
         {
             const size_t remaining = static_cast<size_t>( N ) - static_cast<size_t>( currentSize );
@@ -371,8 +371,8 @@ namespace sw
         }
 
         /**
-         * @brief 자를 자리 `cut` 이 글자 한가운데면(UTF-8 의 이어지는 바이트 · UTF-16 의 뒤 서로게이트) 그 글자의 시작으로 물립니다.
-         * @details 바이트 수로만 자르면 긴 한글 이름의 끝 글자가 반 토막(잘못된 UTF-8)으로 남는다 — ImGui 는 그 자리를 `?` 로 그리고
+         * @brief 자를 위치 `cut` 이 글자 한가운데면(UTF-8 의 이어지는 바이트 · UTF-16 의 뒤 서로게이트) 그 글자의 시작으로 물립니다.
+         * @details 바이트 수로만 자르면 긴 한글 이름의 끝 글자가 반 토막(잘못된 UTF-8)으로 남는다 — ImGui 는 그 위치를 `?` 로 그리고
          *          로그는 줄을 통째로 바꾼다. `pSource[cut]` 은 잘려 나가는 첫 단위다. 잘못된 UTF-8 을 끝없이 거슬러
          *          가지 않도록 UTF-8 은 세 바이트까지만 물린다.
          */
@@ -400,7 +400,7 @@ namespace sw
         /**
          * @brief `length` 칸부터 끝 칸(`_arrData[N]`)까지를 0 으로 채웁니다. 길이를 정하는 연산이 끝에 부릅니다.
          * @details 꼬리가 0 이어야 바깥이 `data()` 에 널 없이 짧게 써도 `size()` 가 맞습니다(클래스 주석의 계약). `Memory::set` 이 아니라
-         *          `std::fill_n` 인 것은 컴파일러가 그 자리에 펼치게 하려는 것입니다 — `Memory::set` 은 Engine.dll 을 건너는 호출이라 짧은 꼬리에서
+         *          `std::fill_n` 인 것은 컴파일러가 그 위치에 펼치게 하려는 것입니다 — `Memory::set` 은 Engine.dll 을 건너는 호출이라 짧은 꼬리에서
          *          대입 한 번이 눈에 띄게 느려집니다.
          */
         void fillZeroFrom( uint32 length ) noexcept { std::fill_n( _arrData + length, N + 1 - length, T{ 0 } ); }
@@ -408,7 +408,7 @@ namespace sw
         /**
          * @brief 길이를 알고 있는 글을 대입합니다(`length` <= N). 자기 버퍼 안쪽일 수 있어 겹쳐도 맞는 `move`(memmove)로 옮깁니다.
          * @details 배열이 작으면(`kWholeFillBytes` 이하) 바깥 글은 배열 전체를 먼저 0 으로 채우고 복사합니다. 크기가 컴파일 때 정해진
-         *          채우기는 그 자리에 펼쳐지지만, 길이가 실행 때 정해지는 꼬리 채우기는 memset 호출이 하나 더 듭니다.
+         *          채우기는 그 위치에 펼쳐지지만, 길이가 실행 때 정해지는 꼬리 채우기는 memset 호출이 하나 더 듭니다.
          */
         void assignKnownLength( const T* pSource, uint32 length ) noexcept
         {
@@ -595,7 +595,7 @@ namespace sw
             pStr = arrSource;
         }
 
-        // 종료 문자까지 민다(`currentSize + fitLength` <= N 이라 끝 칸 안이다).
+        // 종료 문자까지 민다(`currentSize + fitLength` <= N 이라 끝 슬롯 안이다).
         Memory::move( _arrData + pos + fitLength, _arrData + pos, sizeof( T ) * ( currentSize - pos + 1 ) );
         Memory::copy( _arrData + pos, pStr, sizeof( T ) * fitLength );
 

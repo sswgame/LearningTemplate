@@ -45,9 +45,9 @@ namespace sw
          */
         constexpr int64 kWorkerIdleSpinMicro = 2;
         /**
-         * @brief 워커 수를 정할 때 하드웨어 스레드 수에서 빼 두는 수입니다(게임 스레드와 렌더 스레드 몫).
+         * @brief 워커 수를 정할 때 하드웨어 스레드 수에서 빼 두는 수입니다(게임 스레드와 렌더 스레드 분).
          * @details 하드웨어 스레드 수만큼 워커를 만들면 워커가 일하는 동안 게임 · 렌더 스레드가 코어를 나눠 써야 해서, 게임 스레드가
-         *          잡을 돌릴 때 렌더 스레드의 병렬 기록이 밀립니다. 상용 엔진도 전용 스레드 몫을 뺍니다.
+         *          잡을 돌릴 때 렌더 스레드의 병렬 기록이 밀립니다. 상용 엔진도 전용 스레드 분을 뺍니다.
          */
         constexpr uint32 kReservedThreadCount = 2;
         /**
@@ -139,7 +139,7 @@ namespace sw
 
             /**
              * @brief @p count 개를 워커 @p workerCount 개(+ 호출 스레드)가 나눠 갖도록 자릅니다.
-             * @param bCallerRuns 호출 스레드가 바로 함께 실행하는지 여부(`runParallel`). 그렇다면 티켓은 나머지 참여자 몫만 넣습니다.
+             * @param bCallerRuns 호출 스레드가 바로 함께 실행하는지 여부(`runParallel`). 그렇다면 티켓은 나머지 참여자 분만 넣습니다.
              */
             static ParallelSplit compute( uint32 count, uint32 workerCount, bool bCallerRuns )
             {
@@ -152,7 +152,7 @@ namespace sw
                 if ( split._chunkSize == 0 )
                     split._chunkSize = 1;
                 chunkCount = ( count + split._chunkSize - 1 ) / split._chunkSize;
-                // 티켓 하나는 스레드 하나의 몫이다. 청크가 티켓보다 적으면 남는 티켓은 가져가자마자 끝난다(헛된 깨우기).
+                // 티켓 하나는 스레드 하나 분이다. 청크가 티켓보다 적으면 남는 티켓은 가져가자마자 끝난다(헛된 깨우기).
                 const uint32 requestedTicketCount = bCallerRuns ? ( chunkCount > 0 ? chunkCount - 1 : 0 ) : chunkCount;
                 split._ticketCount                = MathUtil::min( requestedTicketCount, workerCount );
                 return split;
@@ -197,7 +197,7 @@ namespace sw
     TaskManager::~TaskManager()
     {
         shutdown();
-        // 아직 핸들이 쥔 노드 · 스테이지가 있으면 풀은 그 핸들들의 몫으로 남고, 마지막 핸들이 놓일 때 스스로 소멸한다.
+        // 아직 핸들이 쥔 노드 · 스테이지가 있으면 풀은 그 핸들들이 책임지고, 마지막 핸들이 놓일 때 스스로 소멸한다.
         if ( _nodePool->detachOwner() == false )
             (void)_nodePool.release(); // 소유를 핸들에 넘겼다 — 여기서 지우면 뒤늦게 놓이는 핸들이 해제된 노드를 만진다
     }
@@ -209,7 +209,7 @@ namespace sw
 
         if ( threadCount == 0 )
         {
-            // 친화도 · Job Object 로 줄인 코어 수를 본다(부하 검증의 하드웨어 흉내가 워커 수까지 줄이는 자리다).
+            // 친화도 · Job Object 로 줄인 코어 수를 본다(부하 검증의 하드웨어 흉내가 워커 수까지 줄이는 곳이다).
             threadCount = thread::getUsableProcessorCount();
             if ( threadCount > kReservedThreadCount + 1 )
                 threadCount -= kReservedThreadCount;
@@ -409,7 +409,7 @@ namespace sw
     void TaskManager::deallocateNode( TaskNode* pNode )
     {
         // 한 번도 큐에 들어가지 않고 마지막 핸들이 놓였다 — 만들기만 하고 제출하지 않은 태스크다. 취소된 태스크처럼 완료 처리한다: 활성 수를 내리고
-        // 부모 · 스테이지 · 후속을 푼다. 그러지 않으면 `waitAll` · 부모 · 후속이 영영 기다린다. `clear()` 뒤라면 그 수는 이미 0 으로 놓였으니
+        // 부모 · 스테이지 · 후속을 해제한다. 그러지 않으면 `waitAll` · 부모 · 후속이 영영 기다린다. `clear()` 뒤라면 그 수는 이미 0 으로 놓였으니
         // 건드리지 않는다.
         const bool bNeverScheduled = pNode->_bScheduled.load( std::memory_order_acquire ) == false;
         const bool bSameEpoch      = pNode->_clearEpoch == _clearEpoch.load( std::memory_order_acquire );
@@ -497,7 +497,7 @@ namespace sw
 
     TaskHandle TaskManager::whenAny( vector_reference<const TaskHandle> listTask, const TaskDelegate& continuation, TaskThreadAffinity affinity )
     {
-        // 유효한 핸들이 하나도 없으면 빈 목록과 같다. 주의: "선행 트리거 몫" 1 을 더해 두고 트리거를 하나도 만들지 않으면 후속이 영영 돌지
+        // 유효한 핸들이 하나도 없으면 빈 목록과 같다. 주의: "선행 트리거 분" 1 을 더해 두고 트리거를 하나도 만들지 않으면 후속이 영영 돌지
         // 않고 활성 수가 남아 `waitAll` · 종료가 멈춘다.
         bool bHasValidTask{ false };
         for ( const TaskHandle& task : listTask )
@@ -514,7 +514,7 @@ namespace sw
         shared_ptr<atomic<bool>> firedFlag = sw::make_shared<atomic<bool>>( false );
         TaskHandle               nextTask  = emplaceTask( "WhenAnyContinuation", continuation, affinity );
 
-        // 사용자의 submit() 몫 1, 선행 태스크 완료 트리거 몫 1
+        // 사용자의 submit() 분 1, 선행 태스크 완료 트리거 분 1
         nextTask.getNode()->_unresolvedDependencies.store( 2, std::memory_order_relaxed );
 
         for ( const TaskHandle& task : listTask )
@@ -545,7 +545,7 @@ namespace sw
         if ( pNode->_unresolvedDependencies.fetch_sub( 1, std::memory_order_acq_rel ) != 1 )
             return;
 
-        // 병렬 그룹의 부모가 시작 조건(제출 + 선행)을 모두 채웠다 — 지금 티켓을 올린다. 0 을 보는 스레드는 하나뿐이므로 여기서 꺼내도 안전하다.
+        // 병렬 그룹의 부모가 시작 조건(제출 + 선행)을 모두 채웠다 — 지금 티켓을 큐에 넣는다. 0 을 보는 스레드는 하나뿐이므로 여기서 꺼내도 안전하다.
         // 부모는 그룹이 끝나 의존 하나가 더 풀릴 때 큐로 가고, 거기서 제 실행 스레드(메인 지정이면 메인)에서 완료된다.
         if ( pNode->_bParallelGroupParent.load( std::memory_order_acquire ) )
         {
@@ -616,8 +616,8 @@ namespace sw
         pGroup->_nextChunkStart.store( start, std::memory_order_relaxed );
         pGroup->_join.reset();
 
-        // 티켓은 **부모가 실행될 때** 올린다(`launchParallelGroup`). 그래야 부모에 건 `runAfter` · 취소 · 실행 스레드 지정을 본문도 따른다.
-        // 부모는 그룹이 끝나야 완료된다(그룹 = 부모의 자식 몫 하나).
+        // 티켓은 **부모가 실행될 때** 큐에 넣는다(`launchParallelGroup`). 그래야 부모에 건 `runAfter` · 취소 · 실행 스레드 지정을 본문도 따른다.
+        // 부모는 그룹이 끝나야 완료된다(그룹 = 부모의 자식 분 하나).
         TaskNode*    pParent     = parentTask.getNode();
         const uint32 ticketCount = MathUtil::max( split._ticketCount, 1u );
         pParent->_callable       = ParallelGroupLaunch{ pGroup, ticketCount };
@@ -788,7 +788,7 @@ namespace sw
         ParallelGroup* pGroup = launch._pGroup;
         if ( pGroup == nullptr )
             return;
-        // 그룹이 부모를 잡고(참조 하나), 부모는 그룹이 끝나야 준비된다(의존 하나 — 마지막 티켓이 푼다, `closeGroupTicket`).
+        // 그룹이 부모를 잡고(참조 하나), 부모는 그룹이 끝나야 준비된다(의존 하나 — 마지막 티켓이 해제한다, `closeGroupTicket`).
         pParent->retain();
         pParent->_unresolvedDependencies.fetch_add( 1, std::memory_order_acq_rel );
         pGroup->_pParent = pParent;
@@ -900,7 +900,7 @@ namespace sw
             inoutState._bQueueCheckDue    = false;
             if ( tryHelpAndExecute( bHelpLowQueue ) )
             {
-                // 같은 세대에 일이 더 남았을 수 있다(묶음 하나에 세대는 한 번 오른다). 다음 걸음도 큐를 본다.
+                // 같은 세대에 일이 더 남았을 수 있다(배치 하나에 세대는 한 번 오른다). 다음 걸음도 큐를 본다.
                 inoutState._spinCount      = 0;
                 inoutState._bQueueCheckDue = true;
                 return true;
@@ -989,7 +989,7 @@ namespace sw
         const bool bMainThread = isMainThread();
         if ( bMainThread )
         {
-            // 메인 작업을 넣는 쪽이 이 칸을 보고 깨운다. 적은 뒤에 큐를 다시 확인해야 그 사이에 들어온 작업을 놓치지 않는다.
+            // 메인 작업을 넣는 쪽이 이 값을 보고 깨운다. 적은 뒤에 큐를 다시 확인해야 그 사이에 들어온 작업을 놓치지 않는다.
             _mainThreadParkedSlot.store( static_cast<int32>( slotIndex ), std::memory_order_seq_cst );
             std::atomic_thread_fence( std::memory_order_seq_cst );
             if ( _queueMainThread.empty() == false )
@@ -1107,7 +1107,7 @@ namespace sw
             t_pCurrentRunningTask = pPrevRunningTask;
         }
 
-        // 본문 몫(1)을 내린다. 0 이 되면 자식도 모두 끝난 것이고, 아니면 마지막 자식이 완료를 처리한다.
+        // 본문 분(1)을 차감한다. 0 이 되면 자식도 모두 끝난 것이고, 아니면 마지막 자식이 완료를 처리한다.
         if ( pNode->_pendingChildren.fetch_sub( 1, std::memory_order_acq_rel ) == 1 )
             completeTask( pNode );
 
@@ -1156,7 +1156,7 @@ namespace sw
 
         BLOCK( "Trigger Successors and Cleanup" )
         {
-            // 목록을 **닫고** 푼다. 닫은 뒤에 `runBefore` 로 붙으려는 후속은 "이미 끝났다" 를 듣고 스스로 의존을 되돌린다(`tryPushBack`).
+            // 목록을 **닫고** 해제한다. 닫은 뒤에 `runBefore` 로 붙으려는 후속은 "이미 끝났다" 를 듣고 스스로 의존을 되돌린다(`tryPushBack`).
             // 닫지 않고 훑으면 그 사이에 붙은 후속이 영영 풀리지 않거나 너무 일찍 돈다.
             pNode->_successors.closeAndForEach( [this]( TaskNode* pSuccessor )
             {

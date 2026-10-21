@@ -128,7 +128,7 @@ namespace sw
 
     bool TaskHandle::isCompleted() const
     {
-        // 본문 몫(1)과 자식 수를 함께 세는 카운터가 0 이면 끝났다. 따로 상태를 적지 않는다 — 완료 경로에 저장이 늘지 않는다.
+        // 본문 분(1)과 자식 수를 함께 세는 카운터가 0 이면 끝났다. 따로 상태를 적지 않는다 — 완료 경로에 저장이 늘지 않는다.
         // 핸들이 참조를 잡고 있으므로 노드가 풀로 돌아가 다시 1 이 되는 일은 없다.
         return _pNode == nullptr || _pNode->_pendingChildren.load( std::memory_order_acquire ) == 0;
     }
@@ -191,7 +191,7 @@ namespace sw
         TaskNode* pTaskNode = task.getNode();
         if ( _pNode != nullptr && pTaskNode != nullptr )
         {
-            // 스테이지는 태스크를 붙들지 않는다. 완료할 때 찾아올 곳만 적어 둔다(제출 전이라 아직 아무도 이 칸을 읽지 않는다).
+            // 스테이지는 태스크를 붙들지 않는다. 완료할 때 찾아올 곳만 적어 둔다(제출 전이라 아직 아무도 이 값을 읽지 않는다).
             pTaskNode->_parentStage = _pNode;
             // 남은 태스크가 생기는 순간 스테이지가 스스로를 잡는다. 핸들이 먼저 사라져도 완료 통지가 갈 곳이 남는다.
             if ( _pNode->_join.addPending( 1 ) == 0 )

@@ -295,7 +295,7 @@ namespace sw
 //
 // 커스텀 array 일 때만 필요하다. `SW_ENABLE_STL_CONTAINER` 가 켜지면 `sw::array` 는 `std::array` 의 별칭이라,
 // 아래 특수화는 표준 라이브러리가 이미 제공하는 것을 다시 정의하게 된다(그 옵션을 켜면 컴파일되지 않는다).
-// `pair.h` 도 같은 이유로 같은 모양이다.
+// `pair.h` 도 같은 이유로 같은 형태다.
 // ------------------------------------------------------------------------------
 #if !defined( SW_ENABLE_STL_CONTAINER )
 namespace std

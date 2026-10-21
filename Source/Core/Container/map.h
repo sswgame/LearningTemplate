@@ -62,9 +62,7 @@ namespace sw
         struct KeyCompare
         {
             Compare _comp;
-            /** @brief 두 엔트리의 키를 비교합니다. */
-            bool operator()( const value_type& a, const value_type& b ) const { return _comp( a.first, b.first ); }
-            /** @brief 엔트리의 키와 이종 키를 비교합니다. */
+            bool    operator()( const value_type& a, const value_type& b ) const { return _comp( a.first, b.first ); }
             template <typename K>
             bool operator()( const value_type& a, const K& b ) const { return _comp( a.first, b ); }
 
@@ -113,7 +111,6 @@ namespace sw
             : _data{ alloc }
             , _comp{ comp } { insert( init.begin(), init.end() ); }
 
-        /** @brief 복사 대입합니다. */
         map& operator=( const map& other )
         {
             if ( this != &other )
@@ -126,7 +123,6 @@ namespace sw
             return *this;
         }
 
-        /** @brief 이동 대입합니다. */
         map& operator=( map&& other ) noexcept
         {
             if ( this != &other )
@@ -139,7 +135,6 @@ namespace sw
             return *this;
         }
 
-        /** @brief 초기화 리스트로 대입합니다. */
         map& operator=( std::initializer_list<value_type> ilist )
         {
             SW_SCOPED_RACE_WRITE();
@@ -151,7 +146,6 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 2) 조회 — 이진 검색 · 이터레이터 · 크기
         // ------------------------------------------------------------------------------
-        /** @brief 쓰고 있는 할당자를 반환합니다. */
         allocator_type get_allocator() const noexcept
         {
             SW_SCOPED_RACE_READ();
@@ -180,7 +174,6 @@ namespace sw
             throw std::out_of_range( "map::at" );
         }
 
-        /** @brief 키에 해당하는 값을 반환합니다. 없으면 기본값으로 만들어 넣습니다. */
         T& operator[]( const Key& key )
         {
             SW_SCOPED_RACE_WRITE();
@@ -191,7 +184,6 @@ namespace sw
             return it->second;
         }
 
-        /** @brief 키에 해당하는 값을 반환합니다. 없으면 기본값으로 만들어 넣습니다. */
         T& operator[]( Key&& key )
         {
             SW_SCOPED_RACE_WRITE();
@@ -202,7 +194,6 @@ namespace sw
             return it->second;
         }
 
-        /** @brief 시작 이터레이터를 반환합니다. */
         iterator begin() noexcept
         {
             SW_SCOPED_RACE_READ();
@@ -221,7 +212,6 @@ namespace sw
             return _data.cbegin();
         }
 
-        /** @brief 끝 이터레이터를 반환합니다. */
         iterator end() noexcept
         {
             SW_SCOPED_RACE_READ();
@@ -240,7 +230,6 @@ namespace sw
             return _data.cend();
         }
 
-        /** @brief 역방향 시작 이터레이터를 반환합니다. */
         reverse_iterator rbegin() noexcept
         {
             SW_SCOPED_RACE_READ();
@@ -259,7 +248,6 @@ namespace sw
             return _data.crbegin();
         }
 
-        /** @brief 역방향 끝 이터레이터를 반환합니다. */
         reverse_iterator rend() noexcept
         {
             SW_SCOPED_RACE_READ();
@@ -278,35 +266,30 @@ namespace sw
             return _data.crend();
         }
 
-        /** @brief 비어 있는지 반환합니다. */
         bool empty() const noexcept
         {
             SW_SCOPED_RACE_READ();
             return _data.empty();
         }
 
-        /** @brief 원소 개수를 반환합니다. */
         size_type size() const noexcept
         {
             SW_SCOPED_RACE_READ();
             return _data.size();
         }
 
-        /** @brief 담을 수 있는 최대 원소 개수를 반환합니다. */
         size_type max_size() const noexcept
         {
             SW_SCOPED_RACE_READ();
             return _data.max_size();
         }
 
-        /** @brief 용량을 예약합니다. */
         void reserve( size_type new_cap )
         {
             SW_SCOPED_RACE_WRITE();
             _data.reserve( new_cap );
         }
 
-        /** @brief 현재 용량을 반환합니다. */
         size_type capacity() const noexcept
         {
             SW_SCOPED_RACE_READ();
@@ -316,14 +299,12 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 3) 변경 — 정렬을 유지하며 insert/erase
         // ------------------------------------------------------------------------------
-        /** @brief 모든 원소를 제거합니다. */
         void clear() noexcept
         {
             SW_SCOPED_RACE_WRITE();
             _data.clear();
         }
 
-        /** @brief 원소를 삽입합니다. */
         pair<iterator, bool> insert( const value_type& value )
         {
             SW_SCOPED_RACE_WRITE();
@@ -334,7 +315,6 @@ namespace sw
             return { it, true };
         }
 
-        /** @brief 원소를 삽입합니다. */
         pair<iterator, bool> insert( value_type&& value )
         {
             SW_SCOPED_RACE_WRITE();
@@ -345,13 +325,10 @@ namespace sw
             return { it, true };
         }
 
-        /** @brief 원소를 삽입합니다. 힌트는 쓰지 않습니다. */
         iterator insert( [[maybe_unused]] const_iterator hint, const value_type& value ) { return insert( value ).first; }
 
-        /** @brief 원소를 삽입합니다. 힌트는 쓰지 않습니다. */
         iterator insert( [[maybe_unused]] const_iterator hint, value_type&& value ) { return insert( std::move( value ) ).first; }
 
-        /** @brief [first, last) 의 원소를 삽입합니다. */
         template <class InputIt>
         void insert( InputIt first, InputIt last )
         {
@@ -364,10 +341,8 @@ namespace sw
             }
         }
 
-        /** @brief 초기화 리스트의 원소를 삽입합니다. */
         void insert( std::initializer_list<value_type> ilist ) { insert( ilist.begin(), ilist.end() ); }
 
-        /** @brief 원소를 제자리에서 생성해 삽입합니다. */
         template <class... Args>
         pair<iterator, bool> emplace( Args&&... args )
         {
@@ -404,21 +379,18 @@ namespace sw
             return { it, true };
         }
 
-        /** @brief pos 가 가리키는 원소를 제거합니다. */
         iterator erase( iterator pos )
         {
             SW_SCOPED_RACE_WRITE();
             return _data.erase( pos );
         }
 
-        /** @brief pos 가 가리키는 원소를 제거합니다. */
         iterator erase( const_iterator pos )
         {
             SW_SCOPED_RACE_WRITE();
             return _data.erase( pos );
         }
 
-        /** @brief [first, last) 범위의 원소를 제거합니다. */
         iterator erase( const_iterator first, const_iterator last )
         {
             SW_SCOPED_RACE_WRITE();
@@ -439,7 +411,6 @@ namespace sw
             return 0;
         }
 
-        /** @brief 내용을 교환합니다. */
         void swap( map& other ) noexcept
         {
             SW_SCOPED_RACE_WRITE();
@@ -459,7 +430,6 @@ namespace sw
             return 0;
         }
 
-        /** @brief 키를 찾습니다. */
         template <typename K>
         iterator find( const K& key )
         {
@@ -468,7 +438,6 @@ namespace sw
             return ( it != _data.end() && _comp( key, it->first ) == false ) ? it : _data.end();
         }
 
-        /** @brief 키를 찾습니다. */
         template <typename K>
         const_iterator find( const K& key ) const
         {
@@ -477,7 +446,6 @@ namespace sw
             return ( it != _data.end() && _comp( key, it->first ) == false ) ? it : _data.end();
         }
 
-        /** @brief 키가 있는지 반환합니다. */
         template <typename K>
         bool contains( const K& key ) const { return count( key ) > 0; }
 

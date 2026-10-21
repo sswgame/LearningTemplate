@@ -42,7 +42,7 @@ namespace sw
 
         /** @brief 가리키는 오브젝트의 ID 를 반환합니다. */
         [[nodiscard]] constexpr uint64 objectID() const noexcept { return _objectID; }
-        /** @brief objectID 가 있으면 true 입니다. 대상이 아직 살아 있는지는 매니저로 풀어 봐야 압니다. */
+        /** @brief objectID 가 있으면 true 입니다. 대상이 아직 살아 있는지는 매니저로 조회해 봐야 압니다. */
         [[nodiscard]] constexpr bool     isValid() const noexcept { return _objectID != 0; }
         [[nodiscard]] constexpr explicit operator bool() const noexcept { return isValid(); }
 

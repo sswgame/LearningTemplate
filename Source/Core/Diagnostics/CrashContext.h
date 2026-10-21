@@ -38,7 +38,7 @@ namespace sw
         /** @brief 프로세스 전역 저장소입니다. */
         static CrashContextStore& get();
 
-        /** @brief 키를 넣거나 덮어씁니다. 자리가 없으면 조용히 버립니다(크래시 경로에서 실패를 키우지 않기 위해서입니다). */
+        /** @brief 키를 넣거나 덮어씁니다. 공간이 없으면 조용히 버립니다(크래시 경로에서 실패를 키우지 않기 위해서입니다). */
         void set( string_view key, string_view value );
     };
 } // namespace sw
@@ -48,8 +48,8 @@ namespace sw
     /**
      * @struct CrashBreadcrumbStore
      * @brief 크래시 직전의 최근 사건(빵부스러기 — 텔레메트리 사건 · 게임 표지)을 고정 버퍼 고리에 들고 있습니다. 크래시 때 할당 없이 파일로 씁니다.
-     * @details 쓰는 쪽은 자리를 원자 카운터로 받아 서로 다른 칸에 씁니다(한 바퀴 — 32 개 — 안에서 겹치지 않는다). 크래시 경로는 잠그지 않고 읽으므로
-     *          그 순간 쓰던 한 줄은 잘려 있을 수 있습니다(진단용이라 받아들인다). Sentry 의 breadcrumbs 와 같은 자리입니다.
+     * @details 쓰는 쪽은 위치를 원자 카운터로 받아 서로 다른 슬롯에 씁니다(한 바퀴 — 32 개 — 안에서 겹치지 않는다). 크래시 경로는 잠그지 않고 읽으므로
+     *          그 순간 쓰던 한 줄은 잘려 있을 수 있습니다(진단용이라 받아들인다). Sentry 의 breadcrumbs 에 해당합니다.
      */
     struct SW_API CrashBreadcrumbStore
     {

@@ -19,7 +19,7 @@
 namespace sw
 {
     /**
-     * @brief 태그 하나의 할당 · 해제 통계를 한 시점에 읽은 값입니다(`MemoryProfiler::getStats` 가 스레드 칸을 합쳐 만든다).
+     * @brief 태그 하나의 할당 · 해제 통계를 한 시점에 읽은 값입니다(`MemoryProfiler::getStats` 가 스레드 슬롯을 합쳐 만든다).
      * @details 값이라 읽은 뒤에는 바뀌지 않습니다. 새 값이 필요하면 `getStats` 를 다시 부릅니다. 칸을 차례로 읽는 동안 다른 스레드가 더한 것은
      *          들어갈 수도 빠질 수도 있습니다(한 순간의 값이 아니다).
      */
@@ -47,7 +47,7 @@ namespace sw
         uint64 _peakAllocationCount{ 0 };
         /** @brief 예산(바이트)입니다. 0 이면 예산이 없다. 데이터(`Config/Engine/MemoryBudget.json`)가 정한다. */
         uint64 _budgetBytes{ 0 };
-        /** @brief 지금 예산을 넘은 상태로 알렸으면 true 입니다(경고는 넘을 때 한 번, 90 % 아래로 내려가면 다시 건다). */
+        /** @brief 지금 예산을 넘은 상태로 알렸으면 true 입니다(경고는 넘을 때 한 번, 90 % 아래로 내려가면 다시 켠다). */
         bool _bOverBudget{ false };
     };
 } // namespace sw
@@ -55,9 +55,9 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 스레드 칸 하나 안의 태그 하나 몫입니다. 할당 · 해제 경로는 지금 스레드 칸의 이 값만 고칩니다.
-     * @details 살아 있는 양은 부호 있는 값입니다 — 한 스레드가 할당하고 다른 스레드가 해제하면 칸 하나는 음수가 되지만 합은 맞습니다.
-     *          칸 안에서 태그 몫(40 B)이 이어 있어 한 스레드의 할당은 자기 칸의 줄 하나만 건드립니다.
+     * @brief 스레드 슬롯 하나 안의 태그 하나의 값입니다. 할당 · 해제 경로는 지금 스레드 슬롯의 이 값만 고칩니다.
+     * @details 살아 있는 양은 부호 있는 값입니다 — 한 스레드가 할당하고 다른 스레드가 해제하면 슬롯 하나는 음수가 되지만 합은 맞습니다.
+     *          슬롯 안에서 태그별 값(40 B)이 이어 있어 한 스레드의 할당은 자기 슬롯의 줄 하나만 건드립니다.
      */
     struct MemoryTagShardCounter
     {
@@ -71,7 +71,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 스레드 칸 하나 — 모든 태그의 몫입니다(`ShardArray` 가 칸마다 캐시 라인 경계에 둔다). */
+    /** @brief 스레드 슬롯 하나 — 모든 태그의 값입니다(`ShardArray` 가 슬롯마다 캐시 라인 경계에 둔다). */
     struct MemoryProfilerShard
     {
         MemoryTagShardCounter _arrTag[kMemoryTagCount]{};
@@ -139,7 +139,7 @@ namespace sw
         [[nodiscard]] static bool findMemoryTagByName( string_view name, MemoryTag& outTag );
         /**
          * @brief 플랫폼 힙(CRT)이 지금 들고 있는 바이트입니다. sw 할당자를 거치지 않은 할당(외부 라이브러리 · `std::allocator`)까지 포함합니다.
-         * @details 태그 합과 비교하면 태그가 볼 수 없는 몫이 나옵니다. sw 블록도 CRT 에서 오므로 그 헤더(블록당 48 바이트)까지 이 값에 들어 있습니다.
+         * @details 태그 합과 비교하면 태그가 볼 수 없는 양이 나옵니다. sw 블록도 CRT 에서 오므로 그 헤더(블록당 48 바이트)까지 이 값에 들어 있습니다.
          *          Windows Debug CRT 에서만 측정할 수 있고, 그 밖에서는 0 입니다.
          */
         static uint64 getPlatformHeapBytes();
@@ -206,7 +206,7 @@ namespace sw
          */
         void recordFree( void* pPtr, size_t size, MemoryTag tag, uint64 callStackHash = 0 ) override;
 
-        /** @brief 태그별 할당 통계를 지금 스레드 칸에서 합쳐 읽은 값입니다(칸 수만큼 읽는다 — 할당마다가 아니라 프레임 · 패널에서 부른다). 최고치도 이때 올린다. */
+        /** @brief 태그별 할당 통계를 지금 스레드 슬롯에서 합쳐 읽은 값입니다(슬롯 수만큼 읽는다 — 할당마다가 아니라 프레임 · 패널에서 부른다). 최고치도 이때 올린다. */
         MemoryProfileStats getStats( MemoryTag tag ) const;
         /** @brief 모든 태그의 지금 살아 있는 바이트 합입니다. */
         uint64 getLiveAllocatedBytes() const;
@@ -225,7 +225,7 @@ namespace sw
         uint64 getLiveAllocationCount() const;
 
         // ------------------------------------------------------------------------------
-        // 3) 최고치 · 예산 · 기준선(누수) — UE LLM 의 태그별 최고치 · 예산(`LLM_TRACKER`)과 같은 자리
+        // 3) 최고치 · 예산 · 기준선(누수) — UE LLM 의 태그별 최고치 · 예산(`LLM_TRACKER`)과 같은 역할
         // ------------------------------------------------------------------------------
         /** @brief 모든 태그의 최고치를 지금 값으로 되돌립니다(측정 창을 새로 시작할 때). */
         void resetPeaks();
@@ -237,7 +237,7 @@ namespace sw
         void clearBudgets();
         /**
          * @brief 살아 있는 바이트를 예산과 견줘, **이번에 새로** 넘은 태그마다 경고 한 줄을 남깁니다. 프레임마다 한 번 부릅니다(태그 수만큼 원자 읽기).
-         * @details 넘은 상태는 기억합니다 — 넘어 있는 동안 다시 경고하지 않고, 예산의 90 % 아래로 내려가면 다시 겁니다(경계에서 오락가락할 때 로그가 넘치지 않게).
+         * @details 넘은 상태는 기억합니다 — 넘어 있는 동안 다시 경고하지 않고, 예산의 90 % 아래로 내려가면 다시 켭니다(경계에서 오락가락할 때 로그가 넘치지 않게).
          * @param pOutListNewlyExceeded 있으면 이번에 새로 넘은 태그를 담습니다.
          * @return 이번에 새로 넘은 태그 수입니다.
          */
@@ -250,7 +250,7 @@ namespace sw
         /** @brief 기준선보다 살아 있는 바이트나 블록이 **늘어난** 태그를 큰 순서로 돌려줍니다. 기준선이 없으면 비어 있습니다. */
         vector<MemoryTagGrowth> collectTagGrowthSinceBaseline() const;
         /**
-         * @brief 기준선보다 늘어난 태그를 stderr 로 한 줄씩 남깁니다(로거가 내려간 뒤에도 보이게 — CRT 누수 보고와 같은 길). 엔진 종료 끝에 Debug 에서 부릅니다.
+         * @brief 기준선보다 늘어난 태그를 stderr 로 한 줄씩 남깁니다(로거가 종료된 뒤에도 보이게 — CRT 누수 보고와 같은 경로). 엔진 종료 끝에 Debug 에서 부릅니다.
          * @return 늘어난 태그 수입니다.
          */
         uint32 reportTagGrowthSinceBaseline( const utf8* pPhaseTag ) const;
@@ -269,7 +269,7 @@ namespace sw
         atomic<bool> _bTrackingEnabled;
         atomic<bool> _bDetailedTrackingEnabled;
 
-        ShardArray<MemoryProfilerShard> _shard;                          ///< 스레드 칸마다 모든 태그의 몫. 할당 · 해제는 지금 스레드 칸만 고친다
+        ShardArray<MemoryProfilerShard> _shard;                          ///< 스레드 슬롯마다 모든 태그의 값. 할당 · 해제는 지금 스레드 슬롯만 고친다
         mutable MemoryTagSummary        _arrTagSummary[kMemoryTagCount]; ///< 태그마다 최고치 · 예산. 합을 읽는 const 함수도 최고치를 올리므로 mutable
 
         array<uint64, kMemoryTagCount> _arrBaselineBytes; ///< `captureTagBaseline` 시점의 태그별 살아 있는 바이트

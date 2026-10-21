@@ -108,7 +108,7 @@ namespace sw
          * @brief 이 풀의 저장 공간에서 나온 포인터인지 확인합니다(반납하기 전에 걸러 내는 용도).
          * @details 주소 범위와 슬롯 간격으로 판정하므로 기다릴 필요가 없습니다("슬롯이 나지 않는다"는 증상은 경합 중인 정상 반납과
          *          구별되지 않으므로 그것으로 알아내지 않습니다).
-         * @note 이미 반납된 포인터는 여기서 가려내지 못합니다(범위 안에 있기 때문입니다). 그쪽은 칸마다 든 "쓰는 중" 표시가 가려냅니다.
+         * @note 이미 반납된 포인터는 여기서 가려내지 못합니다(범위 안에 있기 때문입니다). 그쪽은 슬롯마다 있는 "쓰는 중" 표시가 가려냅니다.
          */
         SW_INLINE bool owns( const T* pPtr ) const
         {
@@ -183,7 +183,7 @@ namespace sw
             pPtr = nullptr; // 호출한 쪽이 실수로 다시 쓰지 못하게 바로 무효화한다
         }
 
-        /** @brief 이 풀의 블록 포인터가 몇 번째 칸인지입니다(`owns` 를 먼저 거친 포인터만). */
+        /** @brief 이 풀의 블록 포인터가 몇 번째 슬롯인지입니다(`owns` 를 먼저 거친 포인터만). */
         SW_INLINE uint32 getSlotIndex( const T* pPtr ) const
         {
             return static_cast<uint32>( ( reinterpret_cast<uintptr_t>( pPtr ) - reinterpret_cast<uintptr_t>( _arrStorage.data() ) ) / sizeof( T ) );

@@ -33,7 +33,7 @@ namespace sw
                     case CTRL_C_EVENT:
                     case CTRL_BREAK_EVENT:
                     {
-                        // 두 번째 Ctrl+C 는 기본 처리기(즉시 종료)로 넘긴다 — 멈춘 종료를 사람이 끊는 길(POSIX 의 _exit(130) 자리).
+                        // 두 번째 Ctrl+C 는 기본 처리기(즉시 종료)로 넘긴다 — 멈춘 종료를 사람이 끊는 경로(POSIX 의 _exit(130) 에 해당).
                         if ( s_interruptCount.fetch_add( 1, std::memory_order_relaxed ) >= 1 )
                             return FALSE;
                         ShutdownSignal::request( ShutdownCause::Interrupt );

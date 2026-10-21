@@ -26,14 +26,14 @@ namespace sw
     class ILogOutput;
 
     // ------------------------------------------------------------------------------
-    // 1) AsyncLogSink — 기본 싱크. 만들면 전역 싱크가 비어 있을 때 자신을 건다(`Logger::registerGlobalSink`)
+    // 1) AsyncLogSink — 기본 싱크. 만들면 전역 싱크가 비어 있을 때 자신을 등록한다(`Logger::registerGlobalSink`)
     // ------------------------------------------------------------------------------
     /**
      * @class AsyncLogSink
      * @brief 기본 로그 싱크입니다. 포맷 · 타임스탬프 · 리스너 · 비동기 큐를 맡고, **출력은 `ILogOutput` 에 넘깁니다.**
      * @details 장치마다 자기 락을 가지므로 파일 I/O 가 느려도 콘솔이 멈추지 않습니다. 기본으로 콘솔 · 파일 출력을 하나씩 달고
      *          시작하며, `addOutput` 으로 더 붙일 수 있습니다(에디터 패널 · 네트워크 등. 그때도 이 클래스를 고칠 필요는 없습니다).
-     *          매크로가 부르는 전역 창구(`Logger`)는 아래층(Log)에 있고, 이 싱크는 파일 · 크래시 · 모듈을 알아야 해서 위층(LogSink)에 있습니다.
+     *          매크로가 부르는 전역 진입점(`Logger`)는 아래층(Log)에 있고, 이 싱크는 파일 · 크래시 · 모듈을 알아야 해서 위층(LogSink)에 있습니다.
      */
     class SW_API AsyncLogSink final : public ILogSink
     {
@@ -88,11 +88,11 @@ namespace sw
         /** @brief 달려 있는 모든 출력 장치에 한 줄을 넘깁니다. 장치마다 자기 락을 가집니다. */
         void dispatchToOutputs( const LogRecord& record );
         /**
-         * @brief 리스너를 뗀 뒤, 떼기 **전에** 시작한 방송이 모두 끝날 때까지 기다립니다.
-         * @details 방송은 리스너 목록을 복사해 락 밖에서 부릅니다. 기다리지 않으면 떼기가 돌아온 뒤에도 다른 스레드의 방송이 뗀 리스너를
-         *          부를 수 있습니다(에디터 콘솔 패널이 파괴되거나 모듈이 내려간 뒤에 그 코드로 들어감). 이 스레드가 방송 도중(리스너 안)이면
+         * @brief 리스너를 제거한 뒤, 제거 **전에** 시작한 방송이 모두 끝날 때까지 기다립니다.
+         * @details 방송은 리스너 목록을 복사해 락 밖에서 부릅니다. 기다리지 않으면 제거가 돌아온 뒤에도 다른 스레드의 방송이 제거한 리스너를
+         *          부를 수 있습니다(에디터 콘솔 패널이 파괴되거나 모듈이 언로드된 뒤에 그 코드로 들어감). 이 스레드가 방송 도중(리스너 안)이면
          *          자기 자신을 기다리게 되므로 기다리지 않습니다. 끊임없는 로그로 세대가 비지 않으면 2 초 뒤 경고하고 돌아옵니다.
-         * @param retiredSlot 떼기 직전 세대 칸(_mutex 안에서 읽은 값)
+         * @param retiredSlot 제거 직전 세대 슬롯(_mutex 안에서 읽은 값)
          */
         void waitForRetiredBroadcasts( uint32 retiredSlot );
         /** @brief 세대를 넘기고 넘기기 전 칸을 돌려줍니다. _mutex 를 쥐고 부릅니다. */
@@ -120,7 +120,7 @@ namespace sw
         mutex                            _cvMutex; ///< 조건 변수 대기용 뮤텍스
         /** @brief 리스너 목록의 불변 사본입니다. 리스너가 없으면 nullptr 입니다. _mutex 로 보호하고, 생산자는 참조만 잡아 락 밖에서 부른다. */
         shared_ptr<const LogWrittenMulticast> _listenerSnapshot;
-        atomic<uint32>                        _arrBroadcastInFlight[2]; ///< 리스너를 부르는 중인 방송 수(세대 두 칸). 떼기가 이전 세대가 빌 때까지 기다린다
+        atomic<uint32>                        _arrBroadcastInFlight[2]; ///< 리스너를 부르는 중인 방송 수(세대 두 슬롯). 제거가 이전 세대가 빌 때까지 기다린다
         uint32                                _broadcastEpoch;          ///< 방송 세대. _mutex 로 보호한다
         atomic<bool>                          _bIsRunning;
         atomic<bool>                          _bInitialized; ///< 쓰는 스레드는 락 없이 읽는다(초기화 · 종료와 경쟁하지 않게 원자값)

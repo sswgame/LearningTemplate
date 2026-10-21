@@ -86,7 +86,7 @@ namespace sw
 
         /**
          * @brief 0 이 아닌 값에서 켜진 비트 중 가장 낮은 비트의 번호(0 ~ 63)를 구합니다. @p value 가 0 이면 결과가 정의되지 않습니다.
-         * @details 비트셋에서 켜진 비트만 골라 도는 자리(`TaskManager` 의 유휴 워커 마스크 · `PrimitiveRegistry` 의 더티 워드)가 씁니다.
+         * @details 비트셋에서 켜진 비트만 골라 도는 코드(`TaskManager` 의 유휴 워커 마스크 · `PrimitiveRegistry` 의 더티 워드)가 씁니다.
          *          C++17 이라 `std::countr_zero` 가 없어 컴파일러 내장 함수를 씁니다(이 저장소의 컴파일러는 전부 clang).
          */
         [[nodiscard]] static SW_INLINE uint32 countTrailingZeros( uint64 value ) noexcept
@@ -219,7 +219,7 @@ namespace sw
         [[nodiscard]] static SW_INLINE float64 ceil( const float64 x ) noexcept { return ::ceil( x ); }
 
         /**
-         * @brief 각(라디안)을 [−π, π] 로 감습니다. 범위 안의 값(경계 π · −π 포함)은 그대로입니다 — 언리얼 `FMath::UnwindRadians` 와 같은 꼴.
+         * @brief 각(라디안)을 [−π, π] 로 감습니다. 범위 안의 값(경계 π · −π 포함)은 그대로입니다 — 언리얼 `FMath::UnwindRadians` 와 같은 형태.
          * @details 2π 를 빼고 더하는 반복이라 큰 값(수천 바퀴)에는 쓰지 않습니다. 각 차이 · 한 프레임 회전처럼 한두 바퀴 안의 값에 씁니다.
          */
         [[nodiscard]] static SW_INLINE float32 wrapAngle( float32 radians ) noexcept
