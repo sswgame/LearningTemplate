@@ -327,9 +327,9 @@ namespace sw
         /**
          * @brief 스케일 · 회전 · 이동을 한 번에 합성합니다(행벡터 규약의 S * R * T).
          * @details `makeScale( s ) * makeFromYawPitchRoll( … ) * makeTranslation( p )` 와 같은 값이지만 행렬 곱을 하지 않습니다.
-         *          스케일은 대각 행렬이고 이동은 마지막 행에만 있어서 결과의 모양이 이미 정해져 있기 때문입니다. 위 3x3 은 회전
+         *          스케일은 대각 행렬이고 이동은 마지막 행에만 있어서 결과의 형태가 이미 정해져 있기 때문입니다. 위 3x3 은 회전
          *          행렬의 각 행에 스케일을 곱한 것이고, 마지막 행이 곧 위치입니다. 행렬 곱 두 번(실수 곱 128번)이 곱 아홉 번으로
-         *          줄어듭니다. 움직이는 컴포넌트가 모두 매 프레임 지나가는 자리라 이 차이가 프레임 시간에 드러납니다.
+         *          줄어듭니다. 움직이는 컴포넌트가 모두 매 프레임 지나가는 경로라 이 차이가 프레임 시간에 드러납니다.
          */
         static float4x4 makeTrs( const float3& position, const quaternion& rotation, const float3& scale ) noexcept;
         /**
@@ -375,7 +375,7 @@ namespace sw
          * @brief 역행렬을 구합니다.
          * @return 특이 행렬이면 `Identity` 를 반환합니다. 실패를 알릴 다른 방법이 없습니다.
          * @warning 그래서 호출하는 쪽이 결과가 Identity 인지 확인해야 할 때가 있습니다. 스케일이 0 인 트랜스폼처럼 역행렬이 없는
-         *          행렬을 넘기면 오류 없이 Identity 로 이어지고, 렌더러에서는 물체가 엉뚱한 자리에 조용히 그려지는 모습으로
+         *          행렬을 넘기면 오류 없이 Identity 로 이어지고, 렌더러에서는 물체가 엉뚱한 위치에 조용히 그려지는 모습으로
          *          나타납니다. 판정 기준은 `|determinant()| < 1e-7` 이며, 미리 알고 싶으면 `determinant()` 를 직접 보십시오.
          */
         float4x4 invert() const noexcept;

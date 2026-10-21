@@ -1,7 +1,7 @@
 /**
  * @file Color.h
  * @brief RGBA 색 값 타입 `Color` 입니다 — 부동소수점(0~1) 4채널과 8비트 패킹(`toRgba` · `toArgb` · `toAbgr`) · 16진 글자 · sRGB 변환을 한곳에 둡니다.
- * @details 엔진 · 에디터 · UI · 디버그 그리기가 `float4` 필드와 손으로 만든 `uint32` 패킹을 따로 들고 있던 자리를 대신합니다.
+ * @details 엔진 · 에디터 · UI · 디버그 그리기가 `float4` 필드와 손으로 만든 `uint32` 패킹을 따로 들고 있던 것을 대신합니다.
  *          **저장 값은 입력 그대로입니다**(감마 · 선형 가정을 하지 않는다) — 이 값이 sRGB 인지 선형인지는 쓰는 쪽이 알고, `toLinear` · `toSrgb` 로 바꿉니다.
  *          패킹 이름은 **가장 높은 바이트부터** 채널 순서로 읽습니다: `toRgba` 는 `0xRRGGBBAA`, `toArgb` 는 `0xAARRGGBB`, `toAbgr` 는 `0xAABBGGRR` 입니다.
  *          `toAbgr` 는 리틀엔디안 메모리에서 바이트가 R, G, B, A 순으로 놓이는 값이라 `DXGI_FORMAT_R8G8B8A8_UNORM` 텍스처 · ImGui `IM_COL32` 와 같습니다.
