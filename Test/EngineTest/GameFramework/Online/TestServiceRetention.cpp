@@ -99,9 +99,15 @@ SW_TEST_CASE( ServiceRetentionTest, ReadsTimeFromHistoryAndClosedReportKeys )
     SW_EXPECT_TRUE( Ledger::readHistoryTimeMs( history, timeMs ) );
     SW_EXPECT_EQUAL( int64{ 1234 }, timeMs );
 
-    ServiceRecord escrow; // 맡김 내역은 시각 위치를 키만으로 알 수 없어 읽지 않는다
-    escrow._key = "esc/trade/abc/0000000000000001/x";
-    SW_EXPECT_FALSE( Ledger::readHistoryTimeMs( escrow, timeMs ) );
+    ServiceRecord escrow; // 맡김 보유자: esc/<도메인>/<토큰>/<시각>/<분개 키>
+    escrow._key = "esc/trade/abc.1/";
+    ServiceKeyUtil::appendHex64( escrow._key, 4321 );
+    escrow._key += "/shop.buy/0123";
+    SW_EXPECT_TRUE( Ledger::readHistoryTimeMs( escrow, timeMs ) );
+    SW_EXPECT_EQUAL( int64{ 4321 }, timeMs );
+    ServiceRecord shortEscrow;
+    shortEscrow._key = "esc/trade/abc";
+    SW_EXPECT_FALSE( Ledger::readHistoryTimeMs( shortEscrow, timeMs ) );
 
     ServiceRecord closedReport;
     closedReport._key = "closed/";

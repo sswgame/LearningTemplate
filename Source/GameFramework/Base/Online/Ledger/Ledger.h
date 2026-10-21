@@ -32,8 +32,8 @@ namespace sw
         /** @brief 분개 레코드에서 이동 시각을 읽습니다(보존 기간 쓸기 `ServiceRetention` 용). 형식이 틀리면 false 입니다. */
         [[nodiscard]] static bool readJournalTimeMs( const ServiceRecord& record, int64& outTimeMs );
         /**
-         * @brief 내역 레코드의 키 `<보유자>/<시각 16 진 16>/<분개 키>` 에서 이동 시각을 읽습니다. 계정과 발행 · 소각 보유자만 읽고, 맡김(에스크로) 보유자는 false 입니다.
-         * @details 맡김 키는 이름 안에 `/` 가 있어 시각 위치를 키만으로 정할 수 없다. 맡김 내역은 맡긴 거래가 끝나면 더 쌓이지 않으므로 쓸지 않고 남긴다.
+         * @brief 내역 레코드의 키 `<보유자>/<시각 16 진 16>/<분개 키>` 에서 이동 시각을 읽습니다. 계정 · 발행 · 소각 · 맡김(에스크로) 보유자의 키를 읽고, 모르는 키는 false 입니다.
+         * @details 맡김 키는 `esc/<도메인>/<토큰>` 이고 도메인(`[0-9a-z_]`)과 토큰(`[0-9a-z_.-]`)의 글자 규칙에 `/` 가 없어, 슬래시 셋째 뒤가 시각이다.
          */
         [[nodiscard]] static bool readHistoryTimeMs( const ServiceRecord& record, int64& outTimeMs );
 

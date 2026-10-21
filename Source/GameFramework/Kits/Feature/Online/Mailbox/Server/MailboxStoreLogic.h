@@ -14,6 +14,8 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "GameFramework/Base/Online/Identity/AccountDirectory.h"
+#include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Base/Online/Mail/ServiceMailCampaign.h"
 #include "GameFramework/Base/Online/Store/ServiceStore.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -35,14 +37,25 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 만료 반환으로 잔액이 바뀐 계정 하나와 그 자산의 잔액입니다. */
+    struct MailboxBalanceChange
+    {
+        AccountID     _accountID{ kInvalidAccountID };
+        LedgerBalance _balance{};
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 만료 정리 한 번의 처리 수입니다. */
     struct MailboxSweepStats
     {
-        int32 _discardedCount{ 0 };
-        int32 _returnedCount{ 0 };
-        int32 _removedCount{ 0 }; ///< 발행 재원, 이미 받은 우편, 없는 우편이며 지우기만 한 수이다
-        int32 _failedCount{ 0 };  ///< 다음 정리가 다시 한다. 서버 둘이 같은 우편을 처리하면 진 쪽이 여기에 포함된다
-        uint8 _bMore{ SW_FALSE }; ///< 상한까지 채웠으므로 곧 다시 정리한다
+        vector<MailboxBalanceChange> _listChange{}; ///< 보낸 쪽에 돌려준 재화로 잔액이 바뀐 계정이다. 서비스가 그 계정에 알린다
+        int32                        _discardedCount{ 0 };
+        int32                        _returnedCount{ 0 };
+        int32                        _removedCount{ 0 }; ///< 발행 재원, 이미 받은 우편, 없는 우편이며 지우기만 한 수이다
+        int32                        _failedCount{ 0 };  ///< 다음 정리가 다시 한다. 서버 둘이 같은 우편을 처리하면 진 쪽이 여기에 포함된다
+        uint8                        _bMore{ SW_FALSE }; ///< 상한까지 채웠으므로 곧 다시 정리한다
     };
 } // namespace sw
 

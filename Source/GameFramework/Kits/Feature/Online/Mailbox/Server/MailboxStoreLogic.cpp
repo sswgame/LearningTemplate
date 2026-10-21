@@ -156,8 +156,18 @@ namespace sw
             }
 
             /** @brief 만료 인덱스 하나를 처리할 트랜잭션을 붙입니다. 실패하면 false 를 반환하며 그 인덱스는 다음 정리가 다시 봅니다. */
+            /** @brief 이동으로 바뀐 계정 보유자의 잔액을 모읍니다. */
+            static void collectAccountChanges( const LedgerTransferOutcome& outcome, vector<MailboxBalanceChange>& outListChange )
+            {
+                for ( const LedgerTransferOutcome::HolderBalance& holderBalance : outcome._listHolderBalance )
+                {
+                    if ( holderBalance._holder._kind == LedgerHolderKind::Account )
+                        outListChange.push_back( MailboxBalanceChange{ holderBalance._holder._accountID, holderBalance._balance } );
+                }
+            }
+
             static bool stageExpiry( IServiceStoreConnection& connection, const ServiceRecord& index, string_view mailKey, int64 nowMs, ServiceTransaction& inoutTransaction,
-                                     bool& outbReturned, bool& outbDiscarded )
+                                     bool& outbReturned, bool& outbDiscarded, vector<MailboxBalanceChange>& outListChange )
             {
                 outbReturned  = false;
                 outbDiscarded = false;
@@ -190,7 +200,11 @@ namespace sw
                     request._listPosting.push_back( LedgerPosting{ escrow, target, attachment._assetID, attachment._amount } );
                 }
                 LedgerTransferOutcome outcome;
-                return Ledger::stageTransfer( connection, request, inoutTransaction, outcome ) == LedgerResult::Ok && outcome._bReplayed == SW_FALSE;
+                if ( Ledger::stageTransfer( connection, request, inoutTransaction, outcome ) != LedgerResult::Ok || outcome._bReplayed == SW_TRUE )
+                    return false;
+                if ( outbReturned )
+                    collectAccountChanges( outcome, outListChange );
+                return true;
             }
         };
     } // namespace
@@ -419,15 +433,20 @@ namespace sw
             }
             if ( static_cast<int64>( expiresMs ) > nowMs )
                 return; // 인덱스가 시각 순서이므로 나머지는 아직 정리할 때가 아니다
-            const string_view  mailKey = string_view( index._key ).substr( width + 1 );
-            ServiceTransaction transaction;
-            bool               bReturned  = false;
-            bool               bDiscarded = false;
-            if ( MailboxStoreLogicInternal::stageExpiry( connection, index, mailKey, nowMs, transaction, bReturned, bDiscarded ) == false ||
+            const string_view            mailKey = string_view( index._key ).substr( width + 1 );
+            ServiceTransaction           transaction;
+            bool                         bReturned  = false;
+            bool                         bDiscarded = false;
+            vector<MailboxBalanceChange> listChange;
+            if ( MailboxStoreLogicInternal::stageExpiry( connection, index, mailKey, nowMs, transaction, bReturned, bDiscarded, listChange ) == false ||
                  connection.commit( transaction ) != ServiceStoreResult::Ok )
             {
                 ++outStats._failedCount;
                 continue;
+            }
+            for ( MailboxBalanceChange& change : listChange )
+            {
+                outStats._listChange.push_back( std::move( change ) );
             }
             if ( bReturned )
                 ++outStats._returnedCount;

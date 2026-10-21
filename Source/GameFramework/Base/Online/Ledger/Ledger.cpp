@@ -303,6 +303,21 @@ namespace sw
             timeOffset = 5 + static_cast<size_t>( ServiceKeyUtil::kHexWidth ) + 1; // "acct/<16 진>/"
         else if ( key.starts_with( "sys/mint/" ) || key.starts_with( "sys/sink/" ) )
             timeOffset = 9;
+        else if ( key.starts_with( "esc/" ) )
+        {
+            // "esc/<도메인>/<토큰>/" — 도메인과 토큰의 글자 규칙에 '/' 가 없으므로 슬래시 셋째 뒤가 시각이다
+            size_t slashCount = 0;
+            for ( size_t index = 0; index < key.size() && slashCount < 3; ++index )
+            {
+                if ( key[index] == '/' )
+                {
+                    ++slashCount;
+                    timeOffset = index + 1;
+                }
+            }
+            if ( slashCount < 3 )
+                return false;
+        }
         else
             return false;
         if ( key.size() < timeOffset + static_cast<size_t>( ServiceKeyUtil::kHexWidth ) )
