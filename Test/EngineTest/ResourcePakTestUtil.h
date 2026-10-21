@@ -11,7 +11,7 @@
 
 namespace sw::test
 {
-    /** @brief 테스트용 팩 파일을 쓰는 도우미입니다(쿠커와 같은 배치 — 헤더 · 4096 정렬 페이로드 · FAT · 항목 경로 목록(스트링 풀, 필수)). */
+    /** @brief 테스트용 팩 파일을 쓰는 도우미입니다. 쿠커와 같은 `ResourcePakWriter` 로 씁니다(배치는 `ResourcePakTypes.h` 머리말). */
     struct ResourcePakTestUtil
     {
         /**

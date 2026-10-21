@@ -1,3 +1,16 @@
+/**
+ * @file ResourcePakTypes.h
+ * @brief .pack 바이너리 레이아웃(헤더 · FAT 항목)과 팩 열거입니다. **이 헤더가 레이아웃의 원본입니다.**
+ * @details 레이아웃은 데이터가 아니라 형식이라 C++ 구조체로 손으로 씁니다. 팩을 쓰는 쪽(`ResourcePakWriter`)과 읽는 쪽(`ResourcePakReader`)이
+ *          같은 구조체를 그대로 쓰고 읽으므로 두 쪽의 오프셋이 어긋날 수 없습니다 — 예전에는 계약 JSON 에서 C++ 헤더와 파이썬 `struct.pack` 이
+ *          따로 나와 "마운트는 되는데 파일이 0개" 인 팩이 생길 수 있었습니다. 필드를 고치면 아래 `static_assert` 가 크기 · 오프셋을 다시 못 박게
+ *          함께 고치고 `kPackFormatVersion` 을 올립니다(옛 팩은 리더가 거절하고 쿠커가 다시 씁니다).
+ *
+ *          파일 배치(쓰는 쪽이 정하고 리더는 헤더의 오프셋만 믿는다): 헤더(64B) · 섹터 정렬 FAT(32B × 항목) · 섹터 정렬 페이로드(항목마다 섹터 정렬) ·
+ *          섹터 정렬 항목 경로 목록(스트링 풀, NUL 종료 경로를 잇는다). FAT 은 경로 해시 오름차순입니다.
+ *          경로 해시는 구분자를 '/' 로 맞춘 팩 안 경로(도메인 제외 — `engine.pack` 의 항목은 `renderpass/default.xml`)의 대소문자 무시
+ *          FNV-1a 64(`HashUtil::computeStringHash64` 기본값)입니다.
+ */
 #pragma once
 #include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
@@ -6,11 +19,7 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "sw/config/PackFormat.gen.h"
-
-// .pack 매직/버전/정렬 상수와 온디스크 구조체(PackHeader, PackFileEntryOnDisk)는
-// Config/Engine/PackFormat.json 에서 생성된다. 같은 계약 파일을 Python 쿠커가 읽으므로
-// 레이아웃을 손으로 맞출 일이 없다. 구조체를 고치려면 계약 파일을 고친다.
+#include <cstddef>
 
 namespace sw
 {
@@ -29,14 +38,14 @@ namespace sw
 
     /**
      * @enum PackCompressionType
-     * @brief 팩 안 파일의 압축 코덱 식별자입니다.
+     * @brief 팩 안 파일의 압축 코덱 식별자입니다. 코덱은 팩 단위입니다 — 리더가 헤더의 코덱 하나로 모든 항목을 풉니다.
      */
     ENUM()
     enum class PackCompressionType : uint8
     {
         None   = 0, ///< 압축하지 않음(그대로 통과)
         RLE    = 1, ///< 빠른 Run-Length Encoding
-        Zlib   = 2, ///< Zlib / Deflate(쿠커가 파이썬이라 기본값입니다. 표준 라이브러리에 들어 있습니다)
+        Zlib   = 2, ///< Zlib / Deflate(기본값 — 표준 zlib 리더라 전략 제약이 없다)
         LZ4    = 3, ///< LZ4 초고속 압축(해제가 가장 빠릅니다)
         Zstd   = 4, ///< Zstandard(크기가 가장 작습니다. 배포물용)
         Custom = 255
@@ -57,19 +66,84 @@ namespace sw
         AES256GCM = 2, ///< AES-256-GCM(상용 수준 보안)
     };
 
-    // 온디스크 구조체는 생성 헤더(PackFormat.gen.h)에 있다. enum 값이 계약 파일과 어긋나면
-    // 쿠커가 쓴 값과 리더가 해석하는 값이 달라지므로 여기서 못 박는다.
-    static_assert( static_cast<uint32>( PackCompressionType::None ) == packformat::kCompressionNone );
-    static_assert( static_cast<uint32>( PackCompressionType::RLE ) == packformat::kCompressionRLE );
-    static_assert( static_cast<uint32>( PackCompressionType::Zlib ) == packformat::kCompressionZlib );
-    static_assert( static_cast<uint32>( PackCompressionType::LZ4 ) == packformat::kCompressionLZ4 );
-    static_assert( static_cast<uint32>( PackCompressionType::Zstd ) == packformat::kCompressionZstd );
-    static_assert( static_cast<uint32>( PackEncryptionType::None ) == packformat::kEncryptionNone );
-    static_assert( static_cast<uint32>( PackEncryptionType::SimpleXor ) == packformat::kEncryptionSimpleXor );
-    static_assert( static_cast<uint32>( PackEncryptionType::AES256GCM ) == packformat::kEncryptionAES256GCM );
-    static_assert( static_cast<uint32>( PackFlag::HasStringPool ) == packformat::kFlagHasStringPool );
-    static_assert( static_cast<uint32>( PackFlag::HasCrc32 ) == packformat::kFlagHasCrc32 );
-    static_assert( static_cast<uint32>( PackFlag::Encrypted ) == packformat::kFlagEncrypted );
+    /** @brief 'SWPK' 매직 넘버(리틀엔디언)입니다. */
+    inline constexpr uint32 kPackMagic = 0x4B505753;
+
+    /** @brief 현재 지원하는 리소스 팩 바이너리 포맷 버전입니다. 레이아웃을 바꾸면 올립니다. */
+    inline constexpr uint32 kPackFormatVersion = 1;
+
+    /** @brief DirectStorage 및 NVMe DMA 친화적 섹터 정렬 경계입니다. */
+    inline constexpr uint16 kPackSectorAlignment = 4096;
+
+#pragma pack( push, 1 )
+    /**
+     * @struct PackHeader
+     * @brief 64바이트 고정 크기 .pack 파일 헤더입니다.
+     */
+    struct PackHeader
+    {
+        uint32 _magic{ 0 };            ///< 'SWPK' 매직 (offset 0)
+        uint32 _formatVersion{ 0 };    ///< 포맷 버전 (offset 4)
+        uint32 _dlcAppID{ 0 };         ///< DLC 식별자(0: 본편/공용, >0: 유료 DLC AppID) (offset 8)
+        uint8  _compressionType{ 0 };  ///< 팩 전체에 적용된 압축 코덱(`PackCompressionType`) (offset 12)
+        uint8  _encryptionType{ 0 };   ///< 암호화 방식(`PackEncryptionType`) (offset 13)
+        uint16 _sectorAlignment{ 0 };  ///< 섹터 정렬 경계(`kPackSectorAlignment`) (offset 14)
+        uint16 _flags{ 0 };            ///< 팩 플래그 비트마스크(`PackFlag`) (offset 16)
+        uint32 _fileCount{ 0 };        ///< 팩에 포함된 파일 총 개수 (offset 18)
+        uint64 _indexOffset{ 0 };      ///< FAT 인덱스 테이블 시작 오프셋 (offset 22)
+        uint64 _indexSize{ 0 };        ///< FAT 인덱스 테이블 바이트 크기 — `_fileCount × sizeof( PackFileEntryOnDisk )` 와 같아야 한다 (offset 30)
+        uint64 _stringPoolOffset{ 0 }; ///< 항목 경로 목록(스트링 풀) 시작 오프셋 — 필수다. 런타임 폴더 나열이 이것으로 항목 이름을 안다 (offset 38)
+        uint64 _stringPoolSize{ 0 };   ///< 스트링 풀 바이트 크기 (offset 46)
+        uint64 _totalDataSize{ 0 };    ///< 정렬 패딩을 포함한 페이로드 총 크기 (offset 54)
+        uint8  _reserved[2]{};         ///< 예약 패딩(총 64바이트) (offset 62)
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @struct PackFileEntryOnDisk
+     * @brief 디스크에 저장되는 파일 할당 테이블(FAT) 항목 하나(32바이트)입니다.
+     */
+    struct PackFileEntryOnDisk
+    {
+        uint64 _pathHash{ 0 };         ///< 팩 안 경로의 대소문자 무시 FNV-1a 64비트 해시 (offset 0)
+        uint64 _dataOffset{ 0 };       ///< 팩 파일 안 페이로드 시작 오프셋(섹터 정렬) (offset 8)
+        uint32 _compressedSize{ 0 };   ///< 압축된 데이터 크기(무압축이면 원본 크기) (offset 16)
+        uint32 _uncompressedSize{ 0 }; ///< 압축 해제 후 원본 크기 (offset 20)
+        uint32 _crc32{ 0 };            ///< 원본 데이터 CRC32 체크섬(빈 데이터는 0) (offset 24)
+        uint32 _stringPoolOffset{ 0 }; ///< 스트링 풀 안 항목 경로 오프셋(NUL 종료, 해시가 `_pathHash` 와 같아야 한다) (offset 28)
+    };
+} // namespace sw
+
+namespace sw
+{
+#pragma pack( pop )
+
+    // 레이아웃을 못 박는다. 디스크의 바이트가 이 구조체 그대로이므로 크기 · 오프셋이 바뀌면 이미 쿠킹된 팩을 잘못 읽는다.
+    static_assert( sizeof( PackHeader ) == 64, "PackHeader must be exactly 64 bytes" );
+    static_assert( offsetof( PackHeader, _magic ) == 0 );
+    static_assert( offsetof( PackHeader, _formatVersion ) == 4 );
+    static_assert( offsetof( PackHeader, _dlcAppID ) == 8 );
+    static_assert( offsetof( PackHeader, _compressionType ) == 12 );
+    static_assert( offsetof( PackHeader, _encryptionType ) == 13 );
+    static_assert( offsetof( PackHeader, _sectorAlignment ) == 14 );
+    static_assert( offsetof( PackHeader, _flags ) == 16 );
+    static_assert( offsetof( PackHeader, _fileCount ) == 18 );
+    static_assert( offsetof( PackHeader, _indexOffset ) == 22 );
+    static_assert( offsetof( PackHeader, _indexSize ) == 30 );
+    static_assert( offsetof( PackHeader, _stringPoolOffset ) == 38 );
+    static_assert( offsetof( PackHeader, _stringPoolSize ) == 46 );
+    static_assert( offsetof( PackHeader, _totalDataSize ) == 54 );
+    static_assert( offsetof( PackHeader, _reserved ) == 62 );
+    static_assert( sizeof( PackFileEntryOnDisk ) == 32, "PackFileEntryOnDisk must be exactly 32 bytes" );
+    static_assert( offsetof( PackFileEntryOnDisk, _pathHash ) == 0 );
+    static_assert( offsetof( PackFileEntryOnDisk, _dataOffset ) == 8 );
+    static_assert( offsetof( PackFileEntryOnDisk, _compressedSize ) == 16 );
+    static_assert( offsetof( PackFileEntryOnDisk, _uncompressedSize ) == 20 );
+    static_assert( offsetof( PackFileEntryOnDisk, _crc32 ) == 24 );
+    static_assert( offsetof( PackFileEntryOnDisk, _stringPoolOffset ) == 28 );
+    static_assert( ( kPackSectorAlignment & ( kPackSectorAlignment - 1 ) ) == 0, "sector alignment must be a power of two" );
 
     /**
      * @struct PackFileEntry
