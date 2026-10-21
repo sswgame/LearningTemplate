@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Editor/Common/Commands/Scene/EditorBakeOutputPath.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorFrameStep.h"
@@ -32,36 +33,6 @@ namespace sw::editor
     {
         struct EditorLightProbeBakeSessionInternal
         {
-            /// @brief 씬 파일 이름의 끝 — 이것을 떼고 볼륨 이름을 붙인다.
-            static constexpr string_view kSceneSuffix = ".scene.xml";
-
-            /**
-             * @brief 볼륨 하나의 `.probes` 리소스 경로입니다 — `<씬 경로에서 .scene.xml 을 뗀 것>.<오브젝트 이름 소문자>.probes`. 씬을 저장한 적이 없으면 빈 문자열입니다.
-             * @details 리소스 경로는 소문자만 받는다(CheckResourceCasing). 이름의 영숫자 밖 글자는 `_` 로 바꾼다.
-             */
-            static string makeProbeResourcePath( const Scene& scene, const LightProbeVolumeComponent& volume )
-            {
-                const string& sourcePath = scene.getSourcePath();
-                string        resourceID = ResourcePaths::toResourceID( sourcePath );
-                if ( resourceID.empty() )
-                    resourceID = sourcePath;
-                if ( resourceID.empty() )
-                    return {};
-                const size_t suffix = resourceID.rfind( kSceneSuffix );
-                string       path{ suffix == string::npos ? resourceID : resourceID.substr( 0, suffix ) };
-                string       name = StringUtil::toLower( volume.getOwner() != nullptr ? volume.getOwner()->getName().c_str() : "volume" );
-                for ( utf8& character : name )
-                {
-                    const bool bAllowed = ( 'a' <= character && character <= 'z' ) || ( '0' <= character && character <= '9' );
-                    if ( bAllowed == false )
-                        character = '_';
-                }
-                path += '.';
-                path += name;
-                path += LightProbeGrid::kExtension;
-                return path;
-            }
-
             /** @brief 굽을 볼륨 — 선택한 오브젝트의 볼륨, 선택에 볼륨이 없으면 씬의 모든 볼륨입니다. */
             static void collectVolumes( GameObjectManager& manager, vector<LightProbeVolumeComponent*>& outListVolume )
             {
@@ -272,7 +243,8 @@ namespace sw::editor
             reportFailure( "a light probe volume was removed while it was baked" );
             return;
         }
-        const string resourcePath = EditorLightProbeBakeSessionInternal::makeProbeResourcePath( scene, *pVolume );
+        // 출력 경로 규칙(`<씬>.<오브젝트 이름>.probes`)은 반사 프로브 베이크와 같은 함수 하나다.
+        const string resourcePath = pVolume->getOwner() != nullptr ? makeSceneBakeResourcePath( scene, *pVolume->getOwner(), LightProbeGrid::kExtension ) : string{};
         if ( resourcePath.empty() )
         {
             reportFailure( "the scene has never been saved - save it before baking light probes" );

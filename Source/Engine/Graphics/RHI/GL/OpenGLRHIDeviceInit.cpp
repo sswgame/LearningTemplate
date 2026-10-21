@@ -257,7 +257,8 @@ namespace sw
             for ( uint32 unit = 0; unit < 64; ++unit )
             {
                 const bool bMaterialUnit = ( shaderslot::kMaterialTexture0 <= unit && unit < shaderslot::kMaterialTexture0 + shaderslot::kMaterialTextureCount );
-                const bool bEngineUnit   = ( unit < shaderslot::kEngineTexture0 + shaderslot::kEngineTextureCount );
+                // G버퍼 머티리얼 칸(t15)도 엔진 텍스처다 — t0..t3 과 떨어져 있을 뿐 같은 샘플러를 쓴다.
+                const bool bEngineUnit = ( unit < shaderslot::kEngineTexture0 + shaderslot::kEngineTextureCount ) || unit == shaderslot::kEngineGBufferMaterialTexture;
                 glBindTextureUnit( unit, defaultTex );
                 if ( bMaterialUnit )
                     glBindSampler( unit, materialSampler );

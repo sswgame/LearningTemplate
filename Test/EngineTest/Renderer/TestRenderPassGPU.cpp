@@ -4649,7 +4649,7 @@ SW_TEST_CASE( RenderPassGPUTest, RenamedAttachmentsRenderTheSameImage )
  * @details 역할을 **이름으로만** 정하면(GBufferAlbedo · GBufferNormal · ShadowMap · AOColor) 이름을 바꿀 때 Lighting 의 입력이 모두
  *          SourceColor · SceneDepth 로 읽혀 계약이 깨지고 G버퍼가 걸리지 않는다. 언리얼 RDG · 유니티 RenderGraph 처럼 바인딩을 이름에서
  *          떼어, 첨부가 `_role` 로 자기 역할을 선언한다.
- *          `deferredpipeline.xml` 의 다섯 첨부 이름을 바꾸고 역할을 적어 같은 씬을 그려 픽셀을 맞춘다.
+ *          `deferredpipeline.xml` 의 여섯 첨부 이름을 바꾸고 역할을 적어 같은 씬을 그려 픽셀을 맞춘다.
  */
 SW_TEST_CASE( RenderPassGPUTest, RenamedGBufferAttachmentsRenderTheSameImage )
 {
@@ -4662,11 +4662,12 @@ SW_TEST_CASE( RenderPassGPUTest, RenamedGBufferAttachmentsRenderTheSameImage )
         const utf8* _pRole; ///< 비면 역할을 적지 않는다(깊이 포맷은 이름 없이도 SceneDepth 다)
     };
     constexpr AttachmentRename arrRename[] = {
-        {"GBufferAlbedo", "MainAlbedo",    "GBufferAlbedo"},
-        {"GBufferNormal", "MainNormal",    "GBufferNormal"},
-        {    "ShadowMap",  "SunShadow",        "ShadowMap"},
-        {      "AOColor",  "Occlusion", "AmbientOcclusion"},
-        {   "SceneDepth",  "MainDepth",                 ""},
+        {  "GBufferAlbedo",  "MainAlbedo",    "GBufferAlbedo"},
+        {  "GBufferNormal",  "MainNormal",    "GBufferNormal"},
+        {"GBufferMaterial", "MainSurface",  "GBufferMaterial"},
+        {      "ShadowMap",   "SunShadow",        "ShadowMap"},
+        {        "AOColor",   "Occlusion", "AmbientOcclusion"},
+        {     "SceneDepth",   "MainDepth",                 ""},
     };
     for ( const AttachmentRename& rename : arrRename )
     {
@@ -5214,6 +5215,120 @@ SW_TEST_CASE( RenderPassGPUTest, LightProbeVolumeReplacesAmbient )
     }
     if ( comparedCount == 0 )
         SW_TEST_SKIP( "No RHI backend could run the light probe volume test" );
+}
+
+/**
+ * @brief [RenderPassGPUTest] 머티리얼 금속도가 포워드와 디퍼드 모두에서 그림을 바꾼다 — 네 백엔드 모두(IndirectLighting.md P5)
+ * @details 금속은 확산이 없고 F0 가 기본 색이라 같은 큐브가 다른 그림이어야 한다. 디퍼드에서 같으면 금속도가 G버퍼 머티리얼 칸(GBufferMaterial,
+ *          에뮬 슬롯 t15)을 지나 조명 패스까지 오지 못한 것이다 — 쓰는 쪽 swStoreSurface · 실행의 셋째 MRT · 바인딩 · swLoadGBufferMaterial 중 하나다.
+ */
+SW_TEST_CASE( RenderPassGPUTest, MetallicChangesForwardAndDeferredPictures )
+{
+    const utf8*           arrPipeline[] = { ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str(), ::test::getEngineDefaultAssets()._defaultDeferredPipeline.c_str() };
+    uint32                comparedCount{ 0 };
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const utf8* pName = device->getBackendName();
+        for ( const utf8* pPipeline : arrPipeline )
+        {
+            sw::vector<uint8>     arrCapture[2];
+            sw::RHITextureMipSpan arrLayout[2]{};
+            bool                  bOk = true;
+            for ( uint32 caseIndex = 0; caseIndex < 2u && bOk; ++caseIndex )
+            {
+                LitCubeScene cube;
+                bOk = cube.populate() && cube._material->setParameter( nullptr, sw::hashed_string( "metallic" ), caseIndex == 0u ? "0.0" : "1.0" );
+                if ( bOk )
+                {
+                    cube._scene.getObjectManager()->flushSceneTransforms();
+                    bOk = renderPresentCaptureOf( device.get(), cube._scene, pPipeline, arrCapture[caseIndex], arrLayout[caseIndex] );
+                }
+            }
+            if ( bOk == false )
+            {
+                SW_LOG_WARNING( "MetallicChangesForwardAndDeferredPictures: %# 에서 '%#' 를 그리지 못했습니다.", pName, pPipeline );
+                continue;
+            }
+            ++comparedCount;
+            const CaptureDifference difference = compareCaptures( arrCapture[0], arrCapture[1] );
+            SW_EXPECT_TRUE_MSG( difference._notBackgroundCount > 0, ( sw::string( pName ) + " " + pPipeline + ": 기준 그림이 배경뿐입니다" ).c_str() );
+            SW_EXPECT_FALSE_MSG( difference.isSameImage(),
+                                 ( sw::string( pName ) + " " + pPipeline + ": 금속도 0 과 1 의 그림이 같다 (" + difference.describe() + ")" ).c_str() );
+        }
+    }
+    if ( comparedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could run the metallic test" );
+}
+
+/**
+ * @brief [RenderPassGPUTest] CPU 와 GPU 입자 시뮬레이션이 같은 씨앗 · 같은 단계 수에서 같은 그림을 그린다 — 네 백엔드 모두(Vfx.md V5)
+ * @details 표본 효과(sparks — 연기 알파 · 불꽃 더하기, CPU 전용 모듈 없음)를 `gv_vfxSimulation` CPU 와 GPU 로 각각 읽어 같은 틱 수만큼 돌리고 Present 를 견준다.
+ *          두 시뮬레이션은 같은 시계(`VfxEmitterClock`)와 같은 난수 수열(splitmix64)을 쓰므로 입자 수와 위치가 같아야 한다. 입자 하나가 빠지거나 위치가 틀리면
+ *          빌보드 하나만큼의 픽셀이 바뀐다. 허용: 다른 칸이 1% 이하 — 부동소수 순서(FMA)가 다르면 빌보드 가장자리 픽셀이 한두 칸 바뀔 수 있어 차이의 크기는 보지 않는다.
+ *          GPU 의 살아 있는 수는 RHI 에 버퍼 되읽기가 없어 직접 세지 않는다(그림이 수를 대신한다).
+ */
+SW_TEST_CASE( RenderPassGPUTest, CPUAndGPUParticleSimulationsDrawTheSameImage )
+{
+#if defined( SW_SHIPPING )
+    SW_TEST_SKIP( "gv_vfxSimulation is a development-build switch" );
+#else
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+    sw::GlobalVariableManager& variables     = sw::engine::getSubsystem<sw::GlobalVariableManager>();
+    constexpr uint32           kTargetCount  = 2;
+    constexpr uint32           kTickCount    = 45;
+    const utf8*                arrTarget[]   = { "CPU", "GPU" };
+    uint32                     comparedCount = 0;
+    test::RHIBackendSweep      sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const utf8*           pName = device->getBackendName();
+        sw::vector<uint8>     arrCapture[kTargetCount];
+        sw::RHITextureMipSpan arrLayout[kTargetCount]{};
+        bool                  bOk = true;
+        for ( uint32 targetIndex = 0; targetIndex < kTargetCount && bOk; ++targetIndex )
+        {
+            // 대상은 효과를 읽을 때 정해진다(VfxComponent) — 읽기 전에 바꾼다.
+            bOk = variables.setValueFromString( "gv_vfxSimulation", arrTarget[targetIndex] );
+            sw::Scene scene( "ParticleCompareScene" );
+            bOk                                = bOk && scene.ensureDefaultCameras();
+            const sw::CameraComponent* pCamera = bOk ? scene.getActiveGameCamera() : nullptr;
+            sw::GameObject*            pObject = pCamera != nullptr ? scene.getObjectManager()->createGameObject( sw::hashed_string( "Effect" ) ) : nullptr;
+            sw::VfxComponent*          pVfx    = pObject != nullptr ? pObject->addComponent<sw::VfxComponent>() : nullptr;
+            bOk                                = bOk && pVfx != nullptr;
+            if ( bOk )
+            {
+                pVfx->setWorldPosition( pCamera->getCameraPosition() + pCamera->getCameraForward() * 4.0f - sw::float3( 0.0f, 0.5f, 0.0f ) );
+                pVfx->setEffectPath( "engine/vfx/sparks.vfx.xml" );
+                pVfx->play();
+                for ( uint32 tickIndex = 0; tickIndex < kTickCount; ++tickIndex )
+                {
+                    pVfx->onTick( sw::VfxEmitterClock::kFixedStepSeconds );
+                }
+                bOk = pVfx->getSpawnedParticleCount() > 0;
+            }
+            if ( bOk )
+            {
+                scene.getObjectManager()->flushSceneTransforms();
+                bOk = renderPresentCaptureOf( device.get(), scene, ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str(), arrCapture[targetIndex],
+                                              arrLayout[targetIndex] );
+            }
+        }
+        if ( bOk == false )
+        {
+            SW_LOG_WARNING( "CPUAndGPUParticleSimulationsDrawTheSameImage: %# 에서 그리지 못했습니다.", pName );
+            continue;
+        }
+        ++comparedCount;
+        const CaptureDifference difference = compareCaptures( arrCapture[0], arrCapture[1] );
+        SW_EXPECT_TRUE_MSG( difference._notBackgroundCount > 0, ( sw::string( pName ) + ": CPU 그림이 배경뿐입니다 — 입자가 그려지지 않았다" ).c_str() );
+        SW_EXPECT_TRUE_MSG( difference._differCount * 100u <= difference._compareCount,
+                            ( sw::string( pName ) + ": CPU 와 GPU 시뮬레이션의 그림이 다르다 (" + difference.describe() + ")" ).c_str() );
+    }
+    SW_EXPECT_TRUE( variables.setValueFromString( "gv_vfxSimulation", "GPU" ) );
+    if ( comparedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could run the particle simulation comparison" );
+#endif
 }
 
 /**

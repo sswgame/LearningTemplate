@@ -1009,7 +1009,7 @@ SW_TEST_CASE( RenderPassTest, PipelineEmptyStagesSkipped )
 
 /**
  * @brief [RenderPassTest] 지오메트리 패스의 컬러 타깃은 선언에서 온다 — 컬러 출력만 선언 순서대로, 컬러 출력이 없으면 검증 오류
- * @details 실행(FrameRenderer)은 `_listResolvedColorOutput` 을 그대로 건다(GBuffer 는 [0] 알베도, [1] 노멀). 이름을 코드에 박으면
+ * @details 실행(FrameRenderer)은 `_listResolvedColorOutput` 을 그대로 건다(GBuffer 는 [0] 알베도, [1] 노멀, [2] 머티리얼). 이름을 코드에 박으면
  *          (SceneColor · GBufferAlbedo …) 다른 이름을 쓰는 파이프라인에서 없는 첨부(핸들 0 = 백버퍼)를 연다. 실제 그림은
  *          `RenderPassGPUTest.RenamedAttachmentsRenderTheSameImage` 가 본다.
  */
@@ -1029,6 +1029,7 @@ SW_TEST_CASE( RenderPassTest, GeometryPassColorTargetsComeFromTheDeclaration )
         };
         addAttachment( "MainAlbedo", "R8G8B8A8_UNORM" );
         addAttachment( "MainNormal", "R16G16B16A16_FLOAT" );
+        addAttachment( "MainMaterial", "R8G8B8A8_UNORM" );
         addAttachment( "MainDepth", "D24_UNORM_S8_UINT" );
 
         sw::RenderGraphPassDesc pass{};
@@ -1045,17 +1046,23 @@ SW_TEST_CASE( RenderPassTest, GeometryPassColorTargetsComeFromTheDeclaration )
     // 출력에 뎁스가 섞여 있어도 컬러만, 선언 순서대로 — 이름은 원본(GBufferAlbedo …)이 아니어도 된다.
     {
         sw::RenderPipelineAsset res;
-        makePipeline( res, "GBuffer", { "MainDepth", "MainAlbedo", "MainNormal" } );
+        makePipeline( res, "GBuffer", { "MainDepth", "MainAlbedo", "MainNormal", "MainMaterial" } );
         SW_EXPECT_EQUAL( 0u, res.validate( "unit-test" ) );
         const sw::vector<sw::RenderGraphPassDesc::ResolvedAttachment>& listColor = res.getGraphPass()[0]._listResolvedColorOutput;
-        SW_ASSERT_EQUAL( size_t( 2 ), listColor.size() );
+        SW_ASSERT_EQUAL( size_t( 3 ), listColor.size() );
         SW_EXPECT_TRUE( listColor[0]._attachment.view() == "MainAlbedo" );
         SW_EXPECT_TRUE( listColor[1]._attachment.view() == "MainNormal" );
+        SW_EXPECT_TRUE( listColor[2]._attachment.view() == "MainMaterial" );
     }
-    // G버퍼는 알베도 · 노멀 두 컬러를 한 MRT 패스로 쓴다 — 하나뿐이면 Lighting · SSAO 가 읽을 노멀이 없다(MRT 없는 단독 패스 경로는 없다).
+    // G버퍼는 알베도 · 노멀 · 머티리얼 세 컬러를 한 MRT 패스로 쓴다 — 모자라면 Lighting · SSAO 가 읽을 칸이 없다(MRT 없는 단독 패스 경로는 없다).
     {
         sw::RenderPipelineAsset res;
         makePipeline( res, "GBuffer", { "MainAlbedo", "MainDepth" } );
+        SW_EXPECT_EQUAL( 1u, res.validate( "unit-test" ) );
+    }
+    {
+        sw::RenderPipelineAsset res;
+        makePipeline( res, "GBuffer", { "MainAlbedo", "MainNormal", "MainDepth" } );
         SW_EXPECT_EQUAL( 1u, res.validate( "unit-test" ) );
     }
     // 뎁스만 내는 ForwardOpaque 는 그릴 컬러가 없다 — 검증 오류(SceneColor 를 짐작해 열지 않는다).
@@ -1095,6 +1102,7 @@ SW_TEST_CASE( RenderPassTest, AttachmentRoleIsDeclaredNotNamed )
     {
         addAttachment( res, "MainAlbedo", "R8G8B8A8_UNORM", pAlbedoRole );
         addAttachment( res, "MainNormal", "R16G16B16A16_FLOAT", "GBufferNormal" );
+        addAttachment( res, "MainSurface", "R8G8B8A8_UNORM", "GBufferMaterial" );
         addAttachment( res, "MainDepth", "D24_UNORM_S8_UINT", "" );
         addAttachment( res, "SunShadow", "D24_UNORM_S8_UINT", "ShadowMap" );
         addAttachment( res, "Lit", "R16G16B16A16_FLOAT", "" );
@@ -1103,7 +1111,7 @@ SW_TEST_CASE( RenderPassTest, AttachmentRoleIsDeclaredNotNamed )
         gbuffer._name            = "GBuffer";
         gbuffer._type            = "GBuffer";
         gbuffer._depthAttachment = "MainDepth";
-        for ( const utf8* pOutput : { "MainNormal", "MainAlbedo", "MainDepth" } ) // 노멀을 먼저 — 순서가 아니라 역할로 골라야 한다
+        for ( const utf8* pOutput : { "MainNormal", "MainSurface", "MainAlbedo", "MainDepth" } ) // 노멀 · 머티리얼을 먼저 — 순서가 아니라 역할로 골라야 한다
         {
             gbuffer._listOutput.push_back( pOutput );
         }
@@ -1112,7 +1120,7 @@ SW_TEST_CASE( RenderPassTest, AttachmentRoleIsDeclaredNotNamed )
         sw::RenderGraphPassDesc lighting{};
         lighting._name = "Lighting";
         lighting._type = "Lighting";
-        for ( const utf8* pInput : { "MainAlbedo", "MainNormal", "MainDepth", "SunShadow" } )
+        for ( const utf8* pInput : { "MainAlbedo", "MainNormal", "MainSurface", "MainDepth", "SunShadow" } )
         {
             lighting._listInput.push_back( pInput );
         }
@@ -1126,16 +1134,18 @@ SW_TEST_CASE( RenderPassTest, AttachmentRoleIsDeclaredNotNamed )
         SW_EXPECT_EQUAL( 0u, res.validate( "unit-test" ) );
 
         const sw::RenderGraphPassDesc& gbuffer = res.getGraphPass()[0];
-        SW_ASSERT_EQUAL( size_t( 2 ), gbuffer._listResolvedColorOutput.size() );
+        SW_ASSERT_EQUAL( size_t( 3 ), gbuffer._listResolvedColorOutput.size() );
         SW_EXPECT_TRUE( static_cast<sw::RenderPassInputRole>( gbuffer._listResolvedColorOutput[0]._role ) == sw::RenderPassInputRole::GBufferNormal );
-        SW_EXPECT_TRUE( static_cast<sw::RenderPassInputRole>( gbuffer._listResolvedColorOutput[1]._role ) == sw::RenderPassInputRole::GBufferAlbedo );
+        SW_EXPECT_TRUE( static_cast<sw::RenderPassInputRole>( gbuffer._listResolvedColorOutput[1]._role ) == sw::RenderPassInputRole::GBufferMaterial );
+        SW_EXPECT_TRUE( static_cast<sw::RenderPassInputRole>( gbuffer._listResolvedColorOutput[2]._role ) == sw::RenderPassInputRole::GBufferAlbedo );
 
         const sw::RenderGraphPassDesc& lighting = res.getGraphPass()[1];
-        SW_ASSERT_EQUAL( size_t( 4 ), lighting._listResolvedInput.size() );
+        SW_ASSERT_EQUAL( size_t( 5 ), lighting._listResolvedInput.size() );
         SW_EXPECT_TRUE( static_cast<sw::RenderPassInputRole>( lighting._listResolvedInput[0]._role ) == sw::RenderPassInputRole::GBufferAlbedo );
         SW_EXPECT_TRUE( static_cast<sw::RenderPassInputRole>( lighting._listResolvedInput[1]._role ) == sw::RenderPassInputRole::GBufferNormal );
-        SW_EXPECT_TRUE( static_cast<sw::RenderPassInputRole>( lighting._listResolvedInput[2]._role ) == sw::RenderPassInputRole::SceneDepth );
-        SW_EXPECT_TRUE( static_cast<sw::RenderPassInputRole>( lighting._listResolvedInput[3]._role ) == sw::RenderPassInputRole::ShadowMap );
+        SW_EXPECT_TRUE( static_cast<sw::RenderPassInputRole>( lighting._listResolvedInput[2]._role ) == sw::RenderPassInputRole::GBufferMaterial );
+        SW_EXPECT_TRUE( static_cast<sw::RenderPassInputRole>( lighting._listResolvedInput[3]._role ) == sw::RenderPassInputRole::SceneDepth );
+        SW_EXPECT_TRUE( static_cast<sw::RenderPassInputRole>( lighting._listResolvedInput[4]._role ) == sw::RenderPassInputRole::ShadowMap );
     }
     // 모르는 역할 글은 오류다 — 조용히 이름 규칙으로 넘기면 선언한 사람이 왜 안 걸리는지 모른다. 이름 규칙으로 떨어진 알베도는 SourceColor 라
     // Lighting 계약도 함께 깨진다(읽지 않는 SourceColor · 필수 GBufferAlbedo 없음) — 셋이다.

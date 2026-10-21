@@ -30,6 +30,7 @@ namespace sw
             static constexpr auto kShadowMap        = "ShadowMap";
             static constexpr auto kGBufferAlbedo    = "GBufferAlbedo";
             static constexpr auto kGBufferNormal    = "GBufferNormal";
+            static constexpr auto kGBufferMaterial  = "GBufferMaterial";
             static constexpr auto kLitColor         = "LitColor";
             static constexpr auto kBloomColor       = "BloomColor";
             static constexpr auto kBloomBright      = "BloomBright";
@@ -435,6 +436,7 @@ namespace sw
         hashed_string _shadowMap{ FrameRendererUtil::Attachment::kShadowMap };
         hashed_string _gbufferAlbedo{ FrameRendererUtil::Attachment::kGBufferAlbedo };
         hashed_string _gbufferNormal{ FrameRendererUtil::Attachment::kGBufferNormal };
+        hashed_string _gbufferMaterial{ FrameRendererUtil::Attachment::kGBufferMaterial };
         hashed_string _litColor{ FrameRendererUtil::Attachment::kLitColor };
         hashed_string _bloomColor{ FrameRendererUtil::Attachment::kBloomColor };
         hashed_string _outlineColor{ FrameRendererUtil::Attachment::kOutlineColor };

@@ -10,6 +10,7 @@
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/3D/LightProbeVolumeComponent.h"
 #include "Engine/Object/Component/3D/PointLightComponent.h"
+#include "Engine/Object/Component/3D/ReflectionProbeComponent.h"
 #include "Engine/Object/Component/3D/SpotLightComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
@@ -56,6 +57,28 @@ namespace sw
                     float4 arrElement[SH9Color::kGPUFloat4Count];
                     probe.makeGPUElement( arrElement );
                     inoutListProbeElement.insert( inoutListProbeElement.end(), arrElement, arrElement + SH9Color::kGPUFloat4Count );
+                }
+                return element;
+            }
+
+            /**
+             * @brief 반사 프로브 하나를 라이트 원소(bindingslots.hlsli 8 절의 SW_LIGHT_TYPE_REFLECTION_PROBE 배치)로 만들고, 그 옥타헤드럴 텍셀을 프로브 버퍼(t13)에 붙입니다.
+             * @details 텍셀 하나가 float4 하나(rgb, a 는 0)다 — SH9 원소와 같은 버퍼라 텍스처 슬롯이 없는 에뮬 백엔드도 같은 길로 읽는다. 경계 구는 상자의 외접구다.
+             */
+            static GPULight makeReflectionProbeElement( const ReflectionProbeComponent& probe, const ReflectionProbeData& data, vector<float4>& inoutListProbeElement )
+            {
+                const float3 center     = probe.getWorldPosition();
+                const float3 halfExtent = probe.getExtent() * 0.5f;
+                const uint32 firstTexel = static_cast<uint32>( inoutListProbeElement.size() );
+                GPULight     element{};
+                element._positionRadius = float4{ center._x, center._y, center._z, halfExtent.getLength() };
+                element._colorIntensity = float4{ halfExtent._x, halfExtent._y, halfExtent._z, probe.getBlendDistance() };
+                element._directionType  = float4{ data._capturePosition._x, data._capturePosition._y, data._capturePosition._z, static_cast<float32>( shaderslot::kLightTypeReflectionProbe ) };
+                element._params         = float4{ static_cast<float32>( data._resolution ), static_cast<float32>( data._levelCount ), static_cast<float32>( firstTexel ), 0.0f };
+                inoutListProbeElement.reserve( inoutListProbeElement.size() + data._listTexel.size() );
+                for ( const float3& texel : data._listTexel )
+                {
+                    inoutListProbeElement.push_back( float4{ texel._x, texel._y, texel._z, 0.0f } );
                 }
                 return element;
             }
@@ -113,6 +136,13 @@ namespace sw
                 const LightProbeGrid* pGrid = ( pVolume != nullptr && pVolume->isActive() ) ? pVolume->findProbeData() : nullptr;
                 if ( pGrid != nullptr )
                     outList.push_back( GPULightBufferInternal::makeProbeVolumeElement( *pGrid, *pOutListProbeElement ) );
+            }
+            // 반사 프로브는 볼륨 뒤에 붙는다(IndirectLighting.md P4). 쓸 수 있는 베이크가 없는 프로브(굽지 않음 · 옮긴 뒤 다시 굽지 않음)는 넣지 않는다.
+            for ( const ReflectionProbeComponent* pProbe : registry.getAll<ReflectionProbeComponent>() )
+            {
+                const ReflectionProbeData* pData = ( pProbe != nullptr && pProbe->isActive() ) ? pProbe->findProbeData() : nullptr;
+                if ( pData != nullptr )
+                    outList.push_back( GPULightBufferInternal::makeReflectionProbeElement( *pProbe, *pData, *pOutListProbeElement ) );
             }
         }
 

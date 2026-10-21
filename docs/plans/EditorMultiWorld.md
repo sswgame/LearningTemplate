@@ -189,10 +189,11 @@ Undo 를 창마다 두는 것은 두 엔진과 다릅니다. 두 엔진 모두 �
    X 도 같은 모달을 띄우고 Don't Save 는 창을 닫으며, 다시 열면 바인딩이 Pressed 로 돌아가 있고 제목 표시도 없다(캡처 4장을 눈으로 봄). 남은 것: 다른 세 백엔드 화면.
    고침(2026-10-20): 제목을 나눈 뒤 기본 배치가 종류 테이블 제목("Prefab Window")만 붙여 열린 채 시작하는 "Prefab Overrides" 가 떠 있는 큰 창으로 씬 뷰를 덮었다. 패널이 영역을 밝히게(`getDefaultDockSlot`) 바꿔 가운데 탭으로 돌렸다(결정 기록 5-11).
 3. **스카이** — 엔진에 `SkyComponent`(천정 · 지평선 · 땅 그러데이션, `SkyGradient::evaluateRadiance`)가 들어갔고(2026-10-21) 패킷(`RenderFramePacket::_sky`)과 패스 상수(`g_SkyZenith` · `g_SkyHorizon` · `g_SkyGround`)까지 실린다.
-   조명 환경 프리셋이 하늘을 스폰한다(`EditorPreviewEnvironment::_bSky`). **남은 단위: 스카이 패스** — `RenderPassType::Sky`(깊이 1 의 풀스크린 삼각형을 LessEqual 로 그려 빈 곳만 칠함, 깊이 쓰기 없음, 하늘이 없거나 표면 값 보기면 건너뜀),
-   `sky.hlsl`, `binding.hlsli` 의 PassCB 세 칸, 엔진 파이프라인 다섯의 Sky 패스(불투명 · 외곽선 뒤, 반투명 앞), 검증(뎁스 · 컬러 출력 필수). 코드는 작업자 워크트리 `previewwin` 에 커밋하지 않고 두었다 —
-   셰이더 소스가 바뀌면 커밋 훅(`CheckShaderStamps`)이 네 백엔드 바이너리 재베이크(`App.exe --cook-shaders`)를 요구하는데 빌드 없이 구현만 하는 지시라 굽지 못했다. 빌드한 쪽이 구워 함께 커밋한다.
-   남은 확인: 머티리얼 창 미리보기의 배경이 그러데이션인지(네 백엔드, `previewswap` 의 PPM), 하늘이 없는 게임 씬의 그림이 그대로인지(골든 이미지), 디퍼드(`-gv_deferred=1`)에서도 빈 곳만 칠하는지.
+   조명 환경 프리셋이 하늘을 스폰한다(`EditorPreviewEnvironment::_bSky`). 스카이 패스도 **들어갔다**(`24eabda44` 병합 — `RenderPassType::Sky`, `sky.hlsl`, 엔진 파이프라인 다섯의 Sky 패스, 쿠킹 바이너리와 함께).
+   남은 확인(실행은 병합 뒤): 머티리얼 창 미리보기의 배경이 그러데이션인지 — 시나리오 `editor/previewsky`(2026-10-22 작성, **아직 돌리지 않았다**)가 창을 연 타깃과 닫고 다시 연 타깃을
+   `Saved/Automation/previewsky_<first|reopen>.ppm` 으로 저장한다(눈으로 본다 — 위가 천정색, 구 뒤는 하늘). 디퍼드에서도 빈 곳만 칠하는지는 같은 시나리오를 `-gv_deferred=1` 로 돌린다.
+   하늘이 없는 게임 씬의 그림이 그대로인지는 골든 이미지로 본다.
+   - 실행(한 줄): `App.exe -EnableEditor -gv_editorStateDir=Saved/Automation/EditorState/previewsky -scenario=engine/automation/editor/previewsky.scenario.xml -dx12` (`-vk` · `-dx11` · `-gl`, 각각 `-gv_deferred=1` 도).
    하늘을 환경광으로 쓰는 것(반구 앰비언트 · SH)은 [IndirectLighting](IndirectLighting.md) P2 · P3 의 일이다.
 4. **풀 공유** — PSO 캐시는 주 렌더러의 것을 함께 쓴다(`FrameRenderer::_pPSOCache`, 2026-10-21). 미리보기 렌더러는 엔진 PSO 를 만들지 않고 캐시에 없는 것만 만들며, 해제는 소유자만 한다.
    창을 닫으면 렌더러를 내리므로 예전에는 다시 열 때마다 엔진 PSO 를 모두 다시 만들었다(첫 프레임 히치, 창 수만큼 중복). 셰이더 핫 리로드는 주 렌더러가 캐시를 다시 채운 뒤 미리보기 렌더러가 자기 몫을 다시 만든다.

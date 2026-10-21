@@ -40,7 +40,9 @@ namespace sw
      * @param outList 기존 내용을 지우고 채웁니다. 부르는 쪽이 프레임마다 재사용하는 버퍼여야 합니다(할당 회피).
      * @param pOutListShadowLightIndex 비지 않으면 그림자를 켠 점광과 스폿 원소의 번호를 지우고 채웁니다.
      * @param pOutListProbeElement 비지 않으면 쓸 수 있는 베이크를 가진 라이트 프로브 볼륨마다 볼륨 원소(`kLightTypeProbeVolume`, 3D 라이트 뒤)를 목록에 넣고
-     *                             그 프로브들의 SH9 원소(프로브 하나가 float4 `kLightProbeFloat4Count` 개)를 지우고 채웁니다. nullptr 이면 볼륨을 모으지 않습니다.
+     *                             그 프로브들의 SH9 원소(프로브 하나가 float4 `kLightProbeFloat4Count` 개)를 지우고 채웁니다. 반사 프로브도 같은 길이다 — 볼륨 뒤에
+     *                             반사 프로브 원소(`kLightTypeReflectionProbe`)를 넣고 그 옥타헤드럴 텍셀(텍셀 하나가 float4 하나)을 같은 목록에 붙입니다.
+     *                             nullptr 이면 볼륨도 반사 프로브도 모으지 않습니다.
      */
     SW_API void collectSceneLights( const Scene* pScene, vector<GPULight>& outList, vector<uint32>* pOutListShadowLightIndex = nullptr,
                                     vector<float4>* pOutListProbeElement = nullptr );
@@ -121,7 +123,7 @@ namespace sw
         RHIStructuredBufferSlot _cpuGridBuffer;          ///< CPU 생산자의 그리드 단어(동적, t12)
         RHIStructuredBufferSlot _gpuGridBuffer;          ///< GPU 생산자의 그리드 단어(기본 힙 UAV, t12 · 컴퓨트 u0)
         RHIStructuredBufferSlot _gpuGridViewBuffer;      ///< GPU 생산자의 뷰 정보(float4 × SW_LIGHT_GRID_VIEW_FLOAT4_COUNT, 컴퓨트 t1)
-        RHIStructuredBufferSlot _probeBuffer;            ///< 라이트 프로브 SH9(float4, t13)
+        RHIStructuredBufferSlot _probeBuffer;            ///< 라이트 프로브 SH9 · 반사 프로브 텍셀(float4, t13)
         vector<float4>          _listProbeScratch;       ///< 이번 프레임의 프로브 원소(`populate` 가 담고 `update` 가 올린다)
         uint32                  _probeElementCount{ 0 }; ///< 이번 프레임에 올린 프로브 원소 수(0 이면 프로브 버퍼를 걸지 않는다)
         vector<GPULight>        _listUploadScratch;      ///< 라이트와 그림자 타일을 이어 붙여 한 번에 업로드하는 임시 버퍼(프레임마다 다시 쓴다)

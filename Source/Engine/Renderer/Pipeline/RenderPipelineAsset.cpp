@@ -110,8 +110,8 @@ namespace sw
                     RenderPassInputRole declaredRole{ RenderPassInputRole::Invalid };
                     if ( attachment._role.empty() == false && tryParseRenderPassInputRole( attachment._role, declaredRole ) == false )
                     {
-                        SW_LOG_ERROR( "[%#] attachment '%#': 알 수 없는 역할 '%#' — SourceColor · SceneDepth · GBufferAlbedo · GBufferNormal · ShadowMap · "
-                                      "AmbientOcclusion · BloomBright 중 하나입니다",
+                        SW_LOG_ERROR( "[%#] attachment '%#': 알 수 없는 역할 '%#' — SourceColor · SceneDepth · GBufferAlbedo · GBufferNormal · GBufferMaterial · "
+                                      "ShadowMap · AmbientOcclusion · BloomBright 중 하나입니다",
                                       sourcePath, attachment._name, attachment._role );
                         ++issueCount;
                     }
@@ -350,7 +350,7 @@ namespace sw
             }
 
             /**
-             * @brief 3-1 · 3-2) 컬러를 그리는 패스(kDrawsDeclaredColor)는 선언한 컬러 출력에 그리고, G버퍼는 알베도 · 노멀을 한 MRT 패스로 쓴다.
+             * @brief 3-1 · 3-2) 컬러를 그리는 패스(kDrawsDeclaredColor)는 선언한 컬러 출력에 그리고, G버퍼는 알베도 · 노멀 · 머티리얼을 한 MRT 패스로 쓴다.
              * @details 컬러 출력이 없으면 그릴 곳이 없다(없는 첨부의 핸들 0 은 백버퍼라, 그대로 두면 화면에 그린다). G버퍼의 컬러 수가 표의 값과 다르면
              *          PSO 와 렌더 패스가 어긋나거나, 노멀이 없어 Lighting · SSAO 가 읽을 것이 없다.
              */
@@ -374,7 +374,7 @@ namespace sw
                                                          pass._listResolvedColorOutput.size() == expectedGBufferColorCount;
                     if ( bSkipGBufferOutputCheck )
                         continue;
-                    SW_LOG_ERROR( "[%#] pass '%#'(%#): 컬러 출력이 %#개입니다 — G버퍼는 알베도 · 노멀 %#개를 한 MRT 패스로 씁니다",
+                    SW_LOG_ERROR( "[%#] pass '%#'(%#): 컬러 출력이 %#개입니다 — G버퍼는 알베도 · 노멀 · 머티리얼 %#개를 한 MRT 패스로 씁니다",
                                   sourcePath, pass._name, pass._type, static_cast<uint32>( pass._listResolvedColorOutput.size() ), expectedGBufferColorCount );
                     ++issueCount;
                 }

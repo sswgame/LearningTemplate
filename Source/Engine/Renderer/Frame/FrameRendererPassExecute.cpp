@@ -9,6 +9,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/IRHITimestampProvider.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
@@ -211,6 +212,8 @@ namespace sw
                 return names._ambientOcclusion;
             case RenderPassInputRole::BloomBright:
                 return names._bloomBright;
+            case RenderPassInputRole::GBufferMaterial:
+                return names._gbufferMaterial;
             case RenderPassInputRole::Invalid:
             case RenderPassInputRole::Count:
                 return names._sourceColor;
@@ -519,23 +522,24 @@ namespace sw
 
     void FrameRenderer::executeGBufferPass( const PassExecuteInput& input )
     {
-        // 알베도와 노멀은 역할로 고른다(첨부의 `_role` 또는 원본 이름). 역할이 없으면 선언 순서([0] 알베도, [1] 노멀)를 따른다.
-        // 한 MRT 패스로 둘 다 쓴다(네 백엔드 모두 MRT 를 보장한다). 컬러 출력이 둘이 아닌 G버퍼는 검증(3-2)이 거부한다.
-        using Internal                     = FrameRendererPassExecuteInternal;
-        FramePassContext&    context       = input._context;
-        const hashed_string& passDepth     = input._passDepth;
-        const hashed_string* pAlbedoTarget = Internal::pickColorOutput( input._declaredColor, RenderPassInputRole::GBufferAlbedo, 0, nullptr );
-        const hashed_string* pNormalTarget = Internal::pickColorOutput( input._declaredColor, RenderPassInputRole::GBufferNormal, 1, pAlbedoTarget );
-        const bool           bHasTargets   = pAlbedoTarget != nullptr && pNormalTarget != nullptr && findTransient( pNormalTarget->view() ) != 0;
+        // 알베도 · 노멀 · 머티리얼은 역할로 고른다(첨부의 `_role` 또는 원본 이름). 역할이 없으면 선언 순서([0] 알베도, [1] 노멀, [2] 머티리얼)를 따른다.
+        // 한 MRT 패스로 셋 다 쓴다(네 백엔드 모두 MRT 를 보장한다). 컬러 출력 수가 표의 값이 아닌 G버퍼는 검증(3-2)이 거부한다.
+        using Internal                       = FrameRendererPassExecuteInternal;
+        FramePassContext&    context         = input._context;
+        const hashed_string& passDepth       = input._passDepth;
+        const hashed_string* pAlbedoTarget   = Internal::pickColorOutput( input._declaredColor, RenderPassInputRole::GBufferAlbedo, 0, nullptr );
+        const hashed_string* pNormalTarget   = Internal::pickColorOutput( input._declaredColor, RenderPassInputRole::GBufferNormal, 1, pAlbedoTarget );
+        const hashed_string* pMaterialTarget = Internal::pickColorOutput( input._declaredColor, RenderPassInputRole::GBufferMaterial, 2, pNormalTarget );
+        const bool           bHasTargets     = pAlbedoTarget != nullptr && pNormalTarget != nullptr && findTransient( pNormalTarget->view() ) != 0 &&
+                                 pMaterialTarget != nullptr && findTransient( pMaterialTarget->view() ) != 0;
         if ( bHasTargets == false || getEnginePSO( RenderPassType::GBuffer ) == 0 )
             return;
         const hashed_string&      albedoTarget = *pAlbedoTarget;
-        const float4              clearColor   = getTargetClearColor( albedoTarget.view() );
-        const float4              normalClear  = getTargetClearColor( pNormalTarget->view() );
-        const string_view         arrNames[]   = { albedoTarget.view(), pNormalTarget->view() };
-        const float4              arrClears[2] = { clearColor, normalClear };
-        const RHIRenderPassLoadOp arrLoads[]   = { colorLoadFor( albedoTarget ), colorLoadFor( *pNormalTarget ) };
-        if ( beginColorPassMrt( context, arrNames, arrClears, arrLoads, 2, passDepth.view(), colorLoadFor( passDepth ) ) == false )
+        const string_view         arrNames[]   = { albedoTarget.view(), pNormalTarget->view(), pMaterialTarget->view() };
+        const float4              arrClears[]  = { getTargetClearColor( albedoTarget.view() ), getTargetClearColor( pNormalTarget->view() ),
+                                                   getTargetClearColor( pMaterialTarget->view() ) };
+        const RHIRenderPassLoadOp arrLoads[]   = { colorLoadFor( albedoTarget ), colorLoadFor( *pNormalTarget ), colorLoadFor( *pMaterialTarget ) };
+        if ( beginColorPassMrt( context, arrNames, arrClears, arrLoads, 3, passDepth.view(), colorLoadFor( passDepth ) ) == false )
             return;
         drawSceneMeshes( context, getEnginePSO( RenderPassType::GBuffer ), input._bTransparentBatch );
         context._pCmd->endRenderPass();
@@ -968,6 +972,10 @@ namespace sw
         const RHIDescriptorIndex source = srvOf( names._sourceColor );
         const RHIDescriptorIndex ao     = srvOf( names._ambientOcclusion );
         const RHIDescriptorIndex bloom  = srvOf( names._bloomBright );
+        // G버퍼 머티리얼 칸은 t0..t3 밖의 자기 슬롯이다(조명 패스가 다섯째로 읽는다 — shaderslot::kEngineGBufferMaterialTexture).
+        const RHIDescriptorIndex material = srvOf( names._gbufferMaterial );
+        if ( material != kInvalidDescriptorIndex )
+            context._pCmd->bindShaderResource( material, shaderslot::kEngineGBufferMaterialTexture );
 
         // 슬롯 테이블은 binding.hlsli 의 swSampleIndex 와 같아야 한다: [shadow|source, albedo|ao, normal|bloom, depth|shadow].
         // 한 슬롯을 나눠 쓰는 둘은 같은 패스에 함께 바인딩되지 않는다(알베도 · 노멀은 Lighting · SSAO, AO · 반해상도 블룸은 Bloom).
