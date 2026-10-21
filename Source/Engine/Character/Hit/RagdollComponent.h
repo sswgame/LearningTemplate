@@ -156,6 +156,8 @@ namespace sw
         void blendPhysicsPose( SkeletalMeshComponent& unit );
         /** @brief 이 오브젝트의 캐릭터 컨트롤러를 켜고 끕니다(래그돌 동안 캡슐이 남지 않게). */
         void setControllerActive( bool bActive );
+        /** @brief 래그돌 동안 관절 모터를 섞기 전 애니메이션 포즈로 끌고(`_poweredMaxTorque` > 0), 벗어나면 끕니다. */
+        void drivePoweredMotors( IPhysicsScene3D& scene );
 
         PROPERTY( Category = "Ragdoll", DisplayName = "Physics Asset", AssetPath, AssetType = "PhysicsAsset", Tooltip = "Bodies, joints and hit zones (*.physics.xml)" )
         string _physicsAssetPath;
@@ -181,6 +183,9 @@ namespace sw
         float32 _hitReactionWeight;
         PROPERTY( Category = "Hit Reaction", DisplayName = "Flinch Seconds", Min = 0.0, Max = 3.0, Units = s )
         float32 _flinchSeconds;
+        PROPERTY( Category = "Ragdoll", DisplayName = "Powered Max Torque", Min = 0.0, Units = "N*m",
+                  Tooltip = "Joint motors pull the ragdoll toward the animation pose with at most this torque (0: limp ragdoll)" )
+        float32 _poweredMaxTorque;
         PROPERTY( Category = "Ragdoll", DisplayName = "State", ReadOnly, Transient )
         RagdollState _state;
         PROPERTY( Category = "Ragdoll", DisplayName = "Ragdoll On Fatal Hit", Tooltip = "Go ragdoll when a hit is marked fatal" )
@@ -200,6 +205,7 @@ namespace sw
         vector<float32>                _listBlendStartWeight; ///< 돌아가기를 시작할 때의 바디 가중치다.
         vector<float32>                _listBoneWeight;       ///< 뼈마다 섞임 가중치다(후처리가 읽는다).
         vector<float4x4>               _listPhysicsModel;     ///< 지난 물리 프레임의 뼈 모델 공간 행렬이다(오브젝트 기준).
+        vector<float4x4>               _listAnimationModel;   ///< 물리를 섞기 전 애니메이션 포즈의 뼈 모델 공간 행렬이다(파워드 래그돌 모터의 목표).
         vector<float3>                 _listKinematicStartPosition;
         vector<float3>                 _listKinematicTargetPosition;
         vector<quaternion>             _listKinematicStartRotation;
@@ -218,6 +224,7 @@ namespace sw
         bool                           _bHasPhysicsPose;
         bool                           _bSettled;
         bool                           _bRebuild;
-        bool                           _bGettingUp; ///< 기상 클립을 재생 중이다. 끝나면 `_getUpExitState` 로 간다.
+        bool                           _bGettingUp;    ///< 기상 클립을 재생 중이다. 끝나면 `_getUpExitState` 로 간다.
+        bool                           _bMotorsDriven; ///< 파워드 래그돌 모터를 켜 두었다. 래그돌을 벗어날 때 한 번 끈다.
     };
 } // namespace sw

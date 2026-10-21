@@ -1,6 +1,6 @@
 # 물리 확장 — 부력 · 파워드 래그돌 · 천과 캐릭터 · 결정성
 
-> 상태: 구현중 · 선행: 없음 · 영역: engine · 옛번호: D1-8 · 진행: 3/5
+> 상태: 구현중 · 선행: 없음 · 영역: engine · 옛번호: D1-8 · 진행: 4/5
 
 차량 물리(`WheeledVehicleComponent`, `IPhysicsVehicleScene`)는 이미 있다. 이 문서는 남은 넷(부력 · 유체, 파워드 래그돌, 천과 캐릭터의 상호작용, 플랫폼 간 결정성)의 설계와 단위다.
 
@@ -19,7 +19,7 @@
 | P1 | 부력 — `IPhysicsBuoyancyScene` · Jolt 구현 · `BuoyancyVolumeComponent` · 테스트 `PhysicsBuoyancyTest` 셋 | 코드 완료(빌드 안 함) |
 | P2 | 파워드 래그돌 API — `driveJointToRotation`(Jolt Cone · Box2D 오류) · `PhysicsRagdollBuilder::driveToPoseWithMotors` | 코드 완료(빌드 안 함) |
 | P3 | 천과 캐릭터 — 캐릭터 속 바디(`_bInnerBody`) | 코드 완료(빌드 안 함) |
-| P4 | `RagdollComponent` 에 파워드 모드를 잇는다 — 모터가 쫓을 포즈는 애니메이션 평가 직후 · 물리 섞기 전의 포즈여야 한다(지금 유닛의 포즈는 `blendPhysicsPose` 가 물리 결과로 덮어써, 그것을 쫓으면 모터가 제자리다). 평가 직후 포즈를 담는 자리(유닛 작업 `IAnimationPhaseTask` 의 앞 단계)를 정하고 `_poweredMaxTorque` 를 둔다 | 남음 |
+| P4 | `RagdollComponent` 의 파워드 모드 — `_poweredMaxTorque`(0 이면 축 늘어진 래그돌). 모터의 목표는 섞기 전 포즈다: `blendPhysicsPose` 가 섞기 직전의 로컬 포즈를 모델 공간 `_listAnimationModel` 로 담고(섞은 뒤 포즈를 쫓으면 모터가 제자리다), `beginPhysicsFrame` 끝의 `drivePoweredMotors` 가 래그돌 동안 모터를 걸고 벗어날 때 한 번 끈다 | 코드 완료(빌드 안 함) |
 | P5 | 플랫폼 간 결정성 — 위 착수 조건이 오면 켜고 `DestructionDamageTest` 처럼 구성 · 플랫폼을 넘는 해시 테스트를 둔다 | 결정(끈 채로) |
 
 ## 남은 것
@@ -28,3 +28,4 @@
 - P2 확인: 래그돌 씬에서 모터 토크를 올리며 팔다리가 포즈로 끌리는지, 쿼터니언 곱 순서(`JoltPhysicsScene::driveJointToRotation` 의 `conj(qA) × qB`)가 맞는지 본다 — 틀리면 관절이 반대로 꺾인다.
 - 옮겨 온 설계 메모(옛 후보 절): 센서 규칙(옛 `D1-2.1`, 2D 는 들어감) — 센서끼리 서로를 본다(box2d `sensor.c` 3.1.1). 막는 콜라이더도 센서다. 겹침은 고정 스텝에서만 난다. 무버 캐스트가 센서를 거르도록 비센서 셰이프 마스크에 전용 비트를 둔다. 결정은 [결정 기록](../09_Decisions.md) 의 `D1-2.1` 줄이다. 옛 `D4-6.6`(파워드 래그돌 보류)은 P2 · P4 다.
 - P3 확인: 천을 단 오브젝트 옆으로 속 바디를 켠 캐릭터가 지나갈 때 천이 밀리는지 본다. 캐릭터 자신의 사격 · 질의가 제 속 바디를 맞히지 않는지(사용자 값 거르기 `_ignoreUserData`) 본다.
+- P4 확인: `_poweredMaxTorque` 를 올린 래그돌이 쓰러지며 팔다리를 애니메이션 자세로 끄는지, 일어서기로 넘어갈 때 모터가 꺼지는지(`_bMotorsDriven`) 본다. 섞기 전 포즈는 래그돌 동안 애니메이터가 계속 평가한다는 가정이다 — 래그돌에서 애니메이터가 멈추면 목표가 마지막 포즈에 머문다.
