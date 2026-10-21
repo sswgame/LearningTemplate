@@ -1546,6 +1546,7 @@ SW_TEST_CASE( RenderPassGPUTest, SpriteDrawsWithTheSpriteShader )
  * @brief [RenderPassGPUTest] 재생 중인 효과의 입자가 투명 패스에서 그려진다 — 같은 장면을 멈춘 효과로 그린 것보다 화면이 밝다 (4 백엔드).
  * @details 입자 PSO 는 투명 패스 PSO 를 물려받아 셰이더만 particle.hlsl 로 바꾼다(`FrameRenderer::ensureParticlePSO`). Shipping 은 쿠킹한 바이너리로
  *          만들므로 쿠커가 그 셰이더를 define 없이 굽지 않으면 이 케이스가 Shipping 에서 진다. 표본 효과는 연기(알파)와 불꽃(더하기, 1 보다 큰 색)이다.
+ *          두 방출기는 CPU 전용 모듈이 없어 기본값(`gv_vfxSimulation` GPU, Shipping 고정)으로 GPU 시뮬레이션(vfxsimulate.hlsl → 간접 드로우)을 탄다.
  */
 SW_TEST_CASE( RenderPassGPUTest, ParticlesDrawInTheTransparentPass )
 {
@@ -1574,9 +1575,10 @@ SW_TEST_CASE( RenderPassGPUTest, ParticlesDrawInTheTransparentPass )
             pVfx->play();
             for ( uint32 tickIndex = 0; tickIndex < 45; ++tickIndex )
             {
-                pVfx->onTick( sw::VfxCPUSimulation::kFixedStepSeconds );
+                pVfx->onTick( sw::VfxEmitterClock::kFixedStepSeconds );
             }
-            bOk = pVfx->getAliveParticleCount() > 0;
+            // 표본의 두 방출기는 기본(GPU) 시뮬레이션이다 — 살아 있는 수는 GPU 에만 있어 일정이 만든 수를 본다. 그린 것은 아래 밝기로 본다.
+            bOk = pVfx->getSpawnedParticleCount() > 0;
             SW_EXPECT_TRUE_MSG( bOk, ( label + ": 효과가 입자를 내지 않았다" ).c_str() );
         }
         float64 playingRed{ 0.0 };

@@ -77,6 +77,8 @@ namespace sw
         MeshSkin,
         /// @brief 뷰마다의 라이트 그리드(클러스터드 라이팅의 빛 목록)를 만드는 컴퓨트(lightgrid.hlsl)입니다. 그룹 하나가 뷰 하나입니다.
         LightGrid,
+        /// @brief GPU 방출기의 입자 시뮬레이션 컴퓨트(vfxsimulate.hlsl)입니다. 그룹 하나가 방출기 하나이고 간접 인자를 씁니다(`VfxGPUSimulation`).
+        VfxSimulation,
     };
 
     /**

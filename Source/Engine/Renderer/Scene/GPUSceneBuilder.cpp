@@ -866,16 +866,31 @@ namespace sw
             for ( uint32 emitterIndex = 0; emitterIndex < pVfx->getEmitterCount(); ++emitterIndex )
             {
                 // 메시 방출기는 메시 인스턴스 배치로 메시 경로를 탄다(`VfxComponent`). 띠는 이웃 둘이 있어야 한 마디다.
-                const VfxEmitterDef&                         def            = pVfx->getEmitterDef( emitterIndex );
-                const shared_ptr<const vector<GPUParticle>>& pListParticle  = pVfx->getEmitterParticles( emitterIndex );
-                const bool                                   bRibbon        = def._renderMode == VfxRenderMode::Ribbon;
-                const size_t                                 minParticles   = bRibbon ? 2u : 1u;
-                const bool                                   bNothingToDraw = def._renderMode == VfxRenderMode::Mesh || pListParticle == nullptr || pListParticle->size() < minParticles;
-                if ( bNothingToDraw )
+                // GPU 방출기는 입자 수를 GT 가 모른다 — 재생 중이면 싣고, 그릴 입자 수(띠는 마디 수)는 컴퓨트가 간접 인자에 쓴다.
+                const VfxEmitterDef& def     = pVfx->getEmitterDef( emitterIndex );
+                const bool           bRibbon = def._renderMode == VfxRenderMode::Ribbon;
+                if ( def._renderMode == VfxRenderMode::Mesh )
                     continue;
+                GPUParticleBatch::Source source{};
+                if ( pVfx->getEmitterSimulationTarget( emitterIndex ) == VfxSimulationTarget::GPU )
+                {
+                    const VfxGPUEmitterRequest* pRequest = pVfx->findEmitterGPURequest( emitterIndex );
+                    if ( pRequest == nullptr )
+                        continue;
+                    source = *pRequest;
+                }
+                else
+                {
+                    const shared_ptr<const vector<GPUParticle>>& pListParticle  = pVfx->getEmitterParticles( emitterIndex );
+                    const size_t                                 minParticles   = bRibbon ? 2u : 1u;
+                    const bool                                   bNothingToDraw = pListParticle == nullptr || pListParticle->size() < minParticles;
+                    if ( bNothingToDraw )
+                        continue;
+                    source = pListParticle;
+                }
                 GPUParticleBatch& batch = listBatch.emplace_back();
                 batch._bRibbon          = bRibbon ? SW_TRUE : SW_FALSE;
-                batch._pListParticle    = pListParticle;
+                batch._source           = std::move( source );
                 batch._world            = world;
                 batch._texturePath      = hashed_string( def._texturePath );
                 batch._sizeScale        = sizeScale;

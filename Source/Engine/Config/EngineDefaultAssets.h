@@ -142,6 +142,8 @@ namespace sw
         PROPERTY( Required )
         DataPath _shaderLightGrid; ///< 라이트 그리드 생산(컴퓨트) — 클러스터드 라이팅의 빛 목록
         PROPERTY( Required )
+        DataPath _shaderVfxSimulation; ///< GPU 방출기의 입자 시뮬레이션(컴퓨트)
+        PROPERTY( Required )
         DataPath _shaderFullscreenTriangle; ///< 전체 화면 삼각형 정점 셰이더
         PROPERTY( Required )
         DataPath _shaderSsao; ///< SSAO

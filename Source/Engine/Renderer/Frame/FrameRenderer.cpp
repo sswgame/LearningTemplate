@@ -437,6 +437,8 @@ namespace sw
         dispatchCullAndSort( animationInstanceCount );
         // 라이트 그리드(GPU 생산자) — 조명을 계산하는 패스(포워드 · 디퍼드 · 투명)보다 먼저 끝나야 한다. 이 리스트는 그 패스들의 리스트보다 먼저 큐에 낸다.
         dispatchLightGrid();
+        // GPU 방출기의 입자 시뮬레이션 — 투명 패스가 그 렌더 입력과 간접 인자를 읽는다(VfxGPUSimulation, vfxsimulate.hlsl).
+        _particleRenderer.recordSimulation( *_pCmd, getEnginePSO( RenderPassType::VfxSimulation ) );
         // 월드 공간 UI 의 렌더 텍스처다. 장면 뷰가 그 텍스처를 읽기 전에 먼저 제출하는 프리패스 리스트(같은 큐)로 그린다.
         _canvasRenderer.drawTargets( *_pCmd, *pDevice, _canvasFrame, *_pPSOCache, getEnginePSO( RenderPassType::Canvas ) );
 
@@ -771,7 +773,7 @@ namespace sw
         _canvasRenderer.prepareFrame( *pDevice, _canvasFrame );
         // 입자 버퍼 · 입자 텍스처 · 입자 PSO 도 같다(투명 패스는 그리기만 한다).
         ensureParticlePSO();
-        _particleRenderer.prepareFrame( *pDevice, _gpuScene.getParticleBatches() );
+        _particleRenderer.prepareFrame( *pDevice, _gpuScene.getParticleBatches(), getEnginePSO( RenderPassType::VfxSimulation ) != 0 );
 
         if ( prepareCommandList( pDevice, pCallerName ) == false )
             return false;

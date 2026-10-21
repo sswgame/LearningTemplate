@@ -52,6 +52,7 @@
                      _shaderMeshSkin="engine/shaders/meshskin.hlsl"
                      _shaderInstanceSort="engine/shaders/instancesort.hlsl"
                      _shaderLightGrid="engine/shaders/lightgrid.hlsl"
+                     _shaderVfxSimulation="engine/shaders/vfxsimulate.hlsl"
                      _shaderFullscreenTriangle="engine/shaders/fullscreentriangle.hlsl"
                      _shaderSsao="engine/shaders/ssao.hlsl"
                      _shaderTaa="engine/shaders/taa.hlsl"

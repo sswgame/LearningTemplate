@@ -36,6 +36,19 @@ namespace sw
         Mesh,      ///< 입자마다 메시 하나(`_mesh` — 메시 인스턴스 배치로 메시 경로를 그대로 탄다)
     };
 
+    /**
+     * @brief 방출기 하나를 시뮬레이션하는 곳입니다(언리얼 Niagara 방출기의 Sim Target).
+     * @details 데이터가 정한다 — CPU 전용 모듈(`VfxEmitterDef::findCPUOnlyModuleName`)을 쓰는 방출기는 모든 빌드에서 CPU 이고, 나머지(빌보드 · 띠)는
+     *          Shipping 에서 GPU, 개발 빌드에서 `gv_vfxSimulation` 이 고른 곳이다(`VfxComponent`). 두 곳은 같은 형식(`GPUParticle`)을 낸다.
+     *          방출기 데이터의 칸이 아니다 — 고를 수 있는 것은 모듈이 정하므로 칸을 두면 "충돌을 쓰는 GPU 방출기" 같은 틀린 데이터만 하나 더 생긴다.
+     */
+    ENUM()
+    enum class VfxSimulationTarget : uint8
+    {
+        CPU, ///< `VfxCPUSimulation` — 게임 스레드가 입자 배열을 낸다
+        GPU, ///< vfxsimulate.hlsl — 렌더 스레드가 컴퓨트로 돌리고 간접 인자로 그린다(`VfxGPUSimulation`)
+    };
+
     /** @brief 입자가 물리 씬에 닿았을 때의 반응입니다. */
     ENUM()
     enum class VfxCollisionMode : uint8
@@ -195,6 +208,12 @@ namespace sw
 
         /** @brief 커브를 시각 순으로 정렬하고 자동 접선을 다시 셉니다. 파일을 읽은 뒤 `validate` 전에 부릅니다. */
         void sortCurves();
+        /**
+         * @brief GPU 시뮬레이션이 표현할 수 없는 모듈의 칸 이름입니다. 없으면(빌보드 · 띠, 충돌 없음, 라이트 없음) nullptr 입니다.
+         * @details 메시 입자는 메시 인스턴스 배치 항목을, 충돌은 물리 씬 레이캐스트를, 파티클 라이트는 CPU 라이트 목록을 게임 스레드에서 쓴다 —
+         *          언리얼 Niagara 도 라이트 렌더러와 CPU 레이 트레이스 충돌은 CPU 시뮬레이션 전용이다. 이 이름이 있으면 그 방출기는 모든 빌드에서 CPU 로 돈다.
+         */
+        [[nodiscard]] const utf8* findCPUOnlyModuleName() const;
         /** @brief 칸 하나하나의 값을 봅니다. 틀린 곳마다 @p sourceLabel 과 방출기 이름을 붙여 오류를 남기고, 하나라도 틀리면 false 입니다. */
         [[nodiscard]] bool validate( string_view sourceLabel ) const;
     };

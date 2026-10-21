@@ -75,6 +75,7 @@ enginedefaultassets.xml 의 엔진 셸 경로입니다. 읽기는 `XMLSerializer
 | `_shaderMeshSkin` | `DataPath` | — |  |  | 스키닝(컴퓨트) |
 | `_shaderInstanceSort` | `DataPath` | — |  |  | 투명 인스턴스 바이토닉 정렬(컴퓨트) |
 | `_shaderLightGrid` | `DataPath` | — |  |  | 라이트 그리드 생산(컴퓨트) — 클러스터드 라이팅의 빛 목록 |
+| `_shaderVfxSimulation` | `DataPath` | — |  |  | GPU 방출기의 입자 시뮬레이션(컴퓨트) |
 | `_shaderFullscreenTriangle` | `DataPath` | — |  |  | 전체 화면 삼각형 정점 셰이더 |
 | `_shaderSsao` | `DataPath` | — |  |  | SSAO |
 | `_shaderTaa` | `DataPath` | — |  |  | TAA |

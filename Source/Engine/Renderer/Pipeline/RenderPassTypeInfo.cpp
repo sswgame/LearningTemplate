@@ -239,6 +239,13 @@ namespace sw
                         info._flags          = Flag::kCompute;
                         break;
                     }
+                    case RenderPassType::VfxSimulation:
+                    {
+                        // 입자 상태 · 렌더 입력은 구조 버퍼 UAV, 간접 인자는 따로 둔 버퍼(DX11 은 RAW UAV)라 구조 버퍼와 간접 인자 겸용 능력이 필요 없다(DX11 도 돈다).
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderVfxSimulation;
+                        info._flags          = Flag::kCompute;
+                        break;
+                    }
                 }
                 return info;
             }

@@ -38,147 +38,76 @@ namespace sw
 
 namespace sw
 {
-    VfxCPUSimulation::VfxCPUSimulation( const VfxEmitterDef& def, uint64 seed )
-        : _def{ def }
+    VfxCPUSimulation::VfxCPUSimulation( shared_ptr<const VfxEmitterDef> pDef, uint64 seed )
+        : _clock{ std::move( pDef ) }
         , _seed{ seed }
         , _listParticle{}
-        , _listBurstFired{}
-        , _spawnedCount{ 0 }
-        , _emitterSeconds{ 0.0f }
-        , _spawnCarry{ 0.0f }
-        , _pendingSeconds{ 0.0f }
-        , _bEmitting{ true }
         , _bWarnedPoolFull{ false }
-        , _bWarnedStepLimit{ false }
     {
-        SW_ASSERT( _def._maxParticles >= 1 );
-        _listParticle.reserve( _def._maxParticles );
-        _listBurstFired.resize( _def._listBurst.size(), 0 );
+        SW_ASSERT( getDef()._maxParticles >= 1 );
+        _listParticle.reserve( getDef()._maxParticles );
     }
 
     void VfxCPUSimulation::restart()
     {
         _listParticle.clear();
-        _listBurstFired.assign( _def._listBurst.size(), 0 );
-        _spawnedCount   = 0;
-        _emitterSeconds = 0.0f;
-        _spawnCarry     = 0.0f;
-        _pendingSeconds = 0.0f;
-        _bEmitting      = true;
-        // 이미 낸 경고(풀이 참 · 단계 상한)는 다시 켜지 않는다 — 다시 시작해도 같은 데이터 문제다.
+        _clock.restart();
+        // 이미 낸 경고(풀이 참)는 다시 켜지 않는다 — 다시 시작해도 같은 데이터 문제다.
     }
 
     void VfxCPUSimulation::update( float32 deltaSeconds, const IVfxCollisionScene* pCollision )
     {
-        SW_ASSERT( deltaSeconds >= 0.0f );
-        if ( deltaSeconds <= 0.0f )
-            return;
-
-        _pendingSeconds += deltaSeconds;
-        const uint32 dueStepCount = static_cast<uint32>( _pendingSeconds / kFixedStepSeconds );
-        _pendingSeconds -= static_cast<float32>( dueStepCount ) * kFixedStepSeconds;
-
-        uint32 stepCount = dueStepCount;
-        if ( dueStepCount > kMaxStepsPerUpdate )
-        {
-            stepCount = kMaxStepsPerUpdate;
-            if ( _bWarnedStepLimit == false )
-            {
-                SW_LOG_WARNING( "Vfx emitter '%#': frame time %# s needs %# steps, running %# and dropping the rest", _def._name, deltaSeconds, dueStepCount, kMaxStepsPerUpdate );
-                _bWarnedStepLimit = true;
-            }
-        }
+        const uint32 stepCount = _clock.takeDueSteps( deltaSeconds );
         for ( uint32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
-            step( kFixedStepSeconds, pCollision );
+            step( VfxEmitterClock::kFixedStepSeconds, pCollision );
         }
     }
 
     void VfxCPUSimulation::step( float32 stepSeconds, const IVfxCollisionScene* pCollision )
     {
         SW_ASSERT( stepSeconds > 0.0f );
-        spawnStep( stepSeconds );
+        spawnParticles( _clock.spawnStep( stepSeconds ) );
         integrateStep( stepSeconds, pCollision );
     }
 
-    void VfxCPUSimulation::spawnStep( float32 stepSeconds )
+    void VfxCPUSimulation::spawnParticles( const VfxSpawnStep& spawn )
     {
-        if ( _bEmitting == false )
-            return;
-
-        const float32 previousSeconds = _emitterSeconds;
-        _emitterSeconds += stepSeconds;
-
-        uint32 spawnCount = 0;
-        for ( size_t burstIndex = 0; burstIndex < _def._listBurst.size(); ++burstIndex )
+        const VfxEmitterDef& def        = getDef();
+        const uint32         freeCount  = def._maxParticles - getAliveCount();
+        const uint32         spawnCount = MathUtil::min( spawn._count, freeCount );
+        if ( spawnCount < spawn._count && _bWarnedPoolFull == false )
         {
-            const VfxBurstDef& burst = _def._listBurst[burstIndex];
-            if ( _listBurstFired[burstIndex] == 0 && burst._time <= _emitterSeconds )
-            {
-                _listBurstFired[burstIndex] = 1;
-                spawnCount += burst._count;
-            }
-        }
-
-        // 생성률은 방출 시간(0.._duration) 안에서만 쌓는다.
-        const float32 emitSeconds = MathUtil::min( _emitterSeconds, _def._duration ) - MathUtil::min( previousSeconds, _def._duration );
-        _spawnCarry += _def._spawnRate * emitSeconds;
-        const float32 wholeCount = MathUtil::floor( _spawnCarry );
-        _spawnCarry -= wholeCount;
-        spawnCount += static_cast<uint32>( wholeCount );
-
-        spawnParticles( spawnCount );
-
-        if ( _emitterSeconds >= _def._duration )
-        {
-            if ( _def._bLooping )
-            {
-                _emitterSeconds -= _def._duration;
-                _listBurstFired.assign( _def._listBurst.size(), 0 );
-            }
-            else
-            {
-                _bEmitting = false;
-            }
-        }
-    }
-
-    void VfxCPUSimulation::spawnParticles( uint32 count )
-    {
-        const uint32 freeCount  = _def._maxParticles - getAliveCount();
-        const uint32 spawnCount = MathUtil::min( count, freeCount );
-        if ( spawnCount < count && _bWarnedPoolFull == false )
-        {
-            SW_LOG_WARNING( "Vfx emitter '%#': pool of %# particles is full, dropping new particles", _def._name, _def._maxParticles );
+            SW_LOG_WARNING( "Vfx emitter '%#': pool of %# particles is full, dropping new particles", def._name, def._maxParticles );
             _bWarnedPoolFull = true;
         }
 
+        // 풀이 차서 못 만든 입자(뒤쪽 번호)도 시계가 번호를 이미 썼다 — 풀 상태가 나머지 입자의 난수를 바꾸지 않게 한다.
         for ( uint32 spawnIndex = 0; spawnIndex < spawnCount; ++spawnIndex )
         {
-            uint64 state = VfxCPUSimulationInternal::makeParticleState( _seed, _spawnedCount );
+            const uint64 particleIndex = spawn._firstParticleIndex + spawnIndex;
+            uint64       state         = VfxCPUSimulationInternal::makeParticleState( _seed, particleIndex );
 
             Particle particle{};
-            particle._particleIndex = _spawnedCount;
-            ++_spawnedCount;
-            particle._lifetime    = VfxCPUSimulationInternal::lerpFloat( _def._lifetimeMin, _def._lifetimeMax, VfxCPUSimulationInternal::nextUnitFloat( state ) );
-            particle._velocity._x = VfxCPUSimulationInternal::lerpFloat( _def._velocityMin._x, _def._velocityMax._x, VfxCPUSimulationInternal::nextUnitFloat( state ) );
-            particle._velocity._y = VfxCPUSimulationInternal::lerpFloat( _def._velocityMin._y, _def._velocityMax._y, VfxCPUSimulationInternal::nextUnitFloat( state ) );
-            particle._velocity._z = VfxCPUSimulationInternal::lerpFloat( _def._velocityMin._z, _def._velocityMax._z, VfxCPUSimulationInternal::nextUnitFloat( state ) );
+            particle._particleIndex = particleIndex;
+            particle._lifetime      = VfxCPUSimulationInternal::lerpFloat( def._lifetimeMin, def._lifetimeMax, VfxCPUSimulationInternal::nextUnitFloat( state ) );
+            particle._velocity._x   = VfxCPUSimulationInternal::lerpFloat( def._velocityMin._x, def._velocityMax._x, VfxCPUSimulationInternal::nextUnitFloat( state ) );
+            particle._velocity._y   = VfxCPUSimulationInternal::lerpFloat( def._velocityMin._y, def._velocityMax._y, VfxCPUSimulationInternal::nextUnitFloat( state ) );
+            particle._velocity._z   = VfxCPUSimulationInternal::lerpFloat( def._velocityMin._z, def._velocityMax._z, VfxCPUSimulationInternal::nextUnitFloat( state ) );
             _listParticle.push_back( particle );
         }
-        // 풀이 차서 못 만든 입자도 번호는 쓴 것으로 센다 — 풀 상태가 나머지 입자의 난수를 바꾸지 않게 한다.
-        _spawnedCount += count - spawnCount;
     }
 
     void VfxCPUSimulation::integrateStep( float32 stepSeconds, const IVfxCollisionScene* pCollision )
     {
-        const IVfxCollisionScene* pActiveCollision = _def._collision._mode != VfxCollisionMode::None ? pCollision : nullptr;
+        const VfxEmitterDef&      def              = getDef();
+        const IVfxCollisionScene* pActiveCollision = def._collision._mode != VfxCollisionMode::None ? pCollision : nullptr;
         size_t                    particleIndex    = 0;
         while ( particleIndex < _listParticle.size() )
         {
             Particle&    particle = _listParticle[particleIndex];
             const float3 from     = particle._position;
-            particle._velocity += _def._gravity * stepSeconds;
+            particle._velocity += def._gravity * stepSeconds;
             particle._position += particle._velocity * stepSeconds;
             particle._age += stepSeconds;
             const bool bSurvivesCollision = pActiveCollision == nullptr || resolveCollision( particle, from, *pActiveCollision );
@@ -196,22 +125,24 @@ namespace sw
 
     bool VfxCPUSimulation::resolveCollision( Particle& particle, const float3& from, const IVfxCollisionScene& collision ) const
     {
-        VfxCollisionHit hit{};
-        if ( collision.castSegment( from, particle._position, _def._collision._layerMask, hit ) == false )
+        const VfxEmitterDef& def = getDef();
+        VfxCollisionHit      hit{};
+        if ( collision.castSegment( from, particle._position, def._collision._layerMask, hit ) == false )
             return true;
-        if ( _def._collision._mode == VfxCollisionMode::Kill )
+        if ( def._collision._mode == VfxCollisionMode::Kill )
             return false;
         // 튀기: 법선 성분은 뒤집어 반발 계수만큼, 접선 성분은 마찰만큼 줄인다. 위치는 닿은 점에서 살짝 띄운다(남은 이동은 버린다 — 한 단계에 한 번만 튄다).
         const float32 normalSpeed = particle._velocity.dot( hit._normal );
         const float3  normalPart  = hit._normal * normalSpeed;
         const float3  tangentPart = particle._velocity - normalPart;
-        particle._velocity        = tangentPart * ( 1.0f - _def._collision._friction ) - normalPart * _def._collision._restitution;
+        particle._velocity        = tangentPart * ( 1.0f - def._collision._friction ) - normalPart * def._collision._restitution;
         particle._position        = hit._point + hit._normal * kCollisionSkin;
         return true;
     }
 
     void VfxCPUSimulation::writeParticles( vector<GPUParticle>& outListParticle ) const
     {
+        const VfxEmitterDef& def = getDef();
         outListParticle.clear();
         outListParticle.reserve( _listParticle.size() );
         // 띠는 태어난 순서로 잇는다. 풀 안의 자리는 지우기(마지막과 바꾸기)마다 섞이므로 번호로 다시 줄 세운다.
@@ -220,7 +151,7 @@ namespace sw
         {
             listOrder[slot] = slot;
         }
-        if ( _def._renderMode == VfxRenderMode::Ribbon )
+        if ( def._renderMode == VfxRenderMode::Ribbon )
         {
             std::sort( listOrder.begin(), listOrder.end(),
                        [this]( uint32 slotA, uint32 slotB )
@@ -232,9 +163,9 @@ namespace sw
             // 수명이 다한 입자는 `integrateStep` 이 지우므로 비율은 늘 0..1 이고, 데이터 검증이 커브 키를 보장한다.
             const float32 lifeRatio = particle._age / particle._lifetime;
             GPUParticle   output{};
-            output._positionSize = float4( particle._position, *_def._sizeOverLife.evaluate( lifeRatio ) );
-            output._color        = float4( *_def._colorOverLife._red.evaluate( lifeRatio ), *_def._colorOverLife._green.evaluate( lifeRatio ),
-                                           *_def._colorOverLife._blue.evaluate( lifeRatio ), *_def._colorOverLife._alpha.evaluate( lifeRatio ) );
+            output._positionSize = float4( particle._position, *def._sizeOverLife.evaluate( lifeRatio ) );
+            output._color        = float4( *def._colorOverLife._red.evaluate( lifeRatio ), *def._colorOverLife._green.evaluate( lifeRatio ),
+                                           *def._colorOverLife._blue.evaluate( lifeRatio ), *def._colorOverLife._alpha.evaluate( lifeRatio ) );
             output._rotationLife = float4( 0.0f, lifeRatio, 0.0f, 0.0f );
             outListParticle.push_back( output );
         }

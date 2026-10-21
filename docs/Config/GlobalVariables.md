@@ -257,6 +257,12 @@
 | `gv_userSettingsFile` | `string` | — | 시험 | 사용자 설정 파일 경로 (비면 사용자 폴더의 usersettings.json) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_viewDistanceScale` | `float32` | `1.0` | 일반 | 시야 거리 배율 (사용자 설정 graphics.viewDistance) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 
+## `Source/Engine/Vfx`
+
+| 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
+|---|---|---|---|---|---|
+| `gv_vfxSimulation` | `VfxSimulationTarget` | `GPU` | 시험 | GPU 로 돌 수 있는 방출기의 시뮬레이션 (CPU / GPU — CPU 전용 모듈을 쓰는 방출기는 늘 CPU) | [VfxComponent.cpp](../../Source/Engine/Vfx/VfxComponent.cpp) |
+
 ## `Source/GameFramework/Base`
 
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |

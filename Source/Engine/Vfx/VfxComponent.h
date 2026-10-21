@@ -12,7 +12,10 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Vfx/VfxCPUSimulation.h"
 #include "Engine/Vfx/VfxEffectDef.h"
+#include "Engine/Vfx/VfxGPUEmitter.h"
 #include "Engine/Vfx/VfxParticle.h"
+
+#include <variant>
 
 namespace sw
 {
@@ -25,8 +28,12 @@ namespace sw
 
     /**
      * @class VfxComponent
-     * @brief 효과의 방출기마다 시뮬레이션 하나(`VfxCPUSimulation`)를 돌리고, 틱마다 살아 있는 입자(`GPUParticle`)를 방출기별 새 배열로 냅니다.
-     * @details 렌더러는 씬의 컴포넌트 목록(`ComponentRegistry`)에서 이 컴포넌트를 찾아 빌보드 · 띠 방출기마다 투명 그리기 하나를 만든다(`GPUSceneBuilder::populateParticleBatches`).
+     * @brief 효과의 방출기마다 시뮬레이션 하나를 돌립니다. CPU 방출기(`VfxCPUSimulation`)는 틱마다 살아 있는 입자(`GPUParticle`)를 새 배열로 내고,
+     *        GPU 방출기(`VfxGPUEmitter`)는 누적 단계 수의 요청(`VfxGPUEmitterRequest`)을 내며 입자는 렌더 스레드의 컴퓨트가 만든다.
+     * @details 방출기마다 시뮬레이션 대상(`VfxSimulationTarget`)을 효과를 읽을 때 정한다(언리얼 Niagara 의 방출기별 Sim Target). CPU 전용 모듈
+     *          (`VfxEmitterDef::findCPUOnlyModuleName` — 메시 · 충돌 · 라이트)을 쓰는 방출기는 모든 빌드에서 CPU 이고, 나머지는 Shipping 에서 GPU,
+     *          개발 빌드에서 `gv_vfxSimulation`(기본 GPU — Shipping 과 같다)이 고른다. 결정 기록 5-12 `D2-11`.
+     *          렌더러는 씬의 컴포넌트 목록(`ComponentRegistry`)에서 이 컴포넌트를 찾아 빌보드 · 띠 방출기마다 투명 그리기 하나를 만든다(`GPUSceneBuilder::populateParticleBatches`).
      *          낸 배열은 고쳐 쓰지 않는다 — 렌더 스레드가 몇 프레임 뒤까지 읽으므로 다음 틱은 새 배열을 만든다.
      *
      *          메시 방출기(`VfxRenderMode::Mesh`)는 풀 크기만큼 항목을 가진 메시 인스턴스 배치(`MeshInstanceBatch`)를 프리미티브 레지스트리에 올리고
@@ -84,10 +91,18 @@ namespace sw
         uint32 getEmitterCount() const { return static_cast<uint32>( _listSimulation.size() ); }
         /** @brief 방출기 @p emitterIndex 의 데이터입니다. 번호는 `getEmitterCount` 보다 작아야 합니다. */
         const VfxEmitterDef& getEmitterDef( uint32 emitterIndex ) const;
-        /** @brief 방출기 @p emitterIndex 가 마지막 틱에 낸 입자입니다. 입자가 없으면 nullptr 입니다. 번호는 `getEmitterCount` 보다 작아야 합니다. */
+        /** @brief 방출기 @p emitterIndex 를 시뮬레이션하는 곳입니다(효과를 읽을 때 정했다). 번호는 `getEmitterCount` 보다 작아야 합니다. */
+        VfxSimulationTarget getEmitterSimulationTarget( uint32 emitterIndex ) const;
+        /**
+         * @brief CPU 방출기 @p emitterIndex 가 마지막 틱에 낸 입자입니다. 입자가 없거나 GPU 방출기면 nullptr 입니다. 번호는 `getEmitterCount` 보다 작아야 합니다.
+         */
         const shared_ptr<const vector<GPUParticle>>& getEmitterParticles( uint32 emitterIndex ) const;
-        /** @brief 모든 방출기의 살아 있는 입자 수입니다. */
-        uint32 getAliveParticleCount() const;
+        /** @brief GPU 방출기 @p emitterIndex 의 이번 요청입니다. 재생 중이 아니거나 CPU 방출기면 nullptr 입니다. 번호는 `getEmitterCount` 보다 작아야 합니다. */
+        const VfxGPUEmitterRequest* findEmitterGPURequest( uint32 emitterIndex ) const;
+        /** @brief CPU 방출기들의 살아 있는 입자 수입니다. GPU 방출기의 입자는 GPU 버퍼에만 있어 세지 않습니다. */
+        uint32 getCPUAliveParticleCount() const;
+        /** @brief 모든 방출기가 이번 재생에서 번호를 쓴 입자 수(풀이 차서 버린 입자 포함)입니다. 생성 일정에서 오므로 CPU · GPU 방출기가 같다. */
+        uint64 getSpawnedParticleCount() const;
         /** @brief 메시 방출기 @p emitterIndex 의 인스턴스 배치입니다. 메시 방출기가 아니거나 등록 전 · 메시를 잡지 못했으면 nullptr 입니다. */
         const MeshInstanceBatch* findEmitterMeshBatch( uint32 emitterIndex ) const;
 
@@ -98,6 +113,9 @@ namespace sw
         void appendGPULights( vector<GPULight>& outList ) const;
 
     private:
+        /** @brief 방출기 하나의 시뮬레이션입니다. 대상(`VfxSimulationTarget`)마다 하나뿐이다 — 둘을 함께 들 수 없다. */
+        using EmitterSimulation = std::variant<VfxCPUSimulation, VfxGPUEmitter>;
+
         /** @brief 메시 방출기 하나의 인스턴스 배치와 그 머티리얼입니다. 메시 방출기가 아니면 둘 다 비어 있습니다. */
         struct MeshEmitter
         {
@@ -106,10 +124,14 @@ namespace sw
             float32                         _meshRadius{ 0.0f }; ///< 메시 원점에서 가장 먼 꼭짓점까지(크기 1 기준) — 항목 바운드에 곱한다
         };
 
-        /** @brief `_effectPath` 를 읽어 방출기마다 시뮬레이션을 만듭니다. 재생은 멈춥니다. 경로가 비었거나 읽지 못하면 방출기가 없습니다. */
+        /** @brief `_effectPath` 를 읽어 방출기마다 시뮬레이션 대상을 정하고 시뮬레이션을 만듭니다. 재생은 멈춥니다. 경로가 비었거나 읽지 못하면 방출기가 없습니다. */
         void loadEffect();
-        /** @brief 방출기마다 살아 있는 입자를 새 배열로 냅니다(입자가 없으면 nullptr). 메시 방출기는 인스턴스 배치의 항목도 고칩니다. */
+        /**
+         * @brief CPU 방출기는 살아 있는 입자를 새 배열로(입자가 없으면 nullptr), GPU 방출기는 재생 중일 때 요청을 냅니다. 메시 방출기는 인스턴스 배치의 항목도 고칩니다.
+         */
         void publishParticles();
+        /** @brief 방출기마다 시뮬레이션을 처음으로 되돌립니다(GPU 방출기는 새 재생 번호를 받는다). */
+        void restartSimulations();
         /** @brief 메시 방출기마다 인스턴스 배치를 만들어 레지스트리에 올립니다. 등록 전(레지스트리 없음)이면 아무것도 하지 않습니다. */
         void rebuildMeshEmitters();
         /** @brief 메시 방출기의 배치를 레지스트리에서 내리고 머티리얼을 놓습니다. */
@@ -119,8 +141,9 @@ namespace sw
 
         PROPERTY( Category = "Vfx", DisplayName = "Effect", AssetPath, FileFilter = "*.vfx.xml", Tooltip = "Particle effect (.vfx.xml)" )
         string                                        _effectPath;
-        vector<VfxCPUSimulation>                      _listSimulation;
-        vector<shared_ptr<const vector<GPUParticle>>> _listPublished;
+        vector<EmitterSimulation>                     _listSimulation;
+        vector<shared_ptr<const vector<GPUParticle>>> _listPublished;      ///< CPU 방출기마다 마지막 틱의 입자(GPU 방출기는 늘 nullptr)
+        vector<VfxGPUEmitterRequest>                  _listGPURequest;     ///< GPU 방출기마다 이번 요청(재생 중이 아니거나 CPU 방출기면 `_pDef` 가 nullptr)
         vector<MeshEmitter>                           _listMeshEmitter;    ///< 방출기마다 하나(`_listSimulation` 과 길이가 같다)
         PrimitiveRegistry*                            _pPrimitiveRegistry; ///< 등록된 씬의 프리미티브 레지스트리(빌림). 등록 전이면 nullptr
         PROPERTY( Category = "Vfx", DisplayName = "Seed", Tooltip = "Random seed of the emitters; the same seed replays the same particles" )

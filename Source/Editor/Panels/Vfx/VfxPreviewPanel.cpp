@@ -48,8 +48,8 @@ namespace sw::editor
             [[nodiscard]] static bool readParticleCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const VfxPreviewPanel* pPanel = findOpenPanel();
-                uint32                 count{ 0 };
-                if ( pPanel == nullptr || pPanel->findPreviewParticleCount( count ) == false )
+                uint64                 count{ 0 };
+                if ( pPanel == nullptr || pPanel->findPreviewSpawnedParticleCount( count ) == false )
                     return false;
                 outValue = static_cast<float64>( count );
                 return true;
@@ -85,7 +85,7 @@ namespace sw::editor
     SW_LOG_CALLER( "VfxPreviewPanel" );
     SW_EDITOR_PANEL( VfxPreviewPanel, VfxPreviewPanel::kPanelID, EditorPanelCategory::Tool, 1310 );
     SW_AUTOMATION_PROBE( editorVfxPreviewParticleCount, "Editor.VfxPreviewParticleCount",
-                         "Live particles of the effect playing in the VFX Preview panel (fails while the panel is closed or has no preview scene)",
+                         "Particles the effect in the VFX Preview panel spawned this run, CPU and GPU emitters alike (fails while the panel is closed or has no preview scene)",
                          &VfxPreviewPanelInternal::readParticleCount );
     SW_AUTOMATION_PROBE( editorVfxPreviewDocumentIsProbeAsset, "Editor.VfxPreviewDocumentIsProbeAsset",
                          "1 when the effect open in the VFX Preview panel is gv_editorProbeAsset and it loaded", &VfxPreviewPanelInternal::readDocumentIsProbeAsset );
@@ -133,7 +133,9 @@ namespace sw::editor
         EditorSelfTestMarks::note( "vfx.stop" );
         EditorWidgets::drawTooltip( "Stop and clear the particles" );
         ImGui::SameLine();
-        ImGui::Text( "Particles: %u", pSubject != nullptr ? pSubject->getAliveParticleCount() : 0u );
+        // GPU 방출기의 살아 있는 입자는 GPU 버퍼에만 있다 — 이번 재생에서 만든 수(일정)와 CPU 방출기의 살아 있는 수를 따로 보인다.
+        const uint32 spawnedCount = pSubject != nullptr ? static_cast<uint32>( pSubject->getSpawnedParticleCount() ) : 0u; // 표시용 — 한 재생에 40 억을 넘지 않는다
+        ImGui::Text( "Spawned: %u  CPU alive: %u", spawnedCount, pSubject != nullptr ? pSubject->getCPUAliveParticleCount() : 0u );
 
         for ( const EmitterRow& row : _listEmitterRow )
         {
@@ -150,12 +152,12 @@ namespace sw::editor
         EditorWidgets::drawPanelStatus( _status.c_str() );
     }
 
-    bool VfxPreviewPanel::findPreviewParticleCount( uint32& outCount ) const
+    bool VfxPreviewPanel::findPreviewSpawnedParticleCount( uint64& outCount ) const
     {
         const VfxComponent* pSubject = findPreviewSubject();
         if ( pSubject == nullptr )
             return false;
-        outCount = pSubject->getAliveParticleCount();
+        outCount = pSubject->getSpawnedParticleCount();
         return true;
     }
 

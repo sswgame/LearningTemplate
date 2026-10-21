@@ -648,6 +648,15 @@
        "description": "라이트 그리드 생산(컴퓨트) — 클러스터드 라이팅의 빛 목록"
       },
       {
+       "name": "_shaderVfxSimulation",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "GPU 방출기의 입자 시뮬레이션(컴퓨트)"
+      },
+      {
        "name": "_shaderFullscreenTriangle",
        "type": "DataPath",
        "default": "",
@@ -4127,6 +4136,14 @@
    "kind": "일반",
    "description": "씬 메시 정점 풀 (0=메시마다 정점 버퍼, 진단용)",
    "source": "Source/Engine/Renderer/Frame/FrameRenderer.cpp"
+  },
+  {
+   "name": "gv_vfxSimulation",
+   "type": "VfxSimulationTarget",
+   "default": "GPU",
+   "kind": "시험",
+   "description": "GPU 로 돌 수 있는 방출기의 시뮬레이션 (CPU / GPU — CPU 전용 모듈을 쓰는 방출기는 늘 CPU)",
+   "source": "Source/Engine/Vfx/VfxComponent.cpp"
   },
   {
    "name": "gv_viewDistanceScale",

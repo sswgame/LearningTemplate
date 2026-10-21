@@ -72,6 +72,17 @@ namespace sw
         _colorOverLife._alpha.sortAndComputeAutoTangents();
     }
 
+    const utf8* VfxEmitterDef::findCPUOnlyModuleName() const
+    {
+        if ( _renderMode == VfxRenderMode::Mesh )
+            return "_renderMode Mesh";
+        if ( _collision._mode != VfxCollisionMode::None )
+            return "_collision";
+        if ( _light._maxLights > 0 )
+            return "_light";
+        return nullptr;
+    }
+
     bool VfxEmitterDef::validate( string_view sourceLabel ) const
     {
         using Check = VfxEffectDefInternal;
@@ -148,6 +159,13 @@ namespace sw
         {
             *this = VfxEffectDef{};
             return false;
+        }
+        // 시뮬레이션 대상은 데이터가 정한다 — CPU 전용 모듈을 쓰는 방출기는 GPU 로 고를 수 없음을 남긴다(나머지는 `VfxComponent` 가 고른다).
+        for ( const VfxEmitterDef& emitter : _listEmitter )
+        {
+            const utf8* pCPUOnlyModule = emitter.findCPUOnlyModuleName();
+            if ( pCPUOnlyModule != nullptr )
+                SW_LOG_INFO( "Vfx '%#': emitter '%#' uses %# - it simulates on the CPU in every build", sourceLabel, emitter._name, pCPUOnlyModule );
         }
         return true;
     }

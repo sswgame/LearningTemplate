@@ -19,6 +19,8 @@
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Vfx/VfxParticle.h"
 
+#include <variant>
+
 namespace sw
 {
     class Material;
@@ -322,17 +324,31 @@ namespace sw
     /**
      * @struct GPUParticleBatch
      * @brief 방출기 하나의 입자 그리기입니다. 투명 정렬 후보 하나이며, 투명 패스가 메시 투명 배치 사이의 제자리(`GPUTransparentParticleSlot`)에 빌보드로 그립니다(`VfxParticleRenderer`).
-     * @details 입자는 방출기 로컬 좌표이고 `_world` 가 월드로 옮깁니다. 입자 배열은 **공유합니다** — 방출기가 단계마다 새 배열을 내므로(`VfxComponent`)
-     *          RT 가 읽는 동안 GT 가 고쳐 쓰지 않습니다. 텍스처는 경로로 싣고 RT 가 텍스처 캐시에서 빌립니다(캔버스 경로 이미지와 같다).
+     * @details 입자는 방출기 로컬 좌표이고 `_world` 가 월드로 옮깁니다. 입자의 출처는 방출기의 시뮬레이션 대상(`VfxSimulationTarget`)마다 하나다 —
+     *          CPU 방출기는 입자 배열을 **공유합니다**(방출기가 단계마다 새 배열을 내므로 RT 가 읽는 동안 GT 가 고쳐 쓰지 않는다 — `VfxComponent`),
+     *          GPU 방출기는 누적 단계 수의 요청을 싣고 RT 가 컴퓨트로 입자를 만들어 간접 인자로 그린다(`VfxGPUSimulation`).
+     *          텍스처는 경로로 싣고 RT 가 텍스처 캐시에서 빌립니다(캔버스 경로 이미지와 같다).
      */
     struct GPUParticleBatch
     {
-        shared_ptr<const vector<GPUParticle>> _pListParticle;         ///< 살아 있는 입자(비지 않는다 — 빈 방출기는 싣지 않는다)
-        float4x4                              _world{};               ///< 방출기 행렬(행벡터 규약)
-        hashed_string                         _texturePath{};         ///< 입자 텍스처(리소스 id)
-        float32                               _sizeScale{ 1.0f };     ///< 방출기 행렬의 최대 축 배율 — 입자 크기에 곱한다
-        uint8                                 _bAdditive{ SW_FALSE }; ///< 더하기 블렌드(`VfxBlendMode::Additive`)면 SW_TRUE
-        uint8                                 _bRibbon{ SW_FALSE };   ///< 띠(`VfxRenderMode::Ribbon`)면 SW_TRUE — 입자는 태어난 순서이고 이웃끼리 잇는다(입자 둘 이상)
+        /** @brief 입자의 출처입니다 — CPU 시뮬레이션의 입자 배열(비지 않는다 — 빈 방출기는 싣지 않는다)이거나 GPU 시뮬레이션의 요청이다. */
+        using Source = std::variant<shared_ptr<const vector<GPUParticle>>, VfxGPUEmitterRequest>;
+
+        Source        _source{};              ///< 입자의 출처(위)
+        float4x4      _world{};               ///< 방출기 행렬(행벡터 규약)
+        hashed_string _texturePath{};         ///< 입자 텍스처(리소스 id)
+        float32       _sizeScale{ 1.0f };     ///< 방출기 행렬의 최대 축 배율 — 입자 크기에 곱한다
+        uint8         _bAdditive{ SW_FALSE }; ///< 더하기 블렌드(`VfxBlendMode::Additive`)면 SW_TRUE
+        uint8         _bRibbon{ SW_FALSE };   ///< 띠(`VfxRenderMode::Ribbon`)면 SW_TRUE — 입자는 태어난 순서이고 이웃끼리 잇는다(입자 둘 이상)
+
+        /** @brief CPU 시뮬레이션의 입자입니다. GPU 시뮬레이션이면 nullptr 입니다. */
+        const vector<GPUParticle>* findCPUParticles() const
+        {
+            const shared_ptr<const vector<GPUParticle>>* pShared = std::get_if<shared_ptr<const vector<GPUParticle>>>( &_source );
+            return pShared != nullptr ? pShared->get() : nullptr;
+        }
+        /** @brief GPU 시뮬레이션의 요청입니다. CPU 시뮬레이션이면 nullptr 입니다. */
+        const VfxGPUEmitterRequest* findGPURequest() const { return std::get_if<VfxGPUEmitterRequest>( &_source ); }
     };
 } // namespace sw
 
