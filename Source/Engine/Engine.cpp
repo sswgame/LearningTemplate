@@ -709,8 +709,8 @@ namespace sw
                 uiWidth  = bHasDevice ? _pRHI->getDevice().getBackBufferWidth() : ( pWindow != nullptr ? pWindow->getWidth() : 0 );
                 uiHeight = bHasDevice ? _pRHI->getDevice().getBackBufferHeight() : ( pWindow != nullptr ? pWindow->getHeight() : 0 );
             }
-            const UIViewport viewport =
-                _pUISystem->computeViewport( float2{ static_cast<float32>( uiWidth ), static_cast<float32>( uiHeight ) }, contentScale );
+            UIViewport viewport     = _pUISystem->computeViewport( float2{ static_cast<float32>( uiWidth ), static_cast<float32>( uiHeight ) }, contentScale );
+            viewport._pointerOrigin = int2{ mainOutput._windowX, mainOutput._windowY }; // 백버퍼면 빈 출력이라 0 이다
             // 음성 이벤트의 자막 — 오디오 스레드가 시작한 클립의 자막 키를 쌓아 두고, 가져가는 곳은 여기 하나다.
             if ( _pAudioService != nullptr && _pAudioService->isInitialized() )
             {

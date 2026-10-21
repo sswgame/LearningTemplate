@@ -76,9 +76,9 @@ namespace sw::editor
                 pEditorContext->getSubsystem<EditorRenderViews>().ensureViewTargetSize( EditorViewKind::Scene, targetWidth, targetHeight );
         }
         // 이 패널이 보이는 프레임만 씬 뷰를 그린다(접힘 · 닫힘 · 다른 탭이면 drawContent 가 불리지 않는다).
-        pEditorContext->getSubsystem<EditorRenderViews>().markViewDrawn( EditorViewKind::Scene );
-
         const ImVec2 imagePos = ImGui::GetCursorScreenPos();
+        pEditorContext->getSubsystem<EditorRenderViews>().markViewDrawn( EditorViewKind::Scene, float2{ imagePos.x, imagePos.y } );
+
         _viewportClient.draw( pEditorContext->getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Scene )._pTextureID, float2{ size.x, size.y } );
 
         _viewportClient.drawOverlays( float2{ imagePos.x, imagePos.y }, float2{ size.x, size.y } );
