@@ -153,21 +153,21 @@ PairedAnimationComponent(시작하는 쪽, 에셋 경로 · 자기 역할)
 | P3b | 네트워크 계층 연결(서버가 세션 시작 · 상태를 복제, 클라이언트가 복원, 롤백 소유 상태) — 키트 `GF_NetPairedAnimation` | 코드와 `PairedAnimationReplicationTest` 작성(빌드 · 테스트 미확인, 두 프로세스 확인은 아래 "남은 것") |
 | M3 | 에디터 미리보기(8절) — `PairedAnimationPanel` · `PairedAnimationEditModel` | 코드와 `PairedAnimationEditModelTest` 작성(빌드 · 테스트 미확인, 창 화면 확인은 아래 "남은 것") |
 | — | 상호작용 단계에서 세션 시작 · 에셋 캐시(핫 리로드) · 세트 고르기(`<Select>`) · 보폭 보정 쥠 | 완료(`InteractionTest` · `PairedAnimationTest`) |
-| — | 시나리오 테스트(Shooter3D 궁수 · 활 · 화살 실제 클립) | 에셋: 궁수는 기사 `2H_Ranged_Shoot`, 활 · 화살은 `Scripts/dev/MakeBowProps.py`(`TestMakeBowProps` 통과). 프리팹 · 씬 · 시나리오는 써 두었지만 커밋하지 못했다 — 임포트 전에는 메시 · 스켈레톤 · 클립이 없어 커밋 훅(`CheckAssetRules` references-exist)이 막는다. 아래 "남은 것" |
+| — | 시나리오 테스트(Shooter3D 궁수 · 활 · 화살 실제 클립) | 에셋: 궁수는 기사 `2H_Ranged_Shoot`, 활 · 화살은 `Scripts/dev/MakeBowProps.py`(`TestMakeBowProps` 통과). 활 · 화살 임포트(`models/props/`), 프리팹(`prefabs/props/bow` · `arrow` · `arrow_projectile` — 투사체는 동적 강체 + `LaunchVelocityComponent` 30 m/s), 활 알림 표(`characters/bow/bow.notifies.xml`), 외형 아이템 `bow_long` · 프리셋 `ShooterArcher`, 씬 `maps/bowshowcase.scene.xml`, 시나리오 `automation/showcase/bowshoot.scenario.xml`(자동 수집 밖) 작성(빌드 · 실행 미확인). 화면 확인은 아래 "남은 것" |
 | — | 프롭 역할을 데이터로 묶기 — 넘기지 않은 역할은 같은 에셋 · 그 역할을 적은 다른 `PairedAnimationComponent` 로(둘이면 오류), `_bStartOnPlay`, 탐침 `PairedAnimation.SessionState` | 코드와 `PairedAnimationTest.ComponentBindsRolesNamedByOtherComponents` 작성(빌드 미확인) |
 
 ## 남은 것
 
 - 에디터 미리보기(M3) 화면 확인: 창을 열어 역할 프리팹을 놓고 스크럽 · 기즈모로 오프셋을 옮기는 에디터 시나리오(`-EnableEditor`, `CaptureEditorUI`).
 - 네트워크(P3b) 두 프로세스 확인: `Server` 와 `App -gv_netConnectAddress` 에서 세션 시작 · 늦은 참가 · 끝이 복제되는지. 씬 문서 밖에서 생긴 참가자는 번호표의 생성 번호(`NetObjectTable::registerSpawned` · `bindSpawned`)로 부를 수 있게 됐다 — 스폰 자체를 복제하는 것(무엇을 스폰했는지 클라이언트에 알리고 묶는 일)은 게임의 몫이고 아직 쓰는 게임이 없다.
-- 시나리오 테스트(병합 · 빌드 뒤): `py -3 Scripts/dev/MakeBowProps.py` → `App --import-models`(활 · 화살 `models/props/` 와 `import.stamp` 를 함께 커밋 — 임포트 없이 glb 를 커밋하면 임포트 스탬프 검사가 깨진다). 그다음 써 둔 데이터를 넣는다(2026-10-22 작업자 `wt/animleft` 가 만든 패치 — `git apply <패치>`, 사본은 그 작업자 보고의 스크래치패드 `bowshowcase.patch`): 프리팹 `prefabs/props/bow` · `arrow` · `arrow_projectile`(+ `.meta`), 활 알림 표 `characters/bow/bow.notifies.xml`(`ReleaseArrow` → `SpawnPrefab`, 시위 본 `string`), 외형 아이템 `bow_long`(활 · 화살 두 부품을 손 소켓 `Gun` 에 — `itemvisuals.xml` · `items.xml`) · 프리셋 `ShooterArcher`, 씬 `maps/bowshowcase.scene.xml`(궁수의 `PairedAnimationComponent` 가 `_bStartOnPlay`), 시나리오 `automation/showcase/bowshoot.scenario.xml`(자동 수집 밖). 패치가 사라졌으면 이 목록대로 다시 만든다. 프리팹은 임포트 결과 경로(`models/props/bow.mesh` · `models/props/bow/bow.skeleton.json` · `models/props/bow/clips` 와 arrow 같은 꼴)를 가리킨다 — 임포터가 다른 경로를 쓰면 고친다. 그 뒤 `App -game=Shooter3D "-gv_firstScene=game/shooter3d/maps/bowshowcase.scene.xml" -scenario=game/shooter3d/automation/showcase/bowshoot.scenario.xml` 를 네 백엔드로 돌리고 스크린샷 둘(당김 · 놓음)을 본다. 손 소켓(`Gun`)에 붙인 활의 자리 · 방향, 투사체가 날아가지 않고 떨어지는 것(투사체 프리팹은 강체뿐 — 쏘는 속도를 주는 컴포넌트가 없다)을 확인하고 고친다.
+- 쇼케이스 확인(빌드 뒤): `App -game=Shooter3D "-gv_firstScene=game/shooter3d/maps/bowshowcase.scene.xml" -scenario=game/shooter3d/automation/showcase/bowshoot.scenario.xml` 를 네 백엔드로 돌리고 스크린샷 둘(당김 · 놓음)을 본다. 손 소켓(`Gun`)에 붙인 활의 자리 · 방향, 시위 본(`string`)에서 나간 투사체의 방향(프리팹의 `_localDirection` 0,0,1 이 화살 앞인지)을 확인하고 프리팹 값을 고친다. 날아가는 동안 화살 머리가 속도 쪽을 보게 하는 것(지금은 처음 자세 그대로 물리가 돌린다)은 그때 정한다.
 
 ## 11. 알려진 한계
 
 - 재생 속도를 매 프레임 쓰는 컴포넌트는 지금 `LocomotionWarpingComponent` 하나이고 세션이 쥐어 둔다. 재생 속도를 쓰는 새 컴포넌트가 생기면 같은 쥠을 받아야 한다 — 받지 않으면 세션 시각 검사가 어긋남으로 보고 중단한다(조용히 틀어지지는 않는다).
 - 상호작용의 누름(`Press`) 단계는 누름으로 이미 끝나므로, 세션 시작이 거절되면 경고만 남고 상호작용은 끝난 채다. 누르고 있기 · 연타 단계는 취소된다.
 - 애니메이션 되감기(`AnimationRewind`) 스크럽 중에는 시각이 예측과 달라 중단된다(개발 빌드 진단 기능).
-- 샘플 에셋(`Resource/game/shooter3d/data/anim/bow_shoot.pairedanim.xml`)의 활 · 화살 메시는 생성기만 있고 아직 임포트하지 않았다 — 프리팹 · 쇼케이스 씬은 임포트될 경로를 가리킨다. 데이터 형식 검사(`ResourceDataSchemaTest`)와 생성기 대조(`TestMakeBowProps`)만 돈다.
+- 샘플 에셋(`Resource/game/shooter3d/data/anim/bow_shoot.pairedanim.xml`)의 쇼케이스(`maps/bowshowcase.scene.xml`)는 실행으로 확인하지 않았다. 데이터 형식 검사(`ResourceDataSchemaTest`)와 생성기 대조(`TestMakeBowProps`)만 돈다.
 - 프롭 역할 묶기는 매니저 전체를 훑는다(시작할 때 한 번). 같은 에셋 · 같은 역할을 적은 프롭이 씬에 둘 이상이면(궁수 둘이 같은 활 프리팹) 고를 수 없어 거절한다 — 그때는 부르는 쪽이 바인딩을 넘긴다.
 - 복원(`restoreSession`)은 `warp` 창을 다시 열지 않는다. 창 도중에 이어 받은 클라이언트는 휘어지지 않은 루트 모션으로 가고 서버의 트랜스폼 보정을 받는다(7절).
 
