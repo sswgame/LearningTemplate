@@ -24,7 +24,7 @@ namespace sw
      * @class SceneCooker
      * @brief 씬 문서의 엔티티 상태를 리플렉션 바이너리로 쿠킹하는 오프라인 단계입니다.
      *
-     * @details **왜 C++ 에 있는가.** 나머지 쿠킹은 `Scripts/generate/CookAssets.py` 가 합니다. 그런데
+     * @details **왜 C++ 에 있는가.** 쿠킹은 모두 엔진 안이다(팩은 `PackCooker`). 특히
      *          엔티티 상태를 바이너리로 만들려면 리플렉션(`TypeInfo` · 프로퍼티 표)이 있어야 하고,
      *          그것은 엔진 안에만 있습니다. 그래서 이 단계만 `App.exe --cook-scenes` 로 넘어옵니다.
      *          셰이더가 `--cook-shaders` 로 넘어오는 것과 같은 이유, 같은 모양입니다.

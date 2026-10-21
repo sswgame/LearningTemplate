@@ -7,6 +7,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Graphics/RHI/RHIBackendInfo.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
@@ -704,6 +705,67 @@ SW_TEST_CASE( ShaderCookStampTest, CommittedCookedOutputIsCurrent )
             continue;
         SW_EXPECT_TRUE_MSG( sw::ShaderCooker::isCookedOutputCurrent( arrBinDir[index], arrShaderPath[index] ),
                             ( arrShaderPath[index] + " 의 산출물이 지금 소스와 다르다 — App --cook-shaders 로 다시 쿠킹한다" ).c_str() );
+    }
+}
+
+/**
+ * @brief [ShaderCookStampTest] 판정(`verifyCookedShaders`)이 빠진 백엔드 · 바이너리 · 매니페스트 · 바뀐 소스를 잡고, 맞는 트리는 통과시킨다
+ * @details 예전에는 같은 판정을 파이썬(`CheckShaderStamps` 게이트)이 따로 들었다. 판정은 스탬프를 쓰는 쪽과 같은 C++ 한 곳이고, 규칙은 이 케이스가 임시 트리에서 고정한다.
+ */
+SW_TEST_CASE( ShaderCookStampTest, VerifyCatchesEveryStaleShape )
+{
+    const test::ScopedTempResourceRoot resourceRoot;
+    const sw::string&                  root = resourceRoot.getRootFolderPath();
+    SW_ASSERT_TRUE( resourceRoot.writeTextFile( "engine/shaders/probe.hlsl", "float4 PSMain() : SV_Target { return 0; }\n" ) );
+    const sw::string binDir = resourceRoot.makePath( "engine/shaders/bin/dx12" );
+    SW_ASSERT_TRUE( sw::FileUtil::ensureDirectoryExists( binDir ) );
+
+    // 1) 한 번도 굽지 않은 백엔드는 문제다.
+    sw::vector<sw::string> listProblem;
+    sw::ShaderCooker::verifyCookedShaders( root, "vulkan", listProblem );
+    SW_EXPECT_EQUAL( size_t( 1 ), listProblem.size() );
+
+    // 2) 스탬프만 있고 바이너리 · 매니페스트가 없으면 문제다.
+    sw::ShaderCooker::writeCookStamp( root, binDir, nullptr );
+    sw::ShaderCooker::invalidateSharedHeaderCache();
+    listProblem.clear();
+    sw::ShaderCooker::verifyCookedShaders( root, "dx12", listProblem );
+    SW_EXPECT_EQUAL( size_t( 2 ), listProblem.size() );
+
+    // 3) 바이너리와 그것을 담은 매니페스트가 있으면 통과다.
+    SW_ASSERT_TRUE( resourceRoot.writeTextFile( "engine/shaders/bin/dx12/probe_ps_psmain_0.dxil", "DXIL" ) );
+    SW_ASSERT_TRUE( resourceRoot.writeTextFile( "engine/shaders/bin/dx12/reflection.manifest", "probe_ps_psmain_0.dxil\n" ) );
+    listProblem.clear();
+    sw::ShaderCooker::verifyCookedShaders( root, "dx12", listProblem );
+    SW_EXPECT_TRUE( listProblem.empty() );
+
+    // 4) 매니페스트에 없는 바이너리와 바뀐 소스는 각각 문제다.
+    SW_ASSERT_TRUE( resourceRoot.writeTextFile( "engine/shaders/bin/dx12/probe_ps_psmain_1.dxil", "DXIL" ) );
+    SW_ASSERT_TRUE( resourceRoot.writeTextFile( "engine/shaders/probe.hlsl", "float4 PSMain() : SV_Target { return 1; }\n" ) );
+    sw::ShaderCooker::invalidateSharedHeaderCache();
+    listProblem.clear();
+    sw::ShaderCooker::verifyCookedShaders( root, "dx12", listProblem );
+    SW_EXPECT_EQUAL( size_t( 2 ), listProblem.size() );
+}
+
+/**
+ * @brief [ShaderCookStampTest] 커밋된 셰이더 바이너리가 쿠킹 표의 **모든 백엔드**에서 지금 소스와 맞는다 — 소스 트리는 읽기만 한다
+ * @details 병합이 한쪽의 소스와 다른 쪽의 바이너리를 섞으면 한 백엔드만 다른 그림을 내거나 Shipping 이 빈 화면을 낸다. 예전 린트 게이트(`CheckShaderStamps`)가 하던
+ *          검사를 같은 판정 함수로 한다. 커밋 훅은 셰이더를 고친 커밋에서 `App --verify-shaders` 로 같은 판정을 부른다.
+ */
+SW_TEST_CASE( ShaderCookStampTest, CommittedBinariesAreCurrentForEveryBackend )
+{
+    const sw::string& root = sw::ResourcePaths::getRootFolderPath();
+    SW_ASSERT_FALSE( root.empty() );
+    for ( const sw::RHIBackendInfo& info : sw::RHIBackendInfoTable::kArrInfo )
+    {
+        const sw::string_view  shaderFolder = sw::ShaderCooker::getSubfolderForFormat( info._shaderTarget );
+        sw::vector<sw::string> listProblem;
+        sw::ShaderCooker::verifyCookedShaders( root, shaderFolder, listProblem );
+        for ( const sw::string& problem : listProblem )
+        {
+            SW_EXPECT_TRUE_MSG( false, ( sw::string( shaderFolder ) + ": " + problem + " — App --cook-shaders 로 다시 쿠킹하고 바이너리를 함께 커밋한다" ).c_str() );
+        }
     }
 }
 

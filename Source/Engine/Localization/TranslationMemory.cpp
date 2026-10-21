@@ -228,3 +228,8 @@ namespace sw
         _culture = CultureTable::normalizeCode( culture );
     }
 } // namespace sw
+
+namespace sw
+{
+    SW_ASSET_TYPE( TranslationMemory, TranslationMemory::kAssetType );
+} // namespace sw

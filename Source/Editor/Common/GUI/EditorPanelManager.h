@@ -49,7 +49,7 @@ namespace sw::editor
     /**
      * @struct EditorPanelRegistration
      * @brief 패널 한 종류의 등록 항목입니다. 패널의 .cpp 가 `SW_EDITOR_PANEL` 로 둡니다.
-     * @details `_pID` 는 `windows.ini` 의 가시성 키이자 `-gv_editorOpenPanel` 의 값이다. `_order` 는 Panel 메뉴와 그리기 순서이고,
+     * @details `_pID` 는 `windows.json` 의 가시성 키이자 `-gv_editorOpenPanel` 의 값이다. `_order` 는 Panel 메뉴와 그리기 순서이고,
      *          카테고리는 Panel 메뉴의 Panels 와 Tools 그룹을 정한다.
      */
     struct EditorPanelRegistration : EditorExtensionRegistration

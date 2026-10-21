@@ -4,12 +4,12 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
-#include "Core/File/KeyValueFile.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/UUID/UUID.h"
 
 #include "Engine/Common/EngineDefines.h"
+#include "Engine/Resource/AssetMeta.h"
 #include "Engine/Resource/Cook/CookStore.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Resource/ResourcePaths.h"
@@ -117,8 +117,15 @@ namespace sw
 
         BLOCK( "Load or Generate Meta" )
         {
-            bool importedFlag = bImported;
-            if ( loadMetaFile( path, result, &importedFlag ) == false )
+            bool                      importedFlag = bImported;
+            const AssetMetaReadResult metaResult   = loadMetaFile( path, result, &importedFlag );
+            if ( metaResult == AssetMetaReadResult::Invalid )
+            {
+                // 깨진 .meta 를 새 GUID 로 덮어쓰지 않는다 — 그 에셋을 가리키던 씬 · 프리팹의 참조가 모두 끊긴다. 고칠 때까지 식별자가 없다(오류는 남겼다).
+                result = {};
+                return result;
+            }
+            if ( metaResult == AssetMetaReadResult::Missing )
             {
 #if defined( SW_SHIPPING )
                 // 배포 빌드는 .meta 를 팩에 넣지 않는다(PackConfig 의 `*.meta` 제외). 여기서 GUID 를 지어내 쓰면
@@ -168,7 +175,7 @@ namespace sw
             return false;
 
         UUID guid{};
-        if ( loadMetaFile( path, guid ) == false )
+        if ( loadMetaFile( path, guid ) != AssetMetaReadResult::Loaded )
             return false;
 
         std::unique_lock<std::shared_mutex> lock{ _mutex };
@@ -300,13 +307,11 @@ namespace sw
                 continue;
             const string assetUnderDomain = normalizedMeta.substr( domainRoot.size() + 1, normalizedMeta.size() - domainRoot.size() - 1 - metaExtension.size() );
 
-            KeyValueMap   mapData;
-            UUID          guid{};
-            const string* pGuidText = nullptr;
-            string        metaText;
-            if ( ResourceIO::readTextFile( metaAbs, metaText ) && KeyValueFile::parse( metaText, mapData ) )
-                pGuidText = KeyValueFile::find( mapData, "guid" );
-            const bool bUnreadableGuid = pGuidText == nullptr || UUID::tryParse( pGuidText->c_str(), guid ) == false || guid.isNull();
+            AssetMeta  meta;
+            UUID       guid{};
+            string     metaText;
+            const bool bMetaRead       = ResourceIO::readTextFile( metaAbs, metaText ) && meta.parseXML( metaText, metaAbs.c_str() );
+            const bool bUnreadableGuid = bMetaRead == false || UUID::tryParse( meta._guid.c_str(), guid ) == false || guid.isNull();
             if ( bUnreadableGuid )
             {
                 SW_LOG_ERROR( "Asset registry: '%#' has no readable guid - the asset is left out of the shipped registry", metaAbs );
@@ -331,7 +336,7 @@ namespace sw
 
     uint32 AssetDatabase::writeRegistryFiles( string_view resourceRoot, string_view cookedDir, const CookStore& store, uint32& outFailedCount )
     {
-        // 도메인 = 루트의 폴더 하나, `game` 은 그 아래 폴더 하나씩(팩 하나가 도메인 하나다 — `CookAssets.py` `cookAllPacks` 와 같은 나눔).
+        // 도메인 = 루트의 폴더 하나, `game` 은 그 아래 폴더 하나씩(팩 하나가 도메인 하나다 — `PackCooker::cookAllPacks` 와 같은 나눔).
         vector<string> listDomain;
         vector<string> listTopFolder;
         (void)FileUtil::collectFolders( resourceRoot, listTopFolder, false ); // 루트가 없으면 도메인이 없다 — 아래가 아무것도 쓰지 않는다
@@ -425,37 +430,32 @@ namespace sw
             return false;
         }
 
-        StringBuilder<constant::kMaxBuffer1024> sb;
-        sb.appendFormat( "guid=%#\nsourcePath=%#\nimported=%#\n",
-                         guid.toString(),
-                         relativePath,
-                         bImported ? 1 : 0 );
-
-        FileUtil::ensureParentDirectoryExists( absMeta );
-        return FileUtil::writeTextFile( absMeta, sb.view() );
+        AssetMeta meta;
+        meta._guid       = string( guid.toString().c_str() );
+        meta._sourcePath = string( relativePath );
+        meta._bImported  = bImported;
+        return FileUtil::ensureParentDirectoryExists( absMeta ) && FileUtil::writeTextFile( absMeta, meta.toXML() );
     }
 
-    bool AssetDatabase::loadMetaFile( string_view relativePath, UUID& outGuid, bool* pOutImported ) const
+    AssetMetaReadResult AssetDatabase::loadMetaFile( string_view relativePath, UUID& outGuid, bool* pOutImported ) const
     {
         const string metaRel = metaPathFor( relativePath );
         if ( ResourceIO::hasResource( metaRel ) == false )
-            return false;
+            return AssetMetaReadResult::Missing;
 
-        string      metaText;
-        KeyValueMap mapData;
-        if ( ResourceIO::readTextResource( metaRel, metaText ) == false || KeyValueFile::parse( metaText, mapData ) == false )
-            return false;
+        string    metaText;
+        AssetMeta meta;
+        if ( ResourceIO::readTextResource( metaRel, metaText ) == false || meta.parseXML( metaText, metaRel.c_str() ) == false )
+            return AssetMetaReadResult::Invalid;
 
-        const string* pGuidStr     = KeyValueFile::find( mapData, "guid" );
-        const bool    bInvalidGuid = pGuidStr == nullptr || UUID::tryParse( pGuidStr->c_str(), outGuid ) == false || outGuid.isNull();
+        const bool bInvalidGuid = UUID::tryParse( meta._guid.c_str(), outGuid ) == false || outGuid.isNull();
         if ( bInvalidGuid )
-            return false;
-        // `imported` 는 임포트 산출물에만 적는다 — 없으면 원본 에셋(0)이다. 정수가 아니면 메타가 깨진 것이다(읽기가 알린다).
-        int32 imported{ 0 };
-        if ( KeyValueFile::readOptionalInto( mapData, "imported", imported ) == false )
-            return false;
+        {
+            SW_LOG_ERROR( "'%#' has an unreadable guid '%#'", metaRel, meta._guid );
+            return AssetMetaReadResult::Invalid;
+        }
         if ( pOutImported != nullptr )
-            *pOutImported = imported != 0;
-        return true;
+            *pOutImported = meta._bImported;
+        return AssetMetaReadResult::Loaded;
     }
 } // namespace sw

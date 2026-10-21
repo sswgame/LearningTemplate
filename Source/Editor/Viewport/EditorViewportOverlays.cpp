@@ -3,7 +3,6 @@
 #include "Editor/Viewport/EditorViewportOverlays.h"
 
 #include "Core/File/FileUtil.h"
-#include "Core/File/KeyValueFile.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/EditorPaths.h"
@@ -24,8 +23,7 @@ namespace sw::editor
     {
         struct EditorViewportOverlaysInternal
         {
-            static constexpr const utf8* kFileName     = "ViewportOverlays.ini";
-            static constexpr const utf8* kViewPrefix   = "scene";
+            static constexpr const utf8* kFileName     = "ViewportOverlays.json";
             static constexpr float32     kSnapDistance = 16.0f; ///< 가장자리에 붙는 거리(배율 1)
             static constexpr float32     kEdgeMargin   = 6.0f;  ///< 가장자리에 붙은 바와 뷰포트 테두리 사이(배율 1)
 
@@ -72,10 +70,10 @@ namespace sw::editor
         _bLoaded = true;
         // 저장된 값을 먼저 읽고 등록한다 — 등록은 저장된 바를 덮지 않고 기본값만 적는다.
         const string path = EditorPaths::resolveEditorStateFile( EditorViewportOverlaysInternal::kFileName );
-        KeyValueMap  mapData;
-        const bool   bCanLoadOverlayState = path.empty() == false && FileUtil::exists( path ) && KeyValueFile::loadFile( path, mapData );
-        if ( bCanLoadOverlayState ) // 처음엔 파일이 없다
-            _layout.readFrom( EditorViewportOverlaysInternal::kViewPrefix, mapData );
+        // 처음엔 파일이 없다(Missing). 깨진 파일은 키와 함께 오류를 남기고 기본 배치로 둔다(저장하면 다시 쓴다).
+        const bool bInvalidOverlayFile = path.empty() == false && _layout.loadFile( path ) == ConfigReadResult::Invalid;
+        if ( bInvalidOverlayFile )
+            SW_LOG_WARNING( "Viewport overlay layout is not valid - the default layout is used until it is saved again: %#", path.c_str() );
         for ( const EditorViewportOverlaysInternal::BarDesc& desc : EditorViewportOverlaysInternal::kArrBar )
         {
             EditorOverlayBarState state{};
@@ -91,9 +89,7 @@ namespace sw::editor
         const string path = EditorPaths::resolveEditorStateFile( EditorViewportOverlaysInternal::kFileName );
         if ( path.empty() )
             return;
-        KeyValueMap mapData;
-        _layout.writeTo( EditorViewportOverlaysInternal::kViewPrefix, mapData );
-        if ( KeyValueFile::saveFile( path, mapData, "Scene view overlay bars (position fraction, docked side, collapsed, visible)" ) == false )
+        if ( _layout.saveFile( path ) == false )
             SW_LOG_WARNING( "Could not save the viewport overlay layout to '%#'", path.c_str() );
     }
 

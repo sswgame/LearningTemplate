@@ -488,3 +488,8 @@ namespace sw
         return doc.saveToString();
     }
 } // namespace sw
+
+namespace sw
+{
+    SW_ASSET_TYPE( TileMapXMLData, TileMapXMLData::kAssetType );
+} // namespace sw

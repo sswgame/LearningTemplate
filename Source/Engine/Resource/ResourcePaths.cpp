@@ -9,6 +9,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Common/AssetTypeRegistry.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -598,48 +599,47 @@ namespace sw
 
     vector<string> ResourcePaths::_s_listResourceFolder;
 
-    vector<string> ResourcePaths::_s_listHostExcludedExtension;
-
-    vector<string> ResourcePaths::_s_listHostExcludedFolder;
+    vector<string> ResourcePaths::_s_listHostExcludedGroup;
 
     void ResourcePaths::setHostTarget( string_view buildTargetName )
     {
-        _s_listHostExcludedExtension.clear();
-        _s_listHostExcludedFolder.clear();
-#define SW_ADD_HOST_EXCLUSION( Target, Kind, Extension, Folder )    \
-    if ( buildTargetName == #Target )                               \
-    {                                                               \
-        if ( string_view{ Extension }.empty() == false )            \
-            _s_listHostExcludedExtension.emplace_back( Extension ); \
-        else                                                        \
-            _s_listHostExcludedFolder.emplace_back( Folder );       \
-    }
-        SW_TARGET_ASSET_EXCLUSION_TABLE( SW_ADD_HOST_EXCLUSION )
-#undef SW_ADD_HOST_EXCLUSION
-        if ( _s_listHostExcludedExtension.empty() == false || _s_listHostExcludedFolder.empty() == false )
-            SW_LOG_INFO( "Host target %# does not read %# asset extensions and %# asset folders", string( buildTargetName ).c_str(),
-                         _s_listHostExcludedExtension.size(), _s_listHostExcludedFolder.size() );
+        _s_listHostExcludedGroup.clear();
+#define SW_ADD_HOST_EXCLUDED_GROUP( Target, Group ) \
+    if ( buildTargetName == #Target )               \
+        _s_listHostExcludedGroup.emplace_back( #Group );
+        SW_TARGET_EXCLUDED_GROUP_TABLE( SW_ADD_HOST_EXCLUDED_GROUP )
+#undef SW_ADD_HOST_EXCLUDED_GROUP
+        if ( _s_listHostExcludedGroup.empty() == false )
+            SW_LOG_INFO( "Host target %# does not read %# asset groups", string( buildTargetName ).c_str(), _s_listHostExcludedGroup.size() );
     }
 
     bool ResourcePaths::isExcludedForHost( string_view resourcePath )
     {
-        if ( _s_listHostExcludedExtension.empty() && _s_listHostExcludedFolder.empty() )
+        if ( _s_listHostExcludedGroup.empty() )
             return false;
-        const string normalized = FileUtil::normalizePath( resourcePath );
-        for ( const string& extension : _s_listHostExcludedExtension )
+        const string_view group = AssetTypeRegistry::findExcludeGroup( resourcePath );
+        if ( group.empty() )
+            return false;
+        for ( const string& excluded : _s_listHostExcludedGroup )
         {
-            if ( StringUtil::endsWith( normalized, extension ) )
+            if ( StringUtil::equals( excluded, group, true ) )
                 return true;
         }
-        for ( const string& folder : _s_listHostExcludedFolder )
-        {
-            // 폴더 조각은 경로 처음이거나 '/' 뒤에서 시작해 '/' 로 끝나야 한다(`shaders/bin` 이 `myshaders/binary` 에 맞지 않게).
-            const size_t position            = normalized.find( folder );
-            const bool   bFolderSegmentMatch = position != string::npos && ( position == 0 || normalized[position - 1] == '/' ) && position + folder.size() < normalized.size() &&
-                                             normalized[position + folder.size()] == '/';
-            if ( bFolderSegmentMatch )
-                return true;
-        }
+        return false;
+    }
+
+    bool ResourcePaths::isExcludedForTarget( string_view buildTargetName, string_view resourcePath )
+    {
+        if ( buildTargetName.empty() )
+            return false;
+        const string_view group = AssetTypeRegistry::findExcludeGroup( resourcePath );
+        if ( group.empty() )
+            return false;
+#define SW_MATCH_TARGET_EXCLUDED_GROUP( Target, Group )                            \
+    if ( buildTargetName == #Target && StringUtil::equals( group, #Group, true ) ) \
+        return true;
+        SW_TARGET_EXCLUDED_GROUP_TABLE( SW_MATCH_TARGET_EXCLUDED_GROUP )
+#undef SW_MATCH_TARGET_EXCLUDED_GROUP
         return false;
     }
 

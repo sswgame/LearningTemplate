@@ -231,29 +231,19 @@ SW_TEST_CASE( AppearanceSelectionTest, UserPresetStoreRoundTripsAndUpgrades )
     AppearanceResolver::resolve( fixture._database, applied, reloaded );
     SW_EXPECT_EQUAL( original._hash, reloaded._hash );
 
-    // 판 1 — `version` · `count` · `favorites` 목록.
-    const string code = AppearanceShareCode::encode( selection, fixture._database );
-    string       version1;
-    version1 += "version=1\ncount=2\n";
-    version1 += "preset0.name=Old Parade\npreset0.code=" + code + "\n";
-    version1 += "preset1.name=Old Barber\npreset1.code=" + code + "\n";
-    version1 += "favorites=Old Barber\n";
+    // 옛 `key=value` 세이브(판 1 · 2)는 읽지 않는다 — 출시 전 데이터라 읽는 길을 두지 않았다(TX2). 지금보다 새 판도 읽지 않는다. 망가진 코드 줄은 건너뛴다.
+    const string              code = AppearanceShareCode::encode( selection, fixture._database );
     UserAppearancePresetStore upgraded;
     upgraded.setDatabase( &fixture._database );
-    SW_ASSERT_TRUE( upgraded.loadFromText( version1 ) );
-    SW_ASSERT_EQUAL( size_t( 2 ), upgraded.getPresets().size() );
-    SW_EXPECT_TRUE( upgraded.findPresetByName( "Old Parade" )->_bFavorite == SW_FALSE );
-    SW_EXPECT_TRUE( upgraded.findPresetByName( "Old Barber" )->_bFavorite == SW_TRUE );
-    SW_EXPECT_TRUE( upgraded.saveToText().find( "formatVersion=2" ) != string::npos );
-
-    // 지금보다 새 판은 읽지 않는다. 망가진 코드 줄은 건너뛴다.
     {
-        SW_TEST_DEFENSIVE_SCOPE( "newer save format and a corrupted preset line" );
-        SW_EXPECT_FALSE( upgraded.loadFromText( "formatVersion=3\npresetCount=0\n" ) );
-        SW_ASSERT_TRUE( upgraded.loadFromText( "formatVersion=2\npresetCount=2\npreset0.name=Broken\npreset0.code=AAAA\npreset1.name=Good\npreset1.code=" + code + "\n" ) );
+        SW_TEST_DEFENSIVE_SCOPE( "old key=value save, newer save format and a corrupted preset line" );
+        SW_EXPECT_FALSE( upgraded.loadFromText( "formatVersion=2\npresetCount=0\n" ) );
+        SW_EXPECT_FALSE( upgraded.loadFromText( R"({ "_formatVersion": 4, "_listPreset": [] })" ) );
+        const string text = R"({ "_formatVersion": 3, "_listPreset": [ { "_name": "Broken", "_code": "AAAA" }, { "_name": "Good", "_code": ")" + code + R"(", "_bFavorite": true } ] })";
+        SW_ASSERT_TRUE( upgraded.loadFromText( text ) );
     }
     SW_EXPECT_EQUAL( size_t( 1 ), upgraded.getPresets().size() );
-    SW_EXPECT_TRUE( upgraded.findPresetByName( "Good" ) != nullptr );
+    SW_EXPECT_TRUE( upgraded.findPresetByName( "Good" ) != nullptr && upgraded.findPresetByName( "Good" )->_bFavorite == SW_TRUE );
 }
 
 /**

@@ -197,3 +197,8 @@ namespace sw
         return path;
     }
 } // namespace sw
+
+namespace sw
+{
+    SW_ASSET_TYPE( MeshVertexAnimation, MeshVertexAnimation::kAssetType );
+} // namespace sw

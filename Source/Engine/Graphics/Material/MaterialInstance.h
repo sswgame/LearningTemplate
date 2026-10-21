@@ -21,6 +21,9 @@ namespace sw
     class SW_API MaterialInstance final : public RHIRenderResource
     {
     public:
+        /** @brief 머티리얼 인스턴스 에셋 종류입니다(등록은 `MaterialInstance.cpp` 의 `SW_ASSET_TYPE`). 경로에 정해진 접미사가 없어 접미사를 두지 않는다. 판 0. */
+        static constexpr AssetTypeDef kAssetType{ "MaterialInstance", nullptr, 0, {}, 0, {} };
+
         /**
          * @brief 생성 키입니다. create() 만 만들 수 있습니다.
          * @details 생성자가 이 키를 요구하므로 `make_shared<MaterialInstance>()` 도 스택의 `MaterialInstance x;` 도 **컴파일되지 않는다.**

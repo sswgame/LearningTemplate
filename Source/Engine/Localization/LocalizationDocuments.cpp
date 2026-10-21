@@ -489,3 +489,10 @@ namespace sw
         return makeSiblingPath( projectPath, CultureTable::normalizeCode( culture ) + TranslationTable::kExtension );
     }
 } // namespace sw
+
+namespace sw
+{
+    SW_ASSET_TYPE( SourceStringTable, SourceStringTable::kAssetType );
+    SW_ASSET_TYPE( TranslationTable, TranslationTable::kAssetType );
+    SW_ASSET_TYPE( LocalizationProject, LocalizationProject::kAssetType );
+} // namespace sw

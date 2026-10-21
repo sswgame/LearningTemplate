@@ -21,7 +21,7 @@
 | 전용 서버 운영 값 | `Config/Server/<게임>.json` |
 | 비밀번호와 키 | 환경 변수 |
 | 빌드 형태 | CMake `SW_*` 옵션과 프리셋 |
-| C++와 파이썬이 같이 읽는 쿠킹과 팩 계약 | `Config/Engine/` 의 `CookContract.json`, `PackFormat.json`, `PackConfig.json` |
+| C++와 파이썬이 같이 읽는 쿠킹 표와 팩 쿠킹 설정 | `Config/Engine/` 의 `CookContract.json`, `PackConfig.json`(엔진 `PackConfig` 가 읽는다) |
 | 모듈 켜고 끄기와 의존 관계 | `*.module.json` |
 | 실행 한 번만 바꾸는 값, 디버그 스위치 | `-gv_<이름>=<값>` 과 명령줄 인자 |
 

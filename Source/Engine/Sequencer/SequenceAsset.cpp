@@ -333,3 +333,8 @@ namespace sw
         return invalid_index::kUint32;
     }
 } // namespace sw
+
+namespace sw
+{
+    SW_ASSET_TYPE( SequenceAsset, SequenceAsset::kAssetType );
+} // namespace sw

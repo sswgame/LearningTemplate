@@ -393,7 +393,7 @@ namespace sw
             SW_LOG_ERROR( "saveActiveScene: no path was given and the scene has no source path - nothing is saved" );
             return false;
         }
-        const string outPath = AssetCookPath::toSourcePath( requestedPath, AssetKind::Scene );
+        const string outPath = AssetCookPath::toSourcePath( requestedPath, SceneDocument::kAssetType );
         if ( outPath != requestedPath )
             SW_LOG_WARNING( "Scene path '%#' is not a name the cooker cooks - saving as '%#'", requestedPath, outPath.c_str() );
 

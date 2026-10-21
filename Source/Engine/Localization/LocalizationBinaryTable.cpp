@@ -131,3 +131,8 @@ namespace sw
         return true;
     }
 } // namespace sw
+
+namespace sw
+{
+    SW_ASSET_TYPE( LocalizationBinaryTable, LocalizationBinaryTable::kAssetType );
+} // namespace sw

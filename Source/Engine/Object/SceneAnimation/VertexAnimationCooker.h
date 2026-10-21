@@ -11,6 +11,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Common/AssetTypeRegistry.h"
+
 namespace sw
 {
     struct CookJobDesc;
@@ -28,6 +30,12 @@ namespace sw
     {
         /** @brief 목록 파일의 확장자입니다. */
         static constexpr string_view kExtension = ".vertexanimation.json";
+        /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            { kExtension, AssetSuffixRole::Plain },
+        };
+        /** @brief 이 에셋 종류입니다(등록은 `VertexAnimationCooker.cpp` 의 `SW_ASSET_TYPE`). */
+        static constexpr AssetTypeDef kAssetType{ "VertexAnimationCookList", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
         string                _meshPath;
         string                _skeletonPath;

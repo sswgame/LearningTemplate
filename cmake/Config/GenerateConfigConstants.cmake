@@ -1,19 +1,18 @@
 # ==============================================================================
 # @file cmake/Config/GenerateConfigConstants.cmake
-# @brief configure 생성 파일 — 생성기 다섯을 한 프로세스로 돌리고(ConfigVars · PackFormat · CookContract · ShippingHostDefaults · LintTargets),
+# @brief configure 생성 파일 — 생성기 넷을 한 프로세스로 돌리고(ConfigVars · CookContract · ShippingHostDefaults · LintTargets),
 #        상수를 CMake 변수로 읽고, 게임 프리셋 경로를 정하고, ConfigConstants.h 를 만든다. 최상위 CMakeLists 가 project() 전에 한 번 include 한다.
 # ==============================================================================
 # 상수만 필요하면 이 파일이 아니라 `LoadConfigConstants.cmake` 를 include 한다(그 파일 머리말 참고).
-# 생성 파일은 모두 `<빌드>/generated/sw/config/` 에 있다. C++ 쪽 이름은 그 폴더 기준 include(`sw/config/PackFormat.gen.h` …)라 CMake 변수로 들지 않는다.
+# 생성 파일은 모두 `<빌드>/generated/sw/config/` 에 있다. C++ 쪽 이름은 그 폴더 기준 include(`sw/config/CookContract.gen.h` …)라 CMake 변수로 들지 않는다.
 include_guard(GLOBAL)
 
 # ------------------------------------------------------------------------------
-# 1) configure 생성기 다섯을 한 프로세스로 — 생성기마다 파이썬을 띄우면 configure 의 3 할 가까이가 파이썬 시작 · import 였다.
+# 1) configure 생성기 넷을 한 프로세스로 — 생성기마다 파이썬을 띄우면 configure 의 3 할 가까이가 파이썬 시작 · import 였다.
 #    규칙 · 출력은 각 생성기 한 자리(GenerateConfigureFiles.py 는 차례로 부를 뿐). ToolchainVars 는 SetupEnvironment 뒤라 DetectToolchain 이 따로 부른다.
-#    - PackFormat.gen.h   : Config/Engine/PackFormat.json(.pack 바이너리 포맷) → C++. offsetof/sizeof static_assert 로 계약과 C++ 이 어긋나면 컴파일이 깨진다.
 #    - CookContract.*     : Config/Engine/CookContract.json(RHI 백엔드 · 쿡 접미사) → C++ X-macro 와 CMake(RHI 백엔드의 빌드 칸 — RhiBackends.cmake 가 읽는다).
 #    - ShippingHostDefaults.h : 엔진 설정 + 게임 프리셋 → Shipping/Dev 폴백 호스트 기본값(프리셋이 없으면 건너뛴다 — 아래 3) 이 멈춘다).
-#    두 JSON 표는 Python 쿠커(CookAssets.py)도 같은 파일을 읽는다.
+#    팩 레이아웃은 생성하지 않는다 — 원본은 손으로 쓴 C++ 헤더(Source/Engine/Resource/Pack/ResourcePakTypes.h)다(StructureSimplification PK1).
 # ------------------------------------------------------------------------------
 include("${CMAKE_CURRENT_LIST_DIR}/../Environment/PythonUtils.cmake")
 sw_executePythonScript("Scripts/generate/GenerateConfigureFiles.py"
@@ -50,7 +49,6 @@ endif()
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
 	"${CMAKE_SOURCE_DIR}/${SW_FILE_RUNTIME_GAME_CONFIG}"
 	"${CMAKE_SOURCE_DIR}/${SW_FILE_RUNTIME_ENGINE_CONFIG}"
-	"${CMAKE_SOURCE_DIR}/Config/Engine/PackFormat.json"
 	"${CMAKE_SOURCE_DIR}/Config/Engine/CookContract.json"
 )
 

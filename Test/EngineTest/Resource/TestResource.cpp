@@ -8,20 +8,26 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Graphics/Material/Material.h"
+#include "Engine/Graphics/Material/MaterialInstance.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/AssetDatabase.h"
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/Resource/AssetManager.h"
+#include "Engine/Resource/AssetMeta.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Resource/Cook/CookStore.h"
 #include "Engine/Resource/Image/DDSLoader.h"
 #include "Engine/Resource/Pack/ResourcePakManager.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Scene/SceneDocument.h"
 
 #include "EngineTest/HostTargetTestUtil.h"
 
 #include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
+
+#include "sw/config/CookContract.gen.h"
 
 #include <fstream>
 
@@ -182,9 +188,8 @@ SW_TEST_CASE( ResourceTest, AssetFormatAcceptsCurrentMaterialXML )
     SW_ASSERT_TRUE( root.isValid() );
 
     sw::AssetFormatVersion source = 99;
-    SW_EXPECT_TRUE( sw::engine::getSubsystem<sw::AssetManager>().getAssetFormatRegistry().upgradeXML( sw::AssetKind::Material, doc, root,
-                                                                                                      sw::AssetFormatVersions::kMaterial, &source ) );
-    SW_EXPECT_EQUAL( sw::AssetFormatVersions::kMaterial, source );
+    SW_EXPECT_TRUE( sw::engine::getSubsystem<sw::AssetManager>().getAssetFormatRegistry().upgradeXML( sw::Material::kAssetType, doc, root, &source ) );
+    SW_EXPECT_EQUAL( sw::Material::kAssetType._formatVersion, source );
     SW_EXPECT_TRUE( root.findAttribute( "formatVersion" ) != nullptr );
     SW_EXPECT_STREQ( "0", root.findAttribute( "formatVersion" ) );
 
@@ -685,7 +690,10 @@ SW_TEST_CASE( ResourceTest, DeletingAnAssetKeepsItsMetaUntilTheAssetIsGone )
     const sw::string assetPath = sw::FileUtil::joinPath( dir, "crate.png" );
     const sw::string metaPath  = assetPath + ".meta";
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( assetPath, "png" ) );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( metaPath, "guid=0b7c2a9e-4f1d-4c3a-9e8b-1d2c3b4a5f61\n" ) );
+    sw::AssetMeta deleteMeta;
+    deleteMeta._guid       = "0b7c2a9e-4f1d-4c3a-9e8b-1d2c3b4a5f61";
+    deleteMeta._sourcePath = "crate.png";
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( metaPath, deleteMeta.toXML() ) );
     {
         // 지울 수 없게 만든다 — Windows 는 열어 둔 파일(공유 삭제 없이)을, POSIX 는 쓰기 권한이 없는 폴더의 항목을 지우지 못한다.
 #if defined( SW_PLATFORM_WINDOWS )
@@ -850,12 +858,21 @@ SW_TEST_CASE( ResourceTest, ShippedAssetRegistryNamesTheAssetWhereItsMetaLives )
     // 프리팹을 하위 폴더로 옮긴다 — .meta 는 따라오지만 안의 sourcePath 는 옛 경로 그대로다.
     const sw::string movedMeta = sw::FileUtil::joinPath( root, "game/demo/prefabs/moved/Crate.prefab.xml.meta" );
     sw::FileUtil::ensureParentDirectoryExists( movedMeta );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( movedMeta, sw::string( "guid=" ) + moved.toString() + "\nsourcePath=game/demo/prefabs/crate.prefab.xml\n" ) );
+    sw::AssetMeta movedMetaData;
+    movedMetaData._guid       = sw::string( moved.toString().c_str() );
+    movedMetaData._sourcePath = "game/demo/prefabs/crate.prefab.xml";
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( movedMeta, movedMetaData.toXML() ) );
     const sw::string engineMeta = sw::FileUtil::joinPath( root, "engine/materials/default.material.meta" );
     sw::FileUtil::ensureParentDirectoryExists( engineMeta );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( engineMeta, sw::string( "guid=" ) + stayed.toString() + "\n" ) );
+    sw::AssetMeta engineMetaData;
+    engineMetaData._guid       = sw::string( stayed.toString().c_str() );
+    engineMetaData._sourcePath = "engine/materials/default.material";
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( engineMeta, engineMetaData.toXML() ) );
     const sw::string brokenMeta = sw::FileUtil::joinPath( root, "engine/materials/broken.material.meta" );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( brokenMeta, "guid=not-a-guid\n" ) );
+    sw::AssetMeta    brokenMetaData;
+    brokenMetaData._guid       = "not-a-guid";
+    brokenMetaData._sourcePath = "engine/materials/broken.material";
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( brokenMeta, brokenMetaData.toXML() ) );
 
     uint32 failedCount = 0;
     {
@@ -911,20 +928,22 @@ SW_TEST_CASE( ResourceTest, CookedPathsComeFromOneRule )
 SW_TEST_CASE( ResourceTest, SourcePathsComeFromTheSameRule )
 {
     using sw::AssetCookPath;
-    using sw::AssetKind;
-    SW_EXPECT_STREQ( "maps/a.scene.xml", AssetCookPath::toSourcePath( "maps/a.scene.xml", AssetKind::Scene ).c_str() );
-    SW_EXPECT_STREQ( "maps/A.Scene.XML", AssetCookPath::toSourcePath( "maps/A.Scene.XML", AssetKind::Scene ).c_str() );
-    SW_EXPECT_STREQ( "maps/level.scene.xml", AssetCookPath::toSourcePath( "maps/level", AssetKind::Scene ).c_str() );
-    SW_EXPECT_STREQ( "maps/level.scene.xml", AssetCookPath::toSourcePath( "maps/level.xml", AssetKind::Scene ).c_str() );
-    SW_EXPECT_STREQ( "maps/level.scene.xml", AssetCookPath::toSourcePath( "maps/level.scene", AssetKind::Scene ).c_str() );
-    SW_EXPECT_STREQ( "maps/level.scene.xml", AssetCookPath::toSourcePath( "maps/level.scene.bin", AssetKind::Scene ).c_str() );
-    SW_EXPECT_STREQ( "maps/forest.scenery.scene.xml", AssetCookPath::toSourcePath( "maps/forest.scenery.xml", AssetKind::Scene ).c_str() );
-    SW_EXPECT_STREQ( "prefabs/b.prefab.json", AssetCookPath::toSourcePath( "prefabs/b.prefab.json", AssetKind::Prefab ).c_str() );
-    SW_EXPECT_STREQ( "prefabs/b.prefab.xml", AssetCookPath::toSourcePath( "prefabs/b.prefab", AssetKind::Prefab ).c_str() );
-    SW_EXPECT_STREQ( "engine/materials/x.material", AssetCookPath::toSourcePath( "engine/materials/x.material", AssetKind::Material ).c_str() );
+    const sw::AssetTypeDef& kScene    = sw::SceneDocument::kAssetType;
+    const sw::AssetTypeDef& kPrefab   = sw::PrefabAsset::kAssetType;
+    const sw::AssetTypeDef& kMaterial = sw::Material::kAssetType;
+    SW_EXPECT_STREQ( "maps/a.scene.xml", AssetCookPath::toSourcePath( "maps/a.scene.xml", kScene ).c_str() );
+    SW_EXPECT_STREQ( "maps/A.Scene.XML", AssetCookPath::toSourcePath( "maps/A.Scene.XML", kScene ).c_str() );
+    SW_EXPECT_STREQ( "maps/level.scene.xml", AssetCookPath::toSourcePath( "maps/level", kScene ).c_str() );
+    SW_EXPECT_STREQ( "maps/level.scene.xml", AssetCookPath::toSourcePath( "maps/level.xml", kScene ).c_str() );
+    SW_EXPECT_STREQ( "maps/level.scene.xml", AssetCookPath::toSourcePath( "maps/level.scene", kScene ).c_str() );
+    SW_EXPECT_STREQ( "maps/level.scene.xml", AssetCookPath::toSourcePath( "maps/level.scene.bin", kScene ).c_str() );
+    SW_EXPECT_STREQ( "maps/forest.scenery.scene.xml", AssetCookPath::toSourcePath( "maps/forest.scenery.xml", kScene ).c_str() );
+    SW_EXPECT_STREQ( "prefabs/b.prefab.json", AssetCookPath::toSourcePath( "prefabs/b.prefab.json", kPrefab ).c_str() );
+    SW_EXPECT_STREQ( "prefabs/b.prefab.xml", AssetCookPath::toSourcePath( "prefabs/b.prefab", kPrefab ).c_str() );
+    SW_EXPECT_STREQ( "engine/materials/x.material", AssetCookPath::toSourcePath( "engine/materials/x.material", kMaterial ).c_str() );
     for ( const utf8* pName : { "maps/level", "maps/level.xml", "maps/level.scene", "maps/level.scene.bin" } )
     {
-        SW_EXPECT_TRUE( AssetCookPath::isCookableSource( AssetCookPath::toSourcePath( pName, AssetKind::Scene ), AssetKind::Scene ) );
+        SW_EXPECT_TRUE( AssetCookPath::isCookableSource( AssetCookPath::toSourcePath( pName, kScene ), kScene ) );
     }
 }
 
@@ -942,18 +961,11 @@ SW_TEST_CASE( ResourceTest, AssetDatabaseKnowsAssetsBeforeTheyAreLoaded )
     if ( metaAbs.empty() )
         return;
 
-    sw::string metaText;
+    sw::string    metaText;
+    sw::AssetMeta meta;
     SW_EXPECT_TRUE( sw::FileUtil::readTextFile( metaAbs, metaText ) );
-    const size_t keyPos = metaText.find( "guid=" );
-    SW_EXPECT_TRUE( keyPos != sw::string::npos );
-    size_t lineEnd = metaText.find( '\n', keyPos );
-    if ( lineEnd == sw::string::npos )
-        lineEnd = metaText.size();
-    sw::string expected = metaText.substr( keyPos + 5, lineEnd - keyPos - 5 );
-    while ( expected.empty() == false && ( expected.back() == '\r' || expected.back() == ' ' ) )
-    {
-        expected.pop_back();
-    }
+    SW_EXPECT_TRUE( meta.parseXML( metaText, metaAbs.c_str() ) );
+    const sw::string expected = meta._guid;
 
     sw::UUID   guid{};
     const bool bFound = sw::engine::getSubsystem<sw::AssetManager>().getAssetDatabase().tryGetGuid( pAsset, guid );
@@ -978,8 +990,7 @@ SW_TEST_CASE( ResourceTest, OutOfRangeFormatVersionIsRejected )
         sw::XMLNode root = doc.getRoot( "MaterialDesc" );
         SW_ASSERT_TRUE( root.isValid() );
         test::ScopedLogSuppressor suppressor;
-        SW_EXPECT_FALSE_MSG( sw::engine::getSubsystem<sw::AssetManager>().getAssetFormatRegistry().upgradeXML( sw::AssetKind::Material, doc, root,
-                                                                                                               sw::AssetFormatVersions::kMaterial ),
+        SW_EXPECT_FALSE_MSG( sw::engine::getSubsystem<sw::AssetManager>().getAssetFormatRegistry().upgradeXML( sw::Material::kAssetType, doc, root ),
                              pVersion );
     }
 }
@@ -1076,4 +1087,57 @@ SW_TEST_CASE( ResourceTest, SourceTreeContentMountsNoPackAndReadsLooseFiles )
     SW_EXPECT_EQUAL( size_t( 0 ), resources.getPackManager().getMountedPackCount() );
     SW_EXPECT_TRUE( resources.getPackManager().isAllowLooseFiles() );
     resources.shutdown();
+}
+
+/**
+ * @brief [AssetTypeRegistryTest] 등록된 종류는 이름 · 접미사가 겹치지 않고, 접미사는 가장 긴 것이 먼저 맞는다
+ * @details 종류의 사실(접미사 · 쿠킹 역할 · 판)은 정의 하나에서 나온다(계획 StructureSimplification AT1). 쿠킹 역할이 있는 접미사는 쿠킹본 이름으로 풀리고,
+ *          저작 소스 판정이 역할과 같다. 표의 적은 순서가 아니라 길이가 우선순위다 — `.scene.xml` 이 `.scene` 보다, `.prefab.json` 이 `.prefab` 보다 먼저.
+ */
+SW_TEST_CASE( AssetTypeRegistryTest, TypesAreUniqueAndLongerSuffixWins )
+{
+    sw::vector<sw::string> listProblem;
+    sw::AssetTypeRegistry::collectProblems( listProblem );
+    for ( const sw::string& problem : listProblem )
+    {
+        SW_EXPECT_TRUE_MSG( false, problem.c_str() );
+    }
+
+    // 엔진이 등록한 종류가 실제로 올라왔는가(정적 등록자가 링크에서 빠지지 않았는가).
+    for ( const sw::AssetTypeDef* pExpected : { &sw::SceneDocument::kAssetType, &sw::PrefabAsset::kAssetType, &sw::Material::kAssetType, &sw::MaterialInstance::kAssetType } )
+    {
+        SW_EXPECT_TRUE_MSG( sw::AssetTypeRegistry::findType( pExpected->_name ) != nullptr, sw::string( pExpected->_name ).c_str() );
+    }
+    // 접미사 상수(`kExtension`)를 가진 엔진 타입은 모두 종류로 등록한다(AT2 · AT3 — 33 종, 교환 형식 `.po` · `.xlf` 는 에셋이 아니라 뺐다). 하나라도 링크에서
+    // 빠지면 수가 모자란다 — 어느 것이 빠졌는지는 위 목록과 `collectTypes` 로 본다.
+    SW_EXPECT_TRUE_MSG( sw::AssetTypeRegistry::collectTypes().size() >= 37u, ( "registered asset types: " + sw::to_string( sw::AssetTypeRegistry::collectTypes().size() ) ).c_str() );
+
+    for ( const sw::AssetTypeDef* pType : sw::AssetTypeRegistry::collectTypes() )
+    {
+        for ( uint32 index = 0; index < pType->_suffixCount; ++index )
+        {
+            const sw::AssetSuffix&     suffix = pType->_pSuffix[index];
+            const sw::string           path   = sw::string( "maps/probe" ) + sw::string( suffix._text );
+            const sw::AssetSuffixMatch match  = sw::AssetTypeRegistry::findSuffix( path );
+            SW_EXPECT_TRUE_MSG( match.isMatched() && match._pSuffix == &suffix, path.c_str() );
+            const bool       bCookName      = suffix._role != sw::AssetSuffixRole::Plain && pType->_cookedSuffix.empty() == false;
+            const sw::string expectedCooked = bCookName ? sw::string( "maps/probe" ) + sw::string( pType->_cookedSuffix ) : sw::string();
+            SW_EXPECT_EQUAL( expectedCooked, sw::AssetCookPath::toCookedPath( path ) );
+            SW_EXPECT_TRUE_MSG( sw::AssetCookPath::isCookableSource( path ) == ( suffix._role == sw::AssetSuffixRole::CookSource ), path.c_str() );
+            SW_EXPECT_TRUE_MSG( sw::AssetCookPath::isCookableSource( path, *pType ) == ( suffix._role == sw::AssetSuffixRole::CookSource ), path.c_str() );
+            SW_EXPECT_TRUE_MSG( sw::AssetCookPath::isCookedOutput( path ) == ( suffix._role == sw::AssetSuffixRole::Cooked ), path.c_str() );
+        }
+    }
+    SW_EXPECT_TRUE( sw::AssetCookPath::isCookableSource( "maps/a.scene.xml", sw::SceneDocument::kAssetType ) );
+    SW_EXPECT_FALSE( sw::AssetCookPath::isCookableSource( "maps/a.scene", sw::SceneDocument::kAssetType ) );
+    SW_EXPECT_STREQ( "maps/a.scene.bin", sw::AssetCookPath::toCookedPath( "maps/a.scene" ).c_str() );
+    SW_EXPECT_STREQ( "prefabs/B.prefab.bin", sw::AssetCookPath::toCookedPath( "prefabs/B.prefab.json" ).c_str() );
+
+    // 쿠킹 표의 타깃 제외는 종류 표의 제외 묶음 이름만 가리킨다(AT5). 모르는 이름이면 그 묶음은 아무것도 빼지 않는다 — 여기서 막는다.
+#define SW_TEST_EXCLUDED_GROUP_ROW( Target, Group ) SW_EXPECT_TRUE_MSG( sw::AssetTypeRegistry::hasExcludeGroup( #Group ), #Target " excludes unknown asset group " #Group );
+    SW_TARGET_EXCLUDED_GROUP_TABLE( SW_TEST_EXCLUDED_GROUP_ROW )
+#undef SW_TEST_EXCLUDED_GROUP_ROW
+    SW_EXPECT_STREQ( "ShaderBinary", sw::string( sw::AssetTypeRegistry::findExcludeGroup( "engine/shaders/bin/dx12/reflection.manifest" ) ).c_str() );
+    SW_EXPECT_STREQ( "Texture", sw::string( sw::AssetTypeRegistry::findExcludeGroup( "engine/textures/Perlin.DDS" ) ).c_str() );
+    SW_EXPECT_TRUE( sw::AssetTypeRegistry::findExcludeGroup( "game/empty/models/crate.mesh" ).empty() );
 }

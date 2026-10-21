@@ -12,6 +12,8 @@
 #include "Core/Container/map.h"
 #include "Core/Container/string.h"
 
+#include "Engine/Common/AssetTypeRegistry.h"
+
 namespace sw
 {
     /** @brief 번역 메모리에서 찾은 것입니다. */
@@ -33,9 +35,15 @@ namespace sw
     class SW_API TranslationMemory
     {
     public:
-        static constexpr const utf8* kExtension      = ".tm.json";
-        static constexpr const utf8* kFolderName     = "tm";
-        static constexpr float32     kFuzzyThreshold = 0.75f;
+        static constexpr const utf8* kExtension = ".tm.json";
+        /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            { kExtension, AssetSuffixRole::Plain },
+        };
+        /** @brief 이 에셋 종류입니다(등록은 `TranslationMemory.cpp` 의 `SW_ASSET_TYPE`). */
+        static constexpr AssetTypeDef kAssetType{ "TranslationMemory", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+        static constexpr const utf8*  kFolderName     = "tm";
+        static constexpr float32      kFuzzyThreshold = 0.75f;
 
         [[nodiscard]] bool loadFromJSONText( string_view jsonText, string_view sourceName, string* pOutError = nullptr );
         [[nodiscard]] bool loadFromFile( string_view absolutePath, string* pOutError = nullptr );

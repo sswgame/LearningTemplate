@@ -1,7 +1,5 @@
 #include "pch.h"
 
-#include "Core/File/KeyValueFile.h"
-
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -71,28 +69,5 @@ SW_TEST_CASE( RequiredOptionalReadTest, JSONMember )
         SW_EXPECT_FALSE( root.readRequired<bool>( "count" ).has_value() );
         SW_EXPECT_FALSE( root.readRequired<int32>( "absent" ).has_value() );
         SW_EXPECT_FALSE( root.readOptional( "fraction", optional ) );
-    }
-}
-
-/**
- * @brief [RequiredOptionalReadTest] key=value 의 필수 · 선택 읽기 — 빈 값은 없음, 깨진 값은 오류다
- */
-SW_TEST_CASE( RequiredOptionalReadTest, KeyValueFile )
-{
-    sw::KeyValueMap map;
-    SW_ASSERT_TRUE( sw::KeyValueFile::parse( "width=1280\nscale=1.25\nfullscreen=on\nname=Hero\nempty=\nbroken=wide\n", map ) );
-    SW_EXPECT_EQUAL( 1280, sw::KeyValueFile::readRequired<int32>( map, "width" ).value_or( 0 ) );
-    SW_EXPECT_NEAR_EQUAL( 1.25f, sw::KeyValueFile::readRequired<float32>( map, "scale" ).value_or( 0.0f ), 1e-6f );
-    SW_EXPECT_TRUE( sw::KeyValueFile::readRequired<bool>( map, "fullscreen" ).value_or( false ) );
-    SW_EXPECT_EQUAL( sw::string( "Hero" ), sw::KeyValueFile::readRequired<sw::string>( map, "name" ).value_or( sw::string{} ) );
-
-    std::optional<int32> optional;
-    SW_EXPECT_TRUE( sw::KeyValueFile::readOptional( map, "empty", optional ) );
-    SW_EXPECT_FALSE( optional.has_value() );
-    {
-        SW_TEST_DEFENSIVE_SCOPE( "missing and unreadable key=value entries" );
-        SW_EXPECT_FALSE( sw::KeyValueFile::readRequired<int32>( map, "height" ).has_value() );
-        SW_EXPECT_FALSE( sw::KeyValueFile::readRequired<int32>( map, "broken" ).has_value() );
-        SW_EXPECT_FALSE( sw::KeyValueFile::readOptional( map, "broken", optional ) );
     }
 }

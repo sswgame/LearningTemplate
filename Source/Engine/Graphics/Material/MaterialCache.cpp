@@ -234,4 +234,5 @@ namespace sw
 namespace sw
 {
     SW_BUILT_IN_ASSET_CACHE( MaterialCache );
+    SW_ASSET_TYPE( Material, Material::kAssetType );
 } // namespace sw

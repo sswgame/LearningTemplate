@@ -15,10 +15,13 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
+#include "Engine/Resource/Cook/PackConfig.h"
+#include "Engine/Resource/Cook/PackCooker.h"
 #include "Engine/Resource/Pack/ResourcePakCompressionUtil.h"
 #include "Engine/Resource/Pack/ResourcePakManager.h"
 #include "Engine/Resource/Pack/ResourcePakReader.h"
 #include "Engine/Resource/Pack/ResourcePakTypes.h"
+#include "Engine/Resource/Pack/ResourcePakWriter.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Resource/ResourcePaths.h"
 
@@ -146,6 +149,15 @@ namespace sw
                 return false;
             sw::Memory::copy( bytes.data() + offset, pBytes, byteCount );
             return sw::FileUtil::writeFile( path, bytes.data(), bytes.size() );
+        }
+
+        /** @brief 팩의 첫 FAT 항목이 가리키는 페이로드 오프셋입니다. 배치는 쓰는 쪽(`ResourcePakWriter`)이 정하므로 오프셋을 짐작하지 않고 항목에서 읽습니다. 못 읽으면 0 입니다. */
+        uint64 readFirstPayloadOffsetInternal( const sw::string& path )
+        {
+            PackFileEntryOnDisk entry{};
+            if ( readPackEntryFromDisk( path, 0, entry ) == false )
+                return 0;
+            return entry._dataOffset;
         }
 
         /** @brief 팩 헤더에서 FAT 시작 오프셋을 읽습니다(PackHeader::_indexOffset, offset 22). */
@@ -647,18 +659,11 @@ SW_TEST_CASE( ResourcePakTest, ZeroCopyAndCrc32CorruptionDetection )
 
     // 2. 팩 파일의 페이로드 바이트 1개를 의도적으로 변조 (데이터 손상 시뮬레이션)
     {
-        FILE* pFile{ nullptr };
-#if defined( SW_PLATFORM_WINDOWS )
-        fopen_s( &pFile, packPath.c_str(), "r+b" );
-#else
-        pFile = fopen( packPath.c_str(), "r+b" );
-#endif
-        SW_ASSERT_TRUE( pFile != nullptr );
-        // 첫 번째 파일의 페이로드는 섹터 4096에 위치
-        fseek( pFile, 4096, SEEK_SET );
-        uint8 corruptedByte = 0xFF;
-        fwrite( &corruptedByte, 1, 1, pFile );
-        fclose( pFile );
+        // 첫 번째 파일의 페이로드 위치는 FAT 항목이 말한다
+        const uint64 payloadOffset = sw::readFirstPayloadOffsetInternal( packPath );
+        SW_ASSERT_TRUE( payloadOffset != 0 );
+        const uint8 corruptedByte = 0xFF;
+        SW_ASSERT_TRUE( sw::patchFileBytesInternal( packPath, payloadOffset, &corruptedByte, 1 ) );
     }
 
     // 3. 변조된 팩 오픈 후 로드 시 CRC32 불일치로 안전하게 거부(false 반환)되는지 검증
@@ -1174,7 +1179,7 @@ SW_TEST_CASE( ResourcePakTest, ZeroedCrcDoesNotDisableTheCheck )
     const uint32 zeroCrc{ 0 };
     const uint8  tampered{ 0xFF };
     SW_ASSERT_TRUE( sw::patchFileBytesInternal( packPath, indexOffset + 24, &zeroCrc, sizeof( zeroCrc ) ) );
-    SW_ASSERT_TRUE( sw::patchFileBytesInternal( packPath, sw::kPackSectorAlignment, &tampered, sizeof( tampered ) ) );
+    SW_ASSERT_TRUE( sw::patchFileBytesInternal( packPath, sw::readFirstPayloadOffsetInternal( packPath ), &tampered, sizeof( tampered ) ) );
 
     sw::ResourcePakReader reader;
     SW_ASSERT_TRUE( reader.open( packPath ) );
@@ -1314,7 +1319,7 @@ SW_TEST_CASE( ResourcePakTest, AsyncReadRejectsCrcMismatch )
                                                                                                                    { "secure/async.bin", "ASYNC_INTEGRITY_PAYLOAD" }
     } ) );
     const uint8 corruptedByte = 0xFF;
-    SW_ASSERT_TRUE( sw::patchFileBytesInternal( packPath, 4096, &corruptedByte, 1 ) ); // 첫 페이로드는 섹터 4096
+    SW_ASSERT_TRUE( sw::patchFileBytesInternal( packPath, sw::readFirstPayloadOffsetInternal( packPath ), &corruptedByte, 1 ) ); // 첫 페이로드(FAT 항목이 가리키는 곳)
 
     sw::ResourcePakReader reader;
     SW_ASSERT_TRUE( reader.open( packPath ) );
@@ -1338,4 +1343,119 @@ SW_TEST_CASE( ResourcePakTest, AsyncReadRejectsCrcMismatch )
     SW_EXPECT_FALSE( bSuccess );
     SW_EXPECT_TRUE( received.empty() );
     reader.close();
+}
+
+/**
+ * @brief [ResourcePakTest] 쓰는 곳 하나(`ResourcePakWriter`)가 레이아웃 원본(`ResourcePakTypes.h`)대로 쓰고 리더가 같은 것을 읽는다
+ * @details FAT 은 첫 섹터 경계, 항목은 경로 해시 오름차순, 페이로드는 섹터 정렬, 스트링 풀은 마지막이다. 빈 항목은 압축 바이트 없이 0 바이트로 둔다
+ *          (리더는 원본 크기 0 인 항목의 압축 바이트를 거절한다).
+ */
+SW_TEST_CASE( ResourcePakTest, WriterLayoutMatchesTheReader )
+{
+    const sw::string          packPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_writer_layout.pack" );
+    sw::ResourcePakWriterDesc desc;
+    desc._compression = sw::PackCompressionType::Zlib;
+    desc._dlcAppID    = 7;
+    sw::ResourcePakWriter writer( desc );
+    writer.addBytes( "maps\\title.scene.xml", { 'a', 'b', 'c' } );
+    writer.addBytes( "data/empty.bin", {} );
+    writer.addBytes( "text/Long.txt", sw::vector<uint8>( 9000, uint8{ 'L' } ) );
+    SW_ASSERT_TRUE( writer.writePackFile( packPath ) );
+
+    sw::PackHeader header{};
+    SW_ASSERT_TRUE( sw::readPackHeaderFromDisk( packPath, header ) );
+    // 패킹된 구조체의 필드는 참조로 넘기지 않는다 — 값으로 꺼내 견준다.
+    const uint64 indexOffset = header._indexOffset;
+    const uint32 fileCount   = header._fileCount;
+    const uint32 dlcAppID    = header._dlcAppID;
+    SW_EXPECT_EQUAL( uint64{ sw::kPackSectorAlignment }, indexOffset );
+    SW_EXPECT_EQUAL( uint32{ 3 }, fileCount );
+    SW_EXPECT_EQUAL( uint32{ 7 }, dlcAppID );
+    uint64 previousHash = 0;
+    for ( uint32 entryIndex = 0; entryIndex < fileCount; ++entryIndex )
+    {
+        sw::PackFileEntryOnDisk entry{};
+        SW_ASSERT_TRUE( sw::readPackEntryFromDisk( packPath, entryIndex, entry ) );
+        const uint64 pathHash           = entry._pathHash;
+        const uint64 dataOffset         = entry._dataOffset;
+        const bool   bEmptyHasNoPayload = entry._uncompressedSize != 0 || entry._compressedSize == 0;
+        SW_EXPECT_TRUE( pathHash > previousHash );
+        SW_EXPECT_EQUAL( uint64{ 0 }, dataOffset % uint64{ sw::kPackSectorAlignment } );
+        SW_EXPECT_TRUE( bEmptyHasNoPayload );
+        previousHash = pathHash;
+    }
+
+    sw::ResourcePakReader reader;
+    SW_ASSERT_TRUE( reader.open( packPath ) );
+    sw::vector<uint8> bytes;
+    SW_EXPECT_TRUE( reader.readFile( "maps/title.scene.xml", bytes ) );
+    SW_EXPECT_EQUAL( size_t( 3 ), bytes.size() );
+    SW_EXPECT_TRUE( reader.readFile( "data/empty.bin", bytes ) );
+    SW_EXPECT_TRUE( bytes.empty() );
+    SW_EXPECT_TRUE( reader.readFile( "text/long.txt", bytes ) );
+    SW_EXPECT_EQUAL( size_t( 9000 ), bytes.size() );
+    sw::vector<sw::string> listPath;
+    reader.collectFolderEntries( "text", listPath );
+    SW_ASSERT_EQUAL( size_t( 1 ), listPath.size() );
+    SW_EXPECT_EQUAL( sw::string( "text/Long.txt" ), listPath[0] );
+    reader.close();
+}
+
+/**
+ * @brief [ResourcePakTest] 같은 경로(대소문자 무시)를 두 번 담은 팩은 쓰지 않는다 — 리더는 해시 하나에 항목 하나만 든다
+ */
+SW_TEST_CASE( ResourcePakTest, WriterRejectsTheSamePathTwice )
+{
+    sw::ResourcePakWriter writer( sw::ResourcePakWriterDesc{} );
+    writer.addBytes( "data/items.json", { '1' } );
+    writer.addBytes( "Data/Items.json", { '2' } );
+    sw::vector<uint8>         bytes;
+    test::ScopedLogSuppressor suppressor;
+    SW_EXPECT_FALSE( writer.makePackBytes( bytes ) );
+    SW_EXPECT_TRUE( bytes.empty() );
+}
+
+/**
+ * @brief [PackCookerTest] 팩에 담을 파일을 팩 설정 · 셰이더 폴더 · 빌드 타깃으로 고른다 — 예전 파이썬 쿠커(`shouldIncludeFile`)와 같은 판정
+ */
+SW_TEST_CASE( PackCookerTest, SelectsFilesByConfigShaderFolderAndTarget )
+{
+    sw::PackConfig config;
+    config._bExcludeRawShaderSource = true;
+    config._listGlobalExcludeDirectory.push_back( "docs" );
+    config._listGlobalExcludePattern.push_back( "*.meta" );
+    sw::PackExcludeRule rule;
+    rule._name = "TopOnly";
+    rule._listExcludeDirectory.push_back( "textures_raw" );
+    rule._bRecursive = false;
+    config._listRule.push_back( rule );
+
+    SW_EXPECT_TRUE( sw::PackCooker::shouldIncludeFile( "textures/a.dds", config, "dx12", "Client" ) );
+    SW_EXPECT_FALSE( sw::PackCooker::shouldIncludeFile( "textures/a.dds", config, "dx12", "Server" ) ); // 서버는 텍스처를 읽지 않는다
+    SW_EXPECT_FALSE( sw::PackCooker::shouldIncludeFile( "docs/readme.md", config, "dx12", "" ) );
+    SW_EXPECT_FALSE( sw::PackCooker::shouldIncludeFile( "maps/Docs/readme.md", config, "dx12", "" ) ); // 폴더 이름은 대소문자를 가리지 않는다
+    SW_EXPECT_FALSE( sw::PackCooker::shouldIncludeFile( "maps/x.scene.xml.meta", config, "dx12", "" ) );
+    SW_EXPECT_FALSE( sw::PackCooker::shouldIncludeFile( "textures_raw/a.png", config, "dx12", "" ) );
+    SW_EXPECT_TRUE( sw::PackCooker::shouldIncludeFile( "sub/textures_raw/a.png", config, "dx12", "" ) ); // 재귀가 아닌 규칙은 맨 위 폴더만 뺀다
+    SW_EXPECT_FALSE( sw::PackCooker::shouldIncludeFile( "shaders/forward.hlsl", config, "dx12", "" ) );
+    SW_EXPECT_TRUE( sw::PackCooker::shouldIncludeFile( "shaders/bin/dx12/forward_vs.dxil", config, "dx12", "" ) );
+    SW_EXPECT_FALSE( sw::PackCooker::shouldIncludeFile( "shaders/bin/vulkan/forward_vs.spv", config, "dx12", "" ) );
+
+    SW_EXPECT_EQUAL( sw::string( "engine.pack" ), sw::PackCooker::makePackFileName( "engine" ) );
+    SW_EXPECT_EQUAL( sw::string( "game_empty.pack" ), sw::PackCooker::makePackFileName( "game/empty" ) );
+}
+
+/**
+ * @brief [StringUtilTest] 와일드카드는 `*`(0 글자 이상, '/' 포함) · `?`(한 글자)이고 대소문자를 가리지 않으며 글 전체에 맞아야 한다
+ */
+SW_TEST_CASE( StringUtilTest, MatchesWildcard )
+{
+    SW_EXPECT_TRUE( sw::StringUtil::matchesWildcard( "*.meta", "a.PNG.META" ) );
+    SW_EXPECT_TRUE( sw::StringUtil::matchesWildcard( "*.sources.json", "data/x.sources.json" ) );
+    SW_EXPECT_TRUE( sw::StringUtil::matchesWildcard( "thumbs.db", "Thumbs.db" ) );
+    SW_EXPECT_TRUE( sw::StringUtil::matchesWildcard( "a?c", "abc" ) );
+    SW_EXPECT_TRUE( sw::StringUtil::matchesWildcard( "*", "" ) );
+    SW_EXPECT_FALSE( sw::StringUtil::matchesWildcard( "*.meta", "a.metadata" ) );
+    SW_EXPECT_FALSE( sw::StringUtil::matchesWildcard( "a?c", "ac" ) );
+    SW_EXPECT_FALSE( sw::StringUtil::matchesWildcard( "", "a" ) );
 }

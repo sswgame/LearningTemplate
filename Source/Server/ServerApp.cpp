@@ -165,7 +165,7 @@ namespace sw
             SW_LOG_ERROR( "Engine initialization failed (dedicated server)" );
             return false;
         }
-        // 헤드리스 작업(서버 팩의 씬 쿠킹)은 엔진 기동 안에서 끝났다. 실패는 종료 코드로 알린다. CookAssets.py 가 이 코드를 본다.
+        // 헤드리스 작업(서버 팩의 씬 쿠킹)은 엔진 기동 안에서 끝났다. 실패는 종료 코드로 알린다. 빌드(CookAssets 타깃) · `MakePackage.py` 가 이 코드를 본다.
         if ( _engine.isHeadless() )
             return _engine.didHeadlessTaskFail() == false;
 

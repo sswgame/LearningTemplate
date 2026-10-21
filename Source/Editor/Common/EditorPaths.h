@@ -20,7 +20,7 @@ namespace sw::editor
          *        이웃 파일 이름을 정하면 그 설정 파일을 찾는 경로가 순환한다. 임포트 설정 둘만 `Config/Editor`(사람이 쓴다)에 있고, 나머지는 `Saved/Editor`(앱이 쓴다)에 있다.
          */
         static constexpr const utf8* kImguiIniFileName               = "imgui.ini";
-        static constexpr const utf8* kWindowsIniFileName             = "windows.ini";
+        static constexpr const utf8* kPanelVisibilityFileName        = "windows.json";             ///< 패널 가시성(`EditorPanelVisibility`, 리플렉션 JSON)
         static constexpr const utf8* kAnimationGraphCanvasFileName   = "AnimationGraph.json";      ///< 노드 에디터 캔버스 상태
         static constexpr const utf8* kDialogueGraphCanvasFileName    = "DialogueGraphEditor.json"; ///< 노드 에디터 캔버스 상태
         static constexpr const utf8* kAnimationGraphDocumentFileName = "AnimationGraphData.json";  ///< 경로가 없는 애니메이션 그래프 문서
@@ -44,7 +44,7 @@ namespace sw::editor
 
         /**
          * @brief 에디터가 쓰는 상태 폴더 <Project>/Saved/Editor 를 반환합니다. 없으면 만듭니다. `-gv_editorStateDir=<폴더>` 를 주면 그 폴더를 씁니다.
-         * @details 도킹(`imgui.ini`, `windows.ini`), 이름 붙인 레이아웃, 노드 캔버스, 경로가 없는 도구 문서, 환경설정(테마 포함 `EditorPreferences.json`), gv 프리셋이
+         * @details 도킹(`imgui.ini`, `windows.json`), 이름 붙인 레이아웃, 노드 캔버스, 경로가 없는 도구 문서, 환경설정(테마 포함 `EditorPreferences.json`), gv 프리셋이
          *          여기에 있다. 사람이 고쳐서 커밋하는 `Config/` 와 나눈다. 언리얼의 `Saved/`, 유니티의 `UserSettings/` 와 같다.
          * @return 정하지 못하면 빈 문자열입니다.
          */

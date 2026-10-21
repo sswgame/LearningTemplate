@@ -170,7 +170,7 @@ namespace sw
         // `git pull` 이 둘의 시간 순서를 임의로 뒤집어, 소스가 바뀌었는데도 "바이너리가 더 새것"이라 낡은 것을 쓴다.
         // 검사는 개발 빌드 전용이다. 배포에는 다시 컴파일할 길이 없어
         // 거부하면 폴백이 아니라 빈 화면이고, 배포물의 신선도는 쿠킹이 같은 스탬프로 이미 막는다
-        // (CookAssets.py --verify-shaders).
+        // (App --cook-all --verify-shaders).
         if ( absPath.empty() == false )
         {
             const string precookedAbsPath = ResourcePaths::findLooseFile( precookedRelPath ).getDiskPath();

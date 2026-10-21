@@ -4,10 +4,10 @@
 
 ## 함정 · 계약
 
-- **쿠킹** — `CookAssets` 는 App 에 의존하고 Shipping 에서는 `all` 에 든다. App 경로는 CMake 가 `--app $<TARGET_FILE:App>` 로 넘긴다(빌드 폴더를 뒤지면 다른 프리셋의 낡은 App
-  을 집는다). 산출물은 `build/<preset>/Cooked/`. 소스 트리에 남은 옛 `.bin` 은 경고와 함께 팩에서 빠진다 — 지운다. 팩 코덱은 `Config/Engine/PackConfig.json`(LZ4 · Zstd 는 pip
-  선택 의존성, 없으면 그 자리에서 멈춘다 — zlib 으로 조용히 물러나면 안 된다), 팩 계약 SSOT 는 `Config/Engine/PackFormat.json`(고치면 configure) · 파이썬 `PackFormatSpec`
-  (`PackStruct.pack()` 은 필드 **이름으로만**).
+- **쿠킹** — `CookAssets` 타깃은 App(전용 서버 타깃은 Server)에 의존하고 Shipping 에서는 `all` 에 든다. 그 실행 파일을 `$<TARGET_FILE:…> --cook-all` 로
+  부른다(빌드 폴더를 뒤지지 않는다). 스테이징은 `build/<preset>/Cooked/`, 팩은 `Bin/Packs`. 소스 트리에 남은 옛 `.bin` 은 경고와 함께 팩에서 빠진다 — 지운다.
+  팩 코덱은 `Config/Engine/PackConfig.json`(엔진 코덱이라 설치 없음), 팩 레이아웃의 원본은 `ResourcePakTypes.h`(손으로 쓴 구조체 · `static_assert`). 증분은
+  `Saved/CookRecord/packs/<타깃>-<셰이더 폴더>/` 의 기록과 DDC 다(바뀐 것이 없으면 팩을 다시 쓰지 않는다).
 - **경고를 재기 전에 그 프리셋을 한 번 빌드한다**(생성 헤더 `FlagOps.gen.h` 가 없으면 `-fsyntax-only` 가 가짜 오류 32 건). 파일을 옮긴 뒤 옛 compile DB 면 "no such file".
   트리 전체의 경고는 `RunBuildWarnings.py --preset Ninja-Debug`. 리눅스 전용 경고는 Windows 의 `RunBuildWarnings` 가 못 본다
   (WSL-Debug 로그). 한 플랫폼에서만 읽는 필드는 `[[maybe_unused]]`.

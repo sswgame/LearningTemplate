@@ -13,6 +13,8 @@ namespace sw
 {
     SW_LOG_CALLER( "Texture2D" );
 
+    SW_ASSET_TYPE( Texture, Texture2D::kAssetType );
+
     Texture2D::Texture2D()
         : _pDevice{ nullptr }
         , _path{}

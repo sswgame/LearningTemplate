@@ -13,7 +13,7 @@
 - Public functions use `camelCase`; private helpers use `camelCaseInternal`.
 - Module constants use `kPascalCase` or `_kPascalCase`.
 - Module/file names use `PascalCase.py`.
-- JSON keys of Python-owned contracts (`Config/Engine/CookContract.json` · `PackConfig.json` · `PackFormat.json`, hand-read import configs) use `snake_case`. Configs read through reflection use the C++ member name as the key (`_width`).
+- JSON keys of Python-owned contracts (`Config/Engine/CookContract.json`, hand-read import configs) use `snake_case`. Configs read through reflection use the C++ member name as the key (`_width`).
 
 Shape. `CheckPythonConventions.py` checks every tracked `.py` against the rules below; the bracketed word is the rule name in its
 violations and in `Scripts/lint/rules/CheckPythonConventions.toml` exemption keys (`<rule>:<path>`). The code must still run on Python 3.10,

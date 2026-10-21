@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""도구가 필수 값 · 읽기 실패를 기본값으로 덮지 않고 멈추거나 위반으로 알리는가 — 팩 계약 키, Git 설치 폴더 환경 변수, 규칙 검사의 파일 읽기."""
+"""도구가 필수 값 · 읽기 실패를 기본값으로 덮지 않고 멈추거나 위반으로 알리는가 — 쿠킹 표 키, Git 설치 폴더 환경 변수, 규칙 검사의 파일 읽기.
+
+팩 설정 · 팩 레이아웃의 필수 값은 엔진이 읽는다(`PackConfig` 의 `Required` 칸 — `ConfigFileSchemaTest`).
+"""
 
 from __future__ import annotations
 
@@ -18,28 +21,20 @@ sys.path.insert(0, str(kRepositoryRoot / "Scripts"))
 from common import Host  # noqa: E402
 from common.BuildTree import BuildTree  # noqa: E402
 from common.CookContract import CookContractSpec, kCookContractConfigRelative  # noqa: E402
-from common.PackFormat import PackFormatSpec, kPackFormatConfigRelative  # noqa: E402
 from lint.conventions import FileScan  # noqa: E402
-from generate import CookAssets  # noqa: E402
 from qa import PerfRegression  # noqa: E402
 
 
 class ToolRequiredValuesTest(unittest.TestCase):
-    def testPackFormatWithoutDeflateStrategyStops(self) -> None:
-        spec = json.loads((kRepositoryRoot / kPackFormatConfigRelative).read_text(encoding="utf-8"))
-        del spec["compression"]["deflateStrategy"]
-        with self.assertRaises(KeyError):
-            PackFormatSpec(spec)
-
     @unittest.skipUnless(sys.platform == "win32", "Windows 설치 폴더 탐색")
     def testGitSearchWithoutProgramFilesStops(self) -> None:
         with mock.patch.object(Host.shutil, "which", return_value=None), mock.patch.dict(os.environ, {}, clear=True):
             with self.assertRaisesRegex(RuntimeError, "ProgramFiles"):
                 Host.resolveGitExecutable()
 
-    def testCookContractWithoutAssetKindsStops(self) -> None:
+    def testCookContractWithoutTargetExclusionStops(self) -> None:
         spec = json.loads((kRepositoryRoot / kCookContractConfigRelative).read_text(encoding="utf-8"))
-        del spec["asset_kinds"]
+        del spec["target_excluded_asset_kinds"]
         with self.assertRaises(KeyError):
             CookContractSpec(spec)
 
@@ -47,12 +42,6 @@ class ToolRequiredValuesTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tempDir:
             with self.assertRaises(FileNotFoundError):
                 list(BuildTree.iterConfigured(Path(tempDir)))
-
-    def testPackConfigWithoutCompressionStops(self) -> None:
-        with self.assertRaises(KeyError):
-            CookAssets.resolveCompressionCodecInternal({})
-        with self.assertRaises(KeyError):
-            CookAssets.shouldIncludeFile("a/b.txt", {"global_exclude_directories": []})
 
     def testPerfToleranceWithoutMetricStops(self) -> None:
         with self.assertRaises(KeyError):

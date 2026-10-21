@@ -9,6 +9,7 @@
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/Server/ServerConfig.h"
 #include "Engine/Profiling/MemoryBudgetMonitor.h"
+#include "Engine/Resource/Cook/PackConfig.h"
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -122,9 +123,8 @@ namespace
             {                       "Config/Game/",                                          "",      &loadStrict<sw::GameConfig>},
             {"Config/Server/chat_banned_words.txt",  "ChatWordFilterTest (word list, not keys)",                          nullptr},
             {                     "Config/Server/",                                          "",    &loadStrict<sw::ServerConfig>},
-            {    "Config/Engine/CookContract.json",                "CheckCookContract (python)",                          nullptr},
-            {      "Config/Engine/PackFormat.json",            "GeneratePackFormat (configure)",                          nullptr},
-            {      "Config/Engine/PackConfig.json",                       "CookAssets (python)",                          nullptr},
+            {    "Config/Engine/CookContract.json",          "GenerateCookContract (configure)",                          nullptr},
+            {      "Config/Engine/PackConfig.json",                                          "",   &loadBaseLayer<sw::PackConfig>},
             {                "Config/Environment/", "SetupEnvironment (python) - machine-local",                          nullptr},
             {                     "Config/Editor/",   "EditorConfigFileSchemaTest (EditorTest)",                          nullptr},
             {                   "Config/README.md",                              "not a config",                          nullptr},

@@ -17,7 +17,7 @@ py -3 -m Scripts gate|fix|report|selftest <이름> [인자…]   # lint/ 의 폴
 
 ```bash
 py -3 Scripts/setup/SetupEnvironment.py
-py -3 Scripts/generate/CookAssets.py --all
+build/Ninja-Debug/Bin/App.exe --cook-all --cooked-dir=build/Ninja-Debug/Cooked --pack-dir=build/Ninja-Debug/Bin/Packs
 py -3 Scripts/lint/gate/CheckEngineLayers.py
 py -3 Scripts/lint/fixer/FormatClangFormat.py
 py -3 Scripts/generate/GenerateShippingHostDefaults.py build/Ninja-Shipping/generated/sw/config/ShippingHostDefaults.h  # 빌드가 읽는 자리(<빌드 폴더>/generated)

@@ -63,17 +63,21 @@ if(SW_TARGET_TYPE STREQUAL "Server")
 else()
 	set(SW_COOK_HOST_TARGET App)
 endif()
-# 빌드 타깃이 빼는 에셋 종류(Config/Engine/CookContract.json 의 target_excluded_asset_kinds — 서버: 텍스처 · 셰이더 바이너리 · 오디오)는 팩에 넣지 않는다.
-set(swCookArgs --all --out "${swPackOutputDir}" --cooked-dir "${CMAKE_BINARY_DIR}/Cooked" --app "$<TARGET_FILE:${SW_COOK_HOST_TARGET}>"
-	--build-target "${SW_TARGET_TYPE}")
+# 쿠킹은 엔진 한 곳이다(`App --cook-all`: 씬 · 프리팹 · 레지스트리 · VAT · 내비메시를 스테이징하고 팩을 굽는다 — `PackCooker`).
+# 빌드 타깃이 빼는 에셋 종류(Config/Engine/CookContract.json 의 target_excluded_asset_kinds — 서버: 텍스처 · 셰이더 바이너리 · 오디오)는
+# 쿠킹하는 호스트가 정한다(Server 가 구우면 서버 팩이다). 팩 설정은 Config/Engine/PackConfig.json 이다.
+set(swCookArgs --cook-all "--cooked-dir=${CMAKE_BINARY_DIR}/Cooked" "--pack-dir=${swPackOutputDir}")
 if(SW_SHIPPING_BUILD AND NOT SW_TARGET_TYPE STREQUAL "Server")
 	list(APPEND swCookArgs --verify-shaders)
 endif()
 
-sw_addRepoPythonTarget(CookAssets "${SW_SCRIPT_COOK_ASSETS}"
-	COMMENT "Cooking scenes, prefabs (XML/JSON) and Resource packs to binary..."
-	ARGS ${swCookArgs}
+add_custom_target(CookAssets
+	COMMAND "$<TARGET_FILE:${SW_COOK_HOST_TARGET}>" ${swCookArgs}
+	WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+	COMMENT "Cooking scenes, prefabs (XML/JSON) and Resource packs to binary (${SW_COOK_HOST_TARGET} --cook-all)..."
+	VERBATIM
 )
+set_target_properties(CookAssets PROPERTIES FOLDER "Engine/Scripts")
 
 # 서드파티 고지 — 배포물(Bin · Shipping 패키지)에 함께 놓는다. vcpkg 설치 트리의 `share/<포트>/copyright` 를 이 매니페스트가
 # 끌어오는 포트만 모아 쓴다(설치 트리는 워크트리끼리 나눠 쓰므로 트리 전체가 아니다). 포트가 바뀌면 status 가 바뀌어 다시 만든다.

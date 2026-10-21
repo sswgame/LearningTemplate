@@ -5,7 +5,6 @@
 #include "Core/Compression/CompressionStream.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
-#include "Core/File/KeyValueFile.h"
 #include "Core/Process/Process.h"
 
 #include "Engine/Animation/Graph/AnimationGraphAsset.h"
@@ -113,11 +112,6 @@ namespace test
             {
                 JSONDocument document;
                 (void)document.tryParse( asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
-            }
-            static void runKeyValue( const uint8* pData, size_t size )
-            {
-                KeyValueMap mapValue;
-                (void)KeyValueFile::parse( asText( pData, size ), mapValue ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runDDS( const uint8* pData, size_t size )
             {
@@ -261,11 +255,6 @@ namespace test
                 appendResourceSeeds( ".json", 4, SeedPick::ByName, outListSeed );
                 appendTextSeed( R"({"a":[1,2.5e3,-0,true,null,"é"],"b":{"c":"d"}})", outListSeed );
             }
-            static void seedKeyValue( vector<vector<uint8>>& outListSeed )
-            {
-                appendResourceSeeds( ".meta", 4, SeedPick::ByName, outListSeed );
-                appendTextSeed( "# c\nguid=11111111-1111-1111-1111-111111111111\nimported=0\nkey = value with spaces\n", outListSeed );
-            }
             static void seedDDS( vector<vector<uint8>>& outListSeed ) { appendResourceSeeds( ".dds", 13, SeedPick::SmallestFirst, outListSeed ); }
             static void seedMesh( vector<vector<uint8>>& outListSeed )
             {
@@ -399,7 +388,6 @@ namespace test
         constexpr LoaderFuzzTarget kArrLoaderFuzzTarget[] = {
             {               "XML",                &LoaderFuzzTargetsInternal::runXML,             &LoaderFuzzTargetsInternal::seedXML,  true},
             {              "JSON",               &LoaderFuzzTargetsInternal::runJSON,            &LoaderFuzzTargetsInternal::seedJSON,  true},
-            {          "KeyValue",           &LoaderFuzzTargetsInternal::runKeyValue,        &LoaderFuzzTargetsInternal::seedKeyValue,  true},
             {               "DDS",                &LoaderFuzzTargetsInternal::runDDS,             &LoaderFuzzTargetsInternal::seedDDS, false},
             {              "Mesh",               &LoaderFuzzTargetsInternal::runMesh,            &LoaderFuzzTargetsInternal::seedMesh, false},
             {       "Compression",        &LoaderFuzzTargetsInternal::runCompression,     &LoaderFuzzTargetsInternal::seedCompression, false},

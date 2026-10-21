@@ -10,6 +10,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Common/AssetTypeRegistry.h"
 #include "Engine/Resource/Cache/IAssetCache.h"
 
 namespace sw
@@ -60,6 +61,16 @@ namespace sw
     class SW_API PrefabAsset
     {
     public:
+        /** @brief 프리팹 파일의 접미사입니다 — 저작 소스 둘(XML · JSON), 쿠킹본, 확장자 없는 이름(쿠킹본으로 읽는다). */
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            { ".prefab.xml",  AssetSuffixRole::CookSource},
+            {".prefab.json",  AssetSuffixRole::CookSource},
+            { ".prefab.bin",      AssetSuffixRole::Cooked},
+            {     ".prefab", AssetSuffixRole::CookedAlias},
+        };
+        /** @brief 프리팹 에셋 종류입니다(등록은 `PrefabAsset.cpp` 의 `SW_ASSET_TYPE`, 캐시 등록 옆). 판 0. */
+        static constexpr AssetTypeDef kAssetType{ "Prefab", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), ".prefab.bin", 0, {} };
+
         /** @brief 로드하지 않은 빈 프리팹으로 만듭니다. */
         PrefabAsset();
 

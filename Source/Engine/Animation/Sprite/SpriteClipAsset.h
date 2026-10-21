@@ -11,6 +11,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Animation/AnimationPlayback.h"
+#include "Engine/Common/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -114,6 +115,12 @@ namespace sw
 
         /** @brief 스프라이트 클립 파일의 접미사입니다. 에디터 종류 표(`EditorAssetType.cpp`)가 이 값을 씁니다. */
         static constexpr string_view kExtension = ".sprite.json";
+        /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            { kExtension, AssetSuffixRole::Plain },
+        };
+        /** @brief 이 에셋 종류입니다(등록은 `SpriteClipAsset.cpp` 의 `SW_ASSET_TYPE`). */
+        static constexpr AssetTypeDef kAssetType{ "SpriteClipAsset", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
         /** @brief 빈 클립을 만듭니다. */
         SpriteClipAsset() = default;

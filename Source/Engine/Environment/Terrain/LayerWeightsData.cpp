@@ -101,3 +101,8 @@ namespace sw
         return FileUtil::writeFile( filePath, bytes.data(), bytes.size() );
     }
 } // namespace sw
+
+namespace sw
+{
+    SW_ASSET_TYPE( LayerWeightsData, LayerWeightsData::kAssetType );
+} // namespace sw

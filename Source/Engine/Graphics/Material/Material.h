@@ -11,6 +11,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Task/TaskTypes.h"
 
+#include "Engine/Common/AssetTypeRegistry.h"
 #include "Engine/Graphics/Material/MaterialTypes.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 
@@ -39,6 +40,12 @@ namespace sw
     public:
         /** @brief 머티리얼 파일의 확장자입니다. 에디터 종류 표(`EditorAssetType.cpp`)가 이 값을 씁니다. */
         static constexpr string_view kExtension = ".material";
+        /** @brief 머티리얼 파일의 접미사입니다(쿠킹하지 않는다). */
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            { kExtension, AssetSuffixRole::Plain },
+        };
+        /** @brief 머티리얼 에셋 종류입니다(등록은 `MaterialCache.cpp` 의 `SW_ASSET_TYPE`). 판 0. */
+        static constexpr AssetTypeDef kAssetType{ "Material", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
         /**
          * @brief 생성 키입니다. create() 만 만들 수 있습니다.

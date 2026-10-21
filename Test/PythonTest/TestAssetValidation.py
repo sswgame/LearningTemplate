@@ -250,9 +250,9 @@ class CheckTest(AssetValidationFixture):
         guidA = "11111111-1111-1111-1111-111111111111"
         guidB = "22222222-2222-2222-2222-222222222222"
         self.put("Resource/game/p/prefabs/a.prefab.xml", "<Prefab/>")
-        self.put("Resource/game/p/prefabs/a.prefab.xml.meta", f"guid={guidA}\nsourcePath=game/p/prefabs/a.prefab.xml\n")
+        self.put("Resource/game/p/prefabs/a.prefab.xml.meta", f'<AssetMeta _guid="{guidA}" _sourcePath="game/p/prefabs/a.prefab.xml" _bImported="false" />')
         self.put("Resource/game/p/prefabs/b.prefab.xml", "<Prefab/>")
-        self.put("Resource/game/p/prefabs/b.prefab.xml.meta", f"guid={guidB}\nsourcePath=game/p/prefabs/wrong.prefab.xml\n")
+        self.put("Resource/game/p/prefabs/b.prefab.xml.meta", f'<AssetMeta _guid="{guidB}" _sourcePath="game/p/prefabs/wrong.prefab.xml" _bImported="false" />')
         self.put("Resource/game/p/maps/a.scene.xml",
                  f'<Scene><entities><entity id="1" prefab="game/p/prefabs/a.prefab.xml" prefabGuid="{guidA}"/>'
                  f'<entity id="2" prefab="game/p/prefabs/a.prefab.xml" prefabGuid="{guidB}"/>'

@@ -21,6 +21,8 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Common/AssetTypeRegistry.h"
+
 namespace sw
 {
     /**
@@ -29,11 +31,17 @@ namespace sw
      */
     struct SW_API LayerWeightsData
     {
-        static constexpr uint32      kMagic         = FourCcUtil::make( "SWLW" );
-        static constexpr string_view kExtension     = ".layerweights";
-        static constexpr uint32      kVersion       = 1u;
-        static constexpr uint32      kLayerCount    = 4u;
-        static constexpr uint32      kMaxResolution = 8193u;
+        static constexpr uint32      kMagic     = FourCcUtil::make( "SWLW" );
+        static constexpr string_view kExtension = ".layerweights";
+        /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            { kExtension, AssetSuffixRole::Plain },
+        };
+        /** @brief 이 에셋 종류입니다(등록은 `LayerWeightsData.cpp` 의 `SW_ASSET_TYPE`). */
+        static constexpr AssetTypeDef kAssetType{ "LayerWeightsData", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+        static constexpr uint32       kVersion       = 1u;
+        static constexpr uint32       kLayerCount    = 4u;
+        static constexpr uint32       kMaxResolution = 8193u;
 
         vector<uint8> _bytes; ///< W × H × `kLayerCount` 바이트다. 텍셀 (x, z) 는 (z × W + x) × `kLayerCount` 에서 시작한다.
         uint32        _width{ 0 };

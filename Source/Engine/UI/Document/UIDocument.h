@@ -8,6 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Common/AssetTypeRegistry.h"
 #include "Engine/UI/Animation/UIAnimation.h"
 #include "Engine/UI/Document/UIBindingDesc.h"
 #include "Engine/UI/Screen/UIScreen.h"
@@ -49,9 +50,15 @@ namespace sw
      */
     struct UIDocumentAsset
     {
-        static constexpr uint32 kVersion           = 1; ///< `_schemaVersion` 입니다. 이전 형식 리더는 두지 않습니다.
-        static constexpr utf8   kExtension[]       = ".ui.xml";
-        static constexpr utf8   kRootElementName[] = "UIDocument";
+        static constexpr uint32 kVersion     = 1; ///< `_schemaVersion` 입니다. 이전 형식 리더는 두지 않습니다.
+        static constexpr utf8   kExtension[] = ".ui.xml";
+        /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            { kExtension, AssetSuffixRole::Plain },
+        };
+        /** @brief 이 에셋 종류입니다(등록은 `UIDocumentLoader.cpp` 의 `SW_ASSET_TYPE`). */
+        static constexpr AssetTypeDef kAssetType{ "UIDocumentAsset", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+        static constexpr utf8         kRootElementName[] = "UIDocument";
 
         string                 _path{}; ///< 정규화한 경로입니다(캐시 키).
         UIScreenDesc           _screenDesc{};

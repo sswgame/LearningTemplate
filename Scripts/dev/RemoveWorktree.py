@@ -31,8 +31,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common.Host import runGit  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
-
-from generate.CookAssets import kCookStampPathPattern  # noqa: E402 — 쿠킹 스탬프 경로의 정본
 from common.Worktree import (  # noqa: E402
     describeWorktreeOwner,
     findMainRoot,
@@ -45,6 +43,11 @@ from common.Worktree import (  # noqa: E402
     resolveOwnerProcessId,
 )
 
+
+
+#: 커밋되는 셰이더 쿠킹 스탬프의 경로 모양(fnmatch, `*` 는 `/` 도 넘는다) — 쿠킹 뒤 바뀌는 생성물을 가려낸다. 스탬프를 쓰는 곳은 엔진
+#: (`ShaderCooker::writeCookStamp`, 파일 이름 `cook.stamp`)이다.
+kCookStampPathPattern = "Resource/*/shaders/bin/*/cook.stamp"
 
 def isDirectoryLink(path: Path) -> bool:
     """`path` 가 심볼릭 링크이거나 Windows 정션인가(링크 너머는 보지 않는다)."""

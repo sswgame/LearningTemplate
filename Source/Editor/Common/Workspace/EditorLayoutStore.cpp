@@ -72,24 +72,27 @@ namespace sw::editor
         std::sort( outListName.begin(), outListName.end() );
     }
 
-    bool EditorLayoutStore::save( string_view folder, string_view name, string_view imguiIniText, const KeyValueMap& panelVisibility )
+    bool EditorLayoutStore::save( string_view folder, string_view name, string_view imguiIniText, const EditorPanelVisibility& panelVisibility )
     {
         if ( FileUtil::ensureDirectoryExists( folder ) == false )
             return false;
         if ( FileUtil::writeTextFile( makeImguiIniPath( folder, name ), string( imguiIniText ) ) == false )
             return false;
-        return KeyValueFile::saveFile( makeVisibilityPath( folder, name ), panelVisibility, "Editor panel visibility (1=open, 0=closed)", "WindowVisibility" );
+        return panelVisibility.saveFile( makeVisibilityPath( folder, name ) );
     }
 
-    bool EditorLayoutStore::load( string_view folder, string_view name, string& outImguiIniText, KeyValueMap& outPanelVisibility )
+    bool EditorLayoutStore::load( string_view folder, string_view name, string& outImguiIniText, EditorPanelVisibility& outPanelVisibility )
     {
-        outPanelVisibility.clear();
+        outPanelVisibility._mapOpen.clear();
         const string imguiPath = makeImguiIniPath( folder, name );
         if ( FileUtil::exists( imguiPath ) == false || FileUtil::readTextFile( imguiPath, outImguiIniText ) == false )
             return false;
         const string visibilityPath = makeVisibilityPath( folder, name );
-        if ( FileUtil::exists( visibilityPath ) && KeyValueFile::loadFile( visibilityPath, outPanelVisibility ) == false )
+        if ( outPanelVisibility.loadFile( visibilityPath ) == ConfigReadResult::Invalid )
+        {
+            outPanelVisibility._mapOpen.clear();
             SW_LOG_WARNING( "Layout '%#': could not read %# - panel visibility is left as it is", string( name ).c_str(), visibilityPath.c_str() );
+        }
         return true;
     }
 

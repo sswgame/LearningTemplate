@@ -9,6 +9,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Common/AssetTypeRegistry.h"
+
 namespace sw
 {
     class JSONValue;
@@ -41,6 +43,12 @@ namespace sw
     public:
         /** @brief 본 LOD 파일의 확장자입니다. */
         static constexpr string_view kExtension = ".bonelod.json";
+        /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            { kExtension, AssetSuffixRole::Plain },
+        };
+        /** @brief 이 에셋 종류입니다(등록은 `SkeletonBoneLOD.cpp` 의 `SW_ASSET_TYPE`). */
+        static constexpr AssetTypeDef kAssetType{ "SkeletonBoneLOD", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
         /** @brief JSON 을 읽습니다. 형식이 틀리면 오류를 남기고 false 이며 내용은 비웁니다. */
         [[nodiscard]] bool parseJSON( string_view json, string_view sourceLabel );

@@ -86,7 +86,6 @@ kDirToolsReflectionTemplates = "Tools/ReflectionParser/Templates"
 
 kScriptSetupVcpkg = "Scripts/setup/SetupVcpkg.py"
 kScriptSetupEnvironment = "Scripts/setup/SetupEnvironment.py"
-kScriptCookAssets = "Scripts/generate/CookAssets.py"
 kScriptGenerateDocs = "Scripts/generate/GenerateDocs.py"
 
 # =============================================================================
@@ -137,14 +136,6 @@ kKeyVcpkgGitUrl = "vcpkg_git_url"
 kKeyVcpkgGitCommit = "vcpkg_git_commit"
 kKeyVcpkgAutoBootstrap = "vcpkg_auto_bootstrap"
 kKeyVcpkgInstalledRel = "vcpkg_installed_rel"
-
-# Resource Pack Config (PackConfig.json)
-kKeyGlobalExcludeDirs = "global_exclude_directories"
-kKeyGlobalExcludePatterns = "global_exclude_patterns"
-kKeyRules = "rules"
-kKeyExcludeDirs = "exclude_directories"
-kKeyExcludePatterns = "exclude_patterns"
-kKeyRecursive = "recursive"
 
 # Environment Variables
 kEnvSwLlvmAutoBootstrap = "SW_LLVM_AUTO_BOOTSTRAP"

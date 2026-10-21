@@ -4,7 +4,8 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/fixed_string.h"
+
+#include "Engine/Serialization/Format/JSONSerializer.h"
 
 namespace sw::editor
 {
@@ -18,33 +19,7 @@ namespace sw::editor
                 return float2{ MathUtil::max( viewSize._x - barSize._x, 0.0f ), MathUtil::max( viewSize._y - barSize._y, 0.0f ) };
             }
 
-            static string formatFraction( float32 value )
-            {
-                fixed_string<constant::kMaxBuffer32> text;
-                formatstring( text.data(), text.capacity(), "%.4f", static_cast<float64>( value ) );
-                return string{ text.c_str() };
-            }
-
             static float32 toFraction( float32 position, float32 freeSpace ) { return freeSpace > 0.0f ? MathUtil::saturate( position / freeSpace ) : 0.0f; }
-
-            static const utf8* getDockName( EditorOverlayDock dock )
-            {
-                constexpr const utf8* kArrName[] = { "free", "top", "bottom", "left", "right" };
-                return kArrName[static_cast<uint32>( dock )];
-            }
-
-            [[nodiscard]] static bool parseDock( string_view text, EditorOverlayDock& outDock )
-            {
-                for ( uint32 index = 0; index <= static_cast<uint32>( EditorOverlayDock::Right ); ++index )
-                {
-                    if ( text == getDockName( static_cast<EditorOverlayDock>( index ) ) )
-                    {
-                        outDock = static_cast<EditorOverlayDock>( index );
-                        return true;
-                    }
-                }
-                return false;
-            }
         };
     } // namespace
 
@@ -146,51 +121,28 @@ namespace sw::editor
         return state._dock == EditorOverlayDock::Left || state._dock == EditorOverlayDock::Right;
     }
 
-    void EditorViewportOverlayLayout::writeTo( string_view prefix, KeyValueMap& outMap ) const
+    bool EditorViewportOverlayLayout::saveFile( string_view absPath ) const
     {
-        for ( const EditorOverlayBarState& bar : _listBar )
-        {
-            const string key          = string( prefix ) + "." + bar._id + ".";
-            outMap[key + "dock"]      = EditorViewportOverlayLayoutInternal::getDockName( bar._dock );
-            outMap[key + "x"]         = EditorViewportOverlayLayoutInternal::formatFraction( bar._fraction._x );
-            outMap[key + "y"]         = EditorViewportOverlayLayoutInternal::formatFraction( bar._fraction._y );
-            outMap[key + "collapsed"] = bar._bCollapsed ? "true" : "false";
-            outMap[key + "visible"]   = bar._bVisible ? "true" : "false";
-        }
+        EditorViewportOverlayFile file;
+        file._listBar = _listBar;
+        return JSONSerializer::saveFile( absPath, &file, *EditorViewportOverlayFile::StaticType() );
     }
 
-    void EditorViewportOverlayLayout::readFrom( string_view prefix, const KeyValueMap& mapData )
+    ConfigReadResult EditorViewportOverlayLayout::loadFile( string_view absPath )
     {
-        const string head = string( prefix ) + ".";
-        for ( const auto& [key, value] : mapData )
+        EditorViewportOverlayFile file;
+        const ConfigReadResult    result = ConfigManager::readConfigFile( file, absPath );
+        if ( result != ConfigReadResult::Loaded )
+            return result;
+        for ( EditorOverlayBarState& loaded : file._listBar )
         {
-            if ( StringUtil::startsWith( key, head ) == false )
-                continue;
-            const string_view rest = string_view{ key }.substr( head.size() );
-            const size_t      dot  = rest.rfind( '.' );
-            if ( dot == string_view::npos || dot == 0 )
-                continue;
-            const string           barID{ rest.substr( 0, dot ) };
-            const string_view      field = rest.substr( dot + 1 );
-            EditorOverlayBarState* pBar  = findBar( barID );
-            if ( pBar == nullptr )
-            {
-                EditorOverlayBarState loaded{};
-                loaded._id = barID;
+            loaded._fraction            = float2{ MathUtil::saturate( loaded._fraction._x ), MathUtil::saturate( loaded._fraction._y ) };
+            EditorOverlayBarState* pBar = findBar( loaded._id );
+            if ( pBar != nullptr )
+                *pBar = loaded;
+            else
                 _listBar.push_back( loaded );
-                pBar = &_listBar.back();
-            }
-            float64 number{ 0.0 };
-            if ( field == "dock" )
-                (void)EditorViewportOverlayLayoutInternal::parseDock( value, pBar->_dock ); // 모르는 이름이면 그대로 둔다
-            else if ( field == "x" && StringUtil::parseDouble( value, number ) )
-                pBar->_fraction._x = MathUtil::saturate( static_cast<float32>( number ) );
-            else if ( field == "y" && StringUtil::parseDouble( value, number ) )
-                pBar->_fraction._y = MathUtil::saturate( static_cast<float32>( number ) );
-            else if ( field == "collapsed" )
-                pBar->_bCollapsed = value == "true";
-            else if ( field == "visible" )
-                pBar->_bVisible = value != "false";
         }
+        return result;
     }
 } // namespace sw::editor

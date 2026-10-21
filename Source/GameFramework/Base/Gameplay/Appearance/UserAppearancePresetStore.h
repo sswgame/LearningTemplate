@@ -8,6 +8,8 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Foundation/Framework/Save/SaveGame.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceSelection.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -28,19 +30,55 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 세이브의 프리셋 한 줄입니다(`UserAppearancePresetFile` 의 원소). 내용은 공유 코드(`AppearanceShareCode`) 한 줄입니다. */
+    REFLECT()
+    struct SW_GF_API UserAppearancePresetRecord
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _name; ///< 플레이어가 적은 이름
+
+        PROPERTY( Required )
+        string _code; ///< 선택의 공유 코드
+
+        PROPERTY()
+        string _thumbnailPath; ///< 미리보기 이미지 경로
+
+        PROPERTY()
+        bool _bFavorite{ false }; ///< 즐겨찾기
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 외형 프리셋 세이브 본문(JSON)입니다. 판(`_formatVersion`)이 `UserAppearancePresetStore::kVersion` 이 아니면 읽지 않습니다. */
+    REFLECT()
+    struct SW_GF_API UserAppearancePresetFile
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        int32 _formatVersion{ 0 }; ///< 세이브 판
+
+        PROPERTY()
+        vector<UserAppearancePresetRecord> _listPreset; ///< 저장한 순서의 프리셋
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class UserAppearancePresetStore
-     * @brief 플레이어 프리셋 목록을 `key=value` 텍스트로 읽고 씁니다. 로컬 저장 슬롯의 본문에 해당합니다. 프리셋 내용은 공유 코드(`AppearanceShareCode`) 한 줄로 싣습니다.
-     *        세이브와 공유가 같은 형식이고 콘텐츠가 바뀌어도 읽힙니다. 펼칠 때 `AppearanceSelectionUtil::applySelection` 이 지워진 것을 보고합니다.
-     * @details **플레이어 세이브는 이미 배포된 데이터이므로 옛 형식을 읽는다.** 엔진 데이터에 적용하는 "옛 이름과 옛 형식 리더를 두지 않는다" 는 규칙은 여기에 해당하지
-     *          않는다. 형식 버전(`formatVersion`)마다 다음 버전으로 올리는 변환 단계를 두고, 읽을 때 현재 버전까지 차례로 올린다. 현재 버전보다 새로운 파일은 읽지 않는다.
-     *          버전 1은 `version`, `count`, `preset{n}.name`, `preset{n}.code`, `favorites=이름,이름` 을 쓴다. 버전 2는 `formatVersion`, `presetCount`,
-     *          `preset{n}.name`, `.code`, `.favorite`, `.thumbnail` 을 쓴다.
+     * @brief 플레이어 프리셋 목록을 리플렉션 JSON(`UserAppearancePresetFile`)으로 읽고 씁니다. 로컬 저장 슬롯의 본문에 해당합니다. 프리셋 내용은 공유 코드(`AppearanceShareCode`) 한 줄로 싣습니다.
+     *        세이브와 공유가 같은 코드이고 콘텐츠가 바뀌어도 읽힙니다. 펼칠 때 `AppearanceSelectionUtil::applySelection` 이 지워진 것을 보고합니다.
+     * @details 판 3 부터 JSON 이다(계획 StructureSimplification TX2). 판 1 · 2 의 `key=value` 세이브는 출시 전 데이터라 읽는 길을 두지 않았다 — 읽기가 실패로 알린다.
+     *          현재 판보다 새 파일도 읽지 않는다. 망가진 프리셋(읽지 못한 공유 코드)은 경고를 남기고 건너뛴다.
      */
     class SW_GF_API UserAppearancePresetStore : public SaveGame
     {
     public:
-        static constexpr int32 kVersion = 2;
+        static constexpr int32 kVersion = 3; ///< 3: 리플렉션 JSON(이전 판은 읽지 않는다)
 
         UserAppearancePresetStore();
 
@@ -64,7 +102,7 @@ namespace sw
         [[nodiscard]] bool writeBytes( vector<uint8>& outBytes ) const override;
         [[nodiscard]] bool readBytes( const uint8* pData, size_t size ) override;
         string             saveToText() const;
-        /** @brief 텍스트에서 읽습니다. 옛 버전은 올리고, 망가진 프리셋 줄은 경고를 남기고 건너뛰며, 버전이 지금보다 새로우면 false 입니다. */
+        /** @brief 텍스트에서 읽습니다. JSON 이 아니거나 판이 지금과 다르면 false 이고, 망가진 프리셋 줄은 경고를 남기고 건너뜁니다. */
         [[nodiscard]] bool loadFromText( string_view text );
 
     private:

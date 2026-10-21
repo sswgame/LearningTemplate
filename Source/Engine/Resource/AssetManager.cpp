@@ -140,7 +140,7 @@ namespace sw
         else if ( getPackManager().isAllowLooseFiles() == false )
         {
             // 팩 전용 구성은 디스크의 .meta 를 훑지 않는다(배포본은 .meta 를 싣지 않고, 훑으면 낱개 파일 금지를 지나간다). 레지스트리가 빠진 팩은
-            // 쿠킹이 막는다(CookAssets.py — .meta 가 있는 도메인에 assetregistry.txt 가 없으면 그 팩을 실패로 한다). 그래서 0 항목은 .meta 가 하나도
+            // 쿠킹이 막는다(`PackCooker` — .meta 가 있는 도메인에 assetregistry.txt 가 없으면 그 팩을 실패로 한다). 그래서 0 항목은 .meta 가 하나도
             // 없는 콘텐츠라는 뜻이고, 그 사실을 남긴다.
             SW_LOG_INFO( "에셋 레지스트리 0 항목 (팩에 assetregistry.txt 없음 - .meta 없는 콘텐츠)" );
         }
@@ -286,10 +286,18 @@ namespace sw
     {
         if ( initialize() == false )
             return SubsystemInitResult::Failed;
-        bool bCookScenes = false;
+        // 쿠킹(씬 · 팩)은 소스 트리를 읽는다 — 팩은 쿠킹의 산출물이라 자기 팩을 읽으면 순환이다.
+        bool bCooking = false;
         if ( engine::areEngineServicesBound() )
-            (void)engine::getSubsystem<CommandLineManager>().getArgument( CommandLineArgument::COOK_SCENES, bCookScenes );                      // 없으면 false 그대로
-        (void)mountContent( EngineConfig::getActive()._listResourcePriority, bCookScenes ? ContentSource::SourceTree : ContentSource::Cooked ); // 느슨한 트리만 있어도 기동한다
+        {
+            const CommandLineManager& commandLine = engine::getSubsystem<CommandLineManager>();
+            for ( const CommandLineArgument argument : { CommandLineArgument::COOK_SCENES, CommandLineArgument::COOK_PACKS, CommandLineArgument::COOK_ALL } )
+            {
+                bool bGiven = false;
+                bCooking    = ( commandLine.getArgument( argument, bGiven ) && bGiven ) || bCooking;
+            }
+        }
+        (void)mountContent( EngineConfig::getActive()._listResourcePriority, bCooking ? ContentSource::SourceTree : ContentSource::Cooked ); // 느슨한 트리만 있어도 기동한다
         return SubsystemInitResult::Succeeded;
     }
 

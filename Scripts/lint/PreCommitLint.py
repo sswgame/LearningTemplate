@@ -47,7 +47,7 @@ from lint.LintCatalog import LintScript, discoverLintScripts
 from lint.StagedScope import selectFileScopedStaged
 from lint.fixer import FormatBranchBraces
 from lint.fixer import FormatForwardDeclarations
-from common.AppBinary import findAppExecutable, findShaderCompileFailures, runShaderCook
+from common.AppBinary import findAppExecutable, findShaderCompileFailures, runShaderCook, runShaderVerify
 from common.Host import getAllStagedFiles, getStagedCppFiles, runClangFormatBatch, runGit
 from common.Parallel import getCpuCount
 from common.Paths import getProjectRoot
@@ -308,12 +308,32 @@ def runGatesInternal(projectRoot: Path, listStaged: list[Path], listFileScoped: 
     return bFailed
 
 
+def isShaderCommitFileInternal(projectRoot: Path, path: Path) -> bool:
+    """
+    셰이더 판정이 필요한 staged 파일인가 — `Resource/<도메인>/shaders/` 아래(소스 · 바이너리 · 스탬프 · 매니페스트)다.
+
+    쿠킹 표(백엔드 줄)를 바꾼 커밋은 여기서 보지 않는다 — 빌드가 필요한 변경이라 `ShaderCookStampTest.CommittedBinariesAreCurrentForEveryBackend` 가 본다.
+    """
+    try:
+        rel = path.resolve().relative_to(projectRoot.resolve()).as_posix().lower()
+    except ValueError:
+        return False
+    return rel.startswith("resource/") and "/shaders/" in rel
+
+
 def checkStagedShadersInternal(projectRoot: Path, stagedFiles: list[Path], bVerbose: bool = False) -> bool:
-    """Staged HLSL/HLSLI 파일이 있을 경우 전 RHI 백엔드(쿠킹 표의 넷: DX11 · DX12 · Vulkan · OpenGL) 컴파일 검증 및 바이너리 갱신을 확인합니다."""
-    stagedShaders = [f for f in stagedFiles if f.suffix.lower() in (".hlsl", ".hlsli")]
-    if not stagedShaders:
+    """
+    셰이더를 고친 커밋을 검사합니다 — staged HLSL/HLSLI 가 있으면 전 RHI 백엔드(쿠킹 표의 넷)로 다시 굽고, 셰이더 폴더를 고친 커밋은
+    빌드된 App 의 판정(`App --verify-shaders`)으로 커밋된 바이너리가 소스와 맞는지 본다.
+
+    **App 이 없으면 건너뛰지 않고 실패한다**(StructureSimplification PK3). 판정 규칙은 엔진(`ShaderCooker::verifyCookedShaders`) 한 곳이라 App 없이 볼 길이 없다.
+    셰이더를 고치는 사람은 그 셰이더를 App 으로 굽으므로 App 이 이미 있다.
+    """
+    listShaderFile = [f for f in stagedFiles if isShaderCommitFileInternal(projectRoot, f)]
+    stagedShaders = [f for f in listShaderFile if f.suffix.lower() in (".hlsl", ".hlsli")]
+    if not listShaderFile:
         if bVerbose:
-            print("  - Staged 셰이더 없음 (HLSL 검증 생략)")
+            print("  - Staged 셰이더 파일 없음 (셰이더 검증 생략)")
         return True
 
     if bVerbose:
@@ -329,9 +349,28 @@ def checkStagedShadersInternal(projectRoot: Path, stagedFiles: list[Path], bVerb
     # 그 프리셋만 빌드해 둔 사람은 이 검증을 통째로 건너뛴다.
     appExe = findAppExecutable(projectRoot)
     if appExe is None:
-        print("  [Warning] App 을 찾을 수 없어 셰이더를 굽지 못했습니다. 낡은 바이너리는 CheckShaderStamps 게이트가 스탬프로 막습니다(빌드 후 --cook-shaders).")
-        return True
+        print("  [Error] 셰이더 파일을 고친 커밋인데 빌드된 App 이 없어 커밋된 바이너리를 판정하지 못했습니다.")
+        print("          빌드한 뒤(cmake --build --preset Ninja-Debug) App --cook-shaders 로 굽고 바이너리를 함께 커밋하세요.")
+        return False
 
+    if stagedShaders:
+        if not cookStagedShadersInternal(projectRoot, appExe, len(stagedShaders), bVerbose):
+            return False
+
+    verified = runShaderVerify(appExe, cwd=projectRoot)
+    if verified.returncode != 0:
+        print(f"  [Error] App --verify-shaders: 커밋된 셰이더 바이너리가 지금 소스와 맞지 않습니다 (종료 코드 {verified.returncode})")
+        for line in (verified.stdout or "").splitlines():
+            if "[Error]" in line or "ERROR" in line.upper():
+                print(f"    {line.strip()}")
+        print("  다시 굽는다:  build/<프리셋>/Bin/App(.exe) --cook-shaders  (바이너리 · cook.stamp · reflection.manifest 를 소스와 함께 커밋한다)")
+        return False
+    print("  - 커밋된 셰이더 바이너리가 모든 백엔드에서 소스와 맞습니다 (App --verify-shaders).")
+    return True
+
+
+def cookStagedShadersInternal(projectRoot: Path, appExe: Path, stagedCount: int, bVerbose: bool) -> bool:
+    """staged HLSL 을 전 백엔드로 다시 굽고, 갱신된 바이너리를 stage 합니다. 컴파일이 하나라도 실패하면 False 입니다."""
     res = runShaderCook(appExe, cwd=projectRoot, bCapture=True)
 
     if res.returncode != 0:
@@ -350,7 +389,7 @@ def checkStagedShadersInternal(projectRoot: Path, stagedFiles: list[Path], bVerb
         print("  [Error] 하나 이상의 RHI 백엔드에서 셰이더 컴파일 실패가 발생했습니다. HLSL 문법을 수정하세요.")
         return False
 
-    print(f"  - 모든 RHI 백엔드 컴파일 검증 통과 (셰이더 {len(stagedShaders)}개)." if not bVerbose else "  - 모든 RHI 백엔드 컴파일 검증 통과.")
+    print(f"  - 모든 RHI 백엔드 컴파일 검증 통과 (셰이더 {stagedCount}개)." if not bVerbose else "  - 모든 RHI 백엔드 컴파일 검증 통과.")
 
     gitCmd = runGit(["status", "--porcelain", "Resource/engine/shaders/bin/", "Resource/common/shaders/bin/"], cwd=projectRoot)
     if gitCmd.returnCode == 0 and gitCmd.stdout.strip():

@@ -425,3 +425,8 @@ namespace sw
         return desc;
     }
 } // namespace sw
+
+namespace sw
+{
+    SW_ASSET_TYPE( AudioMixerDesc, AudioMixerDesc::kAssetType );
+} // namespace sw

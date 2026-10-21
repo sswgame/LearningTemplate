@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
 #include "Editor/Common/Asset/AssetImportPathFilter.h"
@@ -75,7 +76,7 @@ namespace
         {
             for ( const ConfigKind& kind : kArrKind )
             {
-                if ( AssetImportPathFilter::matchesWildcard( kind._pFileName, relativePath ) )
+                if ( StringUtil::matchesWildcard( kind._pFileName, relativePath ) )
                     return &kind;
             }
             return nullptr;

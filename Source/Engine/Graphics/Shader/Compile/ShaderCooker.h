@@ -9,6 +9,7 @@
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Common/AssetTypeRegistry.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 
 namespace sw
@@ -70,6 +71,17 @@ namespace sw
      */
     struct SW_API ShaderCooker
     {
+        /** @brief 쿠킹한 셰이더 산출물의 접미사입니다(백엔드 바이너리 셋, 리플렉션 매니페스트, 쿠킹 스탬프). */
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            {              ".dxil", AssetSuffixRole::Plain},
+            {              ".dxbc", AssetSuffixRole::Plain},
+            {               ".spv", AssetSuffixRole::Plain},
+            {"reflection.manifest", AssetSuffixRole::Plain},
+            {         "cook.stamp", AssetSuffixRole::Plain},
+        };
+        /** @brief 셰이더 바이너리 에셋 종류입니다(등록은 `ShaderCooker.cpp` 의 `SW_ASSET_TYPE`). 전용 서버 패키지가 빼는 묶음 `ShaderBinary` 다. */
+        static constexpr AssetTypeDef kAssetType{ "ShaderBinary", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, "ShaderBinary" };
+
         /**
          * @brief 셰이더 하나를 지정한 포맷과 스테이지로 컴파일해 디스크에 바이너리로 저장합니다.
          * @param sourcePath 원본 HLSL 소스 파일 경로
@@ -172,6 +184,15 @@ namespace sw
         static bool isCookedOutputCurrent( string_view binDirectory, string_view absShaderPath );
         /** @brief `isCookedOutputCurrent` 의 본체 — 다른 include 루트 도메인의 헤더를 @p resourceRoot 아래에서 봅니다. */
         static bool isCookedOutputCurrent( string_view resourceRoot, string_view binDirectory, string_view absShaderPath );
+
+        /**
+         * @brief 도메인(`engine` · `common` · `game/<팩>`)마다 커밋된 @p shaderFolder 바이너리가 지금 소스에서 나온 것인지 보고 문제를 @p outListProblem 에 더합니다.
+         * @details 판정은 스탬프를 쓰는 쪽(`writeCookStamp`)과 같은 수집 규칙 · 같은 해시다 — 규칙이 한 언어에만 있으므로 "두 언어가 같은 규칙인가" 를 볼 게이트가 없다.
+         *          보는 것: 바이너리 폴더 · 스탬프 · 스탬프 판 · 도구 지문(`@toolchain`), 스탬프에 빠진 · 바뀐 · 남은 소스, 바이너리가 하나라도 있는지,
+         *          리플렉션 매니페스트가 있는지와 매니페스트에 없는 바이너리(쿠커 레시피가 늘었는데 다시 굽지 않은 것). 소스가 없는 도메인은 건너뛴다.
+         *          `App --verify-shaders`(커밋 훅 · 배포 빌드)와 `ShaderCookStampTest` 가 부릅니다.
+         */
+        static void verifyCookedShaders( string_view resourceRoot, string_view shaderFolder, vector<string>& outListProblem );
 
         /**
          * @brief 캐시된 공유 헤더 해시와 스탬프 읽기 결과를 버려, 다음 조회가 다시 스캔하게 합니다.

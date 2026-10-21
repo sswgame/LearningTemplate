@@ -57,6 +57,8 @@ namespace sw
 
 namespace sw
 {
+    SW_ASSET_TYPE( MaterialInstance, MaterialInstance::kAssetType );
+
     shared_ptr<MaterialInstance> MaterialInstance::create( Material* pParentMaterial )
     {
         // 인자가 Material* 이라 ADL 이 std::make_shared 를 끌어온다. 한정해야 sw 것이 잡힌다.
@@ -158,7 +160,7 @@ namespace sw
 
         XMLDocument doc;
         XMLNode     root = doc.appendRoot( "MaterialInstanceDesc" );
-        AssetFormatRegistry::writeXMLVersion( root, AssetFormatVersions::kMaterialInstance );
+        AssetFormatRegistry::writeXMLVersion( root, kAssetType._formatVersion );
         MaterialUtil::appendAttribute( root, "name", _desc._name );
         if ( _desc._parentPath.empty() == false )
             MaterialUtil::appendAttribute( root, "parentPath", _desc._parentPath );
@@ -728,7 +730,7 @@ namespace sw
         if ( root.isValid() == false )
             return false;
 
-        if ( AssetFormatRegistry::upgradeXMLWithActiveRegistry( AssetKind::MaterialInstance, doc, root, AssetFormatVersions::kMaterialInstance ) == false )
+        if ( AssetFormatRegistry::upgradeXMLWithActiveRegistry( kAssetType, doc, root ) == false )
             return false;
 
         _desc             = MaterialInstanceDesc{};

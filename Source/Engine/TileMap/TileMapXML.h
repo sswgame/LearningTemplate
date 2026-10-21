@@ -8,6 +8,8 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Common/AssetTypeRegistry.h"
+
 namespace sw
 {
     class TileSetAsset;
@@ -60,6 +62,12 @@ namespace sw
     {
         /** @brief 타일맵 파일의 접미사입니다. 에디터 종류 표(`EditorAssetType.cpp`)가 이 값을 씁니다. */
         static constexpr string_view kExtension = ".tilemap.xml";
+        /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            { kExtension, AssetSuffixRole::Plain },
+        };
+        /** @brief 이 에셋 종류입니다(등록은 `TileMapXML.cpp` 의 `SW_ASSET_TYPE`). */
+        static constexpr AssetTypeDef kAssetType{ "TileMapXMLData", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
         /**
          * @brief 타일맵 하나가 가질 수 있는 최대 셀 수입니다 (2048 x 2048).

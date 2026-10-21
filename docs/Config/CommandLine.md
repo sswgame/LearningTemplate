@@ -20,8 +20,12 @@
 | `-EnableEditor` | 플래그(`-이름`) | 에디터 모듈을 올린다(Dev 만) — 없으면 에디터 없이 게임만 뜬다 | `ENABLE_EDITOR` |
 | `-lang` | 글 값(`-이름=값`) | 시작 언어(`ko_kr` · `en_us` …) | `LANGUAGE` |
 | `-cook-shaders` | 플래그(`-이름`) | 셰이더를 모든 백엔드의 바이너리로 쿠킹하고 끝낸다(헤드리스) | `COOK_SHADERS` |
-| `-cook-scenes` | 플래그(`-이름`) | 씬과 프리팹을 바이너리(SCN1, PFB2)로 쿠킹하고 끝낸다. 쓸 폴더는 `-cooked-dir=<폴더>` 다(CookAssets.py 가 부른다) | `COOK_SCENES` |
-| `-cooked-dir` | 글 값(`-이름=값`) | `-cook-scenes` 가 쿠킹 결과를 쓸 폴더 | `COOKED_DIR` |
+| `-cook-scenes` | 플래그(`-이름`) | 씬과 프리팹을 바이너리(SCN1, PFB2)로 쿠킹하고 끝낸다(GUID 레지스트리 · VAT · 내비메시 포함). 쓸 폴더는 `-cooked-dir=<폴더>` 다 | `COOK_SCENES` |
+| `-cook-packs` | 플래그(`-이름`) | 리소스 팩(engine · common · game_<팩>.pack)을 `-pack-dir=<폴더>` 에 굽고 끝낸다. 스테이징(`-cooked-dir`)의 쿠킹 산출물을 함께 담는다. `-game=` 을 주면 그 게임 팩만, 없으면 모든 게임 팩이다 | `COOK_PACKS` |
+| `-cook-all` | 플래그(`-이름`) | 씬 쿠킹(`-cook-scenes`)과 팩 쿠킹(`-cook-packs`)을 차례로 하고 끝낸다 — 빌드의 CookAssets 타깃과 배포 패키징이 부른다 | `COOK_ALL` |
+| `-cooked-dir` | 글 값(`-이름=값`) | `-cook-scenes` · `-cook-packs` · `-cook-all` 이 쿠킹 결과를 쓸 스테이징 폴더 | `COOKED_DIR` |
+| `-pack-dir` | 글 값(`-이름=값`) | `-cook-packs` · `-cook-all` 이 팩을 쓸 폴더 | `PACK_DIR` |
+| `-verify-shaders` | 플래그(`-이름`) | 커밋된 셰이더 바이너리가 지금 소스에서 나온 것인지(`cook.stamp` · 매니페스트) 본다. 혼자면 쿠킹 표의 모든 백엔드를 보고 문제가 있으면 실패로 끝난다(커밋 훅). `-cook-all` · `-cook-packs` 와 함께면 팩에 담을 백엔드만 보고, 낡았으면 다시 쿠킹한 뒤 다시 보며 그래도 맞지 않으면 팩을 굽지 않는다(배포 빌드) | `VERIFY_SHADERS` |
 | `-server-config` | 글 값(`-이름=값`) | 전용 서버(Server)의 운영 설정 파일(`ServerConfig`) — 비우면 `Config/Server/<게임>.json`(`-game=` 으로 고른 게임). Shipping 도 디스크에서 읽는다. | `SERVER_CONFIG` |
 | `-game` | 글 값(`-이름=값`) | 돌릴 게임(Dev 만) — `Source/Games/<이름>`. 비우면 빌드의 활성 게임(`SW_ACTIVE_GAME`), 다른 게임은 같은 빌드가 함께 지은 것(`SW_GAMES`, `Bin/Games/<이름>/`)이어야 한다. Shipping 은 구운 게임 하나라 보지 않는다(`GameSelection`) | `GAME` |
 | `-service` | 플래그(`-이름`) | 전용 서버를 Windows 서비스(SCM)로 돈다(`Server --service`). SCM 이 띄운 프로세스만 된다. | `SERVICE` |

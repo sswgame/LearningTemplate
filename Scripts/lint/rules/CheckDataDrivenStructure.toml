@@ -82,7 +82,6 @@ cmake = ".cmake CMakeLists.txt"
 "DiscardedLoadResult:Source/Editor/Panels/RenderTarget/RenderTargetViewUtil.cpp" = 1
 "DiscardedLoadResult:Source/Editor/SelfTest/EditorSelfTestDevTools.cpp" = 1
 "DiscardedLoadResult:Source/Editor/SelfTest/EditorTestOutputParser.cpp" = 1
-"DiscardedLoadResult:Source/Editor/Viewport/EditorViewportOverlayLayout.cpp" = 1
 "DiscardedLoadResult:Source/Engine/Animation/AnimationClip.cpp" = 3
 "DiscardedLoadResult:Source/Engine/Audio/AudioVoice.cpp" = 2
 "DiscardedLoadResult:Source/Engine/Bootstrap/MemoryBudgetSubsystem.cpp" = 1

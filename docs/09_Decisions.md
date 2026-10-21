@@ -653,7 +653,7 @@
   컴파일러 라이브러리 파일의 내용 해시로 만들었더니 Windows 에서 쿠킹해 커밋한 스탬프가 리눅스(다른 라이브러리 파일)에서 모두 낡은 것으로 판정돼 리눅스 CI 다섯 잡이 졌다.
   언리얼은 셰이더 DDC 키에 컴파일러 바이너리 해시가 아니라 셰이더 포맷 · 컴파일러 버전 식별자를 넣는 것으로 알고 있다(기억에 의존). 같은 원칙을 따르고,
   사람이 고치는 상수가 실제 설치와 어긋나지 않게 `TestShaderCompilerVersionPin.py` 가 vcpkg 설치 기록과 대조한다.
-- **셰이더 쿠킹 스탬프(`cook.stamp`)는 쿠킹 기록(`.cookrec`) 형식으로 옮기지 않습니다**(2026-10-18, C-42 K5). 스탬프는 커밋되는 산출물 곁에 있고 App 없이 파이썬(`CheckShaderStamps`, CI)이 같은 규칙으로 판정하는 계약인데,
+- **셰이더 쿠킹 스탬프(`cook.stamp`)는 쿠킹 기록(`.cookrec`) 형식으로 옮기지 않습니다**(2026-10-18, C-42 K5). 스탬프는 커밋되는 산출물 곁에 있고 엔진의 판정 하나(`ShaderCooker::verifyCookedShaders` — `App --verify-shaders` · `ShaderCookStampTest`, 2026-10-22 StructureSimplification PK3 에서 파이썬 게이트 `CheckShaderStamps` 를 대신했다)가 보는 계약인데,
   쿠킹 기록은 체크아웃마다의 `Saved/` 캐시이고 판정에 엔진의 읽기 기록이 필요하다. 내용 해시는 이미 같은 함수(`ContentHash`)를 쓰므로 판정 기준은 하나다. 언리얼도 셰이더는 DDC 키를 따로 만들고 에셋 쿠킹과 섞지 않는다 [기억].
 
 - **런타임 UI 를 위해 RHI 에 R8 텍스처, 영역 업로드, 프리멀티플라이 블렌드, 가위 사각형을 더했습니다**(2026-10-06). 사각형 클리핑은 가위로 합니다(Slate, Dear ImGui, Godot 과 같고 배치가 끊기지 않음).

@@ -130,3 +130,8 @@ namespace sw
         return FileUtil::writeTextFile( path, toJSON() );
     }
 } // namespace sw
+
+namespace sw
+{
+    SW_ASSET_TYPE( Skeleton, Skeleton::kAssetType );
+} // namespace sw

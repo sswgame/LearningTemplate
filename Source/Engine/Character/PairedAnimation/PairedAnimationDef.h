@@ -24,6 +24,8 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Common/AssetTypeRegistry.h"
+
 namespace sw
 {
     class CharacterDataReader;
@@ -120,6 +122,12 @@ namespace sw
     {
     public:
         static constexpr string_view kExtension = ".pairedanim.xml";
+        /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            { kExtension, AssetSuffixRole::Plain },
+        };
+        /** @brief 이 에셋 종류입니다(등록은 `PairedAnimationDef.cpp` 의 `SW_ASSET_TYPE`). */
+        static constexpr AssetTypeDef kAssetType{ "PairedAnimationDef", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
         PairedAnimationDef();
 

@@ -57,8 +57,8 @@ namespace sw
         };
     } // namespace
 
-    /** @brief 효과 데이터 파일 종류입니다(스키마 테스트가 이 줄로 파일을 읽어 본다). */
-    SW_RESOURCE_DATA_KIND( VfxEffect, "vfx", nullptr, nullptr, ".vfx.xml", &VfxEffectDefInternal::loadKind );
+    /** @brief 효과 데이터 파일 종류입니다(스키마 테스트가 이 줄로 파일을 읽어 본다). 접미사 글자는 에셋 종류와 같은 `kExtension` 하나다. */
+    SW_RESOURCE_DATA_KIND( VfxEffect, "vfx", nullptr, nullptr, VfxEffectDef::kExtension.data(), &VfxEffectDefInternal::loadKind );
 } // namespace sw
 
 namespace sw
@@ -174,4 +174,9 @@ namespace sw
         }
         return bValid;
     }
+} // namespace sw
+
+namespace sw
+{
+    SW_ASSET_TYPE( VfxEffectDef, VfxEffectDef::kAssetType );
 } // namespace sw

@@ -832,6 +832,43 @@ namespace sw
         return false;
     }
 
+    bool StringUtil::matchesWildcard( string_view pattern, string_view text ) noexcept
+    {
+        // 별표 하나를 기억해 두고 어긋나면 그 별표 뒤부터 다시 맞춘다(되돌아가기 한 칸).
+        size_t patternIndex = 0;
+        size_t textIndex    = 0;
+        size_t starIndex    = string_view::npos;
+        size_t matchIndex   = 0;
+        while ( textIndex < text.size() )
+        {
+            const bool bPatternLeft = patternIndex < pattern.size();
+            if ( bPatternLeft && ( pattern[patternIndex] == '?' || toLowerChar( pattern[patternIndex] ) == toLowerChar( text[textIndex] ) ) )
+            {
+                ++patternIndex;
+                ++textIndex;
+            }
+            else if ( bPatternLeft && pattern[patternIndex] == '*' )
+            {
+                starIndex  = patternIndex++;
+                matchIndex = textIndex;
+            }
+            else if ( starIndex != string_view::npos )
+            {
+                patternIndex = starIndex + 1;
+                textIndex    = ++matchIndex;
+            }
+            else
+            {
+                return false;
+            }
+        }
+        while ( patternIndex < pattern.size() && pattern[patternIndex] == '*' )
+        {
+            ++patternIndex;
+        }
+        return patternIndex == pattern.size();
+    }
+
     string_view StringUtil::trimStart( string_view input )
     {
         size_t start{ 0 };

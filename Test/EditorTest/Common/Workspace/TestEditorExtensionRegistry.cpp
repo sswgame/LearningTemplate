@@ -81,7 +81,7 @@ SW_TEST_CASE( EditorExtensionRegistryTest, OrderKeyDecidesOrderNotRegistrationOr
 
 /**
  * @brief [EditorExtensionRegistryTest] 같은 id 의 둘째 등록은 거절되고, 그것이 내려가도 첫째는 남는다
- * @details 두 파일이 같은 패널 id 를 쓰면 `windows.ini` 가시성 키와 `-gv_editorOpenPanel` 이 둘 중 아무것에나 걸린다. 첫째만 받아 오류로 알린다.
+ * @details 두 파일이 같은 패널 id 를 쓰면 `windows.json` 가시성 키와 `-gv_editorOpenPanel` 이 둘 중 아무것에나 걸린다. 첫째만 받아 오류로 알린다.
  */
 SW_TEST_CASE( EditorExtensionRegistryTest, SecondRegistrationOfAnIDIsRejected )
 {
