@@ -5,6 +5,7 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
+#include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/Component/ComponentNameValidation.h"
 #include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -57,8 +58,10 @@ namespace sw
         , _vertexRadius{ 0.01f }
         , _iterationCount{ 5 }
         , _layer{}
+        , _pinBone{}
         , _listVertex{}
         , _softBody{}
+        , _bPinBoneErrorShown{ SW_FALSE }
     {
     }
 
@@ -66,6 +69,40 @@ namespace sw
     {
         _pinMode = pinMode;
         requestRebuild();
+    }
+
+    void ClothComponent::setPinBone( const hashed_string& boneName )
+    {
+        _pinBone            = boneName;
+        _bPinBoneErrorShown = SW_FALSE;
+        requestRebuild();
+    }
+
+    bool ClothComponent::readPinBonePose( float3& outPosition, quaternion& outRotation )
+    {
+        // 같은 오브젝트, 없으면 부모 오브젝트의 스켈레탈 메시 — 망토 · 헤어 카드는 보통 몸 오브젝트의 자식이다.
+        GameObject*                  pOwner  = getOwner();
+        GameObject*                  pParent = pOwner != nullptr ? pOwner->getParent() : nullptr;
+        const SkeletalMeshComponent* pUnit   = pOwner != nullptr ? pOwner->getComponent<SkeletalMeshComponent>() : nullptr;
+        if ( pUnit == nullptr && pParent != nullptr )
+            pUnit = pParent->getComponent<SkeletalMeshComponent>();
+        float4x4   boneModel{};
+        const bool bFound = pUnit != nullptr && pUnit->findBoneModelTransform( _pinBone, boneModel );
+        if ( bFound == false )
+        {
+            // 스켈레톤이 풀리기 전 프레임과 정말 없는 본을 가르지 못하므로 한 번만 알리고 계속 기다린다(천은 만들지 않는다 — 오브젝트 자리로 대신하지 않는다).
+            if ( _bPinBoneErrorShown == SW_FALSE )
+            {
+                _bPinBoneErrorShown = SW_TRUE;
+                SW_LOG_ERROR( "Cloth '%#': pin bone '%#' is not on a skeletal mesh of this object or its parent yet", pOwner != nullptr ? pOwner->getName().c_str() : "?",
+                              _pinBone.c_str() );
+            }
+            return false;
+        }
+        const float4x4 boneWorld = boneModel * pUnit->getWorldMatrix();
+        outPosition              = boneWorld.getTranslation();
+        outRotation              = boneWorld.getRotation();
+        return true;
     }
 
     PhysicsSoftBodyDesc ClothComponent::makeSoftBodyDesc( const float3& position, const quaternion& rotation, uint8 layer ) const
@@ -155,6 +192,9 @@ namespace sw
         quaternion rotation;
         float3     scale;
         PhysicsComponentUtil::readWorldPose( *this, position, rotation, scale );
+        // 본에 건 천(헤어 카드 · 망토)은 그 본의 월드 자세를 따른다. 본을 아직 못 읽으면(스켈레톤 · 포즈 전) 이번 프레임은 천을 만들지 않는다.
+        if ( _pinBone.empty() == false && readPinBonePose( position, rotation ) == false )
+            return;
         if ( _softBody.isValid() == false )
         {
             _softBody = pScene->createSoftBody( makeSoftBodyDesc( position, rotation, physics.resolveLayer( _layer ) ) );

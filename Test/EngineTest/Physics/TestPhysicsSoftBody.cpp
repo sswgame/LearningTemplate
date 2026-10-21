@@ -8,16 +8,21 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
+#include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/Component/Physics/ClothComponent.h"
 #include "Engine/Object/Component/Physics/RigidBodyComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
+#include "EngineTest/AnimationTestUtil.h"
+
 #include "TestFramework/Harness/TestTick.h"
 #include "TestFramework/TestFramework.h"
+#include "TestFramework/TestScopes.h"
 
 #include <string>
 
@@ -151,6 +156,35 @@ SW_TEST_CASE( PhysicsSoftBodyTest, PinnedVerticesFollowTheObject )
     const sw::float3& bottomCenter = listVertex[listVertex.size() - columns / 2 - 1];
     // 아랫줄은 매달린 천의 진동이 남아 있어 감쇠 시점이 구성(Debug · Release)마다 다르다(Release 에서 0.38 떨어져 있었다). 끌려오지 않았다면 차이는 2 이므로 0.75 면 가른다.
     SW_EXPECT_NEAR_EQUAL( 2.0f, bottomCenter._x, 0.75f );
+    manager.endPlay();
+}
+
+/**
+ * @brief [PhysicsSoftBodyTest] 본에 건 천(헤어 카드 · 망토)은 고정 정점이 그 본의 월드 자리를 따른다 — 오브젝트 자리가 아니다
+ * @details 같은 오브젝트의 사슬 스켈레톤(본마다 1 m 위)에서 bone1 은 유닛 자리 + (0, 1, 0) 이다. 윗변 가운데가 거기 있고, 없는 본이면 천을 만들지 않는다.
+ */
+SW_TEST_CASE( PhysicsSoftBodyTest, PinBoneHangsTheClothFromTheBone )
+{
+    using Internal = PhysicsSoftBodyTestInternal;
+    sw::GameObjectManager      manager;
+    sw::ClothComponent*        pCloth = Internal::spawnCloth( manager, sw::float3{ 1.0f, 2.0f, 0.0f }, sw::ClothPinMode::TopEdge );
+    sw::SkeletalMeshComponent* pUnit  = pCloth->getOwner()->addComponent<sw::SkeletalMeshComponent>();
+    sw::ClothComponent*        pLost  = Internal::spawnCloth( manager, sw::float3{ 0.0f, 3.0f, 0.0f }, sw::ClothPinMode::TopEdge );
+    SW_ASSERT_NOT_NULL( pUnit );
+    pUnit->setSkeleton( sw::make_shared<sw::Skeleton>( test::makeChainSkeleton( 2 ) ) );
+    pCloth->setPinBone( sw::hashed_string( "bone1" ) );
+    pLost->setPinBone( sw::hashed_string( "missing" ) );
+    test::ScopedLogSuppressor suppressor; // 없는 본의 오류 한 줄
+    manager.beginPlay();
+    test::updateFrames( manager, 30 );
+    SW_ASSERT_TRUE( pCloth->isClothCreated() );
+    const sw::vector<sw::float3>& listVertex = pCloth->getVertices();
+    const uint32                  columns    = pCloth->getColumnCount();
+    SW_ASSERT_EQUAL( static_cast<size_t>( columns ) * pCloth->getRowCount(), listVertex.size() );
+    const sw::float3 bone = pUnit->getWorldMatrix().getTranslation() + sw::float3{ 0.0f, 1.0f, 0.0f };
+    SW_EXPECT_NEAR_EQUAL( bone._x, listVertex[columns / 2]._x, 1.0e-3f );
+    SW_EXPECT_NEAR_EQUAL( bone._y, listVertex[columns / 2]._y, 1.0e-3f );
+    SW_EXPECT_FALSE( pLost->isClothCreated() );
     manager.endPlay();
 }
 

@@ -7,12 +7,6 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션 영역의 
 
 ## 기능
 
-### PoweredRagdoll
-제목: 파워드 래그돌과 헤어 · 천
-옛번호: D4-6
-왜 필요한가: 관절 모터가 애니메이션 포즈를 쫓는 래그돌(전신 · 부분 래그돌 · 맞음 반응 · 기상 섞기는 `RagdollComponent`).
-남은 것: 헤어 카드 · 천(Jolt 소프트 바디 — 옛 D1-4), 가닥 헤어(TressFX)는 나중.
-
 ### AnimationAdvancedFeatures
 제목: 애니메이션 고급 기능 후보
 옛번호: D4-16

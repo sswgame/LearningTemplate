@@ -64,6 +64,13 @@ namespace sw
         /** @brief 고정 방식을 바꿉니다. 다음 물리 프레임에 천을 다시 만듭니다. */
         void setPinMode( ClothPinMode pinMode );
         /**
+         * @brief 고정 정점이 따를 본(같은 오브젝트, 없으면 부모 오브젝트의 `SkeletalMeshComponent`)을 정합니다. 비우면 이 오브젝트의 자세를 따릅니다.
+         * @details 헤어 카드 · 망토처럼 몸 본에 매단 천이다(언리얼 Chaos Cloth 의 스킨 고정 · 유니티 Cloth 의 본 부모). 천의 로컬 축은 본의 축이다(윗변이 본 자리, 본의 −Y 로 처진다).
+         *          본을 아직 읽을 수 없으면(스켈레톤 · 포즈 전) 천을 만들지 않고 기다린다 — 오브젝트 자리로 대신하지 않는다.
+         */
+        void                 setPinBone( const hashed_string& boneName );
+        const hashed_string& getPinBone() const { return _pinBone; }
+        /**
          * @brief 이 컴포넌트의 값으로 만든 소프트 바디 서술자입니다(테스트 · 도구가 본다).
          * @param position @p rotation 천을 걸 월드 자세(윗변 가운데)입니다.
          */
@@ -86,6 +93,8 @@ namespace sw
         void updateRenderMesh();
         /** @brief `_layer` 가 물리 레이어 표에 있는지 봅니다(`ComponentNameValidation`). */
         void validateLayer( ValidationContext& context ) const;
+        /** @brief `_pinBone` 의 월드 자세입니다. 그 본을 가진 스켈레탈 메시가 없거나 본을 못 찾으면 오류를 한 번 남기고 false 입니다. */
+        [[nodiscard]] bool readPinBonePose( float3& outPosition, quaternion& outRotation );
 
         PROPERTY( Category = "Cloth", Min = 0.01, Tooltip = "Width along the local X axis", Units = m )
         float32 _width;
@@ -117,8 +126,11 @@ namespace sw
         uint32 _iterationCount;
         PROPERTY( Category = "Simulation", Tooltip = "Collision layer name from the physics settings", Validate = validateLayer )
         hashed_string _layer;
+        PROPERTY( Category = "Cloth", Tooltip = "Bone of this object's (or its parent's) skeletal mesh the pinned vertices follow (hair cards, capes); empty follows this object" )
+        hashed_string _pinBone;
 
         vector<float3>        _listVertex; ///< 마지막 물리 프레임 끝의 정점 월드 위치(게임 스레드가 쓴다)
         PhysicsSoftBodyHandle _softBody;
+        uint8                 _bPinBoneErrorShown; ///< 고정 본을 못 찾았다는 오류를 한 번만 남긴다
     };
 } // namespace sw
