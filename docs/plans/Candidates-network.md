@@ -97,12 +97,6 @@
 - B6(선택) Win32 입력 스레드: 먼저 `GetMessageTime` 해상도를 재고, 에디터 · 콘솔이 먼저 소비하는 판정을 우회하지 않게.
 함정: 롤백 · 락스텝 키트에는 넣지 않는다(프레임 단위 결정성이 계약).
 
-### MmoUpdateAckViaDelivery
-제목: MMO 갱신 확인을 NetConnection 전달 통지로
-옛번호: G-8
-착수 조건: 패킷 확인 → 메시지 전달 통지가 Core 에 생기면.
-왜 필요한가: 키트 확인 메시지(`kUpdateAck`)를 지우고 그 통지로 판정한다(언리얼 NAK 자리).
-
 ### StoreProviderIntegration
 제목: 스토어 제공자(Steam · Epic) 연동
 옛번호: G-15

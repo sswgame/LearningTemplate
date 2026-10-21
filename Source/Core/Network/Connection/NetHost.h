@@ -154,12 +154,14 @@ namespace sw
     {
         vector<NetHostEvent>      _listEvent{};
         vector<NetInboundMessage> _listMessage{};
+        vector<NetDeliveryNotice> _listDeliveryNotice{}; ///< 판정이 난 전달 통지(`INetPeers::sendNotifiedMessage`). 연결 ID 가 채워져 있다
         vector<uint8>             _bytes{};
 
         void clear()
         {
             _listEvent.clear();
             _listMessage.clear();
+            _listDeliveryNotice.clear();
             _bytes.clear();
         }
     };
@@ -187,6 +189,11 @@ namespace sw
         {
             return sendMessage( connectionID, channel, buffer.data(), static_cast<int32>( buffer.size() ) );
         }
+        /**
+         * @brief 비신뢰 메시지를 전달 통지 @p tag 를 달아 보냅니다(`NetConnection::sendNotifiedMessage`). 판정은 `drainInbound` 의 `_listDeliveryNotice` 로 옵니다.
+         * @details 키트가 "받았다" 확인 메시지를 따로 주고받지 않게 하는 창구다(언리얼 `PacketNotify`). 연결이 없거나 메시지가 틀리면 false 이고 통지도 나지 않는다.
+         */
+        [[nodiscard]] virtual bool sendNotifiedMessage( int32 connectionID, const uint8* pData, int32 size, uint32 tag ) = 0;
         /** @brief 연결된 모두에게 보냅니다. @p exceptID 는 제외합니다(-1 이면 제외 없음). 반환값은 보낸 수입니다. */
         virtual int32 broadcast( NetChannelType channel, const uint8* pData, int32 size, int32 exceptID = -1 ) = 0;
         virtual void  disconnect( int32 connectionID )                                                         = 0;
@@ -254,6 +261,7 @@ namespace sw
         bool waitForReceive( float64 timeoutSeconds );
 
         [[nodiscard]] bool sendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size ) override;
+        [[nodiscard]] bool sendNotifiedMessage( int32 connectionID, const uint8* pData, int32 size, uint32 tag ) override;
         [[nodiscard]] bool sendMessage( int32 connectionID, NetChannelType channel, const vector<uint8>& buffer )
         {
             return sendMessage( connectionID, channel, buffer.data(), static_cast<int32>( buffer.size() ) );

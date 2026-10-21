@@ -598,6 +598,76 @@ SW_TEST_CASE( NetworkTest, ConnectionsResendReliableMessagesInOrderAndDropStaleS
 }
 
 /**
+ * @brief [NetworkTest] 전달 통지를 단 비신뢰 메시지는 실린 패킷의 판정을 메시지마다 한 번 돌려준다 — 확인되면 Delivered, 빠른 재전송 간격으로 잃으면 Lost,
+ *        싣지 못하고 줄에서 나이 상한을 넘기면 Lost 다
+ * @details 키트가 "받았다" 확인 메시지를 따로 주고받지 않게 하는 창구다(MMO 갱신 확인을 이것으로 바꿨다). 판정이 없는 메시지가 남으면 기다리는 쪽이 영영 모른다.
+ */
+SW_TEST_CASE( NetworkTest, NotifiedMessagesReportDeliveredOrLostExactlyOnce )
+{
+    NetConnection   sender;
+    NetConnection   receiver;
+    constexpr uint8 kKind = 0x42;
+    float64         time  = 0.0;
+    for ( uint32 round = 0; round < 8; ++round )
+    {
+        time += 0.05;
+        const uint8 arrMessage[3] = { kKind, static_cast<uint8>( round ), 7 };
+        SW_ASSERT_TRUE( sender.sendNotifiedMessage( arrMessage, 3, 100 + round ) );
+        BitWriter writer;
+        sender.writePacket( time, writer, 300 );
+        if ( round != 1 ) // 둘째 패킷(값 101)만 잃는다
+        {
+            BitReader reader( writer.getBytes().data(), writer.getByteCount() );
+            SW_EXPECT_TRUE( receiver.readPacket( time + 0.01, reader ) );
+        }
+        BitWriter ackWriter;
+        receiver.writePacket( time + 0.01, ackWriter, 300 );
+        BitReader ackReader( ackWriter.getBytes().data(), ackWriter.getByteCount() );
+        (void)sender.readPacket( time + 0.02, ackReader ); // 확인만 받으면 된다 — 결과는 아래 통지로 본다
+    }
+    vector<NetDeliveryNotice> listNotice;
+    sender.drainDeliveryNotices( listNotice );
+    int32 lostCount      = 0;
+    int32 deliveredCount = 0;
+    for ( const NetDeliveryNotice& notice : listNotice )
+    {
+        SW_EXPECT_EQUAL( int32( kKind ), int32( notice._kind ) );
+        SW_EXPECT_EQUAL( -1, notice._connectionID ); // 연결 하나는 자기 ID 를 모른다 — 호스트가 채운다
+        if ( notice._result == NetDeliveryResult::Lost )
+        {
+            SW_EXPECT_EQUAL( uint32( 101 ), notice._tag );
+            ++lostCount;
+        }
+        else
+        {
+            SW_EXPECT_TRUE( notice._tag != 101 );
+            ++deliveredCount;
+        }
+    }
+    SW_EXPECT_EQUAL( 1, lostCount );
+    SW_EXPECT_EQUAL( 7, deliveredCount );
+    listNotice.clear();
+    sender.drainDeliveryNotices( listNotice );
+    SW_EXPECT_TRUE( listNotice.empty() ); // 한 번만 낸다
+
+    // 싣지 못한 채 나이 상한을 넘기면 잃은 것이다.
+    NetConnection saturated;
+    const uint8   arrBig[40] = { kKind };
+    SW_ASSERT_TRUE( saturated.sendNotifiedMessage( arrBig, 40, 9 ) );
+    BitWriter tinyPacket;
+    saturated.writePacket( 0.0, tinyPacket, 12 ); // 머리만 들어가는 크기라 메시지는 남는다
+    BitWriter latePacket;
+    saturated.writePacket( 1.0, latePacket, 300 );
+    saturated.drainDeliveryNotices( listNotice );
+    SW_ASSERT_EQUAL( size_t( 1 ), listNotice.size() );
+    SW_EXPECT_EQUAL( uint32( 9 ), listNotice[0]._tag );
+    SW_EXPECT_TRUE( listNotice[0]._result == NetDeliveryResult::Lost );
+
+    SW_TEST_DEFENSIVE_SCOPE( "an empty notified message is refused with an error" );
+    SW_EXPECT_FALSE( saturated.sendNotifiedMessage( arrBig, 0, 1 ) );
+}
+
+/**
  * @brief [NetworkTest] 순서만 채널은 메시지 종류(첫 바이트)마다 흐름이 따로다 — 한 보내기 간격에 두 종류를 보내면 둘 다 가고, 같은 종류는 새 것만 가고,
  *        늦게 온 패킷의 다른 종류 메시지는 버리지 않는다
  * @details 예전에는 채널 전체가 흐름 하나라 마지막 메시지 하나만 실렸다 — 복제 스냅샷과 파괴 덩어리 자세가 같은 간격에 나가면 하나가 조용히 사라졌다.

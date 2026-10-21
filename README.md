@@ -33,6 +33,7 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [GpuVerification](docs/plans/GpuVerification.md) — Linux 와 GPU 검증 구조의 남은 일 (2026-10-18) | 구현중 | 1/2 | 없음 | quality | C-41 |
 | - | [IndirectLighting](docs/plans/IndirectLighting.md) — 간접 조명 구현 단위 (`D2-12`) | 구현중 | 5/7 | ClusteredLighting | graphics | D2-12 |
 | - | [LongFunctions](docs/plans/LongFunctions.md) — 긴 함수 정리 기준 (2026-10-18) | 구현중 | 해당없음 | 없음 | project | C-18 |
+| - | [MmoUpdateAckViaDelivery](docs/plans/MmoUpdateAckViaDelivery.md) — MMO 갱신 확인을 NetConnection 전달 통지로 | 구현중 | 3/4 | 없음 | network | G-8 |
 | - | [NetChannelSchemaHashHandshake](docs/plans/NetChannelSchemaHashHandshake.md) — 넷 채널 등록 API 로 스키마 해시를 핸드셰이크 버전에 섞기 | 구현중 | 1/2 | 없음 | network | D7-7 |
 | - | [OnlineKits](docs/plans/OnlineKits.md) — 온라인 키트 마감 계획 (2026-10-21) | 구현중 | 22/34 | 없음 | network | D7-5 |
 | - | [PairedAnimation](docs/plans/PairedAnimation.md) — 페어드 애니메이션(여러 개체가 한 타임라인으로 도는 애니메이션) | 구현중 | 6/6 | 없음 | gameplay | D4-6 |
@@ -50,7 +51,7 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [StructuralOptimization](docs/plans/StructuralOptimization.md) — 구조 최적화 측정 표 (A · B) | 측정대기 | 해당없음 | 없음 | engine | 없음 |
 | - | [MotionMatching](docs/plans/MotionMatching.md) — 모션 매칭 (보류) | 보류 | 해당없음 | 없음 | gameplay | D4-16 |
 
-후보 문서 9개 · 후보 절 125개
+후보 문서 9개 · 후보 절 124개
 <!-- status-board:end -->
 
 이 저장소에서 볼 수 있는 것은 다음과 같습니다.

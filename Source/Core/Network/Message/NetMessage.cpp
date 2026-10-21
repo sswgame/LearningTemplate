@@ -57,9 +57,11 @@ namespace sw
     NetMessageRouter::NetMessageRouter()
         : _listHandler{}
         , _arrKindHandler{}
+        , _arrNoticeHandler{}
         , _kindTally{}
         , _inbound{}
         , _malformedCount{ 0 }
+        , _unclaimedNoticeCount{ 0 }
     {
     }
 
@@ -69,8 +71,9 @@ namespace sw
             return false;
         if ( VectorUtil::contains( _listHandler, pHandler ) )
             return true;
-        const uint8  rangeBase = pHandler->getMessageRangeBase();
-        const uint16 kindMask  = pHandler->getMessageKindMask();
+        const uint8  rangeBase   = pHandler->getMessageRangeBase();
+        const uint16 kindMask    = pHandler->getMessageKindMask();
+        const uint16 noticedMask = pHandler->getNotifiedKindMask();
         for ( int32 offset = 0; offset < NetMessageRange::kSize; ++offset )
         {
             const int32 kind     = static_cast<int32>( rangeBase ) + offset;
@@ -78,6 +81,12 @@ namespace sw
             if ( bClaimed )
             {
                 SW_LOG_ERROR( "NetMessageRouter: message kind 0x%02x is already claimed - the new handler is refused (give it its own range or a disjoint kind mask)", kind );
+                return false;
+            }
+            const bool bNoticeClaimed = ( ( noticedMask >> offset ) & 1u ) != 0 && kind < kKindCount && _arrNoticeHandler[kind] != nullptr;
+            if ( bNoticeClaimed )
+            {
+                SW_LOG_ERROR( "NetMessageRouter: delivery notices of message kind 0x%02x are already claimed - the new handler is refused", kind );
                 return false;
             }
         }
@@ -95,21 +104,26 @@ namespace sw
 
     void NetMessageRouter::rebuildKindTable()
     {
-        for ( INetMessageHandler*& pSlot : _arrKindHandler )
+        for ( int32 kind = 0; kind < kKindCount; ++kind )
         {
-            pSlot = nullptr;
+            _arrKindHandler[kind]   = nullptr;
+            _arrNoticeHandler[kind] = nullptr;
         }
         for ( INetMessageHandler* pHandler : _listHandler )
         {
-            const uint8  rangeBase = pHandler->getMessageRangeBase();
-            const uint16 kindMask  = pHandler->getMessageKindMask();
+            const uint8  rangeBase   = pHandler->getMessageRangeBase();
+            const uint16 kindMask    = pHandler->getMessageKindMask();
+            const uint16 noticedMask = pHandler->getNotifiedKindMask();
             for ( int32 offset = 0; offset < NetMessageRange::kSize; ++offset )
             {
-                if ( ( ( kindMask >> offset ) & 1u ) == 0 )
-                    continue;
                 const int32 kind = static_cast<int32>( rangeBase ) + offset;
                 if ( kind >= kKindCount )
                     break;
+                const bool bNoticeKind = ( ( noticedMask >> offset ) & 1u ) != 0;
+                if ( bNoticeKind && _arrNoticeHandler[kind] == nullptr )
+                    _arrNoticeHandler[kind] = pHandler; // 겹침은 등록 때 거절했다
+                if ( ( ( kindMask >> offset ) & 1u ) == 0 )
+                    continue;
                 if ( _arrKindHandler[kind] != nullptr )
                 {
                     SW_LOG_ERROR( "NetMessageRouter: message kind 0x%02x is claimed by two handlers - the first one keeps it", kind );
@@ -118,6 +132,20 @@ namespace sw
                 _arrKindHandler[kind] = pHandler;
             }
         }
+    }
+
+    void NetMessageRouter::dispatchNotice( const NetDeliveryNotice& notice )
+    {
+        INetMessageHandler* pHandler = _arrNoticeHandler[notice._kind];
+        if ( pHandler != nullptr )
+        {
+            pHandler->onDeliveryNotice( notice );
+            return;
+        }
+        if ( _unclaimedNoticeCount == 0 )
+            SW_LOG_ERROR( "NetMessageRouter: a delivery notice of message kind 0x%02x has no handler - the sender did not register (getNotifiedKindMask); further ones are only counted",
+                          static_cast<int32>( notice._kind ) );
+        ++_unclaimedNoticeCount;
     }
 
     NetHandleResult NetMessageRouter::dispatch( const NetMessageContext& context, const uint8* pData, int32 size )
@@ -154,6 +182,10 @@ namespace sw
         }
         if ( pOutListEvent != nullptr )
             pOutListEvent->insert( pOutListEvent->end(), _inbound._listEvent.begin(), _inbound._listEvent.end() );
+        for ( const NetDeliveryNotice& notice : _inbound._listDeliveryNotice )
+        {
+            dispatchNotice( notice );
+        }
         for ( const NetInboundMessage& message : _inbound._listMessage )
         {
             const uint8* pData = _inbound._bytes.data() + message._offset;

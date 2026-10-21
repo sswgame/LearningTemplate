@@ -131,7 +131,7 @@ namespace sw
         if ( observer._bActive == SW_FALSE )
         {
             observer = Observer{};
-            observer._ackedUpdate.initialize( static_cast<int32>( NetMMOMessage::kMaxUnconfirmedTicks ) );
+            observer._updateOutcome.initialize( static_cast<int32>( NetMMOMessage::kMaxUnconfirmedTicks ) );
         }
         observer._entityID = entityID;
         observer._bActive  = SW_TRUE;
@@ -145,32 +145,27 @@ namespace sw
 
     NetHandleResult MMOReplicator::handleNetMessage( const NetMessageContext& context, BitReader& body )
     {
+        (void)context;
+        (void)body;
+        return NetHandleResult::NotMine;
+    }
+
+    void MMOReplicator::onDeliveryNotice( const NetDeliveryNotice& notice )
+    {
         // 메시지 펌프(게임 스레드)에서 불린다. 같은 스레드에서 차례로 실행되므로 `update` 의 병렬 본문과 겹치지 않는다.
-        const bool bNotValidAck = context._kind != NetMMOMessage::kUpdateAck || context._connectionID < 0 || context._connectionID >= static_cast<int32>( _listObserver.size() );
-        if ( bNotValidAck )
-            return NetHandleResult::Handled;
-        const uint32 newestTick = static_cast<uint32>( body.readVarUint() );
-        const uint32 bits       = body.readUint32();
-        if ( body.hasOverflowed() || newestTick > _tick )
-            return NetHandleResult::Malformed;
-        Observer& observer = _listObserver[static_cast<size_t>( context._connectionID )];
+        const bool bUnknownConnection = notice._connectionID < 0 || notice._connectionID >= static_cast<int32>( _listObserver.size() );
+        if ( bUnknownConnection )
+            return;
+        Observer& observer = _listObserver[static_cast<size_t>( notice._connectionID )];
         if ( observer._bActive == SW_FALSE )
-            return NetHandleResult::Handled;
-        // 순서가 뒤바뀐 확인도 받은 틱은 받은 것으로 센다. 가장 새 틱은 앞으로만 가고, 테이블 크기 이상 오래된 틱은 적지 않는다. 적으면 링 버퍼에서 새 틱의 슬롯을 덮어쓰게 된다.
-        if ( observer._bHasAck == SW_FALSE || newestTick > observer._newestAckTick )
-            observer._newestAckTick = newestTick;
-        observer._bHasAck       = SW_TRUE;
-        const uint32 span       = NetMMOMessage::kMaxUnconfirmedTicks - 1;
-        const uint32 oldestTick = observer._newestAckTick >= span ? observer._newestAckTick - span : 0u;
-        if ( oldestTick <= newestTick )
-            observer._ackedUpdate.acquire( newestTick ) = SW_TRUE;
-        for ( uint32 index = 0; index < NetMMOMessage::kAckWindowTicks && index + 1 <= newestTick; ++index )
-        {
-            const uint32 tick = newestTick - 1 - index;
-            if ( ( bits & ( 1u << index ) ) != 0 && oldestTick <= tick )
-                observer._ackedUpdate.acquire( tick ) = SW_TRUE;
-        }
-        return NetHandleResult::Handled;
+            return;
+        // 테이블 크기 이상 오래된 틱은 적지 않는다. 적으면 링 버퍼에서 새 틱의 슬롯을 덮어쓰게 된다(그 갱신은 `resolveInFlightUpdates` 가 이미 잃은 것으로 정리했다).
+        const uint32 tick     = notice._tag;
+        const bool   bTooOld  = _tick - tick >= NetMMOMessage::kMaxUnconfirmedTicks;
+        const bool   bFromNow = tick > _tick; // 이 복제기가 단 값이 아니다(재초기화 전의 통지)
+        if ( bTooOld || bFromNow )
+            return;
+        observer._updateOutcome.acquire( tick ) = notice._result == NetDeliveryResult::Delivered ? SW_TRUE : SW_FALSE;
     }
 
     void MMOReplicator::onConnectionClosed( int32 connectionID, NetDisconnectReason reason )
@@ -364,7 +359,9 @@ namespace sw
         writer.writeBool( false );
         if ( listSent.empty() )
             return;
-        (void)_pHost->sendMessage( connectionID, NetChannelType::Unreliable, writer.getBytes() );
+        const vector<uint8>& bytes = writer.getBytes();
+        if ( _pHost->sendNotifiedMessage( connectionID, bytes.data(), static_cast<int32>( bytes.size() ), _tick ) == false )
+            return; // 연결이 없다 — 보낸 것으로 적지 않으므로 우선도가 남는다
         for ( const uint32 entityID : listSent )
         {
             // 확인될 때까지 보낸 상태를 따로 보관한다. 잃으면 확인된 상태(`_listSentState`)가 오래된 것이므로 "바뀜" 가중치가 다시 적용된다.
@@ -385,11 +382,11 @@ namespace sw
             VisibleEntry& entry = visible.second;
             if ( entry._bInFlight == SW_FALSE )
                 continue;
-            const bool bAckedPast = observer._bHasAck == SW_TRUE && observer._newestAckTick >= entry._inFlightTick;
-            const bool bExpired   = _tick - entry._inFlightTick >= NetMMOMessage::kMaxUnconfirmedTicks;
-            if ( bAckedPast == false && bExpired == false )
-                continue; // 아직 전송 중이다
-            const bool bDelivered = bExpired == false && observer._ackedUpdate.find( entry._inFlightTick ) != nullptr;
+            const uint8* pOutcome = observer._updateOutcome.find( entry._inFlightTick );
+            const bool   bExpired = _tick - entry._inFlightTick >= NetMMOMessage::kMaxUnconfirmedTicks;
+            if ( pOutcome == nullptr && bExpired == false )
+                continue; // 아직 판정이 없다(패킷이 오가는 중이다)
+            const bool bDelivered = pOutcome != nullptr && *pOutcome == SW_TRUE;
             if ( bDelivered )
                 entry._listSentState.swap( entry._listInFlightState );
             entry._listInFlightState.clear();
@@ -438,45 +435,6 @@ namespace sw
     {
         (void)connectionID;
         _mapEntity.clear();
-        _bHasUpdate   = SW_FALSE;
-        _receivedBits = 0;
-    }
-
-    void MMOClientView::markUpdateReceived( uint32 tick )
-    {
-        if ( _bHasUpdate == SW_FALSE )
-        {
-            _newestUpdateTick = tick;
-            _receivedBits     = 0;
-            _bHasUpdate       = SW_TRUE;
-            return;
-        }
-        if ( tick > _newestUpdateTick )
-        {
-            const uint32 shift = tick - _newestUpdateTick;
-            // 이전의 가장 새 틱도 이제 비트 하나로 표현한다(shift - 1 위치).
-            if ( shift > NetMMOMessage::kAckWindowTicks )
-                _receivedBits = 0u;
-            else if ( shift == NetMMOMessage::kAckWindowTicks )
-                _receivedBits = 1u << ( shift - 1u ); // 32비트 시프트는 정의되지 않은 동작이다. 앞쪽 비트는 모두 창 밖이므로 이렇게 처리한다
-            else
-                _receivedBits = ( _receivedBits << shift ) | ( 1u << ( shift - 1u ) );
-            _newestUpdateTick = tick;
-            return;
-        }
-        const uint32 age = _newestUpdateTick - tick; // 0이면 같은 틱(중복)이다
-        if ( 1u <= age && age <= NetMMOMessage::kAckWindowTicks )
-            _receivedBits |= 1u << ( age - 1u );
-    }
-
-    void MMOClientView::sendAck( INetPeers& host, int32 connectionID )
-    {
-        if ( _bHasUpdate == SW_FALSE )
-            return;
-        BitWriter& writer = _ackWriter.begin( NetMMOMessage::kUpdateAck );
-        writer.writeVarUint( _newestUpdateTick );
-        writer.writeUint32( _receivedBits );
-        (void)_ackWriter.send( host, connectionID, NetChannelType::Unreliable ); // 잃어도 다음 틱의 확인이 같은 창을 다시 싣는다
     }
 
     NetHandleResult MMOClientView::handleNetMessage( const NetMessageContext& context, BitReader& body )
@@ -515,7 +473,6 @@ namespace sw
             const uint32 tick = static_cast<uint32>( reader.readVarUint() );
             if ( reader.hasOverflowed() )
                 return NetHandleResult::Malformed;
-            markUpdateReceived( tick );
             while ( reader.readBool() )
             {
                 MMOEntity update;

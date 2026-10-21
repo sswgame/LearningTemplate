@@ -23,6 +23,10 @@
  *          메시지를 실었거나 확인할 것이 없던(연결 유지) 패킷만 이 비트를 켜고, 확인만 담은 답은 끈다.
  *          그래야 한가할 때 양쪽이 확인에 확인으로 끝없이 주고받지 않고 `NetHostConfig::_keepAliveInterval` 마다만 오간다.
  *          RTT와 손실률도 이 비트를 켠 패킷으로만 측정한다.
+ *
+ *          전달 통지(`sendNotifiedMessage`)는 비신뢰 메시지에 값 하나를 달아 보내고, 실린 패킷의 판정을 메시지 단위로 돌려준다(`drainDeliveryNotices`).
+ *          판정은 메시지마다 한 번이다 — 패킷이 확인되면 Delivered, 빠른 재전송이 잃은 것으로 보거나 확인 없이 패킷 창(`kPacketWindow`) 밖으로 밀려나거나
+ *          싣지 못하고 줄에서 나이 상한을 넘기면 Lost 다. 잃은 것으로 본 뒤 늦게 온 확인은 판정을 바꾸지 않는다(받는 쪽은 틱 번호로 늦은 메시지를 스스로 거른다).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -67,6 +71,7 @@ namespace sw
         static constexpr int32   kMessageSizeBits           = 11;        ///< 0~1024. 메시지 또는 조각 하나의 길이 필드 비트 수.
         static constexpr float64 kDefaultAckRequestInterval = 0.25;
         static constexpr int32   kMaxReliablePerPacket      = 64;  ///< 패킷 하나에 싣는 신뢰 메시지 상한(보낸 패킷 기록이 힙을 쓰지 않게 한다).
+        static constexpr int32   kMaxNotifiedPerPacket      = 8;   ///< 패킷 하나에 싣는 전달 통지 메시지 상한(넘는 것은 다음 패킷에 싣는다).
         static constexpr int32   kReliableWindow            = 256; ///< 확인되지 않은 신뢰 메시지의 상한. 넘으면 `sendMessage` 가 거절한다(막힘). 2 의 거듭제곱(`SequenceBuffer`).
         static constexpr uint32  kPacketWindow              = 256; ///< 보낸 · 받은 패킷을 기억하는 슬롯 수. 2 의 거듭제곱(`SequenceBuffer`).
         static constexpr int32   kPacketHeaderBits          = 16 + 16 + 32;
@@ -92,6 +97,13 @@ namespace sw
          *        신뢰 창이 메시지 전체(조각 모두)를 받을 수 없으면 로그 없이 false 를 반환합니다. 둘 다 아무것도 넣지 않으므로 반쪽 메시지가 생기지 않습니다.
          */
         [[nodiscard]] bool sendMessage( NetChannelType channel, const uint8* pData, int32 size );
+        /**
+         * @brief 비신뢰 메시지를 전달 통지 @p tag 를 달아 넣습니다. 판정은 `drainDeliveryNotices` 가 메시지마다 한 번 돌려줍니다.
+         * @details 메시지는 1 바이트 이상(첫 바이트가 종류)이고 `kMaxSingleMessageSize` 이하여야 합니다. 어기면 오류 로그와 함께 false 이고 통지도 나지 않습니다.
+         */
+        [[nodiscard]] bool sendNotifiedMessage( const uint8* pData, int32 size, uint32 tag );
+        /** @brief 판정이 난 전달 통지를 @p inoutListNotice 뒤에 옮깁니다. 연결 ID 는 -1 로 둡니다(호스트가 채운다). */
+        void drainDeliveryNotices( vector<NetDeliveryNotice>& inoutListNotice );
         /** @brief 채널 하나의 메시지 상한입니다. 신뢰 순서는 `kMaxReliableMessageSize`, 나머지는 `kMaxSingleMessageSize` 입니다. */
         static int32 getMaxMessageSize( NetChannelType channel );
         /** @brief 받은 메시지 하나를 꺼냅니다. 없으면 false 를 반환합니다. @p outBuffer 의 옛 용량은 연결이 받아 다시 쓴다(같은 버퍼로 계속 받으면 할당이 없다). */
@@ -125,12 +137,16 @@ namespace sw
             static constexpr SequenceSlotReset kSlotReset = SequenceSlotReset::Assign;
 
             uint16  _arrReliableID[kMaxReliablePerPacket]{};
+            uint32  _arrNotifiedTag[kMaxNotifiedPerPacket]{};  ///< 이 패킷에 실은 전달 통지 메시지의 값.
+            uint8   _arrNotifiedKind[kMaxNotifiedPerPacket]{}; ///< 그 메시지의 종류(첫 바이트).
             float64 _time{ 0.0 };
             int32   _byteCount{ 0 };
             int32   _reliableCount{ 0 };
+            int32   _notifiedCount{ 0 };
             uint8   _bAcked{ SW_FALSE };
-            uint8   _bAckRequested{ SW_FALSE }; ///< 상대가 바로 확인한다. RTT와 손실률의 표본이 된다.
-            uint8   _bLossDetected{ SW_FALSE }; ///< 빠른 재전송이 이미 잃은 것으로 판단했다.
+            uint8   _bAckRequested{ SW_FALSE };  ///< 상대가 바로 확인한다. RTT와 손실률의 표본이 된다.
+            uint8   _bLossDetected{ SW_FALSE };  ///< 빠른 재전송이 이미 잃은 것으로 판단했다.
+            uint8   _bNoticeSettled{ SW_FALSE }; ///< 실은 전달 통지의 판정을 냈다(한 번만 낸다).
         };
 
         struct ReceivedPacket
@@ -201,6 +217,8 @@ namespace sw
         {
             vector<uint8> _buffer{};
             float64       _queuedTime{ -1.0 }; ///< 처음 `writePacket` 을 만난 시각. 음수면 아직 만나지 않았다(나이를 세지 않는다)
+            uint32        _noticeTag{ 0 };     ///< `_bNotified` 일 때 판정과 함께 돌려줄 값.
+            uint8         _bNotified{ SW_FALSE };
         };
 
         /** @brief `writePacket` 이 쓰는 중인 패킷 본문입니다. 채널마다 싣는 함수가 같은 예산과 메시지 수를 나눠 씁니다. */
@@ -237,6 +255,8 @@ namespace sw
         /** @brief 다 쓴 메시지 버퍼를 비워 다시 쓸 줄에 넣습니다. 용량이 없거나 조각 하나보다 크거나(모은 큰 메시지) 줄이 차면 버립니다. @p buffer 는 빈다. */
         void recycleBuffer( vector<uint8>& buffer );
 
+        /** @brief 패킷 @p sent 에 실은 전달 통지를 @p result 로 판정합니다. 이미 판정했으면 아무것도 하지 않습니다. */
+        void    settleNotices( SentPacket& sent, NetDeliveryResult result );
         void    processAcks( float64 time, uint16 ack, uint32 ackBits );
         void    detectLostPackets( uint16 ack );
         bool    isReliableDue( const OutgoingReliable& message, float64 time, float64 resendDelay ) const;
@@ -259,6 +279,7 @@ namespace sw
         vector<SequencedStream>                                                  _listSequencedReceive; ///< 순서만 채널에서 종류마다 마지막으로 넘긴 번호.
         vector<uint8>                                                            _listReliableAssembly; ///< 모으는 중인 신뢰 순서 메시지(앞 조각들). 마지막 조각이 오면 넘긴다.
         vector<vector<uint8>>                                                    _listSpareBuffer;      ///< 다 쓴 메시지 버퍼(용량만). 받기 · 비신뢰 보내기가 메시지마다 할당하지 않게 한다.
+        vector<NetDeliveryNotice>                                                _listDeliveryNotice;   ///< 판정이 나서 `drainDeliveryNotices` 를 기다리는 전달 통지.
         NetConnectionStats                                                       _stats;
         float64                                                                  _lastStatsTime;
         float64                                                                  _lastAckRequestTime; ///< 확인을 요청한 패킷을 마지막으로 보낸 시각.
