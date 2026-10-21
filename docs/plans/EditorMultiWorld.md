@@ -204,8 +204,8 @@ Undo 를 창마다 두는 것은 두 엔진과 다릅니다. 두 엔진 모두 �
    GPU 쪽 오류는 로그 줄로 본다. DX12 디버그 레이어와 Vulkan 검증 레이어는 Debug 빌드에서만 켜지고 오류가 `[Warning]` · `[Error]` 줄로 나와 로그 게이트가 시나리오를 진다. 그래서 검증 레이어 확인은 `build/Ninja-Debug` 로 돌린다.
    - 실행(한 줄): `App.exe -EnableEditor -gv_editorStateDir=Saved/Automation/EditorState/previewreopen -scenario=engine/automation/editor/previewreopen.scenario.xml -dx12` (`-vk` · `-dx11` · `-gl` 로 네 백엔드, 상태 폴더는 빈 곳).
    - 한계: 닫은 프레임에 바로 여는 경합과 창 여러 개를 동시에 닫는 것은 넣지 않았다.
-6. **미리보기 씬의 백엔드 교체**(`-gv_rhiSwapAtFrame`). 이 스위치는 `RHIBackendSwitcher::onFrameBegin` 이 엔진 프레임 수가 N 일 때 `gv_rhiBackend` 를 `-gv_rhiSwapTo` 로 바꿔 요청하고 한 번만 쓴다 — 메뉴 · 콘솔 · 시나리오 단계 `SwapBackend` 와 같은 길이다.
-   스위치는 창을 연 시점을 고르지 못하므로 시나리오 `editor/previewswap`(2026-10-20 작성, **아직 돌리지 않았다**)은 같은 길을 `SwapBackend` 로 머티리얼 창이 열려 그려지는 프레임에 요청한다(`other` 로 건너고 `start` 로 돌아와 창이 열린 교체를 두 번 거친다).
+6. **미리보기 씬의 백엔드 교체**. 교체를 거는 길은 메뉴 · 콘솔 · 시나리오 단계 `SwapBackend` 이고(명령줄 `-gv_rhiSwapAtFrame` 은 2026-10-22 에 지웠다 — 시점은 시나리오 단계가 고른다),
+   시나리오 `editor/previewswap`(2026-10-20 작성, **아직 돌리지 않았다**)은 같은 길을 `SwapBackend` 로 머티리얼 창이 열려 그려지는 프레임에 요청한다(`other` 로 건너고 `start` 로 돌아와 창이 열린 교체를 두 번 거친다).
    교체마다 `RHI.SwapFailedCount` 0 · `Module.BindingsOk` 를 보고, 교체 뒤 같은 문서를 다시 열어(에디터 인스턴스가 다시 서므로 창이 닫혀 있어도 되고 그대로여도 된다) 프레임 수가 다시 오르는지와 새 디바이스 위에 새 렌더러가 서는지(시작 줄 수 2 · 3)를 본다.
    교체 뒤 살아 있는 렌더러 수(`Editor.ScenePreviewRenderers`)가 교체 앞과 같은지도 본다 — 옛 디바이스의 렌더러가 남거나 창 하나에 둘이 서면 다르다.
    **자동 단언으로 못 한 것**: 미리보기 타깃의 그림. 평균 색의 문턱값을 GPU 로 돌려 보기 전에는 맞출 수 없어, 시나리오가 `gv_editorPreviewScreenshot` 을 교체 앞 · 뒤 · 복귀 뒤에 걸어 `Saved/Automation/previewswap_<before|after1|after2>.ppm` 으로 저장한다 — PNG 로 바꿔 눈으로 본다(빨간 구 + 바닥).

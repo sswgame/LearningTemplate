@@ -167,7 +167,7 @@ cd build/Ninja-Debug/Bin
 - **타입별 컴포넌트 질의 벤치**(`TypedComponentBenchTest`, Release, `Bin` 에서 `../TestBin/EngineTest.exe --test_filter=TypedComponentBenchTest.* --load_suites=only --host_suites=all`): 오브젝트 1만 · 10만 × 정확한 타입 수 50 · 200 · 500 에서 `forEachComponentOfType`(버킷) · `ComponentRegistry::getAll` · 오브젝트 훑기를 말단 · 기반 타입으로 견주고(질의 한 번 ns), 만들고 지우기 비용 · 잠금 한 쌍 · `sizeof( Component )` 를 찍는다. 결과와 해석은 계획 문서 `TypedComponents` 8.4절.
 - **측정 라운드마다 매니저 · 풀 · 레지스트리를 새로 만듭니다.** best-of-N 반복은 자라는 컨테이너가 만든 오염을 거르지 못합니다. 같은 값이 연달아 세 번 나올 때까지 수치를 믿지 않습니다.
 - **한 번만 일어나는 이벤트(백엔드 교체 프레임의 최대값 등)는 3 회 이상 되풀이해 이상치를 거릅니다.** 프레임 1 에만 일어나는 일(업로드 · PSO 생성)은 워밍업(`FrameProfileSession::kWarmupFrames`) 뒤의 측정 창 밖입니다.
-  측정 창 안에서 전량 재생성을 일으키려면 `-gv_rhiSwapAtFrame` 을 워밍업보다 뒤로 줍니다. 히치 최적화는 평균이 아니라 최악 프레임으로 판정합니다.
+  측정 창 안에서 전량 재생성을 일으키려면 시나리오 단계 `<SwapBackend backend="other"/>` 를 워밍업보다 뒤의 프레임에 둡니다. 히치 최적화는 평균이 아니라 최악 프레임으로 판정합니다.
 - **성능 워크로드는 움직여야 합니다.** 정지한 씬은 "바뀐 것 없음" 빠른 경로만 측정합니다. 워크로드가 지나지 않은 경로는 "검증됨" 이 아니라 "실행된 적 없음" 으로 보고,
   최적화 대상은 프로파일 표에서 고르고 전후 숫자를 커밋 메시지에 남깁니다. 새 프로파일 구간을 넣을 때는 그 상위 구간도 함께 넣습니다. 하위 구간의 합과 전체의 차가 대개 진짜 병목입니다.
 - **렌더 성능은 디스크에서 읽은 씬으로 배치 수를 먼저 셉니다.** 인스턴스 수와 배치 수가 비슷하면 인스턴싱이 꺼진 것입니다.
@@ -460,7 +460,7 @@ ctest --test-dir build/Ninja-Release -L load                     # 부하 스위
   "가끔 튄다" 는 한 장으로 안 잡힌다 — `-gv_screenshotCount=30 -gv_screenshotInterval=2` 로 연속으로 찍어(`_000` … 이 붙는다) 장을 나란히 본다.
 - **"조용한 프레임" 버그는 벤치가 가린다**(회전 큐브라 매 프레임 dirty). 에디터 정지 화면으로 본다: `-EnableEditor -gv_benchMeshes=1 -gv_screenshot -gv_screenshotFrame=60`.
   그리는 것이 의심스러우면 `-gv_gpuCulling=0` · `-gv_drawMerge=0` · `-gv_vertexPool=0` 으로 경로를 하나씩 뗀다.
-- **백엔드 교체는 헤드리스로 재현한다**: `-gv_rhiSwapAtFrame=N -gv_rhiSwapTo=<backend>`. 투명 큐브가 카나리아다. 텍스처 경로는 `-gv_defaultMaterial=engine/materials/benchtextured.material`.
+- **백엔드 교체는 시나리오로 재현한다**: `-scenario=engine/automation/rhiswap/swapother.scenario.xml`(한 번 건너기 — 단계 `SwapBackend`, 시점은 단계의 프레임이 정한다). 투명 큐브가 카나리아다. 텍스처 경로는 `-gv_defaultMaterial=engine/materials/benchtextured.material`.
   전역 변수는 `GlobalVariableInfo::setValueAsInt` 로 넣는다 — **C++ 대입은 변경 콜백을 부르지 않는다.**
 - **실제 백엔드는 로그 `Initializing RHI with backend: <이름>` 으로 확인한다**(설정값에 덮여 "네 백엔드 확인" 이 DX12 네 번이던 적이 있다). "인자가 적혔는가" 는
   `CommandLineManager::isArgumentProvided` 로(`getArgument` 는 기본값이 있으면 안 적어도 true).
