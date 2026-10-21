@@ -12,6 +12,7 @@ configure 가 파이썬 생성기 다섯을 **한 프로세스**로 부른다 �
   - CookContract.gen.h · CookContract.cmake (GenerateCookContract) — CookContract.json → C++ · CMake
   - ShippingHostDefaults.h · ShippingGameDefaults.h (GenerateShippingHostDefaults) — 엔진 설정 · 게임 프리셋 → C++ (프리셋이 없으면 건너뛴다 — CMake 가 그 자리에서 멈춘다)
   - LintTargets.cmake      (GenerateLintTargets)         — lint/gate · selftest 폴더 → CMake 린트 타깃
+  - EditorLayers.cmake     (GenerateEditorLayers)        — 에디터 층 표 → CMake 변수(층별 부분 · 위 층 헤더 껍데기)
 
 ToolchainVars.cmake(GenerateToolchainCMake)는 여기 없다 — SetupEnvironment 가 toolchain_config.json 을 쓴 **뒤**에 돌아야 한다.
 
@@ -32,6 +33,7 @@ from common.GeneratedFile import runGenerator  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 from generate.GenerateCMakeConstants import generateCMakeConstants  # noqa: E402
 from generate.GenerateCookContract import generateCookContract  # noqa: E402
+from generate.GenerateEditorLayers import generateEditorLayers  # noqa: E402
 from generate.GenerateLintTargets import generateLintTargets  # noqa: E402
 from generate.GeneratePackFormat import generatePackFormatHeader  # noqa: E402
 from generate.GenerateShippingHostDefaults import generateShippingHostDefaults  # noqa: E402
@@ -48,6 +50,7 @@ def generateConfigureFiles(outputDir: Path, gameName: str) -> None:
     if (getProjectRoot() / gamePreset).is_file():
         generateShippingHostDefaults(outputDir / "ShippingHostDefaults.h", outputDir / "ShippingGameDefaults.h", gamePreset)
     generateLintTargets(outputDir / "LintTargets.cmake")
+    generateEditorLayers(outputDir / "EditorLayers.cmake")
 
 
 def addArgumentsInternal(parser: argparse.ArgumentParser) -> None:

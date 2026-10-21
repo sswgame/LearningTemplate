@@ -1,4 +1,5 @@
-# CheckEditorLayers 의 규칙 데이터 — 게이트는 Scripts/lint/gate/CheckEditorLayers.py.
+# 에디터 층 표 — 읽는 곳은 Scripts/generate/GenerateEditorLayers.py(→ EditorLayers.cmake). 예전 린트 게이트 CheckEditorLayers 를 빌드 형식이 대신한다:
+# Source/Editor/CMakeLists.txt 가 티어마다 부분을 짓고 위 층 헤더 자리에 #error 껍데기를 놓아, 위 층 헤더 include 가 컴파일에서 멈춘다.
 
 # ------------------------------------------------------------------------------
 # Editor 층 — 숫자가 큰 쪽이 위다. 같은 티어의 다른 층끼리는 서로 include 해도 된다.
@@ -36,9 +37,9 @@ SelfTest = 7
 # 셸(ImGuiEditor) — 모듈 진입점.
 "<root>" = 8
 
-# 키는 셋이다: prelude:<include 경로> · wiring:<파일> · violation:<파일> -> <include 경로>(줄일 대상).
-[exemption]
-"prelude:Editor/Common/Workspace/EditorService.h" = "호스트(엔진) 서비스 창구와 활성 씬 바로가기 — Core · RuntimeAPI 만 include 하는 잎 헤더라 어느 층에서나 쓴다"
-"prelude:Editor/Common/Workspace/EditorExtensionRegistry.h" = "등록 줄(SW_EDITOR_*)의 공통 기반(등록 세대 · 모듈 범위) — Core 만 include 하는 잎 헤더"
-"prelude:Editor/Common/GUI/EditorIconGlyphs.h" = "아이콘 글리프 코드포인트 상수만 — 커맨드 등록 줄이 아이콘을 적는다"
-"prelude:Editor/SelfTest/EditorSelfTestInput.h" = "입력 흉내 표식(EditorSelfTestMarks::note) — 위젯이 그린 자리를 남기는 잎 헤더(Core 만 include)"
+# 어느 층에서 include 해도 되는 잎 헤더(위 층을 include 하지 않는다) → 이유. 위 층 껍데기를 놓지 않는다.
+[prelude]
+"Editor/Common/Workspace/EditorService.h" = "호스트(엔진) 서비스 창구와 활성 씬 바로가기 — Core · RuntimeAPI 만 include 하는 잎 헤더라 어느 층에서나 쓴다"
+"Editor/Common/Workspace/EditorExtensionRegistry.h" = "등록 줄(SW_EDITOR_*)의 공통 기반(등록 세대 · 모듈 범위) — Core 만 include 하는 잎 헤더"
+"Editor/Common/GUI/EditorIconGlyphs.h" = "아이콘 글리프 코드포인트 상수만 — 커맨드 등록 줄이 아이콘을 적는다"
+"Editor/SelfTest/EditorSelfTestInput.h" = "입력 흉내 표식(EditorSelfTestMarks::note) — 위젯이 그린 자리를 남기는 잎 헤더(Core 만 include)"
