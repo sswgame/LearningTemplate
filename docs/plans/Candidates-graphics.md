@@ -82,6 +82,12 @@
 왜 필요한가: 실시간 전역 조명과 볼륨 표현이 없다. [IndirectLighting](IndirectLighting.md)의 프로브 뒤 단계다.
 착수 조건 / 남은 것: 라이트맵 또는 실시간 GI(Lumen · SDFGI · APV 갱신 방식 비교), 볼륨 안개 · 구름 · 대기 산란(`TerrainWaterVegetationRemainders` 의 안개 항목과 합침). 설계 문서가 먼저다. [ClusteredLighting](ClusteredLighting.md)이 선행이다.
 
+### VfxGPULights
+제목: GPU 로 시뮬레이션하는 방출기의 파티클 라이트
+옛번호: 없음
+왜 필요한가: 파티클 라이트(`VfxLightDef`)는 게임 스레드의 씬 라이트 목록에 점광을 붙여 라이트 그리드로 들어가므로 CPU 시뮬레이션 전용이다(`VfxLightDef::getSupportedTargets`). 그래서 라이트를 쓰는 방출기는 깊이 충돌(GPU 전용)과 함께 쓸 수 없고 로드가 실패한다. 지금은 GPU 본체 방출기와 빛만 맡는 작은 CPU 방출기를 같은 효과에 두는 패턴으로 푼다(계획 문서 `Vfx` 의 "GPU 본체 + 라이트 CPU 방출기"). 언리얼 Niagara 도 라이트 렌더러는 CPU 시뮬레이션 전용이다.
+착수 조건 / 남은 것: GPU 라이트 그리드 생산자(`lightgrid.hlsl`)가 입자 라이트를 직접 읽게 하려면 라이트 버퍼에 GPU 가 쓰는 구간(`MeshInstanceWriter::GPU` 와 같은 형식)을 두고, 라이트 수를 CPU 가 모른 채 그리드를 만들 수 있어야 한다(`ClusteredLighting` S5 와 함께 본다). CPU 그리드 생산자(`gv_lightCulling=1`)는 GPU 가 쓴 라이트를 받을 수 없으므로 그 조합의 처리(로드 오류인지)를 함께 정한다. 수요(라이트를 내는 대량 입자)가 생기면 착수한다.
+
 ### ForwardHdrSceneColor
 제목: 포워드 파이프라인의 HDR 장면 색
 옛번호: 없음

@@ -430,6 +430,11 @@ namespace sw
 
         // GPU 드리븐 프리패스다. **애니메이션이 먼저고 컬링이 나중이다.** 순서가 뒤집히면 컬링이
         // 이번 프레임에 회전하기 전의 바운드로 판정한다. 컬링은 이번 프레임에 그리는 **모든 뷰**의 슬롯을 돈다.
+        // 깊이 히스토리(뷰마다 지난 장면 깊이의 사본)가 먼저다 — GPU 입자의 깊이 충돌이 읽는다. 이번 프레임 패스가 장면 깊이를 쓰기 전이라 지난 깊이가 남아 있다.
+        recordDepthHistories();
+        // GPU 방출기의 입자 시뮬레이션은 인스턴스 애니메이션 · 컬링 **앞**이다 — 메시 입자가 인스턴스 칸에 행렬 · 바운드를 쓰고 컬링이 그 바운드로 거른다.
+        // 빌보드 · 띠는 투명 패스가 렌더 입력과 간접 인자를 읽는다(VfxGPUSimulation, vfxsimulate.hlsl · vfxmeshinstance.hlsl).
+        _particleRenderer.recordSimulation( *_pCmd, getEnginePSO( RenderPassType::VfxSimulation ), getEnginePSO( RenderPassType::VfxMeshInstance ) );
         const uint32 animationInstanceCount = static_cast<uint32>( _gpuScene.getInstances().size() );
         dispatchInstanceAnimation( animationInstanceCount );
         dispatchMeshMorph();
@@ -437,8 +442,6 @@ namespace sw
         dispatchCullAndSort( animationInstanceCount );
         // 라이트 그리드(GPU 생산자) — 조명을 계산하는 패스(포워드 · 디퍼드 · 투명)보다 먼저 끝나야 한다. 이 리스트는 그 패스들의 리스트보다 먼저 큐에 낸다.
         dispatchLightGrid();
-        // GPU 방출기의 입자 시뮬레이션 — 투명 패스가 그 렌더 입력과 간접 인자를 읽는다(VfxGPUSimulation, vfxsimulate.hlsl).
-        _particleRenderer.recordSimulation( *_pCmd, getEnginePSO( RenderPassType::VfxSimulation ) );
         // 월드 공간 UI 의 렌더 텍스처다. 장면 뷰가 그 텍스처를 읽기 전에 먼저 제출하는 프리패스 리스트(같은 큐)로 그린다.
         _canvasRenderer.drawTargets( *_pCmd, *pDevice, _canvasFrame, *_pPSOCache, getEnginePSO( RenderPassType::Canvas ) );
 
@@ -520,6 +523,8 @@ namespace sw
         }
         _frameContext               = _mainSeedScratch;
         _lastRenderedExtraViewCount = renderedExtraCount;
+        // 다음 프레임의 깊이 히스토리가 이번 프레임의 장면 깊이와 짝이 되도록 뷰-투영을 적는다.
+        rememberDepthHistoryViews();
         return bOk;
     }
 
@@ -773,7 +778,7 @@ namespace sw
         _canvasRenderer.prepareFrame( *pDevice, _canvasFrame );
         // 입자 버퍼 · 입자 텍스처 · 입자 PSO 도 같다(투명 패스는 그리기만 한다).
         ensureParticlePSO();
-        _particleRenderer.prepareFrame( *pDevice, _gpuScene.getParticleBatches(), getEnginePSO( RenderPassType::VfxSimulation ) != 0 );
+        _particleRenderer.prepareFrame( *pDevice, _gpuScene.getParticleBatches(), _gpuScene.getVfxMeshEmitters(), makeVfxSimulationInput() );
 
         if ( prepareCommandList( pDevice, pCallerName ) == false )
             return false;

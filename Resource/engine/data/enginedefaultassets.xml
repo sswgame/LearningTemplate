@@ -53,6 +53,8 @@
                      _shaderInstanceSort="engine/shaders/instancesort.hlsl"
                      _shaderLightGrid="engine/shaders/lightgrid.hlsl"
                      _shaderVfxSimulation="engine/shaders/vfxsimulate.hlsl"
+                     _shaderVfxMeshInstance="engine/shaders/vfxmeshinstance.hlsl"
+                     _shaderDepthHistory="engine/shaders/depthhistory.hlsl"
                      _shaderFullscreenTriangle="engine/shaders/fullscreentriangle.hlsl"
                      _shaderSsao="engine/shaders/ssao.hlsl"
                      _shaderTaa="engine/shaders/taa.hlsl"

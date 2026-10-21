@@ -869,10 +869,16 @@ namespace sw
                 // GPU 방출기는 입자 수를 GT 가 모른다 — 재생 중이면 싣고, 그릴 입자 수(띠는 마디 수)는 컴퓨트가 간접 인자에 쓴다.
                 const VfxEmitterDef& def     = pVfx->getEmitterDef( emitterIndex );
                 const bool           bRibbon = def._renderMode == VfxRenderMode::Ribbon;
+                const bool           bGPU    = pVfx->getEmitterSimulationTarget( emitterIndex ) == VfxSimulationTarget::GPU;
                 if ( def._renderMode == VfxRenderMode::Mesh )
+                {
+                    // GPU 메시 방출기는 그리기가 아니라 인스턴스 칸 목록을 싣는다 — 컴퓨트가 그 칸에 쓰고 메시 경로가 그린다.
+                    if ( bGPU )
+                        appendVfxMeshEmitter( *pVfx, emitterIndex, objects.getPrimitiveRegistry() );
                     continue;
+                }
                 GPUParticleBatch::Source source{};
-                if ( pVfx->getEmitterSimulationTarget( emitterIndex ) == VfxSimulationTarget::GPU )
+                if ( bGPU )
                 {
                     const VfxGPUEmitterRequest* pRequest = pVfx->findEmitterGPURequest( emitterIndex );
                     if ( pRequest == nullptr )
@@ -915,6 +921,37 @@ namespace sw
         fillMainBatchHeadKeys( cameraPos, _listScratchBatchHeadKey );
         GPUTransparentSorter::placeParticles( vector_reference<const GPUTransparentSortKey>( _listScratchBatchHeadKey ),
                                               vector_reference<const GPUTransparentSortKey>( _listScratchParticleKey ), _snapshot._listParticleSlot );
+    }
+
+    void GPUSceneBuilder::appendVfxMeshEmitter( const VfxComponent& vfx, uint32 emitterIndex, const PrimitiveRegistry& primitives )
+    {
+        const VfxGPUEmitterRequest* pRequest = vfx.findEmitterGPURequest( emitterIndex );
+        const MeshInstanceBatch*    pBatch   = vfx.findEmitterMeshBatch( emitterIndex );
+        const bool                  bNoBatch = pRequest == nullptr || pBatch == nullptr || pBatch->isRegistered() == false;
+        if ( bNoBatch )
+            return;
+        SW_ASSERT( pBatch->getInstanceWriter() == MeshInstanceWriter::GPU );
+        // 프리미티브 번호 → 후보 → 인스턴스 칸. 두 표는 마지막 메시 수집(이번 프레임이거나, 바뀐 것이 없어 건너뛴 프레임이면 지난 것 — 발행된 인스턴스와 같다)의 것이다.
+        // 투명 꼬리의 칸은 뷰마다 다시 놓이므로 받지 않는다(GPU 메시는 불투명 머티리얼만 — `MeshInstanceWriter`).
+        const uint32               meshCount   = static_cast<uint32>( primitives.getAll().size() );
+        const uint32               opaqueCount = _snapshot.getOpaqueInstanceCount();
+        const uint32               firstSlot   = meshCount + pBatch->getFirstEntrySlot();
+        shared_ptr<vector<uint32>> pListSlot   = make_shared<vector<uint32>>( pBatch->getCount(), invalid_index::kUint32 );
+        for ( uint32 entryIndex = 0; entryIndex < pBatch->getCount(); ++entryIndex )
+        {
+            const uint32 primitiveSlot  = firstSlot + entryIndex;
+            const uint32 candidateIndex = primitiveSlot < _listPrimitiveToCandidate.size() ? _listPrimitiveToCandidate[primitiveSlot] : kInvalidCandidateIndex;
+            const uint32 instanceSlot   = candidateIndex < _listCandidateToInstance.size() ? _listCandidateToInstance[candidateIndex] : kInvalidCandidateIndex;
+            if ( instanceSlot < opaqueCount )
+                ( *pListSlot )[entryIndex] = instanceSlot;
+        }
+        const float4x4     world   = vfx.getWorldMatrix();
+        GPUVfxMeshEmitter& emitter = _snapshot._listVfxMeshEmitter.emplace_back();
+        emitter._request           = *pRequest;
+        emitter._pListInstanceSlot = std::move( pListSlot );
+        emitter._world             = world;
+        emitter._meshRadius        = vfx.getEmitterMeshRadius( emitterIndex );
+        emitter._sizeScale         = world.getMaximumAxisScale();
     }
 
     void GPUSceneBuilder::fillParticleKeys( const float3& eye, const float3& axis, vector<GPUTransparentSortKey>& outListKey ) const

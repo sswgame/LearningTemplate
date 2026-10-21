@@ -12,6 +12,7 @@
 #include "Engine/Object/Component/3D/MeshInstanceBatch.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Light/GPULightBuffer.h"
 #include "Engine/Renderer/Scene/GPUSceneBuilder.h"
@@ -776,30 +777,79 @@ SW_TEST_CASE( VfxComponentTest, TrailSampleDrivesRibbonMeshAndLights )
 }
 
 /**
- * @brief [VfxEffectDefTest] GPU 가 표현하지 못하는 모듈(메시 · 충돌 · 라이트)을 쓰는 방출기만 CPU 전용이다 — 빌보드 · 띠는 GPU 로 돌 수 있다
+ * @brief [VfxEffectDefTest] 방출기의 대상은 모듈 대상의 교집합이다 — 빌보드 · 띠 · 메시는 둘 다, 물리 충돌 · 라이트는 CPU, 깊이 충돌은 GPU 이고,
+ *        CPU 전용과 GPU 전용을 함께 쓰면 비어 로드가 실패한다
  */
-SW_TEST_CASE( VfxEffectDefTest, CPUOnlyModulesPinTheCPU )
+SW_TEST_CASE( VfxEffectDefTest, ModuleTargetsIntersect )
 {
-    sw::VfxEmitterDef billboard = sw::makeValidEmitter( "Billboard" );
-    SW_EXPECT_TRUE( billboard.findCPUOnlyModuleName() == nullptr );
+    const sw::VfxSimulationTarget kCPU      = sw::VfxSimulationTarget::CPU;
+    const sw::VfxSimulationTarget kGPU      = sw::VfxSimulationTarget::GPU;
+    sw::VfxEmitterDef             billboard = sw::makeValidEmitter( "Billboard" );
+    SW_EXPECT_TRUE( billboard.computeSupportedTargets().has( kCPU ) && billboard.computeSupportedTargets().has( kGPU ) );
+    SW_EXPECT_TRUE( billboard.findModuleExcluding( kGPU ) == nullptr );
     sw::VfxEmitterDef ribbon = billboard;
     ribbon._renderMode       = sw::VfxRenderMode::Ribbon;
-    SW_EXPECT_TRUE( ribbon.findCPUOnlyModuleName() == nullptr );
+    SW_EXPECT_TRUE( ribbon.computeSupportedTargets().has( kGPU ) );
+    sw::VfxEmitterDef mesh = billboard;
+    mesh._renderMode       = sw::VfxRenderMode::Mesh;
+    SW_EXPECT_TRUE( mesh.computeSupportedTargets().has( kCPU ) && mesh.computeSupportedTargets().has( kGPU ) );
 
-    sw::VfxEmitterDef collision = billboard;
-    collision._collision._mode  = sw::VfxCollisionMode::Bounce;
-    SW_ASSERT_NOT_NULL( collision.findCPUOnlyModuleName() );
-    SW_EXPECT_STREQ( "_collision", collision.findCPUOnlyModuleName() );
+    sw::VfxEmitterDef raycast  = billboard;
+    raycast._collision._mode   = sw::VfxCollisionMode::Bounce;
+    raycast._collision._method = sw::VfxCollisionMethod::PhysicsRaycast;
+    SW_EXPECT_FALSE( raycast.computeSupportedTargets().has( kGPU ) );
+    SW_ASSERT_NOT_NULL( raycast.findModuleExcluding( kGPU ) );
+    SW_EXPECT_STREQ( "_collision", raycast.findModuleExcluding( kGPU ) );
+
+    sw::VfxEmitterDef depth          = billboard;
+    depth._collision._mode           = sw::VfxCollisionMode::Kill;
+    depth._collision._method         = sw::VfxCollisionMethod::SceneDepth;
+    depth._collision._depthThickness = 0.2f;
+    SW_EXPECT_FALSE( depth.computeSupportedTargets().has( kCPU ) );
+    SW_EXPECT_TRUE( depth.computeSupportedTargets().has( kGPU ) );
+    SW_EXPECT_TRUE( depth.validate( "test" ) );
 
     sw::VfxEmitterDef light = billboard;
     light._light._maxLights = 2;
-    SW_ASSERT_NOT_NULL( light.findCPUOnlyModuleName() );
-    SW_EXPECT_STREQ( "_light", light.findCPUOnlyModuleName() );
+    light._light._radius    = 1.0f;
+    light._light._intensity = 1.0f;
+    SW_EXPECT_FALSE( light.computeSupportedTargets().has( kGPU ) );
+    SW_EXPECT_STREQ( "_light", light.findModuleExcluding( kGPU ) );
 
-    sw::VfxEmitterDef mesh = billboard;
-    mesh._renderMode       = sw::VfxRenderMode::Mesh;
-    SW_ASSERT_NOT_NULL( mesh.findCPUOnlyModuleName() );
-    SW_EXPECT_STREQ( "_renderMode Mesh", mesh.findCPUOnlyModuleName() );
+    // 깊이 충돌(GPU 전용) + 라이트(CPU 전용) — 어느 곳에서도 돌 수 없어 로드가 실패한다.
+    sw::VfxEmitterDef impossible = depth;
+    impossible._light            = light._light;
+    SW_EXPECT_TRUE( impossible.computeSupportedTargets().isEmpty() );
+    {
+        test::ScopedLogCollector collector;
+        SW_EXPECT_FALSE( impossible.validate( "test" ) );
+        SW_EXPECT_EQUAL( uint32( 1 ), collector.countContaining( "no simulation target runs both" ) );
+    }
+    // 깊이 방법은 두께가 있어야 한다.
+    sw::VfxEmitterDef thin          = depth;
+    thin._collision._depthThickness = 0.0f;
+    {
+        test::ScopedLogSuppressor suppressor;
+        SW_EXPECT_FALSE( thin.validate( "test" ) );
+    }
+    // 수명을 늘리는 모듈은 없다 — GPU 방출기의 "끝났다" 가 일정에서 구해지는 근거다.
+    SW_EXPECT_TRUE( billboard.isLifetimeBoundedByMax() );
+}
+
+/**
+ * @brief [VfxEffectDefTest] 방출기의 모든 칸(리플렉션 프로퍼티)이 모듈 표에 대상을 선언했다 — 칸을 더하고 줄을 빠뜨리면 여기서 진다
+ */
+SW_TEST_CASE( VfxEffectDefTest, EveryEmitterFieldDeclaresItsTargets )
+{
+    const sw::TypeInfo* pType = sw::VfxEmitterDef::StaticType();
+    SW_ASSERT_NOT_NULL( pType );
+    uint32 fieldCount = 0;
+    pType->forEachProperty( [&fieldCount]( const sw::PropertyInfo& property )
+    {
+        ++fieldCount;
+        SW_EXPECT_TRUE_MSG( sw::VfxEmitterDef::hasModuleRow( property._name.view() ), property._name.c_str() );
+    } );
+    SW_EXPECT_TRUE( fieldCount > 0 );
 }
 
 /**
@@ -919,4 +969,47 @@ SW_TEST_CASE( VfxComponentTest, EmittersPickTheirSimulationTarget )
     SW_ASSERT_EQUAL( uint32( 2 ), pTrail->getEmitterCount() );
     SW_EXPECT_TRUE( pTrail->getEmitterSimulationTarget( 0 ) == sw::VfxSimulationTarget::GPU );
     SW_EXPECT_TRUE( pTrail->getEmitterSimulationTarget( 1 ) == sw::VfxSimulationTarget::CPU );
+}
+
+/**
+ * @brief [VfxComponentTest] GPU 메시 방출기 — 배치는 GPU 가 쓰는 형식(`MeshInstanceWriter::GPU`)이라 항목이 자리표로 남고, 스냅샷은 풀 자리마다 이번 프레임의
+ *        인스턴스 칸을 싣는다(컴퓨트가 그 칸에 쓴다). 깊이 충돌이 GPU 전용이라 표본은 모든 빌드에서 GPU 다
+ */
+SW_TEST_CASE( VfxComponentTest, GPUMeshEmitterPublishesInstanceSlots )
+{
+    sw::Scene scene( "VfxGPUMesh" );
+    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    sw::VfxComponent* pVfx = scene.getObjectManager()->createGameObject( sw::hashed_string( "GPUDebris" ) )->addComponent<sw::VfxComponent>();
+    SW_ASSERT_NOT_NULL( pVfx );
+    pVfx->setEffectPath( "engine/vfx/gpudebris.vfx.xml" );
+    SW_ASSERT_EQUAL( uint32( 1 ), pVfx->getEmitterCount() );
+    SW_EXPECT_TRUE( pVfx->getEmitterSimulationTarget( 0 ) == sw::VfxSimulationTarget::GPU );
+    const sw::MeshInstanceBatch* pBatch = pVfx->findEmitterMeshBatch( 0 );
+    SW_ASSERT_NOT_NULL( pBatch );
+    SW_EXPECT_TRUE( pBatch->getInstanceWriter() == sw::MeshInstanceWriter::GPU );
+    SW_EXPECT_EQUAL( pVfx->getEmitterDef( 0 )._maxParticles, pBatch->getCount() );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, pBatch->getEntry( 0 )._world.getMaximumAxisScale(), 0.0001f ); // 자리표
+
+    pVfx->play();
+    sw::tickComponentFor( *pVfx, 0.3f );
+    SW_EXPECT_TRUE( pVfx->getEmitterParticles( 0 ) == nullptr );                               // 입자는 GPU 에 있다
+    SW_EXPECT_NEAR_EQUAL( 0.0f, pBatch->getEntry( 0 )._world.getMaximumAxisScale(), 0.0001f ); // CPU 는 항목을 쓰지 않는다
+
+    sw::GPUSceneBuilder builder;
+    builder.populateFromScene( &scene, sw::float3( 0.0f, 0.0f, -10.0f ) );
+    SW_EXPECT_TRUE( builder.getParticleBatches().empty() ); // 메시 방출기는 입자 그리기가 아니다
+    SW_ASSERT_EQUAL( size_t( 1 ), builder.getVfxMeshEmitters().size() );
+    const sw::GPUVfxMeshEmitter& emitter = builder.getVfxMeshEmitters()[0];
+    SW_ASSERT_NOT_NULL( emitter._pListInstanceSlot.get() );
+    SW_ASSERT_EQUAL( size_t( pBatch->getCount() ), emitter._pListInstanceSlot->size() );
+    for ( const uint32 slot : *emitter._pListInstanceSlot )
+    {
+        SW_EXPECT_TRUE( slot < builder.getInstances().size() );
+    }
+    SW_EXPECT_TRUE( emitter._meshRadius > 0.0f );
+    SW_EXPECT_TRUE( emitter._request._pDef != nullptr );
+
+    pVfx->stop();
+    builder.populateFromScene( &scene, sw::float3( 0.0f, 0.0f, -10.0f ) );
+    SW_EXPECT_TRUE( builder.getVfxMeshEmitters().empty() );
 }

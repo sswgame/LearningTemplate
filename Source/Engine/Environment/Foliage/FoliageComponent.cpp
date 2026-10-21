@@ -436,7 +436,7 @@ namespace sw
             cell._layerIndex  = layerIndex;
             cell._key         = key;
             cell._contentHash = contentHash;
-            cell._batch       = sw::make_unique<MeshInstanceBatch>( listMesh[meshIndex], material.getMaterial(), material.getInstance(), static_cast<uint32>( listIndex.size() ) );
+            cell._batch       = sw::make_unique<MeshInstanceBatch>( listMesh[meshIndex], material.getMaterial(), material.getInstance(), static_cast<uint32>( listIndex.size() ), MeshInstanceWriter::CPU );
             cell._batch->setOwnerComponent( this );
             float3  minimum{ MathUtil::kMaxFloat, MathUtil::kMaxFloat, MathUtil::kMaxFloat };
             float3  maximum{ MathUtil::kMinFloat, MathUtil::kMinFloat, MathUtil::kMinFloat };

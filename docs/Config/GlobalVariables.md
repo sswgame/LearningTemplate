@@ -261,7 +261,7 @@
 
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
 |---|---|---|---|---|---|
-| `gv_vfxSimulation` | `VfxSimulationTarget` | `GPU` | 시험 | GPU 로 돌 수 있는 방출기의 시뮬레이션 (CPU / GPU — CPU 전용 모듈을 쓰는 방출기는 늘 CPU) | [VfxComponent.cpp](../../Source/Engine/Vfx/VfxComponent.cpp) |
+| `gv_vfxSimulation` | `VfxSimulationTarget` | `GPU` | 시험 | 둘 다 되는 방출기의 시뮬레이션 (CPU / GPU — 모듈이 한 곳만 허락하면 그곳) | [VfxComponent.cpp](../../Source/Engine/Vfx/VfxComponent.cpp) |
 
 ## `Source/GameFramework/Base`
 

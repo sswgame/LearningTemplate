@@ -469,7 +469,7 @@ namespace sw
         for ( uint32 variantIndex = 0; variantIndex < meshVariantCount; ++variantIndex )
         {
             const uint32 entryCount = ( meshCount - variantIndex + meshVariantCount - 1 ) / meshVariantCount;
-            _listInstanceBatch.push_back( sw::make_shared<MeshInstanceBatch>( _listMeshVariant[variantIndex], pSceneMaterial, nullptr, entryCount ) );
+            _listInstanceBatch.push_back( sw::make_shared<MeshInstanceBatch>( _listMeshVariant[variantIndex], pSceneMaterial, nullptr, entryCount, MeshInstanceWriter::CPU ) );
         }
         for ( uint32 index = 0; index < meshCount; ++index )
         {

@@ -355,6 +355,24 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct GPUVfxMeshEmitter
+     * @brief GPU 로 시뮬레이션하는 메시 방출기 하나입니다. 입자 그리기가 아니라 메시 인스턴스 배치(`MeshInstanceWriter::GPU`)의 인스턴스 칸에 쓴다.
+     * @details GT 는 배치 항목마다 그 프레임의 인스턴스 칸(`getInstances()` 의 번호, 불투명 구간)을 찾아 싣는다 — 칸은 배치 구성이 바뀔 때마다 옮겨진다.
+     *          RT 는 시뮬레이션 뒤 · 인스턴스 애니메이션과 컬링 앞에 그 칸들의 행렬 · 바운드 · 색을 쓰고(vfxmeshinstance.hlsl), 컬링이 간접 인자를 만든다.
+     */
+    struct GPUVfxMeshEmitter
+    {
+        VfxGPUEmitterRequest             _request;            ///< 시뮬레이션 요청(`GPUParticleBatch` 의 GPU 출처와 같은 뜻)
+        shared_ptr<const vector<uint32>> _pListInstanceSlot;  ///< 풀 자리마다 인스턴스 칸(`invalid_index::kUint32` 면 이번 프레임에 실리지 않았다)
+        float4x4                         _world{};            ///< 방출기 행렬(행벡터 규약)
+        float32                          _meshRadius{ 0.0f }; ///< 메시 원점에서 가장 먼 바운드 모서리(크기 1)
+        float32                          _sizeScale{ 1.0f };  ///< 방출기 행렬의 최대 축 배율
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @struct GPUSceneSnapshot
      * @brief 게임 스레드가 만들어 렌더 패킷에 실어 렌더 스레드로 **옮기는 모든 데이터**입니다.
      *
@@ -436,12 +454,15 @@ namespace sw
          * @details 메시 배치가 그대로인 프레임에도 카메라와 방출기가 움직이므로 입자 그리기와 함께 매번 다시 정한다(`GPUSceneBuilder::populateParticleBatches`).
          */
         vector<GPUTransparentParticleSlot> _listParticleSlot;
+        /** @brief GPU 로 시뮬레이션하는 메시 방출기들입니다. 입자 그리기와 같이 매번 다시 모은다(인스턴스 칸은 배치 구성을 따른다). */
+        vector<GPUVfxMeshEmitter> _listVfxMeshEmitter;
 
-        /** @brief 입자 그리기와 그 자리를 함께 비웁니다(둘은 길이 · 순서가 같아야 한다). */
+        /** @brief 입자 그리기 · 그 자리 · GPU 메시 방출기를 함께 비웁니다(앞의 둘은 길이 · 순서가 같아야 한다). */
         void clearParticles()
         {
             _listParticleBatch.clear();
             _listParticleSlot.clear();
+            _listVfxMeshEmitter.clear();
         }
 
         /** @brief 인스턴스 배열을 반환합니다. 아직 발행 전이면 빈 배열입니다. */

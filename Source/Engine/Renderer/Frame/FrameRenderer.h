@@ -365,8 +365,18 @@ namespace sw
             uint64                      _viewID{ 0 };
             RHITextureHandle            _taaHistory{ 0 }; ///< TAA resolve 히스토리(지난 TaaColor 의 복사본)
             RHIDescriptorIndex          _taaHistorySrv{ kInvalidDescriptorIndex };
-            RHIStructuredBufferSlot     _transparentRank;           ///< 이 뷰의 투명 순번 테이블(정렬 디스패치 t2). GPU 정렬 백엔드에서 쓴다.
-            vector<uint32>              _listTransparentBatchOrder; ///< 이번 프레임 이 뷰의 투명 배치 순서(비면 주 순서를 쓴다)
+            /**
+             * @brief 깊이 히스토리 — 지난 프레임에 이 뷰가 남긴 장면 깊이의 R32 실수 사본(RT · RW 텍스처)입니다. GPU 입자의 깊이 충돌이 읽는다(`recordDepthHistories`).
+             * @details 깊이 텍스처는 RW 텍스처가 될 수 없고 에뮬 백엔드의 컴퓨트는 샘플 텍스처를 못 읽어서, 프레임 처음에 풀스크린으로 옮겨 둔다.
+             *          장면 깊이 첨부는 프레임 사이에 그대로 남아 있으므로 옮기는 때는 다음 프레임의 컴퓨트 프리패스다(복사본을 프레임 끝에 따로 만들지 않는다).
+             */
+            RHITextureHandle        _depthHistory{ 0 };
+            RHIDescriptorIndex      _depthHistoryUav{ kInvalidDescriptorIndex };
+            float4x4                _depthHistoryViewProj{};           ///< 장면 깊이를 그린 프레임의 뷰-투영(그 프레임 끝에 적는다)
+            float3                  _depthHistoryEye{};                ///< 그 프레임의 눈 위치
+            uint8                   _bLastFrameDepthValid{ SW_FALSE }; ///< 장면 깊이 첨부에 이 뷰가 그린 깊이가 남아 있다(풀을 새로 만들면 내린다)
+            RHIStructuredBufferSlot _transparentRank;                  ///< 이 뷰의 투명 순번 테이블(정렬 디스패치 t2). GPU 정렬 백엔드에서 쓴다.
+            vector<uint32>          _listTransparentBatchOrder;        ///< 이번 프레임 이 뷰의 투명 배치 순서(비면 주 순서를 쓴다)
             /// @brief 이번 프레임 이 뷰의 입자 그리기 순서와 자리(`_listTransparentBatchOrder` 안의 자리)입니다. `_bHasParticleOrder` 가 0 이면 주 시점의 것을 쓴다.
             vector<GPUTransparentParticleSlot> _listParticleSlot;
             uint8                              _bHasParticleOrder{ SW_FALSE }; ///< `_listParticleSlot` 이 이 뷰의 배치 순서와 짝인지
@@ -483,6 +493,24 @@ namespace sw
          *          선언했는지, 대상 첨부의 포맷이 무엇인지는 셋업 시점에 이미 알 수 있다.
          */
         void ensureTaaHistory( ViewTarget& view );
+        /**
+         * @brief 뷰의 깊이 히스토리(R32 실수 RT · RW 텍스처)를 **셋업 단계에서** 풀 크기로 만들어 둡니다(`ensureTaaHistory` 와 같은 이유). 풀을 새로 만들었으니 지난 깊이는 없다.
+         * @details 파이프라인에 장면 깊이 첨부(`FrameRendererUtil::Attachment::kSceneDepth`)가 없으면 만들지 않는다(2D 파이프라인 — 깊이 충돌을 쓸 깊이가 없다).
+         */
+        void ensureDepthHistory( ViewTarget& view );
+        /** @brief 뷰 @p view 의 지난 깊이를 이번 프레임에 히스토리로 옮길 수 있으면 true 입니다(지난 깊이 · 히스토리 · PSO 가 모두 있다). */
+        bool canCopyDepthHistory( const ViewTarget& view ) const;
+        /**
+         * @brief 컴퓨트 프리패스 리스트에 뷰마다 지난 장면 깊이를 깊이 히스토리로 옮기는 풀스크린 하나를 기록합니다(depthhistory.hlsl).
+         * @details GPU 입자 시뮬레이션보다 먼저 기록한다 — 깊이 충돌이 이 히스토리를 읽는다. 지금 읽는 쪽은 주 시점뿐이지만 히스토리는 뷰마다 둔다.
+         */
+        void recordDepthHistories();
+        /** @brief 뷰 @p target 하나의 깊이 히스토리 복사를 기록합니다(`recordDepthHistories` 가 뷰마다 부른다). */
+        void recordDepthHistory( ViewTarget& target );
+        /** @brief 이번 프레임에 그린 뷰마다 그 뷰-투영과 눈 위치를 적어 둡니다(다음 프레임의 깊이 히스토리가 짝이 된다). 모든 뷰를 그린 뒤 부릅니다. */
+        void rememberDepthHistoryViews();
+        /** @brief GPU 입자 시뮬레이션의 이번 프레임 입력(PSO · 주 시점 깊이 히스토리 · 인스턴스 버퍼)입니다. GPUScene 을 올린 뒤 부릅니다. */
+        VfxSimulationFrameInput makeVfxSimulationInput() const;
         /** @brief 트랜지언트 텍스처를 해제합니다. */
         void releaseTransientResources();
         /** @brief 그래프 패스 콜백을 한 번만 바인딩합니다. */

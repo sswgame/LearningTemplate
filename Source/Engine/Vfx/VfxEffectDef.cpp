@@ -54,6 +54,49 @@ namespace sw
                     SW_LOG_ERROR( "Vfx '%#': emitter '%#' %#", sourceLabel, emitterName, pMessage );
                 return bCondition;
             }
+
+            /**
+             * @brief 모듈 표의 한 줄 — 방출기 칸 하나가 돌 수 있는 곳과 수명에 하는 일입니다.
+             * @details 칸마다 한 줄이다(이름은 리플렉션 칸 이름). 값으로 대상이 달라지는 모듈(충돌 · 라이트 · 메시)은 모듈 구조체가 스스로 답한다
+             *          (`getSupportedTargets`). 표에 없는 칸은 테스트가 막는다 — 새 모듈이 대상을 선언하지 않고 GPU 로 가는 길이 없다.
+             */
+            struct ModuleRow
+            {
+                const utf8* _pFieldName;
+                VfxSimulationTargetSet ( *_pComputeTargets )( const VfxEmitterDef& def );
+                bool _bMayExtendLifetime; ///< 입자 수명을 `_lifetimeMax` 보다 늘릴 수 있다(지금은 없다 — 생기면 GPU 방출기의 "끝났다" 를 다시 정해야 한다)
+            };
+
+            static VfxSimulationTargetSet everyTarget( const VfxEmitterDef& /*def*/ ) { return VfxSimulationTargetSet::makeAll(); }
+            static VfxSimulationTargetSet meshTargets( const VfxEmitterDef& def )
+            {
+                return def._renderMode == VfxRenderMode::Mesh ? def._mesh.getSupportedTargets() : VfxSimulationTargetSet::makeAll();
+            }
+            static VfxSimulationTargetSet collisionTargets( const VfxEmitterDef& def ) { return def._collision.getSupportedTargets(); }
+            static VfxSimulationTargetSet lightTargets( const VfxEmitterDef& def ) { return def._light.getSupportedTargets(); }
+
+            /** @brief 방출기의 모든 칸입니다. 칸을 더하면 여기에 줄을 더한다(`VfxEffectDefTest.EveryEmitterFieldDeclaresItsTargets`). */
+            static constexpr ModuleRow kArrModuleRow[] = {
+                {         "_name",      &everyTarget, false},
+                {   "_renderMode",      &everyTarget, false},
+                {  "_texturePath",      &everyTarget, false},
+                {    "_blendMode",      &everyTarget, false},
+                {         "_mesh",      &meshTargets, false},
+                {     "_bLooping",      &everyTarget, false},
+                { "_maxParticles",      &everyTarget, false},
+                {     "_duration",      &everyTarget, false},
+                {    "_spawnRate",      &everyTarget, false},
+                {    "_listBurst",      &everyTarget, false},
+                {  "_lifetimeMin",      &everyTarget, false},
+                {  "_lifetimeMax",      &everyTarget, false},
+                {  "_velocityMin",      &everyTarget, false},
+                {  "_velocityMax",      &everyTarget, false},
+                {      "_gravity",      &everyTarget, false},
+                { "_sizeOverLife",      &everyTarget, false},
+                {"_colorOverLife",      &everyTarget, false},
+                {    "_collision", &collisionTargets, false},
+                {        "_light",     &lightTargets, false},
+            };
         };
     } // namespace
 
@@ -72,15 +115,58 @@ namespace sw
         _colorOverLife._alpha.sortAndComputeAutoTangents();
     }
 
-    const utf8* VfxEmitterDef::findCPUOnlyModuleName() const
+    VfxSimulationTargetSet VfxCollisionDef::getSupportedTargets() const
     {
-        if ( _renderMode == VfxRenderMode::Mesh )
-            return "_renderMode Mesh";
-        if ( _collision._mode != VfxCollisionMode::None )
-            return "_collision";
-        if ( _light._maxLights > 0 )
-            return "_light";
+        if ( _mode == VfxCollisionMode::None )
+            return VfxSimulationTargetSet::makeAll();
+        switch ( _method )
+        {
+            case VfxCollisionMethod::PhysicsRaycast:
+                return VfxSimulationTargetSet::makeOnly( VfxSimulationTarget::CPU );
+            case VfxCollisionMethod::SceneDepth:
+                return VfxSimulationTargetSet::makeOnly( VfxSimulationTarget::GPU );
+        }
+        return VfxSimulationTargetSet{}; // 읽기가 모르는 값을 거절한다 — 여기 오면 빈 집합이라 검증이 막는다
+    }
+
+    VfxSimulationTargetSet VfxEmitterDef::computeSupportedTargets() const
+    {
+        VfxSimulationTargetSet supported = VfxSimulationTargetSet::makeAll();
+        for ( const VfxEffectDefInternal::ModuleRow& row : VfxEffectDefInternal::kArrModuleRow )
+        {
+            supported = supported.intersect( row._pComputeTargets( *this ) );
+        }
+        return supported;
+    }
+
+    const utf8* VfxEmitterDef::findModuleExcluding( VfxSimulationTarget target ) const
+    {
+        for ( const VfxEffectDefInternal::ModuleRow& row : VfxEffectDefInternal::kArrModuleRow )
+        {
+            if ( row._pComputeTargets( *this ).has( target ) == false )
+                return row._pFieldName;
+        }
         return nullptr;
+    }
+
+    bool VfxEmitterDef::isLifetimeBoundedByMax() const
+    {
+        for ( const VfxEffectDefInternal::ModuleRow& row : VfxEffectDefInternal::kArrModuleRow )
+        {
+            if ( row._bMayExtendLifetime )
+                return false;
+        }
+        return true;
+    }
+
+    bool VfxEmitterDef::hasModuleRow( string_view fieldName )
+    {
+        for ( const VfxEffectDefInternal::ModuleRow& row : VfxEffectDefInternal::kArrModuleRow )
+        {
+            if ( fieldName == row._pFieldName )
+                return true;
+        }
+        return false;
     }
 
     bool VfxEmitterDef::validate( string_view sourceLabel ) const
@@ -127,6 +213,17 @@ namespace sw
         bValid = Check::isRequiredCurveValid( _colorOverLife._green, sourceLabel, _name, "_colorOverLife._green" ) && bValid;
         bValid = Check::isRequiredCurveValid( _colorOverLife._blue, sourceLabel, _name, "_colorOverLife._blue" ) && bValid;
         bValid = Check::isRequiredCurveValid( _colorOverLife._alpha, sourceLabel, _name, "_colorOverLife._alpha" ) && bValid;
+
+        const bool bSceneDepth = _collision._mode != VfxCollisionMode::None && _collision._method == VfxCollisionMethod::SceneDepth;
+        if ( bSceneDepth )
+            bValid = Check::expect( _collision._depthThickness > 0.0f, sourceLabel, _name, "_collision._depthThickness must be above 0 for the SceneDepth method" ) && bValid;
+        // 시뮬레이션 대상은 모듈 대상의 교집합이다. 비면 어느 곳에서도 돌 수 없다 — 한쪽 모듈을 조용히 끄지 않고 로드를 멈춘다.
+        if ( computeSupportedTargets().isEmpty() )
+        {
+            SW_LOG_ERROR( "Vfx '%#': emitter '%#' uses %# (no CPU simulation) and %# (no GPU simulation) - no simulation target runs both", sourceLabel, _name,
+                          findModuleExcluding( VfxSimulationTarget::CPU ), findModuleExcluding( VfxSimulationTarget::GPU ) );
+            bValid = false;
+        }
         return bValid;
     }
 } // namespace sw
@@ -160,12 +257,24 @@ namespace sw
             *this = VfxEffectDef{};
             return false;
         }
-        // 시뮬레이션 대상은 데이터가 정한다 — CPU 전용 모듈을 쓰는 방출기는 GPU 로 고를 수 없음을 남긴다(나머지는 `VfxComponent` 가 고른다).
         for ( const VfxEmitterDef& emitter : _listEmitter )
         {
-            const utf8* pCPUOnlyModule = emitter.findCPUOnlyModuleName();
-            if ( pCPUOnlyModule != nullptr )
-                SW_LOG_INFO( "Vfx '%#': emitter '%#' uses %# - it simulates on the CPU in every build", sourceLabel, emitter._name, pCPUOnlyModule );
+            // 시뮬레이션 대상은 데이터가 정한다 — 한 곳에서만 도는 방출기는 그 까닭(모듈 칸)을 남긴다(둘 다 되면 `VfxComponent` 가 고른다).
+            const VfxSimulationTargetSet supported = emitter.computeSupportedTargets();
+            if ( supported.has( VfxSimulationTarget::GPU ) == false )
+                SW_LOG_INFO( "Vfx '%#': emitter '%#' uses %# - it simulates on the CPU in every build", sourceLabel, emitter._name, emitter.findModuleExcluding( VfxSimulationTarget::GPU ) );
+            if ( supported.has( VfxSimulationTarget::CPU ) == false )
+                SW_LOG_INFO( "Vfx '%#': emitter '%#' uses %# - it simulates on the GPU in every build", sourceLabel, emitter._name, emitter.findModuleExcluding( VfxSimulationTarget::CPU ) );
+            // 풀이 찰 수 있는 데이터는 읽을 때 알린다 — 일정만으로 정해지는 상한(생성률 × 가장 긴 수명 + 버스트 전부)이다. CPU 는 차는 순간에도 경고하고,
+            // GPU 는 버린 수를 간접 인자 버퍼에 센다(SW_VFX_ARGS_WORD_DROPPED — 읽어 오는 길은 아직 없다).
+            float32 worstAlive = emitter._spawnRate * emitter._lifetimeMax;
+            for ( const VfxBurstDef& burst : emitter._listBurst )
+            {
+                worstAlive += static_cast<float32>( burst._count );
+            }
+            if ( worstAlive > static_cast<float32>( emitter._maxParticles ) )
+                SW_LOG_WARNING( "Vfx '%#': emitter '%#' may need %# particles but its pool holds %# - new particles are dropped while it is full", sourceLabel,
+                                emitter._name, worstAlive, emitter._maxParticles );
         }
         return true;
     }

@@ -710,6 +710,8 @@ namespace sw
                 case RenderPassType::MeshSkin:
                 case RenderPassType::LightGrid:
                 case RenderPassType::VfxSimulation:
+                case RenderPassType::VfxMeshInstance:
+                case RenderPassType::DepthHistory:
                 {
                     SW_LOG_WARNING( "Unknown pass type '%#' in '%#'", passType, passName );
                     break;

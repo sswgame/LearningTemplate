@@ -69,12 +69,13 @@ namespace sw
 
     VfxParticleRenderer::~VfxParticleRenderer() = default;
 
-    void VfxParticleRenderer::prepareFrame( IRHIDevice& device, const vector<GPUParticleBatch>& listBatch, bool bSimulationPipelineReady )
+    void VfxParticleRenderer::prepareFrame( IRHIDevice& device, const vector<GPUParticleBatch>& listBatch, const vector<GPUVfxMeshEmitter>& listMeshEmitter,
+                                            const VfxSimulationFrameInput& input )
     {
         _listBatchBase.clear();
         _uploadedParticleCount = 0;
         // GPU 방출기의 상태는 배치가 없는 프레임에도 정리해야 한다(멈춘 효과의 버퍼를 놓는다) — 빈 목록이어도 부른다.
-        _gpuSimulation.prepareFrame( device, listBatch, bSimulationPipelineReady );
+        _gpuSimulation.prepareFrame( device, listBatch, listMeshEmitter, input );
         if ( listBatch.empty() )
             return;
         SW_PROFILE_SCOPE( "RT.Vfx.Upload" );

@@ -17,13 +17,14 @@ namespace sw
      * @class VfxGPUEmitter
      * @brief 틱마다 고정 단계를 세어 누적 단계 수를 요청(`VfxGPUEmitterRequest`)으로 냅니다. 렌더 스레드(`VfxGPUSimulation`)가 그만큼 디스패치합니다.
      * @details 게임 스레드는 입자 수를 모른다(GPU 버퍼에 있다). 그래서 "끝났다" 는 일정에서 구한 상한이다 — 방출이 끝난 뒤 마지막으로 입자를 만든 단계부터
-     *          가장 긴 수명(`_lifetimeMax`)과 한 단계를 더 지나면 모든 입자가 사라졌다(GPU 방출기에는 수명을 줄이는 모듈 — 충돌 — 이 없다).
-     *          풀이 차서 버린 입자는 GPU 가 알리지 못한다(CPU 시뮬레이션은 경고한다).
+     *          가장 긴 수명(`_lifetimeMax`)과 한 단계를 더 지나면 모든 입자가 사라졌다. 그 근거는 "어느 모듈도 수명을 늘리지 않는다" 이고, 모듈 표가
+     *          선언한다(`VfxEmitterDef::isLifetimeBoundedByMax` — 깊이 충돌의 없애기처럼 줄이는 모듈은 상한을 그대로 둔다).
+     *          풀이 차서 버린 입자는 GPU 가 간접 인자 버퍼에 센다(읽어 오는 길은 없다). 풀이 찰 수 있는 데이터는 효과를 읽을 때 경고한다.
      */
     class SW_API VfxGPUEmitter
     {
     public:
-        /** @brief @p pDef 의 방출기를 @p seed 로 만듭니다. @p pDef 는 CPU 전용 모듈이 없는 방출기여야 합니다(`VfxEmitterDef::findCPUOnlyModuleName`). */
+        /** @brief @p pDef 의 방출기를 @p seed 로 만듭니다. @p pDef 는 GPU 를 지원하는 방출기여야 합니다(`VfxEmitterDef::computeSupportedTargets`). */
         VfxGPUEmitter( shared_ptr<const VfxEmitterDef> pDef, uint64 seed );
 
         /** @brief 프레임 시간 @p deltaSeconds 만큼 단계를 셉니다(`VfxEmitterClock::takeDueSteps`). */

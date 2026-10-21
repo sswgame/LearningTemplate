@@ -81,7 +81,32 @@ namespace sw
         // 패스가 쓰는 첨부는 모두 위에서 만들었다 — 파이프라인 로드가 선언하지 않은 입출력을 거절한다(`RenderPipelineAsset::validate`).
         // 그래서 코드가 이름으로 포맷 · 클리어 색을 짐작해 첨부를 더 만드는 길이 없다(Swapchain 은 첨부가 아니라 백버퍼다).
         ensureTaaHistory( view );
+        ensureDepthHistory( view );
+        // 새 풀의 장면 깊이에는 아직 아무것도 없다 — 이 뷰를 한 번 그릴 때까지 깊이 충돌은 보지 않는다.
+        view._bLastFrameDepthValid = SW_FALSE;
         return true;
+    }
+
+    void FrameRenderer::ensureDepthHistory( ViewTarget& view )
+    {
+        if ( _pDevice == nullptr || view._depthHistory != 0 )
+            return;
+        const TransientAttachmentPool::Attachment depth = view._transientPool.find( attachmentNames()._sceneDepth.view() );
+        if ( depth._texture == 0 )
+            return; // 장면 깊이가 없는 파이프라인(2D) — 옮길 깊이가 없다
+
+        RHITextureDesc historyDesc{};
+        historyDesc._width              = depth._width;
+        historyDesc._height             = depth._height;
+        historyDesc._format             = RHIFormat::R32_FLOAT;
+        historyDesc._bIsRenderTarget    = SW_TRUE;
+        historyDesc._bIsShaderResource  = SW_TRUE;
+        historyDesc._bIsUnorderedAccess = SW_TRUE;
+        view._depthHistory              = _pDevice->getResourceFactory()->createTexture2D( historyDesc );
+        if ( view._depthHistory != 0 )
+            view._depthHistoryUav = _pDevice->getResourceFactory()->registerBindlessTextureUav( view._depthHistory );
+        if ( view._depthHistoryUav == kInvalidDescriptorIndex )
+            SW_LOG_ERROR( "Failed to create the depth history (%#x%#, R32 float RT + UAV) - GPU particles do not collide with the scene depth", depth._width, depth._height );
     }
 
     void FrameRenderer::ensureTaaHistory( ViewTarget& view )
@@ -150,10 +175,22 @@ namespace sw
         if ( _pDevice == nullptr )
         {
             view._transientPool.forget();
-            view._taaHistory    = 0;
-            view._taaHistorySrv = kInvalidDescriptorIndex;
+            view._taaHistory           = 0;
+            view._taaHistorySrv        = kInvalidDescriptorIndex;
+            view._depthHistory         = 0;
+            view._depthHistoryUav      = kInvalidDescriptorIndex;
+            view._bLastFrameDepthValid = SW_FALSE;
             return;
         }
+
+        // 깊이 히스토리도 풀 크기를 따른다. UAV 등록을 먼저 놓고 텍스처를 지운다(버퍼 슬롯과 같은 순서 — 레지스트리에 죽은 핸들을 남기지 않는다).
+        if ( view._depthHistoryUav != kInvalidDescriptorIndex )
+            _pDevice->getResourceFactory()->unregisterBindlessUav( view._depthHistoryUav );
+        if ( view._depthHistory != 0 )
+            _pDevice->getResourceFactory()->destroyTexture( view._depthHistory );
+        view._depthHistory         = 0;
+        view._depthHistoryUav      = kInvalidDescriptorIndex;
+        view._bLastFrameDepthValid = SW_FALSE;
 
         // 히스토리는 TAA 출력의 복사본이라 크기가 정확히 같아야 한다(CopyResource 제약). 트랜지언트가
         // 새 크기로 다시 잡히면 이것도 같이 버려야 ensureTaaHistory 가 새 크기로 다시 만든다.

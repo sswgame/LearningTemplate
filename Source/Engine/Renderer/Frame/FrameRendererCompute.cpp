@@ -346,6 +346,99 @@ namespace sw
         _pCmd->transitionBuffer( gridBuffer._buffer, RHIBufferState::ShaderResource );
     }
 
+    bool FrameRenderer::canCopyDepthHistory( const ViewTarget& view ) const
+    {
+        const bool bHasSource = view._bLastFrameDepthValid == SW_TRUE && view._depthHistory != 0 && view._depthHistoryUav != kInvalidDescriptorIndex;
+        if ( bHasSource == false || getEnginePSO( RenderPassType::DepthHistory ) == 0 )
+            return false;
+        return view._transientPool.find( attachmentNames()._sceneDepth.view() )._texture != 0;
+    }
+
+    void FrameRenderer::recordDepthHistories()
+    {
+        if ( _pCmd == nullptr || _pDevice == nullptr )
+            return;
+        // 주 시점과 추가 뷰 — 장면 깊이 첨부는 프레임 사이에 그대로 남아 있다(이번 프레임 패스가 쓰기 전이다).
+        recordDepthHistory( _mainView );
+        for ( unique_ptr<ViewTarget>& pView : _listExtraView )
+        {
+            recordDepthHistory( *pView );
+        }
+    }
+
+    void FrameRenderer::recordDepthHistory( ViewTarget& target )
+    {
+        if ( canCopyDepthHistory( target ) == false )
+            return;
+        const TransientAttachmentPool::Attachment depth = target._transientPool.find( attachmentNames()._sceneDepth.view() );
+        _pCmd->prepareTextureForShaderRead( depth._texture );
+        _pCmd->prepareTextureForRenderTarget( target._depthHistory );
+
+        RHIRenderPassBeginInfo beginInfo{};
+        beginInfo._bBindColor        = SW_TRUE;
+        beginInfo._colorTargetCount  = 1;
+        beginInfo._arrColorTarget[0] = target._depthHistory;
+        beginInfo._arrLoadOp[0]      = RHIRenderPassLoadOp::Clear;
+        beginInfo._arrClearColor[0]  = float4{ 1.0f, 0.0f, 0.0f, 0.0f };
+        beginInfo._depthTarget       = 0;
+        beginInfo._width             = depth._width;
+        beginInfo._height            = depth._height;
+        _pCmd->beginRenderPass( beginInfo );
+        _pCmd->setVertexBuffer( 0, 0, 0, 0 );
+        _pCmd->setVertexBuffer( constant::kInstanceSlotStreamSlot, 0, 0, 0 );
+        _pCmd->setPipelineState( getEnginePSO( RenderPassType::DepthHistory ) );
+        // 원본 깊이 — 네이티브는 bindless 번호(루트 상수), 에뮬은 엔진 텍스처 슬롯 0. PSO 뒤에 건다(setPipelineState 가 슬롯 상태를 비운다).
+        const bool   bNativeBindless = _pDevice->supportsNativeBindlessSampling();
+        const uint32 sourceIndex     = bNativeBindless ? static_cast<uint32>( depth._srv ) : 0u;
+        if ( bNativeBindless == false )
+            _pCmd->bindShaderResource( depth._srv, shaderslot::kEngineTexture0 );
+        _pCmd->setGraphicsRootConstants( 0, 1, &sourceIndex );
+        _pCmd->draw( 3, 0 );
+        _pCmd->endRenderPass();
+    }
+
+    void FrameRenderer::rememberDepthHistoryViews()
+    {
+        // 장면 깊이 첨부가 있는 뷰만 — 히스토리가 없으면(2D 파이프라인) 짝을 적을 필요가 없다.
+        const RenderView& mainView = view( RenderViewType::Main );
+        if ( _mainView._depthHistory != 0 )
+        {
+            _mainView._depthHistoryViewProj = mainView._viewProj;
+            _mainView._depthHistoryEye      = mainView._position;
+            _mainView._bLastFrameDepthValid = SW_TRUE;
+        }
+        for ( unique_ptr<ViewTarget>& pView : _listExtraView )
+        {
+            if ( pView->_bRenderThisFrame == SW_FALSE || pView->_depthHistory == 0 )
+                continue;
+            pView->_depthHistoryViewProj = pView->_cullInput._viewProj;
+            pView->_depthHistoryEye      = pView->_cullInput._position;
+            pView->_bLastFrameDepthValid = SW_TRUE;
+        }
+    }
+
+    VfxSimulationFrameInput FrameRenderer::makeVfxSimulationInput() const
+    {
+        VfxSimulationFrameInput input{};
+        input._bSimulationPipelineReady = getEnginePSO( RenderPassType::VfxSimulation ) != 0;
+        input._bMeshPipelineReady       = getEnginePSO( RenderPassType::VfxMeshInstance ) != 0;
+        input._bNativeBindless          = _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling();
+        input._instanceBuffer           = _gpuScene.getInstanceBuffer();
+        input._instanceUav              = _gpuScene.getInstanceUav();
+        // 깊이 충돌은 주 시점의 지난 깊이만 본다(VfxCollisionDef 설명의 한계). 옮길 수 없는 프레임(첫 프레임 · 크기가 바뀐 프레임)은 히스토리가 없다.
+        if ( canCopyDepthHistory( _mainView ) )
+        {
+            const TransientAttachmentPool::Attachment depth = _mainView._transientPool.find( attachmentNames()._sceneDepth.view() );
+            input._depth._texture                           = _mainView._depthHistory;
+            input._depth._uav                               = _mainView._depthHistoryUav;
+            input._depth._width                             = depth._width;
+            input._depth._height                            = depth._height;
+            input._depth._viewProj                          = _mainView._depthHistoryViewProj;
+            input._depth._eye                               = _mainView._depthHistoryEye;
+        }
+        return input;
+    }
+
     bool FrameRenderer::dispatchCullView( uint32 cullViewIndex, const RenderView& renderView, uint32 instanceCount, const ViewTarget* pExtraView )
     {
         if ( cullViewIndex >= _gpuScene.getCullViewCount() )

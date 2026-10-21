@@ -26,7 +26,9 @@ namespace sw
         , _stepCount{ 0 }
         , _lastSpawnStep{ 0 }
     {
-        SW_ASSERT( getDef().findCPUOnlyModuleName() == nullptr );
+        SW_ASSERT( getDef().computeSupportedTargets().has( VfxSimulationTarget::GPU ) );
+        // "끝났다" 를 일정에서 구하는 근거다 — 수명을 늘리는 모듈이 생기면 모듈 표가 그렇다고 선언하고 여기서 멈춘다.
+        SW_ASSERT( getDef().isLifetimeBoundedByMax() );
     }
 
     void VfxGPUEmitter::update( float32 deltaSeconds )

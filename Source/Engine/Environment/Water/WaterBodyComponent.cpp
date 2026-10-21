@@ -305,7 +305,7 @@ namespace sw
         _surfaceVertexCount   = static_cast<uint32>( listVertex.size() );
         shared_ptr<Mesh> mesh = Mesh::create();
         mesh->setVertices( std::move( listVertex ) );
-        _batch = sw::make_unique<MeshInstanceBatch>( std::move( mesh ), _material.getMaterial(), _material.getInstance(), 1u );
+        _batch = sw::make_unique<MeshInstanceBatch>( std::move( mesh ), _material.getMaterial(), _material.getInstance(), 1u, MeshInstanceWriter::CPU );
         _batch->setOwnerComponent( this );
         _batch->setWorld( 0, float4x4::makeTranslation( _surfaceOrigin ) );
         _batch->setBoundsRadius( 0, boundsRadius );

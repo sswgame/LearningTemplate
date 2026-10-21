@@ -47,12 +47,17 @@ namespace sw
         /**
          * @brief 이번 프레임의 입자를 올리고 텍스처를 빌립니다. **기록 시작 전에** 부릅니다(버퍼 생성과 텍스처 읽기는 기록 중에 할 수 없다).
          * @details 방출기마다 버퍼 안 시작 위치를 기억한다(`drawBatches` 가 같은 목록으로 부른다). 처음 보는 텍스처 경로는 `TextureCache` 에서 빌리고 `release` 까지 든다.
-         *          GPU 방출기의 상태와 매개변수도 여기서 갖춘다(`VfxGPUSimulation::prepareFrame`).
-         * @param bSimulationPipelineReady GPU 시뮬레이션 컴퓨트 PSO 가 있으면 true(없으면 GPU 방출기를 그리지 않고 한 번 오류를 남긴다)
+         *          GPU 방출기(빌보드 · 띠 · 메시)의 상태와 매개변수도 여기서 갖춘다(`VfxGPUSimulation::prepareFrame`).
+         * @param listMeshEmitter GPU 메시 방출기(인스턴스 칸 목록) — 그리기는 메시 경로가 한다
+         * @param input           렌더러 쪽 입력(PSO 유무 · 깊이 히스토리 · 인스턴스 버퍼). PSO 가 없으면 GPU 방출기를 그리지 않고 한 번 오류를 남긴다
          */
-        void prepareFrame( IRHIDevice& device, const vector<GPUParticleBatch>& listBatch, bool bSimulationPipelineReady );
-        /** @brief GPU 방출기의 시뮬레이션 디스패치를 컴퓨트 프리패스에 기록합니다(`prepareFrame` 뒤, 투명 패스의 리스트보다 먼저 큐에 낸다). */
-        void recordSimulation( IRHICommandList& cmd, RHIPipelineStateHandle simulationPSO ) const { _gpuSimulation.recordDispatches( cmd, simulationPSO ); }
+        void prepareFrame( IRHIDevice& device, const vector<GPUParticleBatch>& listBatch, const vector<GPUVfxMeshEmitter>& listMeshEmitter,
+                           const VfxSimulationFrameInput& input );
+        /** @brief GPU 방출기의 디스패치를 컴퓨트 프리패스에 기록합니다(`prepareFrame` 뒤, 인스턴스 애니메이션 · 컬링 앞). */
+        void recordSimulation( IRHICommandList& cmd, RHIPipelineStateHandle simulationPSO, RHIPipelineStateHandle meshInstancePSO ) const
+        {
+            _gpuSimulation.recordDispatches( cmd, simulationPSO, meshInstancePSO );
+        }
         /**
          * @brief 지금 열린 렌더 패스에 @p listSlot 의 방출기마다 그리기 하나를 그 순서로 기록합니다. PSO 와 PassCB 는 부르는 쪽이 걸어 두었어야 합니다.
          * @details 투명 패스는 메시 투명 배치 사이의 자리마다 그 자리의 구간으로 부른다(`FrameRenderer::drawParticleSlots`).

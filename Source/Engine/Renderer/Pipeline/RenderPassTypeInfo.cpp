@@ -12,6 +12,9 @@ namespace sw
         /// SSAO 의 기본 클리어(가림 없음)입니다.
         constexpr float4 kNoOcclusionClear{ 1.0f, 1.0f, 1.0f, 1.0f };
 
+        /// 깊이 히스토리의 고정 포맷입니다(깊이 하나 — 컴퓨트가 RW 텍스처로 읽는다. R32 실수는 네 백엔드 모두 형식 있는 UAV 읽기가 된다).
+        constexpr RHIFormat kArrDepthHistoryFormat[] = { RHIFormat::R32_FLOAT };
+
         using Role = RenderPassInputRole;
         using Flag = RenderPassTraitFlag;
 
@@ -244,6 +247,21 @@ namespace sw
                         // 입자 상태 · 렌더 입력은 구조 버퍼 UAV, 간접 인자는 따로 둔 버퍼(DX11 은 RAW UAV)라 구조 버퍼와 간접 인자 겸용 능력이 필요 없다(DX11 도 돈다).
                         info._pDefaultShader = &EngineDefaultAssets::_shaderVfxSimulation;
                         info._flags          = Flag::kCompute;
+                        break;
+                    }
+                    case RenderPassType::VfxMeshInstance:
+                    {
+                        // 인스턴스 버퍼 UAV 에 쓰고 구조 버퍼만 읽는다 — 간접 인자 능력과 무관하다(컬링이 없는 DX11 은 CPU 개수로 모두 그린다).
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderVfxMeshInstance;
+                        info._flags          = Flag::kCompute;
+                        break;
+                    }
+                    case RenderPassType::DepthHistory:
+                    {
+                        // 깊이 없이 R32 실수 RT 하나에 풀스크린 삼각형을 그린다(입력은 C++ 가 직접 건다 — 파이프라인 패스가 아니라 입력 계약이 없다).
+                        info._pDefaultShader   = &EngineDefaultAssets::_shaderDepthHistory;
+                        info._pColorFormat     = kArrDepthHistoryFormat;
+                        info._colorTargetCount = 1;
                         break;
                     }
                 }

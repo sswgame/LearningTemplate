@@ -45,6 +45,7 @@ namespace sw
         , _bWarnedPoolFull{ false }
     {
         SW_ASSERT( getDef()._maxParticles >= 1 );
+        SW_ASSERT( getDef().computeSupportedTargets().has( VfxSimulationTarget::CPU ) ); // 깊이 충돌 같은 GPU 전용 모듈은 여기 오지 않는다
         _listParticle.reserve( getDef()._maxParticles );
     }
 
@@ -136,7 +137,7 @@ namespace sw
         const float3  normalPart  = hit._normal * normalSpeed;
         const float3  tangentPart = particle._velocity - normalPart;
         particle._velocity        = tangentPart * ( 1.0f - def._collision._friction ) - normalPart * def._collision._restitution;
-        particle._position        = hit._point + hit._normal * kCollisionSkin;
+        particle._position        = hit._point + hit._normal * VfxCollisionDef::kSurfaceSkin;
         return true;
     }
 

@@ -53,15 +53,13 @@ namespace sw
      *          좌표는 방출기 로컬입니다. 회전은 지금 0 입니다(회전 모듈은 데이터 형식에 없다).
      *
      *          충돌(`VfxCollisionDef`)은 적분 뒤 그 단계에 움직인 선분을 `IVfxCollisionScene` 에 묻는다. 튀기는 법선 성분을 `_restitution` 만큼 뒤집고
-     *          접선 성분을 `_friction` 만큼 줄이며, 닿은 점에서 법선 쪽으로 `kCollisionSkin` 만큼 띄운다. 띠(`VfxRenderMode::Ribbon`)는 태어난 순서로
+     *          접선 성분을 `_friction` 만큼 줄이며, 닿은 점에서 법선 쪽으로 `VfxCollisionDef::kSurfaceSkin` 만큼 띄운다(GPU 깊이 충돌과 같은 값).
+     *          CPU 는 물리 레이캐스트 방법만 돈다(`VfxCollisionDef::getSupportedTargets` — 깊이 방법의 방출기는 여기 오지 않는다). 띠(`VfxRenderMode::Ribbon`)는 태어난 순서로
      *          이어야 하므로 `writeParticles` 가 입자 번호 순으로 낸다(풀 안의 자리는 지우기마다 바뀐다).
      */
     class SW_API VfxCPUSimulation
     {
     public:
-        /** @brief 튄 입자를 닿은 면에서 띄우는 거리(방출기 로컬 미터)입니다. 다음 단계의 선분이 같은 면에서 시작해 다시 닿지 않게 한다. */
-        static constexpr float32 kCollisionSkin = 0.001f;
-
         /** @brief @p pDef 로 시뮬레이션을 만듭니다. @p pDef 는 `VfxEffectDef::validate` 를 통과한 방출기여야 합니다. @p seed 가 방출기의 씨앗입니다. */
         VfxCPUSimulation( shared_ptr<const VfxEmitterDef> pDef, uint64 seed );
 

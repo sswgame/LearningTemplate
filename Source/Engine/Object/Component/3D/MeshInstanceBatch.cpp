@@ -2,13 +2,17 @@
 
 #include "Engine/Object/Component/3D/MeshInstanceBatch.h"
 
+#include "Core/Log/Logger.h"
+
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 
 namespace sw
 {
-    MeshInstanceBatch::MeshInstanceBatch( shared_ptr<Mesh> mesh, Material* pMaterial, shared_ptr<MaterialInstance> instance, uint32 count )
+    SW_LOG_CALLER( "MeshInstanceBatch" );
+
+    MeshInstanceBatch::MeshInstanceBatch( shared_ptr<Mesh> mesh, Material* pMaterial, shared_ptr<MaterialInstance> instance, uint32 count, MeshInstanceWriter writer )
         : ScenePrimitiveBatch{ count }
         , _listEntry{ count }
         , _mesh{ std::move( mesh ) }
@@ -16,8 +20,18 @@ namespace sw
         , _instance{ std::move( instance ) }
         , _pOwnerComponent{ nullptr }
         , _sortKey{ 0 }
+        , _writer{ writer }
         , _bVisible{ SW_TRUE }
     {
+        if ( _writer == MeshInstanceWriter::GPU )
+        {
+            // 자리표 — 컴퓨트가 쓰기 전(첫 프레임 · 디스패치를 못 한 프레임)에 그려도 넓이 0 이다.
+            for ( Entry& entry : _listEntry )
+            {
+                entry._world        = float4x4::makeScale( 0.0f );
+                entry._boundsRadius = 0.0f;
+            }
+        }
     }
 
     MeshInstanceBatch::~MeshInstanceBatch()
@@ -26,9 +40,15 @@ namespace sw
         unregisterBatch();
     }
 
+    bool MeshInstanceBatch::acceptsCPUWrite() const
+    {
+        SW_LOG_ASSERT( _writer == MeshInstanceWriter::CPU, "MeshInstanceBatch: entry values of a GPU-written batch live in the GPU instance buffer" );
+        return _writer == MeshInstanceWriter::CPU;
+    }
+
     void MeshInstanceBatch::setWorld( uint32 index, const float4x4& world )
     {
-        if ( index >= _listEntry.size() )
+        if ( index >= _listEntry.size() || acceptsCPUWrite() == false )
             return;
         _listEntry[index]._world = world;
         markEntryDirty( index );
@@ -36,7 +56,7 @@ namespace sw
 
     void MeshInstanceBatch::setBoundsRadius( uint32 index, float32 radius )
     {
-        if ( index >= _listEntry.size() )
+        if ( index >= _listEntry.size() || acceptsCPUWrite() == false )
             return;
         _listEntry[index]._boundsRadius = radius;
         markEntryDirty( index );
@@ -52,7 +72,7 @@ namespace sw
 
     void MeshInstanceBatch::setSpinSeed( uint32 index, uint32 seed )
     {
-        if ( index >= _listEntry.size() )
+        if ( index >= _listEntry.size() || acceptsCPUWrite() == false )
             return;
         _listEntry[index]._spinSeed = seed;
         markEntryDirty( index );
@@ -60,7 +80,8 @@ namespace sw
 
     void MeshInstanceBatch::setSprite( uint32 index, const GPUSpriteInstanceData& sprite )
     {
-        if ( index >= _listEntry.size() || _listEntry[index]._sprite == sprite )
+        const bool bUnchanged = index >= _listEntry.size() || _listEntry[index]._sprite == sprite;
+        if ( bUnchanged || acceptsCPUWrite() == false )
             return;
         _listEntry[index]._sprite = sprite;
         markEntryDirty( index );
