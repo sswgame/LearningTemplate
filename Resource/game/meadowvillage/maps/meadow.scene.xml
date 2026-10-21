@@ -67,5 +67,85 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
+		<entity id="4" name="Cc0.crops_dirt_single">
+			<GameObject _schemaVersion="0" _name="Cc0.crops_dirt_single" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-20,0,-20"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/meadowvillage/models/crops_dirt_single.mesh"
+					               _materialPath="game/meadowvillage/materials/nature.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="Cc0.ground_grass">
+			<GameObject _schemaVersion="0" _name="Cc0.ground_grass" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-17,0,-20"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/meadowvillage/models/ground_grass.mesh"
+					               _materialPath="game/meadowvillage/materials/nature.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="Cc0.ground_path_tile">
+			<GameObject _schemaVersion="0" _name="Cc0.ground_path_tile" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-14,0,-20"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/meadowvillage/models/ground_path_tile.mesh"
+					               _materialPath="game/meadowvillage/materials/nature.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="7" name="Cc0.ground_river_tile">
+			<GameObject _schemaVersion="0" _name="Cc0.ground_river_tile" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-11,0,-20"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/meadowvillage/models/ground_river_tile.mesh"
+					               _materialPath="game/meadowvillage/materials/nature.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
 	</entities>
 </Scene>

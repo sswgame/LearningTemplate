@@ -11,6 +11,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/Shader/Binding/GPUInstanceHighlight.h"
 #include "Engine/Graphics/Shader/Binding/GPUSpriteInstanceData.h"
 #include "Engine/Object/GameObject/Registry/ScenePrimitive.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -139,6 +140,15 @@ namespace sw
         /** @brief 투명 큐의 정렬 키를 반환합니다. 0 은 기본(`Default` 레이어, 순서 0)입니다. */
         uint32 getSortKey() const { return _sortKey; }
 
+        /**
+         * @brief 강조(상호작용 외곽선 · 감각 모드)를 정합니다. 빌더가 `GPUInstance::_highlight` 로 옮기고 강조 패스(highlightoutline.hlsl)가 그립니다.
+         * @details 배치 키가 아니라 인스턴스 내용이라 켜고 꺼도 배치를 다시 나누지 않는다. 저장하지 않는 런타임 값이다 — 상호작용 쪽(`InteractionHighlightComponent`)이 매 프레임 정한다.
+         *          불투명 배치만 그린다(반투명 메시는 강조 패스가 보지 않는다).
+         */
+        void setHighlight( InstanceHighlightStyle style, const float3& color );
+        /** @brief `setHighlight` 로 정한 값(`GPUInstanceHighlight::pack`, 0 이면 없음)입니다. */
+        uint32 getHighlight() const { return _highlight; }
+
         /** @brief 바운드 반지름(메시 공간)의 최솟값을 설정합니다. 메시가 아는 경계보다 작으면 메시의 값이 쓰이므로 키우기만 합니다. */
         void setBoundsRadius( float32 radius );
         /** @brief 바운드 반지름(메시 공간)입니다. 설정한 값과 메시의 경계(`Mesh::getBoundingRadius`) 중 큰 쪽입니다. 월드 반지름은 `getWorldBounds` 가 반환합니다. */
@@ -207,6 +217,8 @@ namespace sw
         float32 _vertexAnimationPhase;
         /** @brief 투명 큐의 정렬 키입니다(0 = 기본). 저장하지 않습니다. */
         uint32 _sortKey;
+        /** @brief 강조(`GPUInstanceHighlight::pack`, 0 = 없음)입니다. 저장하지 않습니다. */
+        uint32 _highlight;
         /** @brief 등록할 때 받은 레지스트리입니다. 더티 표시는 소유자를 거치지 않고 여기로 바로 갑니다. */
         PrimitiveRegistry* _pPrimitiveRegistry;
         // "더티" 비트는 여기 없다. 레지스트리의 원자 플래그 하나가 기준이다. 더티를 이 비트필드에 두면 워커의 더티 쓰기가

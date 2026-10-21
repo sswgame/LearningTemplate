@@ -49,8 +49,37 @@ namespace sw
         , _presets{}
         , _report{}
         , _pItemCatalog{ nullptr }
+        , _reloadedMulticast{}
         , _revision{ 0 }
     {
+    }
+
+    bool AppearanceDatabase::reloadFromFolder( string_view folder, const ItemCatalog* pItemCatalog, string& outReport )
+    {
+        // 깨진 파일이 돌고 있는 외형을 지우지 않도록 임시로 먼저 읽어 검사한다(작은 파일이라 두 번 읽는다).
+        AppearanceDatabase probe;
+        if ( probe.loadFromFolder( folder, pItemCatalog ) == false )
+        {
+            outReport = probe.getReport().joined();
+            return false;
+        }
+        if ( loadFromFolder( folder, pItemCatalog ) == false )
+        {
+            outReport = _report.joined(); // 두 읽기 사이에 파일이 또 바뀌었다 — 다음 변경 알림이 다시 읽는다
+            return false;
+        }
+        _reloadedMulticast.broadcast();
+        return true;
+    }
+
+    DelegateHandle AppearanceDatabase::registerReloaded( const Delegate<void()>& delegate )
+    {
+        return _reloadedMulticast.add( delegate );
+    }
+
+    void AppearanceDatabase::unregisterReloaded( DelegateHandle handle )
+    {
+        _reloadedMulticast.remove( handle );
     }
 
     void AppearanceDatabase::clear()

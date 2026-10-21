@@ -11,9 +11,12 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Resource/AssetManager.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameEventUtil.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
+#include "GameFramework/Base/Foundation/Framework/Presentation/GameSound.h"
 #include "GameFramework/Base/Gameplay/Ability/AbilityCatalog.h"
 #include "GameFramework/Base/Gameplay/Ability/AbilitySystemComponent.h"
 #include "GameFramework/Base/Gameplay/Ability/AbilitySystemEvents.h"
@@ -484,18 +487,19 @@ namespace sw
             }
         }
 
+        // 걸린 동안의 태그 조건을 지금 못 맞추면 멈춘 채로 건다 — 태그가 생기면 `refreshOngoingTagRequirements` 가 붙인다.
+        pNewEffect->_bInhibited = _ownedTagCounts.hasAllMatchingTags( def._ongoingRequiredTags ) ? SW_FALSE : SW_TRUE;
+
         ActiveGameplayEffect* pActiveEffect = pNewEffect.get();
         _listActiveEffect.push_back( std::move( pNewEffect ) );
 
-        _ownedTagCounts.updateCounts( pActiveEffect->_grantedTags, 1 );
-        for ( const EvaluatedModifier& modifier : pActiveEffect->_listEvaluatedModifier )
-        {
-            recomputeAttribute( modifier._attribute );
-        }
+        if ( pActiveEffect->_bInhibited == SW_FALSE )
+            engageActiveEffect( *pActiveEffect );
         dispatchCues( pActiveEffect->_spec, GameplayCuePhase::Added, 1.0f );
         _effectAppliedMulticast.broadcast( *pActiveEffect );
 
-        const bool bExecuteNow = def.isPeriodic() && def._bExecutePeriodicOnApplication == SW_TRUE && pActiveEffect->_bPendingRemove == SW_FALSE;
+        const bool bExecuteNow = def.isPeriodic() && def._bExecutePeriodicOnApplication == SW_TRUE && pActiveEffect->_bPendingRemove == SW_FALSE &&
+                                 pActiveEffect->_bInhibited == SW_FALSE;
         if ( bExecuteNow )
             executeSpec( pActiveEffect->_spec, pActiveEffect->_stackCount );
         return pActiveEffect->_handle;
@@ -508,13 +512,40 @@ namespace sw
         activeEffect._bPendingRemove = SW_TRUE;
         _bHasPendingRemoval          = SW_TRUE;
 
-        _ownedTagCounts.updateCounts( activeEffect._grantedTags, -1 );
+        // 멈춘 이펙트는 이미 뗐다.
+        if ( activeEffect._bInhibited == SW_FALSE )
+            disengageActiveEffect( activeEffect );
+        dispatchCues( activeEffect._spec, GameplayCuePhase::Removed, 0.0f );
+        _effectRemovedMulticast.broadcast( activeEffect );
+    }
+
+    void AbilitySystemComponent::engageActiveEffect( ActiveGameplayEffect& activeEffect )
+    {
+        _ownedTagCounts.updateCounts( activeEffect._grantedTags, 1 );
+        for ( const hashed_string& abilityID : activeEffect._spec._pDef->_listGrantedAbility )
+        {
+            const AbilitySpecHandle handle = giveAbilityByID( abilityID, activeEffect._spec._level );
+            if ( handle.isValid() )
+                activeEffect._listGrantedAbilityHandle.push_back( handle );
+        }
         for ( const EvaluatedModifier& modifier : activeEffect._listEvaluatedModifier )
         {
             recomputeAttribute( modifier._attribute );
         }
-        dispatchCues( activeEffect._spec, GameplayCuePhase::Removed, 0.0f );
-        _effectRemovedMulticast.broadcast( activeEffect );
+    }
+
+    void AbilitySystemComponent::disengageActiveEffect( ActiveGameplayEffect& activeEffect )
+    {
+        _ownedTagCounts.updateCounts( activeEffect._grantedTags, -1 );
+        for ( const AbilitySpecHandle& handle : activeEffect._listGrantedAbilityHandle )
+        {
+            (void)clearAbility( handle ); // 게임이 먼저 거뒀으면 없다 — 거둔 것이 뜻이다
+        }
+        activeEffect._listGrantedAbilityHandle.clear();
+        for ( const EvaluatedModifier& modifier : activeEffect._listEvaluatedModifier )
+        {
+            recomputeAttribute( modifier._attribute );
+        }
     }
 
     ActiveGameplayEffect* AbilitySystemComponent::findActiveEffectMutable( ActiveEffectHandle handle )
@@ -570,7 +601,9 @@ namespace sw
                     if ( pActiveEffect->_periodTimer <= AbilitySystemComponentEffectInternal::kTimeEpsilon )
                     {
                         pActiveEffect->_periodTimer += def._period;
-                        executeSpec( pActiveEffect->_spec, pActiveEffect->_stackCount );
+                        // 멈춘 이펙트는 주기를 세되 실행하지 않는다(언리얼 Inhibition 과 같다).
+                        if ( pActiveEffect->_bInhibited == SW_FALSE )
+                            executeSpec( pActiveEffect->_spec, pActiveEffect->_stackCount );
                     }
                 }
                 if ( bTimed && pActiveEffect->_bPendingRemove == SW_FALSE )
@@ -616,6 +649,48 @@ namespace sw
             cueEvent._phase      = phase;
             _gameplayCueMulticast.broadcast( cueEvent );
             GameEventUtil::send( cueEvent );
+            playCueDef( cueTag, phase );
         }
+    }
+
+    void AbilitySystemComponent::playCueDef( TagID cueTag, GameplayCuePhase phase ) const
+    {
+#if defined( SW_WITH_CLIENT_CODE )
+        // 결정: 큐 태그 → 연출은 데이터(카탈로그의 `<GameplayCue>`)가 정한다. 큐를 내는 길은 이 함수 하나라 즉시 · 주기 · 걸림 · 해제가 모두 같은 표를 본다.
+        const AbilityCatalog* pCatalog = findCatalog();
+        const GameplayCueDef* pCueDef  = pCatalog != nullptr ? pCatalog->findCue( cueTag ) : nullptr;
+        const bool            bShows   = pCueDef != nullptr && ( phase != GameplayCuePhase::Removed || pCueDef->_bOnRemoved == SW_TRUE );
+        if ( bShows == false )
+            return;
+        const GameObject*  pOwner   = getOwner();
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        if ( pManager == nullptr )
+            return;
+        // 자리는 지금 읽는다(자기 오브젝트라 이 워커가 읽어도 된다). 스폰 · 소리는 게임 스레드의 틱 뒤에 한다.
+        const SceneComponent* pRoot    = pOwner->getPrimarySceneComponent();
+        const float3          position = ( pRoot != nullptr ? pRoot->getWorldPosition() : float3{} ) + pCueDef->_offset;
+        const GameplayCueDef  cueDef   = *pCueDef;
+        pManager->executeOrDeferPostTick( SW_DELEGATE_LAMBDA( GameObjectManager::PostTickDelegate, [pManager, cueDef, position]()
+        {
+            if ( cueDef._prefab.empty() == false )
+            {
+                AssetManager*   pAssetManager = game::findSubsystem<AssetManager>();
+                GameObject*     pSpawned      = pAssetManager != nullptr ? pAssetManager->getAssetCache<PrefabCache>().spawn( pManager, cueDef._prefab.c_str() ) : nullptr;
+                SceneComponent* pScene        = pSpawned != nullptr ? pSpawned->getPrimarySceneComponent() : nullptr;
+                if ( pScene != nullptr )
+                    pScene->setWorldPosition( position );
+                else
+                    SW_LOG_WARNING( "Gameplay cue '%#': prefab '%#' could not be spawned", cueDef._cueTag.getString(), cueDef._prefab.c_str() );
+            }
+            // 재생 id 는 쓰지 않는다(원샷). 오디오 서비스가 없는 구성(헤드리스)에서는 0 이다.
+            if ( cueDef._soundEvent.empty() == false && cueDef._bPositional == SW_TRUE )
+                (void)GameSound::postEventAt( cueDef._soundEvent, position );
+            else if ( cueDef._soundEvent.empty() == false )
+                (void)GameSound::postEvent( cueDef._soundEvent );
+        } ) );
+#else
+        (void)cueTag;
+        (void)phase;
+#endif
     }
 } // namespace sw

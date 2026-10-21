@@ -20,6 +20,7 @@
 | `GenerateThirdPartyNotices.py` | 서드파티 라이선스 고지 — 매니페스트(`vcpkg.json`)가 끌어오는 포트의 `share/<포트>/copyright` 와 저장소에 원문 그대로 둔 코드의 `ThirdParty/<이름>/LICENSE.md` 를 모은다(빌드 시점, `ThirdPartyNotices` 타깃) | `build/*/Bin/THIRD_PARTY_NOTICES.txt` |
 | `GenerateEditorIcons.py` | 에디터 아이콘 폰트와 글리프 상수 헤더 — 그림은 `Scripts/common/EditorIconFont.py` 의 `kListIcon` (손으로 돌리고 결과를 커밋한다. 다르면 `CheckEditorIcons`) | `Resource/editor/fonts/sweditoricons.ttf` · `Source/Editor/Common/GUI/EditorIconGlyphs.h` |
 | `GenerateReflectionAnnotationKeys.py` | 편집기(clangd)가 `REFLECT` · `PROPERTY` · `FUNCTION` · `ENUM` 인자 키를 완성하게 하는 선언 헤더 — 키는 `AnnotationMeta.txt`, 단위는 `ReflectUnits.h`, 내용은 `Scripts/common/ReflectionAnnotationKeys.py` (손으로 돌리고 결과를 커밋한다. 다르면 `CheckReflectionAnnotationKeys`) | `Source/Engine/Reflection/ReflectionAnnotationKeys.h` |
+| `GeneratePlaceholderHorse.py` | WildWest 승마의 자리 표시 말 — 상자 스킨드 메시 · 뼈 아홉(기수 소켓 `Saddle`) · 걸음새 클립 넷(Walk · Trot · Canter · Gallop) glTF (손으로 돌린다, 결과를 커밋한다. 진짜 말 모델이 오면 지운다) | `Resource/game/wildwest/models_raw/horse_placeholder.gltf` |
 | `GenerateSpriteTextures.py` | 엔진이 들고 다니는 작은 스프라이트 텍스처(DDS)와 클립 — 네 칸 테스트 텍스처 (손으로 돌린다, 결과를 커밋한다) | `Resource/engine/textures/test/quadrants.*` · `Resource/engine/textures/missing.dds` |
 
 `setup/` 은 **외부 도구를 찾아 설치하는** 폴더이고, 원본에서 파일을 만들어 내는 일은 구성 시점이든 빌드 시점이든 여기다.

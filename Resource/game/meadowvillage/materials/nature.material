@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Kenney Nature Kit · Fantasy Town 모델의 머티리얼 — 색은 모델 정점 색이다(텍스처 없음). 화면 확인 전 추정. -->
+<MaterialDesc formatVersion="0" name="MeadowNature" shaderPath="engine/shaders/forwardlit.hlsl" blendMode="Opaque">
+	<_properties>
+		<item name="color" type="Color" shaderType="Float4" defaultValue="1.0 1.0 1.0 1.0" displayName="Base Color" group="Surface" bHdr="0" bSrgb="1"/>
+		<item name="roughness" type="Range" shaderType="Float" defaultValue="0.6" min="0.0" max="1.0" group="Surface"/>
+	</_properties>
+	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+		<_alwaysDefines>
+			<item>MATERIAL_DOMAIN_SURFACE</item>
+		</_alwaysDefines>
+		<_multiCompiles>
+			<item name="FogMode" selected="FOG_OFF">
+				<_options>
+					<item>FOG_OFF</item>
+					<item>FOG_LINEAR</item>
+					<item>FOG_EXP</item>
+				</_options>
+			</item>
+		</_multiCompiles>
+	</_permutations>
+</MaterialDesc>

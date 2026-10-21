@@ -9,6 +9,7 @@
 #pragma once
 #include "GameFramework/Base/Actor/Combat/Weapon/Weapon.h"
 #include "GameFramework/Base/Foundation/Framework/Flow/GameInstanceBase.h"
+#include "GameFramework/Base/Gameplay/Appearance/AppearanceDataWatcher.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
 
@@ -23,10 +24,12 @@ namespace sw
 
     protected:
         bool onInitialize() override;
+        void onUpdate( float32 deltaTime ) override;
 
     private:
-        WeaponCatalog      _weaponCatalog;
-        ItemCatalog        _itemCatalog;
-        AppearanceDatabase _appearanceDatabase;
+        WeaponCatalog         _weaponCatalog;
+        ItemCatalog           _itemCatalog;
+        AppearanceDatabase    _appearanceDatabase;
+        AppearanceDataWatcher _appearanceWatcher; ///< 외형 데이터 핫 리로드(데이터보다 먼저 사라진다 — 뒤에 둔다)
     };
 } // namespace sw

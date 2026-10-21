@@ -22,6 +22,7 @@
 #include "GameFramework/Base/Gameplay/Gimmick/Genre/ShooterGimmicks.h"
 #include "GameFramework/Base/Gameplay/Gimmick/GimmickCircuitComponent.h"
 #include "GameFramework/Base/Gameplay/Gimmick/GimmickSensorComponent.h"
+#include "GameFramework/Base/Gameplay/Gimmick/TickedPathMoverComponent.h"
 #include "GameFramework/Base/Gameplay/Interaction/InteractableComponent.h"
 #include "GameFramework/Base/Gameplay/Interaction/InteractionCatalog.h"
 #include "GameFramework/Base/Gameplay/Interaction/SmartObjectComponent.h"
@@ -504,4 +505,28 @@ SW_TEST_CASE( GimmickGenreTest, Gimmick3DTriggerVariantsReceiveOverlapsInA3DScen
         SW_EXPECT_TRUE_MSG( listSeen[index] == SW_TRUE, listVariant[index]._id.c_str() );
     }
     manager.endPlay();
+}
+
+/**
+ * @brief [GimmickGenreTest] 틱 함수 바닥 — 자리는 틱 번호만으로 정해진다(고리 · 왕복), 같은 초를 다른 길로 와도 같은 자리다
+ */
+SW_TEST_CASE( GimmickGenreTest, TickedPathMoverIsAPureFunctionOfTheTick )
+{
+    const sw::vector<sw::float3> listWaypoint{
+        sw::float3{0.0f, 4.0f, 0.0f},
+        sw::float3{2.0f, 4.0f, 0.0f}
+    };
+    using Mover = sw::TickedPathMoverComponent;
+    // 고리: 0 → (0,4,0) → (2,4,0) → 0, 구간 1 초.
+    SW_EXPECT_NEAR_EQUAL( 0.0f, Mover::computeOffset( listWaypoint, 1.0f, false, 0.0 )._y, 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, Mover::computeOffset( listWaypoint, 1.0f, false, 0.5 )._y, 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, Mover::computeOffset( listWaypoint, 1.0f, false, 1.5 )._x, 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, Mover::computeOffset( listWaypoint, 1.0f, false, 2.5 )._y, 1.0e-5f ); // 끝에서 시작으로 돌아오는 구간
+    SW_EXPECT_NEAR_EQUAL( 2.0f, Mover::computeOffset( listWaypoint, 1.0f, false, 3.5 )._y, 1.0e-5f ); // 한 바퀴(3 초) 뒤 같은 자리
+    // 왕복: 0 → (0,4,0) → (2,4,0) → (0,4,0) → 0, 한 바퀴 4 초.
+    SW_EXPECT_NEAR_EQUAL( 1.0f, Mover::computeOffset( listWaypoint, 1.0f, true, 2.5 )._x, 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, Mover::computeOffset( listWaypoint, 1.0f, true, 3.5 )._y, 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, Mover::computeOffset( listWaypoint, 1.0f, true, 4.0 )._y, 1.0e-5f );
+    // 경유점이 없으면 움직이지 않는다.
+    SW_EXPECT_NEAR_EQUAL( 0.0f, Mover::computeOffset( sw::vector<sw::float3>{}, 1.0f, true, 1.0 ).getLength(), 1.0e-6f );
 }

@@ -18,6 +18,14 @@
       "animation_shell_distance": 0.1
     },
     {
+      "name": "WildWest_PlaceholderHorse",
+      "include_patterns": ["*/wildwest/models_raw/horse_placeholder*"],
+      "animation_codec": "acl",
+      "animation_sample_rate": 30,
+      "animation_precision": 0.0001,
+      "animation_shell_distance": 0.1
+    },
+    {
       "name": "Destruction_BrickWall",
       "include_patterns": ["*/empty/models_raw/brick_wall*"],
       "fracture": { "pattern": "uniform", "pieces": 200, "seed": 7, "levels": [6, 30], "interior_color": [0.55, 0.5, 0.45, 1.0] }

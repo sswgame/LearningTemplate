@@ -184,7 +184,10 @@ namespace sw
         Vector            _velocity{};     ///< 이번 이동에서 실제로 난 속도다. 움직이는 바닥이 실어 나른 몫(`_groundBody` 의 속도)은 뺀 바닥 기준 속도다.
         Vector            _groundNormal{}; ///< 서 있으면 바닥 법선이다.
         PhysicsBodyHandle _groundBody{};   ///< 딛고 선 바디다. 서 있지 않으면 비어 있다. 이 바디가 움직이면 `moveCharacter` 가 그 속도를 실어 준다.
-        bool              _bGrounded{ false };
+        /// 이번 이동에서 바닥이 실어 나른 속도(`_velocity` 에서 뺀 몫)다. 바닥을 떠나는 스텝에 컴포넌트가 이것을 관성으로 잇는다.
+        Vector  _carriedVelocity{};
+        float32 _groundYawRate{ 0.0f }; ///< 디딘 바닥이 위 축(3D Y, 2D Z) 둘레로 도는 각속도(rad/s)다. 3D 컴포넌트가 캐릭터 방향을 따라 돌린다.
+        bool    _bGrounded{ false };
     };
 
     using PhysicsCharacterState3D = PhysicsCharacterState<PhysicsDimension3D>;

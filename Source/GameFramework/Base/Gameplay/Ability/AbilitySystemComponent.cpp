@@ -89,6 +89,7 @@ namespace sw
         , _nextHandleID{ 0 }
         , _listLockDepth{ 0 }
         , _bHasPendingRemoval{ SW_FALSE }
+        , _bRefreshingOngoingTags{ SW_FALSE }
         , _abilitySetID{}
         , _healthAttribute{ "Health" }
         , _maxHealthAttribute{ "MaxHealth" }
@@ -96,6 +97,9 @@ namespace sw
         , _bShowDamageNumbers{ false }
     {
         _pModuleCodeGuard = make_unique<AbilitySystemModuleUnloadGuard>( *this );
+        // 결정: 태그가 바뀌는 길(이펙트 · 어빌리티 · 이펙트 없이 붙인 태그)은 여럿이지만 알림은 집합 하나에서 나온다 — 걸린 동안의 조건과
+        // 태그로 발동하는 어빌리티는 그 알림 하나에 건다. 소멸자의 `unregisterAllChanged` 가 함께 푼다.
+        (void)_ownedTagCounts.registerChanged( GameplayTagCountContainer::TagChangedDelegate::create<&AbilitySystemComponent::onOwnedTagChanged>( this ) );
     }
 
     AbilitySystemComponent::~AbilitySystemComponent()
@@ -255,6 +259,84 @@ namespace sw
             }
         }
         return false;
+    }
+
+    void AbilitySystemComponent::onOwnedTagChanged( TagID tag, int32 newCount )
+    {
+        refreshOngoingTagRequirements();
+        if ( newCount <= 0 )
+            return;
+
+        // 태그가 생기면(0 → 1) 그 태그나 상위 태그를 `_ownedTagTriggerTags` 로 가진 어빌리티를 발동한다(언리얼 `OwnedTagAdded` 트리거).
+        const ScopedListLock lock{ *this };
+        GameplayEventData    eventData;
+        eventData._eventTag    = tag;
+        const size_t specCount = _listAbilitySpec.size();
+        for ( size_t specIndex = 0; specIndex < specCount && specIndex < _listAbilitySpec.size(); ++specIndex )
+        {
+            const AbilitySpec& spec = *_listAbilitySpec[specIndex];
+            if ( spec._bPendingRemove == SW_TRUE )
+                continue;
+            bool bTriggers = false;
+            for ( const TagID& triggerTag : spec._pAbility->getConfig()._ownedTagTriggerTags.getTags() )
+            {
+                if ( tag.isSubtagOf( triggerTag ) )
+                {
+                    bTriggers = true;
+                    break;
+                }
+            }
+            if ( bTriggers )
+                (void)tryActivateAbility( spec._handle, &eventData ); // 조건에 막히면 발동하지 않는 것이 뜻이다
+        }
+    }
+
+    void AbilitySystemComponent::refreshOngoingTagRequirements()
+    {
+        if ( _bRefreshingOngoingTags == SW_TRUE )
+            return;
+        _bRefreshingOngoingTags = SW_TRUE;
+        {
+            // 이펙트 하나를 떼고 붙이면 태그가 바뀌어 앞서 본 이펙트의 답이 달라질 수 있다 — 바뀐 것이 없을 때까지 다시 본다.
+            // 서로의 태그를 조건으로 거는 이펙트가 번갈아 뒤집히면 끝나지 않으므로 이펙트 수 + 1 번에서 멈추고 알린다.
+            const ScopedListLock lock{ *this };
+            const size_t         maxPassCount = _listActiveEffect.size() + 1;
+            bool                 bChanged     = true;
+            size_t               passCount    = 0;
+            while ( bChanged && passCount < maxPassCount )
+            {
+                bChanged = false;
+                ++passCount;
+                const size_t effectCount = _listActiveEffect.size();
+                for ( size_t effectIndex = 0; effectIndex < effectCount && effectIndex < _listActiveEffect.size(); ++effectIndex )
+                {
+                    ActiveGameplayEffect& activeEffect = *_listActiveEffect[effectIndex];
+                    if ( activeEffect._bPendingRemove == SW_TRUE )
+                        continue;
+                    const TagContainer& requiredTags = activeEffect._spec._pDef->_ongoingRequiredTags;
+                    if ( requiredTags.getTagCount() == 0 )
+                        continue;
+                    const bool bShouldInhibit = _ownedTagCounts.hasAllMatchingTags( requiredTags ) == false;
+                    const bool bInhibited     = activeEffect._bInhibited == SW_TRUE;
+                    if ( bShouldInhibit == bInhibited )
+                        continue;
+                    bChanged = true;
+                    if ( bShouldInhibit )
+                    {
+                        activeEffect._bInhibited = SW_TRUE;
+                        disengageActiveEffect( activeEffect );
+                    }
+                    else
+                    {
+                        activeEffect._bInhibited = SW_FALSE;
+                        engageActiveEffect( activeEffect );
+                    }
+                }
+            }
+            if ( bChanged )
+                SW_LOG_ERROR( "refreshOngoingTagRequirements: effects keep inhibiting each other through their ongoing required tags - stopped after %# passes", passCount );
+        }
+        _bRefreshingOngoingTags = SW_FALSE;
     }
 
     // ------------------------------------------------------------------------------

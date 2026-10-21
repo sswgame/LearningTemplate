@@ -12,6 +12,7 @@
 #include "Engine/Character/PairedAnimation/PairedAnimationSystem.h"
 #include "Engine/Common/EngineScope.h"
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
+#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -772,4 +773,32 @@ SW_TEST_CASE( InteractionTest, RegistryCandidatesMatchFullSceneScan )
     SW_ASSERT_EQUAL( size_t( 1 ), listAfter.size() );
     SW_EXPECT_TRUE( listAfter[0] == pAgain );
 #endif
+}
+
+/**
+ * @brief [InteractionTest] 강조 요청은 대상 자신의 틱에서 그 오브젝트의 메시로 옮겨진다(강조 패스가 인스턴스 칸으로 읽는다) — 방식 · 색이 정의대로이고, 요청을 풀면 지운다
+ */
+SW_TEST_CASE( InteractionTest, HighlightRequestReachesTheOwnersMeshes )
+{
+    GameObjectManager manager;
+    InteractionDef    def = InteractionTestInternal::makeDef( "Sense", InteractionInputMode::Press );
+    def._highlight        = InteractionHighlight::Sense;
+    def._highlightColor   = float3{ 0.0f, 1.0f, 0.0f };
+    GameObject* pChest    = manager.createGameObject( hashed_string( "Chest" ) );
+    pChest->addComponent<SceneComponent>();
+    MeshComponent*         pMesh         = pChest->addComponent<MeshComponent>();
+    InteractableComponent* pInteractable = pChest->addComponent<InteractableComponent>();
+    SW_ASSERT_TRUE( pMesh != nullptr && pInteractable != nullptr );
+    pInteractable->setDefinition( def );
+    manager.beginPlay();
+
+    pInteractable->setHighlightRequested( true );
+    manager.update( 1.0f / 60.0f );
+    SW_EXPECT_TRUE( GPUInstanceHighlight::getStyle( pMesh->getHighlight() ) == InstanceHighlightStyle::Sense );
+    SW_EXPECT_EQUAL( GPUInstanceHighlight::pack( InstanceHighlightStyle::Sense, float3{ 0.0f, 1.0f, 0.0f } ), pMesh->getHighlight() );
+
+    pInteractable->setHighlightRequested( false );
+    manager.update( 1.0f / 60.0f );
+    SW_EXPECT_EQUAL( 0u, pMesh->getHighlight() );
+    manager.endPlay();
 }

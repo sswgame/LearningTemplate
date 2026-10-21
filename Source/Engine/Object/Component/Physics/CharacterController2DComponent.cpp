@@ -27,6 +27,7 @@ namespace sw
         , _writtenRotation{}
         , _verticalSpeed{ 0.0f }
         , _pendingJumpSpeed{ 0.0f }
+        , _airVelocity{ 0.0f }
         , _bHasWritten{ false }
     {
     }
@@ -134,11 +135,22 @@ namespace sw
             _verticalSpeed = jumpSpeed;
 
         _previousPosition = _state._position;
-        _state            = pScene->moveCharacter( _character, float2{ moveVelocity, _verticalSpeed }, fixedDeltaTime );
+        _state            = pScene->moveCharacter( _character, float2{ moveVelocity + _airVelocity, _verticalSpeed }, fixedDeltaTime );
         if ( _state._bGrounded && _verticalSpeed <= 0.0f )
+        {
             _verticalSpeed = 0.0f;
+            _airVelocity   = 0.0f;
+        }
         else if ( _verticalSpeed > 0.0f && _state._velocity._y < _verticalSpeed )
             _verticalSpeed = _state._velocity._y;
+        // 결정: 바닥을 떠나는 스텝에 바닥이 실어 나르던 속도를 관성으로 잇는다(3D `CharacterControllerComponent` 와 같다 — 천장 판정 뒤에 둔다).
+        const bool bLeftGround = _state._bGrounded == false && _state._carriedVelocity.getLengthSquared() > 0.0f;
+        if ( bLeftGround )
+        {
+            _airVelocity += _state._carriedVelocity._x;
+            if ( _state._carriedVelocity._y > 0.0f )
+                _verticalSpeed += _state._carriedVelocity._y;
+        }
     }
 
     void CharacterController2DComponent::endPhysicsFrame( ScenePhysics& physics, float32 alpha )

@@ -23,6 +23,8 @@
 
 namespace sw
 {
+    struct ControlIntent;
+
     class INetPeers;
 
     /**
@@ -136,6 +138,11 @@ namespace sw
          * @details 그 틱까지는 처리한 것으로 본다. 그 틱 이전의 입력은 더 받지 않고, 스냅샷의 확인 틱도 다음 틱으로 넘어간다.
          */
         [[nodiscard]] bool popInput( int32 connectionID, uint32 tick, vector<uint8>& outInputBuffer, bool& outbExact );
+        /**
+         * @brief `popInput` 의 바이트를 의도(`ControlIntent::read`)로 읽습니다. 클라이언트의 `ReplicationClient::sendIntent` 와 짝입니다.
+         * @details 되풀이한 입력(@p outbExact 가 false)이면 발동 비트를 지웁니다. 받은 입력이 없거나 깨졌으면 false 이고 @p outIntent 는 그대로입니다.
+         */
+        [[nodiscard]] bool popIntent( int32 connectionID, uint32 tick, ControlIntent& outIntent, bool& outbExact );
         /**
          * @brief 이 클라이언트가 조종하는 엔티티의 상태를, 그 상태를 만든 마지막 입력 틱과 함께 정합니다. 다음 스냅샷부터 예산과 관련 정책에 상관없이 통째로 싣습니다.
          * @details 틱과 상태는 늘 한 번에 정한다. 상태가 `NetSnapshot::kMaxEntityBytes` 를 넘으면 오류를 남기고 정하지 않으며 false 를 반환한다.

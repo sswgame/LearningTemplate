@@ -46,6 +46,7 @@ namespace sw
                        Memory::compare( &instance._boundsCenter, &raw._boundsCenter, sizeof( instance._boundsCenter ) ) != 0 ||
                        Memory::compare( &instance._boundsRadius, &raw._boundsRadius, sizeof( instance._boundsRadius ) ) != 0 ||
                        instance._blendMode != raw._blendMode || instance._spinSeed != raw._spinSeed || instance._sprite != raw._sprite ||
+                       instance._highlight != raw._highlight ||
                        Memory::compare( &instance._vertexAnimationPhase, &raw._vertexAnimationPhase, sizeof( instance._vertexAnimationPhase ) ) != 0;
             }
 
@@ -58,6 +59,7 @@ namespace sw
                 outInstance._blendMode            = raw._blendMode;
                 outInstance._spinSeed             = raw._spinSeed;
                 outInstance._sprite               = raw._sprite;
+                outInstance._highlight            = raw._highlight;
                 outInstance._vertexAnimationPhase = raw._vertexAnimationPhase;
             }
 
@@ -272,6 +274,7 @@ namespace sw
         candidate._bReverseCulling      = GPUSceneBuilderInternal::computeReverseCulling( world );
         candidate._spinSeed             = pMeshComp->getGPUSpinSeed();
         candidate._sprite               = pMeshComp->getSpriteInstanceData();
+        candidate._highlight            = pMeshComp->getHighlight();
         candidate._vertexAnimationPhase = pMeshComp->getVertexAnimationPhase();
         candidate._sortKey              = pMeshComp->getSortKey();
         // 소유권을 싣는다. RT 가 upload() 에서 역참조한다. 스냅샷은 머티리얼과 인스턴스의 소유권도
@@ -313,6 +316,7 @@ namespace sw
         candidate._bReverseCulling           = GPUSceneBuilderInternal::computeReverseCulling( item._world );
         candidate._spinSeed                  = item._spinSeed;
         candidate._sprite                    = item._sprite;
+        candidate._highlight                 = 0; // 인스턴스 배치 항목(데미지 숫자 · HP 바)은 강조하지 않는다
         candidate._vertexAnimationPhase      = 0.0f;
         candidate._sortKey                   = pBatch->getSortKey();
         // 메시 컴포넌트 버전과 같은 규칙이다. 원시 포인터로 먼저 비교하고, 다르면 소유권을 싣는다.
@@ -356,6 +360,7 @@ namespace sw
         outInstance._blendMode            = candidate._blendMode;
         outInstance._spinSeed             = candidate._spinSeed;
         outInstance._sprite               = candidate._sprite;
+        outInstance._highlight            = candidate._highlight;
         outInstance._vertexAnimationPhase = candidate._vertexAnimationPhase;
     }
 

@@ -112,12 +112,13 @@ namespace sw
         float3                  _pendingSurfaceVelocity;  ///< 이번 프레임에 쌓인 면 속도(`_commandLock`)
         float3                  _frameSurfaceVelocity;    ///< 이번 물리 프레임의 면 속도
         float3                  _pendingLaunch;           ///< 0 이 아니면 다음 스텝에 쏜다(`_commandLock`)
-        float3                  _airVelocity;             ///< 발사의 수평 속도 — 땅에 다시 닿으면 0
+        float3                  _airVelocity;             ///< 발사 · 떠난 바닥의 수평 속도 — 땅에 다시 닿으면 0
         float3                  _previousPosition;
         float3                  _writtenPosition;
         quaternion              _writtenRotation;
         float32                 _verticalSpeed;
         float32                 _pendingJumpSpeed; ///< 0 이 아니면 다음 스텝에 준다(`_commandLock`)
+        float32                 _pendingGroundYaw; ///< 마지막 쓰기 뒤 디딘 바닥이 위 축 둘레로 돈 각(rad) — 다음 트랜스폼 쓰기에 얹는다
         bool                    _bHasWritten;
     };
 } // namespace sw

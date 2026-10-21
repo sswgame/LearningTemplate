@@ -70,7 +70,7 @@ namespace sw
      *          체력 어트리뷰트의 이름은 `_healthAttribute` 와 `_maxHealthAttribute` 로 바꿀 수 있다.
      *
      *          **저장**: PROPERTY 만 저장한다(어빌리티 세트 id, 표시 설정). 런타임 상태(어트리뷰트 값, 이펙트, 어빌리티)는 저장하지 않고
-     *          플레이를 시작할 때 세트에서 다시 만든다. 세이브가 필요한 값은 게임의 `SaveGame` 이 어트리뷰트를 읽어서 담는다.
+     *          플레이를 시작할 때 세트에서 다시 만든다. 세이브가 필요한 값은 게임의 `SaveGame` 이 `AbilityAttributeSaveUtil` 로 base 값을 담는다.
      */
     REFLECT( Category = "Gameplay", DisplayName = "Ability System Component", Tooltip = "Attributes, gameplay effects, abilities and gameplay tags (Unreal GAS style)" )
     class SW_GF_API AbilitySystemComponent : public HealthSourceComponent
@@ -346,6 +346,17 @@ namespace sw
         ActiveEffectHandle applyDurationSpec( const GameplayEffectSpec& spec );
         /** @brief 적용된 이펙트를 활성 목록에서 해제합니다. 태그, 집계, 큐, 알림을 함께 정리합니다. */
         void removeActiveEffectInternal( ActiveGameplayEffect& activeEffect );
+        /**
+         * @brief 걸린 이펙트가 대상에 주는 것(부여 태그 · 부여 어빌리티 · 모디파이어 집계)을 붙입니다. `disengageActiveEffect` 와 짝입니다.
+         * @details 걸 때 · 해제할 때 · 걸린 동안의 태그 조건이 바뀔 때가 모두 이 짝 하나를 지나므로, 주는 것이 하나 늘어도 빠뜨릴 곳이 없습니다.
+         */
+        void engageActiveEffect( ActiveGameplayEffect& activeEffect );
+        /** @brief `engageActiveEffect` 가 붙인 것을 뗍니다. */
+        void disengageActiveEffect( ActiveGameplayEffect& activeEffect );
+        /** @brief 걸린 동안의 태그 조건(`_ongoingRequiredTags`)을 지금 태그로 다시 보고, 멈춤 · 재개가 바뀐 이펙트를 떼고 붙입니다. */
+        void refreshOngoingTagRequirements();
+        /** @brief 가진 태그가 생기거나 사라질 때 부릅니다(`_ownedTagCounts` 구독). 걸린 동안의 조건을 다시 보고, 생긴 태그로 발동하는 어빌리티를 발동합니다. */
+        void onOwnedTagChanged( TagID tag, int32 newCount );
         /** @brief 적용된 이펙트를 찾습니다. 지우는 중인 것은 제외합니다. */
         ActiveGameplayEffect* findActiveEffectMutable( ActiveEffectHandle handle );
         /** @brief 같은 정의로 걸려 있는 스택 이펙트를 찾습니다. */
@@ -354,6 +365,8 @@ namespace sw
         void updateActiveEffects( float32 deltaTime );
         /** @brief 이펙트 하나의 큐를 내보냅니다. */
         void dispatchCues( const GameplayEffectSpec& spec, GameplayCuePhase phase, float32 magnitude );
+        /** @brief 카탈로그의 큐 정의(`<GameplayCue>`)가 있으면 그 연출(프리팹 · 소리)을 틱 뒤에 냅니다. 클라이언트 코드가 없는 빌드에서는 아무것도 하지 않습니다. */
+        void playCueDef( TagID cueTag, GameplayCuePhase phase ) const;
         /** @brief 지우라고 표시된 이펙트와 스펙을 실제로 지웁니다. 잠금이 풀렸을 때만 실행합니다. */
         void compactPendingRemovals();
 
@@ -414,6 +427,7 @@ namespace sw
         uint64                                                                                          _nextHandleID;
         uint32                                                                                          _listLockDepth;
         uint8                                                                                           _bHasPendingRemoval;
+        uint8                                                                                           _bRefreshingOngoingTags; ///< `refreshOngoingTagRequirements` 안이다 — 그 안에서 바뀐 태그로 다시 들어가지 않는다
 
         // ---- 저장되는 설정 ----
         PROPERTY( Category = "Ability System", DisplayName = "Ability Set", Tooltip = "Ability set id in the AbilityCatalog, granted on begin play" )

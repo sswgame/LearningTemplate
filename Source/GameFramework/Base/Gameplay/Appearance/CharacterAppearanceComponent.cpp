@@ -137,7 +137,8 @@ namespace sw
         , _socketTask{ *this }
         , _rig{}
         , _socketCache{}
-        , _resolved{}
+        , _state{}
+        , _pEquipment{ nullptr }
         , _bodyBindBones{}
         , _bodyBones{}
         , _listSpawnedPart{}
@@ -146,6 +147,8 @@ namespace sw
         , _taskUnit{}
         , _previewSelection{}
         , _pPreviewDatabase{ nullptr }
+        , _pReloadDatabase{ nullptr }
+        , _reloadSubscription{}
         , _assembleCount{ 0 }
         , _bodyPart{ -1 }
         , _bPartsVisible{ true }
@@ -161,12 +164,26 @@ namespace sw
     {
         Component::onBeginPlay();
         _bStarted = SW_TRUE;
+        // 핫 리로드: 외형 데이터를 다시 읽으면(`AppearanceDatabase::reloadFromFolder`) 다시 조립한다 — 상태가 데이터 버전으로 다시 해석한다.
+        _pReloadDatabase = game::findSubsystem<AppearanceDatabase>();
+        if ( _pReloadDatabase != nullptr )
+            _reloadSubscription = _pReloadDatabase->registerReloaded( Delegate<void()>::create<&CharacterAppearanceComponent::onAppearanceDataReloaded>( this ) );
         if ( _presetID.empty() == false )
+            requestAssemble();
+    }
+
+    void CharacterAppearanceComponent::onAppearanceDataReloaded()
+    {
+        if ( _bStarted == SW_TRUE && _presetID.empty() == false )
             requestAssemble();
     }
 
     void CharacterAppearanceComponent::onEndPlay()
     {
+        if ( _pReloadDatabase != nullptr )
+            _pReloadDatabase->unregisterReloaded( _reloadSubscription );
+        _pReloadDatabase    = nullptr;
+        _reloadSubscription = DelegateHandle{};
         unregisterSocketTask();
         despawnParts();
         _bStarted = SW_FALSE;
@@ -209,6 +226,13 @@ namespace sw
             return;
         }
         _listSlotOverride.push_back( SlotOverride{ slot, itemID } );
+        if ( _bStarted == SW_TRUE )
+            requestAssemble();
+    }
+
+    void CharacterAppearanceComponent::setEquipment( const Equipment* pEquipment )
+    {
+        _pEquipment = pEquipment;
         if ( _bStarted == SW_TRUE )
             requestAssemble();
     }
@@ -339,17 +363,24 @@ namespace sw
             pSlot->_visibleVisual = hashed_string{};
             pSlot->_state         = hashed_string{};
         }
-        AppearanceResolver::resolve( *pDatabase, spec, _resolved );
+        // 해석은 외형 상태 하나가 한다 — 장비 덮어쓰기와 떨어져 나감 판정이 같은 길을 지난다. 데이터 서비스가 바뀌었으면(다시 띄움) 처음부터 다시 잡는다.
+        if ( _state.getDatabase() != pDatabase )
+            _state.initialize( pDatabase, spec );
+        else
+            _state.setSpec( spec );
+        (void)_state.update( _pEquipment ); // 바뀐 것이 없으면 지난 해석을 그대로 쓴다
+        vector<AppearanceDetachEvent> listDetachEvent;
+        _state.takeDetachEvents( listDetachEvent );
 
         _bodyPart = applyBodyPart( *pBody );
         CharacterPoseUtil::makeBindBones( pBody->getSkeleton(), _bodyBindBones );
         _bodyBones = _bodyBindBones;
         (void)CharacterPoseUtil::copyUnitPose( *pBody, _bodyBones ); // 포즈가 아직 없으면 바인드 본 그대로 소켓을 계산한다
         string socketError;
-        if ( _rig.rebuild( _resolved, _bodyBindBones, _socketCache, &socketError ) == false )
+        if ( _rig.rebuild( _state.getResolved(), _bodyBindBones, _socketCache, &socketError ) == false )
             SW_LOG_ERROR( "Appearance '%#' sockets: %#", _presetID.c_str(), socketError.c_str() );
 
-        syncParts( *pManager, *pBody, _bodyPart );
+        syncParts( *pManager, *pBody, _bodyPart, listDetachEvent );
         bindSocketParts( *pManager );
         applyMaterialValues( *pManager, *pBody );
         applyVisibility( *pManager );
@@ -383,9 +414,9 @@ namespace sw
 
     int32 CharacterAppearanceComponent::applyBodyPart( SkeletalMeshComponent& body )
     {
-        for ( size_t partIndex = 0; partIndex < _resolved._listPart.size(); ++partIndex )
+        for ( size_t partIndex = 0; partIndex < _state.getResolved()._listPart.size(); ++partIndex )
         {
-            const ResolvedPart& part = _resolved._listPart[partIndex];
+            const ResolvedPart& part = _state.getResolved()._listPart[partIndex];
             if ( part._owner.empty() == false || part._kind != AppearancePartKind::Skinned )
                 continue;
             // 스켈레톤을 먼저 적용한다. 메시의 스킨 사본이 그 본 수를 참조하기 때문이다.
@@ -403,19 +434,39 @@ namespace sw
         return -1;
     }
 
-    void CharacterAppearanceComponent::syncParts( GameObjectManager& manager, SkeletalMeshComponent& body, int32 bodyPart )
+    bool CharacterAppearanceComponent::releaseDetachedPart( GameObject& object, const SpawnedPart& spawned, const vector<AppearanceDetachEvent>& listDetachEvent ) const
+    {
+        if ( spawned._bSocketPart == SW_FALSE )
+            return false;
+        for ( const AppearanceDetachEvent& detachEvent : listDetachEvent )
+        {
+            const ResolvedDetachedPart& detached  = detachEvent._part;
+            const bool                  bSamePart = detached._owner == spawned._owner && detached._partName == spawned._partName && detached._asset == spawned._asset;
+            if ( bSamePart == false )
+                continue;
+            SocketBindingComponent* pBinding = object.getComponent<SocketBindingComponent>();
+            if ( pBinding != nullptr && pBinding->release( SocketReleaseMode::Physics, detached._impulse ) )
+                return true;
+            SW_LOG_WARNING( "Appearance '%#' part '%#' fell off but has no physics body to release onto - removed", _presetID.c_str(), spawned._partName.c_str() );
+            return false;
+        }
+        return false;
+    }
+
+    void CharacterAppearanceComponent::syncParts( GameObjectManager& manager, SkeletalMeshComponent& body, int32 bodyPart,
+                                                  const vector<AppearanceDetachEvent>& listDetachEvent )
     {
         using Internal = CharacterAppearanceComponentInternal;
         // 남길 것을 고르고 없어진 것은 지운다. 같은 부품(주인, 이름, 에셋)은 그 오브젝트를 그대로 쓴다. 그래서 무기를 바꿔도 투구는 그대로 남는다.
         vector<SpawnedPart> listKeep;
-        vector<uint8>       listPartCovered( _resolved._listPart.size(), SW_FALSE );
+        vector<uint8>       listPartCovered( _state.getResolved()._listPart.size(), SW_FALSE );
         for ( const SpawnedPart& spawned : _listSpawnedPart )
         {
             int32 matched = -1;
-            for ( size_t partIndex = 0; partIndex < _resolved._listPart.size(); ++partIndex )
+            for ( size_t partIndex = 0; partIndex < _state.getResolved()._listPart.size(); ++partIndex )
             {
                 const bool bCandidate = listPartCovered[partIndex] == SW_FALSE && static_cast<int32>( partIndex ) != bodyPart;
-                if ( bCandidate && Internal::isSamePart( _resolved._listPart[partIndex], spawned._owner, spawned._partName, spawned._asset ) )
+                if ( bCandidate && Internal::isSamePart( _state.getResolved()._listPart[partIndex], spawned._owner, spawned._partName, spawned._asset ) )
                 {
                     matched = static_cast<int32>( partIndex );
                     break;
@@ -424,7 +475,7 @@ namespace sw
             GameObject* pObject = manager.resolveGameObject( spawned._object );
             if ( matched < 0 || pObject == nullptr )
             {
-                if ( pObject != nullptr )
+                if ( pObject != nullptr && releaseDetachedPart( *pObject, spawned, listDetachEvent ) == false )
                     manager.destroyObject( pObject );
                 continue;
             }
@@ -438,9 +489,9 @@ namespace sw
         AssetManager*                                 pAssetManager = game::findSubsystem<AssetManager>();
         SceneComponent*                               pBodyScene    = body.getOwner() != nullptr ? body.getOwner()->getPrimarySceneComponent() : nullptr;
         const TComponentHandle<SkeletalMeshComponent> bodyHandle{ &body };
-        for ( size_t partIndex = 0; partIndex < _resolved._listPart.size(); ++partIndex )
+        for ( size_t partIndex = 0; partIndex < _state.getResolved()._listPart.size(); ++partIndex )
         {
-            const ResolvedPart& part      = _resolved._listPart[partIndex];
+            const ResolvedPart& part      = _state.getResolved()._listPart[partIndex];
             const bool          bSkipPart = listPartCovered[partIndex] == SW_TRUE || static_cast<int32>( partIndex ) == bodyPart || part._asset.empty();
             if ( bSkipPart )
                 continue;
@@ -490,7 +541,7 @@ namespace sw
                 continue;
             GameObject*             pObject  = manager.resolveGameObject( spawned._object );
             SocketBindingComponent* pBinding = pObject != nullptr ? pObject->getComponent<SocketBindingComponent>() : nullptr;
-            const ResolvedPart&     part     = _resolved._listPart[spawned._partIndex];
+            const ResolvedPart&     part     = _state.getResolved()._listPart[spawned._partIndex];
             float4x4                inUnit;
             uint32                  unitIndex = AppearanceSocketRig::kNoUnit;
             if ( pBinding == nullptr || _rig.computePlacement( part._placement, _bodyBones, inUnit, unitIndex ) == false )
@@ -515,11 +566,11 @@ namespace sw
     void CharacterAppearanceComponent::applyMaterialValues( GameObjectManager& manager, SkeletalMeshComponent& body )
     {
         using Internal = CharacterAppearanceComponentInternal;
-        for ( const ResolvedMaterialValue& value : _resolved._listMaterialValue )
+        for ( const ResolvedMaterialValue& value : _state.getResolved()._listMaterialValue )
         {
             if ( value._target != ResolvedMaterialTarget::Parameter )
                 continue; // 염색 마스크 채널과 팔레트 슬롯은 그것을 읽는 머티리얼이 생기면 적용한다
-            if ( value._owner.empty() && ( value._part.empty() || ( _bodyPart >= 0 && _resolved._listPart[static_cast<size_t>( _bodyPart )]._partName == value._part ) ) )
+            if ( value._owner.empty() && ( value._part.empty() || ( _bodyPart >= 0 && _state.getResolved()._listPart[static_cast<size_t>( _bodyPart )]._partName == value._part ) ) )
                 Internal::applyParameter( body, value );
             for ( const SpawnedPart& spawned : _listSpawnedPart )
             {
@@ -545,7 +596,7 @@ namespace sw
             if ( pObject == nullptr )
                 continue;
             // 숨기는 칸의 부품은 몸이 보여도 숨긴다(1인칭의 머리 · 손 무기).
-            const hashed_string& owner    = _resolved._listPart[spawned._partIndex]._owner;
+            const hashed_string& owner    = _state.getResolved()._listPart[spawned._partIndex]._owner;
             const bool           bVisible = _bPartsVisible && ( owner.empty() || AppearanceXMLUtil::containsName( _listHiddenSlot, owner ) == false );
             Internal::forEachMesh( *pObject, [bVisible]( MeshComponent& mesh )
             { mesh.setVisible( bVisible ); } );
@@ -565,7 +616,7 @@ namespace sw
             SocketBindingComponent* pBinding = pObject != nullptr ? pObject->getComponent<SocketBindingComponent>() : nullptr;
             float4x4                inUnit;
             uint32                  unitIndex = AppearanceSocketRig::kNoUnit;
-            if ( pBinding != nullptr && _rig.computePlacement( _resolved._listPart[spawned._partIndex]._placement, _bodyBones, inUnit, unitIndex ) )
+            if ( pBinding != nullptr && _rig.computePlacement( _state.getResolved()._listPart[spawned._partIndex]._placement, _bodyBones, inUnit, unitIndex ) )
                 pBinding->updateSocketTransform( inUnit );
         }
     }

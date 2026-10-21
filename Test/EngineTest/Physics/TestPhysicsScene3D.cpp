@@ -609,6 +609,9 @@ SW_TEST_CASE( PhysicsScene3DTest, CharacterIsCarriedByRotatingKinematicPlatform 
     SW_EXPECT_TRUE( state._groundBody == platform );
     SW_EXPECT_NEAR_EQUAL( expected._x, state._position._x, 0.1f );
     SW_EXPECT_NEAR_EQUAL( expected._z, state._position._z, 0.1f );
+    // 바닥의 위 축 각속도(초속 1 라디안)와 실어 나른 속도(반지름 2 × 1 = 2 m/s)가 상태로 나간다 — 컴포넌트가 방향을 돌리고 관성을 잇는 근거다.
+    SW_EXPECT_NEAR_EQUAL( 1.0f, state._groundYawRate, 0.05f );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, state._carriedVelocity.getLength(), 0.2f );
 }
 
 /**

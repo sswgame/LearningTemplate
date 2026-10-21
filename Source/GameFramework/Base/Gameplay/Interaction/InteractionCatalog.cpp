@@ -23,7 +23,7 @@ namespace sw
         {
             static constexpr const utf8* kArrInteractionAttribute[] = { "id", "prompt", "mode", "duration", "presses", "decay",
                                                                         "maxParticipants", "maxDistance", "maxAngle", "lineOfSight", "cooldown", "requiredTags",
-                                                                        "forbiddenTags", "alignment", "highlight", "authority", "montage",
+                                                                        "forbiddenTags", "alignment", "highlight", "highlightColor", "authority", "montage",
                                                                         "pairedAnimation", "interactorRole", "interactableRole" };
             static constexpr const utf8* kArrStepAttribute[]        = { "prompt", "mode", "duration", "presses", "decay", "maxParticipants", "montage",
                                                                         "pairedAnimation", "interactorRole", "interactableRole" };
@@ -140,6 +140,7 @@ namespace sw
         if ( pAlignment != nullptr )
             outDef._alignmentMarker = hashed_string( pAlignment );
         bValid = Internal::readEnum( node, "highlight", outDef._highlight, sourceName ) && bValid;
+        bValid = GameDataXML::readOptionalFloat3( node, "highlightColor", sourceName, outDef._highlightColor ) && bValid;
         bValid = Internal::readEnum( node, "authority", outDef._authority, sourceName ) && bValid;
 
         InteractionStepDef rootStep;

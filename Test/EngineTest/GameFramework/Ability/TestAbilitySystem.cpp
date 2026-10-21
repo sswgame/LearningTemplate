@@ -12,6 +12,7 @@
 
 #include "GameFramework/Base/Foundation/Framework/GameEvents.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
+#include "GameFramework/Base/Gameplay/Ability/AbilityAttributeSave.h"
 #include "GameFramework/Base/Gameplay/Ability/AbilityCatalog.h"
 #include "GameFramework/Base/Gameplay/Ability/AbilitySystemComponent.h"
 #include "GameFramework/Base/Gameplay/Ability/AbilitySystemEvents.h"
@@ -986,4 +987,169 @@ SW_TEST_CASE( AbilitySystemTest, EnumNamesRoundTrip )
     // 모르는 이름은 false 다.
     AttributeModOp unknown{ AttributeModOp::Divide };
     SW_EXPECT_FALSE( registry.enumFromString( "Subtract", unknown ) );
+}
+
+/**
+ * @brief [AbilitySystemTest] 이펙트가 준 어빌리티는 걸린 동안만 있다 — 장비 이펙트가 스킬을 주고, 해제하면 거둔다
+ */
+SW_TEST_CASE( AbilitySystemTest, EffectGrantsAbilitiesWhileActive )
+{
+    constexpr const utf8* kGrantXML = R"(<AbilityCatalog>
+  <Ability id="GA_SwordSlash" class="ApplyEffects"/>
+  <GameplayEffect id="GE_EquipSword" duration="Infinite">
+    <GrantAbility id="GA_SwordSlash"/>
+  </GameplayEffect>
+</AbilityCatalog>)";
+
+    AbilityCatalog catalog;
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kGrantXML, "AbilitySystemTest.Grant" ) );
+    GameObjectManager       manager;
+    AbilitySystemComponent* pAbilitySystem = spawnAbilityOwner( manager, "Owner" );
+    SW_ASSERT_NOT_NULL( pAbilitySystem );
+    pAbilitySystem->setCatalog( &catalog );
+
+    const ActiveEffectHandle effect = pAbilitySystem->applyGameplayEffectToSelf( "GE_EquipSword" );
+    SW_ASSERT_TRUE( effect.isValid() );
+    SW_EXPECT_TRUE( pAbilitySystem->findAbilitySpecHandle( "GA_SwordSlash" ).isValid() );
+    SW_EXPECT_EQUAL( 1u, pAbilitySystem->getAbilityCount() );
+
+    SW_EXPECT_TRUE( pAbilitySystem->removeActiveEffect( effect ) );
+    SW_EXPECT_FALSE( pAbilitySystem->findAbilitySpecHandle( "GA_SwordSlash" ).isValid() );
+    SW_EXPECT_EQUAL( 0u, pAbilitySystem->getAbilityCount() );
+
+    // 즉시 이펙트는 걸려 있지 않아 줄 동안이 없다 — 카탈로그가 그 이펙트를 넣지 않는다.
+    constexpr const utf8* kInstantGrantXML = R"(<AbilityCatalog>
+  <GameplayEffect id="GE_Bad" duration="Instant"><GrantAbility id="GA_SwordSlash"/></GameplayEffect>
+</AbilityCatalog>)";
+    AbilityCatalog        badCatalog;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "an Instant effect that grants an ability" );
+        (void)badCatalog.loadFromXMLText( kInstantGrantXML, "AbilitySystemTest.InstantGrant" ); // 아래 개수가 본다
+    }
+    SW_EXPECT_EQUAL( 0u, badCatalog.getEffectCount() );
+}
+
+/**
+ * @brief [AbilitySystemTest] 걸린 동안의 태그 조건 — 태그가 없는 동안 이펙트는 남되 모디파이어 · 부여 태그가 빠지고, 태그가 돌아오면 다시 든다
+ */
+SW_TEST_CASE( AbilitySystemTest, OngoingTagRequirementsInhibitAndResumeAnEffect )
+{
+    GameObjectManager       manager;
+    AbilitySystemComponent* pAbilitySystem = spawnAbilityOwner( manager, "Owner" );
+    SW_ASSERT_NOT_NULL( pAbilitySystem );
+    addPowerAttribute( *pAbilitySystem, 5.0f );
+
+    shared_ptr<GameplayEffectDef> pBuff = makeModifierEffect( "Buff", EffectDurationPolicy::Infinite, 0.0f, "Power", AttributeModOp::Add, 10.0f );
+    pBuff->_ongoingRequiredTags.addTag( "State.Armed"_tag );
+    pBuff->_grantedTags.addTag( "State.Buffed"_tag );
+
+    const ActiveEffectHandle handle = pAbilitySystem->applyGameplayEffectSpecToSelf( pAbilitySystem->makeOutgoingSpec( pBuff ) );
+    SW_ASSERT_TRUE( handle.isValid() );
+    SW_EXPECT_TRUE( pAbilitySystem->isActiveEffect( handle ) );
+    SW_EXPECT_NEAR_EQUAL( 5.0f, pAbilitySystem->getAttributeValue( "Power" ).value(), 0.001f ); // 조건을 못 맞춰 멈춘 채로 걸렸다
+    SW_EXPECT_FALSE( pAbilitySystem->getOwnedTagCounts().hasMatchingTag( "State.Buffed"_tag ) );
+
+    pAbilitySystem->getOwnedTagCounts().updateCount( "State.Armed"_tag, 1 );
+    SW_EXPECT_NEAR_EQUAL( 15.0f, pAbilitySystem->getAttributeValue( "Power" ).value(), 0.001f );
+    SW_EXPECT_TRUE( pAbilitySystem->getOwnedTagCounts().hasMatchingTag( "State.Buffed"_tag ) );
+
+    pAbilitySystem->getOwnedTagCounts().updateCount( "State.Armed"_tag, -1 );
+    SW_EXPECT_NEAR_EQUAL( 5.0f, pAbilitySystem->getAttributeValue( "Power" ).value(), 0.001f );
+    SW_EXPECT_FALSE( pAbilitySystem->getOwnedTagCounts().hasMatchingTag( "State.Buffed"_tag ) );
+    SW_EXPECT_TRUE( pAbilitySystem->isActiveEffect( handle ) ); // 멈춤은 해제가 아니다
+
+    // 멈춘 채로 해제해도 태그 개수가 음수로 가지 않는다(이미 뗐다).
+    SW_EXPECT_TRUE( pAbilitySystem->removeActiveEffect( handle ) );
+    SW_EXPECT_EQUAL( 0, pAbilitySystem->getOwnedTagCounts().getCount( "State.Buffed"_tag ) );
+    pAbilitySystem->getOwnedTagCounts().updateCount( "State.Armed"_tag, 1 );
+    SW_EXPECT_NEAR_EQUAL( 5.0f, pAbilitySystem->getAttributeValue( "Power" ).value(), 0.001f );
+}
+
+/**
+ * @brief [AbilitySystemTest] 태그가 생기는 순간 발동하는 어빌리티 — 하위 태그도 맞고, 이미 있던 태그의 개수가 늘 때는 발동하지 않는다
+ */
+SW_TEST_CASE( AbilitySystemTest, OwnedTagAddedTriggersAnAbility )
+{
+    GameObjectManager       manager;
+    AbilitySystemComponent* pAbilitySystem = spawnAbilityOwner( manager, "Owner" );
+    SW_ASSERT_NOT_NULL( pAbilitySystem );
+
+    unique_ptr<AbilityTestInstantAbility> pRage = make_unique<AbilityTestInstantAbility>();
+    pRage->getConfig()._ownedTagTriggerTags.addTag( "State.Enraged"_tag );
+    AbilityTestInstantAbility* pRageRaw = pRage.get();
+    (void)pAbilitySystem->giveAbility( std::move( pRage ) );
+
+    pAbilitySystem->getOwnedTagCounts().updateCount( "State.Enraged.Fire"_tag, 1 );
+    SW_EXPECT_EQUAL( 1, pRageRaw->_activateCount );
+    pAbilitySystem->getOwnedTagCounts().updateCount( "State.Enraged.Fire"_tag, 1 ); // 0 → 1 이 아니다
+    SW_EXPECT_EQUAL( 1, pRageRaw->_activateCount );
+    pAbilitySystem->getOwnedTagCounts().updateCount( "State.Calm"_tag, 1 );
+    SW_EXPECT_EQUAL( 1, pRageRaw->_activateCount );
+}
+
+/**
+ * @brief [AbilitySystemTest] 어트리뷰트 base 값을 세이브 바이트로 옮기고 되살린다 — 없는 어트리뷰트를 되살리려 하면 실패를 알린다
+ */
+SW_TEST_CASE( AbilitySystemTest, AttributeBaseValuesRoundTripThroughSaveBytes )
+{
+    GameObjectManager       manager;
+    AbilitySystemComponent* pSaved = spawnCombatant( manager, "Saved", 100.0f, 7.0f, 12.0f );
+    SW_ASSERT_NOT_NULL( pSaved );
+    SW_ASSERT_TRUE( pSaved->setAttributeBaseValue( CombatAttributes::health(), 64.0f ) );
+
+    vector<SavedAttributeValue> listCaptured;
+    AbilityAttributeSaveUtil::captureBaseValues( *pSaved, listCaptured );
+    SW_EXPECT_FALSE( listCaptured.empty() );
+    vector<uint8> bytes;
+    SW_ASSERT_TRUE( AbilityAttributeSaveUtil::writeBytes( listCaptured, bytes ) );
+
+    vector<SavedAttributeValue> listRead;
+    SW_ASSERT_TRUE( AbilityAttributeSaveUtil::readBytes( bytes.data(), bytes.size(), listRead ) );
+    SW_EXPECT_EQUAL( listCaptured.size(), listRead.size() );
+
+    AbilitySystemComponent* pLoaded = spawnCombatant( manager, "Loaded", 100.0f, 0.0f, 0.0f );
+    SW_ASSERT_NOT_NULL( pLoaded );
+    SW_EXPECT_TRUE( AbilityAttributeSaveUtil::applyBaseValues( *pLoaded, listRead ) );
+    SW_EXPECT_NEAR_EQUAL( 64.0f, pLoaded->getAttributeValue( CombatAttributes::health() ).value(), 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 7.0f, pLoaded->getAttributeValue( CombatAttributes::armor() ).value(), 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 12.0f, pLoaded->getAttributeValue( CombatAttributes::attackPower() ).value(), 0.001f );
+
+    AbilitySystemComponent* pBare = spawnAbilityOwner( manager, "Bare" );
+    SW_ASSERT_NOT_NULL( pBare );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "restoring attributes the component does not have" );
+        SW_EXPECT_FALSE( AbilityAttributeSaveUtil::applyBaseValues( *pBare, listRead ) );
+    }
+}
+
+/**
+ * @brief [AbilitySystemTest] 큐 표 — 큐 태그는 가장 가까운 조상의 `<GameplayCue>` 가 맡고, 보여 줄 것이 없는 정의는 로드 오류다
+ */
+SW_TEST_CASE( AbilitySystemTest, GameplayCueTableResolvesTheNearestAncestor )
+{
+    constexpr const utf8* kCueXML = R"(<AbilityCatalog>
+  <GameplayCue tag="GameplayCue.Hit" sound="Hit" positional="false"/>
+  <GameplayCue tag="GameplayCue.Hit.Fire" prefab="game/test/prefabs/flame.prefab.xml" offset="0,1,0"/>
+</AbilityCatalog>)";
+    AbilityCatalog        catalog;
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kCueXML, "AbilitySystemTest.Cue" ) );
+    SW_EXPECT_EQUAL( 2u, catalog.getCueCount() );
+
+    const GameplayCueDef* pFire = catalog.findCue( "GameplayCue.Hit.Fire"_tag );
+    SW_ASSERT_NOT_NULL( pFire );
+    SW_EXPECT_TRUE( pFire->_prefab == hashed_string( "game/test/prefabs/flame.prefab.xml" ) );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, pFire->_offset._y, 0.0001f );
+    const GameplayCueDef* pPhysical = catalog.findCue( "GameplayCue.Hit.Physical"_tag ); // 정의가 없으면 조상 "GameplayCue.Hit"
+    SW_ASSERT_NOT_NULL( pPhysical );
+    SW_EXPECT_TRUE( pPhysical->_soundEvent == hashed_string( "Hit" ) );
+    SW_EXPECT_TRUE( pPhysical->_bPositional == SW_FALSE );
+    SW_EXPECT_NULL( catalog.findCue( "GameplayCue.Heal"_tag ) );
+
+    constexpr const utf8* kEmptyCueXML = R"(<AbilityCatalog><GameplayCue tag="GameplayCue.Nothing"/></AbilityCatalog>)";
+    AbilityCatalog        badCatalog;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a gameplay cue with neither prefab nor sound" );
+        (void)badCatalog.loadFromXMLText( kEmptyCueXML, "AbilitySystemTest.EmptyCue" ); // 아래 개수가 본다
+    }
+    SW_EXPECT_EQUAL( 0u, badCatalog.getCueCount() );
 }

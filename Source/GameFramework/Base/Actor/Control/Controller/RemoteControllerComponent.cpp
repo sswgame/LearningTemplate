@@ -2,47 +2,49 @@
 
 #include "GameFramework/Base/Actor/Control/Controller/RemoteControllerComponent.h"
 
-#include "Core/Network/BitStream.h"
-#include "Core/Network/Replication/NetInputWindow.h"
-
 #include "GameFramework/Base/Actor/Control/Pawn/PawnComponent.h"
 
 namespace sw
 {
-    SW_LOG_CALLER( "RemoteControllerComponent" );
-} // namespace sw
-
-namespace sw
-{
     RemoteControllerComponent::RemoteControllerComponent()
-        : _lastIntent{}
-        , _pReceiveBuffer{ nullptr }
+        : _received{}
+        , _lastIntent{}
         , _nextInputTick{ 0 }
         , _missingTickCount{ 0 }
         , _bHasLastIntent{ false }
     {
+        _received.initialize( kReceiveCapacity );
+    }
+
+    void RemoteControllerComponent::receiveIntent( uint32 tick, const ControlIntent& intent )
+    {
+        if ( tick < _nextInputTick )
+            return; // 이미 지난 틱이다 — 되풀이로 메웠다
+        _received.acquire( tick ) = intent;
+    }
+
+    void RemoteControllerComponent::clearReceived()
+    {
+        _received.reset();
+        _lastIntent     = ControlIntent{};
+        _bHasLastIntent = false;
     }
 
     void RemoteControllerComponent::produceIntent( const ControlFrameContext& context, const PawnComponent& pawn, ControlIntent& outIntent )
     {
         (void)context;
         (void)pawn;
-        const uint32         tick   = _nextInputTick++;
-        const NetInputEntry* pEntry = _pReceiveBuffer != nullptr ? _pReceiveBuffer->find( tick ) : nullptr;
-        if ( pEntry != nullptr )
+        const uint32         tick      = _nextInputTick++;
+        const ControlIntent* pReceived = _received.find( tick );
+        if ( pReceived != nullptr )
         {
-            BitReader     reader( pEntry->_bytes.data(), static_cast<int32>( pEntry->_bytes.size() ) );
-            ControlIntent received;
-            if ( received.read( reader ) )
-            {
-                outIntent                    = received;
-                _lastIntent                  = received;
-                _lastIntent._buttonTriggered = 0;
-                _bHasLastIntent              = true;
-                setControlRotation( received._controlYaw, received._controlPitch );
-                return;
-            }
-            SW_LOG_WARNING( "Remote control intent for tick %# is malformed (%# byte(s)) - repeating the last one", tick, static_cast<uint32>( pEntry->_bytes.size() ) );
+            outIntent                    = *pReceived;
+            _lastIntent                  = *pReceived;
+            _lastIntent._buttonTriggered = 0;
+            _bHasLastIntent              = true;
+            setControlRotation( pReceived->_controlYaw, pReceived->_controlPitch );
+            _received.remove( tick );
+            return;
         }
         // 못 받은 틱 — 마지막 의도를 되풀이한다(받은 적이 없으면 서 있는다).
         ++_missingTickCount;

@@ -75,6 +75,9 @@ namespace sw
      *          - `_applicationBlockedTags`: 대상이 이 태그를 하나라도 가지면 걸리지 않는다(면역).
      *          - `_removeEffectsWithTags`: 걸리는 순간 대상의 활성 이펙트 중 에셋 태그나 부여 태그가 이 태그와 일치하는 것을 지운다(정화).
      *          `_cueTags` 는 연출에 쓴다(`GameplayCueEvent`).
+     *          `_ongoingRequiredTags` 는 걸린 **동안의** 조건이다(언리얼 `OngoingTagRequirements`). 대상이 이 태그를 모두 갖지 못하는 동안 이펙트는
+     *          남아 있되 멈춘다 — 모디파이어 · 부여 태그 · 부여 어빌리티 · 주기 실행이 빠지고 시간은 흐른다. 태그가 돌아오면 다시 든다.
+     *          `_listGrantedAbility` 는 걸린 동안 대상에게 주는 어빌리티의 카탈로그 id 다(장비가 스킬을 준다, 언리얼 `GrantedAbilities`).
      */
     struct SW_GF_API GameplayEffectDef
     {
@@ -95,6 +98,8 @@ namespace sw
         TagContainer                                       _applicationBlockedTags{};
         TagContainer                                       _removeEffectsWithTags{};
         TagContainer                                       _cueTags{};
+        TagContainer                                       _ongoingRequiredTags{};
+        vector<hashed_string>                              _listGrantedAbility{}; ///< 걸린 동안 주는 어빌리티 id(지속 · 무한 이펙트만)
 
         /** @brief 주기 이펙트이면 true 입니다. 즉시 이펙트는 주기를 갖지 않습니다. */
         bool isPeriodic() const { return _period > 0.0f && _durationPolicy != EffectDurationPolicy::Instant; }
@@ -230,6 +235,8 @@ namespace sw
         float32                   _periodTimer{ 0.0f };   ///< 다음 주기 실행까지 남은 시간
         float32                   _startTime{ 0.0f };     ///< 적용된 순간의 컴포넌트 시각
         int32                     _stackCount{ 1 };
+        vector<AbilitySpecHandle> _listGrantedAbilityHandle{}; ///< 이 이펙트가 준 어빌리티(멈추거나 해제되면 거둔다)
         uint8                     _bPendingRemove{ SW_FALSE }; ///< 지우는 중이다. 알리는 도중에 다시 지우지 않는다
+        uint8                     _bInhibited{ SW_FALSE };     ///< 걸린 동안의 태그 조건(`_ongoingRequiredTags`)을 못 맞춰 멈춰 있다
     };
 } // namespace sw

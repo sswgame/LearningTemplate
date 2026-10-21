@@ -48,6 +48,7 @@ namespace sw
         TagContainer                                _activationRequiredTags{};
         TagContainer                                _activationBlockedTags{};
         TagContainer                                _triggerEventTags{};
+        TagContainer                                _ownedTagTriggerTags{};                  ///< 주인에게 이 태그(나 그 하위 태그)가 생기는 순간 발동한다(언리얼 `OwnedTagAdded` 트리거)
         shared_ptr<const GameplayEffectDef>         _pCostEffect{};                          ///< 발동 비용(마나 -20). `commitAbility` 가 적용한다
         shared_ptr<const GameplayEffectDef>         _pCooldownEffect{};                      ///< 쿨다운(부여 태그가 쿨다운 태그). `commitAbility` 가 적용한다
         unordered_map<hashed_string, float32>       _mapParameter{};                         ///< 데이터 매개변수(피해, 사거리, 속도)
