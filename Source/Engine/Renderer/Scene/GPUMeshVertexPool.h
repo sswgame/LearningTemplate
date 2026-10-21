@@ -96,6 +96,12 @@ namespace sw
 
         /** @brief 더 큰 새 버퍼를 만들고 살아 있는 메시를 모두 앞에서부터 다시 이어 붙입니다. */
         void repack( IRHIDevice* pDevice );
+        /** @brief 이번 목록의 메시를 표시합니다. 처음 보거나 내용이 바뀐 메시는 들어올 목록에, 예산 때문에 못 들어간 메시는 다시 시도할 목록에 넣습니다. 바뀐 것이 있으면 true 입니다. */
+        [[nodiscard]] bool markListedMeshes( const vector<Mesh*>& listMesh, uint64 retireStamp );
+        /** @brief 이번 목록에 없는 메시의 구간을 늦게 돌려주고 항목을 지웁니다(포인터는 따라가지 않는다). 지운 것이 있으면 true 입니다. */
+        [[nodiscard]] bool sweepUnlistedMeshes( uint64 retireStamp );
+        /** @brief 들어온 메시에 구간을 주고 그 정점만 한 번에 올립니다. 자리가 없는 메시가 있으면 false 이고, 부르는 쪽이 다시 채운다(`repack`). */
+        [[nodiscard]] bool placeAddedMeshes( IRHIDevice* pDevice );
 
         /// @brief 풀 상한(정점 수)입니다. 4M 정점 × 48 바이트 = 192MB 로, 이 저장소의 씬에는 넉넉합니다.
         static constexpr uint32 kMaxPoolVertices = 4u * 1024u * 1024u;

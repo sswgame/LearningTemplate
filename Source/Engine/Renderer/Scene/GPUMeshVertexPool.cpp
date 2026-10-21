@@ -46,6 +46,29 @@ namespace sw
         _allocator.retireDeferred( _updateCount );
         const uint64 retireStamp = _updateCount + constant::kMaxFrameCountInFlight;
 
+        const bool bMarkedChange = markListedMeshes( listMesh, retireStamp );
+        const bool bChanged      = sweepUnlistedMeshes( retireStamp ) || bMarkedChange;
+        if ( _mapEntry.empty() )
+        {
+            // 풀을 끄거나(gv_vertexPool=0) 씬이 비었다 — 버퍼를 놓는다. 배치는 자기 정점 버퍼로 돌아간다.
+            const bool bHadBuffer = _vertexBuffer != 0;
+            release( pDevice );
+            return bChanged || bHadBuffer;
+        }
+        if ( bChanged == false )
+            return false;
+
+        // 예산 때문에 못 들어간 메시는 집합이 바뀐 프레임에만 다시 시도한다 — 매 프레임 시도하면 넘친 씬이 매 프레임 다시 채운다.
+        _listScratchAdded.insert( _listScratchAdded.end(), _listScratchRetry.begin(), _listScratchRetry.end() );
+
+        // 3) 들어온 메시에 구간을 준다. 하나라도 자리가 없으면(용량 부족, 조각남) 새 버퍼로 다시 채운다.
+        if ( _vertexBuffer == 0 || placeAddedMeshes( pDevice ) == false )
+            repack( pDevice );
+        return true;
+    }
+
+    bool GPUMeshVertexPool::markListedMeshes( const vector<Mesh*>& listMesh, uint64 retireStamp )
+    {
         // 1) 표시: 이번 목록의 메시를 본다. 처음 보거나 내용이 바뀐 메시는 새 구간이 필요하다.
         bool bChanged = false;
         _listScratchAdded.clear();
@@ -86,7 +109,11 @@ namespace sw
             _listScratchAdded.push_back( pMesh );
             bChanged = true;
         }
+        return bChanged;
+    }
 
+    bool GPUMeshVertexPool::sweepUnlistedMeshes( uint64 retireStamp )
+    {
         // 2) 쓸기: 이번 목록에 없는 메시의 구간을 돌려준다. 포인터는 따라가지 않는다(이미 지워졌을 수 있다).
         _listScratchRemoved.clear();
         for ( const auto& [pMesh, entry] : _mapEntry )
@@ -103,28 +130,12 @@ namespace sw
                 _liveVertexCount -= entry._count;
             }
             _mapEntry.erase( pMesh );
-            bChanged = true;
         }
+        return _listScratchRemoved.empty() == false;
+    }
 
-        if ( _mapEntry.empty() )
-        {
-            // 풀을 끄거나(gv_vertexPool=0) 씬이 비었다 — 버퍼를 놓는다. 배치는 자기 정점 버퍼로 돌아간다.
-            const bool bHadBuffer = _vertexBuffer != 0;
-            release( pDevice );
-            return bChanged || bHadBuffer;
-        }
-        if ( bChanged == false )
-            return false;
-
-        // 예산 때문에 못 들어간 메시는 집합이 바뀐 프레임에만 다시 시도한다 — 매 프레임 시도하면 넘친 씬이 매 프레임 다시 채운다.
-        _listScratchAdded.insert( _listScratchAdded.end(), _listScratchRetry.begin(), _listScratchRetry.end() );
-
-        // 3) 들어온 메시에 구간을 준다. 하나라도 자리가 없으면(용량 부족, 조각남) 새 버퍼로 다시 채운다.
-        if ( _vertexBuffer == 0 )
-        {
-            repack( pDevice );
-            return true;
-        }
+    bool GPUMeshVertexPool::placeAddedMeshes( IRHIDevice* pDevice )
+    {
         _listScratchVertex.clear();
         _listScratchRegion.clear();
         for ( const Mesh* pMesh : _listScratchAdded )
@@ -132,11 +143,7 @@ namespace sw
             Entry&       entry = _mapEntry.find( pMesh )->second;
             const uint32 base  = _allocator.allocate( entry._count );
             if ( base == SpanAllocator::kInvalidOffset )
-            {
-                // 이미 받은 구간들은 repack 이 처음부터 다시 나눈다.
-                repack( pDevice );
-                return true;
-            }
+                return false; // 이미 받은 구간들은 repack 이 처음부터 다시 나눈다.
             entry._base = base;
             _liveVertexCount += entry._count;
             const vector<RHIVertex>& listMeshVertex = pMesh->getVertices();
