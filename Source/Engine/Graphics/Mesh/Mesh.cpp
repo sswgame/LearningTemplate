@@ -110,6 +110,8 @@ namespace sw
         instance->setVerticesWithTangents( std::move( listVertex ) );
         instance->setSkin( source._listSkinVertex, source._skinBoneCount );
         instance->setMorphTargets( source._listMorphTarget );
+        // 구간은 원본에서 이미 검사했다 — 같은 정점이라 그대로 맞는다.
+        (void)instance->setSections( source._listSection );
         // 정점과 스킨이 원본과 같다. 모프 풀이 원본 데이터를 한 번만 업로드하도록 번호를 공유한다(setVertices 와 setSkin 이 지운 뒤에 적는다).
         instance->_sharedSkinDataID = source.getSkinDataID();
         return instance;
@@ -234,6 +236,42 @@ namespace sw
         _skinBoneCount      = bMatches ? boneCount : 0u;
         _contentID          = allocateContentID();
         _sharedSkinDataID   = 0;
+    }
+
+    bool Mesh::setSections( vector<MeshSection> listSection )
+    {
+        const uint32 vertexCount = getVertexCount();
+        for ( size_t index = 0; index < listSection.size(); ++index )
+        {
+            const MeshSection& section    = listSection[index];
+            const bool         bInRange   = section._vertexCount > 0 && section._firstVertex <= vertexCount && section._vertexCount <= vertexCount - section._firstVertex;
+            const bool         bTriangles = section._firstVertex % 3 == 0 && section._vertexCount % 3 == 0;
+            bool               bUnique    = section._name.empty() == false && section._personVisibility < MeshPersonVisibility::Count;
+            for ( size_t other = 0; bUnique && other < index; ++other )
+            {
+                bUnique = listSection[other]._name != section._name;
+            }
+            const bool bValidSection = bInRange && bTriangles && bUnique;
+            if ( bValidSection == false )
+            {
+                SW_LOG_ERROR( "Mesh section '%#' [%#, +%#) does not fit %# vertices, is not whole triangles, or repeats a name - the mesh has no sections", section._name.c_str(),
+                              section._firstVertex, section._vertexCount, vertexCount );
+                _listSection.clear();
+                return false;
+            }
+        }
+        _listSection = std::move( listSection );
+        return true;
+    }
+
+    int32 Mesh::findSectionIndex( const hashed_string& name ) const
+    {
+        for ( size_t index = 0; index < _listSection.size(); ++index )
+        {
+            if ( _listSection[index]._name == name )
+                return static_cast<int32>( index );
+        }
+        return -1;
     }
 
     void Mesh::setMorphTargets( vector<MeshMorphTarget> listTarget )

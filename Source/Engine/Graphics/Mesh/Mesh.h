@@ -51,6 +51,35 @@ namespace sw
 namespace sw
 {
     /**
+     * @enum MeshPersonVisibility
+     * @brief 구간이 1인칭 · 3인칭 시점에서 보이는지입니다(VRM firstPerson 의 meshAnnotations). 값은 `.mesh` 의 `SECT` 덩어리에 그대로 들어갑니다.
+     */
+    enum class MeshPersonVisibility : uint8
+    {
+        Both            = 0, ///< 두 시점 모두 보인다
+        ThirdPersonOnly = 1, ///< 3인칭에서만 보인다(1인칭 카메라에 머리 · 머리카락이 걸리지 않게)
+        FirstPersonOnly = 2, ///< 1인칭에서만 보인다
+        Count
+    };
+
+    /**
+     * @struct MeshSection
+     * @brief 메시의 구간 하나입니다 — 정점 범위(인덱스 없는 삼각형 목록이라 3 의 배수)와 이름, 시점 가시성입니다.
+     * @details 머티리얼은 구간마다 다르다. 구간을 그리는 컴포넌트(`MeshComponent::_sectionName`)가 머티리얼을 갖고, 같은 메시 객체를 나눠 써서 스킨 · 모프 결과도
+     *          한 벌이다(언리얼 Skeletal Mesh 의 Section, 유니티 Mesh 의 SubMesh 에 해당한다). 구간이 없는 메시는 전체가 구간 하나다.
+     */
+    struct MeshSection
+    {
+        hashed_string        _name;
+        uint32               _firstVertex{ 0 };
+        uint32               _vertexCount{ 0 };
+        MeshPersonVisibility _personVisibility{ MeshPersonVisibility::Both };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @struct MeshMorphTarget
      * @brief 이름이 붙은 모프 타깃(블렌드 셰이프)입니다. 움직이는 정점만 담습니다(얼굴 타깃은 메시의 작은 일부만 옮깁니다).
      */
@@ -195,6 +224,15 @@ namespace sw
          *          (`SkeletalMeshComponent::setMorphWeight`). 그래서 모프 타깃이 있는 메시는 스킨 구간으로 간다(스킨이 없으면 임포트가 고정 본 하나를 준다).
          */
         void setMorphTargets( vector<MeshMorphTarget> listTarget );
+        /**
+         * @brief 구간을 설정합니다. 구간은 정점 범위 안이고 3 의 배수이며 이름이 겹치지 않아야 합니다 — 아니면 오류를 남기고 구간을 비운 채 false 입니다.
+         * @details 내용 번호는 바꾸지 않는다(정점이 그대로라 정점 · 모프 풀을 다시 올릴 이유가 없다). 그리는 범위는 배치 키라 다음 수집이 다시 나눈다.
+         */
+        [[nodiscard]] bool setSections( vector<MeshSection> listSection );
+        /** @brief 구간들입니다. 비면 구간이 없는 메시(전체가 하나)입니다. */
+        const vector<MeshSection>& getSections() const { return _listSection; }
+        /** @brief 이름의 구간 번호입니다. 없으면 -1 입니다. */
+        int32 findSectionIndex( const hashed_string& name ) const;
         /** @brief 모프 타깃들입니다. */
         const vector<MeshMorphTarget>& getMorphTargets() const { return _listMorphTarget; }
         /** @brief 모프 타깃 수입니다. */
@@ -260,6 +298,8 @@ namespace sw
         uint32 _skinBoneCount{ 0 };
         /// @brief setMorphTargets 를 참고하세요.
         vector<MeshMorphTarget> _listMorphTarget;
+        /// @brief setSections 를 참고하세요.
+        vector<MeshSection> _listSection;
         /// @brief `createSkinInstance` 사본이 공유하는 원본의 스킨 데이터 번호입니다. 0이면 자기 내용 번호를 씁니다(정점이나 스킨을 바꾸면 0으로 돌아갑니다).
         uint64 _sharedSkinDataID{ 0 };
         /// @brief setVertexAnimation 을 참고하세요.

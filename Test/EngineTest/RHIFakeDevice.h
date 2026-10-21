@@ -107,6 +107,7 @@ namespace test
         {
             sw::RHICapabilities caps{};
             caps._bParallelCommandRecording = SW_TRUE;
+            caps._bWireframeFill            = SW_TRUE; // 그리지 않으므로 모든 보기 모드를 받는다
             return caps;
         }
 

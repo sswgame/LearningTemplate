@@ -101,11 +101,21 @@ namespace sw
     static_assert( sizeof( kArrRenderViewModeInfo ) / sizeof( kArrRenderViewModeInfo[0] ) == static_cast<size_t>( RenderViewMode::Count ),
                    "보기 모드 표와 열거형의 개수가 다릅니다" );
 
-    /** @brief 보기 모드의 테이블 항목을 반환합니다. 범위 밖이면 Lit 항목을 반환합니다. */
+    /** @brief 정수가 보기 모드 번호(0 .. Count - 1)인지 봅니다. 밖에서 들어온 번호(`-gv_viewMode`)는 이것으로 거른 뒤에만 `RenderViewMode` 로 바꿉니다. */
+    inline bool isRenderViewModeIndex( int32 value )
+    {
+        return value >= 0 && value < static_cast<int32>( RenderViewMode::Count );
+    }
+
+    /**
+     * @brief 보기 모드의 테이블 항목을 반환합니다.
+     * @details 범위 밖 값을 Lit 으로 바꾸지 않는다 — 들어오는 곳(`isRenderViewModeIndex`, `FrameRenderer::setViewMode`)이 거르므로 여기 닿으면 결함이다.
+     */
     inline const RenderViewModeInfo& getRenderViewModeInfo( RenderViewMode viewMode )
     {
         const uint8 index = static_cast<uint8>( viewMode );
-        return kArrRenderViewModeInfo[index < static_cast<uint8>( RenderViewMode::Count ) ? index : 0];
+        SW_ASSERT( index < static_cast<uint8>( RenderViewMode::Count ) );
+        return kArrRenderViewModeInfo[index];
     }
 } // namespace sw
 

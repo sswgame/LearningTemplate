@@ -263,11 +263,15 @@ namespace sw::editor
                 }
                 if ( listToon.empty() == false )
                 {
-                    splitMaterialSections( body, data, listToon, boneCount, outResult );
+                    // VRM — 본 메시 한 벌에 (머티리얼, 1인칭 가시성) 구간을 둔다. 구간마다 순서를 최적화했으므로 그 순서대로 펼친다.
+                    populateMaterialSections( body, data, listToon, outResult );
                     if ( collectSectionTextures( data, sourcePath, outResult ) == false )
                         return false;
+                    expandTrianglesInOrder( body, boneCount, outResult._mesh );
+                    outResult._mesh._listSection = makeMeshSections( outResult._listSection );
                 }
-                expandTriangles( body, boneCount, outResult._mesh );
+                else
+                    expandTriangles( body, boneCount, outResult._mesh );
                 outResult._bSkinned = SW_TRUE;
                 return readClips( data, mapJointBone, listRootParent, rule, sourcePath, outResult );
             }
@@ -531,12 +535,16 @@ namespace sw::editor
         ModelImporterInternal::applyRule( rule, merged );
         if ( listToon.empty() == false )
         {
-            ModelImporterInternal::splitMaterialSections( merged, *pData, listToon, 0, outResult );
+            ModelImporterInternal::populateMaterialSections( merged, *pData, listToon, outResult );
             if ( ModelImporterInternal::collectSectionTextures( *pData, sourcePath, outResult ) == false )
             {
                 cgltf_free( pData );
                 return false;
             }
+            cgltf_free( pData );
+            ModelImporterInternal::expandTrianglesInOrder( merged, 0, outResult._mesh );
+            outResult._mesh._listSection = ModelImporterInternal::makeMeshSections( outResult._listSection );
+            return true;
         }
         cgltf_free( pData );
         ModelImporterInternal::expandTriangles( merged, 0, outResult._mesh );
@@ -621,6 +629,8 @@ namespace sw::editor
             return false;
         }
         if ( ModelImporterInternal::writeVrmAvatar( result, sourcePath, sideFolder, stem ) == false )
+            return false;
+        if ( ModelImporterInternal::writeCharacterPrefab( result, outputPath, sideFolder, stem ) == false )
             return false;
         [[maybe_unused]] uint64 rawByteTotal        = 0;
         [[maybe_unused]] uint64 compressedByteTotal = 0;

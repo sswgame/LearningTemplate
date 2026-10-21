@@ -60,8 +60,11 @@ namespace sw
             psoDesc.RasterizerState.CullMode = ( desc._cullMode == RHICullMode::Front )
                                                  ? D3D12_CULL_MODE_FRONT
                                                  : ( ( desc._cullMode == RHICullMode::Back ) ? D3D12_CULL_MODE_BACK : D3D12_CULL_MODE_NONE );
-            psoDesc.SampleMask               = MathUtil::kMaxUInt32;
-            psoDesc.PrimitiveTopologyType    = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+            // 깊이 바이어스 — 다른 백엔드와 같은 상수 · 기울기 두 칸이다(RHIPipelineStateDesc::_depthBias).
+            psoDesc.RasterizerState.DepthBias            = desc._depthBias;
+            psoDesc.RasterizerState.SlopeScaledDepthBias = desc._slopeScaledDepthBias;
+            psoDesc.SampleMask                           = MathUtil::kMaxUInt32;
+            psoDesc.PrimitiveTopologyType                = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
             // 뎁스 전용은 RT 가 0 개다. 1 로 두고 R8G8B8A8 을 선언하면 실제로는 DSV 만 바인딩되는 것과 어긋난다.
             psoDesc.NumRenderTargets = request._numRenderTargets;
             if ( psoDesc.NumRenderTargets > 8 )

@@ -114,6 +114,12 @@ namespace sw
             loaded->setSkin( std::move( data._listSkinVertex ), data._skinBoneCount );
         if ( data._listMorphTarget.empty() == false )
             loaded->setMorphTargets( std::move( data._listMorphTarget ) );
+        // 구간이 정점과 맞지 않으면 파일이 깨진 것이다 — 구간 없는 메시로 두지 않고 읽기 실패로 알린다.
+        if ( loaded->setSections( std::move( data._listSection ) ) == false )
+        {
+            MeshCacheInternal::warnLoadFailureOnce( path );
+            return result;
+        }
 
         result = MeshCacheInternal::getSharedTable().insertOrGetLive( MeshCacheInternal::makeKey( path ), std::move( loaded ) );
         return result;
@@ -141,7 +147,7 @@ namespace sw
         live->setVerticesWithTangents( std::move( data._listVertex ) );
         live->setSkin( std::move( data._listSkinVertex ), data._skinBoneCount );
         live->setMorphTargets( std::move( data._listMorphTarget ) );
-        return true;
+        return live->setSections( std::move( data._listSection ) );
     }
 
     bool MeshCache::isCached( string_view relativePath ) const

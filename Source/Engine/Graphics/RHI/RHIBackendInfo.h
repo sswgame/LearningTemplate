@@ -58,6 +58,7 @@ namespace sw
             // 둘을 혼동하면 병렬 테스트가 DX11 병렬 경로를 건너뛴다.
             caps._bParallelCommandRecording   = SW_FALSE;
             caps._bThreadSafeResourceCreation = SW_TRUE;
+            caps._bWireframeFill              = SW_TRUE;
             return caps;
         }
 
@@ -74,6 +75,7 @@ namespace sw
             caps._bMultiDrawIndirect          = SW_TRUE;
             caps._bParallelCommandRecording   = SW_TRUE;
             caps._bThreadSafeResourceCreation = SW_TRUE;
+            caps._bWireframeFill              = SW_TRUE;
             return caps;
         }
 
@@ -95,6 +97,7 @@ namespace sw
             // 때문이다. DX12 의 커맨드 얼로케이터와 같은 제약이다.
             caps._bParallelCommandRecording   = SW_TRUE;
             caps._bThreadSafeResourceCreation = SW_TRUE;
+            caps._bWireframeFill              = SW_TRUE; // 후보. 런타임은 VulkanRHIDevice::getCapabilities 가 fillModeNonSolid 로 덮는다
             return caps;
         }
 
@@ -117,6 +120,7 @@ namespace sw
             caps._bRequiresWindowRecreate = SW_TRUE;
 #endif
             caps._bThreadSafeResourceCreation = SW_FALSE;
+            caps._bWireframeFill              = SW_TRUE;
             return caps;
         }
     };

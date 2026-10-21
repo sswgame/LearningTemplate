@@ -285,11 +285,17 @@ namespace sw
         /// 그릴 후보 하나(트랜스폼, 바운드, 메시, 머티리얼, 인스턴스, 블렌드)입니다. populateFromScene 이 배열을 재사용해 프레임당 힙 할당을 줄입니다.
         struct DrawCandidate
         {
-            float4x4                     _world{};
-            float3                       _boundsCenter{};
-            float32                      _boundsRadius{ 1.0f };      ///< 월드 반지름(메시 반지름 × 월드의 최대 축 스케일). 컬링이 읽는다.
-            float32                      _localBoundsRadius{ 1.0f }; ///< 메시 공간 반지름. 트랜스폼만 바뀐 프레임에는 이 값으로 월드 반지름을 다시 만든다.
-            uint32                       _blendMode{ 0 };
+            float4x4 _world{};
+            float3   _boundsCenter{};
+            float32  _boundsRadius{ 1.0f };      ///< 월드 반지름(메시 반지름 × 월드의 최대 축 스케일). 컬링이 읽는다.
+            float32  _localBoundsRadius{ 1.0f }; ///< 메시 공간 반지름. 트랜스폼만 바뀐 프레임에는 이 값으로 월드 반지름을 다시 만든다.
+            uint32   _blendMode{ 0 };
+            /**
+             * @brief 그리는 메시 구간(`MeshSection`)의 첫 정점과 정점 수입니다. 수가 0 이면 메시 전체입니다. **배치 키**입니다 — 같은 메시의 다른 구간은
+             *        머티리얼이 같아도 다른 배치(다른 정점 범위)다(`MeshComponent::findDrawSection`).
+             */
+            uint32                       _sectionFirstVertex{ 0 };
+            uint32                       _sectionVertexCount{ 0 };
             shared_ptr<Mesh>             _mesh;
             shared_ptr<Material>         _material;
             shared_ptr<MaterialInstance> _instance;
@@ -341,6 +347,7 @@ namespace sw
             bool operator==( const DrawCandidate& other ) const
             {
                 return _mesh == other._mesh && _material == other._material && _instance == other._instance &&
+                       _sectionFirstVertex == other._sectionFirstVertex && _sectionVertexCount == other._sectionVertexCount &&
                        _blendMode == other._blendMode && _spinSeed == other._spinSeed && _sprite == other._sprite && _highlight == other._highlight &&
                        Memory::compare( &_vertexAnimationPhase, &other._vertexAnimationPhase, sizeof( _vertexAnimationPhase ) ) == 0 &&
                        _permutationHash == other._permutationHash && _sortKey == other._sortKey && _bReverseCulling == other._bReverseCulling &&
@@ -365,12 +372,13 @@ namespace sw
              */
             bool hasSameBatchKeyExceptMesh( const DrawCandidate& other ) const
             {
-                return _material == other._material && _instance == other._instance && _blendMode == other._blendMode &&
-                       _permutationHash == other._permutationHash && _bReverseCulling == other._bReverseCulling;
+                return _material == other._material && _instance == other._instance && _sectionFirstVertex == other._sectionFirstVertex &&
+                       _sectionVertexCount == other._sectionVertexCount && _blendMode == other._blendMode && _permutationHash == other._permutationHash &&
+                       _bReverseCulling == other._bReverseCulling;
             }
         };
         /// @brief 후보는 프리미티브마다 하나라 패딩이 곧 메모리 대역폭입니다. 필드 크기의 합을 정렬 단위로 올린 값을 넘으면(필드 사이에 구멍이 생기면) 빌드를 멈춥니다.
-        static_assert( sizeof( DrawCandidate ) <= ( sizeof( float4x4 ) + sizeof( float3 ) + sizeof( float32 ) * 2 + sizeof( uint32 ) * 4 +
+        static_assert( sizeof( DrawCandidate ) <= ( sizeof( float4x4 ) + sizeof( float3 ) + sizeof( float32 ) * 2 + sizeof( uint32 ) * 6 +
                                                     sizeof( shared_ptr<Mesh> ) * 3 + sizeof( GPUSpriteInstanceData ) + sizeof( uint64 ) +
                                                     sizeof( uint8 ) + sizeof( float32 ) + alignof( DrawCandidate ) - 1 ) /
                                                       alignof( DrawCandidate ) * alignof( DrawCandidate ),
@@ -478,6 +486,8 @@ namespace sw
         struct SortKey
         {
             Mesh*             _pMesh{ nullptr };
+            uint32            _sectionFirstVertex{ 0 }; ///< 같은 메시의 다른 구간은 다른 배치다(DrawCandidate::_sectionFirstVertex)
+            uint32            _sectionVertexCount{ 0 };
             Material*         _pMaterial{ nullptr };
             MaterialInstance* _pInstance{ nullptr };
             /**
@@ -493,8 +503,9 @@ namespace sw
             /** @brief 메시, 머티리얼, 인스턴스, 퍼뮤테이션, 컬 반전이 같은지 비교합니다. */
             bool operator==( const SortKey& other ) const
             {
-                return _pMesh == other._pMesh && _pMaterial == other._pMaterial && _pInstance == other._pInstance &&
-                       _permutationHash == other._permutationHash && _bReverseCulling == other._bReverseCulling;
+                return _pMesh == other._pMesh && _sectionFirstVertex == other._sectionFirstVertex && _sectionVertexCount == other._sectionVertexCount &&
+                       _pMaterial == other._pMaterial && _pInstance == other._pInstance && _permutationHash == other._permutationHash &&
+                       _bReverseCulling == other._bReverseCulling;
             }
         };
 

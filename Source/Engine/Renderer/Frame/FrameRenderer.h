@@ -231,6 +231,8 @@ namespace sw
          *          PSO 변형을 만들고, 드로우는 지금 그리는 뷰의 모드로 변형을 고른다. 모드를 바꾼 프레임에는 셰이더 컴파일이 한 번 끼어든다.
          */
         void setViewMode( RenderViewMode viewMode );
+        /** @brief 이 디바이스가 그 보기 모드를 그릴 수 있는지 봅니다(와이어프레임 채우기 능력). 못 그리면 오류를 남기고 false 입니다. 디바이스가 없으면 true 입니다. */
+        [[nodiscard]] bool supportsViewMode( RenderViewMode viewMode ) const;
         /** @brief 주 출력의 보기 모드입니다. */
         RenderViewMode getViewMode() const;
         /**

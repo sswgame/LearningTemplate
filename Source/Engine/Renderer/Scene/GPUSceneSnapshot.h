@@ -84,6 +84,11 @@ namespace sw
          * @details RT 가 upload() 에서 채운다. 같은 풀 버퍼를 쓰는 배치들은 정점 버퍼를 다시 바인딩하지 않고 멀티 드로우로 묶인다.
          */
         uint32 _firstVertex{ 0 };
+        /**
+         * @brief 이 배치가 그리는 메시 구간의 첫 정점(메시 안 번호)입니다. 메시 전체면 0 입니다.
+         * @details RT 가 정점 풀 시작(`_firstVertex`)과 모프 풀 시작(`_morphVertexBase`)에 더하고, VAT 는 배치 표의 `_sectionVertexOffset` 으로 메시 안 번호를 되찾는다.
+         */
+        uint32 _sectionFirstVertex{ 0 };
         uint32 _instanceBase{ 0 };
         uint32 _instanceCount{ 0 };
         uint32 _materialIndex{ 0 };

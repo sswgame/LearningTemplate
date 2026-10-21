@@ -320,6 +320,8 @@ namespace sw
             RHIPrimitiveTopology _topology = RHIPrimitiveTopology::TriangleList;
             RHIFillMode          _fillMode = RHIFillMode::Solid;
             RHICullMode          _cullMode = RHICullMode::None;
+            int32                _depthBias{ 0 };               ///< RHIPipelineStateDesc::_depthBias — glPolygonOffset 의 units
+            float32              _slopeScaledDepthBias{ 0.0f }; ///< RHIPipelineStateDesc::_slopeScaledDepthBias — glPolygonOffset 의 factor
             uint8                _bEnableDepthTest    : 1;
             uint8                _bEnableDepthWrite   : 1;
             uint8                _bEnableBlend        : 1;

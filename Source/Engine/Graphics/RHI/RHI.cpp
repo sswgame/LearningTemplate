@@ -90,6 +90,8 @@ namespace sw
         , _numRenderTargets{ 1 }
         , _arrRtvFormat{}
         , _depthStencilFormat{ RHIFormat::D24_UNORM_S8_UINT }
+        , _depthBias{ 0 }
+        , _slopeScaledDepthBias{ 0.0f }
         , _bEnableDepthTest{ SW_FALSE }
         , _bEnableDepthWrite{ SW_TRUE }
         , _bEnableBlend{ SW_FALSE }

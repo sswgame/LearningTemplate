@@ -129,6 +129,7 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/TextureImporter.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/VrmAvatarImporter.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/VrmMaterialImporter.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/VrmRuntimeAssets.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Localization/LocalizationTools.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/SourceControl/EditorSourceControl.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/SourceControl/SourceControlProvider.cpp"

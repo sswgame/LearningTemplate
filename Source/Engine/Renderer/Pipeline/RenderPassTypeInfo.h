@@ -74,7 +74,7 @@ namespace sw
      * @details 툰(toon.hlsl)은 빛마다 계단 · 그림자색 · 림 · 맷캡을 섞어 알베도 · 노멀 두 칸에 담을 수 없다. G버퍼에 칸을 더하는 대신 포워드로 그린다 —
      *          유니티 URP 디퍼드가 `UniversalForwardOnly` 머티리얼을 포워드 패스로 그리는 것과 같다(기억에 의존한 비교).
      * @note 이 define 을 빠뜨린 툰 머티리얼은 아직 G버퍼로 가서 램버트로 칠해진다. toon.hlsl 의 G버퍼 퍼뮤테이션을 `#error` 로 막는 일은 셰이더 다시 굽기와 함께 한다
-     *       (후보 ToonShadingCompletion).
+     *       (계획 GraphicsFormatBundle G2).
      */
     inline constexpr const utf8* kMaterialForwardOnlyDefine = "MATERIAL_FORWARD_ONLY";
 

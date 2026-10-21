@@ -1,6 +1,7 @@
 /**
  * @file ModelImportVrm.cpp
- * @brief 모델 임포트의 VRM 아바타 정보(humanoid · 표정 · 스프링 본 · 1인칭) 읽기와 `.avatar.json` 쓰기입니다. 값의 해석은 `VrmAvatarImporter` 가 합니다.
+ * @brief 모델 임포트의 VRM 아바타 정보(humanoid · 표정 · 스프링 본 · 1인칭) 읽기와 `.avatar.json` · 얼굴 리그(`.facial.json`) · 후처리 리그(`.rig.json`) 쓰기입니다.
+ * @details 값의 해석은 `VrmAvatarImporter`, 런타임 형식으로 옮기기는 `VrmRuntimeAssets` 가 합니다.
  */
 #include "pch.h"
 
@@ -12,8 +13,12 @@
 #include "Editor/Common/Asset/ModelImportUtil.h"
 #include "Editor/Common/Asset/ModelImporter.h"
 #include "Editor/Common/Asset/VrmAvatarImporter.h"
+#include "Editor/Common/Asset/VrmRuntimeAssets.h"
 
+#include "Engine/Animation/Facial/FacialRig.h"
+#include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw::editor
@@ -31,6 +36,28 @@ namespace sw::editor
                     return;
                 if ( VectorUtil::contains( inoutListMissing, bone ) == false )
                     inoutListMissing.push_back( bone );
+            }
+
+            /** @brief XML 속성 값으로 쓸 글자를 바꿉니다(& < > " '). */
+            static string escapeXMLAttribute( string_view text )
+            {
+                string escaped;
+                for ( const utf8 letter : text )
+                {
+                    if ( letter == '&' )
+                        escaped += "&amp;";
+                    else if ( letter == '<' )
+                        escaped += "&lt;";
+                    else if ( letter == '>' )
+                        escaped += "&gt;";
+                    else if ( letter == '"' )
+                        escaped += "&quot;";
+                    else if ( letter == '\'' )
+                        escaped += "&apos;";
+                    else
+                        escaped += letter;
+                }
+                return escaped;
             }
 
             static string joinNames( const vector<string>& listName )
@@ -160,6 +187,90 @@ namespace sw::editor
         }
         SW_LOG_INFO( "VRM '%#': avatar with %# human bones, %# expressions, %# springs -> %#", sourcePath, result._avatar._listHumanBone.size(),
                      result._avatar._listExpression.size(), result._avatar._listSpring.size(), avatarPath.c_str() );
+
+        // 런타임이 읽는 형식 — 표정은 얼굴 리그, 스프링 본은 후처리 리그(VrmRuntimeAssets). 캐릭터는 이 파일을 다른 얼굴 리그 · 리그처럼 참조한다.
+        vector<string> listNotConverted;
+        if ( VrmRuntimeAssets::hasFacialRig( result._avatar ) )
+        {
+            const string facialPath = FileUtil::joinPath( sideFolder, string( stem ) + string( FacialRig::kExtension ) );
+            if ( FileUtil::writeTextFile( facialPath, VrmRuntimeAssets::makeFacialRigJSON( result._avatar, &listNotConverted ) ) == false )
+            {
+                SW_LOG_ERROR( "Failed to write facial rig %#", facialPath.c_str() );
+                return false;
+            }
+            SW_LOG_INFO( "VRM '%#': expressions -> %#", sourcePath, facialPath.c_str() );
+        }
+        const bool bHasSpringRig = result._bSkinned != SW_FALSE && VrmRuntimeAssets::hasSpringRig( result._avatar, result._skeleton );
+        if ( bHasSpringRig )
+        {
+            const string rigPath = FileUtil::joinPath( sideFolder, string( stem ) + string( RigAsset::kExtension ) );
+            if ( FileUtil::writeTextFile( rigPath, VrmRuntimeAssets::makeSpringRigJSON( result._avatar, result._skeleton, &listNotConverted ) ) == false )
+            {
+                SW_LOG_ERROR( "Failed to write spring rig %#", rigPath.c_str() );
+                return false;
+            }
+            SW_LOG_INFO( "VRM '%#': springs -> %#", sourcePath, rigPath.c_str() );
+        }
+        if ( listNotConverted.empty() == false )
+            SW_LOG_WARNING( "VRM '%#': avatar values the runtime formats cannot hold (not converted): %#", sourcePath, Internal::joinNames( listNotConverted ).c_str() );
+        return true;
+    }
+
+    vector<MeshSection> ModelImportUtil::makeMeshSections( const vector<ModelImportSection>& listSection )
+    {
+        vector<MeshSection> listMeshSection;
+        listMeshSection.reserve( listSection.size() );
+        for ( const ModelImportSection& section : listSection )
+        {
+            listMeshSection.push_back( MeshSection{ hashed_string( section._sectionName ), section._firstVertex, section._vertexCount, section._personVisibility } );
+        }
+        return listMeshSection;
+    }
+
+    bool ModelImportUtil::writeCharacterPrefab( const ModelImportResult& result, string_view meshPath, string_view sideFolder, string_view stem )
+    {
+        using Internal = ModelImportVrmInternal;
+        if ( result._listSection.empty() || result._bSkinned == SW_FALSE )
+            return true;
+        auto resourceOf = [&]( string_view extension )
+        { return ResourcePaths::toResourceID( FileUtil::joinPath( sideFolder, string( stem ) + string( extension ) ) ); };
+        auto materialOf = [&]( const ModelImportSection& section )
+        { return ResourcePaths::toResourceID( FileUtil::joinPath( FileUtil::joinPath( sideFolder, kMaterialFolder ), section._fileStem + ".material" ) ); };
+        const string meshID       = ResourcePaths::toResourceID( meshPath );
+        const string skeletonPath = resourceOf( Skeleton::kExtension );
+        const string name         = Internal::escapeXMLAttribute( stem );
+
+        // 주 컴포넌트(스켈레탈 메시)가 첫 구간을 그리고, 나머지 구간은 같은 메시 객체를 빌려 그린다(MeshSectionComponent). 구간 컴포넌트는 주 컴포넌트에 붙어 따라 움직인다.
+        string xml = "<Prefab formatVersion=\"0\" name=\"" + name + "\">\n";
+        xml += "\t<GameObject _schemaVersion=\"0\" _name=\"" + name + "\" _bActive=\"true\">\n\t\t<_listComponent>\n";
+        const ModelImportSection& first = result._listSection.front();
+        xml += "\t\t\t<SkeletalMeshComponent _componentName=\"SkeletalMeshComponent\" _bActive=\"true\" _meshID=\"" + Internal::escapeXMLAttribute( meshID ) +
+               "\" _materialPath=\"" + Internal::escapeXMLAttribute( materialOf( first ) ) + "\" _sectionName=\"" + Internal::escapeXMLAttribute( first._sectionName ) +
+               "\" _skeletonPath=\"" + Internal::escapeXMLAttribute( skeletonPath ) + "\" />\n";
+        for ( size_t index = 1; index < result._listSection.size(); ++index )
+        {
+            const ModelImportSection& section = result._listSection[index];
+            xml += "\t\t\t<MeshSectionComponent _componentName=\"MeshSectionComponent\" _bActive=\"true\" _attachComponent=\"SkeletalMeshComponent#0\" _materialPath=\"" +
+                   Internal::escapeXMLAttribute( materialOf( section ) ) + "\" _sectionName=\"" + Internal::escapeXMLAttribute( section._sectionName ) + "\" />\n";
+        }
+        if ( VrmRuntimeAssets::hasFacialRig( result._avatar ) )
+            xml += "\t\t\t<FacialAnimationComponent _componentName=\"FacialAnimationComponent\" _bActive=\"true\" _facialRigPath=\"" +
+                   Internal::escapeXMLAttribute( resourceOf( FacialRig::kExtension ) ) + "\" />\n";
+        if ( VrmRuntimeAssets::hasSpringRig( result._avatar, result._skeleton ) )
+            xml += "\t\t\t<PoseModifierComponent _componentName=\"PoseModifierComponent\" _bActive=\"true\" _rigPath=\"" +
+                   Internal::escapeXMLAttribute( resourceOf( RigAsset::kExtension ) ) + "\" />\n";
+        xml += "\t\t</_listComponent>\n\t</GameObject>\n</Prefab>\n";
+
+        const string prefabPath = FileUtil::joinPath( sideFolder, string( stem ) + ".prefab.xml" );
+        const string resourceID = ResourcePaths::toResourceID( prefabPath );
+        const bool   bWritten   = FileUtil::writeTextFile( prefabPath, xml ) &&
+                              FileUtil::writeTextFile( prefabPath + path::kMetaExtension, "guid=" + makeImportedGuid( resourceID ) + "\nsourcePath=" + resourceID + "\nimported=1\n" );
+        if ( bWritten == false )
+        {
+            SW_LOG_ERROR( "Failed to write character prefab %#", prefabPath.c_str() );
+            return false;
+        }
+        SW_LOG_INFO( "Model '%#': character prefab with %# sections -> %#", meshPath, result._listSection.size(), prefabPath.c_str() );
         return true;
     }
 

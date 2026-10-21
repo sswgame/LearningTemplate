@@ -533,7 +533,7 @@ SW_TEST_CASE( ModelImporterTest, SkinnedModelImportsSkeletonClipsAndAttachments 
 }
 
 /**
- * @brief [ModelImporterTest] VRM 은 머티리얼마다 구간 메시 · 툰 머티리얼을 낸다 — 삼각형이 머티리얼대로 나뉘고, 정점 색에 머티리얼 색을 굽지 않는다(머티리얼이 든다)
+ * @brief [ModelImporterTest] VRM 은 머티리얼마다 본 메시의 구간 · 툰 머티리얼을 낸다 — 삼각형이 머티리얼대로 이어지고, 정점 색에 머티리얼 색을 굽지 않는다(머티리얼이 든다)
  * @details 삼각형 두 개를 같은 위치 접근자로 두 프리미티브(머티리얼 0 · 1)가 쓰는 VRM 0.x glTF. 머티리얼 1 은 반투명 MToon 이다.
  */
 SW_TEST_CASE( ModelImporterTest, VrmSplitsMeshByToonMaterial )
@@ -560,14 +560,19 @@ SW_TEST_CASE( ModelImporterTest, VrmSplitsMeshByToonMaterial )
     SW_ASSERT_EQUAL( size_t( 2 ), result._listSection.size() );
     SW_EXPECT_STREQ( "skin", result._listSection[0]._fileStem.c_str() );
     SW_EXPECT_STREQ( "glass", result._listSection[1]._fileStem.c_str() );
-    SW_EXPECT_EQUAL( size_t( 3 ), result._listSection[0]._mesh._listVertex.size() );
-    SW_EXPECT_EQUAL( size_t( 6 ), result._listSection[1]._mesh._listVertex.size() );
+    // 구간은 본 메시 한 벌의 정점 범위다 — 머티리얼 순서로 이어 놓는다(skin 3 정점, glass 6 정점).
+    SW_EXPECT_EQUAL( 0u, result._listSection[0]._firstVertex );
+    SW_EXPECT_EQUAL( 3u, result._listSection[0]._vertexCount );
+    SW_EXPECT_EQUAL( 3u, result._listSection[1]._firstVertex );
+    SW_EXPECT_EQUAL( 6u, result._listSection[1]._vertexCount );
+    SW_EXPECT_STREQ( "skin", result._listSection[0]._sectionName.c_str() );
     SW_EXPECT_TRUE( result._listSection[1]._material._alphaMode == sw::editor::ToonAlphaMode::Transparent );
+    SW_ASSERT_EQUAL( size_t( 2 ), result._mesh._listSection.size() );
     // 본 메시는 전부(9 정점)이고, 색은 흰색이다 — baseColorFactor 는 툰 머티리얼의 baseColor 다(감마 → 선형).
     SW_EXPECT_EQUAL( size_t( 9 ), result._mesh._listVertex.size() );
-    for ( const sw::RHIVertex& vertex : result._listSection[0]._mesh._listVertex )
+    for ( uint32 vertexIndex = 0; vertexIndex < result._listSection[0]._vertexCount; ++vertexIndex )
     {
-        SW_EXPECT_NEAR_EQUAL( 1.0f, vertex._arrColor[0], 1e-6f );
+        SW_EXPECT_NEAR_EQUAL( 1.0f, result._mesh._listVertex[result._listSection[0]._firstVertex + vertexIndex]._arrColor[0], 1e-6f );
     }
     SW_EXPECT_NEAR_EQUAL( 0.21404f, result._listSection[0]._material._baseColor._x, 1e-4f );
 

@@ -597,9 +597,17 @@ namespace sw
         uint32               _numRenderTargets;                   ///< 컬러 RT 개수 (MRT)
         RHIFormat            _arrRtvFormat[kMaxColorAttachments]; ///< RT별 포맷
         RHIFormat            _depthStencilFormat;
-        uint8                _bEnableDepthTest  : 1; ///< 깊이 테스트
-        uint8                _bEnableDepthWrite : 1; ///< 깊이 쓰기 (Transparent=0)
-        uint8                _bEnableBlend      : 1; ///< 알파 블렌딩(색은 SrcAlpha/InvSrcAlpha, 알파 채널은 One/InvSrcAlpha). 네 백엔드가 같다.
+        /**
+         * @brief 깊이 바이어스입니다. 깊이 테스트 전에 래스터 깊이에 더합니다(음수면 카메라 쪽, 깊이 비교는 네 백엔드 모두 LessEqual). 둘 다 0 이면 없습니다.
+         * @details 상수 칸은 깊이 형식의 최소 단위(D24 는 2^-24) 배수이고 기울기 칸은 삼각형의 최대 깊이 기울기에 곱한다. D3D `DepthBias` · `SlopeScaledDepthBias`,
+         *          Vulkan `depthBiasConstantFactor` · `depthBiasSlopeFactor`, GL `glPolygonOffset( factor, units )` 가 같은 식이다. 같은 삼각형을 선으로 겹쳐 그릴 때
+         *          (보기 모드 ShadedWireframe) 선이 면과 z-fighting 하지 않게 한다.
+         */
+        int32   _depthBias;
+        float32 _slopeScaledDepthBias;
+        uint8   _bEnableDepthTest  : 1; ///< 깊이 테스트
+        uint8   _bEnableDepthWrite : 1; ///< 깊이 쓰기 (Transparent=0)
+        uint8   _bEnableBlend      : 1; ///< 알파 블렌딩(색은 SrcAlpha/InvSrcAlpha, 알파 채널은 One/InvSrcAlpha). 네 백엔드가 같다.
         /**
          * @brief 블렌드가 켜졌을 때 원본 색이 이미 알파를 곱한 값인지 나타냅니다(색 One/InvSrcAlpha). `_bEnableBlend` 가 꺼져 있으면 의미가 없습니다.
          * @details 렌더 텍스처에 반투명을 그린 뒤 다시 합성하면 곧은 알파(straight alpha)는 알파를 두 번 곱한다. UI 와 캔버스는 이 방식으로 그린다

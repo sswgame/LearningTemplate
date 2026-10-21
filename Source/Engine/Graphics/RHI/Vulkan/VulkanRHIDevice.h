@@ -235,6 +235,7 @@ namespace sw
             RHICapabilities caps     = RHIAvailability::query( RHIBackend::Vulkan );
             caps._bMultiDrawIndirect = _bMultiDrawIndirect;
             caps._bNativeBindless    = _textureSet != nullptr ? 1u : 0u;
+            caps._bWireframeFill     = _bFillModeNonSolid;
             return caps;
         }
 

@@ -98,12 +98,21 @@ namespace sw
             _accumulator = 0.0f; // 넘는 시간은 버린다. 히치 뒤에 한꺼번에 따라잡느라 튀지 않게 하려는 것이다.
         }
 
-        const float3  planeNormal  = ( space._bPlanar == SW_TRUE ) ? float3::transformVector( space._planeNormal, worldFromModel ).normalize() : float3::Zero;
-        const float32 retain       = 1.0f - MathUtil::saturate( settings._damping );
-        const float32 stiffness    = MathUtil::saturate( settings._stiffness );
-        const float3  gravity      = ( settings._bUseGravityOverride == SW_TRUE ) ? settings._gravityOverride : worldGravity * settings._gravityScale;
-        const float3  gravityStep  = gravity * ( step * step );
-        const float3  previousRoot = _lastRootPosition;
+        const float3 planeNormal = ( space._bPlanar == SW_TRUE ) ? float3::transformVector( space._planeNormal, worldFromModel ).normalize() : float3::Zero;
+        // 입자마다 물성 — "joints" 가 있으면 그 값, 없으면 사슬 값 하나. 길이가 맞지 않는 데이터는 노드가 읽을 때 거른다(RigSpringChainNode::parse).
+        const bool   bPerParticle = settings._listParticle.size() + 1 == count;
+        const float3 chainGravity = ( settings._bUseGravityOverride == SW_TRUE ) ? settings._gravityOverride : worldGravity * settings._gravityScale;
+        auto         particleAt   = [&]( uint32 index ) -> RigSpringParticleSettings
+        {
+            if ( bPerParticle )
+            {
+                RigSpringParticleSettings particle = settings._listParticle[index - 1];
+                particle._gravity                  = ( settings._bUseGravityOverride == SW_TRUE ) ? particle._gravity : chainGravity + particle._gravity;
+                return particle;
+            }
+            return RigSpringParticleSettings{ chainGravity, settings._stiffness, settings._axisPull, settings._damping, settings._particleRadius };
+        };
+        const float3 previousRoot = _lastRootPosition;
         for ( uint32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
             // 뿌리는 애니메이션을 따른다. 스텝마다 지난 프레임 위치에서 이번 위치까지 나눠 옮겨서, 빠른 움직임에도 끝이 튀지 않게 한다.
@@ -112,12 +121,17 @@ namespace sw
             _listPreviousPosition[0] = _listPosition[0];
             for ( uint32 index = 1; index < count; ++index )
             {
-                const float3 velocity        = ( _listPosition[index] - _listPreviousPosition[index] ) * retain;
-                _listPreviousPosition[index] = _listPosition[index];
-                float3 next                  = _listPosition[index] + velocity + gravityStep;
-                // 애니메이션 자세 쪽으로: 부모 입자에서 애니메이션의 상대 방향만큼.
-                const float3 goal = _listPosition[index - 1] + ( _listAnimated[index] - _listAnimated[index - 1] );
-                next              = next + ( goal - next ) * stiffness;
+                const RigSpringParticleSettings particle = particleAt( index );
+                const float32                   retain   = 1.0f - MathUtil::saturate( particle._damping );
+                const float3                    velocity = ( _listPosition[index] - _listPreviousPosition[index] ) * retain;
+                _listPreviousPosition[index]             = _listPosition[index];
+                float3 next                              = _listPosition[index] + velocity + particle._gravity * ( step * step );
+                // 애니메이션 자세 쪽으로: 부모 입자에서 애니메이션의 상대 방향만큼(비율), 그리고 그 방향으로 미는 속도(VRM stiffness — 스텝마다 속도 × 스텝).
+                const float3 animatedOffset = _listAnimated[index] - _listAnimated[index - 1];
+                const float3 goal           = _listPosition[index - 1] + animatedOffset;
+                next                        = next + ( goal - next ) * MathUtil::saturate( particle._stiffness );
+                if ( particle._axisPull != 0.0f && _listLength[index] > 1e-8f )
+                    next = next + animatedOffset * ( particle._axisPull * step / _listLength[index] );
                 if ( space._bPlanar == SW_TRUE )
                     next = next - planeNormal * ( next - root ).dot( planeNormal );
                 next = RigSpringChainInternal::keepLength( _listPosition[index - 1], next, _listLength[index] );
@@ -132,7 +146,7 @@ namespace sw
                                                  : pointA;
                     const float3   away      = next - closest;
                     const float32  distance  = away.getLength();
-                    const float32  minimum   = collider._radius + settings._particleRadius;
+                    const float32  minimum   = collider._radius + particle._radius;
                     if ( distance < minimum && distance > 1e-8f )
                         next = closest + away * ( minimum / distance );
                 }

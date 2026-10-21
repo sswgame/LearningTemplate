@@ -80,7 +80,7 @@ namespace sw::editor
 {
     /**
      * @struct VrmMaterialImporter
-     * @brief VRM 머티리얼 읽기와 엔진 툰 머티리얼 쓰기를 담당합니다. 모든 함수가 static 입니다. 지원하는 키는 `Source/Editor/README.md` 의 "VRM 머티리얼" 테이블에 있습니다.
+     * @brief VRM 머티리얼 읽기와 엔진 툰 머티리얼 쓰기를 담당합니다. 모든 함수가 static 입니다. 지원하는 키의 정본은 `VrmMaterialImporter.cpp` 의 키 표(`kArrVrm0Float` · `kArrVrm0Texture` · `kArrVrm0Color` · `kArrMtoon1Key`)입니다.
      * @details 모르는 키는 오류다. 철자가 틀린 키가 조용히 기본값이 되지 않게 하는 이 저장소의 규칙이다. 아는데 지원하지 않는 키(UV 애니메이션 등)는
      *          @p pOutListIgnored 에 이름을 모은다. 값이 효과 없는 기본값이면 모으지 않는다. 호출하는 쪽이 경고로 알린다.
      */

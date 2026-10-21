@@ -12,9 +12,11 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
+#include "Editor/Common/Asset/ModelImporter.h"
 #include "Editor/Common/Asset/VrmMaterialImporter.h"
 
 #include "Engine/Animation/AnimationClip.h"
+#include "Engine/Graphics/Mesh/Mesh.h"
 
 #include <cgltf.h>
 
@@ -55,8 +57,7 @@ namespace sw::editor
         /** @brief 스킨드 모델 옆 폴더에서 부착 메시와 클립을 담는 폴더 이름입니다. */
         static constexpr string_view kPartFolder = "parts";
         static constexpr string_view kClipFolder = "clips";
-        /** @brief VRM 모델 옆 폴더에서 머티리얼 구간 메시와 툰 머티리얼을 담는 폴더 이름입니다. */
-        static constexpr string_view kSectionFolder  = "sections";
+        /** @brief VRM 모델 옆 폴더에서 툰 머티리얼을 담는 폴더 이름입니다. */
         static constexpr string_view kMaterialFolder = "materials";
         /** @brief 머티리얼이 쓰는 내장 이미지를 꺼내 두는 원본 텍스처 폴더 이름입니다. 텍스처 임포트가 이 이미지를 옆 `textures/` 의 DDS 로 변환합니다. */
         static constexpr string_view kRawTextureFolder = "textures_raw";
@@ -92,8 +93,10 @@ namespace sw::editor
             vector<vector<float3>> _listMorphNormal;   ///< [타깃][정점] 노멀 차이(엔진 공간)
             /** @brief 삼각형마다 그 프리미티브의 머티리얼입니다. 머티리얼 구간을 나눌 때 씁니다. */
             vector<const cgltf_material*> _listTriangleMaterial;
-            uint32                        _skippedPrimitiveCount{ 0 };
-            string                        _baseColorTextureUri;
+            /** @brief 삼각형마다 그 프리미티브의 glTF 메시입니다. VRM 1인칭 가시성(메시마다 정해진다)으로 구간을 나눌 때 씁니다. */
+            vector<const cgltf_mesh*> _listTriangleSourceMesh;
+            uint32                    _skippedPrimitiveCount{ 0 };
+            string                    _baseColorTextureUri;
             /** @brief 머티리얼의 baseColorFactor 를 정점 색에 곱할지 정합니다. VRM 은 머티리얼이 색을 가지고 있으므로 끕니다. 두 번 곱하지 않기 위해서입니다. */
             bool _bBakeMaterialColor{ true };
         };
@@ -217,8 +220,8 @@ namespace sw::editor
          * @details 인덱스가 없으면 정점 순서가 삼각형입니다. 범위 밖 모서리가 있는 삼각형은 버립니다. X 를 뒤집은 거울상이 감김을 한 번 뒤집고,
          *          노드 변환이 거울상(행렬식 < 0)이면 한 번 더 뒤집습니다(glTF 규약).
          */
-        static void appendPrimitiveTriangles( const cgltf_primitive& primitive, const float32 ( &arrWorld )[16], uint32 baseVertex, cgltf_size vertexCount,
-                                              MergedMesh& inoutMesh );
+        static void appendPrimitiveTriangles( const cgltf_primitive& primitive, const cgltf_mesh* pSourceMesh, const float32 ( &arrWorld )[16], uint32 baseVertex,
+                                              cgltf_size vertexCount, MergedMesh& inoutMesh );
 
         /** @brief 정점 하나의 JOINTS_0 과 미리 읽은 WEIGHTS_0(@p pWeight, `kInfluenceCount` 개)를 본 번호와 합이 1 인 가중치로 바꿉니다. 관절 번호를 읽지 못하면 false 입니다. */
         [[nodiscard]] static bool readSkinInfluence( const SkinBinding& skin, const cgltf_accessor* pJoint, const float32* pWeight, cgltf_size vertexIndex, ImportVertex& inoutVertex );
@@ -252,6 +255,10 @@ namespace sw::editor
          * @param skinBoneCount 0 이 아니면 스킨 정점도 같은 순서로 펼쳐 @p outData 에 담습니다.
          */
         static void expandTriangles( MergedMesh& inoutMesh, uint32 skinBoneCount, MeshAssetData& outData );
+        /** @brief 인덱스 순서를 바꾸지 않고 삼각형 목록으로 펼칩니다 — 구간마다 따로 최적화한 순서(`populateMaterialSections`)를 지킨다. */
+        static void expandTrianglesInOrder( const MergedMesh& mesh, uint32 skinBoneCount, MeshAssetData& outData );
+        /** @brief 인덱스 구간 [@p begin, @p end)(삼각형 단위)를 정점 캐시와 오버드로 순서로 최적화합니다. 구간 밖은 건드리지 않습니다. */
+        static void optimizeTriangleRange( MergedMesh& inoutMesh, size_t begin, size_t end );
 
         // ModelImportAnimation.cpp: 스켈레톤, 애니메이션 채널, 리샘플, 모프 곡선, 클립 부가 데이터
 
@@ -318,11 +325,12 @@ namespace sw::editor
                                                      vector<string>& outListIgnored );
 
         /**
-         * @brief 합친 메시를 머티리얼마다 나눠 구간 메시로 만듭니다. 삼각형이 없는 머티리얼은 빠집니다. 정점은 그 구간이 쓰는 것만 옮깁니다.
-         * @param skinBoneCount 스킨드면 본 수입니다(구간도 같은 스켈레톤을 쓴다). 아니면 0 입니다.
+         * @brief 합친 메시의 삼각형을 (머티리얼, 1인칭 가시성) 묶음마다 이어 놓고 구간 표를 만듭니다. 메시는 한 벌이다 — 구간은 그 메시의 정점 범위다(`MeshSection`).
+         * @details 1인칭 가시성은 VRM firstPerson 의 glTF 메시마다 값이다. Auto(적지 않은 메시 포함)는 UniVRM 과 같이 1인칭 본(머리) 아래 본에 가중치가 있는
+         *          꼭짓점을 하나라도 가진 삼각형을 3인칭 전용으로, 나머지를 둘 다로 나눈다. 묶음 안의 순서는 정점 캐시 · 오버드로 최적화를 묶음마다 따로 한다.
+         *          삼각형이 없는 묶음은 빠진다. 구간 이름은 머티리얼 파일 이름이고, 가시성이 둘 다가 아니면 `_tp` · `_fp` 를 붙인다.
          */
-        static void splitMaterialSections( const MergedMesh& merged, const cgltf_data& data, const vector<ToonMaterialDesc>& listToon, uint32 skinBoneCount,
-                                           ModelImportResult& inoutResult );
+        static void populateMaterialSections( MergedMesh& inoutBody, const cgltf_data& data, const vector<ToonMaterialDesc>& listToon, ModelImportResult& inoutResult );
 
         /**
          * @brief 구간 머티리얼이 쓰는 텍스처의 원본 이미지 바이트를 모읍니다. glTF 텍스처 번호로 찾으며, 파일 이름은 이미지 이름입니다(겹치면 번호를 붙인다).
@@ -332,8 +340,8 @@ namespace sw::editor
         [[nodiscard]] static bool collectSectionTextures( const cgltf_data& data, string_view sourcePath, ModelImportResult& inoutResult );
 
         /**
-         * @brief VRM 의 머티리얼 구간(메시와 툰 머티리얼)과 그 텍스처 원본을 씁니다.
-         * @details 메시는 `<옆 폴더>/sections/<머티리얼>.mesh`, 머티리얼은 `<옆 폴더>/materials/<머티리얼>.material` 에 쓴다(엔진 툰 머티리얼이 틀이다).
+         * @brief VRM 의 머티리얼 구간의 툰 머티리얼과 그 텍스처 원본을 씁니다. 구간 자체는 본 메시(`<y>.mesh`)의 `SECT` 덩어리다 — 구간 메시를 따로 쓰지 않는다.
+         * @details 머티리얼은 `<옆 폴더>/materials/<머티리얼>.material` 에 쓴다(엔진 툰 머티리얼이 틀이다). 같은 머티리얼의 구간 여럿(1인칭 가시성이 다른)은 파일 하나를 쓴다.
          *          텍스처 원본(내장 이미지 바이트 그대로)은 `<x>/textures_raw/<y>/<이미지>.png` 에 꺼내 두며, 바이트가 같으면 건드리지 않는다.
          *          머티리얼은 텍스처 임포트(`App --import-textures`)가 만들 `<x>/textures/<y>/<이미지>.dds` 를 가리킨다.
          *          원본은 텍스처 임포트의 스탬프가 지킨다.
@@ -364,6 +372,16 @@ namespace sw::editor
 
         /** @brief 아바타 정보가 있으면 `<옆 폴더>/<stem>.avatar.json` 에 쓰고, 무시한 키를 경고로 알립니다. */
         [[nodiscard]] static bool writeVrmAvatar( const ModelImportResult& result, string_view sourcePath, string_view sideFolder, string_view stem );
+
+        /**
+         * @brief 캐릭터 프리팹 `<옆 폴더>/<stem>.prefab.xml` 을 씁니다 — 스켈레탈 메시(첫 구간)와 구간마다 `MeshSectionComponent`, 얼굴 리그 · 후처리 리그 파일이 있으면
+         *        `FacialAnimationComponent` · `PoseModifierComponent` 가 그 파일을 참조합니다. 구간이 없는 모델은 쓰지 않습니다.
+         * @details 런타임은 이 프리팹을 스폰하면 VRM 의 표정 · 스프링 본 · 1인칭 숨김(구간 가시성)을 쓴다. 적은 칸만 쓰고 나머지는 컴포넌트의 기본값이다.
+         *          `.meta` 는 경로에서 정해지는 GUID 로 함께 쓴다(머티리얼과 같은 규칙 — 다시 임포트해도 같다).
+         */
+        [[nodiscard]] static bool writeCharacterPrefab( const ModelImportResult& result, string_view meshPath, string_view sideFolder, string_view stem );
+        /** @brief 임포트 구간 표를 메시 구간(`MeshSection`)으로 바꿉니다. */
+        static vector<MeshSection> makeMeshSections( const vector<ModelImportSection>& listSection );
 
         /** @brief 원본 바이트에 VRM 확장 이름(`"VRM"` · `VRMC_vrm`)이 있으면 true 입니다. 원본 해시에 아바타 형식 버전을 섞을지 정합니다. */
         static bool containsVrmExtension( const vector<uint8>& bytes );

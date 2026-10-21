@@ -1,6 +1,6 @@
 # 그래픽스 후보
 
-> 상태: 후보 · 선행: 없음 · 영역: graphics · 옛번호: C-55, D2-1, D2-2, D2-5, D2-6, D2-7, D2-9, D2-10, D2-14, E-3, E-13 · 진행: 해당없음
+> 상태: 후보 · 선행: 없음 · 영역: graphics · 옛번호: C-55, D2-2, D2-5, D2-9, D2-10, D2-14, E-3, E-13 · 진행: 해당없음
 
 이 문서는 그래픽스 · RHI · 셰이더 영역에서 착수 전인 후보의 목록입니다. 착수하면 그 절을 계획 문서로 옮기고 여기서 지웁니다.
 
@@ -13,12 +13,6 @@
 착수 조건 / 남은 것: 재고(`RT.GPUScene.vertexPool` 처럼) 이득이 있을 때 `SpanAllocator` 구조로 옮긴다.
 
 ## 기능
-
-### TwoDLightingExtras
-제목: 2D 조명의 남은 것
-옛번호: D2-1
-왜 필요한가: 2D 빛 텍스처 · 자유 모양 빛 · 부드러운 그림자 · 빛 블렌드 스타일이 없다.
-착수 조건 / 남은 것: 넷 모두 빛 컴포넌트(`Source/Engine/Object/Component/2D/Light2DComponent`)의 데이터부터 바꿔야 해 렌더러만 맡은 작업자는 시작하지 못했다(2026-10-17).
 
 ### DirectionalShadowRefinement
 제목: 방향광 그림자의 남은 것
@@ -41,25 +35,6 @@
 - 지형 LOD 교체 · 지형 쓰기의 비용과 식생 부분 계산은 계획 [TerrainEditCost](TerrainEditCost.md) 에 있다.
 함정: 머티리얼 텍스처 칸 16 — 에뮬 슬롯은 Vulkan t 밴드 뒤 t16..t31 이라 SRV 띠(지금 t0..t12)가 밴드 끝까지 자라도 밀리지 않고 DX11 은 정적 머티리얼 샘플러로 읽는다(옛 D2-6.3, 정본은 `ShaderBindingSlots.h` 헤더).
 
-### ToonShadingCompletion
-제목: 툰 머티리얼(MToon 1.0)의 남은 것
-옛번호: D2-6
-왜 필요한가: `toon.hlsl` 은 MToon 1.0 체계이고 아래가 빠졌다.
-착수 조건 / 남은 것:
-- 포워드 전용 지킴: toon.hlsl 의 `SW_PASS_GBUFFER` 분기를 `#error "toon.hlsl is forward-only ..."` 로 바꾼다 — `MATERIAL_FORWARD_ONLY` 를 빠뜨린 머티리얼이 G버퍼에서 램버트로 조용히 칠해지지 않고 쿠킹에서 멈춘다. 커밋 훅(`CheckShaderStamps`)이 다시 굽기를 요구하므로 App 빌드가 있는 통합 때 `--cook-shaders` 와 함께 한다(G버퍼 분기의 "디퍼드 조명은 램버트로 칠한다" 주석도 그때 지운다).
-- UV 스크롤 애니메이션(`uvAnimation*`): VRM 머티리얼 임포터(`Source/Editor`)의 매핑과 같이 바꾼다.
-- 스킨 · 모프 메시의 탄젠트: 스키닝 · 모프 컴퓨트가 위치 · 노멀만 돌려 노멀 맵이 레스트 탄젠트를 쓴다. `GPUMorphVertex` 에 탄젠트 칸이 필요하다.
-
-### VrmRuntimeConsumption
-제목: VRM 임포트 결과를 런타임이 읽기
-옛번호: D2-7
-왜 필요한가: humanoid 본 표 · 표정 · 스프링 본 · 1인칭은 `<이름>.avatar.json` 으로 나오지만 데이터뿐이다. 런타임이 읽는 타입이 없다(표정 → 모프 가중치, 스프링 본 시뮬레이션, 1인칭 메시 숨김). 스키마 테스트는 JSON 객체와 `_version` · `_mapHumanBone` 만 본다.
-착수 조건 / 남은 것:
-- 런타임 타입은 `Engine/Character` · `Engine/Animation` 에, BC7 재임포트는 Editor 임포터에 있어 그래픽 작업자의 파일 밖이다.
-- 본 메시(`<이름>.mesh`)는 구간들을 다시 합친 것이라 디스크에 두 벌이다(VRoid 34k 삼각형 7 MB × 2). 엔진 메시에 머티리얼 구간이 생기면 하나로 줄인다.
-- VRoid 텍스처는 BC3 이다. BC7 은 Release 의 띠 병렬 압축으로 512² 한 장이 8 초라([검증과 측정](../08_Verification.md) 2절, 커밋 `e71f3b8ae`) 예전의 "Debug 10 분" 은 근거가 아니다. Release 로 BC7 임포트를 다시 한다.
-함정: `ModelImporterTest.SkinnedModelImportsSkeletonClipsAndAttachments` 는 Debug 에서 혼자 31 초라 EditorTest 한도를 30 → 120 초로 올려 두었다. 임포트를 줄이면 되돌린다.
-
 ### HalfResolutionBloomMeasurement
 제목: 반해상도 블룸의 Release 측정
 옛번호: D2-9
@@ -73,7 +48,6 @@
 착수 조건 / 남은 것:
 - Shipping 베이크: 쿠킹한 LightingOnly 변형으로 Shipping hostgpu 를 돌린다. Shipping 전체 빌드가 필요해 통합 담당의 Shipping 확인 때 돌린다.
 - Metallic 금속도 칸은 PBR([IndirectLighting](IndirectLighting.md) P5)과 함께 생긴다.
-- Shaded Wireframe: 패스가 둘 필요하다(셰이딩한 면 위에 같은 배치를 선으로 한 번 더). 착수 조건은 RHI 다 — `RHIPipelineStateDesc` 에 깊이 비교 함수(LessEqual)와 깊이 바이어스가 없어(네 백엔드) 겹쳐 그린 선이 면과 z-fighting 한다. 선 색은 보기 모드 define 하나(`swStoreSurface` 가 단색을 낸다)이고 G버퍼에는 셰이딩 모델 Unlit 으로 적으면 디퍼드도 그대로 된다. 디퍼드에서 툰은 `ForwardOnlyOpaque` 패스가 그리므로 그 패스에도 같은 겹침이 필요하다.
 함정: `swStoreSurface` 가 셰이더마다 명시한 거칠기 · 금속도를 받는다. `toon` · `sprite2dlit` 포워드 경로도 LightingOnly 에서는 회색으로 바뀐다.
 
 ### RealtimeGlobalIllumination

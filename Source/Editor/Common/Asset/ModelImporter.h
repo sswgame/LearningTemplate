@@ -65,13 +65,16 @@ namespace sw::editor
 {
     /**
      * @struct ModelImportSection
-     * @brief 머티리얼 하나가 쓰는 삼각형만 모은 메시와 그 툰 머티리얼입니다(VRM). 스킨드 모델이면 본 영향과 스켈레톤은 본 메시와 같습니다.
+     * @brief 본 메시의 구간 하나(머티리얼 하나 × 1인칭 가시성 하나의 삼각형 범위)와 그 툰 머티리얼입니다(VRM).
      */
     struct ModelImportSection
     {
-        string           _fileStem; ///< 출력 파일 이름(소문자, 겹치면 번호를 붙인다)
-        MeshAssetData    _mesh;
-        ToonMaterialDesc _material;
+        string               _fileStem;    ///< 머티리얼 파일 이름(소문자, 겹치면 번호를 붙인다). 같은 머티리얼의 구간은 같은 이름이다
+        string               _sectionName; ///< 본 메시의 구간 이름(`MeshSection::_name`)
+        uint32               _firstVertex{ 0 };
+        uint32               _vertexCount{ 0 };
+        MeshPersonVisibility _personVisibility{ MeshPersonVisibility::Both };
+        ToonMaterialDesc     _material;
     };
 } // namespace sw::editor
 
@@ -133,9 +136,10 @@ namespace sw::editor
      *          - `clips/<클립>.animclip`: 애니메이션마다 하나다. 관절마다 균일한 간격으로 다시 샘플링해 규칙의 코덱으로 압축하고, 클립마다 압축률과 최대 오차를 로그로 보고한다.
      *          클립의 반복, 알림, 커브는 원본 옆의 부가 데이터 `<y>.clips.json` 이 정하며 원본 해시에 섞인다. 옆 폴더는 임포트할 때마다 지우고 다시 쓴다.
      *
-     *          VRM 은 머티리얼에 MToon 값이 있다(0.x 는 `extensions.VRM`, 1.0 은 `VRMC_materials_mtoon`). 머티리얼마다 `sections/<머티리얼>.mesh` 와 툰 머티리얼
-     *          `materials/<머티리얼>.material` 을 옆 폴더에 더 쓰고, 그 머티리얼이 쓰는 내장 이미지를 `<x>/textures_raw/<y>/` 로 꺼낸다(`VrmMaterialImporter`).
-     *          humanoid 본 테이블 · 표정 · 스프링 본 · 1인칭은 본과 모프 타깃 이름으로 풀어 옆 폴더의 `<y>.avatar.json` 에 쓴다(`VrmAvatarImporter`).
+     *          VRM 은 머티리얼에 MToon 값이 있다(0.x 는 `extensions.VRM`, 1.0 은 `VRMC_materials_mtoon`). 본 메시는 (머티리얼, 1인칭 가시성)마다 구간(`SECT`)을 갖고,
+     *          툰 머티리얼 `materials/<머티리얼>.material` 을 옆 폴더에 더 쓰며, 그 머티리얼이 쓰는 내장 이미지를 `<x>/textures_raw/<y>/` 로 꺼낸다(`VrmMaterialImporter`).
+     *          humanoid 본 테이블 · 표정 · 스프링 본 · 1인칭은 본과 모프 타깃 이름으로 풀어 옆 폴더의 `<y>.avatar.json` 에 쓰고, 표정 · 스프링 본은 얼굴 리그 · 후처리 리그로도 쓴다.
+     *          캐릭터 프리팹 `<y>.prefab.xml`(스켈레탈 메시 + 구간마다 `MeshSectionComponent` + 얼굴 리그 · 후처리 리그 컴포넌트)을 옆 폴더에 쓴다.
      */
     struct ModelImporter
     {

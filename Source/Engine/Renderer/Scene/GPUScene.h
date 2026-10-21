@@ -79,14 +79,15 @@ namespace sw
         uint32 _firstVertex{ 0 };
         /// @brief 정점 애니메이션(VAT) 테이블에서 이 배치 메시의 첫 원소입니다. 0xFFFFFFFF 이면 VAT 가 없습니다(binding.hlsli `vertexAnimationBase`).
         uint32 _vertexAnimationBase{ 0xFFFFFFFFu };
-        uint32 _pad1{ 0 };
+        /// @brief 이 배치가 그리는 메시 구간의 첫 정점(메시 안 번호)입니다. VAT 표는 메시 전체의 정점 순서라 배치 안 번호에 이 값을 더해 찾는다(batchdata.hlsli `sectionVertexOffset`).
+        uint32 _sectionVertexOffset{ 0 };
         uint32 _pad2{ 0 };
     };
 } // namespace sw
 
 namespace sw
 {
-    static_assert( sizeof( GPUBatchInfo ) == 8 * sizeof( uint32 ), "GPUBatchInfo 는 uint 여덟(32바이트) — binding.hlsli SwBatchData · gpucull.hlsl GPUBatchInfo 와 같아야 한다" );
+    static_assert( sizeof( GPUBatchInfo ) == 8 * sizeof( uint32 ), "GPUBatchInfo 는 uint 여덟(32바이트) — batchdata.hlsli SwBatchData 와 같아야 한다" );
 
     /// @brief 머티리얼 그룹의 GPU 버퍼입니다. RT 가 소유하며, 셰이더 경로를 키로 스냅샷을 넘어 재사용합니다.
     struct GPUMaterialGroupBuffer

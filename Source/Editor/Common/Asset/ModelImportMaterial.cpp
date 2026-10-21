@@ -1,6 +1,6 @@
 /**
  * @file ModelImportMaterial.cpp
- * @brief 모델 임포트의 VRM 툰 머티리얼 읽기 · 머티리얼 구간 나누기 · 구간 텍스처 모으기 · 구간 메시와 머티리얼 쓰기입니다.
+ * @brief 모델 임포트의 VRM 툰 머티리얼 읽기 · 머티리얼 구간 표 만들기 · 구간 텍스처 모으기 · 구간 머티리얼 쓰기입니다.
  */
 #include "pch.h"
 
@@ -78,60 +78,133 @@ namespace sw::editor
         return true;
     }
 
-    void ModelImportUtil::splitMaterialSections( const MergedMesh& merged, const cgltf_data& data, const vector<ToonMaterialDesc>& listToon, uint32 skinBoneCount,
-                                                 ModelImportResult& inoutResult )
+    void ModelImportUtil::populateMaterialSections( MergedMesh& inoutBody, const cgltf_data& data, const vector<ToonMaterialDesc>& listToon, ModelImportResult& inoutResult )
     {
-        unordered_map<string, uint32> mapStemUse;
-        for ( size_t materialIndex = 0; materialIndex < listToon.size(); ++materialIndex )
+        // glTF 메시마다 1인칭 가시성 — 적지 않은 메시는 Auto 다(VRM 1.0 · 0.x 의 기본). 이름은 아바타 임포터가 쓴 규칙(makeMeshName)과 같다.
+        auto findMode = [&]( const cgltf_mesh* pMesh ) -> VrmFirstPersonMode
         {
-            const cgltf_material* pMaterial = &data.materials[materialIndex];
-            MergedMesh            section;
-            vector<uint32>        listRemap( merged._listVertex.size(), 0xFFFFFFFFu );
-            for ( size_t triangle = 0; triangle < merged._listTriangleMaterial.size(); ++triangle )
+            if ( pMesh == nullptr )
+                return VrmFirstPersonMode::Auto;
+            const size_t meshIndex = static_cast<size_t>( pMesh - data.meshes );
+            const string name      = ( pMesh->name != nullptr && pMesh->name[0] != '\0' ) ? string( pMesh->name ) : "mesh" + to_string( static_cast<uint64>( meshIndex ) );
+            for ( const VrmFirstPersonMesh& annotated : inoutResult._avatar._listFirstPersonMesh )
             {
-                if ( merged._listTriangleMaterial[triangle] != pMaterial )
-                    continue;
-                for ( uint32 corner = 0; corner < 3; ++corner )
-                {
-                    const uint32 source = merged._listIndex[triangle * 3 + corner];
-                    if ( listRemap[source] == 0xFFFFFFFFu )
-                    {
-                        listRemap[source] = static_cast<uint32>( section._listVertex.size() );
-                        section._listVertex.push_back( merged._listVertex[source] );
-                    }
-                    section._listIndex.push_back( listRemap[source] );
-                }
+                if ( annotated._mesh == name )
+                    return annotated._mode;
             }
-            if ( section._listIndex.empty() )
-                continue;
-            // 모프 타깃(표정)은 이 구간의 정점에 차이가 있는 것만 옮긴다 — 얼굴 타깃이 몸 · 옷 구간에 빈 채로 남으면 그 구간도 모프 풀을 탄다.
-            for ( size_t targetIndex = 0; targetIndex < merged._listMorphName.size(); ++targetIndex )
-            {
-                vector<float3> listPosition( section._listVertex.size() );
-                vector<float3> listNormal( section._listVertex.size() );
-                bool           bMoves = false;
-                for ( size_t source = 0; source < listRemap.size(); ++source )
-                {
-                    if ( listRemap[source] == 0xFFFFFFFFu )
-                        continue;
-                    listPosition[listRemap[source]] = merged._listMorphPosition[targetIndex][source];
-                    listNormal[listRemap[source]]   = merged._listMorphNormal[targetIndex][source];
-                    bMoves                          = bMoves || listPosition[listRemap[source]].getLengthSquared() > 1e-7f || listNormal[listRemap[source]].getLengthSquared() > 1e-7f;
-                }
-                if ( bMoves == false )
-                    continue;
-                section._listMorphName.push_back( merged._listMorphName[targetIndex] );
-                section._listMorphPosition.push_back( std::move( listPosition ) );
-                section._listMorphNormal.push_back( std::move( listNormal ) );
-            }
-            ModelImportSection output{};
-            output._material      = listToon[materialIndex];
-            const string baseStem = makeFileStem( output._material._name );
-            const uint32 useCount = mapStemUse[baseStem]++;
-            output._fileStem      = makeNumberedStem( baseStem, useCount );
-            expandTriangles( section, skinBoneCount, output._mesh );
-            inoutResult._listSection.push_back( std::move( output ) );
+            return VrmFirstPersonMode::Auto;
+        };
+
+        // 1인칭 본(머리) 아래 본 — Auto 메시는 이 본에 가중치가 있는 꼭짓점을 가진 삼각형을 3인칭 전용으로 나눈다(UniVRM 과 같다).
+        const Skeleton& skeleton = inoutResult._skeleton;
+        vector<uint8>   listHeadBone( skeleton.getBoneCount(), SW_FALSE );
+        const int32     headBone = inoutResult._avatar._firstPersonBone.empty() ? -1 : skeleton.findBoneIndex( hashed_string( inoutResult._avatar._firstPersonBone ) );
+        for ( uint32 bone = 0; headBone >= 0 && bone < skeleton.getBoneCount(); ++bone )
+        {
+            const int32 parent = skeleton.getBone( bone )._parentIndex;
+            listHeadBone[bone] = ( static_cast<int32>( bone ) == headBone || ( parent >= 0 && listHeadBone[static_cast<uint32>( parent )] == SW_TRUE ) ) ? SW_TRUE : SW_FALSE;
         }
+        auto touchesHead = [&]( size_t triangle ) -> bool
+        {
+            for ( uint32 corner = 0; corner < 3; ++corner )
+            {
+                const ImportVertex& vertex = inoutBody._listVertex[inoutBody._listIndex[triangle * 3 + corner]];
+                for ( uint32 influence = 0; influence < kInfluenceCount; ++influence )
+                {
+                    const uint32 joint          = vertex._arrJoint[influence];
+                    const bool   bHeadInfluence = vertex._arrWeight[influence] > 0.0f && joint < listHeadBone.size() && listHeadBone[joint] == SW_TRUE;
+                    if ( bHeadInfluence )
+                        return true;
+                }
+            }
+            return false;
+        };
+
+        // 삼각형마다 묶음 열쇠 — (머티리얼 번호, 가시성). 머티리얼이 없는 삼각형은 어느 구간에도 들지 않고 뒤에 남는다(그리는 컴포넌트가 없다).
+        const size_t     triangleCount    = inoutBody._listTriangleMaterial.size();
+        constexpr uint32 kNoSection       = 0xFFFFFFFFu;
+        constexpr uint32 kVisibilityCount = static_cast<uint32>( MeshPersonVisibility::Count );
+        vector<uint32>   listKey( triangleCount, kNoSection );
+        uint32           noMaterialCount{ 0 };
+        for ( size_t triangle = 0; triangle < triangleCount; ++triangle )
+        {
+            const cgltf_material* pMaterial = inoutBody._listTriangleMaterial[triangle];
+            if ( pMaterial == nullptr || static_cast<size_t>( pMaterial - data.materials ) >= listToon.size() )
+            {
+                ++noMaterialCount;
+                continue;
+            }
+            const VrmFirstPersonMode mode       = findMode( triangle < inoutBody._listTriangleSourceMesh.size() ? inoutBody._listTriangleSourceMesh[triangle] : nullptr );
+            MeshPersonVisibility     visibility = MeshPersonVisibility::Both;
+            if ( mode == VrmFirstPersonMode::ThirdPersonOnly )
+                visibility = MeshPersonVisibility::ThirdPersonOnly;
+            else if ( mode == VrmFirstPersonMode::FirstPersonOnly )
+                visibility = MeshPersonVisibility::FirstPersonOnly;
+            else if ( mode == VrmFirstPersonMode::Auto && touchesHead( triangle ) )
+                visibility = MeshPersonVisibility::ThirdPersonOnly;
+            listKey[triangle] = static_cast<uint32>( pMaterial - data.materials ) * kVisibilityCount + static_cast<uint32>( visibility );
+        }
+        if ( noMaterialCount > 0 )
+            SW_LOG_WARNING( "VRM model: %# triangles have no material - no mesh section draws them", noMaterialCount );
+
+        // 열쇠 순서로 삼각형을 다시 놓고(안정 정렬 — 같은 묶음 안의 원본 순서를 지킨 뒤 묶음마다 최적화한다), 구간 표를 만든다.
+        vector<uint32> listOrder( triangleCount );
+        for ( uint32 triangle = 0; triangle < static_cast<uint32>( triangleCount ); ++triangle )
+        {
+            listOrder[triangle] = triangle;
+        }
+        std::stable_sort( listOrder.begin(), listOrder.end(), [&listKey]( uint32 lhs, uint32 rhs )
+        { return listKey[lhs] < listKey[rhs]; } );
+        vector<uint32>                listIndex;
+        vector<const cgltf_material*> listMaterial;
+        vector<const cgltf_mesh*>     listSourceMesh;
+        listIndex.reserve( inoutBody._listIndex.size() );
+        for ( const uint32 triangle : listOrder )
+        {
+            for ( uint32 corner = 0; corner < 3; ++corner )
+            {
+                listIndex.push_back( inoutBody._listIndex[triangle * 3 + corner] );
+            }
+            listMaterial.push_back( inoutBody._listTriangleMaterial[triangle] );
+            listSourceMesh.push_back( triangle < inoutBody._listTriangleSourceMesh.size() ? inoutBody._listTriangleSourceMesh[triangle] : nullptr );
+        }
+        inoutBody._listIndex              = std::move( listIndex );
+        inoutBody._listTriangleMaterial   = std::move( listMaterial );
+        inoutBody._listTriangleSourceMesh = std::move( listSourceMesh );
+
+        unordered_map<string, uint32> mapStemUse;
+        unordered_map<uint32, string> mapMaterialStem;
+        size_t                        begin = 0;
+        while ( begin < triangleCount && listKey[listOrder[begin]] != kNoSection )
+        {
+            const uint32 key = listKey[listOrder[begin]];
+            size_t       end = begin;
+            while ( end < triangleCount && listKey[listOrder[end]] == key )
+            {
+                ++end;
+            }
+            optimizeTriangleRange( inoutBody, begin, end );
+            const uint32               materialIndex = key / kVisibilityCount;
+            const MeshPersonVisibility visibility    = static_cast<MeshPersonVisibility>( key % kVisibilityCount );
+            ModelImportSection         section{};
+            section._material = listToon[materialIndex];
+            auto stemIt       = mapMaterialStem.find( materialIndex );
+            if ( stemIt == mapMaterialStem.end() )
+            {
+                const string baseStem = makeFileStem( section._material._name );
+                stemIt                = mapMaterialStem.emplace( materialIndex, makeNumberedStem( baseStem, mapStemUse[baseStem]++ ) ).first;
+            }
+            section._fileStem         = stemIt->second;
+            section._sectionName      = section._fileStem + ( visibility == MeshPersonVisibility::ThirdPersonOnly ? "_tp" : ( visibility == MeshPersonVisibility::FirstPersonOnly ? "_fp" : "" ) );
+            section._firstVertex      = static_cast<uint32>( begin * 3 );
+            section._vertexCount      = static_cast<uint32>( ( end - begin ) * 3 );
+            section._personVisibility = visibility;
+            inoutResult._listSection.push_back( std::move( section ) );
+            begin = end;
+        }
+        // 구간 없는 꼬리(머티리얼 없는 삼각형)도 순서만 최적화한다.
+        if ( begin < triangleCount )
+            optimizeTriangleRange( inoutBody, begin, triangleCount );
     }
 
     bool ModelImportUtil::collectSectionTextures( const cgltf_data& data, string_view sourcePath, ModelImportResult& inoutResult )
@@ -216,14 +289,13 @@ namespace sw::editor
             listTexturePath[textureIndex] = ResourcePaths::toResourceID( TextureImporter::makeImportedTexturePath( rawPath ) );
         }
 
+        vector<string> listWrittenStem;
         for ( const ModelImportSection& section : result._listSection )
         {
-            const string meshPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, kSectionFolder ), section._fileStem + string( MeshAssetFormat::kExtension ) );
-            if ( MeshAssetFormat::saveToFile( meshPath, section._mesh ) == false )
-            {
-                SW_LOG_ERROR( "Failed to write section mesh %#", meshPath.c_str() );
-                return false;
-            }
+            // 같은 머티리얼의 구간(1인칭 가시성이 다른)은 머티리얼 파일 하나를 쓴다.
+            if ( std::find( listWrittenStem.begin(), listWrittenStem.end(), section._fileStem ) != listWrittenStem.end() )
+                continue;
+            listWrittenStem.push_back( section._fileStem );
             const string materialText = VrmMaterialImporter::makeMaterialXML( section._material, listTexturePath );
             const string materialPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, kMaterialFolder ), section._fileStem + ".material" );
             FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( materialPath ) );
