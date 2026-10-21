@@ -34,6 +34,161 @@ namespace sw
             pNode->_execute( passContext );
             pCmdList->endCommandList();
         }
+
+        /**
+         * @brief `RenderGraph::compile` 의 단계들입니다. 활성 노드 사이의 의존 간선을 모으고, Kahn 위상 정렬을 레벨 단위로 돌리고, 순환이면 이름으로 알립니다.
+         */
+        struct RenderGraphCompileInternal
+        {
+            /** @brief 생산자에서 소비자로 향하는 인접 목록과 활성 노드 기준 진입 차수입니다. */
+            struct DependencyGraph
+            {
+                unordered_map<size_t, vector<size_t>> _adjacency;
+                unordered_map<size_t, uint32>         _mapInDegree;
+
+                void addEdge( size_t from, size_t to )
+                {
+                    if ( from == to )
+                        return;
+                    vector<size_t>& listAdjacent = _adjacency[from];
+                    if ( std::find( listAdjacent.begin(), listAdjacent.end(), to ) == listAdjacent.end() )
+                    {
+                        listAdjacent.push_back( to );
+                        ++_mapInDegree[to];
+                    }
+                }
+            };
+
+            /** @brief 간선을 모읍니다 — 1) 같은 리소스의 쓰기 사슬(WAW), 2) 읽기와 그 생산자(RAW), 3) 그 읽기와 생산자 다음 쓰기(WAR). */
+            static void collectDependencyEdges( const vector<RenderGraphNode>& listNode, const vector<size_t>& listActiveIndex, DependencyGraph& outGraph )
+            {
+                // 1. 리소스마다 그것을 쓰는 패스를 활성 등록 순서대로 모두 모은다.
+                unordered_map<hashed_string, vector<size_t>> mapResourceWriter;
+                for ( size_t nodeIndex : listActiveIndex )
+                {
+                    for ( const hashed_string& output : listNode[nodeIndex]._listOutput )
+                    {
+                        mapResourceWriter[output].push_back( nodeIndex );
+                    }
+                }
+
+                outGraph._adjacency.reserve( listActiveIndex.size() );
+                outGraph._mapInDegree.reserve( listActiveIndex.size() );
+                for ( size_t nodeIndex : listActiveIndex )
+                {
+                    outGraph._mapInDegree[nodeIndex] = 0;
+                }
+
+                // 2. 같은 리소스를 잇따라 쓰는 패스들을 사슬로 연결한다(Write-after-Write 순서).
+                for ( const auto& [resource, listWriter] : mapResourceWriter )
+                {
+                    for ( size_t writerIndex = 0; writerIndex + 1 < listWriter.size(); ++writerIndex )
+                    {
+                        outGraph.addEdge( listWriter[writerIndex], listWriter[writerIndex + 1] );
+                    }
+                }
+
+                // 3. 입력을 읽는 소비자마다 맞는 생산자를 찾는다.
+                for ( size_t consumerIndex : listActiveIndex )
+                {
+                    for ( const hashed_string& input : listNode[consumerIndex]._listInput )
+                    {
+                        auto it = mapResourceWriter.find( input );
+                        if ( it == mapResourceWriter.end() || it->second.empty() )
+                            continue;
+
+                        const auto& listWriter    = it->second;
+                        size_t      producerIndex = listWriter.front();
+                        for ( size_t writerIndex : listWriter )
+                        {
+                            if ( writerIndex < consumerIndex )
+                                producerIndex = writerIndex;
+                        }
+                        outGraph.addEdge( producerIndex, consumerIndex );
+
+                        // 이 읽기가 본 버전(생산자) **다음에** 같은 자원을 덮어쓰는 패스는 이 읽기 뒤에 와야 한다(Write-after-Read). 이
+                        // 간선이 없으면 W 가 쓰고 A 가 읽고 B 가 다시 쓸 때 A 와 B 가 같은 레벨에 들어간다. 직렬로는 B 가 먼저 돌아 A 가 B 의 출력을
+                        // 읽고, 병렬로는 둘이 경합한다. 기준은 선언 순서가 아니라 **쓰기 사슬에서 생산자
+                        // 다음**이다. 소비자를 생산자보다 먼저 선언해도 되는 그래프라(앞에 쓰는 이가 없으면 첫 쓰기가 생산자), 선언 순서로 고르면
+                        // 생산자 자신을 골라 순환이 된다.
+                        for ( size_t chainIndex = 0; chainIndex + 1 < listWriter.size(); ++chainIndex )
+                        {
+                            if ( listWriter[chainIndex] == producerIndex )
+                            {
+                                outGraph.addEdge( consumerIndex, listWriter[chainIndex + 1] );
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            /**
+             * @brief Kahn 위상 정렬을 BFS 레벨 단위로 묶어 처리합니다.
+             * @details 같은 레벨에 들어온 노드들은 서로 입출력 의존이 없어(동시에 in-degree 가 0이 됨) 안전하게 병렬 기록할 수 있다.
+             */
+            static void scheduleLevels( const vector<RenderGraphNode>& listNode, const vector<size_t>& listActiveIndex, DependencyGraph& graph,
+                                        vector<hashed_string>& outListOrder, vector<vector<hashed_string>>& outListLevel )
+            {
+                std::queue<size_t> queueReady;
+                for ( size_t nodeIndex : listActiveIndex )
+                {
+                    if ( graph._mapInDegree[nodeIndex] == 0 )
+                        queueReady.push( nodeIndex );
+                }
+
+                outListOrder.reserve( listActiveIndex.size() );
+                while ( queueReady.empty() == false )
+                {
+                    const size_t           levelSize = queueReady.size();
+                    vector<hashed_string>& level     = outListLevel.emplace_back();
+                    level.reserve( levelSize );
+
+                    for ( size_t levelSlot = 0; levelSlot < levelSize; ++levelSlot )
+                    {
+                        const size_t nodeIndex = queueReady.front();
+                        queueReady.pop();
+                        outListOrder.push_back( listNode[nodeIndex]._name );
+                        level.push_back( listNode[nodeIndex]._name );
+
+                        const auto adjacentIt = graph._adjacency.find( nodeIndex );
+                        if ( adjacentIt == graph._adjacency.end() )
+                            continue;
+
+                        for ( size_t consumerIndex : adjacentIt->second )
+                        {
+                            uint32& degree = graph._mapInDegree[consumerIndex];
+                            if ( degree > 0 )
+                                --degree;
+                            if ( degree == 0 )
+                                queueReady.push( consumerIndex );
+                        }
+                    }
+                }
+            }
+
+            /**
+             * @brief 순환을 이름으로 알립니다. 남은 패스는 진입 차수가 0이 되지 못한 것이고, 그 사이의 간선이 순환(과 그 뒤에 매달린 패스)이다.
+             * @details "몇 개 중 몇 개" 만으로는 파이프라인 XML 의 입출력을 손으로 따라가야 하므로 무엇이 무엇을 기다리다 남았는지 적는다.
+             */
+            static void reportCycle( const vector<RenderGraphNode>& listNode, DependencyGraph& graph, size_t scheduledCount, size_t activeCount )
+            {
+                StringBuilder<constant::kMaxBuffer4096> waits;
+                for ( const auto& [producerIndex, listConsumer] : graph._adjacency )
+                {
+                    if ( graph._mapInDegree[producerIndex] == 0 )
+                        continue;
+                    for ( size_t consumerIndex : listConsumer )
+                    {
+                        if ( graph._mapInDegree[consumerIndex] > 0 )
+                            waits.appendFormat( "\n  '%#' waits on '%#'", listNode[consumerIndex]._name.c_str(), listNode[producerIndex]._name.c_str() );
+                    }
+                }
+                SW_LOG_ERROR( "Render graph has a cycle - %#/%# active passes scheduled; these wait on each other "
+                              "(a pass reads what a later pass writes, which reads this one's output):%#",
+                              static_cast<uint32>( scheduledCount ), static_cast<uint32>( activeCount ), waits.c_str() );
+            }
+        };
     } // namespace
 } // namespace sw
 
@@ -120,160 +275,30 @@ namespace sw
      */
     bool RenderGraph::compile()
     {
+        using Internal = RenderGraphCompileInternal;
         _listCompiledExecutionOrder.clear();
         _listCompiledLevel.clear();
 
         if ( _listNode.empty() )
             return false;
 
-        const size_t nodeCount = _listNode.size();
-
         // 활성(컬링되지 않은) 노드 인덱스
         vector<size_t> listActiveIndex;
-        listActiveIndex.reserve( nodeCount );
-        for ( size_t nodeIndex = 0; nodeIndex < nodeCount; ++nodeIndex )
+        listActiveIndex.reserve( _listNode.size() );
+        for ( size_t nodeIndex = 0; nodeIndex < _listNode.size(); ++nodeIndex )
         {
             if ( _listNode[nodeIndex]._bCulled == false )
                 listActiveIndex.push_back( nodeIndex );
         }
-
         if ( listActiveIndex.empty() )
             return false;
 
-        // 1. 리소스마다 그것을 쓰는 패스를 활성 등록 순서대로 모두 모은다.
-        unordered_map<hashed_string, vector<size_t>> mapResourceWriter;
-        for ( size_t nodeIndex : listActiveIndex )
-        {
-            for ( const hashed_string& output : _listNode[nodeIndex]._listOutput )
-            {
-                mapResourceWriter[output].push_back( nodeIndex );
-            }
-        }
-
-        // 인접 목록은 생산자에서 소비자로 향한다. 진입 차수는 활성 노드 기준이다.
-        unordered_map<size_t, vector<size_t>> adjacency;
-        unordered_map<size_t, uint32>         mapInDegree;
-        adjacency.reserve( listActiveIndex.size() );
-        mapInDegree.reserve( listActiveIndex.size() );
-
-        for ( size_t nodeIndex : listActiveIndex )
-        {
-            mapInDegree[nodeIndex] = 0;
-        }
-
-        auto addEdge = [&]( size_t from, size_t to )
-        {
-            if ( from == to )
-                return;
-            auto& listAdjacent = adjacency[from];
-            if ( std::find( listAdjacent.begin(), listAdjacent.end(), to ) == listAdjacent.end() )
-            {
-                listAdjacent.push_back( to );
-                ++mapInDegree[to];
-            }
-        };
-
-        // 2. 같은 리소스를 잇따라 쓰는 패스들을 사슬로 연결한다(Write-after-Write 순서).
-        for ( const auto& [resource, listWriter] : mapResourceWriter )
-        {
-            for ( size_t writerIndex = 0; writerIndex + 1 < listWriter.size(); ++writerIndex )
-            {
-                addEdge( listWriter[writerIndex], listWriter[writerIndex + 1] );
-            }
-        }
-
-        // 3. 입력을 읽는 소비자마다 맞는 생산자를 찾는다.
-        for ( size_t consumerIndex : listActiveIndex )
-        {
-            for ( const hashed_string& input : _listNode[consumerIndex]._listInput )
-            {
-                auto it = mapResourceWriter.find( input );
-                if ( it == mapResourceWriter.end() || it->second.empty() )
-                    continue;
-
-                const auto& listWriter    = it->second;
-                size_t      producerIndex = listWriter.front();
-
-                for ( size_t writerIndex : listWriter )
-                {
-                    if ( writerIndex < consumerIndex )
-                        producerIndex = writerIndex;
-                }
-
-                addEdge( producerIndex, consumerIndex );
-
-                // 이 읽기가 본 버전(생산자) **다음에** 같은 자원을 덮어쓰는 패스는 이 읽기 뒤에 와야 한다(Write-after-Read). 이
-                // 간선이 없으면 W 가 쓰고 A 가 읽고 B 가 다시 쓸 때 A 와 B 가 같은 레벨에 들어간다. 직렬로는 B 가 먼저 돌아 A 가 B 의 출력을
-                // 읽고, 병렬로는 둘이 경합한다. 기준은 선언 순서가 아니라 **쓰기 사슬에서 생산자
-                // 다음**이다. 소비자를 생산자보다 먼저 선언해도 되는 그래프라(앞에 쓰는 이가 없으면 첫 쓰기가 생산자), 선언 순서로 고르면
-                // 생산자 자신을 골라 순환이 된다.
-                for ( size_t chainIndex = 0; chainIndex + 1 < listWriter.size(); ++chainIndex )
-                {
-                    if ( listWriter[chainIndex] == producerIndex )
-                    {
-                        addEdge( consumerIndex, listWriter[chainIndex + 1] );
-                        break;
-                    }
-                }
-            }
-        }
-
-        std::queue<size_t> queueReady;
-        for ( size_t nodeIndex : listActiveIndex )
-        {
-            if ( mapInDegree[nodeIndex] == 0 )
-                queueReady.push( nodeIndex );
-        }
-
-        _listCompiledExecutionOrder.reserve( listActiveIndex.size() );
-        // Kahn 위상 정렬을 BFS 레벨 단위로 묶어 처리한다. 같은 레벨에 들어온 노드들은
-        // 서로 입출력 의존이 없어(동시에 in-degree 가 0이 됨) 안전하게 병렬 기록할 수 있다.
-        while ( queueReady.empty() == false )
-        {
-            const size_t           levelSize = queueReady.size();
-            vector<hashed_string>& level     = _listCompiledLevel.emplace_back();
-            level.reserve( levelSize );
-
-            for ( size_t levelSlot = 0; levelSlot < levelSize; ++levelSlot )
-            {
-                const size_t nodeIndex = queueReady.front();
-                queueReady.pop();
-                _listCompiledExecutionOrder.push_back( _listNode[nodeIndex]._name );
-                level.push_back( _listNode[nodeIndex]._name );
-
-                unordered_map<size_t, vector<size_t>>::iterator adjacentIt = adjacency.find( nodeIndex );
-                if ( adjacentIt == adjacency.end() )
-                    continue;
-
-                for ( size_t consumerIndex : adjacentIt->second )
-                {
-                    uint32& degree = mapInDegree[consumerIndex];
-                    if ( degree > 0 )
-                        --degree;
-                    if ( degree == 0 )
-                        queueReady.push( consumerIndex );
-                }
-            }
-        }
-
+        Internal::DependencyGraph graph;
+        Internal::collectDependencyEdges( _listNode, listActiveIndex, graph );
+        Internal::scheduleLevels( _listNode, listActiveIndex, graph, _listCompiledExecutionOrder, _listCompiledLevel );
         if ( _listCompiledExecutionOrder.size() != listActiveIndex.size() )
         {
-            // 무엇이 무엇을 기다리다 남았는지 이름으로 적는다("몇 개 중 몇 개" 만으로는 파이프라인 XML 의 입출력을 손으로 따라가야
-            // 한다). 남은 패스는 진입 차수가 0이 되지 못한 것이고, 그 사이의 간선이 순환(과 그 뒤에 매달린 패스)이다.
-            StringBuilder<constant::kMaxBuffer4096> waits;
-            for ( const auto& [producerIndex, listConsumer] : adjacency )
-            {
-                if ( mapInDegree[producerIndex] == 0 )
-                    continue;
-                for ( size_t consumerIndex : listConsumer )
-                {
-                    if ( mapInDegree[consumerIndex] > 0 )
-                        waits.appendFormat( "\n  '%#' waits on '%#'", _listNode[consumerIndex]._name.c_str(), _listNode[producerIndex]._name.c_str() );
-                }
-            }
-            SW_LOG_ERROR( "Render graph has a cycle - %#/%# active passes scheduled; these wait on each other "
-                          "(a pass reads what a later pass writes, which reads this one's output):%#",
-                          static_cast<uint32>( _listCompiledExecutionOrder.size() ), static_cast<uint32>( listActiveIndex.size() ), waits.c_str() );
+            Internal::reportCycle( _listNode, graph, _listCompiledExecutionOrder.size(), listActiveIndex.size() );
             _listCompiledExecutionOrder.clear();
             _listCompiledLevel.clear();
             return false;
@@ -352,7 +377,27 @@ namespace sw
             return execute( context );
 
         context.reset();
+        if ( prepareParallelCommandLists( pDevice ) == false )
+            return false;
 
+        // 의존성 레벨 단위로 처리한다. 같은 레벨의 패스들만 동시에 병렬 기록하고,
+        // 레벨 경계마다 태스크를 기다린 뒤 그 레벨의 커맨드 리스트를 먼저 GPU 큐에 제출한다.
+        // 그래야 레벨 N+1 이 참조할 수도 있는 레벨 N 의 출력(예: DepthPrepass → ForwardOpaque)이
+        // 커맨드 기록 순서와 무관하게 GPU 타임라인에서도 먼저 끝난다(같은 큐에 대한
+        // ExecuteCommandLists 호출 순서가 곧 실행 순서다). 패스 콜백이 참조하는 FrameRenderer 쪽 프레임
+        // 공유 상태(예: "직전 패스가 이 리소스를 이미 클리어했는가")도 이 순서 보장 덕에 안전하다.
+        // 같은 자원을 놓고 경합하는 두 패스는 compile() 의 Write-after-Write/Read-after-Write 엣지로
+        // 이미 서로 다른 레벨에 배치되어 있다.
+        for ( const vector<hashed_string>& level : _listCompiledLevel )
+        {
+            if ( recordAndSubmitLevel( context, level, pTaskManager, pDevice ) == false )
+                return false;
+        }
+        return true;
+    }
+
+    bool RenderGraph::prepareParallelCommandLists( IRHIDevice* pDevice )
+    {
         // 엔트리 목록과 노드별 커맨드 리스트는 프레임을 넘어 다시 쓴다(`ParallelScratch`, 완전한 타입은 이 파일에만 있다).
         // 패스마다 프레임마다 새로 만들면 래퍼 하나에 백엔드 할당까지 프레임당 패스 수의 몇 배가 된다.
         if ( _pParallelScratch == nullptr )
@@ -362,8 +407,7 @@ namespace sw
             releaseCommandLists(); // 지난 디바이스의 리스트다. 새 디바이스에서 다시 만든다.
             _pParallelScratch->_pCmdListDevice = pDevice;
         }
-        ParallelScratch&           scratch       = *_pParallelScratch;
-        vector<ParallelPassEntry>& listPassEntry = scratch._listPassEntry;
+        ParallelScratch& scratch = *_pParallelScratch;
         if ( scratch._listNodeCmdList.size() < _listNode.size() )
             scratch._listNodeCmdList.resize( _listNode.size() );
 
@@ -401,98 +445,90 @@ namespace sw
                 }
             }
         }
+        return true;
+    }
 
-        // 의존성 레벨 단위로 처리한다. 같은 레벨의 패스들만 동시에 병렬 기록하고,
-        // 레벨 경계마다 태스크를 기다린 뒤 그 레벨의 커맨드 리스트를 먼저 GPU 큐에 제출한다.
-        // 그래야 레벨 N+1 이 참조할 수도 있는 레벨 N 의 출력(예: DepthPrepass → ForwardOpaque)이
-        // 커맨드 기록 순서와 무관하게 GPU 타임라인에서도 먼저 끝난다(같은 큐에 대한
-        // ExecuteCommandLists 호출 순서가 곧 실행 순서다). 패스 콜백이 참조하는 FrameRenderer 쪽 프레임
-        // 공유 상태(예: "직전 패스가 이 리소스를 이미 클리어했는가")도 이 순서 보장 덕에 안전하다.
-        // 같은 자원을 놓고 경합하는 두 패스는 compile() 의 Write-after-Write/Read-after-Write 엣지로
-        // 이미 서로 다른 레벨에 배치되어 있다.
-        for ( const vector<hashed_string>& level : _listCompiledLevel )
+    bool RenderGraph::recordAndSubmitLevel( RenderGraphExecutionContext& context, const vector<hashed_string>& listLevelPass, TaskManager* pTaskManager, IRHIDevice* pDevice )
+    {
+        ParallelScratch&           scratch       = *_pParallelScratch;
+        vector<ParallelPassEntry>& listPassEntry = scratch._listPassEntry;
+        listPassEntry.clear();
+        listPassEntry.reserve( listLevelPass.size() );
+        _listLevelBarrier.clear();
+        _mapLevelBarrierIndex.clear();
+
+        for ( const hashed_string& passName : listLevelPass )
         {
-            listPassEntry.clear();
-            listPassEntry.reserve( level.size() );
-            _listLevelBarrier.clear();
-            _mapLevelBarrierIndex.clear();
-
-            for ( const hashed_string& passName : level )
+            const auto indexIt = _mapNameToIndex.find( passName );
+            if ( indexIt == _mapNameToIndex.end() )
             {
-                const auto indexIt = _mapNameToIndex.find( passName );
-                if ( indexIt == _mapNameToIndex.end() )
-                {
-                    SW_LOG_ERROR( "executeParallel: unknown pass in level: %#", passName.c_str() );
-                    return false;
-                }
-
-                RenderGraphNode& node = _listNode[indexIt->second];
-                if ( node._bCulled )
-                    continue;
-
-                appendPassBarriers( context, node );
-
-                if ( node._execute.isBound() == false )
-                    continue;
-
-                // 리스트는 위에서 모두 마련했다.
-                listPassEntry.push_back( ParallelPassEntry{ &node, scratch._listNodeCmdList[indexIt->second].get() } );
+                SW_LOG_ERROR( "executeParallel: unknown pass in level: %#", passName.c_str() );
+                return false;
             }
 
-            if ( listPassEntry.empty() )
+            RenderGraphNode& node = _listNode[indexIt->second];
+            if ( node._bCulled )
                 continue;
 
-            // 이 레벨이 만질 자원의 배리어를 **여기서 미리**, 레벨 **첫 패스 리스트의 앞머리**에 발행한다
-            // (언리얼 RDG 가 패스 리스트 앞머리에 배리어를 두는 방식이다). 판단과 기록 모두 렌더 스레드가 병렬 기록
-            // 전에 끝내므로 패스 콜백은 이미 맞는 상태를 보고, 기록 중에 리소스 상태를 바꾸지 않는다. 배리어를
-            // 병렬 기록 스레드가 정하던 구조는 실제로 여러 번 깨졌다. 같은 레벨의 다른 리스트는 큐 순서상 첫
-            // 리스트 뒤에 실행되므로 배리어가 앞선다.
-            //
-            // 프레임 스트림에 기록하면 레벨마다 스트림을 잘라야 하고, 잘린 조각이 큐에 리스트 하나로 나간다
-            // (DX12 에서 리스트당 제출 약 7µs).
-            ParallelPassEntry& firstEntry = listPassEntry[0];
-            firstEntry._pPassCmdList->beginCommandList();
-            firstEntry._bAlreadyBegun = true;
-            issueBarriers( firstEntry._pPassCmdList );
+            appendPassBarriers( context, node );
 
-            // 이 구간 동안 bindless 레지스트리는 불변이어야 한다. 기록 중 등록과 해제가 일어나면
-            // 읽는 쪽이 dangling 을 잡는다. 디바이스가 규칙 위반을 감시할 수 있게 알려 준다.
-            pDevice->setParallelRecording( true );
+            if ( node._execute.isBound() == false )
+                continue;
 
-            TaskStageHandle stage = pTaskManager->createStage( "RenderGraphLevel" );
-
-            for ( ParallelPassEntry& entry : listPassEntry )
-            {
-                TaskHandle handle = pTaskManager->emplaceTask( "RenderPassRecord", SW_DELEGATE_METHOD( TaskDelegate, &ParallelPassEntry::record, &entry ) );
-
-                if ( handle.isValid() )
-                {
-                    // 렌더 스레드는 이 스테이지를 곧바로 기다린다. 게임 스레드의 대량 잡(트랜스폼 플러시, 씬 수집)
-                    // 뒤에 줄을 서면 그 줄이 그대로 프레임 지연이다. High 레인은 모든 워커가 자기 덱보다 먼저 본다.
-                    handle.setPriority( TaskPriority::High );
-                    stage.addTask( handle );
-                    // 레벨의 패스를 모두 넣은 뒤 한 번만 깨운다. 패스마다 깨우면 그 시그널이 기록 시간의 대부분이었다.
-                    pTaskManager->submitWithoutWake( handle );
-                }
-                else
-                {
-                    // 작업을 넣지 못했다(풀이 바닥났거나 종료 중이다). 여기서(렌더 스레드) 직접 기록한다. 그냥 넘어가면 그 리스트가 기록 없이
-                    // 아래에서 제출된다. 레벨의 첫 리스트는 **열린 채로**, 나머지는 지난 프레임의 명령 그대로 제출된다.
-                    entry.record();
-                }
-            }
-            pTaskManager->wakeSleepingWorkers( static_cast<uint32>( listPassEntry.size() ) );
-
-            pTaskManager->waitStage( stage );
-            pDevice->setParallelRecording( false );
-
-            for ( ParallelPassEntry& entry : listPassEntry )
-            {
-                if ( entry._pPassCmdList != nullptr )
-                    pDevice->executeCommandList( entry._pPassCmdList );
-            }
+            // 리스트는 `prepareParallelCommandLists` 가 모두 마련했다.
+            listPassEntry.push_back( ParallelPassEntry{ &node, scratch._listNodeCmdList[indexIt->second].get() } );
         }
 
+        if ( listPassEntry.empty() )
+            return true;
+
+        // 이 레벨이 만질 자원의 배리어를 **여기서 미리**, 레벨 **첫 패스 리스트의 앞머리**에 발행한다
+        // (언리얼 RDG 가 패스 리스트 앞머리에 배리어를 두는 방식이다). 판단과 기록 모두 렌더 스레드가 병렬 기록
+        // 전에 끝내므로 패스 콜백은 이미 맞는 상태를 보고, 기록 중에 리소스 상태를 바꾸지 않는다. 배리어를
+        // 병렬 기록 스레드가 정하던 구조는 실제로 여러 번 깨졌다. 같은 레벨의 다른 리스트는 큐 순서상 첫
+        // 리스트 뒤에 실행되므로 배리어가 앞선다.
+        //
+        // 프레임 스트림에 기록하면 레벨마다 스트림을 잘라야 하고, 잘린 조각이 큐에 리스트 하나로 나간다
+        // (DX12 에서 리스트당 제출 약 7µs).
+        ParallelPassEntry& firstEntry = listPassEntry[0];
+        firstEntry._pPassCmdList->beginCommandList();
+        firstEntry._bAlreadyBegun = true;
+        issueBarriers( firstEntry._pPassCmdList );
+
+        // 이 구간 동안 bindless 레지스트리는 불변이어야 한다. 기록 중 등록과 해제가 일어나면
+        // 읽는 쪽이 dangling 을 잡는다. 디바이스가 규칙 위반을 감시할 수 있게 알려 준다.
+        pDevice->setParallelRecording( true );
+
+        TaskStageHandle stage = pTaskManager->createStage( "RenderGraphLevel" );
+        for ( ParallelPassEntry& entry : listPassEntry )
+        {
+            TaskHandle handle = pTaskManager->emplaceTask( "RenderPassRecord", SW_DELEGATE_METHOD( TaskDelegate, &ParallelPassEntry::record, &entry ) );
+            if ( handle.isValid() )
+            {
+                // 렌더 스레드는 이 스테이지를 곧바로 기다린다. 게임 스레드의 대량 잡(트랜스폼 플러시, 씬 수집)
+                // 뒤에 줄을 서면 그 줄이 그대로 프레임 지연이다. High 레인은 모든 워커가 자기 덱보다 먼저 본다.
+                handle.setPriority( TaskPriority::High );
+                stage.addTask( handle );
+                // 레벨의 패스를 모두 넣은 뒤 한 번만 깨운다. 패스마다 깨우면 그 시그널이 기록 시간의 대부분이었다.
+                pTaskManager->submitWithoutWake( handle );
+            }
+            else
+            {
+                // 작업을 넣지 못했다(풀이 바닥났거나 종료 중이다). 여기서(렌더 스레드) 직접 기록한다. 그냥 넘어가면 그 리스트가 기록 없이
+                // 아래에서 제출된다. 레벨의 첫 리스트는 **열린 채로**, 나머지는 지난 프레임의 명령 그대로 제출된다.
+                entry.record();
+            }
+        }
+        pTaskManager->wakeSleepingWorkers( static_cast<uint32>( listPassEntry.size() ) );
+
+        pTaskManager->waitStage( stage );
+        pDevice->setParallelRecording( false );
+
+        for ( ParallelPassEntry& entry : listPassEntry )
+        {
+            if ( entry._pPassCmdList != nullptr )
+                pDevice->executeCommandList( entry._pPassCmdList );
+        }
         return true;
     }
 
