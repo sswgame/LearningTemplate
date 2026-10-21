@@ -60,6 +60,7 @@
                      _shaderSsao="engine/shaders/ssao.hlsl"
                      _shaderTaa="engine/shaders/taa.hlsl"
                      _shaderTonemap="engine/shaders/tonemap.hlsl"
+                     _shaderDepthOfField="engine/shaders/depthoffield.hlsl"
                      _shaderSky="engine/shaders/sky.hlsl"
                      _shaderToon="engine/shaders/toon.hlsl"
                      _shaderCanvas="engine/shaders/canvas.hlsl"

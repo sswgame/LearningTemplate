@@ -34,7 +34,7 @@
 			                           _bPlayOnBegin="true" />
 			<PoseModifierComponent _componentName="PoseModifierComponent"
 			                       _bActive="true"
-			                       _rigPath="game/shooter3d/rigs/knight_firstperson.rig.json"
+			                       _rigPath="game/shooter3d/rigs/player_body.rig.json"
 			                       _socketSetPath=""
 			                       _physicsAssetPath=""
 			                       _bRigEnabled="true" />
@@ -42,10 +42,6 @@
 			                              _bActive="true"
 			                              _presetID="ShooterPlayer"
 			                              _seed="0" />
-			<PoseModifierComponent _componentName="PoseModifierComponent"
-			                       _bActive="true"
-			                       _rigPath="game/shooter3d/rigs/player_body.rig.json"
-			                       _bRigEnabled="true" />
 			<ShooterAvatarComponent _componentName="ShooterAvatarComponent"
 			                        _bActive="true"
 			                        _player="0"

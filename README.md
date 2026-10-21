@@ -17,7 +17,7 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 | [DataDriven](docs/plans/DataDriven.md) — 데이터 주도 구조 정리 계획 (2026-10-16) | 구현중 | 13/14 | 없음 | engine | C-30, C-36 |
 | 2 | [Vfx](docs/plans/Vfx.md) — 파티클 · VFX 구현 단위 (`D2-11`) | 구현중 | 11/12 | 없음 | graphics | D2-11 |
-| 3 | [CameraRendererIntegration](docs/plans/CameraRendererIntegration.md) — 카메라의 렌더러 쪽 연결과 다중 뷰 검증 | 구현중 | 1/4 | 없음 | gameplay | D4-5 |
+| 3 | [CameraRendererIntegration](docs/plans/CameraRendererIntegration.md) — 카메라의 렌더러 쪽 연결과 다중 뷰 검증 | 구현중 | 2/4 | 없음 | gameplay | D4-5 |
 | 5 | [SerializerSilentSkips](docs/plans/SerializerSilentSkips.md) — 직렬화가 조용히 넘기는 곳 (2026-10-21) | 구현중 | 4/4 | 없음 | engine | C-66 |
 | 6 | [StructureSimplification](docs/plans/StructureSimplification.md) — 구조 단순화 계획 (2026-10-20) | 구현중 | 17/21 | 없음 | engine | 없음 |
 | 7 | [ScriptsStructure](docs/plans/ScriptsStructure.md) — Scripts 구조 — import 루트 하나 · 3층 · 층 게이트 (2026-10-21) | 측정대기 | 10/10 | 없음 | project | 없음 |
@@ -40,7 +40,7 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [EnginePartition](docs/plans/EnginePartition.md) — 엔진 분할 계획 | 구현중 | 4/6 | 없음 | engine | C-1 |
 | - | [FacialAnimation](docs/plans/FacialAnimation.md) — 얼굴 애니메이션의 남은 것 | 구현중 | 3/5 | 없음 | gameplay | D4-6 |
 | - | [GameSceneCc0Meshes](docs/plans/GameSceneCc0Meshes.md) — 게임별 씬이 새로 들인 CC0 메시를 부르게 한다 | 구현중 | 1/2 | 없음 | gameplay | D4-17 |
-| - | [GamepadVirtualCursor](docs/plans/GamepadVirtualCursor.md) — 패드 가상 커서의 남은 것 | 구현중 | 1/3 | 없음 | gameplay | D4-3 |
+| - | [GamepadVirtualCursor](docs/plans/GamepadVirtualCursor.md) — 패드 가상 커서의 남은 것 | 구현중 | 2/3 | 없음 | gameplay | D4-3 |
 | - | [GpuVerification](docs/plans/GpuVerification.md) — Linux 와 GPU 검증 구조의 남은 일 (2026-10-18) | 구현중 | 1/2 | 없음 | quality | C-41 |
 | - | [GraphicsFormatBundle](docs/plans/GraphicsFormatBundle.md) — 그래픽스 형식 묶음 — HDR 장면 색 · 툰 · 변형 탄젠트 · Shaded Wireframe · 2D 조명 · VRM 런타임 · 메시 구간 | 구현중 | 5/12 | 없음 | graphics | D2-1, D2-6, D2-7, D2-10 |
 | - | [IndirectLighting](docs/plans/IndirectLighting.md) — 간접 조명 구현 단위 (`D2-12`) | 구현중 | 8/8 | ClusteredLighting | graphics | D2-12 |
@@ -58,10 +58,10 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [PatchDeltaDelivery](docs/plans/PatchDeltaDelivery.md) — 패치 · 델타 업데이트 배포 구조 | 구현중 | 3/6 | 없음 | network | G-16 |
 | - | [PhysicsExtensions](docs/plans/PhysicsExtensions.md) — 물리 확장 — 부력 · 파워드 래그돌 · 천과 캐릭터 · 결정성 | 구현중 | 4/5 | 없음 | engine | D1-8 |
 | - | [PreloadAndLod](docs/plans/PreloadAndLod.md) — 프리로딩 · LOD · 사전 준비 | 구현중 | 3/7 | 없음 | gameplay | D4-7 |
-| - | [RigEditing](docs/plans/RigEditing.md) — 후처리 리그 편집 저장과 기즈모 | 구현중 | 2/3 | 없음 | gameplay | D4-6 |
+| - | [RigEditing](docs/plans/RigEditing.md) — 후처리 리그 편집 저장과 기즈모 | 구현중 | 3/3 | 없음 | gameplay | D4-6 |
 | - | [ScenarioWritesSourceTree](docs/plans/ScenarioWritesSourceTree.md) — 에디터 시나리오가 저장소 소스 트리에 직접 쓴다 | 구현중 | 2/4 | 없음 | editor | 없음 |
 | - | [ServerDebug](docs/plans/ServerDebug.md) — 서버 디버깅 계획 — 에디터에서 서버 · 멀티플레이를 손쉽게 보는 길 | 구현중 | 9/15 | 없음 | network | D7-3 |
-| - | [ShooterCharacterIntegration](docs/plans/ShooterCharacterIntegration.md) — Shooter3D 캐릭터 통합의 남은 것 | 구현중 | 2/4 | 없음 | gameplay | D4-10 |
+| - | [ShooterCharacterIntegration](docs/plans/ShooterCharacterIntegration.md) — Shooter3D 캐릭터 통합의 남은 것 | 구현중 | 4/6 | 없음 | gameplay | D4-10 |
 | - | [ShooterStrideWarping](docs/plans/ShooterStrideWarping.md) — Shooter3D 발 미끄러짐 연결 | 구현중 | 1/2 | 없음 | gameplay | D4-6 |
 | - | [SingleChannelDdsImport](docs/plans/SingleChannelDdsImport.md) — 1 채널(R8) DDS 를 내는 임포트 규칙 | 구현중 | 1/2 | 없음 | graphics | G-12 |
 | - | [StepEncounterRules](docs/plans/StepEncounterRules.md) — 걸음 조우 판정 하나로 | 구현중 | 1/2 | 없음 | gameplay | G-7 |

@@ -36,6 +36,11 @@
 			<AnimationNotifyComponent _componentName="AnimationNotifyComponent"
 			                          _bActive="true"
 			                          _notifyTablePath="game/shooter3d/characters/skeleton_minion/skeleton_minion.notifies.xml" />
+			<RagdollComponent _componentName="RagdollComponent"
+			                  _bActive="true"
+			                  _physicsAssetPath="game/shooter3d/characters/skeleton_warrior/skeleton_warrior.physics.xml"
+			                  _bRagdollOnFatalHit="false"
+			                  _bAutoGetUp="false" />
 			<CharacterAppearanceComponent _componentName="CharacterAppearanceComponent"
 			                              _bActive="true"
 			                              _presetID="SkeletonMinion"

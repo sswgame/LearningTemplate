@@ -5,12 +5,16 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Automation/AutomationProbe.h"
+#include "Engine/Character/Hit/CharacterHit.h"
+#include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Physics/PhysicsSettings.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Telemetry/TelemetryEvent.h"
 #include "Engine/Telemetry/TelemetryService.h"
@@ -85,6 +89,17 @@ namespace sw
                         return part._socketSet;
                 }
                 return hashed_string{};
+            }
+
+            /** @brief 물리 설정 표에서 레이어 이름의 질의 비트입니다. 표가 없거나 이름이 없으면 false 입니다. */
+            [[nodiscard]] static bool findLayerMask( const GameObjectManager& manager, const hashed_string& layer, uint32& outMask )
+            {
+                const PhysicsSettings* pSettings  = manager.getSubsystem<ScenePhysics>().findSettings();
+                uint8                  layerIndex = 0;
+                if ( pSettings == nullptr || pSettings->findLayerIndex( layer, layerIndex ) == false )
+                    return false;
+                outMask = 1u << layerIndex;
+                return true;
             }
 
             /** @brief 시나리오 프로브가 보는 첫 슈터 플레이어입니다(드물게 불리므로 씬을 훑습니다). */
@@ -180,6 +195,8 @@ namespace sw
         , _regenDelay{ 4.0f }
         , _regenPerSecond{ 6.0f }
         , _downTime{ 2.5f }
+        , _hitboxLayer{ "Ragdoll" }
+        , _shotImpulse{ 30.0f }
         , _hitEffectLifetime{ 0.12f }
         , _tracerLifetime{ 0.07f }
         , _tracerWidth{ 0.025f }
@@ -190,7 +207,7 @@ namespace sw
         , _arrWeapon{}
         , _vitality{}
         , _weaponSockets{}
-        , _listPendingHit{}
+        , _listPendingShot{}
         , _listPendingEffect{}
         , _listPendingTracer{}
         , _soundQueue{}
@@ -498,7 +515,6 @@ namespace sw
 
     void ShooterPlayerComponent::fireWeapon( const ShooterDirectorComponent& director, FirstPersonCameraComponent& camera, bool bJustPressed )
     {
-        using Internal      = ShooterPlayerComponentInternal;
         WeaponState& weapon = _arrWeapon[_weaponIndex];
         GameRay      aim;
         aim._origin    = getEyePosition();
@@ -522,44 +538,24 @@ namespace sw
         flash._color    = _muzzleFlashColor;
         flash._lifetime = 0.05f;
         _listPendingEffect.push_back( flash );
-        bool bAnyHit   = false;
-        bool bHitCover = false;
+        // 판정은 눈에서 한다. 상자 · 바닥까지는 여기서 재고, 적(물리 히트박스)은 틱이 끝난 뒤 그 거리 안에서 묻는다(resolveShots).
         for ( const GameRay& ray : shot._listRay )
         {
-            bool          bHitEnemy = false;
-            const float32 distance  = traceShot( director, ray, weapon.getDef()._damage, bHitEnemy );
-            const float3  end       = ray._origin + ray._direction * distance;
-            bAnyHit                 = bAnyHit || bHitEnemy;
-            // 판정은 눈에서 하고, 탄도선은 총구에서 맞은 위치까지 이은 선이다.
-            _listPendingTracer.push_back( TracerRequest{ muzzle, end } );
-            if ( distance < weapon.getDef()._range )
-            {
-                EffectRequest effect;
-                effect._position = end;
-                effect._size     = bHitEnemy ? 0.18f : 0.1f;
-                effect._color    = bHitEnemy ? _enemyHitColor : _coverHitColor;
-                effect._lifetime = _hitEffectLifetime;
-                _listPendingEffect.push_back( effect );
-                bHitCover = bHitCover || ( bHitEnemy == false && end._y > 0.05f );
-            }
-        }
-        // 한 발(산탄은 여럿)에 소리는 하나만 낸다. 적을 맞혔으면 쇳소리, 상자나 벽을 맞혔으면 나무 소리다.
-        if ( bAnyHit )
-        {
-            ++_hitCount;
-            _hitMarkerTimer = 0.15f;
-            _soundQueue.queueEvent( Internal::kSoundHitEnemy );
-        }
-        else if ( bHitCover )
-        {
-            _soundQueue.queueEvent( Internal::kSoundHitCover );
+            PendingShot pending;
+            pending._ray           = ray;
+            pending._muzzle        = muzzle;
+            pending._coverDistance = traceCover( director, ray );
+            pending._range         = weapon.getDef()._range;
+            pending._damage        = weapon.getDef()._damage;
+            pending._volley        = _shotCount;
+            _listPendingShot.push_back( pending );
         }
         // 반동은 위로 튀고 옆으로 살짝 흔든다.
         const float32 kick = weapon.getDef()._recoilPitch * MathUtil::kDegreeToRadian;
         camera.addRecoil( kick, kick * 0.25f * ( ( _shotCount % 2u ) == 0u ? 1.0f : -1.0f ) );
     }
 
-    float32 ShooterPlayerComponent::traceShot( const ShooterDirectorComponent& director, const GameRay& ray, float32 damage, bool& outHitEnemy )
+    float32 ShooterPlayerComponent::traceCover( const ShooterDirectorComponent& director, const GameRay& ray ) const
     {
         float32 nearest = _arrWeapon[_weaponIndex].getDef()._range;
         for ( const ShooterArenaBox& box : director.getBoxes() )
@@ -571,31 +567,71 @@ namespace sw
         // 바닥
         if ( ray._direction._y < -1.0e-4f )
             nearest = MathUtil::min( nearest, -ray._origin._y / ray._direction._y );
-        // 적은 발에서 키까지의 캡슐로 본다(물리 질의나 부위 히트박스가 들어오면 그쪽을 쓴다).
-        const vector<ShooterEnemyView>& listView     = director.getEnemyViews();
-        const ShooterEnemyView*         pView        = listView.data();
-        const ShooterEnemyView*         pNearestView = nullptr;
-        for ( size_t viewIndex = 0; viewIndex < listView.size(); ++viewIndex )
+        return nearest;
+    }
+
+    void ShooterPlayerComponent::resolveShots( GameObjectManager& manager )
+    {
+        using Internal = ShooterPlayerComponentInternal;
+        if ( _listPendingShot.empty() )
+            return;
+        uint32     hitboxMask = 0;
+        const bool bHasMask   = Internal::findLayerMask( manager, _hitboxLayer, hitboxMask );
+        if ( bHasMask == false )
+            SW_LOG_ERROR( "Hitbox layer '%#' is not in the physics settings - shots cannot hit enemies", _hitboxLayer.c_str() );
+        GameObject*  pOwner   = getOwner();
+        const uint64 ownerID  = pOwner != nullptr ? pOwner->getObjectID() : 0;
+        size_t       shotHead = 0;
+        while ( shotHead < _listPendingShot.size() )
         {
-            const ShooterEnemyView& view     = pView[viewIndex];
-            const float3            bottom   = view._position + float3{ 0.0f, view._radius, 0.0f };
-            const float3            top      = view._position + float3{ 0.0f, MathUtil::max( view._radius, view._height - view._radius ), 0.0f };
-            float32                 distance = 0.0f;
-            if ( RayMath::intersectCapsule( ray, bottom, top, view._radius, nearest, distance ) && distance < nearest )
+            // 한 방아쇠(산탄은 광선 여럿)에 소리 · 맞음 수는 하나만 낸다. 적을 맞혔으면 쇳소리, 상자나 벽을 맞혔으면 나무 소리다.
+            const uint32 volley    = _listPendingShot[shotHead]._volley;
+            bool         bAnyHit   = false;
+            bool         bHitCover = false;
+            for ( ; shotHead < _listPendingShot.size() && _listPendingShot[shotHead]._volley == volley; ++shotHead )
             {
-                nearest      = distance;
-                pNearestView = pView + viewIndex;
+                const PendingShot&     shot     = _listPendingShot[shotHead];
+                float32                distance = shot._coverDistance;
+                bool                   bHitBody = false;
+                CharacterRayHit        rayHit;
+                const bool             bRayHit = bHasMask && CharacterHitUtil::raycast3D( manager, shot._ray._origin, shot._ray._direction, shot._coverDistance, hitboxMask, ownerID, rayHit );
+                ShooterEnemyComponent* pEnemy  = bRayHit && rayHit._pObject != nullptr ? rayHit._pObject->getComponent<ShooterEnemyComponent>() : nullptr;
+                if ( pEnemy != nullptr )
+                {
+                    // 쓰러진 적(래그돌)도 맞고 밀린다 — 맞음 수 · 맞음 표시는 산 적만 센다.
+                    const bool    bAlive = pEnemy->isAlive();
+                    const HitInfo hit    = CharacterHitUtil::makeHitInfo( rayHit, pOwner, shot._ray._direction, shot._damage, _shotImpulse );
+                    CharacterHitUtil::deliverHit( *rayHit._pObject, hit );
+                    distance = rayHit._distance;
+                    bHitBody = true;
+                    bAnyHit  = bAnyHit || bAlive;
+                }
+                const float3 end = shot._ray._origin + shot._ray._direction * distance;
+                // 탄도선은 총구에서 맞은 위치까지 이은 선이다.
+                _listPendingTracer.push_back( TracerRequest{ shot._muzzle, end } );
+                if ( distance < shot._range )
+                {
+                    EffectRequest effect;
+                    effect._position = end;
+                    effect._size     = bHitBody ? 0.18f : 0.1f;
+                    effect._color    = bHitBody ? _enemyHitColor : _coverHitColor;
+                    effect._lifetime = _hitEffectLifetime;
+                    _listPendingEffect.push_back( effect );
+                    bHitCover = bHitCover || ( bHitBody == false && end._y > 0.05f );
+                }
+            }
+            if ( bAnyHit )
+            {
+                ++_hitCount;
+                _hitMarkerTimer = 0.15f;
+                _soundQueue.queueEvent( Internal::kSoundHitEnemy );
+            }
+            else if ( bHitCover )
+            {
+                _soundQueue.queueEvent( Internal::kSoundHitCover );
             }
         }
-        outHitEnemy = pNearestView != nullptr;
-        if ( outHitEnemy )
-        {
-            EnemyHit hit;
-            hit._enemy  = pNearestView->_object;
-            hit._damage = damage;
-            _listPendingHit.push_back( hit );
-        }
-        return nearest;
+        _listPendingShot.clear();
     }
 
     float3 ShooterPlayerComponent::findMuzzlePosition()
@@ -711,7 +747,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     bool ShooterPlayerComponent::hasPending() const
     {
-        return _listPendingHit.empty() == false || _listPendingEffect.empty() == false || _listPendingTracer.empty() == false || _soundQueue.isEmpty() == false ||
+        return _listPendingShot.empty() == false || _listPendingEffect.empty() == false || _listPendingTracer.empty() == false || _soundQueue.isEmpty() == false ||
                _bWeaponModelDirty == SW_TRUE || _bViewModeDirty == SW_TRUE || _bBodyRequested == SW_TRUE;
     }
 
@@ -736,15 +772,8 @@ namespace sw
             return;
         if ( _bBodyRequested == SW_TRUE )
             spawnBody();
-        // 적에게 피해를 준다. 적은 움찔하거나 쓰러지고, 디렉터가 다음 틱에 센다.
-        for ( const EnemyHit& hit : _listPendingHit )
-        {
-            GameObject*            pEnemyObject = pManager->resolveGameObject( hit._enemy );
-            ShooterEnemyComponent* pEnemy       = pEnemyObject != nullptr ? pEnemyObject->getComponent<ShooterEnemyComponent>() : nullptr;
-            if ( pEnemy != nullptr )
-                pEnemy->applyDamage( hit._damage );
-        }
-        _listPendingHit.clear();
+        // 쏜 광선을 적의 히트박스에 묻고 맞음을 보낸다. 적은 움찔하거나 쓰러지고, 디렉터가 다음 틱에 센다. 탄도선 · 탄착 · 소리도 여기서 쌓인다.
+        resolveShots( *pManager );
         const GameObject*         pDirectorObject = pManager->resolveGameObject( _director );
         ShooterDirectorComponent* pDirector       = pDirectorObject != nullptr ? pDirectorObject->getComponent<ShooterDirectorComponent>() : nullptr;
         if ( pDirector != nullptr )

@@ -72,7 +72,7 @@ cd build/Ninja-Debug/Bin
 | `CycleCamera` | C | 카메라 프리셋 돌리기: 1인칭, 3인칭(어깨 너머), 궤도, CCTV |
 | `Camera.Look`, `Camera.LookHold`, `Camera.Zoom` | 마우스 이동, 오른쪽 버튼, 휠 | 궤도 프리셋의 시점, 누른 동안만 시점, 확대 |
 
-스켈레톤은 다가와 칼이나 도끼를 휘두르고, 클립의 맞는 시각에 손이 닿으면 피해를 줍니다. 맞으면 움찔하고 HP 바가 뜨며, 쓰러지면 쓰러짐 클립 뒤 3초 있다가 정리됩니다.
+스켈레톤은 다가와 칼이나 도끼를 휘두르고, 클립 알림이 알린 맞는 시각에 손이 닿으면 피해를 줍니다. 맞으면 움찔하고 HP 바가 뜨며, 쓰러지면 래그돌로 넘어져 3초 있다가 정리됩니다.
 플레이어 체력은 `Vitality` 이고 4초 동안 안 맞으면 다시 찹니다. 바닥나면 쓰러짐 클립(2.5초) 뒤 웨이브 1 부터 다시 시작합니다.
 
 ## 작동 원리
@@ -90,7 +90,7 @@ cd build/Ninja-Debug/Bin
 
 **자동 플레이는 AI 조종자의 빙의입니다.** 스위치(`-gv_shooterAutoPlay`, 씬의 `_bAutoPlay`, 에디터 툴바)가 바뀌면 디렉터가 틱 뒤에 플레이어 폰을 자동 조준 AI 에게 넘기고, 끄면 플레이어 0 의 조종자에게 돌려줍니다.
 플레이어 몸(`ShooterPlayerComponent`)에는 자동 플레이 분기가 없습니다.
-자동 조준 AI 는 가까운 적의 가슴에 초점을 두고 초당 3라디안으로 돕니다. 조준 오차가 3도 안이고 7m 안이면 `Fire`, 8m 안이면 산탄총, 밖이면 소총을 누르고, 아레나 가운데를 도는 나선을 따라 걷습니다.
+자동 조준 AI 는 막는 상자에 가리지 않은 가장 가까운 적의 가슴에 초점을 두고 초당 3라디안으로 돕니다(보이는 적이 없으면 겨누기만 하고 쏘지 않습니다). 조준 오차가 3도 안이고 7m 안이면 `Fire`, 8m 안이면 산탄총, 밖이면 소총을 누르고, 아레나 가운데를 도는 나선을 따라 걷습니다.
 
 **적의 판단은 조종자에 있습니다.** 쫓기(플레이어가 0.5m 넘게 움직이면 경로를 다시 구함), 손 닿는 거리의 0.85 안에서 서기, 닿으면 `Attack` 누르기는 조종자가 합니다.
 휘두르기 간격, 맞는 시각, 움찔, 쓰러짐은 폰(`ShooterEnemyComponent`)의 규칙입니다.
@@ -135,7 +135,7 @@ cd build/Ninja-Debug/Bin
 | 스켈레톤, 탄착과 섬광, 탄도선 | 프리팹 `skeleton`, `skeleton_ai`, `effect`, `tracer`. 효과는 디렉터가 미리 만들어 숨겨 둔 풀에서 꺼내 씁니다 |
 | 플레이어의 몸 | 프리팹 `player_body.prefab.xml`. 플레이어가 플레이 시작에 만듭니다. 장비는 `prefabs/kaykit/*`, `prefabs/blaster_*` |
 | 페이싱, 쓰러뜨린 수, 효과 풀, 로그, 자동 플레이 빙의 | `ShooterDirectorComponent` |
-| 무기 셋, 히트스캔(적은 캡슐), 체력, 탄도선 요청 | `ShooterPlayerComponent`. 카메라, 폰, 몸 이동, 손에 든 총, HUD 와 같은 오브젝트입니다 |
+| 무기 셋, 히트스캔(적은 래그돌 히트박스 물리 질의), 체력, 탄도선 요청 | `ShooterPlayerComponent`. 카메라, 폰, 몸 이동, 손에 든 총, HUD 와 같은 오브젝트입니다 |
 | HUD(조준선, 맞음 표시, 체력, 탄약, 무기 이름) | 플레이어 오브젝트의 `HUDControllerComponent` 가 `ui/hud.ui.xml` 을 열고, `ShooterPlayerComponent::updateHUD` 가 틱 뒤에 게임의 `ShooterHUDViewModel` 을 걸고 값을 넣습니다 |
 | 걷기, 달리기, 점프, 중력, 상자에 미끄러지기 | `ShooterBodyMovementComponent`. 스스로 틱하지 않고 같은 오브젝트의 규칙 컴포넌트가 자기 틱에서 부릅니다 |
 | 몸이 플레이어를 따르기, 애니메이터 파라미터, 상체 레이어 | `ShooterAvatarComponent`(몸 오브젝트) |
@@ -146,7 +146,7 @@ cd build/Ninja-Debug/Bin
 | 감시 카메라와 모니터 | `CctvCamera` 가 렌더 텍스처 `rendertarget/shooter_cctv` 에 `cctv_sweep` 프리셋으로 그리고, 북쪽 벽 `CctvMonitor` 가 그 텍스처를 읽습니다 |
 
 HUD 의 위젯 값은 문서의 `{bind:필드}` 가 연결합니다. 무기 이름은 현지화 키 그대로 넣고, 글 위젯이 문화권에 맞게 바꿉니다. 적 HP 바는 스켈레톤 프리팹의 화면 마커와 `HealthBarComponent` 입니다.
-1인칭 프리셋이면 플레이어가 몸의 머리만 숨기고(리그 `rigs/knight_firstperson.rig.json` 의 `ScaleBone` 과 외형 칸 `Head` · `MainHand`, 값은 `player_body.prefab.xml`) 손에 든 총과 조준선을 보이며, 다른 프리셋에서는 반대입니다.
+1인칭 프리셋이면 플레이어가 몸의 머리만 숨기고(리그 `rigs/player_body.rig.json` 의 `ScaleBone` 과 외형의 숨기는 슬롯 `Head` · `MainHand`, 값은 `player_body.prefab.xml`) 손에 든 총과 조준선을 보이며, 다른 프리셋에서는 반대입니다.
 적 몸(`skeleton.prefab.xml`)은 군중 공유(`_bShareCrowdPose`)를 켜 같은 반복 클립의 적끼리 포즈 하나를 나눕니다. 스킨드 외형 부품은 몸의 값을 따릅니다.
 내비메시는 쿠킹이 `maps/arena.navmesh` 로 쓰고, Dev 는 플레이 첫 프레임에 베이크합니다.
 
@@ -172,10 +172,15 @@ HUD 의 위젯 값은 문서의 `{bind:필드}` 가 연결합니다. 무기 이�
 ## 함정과 주의
 
 - **씬과 프리팹은 엔진 직렬화기가 쓴 파일입니다.** 손으로 고치면 형식을 깨기 쉬우므로 에디터로 고칩니다.
-- **손 IK, 맞은 부위, 래그돌, 무기 떨어뜨리기는 아직 없습니다.** 애니메이션 리그와 게임플레이 작업이 들어오면 `MainHand.SupportHand` 같은 소켓과 물리 에셋을 씁니다.
-- **플레이어 몸은 재생 속도로 발 미끄러짐을 줄입니다.** `ShooterAvatarComponent` 가 지금 이동 클립의 발 속도를 한 번 측정하고(`LocomotionSpeedUtil`), 수평 속도를 그 값으로 나눈 재생 속도를
+- **적의 히트박스는 래그돌 바디입니다.** 스켈레톤 프리팹의 `RagdollComponent`(물리 에셋 `characters/skeleton_warrior/skeleton_warrior.physics.xml`)가 뼈마다 키네마틱 바디를 두고,
+  플레이어의 사격은 틱 뒤에 막는 상자까지의 거리 안에서 그 바디를 물리 질의로 묻습니다. 머리는 피해 ×2 이고, 쓰러지면 래그돌로 넘어집니다(맞은 바디에 충격량).
+  막는 상자(`ShooterBlockerComponent`)는 플레이 시작에 같은 상자의 정적 강체를 만들고, 바닥은 씬의 정적 강체입니다 — 래그돌과 떨어진 무기가 그 위에 눕습니다.
+- **휘두름이 닿는 시각은 클립 알림입니다.** 공격 클립의 `Impact`(곁 데이터 `models_raw/kaykit/skeleton_minion.clips.json`)를 알림 표가 `SwingLands` 로 보냅니다. 곁 데이터를 바꾸면 `App --import-models` 로 다시 가져와야 클립에 알림이 들어갑니다.
+- **왼손 IK 와 스프링 망토는 아직 없습니다.** 무기 부품이 정적 메시라 리그의 소켓 대상(스킨드 유닛만 받는다)이 `MainHand.SupportHand` 를 따라갈 수 없고, 망토는 사슬 뼈가 없는 정적 메시입니다.
+- **1인칭에서도 몸이 보입니다.** 리그(`rigs/player_body.rig.json` — 보폭 워핑 `Stride` 과 같은 리그)의 `HideHead`(ScaleBone, 슬롯 `FirstPersonHead`)가 머리를, 외형의 숨기는 슬롯(`setHiddenSlots` — `Head` · `MainHand`)이 머리 장비 · 몸의 무기를 숨기고 손에 든 총이 남습니다.
+- **플레이어 몸은 재생 속도와 보폭으로 발 미끄러짐을 줄입니다.** `ShooterAvatarComponent` 가 지금 이동 클립의 발 속도를 한 번 측정하고(`LocomotionSpeedUtil`), 수평 속도를 그 값으로 나눈 재생 속도를
   `_minPlayRate` 와 `_maxPlayRate` 사이로 씁니다. 재생 속도는 애니메이터 전체에 걸리므로 상체 레이어도 같은 비율로 빨라집니다.
-  걷기 속도(5.5 m/s)로 뒷걸음과 옆걸음을 하면 클립 발 속도와 차이가 커서 상한에 걸리고, 그 몫은 보폭 워핑이 없어 미끄러짐으로 남습니다.
+  뒷걸음과 옆걸음처럼 상한에 걸린 몫은 리그의 보폭 워핑 노드(`Stride`)가 보폭으로 맞춥니다.
 
 ## 더 볼 곳
 

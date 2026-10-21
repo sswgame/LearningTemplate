@@ -552,8 +552,8 @@ SW_TEST_CASE( RenderPassTest, TypeInfoTableCoversEveryEnumValue )
             SW_EXPECT_TRUE_MSG( info.hasFlag( sw::RenderPassTraitFlag::kGenericFullscreen ), ( "건너뛰는 효과가 일반 풀스크린이 아닌 패스 타입 " + label ).c_str() );
     }
 
-    // 효과(SSAO, 블룸, 외곽선)만 건너뛰고, 이미지를 만드는 단계(조명, 톤맵)는 후처리를 끈 뷰에서도 돈다.
-    const sw::RenderPassType arrSkipped[]    = { sw::RenderPassType::SSAO, sw::RenderPassType::Bloom, sw::RenderPassType::Outline };
+    // 효과(SSAO, 블룸, 외곽선, 피사계 심도)만 건너뛰고, 이미지를 만드는 단계(조명, 톤맵)는 후처리를 끈 뷰에서도 돈다.
+    const sw::RenderPassType arrSkipped[]    = { sw::RenderPassType::SSAO, sw::RenderPassType::Bloom, sw::RenderPassType::Outline, sw::RenderPassType::DepthOfField };
     const sw::RenderPassType arrNotSkipped[] = { sw::RenderPassType::Lighting, sw::RenderPassType::Tonemap };
     for ( const sw::RenderPassType type : arrSkipped )
     {

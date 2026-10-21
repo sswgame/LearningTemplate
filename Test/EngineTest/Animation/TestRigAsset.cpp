@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/MatrixMath.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Animation/Rig/RigAsset.h"
@@ -638,12 +639,10 @@ SW_TEST_CASE( RigAssetTest, RewriteNodeSettingsKeepsOtherKeys )
         "nodes": [ { "type": "Aim", "name": "Look", "bone": "bone2", "target": "Goal", "max_degrees": 45 },
                    { "type": "Aim", "name": "Head", "bone": "bone1", "target": "Goal", "weight": 0.5 } ] })";
     string            rewritten;
-    SW_ASSERT_TRUE( RigAsset::rewriteNodeSettings( source, "test.rig.json",
-                                                   {
-                                                       RigNodeSaveParams{hashed_string( "Look" ), 0.25f, false},
-                                                       RigNodeSaveParams{hashed_string( "Head" ),  0.5f,  true},
-    },
-                                                   rewritten ) );
+    RigSaveParams     nodeSave;
+    nodeSave._listNode.push_back( RigNodeSaveParams{ hashed_string( "Look" ), 0.25f, false } );
+    nodeSave._listNode.push_back( RigNodeSaveParams{ hashed_string( "Head" ), 0.5f, true } );
+    SW_ASSERT_TRUE( RigAsset::rewriteSettings( source, "test.rig.json", nodeSave, rewritten ) );
     shared_ptr<const RigAsset> asset = TestRigAssetInternal::parseRig( rewritten );
     SW_ASSERT_NOT_NULL( asset );
     SW_ASSERT_EQUAL( 2u, static_cast<uint32>( asset->getNodes().size() ) );
@@ -655,13 +654,48 @@ SW_TEST_CASE( RigAssetTest, RewriteNodeSettingsKeepsOtherKeys )
 
     test::ScopedDefensiveTestLog expected( "rewriting a rig refuses an unknown node and an out-of-range weight" );
     string                       unchanged = "keep";
-    SW_EXPECT_FALSE( RigAsset::rewriteNodeSettings( source, "test.rig.json", {
-                                                                                 RigNodeSaveParams{ hashed_string( "Nobody" ), 1.0f, true }
-    },
-                                                    unchanged ) );
-    SW_EXPECT_FALSE( RigAsset::rewriteNodeSettings( source, "test.rig.json", {
-                                                                                 RigNodeSaveParams{ hashed_string( "Look" ), 2.0f, true }
-    },
-                                                    unchanged ) );
+    RigSaveParams                unknownNode;
+    unknownNode._listNode.push_back( RigNodeSaveParams{ hashed_string( "Nobody" ), 1.0f, true } );
+    SW_EXPECT_FALSE( RigAsset::rewriteSettings( source, "test.rig.json", unknownNode, unchanged ) );
+    RigSaveParams outOfRange;
+    outOfRange._listNode.push_back( RigNodeSaveParams{ hashed_string( "Look" ), 2.0f, true } );
+    SW_EXPECT_FALSE( RigAsset::rewriteSettings( source, "test.rig.json", outOfRange, unchanged ) );
+    SW_EXPECT_TRUE( unchanged == "keep" );
+}
+
+/**
+ * @brief [RigAssetTest] 대상 오프셋 되쓰기 — 이름의 대상 `translation` · `rotation`(도, 읽기와 같은 배치)만 바뀌고, 다시 읽으면 같은 오프셋이다. 없는 대상은 쓰지 않는다
+ * @details 리그 디버그 창의 대상 기즈모가 끌기를 놓을 때 이 길로 저장한다(RigEditing R2).
+ */
+SW_TEST_CASE( RigAssetTest, RewriteTargetOffsetRoundTrips )
+{
+    const string_view source = R"({ "targets": [ { "name": "Goal", "bone": "bone1" }, { "name": "Other", "object": "Ball", "translation": [1, 2, 3] } ],
+        "nodes": [ { "type": "Aim", "name": "Look", "bone": "bone2", "target": "Goal" } ] })";
+    RigSaveParams     save;
+    const quaternion  rotation = quaternion::makeFromYawPitchRoll( float3{ 0.1f, 0.4f, -0.2f } );
+    save._listTarget.push_back( RigTargetSaveParams{
+        hashed_string( "Goal" ), float3{ 0.0f, 0.25f, -0.5f },
+        rotation
+    } );
+    string rewritten;
+    SW_ASSERT_TRUE( RigAsset::rewriteSettings( source, "test.rig.json", save, rewritten ) );
+    shared_ptr<const RigAsset> asset = TestRigAssetInternal::parseRig( rewritten );
+    SW_ASSERT_NOT_NULL( asset );
+    const int32 goal = asset->findTargetIndex( hashed_string( "Goal" ) );
+    SW_ASSERT_TRUE( goal >= 0 );
+    const RigTargetDef& def = asset->getTargets()[static_cast<size_t>( goal )];
+    SW_EXPECT_NEAR_EQUAL( 0.25f, def._offset._translation._y, 1e-5f );
+    SW_EXPECT_NEAR_EQUAL( -0.5f, def._offset._translation._z, 1e-5f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, MathUtil::abs( def._offset._rotation.dot( rotation ) ), 1e-4f );
+    // 다른 대상의 키는 그대로다.
+    const int32 other = asset->findTargetIndex( hashed_string( "Other" ) );
+    SW_ASSERT_TRUE( other >= 0 );
+    SW_EXPECT_NEAR_EQUAL( 3.0f, asset->getTargets()[static_cast<size_t>( other )]._offset._translation._z, 1e-5f );
+
+    test::ScopedDefensiveTestLog expected( "rewriting a rig refuses an unknown target" );
+    string                       unchanged = "keep";
+    RigSaveParams                unknownTarget;
+    unknownTarget._listTarget.push_back( RigTargetSaveParams{ hashed_string( "Nobody" ), float3{}, quaternion{} } );
+    SW_EXPECT_FALSE( RigAsset::rewriteSettings( source, "test.rig.json", unknownTarget, unchanged ) );
     SW_EXPECT_TRUE( unchanged == "keep" );
 }

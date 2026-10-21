@@ -83,6 +83,7 @@ enginedefaultassets.xml 의 엔진 셸 경로입니다. 읽기는 `XMLSerializer
 | `_shaderSsao` | `DataPath` | — |  |  | SSAO |
 | `_shaderTaa` | `DataPath` | — |  |  | TAA |
 | `_shaderTonemap` | `DataPath` | — |  |  | 톤 매핑 |
+| `_shaderDepthOfField` | `DataPath` | — |  |  | 피사계 심도 — 장면 깊이에서 착란원을 구해 HDR 색을 흐린다 |
 | `_shaderSky` | `DataPath` | — |  |  | 하늘 그러데이션(스카이 패스) — 깊이 1 의 풀스크린 삼각형 |
 | `_shaderToon` | `DataPath` | — |  |  | 셀 셰이딩 머티리얼 셰이더 — 메시 외곽선 패스의 기본 셰이더이기도 하다 |
 | `_shaderCanvas` | `DataPath` | — |  |  | 화면 2D(UI · 월드 글자) 사각형 — 사각형 하나 = 인스턴스 하나, SDF 모양 · 글리프 |

@@ -16,6 +16,9 @@
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
+#include "Editor/Viewport/EditorViewportMouseClaim.h"
+#include "Editor/Viewport/EditorViewportProjection.h"
+#include "Editor/Viewport/EditorViewportVisualizer.h"
 
 #include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Animation/Rig/RigInstance.h"
@@ -25,11 +28,13 @@
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
+#include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Resource/ResourcePaths.h"
 
 #include <imgui.h>
+#include <ImGuizmo.h>
 
 namespace sw::editor
 {
@@ -93,31 +98,157 @@ namespace sw::editor
             }
 
             /**
-             * @brief 인스턴스 노드의 가중치 · 켜짐을 리그 파일에 되써 넣고 상태 줄 글을 돌려줍니다. 다른 키는 그대로 둡니다(`RigAsset::rewriteNodeSettings`).
-             * @details 파일 감시가 쓴 파일을 다시 읽으면 같은 리그를 쓰는 모든 인스턴스가 새 값으로 다시 바인딩된다.
+             * @brief 대상 오프셋 기즈모의 상태입니다. 창이 대상을 고르고(`_objectID` · `_targetIndex`), 뷰포트 시각화(`drawTargetGizmo`)가 그 대상에 기즈모를 그린다.
+             * @details 창과 시각화가 한 파일에 있어 함수 안 정적 값 하나를 함께 본다(에디터는 한 스레드). 끄는 동안의 값은 `_pending` 이고, 놓으면 리그 파일에 되써 넣는다 —
+             *          파일 감시가 다시 읽어 인스턴스에 들어올 때까지 기즈모는 `_pending` 에 남는다.
              */
-            static string saveNodeSettings( const PoseModifierComponent& modifier )
+            struct TargetEdit
             {
-                const RigInstance&        instance = modifier.getRigInstance();
-                vector<RigNodeSaveParams> listNode;
-                for ( uint32 nodeIndex = 0; nodeIndex < instance.getNodeCount(); ++nodeIndex )
-                {
-                    const RigNode& node = instance.getNode( nodeIndex );
-                    listNode.push_back( RigNodeSaveParams{ node.getName(), node.getWeight(), node.isEnabled() } );
-                }
+                BoneTransform _pending{};
+                string        _status{};
+                uint64        _objectID{ 0 };
+                int32         _targetIndex{ -1 };
+                uint8         _bPending{ SW_FALSE };
+                uint8         _bDragging{ SW_FALSE };
+            };
+
+            static TargetEdit& getTargetEdit()
+            {
+                static TargetEdit s_edit;
+                return s_edit;
+            }
+
+            /** @brief 디스크의 글을 쓰는 되돌리기 절차 하나입니다(되돌리기 · 다시 하기가 그 글을 다시 쓴다 — 파일 감시가 리그를 다시 읽는다). */
+            static void writeRigText( const string& writePath, const string& text )
+            {
+                if ( FileUtil::writeTextFile( writePath, text ) == false )
+                    SW_LOG_ERROR( "Rig file '%#' could not be written", writePath.c_str() );
+            }
+
+            /**
+             * @brief 리그 파일에 @p params 를 되써 넣고 상태 줄 글을 돌려줍니다. 다른 키는 그대로 둡니다(`RigAsset::rewriteSettings`).
+             * @details 파일 감시가 쓴 파일을 다시 읽으면 같은 리그를 쓰는 모든 인스턴스가 새 값으로 다시 바인딩된다. @p pUndoLabel 이 있으면 파일 글 전후를
+             *          되돌리기로 기록한다(대상 오프셋 — 인스턴스 값이 아니라 파일이 바뀐다).
+             */
+            static string saveRig( const PoseModifierComponent& modifier, const RigSaveParams& params, const utf8* pUndoLabel )
+            {
                 const string_view rigPath  = modifier.getRigPath();
                 const string      readPath = ResourcePaths::findLooseFile( rigPath ).getDiskPath();
                 string            text;
                 if ( readPath.empty() || FileUtil::readTextFile( readPath, text ) == false )
                     return string( "The rig file could not be read" );
                 string rewritten;
-                if ( RigAsset::rewriteNodeSettings( text, rigPath, listNode, rewritten ) == false )
+                if ( RigAsset::rewriteSettings( text, rigPath, params, rewritten ) == false )
                     return string( "The rig was not saved - see the log" );
                 const string writePath = ResourcePaths::getWritePath( rigPath );
                 if ( writePath.empty() || FileUtil::writeTextFile( writePath, rewritten ) == false )
                     return string( "The rig file could not be written" );
-                SW_LOG_INFO( "Rig node settings saved to %#", writePath.c_str() );
+                if ( pUndoLabel != nullptr )
+                {
+                    EditorTransaction::push( SW_DELEGATE_LAMBDA( Delegate<void()>, [writePath, text]()
+                    { writeRigText( writePath, text ); } ),
+                                             SW_DELEGATE_LAMBDA( Delegate<void()>, [writePath, rewritten]()
+                    { writeRigText( writePath, rewritten ); } ),
+                                             pUndoLabel );
+                }
+                SW_LOG_INFO( "Rig settings saved to %#", writePath.c_str() );
                 return string( "Saved" );
+            }
+
+            /** @brief 인스턴스 노드의 가중치 · 켜짐을 리그 파일에 되써 넣습니다("Save to rig"). */
+            static string saveNodeSettings( const PoseModifierComponent& modifier )
+            {
+                const RigInstance& instance = modifier.getRigInstance();
+                RigSaveParams      params;
+                for ( uint32 nodeIndex = 0; nodeIndex < instance.getNodeCount(); ++nodeIndex )
+                {
+                    const RigNode& node = instance.getNode( nodeIndex );
+                    params._listNode.push_back( RigNodeSaveParams{ node.getName(), node.getWeight(), node.isEnabled() } );
+                }
+                return saveRig( modifier, params, nullptr );
+            }
+
+            /**
+             * @brief 자기 유닛 대상의 부모 공간(데이터 오프셋을 곱하기 전, 소켓 로컬 × 본 × 유닛)의 월드 행렬입니다. 바깥 대상이면 false 입니다.
+             * @details 대상 월드 = 데이터 오프셋 × 소켓 로컬 × 본 모델 × 유닛 월드(행 벡터). 인스턴스는 앞의 둘을 합친 값만 가지므로 데이터 오프셋의 역을 앞에 곱해 되짚는다.
+             */
+            static bool computeTargetParentWorld( const PoseModifierComponent& modifier, const SkeletalMeshComponent& unit, uint32 targetIndex, float4x4& outParentWorld )
+            {
+                const RigInstance& instance = modifier.getRigInstance();
+                int32              bone     = -1;
+                BoneTransform      combined{};
+                if ( instance.tryGetOwnTargetBinding( targetIndex, bone, combined ) == false )
+                    return false;
+                const vector<float4x4>& listModel = unit.getModelSpaceTransforms();
+                const bool              bOnBone   = 0 <= bone && static_cast<size_t>( bone ) < listModel.size();
+                const float4x4          boneWorld = bOnBone ? listModel[static_cast<size_t>( bone )] * unit.getWorldMatrix() : unit.getWorldMatrix();
+                const RigTargetDef&     def       = instance.getTargetDef( targetIndex );
+                outParentWorld                    = def._offset.toMatrix().invert() * combined.toMatrix() * boneWorld;
+                return true;
+            }
+
+            /**
+             * @brief 창이 고른 자기 유닛 대상에 뷰포트 기즈모를 그리고, 끌기를 놓으면 그 대상의 `translation` · `rotation` 을 리그 파일에 되써 넣습니다(RigEditing R2).
+             * @details 고른 대상이 있는 동안 뷰포트 마우스를 가져가(`EditorViewportMouseClaim`) 선택 기즈모 · 클릭 선택이 비킨다. 조작은 워크스페이스의 이동 · 회전을 따른다(크기는 이동).
+             */
+            static void drawTargetGizmo( const EditorViewportVisualizerArgs& args )
+            {
+                TargetEdit&            edit      = getTargetEdit();
+                PoseModifierComponent* pModifier = edit._targetIndex >= 0 ? findModifier( edit._objectID ) : nullptr;
+                GameObject*            pObject   = pModifier != nullptr ? pModifier->getOwner() : nullptr;
+                SkeletalMeshComponent* pUnit     = pObject != nullptr ? pObject->getComponent<SkeletalMeshComponent>() : nullptr;
+                const bool             bReady    = pUnit != nullptr && args._pActiveCamera != nullptr && pModifier->getRigInstance().isInitialized() &&
+                                    static_cast<uint32>( edit._targetIndex ) < pModifier->getRigInstance().getTargetCount();
+                float4x4 parentWorld{};
+                if ( bReady == false || computeTargetParentWorld( *pModifier, *pUnit, static_cast<uint32>( edit._targetIndex ), parentWorld ) == false )
+                {
+                    EditorViewportMouseClaim::release( &edit );
+                    return;
+                }
+                const RigTargetDef& def = pModifier->getRigInstance().getTargetDef( static_cast<uint32>( edit._targetIndex ) );
+                // 놓은 뒤 파일이 다시 읽혀 인스턴스가 같은 값이 되면 남겨 둔 값을 버린다.
+                const bool bReloaded = edit._bDragging == SW_FALSE && edit._bPending == SW_TRUE &&
+                                       float3::getDistance( edit._pending._translation, def._offset._translation ) < 1.0e-4f &&
+                                       MathUtil::abs( edit._pending._rotation.dot( def._offset._rotation ) ) > 1.0f - 1.0e-5f;
+                if ( bReloaded )
+                    edit._bPending = SW_FALSE;
+                const BoneTransform offset = edit._bPending == SW_TRUE ? edit._pending : def._offset;
+
+                EditorViewportMouseClaim::acquire( &edit );
+                const float32 aspect = args._canvasSize._x / ( args._canvasSize._y > 0.0f ? args._canvasSize._y : 1.0f );
+                float32       arrView[16];
+                float32       arrProj[16];
+                float32       arrMatrix[16];
+                EditorViewportProjectionUtil::storeGizmoMatrix( arrView, args._pActiveCamera->getViewMatrix() );
+                EditorViewportProjectionUtil::storeGizmoMatrix( arrProj, args._pActiveCamera->getProjectionMatrix( aspect ) );
+                EditorViewportProjectionUtil::storeGizmoMatrix( arrMatrix, offset.toMatrix() * parentWorld );
+                ImGuizmo::SetDrawlist( args._pDrawList );
+                ImGuizmo::SetRect( args._canvasPos._x, args._canvasPos._y, args._canvasSize._x, args._canvasSize._y );
+                ImGuizmo::Enable( true );
+                EditorContext*            pContext  = EditorContext::get();
+                const bool                bRotate   = pContext != nullptr && pContext->getSubsystem<EditorWorkspace>().getGizmoOperation() == 1;
+                const ImGuizmo::OPERATION operation = bRotate ? ImGuizmo::ROTATE : ImGuizmo::TRANSLATE;
+                if ( ImGuizmo::Manipulate( arrView, arrProj, operation, ImGuizmo::LOCAL, arrMatrix, nullptr, nullptr ) )
+                {
+                    float4x4 newWorld{};
+                    EditorViewportProjectionUtil::loadGizmoMatrix( newWorld, arrMatrix );
+                    BoneTransform moved = BoneTransform::makeFromMatrix( newWorld * parentWorld.invert() );
+                    moved._scale        = float3{ 1.0f, 1.0f, 1.0f };
+                    edit._pending       = moved;
+                    edit._bPending      = SW_TRUE;
+                    edit._bDragging     = SW_TRUE;
+                }
+                const bool bReleased = edit._bDragging == SW_TRUE && ImGuizmo::IsUsing() == false;
+                if ( bReleased )
+                {
+                    edit._bDragging = SW_FALSE;
+                    RigSaveParams params;
+                    params._listTarget.push_back( RigTargetSaveParams{ def._name, edit._pending._translation, edit._pending._rotation } );
+                    edit._status = saveRig( *pModifier, params, "Move Rig Target" );
+                    // 저장하지 못했으면 파일이 다시 읽히지 않는다 — 남겨 둔 값을 버려 기즈모가 파일 값으로 돌아오게 한다.
+                    if ( edit._status != "Saved" )
+                        edit._bPending = SW_FALSE;
+                }
             }
 
             /** @brief 노드가 쓰는 본 이름을 "첫 본 (+n)" 꼴로 줄입니다. */
@@ -150,6 +281,10 @@ namespace sw::editor
         };
     } // namespace
 
+    SW_EDITOR_VISUALIZER( RigTargetGizmo, "rig_target_gizmo", 900, nullptr, "Rig Target",
+                          "Gizmo on the rig target picked in the Rig Debug window; releasing a drag writes the target offset into the rig asset", true,
+                          &RigDebugPanelInternal::drawTargetGizmo );
+
     RigDebugPanel::RigDebugPanel()
         : IEditorPanel( false ) // 필요할 때 여는 도구라 닫힌 채 시작한다
         , _status{}
@@ -163,12 +298,14 @@ namespace sw::editor
 
     void RigDebugPanel::drawContent()
     {
-        EditorContext* pContext = EditorContext::get();
-        const uint64   objectID = pContext != nullptr ? pContext->getSubsystem<EditorWorkspace>().getSelectedObjectID() : 0;
+        EditorContext*                     pContext   = EditorContext::get();
+        const uint64                       objectID   = pContext != nullptr ? pContext->getSubsystem<EditorWorkspace>().getSelectedObjectID() : 0;
+        RigDebugPanelInternal::TargetEdit& targetEdit = RigDebugPanelInternal::getTargetEdit();
         if ( objectID != _selectedObjectID )
         {
             _selectedObjectID = objectID;
             _selectedNode     = -1;
+            targetEdit        = RigDebugPanelInternal::TargetEdit{};
         }
         PoseModifierComponent* pModifier = RigDebugPanelInternal::findModifier( objectID );
         if ( pModifier == nullptr )
@@ -263,6 +400,50 @@ namespace sw::editor
             }
             ImGui::EndTable();
         }
+
+        // 대상 — 자기 유닛 대상(본 · 소켓)을 고르면 뷰포트에 기즈모가 뜬다(시각화 "Rig Target"). 끌기를 놓으면 그 대상의 오프셋을 리그 파일에 되써 넣는다.
+        // 바깥 대상(다른 유닛 · 오브젝트)은 부모 공간이 호스트 쪽에 있어 여기서 옮기지 않는다.
+        const uint32 targetCount = instance.getTargetCount();
+        if ( targetCount > 0 && ImGui::BeginTable( "##rig_targets", 3, flags ) )
+        {
+            ImGui::TableSetupColumn( "Target" );
+            ImGui::TableSetupColumn( "Translation" );
+            ImGui::TableSetupColumn( "Gizmo" );
+            ImGui::TableHeadersRow();
+            for ( uint32 targetIndex = 0; targetIndex < targetCount; ++targetIndex )
+            {
+                const RigTargetDef&  def  = instance.getTargetDef( targetIndex );
+                int32                bone = -1;
+                BoneTransform        combined{};
+                const bool           bOwnUnit     = instance.tryGetOwnTargetBinding( targetIndex, bone, combined );
+                const bool           bEditingThis = targetEdit._objectID == objectID && targetEdit._targetIndex == static_cast<int32>( targetIndex );
+                const BoneTransform& shownOffset  = bEditingThis && targetEdit._bPending == SW_TRUE ? targetEdit._pending : def._offset;
+                ImGui::PushID( static_cast<int32>( targetIndex ) );
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted( def._name.c_str() );
+                ImGui::TableNextColumn();
+                ImGui::Text( "%.3f, %.3f, %.3f", static_cast<float64>( shownOffset._translation._x ), static_cast<float64>( shownOffset._translation._y ),
+                             static_cast<float64>( shownOffset._translation._z ) );
+                ImGui::TableNextColumn();
+                ImGui::BeginDisabled( bOwnUnit == false || pModifier->getRigPath().empty() );
+                bool bEdit = bEditingThis;
+                if ( ImGui::Checkbox( "##gizmo", &bEdit ) )
+                {
+                    targetEdit              = RigDebugPanelInternal::TargetEdit{};
+                    targetEdit._objectID    = bEdit ? objectID : 0;
+                    targetEdit._targetIndex = bEdit ? static_cast<int32>( targetIndex ) : -1;
+                }
+                ImGui::EndDisabled();
+                if ( bOwnUnit == false )
+                    EditorWidgets::drawTooltip( "Targets on other units or objects are placed by the host - move that object instead" );
+                ImGui::PopID();
+            }
+            ImGui::EndTable();
+        }
+        EditorSelfTestMarks::note( "rigdebug.targets" );
+        if ( targetEdit._status.empty() == false )
+            ImGui::TextDisabled( "Target: %s", targetEdit._status.c_str() );
 
         EditorWidgets::drawPanelStatus( _status.c_str() );
         DebugDrawQueue* pQueue              = findSubsystem<DebugDrawQueue>();

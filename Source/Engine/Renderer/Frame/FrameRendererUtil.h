@@ -492,6 +492,8 @@ namespace sw
         hashed_string _cameraGrade{ "g_CameraGrade" };
         /// @brief 카메라별 화면 틀입니다 — x 레터박스로 남길 가로/세로 비율(0 = 없음), y 지금 뷰의 가로/세로 비율, z 색각 보정 방식(화면 출력 뷰만, 렌더 텍스처는 0). postgrade.hlsli.
         hashed_string _cameraFrame{ "g_CameraFrame" };
+        /// @brief 카메라별 피사계 심도입니다 — x 초점 거리(m), y 착란원 반지름 배율(px), z 반지름 상한(px), w 켬(1) · 끔(0). depthoffield.hlsl.
+        hashed_string _cameraLens{ "g_CameraLens" };
         hashed_string _outlineColor{ "g_OutlineColor" };
         hashed_string _outlineParams{ "g_OutlineParams" };
         hashed_string _sourceTexel{ "g_SourceTexel" };

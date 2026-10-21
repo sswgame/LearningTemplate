@@ -2,6 +2,7 @@
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/MatrixMath.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -15,6 +16,7 @@
 #include "GameFramework/Base/Actor/Camera/CameraDirectorComponent.h"
 #include "GameFramework/Base/Actor/Camera/CameraManagerComponent.h"
 #include "GameFramework/Base/Actor/Camera/CameraMode.h"
+#include "GameFramework/Base/Actor/Camera/CameraPoseUtil.h"
 #include "GameFramework/Base/Actor/Camera/CameraPreset.h"
 #include "GameFramework/Base/Actor/Camera/CameraShake.h"
 #include "GameFramework/Base/Actor/Camera/CameraUserSettings.h"
@@ -641,6 +643,40 @@ SW_TEST_CASE( CameraModeTest, LensPhysicalValuesReachThePose )
     SW_EXPECT_NEAR_EQUAL( 0.5f, half._postProcess._exposureCompensation, 1.0e-6f );
     SW_EXPECT_NEAR_EQUAL( 2.39f, half._postProcess._letterboxAspectRatio, 1.0e-6f ); // 한쪽에만 있으면 절반에서 바꾼다
     SW_EXPECT_NEAR_EQUAL( 0.0f, blendPoses( plain, pose, 0.4f )._postProcess._letterboxAspectRatio, 1.0e-6f );
+    // 조리개는 f 값의 역수(구경)로 섞는다 — 핀홀(0)과 f/1.4 의 절반은 f/2.8 이지 f/0.7 이 아니다. 센서 높이도 포즈에 실린다.
+    SW_EXPECT_NEAR_EQUAL( 24.0f, pose._depthOfField._sensorHeight, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 2.8f, half._depthOfField._aperture, 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, blendPoses( plain, plain, 0.5f )._depthOfField._aperture, 1.0e-6f );
+}
+
+/**
+ * @brief [CameraModeTest] 렌즈 시프트는 카메라 컴포넌트에 쓰여 투영 중심을 옮긴다 — +y 시프트면 앞축 위의 점이 화면 가운데보다 아래(NDC y = -2 · 시프트)에 온다
+ * @details 투영 행렬 하나가 옮기므로 뷰-투영을 쓰는 렌더 뷰 · 컬링 절두체 · 피킹이 같은 값을 본다(`CameraComponent::getProjectionMatrix`).
+ */
+SW_TEST_CASE( CameraModeTest, LensShiftMovesTheProjectionCentre )
+{
+    GameObjectManager manager;
+    GameObject*       pCameraObject = manager.createGameObject( hashed_string( "ShiftCamera" ) );
+    SW_ASSERT_TRUE( pCameraObject != nullptr );
+    CameraComponent* pCamera = pCameraObject->addComponent<CameraComponent>();
+    SW_ASSERT_TRUE( pCamera != nullptr );
+    CameraComponent& camera = *pCamera;
+    CameraPose       pose;
+    pose._lensShift = float2{ 0.0f, 0.1f };
+    CameraPoseUtil::applyLensToCamera( camera, pose );
+    SW_EXPECT_NEAR_EQUAL( 0.1f, camera.getLensShift()._y, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.1f, CameraPoseUtil::makePoseFromCamera( camera )._lensShift._y, 1.0e-6f );
+
+    // 카메라는 원점에서 +Z 를 본다. 앞 5 m 의 점을 투영한다.
+    const float4 clip = float4::transform( float4{ 0.0f, 0.0f, 5.0f, 1.0f }, camera.getViewProjectionMatrix( 1.0f ) );
+    SW_ASSERT_TRUE( clip._w > 0.0f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, clip._x / clip._w, 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( -0.2f, clip._y / clip._w, 1.0e-5f );
+
+    pose._lensShift = float2{};
+    CameraPoseUtil::applyLensToCamera( camera, pose );
+    const float4 centred = float4::transform( float4{ 0.0f, 0.0f, 5.0f, 1.0f }, camera.getViewProjectionMatrix( 1.0f ) );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, centred._y / centred._w, 1.0e-5f );
 }
 
 /**

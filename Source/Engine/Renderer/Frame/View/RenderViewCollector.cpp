@@ -48,14 +48,16 @@ namespace sw
             {
                 const CameraRenderOutput& output = camera.getRenderOutput();
                 RenderViewSettings        settings;
-                settings._screenRect      = output._screenRect;
-                settings._resolutionScale = MathUtil::clamp( output._resolutionScale, 0.1f, 2.0f );
-                settings._postProcess     = camera.getPostProcess();
-                settings._depthOfField    = camera.getDepthOfField();
-                settings._upscaleZoom     = static_cast<uint8>( MathUtil::min( output._upscaleZoom, kMaxUpscaleZoom ) );
-                settings._bShadows        = output._bShadows ? SW_TRUE : SW_FALSE;
-                settings._bPostProcess    = output._bPostProcess ? SW_TRUE : SW_FALSE;
-                settings._bCut            = camera.consumeCut() ? SW_TRUE : SW_FALSE;
+                settings._screenRect       = output._screenRect;
+                settings._resolutionScale  = MathUtil::clamp( output._resolutionScale, 0.1f, 2.0f );
+                settings._postProcess      = camera.getPostProcess();
+                settings._depthOfField     = camera.getDepthOfField();
+                const bool bPerspective    = camera.isOrthographic() == false && camera.getFieldOfViewY() > 0.0f;
+                settings._projectionScaleY = bPerspective ? 1.0f / MathUtil::tan( camera.getFieldOfViewY() * 0.5f ) : 0.0f;
+                settings._upscaleZoom      = static_cast<uint8>( MathUtil::min( output._upscaleZoom, kMaxUpscaleZoom ) );
+                settings._bShadows         = output._bShadows ? SW_TRUE : SW_FALSE;
+                settings._bPostProcess     = output._bPostProcess ? SW_TRUE : SW_FALSE;
+                settings._bCut             = camera.consumeCut() ? SW_TRUE : SW_FALSE;
                 return settings;
             }
 

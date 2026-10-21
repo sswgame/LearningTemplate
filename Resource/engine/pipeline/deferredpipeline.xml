@@ -16,6 +16,7 @@
 		                      _resolutionDivisor="2" />
 		<RenderPassAttachment _name="BloomColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _bClear="true" />
 		<RenderPassAttachment _name="TaaColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _bClear="true" />
+		<RenderPassAttachment _name="DepthOfFieldColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _bClear="true" />
 		<RenderPassAttachment _name="OutlineColor" _format="R8G8B8A8_UNORM" _clearColor="0.12,0.15,0.18,1" _bClear="true" />
 		<RenderPassAttachment _name="TonemapColor" _format="R8G8B8A8_UNORM" _clearColor="0.12,0.15,0.18,1" _bClear="true" />
 	</_listAttachment>
@@ -241,6 +242,24 @@
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
+		<!-- 피사계 심도 — TAA 가 고른 HDR 색을 장면 깊이의 착란원만큼 흐린다. 카메라 조리개가 0(기본)이거나 후처리를 끈 뷰는 원본을 그대로 낸다. -->
+		<RenderGraphPassDesc _name="DepthOfField"
+		                     _type="DepthOfField"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="Back"
+		                     _bEnableDepthTest="true"
+		                     _bEnableDepthWrite="true"
+		                     _bEnableBlend="false">
+			<_listInput>
+				<item>TaaColor</item>
+				<item>SceneDepth</item>
+			</_listInput>
+			<_listOutput>
+				<item>DepthOfFieldColor</item>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
 		<RenderGraphPassDesc _name="Tonemap"
 		                     _type="Tonemap"
 		                     _vertexEntryPoint="VSMain"
@@ -250,7 +269,7 @@
 		                     _bEnableDepthWrite="true"
 		                     _bEnableBlend="false">
 			<_listInput>
-				<item>TaaColor</item>
+				<item>DepthOfFieldColor</item>
 			</_listInput>
 			<_listOutput>
 				<item>TonemapColor</item>

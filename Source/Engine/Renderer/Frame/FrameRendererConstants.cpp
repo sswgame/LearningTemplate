@@ -17,6 +17,10 @@ namespace sw
     {
         constexpr float4 kDefaultBloomParams{ 0.55f, 0.65f, 0.25f, 0.0f };
         constexpr float4 kDefaultOutlineColor{ 0.08f, 0.05f, 0.12f, 0.85f };
+        /// 피사계 심도 착란원 반지름의 상한(px)입니다. depthoffield.hlsl 의 탭 16 개가 이 반지름 안에 퍼지므로, 더 키우면 탭 사이가 벌어져 고리 무늬가 보인다.
+        constexpr float32 kMaxDepthOfFieldRadiusPixels = 8.0f;
+        /// 센서 높이(mm, `CameraDepthOfFieldValues::_sensorHeight`)를 m 로 바꾸는 비율입니다.
+        constexpr float32 kMillimetersPerMeter = 1000.0f;
     } // namespace
 
     void FrameRenderer::applyFrameSky( bool bHasSky, const SkyGradient& sky )
@@ -101,6 +105,20 @@ namespace sw
         const bool    bScreenOutput   = _pActiveView->_pOutputTexture == nullptr;
         const float32 colorVisionMode = bScreenOutput ? static_cast<float32>( _canvasFrame._colorVisionMode ) : 0.0f;
         context._passValues.setFloat4( passConstantNames()._cameraFrame, float4{ MathUtil::max( 0.0f, post._letterboxAspectRatio ), viewAspect, colorVisionMode, 0.0f } );
+        // 피사계 심도(depthoffield.hlsl) — 얇은 렌즈의 착란원. 지름 / 센서 높이 = 센서 높이 · s² / ( 4 · N · 초점 거리 ) · |1 - 초점 거리 / 깊이|
+        // (s = 1 / tan( fovY / 2 ) 라 초점 길이 = 센서 높이 · s / 2, 구경 = 초점 길이 / N, 초점 길이가 초점 거리보다 훨씬 짧다고 본다). y 는 그 반지름을 화면 높이 px 로 바꾼 배율이다.
+        // 조리개 0(핀홀) · 직교 · 후처리를 끈 뷰는 끈다(w = 0) — 셰이더가 원본을 고른다.
+        const CameraDepthOfFieldValues& lens          = _pActiveView->_settings._depthOfField;
+        const float32                   scaleY        = _pActiveView->_settings._projectionScaleY;
+        const bool                      bDepthOfField = _pActiveView->_settings.usesPostProcess() && lens.hasDepthOfField() && scaleY > 0.0f;
+        float32                         cocScale      = 0.0f;
+        if ( bDepthOfField )
+        {
+            const float32 sensorHeightMeters = lens._sensorHeight / kMillimetersPerMeter;
+            cocScale                         = 0.5f * static_cast<float32>( pool.getHeight() ) * sensorHeightMeters * scaleY * scaleY / ( 4.0f * lens._aperture * lens._focusDistance );
+        }
+        context._passValues.setFloat4( passConstantNames()._cameraLens,
+                                       float4{ lens._focusDistance, cocScale, kMaxDepthOfFieldRadiusPixels, bDepthOfField ? 1.0f : 0.0f } );
         // 패스 플래그: 비트는 bindingslots.hlsli 의 SW_PASS_FLAG_*(C++ 는 shaderslot::kPassFlag*)가 기준이다. 후처리는 뷰마다 끌 수 있다(CCTV).
         uint32 flags = ( _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling() ) ? shaderslot::kPassFlagNativeBindless : 0u;
         if ( _pActiveView->_settings.usesPostProcess() == false )

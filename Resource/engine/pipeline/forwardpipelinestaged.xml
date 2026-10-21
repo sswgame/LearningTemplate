@@ -11,6 +11,7 @@
 		<RenderPassAttachment _name="SceneColor" _format="R16G16B16A16_FLOAT" _clearColor="0.12,0.15,0.18,1" _bClear="true" />
 		<RenderPassAttachment _name="SceneDepth" _format="D24_UNORM_S8_UINT" _clearColor="1,0,0,0" _bClear="true" />
 		<RenderPassAttachment _name="ShadowMap" _format="D24_UNORM_S8_UINT" _clearColor="1,0,0,0" _bClear="true" />
+		<RenderPassAttachment _name="DepthOfFieldColor" _format="R16G16B16A16_FLOAT" _clearColor="0.12,0.15,0.18,1" _bClear="true" />
 		<RenderPassAttachment _name="BloomColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _bClear="true" />
 		<RenderPassAttachment _name="OutlineColor" _format="R16G16B16A16_FLOAT" _clearColor="0.12,0.15,0.18,1" _bClear="true" />
 	</_listAttachment>
@@ -113,6 +114,24 @@
 				<item>SW_TRANSPARENT=1</item>
 			</_listPermutation>
 		</RenderGraphPassDesc>
+		<!-- 피사계 심도 — 합친 판(forwardpipeline.xml)과 같은 자리(블룸 앞)다. -->
+		<RenderGraphPassDesc _name="DepthOfField"
+		                     _type="DepthOfField"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="None"
+		                     _bEnableDepthTest="false"
+		                     _bEnableDepthWrite="false"
+		                     _bEnableBlend="false">
+			<_listInput>
+				<item>SceneColor</item>
+				<item>SceneDepth</item>
+			</_listInput>
+			<_listOutput>
+				<item>DepthOfFieldColor</item>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
 		<RenderGraphPassDesc _name="PostBloom"
 		                     _type="Bloom"
 		                     _shaderPath="engine/shaders/postbloom.hlsl"
@@ -123,7 +142,7 @@
 		                     _bEnableDepthWrite="false"
 		                     _bEnableBlend="false">
 			<_listInput>
-				<item>SceneColor</item>
+				<item>DepthOfFieldColor</item>
 			</_listInput>
 			<_listOutput>
 				<item>BloomColor</item>

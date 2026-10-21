@@ -56,7 +56,7 @@ namespace sw
         float32 _fuseTime;
         PROPERTY( Category = "Barrel", DisplayName = "Fracture Strain", Min = 0.0, Tooltip = "Strain at the centre for destructible (fractured) objects in the radius" )
         float32 _fractureStrain;
-        PROPERTY( Category = "Barrel", DisplayName = "Blast Impulse", Min = 0.0, Tooltip = "Impulse given to pieces broken off by the blast", Meta = "Units=N*s" )
+        PROPERTY( Category = "Barrel", DisplayName = "Blast Impulse", Min = 0.0, Tooltip = "Impulse given to pieces broken off by the blast", Units = "N*s" )
         float32 _blastImpulse;
         PROPERTY( RuntimeState, Category = "Barrel", DisplayName = "Damage Taken", Tooltip = "Runtime" )
         float32 _damageTaken;

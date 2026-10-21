@@ -9,6 +9,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
+#include "Core/String/hashed_string.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -22,6 +23,7 @@
 namespace sw
 {
     class FirstPersonCameraComponent;
+    class GameObjectManager;
     class PawnComponent;
     class ShooterBodyMovementComponent;
     class ShooterDirectorComponent;
@@ -48,6 +50,8 @@ namespace sw
      *          **탄도선과 총구 섬광**: 총구(1인칭이면 손에 든 총과 무기 소켓 `Muzzle`, 아니면 몸 외형의 `MainHand.Muzzle`)에서 맞은 위치까지의 상자와
      *          섬광 구를 디렉터의 풀에서 꺼낸다. 에디터 없이 App 에서도 보인다.
      *          적에게 주는 피해, 효과, 효과음, 손에 든 총 교체는 쌓아 두었다가 틱이 끝난 뒤 한 번에 처리한다(게임 스레드).
+     *          **히트스캔**: 틱 안에서는 막는 상자 · 바닥까지의 거리만 재고(`traceCover`), 적은 틱 뒤에 그 거리 안에서 물리 질의로 래그돌 히트박스를 묻는다
+     *          (`resolveShots`, 레이어 `_hitboxLayer`). 피해는 무기 피해 × 맞은 바디의 히트 존 배율이다.
      */
     REFLECT( Category = "Shooter3D", DisplayName = "Shooter Player", Tooltip = "Movement, weapons, hitscan, health, the body and the tracers of the shooter player" )
     class ShooterPlayerComponent : public Component
@@ -118,11 +122,18 @@ namespace sw
             float3 _to{};
         };
 
-        /** @brief 적에게 줄 피해 하나입니다. 틱이 끝난 뒤 적용합니다. */
-        struct EnemyHit
+        /**
+         * @brief 이번 틱에 쏜 광선 하나입니다. 틱 안에서는 막는 상자 · 바닥까지의 거리만 재고, 적 판정(물리 질의)은 틱이 끝난 뒤 게임 스레드에서 합니다.
+         * @details 물리 씬은 한 스레드에서만 다룬다(`CharacterHitUtil`). 같은 방아쇠의 광선(산탄)은 같은 `_volley` 라 소리 · 맞음 수를 한 번만 낸다.
+         */
+        struct PendingShot
         {
-            GameObjectHandle _enemy{};
-            float32          _damage{ 0.0f };
+            GameRay _ray{};
+            float3  _muzzle{};
+            float32 _coverDistance{ 0.0f }; ///< 막는 상자 · 바닥 · 사거리 중 가까운 것(m)
+            float32 _range{ 0.0f };         ///< 무기 사거리(m) — 이보다 짧으면 무언가에 닿았다
+            float32 _damage{ 0.0f };
+            uint32  _volley{ 0 };
         };
 
         /** @brief 낼 탄착 효과 하나입니다. 틱이 끝난 뒤 디렉터의 풀에서 꺼냅니다. */
@@ -145,8 +156,13 @@ namespace sw
         /** @brief 같은 오브젝트의 몸 이동입니다. 없으면 nullptr 입니다. */
         ShooterBodyMovementComponent* findMovement() const;
         void                          fireWeapon( const ShooterDirectorComponent& director, FirstPersonCameraComponent& camera, bool bJustPressed );
-        /** @brief 광선 하나를 쏴 가장 가까운 적, 상자, 바닥을 찾습니다. 적이면 피해를 쌓습니다. 반환값은 맞은 거리입니다. */
-        float32 traceShot( const ShooterDirectorComponent& director, const GameRay& ray, float32 damage, bool& outHitEnemy );
+        /** @brief 광선 하나가 막는 상자 · 바닥에 닿는 거리입니다(닿지 않으면 사거리). 틱 안에서 부르며 물리를 묻지 않습니다. */
+        float32 traceCover( const ShooterDirectorComponent& director, const GameRay& ray ) const;
+        /**
+         * @brief 쌓인 광선을 적의 히트박스(래그돌 바디, 레이어 `_hitboxLayer`)에 물리 질의로 쏘고, 맞은 적에 맞음을 보내며 탄도선 · 탄착 · 소리를 쌓습니다(게임 스레드).
+         * @details 질의 거리는 막는 상자까지라 엄폐물 뒤의 적은 맞지 않는다. 피해 배율은 맞은 바디의 히트 존(머리 ×2 등)이 정한다(`CharacterHitUtil::makeHitInfo`).
+         */
+        void resolveShots( GameObjectManager& manager );
         /** @brief 총구의 월드 위치를 반환합니다. 1인칭이면 손에 든 총, 아니면 몸 외형의 `MainHand.Muzzle` 입니다. 찾지 못하면 눈 아래입니다. */
         float3 findMuzzlePosition();
         void   switchWeapon( int32 weaponIndex );
@@ -186,6 +202,10 @@ namespace sw
         float32 _regenPerSecond;
         PROPERTY( Category = "Health", DisplayName = "Down Time", Tooltip = "Seconds the death clip plays before the round starts over", Min = 0.0, Units = s )
         float32 _downTime;
+        PROPERTY( Category = "Weapons", DisplayName = "Hitbox Layer", Tooltip = "Physics layer of the enemy hitboxes the shots query (the ragdoll bodies)" )
+        hashed_string _hitboxLayer;
+        PROPERTY( Category = "Weapons", DisplayName = "Shot Impulse", Tooltip = "Impulse a bullet gives the body it hits (hit reaction, ragdoll push)", Min = 0.0, Units = "N*s" )
+        float32 _shotImpulse;
         PROPERTY( Category = "Effects", DisplayName = "Hit Effect Lifetime", Tooltip = "Seconds a hit or muzzle flash sphere stays", Min = 0.0, Units = s )
         float32 _hitEffectLifetime;
         PROPERTY( Category = "Effects", DisplayName = "Tracer Lifetime", Tooltip = "Seconds a tracer stays", Min = 0.0, Units = s )
@@ -204,7 +224,7 @@ namespace sw
         WeaponState              _arrWeapon[kWeaponCount];
         Vitality                 _vitality;
         AppearanceSocketSetCache _weaponSockets; ///< 1인칭 총구. 무기 외형의 소켓 에셋.
-        vector<EnemyHit>         _listPendingHit;
+        vector<PendingShot>      _listPendingShot;
         vector<EffectRequest>    _listPendingEffect;
         vector<TracerRequest>    _listPendingTracer;
         GameSoundQueue           _soundQueue; ///< 낼 소리(틱이 끝난 뒤 처리한다. 오디오는 게임 스레드에서 다룬다).

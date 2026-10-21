@@ -395,6 +395,7 @@ namespace sw
                 case RenderPassType::Outline:
                 case RenderPassType::Tonemap:
                 case RenderPassType::Module:
+                case RenderPassType::DepthOfField:
                 case RenderPassType::ForwardOpaqueNoDepthWrite:
                 case RenderPassType::GPUCull:
                 case RenderPassType::InstanceAnimation:

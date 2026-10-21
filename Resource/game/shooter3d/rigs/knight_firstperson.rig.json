@@ -1,5 +1,0 @@
-{
-  "nodes": [
-    { "type": "ScaleBone", "name": "HideHead", "bone": "head", "weight_slot": "FirstPersonHead" }
-  ]
-}

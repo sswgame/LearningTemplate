@@ -42,8 +42,10 @@ namespace sw
      *          `Attack` · `Hit`(트리거) · `Dead` 로 움직입니다. 플레이어를 때리는 것은 다른 오브젝트에 쓰는 일이라 틱 뒤로 미룹니다.
      *          휘두름이 맞는 시각은 클립 데이터다 — 클립 알림 `Impact` → 알림 표(`characters/skeleton_minion/skeleton_minion.notifies.xml`)의 `GameplayEvent` →
      *          `onAnimationNotify` 가 이벤트 `_attackHitEvent` 를 받으면 다음 틱에 손이 닿는지 보고 때린다. 휘두름이 끝날 때까지 이벤트가 없으면 데이터 오류로 알린다.
-     *          맞음(`applyDamage`)은 플레이어의 사격이 틱 뒤에 겁니다. 히트박스는 발에서 `_height` 까지의 캡슐(반지름 `_radius`)입니다 —
-     *          물리 질의 · 부위 히트박스가 들어오면 그쪽으로 옮긴다(소켓 `Chest` 가 히트박스 중심 위치).
+     *          **맞음**은 플레이어의 물리 질의 히트스캔이 틱 뒤에 `CharacterHitUtil::deliverHit` 으로 보낸다(`onHitReceived`). 히트박스는 같은 오브젝트의
+     *          `RagdollComponent`(물리 에셋 `skeleton_warrior.physics.xml` — 뼈마다 바디와 히트 존 배율)이고, 피해는 기본 피해 × 히트 존 배율이다.
+     *          쓰러지면 래그돌로 넘긴다(맞은 바디에 충격량). 쓰러지지 않은 맞음의 몸 흔들림은 래그돌 컴포넌트가 같은 맞음으로 스스로 한다.
+     *          `_radius` · `_height` 는 몸 이동 · 내비 에이전트 · 자동 조준이 쓰는 몸 크기다(판정에는 쓰지 않는다).
      */
     REFLECT( Category = "Shooter3D", DisplayName = "Shooter Enemy", Tooltip = "Skeleton enemy that rises, walks to the player, swings, staggers when hit and collapses" )
     class ShooterEnemyComponent : public HealthSourceComponent
@@ -55,13 +57,13 @@ namespace sw
         virtual ~ShooterEnemyComponent() override = default;
 
         void onTick( float32 deltaTime ) override;
+        /** @brief 무기 판정이 맞혔습니다(틱 밖 · 게임 스레드). 기본 피해 × 히트 존 배율을 깎고, 쓰러지면 맞은 바디에 충격량을 주며 래그돌로 넘깁니다. */
+        void onHitReceived( const HitInfo& hit ) override;
         /** @brief 휘두름 클립의 맞는 알림(`_attackHitEvent`)을 받습니다(게임 스레드, 애니메이션 평가 뒤). 휘두르는 중이면 다음 틱이 맞힘을 처리합니다. */
         void onAnimationNotify( const AnimationNotifyInfo& notify ) override;
 
         /** @brief 스폰합니다 — 디렉터 · 발 위치 · 요 · 체력 · 속도(게임 스레드). */
         void launch( GameObjectHandle director, const float3& position, float32 yaw, float32 health, float32 speed );
-        /** @brief 맞았다 — 체력을 깎고 움찔하거나 쓰러진다(틱 밖 · 게임 스레드). */
-        void applyDamage( float32 amount );
 
         bool isLaunched() const { return _bLaunched == SW_TRUE; }
         bool isAlive() const { return _bLaunched == SW_TRUE && _vitality.isAlive(); }
@@ -82,7 +84,9 @@ namespace sw
         GameObjectHandle getDirector() const { return _director; }
 
     private:
-        void enterPhase( ShooterEnemyPhase phase );
+        /** @brief 체력을 깎고 움찔하거나 쓰러진다(틱 밖 · 게임 스레드). 이번 피해로 쓰러졌으면 true 입니다(이미 쓰러졌으면 false). */
+        [[nodiscard]] bool applyDamage( float32 amount );
+        void               enterPhase( ShooterEnemyPhase phase );
         /** @brief 같은 오브젝트의 애니메이터 파라미터를 씁니다(자기 오브젝트). */
         void updateAnimator( float32 moveCode );
         /** @brief 플레이어를 때리는 것을 틱 뒤로 미룹니다. */
