@@ -10,7 +10,8 @@
  *          - **파라미터 갱신 경로.** 값 하나에 게임 파라미터(`_parameter`)와 곡선(`_listPoint`)을 달면 엔진이 블록(5.3 ms)마다 그 에미터에서 본 파라미터 값을 곡선으로 바꿔
  *            넣는다(`AudioEngine::updateVoiceTargets`). 이벤트의 RTPC 곡선과 같은 모양이고, 늦음은 한 블록 안이다. 엔진이 모르는 파라미터를 읽는 그래프는 시작할 때 오류로 멈춘다.
  *          - **길이.** `_durationSeconds` 가 소리 하나의 길이(필수)이고 엔벨로프의 릴리스가 그 끝에 맞춰진다. 반복 이벤트는 끝에서 그래프를 처음부터 다시 시작한다.
- *          - **에디터 편집.** 지금은 XML 파일을 고치고 에셋 브라우저가 오디오 종류로 보인다. 노드 편집기는 나중 단위다(계획 `AudioEngineExtensions` E5).
+ *          - **에디터 편집.** 소리 그래프 창(`AudioGraphPanel`)이 이 형식 위에서 캔버스(노드 · 연결)와 속성 그리드를 함께 고친다. 캔버스 위치는
+ *            `_editorPosition` 에 실리고 소리는 읽지 않는다(MetaSounds 도 편집기 좌표를 에셋에 둔다).
  * @code
  *     <AudioGraphDef _output="Amp" _durationSeconds="3">
  *         <_listNode>
@@ -32,6 +33,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Audio/AudioSpatial.h"
@@ -95,6 +97,8 @@ namespace sw
         vector<AudioGraphParameterDesc> _listParameter{};
         PROPERTY( Tooltip = "Source clip of a Granular node (in memory: shorter than the streaming threshold, not a graph)" )
         DataPath _clip;
+        PROPERTY( Tooltip = "Position of the node on the editor canvas; the sound does not read it" )
+        float2 _editorPosition{ 0.0f, 0.0f };
         PROPERTY( Tooltip = "Node type" )
         AudioGraphNodeType _type{ AudioGraphNodeType::Sine };
     };
