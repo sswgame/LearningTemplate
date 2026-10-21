@@ -3,6 +3,7 @@
 #include "Engine/UI/Render/UIPaintPass.h"
 
 #include "Core/Container/vector.h"
+#include "Core/Log/Logger.h"
 
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/UI/Base/PanelWidget.h"
@@ -11,8 +12,12 @@
 #include "Engine/UI/Base/WidgetTypes.h"
 #include "Engine/UI/Style/WidgetStyle.h"
 
+#include <cstdlib>
+
 namespace sw
 {
+    SW_LOG_CALLER( "UIPaintPass" );
+
     namespace
     {
         struct UIPaintPassInternal
@@ -90,11 +95,6 @@ namespace sw
                 return true;
             }
         };
-        // z 순서 패널의 그리기 순서 목록을 깊이마다 하나씩 재사용한다. 자식이 z 순서 패널이면 `paintWidget` 이 재귀하므로 목록 하나를 나눠 쓸 수 없다.
-        // 그리기는 게임 스레드에서만 돌지만 트리를 칠하는 스레드가 늘어도 깨지지 않도록 스레드마다 둔다. 첫 그리기에서 생기므로 메모리 태그 기준선 뒤에 할당된다 —
-        // 종료 때 `UIPaintPass::releaseScratch` 가 비운다(스레드 소멸자는 종료 보고 뒤라 "기준선보다 늘었다"로 보인다).
-        thread_local vector<vector<uint32>> t_listPaintOrderByDepth;
-        thread_local uint32                 t_paintOrderDepth = 0;
     } // namespace
 } // namespace sw
 
@@ -110,6 +110,12 @@ namespace sw
 
     uint32 UIPaintPass::paint( WidgetTree& tree, const UIPaintContext& context, CanvasPainter& painter, CanvasDrawList& outCanvas )
     {
+        // 스크래치는 칠하는 쪽이 소유해 넘기는 필수 값이다. 없으면 z 순서 패널을 칠할 수 없으므로 멈춘다.
+        if ( context._pScratch == nullptr )
+        {
+            SW_LOG_ERROR( "UIPaintPass::paint needs UIPaintContext::_pScratch - the painting owner must pass its scratch" );
+            std::abort();
+        }
         // 지난 순회 뒤 트리에 무효화가 하나도 없고 배율과 아틀라스도 그대로면 순회하지 않고 지난 목록을 낸다(멈춘 HUD 나 메뉴는 위젯 수와 무관하게 이어 붙이기 한 번으로 끝난다).
         const bool bReusePaintOutput = canReuseOutput( tree, context, outCanvas._targetSize );
         const bool bScaleChanged     = tree._paintUIScale != context._uiScale;
@@ -212,18 +218,19 @@ namespace sw
             if ( pPanel->hasCustomPaintOrder() )
             {
                 // 바깥 배열이 재귀 중에 커지면 안쪽 목록이 옮겨지므로 참조를 들고 있지 않고 매번 인덱스로 읽는다.
-                const uint32 depth = t_paintOrderDepth;
-                if ( t_listPaintOrderByDepth.size() <= depth )
-                    t_listPaintOrderByDepth.resize( depth + 1 );
-                pPanel->collectPaintOrder( t_listPaintOrderByDepth[depth] );
-                const uint32 orderCount = static_cast<uint32>( t_listPaintOrderByDepth[depth].size() );
-                ++t_paintOrderDepth;
+                UIPaintScratch& scratch = *context._pScratch; // `paint` 가 입구에서 확인했다
+                const uint32    depth   = scratch._paintOrderDepth;
+                if ( scratch._listPaintOrderByDepth.size() <= depth )
+                    scratch._listPaintOrderByDepth.resize( depth + 1 );
+                pPanel->collectPaintOrder( scratch._listPaintOrderByDepth[depth] );
+                const uint32 orderCount = static_cast<uint32>( scratch._listPaintOrderByDepth[depth].size() );
+                ++scratch._paintOrderDepth;
                 for ( uint32 order = 0; order < orderCount; ++order )
                 {
-                    const uint32 index = t_listPaintOrderByDepth[depth][order];
+                    const uint32 index = scratch._listPaintOrderByDepth[depth][order];
                     paintedCount += paintChild( *pPanel->getChild( index ), context, painter, outCanvas, bChildForce, bAtlasChanged );
                 }
-                --t_paintOrderDepth;
+                --scratch._paintOrderDepth;
             }
             else
             {
@@ -258,13 +265,6 @@ namespace sw
         painter.setAnchor( previousAnchor );
         widget._dirtyFlags &= ~Internal::kClearBits;
         return paintedCount;
-    }
-
-    void UIPaintPass::releaseScratch()
-    {
-        t_listPaintOrderByDepth.clear();
-        t_listPaintOrderByDepth.shrink_to_fit();
-        t_paintOrderDepth = 0;
     }
 
     uint32 UIPaintPass::paintChild( Widget& widget, const UIPaintContext& context, CanvasPainter& painter, CanvasDrawList& outCanvas, bool bForce,

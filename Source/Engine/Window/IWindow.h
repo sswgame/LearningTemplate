@@ -128,7 +128,8 @@ namespace sw
         uint32 getMinimumClientHeight() const { return _minClientHeight; }
         /**
          * @brief 창 제목을 바꿉니다(UTF-8). 같은 제목이거나 빈 제목이면 아무것도 하지 않습니다. **창 스레드(메인 스레드)에서만 부릅니다.**
-         * @details 제목은 `_title` 에 남아 `recreate` 가 같은 제목으로 다시 만듭니다(빈 제목은 `recreate` 가 거절하므로 받지 않습니다).
+         * @details 제목은 `_arrTitle` 에 남아 `recreate` 가 같은 제목으로 다시 만듭니다(빈 제목은 `recreate` 가 거절하므로 받지 않습니다).
+         *          `kTitleCapacity` 를 넘는 제목은 오류를 남기고 받지 않습니다(지금 제목이 그대로 남습니다).
          */
         void setTitle( const utf8* pTitle );
         /**
@@ -145,18 +146,10 @@ namespace sw
          * @return 둘 다 없거나 둘 다 있으면 true 입니다. 하나만 있으면 오류를 남기고 false 입니다 — 반쪽 좌표를 플랫폼 값으로 채우지 않습니다.
          */
         [[nodiscard]] bool applyCommandLinePosition( const CommandLineManager& commandLine );
-        /** @brief 지금 제목입니다(UTF-16이며 플랫폼 창이 쓰는 그대로입니다). */
-        const wstring& getTitle() const { return _title; }
-        /**
-         * @brief `recreate` 용 제목 사본(`_title`)을 해제합니다. 플랫폼 창의 제목 줄은 그대로이고, 이 뒤로 `recreate` 는 실패합니다.
-         * @details 창은 엔진 종료 뒤에 파괴되므로, 기동 뒤에 바꾼 제목(에디터)이 엔진 종료 보고에서 그 태그의 증가로 남는다. App 이 엔진을 종료하기 직전에 부른다.
-         *          빈 객체를 대입하지 않고 비운 뒤 줄인다. 새 문자열 객체를 만들지 않아 지금 태그로 잡히는 블록이 없다.
-         */
-        void releaseTitleStorage()
-        {
-            _title.clear();
-            _title.shrink_to_fit();
-        }
+        /** @brief 지금 제목입니다(UTF-8, 널 종료). 창이 직접 들고 있어 힙을 쓰지 않습니다. */
+        const utf8* getTitle() const { return _arrTitle; }
+        /** @brief 제목이 담기는 최대 바이트(널 포함)입니다. 넘는 제목은 `setTitle` · `initializeWindow` 가 오류로 거절합니다. */
+        static constexpr uint32 kTitleCapacity = constant::kMaxBuffer256;
 
         // ------------------------------------------------------------------------------
         // IRenderSurface: RHI 가 창 시스템을 모르는 채로 묻는 다섯 가지
@@ -244,11 +237,21 @@ namespace sw
          * @details 메시지를 받을 때마다 값을 읽는 플랫폼(Win32 `WM_GETMINMAXINFO`)은 할 일이 없다.
          */
         virtual void applyMinimumClientSize() {}
-        /** @brief `_title` 을 플랫폼 창의 제목 줄에 겁니다. 창이 아직 없으면 아무것도 하지 않습니다(만들 때 `_title` 로 겁니다). */
+        /** @brief `_arrTitle` 을 플랫폼 창의 제목 줄에 겁니다. 창이 아직 없으면 아무것도 하지 않습니다(만들 때 `_arrTitle` 로 겁니다). */
         virtual void applyTitle() {}
 
+        /**
+         * @brief @p pTitle 을 `_arrTitle` 에 담습니다(nullptr 은 빈 제목). 플랫폼의 `initializeWindow` 가 처음에 부릅니다.
+         * @return `kTitleCapacity` 를 넘으면 오류를 남기고 false 입니다(제목을 자르지 않는다 — 창을 만들지 않는다).
+         */
+        [[nodiscard]] bool storeTitle( const utf8* pTitle );
+
     protected:
-        wstring                      _title;
+        /**
+         * @brief `recreate` 가 같은 제목으로 다시 만들 제목입니다.
+         * @details 창 안의 고정 버퍼다. 창은 엔진 종료 뒤에 파괴되므로, 힙 문자열이면 기동 뒤에 바꾼 제목(에디터)이 엔진 종료 누수 보고에 그 태그의 증가로 남았다.
+         */
+        utf8                         _arrTitle[kTitleCapacity];
         WindowMessageHandlerDelegate _customHandler;
         WindowResizeDelegate         _onResize;
         WindowCloseQueryDelegate     _closeQuery;

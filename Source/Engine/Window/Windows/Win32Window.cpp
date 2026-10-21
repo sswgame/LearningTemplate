@@ -31,7 +31,9 @@ namespace sw
     {
         _width  = width;
         _height = height;
-        _title  = StringUtil::isNullOrEmpty( pTitle ) ? L"" : StringUtil::utf8ToUtf16( pTitle );
+        if ( storeTitle( pTitle ) == false )
+            return false; // 오류는 storeTitle 이 남겼다
+        const wstring titleW = StringUtil::utf8ToUtf16( _arrTitle );
 
         HINSTANCE hInstance = GetModuleHandleW( nullptr );
 
@@ -56,7 +58,7 @@ namespace sw
         _hWnd = CreateWindowExW(
             0,
             L"SWEngineWindowClass_OWNDC",
-            _title.c_str(),
+            titleW.c_str(),
             WS_OVERLAPPEDWINDOW,
             _restoreX,
             _restoreY,
@@ -89,7 +91,7 @@ namespace sw
     void Win32Window::applyTitle()
     {
         if ( _hWnd != nullptr )
-            SetWindowTextW( _hWnd, _title.c_str() );
+            SetWindowTextW( _hWnd, StringUtil::utf8ToUtf16( _arrTitle ).c_str() );
     }
 
     void Win32Window::applyWindowVisibility( bool bShow )

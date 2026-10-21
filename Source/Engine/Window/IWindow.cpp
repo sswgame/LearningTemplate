@@ -7,6 +7,8 @@
 #include "Engine/Window/Linux/X11Window.h"
 #include "Engine/Window/Windows/Win32Window.h"
 
+#include <cstring>
+
 namespace sw
 {
     SW_LOG_CALLER( "Window" );
@@ -19,7 +21,7 @@ namespace sw
     } // namespace
 
     IWindow::IWindow()
-        : _title{}
+        : _arrTitle{}
         , _customHandler{}
         , _onResize{}
         , _closeQuery{}
@@ -72,11 +74,24 @@ namespace sw
     {
         if ( StringUtil::isNullOrEmpty( pTitle ) )
             return;
-        const wstring title = StringUtil::utf8ToUtf16( pTitle );
-        if ( title == _title )
+        if ( std::strcmp( pTitle, _arrTitle ) == 0 )
             return;
-        _title = title;
+        if ( storeTitle( pTitle ) == false )
+            return; // 오류는 storeTitle 이 남겼다 — 지금 제목이 그대로다
         applyTitle();
+    }
+
+    bool IWindow::storeTitle( const utf8* pTitle )
+    {
+        const utf8* const pSource = pTitle != nullptr ? pTitle : "";
+        const size_t      length  = std::strlen( pSource );
+        if ( length >= kTitleCapacity )
+        {
+            SW_LOG_ERROR( "Window title is %# bytes - it must be shorter than %# bytes (IWindow::kTitleCapacity)", length, kTitleCapacity );
+            return false;
+        }
+        std::memcpy( _arrTitle, pSource, length + 1 );
+        return true;
     }
 
     void IWindow::requestClose()
@@ -135,7 +150,7 @@ namespace sw
 
     bool IWindow::recreate()
     {
-        if ( _title.empty() )
+        if ( _arrTitle[0] == '\0' )
             return false;
 
         // 다시 만들어도 **보이던 창은 보여야 한다**. 빠뜨리면 백엔드 교체 뒤 창이 사라진다.
@@ -155,8 +170,10 @@ namespace sw
         destroy();
         _bShouldClose = SW_FALSE;
 
-        const string title = StringUtil::utf16ToUtf8( _title.c_str() );
-        const bool   bOk   = initializeWindow( title.c_str(), width, height );
+        // 플랫폼의 `initializeWindow` 가 제목을 `_arrTitle` 에 다시 담으므로 사본으로 넘긴다(같은 버퍼를 읽으며 쓰지 않게).
+        utf8 arrTitle[kTitleCapacity];
+        std::memcpy( arrTitle, _arrTitle, kTitleCapacity );
+        const bool bOk = initializeWindow( arrTitle, width, height );
         // 새 창은 늘 창 모드로 선다. 전체 화면이던 창은 보이기 전에 같은 방식으로 되돌린다(크기 통보는 `_bRecreating` 이 삼킨다).
         if ( bOk && _displayMode != WindowDisplayMode::Windowed )
             (void)setDisplayMode( _displayMode, width, height );

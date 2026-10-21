@@ -418,6 +418,7 @@ namespace sw
         UIViewport                _viewport;
         CanvasDrawList            _canvas;              ///< 이번 프레임의 그리기 목록입니다.
         CanvasDrawList            _canvasScratch;       ///< 칠하는 중인 목록입니다(같은 내용이면 버립니다).
+        mutable UIPaintScratch    _paintScratch;        ///< 그리기 순회 스크래치입니다. 칠하기 문맥(`makePaintContext`)으로 넘기고, 이 시스템과 함께 사라집니다.
         uint64                    _canvasRevision;      ///< `_canvas` 내용의 번호입니다.
         vector<const WidgetTree*> _listPaintedTree;     ///< 지난 그리기의 화면 트리 순서입니다(같고 모두 재사용이면 이어 붙이기를 건너뛴다).
         uint8                     _bLastCanvasReusable; ///< 지난 그리기 목록이 트리 출력만으로 이루어졌다(포커스 테두리 · 숨김 없음).

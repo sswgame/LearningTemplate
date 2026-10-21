@@ -25,6 +25,13 @@
 왜 필요한가: 게임 여럿을 빌드 한 번에 짓고 실행할 때 고르며 키트는 필요한 것만 싣는 구조입니다(2026-10-13 사용자 확정). 결정은 [결정 기록](../09_Decisions.md) 5-2, 쓰는 법은 `Source/Games/README.md` 입니다.
 남은 것: 새 호스트 테스트 `AppScenarioTest.EveryGamePackScenarioPassesOnEveryBackend` 를 네 백엔드로 아직 안 돌렸습니다(DX12 직접 실행으로 10 시나리오 통과만 확인).
 
+### StorageOwnershipLeftovers
+제목: 저장소 소유 정리의 잰 뒤에 정할 것
+옛번호: 없음
+왜 필요한가: 종료 전용 해제 함수는 모두 없앴습니다(규칙은 `Core/Memory/LifetimeScope.h` 머리 주석). 아래는 재 봐야 고칠지 정해지는 것입니다.
+남은 것: (1) `BinarySerializer` 의 `thread_local` 버퍼 넷 · `ShaderParameterBinder` 의 `s_cbBytes` — 기준선 뒤에 자라는지 먼저 잰다(자라면 스레드 슬롯 · 바인더가 소유). (2) `LiveReloadManager::clearContexts` · `ModuleDependencyGraph::clear` 의 표 용량 — 소유자 소멸이 종료 보고 뒤인지 본다. (3) `GimmickNodeRegistry::getDefault` 의 기동 단계 등록(`ded0a6fd6`)을 `ScopeOwned` 로 바꿀 수 있는지 본다.
+함정: `SceneTransformStorage::get` · `ResourcePaths` 경로 캐시는 엔진 수명 범위가 닫힌 뒤 쓰면 멈추거나(트랜스폼) 캐시하지 않는다(Debug 단언). 한 프로세스에서 엔진을 두 번 세우는 테스트 호스트가 생기면 이 계약이 먼저 걸린다.
+
 ## 정리
 
 ### StableAddressMap

@@ -111,11 +111,6 @@ namespace sw
         return true;
     }
 
-    void AutomationProbes::releaseUnusedStorage()
-    {
-        AutomationProbeInternal::getRegistrations().shrinkToFit();
-    }
-
     void AutomationProbes::unregisterProbe( const AutomationProbeRegistration* pRegistration )
     {
         (void)AutomationProbeInternal::getRegistrations().remove( pRegistration ); // 등록되어 있지 않은 탐침을 빼는 것은 할 일이 없다

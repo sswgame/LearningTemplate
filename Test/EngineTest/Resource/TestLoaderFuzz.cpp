@@ -354,7 +354,7 @@ SW_TEST_CASE( LoaderFuzzTest, ChildLeavesRenderResourceForStaticDestruction )
 /**
  * @brief [LoaderFuzzTest] 대상이 처음 세운 렌더 리소스 레지스트리가 프로세스 끝의 정적 소멸 뒤에도 쓸 수 있다
  * @details 퍼저 하네스는 정적 `TestHostRuntime` 이라 libFuzzer 의 `exit` 에서 정적 소멸 중에 엔진을 내린다. 그 전에 레지스트리가 소멸하면
- *          `releaseRegistryStorage` 가 지워진 목록을 다시 놓았다(CI 퍼징 `Material`, ASan heap-use-after-free). 자식이 0 으로 끝나야 한다.
+ *          엔진 종료의 레지스트리 정리가 지워진 목록을 다시 놓았다(CI 퍼징 `Material`, ASan heap-use-after-free). 자식이 0 으로 끝나야 한다.
  *          리눅스(ASan)에서만 그 순서가 드러난다 — Windows 는 DLL 마다 정적 소멸이 따로라 고치기 전에도 통과한다.
  */
 SW_TEST_CASE( LoaderFuzzTest, RenderResourceOutlivesStaticDestruction )

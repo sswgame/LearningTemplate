@@ -48,8 +48,6 @@ namespace sw
          *          파생이 자기 이관을 등록하면 그것이 먼저다.
          */
         static SchemaMigrateFn find( const TypeInfo& typeInfo, uint32 fromVersion );
-        /** @brief 언로드된 모듈이 키운 표의 용량을 해제합니다. 엔진 종료 끝(`StaticStorageSubsystem::shutdownSubsystem`)이 부릅니다. */
-        static void releaseUnusedStorage();
     };
 } // namespace sw
 

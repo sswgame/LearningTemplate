@@ -103,6 +103,7 @@ namespace sw
         , _viewport{}
         , _canvas{}
         , _canvasScratch{}
+        , _paintScratch{}
         , _canvasRevision{ 1 }
         , _listPaintedTree{}
         , _bLastCanvasReusable{ SW_FALSE }
@@ -176,7 +177,7 @@ namespace sw
         _styleSheetCache.setReloadedHandler( {} );
         refreshActiveScreen();
         _input.shutdown();
-        UIPaintPass::releaseScratch();
+        _paintScratch = UIPaintScratch{}; // 종료 누수 보고는 이 시스템의 소멸보다 먼저다 — 기동 뒤 자란 스크래치를 지금 놓는다
         _textLayout.reset();
         _pFontService = nullptr;
     }
@@ -928,6 +929,7 @@ namespace sw
     UIPaintContext UISystem::makePaintContext() const
     {
         UIPaintContext context{};
+        context._pScratch      = &_paintScratch;
         context._pTextLayout   = _textLayout.get();
         context._uiScale       = _viewport._uiScale > 0.0f ? _viewport._uiScale : 1.0f;
         context._textScale     = gv_uiTextScale > 0.0f ? static_cast<float32>( gv_uiTextScale ) : 1.0f;

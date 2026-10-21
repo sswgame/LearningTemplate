@@ -7,6 +7,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Memory/LifetimeScope.h"
 #include "Core/Spatial/PositionWelder.h"
 
 #include "Engine/Physics/Collision/PhysicsShape.h"
@@ -27,11 +28,8 @@ namespace sw
                 unordered_set<string>                                         _uniqueFailedPath;
             };
 
-            static Table& getTable()
-            {
-                static Table s_table;
-                return s_table;
-            }
+            /** @brief 표는 엔진 수명 범위가 소유해 엔진 종료 때 저장소째 사라집니다(처음 찾을 때 만들어진다). */
+            inline static ScopeOwned<Table> s_table{};
 
             static atomic<PhysicsMeshShapeCache::LoadTriangleListFunction>& getLoadFunction()
             {
@@ -63,7 +61,11 @@ namespace sw
         if ( path.empty() )
             return result;
 
-        PhysicsMeshShapeCacheInternal::Table& table = PhysicsMeshShapeCacheInternal::getTable();
+        PhysicsMeshShapeCacheInternal::Table* const pTable = PhysicsMeshShapeCacheInternal::s_table.getOrCreate();
+        // nullptr 은 엔진 수명 범위가 닫힌 뒤의 접근이다(Debug 는 `getOrCreate` 가 단언한다) — 셰이프를 만들 엔진이 없다.
+        if ( pTable == nullptr )
+            return result;
+        PhysicsMeshShapeCacheInternal::Table& table = *pTable;
         const string                          key   = PhysicsMeshShapeCacheInternal::makeKey( path );
         {
             std::scoped_lock<mutex>                                                             lock{ table._mutex };
@@ -151,16 +153,21 @@ namespace sw
 
     void PhysicsMeshShapeCache::clear()
     {
-        PhysicsMeshShapeCacheInternal::Table& table = PhysicsMeshShapeCacheInternal::getTable();
-        std::scoped_lock<mutex>               lock{ table._mutex };
-        table._mapPathToData    = unordered_map<string, shared_ptr<const PhysicsMeshShapeData>>{};
-        table._uniqueFailedPath = unordered_set<string>{};
+        // 메시가 다시 읽히면 기하를 버린다. 종료 때의 반납은 표를 소유한 엔진 수명 범위가 한다.
+        PhysicsMeshShapeCacheInternal::Table* const pTable = PhysicsMeshShapeCacheInternal::s_table.find();
+        if ( pTable == nullptr )
+            return;
+        std::scoped_lock<mutex> lock{ pTable->_mutex };
+        pTable->_mapPathToData    = unordered_map<string, shared_ptr<const PhysicsMeshShapeData>>{};
+        pTable->_uniqueFailedPath = unordered_set<string>{};
     }
 
     size_t PhysicsMeshShapeCache::getCachedCount()
     {
-        PhysicsMeshShapeCacheInternal::Table& table = PhysicsMeshShapeCacheInternal::getTable();
-        std::scoped_lock<mutex>               lock{ table._mutex };
-        return table._mapPathToData.size();
+        PhysicsMeshShapeCacheInternal::Table* const pTable = PhysicsMeshShapeCacheInternal::s_table.find();
+        if ( pTable == nullptr )
+            return 0;
+        std::scoped_lock<mutex> lock{ pTable->_mutex };
+        return pTable->_mapPathToData.size();
     }
 } // namespace sw

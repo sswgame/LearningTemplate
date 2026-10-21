@@ -64,12 +64,6 @@ namespace sw
         return _registration.getCount();
     }
 
-    void DevCommandRegistry::releaseUnusedStorage()
-    {
-        std::scoped_lock<mutex> lock{ _mutex };
-        _registration.shrinkToFit();
-    }
-
     void DevCommandRegistry::collectNames( string_view prefix, vector<string>& outListName ) const
     {
         outListName.clear();

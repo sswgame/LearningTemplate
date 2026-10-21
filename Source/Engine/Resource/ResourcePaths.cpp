@@ -7,6 +7,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Memory/LifetimeScope.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Config/EngineConfig.h"
@@ -22,8 +23,9 @@ namespace sw
     {
         struct ResourcePathsInternal
         {
-            inline static mutex                         _s_pathCacheMutex{};
-            inline static unordered_map<uint64, string> _s_mapResolvedPath{};
+            inline static mutex _s_pathCacheMutex{};
+            /** @brief 푼 경로 캐시입니다. 엔진 수명 범위가 소유해 엔진 종료 때 저장소째 사라집니다(처음 넣을 때 만들어진다). */
+            inline static ScopeOwned<unordered_map<uint64, string>> _s_mapResolvedPath{};
 
             /**
              * @brief `initialize()` 본문을 프로세스당 한 번만 돌립니다.
@@ -207,10 +209,7 @@ namespace sw
         // 플래그에 남기고, 반환하는 값은 그 플래그를 읽는다. 본문을 그냥 감싸기만 하면 실패가 사라진다.
         std::call_once( ResourcePathsInternal::_s_initOnce, []()
         {
-            {
-                std::scoped_lock<mutex> lock( ResourcePathsInternal::_s_pathCacheMutex );
-                ResourcePathsInternal::_s_mapResolvedPath.clear();
-            }
+            clearPathCache();
 
             string currentPath = FileUtil::getCurrentPath();
             string rootPath;
@@ -276,10 +275,14 @@ namespace sw
             cacheKeyHash = HashUtil::computeStringHash64( folderName, true, cacheKeyHash );
 
         {
-            std::scoped_lock<mutex> lock( ResourcePathsInternal::_s_pathCacheMutex );
-            auto                    it = ResourcePathsInternal::_s_mapResolvedPath.find( cacheKeyHash );
-            if ( it != ResourcePathsInternal::_s_mapResolvedPath.end() )
-                return LooseFilePath( it->second );
+            std::scoped_lock<mutex>                    lock( ResourcePathsInternal::_s_pathCacheMutex );
+            const unordered_map<uint64, string>* const pMapResolved = ResourcePathsInternal::_s_mapResolvedPath.find();
+            if ( pMapResolved != nullptr )
+            {
+                const auto it = pMapResolved->find( cacheKeyHash );
+                if ( it != pMapResolved->end() )
+                    return LooseFilePath( it->second );
+            }
         }
 
         const string lowerFile   = FileUtil::normalizePath( filePath );
@@ -317,8 +320,11 @@ namespace sw
         {
             // 캐시는 에셋 색인의 몫이다 — 부르는 쪽(스플래시 · 모듈 · 워커)의 태그가 아니라 Asset 으로 센다(재해시가 어디서 일어나든).
             SW_MEMORY_SCOPE( Asset );
-            std::scoped_lock<mutex> lock( ResourcePathsInternal::_s_pathCacheMutex );
-            ResourcePathsInternal::_s_mapResolvedPath.insert_or_assign( cacheKeyHash, found );
+            std::scoped_lock<mutex>              lock( ResourcePathsInternal::_s_pathCacheMutex );
+            unordered_map<uint64, string>* const pMapResolved = ResourcePathsInternal::_s_mapResolvedPath.getOrCreate();
+            // nullptr 은 엔진 수명 범위가 닫힌 뒤다(Debug 는 `getOrCreate` 가 단언한다) — 캐시할 곳이 없을 뿐 찾은 경로는 그대로 돌려준다.
+            if ( pMapResolved != nullptr )
+                pMapResolved->insert_or_assign( cacheKeyHash, found );
         }
 
         return LooseFilePath( std::move( found ) );
@@ -508,8 +514,10 @@ namespace sw
     void ResourcePaths::clearPathCache()
     {
         std::scoped_lock<mutex> lock( ResourcePathsInternal::_s_pathCacheMutex );
-        // `clear()` 는 버킷 · 밀집 배열을 남긴다 — 종료 끝에서도 부르므로 저장소까지 놓는다.
-        ResourcePathsInternal::_s_mapResolvedPath = unordered_map<uint64, string>{};
+        // `clear()` 는 버킷 · 밀집 배열을 남긴다 — 검색 목록이 바뀐 뒤의 캐시가 자란 만큼 남지 않게 저장소까지 놓는다. 종료 때의 반납은 엔진 수명 범위가 한다.
+        unordered_map<uint64, string>* const pMapResolved = ResourcePathsInternal::_s_mapResolvedPath.find();
+        if ( pMapResolved != nullptr )
+            *pMapResolved = unordered_map<uint64, string>{};
     }
 
     string ResourcePaths::makeSaveFolderPath( string_view absoluteFolder )

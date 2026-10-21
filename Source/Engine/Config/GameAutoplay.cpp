@@ -43,12 +43,8 @@ namespace sw
 
     void GameAutoplay::unregisterAutoplay( const GameAutoplayRegistration* pRegistration )
     {
-        RegistrationList<const GameAutoplayRegistration>& registration = getRegistrations();
-        if ( registration.remove( pRegistration ) == false )
-            return;
-        // 게임 모듈이 내려가 비었으면 저장소를 놓는다 — 게임이 키운 용량이 EngineMisc 태그에 남지 않게.
-        if ( registration.getCount() == 0 )
-            registration.shrinkToFit();
+        // 빼기가 저장소를 남은 수에 맞춘다 — 게임이 키운 용량이 EngineMisc 태그에 남지 않는다.
+        (void)getRegistrations().remove( pRegistration ); // 등록되어 있지 않은 것을 빼는 것은 할 일이 없다
     }
 
     const GameAutoplayRegistration* GameAutoplay::findActive()

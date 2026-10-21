@@ -50,12 +50,6 @@ namespace sw
         (void)AutomationStepRegistryInternal::getRegistrations().remove( pRegistration ); // 등록되어 있지 않은 단계를 빼는 것은 할 일이 없다
     }
 
-    void AutomationStepRegistry::releaseUnusedStorage()
-    {
-        AutomationStepRegistryInternal::getRegistrations().shrinkToFit();
-        AutomationStepRegistryInternal::getStartBlockers().shrinkToFit();
-    }
-
     const AutomationStepRegistration* AutomationStepRegistry::find( string_view kind )
     {
         return AutomationStepRegistryInternal::getRegistrations().findByName( kind );

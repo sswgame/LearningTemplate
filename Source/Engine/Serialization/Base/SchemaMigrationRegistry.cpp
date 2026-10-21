@@ -88,12 +88,6 @@ namespace sw
         return nullptr;
     }
 
-    void SchemaMigrationRegistry::releaseUnusedStorage()
-    {
-        const std::lock_guard<mutex> lock( SchemaMigrationRegistryInternal::getMutex() );
-        SchemaMigrationRegistryInternal::getMigrations().shrinkToFit();
-    }
-
     SchemaMigrationRegistrar::SchemaMigrationRegistrar( const utf8* pTypeName, uint32 fromVersion, SchemaMigrateFn migrate )
         : _migration{ pTypeName, fromVersion, migrate }
     {
