@@ -88,6 +88,15 @@ kListCase: tuple[PerfCase, ...] = (
              ("-gv_deferred=1", "-gv_benchMeshes=2000"), listScope=("GPU.Frame", "GPU.PostBloom", "GPU.BloomDownsample")),
     PerfCase("hangulGlyphsCPU", "test", "single", "한글 새 글리프 400 개의 CPU 래스터화 · SDF(기준값, 시스템 한글 글꼴이 없으면 건너뜀)",
              ("--test_filter=GlyphBenchTest.*",)),
+) + tuple(
+    # 클러스터드 라이팅 측정(ClusteredLighting.md S3) — 디퍼드, 큐브 4000, 라이트 16 · 128 · 1024. A 는 그리드 없음(gv_lightCulling 0), B 는 CPU(1) · GPU(2) 생산자.
+    # 디퍼드 조명 패스의 이름은 deferredpipeline.xml 의 "Shading" 이다(GPU.<패스 이름>). GPU 생산자의 디스패치는 컴퓨트 프리패스(GPU.Compute)에 든다.
+    PerfCase(f"lightCulling{producer}{lightCount}", "app", "switch",
+             f"클러스터드 라이팅 — 라이트 {lightCount}, 그리드 없음(A) 대 {producer} 생산자(B)",
+             ("-gv_deferred=1", "-gv_benchMeshes=4000", f"-gv_benchLights={lightCount}"), ("-gv_lightCulling=0",), (f"-gv_lightCulling={mode}",),
+             ("GPU.Frame", "GPU.Shading", "GPU.Compute", "RT.Frame"))
+    for lightCount in (16, 128, 1024)
+    for producer, mode in (("Cpu", 1), ("Gpu", 2))
 )
 
 

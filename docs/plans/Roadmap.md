@@ -11,13 +11,13 @@
    - E3 · E4 의 남은 확인(빌드 · 테스트 · 큐브 20,000 개 벤치) — [EnginePartition](EnginePartition.md) 6.4. 구현은 `wt/enginepart` 에 있다. [단독: 모든 모듈 재빌드]
    - V2 — [GpuVerification](GpuVerification.md) 2절. 지는 케이스 수정은 들어갔고(로컬 확인, CI 미확인) 리눅스 `gl` 원인 확인 뒤 해제. [병렬 가능]
 2. **새 시스템**:
-   - Vfx V4 → V5(V0 ~ V3 · V6 · V7 들어감) — [Vfx](Vfx.md). [병렬 가능]
-   - 클러스터드 라이팅 S2 → S5 — [ClusteredLighting](ClusteredLighting.md). [단독: 셰이더 재베이크]
-   - 간접 조명 P0 부터(ClusteredLighting 뒤) — [IndirectLighting](IndirectLighting.md). [단독: 셰이더 재베이크]
+   - Vfx V4 의 빌드 · 쿠킹 확인 → V5 실행(V0 ~ V3 · V6 · V7 들어감, V4 는 `wt/vfx4`, V5 테스트는 `wt/planleftB` — V4 뒤에 빌드된다) — [Vfx](Vfx.md). [병렬 가능]
+   - 클러스터드 라이팅 S3 측정(실행 코드 `perf-compare lightCulling*` 들어감) — [ClusteredLighting](ClusteredLighting.md). [단독: 측정은 Release 에서 혼자]
+   - 간접 조명 P4 반사 프로브와 P5 · D2-6.4 의 셰이더 쿠킹 · 화면 확인(P5 · D2-6.4 코드는 `wt/planleftB`, 셰이더는 패치) — [IndirectLighting](IndirectLighting.md). [단독: 셰이더 재베이크]
    - 월드 스트리밍 W6 에디터 UI · W7 측정 — [WorldStreaming](WorldStreaming.md) (W2 → W5 와 W7 데이터는 빌드 미확인으로 들어갔다 — 빌드 · 쿠킹 확인이 먼저). [단독: W7 의 히치 측정은 Release 에서 혼자]
 3. **기능 묶음**(분류는 결정 기록 5-12, 한 묶음에 단위가 여럿):
    1. 카메라 디렉터 · 직교 리그 [CameraRendererIntegration](CameraRendererIntegration.md)(S2 피사계 심도, S3 · S4 는 렌더러 기능 선행) → [GamepadVirtualCursor](GamepadVirtualCursor.md)(G2 게임 바인딩 정하기 · G3 실기), 에디터 시나리오 [GraphSaveScenarioRun](Candidates-editor.md#graphsavescenariorun) · [ScenarioRecorderAndInspectorGaps](Candidates-editor.md#scenariorecorderandinspectorgaps) (옛 `D4-5` → `D4-3` → `D3-5` · `D3-8` 에 대응). [병렬 가능]
-   2. 미리보기 창 · 스카이의 확인 — [EditorMultiWorld](EditorMultiWorld.md) 6절 (3) 스카이 패스(컴포넌트 · 패킷 · 상수 · 패스 · 셰이더 들어감), (4) 창을 다시 여는 시간 · 메모리 측정, (5) `previewreopen` · (6) `previewswap` 네 백엔드 실행. [병렬 가능]
+   2. 미리보기 창 · 스카이의 확인 — [EditorMultiWorld](EditorMultiWorld.md) 6절 (3) 스카이 확인(패스는 들어감, 시나리오 `editor/previewsky` 실행), (4) 창을 다시 여는 시간 · 메모리 측정, (5) `previewreopen` · (6) `previewswap` 네 백엔드 실행. [병렬 가능]
    3. 지형 · 식생 [TerrainEditCost](TerrainEditCost.md)(T3 Release 측정 → T4 교체 프레임 GPUScene 수집), 서버 파괴 호스트 [DestructionNetSessionScene](Candidates-network.md#destructionnetsessionscene) → [EncryptedTickCost](Candidates-network.md#encryptedtickcost). [단독: 지형 · 식생이 셰이더 재베이크를 부르고 측정은 Release 에서 혼자]
    4. 오디오 [AudioEngineExtensions](AudioEngineExtensions.md)(E5 절차적 소리 그래프 · E6 측정이 남음), 온라인 키트 마감 [OnlineKits](OnlineKits.md)(아홉 후보 절을 단위로 옮겼다). [병렬 가능]
    5. 애니메이션 — [PairedAnimation](PairedAnimation.md) · [RigEditing](RigEditing.md) · [AnimationLodAndCrowd](Candidates-gameplay.md#animationlodandcrowd), 천 동적 메시 [ClothFollowups](ClothFollowups.md), Shooter3D [ShooterCharacterIntegration](ShooterCharacterIntegration.md), 서버 디버깅 [ServerDebug](ServerDebug.md). [병렬 가능]
