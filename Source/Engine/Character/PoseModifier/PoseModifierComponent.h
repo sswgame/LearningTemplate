@@ -41,12 +41,13 @@ namespace sw
     public:
         explicit PoseModifierBinding( PoseModifierComponent& owner );
 
-        bool            isAnimationActive() const override;
-        void            prepareAnimationFrame( SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override;
-        void            runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override;
-        void            onAnimationUnitDetached( SkeletalMeshComponent& unit ) override;
-        float32         getCurveValue( const hashed_string& curveName ) const override;
-        RigSocketLookup findSocket( const hashed_string& socketName, hashed_string& outParentBone, BoneTransform& outLocal ) const override;
+        bool                  isAnimationActive() const override;
+        AnimationTaskPoseRole getPoseRole() const override { return AnimationTaskPoseRole::Writes; }
+        void                  prepareAnimationFrame( SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override;
+        void                  runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override;
+        void                  onAnimationUnitDetached( SkeletalMeshComponent& unit ) override;
+        float32               getCurveValue( const hashed_string& curveName ) const override;
+        RigSocketLookup       findSocket( const hashed_string& socketName, hashed_string& outParentBone, BoneTransform& outLocal ) const override;
 
     private:
         PoseModifierComponent& _owner;

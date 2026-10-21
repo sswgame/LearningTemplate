@@ -4,7 +4,8 @@
  * @details 묶음(`AnimationCrowdBucket`)의 키는 (스켈레톤, 스킨 원본 메시, 클립, 재생 속도, 루트 고정, 변형 번호)입니다. 변형 번호는 클립 한 바퀴를
  *          `variations_per_clip` 개의 위상으로 나눈 것이고, 묶음의 시간은 군중 시계에 그 위상을 더한 값이라 어긋나지 않습니다(캐릭터의 시간과 반 구간 안쪽).
  *          묶음은 렌더 메시(스킨 원본의 사본) 하나를 가지고, 멤버는 그 메시를 그려 한 배치, 한 결과 구간, 한 팔레트가 됩니다.
- *          블렌드 중, 레이어, 시퀀서 덮어쓰기, 반복하지 않는 클립처럼 나눌 수 없는 프레임의 유닛은 사본 풀(`acquireSoloMesh`)에서 메시를 빌려
+ *          반복 클립 둘 사이를 섞는 유닛은 두 묶음의 포즈를 섞어 사본 풀의 메시로 스킨합니다(`AnimationCrowdMode::Blended`, 클립 샘플 없음).
+ *          레이어, 시퀀서 덮어쓰기, 반복하지 않는 클립처럼 나눌 수 없는 프레임의 유닛은 사본 풀(`acquireSoloMesh`)에서 메시를 빌려
  *          혼자 평가합니다. LOD 가 아주 멀다고 판단한 유닛은 정점 애니메이션(VAT) 메시로 넘어가 CPU 포즈도 GPU 스키닝도 없습니다(`findVertexAnimationMesh`).
  */
 #pragma once
@@ -36,6 +37,12 @@ namespace sw
         Shared,          ///< 묶음의 포즈와 메시를 나눈다(포즈 단계를 처리하지 않는다)
         Solo,            ///< 공유를 켰지만 이번 상태는 나눌 수 없다. 사본 풀의 메시로 혼자 평가한다
         VertexAnimation, ///< 아주 멀다. VAT 메시를 그린다(CPU 포즈와 GPU 스키닝이 없다)
+        /**
+         * @brief 반복 클립 둘 사이를 섞는 중이다. 두 묶음(나가는 클립 · 들어오는 클립)의 포즈를 자기 가중치로 섞고 사본 풀의 메시로 스킨한다 — 클립 샘플이 없다.
+         * @details 언리얼 Animation Sharing 의 블렌드 액터에 해당한다(그쪽은 같은 전이를 시작한 캐릭터끼리 섞은 포즈도 나누고, 여기는 섞기만 유닛마다 한다).
+         */
+        Blended,
+        Count,
     };
 
     /**
@@ -44,10 +51,16 @@ namespace sw
      */
     struct AnimationSharedPoseRequest
     {
-        const AnimationClip* _pClip{ nullptr };              ///< 지금 재생하는 반복 클립 하나
-        float32              _time{ 0.0f };                  ///< 유닛 자신의 클립 시간(초)이다. 변형 구간을 고르는 데 쓴다
-        float32              _playRate{ 1.0f };              ///< 재생 속도 배율(키의 일부)
+        const AnimationClip* _pClip{ nullptr }; ///< 지금 재생하는 반복 클립 하나
+        float32              _time{ 0.0f };     ///< 유닛 자신의 클립 시간(초)이다. 변형 구간을 고르는 데 쓴다
+        float32              _playRate{ 1.0f }; ///< 재생 속도 배율(키의 일부)
+        /// @brief 섞는 중이면 들어오는 반복 클립이다(`AnimationCrowdMode::Blended`). nullptr 이면 `_pClip` 하나만 재생한다. 재생 속도 · 루트 고정은 `_pClip` 쪽과 같다.
+        const AnimationClip* _pTargetClip{ nullptr };
+        float32              _targetTime{ 0.0f };            ///< 들어오는 클립의 유닛 시간(초)
+        float32              _blendWeight{ 0.0f };           ///< 들어오는 클립의 섞임 가중치(0..1)
         uint8                _bAnchorRootMotion{ SW_FALSE }; ///< 루트 모션 본을 시작 위치에 고정하는지 나타낸다(키의 일부)
+
+        bool isBlending() const { return _pTargetClip != nullptr; }
     };
 } // namespace sw
 

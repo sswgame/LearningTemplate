@@ -114,7 +114,79 @@ namespace
             return MathUtil::abs( MathUtil::abs( expected.dot( actual ) ) - 1.0f ) <= tolerance;
         }
     };
+
+    /** @brief 포즈를 읽기만 하는 작업(소켓 부착 모양)입니다. 게임 스레드 마무리에서 유닛이 내준 모델 공간을 기억합니다. */
+    class CrowdReadOnlyTask final : public IAnimationPhaseTask
+    {
+    public:
+        bool                  isAnimationActive() const override { return false; }
+        AnimationTaskPoseRole getPoseRole() const override { return AnimationTaskPoseRole::ReadsOnly; }
+        void                  runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override
+        {
+            (void)phase;
+            (void)unit;
+            (void)context;
+        }
+        void finishAnimationFrame( SkeletalMeshComponent& unit ) override
+        {
+            _pLastModelSpace = &unit.getModelSpaceTransforms();
+            ++_finishCount;
+        }
+
+        const vector<float4x4>* _pLastModelSpace{ nullptr };
+        uint32                  _finishCount{ 0 };
+    };
+
+    /** @brief 포즈를 고치는 둘째 작업(IK 모양)입니다. 아무것도 하지 않지만 쓰는 작업이라 묶음과 나누지 못하게 한다. */
+    class CrowdWritingTask final : public IAnimationPhaseTask
+    {
+    public:
+        bool                  isAnimationActive() const override { return true; }
+        AnimationTaskPoseRole getPoseRole() const override { return AnimationTaskPoseRole::Writes; }
+        void                  runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override
+        {
+            (void)phase;
+            (void)unit;
+            (void)context;
+        }
+    };
 } // namespace
+
+/**
+ * @brief [AnimationCrowdTest] 포즈를 읽기만 하는 작업은 나누기를 막지 않고 묶음의 포즈를 읽는다 — 포즈를 쓰는 둘째 작업은 막는다
+ * @details 같은 Wave 둘. 하나에 읽기 작업(외형의 소켓 작업 모양)을 붙이면 묶음과 나누며, 그 작업이 받는 모델 공간이 묶음의 것이다.
+ *          다른 하나에 쓰기 작업(IK 모양)을 붙이면 포즈가 유닛마다 달라 혼자 평가한다.
+ */
+SW_TEST_CASE( AnimationCrowdTest, ReadOnlyTasksKeepSharingAndReadTheBucketPose )
+{
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
+    const shared_ptr<Skeleton> skeleton = TestAnimationCrowdInternal::makeSkeleton();
+    const shared_ptr<Mesh>     mesh     = TestAnimationCrowdInternal::makeSkinnedCube();
+    const string               folder   = TestAnimationCrowdInternal::writeClips( *skeleton );
+    SW_ASSERT_FALSE( folder.empty() );
+
+    GameObjectManager manager;
+    AnimationSystem&  system = manager.getSubsystem<AnimationSystem>();
+    system.setCrowdSettings( AnimationCrowdSettings{} );
+    SkeletalMeshComponent* pReader = TestAnimationCrowdInternal::createCharacter( manager, "Reader", skeleton, mesh, folder, "Wave", 0.0f );
+    SkeletalMeshComponent* pWriter = TestAnimationCrowdInternal::createCharacter( manager, "Writer", skeleton, mesh, folder, "Wave", 0.0f );
+    SW_ASSERT_NOT_NULL( pReader );
+    SW_ASSERT_NOT_NULL( pWriter );
+    CrowdReadOnlyTask readTask;
+    CrowdWritingTask  writeTask;
+    pReader->registerAnimationPhaseTask( &readTask );
+    pWriter->registerAnimationPhaseTask( &writeTask );
+
+    system.evaluate( 0.0f );
+    SW_EXPECT_TRUE( pReader->getCrowdMode() == AnimationCrowdMode::Shared );
+    SW_EXPECT_TRUE( pWriter->getCrowdMode() == AnimationCrowdMode::Solo );
+    SW_ASSERT_NOT_NULL( pReader->findCrowdBucket() );
+    SW_EXPECT_EQUAL( 1u, readTask._finishCount );
+    SW_EXPECT_TRUE( readTask._pLastModelSpace == &pReader->findCrowdBucket()->getModelSpaceTransforms() );
+
+    pReader->unregisterAnimationPhaseTask( &readTask );
+    pWriter->unregisterAnimationPhaseTask( &writeTask );
+}
 
 /**
  * @brief [AnimationCrowdTest] 같은 상태 · 같은 위상 칸의 유닛은 묶음 하나의 포즈 · 메시를 나눈다 — 묶음마다 평가 한 번, 유닛은 포즈 단계를 돌지 않는다
@@ -187,9 +259,10 @@ SW_TEST_CASE( AnimationCrowdTest, SameStateUnitsShareOneBucket )
 }
 
 /**
- * @brief [AnimationCrowdTest] 섞는 중에는 나눌 수 없다 — 사본 풀의 메시로 혼자 평가하고, 섞기가 끝나면 다시 묶음으로 돌아가 사본을 풀에 돌려준다
+ * @brief [AnimationCrowdTest] 반복 클립 둘 사이를 섞는 동안은 두 묶음의 포즈를 섞는다 — 사본 풀의 메시로 스킨하고, 섞기가 끝나면 다시 묶음으로 돌아가 사본을 풀에 돌려준다
+ * @details 섞는 유닛의 포즈는 나가는 묶음(Wave)과 들어오는 묶음(Sway)의 로컬 포즈를 그 유닛의 가중치로 섞은 것이다(클립을 샘플하지 않는다).
  */
-SW_TEST_CASE( AnimationCrowdTest, CrossfadeFallsBackToSoloThenRejoins )
+SW_TEST_CASE( AnimationCrowdTest, CrossfadeBlendsTwoBucketsThenRejoins )
 {
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
     const shared_ptr<Skeleton> skeleton = TestAnimationCrowdInternal::makeSkeleton();
@@ -209,12 +282,21 @@ SW_TEST_CASE( AnimationCrowdTest, CrossfadeFallsBackToSoloThenRejoins )
     SW_ASSERT_NOT_NULL( pAnimator );
     SW_ASSERT_TRUE( pAnimator->play( hashed_string( "Sway" ), true, 0.3f ) );
     system.evaluate( 0.05f );
-    SW_EXPECT_TRUE( pUnit->getCrowdMode() == AnimationCrowdMode::Solo );
+    SW_EXPECT_TRUE( pUnit->getCrowdMode() == AnimationCrowdMode::Blended );
     SW_EXPECT_NULL( pUnit->findCrowdBucket() );
     SW_EXPECT_TRUE( pUnit->getMesh() != mesh );
     SW_EXPECT_EQUAL( mesh->getSkinDataID(), pUnit->getMesh()->getSkinDataID() );
-    const uint32 soloEvaluations = pUnit->getPoseEvaluationCount();
-    SW_EXPECT_TRUE( soloEvaluations >= 1u ); // 혼자 평가한다
+    SW_EXPECT_TRUE( pUnit->getPoseEvaluationCount() >= 1u ); // 섞은 포즈는 유닛이 만든다
+    const AnimationCrowdBucket* pFrom = pUnit->findCrowdBlendFromBucket();
+    const AnimationCrowdBucket* pTo   = pUnit->findCrowdBlendToBucket();
+    SW_ASSERT_NOT_NULL( pFrom );
+    SW_ASSERT_NOT_NULL( pTo );
+    SW_EXPECT_TRUE( &pFrom->getClip() == pAnimator->findClip( hashed_string( "Wave" ) ) );
+    SW_EXPECT_TRUE( &pTo->getClip() == pAnimator->findClip( hashed_string( "Sway" ) ) );
+    SW_EXPECT_TRUE( 0.0f < pUnit->getCrowdBlendWeight() && pUnit->getCrowdBlendWeight() < 1.0f );
+    Pose expected;
+    Pose::blend( pFrom->getLocalPose(), pTo->getLocalPose(), pUnit->getCrowdBlendWeight(), expected );
+    SW_EXPECT_TRUE( TestAnimationCrowdInternal::isSameRotation( expected.getBoneTransform( 1 )._rotation, TestAnimationCrowdInternal::getBoneRotation( *pUnit ), 1e-4f ) );
     const Mesh* pSoloMesh = pUnit->getRawMesh();
 
     // 섞기가 끝나면(0.3 초) Sway 묶음으로 돌아간다.
@@ -227,10 +309,13 @@ SW_TEST_CASE( AnimationCrowdTest, CrossfadeFallsBackToSoloThenRejoins )
     SW_ASSERT_NOT_NULL( pUnit->findCrowdBucket() );
     SW_EXPECT_TRUE( &pUnit->findCrowdBucket()->getClip() == pAnimator->findClip( hashed_string( "Sway" ) ) );
 
-    // 돌려받은 사본은 다음에 혼자가 될 때 다시 쓴다(새로 만들지 않는다).
+    SW_EXPECT_NULL( pUnit->findCrowdBlendFromBucket() );
+    SW_EXPECT_NULL( pUnit->findCrowdBlendToBucket() );
+
+    // 돌려받은 사본은 다음에 섞을 때 다시 쓴다(새로 만들지 않는다).
     SW_ASSERT_TRUE( pAnimator->play( hashed_string( "Wave" ), true, 0.3f ) );
     system.evaluate( 0.05f );
-    SW_EXPECT_TRUE( pUnit->getCrowdMode() == AnimationCrowdMode::Solo );
+    SW_EXPECT_TRUE( pUnit->getCrowdMode() == AnimationCrowdMode::Blended );
     SW_EXPECT_TRUE( pUnit->getRawMesh() == pSoloMesh );
 }
 

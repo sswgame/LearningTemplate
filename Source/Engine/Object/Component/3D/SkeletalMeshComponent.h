@@ -176,8 +176,8 @@ namespace sw
         // --- 군중 공유 (AnimationCrowd.h) ---
         /**
          * @brief 군중 공유를 켭니다. 켜면 컴포넌트마다 스킨 사본을 두지 않고, 같은 상태와 같은 위상의 캐릭터와 포즈 하나와 결과 구간 하나를 나눕니다.
-         * @details 나눌 수 없는 프레임(블렌드 중, 레이어, 반복하지 않는 클립, 후처리 작업)은 사본 풀의 메시로 혼자 평가하고, LOD 가 VAT 거리로 판정하면
-         *          VAT 메시로 넘어간다(따르는 유닛이 없을 때만).
+         * @details 반복 클립 둘 사이를 섞는 프레임은 두 묶음의 포즈를 섞어 사본 풀의 메시로 스킨한다(`AnimationCrowdMode::Blended`). 나눌 수 없는 프레임
+         *          (레이어, 반복하지 않는 클립, 포즈를 쓰는 후처리 작업)은 사본 풀의 메시로 혼자 평가하고, LOD 가 VAT 거리로 판정하면 VAT 메시로 넘어간다(따르는 유닛이 없을 때만).
          */
         void setShareCrowdPose( bool bShare );
         bool isShareCrowdPose() const { return _bShareCrowdPose == SW_TRUE; }
@@ -185,6 +185,11 @@ namespace sw
         AnimationCrowdMode getCrowdMode() const { return _crowdMode; }
         /** @brief 나누는 묶음을 반환합니다(나누지 않으면 nullptr). */
         const AnimationCrowdBucket* findCrowdBucket() const { return _pCrowdBucket; }
+        /** @brief 섞는 중(`AnimationCrowdMode::Blended`)이면 나가는 · 들어오는 클립의 묶음입니다(아니면 nullptr). */
+        const AnimationCrowdBucket* findCrowdBlendFromBucket() const { return _pBlendFromBucket; }
+        const AnimationCrowdBucket* findCrowdBlendToBucket() const { return _pBlendToBucket; }
+        /** @brief 섞는 중이면 들어오는 클립의 가중치(0..1)입니다. */
+        float32 getCrowdBlendWeight() const { return _crowdBlendWeight; }
         /** @brief 묶음, 사본, VAT 를 정합니다(게임 스레드, `AnimationSystem` 이 시간 단계 뒤에 부릅니다). */
         void updateCrowdMembership( AnimationCrowd& crowd );
         /** @brief 이 유닛의 포즈를 읽는 유닛(리더, 부착 의존)이 있는지 정합니다(`AnimationSystem` 이 레벨을 만들 때 부릅니다). */
@@ -222,10 +227,22 @@ namespace sw
         void refreshBoneLODMasks();
         /** @brief 보간 프레임의 포즈를 만듭니다(직전 표시 포즈에서 마지막 평가 포즈로). 스킨 팔레트 단계에서 부릅니다. */
         void applySkippedFrameInterpolation( bool bEvaluatedThisFrame );
-        /** @brief 이번 프레임 포즈를 묶음과 나눌 수 있으면 요청을 채웁니다. 조건은 작업이 애니메이터 하나이고 리더가 없으며 그 작업이 나눌 수 있다고 답하는 것입니다. */
+        /**
+         * @brief 이번 프레임 포즈를 묶음과 나눌 수 있으면 요청을 채웁니다. 조건은 포즈를 쓰는 작업이 하나(읽기만 하는 소켓 작업은 세지 않는다)이고 리더가 없으며
+         *        그 작업이 나눌 수 있다고 답하는 것입니다.
+         */
         bool describeSharedPose( AnimationSharedPoseRequest& outRequest ) const;
+        /** @brief 포즈를 쓰는 작업(`AnimationTaskPoseRole::Writes`)이 하나뿐이면 그 작업, 아니면 nullptr 입니다. */
+        const IAnimationPhaseTask* findSolePoseWriter() const;
         /** @brief 묶음 참조와 사본을 해제합니다(@p pCrowd 가 있으면 사본을 풀에 반환합니다). */
         void leaveCrowd( AnimationCrowd* pCrowd );
+        /** @brief 섞기의 두 묶음 참조를 해제합니다(사본은 그대로 둡니다 — 혼자 평가로 넘어가도 같은 사본을 쓴다). */
+        void releaseBlendBuckets();
+        /**
+         * @brief 섞는 요청이면 두 묶음에 들어 `AnimationCrowdMode::Blended` 가 됩니다. 묶음을 못 얻으면 false 이고 아무것도 바꾸지 않습니다(호출자가 혼자 평가로 간다).
+         * @param writer 요청을 낸 작업(포즈를 쓰는 유일한 작업). 두 클립의 소유권을 그에게서 받는다.
+         */
+        [[nodiscard]] bool joinBlendBuckets( AnimationCrowd& crowd, const AnimationSharedPoseRequest& request, const IAnimationPhaseTask& writer, bool bVisible );
 
         PROPERTY( Category = "Animation", DisplayName = "Skeleton", AssetPath, AssetType = "Skeleton", Tooltip = "Skeleton asset; empty uses a one-bone implicit skeleton" )
         string _skeletonPath;
@@ -259,7 +276,10 @@ namespace sw
         uint32                                          _effectiveDivisor;      ///< 이번 프레임의 주기(하한 PROPERTY 와 LOD 중 큰 쪽)
         vector<float32>                                 _listMorphWeight;       ///< 그리는 메시의 모프 타깃 가중치(타깃 순서)
         AnimationCrowdBucket*                           _pCrowdBucket;          ///< 나누는 묶음이다. 군중이 소유하며 참조 수로 보호된다
-        shared_ptr<Mesh>                                _soloMesh;              ///< 혼자 평가할 때 빌린 사본
+        AnimationCrowdBucket*                           _pBlendFromBucket;      ///< 섞는 중 나가는 클립의 묶음이다(참조 수로 보호된다). 포즈 접근자는 이것을 돌려주지 않는다
+        AnimationCrowdBucket*                           _pBlendToBucket;        ///< 섞는 중 들어오는 클립의 묶음이다
+        float32                                         _crowdBlendWeight;      ///< 섞는 중 들어오는 클립의 가중치(0..1)
+        shared_ptr<Mesh>                                _soloMesh;              ///< 혼자 평가하거나 섞을 때 빌린 사본
         const AnimationClip*                            _pVertexAnimationClip;  ///< VAT 로 그리는 클립이다. 바뀌면 시간 오프셋을 다시 기록한다
         AnimationCrowdMode                              _crowdMode;
         PROPERTY( Category = "Animation", DisplayName = "Follow Parent Pose", Tooltip = "Use the parent object's skeletal mesh as the leader pose" )

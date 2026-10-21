@@ -56,8 +56,9 @@ namespace
             {
             }
 
-            bool isAnimationActive() const override { return _bActive; }
-            void runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override
+            bool                      isAnimationActive() const override { return _bActive; }
+            sw::AnimationTaskPoseRole getPoseRole() const override { return sw::AnimationTaskPoseRole::Writes; }
+            void                      runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override
             {
                 (void)context;
                 if ( phase == AnimationPhase::Time )

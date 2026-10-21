@@ -3483,8 +3483,9 @@ SW_TEST_CASE( RenderPassGPUTest, SkinnedMeshFollowsPaletteLikeCPUSkinning )
             : _angle{ angle }
         {
         }
-        bool isAnimationActive() const override { return true; }
-        void runAnimationPhase( sw::AnimationPhase phase, sw::SkeletalMeshComponent& unit, const sw::AnimationFrameContext& context ) override
+        bool                      isAnimationActive() const override { return true; }
+        sw::AnimationTaskPoseRole getPoseRole() const override { return sw::AnimationTaskPoseRole::Writes; }
+        void                      runAnimationPhase( sw::AnimationPhase phase, sw::SkeletalMeshComponent& unit, const sw::AnimationFrameContext& context ) override
         {
             (void)context;
             if ( phase != sw::AnimationPhase::BasePose )
@@ -3672,8 +3673,9 @@ SW_TEST_CASE( RenderPassGPUTest, MorphWeightsDeformBeforeSkinningLikeCPU )
             , _weight{ weight }
         {
         }
-        bool isAnimationActive() const override { return true; }
-        void runAnimationPhase( sw::AnimationPhase phase, sw::SkeletalMeshComponent& unit, const sw::AnimationFrameContext& context ) override
+        bool                      isAnimationActive() const override { return true; }
+        sw::AnimationTaskPoseRole getPoseRole() const override { return sw::AnimationTaskPoseRole::Writes; }
+        void                      runAnimationPhase( sw::AnimationPhase phase, sw::SkeletalMeshComponent& unit, const sw::AnimationFrameContext& context ) override
         {
             (void)context;
             if ( phase != sw::AnimationPhase::BasePose )
@@ -8243,8 +8245,9 @@ SW_TEST_CASE( RenderPassGPUTest, MeshOutlineFollowsSkinnedPose )
             : _offset{ offset }
         {
         }
-        bool isAnimationActive() const override { return true; }
-        void runAnimationPhase( sw::AnimationPhase phase, sw::SkeletalMeshComponent& unit, const sw::AnimationFrameContext& context ) override
+        bool                      isAnimationActive() const override { return true; }
+        sw::AnimationTaskPoseRole getPoseRole() const override { return sw::AnimationTaskPoseRole::Writes; }
+        void                      runAnimationPhase( sw::AnimationPhase phase, sw::SkeletalMeshComponent& unit, const sw::AnimationFrameContext& context ) override
         {
             (void)context;
             if ( phase != sw::AnimationPhase::BasePose )

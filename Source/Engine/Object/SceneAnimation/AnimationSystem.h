@@ -63,6 +63,19 @@ namespace sw
 namespace sw
 {
     /**
+     * @enum AnimationTaskPoseRole
+     * @brief 단계 작업이 유닛의 포즈를 어떻게 다루는지입니다(`IAnimationPhaseTask::getPoseRole`). 군중 묶음이 그 유닛의 포즈를 나눌 수 있는지 가른다.
+     */
+    enum class AnimationTaskPoseRole : uint8
+    {
+        Writes = 0, ///< 포즈를 만들거나 고친다(애니메이터, IK, 래그돌, 리타깃). 이런 작업이 하나뿐이어야 묶음과 나누고, 그 작업이 나눌 요청을 낸다
+        ReadsOnly,  ///< 끝난 포즈를 읽기만 한다(소켓 부착). 묶음과 나누는 동안은 묶음의 포즈를 읽는다(`SkeletalMeshComponent::getModelSpaceTransforms`)
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @class IAnimationPhaseTask
      * @brief 유닛 하나의 단계에 끼어드는 작업입니다(애니메이터, 이후의 PoseModifier, 소켓 부착). 유닛에 등록합니다(`SkeletalMeshComponent::registerAnimationPhaseTask`).
      * @details 단계 함수는 워커에서 불린다. 자기 유닛과, 의존으로 선언한 위 유닛만 읽는다. 게임 스레드에서 해야 하는 일(트랜스폼 쓰기)은
@@ -78,6 +91,8 @@ namespace sw
 
         /** @brief 이번 프레임에 할 일이 있으면 true 입니다. 모든 작업이 거짓이고 포즈가 깨끗한 유닛은 쉬며 비용이 없습니다. */
         virtual bool isAnimationActive() const = 0;
+        /** @brief 이 작업이 포즈를 쓰는지 읽기만 하는지입니다. 기본값이 없다 — 새 작업이 자기 몫을 밝혀야 군중 묶음이 잘못 나누지 않는다. */
+        virtual AnimationTaskPoseRole getPoseRole() const = 0;
         /**
          * @brief 단계들 앞의 게임 스레드 준비 작업입니다(일하는 유닛만, LOD 로 포즈를 건너뛰는 프레임도 부릅니다). 다른 오브젝트의 월드 변환이나 물리 질의처럼
          *        워커에서 읽을 수 없는 것을 여기서 스냅샷으로 저장해 둡니다.
@@ -101,6 +116,7 @@ namespace sw
         /**
          * @brief 이번 프레임 포즈를 군중 묶음과 나눌 수 있으면 요청을 채우고 true 를 반환합니다(시간 단계 뒤, 게임 스레드).
          * @details 나눌 수 있는 경우는 반복 클립 하나를 블렌드나 레이어, 시퀀서 덮어쓰기 없이 재생 중일 때다. 기본은 나눌 수 없음이다(IK 같은 후처리 작업은 유닛마다 다르다).
+         *          유닛의 포즈를 쓰는 작업(`AnimationTaskPoseRole::Writes`)이 하나뿐일 때 그 작업에만 묻는다.
          */
         virtual bool describeSharedPose( AnimationSharedPoseRequest& outRequest ) const
         {

@@ -109,6 +109,9 @@ namespace sw
         , _effectiveDivisor{ 1 }
         , _listMorphWeight{}
         , _pCrowdBucket{ nullptr }
+        , _pBlendFromBucket{ nullptr }
+        , _pBlendToBucket{ nullptr }
+        , _crowdBlendWeight{ 0.0f }
         , _soloMesh{}
         , _pVertexAnimationClip{ nullptr }
         , _crowdMode{ AnimationCrowdMode::Own }
@@ -480,13 +483,99 @@ namespace sw
         { return weight != 0.0f; } );
     }
 
+    const IAnimationPhaseTask* SkeletalMeshComponent::findSolePoseWriter() const
+    {
+        // 포즈를 읽기만 하는 작업(소켓 부착)은 세지 않는다 — 묶음과 나누는 동안 묶음의 포즈를 읽는다.
+        const IAnimationPhaseTask* pWriter     = nullptr;
+        uint32                     writerCount = 0;
+        for ( const IAnimationPhaseTask* pTask : _listTask )
+        {
+            if ( pTask->getPoseRole() == AnimationTaskPoseRole::Writes )
+            {
+                pWriter = pTask;
+                ++writerCount;
+            }
+        }
+        return writerCount == 1 ? pWriter : nullptr;
+    }
+
     bool SkeletalMeshComponent::describeSharedPose( AnimationSharedPoseRequest& outRequest ) const
     {
-        // 리더를 따르거나 후처리 일이 있으면 유닛마다 포즈가 다르다 — 나눌 수 없다. 모프 가중치(얼굴 · 커브)도 묶음이 나누지 않는다.
-        const bool bPoseNotShareable = _listTask.size() != 1 || _leader.isValid() || hasActiveMorphWeights();
+        // 리더를 따르거나 포즈를 쓰는 일이 둘 이상(후처리 · IK)이면 유닛마다 포즈가 다르다 — 나눌 수 없다. 모프 가중치(얼굴 · 커브)도 묶음이 나누지 않는다.
+        const IAnimationPhaseTask* pWriter           = findSolePoseWriter();
+        const bool                 bPoseNotShareable = pWriter == nullptr || _leader.isValid() || hasActiveMorphWeights();
         if ( bPoseNotShareable )
             return false;
-        return _listTask[0]->describeSharedPose( outRequest );
+        return pWriter->describeSharedPose( outRequest );
+    }
+
+    void SkeletalMeshComponent::releaseBlendBuckets()
+    {
+        if ( _pBlendFromBucket != nullptr )
+            AnimationCrowd::releaseReference( _pBlendFromBucket );
+        if ( _pBlendToBucket != nullptr )
+            AnimationCrowd::releaseReference( _pBlendToBucket );
+        _pBlendFromBucket = nullptr;
+        _pBlendToBucket   = nullptr;
+        _crowdBlendWeight = 0.0f;
+    }
+
+    bool SkeletalMeshComponent::joinBlendBuckets( AnimationCrowd& crowd, const AnimationSharedPoseRequest& request, const IAnimationPhaseTask& writer, bool bVisible )
+    {
+        const shared_ptr<const AnimationClip> fromClip = writer.findSharedPoseClip( request._pClip );
+        const shared_ptr<const AnimationClip> toClip   = writer.findSharedPoseClip( request._pTargetClip );
+        if ( fromClip == nullptr || toClip == nullptr )
+            return false;
+        // 두 클립은 각자 혼자 재생할 때의 묶음과 같은 키다 — 같은 상태의 나누는 유닛과 묶음을 함께 쓴다.
+        AnimationSharedPoseRequest fromRequest = request;
+        fromRequest._pTargetClip               = nullptr;
+        AnimationSharedPoseRequest toRequest   = fromRequest;
+        toRequest._pClip                       = request._pTargetClip;
+        toRequest._time                        = request._targetTime;
+        AnimationCrowdBucket* pFrom            = crowd.joinBucket( _pBlendFromBucket, fromRequest, _skeleton, _skinSourceMesh, fromClip );
+        AnimationCrowdBucket* pTo              = crowd.joinBucket( _pBlendToBucket, toRequest, _skeleton, _skinSourceMesh, toClip );
+        if ( _soloMesh == nullptr )
+            _soloMesh = crowd.acquireSoloMesh( _skinSourceMesh );
+        const bool bMissingPart = pFrom == nullptr || pTo == nullptr || _soloMesh == nullptr;
+        if ( bMissingPart )
+            return false;
+
+        // 묶음에서 막 넘어왔으면 그 포즈에서 이어 간다(혼자 평가로 넘어갈 때와 같다).
+        if ( _pCrowdBucket != nullptr )
+        {
+            _localPose = _pCrowdBucket->getLocalPose();
+            AnimationCrowd::releaseReference( _pCrowdBucket );
+            _pCrowdBucket = nullptr;
+        }
+        _pVertexAnimationClip = nullptr;
+        if ( pFrom != _pBlendFromBucket )
+        {
+            if ( _pBlendFromBucket != nullptr )
+                AnimationCrowd::releaseReference( _pBlendFromBucket );
+            AnimationCrowd::addReference( pFrom );
+            _pBlendFromBucket = pFrom;
+        }
+        if ( pTo != _pBlendToBucket )
+        {
+            if ( _pBlendToBucket != nullptr )
+                AnimationCrowd::releaseReference( _pBlendToBucket );
+            AnimationCrowd::addReference( pTo );
+            _pBlendToBucket = pTo;
+        }
+        if ( getMesh() != _soloMesh )
+            setMesh( _soloMesh );
+        AnimationCrowd::countMember( *pFrom, bVisible );
+        AnimationCrowd::countMember( *pTo, bVisible );
+        _crowdBlendWeight    = MathUtil::saturate( request._blendWeight );
+        const bool bEntering = _crowdMode != AnimationCrowdMode::Blended;
+        _crowdMode           = AnimationCrowdMode::Blended;
+        // 섞은 포즈는 이 유닛이 만든다(포즈 단계에서 두 묶음을 섞는다). 들어온 프레임은 꼭 만든다.
+        if ( bEntering )
+        {
+            _frameContext._bPoseNeeded = SW_TRUE;
+            _bInterpolationReady       = SW_FALSE;
+        }
+        return true;
     }
 
     void SkeletalMeshComponent::leaveCrowd( AnimationCrowd* pCrowd )
@@ -496,6 +585,7 @@ namespace sw
             AnimationCrowd::releaseReference( _pCrowdBucket );
             _pCrowdBucket = nullptr;
         }
+        releaseBlendBuckets();
         if ( _soloMesh != nullptr )
         {
             if ( pCrowd != nullptr )
@@ -518,9 +608,15 @@ namespace sw
         AnimationSharedPoseRequest      request{};
         shared_ptr<const AnimationClip> clip;
         if ( describeSharedPose( request ) )
-            clip = _listTask[0]->findSharedPoseClip( request._pClip );
+            clip = findSolePoseWriter()->findSharedPoseClip( request._pClip ); // 나눌 수 있으면 포즈를 쓰는 작업이 하나다
 
-        if ( clip != nullptr )
+        // 반복 클립 둘 사이의 페이드 — 두 묶음의 포즈를 섞는다(VAT 는 클립 하나만 그리므로 섞는 동안은 넘어가지 않는다).
+        const bool bBlendRequest = clip != nullptr && request.isBlending();
+        if ( bBlendRequest && joinBlendBuckets( crowd, request, *findSolePoseWriter(), bVisible ) )
+            return;
+        releaseBlendBuckets();
+
+        if ( clip != nullptr && bBlendRequest == false )
         {
             // 아주 멀면 VAT — 따르는 유닛이 없고 재생 속도가 1 일 때(셰이더는 VAT 시계를 그대로 흘린다).
             const bool bUseVertexAnimation = _lodState._bVertexAnimation == SW_TRUE && _bHasDependents == SW_FALSE && request._playRate == 1.0f;
@@ -707,14 +803,28 @@ namespace sw
                 // 보간의 출발점 — 지금 보이던 포즈(직전 프레임의 결과)다.
                 if ( _lodState._bInterpolate == SW_TRUE && _effectiveDivisor > 1 )
                     _interpolationFrom = _localPose;
-                _localPose.setToReference( *_skeleton );
                 // 모프 가중치도 포즈와 같이 새로 만든다 — 일들(커브 · 얼굴)이 이 단계와 후처리 단계에서 더한다.
                 std::fill( _listMorphWeight.begin(), _listMorphWeight.end(), 0.0f );
-                // 리더는 의존이라 이 레벨보다 먼저 평가됐다 — 그 로컬 포즈를 읽는다.
-                const SkeletalMeshComponent* pLeader = findLeaderPose();
-                if ( pLeader != nullptr )
-                    copyLeaderPose( *pLeader );
-                runTasks( phase );
+                const bool bBlendFromCrowd = _crowdMode == AnimationCrowdMode::Blended && _pBlendFromBucket != nullptr && _pBlendToBucket != nullptr;
+                if ( bBlendFromCrowd )
+                {
+                    // 두 묶음은 이 단계 앞에 평가됐다(`AnimationCrowd::evaluateBuckets`) — 클립을 샘플하지 않고 섞기만 한다. 포즈를 쓰는 작업은 건너뛰고 읽는 작업만 부른다.
+                    Pose::blend( _pBlendFromBucket->getLocalPose(), _pBlendToBucket->getLocalPose(), _crowdBlendWeight, _localPose );
+                    for ( IAnimationPhaseTask* pTask : _listTask )
+                    {
+                        if ( pTask->getPoseRole() == AnimationTaskPoseRole::ReadsOnly )
+                            pTask->runAnimationPhase( phase, *this, _frameContext );
+                    }
+                }
+                else
+                {
+                    _localPose.setToReference( *_skeleton );
+                    // 리더는 의존이라 이 레벨보다 먼저 평가됐다 — 그 로컬 포즈를 읽는다.
+                    const SkeletalMeshComponent* pLeader = findLeaderPose();
+                    if ( pLeader != nullptr )
+                        copyLeaderPose( *pLeader );
+                    runTasks( phase );
+                }
                 _localPose.computeModelSpace( _skeleton->getParentIndices(), _listModelSpace );
                 break;
             }

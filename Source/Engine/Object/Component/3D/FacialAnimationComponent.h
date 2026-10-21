@@ -33,10 +33,11 @@ namespace sw
     public:
         explicit FacialAnimationBinding( FacialAnimationComponent& owner );
 
-        bool isAnimationActive() const override;
-        void runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override;
-        void finishAnimationFrame( SkeletalMeshComponent& unit ) override;
-        void onAnimationUnitDetached( SkeletalMeshComponent& unit ) override;
+        bool                  isAnimationActive() const override;
+        AnimationTaskPoseRole getPoseRole() const override { return AnimationTaskPoseRole::Writes; }
+        void                  runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override;
+        void                  finishAnimationFrame( SkeletalMeshComponent& unit ) override;
+        void                  onAnimationUnitDetached( SkeletalMeshComponent& unit ) override;
 
     private:
         FacialAnimationComponent& _owner;

@@ -133,7 +133,7 @@ namespace sw
         if ( _bCrowdSettingsFailed == SW_TRUE )
             return;
         // 묶음 · 사본 · VAT 를 정한다(게임 스레드 — 메시를 갈아 끼운다). 나눈 유닛은 이번 프레임 포즈 단계를 돌지 않는다.
-        uint32 arrModeCount[4] = { 0, 0, 0, 0 };
+        uint32 arrModeCount[static_cast<uint32>( AnimationCrowdMode::Count )]{};
         for ( SkeletalMeshComponent* pUnit : _listActive )
         {
             if ( pUnit->isShareCrowdPose() || pUnit->getCrowdMode() != AnimationCrowdMode::Own )
@@ -144,6 +144,7 @@ namespace sw
         SW_PROFILE_COUNT( "GT.Animation.crowdSharedUnits", arrModeCount[static_cast<uint32>( AnimationCrowdMode::Shared )] );
         SW_PROFILE_COUNT( "GT.Animation.crowdSoloUnits", arrModeCount[static_cast<uint32>( AnimationCrowdMode::Solo )] );
         SW_PROFILE_COUNT( "GT.Animation.crowdVertexAnimationUnits", arrModeCount[static_cast<uint32>( AnimationCrowdMode::VertexAnimation )] );
+        SW_PROFILE_COUNT( "GT.Animation.crowdBlendedUnits", arrModeCount[static_cast<uint32>( AnimationCrowdMode::Blended )] );
         SW_PROFILE_COUNT( "GT.Animation.crowdBucketCount", static_cast<uint32>( _crowd.getBuckets().size() ) );
         SW_PROFILE_COUNT( "GT.Animation.crowdEvaluatedBuckets", _crowd.getEvaluatedBucketCount() );
     }

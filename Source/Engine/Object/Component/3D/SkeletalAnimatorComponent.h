@@ -101,6 +101,7 @@ namespace sw
         explicit SkeletalAnimatorBinding( SkeletalAnimatorComponent& owner );
 
         bool                            isAnimationActive() const override;
+        AnimationTaskPoseRole           getPoseRole() const override { return AnimationTaskPoseRole::Writes; }
         void                            runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override;
         AnimationPlayer*                findSyncPlayer( hashed_string& outGroupName, float32& outWeight ) override;
         void                            finishAnimationFrame( SkeletalMeshComponent& unit ) override;
