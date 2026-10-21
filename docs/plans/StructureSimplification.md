@@ -1,6 +1,6 @@
 # 구조 단순화 계획 (2026-10-20)
 
-> 상태: 설계 · 선행: 없음 · 영역: engine · 옛번호: 없음 · 진행: 3/21
+> 상태: 설계 · 선행: 없음 · 영역: engine · 옛번호: 없음 · 진행: 4/21
 
 상용 엔진(언리얼 · 유니티 · Godot) 비교에서 나온 구조 단순화 정책 네 개를 한 문서로 묶는다. 네 정책 모두 "같은 사실을 두 곳에 적어 두어서, 한쪽만 바뀌면 조용히 어긋난다"는 같은 근본 원인에서 나왔다.
 순서는 필수 설정(HC) → 팩 쿠킹(PK) → 에셋 종류 등록(AT) → 텍스트 형식(TX)이다. PK 가 끝나면 쿠커 쪽 파이썬 소비자가 사라져 AT 의 접미사 테이블 정리가 싸지고, AT 의 등록 줄 하나가 있으면 TX 의 형식 변환이 종류별 로더 하나를 바꾸는 일이 된다.
@@ -59,7 +59,7 @@
 
 | 단위 | 내용 | 건드릴 폴더 | 선행 | 검증 | 측정 |
 |---|---|---|---|---|---|
-| HC4 | **거의 끝(`wt/hc4` · `wt/hc4b`): `ConfigCatalog.py` 의 `PackEngineSettings` 항목과 `loadHostConfig` 문구, `Config/README.md` 의 폴백 · `ensureConfig` 문장, 생성 문서, `Config.py` 의 `loadToolchainConfig` 가 `{}` 대신 `None`, `GenerateShippingHostDefaults.py` 가 `_packRoot` 하나뿐인 프리셋만 굽도록 검사, `CheckGamePresets.py` 의 스키마 · 텔레메트리 경로 검사를 팩 `gamesettings.xml` 의 `<Engine>` 쪽으로 옮김(프리셋의 다른 키도 위반), CMake `VcpkgPortsToolchain.cmake` · `ThirdParty/dxc` 의 오류 무시 `string(JSON ERROR_VARIABLE)` 를 `sw_readOptionalJsonValue` 로. `FileScan.py`(읽지 못하면 멈추거나 위반으로 알림) · `AssetValidation`(`return []` 는 위반 없음이고 XML 파싱 실패는 `xml_wellformed` 가 보고)은 같은 모양이 아니라 그대로 둔다(W5 끝).** 남은 것: Shipping 구성 컴파일(C++ 빌드)로 `ShippingGameDefaults.h` 가 새 검사를 지나는지 확인. | `Scripts/generate/`, `Scripts/lint/gate/`, `Scripts/common/ConfigCatalog.py`, `docs/07_Configuration.md`, `Config/README.md`, `docs/Config/`(생성물) | HC3 | `-L lint`, 생성 문서 점검, Shipping 구성 컴파일 | 없음 |
+| HC4 | **끝(`wt/hc4` · `wt/hc4b` · `wt/hc4done`): `ConfigCatalog.py` 의 `PackEngineSettings` 항목과 `loadHostConfig` 문구, `Config/README.md` 의 폴백 · `ensureConfig` 문장, 생성 문서, `Config.py` 의 `loadToolchainConfig` 가 `{}` 대신 `None`, `GenerateShippingHostDefaults.py` 가 `_packRoot` 하나뿐인 프리셋만 굽도록 검사, `CheckGamePresets.py` 의 스키마 · 텔레메트리 경로 검사를 팩 `gamesettings.xml` 의 `<Engine>` 쪽으로 옮김(프리셋의 다른 키도 위반), CMake `VcpkgPortsToolchain.cmake` · `ThirdParty/dxc` 의 오류 무시 `string(JSON ERROR_VARIABLE)` 를 `sw_readOptionalJsonValue` 로. `FileScan.py`(읽지 못하면 멈추거나 위반으로 알림) · `AssetValidation`(`return []` 는 위반 없음이고 XML 파싱 실패는 `xml_wellformed` 가 보고)은 같은 모양이 아니라 그대로 둔다(W5 끝).** Shipping 구성 컴파일은 C++ 를 건드리지 않은 마무리라 생략했다. 생성 문서 · `Config/README.md` · `Config.py` 는 이미 현재 코드와 맞았다(`GenerateConfigReference.py` 0 changed, selftest 8 · lint-suite 47 통과). | `Scripts/generate/`, `Scripts/lint/gate/`, `Scripts/common/ConfigCatalog.py`, `docs/07_Configuration.md`, `Config/README.md`, `docs/Config/`(생성물) | HC3 | `-L lint`, 생성 문서 점검, Shipping 구성 컴파일 | 없음 |
 
 단위가 끝날 때 고칠 문서: `docs/07_Configuration.md` 32-33 · 42 행(프리셋 경계), `Config/README.md`("기본값을 쓰는 것은 파일이 없을 때뿐" 문단), `GameConfig.h` 머리 주석, 결정 기록 5-4 의 해당 항목.
 
