@@ -173,7 +173,6 @@ namespace sw
         RepNotifyFunction _pRepNotify;
         /** @brief `Validate = fn` 을 부르는 함수입니다. 없으면 nullptr 입니다(`ReflectionValidation::validateObject`). */
         ReflectValidateFunction _pValidate;
-        size_t                  _offset;
 
         hashed_string _name;
         hashed_string _typeName;
@@ -192,7 +191,6 @@ namespace sw
 
         uint32                 _bitOffset;
         ContainerKind          _containerKind;
-        uint8                  _bitMask;
         uint8                  _bIsContainer  : 1;
         uint8                  _bIsBitField   : 1;
         [[maybe_unused]] uint8 _reservedFlags : 6;
@@ -397,6 +395,35 @@ namespace sw
 
         /** @brief 커스텀 메타데이터 태그를 조회합니다. */
         const string* findCustomMeta( const hashed_string& key ) const noexcept;
+
+        /**
+         * @brief 객체 안 오프셋입니다. 비트필드는 그 비트가 든 바이트 번호입니다. 레이아웃 확인 · 덤프에만 씁니다.
+         * @details 값 주소는 `getRawPtr` 로 얻는다. 오프셋을 직접 더하면 접근자(`_pValueAccessor`)를 건너뛰고, 비트필드는 같은 바이트의 다른 플래그를 덮는다.
+         */
+        [[nodiscard]] size_t getOffset() const noexcept { return _offset; }
+        /** @brief 비트필드의 그 비트 마스크입니다. 비트필드가 아니면 `0xFF` 입니다(레이아웃 확인 · 덤프용). */
+        [[nodiscard]] uint8 getBitMask() const noexcept { return _bitMask; }
+
+        /**
+         * @brief 비트필드의 그 비트만 씁니다. 옵저버와 바인딩에 알리지 않습니다(직렬화 · 값 복사용, 알리려면 `setValue`).
+         * @return 비트필드가 아니면 아무것도 쓰지 않고 false 입니다.
+         */
+        [[nodiscard]] bool writeBitFieldSilently( void* pInstance, const bool bValue ) const noexcept
+        {
+            if ( _bIsBitField == SW_FALSE || pInstance == nullptr )
+                return false;
+            uint8& byte = *( static_cast<uint8*>( pInstance ) + _offset );
+            byte        = bValue ? static_cast<uint8>( byte | _bitMask ) : static_cast<uint8>( byte & ~_bitMask );
+            return true;
+        }
+
+    private:
+        /**
+         * @brief 오프셋과 비트 마스크는 이 형식 안에서만 씁니다(`getRawPtr` · `getValue` · `setValue` · `writeBitFieldSilently`).
+         * @details 밖에서 `인스턴스 + _offset` 을 만들면 비트필드는 그 바이트 주소가 되어 같은 바이트의 다른 플래그를 덮고, 접근자 프로퍼티는 엉뚱한 곳을 가리킨다.
+         */
+        size_t _offset;
+        uint8  _bitMask;
     };
 } // namespace sw
 

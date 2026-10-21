@@ -310,13 +310,11 @@ SW_TEST_CASE( InspectorPropertyLayoutTest, UndoLabelNamesTheProperty )
  */
 SW_TEST_CASE( InspectorPropertyLayoutTest, ElementPropertyKeepsHandleTarget )
 {
-    PropertyInfo container;
-    container._typeName             = hashed_string( "vector<ComponentHandle>" );
+    constexpr size_t kContainerOffset = 24;
+    PropertyInfo     container{ hashed_string( "_listLink" ), hashed_string( "vector<ComponentHandle>" ), kContainerOffset };
     container._elementTypeName      = hashed_string( "ComponentHandle" );
-    container._name                 = hashed_string( "_listLink" );
     container._handleTargetTypeName = hashed_string( "X" );
     container._bIsContainer         = SW_TRUE;
-    container._offset               = 24;
     container._metadata->_tooltip   = "tip";
 
     const PropertyInfo element = InspectorPropertyLayout::makeElementProperty( container );
@@ -324,7 +322,7 @@ SW_TEST_CASE( InspectorPropertyLayoutTest, ElementPropertyKeepsHandleTarget )
     SW_EXPECT_TRUE( element._handleTargetTypeName == hashed_string( "X" ) );
     SW_EXPECT_TRUE( element._name == hashed_string( "_listLink" ) );
     SW_EXPECT_TRUE( element._metadata->_tooltip == container._metadata->_tooltip );
-    SW_EXPECT_EQUAL( size_t{ 0 }, static_cast<size_t>( element._offset ) );
+    SW_EXPECT_EQUAL( size_t{ 0 }, element.getOffset() );
     SW_EXPECT_TRUE( element._bIsContainer == SW_FALSE );
 }
 

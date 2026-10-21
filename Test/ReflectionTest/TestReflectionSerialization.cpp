@@ -3830,7 +3830,7 @@ SW_TEST_CASE( ReflectionSerializationTest, ValueAddressTextDoesNotAddPropertyOff
     SW_ASSERT_NOT_NULL( pBits );
     const sw::PropertyInfo* pScore = pBits->findPropertyInHierarchy( sw::hashed_string( "_score" ) );
     SW_ASSERT_NOT_NULL( pScore );
-    SW_ASSERT_TRUE( pScore->_offset != 0 );
+    SW_ASSERT_TRUE( pScore->getOffset() != 0 );
 
     // 옛 오용(값 주소를 객체 주소 자리에 넘김, 그 반대, 맨 포인터)은 컴파일이 안 된다.
     using FormatPropertyFn = decltype( &sw::SerializerUtil::formatPropertyText );

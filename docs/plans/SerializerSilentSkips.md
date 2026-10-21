@@ -62,4 +62,8 @@
   부르는 곳 전부(직렬화 · UI 바인딩 · 애니메이션 · 스타일 · 인스펙터 · 검증 · 보간)를 읽어, 비트필드를 먼저 거르거나 nullptr 을 실패로 받는지 확인했습니다. 걸러지지 않던 곳은 컴포넌트 기본값 패치(`ComponentDefaults::applyPatch`) 하나였습니다.
   그곳은 이제 `applyPropertyTextCoerced`(`SchemaMigrate.h`, 프로퍼티 단위 텍스트 쓰기)로 씁니다. 예전에는 기본값 XML 이 비트필드를 주면 같은 바이트의 다른 플래그가 지워졌습니다.
   비트필드 여부는 데이터(생성된 `PropertyInfo`)라 컴파일 때 막을 수는 없습니다. 값 주소를 내주는 함수 하나가 거절하는 데까지가 형식으로 막은 범위입니다.
+- `PropertyInfo` 의 `_offset` · `_bitMask` 는 비공개입니다(S4). 밖에서 `인스턴스 + _offset` 을 만들 수 없고, 읽기는 `getOffset` · `getBitMask`(레이아웃 확인 · 덤프), 비트 쓰기는 `writeBitFieldSilently`(알림 없음) · `setValue` 로만 합니다.
+  밖에서 오프셋을 직접 더하던 곳은 `SerializerUtil` 의 비트필드 복사 · 비교 · 텍스트 쓰기 셋이었고(비트필드를 거르고 있었습니다), 접근자로 옮겼습니다. 나머지 `_offset` 은 다른 형식(머티리얼 프로퍼티, 이벤트, 게임 필드)입니다.
+  기존 컴포넌트 기본값 데이터(`Resource/game/*/data/gamesettings.xml` 11개)에는 비트필드 속성이 없어 `applyPatch` 변경으로 바뀌는 값은 없습니다.
+- `_offset` 비공개화 커밋은 빌드 · 테스트하지 않았습니다(병합 뒤 한 번에 한다는 방침). 컴파일 오류는 사용처를 전수 검색해 막았습니다. 확인할 것: `ReflectionTest` · `EditorTest` 의 `InspectorPropertyLayoutTest` 와 에디터 대상 빌드.
 - 오브젝트 상태 읽기가 필드마다 한 번 더 쓰므로 씬 로드 · 플레이 스냅샷 복원 시간이 늘 수 있습니다. 병합 뒤 측정해 회귀가 보이면 담는 대상을 좁힙니다. 좁히는 조건은 1절 끝(처리기가 성공할 때만 쓴다는 약속)입니다.
