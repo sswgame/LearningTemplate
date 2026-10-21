@@ -8,6 +8,8 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Graphics/Material/Material.h"
+#include "Engine/Graphics/Material/MaterialInstance.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/AssetDatabase.h"
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/Resource/AssetManager.h"
@@ -17,6 +19,7 @@
 #include "Engine/Resource/Pack/ResourcePakManager.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Scene/SceneDocument.h"
 
 #include "EngineTest/HostTargetTestUtil.h"
 
@@ -182,9 +185,8 @@ SW_TEST_CASE( ResourceTest, AssetFormatAcceptsCurrentMaterialXML )
     SW_ASSERT_TRUE( root.isValid() );
 
     sw::AssetFormatVersion source = 99;
-    SW_EXPECT_TRUE( sw::engine::getSubsystem<sw::AssetManager>().getAssetFormatRegistry().upgradeXML( sw::AssetKind::Material, doc, root,
-                                                                                                      sw::AssetFormatVersions::kMaterial, &source ) );
-    SW_EXPECT_EQUAL( sw::AssetFormatVersions::kMaterial, source );
+    SW_EXPECT_TRUE( sw::engine::getSubsystem<sw::AssetManager>().getAssetFormatRegistry().upgradeXML( sw::Material::kAssetType, doc, root, &source ) );
+    SW_EXPECT_EQUAL( sw::Material::kAssetType._formatVersion, source );
     SW_EXPECT_TRUE( root.findAttribute( "formatVersion" ) != nullptr );
     SW_EXPECT_STREQ( "0", root.findAttribute( "formatVersion" ) );
 
@@ -911,20 +913,22 @@ SW_TEST_CASE( ResourceTest, CookedPathsComeFromOneRule )
 SW_TEST_CASE( ResourceTest, SourcePathsComeFromTheSameRule )
 {
     using sw::AssetCookPath;
-    using sw::AssetKind;
-    SW_EXPECT_STREQ( "maps/a.scene.xml", AssetCookPath::toSourcePath( "maps/a.scene.xml", AssetKind::Scene ).c_str() );
-    SW_EXPECT_STREQ( "maps/A.Scene.XML", AssetCookPath::toSourcePath( "maps/A.Scene.XML", AssetKind::Scene ).c_str() );
-    SW_EXPECT_STREQ( "maps/level.scene.xml", AssetCookPath::toSourcePath( "maps/level", AssetKind::Scene ).c_str() );
-    SW_EXPECT_STREQ( "maps/level.scene.xml", AssetCookPath::toSourcePath( "maps/level.xml", AssetKind::Scene ).c_str() );
-    SW_EXPECT_STREQ( "maps/level.scene.xml", AssetCookPath::toSourcePath( "maps/level.scene", AssetKind::Scene ).c_str() );
-    SW_EXPECT_STREQ( "maps/level.scene.xml", AssetCookPath::toSourcePath( "maps/level.scene.bin", AssetKind::Scene ).c_str() );
-    SW_EXPECT_STREQ( "maps/forest.scenery.scene.xml", AssetCookPath::toSourcePath( "maps/forest.scenery.xml", AssetKind::Scene ).c_str() );
-    SW_EXPECT_STREQ( "prefabs/b.prefab.json", AssetCookPath::toSourcePath( "prefabs/b.prefab.json", AssetKind::Prefab ).c_str() );
-    SW_EXPECT_STREQ( "prefabs/b.prefab.xml", AssetCookPath::toSourcePath( "prefabs/b.prefab", AssetKind::Prefab ).c_str() );
-    SW_EXPECT_STREQ( "engine/materials/x.material", AssetCookPath::toSourcePath( "engine/materials/x.material", AssetKind::Material ).c_str() );
+    const sw::AssetTypeDef& kScene    = sw::SceneDocument::kAssetType;
+    const sw::AssetTypeDef& kPrefab   = sw::PrefabAsset::kAssetType;
+    const sw::AssetTypeDef& kMaterial = sw::Material::kAssetType;
+    SW_EXPECT_STREQ( "maps/a.scene.xml", AssetCookPath::toSourcePath( "maps/a.scene.xml", kScene ).c_str() );
+    SW_EXPECT_STREQ( "maps/A.Scene.XML", AssetCookPath::toSourcePath( "maps/A.Scene.XML", kScene ).c_str() );
+    SW_EXPECT_STREQ( "maps/level.scene.xml", AssetCookPath::toSourcePath( "maps/level", kScene ).c_str() );
+    SW_EXPECT_STREQ( "maps/level.scene.xml", AssetCookPath::toSourcePath( "maps/level.xml", kScene ).c_str() );
+    SW_EXPECT_STREQ( "maps/level.scene.xml", AssetCookPath::toSourcePath( "maps/level.scene", kScene ).c_str() );
+    SW_EXPECT_STREQ( "maps/level.scene.xml", AssetCookPath::toSourcePath( "maps/level.scene.bin", kScene ).c_str() );
+    SW_EXPECT_STREQ( "maps/forest.scenery.scene.xml", AssetCookPath::toSourcePath( "maps/forest.scenery.xml", kScene ).c_str() );
+    SW_EXPECT_STREQ( "prefabs/b.prefab.json", AssetCookPath::toSourcePath( "prefabs/b.prefab.json", kPrefab ).c_str() );
+    SW_EXPECT_STREQ( "prefabs/b.prefab.xml", AssetCookPath::toSourcePath( "prefabs/b.prefab", kPrefab ).c_str() );
+    SW_EXPECT_STREQ( "engine/materials/x.material", AssetCookPath::toSourcePath( "engine/materials/x.material", kMaterial ).c_str() );
     for ( const utf8* pName : { "maps/level", "maps/level.xml", "maps/level.scene", "maps/level.scene.bin" } )
     {
-        SW_EXPECT_TRUE( AssetCookPath::isCookableSource( AssetCookPath::toSourcePath( pName, AssetKind::Scene ), AssetKind::Scene ) );
+        SW_EXPECT_TRUE( AssetCookPath::isCookableSource( AssetCookPath::toSourcePath( pName, kScene ), kScene ) );
     }
 }
 
@@ -978,8 +982,7 @@ SW_TEST_CASE( ResourceTest, OutOfRangeFormatVersionIsRejected )
         sw::XMLNode root = doc.getRoot( "MaterialDesc" );
         SW_ASSERT_TRUE( root.isValid() );
         test::ScopedLogSuppressor suppressor;
-        SW_EXPECT_FALSE_MSG( sw::engine::getSubsystem<sw::AssetManager>().getAssetFormatRegistry().upgradeXML( sw::AssetKind::Material, doc, root,
-                                                                                                               sw::AssetFormatVersions::kMaterial ),
+        SW_EXPECT_FALSE_MSG( sw::engine::getSubsystem<sw::AssetManager>().getAssetFormatRegistry().upgradeXML( sw::Material::kAssetType, doc, root ),
                              pVersion );
     }
 }
@@ -1076,4 +1079,46 @@ SW_TEST_CASE( ResourceTest, SourceTreeContentMountsNoPackAndReadsLooseFiles )
     SW_EXPECT_EQUAL( size_t( 0 ), resources.getPackManager().getMountedPackCount() );
     SW_EXPECT_TRUE( resources.getPackManager().isAllowLooseFiles() );
     resources.shutdown();
+}
+
+/**
+ * @brief [AssetTypeRegistryTest] 등록된 종류는 이름 · 접미사가 겹치지 않고, 접미사는 가장 긴 것이 먼저 맞는다
+ * @details 종류의 사실(접미사 · 쿠킹 역할 · 판)은 정의 하나에서 나온다(계획 StructureSimplification AT1). 쿠킹 역할이 있는 접미사는 쿠킹본 이름으로 풀리고,
+ *          저작 소스 판정이 역할과 같다. 표의 적은 순서가 아니라 길이가 우선순위다 — `.scene.xml` 이 `.scene` 보다, `.prefab.json` 이 `.prefab` 보다 먼저.
+ */
+SW_TEST_CASE( AssetTypeRegistryTest, TypesAreUniqueAndLongerSuffixWins )
+{
+    sw::vector<sw::string> listProblem;
+    sw::AssetTypeRegistry::collectProblems( listProblem );
+    for ( const sw::string& problem : listProblem )
+    {
+        SW_EXPECT_TRUE_MSG( false, problem.c_str() );
+    }
+
+    // 엔진이 등록한 종류가 실제로 올라왔는가(정적 등록자가 링크에서 빠지지 않았는가).
+    for ( const sw::AssetTypeDef* pExpected : { &sw::SceneDocument::kAssetType, &sw::PrefabAsset::kAssetType, &sw::Material::kAssetType, &sw::MaterialInstance::kAssetType } )
+    {
+        SW_EXPECT_TRUE_MSG( sw::AssetTypeRegistry::findType( pExpected->_name ) != nullptr, sw::string( pExpected->_name ).c_str() );
+    }
+
+    for ( const sw::AssetTypeDef* pType : sw::AssetTypeRegistry::collectTypes() )
+    {
+        for ( uint32 index = 0; index < pType->_suffixCount; ++index )
+        {
+            const sw::AssetSuffix&     suffix = pType->_pSuffix[index];
+            const sw::string           path   = sw::string( "maps/probe" ) + sw::string( suffix._text );
+            const sw::AssetSuffixMatch match  = sw::AssetTypeRegistry::findSuffix( path );
+            SW_EXPECT_TRUE_MSG( match.isMatched() && match._pSuffix == &suffix, path.c_str() );
+            const bool       bCookName      = suffix._role != sw::AssetSuffixRole::Plain && pType->_cookedSuffix.empty() == false;
+            const sw::string expectedCooked = bCookName ? sw::string( "maps/probe" ) + sw::string( pType->_cookedSuffix ) : sw::string();
+            SW_EXPECT_EQUAL( expectedCooked, sw::AssetCookPath::toCookedPath( path ) );
+            SW_EXPECT_TRUE_MSG( sw::AssetCookPath::isCookableSource( path ) == ( suffix._role == sw::AssetSuffixRole::CookSource ), path.c_str() );
+            SW_EXPECT_TRUE_MSG( sw::AssetCookPath::isCookableSource( path, *pType ) == ( suffix._role == sw::AssetSuffixRole::CookSource ), path.c_str() );
+            SW_EXPECT_TRUE_MSG( sw::AssetCookPath::isCookedOutput( path ) == ( suffix._role == sw::AssetSuffixRole::Cooked ), path.c_str() );
+        }
+    }
+    SW_EXPECT_TRUE( sw::AssetCookPath::isCookableSource( "maps/a.scene.xml", sw::SceneDocument::kAssetType ) );
+    SW_EXPECT_FALSE( sw::AssetCookPath::isCookableSource( "maps/a.scene", sw::SceneDocument::kAssetType ) );
+    SW_EXPECT_STREQ( "maps/a.scene.bin", sw::AssetCookPath::toCookedPath( "maps/a.scene" ).c_str() );
+    SW_EXPECT_STREQ( "prefabs/B.prefab.bin", sw::AssetCookPath::toCookedPath( "prefabs/B.prefab.json" ).c_str() );
 }

@@ -1,7 +1,7 @@
 /**
  * @file SceneDocument.h
  * @brief 씬 문서 모델과 XML/바이너리 직렬화입니다(씬 이름, 월드 설정, 엔티티 노드 목록, 프리팹 · 임베디드 상태, 쿠킹본의 스트리밍 셀).
- * @details 씬 형식 판(`AssetFormatVersions::kScene`)이 맞지 않는 XML 은 읽지 않습니다 — 옛 판 리더를 두지 않고, 판을 올릴 때 저장소의 씬을
+ * @details 씬 형식 판(`SceneDocument::kAssetType._formatVersion`)이 맞지 않는 XML 은 읽지 않습니다 — 옛 판 리더를 두지 않고, 판을 올릴 때 저장소의 씬을
  *          변환 도구로 다시 씁니다(`Scripts/dev/MoveSceneFormat.py`).
  */
 #pragma once
@@ -10,6 +10,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Resource/AssetTypeRegistry.h"
 #include "Engine/Scene/WorldSettings.h"
 
 namespace sw
@@ -19,6 +20,19 @@ namespace sw
     // ------------------------------------------------------------------------------
     struct SceneDocument
     {
+        /** @brief 씬 파일의 접미사입니다 — 저작 소스, 쿠킹본, 확장자 없는 이름(쿠킹본으로 읽는다). */
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            {".scene.xml",  AssetSuffixRole::CookSource},
+            {".scene.bin",      AssetSuffixRole::Cooked},
+            {    ".scene", AssetSuffixRole::CookedAlias},
+        };
+        /**
+         * @brief 씬 에셋 종류입니다(등록은 `SceneDocument.cpp` 의 `SW_ASSET_TYPE`).
+         * @details 판 1: 프리팹 엔티티가 프리팹 경로 + 덮어쓴 것(`<PrefabOverrides>`)을 싣는다. 판 2: 씬 루트에 월드 설정(`<WorldSettings>`, 스트리밍 여부 · 격자)이
+         *          반드시 있다. 판이 2 가 아닌 씬 파일은 읽지 않는다 — 이관기를 두지 않고 저장소의 씬을 `Scripts/dev/MoveSceneFormat.py` 로 다시 썼다.
+         */
+        static constexpr AssetTypeDef kAssetType{ "Scene", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), ".scene.bin", 2 };
+
         /** @brief 씬 문서 안의 엔티티 하나입니다(프리팹 참조 또는 임베디드 GameObject 상태). */
         struct SceneObjectNode
         {

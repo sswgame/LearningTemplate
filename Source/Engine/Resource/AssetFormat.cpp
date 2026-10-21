@@ -7,31 +7,25 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Resource/AssetManager.h"
 
-#include "sw/config/CookContract.gen.h"
-
 namespace sw
 {
     namespace
     {
         struct AssetFormatInternal
         {
-            /**
-             * @brief 소스 접미사 → 쿠킹본 접미사와 그 에셋 종류. 긴 것이 먼저다(`.scene.xml` 이 `.scene` 보다 먼저 맞아야 한다).
-             * @details 줄은 쿠킹 표(`Config/Engine/CookContract.json` → `SW_COOK_SUFFIX_TABLE`)에서 온다 — Python 쿠커가 같은 표로
-             *          산출물을 알아본다. 에디터의 씬 · 프리팹 판정도 이 표다(`isCookableSource( path, kind )`).
-             */
-            struct CookSuffix
+            /** @brief @p type 의 첫 저작 소스 접미사(원본 이름 `.scene.xml`)입니다. 쿠킹하지 않는 종류면 빈 글입니다. */
+            static string_view findCanonicalSource( const AssetTypeDef& type )
             {
-                string_view _source;
-                string_view _cooked;
-                AssetKind   _kind;
-                bool        _bSource;
-            };
-            static constexpr CookSuffix kArrCookSuffix[] = {
-#define SW_ASSET_COOK_SUFFIX_ROW( SourceSuffix, CookedSuffix, Kind, bAuthoringSource ) { SourceSuffix, CookedSuffix, AssetKind::Kind, bAuthoringSource },
-                SW_COOK_SUFFIX_TABLE( SW_ASSET_COOK_SUFFIX_ROW )
-#undef SW_ASSET_COOK_SUFFIX_ROW
-            };
+                for ( uint32 index = 0; index < type._suffixCount; ++index )
+                {
+                    if ( type._pSuffix[index]._role == AssetSuffixRole::CookSource )
+                        return type._pSuffix[index]._text;
+                }
+                return {};
+            }
+
+            /** @brief 맞은 접미사가 @p role 이면 true 입니다. */
+            static bool hasRole( const AssetSuffixMatch& match, AssetSuffixRole role ) { return match.isMatched() && match._pSuffix->_role == role; }
         };
     } // namespace
 
@@ -39,82 +33,55 @@ namespace sw
 
     string AssetCookPath::toCookedPath( string_view path )
     {
-        for ( const AssetFormatInternal::CookSuffix& suffix : AssetFormatInternal::kArrCookSuffix )
-        {
-            if ( StringUtil::endsWith( path, suffix._source, true ) == false )
-                continue;
-            string cooked( path.substr( 0, path.size() - suffix._source.size() ) );
-            cooked += suffix._cooked;
-            return cooked;
-        }
-        return {};
+        const AssetSuffixMatch match     = AssetTypeRegistry::findSuffix( path );
+        const bool             bCookName = match.isMatched() && match._pSuffix->_role != AssetSuffixRole::Plain && match._pType->_cookedSuffix.empty() == false;
+        if ( bCookName == false )
+            return {};
+        string cooked( path.substr( 0, path.size() - match._pSuffix->_text.size() ) );
+        cooked += match._pType->_cookedSuffix;
+        return cooked;
     }
 
     bool AssetCookPath::isCookableSource( string_view path )
     {
-        for ( const AssetFormatInternal::CookSuffix& suffix : AssetFormatInternal::kArrCookSuffix )
-        {
-            if ( suffix._bSource && StringUtil::endsWith( path, suffix._source, true ) )
-                return true;
-        }
-        return false;
+        return AssetFormatInternal::hasRole( AssetTypeRegistry::findSuffix( path ), AssetSuffixRole::CookSource );
     }
 
     bool AssetCookPath::isCookedOutput( string_view path )
     {
-        for ( const AssetFormatInternal::CookSuffix& suffix : AssetFormatInternal::kArrCookSuffix )
-        {
-            if ( StringUtil::endsWith( path, suffix._cooked, true ) )
-                return true;
-        }
-        return false;
+        return AssetFormatInternal::hasRole( AssetTypeRegistry::findSuffix( path ), AssetSuffixRole::Cooked );
     }
 
-    bool AssetCookPath::isCookableSource( string_view path, AssetKind kind )
+    bool AssetCookPath::isCookableSource( string_view path, const AssetTypeDef& type )
     {
-        for ( const AssetFormatInternal::CookSuffix& suffix : AssetFormatInternal::kArrCookSuffix )
-        {
-            const bool bSourceSuffixMatch = suffix._bSource && suffix._kind == kind && StringUtil::endsWith( path, suffix._source, true );
-            if ( bSourceSuffixMatch )
-                return true;
-        }
-        return false;
+        const AssetSuffixMatch match = AssetTypeRegistry::findSuffix( path );
+        return AssetFormatInternal::hasRole( match, AssetSuffixRole::CookSource ) && match._pType->_name == type._name;
     }
 
-    void AssetCookPath::appendSourceSuffixes( AssetKind kind, vector<string_view>& outListSuffix )
+    void AssetCookPath::appendSourceSuffixes( const AssetTypeDef& type, vector<string_view>& outListSuffix )
     {
-        for ( const AssetFormatInternal::CookSuffix& suffix : AssetFormatInternal::kArrCookSuffix )
+        for ( uint32 index = 0; index < type._suffixCount; ++index )
         {
-            if ( suffix._bSource && suffix._kind == kind )
-                outListSuffix.push_back( suffix._source );
+            if ( type._pSuffix[index]._role == AssetSuffixRole::CookSource )
+                outListSuffix.push_back( type._pSuffix[index]._text );
         }
     }
 
-    string AssetCookPath::toSourcePath( string_view path, AssetKind kind )
+    string AssetCookPath::toSourcePath( string_view path, const AssetTypeDef& type )
     {
-        if ( path.empty() || isCookableSource( path, kind ) )
+        if ( path.empty() || isCookableSource( path, type ) )
             return string( path );
 
-        // 원본 접미사는 그 종류의 첫 소스 줄이다(`.scene.xml` · `.prefab.xml`).
-        string_view canonical;
-        for ( const AssetFormatInternal::CookSuffix& suffix : AssetFormatInternal::kArrCookSuffix )
-        {
-            if ( suffix._bSource && suffix._kind == kind )
-            {
-                canonical = suffix._source;
-                break;
-            }
-        }
+        const string_view canonical = AssetFormatInternal::findCanonicalSource( type );
         if ( canonical.empty() )
             return string( path );
 
         // 같은 종류의 쿠킹하지 않는 이름(쿠킹본 · 확장자 없는 이름)은 그 접미사를 원본으로 바꾼다.
-        for ( const AssetFormatInternal::CookSuffix& suffix : AssetFormatInternal::kArrCookSuffix )
-        {
-            const bool bCookedSuffixMatch = suffix._bSource == false && suffix._kind == kind && StringUtil::endsWith( path, suffix._source, true );
-            if ( bCookedSuffixMatch )
-                return string( path.substr( 0, path.size() - suffix._source.size() ) ) + string( canonical );
-        }
+        const AssetSuffixMatch match       = AssetTypeRegistry::findSuffix( path );
+        const bool             bSameType   = match.isMatched() && match._pType->_name == type._name;
+        const bool             bCookedName = bSameType && ( match._pSuffix->_role == AssetSuffixRole::Cooked || match._pSuffix->_role == AssetSuffixRole::CookedAlias );
+        if ( bCookedName )
+            return string( path.substr( 0, path.size() - match._pSuffix->_text.size() ) ) + string( canonical );
 
         // 끝의 확장자가 원본의 마지막 확장자(`.xml`)와 같으면 그 자리에 넣는다 — `level.xml` → `level.scene.xml`.
         const string_view lastExtension = canonical.substr( canonical.rfind( '.' ) );
@@ -128,32 +95,32 @@ namespace sw
         if ( _bBuiltins )
             return;
         _bBuiltins = true;
-        // 내장 migrator 는 지금 없다 — 저장소의 데이터는 모두 현재 판이다. 호환이 깨지는 변경이면 AssetFormatVersions::* 를 올리고
-        // 여기서 registerXMLMigrator( kind, from, … ) 로 N → N+1 을 등록한다.
+        // 내장 migrator 는 지금 없다 — 저장소의 데이터는 모두 현재 판이다. 호환이 깨지는 변경이면 그 종류의 `AssetTypeDef::_formatVersion` 을 올리고
+        // 여기서 registerXMLMigrator( type, from, … ) 로 N → N+1 을 등록한다.
     }
 
-    void AssetFormatRegistry::registerXMLMigrator( AssetKind kind, AssetFormatVersion fromVersion, XMLAssetMigrator migrator )
+    void AssetFormatRegistry::registerXMLMigrator( const AssetTypeDef& type, AssetFormatVersion fromVersion, XMLAssetMigrator migrator )
     {
         if ( migrator == nullptr )
             return;
-        _mapMigrator.insert_or_assign( MigratorKey{ kind, fromVersion }, migrator );
+        _mapMigrator.insert_or_assign( MigratorKey{ type._name, fromVersion }, migrator );
     }
 
     AssetFormatVersion AssetFormatRegistry::readXMLVersion( XMLNode root )
     {
         if ( root.isValid() == false )
-            return AssetFormatVersions::kUnversioned;
+            return kUnversioned;
         const utf8* pAttr = root.findAttribute( kXMLAttrName );
         if ( StringUtil::isNullOrEmpty( pAttr ) == false )
         {
             // 읽지 못했거나 버전 타입에 담기지 않으면 **가장 큰 버전**으로 본다 — "지원하는 것보다 새 형식" 으로 거절된다. 잘라 담으면
             // "4294967296" · "-1" 이 0(현재 버전)으로 읽혀 그 거절을 지나친다.
-            uint64 ver{ AssetFormatVersions::kUnversioned };
+            uint64 ver{ kUnversioned };
             if ( StringUtil::parseUint64( pAttr, ver, 10 ) == false || ver > static_cast<uint64>( std::numeric_limits<AssetFormatVersion>::max() ) )
                 return std::numeric_limits<AssetFormatVersion>::max();
             return static_cast<AssetFormatVersion>( ver );
         }
-        return AssetFormatVersions::kUnversioned;
+        return kUnversioned;
     }
 
     void AssetFormatRegistry::writeXMLVersion( XMLNode root, AssetFormatVersion version )
@@ -171,45 +138,45 @@ namespace sw
         root.appendAttribute( kXMLAttrName, versionStr.c_str() );
     }
 
-    AssetFormatVersion AssetFormatRegistry::inferXMLVersion( AssetKind kind, XMLNode root ) const
+    AssetFormatVersion AssetFormatRegistry::inferXMLVersion( const AssetTypeDef& type, XMLNode root ) const
     {
         const AssetFormatVersion tagged = readXMLVersion( root );
-        if ( tagged != AssetFormatVersions::kUnversioned || root.isValid() == false )
+        if ( tagged != kUnversioned || root.isValid() == false )
             return tagged;
 
-        (void)kind;
-        return AssetFormatVersions::kUnversioned;
+        (void)type;
+        return kUnversioned;
     }
 
-    bool AssetFormatRegistry::upgradeXML( AssetKind kind, XMLDocument& doc, XMLNode& root,
-                                          AssetFormatVersion currentVersion, AssetFormatVersion* pOutSourceVersion )
+    bool AssetFormatRegistry::upgradeXML( const AssetTypeDef& type, XMLDocument& doc, XMLNode& root, AssetFormatVersion* pOutSourceVersion )
     {
+        const AssetFormatVersion currentVersion = type._formatVersion;
         ensureBuiltins();
         if ( root.isValid() == false )
             return false;
 
-        AssetFormatVersion version = inferXMLVersion( kind, root );
+        AssetFormatVersion version = inferXMLVersion( type, root );
         if ( pOutSourceVersion != nullptr )
             *pOutSourceVersion = version;
 
         if ( version > currentVersion )
         {
-            SW_LOG_ERROR( "%# asset formatVersion %# is newer than supported %#", static_cast<uint32>( kind ), version, currentVersion );
+            SW_LOG_ERROR( "%# asset formatVersion %# is newer than supported %#", type._name, version, currentVersion );
             return false;
         }
 
         while ( version < currentVersion )
         {
-            const MigratorKey key{ kind, version };
+            const MigratorKey key{ type._name, version };
             const auto        it = _mapMigrator.find( key );
             if ( it == _mapMigrator.end() || it->second == nullptr )
             {
-                SW_LOG_ERROR( "Missing migrator kind=%# from=%# to %#", static_cast<uint32>( kind ), version, version + 1 );
+                SW_LOG_ERROR( "Missing migrator kind=%# from=%# to %#", type._name, version, version + 1 );
                 return false;
             }
             if ( it->second( doc, root ) == false || root.isValid() == false )
             {
-                SW_LOG_ERROR( "Migrator failed kind=%# from=%#", static_cast<uint32>( kind ), version );
+                SW_LOG_ERROR( "Migrator failed kind=%# from=%#", type._name, version );
                 return false;
             }
             ++version;
@@ -217,17 +184,17 @@ namespace sw
 
         writeXMLVersion( root, currentVersion );
         if ( pOutSourceVersion != nullptr && *pOutSourceVersion < currentVersion )
-            SW_LOG_INFO( "Upgraded kind=%# formatVersion %# -> %#", static_cast<uint32>( kind ), *pOutSourceVersion, currentVersion );
+            SW_LOG_INFO( "Upgraded kind=%# formatVersion %# -> %#", type._name, *pOutSourceVersion, currentVersion );
         return true;
     }
 
-    bool AssetFormatRegistry::upgradeXMLWithActiveRegistry( AssetKind kind, XMLDocument& doc, XMLNode& root, AssetFormatVersion currentVersion )
+    bool AssetFormatRegistry::upgradeXMLWithActiveRegistry( const AssetTypeDef& type, XMLDocument& doc, XMLNode& root )
     {
         if ( engine::areEngineServicesBound() )
-            return engine::getSubsystem<AssetManager>().getAssetFormatRegistry().upgradeXML( kind, doc, root, currentVersion );
+            return engine::getSubsystem<AssetManager>().getAssetFormatRegistry().upgradeXML( type, doc, root );
 
         // 호출마다 새로 만든다 — 공유하는 정적 레지스트리는 여러 로더 스레드의 `ensureBuiltins` 가 겹쳐 쓴다.
         AssetFormatRegistry builtinRegistry;
-        return builtinRegistry.upgradeXML( kind, doc, root, currentVersion );
+        return builtinRegistry.upgradeXML( type, doc, root );
     }
 } // namespace sw

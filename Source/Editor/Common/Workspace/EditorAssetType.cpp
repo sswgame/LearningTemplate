@@ -25,7 +25,9 @@
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Localization/LocalizationDocuments.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/AssetFormat.h"
+#include "Engine/Scene/SceneDocument.h"
 #include "Engine/Sequencer/SequenceAsset.h"
 #include "Engine/TileMap/TileMapXML.h"
 #include "Engine/UI/Document/UIDocument.h"
@@ -220,20 +222,23 @@ namespace sw::editor
                 return false;
             }
 
-            /** @brief 엔진 쿠킹 규칙의 종류를 반환합니다. 씬이나 프리팹이 아니면 `AssetKind::Count` 입니다. */
-            static AssetKind getCookKind( EditorAssetType kind )
+            /** @brief 엔진 쿠킹 규칙의 종류(정의)를 반환합니다. 씬이나 프리팹이 아니면 nullptr 입니다. */
+            static const AssetTypeDef* findCookType( EditorAssetType kind )
             {
                 if ( kind == EditorAssetType::Scene )
-                    return AssetKind::Scene;
+                    return &SceneDocument::kAssetType;
                 if ( kind == EditorAssetType::Prefab )
-                    return AssetKind::Prefab;
-                return AssetKind::Count;
+                    return &PrefabAsset::kAssetType;
+                return nullptr;
             }
 
             static bool matchRow( const AssetMatchRow& row, string_view path )
             {
                 if ( row._mode == MatchMode::CookableSource )
-                    return AssetCookPath::isCookableSource( path, getCookKind( row._kind ) );
+                {
+                    const AssetTypeDef* pCookType = findCookType( row._kind );
+                    return pCookType != nullptr && AssetCookPath::isCookableSource( path, *pCookType );
+                }
                 if ( row._mode == MatchMode::RawHeightfield )
                     return HeightfieldImporter::isRawHeightfieldPath( path );
                 return matchSuffixList( path, row._pSuffix, row._suffixCount, row._mode );
@@ -244,7 +249,9 @@ namespace sw::editor
             {
                 if ( row._mode == MatchMode::CookableSource )
                 {
-                    AssetCookPath::appendSourceSuffixes( getCookKind( row._kind ), outListSuffix );
+                    const AssetTypeDef* pCookType = findCookType( row._kind );
+                    if ( pCookType != nullptr )
+                        AssetCookPath::appendSourceSuffixes( *pCookType, outListSuffix );
                     return;
                 }
                 if ( row._pSuffix == nullptr )

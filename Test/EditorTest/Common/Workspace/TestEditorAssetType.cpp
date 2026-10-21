@@ -24,10 +24,12 @@
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Localization/LocalizationDocuments.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/Cache/IAssetCache.h"
 #include "Engine/Resource/ResourceDataKind.h"
+#include "Engine/Scene/SceneDocument.h"
 #include "Engine/Sequencer/SequenceAsset.h"
 #include "Engine/TileMap/TileMapXML.h"
 #include "Engine/UI/Document/UIDocument.h"
@@ -76,8 +78,8 @@ SW_TEST_CASE( EditorAssetTypeTest, SceneAndPrefabFollowTheCookersSourceRule )
     };
     for ( const utf8* pPath : arrPath )
     {
-        const bool bCookedScene  = sw::AssetCookPath::isCookableSource( pPath, sw::AssetKind::Scene );
-        const bool bCookedPrefab = sw::AssetCookPath::isCookableSource( pPath, sw::AssetKind::Prefab );
+        const bool bCookedScene  = sw::AssetCookPath::isCookableSource( pPath, sw::SceneDocument::kAssetType );
+        const bool bCookedPrefab = sw::AssetCookPath::isCookableSource( pPath, sw::PrefabAsset::kAssetType );
         SW_EXPECT_TRUE_MSG( EditorAssetTypeRegistry::matches( EditorAssetType::Scene, pPath ) == bCookedScene, pPath );
         SW_EXPECT_TRUE_MSG( EditorAssetTypeRegistry::matches( EditorAssetType::Prefab, pPath ) == bCookedPrefab, pPath );
     }
@@ -97,7 +99,7 @@ SW_TEST_CASE( EditorAssetTypeTest, SceneAndPrefabFollowTheCookersSourceRule )
     sw::vector<sw::string> listPrefabSuffix;
     EditorAssetTypeRegistry::appendSuffixes( EditorAssetType::Prefab, listPrefabSuffix );
     sw::vector<sw::string_view> listCookSuffix;
-    sw::AssetCookPath::appendSourceSuffixes( sw::AssetKind::Prefab, listCookSuffix );
+    sw::AssetCookPath::appendSourceSuffixes( sw::PrefabAsset::kAssetType, listCookSuffix );
     SW_ASSERT_EQUAL( listCookSuffix.size(), listPrefabSuffix.size() );
     for ( size_t index = 0; index < listCookSuffix.size(); ++index )
     {

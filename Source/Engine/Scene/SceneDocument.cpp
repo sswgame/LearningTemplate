@@ -128,6 +128,8 @@ namespace sw
 {
     SW_LOG_CALLER( "SceneDocument" );
 
+    SW_ASSET_TYPE( Scene, SceneDocument::kAssetType );
+
     bool SceneDocument::loadXML( string_view path )
     {
         return loadXMLSource( path, ReadSource::Resource );
@@ -165,7 +167,7 @@ namespace sw
             return false;
         }
 
-        if ( AssetFormatRegistry::upgradeXMLWithActiveRegistry( AssetKind::Scene, doc, root, AssetFormatVersions::kScene ) == false )
+        if ( AssetFormatRegistry::upgradeXMLWithActiveRegistry( kAssetType, doc, root ) == false )
         {
             SW_LOG_ERROR( "formatVersion upgrade failed: %#", absPath );
             return false;
@@ -267,7 +269,7 @@ namespace sw
 
         XMLDocument xmlDoc;
         XMLNode     root = xmlDoc.appendRoot( SceneDocumentInternal::kRoot );
-        root.appendAttribute( "formatVersion", static_cast<uint32>( AssetFormatVersions::kScene ) );
+        root.appendAttribute( "formatVersion", static_cast<uint32>( kAssetType._formatVersion ) );
         root.appendAttribute( "name", _name );
         {
             XMLDocument worldSettingsDoc;

@@ -3,8 +3,8 @@ Scripts/generate/GenerateCookContract.py
 
 Config/Engine/CookContract.json(쿠킹 표의 단일 출처)을 읽어 C++ 헤더(sw/config/CookContract.gen.h)를 생성합니다.
 
-생성물은 X-macro 둘이다 — `SW_RHI_BACKEND_TABLE( X )` 와 `SW_COOK_SUFFIX_TABLE( X )`. 쓰는 쪽(ArgumentList.xxx ·
-RHIBackendUtil · ShaderCooker · AssetCookPath)이 X 를 정의해 펼치므로, 줄이 늘면 그 자리들이 같이 늘어난다. Python 쿠커
+생성물은 X-macro 둘이다 — `SW_RHI_BACKEND_TABLE( X )` 와 `SW_TARGET_ASSET_EXCLUSION_TABLE( X )`. 쓰는 쪽(ArgumentList.xxx ·
+RHIBackendUtil · ShaderCooker · PackCooker · ResourcePaths)이 X 를 정의해 펼치므로, 줄이 늘면 그 자리들이 같이 늘어난다. Python 쿠커
 (MakePackage 등)는 같은 파일을 `CookContractSpec` 으로 읽는다.
 
 Usage:
@@ -42,10 +42,6 @@ def makeHeaderText(spec: CookContractSpec) -> str:
         )
         for backend in spec.listBackend
     ]
-    listSuffixRow = [
-        f'"{suffix.source}", "{suffix.cooked}", {suffix.kind}, {"true" if suffix.bAuthoringSource else "false"}'
-        for suffix in spec.listCookSuffix
-    ]
     listExclusionRow = [
         f'{target}, {kindName}, "{extension}", ""'
         for target, listKind in spec.mapExcludedKindByTarget.items()
@@ -75,13 +71,6 @@ def makeHeaderText(spec: CookContractSpec) -> str:
 
 /** @brief 명령줄 · 설정이 백엔드를 고르지 않았을 때 쓰는 RHIBackend 열거자입니다. */
 #define SW_RHI_BACKEND_DEFAULT {spec.defaultBackend.name}
-
-/**
- * @brief 쿡 접미사 표입니다. 긴 접미사가 먼저입니다(`.scene.xml` 이 `.scene` 보다 먼저 맞아야 한다).
- * @details X( SourceSuffix, CookedSuffix, Kind, bAuthoringSource ) — Kind = AssetKind 열거자,
- *          bAuthoringSource = 쿠커가 쿠킹하는 저작 소스인가.
- */
-{emitMacroInternal("SW_COOK_SUFFIX_TABLE", listSuffixRow)}
 
 /**
  * @brief 빌드 타깃이 패키지에서 빼고 런타임이 읽지 않는 에셋 종류입니다(`target_excluded_asset_kinds` × `asset_kinds`).

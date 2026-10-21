@@ -3,7 +3,7 @@
 """
 저장소의 씬 파일(`*.scene.xml`)을 다음 씬 형식 판으로 다시 씁니다.
 
-왜 있는가: 엔진은 옛 판 씬을 읽는 이관기를 두지 않는다(`AssetFormatVersions::kScene` 가 아닌 판은 읽지 않는다). 판을 올릴 때 데이터를 이 도구로
+왜 있는가: 엔진은 옛 판 씬을 읽는 이관기를 두지 않는다(`SceneDocument::kAssetType._formatVersion` 이 아닌 판은 읽지 않는다). 판을 올릴 때 데이터를 이 도구로
 한 번에 다시 쓰고, 엔진에는 지금 판의 리더 하나만 남긴다.
 
 판 1 → 2: 씬 루트의 `<entities>` 앞에 월드 설정(`<WorldSettings>`, 스트리밍하지 않음)을 넣고 `formatVersion` 을 2 로 올린다. 이미 2 인 파일은 그대로 둔다.

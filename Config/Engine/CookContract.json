@@ -2,7 +2,7 @@
     "$schema_note": [
         "쿠킹이 C++ 과 Python 에서 같이 쓰는 표 둘의 단일 출처(SSOT)다.",
         "C++ 은 configure 때 Scripts/generate/GenerateCookContract.py 가 만든 sw/config/CookContract.gen.h 의 X-macro 로 읽고",
-        "(ArgumentList.xxx · RHIBackendUtil · ShaderCooker · AssetCookPath · PackCooker), Python 도구(MakePackage 등)는",
+        "(ArgumentList.xxx · RHIBackendUtil · ShaderCooker · PackCooker · ResourcePaths), Python 도구(MakePackage 등)는",
         "Scripts/common/CookContract.py 로 이 파일을 직접 읽는다. 쿠커(PackCooker)는 같은 X-macro 를 읽어 컴파일 때 표를 따라온다.",
         "",
         "rhi_backends: 줄 순서 = RHIBackend 열거값(Config/RHIBackendType.h, static_assert 로 맞춘다).",
@@ -11,8 +11,6 @@
         "  module = RHI_* 모듈 이름(매니페스트 · 타깃), source_folder = Source/Engine/Graphics/RHI/<폴더>(그 아래 .cpp 가 그 백엔드의 장치 소스 전부),",
         "  graphics_libs = 플랫폼 그래픽 라이브러리 INTERFACE 타깃(cmake/Modules/Platform), shipping_define = 배포 빌드가 백엔드 하나를 Engine 에 넣을 때 붙이는 매크로.",
         "  CMake 는 configure 가 쓴 generated/sw/config/CookContract.cmake 로 읽는다. 백엔드가 어느 플랫폼에 있는지는 모듈 매니페스트 _listPlatform 이 정본이다.",
-        "cook_suffixes: 긴 접미사가 먼저다(.scene.xml 이 .scene 보다 먼저 맞아야 한다). kind = AssetKind 열거자,",
-        "  is_authoring_source = 쿠커가 쿠킹하는 저작 소스인가(아니면 쿠킹본 · 확장자 없는 이름을 정본으로 돌리는 줄).",
         "asset_kinds: 빌드 타깃이 뺄 수 있는 에셋 종류 — extensions(소문자 확장자) 또는 folders(경로 조각 'a/b' — 그 폴더 아래 전부)로 고른다.",
         "target_excluded_asset_kinds: 빌드 타깃(SW_TARGET_TYPE)마다 패키지에서 빼는 종류. 쿠커(--build-target)는 그 파일을 팩에 넣지 않고,",
         "  같은 호스트의 런타임(ResourcePaths::setHostTarget)은 그 종류를 읽지 않고 없는 것으로 친다(파일 없음 오류를 내지 않는다).",
@@ -30,16 +28,6 @@
           "module": "RHI_Vulkan", "source_folder": "Vulkan", "graphics_libs": "sw_graphics_vulkan_libs", "shipping_define": "SW_RHI_TARGET_VULKAN" },
         { "name": "OpenGL", "shader_folder": "opengl", "shader_target": "SPIRV_OpenGL", "command_line_argument": "OPENGL", "command_line_name": "gl",
           "module": "RHI_GL", "source_folder": "GL", "graphics_libs": "sw_graphics_gl_libs", "shipping_define": "SW_RHI_TARGET_OPENGL" }
-    ],
-
-    "cook_suffixes": [
-        { "source": ".scene.xml", "cooked": ".scene.bin", "kind": "Scene", "is_authoring_source": true },
-        { "source": ".prefab.xml", "cooked": ".prefab.bin", "kind": "Prefab", "is_authoring_source": true },
-        { "source": ".prefab.json", "cooked": ".prefab.bin", "kind": "Prefab", "is_authoring_source": true },
-        { "source": ".scene.bin", "cooked": ".scene.bin", "kind": "Scene", "is_authoring_source": false },
-        { "source": ".prefab.bin", "cooked": ".prefab.bin", "kind": "Prefab", "is_authoring_source": false },
-        { "source": ".scene", "cooked": ".scene.bin", "kind": "Scene", "is_authoring_source": false },
-        { "source": ".prefab", "cooked": ".prefab.bin", "kind": "Prefab", "is_authoring_source": false }
     ],
 
     "asset_kinds": [
