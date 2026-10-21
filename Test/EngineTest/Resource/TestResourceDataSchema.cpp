@@ -505,7 +505,7 @@ namespace
         static bool isFacialRig( sw::string_view resourceID ) { return endsWith( resourceID, sw::FacialRig::kExtension ); }
         static bool isVrmAvatar( sw::string_view resourceID ) { return endsWith( resourceID, ".avatar.json" ); }
 
-        /** @brief VRM 아바타 임포트 산출물(`<모델>.avatar.json`) — 런타임 로더는 아직 없다(표정 · 스프링 본 · 1인칭 숨김은 후속). JSON 객체이고 `_version` · `_mapHumanBone` 이 있는지만 본다. */
+        /** @brief VRM 아바타 임포트 산출물(`<모델>.avatar.json`) — 런타임은 이 파일 대신 임포트가 옮긴 얼굴 리그 · 후처리 리그를 읽는다(VrmRuntimeAssets) — 여기는 humanoid · 1인칭 기록이다. JSON 객체이고 `_version` · `_mapHumanBone` 이 있는지만 본다. */
         [[nodiscard]] static bool loadVrmAvatar( const sw::string& resourceID )
         {
             sw::JSONDocument document;

@@ -4,7 +4,8 @@
  * @details 0.x(`extensions.VRM` 의 humanoid · blendShapeMaster · secondaryAnimation · firstPerson)와 1.0(`VRMC_vrm` · `VRMC_springBone`)을 한 모양으로 모은다.
  *          이름은 1.0 의 것을 쓴다(0.x 의 표정 프리셋 joy 는 happy, 엄지 Proximal 은 Metacarpal). 본은 glTF 노드 번호가 아니라 스켈레톤 본 이름이고,
  *          표정은 메시 · 타깃 번호가 아니라 엔진 메시의 모프 타깃 이름이다(`ModelImportUtil::makeMorphTargetName` 과 같은 규칙).
- *          런타임(표정 → 모프 가중치, 스프링 본 시뮬레이션, 1인칭 메시 숨김)은 아직 이 파일을 읽지 않는다. 데이터 모양을 정한 단계다.
+ *          런타임은 이 파일 대신 임포트가 옮긴 엔진 형식을 읽는다 — 표정은 얼굴 리그, 스프링 본은 후처리 리그(`VrmRuntimeAssets`). humanoid 본 표와 1인칭은
+ *          이 파일에만 있다(1인칭 메시 숨김은 엔진 메시에 머티리얼 구간이 생겨야 한다 — 본 메시는 구간을 합친 것이다).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -185,7 +186,7 @@ namespace sw::editor
         /** @brief 모델 옆 폴더에 쓰는 아바타 파일의 접미사입니다(`<이름>.avatar.json`). */
         static constexpr string_view kExtension = ".avatar.json";
         /** @brief 아바타 파일의 형식과 읽기 규칙 버전입니다. 바꾸면 올립니다. VRM 원본의 해시에 섞여 다시 임포트하게 합니다. */
-        static constexpr uint32 kVersion = 1;
+        static constexpr uint32 kVersion = 2; // 2: 얼굴 리그 · 후처리 리그도 쓴다(VrmRuntimeAssets)
 
         /**
          * @brief VRM 0.x 의 `extensions.VRM` 을 읽습니다.
