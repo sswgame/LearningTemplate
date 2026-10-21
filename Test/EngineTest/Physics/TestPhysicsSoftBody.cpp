@@ -169,12 +169,43 @@ SW_TEST_CASE( PhysicsSoftBodyTest, MissingPinBoneLeavesTheClothUnsimulated )
     SW_EXPECT_NEAR_EQUAL( 1.0f, position._x, 1.0e-5f );
     SW_EXPECT_NEAR_EQUAL( 3.0f, position._y, 1.0e-5f );
 
-    pCloth->setPinBone( sw::hashed_string( "neck" ) );
+    pCloth->setPinBones( { sw::hashed_string( "neck" ) } );
     SW_EXPECT_FALSE( pCloth->findPinPose( position, rotation ) );
     manager.beginPlay();
     test::updateFrames( manager, 10 );
     SW_EXPECT_FALSE( pCloth->isClothCreated() );
     manager.endPlay();
+}
+
+/**
+ * @brief [PhysicsSoftBodyTest] 뼈 셋에 스킨한 윗변 — 양 끝 열은 끝 뼈 하나, 가운데 열은 가운데 뼈 하나, 그 사이는 이웃한 두 뼈를 선형으로 나눈다(합 1, 가중 0 없음)
+ */
+SW_TEST_CASE( PhysicsSoftBodyTest, PinSkinWeightsSpreadTheTopEdgeAcrossBones )
+{
+    using Internal = PhysicsSoftBodyTestInternal;
+    sw::GameObjectManager manager;
+    sw::ClothComponent*   pCloth = Internal::spawnCloth( manager, sw::float3{ 0.0f, 3.0f, 0.0f }, sw::ClothPinMode::TopEdge );
+    pCloth->setPinBones( { sw::hashed_string( "shoulder_l" ), sw::hashed_string( "spine" ), sw::hashed_string( "shoulder_r" ) } );
+    SW_ASSERT_TRUE( pCloth->isSkinnedPin() );
+    const uint32 lastColumn = pCloth->getColumnCount() - 1; // 기본 11 열 — 가운데는 5
+
+    sw::PhysicsSoftBodySkinnedVertex skinned;
+    pCloth->computePinSkinWeights( 0, skinned );
+    SW_ASSERT_EQUAL( 1u, skinned._weightCount );
+    SW_EXPECT_EQUAL( 0u, skinned._arrWeight[0]._jointIndex );
+    pCloth->computePinSkinWeights( lastColumn, skinned );
+    SW_ASSERT_EQUAL( 1u, skinned._weightCount );
+    SW_EXPECT_EQUAL( 2u, skinned._arrWeight[0]._jointIndex );
+    pCloth->computePinSkinWeights( lastColumn / 2, skinned );
+    SW_ASSERT_EQUAL( 1u, skinned._weightCount );
+    SW_EXPECT_EQUAL( 1u, skinned._arrWeight[0]._jointIndex );
+
+    pCloth->computePinSkinWeights( 1, skinned );
+    SW_ASSERT_EQUAL( 2u, skinned._weightCount );
+    SW_EXPECT_EQUAL( 0u, skinned._arrWeight[0]._jointIndex );
+    SW_EXPECT_EQUAL( 1u, skinned._arrWeight[1]._jointIndex );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, skinned._arrWeight[0]._weight + skinned._arrWeight[1]._weight, 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( 0.2f, skinned._arrWeight[1]._weight, 1.0e-5f );
 }
 
 /**

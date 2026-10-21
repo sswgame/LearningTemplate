@@ -22,5 +22,9 @@
 
 ## 남은 것
 
-- S2: 확인 못 한 위험 — 렌더러 .cpp 에만 정의가 있는데 폴더 밖 헤더에 선언된 함수, 렌더러 폴더의 정적 등록(에셋 캐시 `RenderPipelineAssetCache` · 개발 명령 · 탐침)을 서버 기동이 찾는지. 링크 · 기동 로그로 본다.
+- S2 앞서 닫은 것(2026-10-22, 정적 검사 — 빌드로 확인하기 전이다):
+  - 렌더러 .cpp 의 `A::b(` 정의 가운데 렌더러 헤더에 없는 타입의 것 — 없다(걸린 것은 모두 `FileUtil::` · `ShaderCooker::` 같은 호출이었다).
+  - 렌더러가 정의하고 폴더 밖이 `extern` · `SW_DECLARE_*GLOBAL*` 로 선언한 전역 변수 — 없다. 밖의 `gv_*` 언급은 주석뿐이다(`gv_rhiBackend` 를 쓰는 `Engine::applyPendingBackendChange` 는 갈랐다).
+  - 렌더러의 정적 등록 — 개발 명령 다섯(`SW_DEV_COMMAND`)뿐이고 에셋 캐시 · 탐침 · 씬 서비스 등록은 없다. 리플렉션 타입(`RenderPipelineDesc` · `RenderGraphPassDesc` · `RenderPassDesc` · `RenderPassAttachment` · `RenderPassType`)을 밖에서 이름으로 찾는 코드도 없다(주석뿐).
+  - 남은 것은 빌드다: 링크 · 기동 로그 · 실행 파일 크기 · 링크 시간.
 - 함정: 서버용 크래시 보고 전송 동의(운영 설정)는 `OperationsAndDeployment` 쪽이다.

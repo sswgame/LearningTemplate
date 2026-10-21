@@ -215,6 +215,7 @@ namespace sw
         bool                  isSoftBodyValid( PhysicsSoftBodyHandle softBody ) const override;
         bool                  getSoftBodyVertices( PhysicsSoftBodyHandle softBody, vector<float3>& outListPosition ) const override;
         void                  setSoftBodyPinnedTransform( PhysicsSoftBodyHandle softBody, const float3& position, const quaternion& rotation ) override;
+        void                  setSoftBodySkinningPose( PhysicsSoftBodyHandle softBody, const vector<float4x4>& listJointWorld, bool bHardSkinAll ) override;
 
         bool   raycast( const float3& origin, const float3& direction, float32 maxDistance, const PhysicsQueryFilter& filter, PhysicsCastHit3D& outHit ) const override;
         bool   shapeCast( const PhysicsShapeDesc3D& shape, const float3& position, const quaternion& rotation, const float3& direction, float32 maxDistance,
@@ -283,6 +284,7 @@ namespace sw
             JPH::BodyID    _bodyID{};
             vector<uint32> _listPinnedVertex;    ///< 고정 정점 인덱스(서술자 순서)
             vector<float3> _listPinnedRestLocal; ///< 고정 정점의 서술자 로컬 위치(`_listPinnedVertex` 와 같은 순서)
+            uint32         _jointCount{ 0 };     ///< 스킨 구속이 기대하는 뼈 수(`_listInverseBind` 의 수 — 0 이면 스킨 구속이 없다)
         };
 
         struct ShapeRecord
