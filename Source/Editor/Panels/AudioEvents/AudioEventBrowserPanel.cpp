@@ -101,15 +101,28 @@ namespace sw::editor
         _bEditDirty = true;
     }
 
+    bool AudioEventBrowserPanel::saveDocument()
+    {
+        // 검사를 통과하지 못하면 쓰지 않고 오류를 남긴다(고친 사본은 그대로 남아 계속 고칠 수 있다).
+        if ( _bEditDirty == false || _editLibrary.saveToResource( _editLibraryName.view() ) == false )
+            return false;
+        _bEditDirty = false;
+        return true;
+    }
+
+    void AudioEventBrowserPanel::syncDocumentDirty()
+    {
+        if ( _bEditDirty )
+            markDocumentDirty();
+        else
+            clearDocumentDirty();
+    }
+
     void AudioEventBrowserPanel::drawLibraryEditor()
     {
         ImGui::BeginDisabled( _bEditDirty == false );
         if ( ImGui::Button( SW_LOCKEY( "EditorAudioEvents", "SaveEdits" ) ) )
-        {
-            // 검사를 통과하지 못하면 쓰지 않고 오류를 남긴다(고친 사본은 그대로 남아 계속 고칠 수 있다).
-            if ( _editLibrary.saveToResource( _editLibraryName.view() ) )
-                _bEditDirty = false;
-        }
+            (void)saveDocumentAndClearDirty(); // 저장 경로는 하나다 — 실패는 saveToResource 가 오류로 남기고 사본은 그대로다
         ImGui::EndDisabled();
         EditorSelfTestMarks::note( "audioevents.save" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAudioEvents", "SaveEditsTip" ) );

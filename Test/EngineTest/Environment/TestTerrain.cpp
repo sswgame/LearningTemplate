@@ -573,6 +573,129 @@ SW_TEST_CASE( TerrainTest, UnsavedEditsSurviveStateSnapshot )
 }
 
 /**
+ * @brief [TerrainTest] 다시 표본화 — 평면은 어느 해상도로 옮겨도 같은 평면이고, 구멍은 새 셀 중심이 든 원본 셀을 따른다 · 마스크 쓰기는 사각형만 바꾼다
+ * @details 변이: `resampleHeights` 가 원본 샘플 번호를 해상도 비로 옮기지 않으면 평면 비교가 진다. `writeHoleCells` 가 빈 마스크를 0 으로 채우지 않으면 쓰기가 범위를 벗어난다.
+ */
+SW_TEST_CASE( TerrainTest, ResampleKeepsPlaneAndHoleCells )
+{
+    constexpr uint32 kSource = 5;
+    vector<float32>  listPlane( kSource * kSource );
+    for ( uint32 sampleZ = 0; sampleZ < kSource; ++sampleZ )
+    {
+        for ( uint32 sampleX = 0; sampleX < kSource; ++sampleX )
+        {
+            listPlane[sampleZ * kSource + sampleX] = static_cast<float32>( sampleX ) + 2.0f * static_cast<float32>( sampleZ );
+        }
+    }
+    vector<float32> listResampled;
+    SW_ASSERT_TRUE( TerrainHeightfield::resampleHeights( listPlane, kSource, 9, listResampled ) );
+    SW_ASSERT_EQUAL( 81u, static_cast<uint32>( listResampled.size() ) );
+    SW_EXPECT_NEAR_EQUAL( 0.5f + 2.0f * 1.5f, listResampled[3 * 9 + 1], 1.0e-5f ); // 새 샘플 (1, 3) 은 원본 (0.5, 1.5)
+    SW_EXPECT_NEAR_EQUAL( 4.0f + 8.0f, listResampled[80], 1.0e-5f );
+
+    // 원본 셀 (1, 2) 만 구멍 — 두 배 해상도에서는 셀 (2..3, 4..5) 넷이다.
+    vector<uint8> listHole( 4 * 4, 0u );
+    listHole[2 * 4 + 1] = 1u;
+    vector<uint8> listHoleResampled;
+    SW_ASSERT_TRUE( TerrainHeightfield::resampleHoles( listHole, kSource, 9, listHoleResampled ) );
+    uint32 holeCount{ 0 };
+    for ( uint8 cell : listHoleResampled )
+    {
+        holeCount += cell != 0 ? 1u : 0u;
+    }
+    SW_EXPECT_EQUAL( 4u, holeCount );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( listHoleResampled[5 * 8 + 3] ) );
+    vector<uint8> listNoHole;
+    SW_EXPECT_TRUE( TerrainHeightfield::resampleHoles( {}, kSource, 9, listNoHole ) && listNoHole.empty() );
+
+    // 마스크 쓰기 — 빈 마스크(구멍 없음)에서 사각형만 켜진다.
+    TerrainHeightfield field = TerrainTestUtil::makeWaveField( 9 );
+    vector<uint8>      listCell;
+    SW_ASSERT_TRUE( field.readHoleCells( listCell ) );
+    SW_ASSERT_EQUAL( 64u, static_cast<uint32>( listCell.size() ) );
+    listCell[3 * 8 + 2] = 1u;
+    listCell[0]         = 1u; // 사각형 밖 — 쓰이지 않는다
+    TerrainSampleRect cellRect;
+    cellRect.include( 2, 3 );
+    SW_ASSERT_TRUE( field.writeHoleCells( listCell, cellRect ) );
+    SW_EXPECT_TRUE( field.isHoleCell( 2, 3 ) );
+    SW_EXPECT_FALSE( field.isHoleCell( 0, 0 ) );
+    float32 height{ 0.0f };
+    SW_EXPECT_FALSE( field.findHeightAt( 2.5f, 3.5f, height ) );
+
+    SW_TEST_DEFENSIVE_SCOPE( "wrong sizes and out-of-grid rectangles are rejected without changes" );
+    SW_EXPECT_FALSE( TerrainHeightfield::resampleHeights( listPlane, 4, 9, listResampled ) );
+    SW_EXPECT_FALSE( TerrainHeightfield::resampleHoles( listHole, kSource, 1, listHoleResampled ) );
+    TerrainSampleRect outside;
+    outside.include( 8, 8 );
+    SW_EXPECT_FALSE( field.writeHoleCells( listCell, outside ) );
+    SW_EXPECT_FALSE( field.writeHoleCells( vector<uint8>( 3, 1u ), cellRect ) );
+}
+
+/**
+ * @brief [TerrainTest] 구멍 쓰기와 크기 바꾸기 — 질의 · 청크 세대가 따라가고, 크기를 바꾼 저장하지 않은 편집은 상태 스냅샷으로 같은 에셋을 다시 읽은 지형에 돌아간다
+ * @details 변이: `writeHoles` 가 청크 세대를 올리지 않으면 물리 바디가 낡은 채 남아 세대 비교가 진다. `writeState` 가 크기 바꾸기 표시를 싣지 않으면 되살린 지형이
+ *          에셋 해상도(33)로 남는다. 청크 칸으로 나뉘지 않는 해상도는 거절된다.
+ */
+SW_TEST_CASE( TerrainTest, WriteHolesAndResizeSurviveStateSnapshot )
+{
+    const string    heightfieldPath = test::makeTempPath( "holes_resize.heightfield" );
+    HeightfieldData data            = TerrainTestUtil::makeData( 33, &TerrainTestUtil::wave );
+    SW_ASSERT_TRUE( data.saveToFile( heightfieldPath ) );
+
+    GameObjectManager manager;
+    TerrainComponent* arrTerrain[2]{};
+    for ( TerrainComponent*& pTerrain : arrTerrain )
+    {
+        pTerrain = TerrainTestUtil::makeTerrain( manager, "Terrain", heightfieldPath, "" );
+        SW_ASSERT_NOT_NULL( pTerrain );
+        SW_ASSERT_TRUE( pTerrain->reloadTerrain() );
+    }
+    TerrainComponent& edited   = *arrTerrain[0];
+    TerrainComponent& restored = *arrTerrain[1];
+
+    // 32 m · 33 샘플이라 셀 한 칸이 1 m 다. 셀 (20, 3) 은 청크 (1, 0) 에만 든다.
+    vector<uint8> listHole;
+    SW_ASSERT_TRUE( edited.getHeightfield().readHoleCells( listHole ) );
+    listHole[3 * 32 + 20] = 1u;
+    TerrainSampleRect cellRect;
+    cellRect.include( 20, 3 );
+    const vector<uint32> listGenerationBefore = edited.getChunkGenerations();
+    SW_ASSERT_TRUE( edited.writeHoles( listHole, cellRect ) );
+    float32 height{ 0.0f };
+    SW_EXPECT_FALSE( edited.findHeightAt( 20.5f, 3.5f, height ) );
+    SW_EXPECT_TRUE( edited.findHeightAt( 19.5f, 3.5f, height ) );
+    SW_EXPECT_TRUE( edited.getChunkGenerations()[1] > listGenerationBefore[1] );
+    SW_EXPECT_EQUAL( listGenerationBefore[0], edited.getChunkGenerations()[0] );
+
+    // 크기 바꾸기 — 65 샘플은 청크 칸 16 으로 나뉘고(청크 4 × 4), 20 은 나뉘지 않는다.
+    float32 heightBefore{ 0.0f };
+    SW_ASSERT_TRUE( edited.findHeightAt( 7.0f, 9.0f, heightBefore ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a resolution the chunk cells do not divide is rejected without changes" );
+        SW_EXPECT_FALSE( edited.resampleHeightfield( 20 ) );
+        SW_EXPECT_EQUAL( 33u, edited.getHeightfield().getResolution() );
+    }
+    SW_ASSERT_TRUE( edited.resampleHeightfield( 65 ) );
+    SW_EXPECT_EQUAL( 65u, edited.getHeightfield().getResolution() );
+    SW_EXPECT_EQUAL( 16u, edited.getChunkLayout().getChunkCount() );
+    SW_EXPECT_EQUAL( 16u, static_cast<uint32>( edited.getChunkGenerations().size() ) );
+    float32 heightAfter{ 0.0f };
+    SW_ASSERT_TRUE( edited.findHeightAt( 7.0f, 9.0f, heightAfter ) ); // 원본 샘플 위의 점은 그대로다
+    SW_EXPECT_NEAR_EQUAL( heightBefore, heightAfter, 1.0e-4f );
+    SW_EXPECT_FALSE( edited.findHeightAt( 20.5f, 3.5f, height ) ); // 구멍도 따라 옮겨진다
+
+    Archive state;
+    edited.writeState( state );
+    vector<uint8> stateBytes;
+    state.writeData( stateBytes );
+    restored.restoreState( std::move( stateBytes ) );
+    SW_EXPECT_EQUAL( 65u, restored.getHeightfield().getResolution() );
+    SW_EXPECT_TRUE( restored.getHeightfield().getHeightSamples() == edited.getHeightfield().getHeightSamples() );
+    SW_EXPECT_TRUE( restored.getHeightfield().getHoleCells() == edited.getHeightfield().getHoleCells() );
+}
+
+/**
  * @brief [TerrainTest] 프로퍼티 변경 · 오너 이동이 부르는 다시 읽기는 저장하지 않은 편집을 넘기고, `reloadTerrain` 을 직접 부르면 디스크 값으로 돌아간다
  * @details 변이: `onPropertyChanged` 가 `reloadTerrain` 을 부르면 쓴 높이가 사라져 첫 비교가 진다(에디터 플레이 시작 · 지형 옮기기에서 칠한 것을 잃던 결함).
  */

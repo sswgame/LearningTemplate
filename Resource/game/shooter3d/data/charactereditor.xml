@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 캐릭터 편집 창(GF_EditorPlugIn_CharacterEditor)이 이 게임에서 여는 데이터 — 네 칸 모두 필수다. 레퍼런스 포즈는 스켈레톤 이름에서 만든다(knight.refpose.xml). -->
+<!-- 캐릭터 편집 창(GF_EditorPlugIn_CharacterEditor)이 이 게임에서 여는 데이터 — 다섯 칸 모두 필수다. 레퍼런스 포즈는 스켈레톤 이름에서 만든다(knight.refpose.xml).
+     previewPreset 은 창의 미리보기 몸이다 — 외형 선택에 기준 프리셋이 없으면 이 프리셋(기사 몸) 위에 선택을 입힌다. -->
 <CharacterEditor sockets="game/shooter3d/data/sockets/kaykit_humanoid.sockets.xml"
                  skeleton="game/shooter3d/models/kaykit/knight/knight.skeleton.json"
                  items="game/shooter3d/data/items.xml"
-                 appearance="game/shooter3d/data/appearance"/>
+                 appearance="game/shooter3d/data/appearance"
+                 previewPreset="Adventurer"/>

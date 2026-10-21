@@ -19,6 +19,7 @@ namespace sw
     struct UIScaleSettings;
     struct WidgetLayoutSlot;
 
+    class GridPanel;
     class PanelWidget;
     class TypeRegistry;
     class UIScreen;
@@ -197,7 +198,8 @@ namespace sw::editor
         // --- 디자이너: 상자 순서 · 격자 셀 손잡이 ---------------------------------------------------------------
         /**
          * @brief 상자 패널에서 끄는 점 @p point 가 들어갈 위치입니다 — 자식 가운데(@p listChildCenter, 상자 축 좌표, 자식 순서)가 @p point 보다 작은 자식 수입니다.
-         * @details 끄는 자식 자신도 목록에 있다. 분리한 뒤의 번호는 `findReorderIndex` 가 고친다.
+         * @details 끄는 자식 자신도 목록에 있다. 분리한 뒤의 번호는 `findReorderIndex` 가 고친다. 마지막 자식의 가운데가 첫 자식보다 작으면(RTL 거울 등) 거꾸로 놓인 것으로
+         *          보고 가운데가 @p point 보다 **큰** 자식 수를 센다.
          */
         static uint32 findBoxInsertIndex( const vector<float32>& listChildCenter, float32 point );
         /** @brief 자식 @p fromIndex 를 분리하고 끼울 번호입니다 — 사이 위치 @p insertIndex(떼기 전 번호)가 자신 뒤면 하나 당깁니다. */
@@ -208,10 +210,16 @@ namespace sw::editor
          */
         static uint32 findGridTrack( const vector<float32>& listTrackStart, float32 trackEnd, float32 point );
         /**
-         * @brief 격자 패널 @p grid 의 줄 시작 좌표를 자식 사각형으로 모읍니다(@p bRows 면 행 · 위 변, 아니면 열 · 왼쪽 변, UI 단위). 자식이 없는 줄은 앞 줄의 시작을 이어 씁니다.
-         * @param outTrackEnd 자식 사각형의 가장 먼 끝(아래 변이나 오른쪽 변)입니다.
+         * @brief 줄 크기 @p listTrackSize(트랙 순서)와 간격 @p spacing 으로 줄마다 시작 좌표(첫 줄 0)와 마지막 줄의 끝을 채웁니다.
+         * @details 크기는 배치가 정한 값(`GridPanel::getArrangedColumnSizes` · `getArrangedRowSizes`)이다 — 자식 사각형으로 추정하지 않으므로 걸친 칸이 줄을 흐리지 않고
+         *          자식 없는 줄도 제 폭을 가져 끌어 놓을 수 있다.
          */
-        static void collectGridTracks( const PanelWidget& grid, bool bRows, vector<float32>& outListTrackStart, float32& outTrackEnd );
+        static void makeGridTrackStarts( const vector<float32>& listTrackSize, float32 spacing, vector<float32>& outListTrackStart, float32& outTrackEnd );
+        /**
+         * @brief 화면 점 @p screenPoint(UI 단위)가 놓인 격자 @p grid 의 칸입니다. 격자 로컬로 되돌리고 RTL 거울이면 x 를 뒤집어 배치의 줄과 비교합니다.
+         * @return 렌더 변환이 퇴화해 로컬로 되돌릴 수 없으면 false 입니다.
+         */
+        [[nodiscard]] static bool findGridCell( const GridPanel& grid, const float2& screenPoint, uint32& outRow, uint32& outColumn );
         /** @brief 시간 막대 줄입니다 — "0.25 / 1.00 s". */
         static string makeTimeLabel( float32 time, float32 duration );
     };

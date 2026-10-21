@@ -42,8 +42,15 @@ namespace sw::editor
         /** @brief 스택 목록 · 기즈모 · 매개변수 · 하위 스택이 세로로 길다 - 기본(640 x 420)이면 매개변수가 첫 화면 밖으로 밀린다. */
         float2 getInitialPanelSize() const override { return float2{ 560.0f, 900.0f }; }
         void   drawContent() override;
+        /** @brief 스택을 사이드카 문서에 씁니다(닫기 · 종료 확인의 Save). */
+        [[nodiscard]] bool saveDocument() override;
+        bool               canSaveDocument() const override;
 
     private:
+        /** @brief 세션 스택이 사이드카와 다르면 패널 dirty 를 올리고, 같아지면 내립니다(닫기 · 종료 확인 · 제목 표시가 이 값을 본다). 스택이 정본이다. */
+        void syncDocumentDirty() override;
+        /** @brief "Don't Save" — 스택을 마지막으로 읽거나 쓴 사이드카 상태로 돌립니다. */
+        void revertDocument() override;
         void drawTargetRow( MeshModifierSession& session );
         void drawStackList( MeshModifierSession& session );
         /**

@@ -19,6 +19,18 @@ namespace sw::editor
         Lower,      ///< 높이를 내린다
         Flatten,    ///< 목표 높이로 당긴다
         PaintLayer, ///< 레이어 하나의 가중치를 올리고 합을 1 로 맞춘다
+        Smooth,     ///< 높이를 이웃 3 × 3 평균으로 당긴다(언리얼 Smooth)
+        CutHole,    ///< 셀에 구멍을 낸다(언리얼 Visibility 의 칠하기)
+        FillHole,   ///< 셀의 구멍을 메운다
+        Count
+    };
+
+    /** @brief 모드가 고치는 배열입니다. 드래그 사본 · 되돌리기 자료 · 쓰기 API 가 이 값 하나로 갈린다. */
+    enum class TerrainBrushTarget : uint8
+    {
+        Height,      ///< 샘플 높이(N × N) — `TerrainComponent::writeHeights`
+        LayerWeight, ///< 스플랫 텍셀 가중치 — `writeLayerWeights`
+        Hole,        ///< 셀 구멍 마스크((N − 1)²) — `writeHoles`
     };
 
     /** @brief 브러시 설정입니다. */
@@ -62,6 +74,9 @@ namespace sw::editor
      */
     struct TerrainBrush
     {
+        /** @brief @p mode 가 고치는 배열입니다. */
+        static TerrainBrushTarget getTarget( TerrainBrushMode mode );
+
         /**
          * @brief 중심에서 @p distance 떨어진 곳의 가중치입니다.
          * @details 안쪽 반경 = 반경 × (1 − 감쇠) 안은 1, 반경 밖은 0, 그 사이는 smoothstep 으로 줄어든다.
@@ -74,6 +89,7 @@ namespace sw::editor
 
         /**
          * @brief 높이 배열에 한 프레임을 적용합니다. 평탄화는 @p flattenHeight 로 당깁니다(한 프레임에 목표를 넘지 않습니다).
+         * @details 스무드는 프레임 시작의 높이로 샘플마다 이웃 3 × 3 평균(격자 밖 이웃은 뺀다)을 먼저 모두 구한 뒤 당긴다 — 샘플 순서가 결과를 바꾸지 않는다.
          * @return 바뀐 샘플이 있으면 true 입니다.
          */
         [[nodiscard]] static bool applyHeight( vector<float32>& inOutListHeight, uint32 resolution, const vector<TerrainBrushSample>& listSample,
@@ -85,5 +101,16 @@ namespace sw::editor
          */
         [[nodiscard]] static bool applyLayerWeight( vector<float4>& inOutListWeight, uint32 resolution, const vector<TerrainBrushSample>& listSample,
                                                     const TerrainBrushSettings& settings, float32 deltaTime );
+
+        /**
+         * @brief 셀 구멍 마스크(@p cellResolution², 행 우선)에 `CutHole` · `FillHole` 을 적용합니다. 샘플은 셀 중심 격자(`makeHoleGrid`)로 고른 것이다.
+         * @details 구멍은 켜고 끄는 값이라 세기 · 경과 시간을 보지 않는다. 감쇠 가중치가 반 이상인 셀만 바꾼다 — 감쇠가 칠하는 가장자리를 정한다.
+         * @return 바뀐 셀이 있으면 true 입니다.
+         */
+        [[nodiscard]] static bool applyHole( vector<uint8>& inoutListHole, uint32 cellResolution, const vector<TerrainBrushSample>& listSample,
+                                             const TerrainBrushSettings& settings );
+
+        /** @brief 샘플 격자 @p sampleGrid 의 셀 중심 격자입니다(원점이 반 셀 옮겨지고 해상도가 하나 적다). 구멍 브러시가 셀을 고를 때 씁니다. */
+        static TerrainBrushGrid makeHoleGrid( const TerrainBrushGrid& sampleGrid );
     };
 } // namespace sw::editor

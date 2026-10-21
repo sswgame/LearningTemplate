@@ -129,6 +129,9 @@ namespace sw
     class SW_API SocketSet
     {
     public:
+        /** @brief 소켓 에셋 파일의 확장자입니다(편집 창이 문서를 고르는 판정). */
+        static constexpr const utf8* kExtension = ".sockets.xml";
+
         /**
          * @brief XML 텍스트에서 읽습니다(현재 내용은 비웁니다). 모르는 속성이나 원소, 종류(@p kinds 에 없음), 겹친 이름은 오류입니다.
          * @param pBones 있으면 부모 본 이름도 대조합니다(없는 본은 오류입니다).

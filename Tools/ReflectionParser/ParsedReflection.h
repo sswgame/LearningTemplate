@@ -306,6 +306,13 @@ namespace sw
         string _typeName; ///< 정규 타입 이름(`int32` · `string` · `DamageEvent`) — const · 참조는 벗긴다
         /** @brief 기본 인자의 C++ 식 그대로(`1.0f` · `"idle"` · `Mode::Fast`). 없으면 비어 있다. 런타임이 글로 읽어 인자 타입으로 바꾼다. */
         string _defaultValue;
+        /**
+         * @brief 타입 핸들 인자(`TComponentHandle<T>`)의 대상 `T` 입니다(프로퍼티의 `_handleTargetTypeName` 과 같은 표기). 타입 핸들이 아니면 비어 있다.
+         * @details 이때 `_typeName` 은 내장 `ComponentHandle` 로 바꿔 둔다 — 호출 쪽(인스펙터 · 콘솔)은 타입 없는 핸들을 넘기고 호출 썽크가 대상 타입을 확인해 바꾼다.
+         */
+        string _handleTargetTypeName;
+        /** @brief 인자의 C++ 타입 전체 이름(클랭 정규 철자, `sw::TComponentHandle<sw::LightComponent>`)이며 const · 참조는 뗐다. 타입 핸들 인자의 호출 썽크가 이 타입의 지역 변수를 만든다. */
+        string _canonicalTypeName;
     };
 } // namespace sw
 

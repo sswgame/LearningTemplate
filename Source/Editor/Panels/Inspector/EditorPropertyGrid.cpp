@@ -75,14 +75,6 @@ namespace sw::editor
                     InspectorObjectEdit::applyObjectEdit( pOwner, undoLabel, std::forward<EditFunc>( edit ) );
             }
 
-            /** @brief 맵 값 하나를 값 위치(오프셋 0)에 둔 프로퍼티입니다. 위젯(`drawPropertyWidget`)에만 씁니다. 텍스트 변환은 값 주소 쪽(`SerializerUtil::formatValueText`, `parseTextValue`)이 타입 이름으로 한다. */
-            static PropertyInfo makeValueProperty( const hashed_string& typeName )
-            {
-                PropertyInfo valueProp{};
-                valueProp._typeName = typeName;
-                return valueProp;
-            }
-
             /** @brief 즐겨찾기한 프로퍼티만 타입 표시 이름 머리 하나로 모아 @p inoutListGroup 을 바꿉니다. 하나도 없으면 비웁니다. */
             static void keepFavoriteProperties( const TypeInfo& typeInfo, const InspectorFavorites& favorites, vector<InspectorPropertyGroup>& inoutListGroup )
             {
@@ -727,10 +719,8 @@ namespace sw::editor
         if ( ImGui::TreeNodeEx( "##value", ImGuiTreeNodeFlags_SpanFullWidth, "%s", headerBuf.c_str() ) == false )
             return;
 
-        PropertyInfo valueProp      = EditorPropertyGridInternal::makeValueProperty( prop._elementTypeName );
-        valueProp._name             = prop._name;
-        valueProp._metadata         = prop._metadata;
-        const bool bElementEditable = EditorSessionPolicy::areContainerElementEditsAllowed( bReadOnly, true );
+        const PropertyInfo valueProp        = InspectorPropertyLayout::makeElementProperty( prop );
+        const bool         bElementEditable = EditorSessionPolicy::areContainerElementEditsAllowed( bReadOnly, true );
 
         // 값은 맵 노드 안에서 바로 고친다. 되돌리기는 위젯 하나 단위다(`drawPropertyWidget`). 삭제는 순회가 끝난 뒤에 한다.
         size_t eraseOrdinal = static_cast<size_t>( -1 );
@@ -976,7 +966,8 @@ namespace sw::editor
                     formatstring( label.data(), label.capacity(), "arg%# (%#)", paramIndex, parameter._typeName.c_str() );
                 else
                     formatstring( label.data(), label.capacity(), "%# (%#)", parameter._name.c_str(), parameter._typeName.c_str() );
-                InspectorPropertyManager::drawMethodArg( label.c_str(), listSlot[paramIndex] );
+                const GameObject* pEditOwner = getEditOwner();
+                InspectorPropertyManager::drawMethodArg( label.c_str(), listSlot[paramIndex], parameter, pEditOwner != nullptr ? pEditOwner->getManager() : nullptr );
                 ImGui::PopID();
             }
 

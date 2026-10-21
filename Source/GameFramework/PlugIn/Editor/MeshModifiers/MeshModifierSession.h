@@ -96,10 +96,17 @@ namespace sw::editor
         /** @brief 원본 메시의 로컬 경계 상자입니다. */
         const MeshModifierBounds& getSourceBounds() const { return _sourceBounds; }
 
-        /** @brief 스택을 사이드카 문서에 씁니다. */
-        [[nodiscard]] bool saveSidecar() const;
-        /** @brief 사이드카 문서에서 스택을 다시 읽습니다. 없으면 false 입니다. */
+        /** @brief 스택을 사이드카 문서에 씁니다. 성공하면 지금 스택이 저장된 상태가 됩니다(`isStackUnsaved`). */
+        [[nodiscard]] bool saveSidecar();
+        /** @brief 사이드카 문서에서 스택을 다시 읽습니다. 없으면 false 입니다. 읽으면 그 스택이 저장된 상태가 됩니다. */
         [[nodiscard]] bool loadSidecar();
+        /**
+         * @brief 스택이 마지막으로 읽거나 쓴 사이드카(없었으면 빈 스택)와 다르면 true 입니다. 패널의 미저장 표시 · 닫기 확인이 이 값을 본다.
+         * @details 저장 글(`MeshModifierStack::makeJSONText`)끼리 견준다 — 되돌리기로 저장한 상태에 돌아오면 다시 false 다. 대상이 없으면 false 입니다.
+         */
+        bool isStackUnsaved() const;
+        /** @brief "Don't Save" — 스택을 마지막으로 읽거나 쓴 상태로 돌립니다(되돌리기 기록에 남긴다). 대상이 없으면 아무것도 하지 않습니다. */
+        void revertStackToSaved();
         /**
          * @brief 스택을 건 결과를 새 메시 에셋(`<메시>_modified.mesh`)으로 씁니다. 원본은 덮어쓰지 않습니다.
          * @details 스킨 가중치는 정점 수가 같아 그대로 옮긴다. 모프 타깃은 위치가 바뀌어 차이가 맞지 않으므로 버리고 경고한다.
@@ -187,6 +194,7 @@ namespace sw::editor
         vector<float3>             _listSourcePosition; ///< 원본 정점 위치(스택 입력 위치 · 원본 상자)
         vector<string>             _listUndo;
         vector<string>             _listRedo;
+        string                     _savedStackText; ///< 마지막으로 읽거나 쓴 사이드카의 스택 저장 글(`isStackUnsaved` 의 기준)
         string                     _meshPath;
         MeshModifierBounds         _sourceBounds;
         GameObjectHandle           _target;

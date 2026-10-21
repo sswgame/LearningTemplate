@@ -378,6 +378,12 @@ SW_TEST_CASE( UIPreviewLogicTest, BoxReorderIndexFromDropPoint )
     SW_EXPECT_EQUAL( 1u, UIPreviewLogic::findReorderIndex( 1, UIPreviewLogic::findBoxInsertIndex( listCenter, 40.0f ) ) );
     SW_EXPECT_EQUAL( 2u, UIPreviewLogic::findReorderIndex( 1, UIPreviewLogic::findBoxInsertIndex( listCenter, 60.0f ) ) );
     SW_EXPECT_EQUAL( 3u, UIPreviewLogic::findReorderIndex( 1, UIPreviewLogic::findBoxInsertIndex( listCenter, 100.0f ) ) );
+
+    // 오른쪽에서 왼쪽(RTL 거울) — 0 번 자식이 오른쪽 끝이라 오른쪽 바깥이 맨 앞, 왼쪽 바깥이 맨 뒤다
+    const sw::vector<float32> listMirrored{ 70.0f, 50.0f, 30.0f, 10.0f };
+    SW_EXPECT_EQUAL( 0u, UIPreviewLogic::findBoxInsertIndex( listMirrored, 100.0f ) );
+    SW_EXPECT_EQUAL( 2u, UIPreviewLogic::findBoxInsertIndex( listMirrored, 40.0f ) );
+    SW_EXPECT_EQUAL( 4u, UIPreviewLogic::findBoxInsertIndex( listMirrored, 0.0f ) );
 }
 
 /**
@@ -394,8 +400,30 @@ SW_TEST_CASE( UIPreviewLogicTest, GridTrackFromDropPoint )
     SW_EXPECT_EQUAL( 3u, UIPreviewLogic::findGridTrack( listStart, 300.0f, 300.0f ) );
     SW_EXPECT_EQUAL( 0u, UIPreviewLogic::findGridTrack( sw::vector<float32>{}, 0.0f, 50.0f ) );
 
-    // 1 번 줄이 비어 2 번 줄의 시작을 이었다(collectGridTracks) — 100~200 은 2 번 줄이다
+    // 폭 0 인 줄(빈 Auto 줄)은 건너뛴다 — 100~200 은 2 번 줄이다
     const sw::vector<float32> listGap{ 0.0f, 100.0f, 100.0f };
     SW_EXPECT_EQUAL( 2u, UIPreviewLogic::findGridTrack( listGap, 200.0f, 150.0f ) );
     SW_EXPECT_EQUAL( 0u, UIPreviewLogic::findGridTrack( listGap, 200.0f, 50.0f ) );
+}
+
+/**
+ * @brief [UIPreviewLogicTest] 격자 줄 시작은 배치의 줄 크기와 간격으로 만든다 — 자식 없는 줄도 제 폭을 가져 그 칸에 놓을 수 있다
+ */
+SW_TEST_CASE( UIPreviewLogicTest, GridTrackStartsFromArrangedSizes )
+{
+    using sw::editor::UIPreviewLogic;
+    sw::vector<float32> listStart;
+    float32             trackEnd{ -1.0f };
+    UIPreviewLogic::makeGridTrackStarts( sw::vector<float32>{ 100.0f, 50.0f, 80.0f }, 10.0f, listStart, trackEnd );
+    SW_ASSERT_EQUAL( size_t{ 3 }, listStart.size() );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, listStart[0], 1.0e-4f );
+    SW_EXPECT_NEAR_EQUAL( 110.0f, listStart[1], 1.0e-4f );
+    SW_EXPECT_NEAR_EQUAL( 170.0f, listStart[2], 1.0e-4f );
+    SW_EXPECT_NEAR_EQUAL( 250.0f, trackEnd, 1.0e-4f );
+    // 1 번 줄(110~160)에 자식이 없어도 그 줄을 고른다
+    SW_EXPECT_EQUAL( 1u, UIPreviewLogic::findGridTrack( listStart, trackEnd, 130.0f ) );
+
+    UIPreviewLogic::makeGridTrackStarts( sw::vector<float32>{}, 10.0f, listStart, trackEnd );
+    SW_EXPECT_TRUE( listStart.empty() );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, trackEnd, 1.0e-4f );
 }

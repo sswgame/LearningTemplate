@@ -85,7 +85,8 @@ namespace sw::editor
         for ( XMLAttribute attribute = root.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
         {
             const utf8* pName  = attribute.getName();
-            const bool  bKnown = StringUtil::equals( pName, "sockets" ) || StringUtil::equals( pName, "skeleton" ) || StringUtil::equals( pName, "items" ) || StringUtil::equals( pName, "appearance" );
+            const bool  bKnown = StringUtil::equals( pName, "sockets" ) || StringUtil::equals( pName, "skeleton" ) || StringUtil::equals( pName, "items" ) || StringUtil::equals( pName, "appearance" ) ||
+                                StringUtil::equals( pName, "previewPreset" );
             if ( bKnown == false )
             {
                 SW_LOG_ERROR( "%#: unknown attribute '%#' on <%#>", sourceName, pName, Internal::kRootName );
@@ -101,6 +102,7 @@ namespace sw::editor
         bOk = Internal::readRequired( root, "skeleton", _skeletonPath, sourceName ) && bOk;
         bOk = Internal::readRequired( root, "items", _itemsPath, sourceName ) && bOk;
         bOk = Internal::readRequired( root, "appearance", _appearanceFolder, sourceName ) && bOk;
+        bOk = Internal::readRequired( root, "previewPreset", _previewPresetID, sourceName ) && bOk;
         if ( _skeletonPath.empty() == false )
             bOk = Internal::makeRefPosePath( _skeletonPath, _refPosePath, sourceName ) && bOk;
         return bOk;

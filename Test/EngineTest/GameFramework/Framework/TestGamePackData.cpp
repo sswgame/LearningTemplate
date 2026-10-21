@@ -37,18 +37,22 @@ SW_TEST_CASE( GamePackDataTest, MissingRuleIsAnError )
 }
 
 /**
- * @brief [GamePackDataTest] 캐릭터 편집 데이터는 네 칸이 모두 필수다 — 하나가 빠지거나 모르는 속성이면 읽기가 실패하고 표가 빈다. 레퍼런스 포즈는 스켈레톤 이름에서 만든다
+ * @brief [GamePackDataTest] 캐릭터 편집 데이터는 다섯 칸이 모두 필수다 — 하나가 빠지거나 모르는 속성이면 읽기가 실패하고 표가 빈다. 레퍼런스 포즈는 스켈레톤 이름에서 만든다
+ * @details 미리보기 몸 프리셋(`previewPreset`)이 빠지면 창의 미리보기 씬에 세울 몸이 없다 — 다른 칸과 같이 읽기 실패다(몸 없는 창으로 열지 않는다).
  */
 SW_TEST_CASE( GamePackDataTest, CharacterEditorDataNeedsEveryField )
 {
     sw::editor::CharacterEditorPackData data;
-    SW_ASSERT_TRUE(
-        data.loadFromXMLText( R"(<CharacterEditor sockets="a.sockets.xml" skeleton="a.skeleton.json" items="items.xml" appearance="appearance"/>)", "full" ) );
+    SW_ASSERT_TRUE( data.loadFromXMLText(
+        R"(<CharacterEditor sockets="a.sockets.xml" skeleton="a.skeleton.json" items="items.xml" appearance="appearance" previewPreset="Adventurer"/>)", "full" ) );
     SW_EXPECT_STREQ( "a.skeleton.json", data._skeletonPath.c_str() );
     SW_EXPECT_STREQ( "a.refpose.xml", data._refPosePath.c_str() );
-    SW_EXPECT_FALSE( data.loadFromXMLText( R"(<CharacterEditor sockets="a.sockets.xml" skeleton="a.skeleton.json" appearance="appearance"/>)", "noItems" ) );
-    SW_EXPECT_TRUE( data._socketPath.empty() );
+    SW_EXPECT_STREQ( "Adventurer", data._previewPresetID.c_str() );
     SW_EXPECT_FALSE(
-        data.loadFromXMLText( R"(<CharacterEditor sockets="a.sockets.xml" skeleton="a.json" items="items.xml" appearance="appearance"/>)", "skeletonNotNamed" ) );
-    SW_EXPECT_FALSE( data.loadFromXMLText( R"(<CharacterEditor sockets="a" skeleton="b" items="d" appearance="e" extra="f"/>)", "unknownAttribute" ) );
+        data.loadFromXMLText( R"(<CharacterEditor sockets="a.sockets.xml" skeleton="a.skeleton.json" appearance="appearance" previewPreset="Adventurer"/>)", "noItems" ) );
+    SW_EXPECT_TRUE( data._socketPath.empty() );
+    SW_EXPECT_FALSE( data.loadFromXMLText( R"(<CharacterEditor sockets="a.sockets.xml" skeleton="a.skeleton.json" items="items.xml" appearance="appearance"/>)", "noPreviewPreset" ) );
+    SW_EXPECT_FALSE( data.loadFromXMLText(
+        R"(<CharacterEditor sockets="a.sockets.xml" skeleton="a.json" items="items.xml" appearance="appearance" previewPreset="Adventurer"/>)", "skeletonNotNamed" ) );
+    SW_EXPECT_FALSE( data.loadFromXMLText( R"(<CharacterEditor sockets="a" skeleton="b" items="d" appearance="e" previewPreset="p" extra="f"/>)", "unknownAttribute" ) );
 }

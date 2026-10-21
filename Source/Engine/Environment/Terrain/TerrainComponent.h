@@ -135,6 +135,27 @@ namespace sw
          *          `reloadTerrain` 은 디스크 값으로 돌아간다. 틱 밖에서만 부른다.
          */
         [[nodiscard]] bool writeLayerWeights( const vector<float4>& listWeight, const TerrainSampleRect& rect );
+        /**
+         * @brief 구멍 마스크 전부(`getHeightfield().readHoleCells` 로 읽어 고친 사본)에서 @p cellRect(셀 좌표)를 반영합니다.
+         * @details 구멍은 렌더 메시(`TerrainMeshBuilder`) · 충돌(`TerrainColliderComponent`) · 내비(`TerrainNavGeometry`) · 높이 질의가 모두 같은 마스크로 건너뛴다.
+         *          그래서 바뀐 셀이 든 청크의 메시를 다시 만들고 그 청크의 `getChunkGenerations` 를 올리며(물리 바디), 그 자리의 내비 타일을 무효로 한다. 틱 밖에서만 부른다.
+         * @return 반영했으면 true 입니다(지형이 없거나 크기 · 범위가 틀리면 false 이고 아무것도 바꾸지 않습니다).
+         */
+        [[nodiscard]] bool writeHoles( const vector<uint8>& listHole, const TerrainSampleRect& cellRect );
+        /**
+         * @brief 높이장을 해상도 @p resolution 의 값으로 통째로 바꿉니다(높이 @p resolution², 구멍 (@p resolution − 1)² 또는 빈 것). 넓이 · 스플랫 · 머티리얼은 그대로다.
+         * @details 청크 배치를 새로 세우고(청크 칸 `_chunkCells` 가 해상도 − 1 을 나눠야 한다) 모든 청크의 세대를 올린다(물리 바디는 청크 수가 바뀌어 모두 다시 만든다).
+         *          높이 · 구멍은 쓴 편집으로 쳐서 `writeState` 가 새 해상도째 싣는다. 크기 바꾸기 · 그 되돌리기 · 다른 해상도 상태 되살리기가 이 한 길을 쓴다. 틱 밖에서만 부른다.
+         * @return 바꿨으면 true 입니다. 지형이 없거나 크기가 맞지 않거나 청크 칸이 나누지 못하면 알리고 false 이며 아무것도 바꾸지 않습니다.
+         */
+        [[nodiscard]] bool replaceHeightfield( uint32 resolution, const vector<float32>& listHeight, const vector<uint8>& listHole );
+        /**
+         * @brief 지금 높이 · 구멍을 해상도 @p resolution 으로 다시 표본화해 `replaceHeightfield` 로 바꿉니다(`TerrainHeightfield::resampleHeights` · `resampleHoles`).
+         * @return 바꿨으면 true 입니다. 같은 해상도면 아무것도 하지 않고 false 입니다.
+         */
+        [[nodiscard]] bool resampleHeightfield( uint32 resolution );
+        /** @brief 해상도 @p resolution 이 이 지형의 청크 칸(`_chunkCells`)으로 나뉘는지 봅니다(`replaceHeightfield` 가 받는 해상도). */
+        bool isResolutionUsable( uint32 resolution ) const;
         /** @brief `writeLayerWeights` 마다 오르는 세대입니다(`reloadTerrain` 은 0 으로 돌립니다). 가중치로 만든 것(레이어 필터 배치)이 낡았는지 견줍니다. */
         uint32 getSplatRevision() const { return _splatRevision; }
         /**
@@ -157,7 +178,7 @@ namespace sw
          */
         void writeState( Archive& outArchive ) const;
         /** @brief 마지막 `reloadTerrain` 뒤에 높이나 스플랫을 썼으면 true 입니다(`writeState` 가 싣는 것이 있다). 저장해도 다시 읽기 전까지는 true 로 남는다. */
-        bool hasWrittenEdits() const { return _bHeightsWritten || _splatRevision > 0; }
+        bool hasWrittenEdits() const { return _bHeightsWritten || _bHolesWritten || _splatRevision > 0; }
         /** @brief 상태 스냅샷 계약 — 다시 읽은 지형에 `writeState` 의 편집을 되돌려 씁니다. 크기가 맞지 않거나 읽지 못하면 알리고 디스크 값으로 둡니다. */
         void restoreState( vector<uint8>&& bytes );
 
@@ -206,6 +227,13 @@ namespace sw
          * @details 트랜스폼 · 프로퍼티 변경이 부른다 — 지형을 옮기거나 플레이를 시작하는 것이 칠한 것을 버리지 않는다(언리얼 랜드스케이프와 같다).
          */
         [[nodiscard]] bool reloadTerrainKeepingEdits();
+        /**
+         * @brief 높이 · 구멍 쓰기 뒤의 공통 처리입니다. @p generationChunks 의 청크 세대를 올리고, @p meshChunks 의 바운드와 메시를 다시 세우며, @p sampleRect 자리의 내비 타일을 무효로 합니다.
+         * @details 쓰기 하나가 부르는 한 길이라 높이와 구멍이 충돌 · 메시 · 내비 중 하나를 빠뜨리지 않는다.
+         */
+        void markChunksEdited( const TerrainSampleRect& generationChunks, const TerrainSampleRect& meshChunks, const TerrainSampleRect& sampleRect );
+        /** @brief 샘플 사각형 @p sampleRect 를 덮는 내비 타일을 무효로 합니다(매니저가 없으면 아무것도 하지 않는다). */
+        void invalidateNavigation( const TerrainSampleRect& sampleRect );
         /** @brief 지금 LOD 로 청크 배치를 모두 만들어 등록합니다. */
         void createChunks();
         /**
@@ -269,7 +297,9 @@ namespace sw
         uint32              _heightfieldGeneration; ///< `reloadTerrain` 과 `writeHeights` 마다 오른다(`getHeightfieldGeneration`)
         uint32              _splatRevision;         ///< `writeLayerWeights` 마다 오른다(`getSplatRevision`)
         atomic<bool>        _bOriginDirty;          ///< 오너가 움직여 지형 원점이 낡았다
-        bool                _bHeightsWritten;       ///< 마지막 `reloadTerrain` 뒤에 `writeHeights` 가 성공했다(`writeState` 가 싣는다)
+        bool                _bHeightsWritten;       ///< 마지막 `reloadTerrain` 뒤에 `writeHeights` · `replaceHeightfield` 가 성공했다(`writeState` 가 싣는다)
+        bool                _bHolesWritten;         ///< 마지막 `reloadTerrain` 뒤에 `writeHoles` · `replaceHeightfield` 가 성공했다(`writeState` 가 싣는다)
+        bool                _bResolutionReplaced;   ///< 마지막 `reloadTerrain` 뒤에 `replaceHeightfield` 가 성공했다 — 이때만 다른 해상도의 상태를 되살린다
         string              _loadedHeightfieldPath; ///< 마지막으로 읽은 높이장 경로 — 같은 경로를 다시 읽을 때만 편집을 넘긴다
     };
 } // namespace sw

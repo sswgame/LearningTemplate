@@ -40,6 +40,7 @@ namespace sw
         , _downCount{ 0 }
         , _state{ VitalityState::Alive }
         , _bReviving{ SW_FALSE }
+        , _bDamageImmune{ SW_FALSE }
     {
         initialize( _settings );
     }
@@ -103,9 +104,10 @@ namespace sw
     VitalityDamageResult Vitality::applyDamage( float32 amount, float32 poiseDamage, int32 instigatorID )
     {
         VitalityDamageResult result;
-        amount      = MathUtil::max( 0.0f, amount );
-        poiseDamage = MathUtil::max( 0.0f, poiseDamage );
-        if ( _state == VitalityState::Dead || isInvulnerable() )
+        amount                    = MathUtil::max( 0.0f, amount );
+        poiseDamage               = MathUtil::max( 0.0f, poiseDamage );
+        const bool bIgnoresDamage = _state == VitalityState::Dead || isInvulnerable() || isDamageImmune();
+        if ( bIgnoresDamage )
         {
             result._bIgnored = SW_TRUE;
             return result;
@@ -378,8 +380,9 @@ namespace sw
     bool Vitality::readState( Archive& archive )
     {
         Vitality restored;
-        restored._settings = _settings;
-        uint8 state        = 0;
+        restored._settings      = _settings;
+        restored._bDamageImmune = _bDamageImmune; // 개발 스위치는 상태가 아니다
+        uint8 state             = 0;
         archive >> restored._health;
         archive >> restored._shield;
         archive >> restored._downedHealth;

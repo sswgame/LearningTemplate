@@ -785,9 +785,15 @@ namespace sw
         string _defaultValue;
         /** @brief 이 인자 타입의 이름과 값 변환(`ReflectTypeOpsOf<T>::kOps`)입니다. 이벤트는 `EventInfo::setOps` 가 채웁니다. */
         const ReflectTypeOps* _pType;
+        /**
+         * @brief 타입 핸들 인자(`TComponentHandle<T>`)의 대상 `T` 입니다. 타입 핸들이 아니면 비어 있습니다(프로퍼티의 `PropertyInfo::_handleTargetTypeName` 과 같다).
+         * @details 이때 `_typeName` 은 `ComponentHandle` 이다 — 부르는 쪽은 타입 없는 핸들을 넣고, 생성한 호출 썽크가 그 컴포넌트의 씬으로 대상 타입을 확인한다
+         *          (`ComponentHandleArgument::cast`, 틀리면 오류를 남기고 부르지 않는다). 인스펙터는 이 이름으로 선택기를 그린다.
+         */
+        hashed_string _handleTargetTypeName;
 
         FunctionParameterInfo() noexcept;
-        FunctionParameterInfo( string name, string typeName, string defaultValue, const ReflectTypeOps* pType );
+        FunctionParameterInfo( string name, string typeName, string defaultValue, const ReflectTypeOps* pType, hashed_string handleTargetTypeName = {} );
 
         /** @brief 기본 인자가 있으면 true 입니다. */
         bool hasDefaultValue() const noexcept { return _defaultValue.empty() == false; }

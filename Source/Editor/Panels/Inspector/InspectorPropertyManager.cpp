@@ -526,56 +526,71 @@ namespace sw::editor
                 if ( pValue == nullptr )
                     return true;
 
-                const InspectorHandleState            state = InspectorComponentPickerUtil::computeHandleState( *pManager, *pTargetType, *pValue );
-                fixed_string<constant::kMaxBuffer512> preview;
-                makePreview( *pManager, *pValue, state, preview );
-
                 if ( prop._metadata->_bReadOnly != SW_FALSE )
                 {
+                    const InspectorHandleState            state = InspectorComponentPickerUtil::computeHandleState( *pManager, *pTargetType, *pValue );
+                    fixed_string<constant::kMaxBuffer512> preview;
+                    makePreview( *pManager, *pValue, state, preview );
                     drawReadOnlyText( prop, preview.c_str() );
                     return true;
                 }
 
+                ComponentHandle picked{};
+                // 쓰기는 그리드 한곳(통지 · 되돌리기)이 맡는다. Selectable 은 ImGui 편집 플래그를 세우지 않으므로 trackPod 도 부르지 않는다.
+                if ( drawPicker( _pLabel, *pManager, *pTargetType, *pValue, _listChoice, picked ) )
+                {
+                    // `picked` 는 값 자체라 값 주소 쪽 변환(`formatValueText`)으로 쓴다. 객체 주소 쪽(`formatPropertyText`)은 오프셋을 한 번 더 더한다.
+                    const string undoLabel = InspectorPropertyLayout::makeUndoLabel( InspectorPropertyLayout::getPropertyLabel( prop ) );
+                    grid.applyPropertyTextAsEdit( instance, prop,
+                                                  SerializerUtil::formatValueText( ValueAddress{ &picked }, prop._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) ),
+                                                  undoLabel.c_str() );
+                }
+                showTooltipIfHovered( prop );
+                return true;
+            }
+
+            /**
+             * @brief 선택기 콤보 하나입니다. 프로퍼티와 CallInEditor 인자(`InspectorPropertyManager::drawMethodArg`)가 같은 것을 씁니다.
+             * @details 고를 수 있는 값은 "(none)" 과 @p targetType 의 열거한 컴포넌트 핸들뿐이다. 목록은 콤보가 열린 프레임에만 @p inoutListChoice 에 모은다.
+             * @return 지금 값과 다른 것을 골랐으면 true 이고 @p outPicked 에 담습니다.
+             */
+            static bool drawPicker( const utf8* pLabel, const GameObjectManager& manager, const TypeInfo& targetType, ComponentHandle current,
+                                    vector<InspectorComponentChoice>& inoutListChoice, ComponentHandle& outPicked )
+            {
+                const InspectorHandleState            state = InspectorComponentPickerUtil::computeHandleState( manager, targetType, current );
+                fixed_string<constant::kMaxBuffer512> preview;
+                makePreview( manager, current, state, preview );
                 const bool bColored = state == InspectorHandleState::Missing || state == InspectorHandleState::WrongType;
                 if ( bColored )
                     EditorThemeUtil::pushTextColor( state == InspectorHandleState::Missing ? EditorThemeUtil::getWarningColor() : EditorThemeUtil::getErrorColor() );
-                const bool bOpen = ImGui::BeginCombo( _pLabel, preview.c_str() );
+                const bool bOpen = ImGui::BeginCombo( pLabel, preview.c_str() );
                 if ( bColored )
                     EditorThemeUtil::popTextColor();
-                if ( bOpen )
+                if ( bOpen == false )
+                    return false;
+                // 열린 프레임에만 모은다. 닫혀 있을 때 비용은 0 이다.
+                InspectorComponentPickerUtil::collectChoices( manager, targetType, inoutListChoice );
+                ComponentHandle picked{};
+                bool            bPicked = false;
+                if ( ImGui::Selectable( "(none)", current.isValid() == false ) )
+                    bPicked = true;
+                EditorSelfTestMarks::note( "inspector.handle.none" ); // 시나리오가 누른다 — 콤보를 연 프레임에만 그려진다
+                if ( inoutListChoice.empty() )
+                    ImGui::TextDisabled( "No %s in this scene", targetType._name.c_str() );
+                for ( const InspectorComponentChoice& choice : inoutListChoice )
                 {
-                    // 열린 프레임에만 모은다. 닫혀 있을 때 비용은 0 이다.
-                    InspectorComponentPickerUtil::collectChoices( *pManager, *pTargetType, _listChoice );
-                    ComponentHandle picked{};
-                    bool            bPicked = false;
-                    if ( ImGui::Selectable( "(none)", pValue->isValid() == false ) )
+                    if ( ImGui::Selectable( choice._label.c_str(), choice._handle == current ) )
+                    {
+                        picked  = choice._handle;
                         bPicked = true;
-                    EditorSelfTestMarks::note( "inspector.handle.none" ); // 시나리오가 누른다 — 콤보를 연 프레임에만 그려진다
-                    if ( _listChoice.empty() )
-                        ImGui::TextDisabled( "No %s in this scene", pTargetType->_name.c_str() );
-                    for ( const InspectorComponentChoice& choice : _listChoice )
-                    {
-                        if ( ImGui::Selectable( choice._label.c_str(), choice._handle == *pValue ) )
-                        {
-                            picked  = choice._handle;
-                            bPicked = true;
-                        }
-                        if ( EditorSelfTestMarks::isEnabled() )
-                            EditorSelfTestMarks::note( ( "inspector.handle.choice." + choice._label ).c_str() );
                     }
-                    ImGui::EndCombo();
-
-                    // 쓰기는 그리드 한곳(통지 · 되돌리기)이 맡는다. Selectable 은 ImGui 편집 플래그를 세우지 않으므로 trackPod 도 부르지 않는다.
-                    if ( bPicked && picked != *pValue )
-                    {
-                        // `picked` 는 값 자체라 값 주소 쪽 변환(`formatValueText`)으로 쓴다. 객체 주소 쪽(`formatPropertyText`)은 오프셋을 한 번 더 더한다.
-                        const string undoLabel = InspectorPropertyLayout::makeUndoLabel( InspectorPropertyLayout::getPropertyLabel( prop ) );
-                        grid.applyPropertyTextAsEdit( instance, prop,
-                                                      SerializerUtil::formatValueText( ValueAddress{ &picked }, prop._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) ),
-                                                      undoLabel.c_str() );
-                    }
+                    if ( EditorSelfTestMarks::isEnabled() )
+                        EditorSelfTestMarks::note( ( "inspector.handle.choice." + choice._label ).c_str() );
                 }
-                showTooltipIfHovered( prop );
+                ImGui::EndCombo();
+                if ( bPicked == false || picked == current )
+                    return false;
+                outPicked = picked;
                 return true;
             }
 
@@ -911,13 +926,32 @@ namespace sw::editor
 #undef SW_REFLECT_BUILTIN_CONTAINER
     }
 
-    bool InspectorPropertyManager::drawMethodArg( const utf8* pLabel, InspectorMethodArgSlot& slot )
+    bool InspectorPropertyManager::drawMethodArg( const utf8* pLabel, InspectorMethodArgSlot& slot, const FunctionParameterInfo& parameter, const GameObjectManager* pManager )
     {
         if ( slot._value.hasValue() == false || slot._builtinIndex >= std::size( kArrDrawMethodArg ) )
         {
             ImGui::TextDisabled( "%s (unsupported in UI)", pLabel );
             return false;
         }
-        return kArrDrawMethodArg[slot._builtinIndex]( pLabel, slot._value );
+        if ( parameter._handleTargetTypeName.empty() )
+            return kArrDrawMethodArg[slot._builtinIndex]( pLabel, slot._value );
+
+        // 타입 핸들 인자 — 프로퍼티와 같은 선택기다. 칸의 값은 타입 없는 핸들이고(`_typeName` 이 `ComponentHandle`), 호출 썽크가 대상 타입을 다시 확인한다.
+        const TypeRegistry* pRegistry   = findSubsystem<TypeRegistry>();
+        const TypeInfo*     pTargetType = pRegistry != nullptr ? InspectorComponentPickerUtil::findTargetType( *pRegistry, parameter._handleTargetTypeName ) : nullptr;
+        const bool          bPickable   = pTargetType != nullptr && pManager != nullptr && slot._value.getPtr<ComponentHandle>() != nullptr;
+        if ( bPickable == false )
+        {
+            ImGui::TextDisabled( "%s", pLabel );
+            ImGui::SameLine();
+            EditorThemeUtil::textError( pTargetType == nullptr ? "(unknown component type)" : "(no scene: cannot pick a component)" );
+            return false;
+        }
+        static vector<InspectorComponentChoice> s_listChoice; // 콤보가 열린 프레임에만 채운다(UI 스레드 하나만 그린다)
+        ComponentHandle                         picked{};
+        if ( ComponentHandleProperty::drawPicker( pLabel, *pManager, *pTargetType, slot._value.getValue<ComponentHandle>(), s_listChoice, picked ) == false )
+            return false;
+        slot._value = TaskValue{ picked };
+        return true;
     }
 } // namespace sw::editor

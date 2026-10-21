@@ -142,6 +142,8 @@ namespace sw
         , _listSpawnedPart{}
         , _listSlotOverride{}
         , _taskUnit{}
+        , _previewSelection{}
+        , _pPreviewDatabase{ nullptr }
         , _assembleCount{ 0 }
         , _bodyPart{ -1 }
         , _bPartsVisible{ true }
@@ -182,6 +184,13 @@ namespace sw
         _seed     = static_cast<int32>( seed );
         if ( _bStarted == SW_TRUE )
             requestAssemble();
+    }
+
+    void CharacterAppearanceComponent::previewSelection( const AppearanceSelection& selection, const AppearanceDatabase& database )
+    {
+        _previewSelection = selection;
+        _pPreviewDatabase = &database;
+        requestAssemble(); // 미리보기 씬은 플레이를 돌리지 않는다 — 시작을 기다리지 않는다
     }
 
     void CharacterAppearanceComponent::setSlotItem( const hashed_string& slot, const hashed_string& itemID )
@@ -283,10 +292,11 @@ namespace sw
 
     void CharacterAppearanceComponent::assemble()
     {
-        GameObject*            pOwner    = getOwner();
-        GameObjectManager*     pManager  = findManager();
-        SkeletalMeshComponent* pBody     = pOwner != nullptr ? pOwner->getComponent<SkeletalMeshComponent>() : nullptr;
-        AppearanceDatabase*    pDatabase = game::findSubsystem<AppearanceDatabase>();
+        GameObject*            pOwner   = getOwner();
+        GameObjectManager*     pManager = findManager();
+        SkeletalMeshComponent* pBody    = pOwner != nullptr ? pOwner->getComponent<SkeletalMeshComponent>() : nullptr;
+        // 미리보기 입히기는 창이 준 데이터만, 아니면 게임 서비스만 본다(`previewSelection`) — 한쪽이 없다고 다른 쪽으로 물러서지 않는다.
+        const AppearanceDatabase* pDatabase = _pPreviewDatabase != nullptr ? _pPreviewDatabase : game::findSubsystem<AppearanceDatabase>();
         if ( pManager == nullptr || pBody == nullptr )
         {
             SW_LOG_WARNING( "'%#' has no skeletal mesh to wear appearance '%#'", pOwner != nullptr ? pOwner->getName().c_str() : "?", _presetID.c_str() );
@@ -299,12 +309,8 @@ namespace sw
         }
 
         CharacterAppearanceSpec spec;
-        if ( pDatabase->getPresets().expand( hashed_string( _presetID ), static_cast<uint32>( _seed ), pDatabase->getSlotTable(), pDatabase->getSets(),
-                                             pDatabase->getSchemas(), spec ) == false )
-        {
-            SW_LOG_ERROR( "Appearance preset '%#' could not be expanded", _presetID.c_str() );
+        if ( expandSpec( *pDatabase, spec ) == false )
             return;
-        }
         for ( const SlotOverride& slotOverride : _listSlotOverride )
         {
             AppearanceSlotRequest* pSlot = spec.findSlot( slotOverride._slot );
@@ -334,6 +340,30 @@ namespace sw
         applyVisibility( *pManager );
         registerSocketTask( *pBody );
         ++_assembleCount;
+    }
+
+    bool CharacterAppearanceComponent::expandSpec( const AppearanceDatabase& database, CharacterAppearanceSpec& outSpec ) const
+    {
+        const bool              bPreview = _pPreviewDatabase != nullptr;
+        const hashed_string     presetID = bPreview ? _previewSelection._basePresetID : hashed_string( _presetID );
+        const uint32            seed     = bPreview ? _previewSelection._seed : static_cast<uint32>( _seed );
+        CharacterAppearanceSpec base;
+        if ( database.getPresets().expand( presetID, seed, database.getSlotTable(), database.getSets(), database.getSchemas(), base ) == false )
+        {
+            SW_LOG_ERROR( "Appearance preset '%#' could not be expanded", presetID.c_str() );
+            return false;
+        }
+        if ( bPreview == false )
+        {
+            outSpec = std::move( base );
+            return true;
+        }
+        AppearanceSelectionReport report;
+        AppearanceSelectionUtil::applySelection( database, _previewSelection, base, nullptr, outSpec, report );
+        if ( report.isClean() == false )
+            SW_LOG_WARNING( "Previewed appearance on base '%#' dropped %# values and reset %# slots to their defaults", presetID.c_str(),
+                            static_cast<uint32>( report._listDroppedParameter.size() ), static_cast<uint32>( report._listSlotFallback.size() ) );
+        return true;
     }
 
     int32 CharacterAppearanceComponent::applyBodyPart( SkeletalMeshComponent& body )

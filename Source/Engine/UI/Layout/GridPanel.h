@@ -71,6 +71,13 @@ namespace sw
         void setCellSpacing( const float2& cellSpacing );
         /** @brief 마지막 measure 에서 트랙 밖이라 마지막 트랙으로 옮긴 자식 수입니다(테스트와 진단용). */
         uint32 getOutOfRangeCellCount() const { return _outOfRangeCellCount; }
+        /**
+         * @brief 마지막 arrange 의 열 너비 · 행 높이입니다(UI 단위, 트랙 순서). 에디터의 칸 손잡이가 놓은 점의 칸을 고릅니다.
+         * @details 자식 사각형으로 줄을 거꾸로 추정하면 걸친 칸(span)이 섞이고 자식 없는 줄을 고를 수 없어, 배치가 정한 값을 그대로 낸다.
+         *          줄 시작은 왼쪽 위에서 앞 줄들의 합 + 간격이다(RTL 거울은 열 순서만 뒤집는다 — `PanelWidget::arrangeChild`).
+         */
+        const vector<float32>& getArrangedColumnSizes() const { return _listArrangedColumnSize; }
+        const vector<float32>& getArrangedRowSizes() const { return _listArrangedRowSize; }
 
     protected:
         float2 computeDesiredSize( const UILayoutContext& context, const float2& availableSize ) const override;
@@ -83,6 +90,9 @@ namespace sw
         vector<UIGridTrack> _listRow;
         PROPERTY( DisplayName = "Cell Spacing", Meta = "Units=ui" )
         float2 _cellSpacing;
+
+        vector<float32> _listArrangedColumnSize; ///< 마지막 arrange 의 열 너비입니다.
+        vector<float32> _listArrangedRowSize;    ///< 마지막 arrange 의 행 높이입니다.
 
         mutable uint32 _outOfRangeCellCount; ///< 마지막 measure 에서 트랙 밖에 있던 자식 수입니다.
         mutable bool   _bWarnedOutOfRange;   ///< 트랙 밖 경고를 이미 남겼는지 나타냅니다(패널마다 한 번).

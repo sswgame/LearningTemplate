@@ -1069,6 +1069,11 @@ namespace sw
                     parameter._name         = getCursorSpelling( argCursor );
                     parameter._typeName     = session._typeNameMap.normalize( takeString( clang_getTypeSpelling( clang_getCursorType( argCursor ) ) ) );
                     parameter._defaultValue = readDefaultArgument( argCursor );
+                    // 타입 핸들 인자는 썽크가 지역 변수로 만들 정규 철자를 함께 적는다(`resolveComponentHandleParameters`). const · 참조는 뗀다.
+                    string canonical = takeString( clang_getTypeSpelling( clang_getCanonicalType( clang_getNonReferenceType( clang_getCursorType( argCursor ) ) ) ) );
+                    if ( StringUtil::startsWith( canonical, "const " ) )
+                        canonical.erase( 0, 6 );
+                    parameter._canonicalTypeName = std::move( canonical );
                     method._listParameter.push_back( std::move( parameter ) );
                 }
             }
@@ -1224,11 +1229,13 @@ namespace sw
                 const bool           bSingleValue  = prop._bIsContainer == SW_FALSE && tryReadTypedHandleTarget( prop._typeName, target );
                 const bool           bFlatSequence = prop._bIsContainer == SW_TRUE && prop._containerKind == ContainerKind::Sequence && prop._keyTypeName.empty() &&
                                            ( pTree == nullptr || pTree->_elementNested == nullptr || pTree->_elementNested->_bIsContainer == SW_FALSE );
-                const bool bSequenceOfHandles = bFlatSequence && tryReadTypedHandleTarget( prop._elementTypeName, target );
+                // 집합(`set` · `unordered_set`)은 원소의 순서 · 해시가 있어야 컴파일되는데 핸들에는 둘 다 없다 — 생성 단계에서 막아 C++ 오류 대신 이 오류가 뜨게 한다.
+                const bool bOrderedOrHashed   = prop._containerType == "Set" || prop._containerType == "UnorderedSet";
+                const bool bSequenceOfHandles = bFlatSequence && bOrderedOrHashed == false && tryReadTypedHandleTarget( prop._elementTypeName, target );
                 if ( bSingleValue == false && bSequenceOfHandles == false )
                 {
                     SW_LOG_ERROR( "ERROR: PROPERTY() '%#' holds a component handle (%#) in a shape that cannot be saved. Use one TComponentHandle<T>, or a vector of "
-                                  "TComponentHandle<T>. An untyped ComponentHandle, a map and nested containers have no place to check the target type "
+                                  "TComponentHandle<T>. An untyped ComponentHandle, a map, a set and nested containers have no place to check the target type "
                                   "(see docs/plans/TypedComponents.md 3.7).",
                                   owner, prop._typeName );
                     return false;
@@ -1248,6 +1255,40 @@ namespace sw
                         pTree->_elementTypeName = kCanonical;
                 }
                 prop._handleTargetTypeName = target;
+                return true;
+            }
+
+            /**
+             * @brief FUNCTION 인자에 타입 핸들(`TComponentHandle<T>`)이 있으면 내장 `ComponentHandle` 로 정규화하고 대상 `T` 를 싣습니다. 쓸 수 없는 모양이면 오류를 남기고 false 입니다.
+             * @details 호출 쪽(인스펙터의 선택기 · 콘솔)은 타입 없는 핸들을 넘기고, 생성한 호출 썽크가 `ComponentHandleArgument::cast` 로 대상 타입을 확인해 바꾼다.
+             *          확인에는 그 씬의 매니저가 들어서 **컴포넌트의 비정적 메서드**만 받는다(생성자 · 정적 함수 · 컴포넌트가 아닌 타입은 생성 오류다).
+             *          컨테이너에 든 타입 핸들은 대상 타입을 확인할 자리가 없어 오류다. 타입 없는 `ComponentHandle` 은 예전처럼 그대로 둔다.
+             */
+            static bool resolveComponentHandleParameters( ParsedFunctionInfo& method, bool bComponentOwner, const string& owner )
+            {
+                for ( ParsedParameterInfo& parameter : method._listParameter )
+                {
+                    if ( parameter._typeName.find( "TComponentHandle" ) == string::npos )
+                        continue;
+                    string     target;
+                    const bool bTyped = tryReadTypedHandleTarget( parameter._typeName, target );
+                    if ( bTyped == false )
+                    {
+                        SW_LOG_ERROR( "ERROR: FUNCTION '%#' argument '%#' holds component handles in a container (%#). Pass one TComponentHandle<T> per argument.", owner,
+                                      parameter._name, parameter._typeName );
+                        return false;
+                    }
+                    const bool bMemberOfComponent = bComponentOwner && method._bStatic == SW_FALSE && method._bConstructor == SW_FALSE;
+                    if ( bMemberOfComponent == false )
+                    {
+                        SW_LOG_ERROR( "ERROR: FUNCTION '%#' argument '%#' is a TComponentHandle<%#>. Typed handle arguments are checked against the scene of the "
+                                      "called component, so only non-static member functions of a Component may take them.",
+                                      owner, parameter._name, target );
+                        return false;
+                    }
+                    parameter._handleTargetTypeName = target;
+                    parameter._typeName             = "ComponentHandle";
+                }
                 return true;
             }
 
@@ -1597,6 +1638,11 @@ namespace sw
                     collector._bHasError = SW_TRUE;
                     return;
                 }
+                if ( resolveComponentHandleParameters( method, false, owner ) == false ) // 생성자는 매니저가 없다 — 타입 핸들 인자는 오류다
+                {
+                    collector._bHasError = SW_TRUE;
+                    return;
+                }
                 collector._pType->_listMethod.push_back( std::move( method ) );
             }
 
@@ -1648,6 +1694,12 @@ namespace sw
 
                 const string owner = makeMemberOwnerName( collector._pType->_fullyQualifiedName, method._name );
                 if ( bHasAttr && applyAnnotation( functionSpelling, method, session, owner ) == false )
+                {
+                    collector._bHasError = SW_TRUE;
+                    return;
+                }
+                const bool bComponentOwner = isDerivedFromComponent( clang_getCursorSemanticParent( cursor ), session._config );
+                if ( resolveComponentHandleParameters( method, bComponentOwner, owner ) == false )
                 {
                     collector._bHasError = SW_TRUE;
                     return;

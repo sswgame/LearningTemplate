@@ -18,11 +18,15 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceResolver.h"
+#include "GameFramework/Base/Gameplay/Appearance/AppearanceSelection.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceSocketRig.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
+    struct CharacterAppearanceSpec;
+
+    class AppearanceDatabase;
     class CharacterAppearanceComponent;
     class GameObjectManager;
     class SkeletalMeshComponent;
@@ -81,6 +85,13 @@ namespace sw
         void setPreset( const hashed_string& presetID, uint32 seed );
         /** @brief 슬롯의 아이템을 덮어쓰고 다시 조립합니다. 빈 아이템이면 슬롯을 비웁니다. 같은 값이면 아무것도 하지 않습니다. */
         void setSlotItem( const hashed_string& slot, const hashed_string& itemID );
+        /**
+         * @brief 미리보기 입히기 — 프리셋 id 대신 외형 선택 @p selection 을 데이터 @p database 로 조립합니다. 게임 서비스가 없는 씬(에디터 미리보기 창)이 씁니다.
+         * @details 시작(`onBeginPlay`)을 기다리지 않고 조립을 예약한다 — 미리보기 씬은 플레이를 돌리지 않는다. 한 번 부르면 이 컴포넌트는 프리셋 id 와
+         *          게임 서비스 `AppearanceDatabase` 를 보지 않고 이 선택 · 데이터로만 조립한다(두 길이 섞이지 않는다). @p database 는 빌린 것이라 컴포넌트보다 오래 살아야 한다.
+         *          선택을 펼치며 버리거나 되돌린 것(`AppearanceSelectionReport`)은 경고로 남긴다.
+         */
+        void previewSelection( const AppearanceSelection& selection, const AppearanceDatabase& database );
         /** @brief 몸과 부품을 보이거나 숨깁니다. 1인칭에서 몸을 숨길 때 씁니다. */
         void setPartsVisible( bool bVisible );
         bool isPartsVisible() const { return _bPartsVisible; }
@@ -146,6 +157,8 @@ namespace sw
         /** @brief 유닛 번호에 해당하는 오브젝트입니다. 몸이면 이 오브젝트입니다. */
         GameObject*        findUnitObject( GameObjectManager& manager, uint32 unitIndex ) const;
         GameObjectManager* findManager() const;
+        /** @brief 이번 조립의 외형 전개입니다. 미리보기 입히기면 선택을, 아니면 프리셋 id 를 펼칩니다. 펼치지 못하면 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool expandSpec( const AppearanceDatabase& database, CharacterAppearanceSpec& outSpec ) const;
 
     private:
         PROPERTY( Category = "Appearance", DisplayName = "Preset", Tooltip = "CharacterAppearance preset id (data/appearance/presets.xml)" )
@@ -161,7 +174,9 @@ namespace sw
         CharacterBoneArray                      _bodyBones; ///< 지난 포즈(모델 공간). 소켓 질의가 읽는다
         vector<SpawnedPart>                     _listSpawnedPart;
         vector<SlotOverride>                    _listSlotOverride;
-        TComponentHandle<SkeletalMeshComponent> _taskUnit; ///< 단계 작업을 등록한 몸 유닛
+        TComponentHandle<SkeletalMeshComponent> _taskUnit;         ///< 단계 작업을 등록한 몸 유닛
+        AppearanceSelection                     _previewSelection; ///< 미리보기 입히기의 선택(`previewSelection`)
+        const AppearanceDatabase*               _pPreviewDatabase; ///< 미리보기 입히기의 데이터(빌린 것). 있으면 프리셋 id · 게임 서비스를 보지 않는다
         uint32                                  _assembleCount;
         int32                                   _bodyPart;
         bool                                    _bPartsVisible;

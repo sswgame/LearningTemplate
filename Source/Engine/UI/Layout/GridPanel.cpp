@@ -180,6 +180,8 @@ namespace sw
         , _listColumn{}
         , _listRow{}
         , _cellSpacing{}
+        , _listArrangedColumnSize{}
+        , _listArrangedRowSize{}
         , _outOfRangeCellCount{ 0 }
         , _bWarnedOutOfRange{ false }
     {
@@ -320,5 +322,7 @@ namespace sw
             const float32 height = GridPanelInternal::sumSpan( listRowSize, placement._row, placement._rowSpan, _cellSpacing._y );
             arrangeChild( context, *placement._pChild, float2{ x, y }, float2{ width, height } );
         }
+        _listArrangedColumnSize = std::move( listColumnSize );
+        _listArrangedRowSize    = std::move( listRowSize );
     }
 } // namespace sw

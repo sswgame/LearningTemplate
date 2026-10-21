@@ -45,8 +45,15 @@ namespace sw::editor
         bool        isToolPanel() const override { return true; }
         void        drawContent() override;
         float2      getInitialPanelSize() const override { return float2{ 820.0f, 520.0f }; }
+        /** @brief 고치는 라이브러리 사본을 파일에 씁니다(닫기 · 종료 확인의 Save). 검사를 통과하지 못하면 쓰지 않고 false 입니다. */
+        [[nodiscard]] bool saveDocument() override;
+        bool               canSaveDocument() const override { return _bEditDirty; }
 
     private:
+        /** @brief 사본의 미저장(`_bEditDirty`)을 패널 dirty 로 옮깁니다(닫기 · 종료 확인 · 제목 표시가 이 값을 본다). */
+        void syncDocumentDirty() override;
+        /** @brief "Don't Save" — 고치기를 끝내고 사본을 버립니다(파일과 엔진 사본은 그대로다). */
+        void revertDocument() override { endEditing(); }
         void drawEventList();
         void drawEventDetail( IAudioService& audio );
         /** @brief 고른 이벤트의 라이브러리 파일을 사본으로 읽어 고치기를 시작합니다. 읽지 못하면 시작하지 않습니다(읽기가 오류를 남긴다). */

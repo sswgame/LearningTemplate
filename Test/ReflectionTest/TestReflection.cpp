@@ -822,3 +822,37 @@ SW_TEST_CASE( ReflectionTest, AliasedContainerPropertyIsAContainer )
     SW_ASSERT_TRUE( sw::BinarySerializer::deserialize( &fromBinary, *pType, bytes.data(), bytes.size() ) );
     SW_EXPECT_TRUE( fromBinary._listAliasID.size() == 2 && fromBinary._listAliasID[1] == 22 );
 }
+
+/**
+ * @brief [TypedComponentHandleTest] FUNCTION 의 타입 핸들 인자는 타입 없는 핸들로 받고, 생성한 썽크가 그 컴포넌트의 씬에서 대상 타입을 확인한 뒤에만 부른다
+ * @details 변이: 썽크가 확인 없이 바이트를 옮기면 다른 타입(`TestOtherComponent`)을 가리킨 호출도 `_linkCount` 를 올려 두 번째 비교가 진다.
+ *          인자 정보는 `ComponentHandle` 과 대상 타입 이름(프로퍼티와 같은 표기)을 실어 인스펙터가 선택기를 그린다.
+ */
+SW_TEST_CASE( TypedComponentHandleTest, FunctionArgumentIsCheckedByThunk )
+{
+    sw::GameObjectManager manager;
+    const ProbeObject     source = makeProbeObject( manager, "ProbeCall" );
+    SW_ASSERT_TRUE( source._pObject != nullptr && source._pLink != nullptr && source._pFirstProbe != nullptr );
+    const sw::TypeInfo* pType = sw::TestProbeLinkComponent::StaticType();
+    SW_ASSERT_NOT_NULL( pType );
+    const sw::FunctionInfo* pLink      = pType->findMethod( sw::hashed_string( "linkProbe" ) );
+    const sw::PropertyInfo* pProbeProp = pType->findProperty( sw::hashed_string( "_probe" ) );
+    SW_ASSERT_TRUE( pLink != nullptr && pProbeProp != nullptr );
+    SW_ASSERT_EQUAL( 2u, pLink->getParameterCount() );
+    SW_EXPECT_EQUAL( sw::string( "ComponentHandle" ), pLink->_listParameter[0]._typeName );
+    SW_EXPECT_TRUE( pLink->_listParameter[0]._handleTargetTypeName == pProbeProp->_handleTargetTypeName );
+    SW_EXPECT_TRUE( pLink->_listParameter[1]._handleTargetTypeName.empty() );
+
+    source._pLink->_probe = {};
+    SW_EXPECT_TRUE( sw::ReflectionInvoke::call( *pLink, source._pLink, { sw::ReflectValue::make( source._pFirstProbe->getHandle() ), sw::ReflectValue::make( int32{ 3 } ) } ) ==
+                    sw::ReflectCallResult::Ok );
+    SW_EXPECT_EQUAL( 3, source._pLink->_linkCount );
+    SW_EXPECT_TRUE( manager.resolveComponent( source._pLink->_probe ) == source._pFirstProbe );
+
+    SW_TEST_DEFENSIVE_SCOPE( "a handle to a component of another type is refused before the method runs" );
+    const sw::TestOtherComponent* pOther = source._pObject->getComponent<sw::TestOtherComponent>();
+    SW_ASSERT_NOT_NULL( pOther );
+    (void)sw::ReflectionInvoke::call( *pLink, source._pLink, { sw::ReflectValue::make( pOther->getHandle() ), sw::ReflectValue::make( int32{ 5 } ) } );
+    SW_EXPECT_EQUAL( 3, source._pLink->_linkCount );
+    SW_EXPECT_TRUE( manager.resolveComponent( source._pLink->_probe ) == source._pFirstProbe );
+}

@@ -100,9 +100,9 @@ namespace sw::editor
         static string makeUndoLabel( const utf8* pPropertyLabel );
 
         /**
-         * @brief 시퀀스 프로퍼티 @p containerProp 의 원소 하나를 값 위치(오프셋 0)에 둔 프로퍼티입니다. 원소 타입, 이름, 메타, 타입 핸들의 대상 타입을 싣습니다.
+         * @brief 시퀀스 프로퍼티 @p containerProp 의 원소 하나(맵이면 값 하나)를 값 위치(오프셋 0)에 둔 프로퍼티입니다. 원소 타입, 이름, 메타, 타입 핸들의 대상 타입을 싣습니다.
          * @details 원소 프로퍼티를 손으로 필드 몇 개만 복사해 만들면 `_handleTargetTypeName` 이 빠져 `vector<TComponentHandle<T>>` 의 원소가 선택기 대신
-         *          정수 입력으로 떨어진다. 시퀀스 원소의 프로퍼티는 이 함수 하나로 만든다.
+         *          정수 입력으로 떨어진다. 시퀀스 원소와 맵 값의 프로퍼티는 이 함수 하나로 만든다.
          */
         static PropertyInfo makeElementProperty( const PropertyInfo& containerProp );
 

@@ -42,6 +42,8 @@ namespace sw
         // ------------------------------------------------------------------------------
         /** @brief 파일 상단 배너·include 를 출력합니다. */
         void emitFileHeader( CodeEmitBuffer& outBuffer ) const;
+        /** @brief 이 헤더의 FUNCTION 가운데 타입 핸들 인자(`ParsedParameterInfo::_handleTargetTypeName`)가 있으면 true 입니다. */
+        bool hasHandleArgument() const;
         /** @brief TypeRegistrar 본문을 출력합니다. */
         void emitTypeRegistrar( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo, size_t typeIndex ) const;
         /** @brief PropertyInfo 한 항목을 출력합니다. */

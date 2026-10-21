@@ -88,12 +88,15 @@ namespace sw::editor
          * @param bOrbitBlocked 기즈모가 마우스를 가졌으면 true 입니다(`EditorPreviewGizmo::hasMouse`). 기즈모를 쓰지 않는 창은 false 입니다.
          */
         void drawPreviewViewport( const float2& size, bool bOrbitBlocked );
+        /**
+         * @brief 창 Undo 스택이 늘었거나 줄었으면 문서를 dirty 로 표시합니다. 미리보기 씬의 편집은 모두 이 스택을 거치므로 파생 창이 따로 알릴 필요가 없습니다.
+         * @details 편집 기록을 스택 밖(편집 모델)에도 두는 파생 창은 재정의해 그 상태를 더하고, 이 함수를 꼭 부른다(스택의 편집을 놓치지 않는다).
+         */
+        void syncDocumentDirty() override;
 
     private:
         /** @brief @p bFocused 면 초점 씬과 창 스택을 이 창의 것으로 등록하고, 아니면 이 창이 등록해 둔 것을 해제합니다. */
         void applyWindowFocus( bool bFocused );
-        /** @brief 창 Undo 스택이 늘었거나 줄었으면 문서를 dirty 로 표시합니다. 미리보기 씬의 편집은 모두 이 스택을 거치므로 파생 창이 따로 알릴 필요가 없습니다. */
-        void syncDocumentDirty() override;
         /** @brief 포커스를 가진 채 닫혀도 초점 씬과 창 스택을 해제합니다. 닫힌 창은 그려지지 않아 `beginPreviewFrame` 의 `applyWindowFocus( false )` 가 다시 돌지 않습니다. */
         void onPanelClosed() override { applyWindowFocus( false ); }
 

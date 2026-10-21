@@ -38,7 +38,7 @@ namespace sw
      * @details 셀 하나는 대각선 (x, z)-(x+1, z+1) 로 나눈 삼각형 둘이고, 높이 질의는 **렌더 메시(LOD 0)와 같은 삼각형**으로 보간한다.
      *          그래서 물리와 배치가 보는 땅과 그려진 땅이 같다. 노멀은 샘플마다 중앙 차분이고 질의는 그것을 쌍선형으로 섞는다(메시 정점 노멀과 같은 값이다).
      *          레이어 가중치는 스플랫 맵(RGBA8)을 쌍선형으로 읽어 합이 1 이 되게 나눈다. 셰이더(`terrain.hlsl`)와 같은 규칙이다.
-     *          스레드: 질의는 읽기만 한다(병렬 틱과 배치 계산이 동시에 읽는다). 쓰기(`write*`, `setSplat`, `initialize`)는 읽는 쪽이 없는 때(틱 밖)에만 부른다 — 락이 없다.
+     *          스레드: 질의는 읽기만 한다(병렬 틱과 배치 계산이 동시에 읽는다). 쓰기(`write*`, `replaceSamples`, `setSplat`, `initialize`)는 읽는 쪽이 없는 때(틱 밖)에만 부른다 — 락이 없다.
      */
     class SW_API TerrainHeightfield
     {
@@ -70,6 +70,30 @@ namespace sw
         [[nodiscard]] bool writeSplatWeights( const vector<float4>& listWeight, const TerrainSampleRect& rect );
         /** @brief 스플랫 텍셀 전부를 가중치(합 1)로 풉니다. 스플랫이 없으면 false 입니다. */
         [[nodiscard]] bool readSplatWeights( vector<float4>& outListWeight ) const;
+        /** @brief 셀 구멍 마스크 전부((N-1)², 행 우선, 0 이 아니면 구멍)를 채웁니다. 마스크가 비었으면 모두 0 입니다. 높이장이 없으면 false 입니다. */
+        [[nodiscard]] bool readHoleCells( vector<uint8>& outListHole ) const;
+        /**
+         * @brief 구멍 마스크 전부(`readHoleCells` 와 같은 배치)에서 @p cellRect(셀 좌표)의 셀만 씁니다. 마스크가 비었으면 모두 0 으로 만든 뒤 씁니다.
+         * @return 크기가 (N-1)² 가 아니거나 @p cellRect 가 비었거나 벗어나면 false 이고 아무것도 바꾸지 않습니다.
+         */
+        [[nodiscard]] bool writeHoleCells( const vector<uint8>& listHole, const TerrainSampleRect& cellRect );
+        /**
+         * @brief 해상도를 바꿉니다. 원점 · 넓이 · 스플랫은 그대로이고 셀 크기만 다시 구합니다(크기 바꾸기 · 그 되돌리기 · 상태 되살리기의 길).
+         * @param listHeight 월드 높이 @p resolution² 개(행 우선)
+         * @param listHole 구멍 마스크 (@p resolution − 1)² 개, 비면 구멍 없음
+         * @return 해상도가 2 보다 작거나 크기가 맞지 않으면 false 이고 아무것도 바꾸지 않습니다.
+         */
+        [[nodiscard]] bool replaceSamples( uint32 resolution, const vector<float32>& listHeight, const vector<uint8>& listHole );
+        /**
+         * @brief 높이 @p listSource(@p sourceResolution²)를 @p targetResolution² 로 다시 표본화합니다. 같은 정규 좌표 (u, v) 를 렌더 메시와 같은 셀 삼각형으로 보간한다.
+         * @return 해상도가 2 보다 작거나 원본 크기가 맞지 않으면 false 입니다.
+         */
+        [[nodiscard]] static bool resampleHeights( const vector<float32>& listSource, uint32 sourceResolution, uint32 targetResolution, vector<float32>& outListHeight );
+        /**
+         * @brief 구멍 마스크를 새 해상도로 옮깁니다. 새 셀 중심이 든 원본 셀의 값을 씁니다(가장 가까운 셀). 원본이 비었으면 결과도 비었습니다.
+         * @return 해상도가 2 보다 작거나 원본 크기가 맞지 않으면 false 입니다.
+         */
+        [[nodiscard]] static bool resampleHoles( const vector<uint8>& listSource, uint32 sourceResolution, uint32 targetResolution, vector<uint8>& outListHole );
         /** @brief 지금 높이를 원시 높이장으로 되돌립니다(높이 = `heightMin` + 원시 / 65535 × 범위의 역변환). 구멍 마스크는 그대로 담습니다. */
         void makeHeightfieldData( float32 heightMin, float32 heightMax, HeightfieldData& outData ) const;
 

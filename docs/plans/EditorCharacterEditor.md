@@ -1,15 +1,16 @@
 # 캐릭터 편집 창 구현 계획 (D4-8 ⑥)
 
-> 상태: 구현대기 · 선행: EditorMultiWorld · 영역: gameplay · 옛번호: D4-8 · 진행: 0/6
+> 상태: 구현중 · 선행: 없음 · 영역: gameplay · 옛번호: D4-8 · 진행: 3/6
 
-캐릭터 외형 편집 창의 설계 근거입니다(외형 통합 쪽은 [게임플레이 후보](Candidates-gameplay.md) 의 `CharacterAppearanceIntegration`). 다른 PC 에서 병합할 때 판단 기준으로 씁니다. 코드는 아직 바꾸지 않았습니다.
+캐릭터 외형 편집 창의 설계 근거입니다(외형 통합 쪽은 [게임플레이 후보](Candidates-gameplay.md) 의 `CharacterAppearanceIntegration`). 다른 PC 에서 병합할 때 판단 기준으로 씁니다. 진행은 끝의 "남은 것" 절입니다.
 파일 · 함수 이름은 2026-10-14 `wt/editor` 기준으로 읽은 것입니다.
 
 ## 1. 선행 조건
 
 - [EditorMultiWorld.md](EditorMultiWorld.md) 의 단계 1~4(미리보기 씬 · 씬별 GPUScene · 호스트 뷰 목록 · `EditorPreviewPanel` 틀과 창별 선택 · Undo)가 끝나야 합니다.
   캐릭터 창은 그 틀 위의 창 하나입니다. 메인 씬을 빌리는 임시 구현은 하지 않습니다(프리팹 격리가 겪은 "씬이 더러우면 막는다" 문제를 되풀이하게 됩니다).
-- `D4-8` ①~⑤ 의 **통합** 항목 중 "체형 모프 · 피팅 델타를 GPU 모프 풀에 싣기" 와 "`Mesh` · 포즈 ↔ `AppearanceGeometry` · `CharacterBoneArray` 변환" 이 있어야 체형 슬라이더와 피팅 결과가 화면에 보입니다. 없으면 단계 3 이후를 미룹니다.
+  단계 1~4 는 main 에 들어왔다(같은 플러그인의 `PairedAnimationPanel` 이 이미 `EditorPreviewPanel` 을 잇는다). `EditorMultiWorld` 에 남은 것(스카이 패스 · 풀 공유 측정 · 렌더러 내리기와 백엔드 교체 시나리오 실행)은 이 창을 막지 않는다.
+- `D4-8` ①~⑤ 의 **통합** 항목 중(단계 3 · 5 만 막는다) "체형 모프 · 피팅 델타를 GPU 모프 풀에 싣기" 와 "`Mesh` · 포즈 ↔ `AppearanceGeometry` · `CharacterBoneArray` 변환" 이 있어야 체형 슬라이더와 피팅 결과가 화면에 보입니다. 없으면 단계 3 이후를 미룹니다.
 
 ## 2. 현재 있는 것
 
@@ -94,6 +95,14 @@ Engine 은 GameFramework 를 모르므로, 창은 **에디터 쪽에서 GameFram
 
 첫 단계(소켓 파일 · 외형 선택 편집 모델과 패널, 스켈레톤 본 트리 · 레퍼런스 포즈 숫자 편집 `BonePoseEditModel`, 좌우 이름 표, 장비 칸 콤보 · 세트 입히기 · 규칙 설명, 프리셋 파일 저장, 피팅 요약 `FitCheckSummary`, 자기 저장 뒤 핫 리로드 무시 `SaveReloadGuard`)는 `GameFramework/PlugIn/Editor/CharacterEditor` 에 들어갔다. 기본 경로는 shooter3d 데이터다(경로 칸에서 바꾼다).
 
-- 미리보기 씬 위로 옮기기: `EditorMultiWorld` 단계 1~4 의 `EditorPreviewPanel` 이 main 에 들어온 뒤에 `EditorPreviewPanel` 상속 · 캐릭터 스폰 · `EditorAssetType` 에 소켓 종류를 더해 `EditorDocumentPanel` 계약으로 더티 · 저장 · 되돌리기 이관.
-- 그때 같이 할 것: 뷰포트 기즈모 포즈 편집 · 뷰포트 소켓 축 표시 · 제약 리그 미리보기 · 애니메이션 재생 · 썸네일 렌더(`UserAppearancePresetStore::setThumbnailPath` 에 경로만 넣으면 된다) · 피팅 계산 연결(`CharacterEditorPanel::setFitResult` 로 푼 결과를 넘긴다 — 슬라이더를 놓을 때 한 번 풀고, 몸 메시 → `AppearanceGeometry` 변환은 외형 통합 항목) · 핫 리로드 결과를 모델에 다시 반영(지금은 외부 변경 알림만).
-- 체형 · 얼굴 슬라이더 UI(`CustomizationSchema` 로 슬라이더를 만든다)는 GPU 모프 풀 통합 뒤 — 꾸미기 값 모델 · 직렬화는 있다.
+- **단계 1 은 들어갔다(2026-10-22, 빌드 미확인)**: `CharacterEditorPanel` 이 `EditorPreviewPanel` 을 상속한다.
+  - 문서는 소켓 파일이다(`EditorAssetType::Data` 가운데 `SocketSet::kExtension` 만 받는다). 열면 팩 데이터의 소켓 파일을 읽고, 콘텐츠 브라우저에서 소켓 파일을 고르면 그 파일로 바뀐다(미저장 확인 포함). 저장 · 닫기 확인은 `EditorDocumentPanel` 계약이고 창의 Save 단추도 `saveDocumentAndClearDirty` 한 길이다.
+  - 미리보기 몸: 팩 데이터에 필수 칸 `previewPreset`(몸 프리셋 id, Shooter3D · Empty 는 `Adventurer` = 기사 몸)을 더했다. 몸은 프리팹이 아니라 외형 조립이다 — 미리보기 씬에 `SkeletalMeshComponent` + `CharacterAppearanceComponent` 오브젝트 하나를 세우고 `CharacterAppearanceComponent::previewSelection( 선택, 창의 AppearanceDatabase )` 로 입힌다.
+    그 길을 고르면 컴포넌트는 게임 서비스와 프리셋 id 를 보지 않는다(두 길이 섞이지 않는다). 선택에 기준 프리셋이 없으면 `previewPreset` 위에 입히고, 선택 · 외형 데이터의 세대가 바뀔 때만 다시 입힌다. 미리보기 씬은 플레이를 돌리지 않아 시작을 기다리지 않고 조립한다.
+  - 미리보기 탭(다른 탭의 줄을 밀지 않는다)과 소켓 축 표시(몸이 조립한 소켓 = 저장된 파일, 고른 소켓은 길고 밝게). 탐침 `Editor.CharacterEditorPreviewAssembleCount`, 시나리오 `engine/automation/editor/charactereditor` 에 미리보기 탭 · 스크린샷을 더했다.
+- dirty 는 들어갔다(2026-10-21): 모델의 미저장 상태를 패널 dirty 로 옮기고(`syncDocumentDirty`, 이제 미리보기 창 스택의 편집도 더한다) "Don't Save" 는 두 모델을 저장된 상태로 돌린다(`revertDocument` → `revertToSaved`).
+- 남은 것(선행이 다른 계획에 있다):
+  - 단계 3 체형 · 얼굴 슬라이더 — `CharacterAppearanceIntegration` 의 GPU 모프 풀 연결이 먼저다(꾸미기 값 모델 · 직렬화는 있다).
+  - 단계 5 피팅 확인 — 몸 메시 → `AppearanceGeometry` 변환(외형 통합 항목)이 먼저다. 그 뒤 슬라이더를 놓을 때 한 번 풀어 `CharacterEditorPanel::setFitResult` 로 넘긴다(표시는 있다).
+  - 단계 6 의 나머지 — 애니메이션 재생(미리보기 몸에 애니메이터 · 클립 폴더), 썸네일 렌더(미리보기 렌더 타깃을 읽어 `UserAppearancePresetStore::setThumbnailPath`). 좌우 대칭 · 프리셋 저장은 있다.
+  - 뷰포트 기즈모 포즈 편집 · 제약 리그 미리보기 · 편집 중(저장 전) 소켓을 미리보기에 바로 보이기(지금은 조립한 소켓 파일의 자리) · 핫 리로드 결과를 모델에 다시 반영(지금은 외부 변경 알림만).

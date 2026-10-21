@@ -27,6 +27,53 @@ namespace sw::editor
         }
     } // namespace
 
+    TerrainBrushTarget TerrainBrush::getTarget( TerrainBrushMode mode )
+    {
+        switch ( mode )
+        {
+            case TerrainBrushMode::PaintLayer:
+                return TerrainBrushTarget::LayerWeight;
+            case TerrainBrushMode::CutHole:
+            case TerrainBrushMode::FillHole:
+                return TerrainBrushTarget::Hole;
+            case TerrainBrushMode::Raise:
+            case TerrainBrushMode::Lower:
+            case TerrainBrushMode::Flatten:
+            case TerrainBrushMode::Smooth:
+            case TerrainBrushMode::Count:
+                break;
+        }
+        return TerrainBrushTarget::Height;
+    }
+
+    TerrainBrushGrid TerrainBrush::makeHoleGrid( const TerrainBrushGrid& sampleGrid )
+    {
+        TerrainBrushGrid cellGrid{};
+        cellGrid._origin     = float2{ sampleGrid._origin._x + sampleGrid._cellSize._x * 0.5f, sampleGrid._origin._y + sampleGrid._cellSize._y * 0.5f };
+        cellGrid._cellSize   = sampleGrid._cellSize;
+        cellGrid._resolution = sampleGrid._resolution >= 2 ? sampleGrid._resolution - 1 : 0u;
+        return cellGrid;
+    }
+
+    bool TerrainBrush::applyHole( vector<uint8>& inoutListHole, uint32 cellResolution, const vector<TerrainBrushSample>& listSample, const TerrainBrushSettings& settings )
+    {
+        const bool bHoleMode = getTarget( settings._mode ) == TerrainBrushTarget::Hole && settings._mode != TerrainBrushMode::Count;
+        if ( bHoleMode == false || inoutListHole.size() != static_cast<size_t>( cellResolution ) * cellResolution )
+            return false;
+        const uint8 value    = settings._mode == TerrainBrushMode::CutHole ? 1u : 0u;
+        bool        bChanged = false;
+        for ( const TerrainBrushSample& sample : listSample )
+        {
+            const bool bSkipped = sample._sampleX >= cellResolution || sample._sampleZ >= cellResolution || sample._weight < 0.5f;
+            if ( bSkipped )
+                continue;
+            uint8& cell = inoutListHole[static_cast<size_t>( sample._sampleZ ) * cellResolution + sample._sampleX];
+            bChanged    = bChanged || cell != value;
+            cell        = value;
+        }
+        return bChanged;
+    }
+
     float32 TerrainBrush::computeFalloffWeight( float32 distance, const TerrainBrushSettings& settings )
     {
         if ( settings._radius <= 0.0f || distance >= settings._radius )
@@ -66,11 +113,38 @@ namespace sw::editor
     bool TerrainBrush::applyHeight( vector<float32>& inOutListHeight, uint32 resolution, const vector<TerrainBrushSample>& listSample,
                                     const TerrainBrushSettings& settings, float32 flattenHeight, float32 deltaTime )
     {
-        if ( settings._mode == TerrainBrushMode::PaintLayer || inOutListHeight.size() != static_cast<size_t>( resolution ) * resolution )
+        const bool bNotHeightMode = getTarget( settings._mode ) != TerrainBrushTarget::Height || settings._mode == TerrainBrushMode::Count;
+        if ( bNotHeightMode || inOutListHeight.size() != static_cast<size_t>( resolution ) * resolution )
             return false;
-        bool bChanged = false;
-        for ( const TerrainBrushSample& sample : listSample )
+        // 스무드의 목표(이웃 평균)는 쓰기 전에 모두 구한다. 다른 모드는 비워 둔다.
+        vector<float32> listSmoothTarget;
+        if ( settings._mode == TerrainBrushMode::Smooth )
         {
+            listSmoothTarget.reserve( listSample.size() );
+            for ( const TerrainBrushSample& sample : listSample )
+            {
+                float32 sum{ 0.0f };
+                uint32  count{ 0 };
+                for ( int32 dz = -1; dz <= 1; ++dz )
+                {
+                    for ( int32 dx = -1; dx <= 1; ++dx )
+                    {
+                        const int64 x        = static_cast<int64>( sample._sampleX ) + dx;
+                        const int64 z        = static_cast<int64>( sample._sampleZ ) + dz;
+                        const bool  bOutside = x < 0 || z < 0 || x >= resolution || z >= resolution;
+                        if ( bOutside )
+                            continue;
+                        sum += inOutListHeight[static_cast<size_t>( z ) * resolution + static_cast<size_t>( x )];
+                        ++count;
+                    }
+                }
+                listSmoothTarget.push_back( sum / static_cast<float32>( MathUtil::max( count, 1u ) ) ); // 격자 밖 샘플은 고르지 않으므로 자신은 늘 센다
+            }
+        }
+        bool bChanged = false;
+        for ( size_t sampleIndex = 0; sampleIndex < listSample.size(); ++sampleIndex )
+        {
+            const TerrainBrushSample& sample = listSample[sampleIndex];
             if ( sample._sampleX >= resolution || sample._sampleZ >= resolution )
                 continue;
             float32&      height = inOutListHeight[static_cast<size_t>( sample._sampleZ ) * resolution + sample._sampleX];
@@ -93,7 +167,15 @@ namespace sw::editor
                     height += ( flattenHeight - height ) * MathUtil::saturate( amount );
                     break;
                 }
+                case TerrainBrushMode::Smooth:
+                {
+                    height += ( listSmoothTarget[sampleIndex] - height ) * MathUtil::saturate( amount );
+                    break;
+                }
                 case TerrainBrushMode::PaintLayer:
+                case TerrainBrushMode::CutHole:
+                case TerrainBrushMode::FillHole:
+                case TerrainBrushMode::Count:
                 {
                     break;
                 }

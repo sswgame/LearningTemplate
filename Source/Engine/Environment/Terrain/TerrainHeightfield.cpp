@@ -106,6 +106,110 @@ namespace sw
         return true;
     }
 
+    bool TerrainHeightfield::readHoleCells( vector<uint8>& outListHole ) const
+    {
+        outListHole.clear();
+        if ( isValid() == false )
+            return false;
+        const size_t cellCount = static_cast<size_t>( _resolution - 1 ) * ( _resolution - 1 );
+        if ( _listHoleCell.empty() )
+            outListHole.assign( cellCount, 0u );
+        else
+            outListHole = _listHoleCell;
+        return true;
+    }
+
+    bool TerrainHeightfield::writeHoleCells( const vector<uint8>& listHole, const TerrainSampleRect& cellRect )
+    {
+        const uint32 cells        = isValid() ? _resolution - 1 : 0u;
+        const bool   bSizeMatches = cells > 0 && listHole.size() == static_cast<size_t>( cells ) * cells;
+        const bool   bRectInside  = cellRect.isEmpty() == false && cellRect._maxX < cells && cellRect._maxZ < cells;
+        if ( bSizeMatches == false || bRectInside == false )
+            return false;
+        if ( _listHoleCell.empty() )
+            _listHoleCell.assign( listHole.size(), 0u );
+        for ( uint32 cellZ = cellRect._minZ; cellZ <= cellRect._maxZ; ++cellZ )
+        {
+            const size_t rowStart = static_cast<size_t>( cellZ ) * cells;
+            for ( uint32 cellX = cellRect._minX; cellX <= cellRect._maxX; ++cellX )
+            {
+                _listHoleCell[rowStart + cellX] = listHole[rowStart + cellX] != 0 ? 1u : 0u;
+            }
+        }
+        return true;
+    }
+
+    bool TerrainHeightfield::replaceSamples( uint32 resolution, const vector<float32>& listHeight, const vector<uint8>& listHole )
+    {
+        const size_t cellCount   = resolution >= 2 ? static_cast<size_t>( resolution - 1 ) * ( resolution - 1 ) : 0u;
+        const bool   bHeightsFit = resolution >= 2 && listHeight.size() == static_cast<size_t>( resolution ) * resolution;
+        const bool   bHolesFit   = listHole.empty() || listHole.size() == cellCount;
+        const bool   bUsable     = bHeightsFit && bHolesFit && isValid();
+        if ( bUsable == false )
+            return false;
+        _resolution   = resolution;
+        _cellSize     = float2{ _size._x / static_cast<float32>( resolution - 1 ), _size._y / static_cast<float32>( resolution - 1 ) };
+        _listHeight   = listHeight;
+        _listHoleCell = listHole;
+        return true;
+    }
+
+    bool TerrainHeightfield::resampleHeights( const vector<float32>& listSource, uint32 sourceResolution, uint32 targetResolution, vector<float32>& outListHeight )
+    {
+        outListHeight.clear();
+        const bool bUsable = sourceResolution >= 2 && targetResolution >= 2 && listSource.size() == static_cast<size_t>( sourceResolution ) * sourceResolution;
+        if ( bUsable == false )
+            return false;
+        outListHeight.resize( static_cast<size_t>( targetResolution ) * targetResolution );
+        const float32 scale = static_cast<float32>( sourceResolution - 1 ) / static_cast<float32>( targetResolution - 1 );
+        for ( uint32 targetZ = 0; targetZ < targetResolution; ++targetZ )
+        {
+            for ( uint32 targetX = 0; targetX < targetResolution; ++targetX )
+            {
+                const float32 sampleX = static_cast<float32>( targetX ) * scale;
+                const float32 sampleZ = static_cast<float32>( targetZ ) * scale;
+                const uint32  cellX   = MathUtil::min( static_cast<uint32>( sampleX ), sourceResolution - 2 );
+                const uint32  cellZ   = MathUtil::min( static_cast<uint32>( sampleZ ), sourceResolution - 2 );
+                const float32 localX  = sampleX - static_cast<float32>( cellX );
+                const float32 localZ  = sampleZ - static_cast<float32>( cellZ );
+                const size_t  row0    = static_cast<size_t>( cellZ ) * sourceResolution + cellX;
+                const size_t  row1    = row0 + sourceResolution;
+                const float32 h00     = listSource[row0];
+                const float32 h10     = listSource[row0 + 1];
+                const float32 h01     = listSource[row1];
+                const float32 h11     = listSource[row1 + 1];
+                // `findHeightAt` 과 같은 대각선 삼각형이다 — 다시 표본화한 땅이 그려진 땅 위에 놓인다.
+                const float32 height                                                       = localZ >= localX ? h00 + localX * ( h11 - h01 ) + localZ * ( h01 - h00 ) : h00 + localX * ( h10 - h00 ) + localZ * ( h11 - h10 );
+                outListHeight[static_cast<size_t>( targetZ ) * targetResolution + targetX] = height;
+            }
+        }
+        return true;
+    }
+
+    bool TerrainHeightfield::resampleHoles( const vector<uint8>& listSource, uint32 sourceResolution, uint32 targetResolution, vector<uint8>& outListHole )
+    {
+        outListHole.clear();
+        const uint32 sourceCells = sourceResolution >= 2 ? sourceResolution - 1 : 0u;
+        const bool   bUsable     = sourceCells > 0 && targetResolution >= 2 && ( listSource.empty() || listSource.size() == static_cast<size_t>( sourceCells ) * sourceCells );
+        if ( bUsable == false )
+            return false;
+        if ( listSource.empty() )
+            return true;
+        const uint32 targetCells = targetResolution - 1;
+        outListHole.resize( static_cast<size_t>( targetCells ) * targetCells );
+        const float32 scale = static_cast<float32>( sourceCells ) / static_cast<float32>( targetCells );
+        for ( uint32 cellZ = 0; cellZ < targetCells; ++cellZ )
+        {
+            const uint32 sourceZ = MathUtil::min( static_cast<uint32>( ( static_cast<float32>( cellZ ) + 0.5f ) * scale ), sourceCells - 1 );
+            for ( uint32 cellX = 0; cellX < targetCells; ++cellX )
+            {
+                const uint32 sourceX                                            = MathUtil::min( static_cast<uint32>( ( static_cast<float32>( cellX ) + 0.5f ) * scale ), sourceCells - 1 );
+                outListHole[static_cast<size_t>( cellZ ) * targetCells + cellX] = listSource[static_cast<size_t>( sourceZ ) * sourceCells + sourceX];
+            }
+        }
+        return true;
+    }
+
     bool TerrainHeightfield::writeSplatWeights( const vector<float4>& listWeight, const TerrainSampleRect& rect )
     {
         const bool bHasSplat    = _splatWidth > 0 && _splatHeight > 0;

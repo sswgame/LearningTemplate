@@ -411,14 +411,16 @@ namespace sw
         , _typeName{}
         , _defaultValue{}
         , _pType{ nullptr }
+        , _handleTargetTypeName{}
     {
     }
 
-    FunctionParameterInfo::FunctionParameterInfo( string name, string typeName, string defaultValue, const ReflectTypeOps* pType )
+    FunctionParameterInfo::FunctionParameterInfo( string name, string typeName, string defaultValue, const ReflectTypeOps* pType, hashed_string handleTargetTypeName )
         : _name{ std::move( name ) }
         , _typeName{ std::move( typeName ) }
         , _defaultValue{ std::move( defaultValue ) }
         , _pType{ pType }
+        , _handleTargetTypeName{ std::move( handleTargetTypeName ) }
     {
     }
 

@@ -1,6 +1,6 @@
 /**
  * @file ShooterDevCommands.cpp
- * @brief Shooter3D 의 치트 개발 명령(`cheat.ammo` · `cheat.shooter.heal`)입니다. Shipping 에는 없습니다.
+ * @brief Shooter3D 의 치트 개발 명령(`cheat.ammo` · `cheat.shooter.heal` · `cheat.shooter.god`)입니다. Shipping 에는 없습니다.
  * @details 대상은 활성 씬의 모든 `ShooterPlayerComponent` 입니다. 보상과 같은 길(`addWaveAmmo` · `restoreHealth`)을 쓰므로 게임 스레드에서만 부른다.
  *          체력 명령 이름이 `cheat.heal`(어빌리티 시스템)과 겹치지 않게 `cheat.shooter.heal` 이다 — 슈터 플레이어는 어빌리티 시스템이 아니라 `Vitality` 를 쓴다.
  */
@@ -76,6 +76,26 @@ namespace sw
                 outReply = "cheat.shooter.heal healed " + to_string( healedCount ) + " of " + to_string( listPlayer.size() ) + " player(s)";
                 return true;
             }
+
+            /**
+             * @brief `cheat.shooter.god` — 슈터 플레이어의 피해 면역을 뒤집습니다. 첫 플레이어의 지금 값을 기준으로 모두 같은 값이 됩니다.
+             * @details `cheat.god`(어빌리티 시스템 태그)은 `Vitality` 를 쓰는 슈터 플레이어에 닿지 않아 따로 둔다.
+             */
+            static bool runGod( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.empty() == false )
+                    return false;
+                vector<ShooterPlayerComponent*> listPlayer;
+                if ( collectPlayers( listPlayer, outReply ) == false )
+                    return true;
+                const bool bImmune = listPlayer.front()->isDamageImmune() == false;
+                for ( ShooterPlayerComponent* pPlayer : listPlayer )
+                {
+                    pPlayer->setDamageImmune( bImmune );
+                }
+                outReply = string( bImmune ? "cheat.shooter.god on for " : "cheat.shooter.god off for " ) + to_string( listPlayer.size() ) + " player(s)";
+                return true;
+            }
         };
     } // namespace
 } // namespace sw
@@ -85,4 +105,5 @@ namespace sw
 {
     SW_DEV_COMMAND( CheatAmmo, "cheat.ammo", "cheat.ammo", "Add two magazines of reserve ammo to every weapon of every shooter player", &ShooterDevCommandsInternal::runAmmo );
     SW_DEV_COMMAND( CheatShooterHeal, "cheat.shooter.heal", "cheat.shooter.heal", "Fill the health of every living shooter player", &ShooterDevCommandsInternal::runHeal );
+    SW_DEV_COMMAND( CheatShooterGod, "cheat.shooter.god", "cheat.shooter.god", "Toggle damage immunity of every shooter player", &ShooterDevCommandsInternal::runGod );
 } // namespace sw

@@ -1,6 +1,7 @@
 /**
  * @file TerrainBrushTool.h
- * @brief 지형 칠하기 도구 모드("Terrain" 시각화 토글)입니다. 브러시 원을 그리고, 왼쪽 단추 드래그로 높이 · 레이어 가중치를 고치고, 드래그 하나를 되돌리기 하나로 남깁니다.
+ * @brief 지형 칠하기 도구 모드("Terrain" 시각화 토글)입니다. 브러시 원을 그리고, 왼쪽 단추 드래그로 높이 · 레이어 가중치 · 구멍을 고치고, 드래그 하나를 되돌리기 하나로 남깁니다.
+ *        설정 창의 해상도 줄(`terrain.resize`)은 지형을 다시 표본화하고 전후 전체를 되돌리기 하나(`Resize Terrain`)로 남깁니다.
  */
 #pragma once
 #include "Core/Common/Types.h"

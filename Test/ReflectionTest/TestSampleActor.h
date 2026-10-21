@@ -625,6 +625,16 @@ namespace sw
 
         PROPERTY()
         vector<TComponentHandle<TestProbeComponent>> _listProbe;
+
+        /** @brief 타입 핸들 인자 샘플입니다 — 썽크가 타입 없는 핸들을 이 씬에서 확인해 넘긴다(`TypedComponentHandleTest.FunctionArgumentIsCheckedByThunk`). */
+        FUNCTION( CallInEditor )
+        void linkProbe( const TComponentHandle<TestProbeComponent>& probe, int32 count )
+        {
+            _probe = probe;
+            _linkCount += count;
+        }
+
+        int32 _linkCount{ 0 }; ///< `linkProbe` 가 불린 합(리플렉트하지 않는다)
     };
 } // namespace sw
 
