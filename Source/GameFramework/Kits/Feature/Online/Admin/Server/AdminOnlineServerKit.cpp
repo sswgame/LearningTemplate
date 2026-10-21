@@ -7,7 +7,7 @@
 #include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
 #include "GameFramework/Kits/Feature/Online/Admin/Server/AdminService.h"
 
-// GM 키트의 서버 조립 — GM 서비스를 올린다. 표시 이름 · 접속 여부와 세션 끊기는 계정 키트, 지급 상한은 경제 키트의 원장 정책, 제재 알림은 버스를 쓴다.
+// GM 키트의 서버 조립 — GM 서비스를 만든다. 표시 이름 · 접속 여부와 세션 끊기는 계정 키트, 지급 상한은 경제 키트의 원장 정책, 제재 알림은 버스를 쓴다.
 // GM 포트는 플레이어 포트와 따로 사설망에 두기를 권한다 — GM 키트만 적은 온라인 설정으로 서버를 하나 더 띄운다.
 // 옵션:
 //   seedAdmin  `<계정 id>:<등급>`(viewer|support|operator|super). 레코드가 없을 때만 넣는 첫 관리자(여러 번 적는다).

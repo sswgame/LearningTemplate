@@ -1,6 +1,6 @@
 /**
  * @file BlockingHTTPClient.h
- * @brief 엔진의 막는 HTTP 창구(`IHTTPClient`, 텔레메트리와 크래시 보고)를 GameFramework 의 HTTP 클라이언트(`HTTPClient`)로 보내는 어댑터입니다.
+ * @brief 엔진의 블로킹 HTTP API(`IHTTPClient`, 텔레메트리와 크래시 보고)를 GameFramework 의 HTTP 클라이언트(`HTTPClient`)로 보내는 어댑터입니다.
  * @details - Engine 은 GameFramework 를 모르므로 엔진은 `IHTTPClient` 계약만 갖고, 실제 전송은 이 어댑터를 게임이 끼워 넣어 얻습니다.
  *            게임은 `initialize` 한 어댑터를 업로더(`HTTPTelemetryUploader`, `HTTPCrashReportUploader`)에 넘깁니다.
  *          - `send` 는 부른 스레드에서 응답이 올 때까지 막습니다. 안에서 `HTTPClient` 를 직접 돌리므로(`update`, `pollResponses`)
@@ -43,7 +43,7 @@ namespace sw
         [[nodiscard]] bool initialize( unique_ptr<IStreamTransport> transport, const StreamTransportConfig& transportSettings, const HTTPClientConfig& settings );
         void               shutdown();
 
-        /** @brief @p host 의 `https://` 요청에 쓸 TLS 컨텍스트(빌려 쓴다 — 이 객체보다 오래 산다)를 올립니다. */
+        /** @brief @p host 의 `https://` 요청에 쓸 TLS 컨텍스트(빌려 쓴다 — 이 객체보다 오래 산다)를 등록합니다. */
         void registerTLSContext( string_view host, ITLSContext* pTLSContext );
 
         /** @brief 요청 하나를 보내고 응답까지 막습니다. 보내지 못하면 `_status` 0 과 `_error` 입니다. */

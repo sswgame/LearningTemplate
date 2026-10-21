@@ -167,7 +167,7 @@ namespace sw
 
     string OnlinePresence::makeNameKey( string_view displayName )
     {
-        // 이름은 키 규칙(`[0-9a-z_.:/-]`) 밖의 글자를 가질 수 있다. 그래서 대소문자를 무시한 해시로 기록하고, 값에 든 이름으로 다시 비교한다.
+        // 이름은 키 규칙(`[0-9a-z_.:/-]`) 밖의 글자를 가질 수 있다. 그래서 대소문자를 무시한 해시로 기록하고, 값에 포함된 이름으로 다시 비교한다.
         return string( OnlinePresenceInternal::kNameKeyPrefix ) + ServiceKeyUtil::makeHex64( HashUtil::computeStringHash64( displayName.data(), displayName.size() ) );
     }
 

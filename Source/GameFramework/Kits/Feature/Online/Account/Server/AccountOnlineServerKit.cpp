@@ -16,13 +16,13 @@
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/AccountServer.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginService.h"
 
-// 계정 키트의 서버 조립 — 로그인 서비스 · 바인딩을 올리고 신원(디렉터리) · 접속 상태 · 세션 끊기 · 이름 찾기를 문맥에 내놓는다.
+// 계정 키트의 서버 조립 — 로그인 서비스 · 바인딩을 만들고 신원(디렉터리) · 접속 상태 · 세션 끊기 · 이름 찾기를 문맥에 내놓는다.
 // 옵션:
 //   ticketKeySecretEnvironment  게임 접속 티켓 주 키(32 B, 16 진수 64 자)를 담은 환경 변수 이름. 비우면 Dev 만 개발용 키, Shipping 은 기동 실패.
 //   attemptBurst                주소마다 한꺼번에 받는 로그인 시도 수(부하 봇은 크게).
 //   lightPasswordHash           1 이면 가벼운 Argon2id(테스트 · 부하 봇 — Dev 만, 실제 비용을 재려면 끈다).
 //   platformProvidersFile       외부 로그인 제공자 설정 JSON(프로젝트 루트 기준, 형식은 `PlatformLoginProviderFactory::readSettings`). 비우면 외부 로그인이 없다.
-//   platformTrustFile           제공자 HTTPS 를 검증할 CA 묶음 PEM(프로젝트 루트 기준). `https://` 제공자가 있으면 필수다.
+//   platformTrustFile           제공자 HTTPS 를 검증할 CA 번들 PEM(프로젝트 루트 기준). `https://` 제공자가 있으면 필수다.
 
 namespace sw
 {
@@ -38,7 +38,7 @@ namespace sw
             static constexpr int32                   kHexDigitsPerChunk   = ServiceKeyUtil::kHexWidth;
             static constexpr int32                   kBytesPerChunk       = 8;
 
-            /** @brief 16 진수 64 자를 32 바이트로 읽습니다(앞이 높은 자리). 형식이 틀리면 false 입니다. */
+            /** @brief 16 진수 64 자를 32 바이트로 읽습니다(앞쪽이 상위 비트). 형식이 틀리면 false 입니다. */
             [[nodiscard]] static bool parseTicketKey( string_view text, uint8 ( &outArrKey )[LoginTicketAuthority::kMasterKeySize] )
             {
                 const string_view trimmed = StringUtil::trim( text );
@@ -62,7 +62,7 @@ namespace sw
 
         /**
          * @class AccountOnlineServerKit
-         * @brief 계정 키트의 서버 조립입니다. 로그인 서비스는 저장소 완료가 부르므로 저장소를 내린 뒤(`shutdown`)에 내립니다.
+         * @brief 계정 키트의 서버 조립입니다. 로그인 서비스는 저장소 완료가 부르므로 저장소를 종료한 뒤(`shutdown`)에 종료합니다.
          */
         class AccountOnlineServerKit final : public IOnlineServerKit
         {
@@ -136,12 +136,12 @@ namespace sw
 
             void shutdown() override
             {
-                // 저장소를 내리고 남은 완료를 돌린 뒤다 — 로그인 계약의 종료 순서(저장소 → 완료 → 서비스).
+                // 저장소를 종료하고 남은 완료를 돌린 뒤다 — 로그인 계약의 종료 순서(저장소 → 완료 → 서비스).
                 _accountServer.shutdown();
                 if ( _bLoginStarted )
                     _loginService.shutdown();
                 _bLoginStarted = false;
-                _platformProviders.shutdown(); // 로그인 서비스가 빌려 쓰던 제공자다 — 서비스 뒤에 내린다
+                _platformProviders.shutdown(); // 로그인 서비스가 빌려 쓰던 제공자다 — 서비스 뒤에 종료한다
             }
 
         private:

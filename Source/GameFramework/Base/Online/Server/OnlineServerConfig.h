@@ -83,8 +83,8 @@ namespace sw
         vector<OnlineServerOption> _listOption{};
 
         /**
-         * @brief 키트의 옵션 표 @p listField 로 옵션을 모두 읽습니다. 키트는 이 호출 하나로 옵션을 읽습니다(옵션이 없는 키트는 빈 표).
-         * @return 표에 없는 키(철자가 틀린 옵션을 조용히 넘기지 않는다)나 형식이 틀린 값이 있으면 false 와 @p outError 입니다.
+         * @brief 키트의 옵션 테이블 @p listField 로 옵션을 모두 읽습니다. 키트는 이 호출 하나로 옵션을 읽습니다(옵션이 없는 키트는 빈 테이블).
+         * @return 테이블에 없는 키(철자가 틀린 옵션을 조용히 넘기지 않는다)나 형식이 틀린 값이 있으면 false 와 @p outError 입니다.
          */
         [[nodiscard]] bool readOptions( std::initializer_list<OnlineServerKitOptionField> listField, string& outError ) const;
     };

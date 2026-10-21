@@ -71,7 +71,7 @@ namespace sw
     /**
      * @brief 잔액 하나입니다. 계정 잔액은 환불 회수로 음수(빚)가 될 수 있습니다.
      * @details 온라인 메시지(경제, 관리자, 우편함 응답)에 고정 배치형으로 실립니다. `MaxCount` 는 `LedgerConstant::kMaxAssetIDSize` 와 같은 값입니다.
-     *          `_version` 은 저장소 레코드의 판이라 `PROPERTY` 가 아니며 와이어에 싣지 않습니다.
+     *          `_version` 은 저장소 레코드의 버전이라 `PROPERTY` 가 아니며 와이어에 싣지 않습니다.
      */
     REFLECT()
     struct LedgerBalance
@@ -155,7 +155,7 @@ namespace sw
      * @details `_journalKey` 가 멱등 키이다. 같은 키로 다시 오면 다시 적용하지 않고 처음 결과를 돌려준다. 다리나 사유가 다르면 `JournalKeyReused` 이다.
      *          `_pPolicy` 는 빌려 쓰므로 일(work)이 끝날 때까지 살아 있어야 한다.
      *          `_bAllowDebt` 는 환불 회수(이미 써 버린 재화를 거둠)에서만 켠다. 켜면 보낸 계정 잔액이 음수(빚)가 되어도 적용한다.
-     *          빚이 있는 동안 그 재화를 쓰는 이동은 잔액이 더 내려가므로 모두 `InsufficientFunds` 이고, 받는 이동이 빚을 먼저 갚는다.
+     *          빚이 있는 동안 그 재화를 쓰는 이동은 잔액이 더 줄어들어 모두 `InsufficientFunds` 이고, 받는 이동이 빚을 먼저 갚는다.
      *          맡김은 빚을 지지 않는다.
      */
     struct LedgerTransferRequest

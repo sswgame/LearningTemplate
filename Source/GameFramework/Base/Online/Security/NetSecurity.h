@@ -40,7 +40,7 @@ namespace sw
         static unique_ptr<ITLSContext> createServerTLSContext( string_view certificateFile, string_view privateKeyFile, string_view privateKeyPassphrase,
                                                                string& outError );
         /**
-         * @brief 클라이언트 TLS 컨텍스트 — @p trustFile(CA 묶음 또는 서버 인증서 그 자체)로 서버를 검증하고, @p serverName 이 있으면 이름도 본다.
+         * @brief 클라이언트 TLS 컨텍스트 — @p trustFile(CA 번들 또는 서버 인증서 그 자체)로 서버를 검증하고, @p serverName 이 있으면 이름도 본다.
          *        @p trustFile 을 비우면 Dev 에서만 개발용 인증서를 신뢰 + 고정(SHA-256)한다.
          */
         static unique_ptr<ITLSContext> createClientTLSContext( string_view trustFile, string_view serverName, string& outError );

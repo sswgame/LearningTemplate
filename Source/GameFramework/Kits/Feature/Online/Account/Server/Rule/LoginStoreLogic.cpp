@@ -336,7 +336,7 @@ namespace sw
                 return key;
             }
 
-            /** @brief 표시 이름 끝에 붙이는 계정 id 꼬리입니다. 16진 문자열의 뒤쪽 @p digitCount 자리입니다. */
+            /** @brief 표시 이름 끝에 붙이는 계정 id 꼬리입니다. 16진 문자열의 뒤쪽 @p digitCount 글자입니다. */
             static string makeIDSuffix( uint64 accountID, int32 digitCount )
             {
                 const string hex = ServiceKeyUtil::makeHex64( accountID );

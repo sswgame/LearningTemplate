@@ -9,7 +9,7 @@
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeService.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeStateMachine.h"
 
-// 거래 키트의 서버 조립 — 거래 서비스(양쪽 확정 → 원장 분개 하나로 정산)와 바인딩을 올린다. 상대 찾기는 계정 키트(필수), 다른 서버의 상대는 접속 상태,
+// 거래 키트의 서버 조립 — 거래 서비스(양쪽 확정 → 원장 분개 하나로 정산)와 바인딩을 만든다. 상대 찾기는 계정 키트(필수), 다른 서버의 상대는 접속 상태,
 // 계정 잔액 상한은 경제 키트의 원장 정책을 받는다.
 // 옵션:
 //   tradable        거래할 수 있는 자산 id 접두어(여러 번 적는다 — 예: `cur.gold`, `item.`). 하나는 있어야 한다.
@@ -103,7 +103,7 @@ namespace sw
 
             void shutdown() override
             {
-                // 거래 로직은 맡긴 정산 일을 회수한 뒤(저장소를 내린 뒤) 내린다 — 정산 중 거래는 재시작 복구가 마무리한다.
+                // 거래 로직은 맡긴 정산 일을 회수한 뒤(저장소를 종료한 뒤) 종료한다 — 정산 중 거래는 재시작 복구가 마무리한다.
                 if ( _bStarted )
                     _service.shutdown();
                 _bStarted = false;

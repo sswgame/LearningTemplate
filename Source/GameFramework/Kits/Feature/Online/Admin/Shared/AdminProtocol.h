@@ -68,8 +68,8 @@ namespace sw
         static constexpr uint16 kResolveReport    = toMethod( AdminMethodName::ResolveReport );    ///< 열린 신고 `_reportKey` 를 `_reportStatus` 로 닫는다. 메모가 처리 메모다
         static constexpr uint16 kSetMaintenance   = toMethod( AdminMethodName::SetMaintenance );   ///< 점검 창 `_scope` 를 건다(`_messageKey`, `_startMs`, `_endMs`, 허용 계정 `_listAccountID`)
         static constexpr uint16 kClearMaintenance = toMethod( AdminMethodName::ClearMaintenance ); ///< 점검 창 `_scope` 를 푼다
-        static constexpr uint16 kPostNotice       = toMethod( AdminMethodName::PostNotice );       ///< 공지 `_noticeID` 를 올린다(`_body`, `_startMs`, `_endMs`, `_priority`, `_bLiteralText`)
-        static constexpr uint16 kRemoveNotice     = toMethod( AdminMethodName::RemoveNotice );     ///< 공지 `_noticeID` 를 내린다
+        static constexpr uint16 kPostNotice       = toMethod( AdminMethodName::PostNotice );       ///< 공지 `_noticeID` 를 게시한다(`_body`, `_startMs`, `_endMs`, `_priority`, `_bLiteralText`)
+        static constexpr uint16 kRemoveNotice     = toMethod( AdminMethodName::RemoveNotice );     ///< 공지 `_noticeID` 를 삭제한다
         static constexpr uint16 kListLiveEvents   = toMethod( AdminMethodName::ListLiveEvents );   ///< 라이브 이벤트 정의를 JSON 글로 돌려준다(`_listLiveEvent`)
         static constexpr uint16 kPutLiveEvent     = toMethod( AdminMethodName::PutLiveEvent );     ///< `_eventJSON` 정의 하나를 올리거나 덮어쓴다
         static constexpr uint16 kRemoveLiveEvent  = toMethod( AdminMethodName::RemoveLiveEvent );  ///< 이벤트 `_eventID` 를 지운다
@@ -139,7 +139,7 @@ namespace sw
         PROPERTY( MaxCount = ServiceMailConstant::kMaxAttachmentCount )
         vector<ServiceMailAttachment> _listAttachment{}; ///< SendMail, BulkMail, CreateCampaign 에서 쓴다. 상한은 `ServiceMailConstant::kMaxAttachmentCount` 와 같다
         PROPERTY( MaxCount = AdminProtocol::kMaxBulkCount )
-        vector<AccountID> _listAccountID{}; ///< BulkMail 에서 쓰며 12개 이하이다. 우편 하나가 쓰기 넷이라 감사와 멱등 기록까지 한 트랜잭션(64) 안에 든다
+        vector<AccountID> _listAccountID{}; ///< BulkMail 에서 쓰며 12개 이하이다. 우편 하나가 쓰기 넷이라 감사와 멱등 기록까지 한 트랜잭션(64) 안에 들어간다
         PROPERTY( MaxCount = 256 )
         string _displayName{}; ///< LookupAccount 에서 계정 id 대신 쓴다. 이 프로세스에 접속해 있는 계정만 찾을 수 있다
         PROPERTY( MaxCount = 256 )

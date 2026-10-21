@@ -139,7 +139,7 @@ namespace sw
         virtual uint64 submitList( string_view groupPrefix )                              = 0;
         virtual int32  pollCompletions( vector<LocalStoreCompletion>& outListCompletion ) = 0;
         virtual int32  getPendingCount() const                                            = 0;
-        /** @brief 남은 쓰기와 지우기를 **끝까지 마치고** 내립니다. 종료할 때 세이브를 잃지 않게 하려는 것이며, 남은 읽기와 나열은 IOError 입니다. 그 뒤에 맡긴 일도 IOError 입니다. */
+        /** @brief 남은 쓰기와 지우기를 **끝까지 마치고** 종료합니다. 종료할 때 세이브를 잃지 않게 하려는 것이며, 남은 읽기와 나열은 IOError 입니다. 그 뒤에 맡긴 일도 IOError 입니다. */
         virtual void shutdown() = 0;
 
         /** @brief 슬롯 이름이 규칙을 지키면 true 입니다. 규칙은 `[0-9a-z_.-]` 1..64 자이고, `/` 는 하나까지이며, 빈 마디와 `.` 으로 시작하는 마디는 없어야 합니다. */

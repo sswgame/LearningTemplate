@@ -1,6 +1,6 @@
 /**
  * @file Ledger.h
- * @brief 원장을 정의합니다. 표 셋(`ledger_balance`, `ledger_journal`, `ledger_history`) 위의 복식 이동입니다.
+ * @brief 원장을 정의합니다. 테이블 세 개(`ledger_balance`, `ledger_journal`, `ledger_history`) 위의 복식 이동입니다.
  * @details 모두 저장소 스레드(`IServiceStoreWork::run`)에서 도는 동기 함수이다.
  *          PlayFab Economy v2 의 거래 기록이나 Nakama 의 wallet_ledger(단식)와 달리 복식이며 분개 키로 멱등하다. 회계의 차변과 대변이 같다.
  *

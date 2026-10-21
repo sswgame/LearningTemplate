@@ -6,17 +6,17 @@
  *            `kRateLimited` 응답의 자세한 본문(varuint 기다릴 시간, `OnlineError`), 서버 버스 본문(자기 기술형 A, 주제 정의 `ServerBusTopic`. 배포 중 빌드가 섞이므로 B 가 아니다)입니다.
  *            버스에만 쓰는 타입은 이 목록에 넣지 않습니다. 넣으면 서버끼리만 쓰는 필드를 바꿀 때 클라이언트가 업데이트를 받습니다.
  *          - 키트는 Shared `.cpp` 의 이름 공간 범위 객체로 `OnlineProtocolEntry` 하나를 두고 메서드 표(`XxxMethod`, `OnlineMethodTable`)와 같은 목록을 넘깁니다.
- *            객체를 만들면 레지스트리에 오르고, 모듈이 내려가며 파괴되면 내립니다. 그래서 메시지를 쓰는 목록과 해시에 섞는 목록이 같은 선언 하나이고,
+ *            객체를 만들면 레지스트리에 등록되고, 모듈이 언로드되며 파괴되면 제거됩니다. 그래서 메시지를 쓰는 목록과 해시에 섞는 목록이 같은 선언 하나이고,
  *            키트가 해시용 목록을 따로 적는 곳은 없습니다.
  *          - 키트 서비스(클라이언트 `IOnlineClientService` · 서버 `IOnlineHostService`)는 `getProtocol` 로 이 항목을 돌려줘야 합니다.
  *            그래서 항목 없이는 서비스를 만들 수 없고, 서비스를 가진 키트는 빠짐없이 해시에 섞입니다.
- *          - 해시는 이 빌드에 올라온 항목 전부의 영역, 메서드 표의 이름 순서, 메시지 타입마다의 스키마 해시(`FixedLayout::getSchemaHash`)를 섞습니다.
+ *          - 해시는 이 빌드에 올라온 항목 전부의 영역, 메서드 테이블의 이름 순서, 메시지 타입마다의 스키마 해시(`FixedLayout::getSchemaHash`)를 섞습니다.
  *            필드, 순서, 범위 키, 열거자가 바뀌면 손 버전 없이 해시가 바뀝니다. 클라이언트가 키트 일부만 올려도 서버와 같은 값이 나와야 하므로 빌드 전체를 섞습니다.
  *            서버와 클라이언트는 같은 빌드로 배포하므로 같은 키트 모듈이 오르고 같은 해시가 나옵니다(`docs/plans/ReflectionFormats.md` 5절).
  *            한쪽만 키트 모듈을 끄거나(`EditorModuleOverrides`) 핫 리로드로 바꾸면 그쪽 해시만 달라져 접속이 `kVersionMismatch` 로 거절됩니다. 의도한 동작입니다.
- *          - 메서드와 알림 번호는 메서드 표의 열거자 순서이고, 그 이름 순서가 해시에 섞입니다. 같은 타입을 받는 두 메서드(`TradeIDRequest` 를 받는 Lock 과 Cancel)의
+ *          - 메서드와 알림 번호는 메서드 테이블의 열거자 순서이고, 그 이름 순서가 해시에 섞입니다. 같은 타입을 받는 두 메서드(`TradeIDRequest` 를 받는 Lock 과 Cancel)의
  *            번호를 맞바꾸면 이름 순서가 바뀌어 해시가 달라지므로, 빌드가 다른 서버와 클라이언트는 접속 때 갈립니다.
- *          - 메시지마다 머리에 싣는 타입 스키마 해시(`FixedLayout::write`)는 메서드와 타입의 짝을 확인합니다. 표는 메서드의 이름과 번호만 담고 그 메서드가 받는 타입은
+ *          - 메시지마다 머리에 싣는 타입 스키마 해시(`FixedLayout::write`)는 메서드와 타입의 짝을 확인합니다. 테이블은 메서드의 이름과 번호만 담고 그 메서드가 받는 타입은
  *            담지 않으므로, 한 메서드가 받는 타입을 목록 안의 다른 타입으로 바꾼 빌드는 해시가 같습니다. 그 어긋남은 읽기가 `SchemaMismatch` 로 거절합니다.
  *          - 메시지 타입에 코덱이 없으면(적격이 아니면) 해시를 계산하는 기동 때 이유와 함께 프로세스가 멈춥니다(`FixedLayout::getSchemaHash`).
  *          언리얼 `FNetworkVersion::GetLocalNetworkVersion`(빌드에서 나온 값 하나를 접속 때 비교)에 해당합니다(기억에 의존).
@@ -83,8 +83,8 @@ namespace sw
 {
     /**
      * @class OnlineProtocolEntry
-     * @brief 키트 프로토콜 하나의 등록 항목입니다. 만들면 오르고 파괴되면 내립니다. 키트는 Shared `.cpp` 의 이름 공간 범위에 둡니다.
-     * @details 모듈이 로드될 때 오르고 내려갈 때 내려야 빌드의 키트 목록과 같아집니다. 함수 안의 정적 객체로 두면 처음 부를 때에야 올라 클라이언트와 서버가 어긋납니다.
+     * @brief 키트 프로토콜 하나의 등록 항목입니다. 만들면 등록되고 파괴되면 제거됩니다. 키트는 Shared `.cpp` 의 이름 공간 범위에 둡니다.
+     * @details 모듈이 로드될 때 등록되고 언로드될 때 제거돼야 빌드의 키트 목록과 같아집니다. 함수 안의 정적 객체로 두면 처음 부를 때에야 등록돼 클라이언트와 서버가 어긋납니다.
      *          메시지 스키마 해시는 타입 등록이 끝난 뒤(`OnlineProtocolRegistry::computeSchemaHash`)에 계산합니다. 정적 초기화 순서는 타입 등록보다 앞설 수 있기 때문입니다.
      */
     class SW_GF_API OnlineProtocolEntry final : private ServiceFactoryNode
@@ -107,7 +107,7 @@ namespace sw
         uint16 getMethodRange() const { return _methodRange; }
 
         /**
-         * @brief 메서드 표의 해시입니다. 두 열거형의 열거자 이름을 순서대로 섞습니다(`computeNameOrderHash`).
+         * @brief 메서드 테이블의 해시입니다. 두 열거형의 열거자 이름을 순서대로 섞습니다(`computeNameOrderHash`).
          * @details 열거자가 있는데 리플렉션에 이름이 없으면 번호가 해시에서 빠지므로, 대신 쓸 이름 없이 모든 구성에서 프로세스를 멈춥니다.
          */
         template <typename TMethodName, typename TPushName>
@@ -145,7 +145,7 @@ namespace sw
     struct SW_GF_API OnlineProtocolRegistry
     {
         /**
-         * @brief 올라온 항목 전부의 영역, 메서드 표의 이름 순서, 메시지 스키마 해시와 `OnlineProtocolConstant::kBaseVersion` 을 섞은 온라인 스키마 해시입니다.
+         * @brief 올라온 항목 전부의 영역, 메서드 테이블의 이름 순서, 메시지 스키마 해시와 `OnlineProtocolConstant::kBaseVersion` 을 섞은 온라인 스키마 해시입니다.
          * @details 영역 순(같으면 이름 순)으로 섞으므로 모듈을 로드한 순서와 상관없이 같은 값입니다. 호스트와 클라이언트가 `initialize` 때 한 번 부릅니다.
          */
         [[nodiscard]] static uint64 computeSchemaHash();

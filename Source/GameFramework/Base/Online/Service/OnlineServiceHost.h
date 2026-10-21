@@ -3,10 +3,10 @@
  * @brief 프로세스 하나의 서비스 호스트를 정의합니다.
  * @details 호스트는 스트림 엔드포인트와 요청 서버를 갖는다.
  *          스키마 해시 비교, 인증 확인, 요청 보호(주소와 계정마다 토큰 버킷, 몸 상한)를 거친 뒤 메서드 영역을 맡은 서비스(`IOnlineHostService`)로 요청을 넘긴다.
- *          언리얼 Online Services 의 인터페이스 묶음, gRPC 서버의 서비스 등록과 같은 모양이다.
+ *          언리얼 Online Services 의 인터페이스 그룹, gRPC 서버의 서비스 등록과 같은 구조이다.
  *
  *          - 서비스 스레드 하나(`tick` 을 부르는 스레드)에서 돈다. 서비스의 콜백은 모두 그 스레드에서 불린다.
- *            계정과 연결의 표를 갖고 알림(`sendPush`)을 보낸다.
+ *            계정과 연결의 테이블을 갖고 알림(`sendPush`)을 보낸다.
  *          - **캐시 앞과 서버 버스의 소비자는 호스트 하나이다.**
  *            캐시 답과 채널 메시지는 `getEphemeralRouter()` 가 요청 id 와 채널로, 버스 메시지는 `subscribeServerBus` 한 서비스에 나눠 준다.
  *            서비스가 `pollReplies` 나 `pollMessages` 를 직접 부르면 서로의 답을 가져간다.
@@ -14,7 +14,7 @@
  *          - **Hello 는 다른 어떤 바이트보다 먼저 온라인 스키마 해시(`OnlineProtocolRegistry`)를 비교한다.** 다르면 `kVersionMismatch` 와 서버 해시로 답하고 연결을 닫는다.
  *            해시는 `initialize` 때 한 번 정한다. 이 비교는 B 형식이 아니라 고정된 작은 형식이라 스키마가 바뀌어도 늘 읽힌다.
  *          - **수명 계약**: 서비스는 빌려 쓴다. 호스트 `shutdown` 이 서비스마다 `onHostShutdown` 을 한 번 불러 호스트 포인터와 구독을 떼게 한다.
- *            그래서 서비스 객체는 호스트보다 먼저 내려가도 늦게 내려가도 된다.
+ *            그래서 서비스 객체는 호스트보다 먼저 종료돼도 늦게 종료돼도 된다.
  *            서비스 쪽에서 맡긴 비동기 일(캐시 라우터, 접속 상태 찾기)은 서비스 `shutdown` 이 `cancel` 한다.
  */
 #pragma once
@@ -82,7 +82,7 @@ namespace sw
             (void)method;
             return false;
         }
-        /** @brief 요청 하나를 받습니다. 바로 `host.respond*` 로 답하거나, 토큰을 들고 있다가 저장 일이 끝난 뒤 답합니다. 답은 한 번만 할 수 있습니다. */
+        /** @brief 요청 하나를 받습니다. 바로 `host.respond*` 로 답하거나, 토큰을 보관했다가 저장 일이 끝난 뒤 답합니다. 답은 한 번만 할 수 있습니다. */
         virtual void onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) = 0;
         /** @brief 서비스 스레드의 틱입니다. 완료를 거두고 시한을 처리합니다. */
         virtual void onServiceTick( OnlineServiceHost& host, int64 nowMs )
@@ -109,8 +109,8 @@ namespace sw
             (void)message;
         }
         /**
-         * @brief 호스트가 내려갈 때 한 번 불립니다.
-         * @details 기다리던 캐시 답(Unavailable)을 모두 알린 뒤, 버스 구독과 전송을 닫기 전에 불린다. 들고 있던 호스트 포인터와 구독 목록을 버려야 한다.
+         * @brief 호스트가 종료할 때 한 번 불립니다.
+         * @details 기다리던 캐시 답(Unavailable)을 모두 알린 뒤, 버스 구독과 전송을 닫기 전에 불린다. 보관하던 호스트 포인터와 구독 목록을 버려야 한다.
          *          이 뒤로 서비스는 호스트를 부르지 않는다. 서비스 객체가 호스트보다 오래 살아도(늦게 `shutdown`) 사라진 호스트를 만지지 않는다.
          */
         virtual void onHostShutdown( OnlineServiceHost& host ) { (void)host; }
@@ -151,11 +151,11 @@ namespace sw
         OnlineServiceHost( const OnlineServiceHost& )            = delete;
         OnlineServiceHost& operator=( const OnlineServiceHost& ) = delete;
 
-        /** @brief 전송(빌려 쓴다)을 띄우고 받기 시작합니다. 서비스는 그 전에 올려야 합니다. */
+        /** @brief 전송(빌려 쓴다)을 띄우고 받기 시작합니다. 서비스는 그 전에 등록해야 합니다. */
         [[nodiscard]] bool initialize( IStreamTransport* pTransport, const OnlineServiceHostConfig& settings, string& outError );
         void               shutdown();
 
-        /** @brief 서비스를 올립니다. 빌려 쓰며, 영역이 이미 있거나 메서드 번호가 겹치면 오류 로그를 남기고 false 를 반환하고 아무것도 올리지 않습니다. */
+        /** @brief 서비스를 등록합니다. 빌려 쓰며, 영역이 이미 있거나 메서드 번호가 겹치면 오류 로그를 남기고 false 를 반환하고 아무것도 등록하지 않습니다. */
         [[nodiscard]] bool registerHostService( IOnlineHostService* pService );
         /** @brief 엔드포인트 pump, 요청 시한, 캐시 라우터, 서버 버스, 서비스 틱을 차례로 돌립니다. */
         void update( int64 nowMs );
@@ -213,7 +213,7 @@ namespace sw
         void onNetRequest( NetRequestServer& server, const NetRequestContext& context ) override;
 
     private:
-        /** @brief `initialize` 가 도중에 실패했을 때와 `shutdown` 이 함께 쓰는 정리입니다 — 전송 · 요청 서버 · 엔드포인트를 내리고 연결 표를 비웁니다. 아직 서지 않은 것을 내려도 안전합니다. */
+        /** @brief `initialize` 가 도중에 실패했을 때와 `shutdown` 이 함께 쓰는 정리입니다 — 전송 · 요청 서버 · 엔드포인트를 해제하고 연결 테이블을 비웁니다. 아직 시작하지 않은 것을 해제해도 안전합니다. */
         void releaseTransportSide();
 
         struct ConnectionState

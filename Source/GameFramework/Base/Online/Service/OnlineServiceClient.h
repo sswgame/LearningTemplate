@@ -79,7 +79,7 @@ namespace sw
         virtual void                       onServicePush( uint16 kind, BitReader& body ) = 0;
         /** @brief Hello 가 끝났을 때(처음 연결과 다시 연결) 불립니다. 계정 키트는 여기서 재접속 요청을 보냅니다. */
         virtual void onClientReady( OnlineServiceClient& client ) { (void)client; }
-        /** @brief 연결이 끊겼을 때 불립니다. 다시 연결을 기다리며, 계정 키트는 로그인 상태를 내립니다. */
+        /** @brief 연결이 끊겼을 때 불립니다. 다시 연결을 기다리며, 계정 키트는 로그인 상태를 해제합니다. */
         virtual void onClientDisconnected( OnlineServiceClient& client ) { (void)client; }
 
     private:
@@ -128,11 +128,11 @@ namespace sw
         OnlineServiceClient( const OnlineServiceClient& )            = delete;
         OnlineServiceClient& operator=( const OnlineServiceClient& ) = delete;
 
-        /** @brief 키트를 올립니다. 빌려 쓰며 초기화 전에 불러야 합니다. 영역이 겹치면 false 입니다. */
+        /** @brief 키트를 등록합니다. 빌려 쓰며 초기화 전에 불러야 합니다. 영역이 겹치면 false 입니다. */
         [[nodiscard]] bool registerClientService( IOnlineClientService* pService );
         /**
          * @brief 키트를 해제하고 그 영역의 요청을 `cancelRequestsOf` 로 버립니다. 등록하지 않은 키트면 아무것도 하지 않습니다.
-         * @details 키트 기반 소멸자가 부른다. 스키마 해시는 빌드의 항목 전부에서 나오므로 내려도 바뀌지 않는다.
+         * @details 키트 기반 소멸자가 부른다. 스키마 해시는 빌드의 항목 전부에서 나오므로 언로드해도 바뀌지 않는다.
          */
         void unregisterClientService( IOnlineClientService* pService );
         /**

@@ -3,7 +3,7 @@
  * @brief 서버 버스 주제 정의입니다. 주제 하나가 이름과 본문 타입을 함께 가지고, 그 타입으로만 쓰고 읽습니다(docs/plans/ServerBusFormat.md 3.1).
  * @details - `ServerBusTopic<T>` 는 고정 이름 주제, `ServerBusTopicFamily<T>` 는 접미사가 붙는 주제(`chat.channel.<채널>`)입니다. `static constexpr` 객체로 선언합니다.
  *          - 본문은 `T::kBusVersion`(타입 안의 `static constexpr uint32`, 의미 버전) 머리 + A 입니다(`MixedBuildCodec`). 없으면 컴파일이 멈춥니다.
- *            필드 이름 짝짓기로 감당할 수 없는 변경(뜻이 바뀜, 기본값을 처리할 수 없는 새 필드)에서만 올립니다. 다르면 섞인 동안 거절합니다(이관 없음).
+ *            필드 이름 짝짓기로 감당할 수 없는 변경(뜻이 바뀜, 기본값을 처리할 수 없는 새 필드)에서만 버전을 올립니다. 다르면 섞인 동안 거절합니다(이관 없음).
  *          - 읽기 실패는 (타입, 결과, 받은 버전)마다 한 번 오류 로그를 남기고 `ServerBusReadLog::getRejectedCount` 를 올립니다. 부르는 쪽은 결과만 보고 버립니다.
  */
 #pragma once

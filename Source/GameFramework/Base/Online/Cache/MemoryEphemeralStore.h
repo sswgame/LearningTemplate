@@ -31,9 +31,9 @@ namespace sw
         /** @brief 요청 하나를 실행해 답을 돌려줍니다(요청 id 는 프런트가 채운다). 보내기 전의 형식 검사는 프런트가 맡습니다. */
         EphemeralReply execute( const EphemeralRequest& request );
 
-        /** @brief 앞 하나를 받은편지함 주인으로 올립니다. 그 id 입니다. */
+        /** @brief 앞 하나를 받은편지함 주인으로 등록합니다. 그 id 입니다. */
         uint64 registerInbox();
-        /** @brief 받은편지함과 그 구독을 모두 내립니다. */
+        /** @brief 받은편지함과 그 구독을 모두 해제합니다. */
         void unregisterInbox( uint64 inboxID );
         void subscribe( uint64 inboxID, string_view channel );
         void unsubscribe( uint64 inboxID, string_view channel );

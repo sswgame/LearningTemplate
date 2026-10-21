@@ -34,7 +34,7 @@ namespace sw
                 return -1;
             }
 
-            /** @brief @p bytes 에서 "\r\n" 의 자리입니다(없으면 npos). */
+            /** @brief @p bytes 에서 "\r\n" 의 위치입니다(없으면 npos). */
             static size_t findLineEnd( const vector<uint8>& bytes, size_t from )
             {
                 for ( size_t index = from; index + 1 < bytes.size(); ++index )

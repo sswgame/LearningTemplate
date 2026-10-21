@@ -125,7 +125,7 @@ namespace sw
         }
 
     private:
-        /** @brief 서비스 클라이언트 없이(`initialize` 전) 부른 요청을 바로 콜백합니다. 결과는 공통 오류 코드 @p errorCode 를 키트 표로 바꾼 값입니다. */
+        /** @brief 서비스 클라이언트 없이(`initialize` 전) 부른 요청을 바로 콜백합니다. 결과는 공통 오류 코드 @p errorCode 를 키트 테이블로 바꾼 값입니다. */
         uint64 failCall( uint16 method, const NetIdempotencyKey& key, const ReplyDelegate& onReply, uint16 errorCode )
         {
             Reply reply;

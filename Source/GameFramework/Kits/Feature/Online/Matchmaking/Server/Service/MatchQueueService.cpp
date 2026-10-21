@@ -366,7 +366,7 @@ namespace sw
     void MatchQueueService::placeMatches( ModeState& state, int64 nowMs )
     {
         vector<MatchBackfilled> listBackfilled;
-        state._maker.processBackfills( nowMs, listBackfilled ); // 경기 중 빈자리를 새 경기보다 먼저 채운다
+        state._maker.processBackfills( nowMs, listBackfilled ); // 경기 중 빈 슬롯을 새 경기보다 먼저 채운다
         for ( const MatchBackfilled& backfilled : listBackfilled )
         {
             deliverBackfill( backfilled );
@@ -390,7 +390,7 @@ namespace sw
         {
             const UnplacedMatch& unplaced = state._listUnplaced[index];
             const bool           bGiveUp  = nowMs - unplaced._formedMs >= MatchQueueLimit::kNoServerGiveUpMs;
-            // 자리가 없으면 다음 틱에 다시 시도한다. 서버 목록이 바뀌기를 기다리는 것이며, 오래 기다렸으면 NoServer 로 끝낸다
+            // 배정할 서버가 없으면 다음 틱에 다시 시도한다. 서버 목록이 바뀌기를 기다리는 것이며, 오래 기다렸으면 NoServer 로 끝낸다
             if ( placeMatch( state, unplaced._match, bGiveUp ? MatchQueueOutcome::NoServer : MatchQueueOutcome::Count, nowMs ) == false && bGiveUp == false )
             {
                 ++index;

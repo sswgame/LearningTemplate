@@ -12,7 +12,7 @@
  *         <Achievement id="first_blood" stat="kills" threshold="1" rewardAsset="cur.gold" rewardAmount="100" mailTitle="mail.achievement"/>
  *     </LeaderboardCatalog>
  * @endcode
- *          순위표 정의를 데이터로 두는 것은 PlayFab 의 Leaderboard 정의, EOS 개발자 포털의 Leaderboard 설정과 같은 자리입니다.
+ *          순위표 정의를 데이터로 두는 것은 PlayFab 의 Leaderboard 정의나 EOS 개발자 포털의 Leaderboard 설정에 해당합니다.
  */
 #pragma once
 #include "Core/Common/Types.h"

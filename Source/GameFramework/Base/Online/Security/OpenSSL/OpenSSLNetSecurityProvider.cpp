@@ -91,7 +91,7 @@ namespace sw
             }
 
             /**
-             * @brief PEM 키 암호 콜백 — 설정의 암호를 그대로 준다. 암호가 없으면 0(실패)을 돌려준다: 기본 콜백은 콘솔에서 암호를 묻는데, 서버가 그 자리에서 멈추면 안 된다.
+             * @brief PEM 키 암호 콜백 — 설정의 암호를 그대로 준다. 암호가 없으면 0(실패)을 돌려준다: 기본 콜백은 콘솔에서 암호를 묻는데, 서버가 그대로 멈추면 안 된다.
              */
             static int32 providePassphrase( utf8* pBuffer, int32 size, int32 writing, void* pUserData )
             {
@@ -622,7 +622,7 @@ namespace sw
             bReady = listCertificate.empty() == false && pKey != nullptr && SSL_CTX_use_certificate( pContext, listCertificate[0] ) == 1;
             for ( size_t index = 1; bReady && index < listCertificate.size(); ++index )
             {
-                bReady = SSL_CTX_add1_chain_cert( pContext, listCertificate[index] ) == 1; // 중간 인증서 — add1 은 참조를 올린다
+                bReady = SSL_CTX_add1_chain_cert( pContext, listCertificate[index] ) == 1; // 중간 인증서 — add1 은 참조 횟수를 늘린다
             }
             bReady = bReady && SSL_CTX_use_PrivateKey( pContext, pKey ) == 1 && SSL_CTX_check_private_key( pContext ) == 1;
             for ( X509* pCertificate : listCertificate )
@@ -641,7 +641,7 @@ namespace sw
                 bReady = bReady && X509_STORE_add_cert( pStore, pCertificate ) == 1;
                 X509_free( pCertificate );
             }
-            // 신뢰 목록에 든 끝 인증서(개발용 자체 서명 · 고정한 서버 인증서)를 CA 없이 그대로 믿는다.
+            // 신뢰 목록에 포함된 끝 인증서(개발용 자체 서명 · 고정한 서버 인증서)를 CA 없이 그대로 믿는다.
             X509_VERIFY_PARAM_set_flags( SSL_CTX_get0_param( pContext ), X509_V_FLAG_PARTIAL_CHAIN );
             SSL_CTX_set_verify( pContext, SSL_VERIFY_PEER, nullptr );
         }

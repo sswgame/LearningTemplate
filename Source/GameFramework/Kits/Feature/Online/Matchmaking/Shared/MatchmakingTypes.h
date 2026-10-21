@@ -85,7 +85,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 티켓에 든 한 사람입니다. */
+    /** @brief 티켓에 포함된 한 사람입니다. */
     REFLECT()
     struct MatchMember
     {
@@ -161,9 +161,9 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 경기 중 빈자리(백필) 요청입니다. 전용 게임 서버가 권한 매처에 보내는 서버 버스(`mm.backfill.<모드>`)의 본문입니다.
-     * @details 팀마다 빈자리 수를 싣습니다. 매처는 대기 티켓을 실력 허용 범위와 지역 규칙으로 골라 채우고, 채운 사람을 같은 경기 id 의 배정으로 게임 서버에 알립니다.
-     *          빈자리가 모두 차거나 모드의 `_maxWaitMs` 가 지나면 요청이 끝납니다. 같은 경기 id 로 다시 보내면 빈자리 수를 바꿉니다.
+     * @brief 경기 중 빈 슬롯(백필) 요청입니다. 전용 게임 서버가 권한 매처에 보내는 서버 버스(`mm.backfill.<모드>`)의 본문입니다.
+     * @details 팀마다 빈 슬롯 수를 싣습니다. 매처는 대기 티켓을 실력 허용 범위와 지역 규칙으로 골라 채우고, 채운 사람을 같은 경기 id 의 배정으로 게임 서버에 알립니다.
+     *          빈 슬롯이 모두 차거나 모드의 `_maxWaitMs` 가 지나면 요청이 끝납니다. 같은 경기 id 로 다시 보내면 빈 슬롯 수를 바꿉니다.
      */
     REFLECT()
     struct SW_KIT_API MatchBackfillRequest
@@ -171,7 +171,7 @@ namespace sw
         REFLECT_BODY();
         static constexpr uint32 kBusVersion = 1; ///< 서버 버스의 의미 버전(docs/plans/ServerBusFormat.md 3.4)
         PROPERTY( MaxCount = 16 )
-        vector<int32> _listOpenSlot{}; ///< 팀마다 빈자리 수이다. 상한은 `MatchmakingLimit::kMaxTeamCount` 와 같다
+        vector<int32> _listOpenSlot{}; ///< 팀마다 빈 슬롯 수이다. 상한은 `MatchmakingLimit::kMaxTeamCount` 와 같다
         PROPERTY( MaxCount = 32 )
         string _modeID{};
         PROPERTY( MaxCount = 16 )
@@ -196,7 +196,7 @@ namespace sw
     /** @brief 백필로 채운 티켓 하나입니다. 매처가 내고 대기열 서비스가 배정으로 보냅니다. */
     struct MatchBackfilled
     {
-        MatchBackfillRequest _request{}; ///< 채운 뒤의 남은 빈자리가 아니라 요청의 서버 정보를 쓴다
+        MatchBackfillRequest _request{}; ///< 채운 뒤의 남은 빈 슬롯이 아니라 요청의 서버 정보를 쓴다
         MatchTicket          _ticket{};
         int32                _team{ 0 };
     };
@@ -351,7 +351,7 @@ namespace sw
     {
         Found = 0,
         Timeout,   ///< 모드 시한을 넘었거나 권한 서버가 바뀌어 티켓을 잃었다. 다시 줄을 선다
-        NoServer,  ///< 경기는 만들었지만 전용 서버에 끝내 자리가 없었다
+        NoServer,  ///< 경기는 만들었지만 전용 서버에 끝내 배정할 슬롯이 없었다
         Cancelled, ///< 대기열에서 빠졌다. 본인이 뺐거나 파티가 바뀐 경우이다
         Count
     };

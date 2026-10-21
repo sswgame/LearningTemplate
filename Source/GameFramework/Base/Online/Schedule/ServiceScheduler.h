@@ -53,7 +53,7 @@ namespace sw
     {
         string _jobID{};
         int64  _occurrenceMs{ 0 }; ///< 회차의 정한 시각
-        uint64 _runToken{ 0 };     ///< `completeRun` 에 돌려준다(차지 레코드의 판)
+        uint64 _runToken{ 0 };     ///< `completeRun` 에 돌려준다(차지 레코드의 버전)
     };
 } // namespace sw
 

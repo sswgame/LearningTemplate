@@ -218,7 +218,7 @@ namespace sw
         PROPERTY()
         int32 _memberCount{ 0 };
         PROPERTY()
-        int64 _experience{ 0 }; ///< 길드 경험치이다. 서버 시스템(`GuildService::addExperience`)만 올린다
+        int64 _experience{ 0 }; ///< 길드 경험치이다. 서버 시스템(`GuildService::addExperience`)만 늘린다
         PROPERTY()
         int32 _level{ 1 }; ///< 경험치와 서버 설정의 레벨 표(`guildLevelExperience`)로 응답할 때 정한다. 저장하지 않는다
         PROPERTY( Min = 0, Max = 1 )
@@ -265,6 +265,6 @@ namespace sw
         static constexpr int64 kInviteLifetimeMs      = 604800000; ///< 7일이다
         static constexpr int64 kApplicationLifetimeMs = 604800000; ///< 가입 신청이 남는 기간이며 7일이다
         static constexpr int32 kMaxApplication        = 50;        ///< 길드 하나가 쌓아 두는 살아 있는 신청 수이다
-        static constexpr int32 kMaxLevelCount         = 100;       ///< 레벨 표의 길이 상한이다
+        static constexpr int32 kMaxLevelCount         = 100;       ///< 레벨 테이블의 길이 상한이다
     };
 } // namespace sw

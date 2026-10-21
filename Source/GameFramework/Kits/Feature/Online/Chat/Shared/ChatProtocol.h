@@ -7,7 +7,7 @@
  *            공통 오류(`OnlineError`)만 오류 코드로 오며 로그인 없음, 손상된 본문, 시한 초과가 해당한다. 클라이언트는 `fromErrorCode` 로 이를 결과에 맞춘다.
  *          - 메시지 형식(`ChatMessage`) 하나를 알림, 서버 간 버스, 기록 레코드가 함께 쓴다. 알림은 B 이고,
  *            버스(배포 중 빌드가 섞인다)와 기록 레코드(저장소에 남아 다른 빌드가 읽는다)는 자기 기술형(A, `BinarySerializer`)이다.
- *            버스의 의미 버전은 `ChatMessage::kBusVersion`, 기록 레코드의 판은 `kChatRecordVersion` 으로 따로다(버스는 이관을 보지 않는다).
+ *            버스의 의미 버전은 `ChatMessage::kBusVersion`, 기록 레코드의 버전은 `kChatRecordVersion` 으로 따로다(버스는 이관을 보지 않는다).
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -188,9 +188,9 @@ namespace sw
         static constexpr int32           kMaxCursorSize = 128; ///< 기록 키의 상한이다. 채널 id 뒤에 `/` 와 16진 문자열 셋이 붙는다
 
         /**
-         * @brief 기록 레코드를 읽고 씁니다. 저장소에 남는 영속 레코드이므로 자기 기술형(A)이며 레코드 판을 머리에 둡니다.
-         * @details 다른 판이거나 모르는 필드가 있거나 `ChatMessage` 에 선언된 범위를 벗어나면 손상으로 보고 오류 로그를 남기며 false 입니다(`ServiceRecordUtil::readDurable`).
-         *          필드를 더하면 옛 레코드의 그 필드는 기본값으로 채워집니다. 필드를 빼거나 뜻을 바꾸면 판을 올리고 데이터를 다시 씁니다.
+         * @brief 기록 레코드를 읽고 씁니다. 저장소에 남는 영속 레코드이므로 자기 기술형(A)이며 레코드 버전을 머리에 둡니다.
+         * @details 다른 버전이거나 모르는 필드가 있거나 `ChatMessage` 에 선언된 범위를 벗어나면 손상으로 보고 오류 로그를 남기며 false 입니다(`ServiceRecordUtil::readDurable`).
+         *          필드를 더하면 옛 레코드의 그 필드는 기본값으로 채워집니다. 필드를 빼거나 뜻을 바꾸면 버전을 올리고 데이터를 다시 씁니다.
          */
         [[nodiscard]] static bool encodeRecord( const ChatMessage& message, vector<uint8>& outBytes );
         [[nodiscard]] static bool decodeRecord( string_view key, const vector<uint8>& bytes, ChatMessage& outMessage );

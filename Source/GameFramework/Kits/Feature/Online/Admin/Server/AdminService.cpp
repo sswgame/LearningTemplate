@@ -105,7 +105,7 @@ namespace sw
 
     void AdminService::shutdown()
     {
-        // 넘긴 점검과 공지 명령은 서버 디렉터리 키트의 저장 완료 뒤에 끝나므로 거둘 때마다 그 완료도 거둔다
+        // 넘긴 점검과 공지 명령은 서버 디렉터리 키트의 저장 완료 뒤에 끝나므로 회수할 때마다 그 완료도 회수한다
         ServiceStoreUtil::drainUntilIdle(
             _pStore, [this]()
         { return _listPendingCall.empty() && _pendingSeedCount <= 0; }, [this]()

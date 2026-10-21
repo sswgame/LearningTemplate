@@ -97,7 +97,7 @@ namespace sw
     {
         SW_ASSERT( _bInitialized == SW_FALSE );
         _parts        = make_unique<Parts>();
-        _bInitialized = SW_TRUE; // 실패해도 `shutdown` 이 만든 것까지 내린다
+        _bInitialized = SW_TRUE; // 실패해도 `shutdown` 이 만든 것까지 정리한다
         Parts& parts  = *_parts;
 
         parts._config           = settings._config;
@@ -212,7 +212,7 @@ namespace sw
         vector<const OnlineServerKitEntry*> listEntryByFactory( listFactory.size(), nullptr );
         if ( parts._config._listKit.empty() )
         {
-            // 띄울 키트는 운영자가 고른다. 빌드에 든 키트를 모두 띄우면 데이터가 필요한 키트(경제의 카탈로그)가 기동을 막고, 띄울 생각이 없던 포트가 열린다.
+            // 띄울 키트는 운영자가 고른다. 빌드에 포함된 키트를 모두 띄우면 데이터가 필요한 키트(경제의 카탈로그)가 기동을 막고, 띄울 생각이 없던 포트가 열린다.
             outError = "the online service config lists no kits (_listKit)";
             return false;
         }
@@ -347,7 +347,7 @@ namespace sw
             if ( instance._kit != nullptr )
                 instance._kit->stop();
         }
-        // 둘 다 시작하지 않았어도 내려도 된다 — 호스트는 자기 초기화 비트를 보고, 스케줄러는 목록과 저장소 포인터를 비울 뿐이다.
+        // 둘 다 시작하지 않았어도 종료해도 된다 — 호스트는 자기 초기화 비트를 보고, 스케줄러는 목록과 저장소 포인터를 비울 뿐이다.
         parts._host.shutdown();
         parts._scheduler.shutdown();
         if ( parts._store != nullptr )
@@ -374,7 +374,7 @@ namespace sw
         if ( _bInitialized == SW_FALSE )
             return;
         Parts& parts = *_parts;
-        // 메모리 캐시의 만료(TTL)를 서비스와 같은 시계로 잰다 — 캐시가 제 단조 시계를 쓰면 가짜 시계에서 서버 등록 · 매칭 표가 서비스 시각보다 먼저 만료된다.
+        // 메모리 캐시의 만료(TTL)를 서비스와 같은 시계로 계산한다 — 캐시가 제 단조 시계를 쓰면 가짜 시계에서 서버 등록 · 매칭 테이블이 서비스 시각보다 먼저 만료된다.
         if ( parts._bMemoryCache == SW_TRUE && parts._bManualCacheTime == SW_TRUE )
             parts._memoryCacheDatabase.setManualTimeMs( nowMs );
         parts._host.update( nowMs );

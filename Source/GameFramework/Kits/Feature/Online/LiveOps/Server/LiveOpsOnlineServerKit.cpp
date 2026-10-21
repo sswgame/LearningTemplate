@@ -9,10 +9,10 @@
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/Provider/Fake/FakePushProvider.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushNotificationDispatcher.h"
 
-// 라이브 운영 키트의 서버 조립 — 기간 이벤트 · 원격 설정 값 · 기기 등록 · 푸시 발송 서비스와 바인딩을 올린다.
+// 라이브 운영 키트의 서버 조립 — 기간 이벤트 · 원격 설정 값 · 기기 등록 · 푸시 발송 서비스와 바인딩을 만든다.
 // 실제 푸시 제공자(APNs · FCM)는 외부 계정 · 비용이라 계약과 가짜까지만 둔다(결정 기록 5-9).
 // 옵션:
-//   fakePush  1 이면 가짜 푸시 제공자("fake")를 올린다(Dev 만).
+//   fakePush  1 이면 가짜 푸시 제공자("fake")를 등록한다(Dev 만).
 
 namespace sw
 {

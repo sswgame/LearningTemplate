@@ -166,7 +166,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 차지한 회차의 끝을 적는다(판 조건 — 이어받긴 레코드는 건드리지 않는다). */
+    /** @brief 차지한 회차의 끝을 적는다(버전 조건 — 이어받긴 레코드는 건드리지 않는다). */
     class ServiceScheduler::FinishWork final : public IServiceStoreWork
     {
     public:
@@ -355,7 +355,7 @@ namespace sw
     void ServiceScheduler::onClaimCompleted( size_t jobIndex, int64 occurrenceMs, ClaimOutcome outcome, uint64 runToken, int64 retryAtMs )
     {
         if ( jobIndex >= _listJob.size() )
-            return; // 내린 뒤에 거둔 일
+            return; // 종료한 뒤에 회수한 일
         Job& job           = _listJob[jobIndex];
         job._bClaimPending = SW_FALSE;
         switch ( outcome )

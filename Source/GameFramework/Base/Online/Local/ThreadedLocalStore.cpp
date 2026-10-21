@@ -121,12 +121,12 @@ namespace sw
                     _requestReady.wait( lock );
                 }
                 if ( _listQueuedRequest.empty() )
-                    return; // 내리는 중이고 남은 일이 없다
+                    return; // 종료하는 중이고 남은 일이 없다
                 request = std::move( _listQueuedRequest.front() );
                 _listQueuedRequest.pop_front();
                 bStopping = _bStopping == SW_TRUE;
             }
-            // 내리는 중에도 쓰기 · 지우기는 끝까지 한다(종료 때 세이브를 잃지 않는다) — 읽기 · 나열은 받을 사람이 없다.
+            // 종료하는 중에도 쓰기 · 지우기는 끝까지 한다(종료 때 세이브를 잃지 않는다) — 읽기 · 나열은 받을 사람이 없다.
             const bool              bDropped   = bStopping && ( request._operation == LocalStoreOperation::Read || request._operation == LocalStoreOperation::List );
             LocalStoreCompletion    completion = bDropped ? LocalStoreRequestUtil::makeCompletion( request, LocalStoreResult::IOError )
                                                           : LocalStoreRequestUtil::execute( request, *_storage, _sealContext );

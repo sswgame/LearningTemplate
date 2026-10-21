@@ -38,7 +38,7 @@ namespace sw
         string getAssignTopic() const;
         /** @brief 배정 주제(`MatchQueueBus::kAssignTopic`)의 메시지를 처리합니다. 읽지 못했으면(읽기가 로그와 카운터를 남겼다) false 를 반환합니다. */
         [[nodiscard]] bool handleAssign( const ServerBusMessage& message, int64 nowMs );
-        /** @brief 경기 중 빈자리를 권한 매처에 보냅니다(버스 `mm.backfill.<모드>`). 요청의 서버 id 는 이 서버로 채웁니다. 보내지 못했으면 false 이며 발행이 로그에 남겼습니다. */
+        /** @brief 경기 중 빈 슬롯을 권한 매처에 보냅니다(버스 `mm.backfill.<모드>`). 요청의 서버 id 는 이 서버로 채웁니다. 보내지 못했으면 false 이며 발행이 로그에 남겼습니다. */
         [[nodiscard]] bool requestBackfill( ServerBus& bus, const MatchBackfillRequest& request ) const;
         /** @brief 시한이 지난 접속 예정자를 지웁니다. */
         void update( int64 nowMs );

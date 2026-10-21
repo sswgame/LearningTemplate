@@ -41,7 +41,7 @@ namespace sw
         int32 _discardedCount{ 0 };
         int32 _returnedCount{ 0 };
         int32 _removedCount{ 0 }; ///< 발행 재원, 이미 받은 우편, 없는 우편이며 지우기만 한 수이다
-        int32 _failedCount{ 0 };  ///< 다음 정리가 다시 한다. 서버 둘이 같은 우편을 처리하면 진 쪽이 여기에 든다
+        int32 _failedCount{ 0 };  ///< 다음 정리가 다시 한다. 서버 둘이 같은 우편을 처리하면 진 쪽이 여기에 포함된다
         uint8 _bMore{ SW_FALSE }; ///< 상한까지 채웠으므로 곧 다시 정리한다
     };
 } // namespace sw

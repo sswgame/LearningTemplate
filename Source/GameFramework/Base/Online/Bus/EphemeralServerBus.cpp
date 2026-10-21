@@ -44,7 +44,7 @@ namespace sw
 
     EphemeralServerBus::~EphemeralServerBus()
     {
-        // 라우터가 이 객체의 델리게이트를 들고 있다. 라우터가 먼저 내려갔으면(`shutdown`) 구독 목록이 비어 있어 해지는 아무 일도 하지 않는다.
+        // 라우터가 이 객체의 델리게이트를 보관한다. 라우터가 먼저 종료했으면(`shutdown`) 구독 목록이 비어 있어 해지는 아무 일도 하지 않는다.
         for ( const TopicSubscription& subscription : _listSubscription )
         {
             _pRouter->unsubscribe( subscription._subscriptionID );

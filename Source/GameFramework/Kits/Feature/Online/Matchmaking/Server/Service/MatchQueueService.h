@@ -2,15 +2,15 @@
  * @file MatchQueueService.h
  * @brief 매칭 대기열입니다. 모드마다 캐시 임대를 잡은 서버 하나가 매처를 돌리고, 만들어진 경기를 전용 서버에 배정해 게임 서버와 티켓을 낸 서버에 버스로 알립니다. 전송은 모르며 서비스 스레드 하나에서 씁니다.
  * @details - 권한: 모드마다 임대 `mm/lease/<모드>`(값은 서버 id, 10초)를 없을 때만 잡는다. 잡은 서버는 3초마다 자기 값일 때만 연장한다. 버스가 없으면(서버 한 대) 항상 권한을 가진다.
- *          - 백필: 게임 서버가 빈자리(`MatchBackfillRequest`, 버스 `mm.backfill.<모드>`)를 보내면 권한 매처가 새 경기보다 먼저 채운다. 채운 사람은 같은 경기 id 의 배정으로
+ *          - 백필: 게임 서버가 빈 슬롯(`MatchBackfillRequest`, 버스 `mm.backfill.<모드>`)를 보내면 권한 매처가 새 경기보다 먼저 채운다. 채운 사람은 같은 경기 id 의 배정으로
  *            게임 서버(배정 주제)와 티켓을 낸 서버(결과 주제)에 알린다.
  *          - 티켓 흐름: 계정이 접속한 서버가 티켓을 만든다. 파티장이면 파티 전체의 티켓이며 실력은 모드의 실력 통계를 순위표 키트의 통계 창(`IAccountStatSource`)에서 읽는다. 아직 읽지 않은 계정이 있으면 RatingUnavailable 이다.
  *            권한이 있으면 바로 매처에 넣고, 없으면 버스 `mm.queue.<모드>` 로 보낸다. 빠지기는 `mm.cancel.<모드>` 로 보낸다.
  *          - 배정: 경기가 만들어지면 기반 계층의 `ServerRegistryReader` 로 모드의 서버 종류, 경기 지역, 인원 슬롯에 맞는 서버를 고른다.
  *            게임 서버에는 `mm.assign.<서버>`(접속할 사람 목록)로, 티켓을 낸 서버에는 `mm.result.<서버>` 로 결과를 보낸다. 결과를 받은 서버가 멤버에게 알린다.
- *            자리가 없으면 경기를 쥐고 기다렸다가 다시 시도하고, 30초를 넘기면 NoServer 로 끝낸다.
+ *            배정할 서버가 없으면 경기를 쥐고 기다렸다가 다시 시도하고, 30초를 넘기면 NoServer 로 끝낸다.
  *          - 권한이 넘어가면 대기 중인 티켓을 잃는다. 티켓을 낸 서버가 티켓마다 시한(모드 시한 + 30초 + 10초)을 보관하다가 결과가 없으면 Timeout 을 알리고, 클라이언트가 다시 줄을 선다.
- *          - 로비 시작도 같은 배정 경로를 쓴다. 팀은 로비의 팀 그대로이고, 자리가 없으면 바로 NoServer 로 끝내고 로비를 다시 연다.
+ *          - 로비 시작도 같은 배정 경로를 쓴다. 팀은 로비의 팀 그대로이고, 배정할 서버가 없으면 바로 NoServer 로 끝내고 로비를 다시 연다.
  *
  *          Nakama 의 메모리 매처, OpenMatch 의 디렉터와 할당기, PlayFab 의 Matchmaking 에서 Multiplayer Servers 로 이어지는 흐름에 해당한다.
  */
@@ -121,7 +121,7 @@ namespace sw
 
         void joinQueue( AccountID accountID, string_view modeID, string_view region, int64 nowMs, uint64 requestTag );
         void leaveQueue( AccountID accountID, uint64 requestTag );
-        /** @brief 계정이 떠났을 때 부릅니다. 그 계정이 든 티켓을 뺍니다. */
+        /** @brief 계정이 떠났을 때 부릅니다. 그 계정이 포함된 티켓을 뺍니다. */
         void removeAccount( AccountID accountID );
         /** @brief 파티 멤버가 바뀌어 티켓이 깨졌을 때 부릅니다(`PartyLobbyService::drainBrokenTickets`). 이 서버의 티켓이면 빼고, 다른 서버의 티켓이면 권한 서버와 티켓을 낸 서버에 버스로 알립니다. */
         void cancelTicket( uint64 ticketID );
@@ -130,7 +130,7 @@ namespace sw
 
         /** @brief 바인딩이 구독한 주제로 온 버스 메시지를 처리합니다. */
         void handleBusMessage( const ServerBusMessage& message, int64 nowMs );
-        /** @brief 경기 중 빈자리를 맡깁니다. 이 서버가 그 모드의 권한이면 매처에 바로 넣고, 아니면 버스로 권한 서버에 보냅니다. 같은 프로세스의 게임 서버와 테스트가 부릅니다. */
+        /** @brief 경기 중 빈 슬롯을 맡깁니다. 이 서버가 그 모드의 권한이면 매처에 바로 넣고, 아니면 버스로 권한 서버에 보냅니다. 같은 프로세스의 게임 서버와 테스트가 부릅니다. */
         void submitBackfill( const MatchBackfillRequest& request );
         void drainCompletions( vector<MatchQueueCompletion>& outListCompletion ) { _completionBuffer.drainTo( outListCompletion ); }
         void drainNotifications( vector<MatchQueueNotification>& outListNotification ) { _notificationBuffer.drainTo( outListNotification ); }
@@ -159,7 +159,7 @@ namespace sw
         {
             MatchMaker                       _maker{};
             unique_ptr<ServerRegistryReader> _reader{};
-            vector<UnplacedMatch>            _listUnplaced{}; ///< 서버 자리가 없어 기다리는 경기이다
+            vector<UnplacedMatch>            _listUnplaced{}; ///< 배정할 서버가 없어 기다리는 경기이다
             int64                            _leaseAttemptMs{ 0 };
             uint64                           _leaseRequestID{ 0 };
             uint8                            _bAuthority{ SW_FALSE };
@@ -225,6 +225,6 @@ namespace sw
         static constexpr ServerBusTopicFamily<MatchTicketCancel>    kCancelTopic{ "mm.cancel." };     ///< 뒤에 모드 id. 권한 서버로 가는 티켓 취소이다
         static constexpr ServerBusTopicFamily<MatchAssignment>      kResultTopic{ "mm.result." };     ///< 뒤에 서버 16진. 티켓을 낸 서버로 가는 결과이다
         static constexpr ServerBusTopicFamily<MatchFormed>          kAssignTopic{ "mm.assign." };     ///< 뒤에 게임 서버 16진. 게임 서버로 가는 접속 예정자 목록이다
-        static constexpr ServerBusTopicFamily<MatchBackfillRequest> kBackfillTopic{ "mm.backfill." }; ///< 뒤에 모드 id. 게임 서버가 권한 서버로 보내는 경기 중 빈자리이다
+        static constexpr ServerBusTopicFamily<MatchBackfillRequest> kBackfillTopic{ "mm.backfill." }; ///< 뒤에 모드 id. 게임 서버가 권한 서버로 보내는 경기 중 빈 슬롯이다
     };
 } // namespace sw

@@ -9,11 +9,11 @@
 #include "GameFramework/Kits/Feature/Online/Economy/Shared/Catalog/CurrencyCatalog.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Shared/Catalog/OfferCatalog.h"
 
-// 경제 키트의 서버 조립 — 화폐 · 상품 카탈로그를 읽어 경제 서비스를 올리고, 화폐 카탈로그를 원장 정책(계정 잔액 상한)으로 문맥에 내놓는다(우편함 · GM · 거래가 쓴다).
+// 경제 키트의 서버 조립 — 화폐 · 상품 카탈로그를 읽어 경제 서비스를 만들고, 화폐 카탈로그를 원장 정책(계정 잔액 상한)으로 문맥에 내놓는다(우편함 · GM · 거래가 쓴다).
 // 옵션:
 //   currencyCatalog        화폐 카탈로그(리소스 경로, `<CurrencyCatalog>`). 필수.
 //   offerCatalog           상품 카탈로그(리소스 경로, `<OfferCatalog>`). 필수.
-//   fakeReceipts           1 이면 가짜 영수증 제공자("fake")를 올린다(Dev 만 — Shipping 경제 서비스가 거절한다).
+//   fakeReceipts           1 이면 가짜 영수증 제공자("fake")를 등록한다(Dev 만 — Shipping 경제 서비스가 거절한다).
 //   acceptSandboxReceipts  1 이면 스토어의 샌드박스 영수증을 받는다(스테이징 서버).
 
 namespace sw

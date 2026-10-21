@@ -1,7 +1,7 @@
 /**
  * @file LedgerAudit.h
  * @brief 원장 보존 검사입니다. 분개를 모두 훑어 자산마다 발행과 소각을 합하고, 잔액을 모두 훑어 합과 음수를 셉니다. 불변식은 보유 = 발행 - 소각입니다.
- * @details 표 전체를 읽으므로 운영에서는 예약 작업(한가한 시간 · 읽기 복제본)으로 돌린다. 테스트는 메모리 저장소로 이동마다 돌린다.
+ * @details 테이블 전체를 읽으므로 운영에서는 예약 작업(한가한 시간 · 읽기 복제본)으로 돌린다. 테스트는 메모리 저장소로 이동마다 돌린다.
  *          계정의 음수 잔액은 환불 회수의 빚이라 위반이 아니다(따로 센다). 맡김의 음수는 위반이다.
  */
 #pragma once
@@ -46,7 +46,7 @@ namespace sw
 {
     struct SW_GF_API LedgerAudit
     {
-        /** @brief 저장소 스레드에서 표 둘을 훑어 @p outReport 를 채웁니다. */
+        /** @brief 저장소 스레드에서 테이블 둘을 훑어 @p outReport 를 채웁니다. */
         [[nodiscard]] static ServiceStoreResult computeReport( IServiceStoreConnection& connection, LedgerAuditReport& outReport );
     };
 } // namespace sw

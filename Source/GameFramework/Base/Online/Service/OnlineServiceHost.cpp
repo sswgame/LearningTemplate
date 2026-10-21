@@ -92,7 +92,7 @@ namespace sw
         if ( pTransport->initialize( &_endpoint, settings._transportSettings ) == false || pTransport->listen( settings._listenAddress ) == false )
         {
             outError = "online service host could not listen on " + settings._listenAddress.toString();
-            releaseTransportSide(); // 이미 선 엔드포인트 · 요청 서버 · 전송을 내린다 — `_bInitialized` 가 거짓이라 `shutdown` 은 아무것도 하지 않는다
+            releaseTransportSide(); // 이미 선 엔드포인트 · 요청 서버 · 전송을 해제한다 — `_bInitialized` 가 거짓이라 `shutdown` 은 아무것도 하지 않는다
             return false;
         }
         if ( settings._pEphemeralStore != nullptr )
@@ -107,7 +107,7 @@ namespace sw
             return;
         _bInitialized = SW_FALSE;
         _ephemeralRouter.shutdown(); // 기다리던 캐시 요청은 Unavailable 로 한 번씩 — 서비스를 내리기 전
-        // 서비스가 든 호스트 포인터 · 구독을 여기서 떼게 한다 — 서비스 객체는 호스트보다 늦게 내려가도 된다(사라진 호스트를 부르지 않는다).
+        // 서비스가 가진 호스트 포인터 · 구독을 여기서 분리하게 한다 — 서비스 객체는 호스트보다 늦게 종료돼도 된다(사라진 호스트를 부르지 않는다).
         for ( size_t index = _listService.size(); index > 0; --index )
         {
             _listService[index - 1]->onHostShutdown( *this );
@@ -428,7 +428,7 @@ namespace sw
         BitReader     reader( context._pBody + hashSize, context._bodySize - hashSize );
         vector<uint8> buildBytes;
         const bool    bBuildRead = reader.readBlob( buildBytes, OnlineProtocolConstant::kMaxBuildTextSize );
-        (void)reader.readBits( 8 ); // 플랫폼. 최소 빌드 판 확인은 계정 키트 몫
+        (void)reader.readBits( 8 ); // 플랫폼. 최소 빌드 버전 확인은 계정 키트 담당
         if ( bBuildRead == false || reader.hasOverflowed() )
         {
             (void)respondError( context._token, OnlineError::kInvalidRequest );

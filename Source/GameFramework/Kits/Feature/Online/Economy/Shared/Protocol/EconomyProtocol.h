@@ -166,7 +166,7 @@ namespace sw
         PROPERTY( MaxCount = 16 )
         vector<LedgerBalance> _listWithdrawn{}; ///< WithdrawPurchase 가 회수한 자산과 양이다. 스토어 환불 금액은 이것으로 정한다
         PROPERTY( MaxCount = 64 )
-        string _productID{}; ///< Redeem 의 영수증에 든 스토어 상품이다
+        string _productID{}; ///< Redeem 의 영수증에 포함된 스토어 상품이다
         PROPERTY( MaxCount = 512 )
         string _nextCursor{};
         PROPERTY()

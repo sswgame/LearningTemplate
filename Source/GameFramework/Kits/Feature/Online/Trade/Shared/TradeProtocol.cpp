@@ -8,7 +8,7 @@ namespace sw
 {
     namespace
     {
-        constexpr uint32 kTradeRecordVersion = 1; ///< 거래 레코드(A)의 판이다. 필드를 빼거나 뜻을 바꿀 때 올리고 데이터를 다시 쓴다
+        constexpr uint32 kTradeRecordVersion = 1; ///< 거래 레코드(A)의 버전이다. 필드를 빼거나 뜻을 바꿀 때 올리고 데이터를 다시 쓴다
     } // namespace
 } // namespace sw
 

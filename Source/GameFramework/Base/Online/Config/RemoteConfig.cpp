@@ -20,7 +20,7 @@ namespace sw
     {
         struct RemoteConfigInternal
         {
-            static constexpr uint64 kRecordVersion   = 2; ///< 2 에서 값 종류가 3 비트가 됐다(실험). 옛 판 레코드는 다시 쓴다
+            static constexpr uint64 kRecordVersion   = 2; ///< 2 에서 값 종류가 3 비트가 됐다(실험). 옛 버전 레코드는 다시 쓴다
             static constexpr uint64 kVersion         = 2;
             static constexpr int32  kTypeBitCount    = 3;
             static constexpr int32  kMaxVariantCount = 16;
@@ -148,7 +148,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 표 전체를 읽는다(저장소 스레드), 결과를 바꿔 넣는다(서비스 스레드). */
+    /** @brief 테이블 전체를 읽는다(저장소 스레드), 결과를 바꿔 넣는다(서비스 스레드). */
     class RemoteConfig::ReloadWork final : public IServiceStoreWork
     {
     public:
@@ -193,7 +193,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 값 하나를 판 조건 + 감사 줄로 쓴다. */
+    /** @brief 값 하나를 버전 조건 + 감사 줄로 쓴다. */
     class RemoteConfig::SetWork final : public IServiceStoreWork
     {
     public:
@@ -212,7 +212,7 @@ namespace sw
         {
             ServiceTransaction transaction;
             transaction.put( getTable(), _key, RemoteConfigInternal::encodeRecord( _value ), _expectedVersion );
-            // 같은 판 위의 같은 키 바꾸기는 같은 감사 키 — 재시도가 줄을 둘 만들지 않는다
+            // 같은 버전 위의 같은 키 바꾸기는 같은 감사 키 — 재시도가 줄을 둘 만들지 않는다
             ServiceAuditLog::stageEntry( transaction, _audit, _expectedVersion, HashUtil::computeStringHash64( _key.data(), _key.size(), false ) );
             ServiceCommitInfo info;
             _result        = connection.commit( transaction, &info );

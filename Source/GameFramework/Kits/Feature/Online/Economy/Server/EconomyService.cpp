@@ -104,7 +104,7 @@ namespace sw
             uint64               _callID;
             int32                _methodIndex;
         };
-        /** @brief 원장 보존 검사 한 번입니다. 표 전체를 읽는다. */
+        /** @brief 원장 보존 검사 한 번입니다. 테이블 전체를 읽는다. */
         class EconomyLedgerAuditWork final : public IServiceStoreWork
         {
         public:

@@ -4,7 +4,7 @@
  * @details - 테이블은 여섯 개이다.
  *            길드는 `social_guild`, 멤버는 `social_guild_member`(`<길드>/<계정>`), 계정의 길드는 `social_account_guild` 에 둔다.
  *            이름은 `social_guild_name` 에 ASCII 소문자로 바꾼 바이트의 16진 문자열로 두므로 대소문자를 무시하고 유일하다.
- *            초대는 `social_guild_invite`(`<계정>/<길드>`, 7일)에, 순번은 `social_sequence/guild` 에 두며 순번은 만들기와 같은 트랜잭션에서 올린다.
+ *            초대는 `social_guild_invite`(`<계정>/<길드>`, 7일)에, 순번은 `social_sequence/guild` 에 두며 순번은 만들기와 같은 트랜잭션에서 늘린다.
  *          - 한 계정은 한 길드에만 들어간다. 계정의 길드를 "없어야 함" 조건으로 쓰기 때문이다. 정원은 100명이다.
  *            길드장은 혼자일 때만 떠날 수 있고 그때 길드가 해산되며 이름도 지운다. 내보내기는 더 높은 역할만 할 수 있다.
  *          - 변경한 뒤 멤버 목록을 한 번 더 읽어 `GuildChanged` 알림을 보낸다. 받는 사람이 오프라인이면 호스트가 버린다.
@@ -16,7 +16,7 @@
  *            맡기기는 길드 레코드를 다시 써서 해산과 겹치지 않게 하며, 창고에 남은 것이 있으면 해산(혼자 남은 길드장의 떠나기)은 `StorageNotEmpty` 이다.
  *
  *          PlayFab Groups 와 Nakama Groups(역할, 초대, 정원)에 해당한다.
- *          - 레벨은 경험치(`addExperience`, 서버 시스템만)와 서버 설정의 레벨 표로 응답할 때 정한다. 표가 바뀌면 저장된 데이터를 고치지 않아도 레벨이 따라간다.
+ *          - 레벨은 경험치(`addExperience`, 서버 시스템만)와 서버 설정의 레벨 테이블로 응답할 때 정한다. 테이블이 바뀌면 저장된 데이터를 고치지 않아도 레벨이 따라간다.
  *          - 공개 길드(`_bOpenToApply`)에는 누구나 가입 신청을 내고 임원 이상이 받아들이거나 지운다. 신청은 `social_guild_application`(키 `<길드>/<계정>`)이며 7일 뒤 죽는다.
  *            길드마다 살아 있는 신청은 50개까지이고, 새 신청을 받을 때 죽은 신청을 같은 트랜잭션에서 지운다.
  */
@@ -55,7 +55,7 @@ namespace sw
         ListApplications, ///< 살아 있는 신청 목록이다. 임원 이상
         Approve,          ///< 신청을 받아들인다. 임원 이상
         Reject,           ///< 신청을 지운다. 임원 이상
-        AddExperience     ///< 서버 시스템이 길드 경험치를 올린다(`addExperience`). 완료는 없다
+        AddExperience     ///< 서버 시스템이 길드 경험치를 늘린다(`addExperience`). 완료는 없다
     };
 } // namespace sw
 
@@ -147,11 +147,11 @@ namespace sw
         void submit( const GuildRequest& request, uint64 requestTag );
         /** @brief 로그인한 계정의 길드를 찾아 `MemberAttached` 이벤트를 냅니다. 완료는 없습니다. */
         void attachAccount( AccountID accountID, int64 nowMs );
-        /** @brief 서버 시스템(퀘스트, 전투)이 길드 경험치를 @p amount(1 이상) 올립니다. 완료는 없고 멤버에게 GuildChanged 를 알립니다. */
+        /** @brief 서버 시스템(퀘스트, 전투)이 길드 경험치를 @p amount(1 이상)만큼 늘립니다. 완료는 없고 멤버에게 GuildChanged 를 알립니다. */
         void addExperience( uint64 guildID, int64 amount, int64 nowMs );
         /**
-         * @brief 레벨 표를 정합니다. @p listLevelExperience 의 i 번째 값은 레벨 i + 2 가 되는 누적 경험치이며 1 이상이고 늘어나야 합니다.
-         * @return 규칙에 맞지 않으면 false 이고 표를 바꾸지 않습니다. 비어 있으면 모든 길드가 레벨 1 입니다.
+         * @brief 레벨 테이블을 정합니다. @p listLevelExperience 의 i 번째 값은 레벨 i + 2 가 되는 누적 경험치이며 1 이상이고 늘어나야 합니다.
+         * @return 규칙에 맞지 않으면 false 이고 테이블을 바꾸지 않습니다. 비어 있으면 모든 길드가 레벨 1 입니다.
          */
         [[nodiscard]] bool setLevelTable( const vector<int64>& listLevelExperience );
         /** @brief 경험치에 맞는 레벨입니다(1 부터). */

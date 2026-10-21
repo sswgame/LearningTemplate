@@ -50,7 +50,7 @@ namespace sw
                 return context._pCodecRegistry != nullptr ? context._pCodecRegistry : CompressionCodecRegistry::getActive();
             }
 
-            /** @brief 장치 키에서 봉인 키 · 키 표시를 가릅니다. 창구 · 키가 없으면 Invalid. */
+            /** @brief 장치 키에서 봉인 키 · 키 표시를 가릅니다. 보안 제공자나 키 제공자가 없으면 Invalid. */
             static LocalStoreResult deriveKeys( const LocalSealContext& context, uint8 ( &outSealKey )[NetSecurityConstant::kAeadKeySize], uint64& outKeyID )
             {
                 if ( context._pSecurityProvider == nullptr || context._pKeyProvider == nullptr )

@@ -50,7 +50,7 @@ namespace sw
         MetricRegistry*           _pMetricRegistry{ nullptr };                                                            ///< 없으면 지표를 세지 않는다
         int64                     _withdrawalWindowMs{ 7 * constant::kSecondsPerDay * constant::kMillisecondsPerSecond }; ///< 청약철회 기한이다(전자상거래법의 7일)
         ServiceScheduler*         _pScheduler{ nullptr };                                                                 ///< 원장 보존 검사를 예약한다. 없으면 검사하지 않는다(테스트는 `requestLedgerAudit`)
-        int32                     _auditMinuteOfDay{ 4 * 60 + 30 };                                                       ///< 보존 검사 시각(UTC 분)이다. 표 전체를 읽으므로 한가한 시간에 둔다
+        int32                     _auditMinuteOfDay{ 4 * 60 + 30 };                                                       ///< 보존 검사 시각(UTC 분)이다. 테이블 전체를 읽으므로 한가한 시간에 둔다
         uint8                     _bAcceptSandboxReceipts{ SW_FALSE };
     };
 } // namespace sw
