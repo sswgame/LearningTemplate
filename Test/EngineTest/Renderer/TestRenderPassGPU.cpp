@@ -82,6 +82,7 @@
 #include "Engine/Window/IWindow.h"
 
 #include "EngineTest/AnimationTestUtil.h"
+#include "EngineTest/AssetArrivalTestUtil.h"
 #include "EngineTest/RHITestDevice.h"
 #include "EngineTest/RHITestImage.h"
 
@@ -7720,6 +7721,9 @@ SW_TEST_CASE( RenderPassGPUTest, CrowdSharingAndVertexAnimationMatchPerUnitSkinn
             pAnimator->setInitialTime( arrStart[index] );
             pAnimator->dispatchBeginPlay();
         }
+        // 클립은 워커가 읽는다 — 도착을 마치지 않으면 어느 판은 바인드 포즈로 그려져 실행마다 다른 백엔드에서 진다.
+        if ( ::test::finishAssetArrivals( manager ) == false )
+            return result;
         manager.flushSceneTransforms();
         for ( uint32 frame = 0; frame < 4; ++frame )
         {

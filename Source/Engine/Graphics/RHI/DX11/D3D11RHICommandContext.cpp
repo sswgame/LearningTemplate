@@ -203,7 +203,8 @@ namespace sw
      *          - **GL** 은 기본 프레임버퍼와 `glClipControl` 을 되돌려야 합니다(엔진 패스를 거치지
      *            않고 그리는 에디터 ImGui 백엔드가 표준 GL 규약을 가정하기 때문입니다).
      *          - **DX12** 는 배리어 판단에 쓰는 자기 추적 상태(활성 컬러 · 깊이 타깃)를 지웁니다.
-     *          D3D11 은 즉시 모드라 패스 객체가 없고, 해저드는 런타임이 자동으로 추적합니다.
+     *          D3D11 은 즉시 모드라 패스 객체가 없다. 렌더 타깃도 그대로 둔다 — 에디터 ImGui 가 마지막 패스의 백버퍼 바인딩 위에 그린다.
+     *          끝난 타깃을 컴퓨트 UAV 로 거는 해저드는 `bindComputeUav` 가 RT 를 떼서 막는다.
      *          `D3D11RecordingState` 가 들고 있는 것(메시 VB, 루트 상수 그림자)은 **패스 경계를
      *          넘어 유지되어야 하는 것**이라 여기서 지우면 오히려 틀립니다.
      */
@@ -254,6 +255,8 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> uav = _pDevice->bindlessUavAt( index );
         if ( _pContext != nullptr && uav != nullptr )
         {
+            // 컴퓨트는 렌더 패스 밖에서 돈다 — 앞 패스의 렌더 타깃이 이 UAV 의 텍스처면(깊이 히스토리) 런타임이 RT 를 강제로 떼며 오류를 낸다. 먼저 뗀다.
+            _pContext->OMSetRenderTargets( 0, nullptr, nullptr );
             ID3D11UnorderedAccessView* pUav = uav.Get();
             _pContext->CSSetUnorderedAccessViews( slot, 1, &pUav, nullptr );
             // 어느 버퍼가 어느 슬롯에 걸렸는지 남긴다. transitionBuffer 가 이것을 보고 뗀다.
