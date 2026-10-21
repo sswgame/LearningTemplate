@@ -3,6 +3,7 @@
 #include "Engine/Scene/SceneManager.h"
 
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/AsyncFileIO.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/Memory.h"
@@ -863,11 +864,8 @@ namespace sw
 
         pScene->shutdown();
 
-        _listLoadedScene.erase(
-            std::remove_if( _listLoadedScene.begin(), _listLoadedScene.end(),
-                            [pScene]( const unique_ptr<Scene>& owned )
-        { return owned.get() == pScene; } ),
-            _listLoadedScene.end() );
+        VectorUtil::removeIf( _listLoadedScene, [pScene]( const unique_ptr<Scene>& owned )
+        { return owned.get() == pScene; } );
     }
 
     void SceneManager::broadcastSceneObjectsInvalidated()

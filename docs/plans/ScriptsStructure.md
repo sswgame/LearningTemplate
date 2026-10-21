@@ -68,5 +68,6 @@ Scripts/
   같음을 봤다(LintTargets.cmake 는 새 게이트 `CheckScriptLayers` 두 블록만 다름). 병합 뒤 configure 와 `ctest -L lint -j 2` · `-L python -j 2` 를 한 번 돈다.
 - `.claude/hooks/SessionGuard.py` 33행의 주석이 지운 이름 `ListCiJobs.kExitCiFailing` 을 가리킨다. 값(4)은 `common.ExitCode.CiFailing` 과 같고
   `TestDevWorktreeTools` 가 둘을 견준다. 세션 설정이라 사용자가 주석을 `common/ExitCode.py` 의 `CiFailing` 으로 고친다.
+- 2026-10-21 `wt/gatesleft` 에서 다시 봤다. `RunCoreLayerGraph` 의 `None` 폴백은 이미 없다(`readCoreTiers` 가 표 오류에서 멈춘다). 위 `SessionGuard.py` 주석만 남았다.
 - 층 게이트 예외 중 CookAssets 간선 셋(`MakePackage` · `RemoveWorktree` · `CheckShaderStamps`)은 StructureSimplification PK4 가 쿠커를 지울 때 함께 지운다.
   게이트와 짝 명령의 간선은 [ScriptsPairedLintRules](Candidates-project.md#scriptspairedlintrules) 후보다.

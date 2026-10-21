@@ -1,0 +1,5 @@
+# CheckStdRemoveIf 의 규칙 데이터 — 게이트는 Scripts/lint/gate/CheckStdRemoveIf.py.
+
+# std::remove_if 를 직접 써도 되는 파일 → 이유.
+[exemption]
+"Source/Core/Container/VectorUtil.h" = "VectorUtil::removeIf 가 erase-remove 를 한 곳에서 맞게 적는 자리 — 도우미 자신"

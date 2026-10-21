@@ -12,6 +12,12 @@
 왜 필요한가: 층 게이트 · 의존 역전 · Panels 하위 폴더로 구조를 바꾼 3 · 4 단계 뒤에 아래를 돌리지 않았다. 결정은 [결정 기록](../09_Decisions.md) 5-11.
 남은 것: 네 백엔드 에디터 시나리오(`AppTest --test_filter=*Editor*`), Shipping 빌드와 `-L hostgpu`, 게임 전부를 짓는 `Ninja-Debug` 빌드(ThemePark 밖의 에디터 확장 모듈). 배치 끝 검증에서 본다.
 
+### EditorLayerBuildForm
+제목: GUI · Widgets 등 EditorModule 폴더의 층 경계를 빌드 형식으로
+옛번호: 없음
+왜 필요한가: ImGui 를 모르는 모델 층은 `listEditorModelDir` 로 OBJECT 라이브러리(`EditorModel`)에 나뉘어 빌드가 ImGui include 를 막습니다. EditorModule 안의 나머지 층(GUI · Widgets · Popups · Viewport · Panels · AssetActions · SelfTest)의 방향은 `CheckEditorLayers` 게이트만 막습니다.
+남은 것: 2026-10-21 `wt/gatesleft` 에서 따졌고 지금은 옮기지 않았습니다. 모델 층이 되는 까닭은 `IMGUI_USER_CONFIG` 라는 컴파일러 쪽 걸이가 있어서입니다. 위층 헤더 include 에는 그런 걸이가 없고, 모든 include 가 `Source/` 한 뿌리라(Engine 이 같은 뿌리를 내보냅니다) 부품별 include 자리로는 위층 헤더를 가릴 수 없습니다. 층마다 OBJECT 라이브러리로 쪼개는 것은 같은 티어끼리의 상호 include(GUI ↔ Widgets ↔ Popups)와 `Common` 바로 아래 파일 때문에 순환이 되어 넓은 헤더 이동이 먼저입니다. 그래서 형식으로 막지 못하는 틈에 게이트(`CheckEditorLayers`)를 둔 상태입니다. 헤더를 층별로 옮겨 순환이 없어지면 그때 층 하나씩 부품으로 뺍니다.
+
 ### EditorRealRunChecks
 제목: 실기동으로 아직 확인하지 못한 것
 옛번호: B-4

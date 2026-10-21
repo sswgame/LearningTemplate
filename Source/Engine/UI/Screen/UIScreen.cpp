@@ -2,6 +2,7 @@
 
 #include "Engine/UI/Screen/UIScreen.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/UI/Base/Widget.h"
@@ -58,12 +59,10 @@ namespace sw
 
     void UIScreen::removeOrphanBindings()
     {
-        const auto newEnd = std::remove_if( _listBinding.begin(), _listBinding.end(),
-                                            [this]( const UIBindingDesc& binding )
+        const size_t removeCount = VectorUtil::removeIf( _listBinding, [this]( const UIBindingDesc& binding )
         { return _tree.findWidgetByID( binding._widget ) == nullptr; } );
-        if ( newEnd == _listBinding.end() )
+        if ( removeCount == 0 )
             return;
-        _listBinding.erase( newEnd, _listBinding.end() );
         _bindingSet->markRebind();
     }
 

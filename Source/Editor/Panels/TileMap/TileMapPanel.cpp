@@ -3,6 +3,7 @@
 #include "Editor/Panels/TileMap/TileMapPanel.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
@@ -828,10 +829,8 @@ namespace sw::editor
             }
             case PaintLayer::Warp:
             {
-                _map._listWarp.erase( std::remove_if( _map._listWarp.begin(), _map._listWarp.end(),
-                                                      [x, y]( const TileMapXMLData::Warp& warp )
-                { return warp._tileX == x && warp._tileY == y; } ),
-                                      _map._listWarp.end() );
+                VectorUtil::removeIf( _map._listWarp, [x, y]( const TileMapXMLData::Warp& warp )
+                { return warp._tileX == x && warp._tileY == y; } );
                 if ( _bErase == false && _warpTarget.empty() == false )
                 {
                     TileMapXMLData::Warp warpItem{};
@@ -859,10 +858,8 @@ namespace sw::editor
         auto stamp = [&]( int32 tileX, int32 tileY )
         {
             _map.getFlagLayer( TileFlagLayer::Walkable )[indexOf( tileX, tileY )] = 1;
-            _map._listWarp.erase( std::remove_if( _map._listWarp.begin(), _map._listWarp.end(),
-                                                  [tileX, tileY]( const TileMapXMLData::Warp& warp )
-            { return warp._tileX == tileX && warp._tileY == tileY; } ),
-                                  _map._listWarp.end() );
+            VectorUtil::removeIf( _map._listWarp, [tileX, tileY]( const TileMapXMLData::Warp& warp )
+            { return warp._tileX == tileX && warp._tileY == tileY; } );
             TileMapXMLData::Warp warpItem{};
             warpItem._tileX       = tileX;
             warpItem._tileY       = tileY;

@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/Material/MaterialInstance.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/StringBuilder.h"
 
@@ -309,10 +310,8 @@ namespace sw
                                 texture._assetPath.c_str(), texture._name.c_str() );
         }
         // 지운 덮어쓰기(빈 경로)는 돌려준 뒤 뺀다.
-        _listTextureOverride.erase( std::remove_if( _listTextureOverride.begin(), _listTextureOverride.end(),
-                                                    []( const TextureOverride& texture )
-        { return texture._assetPath.empty() && texture._pTexture == nullptr; } ),
-                                    _listTextureOverride.end() );
+        VectorUtil::removeIf( _listTextureOverride, []( const TextureOverride& texture )
+        { return texture._assetPath.empty() && texture._pTexture == nullptr; } );
 
         // 다시 올린 텍스처는 같은 객체에 새 SRV 를 받았다 — 다시 패킹한다.
         const uint32 reloadGeneration = textures.getReloadGeneration();
@@ -561,10 +560,8 @@ namespace sw
 
             if ( _qualityOverride != MaterialQualityLevel::Count )
             {
-                _listCachedDefine.erase( std::remove_if( _listCachedDefine.begin(), _listCachedDefine.end(),
-                                                         []( string_view defineStr )
-                { return StringUtil::startsWith( defineStr, "MATERIAL_QUALITY" ); } ),
-                                         _listCachedDefine.end() );
+                VectorUtil::removeIf( _listCachedDefine, []( string_view defineStr )
+                { return StringUtil::startsWith( defineStr, "MATERIAL_QUALITY" ); } );
                 MaterialUtil::appendQualityDefines( _qualityOverride, _listCachedDefine );
             }
 
