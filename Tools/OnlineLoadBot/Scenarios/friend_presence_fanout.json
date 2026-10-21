@@ -1,0 +1,22 @@
+{
+    "_name": "friend_presence_fanout",
+    "_botCount": 1000,
+    "_rampUpSeconds": 20,
+    "_durationSeconds": 300,
+    "_seed": 11,
+    "_region": "kr",
+    "_listStep": [
+        { "_action": "login", "_mode": "guest" },
+        { "_action": "repeat", "_count": 200, "_listStep": [
+            { "_action": "social_friend_random" },
+            { "_action": "wait", "_minMs": 20, "_maxMs": 60 }
+        ] },
+        { "_action": "repeat", "_count": 30, "_listStep": [
+            { "_action": "social_presence", "_status": "online", "_activity": "lobby" },
+            { "_action": "wait", "_minMs": 2000, "_maxMs": 4000 },
+            { "_action": "social_presence", "_status": "online", "_activity": "match" },
+            { "_action": "wait", "_minMs": 2000, "_maxMs": 4000 }
+        ] },
+        { "_action": "logout" }
+    ]
+}

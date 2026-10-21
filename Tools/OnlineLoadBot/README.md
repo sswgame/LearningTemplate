@@ -82,6 +82,7 @@ OnlineLoadBot --scenario=<json> (--server=<ip:port> [--tls[=<PEM>]] | --local-se
 - 글 안의 `{bot}` 은 봇 번호, `{seq}` 는 그 봇이 보낸 순번으로 바뀝니다. 같은 글을 반복해서 보내면 서버의 도배 방지에 걸리기 때문입니다.
 
 저장소의 시나리오는 `Scenarios/` 에 있습니다. `chat_and_match` 는 채팅과 매칭, `login_storm` 은 비밀번호 로그인(해시 비용), `quick_check` 는 봇 300개로 짧게 도는 빠른 확인입니다.
+측정용 둘은 온라인 키트 계획(`docs/plans/OnlineKits.md` M1 · B2)의 숫자를 잽니다 — `chat_send_p99` 는 봇 2000 이 한 채널에 보내 `chat_send` p99(채널 샤딩 판단의 근거), `friend_presence_fanout` 은 봇마다 친구 요청 200 번 뒤 접속 상태를 바꿔 팬아웃 지연을 봅니다.
 
 ### 결과
 
