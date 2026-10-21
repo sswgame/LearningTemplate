@@ -21,6 +21,7 @@
 #include "Engine/Resource/ResourcePaths.h"
 
 #include "EngineTest/AnimationTestUtil.h"
+#include "EngineTest/AssetArrivalTestUtil.h"
 #include "EngineTest/CharacterTestUtil.h"
 
 #include "GameFramework/Base/Actor/Combat/Dismemberment/Dismemberment.h"
@@ -130,8 +131,11 @@ SW_TEST_CASE( DismembermentRuntimeTest, FatalHeadHitSeversAndSpawnsPhysicsPiece 
     pDismember->setRegionTablePath( Internal::kRegionPath );
 
     manager.beginPlay();
+    // 메시는 워커가 읽는다 — 프레임 수를 세지 않고 도착을 마친 뒤(구성마다 읽는 시간이 다르다), 래그돌이 몸을 짓는 프레임을 돌린다.
+    SW_ASSERT_TRUE( ::test::finishAssetArrivals( manager ) );
     test::updateFrames( manager, 2 );
     SW_ASSERT_NOT_NULL( pUnit->getMesh() );
+    SW_ASSERT_TRUE( pRagdoll->getPhysicsAsset() != nullptr && pRagdoll->getRagdoll()._listBody.empty() == false );
     SW_ASSERT_TRUE( pUnit->getMesh()->hasSkin() );
     const uint32 vertexCountBefore = pUnit->getMesh()->getVertexCount();
     const int32  head              = pRagdoll->getPhysicsAsset()->findBodyIndex( hashed_string( "head" ) );

@@ -50,8 +50,10 @@ namespace sw
             /** @brief 에디터 창의 최소 클라이언트 크기입니다. 메뉴바, 도크 다섯 개, 게임 뷰 툴바가 겹치지 않는 하한입니다. */
             static constexpr uint32 kEditorMinClientWidth  = 960;
             static constexpr uint32 kEditorMinClientHeight = 540;
-            /** @brief 에디터 모듈(EditorModule) 핫 리로드 단축키의 액션 이름(`default.input.xml` 의 Debug 레이어). 에디터를 아는 App 만 쓴다. */
+#if !defined( SW_SHIPPING )
+            /** @brief 에디터 모듈(EditorModule) 핫 리로드 단축키의 액션 이름(`default.input.xml` 의 Debug 레이어). 에디터를 아는 App 만 쓴다(배포본엔 리로드가 없다). */
             static constexpr const utf8* kReloadEditorAction = "ReloadEditor";
+#endif
 
             /** @brief 이 기계 · 빌드가 그 백엔드를 못 돌린다는(환경) 결과면 true 입니다. 결함일 수 있는 `Failed` 는 false 입니다. */
             static constexpr bool isRHIUnusableHere( RHIInitResult result )
