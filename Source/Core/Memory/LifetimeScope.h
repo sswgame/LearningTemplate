@@ -70,6 +70,12 @@ namespace sw
          * @note Debug 에서 두 번 닫으면 단언합니다(두 번째는 아무것도 하지 않습니다).
          */
         void close();
+        /**
+         * @brief 닫힌 범위를 빈 채로 다시 엽니다. 열려 있으면 아무것도 하지 않습니다.
+         * @details 한 프로세스에서 엔진을 다시 세우는 호스트(테스트 하네스 · 퍼저)를 위해서다 — 엔진 기동(`StaticStorageSubsystem::initializeSubsystem`)이 부른다.
+         *          닫힌 뒤 다시 열기 전까지의 접근은 그대로 nullptr 이다(엔진이 없는 동안의 접근이다).
+         */
+        void open();
 
         /**
          * @brief @p entry 를 범위에 등록합니다. 닫힌 범위면 거절합니다.

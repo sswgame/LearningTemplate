@@ -70,6 +70,25 @@ SW_TEST_CASE( LifetimeScopeTest, CreatesOnFirstUseOnly )
 }
 
 /**
+ * @brief [LifetimeScopeTest] 닫은 범위를 다시 열면 같은 자리가 새 값을 만든다 — 한 프로세스에서 엔진을 다시 세우는 호스트(`StaticStorageSubsystem::initializeSubsystem`)
+ */
+SW_TEST_CASE( LifetimeScopeTest, ReopenedScopeCreatesAgain )
+{
+    LifetimeScopeTestValue::resetRecord();
+    LifetimeScope                      scope;
+    ScopeOwned<LifetimeScopeTestValue> owned{ &scope };
+    SW_ASSERT_NOT_NULL( owned.getOrCreate() );
+    scope.close();
+    SW_EXPECT_NULL( owned.find() );
+
+    scope.open();
+    SW_EXPECT_FALSE( scope.isClosed() );
+    SW_EXPECT_NOT_NULL( owned.getOrCreate() );
+    SW_EXPECT_EQUAL( 2u, LifetimeScopeTestValue::s_createdCount.load() );
+    scope.close();
+}
+
+/**
  * @brief [LifetimeScopeTest] 닫으면 만든 역순으로 소멸하고 자리가 빈다
  */
 SW_TEST_CASE( LifetimeScopeTest, CloseDestroysInReverseCreationOrder )

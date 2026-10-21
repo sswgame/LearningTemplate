@@ -42,6 +42,14 @@ namespace sw
         }
     }
 
+    void LifetimeScope::open()
+    {
+        std::lock_guard<SpinLock> lock( _lock );
+        // 닫을 때 목록을 비웠다 — 다시 여는 범위는 빈 범위다.
+        SW_ASSERT( _pHead == nullptr || _bClosed.load( std::memory_order_relaxed ) == false );
+        _bClosed.store( false, std::memory_order_release );
+    }
+
     bool LifetimeScope::attach( LifetimeScopeEntry& entry )
     {
         std::lock_guard<SpinLock> lock( _lock );
