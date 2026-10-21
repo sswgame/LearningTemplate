@@ -56,6 +56,7 @@ namespace sw
         , _listRingFrameNumber{}
         , _pHWnd{ nullptr }
         , _pDisplayHandle{ nullptr }
+        , _surfaceKind{ NativeSurfaceKind::Win32 }
         , _frameFenceCounter{ 0 }
         , _width{ 0 }
         , _height{ 0 }
@@ -143,6 +144,7 @@ namespace sw
     {
         _pHWnd          = desc._pWindowHandle;
         _pDisplayHandle = desc._pWindowDisplay;
+        _surfaceKind    = desc._surfaceKind;
         _width          = desc._width;
         _height         = desc._height;
 

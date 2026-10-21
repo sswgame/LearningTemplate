@@ -73,6 +73,15 @@ if(NOT SW_TARGET_TYPE STREQUAL "Client")
 endif()
 message(STATUS "[BuildConfig] Target type: ${SW_TARGET_TYPE}")
 
+# 이 타깃이 짓지 않는 Engine 폴더(`Source/Engine/` 기준) — 정본은 이 목록 하나다(결정 기록 D7-2.1).
+# Engine 은 그 폴더의 소스 · 리플렉션 헤더를 빼고(Source/Engine/CMakeLists.txt), 테스트는 그 폴더의 헤더를 include 하는 파일을 뺀다
+# (`sw_excludeSourcesIncludingUnbuiltEngineFolders`, cmake/Engine/UnbuiltSources.cmake). 헤더는 남는다 — 값 타입(뷰 요청 · 델리게이트)은 서버도 읽는다.
+# 전용 서버는 렌더러를 짓지 않는다. 그 폴더를 부르는 Engine 본문은 `SW_WITH_CLIENT_CODE` 로 가른다(Engine.cpp · HeadlessSubsystem.cpp · ModuleHost.cpp).
+set(SW_UNBUILT_ENGINE_FOLDERS "")
+if(SW_TARGET_TYPE STREQUAL "Server")
+	list(APPEND SW_UNBUILT_ENGINE_FOLDERS "Renderer")
+endif()
+
 if(SW_SHIPPING_BUILD)
 	target_compile_definitions(sw_global_options INTERFACE SW_SHIPPING)
 	# 배포 클라이언트는 Info 로그를 컴파일하지 않는다(Core/Log/Logger.h). 전용 서버는 남긴다 — 준비 · 상태 · 종료 줄과 콘솔 명령의 답이 Info 이고,

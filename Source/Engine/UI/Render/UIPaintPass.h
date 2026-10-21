@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
@@ -25,11 +26,27 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct UIPaintScratch
+     * @brief 그리기 순회가 다시 쓰는 임시 목록입니다. 칠하는 쪽(`UISystem`)이 소유하고 칠하기 문맥(`UIPaintContext::_pScratch`)으로 넘깁니다.
+     * @details z 순서 패널의 그리기 순서 목록을 깊이마다 하나씩 둔다 — 자식이 z 순서 패널이면 `paintWidget` 이 재귀하므로 목록 하나를 나눠 쓸 수 없다.
+     *          소유자가 사라질 때 함께 사라지므로, 스레드 지역으로 두었을 때처럼 종료 때 따로 비울 일이 없다(스레드 소멸은 종료 누수 보고 뒤다).
+     */
+    struct UIPaintScratch
+    {
+        vector<vector<uint32>> _listPaintOrderByDepth{}; ///< 깊이마다의 그리기 순서(자식 인덱스)
+        uint32                 _paintOrderDepth{ 0 };    ///< 지금 칠하는 z 순서 패널의 깊이
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @struct UIPaintContext
-     * @brief 위젯이 칠할 때 필요한 것입니다. 텍스트 배치, 글리프 캐시, 프레임 번호, 배율이 있습니다.
+     * @brief 위젯이 칠할 때 필요한 것입니다. 텍스트 배치, 글리프 캐시, 프레임 번호, 배율, 순회 스크래치가 있습니다.
      */
     struct UIPaintContext
     {
+        UIPaintScratch*            _pScratch{ nullptr };      ///< 순회 스크래치입니다. 필수 — 없으면 `UIPaintPass::paint` 가 오류로 멈춥니다.
         TextLayoutEngine*          _pTextLayout{ nullptr };   ///< 텍스트 배치입니다(없으면 텍스트 위젯은 칠하지 않습니다).
         GlyphCache*                _pGlyphCache{ nullptr };   ///< 글리프 아틀라스입니다(없으면 텍스트 위젯은 칠하지 않습니다).
         uint64                     _frameIndex{ 0 };          ///< 글리프 캐시의 최근 사용 프레임입니다.
@@ -77,8 +94,6 @@ namespace sw
         static void paintFocusRing( const Widget& widget, CanvasPainter& painter );
         /** @brief 위젯 기하(로컬에서 화면 UI 단위)를 칠하기 변환으로 바꿉니다. */
         static CanvasTransform makeWidgetTransform( const WidgetGeometry& geometry );
-        /** @brief 이 스레드의 그리기 순서 스크래치를 비웁니다. 그리는 스레드가 끝나기 전(`UISystem::shutdown`)에 부릅니다. */
-        static void releaseScratch();
 
     private:
         /** @brief 위젯 하나와 그 아래를 칠합니다. @p bForce 면 이 위젯과 자손을 모두 다시 칠하며, 다시 칠한 수를 반환합니다. */

@@ -87,6 +87,12 @@ namespace sw
     // 길이 유지(긴 함수 정리 기준): 디스플레이 · 프레임버퍼 설정 · 컨텍스트 생성의 순서가 곧 의미라 나누지 않는다.
     bool GlxPlatformContext::initialize( const RHISwapChainDesc& desc, OpenGLContextHandles& outHandles )
     {
+        // GLX 는 X11 창에만 문맥을 건다. Wayland 표면(wl_surface)에는 EGL 이 필요하고 그 길은 아직 없다 — X11 핸들로 읽지 않고 멈춘다.
+        if ( desc._surfaceKind != NativeSurfaceKind::X11 )
+        {
+            SW_LOG_ERROR( "OpenGL on Linux needs an X11 window (GLX) - this window is not X11; use the Vulkan backend on Wayland" );
+            return false;
+        }
         Display* pDpy = (Display*)desc._pWindowDisplay;
         Window   win  = (Window)(uintptr_t)desc._pWindowHandle;
 

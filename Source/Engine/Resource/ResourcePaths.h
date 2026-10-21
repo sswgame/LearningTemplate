@@ -144,7 +144,7 @@ namespace sw
         /** @brief EngineConfig 리플렉션 기본값에 정의된 기본 검색 우선순위 목록을 반환합니다. */
         static const vector<string>& getDefaultSearchPriority();
 
-        /** @brief 캐시해 둔 리소스 경로 해석 결과를 모두 비우고 그 저장소까지 해제합니다. 엔진 종료 끝(`StaticStorageSubsystem::shutdownSubsystem`)에서도 부릅니다. */
+        /** @brief 캐시해 둔 리소스 경로 해석 결과를 모두 비우고 그 저장소까지 해제합니다(검색 목록이 바뀔 때). 종료 때의 반납은 캐시를 소유한 엔진 수명 범위가 합니다. */
         static void clearPathCache();
 
         /**

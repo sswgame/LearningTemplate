@@ -382,9 +382,7 @@ namespace sw
 
         // 콘솔은 엔진(입력 관리자)과 게임 창보다 먼저 내린다(`DevConsoleHost::shutdown`).
         _devConsole.shutdown();
-        // 창은 엔진(RHI) 뒤에 파괴한다. 기동 뒤에 바꾼 제목(에디터)의 사본은 엔진 종료의 누수 보고 전에 해제한다.
-        if ( _window != nullptr )
-            _window->releaseTitleStorage();
+        // 창은 엔진(RHI) 뒤에 파괴한다(제목은 창 안의 고정 버퍼라 엔진 종료의 누수 보고에 남지 않는다).
         // 시나리오 실행기는 로그 리스너 · 입력을 빌려 쓴다 — 엔진 서비스보다 먼저 떼고 내린다. 호스트 범위는 엔진보다 오래 살아야 하므로(모듈 이미지 창구가
         // 엔진 종료 안에서 불린다) 범위째가 아니라 창구 뒤에 서는 구동기만 내린다.
         if ( _pAutomationSession != nullptr )

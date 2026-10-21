@@ -24,6 +24,66 @@
 namespace sw
 {
     SW_LOG_CALLER( "JoltPhysicsScene" );
+
+    namespace
+    {
+        static_assert( PhysicsSoftBodySkinnedVertex::kMaxWeightCount == JPH::SoftBodySharedSettings::Skinned::cMaxSkinWeights, "skin weight count follows Jolt" );
+
+        struct JoltPhysicsSceneSoftBodyInternal
+        {
+            /** @brief 엔진 행렬(행-벡터, 이동은 4 행)을 Jolt 행렬(열-벡터, 이동은 4 열)로 옮깁니다 — 엔진의 행이 Jolt 의 열이다. */
+            static JPH::Mat44 toJoltMatrix( const float4x4& matrix )
+            {
+                return JPH::Mat44{
+                    JPH::Vec4{matrix._11, matrix._12, matrix._13, matrix._14},
+                    JPH::Vec4{matrix._21, matrix._22, matrix._23, matrix._24},
+                    JPH::Vec4{matrix._31, matrix._32, matrix._33, matrix._34},
+                    JPH::Vec4{matrix._41, matrix._42, matrix._43, matrix._44}
+                };
+            }
+
+            /** @brief 스킨 구속 서술이 맞는지 봅니다 — 정점 · 뼈 범위, 가중치 수 · 합, 고정 정점과 겹침. 틀리면 오류를 남기고 false 입니다. */
+            static bool validateSkinning( const PhysicsSoftBodyDesc& desc )
+            {
+                if ( desc._listSkinnedVertex.empty() )
+                    return true;
+                if ( desc._listInverseBind.empty() )
+                {
+                    SW_LOG_ERROR( "Soft body has %# skinned vertices but no inverse bind matrices", desc._listSkinnedVertex.size() );
+                    return false;
+                }
+                for ( const PhysicsSoftBodySkinnedVertex& skinned : desc._listSkinnedVertex )
+                {
+                    const bool bBadVertex = desc._listVertex.size() <= skinned._vertex ||
+                                            std::find( desc._listPinnedVertex.begin(), desc._listPinnedVertex.end(), skinned._vertex ) != desc._listPinnedVertex.end();
+                    const bool bBadCount         = skinned._weightCount == 0 || skinned._weightCount > PhysicsSoftBodySkinnedVertex::kMaxWeightCount;
+                    const bool bBadSkinnedVertex = bBadVertex || bBadCount || skinned._maxDistance < 0.0f;
+                    if ( bBadSkinnedVertex )
+                    {
+                        SW_LOG_ERROR( "Soft body skinned vertex %# is out of range, pinned, has %# weights or a negative max distance", skinned._vertex, skinned._weightCount );
+                        return false;
+                    }
+                    float32 weightSum = 0.0f;
+                    for ( uint32 weightIndex = 0; weightIndex < skinned._weightCount; ++weightIndex )
+                    {
+                        const PhysicsSoftBodySkinWeight& weight = skinned._arrWeight[weightIndex];
+                        if ( desc._listInverseBind.size() <= weight._jointIndex || weight._weight < 0.0f )
+                        {
+                            SW_LOG_ERROR( "Soft body skinned vertex %# names joint %# of %#", skinned._vertex, weight._jointIndex, desc._listInverseBind.size() );
+                            return false;
+                        }
+                        weightSum += weight._weight;
+                    }
+                    if ( MathUtil::abs( weightSum - 1.0f ) > 1.0e-3f )
+                    {
+                        SW_LOG_ERROR( "Soft body skinned vertex %# weights sum to %# (must be 1)", skinned._vertex, weightSum );
+                        return false;
+                    }
+                }
+                return true;
+            }
+        };
+    } // namespace
 } // namespace sw
 
 namespace sw
@@ -50,6 +110,8 @@ namespace sw
                 }
             }
         }
+        if ( JoltPhysicsSceneSoftBodyInternal::validateSkinning( desc ) == false )
+            return PhysicsSoftBodyHandle{};
 
         JPH::Ref<JPH::SoftBodySharedSettings> pShared = JoltUtil::createObject<JPH::SoftBodySharedSettings>(); // Jolt 참조 카운트 객체다. 바디가 들고 Ref 가 해제한다.
         pShared->mVertices.reserve( vertexCount );
@@ -80,6 +142,29 @@ namespace sw
         const bool                                          bBend = desc._bendCompliance >= 0.0f;
         const JPH::SoftBodySharedSettings::VertexAttributes attributes{ desc._stretchCompliance, desc._shearCompliance, bBend ? desc._bendCompliance : FLT_MAX };
         pShared->CreateConstraints( &attributes, 1, bBend ? JPH::SoftBodySharedSettings::EBendType::Distance : JPH::SoftBodySharedSettings::EBendType::None );
+        // 스킨 구속 — 뼈마다 역바인드, 정점마다 뼈 가중(남는 칸은 가중 0). 법선은 면에서 구한다(되받침 거리를 쓰지 않아도 Jolt 가 요구한다). 최적화(구속 재배열) 앞에 둔다.
+        if ( desc._listSkinnedVertex.empty() == false )
+        {
+            pShared->mInvBindMatrices.reserve( desc._listInverseBind.size() );
+            for ( uint32 jointIndex = 0; jointIndex < desc._listInverseBind.size(); ++jointIndex )
+            {
+                pShared->mInvBindMatrices.push_back(
+                    JPH::SoftBodySharedSettings::InvBind{ jointIndex, JoltPhysicsSceneSoftBodyInternal::toJoltMatrix( desc._listInverseBind[jointIndex] ) } );
+            }
+            pShared->mSkinnedConstraints.reserve( desc._listSkinnedVertex.size() );
+            for ( const PhysicsSoftBodySkinnedVertex& skinned : desc._listSkinnedVertex )
+            {
+                JPH::SoftBodySharedSettings::Skinned constraint{ skinned._vertex, skinned._maxDistance, 0.0f, 0.0f };
+                for ( uint32 weightIndex = 0; weightIndex < JPH::SoftBodySharedSettings::Skinned::cMaxSkinWeights; ++weightIndex )
+                {
+                    const bool bUsed                 = weightIndex < skinned._weightCount;
+                    constraint.mWeights[weightIndex] = bUsed ? JPH::SoftBodySharedSettings::SkinWeight{ skinned._arrWeight[weightIndex]._jointIndex, skinned._arrWeight[weightIndex]._weight }
+                                                             : JPH::SoftBodySharedSettings::SkinWeight{ 0, 0.0f };
+                }
+                pShared->mSkinnedConstraints.push_back( constraint );
+            }
+            pShared->CalculateSkinnedConstraintNormals();
+        }
         pShared->Optimize();
 
         JPH::SoftBodyCreationSettings settings{ pShared, JoltUtil::toJolt( desc._position ), JoltUtil::toJolt( desc._rotation ), JoltLayerUtil::makeObjectLayer( desc._layer, true ) };
@@ -104,6 +189,7 @@ namespace sw
         {
             record._listPinnedRestLocal.push_back( desc._listVertex[vertexIndex] );
         }
+        record._jointCount = desc._listSkinnedVertex.empty() ? 0u : static_cast<uint32>( desc._listInverseBind.size() );
         return PhysicsSoftBodyHandle::fromSlot( _softBodies.insert( std::move( record ) ) );
     }
 
@@ -169,6 +255,36 @@ namespace sw
             }
         }
         // 잠금을 놓은 뒤 깨운다(바디 인터페이스가 다시 잠근다). 자는 천은 고정 정점이 옮겨져도 풀리지 않는다.
+        _system.GetBodyInterface().ActivateBody( pRecord->_bodyID );
+    }
+
+    void JoltPhysicsScene::setSoftBodySkinningPose( PhysicsSoftBodyHandle softBody, const vector<float4x4>& listJointWorld, bool bHardSkinAll )
+    {
+        const SoftBodyRecord* pRecord = _softBodies.get( softBody.getSlot() );
+        if ( pRecord == nullptr )
+            return;
+        if ( pRecord->_jointCount == 0 || listJointWorld.size() != pRecord->_jointCount )
+        {
+            SW_LOG_ERROR( "Soft body skinning pose has %# joints, the body expects %#", listJointWorld.size(), pRecord->_jointCount );
+            return;
+        }
+        {
+            JPH::BodyLockWrite lock( _system.GetBodyLockInterface(), pRecord->_bodyID );
+            if ( lock.Succeeded() == false )
+                return;
+            JPH::Body&                     body    = lock.GetBody();
+            JPH::SoftBodyMotionProperties* pMotion = static_cast<JPH::SoftBodyMotionProperties*>( body.GetMotionProperties() );
+            // Jolt 는 뼈 행렬을 질량 중심 변환 기준으로 받는다 — 월드 뼈를 그 역으로 옮긴다.
+            const JPH::RMat44  centerOfMass = body.GetCenterOfMassTransform();
+            const JPH::Mat44   worldToBody  = centerOfMass.InversedRotationTranslation().ToMat44();
+            vector<JPH::Mat44> listJoint;
+            listJoint.reserve( listJointWorld.size() );
+            for ( const float4x4& jointWorld : listJointWorld )
+            {
+                listJoint.push_back( worldToBody * JoltPhysicsSceneSoftBodyInternal::toJoltMatrix( jointWorld ) );
+            }
+            pMotion->SkinVertices( centerOfMass, listJoint.data(), static_cast<JPH::uint>( listJoint.size() ), bHardSkinAll, _tempAllocator );
+        }
         _system.GetBodyInterface().ActivateBody( pRecord->_bodyID );
     }
 

@@ -7,6 +7,7 @@
 #include "Engine/Object/Component/SceneTransformStorage.h"
 
 #include "Core/Container/IndexFreeList.h"
+#include "Core/Memory/LifetimeScope.h"
 #include "Core/Memory/Memory.h"
 
 #include <cstdlib>
@@ -15,10 +16,19 @@ namespace sw
 {
     SW_LOG_CALLER( "SceneTransformStorage" );
 
+    namespace
+    {
+        /** @brief 프로세스에 하나인 저장소입니다. 엔진 수명 범위가 닫히면(엔진 종료) 페이지와 함께 소멸합니다. */
+        ScopeOwned<SceneTransformStorage> s_sceneTransformStorage;
+    } // namespace
+
     SceneTransformStorage& SceneTransformStorage::get()
     {
-        static SceneTransformStorage s_storage;
-        return s_storage;
+        SceneTransformStorage* const pStorage = s_sceneTransformStorage.getOrCreate();
+        // 엔진 수명 범위가 닫힌 뒤의 접근이다 — 컴포넌트가 엔진보다 오래 살았다. 칸을 줄 저장소가 없으므로 멈춘다(Debug 는 `getOrCreate` 가 먼저 단언한다).
+        if ( pStorage == nullptr )
+            std::abort();
+        return *pStorage;
     }
 
     SceneTransformStorage::SceneTransformStorage()
@@ -32,6 +42,9 @@ namespace sw
 
     SceneTransformStorage::~SceneTransformStorage()
     {
+        // 엔진 종료(수명 범위 닫기) 때 칸이 남았으면 그 컴포넌트가 새었다. 페이지는 그래도 놓는다 — 샌 컴포넌트는 다시 불리지 않는다.
+        if ( _liveSlotCount != 0 )
+            SW_LOG_WARNING( "Scene transform storage still has %# live slots at shutdown - a scene component leaked", _liveSlotCount );
         for ( atomic<SceneTransformPage*>& page : _arrPage )
         {
             sw_delete( page.load( std::memory_order_relaxed ) );
@@ -97,21 +110,6 @@ namespace sw
     {
         std::scoped_lock<mutex> lock{ _mutex };
         return _liveSlotCount;
-    }
-
-    bool SceneTransformStorage::releaseStorage()
-    {
-        std::scoped_lock<mutex> lock{ _mutex };
-        if ( _liveSlotCount != 0 )
-            return false;
-
-        for ( atomic<SceneTransformPage*>& page : _arrPage )
-        {
-            sw_delete( page.exchange( nullptr, std::memory_order_acq_rel ) );
-        }
-        _listFreeSlot = vector<uint32>{};
-        _nextSlot     = 0;
-        return true;
     }
 
     void SceneTransformStorage::initializeSlot( SceneTransformPage& page, uint32 pageIndex, SceneComponent* pOwner )

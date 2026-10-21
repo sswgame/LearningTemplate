@@ -25,6 +25,19 @@
 왜 필요한가: 게임 여럿을 빌드 한 번에 짓고 실행할 때 고르며 키트는 필요한 것만 싣는 구조입니다(2026-10-13 사용자 확정). 결정은 [결정 기록](../09_Decisions.md) 5-2, 쓰는 법은 `Source/Games/README.md` 입니다.
 남은 것: 새 호스트 테스트 `AppScenarioTest.EveryGamePackScenarioPassesOnEveryBackend` 를 네 백엔드로 아직 안 돌렸습니다(DX12 직접 실행으로 10 시나리오 통과만 확인).
 
+### NavMeshExtensions
+제목: 3D 내비메시 확장(막는 식생 · AbilityArena 적 · 장애물 캐시)의 실행 확인
+옛번호: D1-3
+왜 필요한가: 셋 다 코드는 들어갔고(2026-10-22) 빌드 · 실행 확인이 남았습니다. 막는 식생은 `FoliageLayer::_navBlockRadius`(`FoliageNavGeometry.cpp`), AbilityArena 적은 프리팹의 `NavMeshAgentComponent`, 장애물 캐시는 에이전트 종류의 `_obstacleMode = TileCache`(`Recast/RecastTileCache.*` — 타일 바이트가 높이 층 묶음이 되고 장애물은 `INavMesh::addCacheObstacle`)입니다.
+남은 것: 테스트 `FoliageTest.BlockingLayerAddsNavObstaclePerInstance` · `NavMeshTileCacheTest.*` 를 돌린다. AbilityArena `ai.scenario.xml` · `control.scenario.xml` 이 내비메시 이동으로도 통과하는지 본다. 장애물 캐시의 상자 요 부호(`NavMeshObstacleComponent::makeCacheObstacle` 의 atan2 와 Detour `addBoxObstacle` 의 `yRadians`)가 맞는지 돌린 직사각 장애물로 본다. 장애물이 많은 장면에서 다시 굽기와 캐시의 `GT.Navigation.*` 시간을 견준다 — 층은 압축하지 않는다(저장 압축기, 메모리는 타일마다 층 크기 × 3 바이트).
+
+### StorageOwnershipLeftovers
+제목: 저장소 소유 정리의 잰 뒤에 정할 것
+옛번호: 없음
+왜 필요한가: 종료 전용 해제 함수는 모두 없앴습니다(규칙은 `Core/Memory/LifetimeScope.h` 머리 주석). 아래는 재 봐야 고칠지 정해지는 것입니다.
+남은 것: (1) `BinarySerializer` 의 `thread_local` 버퍼 넷 · `ShaderParameterBinder` 의 `s_cbBytes` — 기준선 뒤에 자라는지 먼저 잰다(자라면 스레드 슬롯 · 바인더가 소유). (2) `LiveReloadManager::clearContexts` · `ModuleDependencyGraph::clear` 의 표 용량 — 소유자 소멸이 종료 보고 뒤인지 본다. (3) `GimmickNodeRegistry::getDefault` 의 기동 단계 등록(`ded0a6fd6`)을 `ScopeOwned` 로 바꿀 수 있는지 본다.
+함정: `SceneTransformStorage::get` · `ResourcePaths` 경로 캐시는 엔진 수명 범위가 닫힌 뒤 쓰면 멈추거나(트랜스폼) 캐시하지 않는다(Debug 단언). 한 프로세스에서 엔진을 두 번 세우는 테스트 호스트가 생기면 이 계약이 먼저 걸린다.
+
 ## 정리
 
 ### StableAddressMap
@@ -92,25 +105,6 @@ Base 에 남긴 것: 계산한 키로 정렬하는 람다(`TimingJudge` 폭 합,
 
 ## 기능
 
-### NavMeshExtensions
-제목: 3D 내비메시(Recast & Detour)의 남은 것
-옛번호: D1-3
-왜 필요한가: `Source/Engine/Navigation/` 의 3D 내비메시에 아래가 비었습니다.
-남은 것: (2) 식생을 베이크 기하로 — 레이어마다 "길을 막는가" 값이 `FoliageLayer` 에 있어야 합니다(지형 높이장은 종류별 기하 레지스트리로 들어갔음). (3) 장애물이 많고 자주 움직이면 TileCache(압축 층) — 지금은 타일을 통째로 다시 베이크합니다. (6) 다른 테스트 게임(AbilityArena 등)의 적도 내비메시로 — 행동 트리 `MoveTo` 노드가 `INavMover` 를 씁니다.
-
-### Wayland
-제목: Linux 창 계층이 X11 뿐이다
-옛번호: D1-6
-왜 필요한가: `Engine/Window/Linux` 가 X11 이고 Wayland 를 찾지 못했습니다.
-남은 것: 창 생성 · 입력 · 디스플레이 모드 · 클립보드(옛 `D6-2` (4), [UiInputRemaining](Candidates-ui.md))가 대상입니다.
-함정: 리눅스 확인은 CI 잡에서만 합니다(결정 기록 5-12).
-
-### PhysicsExtensions
-제목: 물리 확장 후보
-옛번호: D1-8
-왜 필요한가: 차량 물리, 부력 · 유체, 천과 캐릭터의 상호작용, 파워드 래그돌(옛 `D4-6.6` 보류와 같은 일). 쓰는 게임이 생기면 설계합니다.
-남은 것: Jolt 의 플랫폼 간 결정성 옵션이 꺼져 있어(옛 `D7-8` 검토) 롤백을 물리 객체로 넓히려면 이 옵션 결정이 먼저입니다.
-설계 메모: 센서 규칙(옛 `D1-2.1`, 2D 는 들어감) — 센서끼리 서로를 봅니다(box2d `sensor.c` 3.1.1). 막는 콜라이더도 센서입니다. 겹침은 고정 스텝에서만 납니다. 무버 캐스트가 센서를 거르도록 비센서 셰이프 마스크에 전용 비트를 둡니다. 결정은 [결정 기록](../09_Decisions.md) 의 `D1-2.1` 줄입니다.
 
 ## 조건부
 

@@ -40,15 +40,23 @@ namespace sw
          * @param bGeometryChanged 정적 기하가 바뀌었으면(파괴 · 수정자) true — 다음 영역 처리에서 기하를 다시 모은다.
          */
         void invalidateArea( const AABB& bounds, bool bGeometryChanged );
-        /** @brief 장애물 부피 목록을 다음 영역 처리에서 다시 만들게 합니다(장애물이 빠지거나 다시 뚫렸을 때). */
-        void markObstacleVolumeDirty() { _bObstacleVolumeDirty = true; }
         /** @brief 아직 타일로 바꾸지 않은 알린 영역 수입니다. */
         uint32 getPendingAreaCount() const;
         /** @brief 재베이크로 끼운 타일 수(누적, 진단)입니다. */
         uint32 getRebakedTileCount() const { return _rebakedTileCount; }
 
-        /** @brief 장애물마다 생기거나 사라졌거나 @p moveThreshold 넘게 움직였거나 돌았으면 옛 · 새 자리를 알립니다. */
-        void updateObstacles( const vector<NavMeshObstacleComponent*>& listObstacle, float32 moveThreshold );
+        /**
+         * @brief 장애물마다 생기거나 사라졌거나 @p moveThreshold 넘게 움직였거나 돌았으면 내비메시에 알립니다.
+         * @details 다시 굽기 종류에는 옛 · 새 자리를 장애물 영역으로 알리고(다음 영역 처리가 그 종류에만 타일을 줄에 넣는다), 장애물 캐시 종류에는
+         *          캐시 장애물을 빼고 새 자세로 다시 넣는다(`NavObstacleMode` — 종류마다 다를 수 있다).
+         */
+        void updateObstacles( const vector<unique_ptr<NavMeshRuntime>>& listRuntime, const vector<NavMeshObstacleComponent*>& listObstacle, float32 moveThreshold );
+        /** @brief 사라지는 장애물을 내비메시에서 뺍니다(다시 굽기 종류는 그 자리를 알리고, 캐시 종류는 캐시 장애물을 뺀다). */
+        void forgetObstacle( NavMeshObstacleComponent& obstacle, const vector<unique_ptr<NavMeshRuntime>>& listRuntime );
+        /** @brief 장애물 캐시 종류마다 쌓인 장애물 요청을 처리합니다(끝난 굽기 끼우기와 같은 자리 — 질의가 없는 동안). */
+        static void updateObstacleCaches( const vector<unique_ptr<NavMeshRuntime>>& listRuntime, float32 deltaSeconds );
+        /** @brief 새 캐시 종류에 지금 뚫고 있는 장애물을 모두 넣습니다(런타임을 처음 만들 때). */
+        static void addCarvedObstaclesToCache( NavMeshRuntime& runtime, const vector<NavMeshObstacleComponent*>& listObstacle );
         /**
          * @brief 알린 영역을 각 종류의 타일로 바꿔 재베이크 줄에 넣습니다. 장애물이 바뀌었으면 부피 목록을, 정적 기하가 바뀌었으면 기하를 새 사본으로 바꿉니다.
          * @details 베이크하는 중인 일은 옛 사본을 끝까지 읽는다(둘 다 `shared_ptr<const>`).
@@ -66,7 +74,11 @@ namespace sw
         static void collectObstacleVolumes( const vector<NavMeshObstacleComponent*>& listObstacle, vector<NavConvexVolume>& outListVolume );
 
     private:
-        vector<AABB>     _listDirtyArea; ///< `_dirtyLock` 아래
+        /** @brief 장애물이 바꾼 자리를 알립니다 — 다시 굽기 종류에만 닿는다(캐시 종류는 캐시 장애물로 받는다). 게임 스레드에서만 부릅니다. */
+        void invalidateObstacleArea( const AABB& bounds );
+
+        vector<AABB>     _listDirtyArea;    ///< `_dirtyLock` 아래
+        vector<AABB>     _listObstacleArea; ///< 장애물이 바꾼 자리(게임 스레드만 — 다시 굽기 종류에만 닿는다)
         uint32           _rebakedTileCount;
         mutable SpinLock _dirtyLock;      ///< `invalidateArea` 가 아무 스레드에서 온다
         bool             _bGeometryDirty; ///< `_dirtyLock` 아래

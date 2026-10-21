@@ -820,6 +820,10 @@ namespace sw
         // 배치가 메시의 소유권을 가지고 있으므로(스냅샷 소유 규칙) 큐에 넘겨도 워커가 도는 동안 사라지지 않는다.
         for ( const GPUMeshBatch& batch : _snapshot.getAllBatches() )
         {
+            // 동적 메시(프레임마다 새 메시 — 천)는 정점 풀이 CPU 정점에서 올린다 — 자기 정점 버퍼를 미리 만들면 프레임마다 만들고 버린다.
+            // 풀을 끈 구성에서는 렌더 스레드가 그 프레임에 만든다(`GPUScene::upload`).
+            if ( batch._mesh != nullptr && batch._mesh->isDynamic() )
+                continue;
             queue.requestMesh( batch._mesh );
         }
     }

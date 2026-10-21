@@ -98,16 +98,19 @@ namespace
     {
         sw::WidgetTree      _tree;
         sw::UILayoutContext _layoutContext;
+        sw::UIPaintScratch  _paintScratch;
         sw::UIPaintContext  _paintContext;
         sw::CanvasDrawList  _canvas;
 
         UIPaintFixture( float32 width, float32 height )
             : _tree{}
             , _layoutContext{}
+            , _paintScratch{}
             , _paintContext{}
             , _canvas{}
         {
             _layoutContext._viewportSize = sw::float2{ width, height };
+            _paintContext._pScratch      = &_paintScratch;
         }
 
         /** @brief 레이아웃 → 그리기. 다시 칠한 위젯 수를 돌려준다. */

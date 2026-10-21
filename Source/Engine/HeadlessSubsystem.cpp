@@ -192,6 +192,8 @@ namespace sw
 
         // 헤드리스 작업은 보통 실행이 누수 기준선을 잡는 자리(`initialize` 끝)에 닿지 않는다. 기준선이 없으면 종료 때 살아 있는 블록을 모두
         // 누수로 찍으므로, 작업 직전에 같은 기준선을 잡는다 — 작업이 만든 것을 종료까지 놓지 않을 때만 누수로 보인다.
+        // 셰이더 쿠킹은 렌더러(`Engine/Renderer/Cook`)의 일이다 — Server 타깃은 그 폴더를 짓지 않고, 위에서 전용 서버가 거절했다.
+#if defined( SW_WITH_CLIENT_CODE )
         bool bCookShaders = false;
         if ( commandLine.getArgument( CommandLineArgument::COOK_SHADERS, bCookShaders ) && bCookShaders )
         {
@@ -202,6 +204,7 @@ namespace sw
             _state._bFailed                 = summary.isClean() == false;
             return SubsystemInitResult::SkipDependents;
         }
+#endif
 
         // 리플렉션 문서도 같은 자리다 — 모든 타입 공급자가 등록을 끝낸 뒤(ModuleTypes)라 게임 · 킷의 타입까지 든다.
         string reflectionDocsDir;

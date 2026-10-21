@@ -15,10 +15,13 @@
     #include "Engine/Input/Map/InputKeyTable.h"
     #include "Engine/Input/Linux/LinuxGamepadDevice.h"
     #include "Engine/Window/IWindow.h"
+    #include "Engine/Window/Linux/Wayland/WaylandInputEvent.h"
+    #include "Engine/Window/Linux/Wayland/WaylandWindow.h"
     #include "Engine/Window/NativeWindowEvent.h"
 
     #include <X11/XKBlib.h>
     #include <X11/cursorfont.h>
+    #include <linux/input-event-codes.h>
 
     #include "Core/Common/X11MacroUndef.h"
 
@@ -101,6 +104,46 @@ namespace sw
                 s_pImDisplay    = pDisplay;
                 s_imWindow      = x11Window;
                 return s_pInputContext;
+            }
+
+            /** @brief 활성 창이 Wayland 창이면 true 입니다 — 그 창의 핸들은 X11 이 아니라 아래 X11 호출을 하면 안 된다(`NativeSurfaceKind`). */
+            static bool isWaylandWindow( const IWindow* pWindow ) { return pWindow != nullptr && pWindow->getSurfaceKind() == NativeSurfaceKind::Wayland; }
+
+            /** @brief Wayland 포인터 잠금(zwp_pointer_constraints)이 없다는 오류를 이미 냈다. */
+            static inline bool s_bWaylandLockReported{ false };
+            /** @brief Wayland 포인터의 마지막 자리입니다(버튼 이벤트에는 좌표가 없다). */
+            static inline int2 s_waylandPointer{ 0, 0 };
+
+            /** @brief 리눅스 이벤트 버튼 번호(Wayland `wl_pointer.button`)를 마우스 버튼으로 바꿉니다. 모르는 번호면 Count 입니다. */
+            static MouseButton mapWaylandButton( uint32 button )
+            {
+                switch ( button )
+                {
+                    case BTN_LEFT:
+                    {
+                        return MouseButton::Left;
+                    }
+                    case BTN_MIDDLE:
+                    {
+                        return MouseButton::Middle;
+                    }
+                    case BTN_RIGHT:
+                    {
+                        return MouseButton::Right;
+                    }
+                    case BTN_SIDE:
+                    {
+                        return MouseButton::X1;
+                    }
+                    case BTN_EXTRA:
+                    {
+                        return MouseButton::X2;
+                    }
+                    default:
+                    {
+                        return MouseButton::Count;
+                    }
+                }
             }
 
             /** @brief X11 버튼 번호를 마우스 버튼으로 바꿉니다. 휠 번호(4 ~ 7)나 모르는 번호면 Count 입니다. */
@@ -288,6 +331,9 @@ namespace sw
         IWindow* pWindow = IWindow::getActiveWindow();
         if ( pWindow == nullptr || _pMouse == nullptr )
             return;
+        // Wayland 는 포인터를 물어볼 길이 없고(서버에 위치 질의가 없다) 들어옴 · 나감 · 버튼이 빠짐없이 온다 — 보조 폴링이 없다.
+        if ( X11InputInternal::isWaylandWindow( pWindow ) )
+            return;
 
         // 포인터가 창 안에 있고 포커스도 있으면 MotionNotify/ButtonRelease 가 빠짐없이 들어오므로
         // 보조 폴링이 필요 없다. XQueryPointer 는 서버와 동기 왕복하는 호출이라 프레임마다 부르면 그만큼 비용이 든다
@@ -322,6 +368,73 @@ namespace sw
 
     void InputManager::processNativeEvent( const NativeWindowEvent& event )
     {
+        if ( event._message == NativeWindowEvent::kMessageWayland && event._lParam != 0 )
+        {
+            const WaylandInputEvent& input = *reinterpret_cast<const WaylandInputEvent*>( event._lParam );
+            // X11 갈래와 같은 규칙이다 — 장치 상태는 바꾸지 않고 큐에만 넣는다. 키는 xkb keysym(= X11 KeySym)이라 같은 키 표를 쓴다.
+            switch ( input._kind )
+            {
+                case WaylandInputKind::KeyDown:
+                case WaylandInputKind::KeyUp:
+                {
+                    const Key  key   = InputKeyTable::mapX11KeySym( static_cast<uint64>( input._keySym ) );
+                    const bool bDown = input._kind == WaylandInputKind::KeyDown;
+                    if ( key == Key::LeftAlt || key == Key::RightAlt )
+                        onPlatformAltChanged( bDown );
+                    postRawEvent( bDown ? RawInputEvent::makeKeyDown( key ) : RawInputEvent::makeKeyUp( key ) );
+                    break;
+                }
+                case WaylandInputKind::Text:
+                {
+                    postRawEvent( RawInputEvent::makeTextInput( string_view{ input._arrText } ) );
+                    break;
+                }
+                case WaylandInputKind::PointerMove:
+                {
+                    X11InputInternal::s_waylandPointer = int2{ input._x, input._y };
+                    postRawEvent( RawInputEvent::makeMouseMove( input._x, input._y ) );
+                    break;
+                }
+                case WaylandInputKind::PointerDown:
+                case WaylandInputKind::PointerUp:
+                {
+                    const bool        bDown  = input._kind == WaylandInputKind::PointerDown;
+                    const MouseButton button = X11InputInternal::mapWaylandButton( input._button );
+                    if ( button == MouseButton::Count )
+                        break;
+                    if ( bDown ? onPlatformPointerPressed( button ) : onPlatformPointerReleased( button ) )
+                        break;
+                    // Wayland 버튼 이벤트에는 좌표가 없다 — 마지막 움직임의 자리를 싣는다(0, 0 이면 커서가 왼쪽 위로 튄다).
+                    postRawEvent( bDown ? RawInputEvent::makeMouseButtonDown( button, X11InputInternal::s_waylandPointer._x, X11InputInternal::s_waylandPointer._y )
+                                        : RawInputEvent::makeMouseButtonUp( button, X11InputInternal::s_waylandPointer._x, X11InputInternal::s_waylandPointer._y ) );
+                    break;
+                }
+                case WaylandInputKind::PointerWheel:
+                {
+                    if ( input._wheel != 0.0f )
+                        postRawEvent( RawInputEvent::makeMouseWheel( input._wheel ) );
+                    if ( input._horizontalWheel != 0.0f )
+                        postRawEvent( RawInputEvent::makeMouseHorizontalWheel( input._horizontalWheel ) );
+                    break;
+                }
+                case WaylandInputKind::PointerEnter:
+                case WaylandInputKind::PointerLeave:
+                {
+                    postWindowStateEvent( RawInputEvent::makePointerCrossing( input._kind == WaylandInputKind::PointerEnter ) );
+                    break;
+                }
+                case WaylandInputKind::FocusIn:
+                case WaylandInputKind::FocusOut:
+                {
+                    const bool bFocused                = input._kind == WaylandInputKind::FocusIn;
+                    X11InputInternal::s_bWindowFocused = bFocused;
+                    onPlatformFocusChanged( bFocused );
+                    postWindowStateEvent( RawInputEvent::makeFocusChange( bFocused ) );
+                    break;
+                }
+            }
+            return;
+        }
         if ( event._message != NativeWindowEvent::kMessageX11 || event._lParam == 0 )
             return;
 
@@ -429,6 +542,11 @@ namespace sw
         IWindow* pWindow = IWindow::getActiveWindow();
         if ( pWindow == nullptr )
             return;
+        if ( X11InputInternal::isWaylandWindow( pWindow ) )
+        {
+            static_cast<WaylandWindow*>( pWindow )->setCursorVisible( bVisible ); // 종류를 위에서 확인했다
+            return;
+        }
 
         Display* pDisplay  = static_cast<Display*>( pWindow->getNativeDisplay() );
         Window   x11Window = static_cast<Window>( reinterpret_cast<uintptr_t>( pWindow->getNativeHandle() ) );
@@ -465,6 +583,15 @@ namespace sw
         IWindow* pWindow = IWindow::getActiveWindow();
         if ( pWindow == nullptr )
             return;
+        // Wayland 는 클라이언트가 포인터를 잡거나 옮길 수 없다(zwp_pointer_constraints · relative-pointer 확장이 필요하고 아직 없다). 잠그지 않은 채로 한 번 알린다.
+        if ( X11InputInternal::isWaylandWindow( pWindow ) )
+        {
+            const bool bLockWanted = _pMouse->getLockMode() != MouseLockMode::None;
+            if ( bLockWanted && X11InputInternal::s_bWaylandLockReported == false )
+                SW_LOG_ERROR( "Mouse lock on Wayland needs pointer constraints, which are not implemented - the pointer stays free" );
+            X11InputInternal::s_bWaylandLockReported = X11InputInternal::s_bWaylandLockReported || bLockWanted;
+            return;
+        }
 
         Display* pDisplay  = static_cast<Display*>( pWindow->getNativeDisplay() );
         Window   x11Window = static_cast<Window>( reinterpret_cast<uintptr_t>( pWindow->getNativeHandle() ) );
@@ -498,8 +625,8 @@ namespace sw
             return;
 
         IWindow* pWindow = IWindow::getActiveWindow();
-        if ( pWindow == nullptr )
-            return;
+        if ( pWindow == nullptr || X11InputInternal::isWaylandWindow( pWindow ) )
+            return; // Wayland 는 포인터를 옮길 수 없다(`applyMouseLockMode`)
         Display* pDisplay  = static_cast<Display*>( pWindow->getNativeDisplay() );
         Window   x11Window = static_cast<Window>( reinterpret_cast<uintptr_t>( pWindow->getNativeHandle() ) );
         if ( pDisplay == nullptr || x11Window == 0 )
@@ -521,8 +648,8 @@ namespace sw
     void InputManager::releaseMouseLockMode()
     {
         IWindow* pWindow = IWindow::getActiveWindow();
-        if ( pWindow == nullptr )
-            return;
+        if ( pWindow == nullptr || X11InputInternal::isWaylandWindow( pWindow ) )
+            return; // Wayland 는 잡은 적이 없다
 
         Display* pDisplay = static_cast<Display*>( pWindow->getNativeDisplay() );
         if ( pDisplay == nullptr )
@@ -543,9 +670,10 @@ namespace sw
         // 이름은 Windows API 시절 이름을 그대로 쓰지만(공용 InputManager.h 의 공개 API), 여기서는 X11
         // AccessX(XKB StickyKeys/SlowKeys/BounceKeys)를 억제한다. 게임 도중 방향키를 연타하다
         // AccessX 팝업이 뜨는 것을 막기 위해서다.
-        IWindow* pWindow = IWindow::getActiveWindow();
-        if ( pWindow == nullptr || X11InputInternal::s_bAccessibilityDisabled )
-            return;
+        IWindow*   pWindow           = IWindow::getActiveWindow();
+        const bool bNothingToDisable = pWindow == nullptr || X11InputInternal::s_bAccessibilityDisabled || X11InputInternal::isWaylandWindow( pWindow );
+        if ( bNothingToDisable )
+            return; // Wayland 에는 클라이언트가 끌 AccessX 가 없다(컴포지터의 설정이다)
 
         Display* pDisplay = static_cast<Display*>( pWindow->getNativeDisplay() );
         if ( pDisplay == nullptr )
@@ -572,8 +700,9 @@ namespace sw
         // Display 가 닫히기 전에 해제해야 X 리소스가 남지 않는다.
         X11InputInternal::releaseAll();
 
-        IWindow* pWindow = IWindow::getActiveWindow();
-        if ( pWindow == nullptr || X11InputInternal::s_bAccessibilityDisabled == false )
+        IWindow*   pWindow           = IWindow::getActiveWindow();
+        const bool bNothingToRestore = pWindow == nullptr || X11InputInternal::s_bAccessibilityDisabled == false || X11InputInternal::isWaylandWindow( pWindow );
+        if ( bNothingToRestore )
             return;
 
         Display* pDisplay = static_cast<Display*>( pWindow->getNativeDisplay() );

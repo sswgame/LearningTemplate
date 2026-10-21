@@ -100,6 +100,8 @@ namespace sw
         float32 _mass;
         PROPERTY( Category = "Character", Tooltip = "Collision layer name from the physics settings", Validate = validateLayer )
         hashed_string _layer;
+        PROPERTY( Category = "Character", DisplayName = "Inner Body", Tooltip = "Keep a kinematic capsule body on the character so cloth and sensors feel it (it also pushes dynamic bodies harder)" )
+        bool _bInnerBody;
 
         PhysicsCharacterHandle  _character;
         PhysicsCharacterState3D _state;

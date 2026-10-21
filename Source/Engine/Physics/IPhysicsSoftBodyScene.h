@@ -36,6 +36,12 @@ namespace sw
          * @details 천을 단 오브젝트가 움직일 때 프레임마다 부른다(유니티 Cloth 가 트랜스폼을 따르는 것과 같다). 자는 바디는 깨운다.
          */
         virtual void setSoftBodyPinnedTransform( PhysicsSoftBodyHandle softBody, const float3& position, const quaternion& rotation ) = 0;
+        /**
+         * @brief 스킨 구속 정점(`PhysicsSoftBodyDesc::_listSkinnedVertex`)이 따를 뼈 자세를 줍니다. @p listJointWorld 는 뼈마다 월드 행렬이고 `_listInverseBind` 와 같은 순서 · 수입니다.
+         * @details 다음 스텝이 정점을 스킨 위치(뼈 가중 합)에서 정점마다의 최대 거리 안으로 끌어당긴다(Jolt `SoftBodyMotionProperties::SkinVertices`).
+         *          @p bHardSkinAll 이면 모든 스킨 정점을 스킨 위치에 바로 둔다(순간이동 · 처음 프레임). 수가 다르면 오류를 남기고 아무것도 하지 않는다. 자는 바디는 깨운다.
+         */
+        virtual void setSoftBodySkinningPose( PhysicsSoftBodyHandle softBody, const vector<float4x4>& listJointWorld, bool bHardSkinAll ) = 0;
     };
 } // namespace sw
 

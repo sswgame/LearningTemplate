@@ -42,6 +42,18 @@ if(SW_SHIPPING_BUILD)
 	sw_excludeUnbuiltSources(ENGINE_SOURCES "Graphics/Shader/Compile/ShaderRecompiler\\.(cpp|h)$")
 endif()
 
+# 이 타깃이 짓지 않는 폴더(전용 서버의 `Renderer/` — 목록은 cmake/Engine/BuildLayout.cmake 의 `SW_UNBUILT_ENGINE_FOLDERS`).
+# .cpp 만 뺀다 — 헤더의 값 타입(뷰 요청 · 델리게이트)은 `Engine.h` 를 거쳐 서버도 읽는다. 리플렉션 헤더도 아래 8) 에서 뺀다.
+set(swUnbuiltFolderRegex "")
+foreach(swUnbuiltFolder IN LISTS SW_UNBUILT_ENGINE_FOLDERS)
+	sw_excludeUnbuiltSources(ENGINE_SOURCES "/Source/Engine/${swUnbuiltFolder}/.*\\.(c|cpp)$")
+	if(swUnbuiltFolderRegex)
+		string(APPEND swUnbuiltFolderRegex "|")
+	endif()
+	string(APPEND swUnbuiltFolderRegex "/Source/Engine/${swUnbuiltFolder}/")
+	message(STATUS "[Engine] ${SW_TARGET_TYPE} target: Engine/${swUnbuiltFolder} is not built")
+endforeach()
+
 # ------------------------------------------------------------------------------
 # 2) 압축 코덱(zlib · LZ4 · Zstd) — Engine 에만 붙인다. 찾기 · 진단 · 링크 항목은 `sw_findEngineCompressionLibraries`(cmake/Engine/ThirdPartyLibs.cmake).
 # ------------------------------------------------------------------------------
@@ -224,9 +236,17 @@ sw_markDeterministicSources(Engine
 # ------------------------------------------------------------------------------
 # 8) 리플렉션 코드젠 — ReflectionParser 필요 (루트가 Tools 이후 이 파일을 호출)
 # ------------------------------------------------------------------------------
-sw_addReflectionStep(Engine
-	INCLUDES "${CMAKE_SOURCE_DIR}/Source"
-)
+if(swUnbuiltFolderRegex)
+	# 짓지 않는 폴더의 리플렉션 타입(렌더 패스 · 파이프라인 에셋)은 코드젠도 하지 않는다 — 그 구현이 빠졌다.
+	sw_addReflectionStep(Engine
+		INCLUDES "${CMAKE_SOURCE_DIR}/Source"
+		EXCLUDE_REGEX "${swUnbuiltFolderRegex}"
+	)
+else()
+	sw_addReflectionStep(Engine
+		INCLUDES "${CMAKE_SOURCE_DIR}/Source"
+	)
+endif()
 sw_addReflectBuiltinsGen(Engine)
 
 # ------------------------------------------------------------------------------

@@ -46,6 +46,8 @@ namespace sw
 
         /** @brief Windows 메시지 큐(PeekMessage)를 처리합니다. */
         bool processMessages() override;
+        /** @brief 핸들은 HWND 입니다. */
+        NativeSurfaceKind getSurfaceKind() const override { return NativeSurfaceKind::Win32; }
 
         /** @brief 창을 화면에 띄우거나 숨깁니다. */
         void applyWindowVisibility( bool bShow ) override;

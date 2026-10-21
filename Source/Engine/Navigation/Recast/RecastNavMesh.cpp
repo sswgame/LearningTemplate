@@ -8,6 +8,8 @@
 #include "Engine/Common/EngineParallel.h"
 #include "Engine/Navigation/NavMeshGeometry.h"
 #include "Engine/Navigation/Recast/DetourNavCrowd.h"
+#include "Engine/Navigation/Recast/RecastAreaUtil.h"
+#include "Engine/Navigation/Recast/RecastTileCache.h"
 #include "Engine/Physics/PhysicsDebugDraw.h"
 
 #include <recastnavigation/DetourAlloc.h>
@@ -74,21 +76,6 @@ namespace sw
                 return bits;
             }
 
-            /** @brief 엔진 영역 번호(또는 걷지 못함)의 Recast 영역입니다. */
-            static uint8 toRecastArea( uint8 area )
-            {
-                if ( area == NavigationConstant::kNotWalkableArea || area >= NavigationConstant::kMaxAreaCount )
-                    return RC_NULL_AREA;
-                return static_cast<uint8>( area + 1 );
-            }
-
-            /** @brief Recast 영역의 폴리곤 표시 비트입니다(질의 필터의 영역 비트와 같다). 엔진 영역이 아니면 0 입니다. */
-            static uint16 toPolyFlags( uint8 recastArea )
-            {
-                const bool bEngineArea = 1 <= recastArea && recastArea <= NavigationConstant::kMaxAreaCount;
-                return bEngineArea ? static_cast<uint16>( 1u << ( recastArea - 1 ) ) : static_cast<uint16>( 0 );
-            }
-
             /** @brief 링크 그림의 활 높이(두 끝 거리에 대한 비율)와 마디 수입니다. */
             static constexpr float32 kLinkArcHeightRatio  = 0.25f;
             static constexpr uint32  kLinkArcSegmentCount = 8;
@@ -130,6 +117,7 @@ namespace sw
         , _pSharedQuery{ nullptr }
         , _sharedQueryMutex{}
         , _pNavMesh{ nullptr }
+        , _pTileCache{}
         , _minY{ 0.0f }
         , _maxY{ 0.0f }
         , _revision{ 0 }
@@ -162,7 +150,10 @@ namespace sw
         _minY = bounds._min._y - agentType._height;
         _maxY = bounds._max._y + agentType._height;
 
-        const uint32 tileBits = Internal::computeBitCount( static_cast<uint32>( _grid.getTileCount() ) );
+        // 장애물 캐시는 타일 자리마다 높이 층 여럿을 내비메시 타일로 짓는다 — 자리 수가 층 상한만큼 곱해진다.
+        const bool   bTileCache   = agentType._obstacleMode == NavObstacleMode::TileCache;
+        const uint32 slotsPerTile = bTileCache ? RecastTileCache::kMaxLayerCount : 1u;
+        const uint32 tileBits     = Internal::computeBitCount( static_cast<uint32>( _grid.getTileCount() ) * slotsPerTile );
         if ( tileBits > Internal::kMaxTileBits )
         {
             SW_LOG_ERROR( "Navmesh '%#' needs %# tiles - at most %# fit in a 32-bit polygon reference; raise the tile size", agentType._name.c_str(),
@@ -185,6 +176,15 @@ namespace sw
             shutdown();
             return false;
         }
+        if ( bTileCache )
+        {
+            _pTileCache = make_unique<RecastTileCache>();
+            if ( _pTileCache->initialize( agentType, _grid, _minY, _maxY ) == false )
+            {
+                shutdown();
+                return false;
+            }
+        }
         _listQuery.assign( engine::getParallelScratchSlotCount(), nullptr );
         ++_revision;
         return true;
@@ -205,6 +205,7 @@ namespace sw
     void RecastNavMesh::shutdown()
     {
         freeQueries();
+        _pTileCache.reset(); // 캐시는 내비메시 타일을 짓기만 한다 — 내비메시보다 먼저 놓아도 된다
         dtFreeNavMesh( _pNavMesh );
         _pNavMesh = nullptr;
         _grid     = NavTileGrid{};
@@ -242,6 +243,13 @@ namespace sw
         const bool bInsideGrid = 0 <= tileX && tileX < _grid._tileCountX && 0 <= tileZ && tileZ < _grid._tileCountZ;
         if ( _pNavMesh == nullptr || bInsideGrid == false )
             return false;
+        // 장애물 캐시는 장애물을 층에 굽지 않는다(층이 정적 몫이라 장애물이 움직이면 낡는다) — 장애물은 `addCacheObstacle` 로 넣는다.
+        const bool bCacheWithObstacleVolumes = _pTileCache != nullptr && pExtraVolume != nullptr && pExtraVolume->empty() == false;
+        if ( bCacheWithObstacleVolumes )
+        {
+            SW_LOG_ERROR( "Navmesh '%#' uses the tile cache - obstacle volumes must go through addCacheObstacle, not the bake", _agentType._name.c_str() );
+            return false;
+        }
 
         const NavAgentTypeDef& agent = _agentType;
         rcConfig               config{};
@@ -300,7 +308,7 @@ namespace sw
             listTriangleIndex[slot * 3 + 0] = static_cast<int32>( listIndex[triangleIndex * 3 + 0] );
             listTriangleIndex[slot * 3 + 1] = static_cast<int32>( listIndex[triangleIndex * 3 + 1] );
             listTriangleIndex[slot * 3 + 2] = static_cast<int32>( listIndex[triangleIndex * 3 + 2] );
-            listTriangleArea[slot]          = Internal::toRecastArea( listArea[triangleIndex] );
+            listTriangleArea[slot]          = RecastAreaUtil::toRecastArea( listArea[triangleIndex] );
         }
         const int32 triangleCount = static_cast<int32>( listTriangle.size() );
         rcClearUnwalkableTriangles( &context, config.walkableSlopeAngle, pVertex, vertexCount, listTriangleIndex.data(), triangleCount, listTriangleArea.data() );
@@ -351,7 +359,7 @@ namespace sw
                 listVolumePoint.push_back( volume._minY );
                 listVolumePoint.push_back( point._z );
             }
-            const uint8    recastArea  = Internal::toRecastArea( volume._area );
+            const uint8    recastArea  = RecastAreaUtil::toRecastArea( volume._area );
             const int32    pointCount  = static_cast<int32>( volume._listPoint.size() );
             const float32* pPolygon    = listVolumePoint.data();
             int32          polygonSize = pointCount;
@@ -367,6 +375,20 @@ namespace sw
                 }
             }
             rcMarkConvexPolyArea( &context, pPolygon, polygonSize, volume._minY, volume._maxY, recastArea, *scratch._pCompact );
+        }
+
+        // 장애물 캐시 — 여기까지(복셀화 · 깎기 · 정적 부피 칠하기)가 층에 남는 정적 몫이다. 층으로 나눠 묶음으로 낸다. 폴리곤은 끼울 때 · 장애물이 바뀔 때 캐시가 짓는다.
+        if ( _pTileCache != nullptr )
+        {
+            vector<NavOffMeshLink> listLinkInTile;
+            for ( const NavOffMeshLink& link : geometry.getOffMeshLinks() )
+            {
+                const bool bStartInTile = tileBounds._min._x <= link._start._x && link._start._x < tileBounds._max._x && tileBounds._min._z <= link._start._z &&
+                                          link._start._z < tileBounds._max._z;
+                if ( bStartInTile )
+                    listLinkInTile.push_back( link );
+            }
+            return RecastTileCache::makeLayerPack( context, *scratch._pCompact, config, tileX, tileZ, listLinkInTile, outTile._bytes );
         }
 
         if ( rcBuildDistanceField( &context, *scratch._pCompact ) == false ||
@@ -397,7 +419,7 @@ namespace sw
         // 영역 → 표시 비트(거름의 영역 비트와 같다).
         for ( int32 polyIndex = 0; polyIndex < polyMesh.npolys; ++polyIndex )
         {
-            polyMesh.flags[polyIndex] = Internal::toPolyFlags( polyMesh.areas[polyIndex] );
+            polyMesh.flags[polyIndex] = RecastAreaUtil::toPolyFlags( polyMesh.areas[polyIndex] );
         }
 
         // 오프 메시 링크 — 시작점이 이 타일에 포함된 것만 싣는다(Detour 는 바깥에서 시작하는 링크를 버린다). 끝은 이웃 타일이 끼워질 때 연결된다.
@@ -413,7 +435,7 @@ namespace sw
                                       link._start._z < tileBounds._max._z;
             if ( bStartInTile == false )
                 continue;
-            const uint8 recastArea = Internal::toRecastArea( link._area );
+            const uint8 recastArea = RecastAreaUtil::toRecastArea( link._area );
             for ( const float3* pPoint : { &link._start, &link._end } )
             {
                 listLinkVertex.push_back( pPoint->_x );
@@ -422,7 +444,7 @@ namespace sw
             }
             listLinkRadius.push_back( link._radius );
             listLinkArea.push_back( recastArea );
-            listLinkFlag.push_back( Internal::toPolyFlags( recastArea ) );
+            listLinkFlag.push_back( RecastAreaUtil::toPolyFlags( recastArea ) );
             listLinkDirection.push_back( link._bBidirectional == SW_TRUE ? static_cast<uint8>( DT_OFFMESH_CON_BIDIR ) : static_cast<uint8>( 0 ) );
             listLinkUserID.push_back( link._userID );
         }
@@ -474,6 +496,15 @@ namespace sw
         const bool bInsideGrid = 0 <= tile._tileX && tile._tileX < _grid._tileCountX && 0 <= tile._tileZ && tile._tileZ < _grid._tileCountZ;
         if ( bInsideGrid == false )
             return false;
+        if ( _pTileCache != nullptr )
+        {
+            // 바이트는 층 묶음이다 — 캐시가 옛 층 · 타일을 빼고 새 층에서 지금 장애물로 짓는다.
+            ++_revision;
+            const bool bInstalled = _pTileCache->installPack( tile, *_pNavMesh );
+            if ( bInstalled && _listDisabledLinkID.empty() == false )
+                applyLinkFlags( tile._tileX, tile._tileZ );
+            return bInstalled;
+        }
         const dtTileRef oldRef = _pNavMesh->getTileRefAt( tile._tileX, tile._tileZ, 0 );
         if ( oldRef != 0 )
             _pNavMesh->removeTile( oldRef, nullptr, nullptr );
@@ -499,19 +530,70 @@ namespace sw
 
     void RecastNavMesh::applyLinkFlags( int32 tileX, int32 tileZ )
     {
+        // 자리 하나에 층 여럿이 있을 수 있다(장애물 캐시). 다시 굽기는 층 0 하나뿐이다.
         const dtNavMesh* const pConst = _pNavMesh;
-        const dtMeshTile*      pTile  = pConst->getTileAt( tileX, tileZ, 0 );
-        if ( pTile == nullptr || pTile->header == nullptr )
-            return;
-        const dtPolyRef base = pConst->getPolyRefBase( pTile );
-        for ( int32 linkIndex = 0; linkIndex < pTile->header->offMeshConCount; ++linkIndex )
+        const dtMeshTile*      arrTile[RecastTileCache::kMaxLayerCount * 2];
+        const int32            tileCount = pConst->getTilesAt( tileX, tileZ, arrTile, static_cast<int32>( RecastTileCache::kMaxLayerCount * 2 ) );
+        for ( int32 tileIndex = 0; tileIndex < tileCount; ++tileIndex )
         {
-            const dtOffMeshConnection& link      = pTile->offMeshCons[linkIndex];
-            const dtPoly&              poly      = pTile->polys[link.poly];
-            const bool                 bDisabled = std::binary_search( _listDisabledLinkID.begin(), _listDisabledLinkID.end(), link.userId );
-            const uint16               flags     = bDisabled ? static_cast<uint16>( 0 ) : RecastNavMeshInternal::toPolyFlags( poly.getArea() );
-            (void)_pNavMesh->setPolyFlags( base | static_cast<dtPolyRef>( link.poly ), flags ); // 참조는 방금 이 타일에서 만든 것이라 실패하지 않는다
+            const dtMeshTile* const pTile = arrTile[tileIndex];
+            if ( pTile == nullptr || pTile->header == nullptr )
+                continue;
+            const dtPolyRef base = pConst->getPolyRefBase( pTile );
+            for ( int32 linkIndex = 0; linkIndex < pTile->header->offMeshConCount; ++linkIndex )
+            {
+                const dtOffMeshConnection& link      = pTile->offMeshCons[linkIndex];
+                const dtPoly&              poly      = pTile->polys[link.poly];
+                const bool                 bDisabled = std::binary_search( _listDisabledLinkID.begin(), _listDisabledLinkID.end(), link.userId );
+                const uint16               flags     = bDisabled ? static_cast<uint16>( 0 ) : RecastAreaUtil::toPolyFlags( poly.getArea() );
+                (void)_pNavMesh->setPolyFlags( base | static_cast<dtPolyRef>( link.poly ), flags ); // 참조는 방금 이 타일에서 만든 것이라 실패하지 않는다
+            }
         }
+    }
+
+    void RecastNavMesh::applyLinkFlagsToAllTiles()
+    {
+        const dtNavMesh* const pConst = _pNavMesh;
+        for ( int32 tileIndex = 0; tileIndex < pConst->getMaxTiles(); ++tileIndex )
+        {
+            const dtMeshTile* pTile            = pConst->getTile( tileIndex );
+            const bool        bHasOffMeshLinks = pTile != nullptr && pTile->header != nullptr && pTile->header->offMeshConCount > 0;
+            if ( bHasOffMeshLinks )
+                applyLinkFlags( pTile->header->x, pTile->header->y );
+        }
+    }
+
+    NavObstacleRef RecastNavMesh::addCacheObstacle( const NavCacheObstacleDesc& desc )
+    {
+        if ( _pTileCache == nullptr )
+        {
+            SW_LOG_ERROR( "Navmesh '%#' does not use the tile cache (_obstacleMode) - the obstacle is not added", _agentType._name.c_str() );
+            return 0;
+        }
+        return _pTileCache->addObstacle( desc );
+    }
+
+    void RecastNavMesh::removeCacheObstacle( NavObstacleRef obstacle )
+    {
+        if ( _pTileCache == nullptr )
+        {
+            SW_LOG_ERROR( "Navmesh '%#' does not use the tile cache (_obstacleMode) - obstacle %# cannot be removed", _agentType._name.c_str(), obstacle );
+            return;
+        }
+        _pTileCache->removeObstacle( obstacle );
+    }
+
+    bool RecastNavMesh::updateCacheObstacles( float32 deltaSeconds )
+    {
+        if ( _pTileCache == nullptr || _pNavMesh == nullptr )
+            return false;
+        if ( _pTileCache->update( deltaSeconds, *_pNavMesh ) == false )
+            return false;
+        ++_revision;
+        // 캐시가 다시 지은 타일은 베이크한 표시(모두 열림)로 들어온다 — 막힌 링크를 다시 막는다.
+        if ( _listDisabledLinkID.empty() == false )
+            applyLinkFlagsToAllTiles();
+        return true;
     }
 
     void RecastNavMesh::setOffMeshLinkEnabled( uint32 linkID, bool bEnabled )
@@ -529,14 +611,7 @@ namespace sw
         ++_revision;
         if ( _pNavMesh == nullptr )
             return;
-        const dtNavMesh* const pConst = _pNavMesh;
-        for ( int32 tileIndex = 0; tileIndex < pConst->getMaxTiles(); ++tileIndex )
-        {
-            const dtMeshTile* pTile            = pConst->getTile( tileIndex );
-            const bool        bHasOffMeshLinks = pTile != nullptr && pTile->header != nullptr && pTile->header->offMeshConCount > 0;
-            if ( bHasOffMeshLinks )
-                applyLinkFlags( pTile->header->x, pTile->header->y );
-        }
+        applyLinkFlagsToAllTiles();
     }
 
     bool RecastNavMesh::isOffMeshLinkEnabled( uint32 linkID ) const
@@ -549,6 +624,12 @@ namespace sw
         outListTile.clear();
         if ( _pNavMesh == nullptr )
             return;
+        // 장애물 캐시의 쿠킹 바이트는 층 묶음이다(장애물 없이 굽은 정적 몫 — 읽은 쪽이 `replaceTile` 로 끼운다).
+        if ( _pTileCache != nullptr )
+        {
+            _pTileCache->collectPacks( outListTile );
+            return;
+        }
         for ( int32 tileZ = 0; tileZ < _grid._tileCountZ; ++tileZ )
         {
             for ( int32 tileX = 0; tileX < _grid._tileCountX; ++tileX )

@@ -202,10 +202,11 @@ namespace sw
         class HandlerOnlyWindow final : public sw::IWindow
         {
         public:
-            bool  initializeWindow( const utf8*, uint32, uint32 ) override { return true; }
-            void  destroy() override {}
-            bool  processMessages() override { return true; }
-            void* getNativeHandle() const override { return nullptr; }
+            bool                  initializeWindow( const utf8*, uint32, uint32 ) override { return true; }
+            void                  destroy() override {}
+            bool                  processMessages() override { return true; }
+            void*                 getNativeHandle() const override { return nullptr; }
+            sw::NativeSurfaceKind getSurfaceKind() const override { return sw::NativeSurfaceKind::Win32; } // 표면을 만들지 않는 창 — 종류는 쓰이지 않는다
         };
 
         // 모듈 코드 정리 테스트가 레지스트리마다 하나씩 다는 함수들이다. 몸통을 서로 다르게 둔다 — 같으면 링커가 접어 스텁 주소가 겹칠 수 있다.

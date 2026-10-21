@@ -98,6 +98,7 @@ namespace sw
         , _hitReactionSeconds{ 0.35f }
         , _hitReactionWeight{ 0.6f }
         , _flinchSeconds{ 0.4f }
+        , _poweredMaxTorque{ 0.0f }
         , _state{ RagdollState::Animated }
         , _bRagdollOnFatalHit{ true }
         , _bAutoGetUp{ false }
@@ -113,6 +114,7 @@ namespace sw
         , _listBlendStartWeight{}
         , _listBoneWeight{}
         , _listPhysicsModel{}
+        , _listAnimationModel{}
         , _listKinematicStartPosition{}
         , _listKinematicTargetPosition{}
         , _listKinematicStartRotation{}
@@ -132,6 +134,7 @@ namespace sw
         , _bSettled{ false }
         , _bRebuild{ false }
         , _bGettingUp{ false }
+        , _bMotorsDriven{ false }
     {
     }
 
@@ -520,6 +523,17 @@ namespace sw
             _physicsPose.setBoneTransform( boneIndex, BoneTransform::makeFromMatrix( local ) );
         }
         Pose& pose = unit.getLocalPose();
+        // 파워드 래그돌의 목표는 섞기 전의 애니메이션 포즈다. 섞은 뒤의 모델 공간 행렬은 물리 자세라, 그것을 쫓는 모터는 아무 일도 하지 않는다.
+        if ( _poweredMaxTorque > 0.0f && _state == RagdollState::Ragdoll )
+        {
+            _listAnimationModel.resize( boneCount );
+            for ( uint32 boneIndex = 0; boneIndex < boneCount; ++boneIndex )
+            {
+                const int32    parent          = listParent[boneIndex];
+                const float4x4 local           = pose.getBoneTransform( boneIndex ).toMatrix();
+                _listAnimationModel[boneIndex] = parent < 0 ? local : local * _listAnimationModel[static_cast<size_t>( parent )];
+            }
+        }
         Pose::blendMasked( pose, _physicsPose, 1.0f, _listBoneWeight.data(), pose );
     }
 
@@ -670,6 +684,33 @@ namespace sw
         // 코드가 오브젝트를 순간이동시켰다. 키네마틱 바디도 그 위치로 바로 옮긴다.
         if ( consumeTeleport() )
             PhysicsRagdollBuilder::driveToPose( *pScene, _ragdoll, makeSkeletonView( *_pUnit ), _pUnit->getWorldMatrix(), 0.0f );
+        drivePoweredMotors( *pScene );
+    }
+
+    void RagdollComponent::drivePoweredMotors( IPhysicsScene3D& scene )
+    {
+        if ( _asset == nullptr )
+            return; // 에셋을 읽지 못한 래그돌은 관절 설정(모터를 걸 Cone 관절)을 모른다
+        const size_t boneCount      = _pUnit->getSkeleton().getBoneCount();
+        const bool   bHasTargetPose = _listAnimationModel.size() == boneCount && _listBoneName.size() == boneCount;
+        const bool   bWantMotors    = _state == RagdollState::Ragdoll && _poweredMaxTorque > 0.0f && bHasTargetPose;
+        if ( bWantMotors )
+        {
+            const vector<int32>& listParent = _pUnit->getSkeleton().getParentIndices();
+            PhysicsSkeletonView  view;
+            view._listBoneName       = span<const hashed_string>{ _listBoneName.data(), _listBoneName.size() };
+            view._listParentIndex    = span<const int32>{ listParent.data(), listParent.size() };
+            view._listModelSpaceBone = span<const float4x4>{ _listAnimationModel.data(), _listAnimationModel.size() };
+            PhysicsRagdollBuilder::driveToPoseWithMotors( scene, *_asset, _ragdoll, view, _pUnit->getWorldMatrix(), _poweredMaxTorque );
+            _bMotorsDriven = true;
+            return;
+        }
+        // 래그돌을 벗어나면(일어서기 · 돌아가기) 모터를 한 번 끈다. 켠 채로 두면 키네마틱으로 돌아간 바디끼리 관절이 계속 힘을 낸다.
+        if ( _bMotorsDriven == false )
+            return;
+        _listAnimationModel.clear();
+        PhysicsRagdollBuilder::driveToPoseWithMotors( scene, *_asset, _ragdoll, makeSkeletonView( *_pUnit ), _pUnit->getWorldMatrix(), 0.0f );
+        _bMotorsDriven = false;
     }
 
     void RagdollComponent::prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount )
@@ -750,7 +791,9 @@ namespace sw
         IPhysicsBodyScene3D* pScene = physics.findScene3D();
         if ( pScene != nullptr && _ragdoll.isEmpty() == false )
             PhysicsRagdollBuilder::destroy( *pScene, _ragdoll );
-        _ragdoll = PhysicsRagdoll{};
+        _ragdoll       = PhysicsRagdoll{};
+        _bMotorsDriven = false; // 관절이 바디와 함께 사라졌다
+        _listAnimationModel.clear();
         _listAppliedDynamic.clear();
         _bHasPhysicsPose = false;
     }

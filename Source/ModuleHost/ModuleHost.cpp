@@ -349,8 +349,12 @@ namespace sw
 
     void ModuleHost::drainRenderWorkers()
     {
+#if defined( SW_WITH_CLIENT_CODE )
         if ( _pRenderThread != nullptr )
             _pRenderThread->waitIdle();
+#else
+        SW_ASSERT( _pRenderThread == nullptr ); // Server 타깃은 렌더러를 짓지 않는다 — 렌더 스레드가 있을 수 없다
+#endif
         // **디바이스가 없는 RHI 가 있다.** 백엔드 교체가 실패하면 RHI 객체는 남고 디바이스만 사라지는데, `getDevice()` 는 널
         // 참조를 반환하므로 그 상태로 물으면 죽는다. 종료 경로가 반드시 이곳을 지난다(`Engine::shutdown` 도 같은 이유로
         // `hasDevice()` 를 먼저 확인한다).

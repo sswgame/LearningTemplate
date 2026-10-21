@@ -108,7 +108,8 @@ namespace sw
      *          - **이름 사본**: 이름은 **올릴 때** 복사합니다. 모듈이 내려간 뒤에도 그 이름으로 알리거나 찾을 수 있고, 죽은 객체의 가상 함수를 묻지 않습니다.
      *
      *          **저장소는 늘 `EngineMisc` 태그로 셉니다.** 프로세스 정적 레지스트리는 기동 뒤에 오른 모듈(에디터 · 게임)이 등록하며 용량을 키우는데, 넣는 쪽 태그로
-     *          세면 그 모듈이 내려간 뒤에도 커진 용량이 그 태그에 남습니다. 종료 끝에서 `shrinkToFit` 으로 남은 항목만큼 다시 잡아 기준선으로 돌려놓습니다.
+     *          세면 그 모듈이 내려간 뒤에도 커진 용량이 그 태그에 남습니다. 빼기(`remove`)가 남은 항목만큼 다시 잡으므로, 모듈이 내려가면 용량도 기준선으로 돌아갑니다
+     *          (종료 때만 부르는 반납 함수가 없습니다).
      *
      *          **만들어질 때 전역 열거에 오릅니다.** 목록마다 이름을 하나 받고(`RegistrationListBase::getListName`), `RegistrationListBase::collect` 가 살아 있는
      *          목록의 이름 · 항목 수 · 항목 이름을 한곳에서 보여 줍니다. 복사 · 이동은 막혀 있으니 목록은 멤버나 함수 지역 정적으로 둡니다.
@@ -202,36 +203,51 @@ namespace sw
             return RegistrationResult::Added;
         }
 
-        /** @brief 그 객체가 올라 있으면 뺍니다(남은 것의 순서는 그대로). 뺐으면 true 입니다. 같은 이름의 다른 객체는 건드리지 않습니다. */
+        /**
+         * @brief 그 객체가 올라 있으면 뺍니다(남은 것의 순서는 그대로). 뺐으면 true 입니다. 같은 이름의 다른 객체는 건드리지 않습니다.
+         * @details 뺀 뒤 저장소를 남은 항목 수에 맞춰 다시 잡습니다(`fitStorage`). 빼기는 모듈 언로드 · 컴포넌트 소멸에서만 오므로 그 비용(O(n))을 감수하고,
+         *          대신 종료 때만 부르는 반납 함수를 레지스트리마다 두지 않습니다.
+         */
         [[nodiscard]] bool remove( const T* pItem )
         {
             const size_t index = findIndex( pItem );
             if ( index == kNotFound )
-                return dropShadow( pItem );
+            {
+                const bool bDroppedShadow = dropShadow( pItem );
+                if ( bDroppedShadow )
+                    fitStorage();
+                return bDroppedShadow;
+            }
             const string name = _listName[index];
             _listItem.erase( _listItem.begin() + static_cast<ptrdiff_t>( index ) );
             _listName.erase( _listName.begin() + static_cast<ptrdiff_t>( index ) );
             _listOrder.erase( _listOrder.begin() + static_cast<ptrdiff_t>( index ) );
             restoreShadow( name );
+            fitStorage();
             return true;
         }
 
-        /** @brief 모두 제거합니다(그림자도). */
+        /** @brief 모두 제거합니다(그림자도). 저장소도 해제합니다. */
         void clear()
         {
-            _listItem.clear();
-            _listName.clear();
-            _listOrder.clear();
-            _listShadowItem.clear();
-            _listShadowName.clear();
-            _listShadowOrder.clear();
+            _listItem        = vector<T*>{};
+            _listName        = vector<string>{};
+            _listOrder       = vector<int32>{};
+            _listShadowItem  = vector<T*>{};
+            _listShadowName  = vector<string>{};
+            _listShadowOrder = vector<int32>{};
         }
 
+        /** @brief 그 객체가 올라 있는지 봅니다. */
+        bool contains( const T* pItem ) const { return findIndex( pItem ) != kNotFound; }
+
+    private:
         /**
-         * @brief 저장소를 지금 항목 수에 맞춰 다시 잡습니다(비었으면 놓기만 합니다). 순서와 이름은 그대로입니다.
-         * @details 엔진 종료 끝이 부릅니다 — 언로드된 모듈이 키운 용량과, Debug STL 이 원소를 옮길 때 그 자리 태그로 새로 잡은 문자열 프록시를 돌려놓습니다.
+         * @brief 저장소를 지금 항목 수에 맞춰 다시 잡습니다(비었으면 해제만 합니다). 순서와 이름은 그대로입니다. 그림자가 비었으면 그 저장소도 해제합니다.
+         * @details 제거할 때마다 부릅니다 — 기동 뒤에 로드한 모듈(에디터 · 게임)이 키운 용량과, Debug STL 이 원소를 옮길 때 그 자리 태그로 새로 잡은 문자열 프록시가
+         *          그 모듈이 언로드되는 순간 돌아가므로, 엔진 종료 때 레지스트리마다 반납을 부를 일이 없습니다.
          */
-        void shrinkToFit()
+        void fitStorage()
         {
             SW_MEMORY_SCOPE( EngineMisc );
             vector<T*>     listItem;
@@ -252,11 +268,15 @@ namespace sw
             _listItem  = std::move( listItem );
             _listName  = std::move( listName );
             _listOrder = std::move( listOrder );
+            if ( _listShadowItem.empty() )
+            {
+                _listShadowItem  = vector<T*>{};
+                _listShadowName  = vector<string>{};
+                _listShadowOrder = vector<int32>{};
+            }
         }
 
-        /** @brief 그 객체가 올라 있는지 봅니다. */
-        bool contains( const T* pItem ) const { return findIndex( pItem ) != kNotFound; }
-
+    public:
         /** @brief 올릴 때 복사한 이름으로 찾습니다. 없거나 이름이 비었으면 nullptr 입니다. */
         T* findByName( string_view name ) const
         {

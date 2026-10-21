@@ -149,9 +149,10 @@ namespace sw
 
         /**
          * @brief 프레임마다 새로 만드는 메시(천 같은 시뮬레이션 결과)라고 표시합니다(기본은 꺼짐). 내용 번호는 바뀌지 않습니다.
-         * @details 씬 정점 풀(`GPUMeshVertexPool`)은 메시 집합이 바뀌면 씬 전체 정점을 다시 올린다. 동적 메시를 넣으면 매 프레임 그렇게 되므로
-         *          풀에 넣지 않고 자기 정점 버퍼로 그린다(언리얼 동적 메시 요소의 자리). 정점은 제자리에서 바꾸지 않는다 — 렌더 스냅샷이 옛 메시를 쥐고 있으므로
-         *          프레임마다 `create` 로 새 메시를 만들어 컴포넌트에 건다(`ClothComponent`).
+         * @details 동적 메시도 씬 정점 풀(`GPUMeshVertexPool`)에 든다 — 풀은 바뀐 메시를 "나감 + 들어옴" 으로 보고 그 구간만 올리고, 구간 반납 지연이
+         *          앞 프레임이 읽는 자리를 지킨다. 표시가 하는 일은 게임 스레드가 이 메시를 업로드 큐(`GPUUploadQueue`)에 넣지 않게 하는 것이다 — 자기 정점 버퍼를
+         *          미리 만들면 프레임마다 만들고 버린다(풀을 끈 구성에서만 렌더 스레드가 그 프레임에 만든다). 정점은 제자리에서 바꾸지 않는다 — 렌더 스냅샷이 옛 메시를
+         *          쥐고 있으므로 프레임마다 `create` 로 새 메시를 만들어 컴포넌트에 건다(`ClothComponent`).
          */
         void setDynamic( bool bDynamic ) { _bDynamic = bDynamic ? SW_TRUE : SW_FALSE; }
         /** @brief 동적 메시로 표시했는지 반환합니다. */
@@ -265,7 +266,7 @@ namespace sw
         uint64 _contentID{ allocateContentID() };
         /// @brief setGPUMorphEnabled 를 참고하세요. 이 메시가 모프 풀에 들어갈지 여부입니다.
         uint8 _bGPUMorph{ SW_FALSE };
-        /// @brief setDynamic 을 참고하세요. 씬 정점 풀에 넣지 않는 메시입니다.
+        /// @brief setDynamic 을 참고하세요. 업로드 큐에 넣지 않는(정점 풀이 올리는) 프레임마다의 메시입니다.
         uint8 _bDynamic{ SW_FALSE };
         /// @brief setGPUDeformProgram 을 참고하세요. 잠금(`_deformProgramMutex`) 안에서만 읽고 씁니다.
         shared_ptr<const vector<float4>> _deformProgram;

@@ -198,7 +198,7 @@ SW_TEST_CASE( MemoryTagTest, SceneTransformPageIsTagged )
 
 /**
  * @brief [MemoryTagTest] 경로 캐시를 비우면 캐시 표(Asset)의 저장소까지 돌아간다
- * @details 엔진 종료 끝이 `ResourcePaths::clearPathCache` 를 부른다. 맵의 `clear()` 는 버킷 · 밀집 배열을 남겨, 기동 뒤 자란 표가 종료 누수 보고에 남는다.
+ * @details 검색 목록이 바뀌면 `ResourcePaths::clearPathCache` 가 캐시를 비운다. 맵의 `clear()` 는 버킷 · 밀집 배열을 남겨, 자란 표가 그대로 남는다.
  */
 SW_TEST_CASE( MemoryTagTest, ClearedPathCacheReturnsItsTable )
 {
@@ -211,6 +211,9 @@ SW_TEST_CASE( MemoryTagTest, ClearedPathCacheReturnsItsTable )
         SW_TEST_SKIP( "no tracking memory profiler in this host" );
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
+    // 캐시 표 객체는 처음 넣을 때 만들어져 엔진 수명 범위가 끝까지 소유한다 — 기준을 재기 전에 한 번 만들어 둔다(재는 것은 비우기가 놓는 저장소다).
+    const sw::string warmup = sw::ResourcePaths::findLooseFile( ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str() ).getDiskPath();
+    SW_ASSERT_FALSE( warmup.empty() );
     sw::ResourcePaths::clearPathCache();
     const uint64     assetBefore = getLiveBytes( *pProfiler, sw::MemoryTag::Asset );
     const sw::string resolved    = sw::ResourcePaths::findLooseFile( ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str() ).getDiskPath();

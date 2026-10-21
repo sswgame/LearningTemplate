@@ -92,8 +92,6 @@ namespace sw
         static bool isStartBlocked();
         /** @brief 지금 시계를 잡고 있는 조건(`_bHoldsClock`)의 이름입니다. 없으면 nullptr 입니다. */
         static const utf8* findClockHolder();
-        /** @brief 언로드된 모듈이 키운 두 레지스트리의 용량을 해제합니다. 엔진 종료 끝(`StaticStorageSubsystem::shutdownSubsystem`)이 모듈을 모두 언로드한 뒤 부릅니다. */
-        static void releaseUnusedStorage();
     };
 } // namespace sw
 

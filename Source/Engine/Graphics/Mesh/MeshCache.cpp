@@ -5,6 +5,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Memory/LifetimeScope.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -37,11 +38,8 @@ namespace sw
                 return s_table;
             }
 
-            static WarnedPathSet& getWarnedPathSet()
-            {
-                static WarnedPathSet s_set;
-                return s_set;
-            }
+            /** @brief 경고한 경로 집합입니다. 엔진 수명 범위가 소유해 엔진 종료 때 저장소째 사라집니다(처음 경고할 때 만들어진다). */
+            inline static ScopeOwned<WarnedPathSet> s_warnedPathSet{};
 
             /** @brief 테이블의 키입니다. 리소스 id 는 소문자로 찾으므로(`normalizePath`) 핫 리로드가 넘긴 철자도 같은 항목에 닿습니다. */
             static string makeKey( string_view path ) { return FileUtil::normalizePath( path ); }
@@ -52,9 +50,15 @@ namespace sw
             /** @brief 읽지 못한 경로를 처음 한 번만 경고합니다. */
             static void warnLoadFailureOnce( string_view path )
             {
-                WarnedPathSet&          warned = getWarnedPathSet();
-                std::scoped_lock<mutex> lock{ warned._mutex };
-                if ( warned._uniquePath.insert( makeKey( path ) ).second )
+                WarnedPathSet* const pWarned = s_warnedPathSet.getOrCreate();
+                // nullptr 은 엔진 수명 범위가 닫힌 뒤다(Debug 는 `getOrCreate` 가 단언한다) — 한 번만 거를 집합이 없으니 매번 알린다.
+                if ( pWarned == nullptr )
+                {
+                    SW_LOG_WARNING( "Mesh asset '%#' could not be loaded - nothing is drawn for it", path );
+                    return;
+                }
+                std::scoped_lock<mutex> lock{ pWarned->_mutex };
+                if ( pWarned->_uniquePath.insert( makeKey( path ) ).second )
                     SW_LOG_WARNING( "Mesh asset '%#' could not be loaded - nothing is drawn for it", path );
             }
 
@@ -159,9 +163,13 @@ namespace sw
     void MeshCache::clear()
     {
         MeshCacheInternal::getSharedTable().clear();
-        MeshCacheInternal::WarnedPathSet& warned = MeshCacheInternal::getWarnedPathSet();
-        std::scoped_lock<mutex>           lock{ warned._mutex };
-        warned._uniquePath = unordered_set<string>{};
+        // 다시 읽으면 다시 알리도록 경고 기록을 잊는다. 종료 때의 반납은 집합을 소유한 엔진 수명 범위가 한다.
+        MeshCacheInternal::WarnedPathSet* const pWarned = MeshCacheInternal::s_warnedPathSet.find();
+        if ( pWarned != nullptr )
+        {
+            std::scoped_lock<mutex> lock{ pWarned->_mutex };
+            pWarned->_uniquePath = unordered_set<string>{};
+        }
         PhysicsMeshShapeCache::clear();
     }
 } // namespace sw

@@ -155,6 +155,60 @@ SW_TEST_CASE( PhysicsSoftBodyTest, PinnedVerticesFollowTheObject )
 }
 
 /**
+ * @brief [PhysicsSoftBodyTest] 고정 본을 정했는데 스켈레탈 메시가 없으면 천을 만들지 않는다 — 오브젝트 자세로 대신 걸지 않는다(ClothFollowups C3)
+ * @details 본을 비우면 고정 자세는 오브젝트의 월드 자세다.
+ */
+SW_TEST_CASE( PhysicsSoftBodyTest, MissingPinBoneLeavesTheClothUnsimulated )
+{
+    using Internal = PhysicsSoftBodyTestInternal;
+    sw::GameObjectManager manager;
+    sw::ClothComponent*   pCloth = Internal::spawnCloth( manager, sw::float3{ 1.0f, 3.0f, 0.0f }, sw::ClothPinMode::TopEdge );
+    sw::float3            position;
+    sw::quaternion        rotation;
+    SW_ASSERT_TRUE( pCloth->findPinPose( position, rotation ) );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, position._x, 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( 3.0f, position._y, 1.0e-5f );
+
+    pCloth->setPinBones( { sw::hashed_string( "neck" ) } );
+    SW_EXPECT_FALSE( pCloth->findPinPose( position, rotation ) );
+    manager.beginPlay();
+    test::updateFrames( manager, 10 );
+    SW_EXPECT_FALSE( pCloth->isClothCreated() );
+    manager.endPlay();
+}
+
+/**
+ * @brief [PhysicsSoftBodyTest] 뼈 셋에 스킨한 윗변 — 양 끝 열은 끝 뼈 하나, 가운데 열은 가운데 뼈 하나, 그 사이는 이웃한 두 뼈를 선형으로 나눈다(합 1, 가중 0 없음)
+ */
+SW_TEST_CASE( PhysicsSoftBodyTest, PinSkinWeightsSpreadTheTopEdgeAcrossBones )
+{
+    using Internal = PhysicsSoftBodyTestInternal;
+    sw::GameObjectManager manager;
+    sw::ClothComponent*   pCloth = Internal::spawnCloth( manager, sw::float3{ 0.0f, 3.0f, 0.0f }, sw::ClothPinMode::TopEdge );
+    pCloth->setPinBones( { sw::hashed_string( "shoulder_l" ), sw::hashed_string( "spine" ), sw::hashed_string( "shoulder_r" ) } );
+    SW_ASSERT_TRUE( pCloth->isSkinnedPin() );
+    const uint32 lastColumn = pCloth->getColumnCount() - 1; // 기본 11 열 — 가운데는 5
+
+    sw::PhysicsSoftBodySkinnedVertex skinned;
+    pCloth->computePinSkinWeights( 0, skinned );
+    SW_ASSERT_EQUAL( 1u, skinned._weightCount );
+    SW_EXPECT_EQUAL( 0u, skinned._arrWeight[0]._jointIndex );
+    pCloth->computePinSkinWeights( lastColumn, skinned );
+    SW_ASSERT_EQUAL( 1u, skinned._weightCount );
+    SW_EXPECT_EQUAL( 2u, skinned._arrWeight[0]._jointIndex );
+    pCloth->computePinSkinWeights( lastColumn / 2, skinned );
+    SW_ASSERT_EQUAL( 1u, skinned._weightCount );
+    SW_EXPECT_EQUAL( 1u, skinned._arrWeight[0]._jointIndex );
+
+    pCloth->computePinSkinWeights( 1, skinned );
+    SW_ASSERT_EQUAL( 2u, skinned._weightCount );
+    SW_EXPECT_EQUAL( 0u, skinned._arrWeight[0]._jointIndex );
+    SW_EXPECT_EQUAL( 1u, skinned._arrWeight[1]._jointIndex );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, skinned._arrWeight[0]._weight + skinned._arrWeight[1]._weight, 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( 0.2f, skinned._arrWeight[1]._weight, 1.0e-5f );
+}
+
+/**
  * @brief [PhysicsSoftBodyTest] 그릴 정점 — 격자 칸마다 앞뒤 삼각형 넷(정점 12), 메시 공간으로 옮기고, 감김의 면 노멀이 정점 노멀과 같은 쪽(앞면 +Z · 뒷면 −Z), UV 0..1
  * @details 정점 수가 격자와 다르면 만들지 않는다(다른 격자로 짐작해 그리지 않는다).
  */

@@ -18,7 +18,8 @@ namespace sw
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "StaticStorage";
 
-        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        /** @brief 엔진 수명 범위를 엽니다 — 같은 프로세스에서 엔진을 다시 세우면 앞 엔진이 닫은 범위를 빈 채로 다시 연다. */
+        SubsystemInitResult initializeSubsystem() override;
         /** @brief 정적 저장소를 돌려주고 엔진 수명 범위를 닫습니다. */
         void                    shutdownSubsystem() override;
         const utf8*             getSubsystemName() const override { return kSubsystemName; }

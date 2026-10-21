@@ -138,7 +138,19 @@ namespace sw
 #elif defined( SW_PLATFORM_LINUX )
         // WSLg · gfxstream 은 흔히 xcb 만 내놓고 xlib 는 없다.
         _linuxWsi = 0;
-        if ( VulkanRHIDeviceInternal::hasExtension( listAvailableExt, VK_KHR_XLIB_SURFACE_EXTENSION_NAME ) )
+        if ( _surfaceKind == NativeSurfaceKind::Wayland )
+        {
+            // Wayland 창(`WaylandWindow`) — 표면은 wl_surface 라 X11 확장으로는 만들 수 없다. 대신할 것 없이 이 확장만 받는다.
+            if ( VulkanRHIDeviceInternal::hasExtension( listAvailableExt, "VK_KHR_wayland_surface" ) == false )
+            {
+                SW_LOG_ERROR( "The window is a Wayland surface but the Vulkan loader has no VK_KHR_wayland_surface (rebuild vulkan-loader with [wayland])" );
+                return false;
+            }
+            listExtension.push_back( "VK_KHR_wayland_surface" );
+            _linuxWsi = 3;
+            SW_LOG_TRACE( "Vulkan WSI: VK_KHR_wayland_surface" );
+        }
+        else if ( VulkanRHIDeviceInternal::hasExtension( listAvailableExt, VK_KHR_XLIB_SURFACE_EXTENSION_NAME ) )
         {
             listExtension.push_back( VK_KHR_XLIB_SURFACE_EXTENSION_NAME );
             _linuxWsi = 1;

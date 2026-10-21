@@ -2,40 +2,31 @@
 
 #include "Engine/Bootstrap/StaticStorageSubsystem.h"
 
-#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Memory/LifetimeScope.h"
-#include "Core/Module/ModuleUnloadListener.h"
 
-#include "Engine/Automation/AutomationProbe.h"
-#include "Engine/Automation/AutomationStepRegistry.h"
 #include "Engine/Bootstrap/ContentRootSubsystem.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
-#include "Engine/Object/Component/SceneTransformStorage.h"
-#include "Engine/Resource/ResourcePaths.h"
-#include "Engine/Serialization/Base/SchemaMigrationRegistry.h"
 
 namespace sw
 {
     SW_LOG_CALLER( "StaticStorageSubsystem" );
 
+    SubsystemInitResult StaticStorageSubsystem::initializeSubsystem()
+    {
+        // 처음 기동이면 이미 열려 있다. 같은 프로세스의 두 번째 엔진(테스트 하네스를 다시 세움)이면 앞 엔진의 종료가 닫았다 — 빈 범위로 다시 연다.
+        // 열지 않으면 `ScopeOwned` 가 모두 nullptr 을 내고 `SceneTransformStorage::get` 이 멈춘다.
+        LifetimeScope::getGlobal().open();
+        return SubsystemInitResult::Succeeded;
+    }
+
     void StaticStorageSubsystem::shutdownSubsystem()
     {
-        SceneTransformStorage& transformStorage = SceneTransformStorage::get();
-        if ( transformStorage.releaseStorage() == false )
-            SW_LOG_WARNING( "Scene transform storage still has %# live slots at shutdown - a scene component leaked", transformStorage.getLiveSlotCount() );
-        ResourcePaths::clearPathCache();
-        if ( RHIRenderResource::releaseRegistryStorage() == false )
-            SW_LOG_WARNING( "RHI render resources are still registered at shutdown - a mesh, texture or material leaked" );
-        // 엔진 수명 범위를 닫는다 — 그 범위가 소유한 저장소(`ScopeOwned`: 번역 문자열 · 활성 2D 렌더 설정 · 에셋 로드 기록부)가 만든 역순으로 소멸한다.
+        // 남은 렌더 리소스는 누수다(레지스트리 저장소는 마지막 리소스가 사라질 때 스스로 돌아간다 — 남았으면 돌아가지 않은 채로 보고에 보인다).
+        const uint32 registeredResourceCount = RHIRenderResource::getRegisteredCount();
+        if ( registeredResourceCount != 0 )
+            SW_LOG_WARNING( "%# RHI render resources are still registered at shutdown - a mesh, texture or material leaked", registeredResourceCount );
+        // 엔진 수명 범위를 닫는다 — 그 범위가 소유한 저장소(`ScopeOwned`)가 만든 역순으로 소멸한다. 레지스트리 용량은 등록 해제가 돌려준다(`RegistrationList::remove`).
         LifetimeScope::getGlobal().close();
-        // 레지스트리는 모듈이 모두 내려가 엔진 것만 남았다 — 기동 뒤 모듈이 키운 용량을 놓는다.
-        IModuleUnloadListener::releaseUnusedStorage();
-        AutomationStepRegistry::releaseUnusedStorage();
-        AutomationProbes::releaseUnusedStorage();
-        SchemaMigrationRegistry::releaseUnusedStorage();
-#if SW_DEV_COMMANDS_ENABLED
-        DevCommandRegistry::get().releaseUnusedStorage();
-#endif
     }
 
     span<const utf8* const> StaticStorageSubsystem::getSubsystemDependencies() const

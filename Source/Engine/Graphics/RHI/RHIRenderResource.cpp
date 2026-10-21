@@ -15,8 +15,8 @@ namespace sw
          * @brief 레지스트리입니다. **소유하지 않습니다.** 통보할 대상의 주소만 압니다.
          * @details 첫 사용 시점에 정적 저장소에 한 번 세우고 **소멸자를 부르지 않습니다.** 함수 지역 static 객체로 두면, 처음 쓴 시점이
          *          엔진 하네스보다 늦을 때(퍼저의 정적 `TestHostRuntime` 이 기동한 뒤 첫 머티리얼) `exit()` 의 정적 소멸이 목록을 먼저 지우고,
-         *          뒤이어 도는 엔진 정리(`releaseRegistryStorage`)나 늦게 소멸하는 리소스가 지워진 목록을 씁니다. 버킷 메모리는
-         *          `releaseRegistryStorage`(엔진 종료)가 돌려줍니다.
+         *          뒤이어 도는 엔진 정리나 늦게 소멸하는 리소스가 지워진 목록을 씁니다. 버킷 메모리는 마지막 리소스가 소멸할 때
+         *          (`~RHIRenderResource` 가 빈 표를 대입) 돌아갑니다.
          * @note 리눅스는 공유 라이브러리와 실행 파일의 정적 소멸이 한 목록에서 섞여 돌아 이 순서가 드러나고, Windows 는 DLL 마다 따로 돌아 드러나지 않습니다.
          */
         unordered_set<RHIRenderResource*>& registryInternal()
@@ -78,8 +78,12 @@ namespace sw
 
     RHIRenderResource::~RHIRenderResource()
     {
-        std::scoped_lock<mutex> lock{ registryMutexInternal() };
-        registryInternal().erase( this );
+        std::scoped_lock<mutex>            lock{ registryMutexInternal() };
+        unordered_set<RHIRenderResource*>& registry = registryInternal();
+        registry.erase( this );
+        // 마지막 리소스가 사라지면 버킷도 놓는다 — 기동 뒤 자란 표가 종료 누수 보고에 남지 않는다. 엔진 기본 에셋이 사는 동안은 비지 않으므로 실행 중에는 일어나지 않는다.
+        if ( registry.empty() )
+            registry = unordered_set<RHIRenderResource*>{};
     }
 
     bool RHIRenderResource::initRHI( IRHIDevice* )
@@ -88,13 +92,10 @@ namespace sw
         return true;
     }
 
-    bool RHIRenderResource::releaseRegistryStorage()
+    uint32 RHIRenderResource::getRegisteredCount()
     {
         std::scoped_lock<mutex> lock{ registryMutexInternal() };
-        if ( registryInternal().empty() == false )
-            return false;
-        registryInternal() = unordered_set<RHIRenderResource*>{};
-        return true;
+        return static_cast<uint32>( registryInternal().size() );
     }
 
     void RHIRenderResource::releaseAllFor( IRHIDevice* pDevice )

@@ -52,6 +52,8 @@ XML 속성(값 하나)과 자식 요소(목록, 구조체)의 이름은 아래 �
 | `_detailSampleDistance` | `float32` | `6.0` | 0.0 ~ - |  | Height detail sample spacing in cells (0 = no detail) |
 | `_detailSampleMaxError` | `float32` | `1.0` | 0.0 ~ - |  | Height detail error in cell heights |
 | `_maxCrowdAgentCount` | `uint32` | `512` | 1 ~ - |  | Agents one crowd of this type holds |
+| `_obstacleMode` | `NavObstacleMode` | `RebakeTiles` |  |  | How moving obstacles change this navmesh: rebake touched tiles, or keep height layers and rebuild only on them (many, often moving obstacles) |
+| `_maxCacheObstacleCount` | `uint32` | `256` | 1 ~ 65535 |  | Obstacles the tile cache holds at once (TileCache only) |
 
 ## `NavAreaDef`
 
@@ -63,3 +65,10 @@ XML 속성(값 하나)과 자식 요소(목록, 구조체)의 이름은 아래 �
 |---|---|---|---|---|---|
 | `_name` | `hashed_string` | — |  |  | Area name |
 | `_cost` | `float32` | `1.0` | 1.0 ~ - |  | Path cost multiplier per metre (1 = plain ground) |
+
+## 열거 `NavObstacleMode`
+
+| 값 | 설명 |
+|---|---|
+| `RebakeTiles` | 닿은 타일을 정적 기하부터 다시 베이크한다(장애물이 적고 드물게 움직일 때) |
+| `TileCache` | 정적 기하는 타일마다 높이 층으로 한 번 굽고, 장애물은 층 위에서만 다시 짓는다(Detour TileCache — 장애물이 많고 자주 움직일 때) |

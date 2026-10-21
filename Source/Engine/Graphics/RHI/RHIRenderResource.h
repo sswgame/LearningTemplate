@@ -73,10 +73,9 @@ namespace sw
         static void initAllFor( IRHIDevice* pDevice );
 
         /**
-         * @brief 레지스트리가 비었으면 그 저장소(버킷과 원소 배열)까지 해제합니다. 엔진 종료 마지막에 부릅니다.
-         * @return 아직 등록된 객체가 있으면 아무것도 해제하지 않고 false 입니다. 그 객체가 누수된 것입니다.
-         * @details `erase` 는 원소만 지우고 저장소를 남겨, 기동 뒤 만든 메시 분량이 종료 누수 보고(Mesh 태그)에 남는다.
+         * @brief 지금 등록된 객체 수입니다. 엔진 종료 끝에서 0 이 아니면 그 객체가 누수된 것입니다(진단).
+         * @details 저장소(버킷과 원소 배열)는 마지막 객체가 소멸할 때 스스로 돌아갑니다 — `erase` 는 원소만 지워, 기동 뒤 만든 메시 분량이 종료 누수 보고(Mesh 태그)에 남았다.
          */
-        [[nodiscard]] static bool releaseRegistryStorage();
+        static uint32 getRegisteredCount();
     };
 } // namespace sw

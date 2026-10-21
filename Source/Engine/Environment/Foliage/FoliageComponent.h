@@ -67,6 +67,10 @@ namespace sw
         float32 _swayHeight{ 1.0f };
         PROPERTY( Min = 0.0, Tooltip = "How far influencer spheres push the foliage" )
         float32 _bendStrength{ 1.0f };
+        PROPERTY( Min = 0.0, Units = m, Tooltip = "Radius each instance blocks on the navmesh (trunks, rocks); 0 does not block (grass)" )
+        float32 _navBlockRadius{ 0.0f }; ///< 0 보다 크면 인스턴스마다 이 반지름의 걷지 않는 상자를 베이크 기하에 넣는다(`FoliageNavGeometry.cpp`)
+        PROPERTY( Min = 0.01, Units = m, Tooltip = "Height of the navmesh block above the root (before instance scale)" )
+        float32 _navBlockHeight{ 2.0f };
     };
 } // namespace sw
 
@@ -129,9 +133,13 @@ namespace sw
         uint32 getLastRebuiltBatchCount() const { return _lastRebuiltBatchCount; }
 
         void setLayers( const vector<FoliageLayer>& listLayer ) { _listLayer = listLayer; }
-        void setExclusions( const vector<PlacementExclusion>& listExclusion ) { _listExclusion = listExclusion; }
-        void setRegionSize( const float2& size ) { _regionSize = size; }
-        void setCellSize( float32 cellSize ) { _cellSize = cellSize; }
+        /** @brief 레이어 수입니다. */
+        uint32 getLayerCount() const { return static_cast<uint32>( _listLayer.size() ); }
+        /** @brief 레이어 @p layerIndex 입니다(`getLayerCount` 보다 작아야 한다). */
+        const FoliageLayer& getLayer( uint32 layerIndex ) const { return _listLayer[layerIndex]; }
+        void                setExclusions( const vector<PlacementExclusion>& listExclusion ) { _listExclusion = listExclusion; }
+        void                setRegionSize( const float2& size ) { _regionSize = size; }
+        void                setCellSize( float32 cellSize ) { _cellSize = cellSize; }
 
     private:
         /** @brief (레이어, 메시, 셀) 하나의 배치입니다. */

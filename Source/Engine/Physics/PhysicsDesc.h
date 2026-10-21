@@ -30,6 +30,8 @@ namespace sw
         static constexpr bool kSupportsVehicle = true;
         /** @brief 씬이 소프트 바디(`IPhysicsSoftBodyScene`)를 구현하는지입니다. */
         static constexpr bool kSupportsSoftBody = true;
+        /** @brief 씬이 부력(`IPhysicsBuoyancyScene`)을 구현하는지입니다. */
+        static constexpr bool kSupportsBuoyancy = true;
 
         /** @brief 이 차원이 만들 수 있는 관절 종류인지 봅니다. 3D 는 모든 종류를 만듭니다. */
         static constexpr bool supportsJoint( PhysicsJointType ) { return true; }
@@ -50,6 +52,8 @@ namespace sw
         static constexpr bool kSupportsVehicle = false;
         /** @brief 평면 물리에는 소프트 바디가 없습니다(Box2D 에 없다). 씬은 `IPhysicsSoftBodyScene` 을 상속하지 않습니다. */
         static constexpr bool kSupportsSoftBody = false;
+        /** @brief 평면 물리에는 부력이 없습니다(Box2D 에 잠긴 넓이 계산이 없다). 씬은 `IPhysicsBuoyancyScene` 을 상속하지 않습니다. */
+        static constexpr bool kSupportsBuoyancy = false;
 
         /** @brief 이 차원이 만들 수 있는 관절 종류인지 봅니다. 평면에는 스윙이 없어 Cone 을 만들지 않습니다. */
         static constexpr bool supportsJoint( PhysicsJointType type ) { return type != PhysicsJointType::Cone; }
@@ -157,6 +161,11 @@ namespace sw
         float32 _mass{ 70.0f };                             ///< 밀어낼 때의 질량이다(3D).
         float32 _maxStrength{ 100.0f };                     ///< 동적 바디를 미는 가장 큰 힘이다(3D, 뉴턴).
         uint8   _layer{ 0 };
+        /**
+         * @brief 캐릭터를 따라다니는 속 바디(키네마틱, 같은 캡슐)를 둔다(3D, Jolt `mInnerBodyShape`). 천 · 헤어 같은 소프트 바디와 센서가 캐릭터를 몸으로 느낀다.
+         * @details 끄면(기본) 캐릭터는 이동 질의로만 세계와 닿아 소프트 바디가 몸을 뚫고 지나간다. 켜면 속 바디가 다른 움직이는 바디를 더 세게 밀 수 있어 쓰는 게임이 고른다.
+         */
+        bool _bInnerBody{ false };
     };
 
     using PhysicsCharacterDesc3D = PhysicsCharacterDesc<PhysicsDimension3D>;
@@ -231,6 +240,33 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 스킨 구속 정점 하나가 따르는 뼈 하나와 그 가중치입니다. */
+    struct PhysicsSoftBodySkinWeight
+    {
+        uint32  _jointIndex{ 0 }; ///< `PhysicsSoftBodyDesc::_listInverseBind` 의 자리
+        float32 _weight{ 0.0f };  ///< 0..1. 한 정점의 가중치 합은 1 이어야 한다(만들 때 확인한다)
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief 스킨 구속 정점 하나입니다(헤어 카드 · 옷 — Jolt `SoftBodySharedSettings::Skinned`).
+     * @details 매 스텝 그 정점의 스킨 위치(뼈 가중 합)에서 `_maxDistance` 안으로 끌어당긴다. 0 이면 스킨 위치에 붙는다(고정 정점과 같지만 여러 뼈를 따른다).
+     */
+    struct PhysicsSoftBodySkinnedVertex
+    {
+        static constexpr uint32 kMaxWeightCount = 4; ///< 정점 하나의 뼈 수 상한(Jolt `Skinned::cMaxSkinWeights`)
+
+        uint32                    _vertex{ 0 };
+        PhysicsSoftBodySkinWeight _arrWeight[kMaxWeightCount]{};
+        uint32                    _weightCount{ 0 };
+        float32                   _maxDistance{ 0.0f }; ///< 스킨 위치에서 벗어날 수 있는 거리(m)
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @brief 소프트 바디 하나입니다(천 · 헤어 카드). 정점과 삼각형으로 주고, 변마다 늘어남 · 비틀림 · 굽힘 구속을 만듭니다(Jolt `SoftBodySharedSettings`). 3D 만 지원합니다.
      * @details 고정 정점(`_listPinnedVertex`)은 질량이 없어 시뮬레이션이 움직이지 않고, `setSoftBodyPinnedTransform` 이 준 자세를 따른다(유니티 Cloth 의
@@ -241,17 +277,21 @@ namespace sw
         vector<float3> _listVertex;        ///< 정점(바디 기준 자세의 로컬)
         vector<uint32> _listTriangleIndex; ///< 삼각형마다 정점 인덱스 셋
         vector<uint32> _listPinnedVertex;  ///< 움직이지 않고 자세를 따르는 정점의 인덱스
-        float3         _position{};        ///< 처음 자세(월드)
-        quaternion     _rotation{};
-        float32        _vertexMass{ 0.05f };       ///< 고정되지 않은 정점 하나의 질량(kg)
-        float32        _stretchCompliance{ 0.0f }; ///< 변 늘어남(0 이면 늘어나지 않는다)
-        float32        _shearCompliance{ 0.0f };   ///< 사각형 대각선 비틀림
-        float32        _bendCompliance{ 1.0e-3f }; ///< 이웃 삼각형 사이 굽힘 — 공유 변 맞은편 두 정점 사이 거리 구속(음수면 굽힘 구속을 만들지 않는다)
-        float32        _linearDamping{ 0.1f };
-        float32        _friction{ 0.2f };
-        float32        _gravityFactor{ 1.0f };
-        float32        _vertexRadius{ 0.01f }; ///< 정점의 충돌 반지름(m). 다른 바디 표면에서 이만큼 떨어진다
-        uint32         _iterationCount{ 5 };   ///< 스텝마다 구속을 푸는 횟수
-        uint8          _layer{ 0 };
+        /// @brief 뼈를 따르는 정점(`setSoftBodySkinningPose` 가 프레임마다 뼈 자세를 준다). 고정 정점과 겹치면 안 된다.
+        vector<PhysicsSoftBodySkinnedVertex> _listSkinnedVertex;
+        /// @brief 뼈마다 바인드 자세의 역행렬(서술자 로컬 → 뼈 로컬). `_listSkinnedVertex` 가 있으면 비어 있으면 안 된다.
+        vector<float4x4> _listInverseBind;
+        float3           _position{}; ///< 처음 자세(월드)
+        quaternion       _rotation{};
+        float32          _vertexMass{ 0.05f };       ///< 고정되지 않은 정점 하나의 질량(kg)
+        float32          _stretchCompliance{ 0.0f }; ///< 변 늘어남(0 이면 늘어나지 않는다)
+        float32          _shearCompliance{ 0.0f };   ///< 사각형 대각선 비틀림
+        float32          _bendCompliance{ 1.0e-3f }; ///< 이웃 삼각형 사이 굽힘 — 공유 변 맞은편 두 정점 사이 거리 구속(음수면 굽힘 구속을 만들지 않는다)
+        float32          _linearDamping{ 0.1f };
+        float32          _friction{ 0.2f };
+        float32          _gravityFactor{ 1.0f };
+        float32          _vertexRadius{ 0.01f }; ///< 정점의 충돌 반지름(m). 다른 바디 표면에서 이만큼 떨어진다
+        uint32           _iterationCount{ 5 };   ///< 스텝마다 구속을 푸는 횟수
+        uint8            _layer{ 0 };
     };
 } // namespace sw

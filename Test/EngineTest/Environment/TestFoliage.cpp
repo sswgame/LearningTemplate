@@ -7,8 +7,12 @@
 #include "Engine/Environment/Foliage/WindComponent.h"
 #include "Engine/Environment/Terrain/HeightfieldData.h"
 #include "Engine/Environment/Terrain/TerrainComponent.h"
+#include "Engine/Navigation/NavMeshGeometry.h"
+#include "Engine/Object/Component/Navigation/SceneNavigation.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+
+#include "EngineTest/NavMeshTestUtil.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -108,6 +112,37 @@ SW_TEST_CASE( FoliageTest, PlacementOnTerrainIsDeterministicAndFiltered )
     pFoliage->rebuildFoliage();
     SW_EXPECT_EQUAL( static_cast<uint32>( listFirst.size() ), pFoliage->getInstanceCount() );
     SW_EXPECT_TRUE( pFoliage->getBatchCount() >= 2 );
+}
+
+/**
+ * @brief [FoliageTest] 길을 막는 레이어(`_navBlockRadius` > 0)는 인스턴스마다 걷지 않는 상자(삼각형 12)를 베이크 기하에 더한다 — 풀(0)은 더하지 않는다
+ */
+SW_TEST_CASE( FoliageTest, BlockingLayerAddsNavObstaclePerInstance )
+{
+    GameObjectManager manager;
+    SW_ASSERT_NOT_NULL( FoliageTestUtil::createTerrain( manager ) );
+    GameObject* pObject = manager.createGameObject( hashed_string( "Foliage" ) );
+    SW_ASSERT_NOT_NULL( pObject );
+    FoliageComponent* pFoliage = pObject->addComponent<FoliageComponent>();
+    SW_ASSERT_NOT_NULL( pFoliage );
+    pFoliage->setLocalPosition( float3{ 32.0f, 0.0f, 32.0f } );
+    FoliageLayer layer = FoliageTestUtil::makeGrassLayer();
+    pFoliage->setLayers( { layer } );
+    vector<PlacementInstance> listInstance;
+    SW_ASSERT_TRUE( pFoliage->computeLayerPlacements( 0, listInstance ) );
+    SW_ASSERT_TRUE( listInstance.empty() == false );
+
+    SceneNavigation& navigation = manager.getSubsystem<SceneNavigation>();
+    navigation.setSettings( navtest::makeSettings() );
+    navtest::spawnSurface( manager, NavGeometrySource::RenderMeshes );
+    NavMeshGeometry grassGeometry;
+    SceneNavigation::collectGeometry( manager, nullptr, navigation.getSettings(), navigation.getGeometrySources(), grassGeometry );
+
+    layer._navBlockRadius = 0.3f;
+    pFoliage->setLayers( { layer } );
+    NavMeshGeometry treeGeometry;
+    SceneNavigation::collectGeometry( manager, nullptr, navigation.getSettings(), navigation.getGeometrySources(), treeGeometry );
+    SW_EXPECT_EQUAL( grassGeometry.getTriangleCount() + static_cast<uint32>( listInstance.size() ) * 12u, treeGeometry.getTriangleCount() );
 }
 
 /**

@@ -23,6 +23,8 @@
 
 namespace sw
 {
+    enum class NavObstacleMode : uint8;
+
     struct NavAgentTypeDef;
     struct NavConvexVolume;
     struct NavMeshSettings;
@@ -155,6 +157,21 @@ namespace sw
         virtual void setOffMeshLinkEnabled( uint32 linkID, bool bEnabled ) = 0;
         /** @brief 링크가 막히지 않았으면 true 입니다(모르는 번호도 true). */
         virtual bool isOffMeshLinkEnabled( uint32 linkID ) const = 0;
+
+        /**
+         * @brief 움직이는 장애물을 다루는 방식입니다(`initialize` 의 에이전트 종류 `_obstacleMode`).
+         * @details `TileCache` 면 타일 바이트(`bakeTile` · `replaceTile` · `collectTiles`)가 높이 층 묶음이고, `bakeTile` 은 덧칠 부피(@p pExtraVolume)를 받지 않는다 —
+         *          장애물은 `addCacheObstacle` 로 넣는다. `RebakeTiles` 면 장애물 부피를 덧칠해 타일을 다시 굽고, 아래 세 함수는 오류다.
+         */
+        virtual NavObstacleMode getObstacleMode() const = 0;
+        /** @brief 장애물 캐시에 장애물을 넣습니다(다음 `updateCacheObstacles` 가 닿은 타일을 층에서 다시 짓는다). 실패하면 오류를 남기고 0 입니다. */
+        virtual NavObstacleRef addCacheObstacle( const NavCacheObstacleDesc& desc ) = 0;
+        /** @brief 장애물 캐시에서 장애물을 뺍니다. */
+        virtual void removeCacheObstacle( NavObstacleRef obstacle ) = 0;
+        /**
+         * @brief 쌓인 장애물 요청을 처리합니다(게임 스레드 · 질의가 없는 동안 — `replaceTile` 과 같은 자리). 타일을 다시 지었으면 true 이고 번호(`getRevision`)가 오릅니다.
+         */
+        virtual bool updateCacheObstacles( float32 deltaSeconds ) = 0;
 
         /** @brief @p position 에서 반 크기 @p searchExtent 상자 안의 가장 가까운 내비메시 위 점입니다. 없으면 false 입니다. */
         [[nodiscard]] virtual bool findNearestPoint( const float3& position, const float3& searchExtent, const NavQueryFilter& filter, NavLocation& outLocation ) const = 0;

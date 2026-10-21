@@ -250,7 +250,7 @@ namespace sw
          * @details 바이트가 지난 업로드와 같으면 건너뛴다. 값이 바뀐 그룹만 올린다(언리얼의 더티 업로드).
          */
         void uploadMaterialGroups( IRHIDevice* pDevice );
-        /** @brief 배치 메시를 정점 풀에 모으고(동적 메시는 뺀다) 배치에 풀 버퍼와 시작 정점을 적습니다. 풀이 바뀌면 배치 표를 더티로 둡니다. */
+        /** @brief 배치 메시를 정점 풀에 모으고(동적 메시 포함) 배치에 풀 버퍼와 시작 정점을 적습니다. 풀 밖 배치는 자기 정점 버퍼를 만듭니다. 풀이 바뀌면 배치 테이블을 더티로 둡니다. */
         void updateVertexPool( IRHIDevice* pDevice );
         /** @brief 인스턴스 버퍼를 확보해 통째로 또는 바뀐 구간만 올리고, 뷰마다의 가시 인스턴스 ID 버퍼를 확보합니다. */
         void uploadInstanceAndVisibleBuffers( IRHIDevice* pDevice, uint32 instanceCount );

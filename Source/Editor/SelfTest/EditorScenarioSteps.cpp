@@ -768,8 +768,8 @@ namespace sw::editor
                 const IWindow* pWindow = IWindow::getActiveWindow();
                 if ( pWindow == nullptr )
                     return false;
-                const string title = StringUtil::utf16ToUtf8( pWindow->getTitle().c_str() );
-                outValue           = EditorWindowTitleUtil::isDirtyTitle( title ) ? 1.0 : 0.0;
+                const string title{ pWindow->getTitle() };
+                outValue = EditorWindowTitleUtil::isDirtyTitle( title ) ? 1.0 : 0.0;
                 return true;
             }
 

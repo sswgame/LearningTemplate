@@ -17,12 +17,14 @@
 namespace sw
 {
     class SceneComponent;
+    template <class T>
+    class ScopeOwned;
 
     /**
      * @struct SceneTransformPage
      * @brief 트랜스폼 슬롯 256 개를 담은 페이지입니다. 값마다 배열 하나라, 같은 값을 연달아 도는 패스(틱 뒤 적용, 플러시, 렌더 수집)가 라인 단위로 읽습니다.
-     * @details 슬롯 하나의 값은 모든 배열의 같은 위치(`슬롯 번호 & kSlotMask`)에 있다. 페이지는 한 번 만들면 옮기지도 해제하지도 않으므로(슬롯이
-     *          하나도 없을 때의 `releaseStorage` 까지), 컴포넌트는 자기 페이지 포인터를 가지고 테이블을 거치지 않고 찾는다.
+     * @details 슬롯 하나의 값은 모든 배열의 같은 위치(`슬롯 번호 & kSlotMask`)에 있다. 페이지는 한 번 만들면 옮기지도 해제하지도 않으므로(저장소가
+     *          엔진 수명 범위와 함께 소멸할 때까지), 컴포넌트는 자기 페이지 포인터를 가지고 테이블을 거치지 않고 찾는다.
      *
      *          값을 `SceneComponent` 안에 두지 않는 이유는 틱 뒤 적용과 렌더 수집이 8000 개를 돌 때 오브젝트마다 캐시 라인 서너 개를 건너다니고,
      *          행렬 하나를 읽으려고 컴포넌트 전체를 끌어오게 되기 때문이다.
@@ -127,7 +129,7 @@ namespace sw
          */
         static constexpr uint32 kMaxPageCount = 16384;
 
-        /** @brief 전역 저장소입니다. 처음 부를 때 만들어지고 Engine 이 종료할 때 사라집니다. */
+        /** @brief 전역 저장소입니다. 처음 부를 때 만들어지고 엔진 수명 범위가 닫힐 때(엔진 종료) 사라집니다. 그 뒤에 부르면 멈춥니다. */
         static SceneTransformStorage& get();
 
         /**
@@ -148,13 +150,6 @@ namespace sw
         }
         /** @brief 지금 쓰이는 슬롯 수입니다(테스트와 진단용). */
         uint32 getLiveSlotCount() const;
-        /**
-         * @brief 쓰이는 슬롯이 하나도 없으면 페이지와 빈 슬롯 목록을 모두 해제하고 처음 상태로 되돌립니다. 엔진 종료 끝(`StaticStorageSubsystem::shutdownSubsystem`)이 부릅니다.
-         * @details 저장소는 함수 정적이라 그대로 두면 페이지가 프로세스 끝까지 남아 종료 누수 보고(기준선 대비 태그 증가)에 보입니다. 다시 슬롯을 받으면
-         *          페이지를 새로 만듭니다(슬롯 번호는 0 부터).
-         * @return 해제했으면 true 입니다. 살아 있는 슬롯이 있으면(그 컴포넌트가 페이지 포인터를 가지고 있다) 아무것도 하지 않고 false 입니다.
-         */
-        [[nodiscard]] bool releaseStorage();
 
         /**
          * @brief 슬롯의 로컬 값으로 월드 행렬과 LWC 를 합성합니다. 부모가 없으면 두 부모 포인터를 nullptr 로 줍니다.
@@ -167,16 +162,19 @@ namespace sw
         SceneTransformStorage( const SceneTransformStorage& )            = delete;
         SceneTransformStorage& operator=( const SceneTransformStorage& ) = delete;
 
+        /** @brief 페이지를 모두 해제합니다. 살아 있는 슬롯이 남았으면 경고합니다(컴포넌트가 새었다). 엔진 수명 범위가 닫힐 때 불립니다. */
+        ~SceneTransformStorage();
+
     private:
+        friend class ScopeOwned<SceneTransformStorage>; ///< 엔진 수명 범위가 만들고 소멸시킨다(SceneTransformStorage.cpp)
+
         /** @brief 빈 저장소를 만듭니다. `get` 만 부릅니다. */
         SceneTransformStorage();
-        /** @brief 페이지를 모두 해제합니다. */
-        ~SceneTransformStorage();
 
         /** @brief 슬롯 하나를 기본값으로 채웁니다. */
         static void initializeSlot( SceneTransformPage& page, uint32 pageIndex, SceneComponent* pOwner );
 
-        /** @brief 페이지 테이블입니다. 한 번 발행한 페이지는 `releaseStorage`(살아 있는 슬롯이 없을 때만)까지 그 위치에 있습니다. */
+        /** @brief 페이지 테이블입니다. 한 번 발행한 페이지는 저장소가 소멸할 때까지 그 위치에 있습니다. */
         atomic<SceneTransformPage*> _arrPage[kMaxPageCount];
         /** @brief 반환된 슬롯입니다. 나중에 반환된 것부터 다시 씁니다. */
         vector<uint32> _listFreeSlot;

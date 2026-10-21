@@ -29,6 +29,40 @@ if(NOT SW_TARGET_TYPE STREQUAL "Server")
 	find_library(SW_X11_XCB_LIBRARY NAMES X11-xcb REQUIRED)
 	target_include_directories(sw_platform_linux INTERFACE ${SW_XCB_INCLUDE_DIR})
 	target_link_libraries(sw_platform_linux INTERFACE ${SW_XCB_LIBRARY} ${SW_X11_XCB_LIBRARY})
+
+	# ------------------------------------------------------------------------------
+	# 1-1) Wayland(선택, `SW_ENABLE_WAYLAND`) — 창 · 입력 · 커서. xdg-shell 클라이언트 코드는 구성 때 wayland-scanner 로 만든다.
+	# 패키지: libwayland-dev · libxkbcommon-dev · wayland-protocols(CI 에 더할 것 — docs/plans/WaylandWindowLayer.md).
+	# ------------------------------------------------------------------------------
+	if(SW_ENABLE_WAYLAND)
+		find_package(PkgConfig REQUIRED)
+		pkg_check_modules(SW_WAYLAND REQUIRED IMPORTED_TARGET wayland-client wayland-cursor xkbcommon)
+		pkg_get_variable(SW_WAYLAND_PROTOCOLS_DIR wayland-protocols pkgdatadir)
+		if(NOT SW_WAYLAND_PROTOCOLS_DIR)
+			message(FATAL_ERROR "SW_ENABLE_WAYLAND: wayland-protocols (pkgdatadir) not found")
+		endif()
+		find_program(SW_WAYLAND_SCANNER wayland-scanner REQUIRED)
+
+		set(swXdgShellXml "${SW_WAYLAND_PROTOCOLS_DIR}/stable/xdg-shell/xdg-shell.xml")
+		set(swWaylandGenDir "${CMAKE_BINARY_DIR}/generated/wayland")
+		file(MAKE_DIRECTORY "${swWaylandGenDir}")
+		add_custom_command(
+			OUTPUT "${swWaylandGenDir}/xdg-shell-client-protocol.h" "${swWaylandGenDir}/xdg-shell-protocol.c"
+			COMMAND "${SW_WAYLAND_SCANNER}" client-header "${swXdgShellXml}" "${swWaylandGenDir}/xdg-shell-client-protocol.h"
+			COMMAND "${SW_WAYLAND_SCANNER}" private-code "${swXdgShellXml}" "${swWaylandGenDir}/xdg-shell-protocol.c"
+			DEPENDS "${swXdgShellXml}"
+			COMMENT "wayland-scanner: xdg-shell"
+			VERBATIM
+		)
+		# 생성 코드는 C 다. Engine(공유 라이브러리)에 들어가므로 위치 독립 코드로 짓는다.
+		add_library(sw_wayland_protocols STATIC "${swWaylandGenDir}/xdg-shell-protocol.c" "${swWaylandGenDir}/xdg-shell-client-protocol.h")
+		set_target_properties(sw_wayland_protocols PROPERTIES POSITION_INDEPENDENT_CODE ON LINKER_LANGUAGE C)
+		target_include_directories(sw_wayland_protocols PUBLIC "${swWaylandGenDir}")
+		target_link_libraries(sw_wayland_protocols PUBLIC PkgConfig::SW_WAYLAND)
+		target_link_libraries(sw_platform_linux INTERFACE sw_wayland_protocols)
+		target_compile_definitions(sw_platform_linux INTERFACE SW_WITH_WAYLAND)
+		message(STATUS "[Linux] Wayland window layer enabled (xdg-shell from ${swXdgShellXml})")
+	endif()
 endif()
 
 # ------------------------------------------------------------------------------

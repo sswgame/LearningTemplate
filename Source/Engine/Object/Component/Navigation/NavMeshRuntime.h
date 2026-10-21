@@ -20,6 +20,7 @@
 #include "Engine/Navigation/INavMesh.h"
 #include "Engine/Navigation/NavMeshAsset.h"
 #include "Engine/Navigation/NavMeshGeometry.h"
+#include "Engine/Navigation/NavMeshSettings.h"
 #include "Engine/Navigation/NavigationTypes.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -73,6 +74,18 @@ namespace sw
 
 namespace sw
 {
+    class NavMeshObstacleComponent;
+
+    /** @brief 장애물 캐시(`NavObstacleMode::TileCache`)에 넣은 장애물 하나 — 어느 컴포넌트의 것인지와 캐시 번호입니다. */
+    struct NavCacheObstacleEntry
+    {
+        const NavMeshObstacleComponent* _pObstacle{ nullptr };
+        NavObstacleRef                  _ref{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 에이전트 종류 하나의 내비메시 · 군중 · 입력 · 재베이크 줄입니다. */
     struct NavMeshRuntime
     {
@@ -84,6 +97,7 @@ namespace sw
         shared_ptr<const vector<NavConvexVolume>> _pVolume;
         vector<int2>                              _listDirtyTile;
         vector<unique_ptr<NavTileBakeJob>>        _listJob;
+        vector<NavCacheObstacleEntry>             _listCacheObstacle; ///< 장애물 캐시에 든 장애물(캐시 모드에서만 — 다시 굽기 모드는 `_pVolume` 이다)
         NavQueryFilter                            _filter{};
         NavMeshBakeStats                          _bakeStats{};
         AABB                                      _bounds{};
@@ -99,6 +113,23 @@ namespace sw
             for ( const unique_ptr<NavTileBakeJob>& pJob : _listJob )
             {
                 pJob->waitDone();
+            }
+        }
+
+        /** @brief 장애물을 장애물 캐시로 다루면 true 입니다(덧칠 부피 없이 굽는다). */
+        bool usesObstacleCache() const { return _pNavMesh != nullptr && _pNavMesh->getObstacleMode() == NavObstacleMode::TileCache; }
+
+        /** @brief 장애물 하나의 캐시 장애물을 뺍니다(없으면 할 일이 없다). */
+        void removeCacheObstacle( const NavMeshObstacleComponent* pObstacle )
+        {
+            for ( size_t index = 0; index < _listCacheObstacle.size(); ++index )
+            {
+                if ( _listCacheObstacle[index]._pObstacle != pObstacle )
+                    continue;
+                _pNavMesh->removeCacheObstacle( _listCacheObstacle[index]._ref );
+                _listCacheObstacle[index] = _listCacheObstacle.back();
+                _listCacheObstacle.pop_back();
+                return;
             }
         }
 

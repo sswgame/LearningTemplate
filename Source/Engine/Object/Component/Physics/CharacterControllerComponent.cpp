@@ -20,6 +20,7 @@ namespace sw
         , _gravityScale{ 1.0f }
         , _mass{ 70.0f }
         , _layer{ "Character" }
+        , _bInnerBody{ false }
         , _character{}
         , _state{}
         , _commandLock{}
@@ -121,6 +122,7 @@ namespace sw
             desc._stepHeight    = _stepHeight;
             desc._mass          = _mass;
             desc._layer         = physics.resolveLayer( _layer );
+            desc._bInnerBody    = _bInnerBody;
             _character          = pScene->createCharacter( desc );
             _state              = PhysicsCharacterState3D{};
             _state._position    = position;

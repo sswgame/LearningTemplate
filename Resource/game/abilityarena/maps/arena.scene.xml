@@ -6691,5 +6691,20 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
+		<entity id="335" name="NavigationSurface">
+			<GameObject _schemaVersion="0" _name="NavigationSurface" _bActive="true">
+				<_listComponent>
+					<NavMeshSurfaceComponent _componentName="NavMeshSurfaceComponent"
+					                         _bActive="true"
+					                         _geometrySource="RenderMeshes"
+					                         _boundsHalfExtents="0,0,0">
+						<_listAgentType>
+							<item>Humanoid</item>
+						</_listAgentType>
+						<_listExcludeTag />
+					</NavMeshSurfaceComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
 	</entities>
 </Scene>

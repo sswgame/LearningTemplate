@@ -18,6 +18,14 @@
 
 namespace sw
 {
+    /** @brief 움직이는 장애물(`NavMeshObstacleComponent`)이 내비메시를 바꾸는 방식입니다. */
+    ENUM()
+    enum class NavObstacleMode : uint8
+    {
+        RebakeTiles = 0, ///< 닿은 타일을 정적 기하부터 다시 베이크한다(장애물이 적고 드물게 움직일 때)
+        TileCache,       ///< 정적 기하는 타일마다 높이 층으로 한 번 굽고, 장애물은 층 위에서만 다시 짓는다(Detour TileCache — 장애물이 많고 자주 움직일 때)
+    };
+
     /**
      * @brief 에이전트 종류 하나입니다. 이 몸이 걸을 내비메시를 베이크하는 값입니다.
      * @code
@@ -59,6 +67,10 @@ namespace sw
         float32 _detailSampleMaxError{ 1.0f };
         PROPERTY( Min = 1, Tooltip = "Agents one crowd of this type holds" )
         uint32 _maxCrowdAgentCount{ 512 };
+        PROPERTY( Tooltip = "How moving obstacles change this navmesh: rebake touched tiles, or keep height layers and rebuild only on them (many, often moving obstacles)" )
+        NavObstacleMode _obstacleMode{ NavObstacleMode::RebakeTiles };
+        PROPERTY( Min = 1, Max = 65535, Tooltip = "Obstacles the tile cache holds at once (TileCache only)" )
+        uint32 _maxCacheObstacleCount{ 256 };
     };
 } // namespace sw
 

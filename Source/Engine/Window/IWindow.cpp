@@ -4,8 +4,12 @@
 
 #include "Core/CommandLine/CommandLineManager.h"
 
+#include "Engine/Window/Linux/Wayland/WaylandWindow.h"
 #include "Engine/Window/Linux/X11Window.h"
 #include "Engine/Window/Windows/Win32Window.h"
+
+#include <cstdlib>
+#include <cstring>
 
 namespace sw
 {
@@ -19,7 +23,7 @@ namespace sw
     } // namespace
 
     IWindow::IWindow()
-        : _title{}
+        : _arrTitle{}
         , _customHandler{}
         , _onResize{}
         , _closeQuery{}
@@ -72,11 +76,24 @@ namespace sw
     {
         if ( StringUtil::isNullOrEmpty( pTitle ) )
             return;
-        const wstring title = StringUtil::utf8ToUtf16( pTitle );
-        if ( title == _title )
+        if ( std::strcmp( pTitle, _arrTitle ) == 0 )
             return;
-        _title = title;
+        if ( storeTitle( pTitle ) == false )
+            return; // 오류는 storeTitle 이 남겼다 — 지금 제목이 그대로다
         applyTitle();
+    }
+
+    bool IWindow::storeTitle( const utf8* pTitle )
+    {
+        const utf8* const pSource = pTitle != nullptr ? pTitle : "";
+        const size_t      length  = std::strlen( pSource );
+        if ( length >= kTitleCapacity )
+        {
+            SW_LOG_ERROR( "Window title is %# bytes - it must be shorter than %# bytes (IWindow::kTitleCapacity)", length, kTitleCapacity );
+            return false;
+        }
+        std::memcpy( _arrTitle, pSource, length + 1 );
+        return true;
     }
 
     void IWindow::requestClose()
@@ -135,7 +152,7 @@ namespace sw
 
     bool IWindow::recreate()
     {
-        if ( _title.empty() )
+        if ( _arrTitle[0] == '\0' )
             return false;
 
         // 다시 만들어도 **보이던 창은 보여야 한다**. 빠뜨리면 백엔드 교체 뒤 창이 사라진다.
@@ -155,8 +172,10 @@ namespace sw
         destroy();
         _bShouldClose = SW_FALSE;
 
-        const string title = StringUtil::utf16ToUtf8( _title.c_str() );
-        const bool   bOk   = initializeWindow( title.c_str(), width, height );
+        // 플랫폼의 `initializeWindow` 가 제목을 `_arrTitle` 에 다시 담으므로 사본으로 넘긴다(같은 버퍼를 읽으며 쓰지 않게).
+        utf8 arrTitle[kTitleCapacity];
+        std::memcpy( arrTitle, _arrTitle, kTitleCapacity );
+        const bool bOk = initializeWindow( arrTitle, width, height );
         // 새 창은 늘 창 모드로 선다. 전체 화면이던 창은 보이기 전에 같은 방식으로 되돌린다(크기 통보는 `_bRecreating` 이 삼킨다).
         if ( bOk && _displayMode != WindowDisplayMode::Windowed )
             (void)setDisplayMode( _displayMode, width, height );
@@ -173,7 +192,22 @@ namespace sw
 #if defined( SW_PLATFORM_WINDOWS )
         return make_unique<Win32Window>();
 #elif defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
-        return make_unique<X11Window>();
+        // 창 계층은 환경 변수 하나가 고른다(`SW_WINDOW_BACKEND` = x11 | wayland, 없으면 x11 — XWayland 데스크톱의 지금까지의 길). 모르는 값 · 짓지 않은 계층은 오류로 멈춘다.
+        const utf8* const pBackend = std::getenv( "SW_WINDOW_BACKEND" );
+        if ( pBackend == nullptr || std::strcmp( pBackend, "x11" ) == 0 )
+            return make_unique<X11Window>();
+        if ( std::strcmp( pBackend, "wayland" ) == 0 )
+        {
+    #if defined( SW_WITH_WAYLAND )
+            SW_LOG_INFO( "Window backend: Wayland (SW_WINDOW_BACKEND=wayland)" );
+            return make_unique<WaylandWindow>();
+    #else
+            SW_LOG_ERROR( "SW_WINDOW_BACKEND=wayland but this build has no Wayland window layer (configure with -DSW_ENABLE_WAYLAND=ON)" );
+            return nullptr;
+    #endif
+        }
+        SW_LOG_ERROR( "SW_WINDOW_BACKEND='%#' is not a window backend (x11, wayland)", pBackend );
+        return nullptr;
 #else
         return nullptr;
 #endif

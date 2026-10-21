@@ -8,6 +8,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Memory/LifetimeScope.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -181,12 +182,8 @@ namespace sw
             return s_mutex;
         }
 
-        /// @brief 매니페스트 경로 → 항목입니다. 없는 파일도 빈 채로 캐시해 매번 다시 열지 않습니다.
-        unordered_map<string, ShaderReflectionLibrary::EntryMap>& manifestCacheInternal()
-        {
-            static unordered_map<string, ShaderReflectionLibrary::EntryMap> s_mapManifest;
-            return s_mapManifest;
-        }
+        /// @brief 매니페스트 경로 → 항목입니다. 없는 파일도 빈 채로 캐시해 매번 다시 열지 않습니다. 엔진 수명 범위가 소유해 엔진 종료 때 저장소째 사라집니다.
+        ScopeOwned<unordered_map<string, ShaderReflectionLibrary::EntryMap>> s_mapManifestCache;
 
         /// @brief clearCache 횟수입니다 — 머티리얼이 맞춘 레이아웃이 낡았는지 본다.
         atomic<uint32>& cacheGenerationInternal()
@@ -334,8 +331,12 @@ namespace sw
         }
 #endif
 
-        std::scoped_lock<mutex> lock{ manifestMutexInternal() };
-        auto&                   mapManifest = manifestCacheInternal();
+        std::scoped_lock<mutex>                                         lock{ manifestMutexInternal() };
+        unordered_map<string, ShaderReflectionLibrary::EntryMap>* const pMapManifest = s_mapManifestCache.getOrCreate();
+        // nullptr 은 엔진 수명 범위가 닫힌 뒤의 접근이다(Debug 는 `getOrCreate` 가 단언한다). 매니페스트를 들 곳이 없으니 찾지 못한 것으로 답한다.
+        if ( pMapManifest == nullptr )
+            return false;
+        unordered_map<string, ShaderReflectionLibrary::EntryMap>& mapManifest = *pMapManifest;
 
         auto manifestIter = mapManifest.find( binDirRel );
         if ( manifestIter == mapManifest.end() )
@@ -402,14 +403,18 @@ namespace sw
     void ShaderReflectionLibrary::clearCache()
     {
         std::scoped_lock<mutex> lock{ manifestMutexInternal() };
-        manifestCacheInternal().clear();
+        // 재컴파일 · 쿠킹이 낡은 매니페스트를 버린다. 종료 때의 반납은 캐시를 소유한 엔진 수명 범위가 한다.
+        unordered_map<string, EntryMap>* const pMapManifest = s_mapManifestCache.find();
+        if ( pMapManifest != nullptr )
+            pMapManifest->clear();
         cacheGenerationInternal().fetch_add( 1u, std::memory_order_acq_rel );
     }
 
     uint32 ShaderReflectionLibrary::getCachedManifestCount()
     {
-        std::scoped_lock<mutex> lock{ manifestMutexInternal() };
-        return static_cast<uint32>( manifestCacheInternal().size() );
+        std::scoped_lock<mutex>                      lock{ manifestMutexInternal() };
+        const unordered_map<string, EntryMap>* const pMapManifest = s_mapManifestCache.find();
+        return pMapManifest == nullptr ? 0u : static_cast<uint32>( pMapManifest->size() );
     }
 
     uint32 ShaderReflectionLibrary::getCacheGeneration()

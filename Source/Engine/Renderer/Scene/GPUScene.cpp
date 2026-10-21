@@ -53,15 +53,6 @@ namespace sw
                     }
                 }
             }
-
-            static void uploadMeshesVal( IRHIDevice* pDevice, vector_reference<GPUMeshBatch> listBatch )
-            {
-                for ( GPUMeshBatch& batch : listBatch )
-                {
-                    if ( batch._mesh != nullptr && batch._mesh->initRHI( pDevice ) )
-                        batch._vertexBuffer = batch._mesh->getVertexBuffer();
-                }
-            }
         };
     } // namespace
 } // namespace sw
@@ -115,15 +106,11 @@ namespace sw
         if ( bNothingToUploadScene )
             return false;
 
-        // RT 에서만 하는 두 가지: 머티리얼 인스턴스의 오버라이드를 CB 에 반영하고(updateRHI), 메시를 GPU 에 올린다(initRHI).
+        // RT 에서만 하는 두 가지: 머티리얼 인스턴스의 오버라이드를 CB 에 반영하고(updateRHI), 메시를 GPU 에 올린다(정점 풀, 풀 밖이면 initRHI).
         {
             SW_PROFILE_SCOPE( "RT.GPUScene.applyInstanceCbs" );
             GPUSceneInternal::applyInstanceCbsVal( pDevice, _snapshot.getMutableBatches() );
             GPUSceneInternal::applyElementInstancesVal( pDevice, _snapshot._listMaterialGroup );
-        }
-        {
-            SW_PROFILE_SCOPE( "RT.GPUScene.uploadMeshes" );
-            GPUSceneInternal::uploadMeshesVal( pDevice, _snapshot.getMutableBatches() );
         }
         updateVertexPool( pDevice );
         // 머티리얼 데이터 구조버퍼(셰이더 타입별). 값이 프레임마다 바뀔 수 있어 스냅샷 dirty 와 무관하게 매번 본다(바이트가 같으면 올리지 않는다).
@@ -177,35 +164,41 @@ namespace sw
 
     void GPUScene::updateVertexPool( IRHIDevice* pDevice )
     {
-        // 정점 풀: 배치 메시 모두를 한 정점 버퍼에 모은다. 집합이 같으면 아무것도 하지 않고, 바뀌면 들어오고 나간 메시의 구간만 고친다.
-        // 풀에 든 배치는 풀 버퍼와 시작 오프셋으로 그리고(같은 버퍼 → 멀티 드로우로 묶인다), 못 든 배치는 자기 정점 버퍼(오프셋 0)로 그린다.
+        // 정점 풀: 배치 메시 모두를 한 정점 버퍼에 모은다. 집합이 같으면 아무것도 하지 않고, 바뀌면 들어오고 나간 메시의 구간만 고친다(CPU 정점에서 올린다).
+        // 풀에 든 배치는 풀 버퍼와 시작 오프셋으로 그리고(같은 버퍼 → 멀티 드로우로 묶인다), 못 든 배치만 자기 정점 버퍼(오프셋 0)를 만들어 그린다.
+        // 동적 메시(프레임마다 새 메시 — 천)도 풀에 든다 — 풀은 바뀐 메시를 "나감 + 들어옴" 으로 보고 그 구간만 올리고, 구간 반납 지연이 앞 프레임이 읽는
+        // 위치를 지킨다(ClothFollowups C2). 그래서 프레임마다의 정점 버퍼 생성 · 반납이 없다(게임 스레드도 동적 메시를 업로드 큐에 넣지 않는다).
         // 이 구간의 시간이 C-43 의 전/후 측정값이다(docs/plans/WorldStreaming.md "측정").
-        SW_PROFILE_SCOPE( "RT.GPUScene.vertexPool" );
-        _listScratchPoolMesh.clear();
-        if ( _bVertexPoolEnabled != SW_FALSE )
         {
-            _listScratchPoolMesh.reserve( _snapshot.getAllBatches().size() );
-            for ( const GPUMeshBatch& batch : _snapshot.getAllBatches() )
+            SW_PROFILE_SCOPE( "RT.GPUScene.vertexPool" );
+            _listScratchPoolMesh.clear();
+            if ( _bVertexPoolEnabled != SW_FALSE )
             {
-                // 동적 메시(프레임마다 새 메시 — 천)는 풀 밖이다. 넣으면 집합이 매 프레임 바뀌어 씬 전체 정점을 다시 올린다. 자기 정점 버퍼로 그린다.
-                const bool bDynamicMesh = batch._mesh != nullptr && batch._mesh->isDynamic();
-                if ( bDynamicMesh == false )
+                _listScratchPoolMesh.reserve( _snapshot.getAllBatches().size() );
+                for ( const GPUMeshBatch& batch : _snapshot.getAllBatches() )
+                {
                     _listScratchPoolMesh.push_back( batch._mesh.get() );
+                }
             }
+            // 끈 상태면 빈 목록으로 빌드해 풀이 비워진다. 배치는 아래에서 자기 정점 버퍼(오프셋 0)로 돌아간다.
+            if ( _vertexPool.update( pDevice, _listScratchPoolMesh ) )
+                _bBatchTablesDirty = SW_TRUE;
         }
-        // 끈 상태면 빈 목록으로 빌드해 풀이 비워진다. 배치는 아래에서 자기 정점 버퍼(오프셋 0)로 돌아간다.
-        if ( _vertexPool.update( pDevice, _listScratchPoolMesh ) )
-            _bBatchTablesDirty = SW_TRUE;
+        SW_PROFILE_SCOPE( "RT.GPUScene.uploadMeshes" );
+        const RHIBufferHandle poolBuffer = _vertexPool.getVertexBuffer();
         for ( GPUMeshBatch& batch : _snapshot.getMutableBatches() )
         {
             const uint32 base = _vertexPool.baseOf( batch._mesh.get() );
-            if ( base != GPUMeshVertexPool::kInvalidBase && _vertexPool.getVertexBuffer() != 0 )
+            if ( base != GPUMeshVertexPool::kInvalidBase && poolBuffer != 0 )
             {
-                batch._vertexBuffer = _vertexPool.getVertexBuffer();
+                batch._vertexBuffer = poolBuffer;
                 batch._firstVertex  = base;
+                continue;
             }
-            else
-                batch._firstVertex = 0;
+            // 풀 밖(풀을 껐거나 못 든 메시) — 자기 정점 버퍼로 그린다.
+            batch._firstVertex = 0;
+            if ( batch._mesh != nullptr && batch._mesh->initRHI( pDevice ) )
+                batch._vertexBuffer = batch._mesh->getVertexBuffer();
         }
     }
 

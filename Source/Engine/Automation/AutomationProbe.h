@@ -134,8 +134,6 @@ namespace sw
         static const AutomationProbeRegistration* find( string_view name );
         /** @brief 탐침 하나를 읽습니다. 씬 탐침은 `_pManager` 만 쓰고 수를 냅니다. 값이 없으면 false 입니다. */
         [[nodiscard]] static bool read( const AutomationProbeRegistration& registration, const AutomationProbeQuery& query, AutomationProbeValue& outValue );
-        /** @brief 언로드된 모듈이 키운 레지스트리 용량을 해제합니다. 엔진 종료 끝(`StaticStorageSubsystem::shutdownSubsystem`)이 모듈을 모두 언로드한 뒤 부릅니다. */
-        static void releaseUnusedStorage();
     };
 } // namespace sw
 

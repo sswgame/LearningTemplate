@@ -12,6 +12,8 @@
     #include <poll.h>
 #endif
 
+#include <cstring>
+
 namespace sw
 {
     SW_LOG_CALLER( "X11Window" );
@@ -108,7 +110,8 @@ namespace sw
     {
         _width  = width;
         _height = height;
-        _title  = StringUtil::isNullOrEmpty( pTitle ) ? L"" : StringUtil::utf8ToUtf16( pTitle );
+        if ( storeTitle( pTitle ) == false )
+            return false; // 오류는 storeTitle 이 남겼다
 
         Display* pDisplay = XOpenDisplay( nullptr );
         if ( pDisplay == nullptr )
@@ -261,14 +264,13 @@ namespace sw
 
         // 제목은 UTF-8 이다. XStoreName 은 WM_NAME 을 Latin-1(STRING)으로 적어 비-ASCII 글자가 깨진다. 창 관리자는 _NET_WM_NAME(UTF8_STRING)을
         // 먼저 읽으므로 그것을 같이 적는다(XStoreName 은 _NET_WM_NAME 을 모르는 이전 창 관리자를 위한 것이다).
-        Display*     pDisplay  = static_cast<Display*>( _pX11Display );
-        const Window win       = static_cast<Window>( _x11Window );
-        const string titleText = StringUtil::utf16ToUtf8( _title.c_str() );
-        XStoreName( pDisplay, win, titleText.c_str() );
+        Display*     pDisplay = static_cast<Display*>( _pX11Display );
+        const Window win      = static_cast<Window>( _x11Window );
+        XStoreName( pDisplay, win, _arrTitle );
         const Atom netWmName  = XInternAtom( pDisplay, "_NET_WM_NAME", 0 );
         const Atom utf8String = XInternAtom( pDisplay, "UTF8_STRING", 0 );
-        XChangeProperty( pDisplay, win, netWmName, utf8String, 8, PropModeReplace, reinterpret_cast<const uint8*>( titleText.c_str() ),
-                         static_cast<int32>( titleText.size() ) );
+        XChangeProperty( pDisplay, win, netWmName, utf8String, 8, PropModeReplace, reinterpret_cast<const uint8*>( _arrTitle ),
+                         static_cast<int32>( std::strlen( _arrTitle ) ) );
         XFlush( pDisplay );
     }
 

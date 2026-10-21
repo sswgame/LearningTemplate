@@ -25,6 +25,7 @@ namespace sw
         Frequency,
         Mass,
         Force,
+        Torque,
     };
 
     /** @brief 단위 하나 — 철자 · 차원 · 기준 단위로의 배율(값 × 배율 = 기준 단위 값). */
@@ -38,7 +39,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief `Units = …` 가 받는 철자 전부입니다. 기준 단위는 m · rad · s · ratio · m/s · rad/s · m/s2 · Hz · kg · N 입니다. */
+    /** @brief `Units = …` 가 받는 철자 전부입니다. 기준 단위는 m · rad · s · ratio · m/s · rad/s · m/s2 · Hz · kg · N · N*m 입니다. */
     inline constexpr ReflectUnit kArrReflectUnit[] = {
         {     "mm",       ReflectUnitDimension::Length,                   0.001},
         {     "cm",       ReflectUnitDimension::Length,                    0.01},
@@ -62,6 +63,7 @@ namespace sw
         {      "g",         ReflectUnitDimension::Mass,                   0.001},
         {     "kg",         ReflectUnitDimension::Mass,                     1.0},
         {      "N",        ReflectUnitDimension::Force,                     1.0},
+        {    "N*m",       ReflectUnitDimension::Torque,                     1.0},
     };
 
     /** @brief 단위 표를 찾고 값을 바꿉니다. */

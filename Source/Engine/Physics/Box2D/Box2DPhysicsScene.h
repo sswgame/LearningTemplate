@@ -95,6 +95,8 @@ namespace sw
         bool               isJointValid( PhysicsJointHandle joint ) const override;
         void               setJointMotor( PhysicsJointHandle joint, const PhysicsJointMotor& motor ) override;
         float32            getJointPosition( PhysicsJointHandle joint ) const override;
+        /** @brief 평면에는 Cone 관절이 없다 — 늘 오류다(회전 관절은 `setJointMotor` 의 각 목표로 끈다). */
+        void driveJointToRotation( PhysicsJointHandle joint, const float32& targetRotationA, const float32& targetRotationB, float32 maxTorque ) override;
 
         PhysicsCharacterHandle  createCharacter( const PhysicsCharacterDesc2D& desc ) override;
         void                    destroyCharacter( PhysicsCharacterHandle character ) override;
