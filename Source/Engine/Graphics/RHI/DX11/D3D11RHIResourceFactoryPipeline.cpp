@@ -84,6 +84,9 @@ namespace sw
         rasterizerDesc.FillMode        = ( desc._fillMode == RHIFillMode::Wireframe ) ? D3D11_FILL_WIREFRAME : D3D11_FILL_SOLID;
         rasterizerDesc.CullMode        = ( desc._cullMode == RHICullMode::Front ) ? D3D11_CULL_FRONT : ( ( desc._cullMode == RHICullMode::Back ) ? D3D11_CULL_BACK : D3D11_CULL_NONE );
         rasterizerDesc.DepthClipEnable = TRUE;
+        // 깊이 바이어스 — 다른 백엔드와 같은 상수 · 기울기 두 칸이다(RHIPipelineStateDesc::_depthBias).
+        rasterizerDesc.DepthBias            = desc._depthBias;
+        rasterizerDesc.SlopeScaledDepthBias = desc._slopeScaledDepthBias;
         // 가위는 항상 켠다. 뷰포트를 바인딩하는 곳(setViewport, beginRenderPass, beginFrame)이 가위도 뷰포트 전체로 함께 바인딩하므로
         // setScissorRect 를 부르지 않은 드로우는 지금과 같다(언리얼 D3D11 래스터라이저 상태와 같은 방식).
         rasterizerDesc.ScissorEnable = TRUE;

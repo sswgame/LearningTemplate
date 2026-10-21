@@ -131,6 +131,20 @@ namespace sw
 
         glPolygonMode( GL_FRONT_AND_BACK, pRecord->_fillMode == RHIFillMode::Wireframe ? GL_LINE : GL_FILL );
 
+        // 깊이 바이어스 — 다른 백엔드와 같은 상수 · 기울기 두 칸이다(RHIPipelineStateDesc::_depthBias). 채우기 · 선 다각형 모드 모두에 건다.
+        const bool bDepthBias = pRecord->_depthBias != 0 || pRecord->_slopeScaledDepthBias != 0.0f;
+        if ( bDepthBias )
+        {
+            glEnable( GL_POLYGON_OFFSET_FILL );
+            glEnable( GL_POLYGON_OFFSET_LINE );
+            glPolygonOffset( pRecord->_slopeScaledDepthBias, static_cast<GLfloat>( pRecord->_depthBias ) );
+        }
+        else
+        {
+            glDisable( GL_POLYGON_OFFSET_FILL );
+            glDisable( GL_POLYGON_OFFSET_LINE );
+        }
+
         if ( pRecord->_cullMode == RHICullMode::None )
             glDisable( GL_CULL_FACE );
         else

@@ -141,6 +141,10 @@ namespace sw
         rasterizer.lineWidth     = 1.0f;
         rasterizer.cullMode      = ( desc._cullMode == RHICullMode::Front ) ? VK_CULL_MODE_FRONT_BIT : ( ( desc._cullMode == RHICullMode::Back ) ? VK_CULL_MODE_BACK_BIT : VK_CULL_MODE_NONE );
         rasterizer.frontFace     = VK_FRONT_FACE_CLOCKWISE;
+        // 깊이 바이어스 — 다른 백엔드와 같은 상수 · 기울기 두 칸이다(RHIPipelineStateDesc::_depthBias). LINE 다각형 모드에도 걸린다.
+        rasterizer.depthBiasEnable         = ( desc._depthBias != 0 || desc._slopeScaledDepthBias != 0.0f ) ? VK_TRUE : VK_FALSE;
+        rasterizer.depthBiasConstantFactor = static_cast<float32>( desc._depthBias );
+        rasterizer.depthBiasSlopeFactor    = desc._slopeScaledDepthBias;
 
         VkPipelineMultisampleStateCreateInfo multisampling{};
         multisampling.sType                = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
