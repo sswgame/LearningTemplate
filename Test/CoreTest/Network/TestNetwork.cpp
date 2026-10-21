@@ -1,8 +1,10 @@
 #include "pch.h"
 
+#include "Core/Diagnostics/ProfilerTimeline.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Network/BitStream.h"
 #include "Core/Network/Connection/NetConnection.h"
+#include "Core/Network/Connection/NetFlowLog.h"
 #include "Core/Network/Connection/NetHost.h"
 #include "Core/Network/Connection/SequenceBuffer.h"
 #include "Core/Network/Message/NetMessage.h"
@@ -769,6 +771,66 @@ SW_TEST_CASE( NetworkTest, HostsHandshakeExchangeAndSurviveBadNetworks )
     SW_EXPECT_EQUAL( 4242, readMessageValue( buffer ) );
     SW_EXPECT_TRUE( channel == NetChannelType::ReliableOrdered );
 }
+
+#if SW_NET_FLOW_LOG_ENABLED
+/**
+ * @brief [NetworkTest] 신뢰 순서 메시지는 보낸 곳과 받은 곳의 흐름 id 가 하나씩 짝지어지고, 비신뢰 메시지는 흐름을 남기지 않는다(두 방향 모두)
+ * @details 두 호스트가 한 프로세스라 흐름 링 하나에 양쪽이 쌓인다. 다른 케이스의 흐름과 섞이지 않게 종류 바이트(0xE1 · 0xE2)로 거른다.
+ */
+SW_TEST_CASE( NetworkTest, ReliableOrderedMessagesPairTheirSendAndReceiveFlows )
+{
+    NetHostConfig settings;
+    settings._maxConnections = 2;
+    test::LoopbackCluster pair( 91u );
+    addServerAndClient( pair, settings );
+    SW_ASSERT_TRUE( pair.getServer().listen() );
+    SW_ASSERT_TRUE( pair.getClient( 0 ).connect( NetAddress::makeLoopback( 4000 ) ) );
+    pair.run( 0.3 );
+    SW_ASSERT_TRUE( pair.getClient( 0 ).getConnectionState( 0 ) == NetConnectionState::Connected );
+
+    ProfilerTimeline timeline; // 기록 중인 타임라인이 있어야 흐름이 남는다
+    timeline.setRecording( true );
+    constexpr int32 kSentCount = 3;
+    for ( int32 index = 0; index < kSentCount; ++index )
+    {
+        SW_ASSERT_TRUE( pair.getClient( 0 ).sendMessage( 0, NetChannelType::ReliableOrdered, makeMessage( 0xE1 + ( index << 8 ) ) ) );
+    }
+    SW_ASSERT_TRUE( pair.getClient( 0 ).sendMessage( 0, NetChannelType::Unreliable, makeMessage( 0xE1 ) ) ); // 흐름 없음
+    const vector<uint8> reply = makeMessage( 0xE2 );
+    SW_EXPECT_EQUAL( 1, pair.getServer().broadcast( NetChannelType::ReliableOrdered, reply.data(), static_cast<int32>( reply.size() ) ) );
+    vector<vector<uint8>> listReceived;
+    for ( int32 frame = 0; frame < 60 && listReceived.size() < static_cast<size_t>( kSentCount + 1 ); ++frame )
+    {
+        pair.run( 1.0 / 60.0 );
+        drainServerMessages( pair, listReceived );
+    }
+    int32          connectionID = -1;
+    NetChannelType channel      = NetChannelType::Unreliable;
+    vector<uint8>  buffer;
+    SW_ASSERT_TRUE( pair.getClient( 0 ).receiveMessage( connectionID, channel, buffer ) );
+    timeline.setRecording( false );
+
+    vector<NetFlowEvent> listFlow;
+    NetFlowLog::collect( 0, ~0ull, listFlow );
+    for ( const uint8 kind : { static_cast<uint8>( 0xE1 ), static_cast<uint8>( 0xE2 ) } )
+    {
+        vector<uint64> listSent;
+        vector<uint64> listReceivedID;
+        for ( const NetFlowEvent& flow : listFlow )
+        {
+            if ( flow._kind == kind )
+                ( flow._bReceive ? listReceivedID : listSent ).push_back( flow._id );
+        }
+        const size_t expectedCount = kind == 0xE1 ? static_cast<size_t>( kSentCount ) : 1u;
+        SW_EXPECT_EQUAL( expectedCount, listSent.size() );
+        SW_ASSERT_EQUAL( listSent.size(), listReceivedID.size() );
+        for ( size_t index = 0; index < listSent.size(); ++index )
+        {
+            SW_EXPECT_EQUAL( listSent[index], listReceivedID[index] ); // 보낸 N 번째 = 받은 N 번째
+        }
+    }
+}
+#endif
 
 SW_TEST_CASE( NetworkTest, HostsRejectFullServersForeignProtocolsAndDetectDisconnects )
 {

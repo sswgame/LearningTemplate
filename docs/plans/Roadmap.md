@@ -7,7 +7,7 @@
 ## 지금 순서
 
 1. **`integrator` 설계의 미구현 단위**(설계는 끝났고 코드가 없음).
-   - 데이터화: D6 ~ D9 · P1 · P4 · G1 코드가 들어갔다(`wt/datadriven`, 빌드 미확인). 남은 것: 묶음 빌드와 검증, P2 의 남은 클리어 색 폴백(골든 이미지와 함께), G2(배포본 시나리오 기준값을 잰다) — [DataDriven](DataDriven.md) 7.5. [단독: 기본값 · 로더 형식을 바꿔 여러 모듈이 다시 빌드됨]
+   - 데이터화: D6 ~ D9 · P1 · P4 · G1 코드가 들어갔다(`wt/datadriven`, 빌드 미확인). 남은 것: 묶음 빌드와 검증, P2 의 남은 원본 이름 단계(클리어 색 폴백은 지웠다, 빌드 미확인 — 골든 이미지와 함께), G2(배포본 시나리오 기준값을 잰다) — [DataDriven](DataDriven.md) 7.5. [단독: 기본값 · 로더 형식을 바꿔 여러 모듈이 다시 빌드됨]
    - E3 · E4 의 남은 확인(빌드 · 테스트 · 큐브 20,000 개 벤치) — [EnginePartition](EnginePartition.md) 6.4. 구현은 `wt/enginepart` 에 있다. [단독: 모든 모듈 재빌드]
    - V2 — [GpuVerification](GpuVerification.md) 2절. 지는 케이스 수정은 들어갔고(로컬 확인, CI 미확인) 리눅스 `gl` 원인 확인 뒤 해제. [병렬 가능]
 2. **새 시스템**:
@@ -20,7 +20,7 @@
    2. 미리보기 창 · 스카이의 확인 — [EditorMultiWorld](EditorMultiWorld.md) 6절 (3) 스카이 패스(컴포넌트 · 패킷 · 상수 · 패스 · 셰이더 들어감), (4) 창을 다시 여는 시간 · 메모리 측정, (5) `previewreopen` · (6) `previewswap` 네 백엔드 실행. [병렬 가능]
    3. 지형 · 식생 [TerrainEditCost](TerrainEditCost.md)(T3 Release 측정 → T4 교체 프레임 GPUScene 수집), 서버 파괴 호스트 [DestructionNetSessionScene](Candidates-network.md#destructionnetsessionscene) → [EncryptedTickCost](Candidates-network.md#encryptedtickcost). [단독: 지형 · 식생이 셰이더 재베이크를 부르고 측정은 Release 에서 혼자]
    4. 오디오 [AudioEngineExtensions](AudioEngineExtensions.md)(E5 절차적 소리 그래프 · E6 측정이 남음), 온라인 키트 마감 [OnlineKits](OnlineKits.md)(아홉 후보 절을 단위로 옮겼다). [병렬 가능]
-   5. 애니메이션 — [PairedAnimation](PairedAnimation.md) · [RigEditing](RigEditing.md) · [AnimationLodAndCrowd](Candidates-gameplay.md#animationlodandcrowd), 천 동적 메시 [ClothFollowups](ClothFollowups.md), Shooter3D [ShooterCharacterIntegration](ShooterCharacterIntegration.md), 서버 디버깅 [ServerDebug](ServerDebug.md). [병렬 가능]
+   5. 애니메이션 — [PairedAnimation](PairedAnimation.md) · [RigEditing](RigEditing.md) · [AnimationLodAndCrowd](Candidates-gameplay.md#animationlodandcrowd), 천 동적 메시 [ClothFollowups](ClothFollowups.md), Shooter3D [ShooterCharacterIntegration](ShooterCharacterIntegration.md), 서버 디버깅 [ServerDebug](ServerDebug.md)(S5 흐름 이벤트 들어감 — 빌드 미확인, S8 은 설계만). [병렬 가능]
    6. 그래픽스 형식 묶음(한 작업자, 순서대로, 셰이더 재베이크 · 에셋 재작성): [ViewModeCompletion](Candidates-graphics.md#viewmodecompletion)(Shaded Wireframe 은 RHI 깊이 비교 · 바이어스가 먼저). 디퍼드의 툰은 포워드 전용 패스로 들어갔다(결정 기록 5-5). 머티리얼 텍스처 칸 16개는 들어갔다(`TerrainWaterVegetationRemainders` 의 함정). [단독: 셰이더 재베이크 · 에셋 재작성]
    7. 뒤 순서: 서버 렌더러 제거 [DedicatedServerNoRenderer](Candidates-network.md#dedicatedservernorenderer), 워프 분리 [MeshModifierStack](Candidates-editor.md#meshmodifierstack)(워프 내보내기(`4174d9b8c` · `c82a29a77`) · 앞부분 캐시 · 시간 재생 · 표본기 상한은 들어갔고 절에는 큰 메시 비용 측정 · 셰이딩 미리보기 비용과 캡처 확인이 남았다). [병렬 가능]
 4. **파일이 겹쳐 미룬 정리**: [HeaderIncludeSlimming](Candidates-engine.md#headerincludeslimming) · [PreludeAndFwdCleanup](Candidates-engine.md#preludeandfwdcleanup) · [CommentRewriteRemaining](Candidates-project.md#commentrewriteremaining) · [NamingAuditNext](Candidates-project.md#namingauditnext) · [LongFunctions](LongFunctions.md) — 위 1~2 뒤에. 앞서 병합된 [EngineServiceInjection](Candidates-engine.md#engineserviceinjection) · [NameReferenceAudit](Candidates-engine.md#namereferenceaudit) 는 남은 조각이 있다 — EngineServiceInjection 은 `SceneNavigationCooker` · `PortraitRenderer` 가 아직 인자 하나짜리 `Scene` 생성자를 쓰고, NameReferenceAudit 은 린트로 더 풀 것이 없어 `SW_DEV_COMMAND` 같은 선언 등록 형식의 결정이 먼저다. [단독: 헤더 · include 를 바꿔 여러 모듈이 다시 빌드됨]

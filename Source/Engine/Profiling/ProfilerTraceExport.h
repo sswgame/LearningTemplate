@@ -14,6 +14,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Diagnostics/ProfilerTimeline.h"
+#include "Core/Network/Connection/NetFlowLog.h"
 
 #if SW_PROFILER_TRACE_ENABLED
 
@@ -41,6 +42,12 @@ namespace sw
         uint64                      _monotonicNanoseconds{ 0 }; ///< 저장 시점의 단조 시계(`MonotonicClock::nowNanoseconds`)
         bool                        _bTruncated{ false };       ///< 긴 캡처가 예산을 넘어 뒤를 담지 못했다 — 머리말과 전역 표식으로 알린다
         vector<ProfilerTraceMarker> _listMarker;                ///< 전역 인스턴트로 찍을 표식(쓰기 전용 — 읽을 때는 비어 있다)
+        /**
+         * @brief 네트워크 메시지 흐름(쓰기 전용 — 읽을 때는 비어 있다). "Net messages" 줄에 짧은 구간과 흐름 이벤트(`s` · `f`)로 씁니다.
+         * @details 파일로 저장하는 길(`writeTraceFile`)이 저장하는 사건의 시간 구간으로 `NetFlowLog::collect` 를 불러 채운다.
+         *          합친 트레이스(`mergeTraceJSON`)에서 보낸 프로세스와 받은 프로세스의 같은 id 가 화살표로 이어진다.
+         */
+        vector<NetFlowEvent> _listFlow;
     };
 } // namespace sw
 

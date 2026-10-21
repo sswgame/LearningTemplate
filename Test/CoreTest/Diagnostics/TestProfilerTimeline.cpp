@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Diagnostics/ProfilerTimeline.h"
+#include "Core/Network/Connection/NetFlowLog.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -187,6 +188,65 @@ SW_TEST_CASE( ProfilerTimelineTest, RestartedLongCaptureDropsThePreviousCapture 
     SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), listThread[0]._listEvent.size() );
     SW_EXPECT_EQUAL( 2u, listThread[0]._listEvent[0]._slot );
     SW_EXPECT_FALSE( bTruncated );
+}
+
+/**
+ * @brief [ProfilerTimelineTest] 흐름 id 는 연결 · 방향 · 순서 번호마다 다르고, 같은 셋이면 같다(양쪽이 따로 계산한다). 53 비트 안이다
+ */
+SW_TEST_CASE( ProfilerTimelineTest, NetFlowIDMatchesOnBothEndsAndSeparatesDirections )
+{
+    constexpr uint64 kToken = 0x1234567890ABCDEFull;
+    const uint64     sent   = sw::NetFlowLog::makeFlowID( kToken, false, 7 );
+    SW_EXPECT_EQUAL( sent, sw::NetFlowLog::makeFlowID( kToken, false, 7 ) );
+    SW_EXPECT_TRUE( sent != sw::NetFlowLog::makeFlowID( kToken, true, 7 ) );      // 반대 방향의 7 번째
+    SW_EXPECT_TRUE( sent != sw::NetFlowLog::makeFlowID( kToken, false, 8 ) );     // 다음 메시지
+    SW_EXPECT_TRUE( sent != sw::NetFlowLog::makeFlowID( kToken ^ 1, false, 7 ) ); // 다른 연결
+    SW_EXPECT_EQUAL( 0ull, sent >> 53 );
+}
+
+/**
+ * @brief [ProfilerTimelineTest] 흐름 사건은 기록 중인 타임라인이 있을 때만 남고, 구간 안의 것만 시각 순으로 모인다
+ */
+SW_TEST_CASE( ProfilerTimelineTest, NetFlowsAreKeptOnlyWhileATimelineRecords )
+{
+    sw::vector<sw::NetFlowEvent> listFlow;
+    {
+        sw::ProfilerTimeline timeline; // 꺼진 채로 — 흐름도 남지 않는다
+        sw::NetFlowLog::record( 0xAAAAull, 0x81, false );
+        sw::NetFlowLog::collect( 0, ~0ull, listFlow );
+        for ( const sw::NetFlowEvent& flow : listFlow )
+        {
+            SW_EXPECT_TRUE( flow._id != 0xAAAAull );
+        }
+    }
+
+    sw::ProfilerTimeline timeline;
+    timeline.setRecording( true );
+    sw::NetFlowLog::record( 0xBBBBull, 0x81, false );
+    sw::NetFlowLog::record( 0xBBBBull, 0x81, true );
+    timeline.setRecording( false );
+    sw::NetFlowLog::record( 0xCCCCull, 0x82, false ); // 꺼진 뒤 — 남지 않는다
+
+    sw::NetFlowLog::collect( 0, ~0ull, listFlow );
+    uint32 sentCount     = 0;
+    uint32 receivedCount = 0;
+    for ( size_t index = 0; index < listFlow.size(); ++index )
+    {
+        const sw::NetFlowEvent& flow = listFlow[index];
+        SW_EXPECT_TRUE( flow._id != 0xCCCCull );
+        if ( index > 0 )
+            SW_EXPECT_TRUE( listFlow[index - 1]._nanos <= flow._nanos );
+        if ( flow._id != 0xBBBBull )
+            continue;
+        SW_EXPECT_EQUAL( static_cast<uint8>( 0x81 ), flow._kind );
+        ++( flow._bReceive ? receivedCount : sentCount );
+    }
+    SW_EXPECT_EQUAL( 1u, sentCount );
+    SW_EXPECT_EQUAL( 1u, receivedCount );
+
+    // 구간 밖이면 빠진다.
+    sw::NetFlowLog::collect( 0, 0, listFlow );
+    SW_EXPECT_TRUE( listFlow.empty() );
 }
 
 #endif // SW_PROFILER_TRACE_ENABLED

@@ -81,6 +81,8 @@ namespace sw
         , _stats{}
         , _lastStatsTime{ 0.0 }
         , _lastAckRequestTime{ -1.0e9 }
+        , _orderedSentCount{ 0 }
+        , _orderedReceivedCount{ 0 }
         , _nextPacketSequence{ 0 }
         , _nextReliableSendID{ 0 }
         , _oldestUnackedReliableID{ 0 }
@@ -109,6 +111,8 @@ namespace sw
         _stats                   = NetConnectionStats{};
         _lastStatsTime           = 0.0;
         _lastAckRequestTime      = -1.0e9;
+        _orderedSentCount        = 0;
+        _orderedReceivedCount    = 0;
         _nextPacketSequence      = 0;
         _nextReliableSendID      = 0;
         _oldestUnackedReliableID = 0;
@@ -198,6 +202,8 @@ namespace sw
             pMessage->_channel      = channel;
             ++_nextReliableSendID;
         }
+        if ( channel == NetChannelType::ReliableOrdered )
+            ++_orderedSentCount;
         return true;
     }
 
@@ -211,6 +217,8 @@ namespace sw
         outBuffer.swap( _arrIncoming[channelIndex].front() );
         recycleBuffer( _arrIncoming[channelIndex].front() );
         _arrIncoming[channelIndex].pop_front();
+        if ( channel == NetChannelType::ReliableOrdered )
+            ++_orderedReceivedCount;
         return true;
     }
 
@@ -224,6 +232,8 @@ namespace sw
         inoutBytes.insert( inoutBytes.end(), message.begin(), message.end() );
         recycleBuffer( message );
         _arrIncoming[channelIndex].pop_front();
+        if ( channel == NetChannelType::ReliableOrdered )
+            ++_orderedReceivedCount;
         return true;
     }
 

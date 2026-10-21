@@ -118,6 +118,13 @@ namespace sw
         /** @brief 보낼 줄에서 기다리는 비신뢰 메시지 수입니다. 0 보다 크면 앞 패킷이 다 싣지 못했다(대역폭 포화). */
         int32  getQueuedUnreliableCount() const { return static_cast<int32>( _listOutgoingUnreliable.size() ); }
         uint16 getNextPacketSequence() const { return _nextPacketSequence; }
+        /**
+         * @brief 신뢰 순서 채널에 넣은 메시지 수(조각이 아니라 메시지)와 그 채널에서 꺼낸 메시지 수입니다.
+         * @details 신뢰 순서는 보낸 순서 그대로 한 번씩 넘기므로 한쪽의 "넣은 N 번째" 가 상대의 "꺼낸 N 번째" 다. 트레이스의 흐름 id 가 이것으로
+         *          양쪽을 잇는다(`NetFlowLog::makeFlowID`) — 프로토콜에 칸을 더하지 않는다.
+         */
+        uint64 getOrderedSentCount() const { return _orderedSentCount; }
+        uint64 getOrderedReceivedCount() const { return _orderedReceivedCount; }
 
     private:
         struct SentPacket
@@ -261,7 +268,9 @@ namespace sw
         vector<vector<uint8>>                                                    _listSpareBuffer;      ///< 다 쓴 메시지 버퍼(용량만). 받기 · 비신뢰 보내기가 메시지마다 할당하지 않게 한다.
         NetConnectionStats                                                       _stats;
         float64                                                                  _lastStatsTime;
-        float64                                                                  _lastAckRequestTime; ///< 확인을 요청한 패킷을 마지막으로 보낸 시각.
+        float64                                                                  _lastAckRequestTime;   ///< 확인을 요청한 패킷을 마지막으로 보낸 시각.
+        uint64                                                                   _orderedSentCount;     ///< 신뢰 순서 채널에 넣은 메시지 수
+        uint64                                                                   _orderedReceivedCount; ///< 신뢰 순서 채널에서 꺼낸 메시지 수
         uint16                                                                   _nextPacketSequence;
         uint16                                                                   _nextReliableSendID;
         uint16                                                                   _oldestUnackedReliableID;
