@@ -36,18 +36,40 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @brief 입자 하나(뿌리 다음 본)의 물성입니다. 사슬 값(`RigSpringSettings`)을 이 입자에서만 바꿉니다 — VRM 스프링 본은 관절마다 값이 다르다.
+     * @details 입자 i 는 본 i 의 위치이고 본 i − 1 을 돌린다. VRM 관절 j(본 j, 끝은 본 j + 1)의 값이 입자 j + 1 의 값이다.
+     */
+    struct RigSpringParticleSettings
+    {
+        float3  _gravity{};         ///< 월드 가속도(m/s²)다. 사슬이 중력을 덮어쓰지 않으면 월드 중력 × 배율이 더해진다(`RigSpringChain::simulate`).
+        float32 _stiffness{ 0.1f }; ///< 애니메이션 자세 쪽으로 당기는 비율(0..1)이다.
+        float32 _axisPull{ 0.0f };  ///< 부모에서 애니메이션 방향으로 미는 속도(m/s)다 — VRM stiffness 와 같은 항(three-vrm `boneAxis × stiffness × delta`).
+        float32 _damping{ 0.1f };   ///< 스텝마다 잃는 속도 비율(0..1)이다.
+        float32 _radius{ 0.02f };   ///< 입자 반지름(충돌)이다.
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 스프링 사슬의 물성입니다. */
     struct RigSpringSettings
     {
         float3  _gravityOverride{};               ///< `_bUseGravityOverride` 일 때 쓰는 월드 가속도(m/s²)다. 리그 데이터의 "gravity" 값이다.
         float32 _gravityScale{ 1.0f };            ///< 월드 중력(설정된 물리 중력)에 곱하는 배율이다. 리그 데이터의 "gravity_scale" 값이다.
         float32 _stiffness{ 0.1f };               ///< 스텝마다 애니메이션 자세 쪽으로 당기는 비율이다(0..1).
+        float32 _axisPull{ 0.0f };                ///< 부모에서 애니메이션 방향으로 미는 속도(m/s)다. 리그 데이터의 "axis_pull" 값이다(VRM stiffness 와 같은 항).
         float32 _damping{ 0.1f };                 ///< 스텝마다 잃는 속도의 비율이다(0..1).
         float32 _particleRadius{ 0.02f };         ///< 입자 반지름이다(충돌).
         float32 _fixedStep{ 1.0f / 60.0f };       ///< 스텝 길이(초)다. 프레임 시간과 무관하게 같은 결과가 나온다.
         float32 _teleportDistance{ 1.0f };        ///< 한 프레임에 뿌리가 이만큼 넘게 움직이면 순간이동으로 보고 다시 시작한다.
         uint32  _maxSubStep{ 4 };                 ///< 프레임당 스텝 상한(넘는 시간은 버린다)
         uint8   _bUseGravityOverride{ SW_FALSE }; ///< 월드 중력 대신 `_gravityOverride` 를 쓴다(언리얼 AnimDynamics 의 GravityOverride).
+        /**
+         * @brief 입자마다의 물성입니다(리그 데이터의 "joints"). 비면 모든 입자가 위 사슬 값이고, 있으면 길이가 본 수 − 1 이며 [k] 가 입자 k + 1 이다.
+         * @details 입자 값의 중력은 `_bUseGravityOverride` 일 때 덮어쓰기, 아니면 월드 중력 × 배율 위에 더한다.
+         */
+        vector<RigSpringParticleSettings> _listParticle;
     };
 } // namespace sw
 

@@ -118,3 +118,17 @@ SW_TEST_CASE( VrmRuntimeAssetsTest, SpringsBecomeSpringChainRig )
     (void)sw::editor::VrmRuntimeAssets::makeSpringRigJSON( def, skeleton, &listIgnored );
     SW_EXPECT_EQUAL( size_t( 1 ), listIgnored.size() );
 }
+
+/**
+ * @brief [VrmRuntimeAssetsTest] 리그 SpringChain 의 `joints` 는 본 수 − 1 개여야 한다 — 입자마다 물성(VRM 관절마다 값)이 어긋나면 로드 오류다
+ */
+SW_TEST_CASE( VrmRuntimeAssetsTest, SpringChainJointsMustMatchBones )
+{
+    const utf8*  pGood = R"({ "nodes": [ { "type": "SpringChain", "name": "A", "bones": ["b0", "b1", "b2"], "axis_pull": 1.0,
+        "joints": [ { "axis_pull": 1.0, "damping": 0.4 }, { "axis_pull": 0.5, "radius": 0.02 } ] } ] })";
+    const utf8*  pBad  = R"({ "nodes": [ { "type": "SpringChain", "name": "A", "bones": ["b0", "b1", "b2"], "joints": [ { "axis_pull": 1.0 } ] } ] })";
+    sw::RigAsset good;
+    SW_EXPECT_TRUE( good.parseJSON( pGood, "good.rig.json" ) );
+    sw::RigAsset bad;
+    SW_EXPECT_FALSE( bad.parseJSON( pBad, "bad.rig.json" ) );
+}

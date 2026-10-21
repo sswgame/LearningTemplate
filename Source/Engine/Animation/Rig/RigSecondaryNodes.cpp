@@ -90,7 +90,8 @@ namespace sw
         };
 
         /**
-         * @brief 스프링 체인(꼬리, 머리 가닥, 망토)입니다. 키는 `bones`, `stiffness`, `damping`, `gravity`, `particle_radius`, `fixed_step`, `max_substeps`,
+         * @brief 스프링 체인(꼬리, 머리 가닥, 망토)입니다. 키는 `bones`, `stiffness`, `axis_pull`, `damping`, `gravity`, `particle_radius`, `fixed_step`, `max_substeps`,
+         *        `joints`(`[{ "stiffness", "axis_pull", "damping", "gravity", "radius" }]` — 본 수 − 1 개, 입자마다 값),
          *        `teleport_distance`, `colliders`(`[{ "bone", "shape", "a", "b", "radius" }]`),
          *        `use_shared_colliders`(호스트가 준 충돌체, 즉 물리 에셋의 구와 캡슐도 사용)입니다. 멀리서 끄는 것은 공통 키 `min_screen_size` 입니다.
          */
@@ -111,7 +112,8 @@ namespace sw
                 bool bShared               = false;
                 _settings._gravityOverride = float3{ MathUtil::kMaxFloat, 0.0f, 0.0f }; // 표식이다. "gravity" 를 읽었는지 구분한다.
                 bool bOk                   = reader.readNameList( "bones", _listBoneName, true ) && reader.readFloat( "stiffness", _settings._stiffness, false ) &&
-                           reader.readFloat( "damping", _settings._damping, false ) && reader.readFloat3( "gravity", _settings._gravityOverride, false ) && reader.readFloat( "gravity_scale", _settings._gravityScale, false ) &&
+                           reader.readFloat( "damping", _settings._damping, false ) && reader.readFloat( "axis_pull", _settings._axisPull, false ) &&
+                           reader.readFloat3( "gravity", _settings._gravityOverride, false ) && reader.readFloat( "gravity_scale", _settings._gravityScale, false ) &&
                            reader.readFloat( "particle_radius", _settings._particleRadius, false ) && reader.readFloat( "fixed_step", _settings._fixedStep, false ) &&
                            reader.readUint( "max_substeps", _settings._maxSubStep, false ) &&
                            reader.readFloat( "teleport_distance", _settings._teleportDistance, false ) &&
@@ -136,9 +138,28 @@ namespace sw
                     spec._collider._shape = shape == 0 ? RigSpringColliderShape::Sphere : RigSpringColliderShape::Capsule;
                     _listColliderSpec.push_back( spec );
                 }
+                // 입자마다의 물성(VRM 관절마다 값) — 적지 않은 키는 사슬 값이다. 길이는 본 수 − 1 이어야 한다(입자 하나에 하나).
+                const JSONValue joints = reader.readArray( "joints", false );
+                _settings._listParticle.clear();
+                for ( size_t index = 0; bOk && joints.isValid() && index < joints.size(); ++index )
+                {
+                    RigJSONReader             jointReader( joints.at( index ), reader.getContext() );
+                    RigSpringParticleSettings particle{ float3{}, _settings._stiffness, _settings._axisPull, _settings._damping, _settings._particleRadius };
+                    bOk = jointReader.readFloat( "stiffness", particle._stiffness, false ) && jointReader.readFloat( "axis_pull", particle._axisPull, false ) &&
+                          jointReader.readFloat( "damping", particle._damping, false ) && jointReader.readFloat3( "gravity", particle._gravity, false ) &&
+                          jointReader.readFloat( "radius", particle._radius, false );
+                    bOk = jointReader.finish() && bOk;
+                    _settings._listParticle.push_back( particle );
+                }
                 if ( bOk && ( _listBoneName.size() < 2 || _settings._fixedStep <= 0.0f || _settings._maxSubStep == 0 ) )
                 {
                     reader.fail( "'bones' needs at least two bones, 'fixed_step' and 'max_substeps' must be positive" );
+                    return false;
+                }
+                const bool bJointCountMismatch = _settings._listParticle.empty() == false && _settings._listParticle.size() + 1 != _listBoneName.size();
+                if ( bOk && bJointCountMismatch )
+                {
+                    reader.fail( "'joints' needs one entry per bone after the first" );
                     return false;
                 }
                 return bOk && reader.isOk();

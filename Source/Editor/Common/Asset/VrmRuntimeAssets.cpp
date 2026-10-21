@@ -70,6 +70,20 @@ namespace sw::editor
                 }
             }
 
+            /** @brief 사슬 본 @p bone 의 관절입니다. 없으면(가지 사슬 뿌리가 이 스프링 밖일 때) 끝 본 @p tail 의 관절입니다 — 사슬은 관절 본으로만 만들어져 둘 중 하나는 있다. */
+            static const VrmSpringJoint* findJoint( const VrmSpring& spring, const string& bone, const string& tail )
+            {
+                const VrmSpringJoint* pTail = nullptr;
+                for ( const VrmSpringJoint& joint : spring._listJoint )
+                {
+                    if ( joint._bone == bone )
+                        return &joint;
+                    if ( joint._bone == tail )
+                        pTail = &joint;
+                }
+                return pTail;
+            }
+
             /** @brief 스프링 하나의 관절을 스켈레톤 부모를 따라 사슬로 끊습니다(VrmRuntimeAssets::makeSpringRigJSON 의 규칙). */
             static void splitSpring( const VrmAvatarDef& def, uint32 springIndex, const Skeleton& skeleton, vector<SpringChainSpec>& inoutListChain,
                                      vector<string>* pOutListIgnored )
@@ -216,17 +230,6 @@ namespace sw::editor
             partIndex               = ( chain._springIndex == previousSpring ) ? partIndex + 1 : 0;
             previousSpring          = chain._springIndex;
 
-            // 물성은 첫 관절의 값이다 — 관절마다 다르면 무시 목록에 남긴다.
-            const VrmSpringJoint& first = spring._listJoint.front();
-            float32               particleRadius{ 0.0f };
-            for ( const VrmSpringJoint& joint : spring._listJoint )
-            {
-                particleRadius        = MathUtil::max( particleRadius, joint._hitRadius );
-                const bool bDifferent = MathUtil::abs( joint._stiffness - first._stiffness ) > 1e-4f || MathUtil::abs( joint._dragForce - first._dragForce ) > 1e-4f ||
-                                        MathUtil::abs( joint._gravityPower - first._gravityPower ) > 1e-4f;
-                if ( bDifferent )
-                    Internal::addIgnored( pOutListIgnored, "springBone '" + spring._name + "' per-joint values (the first joint is used)" );
-            }
             if ( spring._centerBone.empty() == false )
                 Internal::addIgnored( pOutListIgnored, "springBone '" + spring._name + "' center" );
 
@@ -240,11 +243,29 @@ namespace sw::editor
             {
                 bones.pushBack().setString( bone );
             }
-            node.set( "stiffness", false ).setFloat( static_cast<float64>( MathUtil::saturate( first._stiffness * step ) ) );
+            // VRM(three-vrm VRMSpringBoneJoint.update) 의 한 프레임: 다음 끝 = 끝 + (끝 − 이전 끝) × (1 − dragForce) + 뼈 방향 × stiffness × dt + gravityDir × gravityPower × dt,
+            // 그 뒤 길이를 맞추고 충돌체(hitRadius + 반지름)에서 밀어낸다. 리그 사슬의 고정 스텝과 항마다 같다 — 감쇠 = dragForce, axis_pull = stiffness(m/s),
+            // 중력 가속도 = gravityDir × gravityPower ÷ 스텝(스텝마다 가속도 × 스텝² = gravityPower × 스텝), 비율 당김(stiffness) 은 0, 반지름 = hitRadius.
+            // 관절 j(본 j, 끝은 본 j + 1)의 값이 입자 j + 1 이다 — 사슬 본 k 의 관절 값이 joints[k] 다. 가지에서 새로 시작한 사슬의 뿌리(부모 본)는 이 스프링의 관절이다.
+            const VrmSpringJoint& first = *Internal::findJoint( spring, chain._listBone[0], chain._listBone[1] );
+            node.set( "stiffness", false ).setFloat( 0.0 );
+            node.set( "axis_pull", false ).setFloat( static_cast<float64>( first._stiffness ) );
             node.set( "damping", false ).setFloat( static_cast<float64>( MathUtil::saturate( first._dragForce ) ) );
-            // VRM 의 중력은 스텝마다 더하는 위치(속도)라 가속도로는 ÷ 스텝이다. 힘이 0 이면 0 벡터로 덮어 월드 중력을 받지 않는다(VRM 과 같다).
             Internal::writeFloat3( node.set( "gravity", false ), first._gravityDirection * ( first._gravityPower / step ) );
-            node.set( "particle_radius", false ).setFloat( static_cast<float64>( particleRadius ) );
+            node.set( "particle_radius", false ).setFloat( static_cast<float64>( first._hitRadius ) );
+            const JSONValue joints = node.set( "joints", false );
+            joints.setArray();
+            for ( size_t boneIndex = 0; boneIndex + 1 < chain._listBone.size(); ++boneIndex )
+            {
+                const VrmSpringJoint& joint = *Internal::findJoint( spring, chain._listBone[boneIndex], chain._listBone[boneIndex + 1] );
+                const JSONValue       entry = joints.pushBack();
+                entry.setObject();
+                entry.set( "stiffness", false ).setFloat( 0.0 );
+                entry.set( "axis_pull", false ).setFloat( static_cast<float64>( joint._stiffness ) );
+                entry.set( "damping", false ).setFloat( static_cast<float64>( MathUtil::saturate( joint._dragForce ) ) );
+                Internal::writeFloat3( entry.set( "gravity", false ), joint._gravityDirection * ( joint._gravityPower / step ) );
+                entry.set( "radius", false ).setFloat( static_cast<float64>( joint._hitRadius ) );
+            }
 
             vector<uint32> listCollider;
             for ( const uint32 groupIndex : spring._listColliderGroup )

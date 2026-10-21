@@ -7,9 +7,11 @@
  *          옮기지 못하는 값은 @p pOutListIgnored 에 이름을 모은다(호출하는 쪽이 경고로 알린다):
  *          - 표정의 override(blink · lookAt · mouth 누르기)와 isBinary — 얼굴 리그에 그 규칙이 없다.
  *          - 깜빡임 표정의 가중치 — 얼굴 리그의 깜빡임 타깃은 이름뿐(가중치 1)이다.
- *          - 스프링의 center 본과 관절마다 다른 물성 — 리그의 사슬은 물성 한 벌이고 월드 기준이다(첫 관절의 값을 쓴다).
- *          스프링 물성은 같은 식이 아니라 옮김이다(VRM 은 three-vrm 식의 위치 더하기, 리그는 베를레 고정 스텝): 강성 × 스텝, 끌림 = 감쇠,
- *          중력 = 방향 × 힘 ÷ 스텝(가속도로). 실제 모델로 흔들림을 눈으로 맞춘다(계획 GraphicsFormatBundle 의 VRM 단계).
+ *          - 스프링의 center 본 — 리그 사슬은 월드 기준이다.
+ *          스프링 물성은 three-vrm `VRMSpringBoneJoint.update`(VRM 1.0 스펙의 참조 구현)와 항마다 같다: dragForce = 감쇠, stiffness = `axis_pull`(애니메이션 방향으로 m/s),
+ *          gravityPower × gravityDir = 스텝마다 위치 더하기라 가속도로는 ÷ 스텝, hitRadius = 입자 반지름 — 관절마다 값은 리그의 `joints` 로 간다.
+ *          남는 차이: 리그는 고정 스텝(1/60 초)이고 VRM 은 프레임 시간이다. 뼈 방향은 애니메이션 자세의 부모 방향이다(VRM 은 시뮬레이션된 부모 × 처음 로컬 회전).
+ *          0.x 의 끝 본(자식 없음)은 VRM 이 가상 꼬리(7 cm)로 돌리지만 리그 사슬은 끝 본을 돌리지 않는다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
