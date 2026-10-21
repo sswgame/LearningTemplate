@@ -3745,6 +3745,80 @@ SW_TEST_CASE( ReflectionSerializationTest, CoercedBitFieldReadTouchesOnlyItsOwnB
 }
 
 /**
+ * @brief [ReflectionSerializationTest] 스키마 이관이 비트필드에 orphan 을 적용하면 그 비트만 바뀐다(바이너리 · 텍스트, 점 경로 · 이름)
+ * @details 점 경로(`resolvePropertyPath`)가 비트필드에도 그 바이트 주소를 값 주소로 내줘, orphan 적용이 bool 을 통째로 써 같은 바이트의
+ *          다른 플래그를 지웠다. 이제 점 경로는 프로퍼티와 주인 객체만 내주고 쓰기는 프로퍼티 단위로 한다(`docs/plans/SerializerSilentSkips.md` S4).
+ */
+SW_TEST_CASE( ReflectionSerializationTest, OrphanAppliedToBitFieldTouchesOnlyItsOwnBit )
+{
+    const sw::SerializeContext& context = sw::SerializeContext::getDefault( sw::SerializePurpose::Authoring );
+    const sw::TypeInfo*         pBits   = sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::BitfieldTestActor" ) );
+    SW_ASSERT_NOT_NULL( pBits );
+
+    // 옛 빌드가 _bInvulnerable 을 int32 로 가졌던 경우의 orphan(값 1)과, 텍스트 형식의 orphan("true").
+    sw::SchemaOrphanValue binaryOrphan;
+    binaryOrphan._name         = sw::hashed_string( "_bInvulnerable" );
+    binaryOrphan._nameHash     = binaryOrphan._name.getHash();
+    binaryOrphan._wireTypeHash = sw::hashed_string( "int32" ).getHash();
+    const int32 kOne           = 1;
+    binaryOrphan._listBinary.resize( sizeof( kOne ) );
+    sw::Memory::copy( binaryOrphan._listBinary.data(), &kOne, sizeof( kOne ) );
+    sw::SchemaOrphanValue textOrphan;
+    textOrphan._name     = binaryOrphan._name;
+    textOrphan._nameHash = binaryOrphan._nameHash;
+    textOrphan._text     = "true";
+
+    const auto expectOnlyItsBit = [&]( const sw::SchemaOrphanValue& orphan, const bool bByPath )
+    {
+        const sw::vector<sw::SchemaOrphanValue> listOrphan{ orphan };
+        sw::BitfieldTestActor                   target;
+        target._bActive       = SW_TRUE;
+        target._bInvulnerable = SW_FALSE;
+        target._bCanJump      = SW_TRUE;
+        sw::SchemaMigrateContext migrateContext{ context };
+        migrateContext._pInstance = &target;
+        migrateContext._pTypeInfo = pBits;
+        migrateContext._pOrphans  = &listOrphan;
+        const bool bApplied       = bByPath ? migrateContext.applyOrphanToPath( "_bInvulnerable" ) : migrateContext.applyOrphanTo( sw::hashed_string( "_bInvulnerable" ) );
+        SW_EXPECT_TRUE( bApplied );
+        SW_EXPECT_EQUAL( 1, static_cast<int32>( target._bInvulnerable ) );
+        SW_EXPECT_TRUE_MSG( target._bActive == 1, "orphan 적용이 같은 바이트의 다른 비트필드를 덮었습니다" );
+        SW_EXPECT_TRUE_MSG( target._bCanJump == 1, "orphan 적용이 같은 바이트의 다른 비트필드를 덮었습니다" );
+    };
+    expectOnlyItsBit( binaryOrphan, false );
+    expectOnlyItsBit( binaryOrphan, true );
+    expectOnlyItsBit( textOrphan, false );
+    expectOnlyItsBit( textOrphan, true );
+
+    // 비트필드는 값 주소가 없다 — 그 바이트 주소를 값 주소로 받아 쓰는 길이 없다.
+    const sw::PropertyInfo* pInvuln = pBits->findPropertyInHierarchy( sw::hashed_string( "_bInvulnerable" ) );
+    SW_ASSERT_NOT_NULL( pInvuln );
+    sw::BitfieldTestActor probe;
+    SW_EXPECT_TRUE( pInvuln->getRawPtr( static_cast<void*>( &probe ) ) == nullptr );
+    SW_EXPECT_TRUE( pInvuln->getRawPtr( static_cast<const void*>( &probe ) ) == nullptr );
+
+    // 프로퍼티 단위 텍스트 쓰기(컴포넌트 기본값 패치가 쓴다)도 그 비트만 바꾼다.
+    probe._bActive  = SW_TRUE;
+    probe._bCanJump = SW_TRUE;
+    SW_EXPECT_TRUE( sw::applyPropertyTextCoerced( *pInvuln, sw::MutableObjectAddress{ &probe }, "true", context ) );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( probe._bInvulnerable ) );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( probe._bActive ) );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( probe._bCanJump ) );
+
+    // 이름으로 텍스트를 쓰는 이관 도우미도 같다.
+    sw::BitfieldTestActor target;
+    target._bActive  = SW_TRUE;
+    target._bCanJump = SW_TRUE;
+    sw::SchemaMigrateContext migrateContext{ context };
+    migrateContext._pInstance = &target;
+    migrateContext._pTypeInfo = pBits;
+    SW_EXPECT_TRUE( migrateContext.setPropertyFromText( sw::hashed_string( "_bInvulnerable" ), "true" ) );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( target._bInvulnerable ) );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( target._bActive ) );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( target._bCanJump ) );
+}
+
+/**
  * @brief [ReflectionSerializationTest] 객체 주소는 `formatPropertyText`, 값 주소는 `formatValueText` — 같은 값을 같은 글로 쓴다
  * @details 두 주소를 한 함수로 받던 때 인스펙터 핸들 선택기가 값 주소를 넘겨 오프셋이 한 번 더 더해졌다(고른 값이 `0:0` 이 됐다).
  *          값 주소 쪽은 프로퍼티를 받지 않아 오프셋을 더할 수 없다. 오프셋이 0 이 아닌 필드로 두 쪽이 같은 글을 내는지, 값 주소 쪽 읽기(`parseTextValue`)와 짝인지 본다.
@@ -3756,7 +3830,7 @@ SW_TEST_CASE( ReflectionSerializationTest, ValueAddressTextDoesNotAddPropertyOff
     SW_ASSERT_NOT_NULL( pBits );
     const sw::PropertyInfo* pScore = pBits->findPropertyInHierarchy( sw::hashed_string( "_score" ) );
     SW_ASSERT_NOT_NULL( pScore );
-    SW_ASSERT_TRUE( pScore->_offset != 0 );
+    SW_ASSERT_TRUE( pScore->getOffset() != 0 );
 
     // 옛 오용(값 주소를 객체 주소 자리에 넘김, 그 반대, 맨 포인터)은 컴파일이 안 된다.
     using FormatPropertyFn = decltype( &sw::SerializerUtil::formatPropertyText );
@@ -3861,17 +3935,18 @@ SW_TEST_CASE( ReflectionSerializationTest, ValueAddressTextDoesNotAddPropertyOff
     static_assert( std::is_invocable_v<ReaderValueObjectFn, sw::IContainerReader&, sw::MutableValueAddress, const sw::hashed_string&, const sw::TypeInfo&, sw::ContainerSlot> );
     static_assert( !std::is_invocable_v<ReaderValueObjectFn, sw::IContainerReader&, void*, const sw::hashed_string&, const sw::TypeInfo&, sw::ContainerSlot> );
 
-    // 점 경로 · 범위 검사 · 버전 읽기 절차는 객체 주소를 받고, 점 경로가 찾은 것은 값 주소다. 역할 도우미는 객체와 값을 한 함수에 함께 받는다.
+    // 점 경로 · 범위 검사 · 버전 읽기 절차는 객체 주소를 받는다. 점 경로가 찾은 것은 값 주소가 아니라 프로퍼티와 그 주인 객체다(비트필드는 값 주소가 없다).
+    // 역할 도우미는 객체와 값을 한 함수에 함께 받는다.
     using ResolvePathFn  = decltype( &sw::resolvePropertyPath );
     using RangeErrorsFn  = decltype( &sw::SerializerUtil::collectRangeErrors );
     using WithinRangesFn = decltype( &sw::SerializerUtil::isWithinDeclaredRanges );
     using RepNotifyFn    = decltype( &sw::PropertyRoleUtil::callRepNotify );
     using InterpolateFn  = decltype( &sw::PropertyRoleUtil::applyInterpolated );
     using PropertyPtr    = const sw::PropertyInfo*&;
-    static_assert( std::is_invocable_v<ResolvePathFn, sw::MutableObjectAddress, const sw::TypeInfo&, const utf8*, sw::MutableValueAddress&, PropertyPtr> );
-    static_assert( !std::is_invocable_v<ResolvePathFn, sw::MutableValueAddress, const sw::TypeInfo&, const utf8*, sw::MutableValueAddress&, PropertyPtr> );
-    static_assert( !std::is_invocable_v<ResolvePathFn, sw::MutableObjectAddress, const sw::TypeInfo&, const utf8*, sw::MutableObjectAddress&, PropertyPtr> ); // 찾은 것은 값이다
-    static_assert( !std::is_invocable_v<ResolvePathFn, void*, const sw::TypeInfo&, const utf8*, void*&, PropertyPtr> );
+    static_assert( std::is_invocable_v<ResolvePathFn, sw::MutableObjectAddress, const sw::TypeInfo&, const utf8*, sw::ResolvedPropertyPath&> );
+    static_assert( !std::is_invocable_v<ResolvePathFn, sw::MutableValueAddress, const sw::TypeInfo&, const utf8*, sw::ResolvedPropertyPath&> );
+    static_assert( !std::is_invocable_v<ResolvePathFn, sw::MutableObjectAddress, const sw::TypeInfo&, const utf8*, sw::MutableValueAddress&, PropertyPtr> ); // 값 주소를 내주지 않는다
+    static_assert( !std::is_invocable_v<ResolvePathFn, void*, const sw::TypeInfo&, const utf8*, sw::ResolvedPropertyPath&> );
     static_assert( std::is_invocable_v<RangeErrorsFn, const sw::TypeInfo&, sw::ObjectAddress, const sw::string&, sw::vector<sw::string>&> );
     static_assert( !std::is_invocable_v<RangeErrorsFn, const sw::TypeInfo&, sw::ValueAddress, const sw::string&, sw::vector<sw::string>&> );
     static_assert( !std::is_invocable_v<RangeErrorsFn, const sw::TypeInfo&, const void*, const sw::string&, sw::vector<sw::string>&> );

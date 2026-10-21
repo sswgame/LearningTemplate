@@ -361,22 +361,22 @@ SW_TEST_CASE( ReflectionBitfieldTest, BitfieldPropertyMetadata )
     const sw::PropertyInfo* pPropActive = pType->findProperty( sw::hashed_string( "_bActive" ) );
     SW_ASSERT_NOT_NULL( pPropActive );
     SW_EXPECT_EQUAL( SW_TRUE, pPropActive->_bIsBitField );
-    SW_EXPECT_EQUAL( 0x01, pPropActive->_bitMask );
+    SW_EXPECT_EQUAL( 0x01, pPropActive->getBitMask() );
 
     const sw::PropertyInfo* pPropInvuln = pType->findProperty( sw::hashed_string( "_bInvulnerable" ) );
     SW_ASSERT_NOT_NULL( pPropInvuln );
     SW_EXPECT_EQUAL( SW_TRUE, pPropInvuln->_bIsBitField );
-    SW_EXPECT_EQUAL( 0x02, pPropInvuln->_bitMask );
+    SW_EXPECT_EQUAL( 0x02, pPropInvuln->getBitMask() );
 
     const sw::PropertyInfo* pPropCanJump = pType->findProperty( sw::hashed_string( "_bCanJump" ) );
     SW_ASSERT_NOT_NULL( pPropCanJump );
     SW_EXPECT_EQUAL( SW_TRUE, pPropCanJump->_bIsBitField );
-    SW_EXPECT_EQUAL( 0x04, pPropCanJump->_bitMask );
+    SW_EXPECT_EQUAL( 0x04, pPropCanJump->getBitMask() );
 
     const sw::PropertyInfo* pPropScore = pType->findProperty( sw::hashed_string( "_score" ) );
     SW_ASSERT_NOT_NULL( pPropScore );
     SW_EXPECT_EQUAL( SW_FALSE, pPropScore->_bIsBitField );
-    SW_EXPECT_EQUAL( 0xFF, pPropScore->_bitMask );
+    SW_EXPECT_EQUAL( 0xFF, pPropScore->getBitMask() );
 }
 
 /**

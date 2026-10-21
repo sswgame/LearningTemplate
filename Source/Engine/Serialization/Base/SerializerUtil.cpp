@@ -903,12 +903,7 @@ namespace sw
         if ( pSrcInstance == nullptr || pDstInstance == nullptr )
             return false;
         if ( prop._bIsBitField == SW_TRUE )
-        {
-            const uint8 srcByte = *( static_cast<const uint8*>( pSrcInstance ) + prop._offset );
-            uint8&      dstByte = *( static_cast<uint8*>( pDstInstance ) + prop._offset );
-            dstByte             = ( ( srcByte & prop._bitMask ) != 0 ) ? static_cast<uint8>( dstByte | prop._bitMask ) : static_cast<uint8>( dstByte & ~prop._bitMask );
-            return true;
-        }
+            return prop.writeBitFieldSilently( pDstInstance, prop.getValue<bool>( pSrcInstance ) );
 
         // 같은 컨텍스트로 방금 쓴 바이트다. 쓰기가 다루지 않는 필드(금지된 필드)는 싣지 않으므로 객체째 실패도 이 값의 실패다.
         vector<uint8> bytes;
@@ -942,11 +937,7 @@ namespace sw
         if ( pInstanceA == nullptr || pInstanceB == nullptr )
             return pInstanceA == pInstanceB;
         if ( prop._bIsBitField == SW_TRUE )
-        {
-            const uint8 byteA = *( static_cast<const uint8*>( pInstanceA ) + prop._offset );
-            const uint8 byteB = *( static_cast<const uint8*>( pInstanceB ) + prop._offset );
-            return ( byteA & prop._bitMask ) == ( byteB & prop._bitMask );
-        }
+            return prop.getValue<bool>( pInstanceA ) == prop.getValue<bool>( pInstanceB );
 
         const void* pA = prop.getRawPtr( pInstanceA );
         const void* pB = prop.getRawPtr( pInstanceB );
@@ -978,9 +969,7 @@ namespace sw
             bool bValue = false;
             if ( StringUtil::tryParseBool( text, bValue ) == false )
                 return false;
-            uint8& byte = *( static_cast<uint8*>( pInstance ) + prop._offset );
-            byte        = bValue ? static_cast<uint8>( byte | prop._bitMask ) : static_cast<uint8>( byte & ~prop._bitMask );
-            return true;
+            return prop.writeBitFieldSilently( pInstance, bValue );
         }
         void* pValue = prop.getRawPtr( pInstance );
         return pValue != nullptr && parseTextValue( MutableValueAddress{ pValue }, prop._typeName, text, context );

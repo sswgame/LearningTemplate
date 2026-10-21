@@ -25,6 +25,8 @@
   다른 객체의 필드인 객체(구조체 칸, 소유 포인터 본문)는 `BinarySerializer::deserializeNested` 로 읽고, 맨 바깥을 읽는 `deserialize` 는 bool 그대로입니다 — 바깥에 이어 읽을 읽기가 없어 두 실패를 가를 쓸 곳이 없고, 부르는 곳이 50 곳이 넘습니다.
   태그 스트림 안에서는 페이로드 크기를 알므로 깨진 스트림도 그 칸의 `FieldFailed` 이고, 소유 포인터 본문을 못 읽은 것은 예전처럼 원소의 `StreamBroken` 입니다.
 - 기록 타입이 다른 필드의 이관은 프로퍼티 단위(`tryCoercePropertyBinary`, `SchemaMigrate.h`)로 합니다. 태그 스트림 읽기가 `getRawPtr` 로 값 주소를 꺼내 넘기던 때는 비트필드가 그 바이트 주소여서 bool 이 같은 바이트의 다른 비트필드를 덮었습니다(S4 에서 읽어 확인).
+- 스키마 이관의 점 경로(`resolvePropertyPath`)는 값 주소를 내주지 않고 프로퍼티와 그 주인 객체(`ResolvedPropertyPath`)를 내줍니다. orphan 적용(`applyOrphanTo` · `applyOrphanToPath`) · `movePropertyValue` · `setPropertyFromText` 는 프로퍼티 단위로 써서 비트필드는 그 비트만 씁니다(S4).
+  예전에는 점 경로가 비트필드에도 그 바이트 주소를 값 주소로 줘, 같은 바이트의 다른 플래그를 덮었습니다.
 
 ## 2. 단위
 
@@ -33,11 +35,11 @@
 | S1 | 바이너리 태그 스트림(`BinarySerializer` 의 `deserializeTagged`): 읽기 전 값을 담고 실패하면 되돌린다. 프로퍼티 하나를 쓰는 세 갈래(비트필드 · 컨테이너 · 값)를 `SerializerUtil::writePropertyBinary` 하나로 모아 태그 스트림 쓰기 · 값 복사 · 되돌리기가 함께 쓴다 — **들어감**(`ReflectionSerializationTest.UnreadableFieldKeepsItsValueBeforeTheRead`, 빌드 · 실행은 병합 때) | 없음 |
 | S2 | 텍스트 형식의 소프트 읽기: JSON `readObject` 와 XML `readXMLIntoInstance` 도 읽지 못한 필드를 읽기 전 값으로 되돌린다. 담기 · 되돌리기를 `PropertyReadRollback` 으로 모아 바이너리와 함께 쓴다(1절의 단위 규칙) — **들어감**(`ReflectionSerializationTest.JSONSoftReadKeepsUnreadableFieldValueBeforeTheRead` · `XMLSoftReadKeepsUnreadableFieldValueBeforeTheRead`, 빌드 · 실행은 병합 때). 동작 변경은 3절 | S1 |
 | S3 | 원소 · 구조체 읽기 결과가 필드 실패와 객체 실패를 가른다: `FieldReadResult` 를 두고 `ContainerReadResult` 에 `ObjectRejected` 를 더한다. XML `readXMLIntoInstance` · JSON `readObject` · `readProperty` · `readJSONValue` 가 그것을 돌려주고, 컨테이너 원소인 구조체 · 컴포넌트 안의 금지된 필드가 칸 실패로 낮아지지 않고 객체째 실패한다(1절) — **들어감**(`ReflectionPurposeTest.RuntimeStateInAContainerElementRejectsTheSoftRead`, 빌드 · 실행은 병합 때). 동작 변경은 3절 | S2 |
-| S4 | 바이너리도 필드 실패와 객체 실패를 가른다: `deserializeTagged` · `deserializeValueBinary` · `deserializeNestedContainerBinary` · `applyPropertyBinary` · `tryCoerceBinaryPayload` 가 `FieldReadResult` 를 돌려주고, 칸 읽기는 `BinarySerializer::deserializeNested` 로 한다. 기록 타입이 다른 필드의 이관을 프로퍼티 단위(`tryCoercePropertyBinary`)로 옮겨 비트필드가 같은 바이트의 다른 플래그를 덮지 않는다(1절) — **들어감**(`ReflectionPurposeTest.RuntimeStateInAContainerElementRejectsTheBinarySoftRead` · `ReflectionSerializationTest.CoercedBitFieldReadTouchesOnlyItsOwnBit`, 빌드 · 실행은 병합 때). 동작 변경은 3절 | S3 |
+| S4 | 바이너리도 필드 실패와 객체 실패를 가른다: `deserializeTagged` · `deserializeValueBinary` · `deserializeNestedContainerBinary` · `applyPropertyBinary` · `tryCoerceBinaryPayload` 가 `FieldReadResult` 를 돌려주고, 칸 읽기는 `BinarySerializer::deserializeNested` 로 한다. 기록 타입이 다른 필드의 이관을 프로퍼티 단위(`tryCoercePropertyBinary`)로 옮겨 비트필드가 같은 바이트의 다른 플래그를 덮지 않는다. 점 경로(`resolvePropertyPath`)도 값 주소 대신 프로퍼티와 주인 객체를 내줘 orphan 적용이 같은 결함을 갖지 않는다(1절) — **들어감**(`ReflectionPurposeTest.RuntimeStateInAContainerElementRejectsTheBinarySoftRead` · `ReflectionSerializationTest.CoercedBitFieldReadTouchesOnlyItsOwnBit` · `OrphanAppliedToBitFieldTouchesOnlyItsOwnBit`). 동작 변경은 3절 | S3 |
 
 ## 3. 확인
 
-- S1 · S2 · S3 · S4 는 빌드하지 않았습니다. 병합 때 `ReflectionTest` 의 `ReflectionSerializationTest.*` · `ReflectionPurposeTest.*` 와 오브젝트 상태 테스트(`EngineTest` 의 `ObjectStateRoundTripTest.*`)를 돌리고, 씬을 여는 기존 시나리오 하나로 바이너리 씬 로드와 XML 씬 · 프리팹 로드를 봅니다. 설정 읽기(`ConfigManager::readConfigJSON`, JSON 소프트)도 지납니다.
+- S1 ~ S4 를 main 에서 Debug 로 빌드해 `ReflectionTest` 267 개와 `ObjectStateRoundTripTest.*` 17 개가 통과했습니다(2026-10-22, S4 의 점 경로 변경 포함). `getRawPtr` 변경 뒤 다시 빌드해 `ReflectionTest` 267 개, `EngineTest` 의 `ObjectStateRoundTripTest` · `ComponentDefaultsTest` · `UIBindingTest` · `UIStyleTest` 56 개가 통과했습니다(에디터 대상은 빌드하지 않음). 남은 것: 씬을 여는 시나리오는 돌리지 않았습니다. 병합 때 `ReflectionTest` 의 `ReflectionSerializationTest.*` · `ReflectionPurposeTest.*` 와 오브젝트 상태 테스트(`EngineTest` 의 `ObjectStateRoundTripTest.*`)를 돌리고, 씬을 여는 기존 시나리오 하나로 바이너리 씬 로드와 XML 씬 · 프리팹 로드를 봅니다. 설정 읽기(`ConfigManager::readConfigJSON`, JSON 소프트)도 지납니다.
 - S2 로 바뀌는 동작(텍스트 형식 소프트 읽기):
   - 읽지 못한 원소가 있는 컨테이너는 읽힌 원소만 남던 것이 이제 읽기 전 값입니다. XML 은 그 칸의 orphan 이 실패한 원소 글들에서 칸 원문 하나로 바뀝니다.
   - 읽다 만 소유 포인터 목록(컴포넌트 목록에서 원소가 금지된 필드 · 범위 밖 값으로 실패)은 반쯤 찬 목록으로 이어 읽던 것이 이제 객체째 실패(`Rejected`)입니다.
@@ -54,6 +56,14 @@
   - 기록 타입이 다른 비트필드(옛 빌드의 int32 등)는 이관이 그 비트만 씁니다. 예전에는 같은 바이트의 다른 비트필드가 지워졌습니다.
   - 이관(`tryCoerceBinaryPayload`)이 구조체 대상 안에서 금지된 필드를 만나면 다른 해석(문자열 · 재해석)을 더 해 보지 않고 객체째 실패입니다.
   - 스키마 이관의 orphan 적용(`applyOrphanTo` · `applyOrphanToPath`)과 diff 적용 · 값 복사는 bool 계약 그대로라 객체째 실패도 그 적용의 실패입니다.
-- 같은 모양이 남은 곳: 스키마 이관의 점 경로(`resolvePropertyPath`)도 비트필드면 그 바이트 주소를 값 주소로 돌려줘, 이관 함수가 비트필드에 orphan 을 적용하면 같은 바이트의 다른 플래그를 덮을 수 있습니다(읽어서 본 것, 실행 확인 안 함).
-  `PropertyInfo::getRawPtr` 가 비트필드에도 주소를 주는 것이 근본 원인이라, 값 주소를 비트필드에서 받을 수 없게 하는 형식(비트필드 값 주소)은 리플렉션 쪽 후속입니다.
+  - 스키마 이관이 비트필드에 orphan 을 적용하거나(`applyOrphanTo` · `applyOrphanToPath`) 텍스트를 쓰면(`setPropertyFromText` · `movePropertyValue`) 그 비트만 씁니다. 예전에는 같은 바이트의 다른 비트필드가 지워졌습니다.
+    같은 타입 orphan 의 바이너리 적용은 `deserializeValueBinary` 대신 `SerializerUtil::applyPropertyBinary` 로 해 끝 검사도 그것이 합니다. 값 주소가 없는(접근자만 있는) 원본을 옮기면 빈 글로 이어 쓰지 않고 실패입니다.
+- 근본 원인은 `PropertyInfo::getRawPtr` 가 비트필드에도 그 바이트 주소를 주는 것이었습니다. 이제 비트필드는 nullptr 이고(`[[nodiscard]]`), 비트필드는 `getValue` · `setValue` 로만 읽고 씁니다(S4, 2026-10-22).
+  부르는 곳 전부(직렬화 · UI 바인딩 · 애니메이션 · 스타일 · 인스펙터 · 검증 · 보간)를 읽어, 비트필드를 먼저 거르거나 nullptr 을 실패로 받는지 확인했습니다. 걸러지지 않던 곳은 컴포넌트 기본값 패치(`ComponentDefaults::applyPatch`) 하나였습니다.
+  그곳은 이제 `applyPropertyTextCoerced`(`SchemaMigrate.h`, 프로퍼티 단위 텍스트 쓰기)로 씁니다. 예전에는 기본값 XML 이 비트필드를 주면 같은 바이트의 다른 플래그가 지워졌습니다.
+  비트필드 여부는 데이터(생성된 `PropertyInfo`)라 컴파일 때 막을 수는 없습니다. 값 주소를 내주는 함수 하나가 거절하는 데까지가 형식으로 막은 범위입니다.
+- `PropertyInfo` 의 `_offset` · `_bitMask` 는 비공개입니다(S4). 밖에서 `인스턴스 + _offset` 을 만들 수 없고, 읽기는 `getOffset` · `getBitMask`(레이아웃 확인 · 덤프), 비트 쓰기는 `writeBitFieldSilently`(알림 없음) · `setValue` 로만 합니다.
+  밖에서 오프셋을 직접 더하던 곳은 `SerializerUtil` 의 비트필드 복사 · 비교 · 텍스트 쓰기 셋이었고(비트필드를 거르고 있었습니다), 접근자로 옮겼습니다. 나머지 `_offset` 은 다른 형식(머티리얼 프로퍼티, 이벤트, 게임 필드)입니다.
+  기존 컴포넌트 기본값 데이터(`Resource/game/*/data/gamesettings.xml` 11개)에는 비트필드 속성이 없어 `applyPatch` 변경으로 바뀌는 값은 없습니다.
+- `_offset` 비공개화 커밋은 빌드 · 테스트하지 않았습니다(병합 뒤 한 번에 한다는 방침). 컴파일 오류는 사용처를 전수 검색해 막았습니다. 확인할 것: `ReflectionTest` · `EditorTest` 의 `InspectorPropertyLayoutTest` 와 에디터 대상 빌드.
 - 오브젝트 상태 읽기가 필드마다 한 번 더 쓰므로 씬 로드 · 플레이 스냅샷 복원 시간이 늘 수 있습니다. 병합 뒤 측정해 회귀가 보이면 담는 대상을 좁힙니다. 좁히는 조건은 1절 끝(처리기가 성공할 때만 쓴다는 약속)입니다.

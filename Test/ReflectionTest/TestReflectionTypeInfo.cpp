@@ -236,13 +236,13 @@ SW_TEST_CASE( ReflectionPropertyInfoTest, OffsetCorrectness )
     SW_EXPECT_TRUE( speedProp != nullptr );
 
     if ( hpProp != nullptr )
-        SW_EXPECT_EQUAL( SW_OFFSET_OF( sw::DummyActor, _hp ), hpProp->_offset );
+        SW_EXPECT_EQUAL( SW_OFFSET_OF( sw::DummyActor, _hp ), hpProp->getOffset() );
 
     if ( nameProp != nullptr )
-        SW_EXPECT_EQUAL( SW_OFFSET_OF( sw::DummyActor, _name ), nameProp->_offset );
+        SW_EXPECT_EQUAL( SW_OFFSET_OF( sw::DummyActor, _name ), nameProp->getOffset() );
 
     if ( speedProp != nullptr )
-        SW_EXPECT_EQUAL( SW_OFFSET_OF( sw::DummyActor, _speed ), speedProp->_offset );
+        SW_EXPECT_EQUAL( SW_OFFSET_OF( sw::DummyActor, _speed ), speedProp->getOffset() );
 }
 
 /**
@@ -987,12 +987,12 @@ SW_TEST_CASE( ReflectionTypeInfoTest, FindPropertyInHierarchyUsesMergedMapWhenLa
     // 파생이 다시 적은 이름은 파생의 오프셋.
     const sw::PropertyInfo* pBeta = pLeaf->findPropertyInHierarchy( sw::hashed_string( "_beta" ) );
     SW_ASSERT_NOT_NULL( pBeta );
-    SW_EXPECT_EQUAL( size_t( 16 ), pBeta->_offset );
+    SW_EXPECT_EQUAL( size_t( 16 ), pBeta->getOffset() );
     // 기반의 별칭도 같은 항목.
     const sw::PropertyInfo* pGamma = pLeaf->findPropertyInHierarchy( sw::hashed_string( "_gammaOld" ) );
     SW_ASSERT_NOT_NULL( pGamma );
     SW_EXPECT_TRUE( pGamma->_name == sw::hashed_string( "_gamma" ) );
-    SW_EXPECT_EQUAL( size_t( 8 ), pGamma->_offset );
+    SW_EXPECT_EQUAL( size_t( 8 ), pGamma->getOffset() );
     SW_EXPECT_NULL( pLeaf->findPropertyInHierarchy( sw::hashed_string( "_zeta" ) ) );
 
     registry.unregisterTypesByModule( "TestHierarchyMap" );
@@ -1203,23 +1203,23 @@ SW_TEST_CASE( ReflectionTypeInfoTest, EveryBitFieldLiesBetweenItsNeighbours )
             ++bitFieldCount;
 
             const sw::string where = sw::string( typeInfo._fullyQualifiedName.c_str() ) + "::" + bitField._name.c_str() + " @" +
-                                     sw::to_string( static_cast<uint64>( bitField._offset ) );
+                                     sw::to_string( static_cast<uint64>( bitField.getOffset() ) );
             for ( size_t previous = index; previous-- > 0; )
             {
                 if ( isPlainProperty( listProperty[previous] ) == false )
                     continue;
-                if ( bitField._offset <= listProperty[previous]._offset )
+                if ( bitField.getOffset() <= listProperty[previous].getOffset() )
                     listViolation.push_back( where + " is not after " + listProperty[previous]._name.c_str() + " @" +
-                                             sw::to_string( static_cast<uint64>( listProperty[previous]._offset ) ) );
+                                             sw::to_string( static_cast<uint64>( listProperty[previous].getOffset() ) ) );
                 break;
             }
             for ( size_t next = index + 1; next < listProperty.size(); ++next )
             {
                 if ( isPlainProperty( listProperty[next] ) == false )
                     continue;
-                if ( bitField._offset >= listProperty[next]._offset )
+                if ( bitField.getOffset() >= listProperty[next].getOffset() )
                     listViolation.push_back( where + " is not before " + listProperty[next]._name.c_str() + " @" +
-                                             sw::to_string( static_cast<uint64>( listProperty[next]._offset ) ) );
+                                             sw::to_string( static_cast<uint64>( listProperty[next].getOffset() ) ) );
                 break;
             }
         }

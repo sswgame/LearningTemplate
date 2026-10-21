@@ -302,7 +302,6 @@ namespace sw
         , _pValueAccessor{ nullptr }
         , _pRepNotify{ nullptr }
         , _pValidate{ nullptr }
-        , _offset{ 0 }
         , _name{}
         , _typeName{}
         , _elementTypeName{}
@@ -312,10 +311,11 @@ namespace sw
         , _cachedNameHash{ 0 }
         , _bitOffset{ 0 }
         , _containerKind{ ContainerKind::None }
-        , _bitMask{ MathUtil::kMaxUInt8 }
         , _bIsContainer{ SW_FALSE }
         , _bIsBitField{ SW_FALSE }
         , _reservedFlags{ 0 }
+        , _offset{ 0 }
+        , _bitMask{ MathUtil::kMaxUInt8 }
     {
     }
 
@@ -387,7 +387,6 @@ namespace sw
         , _pValueAccessor{ nullptr }
         , _pRepNotify{ nullptr }
         , _pValidate{ nullptr }
-        , _offset{ offset }
         , _name{ name }
         , _typeName{ typeName }
         , _elementTypeName{ elementTypeName }
@@ -397,10 +396,11 @@ namespace sw
         , _cachedNameHash{ 0 }
         , _bitOffset{ 0 }
         , _containerKind{ containerKind }
-        , _bitMask{ MathUtil::kMaxUInt8 }
         , _bIsContainer{ static_cast<uint8>( bIsContainer ? SW_TRUE : SW_FALSE ) }
         , _bIsBitField{ SW_FALSE }
         , _reservedFlags{ 0 }
+        , _offset{ offset }
+        , _bitMask{ MathUtil::kMaxUInt8 }
     {
         if ( alias.empty() == false )
             _listAlias.push_back( alias );
@@ -940,11 +940,11 @@ namespace sw
             {
                 out.appendFormat( "    PROPERTY %# : %#", prop._name.c_str(), prop._typeName.c_str() );
                 if ( prop._bIsBitField == SW_TRUE )
-                    out.appendFormat( "  @byte %# mask 0x%# (bit field)", static_cast<uint64>( prop._offset ), Fmt( static_cast<uint32>( prop._bitMask ), Format().hex() ) );
+                    out.appendFormat( "  @byte %# mask 0x%# (bit field)", static_cast<uint64>( prop.getOffset() ), Fmt( static_cast<uint32>( prop.getBitMask() ), Format().hex() ) );
                 else if ( prop._pValueAccessor != nullptr )
                     out.append( "  @accessor" );
                 else
-                    out.appendFormat( "  @offset %#", static_cast<uint64>( prop._offset ) );
+                    out.appendFormat( "  @offset %#", static_cast<uint64>( prop.getOffset() ) );
                 if ( prop._bIsContainer == SW_TRUE )
                     out.appendFormat( "  [%# element=%#%#%#]", toString( prop._containerKind ), prop._elementTypeName.c_str(),
                                       prop._keyTypeName.empty() ? "" : " key=", prop._keyTypeName.c_str() );
