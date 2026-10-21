@@ -9,9 +9,6 @@ namespace sw
         /// G버퍼 MRT 의 고정 포맷입니다: [0] 알베도, [1] 노멀.
         constexpr RHIFormat kArrGBufferColorFormat[] = { RHIFormat::R8G8B8A8_UNORM, RHIFormat::R16G16B16A16_FLOAT };
 
-        /// SSAO 의 기본 클리어(가림 없음)입니다.
-        constexpr float4 kNoOcclusionClear{ 1.0f, 1.0f, 1.0f, 1.0f };
-
         using Role = RenderPassInputRole;
         using Flag = RenderPassTraitFlag;
 
@@ -101,8 +98,8 @@ namespace sw
                     }
                     case RenderPassType::SSAO:
                     {
+                        // 클리어(가림 없음 = 흰색)는 AO 첨부의 선언이다.
                         info._pDefaultShader = &EngineDefaultAssets::_shaderSsao;
-                        info._pDefaultClear  = &kNoOcclusionClear;
                         info._inputContract  = makeContract( { Role::GBufferNormal, Role::SceneDepth }, {} );
                         info._flags          = Flag::kGenericFullscreen | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess;
                         break;

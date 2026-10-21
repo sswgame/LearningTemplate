@@ -134,8 +134,6 @@ namespace sw
         const utf8* _pExcludedMaterialDefine{ nullptr };
         /** @brief 고정 컬러 포맷(`_colorTargetCount` 개)입니다. nullptr 이면 패스가 선언한 출력의 포맷을 씁니다. */
         const RHIFormat* _pColorFormat{ nullptr };
-        /** @brief 풀스크린 패스가 타깃 첨부의 클리어 색 선언이 없을 때 쓰는 색입니다. nullptr 이면 렌더러의 클리어 색을 씁니다. */
-        const float4* _pDefaultClear{ nullptr };
         /** @brief 이 패스 타입이 읽는 입력의 역할입니다. `kHasInputContract` 일 때만 의미가 있습니다. */
         RenderPassInputSignature _inputContract{};
         /** @brief 테이블의 항목 순서를 검사하는 용도입니다. 항목 번호가 이 값입니다. */

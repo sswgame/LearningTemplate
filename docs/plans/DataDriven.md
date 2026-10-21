@@ -141,10 +141,14 @@ D6 의 데이터 다시 쓰기는 키트가 읽는 데이터 파일만 건드립
 - D9: XML `getAttribute*` · `getChild*` · `tryGetAttributeIntInRange`, JSON `asInt` 류, `KeyValueFile::get*` 를 지웠다. JSON 키 없는 값은 `read<T>()`, 선택 키는 `readOptionalInto`(없으면 넣어 둔 값 그대로)다. `CharacterDataReader` 의 선택 읽기도 inout 이다.
   게이트에서 `AttributeFallback` 종류를 뺐다. `fallbackParameter` 모양은 새 코드가 다시 쓸 수 있으므로 남겼다(형식으로 막히지 않는다).
 - P1: 엔진 UI 문서 15 개 · 프리셋 표 둘 · 컴포넌트 기본 머티리얼 넷이 `EngineDefaultAssets` 칸이 됐다. UI 는 `UIEngineDocuments` 묶음을 기동 때 받는다. 컴포넌트 머티리얼 칸은 비면 표의 값이다.
-- P2(일부): 파이프라인 검증 문제를 로드 실패로 바꾸고 `ensureNamed` · `attachmentFormatOrDefault` 를 지웠다(풀이 선언의 포맷 · 클리어 색을 든다). `getAttachmentClearColorOrDefault` 와 "선언이 없을 때만 원본 이름" 단계는 네 백엔드 골든 이미지 확인과 함께 뺀다.
+- P2(일부): 파이프라인 검증 문제를 로드 실패로 바꾸고 `ensureNamed` · `attachmentFormatOrDefault` 를 지웠다(풀이 선언의 포맷 · 클리어 색을 든다).
+  2026-10-22(`wt/planleftA`, 빌드 미확인): `getAttachmentClearColorOrDefault` 를 지우고 `getTargetClearColor( name )` 하나로 바꿨다 — 값은 풀이 든 선언이고, 풀에 없는 이름(백버퍼)은 렌더러 클리어 색(SceneColor 선언)이다. 호출부가 기본값을 넘기지 않으므로 패스마다 적던 값(뎁스 1, 노멀 `kNormalClear`, SSAO 의 테이블 `_pDefaultClear`)이 함께 지워졌다.
+  엔진 파이프라인 XML 6 개는 모든 첨부에 `_clearColor` 와 `_bClear="true"` 를 적으므로 그림은 같아야 한다(바뀔 수 있는 곳은 `_bClear="false"` 첨부 — 데이터에 없다). 네 백엔드 골든 확인이 남았다.
+  남은 것: "선언이 없을 때만 원본 이름" 단계(`pDeclaredColor == nullptr` · 패스 서술 없는 실행의 이름 후보). 검증이 지오메트리 패스의 컬러 출력 선언을 아직 요구하지 않으므로, 검증에 그 조건을 더하고 이름 후보를 지우는 일을 골든 확인과 함께 한다.
 - P4: 엔진 기본 에셋 경로를 리터럴로 적던 테스트 약 130 곳이 `test::getEngineDefaultAssets()` 를 거친다. 실린 파일을 늘어놓은 목록 · 테스트 데이터 글 안의 경로는 그대로다.
 - G1: NileCity 계획표는 `data/autoplan.xml`, HarvestValley 작물 모델 표 · 해 곡선과 StarSkirmish 성향은 디렉터 PROPERTY(씬 데이터)다. 값은 옛 코드 그대로다.
 - G2(남음): 배포본 그림 비교는 구운 팩 시나리오의 `Screenshot` · `ExpectImage` 기준값(또는 골든)이 필요하고, 그 값은 실행해 재야 한다. 빌드 뒤 Empty 게임 팩 시나리오로 잰다.
+  기준값 없이 시나리오만 먼저 넣지 않는다 — 기준 파일이 없으면 Shipping `-L hostgpu` 가 실패하고(폴백 금지), 느슨한 `meanLuma` 하한은 이미 `runner.scenario.xml` 이 한다. 모양은 `ExpectImage metric="differentFrom" reference="<골든>.ppm" atMost="…"` 이다.
 
 ### 7.6 사용자 결정
 

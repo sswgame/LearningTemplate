@@ -206,11 +206,13 @@ namespace sw
         return false;
     }
 
-    float4 FrameRenderer::getAttachmentClearColorOrDefault( string_view attachmentName, const float4& fallback ) const
+    float4 FrameRenderer::getTargetClearColor( string_view attachmentName ) const
     {
-        float4 clearColor = fallback;
-        (void)tryGetAttachmentClearColor( attachmentName, clearColor ); // 선언이 없으면 fallback
-        return clearColor;
+        // 첨부의 클리어 색은 파이프라인 XML 의 선언 하나가 원본이다(풀이 할당할 때 선언 값을 든다). 패스마다 코드가 따로 적던
+        // 기본값(뎁스 1, 노멀 0.5 · 0.5 · 1, SSAO 흰색)은 선언과 갈라질 수 있어 지웠다. 풀에 없는 이름은 백버퍼(핸들 0)이고,
+        // 백버퍼의 클리어 색은 렌더러의 클리어 색(SceneColor 선언에서 온다) 하나다.
+        const TransientAttachmentPool::Attachment attachment = activePool().find( attachmentName );
+        return attachment._texture != 0 ? attachment._clearColor : _clearColor;
     }
 
     TransientAttachmentPool::Attachment FrameRenderer::findTransientAttachment( string_view name ) const

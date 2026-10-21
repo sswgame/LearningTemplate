@@ -327,9 +327,8 @@ namespace sw
             // PSO 가 0이면 `drawFullscreen` 이 파이프라인 설정을 건너뛴다. 대체할 PSO 는 테이블이 정한 것만 쓴다(Tonemap 은 Present).
             const RHIPipelineStateHandle pso = findPassPSO( passType );
 
-            // 기본 클리어는 테이블의 값(SSAO 는 흰색이며 가림 없음)이고 없으면 렌더러의 클리어 색이다. 첨부가 클리어 색을 선언했으면 그것이 우선한다.
-            const float4 defaultClear = info._pDefaultClear != nullptr ? *info._pDefaultClear : _clearColor;
-            const float4 targetClear  = getAttachmentClearColorOrDefault( pTarget->view(), defaultClear );
+            // 클리어 색은 타깃 첨부의 선언이다(SSAO 의 흰색 = 가림 없음도 AOColor 선언에 있다).
+            const float4 targetClear = getTargetClearColor( pTarget->view() );
             // 후처리를 끈 뷰(CCTV, 표면 값 보기 모드)에서 효과 패스(테이블의 kSkipsWithoutPostProcess)는 효과를 적용하지 않는다. 포맷이 같으면 원본을 복사하고,
             // 다르면 그 패스 셰이더가 SW_PASS_FLAG_SKIP_POST 를 보고 원본을 그대로 낸다(복사는 같은 포맷끼리만 된다). 원본 색을 읽지 않는 효과(SSAO)는
             // 기본 클리어로 지우기만 한다(SSAO 의 흰색은 가림 없음).
@@ -371,7 +370,7 @@ namespace sw
                 case RenderPassType::Shadow:
                 {
                     // 클리어 값은 실제로 바인딩하는 뎁스 첨부의 선언에서 읽는다(이름 ShadowMap 으로 찾지 않는다).
-                    const float4 clearVal = getAttachmentClearColorOrDefault( passDepth.view(), float4{ 1.0f, 0.0f, 0.0f, 0.0f } );
+                    const float4 clearVal = getTargetClearColor( passDepth.view() );
                     beginDepthOnlyPass( context, passDepth.view(), clearVal._x, colorLoadFor( passDepth, false ) );
                     // 그림자를 끈 뷰는 지우기만 한다. 깊이 1(가장 멀다)이면 모두 빛을 받는다.
                     if ( _pActiveView->_settings._bShadows == SW_TRUE )
@@ -381,7 +380,7 @@ namespace sw
                 }
                 case RenderPassType::DepthPrepass:
                 {
-                    const float4 clearVal = getAttachmentClearColorOrDefault( passDepth.view(), float4{ 1.0f, 0.0f, 0.0f, 0.0f } );
+                    const float4 clearVal = getTargetClearColor( passDepth.view() );
                     beginDepthOnlyPass( context, passDepth.view(), clearVal._x, colorLoadFor( passDepth, false ) );
                     drawSceneMeshes( context, findPassPSO( RenderPassType::DepthPrepass ), bTransparentBatch );
                     context._pCmd->endRenderPass();
@@ -409,7 +408,7 @@ namespace sw
                     registerPassTexture( context, attachmentNames()._shadowMap,
                                          pShadowInput != nullptr ? pShadowInput->_attachment.view() : string_view{ FrameRendererUtil::Attachment::kShadowMap } );
                     const hashed_string& colorTarget = pDeclaredColor != nullptr ? ( *pDeclaredColor )[0]._attachment : attachmentNames()._sceneColor;
-                    const float4         sceneClear  = getAttachmentClearColorOrDefault( colorTarget.view(), _clearColor );
+                    const float4         sceneClear  = getTargetClearColor( colorTarget.view() );
                     if ( beginColorPass( context, colorTarget.view(), passDepth.view(), sceneClear, colorLoadFor( colorTarget, false ), colorLoadFor( passDepth, false ) ) )
                     {
                         const bool bDepthAlreadyWritten = passType == RenderPassType::ForwardOpaque && _bHasExecutedDepthPrepass.load() != 0 &&
@@ -432,8 +431,8 @@ namespace sw
                     const bool             bHasNormal    = pNormalTarget != nullptr && findTransient( pNormalTarget->view() ) != 0;
                     if ( bHasNormal == false || getEnginePSO( RenderPassType::GBuffer ) == 0 )
                         break;
-                    const float4              clearColor   = getAttachmentClearColorOrDefault( albedoTarget.view(), float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
-                    const float4              normalClear  = getAttachmentClearColorOrDefault( pNormalTarget->view(), FrameRendererUtil::kNormalClear );
+                    const float4              clearColor   = getTargetClearColor( albedoTarget.view() );
+                    const float4              normalClear  = getTargetClearColor( pNormalTarget->view() );
                     const string_view         arrNames[]   = { albedoTarget.view(), pNormalTarget->view() };
                     const float4              arrClears[2] = { clearColor, normalClear };
                     const RHIRenderPassLoadOp arrLoads[]   = { colorLoadFor( albedoTarget, false ), colorLoadFor( *pNormalTarget, false ) };
@@ -479,7 +478,7 @@ namespace sw
                     if ( viewModeInfo._bWireframe || viewModeInfo._bShowsBuffer )
                         break;
                     const hashed_string& colorTarget = pDeclaredColor != nullptr ? ( *pDeclaredColor )[0]._attachment : attachmentNames()._sceneColor;
-                    const float4         sceneClear  = getAttachmentClearColorOrDefault( colorTarget.view(), _clearColor );
+                    const float4         sceneClear  = getTargetClearColor( colorTarget.view() );
                     if ( beginColorPass( context, colorTarget.view(), passDepth.view(), sceneClear, colorLoadFor( colorTarget, false ), colorLoadFor( passDepth, false ) ) )
                     {
                         drawSceneMeshes( context, getEnginePSO( RenderPassType::MeshOutline ), bTransparentBatch );

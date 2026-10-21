@@ -672,8 +672,11 @@ namespace sw
         // ------------------------------------------------------------------------------
         /** @brief 어태치먼트 클리어 색을 찾습니다. */
         [[nodiscard]] bool tryGetAttachmentClearColor( string_view attachmentName, float4& outClearColor ) const;
-        /** @brief 어태치먼트 클리어 색을 반환합니다. 없으면 기본값을 반환합니다. */
-        float4 getAttachmentClearColorOrDefault( string_view attachmentName, const float4& fallback ) const;
+        /**
+         * @brief 패스 타깃의 클리어 색입니다. 파이프라인 XML 의 첨부 선언(풀이 든 값)이 원본이고, 풀에 없는 이름(백버퍼)은 렌더러의 클리어 색입니다.
+         * @details 호출부가 기본값을 넘기지 않는다 — 패스마다 적던 기본값이 선언과 갈라지는 길을 형식으로 막는다.
+         */
+        float4 getTargetClearColor( string_view attachmentName ) const;
         /**
          * @brief 트랜지언트 텍스처와 그 SRV 를 한 번의 조회로 찾습니다. 없으면 빈 값입니다.
          * @details 이름 하나로 둘 다 필요한 곳(registerPassTexture)이 패스마다 여러 번 돈다. 조회를 한 번만 하므로 해시도 한 번이다.
