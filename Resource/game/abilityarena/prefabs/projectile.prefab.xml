@@ -21,6 +21,10 @@
 			                          _radius="0.25"
 			                          _unitRadius="0.5"
 			                          _visualLift="0.9" />
+			<NavMeshModifierComponent _componentName="NavMeshModifierComponent"
+			                          _bActive="true"
+			                          _areaName=""
+			                          _bIgnoreFromBuild="true" />
 		</_listComponent>
 	</GameObject>
 </Prefab>

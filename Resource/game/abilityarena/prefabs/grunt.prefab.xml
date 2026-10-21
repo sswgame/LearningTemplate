@@ -63,6 +63,22 @@
 				</_listButton>
 				<_listAnalog />
 			</PawnComponent>
+			<NavMeshAgentComponent _componentName="NavMeshAgentComponent"
+			                       _bActive="true"
+			                       _agentType="Humanoid"
+			                       _maxSpeed="4"
+			                       _maxAcceleration="16"
+			                       _stoppingDistance="0.5"
+			                       _radius="0.5"
+			                       _separationWeight="2"
+			                       _avoidanceQuality="Medium"
+			                       _turnRate="8"
+			                       _driveMode="SteerOnly"
+			                       _bUpdateRotation="false" />
+			<NavMeshModifierComponent _componentName="NavMeshModifierComponent"
+			                          _bActive="true"
+			                          _areaName=""
+			                          _bIgnoreFromBuild="true" />
 			<ArenaUnitComponent _componentName="ArenaUnitComponent"
 			                    _bActive="true"
 			                    _director="0"

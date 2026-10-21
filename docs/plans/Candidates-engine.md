@@ -123,13 +123,14 @@ Base 에 남긴 것: 계산한 키로 정렬하는 람다(`TimingJudge` 폭 합,
 제목: 3D 내비메시(Recast & Detour)의 남은 것
 옛번호: D1-3
 왜 필요한가: `Source/Engine/Navigation/` 의 3D 내비메시에 아래가 비었습니다.
-남은 것: (2) 식생을 베이크 기하로 — 레이어마다 "길을 막는가" 값이 `FoliageLayer` 에 있어야 합니다(지형 높이장은 종류별 기하 레지스트리로 들어갔음). (3) 장애물이 많고 자주 움직이면 TileCache(압축 층) — 지금은 타일을 통째로 다시 베이크합니다. (6) 다른 테스트 게임(AbilityArena 등)의 적도 내비메시로 — 행동 트리 `MoveTo` 노드가 `INavMover` 를 씁니다.
+남은 것: (3) 장애물이 많고 자주 움직이면 TileCache(압축 층) — 지금은 타일을 통째로 다시 베이크합니다. 착수 조건은 움직이는 장애물로 타일 다시 굽기가 프레임을 넘기는 장면이 생기는 것입니다. 식생(`FoliageLayer::_navBlockRadius`, `FoliageNavGeometry.cpp`)과 AbilityArena 적(프리팹의 `NavMeshAgentComponent`)은 들어갔고, 확인 못 한 것은 AbilityArena `ai.scenario.xml` · `control.scenario.xml` 이 내비메시 이동으로도 통과하는지입니다.
 
 ### Wayland
 제목: Linux 창 계층이 X11 뿐이다
 옛번호: D1-6
 왜 필요한가: `Engine/Window/Linux` 가 X11 이고 Wayland 를 찾지 못했습니다.
 남은 것: 창 생성 · 입력 · 디스플레이 모드 · 클립보드(옛 `D6-2` (4), [UiInputRemaining](Candidates-ui.md))가 대상입니다.
+설계 메모(2026-10-22): `IWindow::createPlatformWindow` 가 `WAYLAND_DISPLAY` 를 보고 `WaylandWindow`(`Engine/Window/Linux/Wayland/`)를 고르고, 없으면 X11 이다 — 고른 결과를 로그 한 줄로 남긴다. 의존은 `wayland-client` · `xkbcommon` · `wayland-protocols`(xdg-shell · xdg-decoration, `wayland-scanner` 로 구성 때 만든다)이고 Linux 클라이언트 타깃에만 링크한다(서버는 X11 처럼 찾지도 않는다). Vulkan 표면은 `VK_KHR_wayland_surface`, GL 은 EGL 이라 `IRenderSurface::getSurfaceDisplay` 가 `wl_display` 를 낸다. 착수 조건은 CI 리눅스 잡에 Wayland 컴포지터(weston headless)를 둘 수 있는가이다 — 확인할 길 없이 짓지 않는다.
 함정: 리눅스 확인은 CI 잡에서만 합니다(결정 기록 5-12).
 
 ### PhysicsExtensions

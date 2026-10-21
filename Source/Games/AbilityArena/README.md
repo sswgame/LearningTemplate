@@ -30,6 +30,7 @@ cd build/Ninja-Debug/Bin
 자동 플레이를 켜서 자동 전투 AI 가 폰을 잡고 적을 쓰러뜨리는지, 끄면 플레이어 조종자가 되찾는지 봅니다.
 탐침은 `Arena.PlayerX`, `Arena.PlayerZ`, `Arena.PlayerShotCount`, `Arena.KillCount`, `Arena.PlayerControllerKind`(0 플레이어, 1 AI)입니다.
 `ai.scenario.xml` 은 첫 근접 적이 쫓다가(`Chase`) 때리는지(`Strike`) 적 AI 의 판단 상태(`AI.State`)로 봅니다. 적 AI 오브젝트는 모두 `ArenaGruntAI` 로 스폰되므로 `target="ArenaGruntAI[0]"` 처럼 만든 순서의 번호로 고릅니다.
+적(`grunt` · `caster` 프리팹)은 내비메시 에이전트(`NavMeshAgentComponent`, `SteerOnly`)로 기둥 · 벽을 돌아 걷습니다 — AI 조종자가 그 속도를 이동 축으로 넣습니다. 씬의 `NavigationSurface` 가 바닥 · 벽 렌더 메시로 굽고, 유닛 · 투사체는 굽기에서 뺍니다(`NavMeshModifierComponent`).
 
 ## 조작
 
