@@ -3,6 +3,7 @@
 #include "Editor/Viewport/EditorViewportOverlayLayout.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
 
@@ -77,12 +78,7 @@ namespace sw::editor
 
     const EditorOverlayBarState* EditorViewportOverlayLayout::findBar( string_view barID ) const
     {
-        for ( const EditorOverlayBarState& bar : _listBar )
-        {
-            if ( bar._id == barID )
-                return &bar;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&EditorOverlayBarState::_id>( _listBar, barID );
     }
 
     void EditorViewportOverlayLayout::resetToDefault()

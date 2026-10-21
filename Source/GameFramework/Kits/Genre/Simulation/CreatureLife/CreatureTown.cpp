@@ -396,7 +396,7 @@ namespace sw
         if ( creature._house >= 0 )
         {
             vector<hashed_string>& listOldResident = _listHouse[static_cast<size_t>( creature._house )]._listResident;
-            listOldResident.erase( std::remove( listOldResident.begin(), listOldResident.end(), speciesID ), listOldResident.end() );
+            VectorUtil::removeValue( listOldResident, speciesID );
         }
         house._listResident.push_back( speciesID );
         creature._house = houseIndex;

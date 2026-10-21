@@ -2,6 +2,7 @@
 
 #include "Engine/Destruction/FractureComponentBase.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Time/MonotonicClock.h"
@@ -1509,12 +1510,7 @@ namespace sw
 
     const FractureGroupRuntime* FractureComponentBase::findRuntime( uint32 groupID ) const
     {
-        for ( const FractureGroupRuntime& runtime : _listRuntime )
-        {
-            if ( runtime._groupID == groupID )
-                return &runtime;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&FractureGroupRuntime::_groupID>( _listRuntime, groupID );
     }
 
     uint32 FractureComponentBase::getDynamicBodyCount() const

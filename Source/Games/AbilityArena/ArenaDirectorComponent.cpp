@@ -3,6 +3,7 @@
 #include "Games/AbilityArena/ArenaDirectorComponent.h"
 
 #include "Core/Common/FourCcUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
@@ -742,12 +743,7 @@ namespace sw
 
     bool ArenaDirectorComponent::hasPendingUnit( ArenaUnitKind kind ) const
     {
-        for ( const SpawnRequest& request : _listPendingUnit )
-        {
-            if ( request._kind == kind )
-                return true;
-        }
-        return false;
+        return VectorUtil::containsBy<&SpawnRequest::_kind>( _listPendingUnit, kind );
     }
 
     void ArenaDirectorComponent::pruneProjectiles()

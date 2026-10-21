@@ -2,6 +2,7 @@
 
 #include "Engine/Audio/AudioEvent.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Audio/AudioMixerDesc.h"
@@ -124,12 +125,7 @@ namespace sw
 
     const AudioEventDesc* AudioEventLibrary::findEvent( const hashed_string& name ) const
     {
-        for ( const AudioEventDesc& event : _listEvent )
-        {
-            if ( event._name == name )
-                return &event;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&AudioEventDesc::_name>( _listEvent, name );
     }
 
     AudioEventDesc* AudioEventLibrary::findEvent( const hashed_string& name )
@@ -165,11 +161,6 @@ namespace sw
 
     const AudioParameterDesc* AudioEventLibrary::findParameter( const hashed_string& name ) const
     {
-        for ( const AudioParameterDesc& parameter : _listParameter )
-        {
-            if ( parameter._name == name )
-                return &parameter;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&AudioParameterDesc::_name>( _listParameter, name );
     }
 } // namespace sw

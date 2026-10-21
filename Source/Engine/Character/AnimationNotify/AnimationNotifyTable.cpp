@@ -3,6 +3,7 @@
 #include "Engine/Character/AnimationNotify/AnimationNotifyTable.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 
 #include "Engine/Character/AnimationNotify/AnimationNotifyHandlers.h"
 #include "Engine/Character/CharacterDataReader.h"
@@ -82,12 +83,7 @@ namespace sw
 {
     const AnimationNotifyParam* AnimationNotifyEntry::findParam( const hashed_string& name ) const
     {
-        for ( const AnimationNotifyParam& param : _listParam )
-        {
-            if ( param._name == name )
-                return &param;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&AnimationNotifyParam::_name>( _listParam, name );
     }
 
     const AnimationNotifyParam* AnimationNotifyEntry::findDeclaredParam( const hashed_string& name ) const
@@ -156,12 +152,7 @@ namespace sw
 
     const AnimationNotifyEntry* AnimationNotifyTable::findEntry( const hashed_string& notify ) const
     {
-        for ( const AnimationNotifyEntry& entry : _listEntry )
-        {
-            if ( entry._notify == notify )
-                return &entry;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&AnimationNotifyEntry::_notify>( _listEntry, notify );
     }
 
     void AnimationNotifyTable::readRoot( const XMLNode& root, const AnimationNotifyHandlerRegistry& registry, CharacterDataReader& reader )
@@ -186,12 +177,7 @@ namespace sw
 
     bool AnimationNotifyTable::isFootContactNotify( const hashed_string& notify ) const
     {
-        for ( const AnimationFootContactDef& def : _listFootContact )
-        {
-            if ( def._notify == notify )
-                return true;
-        }
-        return false;
+        return VectorUtil::containsBy<&AnimationFootContactDef::_notify>( _listFootContact, notify );
     }
 
     void AnimationNotifyTable::readFootContact( const XMLNode& node, CharacterDataReader& reader )

@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Gameplay/Interaction/InteractionProgress.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -81,12 +82,7 @@ namespace sw
 
     bool InteractionProgress::hasParticipant( uint32 actorID ) const
     {
-        for ( const uint32 participant : _listParticipant )
-        {
-            if ( participant == actorID )
-                return true;
-        }
-        return false;
+        return VectorUtil::contains( _listParticipant, actorID );
     }
 
     bool InteractionProgress::join( uint32 actorID )

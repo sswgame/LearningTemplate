@@ -2,6 +2,7 @@
 
 #include "Editor/Viewport/EditorViewportOverlays.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/KeyValueFile.h"
 #include "Core/Math/MathUtil.h"
@@ -112,12 +113,7 @@ namespace sw::editor
 
     const EditorOverlayBarRuntime* EditorViewportOverlays::findRuntime( string_view barID ) const
     {
-        for ( const EditorOverlayBarRuntime& runtime : _listRuntime )
-        {
-            if ( runtime._id == barID )
-                return &runtime;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&EditorOverlayBarRuntime::_id>( _listRuntime, barID );
     }
 
     void EditorViewportOverlays::resetToDefault()

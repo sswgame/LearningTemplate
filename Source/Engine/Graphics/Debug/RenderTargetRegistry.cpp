@@ -2,6 +2,8 @@
 
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
 
+#include "Core/Container/VectorUtil.h"
+
 namespace sw
 {
     void RenderTargetRegistry::publish( vector<RenderTargetInfo> listTarget )
@@ -32,12 +34,7 @@ namespace sw
     bool RenderTargetRegistry::isPublished( RHITextureHandle texture ) const
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        for ( const RenderTargetInfo& target : _listTarget )
-        {
-            if ( target._texture == texture )
-                return true;
-        }
-        return false;
+        return VectorUtil::containsBy<&RenderTargetInfo::_texture>( _listTarget, texture );
     }
 
     uint32 RenderTargetRegistry::requestReadback( RHITextureHandle texture )

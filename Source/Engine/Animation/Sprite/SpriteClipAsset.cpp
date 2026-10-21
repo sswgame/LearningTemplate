@@ -2,6 +2,7 @@
 
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
@@ -181,12 +182,7 @@ namespace sw
 
     const SpriteClipAnimation* SpriteClipAsset::findAnimation( string_view name ) const
     {
-        for ( const SpriteClipAnimation& animation : _listAnimation )
-        {
-            if ( animation._name == name )
-                return &animation;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&SpriteClipAnimation::_name>( _listAnimation, name );
     }
 
     bool SpriteClipAsset::findFrameRange( string_view name, SpriteClipAnimation& outRange ) const

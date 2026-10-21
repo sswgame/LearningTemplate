@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/Action/Metroidvania/Rule/MetroAbilitySet.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -101,12 +102,7 @@ namespace sw
 
     bool MetroAbilitySet::hasAbility( const hashed_string& abilityID ) const
     {
-        for ( const hashed_string& owned : _listAbility )
-        {
-            if ( owned == abilityID )
-                return true;
-        }
-        return false;
+        return VectorUtil::contains( _listAbility, abilityID );
     }
 
     void MetroAbilitySet::applyToSettings( PlatformerSettings& outSettings ) const

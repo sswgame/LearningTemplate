@@ -3,6 +3,7 @@
 #include "Engine/Character/Socket/SocketSet.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 
 #include "Engine/Character/CharacterDataReader.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
@@ -100,12 +101,7 @@ namespace sw
 
     bool SocketKindTable::hasKind( const hashed_string& name ) const
     {
-        for ( const hashed_string& kind : _listKind )
-        {
-            if ( kind == name )
-                return true;
-        }
-        return false;
+        return VectorUtil::contains( _listKind, name );
     }
 } // namespace sw
 
@@ -311,22 +307,12 @@ namespace sw
 
     const SocketDef* SocketSet::findSocket( const hashed_string& name ) const
     {
-        for ( const SocketDef& socket : _listSocket )
-        {
-            if ( socket._name == name )
-                return &socket;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&SocketDef::_name>( _listSocket, name );
     }
 
     const VirtualBoneDef* SocketSet::findVirtualBone( const hashed_string& name ) const
     {
-        for ( const VirtualBoneDef& virtualBone : _listVirtualBone )
-        {
-            if ( virtualBone._name == name )
-                return &virtualBone;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&VirtualBoneDef::_name>( _listVirtualBone, name );
     }
 
     void SocketSet::clear()

@@ -4,6 +4,7 @@
 
 #include "Core/Common/FourCcUtil.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
@@ -169,12 +170,7 @@ namespace sw
 
     const NavMeshAssetEntry* NavMeshAsset::findEntry( const hashed_string& agentType ) const
     {
-        for ( const NavMeshAssetEntry& entry : _listEntry )
-        {
-            if ( entry._agentType == agentType )
-                return &entry;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&NavMeshAssetEntry::_agentType>( _listEntry, agentType );
     }
 
     void NavMeshAsset::setEntry( NavMeshAssetEntry entry )

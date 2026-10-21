@@ -2,6 +2,7 @@
 
 #include "Engine/UI/Animation/UIAnimationPlayer.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
@@ -48,12 +49,7 @@ namespace sw
 
     const UIAnimation* UIAnimationPlayer::findAnimation( const hashed_string& name ) const
     {
-        for ( const UIAnimation& animation : _listAnimation )
-        {
-            if ( animation._name == name )
-                return &animation;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&UIAnimation::_name>( _listAnimation, name );
     }
 
     bool UIAnimationPlayer::play( const hashed_string& name, float32 speed, uint32 loopCount )
@@ -99,12 +95,7 @@ namespace sw
 
     bool UIAnimationPlayer::isPlaying( const hashed_string& name ) const
     {
-        for ( const ActiveAnimation& active : _listActive )
-        {
-            if ( active._name == name )
-                return true;
-        }
-        return false;
+        return VectorUtil::containsBy<&ActiveAnimation::_name>( _listActive, name );
     }
 
     bool UIAnimationPlayer::start( const hashed_string& name, float32 speed, uint32 loopCount, bool bReverse )

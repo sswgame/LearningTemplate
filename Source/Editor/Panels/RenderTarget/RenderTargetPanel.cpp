@@ -2,6 +2,7 @@
 
 #include "Editor/Panels/RenderTarget/RenderTargetPanel.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
@@ -36,12 +37,7 @@ namespace sw::editor
         /** @brief 고른 타깃을 이름으로 찾습니다. 없으면 nullptr 입니다. */
         const RenderTargetInfo* findByName( const vector<RenderTargetInfo>& listTarget, const string& name )
         {
-            for ( const RenderTargetInfo& info : listTarget )
-            {
-                if ( info._name == name )
-                    return &info;
-            }
-            return nullptr;
+            return VectorUtil::findBy<&RenderTargetInfo::_name>( listTarget, name );
         }
     } // namespace
 

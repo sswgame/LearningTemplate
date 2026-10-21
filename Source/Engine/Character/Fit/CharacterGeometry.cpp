@@ -2,6 +2,7 @@
 
 #include "Engine/Character/Fit/CharacterGeometry.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Character/Fit/BodyShape.h"
@@ -64,12 +65,7 @@ namespace sw
 
     const GeometryMorphTarget* AppearanceGeometry::findMorph( const hashed_string& name ) const
     {
-        for ( const GeometryMorphTarget& morph : _listMorph )
-        {
-            if ( morph._name == name )
-                return &morph;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&GeometryMorphTarget::_name>( _listMorph, name );
     }
 
     void AppearanceGeometry::computeVertexNormals()

@@ -2,6 +2,8 @@
 
 #include "Engine/Audio/AudioMixerDesc.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include "Engine/Audio/DSP/AudioEffect.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
@@ -198,12 +200,7 @@ namespace sw
 
     const AudioAttenuationDesc* AudioMixerDesc::findAttenuation( const hashed_string& name ) const
     {
-        for ( const AudioAttenuationDesc& attenuation : _listAttenuation )
-        {
-            if ( attenuation._name == name )
-                return &attenuation;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&AudioAttenuationDesc::_name>( _listAttenuation, name );
     }
 
     bool AudioMixerDesc::validateAttenuations( const vector<AudioAttenuationDesc>& listAttenuation, string_view sourceName )
@@ -248,12 +245,7 @@ namespace sw
 
     const AudioSnapshotDesc* AudioMixerDesc::findSnapshot( const hashed_string& name ) const
     {
-        for ( const AudioSnapshotDesc& snapshot : _listSnapshot )
-        {
-            if ( snapshot._name == name )
-                return &snapshot;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&AudioSnapshotDesc::_name>( _listSnapshot, name );
     }
 
     const AudioEffectDesc* AudioMixerDesc::findEffect( uint32 busIndex, const hashed_string& effectName ) const

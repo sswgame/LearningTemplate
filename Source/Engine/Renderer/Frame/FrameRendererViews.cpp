@@ -7,6 +7,8 @@
  */
 #include "pch.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -119,10 +121,8 @@ namespace sw
             if ( pView->_bSeenThisFrame == SW_FALSE )
                 releaseExtraView( *pView );
         }
-        _listExtraView.erase( std::remove_if( _listExtraView.begin(), _listExtraView.end(),
-                                              []( const unique_ptr<ViewTarget>& pView )
-        { return pView->_bSeenThisFrame == SW_FALSE; } ),
-                              _listExtraView.end() );
+        VectorUtil::removeIf( _listExtraView, []( const unique_ptr<ViewTarget>& pView )
+        { return pView->_bSeenThisFrame == SW_FALSE; } );
         for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( _listExtraView.size() ); ++viewIndex )
         {
             _listExtraView[viewIndex]->_cullSlot       = kFirstExtraCullView + viewIndex * kCullSlotsPerExtraView;

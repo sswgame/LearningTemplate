@@ -2,6 +2,7 @@
 
 #include "Engine/Animation/Graph/AnimationGraphAsset.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
@@ -446,22 +447,12 @@ namespace sw
 
     const AnimationBoneMaskDef* AnimationGraphAsset::findBoneMask( const hashed_string& name ) const
     {
-        for ( const AnimationBoneMaskDef& mask : _listBoneMask )
-        {
-            if ( mask._name == name )
-                return &mask;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&AnimationBoneMaskDef::_name>( _listBoneMask, name );
     }
 
     const AnimationGraphLayerDef* AnimationGraphAsset::findLayer( const hashed_string& name ) const
     {
-        for ( const AnimationGraphLayerDef& layer : _listLayer )
-        {
-            if ( layer._name == name )
-                return &layer;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&AnimationGraphLayerDef::_name>( _listLayer, name );
     }
 
     string AnimationGraphAsset::toJSON() const
@@ -567,24 +558,14 @@ namespace sw
 
     const AnimationGraphNode* AnimationGraphAsset::findNode( int32 nodeID ) const
     {
-        for ( const AnimationGraphNode& node : _listNode )
-        {
-            if ( node._id == nodeID )
-                return &node;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&AnimationGraphNode::_id>( _listNode, nodeID );
     }
 
     const AnimationGraphNode* AnimationGraphAsset::findNodeByName( string_view name ) const
     {
         if ( name.empty() )
             return nullptr;
-        for ( const AnimationGraphNode& node : _listNode )
-        {
-            if ( node._name == name )
-                return &node;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&AnimationGraphNode::_name>( _listNode, name );
     }
 
     const AnimationGraphNode* AnimationGraphAsset::findEntryNode() const

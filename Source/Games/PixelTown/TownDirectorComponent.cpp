@@ -3,6 +3,7 @@
 #include "Games/PixelTown/TownDirectorComponent.h"
 
 #include "Core/Common/FourCcUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Automation/AutomationProbe.h"
@@ -245,12 +246,7 @@ namespace sw
 
     const TownDirectorComponent::Villager* TownDirectorComponent::findVillager( const int2& tile ) const
     {
-        for ( const Villager& villager : _listVillager )
-        {
-            if ( villager._tile == tile )
-                return &villager;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&Villager::_tile>( _listVillager, tile );
     }
 
     const PawnComponent* TownDirectorComponent::findHeroPawn() const

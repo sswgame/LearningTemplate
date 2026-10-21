@@ -3,6 +3,7 @@
 #include "Engine/UI/Animation/UIStyleTransition.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Reflection/ReflectionTypes.h"
@@ -363,12 +364,7 @@ namespace sw
 {
     const UIStyleTransitionSpec::Entry* UIStyleTransitionSpec::findEntry( UIStyleField field ) const
     {
-        for ( const Entry& entry : _listEntry )
-        {
-            if ( entry._field == field )
-                return &entry;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&Entry::_field>( _listEntry, field );
     }
 
     bool UIStyleTransitionSpec::parse( string_view text, UIStyleTransitionSpec& outSpec, string& outError )

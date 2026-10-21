@@ -2,6 +2,8 @@
 
 #include "Engine/Telemetry/TelemetryEvent.h"
 
+#include "Core/Container/VectorUtil.h"
+
 namespace sw
 {
     TelemetryEvent::TelemetryEvent( const hashed_string& eventID )
@@ -55,11 +57,6 @@ namespace sw
 
     const TelemetryValue* TelemetryEvent::findValue( const hashed_string& name ) const
     {
-        for ( const TelemetryValue& value : _listValue )
-        {
-            if ( value._name == name )
-                return &value;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&TelemetryValue::_name>( _listValue, name );
     }
 } // namespace sw

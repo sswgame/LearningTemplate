@@ -3,6 +3,7 @@
 #include "GameFramework/PlugIn/Editor/Admin/AdminCommandProvider.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Time/WallClock.h"
 
@@ -114,12 +115,7 @@ namespace sw::editor
 
     const FakeAdminAccount* FakeAdminProvider::findAccount( AccountID accountID ) const
     {
-        for ( const FakeAdminAccount& account : _listAccount )
-        {
-            if ( account._accountID == accountID )
-                return &account;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&FakeAdminAccount::_accountID>( _listAccount, accountID );
     }
 
     FakeAdminAccount* FakeAdminProvider::findMutableAccount( AccountID accountID )

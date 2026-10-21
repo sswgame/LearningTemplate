@@ -3,6 +3,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/Config/EditorToolDefaults.h"
@@ -146,7 +147,7 @@ namespace sw::editor
 
     void unregisterPreviewSelection( EditorSelection& selection )
     {
-        s_listPreviewSelection.erase( std::remove( s_listPreviewSelection.begin(), s_listPreviewSelection.end(), &selection ), s_listPreviewSelection.end() );
+        VectorUtil::removeValue( s_listPreviewSelection, &selection );
     }
 
     GameObjectManager* getActiveObjectManager()

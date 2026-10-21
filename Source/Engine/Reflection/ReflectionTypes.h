@@ -7,6 +7,7 @@
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Task/TaskTypes.h"
 
 #include "Engine/EngineMinimal.h"
@@ -242,12 +243,7 @@ namespace sw
                 return true;
             if ( _listAlias.empty() )
                 return false;
-            for ( const hashed_string& alias : _listAlias )
-            {
-                if ( alias == nameOrAlias )
-                    return true;
-            }
-            return false;
+            return VectorUtil::contains( _listAlias, nameOrAlias );
         }
 
         /** @brief 이 프로퍼티가 직렬화 가능한 컨테이너 래퍼를 가지고 있는지 반환합니다. */
@@ -1108,14 +1104,7 @@ namespace sw
         const FunctionInfo* findMethod( const hashed_string& methodName ) const
         {
             if ( _listMethod.size() <= constant::reflection::kLinearSearchThreshold )
-            {
-                for ( const FunctionInfo& method : _listMethod )
-                {
-                    if ( method._hashName == methodName )
-                        return &method;
-                }
-                return nullptr;
-            }
+                return VectorUtil::findBy<&FunctionInfo::_hashName>( _listMethod, methodName );
 
             populateLookupCache();
             auto it = _mapNameToMethod.find( methodName );
@@ -1171,12 +1160,7 @@ namespace sw
         /** @brief 이 타입이 선언한 이벤트를 이름으로 찾습니다. */
         const EventInfo* findEvent( const hashed_string& eventName ) const
         {
-            for ( const EventInfo& event : _listEvent )
-            {
-                if ( event._name == eventName )
-                    return &event;
-            }
-            return nullptr;
+            return VectorUtil::findBy<&EventInfo::_name>( _listEvent, eventName );
         }
 
         /** @brief 자기부터 기반으로 올라가며 이벤트를 이름으로 찾습니다. 파생 타입이 우선합니다. */

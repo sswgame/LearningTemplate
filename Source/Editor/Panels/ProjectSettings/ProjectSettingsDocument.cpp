@@ -3,6 +3,7 @@
 #include "Editor/Panels/ProjectSettings/ProjectSettingsDocument.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/Memory.h"
@@ -27,12 +28,7 @@ namespace sw::editor
 
             static bool isEqualKey( const vector<string>& listEqual, const string& path )
             {
-                for ( const string& equalPath : listEqual )
-                {
-                    if ( equalPath == path )
-                        return true;
-                }
-                return false;
+                return VectorUtil::contains( listEqual, path );
             }
 
             static string makePath( const string& prefix, const string& key )

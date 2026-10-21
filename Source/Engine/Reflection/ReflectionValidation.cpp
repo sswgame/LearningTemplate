@@ -2,6 +2,7 @@
 
 #include "Engine/Reflection/ReflectionValidation.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Memory/LifetimeScope.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -142,12 +143,7 @@ namespace sw
 
     bool ValidationContext::hasError() const noexcept
     {
-        for ( const ValidationIssue& issue : _listIssue )
-        {
-            if ( issue._severity == ValidationSeverity::Error )
-                return true;
-        }
-        return false;
+        return VectorUtil::containsBy<&ValidationIssue::_severity>( _listIssue, ValidationSeverity::Error );
     }
 
     void ValidationContext::setSource( const uint64 sourceID, const string_view sourceLabel )

@@ -2,6 +2,7 @@
 
 #include "Engine/Renderer/Frame/View/RenderViewCollector.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
@@ -230,9 +231,7 @@ namespace sw
 
     void RenderViewCollector::removeScreenRectViews( vector<RenderViewRequest>& inoutListView )
     {
-        inoutListView.erase( std::remove_if( inoutListView.begin(), inoutListView.end(),
-                                             []( const RenderViewRequest& request )
-        { return request._outputKind == RenderViewOutputKind::ScreenRect; } ),
-                             inoutListView.end() );
+        VectorUtil::removeIf( inoutListView, []( const RenderViewRequest& request )
+        { return request._outputKind == RenderViewOutputKind::ScreenRect; } );
     }
 } // namespace sw

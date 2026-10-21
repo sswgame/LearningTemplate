@@ -2,6 +2,7 @@
 
 #include "Engine/UI/Style/UITheme.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Serialization/Format/XMLSerializer.h"
@@ -22,11 +23,6 @@ namespace sw
 
     const UIThemeDesc* UIThemeCatalog::findTheme( const hashed_string& name ) const
     {
-        for ( const UIThemeDesc& theme : _listTheme )
-        {
-            if ( theme._name == name )
-                return &theme;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&UIThemeDesc::_name>( _listTheme, name );
     }
 } // namespace sw

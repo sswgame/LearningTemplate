@@ -3,6 +3,7 @@
 #include "Engine/Localization/TextFormatter.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/set.h"
 
 #include "Engine/Localization/TimeZoneUtil.h"
@@ -602,12 +603,7 @@ namespace sw
 
     const TextArgument* TextArgumentList::findArgument( string_view name ) const
     {
-        for ( const TextArgument& argument : _listArgument )
-        {
-            if ( argument._name == name )
-                return &argument;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&TextArgument::_name>( _listArgument, name );
     }
 
     bool TextFormatter::format( string_view pattern, const TextArgumentList& arguments, const CultureInfo& culture, string& outText, string* pOutError )

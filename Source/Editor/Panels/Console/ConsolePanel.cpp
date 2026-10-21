@@ -5,6 +5,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/Memory.h"
 
@@ -590,12 +591,7 @@ namespace sw::editor
 
     bool ConsolePanel::isMessageInSnapshot( string_view message ) const
     {
-        for ( const LogEntry& entry : _listDrawSnapshot )
-        {
-            if ( entry._message == message )
-                return true;
-        }
-        return false;
+        return VectorUtil::containsBy<&LogEntry::_message>( _listDrawSnapshot, message );
     }
 
     bool ConsolePanel::isMessageVisible( string_view message ) const

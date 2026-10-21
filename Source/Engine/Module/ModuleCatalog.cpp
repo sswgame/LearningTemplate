@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/TopologicalSortUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Serialization/Format/JSONSerializer.h"
@@ -90,12 +91,7 @@ namespace sw
 
     bool ModuleResolution::isActive( string_view name ) const
     {
-        for ( const string& active : _listLoadOrder )
-        {
-            if ( active == name )
-                return true;
-        }
-        return false;
+        return VectorUtil::contains( _listLoadOrder, name );
     }
 } // namespace sw
 
@@ -305,12 +301,7 @@ namespace sw
 
     const ModuleManifest* ModuleCatalog::findManifest( string_view name ) const
     {
-        for ( const ModuleManifest& manifest : _listManifest )
-        {
-            if ( manifest._name == name )
-                return &manifest;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&ModuleManifest::_name>( _listManifest, name );
     }
 
     bool ModuleCatalog::resolve( const ModuleResolveContext& context, ModuleResolution& outResolution, string& outError ) const

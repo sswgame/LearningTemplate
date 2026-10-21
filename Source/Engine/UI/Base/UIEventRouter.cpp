@@ -2,6 +2,8 @@
 
 #include "Engine/UI/Base/UIEventRouter.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include "Engine/UI/Base/PanelWidget.h"
 #include "Engine/UI/Base/Widget.h"
 #include "Engine/UI/Base/WidgetTree.h"
@@ -94,12 +96,7 @@ namespace sw
 {
     bool UIWidgetPath::contains( WidgetID id ) const
     {
-        for ( const WidgetID value : _listWidget )
-        {
-            if ( value == id )
-                return true;
-        }
-        return false;
+        return VectorUtil::contains( _listWidget, id );
     }
 
     bool UIEventRouter::hitTest( const WidgetTree& tree, const float2& screenPoint, UIWidgetPath& outPath )

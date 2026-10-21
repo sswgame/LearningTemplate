@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/RPG/WitcherRPG/Rule/WitcherContract.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -163,12 +164,7 @@ namespace sw
 
     bool WitcherInvestigation::isFoundInternal( const hashed_string& clueID ) const
     {
-        for ( const hashed_string& found : _listFound )
-        {
-            if ( found == clueID )
-                return true;
-        }
-        return false;
+        return VectorUtil::contains( _listFound, clueID );
     }
 
     WitcherHaggle::WitcherHaggle()
