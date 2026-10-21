@@ -260,6 +260,7 @@
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
 |---|---|---|---|---|---|
 | `gv_effectsSpawnScale` | `float32` | `1.0` | 일반 | 이펙트 입자 생성 배율 (사용자 설정 graphics.effectsQuality 의 targetValue) | [VfxComponent.cpp](../../Source/Engine/Vfx/VfxComponent.cpp) |
+| `gv_vfxSimulation` | `VfxSimulationTarget` | `GPU` | 테스트 | 둘 다 되는 방출기의 시뮬레이션 (CPU / GPU — 모듈이 한 곳만 허락하면 그곳) | [VfxComponent.cpp](../../Source/Engine/Vfx/VfxComponent.cpp) |
 
 ## `Source/GameFramework/Base`
 

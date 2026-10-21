@@ -66,7 +66,7 @@ namespace sw
                                                                  normalMapPath.empty() ? hashed_string{} : hashed_string( normalMapPath ) );
 
         // 스프라이트 사각형은 공유 프리미티브다 — 같은 메시라야 스프라이트 컴포넌트와 한 배치로 묶인다.
-        _batch                                  = sw::make_unique<MeshInstanceBatch>( MeshUtil::acquirePrimitive( "Sprite" ), pMaterial, std::move( instance ), count );
+        _batch                                  = sw::make_unique<MeshInstanceBatch>( MeshUtil::acquirePrimitive( "Sprite" ), pMaterial, std::move( instance ), count, MeshInstanceWriter::CPU );
         constexpr float32 kUnitQuadHalfDiagonal = MathUtil::kInvSqrt2;
         for ( uint32 index = 0; index < count; ++index )
         {

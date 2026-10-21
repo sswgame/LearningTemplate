@@ -86,6 +86,11 @@ namespace sw
         uint32 getCount() const { return _entryCount; }
         /** @brief 레지스트리에 들어 있으면 true 입니다. */
         bool isRegistered() const { return _pRegistry != nullptr; }
+        /**
+         * @brief 레지스트리의 인스턴스 항목 목록에서 첫 항목의 자리입니다. 등록된 동안만 뜻이 있다(`isRegistered`).
+         * @details 프리미티브 번호는 메시 컴포넌트 수 + 이 자리 + 항목 번호다. GPU 가 항목 값을 쓰는 배치(`MeshInstanceWriter::GPU`)의 인스턴스 칸을 빌더가 찾을 때 쓴다.
+         */
+        uint32 getFirstEntrySlot() const { return _firstEntry; }
 
     protected:
         /** @brief 등록되어 있으면 레지스트리에서 빠집니다(`unregisterBatch`). */

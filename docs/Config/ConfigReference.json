@@ -657,6 +657,33 @@
        "description": "라이트 그리드 생산(컴퓨트) — 클러스터드 라이팅의 빛 목록"
       },
       {
+       "name": "_shaderVfxSimulation",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "GPU 방출기의 입자 시뮬레이션(컴퓨트)"
+      },
+      {
+       "name": "_shaderVfxMeshInstance",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "GPU 메시 입자의 인스턴스 쓰기(컴퓨트)"
+      },
+      {
+       "name": "_shaderDepthHistory",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "뷰의 깊이 히스토리 복사(풀스크린) — GPU 입자의 깊이 충돌이 읽는다"
+      },
+      {
        "name": "_shaderFullscreenTriangle",
        "type": "DataPath",
        "default": "",
@@ -4199,6 +4226,14 @@
    "kind": "일반",
    "description": "씬 메시 정점 풀 (0=메시마다 정점 버퍼, 진단용)",
    "source": "Source/Engine/Renderer/Frame/FrameRenderer.cpp"
+  },
+  {
+   "name": "gv_vfxSimulation",
+   "type": "VfxSimulationTarget",
+   "default": "GPU",
+   "kind": "테스트",
+   "description": "둘 다 되는 방출기의 시뮬레이션 (CPU / GPU — 모듈이 한 곳만 허락하면 그곳)",
+   "source": "Source/Engine/Vfx/VfxComponent.cpp"
   },
   {
    "name": "gv_viewDistanceScale",

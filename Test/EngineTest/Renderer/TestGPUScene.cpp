@@ -140,7 +140,7 @@ SW_TEST_CASE( GPUSceneTest, MeshInstanceBatchRendersWithoutComponents )
     pMesh->setVisible( true );
 
     // 배치: 항목 셋, 씬 컴포넌트 없음.
-    sw::shared_ptr<sw::MeshInstanceBatch> pBatch = sw::make_shared<sw::MeshInstanceBatch>( cube, nullptr, nullptr, 3u );
+    sw::shared_ptr<sw::MeshInstanceBatch> pBatch = sw::make_shared<sw::MeshInstanceBatch>( cube, nullptr, nullptr, 3u, sw::MeshInstanceWriter::CPU );
     for ( uint32 index = 0; index < 3; ++index )
     {
         pBatch->setWorld( index, sw::float4x4::makeTrs( sw::float3( static_cast<float32>( index ), 0.0f, -2.0f ), sw::float3( 0.0f, 0.0f, 0.0f ),
@@ -2460,7 +2460,7 @@ SW_TEST_CASE( GPUSceneTest, EqualDepthTransparentOrderIsStableUnderViewAxis )
     SW_ASSERT_NOT_NULL( fixture.addMesh( "SpriteLeft", sw::float3{ -1.0f, 0.0f, 0.0f }, 0 ) );
     SW_ASSERT_NOT_NULL( fixture.addMesh( "SpriteRight", sw::float3{ 1.0f, 0.0f, 0.0f }, 0 ) );
     // 월드 UI 는 컴포넌트가 아니라 인스턴스 배치(HP 바 · 데미지 숫자와 같은 길)다. 같은 Z.
-    sw::unique_ptr<sw::MeshInstanceBatch> pWorldUI = sw::make_unique<sw::MeshInstanceBatch>( fixture._cube, fixture._glass.get(), nullptr, 1u );
+    sw::unique_ptr<sw::MeshInstanceBatch> pWorldUI = sw::make_unique<sw::MeshInstanceBatch>( fixture._cube, fixture._glass.get(), nullptr, 1u, sw::MeshInstanceWriter::CPU );
     pWorldUI->setWorld( 0, sw::float4x4::makeTrs( sw::float3( 0.5f, 0.0f, 0.0f ), sw::float3( 0.0f, 0.0f, 0.0f ), sw::float3( 1.0f, 1.0f, 1.0f ) ) );
     pWorldUI->setSortKey( worldUIKey );
     fixture._scene.getObjectManager()->getPrimitiveRegistry().addInstanceBatch( pWorldUI.get() );

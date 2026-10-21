@@ -742,15 +742,22 @@ namespace sw
 
         glUseProgram( program );
 
-        const GLuint vbo = _pDevice->resolveGlBuffer( _pState->_boundMeshVb );
-        const GLuint buf = _pDevice->resolveGlBuffer( argumentBuffer );
-        if ( vbo == 0 && _pState->_boundMeshVb != 0 )
+        // 메시를 걸지 않은 간접 드로우(GPU 입자 — SV_VertexID 로 정점을 만든다)는 drawArrays 와 같이 장치 공용 VAO 로 그린다(다른 세 백엔드도 공용 버퍼로 그린다).
+        const bool   bMeshVertexBuffer = _pState->_boundMeshVb != 0;
+        const GLuint vbo               = bMeshVertexBuffer ? _pDevice->resolveGlBuffer( _pState->_boundMeshVb ) : 0u;
+        const GLuint buf               = _pDevice->resolveGlBuffer( argumentBuffer );
+        if ( vbo == 0 && bMeshVertexBuffer )
             RHIDrawDiagnostics::reportDestroyedVertexBuffer( "OpenGL", _pState->_boundMeshVb );
-        const bool bMissingMeshBuffers = vbo == 0 || _pDevice->_meshVao == 0 || buf == 0;
-        if ( bMissingMeshBuffers )
+        const bool bMissingMeshBuffers  = bMeshVertexBuffer && ( vbo == 0 || _pDevice->_meshVao == 0 );
+        const bool bMissingSharedBuffer = bMeshVertexBuffer == false && _pDevice->_vao == 0;
+        const bool bCannotDraw          = bMissingMeshBuffers || bMissingSharedBuffer || buf == 0;
+        if ( bCannotDraw )
             return;
 
-        bindMeshVaoAttribs( vbo );
+        if ( bMeshVertexBuffer )
+            bindMeshVaoAttribs( vbo );
+        else
+            glBindVertexArray( _pDevice->_vao );
         glBindBuffer( GL_DRAW_INDIRECT_BUFFER, buf );
 
         constexpr GLsizei stride  = sizeof( RHIDrawIndirectCommand );

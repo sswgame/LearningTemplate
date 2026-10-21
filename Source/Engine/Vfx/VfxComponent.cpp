@@ -9,6 +9,7 @@
 #include "Core/Math/MatrixMath.h"
 
 #include "Engine/Environment/EnvironmentUtil.h"
+#include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
@@ -33,6 +34,15 @@ SW_GLOBAL_VARIABLE( float32, gv_effectsSpawnScale, 1.0f, "이펙트 입자 생�
 namespace sw
 {
     SW_LOG_CALLER( "VfxComponent" );
+
+#if !defined( SW_SHIPPING )
+    /**
+     * @brief CPU · GPU 둘 다 되는 방출기의 시뮬레이션 대상입니다. 기본값은 Shipping 과 같은 GPU 다.
+     * @details 학습용으로 두 방식을 나란히 보게 둔다(결정 기록 5-12 `D2-11`). 한 곳만 되는 방출기(물리 충돌 · 라이트는 CPU, 깊이 충돌은 GPU)는
+     *          이 값과 무관하게 그곳이다(`VfxEmitterDef::computeSupportedTargets`). Shipping 은 변수를 두지 않고 GPU 로 고정한다. 효과를 읽을 때 정하므로 바꾼 뒤 읽은 효과부터 따른다.
+     */
+    SW_TEST_GLOBAL_VARIABLE( VfxSimulationTarget, gv_vfxSimulation, VfxSimulationTarget::GPU, "둘 다 되는 방출기의 시뮬레이션 (CPU / GPU — 모듈이 한 곳만 허락하면 그곳)" );
+#endif
 
     namespace
     {
@@ -89,10 +99,39 @@ namespace sw
                 return farCorner.getLength();
             }
 
+            /**
+             * @brief GPU 메시 입자가 쓸 수 있는 머티리얼이면 true 입니다 — 불투명만(머티리얼이 없으면 씬 기본 머티리얼이라 불투명).
+             * @details 투명 배치는 CPU 의 행렬로 정렬되고 뷰마다 꼬리 순서를 다시 만든다 — GPU 가 쓴 행렬은 그 정렬에 들어가지 않는다(`MeshInstanceWriter`).
+             */
+            [[nodiscard]] static bool isGPUMeshBlendSupported( const Material* pMaterial )
+            {
+                return pMaterial == nullptr || pMaterial->getBlendMode() == RHIBlendMode::Opaque;
+            }
+
             /** @brief 메시 id 를 메시로 해석합니다(`.mesh` 경로는 메시 캐시, 아니면 내장 도형 — `MeshComponent` 와 같은 규칙). */
             static shared_ptr<Mesh> acquireMesh( const string& meshID )
             {
                 return MeshAssetFormat::isMeshAssetPath( meshID ) ? MeshCache::acquire( meshID ) : MeshUtil::acquirePrimitive( meshID );
+            }
+
+            /**
+             * @brief 방출기 @p def 의 시뮬레이션 대상입니다 — 모듈이 허락한 곳(`computeSupportedTargets`)과 빌드가 원하는 곳(Shipping 은 GPU, 개발 빌드는
+             *        `gv_vfxSimulation`)의 교집합입니다.
+             * @details 교집합이 비면(모듈이 한 곳만 허락하고 빌드는 다른 곳을 원한다) 모듈이 허락한 곳이다 — 데이터가 정한 대상이고, `gv_vfxSimulation` 은
+             *          둘 다 되는 방출기만 고르는 비교 스위치다. 허락한 곳이 하나도 없는 방출기는 검증이 로드를 막았다.
+             */
+            [[nodiscard]] static VfxSimulationTarget selectSimulationTarget( const VfxEmitterDef& def )
+            {
+                const VfxSimulationTargetSet supported = def.computeSupportedTargets();
+                SW_ASSERT( supported.isEmpty() == false );
+#if defined( SW_SHIPPING )
+                const VfxSimulationTarget wanted = VfxSimulationTarget::GPU;
+#else
+                const VfxSimulationTarget wanted = gv_vfxSimulation;
+#endif
+                if ( supported.has( wanted ) )
+                    return wanted;
+                return supported.has( VfxSimulationTarget::GPU ) ? VfxSimulationTarget::GPU : VfxSimulationTarget::CPU;
             }
         };
     } // namespace
@@ -148,10 +187,12 @@ namespace sw
             return;
 
         // 충돌하는 방출기가 있고 물리 씬(3D)이 있을 때만 질의를 만든다. 물리 씬이 없는 씬에서는 충돌 없이 돈다(닿을 것이 없다).
+        // 충돌은 CPU 전용 모듈이라 충돌하는 방출기는 늘 CPU 시뮬레이션이다.
         bool bAnyCollision = false;
-        for ( const VfxCPUSimulation& simulation : _listSimulation )
+        for ( const EmitterSimulation& simulation : _listSimulation )
         {
-            bAnyCollision = bAnyCollision || simulation.getDef()._collision._mode != VfxCollisionMode::None;
+            const VfxCPUSimulation* pCPUSimulation = std::get_if<VfxCPUSimulation>( &simulation );
+            bAnyCollision                          = bAnyCollision || ( pCPUSimulation != nullptr && pCPUSimulation->getDef()._collision._mode != VfxCollisionMode::None );
         }
         const GameObject*                    pOwner        = getOwner();
         const GameObjectManager*             pManager      = pOwner != nullptr ? pOwner->getManager() : nullptr;
@@ -161,10 +202,20 @@ namespace sw
             pCollision = sw::make_unique<VfxPhysicsCollisionScene>( *pPhysicsScene, getWorldMatrix() );
 
         bool bAllFinished = true;
-        for ( VfxCPUSimulation& simulation : _listSimulation )
+        for ( EmitterSimulation& simulation : _listSimulation )
         {
-            simulation.update( deltaTime, pCollision.get() );
-            bAllFinished = bAllFinished && simulation.isFinished();
+            VfxCPUSimulation* pCPUSimulation = std::get_if<VfxCPUSimulation>( &simulation );
+            VfxGPUEmitter*    pGPUEmitter    = std::get_if<VfxGPUEmitter>( &simulation );
+            if ( pCPUSimulation != nullptr )
+            {
+                pCPUSimulation->update( deltaTime, pCollision.get() );
+                bAllFinished = bAllFinished && pCPUSimulation->isFinished();
+            }
+            else
+            {
+                pGPUEmitter->update( deltaTime );
+                bAllFinished = bAllFinished && pGPUEmitter->isFinished();
+            }
         }
         _bPlaying = bAllFinished == false;
         publishParticles();
@@ -187,22 +238,28 @@ namespace sw
 
     void VfxComponent::play()
     {
-        for ( VfxCPUSimulation& simulation : _listSimulation )
-        {
-            simulation.restart();
-        }
+        restartSimulations();
         _bPlaying = _listSimulation.empty() == false;
         publishParticles();
     }
 
     void VfxComponent::stop()
     {
-        for ( VfxCPUSimulation& simulation : _listSimulation )
-        {
-            simulation.restart();
-        }
+        restartSimulations();
         _bPlaying = false;
         publishParticles();
+    }
+
+    void VfxComponent::restartSimulations()
+    {
+        for ( EmitterSimulation& simulation : _listSimulation )
+        {
+            VfxCPUSimulation* pCPUSimulation = std::get_if<VfxCPUSimulation>( &simulation );
+            if ( pCPUSimulation != nullptr )
+                pCPUSimulation->restart();
+            else
+                std::get<VfxGPUEmitter>( simulation ).restart();
+        }
     }
 
     void VfxComponent::setEffectPath( string_view path )
@@ -220,7 +277,14 @@ namespace sw
     const VfxEmitterDef& VfxComponent::getEmitterDef( uint32 emitterIndex ) const
     {
         SW_ASSERT( emitterIndex < _listSimulation.size() );
-        return _listSimulation[emitterIndex].getDef();
+        const VfxCPUSimulation* pCPUSimulation = std::get_if<VfxCPUSimulation>( &_listSimulation[emitterIndex] );
+        return pCPUSimulation != nullptr ? pCPUSimulation->getDef() : std::get<VfxGPUEmitter>( _listSimulation[emitterIndex] ).getDef();
+    }
+
+    VfxSimulationTarget VfxComponent::getEmitterSimulationTarget( uint32 emitterIndex ) const
+    {
+        SW_ASSERT( emitterIndex < _listSimulation.size() );
+        return std::holds_alternative<VfxCPUSimulation>( _listSimulation[emitterIndex] ) ? VfxSimulationTarget::CPU : VfxSimulationTarget::GPU;
     }
 
     const shared_ptr<const vector<GPUParticle>>& VfxComponent::getEmitterParticles( uint32 emitterIndex ) const
@@ -229,20 +293,44 @@ namespace sw
         return _listPublished[emitterIndex];
     }
 
-    uint32 VfxComponent::getAliveParticleCount() const
+    const VfxGPUEmitterRequest* VfxComponent::findEmitterGPURequest( uint32 emitterIndex ) const
+    {
+        SW_ASSERT( emitterIndex < _listGPURequest.size() );
+        return _listGPURequest[emitterIndex]._pDef != nullptr ? &_listGPURequest[emitterIndex] : nullptr;
+    }
+
+    uint32 VfxComponent::getCPUAliveParticleCount() const
     {
         uint32 aliveCount = 0;
-        for ( const VfxCPUSimulation& simulation : _listSimulation )
+        for ( const EmitterSimulation& simulation : _listSimulation )
         {
-            aliveCount += simulation.getAliveCount();
+            const VfxCPUSimulation* pCPUSimulation = std::get_if<VfxCPUSimulation>( &simulation );
+            aliveCount += pCPUSimulation != nullptr ? pCPUSimulation->getAliveCount() : 0u;
         }
         return aliveCount;
+    }
+
+    uint64 VfxComponent::getSpawnedParticleCount() const
+    {
+        uint64 spawnedCount = 0;
+        for ( const EmitterSimulation& simulation : _listSimulation )
+        {
+            const VfxCPUSimulation* pCPUSimulation = std::get_if<VfxCPUSimulation>( &simulation );
+            spawnedCount += pCPUSimulation != nullptr ? pCPUSimulation->getSpawnedCount() : std::get<VfxGPUEmitter>( simulation ).getSpawnedCount();
+        }
+        return spawnedCount;
     }
 
     const MeshInstanceBatch* VfxComponent::findEmitterMeshBatch( uint32 emitterIndex ) const
     {
         SW_ASSERT( emitterIndex < _listSimulation.size() );
         return emitterIndex < _listMeshEmitter.size() ? _listMeshEmitter[emitterIndex]._batch.get() : nullptr;
+    }
+
+    float32 VfxComponent::getEmitterMeshRadius( uint32 emitterIndex ) const
+    {
+        SW_ASSERT( emitterIndex < _listSimulation.size() );
+        return emitterIndex < _listMeshEmitter.size() ? _listMeshEmitter[emitterIndex]._meshRadius : 0.0f;
     }
 
     void VfxComponent::appendGPULights( vector<GPULight>& outList ) const
@@ -253,7 +341,7 @@ namespace sw
         const float32  sizeScale = world.getMaximumAxisScale();
         for ( size_t emitterIndex = 0; emitterIndex < _listSimulation.size(); ++emitterIndex )
         {
-            const VfxLightDef&                           lightDef      = _listSimulation[emitterIndex].getDef()._light;
+            const VfxLightDef&                           lightDef      = getEmitterDef( static_cast<uint32>( emitterIndex ) )._light;
             const shared_ptr<const vector<GPUParticle>>& pListParticle = _listPublished[emitterIndex];
             if ( lightDef._maxLights == 0 || pListParticle == nullptr )
                 continue;
@@ -275,6 +363,7 @@ namespace sw
         releaseMeshEmitters();
         _listSimulation.clear();
         _listPublished.clear();
+        _listGPURequest.clear();
         _bPlaying = false;
         if ( _effectPath.empty() )
             return;
@@ -286,9 +375,15 @@ namespace sw
         const float32 spawnScale = MathUtil::max( 0.0f, static_cast<float32>( gv_effectsSpawnScale ) );
         for ( uint32 emitterIndex = 0; emitterIndex < static_cast<uint32>( effect._listEmitter.size() ); ++emitterIndex )
         {
-            _listSimulation.emplace_back( effect._listEmitter[emitterIndex], HashUtil::combine( _seed, emitterIndex ), spawnScale );
+            shared_ptr<const VfxEmitterDef> pDef = make_shared<const VfxEmitterDef>( std::move( effect._listEmitter[emitterIndex] ) );
+            const uint64                    seed = HashUtil::combine( _seed, emitterIndex );
+            if ( VfxComponentInternal::selectSimulationTarget( *pDef ) == VfxSimulationTarget::CPU )
+                _listSimulation.emplace_back( std::in_place_type<VfxCPUSimulation>, std::move( pDef ), seed, spawnScale );
+            else
+                _listSimulation.emplace_back( std::in_place_type<VfxGPUEmitter>, std::move( pDef ), seed, spawnScale );
         }
         _listPublished.resize( _listSimulation.size() );
+        _listGPURequest.resize( _listSimulation.size() );
         rebuildMeshEmitters();
     }
 
@@ -300,7 +395,7 @@ namespace sw
         _listMeshEmitter.resize( _listSimulation.size() );
         for ( uint32 emitterIndex = 0; emitterIndex < static_cast<uint32>( _listSimulation.size() ); ++emitterIndex )
         {
-            const VfxEmitterDef& def = _listSimulation[emitterIndex].getDef();
+            const VfxEmitterDef& def = getEmitterDef( emitterIndex );
             if ( def._renderMode != VfxRenderMode::Mesh )
                 continue;
             shared_ptr<Mesh> mesh = VfxComponentInternal::acquireMesh( def._mesh._meshID );
@@ -314,10 +409,22 @@ namespace sw
             meshEmitter._material    = sw::make_unique<EnvironmentMaterial>();
             if ( def._mesh._materialPath.empty() == false )
                 (void)meshEmitter._material->acquire( def._mesh._materialPath ); // 못 잡으면 씬 기본 머티리얼(경고는 안에서)
+            // GPU 메시 입자는 컴퓨트가 인스턴스 칸에 행렬을 쓴다 — 투명 정렬은 CPU 행렬로 하므로 불투명 머티리얼만 받는다(대신 CPU 로 돌리지 않는다).
+            const bool bGPUWritten = getEmitterSimulationTarget( emitterIndex ) == VfxSimulationTarget::GPU;
+            if ( bGPUWritten && VfxComponentInternal::isGPUMeshBlendSupported( meshEmitter._material->getMaterial() ) == false )
+            {
+                SW_LOG_ERROR( "Vfx '%#': emitter '%#' simulates on the GPU but material '%#' is not opaque - GPU mesh particles need an opaque material; the emitter is not drawn",
+                              _effectPath, def._name, def._mesh._materialPath );
+                meshEmitter._material->release();
+                meshEmitter._material.reset();
+                continue;
+            }
             meshEmitter._meshRadius = VfxComponentInternal::computeOriginRadius( *mesh );
-            meshEmitter._batch      = sw::make_unique<MeshInstanceBatch>( std::move( mesh ), meshEmitter._material->getMaterial(), meshEmitter._material->getInstance(), def._maxParticles );
+            meshEmitter._batch      = sw::make_unique<MeshInstanceBatch>( std::move( mesh ), meshEmitter._material->getMaterial(), meshEmitter._material->getInstance(),
+                                                                          def._maxParticles, bGPUWritten ? MeshInstanceWriter::GPU : MeshInstanceWriter::CPU );
             meshEmitter._batch->setOwnerComponent( this );
-            writeMeshEntries( emitterIndex, _listPublished[emitterIndex].get() );
+            if ( bGPUWritten == false )
+                writeMeshEntries( emitterIndex, _listPublished[emitterIndex].get() );
             _pPrimitiveRegistry->addInstanceBatch( meshEmitter._batch.get() );
         }
     }
@@ -340,6 +447,7 @@ namespace sw
         MeshInstanceBatch* pBatch = emitterIndex < _listMeshEmitter.size() ? _listMeshEmitter[emitterIndex]._batch.get() : nullptr;
         if ( pBatch == nullptr )
             return;
+        SW_ASSERT( pBatch->getInstanceWriter() == MeshInstanceWriter::CPU ); // GPU 배치의 항목은 컴퓨트가 쓴다(`VfxGPUSimulation`)
         const float4x4 world      = getWorldMatrix();
         const float32  sizeScale  = world.getMaximumAxisScale();
         const float32  meshRadius = _listMeshEmitter[emitterIndex]._meshRadius;
@@ -366,7 +474,14 @@ namespace sw
     {
         for ( uint32 emitterIndex = 0; emitterIndex < static_cast<uint32>( _listSimulation.size() ); ++emitterIndex )
         {
-            const VfxCPUSimulation& simulation = _listSimulation[emitterIndex];
+            const VfxGPUEmitter* pGPUEmitter = std::get_if<VfxGPUEmitter>( &_listSimulation[emitterIndex] );
+            if ( pGPUEmitter != nullptr )
+            {
+                // 입자는 렌더 스레드의 GPU 버퍼에 있다 — 재생 중일 때만 누적 단계 수를 싣는다(멈추면 렌더 스레드가 그 상태를 놓는다).
+                _listGPURequest[emitterIndex] = _bPlaying ? pGPUEmitter->makeRequest() : VfxGPUEmitterRequest{};
+                continue;
+            }
+            const VfxCPUSimulation& simulation = std::get<VfxCPUSimulation>( _listSimulation[emitterIndex] );
             if ( simulation.getAliveCount() == 0 )
             {
                 _listPublished[emitterIndex].reset();

@@ -18,6 +18,19 @@
 
 namespace sw
 {
+    /**
+     * @brief 배치 항목의 렌더 값(월드 행렬 · 바운드 · 색)을 누가 쓰는지입니다.
+     * @details `GPU` 배치는 항목 값이 GPU 의 인스턴스 버퍼에서만 산다 — 컴퓨트(GPU 메시 입자, `VfxGPUSimulation`)가 매 프레임 애니메이션 · 컬링 앞에
+     *          그 항목들의 인스턴스 칸에 쓴다. CPU 쪽 항목은 만들 때의 자리표(크기 0 행렬, 바운드 0)로 고정되고 바꾸는 함수는 거절한다 — 그래서 빌더가
+     *          그 항목을 더티로 볼 일이 없고, 배치 구성이 바뀌어 통째로 올릴 때 덮어쓴 자리표는 같은 프레임의 컴퓨트가 다시 쓴다(그리는 값은 늘 GPU 것이다).
+     *          불투명 머티리얼만 받는다 — 투명 정렬은 CPU 의 행렬로 한다(`GPUTransparentSorter`).
+     */
+    enum class MeshInstanceWriter : uint8
+    {
+        CPU, ///< 항목 값을 CPU 가 쓰고 빌더가 올린다(기본)
+        GPU, ///< 항목 값을 컴퓨트가 인스턴스 버퍼에 쓴다 — CPU 의 `set*` 은 거절한다
+    };
+
     class Component;
     class Material;
     class MaterialInstance;
@@ -39,8 +52,9 @@ namespace sw
         /**
          * @brief 메시 하나 · 머티리얼 하나 · 항목 count 개로 만듭니다. 머티리얼이 nullptr 이면 씬 기본 머티리얼로 그려집니다.
          * @param pMaterial 소유하지 않습니다. MeshComponent 와 같은 규칙입니다(빌더가 스냅샷에 소유를 싣습니다).
+         * @param writer    항목 값을 쓰는 쪽입니다. `GPU` 면 항목이 자리표(크기 0)로 시작하고 CPU 의 `set*` 을 거절합니다(`MeshInstanceWriter`).
          */
-        MeshInstanceBatch( shared_ptr<Mesh> mesh, Material* pMaterial, shared_ptr<MaterialInstance> instance, uint32 count );
+        MeshInstanceBatch( shared_ptr<Mesh> mesh, Material* pMaterial, shared_ptr<MaterialInstance> instance, uint32 count, MeshInstanceWriter writer );
         /** @brief 등록되어 있으면 레지스트리에서 빠집니다. */
         ~MeshInstanceBatch();
 
@@ -107,14 +121,20 @@ namespace sw
         MaterialInstance* getRawMaterialInstance() const { return _instance.get(); }
         /** @brief 머티리얼 인스턴스(소유 포인터)입니다. */
         const shared_ptr<MaterialInstance>& getMaterialInstance() const { return _instance; }
+        /** @brief 항목 값을 쓰는 쪽입니다. */
+        MeshInstanceWriter getInstanceWriter() const { return _writer; }
 
     private:
+        /** @brief CPU 가 항목 값을 바꿀 수 있으면 true 입니다. GPU 배치에 쓰려 하면 어설션으로 멈춘다(부른 쪽의 결함이다). */
+        [[nodiscard]] bool acceptsCPUWrite() const;
+
         vector<Entry>                _listEntry;
         shared_ptr<Mesh>             _mesh;
         Material*                    _pMaterial;
         shared_ptr<MaterialInstance> _instance;
         const Component*             _pOwnerComponent; ///< 든 컴포넌트(빌림). 꺼지면 빌더가 뺀다. nullptr 이면 늘 그린다
         uint32                       _sortKey;         ///< 항목 모두의 투명 정렬 키(0 = 기본)
+        MeshInstanceWriter           _writer;
         uint8                        _bVisible;
     };
 } // namespace sw

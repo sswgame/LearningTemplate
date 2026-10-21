@@ -84,6 +84,12 @@ namespace sw
         MeshSkin,
         /// @brief 뷰마다의 라이트 그리드(클러스터드 라이팅의 빛 목록)를 만드는 컴퓨트(lightgrid.hlsl)입니다. 그룹 하나가 뷰 하나입니다.
         LightGrid,
+        /// @brief GPU 방출기의 입자 시뮬레이션 컴퓨트(vfxsimulate.hlsl)입니다. 그룹 하나가 방출기 하나이고 간접 인자를 씁니다(`VfxGPUSimulation`).
+        VfxSimulation,
+        /// @brief GPU 메시 입자를 메시 인스턴스 배치의 인스턴스 칸에 쓰는 컴퓨트(vfxmeshinstance.hlsl)입니다. 인스턴스 애니메이션 · 컬링 앞에 돈다.
+        VfxMeshInstance,
+        /// @brief 뷰의 지난 프레임 장면 깊이를 R32 실수 RT(깊이 히스토리)로 옮기는 풀스크린(depthhistory.hlsl)입니다. 컴퓨트 프리패스 리스트에서 그린다.
+        DepthHistory,
     };
 
     /**

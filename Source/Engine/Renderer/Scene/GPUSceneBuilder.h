@@ -32,6 +32,7 @@ namespace sw
     class PrimitiveRegistry;
     class Scene;
     class ScenePrimitive;
+    class VfxComponent;
 
     /**
      * @class GPUSceneBuilder
@@ -124,6 +125,8 @@ namespace sw
         const vector<GPUParticleBatch>& getParticleBatches() const { return _snapshot._listParticleBatch; }
         /** @brief 주 시점에서 입자 그리기의 메시 투명 배치 사이 자리(`getParticleBatches` 와 같은 순서)를 반환합니다. */
         const vector<GPUTransparentParticleSlot>& getParticleSlots() const { return _snapshot._listParticleSlot; }
+        /** @brief GPU 로 시뮬레이션하는 메시 방출기들(배치 항목마다의 인스턴스 칸)을 반환합니다. */
+        const vector<GPUVfxMeshEmitter>& getVfxMeshEmitters() const { return _snapshot._listVfxMeshEmitter; }
         /** @brief 마지막 `computeViewTransparentOrders` 가 만든 추가 뷰마다의 투명 순서입니다. */
         const vector<GPUViewTransparentOrder>& getViewTransparentOrders() const { return _snapshot._listViewTransparentOrder; }
         /** @brief 셰이더 타입별 머티리얼 데이터 그룹(CPU 스냅샷)을 반환합니다. */
@@ -212,6 +215,10 @@ namespace sw
          *          메시 투명 배치(발행된 꼬리)와 견줘 입자마다 주 투명 순서 안의 자리(`GPUSceneSnapshot::_listParticleSlot`)도 정한다. 메시 쪽이 끝난 **뒤** 부른다.
          */
         void populateParticleBatches( const GameObjectManager& objects, const float3& cameraPos );
+        /**
+         * @brief GPU 메시 방출기 하나(`GPUVfxMeshEmitter`)를 싣습니다 — 배치 항목마다 이번에 발행된 인스턴스 칸을 찾는다(불투명 구간만). 재생 중이 아니거나 배치가 없으면 싣지 않습니다.
+         */
+        void appendVfxMeshEmitter( const VfxComponent& vfx, uint32 emitterIndex, const PrimitiveRegistry& primitives );
         /** @brief 입자 그리기마다 @p eye · @p axis 의 정렬 키를 채우고 그리는 순서로 정렬합니다. 키의 후보 번호 칸은 `_listParticleBatch` 의 번호입니다. */
         void fillParticleKeys( const float3& eye, const float3& axis, vector<GPUTransparentSortKey>& outListKey ) const;
         /**

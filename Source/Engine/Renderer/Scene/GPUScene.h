@@ -156,6 +156,8 @@ namespace sw
         vector_reference<const GPUMeshBatch> getTransparentBatches() const { return _snapshot.getTransparentBatches(); }
         /** @brief 방출기마다의 입자 그리기(주 시점에서 먼 것부터)를 반환합니다. */
         const vector<GPUParticleBatch>& getParticleBatches() const { return _snapshot._listParticleBatch; }
+        /** @brief GPU 로 시뮬레이션하는 메시 방출기들(인스턴스 칸 목록)을 반환합니다. */
+        const vector<GPUVfxMeshEmitter>& getVfxMeshEmitters() const { return _snapshot._listVfxMeshEmitter; }
         /** @brief 주 시점에서 입자 그리기의 순서와 메시 투명 배치 사이의 자리를 반환합니다(`GPUSceneSnapshot::_listParticleSlot`). */
         const vector<GPUTransparentParticleSlot>& getParticleSlots() const { return _snapshot._listParticleSlot; }
         /** @brief 이 추가 뷰의 투명 순서(스냅샷이 싣고 온 것)입니다. 없으면 nullptr 입니다. */

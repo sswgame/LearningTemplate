@@ -37,13 +37,63 @@ namespace sw
         Mesh,      ///< 입자마다 메시 하나(`_mesh` — 메시 인스턴스 배치로 메시 경로를 그대로 탄다)
     };
 
-    /** @brief 입자가 물리 씬에 닿았을 때의 반응입니다. */
+    /**
+     * @brief 방출기 하나를 시뮬레이션하는 곳입니다(언리얼 Niagara 방출기의 Sim Target).
+     * @details 데이터가 정한다 — 모듈마다 돌 수 있는 곳(`VfxSimulationTargetSet`)을 선언하고, 방출기의 대상은 그 교집합이다
+     *          (`VfxEmitterDef::computeSupportedTargets`). 둘 다 되는 방출기만 Shipping 에서 GPU, 개발 빌드에서 `gv_vfxSimulation` 이 고른다(`VfxComponent`).
+     *          두 곳은 같은 형식(`GPUParticle`)을 낸다. 방출기 데이터의 칸이 아니다 — 고를 수 있는 것은 모듈이 정하므로 칸을 두면 틀린 조합만 하나 더 생긴다.
+     */
+    ENUM()
+    enum class VfxSimulationTarget : uint8
+    {
+        CPU, ///< `VfxCPUSimulation` — 게임 스레드가 입자 배열을 낸다
+        GPU, ///< vfxsimulate.hlsl — 렌더 스레드가 컴퓨트로 돌리고 간접 인자로 그린다(`VfxGPUSimulation`)
+    };
+
+    /** @brief 입자가 무엇에 닿았을 때 반응하는지입니다. */
     ENUM()
     enum class VfxCollisionMode : uint8
     {
         None,   ///< 닿음을 보지 않는다
         Bounce, ///< 닿은 면에서 튄다(`_restitution` · `_friction`)
         Kill,   ///< 닿으면 사라진다
+    };
+
+    /**
+     * @brief 충돌을 무엇으로 찾는지입니다. 방법이 시뮬레이션 대상을 정한다(언리얼 Niagara 의 CPU 레이 트레이스 · GPU 깊이 버퍼 충돌).
+     */
+    ENUM()
+    enum class VfxCollisionMethod : uint8
+    {
+        PhysicsRaycast, ///< 물리 씬(3D)에 한 단계의 선분을 쏜다 — CPU 전용(게임 스레드의 물리 씬)
+        SceneDepth,     ///< 주 시점의 지난 프레임 깊이와 견준다 — GPU 전용. 화면 밖 · 가려진 면은 못 본다(`VfxCollisionDef` 설명)
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @struct VfxSimulationTargetSet
+     * @brief 시뮬레이션 대상의 집합입니다. 모듈마다 자기가 돌 수 있는 곳을 이 값으로 선언하고, 방출기는 교집합을 씁니다.
+     */
+    struct VfxSimulationTargetSet
+    {
+        uint8 _bits{ 0 };
+
+        /** @brief CPU 와 GPU 둘 다입니다. */
+        static constexpr VfxSimulationTargetSet makeAll() { return VfxSimulationTargetSet{ static_cast<uint8>( makeBit( VfxSimulationTarget::CPU ) | makeBit( VfxSimulationTarget::GPU ) ) }; }
+        /** @brief @p target 하나뿐입니다. */
+        static constexpr VfxSimulationTargetSet makeOnly( VfxSimulationTarget target ) { return VfxSimulationTargetSet{ makeBit( target ) }; }
+
+        /** @brief @p target 이 들어 있으면 true 입니다. */
+        constexpr bool has( VfxSimulationTarget target ) const { return ( _bits & makeBit( target ) ) != 0; }
+        /** @brief 비었으면(어느 곳에서도 돌 수 없으면) true 입니다. */
+        constexpr bool isEmpty() const { return _bits == 0; }
+        /** @brief 두 집합의 교집합입니다. */
+        constexpr VfxSimulationTargetSet intersect( VfxSimulationTargetSet other ) const { return VfxSimulationTargetSet{ static_cast<uint8>( _bits & other._bits ) }; }
+
+    private:
+        static constexpr uint8 makeBit( VfxSimulationTarget target ) { return static_cast<uint8>( 1u << static_cast<uint32>( target ) ); }
     };
 } // namespace sw
 
@@ -59,28 +109,50 @@ namespace sw
         string _meshID{};
         PROPERTY( AssetPath, AssetType = "Material", Tooltip = "Material of the particle meshes; empty uses the scene default" )
         string _materialPath{};
+
+        /**
+         * @brief 메시 입자는 CPU · GPU 둘 다 돈다. GPU 는 배치의 인스턴스 구간에 행렬을 쓰고 컬링이 간접 인자를 만든다(`VfxGPUSimulation`).
+         * @details 머티리얼의 블렌드는 머티리얼을 읽어야 알 수 있어 여기서 가르지 않는다 — GPU 메시는 불투명 머티리얼만 받고, 투명이면
+         *          컴포넌트가 오류로 그리지 않는다(`VfxComponent` 의 `isGPUMeshBlendSupported` — 투명 정렬은 CPU 행렬로 한다).
+         */
+        VfxSimulationTargetSet getSupportedTargets() const { return VfxSimulationTargetSet::makeAll(); }
     };
 } // namespace sw
 
 namespace sw
 {
     /**
-     * @brief 입자 충돌입니다. 한 단계에 움직인 선분을 물리 씬(3D)에 쏘아 처음 닿은 면에서 반응합니다(언리얼 Niagara 의 CPU 레이 트레이스 충돌).
-     * @details 좌표는 방출기 로컬이고 월드 변환은 부르는 쪽이 한다(`IVfxCollisionScene`). 입자 크기는 보지 않는다(점 충돌).
+     * @brief 입자 충돌입니다. 방법(`_method`)이 시뮬레이션 대상을 정합니다.
+     * @details `PhysicsRaycast`(CPU): 한 단계에 움직인 선분을 물리 씬(3D)에 쏘아 처음 닿은 면에서 반응한다(언리얼 Niagara 의 CPU 레이 트레이스 충돌).
+     *          좌표는 방출기 로컬이고 월드 변환은 부르는 쪽이 한다(`IVfxCollisionScene`).
+     *          `SceneDepth`(GPU): 입자를 주 시점의 **지난 프레임** 깊이(`FrameRenderer` 의 깊이 히스토리)에 투영해, 깊이 면 뒤로 `_depthThickness` 안쪽에
+     *          들어가면 닿은 것으로 본다. 법선은 깊이의 이웃 텍셀 기울기다(언리얼 Niagara GPU 깊이 버퍼 충돌). 한계: 화면 밖과 가려진 면(다른 물체 뒤)은
+     *          보지 못하고, 깊이 두께보다 빨리 지나가면 뚫고, 한 프레임 늦은 깊이라 빠르게 움직이는 면은 어긋난다. 추가 뷰의 깊이는 쓰지 않는다.
+     *          두 방법 모두 입자 크기는 보지 않는다(점 충돌).
      */
     REFLECT()
     struct SW_API VfxCollisionDef
     {
         REFLECT_BODY();
 
-        PROPERTY( Tooltip = "What a particle does when it hits the physics scene" )
+        /** @brief 튄 입자를 닿은 면에서 띄우는 거리(미터)입니다. 다음 단계가 같은 면에서 시작해 다시 닿지 않게 한다. CPU · GPU 충돌이 같은 값을 쓴다(GPU 는 매개변수로 받는다). */
+        static constexpr float32 kSurfaceSkin = 0.001f;
+
+        PROPERTY( Tooltip = "What a particle does when it hits something" )
         VfxCollisionMode _mode{ VfxCollisionMode::None };
+        PROPERTY( Tooltip = "How hits are found: PhysicsRaycast (CPU simulation) or SceneDepth (GPU simulation, last frame's main view depth)" )
+        VfxCollisionMethod _method{ VfxCollisionMethod::PhysicsRaycast };
+        PROPERTY( Min = 0.0, Units = m, Tooltip = "SceneDepth: how far behind the depth surface still counts as a hit (required above 0 for SceneDepth)" )
+        float32 _depthThickness{ 0.0f };
         PROPERTY( Min = 0.0, Max = 1.0, Tooltip = "Share of the normal speed kept after a bounce (0 = stops on the surface)" )
         float32 _restitution{ 0.0f };
         PROPERTY( Min = 0.0, Max = 1.0, Tooltip = "Share of the tangent speed lost on a bounce" )
         float32 _friction{ 0.0f };
-        PROPERTY( Tooltip = "Physics layers the particles collide with (bit per layer)" )
+        PROPERTY( Tooltip = "Physics layers the particles collide with (bit per layer, PhysicsRaycast only)" )
         uint32 _layerMask{ 0xFFFFFFFFu };
+
+        /** @brief 충돌이 꺼져 있으면 둘 다, 켜져 있으면 방법이 정한 곳 하나입니다. */
+        VfxSimulationTargetSet getSupportedTargets() const;
     };
 } // namespace sw
 
@@ -102,6 +174,15 @@ namespace sw
         float32 _radius{ 0.0f };
         PROPERTY( Min = 0.0, Tooltip = "Light intensity, multiplied by the particle alpha (required when _maxLights is above 0)" )
         float32 _intensity{ 0.0f };
+
+        /**
+         * @brief 빛을 내면 CPU 뿐이고(라이트는 게임 스레드의 씬 라이트 목록에 붙는다), 내지 않으면 둘 다입니다.
+         * @details GPU 방출기에 빛이 필요하면 빛만 맡는 작은 CPU 방출기를 같은 효과에 둔다(계획 문서 `Vfx` 의 패턴 — GPU 라이트는 후보 `VfxGPULights`).
+         */
+        VfxSimulationTargetSet getSupportedTargets() const
+        {
+            return _maxLights > 0 ? VfxSimulationTargetSet::makeOnly( VfxSimulationTarget::CPU ) : VfxSimulationTargetSet::makeAll();
+        }
     };
 } // namespace sw
 
@@ -196,6 +277,21 @@ namespace sw
 
         /** @brief 커브를 시각 순으로 정렬하고 자동 접선을 다시 셉니다. 파일을 읽은 뒤 `validate` 전에 부릅니다. */
         void sortCurves();
+        /**
+         * @brief 이 방출기가 돌 수 있는 곳 — 모든 모듈 칸이 선언한 대상의 교집합입니다. 비면 검증이 로드를 실패시킵니다.
+         * @details 칸마다 한 줄인 모듈 표(VfxEffectDef.cpp)가 원본이다. 칸을 더하고 줄을 빠뜨리면 `VfxEffectDefTest.EveryEmitterFieldDeclaresItsTargets` 가 진다
+         *          (리플렉션의 칸 목록과 표를 맞춘다). 언리얼 Niagara 도 라이트 렌더러와 CPU 레이 트레이스 충돌은 CPU 시뮬레이션 전용이다.
+         */
+        [[nodiscard]] VfxSimulationTargetSet computeSupportedTargets() const;
+        /** @brief @p target 을 지원하지 않는 첫 모듈 칸의 이름입니다(로그용). 모두 지원하면 nullptr 입니다. */
+        [[nodiscard]] const utf8* findModuleExcluding( VfxSimulationTarget target ) const;
+        /**
+         * @brief 모든 모듈이 입자의 수명을 `_lifetimeMax` 보다 늘리지 않으면 true 입니다(줄이는 것 — 충돌의 없애기 — 은 된다).
+         * @details GPU 방출기가 입자 수를 모른 채 "끝났다" 를 일정에서 구하는 근거다(`VfxGPUEmitter::isFinished`). 모듈 표의 줄이 선언한다.
+         */
+        [[nodiscard]] bool isLifetimeBoundedByMax() const;
+        /** @brief 모듈 표에 @p fieldName 칸의 줄이 있으면 true 입니다(테스트가 리플렉션 칸 목록과 맞춘다). */
+        [[nodiscard]] static bool hasModuleRow( string_view fieldName );
         /** @brief 칸 하나하나의 값을 봅니다. 틀린 곳마다 @p sourceLabel 과 방출기 이름을 붙여 오류를 남기고, 하나라도 틀리면 false 입니다. */
         [[nodiscard]] bool validate( string_view sourceLabel ) const;
     };

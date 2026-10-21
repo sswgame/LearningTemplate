@@ -242,7 +242,7 @@ SW_TEST_CASE( MemoryTagTest, PrimitiveDirtyFlagsAreTagged )
 
     constexpr uint32      kEntryCount = 4096;
     sw::PrimitiveRegistry registry;
-    sw::MeshInstanceBatch batch( nullptr, nullptr, nullptr, kEntryCount );
+    sw::MeshInstanceBatch batch( nullptr, nullptr, nullptr, kEntryCount, sw::MeshInstanceWriter::CPU );
     const uint64          animationBefore = getLiveBytes( *pProfiler, sw::MemoryTag::Animation );
     {
         SW_MEMORY_SCOPE( Animation );

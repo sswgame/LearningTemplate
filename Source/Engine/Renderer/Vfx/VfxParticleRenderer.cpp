@@ -36,9 +36,10 @@ namespace sw
             static constexpr uint32 kFlagAdditive = 1u << 0;
             static constexpr uint32 kFlagRibbon   = 1u << 1;
 
-            /** @brief 입자 하나의 정점 수입니다 — particle.hlsl 이 SV_VertexID 로 모서리 여섯을 만든다. 메시 없는 드로우라 장치 공용 대체 정점 버퍼가 이만큼 담아야 한다. */
-            static constexpr uint32 kVerticesPerParticle = 6;
-            static_assert( kVerticesPerParticle <= constant::kFallbackVertexCount, "the fallback vertex buffer must cover a particle quad (slot 0 is read past its end)" );
+            // 메시 없는 드로우라 장치 공용 대체 정점 버퍼가 입자 하나의 정점 수만큼 담아야 한다.
+            static_assert( GPUParticle::kVertexCount <= constant::kFallbackVertexCount, "the fallback vertex buffer must cover a particle quad (slot 0 is read past its end)" );
+            /** @brief GPU 방출기의 버퍼 안 시작 위치 자리표입니다 — 자기 렌더 입력 버퍼를 0 부터 읽는다. */
+            static constexpr uint32 kNoSharedBase = invalid_index::kUint32;
 
             /** @brief 입자 버퍼가 모자라면 이 배율로 키운다(입자 수가 프레임마다 조금씩 늘 때 다시 만들기를 줄인다). */
             static constexpr float32 kParticleBufferGrowth = 1.5f;
@@ -61,16 +62,20 @@ namespace sw
         , _listBatchBase{}
         , _listTexture{}
         , _particleBuffer{}
+        , _gpuSimulation{}
         , _uploadedParticleCount{ 0 }
     {
     }
 
     VfxParticleRenderer::~VfxParticleRenderer() = default;
 
-    void VfxParticleRenderer::prepareFrame( IRHIDevice& device, const vector<GPUParticleBatch>& listBatch )
+    void VfxParticleRenderer::prepareFrame( IRHIDevice& device, const vector<GPUParticleBatch>& listBatch, const vector<GPUVfxMeshEmitter>& listMeshEmitter,
+                                            const VfxSimulationFrameInput& input )
     {
         _listBatchBase.clear();
         _uploadedParticleCount = 0;
+        // GPU 방출기의 상태는 배치가 없는 프레임에도 정리해야 한다(멈춘 효과의 버퍼를 놓는다) — 빈 목록이어도 부른다.
+        _gpuSimulation.prepareFrame( device, listBatch, listMeshEmitter, input );
         if ( listBatch.empty() )
             return;
         SW_PROFILE_SCOPE( "RT.Vfx.Upload" );
@@ -91,12 +96,18 @@ namespace sw
             added._pTexture    = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().acquire( batch._texturePath.view(), &device );
         }
 
-        // 2) 입자 — 방출기들을 이어 한 버퍼에 담는다(같은 프레임에 버퍼를 두 번 갱신하지 않는다).
+        // 2) 입자 — CPU 방출기들을 이어 한 버퍼에 담는다(같은 프레임에 버퍼를 두 번 갱신하지 않는다). GPU 방출기는 자기 렌더 입력 버퍼를 읽는다.
         _listUploadScratch.clear();
         for ( const GPUParticleBatch& batch : listBatch )
         {
+            const vector<GPUParticle>* pListParticle = batch.findCPUParticles();
+            if ( pListParticle == nullptr )
+            {
+                _listBatchBase.push_back( VfxParticleRendererInternal::kNoSharedBase );
+                continue;
+            }
             _listBatchBase.push_back( static_cast<uint32>( _listUploadScratch.size() ) );
-            _listUploadScratch.insert( _listUploadScratch.end(), batch._pListParticle->begin(), batch._pListParticle->end() );
+            _listUploadScratch.insert( _listUploadScratch.end(), pListParticle->begin(), pListParticle->end() );
         }
         const uint32 particleCount = static_cast<uint32>( _listUploadScratch.size() );
         if ( particleCount == 0 )
@@ -119,27 +130,37 @@ namespace sw
     uint32 VfxParticleRenderer::drawBatches( IRHICommandList& cmd, const vector<GPUParticleBatch>& listBatch, vector_reference<const GPUTransparentParticleSlot> listSlot,
                                              bool bNativeBindless ) const
     {
-        const bool bNothingToDraw =
-            listSlot.empty() || _uploadedParticleCount == 0 || _particleBuffer.isValid() == false || _listBatchBase.size() != listBatch.size();
+        const bool bNothingToDraw = listSlot.empty() || _listBatchBase.size() != listBatch.size();
         if ( bNothingToDraw )
             return 0;
         SW_PROFILE_SCOPE( "RT.Vfx.Draw" );
 
         // 바인딩은 PSO 뒤에 건다(setPipelineState 가 슬롯 상태를 비운다) — 부르는 쪽이 PSO 를 걸고 PassCB 를 바인딩한 뒤 여기로 온다.
-        cmd.bindStructuredBuffer( _particleBuffer._srv, shaderslot::kPassBuffer );
-        uint32 drawnBatchCount = 0;
+        // t11 은 CPU 방출기의 공유 버퍼이거나 GPU 방출기 자기의 렌더 입력이다 — 바뀔 때만 다시 건다.
+        const bool         bSharedReady    = _uploadedParticleCount > 0 && _particleBuffer.isValid();
+        RHIDescriptorIndex boundParticles  = kInvalidDescriptorIndex;
+        uint32             drawnBatchCount = 0;
         for ( const GPUTransparentParticleSlot& slot : listSlot )
         {
+            using Root              = VfxParticleRendererInternal;
             const uint32 batchIndex = slot._particleBatchIndex;
             SW_ASSERT( batchIndex < listBatch.size() );
-            const GPUParticleBatch&  batch = listBatch[batchIndex];
-            const RHIDescriptorIndex srv   = findTextureSrv( batch._texturePath );
-            if ( srv == kInvalidDescriptorIndex )
+            const GPUParticleBatch&             batch       = listBatch[batchIndex];
+            const VfxGPUSimulation::DrawSource* pGPUSource  = _gpuSimulation.findDrawSource( batchIndex );
+            const bool                          bGPUBatch   = batch.findGPURequest() != nullptr;
+            const bool                          bSourceGone = bGPUBatch ? pGPUSource == nullptr : bSharedReady == false;
+            const RHIDescriptorIndex            srv         = findTextureSrv( batch._texturePath );
+            if ( srv == kInvalidDescriptorIndex || bSourceGone )
                 continue;
+            const RHIDescriptorIndex particleSrv = bGPUBatch ? pGPUSource->_particleSrv : _particleBuffer._srv;
+            if ( particleSrv != boundParticles )
+            {
+                cmd.bindStructuredBuffer( particleSrv, shaderslot::kPassBuffer );
+                boundParticles = particleSrv;
+            }
 
-            using Root = VfxParticleRendererInternal;
             uint32 arrRoot[Root::kRootConstantCount]{};
-            arrRoot[Root::kRootParticleBase] = _listBatchBase[batchIndex];
+            arrRoot[Root::kRootParticleBase] = bGPUBatch ? 0u : _listBatchBase[batchIndex];
             arrRoot[Root::kRootFlags]        = ( batch._bAdditive == SW_TRUE ? Root::kFlagAdditive : 0u ) | ( batch._bRibbon == SW_TRUE ? Root::kFlagRibbon : 0u );
             arrRoot[Root::kRootSizeScale]    = Root::toBits( batch._sizeScale );
             if ( bNativeBindless )
@@ -167,12 +188,18 @@ namespace sw
                 }
             }
             cmd.setGraphicsRootConstants( 0, Root::kRootConstantCount, arrRoot );
+            ++drawnBatchCount;
+            if ( bGPUBatch )
+            {
+                // 정점 수 · 인스턴스 수(띠는 마디 수)는 컴퓨트가 썼다(vfxsimulate.hlsl). 시작 인스턴스는 0 이다.
+                cmd.drawIndirect( pGPUSource->_argsBuffer, 0, 1 );
+                continue;
+            }
             // 시작 인스턴스는 0 — D3D 는 SV_InstanceID 에 시작 인스턴스를 더하지 않는다. 시작 입자는 루트 상수로 간다.
             // 띠는 이웃 입자 둘이 한 마디(사각형 하나)라 인스턴스가 입자 수보다 하나 적다(빌더가 입자 둘 이상만 싣는다).
-            const uint32 particleCount = static_cast<uint32>( batch._pListParticle->size() );
+            const uint32 particleCount = static_cast<uint32>( batch.findCPUParticles()->size() );
             const uint32 instanceCount = batch._bRibbon == SW_TRUE ? particleCount - 1u : particleCount;
-            cmd.drawInstanced( Root::kVerticesPerParticle, instanceCount, 0, 0 );
-            ++drawnBatchCount;
+            cmd.drawInstanced( GPUParticle::kVertexCount, instanceCount, 0, 0 );
         }
         return drawnBatchCount;
     }
@@ -190,6 +217,7 @@ namespace sw
         }
         _listTexture.clear();
         _particleBuffer.release( pDevice );
+        _gpuSimulation.release( pDevice );
         _listBatchBase.clear();
         _uploadedParticleCount = 0;
     }

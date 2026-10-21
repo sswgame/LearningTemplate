@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 엔진 표본 효과 — GPU 메시 입자(튀는 큐브 파편, 깊이 충돌). 깊이 충돌(SceneDepth)이 GPU 전용이라 모든 빌드에서 GPU 로 돈다.
+     메시는 인스턴스 배치의 인스턴스 칸에 컴퓨트가 쓴다(MeshInstanceWriter::GPU — 불투명 머티리얼만). VfxComponentTest 가 읽는다.
+     라이트가 필요하면 빛만 맡는 작은 CPU 방출기를 같은 효과에 둔다(계획 문서 Vfx 의 패턴) — 이 표본은 라이트를 두지 않는다. -->
+<VfxEffectDef>
+	<_listEmitter>
+		<VfxEmitterDef _name="GPUDebris" _renderMode="Mesh" _bLooping="true"
+		               _maxParticles="64" _duration="1" _spawnRate="0" _lifetimeMin="1.5" _lifetimeMax="2"
+		               _velocityMin="-1.5, 3, -1.5" _velocityMax="1.5, 5, 1.5" _gravity="0, -9.8, 0">
+			<_mesh _meshID="Cube" _materialPath=""/>
+			<_listBurst><VfxBurstDef _time="0" _count="24"/></_listBurst>
+			<_sizeOverLife><_listKey><FloatCurveKey _time="0" _value="0.15" _interpolation="Linear"/><FloatCurveKey _time="1" _value="0.05" _interpolation="Linear"/></_listKey></_sizeOverLife>
+			<_colorOverLife>
+				<_red><_listKey><FloatCurveKey _time="0" _value="0.9" _interpolation="Linear"/></_listKey></_red>
+				<_green><_listKey><FloatCurveKey _time="0" _value="0.6" _interpolation="Linear"/></_listKey></_green>
+				<_blue><_listKey><FloatCurveKey _time="0" _value="0.3" _interpolation="Linear"/></_listKey></_blue>
+				<_alpha><_listKey><FloatCurveKey _time="0" _value="1" _interpolation="Linear"/></_listKey></_alpha>
+			</_colorOverLife>
+			<_collision _mode="Bounce" _method="SceneDepth" _depthThickness="0.3" _restitution="0.4" _friction="0.2"/>
+		</VfxEmitterDef>
+	</_listEmitter>
+</VfxEffectDef>

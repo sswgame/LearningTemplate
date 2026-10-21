@@ -1,7 +1,9 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Graphics/Shader/Binding/GPULight.h"
@@ -10,6 +12,7 @@
 #include "Engine/Object/Component/3D/MeshInstanceBatch.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Light/GPULightBuffer.h"
 #include "Engine/Renderer/Scene/GPUSceneBuilder.h"
@@ -18,6 +21,8 @@
 #include "Engine/Vfx/VfxCPUSimulation.h"
 #include "Engine/Vfx/VfxComponent.h"
 #include "Engine/Vfx/VfxEffectDef.h"
+#include "Engine/Vfx/VfxEmitterClock.h"
+#include "Engine/Vfx/VfxGPUEmitter.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -27,9 +32,50 @@ namespace sw
 {
     namespace
     {
-        constexpr float32 kTestStepSeconds = VfxCPUSimulation::kFixedStepSeconds;
+        constexpr float32 kTestStepSeconds = VfxEmitterClock::kFixedStepSeconds;
         /** @brief 컴포넌트 테스트가 읽는 엔진 표본 효과입니다(방출기 둘 — 0 연기(알파), 1 불꽃(더하기), 둘 다 반복). */
         constexpr const utf8* kVfxSampleEffectPath = "engine/vfx/sparks.vfx.xml";
+
+        /** @brief 방출기 데이터의 공유 사본입니다(시뮬레이션이 데이터를 공유 소유한다). */
+        shared_ptr<const VfxEmitterDef> shareDef( const VfxEmitterDef& def )
+        {
+            return make_shared<const VfxEmitterDef>( def );
+        }
+
+        /**
+         * @brief 범위 동안 `gv_vfxSimulation` 을 바꿉니다. Shipping 은 변수가 없어(GPU 고정) `isApplied` 가 false 다.
+         * @details 시뮬레이션 대상은 효과를 읽을 때 정하므로 효과를 읽기 전에 만든다.
+         */
+        class ScopedVfxSimulationTarget
+        {
+        public:
+            explicit ScopedVfxSimulationTarget( const utf8* pTarget )
+                : _pVariable{ engine::getSubsystem<GlobalVariableManager>().findVariable( "gv_vfxSimulation" ) }
+                , _previous{}
+                , _bApplied{ false }
+            {
+                if ( _pVariable == nullptr )
+                    return;
+                _previous = _pVariable->getValueAsString();
+                _bApplied = _pVariable->setValueAsString( pTarget );
+            }
+
+            ~ScopedVfxSimulationTarget()
+            {
+                if ( _bApplied )
+                    (void)_pVariable->setValueAsString( _previous ); // 되돌리기 — 앞에서 같은 변수에 쓴 값이다
+            }
+
+            ScopedVfxSimulationTarget( const ScopedVfxSimulationTarget& )            = delete;
+            ScopedVfxSimulationTarget& operator=( const ScopedVfxSimulationTarget& ) = delete;
+
+            bool isApplied() const { return _bApplied; }
+
+        private:
+            GlobalVariableInfo* _pVariable;
+            string              _previous;
+            bool                _bApplied;
+        };
 
         /** @brief 컴포넌트를 @p seconds 동안 고정 간격 틱으로 돌립니다(한 틱이 단계 상한을 넘지 않게). */
         void tickComponentFor( VfxComponent& component, float32 seconds )
@@ -256,9 +302,9 @@ SW_TEST_CASE( VfxEffectDefTest, UnknownNamesFailTheLoad )
 SW_TEST_CASE( VfxCPUSimulationTest, SameSeedGivesSameParticles )
 {
     const sw::VfxEmitterDef emitter = sw::makeValidEmitter( "Sparks" );
-    sw::VfxCPUSimulation    first( emitter, 7, 1.0f );
-    sw::VfxCPUSimulation    second( emitter, 7, 1.0f );
-    sw::VfxCPUSimulation    other( emitter, 8, 1.0f );
+    sw::VfxCPUSimulation    first( sw::shareDef( emitter ), 7, 1.0f );
+    sw::VfxCPUSimulation    second( sw::shareDef( emitter ), 7, 1.0f );
+    sw::VfxCPUSimulation    other( sw::shareDef( emitter ), 8, 1.0f );
 
     const sw::vector<sw::GPUParticle> listFirst  = sw::runSteps( first, 45 );
     const sw::vector<sw::GPUParticle> listSecond = sw::runSteps( second, 45 );
@@ -288,7 +334,7 @@ SW_TEST_CASE( VfxCPUSimulationTest, ParticlesExpireAndTheEmitterFinishes )
     emitter._spawnRate        = 0.0f;
     emitter._duration         = 1.0f;
     emitter._listBurst.push_back( sw::makeBurst( 0.0f, 10 ) );
-    sw::VfxCPUSimulation simulation( emitter, 1, 1.0f );
+    sw::VfxCPUSimulation simulation( sw::shareDef( emitter ), 1, 1.0f );
 
     simulation.step( sw::kTestStepSeconds, nullptr );
     SW_EXPECT_EQUAL( uint32( 10 ), simulation.getAliveCount() );
@@ -309,7 +355,7 @@ SW_TEST_CASE( VfxCPUSimulationTest, SpawnRateEmitsPerSecond )
     emitter._spawnRate        = 30.0f;
     emitter._lifetimeMin      = 10.0f; // 이 테스트 동안 아무도 죽지 않는다
     emitter._lifetimeMax      = 10.0f;
-    sw::VfxCPUSimulation simulation( emitter, 1, 1.0f );
+    sw::VfxCPUSimulation simulation( sw::shareDef( emitter ), 1, 1.0f );
 
     (void)sw::runSteps( simulation, 60 ); // 1 초
     SW_EXPECT_NEAR_EQUAL( 30.0f, static_cast<float32>( simulation.getAliveCount() ), 1.0f );
@@ -325,8 +371,8 @@ SW_TEST_CASE( VfxCPUSimulationTest, SpawnScaleScalesRateAndBursts )
     emitter._lifetimeMin      = 10.0f;
     emitter._lifetimeMax      = 10.0f;
     emitter._listBurst.push_back( sw::makeBurst( 0.0f, 10 ) );
-    sw::VfxCPUSimulation full( emitter, 1, 1.0f );
-    sw::VfxCPUSimulation half( emitter, 1, 0.5f );
+    sw::VfxCPUSimulation full( sw::shareDef( emitter ), 1, 1.0f );
+    sw::VfxCPUSimulation half( sw::shareDef( emitter ), 1, 0.5f );
 
     (void)sw::runSteps( full, 60 );
     (void)sw::runSteps( half, 60 );
@@ -343,7 +389,7 @@ SW_TEST_CASE( VfxCPUSimulationTest, FullPoolDropsNewParticlesAndWarnsOnce )
     emitter._maxParticles     = 8;
     emitter._lifetimeMin      = 10.0f;
     emitter._lifetimeMax      = 10.0f;
-    sw::VfxCPUSimulation simulation( emitter, 1, 1.0f );
+    sw::VfxCPUSimulation simulation( sw::shareDef( emitter ), 1, 1.0f );
 
     test::ScopedLogCollector collector;
     (void)sw::runSteps( simulation, 60 );
@@ -360,7 +406,7 @@ SW_TEST_CASE( VfxCPUSimulationTest, LongFrameRunsAtMostTheStepLimit )
     emitter._spawnRate        = 60.0f;
     emitter._lifetimeMin      = 10.0f;
     emitter._lifetimeMax      = 10.0f;
-    sw::VfxCPUSimulation simulation( emitter, 1, 1.0f );
+    sw::VfxCPUSimulation simulation( sw::shareDef( emitter ), 1, 1.0f );
 
     test::ScopedLogCollector collector;
     simulation.update( 1.0f, nullptr ); // 60 단계 몫 — 상한 8 단계만 돈다
@@ -382,7 +428,7 @@ SW_TEST_CASE( VfxCPUSimulationTest, WrittenParticlesFollowTheLifeCurves )
     emitter._velocityMin = sw::float3( 0.0f, 0.0f, 0.0f );
     emitter._velocityMax = sw::float3( 0.0f, 0.0f, 0.0f );
     emitter._gravity     = sw::float3( 0.0f, 0.0f, 0.0f );
-    sw::VfxCPUSimulation simulation( emitter, 1, 1.0f );
+    sw::VfxCPUSimulation simulation( sw::shareDef( emitter ), 1, 1.0f );
 
     const sw::vector<sw::GPUParticle> listParticle = sw::runSteps( simulation, 30 ); // 0.5 초 = 수명의 절반
     SW_ASSERT_EQUAL( size_t( 1 ), listParticle.size() );
@@ -436,7 +482,7 @@ SW_TEST_CASE( VfxCPUSimulationTest, RibbonParticlesAreWrittenInBirthOrder )
     emitter._renderMode       = sw::VfxRenderMode::Ribbon;
     emitter._lifetimeMin      = 0.5f; // 수명이 같으면 태어난 순서 = 수명 비율이 큰 순서
     emitter._lifetimeMax      = 0.5f;
-    sw::VfxCPUSimulation simulation( emitter, 3, 1.0f );
+    sw::VfxCPUSimulation simulation( sw::shareDef( emitter ), 3, 1.0f );
 
     const sw::vector<sw::GPUParticle> listParticle = sw::runSteps( simulation, 50 ); // 앞 입자들이 죽어 마지막 입자와 자리를 바꾼 뒤
     SW_ASSERT_TRUE( listParticle.size() > 2 );
@@ -464,7 +510,7 @@ SW_TEST_CASE( VfxCPUSimulationTest, CollisionBouncesOrKills )
     sw::VfxEmitterDef bounce       = emitter;
     bounce._collision._mode        = sw::VfxCollisionMode::Bounce;
     bounce._collision._restitution = 0.5f;
-    sw::VfxCPUSimulation bounceSimulation( bounce, 1, 1.0f );
+    sw::VfxCPUSimulation bounceSimulation( sw::shareDef( bounce ), 1, 1.0f );
     for ( uint32 stepIndex = 0; stepIndex < 30; ++stepIndex ) // 0.5 초 — 0.083 초 뒤에 바닥에 닿는다
     {
         bounceSimulation.step( sw::kTestStepSeconds, &floor );
@@ -476,14 +522,14 @@ SW_TEST_CASE( VfxCPUSimulationTest, CollisionBouncesOrKills )
 
     sw::VfxEmitterDef kill = emitter;
     kill._collision._mode  = sw::VfxCollisionMode::Kill;
-    sw::VfxCPUSimulation killSimulation( kill, 1, 1.0f );
+    sw::VfxCPUSimulation killSimulation( sw::shareDef( kill ), 1, 1.0f );
     for ( uint32 stepIndex = 0; stepIndex < 30; ++stepIndex )
     {
         killSimulation.step( sw::kTestStepSeconds, &floor );
     }
     SW_EXPECT_EQUAL( uint32( 0 ), killSimulation.getAliveCount() );
 
-    sw::VfxCPUSimulation noCollision( emitter, 1, 1.0f ); // 충돌이 꺼져 있으면 질의가 있어도 뚫고 내려간다
+    sw::VfxCPUSimulation noCollision( sw::shareDef( emitter ), 1, 1.0f ); // 충돌이 꺼져 있으면 질의가 있어도 뚫고 내려간다
     for ( uint32 stepIndex = 0; stepIndex < 30; ++stepIndex )
     {
         noCollision.step( sw::kTestStepSeconds, &floor );
@@ -499,6 +545,9 @@ SW_TEST_CASE( VfxCPUSimulationTest, CollisionBouncesOrKills )
  */
 SW_TEST_CASE( VfxComponentTest, PlayPublishesParticlesPerEmitterAndStopClearsThem )
 {
+    const sw::ScopedVfxSimulationTarget cpuTarget( "CPU" );
+    if ( cpuTarget.isApplied() == false )
+        SW_TEST_SKIP( "gv_vfxSimulation is a development-build switch (Shipping simulates these emitters on the GPU)" );
     sw::GameObjectManager manager;
     sw::GameObject*       pObject = manager.createGameObject( sw::hashed_string( "Vfx" ) );
     sw::VfxComponent*     pVfx    = pObject->addComponent<sw::VfxComponent>();
@@ -520,7 +569,7 @@ SW_TEST_CASE( VfxComponentTest, PlayPublishesParticlesPerEmitterAndStopClearsThe
         publishedCount += static_cast<uint32>( pListParticle->size() );
     }
     SW_EXPECT_TRUE( publishedCount > 0 );
-    SW_EXPECT_EQUAL( pVfx->getAliveParticleCount(), publishedCount );
+    SW_EXPECT_EQUAL( pVfx->getCPUAliveParticleCount(), publishedCount );
 
     // 낸 배열은 고쳐 쓰지 않는다 — 렌더 스레드가 들고 있는 사본은 다음 틱 뒤에도 그대로다.
     const sw::shared_ptr<const sw::vector<sw::GPUParticle>> pHeld     = pVfx->getEmitterParticles( 1 );
@@ -531,7 +580,7 @@ SW_TEST_CASE( VfxComponentTest, PlayPublishesParticlesPerEmitterAndStopClearsThe
 
     pVfx->stop();
     SW_EXPECT_FALSE( pVfx->isPlaying() );
-    SW_EXPECT_EQUAL( uint32( 0 ), pVfx->getAliveParticleCount() );
+    SW_EXPECT_EQUAL( uint32( 0 ), pVfx->getCPUAliveParticleCount() );
     SW_EXPECT_TRUE( pVfx->getEmitterParticles( 0 ) == nullptr );
     SW_EXPECT_TRUE( pVfx->getEmitterParticles( 1 ) == nullptr );
 }
@@ -541,6 +590,9 @@ SW_TEST_CASE( VfxComponentTest, PlayPublishesParticlesPerEmitterAndStopClearsThe
  */
 SW_TEST_CASE( VfxComponentTest, SameSeedReplaysTheSameParticles )
 {
+    const sw::ScopedVfxSimulationTarget cpuTarget( "CPU" );
+    if ( cpuTarget.isApplied() == false )
+        SW_TEST_SKIP( "gv_vfxSimulation is a development-build switch (Shipping simulates these emitters on the GPU)" );
     sw::GameObjectManager manager;
     sw::VfxComponent*     arrVfx[3]{};
     const uint32          arrSeed[3] = { 7, 7, 8 };
@@ -586,6 +638,9 @@ SW_TEST_CASE( VfxComponentTest, MissingEffectHasNoEmitters )
  */
 SW_TEST_CASE( VfxComponentTest, SceneSnapshotCarriesOneBatchPerEmitterFarFirst )
 {
+    const sw::ScopedVfxSimulationTarget cpuTarget( "CPU" );
+    if ( cpuTarget.isApplied() == false )
+        SW_TEST_SKIP( "gv_vfxSimulation is a development-build switch (Shipping simulates these emitters on the GPU)" );
     sw::Scene scene( "VfxSnapshot" );
     SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
     const float32     arrDistance[3] = { 5.0f, 20.0f, 12.0f };
@@ -600,7 +655,7 @@ SW_TEST_CASE( VfxComponentTest, SceneSnapshotCarriesOneBatchPerEmitterFarFirst )
         sw::tickComponentFor( *arrVfx[index], 0.5f );
     }
     arrVfx[2]->setActive( false );
-    SW_EXPECT_TRUE( arrVfx[0]->getAliveParticleCount() > 0 );
+    SW_EXPECT_TRUE( arrVfx[0]->getCPUAliveParticleCount() > 0 );
     SW_EXPECT_TRUE( arrVfx[0]->isActive() );
     SW_EXPECT_EQUAL( size_t( 3 ), scene.getObjectManager()->getComponentRegistry().getAll<sw::VfxComponent>().size() );
 
@@ -615,7 +670,7 @@ SW_TEST_CASE( VfxComponentTest, SceneSnapshotCarriesOneBatchPerEmitterFarFirst )
     uint32 additiveCount = 0;
     for ( const sw::GPUParticleBatch& batch : listBatch )
     {
-        SW_EXPECT_TRUE( batch._pListParticle != nullptr && batch._pListParticle->empty() == false );
+        SW_EXPECT_TRUE( batch.findCPUParticles() != nullptr && batch.findCPUParticles()->empty() == false );
         SW_EXPECT_NEAR_EQUAL( 1.0f, batch._sizeScale, 0.001f );
         additiveCount += batch._bAdditive == SW_TRUE ? 1u : 0u;
     }
@@ -624,8 +679,8 @@ SW_TEST_CASE( VfxComponentTest, SceneSnapshotCarriesOneBatchPerEmitterFarFirst )
     // 씬이 그대로인 프레임에도 입자는 다시 모은다(메시의 "바뀐 것 없음" 건너뛰기와 별개다).
     sw::tickComponentFor( *arrVfx[0], 0.1f );
     builder.populateFromScene( &scene, sw::float3( 0.0f, 0.0f, 0.0f ) );
-    SW_EXPECT_TRUE( builder.getParticleBatches()[2]._pListParticle == arrVfx[0]->getEmitterParticles( 0 ) ||
-                    builder.getParticleBatches()[3]._pListParticle == arrVfx[0]->getEmitterParticles( 0 ) );
+    SW_EXPECT_TRUE( builder.getParticleBatches()[2].findCPUParticles() == arrVfx[0]->getEmitterParticles( 0 ).get() ||
+                    builder.getParticleBatches()[3].findCPUParticles() == arrVfx[0]->getEmitterParticles( 0 ).get() );
 }
 
 /**
@@ -738,4 +793,242 @@ SW_TEST_CASE( VfxComponentTest, TrailSampleDrivesRibbonMeshAndLights )
     SW_EXPECT_NEAR_EQUAL( 0.0f, pMeshBatch->getEntry( 0 )._world.getMaximumAxisScale(), 0.0001f );
     sw::collectSceneLights( &scene, listLight );
     SW_EXPECT_EQUAL( uint32( 0 ), sw::countPointLights( listLight ) );
+}
+
+/**
+ * @brief [VfxEffectDefTest] 방출기의 대상은 모듈 대상의 교집합이다 — 빌보드 · 띠 · 메시는 둘 다, 물리 충돌 · 라이트는 CPU, 깊이 충돌은 GPU 이고,
+ *        CPU 전용과 GPU 전용을 함께 쓰면 비어 로드가 실패한다
+ */
+SW_TEST_CASE( VfxEffectDefTest, ModuleTargetsIntersect )
+{
+    const sw::VfxSimulationTarget kCPU      = sw::VfxSimulationTarget::CPU;
+    const sw::VfxSimulationTarget kGPU      = sw::VfxSimulationTarget::GPU;
+    sw::VfxEmitterDef             billboard = sw::makeValidEmitter( "Billboard" );
+    SW_EXPECT_TRUE( billboard.computeSupportedTargets().has( kCPU ) && billboard.computeSupportedTargets().has( kGPU ) );
+    SW_EXPECT_TRUE( billboard.findModuleExcluding( kGPU ) == nullptr );
+    sw::VfxEmitterDef ribbon = billboard;
+    ribbon._renderMode       = sw::VfxRenderMode::Ribbon;
+    SW_EXPECT_TRUE( ribbon.computeSupportedTargets().has( kGPU ) );
+    sw::VfxEmitterDef mesh = billboard;
+    mesh._renderMode       = sw::VfxRenderMode::Mesh;
+    SW_EXPECT_TRUE( mesh.computeSupportedTargets().has( kCPU ) && mesh.computeSupportedTargets().has( kGPU ) );
+
+    sw::VfxEmitterDef raycast  = billboard;
+    raycast._collision._mode   = sw::VfxCollisionMode::Bounce;
+    raycast._collision._method = sw::VfxCollisionMethod::PhysicsRaycast;
+    SW_EXPECT_FALSE( raycast.computeSupportedTargets().has( kGPU ) );
+    SW_ASSERT_NOT_NULL( raycast.findModuleExcluding( kGPU ) );
+    SW_EXPECT_STREQ( "_collision", raycast.findModuleExcluding( kGPU ) );
+
+    sw::VfxEmitterDef depth          = billboard;
+    depth._collision._mode           = sw::VfxCollisionMode::Kill;
+    depth._collision._method         = sw::VfxCollisionMethod::SceneDepth;
+    depth._collision._depthThickness = 0.2f;
+    SW_EXPECT_FALSE( depth.computeSupportedTargets().has( kCPU ) );
+    SW_EXPECT_TRUE( depth.computeSupportedTargets().has( kGPU ) );
+    SW_EXPECT_TRUE( depth.validate( "test" ) );
+
+    sw::VfxEmitterDef light = billboard;
+    light._light._maxLights = 2;
+    light._light._radius    = 1.0f;
+    light._light._intensity = 1.0f;
+    SW_EXPECT_FALSE( light.computeSupportedTargets().has( kGPU ) );
+    SW_EXPECT_STREQ( "_light", light.findModuleExcluding( kGPU ) );
+
+    // 깊이 충돌(GPU 전용) + 라이트(CPU 전용) — 어느 곳에서도 돌 수 없어 로드가 실패한다.
+    sw::VfxEmitterDef impossible = depth;
+    impossible._light            = light._light;
+    SW_EXPECT_TRUE( impossible.computeSupportedTargets().isEmpty() );
+    {
+        test::ScopedLogCollector collector;
+        SW_EXPECT_FALSE( impossible.validate( "test" ) );
+        SW_EXPECT_EQUAL( uint32( 1 ), collector.countContaining( "no simulation target runs both" ) );
+    }
+    // 깊이 방법은 두께가 있어야 한다.
+    sw::VfxEmitterDef thin          = depth;
+    thin._collision._depthThickness = 0.0f;
+    {
+        test::ScopedLogSuppressor suppressor;
+        SW_EXPECT_FALSE( thin.validate( "test" ) );
+    }
+    // 수명을 늘리는 모듈은 없다 — GPU 방출기의 "끝났다" 가 일정에서 구해지는 근거다.
+    SW_EXPECT_TRUE( billboard.isLifetimeBoundedByMax() );
+}
+
+/**
+ * @brief [VfxEffectDefTest] 방출기의 모든 칸(리플렉션 프로퍼티)이 모듈 표에 대상을 선언했다 — 칸을 더하고 줄을 빠뜨리면 여기서 진다
+ */
+SW_TEST_CASE( VfxEffectDefTest, EveryEmitterFieldDeclaresItsTargets )
+{
+    const sw::TypeInfo* pType = sw::VfxEmitterDef::StaticType();
+    SW_ASSERT_NOT_NULL( pType );
+    uint32 fieldCount = 0;
+    pType->forEachProperty( [&fieldCount]( const sw::PropertyInfo& property )
+    {
+        ++fieldCount;
+        SW_EXPECT_TRUE_MSG( sw::VfxEmitterDef::hasModuleRow( property._name.view() ), property._name.c_str() );
+    } );
+    SW_EXPECT_TRUE( fieldCount > 0 );
+}
+
+/**
+ * @brief [VfxEmitterClockTest] 시계의 일정은 CPU 시뮬레이션이 만든 입자와 같다 — 번호는 끊기지 않고, 풀이 넉넉하면 만든 수가 일정의 합이다
+ * @details GPU 시뮬레이션은 같은 시계로 일정을 얻는다(`VfxGPUSimulation`) — 이 테스트가 두 쪽이 같은 수 · 같은 번호로 입자를 만드는 근거다.
+ */
+SW_TEST_CASE( VfxEmitterClockTest, ScheduleMatchesTheCPUSimulation )
+{
+    sw::VfxEmitterDef emitter = sw::makeValidEmitter( "Schedule" );
+    emitter._spawnRate        = 45.0f;
+    emitter._lifetimeMin      = 10.0f; // 이 테스트 동안 아무도 죽지 않는다
+    emitter._lifetimeMax      = 10.0f;
+    emitter._maxParticles     = 1000;
+    emitter._listBurst.push_back( sw::makeBurst( 0.25f, 5 ) );
+    sw::VfxEmitterClock  clock( sw::shareDef( emitter ), 1.0f );
+    sw::VfxCPUSimulation simulation( sw::shareDef( emitter ), 1, 1.0f );
+
+    uint64 expectedIndex = 0;
+    uint64 scheduledSum  = 0;
+    for ( uint32 stepIndex = 0; stepIndex < 60; ++stepIndex )
+    {
+        const sw::VfxSpawnStep spawn = clock.spawnStep( sw::kTestStepSeconds );
+        SW_EXPECT_EQUAL( expectedIndex, spawn._firstParticleIndex );
+        expectedIndex += spawn._count;
+        scheduledSum += spawn._count;
+        simulation.step( sw::kTestStepSeconds, nullptr );
+    }
+    SW_EXPECT_EQUAL( scheduledSum, clock.getSpawnedCount() );
+    SW_EXPECT_EQUAL( clock.getSpawnedCount(), simulation.getSpawnedCount() );
+    SW_EXPECT_EQUAL( static_cast<uint64>( simulation.getAliveCount() ), scheduledSum );
+}
+
+/**
+ * @brief [VfxGPUEmitterTest] GPU 방출기는 누적 단계 수를 싣고, 방출이 끝난 뒤 가장 긴 수명이 지나야 끝나며, 다시 시작하면 새 재생 번호를 받는다
+ */
+SW_TEST_CASE( VfxGPUEmitterTest, FinishesAfterTheLongestLifetimeAndRestartsWithANewRun )
+{
+    sw::VfxEmitterDef emitter = sw::makeValidEmitter( "Once" );
+    emitter._spawnRate        = 0.0f;
+    emitter._duration         = 0.5f;
+    emitter._lifetimeMin      = 0.5f;
+    emitter._lifetimeMax      = 1.0f;
+    emitter._listBurst.push_back( sw::makeBurst( 0.0f, 4 ) );
+    sw::VfxGPUEmitter gpuEmitter( sw::shareDef( emitter ), 3, 1.0f );
+
+    for ( uint32 stepIndex = 0; stepIndex < 54; ++stepIndex ) // 0.9 초 — 가장 긴 수명 전
+    {
+        gpuEmitter.update( sw::kTestStepSeconds );
+    }
+    const sw::VfxGPUEmitterRequest firstRequest = gpuEmitter.makeRequest();
+    SW_EXPECT_FALSE( gpuEmitter.isFinished() );
+    SW_EXPECT_EQUAL( uint64( 4 ), gpuEmitter.getSpawnedCount() );
+    SW_EXPECT_NEAR_EQUAL( 54.0f, static_cast<float32>( firstRequest._stepCount ), 1.0f );
+    SW_EXPECT_EQUAL( uint64( 3 ), firstRequest._seed );
+    SW_EXPECT_TRUE( firstRequest._pDef != nullptr );
+
+    for ( uint32 stepIndex = 0; stepIndex < 18; ++stepIndex ) // 1.2 초
+    {
+        gpuEmitter.update( sw::kTestStepSeconds );
+    }
+    SW_EXPECT_TRUE( gpuEmitter.isFinished() );
+
+    gpuEmitter.restart();
+    const sw::VfxGPUEmitterRequest restarted = gpuEmitter.makeRequest();
+    SW_EXPECT_TRUE( restarted._runID != firstRequest._runID );
+    SW_EXPECT_EQUAL( uint64( 0 ), restarted._stepCount );
+    SW_EXPECT_FALSE( gpuEmitter.isFinished() );
+}
+
+/**
+ * @brief [VfxComponentTest] 방출기마다 시뮬레이션 대상을 정한다 — GPU 로 고른 빌보드 방출기는 입자 배열 대신 요청을 싣고, CPU 전용 모듈(메시 · 충돌 · 라이트)의
+ *        방출기는 고른 값과 무관하게 CPU 다
+ * @details Shipping 은 변수가 없고 GPU 로 고정이라 같은 기대가 맞는다.
+ */
+SW_TEST_CASE( VfxComponentTest, EmittersPickTheirSimulationTarget )
+{
+    const sw::ScopedVfxSimulationTarget gpuTarget( "GPU" );
+    (void)gpuTarget; // Shipping 에서는 적용되지 않는다 — GPU 고정이라 기대가 같다
+    sw::Scene scene( "VfxTarget" );
+    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    sw::VfxComponent* pSparks = scene.getObjectManager()->createGameObject( sw::hashed_string( "Sparks" ) )->addComponent<sw::VfxComponent>();
+    SW_ASSERT_NOT_NULL( pSparks );
+    pSparks->setEffectPath( sw::kVfxSampleEffectPath );
+    SW_ASSERT_EQUAL( uint32( 2 ), pSparks->getEmitterCount() );
+    SW_EXPECT_TRUE( pSparks->getEmitterSimulationTarget( 0 ) == sw::VfxSimulationTarget::GPU );
+    SW_EXPECT_TRUE( pSparks->getEmitterSimulationTarget( 1 ) == sw::VfxSimulationTarget::GPU );
+    SW_EXPECT_TRUE( pSparks->findEmitterGPURequest( 0 ) == nullptr ); // 재생 전
+
+    pSparks->play();
+    sw::tickComponentFor( *pSparks, 0.5f );
+    SW_EXPECT_TRUE( pSparks->isPlaying() );
+    SW_EXPECT_TRUE( pSparks->getEmitterParticles( 0 ) == nullptr );
+    const sw::VfxGPUEmitterRequest* pRequest = pSparks->findEmitterGPURequest( 1 );
+    SW_ASSERT_NOT_NULL( pRequest );
+    SW_EXPECT_NEAR_EQUAL( 30.0f, static_cast<float32>( pRequest->_stepCount ), 1.0f );
+    SW_EXPECT_EQUAL( uint32( 0 ), pSparks->getCPUAliveParticleCount() );
+    SW_EXPECT_TRUE( pSparks->getSpawnedParticleCount() > 0 );
+
+    sw::GPUSceneBuilder builder;
+    builder.populateFromScene( &scene, sw::float3( 0.0f, 0.0f, -10.0f ) );
+    SW_ASSERT_EQUAL( size_t( 2 ), builder.getParticleBatches().size() );
+    for ( const sw::GPUParticleBatch& batch : builder.getParticleBatches() )
+    {
+        SW_EXPECT_TRUE( batch.findGPURequest() != nullptr );
+        SW_EXPECT_TRUE( batch.findCPUParticles() == nullptr );
+    }
+
+    pSparks->stop();
+    SW_EXPECT_TRUE( pSparks->findEmitterGPURequest( 1 ) == nullptr );
+    builder.populateFromScene( &scene, sw::float3( 0.0f, 0.0f, -10.0f ) );
+    SW_EXPECT_TRUE( builder.getParticleBatches().empty() );
+
+    // 띠는 GPU, 메시 · 충돌 · 라이트를 쓰는 파편은 CPU 다.
+    sw::VfxComponent* pTrail = scene.getObjectManager()->createGameObject( sw::hashed_string( "Trail" ) )->addComponent<sw::VfxComponent>();
+    SW_ASSERT_NOT_NULL( pTrail );
+    pTrail->setEffectPath( "engine/vfx/trail.vfx.xml" );
+    SW_ASSERT_EQUAL( uint32( 2 ), pTrail->getEmitterCount() );
+    SW_EXPECT_TRUE( pTrail->getEmitterSimulationTarget( 0 ) == sw::VfxSimulationTarget::GPU );
+    SW_EXPECT_TRUE( pTrail->getEmitterSimulationTarget( 1 ) == sw::VfxSimulationTarget::CPU );
+}
+
+/**
+ * @brief [VfxComponentTest] GPU 메시 방출기 — 배치는 GPU 가 쓰는 형식(`MeshInstanceWriter::GPU`)이라 항목이 자리표로 남고, 스냅샷은 풀 자리마다 이번 프레임의
+ *        인스턴스 칸을 싣는다(컴퓨트가 그 칸에 쓴다). 깊이 충돌이 GPU 전용이라 표본은 모든 빌드에서 GPU 다
+ */
+SW_TEST_CASE( VfxComponentTest, GPUMeshEmitterPublishesInstanceSlots )
+{
+    sw::Scene scene( "VfxGPUMesh" );
+    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    sw::VfxComponent* pVfx = scene.getObjectManager()->createGameObject( sw::hashed_string( "GPUDebris" ) )->addComponent<sw::VfxComponent>();
+    SW_ASSERT_NOT_NULL( pVfx );
+    pVfx->setEffectPath( "engine/vfx/gpudebris.vfx.xml" );
+    SW_ASSERT_EQUAL( uint32( 1 ), pVfx->getEmitterCount() );
+    SW_EXPECT_TRUE( pVfx->getEmitterSimulationTarget( 0 ) == sw::VfxSimulationTarget::GPU );
+    const sw::MeshInstanceBatch* pBatch = pVfx->findEmitterMeshBatch( 0 );
+    SW_ASSERT_NOT_NULL( pBatch );
+    SW_EXPECT_TRUE( pBatch->getInstanceWriter() == sw::MeshInstanceWriter::GPU );
+    SW_EXPECT_EQUAL( pVfx->getEmitterDef( 0 )._maxParticles, pBatch->getCount() );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, pBatch->getEntry( 0 )._world.getMaximumAxisScale(), 0.0001f ); // 자리표
+
+    pVfx->play();
+    sw::tickComponentFor( *pVfx, 0.3f );
+    SW_EXPECT_TRUE( pVfx->getEmitterParticles( 0 ) == nullptr );                               // 입자는 GPU 에 있다
+    SW_EXPECT_NEAR_EQUAL( 0.0f, pBatch->getEntry( 0 )._world.getMaximumAxisScale(), 0.0001f ); // CPU 는 항목을 쓰지 않는다
+
+    sw::GPUSceneBuilder builder;
+    builder.populateFromScene( &scene, sw::float3( 0.0f, 0.0f, -10.0f ) );
+    SW_EXPECT_TRUE( builder.getParticleBatches().empty() ); // 메시 방출기는 입자 그리기가 아니다
+    SW_ASSERT_EQUAL( size_t( 1 ), builder.getVfxMeshEmitters().size() );
+    const sw::GPUVfxMeshEmitter& emitter = builder.getVfxMeshEmitters()[0];
+    SW_ASSERT_NOT_NULL( emitter._pListInstanceSlot.get() );
+    SW_ASSERT_EQUAL( size_t( pBatch->getCount() ), emitter._pListInstanceSlot->size() );
+    for ( const uint32 slot : *emitter._pListInstanceSlot )
+    {
+        SW_EXPECT_TRUE( slot < builder.getInstances().size() );
+    }
+    SW_EXPECT_TRUE( emitter._meshRadius > 0.0f );
+    SW_EXPECT_TRUE( emitter._request._pDef != nullptr );
+
+    pVfx->stop();
+    builder.populateFromScene( &scene, sw::float3( 0.0f, 0.0f, -10.0f ) );
+    SW_EXPECT_TRUE( builder.getVfxMeshEmitters().empty() );
 }
