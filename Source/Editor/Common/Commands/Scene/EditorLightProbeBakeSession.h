@@ -75,6 +75,7 @@ namespace sw::editor
         LightProbeBakeJob _job;
         string            _lastError;
         uint64            _sceneGeneration; ///< 시작할 때의 씬 세대 — 바뀌면 멈춘다
+        uint32            _heldEditCount;   ///< 시작할 때의 `EditorPlaySession::getHeldSceneEditCount` — 바뀌면(잠금을 지나친 편집) 멈춘다
         uint32            _nextVolumeIndex;
         uint32            _bakedCount;
         uint32            _finishedRunCount;

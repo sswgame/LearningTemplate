@@ -177,5 +177,5 @@ namespace sw::editor
 
     SW_EDITOR_PANEL( PreferencesPanel, PreferencesPanel::kPanelID, EditorPanelCategory::Tool, 2000 );
     SW_EDITOR_COMMAND( EditorPreferences, "editor.preferences", 2210, "Preferences...", editoricon::kSettings, "Editor", "에디터 환경설정 창을 엽니다",
-                       "Open editor preferences", {}, &PreferencesPanelInternal::openPanel, nullptr, "MainMenu/Edit" );
+                       "Open editor preferences", {}, &PreferencesPanelInternal::openPanel, nullptr, NoScene, "MainMenu/Edit" );
 } // namespace sw::editor

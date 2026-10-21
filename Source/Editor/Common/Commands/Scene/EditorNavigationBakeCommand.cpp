@@ -67,7 +67,7 @@ namespace sw::editor
 
     SW_EDITOR_COMMAND( NavigationBake, "navigation.bake", 3300, "Bake Navigation", editoricon::kNavigation, "Navigation",
                        "활성 씬의 내비메시를 에이전트 종류마다 다시 베이크합니다(Nav 시각화로 폴리곤 테두리를 봅니다)", "Bake the navmesh of the active scene", {},
-                       &EditorNavigationBakeCommandInternal::runBake, &EditorNavigationBakeCommandInternal::isEnabled, "MainMenu/Build" );
+                       &EditorNavigationBakeCommandInternal::runBake, &EditorNavigationBakeCommandInternal::isEnabled, Scene, "MainMenu/Build" );
 
     SW_AUTOMATION_PROBE( editorNavigationBakeCount, "Editor.NavigationBakeCount", "Times the navigation.bake command ran in this editor session",
                          &EditorNavigationBakeCommandInternal::readBakeRunCount );

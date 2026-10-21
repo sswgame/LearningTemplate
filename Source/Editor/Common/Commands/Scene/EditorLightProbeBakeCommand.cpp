@@ -9,7 +9,6 @@
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Commands/Scene/EditorLightProbeBakeSession.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
-#include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 namespace sw::editor
@@ -25,12 +24,12 @@ namespace sw::editor
                     pSession->start();
             }
 
-            /** @brief 편집 상태에서만 켠다 — 플레이 중에 구우면 플레이가 움직인 오브젝트의 빛을 굽는다. 굽는 동안은 편집이 막혀 다시 켜지지 않는다. */
-            static bool isEnabled() { return EditorPlaySession::areSceneEditsAllowed() && editor::getActiveObjectManager() != nullptr; }
+            /** @brief 씬이 있을 때 켠다. 편집 허용 답(플레이 중 · 굽는 중이면 꺼진다)은 레지스트리가 함께 묻는다(`EditorCommandEdit::Scene`). */
+            static bool isEnabled() { return editor::getActiveObjectManager() != nullptr; }
         };
     } // namespace
 
     SW_EDITOR_COMMAND( LightProbeBake, "lighting.bakeProbes", 3310, "Bake Light Probes", editoricon::kLightGlobal, "Lighting",
                        "선택한(없으면 모든) 라이트 프로브 볼륨의 간접광을 굽습니다(씬 옆 .probes)", "Bake the selected (or every) light probe volume of the active scene", {},
-                       &EditorLightProbeBakeCommandInternal::runBake, &EditorLightProbeBakeCommandInternal::isEnabled, "MainMenu/Build" );
+                       &EditorLightProbeBakeCommandInternal::runBake, &EditorLightProbeBakeCommandInternal::isEnabled, Scene, "MainMenu/Build" );
 } // namespace sw::editor

@@ -345,6 +345,19 @@ namespace sw::editor
         return pData != nullptr && pData->_sceneEditHoldCount > 0;
     }
 
+    void EditorPlaySession::noteSceneEditWhileHeld()
+    {
+        PlaySessionData* pData = EditorPlaySessionInternal::data();
+        if ( pData != nullptr )
+            ++pData->_heldSceneEditCount;
+    }
+
+    uint32 EditorPlaySession::getHeldSceneEditCount()
+    {
+        const PlaySessionData* pData = EditorPlaySessionInternal::data();
+        return pData != nullptr ? pData->_heldSceneEditCount : 0u;
+    }
+
     bool EditorPlaySession::hasPendingStep()
     {
         const PlaySessionData* pData = EditorPlaySessionInternal::data();

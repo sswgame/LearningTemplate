@@ -10,6 +10,7 @@
 #include "Editor/Common/Commands/Scene/EditorLightProbeBakeSession.h"
 #include "Editor/Common/GUI/EditorStatusBar.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include <imgui.h>
 
@@ -29,6 +30,7 @@ namespace sw::editor
             ImGui::SameLine();
             if ( ImGui::SmallButton( "Cancel##lightProbeBake" ) )
                 pSession->cancel( "canceled" );
+            EditorSelfTestMarks::note( "statusBar.lightProbeBakeCancel" ); // 시나리오 lightprobebakecancel 이 누른다
         }
     } // namespace
 

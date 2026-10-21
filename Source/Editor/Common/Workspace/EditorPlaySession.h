@@ -83,6 +83,8 @@ namespace sw::editor
         PlaySessionState _queuedState{ PlaySessionState::Stopped };
         /** @brief 씬 편집을 막고 있는 작업 수입니다(`EditorPlaySession::holdSceneEdits` — 굽는 동안 물리 셰이프가 바뀌지 않게). */
         uint32 _sceneEditHoldCount;
+        /** @brief 막는 동안 씬이 바뀐 횟수입니다(`EditorPlaySession::noteSceneEditWhileHeld`). */
+        uint32 _heldSceneEditCount;
         uint8  _bHasSnapshot      : 1;
         uint8  _bStartQueued      : 1; ///< 씬을 여는 중이라 시작을 미뤘다(언리얼의 RequestPlaySession 대기 요청에 해당)
         uint8  _bSimulate         : 1; ///< 월드만 실행한다. 게임 모듈 업데이트와 게임 입력이 없고 에디터 카메라를 유지한다(언리얼의 Simulate)
@@ -103,6 +105,7 @@ namespace sw::editor
             , _state{ PlaySessionState::Stopped }
             , _queuedState{ PlaySessionState::Stopped }
             , _sceneEditHoldCount{ 0 }
+            , _heldSceneEditCount{ 0 }
             , _bHasSnapshot{ SW_FALSE }
             , _bStartQueued{ SW_FALSE }
             , _bSimulate{ SW_FALSE }
@@ -171,6 +174,10 @@ namespace sw::editor
         static void releaseSceneEdits();
         /** @brief 씬 편집을 막고 있는 작업이 있으면 true 입니다. */
         static bool areSceneEditsHeld();
+        /** @brief 막는 동안 씬이 바뀌었음을 셉니다(`EditorWorkspace::markSceneDirty` 가 부른다 — 편집 허용 답을 묻지 않은 경로다). */
+        static void noteSceneEditWhileHeld();
+        /** @brief 막는 동안 바뀐 횟수입니다(세션 동안 늘기만 한다). 막는 작업은 시작할 때 값과 견줘 바뀌면 멈춘다. */
+        static uint32 getHeldSceneEditCount();
         /** @brief 이번 프레임에 Step 이 예약되어 있으면 true 입니다. */
         static bool hasPendingStep();
         /** @brief Simulate(월드만 실행하는 세션)이면 true 입니다. 정지 상태이면 false 입니다. */

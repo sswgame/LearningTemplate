@@ -57,14 +57,14 @@ namespace sw::editor
     SW_EDITOR_COMMAND( PlayEject, "play.eject", 4100, "Eject / Possess", editoricon::kController, "Play",
                        "플레이 중 플레이어 조종을 놓고 씬 뷰 에디터 카메라로 빠져나옵니다(다시 누르면 조종으로 돌아갑니다)",
                        "Leave the player for the scene view while playing, or take it back", ( EditorCommandShortcut{ EditorCommandKey::F8, commandmodifier::kNone } ),
-                       &EditorPlayCommandsInternal::runToggleEject, &EditorPlayCommandsInternal::isSessionRunning, "MainMenu/Play" );
+                       &EditorPlayCommandsInternal::runToggleEject, &EditorPlayCommandsInternal::isSessionRunning, NoScene, "MainMenu/Play" );
     SW_EDITOR_COMMAND( PlayKeepChanges, "play.keepChanges", 4110, "Keep Simulation Changes", editoricon::kBookmark, "Play",
                        "고른 오브젝트의 지금(플레이 중) 상태를 Stop 뒤 편집 씬에 남깁니다(되돌리기 한 번)",
-                       "Keep the selected objects' play state after Stop", {}, &EditorPlayCommandsInternal::runKeepChanges, &EditorPlayCommandsInternal::canKeepChanges,
+                       "Keep the selected objects' play state after Stop", {}, &EditorPlayCommandsInternal::runKeepChanges, &EditorPlayCommandsInternal::canKeepChanges, NoScene,
                        "MainMenu/Play" );
     SW_EDITOR_COMMAND( PlayStandalone, "play.standalone", 4120, "Play in New Window", editoricon::kLayout, "Play",
                        "저장된 활성 씬을 에디터 없이 새 창(별도 프로세스)으로 띄웁니다",
-                       "Run the saved active scene in a separate game process", {}, &EditorPlayCommandsInternal::runLaunchStandalone, nullptr, "MainMenu/Play" );
+                       "Run the saved active scene in a separate game process", {}, &EditorPlayCommandsInternal::runLaunchStandalone, nullptr, NoScene, "MainMenu/Play" );
 
     void EditorPlayCommands::update()
     {

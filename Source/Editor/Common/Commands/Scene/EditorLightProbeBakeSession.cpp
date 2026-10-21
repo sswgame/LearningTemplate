@@ -148,6 +148,7 @@ namespace sw::editor
         , _job{}
         , _lastError{}
         , _sceneGeneration{ 0 }
+        , _heldEditCount{ 0 }
         , _nextVolumeIndex{ 0 }
         , _bakedCount{ 0 }
         , _finishedRunCount{ 0 }
@@ -179,6 +180,7 @@ namespace sw::editor
                 _listObjectID.push_back( pVolume->getOwner()->getObjectID() );
         }
         _sceneGeneration = pSceneManager->getSceneGeneration();
+        _heldEditCount   = EditorPlaySession::getHeldSceneEditCount();
         _nextVolumeIndex = 0;
         _bakedCount      = 0;
         _lastError.clear();
@@ -212,6 +214,11 @@ namespace sw::editor
         if ( EditorPlaySession::isStopped() == false )
         {
             cancel( "play started during the bake" );
+            return;
+        }
+        if ( EditorPlaySession::getHeldSceneEditCount() != _heldEditCount )
+        {
+            cancel( "the scene was edited during the bake" );
             return;
         }
         const Stopwatch stopwatch;
@@ -283,10 +290,7 @@ namespace sw::editor
             return;
         }
         SW_LOG_INFO( "Baked light probes '%#' (%# probes)", resourcePath.c_str(), probeCount );
-        ++_bakedCount;
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext != nullptr )
-            pContext->getSubsystem<EditorWorkspace>().markSceneDirty();
+        ++_bakedCount; // 씬 dirty 는 잠금을 푼 뒤 `finish` 가 표시한다(잠긴 동안의 표시는 잠금을 지나친 편집으로 센다)
     }
 
     void EditorLightProbeBakeSession::reportFailure( const string& error )
@@ -305,6 +309,8 @@ namespace sw::editor
         EditorContext* pContext = EditorContext::get();
         if ( pContext == nullptr )
             return;
+        if ( _bakedCount > 0 )
+            pContext->getSubsystem<EditorWorkspace>().markSceneDirty(); // 볼륨의 경로가 바뀌었다 — 저장해야 남는다
         EditorNotificationManager& notification = pContext->getSubsystem<EditorNotificationManager>();
         const uint32               volumeCount  = getVolumeCount();
         utf8                       arrMessage[constant::kMaxBuffer512];
