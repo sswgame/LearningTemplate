@@ -182,7 +182,8 @@ namespace sw
              * @details 쿠킹된 문서를 한 번 더 지어 오브젝트마다 자리 · 플래그 · 참조를 읽는다. 셀을 넘는 참조(`WorldCellGrid::findCrossCellReferences`)나
              *          프리팹을 찾지 못한 엔티티가 있으면 오류를 남기고 false 다 — 런타임에 조용히 끊기는 참조 · 빠지는 엔티티를 쿠킹본에 싣지 않는다.
              */
-            static bool partitionStreamingCells( const SceneEngineServices& services, SceneDocument& inoutDoc, string_view scenePath )
+            static bool partitionStreamingCells( const SceneEngineServices& services, SceneDocument& inoutDoc, string_view scenePath,
+                                                 vector<WorldCellReference>* pOutListViolation )
             {
                 WorldCellGrid grid;
                 if ( WorldCellGrid::tryCreate( inoutDoc._worldSettings._cellGrid, grid ) == false )
@@ -256,6 +257,8 @@ namespace sw
                                       scenePath, fromIt != mapObjectByFileID.end() ? fromIt->second->getName().c_str() : "?", violation._fromObjectID,
                                       toIt != mapObjectByFileID.end() ? toIt->second->getName().c_str() : "?", violation._toObjectID );
                     }
+                    if ( pOutListViolation != nullptr )
+                        *pOutListViolation = std::move( listViolation );
                     placement.shutdown();
                     return false;
                 }
@@ -518,8 +521,11 @@ namespace sw
         return tally.getWrittenCount();
     }
 
-    bool SceneCooker::splitStreamingCells( const SceneEngineServices& services, SceneDocument& inoutDoc, string_view sceneName )
+    bool SceneCooker::splitStreamingCells( const SceneEngineServices& services, SceneDocument& inoutDoc, string_view sceneName,
+                                           vector<WorldCellReference>* pOutListViolation )
     {
+        if ( pOutListViolation != nullptr )
+            pOutListViolation->clear();
         if ( inoutDoc._worldSettings._bStreaming == false )
             return true;
         if ( inoutDoc._listStreamingCell.empty() == false )
@@ -527,7 +533,63 @@ namespace sw
             SW_LOG_ERROR( "Scene cook: '%#' is already split into cells", sceneName );
             return false;
         }
-        return SceneCookerInternal::partitionStreamingCells( services, inoutDoc, sceneName );
+        return SceneCookerInternal::partitionStreamingCells( services, inoutDoc, sceneName, pOutListViolation );
+    }
+
+    bool SceneCooker::previewStreamingCells( const Scene& scene, StreamingCellPreview& outPreview )
+    {
+        outPreview = StreamingCellPreview{};
+        if ( scene.getWorldSettings()._bStreaming == false )
+        {
+            SW_LOG_ERROR( "Streaming cell preview: '%#' does not stream", scene.getName().c_str() );
+            return false;
+        }
+        SceneDocument doc{};
+        if ( scene.serializeToDocument( doc ) == false )
+        {
+            SW_LOG_ERROR( "Streaming cell preview: '%#' could not be written as a document", scene.getName().c_str() );
+            return false;
+        }
+        // 문서의 파일 id 는 씬이 들고 있는 표(런타임 id → 파일 id)에서 왔다 — 뒤집어 열린 씬의 오브젝트로 되돌린다.
+        ObjectSavedIDMap mapSavedID;
+        scene.collectSavedIDMap( mapSavedID );
+        unordered_map<uint64, uint64> mapObjectIDByFileID;
+        mapObjectIDByFileID.reserve( mapSavedID.size() );
+        for ( const auto& [objectID, fileID] : mapSavedID )
+        {
+            mapObjectIDByFileID.emplace( fileID, objectID );
+        }
+        const auto toObjectID = [&mapObjectIDByFileID]( uint64 fileID )
+        {
+            const auto objectIt = mapObjectIDByFileID.find( fileID );
+            return objectIt != mapObjectIDByFileID.end() ? objectIt->second : uint64{ 0 };
+        };
+
+        vector<WorldCellReference> listViolation;
+        if ( splitStreamingCells( scene.getEngineServices(), doc, scene.getName(), &listViolation ) == false )
+        {
+            if ( listViolation.empty() )
+                return false; // 나누지 못한 이유는 쿠커가 로그에 남겼다
+            for ( const WorldCellReference& violation : listViolation )
+            {
+                outPreview._listViolation.push_back( WorldCellReference{ toObjectID( violation._fromObjectID ), toObjectID( violation._toObjectID ) } );
+            }
+            return true;
+        }
+        for ( const SceneDocument::SceneObjectNode& entity : doc._listSceneObjectNode )
+        {
+            outPreview._listAlwaysLoadedID.push_back( toObjectID( entity._fileID ) );
+        }
+        for ( const SceneDocument::StreamingCell& cell : doc._listStreamingCell )
+        {
+            StreamingCellPreviewCell& previewCell = outPreview._listCell.emplace_back();
+            previewCell._cell                     = cell._cell;
+            for ( const SceneDocument::SceneObjectNode& entity : cell._listSceneObjectNode )
+            {
+                previewCell._listObjectID.push_back( toObjectID( entity._fileID ) );
+            }
+        }
+        return true;
     }
 
     CookJobDesc SceneCooker::makeCookJobDesc( const TypeRegistry& registry )

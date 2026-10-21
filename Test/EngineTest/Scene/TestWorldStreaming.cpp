@@ -168,6 +168,62 @@ SW_TEST_CASE( WorldStreamingTest, CrossCellReferenceFailsTheCook )
 }
 
 /**
+ * @brief [WorldStreamingTest] 열린 씬의 셀 미리보기는 쿠커와 같게 나누고 결과를 그 씬의 오브젝트 id 로 돌려준다 — 위반도 오브젝트로 짚는다
+ * @details 에디터 World Cells 창과 `world.cells` 가 이 결과를 읽는다(`SceneCooker::previewStreamingCells`).
+ */
+SW_TEST_CASE( WorldStreamingTest, CellPreviewPointsAtSceneObjects )
+{
+    using Internal = sw::WorldStreamingTestInternal;
+    sw::SceneManager manager;
+    SW_ASSERT_TRUE( manager.initialize() );
+
+    sw::SceneDocument splitDoc{};
+    splitDoc._name          = "PreviewTown";
+    splitDoc._worldSettings = Internal::makeStreamingSettings();
+    splitDoc._listSceneObjectNode.push_back( Internal::makeEntity( 1, "Sky", "500,0,500", 0, true ) );
+    splitDoc._listSceneObjectNode.push_back( Internal::makeEntity( 2, "HouseA", "1,0,1" ) );
+    splitDoc._listSceneObjectNode.push_back( Internal::makeEntity( 4, "HouseB", "25,0,-3" ) );
+    sw::Scene* pSplitScene = manager.createScene( "PreviewTown" );
+    SW_ASSERT_TRUE( pSplitScene->instantiate( splitDoc ) );
+    const sw::GameObject* pSky    = pSplitScene->getObjectManager()->findGameObjectByName( sw::hashed_string( "Sky" ) );
+    const sw::GameObject* pHouseA = pSplitScene->getObjectManager()->findGameObjectByName( sw::hashed_string( "HouseA" ) );
+    SW_ASSERT_NOT_NULL( pSky );
+    SW_ASSERT_NOT_NULL( pHouseA );
+
+    sw::StreamingCellPreview preview{};
+    SW_ASSERT_TRUE( sw::SceneCooker::previewStreamingCells( *pSplitScene, preview ) );
+    SW_EXPECT_TRUE( preview._listViolation.empty() );
+    SW_ASSERT_EQUAL( size_t( 1 ), preview._listAlwaysLoadedID.size() );
+    SW_EXPECT_EQUAL( pSky->getObjectID(), preview._listAlwaysLoadedID[0] );
+    SW_ASSERT_EQUAL( size_t( 2 ), preview._listCell.size() );
+    SW_EXPECT_TRUE( preview._listCell[1]._cell == ( sw::WorldCellCoord{ 0, 0 } ) );
+    SW_ASSERT_EQUAL( size_t( 1 ), preview._listCell[1]._listObjectID.size() );
+    SW_EXPECT_EQUAL( pHouseA->getObjectID(), preview._listCell[1]._listObjectID[0] );
+
+    // 늘 올라 있는 Lamp 가 셀 (0,0) 의 Post 에 붙는다 — 쿠킹이 실패할 참조를 두 오브젝트로 짚는다.
+    sw::SceneDocument crossDoc{};
+    crossDoc._name          = "PreviewCross";
+    crossDoc._worldSettings = Internal::makeStreamingSettings();
+    crossDoc._listSceneObjectNode.push_back( Internal::makeEntity( 1, "Post", "1,0,1" ) );
+    crossDoc._listSceneObjectNode.push_back( Internal::makeEntity( 2, "Lamp", "55,0,1", 1, true ) );
+    sw::Scene* pCrossScene = manager.createScene( "PreviewCross" );
+    SW_ASSERT_TRUE( pCrossScene->instantiate( crossDoc ) );
+    const sw::GameObject* pPost = pCrossScene->getObjectManager()->findGameObjectByName( sw::hashed_string( "Post" ) );
+    const sw::GameObject* pLamp = pCrossScene->getObjectManager()->findGameObjectByName( sw::hashed_string( "Lamp" ) );
+    SW_ASSERT_NOT_NULL( pPost );
+    SW_ASSERT_NOT_NULL( pLamp );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a cross-cell reference" );
+        SW_ASSERT_TRUE( sw::SceneCooker::previewStreamingCells( *pCrossScene, preview ) );
+    }
+    SW_EXPECT_TRUE( preview._listCell.empty() );
+    SW_ASSERT_EQUAL( size_t( 1 ), preview._listViolation.size() );
+    SW_EXPECT_EQUAL( pLamp->getObjectID(), preview._listViolation[0]._fromObjectID );
+    SW_EXPECT_EQUAL( pPost->getObjectID(), preview._listViolation[0]._toObjectID );
+    manager.shutdown();
+}
+
+/**
  * @brief [WorldStreamingTest] 원점 둘레의 셀만 올리고, 원점이 멀어지면 여유 반경을 넘은 셀을 내린다 — 바깥 원점 여럿은 합집합이다
  */
 SW_TEST_CASE( WorldStreamingTest, CellsFollowStreamingSources )

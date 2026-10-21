@@ -8,6 +8,8 @@
 #include "Core/Network/Message/NetSendBudget.h"
 #include "Core/Network/NetTypes.h"
 
+#include "Engine/Scene/WorldStreamingSubsystem.h"
+
 #include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
 
 #include <algorithm>
@@ -65,6 +67,7 @@ namespace sw
         : _mapEntity{}
         , _listObserver{}
         , _grid{}
+        , _listScratchSource{}
         , _settings{}
         , _defaultPolicy{}
         , _pHost{ nullptr }
@@ -80,7 +83,7 @@ namespace sw
     {
     }
 
-    bool MMOReplicator::initialize( NetHost* pHost, const MMOReplicatorConfig& settings, const IInterestPolicy* pPolicy )
+    bool MMOReplicator::initialize( NetHost* pHost, const MMOReplicatorConfig& settings, const WorldCellGrid& cellGrid, const IInterestPolicy* pPolicy )
     {
         // 실패하면 호스트 없는 복제기로 남기고 지난 설정을 그대로 둔다. 값을 범위 안으로 맞춰 돌지 않는다.
         _pHost                  = nullptr;
@@ -95,10 +98,22 @@ namespace sw
             SW_LOG_ERROR( "MMOReplicator: refused to start - leave radius %# is smaller than enter radius %#", settings._leaveRadius, settings._enterRadius );
             return false;
         }
+        // 기본값 격자(셀 크기 0)는 `WorldCellGrid::tryCreate` 를 지나지 않은 것이다 — 칸 크기를 대신 정하지 않는다.
+        if ( ( cellGrid.getCellSize() > 0.0f ) == false )
+        {
+            SW_LOG_ERROR( "MMOReplicator: refused to start - world cell grid was not created (cell size %#)", cellGrid.getCellSize() );
+            return false;
+        }
+        if ( settings._leaveRadius > cellGrid.getLoadingRadius() )
+        {
+            SW_LOG_ERROR( "MMOReplicator: refused to start - leave radius %# is larger than the world loading radius %# (visible entities could sit in unloaded cells)",
+                          settings._leaveRadius, cellGrid.getLoadingRadius() );
+            return false;
+        }
         _pHost    = pHost;
         _settings = settings;
         _pPolicy  = pPolicy != nullptr ? pPolicy : &_defaultPolicy;
-        _grid     = SpatialHashGrid2D{ settings._cellSize };
+        _grid     = SpatialHashGrid2D{ cellGrid.getCellSize() };
         _mapEntity.clear();
         _listObserver.clear();
         _sentUpdateCount = 0;
@@ -190,6 +205,25 @@ namespace sw
         return connectionID >= 0 && connectionID < static_cast<int32>( _listObserver.size() )
                  ? static_cast<int32>( _listObserver[static_cast<size_t>( connectionID )]._mapVisible.size() )
                  : 0;
+    }
+
+    void MMOReplicator::collectObserverPositions( vector<float3>& outListPosition ) const
+    {
+        outListPosition.clear();
+        for ( const Observer& observer : _listObserver )
+        {
+            if ( observer._bActive == SW_FALSE )
+                continue;
+            const auto entityIter = _mapEntity.find( observer._entityID );
+            if ( entityIter != _mapEntity.end() )
+                outListPosition.push_back( entityIter->second._position );
+        }
+    }
+
+    void MMOReplicator::feedStreamingSources( WorldStreamingSubsystem& streaming )
+    {
+        collectObserverPositions( _listScratchSource );
+        streaming.setExternalSources( span<const float3>( _listScratchSource.data(), _listScratchSource.size() ) );
     }
 
     void MMOReplicator::setTaskManager( TaskManager* pTaskManager, uint32 serialThreshold )

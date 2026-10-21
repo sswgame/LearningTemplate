@@ -1,6 +1,6 @@
 # 월드 스트리밍(D1-7) — 설계와 구현 단위
 
-> 상태: 구현중 · 선행: 없음 · 영역: engine · 옛번호: D1-7 · 진행: 5/7
+> 상태: 구현중 · 선행: 없음 · 영역: engine · 옛번호: D1-7 · 진행: 6/7
 
 결정의 정본은 [결정 기록](../09_Decisions.md) 5-12 의 `D1-7` 행이다. 이 문서는 그 결정을 구현 단위로 나누고, 단위마다 무엇을 하고 무엇으로 확인하는지 적는다.
 `design-reviewer` 검토는 아직 받지 않았다(통합 때 받는다).
@@ -48,15 +48,16 @@ VAT 풀(`GPUVertexAnimationPool` 계열)도 같은 "통째로 다시" 모양인�
 | W2 | 씬 루트의 `<WorldSettings>`(`Engine/Scene/WorldSettings` — 스트리밍 여부 · 격자 · 내리는 여유 · 프레임당 셀 수, 리플렉션)와 `GameObject::_bAlwaysLoaded`. 씬 형식 판 2 — 옛 판 리더 없이 저장소의 씬 20 개를 `Scripts/dev/MoveSceneFormat.py` 로 다시 썼다. SCN1 판 4, 쿠커 버전 2 | `WorldStreamingTest.WorldSettingsRoundTripThroughXMLAndBinary` · `SceneWithoutUsableWorldSettingsIsRejected` | 들어감(빌드 미확인) |
 | W3 | `SceneCooker::splitStreamingCells` — 계층 루트의 자리로 셀을 정하고, 늘 올라 있거나 자리가 없는 엔티티는 기본 목록에 둔다. 참조는 저장 경로(`ObjectSaveOptions::_pOutListReferencedID`)로 모으고 셀을 넘으면 쿠킹 실패. **셀 파일을 따로 두지 않고** 같은 쿠킹본에 싣는다 — 쿠킹 기록 · DDC 가 작업 하나에 출력 하나라 따로 굽힌 기본 파일과 셀 파일이 섞일 수 있다 | `WorldStreamingTest.CookerSplitsEntitiesIntoCells` · `CrossCellReferenceFailsTheCook` | 들어감(빌드 미확인) |
 | W4 | `WorldStreamingSubsystem`(씬 서비스, `DestroyPost` 단계) — 원점 둘레의 셀을 가까운 순으로 프레임당 예산만큼 `Scene::instantiateCell` 로 짓고, 반경 + 여유 밖의 셀을 `Scene::unloadCell` 로 내린다. 셀 바이트는 비동기 씬 로드 때 함께 올라와 있다 | `WorldStreamingTest.CellsFollowStreamingSources` | 들어감(빌드 미확인) |
-| W5 | 서버 · 여러 원점 — `setExternalSources` 로 접속자마다 원점을 넣으면 셀 합집합을 올린다 | `CellsFollowStreamingSources` 의 두 원점 | 들어감(빌드 미확인) |
-| W6 | 에디터: 격자 오버레이(`gv_worldCellDebugDraw`)와 쿠커처럼 나눠 보는 개발 명령(`world.cells`)은 들어갔다. 남은 것 — 셀별 올림/내림 미리보기 · 쿠킹 위반 목록 패널(에디터 UI) | `ux-reviewer` 캡처 | 일부 |
+| W5 | 서버 · 여러 원점 — `setExternalSources` 로 접속자마다 원점을 넣으면 셀 합집합을 올린다. 서버 연결은 `MMOReplicator::feedStreamingSources`(관찰자 엔티티 자리 → 원점). 복제기의 관심 영역 해시는 `initialize` 가 받는 `WorldCellGrid` 의 칸이고(설정의 `_cellSize` 를 뺐다), 나가는 반경이 로딩 반경보다 크면 거절한다(보이는 엔티티가 내려간 셀에 있을 수 있다) | `CellsFollowStreamingSources` 의 두 원점, `NetMMOTest.ObserverPositionsAreTheStreamingSources` · `MMORefusesOutOfRangeSettings` | 들어감(빌드 미확인) |
+| W6 | 에디터: 격자 오버레이(`gv_worldCellDebugDraw`), 개발 명령(`world.cells`), World Cells 창(`Editor/Panels/Scene/WorldCellsPanel` — 쿠커와 같은 나눔 `SceneCooker::previewStreamingCells` 으로 셀마다 엔티티 수와 게임 카메라에서의 올림 · 유지 · 내림, 셀을 넘는 참조 목록, 줄을 누르면 그 오브젝트를 고른다) | `WorldStreamingTest.CellPreviewPointsAtSceneObjects`, `ux-reviewer` 캡처 | 들어감(빌드 · 캡처 미확인) |
 | W7 | WildWest 초원(`prairie.scene.xml`)을 스트리밍 씬으로(셀 16 m, 반경 32 m, 여유 8 m, 프레임당 2 셀, 카메라 · 해 · 땅 · 기수 · 말 · AI · 목장은 늘 올라 있음). 남은 것 — Release 히치 측정 | 측정 기록 | 데이터만 |
 
 남은 일:
 - 빌드와 테스트 — `WorldStreamingTest` 다섯 개, 씬 픽스처를 판 2 로 고친 `SceneTest` · `SceneAsyncTest` · `PrefabOverridesTest` 등, 리플렉션 헤더가 늘어 구성을 다시 돌린다.
 - 쿠킹(`App.exe --cook-scenes`)으로 WildWest 초원이 셀로 나뉘는지(셀을 넘는 참조가 없는지), Shipping 에서 셀이 올라오는지 확인한다.
 - 측정: Release 로 WildWest 를 돌리며 셀이 오르내리는 프레임의 `GT.Scene.tick.destroyPost` 최대값과 정점 풀 repack 횟수(0 이어야 한다).
-- W5 의 서버 연결: 서버 게임 코드가 접속자 위치를 `setExternalSources` 로 넣는 자리와, `MMOReplicator` 의 관심 영역 격자를 `WorldCellGrid` 로 맞추는 일(키트 소유).
+- W5: `MMOReplicator` 를 쓰는 게임 서버가 아직 없다 — 첫 MMO 게임이 틱마다 `replicator.update` 다음에 `feedStreamingSources( 씬의 WorldStreamingSubsystem )` 를 부르고 `initialize` 에 `getGrid()` 를 넘긴다.
+- W6: World Cells 창의 캡처(`ux-reviewer`)와 `uiaudit` 시나리오에 창이 잡히는지. 문구 열 개는 `editor.strings.json` · `ko.translation.json` 에 넣었다(`--check-text` 미확인).
 - `GameObject` 가 8 B 커졌다(`_bAlwaysLoaded`, 꼬리 패딩이 없었다) — `GameObjectBenchTest` 로 풀 블록 크기 변화를 본다.
 
 충돌 후보: W2 · W3 은 오브젝트 · 씬 직렬화(feat14 타입드 컴포넌트)와, C-43 은 그래픽스 브랜치(feat7 형식, feat15 클러스터드)의 `GPUScene.cpp` ·
