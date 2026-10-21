@@ -230,7 +230,7 @@ namespace
         NetSimConfig       settings;
         settings._seed                       = seed;
         settings._hostSettings._sendInterval = 1.0 / 60.0;
-        if ( harness.initialize( settings, &game ) == false )
+        if ( harness.initialize( sw::SceneEngineServices::makeFromBoundEngine(), settings, &game ) == false )
             return RollbackRunResult{};
         BurstDropper dropper;
         dropper._pHarness  = &harness;
@@ -429,7 +429,7 @@ namespace
         settings._hostSettings._timeoutSeconds = 1.0;
         settings._hostSettings._sendInterval   = 1.0 / 60.0;
         LockstepLeaveResult result;
-        if ( harness.initialize( settings, &game ) == false )
+        if ( harness.initialize( sw::SceneEngineServices::makeFromBoundEngine(), settings, &game ) == false )
             return result;
         NetSimLinkConditions link;
         link._upstream._latency  = 0.03;
@@ -649,7 +649,7 @@ SW_TEST_CASE( NetLockstepTest, RollbackLeadingPeerWaitsForTheOther )
     NetSimHarness      harness;
     NetSimConfig       settings;
     settings._hostSettings._sendInterval = 1.0 / 60.0;
-    SW_ASSERT_TRUE( harness.initialize( settings, &game ) );
+    SW_ASSERT_TRUE( harness.initialize( sw::SceneEngineServices::makeFromBoundEngine(), settings, &game ) );
     NetSimLinkConditions link;
     link._upstream._latency = 0.05;
     link._downstream        = link._upstream;
@@ -783,7 +783,7 @@ SW_TEST_CASE( NetLockstepTest, ChecksumHistoryStaysBounded )
 {
     LeaveLockstepGame game( 2, 1, 0 );
     NetSimHarness     harness;
-    SW_ASSERT_TRUE( harness.initialize( NetSimConfig{}, &game ) );
+    SW_ASSERT_TRUE( harness.initialize( sw::SceneEngineServices::makeFromBoundEngine(), NetSimConfig{}, &game ) );
     (void)harness.addClient( NetSimLinkConditions{} );
     harness.stepTicks( 800 );
     const LockstepSession& server = getLeaveLockstepSession( harness.getServer() )._session;

@@ -330,7 +330,7 @@ namespace
         NetSimConfig  settings;
         settings._seed = seed;
         NetSimRunResult result;
-        if ( harness.initialize( settings, &game ) == false )
+        if ( harness.initialize( sw::SceneEngineServices::makeFromBoundEngine(), settings, &game ) == false )
             return result;
         NetEmulationConditions bad = makeConditions( 0.1, 0.02, 0.15f );
         bad._duplicateRate         = 0.05f;
@@ -365,7 +365,7 @@ SW_TEST_CASE( NetSimHarnessTest, EveryWorldRunsItsOwnSceneAndPhysics )
 {
     CrateGame     game;
     NetSimHarness harness;
-    SW_ASSERT_TRUE( harness.initialize( NetSimConfig{}, &game ) );
+    SW_ASSERT_TRUE( harness.initialize( sw::SceneEngineServices::makeFromBoundEngine(), NetSimConfig{}, &game ) );
     for ( int32 index = 0; index < 3; ++index )
     {
         SW_ASSERT_TRUE( harness.addClient( NetSimLinkConditions::makeSymmetric( makeConditions( 0.03, 0.005, 0.02f ) ) ) > 0 );
@@ -402,7 +402,7 @@ SW_TEST_CASE( NetSimHarnessTest, LinkConditionsArePerClient )
 {
     CrateGame     game;
     NetSimHarness harness;
-    SW_ASSERT_TRUE( harness.initialize( NetSimConfig{}, &game ) );
+    SW_ASSERT_TRUE( harness.initialize( sw::SceneEngineServices::makeFromBoundEngine(), NetSimConfig{}, &game ) );
     const int32          cleanClient = harness.addClient( NetSimLinkConditions{} );
     NetSimLinkConditions slow;
     slow._downstream       = makeConditions( 0.2, 0.0, 0.0f );
@@ -433,7 +433,7 @@ SW_TEST_CASE( NetSimHarnessTest, LateJoinConvergesAndLeaveNotifiesServer )
 {
     CrateGame     game;
     NetSimHarness harness;
-    SW_ASSERT_TRUE( harness.initialize( NetSimConfig{}, &game ) );
+    SW_ASSERT_TRUE( harness.initialize( sw::SceneEngineServices::makeFromBoundEngine(), NetSimConfig{}, &game ) );
     const int32 firstClient  = harness.addClient( NetSimLinkConditions{} );
     const int32 secondClient = harness.addClient( NetSimLinkConditions{} );
     harness.stepTicks( 180 );
@@ -473,7 +473,7 @@ SW_TEST_CASE( NetSimHarnessTest, LostAcceptedStillGivesLockstepPlayersTheirNumbe
 {
     LockstepNetSimGame game( 2 );
     NetSimHarness      harness;
-    SW_ASSERT_TRUE( harness.initialize( NetSimConfig{}, &game ) );
+    SW_ASSERT_TRUE( harness.initialize( sw::SceneEngineServices::makeFromBoundEngine(), NetSimConfig{}, &game ) );
     AcceptedDropper      dropper;
     NetSimLinkConditions lostAccepted;
     dropper._remaining                           = 1;
@@ -503,7 +503,7 @@ SW_TEST_CASE( NetSimHarnessTest, SpoofedConnectRequestsDoNotFillTheServer )
     NetSimHarness harness;
     NetSimConfig  settings;
     settings._hostSettings._maxConnections = 4;
-    SW_ASSERT_TRUE( harness.initialize( settings, &game ) );
+    SW_ASSERT_TRUE( harness.initialize( sw::SceneEngineServices::makeFromBoundEngine(), settings, &game ) );
     NetSimLinkConditions spoofed;
     spoofed._downstream._pDropFilter = &dropEverything;
     for ( int32 index = 0; index < 4; ++index )

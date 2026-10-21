@@ -172,7 +172,7 @@ SW_TEST_CASE( NetTurnRelayTest, RoomsEnforceTurnsAndResyncReturningPlayers )
     UnoLikePolicy       policy;
     TurnRelayNetSimGame game( 3, &policy, 0 );
     NetSimHarness       harness;
-    SW_ASSERT_TRUE( harness.initialize( NetSimConfig{}, &game ) );
+    SW_ASSERT_TRUE( harness.initialize( sw::SceneEngineServices::makeFromBoundEngine(), NetSimConfig{}, &game ) );
     // 손실 10 % — 핸드셰이크는 몇 번 되풀이될 수 있다.
     NetSimLinkConditions link;
     link._upstream._latency  = 0.04;
@@ -285,7 +285,7 @@ SW_TEST_CASE( NetTurnRelayTest, RejoinCatchesUpBeyondReliableWindow )
     AnyoneMayActPolicy  policy;
     TurnRelayNetSimGame game( 2, &policy, 0 );
     NetSimHarness       harness;
-    SW_ASSERT_TRUE( harness.initialize( NetSimConfig{}, &game ) );
+    SW_ASSERT_TRUE( harness.initialize( sw::SceneEngineServices::makeFromBoundEngine(), NetSimConfig{}, &game ) );
     NetSimLinkConditions link;
     link._upstream._latency  = 0.03;
     link._upstream._lossRate = 0.05f;
@@ -335,7 +335,7 @@ SW_TEST_CASE( NetTurnRelayTest, LiveSeatCannotBeReclaimed )
 {
     TurnRelayNetSimGame game( 2, nullptr, 0 );
     NetSimHarness       harness;
-    SW_ASSERT_TRUE( harness.initialize( NetSimConfig{}, &game ) );
+    SW_ASSERT_TRUE( harness.initialize( sw::SceneEngineServices::makeFromBoundEngine(), NetSimConfig{}, &game ) );
     TurnRelayClient clientA;
     TurnRelayClient clientB;
     TurnRelayClient intruder;
@@ -373,7 +373,7 @@ SW_TEST_CASE( NetTurnRelayTest, OneConnectionTakesOneSeat )
 {
     TurnRelayNetSimGame game( 2, nullptr, 0 );
     NetSimHarness       harness;
-    SW_ASSERT_TRUE( harness.initialize( NetSimConfig{}, &game ) );
+    SW_ASSERT_TRUE( harness.initialize( sw::SceneEngineServices::makeFromBoundEngine(), NetSimConfig{}, &game ) );
     TurnRelayClient clientA;
     TurnRelayClient clientB;
     (void)addTurnClient( harness, game, clientA, NetSimLinkConditions{} );
@@ -414,7 +414,7 @@ SW_TEST_CASE( NetTurnRelayTest, SeatTokensDifferBetweenServers )
     {
         TurnRelayNetSimGame game( 1, nullptr, 0 );
         NetSimHarness       harness;
-        SW_ASSERT_TRUE( harness.initialize( NetSimConfig{}, &game ) );
+        SW_ASSERT_TRUE( harness.initialize( sw::SceneEngineServices::makeFromBoundEngine(), NetSimConfig{}, &game ) );
         TurnRelayClient client;
         (void)addTurnClient( harness, game, client, NetSimLinkConditions{} );
         client.join( 7 );
@@ -444,7 +444,7 @@ SW_TEST_CASE( NetTurnRelayTest, LargeActionsCatchUpThroughAFullWindow )
     AnyoneMayActPolicy  policy;
     TurnRelayNetSimGame game( 2, &policy, 0 );
     NetSimHarness       harness;
-    SW_ASSERT_TRUE( harness.initialize( NetSimConfig{}, &game ) );
+    SW_ASSERT_TRUE( harness.initialize( sw::SceneEngineServices::makeFromBoundEngine(), NetSimConfig{}, &game ) );
     NetSimLinkConditions link;
     link._upstream._latency  = 0.03;
     link._upstream._lossRate = 0.05f;

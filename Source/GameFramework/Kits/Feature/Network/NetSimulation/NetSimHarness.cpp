@@ -87,11 +87,11 @@ namespace sw
 
 namespace sw
 {
-    NetSimWorld::NetSimWorld( NetSimRole role, int32 worldIndex, INetTransport* pTransport, const NetHostConfig& hostSettings )
+    NetSimWorld::NetSimWorld( const SceneEngineServices& services, NetSimRole role, int32 worldIndex, INetTransport* pTransport, const NetHostConfig& hostSettings )
         : _counter{ pTransport }
         , _host{}
         , _router{}
-        , _pScene{ make_unique<Scene>( role == NetSimRole::Server ? "NetSimServer" : "NetSimClient" ) }
+        , _pScene{ make_unique<Scene>( role == NetSimRole::Server ? "NetSimServer" : "NetSimClient", services ) }
         , _pSession{}
         , _listUnhandled{}
         , _listEvent{}
@@ -165,6 +165,7 @@ namespace sw
 {
     NetSimHarness::NetSimHarness()
         : _settings{}
+        , _services{}
         , _pNetwork{}
         , _listLink{}
         , _pServer{}
@@ -182,7 +183,7 @@ namespace sw
         shutdown();
     }
 
-    bool NetSimHarness::initialize( const NetSimConfig& settings, INetSimGame* pGame )
+    bool NetSimHarness::initialize( const SceneEngineServices& services, const NetSimConfig& settings, INetSimGame* pGame )
     {
         shutdown();
         if ( settings._tickInterval <= 0.0 )
@@ -191,6 +192,7 @@ namespace sw
             return false;
         }
         _settings       = settings;
+        _services       = services;
         _pGame          = pGame;
         _time           = 0.0;
         _tick           = 0;
@@ -254,7 +256,7 @@ namespace sw
         hostSettings._saltSeed     = mixNetSimSeed( _settings._seed, 0x10000u + static_cast<uint64>( worldIndex ) ) | 1u;
         // 송신 간격이 틱의 배수일 때 틱 시각(틱 × 간격)의 반올림 오차로 한 틱 늦게 나갈 수 있다. 반 틱 앞당겨서 "k 틱마다 한 번" 이 정확히 지켜지게 한다.
         hostSettings._sendInterval = MathUtil::max( 0.0, hostSettings._sendInterval - _settings._tickInterval * 0.5 );
-        return sw_new NetSimWorld( role, worldIndex, link._pEmulation.get(), hostSettings );
+        return sw_new NetSimWorld( _services, role, worldIndex, link._pEmulation.get(), hostSettings );
     }
 
     int32 NetSimHarness::addClient( const NetSimLinkConditions& conditions )

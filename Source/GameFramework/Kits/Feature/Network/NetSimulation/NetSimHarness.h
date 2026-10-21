@@ -35,6 +35,8 @@
 #include "Core/Network/Transport/NetEmulation.h"
 #include "Core/Network/Transport/NetTransport.h"
 
+#include "Engine/Object/GameObject/Service/SceneEngineServices.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -198,7 +200,7 @@ namespace sw
     class SW_KIT_API NetSimWorld
     {
     public:
-        NetSimWorld( NetSimRole role, int32 worldIndex, INetTransport* pTransport, const NetHostConfig& hostSettings );
+        NetSimWorld( const SceneEngineServices& services, NetSimRole role, int32 worldIndex, INetTransport* pTransport, const NetHostConfig& hostSettings );
         ~NetSimWorld();
 
         NetSimWorld( const NetSimWorld& )            = delete;
@@ -253,7 +255,7 @@ namespace sw
      * @brief 서버 월드 1개와 클라이언트 월드 N개를 한 스레드에서 고정 스텝으로 돌립니다. 자세한 동작은 파일 머리말을 참고하세요.
      * @code
      *     NetSimHarness harness;
-     *     harness.initialize( settings, &game );                          // 서버 월드를 만든다
+     *     harness.initialize( services, settings, &game );                // 서버 월드를 만든다
      *     const int32 clientA = harness.addClient( NetSimLinkConditions::makeSymmetric( lossy ) );
      *     harness.stepTicks( 600 );
      *     const int32 lateClient = harness.addClient( {} );               // 늦은 참가
@@ -270,8 +272,9 @@ namespace sw
         NetSimHarness( const NetSimHarness& )            = delete;
         NetSimHarness& operator=( const NetSimHarness& ) = delete;
 
-        /** @brief 망을 만들고 서버 월드를 만듭니다. `INetSimGame::createSession` 호출, 플레이 시작, listen 까지 처리합니다. @p pGame 은 하니스보다 오래 살아야 합니다. */
-        [[nodiscard]] bool initialize( const NetSimConfig& settings, INetSimGame* pGame );
+        /** @brief 망을 만들고 서버 월드를 만듭니다. `INetSimGame::createSession` 호출, 플레이 시작, listen 까지 처리합니다. @p pGame 은 하니스보다 오래 살아야 합니다.
+         *        @p services 는 월드마다의 씬을 지을 엔진 서비스 묶음입니다(물리 · 오디오 · 에셋). 전역 표를 다시 찾지 않습니다. */
+        [[nodiscard]] bool initialize( const SceneEngineServices& services, const NetSimConfig& settings, INetSimGame* pGame );
         /** @brief 클라이언트와 서버 월드를 모두 종료합니다. 소멸자도 이 함수를 부릅니다. */
         void shutdown();
 
@@ -323,6 +326,7 @@ namespace sw
         void         updateNetwork();
 
         NetSimConfig                    _settings;
+        SceneEngineServices             _services; ///< `initialize` 가 받은 묶음(빌림). 월드의 씬을 이것으로 짓는다
         unique_ptr<LoopbackNetwork>     _pNetwork;
         vector<unique_ptr<Link>>        _listLink;
         unique_ptr<NetSimWorld>         _pServer;

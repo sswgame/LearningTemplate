@@ -143,7 +143,7 @@ namespace
         NetSimConfig settings;
         settings._hostSettings = hostSettings;
         NetSimHarness harness;
-        SW_ASSERT_TRUE( harness.initialize( settings, &game ) );
+        SW_ASSERT_TRUE( harness.initialize( sw::SceneEngineServices::makeFromBoundEngine(), settings, &game ) );
         for ( uint32 index = 0; index < kClientCount; ++index )
         {
             SW_ASSERT_TRUE( harness.addClient( NetSimLinkConditions{} ) > 0 );

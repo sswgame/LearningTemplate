@@ -365,7 +365,7 @@ SW_TEST_CASE( NetCompressionBenchTest, ReplicationSnapshotPackets )
     SnapshotGame  game;
     DatagramTap   tap;
     NetSimHarness harness;
-    SW_ASSERT_TRUE( harness.initialize( NetSimConfig{}, &game ) );
+    SW_ASSERT_TRUE( harness.initialize( sw::SceneEngineServices::makeFromBoundEngine(), NetSimConfig{}, &game ) );
     NetSimLinkConditions conditions;
     conditions._downstream._pDropFilter        = &DatagramTap::capture;
     conditions._downstream._pDropFilterContext = &tap;
