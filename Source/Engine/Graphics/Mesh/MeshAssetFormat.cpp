@@ -31,6 +31,79 @@ namespace sw
             static constexpr uint8 kArrMorphChunk[4] = { 'M', 'R', 'P', 'H' };
             /** @brief 모프 차이 하나의 바이트 수입니다(정점 번호 uint32 + float32 여섯). */
             static constexpr uint32 kMorphDeltaSize = 4 + 6 * 4;
+            /** @brief 구간 덩어리의 이름입니다. */
+            static constexpr uint8 kArrSectionChunk[4] = { 'S', 'E', 'C', 'T' };
+
+            /** @brief 덩어리 이름 넷과 길이 자리를 쓰고, 길이 자리의 위치를 돌려줍니다(내용을 쓴 뒤 `finishChunk` 가 채운다). */
+            static size_t beginChunk( vector<uint8>& outBytes, const uint8 ( &arrName )[4] )
+            {
+                for ( const uint8 letter : arrName )
+                {
+                    outBytes.push_back( letter );
+                }
+                const size_t lengthOffset = outBytes.size();
+                LittleEndianUtil::appendUint32( outBytes, 0u );
+                return lengthOffset;
+            }
+
+            static void finishChunk( vector<uint8>& outBytes, size_t lengthOffset )
+            {
+                const uint32 contentLength = static_cast<uint32>( outBytes.size() - lengthOffset - 4 );
+                for ( uint32 byteIndex = 0; byteIndex < 4; ++byteIndex )
+                {
+                    outBytes[lengthOffset + byteIndex] = static_cast<uint8>( ( contentLength >> ( byteIndex * 8 ) ) & 0xFFu );
+                }
+            }
+
+            /** @brief 구간 덩어리(`SECT`)를 씁니다 — 구간 수, 구간마다 이름 길이 · 이름 · 첫 정점 · 정점 수 · 시점 가시성. 구간이 없으면 쓰지 않습니다. */
+            static void appendSectionChunk( vector<uint8>& outBytes, const vector<MeshSection>& listSection )
+            {
+                if ( listSection.empty() )
+                    return;
+                const size_t lengthOffset = beginChunk( outBytes, kArrSectionChunk );
+                LittleEndianUtil::appendUint32( outBytes, static_cast<uint32>( listSection.size() ) );
+                for ( const MeshSection& section : listSection )
+                {
+                    const string_view name = section._name.c_str();
+                    LittleEndianUtil::appendUint32( outBytes, static_cast<uint32>( name.size() ) );
+                    outBytes.insert( outBytes.end(), reinterpret_cast<const uint8*>( name.data() ), reinterpret_cast<const uint8*>( name.data() ) + name.size() );
+                    LittleEndianUtil::appendUint32( outBytes, section._firstVertex );
+                    LittleEndianUtil::appendUint32( outBytes, section._vertexCount );
+                    LittleEndianUtil::appendUint32( outBytes, static_cast<uint32>( section._personVisibility ) );
+                }
+                finishChunk( outBytes, lengthOffset );
+            }
+
+            /** @brief 구간 덩어리 내용을 읽습니다. 길이 · 범위 · 가시성 값이 맞지 않으면 false 입니다(범위와 이름 중복은 `Mesh::setSections` 가 다시 본다). */
+            [[nodiscard]] static bool readSectionChunk( const uint8* pChunk, const uint8* pChunkEnd, uint32 vertexCount, vector<MeshSection>& outListSection )
+            {
+                if ( pChunkEnd - pChunk < 4 )
+                    return false;
+                const uint32 sectionCount = LittleEndianUtil::readUint32( pChunk );
+                pChunk += 4;
+                for ( uint32 sectionIndex = 0; sectionIndex < sectionCount; ++sectionIndex )
+                {
+                    if ( pChunkEnd - pChunk < 4 )
+                        return false;
+                    const uint32 nameLength = LittleEndianUtil::readUint32( pChunk );
+                    if ( static_cast<size_t>( pChunkEnd - pChunk ) < 16u + nameLength )
+                        return false;
+                    MeshSection section{};
+                    section._name = hashed_string( string( reinterpret_cast<const utf8*>( pChunk + 4 ), nameLength ) );
+                    pChunk += 4 + nameLength;
+                    section._firstVertex    = LittleEndianUtil::readUint32( pChunk );
+                    section._vertexCount    = LittleEndianUtil::readUint32( pChunk + 4 );
+                    const uint32 visibility = LittleEndianUtil::readUint32( pChunk + 8 );
+                    pChunk += 12;
+                    const bool bValidSection = visibility < static_cast<uint32>( MeshPersonVisibility::Count ) && section._firstVertex <= vertexCount &&
+                                               section._vertexCount <= vertexCount - section._firstVertex;
+                    if ( bValidSection == false )
+                        return false;
+                    section._personVisibility = static_cast<MeshPersonVisibility>( visibility );
+                    outListSection.push_back( std::move( section ) );
+                }
+                return pChunk == pChunkEnd;
+            }
 
             static_assert( MeshAssetFormat::kVertexSize == kFloatPerVertex * sizeof( float32 ), "kVertexSize must match the float layout" );
             static_assert( sizeof( RHIVertex ) == MeshAssetFormat::kVertexSize, "RHIVertex changed - bump MeshAssetFormat::kVersion and re-import models" );
@@ -140,38 +213,41 @@ namespace sw
                 }
             }
         }
-        if ( data._listMorphTarget.empty() )
-            return;
-        // 선택 덩어리 — 모프 타깃. 길이는 내용을 다 쓴 뒤 채운다.
-        for ( const uint8 letter : MeshAssetFormatInternal::kArrMorphChunk )
+        // 선택 덩어리 — 모프 타깃(있을 때). 길이는 내용을 다 쓴 뒤 채운다.
+        if ( data._listMorphTarget.empty() == false )
         {
-            outBytes.push_back( letter );
-        }
-        const size_t lengthOffset = outBytes.size();
-        LittleEndianUtil::appendUint32( outBytes, 0u );
-        const size_t contentStart = outBytes.size();
-        LittleEndianUtil::appendUint32( outBytes, static_cast<uint32>( data._listMorphTarget.size() ) );
-        for ( const MeshMorphTarget& target : data._listMorphTarget )
-        {
-            const string_view name = target._name.c_str();
-            LittleEndianUtil::appendUint32( outBytes, static_cast<uint32>( name.size() ) );
-            outBytes.insert( outBytes.end(), reinterpret_cast<const uint8*>( name.data() ), reinterpret_cast<const uint8*>( name.data() ) + name.size() );
-            LittleEndianUtil::appendUint32( outBytes, static_cast<uint32>( target._listDelta.size() ) );
-            for ( const MeshMorphDelta& delta : target._listDelta )
+            for ( const uint8 letter : MeshAssetFormatInternal::kArrMorphChunk )
             {
-                LittleEndianUtil::appendUint32( outBytes, delta._vertexIndex );
-                const float32 arrValue[6] = { delta._position._x, delta._position._y, delta._position._z, delta._normal._x, delta._normal._y, delta._normal._z };
-                for ( const float32 value : arrValue )
+                outBytes.push_back( letter );
+            }
+            const size_t lengthOffset = outBytes.size();
+            LittleEndianUtil::appendUint32( outBytes, 0u );
+            const size_t contentStart = outBytes.size();
+            LittleEndianUtil::appendUint32( outBytes, static_cast<uint32>( data._listMorphTarget.size() ) );
+            for ( const MeshMorphTarget& target : data._listMorphTarget )
+            {
+                const string_view name = target._name.c_str();
+                LittleEndianUtil::appendUint32( outBytes, static_cast<uint32>( name.size() ) );
+                outBytes.insert( outBytes.end(), reinterpret_cast<const uint8*>( name.data() ), reinterpret_cast<const uint8*>( name.data() ) + name.size() );
+                LittleEndianUtil::appendUint32( outBytes, static_cast<uint32>( target._listDelta.size() ) );
+                for ( const MeshMorphDelta& delta : target._listDelta )
                 {
-                    MeshAssetFormatInternal::appendFloat32( outBytes, value );
+                    LittleEndianUtil::appendUint32( outBytes, delta._vertexIndex );
+                    const float32 arrValue[6] = { delta._position._x, delta._position._y, delta._position._z, delta._normal._x, delta._normal._y, delta._normal._z };
+                    for ( const float32 value : arrValue )
+                    {
+                        MeshAssetFormatInternal::appendFloat32( outBytes, value );
+                    }
                 }
             }
+            const uint32 contentLength = static_cast<uint32>( outBytes.size() - contentStart );
+            for ( uint32 byteIndex = 0; byteIndex < 4; ++byteIndex )
+            {
+                outBytes[lengthOffset + byteIndex] = static_cast<uint8>( ( contentLength >> ( byteIndex * 8 ) ) & 0xFFu );
+            }
         }
-        const uint32 contentLength = static_cast<uint32>( outBytes.size() - contentStart );
-        for ( uint32 byteIndex = 0; byteIndex < 4; ++byteIndex )
-        {
-            outBytes[lengthOffset + byteIndex] = static_cast<uint8>( ( contentLength >> ( byteIndex * 8 ) ) & 0xFFu );
-        }
+        // 선택 덩어리 — 구간(있을 때).
+        MeshAssetFormatInternal::appendSectionChunk( outBytes, data._listSection );
     }
 
     void MeshAssetFormat::makeBytes( const vector<RHIVertex>& listVertex, vector<uint8>& outBytes )
@@ -279,14 +355,27 @@ namespace sw
                 return false;
             }
             const bool   bMorph      = Memory::compare( pCursor, MeshAssetFormatInternal::kArrMorphChunk, 4 ) == 0;
+            const bool   bSection    = Memory::compare( pCursor, MeshAssetFormatInternal::kArrSectionChunk, 4 ) == 0;
             const uint32 chunkLength = LittleEndianUtil::readUint32( pCursor + 4 );
             const uint8* pChunk      = pCursor + 8;
             const uint8* pChunkEnd   = pChunk + chunkLength;
-            if ( bMorph == false || chunkLength > static_cast<size_t>( pEnd - pChunk ) )
+            const bool   bKnownChunk = bMorph || bSection;
+            if ( bKnownChunk == false || chunkLength > static_cast<size_t>( pEnd - pChunk ) )
             {
                 SW_LOG_WARNING( "Mesh asset has an unknown or truncated chunk" );
                 outData = MeshAssetData{};
                 return false;
+            }
+            if ( bSection )
+            {
+                if ( MeshAssetFormatInternal::readSectionChunk( pChunk, pChunkEnd, vertexCount, outData._listSection ) == false )
+                {
+                    SW_LOG_WARNING( "Mesh asset has a malformed section chunk" );
+                    outData = MeshAssetData{};
+                    return false;
+                }
+                pCursor = pChunkEnd;
+                continue;
             }
             bool   bValid      = chunkLength >= 4;
             uint32 targetCount = bValid ? LittleEndianUtil::readUint32( pChunk ) : 0u;

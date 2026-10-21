@@ -17,6 +17,7 @@
 
 namespace sw
 {
+    class GameObject;
     class GameObjectManager;
     class Material;
     class MaterialInstance;
@@ -148,6 +149,30 @@ namespace sw
         /** @brief 메시 공간의 경계(`Mesh::getLocalBoundsMin/Max`, 메시가 없으면 단위 상자)를 월드로 옮긴 상자를 반환합니다. */
         bool getWorldBox( AABB& outBox ) const override;
 
+        /**
+         * @brief 그릴 메시 구간(`MeshSection`)의 이름을 정합니다. 비면 메시 전체를 그립니다. 저장됩니다(PROPERTY).
+         * @details 한 메시의 구간마다 컴포넌트가 하나다(머티리얼이 구간마다 다르다). 스킨드 메시는 구간 컴포넌트(`MeshSectionComponent`)가 같은 메시 객체를 그려
+         *          포즈 · 스킨 · 모프가 한 벌이다. 메시에 없는 이름이면 그리지 않고 해석할 때 오류를 남긴다.
+         */
+        void          setSectionName( hashed_string sectionName );
+        hashed_string getSectionName() const { return _sectionName; }
+        /**
+         * @brief 그릴 정점 범위입니다. 구간 이름이 비면 (0, 0)(메시 전체)이고 true, 메시에 그 구간이 없으면 false(그리지 않는다)입니다.
+         * @details 렌더 수집(`GPUSceneBuilder::fillCandidateFromPrimitive`)이 워커에서 부르므로 로그를 남기지 않는다 — 오류는 `resolveRenderAssets` 가 남긴다.
+         */
+        [[nodiscard]] bool findDrawSection( uint32& outFirstVertex, uint32& outVertexCount ) const;
+        /**
+         * @brief 1인칭 시점인지를 정합니다(저장하지 않는 런타임 값). 구간의 시점 가시성(`MeshPersonVisibility`)이 이 값으로 보이고 숨습니다.
+         * @details VRM firstPerson 의 자리다(1인칭 카메라에 머리 · 머리카락이 걸리지 않게). 시점은 컴포넌트 단위라 모든 뷰가 같은 판정을 쓴다 — 분할 화면에서
+         *          다른 플레이어가 보는 뷰는 따로 고르지 않는다(언리얼 OwnerNoSee 처럼 뷰마다 가르려면 뷰의 소유자 칸이 필요하다).
+         */
+        void setFirstPersonView( bool bFirstPerson );
+        bool isFirstPersonView() const { return _bFirstPersonView == SW_TRUE; }
+        /** @brief 오브젝트의 모든 메시 컴포넌트에 1인칭 시점을 정합니다(카메라가 1인칭으로 들어가고 나올 때 부른다). */
+        static void setFirstPersonViewOnObject( const GameObject& owner, bool bFirstPerson );
+        /** @brief 그리는 구간이 지금 시점(1인칭 · 3인칭)에서 보이는지입니다. 구간이 없으면 늘 보입니다. */
+        bool isVisibleInCurrentPerson() const;
+
         /** @brief 가시 여부를 설정합니다. */
         void setVisible( bool bVisible );
         /** @brief 가시 여부를 반환합니다. */
@@ -181,6 +206,12 @@ namespace sw
         virtual hashed_string getDefaultMaterialPath() const { return {}; }
         /** @brief 스프라이트 프레임과 색을 바꿉니다. 값이 달라졌을 때만 렌더 상태를 더티로 표시하므로, 같은 프레임을 다시 넣는 애니메이터는 비용이 없습니다. */
         void setSpriteInstanceData( const GPUSpriteInstanceData& data );
+        /** @brief 구간 이름이 지금 메시에 있는지 보고, 없으면 오류를 남깁니다(그리지 않는다 — `findDrawSection`). 메시가 바뀌거나 이름이 바뀔 때 부릅니다. */
+        void validateSectionName() const;
+        /** @brief 이 컴포넌트의 메시를 따라 그리는 구간 컴포넌트(`MeshSectionComponent`)에 메시가 바뀌었다고 알립니다. */
+        void notifyMeshFollowers();
+        /** @brief 메시를 바꾸되 따라 그리는 구간 컴포넌트에 알리지 않습니다 — 구간 컴포넌트가 자기 원본을 따라갈 때 쓴다(서로 알리며 돌지 않게). */
+        void assignMeshWithoutFollowers( shared_ptr<Mesh> mesh );
 
     private:
         shared_ptr<Mesh>             _mesh;
@@ -201,6 +232,8 @@ namespace sw
         RHIBlendMode _blendMode;
         PROPERTY( Category = "Rendering", DisplayName = "GPU Spin Seed", Tooltip = "Non-zero makes the GPU spin this instance; the seed picks its speed" )
         uint32 _gpuSpinSeed;
+        PROPERTY( Category = "Rendering", DisplayName = "Section", Tooltip = "Mesh section to draw (material section of an imported model); empty draws the whole mesh" )
+        hashed_string _sectionName;
         /** @brief GPU 인스턴스의 스프라이트 슬롯 데이터입니다. 저장하지 않으며, 파생 타입의 저장되는 값(프레임, 색)에서 만듭니다. */
         GPUSpriteInstanceData _spriteInstanceData;
         /** @brief 정점 애니메이션 시각 오프셋(초)입니다. 저장하지 않습니다(setVertexAnimationPhase). */
@@ -213,7 +246,8 @@ namespace sw
         // `_bVisible` 과 같은 바이트를 읽고 고쳐 쓰는 것이라, 이웃 비트를 만지는 스레드와 레이스가 된다.
         /** @brief 그리는지 여부입니다. 저장됩니다(PROPERTY). 숨긴 메시가 Stop, 되돌리기, 씬 다시 열기 뒤에도 숨은 채로 남습니다. */
         PROPERTY( Category = "Rendering", DisplayName = "Visible", Tooltip = "Draw this mesh" )
-        uint8 _bVisible : 1;
-        uint8 _reserved : 7;
+        uint8 _bVisible         : 1;
+        uint8 _bFirstPersonView : 1; ///< 1인칭 시점인지(저장하지 않음, `setFirstPersonView`) — 게임 스레드만 쓴다
+        uint8 _reserved         : 6;
     };
 } // namespace sw

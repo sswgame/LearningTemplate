@@ -328,6 +328,8 @@ namespace sw
         {
             entry._mesh = Mesh::create();
             entry._mesh->setVertices( sourceMesh->getVertices() );
+            // 정점 순서가 원본과 같아 구간도 그대로다(구간 컴포넌트가 VAT 메시의 같은 범위를 그린다).
+            (void)entry._mesh->setSections( sourceMesh->getSections() );
             entry._mesh->setVertexAnimation( std::move( animation ) );
             SW_LOG_INFO( "Vertex animation '%#' ready (%# frames x %# vertices)", clip.getName().c_str(), entry._mesh->findVertexAnimation()->_frameCount,
                          entry._mesh->getVertexCount() );

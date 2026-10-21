@@ -89,7 +89,9 @@ namespace sw
     {
         for ( GPUMeshBatch& batch : _snapshot.getMutableBatches() )
         {
-            const uint32 base = pool.baseOf( batch._mesh.get() );
+            // 구간 배치는 메시 시작에 구간 첫 정점을 더한다 — 셰이더는 배치 안 번호(로컬)를 더해 원소를 찾는다(binding.hlsli swComputeMorphElement).
+            const uint32 meshBase = pool.baseOf( batch._mesh.get() );
+            const uint32 base     = ( meshBase != GPUMeshMorphPool::kInvalidBase ) ? meshBase + batch._sectionFirstVertex : meshBase;
             if ( batch._morphVertexBase != base )
                 _bBatchTablesDirty = SW_TRUE; // 표가 이 값을 든다. 바뀌면 다시 올린다
             batch._morphVertexBase = base;
@@ -151,10 +153,10 @@ namespace sw
                 if ( base != GPUMeshVertexPool::kInvalidBase && _vertexPool.getVertexBuffer() != 0 )
                 {
                     batch._vertexBuffer = _vertexPool.getVertexBuffer();
-                    batch._firstVertex  = base;
+                    batch._firstVertex  = base + batch._sectionFirstVertex;
                 }
                 else
-                    batch._firstVertex = 0;
+                    batch._firstVertex = batch._sectionFirstVertex; // 자기 정점 버퍼 — 구간의 첫 정점부터
             }
         }
         // 머티리얼 데이터 구조버퍼(셰이더 타입별). 값이 프레임마다 바뀔 수 있어 스냅샷 dirty 와 무관하게 매번 본다(바이트가 같으면 올리지 않는다).
@@ -249,6 +251,7 @@ namespace sw
             _listScratchBatchInfo[argIndex]._morphVertexBase     = infoBatch._morphVertexBase;
             _listScratchBatchInfo[argIndex]._firstVertex         = infoBatch._firstVertex;
             _listScratchBatchInfo[argIndex]._vertexAnimationBase = infoBatch._vertexAnimationBase;
+            _listScratchBatchInfo[argIndex]._sectionVertexOffset = infoBatch._sectionFirstVertex;
             // 투명은 압축한 뒤 GPU 가 깊이순으로 다시 정렬한다. 한 워크그룹에 안 담기는 큰 배치만
             // 압축을 포기하고 CPU 가 정렬해 둔 순서를 그대로 쓴다.
             GPUBatchSortMode sortMode = GPUBatchSortMode::None;

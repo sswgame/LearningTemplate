@@ -356,3 +356,67 @@ SW_TEST_CASE( MeshAssetTest, MorphTargetChunkRoundTripsAndRejectsMalformedChunks
     trailing.insert( trailing.end(), { 0, 0, 0, 0 } );
     expectRejected( trailing );
 }
+
+/**
+ * @brief [MeshAssetTest] 구간(`SECT` 덩어리)이 쓴 그대로 다시 읽히고, 메시는 정점 밖 · 삼각형이 아닌 · 이름이 겹친 구간을 받지 않는다
+ */
+SW_TEST_CASE( MeshAssetTest, SectionsRoundTripAndAreValidated )
+{
+    sw::MeshAssetData data{};
+    data._listVertex = makeTestTriangles( 4, 0.5f );
+    data._listSection.push_back( sw::MeshSection{ sw::hashed_string( "Body" ), 0, 6, sw::MeshPersonVisibility::Both } );
+    data._listSection.push_back( sw::MeshSection{ sw::hashed_string( "Hair" ), 6, 6, sw::MeshPersonVisibility::ThirdPersonOnly } );
+    sw::vector<uint8> bytes;
+    sw::MeshAssetFormat::makeBytes( data, bytes );
+    sw::MeshAssetData read{};
+    SW_ASSERT_TRUE( sw::MeshAssetFormat::readFromBytes( bytes.data(), bytes.size(), read ) );
+    SW_ASSERT_EQUAL( size_t( 2 ), read._listSection.size() );
+    SW_EXPECT_TRUE( read._listSection[1]._name == sw::hashed_string( "Hair" ) );
+    SW_EXPECT_EQUAL( 6u, read._listSection[1]._firstVertex );
+    SW_EXPECT_TRUE( read._listSection[1]._personVisibility == sw::MeshPersonVisibility::ThirdPersonOnly );
+
+    sw::shared_ptr<sw::Mesh> mesh = sw::Mesh::create();
+    mesh->setVertices( read._listVertex );
+    SW_EXPECT_TRUE( mesh->setSections( read._listSection ) );
+    SW_EXPECT_EQUAL( 1, mesh->findSectionIndex( sw::hashed_string( "Hair" ) ) );
+    // 정점 밖 · 삼각형이 아님 · 이름 겹침은 받지 않는다(구간을 비운다).
+    SW_EXPECT_FALSE( mesh->setSections( {
+        sw::MeshSection{ sw::hashed_string( "Out" ), 9, 6, sw::MeshPersonVisibility::Both }
+    } ) );
+    SW_EXPECT_TRUE( mesh->getSections().empty() );
+    SW_EXPECT_FALSE( mesh->setSections( {
+        sw::MeshSection{ sw::hashed_string( "Odd" ), 0, 4, sw::MeshPersonVisibility::Both }
+    } ) );
+    SW_EXPECT_FALSE( mesh->setSections( {
+        sw::MeshSection{sw::hashed_string( "A" ), 0, 3, sw::MeshPersonVisibility::Both},
+        sw::MeshSection{sw::hashed_string( "A" ), 3, 3, sw::MeshPersonVisibility::Both}
+    } ) );
+}
+
+/**
+ * @brief [MeshAssetTest] 메시 컴포넌트는 구간 이름의 정점 범위만 그리고, 없는 이름은 그리지 않으며, 1인칭 시점에서 3인칭 전용 구간을 숨긴다
+ */
+SW_TEST_CASE( MeshAssetTest, MeshComponentDrawsNamedSectionAndHonorsPerson )
+{
+    sw::shared_ptr<sw::Mesh> mesh = sw::Mesh::create();
+    mesh->setVertices( makeTestTriangles( 4, 0.5f ) );
+    SW_ASSERT_TRUE( mesh->setSections( {
+        sw::MeshSection{sw::hashed_string( "Body" ), 0, 6,            sw::MeshPersonVisibility::Both},
+        sw::MeshSection{sw::hashed_string( "Hair" ), 6, 6, sw::MeshPersonVisibility::ThirdPersonOnly}
+    } ) );
+    sw::MeshComponent component;
+    component.setMesh( mesh );
+    uint32 first{ 99 };
+    uint32 count{ 99 };
+    SW_EXPECT_TRUE( component.findDrawSection( first, count ) );
+    SW_EXPECT_EQUAL( 0u, count ); // 이름이 없으면 메시 전체
+    component.setSectionName( sw::hashed_string( "Hair" ) );
+    SW_EXPECT_TRUE( component.findDrawSection( first, count ) );
+    SW_EXPECT_EQUAL( 6u, first );
+    SW_EXPECT_EQUAL( 6u, count );
+    SW_EXPECT_TRUE( component.isVisibleInCurrentPerson() );
+    component.setFirstPersonView( true );
+    SW_EXPECT_FALSE( component.isVisibleInCurrentPerson() );
+    component.setSectionName( sw::hashed_string( "Missing" ) );
+    SW_EXPECT_FALSE( component.findDrawSection( first, count ) );
+}

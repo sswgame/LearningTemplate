@@ -12,6 +12,7 @@
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
+#include "Engine/Object/Component/3D/MeshSectionComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
@@ -34,11 +35,13 @@ namespace sw
         , _boundsRadius{ 0.866f }
         , _blendMode{ RHIBlendMode::Opaque }
         , _gpuSpinSeed{ 0 }
+        , _sectionName{}
         , _spriteInstanceData{}
         , _vertexAnimationPhase{ 0.0f }
         , _sortKey{ 0 }
         , _pPrimitiveRegistry{ nullptr }
         , _bVisible{ SW_TRUE }
+        , _bFirstPersonView{ SW_FALSE }
         , _reserved{ 0 }
     {
         // 월드가 바뀌면 트랜스폼 칸의 프리미티브 번호로 렌더 더티가 찍힌다(`ScenePrimitive::setPrimitiveIndex`). 훅은 받지 않는다.
@@ -108,7 +111,80 @@ namespace sw
         // 읽지 못한 에셋은 메시 없이 남는다(그리지 않는다) — 캐시가 경로마다 한 번 경고하고, 핫 리로드 알림이 다시 해석한다.
         _mesh           = MeshAssetFormat::isMeshAssetPath( meshID ) ? MeshCache::acquire( meshID ) : MeshUtil::acquirePrimitive( meshID );
         _resolvedMeshID = hashedMeshID;
+        validateSectionName();
         markRenderStateDirty();
+        notifyMeshFollowers();
+    }
+
+    void MeshComponent::setSectionName( hashed_string sectionName )
+    {
+        _sectionName = sectionName;
+        validateSectionName();
+        markRenderStateDirty();
+    }
+
+    bool MeshComponent::findDrawSection( uint32& outFirstVertex, uint32& outVertexCount ) const
+    {
+        outFirstVertex = 0;
+        outVertexCount = 0;
+        if ( _sectionName.empty() )
+            return true;
+        const int32 sectionIndex = ( _mesh != nullptr ) ? _mesh->findSectionIndex( _sectionName ) : -1;
+        if ( sectionIndex < 0 )
+            return false;
+        const MeshSection& section = _mesh->getSections()[static_cast<size_t>( sectionIndex )];
+        outFirstVertex             = section._firstVertex;
+        outVertexCount             = section._vertexCount;
+        return true;
+    }
+
+    void MeshComponent::validateSectionName() const
+    {
+        const bool bResolvable = _sectionName.empty() || _mesh == nullptr || _mesh->findSectionIndex( _sectionName ) >= 0;
+        if ( bResolvable )
+            return;
+        SW_LOG_ERROR( "Mesh '%#' has no section '%#' - the component draws nothing", _meshID.c_str(), _sectionName.c_str() );
+    }
+
+    void MeshComponent::setFirstPersonView( bool bFirstPerson )
+    {
+        const uint8 value = bFirstPerson ? SW_TRUE : SW_FALSE;
+        if ( _bFirstPersonView == value )
+            return;
+        _bFirstPersonView = value;
+        markRenderStateDirty();
+    }
+
+    void MeshComponent::setFirstPersonViewOnObject( const GameObject& owner, bool bFirstPerson )
+    {
+        owner.forEachComponentOfType<MeshComponent>( [bFirstPerson]( MeshComponent* pMesh )
+        { pMesh->setFirstPersonView( bFirstPerson ); } );
+    }
+
+    bool MeshComponent::isVisibleInCurrentPerson() const
+    {
+        const int32 sectionIndex = ( _mesh != nullptr && _sectionName.empty() == false ) ? _mesh->findSectionIndex( _sectionName ) : -1;
+        if ( sectionIndex < 0 )
+            return true;
+        const MeshPersonVisibility visibility = _mesh->getSections()[static_cast<size_t>( sectionIndex )]._personVisibility;
+        if ( visibility == MeshPersonVisibility::ThirdPersonOnly )
+            return _bFirstPersonView == SW_FALSE;
+        if ( visibility == MeshPersonVisibility::FirstPersonOnly )
+            return _bFirstPersonView == SW_TRUE;
+        return true;
+    }
+
+    void MeshComponent::notifyMeshFollowers()
+    {
+        const GameObject* pOwner = getOwner();
+        if ( pOwner == nullptr )
+            return;
+        // 구간 컴포넌트는 이 오브젝트의 주 메시 컴포넌트의 메시 객체를 그린다(MeshSectionComponent::resolveRenderAssets) — 메시가 바뀌면 다시 따라간다.
+        pOwner->forEachComponentOfType<MeshSectionComponent>( [this]( MeshSectionComponent* pSection )
+        {
+            if ( pSection != this )
+                pSection->followSourceMesh();
+        } );
     }
 
     void MeshComponent::onRegister( GameObjectManager& manager )
@@ -149,8 +225,11 @@ namespace sw
         ScenePrimitive::onPropertyChanged( propertyName );
         static const hashed_string s_materialPathName( "_materialPath" );
         static const hashed_string s_meshIDName( "_meshID" );
+        static const hashed_string s_sectionName( "_sectionName" );
         if ( propertyName == s_materialPathName || propertyName == s_meshIDName )
             resolveRenderAssets();
+        if ( propertyName == s_sectionName )
+            validateSectionName();
         markRenderStateDirty();
     }
 
@@ -165,6 +244,16 @@ namespace sw
         _mesh = std::move( mesh );
         // 지금 id 의 메시로 삼는다 — 시작 · 로드 뒤 해석이 런타임 지정을 덮지 않고, id 가 바뀌면 그 id 의 것으로 바뀐다.
         _resolvedMeshID = hashed_string( string{ _meshID.empty() ? getDefaultMeshID() : string_view{ _meshID } }.c_str() );
+        markRenderStateDirty();
+        notifyMeshFollowers();
+    }
+
+    void MeshComponent::assignMeshWithoutFollowers( shared_ptr<Mesh> mesh )
+    {
+        if ( _mesh == mesh )
+            return;
+        _mesh = std::move( mesh );
+        validateSectionName();
         markRenderStateDirty();
     }
 

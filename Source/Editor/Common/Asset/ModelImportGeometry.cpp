@@ -331,12 +331,12 @@ namespace sw::editor
         }
         if ( appendMorphTargets( primitive, pSourceMesh, arrWorld, baseVertex, vertexCount, inoutMesh ) == false )
             return false;
-        appendPrimitiveTriangles( primitive, arrWorld, baseVertex, vertexCount, inoutMesh );
+        appendPrimitiveTriangles( primitive, pSourceMesh, arrWorld, baseVertex, vertexCount, inoutMesh );
         return true;
     }
 
-    void ModelImportUtil::appendPrimitiveTriangles( const cgltf_primitive& primitive, const float32 ( &arrWorld )[16], uint32 baseVertex, cgltf_size vertexCount,
-                                                    MergedMesh& inoutMesh )
+    void ModelImportUtil::appendPrimitiveTriangles( const cgltf_primitive& primitive, const cgltf_mesh* pSourceMesh, const float32 ( &arrWorld )[16], uint32 baseVertex,
+                                                    cgltf_size vertexCount, MergedMesh& inoutMesh )
     {
         const cgltf_size indexCount   = primitive.indices != nullptr ? primitive.indices->count : vertexCount;
         const bool       bSwapWinding = computeDeterminant3( arrWorld ) >= 0.0f;
@@ -356,6 +356,7 @@ namespace sw::editor
             inoutMesh._listIndex.push_back( bSwapWinding ? arrCorner[2] : arrCorner[1] );
             inoutMesh._listIndex.push_back( bSwapWinding ? arrCorner[1] : arrCorner[2] );
             inoutMesh._listTriangleMaterial.push_back( primitive.material );
+            inoutMesh._listTriangleSourceMesh.push_back( pSourceMesh );
         }
     }
 
@@ -600,16 +601,30 @@ namespace sw::editor
         return skin;
     }
 
+    void ModelImportUtil::optimizeTriangleRange( MergedMesh& inoutMesh, size_t begin, size_t end )
+    {
+        if ( end <= begin || inoutMesh._listVertex.empty() )
+            return;
+        uint32*      pIndex      = inoutMesh._listIndex.data() + begin * 3;
+        const size_t indexCount  = ( end - begin ) * 3;
+        const size_t vertexCount = inoutMesh._listVertex.size();
+        meshopt_optimizeVertexCache( pIndex, pIndex, indexCount, vertexCount );
+        meshopt_optimizeOverdraw( pIndex, pIndex, indexCount, &inoutMesh._listVertex[0]._position._x, vertexCount, sizeof( ImportVertex ), kOverdrawThreshold );
+    }
+
     void ModelImportUtil::expandTriangles( MergedMesh& inoutMesh, uint32 skinBoneCount, MeshAssetData& outData )
+    {
+        // 메시 전체를 한 묶음으로 최적화한다 — 구간이 있는 메시는 묶음마다 최적화하고 순서를 지켜 펼친다(populateMaterialSections · expandTrianglesInOrder).
+        optimizeTriangleRange( inoutMesh, 0, inoutMesh._listIndex.size() / 3 );
+        expandTrianglesInOrder( inoutMesh, skinBoneCount, outData );
+    }
+
+    void ModelImportUtil::expandTrianglesInOrder( const MergedMesh& inoutMesh, uint32 skinBoneCount, MeshAssetData& outData )
     {
         outData = MeshAssetData{};
         if ( inoutMesh._listIndex.empty() )
             return;
-        vector<uint32>& listIndex   = inoutMesh._listIndex;
-        const size_t    vertexCount = inoutMesh._listVertex.size();
-        meshopt_optimizeVertexCache( listIndex.data(), listIndex.data(), listIndex.size(), vertexCount );
-        meshopt_optimizeOverdraw( listIndex.data(), listIndex.data(), listIndex.size(), &inoutMesh._listVertex[0]._position._x, vertexCount,
-                                  sizeof( ImportVertex ), kOverdrawThreshold );
+        const vector<uint32>& listIndex = inoutMesh._listIndex;
 
         outData._listVertex.reserve( listIndex.size() );
         if ( skinBoneCount > 0 )
