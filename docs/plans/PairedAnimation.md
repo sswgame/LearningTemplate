@@ -125,7 +125,7 @@ PairedAnimationComponent(시작하는 쪽, 에셋 경로 · 자기 역할)
 
 **네트워크 계층(키트 `GF_NetPairedAnimation`, 메시지 영역 `0x60`)**: 계약은 `PairedAnimationReplication.h` 머리말이 정본이다. 정한 것은 이렇다.
 
-- 역할 → 오브젝트 대응은 파괴 복제(`DestructionNetSession`)의 규칙을 그대로 쓴다 — 애니메이터가 있는 씬 오브젝트를 복제 시작 때 이름순으로 1 부터 매긴다(`PairedAnimationNetObjectTable`). 표에 없는 오브젝트(나중에 생긴 것)가 참가한 세션, 리소스 경로 없이 만든 에셋(`PairedAnimationDef::getSourcePath` 가 빔)의 세션은 서버가 오류를 남기고 보내지 않는다.
+- 역할 → 오브젝트 대응은 씬의 번호표 `NetObjectTable`(Engine/Net, 파괴 복제와 같은 표)이다 — 씬 오브젝트는 이름 해시(이름순 몇 번째가 아니라 한쪽에만 있는 오브젝트가 번호를 밀지 않는다), 플레이 중에 생긴 오브젝트(투사체)는 서버의 `registerSpawned` 번호를 게임의 스폰 복제가 클라이언트에서 `bindSpawned` 로 묶은 것이다. 번호가 없는 오브젝트가 참가한 세션, 리소스 경로 없이 만든 에셋(`PairedAnimationDef::getSourcePath` 가 빔)의 세션은 서버가 오류를 남기고 보내지 않는다.
 - 늦게 들어온 클라이언트에도 서버는 `captureSnapshot` 의 실제 진입 시각을 보낸다(`makeAtElapsedTime` 의 추정은 쓰지 않는다). 상태 메시지는 세션을 처음 본 갱신에 모두에게, 연결이 열리면 그 연결에 한 번 간다. 끝(`Finished` · `Aborted` · 목록에서 빠짐)은 끝 메시지로 가고 클라이언트는 아직 재생 중이면 중단한다.
 - 복원이 클립이 끝난 역할(서버가 게임플레이로 내보낸 선택 역할 포함)에 `exitState` 를 재생하는 규칙은 그대로 둔다. 같은 id 의 상태를 다시 받으면(보정 · 롤백) 클라이언트는 옛 세션을 중단하고 다시 복원한다. 롤백 소유 상태는 게임이 `makeSessionState` → `PairedAnimationNetState::write` 의 바이트를 `setOwnerState` 에 싣고, 되감은 뒤 `PairedAnimationReplicationClient::applyState` 를 부른다.
 - 씬에 `PairedAnimationNetSessionComponent` 하나를 두면 게임 네트워크 세션(`GameNetSession`)의 역할대로 서버(틱 `PostUpdate` 에서 보냄) · 클라이언트(게임 프레임 앞에서 받음)가 된다. 클라이언트의 게임플레이가 세션을 따로 시작하지 않게 막는 일은 게임 권한의 몫이다.
@@ -158,7 +158,7 @@ PairedAnimationComponent(시작하는 쪽, 에셋 경로 · 자기 역할)
 ## 남은 것
 
 - 에디터 미리보기(M3) 화면 확인: 창을 열어 역할 프리팹을 놓고 스크럽 · 기즈모로 오프셋을 옮기는 에디터 시나리오(`-EnableEditor`, `CaptureEditorUI`).
-- 네트워크(P3b) 두 프로세스 확인: `Server` 와 `App -gv_netConnectAddress` 에서 세션 시작 · 늦은 참가 · 끝이 복제되는지. 씬 문서 밖에서 생긴 참가자(투사체 같은)를 복제하려면 번호표가 아니라 복제 엔티티 id 대응이 필요하다(후속).
+- 네트워크(P3b) 두 프로세스 확인: `Server` 와 `App -gv_netConnectAddress` 에서 세션 시작 · 늦은 참가 · 끝이 복제되는지. 씬 문서 밖에서 생긴 참가자는 번호표의 생성 번호(`NetObjectTable::registerSpawned` · `bindSpawned`)로 부를 수 있게 됐다 — 스폰 자체를 복제하는 것(무엇을 스폰했는지 클라이언트에 알리고 묶는 일)은 게임의 몫이고 아직 쓰는 게임이 없다.
 - 시나리오 테스트: `py -3 Scripts/dev/MakeBowProps.py` → `App --import-models`(활 · 화살 `models/props/` 와 `import.stamp` 를 함께 커밋) → 활 · 화살 · 투사체 프리팹과 활 알림 표(`ReleaseArrow` → `SpawnPrefab`) → 궁수 · 활 · 화살을 둔 씬과 세션을 시작하는 시나리오(세션 상태 탐침과 스크린샷). 임포트에 빌드가 필요해 이번에는 생성기와 에셋 타임라인까지만 했다 — 임포트 없이 glb 를 커밋하면 임포트 스탬프 검사가 깨진다.
 
 ## 11. 알려진 한계

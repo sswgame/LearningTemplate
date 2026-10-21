@@ -11,6 +11,7 @@
 #include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Service/NetObjectTable.h"
 
 #include <algorithm>
 
@@ -24,6 +25,22 @@ namespace sw
         bool containsPairedSessionID( const vector<uint32>& listSessionID, uint32 sessionID )
         {
             return std::find( listSessionID.begin(), listSessionID.end(), sessionID ) != listSessionID.end();
+        }
+
+        /** @brief 애니메이터를 가진 오브젝트의 번호(`NetObjectTable`)입니다. 핸들이 풀리지 않거나 번호가 없으면 0 입니다. */
+        uint32 findAnimatorNetID( GameObjectManager& manager, const TComponentHandle<SkeletalAnimatorComponent>& animator )
+        {
+            const SkeletalAnimatorComponent* pAnimator = manager.resolveComponent( animator );
+            const GameObject*                pOwner    = pAnimator != nullptr ? pAnimator->getOwner() : nullptr;
+            return pOwner != nullptr ? manager.getSubsystem<NetObjectTable>().findID( *pOwner ) : 0u;
+        }
+
+        /** @brief 번호의 오브젝트에 있는 애니메이터입니다. 오브젝트나 애니메이터가 없으면 무효 핸들입니다. */
+        TComponentHandle<SkeletalAnimatorComponent> findNetAnimator( GameObjectManager& manager, uint32 netID )
+        {
+            GameObject*                      pObject   = manager.getSubsystem<NetObjectTable>().findObject( netID );
+            const SkeletalAnimatorComponent* pAnimator = pObject != nullptr ? pObject->getComponent<SkeletalAnimatorComponent>() : nullptr;
+            return pAnimator != nullptr ? TComponentHandle<SkeletalAnimatorComponent>( pAnimator ) : TComponentHandle<SkeletalAnimatorComponent>{};
         }
     } // namespace
 } // namespace sw
@@ -80,52 +97,8 @@ namespace sw
 
 namespace sw
 {
-    PairedAnimationNetObjectTable::PairedAnimationNetObjectTable()
-        : _listAnimator{}
-    {
-    }
-
-    void PairedAnimationNetObjectTable::rebuild( GameObjectManager& manager )
-    {
-        _listAnimator.clear();
-        vector<GameObject*> listObject;
-        manager.getAllGameObjects( listObject );
-        // 이름순이 번호다 — 서버와 클라이언트가 같은 씬 문서를 읽으므로 같은 번호가 된다(`DestructionNetSession` 과 같은 규칙).
-        std::sort( listObject.begin(), listObject.end(), []( const GameObject* pLhs, const GameObject* pRhs )
-        { return pLhs->getName().lexicalLess( pRhs->getName() ); } );
-        for ( GameObject* pObject : listObject )
-        {
-            const SkeletalAnimatorComponent* pAnimator = pObject->getComponent<SkeletalAnimatorComponent>();
-            if ( pAnimator != nullptr )
-                _listAnimator.push_back( TComponentHandle<SkeletalAnimatorComponent>( pAnimator ) );
-        }
-    }
-
-    uint32 PairedAnimationNetObjectTable::findNetID( const TComponentHandle<SkeletalAnimatorComponent>& animator ) const
-    {
-        if ( animator.isValid() == false )
-            return 0;
-        for ( size_t index = 0; index < _listAnimator.size(); ++index )
-        {
-            if ( _listAnimator[index] == animator )
-                return static_cast<uint32>( index + 1 );
-        }
-        return 0;
-    }
-
-    TComponentHandle<SkeletalAnimatorComponent> PairedAnimationNetObjectTable::findAnimator( uint32 netID ) const
-    {
-        if ( netID == 0 || netID > _listAnimator.size() )
-            return {};
-        return _listAnimator[netID - 1];
-    }
-} // namespace sw
-
-namespace sw
-{
     PairedAnimationReplicationServer::PairedAnimationReplicationServer()
-        : _table{}
-        , _listAnnouncedID{}
+        : _listAnnouncedID{}
         , _listRefusedID{}
         , _listJoiningConnection{}
         , _stats{}
@@ -144,7 +117,7 @@ namespace sw
         _listJoiningConnection.clear();
         _stats = PairedAnimationReplicationStats{};
         if ( pManager != nullptr )
-            _table.rebuild( *pManager );
+            pManager->getSubsystem<NetObjectTable>().captureSceneObjects();
     }
 
     void PairedAnimationReplicationServer::update()
@@ -185,6 +158,11 @@ namespace sw
     bool PairedAnimationReplicationServer::makeSessionState( const PairedAnimationSession& session, PairedAnimationNetState& outState ) const
     {
         const PairedAnimationDef& def = session.getDef();
+        if ( _pManager == nullptr )
+        {
+            SW_LOG_ERROR( "Paired animation session %# is not replicated: the replication server was not initialized with a scene", session.getID() );
+            return false;
+        }
         if ( def.getSourcePath().empty() )
         {
             SW_LOG_ERROR( "Paired animation session %# is not replicated: its asset was not loaded from a resource path, so clients cannot load the same asset", session.getID() );
@@ -197,10 +175,10 @@ namespace sw
             const TComponentHandle<SkeletalAnimatorComponent>& animator = session.getRoleAnimator( roleIndex );
             if ( animator.isValid() == false )
                 continue; // 바인딩 없는 선택 역할
-            const uint32 netID = _table.findNetID( animator );
+            const uint32 netID = findAnimatorNetID( *_pManager, animator );
             if ( netID == 0 )
             {
-                SW_LOG_ERROR( "Paired animation session %# is not replicated: role '%#' of '%#' is bound to an object that was not in the scene when replication started", session.getID(),
+                SW_LOG_ERROR( "Paired animation session %# is not replicated: role '%#' of '%#' is bound to an object without a net id (not a captured scene object and not a registered spawned object)", session.getID(),
                               def.getRoles()[roleIndex]._name.c_str(), def.getSourcePath().c_str() );
                 return false;
             }
@@ -304,8 +282,7 @@ namespace sw
 namespace sw
 {
     PairedAnimationReplicationClient::PairedAnimationReplicationClient()
-        : _table{}
-        , _stats{}
+        : _stats{}
         , _pManager{ nullptr }
     {
     }
@@ -315,7 +292,7 @@ namespace sw
         _pManager = pManager;
         _stats    = PairedAnimationReplicationStats{};
         if ( pManager != nullptr )
-            _table.rebuild( *pManager );
+            pManager->getSubsystem<NetObjectTable>().captureSceneObjects();
     }
 
     PairedAnimationStartResult PairedAnimationReplicationClient::applyState( const PairedAnimationNetState& state )
@@ -346,11 +323,11 @@ namespace sw
             const uint32 netID = state._listRoleNetID[roleIndex];
             if ( netID == 0 )
                 continue; // 서버에서도 바인딩 없는 선택 역할
-            const TComponentHandle<SkeletalAnimatorComponent> animator = _table.findAnimator( netID );
+            const TComponentHandle<SkeletalAnimatorComponent> animator = findNetAnimator( *_pManager, netID );
             if ( animator.isValid() == false )
             {
-                SW_LOG_ERROR( "Replicated paired animation session %# rejected: role '%#' names object %# but this scene has %# animated objects", state._snapshot._sessionID,
-                              def->getRoles()[roleIndex]._name.c_str(), netID, _table.getCount() );
+                SW_LOG_ERROR( "Replicated paired animation session %# rejected: role '%#' names net object %# but no animated object here has that id", state._snapshot._sessionID,
+                              def->getRoles()[roleIndex]._name.c_str(), netID );
                 ++_stats._rejectedCount;
                 return PairedAnimationStartResult::ParticipantMissing;
             }

@@ -10,8 +10,8 @@
  *          - **늦은 참가.** 연결이 열리면 다음 갱신에서 재생 중인 세션마다 그때의 상태를 그 연결에만 보낸다(같은 메시지).
  *          - **끝.** 서버에서 세션이 끝나거나(`Finished` · `Aborted`) 목록에서 빠지면 끝 메시지(`kSessionEnd`)를 보내고, 클라이언트는 아직 재생 중이면 중단한다
  *            (남은 역할은 각자 `exitState` 로 블렌드 — 클립이 끝난 세션과 같은 규칙이다).
- *          - **오브젝트 번호.** 파괴 복제(`DestructionNetSession`)와 같은 규칙이다 — 애니메이터가 있는 씬 오브젝트를 시작할 때 이름순으로 1 부터 매긴다
- *            (`PairedAnimationNetObjectTable`). 서버와 클라이언트가 같은 씬 문서를 읽으므로 번호가 같다. 표에 없는 오브젝트(나중에 생긴 것)가 참가한 세션은
+ *          - **오브젝트 번호.** 씬의 번호표(`NetObjectTable` — 파괴 복제와 같은 표)의 번호다. 씬 오브젝트는 이름 해시, 플레이 중에 생긴 오브젝트(투사체)는
+ *            서버가 매기고 게임의 스폰 복제가 클라이언트에 묶은 생성 번호다. 번호가 없는 오브젝트(묶지 않은 생성 오브젝트, 이름이 겹친 씬 오브젝트)가 참가한 세션은
  *            복제할 수 없어 서버가 오류를 남기고 보내지 않는다 — 다른 오브젝트에 조용히 묶지 않는다.
  *          - **롤백.** 소유 상태(`ReplicationServer::setOwnerState`)에 세션을 실으려면 게임이 `PairedAnimationNetState::write` 의 바이트를 싣고, 되감은 뒤
  *            `PairedAnimationReplicationClient::applyState` 를 부른다. 같은 id 가 재생 중이면 중단하고 다시 복원한다(서버 상태가 정본이다).
@@ -74,30 +74,6 @@ namespace sw
 
 namespace sw
 {
-    /**
-     * @class PairedAnimationNetObjectTable
-     * @brief 애니메이터가 있는 씬 오브젝트의 번호표입니다(이름순, 1 부터). 서버와 클라이언트가 같은 씬 문서에서 같은 표를 만듭니다.
-     */
-    class SW_KIT_API PairedAnimationNetObjectTable
-    {
-    public:
-        PairedAnimationNetObjectTable();
-
-        /** @brief 매니저의 지금 오브젝트로 표를 다시 만듭니다(씬을 읽은 뒤, 복제를 시작할 때 한 번). */
-        void rebuild( GameObjectManager& manager );
-        /** @brief 애니메이터의 번호입니다. 표에 없으면 0 입니다. */
-        uint32 findNetID( const TComponentHandle<SkeletalAnimatorComponent>& animator ) const;
-        /** @brief 번호의 애니메이터입니다. 범위 밖이면 무효 핸들입니다. */
-        TComponentHandle<SkeletalAnimatorComponent> findAnimator( uint32 netID ) const;
-        uint32                                      getCount() const { return static_cast<uint32>( _listAnimator.size() ); }
-
-    private:
-        vector<TComponentHandle<SkeletalAnimatorComponent>> _listAnimator; ///< 번호 - 1 순서
-    };
-} // namespace sw
-
-namespace sw
-{
     /** @brief 보낸 · 받은 횟수입니다. 테스트와 확인에 씁니다. */
     struct PairedAnimationReplicationStats
     {
@@ -127,7 +103,7 @@ namespace sw
     public:
         PairedAnimationReplicationServer();
 
-        /** @brief @p pManager 의 오브젝트 번호표를 만들고 시작합니다. 보낸 기록은 비웁니다. */
+        /** @brief @p pManager 의 씬 오브젝트를 번호표(`NetObjectTable::captureSceneObjects`)에 잡고 시작합니다. 보낸 기록은 비웁니다. */
         void initialize( NetHost* pHost, GameObjectManager* pManager );
         /** @brief 끝난 세션의 끝, 새 세션의 상태, 들어온 연결의 상태 순서로 보냅니다(게임 스레드). */
         void update();
@@ -142,12 +118,11 @@ namespace sw
 
         /**
          * @brief 재생 중인 세션의 복제 상태를 만듭니다. 메시지와 롤백 소유 상태(`ReplicationServer::setOwnerState` 에 `PairedAnimationNetState::write` 의 바이트)가 함께 씁니다.
-         * @details 에셋을 리소스 경로에서 읽지 않았거나, 참가자가 번호표에 없거나, 재생 중이 아니면 false 이고 앞의 둘은 오류를 남깁니다.
+         * @details 에셋을 리소스 경로에서 읽지 않았거나, 참가자에게 번호(`NetObjectTable`)가 없거나, 재생 중이 아니면 false 이고 앞의 둘은 오류를 남깁니다.
          */
         [[nodiscard]] bool makeSessionState( const PairedAnimationSession& session, PairedAnimationNetState& outState ) const;
 
         const PairedAnimationReplicationStats& getStats() const { return _stats; }
-        const PairedAnimationNetObjectTable&   getObjectTable() const { return _table; }
 
     private:
         /** @brief 상태 메시지를 씁니다. 쓰지 못하면(경로 · 역할 수 상한) 오류를 남기고 false 입니다. */
@@ -158,7 +133,6 @@ namespace sw
         bool               hasAnnounced( uint32 sessionID ) const;
         bool               hasRefused( uint32 sessionID ) const;
 
-        PairedAnimationNetObjectTable   _table;
         vector<uint32>                  _listAnnouncedID; ///< 상태를 보냈고 아직 끝을 보내지 않은 세션
         vector<uint32>                  _listRefusedID;   ///< 복제할 수 없어 보내지 않은 세션(오류를 한 번만 남긴다)
         vector<int32>                   _listJoiningConnection;
@@ -184,7 +158,7 @@ namespace sw
     public:
         PairedAnimationReplicationClient();
 
-        /** @brief @p pManager 의 오브젝트 번호표를 만들고 시작합니다. */
+        /** @brief @p pManager 의 씬 오브젝트를 번호표(`NetObjectTable::captureSceneObjects`)에 잡고 시작합니다. */
         void initialize( GameObjectManager* pManager );
         /**
          * @brief 복제 상태로 세션을 복원합니다(게임 스레드, 틱 밖). 받은 메시지와 롤백(되감은 뒤 소유 상태)이 함께 씁니다.
@@ -202,10 +176,8 @@ namespace sw
         NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
 
         const PairedAnimationReplicationStats& getStats() const { return _stats; }
-        const PairedAnimationNetObjectTable&   getObjectTable() const { return _table; }
 
     private:
-        PairedAnimationNetObjectTable   _table;
         PairedAnimationReplicationStats _stats;
         GameObjectManager*              _pManager;
     };

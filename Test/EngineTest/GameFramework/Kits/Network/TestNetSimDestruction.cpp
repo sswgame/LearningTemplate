@@ -70,11 +70,13 @@ namespace
         const sw::DestructionNetSession& server = getNetSession( harness.getServer() );
         sw::vector<sw::NetSimWorld*>     listClient;
         harness.collectClients( listClient );
+        sw::vector<uint32> listNetID;
+        server.collectObjectIDs( listNetID );
         for ( sw::NetSimWorld* pClient : listClient )
         {
             const sw::vector<sw::DestructionHashRecord>& listServer = server.getHashRecords();
             const sw::vector<sw::DestructionHashRecord>& listLocal  = getNetSession( *pClient ).getHashRecords();
-            for ( uint32 netID = 1; netID <= server.getObjectCount(); ++netID )
+            for ( const uint32 netID : listNetID )
             {
                 uint64 serverHash = 0;
                 uint64 localHash  = 0;

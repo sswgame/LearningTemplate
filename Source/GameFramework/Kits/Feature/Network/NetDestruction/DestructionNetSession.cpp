@@ -8,6 +8,7 @@
 #include "Engine/Destruction/FractureComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Service/NetObjectTable.h"
 
 #include "GameFramework/Base/Gameplay/Gimmick/Genre/ShooterGimmicks.h"
 
@@ -20,12 +21,12 @@ namespace sw
     DestructionNetSession::DestructionNetSession()
         : _server{}
         , _client{}
-        , _listFracture{}
-        , _listName{}
-        , _listLoggedCount{}
+        , _listEntry{}
         , _listRecord{}
+        , _pManager{ nullptr }
         , _pRouter{ nullptr }
         , _serverTick{ 0 }
+        , _seenSpawnedRevision{ 0 }
         , _side{ DestructionNetSide::Server }
     {
     }
@@ -41,44 +42,71 @@ namespace sw
         shutdown();
         _side       = side;
         _serverTick = 0;
-        _listFracture.clear();
-        _listName.clear();
+        _listEntry.clear();
         _listRecord.clear();
+        _pManager = &manager;
 
-        vector<GameObject*> listObject;
-        manager.getAllGameObjects( listObject );
-        // 이름순이 번호다 — 서버와 클라이언트가 같은 씬 문서를 읽으므로 같은 번호가 된다.
-        std::sort( listObject.begin(), listObject.end(), []( const GameObject* pLhs, const GameObject* pRhs )
-        { return pLhs->getName().lexicalLess( pRhs->getName() ); } );
-        for ( GameObject* pObject : listObject )
+        if ( side == DestructionNetSide::Client )
         {
             // 피해를 내는 기믹은 서버의 게임플레이다 — 클라이언트는 사건만 받는다.
-            ExplosiveBarrelComponent* pBarrel = pObject->getComponent<ExplosiveBarrelComponent>();
-            if ( pBarrel != nullptr && side == DestructionNetSide::Client )
-                pBarrel->setActive( false );
-            FractureComponent* pFracture = pObject->getComponent<FractureComponent>();
-            if ( pFracture == nullptr )
-                continue;
-            _listFracture.push_back( pFracture );
-            _listName.push_back( string{ pObject->getName().c_str() } );
+            vector<GameObject*> listObject;
+            manager.getAllGameObjects( listObject );
+            for ( GameObject* pObject : listObject )
+            {
+                ExplosiveBarrelComponent* pBarrel = pObject->getComponent<ExplosiveBarrelComponent>();
+                if ( pBarrel != nullptr )
+                    pBarrel->setActive( false );
+            }
         }
-        _listLoggedCount.assign( _listFracture.size(), 0u );
 
         if ( side == DestructionNetSide::Server )
             _server.initialize( &host, &manager, settings );
         else
             _client.initialize( &host, &manager, settings );
-        for ( uint32 index = 0; index < static_cast<uint32>( _listFracture.size() ); ++index )
-        {
-            if ( side == DestructionNetSide::Server )
-                _server.registerObject( index + 1, *_listFracture[index] );
-            else
-                _client.registerObject( index + 1, *_listFracture[index] );
-        }
+        NetObjectTable& table = manager.getSubsystem<NetObjectTable>();
+        table.captureSceneObjects();
+        _seenSpawnedRevision = table.getSpawnedRevision();
+        registerNumberedObjects();
         INetMessageHandler* pHandler = side == DestructionNetSide::Server ? static_cast<INetMessageHandler*>( &_server ) : static_cast<INetMessageHandler*>( &_client );
         (void)router.registerHandler( pHandler ); // 이미 단 처리기여도 true 다 — 같은 라우터에 다시 시작하는 경우
         _pRouter = &router;
-        SW_LOG_INFO( "Destruction net session started as %# with %# objects", side == DestructionNetSide::Server ? "server" : "client", static_cast<uint32>( _listFracture.size() ) );
+        SW_LOG_INFO( "Destruction net session started as %# with %# objects", side == DestructionNetSide::Server ? "server" : "client", static_cast<uint32>( _listEntry.size() ) );
+    }
+
+    void DestructionNetSession::registerNumberedObjects()
+    {
+        vector<GameObject*> listObject;
+        _pManager->getSubsystem<NetObjectTable>().collectObjects( listObject );
+        const NetObjectTable& table = _pManager->getSubsystem<NetObjectTable>();
+        for ( GameObject* pObject : listObject )
+        {
+            FractureComponent* pFracture = pObject->getComponent<FractureComponent>();
+            if ( pFracture == nullptr )
+                continue;
+            const uint32 netID       = table.findID( *pObject );
+            const bool   bRegistered = std::any_of( _listEntry.begin(), _listEntry.end(), [netID]( const Entry& entry )
+              { return entry._netID == netID; } );
+            if ( netID == 0 || bRegistered )
+                continue;
+            Entry entry{};
+            entry._pFracture = pFracture;
+            entry._name      = string{ pObject->getName().c_str() };
+            entry._netID     = netID;
+            _listEntry.push_back( entry );
+            if ( _side == DestructionNetSide::Server )
+                _server.registerObject( netID, *pFracture );
+            else
+                _client.registerObject( netID, *pFracture );
+        }
+    }
+
+    void DestructionNetSession::collectObjectIDs( vector<uint32>& outListNetID ) const
+    {
+        outListNetID.clear();
+        for ( const Entry& entry : _listEntry )
+        {
+            outListNetID.push_back( entry._netID );
+        }
     }
 
     void DestructionNetSession::shutdown()
@@ -103,6 +131,13 @@ namespace sw
     {
         if ( _pRouter == nullptr )
             return;
+        // 플레이 중에 번호를 받은 파괴 오브젝트(서버의 registerSpawned · 클라이언트의 bindSpawned)를 등록한다.
+        const uint32 spawnedRevision = _pManager->getSubsystem<NetObjectTable>().getSpawnedRevision();
+        if ( spawnedRevision != _seenSpawnedRevision )
+        {
+            _seenSpawnedRevision = spawnedRevision;
+            registerNumberedObjects();
+        }
         if ( _side == DestructionNetSide::Server )
             _server.update( _serverTick++ );
         else
@@ -117,9 +152,9 @@ namespace sw
 
     string_view DestructionNetSession::findObjectName( uint32 netID ) const
     {
-        if ( netID == 0 || netID > _listName.size() )
-            return {};
-        return _listName[netID - 1];
+        const auto it = std::find_if( _listEntry.begin(), _listEntry.end(), [netID]( const Entry& entry )
+        { return entry._netID == netID; } );
+        return it != _listEntry.end() ? string_view{ it->_name } : string_view{};
     }
 
     string DestructionNetSession::formatHashLine( DestructionNetSide side, const DestructionHashRecord& record, string_view objectName )
@@ -132,16 +167,16 @@ namespace sw
 
     void DestructionNetSession::recordChangedHashes()
     {
-        for ( uint32 index = 0; index < static_cast<uint32>( _listFracture.size() ); ++index )
+        for ( Entry& entry : _listEntry )
         {
-            const DestructionState& state      = _listFracture[index]->getState();
+            const DestructionState& state      = entry._pFracture->getState();
             const uint32            eventCount = state.getEventCount();
-            if ( eventCount == _listLoggedCount[index] )
+            if ( eventCount == entry._loggedCount )
                 continue;
-            _listLoggedCount[index] = eventCount;
-            const DestructionHashRecord record{ state.computeStateHash(), index + 1, eventCount };
+            entry._loggedCount = eventCount;
+            const DestructionHashRecord record{ state.computeStateHash(), entry._netID, eventCount };
             _listRecord.push_back( record );
-            SW_LOG_INFO( "%#", formatHashLine( _side, record, _listName[index] ).c_str() );
+            SW_LOG_INFO( "%#", formatHashLine( _side, record, entry._name ).c_str() );
         }
     }
 } // namespace sw
