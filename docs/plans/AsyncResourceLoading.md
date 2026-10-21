@@ -67,7 +67,7 @@
   - **캐릭터 스폰**: 애니메이터가 시작 때 그래프의 클립을 비동기로 요청하고, 유닛(스켈레탈 메시)은 다 읽힐 때까지 그리지 않는다(`IAnimationPhaseTask::pollAnimationAssetsReady` → `SkeletalMeshComponent::pollReadyToAppear`). 그동안 `play` 는 미뤄지고, 다 읽히면 그래프를 지어 재생한 뒤 디더로 나타난다. 스켈레톤 · 본 LOD 는 포즈 버퍼 크기를 정하므로 동기(`acquire`)로 둔다 — 같은 블록을 기다린다.
   - **프리팹 수명**: 캐시가 `shared_ptr<const PrefabAsset>` 로 나눠 준다(원시 포인터는 `reload` 가 항목을 버리면 해제된 메모리였다). 읽는 사이 캐시를 버리면 세대가 바뀌어 결과를 넣지 않는다. 중첩 원본은 그 로드 안에서 같은 스레드가 읽어 순환한 두 프리팹을 두 워커가 읽어도 서로를 기다리지 않는다.
   - **시나리오 · 테스트**: `<Screenshot>` 이 씬의 에셋 일(`Assets.Pending` — 도착 단계의 대기 + 읽거나 올리는 텍스처)이 0 이 되고 3 프레임 지날 때까지 기다린다(상한 600 프레임이면 실패로 적는다). 시나리오마다 기다림을 적지 않는다. 애니메이터 테스트가 이번 프레임에 포즈가 필요하면 `waitForAnimationAssets`.
-- **셰이더는 아직 커밋하지 않았다**: 셰이더 소스를 바꾸면 쿠킹 스탬프 게이트(`CheckShaderStamps`)가 다시 굽기 전 커밋을 막는다. 빌드 없이 구현하라는 지시라 셰이더 소스(binding.hlsli 8-1 · instancedata.hlsli `appearance` · forwardlit · gbuffer · toon · shadowdepth)와 그에 맞춘 `ShaderBindingValidatorTest` 표 한 줄을 패치로 남겼다 — `docs/plans/patches/AsyncResourceLoading-shaders.patch`. `git apply` 뒤 셰이더를 다시 구워 함께 커밋한다. 그 전에는 C++ 가 디더 변형을 요청해도 셰이더가 define 을 몰라 버리기 없이 그린다(등장 비율 0 은 그리지 않는 것만 동작).
+- **셰이더는 통합(2026-10-22, `f33a7f91f`)에서 적용 · 쿠킹했다** — 디더 등장 변형(`SW_APPEARANCE_DITHER`)과 `GPUInstance::_appearance` 칸(강조 칸과 나눴다). 옮겨 온 패치 파일은 지웠다.
 - 남은 확인(전부 빌드 없이 구현함): 빌드와 테스트 전체. 특히 (1) 위 패치를 적용해 셰이더 쿠킹 다시(`ShaderBindingValidatorTest.InstanceElementLayoutMatchesCPUStruct` 가 `appearance` 를 대조한다), (2) 깊이만 쓰는 패스에 픽셀 스테이지를 붙인 디더 변형이 네 백엔드에서 PSO 를 만드는지(컬러 타깃 없이 `SV_TARGET` 을 쓰는 PS), (3) 등장 중간 프레임 스크린샷(TAA 켬 · 끔), (4) 엔진 서비스가 묶인 테스트에서 시작 때 클립을 쓰는 애니메이터 테스트가 미뤄진 재생을 기다리는지, (5) `MaterialCache` 로 텍스처를 쓰고 첫 프레임을 읽는 GPU 테스트.
 - 함정: 등장 비율은 GPU 씬 버퍼 레이아웃을 바꿔 셰이더 전체 재빌드가 듭니다. 그 단위는 혼자 돌립니다.
 
