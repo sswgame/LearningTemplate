@@ -27,6 +27,7 @@ namespace sw
     enum class InputGlyphStyle : uint8;
 
     struct ActionBinding;
+    struct InputPressInstant;
 
     class InputManager;
 
@@ -578,6 +579,12 @@ namespace sw
 
         bool wasActionPressed( const hashed_string& action ) const;
         bool wasActionPressed( ActionHandle handle ) const;
+        /**
+         * @brief 이번 프레임에 액션이 눌린 순간입니다(서브틱 입력 — CS2 처럼 클릭한 순간의 시선으로 쏠 때 쓴다). 이번 프레임에 눌리지 않았으면 false 입니다.
+         * @details 바인딩마다 그 바인딩이 완성된 순간(코드 · 조합이면 마지막으로 눌린 컨트롤)을 보고, 여러 바인딩이 함께 눌렸으면 가장 이른 것이다.
+         *          아날로그 축의 임계처럼 누름 이벤트가 없는 바인딩만 눌렸으면 false 이다 — 그 순간을 모른다(지어내지 않는다).
+         */
+        [[nodiscard]] bool tryGetActionPressInstant( ActionHandle handle, InputPressInstant& outInstant ) const;
 
         bool wasActionReleased( const hashed_string& action ) const;
         bool wasActionReleased( ActionHandle handle ) const;

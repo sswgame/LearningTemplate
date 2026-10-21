@@ -5,6 +5,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Input/Devices/GamepadDevice.h"
 #include "Engine/Input/Devices/KeyboardDevice.h"
@@ -74,6 +75,10 @@ namespace sw
         , _pGamepad{ nullptr }
         , _pInputMap{ nullptr }
         , _listDrainedEvent{}
+        , _listFramePress{}
+        , _frameLookDelta{}
+        , _pfnNowMicroseconds{ &MonotonicClock::nowMicroseconds }
+        , _frameEndMicroseconds{ 0 }
         , _pVirtualInput{ nullptr }
         , _virtualFrameIndex{ 0 }
         , _beginFrameCount{ 0 }
@@ -215,7 +220,9 @@ namespace sw
         if ( _bInputMuted == SW_TRUE )
             return false;
 
-        const bool bPushed = _queueRawEvent.push( rawEvent );
+        RawInputEvent stamped     = rawEvent;
+        stamped._timeMicroseconds = _pfnNowMicroseconds();
+        const bool bPushed        = _queueRawEvent.push( stamped );
         if ( bPushed == false )
             _droppedRawEventCount.fetch_add( 1, std::memory_order_relaxed );
         return bPushed;
@@ -225,10 +232,74 @@ namespace sw
     {
         // 음소거는 "입력을 무시한다" 는 뜻이지 "창이 포커스를 잃은 것도 모른다" 는 뜻이 아니다. 음소거 중에 포커스를 잃고
         // 음소거가 풀린 뒤에도 그 전의 눌림이 남아 있으면 안 된다.
-        const bool bPushed = _queueRawEvent.push( rawEvent );
+        RawInputEvent stamped     = rawEvent;
+        stamped._timeMicroseconds = _pfnNowMicroseconds();
+        const bool bPushed        = _queueRawEvent.push( stamped );
         if ( bPushed == false )
             _droppedRawEventCount.fetch_add( 1, std::memory_order_relaxed );
         return bPushed;
+    }
+
+    void InputManager::setClock( ClockFunction pfnNowMicroseconds )
+    {
+        SW_ASSERT( pfnNowMicroseconds != nullptr );
+        _pfnNowMicroseconds = pfnNowMicroseconds;
+    }
+
+    void InputManager::assignFrameFractions( size_t osEventCount, float32 deltaSeconds )
+    {
+        // 창은 지난 프레임 길이만큼이다 — 엔진이 잰 델타와 같은 시계(QPC)를 본다. 창 밖(그보다 먼저 들어온 이벤트)은 0, 시계 앞은 1 로 자른다.
+        const int64   windowMicroseconds = MathUtil::max( int64{ 1 }, static_cast<int64>( static_cast<float64>( deltaSeconds ) * 1.0e6 ) );
+        const int64   windowStart        = _frameEndMicroseconds - windowMicroseconds;
+        const float64 inverseWindow      = 1.0 / static_cast<float64>( windowMicroseconds );
+        for ( size_t eventIndex = 0; eventIndex < osEventCount; ++eventIndex )
+        {
+            RawInputEvent& event = _listDrainedEvent[eventIndex];
+            const float64  place = static_cast<float64>( event._timeMicroseconds - windowStart ) * inverseWindow;
+            event._frameFraction = static_cast<float32>( MathUtil::clamp( place, 0.0, 1.0 ) );
+        }
+    }
+
+    void InputManager::recordFramePress( const RawInputEvent& rawEvent )
+    {
+        InputSlot  slot{};
+        const bool bKeyPress     = rawEvent._type == RawInputEventType::KeyDown && rawEvent._bRepeat == SW_FALSE;
+        const bool bMousePress   = rawEvent._type == RawInputEventType::MouseButtonDown || rawEvent._type == RawInputEventType::MouseDoubleClick;
+        const bool bGamepadPress = rawEvent._type == RawInputEventType::GamepadButtonDown;
+        if ( bKeyPress )
+            slot = InputSlot::fromKey( rawEvent._payload._keyData._key );
+        else if ( bMousePress )
+            slot = InputSlot::fromMouseButton( rawEvent._payload._mouseData._button );
+        else if ( bGamepadPress )
+            slot = InputSlot{ InputDeviceKind::Gamepad, rawEvent._deviceIndex, static_cast<uint16>( rawEvent._payload._gamepadData._button ) };
+        else
+            return;
+        for ( const FramePress& press : _listFramePress )
+        {
+            if ( press._slot == slot )
+                return; // 첫 누름만 남긴다
+        }
+        _listFramePress.push_back( FramePress{
+            slot, InputPressInstant{ _frameLookDelta, rawEvent._frameFraction, rawEvent._timeMicroseconds }
+        } );
+    }
+
+    bool InputManager::tryGetPressInstant( const InputSlot& slot, InputPressInstant& outInstant ) const
+    {
+        for ( const FramePress& press : _listFramePress )
+        {
+            if ( press._slot == slot )
+            {
+                outInstant = press._instant;
+                return true;
+            }
+        }
+        // 이벤트 없이 눌렸다 — 폴링하는 장치(패드 · 트리거)는 `beginFrame` 의 폴링이 본 순간, 곧 프레임 끝이다.
+        const IInputDevice* pDevice = getDevice( slot._deviceKind, slot._deviceIndex );
+        if ( pDevice == nullptr || pDevice->wasControlPressed( slot._controlIndex ) == false )
+            return false;
+        outInstant = InputPressInstant{ _frameLookDelta, 1.0f, _frameEndMicroseconds };
+        return true;
     }
 
     void InputManager::registerDevice( unique_ptr<IInputDevice> pDevice )
@@ -343,6 +414,9 @@ namespace sw
         // 배타 가상 입력: OS 가 낸 장치 이벤트와 창 포커스 이벤트를 버린다(글자 입력도 버리며, 가상 원천이 `makeTextInput` 으로 따로 낸다).
         if ( bOsSuppressed )
             _listDrainedEvent.clear();
+        // OS 이벤트에 프레임 안 자리를 채운다(서브틱 입력). 가상 이벤트는 녹화된 자리를 그대로 쓴다 — 재생이 녹화와 같은 순간을 본다.
+        _frameEndMicroseconds = _pfnNowMicroseconds();
+        assignFrameFractions( _listDrainedEvent.size(), deltaSeconds );
         // 2-1) 가상 입력 원천의 이번 프레임 이벤트를 OS 이벤트 뒤에 붙인다. 같은 재생 경로(3)를 탄다.
         if ( _pVirtualInput != nullptr )
         {
@@ -364,16 +438,28 @@ namespace sw
             const IWindow* pWindow = IWindow::getActiveWindow();
             if ( pWindow != nullptr )
             {
+                const size_t firstCursorEvent = _listDrainedEvent.size();
                 _virtualCursor.emitFrame( getGamepad( _virtualCursor.getSettings()._padIndex ), _pMouse->getPosition(),
                                           int2{ static_cast<int32>( pWindow->getWidth() ), static_cast<int32>( pWindow->getHeight() ) }, deltaSeconds, _listDrainedEvent );
+                for ( size_t eventIndex = firstCursorEvent; eventIndex < _listDrainedEvent.size(); ++eventIndex )
+                {
+                    _listDrainedEvent[eventIndex]._frameFraction = 1.0f; // 패드를 지금 폴링해 만든 이벤트다 — 프레임 끝의 순간이다
+                }
             }
         }
 
         // 3) 꺼낸 원시 이벤트를 들어온 순서대로 장치에 적용한다(새 프레임 엣지 플래그 설정). 포커스를 잃는 이벤트도 이 순서 안에서
         //    적용해야 그보다 먼저 들어온 키 누름이 리셋 뒤에 다시 적용되지 않는다(알트탭하면 캐릭터가 계속 달리는 문제가 생긴다).
+        //    적용하면서 누름마다 그 순간과 그 앞까지의 시선 누적을 적는다(`tryGetPressInstant`).
+        _listFramePress.clear();
+        _frameLookDelta = float2{};
         for ( const RawInputEvent& rawEvent : _listDrainedEvent )
         {
+            recordFramePress( rawEvent );
             dispatchRawEvent( rawEvent );
+            const bool bLookMotion = rawEvent._type == RawInputEventType::MouseMove || rawEvent._type == RawInputEventType::MouseRawDelta;
+            if ( bLookMotion )
+                _frameLookDelta += rawEvent._payload._mouseData._rawDelta;
         }
 
         // 콘솔이 키보드를 쥔 프레임에 눌려 있는 패드 컨트롤은 콘솔을 닫은 뒤에도 뗄 때까지 게임에 가린다(닫는 B 가 게임의 B 로 새지 않게).

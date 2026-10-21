@@ -38,6 +38,22 @@ namespace sw
     };
 
     /**
+     * @struct InputPressInstant
+     * @brief 이번 프레임에 컨트롤 하나가 눌린 순간입니다(CS2 식 서브틱 입력 — 클릭한 순간의 시선으로 쏜다).
+     * @details 프레임 안의 자리와, 그 순간 직전까지 이 프레임에 쌓인 마우스 원시 이동량(시선 누적)을 함께 준다. 게임은 프레임 시작의 시선에
+     *          `_lookDeltaBefore` 를 자기 감도로 더해 그 순간의 시선을 만든다. 폴링하는 장치(패드)의 누름은 폴링한 순간 = 프레임 끝(1)이다.
+     */
+    struct InputPressInstant
+    {
+        float2  _lookDeltaBefore{};     ///< 프레임 시작부터 누름 직전까지의 마우스 원시 이동량(`RawInputEvent` 의 원시 델타 합)
+        float32 _frameFraction{ 0.0f }; ///< 0 = 프레임 창의 시작, 1 = 이번 `beginFrame`
+        int64   _timeMicroseconds{ 0 }; ///< 누름이 큐에 들어온 시각(단조 시계). 가상 입력이면 0 이다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @brief 키보드(키 조회와 글자 입력)를 지금 누가 받는지 나타냅니다.
      * @details `Game` 이 아니면 게임 쪽 조회(`InputManager::isKeyDown`, 통합 InputMap 의 키보드 바인딩)는 "안 눌림" 이고, 글자는 그 주인의
      *          콜백에만 간다. 장치 상태는 계속 갱신한다.
@@ -103,9 +119,24 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 2) 락프리 원시 이벤트 큐(Lock-Free Event Queue)
         // ------------------------------------------------------------------------------
-        /** @brief OS 창 스레드나 백그라운드 폴러에서 잠금 없이 원시 이벤트를 넣습니다. */
+        /** @brief OS 창 스레드나 백그라운드 폴러에서 잠금 없이 원시 이벤트를 넣습니다. 넣는 순간의 시각(`setClock` 의 시계)을 이벤트에 적습니다. */
         bool   postRawEvent( const RawInputEvent& rawEvent );
         uint32 getPendingRawEventCount() const { return _queueRawEvent.size(); }
+
+        /** @brief 단조 시계 마이크로초를 읽는 함수입니다. */
+        using ClockFunction = int64 ( * )();
+        /**
+         * @brief 이벤트 시각과 프레임 창을 재는 시계를 바꿉니다(테스트가 정해진 시각을 넣는다). 기본은 `MonotonicClock::nowMicroseconds` 입니다.
+         * @details 큐에 넣는 쪽(창 스레드)과 `beginFrame` 이 같은 시계를 본다. 이벤트가 큐에 있는 동안 바꾸지 않는다. nullptr 은 받지 않는다(어설트).
+         */
+        void setClock( ClockFunction pfnNowMicroseconds );
+        /**
+         * @brief 이번 프레임에 @p slot 이 눌린 순간을 찾습니다. 이번 프레임에 눌리지 않았으면 false 입니다.
+         * @details 이벤트로 눌렸으면 그 이벤트의 자리와 시선 누적이고, 폴링으로 눌렸으면(패드) 프레임 끝(1)과 프레임 전체의 시선 누적이다. 한 프레임에 여러 번 눌렸으면 첫 누름이다.
+         */
+        [[nodiscard]] bool tryGetPressInstant( const InputSlot& slot, InputPressInstant& outInstant ) const;
+        /** @brief 이번 프레임에 쌓인 마우스 원시 이동량입니다(`InputPressInstant::_lookDeltaBefore` 와 같은 합). */
+        float2 getFrameLookDelta() const { return _frameLookDelta; }
 
         // ------------------------------------------------------------------------------
         // 3) 다형 장치 레지스트리(Device Registry)
@@ -269,7 +300,18 @@ namespace sw
         void restoreWindowsAccessibilityShortcuts();
 
     private:
+        /** @brief 이번 프레임에 눌린 컨트롤 하나와 그 순간입니다(`tryGetPressInstant`). */
+        struct FramePress
+        {
+            InputSlot         _slot{};
+            InputPressInstant _instant{};
+        };
+
         void dispatchRawEvent( const RawInputEvent& rawEvent );
+        /** @brief 누름 이벤트면 그 컨트롤의 이번 프레임 첫 누름 순간을 적습니다(적용하기 전에 부른다 — 시선 누적은 그 이벤트 앞까지다). */
+        void recordFramePress( const RawInputEvent& rawEvent );
+        /** @brief 큐에서 꺼낸 OS 이벤트 [0, @p osEventCount) 에 프레임 안 자리를 채웁니다. 창은 [지금 - @p deltaSeconds, 지금] 입니다. */
+        void assignFrameFractions( size_t osEventCount, float32 deltaSeconds );
         /** @brief 가상 커서를 입력 맵의 `virtualCursor` 대로 켜고 끄고 스틱을 맞춥니다. 바뀔 때만 켜고 끕니다(켜고 끌 때 버튼 상태를 새로 잡는다). */
         void syncVirtualCursorToMap();
         /** @brief 모든 패드의 가상 세션을 켜거나 끕니다(배타 가상 입력이 붙고 뗄 때). */
@@ -358,6 +400,10 @@ namespace sw
         GamepadDevice*                       _pGamepad;             /**< 0번 게임패드 편의 API 용 캐시 포인터입니다(1~3번은 getGamepad(index) 로 조회). */
         unique_ptr<InputMap>                 _pInputMap;            /**< 이 InputManager 에 연결된 기본 InputMap 인스턴스입니다. */
         vector<RawInputEvent>                _listDrainedEvent;     /**< beginFrame() 에서 큐를 비워 담아 두는 임시 버퍼입니다(매 프레임 재사용). */
+        vector<FramePress>                   _listFramePress;       /**< 이번 프레임에 눌린 컨트롤마다 첫 누름 순간입니다(beginFrame 이 비우고 채운다). */
+        float2                               _frameLookDelta;       /**< 이번 프레임에 적용한 마우스 원시 이동량의 합입니다. */
+        ClockFunction                        _pfnNowMicroseconds;   /**< 이벤트 시각과 프레임 창을 재는 시계입니다(`setClock`). */
+        int64                                _frameEndMicroseconds; /**< 이번 `beginFrame` 의 시각입니다(폴링한 누름의 순간). */
         IVirtualInputSource*                 _pVirtualInput;        /**< 붙인 가상 입력 원천입니다(빌림). nullptr 이면 OS 입력만 받습니다. */
         VirtualCursor                        _virtualCursor;        /**< 패드 스틱으로 마우스 커서를 움직이는 가상 커서입니다. */
         uint32                               _virtualFrameIndex;    /**< 붙인 뒤 `beginFrame` 횟수이며, 원천에 넘기는 프레임 번호입니다. */

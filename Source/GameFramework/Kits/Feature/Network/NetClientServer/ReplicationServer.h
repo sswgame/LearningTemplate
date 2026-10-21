@@ -83,6 +83,8 @@ namespace sw
         int32 _historySize{ 64 }; ///< 클라이언트마다 기억하는 보낸 스냅샷(기준 후보)의 수
         PROPERTY( Min = 1 )
         int32 _inputBufferSize{ 64 }; ///< 클라이언트마다 받아 두는 입력 틱 수. 받은 가장 새 틱에서 이만큼 뒤까지 보관하고 더 오래된 입력은 버린다
+        PROPERTY( Min = 0, Max = 256 )
+        int32 _maxViewLagTicks{ 32 }; ///< 입력 스탬프의 보던 틱을 꺼내는 틱에서 이만큼 뒤까지만 받는다(서버 클램프). 랙 보정 기록(`LagCompensationHistory`)보다 길게 잡지 않는다
     };
 } // namespace sw
 
@@ -139,7 +141,10 @@ namespace sw
          * @details 틱과 상태는 늘 한 번에 정한다. 상태가 `NetSnapshot::kMaxEntityBytes` 를 넘으면 오류를 남기고 정하지 않으며 false 를 반환한다.
          */
         [[nodiscard]] bool setOwnerState( int32 connectionID, uint32 inputTick, const vector<uint8>& buffer );
-        /** @brief 클라이언트가 보고 있는 틱입니다. 보간 지연만큼 과거이며 소수이고, 랙 보정에서 되감을 때 씁니다. */
+        /**
+         * @brief 마지막으로 꺼낸 입력(`popInput`)을 만들 때 클라이언트가 보던 틱입니다. 보간 지연만큼 과거이며 소수이고, 랙 보정에서 되감을 때 씁니다.
+         * @details 입력 항목마다 온 스탬프이므로 다시 보낸 옛 입력은 그 입력의 시점이다. 꺼내는 틱 이후와 `_maxViewLagTicks` 보다 오래된 값은 잘라 낸다.
+         */
         float32            getClientViewTick( int32 connectionID ) const;
         uint32             getAckedTick( int32 connectionID ) const;
         const NetSnapshot& getWorldSnapshot() const { return _world; }

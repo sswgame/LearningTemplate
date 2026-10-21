@@ -44,6 +44,7 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [ServerDebug](docs/plans/ServerDebug.md) — 서버 디버깅 계획 — 에디터에서 서버 · 멀티플레이를 손쉽게 보는 길 | 구현중 | 8/15 | 없음 | network | D7-3 |
 | - | [ShooterCharacterIntegration](docs/plans/ShooterCharacterIntegration.md) — Shooter3D 캐릭터 통합의 남은 것 | 구현중 | 1/4 | 없음 | gameplay | D4-10 |
 | - | [StorageOwnership](docs/plans/StorageOwnership.md) — 저장소 소유 정리 — 종료 전용 해제 함수 없애기 | 구현중 | 0/6 | 없음 | engine | 없음 |
+| - | [SubtickInput](docs/plans/SubtickInput.md) — CS2 식 서브틱 입력 | 구현중 | 4/6 | 없음 | network | G-2 |
 | - | [TerrainEditCost](docs/plans/TerrainEditCost.md) — 지형 LOD 교체 · 지형 쓰기 · 식생 다시 계산의 비용 (2026-10-21) | 구현중 | 2/4 | 없음 | graphics | D2-5.6, D2-5.7 |
 | - | [UiInputRemaining](docs/plans/UiInputRemaining.md) — 런타임 UI 입력의 남은 것 | 구현중 | 2/3 | 없음 | ui | D6-2 |
 | - | [WorldStreaming](docs/plans/WorldStreaming.md) — 월드 스트리밍(D1-7) — 설계와 구현 단위 | 구현중 | 5/7 | 없음 | engine | D1-7 |
@@ -51,7 +52,7 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [StructuralOptimization](docs/plans/StructuralOptimization.md) — 구조 최적화 측정 표 (A · B) | 측정대기 | 해당없음 | 없음 | engine | 없음 |
 | - | [MotionMatching](docs/plans/MotionMatching.md) — 모션 매칭 (보류) | 보류 | 해당없음 | 없음 | gameplay | D4-16 |
 
-후보 문서 9개 · 후보 절 124개
+후보 문서 9개 · 후보 절 123개
 <!-- status-board:end -->
 
 이 저장소에서 볼 수 있는 것은 다음과 같습니다.

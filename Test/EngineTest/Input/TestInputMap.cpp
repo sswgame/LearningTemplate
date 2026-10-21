@@ -599,6 +599,14 @@ namespace
         input.endFrame();
         return bFired;
     }
+
+    /** @brief 서브틱 테스트의 시계입니다(마이크로초). 테스트가 값을 정한다. */
+    int64 s_subtickNowMicroseconds{ 0 };
+
+    int64 readSubtickTestClock()
+    {
+        return s_subtickNowMicroseconds;
+    }
 } // namespace
 
 /**
@@ -2029,4 +2037,47 @@ SW_TEST_CASE( InputMapTest, CommandGamesPutTheCursorOnTheLeftStickAndTheCameraOn
         }
         SW_EXPECT_TRUE( bPanOnRightStick );
     }
+}
+
+/**
+ * @brief [InputMapTest] 액션이 눌린 순간은 프레임 안의 자리와 그 앞까지의 시선 누적이다(서브틱 입력 B1 ~ B3) — 같은 프레임의 뒤쪽 이동은 그 순간에 들지 않는다
+ * @details 시계를 주입해 프레임 창 [0, 16 ms] 안의 4 ms 에 이동, 8 ms 에 클릭, 12 ms 에 또 이동을 넣는다. 클릭의 자리는 0.5, 시선 누적은 첫 이동만이다.
+ *          CS2 처럼 클릭한 순간의 시선으로 쏘려면 이 둘이 있어야 한다(프레임 끝 시선으로 쏘면 프레임 뒤쪽의 마우스 이동이 탄에 섞인다).
+ */
+SW_TEST_CASE( InputMapTest, ActionPressInstantCarriesFramePlaceAndLookBeforeIt )
+{
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    input.setClock( &readSubtickTestClock );
+    sw::InputMap& inputMap = input.getInputMap();
+    inputMap.bind( "Fire", sw::MouseButton::Left );
+    const sw::ActionHandle fire = inputMap.getActionHandle( "Fire" );
+
+    s_subtickNowMicroseconds = 1000000;
+    input.beginFrame( 0.016f );
+    input.endFrame();
+
+    s_subtickNowMicroseconds += 4000;
+    SW_ASSERT_TRUE( input.postRawEvent( sw::RawInputEvent::makeMouseRawDelta( 3.0f, -1.0f ) ) );
+    s_subtickNowMicroseconds += 4000;
+    SW_ASSERT_TRUE( input.postRawEvent( sw::RawInputEvent::makeMouseButtonDown( sw::MouseButton::Left ) ) );
+    s_subtickNowMicroseconds += 4000;
+    SW_ASSERT_TRUE( input.postRawEvent( sw::RawInputEvent::makeMouseRawDelta( 5.0f, 2.0f ) ) );
+    s_subtickNowMicroseconds += 4000;
+    input.beginFrame( 0.016f );
+
+    sw::InputPressInstant instant;
+    SW_ASSERT_TRUE( inputMap.tryGetActionPressInstant( fire, instant ) );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, instant._frameFraction, 1.0e-4f );
+    SW_EXPECT_NEAR_EQUAL( 3.0f, instant._lookDeltaBefore._x, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( -1.0f, instant._lookDeltaBefore._y, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 8.0f, input.getFrameLookDelta()._x, 1.0e-6f );
+    input.endFrame();
+
+    // 다음 프레임은 누르지 않았다 — 순간이 없다(지난 프레임 값을 돌려주지 않는다).
+    s_subtickNowMicroseconds += 16000;
+    input.beginFrame( 0.016f );
+    SW_EXPECT_FALSE( inputMap.tryGetActionPressInstant( fire, instant ) );
+    input.endFrame();
+    input.shutdown();
 }

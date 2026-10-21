@@ -83,20 +83,6 @@
 
 ## 조건부
 
-### SubtickInput
-제목: CS2 식 서브틱 입력
-옛번호: G-2
-착수 조건: 넷 게임이 생기면(2026-10-05 제안; 지금 넷 키트를 쓰는 테스트 게임은 0).
-왜 필요한가: `RawInputEvent` · `NativeWindowEvent` 에 시각이 없다(`MSG::time` 을 버림).
-남은 것:
-- B1 사건 시각 + 입력 리플레이 판 4.
-- B2 프레임 안 자리와 그 순간까지의 시선 누적(시계 주입).
-- B3 `InputMap` 이 행동별 "누른 순간" 을 준다.
-- B4 클릭 순간의 시선으로 발사(쿨다운 남은 몫은 이미 고침).
-- B5 넷 입력 항목마다 스탬프 · `viewTick`. 지금은 메시지마다 하나라 다시 보낸 옛 입력도 최신으로 판정한다. 자리는 있다: `NetInputFormat::_bStamped` · `NetInputSendWindow::push( …, stamp )` · `NetInputEntry::_stamp`, 켜면 `kClientServer` 판을 올린다. 서버 클램프(랙 보정 `LagCompensationHistory::raycastAt(float)` 는 있다).
-- B6(선택) Win32 입력 스레드: 먼저 `GetMessageTime` 해상도를 재고, 에디터 · 콘솔이 먼저 소비하는 판정을 우회하지 않게.
-함정: 롤백 · 락스텝 키트에는 넣지 않는다(프레임 단위 결정성이 계약).
-
 ### StoreProviderIntegration
 제목: 스토어 제공자(Steam · Epic) 연동
 옛번호: G-15

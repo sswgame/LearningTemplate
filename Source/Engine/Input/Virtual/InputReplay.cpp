@@ -32,7 +32,7 @@ namespace sw
          * @brief 지금 쓰는 리플레이 파일 버전입니다. 프레임마다 `deltaTime(float32)`, `eventCount(uint32)`, `RawInputEvent` n 개가 이어집니다.
          * @details `RawInputEvent` 를 구조체째로 쓰므로 그 배치가 바뀌면 버전을 올린다(다른 버전은 읽지 않는다).
          */
-        constexpr uint32 kReplayVersion = 4;
+        constexpr uint32 kReplayVersion = 5; ///< 5: `RawInputEvent` 에 프레임 안 자리(`_frameFraction`)와 시각이 들었다
 
         struct InputReplayInternal
         {
