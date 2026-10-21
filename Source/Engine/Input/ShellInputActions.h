@@ -1,6 +1,7 @@
 /**
  * @file Engine/Input/ShellInputActions.h
- * @brief 셸 디버그 액션 맵(`EngineDefaultAssets::_shellInputMap`)을 만들고 프레임마다 돌립니다. `Engine` 의 값 멤버입니다.
+ * @brief 셸 디버그 액션 맵(`EngineDefaultAssets::_shellInputMap`)을 만들고 프레임마다 돌립니다. `Engine` 의 값 멤버이고, 엔진이 서비스 범위에 빌려 겁니다
+ *        (엔진 루프를 모르는 개발 명령은 `engine::findSubsystem<ShellInputActions>()` 로 찾는다).
  * @details 이 클래스가 내주는 것은 **입력 사실**(그 액션이 이번 프레임에 발동했나)뿐입니다. 액션이 무엇을 뜻하는지(셰이더를 다시 굽는다,
  *          모듈을 다시 올린다)는 그 장치를 가진 쪽이 정합니다 — 셰이더 리로드 단축키는 `ShaderRecompiler` 를 소유한 `Engine` 가 읽습니다.
  */
@@ -78,8 +79,6 @@ namespace sw
         const string& getUserBindingsPath() const { return _userBindingsPath; }
         /** @brief 셸 맵의 재배치를 사용자 파일에 저장합니다. 경로가 없으면 false 입니다. */
         [[nodiscard]] bool saveUserBindings() const;
-        /** @brief 지금 돌고 있는 셸 액션(엔진 루프의 값 멤버)입니다. 개발 명령처럼 엔진 루프를 모르는 곳이 씁니다. 없으면 nullptr 입니다. */
-        static ShellInputActions* findActive();
 
     private:
         unique_ptr<InputMap> _mapDebugAction;

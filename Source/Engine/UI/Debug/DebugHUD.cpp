@@ -37,6 +37,13 @@ namespace sw
     {
         struct DebugHUDInternal
         {
+            /** @brief 엔진 UI 서비스가 든 HUD 입니다(`UISystem::getDebugHUD`). 개발 명령 `hud` 와 탐침이 찾는다. 엔진 밖이거나 HUD 가 없으면 nullptr 입니다. */
+            static DebugHUD* findEngineHUD()
+            {
+                UISystem* pUI = engine::findSubsystem<UISystem>();
+                return pUI != nullptr ? pUI->getDebugHUD() : nullptr;
+            }
+
             /** @brief 섹션 본문을 다시 부르는 간격(초)입니다. 언리얼 `stat` 처럼 읽을 수 있는 빠르기(4 Hz)이며, 켜짐이나 목록이 바뀌면 바로 부릅니다. */
             static constexpr float32 kRefreshSeconds = 0.25f;
             /** @brief 화면 모서리에서 패널까지의 여백(UI 단위)입니다. */
@@ -178,7 +185,7 @@ namespace sw
 
             static bool runCommand( const vector<string>& listArgument, string& outReply )
             {
-                DebugHUD* pHUD = DebugHUD::findActive();
+                DebugHUD* pHUD = DebugHUDInternal::findEngineHUD();
                 if ( pHUD == nullptr )
                 {
                     outReply = "no debug HUD in this run (no runtime UI)";
@@ -226,7 +233,7 @@ namespace sw
             [[nodiscard]] static bool readShown( const GameObjectManager* pManager, float64& outValue )
             {
                 (void)pManager;
-                const DebugHUD* pHUD = DebugHUD::findActive();
+                const DebugHUD* pHUD = DebugHUDInternal::findEngineHUD();
                 outValue             = pHUD != nullptr && pHUD->isScreenOpen() ? 1.0 : 0.0;
                 return pHUD != nullptr;
             }
@@ -234,7 +241,7 @@ namespace sw
             [[nodiscard]] static bool readWindowOpen( const GameObjectManager* pManager, float64& outValue )
             {
                 (void)pManager;
-                const DebugHUD* pHUD = DebugHUD::findActive();
+                const DebugHUD* pHUD = DebugHUDInternal::findEngineHUD();
                 outValue             = pHUD != nullptr && pHUD->isWindowOpen() ? 1.0 : 0.0;
                 return pHUD != nullptr;
             }
@@ -242,7 +249,7 @@ namespace sw
             [[nodiscard]] static bool readCorner( const GameObjectManager* pManager, float64& outValue )
             {
                 (void)pManager;
-                const DebugHUD* pHUD   = DebugHUD::findActive();
+                const DebugHUD* pHUD   = DebugHUDInternal::findEngineHUD();
                 DebugHUDCorner  corner = DebugHUDCorner::TopLeft;
                 if ( pHUD == nullptr || pHUD->tryGetArrangedCorner( corner ) == false )
                     return false;
@@ -253,7 +260,7 @@ namespace sw
             [[nodiscard]] static bool readSectionCount( const GameObjectManager* pManager, float64& outValue )
             {
                 (void)pManager;
-                const DebugHUD* pHUD = DebugHUD::findActive();
+                const DebugHUD* pHUD = DebugHUDInternal::findEngineHUD();
                 outValue             = pHUD != nullptr ? static_cast<float64>( pHUD->getDrawnSectionCount() ) : 0.0;
                 return pHUD != nullptr;
             }
@@ -261,7 +268,7 @@ namespace sw
             [[nodiscard]] static bool readSectionShown( const GameObjectManager* pManager, float64& outValue )
             {
                 (void)pManager;
-                const DebugHUD* pHUD = DebugHUD::findActive();
+                const DebugHUD* pHUD = DebugHUDInternal::findEngineHUD();
                 outValue             = pHUD != nullptr && pHUD->isSectionDrawn( gv_debugHUDProbeSection ) ? 1.0 : 0.0;
                 return pHUD != nullptr;
             }
@@ -564,7 +571,7 @@ namespace sw
                 const DebugHUDRegistry& registry = DebugHUDRegistry::get();
                 if ( registry.getRevision() != _seenRevision )
                     rebuildCheckBoxes();
-                DebugHUD* pHUD = DebugHUD::findActive();
+                DebugHUD* pHUD = DebugHUDInternal::findEngineHUD();
                 for ( size_t index = 0; index < _listSectionName.size(); ++index )
                 {
                     const DebugHUDSectionRegistration* pRegistration = registry.findSection( _listSectionName[index] );
@@ -627,9 +634,6 @@ namespace sw
             vector<uint8>    _listLastChecked; ///< 지난 틱의 체크 상태입니다. 다르면 사용자가 바꾼 것입니다.
             uint64           _seenRevision;
         };
-
-        /** @brief 지금 동작 중인 컨트롤러입니다(Engine 이미지에 있으므로 핫 리로드와 무관합니다). */
-        DebugHUD* s_pActiveHUD = nullptr;
     } // namespace
 } // namespace sw
 
@@ -673,8 +677,6 @@ namespace sw
         shutdown();
         _pUI       = &ui;
         _pSettings = pSettings;
-        if ( s_pActiveHUD == nullptr )
-            s_pActiveHUD = this;
     }
 
     void DebugHUD::shutdown()
@@ -693,8 +695,6 @@ namespace sw
         _bProfilerEnabledByHUD = SW_FALSE;
         _pUI                   = nullptr;
         _pSettings             = nullptr;
-        if ( s_pActiveHUD == this )
-            s_pActiveHUD = nullptr;
     }
 
     void DebugHUD::update( const InputMap* pShellMap )
@@ -831,11 +831,6 @@ namespace sw
         const bool            bBottom = center._y > size._y * 0.5f;
         outCorner                     = static_cast<DebugHUDCorner>( ( bBottom ? 2 : 0 ) + ( bRight ? 1 : 0 ) );
         return true;
-    }
-
-    DebugHUD* DebugHUD::findActive()
-    {
-        return s_pActiveHUD;
     }
 
     bool DebugHUD::tryParseCorner( string_view text, DebugHUDCorner& outCorner )

@@ -10,7 +10,8 @@ allowed_engine_function = [
     "getEngineAbiStamp",
 ]
 
-# 헤더에서 `static … getInstance()` 를 가져도 되는 타입 → 이유. 새 서비스는 서브시스템으로 만들어 범위에 넣는다.
+# 헤더에서 `static … getInstance()` 나 정적 활성 창구 `static T* findActive…()` · `getActive…()` 를 가져도 되는 타입 → 이유.
+# 새 서비스는 서브시스템으로 만들어 범위에 넣고, "지금 도는 것" 은 소유자가 범위에 빌려 건다(`SubsystemScope::bind`).
 [exemption]
 RawAnimationCodec = "상태 없는 코덱 — 서비스가 아니라 순수 함수 묶음이다"
 ACLAnimationCodec = "상태 없는 코덱 — 서비스가 아니라 순수 함수 묶음이다"
@@ -20,3 +21,9 @@ TestRegistry = "테스트 프레임워크의 링크 때 등록 표 — 엔진 �
 RigNodeRegistry = "링크 때 등록 표 — 엔진 범위가 서 있기 전에 채워진다"
 EditorSettingsInstance = "설정 페이지 등록 줄의 인스턴스 함수 표 — 등록 항목이 함수 포인터로 든다"
 EditorSettingsPageNone = "설정 페이지 등록 줄의 인스턴스 함수 표 — 그리기 함수 방식의 빈 자리"
+MemoryProfiler = "활성 창구 — 전역 operator new/delete 훅이 엔진 범위가 서기 전 · 사라진 뒤에도 잠금 없이 읽는다(Core 층이라 범위를 모른다)"
+CompressionCodecRegistry = "활성 창구 — Core 의 CompressionStream 이 레지스트리를 받지 않았을 때 읽는 Core 층의 칸이다(Core 는 엔진 범위를 모른다)"
+ProfilerBackend = "활성 창구 — 프로파일 구간이 렌더 · 작업 스레드에서 잠금 없이 읽는다(범위 조회는 선형 검색이라 핫 패스에 못 둔다)"
+IWindow = "활성 창구 — Engine 가 만든 창을 App 에 넘기는 소유권 전달 칸이자 입력 · RHI 가 읽는 관찰 포인터다. 범위로 옮기는 일은 계획 문서 `AppStructure` 의 A7"
+GameInstanceBase = "활성 창구 아님 — findActiveObjectManager 는 게임 범위를 올라가 찾는 편의 함수이고 정적 포인터를 들지 않는다"
+GameAutoplay = "활성 창구 아님 — findActive 는 링크 때 등록 표(RegistrationList)의 마지막 줄을 읽고 정적 포인터를 들지 않는다"

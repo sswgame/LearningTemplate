@@ -1379,7 +1379,8 @@ namespace sw::editor
             /** @brief 게임 디버그 HUD 의 켜짐(`debug.hud`) 상태입니다. 화면이 열렸는지(엔진 프로브 `DebugHUD.Shown`)와 달리 정지 상태에서도 켜짐 여부를 반환합니다. 조종자가 없으면 값을 내지 않습니다. */
             [[nodiscard]] static bool readDebugHUDEnabled( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const DebugHUD* pHUD = DebugHUD::findActive();
+                const UISystem* pUI  = editor::findSubsystem<UISystem>();
+                const DebugHUD* pHUD = pUI != nullptr ? pUI->getDebugHUD() : nullptr;
                 if ( pHUD == nullptr )
                     return false;
                 outValue = pHUD->isShown() ? 1.0 : 0.0;

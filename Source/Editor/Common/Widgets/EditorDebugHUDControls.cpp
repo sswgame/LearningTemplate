@@ -7,21 +7,34 @@
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"
 #include "Engine/UI/Debug/DebugHUD.h"
+#include "Engine/UI/UISystem.h"
 
 #include <imgui.h>
 
 namespace sw::editor
 {
     SW_LOG_CALLER( "EditorDebugHUD" );
+
+    namespace
+    {
+        /** @brief 게임 디버그 HUD 입니다 — 그것을 든 엔진 UI 서비스(`UISystem::getDebugHUD`)에서 찾는다. 없으면(Shipping · 테스트 호스트) nullptr 입니다. */
+        DebugHUD* findEditorDebugHUDControlsTarget()
+        {
+            UISystem* pUI = editor::findSubsystem<UISystem>();
+            return pUI != nullptr ? pUI->getDebugHUD() : nullptr;
+        }
+    } // namespace
+
     SW_EDITOR_SETTINGS_PAGE( DebugHUD, "debug_hud", "Editor/Debug HUD", 360, &EditorDebugHUDControls::drawPreferencesPage );
 
     void EditorDebugHUDControls::drawMasterToggle( const utf8* pMark )
     {
-        DebugHUD*  pHUD   = DebugHUD::findActive();
+        DebugHUD*  pHUD   = findEditorDebugHUDControlsTarget();
         const bool bShown = pHUD != nullptr && pHUD->isShown();
         ImGui::BeginDisabled( pHUD == nullptr );
         if ( EditorWidgets::drawIconToggle( "##debugHUD", editoricon::kChart, bShown,
@@ -35,7 +48,7 @@ namespace sw::editor
 
     void EditorDebugHUDControls::drawSectionChecklist()
     {
-        DebugHUD* pHUD = DebugHUD::findActive();
+        DebugHUD* pHUD = findEditorDebugHUDControlsTarget();
         if ( pHUD == nullptr )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdCommon", "DebugHUDNotRunning" ) );
@@ -58,7 +71,7 @@ namespace sw::editor
 
     void EditorDebugHUDControls::drawLayoutSettings()
     {
-        DebugHUD* pHUD = DebugHUD::findActive();
+        DebugHUD* pHUD = findEditorDebugHUDControlsTarget();
         if ( pHUD == nullptr )
             return;
         int32 corner = static_cast<int32>( DebugHUD::getCorner() );
@@ -83,7 +96,7 @@ namespace sw::editor
 
     void EditorDebugHUDControls::drawPreferencesPage()
     {
-        DebugHUD* pHUD = DebugHUD::findActive();
+        DebugHUD* pHUD = findEditorDebugHUDControlsTarget();
         if ( pHUD == nullptr )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdCommon", "DebugHUDNotRunningHost" ) );

@@ -270,6 +270,8 @@ namespace sw
                 SW_LOG_ERROR( "Engine services failed: %#", _services.getCollection().getError().c_str() );
                 return false;
             }
+            // 셸 액션은 엔진의 값 멤버다 — 개발 명령(`shell.rebind`)이 `engine::findSubsystem<ShellInputActions>()` 로 찾게 빌려 건다(`shutdown` 이 맵을 놓을 때 푼다).
+            (void)_services.bind( &_shellActions ); // 새 범위 — 겹치지 않는다
         }
 
         // 기동 단계는 서브시스템이다 — 서브시스템이 스스로 이름 · 의존 · 호스트를 선언한다. 추가 순서는 뜻이 없다(의존이 정한다). 해제는 그 역순이다.
@@ -455,6 +457,7 @@ namespace sw
         _startup.getCollection().shutdownAll();
         // 셸 디버그 액션 맵은 입력 매니저를 가리킨다 — 매니저가 소멸하기(Input 의 해제 자리) 전에 놓는다(`updateShellActions` 가 처음 쓸 때 만든다).
         _shellActions.reset();
+        _services.unbind<ShellInputActions>();
         // 단계가 소유한 객체를 초기화 순서의 역순으로 소멸시킨다: UI → 텔레메트리 → 렌더러 쪽 → RHI →
         // 글꼴 → 씬 → 입력 · 오디오 → 태스크 → 셰이더 캐시 → 엔진 데이터 → 리소스 → 설정 → 리플렉션 → 압축. 기동이 어디서 멈췄든 모든 단계를 해제한다.
         _startup.destroyAll();

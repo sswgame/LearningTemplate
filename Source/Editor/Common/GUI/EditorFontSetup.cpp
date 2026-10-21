@@ -6,6 +6,7 @@
 #include "Core/File/FileUtil.h"
 
 #include "Editor/Common/Config/EditorConfig.h"
+#include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/Config/EditorThemeConfig.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/EditorPaths.h"
@@ -31,7 +32,7 @@ namespace sw::editor
              */
             [[nodiscard]] static bool readTypography( float32& outFontSize, float32& outIconScale )
             {
-                const string&     themeName = EditorConfig::getActive()._themeName;
+                const string&     themeName = getPreferences<EditorConfig>()._themeName;
                 EditorThemeConfig theme{};
                 string            error;
                 if ( EditorThemeTokens::loadTheme( themeName, theme, error ) == false )
