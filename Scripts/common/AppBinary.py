@@ -3,7 +3,7 @@
 """
 빌드된 `App.exe` 를 찾고 헤드리스로 셰이더를 쿠킹하는 자리.
 
-**후보 목록은 여기 한 자리다**(쿠커 `CookAssets` 와 커밋 훅 `PreCommitLint` 가 같이 쓴다). 목록이 둘이면 갈라진다 —
+**후보 목록은 여기 한 자리다**(커밋 훅 `PreCommitLint` 와 도구가 같이 쓴다). 목록이 둘이면 갈라진다 —
 한쪽만 Ninja-Shipping 을 빼먹으면 **Shipping 만 빌드해 둔 사람은** 셰이더를 고쳐 커밋할 때 검증을 건너뛴다.
 Shipping 이 후보에 있는 이유: Shipping App 도 쿠커를 링크하므로(로그만 안 남는다) Dev 빌드 없이도 스스로 다시 쿠킹한다.
 
@@ -59,22 +59,6 @@ def runShaderVerify(
     (`ShaderCooker::verifyCookedShaders`) 하나로 본다. 출력을 붙잡아 돌려준다(커밋 훅이 문제 줄을 보인다).
     """
     return runHeadlessTask(appExe, ["--verify-shaders"], cwd=cwd, bCapture=True)
-
-
-def runSceneCook(
-    appExe: Path,
-    cookedDir: Path,
-    *,
-    cwd: Path | None = None,
-    bCapture: bool = False,
-) -> subprocess.CompletedProcess:
-    """
-    `App.exe --cook-scenes --cooked-dir=<dir>` 를 돌립니다.
-
-    씬 쿠킹이 엔진 안에 있는 이유는 **리플렉션** 하나다 — 엔티티 상태를 바이너리로 구우려면
-    `TypeInfo` 와 프로퍼티 표가 필요하고, 파이썬에는 그것이 없다. 셰이더 쿠킹과 같은 자리다.
-    """
-    return runHeadlessTask(appExe, ["--cook-scenes", f"--cooked-dir={cookedDir}"], cwd=cwd, bCapture=bCapture)
 
 
 def runHeadlessTask(

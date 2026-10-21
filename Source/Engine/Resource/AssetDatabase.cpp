@@ -331,7 +331,7 @@ namespace sw
 
     uint32 AssetDatabase::writeRegistryFiles( string_view resourceRoot, string_view cookedDir, const CookStore& store, uint32& outFailedCount )
     {
-        // 도메인 = 루트의 폴더 하나, `game` 은 그 아래 폴더 하나씩(팩 하나가 도메인 하나다 — `CookAssets.py` `cookAllPacks` 와 같은 나눔).
+        // 도메인 = 루트의 폴더 하나, `game` 은 그 아래 폴더 하나씩(팩 하나가 도메인 하나다 — `PackCooker::cookAllPacks` 와 같은 나눔).
         vector<string> listDomain;
         vector<string> listTopFolder;
         (void)FileUtil::collectFolders( resourceRoot, listTopFolder, false ); // 루트가 없으면 도메인이 없다 — 아래가 아무것도 쓰지 않는다

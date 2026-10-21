@@ -39,7 +39,7 @@ namespace sw
              */
             static constexpr string_view kCookStampHeader{ "SWCOOK 4" };
 
-            /** @brief 스탬프에서 도구 지문 줄의 키입니다. 소스 키는 '@' 로 시작하지 않습니다(`CookAssets.py` 는 이 줄을 건너뜁니다). */
+            /** @brief 스탬프에서 도구 지문 줄의 키입니다. 소스 키는 '@' 로 시작하지 않습니다. */
             static constexpr string_view kToolchainKey{ "@toolchain" };
 
             /** @brief 스탬프의 16자리 hex 를 uint64 로 바꿉니다. 형식이 맞지 않으면 0이며 불일치로 처리합니다. */
@@ -72,7 +72,7 @@ namespace sw
              *        (`ShaderCooker::kArrIncludeRootDomain`)의 `.hlsli` 입니다.
              * @details 셰이더는 자기 폴더 밖 include 루트(engine, common)의 헤더도 include 한다. 자기 도메인만 보면 engine 헤더를 고쳐도
              *          common 셰이더가 "최신" 으로 남는다. 다른 도메인 헤더의 키는 `<도메인>:<상대 경로>` 다(자기 키에는 ':' 가 없다).
-             *          `CookAssets.py` 의 `collectStampedSourceHashesInternal` 이 같은 규칙이다.
+             *          판정(`ShaderCooker::verifyCookedShaders`)도 이 함수를 쓴다 — 규칙이 한 곳이다.
              *          다른 도메인은 @p resourceRoot 아래에서 찾는다. 전역 루트(`ResourcePaths`)를 여기서 읽으면 임시 트리에서 도는 테스트도
              *          실제 `Resource/` 의 헤더를 보게 되어, 다른 프로세스가 그 트리를 건드리는 순간 판정이 흔들린다.
              */
@@ -213,7 +213,7 @@ namespace sw
 
             /**
              * @brief `bin/<rhi>/cook.stamp` 에 셰이더 소스의 **내용 해시**를 적습니다.
-             * @details 쿠커(CookAssets.py)가 "지금 팩에 넣으려는 바이너리가 지금 이 소스에서 나온
+             * @details 판정(`verifyCookedShaders`, `App --verify-shaders`)이 "지금 팩에 넣으려는 바이너리가 지금 이 소스에서 나온
              *          것인가" 를 파일 시간이 아니라 내용으로 확인하기 위한 것이다. 파일 시간은
              *          `git clone` 이 모두 체크아웃 시각으로 덮어써서 비교 자체가 무의미해진다.
              *          형식은 한 줄에 `<FNV-1a 64 16자리 hex> <shaders/ 기준 상대 경로>` 다. 해시는 CR 을

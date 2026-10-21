@@ -366,7 +366,7 @@ namespace sw
         const bool bHasStringPool = ( _header._flags & static_cast<uint16>( PackFlag::HasStringPool ) ) != 0;
         if ( bHasStringPool == false || _header._stringPoolSize == 0 )
         {
-            SW_LOG_ERROR( "Pack has no entry path list (string pool) - cook it again with Scripts/generate/CookAssets.py: %#", _packFilePath );
+            SW_LOG_ERROR( "Pack has no entry path list (string pool) - cook it again with App --cook-packs: %#", _packFilePath );
             return false;
         }
         _stringPoolBytes.resize( _header._stringPoolSize );

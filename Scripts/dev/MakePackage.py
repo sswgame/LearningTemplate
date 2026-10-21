@@ -14,7 +14,8 @@
 | `Server` | `Ninja-Shipping-Server` | `Server.exe` | `CookContract.json` 의 `target_excluded_asset_kinds`(텍스처 · 셰이더 바이너리 · 오디오) |
 
 스테이징은 빌드 폴더 `Bin` 의 맨 위 DLL 과 그 타깃의 실행 파일, `THIRD_PARTY_NOTICES.txt`, 그리고 `Packs/` 가운데 공용 팩과 그 게임의 팩만 베낀다
-(`Bin/Packs` 에는 모든 게임의 팩이 구워져 있다 — 이름은 `CookAssets.listPackNameOfGame` 이 게임 프리셋의 `_packRoot` 로 정한다).
+(`Bin/Packs` 에는 모든 게임의 팩이 구워져 있다 — 이름은 `listPackNameOfGame` 이 게임 프리셋의 `_packRoot` 로 정한다). 쿠킹은 그 타깃의 실행 파일이
+`--cook-all` 로 한다(엔진의 `PackCooker`, 팩 파일 이름 규칙 `PackCooker::makePackFileName`). 이름이 어긋나면 스테이징이 빠진 팩을 알리고 멈춘다.
 Dev 산출물(`Modules/` · `Saved/` · `Symbols/`)과 다른 실행 파일(테스트 · 부하 봇)은 들이지 않는다. 서버는 `Config/Server/<게임>.json` 을 함께 둔다
 (서버는 Shipping 에서도 운영 설정을 디스크에서 읽는다).
 
@@ -35,10 +36,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common.BuildTree import BuildTree  # noqa: E402
-from common.Config import ConfigError  # noqa: E402
+from common.Config import ConfigError, requireConfig  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
+from common.Constants import kDirRuntimeGamePreset  # noqa: E402
 from common.Process import runProcess  # noqa: E402
-from generate.CookAssets import listPackNameOfGame  # noqa: E402
 
 #: 단계 이름 — 창이 `[package] step k/n <이름>` 으로 읽는다. 순서가 진행 순서다.
 kListStepName: tuple[str, ...] = ("build", "cook", "stage", "verify")
@@ -51,6 +52,24 @@ kListLibrarySuffix: tuple[str, ...] = (".dll",) if sys.platform == "win32" else 
 #: Bin 에서 베끼는 폴더 · 파일.
 kPackFolderName = "Packs"
 kNoticeFileName = "THIRD_PARTY_NOTICES.txt"
+
+
+#: 런타임이 늘 올리는 공용 팩. 게임 팩은 `game_<팩 폴더>.pack` 이다(`PackCooker::makePackFileName` 과 같은 이름).
+kListSharedPackName: tuple[str, ...] = ("engine.pack", "common.pack")
+
+
+def listPackNameOfGame(projectRoot: Path, game: str) -> list[str]:
+    """그 게임의 배포 패키지가 담는 팩 파일 이름들입니다 — 공용 팩과 그 게임의 팩 하나.
+
+    팩 폴더는 게임 프리셋(`Config/Game/<게임>.json`)의 `_packRoot`(`game/<폴더>`)에서 읽는다 — 게임 이름과 폴더 이름이 다를 수 있다(ThemeParkTycoon → themepark).
+    프리셋이나 키가 없으면 ConfigError.
+    """
+    presetPath = projectRoot / kDirRuntimeGamePreset / f"{game}.json"
+    packRoot = str(requireConfig(presetPath, presetPath.name).get("_packRoot", ""))
+    folderName = packRoot.removeprefix("game/")
+    if not packRoot.startswith("game/") or not folderName or "/" in folderName:
+        raise ConfigError(f"{presetPath}: `_packRoot` 는 `game/<폴더>` 입니다 (`{packRoot}`)")
+    return [*kListSharedPackName, f"game_{folderName.lower()}.pack"]
 
 
 class PackageError(Exception):
@@ -132,16 +151,29 @@ def runBuild(request: PackageRequest, projectRoot: Path) -> None:
 
 
 def runCook(request: PackageRequest, projectRoot: Path, binDir: Path) -> None:
-    """리소스 팩을 그 타깃 · 백엔드로 다시 쿠킹해 Bin/Packs 에 둔다(빌드를 건너뛰고 쿠킹만 새로 할 때)."""
+    """리소스 팩을 그 타깃의 실행 파일(`--cook-all`)로 다시 쿠킹해 Bin/Packs 에 둔다(빌드를 건너뛰고 쿠킹만 새로 할 때).
+
+    쿠킹하는 호스트가 빌드 타깃이다 — `Server` 실행 파일이 구운 팩은 서버가 읽지 않는 종류를 뺀다. 실행 파일이 없으면 다른 빌드로 대신하지 않고 멈춘다.
+    """
     executable = binDir / kMapTargetExecutable[request.target]
-    listCommand = [sys.executable, str(projectRoot / "Scripts" / "generate" / "CookAssets.py"), "--all", "--out", str(binDir / kPackFolderName),
-                   "--cooked-dir", str(binDir.parent / "Cooked"), "--build-target", request.target, "--game", request.game]
-    if executable.is_file():
-        listCommand += ["--app", str(executable)]
+    if executable.is_file() is False:
+        raise PackageError(f"{executable} is missing - build the {request.target} target before cooking")
+    listCommand = [str(executable), "--cook-all", f"--cooked-dir={binDir.parent / 'Cooked'}", f"--pack-dir={binDir / kPackFolderName}", f"--game={request.game}"]
+    if request.target == "Client":
+        listCommand.append("--verify-shaders")
     if request.rhi:
-        listCommand += ["--target-rhi", request.rhi]
+        listCommand.append(f"--{findBackendSwitchInternal(request.rhi)}")
     if runProcess(listCommand, cwd=projectRoot, bCapture=False).returnCode != 0:
-        raise PackageError("CookAssets.py failed")
+        raise PackageError(f"{executable.name} --cook-all failed")
+
+
+def findBackendSwitchInternal(rhi: str) -> str:
+    """쿠킹 표의 백엔드 이름(`DirectX12`)을 App 명령줄 이름(`dx12`)으로 바꿉니다. 모르는 이름이면 실패다."""
+    from common.CookContract import CookContractSpec
+    backend = CookContractSpec.load().findBackend(rhi)
+    if backend is None:
+        raise PackageError(f"unknown RHI backend '{rhi}'")
+    return backend.commandLineName
 
 
 def stagePackage(request: PackageRequest, projectRoot: Path, binDir: Path, stagingDir: Path) -> None:

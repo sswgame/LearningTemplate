@@ -17,7 +17,6 @@ from dataclasses import dataclass
 from .AssetValidation import kAssetRuleConfigRelative
 from .Constants import kFilePackConfig, kFileRuntimeEditorToolDefaults, kFileRuntimeEngineConfig
 from .CookContract import kCookContractConfigRelative
-from .PackFormat import kPackFormatConfigRelative
 
 # ------------------------------------------------------------------------------
 # 1) 층 — `docs/07_Configuration.md` 의 결정표와 같은 이름이다
@@ -236,16 +235,12 @@ kListConfigFile: tuple[ConfigFileEntry, ...] = (
     ConfigFileEntry(
         page="", pathPattern=kCookContractConfigRelative, layer=kLayerBuildContract, fileFormat="json",
         reader="`GenerateCookContract.py`(→ `CookContract.gen.h`) · `Scripts/common/CookContract.py`",
-        readWhen="configure · 쿠킹 · `CheckCookContract` 게이트", shipping="빌드에 굳음", bCommitted=True,
+        readWhen="configure", shipping="빌드에 굳음", bCommitted=True,
         ownerDoc="Scripts/common/CookContract.py"),
     ConfigFileEntry(
-        page="", pathPattern=kPackFormatConfigRelative, layer=kLayerBuildContract, fileFormat="json",
-        reader="`GeneratePackFormat.py`(→ `PackFormat.gen.h`) · `Scripts/common/PackFormat.py`", readWhen="configure · 쿠킹",
-        shipping="빌드에 굳음", bCommitted=True, ownerDoc="Scripts/common/PackFormat.py"),
-    ConfigFileEntry(
         page="", pathPattern=kFilePackConfig, layer=kLayerBuildContract, fileFormat="json",
-        reader="`Scripts/generate/CookAssets.py`", readWhen="쿠킹(팩 만들기)", shipping="팩 모양을 정한다(파일은 안 실림)",
-        bCommitted=True, ownerDoc="Scripts/generate/README.md"),
+        reader="`PackCooker`(`App --cook-packs` · `--cook-all`, 형식 `PackConfig`)", readWhen="쿠킹(팩 만들기)", shipping="팩 모양을 정한다(파일은 안 실림)",
+        bCommitted=True, ownerDoc="Source/Engine/Resource/Cook/PackConfig.h"),
     # --- 모듈 매니페스트 ----------------------------------------------------------------------------------------------------
     ConfigFileEntry(
         page="ModuleManifest", pathPattern="Source/*.module.json", layer=kLayerModule, fileFormat="json",

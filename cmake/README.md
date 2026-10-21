@@ -147,9 +147,9 @@ Dev 와 Shipping · Server 는 다른 갈래를 탄다 — 고친 갈래의 프�
   측정하는 법: `cmake --preset <p> --profiling-format=google-trace --profiling-output=t.json` → `ConfigureSnapshot.py profile t.json`(CMake 는 B/E 짝으로 적는다).
   리팩터 전후 configure 동일성은 `ConfigureSnapshot.py take/diff`(실행 파일 테스트의 command 는 그 exe 가 지어졌는지에 따라 비거나 찬다 — 차이로 읽지 말 것).
 - **서드파티 격리의 링크 주인은 규칙마다다**(`CheckThirdPartyIsolation` 의 `cmakeLinkOwner`) — 엔진 백엔드는 `Source/Engine/CMakeLists.txt`, 키트 안 드라이버(SQLite)는 그 키트의 CMakeLists 가 링크한다. 어느 드라이버가 실행 파일에 드는지는 빌드 타깃(`_listTarget`)이 정한다 — 드라이버 목록 옵션을 따로 두지 않는다.
-- **빌드 타깃별 제외 에셋은 쿠킹 표 한 줄이다**(`Config/Engine/CookContract.json` 의 `asset_kinds` · `target_excluded_asset_kinds`). 쿠커(`--build-target`)가 팩에서 빼고,
+- **빌드 타깃별 제외 에셋은 쿠킹 표 한 줄이다**(`Config/Engine/CookContract.json` 의 `asset_kinds` · `target_excluded_asset_kinds`). 팩 쿠커(`PackCooker`, 쿠킹하는 호스트가 타깃)가 팩에서 빼고,
   같은 호스트의 런타임(`ResourcePaths::setHostTarget`)은 그 종류를 읽지 않는다 — 한쪽만 고치면 서버가 "파일 없음" 을 쏟거나 팩에 쓸모없는 바이트가 남는다.
-  종류를 더하면 `CheckCookContract` · `TestServerPackExclusion` · `ResourceHostTargetTest` 가 같이 본다.
+  둘은 같은 표 · 같은 맞춤 함수(`ResourcePaths::isExcludedForTarget`)를 쓰고 `PackCookerTest` · `ResourceHostTargetTest` 가 본다.
 - **서드파티 고지는 빌드가 만든다** — `ThirdPartyNotices` 타깃(`Scripts/generate/GenerateThirdPartyNotices.py`)이 `Bin/THIRD_PARTY_NOTICES.txt` 에
   매니페스트가 끌어오는 vcpkg 포트의 `share/<포트>/copyright` 를 모은다(설치 트리를 워크트리끼리 나눠 써 트리 전체가 아니라 `vcpkg/status` 의 의존 닫힘).
   vcpkg 밖에서 들인 코드(저장소에 복사한 헤더 등)는 여기 저절로 들어가지 않는다 — 그런 것을 들이면 그 고지를 같이 넣는다.
@@ -158,8 +158,8 @@ Dev 와 Shipping · Server 는 다른 갈래를 탄다 — 고친 갈래의 프�
   default 를 잡는다), 일부만 다루면 `default:`(`-Wno-switch-enum` · `-Wno-switch-default`). 파일별 `#pragma` 로 switch 경고를 바꾸지 않는다. 외부 헤더는 `SYSTEM`
   include 여야 이 규칙이 그 안에 걸리지 않는다(ReflectionParser 의 nlohmann-json 이 일반 `-I` 였다).
 - **RHI 백엔드 표(이름 · 별칭 · 셰이더 폴더 · 포맷)와 쿡 접미사 표의 원본은 `Config/Engine/CookContract.json`** — `GenerateCookContract.py` 가 C++ X-macro
-  (`sw/config/CookContract.gen.h`)를 만들고 Python 은 `Scripts/common/CookContract.py` 로 읽는다. `CheckCookContract` 게이트가 쿠커 함수를 표와 대조한다.
-  두 언어에 목록을 따로 적지 말 것(`PackFormat.json` 과 같은 모양). 백엔드의 빌드 칸(모듈 · 장치 소스 폴더 · 그래픽 라이브러리 · 배포 매크로)도 여기 —
+  (`sw/config/CookContract.gen.h`)를 만들고 Python 도구는 `Scripts/common/CookContract.py` 로 읽는다. 쿠커는 C++ 이라 같은 X-macro 를 컴파일 때 따라온다.
+  두 언어에 목록을 따로 적지 말 것. 백엔드의 빌드 칸(모듈 · 장치 소스 폴더 · 그래픽 라이브러리 · 배포 매크로)도 여기 —
   CMake 는 `generated/sw/config/CookContract.cmake` 로 읽는다(`cmake/Engine/RhiBackends.cmake`). `SW_SHIPPING_RHI_BACKEND` 는 표의 이름만 받고(별칭 · 소문자는 구성 실패 —
   옛 빌드 폴더는 캐시 값을 고칠 것), 그 플랫폼에 없는 백엔드면 구성이 선다(`PythonTest_TestRhiBackendTable`).
 - **소스 손 목록은 `Test/EditorTest/CMakeLists.txt` 하나다** — Editor 소스 중 ImGui 없는 것을 고른다(`CheckTestSuites`). Core 는 폴더 GLOB + 플랫폼 폴더 규칙

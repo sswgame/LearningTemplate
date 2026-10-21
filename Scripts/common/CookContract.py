@@ -3,8 +3,8 @@
 """
 쿠킹 표(`Config/Engine/CookContract.json`)를 **읽은 결과** — RHI 백엔드 표 · 쿡 접미사 표 · 빌드 타깃별 제외 에셋 종류 표.
 
-C++ 은 같은 파일에서 생성한 X-macro(`sw/config/CookContract.gen.h`, `GenerateCookContract.py`)로 읽고, 쿠커
-(`CookAssets.py`)는 이 객체에 묻는다. 표를 읽고 검증하는 일은 여기 한 곳이다 — 헤더 생성기와 쿠커가 같은 객체를 쓴다.
+C++(쿠커 `PackCooker` · `ShaderCooker` 포함)은 같은 파일에서 생성한 X-macro(`sw/config/CookContract.gen.h`, `GenerateCookContract.py`)로 읽고,
+파이썬 도구(`MakePackage.py` 등)는 이 객체에 묻는다. 파이썬에서 표를 읽고 검증하는 일은 여기 한 곳이다 — 헤더 생성기와 도구가 같은 객체를 쓴다.
 """
 
 from __future__ import annotations

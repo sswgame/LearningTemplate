@@ -76,9 +76,8 @@
 
 | 파일 | 읽는 곳과 시점 | 배포본 | 커밋 | 문서 |
 |---|---|---|---|---|
-| `Config/Engine/CookContract.json` | `GenerateCookContract.py`(→ `CookContract.gen.h`) · `Scripts/common/CookContract.py` — configure · 쿠킹 · `CheckCookContract` 게이트 | 빌드에 굳음 | 한다 | [형식 설명](../../Scripts/common/CookContract.py) |
-| `Config/Engine/PackFormat.json` | `GeneratePackFormat.py`(→ `PackFormat.gen.h`) · `Scripts/common/PackFormat.py` — configure · 쿠킹 | 빌드에 굳음 | 한다 | [형식 설명](../../Scripts/common/PackFormat.py) |
-| `Config/Engine/PackConfig.json` | `Scripts/generate/CookAssets.py` — 쿠킹(팩 만들기) | 팩 모양을 정한다(파일은 안 실림) | 한다 | [형식 설명](../../Scripts/generate/README.md) |
+| `Config/Engine/CookContract.json` | `GenerateCookContract.py`(→ `CookContract.gen.h`) · `Scripts/common/CookContract.py` — configure | 빌드에 굳음 | 한다 | [형식 설명](../../Scripts/common/CookContract.py) |
+| `Config/Engine/PackConfig.json` | `PackCooker`(`App --cook-packs` · `--cook-all`, 형식 `PackConfig`) — 쿠킹(팩 만들기) | 팩 모양을 정한다(파일은 안 실림) | 한다 | [형식 설명](../../Source/Engine/Resource/Cook/PackConfig.h) |
 
 ## 모듈 매니페스트
 

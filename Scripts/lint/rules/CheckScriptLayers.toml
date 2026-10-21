@@ -23,7 +23,6 @@
 "Scripts/generate/GenerateConfigureFiles.py|generate.GenerateCMakeConstants" = "configure 생성기 다섯을 한 프로세스로 돌리는 조립 명령(docs/09_Decisions.md 5-2, 2026-10-06)"
 "Scripts/generate/GenerateConfigureFiles.py|generate.GenerateCookContract" = "configure 생성기 다섯을 한 프로세스로 돌리는 조립 명령(docs/09_Decisions.md 5-2, 2026-10-06)"
 "Scripts/generate/GenerateConfigureFiles.py|generate.GenerateLintTargets" = "configure 생성기 다섯을 한 프로세스로 돌리는 조립 명령(docs/09_Decisions.md 5-2, 2026-10-06)"
-"Scripts/generate/GenerateConfigureFiles.py|generate.GeneratePackFormat" = "configure 생성기 다섯을 한 프로세스로 돌리는 조립 명령(docs/09_Decisions.md 5-2, 2026-10-06)"
 "Scripts/generate/GenerateConfigureFiles.py|generate.GenerateShippingHostDefaults" = "configure 생성기 다섯을 한 프로세스로 돌리는 조립 명령(docs/09_Decisions.md 5-2, 2026-10-06)"
 "Scripts/setup/SetupEnvironment.py|setup.InstallGitHooks" = "설정 단계(SetupLlvm · SetupVcpkg · SetupLinuxDevEnvironment · InstallGitHooks)를 순서대로 부르는 조립 명령"
 "Scripts/setup/SetupEnvironment.py|setup.SetupLinuxDevEnvironment" = "설정 단계(SetupLlvm · SetupVcpkg · SetupLinuxDevEnvironment · InstallGitHooks)를 순서대로 부르는 조립 명령"
@@ -43,5 +42,3 @@
 "Scripts/lint/report/RunDiscardReasons.py|lint.gate.CheckDiscardReason" = "보고서가 짝 게이트의 판정(findFallibleDiscards)으로 버린 자리를 모은다"
 "Scripts/lint/selftest/CheckCodeConventionsSelfTest.py|lint.gate.CheckCodeConventions" = "셀프테스트가 자기 게이트를 부른다"
 "Scripts/lint/selftest/CheckServiceAccessSelfTest.py|lint.gate.CheckServiceAccess" = "셀프테스트가 자기 게이트를 부른다"
-"Scripts/dev/MakePackage.py|generate.CookAssets" = "generate.CookAssets 의 팩 이름 목록. StructureSimplification PK4 가 쿠커를 C++ 로 옮겨 generate/CookAssets.py 를 지우면 이 줄도 지운다"
-"Scripts/dev/RemoveWorktree.py|generate.CookAssets" = "쿠킹 스탬프 경로의 정본(kCookStampPathPattern). StructureSimplification PK4 가 쿠커를 C++ 로 옮겨 generate/CookAssets.py 를 지우면 이 줄도 지운다"

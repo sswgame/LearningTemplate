@@ -309,17 +309,21 @@ def runGatesInternal(projectRoot: Path, listStaged: list[Path], listFileScoped: 
 
 
 def isShaderCommitFileInternal(projectRoot: Path, path: Path) -> bool:
-    """셰이더 판정이 필요한 staged 파일인가 — `Resource/<도메인>/shaders/` 아래(소스 · 바이너리 · 스탬프 · 매니페스트)이거나 쿠킹 표다."""
+    """
+    셰이더 판정이 필요한 staged 파일인가 — `Resource/<도메인>/shaders/` 아래(소스 · 바이너리 · 스탬프 · 매니페스트)다.
+
+    쿠킹 표(백엔드 줄)를 바꾼 커밋은 여기서 보지 않는다 — 빌드가 필요한 변경이라 `ShaderCookStampTest.CommittedBinariesAreCurrentForEveryBackend` 가 본다.
+    """
     try:
         rel = path.resolve().relative_to(projectRoot.resolve()).as_posix().lower()
     except ValueError:
         return False
-    return rel == "config/engine/cookcontract.json" or (rel.startswith("resource/") and "/shaders/" in rel)
+    return rel.startswith("resource/") and "/shaders/" in rel
 
 
 def checkStagedShadersInternal(projectRoot: Path, stagedFiles: list[Path], bVerbose: bool = False) -> bool:
     """
-    셰이더를 고친 커밋을 검사합니다 — staged HLSL/HLSLI 가 있으면 전 RHI 백엔드(쿠킹 표의 넷)로 다시 굽고, 셰이더 폴더 · 쿠킹 표를 고친 커밋은
+    셰이더를 고친 커밋을 검사합니다 — staged HLSL/HLSLI 가 있으면 전 RHI 백엔드(쿠킹 표의 넷)로 다시 굽고, 셰이더 폴더를 고친 커밋은
     빌드된 App 의 판정(`App --verify-shaders`)으로 커밋된 바이너리가 소스와 맞는지 본다.
 
     **App 이 없으면 건너뛰지 않고 실패한다**(StructureSimplification PK3). 판정 규칙은 엔진(`ShaderCooker::verifyCookedShaders`) 한 곳이라 App 없이 볼 길이 없다.
