@@ -42,7 +42,7 @@ namespace sw
      * @brief 할당마다 불리는 기록기입니다(`MemoryProfiler` 가 구현합니다). `Memory::registerAllocationTracker` 로 겁니다.
      * @details 프로파일러는 컨테이너 · 호출 스택을 쓰므로 위층(Diagnostics)에 있고, 할당기는 이 인터페이스만 압니다. 배포본에서는 불리지 않습니다(헤더가 없다).
      *          **해제는 이 기록기가 세었다고 답한 블록만 받습니다**(`AllocationRecord::_bCounted`). 블록 헤더에는 센 기록기의 번호(`getTrackerID`)가
-     *          남으므로, 기록기를 바꿔 걸어도 다른 기록기가 센 블록의 해제는 오지 않습니다.
+     *          남으므로, 기록기를 교체해도 다른 기록기가 센 블록의 해제는 오지 않습니다.
      */
     class SW_API IAllocationTracker
     {
@@ -403,7 +403,7 @@ namespace sw
     }
 
     /**
-     * @brief 원소 @p count 개를 값 초기화한 배열을 sw 할당자로 잡아 `unique_ptr<T[]>` 로 돌려줍니다(`std::make_unique<T[]>` 와 같은 모양).
+     * @brief 원소 @p count 개를 값 초기화한 배열을 sw 할당자로 잡아 `unique_ptr<T[]>` 로 돌려줍니다(`std::make_unique<T[]>` 와 같은 형태).
      * @details 원소는 소멸자가 하는 일이 없는 타입이어야 합니다(`default_delete<T[]>`).
      */
     template <typename T>

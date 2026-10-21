@@ -589,8 +589,8 @@ namespace sw
         void clear() { removeAll(); }
 
         /**
-         * @brief 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 델리게이트를 모두 떼고, 뗀 수를 반환합니다.
-         * @details 그 범위의 모듈(DLL · SO)이 만든 구독을 모듈을 내리기 **전에** 떼는 데 씁니다. broadcast 중이면 `remove` 와 같이 그 자리에서
+         * @brief 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 델리게이트를 모두 제거하고, 제거한 수를 반환합니다.
+         * @details 그 범위의 모듈(DLL · SO)이 만든 구독을 모듈을 언로드하기 **전에** 제거하는 데 씁니다. broadcast 중이면 `remove` 와 같이 그 자리에서
          *          무효화하고 끝난 뒤 지웁니다.
          */
         uint32 removeCodeWithin( const void* pBegin, const void* pEnd )

@@ -98,7 +98,7 @@ namespace sw
 
         // 파이프는 exec 를 넘지 않게 연다. 다른 스레드가 거의 동시에 띄운 자식이 이 파이프를 물려받으면, 이쪽의 읽기는 자기 자식이
         // 끝나도 EOF 를 못 받고 **남의 자식이 끝날 때까지** 막힌다. 자식 쪽에서 쓸 끝은 아래 `dup2` 가 표준 출력으로 옮기며
-        // CLOEXEC 를 떼므로 그대로 넘어간다.
+        // CLOEXEC 를 해제하므로 그대로 넘어간다.
         int32 arrPipeFd[2] = { -1, -1 };
     #if defined( SW_PLATFORM_LINUX )
         const bool bPipeOpened = pipe2( arrPipeFd, O_CLOEXEC ) == 0;
@@ -336,7 +336,7 @@ namespace sw
     {
         if ( _pStdInWrite == nullptr )
             return false;
-        // 자식이 먼저 끝났으면 SIGPIPE 가 이 프로세스를 죽인다 — 테스트 실행 파일은 신호 처리기를 두지 않으므로 여기서 한 번 무시로 건다(프로세스 전역).
+        // 자식이 먼저 끝났으면 SIGPIPE 가 이 프로세스를 죽인다 — 테스트 실행 파일은 신호 처리기를 두지 않으므로 여기서 한 번 무시로 등록한다(프로세스 전역).
         (void)signal( SIGPIPE, SIG_IGN );
         const int32 descriptor = static_cast<int32>( reinterpret_cast<intptr_t>( _pStdInWrite ) - 1 );
         size_t      written    = 0;
@@ -373,7 +373,7 @@ namespace sw
         if ( childPid <= 0 )
             return false;
 
-        // 핵심은 `WNOWAIT` 이다. **거두지 않고** 묻는다. `waitpid(WNOHANG)` 로 물으면 끝난 자식을 그 자리에서 거둬
+        // 핵심은 `WNOWAIT` 이다. **회수하지 않고** 묻는다. `waitpid(WNOHANG)` 로 물으면 끝난 자식을 그 자리에서 회수해
         // 버려서, 이어서 부르는 `waitForExit` 이 종료 코드를 영영 받지 못한다.
         siginfo_t info{};
         info.si_pid = 0;

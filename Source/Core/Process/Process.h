@@ -28,7 +28,7 @@ namespace sw
     {
         string _workingDirectory{};
         bool   _bCreateWindow{ false };
-        /** @brief 자식의 표준 입력을 파이프로 잇습니다 — `writeInput` · `closeInput` 으로 씁니다. 끄면 자식의 표준 입력은 비어 있다(NUL · /dev/null). */
+        /** @brief 자식의 표준 입력을 파이프로 연결합니다 — `writeInput` · `closeInput` 으로 씁니다. 끄면 자식의 표준 입력은 비어 있다(NUL · /dev/null). */
         bool _bPipeStandardInput{ false };
         /**
          * @brief Windows 에서 자식을 새 프로세스 그룹으로 띄웁니다(`CREATE_NEW_PROCESS_GROUP`) — `requestStop` 이 그 그룹에 Ctrl+Break 를 보낼 수 있게.
@@ -55,7 +55,7 @@ namespace sw
         Process();
         /**
          * @brief 프로세스 핸들을 닫고 자원을 정리합니다.
-         * @details 양쪽 모두 실행 중인 자식을 **분리**하고 기다리지 않습니다. POSIX 는 이미 끝난 자식을 여기서 거두고(좀비를 남기지
+         * @details 양쪽 모두 실행 중인 자식을 **분리**하고 기다리지 않습니다. POSIX 는 이미 끝난 자식을 여기서 회수하고(좀비를 남기지
          *          않습니다), 아직 도는 자식은 이 프로세스가 끝난 뒤 init 이 거둡니다. 기다리면 **소멸자가 자식이 끝날 때까지 막힙니다.**
          */
         ~Process();
@@ -85,8 +85,8 @@ namespace sw
          * @brief 프로세스가 끝나기를 기다리고 종료 코드를 반환합니다.
          * @return 프로세스 종료 코드(-1 = 대기 실패). **POSIX 에서 시그널로 죽은 자식은 `128 + 시그널 번호`** 입니다(셸 규약.
          *         예: SIGKILL 이면 137). 시그널로 죽은 프로세스에는 종료 코드가 없기 때문입니다.
-         * @details POSIX 는 여기서 자식을 거두고 **pid 를 놓습니다.** 그 번호는 OS 가 곧 재사용하므로, 계속 들고 있으면 나중에 다른
-         *          프로세스의 자식을 거두게 됩니다. 그래서 `waitForExit` 뒤의 `getProcessID` 는 0 이고, 두 번째 `waitForExit` 은
+         * @details POSIX 는 여기서 자식을 회수하고 **pid 를 놓습니다.** 그 번호는 OS 가 곧 재사용하므로, 계속 보관하면 나중에 다른
+         *          프로세스의 자식을 회수하게 됩니다. 그래서 `waitForExit` 뒤의 `getProcessID` 는 0 이고, 두 번째 `waitForExit` 은
          *          -1 입니다.
          */
         int32 waitForExit();
@@ -109,7 +109,7 @@ namespace sw
         void closeInput();
         /**
          * @brief 자식에게 **정상 종료**를 요청합니다(강제 종료인 `terminate` 와 다르다). 보냈으면 true 입니다.
-         * @details POSIX 는 자식의 프로세스 그룹에 SIGTERM(`launch` 가 자식을 제 그룹의 우두머리로 세운다 — `sh -c` 너머의 실제 프로그램까지 닿는다).
+         * @details POSIX 는 자식의 프로세스 그룹에 SIGTERM(`launch` 가 자식을 제 그룹의 우두머리로 만든다 — `sh -c` 너머의 실제 프로그램까지 닿는다).
          *          Windows 는 `CTRL_BREAK_EVENT` 를 자식의 프로세스 그룹에 보낸다(`_bNewProcessGroup` 으로 띄운 자식만). 이 프로세스가 콘솔에
          *          붙어 있지 않으면 보낼 수 없어 false 입니다(서비스 · 콘솔 없는 CI) — 부르는 쪽은 표준 입력 명령 같은 다른 길을 씁니다.
          */
@@ -117,8 +117,8 @@ namespace sw
 
         /**
          * @brief 프로세스가 아직 실행 중인지 반환합니다.
-         * @details 양쪽 모두 **OS 에 직접 묻습니다.** POSIX 는 `waitid(WNOHANG | WNOWAIT)` 라서 묻기만 하고 거두지는 않습니다.
-         *          거두면 이어서 부를 `waitForExit` 이 종료 코드를 잃기 때문입니다. 자기가 들고 있는 플래그만 보면 자식이 스스로
+         * @details 양쪽 모두 **OS 에 직접 묻습니다.** POSIX 는 `waitid(WNOHANG | WNOWAIT)` 라서 묻기만 하고 회수하지는 않습니다.
+         *          회수하면 이어서 부를 `waitForExit` 이 종료 코드를 잃기 때문입니다. 자기가 보관한 플래그만 보면 자식이 스스로
          *          끝나도 true 로 남습니다.
          */
         bool isRunning() const;
@@ -146,7 +146,7 @@ namespace sw
          * @details 파일 탐색기 · 브라우저처럼 **사용자가 닫을 때까지 사는** 프로그램을 띄울 때 씁니다. `execute` 는 출력 파이프가 닫힐
          *          때까지 기다리므로, 그런 프로그램(또는 그것이 띄운 손자)이 파이프를 물고 있으면 부른 스레드가 그동안 멈춥니다 —
          *          에디터의 "탐색기에서 보기" 가 UI 스레드에서 그렇게 불렀습니다. 게다가 `explorer.exe /select,` 는 성공해도 1 을
-         *          돌려줘서 실패 경고가 매번 찍혔습니다. 언리얼의 `CreateProc( bLaunchDetached )` 와 같은 자리입니다.
+         *          돌려줘서 실패 경고가 매번 찍혔습니다. 언리얼의 `CreateProc( bLaunchDetached )` 와 에 해당합니다.
          *          자식은 이 프로세스의 핸들 · 서술자를 하나도 물려받지 않습니다(POSIX 는 표준 입출력을 /dev/null 로, 두 번 fork 해
          *          좀비를 남기지 않습니다).
          */
@@ -163,7 +163,7 @@ namespace sw
 
         /**
          * @brief ID 가 @p processID 인 프로세스가 지금 살아 있는지 OS 에 묻습니다. 0 이하는 false 입니다.
-         * @details 있지만 권한이 없어 열 수 없는 프로세스는 살아 있다고 봅니다(지우면 안 되는 쪽으로 틀린다). 끝났지만 아직 거두지 않은
+         * @details 있지만 권한이 없어 열 수 없는 프로세스는 살아 있다고 봅니다(지우면 안 되는 쪽으로 틀린다). 끝났지만 아직 회수하지 않은
          *          POSIX 좀비도 살아 있다고 나옵니다. OS 가 ID 를 다시 쓰면 다른 프로세스를 보고 true 일 수 있으므로, 이 답은 "죽었으니
          *          치워도 된다" 를 가르는 데만 씁니다.
          */
