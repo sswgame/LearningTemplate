@@ -28,14 +28,11 @@ namespace sw::editor
     {
         struct EditorThemeInternal
         {
-            /** @brief 환경설정 섹션 Appearance 의 인스턴스입니다. 활성 EditorConfig 에 속합니다. */
-            static void* getAppearanceInstance() { return EditorConfig::getActiveInstance(); }
-            /** @brief 환경설정 섹션 Appearance 의 기본값입니다. */
-            static const void* getAppearanceDefault()
-            {
-                static const EditorConfig s_default{};
-                return &s_default;
-            }
+            /**
+             * @brief 환경설정 섹션 Appearance 의 값을 고칠 수 있게 돌려줍니다. 값은 등록 줄(`SW_EDITOR_SETTINGS`)이 가리키는 그 인스턴스 하나다 —
+             *        테마를 저장할 때(`saveToConfig`)만 쓴다. 읽기는 `getPreferences<EditorConfig>()` 다.
+             */
+            static EditorConfig& editAppearance() { return *static_cast<EditorConfig*>( EditorSettingsInstance<EditorConfig>::getInstance() ); }
 
             /**
              * @brief 환경설정 섹션 Appearance 의 값이 바뀌었을 때(창에서 고침 · 파일을 다시 읽음 · 섹션 되돌림) 테마를 다시 적용합니다.
@@ -340,7 +337,7 @@ namespace sw::editor
     bool EditorThemeUtil::loadFromConfig()
     {
         // 테마 이름의 정본은 설정(`EditorConfig::_themeName`)이다. 그 벌이 없으면 다른 벌로 바꿔 끼우지 않는다 — 고친 이름이 무시된 것을 아무도 모른다.
-        const EditorConfig&      editorConfig = EditorConfig::getActive();
+        const EditorConfig&      editorConfig = getPreferences<EditorConfig>();
         const EditorThemeConfig* pTheme       = EditorThemeInternal::findAvailable( editorConfig._themeName );
         if ( pTheme == nullptr )
         {
@@ -356,7 +353,7 @@ namespace sw::editor
 
     void EditorThemeUtil::saveToConfig()
     {
-        EditorConfig editorConfig = EditorConfig::getActive();
+        EditorConfig& editorConfig = EditorThemeInternal::editAppearance();
 
         const EditorThemeConfig& themeConfig = EditorThemeInternal::activeTheme();
         editorConfig._themeName              = themeConfig._name;
@@ -372,7 +369,6 @@ namespace sw::editor
         editorConfig._themeFrameRounding  = bRadius ? themeConfig._radius._frame : EditorConfig::kNotOverridden;
         editorConfig._themeTabRounding    = bRadius ? themeConfig._radius._tab : EditorConfig::kNotOverridden;
 
-        EditorConfig::setActive( editorConfig );
         EditorConfig::saveToPreferences();
     }
 
@@ -739,6 +735,5 @@ namespace sw::editor
 namespace sw::editor
 {
     // 테마는 환경설정 섹션 "Editor/Appearance" 다. 저장은 EditorPreferences.json 하나에 하고, 값을 고치면(창에서 편집하거나 파일을 다시 읽으면) 테마를 다시 적용한다.
-    SW_EDITOR_REGISTER( EditorSettingsRegistration, Settings_EditorConfig, { "appearance", 200 }, "Editor/Appearance", &EditorConfig::StaticType,
-                        &EditorThemeInternal::getAppearanceInstance, &EditorThemeInternal::getAppearanceDefault, &EditorThemeInternal::onAppearanceChanged, nullptr );
+    SW_EDITOR_SETTINGS( EditorConfig, "appearance", "Editor/Appearance", 200, &EditorThemeInternal::onAppearanceChanged );
 } // namespace sw::editor

@@ -3698,14 +3698,6 @@
    "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
   },
   {
-   "name": "gv_reloadGameAtFrame",
-   "type": "int32",
-   "default": "0",
-   "kind": "시험",
-   "description": "이 프레임에 게임 모듈 핫 리로드를 요청한다 (0=사용 안 함)",
-   "source": "Source/App/ModuleReloadDriver.cpp"
-  },
-  {
    "name": "gv_renderPipeline",
    "type": "string",
    "default": "",
@@ -3768,22 +3760,6 @@
    "kind": "시험",
    "description": "소프트웨어 어댑터로 띄운다: 0=하드웨어, 1=WARP(DX11 · DX12) · CPU 디바이스(Vulkan)",
    "source": "Source/Engine/Graphics/RHI/IRHIDevice.cpp"
-  },
-  {
-   "name": "gv_rhiSwapAtFrame",
-   "type": "int32",
-   "default": "0",
-   "kind": "시험",
-   "description": "이 프레임에 백엔드 교체를 요청한다 (0=사용 안 함)",
-   "source": "Source/App/RHIBackendSwitcher.cpp"
-  },
-  {
-   "name": "gv_rhiSwapTo",
-   "type": "RHIBackend",
-   "default": "DirectX12",
-   "kind": "시험",
-   "description": "gv_rhiSwapAtFrame 에 바꿀 백엔드",
-   "source": "Source/App/RHIBackendSwitcher.cpp"
   },
   {
    "name": "gv_scheduleTrace",
@@ -4095,14 +4071,6 @@
    "default": "",
    "kind": "시험",
    "description": "사용자 설정을 메뉴와 같은 길로 바꾼다: \"id=value;id=value\" (자동화)",
-   "source": "Source/App/UserSettingsHost.cpp"
-  },
-  {
-   "name": "gv_userSettingsApplyFrame",
-   "type": "int32",
-   "default": "30",
-   "kind": "시험",
-   "description": "gv_userSettingsApply 를 적용할 프레임",
    "source": "Source/App/UserSettingsHost.cpp"
   },
   {

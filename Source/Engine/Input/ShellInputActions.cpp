@@ -25,9 +25,6 @@ namespace sw
         constexpr const utf8* kIndexAttr    = "index";
         constexpr const utf8* kSlotAttr     = "slot";
         constexpr int32       kMaxBindIndex = 16; ///< 한 액션이 가질 수 있는 바인딩 번호의 상한입니다(잘못된 파일이 큰 번호를 주지 못하게).
-
-        /** @brief 지금 도는 셸 액션입니다(엔진 루프가 값 멤버로 가진다). 개발 명령이 엔진 루프를 모르고 찾는 길입니다. */
-        ShellInputActions* s_pActive = nullptr;
     } // namespace
 
     ShellInputActions::ShellInputActions()
@@ -37,16 +34,7 @@ namespace sw
     {
     }
 
-    ShellInputActions::~ShellInputActions()
-    {
-        if ( s_pActive == this )
-            s_pActive = nullptr;
-    }
-
-    ShellInputActions* ShellInputActions::findActive()
-    {
-        return s_pActive;
-    }
+    ShellInputActions::~ShellInputActions() = default;
 
     void ShellInputActions::update( InputManager& inputManager, float32 deltaTime )
     {
@@ -57,7 +45,6 @@ namespace sw
             // 플레이어가 셸 키(콘솔 여는 키 …)를 바꿨으면 리소스의 기본 위에 입힌다. 읽지 못한 파일은 로그가 알리고 기본 키로 돈다.
             if ( _userBindingsPath.empty() == false )
                 (void)loadUserBindings( *_mapDebugAction, _userBindingsPath ); // 실패는 loadUserBindings 가 경고로 남긴다
-            s_pActive = this;
         }
 
         // _mapDebugAction 은 위에서 처음 한 번 만든 뒤로 계속 있으므로 nullptr 일 수 없다.
@@ -72,8 +59,6 @@ namespace sw
     {
         _mapDebugAction.reset();
         _bBound = false;
-        if ( s_pActive == this )
-            s_pActive = nullptr;
     }
 
     unique_ptr<InputMap> ShellInputActions::createInputMap( string_view inputMapPath )
@@ -198,10 +183,10 @@ namespace sw
     {
         struct ShellInputActionsDevCommandsInternal
         {
-            /** @brief 셸 맵과 그 사용자 파일이 있는 활성 셸 액션입니다. 없으면 답에 까닭을 적고 nullptr 입니다. */
+            /** @brief 셸 맵이 선 엔진의 셸 액션입니다(엔진이 서비스 범위에 빌려 건다). 없으면 답에 까닭을 적고 nullptr 입니다. */
             static ShellInputActions* findShell( string& outReply )
             {
-                ShellInputActions* pShell = ShellInputActions::findActive();
+                ShellInputActions* pShell = engine::findSubsystem<ShellInputActions>();
                 if ( pShell == nullptr || pShell->getInputMap() == nullptr )
                     outReply = "the shell input map is not running";
                 return pShell != nullptr && pShell->getInputMap() != nullptr ? pShell : nullptr;

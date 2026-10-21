@@ -2,11 +2,9 @@
 
 #include "App/DevConsoleHost.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/LogSink/ConsoleLogOutput.h"
-#include "Core/Process/StandardInputReader.h"
 #include "Core/String/string_splitter.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -35,8 +33,7 @@ namespace sw
     DevConsoleHost::DevConsoleHost()
 #if !defined( SW_SHIPPING )
         : _devConsoleController{ nullptr }
-        , _standardInput{ nullptr }
-        , _listStandardInputCommand{}
+        , _standardInput{}
         , _bEnableEditor{ SW_FALSE }
         , _bExecPending{ SW_FALSE }
         , _reserved{ 0 }
@@ -60,8 +57,7 @@ namespace sw
         if ( gv_standardInputCommands != 0 )
         {
             ConsoleLogOutput::setFlushEveryLine( true ); // 부모가 줄 단위로 바로 모은다(접속과 종료 줄을 기다리는 쪽).
-            _standardInput = make_unique<StandardInputReader>();
-            _standardInput->start();
+            _standardInput.start();
         }
 #endif
     }
@@ -70,8 +66,7 @@ namespace sw
     {
 #if !defined( SW_SHIPPING )
         _devConsoleController.reset();
-        _standardInput.reset();                             // 읽기 스레드를 멈추고 기다린다.
-        vector<string>{}.swap( _listStandardInputCommand ); // 엔진 종료의 누수 보고 전에 해제한다(기동 뒤에 잡은 용량).
+        _standardInput.stop(); // 읽기 스레드를 멈추고 기다린다. 줄 버퍼도 엔진 종료의 누수 보고 전에 해제한다.
 #endif
     }
 
@@ -106,26 +101,17 @@ namespace sw
     bool DevConsoleHost::pollStandardInputCommands()
     {
 #if !defined( SW_SHIPPING )
-        if ( _standardInput == nullptr )
-            return false;
-        _standardInput->drainLines( _listStandardInputCommand );
-        bool bQuitRequested = false;
-        for ( const string& line : _listStandardInputCommand )
-        {
-            const string_view command = StringUtil::trim( line );
-            if ( command == "quit" || command == "stop" )
-            {
-                SW_LOG_INFO( "App quit requested on standard input" );
-                bQuitRequested = true;
-                break;
-            }
-            if ( command.empty() == false && _devConsoleController != nullptr )
-                (void)_devConsoleController->getConsole().submit( command ); // 응답과 실패는 로그에 남는다.
-        }
-        _listStandardInputCommand.clear();
-        return bQuitRequested;
+        return _standardInput.poll( SW_DELEGATE_METHOD( StandardInputCommandDelegate, &DevConsoleHost::submitStandardInputCommand, this ) );
 #else
         return false;
 #endif
     }
+
+#if !defined( SW_SHIPPING )
+    void DevConsoleHost::submitStandardInputCommand( string_view command )
+    {
+        if ( _devConsoleController != nullptr )
+            (void)_devConsoleController->getConsole().submit( command ); // 응답과 실패는 로그에 남는다.
+    }
+#endif
 } // namespace sw

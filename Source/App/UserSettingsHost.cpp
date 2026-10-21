@@ -14,7 +14,6 @@
 #include "Engine/Window/IWindow.h"
 
 SW_TEST_GLOBAL_VARIABLE( sw::string, gv_userSettingsApply, "", "사용자 설정을 메뉴와 같은 길로 바꾼다: \"id=value;id=value\" (자동화)" );
-SW_TEST_GLOBAL_VARIABLE( int32, gv_userSettingsApplyFrame, 30, "gv_userSettingsApply 를 적용할 프레임" );
 SW_TEST_GLOBAL_VARIABLE( bool, gv_userSettingsAutoConfirm, true, "gv_userSettingsApply 의 화면 변경을 바로 확인한다 (false 면 카운트다운이 되돌린다)" );
 
 namespace sw
@@ -24,16 +23,14 @@ namespace sw
     UserSettingsHost::UserSettingsHost()
         : _pEngine{ nullptr }
         , _pWindow{ nullptr }
-        , _frameIndex{ 0 }
         , _appliedText{}
     {
     }
 
     void UserSettingsHost::initialize( Engine* pEngine, IWindow* pWindow )
     {
-        _pEngine    = pEngine;
-        _pWindow    = pWindow;
-        _frameIndex = 0;
+        _pEngine = pEngine;
+        _pWindow = pWindow;
         _appliedText.clear();
     }
 
@@ -47,10 +44,10 @@ namespace sw
     {
         if ( _pEngine == nullptr || engine::areEngineServicesBound() == false )
             return;
-        ++_frameIndex;
-        // 값마다 한 번 적용한다 — 명령줄 값은 그 프레임에, 시나리오가 실행 중에 바꾼 값은 바뀐 프레임에 들어간다.
+        // 값마다 한 번 적용한다 — 명령줄 값은 첫 프레임에, 시나리오(`<Variable>`)가 실행 중에 바꾼 값은 바뀐 프레임에 들어간다.
+        // 적용할 프레임을 고르는 스위치는 두지 않는다. 시점은 시나리오의 단계가 정한다(백엔드 교체 · 모듈 리로드와 같은 방식).
         const bool bNewApplyText = gv_userSettingsApply.empty() == false && gv_userSettingsApply != _appliedText;
-        if ( bNewApplyText && _frameIndex >= static_cast<uint32>( gv_userSettingsApplyFrame ) )
+        if ( bNewApplyText )
         {
             _appliedText = gv_userSettingsApply;
             applyCommandLineSettings();

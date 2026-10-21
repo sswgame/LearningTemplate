@@ -25,9 +25,10 @@ import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(co
 
 _kRetired = "ServiceAccess/RetiredWindow"
 _kSingleton = "ServiceAccess/Singleton"
+_kActiveWindow = "ServiceAccess/ActiveWindow"
 
-# (이름, 파일 -> 내용, 기대하는 (RetiredWindow, Singleton) 건수)
-_kListCase: list[tuple[str, dict[str, str], tuple[int, int]]] = [
+# (이름, 파일 -> 내용, 기대하는 (RetiredWindow, Singleton) 건수 — 셋째 값이 있으면 ActiveWindow 건수, 없으면 0)
+_kListCase: list[tuple[str, dict[str, str], tuple[int, ...]]] = [
     ("옛 getService / getSceneService / isServiceBound",
      {"Source/Probe/A.cpp": "void f()\n{\n    game::getService<Foo>();\n    scene.getSceneService<Bar>();\n    if ( game::isServiceBound<Foo>() ) {}\n}\n"},
      (3, 0)),
@@ -42,6 +43,10 @@ _kListCase: list[tuple[str, dict[str, str], tuple[int, int]]] = [
      {"Source/Probe/H.inl": "struct Bar\n{\n    static Bar& getInstance()\n    {\n        static Bar s;\n        return s;\n    }\n};\n"}, (0, 1)),
     ("중첩 클래스의 getInstance 는 안쪽 타입으로 판정",
      {"Source/Probe/I.h": "class RawAnimationCodec\n{\n    struct Inner\n    {\n        static Inner& getInstance();\n    };\n};\n"}, (0, 1)),
+    ("헤더의 정적 활성 창구(find · get, 이름 뒤에 더 붙어도)",
+     {"Source/Probe/Q.h": ("class Foo\n{\npublic:\n    static Foo* findActive();\n    static const Foo* getActiveInstance();\n"
+                           "    static Foo*  findActiveFoo( );\n};\n")},
+     (0, 0, 3)),
     # --- 어기지 않은 조각 ---
     ("주석 · 문자열 안의 언급",
      {"Source/Probe/J.cpp": '// getService<Foo>() 는 지워졌다. engine::getTypeRegistry() 도\n/* getSceneService<Bar>() */\nconst char* kText = "getService<Foo>()";\n'},
@@ -57,6 +62,11 @@ _kListCase: list[tuple[str, dict[str, str], tuple[int, int]]] = [
       "Source/Probe/N.h": "void f()\n{\n    static auto& s = Foo::getInstance();\n}\n"},
      (0, 0)),
     ("예외 표의 타입", {"Source/Probe/O.h": "class SQLiteDriver\n{\npublic:\n    static SQLiteDriver& getInstance();\n};\n"}, (0, 0)),
+    ("활성 창구 예외 표의 타입", {"Source/Probe/R.h": "class IWindow\n{\npublic:\n    static IWindow* getActiveWindow();\n};\n"}, (0, 0, 0)),
+    ("참조를 돌려주는 활성 설정 · 인자 있는 함수 · cpp 의 정의는 보지 않는다",
+     {"Source/Probe/S.h": "struct Cfg\n{\n    static const Cfg& getActive();\n    static Cfg* findActiveFor( int id );\n};\n",
+      "Source/Probe/S.cpp": "Cfg* Cfg::findActive()\n{\n    static Cfg* s_p = nullptr;\n    return s_p;\n}\n"},
+     (0, 0, 0)),
     ("예외 표의 템플릿 구조체",
      {"Source/Probe/P.h": "template <typename T>\nstruct EditorSettingsInstance\n{\n    static void* getInstance()\n    {\n        return nullptr;\n    }\n};\n"},
      (0, 0)),
@@ -85,9 +95,10 @@ class CheckServiceAccessSelfTestGate(LintGate):
                     path.parent.mkdir(parents=True, exist_ok=True)
                     path.write_text(content, encoding="utf-8", newline="\n")
                 listViolation = CheckServiceAccess.findServiceAccessViolations(caseRoot, None)
-                found = (countCategory(listViolation, _kRetired), countCategory(listViolation, _kSingleton))
-                if found != expected:
-                    listError.append(f"{name}: (RetiredWindow, Singleton) 기대 {expected}, 실제 {found}")
+                found = (countCategory(listViolation, _kRetired), countCategory(listViolation, _kSingleton), countCategory(listViolation, _kActiveWindow))
+                expectedFull = tuple(expected) + (0,) * (3 - len(expected))
+                if found != expectedFull:
+                    listError.append(f"{name}: (RetiredWindow, Singleton, ActiveWindow) 기대 {expectedFull}, 실제 {found}")
         finally:
             shutil.rmtree(tempRoot, ignore_errors=True)
         return GateResult(listViolation=listError, summary=f"{len(_kListCase)} cases")

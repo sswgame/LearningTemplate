@@ -1,8 +1,9 @@
 /**
  * @file ServerApp.h
  * @brief 전용 서버 실행 파일의 본체입니다. 창과 GPU 없이 엔진을 서버 역할로 시작하고, 게임 모듈을 고정 틱으로 돌리고, 종료 요청이 오면 정상 종료합니다.
- * @details App(플레이어 실행 파일)과 따로 둡니다(언리얼의 `<Game>Server` 와 유니티 Dedicated Server 빌드와 같은 구조입니다). 같이 쓰는 것은 모듈 호스트와
- *          매니페스트 해석(`ModuleHost`)뿐입니다.
+ * @details App(플레이어 실행 파일)과 따로 둡니다(언리얼의 `<Game>Server` 와 유니티 Dedicated Server 빌드와 같은 구조입니다). 같이 쓰는 것은 `Source/ModuleHost` 의 것 —
+ *          모듈 호스트와 매니페스트 해석, 호스트 범위 세우기(`ModuleImageHostSubsystem::initializeHostScope`), 핫 리로드 구동기(`ModuleReloadDriver` — 개발 명령 `module.reload` 와
+ *          탐침 `Module.*` 도 따라온다), 표준 입력 명령 채널(`StandardInputCommands` — 종료 낱말 `quit` · `stop`)입니다.
  *
  *          기동 순서는 다음과 같다. 엔진(`EngineHostRole::DedicatedServer`, 기동 테이블의 Client 단계를 건너뛴다), 서버 설정, 게임 인스턴스(창과 디바이스는 nullptr),
  *          종료 신호 처리기, 콘솔 입력, "Dedicated server ready" 로그, 고정 틱 루프, 종료 요청, 역순 종료, "Dedicated server shutdown complete" 로그다.
@@ -22,12 +23,14 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Process/StandardInputReader.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/Engine.h"
 #include "Engine/Module/ModuleCatalog.h"
 #include "Engine/Observability/ServerServiceRegistry.h"
+
+#include "ModuleHost/ModuleReloadDriver.h"
+#include "ModuleHost/StandardInputCommands.h"
 
 namespace sw
 {
@@ -36,7 +39,6 @@ namespace sw
     class DebugChannel;
     class DevConsole;
     class IStreamTransport;
-    class LiveReloadManager;
     class MetricCounter;
     class MetricGauge;
     class MetricHistogram;
@@ -92,10 +94,9 @@ namespace sw
         /** @brief 모듈 리로드 직전입니다. 서버 서비스의 코드는 그 모듈에 있으므로 먼저 멈추고, 게임 쪽 처리는 모듈 호스트에 넘깁니다. 다음 틱에 다시 시작합니다. */
         bool onBeforeModuleReload( const vector<string>& listModuleName );
 #endif
-        LiveReloadManager* getLiveReloadManager() const;
-        void               updateOnce( float32 deltaSeconds );
-        /** @brief 콘솔 명령 한 줄을 이 스레드(게임 스레드)에서 처리합니다. */
-        void executeCommand( string_view line );
+        void updateOnce( float32 deltaSeconds );
+        /** @brief 콘솔 명령 한 줄(종료 낱말은 `StandardInputCommands` 가 먼저 거른다)을 이 스레드(게임 스레드)에서 처리합니다. */
+        void executeCommand( string_view command );
         /** @brief Dev 의 일시정지 명령(`pause` · `resume` · `step [N]`)이면 처리하고 true 입니다. Shipping 은 늘 false 입니다. */
         bool executePauseCommand( string_view command );
         void logStatus() const;
@@ -107,7 +108,7 @@ namespace sw
     private:
         /**
          * @brief 호스트 범위입니다 — 엔진 범위의 부모이고, 엔진보다 먼저 서서 나중에 사라집니다(그래서 `_engine` 보다 앞에 선언한다).
-         * @details 모듈 이미지 창구(`ModuleImageHostSubsystem`)만 듭니다 — 엔진의 `ModuleTypes` · `ModuleImages` 단계가 찾아 부릅니다.
+         * @details 모듈 이미지 창구(`ModuleImageHostSubsystem`)와 리로드 구동기(빌려 건다)를 듭니다 — 엔진의 `ModuleTypes` · `ModuleImages` 단계가 창구를 찾아 부릅니다.
          *          서버 서비스 관리자(`_serverServices`)는 이 범위에 넣지 않습니다. 모듈 리로드마다 멈췄다 다시 시작하는 수명이라 범위의 초기화 · 종료 한 쌍과 맞지 않기 때문입니다(결정 기록 5-3).
          */
         SubsystemScope _host;
@@ -115,15 +116,16 @@ namespace sw
         ModuleImageHostSubsystem* _pModuleImageHost;
         Engine                    _engine;
         unique_ptr<ModuleHost>    _moduleHost;
+        /** @brief 모듈 핫 리로드입니다(App 과 같은 구동기). 자신을 `_host` 에 겁니다. Shipping 에서는 아무것도 하지 않습니다. */
+        ModuleReloadDriver _moduleReload;
 #if !defined( SW_SHIPPING )
-        unique_ptr<LiveReloadManager> _liveReloadManager;
-        unique_ptr<DevConsole>        _devConsole;     ///< Dev 서버는 개발 콘솔과 같은 명령(개발 명령 · gv_*)을 표준 입력으로 받는다
-        unique_ptr<IStreamTransport>  _debugTransport; ///< 디버그 채널의 스트림 전송(채널을 종료한 뒤 지운다)
-        unique_ptr<DebugChannel>      _debugChannel;   ///< 읽기 중심의 원격 개발 명령 채널( 가 0 이 아닐 때만, 루프백 · 토큰, 서버 디버깅 S3)
+        unique_ptr<DevConsole>       _devConsole;     ///< Dev 서버는 개발 콘솔과 같은 명령(개발 명령 · gv_*)을 표준 입력으로 받는다
+        unique_ptr<IStreamTransport> _debugTransport; ///< 디버그 채널의 스트림 전송(채널을 종료한 뒤 지운다)
+        unique_ptr<DebugChannel>     _debugChannel;   ///< 읽기 중심의 원격 개발 명령 채널(`gv_debugChannelPort` 가 0 이 아닐 때만, 루프백 · 토큰, 서버 디버깅 S3)
 #endif
         ModuleCatalog                     _moduleCatalog;
         ModuleResolution                  _moduleResolution;
-        StandardInputReader               _console;
+        StandardInputCommands             _console; ///< 표준 입력 명령 채널(설정 `_bConsoleInput` 이 켤 때만 시작한다)
         unique_ptr<MetricRegistry>        _metricRegistry;
         unique_ptr<ServiceHealthRegistry> _healthRegistry;
         unique_ptr<IStreamTransport>      _opsTransport; ///< 운영 HTTP 의 스트림 전송(엔드포인트가 빌려 쓰므로 엔드포인트를 종료한 뒤 지운다).
@@ -132,7 +134,6 @@ namespace sw
         unique_ptr<ServerServiceManager>  _serverServices;          ///< 모듈이 올린 서버 서비스(온라인 서비스 호스트 등)
         string                            _serverConfigPath;        ///< 읽은 서버 설정 파일 경로(서비스가 옆 파일을 찾는다)
         ServerServiceContext              _serverServiceContext;    ///< 서버 서비스와 게임 · 키트 모듈(`ServerServiceRegistry::findHostContext`)이 받는 서버 문맥
-        vector<string>                    _listPendingCommand;      ///< 콘솔에서 꺼낸 줄(틱마다 재사용)
         const ServerConfig*               _pServerConfig;           // ConfigManager 가 소유한다
         MetricHistogram*                  _pTickHistogram;          ///< server_tick_seconds. 틱 본문 시간.
         MetricCounter*                    _pDroppedTickCounter;     ///< server_dropped_ticks_total

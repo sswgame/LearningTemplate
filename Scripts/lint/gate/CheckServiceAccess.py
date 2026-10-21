@@ -11,7 +11,11 @@
     `locateSubsystem<…>( engine::getEngineSubsystems() )`, 그리고 `engine::` 아래의 이름 붙은 접근자(`engine::getTypeRegistry()` 따위).
     `engine::` 아래에 남는 `get*` 은 규칙 데이터의 `allowed_engine_function` 뿐이다. 주석 · 문자열 안의 언급은 보지 않는다.
   - `ServiceAccess/Singleton`: 헤더의 `static … getInstance()`. 전역 단일체는 수명과 순서가 숨는다 — 새 서비스는 서브시스템으로 만들어 범위에 넣는다.
-    예외는 `Scripts/lint/rules/CheckServiceAccess.toml` 의 `[exemption]`(타입 이름 → 이유)이고, 더는 `getInstance()` 가 없는 타입은 낡은 예외로 실패한다.
+  - `ServiceAccess/ActiveWindow`: 헤더의 정적 활성 창구 `static T* findActive…()` · `static T* getActive…()`(포인터를 돌려주는 것). 정적 포인터 칸에 "지금 도는 것" 을
+    적어 두는 모양이라 단일체와 같이 수명이 숨고, 둘째 인스턴스 · 내려간 인스턴스를 가리킨다(App 의 교체기 · 엔진의 셸 액션 · 디버그 HUD 가 이 모양이었다).
+    소유자가 객체를 범위에 빌려 걸고(`SubsystemScope::bind`) 쓰는 쪽이 `findSubsystem<T>()` 로 찾는다.
+    **형식으로 막지 못하는 틈이라 게이트를 둔다** — 정적 멤버 함수와 정적 변수는 언어가 늘 허락하고, 범위 창구는 쓰는 쪽이 고르는 길이라 타입이 강제할 수 없다.
+  예외는 둘 다 `Scripts/lint/rules/CheckServiceAccess.toml` 의 `[exemption]`(타입 이름 → 이유)이고, 더는 그 모양이 없는 타입은 낡은 예외로 실패한다.
 
 대상은 `Source/` · `Test/` · `Tools/ReflectionParser/` · `Tools/OnlineLoadBot/` 의 `.h` · `.cpp` · `.inl` 이다(생성 `.gen.cpp` 와 ThirdParty 제외).
 
@@ -43,6 +47,7 @@ _kSetRemainingEngineFunction = frozenset(_kRuleData["allowed_engine_function"])
 
 _kRetiredWindowCategory = "ServiceAccess/RetiredWindow"
 _kSingletonCategory = "ServiceAccess/Singleton"
+_kActiveWindowCategory = "ServiceAccess/ActiveWindow"
 
 # 지워진 창구 다섯 모양. 이름 붙은 접근자는 아래 `_kEngineNamedAccessorRe` 가 따로 본다(허용 이름을 데이터에서 빼야 해서).
 _kRetiredWindowRe = (
@@ -54,6 +59,7 @@ _kRetiredWindowRe = (
 _kEngineNamedAccessorRe = re.compile(r"(?<![\w$])engine::(get[A-Z]\w*)\s*\(")
 
 _kStaticGetInstanceRe = re.compile(r"\bstatic\b[^;{}()=]*?\bgetInstance\s*\(")
+_kStaticActiveWindowRe = re.compile(r"\bstatic\b[^;{}()=]*?\*\s*((?:find|get)\w*Active\w*)\s*\(\s*\)")
 _kClassHeadRe = re.compile(r"\b(?:class|struct)\s+(?:(?:\w*API|alignas\s*\([^)]*\))\s+)*(\w+)")
 
 
@@ -111,7 +117,7 @@ def findSingletons(relative: str, text: str, code: str) -> list[str]:
     listViolation: list[str] = []
     for _, className in findEnclosingClassNames(code):
         if className in gate.mapExemption:
-            gate.seeExemption(className)   # 타입은 있는데 getInstance() 가 없으면 낡은 예외로 실패한다
+            gate.seeExemption(className)   # 타입은 있는데 getInstance() · 활성 창구가 없으면 낡은 예외로 실패한다
     for match in _kStaticGetInstanceRe.finditer(code):
         typeName = classNameAtInternal(code, match.start())
         lineNumber = lineOfInternal(code, match.start())
@@ -121,6 +127,16 @@ def findSingletons(relative: str, text: str, code: str) -> list[str]:
         owner = typeName or "(클래스 밖)"
         listViolation.append(f"{relative}:{lineNumber}: [{_kSingletonCategory}] {owner}::getInstance() — 전역 단일체입니다. "
                              f"새 서비스는 서브시스템으로 만들어 범위에 넣으십시오 | {listOriginalLine[lineNumber - 1].strip()}")
+    for match in _kStaticActiveWindowRe.finditer(code):
+        typeName = classNameAtInternal(code, match.start())
+        if typeName == "":
+            continue   # 클래스 밖의 정적 자유 함수는 .cpp 안의 도우미다(헤더에는 없다)
+        lineNumber = lineOfInternal(code, match.start())
+        if typeName in gate.mapExemption:
+            gate.useExemption(typeName)
+            continue
+        listViolation.append(f"{relative}:{lineNumber}: [{_kActiveWindowCategory}] {typeName}::{match.group(1)}() — 정적 활성 창구입니다. "
+                             f"소유자가 범위에 걸고(SubsystemScope::bind) findSubsystem<T>() 로 찾으십시오 | {listOriginalLine[lineNumber - 1].strip()}")
     return listViolation
 
 
@@ -144,7 +160,7 @@ def findServiceAccessViolations(repositoryRoot: Path, listTargetFile: list[str] 
 class CheckServiceAccessGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다 — 깨끗한 조각과 예외 쪽은 `selftest/CheckServiceAccessSelfTest.py` 가 본다."""
 
-    description = "서비스 접근이 한 어휘(getSubsystem / findSubsystem)인지 · 헤더에 새 전역 단일체(getInstance)가 없는지 검사"
+    description = "서비스 접근이 한 어휘(getSubsystem / findSubsystem)인지 · 헤더에 새 전역 단일체(getInstance) · 정적 활성 창구(findActive)가 없는지 검사"
     buildComment = "Checking service access vocabulary and singletons..."
     timeoutSeconds = 60
     preCommitPattern = tuple(f"{root}/*" for root in _kListScanRoot)
@@ -157,6 +173,7 @@ class CheckServiceAccessGate(LintGate):
         "  서비스 접근은 범위마다 getSubsystem<T>()(반드시 있음) / findSubsystem<T>()(없을 수 있음) 둘입니다:\n"
         "      engine::getSubsystem<TaskManager>()      game::findSubsystem<T>()      editor::findSubsystem<T>()      GameObjectManager::getSubsystem<T>()\n"
         "  새 서비스는 전역 단일체(static getInstance())가 아니라 서브시스템으로 만들어 범위에 넣습니다.\n"
+        "  \"지금 도는 것\" 을 정적 포인터로 내주는 창구(static T* findActive())도 두지 않습니다 — 소유자가 범위에 빌려 겁니다(SubsystemScope::bind).\n"
         "  정말 단일체가 필요하면 Scripts/lint/rules/CheckServiceAccess.toml 의 [exemption] 에 타입 이름과 이유를 적습니다."
     )
     selfTestCases = [
@@ -182,6 +199,13 @@ class CheckServiceAccessGate(LintGate):
             },
         },
         {
+            "name": "정적 활성 창구",
+            "expectedViolation": "Source/Probe/ProbeActive.h:4: [ServiceAccess/ActiveWindow] ProbeActive::findActive()",
+            "files": {
+                "Source/Probe/ProbeActive.h": "class ProbeActive\n{\npublic:\n    static ProbeActive* findActive();\n};\n",
+            },
+        },
+        {
             "name": "getInstance() 를 더는 두지 않는 예외 타입(낡은 예외)",
             "expectedViolation": "[낡은 예외] 'RawAnimationCodec' 의 대상은 그대로인데 규칙을 어기지 않습니다",
             "files": {
@@ -199,8 +223,9 @@ class CheckServiceAccessGate(LintGate):
     def finishSourceScan(self, repositoryRoot: Path, args: argparse.Namespace, result: SourceScanResult) -> GateResult:
         listViolation, _ = joinFindings(result.listFindings)
         listRetired = [line for line in listViolation if f"[{_kRetiredWindowCategory}]" in line]
+        listActive = [line for line in listViolation if f"[{_kActiveWindowCategory}]" in line]
         summary = (f"{' · '.join(_kListScanRoot)} — {_kRetiredWindowCategory} {len(listRetired)} · "
-                   f"{_kSingletonCategory} {len(listViolation) - len(listRetired)}")
+                   f"{_kSingletonCategory} {len(listViolation) - len(listRetired) - len(listActive)} · {_kActiveWindowCategory} {len(listActive)}")
         return GateResult(listViolation=listViolation, summary=summary)
 
 

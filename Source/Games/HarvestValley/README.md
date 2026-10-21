@@ -20,7 +20,7 @@ cmake --build --preset Ninja-Debug
 cd build/Ninja-Debug/Bin
 ./App.exe -game=HarvestValley -dx12
 ./App.exe -game=HarvestValley -dx12 -gv_farmAutoPlay=1      # 자동 농부 AI 가 농부를 잡는다: 갈기, 심기, 물, 거두기, 출하, 잠
-./App.exe -game=HarvestValley -dx12 -gv_farmAutoPlay=1 -gv_reloadGameAtFrame=1500   # 1500 프레임에 게임 모듈 핫 리로드
+./App.exe -game=HarvestValley -dx12 -gv_farmAutoPlay=1 "-gv_devConsoleExec=module.reload SWGame"   # 시작 씬이 열리면 게임 모듈 핫 리로드(시점을 고르려면 시나리오 단계 DevCommand)
 ./App.exe -game=HarvestValley -dx12 -scenario=game/harvestvalley/automation/control.scenario.xml
 ```
 

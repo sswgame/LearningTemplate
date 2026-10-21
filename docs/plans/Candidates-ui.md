@@ -29,7 +29,7 @@
 왜 필요한가: `Engine/UI/README.md` 의 입력 항목 중 둘이 남았다.
 남은 것:
 - 에디터 게임 뷰(Game 패널) 안의 포인터 좌표(창 픽셀 → 게임 뷰 렌더 타깃): UI 가 게임 뷰에 그려지는 단계와 함께.
-- 리눅스의 운영체제 클립보드: Windows 만 끼웠다(`PlatformClipboard`, `App/RuntimeUIHost`). X11 은 CLIPBOARD 선택 소유와 `SelectionRequest` 응답이 창 메시지 루프에 있어야 하고(`Engine/Window/Linux/X11Clipboard.cpp` 는 `isAvailable` false), Wayland 는 옛번호 `D1-6`. 그때까지 리눅스 UI 는 엔진 안 클립보드다.
+- 리눅스의 운영체제 클립보드: Windows 만 끼웠다(`PlatformClipboard`, `App::installRuntimeUIHooks`). X11 은 CLIPBOARD 선택 소유와 `SelectionRequest` 응답이 창 메시지 루프에 있어야 하고(`Engine/Window/Linux/X11Clipboard.cpp` 는 `isAvailable` false), Wayland 는 옛번호 `D1-6`. 그때까지 리눅스 UI 는 엔진 안 클립보드다.
 
 ### UiOptionsMenuVerification
 제목: 옵션 · 일시정지 메뉴의 실기동 확인

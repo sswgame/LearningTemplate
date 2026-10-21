@@ -5,15 +5,15 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
-#include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
+
+#include "ModuleHost/StandardInputCommands.h"
 
 namespace sw
 {
     class DevConsoleController;
     class InputMap;
     class IWindow;
-    class StandardInputReader;
 
     /**
      * @class DevConsoleHost
@@ -42,7 +42,7 @@ namespace sw
         /** @brief 셸 InputMap 의 이번 프레임 액션으로 콘솔을 갱신합니다(에디터가 없을 때). 셸 액션을 갱신한 뒤에 부릅니다. */
         void update( InputMap* pShellMap );
         /**
-         * @brief `-gv_standardInputCommands=1` 로 실행했으면 표준 입력에서 온 줄을 처리합니다. `quit` 과 `stop` 은 종료이고, 나머지는 개발 콘솔 명령입니다.
+         * @brief `-gv_standardInputCommands=1` 로 실행했으면 표준 입력에서 온 줄을 처리합니다(`StandardInputCommands` — 종료 낱말은 그쪽이 안다). 나머지 줄은 개발 콘솔 명령입니다.
          * @return 종료를 요청받았으면 true 를 반환합니다. Shipping 에서는 항상 false 입니다.
          * @details 창 닫기를 보낼 수 없는 부모나 콘솔이 없는 부모도 이 경로로 클라이언트를 정상 종료합니다.
          */
@@ -50,9 +50,14 @@ namespace sw
 
     private:
 #if !defined( SW_SHIPPING )
+        /** @brief 표준 입력의 종료 아닌 줄을 개발 콘솔에 넘깁니다. */
+        void submitStandardInputCommand( string_view command );
+#endif
+
+    private:
+#if !defined( SW_SHIPPING )
         unique_ptr<DevConsoleController> _devConsoleController;
-        unique_ptr<StandardInputReader>  _standardInput;            ///< `-gv_standardInputCommands=1` 일 때만 있다. 부모 프로세스의 명령 채널이다.
-        vector<string>                   _listStandardInputCommand; ///< 표준 입력에서 꺼낸 줄(프레임마다 재사용)
+        StandardInputCommands            _standardInput; ///< `-gv_standardInputCommands=1` 일 때만 시작한다. 부모 프로세스의 명령 채널이다.
 
         uint8                  _bEnableEditor : 1;
         uint8                  _bExecPending  : 1; ///< `-gv_devConsoleExec` 를 아직 돌리지 않았다.

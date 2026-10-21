@@ -110,8 +110,6 @@ namespace sw
          */
         [[nodiscard]] bool tryGetArrangedCorner( DebugHUDCorner& outCorner ) const;
 
-        /** @brief 지금 동작 중인 컨트롤러입니다(개발 명령 `hud` 와 자동화 탐침이 찾습니다). 없으면 nullptr 입니다. */
-        static DebugHUD* findActive();
         /** @brief `topLeft`, `topright`, `0`..`3` 을 모서리로 읽습니다(대소문자 무시). */
         [[nodiscard]] static bool tryParseCorner( string_view text, DebugHUDCorner& outCorner );
         /** @brief 설정 선택지 이름(`topLeft` 등)입니다. */

@@ -963,6 +963,17 @@
   `CheckEngineLayers` 가 방향(App · Server → ModuleHost → Engine · RuntimeAPI)을 지킵니다.
   고정 스텝 시간 정책 `FixedTimestep` 은 모듈 호스트가 아니라 Core(`Core/Time`, `GameTimer` 옆)에 둡니다(언리얼도 고정 시간 값을 모듈 관리자 밖에 둔다).
   기본값은 Core 가 정하지 않고 만들 때 받습니다(App 이 `EngineConfig` 의 초기값을 넘긴다 — 출처 하나). 2026-10-13 에 `Engine/Config` 에서 옮겼습니다(엔진 의존이 기본값 하나뿐이었다).
+- **App 과 Server 가 같이 하는 호스트 일은 `Source/ModuleHost` 한 곳에 둡니다**(2026-10-22, 계획 문서 `AppStructure`). 호스트 범위 세우기(`ModuleImageHostSubsystem::initializeHostScope`),
+  핫 리로드 소유(`ModuleReloadDriver` — `LiveReloadManager` 수명 · 씬 뒤 훅 · 개발 명령 `module.reload` · 탐침 `Module.*`), 표준 입력 명령 채널(`StandardInputCommands` — 종료 낱말 `quit` · `stop`)입니다.
+  그래서 Server 도 `module.reload` 와 `Module.*` 를 얻습니다. 등록 매크로는 호스트가 부르는 클래스의 `.cpp`(`ModuleReloadDriver.cpp`)에 두어 정적 라이브러리에서도 오브젝트가 링크에서 빠지지 않습니다.
+  리로드 단축키(에디터 모듈 포함)는 그 입력을 아는 App 이 정하고(`App::pollReloadHotkeys`) 구동기에는 요청만 넘깁니다.
+- **"지금 도는 것" 을 정적 포인터로 내주는 창구(`static T* findActive()`)를 두지 않습니다**(2026-10-22). 소유자가 객체를 범위에 빌려 걸고(`SubsystemScope::bind`) 쓰는 쪽이 `findSubsystem<T>()` 로 찾습니다 —
+  App 의 교체기와 리로드 구동기는 호스트 범위, 엔진의 셸 액션은 서비스 범위에 걸고, 디버그 HUD 는 그것을 든 `UISystem::getDebugHUD` 로, 에디터 테마 설정은 환경설정 등록 줄의 인스턴스(`getPreferences<EditorConfig>()`)로 찾습니다.
+  정적 칸은 둘째 인스턴스 · 내려간 인스턴스를 가리킬 수 있고 수명이 숨습니다. 정적 함수는 언어가 늘 허락해 형식으로 막지 못하므로 `CheckServiceAccess` 의 `ServiceAccess/ActiveWindow` 가 헤더의 모양을 막고,
+  남는 것(Core 층 · 잠금 없이 읽는 칸 · 창 소유권 전달)은 규칙 데이터의 예외 표에 이유와 함께 둡니다.
+- **"N 번째 프레임에 무엇을 한다" 명령줄 스위치를 두지 않고 시점은 시나리오 단계가 고릅니다**(2026-10-22). `-gv_reloadGameAtFrame` · `-gv_rhiSwapAtFrame`/`-gv_rhiSwapTo` · `-gv_userSettingsApplyFrame` 을 지웠습니다 —
+  같은 일을 단계 `<DevCommand line="module.reload SWGame"/>` · `<SwapBackend backend="…"/>` · `<Variable name="gv_userSettingsApply" …/>` 가 하고, 각 스위치가 따로 세던 프레임 카운터와 빈 프레임 관찰자 함수가 사라집니다.
+  `gv_userSettingsApply` 의 명령줄 값은 첫 프레임에 들어갑니다.
 - **`ModuleHost` 는 게임 모듈만 다루고, 에디터 몫은 App 의 파생 `EditorModuleHost`(`Source/App`)가 맡습니다**(2026-10-10). 전용 서버는 기반 클래스만 쓰고 모드 플래그(`_bDedicatedServer`)가 없습니다 — RHI 를 받았는지가 "디바이스가 있어야 게임을 만든다" 를 정합니다.
   에디터가 끼어드는 자리는 기반의 보호 가상 함수 다섯이고, 내리는 순서(`suspendModules`)는 기반 한 곳에 남습니다. 에디터 몫을 서버 바이너리에서 뺍니다(언리얼 `UGameEngine`/`UEditorEngine` 파생과 같은 방향).
 - **에디터 뷰포트 격자는 카메라 높이로 1 · 10 · 100 m 간격을 고르고 경계에서 섞습니다**(2026-10-10). 굵은 선(5 칸마다)은 월드 좌표로 정하고 가장자리는 흐립니다. 화면 공간 셰이더 격자(Unity 2019+ · Godot 4)는 렌더 패스를 하나 더 들여야 해 ImGui 선 그리기를 유지합니다.
@@ -1163,7 +1174,7 @@
 | D3-4.2 | 무적(`cheat.god`)은 어빌리티 시스템의 태그 기반으로 넣는다. | 언리얼 CheatManager God와 GAS 태그. | 추 |
 | D3-9.4 | 포토 모드는 게임 HUD를 기본으로 숨기고 토글을 둔다. | 포토 모드 관례. | 추 |
 | D4-14.1 D4-14.2 | 포토 모드 조작은 게임 입력 맵이 아니라 엔진 포토 모드 맵(`engine/input/photomode.input.xml`, `EngineDefaultAssets::_photoModeInputMap`)에서 읽는다. 맵을 읽지 못하면 포토 모드를 켜지 않는다. | 언리얼 Enhanced Input 은 포토 모드 동안 전용 매핑 컨텍스트를 올린다. 게임마다 액션을 다는 방식은 빠뜨리면 조작이 조용히 0 이 된다. | 추 |
-| D6-4.1 | 일시정지 메뉴의 "끝내기"는 에디터 없이 뜬 게임 창 호스트(`RuntimeUIHost`)가, "타이틀로"는 gamesettings 에 타이틀 씬이 있는 게임 인스턴스가 등록한다. 누르면 메뉴를 닫고 넘긴다. 등록은 등록한 처리 함수로만 거둔다. | 언리얼 PIE 의 Quit 은 PIE 만 끝낸다. Lyra 의 "Quit to Main Menu". 핫 리로드는 새 인스턴스를 먼저 세운다. | 추 |
+| D6-4.1 | 일시정지 메뉴의 "끝내기"는 에디터 없이 뜬 게임 창 호스트(App — `App::installRuntimeUIHooks`)가, "타이틀로"는 gamesettings 에 타이틀 씬이 있는 게임 인스턴스가 등록한다. 누르면 메뉴를 닫고 넘긴다. 등록은 등록한 처리 함수로만 거둔다. | 언리얼 PIE 의 Quit 은 PIE 만 끝낸다. Lyra 의 "Quit to Main Menu". 핫 리로드는 새 인스턴스를 먼저 세운다. | 추 |
 | D6-2.2 D6-2.3 | 키 바인딩 설정의 대상은 그 액션을 가진 맵이다(게임 맵 먼저, 그다음 런타임 UI 맵). 엔진 스키마에 일시정지 메뉴 키를 둔다. 운영체제 클립보드가 이어지면 엔진 안 글로 대신하지 않는다. 리눅스는 X11 선택 처리가 생길 때까지 엔진 안 클립보드다. | Enhanced Input 사용자 설정은 모든 매핑 컨텍스트의 키를 바꾼다. 클립보드는 언리얼 `FPlatformApplicationMisc` · Godot `DisplayServer` 자리다. | 추 |
 | D3-9.2 | 시나리오 녹화는 실제 입력만 기록한다. 자동화 주입 입력은 기록하지 않는다. | 주입 입력을 기록하면 재생 때 되먹임이 생긴다. | 추 |
 | D3-1.2 | 데이터 종류 레지스트리 이전은 D3-1.1(Core 이전)을 먼저 하고 결과를 보고 정한다. | 5-11의 단계 순서. | 추 |
