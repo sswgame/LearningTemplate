@@ -316,6 +316,12 @@
 | `gv_benchUiNameplates` | `int32` | `0` | 시험 | 앞쪽 벤치 큐브 K 개에 RTS 이름표(이름 글 + HP 막대)를 붙인다 (0=사용 안 함) | [BenchSceneProbes.cpp](../../Source/Games/Empty/BenchSceneProbes.cpp) |
 | `gv_benchViews` | `int32` | `0` | 시험 | 격자를 둘러보는 캡처 카메라(렌더 텍스처 512²) 수 (0=사용 안 함) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
 
+## `Source/Games/FrontierTown`
+
+| 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
+|---|---|---|---|---|---|
+| `gv_frontierAutoPlay` | `int32` | `0` | 시험 · 배포본에도 | FrontierTown: 시계를 빨리 감아 달 결산과 RTS 를 스스로 돌린다 (1=켜기) | [FrontierCityDirectorComponent.cpp](../../Source/Games/FrontierTown/FrontierCityDirectorComponent.cpp) |
+
 ## `Source/Games/HarvestValley`
 
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |

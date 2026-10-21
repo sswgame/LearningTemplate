@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- FrontierTown 의 도시 데이터(GF_CityBuilder 의 CityCatalog 형식) — 조립 시험이라 최소다. 신전(4 칸)은 첫 틱에 놓는 기념 건물이고 막힌 땅이 된다.
+     형식 설명은 game/nilecity/data/city.xml 머리말에 있다. -->
+<CityCatalog roadCost="1">
+  <Building id="house" name="House" kind="House" size="1" cost="5"/>
+  <Building id="temple" name="Temple" kind="Decoration" size="4" cost="40"/>
+  <HouseLevel name="Hut" population="4" tax="1"/>
+</CityCatalog>

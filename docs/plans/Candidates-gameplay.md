@@ -7,13 +7,6 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션 영역의 
 
 ## 기능
 
-### KitCompositionGames
-제목: 키트 조립의 두 번째 테스트 게임과 땅 쓰기
-옛번호: D4-4
-왜 필요한가: 틀 · 키트 전부 · 조립 테스트 둘(`KitCompositionTest`)과 `MeadowVillage` 는 들어갔다(규칙: `Source/GameFramework/Kits/` "키트 여럿을 한 게임에"). 필요해지기 전까지 남긴 몫이다.
-착수 조건 / 남은 것: 둘째 조립(RTS + City)의 테스트 게임이 필요해지면 MeadowVillage 모양으로 만든다. 격자 키트를 섞는 게임이 생기면 `SessionStateSettings::_land*` 와 키트의 `bindLand` 를 건다.
-함정: SRPG 는 전투 끝에 `releaseLand`. 공원 놀이기구 발자국은 상태 바이트에 싣지 않는다 — 지은 칸은 땅이 든다.
-
 ### AnimationLodAndCrowd
 제목: 애니메이션 LOD 와 군중 공유
 옛번호: D4-6

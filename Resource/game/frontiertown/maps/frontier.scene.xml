@@ -1,0 +1,86 @@
+<Scene formatVersion="2" name="FrontierTown">
+	<WorldSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</WorldSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _componentName="CameraComponent"
+					                 _bActive="true"
+					                 _localPosition="16,32,-8"
+					                 _localRotation="0.9272952,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachOwnerID="0"
+					                 _attachComponent="None"
+					                 _fovY="0.7"
+					                 _nearZ="0.1"
+					                 _farZ="120"
+					                 _orthoHeight="34"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="true" />
+					<CameraDirectorComponent _componentName="CameraDirectorComponent"
+					                         _bActive="true"
+					                         _catalogPath="game/frontiertown/data/frontier.cameras.xml"
+					                         _initialPreset="frontier"
+					                         _focusPoint="16,0,16"
+					                         _bReadInput="false">
+						<_listGroupTarget />
+					</CameraDirectorComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _componentName="DirectionalLightComponent"
+					                           _bActive="true"
+					                           _localPosition="0,0,0"
+					                           _localRotation="0.9,0.6,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachOwnerID="0"
+					                           _attachComponent="None"
+					                           _color="1,0.9,0.75"
+					                           _intensity="1.4"
+					                           _ambient="0.3"
+					                           _shadowExtent="40"
+					                           _shadowDistance="60"
+					                           _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="TownState">
+			<GameObject _schemaVersion="0" _name="TownState" _bActive="true">
+				<_listComponent>
+					<SessionStateComponent _componentName="SessionStateComponent" _bActive="true" />
+					<FrontierCityDirectorComponent _componentName="FrontierCityDirectorComponent"
+					                               _bActive="true"
+					                               _bAutoPlay="false"
+					                               _tilePrefab="game/frontiertown/prefabs/tile.prefab.xml"
+					                               _landmarkBuilding="temple"
+					                               _landmarkX="4"
+					                               _landmarkY="4"
+					                               _roadFromX="0"
+					                               _roadFromY="10"
+					                               _roadToX="15"
+					                               _roadToY="10" />
+					<FrontierSkirmishDirectorComponent _componentName="FrontierSkirmishDirectorComponent"
+					                                   _bActive="true"
+					                                   _bAutoPlay="false"
+					                                   _unitPrefab="game/frontiertown/prefabs/tile.prefab.xml"
+					                                   _workerUnit="worker"
+					                                   _soldierUnit="marine"
+					                                   _barracksUnit="barracks"
+					                                   _barracksX="20"
+					                                   _barracksY="20"
+					                                   _workerStart="2.5,0,2.5"
+					                                   _patrolA="2.5,0,6.5"
+					                                   _patrolB="10.5,0,6.5" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

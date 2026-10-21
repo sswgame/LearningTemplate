@@ -74,6 +74,12 @@
 | `controls.arenaHeal` | keyBinding | `` |  | confirm | `input.keyBinding` |
 | `controls.arenaDash` | keyBinding | `` |  | confirm | `input.keyBinding` |
 
+## `Resource/game/frontiertown/data/frontier.settings.xml`
+
+| id | 타입 | 기본값 | 범위 | 적용 | 대상 |
+|---|---|---|---|---|---|
+| `controls.frontierFastForward` | keyBinding | `` |  | confirm | `input.keyBinding` |
+
 ## `Resource/game/harvestvalley/data/farm.settings.xml`
 
 | id | 타입 | 기본값 | 범위 | 적용 | 대상 |

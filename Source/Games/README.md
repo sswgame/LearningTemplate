@@ -46,6 +46,7 @@ Resource/game/<게임 소문자>/               → 팩: data/gamesettings.xml, 
 |------|------|----------------------|
 | `Empty` | 최소 템플릿 | 새 게임의 출발점, 렌더 벤치 하네스(`-gv_benchMeshes=N`) |
 | [`AbilityArena`](AbilityArena/README.md) | 탑다운 웨이브 아레나 | 어빌리티 시스템(GAS), 폰과 AI 조종자 |
+| [`FrontierTown`](FrontierTown/README.md) | 도시 + 실시간 전략 | 격자 키트 둘이 공유 땅 하나를 나누기(`bindLand`) |
 | [`HarvestValley`](HarvestValley/README.md) | 농장 생활 | 키트 하나(`GF_Farming`), 공유 상태, 자동 플레이 빙의 |
 | [`MeadowVillage`](MeadowVillage/README.md) | 농장 + 생물 마을 | 키트 둘을 한 게임에 섞기 |
 | [`NileCity`](NileCity/README.md) | 도시 건설 | 명령형 디렉터, 절차 지형, 커서 아래 땅 고르기 |

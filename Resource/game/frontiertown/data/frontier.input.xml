@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  FrontierTown 의 게임플레이 입력 맵 — 액션 이름은 게임 접두(Frontier.)다. 시계를 미는 도시 디렉터만 읽는다(RTS 디렉터는 입력을 받지 않는다).
+  키트 코드는 액션 이름을 박지 않는다(CheckKitNamespaces) — 이름은 게임 디렉터만 안다.
+-->
+<InputMap defaultLayer="Gameplay" doubleClickTime="0.35" doubleClickMaxDistance="6" holdThreshold="0.4">
+	<layers>
+		<layer name="Gameplay" enabled="1" blockLower="0"/>
+	</layers>
+	<action name="Frontier.FastForward" layer="Gameplay" trigger="Down">
+		<bind source="key" code="Space"/>
+	</action>
+</InputMap>

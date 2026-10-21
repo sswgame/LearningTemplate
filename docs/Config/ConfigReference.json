@@ -3441,6 +3441,14 @@
    "source": "Source/Engine/Destruction/FractureComponentBase.cpp"
   },
   {
+   "name": "gv_frontierAutoPlay",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험 · 배포본에도",
+   "description": "FrontierTown: 시계를 빨리 감아 달 결산과 RTS 를 스스로 돌린다 (1=켜기)",
+   "source": "Source/Games/FrontierTown/FrontierCityDirectorComponent.cpp"
+  },
+  {
    "name": "gv_gpuCulling",
    "type": "int32",
    "default": "1",
