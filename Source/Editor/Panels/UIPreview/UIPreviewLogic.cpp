@@ -398,10 +398,12 @@ namespace sw::editor
 
     uint32 UIPreviewLogic::findBoxInsertIndex( const vector<float32>& listChildCenter, float32 point )
     {
-        uint32 index{ 0 };
+        // 방향은 배치 결과에서 읽는다 — 오른쪽에서 왼쪽(RTL 거울)이나 자식 크기보다 큰 음수 간격이면 번호가 커질수록 가운데가 작아진다.
+        const bool bDescending = listChildCenter.size() >= 2 && listChildCenter.back() < listChildCenter.front();
+        uint32     index{ 0 };
         for ( const float32 center : listChildCenter )
         {
-            if ( center < point )
+            if ( bDescending ? center > point : center < point )
                 ++index;
         }
         return index;
@@ -428,36 +430,33 @@ namespace sw::editor
         return track;
     }
 
-    void UIPreviewLogic::collectGridTracks( const PanelWidget& grid, bool bRows, vector<float32>& outListTrackStart, float32& outTrackEnd )
+    void UIPreviewLogic::makeGridTrackStarts( const vector<float32>& listTrackSize, float32 spacing, vector<float32>& outListTrackStart, float32& outTrackEnd )
     {
         outListTrackStart.clear();
         outTrackEnd = 0.0f;
-        vector<uint8> listSeen;
-        for ( uint32 childIndex = 0; childIndex < grid.getChildCount(); ++childIndex )
+        for ( uint32 trackIndex = 0; trackIndex < static_cast<uint32>( listTrackSize.size() ); ++trackIndex )
         {
-            const Widget*           pChild = grid.getChild( childIndex );
-            const WidgetLayoutSlot& slot   = pChild->getLayoutSlot();
-            const UIRect            bounds = pChild->getGeometry().computeScreenBounds();
-            const uint32            track  = bRows ? slot._row : slot._column;
-            const float32           start  = bRows ? bounds._top : bounds._left;
-            const float32           end    = bRows ? bounds._bottom : bounds._right;
-            while ( outListTrackStart.size() <= track )
-            {
-                outListTrackStart.push_back( 0.0f );
-                listSeen.push_back( 0 );
-            }
-            if ( listSeen[track] == 0 || start < outListTrackStart[track] )
-                outListTrackStart[track] = start;
-            listSeen[track] = 1;
-            if ( childIndex == 0 || end > outTrackEnd )
-                outTrackEnd = end;
+            const float32 start = trackIndex == 0 ? 0.0f : outTrackEnd + spacing;
+            outListTrackStart.push_back( start );
+            outTrackEnd = start + listTrackSize[trackIndex];
         }
-        // 자식이 없는 줄은 폭이 0 인 줄로 둔다(뒤 줄의 시작을 잇는다) — 그 칸으로는 끌어 놓을 수 없지만 번호는 밀리지 않는다. 마지막 줄에는 늘 자식이 있다.
-        for ( uint32 trackIndex = static_cast<uint32>( outListTrackStart.size() ); trackIndex-- > 0; )
-        {
-            if ( listSeen[trackIndex] == 0 )
-                outListTrackStart[trackIndex] = trackIndex + 1 < static_cast<uint32>( outListTrackStart.size() ) ? outListTrackStart[trackIndex + 1] : outTrackEnd;
-        }
+    }
+
+    bool UIPreviewLogic::findGridCell( const GridPanel& grid, const float2& screenPoint, uint32& outRow, uint32& outColumn )
+    {
+        float2 local{};
+        if ( grid.getGeometry().inverseTransformPoint( screenPoint, local ) == false )
+            return false;
+        // 격자는 RTL 이면 늘 거울로 놓는다(`mirrorsChildrenInRightToLeft` 를 바꾸지 않는다) — 배치는 거울 전 좌표로 줄을 정한다(`PanelWidget::arrangeChild`).
+        if ( grid.isRightToLeft() )
+            local._x = grid.getGeometry()._size._x - local._x;
+        vector<float32> listStart;
+        float32         trackEnd{ 0.0f };
+        makeGridTrackStarts( grid.getArrangedRowSizes(), grid.getCellSpacing()._y, listStart, trackEnd );
+        outRow = findGridTrack( listStart, trackEnd, local._y );
+        makeGridTrackStarts( grid.getArrangedColumnSizes(), grid.getCellSpacing()._x, listStart, trackEnd );
+        outColumn = findGridTrack( listStart, trackEnd, local._x );
+        return true;
     }
 
     string UIPreviewLogic::makeTimeLabel( float32 time, float32 duration )

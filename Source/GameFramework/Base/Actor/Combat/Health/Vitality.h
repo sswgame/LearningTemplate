@@ -139,6 +139,12 @@ namespace sw
         void stopRevive();
         /** @brief @p seconds 동안 피해를 받지 않습니다. 이미 남은 시간보다 길 때만 늘립니다. */
         void setInvulnerable( float32 seconds );
+        /**
+         * @brief 시간 없이 피해를 받지 않게 켜거나 끕니다(치트 `cheat.shooter.god`). `kill` 은 막지 않습니다(낙사 · 존 밖).
+         * @details 개발 도구의 스위치라 상태 바이트(`writeState`)에 싣지 않고, 리스폰 · 상태 복원 뒤에도 그대로입니다.
+         */
+        void setDamageImmune( bool bImmune ) { _bDamageImmune = bImmune ? SW_TRUE : SW_FALSE; }
+        bool isDamageImmune() const { return _bDamageImmune == SW_TRUE; }
         /** @brief 상태를 가리지 않고 죽입니다. 낙사, 존 밖, 갈고리 희생에 씁니다. 이미 죽었으면 아무 일도 없습니다. */
         void kill( int32 instigatorID = -1 );
         void resetDownCount() { _downCount = 0; }
@@ -193,5 +199,6 @@ namespace sw
         int32                      _downCount;
         VitalityState              _state;
         uint8                      _bReviving;
+        uint8                      _bDamageImmune; ///< `setDamageImmune` — 상태 바이트에 싣지 않는다
     };
 } // namespace sw

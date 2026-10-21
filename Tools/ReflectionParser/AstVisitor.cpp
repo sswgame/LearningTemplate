@@ -1224,11 +1224,13 @@ namespace sw
                 const bool           bSingleValue  = prop._bIsContainer == SW_FALSE && tryReadTypedHandleTarget( prop._typeName, target );
                 const bool           bFlatSequence = prop._bIsContainer == SW_TRUE && prop._containerKind == ContainerKind::Sequence && prop._keyTypeName.empty() &&
                                            ( pTree == nullptr || pTree->_elementNested == nullptr || pTree->_elementNested->_bIsContainer == SW_FALSE );
-                const bool bSequenceOfHandles = bFlatSequence && tryReadTypedHandleTarget( prop._elementTypeName, target );
+                // 집합(`set` · `unordered_set`)은 원소의 순서 · 해시가 있어야 컴파일되는데 핸들에는 둘 다 없다 — 생성 단계에서 막아 C++ 오류 대신 이 오류가 뜨게 한다.
+                const bool bOrderedOrHashed   = prop._containerType == "Set" || prop._containerType == "UnorderedSet";
+                const bool bSequenceOfHandles = bFlatSequence && bOrderedOrHashed == false && tryReadTypedHandleTarget( prop._elementTypeName, target );
                 if ( bSingleValue == false && bSequenceOfHandles == false )
                 {
                     SW_LOG_ERROR( "ERROR: PROPERTY() '%#' holds a component handle (%#) in a shape that cannot be saved. Use one TComponentHandle<T>, or a vector of "
-                                  "TComponentHandle<T>. An untyped ComponentHandle, a map and nested containers have no place to check the target type "
+                                  "TComponentHandle<T>. An untyped ComponentHandle, a map, a set and nested containers have no place to check the target type "
                                   "(see docs/plans/TypedComponents.md 3.7).",
                                   owner, prop._typeName );
                     return false;

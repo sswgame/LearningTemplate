@@ -56,6 +56,13 @@ namespace sw::editor
         void setFitResult( const FitResult& result );
 
     private:
+        /**
+         * @brief 소켓 · 포즈 모델의 미저장 상태를 패널의 dirty 로 옮깁니다(닫기 확인 · 종료 확인 · 제목 표시가 이 값을 본다).
+         * @details 편집 기록이 모델 안에 있어 패널이 편집마다 알리지 않는다 — 그리기마다 모델을 정본으로 다시 맞춘다(`DataTablePanel` 과 같은 모양).
+         */
+        void syncDocumentDirty() override;
+        /** @brief "Don't Save" — 두 모델을 마지막으로 읽거나 저장한 상태로 돌립니다. 외형 선택은 파일 문서가 아니라(프리셋 저장은 따로 누른다) 건드리지 않습니다. */
+        void revertDocument() override;
         void drawFileRow();
         void drawSocketTab();
         void drawSocketList();

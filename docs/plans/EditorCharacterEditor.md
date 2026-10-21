@@ -1,6 +1,6 @@
 # 캐릭터 편집 창 구현 계획 (D4-8 ⑥)
 
-> 상태: 구현대기 · 선행: EditorMultiWorld · 영역: gameplay · 옛번호: D4-8 · 진행: 0/6
+> 상태: 구현대기 · 선행: 없음 · 영역: gameplay · 옛번호: D4-8 · 진행: 0/6
 
 캐릭터 외형 편집 창의 설계 근거입니다(외형 통합 쪽은 [게임플레이 후보](Candidates-gameplay.md) 의 `CharacterAppearanceIntegration`). 다른 PC 에서 병합할 때 판단 기준으로 씁니다. 코드는 아직 바꾸지 않았습니다.
 파일 · 함수 이름은 2026-10-14 `wt/editor` 기준으로 읽은 것입니다.
@@ -9,6 +9,7 @@
 
 - [EditorMultiWorld.md](EditorMultiWorld.md) 의 단계 1~4(미리보기 씬 · 씬별 GPUScene · 호스트 뷰 목록 · `EditorPreviewPanel` 틀과 창별 선택 · Undo)가 끝나야 합니다.
   캐릭터 창은 그 틀 위의 창 하나입니다. 메인 씬을 빌리는 임시 구현은 하지 않습니다(프리팹 격리가 겪은 "씬이 더러우면 막는다" 문제를 되풀이하게 됩니다).
+  단계 1~4 는 main 에 들어왔다(같은 플러그인의 `PairedAnimationPanel` 이 이미 `EditorPreviewPanel` 을 잇는다). `EditorMultiWorld` 에 남은 것(스카이 패스 · 풀 공유 측정 · 렌더러 내리기와 백엔드 교체 시나리오 실행)은 이 창을 막지 않는다.
 - `D4-8` ①~⑤ 의 **통합** 항목 중 "체형 모프 · 피팅 델타를 GPU 모프 풀에 싣기" 와 "`Mesh` · 포즈 ↔ `AppearanceGeometry` · `CharacterBoneArray` 변환" 이 있어야 체형 슬라이더와 피팅 결과가 화면에 보입니다. 없으면 단계 3 이후를 미룹니다.
 
 ## 2. 현재 있는 것
@@ -94,6 +95,9 @@ Engine 은 GameFramework 를 모르므로, 창은 **에디터 쪽에서 GameFram
 
 첫 단계(소켓 파일 · 외형 선택 편집 모델과 패널, 스켈레톤 본 트리 · 레퍼런스 포즈 숫자 편집 `BonePoseEditModel`, 좌우 이름 표, 장비 칸 콤보 · 세트 입히기 · 규칙 설명, 프리셋 파일 저장, 피팅 요약 `FitCheckSummary`, 자기 저장 뒤 핫 리로드 무시 `SaveReloadGuard`)는 `GameFramework/PlugIn/Editor/CharacterEditor` 에 들어갔다. 기본 경로는 shooter3d 데이터다(경로 칸에서 바꾼다).
 
-- 미리보기 씬 위로 옮기기: `EditorMultiWorld` 단계 1~4 의 `EditorPreviewPanel` 이 main 에 들어온 뒤에 `EditorPreviewPanel` 상속 · 캐릭터 스폰 · `EditorAssetType` 에 소켓 종류를 더해 `EditorDocumentPanel` 계약으로 더티 · 저장 · 되돌리기 이관.
+- 미리보기 씬 위로 옮기기(단계 1): `EditorPreviewPanel` 상속 · 캐릭터 스폰 · `EditorAssetType` 에 소켓 종류를 더해 `EditorDocumentPanel` 계약으로 저장 · 되돌리기 이관.
+  **걸림돌(2026-10-21 확인)**: 미리보기에 놓을 캐릭터가 데이터에 없다. 팩 데이터(`CharacterEditorPackData`, `data/charactereditor.xml`)에 몸 칸이 없고, Shooter3D 에는 기사 몸 프리팹이 없다(`player_body.prefab.xml` 은 메시가 빈 칸이라 실행 중에 채운다).
+  그래서 몸은 외형 조립(`CharacterAppearanceComponent` + 창의 `AppearanceDatabase`)으로 세워야 하고, 그 컴포넌트가 미리보기 씬에서 데이터베이스를 찾는 길(게임 서비스는 메인 씬 것)이 단계 1 의 위험 그대로 남았다. 먼저 팩 데이터에 미리보기 몸 칸(필수)을 더하거나 조립 컴포넌트가 데이터베이스를 주입받게 정한다.
+- dirty 는 들어갔다(2026-10-21): 모델의 미저장 상태를 패널 dirty 로 옮기고(`syncDocumentDirty`) "Don't Save" 는 두 모델을 저장된 상태로 돌린다(`revertDocument` → `revertToSaved`). 전에는 패널이 dirty 를 표시하지 않아 닫기 · 종료 확인이 소켓 · 포즈 편집을 건너뛰었다.
 - 그때 같이 할 것: 뷰포트 기즈모 포즈 편집 · 뷰포트 소켓 축 표시 · 제약 리그 미리보기 · 애니메이션 재생 · 썸네일 렌더(`UserAppearancePresetStore::setThumbnailPath` 에 경로만 넣으면 된다) · 피팅 계산 연결(`CharacterEditorPanel::setFitResult` 로 푼 결과를 넘긴다 — 슬라이더를 놓을 때 한 번 풀고, 몸 메시 → `AppearanceGeometry` 변환은 외형 통합 항목) · 핫 리로드 결과를 모델에 다시 반영(지금은 외부 변경 알림만).
 - 체형 · 얼굴 슬라이더 UI(`CustomizationSchema` 로 슬라이더를 만든다)는 GPU 모프 풀 통합 뒤 — 꾸미기 값 모델 · 직렬화는 있다.

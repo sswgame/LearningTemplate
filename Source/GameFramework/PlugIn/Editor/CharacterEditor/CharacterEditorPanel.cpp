@@ -280,6 +280,24 @@ namespace sw::editor
         return bSaved;
     }
 
+    void CharacterEditorPanel::syncDocumentDirty()
+    {
+        if ( _sockets.isDirty() || _pose.isDirty() )
+            markDocumentDirty();
+        else
+            clearDocumentDirty();
+    }
+
+    void CharacterEditorPanel::revertDocument()
+    {
+        if ( _sockets.isDirty() && _sockets.revertToSaved() == false )
+            SW_LOG_ERROR( "Character Editor: the socket edits could not be discarded - the saved state did not read back" );
+        if ( _pose.isDirty() && _pose.revertToSaved() == false )
+            SW_LOG_ERROR( "Character Editor: the reference pose edits could not be discarded - the saved state did not read back" );
+        _selectedSocket = hashed_string{};
+        _status.clear();
+    }
+
     void CharacterEditorPanel::setFitResult( const FitResult& result )
     {
         _fit     = FitCheckSummary::fromResult( result );

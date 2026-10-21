@@ -369,8 +369,9 @@ namespace sw::editor
                 ImGui::SetNextWindowPos( ImVec2{ args._canvasPos._x + 12.0f, args._canvasPos._y + 48.0f }, ImGuiCond_FirstUseEver );
                 if ( ImGui::Begin( "Terrain Brush###TerrainBrushTool", nullptr, ImGuiWindowFlags_AlwaysAutoResize ) )
                 {
-                    static const utf8* const s_arrModeName[] = { "Raise", "Lower", "Flatten", "Paint Layer" };
-                    int32                    mode            = static_cast<int32>( state._settings._mode );
+                    static const utf8* const s_arrModeName[] = { "Raise", "Lower", "Flatten", "Paint Layer", "Smooth" };
+                    static_assert( static_cast<size_t>( IM_ARRAYSIZE( s_arrModeName ) ) == static_cast<size_t>( TerrainBrushMode::Count ), "Terrain brush mode names follow TerrainBrushMode" );
+                    int32 mode = static_cast<int32>( state._settings._mode );
                     if ( ImGui::Combo( "Mode", &mode, s_arrModeName, IM_ARRAYSIZE( s_arrModeName ) ) )
                         state._settings._mode = static_cast<TerrainBrushMode>( mode );
                     ImGui::SliderFloat( "Radius", &state._settings._radius, 0.5f, 64.0f, "%.1f m" );
@@ -410,14 +411,15 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief `terrain.brush <raise|lower|flatten|paint> [radius] [strength] [layer]` — 시나리오가 브러시를 고정 값으로 맞춥니다. */
+            /** @brief `terrain.brush <raise|lower|flatten|paint|smooth> [radius] [strength] [layer]` — 시나리오가 브러시를 고정 값으로 맞춥니다. */
             static bool runBrush( const vector<string>& listArgument, string& outReply )
             {
                 if ( listArgument.empty() || listArgument.size() > 4 )
                     return false;
-                static const utf8* const s_arrModeName[] = { "raise", "lower", "flatten", "paint" };
-                TerrainBrushSettings     settings        = getState()._settings;
-                bool                     bKnownMode      = false;
+                static const utf8* const s_arrModeName[] = { "raise", "lower", "flatten", "paint", "smooth" };
+                static_assert( static_cast<size_t>( IM_ARRAYSIZE( s_arrModeName ) ) == static_cast<size_t>( TerrainBrushMode::Count ), "Terrain brush command names follow TerrainBrushMode" );
+                TerrainBrushSettings settings   = getState()._settings;
+                bool                 bKnownMode = false;
                 for ( uint32 index = 0; index < IM_ARRAYSIZE( s_arrModeName ); ++index )
                 {
                     if ( listArgument[0] == s_arrModeName[index] )
@@ -521,6 +523,6 @@ namespace sw::editor
                          &TerrainBrushToolInternal::readHit );
     SW_AUTOMATION_PROBE( editorTerrainBrushToolActive, "Editor.TerrainBrushToolActive", "1 when the terrain tool (scene view Terrain toggle) ran this or the last frame",
                          &TerrainBrushToolInternal::readToolActive );
-    SW_DEV_COMMAND( TerrainBrush, "terrain.brush", "terrain.brush <raise|lower|flatten|paint> [radius] [strength] [layer]",
+    SW_DEV_COMMAND( TerrainBrush, "terrain.brush", "terrain.brush <raise|lower|flatten|paint|smooth> [radius] [strength] [layer]",
                     "Set the terrain brush of the scene view terrain tool", &TerrainBrushToolInternal::runBrush );
 } // namespace sw::editor

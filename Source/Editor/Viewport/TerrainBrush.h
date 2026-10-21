@@ -19,6 +19,8 @@ namespace sw::editor
         Lower,      ///< 높이를 내린다
         Flatten,    ///< 목표 높이로 당긴다
         PaintLayer, ///< 레이어 하나의 가중치를 올리고 합을 1 로 맞춘다
+        Smooth,     ///< 높이를 이웃 3 × 3 평균으로 당긴다(언리얼 Smooth)
+        Count
     };
 
     /** @brief 브러시 설정입니다. */
@@ -74,6 +76,7 @@ namespace sw::editor
 
         /**
          * @brief 높이 배열에 한 프레임을 적용합니다. 평탄화는 @p flattenHeight 로 당깁니다(한 프레임에 목표를 넘지 않습니다).
+         * @details 스무드는 프레임 시작의 높이로 샘플마다 이웃 3 × 3 평균(격자 밖 이웃은 뺀다)을 먼저 모두 구한 뒤 당긴다 — 샘플 순서가 결과를 바꾸지 않는다.
          * @return 바뀐 샘플이 있으면 true 입니다.
          */
         [[nodiscard]] static bool applyHeight( vector<float32>& inOutListHeight, uint32 resolution, const vector<TerrainBrushSample>& listSample,

@@ -66,11 +66,38 @@ namespace sw::editor
     bool TerrainBrush::applyHeight( vector<float32>& inOutListHeight, uint32 resolution, const vector<TerrainBrushSample>& listSample,
                                     const TerrainBrushSettings& settings, float32 flattenHeight, float32 deltaTime )
     {
-        if ( settings._mode == TerrainBrushMode::PaintLayer || inOutListHeight.size() != static_cast<size_t>( resolution ) * resolution )
+        const bool bNotHeightMode = settings._mode == TerrainBrushMode::PaintLayer || settings._mode == TerrainBrushMode::Count;
+        if ( bNotHeightMode || inOutListHeight.size() != static_cast<size_t>( resolution ) * resolution )
             return false;
-        bool bChanged = false;
-        for ( const TerrainBrushSample& sample : listSample )
+        // 스무드의 목표(이웃 평균)는 쓰기 전에 모두 구한다. 다른 모드는 비워 둔다.
+        vector<float32> listSmoothTarget;
+        if ( settings._mode == TerrainBrushMode::Smooth )
         {
+            listSmoothTarget.reserve( listSample.size() );
+            for ( const TerrainBrushSample& sample : listSample )
+            {
+                float32 sum{ 0.0f };
+                uint32  count{ 0 };
+                for ( int32 dz = -1; dz <= 1; ++dz )
+                {
+                    for ( int32 dx = -1; dx <= 1; ++dx )
+                    {
+                        const int64 x        = static_cast<int64>( sample._sampleX ) + dx;
+                        const int64 z        = static_cast<int64>( sample._sampleZ ) + dz;
+                        const bool  bOutside = x < 0 || z < 0 || x >= resolution || z >= resolution;
+                        if ( bOutside )
+                            continue;
+                        sum += inOutListHeight[static_cast<size_t>( z ) * resolution + static_cast<size_t>( x )];
+                        ++count;
+                    }
+                }
+                listSmoothTarget.push_back( sum / static_cast<float32>( MathUtil::max( count, 1u ) ) ); // 격자 밖 샘플은 고르지 않으므로 자신은 늘 센다
+            }
+        }
+        bool bChanged = false;
+        for ( size_t sampleIndex = 0; sampleIndex < listSample.size(); ++sampleIndex )
+        {
+            const TerrainBrushSample& sample = listSample[sampleIndex];
             if ( sample._sampleX >= resolution || sample._sampleZ >= resolution )
                 continue;
             float32&      height = inOutListHeight[static_cast<size_t>( sample._sampleZ ) * resolution + sample._sampleX];
@@ -93,7 +120,13 @@ namespace sw::editor
                     height += ( flattenHeight - height ) * MathUtil::saturate( amount );
                     break;
                 }
+                case TerrainBrushMode::Smooth:
+                {
+                    height += ( listSmoothTarget[sampleIndex] - height ) * MathUtil::saturate( amount );
+                    break;
+                }
                 case TerrainBrushMode::PaintLayer:
+                case TerrainBrushMode::Count:
                 {
                     break;
                 }

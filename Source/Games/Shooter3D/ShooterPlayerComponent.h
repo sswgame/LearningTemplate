@@ -69,6 +69,9 @@ namespace sw
         void addWaveAmmo();
         /** @brief 수리 보상입니다. 체력을 채웁니다(틱이 끝난 뒤 게임 스레드에서 부릅니다). */
         void restoreHealth( float32 amount );
+        /** @brief 치트 `cheat.shooter.god` 입니다. 켜면 피해를 받지 않습니다(`Vitality::setDamageImmune`, 판을 다시 시작해도 남는다). */
+        void setDamageImmune( bool bImmune ) { _vitality.setDamageImmune( bImmune ); }
+        bool isDamageImmune() const { return _vitality.isDamageImmune(); }
         /** @brief 스폰한 몸을 지웁니다(상태를 저장하기 전). 다음 틱이 끝난 뒤 다시 스폰합니다. */
         void despawnViews();
 

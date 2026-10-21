@@ -1279,10 +1279,10 @@ namespace sw::editor
         const bool  bCannotEditLayout = pWidget == nullptr || drawSize._x <= 0.0f || drawSize._y <= 0.0f;
         if ( bCannotEditLayout )
             return;
-        PanelWidget*    pParent = pWidget->getParent();
-        const BoxPanel* pBox    = castTo<const BoxPanel>( pParent );
-        const bool      bGrid   = castTo<const GridPanel>( pParent ) != nullptr;
-        if ( pParent == nullptr || ( pBox == nullptr && bGrid == false ) )
+        PanelWidget*     pParent = pWidget->getParent();
+        const BoxPanel*  pBox    = castTo<const BoxPanel>( pParent );
+        const GridPanel* pGrid   = castTo<const GridPanel>( pParent );
+        if ( pParent == nullptr || ( pBox == nullptr && pGrid == nullptr ) )
             return;
         const UIRect  box  = UIPreviewLogic::mapUIToImage( pWidget->getGeometry().computeScreenBounds(), drawSize, _viewport );
         const float32 half = Internal::kHandleSize * EditorThemeUtil::getDpiScale() * 0.5f;
@@ -1336,18 +1336,16 @@ namespace sw::editor
                                      "Reorder UI Widget" );
             return;
         }
-        // 격자: 놓은 점이 속한 행 · 열(자식 사각형으로 모은 줄)을 슬롯에 쓴다 — 슬롯 편집이라 캔버스 손잡이와 같이 `_slot` 텍스트 전후를 남긴다.
+        // 격자: 놓은 점이 속한 행 · 열(배치가 정한 줄)을 슬롯에 쓴다 — 슬롯 편집이라 캔버스 손잡이와 같이 `_slot` 텍스트 전후를 남긴다.
         const PropertyInfo* pSlotProp = UIPreviewLogic::findWidgetProperty( *pWidget, "_slot" );
         if ( pSlotProp == nullptr )
             return;
-        vector<float32> listRowStart;
-        vector<float32> listColumnStart;
-        float32         rowEnd{ 0.0f };
-        float32         columnEnd{ 0.0f };
-        UIPreviewLogic::collectGridTracks( *pParent, true, listRowStart, rowEnd );
-        UIPreviewLogic::collectGridTracks( *pParent, false, listColumnStart, columnEnd );
-        const uint32     row    = MathUtil::min( UIPreviewLogic::findGridTrack( listRowStart, rowEnd, point._y ), 0xFFFFu );
-        const uint32     column = MathUtil::min( UIPreviewLogic::findGridTrack( listColumnStart, columnEnd, point._x ), 0xFFFFu );
+        uint32 gridRow{ 0 };
+        uint32 gridColumn{ 0 };
+        if ( UIPreviewLogic::findGridCell( *pGrid, point, gridRow, gridColumn ) == false )
+            return;
+        const uint32     row    = MathUtil::min( gridRow, 0xFFFFu );
+        const uint32     column = MathUtil::min( gridColumn, 0xFFFFu );
         WidgetLayoutSlot slot   = pWidget->getLayoutSlot();
         if ( slot._row == row && slot._column == column )
             return;

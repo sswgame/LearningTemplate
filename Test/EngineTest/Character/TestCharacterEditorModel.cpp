@@ -370,6 +370,24 @@ SW_TEST_CASE( SocketEditModelTest, FailedLoadKeepsContentAndLoadClearsHistory )
 }
 
 /**
+ * @brief [SocketEditModelTest] 편집을 버리면(창의 "Don't Save") 마지막으로 읽은 상태로 돌아가고 기록이 지워진다
+ */
+SW_TEST_CASE( SocketEditModelTest, RevertToSavedDiscardsEdits )
+{
+    using Internal = CharacterEditorModelTestInternal;
+
+    SocketEditModel model = Internal::makeModel( "<SocketSet><Socket name='A' kind='Attach'/></SocketSet>" );
+    string          error;
+    SW_ASSERT_TRUE( model.addSocket( hashed_string( "B" ), hashed_string{}, hashed_string{}, error ) );
+    SW_ASSERT_TRUE( model.isDirty() );
+
+    SW_ASSERT_TRUE( model.revertToSaved() );
+    SW_EXPECT_EQUAL( size_t( 1 ), model.getSockets().getSockets().size() );
+    SW_EXPECT_FALSE( model.isDirty() );
+    SW_EXPECT_FALSE( model.canUndo() );
+}
+
+/**
  * @brief [AppearanceEditModelTest] 슬롯 · 꾸미기 값 편집은 되돌릴 수 있고, 같은 값은 기록을 남기지 않으며, 저장하면 더럽힘이 풀린다
  */
 SW_TEST_CASE( AppearanceEditModelTest, EditsUndoRedoAndSaveToPresetStore )

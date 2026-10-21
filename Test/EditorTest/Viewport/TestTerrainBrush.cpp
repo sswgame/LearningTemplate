@@ -92,6 +92,27 @@ SW_TEST_CASE( TerrainBrushTest, RaiseLowerAndFlatten )
 }
 
 /**
+ * @brief [TerrainBrushTest] 스무드는 프레임 시작 높이의 이웃 3 × 3 평균으로 당긴다 — 샘플 순서가 결과를 바꾸지 않고, 모서리는 격자 안 이웃만 센다
+ */
+SW_TEST_CASE( TerrainBrushTest, SmoothPullsTowardNeighborAverage )
+{
+    const uint32    resolution = 3;
+    vector<float32> listHeight( resolution * resolution, 0.0f );
+    listHeight[4] = 9.0f; // 가운데 봉우리
+
+    TerrainBrushSettings settings;
+    settings._mode     = TerrainBrushMode::Smooth;
+    settings._strength = 100.0f; // 한 프레임에 목표까지
+    const vector<TerrainBrushSample> listSample{
+        TerrainBrushSample{1, 1, 1.0f},
+        TerrainBrushSample{0, 0, 1.0f}
+    };
+    SW_EXPECT_TRUE( TerrainBrush::applyHeight( listHeight, resolution, listSample, settings, 0.0f, 1.0f ) );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, listHeight[4], 1e-5f );  // 9 / 9
+    SW_EXPECT_NEAR_EQUAL( 2.25f, listHeight[0], 1e-5f ); // 모서리 2 × 2 = 9 / 4, 가운데가 먼저 바뀌어도 프레임 시작 값으로 구한다
+}
+
+/**
  * @brief [TerrainBrushTest] 레이어 칠하기는 목표 레이어를 올리고 합을 1 로 지킨다
  */
 SW_TEST_CASE( TerrainBrushTest, PaintLayerKeepsSumOne )

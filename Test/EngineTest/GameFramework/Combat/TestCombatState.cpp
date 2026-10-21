@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 #include "GameFramework/Base/Actor/Combat/Damage/ElementChart.h"
 #include "GameFramework/Base/Actor/Combat/FrameData.h"
 #include "GameFramework/Base/Actor/Combat/Health/ResourceGauge.h"
@@ -119,6 +121,33 @@ SW_TEST_CASE( CombatStateTest, ShieldTakesDamageFirstAndPoiseBreaksThenRecovers 
     result = vitality.applyDamage( 50.0f, 0.0f, 1 );
     SW_EXPECT_TRUE( result._bIgnored == SW_TRUE );
     SW_EXPECT_NEAR_EQUAL( 80.0f, vitality.getHealth(), 1.0e-4f );
+}
+
+/**
+ * @brief [CombatStateTest] 피해 면역 스위치(치트)는 시간이 지나도 꺼지지 않고, 상태 복원 · 리스폰 뒤에도 남으며, kill 은 막지 않는다
+ */
+SW_TEST_CASE( CombatStateTest, DamageImmuneOutlivesTimeRestoreAndRespawn )
+{
+    Vitality vitality( VitalitySettings{} );
+    vitality.setDamageImmune( true );
+    vitality.update( 100.0f );
+    SW_EXPECT_TRUE( vitality.applyDamage( 50.0f )._bIgnored == SW_TRUE );
+
+    Archive writer;
+    vitality.writeState( writer );
+    vector<uint8> bytes;
+    writer.writeData( bytes );
+    Archive reader( bytes.data(), bytes.size() );
+    SW_ASSERT_TRUE( vitality.readState( reader ) );
+    vitality.respawn();
+    SW_EXPECT_TRUE( vitality.isDamageImmune() );
+    SW_EXPECT_TRUE( vitality.applyDamage( 50.0f )._bIgnored == SW_TRUE );
+
+    vitality.kill();
+    SW_EXPECT_TRUE( vitality.isDead() );
+    vitality.respawn();
+    vitality.setDamageImmune( false );
+    SW_EXPECT_TRUE( vitality.applyDamage( 50.0f )._bIgnored == SW_FALSE );
 }
 
 SW_TEST_CASE( CombatStateTest, DownedBleedsOutReviveInterruptsAndDownLimitKills )
