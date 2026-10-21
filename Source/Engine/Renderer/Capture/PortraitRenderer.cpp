@@ -69,6 +69,7 @@ namespace sw
     PortraitRenderer::PortraitRenderer()
         : _pDevice{ nullptr }
         , _renderer{ nullptr }
+        , _services{}
     {
     }
 

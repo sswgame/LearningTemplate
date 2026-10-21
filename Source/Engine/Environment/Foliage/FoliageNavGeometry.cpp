@@ -15,7 +15,7 @@ namespace sw
 {
     namespace
     {
-        void contribute( const Component& component, uint8 area, NavMeshGeometry& outGeometry )
+        void contributeFoliage( const Component& component, uint8 area, NavMeshGeometry& outGeometry )
         {
             (void)area; // 막는 식생은 늘 걷지 않는 영역이다 — 표면(지형)의 영역을 따르지 않는다
             const FoliageComponent&   foliage = static_cast<const FoliageComponent&>( component );
@@ -43,5 +43,5 @@ namespace sw
 
 namespace sw
 {
-    SW_NAV_GEOMETRY_CONTRIBUTOR( FoliageComponent, &contribute )
+    SW_NAV_GEOMETRY_CONTRIBUTOR( FoliageComponent, &contributeFoliage )
 } // namespace sw

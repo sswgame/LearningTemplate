@@ -3783,7 +3783,7 @@ SW_TEST_CASE( ReflectionSerializationTest, OrphanAppliedToBitFieldTouchesOnlyIts
         SW_EXPECT_TRUE( bApplied );
         SW_EXPECT_EQUAL( 1, static_cast<int32>( target._bInvulnerable ) );
         SW_EXPECT_TRUE_MSG( target._bActive == 1, "orphan 적용이 같은 바이트의 다른 비트필드를 덮었습니다" );
-        SW_EXPECT_TRUE_MSG( target._bCanJump == 1, "orphan 적용이 같은 바이트의 다른 비트필드를 덮었습니다" );
+        SW_EXPECT_TRUE_MSG( target._bCanJump == SW_TRUE, "orphan 적용이 같은 바이트의 다른 비트필드를 덮었습니다" );
     };
     expectOnlyItsBit( binaryOrphan, false );
     expectOnlyItsBit( binaryOrphan, true );

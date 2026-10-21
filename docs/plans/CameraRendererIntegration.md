@@ -19,7 +19,7 @@
 - 컷 신호는 카메라 쪽이 끝났다(디렉터 `consumeCut` → `CameraComponent::markCut` → `RenderViewSettings::_bCut`, 테스트 `CameraModeTest.DirectorComponentMarksTheCameraCutOnce` · `RenderViewCollectorTest.CameraPostProcessAndCutReachTheViewSettings`).
 - 지금 `_bCut` 은 TAA 기록만 리셋한다. 렌더러에 모션 벡터 · 자동 노출 · 모션 블러가 없다(2026-10-22 `Source/Engine` 검색). 셋은 각각 렌더러 기능이라 FeatureQueue 에서 착수한다.
 - 짧은 설계(기능이 들어올 때 붙일 자리): 시간 누적 상태는 모두 `FrameRenderer::ViewTarget` 의 뷰마다 기록(TAA 기록과 같은 자리)에 두고, 컷 프레임에는 TAA 의 컷 처리와 같은 분기 하나에서 모션 벡터 0 · 노출 기록을 이번 프레임 측정값으로 덮기 · 모션 블러 세기 0 을 함께 고른다. 기능마다 컷을 따로 읽지 않는다.
-- 대기 뷰 신호(`CameraManagerComponent::setPendingView`)를 듣는 쪽은 [PreloadAndLod](Candidates-gameplay.md#preloadandlod).
+- 대기 뷰 신호(`CameraManagerComponent::setPendingView`)를 듣는 쪽은 [PreloadAndLod](PreloadAndLod.md).
 
 ### S4 다중 뷰 보임의 가려짐
 

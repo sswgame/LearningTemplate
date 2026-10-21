@@ -4,6 +4,7 @@
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/String/StringBuilder.h"
 
 #include <algorithm>
@@ -93,11 +94,9 @@ namespace sw
     {
         AssetTypeRegistryInternal::Table& table = AssetTypeRegistryInternal::getTable();
         std::scoped_lock<mutex>           lock( table._mutex );
-        table._listType.erase( std::remove( table._listType.begin(), table._listType.end(), &def ), table._listType.end() );
-        table._listSuffix.erase( std::remove_if( table._listSuffix.begin(), table._listSuffix.end(),
-                                                 [&def]( const AssetTypeRegistryInternal::SuffixEntry& entry )
-        { return entry._pType == &def; } ),
-                                 table._listSuffix.end() );
+        VectorUtil::removeValue( table._listType, &def );
+        VectorUtil::removeIf( table._listSuffix, [&def]( const AssetTypeRegistryInternal::SuffixEntry& entry )
+        { return entry._pType == &def; } );
     }
 
     const AssetTypeDef* AssetTypeRegistry::findType( string_view name )

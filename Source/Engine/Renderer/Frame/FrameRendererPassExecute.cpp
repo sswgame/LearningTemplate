@@ -608,13 +608,18 @@ namespace sw
         const RenderViewModeInfo& viewModeInfo = getRenderViewModeInfo( _pActiveView->_settings._viewMode );
         if ( ( viewModeInfo._bWireframe && viewModeInfo._bOverlay == false ) || viewModeInfo._bShowsBuffer )
             return;
-        FramePassContext&    context     = input._context;
-        const hashed_string& passDepth   = input._passDepth;
-        const hashed_string& colorTarget = input._declaredColor[0]._attachment;
-        const float4         sceneClear  = getTargetClearColor( colorTarget.view() );
-        if ( beginColorPass( context, colorTarget.view(), passDepth.view(), sceneClear, colorLoadFor( colorTarget ), colorLoadFor( passDepth ) ) == false )
+        FramePassContext&            context     = input._context;
+        const hashed_string&         passDepth   = input._passDepth;
+        const hashed_string&         colorTarget = input._declaredColor[0]._attachment;
+        const float4                 sceneClear  = getTargetClearColor( colorTarget.view() );
+        const RHIPipelineStateHandle pso         = getEnginePSO( input._passType );
+        // 렌더 패스의 깊이 붙임은 PSO 의 깊이 형식을 따른다 — 깊이 테스트를 끈 감각 패스의 PSO 는 깊이가 없고, 둘이 다르면 Vulkan 은 그리지 않는다.
+        RHIPipelineStateDesc psoDesc{};
+        const bool           bUsesDepth = findPSODesc( pso, psoDesc ) && psoDesc._depthStencilFormat != RHIFormat::Unknown;
+        const string_view    depthName  = bUsesDepth ? passDepth.view() : string_view{};
+        if ( beginColorPass( context, colorTarget.view(), depthName, sceneClear, colorLoadFor( colorTarget ), colorLoadFor( passDepth ) ) == false )
             return;
-        drawSceneMeshes( context, getEnginePSO( input._passType ), false );
+        drawSceneMeshes( context, pso, false );
         context._pCmd->endRenderPass();
     }
 

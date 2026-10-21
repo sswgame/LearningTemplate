@@ -12,7 +12,7 @@ namespace sw
 {
     namespace
     {
-        void contribute( const Component& component, uint8 area, NavMeshGeometry& outGeometry )
+        void contributeTerrain( const Component& component, uint8 area, NavMeshGeometry& outGeometry )
         {
             const TerrainHeightfield& heightfield = static_cast<const TerrainComponent&>( component ).getHeightfield();
             if ( heightfield.isValid() == false )
@@ -26,5 +26,5 @@ namespace sw
 
 namespace sw
 {
-    SW_NAV_GEOMETRY_CONTRIBUTOR( TerrainComponent, &contribute )
+    SW_NAV_GEOMETRY_CONTRIBUTOR( TerrainComponent, &contributeTerrain )
 } // namespace sw

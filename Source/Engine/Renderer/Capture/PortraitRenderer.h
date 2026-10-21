@@ -70,6 +70,6 @@ namespace sw
     private:
         IRHIDevice*               _pDevice;
         unique_ptr<FrameRenderer> _renderer;
-        SceneEngineServices       _services{}; ///< `initialize` 가 받은 묶음(빌림). 스튜디오 씬과 프리팹 · 머티리얼 캐시를 이것으로 찾는다
+        SceneEngineServices       _services; ///< `initialize` 가 받은 묶음(빌림). 스튜디오 씬과 프리팹 · 머티리얼 캐시를 이것으로 찾는다
     };
 } // namespace sw
