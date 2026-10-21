@@ -49,7 +49,7 @@ namespace sw
                 if ( cooked.loadFromXMLFile( ::test::makeTempResourceID( path ) ) )
                     (void)cooked.saveToBinaryFile( binPath ); // 못 쓰면 Shipping 의 로드가 실패로 드러난다
             }
-            return path;
+            return test::makeTempResourceID( path );
         }
 
         /** @brief 씬 컴포넌트 하나(위치 1,2,3 · 스케일 2)를 든 프리팹 에셋을 만듭니다. */
@@ -295,7 +295,7 @@ SW_TEST_CASE( PrefabTest, InMemoryJSONPrefabCreationAndSpawn )
     sw::GameObjectManager objects;
     sw::PrefabCache       prefabs;
 
-    sw::GameObject* spawned = prefabs.spawn( &objects, tempPath, "BossActor" );
+    sw::GameObject* spawned = prefabs.spawn( &objects, ::test::makeTempResourceID( tempPath ), "BossActor" );
     SW_ASSERT_NOT_NULL( spawned );
     SW_EXPECT_EQUAL( sw::string( "BossActor" ), sw::string( spawned->getName().c_str() ) );
 #endif
@@ -323,13 +323,13 @@ SW_TEST_CASE( PrefabTest, CircularReferenceSpawnProtection )
     sw::RegisterMockComponents();
     sw::PrefabCache prefabs;
     sw::MockPostLoadSpawnerComponent::s_pPrefabs          = &prefabs;
-    sw::MockPostLoadSpawnerComponent::s_spawnPath         = xmlPath;
+    sw::MockPostLoadSpawnerComponent::s_spawnPath         = ::test::makeTempResourceID( xmlPath );
     sw::MockPostLoadSpawnerComponent::s_spawnAttemptCount = 0;
     sw::MockPostLoadSpawnerComponent::s_spawnedCount      = 0;
     sw::GameObject* pSpawned                              = nullptr;
     {
         test::ScopedDefensiveTestLog expected( "a prefab whose component spawns the same prefab" );
-        pSpawned = prefabs.spawn( &objects, xmlPath, "TestCircular" );
+        pSpawned = prefabs.spawn( &objects, ::test::makeTempResourceID( xmlPath ), "TestCircular" );
     }
     sw::MockPostLoadSpawnerComponent::s_pPrefabs = nullptr;
 
@@ -387,7 +387,7 @@ SW_TEST_CASE( PrefabTest, SpawnDuringTickKeepsThePrefabsState )
     SW_ASSERT_NOT_NULL( pMock );
     pMock->_pTickPrefabs      = &prefabs;
     pMock->_pTickSpawnManager = &objects;
-    pMock->_tickSpawnPath     = xmlPath;
+    pMock->_tickSpawnPath     = ::test::makeTempResourceID( xmlPath );
 
     objects.update( 0.016f );
 
@@ -411,12 +411,12 @@ SW_TEST_CASE( PrefabTest, JSONPrefabRevertKeepsComponents )
 
     sw::GameObjectManager objects;
     sw::PrefabCache       prefabs;
-    sw::GameObject*       pInstance = prefabs.spawn( &objects, jsonPath, "CrateA" );
+    sw::GameObject*       pInstance = prefabs.spawn( &objects, ::test::makeTempResourceID( jsonPath ), "CrateA" );
     SW_ASSERT_NOT_NULL( pInstance );
     SW_ASSERT_NOT_NULL( pInstance->getPrimarySceneComponent() );
     pInstance->getPrimarySceneComponent()->setLocalScale( sw::float3( 5.0f, 5.0f, 5.0f ) );
 
-    SW_ASSERT_TRUE( prefabs.revertInstance( pInstance, jsonPath ) );
+    SW_ASSERT_TRUE( prefabs.revertInstance( pInstance, ::test::makeTempResourceID( jsonPath ) ) );
     const sw::SceneComponent* pRoot = pInstance->getPrimarySceneComponent();
     SW_ASSERT_NOT_NULL( pRoot );
     SW_EXPECT_TRUE( pRoot->getLocalScale() == sw::float3( 2.0f, 2.0f, 2.0f ) );
@@ -437,7 +437,7 @@ SW_TEST_CASE( PrefabTest, RevertKeepsTheInstancesPlaceAndParent )
     sw::PrefabCache       prefabs;
     sw::GameObject*       pTruck = objects.createGameObject( sw::hashed_string( "Truck" ) );
     SW_ASSERT_NOT_NULL( pTruck->addComponent<sw::SceneComponent>() );
-    sw::GameObject* pInstance = prefabs.spawn( &objects, xmlPath, "CrateA" );
+    sw::GameObject* pInstance = prefabs.spawn( &objects, ::test::makeTempResourceID( xmlPath ), "CrateA" );
     SW_ASSERT_NOT_NULL( pInstance );
     SW_ASSERT_TRUE( pInstance->attachToParent( pTruck ) );
     pInstance->setName( sw::hashed_string( "CargoCrate" ) );
@@ -446,7 +446,7 @@ SW_TEST_CASE( PrefabTest, RevertKeepsTheInstancesPlaceAndParent )
     pRoot->setLocalRotation( sw::float3( 0.0f, 1.0f, 0.0f ) );
     pRoot->setLocalScale( sw::float3( 5.0f, 5.0f, 5.0f ) );
 
-    SW_ASSERT_TRUE( prefabs.revertInstance( pInstance, xmlPath ) );
+    SW_ASSERT_TRUE( prefabs.revertInstance( pInstance, ::test::makeTempResourceID( xmlPath ) ) );
     pRoot = pInstance->getPrimarySceneComponent();
     SW_ASSERT_NOT_NULL( pRoot );
     SW_EXPECT_TRUE( pInstance->getParent() == pTruck );
@@ -503,14 +503,14 @@ SW_TEST_CASE( PrefabTest, RevertKeepsTheSocketAndTheComponentIDs )
     sw::SceneComponent*   pBody  = pTruck->addComponent<sw::SceneComponent>();
     sw::SceneComponent*   pBed   = pTruck->addComponent<sw::SceneComponent>();
     SW_ASSERT_TRUE( pBed->attachToComponent( pBody ) );
-    sw::GameObject* pInstance = prefabs.spawn( &objects, xmlPath, "Cargo" );
+    sw::GameObject* pInstance = prefabs.spawn( &objects, ::test::makeTempResourceID( xmlPath ), "Cargo" );
     SW_ASSERT_NOT_NULL( pInstance );
     sw::SceneComponent* pRoot = pInstance->getPrimarySceneComponent();
     SW_ASSERT_NOT_NULL( pRoot );
     SW_ASSERT_TRUE( pRoot->attachToComponent( pBed ) );
     const sw::ComponentHandle rootHandle = pRoot->getHandle();
 
-    SW_ASSERT_TRUE( prefabs.revertInstance( pInstance, xmlPath ) );
+    SW_ASSERT_TRUE( prefabs.revertInstance( pInstance, ::test::makeTempResourceID( xmlPath ) ) );
     pRoot = pInstance->getPrimarySceneComponent();
     SW_ASSERT_NOT_NULL( pRoot );
     SW_EXPECT_TRUE( pRoot->getParent() == pBed ); // 몸통이 아니라 짐칸
@@ -564,9 +564,9 @@ SW_TEST_CASE( PrefabTest, PrefabMadeFromAChildDoesNotRememberItsParent )
         sw::GameObject* pBesideOriginal = nullptr;
         {
             SW_TEST_DEFENSIVE_SCOPE( "a prefab file that carries a parent reference" );
-            pInstance = prefabs.spawn( &world, path, "Pickup" );
+            pInstance = prefabs.spawn( &world, ::test::makeTempResourceID( path ), "Pickup" );
             // 원래 부모가 살아 있는 매니저(프리팹을 만든 씬에 바로 놓는 경우)에서도 붙지 않는다 — 이 프리팹에는 그 부모의 id 까지 실려 있다.
-            pBesideOriginal = prefabs.spawn( &authoring, path, "PickupBesideOriginal" );
+            pBesideOriginal = prefabs.spawn( &authoring, ::test::makeTempResourceID( path ), "PickupBesideOriginal" );
         }
         sw::Logger::unregisterGlobalListener( handle );
         SW_ASSERT_NOT_NULL( pInstance );
@@ -612,7 +612,7 @@ SW_TEST_CASE( PrefabTest, EngineCooksXMLAndJSONPrefabs )
     for ( const utf8* pCooked : { "/crate.prefab.bin", "/barrel.prefab.bin", "/sub/deep.prefab.bin" } )
     {
         sw::PrefabAsset cooked;
-        SW_ASSERT_TRUE_MSG( cooked.loadFromBinaryFile( cookedRoot + pCooked ), pCooked );
+        SW_ASSERT_TRUE_MSG( cooked.loadFromBinaryFile( ::test::makeTempResourceID( cookedRoot + pCooked ) ), pCooked );
         SW_EXPECT_TRUE( cooked.getName() == crate.getName() );
         sw::GameObject* pObj = check.createGameObject( sw::hashed_string( "Check" ) );
         SW_ASSERT_TRUE( cooked.applyStateTo( pObj ) );
@@ -658,7 +658,7 @@ SW_TEST_CASE( PrefabTest, CookedPrefabMatchesItsSource )
         sw::PrefabAsset  fromCooked;
         const sw::string sourcePath = sourceRoot + pair._pSource;
         SW_ASSERT_TRUE_MSG( pair._bJSON ? fromSource.loadFromJSONFile( ::test::makeTempResourceID( sourcePath ) ) : fromSource.loadFromXMLFile( ::test::makeTempResourceID( sourcePath ) ), pair._pSource );
-        SW_ASSERT_TRUE_MSG( fromCooked.loadFromBinaryFile( cookedRoot + pair._pCooked ), pair._pCooked );
+        SW_ASSERT_TRUE_MSG( fromCooked.loadFromBinaryFile( ::test::makeTempResourceID( cookedRoot + pair._pCooked ) ), pair._pCooked );
         SW_EXPECT_EQUAL( fromSource.getName(), fromCooked.getName() );
 
         // 같은 형식으로 다시 써서 글 전체를 견준다. 형식마다 다른 읽은 상태의 표현은 여기서 지워진다.
@@ -701,7 +701,7 @@ SW_TEST_CASE( PrefabTest, ComponentNameSurvivesEveryPrefabFormat )
     sw::PrefabAsset fromCooked;
     SW_ASSERT_TRUE( fromXML.loadFromXMLFile( ::test::makeTempResourceID( xmlPath ) ) );
     SW_ASSERT_TRUE( fromJSON.loadFromJSONFile( ::test::makeTempResourceID( jsonPath ) ) );
-    SW_ASSERT_TRUE( fromCooked.loadFromBinaryFile( sw::AssetCookPath::toCookedPath( jsonPath ) ) );
+    SW_ASSERT_TRUE( fromCooked.loadFromBinaryFile( ::test::makeTempResourceID( sw::AssetCookPath::toCookedPath( jsonPath ) ) ) );
 
     sw::GameObjectManager check;
     for ( const sw::PrefabAsset* pAsset : { &fromXML, &fromJSON, &fromCooked } )
@@ -750,12 +750,13 @@ SW_TEST_CASE( PrefabTest, XMLPrefabReadsOnlyTheSavedShape )
  */
 SW_TEST_CASE( PrefabTest, NestedInstancesSurviveEveryPrefabFormat )
 {
-    const sw::string                   wheelPath = test::makeTempPath( "nest_fmt_wheel.prefab.xml" );
-    sw::PrefabAsset                    cart      = sw::makeCartPrefab( wheelPath );
-    sw::vector<sw::PrefabInstanceNode> listNode  = cart.getNestedInstances();
+    const sw::string                   wheelPathDisk = test::makeTempPath( "nest_fmt_wheel.prefab.xml" );
+    const sw::string                   wheelPath     = test::makeTempResourceID( wheelPathDisk );
+    sw::PrefabAsset                    cart          = sw::makeCartPrefab( wheelPathDisk );
+    sw::vector<sw::PrefabInstanceNode> listNode      = cart.getNestedInstances();
     sw::PrefabInstanceNode             hubcap{};
     hubcap._name        = "Hubcap";
-    hubcap._prefabPath  = ::test::makeTempResourceID( wheelPath );
+    hubcap._prefabPath  = wheelPath;
     hubcap._parentIndex = 1; // WheelR 에 붙는다
     listNode.push_back( hubcap );
     SW_ASSERT_TRUE( cart.setNestedInstances( listNode ) );
@@ -786,7 +787,7 @@ SW_TEST_CASE( PrefabTest, NestedInstancesSurviveEveryPrefabFormat )
 
     // 부모가 자기보다 뒤인 목록은 받지 않는다.
     sw::vector<sw::PrefabInstanceNode> listBroken( 1 );
-    listBroken[0]._prefabPath  = ::test::makeTempResourceID( wheelPath );
+    listBroken[0]._prefabPath  = wheelPath;
     listBroken[0]._parentIndex = 0;
     {
         SW_TEST_DEFENSIVE_SCOPE( "a nested instance whose parent does not come before it" );
@@ -802,14 +803,15 @@ SW_TEST_CASE( PrefabTest, NestedInstancesSurviveEveryPrefabFormat )
  */
 SW_TEST_CASE( PrefabTest, NestedInstancesSpawnAttachedWithTheirOverrides )
 {
-    const sw::string wheelPath = test::makeTempPath( "nest_spawn_wheel.prefab.xml" );
-    const sw::string cartPath  = test::makeTempPath( "nest_spawn_cart.prefab.xml" );
-    SW_ASSERT_TRUE( sw::writeWithCooked( sw::makeWheelPrefab( 2.0f ), wheelPath ) );
-    SW_ASSERT_TRUE( sw::writeWithCooked( sw::makeCartPrefab( wheelPath ), cartPath ) );
+    const sw::string wheelPathDisk = test::makeTempPath( "nest_spawn_wheel.prefab.xml" );
+    const sw::string wheelPath     = test::makeTempResourceID( wheelPathDisk );
+    const sw::string cartPath      = test::makeTempPath( "nest_spawn_cart.prefab.xml" );
+    SW_ASSERT_TRUE( sw::writeWithCooked( sw::makeWheelPrefab( 2.0f ), wheelPathDisk ) );
+    SW_ASSERT_TRUE( sw::writeWithCooked( sw::makeCartPrefab( wheelPathDisk ), cartPath ) );
 
     sw::GameObjectManager objects;
     sw::PrefabCache       prefabs;
-    sw::GameObject*       pCart = prefabs.spawn( &objects, cartPath, "Cart" );
+    sw::GameObject*       pCart = prefabs.spawn( &objects, ::test::makeTempResourceID( cartPath ), "Cart" );
     SW_ASSERT_NOT_NULL( pCart );
     sw::GameObject* pLeft  = sw::findChildByNamePrefix( pCart, "WheelL" );
     sw::GameObject* pRight = sw::findChildByNamePrefix( pCart, "WheelR" );
@@ -830,9 +832,9 @@ SW_TEST_CASE( PrefabTest, NestedInstancesSpawnAttachedWithTheirOverrides )
     SW_EXPECT_TRUE( objects.getSubsystem<sw::PrefabInstanceRegistry>().isAttachedNestedPart( pLeft ) );
 
     // 원본(바퀴)만 고친다 — 수레 파일은 그대로다.
-    SW_ASSERT_TRUE( sw::writeWithCooked( sw::makeWheelPrefab( 3.0f ), wheelPath ) );
+    SW_ASSERT_TRUE( sw::writeWithCooked( sw::makeWheelPrefab( 3.0f ), wheelPathDisk ) );
     prefabs.reload( wheelPath );
-    sw::GameObject* pCartAgain = prefabs.spawn( &objects, cartPath, "CartAgain" );
+    sw::GameObject* pCartAgain = prefabs.spawn( &objects, ::test::makeTempResourceID( cartPath ), "CartAgain" );
     SW_ASSERT_NOT_NULL( pCartAgain );
     sw::GameObject* pLeftAgain  = sw::findChildByNamePrefix( pCartAgain, "WheelL" );
     sw::GameObject* pRightAgain = sw::findChildByNamePrefix( pCartAgain, "WheelR" );
@@ -910,11 +912,11 @@ SW_TEST_CASE( PrefabTest, CircularNestedPrefabIsALoadError )
         SW_EXPECT_NULL( prefabs.loadPrefab( ::test::makeTempResourceID( pathB ) ).get() );
         SW_EXPECT_NULL( prefabs.loadPrefab( ::test::makeTempResourceID( pathSelf ) ).get() );
         SW_EXPECT_NOT_NULL( prefabs.loadPrefab( ::test::makeTempResourceID( pathOuter ) ).get() );
-        pOuter = prefabs.spawn( &objects, pathOuter, "Outer" );
+        pOuter = prefabs.spawn( &objects, ::test::makeTempResourceID( pathOuter ), "Outer" );
     }
     SW_ASSERT_NOT_NULL( pOuter );
     SW_EXPECT_FALSE( pOuter->hasChildren() ); // 순환에 든 노드는 스폰하지 않는다
-    SW_EXPECT_FALSE( prefabs.isCached( pathA ) );
+    SW_EXPECT_FALSE( prefabs.isCached( ::test::makeTempResourceID( pathA ) ) );
 }
 
 /**
@@ -953,7 +955,7 @@ SW_TEST_CASE( PrefabTest, CookFlattensNestedInstancesSoTheOriginalIsNotRead )
     SW_EXPECT_FALSE( sw::FileUtil::exists( cookedRoot + "/broken_cart.prefab.bin" ) );
 
     sw::PrefabAsset cookedTrain;
-    SW_ASSERT_TRUE( cookedTrain.loadFromBinaryFile( cookedRoot + "/train.prefab.bin" ) );
+    SW_ASSERT_TRUE( cookedTrain.loadFromBinaryFile( ::test::makeTempResourceID( cookedRoot + "/train.prefab.bin" ) ) );
     SW_ASSERT_EQUAL( size_t( 3 ), cookedTrain.getNestedInstances().size() ); // Car, 그 아래 WheelL · WheelR
     SW_EXPECT_TRUE( cookedTrain.hasResolvedNestedInstances() );
     SW_EXPECT_EQUAL( -1, cookedTrain.getNestedInstances()[0]._parentIndex );
@@ -996,14 +998,15 @@ SW_TEST_CASE( PrefabTest, CookFlattensNestedInstancesSoTheOriginalIsNotRead )
  */
 SW_TEST_CASE( PrefabTest, PrefabMadeFromAnInstanceKeepsItsNestedPartsAsOverrides )
 {
-    const sw::string wheelPath = test::makeTempPath( "nest_apply_wheel.prefab.xml" );
-    const sw::string cartPath  = test::makeTempPath( "nest_apply_cart.prefab.xml" );
-    SW_ASSERT_TRUE( sw::writeWithCooked( sw::makeWheelPrefab( 2.0f ), wheelPath ) );
-    SW_ASSERT_TRUE( sw::writeWithCooked( sw::makeCartPrefab( wheelPath ), cartPath ) );
+    const sw::string wheelPathDisk = test::makeTempPath( "nest_apply_wheel.prefab.xml" );
+    const sw::string wheelPath     = test::makeTempResourceID( wheelPathDisk );
+    const sw::string cartPath      = test::makeTempPath( "nest_apply_cart.prefab.xml" );
+    SW_ASSERT_TRUE( sw::writeWithCooked( sw::makeWheelPrefab( 2.0f ), wheelPathDisk ) );
+    SW_ASSERT_TRUE( sw::writeWithCooked( sw::makeCartPrefab( wheelPathDisk ), cartPath ) );
 
     sw::GameObjectManager objects;
     sw::PrefabCache       prefabs;
-    sw::GameObject*       pCart = prefabs.spawn( &objects, cartPath, "Cart" );
+    sw::GameObject*       pCart = prefabs.spawn( &objects, ::test::makeTempResourceID( cartPath ), "Cart" );
     SW_ASSERT_NOT_NULL( pCart );
     sw::GameObject* pRight = sw::findChildByNamePrefix( pCart, "WheelR" );
     SW_ASSERT_TRUE( pRight != nullptr && pRight->getPrimarySceneComponent() != nullptr );
@@ -1026,7 +1029,7 @@ SW_TEST_CASE( PrefabTest, PrefabMadeFromAnInstanceKeepsItsNestedPartsAsOverrides
     const sw::string appliedPath = test::makeTempPath( "nest_apply_cart_applied.prefab.xml" );
     SW_ASSERT_TRUE( sw::writeWithCooked( applied, appliedPath ) );
     sw::GameObjectManager check;
-    sw::GameObject*       pCheck = prefabs.spawn( &check, appliedPath, "Check" );
+    sw::GameObject*       pCheck = prefabs.spawn( &check, ::test::makeTempResourceID( appliedPath ), "Check" );
     SW_ASSERT_NOT_NULL( pCheck );
     sw::GameObject* pCheckRight = sw::findChildByNamePrefix( pCheck, "WheelR" );
     SW_ASSERT_TRUE( pCheckRight != nullptr && pCheckRight->getPrimarySceneComponent() != nullptr );
@@ -1039,11 +1042,12 @@ SW_TEST_CASE( PrefabTest, PrefabMadeFromAnInstanceKeepsItsNestedPartsAsOverrides
  */
 SW_TEST_CASE( PrefabTest, ApplyToOuterPrefabKeepsEditsOfPartsInsideParts )
 {
-    const sw::string wheelPath = test::makeTempPath( "nest_deep_wheel.prefab.xml" );
-    const sw::string cartPath  = test::makeTempPath( "nest_deep_cart.prefab.xml" );
-    const sw::string trainPath = test::makeTempPath( "nest_deep_train.prefab.xml" );
-    SW_ASSERT_TRUE( sw::writeWithCooked( sw::makeWheelPrefab( 2.0f ), wheelPath ) );
-    SW_ASSERT_TRUE( sw::writeWithCooked( sw::makeCartPrefab( wheelPath ), cartPath ) );
+    const sw::string wheelPathDisk = test::makeTempPath( "nest_deep_wheel.prefab.xml" );
+    const sw::string wheelPath     = test::makeTempResourceID( wheelPathDisk );
+    const sw::string cartPath      = test::makeTempPath( "nest_deep_cart.prefab.xml" );
+    const sw::string trainPath     = test::makeTempPath( "nest_deep_train.prefab.xml" );
+    SW_ASSERT_TRUE( sw::writeWithCooked( sw::makeWheelPrefab( 2.0f ), wheelPathDisk ) );
+    SW_ASSERT_TRUE( sw::writeWithCooked( sw::makeCartPrefab( wheelPathDisk ), cartPath ) );
     sw::PrefabAsset                    train = sw::makeWheelPrefab( 1.0f );
     sw::vector<sw::PrefabInstanceNode> listCar( 1 );
     listCar[0]._name       = "Car";
@@ -1053,7 +1057,7 @@ SW_TEST_CASE( PrefabTest, ApplyToOuterPrefabKeepsEditsOfPartsInsideParts )
 
     sw::GameObjectManager objects;
     sw::PrefabCache       prefabs;
-    sw::GameObject*       pTrain = prefabs.spawn( &objects, trainPath, "Train" );
+    sw::GameObject*       pTrain = prefabs.spawn( &objects, ::test::makeTempResourceID( trainPath ), "Train" );
     SW_ASSERT_NOT_NULL( pTrain );
     sw::GameObject* pCar = sw::findChildByNamePrefix( pTrain, "Car" );
     SW_ASSERT_NOT_NULL( pCar );
@@ -1073,7 +1077,7 @@ SW_TEST_CASE( PrefabTest, ApplyToOuterPrefabKeepsEditsOfPartsInsideParts )
     const sw::string appliedPath = test::makeTempPath( "nest_deep_train_applied.prefab.xml" );
     SW_ASSERT_TRUE( sw::writeWithCooked( applied, appliedPath ) );
     sw::GameObjectManager check;
-    sw::GameObject*       pCheck = prefabs.spawn( &check, appliedPath, "Check" );
+    sw::GameObject*       pCheck = prefabs.spawn( &check, ::test::makeTempResourceID( appliedPath ), "Check" );
     SW_ASSERT_NOT_NULL( pCheck );
     sw::GameObject* pCheckCar = sw::findChildByNamePrefix( pCheck, "Car" );
     SW_ASSERT_NOT_NULL( pCheckCar );
@@ -1096,8 +1100,9 @@ SW_TEST_CASE( PrefabTest, ApplyToOuterPrefabKeepsEditsOfPartsInsideParts )
  */
 SW_TEST_CASE( PrefabTest, ReferencedPrefabPathsListNestedSourcesOnce )
 {
-    const sw::string       wheelPath = test::makeTempPath( "nest_refs_wheel.prefab.xml" );
-    const sw::PrefabAsset  cart      = sw::makeCartPrefab( wheelPath );
+    const sw::string       wheelPathDisk = test::makeTempPath( "nest_refs_wheel.prefab.xml" );
+    const sw::string       wheelPath     = test::makeTempResourceID( wheelPathDisk );
+    const sw::PrefabAsset  cart          = sw::makeCartPrefab( wheelPathDisk );
     sw::vector<sw::string> listPath;
     cart.collectReferencedPrefabPaths( listPath );
     SW_ASSERT_EQUAL( size_t( 1 ), listPath.size() );

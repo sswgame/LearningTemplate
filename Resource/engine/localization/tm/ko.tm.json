@@ -10,6 +10,14 @@
             "text": "(없음)"
         },
         {
+            "source": "5.1 Surround",
+            "text": "5.1 서라운드"
+        },
+        {
+            "source": "7.1 Surround",
+            "text": "7.1 서라운드"
+        },
+        {
             "source": "A wild {name} appeared!",
             "text": "야생의 {name}(이)가 나타났다!"
         },
@@ -68,6 +76,10 @@
         {
             "source": "Audio",
             "text": "오디오"
+        },
+        {
+            "source": "Automatic",
+            "text": "자동"
         },
         {
             "source": "Axis",
@@ -272,6 +284,10 @@
         {
             "source": "Head Bob",
             "text": "걸음 흔들림"
+        },
+        {
+            "source": "Headphones (3D)",
+            "text": "헤드폰 (3D)"
         },
         {
             "source": "High",
@@ -618,12 +634,20 @@
             "text": "공간"
         },
         {
+            "source": "Speaker Setup",
+            "text": "스피커 구성"
+        },
+        {
             "source": "Sprint",
             "text": "달리기"
         },
         {
             "source": "Stacks",
             "text": "스택"
+        },
+        {
+            "source": "Stereo",
+            "text": "스테레오"
         },
         {
             "source": "Stick Dead Zone",

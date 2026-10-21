@@ -228,12 +228,14 @@ SW_TEST_CASE( AudioStreamTest, StreamedVoiceMatchesMemoryVoiceAcrossTheLoopSeam 
  */
 SW_TEST_CASE( AudioStreamTest, CachePolicyChoosesStreamingByLengthAndFormat )
 {
-    const sw::string        path8   = test::makeTempPath( "stream_policy_8bit.wav" );
-    const sw::string        path    = test::makeTempPath( "stream_policy_3s.wav" );
-    const sw::vector<uint8> bytes16 = AudioStreamTestInternal::makeWav( 48000, 1, 48000 * 3 );
-    const sw::vector<uint8> bytes8  = AudioStreamTestInternal::makeWav( 48000, 1, 48000 * 3, 8 );
-    SW_ASSERT_TRUE( sw::FileUtil::writeFile( path, bytes16.data(), bytes16.size() ) );
-    SW_ASSERT_TRUE( sw::FileUtil::writeFile( path8, bytes8.data(), bytes8.size() ) );
+    const sw::string        path8Disk = test::makeTempPath( "stream_policy_8bit.wav" );
+    const sw::string        path8     = test::makeTempResourceID( path8Disk );
+    const sw::string        pathDisk  = test::makeTempPath( "stream_policy_3s.wav" );
+    const sw::string        path      = test::makeTempResourceID( pathDisk );
+    const sw::vector<uint8> bytes16   = AudioStreamTestInternal::makeWav( 48000, 1, 48000 * 3 );
+    const sw::vector<uint8> bytes8    = AudioStreamTestInternal::makeWav( 48000, 1, 48000 * 3, 8 );
+    SW_ASSERT_TRUE( sw::FileUtil::writeFile( pathDisk, bytes16.data(), bytes16.size() ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeFile( path8Disk, bytes8.data(), bytes8.size() ) );
 
     sw::AudioClipCache defaultCache; // 기준 20 초 — 3 초는 짧다
     SW_EXPECT_NEAR_EQUAL( sw::AudioClipCache::kDefaultStreamMinSeconds, defaultCache.getStreamMinSeconds(), 1e-6f );
@@ -263,8 +265,8 @@ SW_TEST_CASE( AudioStreamTest, CachePolicyChoosesStreamingByLengthAndFormat )
     SW_EXPECT_FALSE( pEight->isStreamed() );
     SW_EXPECT_EQUAL( size_t( 48000 ) * 3u, pEight->_listSample.size() );
 
-    SW_EXPECT_TRUE( sw::FileUtil::removeFile( path ) );
-    SW_EXPECT_TRUE( sw::FileUtil::removeFile( path8 ) );
+    SW_EXPECT_TRUE( sw::FileUtil::removeFile( pathDisk ) );
+    SW_EXPECT_TRUE( sw::FileUtil::removeFile( path8Disk ) );
 }
 
 /**

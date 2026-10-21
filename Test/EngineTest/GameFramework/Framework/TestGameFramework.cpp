@@ -2899,10 +2899,10 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameSettingsIsBoundAndApplied )
                                "<titleScene>game/test/maps/title.scene.xml</titleScene>"
                                "<inputMap>engine/input/default.input.xml</inputMap>"
                                "<localizationProject>" +
-                               FileUtil::joinPath( _localeDir, "boot.locproject.json" ) + "</localizationProject>"
-                                                                                          "<defaultLanguage>ko_KR</defaultLanguage>" // 파일 이름(ko_kr)과 철자가 다르다
-                                                                                          "<fallbackLanguage>en-US</fallbackLanguage>"
-                                                                                          "<defaultSavePath>" +
+                               test::makeTempResourceID( FileUtil::joinPath( _localeDir, "boot.locproject.json" ) ) + "</localizationProject>"
+                                                                                                                      "<defaultLanguage>ko_KR</defaultLanguage>" // 파일 이름(ko_kr)과 철자가 다르다
+                                                                                                                      "<fallbackLanguage>en-US</fallbackLanguage>"
+                                                                                                                      "<defaultSavePath>" +
                                _savePath + "</defaultSavePath>"
                                            "</GameSettings>";
             return _bootstrap._data.loadFromXMLText( xml, "test" );

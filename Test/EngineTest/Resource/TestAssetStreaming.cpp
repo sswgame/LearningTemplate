@@ -47,8 +47,9 @@ SW_TEST_CASE( AssetStreamingTest, FailedRequestIsNotLoadedAndRetries )
     queue.initialize();
 
     // 존재하지 않는 경로. 파일을 만들지 않으므로 워커는 반드시 실패한다.
-    const sw::string missingPath = test::makeTempPath( "sw_test_missing_asset.dat" );
-    SW_ASSERT_TRUE( sw::FileUtil::removeFile( missingPath ) );
+    const sw::string missingPathDisk = test::makeTempPath( "sw_test_missing_asset.dat" );
+    const sw::string missingPath     = test::makeTempResourceID( missingPathDisk );
+    SW_ASSERT_TRUE( sw::FileUtil::removeFile( missingPathDisk ) );
 
     bool bFirstCompleted{ false };
     bool bFirstSuccess{ true };
@@ -75,7 +76,7 @@ SW_TEST_CASE( AssetStreamingTest, FailedRequestIsNotLoadedAndRetries )
 
     // 파일을 만든 뒤 다시 요청하면 기록된 실패를 넘어 **다시 읽어야** 한다.
     const sw::string payload = "RETRY_PAYLOAD";
-    SW_ASSERT_TRUE( sw::FileUtil::writeFile( missingPath,
+    SW_ASSERT_TRUE( sw::FileUtil::writeFile( missingPathDisk,
                                              reinterpret_cast<const uint8*>( payload.data() ),
                                              static_cast<uint64>( payload.size() ) ) );
     bool bSecondCompleted{ false };
@@ -199,9 +200,10 @@ SW_TEST_CASE( AssetStreamingTest, AssetStreamingQueueInFlightMulticastCallbacks 
  */
 SW_TEST_CASE( AssetStreamingTest, StreamingFutureAndSpscQueue )
 {
-    const sw::string tempFile = test::makeTempPath( "sw_test_streaming_asset.dat" );
-    const sw::string testData = "STREAMING_TEST_PAYLOAD";
-    SW_ASSERT_TRUE( sw::FileUtil::writeFile( tempFile,
+    const sw::string tempFileDisk = test::makeTempPath( "sw_test_streaming_asset.dat" );
+    const sw::string tempFile     = test::makeTempResourceID( tempFileDisk );
+    const sw::string testData     = "STREAMING_TEST_PAYLOAD";
+    SW_ASSERT_TRUE( sw::FileUtil::writeFile( tempFileDisk,
                                              reinterpret_cast<const uint8*>( testData.data() ),
                                              static_cast<uint64>( testData.size() ) ) );
 
@@ -240,7 +242,8 @@ SW_TEST_CASE( AssetStreamingTest, MultiThreadedConcurrentStreamingStress )
     constexpr int32 kFileCount = 8;
     constexpr int32 kWorkers   = 4;
 
-    sw::vector<sw::string> listTempFile;
+    sw::vector<sw::string> listTempFile; // 쓰고 지우는 디스크 경로
+    sw::vector<sw::string> listTempID;   // 스트리밍 큐가 읽는 리소스 id
     listTempFile.reserve( kFileCount );
 
     for ( int32 fileIndex = 0; fileIndex < kFileCount; ++fileIndex )
@@ -250,6 +253,7 @@ SW_TEST_CASE( AssetStreamingTest, MultiThreadedConcurrentStreamingStress )
         const sw::string data = "STRESS_DATA_BLOCK";
         SW_ASSERT_TRUE( sw::FileUtil::writeFile( path, reinterpret_cast<const uint8*>( data.data() ), data.size() ) );
         listTempFile.push_back( path );
+        listTempID.push_back( test::makeTempResourceID( path ) );
     }
 
     sw::AssetStreamingQueue queue;
@@ -263,11 +267,11 @@ SW_TEST_CASE( AssetStreamingTest, MultiThreadedConcurrentStreamingStress )
 
     for ( int32 threadIndex = 0; threadIndex < kWorkers; ++threadIndex )
     {
-        listThread.emplace_back( [&queue, &listTempFile, &countCallback]()
+        listThread.emplace_back( [&queue, &listTempID, &countCallback]()
         {
             for ( int32 cycle = 0; cycle < 10; ++cycle )
             {
-                for ( const sw::string& path : listTempFile )
+                for ( const sw::string& path : listTempID )
                 {
                     sw::TaskFuture<bool> fut = queue.requestAssetFuture( path );
                     fut.then( [&countCallback]( bool bSuccess )
@@ -297,7 +301,7 @@ SW_TEST_CASE( AssetStreamingTest, MultiThreadedConcurrentStreamingStress )
 
     for ( const sw::string& path : listTempFile )
     {
-        SW_EXPECT_TRUE( queue.isLoaded( path ) );
+        SW_EXPECT_TRUE( queue.isLoaded( test::makeTempResourceID( path ) ) );
         SW_EXPECT_TRUE( sw::FileUtil::removeFile( path ) );
     }
 
@@ -325,10 +329,11 @@ SW_TEST_CASE( AssetStreamingTest, DataRequestDoesNotPiggybackOnAnExistenceCheck 
     // 프리셋마다 리소스가 어디에 있는지 다르므로 — Shipping 은 팩만 읽는다 —
     // **직접 만든 파일을 절대 경로로** 준다. `ResourcePaths` 은 절대 경로를 디스크에서 그대로
     // 읽으므로 어느 프리셋에서나 같은 답이 나온다.
-    const sw::string assetPath = test::makeTempPath( "sw_stream_piggyback.bin" );
+    const sw::string assetPathDisk = test::makeTempPath( "sw_stream_piggyback.bin" );
+    const sw::string assetPath     = test::makeTempResourceID( assetPathDisk );
 
     const sw::vector<uint8> payload( 4096, uint8{ 0xAB } );
-    SW_ASSERT_TRUE( sw::FileUtil::writeFile( assetPath, payload.data(), payload.size() ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeFile( assetPathDisk, payload.data(), payload.size() ) );
 
     const utf8* pAssetPath = assetPath.c_str();
 
@@ -407,10 +412,12 @@ SW_TEST_CASE( AssetStreamingTest, HighPriorityRequestOvertakesAnEarlierNormalOne
     const uint32 workerCount = taskMgr.getWorkerCount();
     SW_ASSERT_TRUE( workerCount >= 1 );
 
-    const sw::string normalPath = test::makeTempPath( "sw_test_streaming_normal.dat" );
-    const sw::string highPath   = test::makeTempPath( "sw_test_streaming_high.dat" );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( normalPath, "normal" ) );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( highPath, "high" ) );
+    const sw::string normalPathDisk = test::makeTempPath( "sw_test_streaming_normal.dat" );
+    const sw::string normalPath     = test::makeTempResourceID( normalPathDisk );
+    const sw::string highPathDisk   = test::makeTempPath( "sw_test_streaming_high.dat" );
+    const sw::string highPath       = test::makeTempResourceID( highPathDisk );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( normalPathDisk, "normal" ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( highPathDisk, "high" ) );
 
     // 지역 구조체는 정적 멤버를 못 가진다 — 함수 지역 static 으로 둔다.
     static sw::atomic<uint32> s_ticketCount{ 0 };
@@ -486,9 +493,10 @@ SW_TEST_CASE( AssetStreamingTest, ManyCallbacksOnOnePathAreAllDelivered )
     sw::AssetStreamingQueue queue;
     queue.initialize();
 
-    const sw::string        assetPath = test::makeTempPath( "sw_stream_fanout.bin" );
+    const sw::string        assetPathDisk = test::makeTempPath( "sw_stream_fanout.bin" );
+    const sw::string        assetPath     = test::makeTempResourceID( assetPathDisk );
     const sw::vector<uint8> payload( 1024, uint8{ 0x5A } );
-    SW_ASSERT_TRUE( sw::FileUtil::writeFile( assetPath, payload.data(), payload.size() ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeFile( assetPathDisk, payload.data(), payload.size() ) );
 
     constexpr uint32    kCallbackCount = 1500;
     std::atomic<uint32> okCount{ 0 };
@@ -524,9 +532,10 @@ SW_TEST_CASE( AssetStreamingTest, CanceledDataRequestCompletesOnceAsFailure )
     sw::AssetStreamingQueue queue;
     queue.initialize();
 
-    const sw::string        assetPath = test::makeTempPath( "sw_stream_cancel.bin" );
+    const sw::string        assetPathDisk = test::makeTempPath( "sw_stream_cancel.bin" );
+    const sw::string        assetPath     = test::makeTempResourceID( assetPathDisk );
     const sw::vector<uint8> payload( 256 * 1024, uint8{ 0x11 } );
-    SW_ASSERT_TRUE( sw::FileUtil::writeFile( assetPath, payload.data(), payload.size() ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeFile( assetPathDisk, payload.data(), payload.size() ) );
 
     std::atomic<uint32> callbackCount{ 0 };
     std::atomic<uint32> successCount{ 0 };
@@ -563,9 +572,10 @@ SW_TEST_CASE( AssetStreamingTest, CancelAfterReadFinishedButBeforeUpdateDelivers
     sw::AssetStreamingQueue queue;
     queue.initialize();
 
-    const sw::string        assetPath = test::makeTempPath( "sw_stream_cancel_late.bin" );
+    const sw::string        assetPathDisk = test::makeTempPath( "sw_stream_cancel_late.bin" );
+    const sw::string        assetPath     = test::makeTempResourceID( assetPathDisk );
     const sw::vector<uint8> payload( 1024, uint8{ 0x22 } );
-    SW_ASSERT_TRUE( sw::FileUtil::writeFile( assetPath, payload.data(), payload.size() ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeFile( assetPathDisk, payload.data(), payload.size() ) );
 
     std::atomic<uint32> callbackCount{ 0 };
     std::atomic<uint32> successCount{ 0 };

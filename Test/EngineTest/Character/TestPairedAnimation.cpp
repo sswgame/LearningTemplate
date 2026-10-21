@@ -28,6 +28,7 @@
 #include "Engine/Resource/ResourcePaths.h"
 
 #include "EngineTest/AnimationTestUtil.h"
+#include "EngineTest/AssetArrivalTestUtil.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -96,10 +97,13 @@ namespace
             if ( pUnit == nullptr || pAnimator == nullptr )
                 return nullptr;
             pUnit->setSkeleton( make_shared<Skeleton>( test::makeChainSkeleton( 3 ) ) );
-            pAnimator->setClipFolder( folder );
+            pAnimator->setClipFolder( test::makeTempResourceID( folder ) );
             pAnimator->setInitialState( "Idle" );
             pAnimator->setExtractRootMotion( bRootMotion );
             pAnimator->dispatchBeginPlay();
+            // 클립은 워커가 읽는다 — 세션은 준비된 참가자만 받는다(`ParticipantNotReady`).
+            if ( ::test::finishAssetArrivals( manager ) == false )
+                return nullptr;
             return pAnimator;
         }
 
@@ -535,7 +539,7 @@ SW_TEST_CASE( PairedAnimationTest, ComponentStartsWithEditedAssetAfterCacheReloa
     PairedAnimationComponent* pComponent = pLeader->getOwner()->addComponent<PairedAnimationComponent>();
     SW_ASSERT_NOT_NULL( pComponent );
     pComponent->setRole( "Leader" );
-    pComponent->setPairedAnimationPath( path );
+    pComponent->setPairedAnimationPath( test::makeTempResourceID( path ) );
     pComponent->dispatchBeginPlay();
 
     SW_ASSERT_TRUE( pComponent->startSession( {} ) == PairedAnimationStartResult::Started );
@@ -551,9 +555,9 @@ SW_TEST_CASE( PairedAnimationTest, ComponentStartsWithEditedAssetAfterCacheReloa
         <Role name="Prop" required="false" clip="Late" align="none" enterBlend="0" exitState="Idle" exitBlend="0"/>
     </PairedAnimation>)" ) );
     SharedAssetCache<PairedAnimationDef> cache;
-    SW_EXPECT_TRUE( cache.isCached( path ) );
+    SW_EXPECT_TRUE( cache.isCached( test::makeTempResourceID( path ) ) );
     const uint32 reloadCount = SharedAssetCache<PairedAnimationDef>::getReloadCount();
-    cache.reload( path, nullptr );
+    cache.reload( test::makeTempResourceID( path ), nullptr );
     SW_EXPECT_EQUAL( reloadCount + 1, SharedAssetCache<PairedAnimationDef>::getReloadCount() );
     SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), pFirst->getDef().getRoles().size() ); // 돌던 세션은 옛 에셋
 
@@ -589,9 +593,9 @@ SW_TEST_CASE( PairedAnimationTest, ComponentBindsRolesNamedByOtherComponents )
     PairedAnimationComponent* pProp    = pFollower->getOwner()->addComponent<PairedAnimationComponent>();
     SW_ASSERT_TRUE( pStarter != nullptr && pProp != nullptr );
     pStarter->setRole( "Leader" );
-    pStarter->setPairedAnimationPath( path );
+    pStarter->setPairedAnimationPath( test::makeTempResourceID( path ) );
     pProp->setRole( "Follower" );
-    pProp->setPairedAnimationPath( path );
+    pProp->setPairedAnimationPath( test::makeTempResourceID( path ) );
     pStarter->dispatchBeginPlay();
     pProp->dispatchBeginPlay();
 
@@ -609,7 +613,7 @@ SW_TEST_CASE( PairedAnimationTest, ComponentBindsRolesNamedByOtherComponents )
     PairedAnimationComponent* pSecondProp = pSecond->getOwner()->addComponent<PairedAnimationComponent>();
     SW_ASSERT_NOT_NULL( pSecondProp );
     pSecondProp->setRole( "Follower" );
-    pSecondProp->setPairedAnimationPath( path );
+    pSecondProp->setPairedAnimationPath( test::makeTempResourceID( path ) );
     pSecondProp->dispatchBeginPlay();
     {
         SW_TEST_DEFENSIVE_SCOPE( "two props name the same role" );

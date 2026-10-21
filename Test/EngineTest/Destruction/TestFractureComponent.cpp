@@ -46,7 +46,7 @@ namespace
             if ( sw::MeshFractureUtil::fracture( listBox, settings, asset, error ) == false )
                 return {};
             const sw::string path = test::makeTempPath( pName );
-            return asset.saveToFile( path ) ? path : sw::string{};
+            return asset.saveToFile( path ) ? test::makeTempResourceID( path ) : sw::string{};
         }
 
         /** @brief 테스트용 표 — 임계값이 낮고 파편이 빨리 쉰다. */
@@ -60,7 +60,7 @@ namespace
   <Impact impulseToStrain="0.5" minImpulse="20" radius="0.4"/>
   <Debris lifetime="1.5" maxBodies="64" smallVolume="0.03" fadeTime="0.25" sleepRemoveTime="0.3" keepCollisionVolume="0.5" hullShrink="0.01"/>
 </DestructionProfile>)" );
-            return path;
+            return test::makeTempResourceID( path );
         }
 
         /** @brief 파편 예산 테스트용 표 — 잎 하나도 임계값을 넘는 센 폭발에 모두 떨어지고, 오브젝트 상한은 넉넉하고 오래 남는다. */
@@ -73,7 +73,7 @@ namespace
   <Links strength="1" supportStrength="30000"/>
   <Debris lifetime="100" maxBodies="1000" smallVolume="0" fadeTime="1" sleepRemoveTime="100" keepCollisionVolume="0.5" hullShrink="0.01"/>
 </DestructionProfile>)" );
-            return path;
+            return test::makeTempResourceID( path );
         }
 
         static void spawnFloor( sw::GameObjectManager& manager )

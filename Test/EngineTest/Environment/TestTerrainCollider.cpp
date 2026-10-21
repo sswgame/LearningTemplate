@@ -143,7 +143,7 @@ SW_TEST_CASE( TerrainColliderTest, CratesRestOnTheTerrainAndFallThroughHoles )
     SW_ASSERT_NOT_NULL( pGround );
     TerrainComponent* pTerrain = pGround->addComponent<TerrainComponent>();
     SW_ASSERT_NOT_NULL( pTerrain );
-    pTerrain->setHeightfieldPath( path );
+    pTerrain->setHeightfieldPath( ::test::makeTempResourceID( path ) );
     pTerrain->setSize( float2{ 16.0f, 16.0f } );
     pTerrain->setHeightRange( Internal::kHeightMin, Internal::kHeightMax );
     pTerrain->setChunkCells( 16 );
@@ -201,7 +201,7 @@ SW_TEST_CASE( TerrainColliderTest, WriteHeightsRebuildsOnlyTouchedChunkBodies )
     SW_ASSERT_NOT_NULL( pGround );
     TerrainComponent* pTerrain = pGround->addComponent<TerrainComponent>();
     SW_ASSERT_NOT_NULL( pTerrain );
-    pTerrain->setHeightfieldPath( path );
+    pTerrain->setHeightfieldPath( ::test::makeTempResourceID( path ) );
     pTerrain->setSize( float2{ 16.0f, 16.0f } );
     pTerrain->setHeightRange( Internal::kHeightMin, Internal::kHeightMax );
     pTerrain->setChunkCells( 4 );

@@ -21,6 +21,7 @@
 #include "Engine/Resource/ResourcePaths.h"
 
 #include "EngineTest/AnimationTestUtil.h"
+#include "EngineTest/AssetArrivalTestUtil.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -585,10 +586,11 @@ SW_TEST_CASE( SkeletalAnimationTest, AnimatorPlaysClipFromFolder )
     SkeletalAnimatorComponent* pAnimator = pObject->addComponent<SkeletalAnimatorComponent>();
     SW_ASSERT_TRUE( pUnit != nullptr && pAnimator != nullptr );
     pUnit->setSkeleton( make_shared<Skeleton>( skeleton ) );
-    pAnimator->setClipFolder( folder );
+    pAnimator->setClipFolder( ::test::makeTempResourceID( folder ) );
     pAnimator->setInitialState( "Walk" );
     pAnimator->setExtractRootMotion( true );
     pAnimator->dispatchBeginPlay();
+    SW_ASSERT_TRUE( ::test::finishAssetArrivals( manager ) );
     SW_EXPECT_TRUE( pAnimator->getCurrentStateName() == hashed_string( "Walk" ) );
 
     manager.getSubsystem<AnimationSystem>().evaluate( 0.25f );
@@ -664,9 +666,10 @@ SW_TEST_CASE( SkeletalAnimationTest, InterruptedCrossfadeContinuesFromThePreviou
     SkeletalAnimatorComponent* pAnimator = pObject->addComponent<SkeletalAnimatorComponent>();
     SW_ASSERT_TRUE( pUnit != nullptr && pAnimator != nullptr );
     pUnit->setSkeleton( make_shared<Skeleton>( skeleton ) );
-    pAnimator->setClipFolder( folder );
+    pAnimator->setClipFolder( ::test::makeTempResourceID( folder ) );
     pAnimator->setInitialState( "A" );
     pAnimator->dispatchBeginPlay();
+    SW_ASSERT_TRUE( ::test::finishAssetArrivals( manager ) );
     manager.getSubsystem<AnimationSystem>().evaluate( 0.05f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, pUnit->getLocalPose().getBoneTransform( 0 )._translation._x, 1e-4f );
 
@@ -770,11 +773,12 @@ SW_TEST_CASE( SkeletalAnimationTest, AnimatorSeeksCurrentTime )
     SkeletalAnimatorComponent* pAnimator = pObject->addComponent<SkeletalAnimatorComponent>();
     SW_ASSERT_TRUE( pUnit != nullptr && pAnimator != nullptr );
     pUnit->setSkeleton( make_shared<Skeleton>( skeleton ) );
-    pAnimator->setClipFolder( folder );
+    pAnimator->setClipFolder( ::test::makeTempResourceID( folder ) );
     pAnimator->setInitialState( "Slide" );
     SW_EXPECT_FALSE( pAnimator->seekCurrentTime( 0.5f ) ); // 시작 전이라 재생 중인 것이 없다
 
     pAnimator->dispatchBeginPlay();
+    SW_ASSERT_TRUE( ::test::finishAssetArrivals( manager ) );
     SW_EXPECT_TRUE( pAnimator->seekCurrentTime( 0.5f ) );
     SW_EXPECT_NEAR_EQUAL( 0.5f, pAnimator->getGraphPlayer().getPlayer().getCurrentTime(), 1e-6f );
     manager.getSubsystem<AnimationSystem>().evaluate( 0.0f );

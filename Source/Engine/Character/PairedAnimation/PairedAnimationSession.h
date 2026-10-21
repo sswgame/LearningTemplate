@@ -52,6 +52,7 @@ namespace sw
         NoMatchingSet,       ///< 세트 고르기 — 지금 자리에 맞는 세트가 없다(게임플레이의 정상 거절, `PairedAnimationSystem::startMatchingSession`)
         InvalidSnapshot,     ///< 복원 — 스냅샷이 에셋 · 바인딩과 맞지 않는다(역할 수, 시각 범위, 앵커 단계 등. 복제 계층의 결함, 오류 로그)
         SessionIDInUse,      ///< 복원 — 같은 id 의 세션이 아직 재생 중이다(먼저 중단해야 한다)
+        ParticipantNotReady, ///< 참가자의 애니메이션 클립을 아직 읽는 중이다(`SkeletalAnimatorComponent::isWaitingForAnimationAssets`, 정상 거절 — 준비된 뒤 다시 시도)
     };
 
     /** @enum PairedAnimationSessionState @brief 세션의 상태입니다. */

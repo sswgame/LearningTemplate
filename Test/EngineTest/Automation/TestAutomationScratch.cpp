@@ -4,6 +4,7 @@
 
 #include "Engine/Automation/AutomationScenario.h"
 #include "Engine/Automation/AutomationScratch.h"
+#include "Engine/Resource/AssetMeta.h"
 #include "Engine/Resource/ResourcePaths.h"
 
 #include "TestFramework/TestFramework.h"
@@ -66,9 +67,12 @@ SW_TEST_CASE( AutomationScratchTest, PrepareMakesAFreshRebasedCopy )
     sw::string scratchMeta;
     SW_ASSERT_TRUE( sw::FileUtil::readTextFile( sw::FileUtil::joinPath( sourceDir, "probe.material.meta" ), sourceMeta ) );
     SW_ASSERT_TRUE( sw::FileUtil::readTextFile( sw::FileUtil::joinPath( scratchDir, "probe.material.meta" ), scratchMeta ) );
-    SW_EXPECT_TRUE( sourceMeta.find( "guid=" ) != sw::string::npos );
-    SW_EXPECT_TRUE( sourceMeta.substr( 0, sourceMeta.find( '\n' ) ) != scratchMeta.substr( 0, scratchMeta.find( '\n' ) ) ); // guid 줄이 다르다
-    SW_EXPECT_TRUE( scratchMeta.find( "sourcePath=scratch/test.automationscratch/probe.material" ) != sw::string::npos );
+    sw::AssetMeta sourceAssetMeta;
+    sw::AssetMeta scratchAssetMeta;
+    SW_ASSERT_TRUE( sourceAssetMeta.parseXML( sourceMeta, "source meta" ) );
+    SW_ASSERT_TRUE( scratchAssetMeta.parseXML( scratchMeta, "scratch meta" ) );
+    SW_EXPECT_TRUE( sourceAssetMeta._guid != scratchAssetMeta._guid ); // 사본은 새 guid 다
+    SW_EXPECT_EQUAL( sw::string( "scratch/test.automationscratch/probe.material" ), scratchAssetMeta._sourcePath );
 
     SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( scratchDir ) );
 }

@@ -436,19 +436,19 @@ SW_TEST_CASE( AnimationTest, SpriteAnimatorReopensItsGraphWhenThePathChanges )
     SW_ASSERT_NOT_NULL( pObject );
     SpriteAnimatorComponent* pAnimator = pObject->addComponent<SpriteAnimatorComponent>();
     SW_ASSERT_NOT_NULL( pAnimator );
-    SW_ASSERT_TRUE( writeGraphPath( pAnimator, graphA ) );
+    SW_ASSERT_TRUE( writeGraphPath( pAnimator, ::test::makeTempResourceID( graphA ) ) );
     pAnimator->dispatchBeginPlay();
     SW_EXPECT_EQUAL( string( "Idle" ), pAnimator->getCurrentAnimation() );
 
     // 다른 그래프 — 지금 애니메이션(Idle)이 없으니 새 그래프의 첫 애니메이션부터.
-    SW_ASSERT_TRUE( writeGraphPath( pAnimator, graphB ) );
+    SW_ASSERT_TRUE( writeGraphPath( pAnimator, ::test::makeTempResourceID( graphB ) ) );
     SW_EXPECT_EQUAL( string( "Jump" ), pAnimator->getCurrentAnimation() );
     SW_EXPECT_TRUE( pAnimator->isPlaying() );
 
     // 같은 경로의 파일이 바뀐다(핫 리로드 알림은 값이 같다) — 지금 애니메이션(Jump)이 남아 있으면 그대로 잇는다.
     SW_ASSERT_TRUE( writeNamedGraph( graphB, { "Land", "Jump" } ) );
     pAnimator->setFrame( 0 );
-    SW_ASSERT_TRUE( writeGraphPath( pAnimator, graphB ) );
+    SW_ASSERT_TRUE( writeGraphPath( pAnimator, ::test::makeTempResourceID( graphB ) ) );
     SW_EXPECT_EQUAL( string( "Jump" ), pAnimator->getCurrentAnimation() );
     SW_EXPECT_TRUE( pAnimator->isPlaying() );
 }
@@ -483,7 +483,7 @@ SW_TEST_CASE( AnimationTest, SpriteAnimatorTakesFrameCountAndTimingFromTheClip )
     SW_ASSERT_NOT_NULL( pObject );
     SpriteComponent* pSprite = pObject->addComponent<SpriteComponent>();
     SW_ASSERT_NOT_NULL( pSprite );
-    pSprite->setClipPath( clipPath );
+    pSprite->setClipPath( ::test::makeTempResourceID( clipPath ) );
     SW_ASSERT_NOT_NULL( pSprite->getClip() );
     SpriteAnimatorComponent* pAnimator = pObject->addComponent<SpriteAnimatorComponent>();
     SW_ASSERT_NOT_NULL( pAnimator );
@@ -570,7 +570,7 @@ SW_TEST_CASE( AnimationTest, SpriteAnimatorAppliesClipTransformKeys )
     SW_ASSERT_NOT_NULL( pSprite );
     SW_ASSERT_TRUE( pObject->getPrimarySceneComponent() == pRoot );
     pSprite->setLocalPosition( float3{ 0.0f, 0.0f, 0.25f } );
-    pSprite->setClipPath( clipPath );
+    pSprite->setClipPath( ::test::makeTempResourceID( clipPath ) );
     SW_ASSERT_NOT_NULL( pSprite->getClip() );
     SpriteAnimatorComponent* pAnimator = pObject->addComponent<SpriteAnimatorComponent>();
     SW_ASSERT_NOT_NULL( pAnimator );
@@ -614,7 +614,7 @@ SW_TEST_CASE( AnimationTest, SpriteAnimatorAppliesClipTransformKeys )
     SpriteComponent* pPrimarySprite = pRootSprite->addComponent<SpriteComponent>();
     SW_ASSERT_NOT_NULL( pPrimarySprite );
     pPrimarySprite->setLocalPosition( float3{ 7.0f, 8.0f, 0.0f } );
-    pPrimarySprite->setClipPath( clipPath );
+    pPrimarySprite->setClipPath( ::test::makeTempResourceID( clipPath ) );
     SpriteAnimatorComponent* pRootAnimator = pRootSprite->addComponent<SpriteAnimatorComponent>();
     SW_ASSERT_NOT_NULL( pRootAnimator );
     {

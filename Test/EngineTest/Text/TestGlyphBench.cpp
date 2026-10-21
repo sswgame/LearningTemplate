@@ -56,7 +56,7 @@ SW_TEST_CASE( GlyphBenchTest, HangulFirstFrameRasterize )
     LocalizationTestUtil::writeTranslation( folder, "ko", R"("ui.title": { "text": "제목" })" );
     sw::LocalizationManager localization;
     SW_ASSERT_TRUE( LocalizationTestUtil::loadEngineCultures( localization ) );
-    SW_ASSERT_TRUE( localization.mountProject( projectPath, sw::LocalizationScope::Game ) );
+    SW_ASSERT_TRUE( localization.mountProject( ::test::makeTempResourceID( projectPath ), sw::LocalizationScope::Game ) );
     SW_ASSERT_TRUE( localization.setCurrentLanguage( "ko" ) );
 
     sw::FontService fontService( sw::IFontRasterizer::createDefault(), &localization );

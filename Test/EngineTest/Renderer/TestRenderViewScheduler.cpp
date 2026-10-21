@@ -371,6 +371,14 @@ SW_TEST_CASE( RenderViewModeTest, NamesAreUniqueAndLightingOnlyIsShaded )
     SW_EXPECT_FALSE( lightingOnly._bWireframe );
     SW_EXPECT_FALSE( lightingOnly._bAdditiveNoDepth );
 
+    // ShadedWireframe 은 겹침 모드다 — Lit 위에 선(와이어프레임 채우기 + 단색 define)을 한 번 더 그리고 후처리는 그대로다.
+    const RenderViewModeInfo& shadedWireframe = getRenderViewModeInfo( RenderViewMode::ShadedWireframe );
+    SW_EXPECT_TRUE( shadedWireframe._bOverlay );
+    SW_EXPECT_TRUE( shadedWireframe._bWireframe );
+    SW_EXPECT_TRUE( shadedWireframe._pShaderDefine != nullptr );
+    SW_EXPECT_FALSE( shadedWireframe._bShowsBuffer );
+    SW_EXPECT_FALSE( lightingOnly._bOverlay );
+
     // 밖에서 들어온 번호는 거른다 — 범위 밖을 Lit 으로 바꾸지 않는다.
     SW_EXPECT_TRUE( isRenderViewModeIndex( 0 ) );
     SW_EXPECT_TRUE( isRenderViewModeIndex( static_cast<int32>( RenderViewMode::Count ) - 1 ) );

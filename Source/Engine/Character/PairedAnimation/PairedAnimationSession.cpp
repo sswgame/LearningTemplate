@@ -191,6 +191,9 @@ namespace sw
         SkeletalAnimatorComponent* pAnimator = resolveAnimator( manager, role );
         if ( pAnimator == nullptr )
             return PairedAnimationStartResult::ParticipantMissing;
+        // 시작 때 요청한 클립을 아직 읽는 중이면 재생 · 시각 맞추기가 미뤄져 세션의 시계와 어긋난다 — 시작하지 않는다.
+        if ( pAnimator->isWaitingForAnimationAssets() )
+            return PairedAnimationStartResult::ParticipantNotReady;
         const hashed_string ownerName = PairedAnimationSessionInternal::findOwnerName( *pAnimator );
         if ( roleDef._skeletonPath.empty() == false )
         {

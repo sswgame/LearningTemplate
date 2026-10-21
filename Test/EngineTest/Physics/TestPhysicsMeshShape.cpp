@@ -59,7 +59,7 @@ namespace
         }
         const sw::string path = test::makeTempPath( pFileName );
         SW_EXPECT_TRUE( sw::MeshAssetFormat::saveToFile( path, listVertex ) );
-        return path;
+        return test::makeTempResourceID( path );
     }
 
     /** @brief 기하에서 가장 큰 x 입니다(정육면체면 반 크기). 점이 없으면 0 입니다. */
@@ -213,7 +213,7 @@ SW_TEST_CASE( PhysicsMeshShapeTest, MissingMeshOrLoaderIsRejected )
     {
         const ScopedMeshLoader loader{ sw::PhysicsMeshShapeCache::getLoadFunction() };
         const sw::string       missing = test::makeTempPath( "never_written.mesh" );
-        SW_EXPECT_FALSE( addBody( *pScene, makeMeshShape( sw::PhysicsShapeType3D::TriangleMesh, missing ), sw::float3{}, sw::PhysicsBodyType::Static ).isValid() );
+        SW_EXPECT_FALSE( addBody( *pScene, makeMeshShape( sw::PhysicsShapeType3D::TriangleMesh, ::test::makeTempResourceID( missing ) ), sw::float3{}, sw::PhysicsBodyType::Static ).isValid() );
         SW_EXPECT_TRUE( sw::PhysicsMeshShapeCache::acquire( ::test::makeTempResourceID( missing ) ) == nullptr );
         SW_EXPECT_EQUAL( static_cast<size_t>( 0 ), sw::PhysicsMeshShapeCache::getCachedCount() );
     }

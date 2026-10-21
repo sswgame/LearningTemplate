@@ -180,8 +180,11 @@ namespace sw
 
     void CharacterAppearanceComponent::onEndPlay()
     {
-        if ( _pReloadDatabase != nullptr )
-            _pReloadDatabase->unregisterReloaded( _reloadSubscription );
+        // 데이터베이스는 게임 서비스다 — 모듈을 내릴 때 서비스가 컴포넌트보다 먼저 사라진다. 쥔 포인터로 부르지 않고 지금 서비스를 다시 찾아
+        // 같은 것이 살아 있을 때만 뗀다(사라졌으면 구독도 함께 사라졌다).
+        AppearanceDatabase* pLiveDatabase = game::findSubsystem<AppearanceDatabase>();
+        if ( pLiveDatabase != nullptr && pLiveDatabase == _pReloadDatabase )
+            pLiveDatabase->unregisterReloaded( _reloadSubscription );
         _pReloadDatabase    = nullptr;
         _reloadSubscription = DelegateHandle{};
         unregisterSocketTask();

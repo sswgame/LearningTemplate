@@ -144,7 +144,7 @@ SW_TEST_CASE( SceneAsyncTest, AsyncRequestCompletes )
     SW_ASSERT_TRUE( manager.initialize() );
     SW_EXPECT_FALSE( manager.isTransitioning() );
 
-    SW_ASSERT_TRUE( manager.requestLoadAsync( xmlPath ) );
+    SW_ASSERT_TRUE( manager.requestLoadAsync( ::test::makeTempResourceID( xmlPath ) ) );
     SW_EXPECT_TRUE( manager.isTransitioning() );
 
     sw::drainSceneTransitions( manager );
@@ -155,7 +155,7 @@ SW_TEST_CASE( SceneAsyncTest, AsyncRequestCompletes )
     SW_EXPECT_EQUAL( size_t( 2 ), manager.getActiveScene()->getObjectManager()->getAllGameObjects().size() );
 
     // 타입 등록 전에 부르는 기다림(`waitForPendingLoad`)은 잡이 끝날 때까지 막고 결과를 남긴다 — 다음 전환 한 번이 그 씬을 바로 받는다.
-    SW_ASSERT_TRUE( manager.requestLoadAsync( xmlPath ) );
+    SW_ASSERT_TRUE( manager.requestLoadAsync( ::test::makeTempResourceID( xmlPath ) ) );
     manager.waitForPendingLoad();
     manager.updateTransitions();
     SW_EXPECT_FALSE_MSG( manager.isTransitioning(), "waitForPendingLoad returned before the load job finished, or dropped its result" );
@@ -202,7 +202,7 @@ SW_TEST_CASE( SceneAsyncTest, CarriedChildKeepsItsParentWhenTheNextSceneHasTheSa
     const sw::ComponentHandle mountHandle   = pMount->getHandle();
     const sw::ComponentHandle speakerHandle = pSpeakerScene->getHandle();
 
-    SW_ASSERT_TRUE( manager.requestLoadAsync( xmlPath ) );
+    SW_ASSERT_TRUE( manager.requestLoadAsync( ::test::makeTempResourceID( xmlPath ) ) );
     sw::drainSceneTransitions( manager );
     sw::Scene* pDungeon = manager.getActiveScene();
     SW_ASSERT_NOT_NULL( pDungeon );
@@ -325,8 +325,8 @@ SW_TEST_CASE( SceneAsyncTest, AsyncWarpSequenceQueuesLatest )
 
     sw::SceneManager manager;
     SW_ASSERT_TRUE( manager.initialize() );
-    SW_ASSERT_TRUE( manager.requestLoadAsync( townA ) );
-    SW_EXPECT_TRUE( manager.requestLoadAsync( townB ) ); // 대기열에 넣고 목적지를 버리지 않음
+    SW_ASSERT_TRUE( manager.requestLoadAsync( ::test::makeTempResourceID( townA ) ) );
+    SW_EXPECT_TRUE( manager.requestLoadAsync( ::test::makeTempResourceID( townB ) ) ); // 대기열에 넣고 목적지를 버리지 않음
 
     sw::drainSceneTransitions( manager );
     SW_ASSERT_NOT_NULL( manager.getActiveScene() );
@@ -365,7 +365,7 @@ SW_TEST_CASE( SceneAsyncTest, AsyncSwapUnloadsPreviousActive )
     SW_ASSERT_NOT_NULL( bootstrap );
     SW_EXPECT_EQUAL( size_t( 1 ), manager.getLoadedScenes().size() );
 
-    SW_ASSERT_TRUE( manager.requestLoadAsync( xmlPath ) );
+    SW_ASSERT_TRUE( manager.requestLoadAsync( ::test::makeTempResourceID( xmlPath ) ) );
     sw::drainSceneTransitions( manager );
 
     SW_ASSERT_NOT_NULL( manager.getActiveScene() );
@@ -413,8 +413,8 @@ SW_TEST_CASE( SceneAsyncTest, SceneAsyncLoadCancellationAndRecovery )
     SW_ASSERT_TRUE( manager.initialize() );
 
     // 1차 비동기 요청 후 즉시 2차 비동기 요청 발행 (큐잉 전환)
-    SW_ASSERT_TRUE( manager.requestLoadAsync( scenePath1 ) );
-    SW_ASSERT_TRUE( manager.requestLoadAsync( scenePath2 ) );
+    SW_ASSERT_TRUE( manager.requestLoadAsync( ::test::makeTempResourceID( scenePath1 ) ) );
+    SW_ASSERT_TRUE( manager.requestLoadAsync( ::test::makeTempResourceID( scenePath2 ) ) );
 
     sw::drainSceneTransitions( manager );
 
@@ -457,7 +457,7 @@ SW_TEST_CASE( SceneAsyncTest, RequestLoadFutureChaining )
 
     bool                       bContinuationInvoked = false;
     sw::string                 loadedSceneName{};
-    sw::TaskFuture<sw::Scene*> future = manager.requestLoadFuture( xmlPath );
+    sw::TaskFuture<sw::Scene*> future = manager.requestLoadFuture( ::test::makeTempResourceID( xmlPath ) );
     SW_ASSERT_TRUE( future.isValid() );
     SW_EXPECT_FALSE( future.isReady() );
 
@@ -516,9 +516,9 @@ SW_TEST_CASE( SceneAsyncTest, RapidConcurrentFutureLoadsAndCancellationsStress )
 
     for ( int32 cycle = 0; cycle < 5; ++cycle )
     {
-        sw::TaskFuture<sw::Scene*> fut1 = manager.requestLoadFuture( listXMLPath[0] );
-        sw::TaskFuture<sw::Scene*> fut2 = manager.requestLoadFuture( listXMLPath[1] );
-        sw::TaskFuture<sw::Scene*> fut3 = manager.requestLoadFuture( listXMLPath[2] );
+        sw::TaskFuture<sw::Scene*> fut1 = manager.requestLoadFuture( test::makeTempResourceID( listXMLPath[0] ) );
+        sw::TaskFuture<sw::Scene*> fut2 = manager.requestLoadFuture( test::makeTempResourceID( listXMLPath[1] ) );
+        sw::TaskFuture<sw::Scene*> fut3 = manager.requestLoadFuture( test::makeTempResourceID( listXMLPath[2] ) );
 
         sw::drainSceneTransitions( manager );
 
@@ -579,9 +579,9 @@ SW_TEST_CASE( SceneAsyncTest, QueuedRequestGetsItsOwnScene )
     SW_ASSERT_TRUE( manager.initialize() );
 
     // A 가 돌고, B 가 대기열로, C 가 B 를 밀어낸다.
-    sw::TaskFuture<sw::Scene*> futA = manager.requestLoadFuture( pathA );
-    sw::TaskFuture<sw::Scene*> futB = manager.requestLoadFuture( pathB );
-    sw::TaskFuture<sw::Scene*> futC = manager.requestLoadFuture( pathC );
+    sw::TaskFuture<sw::Scene*> futA = manager.requestLoadFuture( ::test::makeTempResourceID( pathA ) );
+    sw::TaskFuture<sw::Scene*> futB = manager.requestLoadFuture( ::test::makeTempResourceID( pathB ) );
+    sw::TaskFuture<sw::Scene*> futC = manager.requestLoadFuture( ::test::makeTempResourceID( pathC ) );
     SW_ASSERT_TRUE( futA.isValid() );
     SW_ASSERT_TRUE( futB.isValid() );
     SW_ASSERT_TRUE( futC.isValid() );
@@ -620,7 +620,7 @@ SW_TEST_CASE( SceneAsyncTest, TypesRegisteredDuringLoadAreNotLost )
 
     sw::SceneManager manager;
     SW_ASSERT_TRUE( manager.initialize() );
-    SW_ASSERT_TRUE( manager.requestLoadAsync( xmlPath ) );
+    SW_ASSERT_TRUE( manager.requestLoadAsync( ::test::makeTempResourceID( xmlPath ) ) );
     // 워커가 씬을 다 지은 뒤에(그 타입 없이) 모듈이 올라온다.
     sw::engine::getSubsystem<sw::TaskManager>().waitAll();
     sw::engine::getSubsystem<sw::TypeRegistry>().registerPendingTypes( "LateModule", s_pLateHead, nullptr );
@@ -652,8 +652,8 @@ SW_TEST_CASE( SceneAsyncTest, TypesRegisteredDuringLoadAreNotLostWithSamePathQue
 
     sw::SceneManager manager;
     SW_ASSERT_TRUE( manager.initialize() );
-    sw::TaskFuture<sw::Scene*> first  = manager.requestLoadFuture( xmlPath );
-    sw::TaskFuture<sw::Scene*> second = manager.requestLoadFuture( xmlPath ); // 같은 씬이 대기열로
+    sw::TaskFuture<sw::Scene*> first  = manager.requestLoadFuture( ::test::makeTempResourceID( xmlPath ) );
+    sw::TaskFuture<sw::Scene*> second = manager.requestLoadFuture( ::test::makeTempResourceID( xmlPath ) ); // 같은 씬이 대기열로
     SW_ASSERT_TRUE( first.isValid() );
     SW_ASSERT_TRUE( second.isValid() );
     // 워커가 씬을 다 지은 뒤에(그 타입 없이) 모듈이 올라온다.
@@ -693,7 +693,7 @@ SW_TEST_CASE( SceneAsyncTest, SaveIsRefusedWhileBlocked )
 
     sw::SceneManager manager;
     SW_ASSERT_TRUE( manager.initialize() );
-    SW_ASSERT_TRUE( manager.requestLoadAsync( xmlPath ) );
+    SW_ASSERT_TRUE( manager.requestLoadAsync( ::test::makeTempResourceID( xmlPath ) ) );
     sw::drainSceneTransitions( manager );
     SW_ASSERT_NOT_NULL( manager.getActiveScene() );
 
@@ -727,7 +727,7 @@ SW_TEST_CASE( SceneAsyncTest, SavedSceneNamesAreCookable )
 
     sw::SceneManager manager;
     SW_ASSERT_TRUE( manager.initialize() );
-    SW_ASSERT_TRUE( manager.requestLoadAsync( xmlPath ) );
+    SW_ASSERT_TRUE( manager.requestLoadAsync( ::test::makeTempResourceID( xmlPath ) ) );
     sw::drainSceneTransitions( manager );
     SW_ASSERT_NOT_NULL( manager.getActiveScene() );
 

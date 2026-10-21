@@ -396,7 +396,8 @@ SW_TEST_CASE( EditorAssetTypeTest, FindKindTakesTheFirstMatchingRow )
     SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "anim/idle.animgraph.json" ) == EditorAssetType::AnimationGraph );
     SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "cut/intro.seq.json" ) == EditorAssetType::Sequence );
     SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "maps/overworld.tilemap.xml" ) == EditorAssetType::TileMap );
-    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "config/input.ini" ) == EditorAssetType::Data );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "config/input.json" ) == EditorAssetType::Data );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "config/input.ini" ) == EditorAssetType::Unknown ); // 키=값 글은 데이터 형식이 아니다(TX3)
     SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "notes/todo.txt" ) == EditorAssetType::Unknown );
     SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "" ) == EditorAssetType::Unknown );
 }

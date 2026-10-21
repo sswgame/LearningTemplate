@@ -112,7 +112,7 @@ SW_TEST_CASE( MemoryTagTest, AsyncSceneLoadOnWorkerIsTaggedScene )
     SW_ASSERT_TRUE( outerTag == sw::MemoryTag::Unknown );
 
     const uint64               sceneBefore = getTotalBytes( *pProfiler, sw::MemoryTag::Scene );
-    sw::TaskFuture<sw::Scene*> future      = manager.requestLoadFuture( xmlPath );
+    sw::TaskFuture<sw::Scene*> future      = manager.requestLoadFuture( ::test::makeTempResourceID( xmlPath ) );
     SW_ASSERT_TRUE( future.isValid() );
     SW_EXPECT_TRUE( sw::engine::getSubsystem<sw::TaskManager>().waitAll( 5000 ) );
     const uint64 sceneAfterWorker = getTotalBytes( *pProfiler, sw::MemoryTag::Scene );

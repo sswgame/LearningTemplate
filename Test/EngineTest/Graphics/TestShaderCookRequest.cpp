@@ -253,7 +253,10 @@ SW_TEST_CASE( ShaderCookRequestTest, EveryPipelinePassShaderIsRequested )
     // 배포 파이프라인이 파이프라인 타입을 모두 덮는지 본다(덮지 못한 타입은 이 대조가 보지 못한다).
     for ( uint32 typeIndex = 1; typeIndex < sw::kRenderPassTypeCount; ++typeIndex )
     {
-        if ( sw::isPipelinePassType( static_cast<sw::RenderPassType>( typeIndex ) ) )
+        // 셰이더가 패스 데이터에서만 오는 타입(모듈 패스 — 기본 셰이더가 없다)은 게임 파이프라인에만 나온다.
+        const sw::RenderPassType passType      = static_cast<sw::RenderPassType>( typeIndex );
+        const bool               bEngineShader = sw::getRenderPassTypeInfo( passType )._pDefaultShader != nullptr;
+        if ( sw::isPipelinePassType( passType ) && bEngineShader )
             SW_EXPECT_TRUE_MSG( arrCovered[typeIndex], ( "배포 파이프라인에 없는 패스 타입 " + sw::to_string( typeIndex ) ).c_str() );
     }
 }
@@ -286,6 +289,9 @@ SW_TEST_CASE( ShaderCookRequestTest, EveryViewModeVariantOfEveryMeshPassTypeIsRe
     {
         const sw::RenderPassType passType = static_cast<sw::RenderPassType>( typeIndex );
         if ( sw::FrameRendererUtil::drawsSceneMeshes( passType ) == false )
+            continue;
+        // 파이프라인 퍼뮤테이션을 요구하는 패스(강조 외곽선)는 서술 없이 만들지 않는다 — 런타임도 쿠커도 파이프라인 패스로만 만든다.
+        if ( sw::getRenderPassTypeInfo( passType ).hasFlag( sw::RenderPassTraitFlag::kRequiresPassDesc ) )
             continue;
         const sw::RenderPassShaderSelection passShader = sw::selectRenderPassShader( passType, nullptr, engineDefaultAssets );
         if ( passShader._shaderPath.empty() )
@@ -497,6 +503,9 @@ SW_TEST_CASE( ShaderCookRequestTest, EveryRuntimeStaticSwitchCombinationIsReques
                 const sw::RenderPassType passType = static_cast<sw::RenderPassType>( typeIndex );
                 if ( sw::FrameRendererUtil::drawsSceneMeshes( passType ) == false ||
                      sw::FrameRendererUtil::drawsMaterialInPass( passType, &listMaterialDefine ) == false )
+                    continue;
+                // 파이프라인 퍼뮤테이션을 요구하는 패스(강조 외곽선)는 서술 없이 만들지 않는다 — 런타임도 쿠커도 파이프라인 패스로만 만든다.
+                if ( sw::getRenderPassTypeInfo( passType ).hasFlag( sw::RenderPassTraitFlag::kRequiresPassDesc ) )
                     continue;
                 // 깊이 패스도 알파 컷오프 · 정점 변형 머티리얼은 머티리얼 셰이더로 그린다(그때 픽셀 스테이지는 컷오프만).
                 const bool                          bMaterialDepthShader = sw::FrameRendererUtil::drawsDepthWithMaterialShader( passType, &listMaterialDefine );

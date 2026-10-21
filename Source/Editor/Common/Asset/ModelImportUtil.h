@@ -350,6 +350,12 @@ namespace sw::editor
 
         /** @brief 리소스 경로에서 UUID 문자열을 만듭니다. 버전 4와 변형 비트를 맞춘 FNV-1a 두 개로 만들며, 같은 경로는 어디서 임포트해도 같은 GUID 가 나옵니다. */
         static string makeImportedGuid( string_view resourceID );
+        /**
+         * @brief 임포터가 만든 산출물(@p assetPath, 디스크 경로)의 `.meta` 를 씁니다 — 경로에서 정해지는 GUID(`makeImportedGuid`), `_bImported`.
+         * @details 글로 짓지 않고 `AssetMeta` 로 쓴다(형식은 그 타입 하나가 정한다 — 손으로 지은 키=값 글은 형식이 XML 로 바뀐 뒤 읽히지 않았다).
+         *          캐시가 잡을 때 `.meta` 를 지어 붙이면 실행마다 GUID 가 달라 임포트 결과 해시가 어긋나므로 임포터가 미리 쓴다.
+         */
+        [[nodiscard]] static bool writeImportedMeta( const string& assetPath );
 
         /**
          * @brief 원본 경로에서 원본 텍스처 폴더를 구합니다(`<x>/models_raw/<y>.vrm` → `<x>/textures_raw/<y>`). `models_raw/` 구간이 없으면 빈 문자열입니다.

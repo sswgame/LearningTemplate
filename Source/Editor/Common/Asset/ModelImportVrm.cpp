@@ -20,6 +20,7 @@
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw::editor
 {
@@ -262,9 +263,9 @@ namespace sw::editor
         xml += "\t\t</_listComponent>\n\t</GameObject>\n</Prefab>\n";
 
         const string prefabPath = FileUtil::joinPath( sideFolder, string( stem ) + ".prefab.xml" );
-        const string resourceID = ResourcePaths::toResourceID( prefabPath );
-        const bool   bWritten   = FileUtil::writeTextFile( prefabPath, xml ) &&
-                              FileUtil::writeTextFile( prefabPath + path::kMetaExtension, "guid=" + makeImportedGuid( resourceID ) + "\nsourcePath=" + resourceID + "\nimported=1\n" );
+        // 엔진 XML 서식으로 쓴다(문서를 거쳐 저장) — 저장소의 엔진 형식 파일은 바이트 그대로 왕복해야 한다(XmlAssetMerge).
+        XMLDocument prefabDocument;
+        const bool  bWritten = prefabDocument.parse( xml, prefabPath ) && prefabDocument.saveFile( prefabPath ) && writeImportedMeta( prefabPath );
         if ( bWritten == false )
         {
             SW_LOG_ERROR( "Failed to write character prefab %#", prefabPath.c_str() );

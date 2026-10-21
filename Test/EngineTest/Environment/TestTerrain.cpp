@@ -367,7 +367,7 @@ SW_TEST_CASE( TerrainTest, ComponentLoadsAndUpdatesLODs )
     TerrainComponent* pTerrain = pObject->addComponent<TerrainComponent>();
     SW_ASSERT_NOT_NULL( pTerrain );
     pTerrain->setLocalPosition( float3{ 100.0f, 2.0f, -50.0f } );
-    pTerrain->setHeightfieldPath( path );
+    pTerrain->setHeightfieldPath( ::test::makeTempResourceID( path ) );
     pTerrain->setSize( float2{ 64.0f, 64.0f } );
     pTerrain->setHeightRange( TerrainTestUtil::kHeightMin, TerrainTestUtil::kHeightMax );
     pTerrain->setChunkCells( 16 );
@@ -406,7 +406,7 @@ SW_TEST_CASE( TerrainTest, ChunksLeaveTheGPUSceneWhenTheComponentOrOwnerIsOff )
     GameObject*       pObject  = scene.getObjectManager()->createGameObject( hashed_string( "Terrain" ) );
     TerrainComponent* pTerrain = pObject->addComponent<TerrainComponent>();
     SW_ASSERT_NOT_NULL( pTerrain );
-    pTerrain->setHeightfieldPath( path );
+    pTerrain->setHeightfieldPath( ::test::makeTempResourceID( path ) );
     pTerrain->setSize( float2{ 32.0f, 32.0f } );
     pTerrain->setHeightRange( TerrainTestUtil::kHeightMin, TerrainTestUtil::kHeightMax );
     pTerrain->setChunkCells( 16 );
@@ -449,7 +449,7 @@ SW_TEST_CASE( TerrainTest, WriteHeightsUpdatesQueriesAndSaves )
     SW_ASSERT_NOT_NULL( pObject );
     TerrainComponent* pTerrain = pObject->addComponent<TerrainComponent>();
     SW_ASSERT_NOT_NULL( pTerrain );
-    pTerrain->setHeightfieldPath( path );
+    pTerrain->setHeightfieldPath( ::test::makeTempResourceID( path ) );
     pTerrain->setSize( float2{ 64.0f, 64.0f } );
     pTerrain->setHeightRange( TerrainTestUtil::kHeightMin, TerrainTestUtil::kHeightMax );
     pTerrain->setChunkCells( 16 );
@@ -521,7 +521,7 @@ SW_TEST_CASE( TerrainTest, UnsavedEditsSurviveStateSnapshot )
     TerrainComponent* arrTerrain[2]{};
     for ( TerrainComponent*& pTerrain : arrTerrain )
     {
-        pTerrain = TerrainTestUtil::makeTerrain( manager, "Terrain", heightfieldPath, splatPath );
+        pTerrain = TerrainTestUtil::makeTerrain( manager, "Terrain", ::test::makeTempResourceID( heightfieldPath ), ::test::makeTempResourceID( splatPath ) );
         SW_ASSERT_NOT_NULL( pTerrain );
         SW_ASSERT_TRUE( pTerrain->reloadTerrain() );
     }
@@ -647,7 +647,7 @@ SW_TEST_CASE( TerrainTest, WriteHolesAndResizeSurviveStateSnapshot )
     TerrainComponent* arrTerrain[2]{};
     for ( TerrainComponent*& pTerrain : arrTerrain )
     {
-        pTerrain = TerrainTestUtil::makeTerrain( manager, "Terrain", heightfieldPath, "" );
+        pTerrain = TerrainTestUtil::makeTerrain( manager, "Terrain", ::test::makeTempResourceID( heightfieldPath ), "" );
         SW_ASSERT_NOT_NULL( pTerrain );
         SW_ASSERT_TRUE( pTerrain->reloadTerrain() );
     }
@@ -710,7 +710,7 @@ SW_TEST_CASE( TerrainTest, PropertyChangeKeepsUnsavedEdits )
     SW_ASSERT_NOT_NULL( pObject );
     TerrainComponent* pTerrain = pObject->addComponent<TerrainComponent>();
     SW_ASSERT_NOT_NULL( pTerrain );
-    pTerrain->setHeightfieldPath( heightfieldPath );
+    pTerrain->setHeightfieldPath( ::test::makeTempResourceID( heightfieldPath ) );
     pTerrain->setSize( float2{ 32.0f, 32.0f } );
     pTerrain->setHeightRange( TerrainTestUtil::kHeightMin, TerrainTestUtil::kHeightMax );
     pTerrain->setChunkCells( 16 );
@@ -748,7 +748,7 @@ SW_TEST_CASE( TerrainTest, LargeHeightWriteSpreadsChunkRebuilds )
     SW_ASSERT_NOT_NULL( pObject );
     TerrainComponent* pTerrain = pObject->addComponent<TerrainComponent>();
     SW_ASSERT_NOT_NULL( pTerrain );
-    pTerrain->setHeightfieldPath( path );
+    pTerrain->setHeightfieldPath( ::test::makeTempResourceID( path ) );
     pTerrain->setSize( float2{ 64.0f, 64.0f } );
     pTerrain->setHeightRange( TerrainTestUtil::kHeightMin, TerrainTestUtil::kHeightMax );
     pTerrain->setChunkCells( 16 );
@@ -836,7 +836,7 @@ SW_TEST_CASE( TerrainTest, PaintedSplatIsPerTerrainAndKeptOnCPU )
     const utf8*       arrName[2] = { "PaintedTerrain", "OtherTerrain" };
     for ( uint32 index = 0; index < 2; ++index )
     {
-        arrTerrain[index] = TerrainTestUtil::makeTerrain( manager, arrName[index], heightfieldPath, splatPath );
+        arrTerrain[index] = TerrainTestUtil::makeTerrain( manager, arrName[index], ::test::makeTempResourceID( heightfieldPath ), ::test::makeTempResourceID( splatPath ) );
         SW_ASSERT_NOT_NULL( arrTerrain[index] );
         SW_ASSERT_TRUE( arrTerrain[index]->reloadTerrain() );
     }
@@ -937,7 +937,7 @@ SW_TEST_CASE( TerrainTest, DedicatedServerAnswersLayerQueries )
 
     test::ScopedHostTarget serverHost( "Server" );
     GameObjectManager      manager;
-    TerrainComponent*      pTerrain = TerrainTestUtil::makeTerrain( manager, "ServerTerrain", heightfieldPath, weightsPath );
+    TerrainComponent*      pTerrain = TerrainTestUtil::makeTerrain( manager, "ServerTerrain", ::test::makeTempResourceID( heightfieldPath ), ::test::makeTempResourceID( weightsPath ) );
     SW_ASSERT_NOT_NULL( pTerrain );
     SW_ASSERT_TRUE( pTerrain->reloadTerrain() );
     const float4 weight = pTerrain->computeLayerWeightsAt( 16.0f, 16.0f );
@@ -947,7 +947,7 @@ SW_TEST_CASE( TerrainTest, DedicatedServerAnswersLayerQueries )
     SW_TEST_DEFENSIVE_SCOPE( "layer weights the server cannot read stop the terrain instead of answering layer 0" );
     const string ddsPath = test::makeTempPath( "server_splat.dds" );
     SW_ASSERT_TRUE( ImageFileWriter::writeDDSRgba8( ddsPath, TerrainTestUtil::makeUniformWeights( 8, 2 )._bytes, 8, 8 ) );
-    pTerrain->setLayerWeightsPath( ddsPath );
+    pTerrain->setLayerWeightsPath( ::test::makeTempResourceID( ddsPath ) );
     SW_EXPECT_FALSE( pTerrain->reloadTerrain() );
     SW_EXPECT_FALSE( pTerrain->getHeightfield().isValid() );
     pTerrain->setLayerWeightsPath( test::makeTempPath( "missing.layerweights" ) );

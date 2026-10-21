@@ -202,6 +202,7 @@ namespace sw
         const IRigGroundQuery*                          _pGroundQueryOverride;
         const SkeletalAnimatorComponent*                _pFrameAnimator; ///< 이번 프레임의 같은 유닛 애니메이터(커브 출처, 프레임 시작에 찾음)
         SkeletalMeshComponent*                          _pUnit;
+        const Skeleton*                                 _pBoundSkeleton; ///< 마지막으로 묶으려 한 유닛 스켈레톤(바뀌면 프레임 준비가 다시 묶는다)
         uint64                                          _boundContentID;
         PROPERTY( Category = "Rig", DisplayName = "Enabled", Tooltip = "Evaluate the rig; disabled rigs cost nothing" )
         uint8                  _bRigEnabled : 1;

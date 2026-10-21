@@ -238,9 +238,9 @@ SW_TEST_CASE( AnimationGraphLayersTest, AnimatorPlaysBlendSpaceStateFromGraph )
     SkeletalAnimatorComponent* pAnimator = pObject->addComponent<SkeletalAnimatorComponent>();
     SW_ASSERT_TRUE( pUnit != nullptr && pAnimator != nullptr );
     pUnit->setSkeleton( make_shared<Skeleton>( skeleton ) );
-    pAnimator->setClipFolder( folder );
+    pAnimator->setClipFolder( ::test::makeTempResourceID( folder ) );
     pAnimator->getParameters().setFloat( hashed_string( "Speed" ), 0.5f );
-    pAnimator->setAnimationGraphPath( graphPath );
+    pAnimator->setAnimationGraphPath( ::test::makeTempResourceID( graphPath ) );
     pAnimator->setInitialState( "Move" );
     pAnimator->dispatchBeginPlay();
     SW_EXPECT_TRUE( pAnimator->getCurrentStateName() == hashed_string( "Move" ) );
@@ -315,9 +315,9 @@ SW_TEST_CASE( AnimationGraphLayersTest, BlendSpaceStateFiresSampleClipNotifies )
         pUnit->setSkeleton( make_shared<Skeleton>( skeleton ) );
         RecordingNotifyListener listener;
         pAnimator->setNotifyListener( &listener );
-        pAnimator->setClipFolder( folder );
+        pAnimator->setClipFolder( ::test::makeTempResourceID( folder ) );
         pAnimator->getParameters().setFloat( hashed_string( "Speed" ), modeCase._speed );
-        pAnimator->setAnimationGraphPath( graphPath );
+        pAnimator->setAnimationGraphPath( ::test::makeTempResourceID( graphPath ) );
         pAnimator->setInitialState( "Move" );
         pAnimator->dispatchBeginPlay();
         const IAnimationPlayable* pState = pAnimator->getGraphPlayer().getPlayer().getCurrentPlayable();
@@ -381,8 +381,8 @@ SW_TEST_CASE( AnimationGraphLayersTest, GraphLayerMasksUpperBodyFromData )
     SkeletalAnimatorComponent* pAnimator = pObject->addComponent<SkeletalAnimatorComponent>();
     SW_ASSERT_TRUE( pUnit != nullptr && pAnimator != nullptr );
     pUnit->setSkeleton( make_shared<Skeleton>( skeleton ) );
-    pAnimator->setClipFolder( folder );
-    pAnimator->setAnimationGraphPath( graphPath );
+    pAnimator->setClipFolder( ::test::makeTempResourceID( folder ) );
+    pAnimator->setAnimationGraphPath( ::test::makeTempResourceID( graphPath ) );
     pAnimator->setInitialState( "Base" );
     pAnimator->getParameters().setFloat( hashed_string( "UpperWeight" ), 1.0f );
     pAnimator->dispatchBeginPlay();
@@ -419,7 +419,7 @@ SW_TEST_CASE( AnimationGraphLayersTest, RestartedLayerInertializesFromInterrupte
     SkeletalAnimatorComponent* pAnimator = pObject->addComponent<SkeletalAnimatorComponent>();
     SW_ASSERT_TRUE( pUnit != nullptr && pAnimator != nullptr );
     pUnit->setSkeleton( make_shared<Skeleton>( skeleton ) );
-    pAnimator->setClipFolder( folder );
+    pAnimator->setClipFolder( ::test::makeTempResourceID( folder ) );
     pAnimator->setInitialState( "Base" );
     pAnimator->dispatchBeginPlay();
     AnimationLayerDesc desc{};
@@ -473,8 +473,8 @@ SW_TEST_CASE( AnimationGraphLayersTest, InertializationSkipsPoseNobodySaw )
         SkeletalAnimatorComponent* pAnimator = pObject->addComponent<SkeletalAnimatorComponent>();
         SW_ASSERT_TRUE( pUnit != nullptr && pAnimator != nullptr );
         pUnit->setSkeleton( make_shared<Skeleton>( skeleton ) );
-        pAnimator->setClipFolder( folder );
-        pAnimator->setAnimationGraphPath( graphPath );
+        pAnimator->setClipFolder( ::test::makeTempResourceID( folder ) );
+        pAnimator->setAnimationGraphPath( ::test::makeTempResourceID( graphPath ) );
         pAnimator->setInitialState( "Idle" );
         pAnimator->dispatchBeginPlay();
         for ( uint32 frameIndex = 0; frameIndex < 4; ++frameIndex )
@@ -537,10 +537,10 @@ SW_TEST_CASE( AnimationGraphLayersTest, UnplayableGraphIsNotUsed )
     SkeletalAnimatorComponent* pAnimator = pObject->addComponent<SkeletalAnimatorComponent>();
     SW_ASSERT_TRUE( pUnit != nullptr && pAnimator != nullptr );
     pUnit->setSkeleton( make_shared<Skeleton>( skeleton ) );
-    pAnimator->setClipFolder( folder );
+    pAnimator->setClipFolder( ::test::makeTempResourceID( folder ) );
     {
         test::ScopedDefensiveTestLog expected( "a graph layer without its clip fails the graph" );
-        pAnimator->setAnimationGraphPath( layerGraphPath );
+        pAnimator->setAnimationGraphPath( ::test::makeTempResourceID( layerGraphPath ) );
     }
     SW_EXPECT_EQUAL( 0u, pAnimator->getGraphLayerCount() );
     SW_EXPECT_TRUE( pAnimator->getGraphPlayer().getGraph() == nullptr );

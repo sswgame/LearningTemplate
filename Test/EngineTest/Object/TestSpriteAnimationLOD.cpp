@@ -64,7 +64,7 @@ namespace
             walker._pSprite = pObject->addComponent<SpriteComponent>();
             if ( walker._pSprite == nullptr )
                 return walker;
-            walker._pSprite->setClipPath( clipPath );
+            walker._pSprite->setClipPath( ::test::makeTempResourceID( clipPath ) );
             walker._pAnimator = pObject->addComponent<SpriteAnimatorComponent>();
             if ( walker._pAnimator != nullptr )
                 walker._pAnimator->play( "all", true );

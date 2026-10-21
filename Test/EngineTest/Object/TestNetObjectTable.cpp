@@ -37,19 +37,19 @@ SW_TEST_CASE( NetObjectTableTest, SceneIDsComeFromNamesNotOrder )
     SW_EXPECT_EQUAL( serverTable.findID( *pServerBarrel ), clientTable.findID( *pClientBarrel ) );
     SW_EXPECT_TRUE( clientTable.findObject( wallID ) == pClientWall );
 
-    // 이름이 같은 씬 오브젝트 — 번호를 주지 않는다(오류 로그).
+    // 같은 이름으로 만들어도 매니저가 뒤의 것에 번호를 붙여 이름이 갈린다(GameObjectStore) — 씬 번호도 갈리고, 만든 순서가 같으면 양쪽이 같은 번호를 준다.
+    // 같은 번호(해시 충돌)는 어느 쪽에도 주지 않는다(captureSceneObjects 의 오류 로그) — 이름으로는 만들 수 없는 경우다.
     GameObjectManager duplicateManager;
     GameObject*       pFirst  = duplicateManager.createGameObject( hashed_string( "Crate" ) );
     GameObject*       pSecond = duplicateManager.createGameObject( hashed_string( "Crate" ) );
     SW_ASSERT_TRUE( pFirst != nullptr && pSecond != nullptr );
+    SW_EXPECT_TRUE( pFirst->getName() != pSecond->getName() );
     NetObjectTable& duplicateTable = duplicateManager.getSubsystem<NetObjectTable>();
-    {
-        SW_TEST_DEFENSIVE_SCOPE( "two scene objects share a name" );
-        duplicateTable.captureSceneObjects();
-    }
-    SW_EXPECT_EQUAL( 0u, duplicateTable.findID( *pFirst ) );
-    SW_EXPECT_EQUAL( 0u, duplicateTable.findID( *pSecond ) );
-    SW_EXPECT_NULL( duplicateTable.findObject( NetObjectTable::computeSceneID( *pFirst ) ) );
+    duplicateTable.captureSceneObjects();
+    const uint32 firstID  = duplicateTable.findID( *pFirst );
+    const uint32 secondID = duplicateTable.findID( *pSecond );
+    SW_EXPECT_TRUE( firstID != 0u && secondID != 0u && firstID != secondID );
+    SW_EXPECT_TRUE( duplicateTable.findObject( firstID ) == pFirst );
 
     // 잡은 뒤에 생긴 오브젝트는 씬 번호를 받지 않는다.
     GameObject* pLate = serverManager.createGameObject( hashed_string( "LateArrow" ) );

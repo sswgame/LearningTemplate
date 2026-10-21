@@ -185,7 +185,7 @@ SW_TEST_CASE( SpriteClipAssetTest, CacheSharesOneClipPerPath )
     SW_EXPECT_EQUAL( 2, reloaded->getFrameCount() );
 
     test::ScopedDefensiveTestLog expected( "a missing sprite clip is reported and yields nothing" );
-    SW_EXPECT_TRUE( sw::SharedAssetCache<sw::SpriteClipAsset>::acquire( test::makeTempPath( "never_written.sprite.json" ) ) == nullptr );
+    SW_EXPECT_TRUE( sw::SharedAssetCache<sw::SpriteClipAsset>::acquire( test::makeTempResourceID( test::makeTempPath( "never_written.sprite.json" ) ) ) == nullptr );
     SW_EXPECT_TRUE( sw::SharedAssetCache<sw::SpriteClipAsset>::acquire( "" ) == nullptr );
 }
 

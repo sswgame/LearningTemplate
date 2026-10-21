@@ -60,7 +60,7 @@ namespace
   <Links strength="40" supportStrength="30000"/>
   <Debris lifetime="3" maxBodies="64" smallVolume="0.01" fadeTime="0.25" sleepRemoveTime="0.5" keepCollisionVolume="0.5" hullShrink="0.005"/>
 </DestructionProfile>)" );
-            return path;
+            return test::makeTempResourceID( path );
         }
     };
 } // namespace

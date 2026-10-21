@@ -47,7 +47,7 @@ namespace
             TerrainComponent* pTerrain = pObject != nullptr ? pObject->addComponent<TerrainComponent>() : nullptr;
             if ( pTerrain == nullptr )
                 return nullptr;
-            pTerrain->setHeightfieldPath( path );
+            pTerrain->setHeightfieldPath( ::test::makeTempResourceID( path ) );
             pTerrain->setSize( float2{ 64.0f, 64.0f } );
             pTerrain->setHeightRange( 0.0f, 32.0f );
             pTerrain->setChunkCells( 16 );

@@ -319,10 +319,9 @@ namespace sw
         {
             inline constexpr const utf8* kInstances                    = "g_SwInstances";
             inline constexpr const utf8* kMaterials                    = "g_SwMaterials";
-            inline constexpr const utf8* kEngineTexture                = "g_SwSlot";                       ///< 뒤에 0..3 이 붙는다.
-            inline constexpr const utf8* kMaterialTexture              = "g_SwMaterialTex";                ///< 뒤에 0..15 가 붙는다.
-            inline constexpr const utf8* kEngineGBufferMaterialTexture = "g_SwSlotGBufferMaterial";        ///< t15(에뮬). G버퍼 머티리얼 칸
-            inline constexpr const utf8* kEngineGBufferMaterialSampler = "g_SwSlotGBufferMaterialSampler"; ///< GL 만의 결합 샘플러(DX11 은 정적 세트로 읽는다)
+            inline constexpr const utf8* kEngineTexture                = "g_SwSlot";                ///< 뒤에 0..3 이 붙는다.
+            inline constexpr const utf8* kMaterialTexture              = "g_SwMaterialTex";         ///< 뒤에 0..15 가 붙는다.
+            inline constexpr const utf8* kEngineGBufferMaterialTexture = "g_SwSlotGBufferMaterial"; ///< t15(에뮬). G버퍼 머티리얼 칸
             inline constexpr const utf8* kBindlessTextures             = "g_SwBindlessTex2D";
             inline constexpr const utf8* kBindlessRwTextures           = "g_SwBindlessRWTex2D";
             inline constexpr const utf8* kSamplers                     = "g_SwSamplers";           ///< Vulkan: set 1 binding 1 immutable sampler 배열(s0..s6)

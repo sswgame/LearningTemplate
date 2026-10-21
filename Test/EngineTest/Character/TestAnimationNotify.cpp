@@ -19,6 +19,7 @@
 #include "Engine/Resource/ResourcePaths.h"
 
 #include "EngineTest/AnimationTestUtil.h"
+#include "EngineTest/AssetArrivalTestUtil.h"
 #include "EngineTest/TestGameObjectMocks.h"
 
 #include "TestFramework/TestFramework.h"
@@ -317,10 +318,11 @@ SW_TEST_CASE( AnimationNotifyTest, AnimatorDeliversClipNotifiesToDispatcher )
     AnimationNotifyComponent*  pNotify   = pObject->addComponent<AnimationNotifyComponent>();
     SW_ASSERT_TRUE( pUnit != nullptr && pAnimator != nullptr && pNotify != nullptr );
     pUnit->setSkeleton( make_shared<Skeleton>( skeleton ) );
-    pAnimator->setClipFolder( folder );
+    pAnimator->setClipFolder( ::test::makeTempResourceID( folder ) );
     pAnimator->setInitialState( "Attack" );
     pAnimator->dispatchBeginPlay();
     pNotify->dispatchBeginPlay();
+    SW_ASSERT_TRUE( ::test::finishAssetArrivals( manager ) );
     pNotify->setNotifyTable( table );
     SW_EXPECT_TRUE( pAnimator->getNotifyListener() != nullptr );
 

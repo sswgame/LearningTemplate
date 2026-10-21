@@ -509,6 +509,30 @@
             "text": "효과음 음량",
             "sourceHash": "1c5962fcd2ea2f59"
         },
+        "settings.audio.speakerMode": {
+            "text": "스피커 구성",
+            "sourceHash": "d29256f633294933"
+        },
+        "settings.audio.speakerMode.auto": {
+            "text": "자동",
+            "sourceHash": "d200028b9f6015e4"
+        },
+        "settings.audio.speakerMode.headphones": {
+            "text": "헤드폰 (3D)",
+            "sourceHash": "cb35278216cbcf90"
+        },
+        "settings.audio.speakerMode.stereo": {
+            "text": "스테레오",
+            "sourceHash": "5c73b6a46de9972d"
+        },
+        "settings.audio.speakerMode.surround51": {
+            "text": "5.1 서라운드",
+            "sourceHash": "9eff77e9f0d62ca5"
+        },
+        "settings.audio.speakerMode.surround71": {
+            "text": "7.1 서라운드",
+            "sourceHash": "e3b7d24b4997a35f"
+        },
         "settings.audio.uiVolume": {
             "text": "인터페이스 음량",
             "sourceHash": "b821b9172a51c8c2"

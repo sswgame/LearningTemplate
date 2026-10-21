@@ -16,6 +16,7 @@
 #include "Engine/Resource/ResourcePaths.h"
 
 #include "EngineTest/AnimationTestUtil.h"
+#include "EngineTest/AssetArrivalTestUtil.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -86,9 +87,11 @@ namespace
             if ( pUnit == nullptr || pAnimator == nullptr )
                 return nullptr;
             pUnit->setSkeleton( skeleton );
-            pAnimator->setClipFolder( folder );
+            pAnimator->setClipFolder( ::test::makeTempResourceID( folder ) );
             pAnimator->setInitialState( "Wave" );
             pAnimator->dispatchBeginPlay();
+            if ( ::test::finishAssetArrivals( manager ) == false ) // 클립은 워커가 읽는다
+                return nullptr;
             return pUnit;
         }
 

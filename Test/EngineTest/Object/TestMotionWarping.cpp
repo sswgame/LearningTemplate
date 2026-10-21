@@ -22,6 +22,7 @@
 #include "Engine/Resource/ResourcePaths.h"
 
 #include "EngineTest/AnimationTestUtil.h"
+#include "EngineTest/AssetArrivalTestUtil.h"
 
 #include "GameFramework/Base/Gameplay/Interaction/InteractableComponent.h"
 
@@ -75,7 +76,7 @@ namespace
             if ( pUnit == nullptr || pAnimator == nullptr )
                 return nullptr;
             pUnit->setSkeleton( make_shared<Skeleton>( test::makeChainSkeleton( 3 ) ) );
-            pAnimator->setClipFolder( folder );
+            pAnimator->setClipFolder( ::test::makeTempResourceID( folder ) );
             pAnimator->setInitialState( "Walk" );
             pAnimator->setExtractRootMotion( true );
             return pAnimator;
@@ -123,6 +124,7 @@ SW_TEST_CASE( MotionWarpingTest, WarpWindowReachesTargetAtWindowEnd )
     pAnimator->dispatchBeginPlay();
     pWarping->dispatchBeginPlay();
     pNotify->dispatchBeginPlay();
+    SW_ASSERT_TRUE( ::test::finishAssetArrivals( manager ) );
     SW_ASSERT_TRUE( pAnimator->play( hashed_string( "Walk" ), false, 0.0f ) );
     pWarping->setWarpTarget( hashed_string( "Seat" ), float3{ 0.5f, 0.0f, 2.0f }, MathUtil::kHalfPi );
 
@@ -169,6 +171,7 @@ SW_TEST_CASE( MotionWarpingTest, RootMotionMovesThroughCharacterController )
     SW_ASSERT_NOT_NULL( TestMotionWarpingInternal::addAnimator( *pWalker, folder ) );
 
     manager.beginPlay();
+    SW_ASSERT_TRUE( ::test::finishAssetArrivals( manager ) );
     for ( uint32 frameIndex = 0; frameIndex < 120; ++frameIndex )
     {
         manager.update( TestMotionWarpingInternal::kFrame );
@@ -208,7 +211,7 @@ SW_TEST_CASE( MotionWarpingTest, AlignmentPointResolvesSocketMarker )
     SW_EXPECT_NEAR_EQUAL( 3.0f, position._z, 1e-4f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, yaw, 1e-4f );
 
-    pSockets->setSocketSetPath( socketPath );
+    pSockets->setSocketSetPath( ::test::makeTempResourceID( socketPath ) );
     SW_EXPECT_TRUE( pInteractable->computeAlignmentPoint( position, yaw ) );
     SW_EXPECT_NEAR_EQUAL( 2.0f, position._x, 1e-4f );
     SW_EXPECT_NEAR_EQUAL( 4.5f, position._z, 1e-4f );
@@ -237,6 +240,7 @@ SW_TEST_CASE( MotionWarpingTest, LocomotionWarpingScalesRateAndTurnsLowerBody )
     } );
     pAnimator->dispatchBeginPlay();
     pLocomotion->dispatchBeginPlay();
+    SW_ASSERT_TRUE( ::test::finishAssetArrivals( manager ) );
 
     SceneComponent* pRoot = pObject->getPrimarySceneComponent();
     const float32   speed = 3.0f;

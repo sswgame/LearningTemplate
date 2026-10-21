@@ -160,11 +160,11 @@ SW_TEST_CASE( MeshAssetTest, CacheSharesOneMeshPerPathAndReloadsInPlace )
     SW_EXPECT_EQUAL( 3u, first->getVertexCount() );
 
     sw::MeshCache cache;
-    SW_EXPECT_TRUE( cache.isCached( path ) );
+    SW_EXPECT_TRUE( cache.isCached( ::test::makeTempResourceID( path ) ) );
 
     const uint64 contentBefore = first->getContentID();
     SW_ASSERT_TRUE( sw::MeshAssetFormat::saveToFile( path, makeTestTriangles( 3, 0.5f ) ) );
-    SW_EXPECT_TRUE( sw::MeshCache::reloadShared( path, nullptr ) );
+    SW_EXPECT_TRUE( sw::MeshCache::reloadShared( ::test::makeTempResourceID( path ), nullptr ) );
     SW_EXPECT_EQUAL( 9u, first->getVertexCount() );
     SW_EXPECT_TRUE( first->getContentID() != contentBefore ); // 정점 풀이 다시 올릴 근거
     SW_EXPECT_TRUE( sw::MeshCache::acquire( ::test::makeTempResourceID( path ) ) == first );
@@ -174,7 +174,7 @@ SW_TEST_CASE( MeshAssetTest, CacheSharesOneMeshPerPathAndReloadsInPlace )
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( path, arrGarbage, sizeof( arrGarbage ) ) );
     {
         test::ScopedDefensiveTestLog expected( "reloading a malformed mesh keeps the old vertices" );
-        SW_EXPECT_FALSE( sw::MeshCache::reloadShared( path, nullptr ) );
+        SW_EXPECT_FALSE( sw::MeshCache::reloadShared( ::test::makeTempResourceID( path ), nullptr ) );
     }
     SW_EXPECT_EQUAL( 9u, first->getVertexCount() );
 }
@@ -192,8 +192,8 @@ SW_TEST_CASE( MeshAssetTest, ReadySetHoldsMeshesUntilCleared )
     SW_ASSERT_TRUE( sw::MeshAssetFormat::saveToFile( pathB, makeTestTriangles( 2, 1.0f ) ) );
 
     sw::AssetReadySet readySet;
-    readySet.add( sw::MeshCache::request( pathA ) );
-    readySet.add( sw::MeshCache::request( pathB ) );
+    readySet.add( sw::MeshCache::request( ::test::makeTempResourceID( pathA ) ) );
+    readySet.add( sw::MeshCache::request( ::test::makeTempResourceID( pathB ) ) );
     const sw::Stopwatch stopwatch;
     while ( readySet.isComplete() == false && stopwatch.getElapsedMilliseconds() < 10'000 )
     {
@@ -203,15 +203,15 @@ SW_TEST_CASE( MeshAssetTest, ReadySetHoldsMeshesUntilCleared )
     SW_EXPECT_EQUAL( size_t( 2 ), readySet.countReady() );
 
     sw::MeshCache cache;
-    SW_EXPECT_TRUE( cache.isCached( pathA ) );
+    SW_EXPECT_TRUE( cache.isCached( ::test::makeTempResourceID( pathA ) ) );
     SW_EXPECT_EQUAL( 6u, sw::MeshCache::acquire( ::test::makeTempResourceID( pathB ) )->getVertexCount() );
 
     readySet.clear();
-    SW_EXPECT_FALSE( cache.isCached( pathA ) );
+    SW_EXPECT_FALSE( cache.isCached( ::test::makeTempResourceID( pathA ) ) );
 
     {
         test::ScopedDefensiveTestLog expected( "a missing mesh in a ready set fails the set" );
-        readySet.add( sw::MeshCache::request( test::makeTempPath( "preload_missing.mesh" ) ) );
+        readySet.add( sw::MeshCache::request( test::makeTempResourceID( test::makeTempPath( "preload_missing.mesh" ) ) ) );
         while ( readySet.isComplete() == false && stopwatch.getElapsedMilliseconds() < 10'000 )
         {
             std::this_thread::yield();
@@ -232,9 +232,9 @@ SW_TEST_CASE( MeshAssetTest, AcquireWaitsOnTheSameLoadAsRequest )
     const sw::string path = test::makeTempPath( "same_path.mesh" );
     SW_ASSERT_TRUE( sw::MeshAssetFormat::saveToFile( path, makeTestTriangles( 1, 1.0f ) ) );
 
-    const sw::MeshHandle handle = sw::MeshCache::request( path );
+    const sw::MeshHandle handle = sw::MeshCache::request( ::test::makeTempResourceID( path ) );
     SW_ASSERT_TRUE( handle.isValid() );
-    const sw::shared_ptr<sw::Mesh> mesh = sw::MeshCache::acquire( path );
+    const sw::shared_ptr<sw::Mesh> mesh = sw::MeshCache::acquire( ::test::makeTempResourceID( path ) );
     SW_ASSERT_NOT_NULL( mesh.get() );
     SW_EXPECT_TRUE( handle.wait() == mesh );
     SW_EXPECT_TRUE( handle.getState() == sw::AssetLoadState::Ready );
@@ -272,7 +272,7 @@ SW_TEST_CASE( MeshAssetTest, MeshComponentResolvesMeshAssetPath )
     SW_ASSERT_TRUE( sw::SerializerUtil::applyPropertyText( *pMeshID, sw::MutableObjectAddress{ pMesh }, ::test::makeTempResourceID( path ), context ) );
     pMesh->onPropertyChanged( pMeshID->_name );
     // 에셋은 워커가 읽는다 — 다 읽을 때까지 메시가 없고(그리지 않는다), 씬 프레임의 도착 단계가 넣는다.
-    waitForMeshArrival( manager, path );
+    waitForMeshArrival( manager, ::test::makeTempResourceID( path ) );
     SW_EXPECT_FALSE( pMesh->isMeshLoading() );
     SW_ASSERT_NOT_NULL( pMesh->getRawMesh() );
     SW_EXPECT_EQUAL( 6u, pMesh->getRawMesh()->getVertexCount() );
@@ -286,8 +286,8 @@ SW_TEST_CASE( MeshAssetTest, MeshComponentResolvesMeshAssetPath )
     {
         test::ScopedDefensiveTestLog expected( "a missing mesh asset leaves the component without a mesh" );
         const sw::string             missingPath = test::makeTempPath( "missing.mesh" );
-        pMesh->setMeshID( missingPath );
-        waitForMeshArrival( manager, missingPath );
+        pMesh->setMeshID( ::test::makeTempResourceID( missingPath ) );
+        waitForMeshArrival( manager, ::test::makeTempResourceID( missingPath ) );
     }
     SW_EXPECT_EQUAL( size_t( 0 ), manager.getPrimitiveRegistry().countAssetWaiters() );
     SW_EXPECT_NULL( pMesh->getRawMesh() );

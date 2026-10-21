@@ -70,7 +70,7 @@ SW_TEST_CASE( EditorResourceIndexTest, CatalogCountsEveryKindOfTheTable )
         "textures/a.png",
         "textures/b.dds",
         "shaders/pbr.hlsl",
-        "config/input.ini",
+        "config/input.json",
         "anim/idle.animgraph.json",
         "notes/todo.txt",
     };

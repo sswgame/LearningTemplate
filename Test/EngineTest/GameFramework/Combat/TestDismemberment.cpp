@@ -195,7 +195,7 @@ SW_TEST_CASE( DismembermentRuntimeTest, FatalHeadHitSeversAndSpawnsPhysicsPiece 
     SkeletalMeshComponent*  pTubeUnit      = pTube->addComponent<SkeletalMeshComponent>();
     DismembermentComponent* pTubeDismember = pTube->addComponent<DismembermentComponent>();
     pTubeDismember->setSeverableRegions( { hashed_string( "Upper" ) } );
-    pTubeDismember->setRegionTablePath( regionPath );
+    pTubeDismember->setRegionTablePath( ::test::makeTempResourceID( regionPath ) );
     test::updateFrames( manager, 2 );
     pTubeUnit->setSkeleton( make_shared<Skeleton>( test::makeChainSkeleton( 2 ) ) );
     pTubeUnit->setMesh( Internal::makeSkinnedTube() );

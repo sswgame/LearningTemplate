@@ -317,7 +317,7 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, RevertingAnOverrideRemovesItFromTheSa
         prefab.setFromGameObject( pSource );
         SW_ASSERT_TRUE( prefab.saveToXMLFile( prefabPath ) );
         SW_ASSERT_TRUE( prefab.saveToBinaryFile( AssetCookPath::toCookedPath( prefabPath ) ) ); // 배포본은 쿠킹본만 읽는다
-        engine::getSubsystem<AssetManager>().getAssetCache<sw::PrefabCache>().reload( prefabPath );
+        engine::getSubsystem<AssetManager>().getAssetCache<sw::PrefabCache>().reload( ::test::makeTempResourceID( prefabPath ) );
     }
 
     SceneManager manager;
@@ -325,7 +325,7 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, RevertingAnOverrideRemovesItFromTheSa
     SceneDocument                  authored;
     SceneDocument::SceneObjectNode entity;
     entity._name   = "Crate";
-    entity._prefab = prefabPath;
+    entity._prefab = ::test::makeTempResourceID( prefabPath );
     authored._listSceneObjectNode.push_back( entity );
     Scene* pPlaced = manager.createScene( "RevertWorld" );
     SW_ASSERT_TRUE( pPlaced->instantiate( authored ) );

@@ -609,7 +609,7 @@ SW_TEST_CASE( TypedComponentBenchTest, QueryWhileAsyncSceneLoad )
     SW_ASSERT_TRUE( sceneManager.initialize() );
     sw::vector<int64>   listDuring;
     const sw::Stopwatch loadStopwatch;
-    SW_ASSERT_TRUE( sceneManager.requestLoadAsync( xmlPath ) );
+    SW_ASSERT_TRUE( sceneManager.requestLoadAsync( ::test::makeTempResourceID( xmlPath ) ) );
     const sw::Deadline deadline   = sw::Deadline::afterMilliseconds( kLoadTimeoutMilliseconds );
     uint32             queryCount = 0;
     while ( sceneManager.isTransitioning() && deadline.isExpired() == false )

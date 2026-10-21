@@ -84,7 +84,7 @@ SW_TEST_CASE( LocalizationManagerTest, ProjectCultureChainSkipsStaleAndReviewTra
 
     sw::LocalizationManager loc;
     SW_ASSERT_TRUE( LocalizationTestUtil::loadEngineCultures( loc ) );
-    SW_ASSERT_TRUE( loc.mountProject( projectPath, sw::LocalizationScope::Game ) );
+    SW_ASSERT_TRUE( loc.mountProject( ::test::makeTempResourceID( projectPath ), sw::LocalizationScope::Game ) );
     SW_EXPECT_EQUAL( sw::string( "en" ), loc.getCurrentLanguage() ); // 처음 올린 프로젝트의 원문 문화권
 
     SW_ASSERT_TRUE( loc.setCurrentLanguage( "ko-KR" ) );
@@ -117,7 +117,7 @@ SW_TEST_CASE( LocalizationManagerTest, MissingKeysAreReportedOnce )
 
     const sw::string        folder = test::makeTempDirectory( "loc_missing" );
     sw::LocalizationManager loc;
-    SW_ASSERT_TRUE( loc.mountProject( writeSampleProject( folder ), sw::LocalizationScope::Game ) );
+    SW_ASSERT_TRUE( loc.mountProject( ::test::makeTempResourceID( writeSampleProject( folder ) ), sw::LocalizationScope::Game ) );
     test::ScopedLogCollector logs;
     SW_EXPECT_STREQ( "fallback", loc.getString( sw::hashed_string( "ui.unknown" ), "fallback" ) );
     SW_EXPECT_STREQ( "fallback", loc.getString( sw::hashed_string( "ui.unknown" ), "fallback" ) );
@@ -160,7 +160,7 @@ SW_TEST_CASE( LocalizationManagerTest, ReloadChangedFilePicksUpNewTextAndKeepsOl
     const sw::string projectPath = writeSampleProject( folder );
 
     sw::LocalizationManager loc;
-    SW_ASSERT_TRUE( loc.mountProject( projectPath, sw::LocalizationScope::Game ) );
+    SW_ASSERT_TRUE( loc.mountProject( ::test::makeTempResourceID( projectPath ), sw::LocalizationScope::Game ) );
     SW_ASSERT_TRUE( loc.setCurrentLanguage( "ko" ) );
     const utf8* pHeld = loc.getString( sw::hashed_string( "ui.title" ) );
     SW_EXPECT_STREQ( "신비의 섬", pHeld );
@@ -172,8 +172,8 @@ SW_TEST_CASE( LocalizationManagerTest, ReloadChangedFilePicksUpNewTextAndKeepsOl
 
     LocalizationTestUtil::writeTranslation( folder, "ko", R"("ui.title": { "text": "수수께끼 섬" })" );
     const sw::string changedPath = sw::FileUtil::joinPath( folder, "ko.translation.json" );
-    SW_EXPECT_TRUE( loc.isProjectFile( changedPath ) );
-    SW_EXPECT_TRUE( loc.reloadChangedFile( changedPath ) == sw::ReloadOutcome::Reloaded );
+    SW_EXPECT_TRUE( loc.isProjectFile( ::test::makeTempResourceID( changedPath ) ) );
+    SW_EXPECT_TRUE( loc.reloadChangedFile( ::test::makeTempResourceID( changedPath ) ) == sw::ReloadOutcome::Reloaded );
     SW_EXPECT_STREQ( "수수께끼 섬", loc.getString( sw::hashed_string( "ui.title" ) ) );
     SW_EXPECT_STREQ( "신비의 섬", pHeld ); // 들고 있던 포인터는 그대로다
     SW_EXPECT_TRUE( loc.getTextRevision() > revisionBefore );
@@ -183,7 +183,7 @@ SW_TEST_CASE( LocalizationManagerTest, ReloadChangedFilePicksUpNewTextAndKeepsOl
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( changedPath, "{ \"culture\": \"ko\", \"entries\": { " ) );
     {
         SW_TEST_DEFENSIVE_SCOPE( "a half-written translation file" );
-        SW_EXPECT_TRUE( loc.reloadChangedFile( changedPath ) == sw::ReloadOutcome::Failed );
+        SW_EXPECT_TRUE( loc.reloadChangedFile( ::test::makeTempResourceID( changedPath ) ) == sw::ReloadOutcome::Failed );
     }
     SW_EXPECT_STREQ( "수수께끼 섬", loc.getString( sw::hashed_string( "ui.title" ) ) );
 
@@ -202,7 +202,7 @@ SW_TEST_CASE( LocalizationManagerTest, HotReloadGoesThroughTheAssetCacheRegistry
     const sw::string         projectPath      = writeSampleProject( folder );
     sw::LocalizationManager& loc              = sw::engine::getSubsystem<sw::LocalizationManager>();
     const sw::string         previousLanguage = loc.getCurrentLanguage();
-    SW_ASSERT_TRUE( loc.mountProject( projectPath, sw::LocalizationScope::Game ) );
+    SW_ASSERT_TRUE( loc.mountProject( ::test::makeTempResourceID( projectPath ), sw::LocalizationScope::Game ) );
     SW_ASSERT_TRUE( loc.setCurrentLanguage( "ko" ) );
     SW_EXPECT_STREQ( "신비의 섬", loc.getString( sw::hashed_string( "ui.title" ) ) );
 
@@ -210,9 +210,9 @@ SW_TEST_CASE( LocalizationManagerTest, HotReloadGoesThroughTheAssetCacheRegistry
     sw::IAssetCache* pCache          = resources.findAssetCache( "StringTable" );
     const sw::string translationPath = sw::FileUtil::joinPath( folder, "ko.translation.json" );
     SW_ASSERT_NOT_NULL( pCache );
-    SW_EXPECT_TRUE( pCache->isCached( translationPath ) );
+    SW_EXPECT_TRUE( pCache->isCached( ::test::makeTempResourceID( translationPath ) ) );
     LocalizationTestUtil::writeTranslation( folder, "ko", R"("ui.title": { "text": "수수께끼 섬" })" );
-    pCache->reload( translationPath, nullptr );
+    pCache->reload( ::test::makeTempResourceID( translationPath ), nullptr );
     SW_EXPECT_STREQ( "수수께끼 섬", loc.getString( sw::hashed_string( "ui.title" ) ) );
 
     pCache->clear(); // 캐시 비우기(재초기화)는 화면의 글을 지우지 않는다
@@ -236,8 +236,8 @@ SW_TEST_CASE( LocalizationManagerTest, UnmountingGameProjectsKeepsEngineStrings 
     LocalizationTestUtil::writeSourceTable( gameFolder, "en", R"("g.key": { "source": "Game" })" );
 
     sw::LocalizationManager loc;
-    SW_ASSERT_TRUE( loc.mountProject( enginePath, sw::LocalizationScope::Engine ) );
-    SW_ASSERT_TRUE( loc.mountProject( LocalizationTestUtil::writeProject( gameFolder, "en", "[]" ), sw::LocalizationScope::Game ) );
+    SW_ASSERT_TRUE( loc.mountProject( ::test::makeTempResourceID( enginePath ), sw::LocalizationScope::Engine ) );
+    SW_ASSERT_TRUE( loc.mountProject( ::test::makeTempResourceID( LocalizationTestUtil::writeProject( gameFolder, "en", "[]" ) ), sw::LocalizationScope::Game ) );
     SW_EXPECT_STREQ( "Game", loc.getString( sw::hashed_string( "g.key" ) ) );
 
     loc.unmountProjects( sw::LocalizationScope::Game );
@@ -295,7 +295,7 @@ SW_TEST_CASE( LocalizationManagerTest, GameStringsMountsTheGameProject )
     const sw::string previousLanguage = sw::engine::getSubsystem<sw::LocalizationManager>().getCurrentLanguage();
     const sw::string previousFallback = sw::engine::getSubsystem<sw::LocalizationManager>().getFallbackLanguage();
 
-    SW_ASSERT_TRUE( sw::GameStrings::initialize( projectPath, "ko_KR", "en_US" ) );
+    SW_ASSERT_TRUE( sw::GameStrings::initialize( ::test::makeTempResourceID( projectPath ), "ko_KR", "en_US" ) );
     SW_EXPECT_EQUAL( sw::string( "ko_kr" ), sw::GameStrings::getLanguage() );
     SW_EXPECT_EQUAL( sw::string( "en_us" ), sw::GameStrings::getFallbackLanguage() );
     SW_EXPECT_STREQ( "신비의 섬", sw::GameStrings::get( "ui.title" ) );
@@ -385,7 +385,7 @@ SW_TEST_CASE( LocalizationManagerTest, LanguageCodeSpellingsNameOneLanguage )
     LocalizationTestUtil::writeTranslation( folder, "ko_kr", R"("UI_PLAY": { "text": "플레이" })" );
 
     sw::LocalizationManager loc;
-    SW_ASSERT_TRUE( loc.initialize( projectPath, "ko_KR", "en_US" ) );
+    SW_ASSERT_TRUE( loc.initialize( ::test::makeTempResourceID( projectPath ), "ko_KR", "en_US" ) );
     SW_EXPECT_EQUAL( sw::string( "ko_kr" ), loc.getCurrentLanguage() );
     SW_EXPECT_STREQ( "플레이", loc.getString( sw::hashed_string( "UI_PLAY" ) ) );
     SW_EXPECT_STREQ( "English", loc.getString( sw::hashed_string( "UI_ONLY_EN" ) ) );
@@ -431,7 +431,7 @@ SW_TEST_CASE( LocalizationManagerTest, CopyStateGivesAnIndependentManagerWithIts
     const sw::string        folder = test::makeTempDirectory( "loc_copy" );
     sw::LocalizationManager original;
     SW_ASSERT_TRUE( LocalizationTestUtil::loadEngineCultures( original ) );
-    SW_ASSERT_TRUE( original.mountProject( writeSampleProject( folder ), sw::LocalizationScope::Game ) );
+    SW_ASSERT_TRUE( original.mountProject( ::test::makeTempResourceID( writeSampleProject( folder ) ), sw::LocalizationScope::Game ) );
     SW_ASSERT_TRUE( original.setCurrentLanguage( "ko" ) );
     const uint32 originalRevision = original.getTextRevision();
 

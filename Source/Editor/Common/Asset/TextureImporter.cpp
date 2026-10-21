@@ -294,8 +294,10 @@ namespace sw::editor
                 outFinalImage = std::move( mipChain );
                 return true;
             }
-            hr = DirectX::Convert( mipChain.GetImages(), mipChain.GetImageCount(), mipChain.GetMetadata(), targetFormat, kFilterFlags, DirectX::TEX_THRESHOLD_DEFAULT,
-                                   outFinalImage );
+            // 1 채널(R8)은 R 채널을 그대로 옮긴다 — DirectXTex 는 따로 말하지 않으면 RGB 를 휘도로 섞는다(마스크 텍스처의 값이 바뀐다).
+            const DirectX::TEX_FILTER_FLAGS convertFlags = targetFormat == DXGI_FORMAT_R8_UNORM ? kFilterFlags | DirectX::TEX_FILTER_RGB_COPY_RED : kFilterFlags;
+            hr                                           = DirectX::Convert( mipChain.GetImages(), mipChain.GetImageCount(), mipChain.GetMetadata(), targetFormat, convertFlags, DirectX::TEX_THRESHOLD_DEFAULT,
+                                                                             outFinalImage );
             if ( FAILED( hr ) )
             {
                 SW_LOG_ERROR( "DirectX::Convert failed (hr=0x%#) for format %# (%#)", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ),

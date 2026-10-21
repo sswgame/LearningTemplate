@@ -43,7 +43,7 @@ namespace
             if ( sw::MeshFractureUtil::fracture( listBox, settings, asset, error ) == false )
                 return {};
             const sw::string path = test::makeTempPath( pName );
-            return asset.saveToFile( path ) ? path : sw::string{};
+            return asset.saveToFile( path ) ? test::makeTempResourceID( path ) : sw::string{};
         }
 
         /** @brief 뿌리 정적 강체 · 메시 · 파괴 컴포넌트(바닥 앵커)를 가진 오브젝트입니다. */

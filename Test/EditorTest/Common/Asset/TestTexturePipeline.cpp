@@ -425,7 +425,8 @@ namespace sw::editor
         SW_ASSERT_TRUE( DDSLoader::loadFromDiskFile( ddsPath, dds ) );
         SW_EXPECT_EQUAL( 61u, dds._dxgiFormat );
         SW_ASSERT_TRUE( dds._bytes.size() == 2 );
-        SW_EXPECT_TRUE( dds._bytes[0] == 10 && dds._bytes[1] == 200 );
+        SW_EXPECT_EQUAL( 10u, static_cast<uint32>( dds._bytes[0] ) );
+        SW_EXPECT_EQUAL( 200u, static_cast<uint32>( dds._bytes[1] ) );
 
         TextureImportRule unknownRule;
         unknownRule._format = "R8_SNORM";

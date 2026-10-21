@@ -143,8 +143,8 @@ SW_TEST_CASE( AnimationNotify2DTest, SpriteNotifiesDriveFootstepAndHitWindowIn2D
     SocketSetComponent*         pSockets    = pFighter->addComponent<SocketSetComponent>();
     AnimationNotifyComponent*   pNotify     = pFighter->addComponent<AnimationNotifyComponent>();
     SW_ASSERT_TRUE( pTargetHits != nullptr && pSelfHits != nullptr && pSprite != nullptr && pAnimator != nullptr && pSockets != nullptr && pNotify != nullptr );
-    pSprite->setClipPath( clipPath );
-    pSockets->setSocketSetPath( socketPath );
+    pSprite->setClipPath( ::test::makeTempResourceID( clipPath ) );
+    pSockets->setSocketSetPath( ::test::makeTempResourceID( socketPath ) );
     shared_ptr<AnimationNotifyTable> table = make_shared<AnimationNotifyTable>();
     SW_ASSERT_TRUE( table->loadFromXMLText( R"(<AnimationNotifies>
             <Notify name="Step" handler="Footstep" socket="Root" distance="0.6"/>

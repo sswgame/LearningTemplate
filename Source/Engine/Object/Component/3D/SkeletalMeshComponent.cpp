@@ -232,6 +232,11 @@ namespace sw
         return *_skeleton;
     }
 
+    bool SkeletalMeshComponent::hasDataSkeleton() const
+    {
+        return _skeleton != SkeletalMeshComponentInternal::getImplicitSkeleton();
+    }
+
     void SkeletalMeshComponent::resolveSkeleton()
     {
         // 경로가 비었고 런타임에 정한 스켈레톤이면 그대로 둔다 — 렌더 에셋을 다시 풀어도(resolveRenderAssets) 암묵 스켈레톤으로 덮지 않는다.

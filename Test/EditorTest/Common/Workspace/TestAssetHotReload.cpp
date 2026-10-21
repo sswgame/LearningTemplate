@@ -104,7 +104,7 @@ SW_TEST_CASE( AssetHotReloadTest, ReloadedAssetReachesComponentsThroughTheirAsse
     SW_ASSERT_NOT_NULL( pObject );
     sw::SpriteComponent* pSprite = pObject->addComponent<sw::SpriteComponent>();
     SW_ASSERT_NOT_NULL( pSprite );
-    pSprite->setClipPath( clipPath );
+    pSprite->setClipPath( ::test::makeTempResourceID( clipPath ) );
     pSprite->setClipFrame( 1 );
     SW_EXPECT_NEAR_EQUAL( 0.0f, pSprite->getSpriteInstanceData().getUvRect()._x, 1e-4f );
 
@@ -113,14 +113,14 @@ SW_TEST_CASE( AssetHotReloadTest, ReloadedAssetReachesComponentsThroughTheirAsse
     sw::AssetManager resources;
     sw::IAssetCache* pCache = resources.findAssetCache( "SpriteClip" );
     SW_ASSERT_NOT_NULL( pCache );
-    pCache->reload( clipPath, nullptr );
+    pCache->reload( ::test::makeTempResourceID( clipPath ), nullptr );
 
     // 다른 경로는 아무에게도 알리지 않는다.
     SW_EXPECT_EQUAL( 0u, sw::editor::AssetHotReload::notifyAssetUsers( manager, "other/unrelated.sprite.json" ) );
     SW_EXPECT_NEAR_EQUAL( 0.0f, pSprite->getSpriteInstanceData().getUvRect()._x, 1e-4f );
 
     // 구분자가 달라도 같은 경로다 — 클립 프로퍼티 하나에 알린다.
-    sw::string spelledDifferently = clipPath;
+    sw::string spelledDifferently = ::test::makeTempResourceID( clipPath );
     for ( utf8& ch : spelledDifferently )
     {
         if ( ch == '/' )

@@ -306,12 +306,7 @@ namespace sw::editor
             }
             // 머티리얼 캐시는 잡을 때 `.meta` 를 지어 붙인다 — 옆 폴더에 실행마다 다른 GUID 가 생기면 임포트 결과 해시가 어긋난다.
             // 그래서 임포터가 경로에서 정해지는 GUID 로 미리 쓴다(언리얼 · 유니티의 임포트 부산물도 임포터가 식별자를 정한다).
-            const string resourceID = ResourcePaths::toResourceID( materialPath );
-            AssetMeta    meta;
-            meta._guid       = makeImportedGuid( resourceID );
-            meta._sourcePath = resourceID;
-            meta._bImported  = true;
-            if ( FileUtil::writeTextFile( materialPath + path::kMetaExtension, meta.toXML() ) == false )
+            if ( writeImportedMeta( materialPath ) == false )
             {
                 SW_LOG_ERROR( "Failed to write %#.meta", materialPath.c_str() );
                 return false;
@@ -328,6 +323,16 @@ namespace sw::editor
         }
         SW_LOG_INFO( "VRM '%#': %# material sections, %# texture sources", sourcePath, result._listSection.size(), result._listTexture.size() );
         return true;
+    }
+
+    bool ModelImportUtil::writeImportedMeta( const string& assetPath )
+    {
+        const string resourceID = ResourcePaths::toResourceID( assetPath );
+        AssetMeta    meta;
+        meta._guid       = makeImportedGuid( resourceID );
+        meta._sourcePath = resourceID;
+        meta._bImported  = true;
+        return FileUtil::writeTextFile( assetPath + path::kMetaExtension, meta.toXML() );
     }
 
     string ModelImportUtil::makeImportedGuid( string_view resourceID )

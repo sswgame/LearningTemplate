@@ -423,7 +423,7 @@ SW_TEST_CASE( ModelImporterTest, ImportRuleIsChosenByPathAndFeedsTheSourceHash )
     SW_EXPECT_EQUAL( 1u, sw::editor::ModelImporter::importAllModels( resourceRoot, recenterConfig, sw::editor::AssetImportMode::ImportStale )._importedCount );
 
     sw::vector<sw::RHIVertex> listVertex;
-    SW_ASSERT_TRUE( sw::MeshAssetFormat::loadFromResource( sw::FileUtil::joinPath( resourceRoot, "game/probe/models/triangle.mesh" ), listVertex ) );
+    SW_ASSERT_TRUE( sw::MeshAssetFormat::loadFromResource( ::test::makeTempResourceID( sw::FileUtil::joinPath( resourceRoot, "game/probe/models/triangle.mesh" ) ), listVertex ) );
     SW_EXPECT_TRUE( TestModelImporterInternal::containsPosition( listVertex, sw::float3{ 0.5f, 3.0f, 0.0f } ) );
 }
 

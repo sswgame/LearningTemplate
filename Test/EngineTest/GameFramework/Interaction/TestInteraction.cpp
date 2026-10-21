@@ -164,7 +164,7 @@ namespace
             if ( pUnit == nullptr || pAnimator == nullptr )
                 return nullptr;
             pUnit->setSkeleton( make_shared<Skeleton>( test::makeChainSkeleton( 3 ) ) );
-            pAnimator->setClipFolder( folder );
+            pAnimator->setClipFolder( ::test::makeTempResourceID( folder ) );
             pAnimator->setInitialState( "Idle" );
             return pAnimator;
         }
@@ -608,8 +608,9 @@ SW_TEST_CASE( InteractionTest, PairedAnimationStepStartsSessionWithBothAnimators
     const bool   bWritten = InteractionTestInternal::writeClip( folder, "Lead", false ) && InteractionTestInternal::writeClip( folder, "Follow", false ) &&
                           InteractionTestInternal::writeClip( folder, "Idle", true );
     SW_ASSERT_TRUE( bWritten );
-    const string assetPath = FileUtil::joinPath( folder, "takedown.pairedanim.xml" );
-    SW_ASSERT_TRUE( FileUtil::writeTextFile( assetPath, R"(<PairedAnimation duration="1">
+    const string assetPathDisk = FileUtil::joinPath( folder, "takedown.pairedanim.xml" );
+    const string assetPath     = test::makeTempResourceID( assetPathDisk );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( assetPathDisk, R"(<PairedAnimation duration="1">
         <Role name="Attacker" anchor="true" required="true" clip="Lead" enterBlend="0" exitState="Idle" exitBlend="0"/>
         <Role name="Victim" required="true" clip="Follow" align="snap" offset="0 0 1" yaw="180" maxAlignDistance="3" enterBlend="0" exitState="Idle" exitBlend="0"/>
         <Select role="Victim" minAngle="-45" maxAngle="45" maxDistance="3"/>
@@ -670,16 +671,16 @@ SW_TEST_CASE( InteractionTest, EditedCatalogReachesComponentsThroughTheAssetCach
     InteractableComponent* pInteractable = pDoor != nullptr ? pDoor->addComponent<InteractableComponent>() : nullptr;
     if ( pInteractable != nullptr )
     {
-        pInteractable->setCatalogPath( path );
+        pInteractable->setCatalogPath( ::test::makeTempResourceID( path ) );
         pInteractable->setInteractionID( "Open" );
     }
     IAssetCache*          pCache  = resources.findAssetCache( "InteractionCatalog" ); // 표 캐시는 처음 읽을 때 생겨 묶인 레지스트리에 오른다
     const InteractionDef* pBefore = pInteractable != nullptr ? pInteractable->getDefinition() : nullptr;
 
     SW_ASSERT_TRUE( FileUtil::writeTextFile( path, R"(<Interactions><Interaction id="Open" mode="Press" maxDistance="5"/></Interactions>)" ) );
-    const bool bCached = pCache != nullptr && pCache->isCached( path );
+    const bool bCached = pCache != nullptr && pCache->isCached( ::test::makeTempResourceID( path ) );
     if ( pCache != nullptr )
-        pCache->reload( path, nullptr );
+        pCache->reload( ::test::makeTempResourceID( path ), nullptr );
     if ( pInteractable != nullptr )
         pInteractable->onTick( 0.0f );
     const InteractionDef* pAfter = pInteractable != nullptr ? pInteractable->getDefinition() : nullptr;
@@ -718,7 +719,7 @@ SW_TEST_CASE( InteractionTest, EditedCatalogReachesSmartObjectSlots )
     bool                  bKept   = false;
     if ( pSmart != nullptr && pSitter != nullptr )
     {
-        pSmart->setCatalogPath( path );
+        pSmart->setCatalogPath( ::test::makeTempResourceID( path ) );
         pSmart->setSmartObjectID( hashed_string( "Bench" ) );
         before = pSmart->getSlotCount();
         (void)pSmart->claimSlot( *pSitter, 0 );
@@ -726,7 +727,7 @@ SW_TEST_CASE( InteractionTest, EditedCatalogReachesSmartObjectSlots )
             path, R"(<Interactions><SmartObject id="Bench"><Slot id="Left" offset="-0.5,0,0" tags="Activity.Sit"/><Slot id="Right" offset="0.5,0,0" tags="Activity.Sit"/></SmartObject></Interactions>)" ) );
         IAssetCache* pCache = resources.findAssetCache( "InteractionCatalog" );
         if ( pCache != nullptr )
-            pCache->reload( path, nullptr );
+            pCache->reload( ::test::makeTempResourceID( path ), nullptr );
         pSmart->onTick( 0.0f );
         after = pSmart->getSlotCount();
         bKept = pSmart->findSlotOf( *pSitter ) == 0;

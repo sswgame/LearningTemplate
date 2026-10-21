@@ -1313,6 +1313,18 @@
                 "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
             ]
         },
+        "EditorAudioEvents.PublishCost": {
+            "source": "Publish cost (avg / peak)",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
+            ]
+        },
+        "EditorAudioEvents.PublishCostTip": {
+            "source": "Time the audio thread spends per block copying instances and voices for this window",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
+            ]
+        },
         "EditorAudioEvents.RealVoices": {
             "source": "Real voices",
             "origins": [
@@ -1377,6 +1389,90 @@
             "source": "Virtual voices",
             "origins": [
                 "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
+            ]
+        },
+        "EditorAudioGraph.BrokenLinks": {
+            "source": "The graph has links to missing nodes or a cycle - it is not processed",
+            "origins": [
+                "Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp"
+            ]
+        },
+        "EditorAudioGraph.CanvasFailed": {
+            "source": "The node canvas could not be drawn",
+            "origins": [
+                "Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp"
+            ]
+        },
+        "EditorAudioGraph.NoGraph": {
+            "source": "Open an audio graph (.audiograph.json) to edit it",
+            "origins": [
+                "Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp"
+            ]
+        },
+        "EditorAudioGraph.Open": {
+            "source": "Open",
+            "origins": [
+                "Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp"
+            ]
+        },
+        "EditorAudioGraph.PathHint": {
+            "source": "Audio graph resource id",
+            "origins": [
+                "Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp"
+            ]
+        },
+        "EditorAudioGraph.Preview": {
+            "source": "Preview",
+            "origins": [
+                "Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp"
+            ]
+        },
+        "EditorAudioGraph.PreviewTip": {
+            "source": "Play the graph through the editor audio device",
+            "origins": [
+                "Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp"
+            ]
+        },
+        "EditorAudioGraph.ProcessingOrder": {
+            "source": "Processing order",
+            "origins": [
+                "Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp"
+            ]
+        },
+        "EditorAudioGraph.Save": {
+            "source": "Save",
+            "origins": [
+                "Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp"
+            ]
+        },
+        "EditorAudioGraph.SaveTip": {
+            "source": "Write the graph to its file",
+            "origins": [
+                "Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp"
+            ]
+        },
+        "EditorAudioGraph.SelectNodeHint": {
+            "source": "Select a node to edit its settings",
+            "origins": [
+                "Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp"
+            ]
+        },
+        "EditorAudioGraph.SetOutput": {
+            "source": "Set as output",
+            "origins": [
+                "Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp"
+            ]
+        },
+        "EditorAudioGraph.StopPreview": {
+            "source": "Stop preview",
+            "origins": [
+                "Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp"
+            ]
+        },
+        "EditorAudioGraph.Unsaved": {
+            "source": "Unsaved changes",
+            "origins": [
+                "Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp"
             ]
         },
         "EditorBugIt.Capture": {

@@ -286,7 +286,7 @@ SW_TEST_CASE( MaterialTest, MaterialReflectionSchemaSync )
     colorVar._size   = 16;
     colorVar._type   = "Float4";
     cb._listVariable.push_back( colorVar );
-    // 셰이더 구조체는 XML(color · roughness · albedoMap)과 순서가 다르다 — 텍스처 인덱스가 먼저다.
+    // 셰이더 구조체는 XML(color · roughness · metallic · albedoMap)과 순서가 다르다 — 텍스처 인덱스가 먼저다.
     sw::ShaderVariableInfo albedoVar{};
     albedoVar._name   = "albedoMap";
     albedoVar._offset = 16;
@@ -299,6 +299,12 @@ SW_TEST_CASE( MaterialTest, MaterialReflectionSchemaSync )
     roughVar._size   = 4;
     roughVar._type   = "Float";
     cb._listVariable.push_back( roughVar );
+    sw::ShaderVariableInfo metallicVar{};
+    metallicVar._name   = "metallic";
+    metallicVar._offset = 24;
+    metallicVar._size   = 4;
+    metallicVar._type   = "Float";
+    cb._listVariable.push_back( metallicVar );
     reflection._listConstantBuffer.push_back( cb );
 
     SW_EXPECT_TRUE( material->syncPropertiesFromReflection( reflection ) );

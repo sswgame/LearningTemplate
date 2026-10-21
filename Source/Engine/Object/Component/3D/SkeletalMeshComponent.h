@@ -81,6 +81,8 @@ namespace sw
         void setSkeleton( shared_ptr<const Skeleton> skeleton );
         /** @brief 스켈레톤을 반환합니다. 항상 있습니다(없으면 암묵 스켈레톤). */
         const Skeleton& getSkeleton() const;
+        /** @brief 데이터 스켈레톤(경로 또는 런타임 지정)을 받았는지입니다. 아니면 본 하나짜리 암묵 스켈레톤이다(외형을 아직 입지 않았거나 전용 서버). */
+        bool hasDataSkeleton() const;
 
         /**
          * @brief 로컬 포즈입니다. 기본 포즈 단계의 작업이 여기에 씁니다. 군중 묶음과 나누는 중이면 묶음의 포즈이며, 그때는 포즈 단계가 돌지 않아 아무도 쓰지 않습니다.

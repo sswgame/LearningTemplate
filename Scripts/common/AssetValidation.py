@@ -331,7 +331,18 @@ _kMeshVersion = _readMeshFormatConstant("kVersion")
 _kMeshHeaderSize = _readMeshFormatConstant("kHeaderSize")
 _kMeshSkinVertexSize = _readMeshFormatConstant("kSkinVertexSize")
 _kMeshVertexSize = _readMeshFormatConstant("kVertexSize")
-_kMeshChunkTags = (b"MRPH",)
+
+
+def _readMeshChunkTags() -> tuple[bytes, ...]:
+    """`MeshAssetFormat.cpp` 의 선택 덩어리 태그(`kArr...Chunk[4] = { 'M', 'R', 'P', 'H' }`)를 모두 읽습니다. 손으로 적은 목록은 구간 덩어리(SECT)가 더해질 때 어긋났다."""
+    source = Path(__file__).resolve().parents[2] / "Source" / "Engine" / "Graphics" / "Mesh" / "MeshAssetFormat.cpp"
+    listTag = [bytes("".join(match), "ascii") for match in re.findall(r"kArr\w+Chunk\[4\]\s*=\s*\{\s*'(.)',\s*'(.)',\s*'(.)',\s*'(.)'\s*\}", source.read_text(encoding="utf-8"))]
+    if not listTag:
+        raise RuntimeError(f"{source}: 덩어리 태그(kArr...Chunk)를 찾지 못했습니다")
+    return tuple(listTag)
+
+
+_kMeshChunkTags = _readMeshChunkTags()
 
 
 def readMeshInfo(data: bytes) -> MeshInfo:
@@ -349,7 +360,7 @@ def readMeshInfo(data: bytes) -> MeshInfo:
     baseSize = _kMeshHeaderSize + vertexCount * vertexSize + skinSize
     if len(data) < baseSize:
         raise ValueError(f"file size {len(data)} does not match the header ({vertexCount} x {vertexSize} bytes + {skinSize} skin bytes + {_kMeshHeaderSize})")
-    # 정점 뒤의 선택 덩어리(태그 4 바이트 + 길이 uint32 + 본문 — 지금은 모프 `MRPH`)가 파일 끝에 꼭 맞아야 한다.
+    # 정점 뒤의 선택 덩어리(태그 4 바이트 + 길이 uint32 + 본문 — 모프 `MRPH` · 구간 `SECT`, 목록은 C++ 이 원본)가 파일 끝에 꼭 맞아야 한다.
     cursor = baseSize
     while cursor < len(data):
         if len(data) - cursor < 8:

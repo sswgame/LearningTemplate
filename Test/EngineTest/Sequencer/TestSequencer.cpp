@@ -671,9 +671,10 @@ SW_TEST_CASE( SequencerTest, PlayerComponentBroadcastsCrossedEvents )
  */
 SW_TEST_CASE( SequencerTest, PlayerComponentReopensItsSequenceAfterStateLoad )
 {
-    const sw::string  path  = test::makeTempPath( "sw_test_state_sequence.json" );
-    sw::SequenceAsset asset = sw::makeSequenceWithFirstFrameEvent();
-    SW_ASSERT_TRUE( asset.saveToFile( path ) );
+    const sw::string  pathDisk = test::makeTempPath( "sw_test_state_sequence.json" );
+    const sw::string  path     = test::makeTempResourceID( pathDisk );
+    sw::SequenceAsset asset    = sw::makeSequenceWithFirstFrameEvent();
+    SW_ASSERT_TRUE( asset.saveToFile( pathDisk ) );
 
     sw::GameObjectManager manager;
     sw::GameObject*       pSource = manager.createGameObject( sw::hashed_string{ "Director" } );

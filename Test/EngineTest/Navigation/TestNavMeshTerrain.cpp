@@ -84,7 +84,7 @@ SW_TEST_CASE( NavMeshTerrainTest, TerrainComponentIsCollectedWithoutMeshes )
     navigation.setSettings( navtest::makeSettings() );
     sw::GameObject*       pObject  = manager.createGameObject( sw::hashed_string( "Terrain" ) );
     sw::TerrainComponent* pTerrain = pObject->addComponent<sw::TerrainComponent>();
-    pTerrain->setHeightfieldPath( path );
+    pTerrain->setHeightfieldPath( ::test::makeTempResourceID( path ) );
     pTerrain->setSize( sw::float2{ 32.0f, 32.0f } );
     pTerrain->setHeightRange( 0.0f, 4.0f );
     pTerrain->setChunkCells( 16 );

@@ -1661,7 +1661,8 @@ SW_TEST_CASE( SceneTest, PersistentRootsCarryIntoTheNextScene )
 SW_TEST_CASE( SceneTest, PrefabInstanceWithSavedStateIsBuiltOnce )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
-    const sw::string prefabPath = test::makeTempPath( "lifecycle.prefab.xml" );
+    const sw::string prefabPathDisk = test::makeTempPath( "lifecycle.prefab.xml" );
+    const sw::string prefabPath     = test::makeTempResourceID( prefabPathDisk );
     sw::string       savedState;
     {
         sw::GameObjectManager authoring;
@@ -1670,9 +1671,9 @@ SW_TEST_CASE( SceneTest, PrefabInstanceWithSavedStateIsBuiltOnce )
         SW_ASSERT_NOT_NULL( pSource->addComponent<sw::MockPoolLifecycleComponent>() );
         sw::PrefabAsset asset;
         asset.setFromGameObject( pSource );
-        SW_ASSERT_TRUE( asset.saveToXMLFile( prefabPath ) );
+        SW_ASSERT_TRUE( asset.saveToXMLFile( prefabPathDisk ) );
         // 배포본은 쿠킹본만 읽는다.
-        SW_ASSERT_TRUE( asset.saveToBinaryFile( sw::FileUtil::replaceExtension( prefabPath, ".bin" ) ) );
+        SW_ASSERT_TRUE( asset.saveToBinaryFile( sw::FileUtil::replaceExtension( prefabPathDisk, ".bin" ) ) );
         savedState = sw::ObjectStateSerializer::saveToXMLString( pSource, sw::ObjectSaveOptions{ sw::SerializePurpose::Authoring } );
     }
 
@@ -1774,7 +1775,7 @@ SW_TEST_CASE( SceneTest, BrokenSceneFileSaysWhereNotFileNotFound )
     {
         test::ScopedDefensiveTestLog expected( "a scene file that does not exist" );
         sw::SceneDocument            document;
-        SW_EXPECT_FALSE( document.loadXML( test::makeTempPath( "missing.scene.xml" ) ) );
+        SW_EXPECT_FALSE( document.loadXML( test::makeTempResourceID( test::makeTempPath( "missing.scene.xml" ) ) ) );
     }
     SW_EXPECT_TRUE_MSG( logs.countContaining( "missing.scene.xml: not found" ) == 1, logs.joined().c_str() );
 }

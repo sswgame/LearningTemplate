@@ -819,7 +819,7 @@ SW_TEST_CASE( UserSettingsTest, PseudoLocaleIsSelectableThroughTheLanguageSettin
 
     sw::LocalizationManager localization;
     SW_ASSERT_TRUE( localization.loadCultureTable( ::test::getEngineDefaultAssets()._cultureTable.c_str() ) );
-    SW_ASSERT_TRUE( localization.mountProject( projectPath, sw::LocalizationScope::Game ) );
+    SW_ASSERT_TRUE( localization.mountProject( ::test::makeTempResourceID( projectPath ), sw::LocalizationScope::Game ) );
 
     sw::UserSettingsManager settings;
     sw::UserSettingsTargets targets;

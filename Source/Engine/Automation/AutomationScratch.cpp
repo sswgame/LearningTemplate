@@ -8,6 +8,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/UUID/UUID.h"
 
+#include "Engine/Resource/AssetMeta.h"
 #include "Engine/Resource/ResourcePaths.h"
 
 namespace sw
@@ -16,8 +17,6 @@ namespace sw
     {
         struct AutomationScratchInternal
         {
-            static constexpr string_view kGuidKey = "guid=";
-
             /** @brief 리소스 id 에 들어가는 글자인지입니다(id 경계 판정). */
             static bool isIDCharacter( utf8 character )
             {
@@ -25,19 +24,21 @@ namespace sw
                 return bLetterOrDigit || character == '_' || character == '.' || character == '/' || character == '-';
             }
 
-            /** @brief `.meta` 의 `guid=` 줄을 새 guid 로 바꿉니다. 줄이 없으면 그대로입니다. */
-            static string renewMetaGuid( string_view text )
+            /**
+             * @brief `.meta`(이미 사본 id 로 바꾼 글)를 `AssetMeta` 로 읽어 guid 를 새로 만든 글을 돌려줍니다. 원본과 사본이 같은 guid 를 가지면 안 된다.
+             * @details 글자 찾기로 고치지 않는다 — 형식이 바뀌면(키=값 → XML) 조용히 그대로 복사됐다. 읽지 못하면 오류다.
+             */
+            [[nodiscard]] static bool renewMetaGuid( string_view text, const string& sourceFile, string& outText, string& outError )
             {
-                string       result{ text };
-                const size_t keyPos = result.find( kGuidKey.data() ); // 리터럴에서 만든 view 라 널로 끝난다
-                if ( keyPos == string::npos )
-                    return result;
-                const size_t valueStart = keyPos + kGuidKey.size();
-                size_t       valueEnd   = result.find_first_of( "\r\n", valueStart );
-                if ( valueEnd == string::npos )
-                    valueEnd = result.size();
-                result.replace( valueStart, valueEnd - valueStart, UUID::generate().toString() );
-                return result;
+                AssetMeta meta;
+                if ( meta.parseXML( text, sourceFile.c_str() ) == false )
+                {
+                    outError = "could not read the asset meta " + sourceFile;
+                    return false;
+                }
+                meta._guid = UUID::generate().toString();
+                outText    = meta.toXML();
+                return true;
             }
         };
     } // namespace
@@ -144,9 +145,10 @@ namespace sw
                 continue;
             }
             const string_view sourceText( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() );
-            string            text = rebaseText( sourceText, folder._sourceID, folder._scratchID );
-            if ( StringUtil::endsWith( FileUtil::normalizePath( targetFile ), ".meta" ) )
-                text = AutomationScratchInternal::renewMetaGuid( text );
+            string            text  = rebaseText( sourceText, folder._sourceID, folder._scratchID );
+            const bool        bMeta = StringUtil::endsWith( FileUtil::normalizePath( targetFile ), ".meta" );
+            if ( bMeta && AutomationScratchInternal::renewMetaGuid( string( text ), sourceFile, text, outError ) == false )
+                return false;
             if ( FileUtil::writeTextFile( targetFile, text ) == false )
             {
                 outError = "could not write " + targetFile;

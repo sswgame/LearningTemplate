@@ -436,7 +436,7 @@ SW_TEST_CASE( UIDocumentTest, ReloadRebuildsAndKeepsFocusByName )
     SW_EXPECT_EQUAL( 300.0f, pScroll->getScrollOffset()._y );
 
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( path, UIReloadTestUtil::makeReloadDocument( true, "New" ) ) );
-    fixture._ui.getDocumentCache().reload( path, nullptr );
+    fixture._ui.getDocumentCache().reload( ::test::makeTempResourceID( path ), nullptr );
     SW_ASSERT_TRUE( fixture._ui.findScreen( handle ) == pScreen ); // 같은 화면 · 새 트리
     const sw::ButtonWidget* pNewB = pScreen->getTree().findWidget<sw::ButtonWidget>( "B" );
     SW_ASSERT_NOT_NULL( pNewB );

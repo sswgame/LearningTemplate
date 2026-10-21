@@ -21,6 +21,7 @@
 #include "Engine/Resource/ResourcePaths.h"
 
 #include "EngineTest/AnimationTestUtil.h"
+#include "EngineTest/AssetArrivalTestUtil.h"
 
 #include "GameFramework/Kits/Feature/Network/NetPairedAnimation/PairedAnimationReplication.h"
 
@@ -65,7 +66,7 @@ namespace
                                 writeClip( outClipFolder, "Idle", 31, true );
             const string path     = FileUtil::joinPath( outClipFolder, "replicated.pairedanim.xml" );
             const bool   bWritten = bClips && FileUtil::writeTextFile( path, kXML );
-            return bWritten ? path : string{};
+            return bWritten ? test::makeTempResourceID( path ) : string{};
         }
 
         static SkeletalAnimatorComponent* addParticipant( GameObjectManager& manager, const utf8* pName, const string& folder )
@@ -76,9 +77,11 @@ namespace
             if ( pUnit == nullptr || pAnimator == nullptr )
                 return nullptr;
             pUnit->setSkeleton( make_shared<Skeleton>( test::makeChainSkeleton( 3 ) ) );
-            pAnimator->setClipFolder( folder );
+            pAnimator->setClipFolder( ::test::makeTempResourceID( folder ) );
             pAnimator->setInitialState( "Idle" );
             pAnimator->dispatchBeginPlay();
+            if ( ::test::finishAssetArrivals( manager ) == false ) // 클립은 워커가 읽는다
+                return nullptr;
             return pAnimator;
         }
 
@@ -228,7 +231,7 @@ SW_TEST_CASE( PairedAnimationReplicationTest, RefusesUnreplicableSessionsAndBadS
     const uint32          followerID = table.findID( *pFollower->getOwner() );
     state._listRoleNetID             = { leaderID, followerID };
     SW_EXPECT_TRUE( client.applyState( state ) == PairedAnimationStartResult::InvalidSnapshot );
-    state._assetPath     = FileUtil::joinPath( folder, "missing.pairedanim.xml" );
+    state._assetPath     = test::makeTempResourceID( FileUtil::joinPath( folder, "missing.pairedanim.xml" ) );
     state._listRoleNetID = { leaderID, followerID, 0u };
     SW_EXPECT_TRUE( client.applyState( state ) == PairedAnimationStartResult::AssetNotLoaded );
     SW_EXPECT_EQUAL( 3u, client.getStats()._rejectedCount );

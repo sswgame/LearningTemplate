@@ -86,8 +86,8 @@ SW_TEST_CASE( SceneCookTest, PrefabEditCooksOnlyTheScenesThatUseIt )
     const sw::string prefabB = sw::FileUtil::joinPath( root, "game/demo/prefabs/b.prefab.xml" );
     Internal::writePrefab( prefabA, 1.0f );
     Internal::writePrefab( prefabB, 2.0f );
-    Internal::writeScene( sw::FileUtil::joinPath( root, "game/demo/maps/usesa.scene.xml" ), prefabA );
-    Internal::writeScene( sw::FileUtil::joinPath( root, "game/demo/maps/usesb.scene.xml" ), prefabB );
+    Internal::writeScene( sw::FileUtil::joinPath( root, "game/demo/maps/usesa.scene.xml" ), ::test::makeTempResourceID( prefabA ) );
+    Internal::writeScene( sw::FileUtil::joinPath( root, "game/demo/maps/usesb.scene.xml" ), ::test::makeTempResourceID( prefabB ) );
     Internal::writeScene( sw::FileUtil::joinPath( root, "game/demo/maps/plain.scene.xml" ), {} );
 
     const sw::SceneEngineServices services = sw::SceneEngineServices::makeFromBoundEngine();

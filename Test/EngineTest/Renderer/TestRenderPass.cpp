@@ -539,7 +539,8 @@ SW_TEST_CASE( RenderPassTest, TypeInfoTableCoversEveryEnumValue )
         const sw::RenderPassType      type  = static_cast<sw::RenderPassType>( typeIndex );
         const sw::RenderPassTypeInfo& info  = sw::getRenderPassTypeInfo( type );
         const sw::string              label = sw::to_string( typeIndex );
-        SW_EXPECT_TRUE_MSG( info._pDefaultShader != nullptr, ( "기본 셰이더가 없는 패스 타입 " + label ).c_str() );
+        // 모듈 패스만 기본 셰이더가 없다 — 셰이더는 패스의 `_shaderPath`(필수, 검증)다.
+        SW_EXPECT_TRUE_MSG( info._pDefaultShader != nullptr || type == sw::RenderPassType::Module, ( "기본 셰이더가 없는 패스 타입 " + label ).c_str() );
         // 파이프라인 패스의 입력은 지오메트리 드로우가 정하거나(메시 패스) 입력 계약이 정한다 — 둘 중 정확히 하나다.
         if ( sw::isPipelinePassType( type ) )
         {

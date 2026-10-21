@@ -17,6 +17,7 @@
 #include "Engine/Object/SceneAnimation/MeshVertexAnimationBaker.h"
 #include "Engine/Resource/Cook/CookStore.h"
 #include "Engine/Resource/ResourceIO.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
@@ -143,7 +144,14 @@ namespace sw
         for ( const hashed_string& clipName : list._listClip )
         {
             const string cookedPath = MeshVertexAnimation::makeCookedPath( list._meshPath, clipName );
-            const string outputPath = cookedDir.empty() ? cookedPath : FileUtil::joinPath( cookedDir, cookedPath );
+            // 쿠킹 폴더가 비었으면 메시 곁(리소스 id 를 디스크 자리로 푼 곳)에 쓴다 — id 를 그대로 디스크 경로로 쓰면 작업 폴더 아래에 생긴다.
+            const string outputPath = cookedDir.empty() ? ResourcePaths::makeAbsolutePath( cookedPath ) : FileUtil::joinPath( cookedDir, cookedPath );
+            if ( outputPath.empty() )
+            {
+                SW_LOG_ERROR( "VAT '%#' has no disk folder beside its mesh to be written to", cookedPath.c_str() );
+                ++outFailedCount;
+                continue;
+            }
             if ( cookClip( list, clipName, outputPath, framesPerSecond ) == false )
             {
                 ++outFailedCount;

@@ -78,8 +78,9 @@ SW_TEST_CASE( AudioConvolutionTest, ConvolutionReverbAppliesTheImpulseResponse )
     listImpulse[300] = 0.5f;
     sw::vector<uint8> bytes;
     sw::AudioWavEncoder::encodeFloat32( listImpulse.data(), kImpulseFrames, 1, 0, sw::audio::kSampleRate, bytes );
-    const sw::string path = test::makeTempPath( "convolution_ir.wav" );
-    SW_ASSERT_TRUE( sw::FileUtil::writeFile( path, bytes.data(), bytes.size() ) );
+    const sw::string pathDisk = test::makeTempPath( "convolution_ir.wav" );
+    const sw::string path     = test::makeTempResourceID( pathDisk );
+    SW_ASSERT_TRUE( sw::FileUtil::writeFile( pathDisk, bytes.data(), bytes.size() ) );
 
     sw::string effectXML;
     effectXML.append( "<AudioEffectDesc _type=\"ConvolutionReverb\" _impulse=\"" );

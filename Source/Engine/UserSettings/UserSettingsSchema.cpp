@@ -44,12 +44,12 @@ namespace sw
 
             /** @brief 설정 종류의 성질 표입니다. 열거자 순서대로 한 줄씩 둡니다 — 아래 static_assert 가 순서와 줄 수를 지킵니다. */
             static constexpr UserSettingTypeTraits kArrTypeTraits[] = {
-                {      "bool",                                 kBooleanVariable,       UserSettingType::Bool,   UserSettingStorageKind::Bool, false},
-                {       "int",                   kInt32Variable | kEnumVariable,        UserSettingType::Int, UserSettingStorageKind::Number,  true},
-                {     "float",                                   kFloatVariable,      UserSettingType::Float, UserSettingStorageKind::Number,  true},
-                {      "enum", kInt32Variable | kEnumVariable | kStringVariable,       UserSettingType::Enum,   UserSettingStorageKind::Text, false},
-                {"keyBinding",                                                0, UserSettingType::KeyBinding,   UserSettingStorageKind::Text, false},
-                {    "string",                                  kStringVariable,     UserSettingType::String,   UserSettingStorageKind::Text, false},
+                {      "bool",                                                  kBooleanVariable,       UserSettingType::Bool,   UserSettingStorageKind::Bool, false},
+                {       "int",                                    kInt32Variable | kEnumVariable,        UserSettingType::Int, UserSettingStorageKind::Number,  true},
+                {     "float",                                                    kFloatVariable,      UserSettingType::Float, UserSettingStorageKind::Number,  true},
+                {      "enum", kInt32Variable | kEnumVariable | kStringVariable | kFloatVariable,       UserSettingType::Enum,   UserSettingStorageKind::Text, false},
+                {"keyBinding",                                                                 0, UserSettingType::KeyBinding,   UserSettingStorageKind::Text, false},
+                {    "string",                                                   kStringVariable,     UserSettingType::String,   UserSettingStorageKind::Text, false},
             };
             static constexpr NamedValue<UserSettingApplyTiming> kArrTimingName[] = {
                 {"immediate",    UserSettingApplyTiming::Immediate},
@@ -748,6 +748,20 @@ namespace sw
                     {
                         SW_LOG_ERROR( "setting '%#' cannot drive global variable '%#' (type mismatch)", pID, def._targetName.c_str() );
                         bOk = false;
+                    }
+                    else if ( def._type == UserSettingType::Enum && pVariable->_type == GlobalVariableType::Float )
+                    {
+                        // 실수 변수는 선택지 순번으로 채울 수 없다 — 모든 선택지가 수인 targetValue 를 가져야 한다(순번으로 떨어지는 길이 없다).
+                        for ( const UserSettingOption& option : def._listOption )
+                        {
+                            float32 parsed{ 0.0f };
+                            if ( StringUtil::parseFloat( option._targetValue, parsed ) == false )
+                            {
+                                SW_LOG_ERROR( "setting '%#' drives float variable '%#' - option '%#' needs a numeric targetValue", pID, def._targetName.c_str(),
+                                              option._value.c_str() );
+                                bOk = false;
+                            }
+                        }
                     }
                     break;
                 }

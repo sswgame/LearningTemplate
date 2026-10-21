@@ -21,6 +21,8 @@
 #include "Engine/Object/SceneAnimation/AnimationSystem.h"
 #include "Engine/Resource/ResourcePaths.h"
 
+#include "EngineTest/AssetArrivalTestUtil.h"
+
 #include "TestFramework/TestFramework.h"
 
 using namespace sw;
@@ -75,6 +77,9 @@ namespace
                 pAnimator->setInitialState( pAnimatorState );
                 pAnimator->dispatchBeginPlay();
             }
+            // 메시 · 클립은 워커가 읽는다 — 표정이 모프 타깃을 찾기 전에 도착을 마친다.
+            if ( ::test::finishAssetArrivals( manager ) == false )
+                return nullptr;
             FacialAnimationComponent* pFace = pObject->addComponent<FacialAnimationComponent>();
             if ( pFace == nullptr )
                 return nullptr;
@@ -508,7 +513,7 @@ SW_TEST_CASE( FacialAnimationTest, AnimatorExpressionCurvesDriveExpressions )
 
     GameObjectManager         manager;
     SkeletalMeshComponent*    pUnit = nullptr;
-    FacialAnimationComponent* pFace = TestFacialAnimationInternal::createHead( manager, pUnit, "Grin", folder );
+    FacialAnimationComponent* pFace = TestFacialAnimationInternal::createHead( manager, pUnit, "Grin", ::test::makeTempResourceID( folder ) );
     SW_ASSERT_NOT_NULL( pFace );
     manager.getSubsystem<AnimationSystem>().evaluate( 0.5f );
     const SkeletalAnimatorComponent* pAnimator = pUnit->getOwner()->getComponent<SkeletalAnimatorComponent>();

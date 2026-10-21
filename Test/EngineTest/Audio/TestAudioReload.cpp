@@ -53,27 +53,28 @@ namespace
 SW_TEST_CASE( AudioReloadTest, EventLibraryReloadsFromTheChangedFile )
 {
     test::ScopedLogCollector logs; // 없는 클립 · 깨진 파일의 오류와 경고가 로그에 남는다
-    const sw::string         folder = test::makeTempDirectory( "audio_reload_library" );
-    const sw::string         path   = sw::FileUtil::joinPath( folder, "game.audioevents.xml" );
-    AudioReloadTestInternal::write( path, AudioReloadTestInternal::makeLibraryXML( "Alpha", "sfx" ) );
+    const sw::string         folder   = test::makeTempDirectory( "audio_reload_library" );
+    const sw::string         pathDisk = sw::FileUtil::joinPath( folder, "game.audioevents.xml" );
+    const sw::string         path     = test::makeTempResourceID( pathDisk );
+    AudioReloadTestInternal::write( pathDisk, AudioReloadTestInternal::makeLibraryXML( "Alpha", "sfx" ) );
 
     sw::unique_ptr<sw::IAudioService> pService = sw::IAudioService::createNull();
     SW_ASSERT_TRUE( pService->initialize() );
     sw::AudioEventLibrary library;
-    SW_ASSERT_TRUE( library.loadFromResource( ::test::makeTempResourceID( path ) ) );
+    SW_ASSERT_TRUE( library.loadFromResource( path ) );
     SW_ASSERT_TRUE( pService->getEngine().loadEventLibrary( sw::hashed_string( path ), library ) );
     SW_EXPECT_TRUE( pService->getEngine().hasEvent( sw::hashed_string( "Alpha" ) ) );
     SW_EXPECT_TRUE( pService->isDataFile( path ) );
     SW_EXPECT_FALSE( pService->isDataFile( sw::FileUtil::joinPath( folder, "other.audioevents.xml" ) ) );
 
     // 이벤트를 하나 더한 파일 → 같은 이름이라 두 라이브러리가 되지 않고 교체된다.
-    AudioReloadTestInternal::write( path, AudioReloadTestInternal::makeTwoEventLibraryXML( "Alpha", "Beta" ) );
+    AudioReloadTestInternal::write( pathDisk, AudioReloadTestInternal::makeTwoEventLibraryXML( "Alpha", "Beta" ) );
     SW_EXPECT_TRUE( pService->reloadDataFile( path ) );
     SW_EXPECT_TRUE( pService->getEngine().hasEvent( sw::hashed_string( "Beta" ) ) );
     SW_EXPECT_TRUE( pService->getEngine().hasEvent( sw::hashed_string( "Alpha" ) ) );
 
     // 깨진 파일은 거절하고 지금 것을 쓴다.
-    AudioReloadTestInternal::write( path, "<AudioEventLibrary><_listEvent><AudioEventDesc" );
+    AudioReloadTestInternal::write( pathDisk, "<AudioEventLibrary><_listEvent><AudioEventDesc" );
     SW_EXPECT_FALSE( pService->reloadDataFile( path ) );
     SW_EXPECT_TRUE( pService->getEngine().hasEvent( sw::hashed_string( "Beta" ) ) );
 
@@ -88,27 +89,29 @@ SW_TEST_CASE( AudioReloadTest, EventLibraryReloadsFromTheChangedFile )
 SW_TEST_CASE( AudioReloadTest, MixerGraphReloadsFromTheChangedFile )
 {
     test::ScopedLogCollector logs;
-    const sw::string         folder      = test::makeTempDirectory( "audio_reload_mixer" );
-    const sw::string         mixerPath   = sw::FileUtil::joinPath( folder, "game.audiomixer.xml" );
-    const sw::string         libraryPath = sw::FileUtil::joinPath( folder, "extra.audioevents.xml" );
-    AudioReloadTestInternal::write( mixerPath, AudioReloadTestInternal::makeMixerXML( nullptr ) );
-    AudioReloadTestInternal::write( libraryPath, AudioReloadTestInternal::makeLibraryXML( "Gamma", "extra" ) );
+    const sw::string         folder          = test::makeTempDirectory( "audio_reload_mixer" );
+    const sw::string         mixerPathDisk   = sw::FileUtil::joinPath( folder, "game.audiomixer.xml" );
+    const sw::string         mixerPath       = test::makeTempResourceID( mixerPathDisk );
+    const sw::string         libraryPathDisk = sw::FileUtil::joinPath( folder, "extra.audioevents.xml" );
+    const sw::string         libraryPath     = test::makeTempResourceID( libraryPathDisk );
+    AudioReloadTestInternal::write( mixerPathDisk, AudioReloadTestInternal::makeMixerXML( nullptr ) );
+    AudioReloadTestInternal::write( libraryPathDisk, AudioReloadTestInternal::makeLibraryXML( "Gamma", "extra" ) );
 
     sw::unique_ptr<sw::IAudioService> pService = sw::IAudioService::createNull();
     SW_ASSERT_TRUE( pService->initialize() );
-    SW_ASSERT_TRUE( pService->loadMixer( ::test::makeTempResourceID( mixerPath ) ) );
+    SW_ASSERT_TRUE( pService->loadMixer( mixerPath ) );
     SW_EXPECT_STREQ( mixerPath.c_str(), pService->getMixerPath().c_str() );
     SW_EXPECT_TRUE( pService->isDataFile( mixerPath ) );
 
     sw::AudioEventLibrary library;
-    SW_ASSERT_TRUE( library.loadFromResource( ::test::makeTempResourceID( libraryPath ) ) );
+    SW_ASSERT_TRUE( library.loadFromResource( libraryPath ) );
     SW_EXPECT_FALSE( pService->getEngine().loadEventLibrary( sw::hashed_string( libraryPath ), library ) ); // 'extra' 버스가 아직 없다
 
-    AudioReloadTestInternal::write( mixerPath, AudioReloadTestInternal::makeMixerXML( "extra" ) );
+    AudioReloadTestInternal::write( mixerPathDisk, AudioReloadTestInternal::makeMixerXML( "extra" ) );
     SW_EXPECT_TRUE( pService->reloadDataFile( mixerPath ) );
     SW_EXPECT_TRUE( pService->getEngine().loadEventLibrary( sw::hashed_string( libraryPath ), library ) );
 
-    AudioReloadTestInternal::write( mixerPath, "<AudioMixerDesc><_listBus><AudioBusDesc _name=\"sfx\" _parent=\"nowhere\" /></_listBus></AudioMixerDesc>" );
+    AudioReloadTestInternal::write( mixerPathDisk, "<AudioMixerDesc><_listBus><AudioBusDesc _name=\"sfx\" _parent=\"nowhere\" /></_listBus></AudioMixerDesc>" );
     SW_EXPECT_FALSE( pService->reloadDataFile( mixerPath ) );
     SW_EXPECT_STREQ( mixerPath.c_str(), pService->getMixerPath().c_str() );
     pService->shutdown();

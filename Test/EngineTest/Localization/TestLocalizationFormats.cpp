@@ -382,7 +382,7 @@ SW_TEST_CASE( LocalizationBinaryTableTest, ManagerCooksAndLoadsWithoutAuthoringF
     LocalizationTestUtil::writeTranslation( folder, "ko", "\"ui.start\": { \"text\": \"시작\" }, \"ui.quit\": { \"text\": \"종료\", \"sourceHash\": \"" + staleHash + "\" }" );
 
     sw::LocalizationManager cooker;
-    SW_ASSERT_TRUE( cooker.mountProject( project, sw::LocalizationScope::Game ) );
+    SW_ASSERT_TRUE( cooker.mountProject( ::test::makeTempResourceID( project ), sw::LocalizationScope::Game ) );
     sw::vector<uint8> bytes;
     SW_ASSERT_TRUE( cooker.cookBinaryTable( "ko", bytes ) );
     sw::vector<uint8> none;

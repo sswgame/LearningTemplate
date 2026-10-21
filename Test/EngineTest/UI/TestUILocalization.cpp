@@ -58,7 +58,7 @@ namespace
             LocalizationTestUtil::writeSourceTable( folder, "en", R"("Menu.Start": { "source": "Start" })" );
             LocalizationTestUtil::writeTranslation( folder, "ko", R"("Menu.Start": { "text": "새 게임을 시작합니다" })" );
             SW_EXPECT_TRUE( LocalizationTestUtil::loadEngineCultures( _localization ) );
-            SW_EXPECT_TRUE( _localization.mountProject( projectPath, sw::LocalizationScope::Game ) );
+            SW_EXPECT_TRUE( _localization.mountProject( ::test::makeTempResourceID( projectPath ), sw::LocalizationScope::Game ) );
             SW_EXPECT_TRUE( _localization.setCurrentLanguage( "en" ) );
 
             sw::FontCatalogDesc catalog{};

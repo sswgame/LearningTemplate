@@ -161,6 +161,7 @@ namespace sw
         , _pGroundQueryOverride{ nullptr }
         , _pFrameAnimator{ nullptr }
         , _pUnit{ nullptr }
+        , _pBoundSkeleton{ nullptr }
         , _boundContentID{ 0 }
         , _bRigEnabled{ SW_TRUE }
         , _reserved{ 0 }
@@ -349,7 +350,12 @@ namespace sw
             if ( _pUnit != nullptr )
                 _pUnit->registerAnimationPhaseTask( &_binding );
         }
+        _pBoundSkeleton = ( _pUnit != nullptr ) ? &_pUnit->getSkeleton() : nullptr;
         if ( _pUnit == nullptr || _asset == nullptr )
+            return;
+        // 데이터 스켈레톤을 아직 받지 않은 유닛(전용 서버는 외형을 입히지 않고, 외형은 시작 뒤에 입혀질 수 있다)에는 묶지 않는다 — 리그는 그 뼈를
+        // 이름으로 찾으므로 암묵 스켈레톤에는 늘 실패한다. 스켈레톤이 바뀌면 프레임 준비(prepareFrame)가 다시 묶는다.
+        if ( _pUnit->hasDataSkeleton() == false )
             return;
 
         const string label = _rigPath.empty() ? string{ pOwner->getName().c_str() } : _rigPath;
@@ -601,8 +607,10 @@ namespace sw
     {
         if ( _bRigEnabled == SW_FALSE )
             return;
-        // 리그가 핫 리로드됐으면(내용 번호가 바뀜) 다시 묶는다.
-        if ( _asset != nullptr && _asset->getContentID() != _boundContentID )
+        // 리그가 핫 리로드됐거나(내용 번호가 바뀜) 유닛이 다른 스켈레톤을 받았으면(외형을 입음) 다시 묶는다.
+        const bool bRigChanged      = _asset != nullptr && _asset->getContentID() != _boundContentID && unit.hasDataSkeleton();
+        const bool bSkeletonChanged = &unit.getSkeleton() != _pBoundSkeleton;
+        if ( bRigChanged || bSkeletonChanged )
             bindRig();
         if ( _instance.isInitialized() == false )
             return;

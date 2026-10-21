@@ -178,9 +178,9 @@ SW_TEST_CASE( AudioServiceTest, WavParsingAndMalformedData )
     }
 
     // 로드 검증 (비동기로 제출되므로 파일이 존재하면 true 반환)
-    SW_EXPECT_TRUE( pAudioService->play( validWavPath ) );
-    SW_EXPECT_TRUE( pAudioService->play( malformedPath ) );
-    SW_EXPECT_TRUE( pAudioService->play( truncatedPath ) );
+    SW_EXPECT_TRUE( pAudioService->play( test::makeTempResourceID( validWavPath ) ) );
+    SW_EXPECT_TRUE( pAudioService->play( test::makeTempResourceID( malformedPath ) ) );
+    SW_EXPECT_TRUE( pAudioService->play( test::makeTempResourceID( truncatedPath ) ) );
 
     if ( sw::engine::areEngineServicesBound() )
         sw::engine::getSubsystem<sw::TaskManager>().waitAll();
@@ -274,8 +274,9 @@ SW_TEST_CASE( AudioServiceTest, MusicPathTracksRequests )
     SW_EXPECT_TRUE( pAudioService->initialize() );
     SW_EXPECT_TRUE( pAudioService->getMusicPath().empty() );
 
-    const sw::string musicPath = test::makeTempPath( "test_music_track.wav" );
-    SW_EXPECT_TRUE( writeTestWav( musicPath, 64 ) );
+    const sw::string musicDiskPath = test::makeTempPath( "test_music_track.wav" );
+    SW_EXPECT_TRUE( writeTestWav( musicDiskPath, 64 ) );
+    const sw::string musicPath = test::makeTempResourceID( musicDiskPath );
 
     SW_EXPECT_TRUE( pAudioService->playMusic( musicPath ) );
     // playMusic 이 돌아온 시점에는 이미 이 곡이 요청되어 있어야 한다.
@@ -313,6 +314,8 @@ SW_TEST_CASE( AudioServiceTest, MultithreadedAudioDecodeAndPlayback )
 
     SW_EXPECT_TRUE( writeTestWav( wavA, 32 ) );
     SW_EXPECT_TRUE( writeTestWav( wavB, 32 ) );
+    const sw::string wavAID = test::makeTempResourceID( wavA );
+    const sw::string wavBID = test::makeTempResourceID( wavB );
 
     constexpr int32         threadCount = 4;
     sw::vector<std::thread> workers;
@@ -324,7 +327,7 @@ SW_TEST_CASE( AudioServiceTest, MultithreadedAudioDecodeAndPlayback )
         {
             for ( int32 iter = 0; iter < 10; ++iter )
             {
-                pAudioService->play( ( workerIndex % 2 == 0 ) ? wavA : wavB );
+                pAudioService->play( ( workerIndex % 2 == 0 ) ? wavAID : wavBID );
             }
         } );
     }
@@ -379,7 +382,7 @@ SW_TEST_CASE( AudioServiceTest, ShutdownWhileDecodeTasksAreStillInFlight )
         nameBuilder.append( ".wav" );
         sw::string path = test::makeTempPath( nameBuilder.view() );
         SW_ASSERT_TRUE( writeTestWav( path, 200000 ) );
-        listWavPath.push_back( std::move( path ) );
+        listWavPath.push_back( test::makeTempResourceID( path ) );
     }
 
     for ( int32 round = 0; round < kRoundCount; ++round )
@@ -420,9 +423,9 @@ SW_TEST_CASE( AudioServiceTest, FloatAndExtensibleWavsDecode )
     SW_ASSERT_TRUE( writeFormattedWav( extensiblePath, 1u, 6u, 24u, 1u ) ); // 확장형 24 비트 PCM 5.1
     SW_ASSERT_TRUE( writeFormattedWav( extFloatPath, 3u, 2u, 32u, 3u ) );   // 확장형 float
 
-    SW_EXPECT_TRUE( pAudioService->preload( floatPath ) );
-    SW_EXPECT_TRUE( pAudioService->preload( extensiblePath ) );
-    SW_EXPECT_TRUE( pAudioService->preload( extFloatPath ) );
+    SW_EXPECT_TRUE( pAudioService->preload( test::makeTempResourceID( floatPath ) ) );
+    SW_EXPECT_TRUE( pAudioService->preload( test::makeTempResourceID( extensiblePath ) ) );
+    SW_EXPECT_TRUE( pAudioService->preload( test::makeTempResourceID( extFloatPath ) ) );
     SW_EXPECT_FALSE( pAudioService->preload( "NonExistentSoundFile.wav" ) );
 
     pAudioService->shutdown();

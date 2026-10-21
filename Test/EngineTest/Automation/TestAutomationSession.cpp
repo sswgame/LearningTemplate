@@ -35,7 +35,7 @@ namespace
             const sw::string path   = folder + "/" + pName + ".scenario.xml";
             const sw::string text   = sw::string( "<Scenario name=\"" ) + pName + "\" startAfter=\"Immediately\" timeoutFrames=\"50\">" + pBody + "</Scenario>";
             SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( path, text ) );
-            return path;
+            return test::makeTempResourceID( path );
         }
 
         /** @brief 세션을 끝날 때까지(최대 @p maxFrames) 돌려 종료 코드를 돌려줍니다. */

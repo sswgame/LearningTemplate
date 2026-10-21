@@ -332,11 +332,11 @@ namespace sw::editor
                 inoutDesc._outlineMode  = ToonOutlineMode::None;
             }
 
-            /** @brief 소수 여섯 자리까지의 문자열입니다. XML 에 쓰는 값입니다. */
+            /** @brief 소수 여섯 자리까지의 문자열입니다. XML 에 쓰는 값입니다. 음의 0 은 0 으로 쓴다(부호를 뒤집은 0 이 "-0" 으로 남지 않게 — -0 + 0 = +0). */
             static string formatNumber( float32 value )
             {
                 utf8 arrText[constant::kMaxBuffer32]{};
-                (void)snprintf( arrText, sizeof( arrText ), "%.6g", static_cast<float64>( value ) );
+                (void)snprintf( arrText, sizeof( arrText ), "%.6g", static_cast<float64>( value ) + 0.0 );
                 return string( arrText );
             }
 

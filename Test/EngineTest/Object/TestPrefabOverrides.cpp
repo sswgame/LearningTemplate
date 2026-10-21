@@ -54,7 +54,7 @@ namespace sw
             {
                 if ( asset.saveToXMLFile( path ) == false || asset.saveToBinaryFile( AssetCookPath::toCookedPath( path ) ) == false )
                     return false;
-                engine::getSubsystem<AssetManager>().getAssetCache<sw::PrefabCache>().reload( path );
+                engine::getSubsystem<AssetManager>().getAssetCache<sw::PrefabCache>().reload( ::test::makeTempResourceID( path ) );
                 return true;
             }
 
@@ -125,9 +125,10 @@ SW_TEST_CASE( PrefabOverridesTest, OverridesHoldOnlyWhatDiffersAndRebuildTheInst
 SW_TEST_CASE( PrefabOverridesTest, PrefabEditReachesPlacedInstancesButNotTheirOverrides )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
-    const sw::string prefabPath = test::makeTempPath( "crate.prefab.xml" );
+    const sw::string prefabPathDisk = test::makeTempPath( "crate.prefab.xml" );
+    const sw::string prefabPath     = test::makeTempResourceID( prefabPathDisk );
     SW_ASSERT_TRUE( sw::PrefabOverridesTestInternal::writePrefab(
-        sw::PrefabOverridesTestInternal::makeCratePrefab( sw::float3( 1.0f, 2.0f, 3.0f ), sw::float3( 2.0f, 2.0f, 2.0f ) ), prefabPath ) );
+        sw::PrefabOverridesTestInternal::makeCratePrefab( sw::float3( 1.0f, 2.0f, 3.0f ), sw::float3( 2.0f, 2.0f, 2.0f ) ), prefabPathDisk ) );
 
     sw::SceneManager manager;
     SW_ASSERT_TRUE( manager.initialize() );
@@ -153,12 +154,13 @@ SW_TEST_CASE( PrefabOverridesTest, PrefabEditReachesPlacedInstancesButNotTheirOv
     SW_EXPECT_TRUE( pSavedA->_embeddedXML.empty() && pSavedB->_embeddedXML.empty() ); // 전체 상태를 싣지 않는다
     SW_EXPECT_TRUE_MSG( pSavedA->_prefabOverrideXML.find( "_localPosition" ) != sw::string::npos, pSavedA->_prefabOverrideXML.c_str() );
     SW_EXPECT_TRUE_MSG( pSavedB->_prefabOverrideXML.empty(), pSavedB->_prefabOverrideXML.c_str() );
-    const sw::string scenePath = test::makeTempPath( "prefab_edit.scene.xml" );
-    SW_ASSERT_TRUE( saved.saveXML( scenePath ) );
+    const sw::string scenePathDisk = test::makeTempPath( "prefab_edit.scene.xml" );
+    const sw::string scenePath     = test::makeTempResourceID( scenePathDisk );
+    SW_ASSERT_TRUE( saved.saveXML( scenePathDisk ) );
 
     // 프리팹을 고친다 — 위치와 스케일 둘 다.
     SW_ASSERT_TRUE( sw::PrefabOverridesTestInternal::writePrefab(
-        sw::PrefabOverridesTestInternal::makeCratePrefab( sw::float3( 9.0f, 9.0f, 9.0f ), sw::float3( 3.0f, 3.0f, 3.0f ) ), prefabPath ) );
+        sw::PrefabOverridesTestInternal::makeCratePrefab( sw::float3( 9.0f, 9.0f, 9.0f ), sw::float3( 3.0f, 3.0f, 3.0f ) ), prefabPathDisk ) );
 
     /** @brief 다시 지은 씬의 두 상자를 봅니다: A 는 덮어쓴 위치 + 새 스케일, B 는 새 위치 + 새 스케일. */
     struct Check
@@ -178,17 +180,18 @@ SW_TEST_CASE( PrefabOverridesTest, PrefabEditReachesPlacedInstancesButNotTheirOv
     };
 
     sw::SceneDocument reopened;
-    SW_ASSERT_TRUE( reopened.loadXML( ::test::makeTempResourceID( scenePath ) ) );
+    SW_ASSERT_TRUE( reopened.loadXML( scenePath ) );
     sw::Scene* pReopened = manager.createScene( "PrefabEditWorldReopened" );
     SW_ASSERT_TRUE( pReopened->instantiate( reopened ) );
     Check::run( pReopened, "xml" );
 
     // 쿠킹한 씬도 같은 뜻이다 — 프리팹 엔티티는 덮어쓴 것을 SCN1 에 싣고, 로드가 쿠킹한 프리팹 위에 얹는다.
     (void)sw::SceneCooker::cookEntityState( sw::SceneEngineServices::makeFromBoundEngine(), reopened ); // 프리팹 엔티티는 쿠킹하지 않는다(덮어쓴 것 그대로 실린다)
-    const sw::string binPath = test::makeTempPath( "prefab_edit.scene.bin" );
-    SW_ASSERT_TRUE( reopened.saveBinary( binPath ) );
+    const sw::string binPathDisk = test::makeTempPath( "prefab_edit.scene.bin" );
+    const sw::string binPath     = test::makeTempResourceID( binPathDisk );
+    SW_ASSERT_TRUE( reopened.saveBinary( binPathDisk ) );
     sw::SceneDocument cooked;
-    SW_ASSERT_TRUE( cooked.loadBinary( ::test::makeTempResourceID( binPath ) ) );
+    SW_ASSERT_TRUE( cooked.loadBinary( binPath ) );
     const sw::SceneDocument::SceneObjectNode* pCookedA = sw::PrefabOverridesTestInternal::findEntity( cooked, "CrateA" );
     SW_ASSERT_NOT_NULL( pCookedA );
     SW_EXPECT_TRUE( pCookedA->_embeddedStateBytes.empty() && pCookedA->_prefabOverrideXML.empty() == false );
@@ -207,9 +210,10 @@ SW_TEST_CASE( PrefabOverridesTest, PrefabEditReachesPlacedInstancesButNotTheirOv
 SW_TEST_CASE( PrefabOverridesTest, FullStatePrefabEntityIsReadAndResavedAsOverrides )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
-    const sw::string prefabPath = test::makeTempPath( "legacy_crate.prefab.xml" );
+    const sw::string prefabPathDisk = test::makeTempPath( "legacy_crate.prefab.xml" );
+    const sw::string prefabPath     = test::makeTempResourceID( prefabPathDisk );
     SW_ASSERT_TRUE( sw::PrefabOverridesTestInternal::writePrefab(
-        sw::PrefabOverridesTestInternal::makeCratePrefab( sw::float3( 1.0f, 2.0f, 3.0f ), sw::float3( 2.0f, 2.0f, 2.0f ) ), prefabPath ) );
+        sw::PrefabOverridesTestInternal::makeCratePrefab( sw::float3( 1.0f, 2.0f, 3.0f ), sw::float3( 2.0f, 2.0f, 2.0f ) ), prefabPathDisk ) );
 
     // 인스턴스는 위치를 덮어쓰고 메시를 지운 전체 상태다.
     const sw::string legacyScene = sw::string( "<Scene formatVersion=\"2\" name=\"Legacy\">\n"
@@ -227,13 +231,14 @@ SW_TEST_CASE( PrefabOverridesTest, FullStatePrefabEntityIsReadAndResavedAsOverri
                                    "\t\t</entity>\n"
                                    "\t</entities>\n"
                                    "</Scene>\n";
-    const sw::string legacyPath = test::makeTempPath( "legacy.scene.xml" );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( legacyPath, legacyScene ) );
+    const sw::string legacyPathDisk = test::makeTempPath( "legacy.scene.xml" );
+    const sw::string legacyPath     = test::makeTempResourceID( legacyPathDisk );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( legacyPathDisk, legacyScene ) );
 
     sw::SceneManager manager;
     SW_ASSERT_TRUE( manager.initialize() );
     sw::SceneDocument legacy;
-    SW_ASSERT_TRUE( legacy.loadXML( ::test::makeTempResourceID( legacyPath ) ) );
+    SW_ASSERT_TRUE( legacy.loadXML( legacyPath ) );
     sw::Scene* pOpened = manager.createScene( "LegacyWorld" );
     SW_ASSERT_TRUE( pOpened->instantiate( legacy ) );
     sw::GameObject* pOld = pOpened->getObjectManager()->findGameObjectByName( sw::hashed_string( "Old" ) );
@@ -248,14 +253,15 @@ SW_TEST_CASE( PrefabOverridesTest, FullStatePrefabEntityIsReadAndResavedAsOverri
     SW_ASSERT_NOT_NULL( pResaved );
     SW_EXPECT_TRUE( pResaved->_embeddedXML.empty() );
     SW_EXPECT_TRUE_MSG( pResaved->_prefabOverrideXML.find( "<Remove key=\"MeshComponent#0\"" ) != sw::string::npos, pResaved->_prefabOverrideXML.c_str() );
-    const sw::string resavedPath = test::makeTempPath( "legacy_resaved.scene.xml" );
-    SW_ASSERT_TRUE( resaved.saveXML( resavedPath ) );
+    const sw::string resavedPathDisk = test::makeTempPath( "legacy_resaved.scene.xml" );
+    const sw::string resavedPath     = test::makeTempResourceID( resavedPathDisk );
+    SW_ASSERT_TRUE( resaved.saveXML( resavedPathDisk ) );
     sw::string resavedText;
-    SW_ASSERT_TRUE( sw::FileUtil::readTextFile( resavedPath, resavedText ) );
+    SW_ASSERT_TRUE( sw::FileUtil::readTextFile( resavedPathDisk, resavedText ) );
     SW_EXPECT_TRUE_MSG( resavedText.find( "formatVersion=\"2\"" ) != sw::string::npos, resavedText.c_str() );
 
     sw::SceneDocument reread;
-    SW_ASSERT_TRUE( reread.loadXML( ::test::makeTempResourceID( resavedPath ) ) );
+    SW_ASSERT_TRUE( reread.loadXML( resavedPath ) );
     sw::Scene* pReopened = manager.createScene( "LegacyWorldReopened" );
     SW_ASSERT_TRUE( pReopened->instantiate( reread ) );
     sw::GameObject* pReopenedOld = pReopened->getObjectManager()->findGameObjectByName( sw::hashed_string( "Old" ) );
@@ -280,14 +286,15 @@ SW_TEST_CASE( PrefabOverridesTest, CookedSceneOfAnotherVersionIsRefused )
          << sw::string( "<GameObject _schemaVersion=\"0\" _name=\"Plain\" _bActive=\"false\"><_listComponent/></GameObject>" );
     arch << sw::vector<uint8>{};
     arch << static_cast<uint64>( 4 );
-    const sw::string path = test::makeTempPath( "v2.scene.bin" );
-    SW_ASSERT_TRUE( arch.saveFile( path ) );
+    const sw::string pathDisk = test::makeTempPath( "v2.scene.bin" );
+    const sw::string path     = test::makeTempResourceID( pathDisk );
+    SW_ASSERT_TRUE( arch.saveFile( pathDisk ) );
 
     test::ScopedLogCollector logs;
     {
         test::ScopedDefensiveTestLog expected( "a cooked scene of another binary version" );
         sw::SceneDocument            doc;
-        SW_EXPECT_FALSE( doc.loadBinary( ::test::makeTempResourceID( path ) ) );
+        SW_EXPECT_FALSE( doc.loadBinary( path ) );
         SW_EXPECT_TRUE( doc._listSceneObjectNode.empty() );
     }
     SW_EXPECT_TRUE_MSG( logs.countContaining( "Unsupported binary version 2" ) == 1, logs.joined().c_str() );
@@ -380,23 +387,25 @@ SW_TEST_CASE( PrefabOverridesTest, RenamedInheritedComponentIsRecordedAsRemoveAn
 SW_TEST_CASE( PrefabOverridesTest, NestedPartsAreRespawnedNotSavedAndUnlinkKeepsThemAsInstances )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
-    const sw::string wheelPath = test::makeTempPath( "scene_nest_wheel.prefab.xml" );
-    const sw::string cratePath = test::makeTempPath( "scene_nest_crate.prefab.xml" );
+    const sw::string wheelPathDisk = test::makeTempPath( "scene_nest_wheel.prefab.xml" );
+    const sw::string wheelPath     = test::makeTempResourceID( wheelPathDisk );
+    const sw::string cratePathDisk = test::makeTempPath( "scene_nest_crate.prefab.xml" );
+    const sw::string cratePath     = test::makeTempResourceID( cratePathDisk );
     {
         sw::GameObjectManager authoring;
         sw::GameObject*       pWheel = authoring.createGameObject( sw::hashed_string( "Wheel" ) );
         SW_ASSERT_NOT_NULL( pWheel->addComponent<sw::SceneComponent>() );
         sw::PrefabAsset wheel;
         wheel.setFromGameObject( pWheel );
-        SW_ASSERT_TRUE( sw::PrefabOverridesTestInternal::writePrefab( wheel, wheelPath ) );
+        SW_ASSERT_TRUE( sw::PrefabOverridesTestInternal::writePrefab( wheel, wheelPathDisk ) );
     }
     sw::PrefabAsset                    crate = sw::PrefabOverridesTestInternal::makeCratePrefab( sw::float3( 1.0f, 2.0f, 3.0f ), sw::float3( 2.0f, 2.0f, 2.0f ) );
     sw::vector<sw::PrefabInstanceNode> listNode( 1 );
     listNode[0]._name       = "Wheel";
-    listNode[0]._prefabPath = ::test::makeTempResourceID( wheelPath );
+    listNode[0]._prefabPath = wheelPath;
     listNode[0]._attachKey  = "Socket#0";
     SW_ASSERT_TRUE( crate.setNestedInstances( listNode ) );
-    SW_ASSERT_TRUE( sw::PrefabOverridesTestInternal::writePrefab( crate, cratePath ) );
+    SW_ASSERT_TRUE( sw::PrefabOverridesTestInternal::writePrefab( crate, cratePathDisk ) );
 
     sw::SceneManager manager;
     SW_ASSERT_TRUE( manager.initialize() );
@@ -486,26 +495,28 @@ SW_TEST_CASE( PrefabOverridesTest, PartOverridesRoundTripAndStayOutOfTheRootStat
 SW_TEST_CASE( PrefabOverridesTest, SceneEditOfANestedPartIsSavedOnTheOuterInstance )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
-    const sw::string wheelPath = test::makeTempPath( "scene_part_wheel.prefab.xml" );
-    const sw::string cratePath = test::makeTempPath( "scene_part_crate.prefab.xml" );
+    const sw::string wheelPathDisk = test::makeTempPath( "scene_part_wheel.prefab.xml" );
+    const sw::string wheelPath     = test::makeTempResourceID( wheelPathDisk );
+    const sw::string cratePathDisk = test::makeTempPath( "scene_part_crate.prefab.xml" );
+    const sw::string cratePath     = test::makeTempResourceID( cratePathDisk );
     {
         sw::GameObjectManager authoring;
         sw::GameObject*       pWheel = authoring.createGameObject( sw::hashed_string( "Wheel" ) );
         SW_ASSERT_NOT_NULL( pWheel->addComponent<sw::SceneComponent>() );
         sw::PrefabAsset wheel;
         wheel.setFromGameObject( pWheel );
-        SW_ASSERT_TRUE( sw::PrefabOverridesTestInternal::writePrefab( wheel, wheelPath ) );
+        SW_ASSERT_TRUE( sw::PrefabOverridesTestInternal::writePrefab( wheel, wheelPathDisk ) );
     }
     sw::PrefabAsset                    crate = sw::PrefabOverridesTestInternal::makeCratePrefab( sw::float3( 1.0f, 2.0f, 3.0f ), sw::float3( 2.0f, 2.0f, 2.0f ) );
     sw::vector<sw::PrefabInstanceNode> listNode( 2 );
     listNode[0]._name       = "WheelL";
-    listNode[0]._prefabPath = ::test::makeTempResourceID( wheelPath );
+    listNode[0]._prefabPath = wheelPath;
     listNode[0]._attachKey  = "Socket#0";
     listNode[1]._name       = "WheelR";
-    listNode[1]._prefabPath = ::test::makeTempResourceID( wheelPath );
+    listNode[1]._prefabPath = wheelPath;
     listNode[1]._attachKey  = "Socket#0";
     SW_ASSERT_TRUE( crate.setNestedInstances( listNode ) );
-    SW_ASSERT_TRUE( sw::PrefabOverridesTestInternal::writePrefab( crate, cratePath ) );
+    SW_ASSERT_TRUE( sw::PrefabOverridesTestInternal::writePrefab( crate, cratePathDisk ) );
 
     sw::SceneManager manager;
     SW_ASSERT_TRUE( manager.initialize() );

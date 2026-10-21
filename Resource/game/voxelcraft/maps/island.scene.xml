@@ -81,7 +81,11 @@
 					                            _viewModelName="None"
 					                            _viewModelOffset="0,0,0"
 					                            _viewModelYawOffset="0">
-						<_headBob _verticalAmplitude="0.025" _lateralAmplitude="0.012" _strideLength="1.6" _referenceSpeed="4" _blendTime="0.15" />
+						<_headBob _verticalAmplitude="0.025"
+						          _lateralAmplitude="0.012"
+						          _strideLength="1.6"
+						          _referenceSpeed="4"
+						          _blendTime="0.15" />
 					</FirstPersonCameraComponent>
 					<VoxelPlayerComponent _componentName="VoxelPlayerComponent"
 					                      _bActive="true"

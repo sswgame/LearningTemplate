@@ -441,8 +441,9 @@ SW_TEST_CASE( DialogueGraphTest, MakeNodeFillsTheBodyField )
  */
 SW_TEST_CASE( DialogueGraphTest, RunnerReopensItsGraphAfterStateLoad )
 {
-    const string filePath = test::makeTempPath( "test_state_dialogue_graph.json" );
-    SW_ASSERT_TRUE( makeChoiceGraph().saveToFile( filePath ) );
+    const string filePathDisk = test::makeTempPath( "test_state_dialogue_graph.json" );
+    const string filePath     = test::makeTempResourceID( filePathDisk );
+    SW_ASSERT_TRUE( makeChoiceGraph().saveToFile( filePathDisk ) );
 
     GameObjectManager manager;
     GameObject*       pSource = manager.createGameObject( hashed_string( "Npc" ) );

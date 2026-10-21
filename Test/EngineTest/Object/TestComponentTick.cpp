@@ -935,7 +935,7 @@ SW_TEST_CASE( ComponentDefaultsTest, BaseTypeDefaultsApplyBeforeDerived )
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( defaultsPath, xml ) );
 
     const sw::string previousPath{ sw::Component::getDefaultGameSettingsPath() };
-    sw::Component::setDefaultGameSettingsPath( defaultsPath );
+    sw::Component::setDefaultGameSettingsPath( ::test::makeTempResourceID( defaultsPath ) );
 
     {
         sw::GameObjectManager manager;
@@ -971,7 +971,7 @@ SW_TEST_CASE( ComponentDefaultsTest, ResolvedDefaultsStayPutWhileOtherTypesResol
     const sw::string defaultsPath = test::makeTempPath( "test_component_defaults_stable.xml" );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( defaultsPath, "<GameSettings><Defaults><MeshComponent _boundsRadius=\"7.5\" /></Defaults></GameSettings>\n" ) );
     const sw::string previousPath{ sw::Component::getDefaultGameSettingsPath() };
-    sw::Component::setDefaultGameSettingsPath( defaultsPath );
+    sw::Component::setDefaultGameSettingsPath( ::test::makeTempResourceID( defaultsPath ) );
 
     sw::ComponentDefaults& defaults  = sw::engine::getSubsystem<sw::ComponentDefaults>();
     const sw::TypeInfo*    pMeshType = sw::MeshComponent::StaticType();
@@ -1011,7 +1011,7 @@ SW_TEST_CASE( ComponentDefaultsTest, ModuleRegistrationKeepsLiveValues )
     const sw::string defaultsPath = test::makeTempPath( "test_component_defaults_restamp.xml" );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( defaultsPath, "<GameSettings><Defaults><MeshComponent _boundsRadius=\"7.5\" /></Defaults></GameSettings>\n" ) );
     const sw::string previousPath{ sw::Component::getDefaultGameSettingsPath() };
-    sw::Component::setDefaultGameSettingsPath( defaultsPath );
+    sw::Component::setDefaultGameSettingsPath( ::test::makeTempResourceID( defaultsPath ) );
 
     // 모듈 등록은 엔진 씬 매니저의 씬들을 돈다 — 그 씬에 둔다.
     sw::Scene* pScene = sw::engine::getSubsystem<sw::SceneManager>().getActiveScene();

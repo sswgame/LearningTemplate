@@ -99,7 +99,7 @@ namespace
             sw::TerrainComponent* pTerrain = object.addComponent<sw::TerrainComponent>();
             if ( pTerrain == nullptr )
                 return nullptr;
-            pTerrain->setHeightfieldPath( path );
+            pTerrain->setHeightfieldPath( ::test::makeTempResourceID( path ) );
             pTerrain->setSize( sw::float2{ 256.0f, 256.0f } );
             pTerrain->setHeightRange( 0.0f, 40.0f );
             pTerrain->setChunkCells( chunkCells );

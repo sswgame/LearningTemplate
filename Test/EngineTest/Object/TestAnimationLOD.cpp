@@ -18,6 +18,7 @@
 #include "Engine/Resource/ResourcePaths.h"
 
 #include "EngineTest/AnimationTestUtil.h"
+#include "EngineTest/AssetArrivalTestUtil.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -280,9 +281,10 @@ SW_TEST_CASE( AnimationLODTest, AnimatorSkipsRemovedBoneTracks )
     shared_ptr<SkeletonBoneLOD> boneLOD = make_shared<SkeletonBoneLOD>();
     SW_ASSERT_TRUE( boneLOD->parseJSON( R"({ "levels": [ { "max_screen_size": 0.2, "remove": [ "bone3" ] } ] })", "test" ) );
     pUnit->setBoneLOD( boneLOD );
-    pAnimator->setClipFolder( folder );
+    pAnimator->setClipFolder( ::test::makeTempResourceID( folder ) );
     pAnimator->setInitialState( "Wave" );
     pAnimator->dispatchBeginPlay();
+    SW_ASSERT_TRUE( ::test::finishAssetArrivals( manager ) );
 
     AnimationLODState state{};
     state._boneLODLevel = 1;

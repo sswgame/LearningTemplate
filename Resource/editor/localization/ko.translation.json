@@ -873,6 +873,14 @@
             "text": "이벤트 재생",
             "sourceHash": "29c60846920313bf"
         },
+        "EditorAudioEvents.PublishCost": {
+            "text": "게시 비용 (평균 / 최대)",
+            "sourceHash": "8812f21001b895b4"
+        },
+        "EditorAudioEvents.PublishCostTip": {
+            "text": "오디오 스레드가 이 창을 위해 블록마다 인스턴스와 보이스를 복사하는 시간",
+            "sourceHash": "329a25cfb6492e50"
+        },
         "EditorAudioEvents.RealVoices": {
             "text": "실제 보이스",
             "sourceHash": "97a9fea95c6a8b58"
@@ -916,6 +924,62 @@
         "EditorAudioEvents.VirtualVoices": {
             "text": "가상 보이스",
             "sourceHash": "6dfba19a93c88787"
+        },
+        "EditorAudioGraph.BrokenLinks": {
+            "text": "그래프에 없는 노드를 가리키는 연결이나 순환이 있어 처리하지 않습니다",
+            "sourceHash": "fe6e6577fc8d9c40"
+        },
+        "EditorAudioGraph.CanvasFailed": {
+            "text": "노드 캔버스를 그리지 못했습니다",
+            "sourceHash": "06f628928d5048b9"
+        },
+        "EditorAudioGraph.NoGraph": {
+            "text": "편집할 오디오 그래프(.audiograph.json)를 여세요",
+            "sourceHash": "25add86e1f44eef3"
+        },
+        "EditorAudioGraph.Open": {
+            "text": "열기",
+            "sourceHash": "1f7698c061c208c9"
+        },
+        "EditorAudioGraph.PathHint": {
+            "text": "오디오 그래프 리소스 id",
+            "sourceHash": "4dd40b179c2fed20"
+        },
+        "EditorAudioGraph.Preview": {
+            "text": "미리 듣기",
+            "sourceHash": "417b90913e05bc17"
+        },
+        "EditorAudioGraph.PreviewTip": {
+            "text": "에디터 오디오 장치로 그래프를 재생합니다",
+            "sourceHash": "989ace2022762c59"
+        },
+        "EditorAudioGraph.ProcessingOrder": {
+            "text": "처리 순서",
+            "sourceHash": "866ab6ccab85b00a"
+        },
+        "EditorAudioGraph.Save": {
+            "text": "저장",
+            "sourceHash": "33f85f24c0f5f008"
+        },
+        "EditorAudioGraph.SaveTip": {
+            "text": "그래프를 파일에 씁니다",
+            "sourceHash": "d4d50b04f08e2f14"
+        },
+        "EditorAudioGraph.SelectNodeHint": {
+            "text": "설정을 편집할 노드를 고르세요",
+            "sourceHash": "1530fe720d29c5e4"
+        },
+        "EditorAudioGraph.SetOutput": {
+            "text": "출력으로 지정",
+            "sourceHash": "44e1db1124a858ee"
+        },
+        "EditorAudioGraph.StopPreview": {
+            "text": "미리 듣기 멈춤",
+            "sourceHash": "f83bedb815ca8289"
+        },
+        "EditorAudioGraph.Unsaved": {
+            "text": "* 저장하지 않은 변경",
+            "sourceHash": "6e6e4d288ea76fc4"
         },
         "EditorBugIt.Capture": {
             "text": "스크린샷 · 로그 · 씬 사본 · 카메라 자리 · 재현 명령을 위 메모와 함께 Saved/BugIt/<시각>/ 에 모읍니다",
@@ -1873,6 +1937,10 @@
             "text": "모든 프로세스를 멈추고 기록한 트레이스를 합칩니다",
             "sourceHash": "8e237706f24580c3"
         },
+        "EditorMultiplayer.SyncClient": {
+            "text": "이 클라이언트의 상태 해시 기록을 읽습니다(서버 틱 번호로 기록한 최근 틱)",
+            "sourceHash": "aaeb3b9d38bc496e"
+        },
         "EditorMultiplayer.SyncCompare": {
             "text": "두 기록이 모두 가진 틱 가운데 상태 해시가 다른 가장 이른 틱을 찾습니다(씬 트랜스폼: 이름, 활성, 월드 위치)",
             "sourceHash": "3589d10ef8ec3541"
@@ -2582,7 +2650,8 @@
             "sourceHash": "2581cf7b719bdade"
         },
         "EditorTileMap.AddDataLayerTip": {
-            "text": "이 맵에 이름 붙은 정수 데이터 레이어(지형 비용, 발소리)를 더합니다. 이름은 겹치면 안 됩니다."
+            "text": "이 맵에 이름 붙은 정수 데이터 레이어(지형 비용, 발소리)를 더합니다. 이름은 겹치면 안 됩니다.",
+            "sourceHash": "3c5c6a261a07f886"
         },
         "EditorTileMap.ApplyEdgeTip": {
             "text": "이 가장자리의 모든 칸을 대상 맵으로 가는, 걸을 수 있는 워프로 바꿉니다.",
@@ -2601,16 +2670,20 @@
             "sourceHash": "6d08017bc405180c"
         },
         "EditorTileMap.DataLayerDefaultTip": {
-            "text": "새 레이어의 모든 칸 값이자 지우기가 칠하는 값입니다."
+            "text": "새 레이어의 모든 칸 값이자 지우기가 칠하는 값입니다.",
+            "sourceHash": "dbbb4286560e7857"
         },
         "EditorTileMap.DataLayerNameTip": {
-            "text": "새 데이터 레이어의 이름입니다. 게임은 이 이름으로 레이어를 읽습니다."
+            "text": "새 데이터 레이어의 이름입니다. 게임은 이 이름으로 레이어를 읽습니다.",
+            "sourceHash": "e3678e931b639a05"
         },
         "EditorTileMap.DataLayerRejectedStatus": {
-            "text": "데이터 레이어를 더하지 못했습니다: 이름이 비었거나 이미 있습니다"
+            "text": "데이터 레이어를 더하지 못했습니다: 이름이 비었거나 이미 있습니다",
+            "sourceHash": "665daaf69526a65e"
         },
         "EditorTileMap.DataValueTip": {
-            "text": "고른 데이터 레이어에 칠할 정수입니다."
+            "text": "고른 데이터 레이어에 칠할 정수입니다.",
+            "sourceHash": "d1a3dd2408fea1c8"
         },
         "EditorTileMap.EdgeTargetTip": {
             "text": "이 가장자리(북, 동, 남, 서)를 벗어나면 이어지는 맵입니다.",

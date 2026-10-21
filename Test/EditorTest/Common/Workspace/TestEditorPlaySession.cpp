@@ -52,7 +52,7 @@ namespace
         boss._name = "Boss";
         doc._listSceneObjectNode.push_back( std::move( boss ) );
         const bool bWritten = sw::FileUtil::writeTextFile( path, text ) && doc.saveBinary( sw::AssetCookPath::toCookedPath( path ) );
-        return bWritten ? path : sw::string{};
+        return bWritten ? test::makeTempResourceID( path ) : sw::string{};
     }
 
     /** @brief 에디터 프레임을 흉내 냅니다 — 태스크를 비우고, 끝난 로드를 들이고(tickTransitions), 플레이 세션을 갱신합니다. */

@@ -274,7 +274,8 @@ SW_TEST_CASE( RagdollTest, HitReactionAndPartialRagdollAffectOnlyTheSubtree )
 SW_TEST_CASE( RagdollTest, PhysicsAssetHotReloadRebuildsBodies )
 {
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
-    const string path = test::makeTempPath( "dummy.physics.xml" );
+    const string pathDisk = test::makeTempPath( "dummy.physics.xml" );
+    const string path     = test::makeTempResourceID( pathDisk );
     const utf8*  pTwoBodies =
         R"(<PhysicsAsset><_listBody>
             <PhysicsAssetBodyDef _bone="hips"><_listShape><PhysicsShapeDesc3D _type="Sphere" _radius="0.2" /></_listShape></PhysicsAssetBodyDef>
@@ -286,7 +287,7 @@ SW_TEST_CASE( RagdollTest, PhysicsAssetHotReloadRebuildsBodies )
             <PhysicsAssetBodyDef _bone="chest"><_listShape><PhysicsShapeDesc3D _type="Sphere" _radius="0.25" /></_listShape></PhysicsAssetBodyDef>
             <PhysicsAssetBodyDef _bone="head"><_listShape><PhysicsShapeDesc3D _type="Sphere" _radius="0.3" /></_listShape></PhysicsAssetBodyDef>
         </_listBody></PhysicsAsset>)";
-    SW_ASSERT_TRUE( FileUtil::writeTextFile( path, pTwoBodies ) );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( pathDisk, pTwoBodies ) );
 
     GameObjectManager manager;
     RagdollComponent* pRagdoll = TestRagdollInternal::spawnSkeleton( manager, "Reloaded", float3{}, false, path.c_str() );
@@ -295,7 +296,7 @@ SW_TEST_CASE( RagdollTest, PhysicsAssetHotReloadRebuildsBodies )
     test::updateFrames( manager, 2 );
     SW_EXPECT_EQUAL( size_t( 2 ), pRagdoll->getRagdoll()._listBody.size() );
 
-    SW_ASSERT_TRUE( FileUtil::writeTextFile( path, pThreeBodies ) );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( pathDisk, pThreeBodies ) );
     SharedAssetCache<PhysicsAsset> cache;
     SW_ASSERT_TRUE( cache.isCached( path ) );
     cache.reload( path, nullptr );

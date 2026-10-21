@@ -5,7 +5,6 @@
 #include "Core/Compression/CompressionStream.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Process/Process.h"
 
 #include "Engine/Animation/Graph/AnimationGraphAsset.h"
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"
@@ -33,6 +32,8 @@
 
 #include "EngineTest/ResourcePakTestUtil.h"
 
+#include "TestFramework/TestTempPath.h"
+
 using namespace sw;
 
 namespace test
@@ -41,12 +42,8 @@ namespace test
     {
         struct LoaderFuzzTargetsInternal
         {
-            /** @brief 같은 프로세스 · 같은 이름의 임시 파일 경로입니다(파일 경로만 받는 로더용 — 팩 · 씬). */
-            static string makeScratchPath( string_view tag )
-            {
-                const string tempDir = FileUtil::getTempDirectory();
-                return FileUtil::joinPath( tempDir, string( "sw_fuzz_" ) + to_string( Process::getCurrentProcessID() ) + "_" + string( tag ) );
-            }
+            /** @brief 이 케이스의 임시 폴더 아래 디스크 경로입니다(파일 경로만 받는 로더용 — 팩 · 씬). 리소스 입구로 읽을 때는 `makeTempResourceID` 로 id 를 얻는다(OS 경로는 거절된다). */
+            static string makeScratchPath( string_view tag ) { return ::test::makeTempPath( string( "fuzz_" ) + string( tag ) ); }
 
             static string_view asText( const uint8* pData, size_t size ) { return string_view( reinterpret_cast<const utf8*>( pData ), size ); }
 
@@ -151,7 +148,7 @@ namespace test
                 if ( FileUtil::writeFile( path, pData, size ) == false )
                     return;
                 SceneDocument document;
-                (void)document.loadXML( path ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
+                (void)document.loadXML( ::test::makeTempResourceID( path ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runSceneBinary( const uint8* pData, size_t size )
             {
@@ -159,7 +156,7 @@ namespace test
                 if ( FileUtil::writeFile( path, pData, size ) == false )
                     return;
                 SceneDocument document;
-                (void)document.loadBinary( path ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
+                (void)document.loadBinary( ::test::makeTempResourceID( path ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runGameObjectXML( const uint8* pData, size_t size )
             {
@@ -300,7 +297,7 @@ namespace test
                     const string  binPath = makeScratchPath( "seed.scene.bin" );
                     SceneDocument document;
                     vector<uint8> bytes;
-                    const bool    bSeedBuilt = FileUtil::writeFile( xmlPath, xml.data(), xml.size() ) && document.loadXML( xmlPath ) && document.saveBinary( binPath ) &&
+                    const bool    bSeedBuilt = FileUtil::writeFile( xmlPath, xml.data(), xml.size() ) && document.loadXML( ::test::makeTempResourceID( xmlPath ) ) && document.saveBinary( binPath ) &&
                                             FileUtil::readFile( binPath, bytes );
                     if ( bSeedBuilt )
                         outListSeed.push_back( std::move( bytes ) );
