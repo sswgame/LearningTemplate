@@ -260,3 +260,27 @@ SW_TEST_CASE( TextFormatterTest, ValidationRejectsBrokenPatterns )
     SW_EXPECT_STREQ( "c", listName[2].c_str() );
     SW_EXPECT_STREQ( "n", listName[3].c_str() );
 }
+
+/**
+ * @brief [CultureTableTest] 아랍어 밖의 RTL 문화권 — 히브리어(라틴 숫자, one · two · other)와 페르시아어(확장 아랍-인도 숫자 ۰-۹, i = 0 또는 n = 1 이 one)
+ */
+SW_TEST_CASE( CultureTableTest, HebrewAndPersianAreRightToLeft )
+{
+    const sw::CultureInfo* pHebrew  = TextFormatterTestInternal::getCultures().findCulture( "he" );
+    const sw::CultureInfo* pPersian = TextFormatterTestInternal::getCultures().findCulture( "fa" );
+    SW_ASSERT_NOT_NULL( pHebrew );
+    SW_ASSERT_NOT_NULL( pPersian );
+    SW_EXPECT_TRUE( pHebrew->_bRightToLeft );
+    SW_EXPECT_TRUE( pPersian->_bRightToLeft );
+
+    const sw::string_view kPattern = "{n, plural, one {one} two {two} other {other}}";
+    SW_EXPECT_STREQ( "one", TextFormatterTestInternal::plural( "he", kPattern, 1 ).c_str() );
+    SW_EXPECT_STREQ( "two", TextFormatterTestInternal::plural( "he", kPattern, 2 ).c_str() );
+    SW_EXPECT_STREQ( "other", TextFormatterTestInternal::plural( "he", kPattern, 5 ).c_str() );
+    SW_EXPECT_STREQ( "one", TextFormatterTestInternal::plural( "fa", kPattern, 1 ).c_str() );
+    SW_EXPECT_STREQ( "one", TextFormatterTestInternal::plural( "fa", kPattern, 0 ).c_str() );
+    SW_EXPECT_STREQ( "other", TextFormatterTestInternal::plural( "fa", kPattern, 2 ).c_str() );
+
+    // 페르시아어 숫자는 U+06F0 부터다: 12 → ۱۲.
+    SW_EXPECT_STREQ( "\xDB\xB1\xDB\xB2", TextFormatterTestInternal::format( "fa", "{n}", sw::TextArgumentList().addInteger( "n", 12 ) ).c_str() );
+}

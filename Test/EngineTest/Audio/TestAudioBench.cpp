@@ -91,3 +91,47 @@ SW_TEST_CASE( AudioBenchTest, RenderCostPerVoice )
                      static_cast<float32>( elapsedMicro ) * 1000.0f / static_cast<float32>( static_cast<uint64>( voiceCount ) * kFrameCount ) );
     }
 }
+
+/**
+ * @brief [AudioBenchTest] 블록마다의 게시(`publishState`) 비용 — 이벤트 창 사본이 인스턴스마다 보이스를 모두 훑는다(인스턴스 × 보이스, E6)
+ * @details 인스턴스 N 개(보이스 하나씩, 모두 가상이 아니게)로 1 초를 렌더하고, 엔진이 블록마다 잰 게시 시간(`AudioEngineStats::_publishNanoseconds` · 최댓값)을
+ *          로그로 남긴다. N 이 두 배일 때 게시 시간이 네 배 가까이 늘면 훑기가 비용의 대부분이다 — 그때 보이스를 한 번만 훑어 인스턴스에 모으도록 바꾼다.
+ *          테스트는 그만큼의 인스턴스가 게시됐는지만 본다(시간은 기계마다 다르다).
+ */
+SW_TEST_CASE( AudioBenchTest, PublishCostPerInstance )
+{
+    const uint32 arrInstanceCount[3] = { 32, 64, 128 };
+    for ( const uint32 instanceCount : arrInstanceCount )
+    {
+        sw::AudioEngine engine;
+        SW_ASSERT_TRUE( AudioBenchTestInternal::initializeEngine( engine, instanceCount ) );
+        sw::AudioListenerState listener;
+        listener._bActive = true;
+        engine.setListener( 0, listener );
+        for ( uint32 instanceIndex = 0; instanceIndex < instanceCount; ++instanceIndex )
+        {
+            const sw::AudioEmitterID emitterID = instanceIndex + 1;
+            engine.setEmitter( emitterID, sw::float3( 2.0f, 0.0f, 0.0f ), sw::float3( 0.0f, 0.0f, 0.0f ) );
+            (void)engine.postEvent( sw::hashed_string( "Engine" ), emitterID );
+        }
+        (void)test::AudioTestUtil::render( engine, 4096 ); // 클립 시작 · 첫 블록 램프
+
+        constexpr uint32    kFrameCount = sw::audio::kSampleRate;
+        constexpr uint32    kBlockCount = kFrameCount / sw::audio::kBlockFrameCount;
+        sw::vector<float32> listBlock( static_cast<size_t>( sw::audio::kBlockFrameCount ) * sw::audio::kStereoChannelCount );
+        uint64              publishSum = 0;
+        for ( uint32 blockIndex = 0; blockIndex < kBlockCount; ++blockIndex )
+        {
+            engine.render( listBlock.data(), sw::audio::kBlockFrameCount );
+            publishSum += engine.getStats()._publishNanoseconds;
+        }
+
+        const sw::AudioEngineStats stats = engine.getStats();
+        SW_EXPECT_EQUAL( instanceCount, stats._instanceCount );
+        sw::vector<sw::AudioInstanceStatus> listStatus;
+        engine.getInstanceStatuses( listStatus );
+        SW_EXPECT_EQUAL( static_cast<size_t>( instanceCount ), listStatus.size() );
+        SW_LOG_INFO( "[AudioBench] publish with %# instances x %# voices: mean %# ns, peak %# ns per block", instanceCount, stats._voiceCount, publishSum / kBlockCount,
+                     stats._peakPublishNanoseconds );
+    }
+}

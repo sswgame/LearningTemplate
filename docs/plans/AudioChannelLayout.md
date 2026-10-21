@@ -19,7 +19,7 @@
 | 이펙트 | 종류 표에 지원 레이아웃을 선언하고, 맞지 않으면 초기화 오류. | 폴백 금지. |
 | 패너 | 레이아웃(채널 집합)과 패너(방향 → 게인)를 나눈다. 2D 소리는 앞 두 채널, 3D 는 쌍별 패닝, LFE 는 직접 패닝하지 않는다. | HRTF 가 같은 입력으로 같은 자리에 올라온다. |
 | 다채널 클립 | ITU-R BS.775 명시 다운믹스로 스테레오로 줄인다(통째로 푼 클립 · 스트리밍 모두). | 앞 두 채널만 남기던 결함(센터 대사 소실)을 없앤다. |
-| 버스별 레이아웃 | 하지 않는다. | 지금 호출부가 없다. |
+| 버스별 레이아웃 | 이때는 하지 않았다. 계획 [AudioEngineExtensions](AudioEngineExtensions.md) 가 버스 데이터 `_channels`(`Output` · `Stereo`)로 이었다. | 그때는 호출부가 없었다. |
 
 형식과 계약의 정본은 코드 헤더 주석입니다: `AudioChannelLayout.h`(레이아웃 · 스피커 모드 · 채널 마스크), `AudioBlock.h`(평면 블록), `AudioPanner.h`(방향 · 쌍별 패닝 · 퍼짐), `AudioVoice.h`(소스 채널 로우패스 · 패닝), `DSP/AudioEffect.h`(지원 레이아웃 · 링크 · LFE), `IAudioService.h`(장치 협상 · `gv_audioDumpPath`), `AudioDownmix.h`(다운믹스 행렬).
 계획에 있던 `createNull(layout)` 은 두지 않았습니다. 장치 없는 서비스도 `setSpeakerMode` 하나로 레이아웃을 고릅니다(길을 하나로).

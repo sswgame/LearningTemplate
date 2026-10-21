@@ -192,8 +192,8 @@ SW_TEST_CASE( AudioStreamTest, StreamedVoiceMatchesMemoryVoiceAcrossTheLoopSeam 
 
     sw::AudioVoice memoryVoice;
     sw::AudioVoice streamVoice;
-    memoryVoice.start( pMemory, true, 0, false );
-    streamVoice.start( pStream, true, 0, false );
+    memoryVoice.start( pMemory, true, 0, false, 0 );
+    streamVoice.start( pStream, true, 0, false, 0 );
     const float64 rate = static_cast<float64>( kRate ) / static_cast<float64>( sw::audio::kSampleRate );
     for ( sw::AudioVoice* pVoice : { &memoryVoice, &streamVoice } )
     {

@@ -3,6 +3,7 @@
 #include "Engine/Audio/AudioVoice.h"
 
 #include "Engine/Audio/AudioTypes.h"
+#include "Engine/Audio/Graph/AudioGraph.h"
 
 namespace sw
 {
@@ -79,6 +80,7 @@ namespace sw
         , _lowPass{}
         , _binaural{}
         , _stream{}
+        , _pGraph{ nullptr }
         , _firstFrameLeft{ 0.0f }
         , _firstFrameRight{ 0.0f }
         , _bHaveFirstFrame{ false }
@@ -104,7 +106,7 @@ namespace sw
     {
     }
 
-    void AudioVoice::start( shared_ptr<const AudioClipData> pClip, bool bLoop, uint32 startDelayFrames, bool bRampIn )
+    void AudioVoice::start( shared_ptr<const AudioClipData> pClip, bool bLoop, uint32 startDelayFrames, bool bRampIn, uint64 graphSeed )
     {
         reset();
         _bRampIn          = bRampIn ? SW_TRUE : SW_FALSE;
@@ -112,10 +114,30 @@ namespace sw
         _bLoop            = bLoop ? SW_TRUE : SW_FALSE;
         _startDelayFrames = startDelayFrames;
         _bFinished        = ( _pClip == nullptr || _pClip->_frameCount == 0 ) ? SW_TRUE : SW_FALSE;
+        if ( _bFinished == SW_TRUE )
+            return;
+        // 소리 그래프는 보이스마다 실행 상태를 만들어 블록 길이 덩어리의 창으로 읽는다(게임 파라미터 늦음이 한 블록 안이다).
+        if ( _pClip->isGraph() )
+        {
+            unique_ptr<AudioGraphInstance> pInstance = make_unique<AudioGraphInstance>( _pClip->_pGraph, graphSeed );
+            _pGraph                                  = pInstance.get();
+            if ( _stream.openDecoder( std::move( pInstance ), 1, audio::kBlockFrameCount ) == false )
+            {
+                _pGraph    = nullptr;
+                _bFinished = SW_TRUE;
+            }
+            return;
+        }
         // 스트리밍 클립은 보이스마다 디코더를 연다(압축 바이트는 클립이 한 벌만 든다). 열지 못하면 소리 없이 끝난다.
-        const bool bStreamOpenFailed = _bFinished == SW_FALSE && _pClip->isStreamed() && _stream.open( *_pClip->_pStream ) == false;
+        const bool bStreamOpenFailed = _pClip->isStreamed() && _stream.open( *_pClip->_pStream ) == false;
         if ( bStreamOpenFailed )
             _bFinished = SW_TRUE;
+    }
+
+    void AudioVoice::setGraphParameter( uint32 inputIndex, float32 value )
+    {
+        SW_ASSERT( _pGraph != nullptr );
+        _pGraph->setParameterValue( inputIndex, value );
     }
 
     void AudioVoice::reset()
@@ -233,7 +255,8 @@ namespace sw
         source._frameCount   = bus._frameCount;
         uint32 activeBegin{ 0 };
         uint32 activeEnd{ 0 };
-        if ( _pClip->isStreamed() )
+        // 스트리밍 클립과 소리 그래프는 같은 창으로 읽는다.
+        if ( _pClip->isStreamed() || _pClip->isGraph() )
         {
             AudioVoiceStreamSampler sampler{ _stream, _firstFrameLeft, _firstFrameRight, _bHaveFirstFrame };
             renderSource( sampler, source, arrFade, activeBegin, activeEnd );

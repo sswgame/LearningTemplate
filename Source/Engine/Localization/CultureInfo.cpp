@@ -92,6 +92,27 @@ namespace sw
                 return PluralCategory::Other;
             }
 
+            /** @brief 히브리어입니다(CLDR). one: 정수 1 이거나 정수 0 의 소수, two: 정수 2, 나머지 other. */
+            static PluralCategory selectHebrew( const PluralOperands& operands )
+            {
+                const bool bWhole = operands._visibleFractionCount == 0;
+                if ( bWhole && operands._integerDigits == 1 )
+                    return PluralCategory::One;
+                if ( bWhole == false && operands._integerDigits == 0 )
+                    return PluralCategory::One;
+                if ( bWhole && operands._integerDigits == 2 )
+                    return PluralCategory::Two;
+                return PluralCategory::Other;
+            }
+
+            /** @brief 페르시아어입니다(CLDR "i = 0 or n = 1"). 정수 부분이 0 이거나 정확히 1 이면 one, 나머지 other. */
+            static PluralCategory selectPersian( const PluralOperands& operands )
+            {
+                const bool bExactOne = operands._integerDigits == 1 && operands._fractionDigits == 0;
+                const bool bOne      = operands._integerDigits == 0 || bExactOne;
+                return bOne ? PluralCategory::One : PluralCategory::Other;
+            }
+
             /** @brief 영어 서수입니다. one: 1 · 21 · 101 (11 제외), two: 2 · 22 (12 제외), few: 3 · 23 (13 제외). */
             static PluralCategory selectOrdinalEnglish( const PluralOperands& operands )
             {
@@ -135,6 +156,8 @@ namespace sw
                 { "polish",  &selectPolish},
                 {  "czech",   &selectCzech},
                 { "arabic",  &selectArabic},
+                { "hebrew",  &selectHebrew},
+                {"persian", &selectPersian},
             };
 
             static constexpr const utf8* kArrCategoryName[] = { "zero", "one", "two", "few", "many", "other" };
@@ -166,6 +189,21 @@ namespace sw
                                                                 "digits", "decimalSeparator", "groupSeparator", "percentPattern", "currencyCode",
                                                                 "currencyPattern", "datePatterns", "timePatterns", "monthNames", "monthAbbreviations",
                                                                 "dayPeriods", "fonts", "pseudo" };
+
+            /** @brief 숫자 체계의 숫자 0 의 코드 포인트입니다. 숫자 1 ~ 9 는 그 뒤에 이어진다. */
+            static uint32 getDigitZeroCodePoint( NumeralSystem numeralSystem )
+            {
+                switch ( numeralSystem )
+                {
+                    case NumeralSystem::Latin:
+                        return '0';
+                    case NumeralSystem::ArabicIndic:
+                        return 0x0660u;
+                    case NumeralSystem::ExtendedArabicIndic:
+                        return 0x06F0u;
+                }
+                return '0';
+            }
 
             static bool isKnownField( string_view name )
             {
@@ -301,9 +339,11 @@ namespace sw
                         inoutInfo._numeralSystem = NumeralSystem::Latin;
                     else if ( digitsName == "arab" )
                         inoutInfo._numeralSystem = NumeralSystem::ArabicIndic;
+                    else if ( digitsName == "arabext" )
+                        inoutInfo._numeralSystem = NumeralSystem::ExtendedArabicIndic;
                     else
                     {
-                        outError = "unknown digits '" + digitsName + "' (latn, arab)";
+                        outError = "unknown digits '" + digitsName + "' (latn, arab, arabext)";
                         return false;
                     }
                 }
@@ -485,8 +525,8 @@ namespace sw
         for ( const utf8 character : asciiDigits )
         {
             const bool bDigit = '0' <= character && character <= '9';
-            if ( bDigit && _numeralSystem == NumeralSystem::ArabicIndic )
-                StringUtil::appendUtf8( inoutText, 0x0660u + static_cast<uint32>( character - '0' ) );
+            if ( bDigit && _numeralSystem != NumeralSystem::Latin )
+                StringUtil::appendUtf8( inoutText, CultureInfoInternal::getDigitZeroCodePoint( _numeralSystem ) + static_cast<uint32>( character - '0' ) );
             else
                 inoutText.push_back( character );
         }

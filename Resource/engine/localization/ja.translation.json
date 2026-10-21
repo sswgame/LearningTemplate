@@ -1,0 +1,753 @@
+{
+    "culture": "ja",
+    "entries": {
+        "Already used by": {
+            "text": "使用中:",
+            "sourceHash": "cbdae832bc5ce48d"
+        },
+        "Apply": {
+            "text": "適用",
+            "sourceHash": "b8f855b49234b81b"
+        },
+        "Cancel": {
+            "text": "キャンセル",
+            "sourceHash": "2ceb11be2290bb1b"
+        },
+        "Close": {
+            "text": "閉じる",
+            "sourceHash": "5e8250fb85d64c23"
+        },
+        "Corner": {
+            "text": "位置",
+            "sourceHash": "d66afae9aedadcf0"
+        },
+        "Debug HUD": {
+            "text": "デバッグ HUD",
+            "sourceHash": "e7b16707c98cf071"
+        },
+        "Defaults": {
+            "text": "初期設定",
+            "sourceHash": "48022f6d5501d677"
+        },
+        "Discard": {
+            "text": "破棄",
+            "sourceHash": "c00a88b90cd60661"
+        },
+        "EdAbilityDebug.ColumnActive": {
+            "text": "有効",
+            "sourceHash": "a45a194b58837e4f"
+        },
+        "EdAbilityDebug.ColumnBase": {
+            "text": "基本値",
+            "sourceHash": "c1a4e2a7a8e20d58"
+        },
+        "EdAbilityDebug.ColumnCooldown": {
+            "text": "クールダウン",
+            "sourceHash": "8b59db90be866528"
+        },
+        "EdAbilityDebug.ColumnCount": {
+            "text": "数",
+            "sourceHash": "71a5c9f4b68ef4d4"
+        },
+        "EdAbilityDebug.ColumnCurrent": {
+            "text": "現在値",
+            "sourceHash": "ab8b4cbbb1fa71fa"
+        },
+        "EdAbilityDebug.ColumnName": {
+            "text": "名前",
+            "sourceHash": "ef49aec68fd1dc66"
+        },
+        "EdAbilityDebug.ColumnRemaining": {
+            "text": "残り",
+            "sourceHash": "dd9423c2ce1195a3"
+        },
+        "EdAbilityDebug.ColumnStacks": {
+            "text": "スタック",
+            "sourceHash": "1d286181862db5e4"
+        },
+        "EdAbilityDebug.ColumnTag": {
+            "text": "タグ",
+            "sourceHash": "6ce0cb19e201b153"
+        },
+        "EdAbilityDebug.HintNoTarget": {
+            "text": "AbilitySystemComponent を持つオブジェクトを選択するか、上で選んでください。",
+            "sourceHash": "937bde747e495279"
+        },
+        "EdAbilityDebug.HintPlayOnly": {
+            "text": "実行中のアビリティ状態はプレイ中にのみ存在します。プレイを押して確認してください。",
+            "sourceHash": "7adebb387e539a62"
+        },
+        "EdAbilityDebug.Infinite": {
+            "text": "無限",
+            "sourceHash": "0c024c0024360a2d"
+        },
+        "EdAbilityDebug.NoComponentsInScene": {
+            "text": "アクティブなシーンに AbilitySystemComponent がありません",
+            "sourceHash": "f9aceb1e918e73da"
+        },
+        "EdAbilityDebug.PickTarget": {
+            "text": "アビリティシステムを選択...",
+            "sourceHash": "0f5befa1ba0a7140"
+        },
+        "EdAbilityDebug.SectionAbilities": {
+            "text": "付与されたアビリティ",
+            "sourceHash": "59c749c8cdb544fa"
+        },
+        "EdAbilityDebug.SectionAttributes": {
+            "text": "アトリビュート",
+            "sourceHash": "16b9446e3a70e1f4"
+        },
+        "EdAbilityDebug.SectionEffects": {
+            "text": "有効なエフェクト",
+            "sourceHash": "6991d93fa865e70d"
+        },
+        "EdAbilityDebug.SectionTags": {
+            "text": "所有タグ",
+            "sourceHash": "35d4aac5d07d7ce3"
+        },
+        "EdMeshModifiers.AddItem": {
+            "text": "項目を追加",
+            "sourceHash": "1373a4ab54d88333"
+        },
+        "EdMeshModifiers.AddModifier": {
+            "text": "モディファイアを追加",
+            "sourceHash": "f4d95a66cf236fed"
+        },
+        "EdMeshModifiers.Axis": {
+            "text": "軸",
+            "sourceHash": "b035a78b241ed7d4"
+        },
+        "EdMeshModifiers.Bake": {
+            "text": "ベイク",
+            "sourceHash": "c152d2a7a89be800"
+        },
+        "EdMeshModifiers.CPUOnly": {
+            "text": "(CPU のみ)",
+            "sourceHash": "0c5c8598488eecee"
+        },
+        "EdMeshModifiers.Center": {
+            "text": "中心",
+            "sourceHash": "b38d497d992ab4a4"
+        },
+        "EdMeshModifiers.ControlPoints": {
+            "text": "制御点",
+            "sourceHash": "7551ef17ae7e064d"
+        },
+        "EdMeshModifiers.CurveEditHint": {
+            "text": "クリックしてカーブを編集",
+            "sourceHash": "d2457db110d81830"
+        },
+        "EdMeshModifiers.DuplicateRow": {
+            "text": "行を複製",
+            "sourceHash": "1eb11810b6d41e8e"
+        },
+        "EdMeshModifiers.EnterNestedStack": {
+            "text": "このグループのネストされたスタックを編集",
+            "sourceHash": "a8e48d4c6a6a8255"
+        },
+        "EdMeshModifiers.ExportWarp": {
+            "text": "ワールドワープとして書き出す",
+            "sourceHash": "0cc4a3640140e0f5"
+        },
+        "EdMeshModifiers.FitBounds": {
+            "text": "境界に合わせる",
+            "sourceHash": "402ad59bb6ed0112"
+        },
+        "EdMeshModifiers.GPUPreviewBlockedBy": {
+            "text": "CPU のみ:",
+            "sourceHash": "cc44e27c6bf4732d"
+        },
+        "EdMeshModifiers.GPUPreviewBlockedByStack": {
+            "text": "CPU のみ (法線の再計算)",
+            "sourceHash": "e6d737e3073915e4"
+        },
+        "EdMeshModifiers.HintPickTarget": {
+            "text": "メッシュコンポーネントが .mesh アセットを使うオブジェクトを選択し、「選択を使用」を押してください。",
+            "sourceHash": "150c002cb25c2c9e"
+        },
+        "EdMeshModifiers.HintSelectModifier": {
+            "text": "スタックからモディファイアを選択してください。",
+            "sourceHash": "c17f55d8a9720295"
+        },
+        "EdMeshModifiers.HintTargetGone": {
+            "text": "対象のオブジェクトはもう存在しません。",
+            "sourceHash": "1bc0e1e113faeb86"
+        },
+        "EdMeshModifiers.Mirror": {
+            "text": "ミラー",
+            "sourceHash": "1e5ff0f50c741122"
+        },
+        "EdMeshModifiers.MoveRowDown": {
+            "text": "行を下へ移動",
+            "sourceHash": "e614e211c8b34f94"
+        },
+        "EdMeshModifiers.MoveRowUp": {
+            "text": "行を上へ移動",
+            "sourceHash": "8ae65593ed9e4275"
+        },
+        "EdMeshModifiers.Name": {
+            "text": "名前",
+            "sourceHash": "ef49aec68fd1dc66"
+        },
+        "EdMeshModifiers.NestedDepth": {
+            "text": "深さ",
+            "sourceHash": "3231d0dc6fe30d4a"
+        },
+        "EdMeshModifiers.NestedEmpty": {
+            "text": "空です。モディファイアを追加してグループにします。",
+            "sourceHash": "7af7ec639534480a"
+        },
+        "EdMeshModifiers.NestedStack": {
+            "text": "ネストされたスタック",
+            "sourceHash": "0d6be80e0ced25ae"
+        },
+        "EdMeshModifiers.NestedUp": {
+            "text": "上へ",
+            "sourceHash": "09313a07b5c3ab60"
+        },
+        "EdMeshModifiers.NoTarget": {
+            "text": "対象なし",
+            "sourceHash": "88b4f03b7af48b9f"
+        },
+        "EdMeshModifiers.PlayPreviewTime": {
+            "text": "再生",
+            "sourceHash": "cd105819b5a10243"
+        },
+        "EdMeshModifiers.PointIndex": {
+            "text": "点",
+            "sourceHash": "8a439296ced9ed11"
+        },
+        "EdMeshModifiers.PointPosition": {
+            "text": "位置",
+            "sourceHash": "c1611c0558728a2a"
+        },
+        "EdMeshModifiers.PreviewTime": {
+            "text": "プレビュー時間",
+            "sourceHash": "c6552dd0fb586094"
+        },
+        "EdMeshModifiers.RecomputeNormals": {
+            "text": "法線の再計算",
+            "sourceHash": "2a5bbf4552aa7855"
+        },
+        "EdMeshModifiers.Redo": {
+            "text": "やり直し",
+            "sourceHash": "7417792bbe720149"
+        },
+        "EdMeshModifiers.ReferenceNoMatch": {
+            "text": "次のコンポーネントを持つオブジェクトがありません:",
+            "sourceHash": "4e824d53a2525bd0"
+        },
+        "EdMeshModifiers.ReferenceNone": {
+            "text": "(なし)",
+            "sourceHash": "cc766cf900364200"
+        },
+        "EdMeshModifiers.ReloadStack": {
+            "text": "スタックを再読み込み",
+            "sourceHash": "372f2d0fa36ebb0c"
+        },
+        "EdMeshModifiers.RemoveRow": {
+            "text": "行を削除",
+            "sourceHash": "77318393dfdb0775"
+        },
+        "EdMeshModifiers.ResetLattice": {
+            "text": "ラティスをリセット",
+            "sourceHash": "11fff1797b257282"
+        },
+        "EdMeshModifiers.ResetParams": {
+            "text": "パラメーターをリセット",
+            "sourceHash": "aca3bdbe9d0ddaf4"
+        },
+        "EdMeshModifiers.Rotation": {
+            "text": "回転",
+            "sourceHash": "cde2e53f46beac7f"
+        },
+        "EdMeshModifiers.SaveStack": {
+            "text": "スタックを保存",
+            "sourceHash": "03376e0fb812a6d0"
+        },
+        "EdMeshModifiers.ShadedPreview": {
+            "text": "シェーディングプレビュー",
+            "sourceHash": "3a001a59df5db872"
+        },
+        "EdMeshModifiers.ShadedPreviewTooltip": {
+            "text": "スタックの結果で対象メッシュをシェーディングします。有効なモディファイアがすべて対応していればコンピュートシェーダーで実行し、そうでなければ CPU の結果を頂点としてアップロードします。オフにすると元のメッシュとワイヤープレビューのままです。",
+            "sourceHash": "7d5df56f33074e8f"
+        },
+        "EdMeshModifiers.SpaceReference": {
+            "text": "参照オブジェクト",
+            "sourceHash": "f99ff83cb627c00d"
+        },
+        "EdMeshModifiers.Undo": {
+            "text": "元に戻す",
+            "sourceHash": "8f4be9f086eb530f"
+        },
+        "EdMeshModifiers.UseSelection": {
+            "text": "選択を使用",
+            "sourceHash": "18163441a7dc78f2"
+        },
+        "EdMeshModifiers.UseSelectionForParam": {
+            "text": "選択を使用",
+            "sourceHash": "18163441a7dc78f2"
+        },
+        "EdMeshModifiers.WarpExportPath": {
+            "text": "ワープファイル (.mfwarp)",
+            "sourceHash": "ab63f8ba7f42ead5"
+        },
+        "EdMeshModifiers.WorldSpace": {
+            "text": "ワールド空間",
+            "sourceHash": "704e1344b9026739"
+        },
+        "EdSchedule.ColumnActivity": {
+            "text": "行動",
+            "sourceHash": "6c76b294d740446c"
+        },
+        "EdSchedule.ColumnPlace": {
+            "text": "場所",
+            "sourceHash": "13b3f5afa0862d1c"
+        },
+        "EdSchedule.ColumnSource": {
+            "text": "出典",
+            "sourceHash": "5f43af3669b1e098"
+        },
+        "EdSchedule.ColumnTime": {
+            "text": "時刻",
+            "sourceHash": "48e186fb300e5464"
+        },
+        "EdSchedule.ColumnTravel": {
+            "text": "移動",
+            "sourceHash": "bb87af74ab3706b9"
+        },
+        "EdSchedule.EmptyHint": {
+            "text": "スケジュールシステムが動いていません。スケジュールを持つ NPC でプレイを始めてください。",
+            "sourceHash": "c440b029ca8db326"
+        },
+        "EdSchedule.EmptyPlan": {
+            "text": "今日の予定はありません",
+            "sourceHash": "b3a79d044bf5027f"
+        },
+        "EdSchedule.FollowClock": {
+            "text": "ゲーム時計に合わせる",
+            "sourceHash": "9331e1eca52eafa8"
+        },
+        "EdSchedule.GameTime": {
+            "text": "ゲーム時刻",
+            "sourceHash": "312a78762d9ad9a4"
+        },
+        "EdSchedule.NpcListTitle": {
+            "text": "NPC",
+            "sourceHash": "578931c5a8afe279"
+        },
+        "EdSchedule.RawTimeline": {
+            "text": "生のタイムライン",
+            "sourceHash": "60d9224c1e5f1898"
+        },
+        "EdSchedule.SelectNpcHint": {
+            "text": "左で NPC を選択してください",
+            "sourceHash": "2d4aa57458132d18"
+        },
+        "EdSchedule.SystemIndex": {
+            "text": "スケジュールシステム",
+            "sourceHash": "22b2a2f792a7281d"
+        },
+        "EdSchedule.WhyNow": {
+            "text": "今この行動をする理由",
+            "sourceHash": "998a39497efff850"
+        },
+        "Keep": {
+            "text": "維持",
+            "sourceHash": "d60a7dde73859828"
+        },
+        "Keep these display settings?": {
+            "text": "この表示設定を維持しますか?",
+            "sourceHash": "0048bd736e33dcdf"
+        },
+        "Loading": {
+            "text": "読み込み中",
+            "sourceHash": "b59d68ed12d46377"
+        },
+        "Notification.GameSaved": {
+            "text": "ゲームを保存しました",
+            "sourceHash": "820b2b70b4c9f0c4"
+        },
+        "Notification.RestartRequired": {
+            "text": "一部の変更は再起動後に反映されます。",
+            "sourceHash": "14441b823018dda4"
+        },
+        "Opacity": {
+            "text": "不透明度",
+            "sourceHash": "ba64d8954d027206"
+        },
+        "Options": {
+            "text": "オプション",
+            "sourceHash": "463b8c4e92751ba5"
+        },
+        "Paused": {
+            "text": "一時停止中",
+            "sourceHash": "95bc8722b2708f8b"
+        },
+        "Press a key. Escape cancels; hold Escape for one second to bind it.": {
+            "text": "キーを押してください。Esc でキャンセル、Esc を 1 秒押し続けると Esc を割り当てます。",
+            "sourceHash": "2fe6a469745a3551"
+        },
+        "Quit Game": {
+            "text": "ゲームを終了",
+            "sourceHash": "92aee0b2e93f7fd0"
+        },
+        "Resume": {
+            "text": "再開",
+            "sourceHash": "89118d3a7be870ca"
+        },
+        "Return to Title": {
+            "text": "タイトルに戻る",
+            "sourceHash": "6769de3e1eac7922"
+        },
+        "Revert": {
+            "text": "元に戻す",
+            "sourceHash": "d89a2e529b31ef43"
+        },
+        "Reverting in": {
+            "text": "元に戻すまで",
+            "sourceHash": "9cef80c4c43e7e14"
+        },
+        "Sections": {
+            "text": "セクション",
+            "sourceHash": "0337d90cf703df0d"
+        },
+        "Show HUD (Ctrl+F3)": {
+            "text": "HUD を表示 (Ctrl+F3)",
+            "sourceHash": "8f553b077c9a458d"
+        },
+        "Some changes take effect after a restart.": {
+            "text": "一部の変更は再起動後に反映されます。",
+            "sourceHash": "14441b823018dda4"
+        },
+        "Swap": {
+            "text": "入れ替え",
+            "sourceHash": "cf28302518a72dee"
+        },
+        "You have changes that are not applied.": {
+            "text": "適用していない変更があります。",
+            "sourceHash": "9ea9ff2b01f83378"
+        },
+        "[action=UI.Accept] Select": {
+            "text": "[action=UI.Accept] 選択",
+            "sourceHash": "484163e56235b950"
+        },
+        "settings.accessibility.colorVision": {
+            "text": "色覚モード",
+            "sourceHash": "dbb8616605f92363"
+        },
+        "settings.accessibility.colorVision.deuteranopia": {
+            "text": "2 型色覚 (緑)",
+            "sourceHash": "eaffd5d797c0d636"
+        },
+        "settings.accessibility.colorVision.protanopia": {
+            "text": "1 型色覚 (赤)",
+            "sourceHash": "ebd58127ad3cb56a"
+        },
+        "settings.accessibility.colorVision.tritanopia": {
+            "text": "3 型色覚 (青)",
+            "sourceHash": "0cb4b4d963fc5f44"
+        },
+        "settings.accessibility.reduceFlashing": {
+            "text": "点滅を減らす",
+            "sourceHash": "81cf7ea1fe1b0e77"
+        },
+        "settings.accessibility.reduceMotion": {
+            "text": "動きを減らす",
+            "sourceHash": "4c7266515b845807"
+        },
+        "settings.accessibility.subtitleBackground": {
+            "text": "字幕の背景",
+            "sourceHash": "2b9911a132958e47"
+        },
+        "settings.accessibility.subtitleSize": {
+            "text": "字幕のサイズ",
+            "sourceHash": "6b7868a86e8badfa"
+        },
+        "settings.accessibility.subtitles": {
+            "text": "字幕",
+            "sourceHash": "8d4efa71fde7e9be"
+        },
+        "settings.accessibility.textSize": {
+            "text": "文字サイズ",
+            "sourceHash": "e92d136588dd09a3"
+        },
+        "settings.accessibility.uiScale": {
+            "text": "UI の拡大率",
+            "sourceHash": "deba5e3543cd9735"
+        },
+        "settings.accessibility.uiTheme": {
+            "text": "UI テーマ",
+            "sourceHash": "ad5a6165f8ac74b6"
+        },
+        "settings.accessibility.uiTheme.default": {
+            "text": "標準",
+            "sourceHash": "11326fd2590f4e5e"
+        },
+        "settings.accessibility.uiTheme.highcontrast": {
+            "text": "ハイコントラスト",
+            "sourceHash": "480fd2e6a8201911"
+        },
+        "settings.audio.ambientVolume": {
+            "text": "環境音の音量",
+            "sourceHash": "7083aeea6de6277b"
+        },
+        "settings.audio.masterVolume": {
+            "text": "マスター音量",
+            "sourceHash": "14ade2902b12eee3"
+        },
+        "settings.audio.musicVolume": {
+            "text": "音楽の音量",
+            "sourceHash": "9f650daa8068041e"
+        },
+        "settings.audio.mute": {
+            "text": "すべてミュート",
+            "sourceHash": "675ad12a7174c7e7"
+        },
+        "settings.audio.sfxVolume": {
+            "text": "効果音の音量",
+            "sourceHash": "1c5962fcd2ea2f59"
+        },
+        "settings.audio.speakerMode": {
+            "text": "スピーカー構成",
+            "sourceHash": "d29256f633294933"
+        },
+        "settings.audio.speakerMode.auto": {
+            "text": "自動",
+            "sourceHash": "d200028b9f6015e4"
+        },
+        "settings.audio.speakerMode.headphones": {
+            "text": "ヘッドホン (3D)",
+            "sourceHash": "cb35278216cbcf90"
+        },
+        "settings.audio.speakerMode.stereo": {
+            "text": "ステレオ",
+            "sourceHash": "5c73b6a46de9972d"
+        },
+        "settings.audio.speakerMode.surround51": {
+            "text": "5.1 サラウンド",
+            "sourceHash": "9eff77e9f0d62ca5"
+        },
+        "settings.audio.speakerMode.surround71": {
+            "text": "7.1 サラウンド",
+            "sourceHash": "e3b7d24b4997a35f"
+        },
+        "settings.audio.uiVolume": {
+            "text": "インターフェースの音量",
+            "sourceHash": "b821b9172a51c8c2"
+        },
+        "settings.audio.voiceVolume": {
+            "text": "ボイスの音量",
+            "sourceHash": "1424176a6e3d6685"
+        },
+        "settings.category.accessibility": {
+            "text": "アクセシビリティ",
+            "sourceHash": "11fdceabe7befeff"
+        },
+        "settings.category.audio": {
+            "text": "オーディオ",
+            "sourceHash": "08e6bd98452e6bb9"
+        },
+        "settings.category.controls": {
+            "text": "操作",
+            "sourceHash": "83cd32b685ccc9b7"
+        },
+        "settings.category.display": {
+            "text": "ディスプレイ",
+            "sourceHash": "1125d159f7e64df5"
+        },
+        "settings.category.gameplay": {
+            "text": "ゲームプレイ",
+            "sourceHash": "28235c3f4dd70e95"
+        },
+        "settings.category.graphics": {
+            "text": "グラフィックス",
+            "sourceHash": "6cc99c2f3cbc7008"
+        },
+        "settings.category.language": {
+            "text": "言語",
+            "sourceHash": "efcf950b3cc4fc3b"
+        },
+        "settings.category.privacy": {
+            "text": "プライバシー",
+            "sourceHash": "e78c02e9a98a0f47"
+        },
+        "settings.common.off": {
+            "text": "オフ",
+            "sourceHash": "302cbb19bf9a174a"
+        },
+        "settings.confirm.keepChanges": {
+            "text": "この設定を維持しますか? {seconds} 秒後に元に戻ります。",
+            "sourceHash": "d8bd8dfcd7e97078"
+        },
+        "settings.controls.aimMode": {
+            "text": "エイム",
+            "sourceHash": "f9a3e0199ffcbd16"
+        },
+        "settings.controls.crouchMode": {
+            "text": "しゃがみ",
+            "sourceHash": "cd7743f6969479eb"
+        },
+        "settings.controls.gamepadSensitivity": {
+            "text": "ゲームパッド感度",
+            "sourceHash": "524014273006eb8b"
+        },
+        "settings.controls.hold": {
+            "text": "長押し",
+            "sourceHash": "6ab6f7d87fdbe998"
+        },
+        "settings.controls.invertY": {
+            "text": "上下の視点を反転",
+            "sourceHash": "e9c878ae44ea1e14"
+        },
+        "settings.controls.mouseSensitivity": {
+            "text": "マウス感度",
+            "sourceHash": "67b03bcb89cd52cf"
+        },
+        "settings.controls.pauseMenu": {
+            "text": "ポーズメニュー",
+            "sourceHash": "2889ddc771329148"
+        },
+        "settings.controls.sprintMode": {
+            "text": "ダッシュ",
+            "sourceHash": "f3b65f24b2611635"
+        },
+        "settings.controls.stickDeadzone": {
+            "text": "スティックのデッドゾーン",
+            "sourceHash": "7b03bd1e88a3ce47"
+        },
+        "settings.controls.toggle": {
+            "text": "切り替え",
+            "sourceHash": "2729d39ee6c0cca5"
+        },
+        "settings.display.resolution": {
+            "text": "解像度",
+            "sourceHash": "f74160a9dc86ab8f"
+        },
+        "settings.display.vsync": {
+            "text": "垂直同期",
+            "sourceHash": "b08b0fa02c4c669e"
+        },
+        "settings.display.windowMode": {
+            "text": "ウィンドウモード",
+            "sourceHash": "74e7a95114592520"
+        },
+        "settings.display.windowMode.borderless": {
+            "text": "ボーダーレス",
+            "sourceHash": "60c26ddb9c7ef1fa"
+        },
+        "settings.display.windowMode.windowed": {
+            "text": "ウィンドウ",
+            "sourceHash": "c73eba7da7d67b64"
+        },
+        "settings.gameplay.cameraShake": {
+            "text": "カメラの揺れ",
+            "sourceHash": "0d4412b117d8c5c4"
+        },
+        "settings.gameplay.fieldOfView": {
+            "text": "視野角",
+            "sourceHash": "cfc03af4e2ec2dd9"
+        },
+        "settings.gameplay.headBob": {
+            "text": "頭の揺れ",
+            "sourceHash": "6b009c84219aa0f8"
+        },
+        "settings.gameplay.showTutorials": {
+            "text": "チュートリアルを表示",
+            "sourceHash": "f7f7f982c0020167"
+        },
+        "settings.graphics.effectsQuality": {
+            "text": "エフェクト品質",
+            "sourceHash": "2f1d73eefe0d67e4"
+        },
+        "settings.graphics.foliageDensity": {
+            "text": "植生の密度",
+            "sourceHash": "2fbb57da1cea22f8"
+        },
+        "settings.graphics.motionBlur": {
+            "text": "モーションブラー",
+            "sourceHash": "bb0dd4796cb70d98"
+        },
+        "settings.graphics.postQuality": {
+            "text": "ポストプロセス品質",
+            "sourceHash": "25d945a94bd08004"
+        },
+        "settings.graphics.quality": {
+            "text": "グラフィック品質",
+            "sourceHash": "207b31ba362cec89"
+        },
+        "settings.graphics.quality.custom": {
+            "text": "カスタム",
+            "sourceHash": "f0cab2483f66aa2e"
+        },
+        "settings.graphics.quality.high": {
+            "text": "高",
+            "sourceHash": "9deeefd89ca8a81d"
+        },
+        "settings.graphics.quality.low": {
+            "text": "低",
+            "sourceHash": "24f3a319b88552c1"
+        },
+        "settings.graphics.quality.medium": {
+            "text": "中",
+            "sourceHash": "ac6bdc71f750ac96"
+        },
+        "settings.graphics.quality.ultra": {
+            "text": "最高",
+            "sourceHash": "311b3da2e76753d5"
+        },
+        "settings.graphics.renderScale": {
+            "text": "レンダースケール",
+            "sourceHash": "c17a07578d87a8f7"
+        },
+        "settings.graphics.shadowQuality": {
+            "text": "影の品質",
+            "sourceHash": "d055b83933ce0048"
+        },
+        "settings.graphics.textureQuality": {
+            "text": "テクスチャ品質",
+            "sourceHash": "8dec707fb7d9325d"
+        },
+        "settings.graphics.upscaler": {
+            "text": "アップスケーラー",
+            "sourceHash": "523e5f717170c790"
+        },
+        "settings.graphics.upscaler.spatial": {
+            "text": "空間",
+            "sourceHash": "07d754eb51a3ee43"
+        },
+        "settings.graphics.viewDistance": {
+            "text": "描画距離",
+            "sourceHash": "f2a71c8e84cbc543"
+        },
+        "settings.language.text": {
+            "text": "テキストの言語",
+            "sourceHash": "8b38f66b7ca61de8"
+        },
+        "settings.privacy.crashReports": {
+            "text": "クラッシュレポート",
+            "sourceHash": "b4a986fd6964c2d3"
+        },
+        "settings.privacy.crashReports.ask": {
+            "text": "毎回確認する",
+            "sourceHash": "44254bb1ef85bac8"
+        },
+        "settings.privacy.crashReports.local": {
+            "text": "ローカルに保存",
+            "sourceHash": "8b3c1bab8e4d3093"
+        },
+        "settings.privacy.crashReports.send": {
+            "text": "自動で送信",
+            "sourceHash": "9fa9bb8c8057dbfa"
+        },
+        "settings.privacy.telemetry": {
+            "text": "使用状況データを共有",
+            "sourceHash": "35369209785d4d0d"
+        },
+        "settings.restartRequired": {
+            "text": "{count} 件の設定は再起動後に反映されます。",
+            "sourceHash": "6462a7414eb6a4f5"
+        }
+    }
+}

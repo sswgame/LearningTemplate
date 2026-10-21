@@ -11,8 +11,8 @@
 옛번호: D5-2
 왜 필요한가: RTL 문화권 데이터와 일본어 번역이 비어 있고, 쿠킹에 문화권 필터가 없다(`Engine/Localization/LocalizationDocuments.h`).
 남은 것:
-- 아랍어 이외 RTL 문화권 데이터와 `ja` 번역(`po/ja.po` 의 글이 비어 있다). 끝나면 엔진 프로젝트 `stagedCultures` 에 넣는다.
-- 쿠킹 문화권 필터: `stagedCultures` 밖 문화권의 번역 테이블도 팩에 들어간다(언리얼은 스테이지 목록 밖 문화권을 빼고 패키징한다). 목록 밖 테이블이 생기면 쿠킹에서 거른다.
+- (끝남, 2026-10-22) RTL 문화권 `he` · `fa`(복수형 `hebrew` · `persian`, 숫자 `arabext`)와 엔진 `ja` 번역 187 줄, 엔진 프로젝트 `stagedCultures` 에 `ja`. 사람 눈 확인(일본어 화면 잘림 · RTL 배치)과 `--check-text` 는 남았다.
+- 쿠킹 문화권 필터: `stagedCultures` 밖 문화권의 번역 테이블도 팩에 들어간다(언리얼은 스테이지 목록 밖 문화권을 빼고 패키징한다). 목록 밖 테이블이 생기면 쿠킹에서 거른다 — 지금도 목록 밖 테이블은 없다(엔진 · 에디터 · Shooter3D 모두 번역 표가 출시 문화권뿐).
 - 아이템 이름(Shooter3D)은 표에 모이지만 화면에 쓰는 코드가 아직 없다(무기 이름은 HUD 가 `getStringByText` 로 쓴다).
 
 ### NpcScheduleFollowUp

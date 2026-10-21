@@ -64,7 +64,7 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Tooltip = "Resource path of the clip (wav, ogg)" )
+        PROPERTY( Tooltip = "Resource path of the clip (wav, ogg) or of a sound graph (.audiograph.xml)" )
         hashed_string _path{};
         PROPERTY( Tooltip = "Subtitle text key (Namespace.Key in a string table) shown when this clip starts; empty shows none" )
         hashed_string _subtitleKey{};

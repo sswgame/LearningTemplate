@@ -5,6 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Audio/AudioChannelLayout.h"
 #include "Engine/Audio/AudioClipDecoder.h"
 
 namespace sw
@@ -100,7 +101,22 @@ namespace sw
         _pDecoder     = shared_ptr<IAudioStreamDecoder>( std::move( pDecoder ) );
         _channelCount = source.getInfo()._channelCount;
         _downmix      = source.getDownmix();
-        _listWindow.reserve( static_cast<size_t>( kChunkFrames + kRetainFrames ) * _channelCount );
+        _chunkFrames  = kChunkFrames;
+        _listWindow.reserve( static_cast<size_t>( _chunkFrames + kRetainFrames ) * _channelCount );
+        return true;
+    }
+
+    bool AudioStreamWindow::openDecoder( unique_ptr<IAudioStreamDecoder> pDecoder, uint16 channelCount, uint32 chunkFrames )
+    {
+        close();
+        const bool bValidDecoder = pDecoder != nullptr && 1 <= channelCount && channelCount <= audio::kStereoChannelCount && chunkFrames > 0;
+        if ( bValidDecoder == false )
+            return false;
+        _pDecoder     = shared_ptr<IAudioStreamDecoder>( std::move( pDecoder ) );
+        _channelCount = channelCount;
+        _downmix      = AudioDownmix{};
+        _chunkFrames  = chunkFrames;
+        _listWindow.reserve( static_cast<size_t>( _chunkFrames + kRetainFrames ) * _channelCount );
         return true;
     }
 
@@ -126,8 +142,8 @@ namespace sw
         {
             _windowFrames = 0;
         }
-        _listWindow.resize( static_cast<size_t>( retained + kChunkFrames ) * _channelCount );
-        const uint32 decoded = _pDecoder->readFrames( _listWindow.data() + static_cast<size_t>( retained ) * _channelCount, kChunkFrames );
+        _listWindow.resize( static_cast<size_t>( retained + _chunkFrames ) * _channelCount );
+        const uint32 decoded = _pDecoder->readFrames( _listWindow.data() + static_cast<size_t>( retained ) * _channelCount, _chunkFrames );
         _windowFrames        = retained + decoded;
         _decodedFrameCount += decoded;
         return decoded > 0;

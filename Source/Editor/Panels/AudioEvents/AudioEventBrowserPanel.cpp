@@ -329,6 +329,11 @@ namespace sw::editor
         ImGui::Text( "%s: %llu / %llu", SW_LOCKEY( "EditorAudioEvents", "PlayedDropped" ), static_cast<uint64>( profile._playedEventCount ),
                      static_cast<uint64>( profile._droppedEventCount ) );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAudioEvents", "PlayedDroppedTip" ) );
+        // 이 창이 읽는 사본(인스턴스 × 보이스)을 오디오 스레드가 블록마다 만드는 비용이다(E6 측정).
+        const float64 nanosecondsPerMicrosecond = static_cast<float64>( constant::kNanosecondsPerMicrosecond );
+        ImGui::Text( "%s: %.1f / %.1f us", SW_LOCKEY( "EditorAudioEvents", "PublishCost" ), static_cast<float64>( stats._publishNanoseconds ) / nanosecondsPerMicrosecond,
+                     static_cast<float64>( stats._peakPublishNanoseconds ) / nanosecondsPerMicrosecond );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAudioEvents", "PublishCostTip" ) );
     }
 
     void AudioEventBrowserPanel::drawContent()

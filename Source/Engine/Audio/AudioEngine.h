@@ -502,6 +502,8 @@ namespace sw
         uint64                                       _appliedPlayingID;               /**< 적용한 재생 명령의 가장 큰 id 입니다. */
         uint64                                       _playedEventCount;               /**< 재생한 이벤트 수입니다. 게시용입니다. */
         uint64                                       _droppedEventCount;              /**< 버린 이벤트 수입니다. 게시용입니다. */
+        uint64                                       _lastPublishNanoseconds;         /**< 지난 블록의 게시 비용(ns)입니다. 다음 블록의 상태로 게시합니다(측정, E6). */
+        uint64                                       _peakPublishNanoseconds;         /**< 게시 비용의 최댓값(ns)입니다. */
         uint32                                       _peakRealVoiceCount;             /**< 한 블록에 섞은 보이스의 최댓값입니다. 게시용입니다. */
         uint32                                       _blockCursor;                    /**< `_blockOutput` 에서 다음에 내보낼 프레임입니다. */
         AudioChannelLayout                           _layout;                         /**< 출력 채널 구성입니다. 초기화와 `setChannelLayout`(장치를 닫은 뒤)이 정합니다. */

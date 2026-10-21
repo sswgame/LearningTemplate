@@ -240,6 +240,63 @@
                 "Arial"
             ]
         },
+        "fa": {
+            "nativeName": "فارسی",
+            "pluralRule": "persian",
+            "currencyCode": "IRR",
+            "currencyPattern": "# ¤",
+            "rightToLeft": true,
+            "digits": "arabext",
+            "decimalSeparator": "٫",
+            "groupSeparator": "٬",
+            "percentPattern": "#٪",
+            "datePatterns": {
+                "short": "y/M/d",
+                "medium": "d MMM y",
+                "long": "d MMMM y"
+            },
+            "timePatterns": {
+                "short": "H:mm",
+                "medium": "H:mm:ss"
+            },
+            "monthNames": [
+                "ژانویه",
+                "فوریه",
+                "مارس",
+                "آوریل",
+                "مه",
+                "ژوئن",
+                "ژوئیه",
+                "اوت",
+                "سپتامبر",
+                "اکتبر",
+                "نوامبر",
+                "دسامبر"
+            ],
+            "monthAbbreviations": [
+                "ژانویه",
+                "فوریه",
+                "مارس",
+                "آوریل",
+                "مه",
+                "ژوئن",
+                "ژوئیه",
+                "اوت",
+                "سپتامبر",
+                "اکتبر",
+                "نوامبر",
+                "دسامبر"
+            ],
+            "dayPeriods": [
+                "ق.ظ.",
+                "ب.ظ."
+            ],
+            "fonts": [
+                "Noto Sans Arabic",
+                "Segoe UI",
+                "Noto Sans"
+            ]
+        },
         "fr": {
             "nativeName": "Français",
             "pluralRule": "french",
@@ -293,6 +350,63 @@
             "fonts": [
                 "Noto Sans",
                 "Arial"
+            ]
+        },
+        "he": {
+            "nativeName": "עברית",
+            "pluralRule": "hebrew",
+            "currencyCode": "ILS",
+            "currencyPattern": "# ¤",
+            "rightToLeft": true,
+            "digits": "latn",
+            "decimalSeparator": ".",
+            "groupSeparator": ",",
+            "percentPattern": "#%",
+            "datePatterns": {
+                "short": "d.M.y",
+                "medium": "d בMMM y",
+                "long": "d בMMMM y"
+            },
+            "timePatterns": {
+                "short": "H:mm",
+                "medium": "H:mm:ss"
+            },
+            "monthNames": [
+                "ינואר",
+                "פברואר",
+                "מרץ",
+                "אפריל",
+                "מאי",
+                "יוני",
+                "יולי",
+                "אוגוסט",
+                "ספטמבר",
+                "אוקטובר",
+                "נובמבר",
+                "דצמבר"
+            ],
+            "monthAbbreviations": [
+                "ינו׳",
+                "פבר׳",
+                "מרץ",
+                "אפר׳",
+                "מאי",
+                "יוני",
+                "יולי",
+                "אוג׳",
+                "ספט׳",
+                "אוק׳",
+                "נוב׳",
+                "דצמ׳"
+            ],
+            "dayPeriods": [
+                "לפנה״צ",
+                "אחה״צ"
+            ],
+            "fonts": [
+                "Noto Sans Hebrew",
+                "Segoe UI",
+                "Noto Sans"
             ]
         },
         "ja": {
