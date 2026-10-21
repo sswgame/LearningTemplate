@@ -30,16 +30,26 @@
 #include "Core/Container/string.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Resource/AssetHandle.h"
 #include "Engine/Resource/Cache/IAssetCache.h"
 
 namespace sw
 {
-    template <typename AssetType>
-    class SharedAssetTable;
-
     /** @brief 에셋 종류마다 다른 값입니다. 인스턴스화하는 .cpp 가 특수화합니다(`SharedAssetCacheDefinition.h` 참고). */
     template <typename AssetType>
     struct SharedAssetCacheTraits;
+
+    template <typename AssetType>
+    class SharedAssetLoadBlock;
+    template <typename AssetType>
+    class SharedAssetTable;
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 공유 에셋 로드 핸들입니다(`SharedAssetCache<에셋>::request`). 핸들이 살아 있는 동안 준비된 에셋도 살아 있습니다. */
+    template <typename AssetType>
+    using SharedAssetHandle = AssetHandle<SharedAssetLoadBlock<AssetType>>;
 } // namespace sw
 
 namespace sw
@@ -53,7 +63,12 @@ namespace sw
     class SharedAssetCache final : public IAssetCache
     {
     public:
-        /** @brief 경로의 에셋을 나눠 받습니다. 처음이면 읽고, 읽을 수 없으면 nullptr 입니다(오류는 읽는 함수가 남깁니다). 워커에서 불러도 됩니다(잠급니다). */
+        /**
+         * @brief 경로의 에셋 로드를 요청합니다. 표에 있으면 준비된 핸들, 없으면 워커가 읽습니다(엔진 태스크가 없으면 이 자리에서). 워커에서 불러도 됩니다.
+         * @details 실패는 기억하지 않으므로 파일이 생기면 다음 요청이 읽습니다(오류는 읽는 함수가 남깁니다).
+         */
+        static SharedAssetHandle<AssetType> request( string_view path );
+        /** @brief 경로의 에셋을 나눠 받습니다. `request` 와 같은 로드 블록을 기다립니다(새 로드는 이 자리에서 읽는다). 읽을 수 없으면 nullptr 입니다. 워커에서 불러도 됩니다. */
         static shared_ptr<const AssetType> acquire( string_view path );
         /**
          * @brief 사용 중이면 다시 읽고 다시 읽은 횟수를 올립니다(틱 밖, 게임 스레드). 읽지 못하면 옛 내용 그대로이고 false 입니다.
@@ -74,7 +89,50 @@ namespace sw
         void clear() override;
 
     private:
+        friend class SharedAssetLoadBlock<AssetType>;
+
         /** @brief 프로세스에 하나인 표입니다(Engine.dll 안에 있어 모듈 핫 리로드에도 사라지지 않습니다). */
         static SharedAssetTable<AssetType>& getTable();
+        /** @brief `request` 와 `acquire` 의 본문입니다. 새 로드를 @p start 대로 시작합니다(동기 API 는 이 자리에서 읽는다 — `AssetLoadStart`). */
+        static SharedAssetHandle<AssetType> requestWith( string_view path, AssetLoadStart start );
+        /** @brief 로드 단계 본문입니다. 종류의 읽는 함수로 읽어 표에 넣습니다(메모리 태그를 겁니다). */
+        [[nodiscard]] static bool loadIntoTable( string_view path, shared_ptr<const AssetType>& outAsset );
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class SharedAssetLoadBlock
+     * @brief 공유 에셋 로드 하나의 공유 상태입니다. 로드 단계에서 파일을 읽어 표에 넣습니다(완료 단계 없음 — 디바이스를 쓰지 않습니다).
+     */
+    template <typename TAsset>
+    class SharedAssetLoadBlock final : public AssetLoadBlock
+    {
+    public:
+        using AssetType = const TAsset;
+
+        SharedAssetLoadBlock( const utf8* pKindName, string_view path )
+            : AssetLoadBlock{ pKindName, path }
+            , _pAsset{}
+        {
+        }
+
+        /** @brief 읽은 에셋입니다. `Ready` 일 때만 값이 있습니다(`AssetHandle::get` 이 상태를 본다). */
+        const shared_ptr<const TAsset>& getAsset() const { return _pAsset; }
+
+    protected:
+        [[nodiscard]] bool runLoad( string& outError ) override
+        {
+            if ( SharedAssetCache<TAsset>::loadIntoTable( getPath(), _pAsset ) )
+                return true;
+            outError = "the asset could not be read (the loader logged why)";
+            return false;
+        }
+
+    private:
+        friend class SharedAssetTable<TAsset>;
+
+        shared_ptr<const TAsset> _pAsset;
     };
 } // namespace sw

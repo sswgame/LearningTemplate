@@ -2,7 +2,8 @@
  * @file AssetHandle.h
  * @brief 로드 상태(`Loading` · `Ready` · `Failed`)를 드러내는 에셋 핸들과, 핸들 여럿을 모아 준비를 묻는 준비 집합(`AssetReadySet`)입니다.
  * @details 언리얼 `FStreamableHandle` · 유니티 Addressables `AsyncOperationHandle` 과 같은 모양입니다. 종류별 캐시(`MeshCache` · `TextureCache` · `AudioClipCache`)가
- *          `request( path )` 로 핸들을 내고, 동기 API(`acquire` · `loadClip`)는 그 핸들을 `wait()` 합니다 — 비동기와 동기가 **같은 로드 블록**을 탑니다.
+ *          `request( path )` 로 핸들을 내고, 동기 API(`acquire` · `loadPrefab` · `getOrCompile`)는 같은 진행 중 표에서 블록을 받아 `wait()` 합니다 — 비동기와 동기가
+ *          **같은 로드 블록**을 탑니다. 다른 점은 새 로드를 어디서 시작하는가(`AssetLoadStart`) 하나입니다.
  *
  *          한 로드는 두 단계입니다. **로드**(디스크 읽기 · 디코드, 어느 스레드든)와, 필요한 종류만 **완료**(GPU 업로드처럼 정해진 스레드에서만 되는 일)입니다.
  *          각 단계는 먼저 집은(`claim`) 스레드 하나가 실행합니다. 워커 태스크가 아직 집지 않은 로드를 기다리는 쪽(`wait`)이 집으면 그 자리에서 실행하므로,
@@ -27,6 +28,18 @@ namespace sw
         Loading = 0, ///< 읽거나 디코드하거나 완료(GPU 업로드)를 기다리는 중이다
         Ready,       ///< 쓸 수 있다
         Failed,      ///< 읽기 · 디코드 · 완료가 실패했다. 이유는 `getError` 에 있다
+    };
+
+    /**
+     * @brief 새 로드의 로드 단계를 어디서 시작하는가입니다(`AssetLoadBlock::startLoad`).
+     * @details 동기 API(`acquire` · `loadPrefab`)는 `OnCallingThread` 로 블록을 만들어 그 자리에서 읽는다 — 워커에 맡겼다가 곧바로 기다리면 태스크가 하나
+     *          헛돌고, 읽기의 로그(오류)가 호출한 스레드가 아니라 워커에서 나와 테스트의 방어 범위(`SW_TEST_DEFENSIVE_SCOPE`) 밖으로 샌다.
+     *          블록과 진행 중 표는 같으므로 그 사이 같은 경로를 비동기로 요청한 쪽은 같은 로드를 받는다.
+     */
+    enum class AssetLoadStart : uint8
+    {
+        Async,          ///< 낮은 우선순위 워커 태스크로 시작한다(엔진 태스크가 없으면 이 자리에서)
+        OnCallingThread ///< 이 자리에서 읽는다(동기 API)
     };
 } // namespace sw
 
@@ -70,10 +83,11 @@ namespace sw
         bool runCompletionIfPending();
 
         /**
-         * @brief 로드 단계를 시작합니다. 엔진 태스크가 있으면 낮은 우선순위 워커 태스크로, 없으면(테스트 · 도구) 이 자리에서 실행합니다.
+         * @brief 로드 단계를 시작합니다. `Async` 는 엔진 태스크가 있으면 낮은 우선순위 워커 태스크로, 없으면(테스트 · 도구) 이 자리에서 실행합니다.
+         *        `OnCallingThread` 는 늘 이 자리에서 실행합니다.
          * @details 태스크는 이 블록을 `shared_ptr` 로 쥐므로 핸들이 먼저 사라져도 해제된 블록에 쓰지 않습니다.
          */
-        static void startLoad( const shared_ptr<AssetLoadBlock>& pBlock );
+        static void startLoad( const shared_ptr<AssetLoadBlock>& pBlock, AssetLoadStart start );
 
     protected:
         /**

@@ -73,12 +73,12 @@ namespace sw
         return true;
     }
 
-    void AssetLoadBlock::startLoad( const shared_ptr<AssetLoadBlock>& pBlock )
+    void AssetLoadBlock::startLoad( const shared_ptr<AssetLoadBlock>& pBlock, AssetLoadStart start )
     {
         SW_ASSERT( pBlock != nullptr );
         if ( pBlock->_phase.load( std::memory_order_acquire ) != kPhaseQueued )
             return; // 캐시 적중 · 틀린 요청으로 이미 끝난 블록이다
-        if ( engine::areEngineServicesBound() == false )
+        if ( start == AssetLoadStart::OnCallingThread || engine::areEngineServicesBound() == false )
         {
             pBlock->runLoadIfUnclaimed();
             return;

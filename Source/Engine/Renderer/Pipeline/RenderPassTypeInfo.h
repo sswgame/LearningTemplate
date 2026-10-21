@@ -66,6 +66,13 @@ namespace sw
     /** @brief 알파 컷오프 머티리얼의 define 입니다. 깊이 패스(그림자, 깊이 프리패스)도 머티리얼 셰이더로 그려 같은 형태로 오립니다(`FrameRendererUtil::drawsDepthWithMaterialShader`). */
     inline constexpr const utf8* kMaterialAlphaCutoffDefine = "MATERIAL_ALPHA_CUTOFF";
 
+    /**
+     * @brief 등장 중인 인스턴스(`GPUInstance::_appearance` < 1)의 퍼뮤테이션 define 입니다. 셰이더가 등장 비율만큼의 픽셀만 남긴다(binding.hlsli 8-1).
+     * @details 머티리얼 에셋이 아니라 빌더가 붙인다(`GPUMaterialRegistry::permutationHashFor`). 등장 중인 인스턴스만 이 변형이라 다 보이는 물체는
+     *          픽셀 버리기 없이 그린다. 깊이만 쓰는 패스도 이 변형에는 픽셀 스테이지를 붙인다(`FrameRendererUtil::addsAppearanceDitherPixelStage`).
+     */
+    inline constexpr const utf8* kAppearanceDitherDefine = "SW_APPEARANCE_DITHER";
+
     /** @brief 정점 셰이더가 정점을 옮기는 머티리얼(바람)의 define 입니다. 그림자 패스는 머티리얼 셰이더로 그리고 깊이 프리패스는 그 배치를 뺀다. */
     inline constexpr const utf8* kMaterialVertexDeformDefine = "MATERIAL_VERTEX_DEFORM";
 

@@ -29,6 +29,11 @@ namespace sw
         return _owner.isAnimationActive();
     }
 
+    bool SkeletalAnimatorBinding::pollAnimationAssetsReady()
+    {
+        return _owner.finishClipLoadsIfComplete();
+    }
+
     void SkeletalAnimatorBinding::runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context )
     {
         if ( phase == AnimationPhase::Time )
@@ -183,6 +188,9 @@ namespace sw
         , _graphPlayer{}
         , _parameters{}
         , _mapClip{}
+        , _listClipLoad{}
+        , _deferredPlayState{}
+        , _deferredPlayBlend{ -1.0f }
         , _mapTrackToBone{}
         , _pTrackMapSkeleton{ nullptr }
         , _listLayer{}
@@ -222,6 +230,10 @@ namespace sw
         , _bPoseShownThisFrame{ SW_FALSE }
         , _bCarryingOver{ SW_FALSE }
         , _bInertializationPending{ SW_FALSE }
+        , _bClipsPending{ SW_FALSE }
+        , _bStartPending{ SW_FALSE }
+        , _bPlayDeferred{ SW_FALSE }
+        , _bDeferredPlayLoop{ SW_TRUE }
         , _reserved{ 0 }
     {
         _graphPlayer.setPlayableSource( &_binding );
@@ -237,16 +249,135 @@ namespace sw
     {
         Component::onBeginPlay();
         _graphPlayer.setDefaultBlendSeconds( _blendSeconds );
-        loadGraph();
         bindToUnit();
-        if ( _bPlayOnBegin == SW_FALSE )
+        // 스폰이 디스크를 기다리지 않게 클립은 워커가 읽는다. 다 읽힐 때까지 유닛은 그리지 않고(캐릭터는 애니메이션이 준비된 뒤 나타난다),
+        // 씬 프레임의 도착 단계가 유닛을 통해 마무리를 묻는다(`pollAnimationAssetsReady`). 묻는 쪽(유닛)이 없으면 그 자리에서 읽는다.
+        if ( _pUnit != nullptr )
+            loadGraphForBeginPlay();
+        else
+            loadGraph();
+        if ( _bClipsPending == SW_TRUE )
+        {
+            _bStartPending = _bPlayOnBegin;
+            _pUnit->holdUntilAnimationAssetsReady();
             return;
+        }
+        if ( _bPlayOnBegin == SW_TRUE )
+            startInitialState();
+    }
+
+    void SkeletalAnimatorComponent::startInitialState()
+    {
         // 핫 리로드로 되살아났으면 그 상태 · 시각에서 잇는다. 아니면 처음 상태부터.
         const float32 resumeTime = _stateTime;
         if ( _currentState.empty() == false && play( hashed_string( _currentState ), true, 0.0f ) )
             _graphPlayer.getPlayer().setCurrentTime( resumeTime );
         else if ( play( hashed_string( _initialState ), true, 0.0f ) && _initialTime > 0.0f )
             _graphPlayer.getPlayer().setCurrentTime( _initialTime );
+    }
+
+    void SkeletalAnimatorComponent::loadGraphForBeginPlay()
+    {
+        _graph = AnimationGraphAsset{};
+        if ( _animationGraphPath.empty() == false && _graph.loadFromFile( _animationGraphPath ) == false )
+            SW_LOG_ERROR( "Animation graph '%#' could not be loaded", _animationGraphPath.c_str() );
+        requestClipLoads();
+        if ( _listClipLoad.empty() )
+        {
+            applyGraphPlayables();
+            return;
+        }
+        _bClipsPending = SW_TRUE;
+        (void)finishClipLoadsIfComplete(); // 모두 이미 읽혀 있었으면(같은 클립을 쓰는 캐릭터가 먼저 읽었다) 바로 끝난다
+    }
+
+    void SkeletalAnimatorComponent::requestClipLoads()
+    {
+        _listClipLoad.clear();
+        auto request = [this]( const hashed_string& clipName )
+        {
+            if ( clipName.empty() || _mapClip.find( clipName ) != _mapClip.end() )
+                return;
+            for ( const ClipLoad& existing : _listClipLoad )
+            {
+                if ( existing._clipName == clipName )
+                    return;
+            }
+            ClipLoad& added = _listClipLoad.emplace_back();
+            added._clipName = clipName;
+            added._load     = SharedAssetCache<AnimationClip>::request( makeClipPath( clipName ) );
+        };
+        // 그래프를 짓는 것(`rebuildGraphPlayables`)과 같은 이름을 모은다 — 노드(블렌드 스페이스면 표본), 레이어. 그래프가 없으면 시작 상태가 곧 클립이다.
+        for ( const AnimationGraphNode& node : _graph._listNode )
+        {
+            if ( node.hasPoseNode() )
+                continue;
+            if ( node.hasBlendSpace() == false )
+            {
+                request( hashed_string( node._name ) );
+                continue;
+            }
+            for ( const BlendSpaceSample& sample : node._blendSpace._space.getSamples() )
+            {
+                request( sample._clipName );
+            }
+        }
+        for ( const AnimationGraphLayerDef& def : _graph._listLayer )
+        {
+            request( def._clipName );
+        }
+        if ( _graph._listNode.empty() )
+        {
+            request( hashed_string( _currentState ) );
+            request( hashed_string( _initialState ) );
+        }
+    }
+
+    bool SkeletalAnimatorComponent::finishClipLoadsIfComplete()
+    {
+        if ( _bClipsPending == SW_FALSE )
+            return true;
+        for ( const ClipLoad& load : _listClipLoad )
+        {
+            if ( load._load.isLoading() )
+                return false;
+        }
+        // 다 끝났다. 읽은 것만 표에 넣는다 — 못 읽은 이름은 그래프를 지을 때(`rebuildGraphPlayables`) · 재생할 때 오류가 드러난다.
+        for ( const ClipLoad& load : _listClipLoad )
+        {
+            shared_ptr<const AnimationClip> clip = load._load.get();
+            if ( clip != nullptr )
+                _mapClip.emplace( load._clipName, std::move( clip ) );
+        }
+        _listClipLoad.clear();
+        _bClipsPending = SW_FALSE;
+        applyGraphPlayables();
+        runDeferredPlayback();
+        return true;
+    }
+
+    void SkeletalAnimatorComponent::runDeferredPlayback()
+    {
+        if ( _bPlayDeferred == SW_TRUE )
+        {
+            _bPlayDeferred = SW_FALSE;
+            _bStartPending = SW_FALSE; // 기다리는 동안 코드가 다른 상태를 재생하라고 했다 — 그것이 이긴다
+            (void)play( _deferredPlayState, _bDeferredPlayLoop == SW_TRUE, _deferredPlayBlend );
+        }
+        else if ( _bStartPending == SW_TRUE )
+        {
+            _bStartPending = SW_FALSE;
+            startInitialState();
+        }
+    }
+
+    void SkeletalAnimatorComponent::waitForAnimationAssets()
+    {
+        for ( const ClipLoad& load : _listClipLoad )
+        {
+            (void)load._load.wait();
+        }
+        (void)finishClipLoadsIfComplete();
     }
 
     void SkeletalAnimatorComponent::onEndPlay()
@@ -291,10 +422,16 @@ namespace sw
 
     void SkeletalAnimatorComponent::loadGraph()
     {
-        _graph = AnimationGraphAsset{};
+        // 코드가 그래프를 바꿨다 — 시작 때 요청해 둔 로드는 버리고 그 자리에서 다시 읽는다(동기 API). 미룬 시작 재생은 아래 뒤에 한다.
+        const bool bWasPending = _bClipsPending == SW_TRUE;
+        _listClipLoad.clear();
+        _bClipsPending = SW_FALSE;
+        _graph         = AnimationGraphAsset{};
         if ( _animationGraphPath.empty() == false && _graph.loadFromFile( _animationGraphPath ) == false )
             SW_LOG_ERROR( "Animation graph '%#' could not be loaded", _animationGraphPath.c_str() );
         applyGraphPlayables();
+        if ( bWasPending )
+            runDeferredPlayback();
     }
 
     void SkeletalAnimatorComponent::applyGraphPlayables()
@@ -386,7 +523,13 @@ namespace sw
         _clipFolder = string{ folder };
         _mapClip.clear();
         _mapTrackToBone.clear();
+        // 시작 때 요청해 둔 클립은 옛 폴더의 것이다 — 버리고 새 폴더에서 그 자리에서 읽는다(동기 API).
+        const bool bWasPending = _bClipsPending == SW_TRUE;
+        _listClipLoad.clear();
+        _bClipsPending = SW_FALSE;
         applyGraphPlayables();
+        if ( bWasPending )
+            runDeferredPlayback();
     }
 
     void SkeletalAnimatorComponent::setAnimationGraphPath( string_view path )
@@ -422,6 +565,15 @@ namespace sw
 
     bool SkeletalAnimatorComponent::play( const hashed_string& stateName, bool bLoop, float32 blendSeconds )
     {
+        // 시작 때 요청한 클립을 읽는 중이다 — 그래프가 아직 없으니 재생을 미루고, 다 읽히면 한다(`runDeferredPlayback`). 없는 클립은 그때 오류가 난다.
+        if ( _bClipsPending == SW_TRUE )
+        {
+            _deferredPlayState = stateName;
+            _deferredPlayBlend = blendSeconds;
+            _bDeferredPlayLoop = bLoop ? SW_TRUE : SW_FALSE;
+            _bPlayDeferred     = SW_TRUE;
+            return true;
+        }
         const AnimationGraphNode* pNode = stateName.empty() ? _graph.findEntryNode() : _graph.findNodeByName( stateName.c_str() );
         // 블렌드 스페이스 노드의 표본은 그래프를 읽을 때 읽었다. 가중치와 길이는 지금 파라미터로 맞춰 둔다(길이 0 이면 재생되지 않는다).
         if ( pNode != nullptr && pNode->hasBlendSpace() )

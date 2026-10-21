@@ -146,6 +146,11 @@ namespace sw
 
     MeshHandle MeshCache::request( string_view path )
     {
+        return requestWith( path, AssetLoadStart::Async );
+    }
+
+    MeshHandle MeshCache::requestWith( string_view path, AssetLoadStart start )
+    {
         if ( path.empty() )
         {
             shared_ptr<MeshLoadBlock> pFailed = make_shared<MeshLoadBlock>( path );
@@ -175,13 +180,13 @@ namespace sw
             }
             inFlight._mapKeyToBlock[key] = pBlock;
         }
-        AssetLoadBlock::startLoad( pBlock );
+        AssetLoadBlock::startLoad( pBlock, start );
         return MeshHandle{ std::move( pBlock ) };
     }
 
     shared_ptr<Mesh> MeshCache::acquire( string_view path )
     {
-        return request( path ).wait();
+        return requestWith( path, AssetLoadStart::OnCallingThread ).wait();
     }
 
     bool MeshCache::reloadShared( string_view path, IRHIDevice* pDevice )

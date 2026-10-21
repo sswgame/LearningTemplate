@@ -148,6 +148,12 @@ namespace sw
          *          못 읽은 텍스처는 엔진의 누락 텍스처 체커를 빌린다. 체커마저 못 읽으면 오류를 남기고 false 다(흰색으로 대신하지 않는다).
          */
         [[nodiscard]] bool resolveTextureAssets( IRHIDevice* pRHI );
+        /**
+         * @brief 텍스처 로드를 어디서 시작할지 정합니다(다음 `initialize` · `initRHI` 부터). 기본은 그 자리(`AssetLoadStart::OnCallingThread`)입니다.
+         * @details 씬이 쓰는 머티리얼(`MaterialCache`)은 `Async` 로 둔다 — 텍스처를 워커가 읽는 동안 로드 중 텍스처(회색)를 그린다. 직접 만든 머티리얼(도구 · 테스트 ·
+         *          에디터 미리보기)은 그 자리에서 읽어 첫 그림부터 진짜 텍스처다.
+         */
+        void setTextureLoadStart( AssetLoadStart start ) { _textureLoadStart = start; }
         /** @brief resolveTextureAssets 가 빌린 텍스처를 캐시에 반환합니다. */
         void releaseTextureAssets( IRHIDevice* pRHI );
         /**
@@ -278,6 +284,7 @@ namespace sw
         uint32                     _textureReloadGeneration; ///< SRV 인덱스를 받을 때의 `TextureCache::getReloadGeneration()`
         vector<string>             _listAcquiredTexturePath; ///< resolveTextureAssets 가 해석한 요청 경로(프로퍼티의 assetPath). refreshTextureBindings 가 프로퍼티와 맞춘다.
         vector<TextureHandle>      _listTextureLoad;         ///< 위와 같은 순서의 텍스처 로드(`TextureCache::request`). 준비되면 참조를 쥐고, 실패하면 놓는다
+        AssetLoadStart             _textureLoadStart;        ///< 텍스처 로드를 어디서 시작하는가(`setTextureLoadStart`). 기본은 그 자리(동기)
         vector<string>             _listBorrowedTexturePath; ///< 위와 같은 순서로 대신 빌린 경로(`acquire` · `release` 짝) — 로드 중이면 로드 중 텍스처, 실패면 누락 텍스처, 진짜가 붙었으면 빈 문자열
         vector<RHIDescriptorIndex> _listMaterialTextureSrv;  ///< 위 경로와 같은 순서의 백엔드 SRV 인덱스(에뮬레이션 백엔드의 슬롯 바인딩용)
         vector<hashed_string>      _listMaterialTextureName; ///< 위와 같은 순서의 프로퍼티 이름(인스턴스가 같은 슬롯을 덮어쓴다)

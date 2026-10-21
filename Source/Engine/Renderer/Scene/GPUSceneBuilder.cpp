@@ -46,7 +46,8 @@ namespace sw
                        Memory::compare( &instance._boundsCenter, &raw._boundsCenter, sizeof( instance._boundsCenter ) ) != 0 ||
                        Memory::compare( &instance._boundsRadius, &raw._boundsRadius, sizeof( instance._boundsRadius ) ) != 0 ||
                        instance._blendMode != raw._blendMode || instance._spinSeed != raw._spinSeed || instance._sprite != raw._sprite ||
-                       Memory::compare( &instance._vertexAnimationPhase, &raw._vertexAnimationPhase, sizeof( instance._vertexAnimationPhase ) ) != 0;
+                       Memory::compare( &instance._vertexAnimationPhase, &raw._vertexAnimationPhase, sizeof( instance._vertexAnimationPhase ) ) != 0 ||
+                       Memory::compare( &instance._appearance, &raw._appearance, sizeof( instance._appearance ) ) != 0;
             }
 
             /** @brief raw 의 페이로드를 인스턴스에 옮깁니다. `_meshBatchIndex` 와 `_materialIndex` 는 그대로 둡니다. 배치 구성이 같을 때만 부릅니다. */
@@ -59,6 +60,7 @@ namespace sw
                 outInstance._spinSeed             = raw._spinSeed;
                 outInstance._sprite               = raw._sprite;
                 outInstance._vertexAnimationPhase = raw._vertexAnimationPhase;
+                outInstance._appearance           = raw._appearance;
             }
 
             /**
@@ -214,6 +216,9 @@ namespace sw
         MeshComponent* pMeshComp = static_cast<MeshComponent*>( pPrimitive );
         if ( pMeshComp == nullptr || pMeshComp->isVisible() == false )
             return false;
+        // 등장 비율 0 은 아직(또는 이제) 보이지 않는다 — 애니메이션을 기다리는 캐릭터, 다 사라진 메시(`MeshComponent::getAppearance`).
+        if ( pMeshComp->getAppearance() <= 0.0f )
+            return false;
         // 컴포넌트를 꺼도 빠진다(`isActive` 는 자기 비트와 소유 오브젝트의 계층 활성을 함께 본다).
         // 소유 오브젝트만 보면 빛은 컴포넌트를 끄면 꺼지는데 메시는 그대로 그려진다.
         const bool bExcludedMeshComponent = pMeshComp->getOwner() == nullptr || pMeshComp->isActive() == false || pMeshComp->getOwner()->isHiddenInEditor();
@@ -234,6 +239,7 @@ namespace sw
         candidate._spinSeed             = pMeshComp->getGPUSpinSeed();
         candidate._sprite               = pMeshComp->getSpriteInstanceData();
         candidate._vertexAnimationPhase = pMeshComp->getVertexAnimationPhase();
+        candidate._appearance           = pMeshComp->getAppearance();
         candidate._sortKey              = pMeshComp->getSortKey();
         // 소유권을 싣는다. RT 가 upload() 에서 역참조한다. 스냅샷은 머티리얼과 인스턴스의 소유권도
         // 함께 싣는다(렌더 스레드가 패킷을 다 쓸 때까지 살아 있어야 한다). 세 줄 모두 **원시 포인터로
@@ -243,7 +249,7 @@ namespace sw
         if ( candidate._instance.get() != pMeshComp->getRawMaterialInstance() )
             candidate._instance = pMeshComp->getMaterialInstance();
         fillCandidateMaterial( candidate, pMeshComp->getMaterial(), pScene, static_cast<uint32>( pMeshComp->getBlendMode() ) );
-        // 퍼뮤테이션 해시는 **여기서 구하지 않는다**. 호출하는 쪽이 게임 스레드에서 기록한다(stampPermutationHash).
+        // 퍼뮤테이션 해시는 **여기서 구하지 않는다**. 호출하는 쪽이 게임 스레드에서 기록한다(`stampPermutationHash`).
         // 머티리얼의 해시 게터는 더티 플래그를 보고 캐시를 다시 만드는 지연 계산이라, 같은 머티리얼을
         // 나눠 쓰는 프리미티브들을 워커 여럿이 동시에 채우면 그 캐시를 동시에 고쳐 쓰게 된다.
         return true;
@@ -275,6 +281,7 @@ namespace sw
         candidate._spinSeed                  = item._spinSeed;
         candidate._sprite                    = item._sprite;
         candidate._vertexAnimationPhase      = 0.0f;
+        candidate._appearance                = 1.0f; // 인스턴스 배치(식생 · UI)는 등장하지 않는다
         candidate._sortKey                   = pBatch->getSortKey();
         // 메시 컴포넌트 버전과 같은 규칙이다. 원시 포인터로 먼저 비교하고, 다르면 소유권을 싣는다.
         if ( candidate._mesh.get() != pMesh )
@@ -306,7 +313,7 @@ namespace sw
     {
         // 어느 PSO 로 그릴지를 정하는 값이다. 배치 키의 일부이고, 여기서 한 번 구해 두면
         // 나누기와 정렬이 다시 구하지 않는다(투명은 원소마다 물었다).
-        candidate._permutationHash = GPUMaterialRegistry::permutationHashFor( candidate._material.get(), candidate._instance.get() );
+        candidate._permutationHash = GPUMaterialRegistry::permutationHashFor( candidate._material.get(), candidate._instance.get(), candidate.usesAppearanceDither() );
     }
 
     void GPUSceneBuilder::fillPayload( const DrawCandidate& candidate, GPUInstance& outInstance )
@@ -318,6 +325,7 @@ namespace sw
         outInstance._spinSeed             = candidate._spinSeed;
         outInstance._sprite               = candidate._sprite;
         outInstance._vertexAnimationPhase = candidate._vertexAnimationPhase;
+        outInstance._appearance           = candidate._appearance;
     }
 
     bool GPUSceneBuilder::copyCandidateTransforms( const PrimitiveRegistry& primitives )
@@ -596,7 +604,8 @@ namespace sw
                                 const DrawCandidate& prev = _pPrevCandidate[prevIndex];
                                 // 해시는 (머티리얼, 인스턴스, 퍼뮤테이션 세대)의 함수다. 셋이 같으면 지난 값이 그대로 맞고,
                                 // 그래야 키와 내용 비교도 의미가 있다(해시가 키에 들어 있다).
-                                const bool bSameShader = _bPermutationSame && prev._material == candidate._material && prev._instance == candidate._instance;
+                                const bool bSameShader = _bPermutationSame && prev._material == candidate._material && prev._instance == candidate._instance &&
+                                                         prev.usesAppearanceDither() == candidate.usesAppearanceDither();
                                 if ( bSameShader )
                                 {
                                     candidate._permutationHash = prev._permutationHash;
@@ -1425,7 +1434,7 @@ namespace sw
         // 퍼뮤테이션은 **배치에 실제로 들어 있는 후보**에서 뽑는다. 합치기가 켜지면 키의 인스턴스는 nullptr 이라,
         // 키로 물으면 대표 머티리얼의 define 만 나오고 인스턴스가 켠 키워드가 통째로 빠진다. 그 배치는
         // 잘못된 셰이더로 그려진다. 한 배치의 구성원은 모두 같은 퍼뮤테이션 해시를 가지므로 아무 구성원이나 맞다.
-        batch._shaderPermutation = _materialRegistry.shaderPermutationFor( headCandidate._material.get(), headCandidate._instance.get(), _snapshot );
+        batch._shaderPermutation = _materialRegistry.shaderPermutationFor( headCandidate._material.get(), headCandidate._instance.get(), headCandidate.usesAppearanceDither(), _snapshot );
         batch._materialIndex     = 0;
 
         // 인스턴스마다 자기 (머티리얼, 인스턴스) 원소를 받는다. 합치기가 켜져 있으면 한 배치에 여러 머티리얼이 들어간다.

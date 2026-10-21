@@ -341,9 +341,9 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, RevertingAnOverrideRemovesItFromTheSa
     SW_ASSERT_TRUE( pReopened->instantiate( saved ) );
     GameObject* pInstance = pReopened->getObjectManager()->findGameObjectByName( hashed_string( "Crate" ) );
     SW_ASSERT_NOT_NULL( pInstance );
-    GameObjectManager scratch;
-    GameObject*       pCdo    = scratch.createGameObject( hashed_string( "Cdo" ) );
-    PrefabAsset*      pPrefab = engine::getSubsystem<AssetManager>().getAssetCache<sw::PrefabCache>().loadPrefab( prefabPath );
+    GameObjectManager                   scratch;
+    GameObject*                         pCdo    = scratch.createGameObject( hashed_string( "Cdo" ) );
+    const shared_ptr<const PrefabAsset> pPrefab = engine::getSubsystem<AssetManager>().getAssetCache<sw::PrefabCache>().loadPrefab( prefabPath );
     SW_ASSERT_TRUE( pPrefab != nullptr && pPrefab->applyStateTo( pCdo ) );
 
     vector<PrefabOverrideItem> listOverride;

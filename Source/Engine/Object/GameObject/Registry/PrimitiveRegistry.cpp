@@ -122,7 +122,7 @@ namespace sw
         added._pFunction   = pFunction;
     }
 
-    void PrimitiveRegistry::updateAssetWaiters()
+    void PrimitiveRegistry::updateAssetWaiters( float32 deltaSeconds )
     {
         // 번호로 돈다 — 함수가 다시 걸면(addAssetWaiter) 같은 자리를 고치거나 뒤에 붙인다. 함수 안에서 프리미티브를 지우는 일(remove)은 없다:
         // 컴포넌트 제거는 틱 밖의 파괴 단계에서만 일어난다. 그래서 함수를 부르는 동안 잠금을 쥐지 않는다(함수가 다시 걸 때 같은 잠금을 잡는다).
@@ -130,7 +130,7 @@ namespace sw
         while ( waiterIndex < _listAssetWaiter.size() )
         {
             const AssetWaiter waiter      = _listAssetWaiter[waiterIndex];
-            const bool        bStillWaits = waiter._pFunction( *waiter._pPrimitive );
+            const bool        bStillWaits = waiter._pFunction( *waiter._pPrimitive, deltaSeconds );
             if ( bStillWaits )
             {
                 ++waiterIndex;

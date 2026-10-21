@@ -61,11 +61,12 @@ namespace sw
          *          `wait()` 한 쪽이 그 자리에서 한다. 렌더 텍스처 · CPU 텍스처는 읽을 파일이 없어 업로드 단계만 있다.
          *          **수명 계약**: 핸들이 준비된 텍스처의 참조 하나를 쥐고, 마지막 핸들이 사라질 때 놓는다. 업로드가 끝나면 `getReloadGeneration` 이 올라
          *          로드 중 텍스처를 빌려 둔 머티리얼이 새 SRV 를 받는다(`Material::refreshTextureBindings`).
+         * @param start 새 로드의 로드 단계(디스크 읽기)를 어디서 시작하는가입니다. `OnCallingThread` 여도 업로드는 `wait()` 나 펌프가 한다.
          */
-        TextureHandle request( string_view relativePath, IRHIDevice* pDevice );
+        TextureHandle request( string_view relativePath, IRHIDevice* pDevice, AssetLoadStart start );
         /**
          * @brief 경로의 텍스처를 확보하고 GPU 에 업로드합니다(렌더 텍스처 경로면 렌더 타깃을 만듭니다). 실패하면 nullptr 입니다.
-         * @details `request( path ).wait()` 와 같은 길이다 — 디바이스를 쓰는 스레드에서만 부른다(업로드를 그 자리에서 한다).
+         * @details `request` 와 같은 로드 블록을 기다린다(새 로드는 이 자리에서 읽는다) — 디바이스를 쓰는 스레드에서만 부른다(업로드를 그 자리에서 한다).
          *          **수명 계약**: 성공하면 참조를 하나 셉니다. 돌려준 포인터는 짝이 되는 `release` 까지 살아 있습니다(객체는 `unique_ptr` 이라
          *          맵이 원소를 옮겨도 주소가 그대로입니다). 같은 경로를 동시에 원한 스레드는 같은 로드를 기다려 받습니다.
          */
@@ -77,6 +78,8 @@ namespace sw
         uint32 completePendingLoads( uint32 maxCount );
         /** @brief 렌더 스레드가 한 프레임에 올리는 비동기 로드 수의 상한입니다(`completePendingLoads`). */
         static constexpr uint32 kMaxUploadsPerFrame = 8;
+        /** @brief 읽거나 올리는 중인 텍스처 수입니다(어느 스레드든). 시나리오의 스크린샷이 로드 중 텍스처를 찍지 않게 기다릴 때 씁니다(`AutomationRunner`). */
+        uint32 countLoadsInFlight() const;
         /** @brief 렌더 텍스처 경로(`rendertarget/...`)이면 true 입니다. */
         static bool isRenderTargetPath( string_view relativePath );
         /** @brief CPU 텍스처 경로(`cpu/...`)이면 true 입니다. */

@@ -7,6 +7,7 @@
 #include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/string.h"
 #include "Core/Memory/Memory.h"
 
@@ -154,6 +155,26 @@ namespace sw
         /** @brief 메시 공간의 경계(`Mesh::getLocalBoundsMin/Max`, 메시가 없으면 단위 상자)를 월드로 옮긴 상자를 반환합니다. */
         bool getWorldBox( AABB& outBox ) const override;
 
+        /**
+         * @brief 등장 비율(0 ~ 1)입니다. 1 이면 다 보이고, 0 이면 그리지 않습니다. 그 사이는 디더로 그 비율만큼의 픽셀만 그립니다(`GPUInstance::_appearance`).
+         * @details 비동기로 읽은 메시가 도착하면 0 에서 `_appearSeconds` 동안 1 로 오른다(한 프레임에 튀지 않게). 캐릭터는 애니메이션이 준비될 때까지 0 에 머문다
+         *          (`pollReadyToAppear`). 바로 보이는 메시(내장 도형, 이미 읽은 에셋)는 1 그대로다.
+         */
+        float32 getAppearance() const { return _appearance; }
+        /** @brief 0 에서(진행 중이면 지금 값에서) `_appearSeconds` 동안 서서히 나타납니다 — 텔레포트처럼 그 자리에 새로 나타나는 경우에 부릅니다. */
+        void beginAppearance();
+        /** @brief 지금 값에서 `_appearSeconds` 동안 서서히 사라집니다. 0 이 되면 그리지 않습니다 — 지우기 전에 부르고 `isFullyDisappeared` 뒤에 지웁니다. */
+        void beginDisappearance();
+        /**
+         * @brief 순간이동(`SceneComponent::teleportTo`)했을 때 `_bAppearOnTeleport` 면 새 자리에서 다시 나타납니다. 틱 중(워커)에도 불리므로 표시만 하고, 씬 프레임의
+         *        도착 단계가 등장을 시작한다.
+         */
+        void onTeleported() override;
+        /** @brief 사라지기가 끝났으면(등장 비율 0, 진행 없음) true 입니다. */
+        bool isFullyDisappeared() const { return _appearance <= 0.0f && _appearanceRate == 0.0f && _bAwaitingAppearance == SW_FALSE; }
+        /** @brief 등장 · 사라지기 시간(초) 기본값입니다. 컴포넌트마다 `_appearSeconds` 로 바꿉니다(0 이면 바로). */
+        static constexpr float32 kDefaultAppearSeconds = 0.4f;
+
         /** @brief 가시 여부를 설정합니다. */
         void setVisible( bool bVisible );
         /** @brief 가시 여부를 반환합니다. */
@@ -187,12 +208,24 @@ namespace sw
         virtual hashed_string getDefaultMaterialPath() const { return {}; }
         /** @brief 스프라이트 프레임과 색을 바꿉니다. 값이 달라졌을 때만 렌더 상태를 더티로 표시하므로, 같은 프레임을 다시 넣는 애니메이터는 비용이 없습니다. */
         void setSpriteInstanceData( const GPUSpriteInstanceData& data );
+        /**
+         * @brief 나타날 준비가 됐는지 묻습니다(씬 프레임마다, 게임 스레드, 등장을 미루는 동안). 기본은 늘 준비됨입니다.
+         * @details 캐릭터(스켈레탈 메시)는 붙은 애니메이터의 클립이 다 읽혔을 때 준비된다 — 애니메이션 없이 기본 자세로 한 프레임이라도 보이지 않게.
+         *          묻는 김에 기다리던 쪽을 마무리해도 된다(애니메이터가 그래프를 짓고 시작 상태를 재생한다).
+         */
+        virtual bool pollReadyToAppear() { return true; }
+        /** @brief 등장 비율을 0 으로 두고 `pollReadyToAppear` 가 true 가 될 때까지 기다렸다가 나타납니다(파생 타입이 준비가 늦어질 때 부릅니다). */
+        void holdAppearanceUntilReady();
 
     private:
-        /** @brief 메시 로드를 기다리는 동안 씬 프레임마다 불립니다(`PrimitiveRegistry::addAssetWaiter`). 아직 기다리면 true 입니다. */
-        static bool updateMeshLoad( ScenePrimitive& primitive );
+        /** @brief 메시 로드 · 등장 대기 · 등장 진행 동안 씬 프레임마다 불립니다(`PrimitiveRegistry::addAssetWaiter`). 아직 할 일이 있으면 true 입니다. */
+        static bool updateArrival( ScenePrimitive& primitive, float32 deltaSeconds );
         /** @brief 끝난 메시 로드의 결과를 메시로 삼고 핸들을 놓습니다. 실패면 메시 없이 둔다. */
         void applyMeshLoad();
+        /** @brief 등장(@p direction 이 양수) 또는 사라지기(음수)를 시작합니다. `_appearSeconds` 가 0 이면 바로 끝 값입니다. */
+        void startAppearanceRamp( float32 direction );
+        /** @brief 등장 대기와 진행을 한 프레임 나아갑니다. 아직 할 일이 있으면 true 입니다. */
+        bool advanceAppearance( float32 deltaSeconds );
 
     private:
         shared_ptr<Mesh>             _mesh;
@@ -220,13 +253,22 @@ namespace sw
         float32 _vertexAnimationPhase;
         /** @brief 투명 큐의 정렬 키입니다(0 = 기본). 저장하지 않습니다. */
         uint32 _sortKey;
+        PROPERTY( Category = "Rendering", DisplayName = "Appear Seconds", Tooltip = "Dither fade-in time after the mesh finishes loading (and for beginAppearance/beginDisappearance); 0 shows it at once", Min = 0.0, Max = 5.0, Units = s )
+        float32 _appearSeconds;
+        float32 _appearance;     ///< 등장 비율(0 ~ 1, 저장하지 않음). `getAppearance`
+        float32 _appearanceRate; ///< 등장 비율의 초당 변화(양수 등장 · 음수 사라지기 · 0 멈춤, 저장하지 않음)
+        /** @brief 순간이동이 표시한 등장 요청입니다(`onTeleported`, 워커가 쓴다). 도착 단계가 꺼내 `beginAppearance` 한다. 비트필드에 두면 이웃 비트와 레이스다. */
+        atomic<bool> _bTeleportAppearPending;
         /** @brief 등록할 때 받은 레지스트리입니다. 더티 표시는 소유자를 거치지 않고 여기로 바로 갑니다. */
         PrimitiveRegistry* _pPrimitiveRegistry;
         // "더티" 비트는 여기 없다. 레지스트리의 원자 플래그 하나가 기준이다. 더티를 이 비트필드에 두면 워커의 더티 쓰기가
         // `_bVisible` 과 같은 바이트를 읽고 고쳐 쓰는 것이라, 이웃 비트를 만지는 스레드와 레이스가 된다.
         /** @brief 그리는지 여부입니다. 저장됩니다(PROPERTY). 숨긴 메시가 Stop, 되돌리기, 씬 다시 열기 뒤에도 숨은 채로 남습니다. */
         PROPERTY( Category = "Rendering", DisplayName = "Visible", Tooltip = "Draw this mesh" )
-        uint8 _bVisible : 1;
-        uint8 _reserved : 7;
+        uint8 _bVisible            : 1;
+        uint8 _bAwaitingAppearance : 1; ///< 등장을 미루는 중이다(`holdAppearanceUntilReady`, 저장하지 않음)
+        PROPERTY( Category = "Rendering", DisplayName = "Appear On Teleport", Tooltip = "Dither in again after teleportTo (respawn); off for network corrections and camera cuts" )
+        uint8 _bAppearOnTeleport : 1;
+        uint8 _reserved          : 5;
     };
 } // namespace sw

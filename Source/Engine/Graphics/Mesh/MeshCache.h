@@ -67,7 +67,7 @@ namespace sw
         static MeshHandle request( string_view path );
 
         /**
-         * @brief 경로의 메시를 **공유받습니다**. `request( path ).wait()` 와 같은 길입니다 — 아직 아무도 읽지 않았으면 이 스레드가 읽습니다.
+         * @brief 경로의 메시를 **공유받습니다**. `request` 와 같은 로드 블록을 기다립니다 — 아직 아무도 읽지 않았으면 이 스레드가 읽습니다(`AssetLoadStart::OnCallingThread`).
          * @return 읽을 수 없으면 nullptr 입니다.
          */
         static shared_ptr<Mesh> acquire( string_view path );
@@ -92,5 +92,9 @@ namespace sw
         size_t getCachedCount() const override;
         /** @brief 캐시와 경고 기록, 물리 셰이프 캐시를 비웁니다. 사용 중인 메시는 그대로이고, 다음 요청은 파일을 새로 읽습니다. */
         void clear() override;
+
+    private:
+        /** @brief `request` 와 `acquire` 의 본문입니다. 새 로드를 @p start 대로 시작합니다(동기 API 는 이 자리에서 읽는다 — `AssetLoadStart`). */
+        static MeshHandle requestWith( string_view path, AssetLoadStart start );
     };
 } // namespace sw

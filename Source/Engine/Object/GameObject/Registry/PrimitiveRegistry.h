@@ -131,8 +131,11 @@ namespace sw
         /** @brief 프리미티브 번호 공간의 크기입니다(메시 컴포넌트 수 + 인스턴스 항목 수). */
         uint32 getSlotCount() const { return static_cast<uint32>( _listPrimitive.size() + _listInstanceEntry.size() ); }
 
-        /** @brief 에셋 로드를 기다리는 프리미티브가 프레임마다 받는 함수입니다. 아직 기다리면 true, 다 받았으면 false 를 반환합니다. */
-        using AssetWaitFunction = bool ( * )( ScenePrimitive& primitive );
+        /**
+         * @brief 에셋 로드(또는 그 뒤의 등장)를 기다리는 프리미티브가 프레임마다 받는 함수입니다. 아직 기다리면 true, 다 끝났으면 false 를 반환합니다.
+         * @param deltaSeconds 이번 씬 프레임의 시간(초)입니다 — 등장 비율을 올리고 내리는 데 쓴다(`MeshComponent::beginAppearance`).
+         */
+        using AssetWaitFunction = bool ( * )( ScenePrimitive& primitive, float32 deltaSeconds );
         /**
          * @brief 에셋 로드(`AssetHandle`)를 기다리는 프리미티브를 겁니다(게임 스레드). 이미 걸려 있으면 함수만 바꿉니다.
          * @details 기반에 가상 함수를 더하지 않으려고 함수 포인터로 받는다(파일 머리 `ScenePrimitive.h`). `remove` 가 같이 뺀다 — 사라진 컴포넌트는 불리지 않는다.
@@ -142,7 +145,7 @@ namespace sw
          * @brief 기다리는 프리미티브의 함수를 한 번씩 부르고 다 받은 것을 뺍니다(씬 프레임 `AssetArrival` 단계, 게임 스레드, 병렬 구간 밖).
          * @details 함수 안에서 다시 `addAssetWaiter` 를 불러도 된다(다른 메시로 바꿔 다시 기다리는 경우) — 반환값이 남길지를 정한다.
          */
-        void updateAssetWaiters();
+        void updateAssetWaiters( float32 deltaSeconds );
         /** @brief 에셋을 기다리는 프리미티브 수입니다(테스트 · 진단). */
         size_t countAssetWaiters() const { return _listAssetWaiter.size(); }
 

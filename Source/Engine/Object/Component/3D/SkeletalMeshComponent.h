@@ -125,6 +125,11 @@ namespace sw
         void registerAnimationPhaseTask( IAnimationPhaseTask* pTask );
         /** @brief 작업을 해제합니다. 그 작업에 `onAnimationUnitDetached` 를 알립니다. */
         void unregisterAnimationPhaseTask( IAnimationPhaseTask* pTask );
+        /**
+         * @brief 등록한 작업의 에셋이 아직 읽히는 중이라고 알립니다(애니메이터가 클립을 요청한 직후). 유닛은 모든 작업이 준비될 때까지 그리지 않고, 준비되면 디더로 나타납니다.
+         * @details 캐릭터 스폰의 "애니메이션이 준비된 뒤 나타난다" 규칙이다 — 애니메이션 없이 기본 자세로 서 있는 프레임이 화면에 나오지 않는다.
+         */
+        void holdUntilAnimationAssetsReady() { holdAppearanceUntilReady(); }
 
         /** @brief 포즈를 만드는 주기(프레임 수)입니다. 1 이면 매 프레임입니다. */
         void   setUpdateRateDivisor( uint32 divisor );
@@ -200,6 +205,10 @@ namespace sw
         void finishAnimationFrame();
         /** @brief 동기 그룹 후보를 모읍니다(게임 스레드). */
         void collectSyncPlayers( vector<AnimationPlayer*>& inoutListPlayer, vector<float32>& inoutListWeight, vector<hashed_string>& inoutListGroup );
+
+    protected:
+        /** @brief 등록한 작업(애니메이터)이 모두 에셋을 다 읽었으면 true 입니다(`IAnimationPhaseTask::pollAnimationAssetsReady`). */
+        bool pollReadyToAppear() override;
 
     private:
         /** @brief 스켈레톤을 경로에서 다시 읽습니다. 경로가 비어 있고 코드가 정한 스켈레톤이 있으면 그대로 둡니다. */

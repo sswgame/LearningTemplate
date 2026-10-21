@@ -17,6 +17,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/SceneAnimation/AnimationSystem.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Resource/Cache/SharedAssetCache.h"
 
 namespace sw
 {
@@ -101,6 +102,7 @@ namespace sw
         explicit SkeletalAnimatorBinding( SkeletalAnimatorComponent& owner );
 
         bool                            isAnimationActive() const override;
+        bool                            pollAnimationAssetsReady() override;
         void                            runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override;
         AnimationPlayer*                findSyncPlayer( hashed_string& outGroupName, float32& outWeight ) override;
         void                            finishAnimationFrame( SkeletalMeshComponent& unit ) override;
@@ -144,7 +146,10 @@ namespace sw
         void onEndPlay() override;
         void onPropertyChanged( hashed_string propertyName ) override;
 
-        /** @brief 상태(또는 그래프 밖 클립)를 재생합니다. @p blendSeconds 가 음수면 `_blendSeconds` 입니다. 클립을 찾았으면 true 입니다. */
+        /**
+         * @brief 상태(또는 그래프 밖 클립)를 재생합니다. @p blendSeconds 가 음수면 `_blendSeconds` 입니다. 클립을 찾았으면 true 입니다.
+         * @details 시작 때 요청한 클립을 아직 읽는 중이면(`isWaitingForAnimationAssets`) 재생을 미루고 true 를 반환한다 — 다 읽히면 그때 재생하고, 클립이 없으면 그때 오류를 남긴다.
+         */
         bool play( const hashed_string& stateName, bool bLoop = true, float32 blendSeconds = -1.0f );
         FUNCTION( Category = "Playback", DisplayName = "Stop", CallInEditor )
         void stop();
@@ -164,6 +169,15 @@ namespace sw
         void setAnimationGraphPath( string_view path );
         /** @brief 클립을 미리 읽어 둡니다(게임 스레드). 워커의 전이는 읽어 둔 클립만 찾습니다. */
         bool preloadClip( const hashed_string& clipName );
+        /**
+         * @brief 시작 때 요청한 클립(그래프가 이름 붙인 것과 시작 상태)을 아직 읽는 중이면 true 입니다. 그동안 유닛은 그리지 않고(캐릭터는 애니메이션이 준비된 뒤
+         *        나타난다), 다 읽히면 그래프를 짓고 미뤄 둔 시작 재생을 합니다(씬 프레임의 도착 단계, `SkeletalMeshComponent::pollReadyToAppear`).
+         * @details 시작(`onBeginPlay`)만 비동기다 — 스폰이 디스크를 기다리지 않게. 코드가 부르는 세터(`setAnimationGraphPath` · `setClipFolder`)와 `play` 의 그래프 밖 클립은
+         *          같은 로드 블록을 그 자리에서 기다린다(동기 API).
+         */
+        bool isWaitingForAnimationAssets() const { return _bClipsPending == SW_TRUE; }
+        /** @brief 시작 때 요청한 클립을 그 자리에서 기다려(같은 로드 블록, 이 스레드가 돕는다) 마무리합니다. 테스트 · 에디터 미리보기처럼 이번 프레임에 포즈가 필요할 때 부릅니다. */
+        void waitForAnimationAssets();
 
         /** @brief 상태 기계 파라미터입니다. 게임 코드가 틱에서 씁니다. */
         AnimationParameterSet&       getParameters() { return _parameters; }
@@ -298,8 +312,18 @@ namespace sw
 
         /** @brief 같은 오브젝트의 유닛에 붙습니다. */
         void bindToUnit();
-        /** @brief 그래프를 다시 읽고 노드의 클립을 미리 읽습니다. 그래프 레이어와 블렌드 스페이스 상태도 다시 만듭니다. */
+        /** @brief 그래프를 다시 읽고 노드의 클립을 미리 읽습니다(그 자리에서). 그래프 레이어와 블렌드 스페이스 상태도 다시 만듭니다. 시작 때 요청해 둔 로드는 버립니다. */
         void loadGraph();
+        /** @brief 시작 때의 그래프 읽기입니다. 클립은 비동기로 요청하고(`requestClipLoads`), 다 읽혔으면 그 자리에서 마무리합니다. */
+        void loadGraphForBeginPlay();
+        /** @brief 그래프가 이름 붙인 클립(노드 · 블렌드 표본 · 레이어)과 그래프 밖 시작 상태의 클립을 비동기로 요청합니다(이미 표에 있는 것은 빼고). */
+        void requestClipLoads();
+        /** @brief 요청한 클립이 다 읽혔으면 표에 넣고 그래프를 지은 뒤 미뤄 둔 재생을 합니다. 아직 읽는 중이면 false 입니다. */
+        bool finishClipLoadsIfComplete();
+        /** @brief 시작 상태를 재생합니다(핫 리로드로 되살아났으면 그 상태 · 시각에서 잇는다). */
+        void startInitialState();
+        /** @brief 클립을 기다리는 동안 미룬 재생(코드의 `play`, 없으면 시작 상태)을 합니다. */
+        void runDeferredPlayback();
         /**
          * @brief 그래프의 재생할 것을 다시 만듭니다(`rebuildGraphPlayables`). 이 애니메이터가 재생할 수 없는 것을 그래프가 적었으면 파일을 못 읽은 것과 같이
          *        그래프를 쓰지 않습니다 — 빠진 노드 · 레이어만 빼고 도는 그래프는 데이터가 말한 것과 다른 포즈를 낸다.
@@ -365,11 +389,21 @@ namespace sw
         PROPERTY( Category = "Sync", DisplayName = "Sync Weight", Tooltip = "Leader is the member with the largest weight", Min = 0.0 )
         float32 _syncWeight;
 
-        SkeletalAnimatorBinding                                       _binding;
-        AnimationGraphAsset                                           _graph;
-        AnimationGraphPlayer                                          _graphPlayer;
-        AnimationParameterSet                                         _parameters;
+        SkeletalAnimatorBinding _binding;
+        AnimationGraphAsset     _graph;
+        AnimationGraphPlayer    _graphPlayer;
+        AnimationParameterSet   _parameters;
+        /** @brief 시작 때 요청한 클립 하나입니다. */
+        struct ClipLoad
+        {
+            hashed_string                    _clipName;
+            SharedAssetHandle<AnimationClip> _load;
+        };
+
         unordered_map<hashed_string, shared_ptr<const AnimationClip>> _mapClip;
+        vector<ClipLoad>                                              _listClipLoad;      ///< 시작 때 요청해 아직 표에 넣지 않은 클립(`requestClipLoads`)
+        hashed_string                                                 _deferredPlayState; ///< 클립을 기다리는 동안 미룬 `play` 의 상태
+        float32                                                       _deferredPlayBlend; ///< 미룬 `play` 의 섞기 시간
         unordered_map<const AnimationClip*, vector<int32>>            _mapTrackToBone;
         const Skeleton*                                               _pTrackMapSkeleton;
         vector<LayerState>                                            _listLayer;
@@ -413,6 +447,10 @@ namespace sw
         uint8                  _bPoseShownThisFrame          : 1; ///< 이번 프레임에 포즈를 만들었거나 지난 포즈가 화면에 그대로 보인다(다음 시간 단계가 기록의 유효를 판정한다)
         uint8                  _bCarryingOver                : 1;
         uint8                  _bInertializationPending      : 1; ///< 새 inertialization 이 다음 포즈 계산에서 시작되기를 기다린다
-        [[maybe_unused]] uint8 _reserved                     : 2;
+        uint8                  _bClipsPending                : 1; ///< 시작 때 요청한 클립을 읽는 중이다(`isWaitingForAnimationAssets`)
+        uint8                  _bStartPending                : 1; ///< 클립이 다 읽히면 시작 상태를 재생한다
+        uint8                  _bPlayDeferred                : 1; ///< 클립이 다 읽히면 미룬 play 를 한다
+        uint8                  _bDeferredPlayLoop            : 1; ///< 미룬 `play` 의 반복 여부
+        [[maybe_unused]] uint8 _reserved                     : 6;
     };
 } // namespace sw

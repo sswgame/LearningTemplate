@@ -330,12 +330,21 @@ namespace sw
                     collectMaterialRuntimeDefines( *material, matPath, listRuntimeDefine );
                     MaterialVariantInfo variant;
                     variant._shaderPath = material->getShaderPath();
+                    // 불투명 머티리얼은 등장 디더 변형도 쿠킹한다 — 로드가 끝나 서서히 나타나는 메시가 그 변형으로 그려진다(`GPUMaterialRegistry::permutationHashFor`).
+                    const bool bCooksAppearanceDither = material->getBlendMode() != RHIBlendMode::Transparent;
                     for ( vector<string>& listDefine : listRuntimeDefine )
                     {
                         variant._listDefine = std::move( listDefine );
                         listMaterialVariant.push_back( variant );
                         appendRequestUnique( outListRequest, variant._shaderPath, getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint, ShaderStage::Vertex, variant._listDefine );
                         appendRequestUnique( outListRequest, variant._shaderPath, getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint, ShaderStage::Pixel, variant._listDefine );
+                        if ( bCooksAppearanceDither == false )
+                            continue;
+                        MaterialVariantInfo ditherVariant = variant;
+                        ditherVariant._listDefine.push_back( string( kAppearanceDitherDefine ) );
+                        appendRequestUnique( outListRequest, ditherVariant._shaderPath, getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint, ShaderStage::Vertex, ditherVariant._listDefine );
+                        appendRequestUnique( outListRequest, ditherVariant._shaderPath, getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint, ShaderStage::Pixel, ditherVariant._listDefine );
+                        listMaterialVariant.push_back( std::move( ditherVariant ) );
                     }
                     // 정의 없는 변형도 — 머티리얼이 원소 레이아웃을 읽는 자리다(`Material::ensureShaderLayout` 은 define 없이 리플렉션한다). 패스 기본
                     // 셰이더(forwardlit)는 위 1) 에서 이미 쿠킹되지만, 머티리얼만 쓰는 셰이더(지형 · 식생 · 물)는 여기서 쿠킹하지 않으면 Shipping 에서
@@ -366,7 +375,8 @@ namespace sw
                         const bool    bMaterialDepthShader = FrameRendererUtil::drawsDepthWithMaterialShader( passInfo._passType, &variant._listDefine );
                         const string& shaderPath           = ( passInfo._bUsesMaterialShader || bMaterialDepthShader ) ? variant._shaderPath : passInfo._shaderPath;
                         const bool    bHasPixelStage =
-                            bMaterialDepthShader ? FrameRendererUtil::hasMaterialDepthPixelStage( passInfo._passType, &variant._listDefine ) : passInfo._bHasPixelStage;
+                            bMaterialDepthShader ? FrameRendererUtil::hasMaterialDepthPixelStage( passInfo._passType, &variant._listDefine )
+                                                    : ( passInfo._bHasPixelStage || FrameRendererUtil::addsAppearanceDitherPixelStage( passInfo._passType, &variant._listDefine ) );
                         listDrawVariant.push_back( MeshDrawVariant{ shaderPath, mergeDefines( passInfo._listPermutation, variant._listDefine ), bHasPixelStage } );
                     }
 

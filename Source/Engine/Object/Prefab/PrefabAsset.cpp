@@ -561,8 +561,8 @@ namespace sw
                     node._name       = pPart->getName().c_str();
                     node._prefabPath = pRecord->_prefabPath;
 
-                    const PrefabAsset* pSource = pPrefabs->loadPrefab( node._prefabPath );
-                    string             baseState;
+                    const shared_ptr<const PrefabAsset> pSource = pPrefabs->loadPrefab( node._prefabPath );
+                    string                              baseState;
                     if ( pSource == nullptr || PrefabOverrides::makeBaseState( *pSource, baseState ) == false )
                     {
                         SW_LOG_WARNING( "Nested prefab '%#' of '%#' could not be read - instance '%#' is not written to the prefab", node._prefabPath, root.getName().c_str(),
@@ -1045,6 +1045,9 @@ namespace sw
         const string cacheKey = PrefabAssetInternal::makePrefabCacheKey( assetRelativePath );
 
         std::unique_lock<std::shared_mutex> writeLock{ _mapCacheMutex };
+        // 읽는 중인 로드는 옛 파일을 읽었을 수 있다 — 세대를 올려 그 결과가 캐시에 들지 않게 하고, 다음 요청은 새로 읽게 진행 중 표에서 뗀다.
+        _cacheGeneration.fetch_add( 1, std::memory_order_acq_rel );
+        _mapLoading.clear();
         _mapCache.erase( cacheKey );
         // 중첩 인스턴스(원본 경로)를 가진 프리팹은 다음 로드가 순환을 다시 보게 버린다. 고친 원본이 상위를 놓으면 순환이 된다.
         for ( auto cacheIt = _mapCache.begin(); cacheIt != _mapCache.end(); )
@@ -1081,22 +1084,119 @@ namespace sw
     void PrefabCache::clear()
     {
         std::unique_lock<std::shared_mutex> writeLock{ _mapCacheMutex };
+        _cacheGeneration.fetch_add( 1, std::memory_order_acq_rel );
+        _mapLoading.clear();
         _mapCache.clear();
     }
-    PrefabAsset* PrefabCache::loadPrefab( string_view assetRelativePath )
+
+    PrefabCache::PrefabCache()
+        : _mapCacheMutex{}
+        , _mapCache{}
+        , _mapLoading{}
+        , _cacheGeneration{ 0 }
+    {
+    }
+
+    PrefabCache::~PrefabCache()
+    {
+        // 워커가 아직 이 캐시로 읽고 있을 수 있다(블록이 원시 포인터를 쥔다). 모두 끝날 때까지 기다린다 — 아무도 집지 않은 로드는 여기서 실행한다.
+        vector<shared_ptr<PrefabLoadBlock>> listLoading;
+        {
+            std::unique_lock<std::shared_mutex> writeLock{ _mapCacheMutex };
+            for ( const auto& [key, weakBlock] : _mapLoading )
+            {
+                shared_ptr<PrefabLoadBlock> pBlock = weakBlock.lock();
+                if ( pBlock != nullptr )
+                    listLoading.push_back( std::move( pBlock ) );
+            }
+        }
+        for ( const shared_ptr<PrefabLoadBlock>& pBlock : listLoading )
+        {
+            pBlock->wait();
+        }
+    }
+
+    PrefabLoadBlock::PrefabLoadBlock( PrefabCache* pCache, string_view resolvedPath, string cacheKey )
+        : AssetLoadBlock{ PrefabCache::kAssetKindName, resolvedPath }
+        , _pCache{ pCache }
+        , _cacheKey{ std::move( cacheKey ) }
+        , _pAsset{}
+    {
+    }
+
+    bool PrefabLoadBlock::runLoad( string& outError )
+    {
+        _pAsset = _pCache->loadAndCache( getPath() );
+        {
+            // 결과가 캐시에 든 **뒤에** 진행 중 표에서 뺀다 — 그 사이에 온 요청은 진행 중 블록이나 캐시 둘 중 하나를 반드시 본다.
+            // 이 블록의 칸일 때만 뺀다(다시 읽기가 표를 비운 뒤 새 요청이 새 블록을 넣었을 수 있다).
+            std::unique_lock<std::shared_mutex> writeLock{ _pCache->_mapCacheMutex };
+            const auto                          it = _pCache->_mapLoading.find( _cacheKey );
+            if ( it != _pCache->_mapLoading.end() && ( it->second.expired() || it->second.lock().get() == this ) )
+                _pCache->_mapLoading.erase( it );
+        }
+        if ( _pAsset == nullptr )
+        {
+            outError = "the prefab could not be loaded (the loader logged why)";
+            return false;
+        }
+        return true;
+    }
+
+    PrefabHandle PrefabCache::request( string_view assetRelativePath )
+    {
+        return requestWith( assetRelativePath, AssetLoadStart::Async );
+    }
+
+    PrefabHandle PrefabCache::requestWith( string_view assetRelativePath, AssetLoadStart start )
+    {
+        const string resolvedPath = PrefabAssetInternal::resolvePrefabPath( assetRelativePath );
+        const string cacheKey     = PrefabAssetInternal::makePrefabCacheKey( resolvedPath );
+
+        shared_ptr<PrefabLoadBlock> pBlock;
+        {
+            std::unique_lock<std::shared_mutex> writeLock{ _mapCacheMutex };
+            const auto                          loadingIt = _mapLoading.find( cacheKey );
+            if ( loadingIt != _mapLoading.end() )
+                pBlock = loadingIt->second.lock();
+            if ( pBlock != nullptr )
+                return PrefabHandle{ std::move( pBlock ) };
+
+            // 진행 중 표를 잡은 채 캐시를 본다 — 로드는 캐시에 넣은 뒤 표에서 빼므로, 여기서 둘 다 없으면 정말 아무도 읽지 않았다.
+            pBlock             = make_shared<PrefabLoadBlock>( this, resolvedPath, cacheKey );
+            const auto cacheIt = _mapCache.find( cacheKey );
+            if ( cacheIt != _mapCache.end() )
+            {
+                pBlock->_pAsset = cacheIt->second;
+                pBlock->markReadyWithoutLoad();
+                return PrefabHandle{ std::move( pBlock ) };
+            }
+            _mapLoading[cacheKey] = pBlock;
+        }
+        AssetLoadBlock::startLoad( pBlock, start );
+        return PrefabHandle{ std::move( pBlock ) };
+    }
+
+    shared_ptr<const PrefabAsset> PrefabCache::loadPrefab( string_view assetRelativePath )
+    {
+        return requestWith( assetRelativePath, AssetLoadStart::OnCallingThread ).wait();
+    }
+
+    shared_ptr<const PrefabAsset> PrefabCache::loadAndCache( string_view assetRelativePath )
     {
         SW_MEMORY_SCOPE( Scene );
         const string resolvedPath = PrefabAssetInternal::resolvePrefabPath( assetRelativePath );
 
-        const string cacheKey = PrefabAssetInternal::makePrefabCacheKey( resolvedPath );
+        const string cacheKey   = PrefabAssetInternal::makePrefabCacheKey( resolvedPath );
+        const uint32 generation = _cacheGeneration.load( std::memory_order_acquire );
         {
             std::shared_lock<std::shared_mutex> readLock{ _mapCacheMutex };
             const auto                          cacheIt = _mapCache.find( cacheKey );
             if ( cacheIt != _mapCache.end() )
-                return cacheIt->second.get();
+                return cacheIt->second;
         }
 
-        unique_ptr<PrefabAsset> asset = make_unique<PrefabAsset>();
+        shared_ptr<PrefabAsset> asset = make_shared<PrefabAsset>();
 
         // 쿠킹본 이름은 쿠커(`cookAllPrefabs`)와 같은 규칙 하나다(`AssetCookPath`).
         string binPath = AssetCookPath::toCookedPath( resolvedPath );
@@ -1140,11 +1240,13 @@ namespace sw
         std::unique_lock<std::shared_mutex> writeLock{ _mapCacheMutex };
         const auto                          cacheIt = _mapCache.find( cacheKey );
         if ( cacheIt != _mapCache.end() )
-            return cacheIt->second.get();
+            return cacheIt->second;
+        // 읽는 사이 캐시를 버렸다(다시 읽기 · 비우기) — 옛 파일을 읽었을 수 있으니 넣지 않고 요청한 쪽에만 준다.
+        if ( _cacheGeneration.load( std::memory_order_acquire ) != generation )
+            return asset;
 
-        PrefabAsset* pCached = asset.get();
-        _mapCache.emplace( cacheKey, std::move( asset ) );
-        return pCached;
+        _mapCache.emplace( cacheKey, asset );
+        return asset;
     }
 
     bool PrefabCache::validateNestedInstances( const PrefabAsset& asset, const string& cacheKey )
@@ -1174,7 +1276,8 @@ namespace sw
                     SW_LOG_ERROR( "Circular nested prefab reference: '%#' places '%#', which is already being loaded", asset.getName(), childPath );
                     continue;
                 }
-                const bool bLoadFailed = loadPrefab( childPath ) == nullptr;
+                // 원본은 이 스레드에서 읽는다(`loadAndCache`) — 다른 스레드의 로드 블록을 기다리면 순환한 두 프리팹을 두 워커가 읽을 때 서로를 기다린다.
+                const bool bLoadFailed = loadAndCache( childPath ) == nullptr;
                 if ( bLoadFailed && cycleFloor > depth )
                     SW_LOG_WARNING( "Nested prefab '%#' in '%#' could not be loaded - that instance is skipped when spawning", childPath, asset.getName() );
             }
@@ -1192,7 +1295,7 @@ namespace sw
     {
         if ( pInstance == nullptr )
             return false;
-        const PrefabAsset* pAsset = loadPrefab( assetRelativePath );
+        const shared_ptr<const PrefabAsset> pAsset = loadPrefab( assetRelativePath );
         if ( pAsset == nullptr || pAsset->isValid() == false )
             return false;
 
@@ -1233,9 +1336,9 @@ namespace sw
     {
         if ( pInstance == nullptr || oldBaseStateXML.empty() )
             return false;
-        const PrefabAsset* pAsset = loadPrefab( assetRelativePath );
-        string             newBaseState;
-        const bool         bNoNewBase = pAsset == nullptr || pAsset->isValid() == false || PrefabOverrides::makeBaseState( *pAsset, newBaseState ) == false;
+        const shared_ptr<const PrefabAsset> pAsset = loadPrefab( assetRelativePath );
+        string                              newBaseState;
+        const bool                          bNoNewBase = pAsset == nullptr || pAsset->isValid() == false || PrefabOverrides::makeBaseState( *pAsset, newBaseState ) == false;
         if ( bNoNewBase )
             return false;
         // 덮어쓴 것은 옛 원형과 견줘 뽑는다. 새 원형과 견주면 프리팹에서 바뀐 칸이 모두 "인스턴스가 덮어쓴 값" 으로 보여 퍼지지 않는다.
@@ -1275,7 +1378,7 @@ namespace sw
         }
         const PrefabAssetInternal::PathStackScope scope{ spawnStack, pathKey };
 
-        PrefabAsset* pAsset = loadPrefab( assetRelativePath );
+        const shared_ptr<const PrefabAsset> pAsset = loadPrefab( assetRelativePath );
         if ( pAsset == nullptr || pAsset->isValid() == false )
             return nullptr;
 
@@ -1299,7 +1402,7 @@ namespace sw
                 // 미룬 자리에서도 이 프리팹을 펼치는 중이라고 적는다 — 중첩 스폰의 순환 검사가 이 경로를 본다.
                 const PrefabAssetInternal::PathStackScope laterScope{ PrefabAssetInternal::getSpawnStack(), pathKey };
                 GameObject*                               pSpawned      = pGameObjectManager->findGameObjectByID( objectID );
-                PrefabAsset*                              pLaterAsset   = ( pSpawned != nullptr ) ? loadPrefab( resolvedPath ) : nullptr;
+                const shared_ptr<const PrefabAsset>       pLaterAsset   = ( pSpawned != nullptr ) ? loadPrefab( resolvedPath ) : nullptr;
                 const bool                                bStateWritten = pLaterAsset != nullptr && applySpawnState( pSpawned, *pLaterAsset, instanceName );
                 if ( pSpawned != nullptr && bStateWritten == false )
                     pGameObjectManager->destroyObject( pSpawned );
@@ -1330,9 +1433,9 @@ namespace sw
         return true;
     }
 
-    bool PrefabCache::makeNestedInstanceState( const PrefabInstanceNode& node, string& outStateXML, const PrefabAsset** ppOutSource )
+    bool PrefabCache::makeNestedInstanceState( const PrefabInstanceNode& node, string& outStateXML, shared_ptr<const PrefabAsset>& outSource )
     {
-        *ppOutSource = nullptr;
+        outSource.reset();
         outStateXML.clear();
         if ( node.isResolved() )
         {
@@ -1340,7 +1443,7 @@ namespace sw
             return true;
         }
 
-        const PrefabAsset* pSource = loadPrefab( node._prefabPath.empty() ? node._prefabGuid : node._prefabPath );
+        const shared_ptr<const PrefabAsset> pSource = loadPrefab( node._prefabPath.empty() ? node._prefabGuid : node._prefabPath );
         if ( pSource == nullptr || pSource->isValid() == false )
         {
             SW_LOG_WARNING( "Nested prefab '%#' could not be loaded - instance '%#' is skipped", node._prefabPath, node._name );
@@ -1363,7 +1466,7 @@ namespace sw
             SW_LOG_WARNING( "Overrides of nested prefab instance '%#' (%#) could not be applied - it is skipped", node._name, node._prefabPath );
             return false;
         }
-        *ppOutSource = pSource;
+        outSource = pSource;
         return true;
     }
 
@@ -1412,9 +1515,9 @@ namespace sw
                 }
             }
 
-            string             state;
-            const PrefabAsset* pSource = nullptr;
-            if ( makeNestedInstanceState( node, state, &pSource ) == false )
+            string                        state;
+            shared_ptr<const PrefabAsset> pSource;
+            if ( makeNestedInstanceState( node, state, pSource ) == false )
                 continue;
             const string partKey  = node.makePartKey( index );
             const string partPath = PrefabAssetInternal::joinPartPath( rootPath, partKey );
@@ -1548,9 +1651,9 @@ namespace sw
                 continue;
             }
 
-            const string        sourcePath = PrefabAssetInternal::resolvePrefabPath( node._prefabPath.empty() ? node._prefabGuid : node._prefabPath );
-            const hashed_string sourceKey  = PrefabAssetInternal::makePathKey( PrefabAssetInternal::makePrefabCacheKey( sourcePath ) );
-            const PrefabAsset*  pSource    = loadPrefab( sourcePath );
+            const string                        sourcePath = PrefabAssetInternal::resolvePrefabPath( node._prefabPath.empty() ? node._prefabGuid : node._prefabPath );
+            const hashed_string                 sourceKey  = PrefabAssetInternal::makePathKey( PrefabAssetInternal::makePrefabCacheKey( sourcePath ) );
+            const shared_ptr<const PrefabAsset> pSource    = loadPrefab( sourcePath );
             if ( pSource == nullptr || PrefabAssetInternal::isOnStack( spawnStack, sourceKey ) )
             {
                 SW_LOG_ERROR( "Nested prefab '%#' in '%#' could not be loaded (missing or circular) - the prefab is not flattened", sourcePath, asset.getName() );

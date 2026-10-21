@@ -133,7 +133,7 @@ namespace sw
 
     TextureCache::~TextureCache() = default;
 
-    TextureHandle TextureCache::request( string_view relativePath, IRHIDevice* pDevice )
+    TextureHandle TextureCache::request( string_view relativePath, IRHIDevice* pDevice, AssetLoadStart start )
     {
         SW_MEMORY_SCOPE( Texture );
         const string key = FileUtil::normalizePath( relativePath );
@@ -212,13 +212,13 @@ namespace sw
         _impl->_mapEntry[key]._pLoadBlock = pBlock;
         lock.unlock();
 
-        AssetLoadBlock::startLoad( pBlock );
+        AssetLoadBlock::startLoad( pBlock, start );
         return TextureHandle{ std::move( pBlock ) };
     }
 
     Texture2D* TextureCache::acquire( string_view relativePath, IRHIDevice* pDevice )
     {
-        const TextureHandle         handle   = request( relativePath, pDevice );
+        const TextureHandle         handle   = request( relativePath, pDevice, AssetLoadStart::OnCallingThread );
         const shared_ptr<Texture2D> pTexture = handle.wait();
         if ( pTexture == nullptr )
             return nullptr;
@@ -250,6 +250,18 @@ namespace sw
                 ++completedCount;
         }
         return completedCount;
+    }
+
+    uint32 TextureCache::countLoadsInFlight() const
+    {
+        std::shared_lock<std::shared_mutex> lock{ _impl->_mutex };
+        uint32                              count = 0;
+        for ( const auto& [key, entry] : _impl->_mapEntry )
+        {
+            if ( entry._bLoading )
+                ++count;
+        }
+        return count;
     }
 
     bool TextureCache::isRenderTargetPath( string_view relativePath )

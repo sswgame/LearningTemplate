@@ -1,6 +1,6 @@
 # 리소스 비동기 로드와 디더 등장 계획 (2026-10-20)
 
-> 상태: 구현중 · 선행: 없음 · 영역: engine · 옛번호: 없음 · 진행: 4/7
+> 상태: 측정대기 · 선행: 없음 · 영역: engine · 옛번호: 없음 · 진행: 7/7
 
 모든 리소스를 비동기로 읽고, 로드가 끝난 오브젝트는 디더로 서서히 나타나게 합니다. 후보 `AsyncResourceLoading`(`Candidates-engine.md`)을 계획으로 올린 문서입니다.
 
@@ -58,9 +58,17 @@
   - 종류별 캐시는 지금 반환 형식을 `T` 의 소유 방식(`Texture2D*` 참조 수, `shared_ptr`, 캐시 소유 `PrefabAsset*`)대로 두고, 핸들이 그 방식의 소유를 감쌉니다. 프리팹의 원시 포인터는 핸들이 캐시 항목의 세대를 쥐는 형식으로 바꿔야 합니다.
   - 준비 집합 `AssetReadySet`: 핸들 여럿을 모아 `isReady()` · `hasFailed()` 를 냅니다. 로딩 화면은 이것만 기다립니다. `MeshPreloadSet` 은 이것의 메시 전용 선구이므로 A3 에서 흡수합니다.
   - 오디오 `AudioClipStatus` 는 `AssetLoadState` 로 바꿔 호출처를 맞춥니다(5곳 안팎).
-- 남은 확인: (1) 해결 — 위 검토의 "텍스처 업로드 스레드". (2) 셰이더 런타임의 동기 호출 개수(C2 앞에).
-- 남은 확인(A2 · A3 · C1 은 빌드 없이 구현함): 빌드와 테스트(`MeshAssetTest` 의 `ReadySetHoldsMeshesUntilCleared` · `AcquireWaitsOnTheSameLoadAsRequest` · `MeshComponentResolvesMeshAssetPath`). 첫 프레임에 텍스처를 읽는 GPU 테스트 · 시나리오가 로드 중 회색을 찍지 않는지 — `RenderPassGPUTest` 의 누락 텍스처 테스트는 첫 프레임이 회색이고 다음 갱신에서 마젠타가 되므로, 테스트가 준비 집합이나 몇 프레임을 기다려야 할 수 있다. 첫 프레임에 메시를 찍는 스크린샷 시나리오도 같다.
-- 함정: TAA 가 꺼진 품질 단계에서는 디더 패턴이 보입니다. B 단계에서 그 단계의 모양을 정해야 합니다(디더 대신 알파 페이드, 또는 등장을 즉시로).
+- 남은 확인: (1) 해결 — 위 검토의 "텍스처 업로드 스레드". (2) 해결 — 셰이더는 `ShaderCache::getOrCompile` 하나가 입구라 그것을 블록으로 옮겼다(C2).
+- 정한 것(B · C2, 2026-10-22, 권고안으로 — 사용자 결정 "남은 기능을 전부 구현"):
+  - **동기 · 비동기의 경계**: 새 로드를 어디서 시작하는지를 형식으로 둔다(`AssetLoadStart`). 동기 API(`acquire` · `loadPrefab` · `getOrCompile` · 세터)는 `OnCallingThread` — 워커에 맡겼다 곧바로 기다리면 태스크가 헛돌고, 읽기 오류 로그가 워커에서 나와 테스트의 방어 범위 밖으로 샌다. 데이터가 정한 로드(씬의 메시 · `MaterialCache` 의 텍스처 · 애니메이터의 시작 클립)는 `Async`. 직접 만든 머티리얼(`Material::create`)은 그 자리에서 읽어 GPU 테스트의 첫 그림이 진짜 텍스처다.
+  - **등장 비율**: `GPUInstance::_appearance`(옛 `reserved0` 자리, 원소 128 바이트 그대로). 1 보다 작은 불투명 인스턴스만 퍼뮤테이션 `SW_APPEARANCE_DITHER` 로 따로 배치되어 픽셀을 버린다 — 다 보이는 물체는 버리기 없이 조기 깊이 검사를 지킨다. 문턱은 화면 4x4 Bayer 라 깊이 프리패스 · 그림자 · 기본 패스가 같은 픽셀을 버린다. 깊이만 쓰는 패스도 이 변형에는 픽셀 스테이지를 붙인다(`FrameRendererUtil::addsAppearanceDitherPixelStage`, 쿠커와 같은 판정). 쿠커는 불투명 머티리얼마다 디더 변형을 더 굽는다.
+  - **TAA 꺼진 단계**: 디더 그대로 둔다(언리얼 Dithered LOD Transition 과 같다). 등장 시간이 짧고(`MeshComponent::_appearSeconds` 기본 0.4 초, 0 이면 바로) 알파 페이드는 불투명 정렬 · 깊이 쓰기를 깬다.
+  - **연결**: 로드 완료(비동기로 도착한 메시만 — 이미 읽은 메시는 바로 보인다) · 소멸(`beginDisappearance` 뒤 `isFullyDisappeared` 면 지운다) · 텔레포트(`_bAppearOnTeleport` 를 켠 것만 — 네트워크 보정 · 카메라 컷이 깜빡이지 않게). LOD 전환은 메시 LOD 가 없어 연결할 곳이 없다(생기면 `beginAppearance`).
+  - **캐릭터 스폰**: 애니메이터가 시작 때 그래프의 클립을 비동기로 요청하고, 유닛(스켈레탈 메시)은 다 읽힐 때까지 그리지 않는다(`IAnimationPhaseTask::pollAnimationAssetsReady` → `SkeletalMeshComponent::pollReadyToAppear`). 그동안 `play` 는 미뤄지고, 다 읽히면 그래프를 지어 재생한 뒤 디더로 나타난다. 스켈레톤 · 본 LOD 는 포즈 버퍼 크기를 정하므로 동기(`acquire`)로 둔다 — 같은 블록을 기다린다.
+  - **프리팹 수명**: 캐시가 `shared_ptr<const PrefabAsset>` 로 나눠 준다(원시 포인터는 `reload` 가 항목을 버리면 해제된 메모리였다). 읽는 사이 캐시를 버리면 세대가 바뀌어 결과를 넣지 않는다. 중첩 원본은 그 로드 안에서 같은 스레드가 읽어 순환한 두 프리팹을 두 워커가 읽어도 서로를 기다리지 않는다.
+  - **시나리오 · 테스트**: `<Screenshot>` 이 씬의 에셋 일(`Assets.Pending` — 도착 단계의 대기 + 읽거나 올리는 텍스처)이 0 이 되고 3 프레임 지날 때까지 기다린다(상한 600 프레임이면 실패로 적는다). 시나리오마다 기다림을 적지 않는다. 애니메이터 테스트가 이번 프레임에 포즈가 필요하면 `waitForAnimationAssets`.
+- **셰이더는 아직 커밋하지 않았다**: 셰이더 소스를 바꾸면 쿠킹 스탬프 게이트(`CheckShaderStamps`)가 다시 굽기 전 커밋을 막는다. 빌드 없이 구현하라는 지시라 셰이더 소스(binding.hlsli 8-1 · instancedata.hlsli `appearance` · forwardlit · gbuffer · toon · shadowdepth)와 그에 맞춘 `ShaderBindingValidatorTest` 표 한 줄을 패치로 남겼다 — `docs/plans/patches/AsyncResourceLoading-shaders.patch`. `git apply` 뒤 셰이더를 다시 구워 함께 커밋한다. 그 전에는 C++ 가 디더 변형을 요청해도 셰이더가 define 을 몰라 버리기 없이 그린다(등장 비율 0 은 그리지 않는 것만 동작).
+- 남은 확인(전부 빌드 없이 구현함): 빌드와 테스트 전체. 특히 (1) 위 패치를 적용해 셰이더 쿠킹 다시(`ShaderBindingValidatorTest.InstanceElementLayoutMatchesCPUStruct` 가 `appearance` 를 대조한다), (2) 깊이만 쓰는 패스에 픽셀 스테이지를 붙인 디더 변형이 네 백엔드에서 PSO 를 만드는지(컬러 타깃 없이 `SV_TARGET` 을 쓰는 PS), (3) 등장 중간 프레임 스크린샷(TAA 켬 · 끔), (4) 엔진 서비스가 묶인 테스트에서 시작 때 클립을 쓰는 애니메이터 테스트가 미뤄진 재생을 기다리는지, (5) `MaterialCache` 로 텍스처를 쓰고 첫 프레임을 읽는 GPU 테스트.
 - 함정: 등장 비율은 GPU 씬 버퍼 레이아웃을 바꿔 셰이더 전체 재빌드가 듭니다. 그 단위는 혼자 돌립니다.
 
 ## 4. 구현 단위
@@ -70,10 +78,10 @@
 | A1 ✅ | 현재 리소스 핸들 형식과 동기 로드 호출처를 조사한다(종류별 실제 개수). 공유 서비스의 스레드 안전성을 확인한다. 상태가 드러나는 핸들 형식의 설계를 이 문서에 확정한다. | 읽기 전용. 완료(2026-10-20), 결과는 3절 |
 | A2 ✅ | 핸들 형식(`Loading` · `Ready` · `Failed`)과 준비 집합 선언 API. 동기 API 를 "기다리는 비동기"로 같은 경로에 둔다. | 완료(2026-10-21, 빌드 미확인). `AssetHandle.h` — 설계 검토는 3절 |
 | A3 ✅ | 텍스처 → 메시 순으로 옮김. 로드 중 규칙 적용. | 완료(2026-10-21, 빌드 미확인). `MeshCache::request` · `MeshComponent` 도착 단계 · `MeshPreloadSet` 를 준비 집합으로 흡수, `TextureCache::request` 두 단계 · `Material` 로드 중 회색 → 진짜 · 실패 체커 |
-| B1 | 프리미티브 "등장 비율"(0 ~ 1)과 불투명 패스의 스크린 공간 디더 클립. 그림자 패스에도 같은 클립. | 셰이더 전체 재빌드. 혼자. GPU 씬 버퍼 레이아웃을 바꾸므로 빌드 · GPU 확인 없이 하지 않았다 |
-| B2 | 등장 비율을 로드 완료 · 소멸 · LOD 전환 · 텔레포트에 연결한다. TAA 꺼진 단계의 모양을 정한다. | B1 뒤. GPU 화면 확인 필요. 로드 완료 연결점은 `MeshComponent::updateMeshLoad` |
+| B1 ✅ | 프리미티브 "등장 비율"(0 ~ 1)과 불투명 패스의 스크린 공간 디더 클립. 그림자 패스에도 같은 클립. | 완료(2026-10-22, 빌드 · 쿠킹 미확인). `GPUInstance::_appearance` · `SW_APPEARANCE_DITHER` 퍼뮤테이션 · binding.hlsli 8-1 · forwardlit · gbuffer · toon · shadowdepth |
+| B2 ✅ | 등장 비율을 로드 완료 · 소멸 · LOD 전환 · 텔레포트에 연결한다. TAA 꺼진 단계의 모양을 정한다. | 완료(2026-10-22, GPU 화면 미확인). `MeshComponent::beginAppearance` · `beginDisappearance` · `_bAppearOnTeleport` — 결정은 3절 |
 | C1 ✅ | 오디오 상태를 `AssetLoadState` 로 맞춘다(`AudioClipStatus` 삭제, 요청 없음은 빈 값 `findLoadState`). | 완료(2026-10-21, 빌드 미확인) |
-| C2 | 프리팹 → 애니메이션 순으로 옮김(프리팹 원시 포인터는 핸들이 캐시 항목을 쥐는 형식으로). 캐릭터는 애니메이션 준비 뒤 스폰. 셰이더는 쿠킹 단계가 달라 마지막. | C1 뒤. 프리팹 호출처 17줄 · 5파일 |
+| C2 ✅ | 프리팹 → 애니메이션 순으로 옮김(프리팹 원시 포인터는 핸들이 캐시 항목을 쥐는 형식으로). 캐릭터는 애니메이션 준비 뒤 스폰. 셰이더는 쿠킹 단계가 달라 마지막. | 완료(2026-10-22, 빌드 미확인). `PrefabCache::request` · `SharedAssetCache::request`(스켈레톤 · 클립 · 리그 · …) · `ShaderCache::request` · 애니메이터 시작 클립 비동기 · 스크린샷이 `Assets.Pending` 을 기다림 |
 
 ## 5. 검증
 
@@ -83,4 +91,4 @@
 
 ## 6. 결정 대기
 
-- 없음. 텍스처 업로드 스레드는 3절 검토에서 정했다. 프리팹 핸들의 수명 규약은 C2 에서 정한다.
+- 없음. 텍스처 업로드 스레드 · 프리팹 수명 · TAA 꺼진 단계 · 텔레포트 등장은 3절에서 권고안으로 정했다. 남은 것은 3절의 "남은 확인"(빌드 · 쿠킹 · GPU 화면)이다.

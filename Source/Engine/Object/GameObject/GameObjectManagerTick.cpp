@@ -54,12 +54,12 @@ namespace sw
         dispatchPendingBeginPlay();
     }
 
-    void GameObjectManager::runFrameStepAssetArrival( float32 /*deltaTime*/ )
+    void GameObjectManager::runFrameStepAssetArrival( float32 deltaTime )
     {
         if ( _primitiveRegistry.countAssetWaiters() == 0 )
             return;
         SW_PROFILE_SCOPE( "GT.Scene.tick.assetArrival" );
-        _primitiveRegistry.updateAssetWaiters();
+        _primitiveRegistry.updateAssetWaiters( deltaTime );
     }
 
     void GameObjectManager::runFrameStepFrameSystems( float32 deltaTime )

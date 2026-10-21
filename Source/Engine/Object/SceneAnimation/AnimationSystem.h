@@ -79,6 +79,12 @@ namespace sw
         /** @brief 이번 프레임에 할 일이 있으면 true 입니다. 모든 작업이 거짓이고 포즈가 깨끗한 유닛은 쉬며 비용이 없습니다. */
         virtual bool isAnimationActive() const = 0;
         /**
+         * @brief 이 작업이 쓰는 에셋(클립)이 다 읽혔는지 묻습니다(게임 스레드, 유닛이 나타나기를 미루는 동안 씬 프레임마다). 기본은 늘 준비됨입니다.
+         * @details 다 읽혔으면 그 자리에서 마무리해도 된다(애니메이터가 그래프를 짓고 미뤄 둔 재생을 한다). 유닛은 모든 작업이 준비될 때까지 그리지 않는다
+         *          (`SkeletalMeshComponent::pollReadyToAppear` — 캐릭터는 애니메이션이 준비된 뒤 나타난다).
+         */
+        virtual bool pollAnimationAssetsReady() { return true; }
+        /**
          * @brief 단계들 앞의 게임 스레드 준비 작업입니다(일하는 유닛만, LOD 로 포즈를 건너뛰는 프레임도 부릅니다). 다른 오브젝트의 월드 변환이나 물리 질의처럼
          *        워커에서 읽을 수 없는 것을 여기서 스냅샷으로 저장해 둡니다.
          */

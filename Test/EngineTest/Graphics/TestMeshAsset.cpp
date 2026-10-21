@@ -55,7 +55,7 @@ namespace
     void waitForMeshArrival( sw::GameObjectManager& manager, const sw::string& path )
     {
         (void)sw::MeshCache::acquire( path ); // 결과는 컴포넌트가 받는다 — 여기서는 로드가 끝나기만 기다린다
-        manager.getPrimitiveRegistry().updateAssetWaiters();
+        manager.getPrimitiveRegistry().updateAssetWaiters( 0.0f );
     }
 } // namespace
 
@@ -291,6 +291,34 @@ SW_TEST_CASE( MeshAssetTest, MeshComponentResolvesMeshAssetPath )
     }
     SW_EXPECT_EQUAL( size_t( 0 ), manager.getPrimitiveRegistry().countAssetWaiters() );
     SW_EXPECT_NULL( pMesh->getRawMesh() );
+}
+
+/**
+ * @brief [MeshAssetTest] 등장 · 사라지기는 `_appearSeconds` 동안 씬 프레임의 도착 단계가 비율을 올리고 내린다 — 끝나면 대기에서 빠지고, 다 사라지면 그리지 않는다
+ */
+SW_TEST_CASE( MeshAssetTest, AppearanceRampsOverAppearSeconds )
+{
+    sw::GameObjectManager manager;
+    sw::GameObject*       pProp = manager.createGameObject( sw::hashed_string( "Appearing" ) );
+    sw::MeshComponent*    pMesh = pProp->addComponent<sw::MeshComponent>();
+    SW_ASSERT_NOT_NULL( pMesh );
+    SW_EXPECT_EQUAL( 1.0f, pMesh->getAppearance() ); // 바로 보이는 메시(내장 도형)는 다 보인다
+
+    const float32 halfStep = sw::MeshComponent::kDefaultAppearSeconds * 0.5f;
+    pMesh->beginAppearance();
+    SW_EXPECT_EQUAL( 0.0f, pMesh->getAppearance() );
+    SW_EXPECT_EQUAL( size_t( 1 ), manager.getPrimitiveRegistry().countAssetWaiters() );
+    manager.getPrimitiveRegistry().updateAssetWaiters( halfStep );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, pMesh->getAppearance(), 1e-4f );
+    manager.getPrimitiveRegistry().updateAssetWaiters( halfStep );
+    SW_EXPECT_EQUAL( 1.0f, pMesh->getAppearance() );
+    SW_EXPECT_EQUAL( size_t( 0 ), manager.getPrimitiveRegistry().countAssetWaiters() );
+
+    pMesh->beginDisappearance();
+    manager.getPrimitiveRegistry().updateAssetWaiters( sw::MeshComponent::kDefaultAppearSeconds );
+    SW_EXPECT_EQUAL( 0.0f, pMesh->getAppearance() );
+    SW_EXPECT_TRUE( pMesh->isFullyDisappeared() );
+    SW_EXPECT_EQUAL( size_t( 0 ), manager.getPrimitiveRegistry().countAssetWaiters() );
 }
 
 /**

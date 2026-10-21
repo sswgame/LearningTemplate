@@ -371,6 +371,19 @@ namespace sw
         }
 
         /**
+         * @brief 깊이만 쓰는 패스가 패스 셰이더(shadowdepth.hlsl)로 등장 디더 변형을 그릴 때 픽셀 스테이지를 붙이는지 반환합니다.
+         * @details 패스 셰이더의 깊이 패스는 컬러 출력이 없어 픽셀 스테이지가 없다(`hasPixelStage`). 등장 디더는 픽셀을 버리므로 그 변형에만 붙인다 —
+         *          붙이지 않으면 프리패스가 물체의 깊이를 다 써 기본 패스가 버린 픽셀 자리에 뒤의 물체가 그려지지 않는다(구멍).
+         *          머티리얼 셰이더로 그리는 깊이 배치(알파 컷오프)는 그 셰이더의 픽셀 스테이지가 이미 있고, 정점 변형만인 배치는 디더 없이 깊이를 쓴다.
+         *          런타임 PSO 변형(`FrameRenderer::createMaterialPSOVariant`)과 셰이더 쿠커가 같은 함수를 부른다.
+         */
+        static bool addsAppearanceDitherPixelStage( RenderPassType passType, const vector<string>* pListMaterialDefine )
+        {
+            return isDepthOnlyPassType( passType ) && drawsDepthWithMaterialShader( passType, pListMaterialDefine ) == false &&
+                   hasMaterialDefine( pListMaterialDefine, kAppearanceDitherDefine );
+        }
+
+        /**
          * @brief 이 패스 타입이 셰이더에 **추가하는 define** 입니다. 파이프라인 XML 의 `_listPermutation` 위에 더해집니다.
          * @details G버퍼 패스는 픽셀 출력 서명을 MRT 로 바꾸려고 `SW_PASS_GBUFFER=1` 을 C++ 에서 추가한다. 그래서 "이 패스의
          *          define 집합" 은 XML 만 보고 답하면 런타임과 어긋난다. 런타임과 쿠커가 같은 테이블(`RenderPassTypeInfo`)을 본다.

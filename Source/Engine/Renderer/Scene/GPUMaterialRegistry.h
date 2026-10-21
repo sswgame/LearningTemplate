@@ -28,8 +28,9 @@ namespace sw
         /**
          * @brief (머티리얼, 인스턴스)의 퍼뮤테이션 해시를 반환합니다. 셰이더 경로와 정적 define 을 함께 봅니다.
          * @details 인스턴스는 키워드를 덮어쓸 수 있으므로 인스턴스가 있으면 그 해시를 씁니다(부모의 해시를 이미 포함합니다).
+         *          @p bAppearanceDither 면 등장 디더 변형(`kAppearanceDitherDefine`)의 해시입니다 — 등장 중인 인스턴스만 그 변형으로 따로 배치됩니다.
          */
-        static uint64 permutationHashFor( const Material* pMaterial, const MaterialInstance* pInstance );
+        static uint64 permutationHashFor( const Material* pMaterial, const MaterialInstance* pInstance, bool bAppearanceDither );
 
         /**
          * @brief 그룹 목록, 원소 테이블, 퍼뮤테이션 테이블을 통째로 비웁니다. 그룹 기준이 바뀌었을 때 부릅니다.
@@ -39,7 +40,7 @@ namespace sw
         /** @brief 머티리얼의 셰이더 타입 그룹 인덱스를 찾거나 만듭니다(배치를 방출할 때 부릅니다). 머티리얼이 없으면 kInvalidMaterialGroup 입니다. */
         uint32 materialGroupFor( const Material* pMaterial, GPUSceneSnapshot& inoutSnapshot );
         /** @brief 퍼뮤테이션 인덱스를 찾거나 만듭니다(배치를 방출할 때 부릅니다). 머티리얼이 없으면 kInvalidShaderPermutation 입니다. */
-        uint32 shaderPermutationFor( const Material* pMaterial, const MaterialInstance* pInstance, GPUSceneSnapshot& inoutSnapshot );
+        uint32 shaderPermutationFor( const Material* pMaterial, const MaterialInstance* pInstance, bool bAppearanceDither, GPUSceneSnapshot& inoutSnapshot );
         /**
          * @brief 전체 재구축을 시작합니다. 빌드 번호를 증가시키고 그룹마다의 직전 조회 결과를 버립니다.
          * @details 원소 인덱스는 지우지 않습니다. 처음 본 쌍에만 슬롯을 주고 쓰이지 않으면 `freeUnusedMaterialElements` 가 지연 회수합니다.

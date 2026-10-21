@@ -267,6 +267,14 @@ namespace sw
             /// @brief 정점 애니메이션 시간 오프셋(초)입니다. MeshComponent 가 주고 GPUInstance::_vertexAnimationPhase 로 전달됩니다(배치 키가 아니라 내용).
             /// 컬 반전(1바이트) 뒤의 정렬 빈 공간에 둔다. 앞에 두면 구멍이 생긴다(아래 static_assert).
             float32 _vertexAnimationPhase{ 0.0f };
+            /**
+             * @brief 등장 비율(0 ~ 1)입니다. MeshComponent 가 주고 `GPUInstance::_appearance` 로 전달됩니다(내용). 1 보다 작으면 디더 변형이라 퍼뮤테이션 해시가 달라진다.
+             * @details 배치 키에는 따로 넣지 않는다 — 디더인지는 퍼뮤테이션 해시에 들어 있다(`usesAppearanceDither`, `stampPermutationHash`).
+             */
+            float32 _appearance{ 1.0f };
+
+            /** @brief 등장 디더 변형으로 그리는지 반환합니다 — 등장 중(1 미만)이고 불투명일 때입니다. 투명은 정렬 · 블렌드가 있어 디더하지 않는다. */
+            bool usesAppearanceDither() const { return _appearance < 1.0f && _blendMode != static_cast<uint32>( RHIBlendMode::Transparent ); }
 
             /**
              * @brief 재구축이 필요한지 판단하기 위한 필드 단위 비교입니다.
@@ -286,6 +294,7 @@ namespace sw
                 return _mesh == other._mesh && _material == other._material && _instance == other._instance &&
                        _blendMode == other._blendMode && _spinSeed == other._spinSeed && _sprite == other._sprite &&
                        Memory::compare( &_vertexAnimationPhase, &other._vertexAnimationPhase, sizeof( _vertexAnimationPhase ) ) == 0 &&
+                       Memory::compare( &_appearance, &other._appearance, sizeof( _appearance ) ) == 0 &&
                        _permutationHash == other._permutationHash && _sortKey == other._sortKey && _bReverseCulling == other._bReverseCulling &&
                        Memory::compare( &_world, &other._world, sizeof( _world ) ) == 0 &&
                        Memory::compare( &_boundsCenter, &other._boundsCenter, sizeof( _boundsCenter ) ) == 0 &&
@@ -310,7 +319,7 @@ namespace sw
         /// @brief 후보는 프리미티브마다 하나라 패딩이 곧 메모리 대역폭입니다. 필드 크기의 합을 정렬 단위로 올린 값을 넘으면(필드 사이에 구멍이 생기면) 빌드를 멈춥니다.
         static_assert( sizeof( DrawCandidate ) <= ( sizeof( float4x4 ) + sizeof( float3 ) + sizeof( float32 ) * 2 + sizeof( uint32 ) * 3 +
                                                     sizeof( shared_ptr<Mesh> ) * 3 + sizeof( GPUSpriteInstanceData ) + sizeof( uint64 ) +
-                                                    sizeof( uint8 ) + sizeof( float32 ) + alignof( DrawCandidate ) - 1 ) /
+                                                    sizeof( uint8 ) + sizeof( float32 ) * 2 + alignof( DrawCandidate ) - 1 ) /
                                                       alignof( DrawCandidate ) * alignof( DrawCandidate ),
                        "DrawCandidate has padding between fields (or a field was added without adding its size here)" );
 
