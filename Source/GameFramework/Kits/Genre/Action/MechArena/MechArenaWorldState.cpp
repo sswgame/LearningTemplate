@@ -3,6 +3,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
 
+#include "Engine/Net/NetMessageChannel.h"
 #include "Engine/Serialization/Fixed/FixedLayout.h"
 #include "Engine/Serialization/Format/Archive.h"
 
@@ -220,11 +221,16 @@ namespace sw
         }
     }
 
-    bool MechArenaWorld::writeState( BitWriter& outWriter ) const
+    bool MechArenaWorld::registerSnapshotMessage( NetMessageChannel& inoutChannel, uint8 kind )
+    {
+        return inoutChannel.registerMessage<MechArenaSnapshot>( kind );
+    }
+
+    bool MechArenaWorld::writeSnapshotMessage( const NetMessageChannel& channel, uint8 kind, NetMessageWriter& outWriter ) const
     {
         MechArenaSnapshot snapshot;
         makeSnapshot( snapshot );
-        return FixedLayout::write( snapshot, outWriter );
+        return channel.writeMessage( kind, snapshot, outWriter );
     }
 
     void MechArenaWorld::writeState( Archive& outArchive ) const

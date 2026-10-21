@@ -5,6 +5,7 @@
 
 #include "Core/Network/BitStream.h"
 
+#include "Engine/Net/NetMessageChannel.h"
 #include "Engine/Serialization/Fixed/FixedLayout.h"
 #include "Engine/Serialization/Format/Archive.h"
 
@@ -500,7 +501,14 @@ SW_TEST_CASE( AsymmetricHorrorTest, GatesHatchCollapseAndStateBytes )
     SW_ASSERT_TRUE( loadRules( catalog ) );
 
     // 발전기 두 대 → 탈출구 → 한 명 탈출 → 남은 한 명에게 해치.
-    auto runEscape = [&]( BitWriter& outWriter, bool bLeaveSecond )
+    // 스냅샷은 넷 채널에 등록한 종류로 본문만 싣는다(NetChannelSchemaHashHandshake).
+    constexpr uint8   kSnapshotKind = 0x80;
+    NetMessageChannel channel;
+    SW_ASSERT_TRUE( HorrorMatch::registerSnapshotMessage( channel, kSnapshotKind ) );
+    NetHostConfig hostSettings;
+    SW_ASSERT_TRUE( channel.seal( NetHostConfig{}, hostSettings ) );
+
+    auto runEscape = [&]( NetMessageWriter& outWriter, bool bLeaveSecond )
     {
         HorrorMatch match;
         SW_ASSERT_TRUE( beginMatch( match, catalog ) );
@@ -525,7 +533,7 @@ SW_TEST_CASE( AsymmetricHorrorTest, GatesHatchCollapseAndStateBytes )
         SW_ASSERT_TRUE( match.escape( first ) );
         match.update( kAsymmetricHorrorStep );
         SW_EXPECT_TRUE( match.isHatchOpen() ); // 한 명만 남았다
-        const bool bWritten = match.writeState( outWriter );
+        const bool bWritten = match.writeSnapshotMessage( channel, kSnapshotKind, outWriter );
         SW_EXPECT_TRUE( bWritten );
         if ( bLeaveSecond )
         {
@@ -544,15 +552,17 @@ SW_TEST_CASE( AsymmetricHorrorTest, GatesHatchCollapseAndStateBytes )
         }
     };
 
-    BitWriter firstRun;
-    BitWriter secondRun;
+    NetMessageWriter firstRun;
+    NetMessageWriter secondRun;
     runEscape( firstRun, true );
     runEscape( secondRun, false );
     SW_ASSERT_EQUAL( firstRun.getByteCount(), secondRun.getByteCount() );
     SW_EXPECT_TRUE( firstRun.getBytes() == secondRun.getBytes() ); // 같은 입력까지는 같은 바이트
 
+    // 본문만 실린 메시지를 같은 채널로 읽어 다시 쓰면 같은 바이트다(스키마 해시 8 바이트는 핸드셰이크 버전에 섞였다).
     HorrorSnapshot        snapshot;
-    const FixedReadResult result = FixedLayout::read( firstRun.getBytes().data(), firstRun.getByteCount(), snapshot );
+    BitReader             body( firstRun.getBytes().data() + 1, firstRun.getByteCount() - 1 );
+    const FixedReadResult result = channel.readMessage( kSnapshotKind, body, snapshot );
     SW_ASSERT_TRUE_MSG( result == FixedReadResult::Ok, FixedLayout::toString( result ) );
     SW_EXPECT_EQUAL( static_cast<int32>( snapshot._listSurvivor.size() ), 2 );
     SW_EXPECT_TRUE( snapshot._listSurvivor[0]._state == SurvivorState::Escaped );
@@ -560,14 +570,15 @@ SW_TEST_CASE( AsymmetricHorrorTest, GatesHatchCollapseAndStateBytes )
     SW_EXPECT_TRUE( snapshot._bHatchOpen == SW_TRUE );
     SW_EXPECT_EQUAL( static_cast<int32>( snapshot._listGenerator.size() ), 2 );
     SW_EXPECT_EQUAL( static_cast<int32>( snapshot._listGenerator[0]._flag & 1u ), 1 );
-    BitWriter  rewritten;
-    const bool bRewritten = FixedLayout::write( snapshot, rewritten );
+    NetMessageWriter rewritten;
+    const bool       bRewritten = channel.writeMessage( kSnapshotKind, snapshot, rewritten );
     SW_EXPECT_TRUE( bRewritten );
     SW_EXPECT_TRUE( rewritten.getBytes() == firstRun.getBytes() );
 
     // 모자란 바이트는 거절하고 대상은 그대로다.
     HorrorSnapshot        broken;
-    const FixedReadResult shortResult = FixedLayout::read( firstRun.getBytes().data(), firstRun.getByteCount() / 2, broken );
+    BitReader             shortBody( firstRun.getBytes().data() + 1, firstRun.getByteCount() / 2 );
+    const FixedReadResult shortResult = channel.readMessage( kSnapshotKind, shortBody, broken );
     SW_EXPECT_TRUE( shortResult == FixedReadResult::Truncated );
     SW_EXPECT_TRUE( FixedLayout::equals( broken, HorrorSnapshot{} ) );
 }
