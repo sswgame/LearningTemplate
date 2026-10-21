@@ -197,6 +197,16 @@ namespace sw
          * @return 갱신했으면 true 입니다. 조건이 맞지 않아 전체 재구축이 필요하면 false 입니다.
          */
         bool refreshInstancesInPlace( bool bPartialCollect );
+        /**
+         * @brief 부분 수집에서 메시만 바뀐 불투명 후보(`_listMeshSwapCandidate`)의 배치를 다시 나누지 않고 그 배치의 메시만 바꿉니다(TerrainEditCost T4).
+         * @details 후보마다 그 배치가 인스턴스 하나뿐이어야 한다(지형 청크는 청크마다 인스턴스 배치 하나다). 같은 메시를 여럿이 쓰는 배치는
+         *          새 메시로 갈라야 하므로 나누기가 맡는다. 불투명 인스턴스 자리는 정렬된 나누기 항목의 자리와 같다(`populateBatches` 가 항목 순서로 방출한다) —
+         *          그 자리의 나누기 키 메시도 함께 바꿔 다음 전체 방출(`populateBatches`)이 낡은 메시 포인터로 묶지 않게 한다.
+         *          인접한 같은 키끼리 묶는 규칙이라 정렬 순서가 흐트러져도 배치는 맞다(묶음이 하나 덜 합쳐질 수 있을 뿐이다).
+         *          렌더 스레드는 배치의 메시에서 정점 풀 구간 · 모프 · VAT 를 매 프레임 다시 구하므로 GT 는 메시와 정점 수만 바꾼다.
+         * @return 모든 후보를 바꿨으면 true 입니다. 하나라도 조건이 맞지 않으면 아무것도 바꾸지 않고 false 이며, 부르는 쪽이 배치를 다시 나눈다.
+         */
+        [[nodiscard]] bool swapSingleInstanceBatchMeshes();
         /** @brief 재구축 판단 캐시를 무효로 만듭니다. */
         void invalidateBuildCache();
         /**
@@ -300,11 +310,16 @@ namespace sw
              *          배치 구성은 한 글자도 바뀌지 않으므로 다시 나누고 다시 정렬할 이유가 없다.
              *          움직이는 씬에서 남는 유일한 O(N log N) 이 그 정렬이다.
              */
-            bool hasSameBatchKey( const DrawCandidate& other ) const
+            bool hasSameBatchKey( const DrawCandidate& other ) const { return _mesh == other._mesh && hasSameBatchKeyExceptMesh( other ); }
+            /**
+             * @brief 메시 말고 배치 키(머티리얼, 인스턴스, 블렌드, 퍼뮤테이션 해시, 컬 반전)가 같은지 확인합니다.
+             * @details 메시만 바뀐 후보(지형 청크의 LOD 교체 — 청크마다 새 메시)는 인스턴스 하나짜리 배치면 배치를 다시 나누지 않고 그 배치의 메시만
+             *          바꾼다(`swapSingleInstanceBatchMeshes`). PSO · 머티리얼 버퍼를 정하는 값은 모두 여기 있고 메시는 정점 구간만 정한다.
+             */
+            bool hasSameBatchKeyExceptMesh( const DrawCandidate& other ) const
             {
-                return _mesh == other._mesh && _material == other._material && _instance == other._instance &&
-                       _blendMode == other._blendMode && _permutationHash == other._permutationHash &&
-                       _bReverseCulling == other._bReverseCulling;
+                return _material == other._material && _instance == other._instance && _blendMode == other._blendMode &&
+                       _permutationHash == other._permutationHash && _bReverseCulling == other._bReverseCulling;
             }
         };
         /// @brief 후보는 프리미티브마다 하나라 패딩이 곧 메모리 대역폭입니다. 필드 크기의 합을 정렬 단위로 올린 값을 넘으면(필드 사이에 구멍이 생기면) 빌드를 멈춥니다.
@@ -395,6 +410,8 @@ namespace sw
          *          번호 공간의 4분의 1 미만)에도 이들은 세지 않는다. 큐브 8000개가 모두 움직이는 프레임도 부분 수집이다.
          */
         vector<uint32> _listTransformDirtyPrimitive;
+        /** @brief 이번 부분 수집에서 메시만 바뀐 불투명 후보의 인덱스입니다(`swapSingleInstanceBatchMeshes`). 수집마다 비웁니다. */
+        vector<uint32> _listMeshSwapCandidate;
         /** @brief 레지스트리 인덱스에서 후보 인덱스를 찾는 배열입니다(`kInvalidCandidateIndex` 는 후보에 실리지 않았다는 뜻). */
         vector<uint32> _listPrimitiveToCandidate;
         /// @brief 전체 수집이 프리미티브 번호 위치에 남긴 `CollectFlag` 입니다. 앞으로 당겨 올 때 읽습니다.
