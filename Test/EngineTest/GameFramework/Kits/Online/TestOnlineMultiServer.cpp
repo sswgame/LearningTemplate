@@ -6,7 +6,11 @@
 
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
 
+#include "EngineTest/GameFramework/Online/ServerBusTestTypes.h"
+
 #include "GameFramework/Base/Online/Bus/LocalServerBus.h"
+#include "GameFramework/Base/Online/Bus/MixedBuildCodec.h"
+#include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Base/Online/Cache/MemoryEphemeralStore.h"
 #include "GameFramework/Base/Online/Ledger/Ledger.h"
 #include "GameFramework/Base/Online/Ledger/LedgerAudit.h"
@@ -303,6 +307,82 @@ SW_TEST_CASE( OnlineMultiServerTest, AdministrativeRevokeOnOneServerReachesTheOt
     SW_EXPECT_EQUAL( int32( LoginRevokeReason::Administrative ), int32( listEvent[0]._reason ) );
     SW_EXPECT_TRUE( listEvent[0]._reasonCode == "gm.kick" );
     SW_EXPECT_EQUAL( uint64( 0 ), rig._serverB._accountServer.findSessionID( bobID ) );
+}
+
+/**
+ * @brief [OnlineMultiServerTest] 필드를 더한 새 빌드가 보낸 해지 알림도 옛 빌드의 계정 서버가 읽고 연결을 닫는다(배포 중 혼합 빌드, docs/plans/ServerBusFormat.md 3.3)
+ * @details 보안 알림이 혼합 빌드에서 버려지면 끊긴 세션이 세션 다시 읽기 주기까지 살아 있다(이 고정물은 다시 읽기를 껐다).
+ */
+SW_TEST_CASE( OnlineMultiServerTest, ARevokeNoticeFromANewerBuildStillClosesTheConnectionOnTheOtherServer )
+{
+    MultiServerRig rig;
+    AccountID      aliceID = kInvalidAccountID;
+    AccountID      bobID   = kInvalidAccountID;
+    SW_ASSERT_TRUE( rig.loginAliceOnAAndBobOnB( aliceID, bobID ) );
+    const uint64 bobSessionID = rig._serverB._accountServer.findSessionID( bobID );
+    SW_ASSERT_TRUE( bobSessionID != 0 );
+
+    BusTestRevokeNoticeNextBuild notice;
+    notice._reasonCode    = "gm.kick";
+    notice._accountID     = bobID;
+    notice._sessionID     = bobSessionID;
+    notice._reason        = LoginRevokeReason::Administrative;
+    notice._issuedByShard = 9;
+    vector<uint8> bytes;
+    SW_ASSERT_TRUE( MixedBuildCodec::encode( BusTestRevokeNoticeNextBuild::kBusVersion, notice, bytes ) );
+    const uint64 rejectedAt = ServerBusReadLog::getRejectedCount();
+    rig._serverA._bus.publish( "account.revoke", bytes.data(), static_cast<int32>( bytes.size() ) ); // A 가 새 빌드다
+
+    vector<AccountClientEvent> listEvent;
+    {
+        test::ScopedLogSuppressor suppressor; // 건너뛴 필드 경고(타입과 필드마다 한 번)
+        for ( int32 attempt = 0; attempt < 50 && listEvent.empty(); ++attempt )
+        {
+            rig.step();
+            (void)rig._bobOnB._account.pollEvents( listEvent );
+        }
+    }
+    SW_ASSERT_EQUAL( size_t( 1 ), listEvent.size() );
+    SW_EXPECT_EQUAL( int32( LoginRevokeReason::Administrative ), int32( listEvent[0]._reason ) );
+    SW_EXPECT_TRUE( listEvent[0]._reasonCode == "gm.kick" );
+    SW_EXPECT_EQUAL( uint64( 0 ), rig._serverB._accountServer.findSessionID( bobID ) );
+    SW_EXPECT_EQUAL( rejectedAt, ServerBusReadLog::getRejectedCount() );
+}
+
+/**
+ * @brief [OnlineMultiServerTest] 의미 버전이 다른 해지 알림은 읽지 않는다 — 연결은 그대로이고 거절이 카운터에 남는다(그 세션은 세션 다시 읽기가 끊는다)
+ */
+SW_TEST_CASE( OnlineMultiServerTest, ARevokeNoticeOfAnotherSemanticVersionIsRejectedAndCounted )
+{
+    MultiServerRig rig;
+    AccountID      aliceID = kInvalidAccountID;
+    AccountID      bobID   = kInvalidAccountID;
+    SW_ASSERT_TRUE( rig.loginAliceOnAAndBobOnB( aliceID, bobID ) );
+    const uint64 bobSessionID = rig._serverB._accountServer.findSessionID( bobID );
+    SW_ASSERT_TRUE( bobSessionID != 0 );
+
+    AccountRevokeNotice notice;
+    notice._reasonCode = "gm.kick";
+    notice._accountID  = bobID;
+    notice._sessionID  = bobSessionID;
+    notice._reason     = LoginRevokeReason::Administrative;
+    vector<uint8> bytes;
+    SW_ASSERT_TRUE( MixedBuildCodec::encode( AccountRevokeNotice::kBusVersion + 1, notice, bytes ) );
+    const uint64 rejectedAt = ServerBusReadLog::getRejectedCount();
+    rig._serverA._bus.publish( "account.revoke", bytes.data(), static_cast<int32>( bytes.size() ) );
+
+    vector<AccountClientEvent> listEvent;
+    {
+        test::ScopedLogSuppressor suppressor; // 버전 다름 거절 오류
+        for ( int32 attempt = 0; attempt < 20; ++attempt )
+        {
+            rig.step();
+            (void)rig._bobOnB._account.pollEvents( listEvent );
+        }
+    }
+    SW_EXPECT_TRUE( listEvent.empty() );
+    SW_EXPECT_EQUAL( bobSessionID, rig._serverB._accountServer.findSessionID( bobID ) );
+    SW_EXPECT_EQUAL( rejectedAt + 1, ServerBusReadLog::getRejectedCount() );
 }
 
 SW_TEST_CASE( OnlineMultiServerTest, TradeWithAPeerOnAnotherServerSettlesAndBothSidesArePushed )

@@ -95,6 +95,6 @@
 ## 남은 확인
 
 - **테스트 실행**: 통합(integ6)에서 Debug 빌드는 세웠지만 위 테스트(`ReflectionSerializationTest.*` · `ServerBusTest.*` · `ServerBusMixedBuildTest.*` · `OnlineServiceHostTest.*` · `RemoteConfigTest.*`, 키트 테스트, `-L nogpu` · `-L lint`)의 통과 기록은 찾지 못했습니다. 한 번 돌려 확인합니다.
-- **해지 알림(보안) 서버 둘 테스트**: 같은 경로를 `ServerBusMixedBuildTest.AnAddedFieldIsSkippedByTheOldBuild` 가 타입 하나로 보고 있고, 계정 서버 둘 고정물로 다시 확인하는 테스트는 쓰지 않았습니다.
+- **해지 알림(보안) 서버 둘 테스트**: 썼습니다(2026-10-22, 빌드 미확인). `OnlineMultiServerTest.ARevokeNoticeFromANewerBuildStillClosesTheConnectionOnTheOtherServer` 는 필드를 더한 새 빌드 본문(`BusTestRevokeNoticeNextBuild`)을 A 의 버스로 보내 B 가 밥의 연결을 닫는지, `ARevokeNoticeOfAnotherSemanticVersionIsRejectedAndCounted` 는 의미 버전이 다르면 연결이 그대로이고 거절 카운터가 하나 오르는지 봅니다. 남은 것은 이 둘을 위 테스트 실행에 함께 돌려 통과 기록을 남기는 것입니다.
 - **측정(Release, 3~5 회 중앙값을 [검증 문서](../08_Verification.md) 에 적음)**: 판단 기준은 코덱 비용이 버스 전송 왕복(`LocalServerBusHub`)의 5 % 아래면 최적화하지 않는 것입니다. 측정할 것은 ① `ChatMessage` 짧은 글(10 자)과 512 자의 A 대 B 쓰기 + 읽기 시간과 바이트, ② 모르는 필드가 있을 때와 없을 때 읽기 차이, ③ 서버 둘(`LocalServerBusHub`, 가능하면 RESP 위 `EphemeralServerBus`)에서 초당 1k · 10k 채팅일 때 서비스 틱 p50 / p99 와 코덱 비율, ④ 버스 타입마다 실제 상한으로 채운 A 바이트. 결과가 나쁘면 고칠 곳은 A 읽기 경로이고 형식을 B 로 돌리지 않습니다.
 - **알려진 위험**: 로그 폭주는 (타입, 필드) · (타입, 결과, 버전)마다 한 번으로 막았습니다. 버스 전용 타입은 `MessageTypes` 에서 빠져 기동 때의 코덱 확인을 지나지 않으므로 타입마다 주제 왕복 테스트가 그 확인을 맡습니다. 이 변경으로 온라인 스키마 해시가 한 번 바뀌어 옛 클라이언트는 한 번 업데이트를 받습니다.
