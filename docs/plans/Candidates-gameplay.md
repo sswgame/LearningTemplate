@@ -3,7 +3,7 @@
 > 상태: 후보 · 선행: 없음 · 영역: gameplay · 옛번호: D4-2,D4-4,D4-6,D4-7,D4-8,D4-9,D4-10,D4-11,D4-12,D4-13,D4-14,D4-15,D4-16,D4-17,G-4,G-6,G-7 · 진행: 해당없음
 
 GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션 영역의 착수 전 후보 목록입니다. 착수하면 그 절을 계획 문서로 옮기고 여기서 지웁니다.
-이미 계획 문서가 있는 일의 남은 것은 그 문서에 있습니다: [PairedAnimation](PairedAnimation.md) · [EditorCharacterEditor](EditorCharacterEditor.md) · [MotionMatching](MotionMatching.md).
+이미 계획 문서가 있는 일의 남은 것은 그 문서에 있습니다: [PairedAnimation](PairedAnimation.md) · [AnimationLodAndCrowd](AnimationLodAndCrowd.md) · [EditorCharacterEditor](EditorCharacterEditor.md) · [MotionMatching](MotionMatching.md).
 
 ## 기능
 
@@ -22,17 +22,6 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션 영역의 
 왜 필요한가: 틀 · 키트 전부 · 조립 테스트 둘(`KitCompositionTest`)과 `MeadowVillage` 는 들어갔다(규칙: `Source/GameFramework/Kits/` "키트 여럿을 한 게임에"). 필요해지기 전까지 남긴 몫이다.
 착수 조건 / 남은 것: 둘째 조립(RTS + City)의 테스트 게임이 필요해지면 MeadowVillage 모양으로 만든다. 격자 키트를 섞는 게임이 생기면 `SessionStateSettings::_land*` 와 키트의 `bindLand` 를 건다.
 함정: SRPG 는 전투 끝에 `releaseLand`. 공원 놀이기구 발자국은 상태 바이트에 싣지 않는다 — 지은 칸은 땅이 든다.
-
-### AnimationLodAndCrowd
-제목: 애니메이션 LOD 와 군중 공유
-옛번호: D4-6
-왜 필요한가: 애니메이션 LOD(`AnimationLOD.h` — 리그 노드도 화면 크기 `min_screen_size` 로 꺼진다)와 군중 공유(`AnimationCrowd.h`)는 들어갔다.
-2026-10-22 `wt/animleft` 가 코드 · 데이터를 썼다(빌드 · 화면 미확인) — 작업마다 포즈 접근 형식(`IAnimationPhaseTask::getPoseAccess`, 순수 가상 `Writes` · `ReadsOnly`)을 정해 쓰는 작업이 꼭 하나일 때만 묻고(외형 소켓 작업은 읽기),
-리더를 따르는 부품은 리더 묶음과 같은 클립 · 칸의 자기 묶음(`AnimationCrowd::joinFollowerBucket`), 반복 클립 둘 사이의 페이드는 섞기 묶음(`joinBlendBucket` — 같은 출발 칸 · 같은 프레임에 같은 전이를 시작한 유닛이 한 묶음, 가중치는 멤버가 정함)을 나눈다.
-Shooter3D 적 프리팹이 `_bShareCrowdPose` 를 켜고 스킨드 외형 부품은 몸의 값을 따른다. 테스트는 `AnimationCrowdTest.ReaderTasksAndLeaderFollowersShareBuckets` · `CrossfadeSharesABlendBucketThenRejoins`. 착수했으니 계획 문서로 옮길 차례다(README 진행 표가 생성물이라 병합 때 옮긴다).
-남은 것:
-- 확인: Shooter3D autoplay 에서 `GT.Animation.crowdSharedUnits` 가 적 수만큼 오르고 쫓는 동안 `crowdSoloUnits` 가 0 근처인지, 적 무기 · 방패가 손을 따라가는지(스크린샷). 섞기 묶음이 끝나 들어간 클립의 묶음으로 갈 때 반 칸 안쪽 시각 차이가 튀어 보이는지. 적 30 마리 `GT.Animation` 전후(Release).
-- 메시 LOD 가 생기면 본 LOD 를 메시 LOD 와 묶기([PreloadAndLod](#preloadandlod)).
 
 ### FacialAnimation
 제목: 얼굴 애니메이션의 남은 것
