@@ -51,6 +51,7 @@ enginedefaultassets.xml 의 엔진 셸 경로입니다. 읽기는 `XMLSerializer
 | `_uiNotifications` | `DataPath` | — |  |  | 알림 화면(`UINotificationService`) |
 | `_uiNotificationEntry` | `DataPath` | — |  |  | 알림 한 줄 견본 |
 | `_uiSubtitles` | `DataPath` | — |  |  | 자막 화면(`UISubtitleService`) |
+| `_uiTooltip` | `DataPath` | — |  |  | 툴팁 화면(`UITooltipService`) |
 | `_uiDebugHUD` | `DataPath` | — |  |  | 디버그 HUD 설정 창(`DebugHUD`, 개발 빌드) |
 | `_debugHUDSettingsSchema` | `DataPath` | — |  |  | 디버그 HUD 설정 스키마(`DebugHUD`, 개발 빌드) |
 | `_uiResolutionPresets` | `DataPath` | — |  |  | UI 미리보기 해상도 프리셋 표(`UIResolutionPresetTable`) |

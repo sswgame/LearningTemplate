@@ -91,6 +91,7 @@ namespace sw
         , _arrCapturedGamepadMask{}
         , _keyboardFocus{ InputKeyboardFocus::Game }
         , _virtualInputMode{ VirtualInputMode::Exclusive }
+        , _cursorShape{ CursorShape::Arrow }
         , _pendingHighSurrogate{ 0 }
         , _consumedButtonMask{ 0 }
         , _bInitialized{ SW_FALSE }
@@ -951,6 +952,17 @@ namespace sw
             return;
         setCursorVisiblePlatform( bHide == false );
         _bCursorHiddenApplied = bHide ? SW_TRUE : SW_FALSE;
+        if ( bHide == false )
+            applyCursorShapePlatform(); // 숨긴 동안 바뀐 모양을 다시 보일 때 적용한다(X11 은 보이기가 기본 커서로 되돌린다)
+    }
+
+    void InputManager::setCursorShape( CursorShape shape )
+    {
+        if ( _cursorShape == shape )
+            return;
+        _cursorShape = shape;
+        if ( _bCursorHiddenApplied == SW_FALSE )
+            applyCursorShapePlatform();
     }
 
     void InputManager::onPlatformFocusChanged( bool bFocused )

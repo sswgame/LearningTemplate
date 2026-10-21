@@ -100,6 +100,7 @@ namespace sw
 #endif
         , _scaleSettings{}
         , _subtitles{ *this }
+        , _tooltips{ *this }
         , _viewport{}
         , _canvas{}
         , _canvasScratch{}
@@ -152,6 +153,7 @@ namespace sw
     void UISystem::shutdown()
     {
         _subtitles.clear();
+        _tooltips.clear();
         _notifications.clear();
         // 위젯 컴포넌트가 이 시스템보다 오래 남을 수 있으므로 등록과 마커를 잊게 한다(그 뒤 소멸자가 이 시스템을 부르지 않게).
         for ( WidgetComponent* pComponent : _listWidgetComponent )
@@ -274,6 +276,8 @@ namespace sw
         syncScreenSwitches();
         reopenClosedScreens();
         _subtitles.update( deltaSeconds );
+        if ( _bOnScreenSuppressed == SW_FALSE )
+            _tooltips.update( deltaSeconds ); // 화면을 막는 동안(에디터 멈춤)은 포인터도 막혀 있다 — 툴팁과 커서를 건드리지 않는다
         updateScreens( deltaSeconds );
         _notifications.update( deltaSeconds );
         applyPendingCloses();

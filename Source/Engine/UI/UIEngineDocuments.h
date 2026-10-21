@@ -35,6 +35,7 @@ namespace sw
         string _notifications;        ///< 알림 화면
         string _notificationEntry;    ///< 알림 한 줄 견본
         string _subtitles;            ///< 자막 화면
+        string _tooltip;              ///< 툴팁 화면(`UITooltipService`)
         string _debugHUD;             ///< 디버그 HUD 설정 창(개발 빌드)
 
         /** @brief 엔진 기본 에셋 표에서 경로를 옮겨 담습니다. */

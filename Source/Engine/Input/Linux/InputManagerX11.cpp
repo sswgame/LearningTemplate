@@ -18,6 +18,7 @@
     #include "Engine/Window/NativeWindowEvent.h"
 
     #include <X11/XKBlib.h>
+    #include <X11/cursorfont.h>
 
     #include "Core/Common/X11MacroUndef.h"
 
@@ -34,10 +35,12 @@ namespace sw
         {
             static inline XIM    s_pInputMethod{ nullptr };
             static inline XIC    s_pInputContext{ nullptr };
-            static inline void*  s_pImDisplay{ nullptr };     ///< XIC 를 만들 때 쓴 Display* 입니다.
-            static inline Window s_imWindow{ 0 };             ///< XIC 의 XNClientWindow 입니다. 창이 바뀌면 반드시 XIC 를 다시 만들어야 합니다.
-            static inline Cursor s_invisibleCursor{ 0 };      ///< X11 None(리소스 없음)입니다. X11MacroUndef.h 가 None 매크로를 지우므로 리터럴 0 을 씁니다.
-            static inline void*  s_pCursorDisplay{ nullptr }; ///< s_invisibleCursor 를 만든 Display* 입니다(다르면 다시 만듭니다).
+            static inline void*  s_pImDisplay{ nullptr };                                                ///< XIC 를 만들 때 쓴 Display* 입니다.
+            static inline Window s_imWindow{ 0 };                                                        ///< XIC 의 XNClientWindow 입니다. 창이 바뀌면 반드시 XIC 를 다시 만들어야 합니다.
+            static inline Cursor s_invisibleCursor{ 0 };                                                 ///< X11 None(리소스 없음)입니다. X11MacroUndef.h 가 None 매크로를 지우므로 리터럴 0 을 씁니다.
+            static inline void*  s_pCursorDisplay{ nullptr };                                            ///< s_invisibleCursor 를 만든 Display* 입니다(다르면 다시 만듭니다).
+            static inline Cursor s_arrShapeCursor[static_cast<size_t>( CursorShape::NotAllowed ) + 1]{}; ///< 모양마다 만든 글꼴 커서입니다(0 이면 아직 없음)
+            static inline void*  s_pShapeCursorDisplay{ nullptr };                                       ///< s_arrShapeCursor 를 만든 Display* 입니다
             static inline bool   s_bAccessibilityDisabled{ false };
             /** @brief 창이 X11 포커스를 가지고 있는지 나타냅니다(FocusIn/FocusOut 으로 갱신). 보조 폴링을 건너뛸지 정하는 데 씁니다. */
             static inline bool   s_bWindowFocused{ false };
@@ -204,9 +207,54 @@ namespace sw
                 return s_invisibleCursor;
             }
 
+            /** @brief 모양의 X11 글꼴 커서 번호(`XC_*`)입니다. */
+            static uint32 getFontCursorID( CursorShape shape )
+            {
+                switch ( shape )
+                {
+                    case CursorShape::Arrow:
+                        return XC_left_ptr;
+                    case CursorShape::Hand:
+                        return XC_hand2;
+                    case CursorShape::TextBeam:
+                        return XC_xterm;
+                    case CursorShape::ResizeHorizontal:
+                        return XC_sb_h_double_arrow;
+                    case CursorShape::ResizeVertical:
+                        return XC_sb_v_double_arrow;
+                    case CursorShape::NotAllowed:
+                        return XC_X_cursor;
+                }
+                return XC_left_ptr;
+            }
+
+            /** @brief 모양의 글꼴 커서를 만들어 캐시합니다(Display 가 바뀌면 다시 만든다 — 옛 Display 의 리소스는 그 Display 와 함께 사라졌다). */
+            static Cursor getOrCreateShapeCursor( Display* pDisplay, CursorShape shape )
+            {
+                if ( s_pShapeCursorDisplay != pDisplay )
+                {
+                    for ( Cursor& cursor : s_arrShapeCursor )
+                    {
+                        cursor = 0;
+                    }
+                    s_pShapeCursorDisplay = pDisplay;
+                }
+                Cursor& cached = s_arrShapeCursor[static_cast<size_t>( shape )];
+                if ( cached == 0 )
+                    cached = XCreateFontCursor( pDisplay, getFontCursorID( shape ) );
+                return cached;
+            }
+
             /** @brief XIM/XIC 와 커서를 해제합니다. 창이나 Display 가 사라지기 전에 불러야 합니다. */
             static void releaseAll()
             {
+                for ( Cursor& cursor : s_arrShapeCursor )
+                {
+                    if ( cursor != 0 && s_pShapeCursorDisplay != nullptr )
+                        XFreeCursor( static_cast<Display*>( s_pShapeCursorDisplay ), cursor );
+                    cursor = 0;
+                }
+                s_pShapeCursorDisplay = nullptr;
                 if ( s_pInputContext != nullptr )
                 {
                     XDestroyIC( s_pInputContext );
@@ -391,6 +439,21 @@ namespace sw
             XUndefineCursor( pDisplay, x11Window );
         else
             XDefineCursor( pDisplay, x11Window, X11InputInternal::getOrCreateInvisibleCursor( pDisplay, x11Window ) );
+        XFlush( pDisplay );
+    }
+
+    void InputManager::applyCursorShapePlatform()
+    {
+        IWindow* pWindow = IWindow::getActiveWindow();
+        if ( pWindow == nullptr )
+            return;
+
+        Display* pDisplay  = static_cast<Display*>( pWindow->getNativeDisplay() );
+        Window   x11Window = static_cast<Window>( reinterpret_cast<uintptr_t>( pWindow->getNativeHandle() ) );
+        if ( pDisplay == nullptr || x11Window == 0 )
+            return;
+
+        XDefineCursor( pDisplay, x11Window, X11InputInternal::getOrCreateShapeCursor( pDisplay, _cursorShape ) );
         XFlush( pDisplay );
     }
 

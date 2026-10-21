@@ -12,6 +12,7 @@
 #include "Core/Module/ModuleUnloadListener.h"
 #include "Core/Subsystem/ISubsystem.h"
 
+#include "Engine/Input/CursorShape.h"
 #include "Engine/Input/Devices/GamepadDevice.h"
 #include "Engine/Input/Devices/KeyboardDevice.h"
 #include "Engine/Input/Devices/MouseDevice.h"
@@ -236,6 +237,12 @@ namespace sw
 
         void setMouseLockMode( MouseLockMode mode );
         void setCursorVisible( bool bVisible );
+        /**
+         * @brief OS 커서 모양을 바꿉니다(런타임 UI 가 호버한 위젯의 `UICursorShape` 로 프레임마다 부른다). 같은 모양이면 아무것도 하지 않습니다.
+         * @details 숨긴 커서(잠금 · `setCursorVisible( false )`)에는 적용하지 않고 기억했다가 다시 보일 때 적용한다. 에디터에서는 ImGui 가 커서를 쥐므로 게임 뷰 밖에서 덮인다.
+         */
+        void        setCursorShape( CursorShape shape );
+        CursorShape getCursorShape() const { return _cursorShape; }
 
         void setMouseClipSubRect( int32 left, int32 top, int32 right, int32 bottom );
         void clearMouseClipSubRect();
@@ -350,6 +357,8 @@ namespace sw
         }
         /** @brief 커서 표시와 숨김을 OS 에 실제로 적용합니다. `syncMouseLock` 이 숨김 상태가 바뀔 때만 부릅니다(Win32 `ShowCursor` 는 카운터입니다). */
         void setCursorVisiblePlatform( bool bVisible );
+        /** @brief 커서 모양(`_cursorShape`)을 OS 에 적용합니다(Win32 창 클래스 커서 + `SetCursor`, X11 `XDefineCursor`). 숨긴 동안에는 부르지 않습니다. */
+        void applyCursorShapePlatform();
         /** @brief 게임이 포인터를 가질 수 있는 상태인지 반환합니다. 포커스가 있고, Alt 를 누르지 않았고, 키보드 포커스가 `Game` 이고, (잠금을 요청 중이면) 클릭으로 다시 잡았어야 합니다. */
         bool isPointerOwnedByGame() const;
         /** @brief 창 포커스가 바뀌었습니다(메시지를 받는 곳에서 부릅니다). 잃으면 잠금 재획득 표시와 Alt 상태도 지웁니다. */
@@ -417,6 +426,7 @@ namespace sw
         uint32                               _arrCapturedGamepadMask[kMaxGamepadSlot];   /**< 개발 콘솔이 키보드를 쥔 동안 눌려서 게임에 보이지 않게 가린 패드 컨트롤입니다(비트는 `makeGamepadControlBit`). */
         InputKeyboardFocus                   _keyboardFocus;                             /**< 지금 키보드를 받는 쪽입니다. */
         VirtualInputMode                     _virtualInputMode;                          /**< 붙인 가상 입력 원천의 모드입니다. */
+        CursorShape                          _cursorShape;                               /**< OS 커서 모양입니다(`setCursorShape`). */
         [[maybe_unused]] uint16              _pendingHighSurrogate;                      /**< 짝을 기다리는 서로게이트의 앞 반쪽입니다(Win32 WM_CHAR). 0 이면 없습니다. */
         uint8                                _consumedButtonMask;                        /**< 잠금을 다시 잡느라 삼킨, 아직 떼지 않은 마우스 버튼 비트입니다(`1 << MouseButton`). */
         uint8                                _bInitialized          : 1;

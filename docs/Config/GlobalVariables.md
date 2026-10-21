@@ -226,6 +226,7 @@
 | `gv_uiDebugSafeZone` | `float32` | `0.0` | 시험 | UI 안전 영역 흉내 — 각 변을 화면 크기의 이 비율(0..0.1)만큼 안쪽으로 민다 | [UIScale.cpp](../../Source/Engine/UI/Layout/UIScale.cpp) |
 | `gv_uiDemo` | `bool` | `false` | 시험 · 배포본에도 | UI 시험 화면을 띄운다 — 글 · 버튼 다섯 · 슬라이더 · 체크 · 진행 · 콤보 · 입력 필드 · 그리기 견본(둥근 상자 · 자르기 · 9-슬라이스 · 오른쪽에서 왼쪽 글) | [UIDemoScreen.cpp](../../Source/Engine/UI/Debug/UIDemoScreen.cpp) |
 | `gv_uiOptionsMenu` | `bool` | `false` | 시험 · 배포본에도 | 옵션 메뉴를 띄운다 — 사용자 설정 스키마에서 만든 탭 · 행(개발 확인 · 스크린샷) | [OptionsMenuScreen.cpp](../../Source/Engine/UI/Screen/OptionsMenuScreen.cpp) |
+| `gv_uiTooltipDelay` | `float32` | `0.5` | 일반 | 런타임 UI 툴팁이 뜨기까지 위젯 위에 머무는 시간(초) | [UITooltipService.cpp](../../Source/Engine/UI/Screen/UITooltipService.cpp) |
 
 ## `Source/Engine/UserSettings`
 

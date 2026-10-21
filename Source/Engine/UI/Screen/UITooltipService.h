@@ -1,0 +1,71 @@
+/**
+ * @file UITooltipService.h
+ * @brief 런타임 UI 의 툴팁과 커서 모양입니다. 호버 경로에서 가장 가까운 위젯의 설명 글(`Widget::getTooltip`)을 머문 뒤 띄우고, 커서 모양(`Widget::getCursorShape`)을 OS 커서로 냅니다.
+ */
+#pragma once
+#include "Core/Common/Macros.h"
+#include "Core/Common/Types.h"
+
+#include "Engine/Input/CursorShape.h"
+#include "Engine/UI/Base/WidgetTypes.h"
+#include "Engine/UI/Screen/UIScreen.h"
+
+namespace sw
+{
+    struct UIWidgetPath;
+
+    class UISystem;
+    class Widget;
+    class WidgetTree;
+
+    /**
+     * @class UITooltipService
+     * @brief 툴팁 화면(`UIEngineDocuments::_tooltip`, 오버레이 레이어)을 열고 닫고, 커서 모양을 정합니다. `UISystem` 의 일부입니다(`UISystem::getTooltips`).
+     * @details 언리얼 Slate 의 툴팁(`SToolTip`, 지연 후 커서 옆) · 위젯 `Cursor` 속성과 같은 자리다.
+     *          - 툴팁: 호버 경로의 잎에서 루트로 올라가 처음 만난 비어 있지 않은 설명 글이 주인이다. 같은 주인 위에 `gv_uiTooltipDelay` 초 머물면 띄우고,
+     *            주인이 바뀌거나 포인터 입력이 아니게 되면(탐색 방식) 닫는다. 위치는 포인터 오른쪽 아래(`kPointerOffset`, UI 단위)이며 문서의 `Body` 위젯을 옮긴다.
+     *          - 커서: 호버 경로의 잎에서 올라가 처음 만난 `Inherit` 가 아닌 모양이다. 루트까지 모두 `Inherit` 면 화살표다. 호버가 없으면 화살표다.
+     *          문서의 위젯 이름: `Body`(옮기는 바탕), `Text`(글). 게임 스레드에서만 쓴다.
+     */
+    class SW_API UITooltipService
+    {
+    public:
+        /** @brief 툴팁을 포인터에서 이만큼(UI 단위) 오른쪽 아래에 둡니다. */
+        static constexpr float32 kPointerOffsetX = 16.0f;
+        static constexpr float32 kPointerOffsetY = 20.0f;
+
+        explicit UITooltipService( UISystem& uiSystem );
+        UITooltipService( const UITooltipService& )            = delete;
+        UITooltipService& operator=( const UITooltipService& ) = delete;
+
+        /** @brief 호버 경로로 커서 모양을 정하고, 머문 시간을 세어 툴팁을 열고 닫고 옮깁니다. `UISystem::update` 가 화면 틱 앞에서 부릅니다. */
+        void update( float32 deltaSeconds );
+        /** @brief 툴팁을 닫고 머문 시간을 지웁니다(`UISystem::shutdown`). */
+        void clear();
+
+        /** @brief 호버 경로 @p path(@p tree 안)의 커서 모양입니다. 잎에서 올라가 처음 만난 `Inherit` 가 아닌 값, 없으면 `Arrow` 입니다. */
+        static UICursorShape resolveCursorShape( const WidgetTree& tree, const UIWidgetPath& path );
+        /** @brief 풀린 UI 커서 모양(`Inherit` 가 아님)을 OS 커서 모양으로 바꿉니다. `Inherit` 를 넘기면 어설트하고 `Arrow` 입니다. */
+        static CursorShape toCursorShape( UICursorShape shape );
+        /** @brief 호버 경로 @p path 에서 설명 글을 가진 가장 가까운 위젯입니다(잎부터). 없으면 nullptr 입니다. */
+        static const Widget* findTooltipOwner( const WidgetTree& tree, const UIWidgetPath& path );
+
+        /** @brief 지금 툴팁을 띄운 주인입니다(없으면 `kInvalidWidgetID`). */
+        WidgetID getShownOwner() const { return _shownOwner; }
+        /** @brief 툴팁 화면입니다(열려 있지 않으면 무효 핸들). */
+        UIScreenHandle getScreen() const { return _screen; }
+
+    private:
+        /** @brief 툴팁 화면을 열고 글을 넣고 포인터 옆으로 옮깁니다. 문서를 열지 못하면 오류를 한 번 남기고 다시 시도하지 않습니다. */
+        void show( const Widget& owner );
+        /** @brief 툴팁 화면을 닫습니다. */
+        void hide();
+
+        UISystem&      _uiSystem;
+        UIScreenHandle _screen;
+        WidgetID       _hoverOwner;      ///< 지금 머무는 주인(설명 글을 가진 위젯)
+        WidgetID       _shownOwner;      ///< 툴팁을 띄운 주인
+        float32        _hoverSeconds;    ///< `_hoverOwner` 위에 머문 시간
+        bool           _bDocumentFailed; ///< 문서를 열지 못했는지(같은 오류를 매 프레임 내지 않게)
+    };
+} // namespace sw

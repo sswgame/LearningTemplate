@@ -51,6 +51,10 @@ namespace sw
     {
     }
 
+    void InputManager::applyCursorShapePlatform()
+    {
+    }
+
     void InputManager::applyMouseLockMode()
     {
     }

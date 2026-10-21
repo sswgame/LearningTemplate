@@ -92,9 +92,11 @@ namespace sw
         /** @brief @p inputMap 의 액션 @p action 이 지금 쓰는 물리 입력을 소비합니다. */
         void consumeAction( const InputMap& inputMap, const hashed_string& action );
 
-        UIFocusManager&           getFocusManager() { return _focus; }
-        const UIFocusManager&     getFocusManager() const { return _focus; }
-        const UIPointerState&     getPointerState() const { return _pointer; }
+        UIFocusManager&       getFocusManager() { return _focus; }
+        const UIFocusManager& getFocusManager() const { return _focus; }
+        const UIPointerState& getPointerState() const { return _pointer; }
+        /** @brief 마지막으로 처리한 포인터 위치입니다(UI 단위, 뷰포트 원점 기준). 툴팁이 이 옆에 뜬다. */
+        const float2&             getLastPointerPosition() const { return _lastPointerPosition; }
         UIInputConsumption&       getConsumption() { return _consumption; }
         const UIInputConsumption& getConsumption() const { return _consumption; }
         UIInputMode               getInputMode() const { return _inputMode; }

@@ -31,6 +31,7 @@ namespace sw
         , _renderTransform{}
         , _slot{}
         , _navigation{}
+        , _tooltip{}
         , _paintCache{}
         , _computedStyle{}
         , _styleTransition{}
@@ -50,6 +51,7 @@ namespace sw
         , _opacity{ 1.0f }
         , _visibility{ WidgetVisibility::Visible }
         , _flowDirection{ UIFlowDirection::Inherit }
+        , _cursorShape{ UICursorShape::Inherit }
         , _bEnabled{ true }
         , _bRightToLeft{ false }
         , _bHovered{ false }

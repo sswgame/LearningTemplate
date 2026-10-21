@@ -31,6 +31,7 @@
 #include "Engine/UI/Screen/UIOffscreenScreens.h"
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/Screen/UISubtitleService.h"
+#include "Engine/UI/Screen/UITooltipService.h"
 #include "Engine/UI/Style/UIStyleSheetCache.h"
 #include "Engine/UI/Style/UIThemeController.h"
 #include "Engine/UI/UIEngineDocuments.h"
@@ -273,6 +274,8 @@ namespace sw
         /** @brief 자막입니다. 오버레이 레이어 아래 가운데에 최대 둘까지 표시하며, 사용자 설정의 끔/켬, 크기, 배경을 따릅니다. */
         UISubtitleService&       getSubtitles() { return _subtitles; }
         const UISubtitleService& getSubtitles() const { return _subtitles; }
+        /** @brief 툴팁과 커서 모양입니다. 호버 경로의 위젯 설명 글을 머문 뒤 띄우고, 위젯 커서 모양을 OS 커서로 냅니다. */
+        const UITooltipService& getTooltips() const { return _tooltips; }
 
         // --- 게임 쪽이 묻는 것 -----------------------------------------------------------
         /** @brief 모달이나 로딩 화면이 떠 있어 게임 입력을 막아야 하면 true 입니다(플레이어 컨트롤러가 의도를 0 으로 둡니다). */
@@ -415,6 +418,7 @@ namespace sw
 #endif
         UIScaleSettings           _scaleSettings;
         UISubtitleService         _subtitles;
+        UITooltipService          _tooltips;
         UIViewport                _viewport;
         CanvasDrawList            _canvas;              ///< 이번 프레임의 그리기 목록입니다.
         CanvasDrawList            _canvasScratch;       ///< 칠하는 중인 목록입니다(같은 내용이면 버립니다).

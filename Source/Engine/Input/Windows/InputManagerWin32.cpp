@@ -25,6 +25,27 @@ namespace sw
 {
     namespace
     {
+        /** @brief 커서 모양의 Win32 표준 커서 이름(`IDC_*`)입니다. */
+        LPCWSTR getWin32CursorNameInternal( CursorShape shape )
+        {
+            switch ( shape )
+            {
+                case CursorShape::Arrow:
+                    return reinterpret_cast<LPCWSTR>( IDC_ARROW );
+                case CursorShape::Hand:
+                    return reinterpret_cast<LPCWSTR>( IDC_HAND );
+                case CursorShape::TextBeam:
+                    return reinterpret_cast<LPCWSTR>( IDC_IBEAM );
+                case CursorShape::ResizeHorizontal:
+                    return reinterpret_cast<LPCWSTR>( IDC_SIZEWE );
+                case CursorShape::ResizeVertical:
+                    return reinterpret_cast<LPCWSTR>( IDC_SIZENS );
+                case CursorShape::NotAllowed:
+                    return reinterpret_cast<LPCWSTR>( IDC_NO );
+            }
+            return reinterpret_cast<LPCWSTR>( IDC_ARROW );
+        }
+
         uint8 getWin32ModifierMaskInternal()
         {
             uint8 mask = ModifierKey::None;
@@ -424,6 +445,19 @@ namespace sw
     void InputManager::setCursorVisiblePlatform( bool bVisible )
     {
         ShowCursor( bVisible ? TRUE : FALSE );
+    }
+
+    void InputManager::applyCursorShapePlatform()
+    {
+        IWindow* pWindow = IWindow::getActiveWindow();
+        HWND     pHwnd   = pWindow != nullptr ? static_cast<HWND>( pWindow->getNativeHandle() ) : nullptr;
+        if ( pHwnd == nullptr )
+            return;
+        const LPCWSTR pCursorName = getWin32CursorNameInternal( _cursorShape );
+        // 창 클래스 커서를 바꾼다 — 마우스가 움직일 때마다 `DefWindowProc` 의 WM_SETCURSOR 가 그 커서로 되돌리므로 `SetCursor` 만으로는 다음 이동에 사라진다.
+        HCURSOR pCursor = LoadCursorW( nullptr, pCursorName );
+        SetClassLongPtrW( pHwnd, GCLP_HCURSOR, reinterpret_cast<LONG_PTR>( pCursor ) );
+        SetCursor( pCursor );
     }
 
     void InputManager::applyMouseLockMode()
