@@ -257,6 +257,14 @@ namespace sw
                     desc._pixelShaderPath.clear();
                 bChanged = true;
             }
+            // 등장 디더 변형은 패스 셰이더의 깊이 패스에도 픽셀 스테이지가 있어야 한다 — 기본 패스와 같은 픽셀을 버린다(쿠커와 같은 판정).
+            if ( FrameRendererUtil::addsAppearanceDitherPixelStage( passType, &pPermutation->_listDefine ) && desc._pixelShaderPath.empty() )
+            {
+                desc._pixelShaderPath = desc._vertexShaderPath;
+                if ( desc._pixelEntryPoint.empty() )
+                    desc._pixelEntryPoint = string( resolveEntryPoint( string_view{}, ShaderStage::Pixel ) );
+                bChanged = true;
+            }
             for ( const string& defineStr : pPermutation->_listDefine )
             {
                 bool bFound{ false };

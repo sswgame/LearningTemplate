@@ -4,6 +4,8 @@
     테스트 텍스처입니다. 인스턴스마다 다른 UV 사각형 · 색을 픽셀로 확인하는 테스트(RenderPassGPUTest)과 확인용 씬의 애니메이션 아틀라스가 씁니다.
   - `engine/textures/missing.dds` — 마젠타 · 검정 체커(64x64, 16 텍셀 칸). 못 읽은 텍스처 · 머티리얼 대신 샘플합니다
     (`EngineDefaultAssets::_missingTexture` · `missingmaterial.material`).
+  - `engine/textures/loading.dds` — 고른 중간 회색(4x4). 비동기로 읽는 텍스처가 도착하기 전에 샘플합니다(`EngineDefaultAssets::_loadingTexture`).
+    실패 표시(마젠타)와 달리 로드 중은 정해진 상태라 눈에 띄지 않는 색입니다.
 
 엔진은 실행 중에 DDS 만 읽으므로(`DDSLoader`) PNG 가 아니라 DDS 를 씁니다. 같은 입력이면 바이트까지 같은 파일이 나옵니다.
 
@@ -31,6 +33,10 @@ kMissingTextureSize = 64        # 누락 텍스처 한 변(텍셀)
 kMissingCellSize = 16           # 체커 칸 한 변 — 4x4 칸. 칸이 작으면 멀리서 회색으로 뭉개져 눈에 안 띈다
 kMissingColors = ((255, 0, 255, 255), (0, 0, 0, 255))  # 마젠타 · 검정 — 유니티 · 소스 엔진의 누락 표시 색
 kMissingTexturePath = "engine/textures/missing.dds"
+
+kLoadingTextureSize = 4                  # 로드 중 텍스처 한 변(텍셀) — 고른 색이라 크기가 뜻이 없다
+kLoadingColor = (128, 128, 128, 255)     # 중간 회색
+kLoadingTexturePath = "engine/textures/loading.dds"
 
 
 def makeDdsBytes(width: int, height: int, rgbaBytes: bytes | bytearray) -> bytes:
@@ -88,7 +94,7 @@ def writeFileInternal(path: Path, data: bytes) -> None:
 
 
 def generate(repositoryRoot: str) -> None:
-    """세 파일을 씁니다. 리소스 경로는 소문자입니다(CheckResourceCasing)."""
+    """네 파일을 씁니다. 리소스 경로는 소문자입니다(CheckResourceCasing)."""
     resourceRoot = Path(repositoryRoot) / "Resource"
 
     width, height, pixels, listFrame = makeQuadrantTextureInternal()
@@ -98,6 +104,8 @@ def generate(repositoryRoot: str) -> None:
                       makeClipText(kQuadrantsTexturePath, listFrame, listAnimation).encode("utf-8"))
     width, height, pixels = makeMissingTextureInternal()
     writeFileInternal(resourceRoot / kMissingTexturePath, makeDdsBytes(width, height, pixels))
+    loadingPixels = bytes(kLoadingColor) * (kLoadingTextureSize * kLoadingTextureSize)
+    writeFileInternal(resourceRoot / kLoadingTexturePath, makeDdsBytes(kLoadingTextureSize, kLoadingTextureSize, loadingPixels))
 
 
 def main(argv: Sequence[str] | None = None) -> int:

@@ -202,16 +202,16 @@ SW_TEST_CASE( PrefabTest, MissingSourceDoesNotFallBackToCookedBinaryInDev )
     SW_ASSERT_TRUE( src.saveToBinaryFile( sw::AssetCookPath::toCookedPath( orphanSourcePath ) ) );
     SW_ASSERT_FALSE( sw::FileUtil::exists( orphanSourcePath ) );
 
-    sw::PrefabCache  manager;
-    sw::PrefabAsset* pLoaded{ nullptr };
+    sw::PrefabCache                       manager;
+    sw::shared_ptr<const sw::PrefabAsset> pLoaded;
     {
         SW_TEST_DEFENSIVE_SCOPE( "prefab whose source is gone" );
         pLoaded = manager.loadPrefab( ::test::makeTempResourceID( orphanSourcePath ) );
     }
 #if defined( SW_SHIPPING )
-    SW_EXPECT_NOT_NULL( pLoaded );
+    SW_EXPECT_NOT_NULL( pLoaded.get() );
 #else
-    SW_EXPECT_NULL( pLoaded );
+    SW_EXPECT_NULL( pLoaded.get() );
 #endif
 }
 
@@ -246,9 +246,9 @@ SW_TEST_CASE( PrefabTest, CacheKeyNormalizesPathAndExtension )
     SW_EXPECT_TRUE( src.saveToJSONFile( jsonPath ) );
     SW_EXPECT_TRUE( src.saveToBinaryFile( binPath ) );
 
-    sw::PrefabCache  manager;
-    sw::PrefabAsset* fromXML  = manager.loadPrefab( ::test::makeTempResourceID( xmlPath ) );
-    sw::PrefabAsset* fromJSON = manager.loadPrefab( ::test::makeTempResourceID( jsonPath ) );
+    sw::PrefabCache        manager;
+    const sw::PrefabAsset* fromXML  = manager.loadPrefab( ::test::makeTempResourceID( xmlPath ) ).get();
+    const sw::PrefabAsset* fromJSON = manager.loadPrefab( ::test::makeTempResourceID( jsonPath ) ).get();
     SW_ASSERT_NOT_NULL( fromXML );
     SW_EXPECT_EQUAL( fromXML, fromJSON );
 
@@ -261,7 +261,7 @@ SW_TEST_CASE( PrefabTest, CacheKeyNormalizesPathAndExtension )
             ch = '/';
     }
     if ( slashFlipped != xmlPath )
-        SW_EXPECT_EQUAL( fromXML, manager.loadPrefab( ::test::makeTempResourceID( slashFlipped ) ) );
+        SW_EXPECT_EQUAL( fromXML, manager.loadPrefab( ::test::makeTempResourceID( slashFlipped ) ).get() );
 }
 
 /**
@@ -906,10 +906,10 @@ SW_TEST_CASE( PrefabTest, CircularNestedPrefabIsALoadError )
     sw::GameObject*       pOuter = nullptr;
     {
         SW_TEST_DEFENSIVE_SCOPE( "circular nested prefabs" );
-        SW_EXPECT_NULL( prefabs.loadPrefab( ::test::makeTempResourceID( pathA ) ) );
-        SW_EXPECT_NULL( prefabs.loadPrefab( ::test::makeTempResourceID( pathB ) ) );
-        SW_EXPECT_NULL( prefabs.loadPrefab( ::test::makeTempResourceID( pathSelf ) ) );
-        SW_EXPECT_NOT_NULL( prefabs.loadPrefab( ::test::makeTempResourceID( pathOuter ) ) );
+        SW_EXPECT_NULL( prefabs.loadPrefab( ::test::makeTempResourceID( pathA ) ).get() );
+        SW_EXPECT_NULL( prefabs.loadPrefab( ::test::makeTempResourceID( pathB ) ).get() );
+        SW_EXPECT_NULL( prefabs.loadPrefab( ::test::makeTempResourceID( pathSelf ) ).get() );
+        SW_EXPECT_NOT_NULL( prefabs.loadPrefab( ::test::makeTempResourceID( pathOuter ) ).get() );
         pOuter = prefabs.spawn( &objects, pathOuter, "Outer" );
     }
     SW_ASSERT_NOT_NULL( pOuter );

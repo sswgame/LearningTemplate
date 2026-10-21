@@ -668,6 +668,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, InstanceElementLayoutMatchesCPUStruct 
         { "tint", static_cast<uint32>( offsetof( sw::GPUInstance, _sprite ) + offsetof( sw::GPUSpriteInstanceData, _tint ) ) },
         { "pixelSnap", static_cast<uint32>( offsetof( sw::GPUInstance, _sprite ) + offsetof( sw::GPUSpriteInstanceData, _pixelSnap ) ) },
         { "vertexAnimationPhase", static_cast<uint32>( offsetof( sw::GPUInstance, _vertexAnimationPhase ) ) },
+        { "appearance", static_cast<uint32>( offsetof( sw::GPUInstance, _appearance ) ) },
     };
     // 인스턴스 원소를 담는 버퍼 이름 — 그래픽스(t4)와 컴퓨트 셋(읽기 g_Instances · 고쳐 쓰기 g_InstancesRW).
     const utf8* arrInstanceBufferName[] = { sw::shaderslot::resname::kInstances, "g_Instances", "g_InstancesRW" };

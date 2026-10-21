@@ -207,6 +207,15 @@
        "description": "못 읽은 텍스처 대신 샘플하는 마젠타 체커"
       },
       {
+       "name": "_loadingTexture",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "비동기로 읽는 텍스처가 도착하기 전에 샘플하는 중간 회색(실패 표시가 아니라 정해진 로드 중 상태)"
+      },
+      {
        "name": "_shellInputMap",
        "type": "DataPath",
        "default": "",

@@ -8,11 +8,40 @@
 #include "Core/Container/string.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Resource/AssetHandle.h"
 #include "Engine/Resource/Cache/IAssetCache.h"
 
 namespace sw
 {
     class Mesh;
+
+    /**
+     * @class MeshLoadBlock
+     * @brief `.mesh` 로드 하나의 공유 상태입니다. 로드 단계에서 파일을 읽어 `Mesh` 를 만들고 캐시에 넣습니다(CPU 만 — 정점 업로드는 업로드 큐가 한다).
+     */
+    class SW_API MeshLoadBlock final : public AssetLoadBlock
+    {
+    public:
+        using AssetType = Mesh;
+
+        explicit MeshLoadBlock( string_view path );
+
+        /** @brief 읽은 메시입니다. `Ready` 일 때만 값이 있습니다(`AssetHandle::get` 이 상태를 본다). */
+        const shared_ptr<Mesh>& getAsset() const { return _pMesh; }
+
+    private:
+        [[nodiscard]] bool runLoad( string& outError ) override;
+
+    private:
+        friend class MeshCache; // 캐시 적중은 읽지 않고 메시를 채워 `Ready` 로 만든다
+        shared_ptr<Mesh> _pMesh;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 메시 로드 핸들입니다. */
+    using MeshHandle = AssetHandle<MeshLoadBlock>;
 
     /**
      * @class MeshCache
@@ -31,9 +60,15 @@ namespace sw
         MeshCache();
 
         /**
-         * @brief 경로의 메시를 **공유받습니다**. 처음이면 읽고, 읽을 수 없으면 nullptr 입니다.
+         * @brief 경로의 메시 로드를 요청합니다. 이미 보관 중이면 `Ready` 핸들, 같은 경로를 읽는 중이면 그 로드의 핸들, 아니면 워커에서 새로 읽는 핸들입니다.
          * @details 읽지 못한 경로는 경로마다 한 번만 경고합니다(같은 메시를 쓰는 컴포넌트 수백 개가 같은 줄을 찍지 않게). 실패는 기억하지
-         *          않으므로 파일이 생기면 다음 요청이 읽습니다.
+         *          않으므로 파일이 생기면 다음 요청이 읽습니다. 캐시는 약한 참조이므로 준비된 메시는 핸들(또는 그 메시를 받은 쪽)이 쥐는 동안만 남습니다.
+         */
+        static MeshHandle request( string_view path );
+
+        /**
+         * @brief 경로의 메시를 **공유받습니다**. `request` 와 같은 로드 블록을 기다립니다 — 아직 아무도 읽지 않았으면 이 스레드가 읽습니다(`AssetLoadStart::OnCallingThread`).
+         * @return 읽을 수 없으면 nullptr 입니다.
          */
         static shared_ptr<Mesh> acquire( string_view path );
 
@@ -57,5 +92,9 @@ namespace sw
         size_t getCachedCount() const override;
         /** @brief 캐시와 경고 기록, 물리 셰이프 캐시를 비웁니다. 사용 중인 메시는 그대로이고, 다음 요청은 파일을 새로 읽습니다. */
         void clear() override;
+
+    private:
+        /** @brief `request` 와 `acquire` 의 본문입니다. 새 로드를 @p start 대로 시작합니다(동기 API 는 이 자리에서 읽는다 — `AssetLoadStart`). */
+        static MeshHandle requestWith( string_view path, AssetLoadStart start );
     };
 } // namespace sw

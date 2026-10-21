@@ -131,7 +131,32 @@ namespace sw
         /** @brief 프리미티브 번호 공간의 크기입니다(메시 컴포넌트 수 + 인스턴스 항목 수). */
         uint32 getSlotCount() const { return static_cast<uint32>( _listPrimitive.size() + _listInstanceEntry.size() ); }
 
+        /**
+         * @brief 에셋 로드(또는 그 뒤의 등장)를 기다리는 프리미티브가 프레임마다 받는 함수입니다. 아직 기다리면 true, 다 끝났으면 false 를 반환합니다.
+         * @param deltaSeconds 이번 씬 프레임의 시간(초)입니다 — 등장 비율을 올리고 내리는 데 쓴다(`MeshComponent::beginAppearance`).
+         */
+        using AssetWaitFunction = bool ( * )( ScenePrimitive& primitive, float32 deltaSeconds );
+        /**
+         * @brief 에셋 로드(`AssetHandle`)를 기다리는 프리미티브를 겁니다(게임 스레드). 이미 걸려 있으면 함수만 바꿉니다.
+         * @details 기반에 가상 함수를 더하지 않으려고 함수 포인터로 받는다(파일 머리 `ScenePrimitive.h`). `remove` 가 같이 뺀다 — 사라진 컴포넌트는 불리지 않는다.
+         */
+        void addAssetWaiter( ScenePrimitive* pPrimitive, AssetWaitFunction pFunction );
+        /**
+         * @brief 기다리는 프리미티브의 함수를 한 번씩 부르고 다 받은 것을 뺍니다(씬 프레임 `AssetArrival` 단계, 게임 스레드, 병렬 구간 밖).
+         * @details 함수 안에서 다시 `addAssetWaiter` 를 불러도 된다(다른 메시로 바꿔 다시 기다리는 경우) — 반환값이 남길지를 정한다.
+         */
+        void updateAssetWaiters( float32 deltaSeconds );
+        /** @brief 에셋을 기다리는 프리미티브 수입니다(테스트 · 진단). */
+        size_t countAssetWaiters() const { return _listAssetWaiter.size(); }
+
     private:
+        /** @brief 에셋을 기다리는 프리미티브 하나입니다. */
+        struct AssetWaiter
+        {
+            ScenePrimitive*   _pPrimitive{ nullptr };
+            AssetWaitFunction _pFunction{ nullptr };
+        };
+
         /** @brief `_mutex` 를 이미 쥔 채로 더티 표시를 지웁니다. */
         void clearDirtyLocked();
 
@@ -152,6 +177,7 @@ namespace sw
         vector<uint32>                 _listPrimitiveTransformSlot;
         vector<PrimitiveInstanceEntry> _listInstanceEntry; ///< 배치 순서대로 이어 붙은 항목들
         vector<ScenePrimitiveBatch*>   _listInstanceBatch; ///< 등록된 배치. 빼기와 자리 당기기에 씁니다
+        vector<AssetWaiter>            _listAssetWaiter;   ///< 에셋 로드를 기다리는 프리미티브(`addAssetWaiter`). 게임 스레드만 씁니다
         /**
          * @brief 슬롯마다 "바뀌었다" 비트입니다. **워드 하나가 슬롯 64 개**입니다. 원자값이라 워커 여럿이 동시에 표시해도 됩니다.
          * @details `consumeDirty` 는 워드마다 exchange 한 번(8000 슬롯이면 125 번)이고 켜진 비트만 골라 순회한다. 슬롯마다 원자 바이트로 두면

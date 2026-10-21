@@ -31,10 +31,32 @@ namespace sw
 namespace sw
 {
     template <typename AssetType>
+    SharedAssetHandle<AssetType> SharedAssetCache<AssetType>::request( string_view path )
+    {
+        return requestWith( path, AssetLoadStart::Async );
+    }
+
+    template <typename AssetType>
     shared_ptr<const AssetType> SharedAssetCache<AssetType>::acquire( string_view path )
     {
+        return requestWith( path, AssetLoadStart::OnCallingThread ).wait();
+    }
+
+    template <typename AssetType>
+    SharedAssetHandle<AssetType> SharedAssetCache<AssetType>::requestWith( string_view path, AssetLoadStart start )
+    {
+        bool                                        bStartLoad = false;
+        shared_ptr<SharedAssetLoadBlock<AssetType>> pBlock     = getTable().request( path, SharedAssetCacheTraits<AssetType>::kKindName, bStartLoad );
+        if ( bStartLoad )
+            AssetLoadBlock::startLoad( pBlock, start );
+        return SharedAssetHandle<AssetType>{ std::move( pBlock ) };
+    }
+
+    template <typename AssetType>
+    bool SharedAssetCache<AssetType>::loadIntoTable( string_view path, shared_ptr<const AssetType>& outAsset )
+    {
         const ScopedMemoryTag memoryScope{ SharedAssetCacheTraits<AssetType>::kMemoryTag };
-        return getTable().acquire( path, &SharedAssetCacheTraits<AssetType>::load );
+        return getTable().loadAndIntern( path, &SharedAssetCacheTraits<AssetType>::load, outAsset );
     }
 
     template <typename AssetType>

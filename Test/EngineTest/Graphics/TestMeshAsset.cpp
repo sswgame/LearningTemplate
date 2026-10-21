@@ -8,12 +8,12 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
-#include "Engine/Graphics/Mesh/MeshPreloadSet.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Resource/AssetHandle.h"
 #include "Engine/Serialization/Base/SerializerUtil.h"
 
 #include "TestFramework/TestFramework.h"
@@ -49,6 +49,13 @@ namespace
             listVertex.push_back( makeTestVertex( offset + 1.0f, 0.0f, 0.0f, red ) );
         }
         return listVertex;
+    }
+
+    /** @brief 메시 로드가 끝날 때까지 기다리고(같은 로드 블록을 이 스레드가 돕는다) 씬 프레임의 도착 단계를 한 번 돌립니다. */
+    void waitForMeshArrival( sw::GameObjectManager& manager, const sw::string& path )
+    {
+        (void)sw::MeshCache::acquire( path ); // 결과는 컴포넌트가 받는다 — 여기서는 로드가 끝나기만 기다린다
+        manager.getPrimitiveRegistry().updateAssetWaiters( 0.0f );
     }
 } // namespace
 
@@ -173,33 +180,77 @@ SW_TEST_CASE( MeshAssetTest, CacheSharesOneMeshPerPathAndReloadsInPlace )
 }
 
 /**
- * @brief [MeshAssetTest] 미리 읽기 묶음은 읽은 메시를 쥐어 캐시에 남기고, 뒤의 acquire 는 그 메시를 받으며, clear 하면 놓는다
- * @details 캐시는 약한 참조라 묶음이 쥐지 않으면 미리 읽은 메시가 바로 사라져 스폰이 다시 디스크를 읽는다(StarSkirmish 의 플레이 중 히치).
+ * @brief [MeshAssetTest] 준비 집합은 읽은 메시를 쥐어 캐시에 남기고, 뒤의 acquire 는 그 메시를 받으며, clear 하면 놓는다
+ * @details 캐시는 약한 참조라 집합이 쥐지 않으면 미리 읽은 메시가 바로 사라져 스폰이 다시 디스크를 읽는다(StarSkirmish 의 플레이 중 히치).
+ *          없는 경로는 집합을 `Failed` 로 만들고 이유를 남긴다 — 기본 메시로 대신 채우지 않는다.
  */
-SW_TEST_CASE( MeshAssetTest, PreloadSetHoldsMeshesUntilCleared )
+SW_TEST_CASE( MeshAssetTest, ReadySetHoldsMeshesUntilCleared )
 {
     const sw::string pathA = test::makeTempPath( "preload_a.mesh" );
     const sw::string pathB = test::makeTempPath( "preload_b.mesh" );
     SW_ASSERT_TRUE( sw::MeshAssetFormat::saveToFile( pathA, makeTestTriangles( 1, 1.0f ) ) );
     SW_ASSERT_TRUE( sw::MeshAssetFormat::saveToFile( pathB, makeTestTriangles( 2, 1.0f ) ) );
 
-    sw::MeshPreloadSet preload;
-    preload.request( { pathA, pathB } );
+    sw::AssetReadySet readySet;
+    readySet.add( sw::MeshCache::request( pathA ) );
+    readySet.add( sw::MeshCache::request( pathB ) );
     const sw::Stopwatch stopwatch;
-    while ( preload.isComplete() == false && stopwatch.getElapsedMilliseconds() < 10'000 )
+    while ( readySet.isComplete() == false && stopwatch.getElapsedMilliseconds() < 10'000 )
     {
         std::this_thread::yield();
     }
-    SW_ASSERT_TRUE( preload.isComplete() );
-    SW_EXPECT_EQUAL( 2u, preload.getLoadedCount() );
+    SW_ASSERT_TRUE( readySet.isReady() );
+    SW_EXPECT_EQUAL( size_t( 2 ), readySet.countReady() );
 
     sw::MeshCache cache;
     SW_EXPECT_TRUE( cache.isCached( pathA ) );
     SW_EXPECT_EQUAL( 6u, sw::MeshCache::acquire( ::test::makeTempResourceID( pathB ) )->getVertexCount() );
 
-    preload.clear();
-    SW_EXPECT_EQUAL( 0u, preload.getLoadedCount() );
+    readySet.clear();
     SW_EXPECT_FALSE( cache.isCached( pathA ) );
+
+    {
+        test::ScopedDefensiveTestLog expected( "a missing mesh in a ready set fails the set" );
+        readySet.add( sw::MeshCache::request( test::makeTempPath( "preload_missing.mesh" ) ) );
+        while ( readySet.isComplete() == false && stopwatch.getElapsedMilliseconds() < 10'000 )
+        {
+            std::this_thread::yield();
+        }
+    }
+    SW_EXPECT_TRUE( readySet.hasFailed() );
+    sw::vector<sw::string> listError;
+    readySet.appendFailures( listError );
+    SW_EXPECT_EQUAL( size_t( 1 ), listError.size() );
+}
+
+/**
+ * @brief [MeshAssetTest] 동기 acquire 는 요청과 같은 로드 블록을 탄다 — 먼저 낸 요청의 핸들과 acquire 가 같은 메시를 받고, 핸들 상태는 `Ready` 다
+ * @details 두 갈래(비동기 요청 · 동기 읽기)가 따로 읽으면 같은 경로가 두 번 읽히고 배치 키(메시 포인터)가 갈린다.
+ */
+SW_TEST_CASE( MeshAssetTest, AcquireWaitsOnTheSameLoadAsRequest )
+{
+    const sw::string path = test::makeTempPath( "same_path.mesh" );
+    SW_ASSERT_TRUE( sw::MeshAssetFormat::saveToFile( path, makeTestTriangles( 1, 1.0f ) ) );
+
+    const sw::MeshHandle handle = sw::MeshCache::request( path );
+    SW_ASSERT_TRUE( handle.isValid() );
+    const sw::shared_ptr<sw::Mesh> mesh = sw::MeshCache::acquire( path );
+    SW_ASSERT_NOT_NULL( mesh.get() );
+    SW_EXPECT_TRUE( handle.wait() == mesh );
+    SW_EXPECT_TRUE( handle.getState() == sw::AssetLoadState::Ready );
+    SW_EXPECT_TRUE( handle.getError().empty() );
+
+    // 빈 경로는 읽지 않고 바로 실패한다(이유가 있다).
+    const sw::MeshHandle empty = sw::MeshCache::request( "" );
+    SW_EXPECT_TRUE( empty.hasFailed() );
+    SW_EXPECT_FALSE( empty.getError().empty() );
+    SW_EXPECT_NULL( empty.get().get() );
+
+    // 요청 없는 핸들은 상태가 없다.
+    const sw::MeshHandle none;
+    SW_EXPECT_FALSE( none.isValid() );
+    SW_EXPECT_FALSE( none.isReady() );
+    SW_EXPECT_FALSE( none.hasFailed() );
 }
 
 /**
@@ -220,6 +271,9 @@ SW_TEST_CASE( MeshAssetTest, MeshComponentResolvesMeshAssetPath )
 
     SW_ASSERT_TRUE( sw::SerializerUtil::applyPropertyText( *pMeshID, sw::MutableObjectAddress{ pMesh }, ::test::makeTempResourceID( path ), context ) );
     pMesh->onPropertyChanged( pMeshID->_name );
+    // 에셋은 워커가 읽는다 — 다 읽을 때까지 메시가 없고(그리지 않는다), 씬 프레임의 도착 단계가 넣는다.
+    waitForMeshArrival( manager, path );
+    SW_EXPECT_FALSE( pMesh->isMeshLoading() );
     SW_ASSERT_NOT_NULL( pMesh->getRawMesh() );
     SW_EXPECT_EQUAL( 6u, pMesh->getRawMesh()->getVertexCount() );
     SW_EXPECT_TRUE( pMesh->getRawMesh() == sw::MeshCache::acquire( ::test::makeTempResourceID( path ) ).get() );
@@ -231,9 +285,40 @@ SW_TEST_CASE( MeshAssetTest, MeshComponentResolvesMeshAssetPath )
     // 없는 에셋은 메시 없이 남는다(그리지 않는다).
     {
         test::ScopedDefensiveTestLog expected( "a missing mesh asset leaves the component without a mesh" );
-        pMesh->setMeshID( test::makeTempPath( "missing.mesh" ) );
+        const sw::string             missingPath = test::makeTempPath( "missing.mesh" );
+        pMesh->setMeshID( missingPath );
+        waitForMeshArrival( manager, missingPath );
     }
+    SW_EXPECT_EQUAL( size_t( 0 ), manager.getPrimitiveRegistry().countAssetWaiters() );
     SW_EXPECT_NULL( pMesh->getRawMesh() );
+}
+
+/**
+ * @brief [MeshAssetTest] 등장 · 사라지기는 `_appearSeconds` 동안 씬 프레임의 도착 단계가 비율을 올리고 내린다 — 끝나면 대기에서 빠지고, 다 사라지면 그리지 않는다
+ */
+SW_TEST_CASE( MeshAssetTest, AppearanceRampsOverAppearSeconds )
+{
+    sw::GameObjectManager manager;
+    sw::GameObject*       pProp = manager.createGameObject( sw::hashed_string( "Appearing" ) );
+    sw::MeshComponent*    pMesh = pProp->addComponent<sw::MeshComponent>();
+    SW_ASSERT_NOT_NULL( pMesh );
+    SW_EXPECT_EQUAL( 1.0f, pMesh->getAppearance() ); // 바로 보이는 메시(내장 도형)는 다 보인다
+
+    const float32 halfStep = sw::MeshComponent::kDefaultAppearSeconds * 0.5f;
+    pMesh->beginAppearance();
+    SW_EXPECT_EQUAL( 0.0f, pMesh->getAppearance() );
+    SW_EXPECT_EQUAL( size_t( 1 ), manager.getPrimitiveRegistry().countAssetWaiters() );
+    manager.getPrimitiveRegistry().updateAssetWaiters( halfStep );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, pMesh->getAppearance(), 1e-4f );
+    manager.getPrimitiveRegistry().updateAssetWaiters( halfStep );
+    SW_EXPECT_EQUAL( 1.0f, pMesh->getAppearance() );
+    SW_EXPECT_EQUAL( size_t( 0 ), manager.getPrimitiveRegistry().countAssetWaiters() );
+
+    pMesh->beginDisappearance();
+    manager.getPrimitiveRegistry().updateAssetWaiters( sw::MeshComponent::kDefaultAppearSeconds );
+    SW_EXPECT_EQUAL( 0.0f, pMesh->getAppearance() );
+    SW_EXPECT_TRUE( pMesh->isFullyDisappeared() );
+    SW_EXPECT_EQUAL( size_t( 0 ), manager.getPrimitiveRegistry().countAssetWaiters() );
 }
 
 /**

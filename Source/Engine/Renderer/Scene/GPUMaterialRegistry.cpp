@@ -9,10 +9,11 @@
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 
 namespace sw
 {
-    uint64 GPUMaterialRegistry::permutationHashFor( const Material* pMaterial, const MaterialInstance* pInstance )
+    uint64 GPUMaterialRegistry::permutationHashFor( const Material* pMaterial, const MaterialInstance* pInstance, bool bAppearanceDither )
     {
         if ( pMaterial == nullptr )
             return 0;
@@ -20,6 +21,8 @@ namespace sw
         const uint64 defineHash = ( pInstance != nullptr ) ? pInstance->getPermutationHash() : pMaterial->getPermutationHash();
         uint64       hash       = pMaterial->getShaderPathHash();
         hash                    = HashUtil::combine( hash, defineHash );
+        if ( bAppearanceDither )
+            hash = HashUtil::combine( hash, hashed_string( kAppearanceDitherDefine ).getHash() );
         return hash;
     }
 
@@ -50,11 +53,11 @@ namespace sw
         return groupIndex;
     }
 
-    uint32 GPUMaterialRegistry::shaderPermutationFor( const Material* pMaterial, const MaterialInstance* pInstance, GPUSceneSnapshot& inoutSnapshot )
+    uint32 GPUMaterialRegistry::shaderPermutationFor( const Material* pMaterial, const MaterialInstance* pInstance, bool bAppearanceDither, GPUSceneSnapshot& inoutSnapshot )
     {
         if ( pMaterial == nullptr )
             return kInvalidShaderPermutation;
-        const uint64 hash = permutationHashFor( pMaterial, pInstance );
+        const uint64 hash = permutationHashFor( pMaterial, pInstance, bAppearanceDither );
         const auto   it   = _mapPermutationToIndex.find( hash );
         if ( it != _mapPermutationToIndex.end() )
             return it->second;
@@ -62,7 +65,9 @@ namespace sw
         GPUShaderPermutation permutation{};
         permutation._shaderPath = pMaterial->getShaderPath();
         permutation._listDefine = ( pInstance != nullptr ) ? pInstance->getCachedShaderDefines() : pMaterial->getCachedShaderDefines();
-        permutation._hash       = hash;
+        if ( bAppearanceDither )
+            permutation._listDefine.push_back( string( kAppearanceDitherDefine ) ); // 쿠커도 머티리얼 define 끝에 붙인다(`ShaderCookRequest`)
+        permutation._hash = hash;
 
         // copy-on-write: 목록은 RT 와 공유하므로 제자리에 추가하지 않는다. 새 퍼뮤테이션은 드물어(머티리얼 종류만큼) 복사가 싸다.
         shared_ptr<vector<GPUShaderPermutation>> pList = ( inoutSnapshot._pListShaderPermutation != nullptr )

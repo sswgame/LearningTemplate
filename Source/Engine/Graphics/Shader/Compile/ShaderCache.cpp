@@ -30,19 +30,6 @@ namespace sw
                                                         ShaderCooker::getExtensionForFormat( desc._targetFormat ) );
         }
 
-        /** @brief 인메모리 캐시의 키입니다 — 경로 · 진입점 · 스테이지 · 타깃 · 코드젠 · define 전부입니다. */
-        string makeMemoryCacheKey( const ShaderCompileDesc& desc )
-        {
-            StringBuilder<constant::kMaxBuffer256> sb;
-            sb.append( desc._filePath ).append( '_' ).append( desc._entryPoint ).append( '_' ).append( static_cast<int32>( desc._stage ) ).append( '_' ).append( static_cast<int32>( desc._targetFormat ) );
-            sb.append( desc._bDebugCodegen != SW_FALSE ? "_dbg" : "_opt" );
-            for ( const auto& def : desc._listDefine )
-            {
-                sb.append( '_' ).append( def._name ).append( '=' ).append( def._value );
-            }
-            return string( sb.c_str(), sb.size() );
-        }
-
         /** @brief 디스크 파일이 있고 비어 있지 않으면 그 바이트를 읽어 true 입니다(로컬 라이브 수정 캐시). */
         [[nodiscard]] bool readNonEmptyFile( const string& path, vector<uint8>& outBytes )
         {
@@ -126,8 +113,35 @@ namespace sw
         return liveDesc;
     }
 
+    ShaderLoadBlock::ShaderLoadBlock( ShaderCache* pCache, const ShaderCompileDesc& desc, string cacheKey )
+        : AssetLoadBlock{ "Shader", desc._filePath }
+        , _pCache{ pCache }
+        , _desc{ desc }
+        , _cacheKey{ std::move( cacheKey ) }
+        , _pResult{}
+    {
+    }
+
+    bool ShaderLoadBlock::runLoad( string& outError )
+    {
+        shared_ptr<ShaderCompileResult> pResult = sw::make_shared<ShaderCompileResult>( _pCache->loadOrCompile( _desc, _cacheKey ) );
+        const bool                      bLoaded = pResult->_bSuccess;
+        if ( bLoaded == false )
+            outError = pResult->_errorMessage.empty() ? string( "the shader could not be compiled or found" ) : pResult->_errorMessage;
+        _pResult = std::move( pResult );
+        {
+            // 이 블록의 칸일 때만 뺀다(캐시를 비운 뒤 같은 요청이 새 블록을 넣었을 수 있다).
+            std::scoped_lock<mutex> lock{ _pCache->_mutexCache };
+            const auto              it = _pCache->_mapLoading.find( _cacheKey );
+            if ( it != _pCache->_mapLoading.end() && ( it->second.expired() || it->second.lock().get() == this ) )
+                _pCache->_mapLoading.erase( it );
+        }
+        return bLoaded;
+    }
+
     ShaderCache::ShaderCache()
         : _mapCache{}
+        , _mapLoading{}
         , _mutexCache{}
     {
     }
@@ -145,18 +159,90 @@ namespace sw
 
     void ShaderCache::shutdown()
     {
+        waitForLoadsInFlight();
         clearCache();
         // 리플렉션 매니페스트 캐시는 프로세스 정적 저장소라 엔진 종료 뒤에도 남는다. 셰이더 층이 종료될 때 같이 비운다.
         // 비우지 않으면 백엔드 교체로 기동 뒤에 읽은 매니페스트가 종료 누수 검사에 남는다.
         ShaderReflectionLibrary::clearCache();
     }
 
+    string ShaderCache::makeCacheKey( const ShaderCompileDesc& desc )
+    {
+        StringBuilder<constant::kMaxBuffer256> sb;
+        sb.append( desc._filePath ).append( '_' ).append( desc._entryPoint ).append( '_' ).append( static_cast<int32>( desc._stage ) ).append( '_' ).append( static_cast<int32>( desc._targetFormat ) );
+        sb.append( desc._bDebugCodegen != SW_FALSE ? "_dbg" : "_opt" );
+        for ( const auto& def : desc._listDefine )
+        {
+            sb.append( '_' ).append( def._name ).append( '=' ).append( def._value );
+        }
+        return string( sb.c_str(), sb.size() );
+    }
+
+    ShaderHandle ShaderCache::request( const ShaderCompileDesc& desc )
+    {
+        return requestWith( desc, AssetLoadStart::Async );
+    }
+
+    ShaderHandle ShaderCache::requestWith( const ShaderCompileDesc& desc, AssetLoadStart start )
+    {
+        string                      cacheKey = makeCacheKey( desc );
+        shared_ptr<ShaderLoadBlock> pBlock;
+        {
+            std::scoped_lock<mutex> lock{ _mutexCache };
+            const auto              it = _mapLoading.find( cacheKey );
+            if ( it != _mapLoading.end() )
+                pBlock = it->second.lock();
+            if ( pBlock != nullptr )
+                return ShaderHandle{ std::move( pBlock ) };
+            // 인메모리 적중도 로드 단계가 본다 — 적중인지는 소스 해시를 구해야 알고, 그 계산(파일 읽기)은 잠금 밖에서 한다.
+            pBlock                = sw::make_shared<ShaderLoadBlock>( this, desc, cacheKey );
+            _mapLoading[cacheKey] = pBlock;
+        }
+        AssetLoadBlock::startLoad( pBlock, start );
+        return ShaderHandle{ std::move( pBlock ) };
+    }
+
     ShaderCompileResult ShaderCache::getOrCompile( const ShaderCompileDesc& desc )
     {
+        const ShaderHandle handle = requestWith( desc, AssetLoadStart::OnCallingThread );
+        handle.getBlock()->wait();
+        // 실패도 결과를 돌려준다 — 부르는 쪽이 컴파일 오류 문구를 드러낸다.
+        const shared_ptr<const ShaderCompileResult>& pResult = handle.getBlock()->getResult();
+        if ( pResult != nullptr )
+            return *pResult;
+        ShaderCompileResult failedResult{};
+        failedResult._bSuccess     = false;
+        failedResult._errorMessage = handle.getError();
+        return failedResult;
+    }
+
+    void ShaderCache::waitForLoadsInFlight()
+    {
+        vector<shared_ptr<ShaderLoadBlock>> listLoading;
+        {
+            std::scoped_lock<mutex> lock{ _mutexCache };
+            for ( const auto& [key, weakBlock] : _mapLoading )
+            {
+                shared_ptr<ShaderLoadBlock> pBlock = weakBlock.lock();
+                if ( pBlock != nullptr )
+                    listLoading.push_back( std::move( pBlock ) );
+            }
+        }
+        for ( const shared_ptr<ShaderLoadBlock>& pBlock : listLoading )
+        {
+            pBlock->wait();
+        }
+    }
+
+    ShaderCompileResult ShaderCache::loadOrCompile( const ShaderCompileDesc& desc, const string& inCacheKey )
+    {
         SW_MEMORY_SCOPE( Shader );
-        const string absPath           = ResourcePaths::findLooseFile( desc._filePath ).getDiskPath();
-        string       cacheKey          = makeMemoryCacheKey( desc );
-        const uint64 currentSourceHash = absPath.empty() == false ? ShaderCooker::computeEffectiveSourceHash( absPath ) : 0u;
+        string       cacheKey = inCacheKey;
+        uint64       currentSourceHash{ 0 };
+        const string absPath = ResourcePaths::findLooseFile( desc._filePath ).getDiskPath();
+
+        if ( absPath.empty() == false )
+            currentSourceHash = ShaderCooker::computeEffectiveSourceHash( absPath );
 
         // 0) 인메모리 캐시 조회
         {

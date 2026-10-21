@@ -6,11 +6,14 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/Common/AssetTypeRegistry.h"
+#include "Engine/Resource/AssetHandle.h"
 #include "Engine/Resource/Cache/IAssetCache.h"
 
 namespace sw
@@ -174,22 +177,64 @@ namespace sw
 
 namespace sw
 {
-    /// @brief 프리팹을 로드하고 스폰하는 캐시입니다.
+    /**
+     * @class PrefabLoadBlock
+     * @brief 프리팹 로드 하나의 공유 상태입니다. 로드 단계에서 파일을 읽고 중첩 원본을 확인해 캐시에 넣습니다(완료 단계 없음).
+     * @details 블록은 캐시를 원시 포인터로 가리킨다 — 캐시 소멸자가 진행 중인 로드를 모두 기다리므로(`~PrefabCache`) 단계를 실행하는 동안 캐시는 살아 있다.
+     */
+    class SW_API PrefabLoadBlock final : public AssetLoadBlock
+    {
+    public:
+        using AssetType = const PrefabAsset;
+
+        /** @brief @p resolvedPath 는 GUID 를 푼 경로, @p cacheKey 는 그 캐시 키입니다(`PrefabCache::request` 가 한 번 구한다). */
+        PrefabLoadBlock( PrefabCache* pCache, string_view resolvedPath, string cacheKey );
+
+        /** @brief 읽은 프리팹입니다. `Ready` 일 때만 값이 있습니다(`AssetHandle::get` 이 상태를 본다). */
+        const shared_ptr<const PrefabAsset>& getAsset() const { return _pAsset; }
+
+    protected:
+        [[nodiscard]] bool runLoad( string& outError ) override;
+
+    private:
+        friend class PrefabCache;
+
+        PrefabCache*                  _pCache;
+        string                        _cacheKey;
+        shared_ptr<const PrefabAsset> _pAsset;
+    };
+
+    /** @brief 프리팹 로드 핸들입니다. 핸들이 살아 있는 동안 프리팹도 살아 있습니다(캐시가 버려도 — 다시 읽기 · `clear`). */
+    using PrefabHandle = AssetHandle<PrefabLoadBlock>;
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief 프리팹을 로드하고 스폰하는 캐시입니다.
+     * @details 캐시는 프리팹을 `shared_ptr` 로 나눠 준다. 원시 포인터를 내주면 다시 읽기(`reload`)가 항목을 버리는 순간 쥔 쪽이 해제된 메모리를 본다.
+     */
     class SW_API PrefabCache final : public IAssetCache
     {
     public:
         /** @brief 빈 프리팹 캐시로 만듭니다. */
-        PrefabCache() = default;
-        /** @brief 캐시된 프리팹을 정리합니다. */
-        ~PrefabCache() override = default;
+        PrefabCache();
+        /** @brief 진행 중인 로드를 기다린 뒤 캐시된 프리팹을 정리합니다(워커의 로드가 사라진 캐시에 쓰지 않게). */
+        ~PrefabCache() override;
 
         /** @brief 복사를 금지합니다. */
         PrefabCache( const PrefabCache& ) = delete;
         /** @brief 대입을 금지합니다. */
         PrefabCache& operator=( const PrefabCache& ) = delete;
 
-        /** @brief 프리팹을 로드합니다. Dev 는 XML 과 JSON 저작본을, Shipping 은 쿠킹된 .prefab.bin 만 읽습니다. 캐시 키는 확장자를 뺀 정규화 경로입니다. */
-        PrefabAsset* loadPrefab( string_view assetRelativePath );
+        /**
+         * @brief 프리팹 로드를 요청합니다. 캐시에 있으면 준비된 핸들, 누가 읽는 중이면 그 로드, 아니면 워커가 읽습니다(엔진 태스크가 없으면 이 자리에서).
+         * @details Dev 는 XML 과 JSON 저작본을, Shipping 은 쿠킹된 .prefab.bin 만 읽습니다. 캐시 키는 확장자를 뺀 정규화 경로입니다.
+         *          중첩 원본은 그 로드 안에서 같은 스레드가 읽는다 — 다른 스레드의 로드를 기다리지 않으므로 순환한 프리팹 둘을 두 워커가 동시에 읽어도 멈추지 않는다.
+         */
+        PrefabHandle request( string_view assetRelativePath );
+        /** @brief 프리팹을 로드합니다. `request` 와 같은 로드 블록을 기다립니다(새 로드는 이 자리에서 읽는다). 읽지 못하면 nullptr 입니다. */
+        shared_ptr<const PrefabAsset> loadPrefab( string_view assetRelativePath );
         /**
          * @brief 인스턴스를 프리팹 상태로 되돌립니다. 인스턴스의 위치 정보(부모, 이름, 루트의 위치와 회전)는 유지합니다.
          * @details 유니티의 `PrefabUtility.RevertPrefabInstance` 와 같은 규칙이다(루트의 위치와 회전은 항상 인스턴스의 것이고, 스케일은 되돌린다). 상태를
@@ -276,6 +321,16 @@ namespace sw
         static constexpr uint32 kCookVersion = 1;
 
     private:
+        friend class PrefabLoadBlock;
+
+        /** @brief `request` 와 `loadPrefab` 의 본문입니다. 새 로드를 @p start 대로 시작합니다(동기 API 는 이 자리에서 읽는다 — `AssetLoadStart`). */
+        PrefabHandle requestWith( string_view assetRelativePath, AssetLoadStart start );
+
+        /**
+         * @brief 캐시를 보고 없으면 이 스레드에서 읽어 넣습니다(로드 단계 본문 · 중첩 원본). 읽지 못하면 nullptr 입니다.
+         * @details 읽는 사이 캐시를 버렸으면(`reload` · `clear` — 세대가 바뀜) 결과를 캐시에 넣지 않고 요청한 쪽에만 준다(옛 파일 내용이 다시 살아나지 않게).
+         */
+        shared_ptr<const PrefabAsset> loadAndCache( string_view assetRelativePath );
         /** @brief 스폰한 오브젝트에 프리팹 상태와 이름을 쓰고 중첩 인스턴스를 스폰합니다. 바로 하는 스폰과 틱 뒤로 미룬 스폰, 부품 기준 스폰이 같이 씁니다. 실패하면 false 입니다. */
         [[nodiscard]] bool applySpawnState( GameObject* pGameObject, const PrefabAsset& asset, string_view instanceName );
         /**
@@ -284,8 +339,8 @@ namespace sw
          *          그 노드만 스폰할 때 건너뛴다. 원본이 없는 노드는 경고만 한다.
          */
         [[nodiscard]] bool validateNestedInstances( const PrefabAsset& asset, const string& cacheKey );
-        /** @brief 노드 하나의 오브젝트 상태(원본 + 오버라이드, 또는 펼친 상태)를 만듭니다. 원본 노드면 @p ppOutSource 에 원본 프리팹을 줍니다. 실패하면 false 입니다. */
-        [[nodiscard]] bool makeNestedInstanceState( const PrefabInstanceNode& node, string& outStateXML, const PrefabAsset** ppOutSource );
+        /** @brief 노드 하나의 오브젝트 상태(원본 + 오버라이드, 또는 펼친 상태)를 만듭니다. 원본 노드면 @p outSource 에 원본 프리팹을 줍니다. 실패하면 false 입니다. */
+        [[nodiscard]] bool makeNestedInstanceState( const PrefabInstanceNode& node, string& outStateXML, shared_ptr<const PrefabAsset>& outSource );
         /**
          * @brief `flattenNestedInstances` 의 재귀 단계입니다 — @p asset 의 노드를 펼쳐 @p inoutListNode 끝에 더합니다. 루트 노드의 부모는 @p parentIndex 입니다.
          * @param parentPath 부모 노드의 부품 경로입니다(맨 바깥은 빈 글). 펼친 노드의 `_partPath` 가 이 아래에 붙습니다.
@@ -300,7 +355,9 @@ namespace sw
         uint32 spawnNestedInstancesUnder( GameObject* pRoot, const PrefabAsset& asset, string_view rootPath, const vector<PrefabPartOverride>& listPartOverride,
                                           vector<string>& inoutListSpawnedPath );
 
-        mutable std::shared_mutex                      _mapCacheMutex;
-        unordered_map<string, unique_ptr<PrefabAsset>> _mapCache;
+        mutable std::shared_mutex                            _mapCacheMutex;
+        unordered_map<string, shared_ptr<const PrefabAsset>> _mapCache;
+        unordered_map<string, weak_ptr<PrefabLoadBlock>>     _mapLoading;      ///< 읽는 중인 로드(같은 경로의 동시 요청은 같은 블록). `_mapCacheMutex` 로 지킨다
+        atomic<uint32>                                       _cacheGeneration; ///< `reload` · `clear` 가 올린다. 읽는 사이 바뀌면 결과를 캐시에 넣지 않는다
     };
 } // namespace sw

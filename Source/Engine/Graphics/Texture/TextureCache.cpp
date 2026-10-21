@@ -8,6 +8,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -17,6 +18,7 @@
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/Cache/BuiltInAssetCache.h"
+#include "Engine/Resource/Image/DDSLoader.h"
 
 #include <condition_variable>
 
@@ -39,11 +41,12 @@ namespace sw
     {
         struct Entry
         {
-            unique_ptr<Texture2D> _texture;
-            uint32                _refCount{ 0 };
-            bool                  _bLoading{ false };   ///< 잠금 밖에서 올리는 중 — 다른 스레드는 `_cvLoaded` 로 기다린다
-            bool                  _bPublished{ false }; ///< 한 번이라도 올라왔는가 — `find` 는 이것만 내준다
-            bool                  _bPinned{ false };    ///< CPU 텍스처 — `releaseCPUTexture` 전에는 참조가 0 이어도 지우지 않는다
+            unique_ptr<Texture2D>      _texture;
+            weak_ptr<TextureLoadBlock> _pLoadBlock; ///< 진행 중인 로드(`request`) — 같은 경로의 요청은 이 블록을 받는다
+            uint32                     _refCount{ 0 };
+            bool                       _bLoading{ false };   ///< 잠금 밖에서 올리는 중(로드 블록 · `reload` · `resizeRenderTarget`) — 블록이 없으면 다른 스레드는 `_cvLoaded` 로 기다린다
+            bool                       _bPublished{ false }; ///< 한 번이라도 올라왔는가 — `find` 는 이것만 내준다
+            bool                       _bPinned{ false };    ///< CPU 텍스처 — `releaseCPUTexture` 전에는 참조가 0 이어도 지우지 않는다
         };
         struct RenderTargetSize
         {
@@ -67,11 +70,62 @@ namespace sw
         unordered_map<string, RenderTargetSize> _mapRenderTargetSize; ///< `declareRenderTarget` 이 알린 크기
         std::shared_mutex                       _mutex;
         std::condition_variable_any             _cvLoaded;              ///< 항목의 `_bLoading` 이 내려갈 때 깨운다
-        atomic<uint32>                          _reloadGeneration{ 0 }; ///< reload 횟수 — 머티리얼이 SRV 인덱스를 다시 받을 때를 안다
+        atomic<uint32>                          _reloadGeneration{ 0 }; ///< SRV 가 바뀌었을 수 있는 횟수 — 머티리얼이 SRV 인덱스를 다시 받을 때를 안다
+        mutex                                   _awaitingMutex;
+        vector<shared_ptr<TextureLoadBlock>>    _listAwaitingUpload; ///< 워커가 읽기를 마치고 업로드를 기다리는 로드(`completePendingLoads` 가 비운다)
+
+        /** @brief 참조를 하나 놓습니다. 0 이 되면 GPU 자원까지 해제합니다(`TextureCache::release` · 로드 블록 소멸). */
+        void releaseReference( const string& key, IRHIDevice* pDevice )
+        {
+            std::unique_lock<std::shared_mutex> lock{ _mutex };
+            auto                                it = _mapEntry.find( key );
+            if ( it == _mapEntry.end() )
+                return;
+            if ( it->second._refCount > 0 )
+                --it->second._refCount;
+            // 올리는 중(acquire · reload)이면 지우지 않는다 — 그 스레드가 끝날 때 참조 수를 보고 정리한다.
+            if ( it->second._refCount == 0 && it->second._bLoading == false )
+            {
+                if ( it->second._texture != nullptr )
+                    it->second._texture->releaseRHI( pDevice );
+                // CPU 텍스처는 원본을 남긴다 — 소유자가 `releaseCPUTexture` 로 지운다.
+                if ( it->second._bPinned == false )
+                    _mapEntry.erase( it );
+            }
+        }
+
+        /**
+         * @brief 로드 블록의 완료 단계가 끝났음을 항목에 적습니다. 성공하면 공개하고 블록 몫의 참조를 하나 셉니다. 실패하면 아무도 쥐지 않은 항목을 지웁니다.
+         * @details 진행 중 표시를 내리는 곳은 여기 하나다 — 로드 단계가 실패해도 완료 단계를 거쳐 여기로 온다(`TextureLoadBlock` 머리말).
+         */
+        void finishLoad( const string& key, bool bReady )
+        {
+            {
+                std::unique_lock<std::shared_mutex> lock{ _mutex };
+                const auto                          it = _mapEntry.find( key );
+                SW_ASSERT( it != _mapEntry.end() && it->second._bLoading );
+                Entry& entry      = it->second;
+                entry._bLoading   = false;
+                entry._pLoadBlock = weak_ptr<TextureLoadBlock>{};
+                if ( bReady )
+                {
+                    entry._bPublished = true;
+                    ++entry._refCount;
+                }
+                else if ( entry._refCount == 0 && entry._bPinned == false )
+                {
+                    _mapEntry.erase( it );
+                }
+            }
+            // 새 SRV 가 생겼다 — 로드 중 텍스처를 빌려 둔 머티리얼이 다시 받게 한다(진행 중 표시를 내린 뒤에 올린다: `reload` 와 같은 순서).
+            if ( bReady )
+                _reloadGeneration.fetch_add( 1u, std::memory_order_acq_rel );
+            _cvLoaded.notify_all();
+        }
     };
 
     TextureCache::TextureCache()
-        : _impl{ make_unique<Impl>() }
+        : _impl{ sw::make_shared<Impl>() }
     {
         // 컴포넌트 모델 코어(카메라)는 이 헤더를 모르므로 Engine/Common 의 창구로 크기를 알린다 — 처리 함수는 상태가 없어 다시 묶어도 같다.
         engine::bindRenderTargetDeclaration( &forwardRenderTargetDeclaration );
@@ -79,19 +133,23 @@ namespace sw
 
     TextureCache::~TextureCache() = default;
 
-    Texture2D* TextureCache::acquire( string_view relativePath, IRHIDevice* pDevice )
+    TextureHandle TextureCache::request( string_view relativePath, IRHIDevice* pDevice, AssetLoadStart start )
     {
         SW_MEMORY_SCOPE( Texture );
-        const bool bInvalidLoadRequest = relativePath.empty() || _impl == nullptr || pDevice == nullptr;
-        if ( bInvalidLoadRequest )
-            return nullptr;
         const string key = FileUtil::normalizePath( relativePath );
+        if ( key.empty() || pDevice == nullptr )
+        {
+            shared_ptr<TextureLoadBlock> pFailed = sw::make_shared<TextureLoadBlock>( key, pDevice, TextureLoadBlock::Source::File, nullptr, _impl );
+            pFailed->markFailedWithoutLoad( key.empty() ? "the texture path is empty" : "there is no device to upload to" );
+            return TextureHandle{ std::move( pFailed ) };
+        }
 
-        // 디스크 읽기와 GPU 생성은 잠금 밖에서 한다. 잠금 안에서는 "진행 중" 표시(_bLoading)만 세우고, 같은 키를 동시에
-        // 원한 스레드는 그 표시가 내려갈 때까지 기다렸다가 결과를 받는다(이중 생성 없음). Texture2D 는 unique_ptr 이라
-        // 맵이 원소를 옮겨도 주소가 그대로다. 진행 중인 항목은 release · 실패 정리가 지우지 않는다.
+        // 디스크 읽기와 GPU 생성은 잠금 밖에서 한다. 잠금 안에서는 "진행 중" 표시(_bLoading)와 그 로드의 블록만 적고, 같은 키를 동시에
+        // 원한 쪽은 같은 블록을 받는다(이중 생성 없음). Texture2D 는 unique_ptr 이라 맵이 원소를 옮겨도 주소가 그대로다. 진행 중인 항목은
+        // release · 실패 정리가 지우지 않는다.
         std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
         Texture2D*                          pTexture = nullptr;
+        TextureLoadBlock::Source            source   = TextureLoadBlock::Source::File;
         for ( ;; )
         {
             const auto it = _impl->_mapEntry.find( key );
@@ -99,7 +157,12 @@ namespace sw
             {
                 // CPU 텍스처는 원본이 있어야 만든다 — 소유자가 이미 놓았다.
                 if ( isCPUTexturePath( key ) )
-                    return nullptr;
+                {
+                    lock.unlock();
+                    shared_ptr<TextureLoadBlock> pFailed = sw::make_shared<TextureLoadBlock>( key, pDevice, TextureLoadBlock::Source::CPUBytes, nullptr, _impl );
+                    pFailed->markFailedWithoutLoad( "the CPU texture was already released by its owner" );
+                    return TextureHandle{ std::move( pFailed ) };
+                }
                 Impl::Entry& entry = _impl->_mapEntry[key];
                 entry._texture     = make_unique<Texture2D>();
                 entry._bLoading    = true;
@@ -109,57 +172,96 @@ namespace sw
             Impl::Entry& entry = it->second;
             if ( entry._bLoading )
             {
+                shared_ptr<TextureLoadBlock> pInFlight = entry._pLoadBlock.lock();
+                if ( pInFlight != nullptr )
+                    return TextureHandle{ std::move( pInFlight ) };
+                // 로드 블록이 아닌 길(`reload` · `resizeRenderTarget`, 디바이스 스레드)이 올리는 중이다 — 짧게 기다린다.
                 _impl->_cvLoaded.wait( lock );
                 continue;
             }
             if ( entry._texture->isRHIValid() )
             {
+                // 캐시 적중 — 단계를 거치지 않고 참조를 쥔 `Ready` 블록을 준다.
                 ++entry._refCount;
-                return entry._texture.get();
+                shared_ptr<TextureLoadBlock> pReady = sw::make_shared<TextureLoadBlock>( key, pDevice, TextureLoadBlock::Source::File, entry._texture.get(), _impl );
+                pReady->_bHoldsReference            = true;
+                pReady->markReadyWithoutLoad();
+                return TextureHandle{ std::move( pReady ) };
             }
-            // 들고는 있지만 GPU 자원이 없다(리로드 실패 등) — 같은 객체에 다시 올린다.
+            // 들고는 있지만 GPU 자원이 없다(리로드 실패 · CPU 텍스처의 참조가 0 이 되어 내린 뒤) — 같은 객체에 다시 올린다.
             entry._bLoading = true;
             pTexture        = entry._texture.get();
             break;
         }
-        const bool             bRenderTarget = isRenderTargetPath( key );
-        Impl::RenderTargetSize size{};
-        if ( bRenderTarget )
+
+        // 렌더 텍스처는 파일이 없다. 알린 크기(없으면 기본)로 렌더 타깃을 만든다. CPU 텍스처는 자기 원본을 올린다.
+        if ( isRenderTargetPath( key ) )
+            source = TextureLoadBlock::Source::RenderTarget;
+        else if ( pTexture->hasCPUBytes() )
+            source = TextureLoadBlock::Source::CPUBytes;
+        shared_ptr<TextureLoadBlock> pBlock = sw::make_shared<TextureLoadBlock>( key, pDevice, source, pTexture, _impl );
+        if ( source == TextureLoadBlock::Source::RenderTarget )
         {
             const auto sizeIter = _impl->_mapRenderTargetSize.find( key );
             if ( sizeIter != _impl->_mapRenderTargetSize.end() )
-                size = sizeIter->second;
+            {
+                pBlock->_renderTargetWidth  = sizeIter->second._width;
+                pBlock->_renderTargetHeight = sizeIter->second._height;
+            }
         }
+        _impl->_mapEntry[key]._pLoadBlock = pBlock;
         lock.unlock();
 
-        // 렌더 텍스처는 파일이 없다. 알린 크기(없으면 기본)로 렌더 타깃을 만든다. CPU 텍스처는 자기 원본을 올린다.
-        bool bReady{ false };
-        if ( bRenderTarget )
-            bReady = pTexture->createRenderTarget( pDevice, key, size._width, size._height, constant::kOffscreenColorFormat );
-        else if ( pTexture->hasCPUBytes() )
-            bReady = pTexture->loadFromCPUBytes( pDevice );
-        else
-            bReady = pTexture->loadFromResource( pDevice, key );
+        AssetLoadBlock::startLoad( pBlock, start );
+        return TextureHandle{ std::move( pBlock ) };
+    }
 
-        lock.lock();
-        const auto it = _impl->_mapEntry.find( key );
-        SW_ASSERT( it != _impl->_mapEntry.end() && it->second._bLoading );
-        Impl::Entry& entry = it->second;
-        entry._bLoading    = false;
-        if ( bReady )
+    Texture2D* TextureCache::acquire( string_view relativePath, IRHIDevice* pDevice )
+    {
+        const TextureHandle         handle   = request( relativePath, pDevice, AssetLoadStart::OnCallingThread );
+        const shared_ptr<Texture2D> pTexture = handle.wait();
+        if ( pTexture == nullptr )
+            return nullptr;
+        // 핸들 몫의 참조는 이 함수를 나가며 놓인다 — 돌려주는 포인터 몫(짝 `release`)을 하나 더 센다. 핸들이 쥐고 있으므로 항목은 있다.
+        const string                        key = FileUtil::normalizePath( relativePath );
+        std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
+        const auto                          it = _impl->_mapEntry.find( key );
+        SW_ASSERT( it != _impl->_mapEntry.end() );
+        ++it->second._refCount;
+        return pTexture.get();
+    }
+
+    uint32 TextureCache::completePendingLoads( uint32 maxCount )
+    {
+        vector<shared_ptr<TextureLoadBlock>> listBlock;
         {
-            entry._bPublished = true;
-            ++entry._refCount;
+            std::scoped_lock<mutex> lock{ _impl->_awaitingMutex };
+            const size_t            takeCount = MathUtil::min( static_cast<size_t>( maxCount ), _impl->_listAwaitingUpload.size() );
+            if ( takeCount == 0 )
+                return 0;
+            listBlock.assign( std::make_move_iterator( _impl->_listAwaitingUpload.begin() ), std::make_move_iterator( _impl->_listAwaitingUpload.begin() + static_cast<ptrdiff_t>( takeCount ) ) );
+            _impl->_listAwaitingUpload.erase( _impl->_listAwaitingUpload.begin(), _impl->_listAwaitingUpload.begin() + static_cast<ptrdiff_t>( takeCount ) );
         }
-        else
+        // 이미 다른 스레드가 기다리며(`wait`) 올렸으면 건너뛴다 — 완료 단계는 먼저 집은 쪽 하나만 실행한다.
+        uint32 completedCount = 0;
+        for ( const shared_ptr<TextureLoadBlock>& pBlock : listBlock )
         {
-            pTexture = nullptr;
-            if ( entry._refCount == 0 && entry._bPinned == false )
-                _impl->_mapEntry.erase( it );
+            if ( pBlock->runCompletionIfPending() )
+                ++completedCount;
         }
-        lock.unlock();
-        _impl->_cvLoaded.notify_all();
-        return pTexture;
+        return completedCount;
+    }
+
+    uint32 TextureCache::countLoadsInFlight() const
+    {
+        std::shared_lock<std::shared_mutex> lock{ _impl->_mutex };
+        uint32                              count = 0;
+        for ( const auto& [key, entry] : _impl->_mapEntry )
+        {
+            if ( entry._bLoading )
+                ++count;
+        }
+        return count;
     }
 
     bool TextureCache::isRenderTargetPath( string_view relativePath )
@@ -435,23 +537,7 @@ namespace sw
     {
         if ( relativePath.empty() || _impl == nullptr )
             return;
-        const string key = FileUtil::normalizePath( relativePath );
-
-        std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
-        auto                                it = _impl->_mapEntry.find( key );
-        if ( it == _impl->_mapEntry.end() )
-            return;
-        if ( it->second._refCount > 0 )
-            --it->second._refCount;
-        // 올리는 중(acquire · reload)이면 지우지 않는다 — 그 스레드가 끝날 때 참조 수를 보고 정리한다.
-        if ( it->second._refCount == 0 && it->second._bLoading == false )
-        {
-            if ( it->second._texture != nullptr )
-                it->second._texture->releaseRHI( pDevice );
-            // CPU 텍스처는 원본을 남긴다 — 소유자가 `releaseCPUTexture` 로 지운다.
-            if ( it->second._bPinned == false )
-                _impl->_mapEntry.erase( it );
-        }
+        _impl->releaseReference( FileUtil::normalizePath( relativePath ), pDevice );
     }
 
     bool TextureCache::isCached( string_view relativePath ) const
@@ -490,8 +576,125 @@ namespace sw
     {
         if ( _impl == nullptr )
             return;
+        {
+            std::scoped_lock<mutex> awaitingLock{ _impl->_awaitingMutex };
+            _impl->_listAwaitingUpload.clear(); // 올리지 않은 로드는 버린다 — 그 블록을 쥔 핸들은 `Loading` 으로 남는다(종료 때만 온다)
+        }
         std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
         _impl->_mapEntry.clear();
+    }
+} // namespace sw
+
+namespace sw
+{
+    TextureLoadBlock::TextureLoadBlock( string_view key, IRHIDevice* pDevice, Source source, Texture2D* pTexture, weak_ptr<TextureCache::Impl> pCache )
+        : AssetLoadBlock{ TextureCache::kAssetKindName, key }
+        , _pImage{}
+        , _loadError{}
+        , _pCache{ std::move( pCache ) }
+        , _pDevice{ pDevice }
+        , _pTexture{ pTexture }
+        , _renderTargetWidth{ TextureCache::kDefaultRenderTargetSize }
+        , _renderTargetHeight{ TextureCache::kDefaultRenderTargetSize }
+        , _source{ source }
+        , _bHoldsReference{ false }
+    {
+    }
+
+    TextureLoadBlock::~TextureLoadBlock()
+    {
+        if ( _bHoldsReference == false )
+            return;
+        // 캐시가 먼저 사라졌으면(종료) 놓을 항목이 없다.
+        const shared_ptr<TextureCache::Impl> pCache = _pCache.lock();
+        if ( pCache != nullptr )
+            pCache->releaseReference( getPath(), _pDevice );
+    }
+
+    shared_ptr<Texture2D> TextureLoadBlock::getAsset() const
+    {
+        // 별칭 shared_ptr — 블록(곧 참조)을 쥔 채 텍스처를 가리킨다. 텍스처 객체는 항목이 소유한다.
+        return shared_ptr<Texture2D>( shared_from_this(), _pTexture );
+    }
+
+    bool TextureLoadBlock::runLoad( string& /*outError*/ )
+    {
+        // 렌더 타깃 · CPU 텍스처는 읽을 파일이 없다 — 업로드 단계만 있다.
+        if ( _source != Source::File )
+            return true;
+        _pImage = make_unique<DDSImageData>();
+        if ( Texture2D::readImage( getPath(), *_pImage ) == false )
+        {
+            _loadError = "the DDS could not be read or uses a format the engine cannot upload";
+            _pImage.reset();
+        }
+        // 실패도 완료 단계로 넘긴다 — 진행 중 표시는 완료 단계 하나가 내린다(헤더).
+        return true;
+    }
+
+    void TextureLoadBlock::onAwaitingCompletion()
+    {
+        const shared_ptr<TextureCache::Impl> pCache = _pCache.lock();
+        if ( pCache == nullptr )
+            return;
+        std::scoped_lock<mutex> lock{ pCache->_awaitingMutex };
+        pCache->_listAwaitingUpload.push_back( shared_from_this() );
+    }
+
+    bool TextureLoadBlock::runCompletion( string& outError )
+    {
+        SW_MEMORY_SCOPE( Texture );
+        const shared_ptr<TextureCache::Impl> pCache = _pCache.lock();
+        if ( pCache == nullptr )
+        {
+            outError = "the texture cache was shut down before the upload";
+            return false;
+        }
+        {
+            // 펌프가 아닌 쪽(`wait`)이 먼저 올렸으면 대기 목록에서 뺀다 — 목록이 블록(곧 참조)을 쥔 채 남지 않게(렌더가 없는 테스트는 펌프가 돌지 않는다).
+            std::scoped_lock<mutex>               lock{ pCache->_awaitingMutex };
+            vector<shared_ptr<TextureLoadBlock>>& listAwaiting = pCache->_listAwaitingUpload;
+            for ( size_t index = 0; index < listAwaiting.size(); ++index )
+            {
+                if ( listAwaiting[index].get() != this )
+                    continue;
+                listAwaiting.erase( listAwaiting.begin() + static_cast<ptrdiff_t>( index ) );
+                break;
+            }
+        }
+        bool bReady = false;
+        if ( _loadError.empty() )
+        {
+            switch ( _source )
+            {
+                case Source::File:
+                {
+                    bReady = _pTexture->loadFromImage( _pDevice, getPath(), *_pImage );
+                    break;
+                }
+                case Source::RenderTarget:
+                {
+                    bReady = _pTexture->createRenderTarget( _pDevice, getPath(), _renderTargetWidth, _renderTargetHeight, constant::kOffscreenColorFormat );
+                    break;
+                }
+                case Source::CPUBytes:
+                {
+                    bReady = _pTexture->loadFromCPUBytes( _pDevice );
+                    break;
+                }
+            }
+            if ( bReady == false )
+                _loadError = "the GPU upload failed";
+        }
+        _pImage.reset();
+        pCache->finishLoad( getPath(), bReady );
+        if ( bReady == false )
+        {
+            outError = _loadError;
+            return false;
+        }
+        _bHoldsReference = true;
+        return true;
     }
 } // namespace sw
 

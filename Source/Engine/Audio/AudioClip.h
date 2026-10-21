@@ -16,6 +16,9 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Common/AssetTypeRegistry.h"
+#include "Engine/Resource/AssetHandle.h"
+
+#include <optional>
 
 namespace sw
 {
@@ -73,15 +76,6 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 클립 캐시에서 경로 하나의 상태입니다. */
-    enum class AudioClipStatus : uint8
-    {
-        Missing = 0, ///< 요청한 적이 없다.
-        Loading,     ///< 워커가 디코드 중이다
-        Ready,       ///< 쓸 수 있다
-        Failed,      ///< 디코드나 읽기에 실패했다(다시 요청하면 다시 시도한다).
-    };
-
     /** @brief 공통 디코더가 다루지 않는 형식(MP3 등)을 디코드하는 백엔드 함수입니다. @p path 는 리소스 상대 경로이거나 절대 경로입니다. */
     using AudioFallbackDecodeFunction = bool ( * )( string_view path, AudioPcm& outPcm );
 
@@ -116,8 +110,11 @@ namespace sw
         /** @brief 준비된 클립입니다. 아직 없거나 실패했으면 nullptr 입니다. 디코드하지 않습니다. */
         shared_ptr<const AudioClipData> findClip( const hashed_string& path ) const;
 
-        /** @brief 경로의 상태입니다. */
-        AudioClipStatus getStatus( const hashed_string& path ) const;
+        /**
+         * @brief 경로의 로드 상태입니다(`AssetLoadState` — 다른 에셋 핸들과 같은 상태, 실패는 다시 요청하면 다시 시도한다). 요청한 적이 없으면(또는 `clear` 뒤) 빈 값입니다.
+         * @details "요청한 적 없음" 을 상태 열거형의 한 값으로 두지 않는다 — 그러면 `Failed` 와 한데 묶는 호출처가 생긴다(`AssetHandle.h` 머리말).
+         */
+        std::optional<AssetLoadState> findLoadState( const hashed_string& path ) const;
 
         /** @brief 지금 디코드해 캐시에 넣고 반환합니다. 이미 있으면 그것을 반환합니다. 읽기나 디코드에 실패하면 nullptr 를 반환합니다. */
         shared_ptr<const AudioClipData> loadClip( const hashed_string& path );
@@ -159,7 +156,7 @@ namespace sw
         struct Entry
         {
             shared_ptr<const AudioClipData> _pClip{};
-            AudioClipStatus                 _status{ AudioClipStatus::Missing };
+            AssetLoadState                  _status{ AssetLoadState::Loading }; ///< 엔트리는 요청(`requestClip`)이나 결과(`storeResult`)가 만든다
         };
 
         unordered_map<hashed_string, Entry, hashed_string::HashFunc> _mapPathToEntry;     /**< 경로에서 엔트리로 가는 맵입니다. */

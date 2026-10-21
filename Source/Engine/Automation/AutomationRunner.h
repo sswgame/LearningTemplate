@@ -219,11 +219,12 @@ namespace sw
         uint32                  _waitFrameCount; ///< 시작 조건을 기다린 프레임 수입니다.
         uint32                  _screenshotRequestedCount;
         uint32                  _screenshotCompletedCount;
-        uint32                  _imageWaitFrameCount;   ///< `<ExpectImage>` 가 스크린샷을 기다린 프레임 수입니다.
-        uint32                  _holdFrameCount;        ///< 지금 단계(`<WaitUntil>` · 마크를 기다리는 에디터 입력)가 시나리오 시계를 붙잡은 프레임(`holdUntilReady`, 그동안 `_frameIndex` 는 그대로다)
-        uint32                  _clockHoldFrameCount;   ///< 시계 잡기 조건이 이어서 붙잡은 프레임(`holdClockForBackgroundWork`)
-        float64                 _clockHoldStartSeconds; ///< 그 붙잡기가 시작된 단조 시계 초
-        string                  _clockHolderName;       ///< 붙잡은 조건의 이름(로그)
+        uint32                  _imageWaitFrameCount;    ///< `<ExpectImage>` 가 스크린샷을, `<Screenshot>` 이 에셋 일을 기다린 프레임 수입니다(단계마다 0 부터).
+        uint32                  _assetSettledFrameCount; ///< `<Screenshot>` 앞에서 에셋 일이 0 인 채로 지난 프레임 수입니다(`holdScreenshot`)
+        uint32                  _holdFrameCount;         ///< 지금 단계(`<WaitUntil>` · 마크를 기다리는 에디터 입력)가 시나리오 시계를 붙잡은 프레임(`holdUntilReady`, 그동안 `_frameIndex` 는 그대로다)
+        uint32                  _clockHoldFrameCount;    ///< 시계 잡기 조건이 이어서 붙잡은 프레임(`holdClockForBackgroundWork`)
+        float64                 _clockHoldStartSeconds;  ///< 그 붙잡기가 시작된 단조 시계 초
+        string                  _clockHolderName;        ///< 붙잡은 조건의 이름(로그)
         AutomationResult        _result;
         uint8                   _bStarted   : 1;
         uint8                   _bEnded     : 1;

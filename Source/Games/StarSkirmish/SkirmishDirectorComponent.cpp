@@ -10,6 +10,7 @@
 #include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Config/GameAutoplay.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
+#include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
@@ -229,8 +230,13 @@ namespace sw
     void SkirmishDirectorComponent::onGameStarted()
     {
         // 처음 짓는 건물 · 유닛의 모델을 게임 스레드가 플레이 중에 디스크에서 읽지 않게 판을 열 때 워커로 미리 읽는다(느린 디스크의 히치).
-        if ( _unitModels.isComplete() && _unitModels.getLoadedCount() == 0 )
-            _unitModels.request( SkirmishUnitComponent::makeAllModelPaths() );
+        if ( _unitModels.getCount() == 0 )
+        {
+            for ( const string& path : SkirmishUnitComponent::makeAllModelPaths() )
+            {
+                _unitModels.add( MeshCache::request( path ) );
+            }
+        }
         // 사람 쪽은 글자 키가 명령이라 카메라는 방향키만 쓴다. 둘 다 AI 면 맵 전체가 보이게 물러선 프리셋(`_watchCameraPreset`, 씬 데이터)으로 시작하고 WASD 도 카메라를 움직인다.
         // 프리셋 고르기는 카메라 오브젝트의 시작 순서에 기대지 않는다(`startWithPreset` — 시작 전이면 시작 프리셋, 뒤면 컷).
         CameraDirectorComponent* pRig = findCameraRig();

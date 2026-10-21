@@ -240,7 +240,7 @@ namespace sw::editor
         if ( pResources == nullptr || outPrefabPath.empty() )
             return;
 
-        PrefabAsset* pLoaded = pResources->getAssetCache<PrefabCache>().loadPrefab( outPrefabPath );
+        const shared_ptr<const PrefabAsset> pLoaded = pResources->getAssetCache<PrefabCache>().loadPrefab( outPrefabPath );
         if ( pLoaded == nullptr || pLoaded->isValid() == false )
             return;
 
@@ -310,7 +310,7 @@ namespace sw::editor
         AssetManager* pResources = editor::findSubsystem<AssetManager>();
         if ( pResources == nullptr )
             return;
-        PrefabAsset* pLoaded = pResources->getAssetCache<PrefabCache>().loadPrefab( prefabPath );
+        const shared_ptr<const PrefabAsset> pLoaded = pResources->getAssetCache<PrefabCache>().loadPrefab( prefabPath );
         if ( pLoaded == nullptr )
             return;
 

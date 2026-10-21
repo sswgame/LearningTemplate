@@ -3,6 +3,7 @@
 #include "Engine/Object/Component/3D/MeshComponent.h"
 
 #include "Core/Math/AABB.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
@@ -25,6 +26,7 @@ namespace sw
 
     MeshComponent::MeshComponent()
         : _mesh{}
+        , _meshLoad{}
         , _pMaterial{ nullptr }
         , _materialInstance{}
         , _meshID{}
@@ -40,9 +42,15 @@ namespace sw
         , _vertexAnimationPhase{ 0.0f }
         , _sortKey{ 0 }
         , _highlight{ 0 }
+        , _appearSeconds{ kDefaultAppearSeconds }
+        , _appearance{ 1.0f }
+        , _appearanceRate{ 0.0f }
+        , _bTeleportAppearPending{ false }
         , _pPrimitiveRegistry{ nullptr }
         , _bVisible{ SW_TRUE }
         , _bFirstPersonView{ SW_FALSE }
+        , _bAwaitingAppearance{ SW_FALSE }
+        , _bAppearOnTeleport{ SW_FALSE }
         , _reserved{ 0 }
     {
         // 월드가 바뀌면 트랜스폼 칸의 프리미티브 번호로 렌더 더티가 찍힌다(`ScenePrimitive::setPrimitiveIndex`). 훅은 받지 않는다.
@@ -106,12 +114,132 @@ namespace sw
     {
         const string_view   meshID = _meshID.empty() ? getDefaultMeshID() : string_view{ _meshID };
         const hashed_string hashedMeshID( string{ meshID }.c_str() );
-        if ( _mesh != nullptr && _resolvedMeshID == hashedMeshID )
+        const bool          bSameID = _resolvedMeshID == hashedMeshID;
+        if ( bSameID && ( _mesh != nullptr || _meshLoad.isLoading() ) )
             return;
-        // **공유되는** 메시를 받는다(`.mesh` 경로는 메시 캐시, 그 밖은 내장 도형). 컴포넌트마다 제 메시를 만들면 배치가 그만큼 갈린다.
-        // 읽지 못한 에셋은 메시 없이 남는다(그리지 않는다) — 캐시가 경로마다 한 번 경고하고, 핫 리로드 알림이 다시 해석한다.
-        _mesh           = MeshAssetFormat::isMeshAssetPath( meshID ) ? MeshCache::acquire( meshID ) : MeshUtil::acquirePrimitive( meshID );
         _resolvedMeshID = hashedMeshID;
+        // **공유되는** 메시를 받는다(`.mesh` 경로는 메시 캐시, 그 밖은 내장 도형). 컴포넌트마다 제 메시를 만들면 배치가 그만큼 갈린다.
+        if ( MeshAssetFormat::isMeshAssetPath( meshID ) == false )
+        {
+            _meshLoad.reset();
+            _mesh = MeshUtil::acquirePrimitive( meshID );
+            validateSectionName();
+            markRenderStateDirty();
+            notifyMeshFollowers();
+            return;
+        }
+        // 에셋은 워커에서 읽는다. 다 읽을 때까지 그리지 않고, 도착하면 `AssetArrival` 단계가 넣는다. 읽지 못한 에셋은 메시 없이 남는다(그리지 않는다) —
+        // 캐시가 경로마다 한 번 경고하고, 핫 리로드 알림이 다시 해석한다.
+        _meshLoad = MeshCache::request( meshID );
+        if ( _meshLoad.isLoading() == false )
+        {
+            applyMeshLoad();
+            return;
+        }
+        _mesh = nullptr;
+        markRenderStateDirty();
+        notifyMeshFollowers();
+        if ( _pPrimitiveRegistry != nullptr )
+            _pPrimitiveRegistry->addAssetWaiter( this, &MeshComponent::updateArrival );
+    }
+
+    bool MeshComponent::updateArrival( ScenePrimitive& primitive, float32 deltaSeconds )
+    {
+        // 레지스트리에 들어오는 것은 메시 계열뿐이다(`ScenePrimitive.h` 의 불변식).
+        MeshComponent& self = static_cast<MeshComponent&>( primitive );
+        if ( self._bTeleportAppearPending.exchange( false, std::memory_order_acq_rel ) )
+            self.beginAppearance();
+        if ( self._meshLoad.isLoading() )
+            return true;
+        if ( self._meshLoad.isValid() )
+        {
+            self.applyMeshLoad();
+            // 도착한 메시로 렌더 에셋을 다시 푼다 — 파생 타입(스켈레탈)이 스킨 사본을 이때 만든다. 메시 id 는 그대로라 메시를 다시 요청하지 않는다.
+            // 실패한 로드는 다시 풀지 않는다 — 메시가 없으면 다시 요청하므로 프레임마다 디스크를 읽게 된다(다음 해석 · 핫 리로드가 다시 시도한다).
+            if ( self._mesh != nullptr )
+            {
+                self.resolveRenderAssets();
+                // 로드 뒤에 나타나는 메시는 한 프레임에 튀지 않고 서서히 나타난다(디더 등장). 준비가 더 필요하면(캐릭터의 애니메이션) 그때까지 숨는다.
+                self.holdAppearanceUntilReady();
+            }
+            if ( self._meshLoad.isLoading() )
+                return true;
+        }
+        return self.advanceAppearance( deltaSeconds );
+    }
+
+    void MeshComponent::onTeleported()
+    {
+        ScenePrimitive::onTeleported();
+        if ( _bAppearOnTeleport == SW_FALSE || _pPrimitiveRegistry == nullptr )
+            return;
+        // 틱 중(워커)에도 불린다 — 표시만 하고(원자값) 등장은 씬 프레임의 도착 단계가 시작한다. 거는 것은 레지스트리가 잠근다.
+        _bTeleportAppearPending.store( true, std::memory_order_release );
+        _pPrimitiveRegistry->addAssetWaiter( this, &MeshComponent::updateArrival );
+    }
+
+    void MeshComponent::beginAppearance()
+    {
+        _bAwaitingAppearance = SW_FALSE;
+        startAppearanceRamp( 1.0f );
+    }
+
+    void MeshComponent::beginDisappearance()
+    {
+        _bAwaitingAppearance = SW_FALSE;
+        startAppearanceRamp( -1.0f );
+    }
+
+    void MeshComponent::holdAppearanceUntilReady()
+    {
+        _appearance          = 0.0f;
+        _appearanceRate      = 0.0f;
+        _bAwaitingAppearance = SW_TRUE;
+        markRenderStateDirty();
+        if ( _pPrimitiveRegistry != nullptr )
+            _pPrimitiveRegistry->addAssetWaiter( this, &MeshComponent::updateArrival );
+    }
+
+    void MeshComponent::startAppearanceRamp( float32 direction )
+    {
+        // 시간이 0 이면 바로 끝 값이다(등장을 끈 물체 — 데이터 `_appearSeconds`).
+        if ( _appearSeconds <= 0.0f )
+        {
+            _appearance     = direction > 0.0f ? 1.0f : 0.0f;
+            _appearanceRate = 0.0f;
+            markRenderStateDirty();
+            return;
+        }
+        if ( direction > 0.0f && _appearance >= 1.0f )
+            _appearance = 0.0f; // 다 보이던 것을 다시 나타나게 한다(텔레포트)
+        _appearanceRate = direction / _appearSeconds;
+        markRenderStateDirty();
+        if ( _pPrimitiveRegistry != nullptr )
+            _pPrimitiveRegistry->addAssetWaiter( this, &MeshComponent::updateArrival );
+    }
+
+    bool MeshComponent::advanceAppearance( float32 deltaSeconds )
+    {
+        if ( _bAwaitingAppearance == SW_TRUE )
+        {
+            if ( pollReadyToAppear() == false )
+                return true;
+            beginAppearance();
+        }
+        if ( _appearanceRate == 0.0f )
+            return false;
+        _appearance = MathUtil::clamp( _appearance + _appearanceRate * deltaSeconds, 0.0f, 1.0f );
+        markRenderStateDirty();
+        const bool bRampDone = _appearance <= 0.0f || _appearance >= 1.0f;
+        if ( bRampDone )
+            _appearanceRate = 0.0f;
+        return bRampDone == false;
+    }
+
+    void MeshComponent::applyMeshLoad()
+    {
+        _mesh = _meshLoad.get();
+        _meshLoad.reset();
         validateSectionName();
         markRenderStateDirty();
         notifyMeshFollowers();
@@ -193,6 +321,11 @@ namespace sw
         ScenePrimitive::onRegister( manager );
         _pPrimitiveRegistry = &manager.getPrimitiveRegistry();
         _pPrimitiveRegistry->add( this );
+        // 등록 전에 요청한 메시 로드가 아직 끝나지 않았으면 이제부터 씬 프레임이 기다린다.
+        if ( _meshLoad.isLoading() )
+            _pPrimitiveRegistry->addAssetWaiter( this, &MeshComponent::updateArrival );
+        else if ( _bAwaitingAppearance == SW_TRUE || _appearanceRate != 0.0f )
+            _pPrimitiveRegistry->addAssetWaiter( this, &MeshComponent::updateArrival ); // 등록 전에 시작한 등장 · 대기도 이제부터 씬 프레임이 진행한다
         // 픽셀 퍼펙트 카메라가 이미 정한 스냅 단위를 이어받는다(정한 뒤에 생긴 스프라이트도 격자에 붙는다).
         setPixelSnapUnit( manager.getCameraRegistry().getPixelSnapUnit() );
     }
@@ -243,6 +376,7 @@ namespace sw
     void MeshComponent::setMesh( shared_ptr<Mesh> mesh )
     {
         _mesh = std::move( mesh );
+        _meshLoad.reset(); // 런타임 지정이 이긴다 — 읽던 에셋이 도착해도 덮지 않는다
         // 지금 id 의 메시로 삼는다 — 시작 · 로드 뒤 해석이 런타임 지정을 덮지 않고, id 가 바뀌면 그 id 의 것으로 바뀐다.
         _resolvedMeshID = hashed_string( string{ _meshID.empty() ? getDefaultMeshID() : string_view{ _meshID } }.c_str() );
         markRenderStateDirty();

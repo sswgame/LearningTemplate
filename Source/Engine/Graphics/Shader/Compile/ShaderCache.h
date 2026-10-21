@@ -12,6 +12,44 @@
 #include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
+#include "Engine/Resource/AssetHandle.h"
+
+namespace sw
+{
+    class ShaderCache;
+
+    /**
+     * @class ShaderLoadBlock
+     * @brief 셰이더 바이트코드 하나(로컬 캐시 · 쿠킹본 · 실시간 컴파일)를 얻는 로드의 공유 상태입니다. 로드 단계가 `ShaderCache` 의 세 순위를 그대로 탑니다.
+     * @details 결과는 실패해도 남긴다(`getResult` — 컴파일 오류 문구). 블록은 캐시를 원시 포인터로 가리킨다 — 캐시 종료(`shutdown`)가 진행 중인 로드를 모두 기다린다.
+     */
+    class SW_API ShaderLoadBlock final : public AssetLoadBlock
+    {
+    public:
+        using AssetType = const ShaderCompileResult;
+
+        ShaderLoadBlock( ShaderCache* pCache, const ShaderCompileDesc& desc, string cacheKey );
+
+        /** @brief 바이트코드입니다. `Ready` 일 때만 쓸 수 있습니다(`AssetHandle::get` 이 상태를 본다). */
+        const shared_ptr<const ShaderCompileResult>& getAsset() const { return _pResult; }
+        /** @brief 끝난 로드의 결과입니다. 실패해도 오류 문구가 들어 있습니다. 끝나기 전에는 nullptr 입니다. */
+        const shared_ptr<const ShaderCompileResult>& getResult() const { return _pResult; }
+
+    protected:
+        [[nodiscard]] bool runLoad( string& outError ) override;
+
+    private:
+        friend class ShaderCache;
+
+        ShaderCache*                          _pCache;
+        ShaderCompileDesc                     _desc;
+        string                                _cacheKey;
+        shared_ptr<const ShaderCompileResult> _pResult;
+    };
+
+    /** @brief 셰이더 로드 핸들입니다(`ShaderCache::request`). */
+    using ShaderHandle = AssetHandle<ShaderLoadBlock>;
+} // namespace sw
 
 namespace sw
 {
@@ -55,7 +93,12 @@ namespace sw
         SubsystemHostMask getSubsystemHost() const override { return SubsystemHostMask::All; }
         MemoryTag         getSubsystemMemoryTag() const override { return MemoryTag::Shader; }
 
-        /** @brief 캐시에 있으면 반환하고, 없거나 소스가 바뀌었으면 컴파일한 뒤 캐시합니다. */
+        /**
+         * @brief 바이트코드 로드를 요청합니다. 같은 요청(경로 · 진입점 · 스테이지 · 대상 · 코드젠 · define)을 읽는 중이면 그 로드를 받고, 아니면 워커가 읽거나
+         *        컴파일합니다(엔진 태스크가 없으면 이 자리에서). PSO 를 만들기 전에 미리 데워 둘 때 씁니다.
+         */
+        ShaderHandle request( const ShaderCompileDesc& desc );
+        /** @brief 캐시에 있으면 반환하고, 없거나 소스가 바뀌었으면 컴파일한 뒤 캐시합니다. `request` 와 같은 로드 블록을 기다립니다(새 로드는 이 자리에서). */
         ShaderCompileResult getOrCompile( const ShaderCompileDesc& desc );
         /** @brief 컴파일 캐시를 비웁니다. */
         void clearCache();
@@ -90,10 +133,21 @@ namespace sw
         static ShaderCompileDesc makeLiveCompileDesc( const ShaderCompileDesc& desc );
 
     private:
+        friend class ShaderLoadBlock;
+
+        /** @brief 인메모리 캐시의 키입니다(경로 · 진입점 · 스테이지 · 대상 · 코드젠 · define). */
+        static string makeCacheKey( const ShaderCompileDesc& desc );
+        /** @brief `request` 와 `getOrCompile` 의 본문입니다. 새 로드를 @p start 대로 시작합니다(`AssetLoadStart`). */
+        ShaderHandle requestWith( const ShaderCompileDesc& desc, AssetLoadStart start );
+        /** @brief 로드 단계 본문입니다 — 인메모리 캐시, 로컬 캐시, 쿠킹본, 실시간 컴파일 순으로 찾습니다(이 스레드). */
+        ShaderCompileResult loadOrCompile( const ShaderCompileDesc& desc, const string& cacheKey );
         /** @brief 인메모리 캐시에 넣습니다. 로컬 캐시, 쿠킹된 바이너리, 라이브 컴파일 세 경우가 같은 항목을 만듭니다. */
         void storeEntry( string&& cacheKey, const ShaderCompileDesc& desc, const ShaderCompileResult& result, uint64 sourceHash );
+        /** @brief 진행 중인 로드를 모두 기다립니다(종료 — 워커의 로드가 사라진 캐시에 쓰지 않게). */
+        void waitForLoadsInFlight();
 
-        unordered_map<string, ShaderCacheEntry> _mapCache;
-        mutable mutex                           _mutexCache;
+        unordered_map<string, ShaderCacheEntry>          _mapCache;
+        unordered_map<string, weak_ptr<ShaderLoadBlock>> _mapLoading; ///< 읽거나 컴파일 중인 로드(같은 요청은 같은 블록). `_mutexCache` 로 지킨다
+        mutable mutex                                    _mutexCache;
     };
 } // namespace sw

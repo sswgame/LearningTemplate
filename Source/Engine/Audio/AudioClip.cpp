@@ -175,16 +175,18 @@ namespace sw
     {
         std::scoped_lock<mutex> lock{ _mutex };
         const auto              it = _mapPathToEntry.find( path );
-        if ( it == _mapPathToEntry.end() || it->second._status != AudioClipStatus::Ready )
+        if ( it == _mapPathToEntry.end() || it->second._status != AssetLoadState::Ready )
             return nullptr;
         return it->second._pClip;
     }
 
-    AudioClipStatus AudioClipCache::getStatus( const hashed_string& path ) const
+    std::optional<AssetLoadState> AudioClipCache::findLoadState( const hashed_string& path ) const
     {
         std::scoped_lock<mutex> lock{ _mutex };
         const auto              it = _mapPathToEntry.find( path );
-        return it == _mapPathToEntry.end() ? AudioClipStatus::Missing : it->second._status;
+        if ( it == _mapPathToEntry.end() )
+            return std::nullopt;
+        return it->second._status;
     }
 
     shared_ptr<const AudioClipData> AudioClipCache::loadClip( const hashed_string& path )
@@ -192,7 +194,7 @@ namespace sw
         {
             std::scoped_lock<mutex> lock{ _mutex };
             const auto              it = _mapPathToEntry.find( path );
-            if ( it != _mapPathToEntry.end() && it->second._status == AudioClipStatus::Ready )
+            if ( it != _mapPathToEntry.end() && it->second._status == AssetLoadState::Ready )
                 return it->second._pClip;
         }
         shared_ptr<const AudioClipData> pClip = decodeClip( path );
@@ -206,10 +208,11 @@ namespace sw
             return;
         {
             std::scoped_lock<mutex> lock{ _mutex };
-            Entry&                  entry = _mapPathToEntry[path];
-            if ( entry._status == AudioClipStatus::Ready || entry._status == AudioClipStatus::Loading )
+            // 새 엔트리는 `Loading` 으로 생긴다 — 있던 엔트리가 준비됐거나 디코드 중이면 다시 띄우지 않는다(실패한 것만 다시 시도한다).
+            const auto it = _mapPathToEntry.find( path );
+            if ( it != _mapPathToEntry.end() && it->second._status != AssetLoadState::Failed )
                 return;
-            entry._status = AudioClipStatus::Loading;
+            _mapPathToEntry[path]._status = AssetLoadState::Loading;
         }
 
         // 이 호스트(전용 서버)의 패키지에 없는 종류다 — 디코드 작업을 띄우지 않고 없는 것으로 친다(경고 없음, ResourcePaths::setHostTarget).
@@ -236,7 +239,7 @@ namespace sw
         std::scoped_lock<mutex> lock{ _mutex };
         for ( const auto& entry : _mapPathToEntry )
         {
-            const bool bSamePath = entry.second._status == AudioClipStatus::Ready && StringUtil::equals( FileUtil::normalizeSeparators( entry.first.view() ), wanted, true );
+            const bool bSamePath = entry.second._status == AssetLoadState::Ready && StringUtil::equals( FileUtil::normalizeSeparators( entry.first.view() ), wanted, true );
             if ( bSamePath )
             {
                 outPath = entry.first;
@@ -364,7 +367,7 @@ namespace sw
     {
         std::scoped_lock<mutex> lock{ _mutex };
         Entry&                  entry = _mapPathToEntry[path];
-        entry._status                 = pClip != nullptr ? AudioClipStatus::Ready : AudioClipStatus::Failed;
+        entry._status                 = pClip != nullptr ? AssetLoadState::Ready : AssetLoadState::Failed;
         entry._pClip                  = std::move( pClip );
     }
 } // namespace sw

@@ -19,6 +19,7 @@
 | `textures_raw/pixel/puny_world/*.png` | Shade "16x16 Puny World Tileset" (<https://opengameart.org/content/16x16-puny-world-tileset>) — `punyworld-overworld-tileset.png` 를 `puny_world.png` 로(바이트는 그대로) | CC0 1.0 |
 | `textures_raw/pixel/puny_characters/*.png` | Shade "Puny Characters" (<https://opengameart.org/content/puny-characters>) — `puny-characters.zip` 의 `Character-Base` · `Warrior-Blue` · `Soldier-Red` · `Mage-Cyan` · `Archer-Green` · `Slime` 을 소문자 `_` 이름으로(바이트는 그대로, 나머지 색 바꿈 · 오크 묶음은 넣지 않음) | CC0 1.0 |
 | `textures/missing.dds` | `Scripts/generate/GenerateSpriteTextures.py` 가 만든 누락 표시 체커(마젠타 · 검정) | 이 저장소 |
+| `textures/loading.dds` | `Scripts/generate/GenerateSpriteTextures.py` 가 만든 로드 중 표시(고른 중간 회색) | 이 저장소 |
 | `textures/test/quadrants.dds` | `Scripts/generate/GenerateSpriteTextures.py` 가 만든 네 칸 테스트 텍스처 | 이 저장소 |
 | `textures/test/checker.dds` · `textures/test/pixelstripes.dds` | 이 저장소에서 만든 테스트 패턴(체커 · 줄무늬 — 커밋 `6361d2d54` · `bb857b284`) | 이 저장소 |
 

@@ -181,6 +181,17 @@ namespace sw
             setShareCrowdPose( _bShareCrowdPose == SW_TRUE );
     }
 
+    bool SkeletalMeshComponent::pollReadyToAppear()
+    {
+        // 모든 작업에 묻는다(하나가 거짓이어도 나머지가 마무리할 기회를 갖게 끝까지 돈다).
+        bool bReady = true;
+        for ( IAnimationPhaseTask* pTask : _listTask )
+        {
+            bReady = pTask->pollAnimationAssetsReady() && bReady;
+        }
+        return bReady;
+    }
+
     void SkeletalMeshComponent::resolveRenderAssets()
     {
         MeshComponent::resolveRenderAssets();

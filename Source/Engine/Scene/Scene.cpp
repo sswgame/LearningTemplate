@@ -114,8 +114,8 @@ namespace sw
                 if ( cachedIt != inoutMapBaseState.end() )
                     return cachedIt->second.empty() ? nullptr : &cachedIt->second;
 
-                string             baseState;
-                const PrefabAsset* pPrefab = assetManager.getAssetCache<PrefabCache>().loadPrefab( prefabPath );
+                string                              baseState;
+                const shared_ptr<const PrefabAsset> pPrefab = assetManager.getAssetCache<PrefabCache>().loadPrefab( prefabPath );
                 if ( pPrefab != nullptr && PrefabOverrides::makeBaseState( *pPrefab, baseState ) == false )
                 {
                     SW_LOG_WARNING( "Prefab '%#' could not be built as a base state", prefabPath );
@@ -175,8 +175,8 @@ namespace sw
                 vector<PrefabPartOverride> listPartOverride;
                 for ( const auto& [objectID, prefabPath] : mapInstancePrefab )
                 {
-                    const GameObject*  pInstance = objects.findGameObjectByID( objectID );
-                    const PrefabAsset* pPrefab   = pInstance != nullptr ? prefabs.loadPrefab( prefabPath ) : nullptr;
+                    const GameObject*                   pInstance = objects.findGameObjectByID( objectID );
+                    const shared_ptr<const PrefabAsset> pPrefab   = pInstance != nullptr ? prefabs.loadPrefab( prefabPath ) : nullptr;
                     if ( pPrefab == nullptr )
                         continue;
                     if ( prefabs.collectPartOverrides( *pInstance, *pPrefab, listPartOverride ) == false )
@@ -408,7 +408,7 @@ namespace sw
             vector<PrefabPartOverride> listPartOverride;
             for ( const SceneInternal::PrefabEntity& prefabEntity : listPrefabEntity )
             {
-                const PrefabAsset* pPrefab = prefabs.loadPrefab( *prefabEntity._pPrefabPath );
+                const shared_ptr<const PrefabAsset> pPrefab = prefabs.loadPrefab( *prefabEntity._pPrefabPath );
                 if ( pPrefab == nullptr )
                     continue;
                 if ( PrefabOverrides::collectPartOverrides( *prefabEntity._pOverrideXML, listPartOverride ) == false )

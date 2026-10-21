@@ -17,6 +17,7 @@
 #include "Engine/Automation/AutomationStepRegistry.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Environment/Terrain/TerrainComponent.h"
+#include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Input/RawInputEvent.h"
@@ -25,8 +26,10 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Profiling/ProfilerTraceExport.h"
 #include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Resource/AssetManager.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Window/IWindow.h"
@@ -44,6 +47,16 @@ namespace sw
         {
             /** @brief `<ExpectImage>` 가 스크린샷을 기다리는 최대 프레임입니다. 렌더 큐 깊이보다 넉넉하게 잡습니다. */
             static constexpr uint32 kMaxImageWaitFrames = 30;
+            /**
+             * @brief 스크린샷이 에셋 일(읽는 중 · 나타나는 중인 메시, 올리기를 기다리는 텍스처)을 기다리는 최대 프레임 수입니다. 넘기면 실패로 적고 그대로 찍는다.
+             * @details 고정 프레임 시간(60 Hz)에서 10 초다 — 첫 프레임에 큰 씬의 텍스처 수백 장이 워커에 줄을 서도 넉넉하다.
+             */
+            static constexpr uint32 kMaxAssetSettleFrames = 600;
+            /**
+             * @brief 에셋 일이 0 이 된 뒤 스크린샷 전에 더 기다리는 프레임 수입니다. 올린 텍스처의 새 SRV 는 다음 씬 빌드가 머티리얼에 넣고(`Material::refreshTextureBindings`),
+             *        그 스냅샷이 렌더 큐(깊이 2)를 지나야 화면에 나온다.
+             */
+            static constexpr uint32 kAssetSettleTrailFrames = 3;
             /** @brief `darkFraction` 의 기본 임계값(영역 중앙값에 곱한다)입니다. */
             static constexpr float32 kDefaultDarkRatio = 0.7f;
             /** @brief `CloseWindow` 의 기본 종료 시한(초)입니다. */
@@ -684,6 +697,27 @@ namespace sw
                 return true;
             }
 
+            /**
+             * @brief 씬이 기다리는 에셋 일의 수입니다 — 읽는 중이거나 애니메이션을 기다리거나 디더로 나타나는 중인 메시(씬 프레임 도착 단계의 대기), 읽거나 올리는 중인 텍스처.
+             * @details 스크린샷(`holdScreenshot`)과 탐침 `Assets.Pending` 이 같은 셈을 쓴다 — 첫 프레임을 찍는 시나리오가 로드 중 회색 · 빈 메시를 찍지 않게.
+             */
+            [[nodiscard]] static uint32 countPendingAssetWork( const GameObjectManager* pManager )
+            {
+                uint32 count = 0;
+                if ( pManager != nullptr )
+                    count += static_cast<uint32>( pManager->getPrimitiveRegistry().countAssetWaiters() );
+                if ( engine::areEngineServicesBound() )
+                    count += engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().countLoadsInFlight();
+                return count;
+            }
+
+            /** @brief 탐침 `Assets.Pending` 입니다. 씬이 기다리는 에셋 일의 수입니다(`countPendingAssetWork`). 0 이면 화면이 다 읽힌 상태입니다. */
+            [[nodiscard]] static bool readAssetsPending( const GameObjectManager* pManager, float64& outValue )
+            {
+                outValue = static_cast<float64>( countPendingAssetWork( pManager ) );
+                return true;
+            }
+
             /** @brief 질의 탐침의 대상 오브젝트 월드 위치입니다. 대상이 없으면 이유를 적고 false 입니다. */
             [[nodiscard]] static bool readTargetPosition( const AutomationProbeQuery& query, float3& outPosition, AutomationProbeValue& outValue )
             {
@@ -842,6 +876,8 @@ namespace sw
                          &AutomationRunnerInternal::readTerrainWrittenEditCount );
     SW_AUTOMATION_PROBE( sceneTransitioning, "Scene.Transitioning", "1 while an asynchronous scene load or transition is in flight",
                          &AutomationRunnerInternal::readSceneTransitioning );
+    SW_AUTOMATION_PROBE( assetsPending, "Assets.Pending", "Meshes still loading, waiting for animation or dithering in, plus textures still loading or uploading (0 = settled)",
+                         &AutomationRunnerInternal::readAssetsPending );
     SW_AUTOMATION_PROBE( sceneTransformHash, "Scene.TransformHash", "Order-independent hash of every object's name and world position (1 mm) - equal across backends",
                          &AutomationRunnerInternal::readSceneTransformHash );
     SW_AUTOMATION_QUERY_PROBE( objectX, "Object.X", "World X of the target object (m)", &AutomationRunnerInternal::readObjectX, true, false );
@@ -1089,6 +1125,27 @@ namespace sw
             return runner.shouldHoldForCondition( step, input ) ? AutomationStepHold::Hold : AutomationStepHold::Run;
         }
 
+        /**
+         * @brief 씬의 에셋 일이 끝나고(`countPendingAssetWork` 가 0) 몇 프레임이 더 지날 때까지 스크린샷을 미룹니다. 상한을 넘기면 실패로 적고 그대로 찍는다.
+         * @details 메시 · 텍스처는 워커가 읽는다 — 첫 프레임을 찍으면 빈 메시와 로드 중 회색이 찍힌다. 시나리오마다 기다림을 적지 않고 찍는 단계가 기다린다.
+         */
+        static AutomationStepHold holdScreenshot( AutomationRunner& runner, const AutomationStep& step, InputManager& input )
+        {
+            (void)input;
+            const bool bSettled            = AutomationRunnerInternal::countPendingAssetWork( runner.findActiveObjectManager() ) == 0;
+            runner._assetSettledFrameCount = bSettled ? runner._assetSettledFrameCount + 1 : 0;
+            if ( runner._assetSettledFrameCount > AutomationRunnerInternal::kAssetSettleTrailFrames )
+            {
+                runner._assetSettledFrameCount = 0;
+                return AutomationStepHold::Run;
+            }
+            if ( ++runner._imageWaitFrameCount <= AutomationRunnerInternal::kMaxAssetSettleFrames )
+                return AutomationStepHold::Hold;
+            runner.recordFailure( step, "assets were still loading when the screenshot was due (Assets.Pending never reached 0)" );
+            runner._assetSettledFrameCount = 0;
+            return AutomationStepHold::Run;
+        }
+
         /** @brief 요청한 스크린샷이 다 써질 때까지 기다립니다. 상한을 넘기면 실패로 적고 측정하지 않고 넘깁니다. */
         static AutomationStepHold holdExpectImage( AutomationRunner& runner, const AutomationStep& step, InputManager& input )
         {
@@ -1127,7 +1184,8 @@ namespace sw
     SW_AUTOMATION_STEP( runnerRecord, "Record", &AutomationRunnerEngineSteps::runRecord, &AutomationRunnerInternal::validateRecord, false );
     SW_AUTOMATION_STEP( runnerRemember, "Remember", &AutomationRunnerEngineSteps::runRemember, &AutomationRunnerInternal::validateRemember, false );
     SW_AUTOMATION_STEP( runnerExpectLog, "ExpectLog", &AutomationRunnerEngineSteps::runExpectLog, &AutomationRunnerInternal::validateExpectLog, false );
-    SW_AUTOMATION_STEP( runnerScreenshot, "Screenshot", &AutomationRunnerEngineSteps::runScreenshot, &AutomationRunnerInternal::validateScreenshot, false );
+    SW_AUTOMATION_STEP_WITH_HOOKS( runnerScreenshot, "Screenshot", &AutomationRunnerEngineSteps::runScreenshot, &AutomationRunnerInternal::validateScreenshot, nullptr,
+                                   &AutomationRunnerEngineSteps::holdScreenshot, false );
     SW_AUTOMATION_STEP_WITH_HOOKS( runnerExpectImage, "ExpectImage", &AutomationRunnerEngineSteps::runExpectImage, &AutomationRunnerInternal::validateExpectImage, nullptr,
                                    &AutomationRunnerEngineSteps::holdExpectImage, false );
     SW_AUTOMATION_STEP( runnerCloseWindow, "CloseWindow", &AutomationRunnerEngineSteps::runCloseWindow, &AutomationRunnerInternal::validateCloseWindow, false );
@@ -1162,6 +1220,7 @@ namespace sw
         , _screenshotRequestedCount{ 0 }
         , _screenshotCompletedCount{ 0 }
         , _imageWaitFrameCount{ 0 }
+        , _assetSettledFrameCount{ 0 }
         , _holdFrameCount{ 0 }
         , _clockHoldFrameCount{ 0 }
         , _clockHoldStartSeconds{ 0.0 }
