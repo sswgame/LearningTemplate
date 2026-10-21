@@ -35,6 +35,7 @@
 #include "Engine/Scene/SceneCooker.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Scene/SceneObjectReference.h"
 
 #include "EngineTest/TestGameObjectMocks.h"
 
@@ -319,6 +320,54 @@ SW_TEST_CASE( SceneTest, MultipleScenesKeepFirstActive )
     SW_EXPECT_EQUAL( first, manager.getActiveScene() );
     SW_EXPECT_EQUAL( size_t( 2 ), manager.getLoadedScenes().size() );
     SW_EXPECT_STREQ( "Level_B", second->getName() );
+
+    manager.shutdown();
+}
+
+/**
+ * @brief [SceneTest] 파일을 넘는 참조 — 다른 씬의 오브젝트를 (씬 경로, 파일 id) 로 가리키고, 그 씬이 올라와 있을 때만 해석된다. 지운 오브젝트의 id 는 다시 주지 않는다
+ */
+SW_TEST_CASE( SceneTest, CrossSceneReferenceResolvesThroughFileID )
+{
+    sw::SceneManager manager;
+    SW_ASSERT_TRUE( manager.initialize() );
+
+    sw::Scene* pSublevel = manager.createScene( "Sublevel" );
+    sw::Scene* pMain     = manager.createScene( "Main" );
+    SW_ASSERT_NOT_NULL( pSublevel );
+    SW_ASSERT_NOT_NULL( pMain );
+    pSublevel->setSourcePath( "game/test/maps/sublevel.scene.xml" );
+    sw::GameObject* pDoor = pSublevel->getObjectManager()->createGameObject( sw::hashed_string( "Door" ) );
+    SW_ASSERT_NOT_NULL( pDoor );
+
+    sw::SceneObjectReference reference;
+    SW_ASSERT_TRUE( sw::SceneObjectReferenceUtil::makeReference( *pSublevel, pDoor->getObjectID(), reference ) );
+    SW_EXPECT_TRUE( reference.isSet() );
+    sw::SceneObjectReference unsavedScene;
+    SW_EXPECT_FALSE( sw::SceneObjectReferenceUtil::makeReference( *pMain, pDoor->getObjectID(), unsavedScene ) ); // 경로 없는 씬은 가리킬 수 없다
+
+    uint64 objectID = 0;
+    SW_EXPECT_TRUE( sw::SceneObjectReferenceUtil::resolve( manager, reference, objectID ) == sw::SceneObjectResolveResult::Resolved );
+    SW_EXPECT_EQUAL( pDoor->getObjectID(), objectID );
+
+    // 경로 표기(대소문자 · 구분자)가 달라도 같은 파일이다.
+    sw::SceneObjectReference spelled = reference;
+    spelled._scenePath               = "Game\\Test\\Maps\\Sublevel.scene.xml";
+    SW_EXPECT_TRUE( sw::SceneObjectReferenceUtil::resolve( manager, spelled, objectID ) == sw::SceneObjectResolveResult::Resolved );
+
+    sw::SceneObjectReference otherScene = reference;
+    otherScene._scenePath               = "game/test/maps/missing.scene.xml";
+    SW_EXPECT_TRUE( sw::SceneObjectReferenceUtil::resolve( manager, otherScene, objectID ) == sw::SceneObjectResolveResult::SceneNotLoaded );
+    SW_EXPECT_TRUE( sw::SceneObjectReferenceUtil::resolve( manager, sw::SceneObjectReference{}, objectID ) == sw::SceneObjectResolveResult::Unset );
+
+    // 대상을 지우면 ObjectMissing 이고, 새 오브젝트는 그 파일 id 를 받지 않는다(남은 참조가 새 오브젝트에 붙지 않는다).
+    const uint64 doorFileID = reference._fileID;
+    pSublevel->getObjectManager()->destroyObject( pDoor );
+    pSublevel->getObjectManager()->processDeferredDestruction();
+    SW_EXPECT_TRUE( sw::SceneObjectReferenceUtil::resolve( manager, reference, objectID ) == sw::SceneObjectResolveResult::ObjectMissing );
+    sw::GameObject* pWindow = pSublevel->getObjectManager()->createGameObject( sw::hashed_string( "Window" ) );
+    SW_ASSERT_NOT_NULL( pWindow );
+    SW_EXPECT_TRUE( pSublevel->getOrAssignFileID( pWindow->getObjectID() ) > doorFileID );
 
     manager.shutdown();
 }

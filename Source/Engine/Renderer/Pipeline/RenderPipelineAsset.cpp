@@ -157,6 +157,19 @@ namespace sw
                               sourcePath, pass._name, pass._type );
                 ++issueCount;
             }
+            // 모듈 패스는 이름(등록 키)과 셰이더가 필수다 — 기본 셰이더가 없고, 이름 없이는 상수를 받을 곳이 없다. 다른 타입의 `_modulePass` 는 읽히지 않으므로 오류다.
+            pass._resolvedModulePass = pass._modulePass.empty() ? hashed_string{} : hashed_string( pass._modulePass.c_str() );
+            const bool bModulePass   = pass._resolvedType == RenderPassType::Module;
+            if ( bModulePass && ( pass._modulePass.empty() || pass._shaderPath.empty() ) )
+            {
+                SW_LOG_ERROR( "[%#] pass '%#': Module 패스는 _modulePass 와 _shaderPath 가 필요합니다", sourcePath, pass._name );
+                ++issueCount;
+            }
+            if ( bModulePass == false && pass._modulePass.empty() == false )
+            {
+                SW_LOG_ERROR( "[%#] pass '%#': _modulePass 는 Module 타입 패스에만 씁니다(타입 '%#')", sourcePath, pass._name, pass._type );
+                ++issueCount;
+            }
 
             for ( const string& inputName : pass._listInput )
             {
@@ -209,6 +222,24 @@ namespace sw
                                   "있습니다 — 이대로면 뎁스 없이 그립니다",
                                   sourcePath, pass._name, outputName );
                     ++issueCount;
+                }
+            }
+        }
+
+        // 모듈 패스 이름은 PSO 와 상수의 키다. 한 파이프라인에 두 번 나오면 두 패스가 한 PSO(먼저 만든 셰이더)를 나눠 쓰게 된다.
+        for ( size_t passIndex = 0; passIndex < _desc._listPass.size(); ++passIndex )
+        {
+            const RenderGraphPassDesc& pass = _desc._listPass[passIndex];
+            if ( pass._modulePass.empty() )
+                continue;
+            for ( size_t earlierIndex = 0; earlierIndex < passIndex; ++earlierIndex )
+            {
+                if ( _desc._listPass[earlierIndex]._modulePass == pass._modulePass )
+                {
+                    SW_LOG_ERROR( "[%#] pass '%#': 모듈 패스 '%#' 가 이미 앞 패스에 있습니다 — 모듈 패스 이름은 파이프라인에서 하나뿐이어야 합니다", sourcePath, pass._name,
+                                  pass._modulePass );
+                    ++issueCount;
+                    break;
                 }
             }
         }

@@ -534,19 +534,7 @@ namespace sw
         if ( _objectManager == nullptr )
             return;
 
-        // 새 id 는 이 씬이 지금껏 쓴 어느 파일 id 보다 크다. 사라진 오브젝트나 해석하지 못한 엔티티의 id 를 다시 주면 그것을 가리키던 참조가
-        // 새 오브젝트에 붙는다.
-        uint64 nextFileID = 1;
-        for ( const auto& [objectID, fileID] : _mapObjectIDToFileID )
-        {
-            (void)objectID;
-            nextFileID = MathUtil::max( nextFileID, fileID + 1 );
-        }
-        for ( const SceneDocument::SceneObjectNode& unresolved : _listUnresolvedEntity )
-        {
-            nextFileID = MathUtil::max( nextFileID, unresolved._fileID + 1 );
-        }
-
+        uint64              nextFileID = computeNextFileID();
         vector<GameObject*> listObject;
         _objectManager->getAllGameObjects( listObject );
         outMap.reserve( listObject.size() );
@@ -564,6 +552,47 @@ namespace sw
             outMap.emplace( pGo->getObjectID(), nextFileID );
             ++nextFileID;
         }
+    }
+
+    uint64 Scene::getOrAssignFileID( uint64 objectID ) const
+    {
+        if ( _objectManager == nullptr || _objectManager->resolveGameObject( GameObjectHandle::make( objectID ) ) == nullptr )
+            return 0;
+        const auto mapIt = _mapObjectIDToFileID.find( objectID );
+        if ( mapIt != _mapObjectIDToFileID.end() )
+            return mapIt->second;
+        const uint64 nextFileID = computeNextFileID();
+        _mapObjectIDToFileID.emplace( objectID, nextFileID );
+        return nextFileID;
+    }
+
+    uint64 Scene::computeNextFileID() const
+    {
+        // 새 id 는 이 씬이 지금껏 쓴 어느 파일 id 보다 크다. 사라진 오브젝트나 해석하지 못한 엔티티의 id 를 다시 주면 그것을 가리키던 참조가
+        // (파일을 넘는 참조 `SceneObjectReference` 를 포함해) 새 오브젝트에 붙는다.
+        uint64 nextFileID = 1;
+        for ( const auto& [objectID, fileID] : _mapObjectIDToFileID )
+        {
+            (void)objectID;
+            nextFileID = MathUtil::max( nextFileID, fileID + 1 );
+        }
+        for ( const SceneDocument::SceneObjectNode& unresolved : _listUnresolvedEntity )
+        {
+            nextFileID = MathUtil::max( nextFileID, unresolved._fileID + 1 );
+        }
+        return nextFileID;
+    }
+
+    uint64 Scene::findObjectIDByFileID( uint64 fileID ) const
+    {
+        if ( fileID == 0 || _objectManager == nullptr )
+            return 0;
+        for ( const auto& [objectID, knownFileID] : _mapObjectIDToFileID )
+        {
+            if ( knownFileID == fileID && _objectManager->resolveGameObject( GameObjectHandle::make( objectID ) ) != nullptr )
+                return objectID;
+        }
+        return 0;
     }
 
     /**

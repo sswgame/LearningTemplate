@@ -63,6 +63,13 @@ namespace sw
          *        G버퍼 패스는 그 배치를 빼므로 조명 패스 뒤에 두고 같은 장면 깊이를 테스트 · 쓰기 합니다(유니티 URP 디퍼드의 `UniversalForwardOnly` 패스와 같은 자리).
          */
         ForwardOnlyOpaque,
+        /**
+         * @brief 모듈(게임 · 키트)이 이름으로 등록한 풀스크린 패스입니다. 셰이더는 패스의 `_shaderPath`(필수), 이름은 `_modulePass`(필수)입니다.
+         * @details 모듈은 **데이터만** 넘깁니다 — 패스 상수 이름 · 값(`ModuleRenderPassRegistry`). 커맨드 리스트 · 트랜지언트 풀 · `FramePassContext` 는 모듈 경계를
+         *          넘지 않고, 렌더 스레드에서 모듈 코드가 돌지 않습니다. 그래서 핫 리로드로 모듈 DLL 이 내려가도 렌더 스레드가 그 코드를 부를 수 없습니다.
+         *          입력은 선언한 첨부를 역할로 바인딩하고 첫 출력에 그립니다(일반 풀스크린 패스와 같은 실행). 등록되지 않은 이름이면 오류를 한 번 남기고 그리지 않습니다.
+         */
+        Module,
 
         // --- 엔진 내부 PSO 슬롯. 파이프라인 XML 에는 나올 수 없다(검증이 거부한다). ---
         ForwardOpaqueNoDepthWrite,
@@ -88,7 +95,7 @@ namespace sw
     /** @brief 파이프라인 XML 의 `_type` 으로 쓸 수 있는 값인지 확인합니다(내부 슬롯과 Invalid 는 제외합니다). */
     constexpr bool isPipelinePassType( RenderPassType type )
     {
-        return type != RenderPassType::Invalid && static_cast<uint32>( type ) <= static_cast<uint32>( RenderPassType::ForwardOnlyOpaque );
+        return type != RenderPassType::Invalid && static_cast<uint32>( type ) <= static_cast<uint32>( RenderPassType::Module );
     }
 
     /// @brief 렌더 패스 어태치먼트 하나(이름, 포맷, 클리어 색, 클리어 여부)입니다.
@@ -209,6 +216,15 @@ namespace sw
          *          박으면 다른 이름을 쓰는 파이프라인에서 없는 첨부를 열고, 없는 첨부의 핸들 0은 백버퍼라 화면에 그린다.
          */
         vector<ResolvedAttachment> _listResolvedColorOutput;
+
+        /**
+         * @brief `_type="Module"` 패스가 가리키는 모듈 패스 이름입니다(`ModuleRenderPassRegistry` 의 키). 그 타입에서는 필수이고 다른 타입에 적으면 검증 오류입니다.
+         */
+        PROPERTY( SkipIfEmpty )
+        string _modulePass;
+
+        /** @brief `_modulePass` 를 intern 해 둔 값입니다. XML 로드 시 RenderPipelineAsset 가 채웁니다(직렬화하지 않음). PSO 와 상수의 키입니다. */
+        hashed_string _resolvedModulePass;
 
         /** @brief HLSL 경로(engine/... 또는 common/...)입니다. 비면 FrameRenderer 가 패스 타입의 기본 셰이더를 씁니다. */
         PROPERTY( SkipIfEmpty )

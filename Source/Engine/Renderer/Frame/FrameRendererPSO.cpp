@@ -87,13 +87,31 @@ namespace sw
 
     RHIPipelineStateHandle FrameRenderer::createPSOForPassType( RenderPassType passType, const RHIFormat* pRtvFormatOverride )
     {
+        return createPSOForPass( passType, findPassDescByType( passType ), pRtvFormatOverride );
+    }
+
+    void FrameRenderer::createModulePassPSOs()
+    {
+        // 모듈 패스는 셰이더가 패스마다 다르다(`_shaderPath` 필수). 종류 하나에 PSO 하나인 엔진 PSO 표에 둘 수 없어 모듈 이름으로 둔다.
+        // 실패(0)도 기록한다 — 기록 중에는 만들 수 없고, 실행이 "등록됐는데 0" 을 보고 오류를 한 번 남긴다.
+        for ( const RenderGraphPassDesc& pass : _pipelineResource.getDesc()._listPass )
+        {
+            RHIPipelineStateHandle existing{ 0 };
+            const bool             bNeedsPSO = pass._resolvedType == RenderPassType::Module && pass._resolvedModulePass.empty() == false &&
+                                   _pPSOCache->findModulePassPSO( pass._resolvedModulePass, existing ) == false;
+            if ( bNeedsPSO )
+                _pPSOCache->setModulePassPSO( pass._resolvedModulePass, createPSOForPass( RenderPassType::Module, &pass, nullptr ) );
+        }
+    }
+
+    RHIPipelineStateHandle FrameRenderer::createPSOForPass( RenderPassType passType, const RenderGraphPassDesc* pPassDesc, const RHIFormat* pRtvFormatOverride )
+    {
         if ( _pDevice == nullptr )
             return 0;
 
         // 셰이더, define, 기본 렌더 상태는 패스 종류 테이블(RenderPassTypeInfo)이 정하고, 파이프라인 XML 의 패스 서술이 그 위를 조정한다.
         // 셰이더와 define 은 쿠커와 **같은 함수**(selectRenderPassShader)로 정한다. 어긋나면 Shipping 에서 매니페스트 미스가 난다.
         const RenderPassTypeInfo&       info               = getRenderPassTypeInfo( passType );
-        const RenderGraphPassDesc*      pPassDesc          = findPassDescByType( passType );
         const RenderPassShaderSelection shader             = selectRenderPassShader( passType, pPassDesc, engine::getSubsystem<EngineDefaultAssets>() );
         const bool                      bDepthTest         = info.hasFlag( RenderPassTraitFlag::kDepthTest );
         const bool                      bDefaultDepthWrite = info.hasFlag( RenderPassTraitFlag::kDepthWrite );

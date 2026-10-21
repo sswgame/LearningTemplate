@@ -76,6 +76,8 @@ namespace sw
 
         // 출력 패스(Present · Canvas)의 포맷별 변종도 PSO 등록 단계에서 만든다. 기록 중에는 PSO 를 만들 수 없다(findOutputPSO 주석 참고).
         createOutputPSOVariants();
+        // 모듈 패스는 패스마다 셰이더가 달라 모듈 이름별로 만든다(기록 중에는 만들 수 없다).
+        createModulePassPSOs();
 
         // 폴백 원소는 PSO 를 모두 등록한 뒤에 만든다. 필요한 stride 를 레이아웃에서 읽어야 하고, 기록 중에는 만들 수 없다.
         ensureMaterialFallbackBuffers();

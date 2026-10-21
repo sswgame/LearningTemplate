@@ -193,6 +193,14 @@ namespace sw
                         info._flags                   = Flag::kDepthTest | Flag::kDepthWrite | kSceneColorPassFlags;
                         break;
                     }
+                    case RenderPassType::Module:
+                    {
+                        // 모듈이 등록한 풀스크린 패스 — 기본 셰이더가 없다(패스의 `_shaderPath` 가 필수, 검증). PSO 는 패스 이름마다 만든다(createModulePassPSOs).
+                        // 입력은 모두 선택이다. 무엇을 읽는지는 모듈의 셰이더가 정하고, 계약은 역할 이름(`g_<Role>Index`)까지만 맡는다.
+                        info._inputContract = makeContract( {}, { Role::SourceColor, Role::SceneDepth, Role::GBufferNormal, Role::AmbientOcclusion } );
+                        info._flags         = Flag::kGenericFullscreen | Flag::kHasInputContract;
+                        break;
+                    }
                     case RenderPassType::ForwardOpaqueNoDepthWrite:
                     {
                         // 깊이 프리패스가 돈 프레임의 불투명 패스다. 깊이는 테스트만 한다.

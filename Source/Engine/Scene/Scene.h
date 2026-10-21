@@ -72,6 +72,13 @@ namespace sw
          * @details 파일 id 는 한 번 정하면 그 오브젝트가 사라져도 다시 쓰지 않습니다 — 남은 참조가 새 오브젝트를 가리키지 않게. 쿠커 · 저장이 씁니다.
          */
         void collectSavedIDMap( ObjectSavedIDMap& outMap ) const;
+        /**
+         * @brief 오브젝트의 파일 id 를 반환합니다. 아직 없으면(새로 만든 오브젝트) 지금 줍니다 — `collectSavedIDMap` 과 같은 규칙(이 씬이 쓴 어느 id 보다 크다)입니다.
+         * @details 파일을 넘는 참조(`SceneObjectReference`)가 대상을 적을 때 씁니다. 없는 오브젝트면 0 입니다. 다음 저장이 그 id 를 그대로 씁니다.
+         */
+        [[nodiscard]] uint64 getOrAssignFileID( uint64 objectID ) const;
+        /** @brief 파일 id 의 살아 있는 오브젝트 id 입니다. 이 씬에 없으면(지운 오브젝트 · 내려간 스트리밍 셀) 0 입니다. */
+        [[nodiscard]] uint64 findObjectIDByFileID( uint64 fileID ) const;
 
         /**
          * @brief 활성 씬의 GameObject 를 병렬로 틱합니다.
@@ -147,6 +154,8 @@ namespace sw
     private:
         /** @brief 기본 머티리얼 참조를 해제합니다. */
         void releaseDefaultMaterial();
+        /** @brief 새 오브젝트에 줄 파일 id 입니다 — 이 씬이 쓴 어느 파일 id(해석하지 못한 엔티티 포함)보다 큽니다. */
+        uint64 computeNextFileID() const;
         /**
          * @brief 엔티티 목록을 한 배치로 지어 이 씬에 더합니다(`instantiate` · `instantiateCell` 의 본문).
          * @param bStreamingCell 스트리밍 셀을 짓는다. 지금 씬에 있는 파일 id 의 오브젝트를 배치에 먼저 기록해 엔티티가 그것을 파일 id 로 가리킬 수 있게 하고,
