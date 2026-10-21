@@ -3,6 +3,7 @@
 #include "Engine/Automation/AutomationLogPolicy.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -70,11 +71,7 @@ namespace sw
 
     bool AutomationLogPolicy::isAllowed( string_view text ) const
     {
-        for ( const AutomationAllowedLog& allowed : _listAllowed )
-        {
-            if ( text.find( string_view( allowed._contains ) ) != string_view::npos )
-                return true;
-        }
-        return false;
+        return VectorUtil::containsIf( _listAllowed, [&]( const AutomationAllowedLog& allowed )
+        { return text.find( string_view( allowed._contains ) ) != string_view::npos; } );
     }
 } // namespace sw

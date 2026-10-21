@@ -243,12 +243,8 @@ namespace sw
 
     const HTTPHeader* HTTPUtil::findHeader( const vector<HTTPHeader>& listHeader, string_view name )
     {
-        for ( const HTTPHeader& header : listHeader )
-        {
-            if ( isEqualIgnoreCase( header._name, name ) )
-                return &header;
-        }
-        return nullptr;
+        return VectorUtil::findIf( listHeader, [&]( const HTTPHeader& header )
+        { return isEqualIgnoreCase( header._name, name ); } );
     }
 
     bool HTTPUtil::isEqualIgnoreCase( string_view left, string_view right )

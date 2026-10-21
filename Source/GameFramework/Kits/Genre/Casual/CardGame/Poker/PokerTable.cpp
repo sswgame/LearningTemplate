@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Casual/CardGame/Poker/PokerTable.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -42,7 +43,7 @@ namespace sw
         vector<int32> listLevel;
         for ( const int32 contribution : listContribution )
         {
-            if ( contribution > 0 && std::find( listLevel.begin(), listLevel.end(), contribution ) == listLevel.end() )
+            if ( contribution > 0 && VectorUtil::contains( listLevel, contribution ) == false )
                 listLevel.push_back( contribution );
         }
         std::sort( listLevel.begin(), listLevel.end() );
@@ -93,7 +94,7 @@ namespace sw
             for ( int32 offset = 0; offset < seatCount; ++offset )
             {
                 const int32 seat      = ( firstSeat + offset ) % seatCount;
-                const bool  bEligible = std::find( pot._listEligibleSeat.begin(), pot._listEligibleSeat.end(), seat ) != pot._listEligibleSeat.end();
+                const bool  bEligible = VectorUtil::contains( pot._listEligibleSeat, seat );
                 if ( bEligible && listScore[static_cast<size_t>( seat )] == bestScore )
                     listWinner.push_back( seat );
             }

@@ -206,7 +206,7 @@ namespace sw
             hashed_string abilityID;
             if ( StateArchiveUtil::readName( archive, abilityID ) == false )
                 return false;
-            const bool bDuplicate = std::find( listAbility.begin(), listAbility.end(), abilityID ) != listAbility.end();
+            const bool bDuplicate = VectorUtil::contains( listAbility, abilityID );
             if ( _pCatalog->findAbility( abilityID ) == nullptr || bDuplicate )
                 return false;
             listAbility.push_back( abilityID );

@@ -123,7 +123,7 @@ namespace sw
 
         // 한 번 휘두를 때 유닛마다 한 번만 맞는다. 판정을 나갔다 다시 들어와도 다시 맞지 않는다.
         const GameObjectHandle target = pTarget->getHandle();
-        if ( std::find( _listHitTarget.begin(), _listHitTarget.end(), target ) != _listHitTarget.end() )
+        if ( VectorUtil::contains( _listHitTarget, target ) )
             return;
         _listHitTarget.push_back( target );
         pStats->takeDamage( _damage, ( pAttacker != nullptr ) ? pAttacker->getHandle() : GameObjectHandle{} );

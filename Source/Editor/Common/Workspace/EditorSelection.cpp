@@ -46,16 +46,12 @@ namespace sw::editor
             }
             case SelectionMode::Remove:
             {
-                auto it = std::find( _listSelectedObject.begin(), _listSelectedObject.end(), handle );
-                if ( it != _listSelectedObject.end() )
-                    _listSelectedObject.erase( it );
+                VectorUtil::removeFirst( _listSelectedObject, handle );
                 break;
             }
             case SelectionMode::Toggle:
             {
-                auto it = std::find( _listSelectedObject.begin(), _listSelectedObject.end(), handle );
-                if ( it != _listSelectedObject.end() )
-                    _listSelectedObject.erase( it );
+                VectorUtil::removeFirst( _listSelectedObject, handle );
                 else if ( handle.isValid() )
                     _listSelectedObject.push_back( handle );
                 break;
@@ -80,17 +76,12 @@ namespace sw::editor
             const GameObjectHandle handle = pObj->getHandle();
             if ( mode == SelectionMode::Remove )
             {
-                auto it = std::find( _listSelectedObject.begin(), _listSelectedObject.end(), handle );
-                if ( it != _listSelectedObject.end() )
-                    _listSelectedObject.erase( it );
+                VectorUtil::removeFirst( _listSelectedObject, handle );
             }
             else if ( mode == SelectionMode::Toggle )
             {
-                auto it = std::find( _listSelectedObject.begin(), _listSelectedObject.end(), handle );
-                if ( it != _listSelectedObject.end() )
-                    _listSelectedObject.erase( it );
-                else
-                    _listSelectedObject.push_back( handle );
+                VectorUtil::removeFirst( _listSelectedObject, handle );
+                else _listSelectedObject.push_back( handle );
             }
             else if ( hasObject( pObj ) == false )
             {
@@ -105,7 +96,7 @@ namespace sw::editor
     {
         if ( pObj == nullptr )
             return false;
-        return std::find( _listSelectedObject.begin(), _listSelectedObject.end(), pObj->getHandle() ) != _listSelectedObject.end();
+        return VectorUtil::contains( _listSelectedObject, pObj->getHandle() );
     }
 
     GameObject* EditorSelection::getPrimaryObject() const
@@ -154,16 +145,12 @@ namespace sw::editor
             }
             case SelectionMode::Remove:
             {
-                auto it = std::find( _listSelectedAsset.begin(), _listSelectedAsset.end(), assetPath );
-                if ( it != _listSelectedAsset.end() )
-                    _listSelectedAsset.erase( it );
+                VectorUtil::removeFirst( _listSelectedAsset, assetPath );
                 break;
             }
             case SelectionMode::Toggle:
             {
-                auto it = std::find( _listSelectedAsset.begin(), _listSelectedAsset.end(), assetPath );
-                if ( it != _listSelectedAsset.end() )
-                    _listSelectedAsset.erase( it );
+                VectorUtil::removeFirst( _listSelectedAsset, assetPath );
                 else if ( assetPath.empty() == false )
                     _listSelectedAsset.emplace_back( assetPath );
                 break;
@@ -185,17 +172,12 @@ namespace sw::editor
 
             if ( mode == SelectionMode::Remove )
             {
-                auto it = std::find( _listSelectedAsset.begin(), _listSelectedAsset.end(), path );
-                if ( it != _listSelectedAsset.end() )
-                    _listSelectedAsset.erase( it );
+                VectorUtil::removeFirst( _listSelectedAsset, path );
             }
             else if ( mode == SelectionMode::Toggle )
             {
-                auto it = std::find( _listSelectedAsset.begin(), _listSelectedAsset.end(), path );
-                if ( it != _listSelectedAsset.end() )
-                    _listSelectedAsset.erase( it );
-                else
-                    _listSelectedAsset.push_back( path );
+                VectorUtil::removeFirst( _listSelectedAsset, path );
+                else _listSelectedAsset.push_back( path );
             }
             else if ( hasAsset( path ) == false )
             {
@@ -208,8 +190,7 @@ namespace sw::editor
 
     bool EditorSelection::hasAsset( string_view assetPath ) const
     {
-        return std::find( _listSelectedAsset.begin(), _listSelectedAsset.end(), assetPath ) !=
-               _listSelectedAsset.end();
+        return VectorUtil::contains( _listSelectedAsset, assetPath );
     }
 
     string_view EditorSelection::getPrimaryAsset() const

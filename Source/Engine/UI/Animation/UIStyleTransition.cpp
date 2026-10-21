@@ -523,7 +523,7 @@ namespace sw
             state->_shown._setMask |= UIStyleFieldTable::makeBit( channel._field ); // 새 스타일이 정하지 않은 필드도 옮기는 동안은 정한 것으로 보인다
         }
         WidgetTree* pTree = widget.getTree();
-        if ( pTree != nullptr && std::find( pTree->_listStyleTransition.begin(), pTree->_listStyleTransition.end(), widget.getID() ) == pTree->_listStyleTransition.end() )
+        if ( pTree != nullptr && VectorUtil::contains( pTree->_listStyleTransition, widget.getID() ) == false )
             pTree->_listStyleTransition.push_back( widget.getID() );
     }
 

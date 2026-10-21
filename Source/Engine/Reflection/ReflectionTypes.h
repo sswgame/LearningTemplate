@@ -228,12 +228,8 @@ namespace sw
          */
         bool matchesRedirectHash( const uint32 oldNameHash ) const noexcept
         {
-            for ( const hashed_string& alias : _listAlias )
-            {
-                if ( alias.empty() == false && alias.getHash() == oldNameHash )
-                    return true;
-            }
-            return false;
+            return VectorUtil::containsIf( _listAlias, [&]( const hashed_string& alias )
+            { return alias.empty() == false && alias.getHash() == oldNameHash; } );
         }
 
         /** @brief 이름이나 별칭과 일치하면 true 입니다. */
@@ -1087,12 +1083,8 @@ namespace sw
         {
             if ( _listProperty.size() <= constant::reflection::kLinearSearchThreshold )
             {
-                for ( const PropertyInfo& propertyInfo : _listProperty )
-                {
-                    if ( propertyInfo.matchesName( propertyNameOrAlias ) )
-                        return &propertyInfo;
-                }
-                return nullptr;
+                return VectorUtil::findIf( _listProperty, [&]( const PropertyInfo& propertyInfo )
+                { return propertyInfo.matchesName( propertyNameOrAlias ); } );
             }
 
             populateLookupCache();

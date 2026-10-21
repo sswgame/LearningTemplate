@@ -2,6 +2,8 @@
 
 #include "Core/Container/DynamicBitset.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include <ostream>
 
 SW_LOG_CALLER( "DynamicBitset" );
@@ -146,12 +148,8 @@ namespace sw
 
     bool DynamicBitset::any() const
     {
-        for ( const BlockType& block : _listBlock )
-        {
-            if ( block != 0 )
-                return true;
-        }
-        return false;
+        return VectorUtil::containsIf( _listBlock, [&]( const BlockType& block )
+        { return block != 0; } );
     }
 
     uint32 DynamicBitset::count() const

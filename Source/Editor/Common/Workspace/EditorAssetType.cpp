@@ -3,6 +3,7 @@
 #include "Editor/Common/Workspace/EditorAssetType.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 
 #include "Editor/Common/Asset/HeightfieldImporter.h"
@@ -322,12 +323,8 @@ namespace sw::editor
 
             static bool containsSuffix( const vector<string>& listSuffix, string_view suffix )
             {
-                for ( const string& existing : listSuffix )
-                {
-                    if ( StringUtil::equals( existing, suffix, true ) )
-                        return true;
-                }
-                return false;
+                return VectorUtil::containsIf( listSuffix, [&]( const string& existing )
+                { return StringUtil::equals( existing, suffix, true ); } );
             }
 
             /** @brief 규칙 하나의 접미사를 중복 없이 @p outListSuffix 에 추가합니다. */

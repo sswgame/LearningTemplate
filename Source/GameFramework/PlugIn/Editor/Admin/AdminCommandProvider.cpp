@@ -47,12 +47,8 @@ namespace sw::editor
 
             static LedgerBalance* findBalance( vector<LedgerBalance>& inoutListBalance, string_view assetID )
             {
-                for ( LedgerBalance& balance : inoutListBalance )
-                {
-                    if ( string_view( balance._assetID ) == assetID )
-                        return &balance;
-                }
-                return nullptr;
+                return VectorUtil::findIf( inoutListBalance, [&]( LedgerBalance& balance )
+                { return string_view( balance._assetID ) == assetID; } );
             }
 
             static bool isRoleAtLeast( AdminRole role, AdminRole required )
@@ -120,12 +116,7 @@ namespace sw::editor
 
     FakeAdminAccount* FakeAdminProvider::findMutableAccount( AccountID accountID )
     {
-        for ( FakeAdminAccount& account : _listAccount )
-        {
-            if ( account._accountID == accountID )
-                return &account;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&FakeAdminAccount::_accountID>( _listAccount, accountID );
     }
 
     int64 FakeAdminProvider::getNowMs() const

@@ -3,6 +3,7 @@
 #include "Editor/SelfTest/EditorTestOutputParser.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 
 namespace sw::editor
 {
@@ -83,7 +84,7 @@ namespace sw::editor
             if ( EditorTestOutputParserInternal::isCaseName( name ) == false )
                 continue;
             const string nameText( name );
-            if ( std::find( outListName.begin(), outListName.end(), nameText ) == outListName.end() )
+            if ( VectorUtil::contains( outListName, nameText ) == false )
                 outListName.push_back( nameText );
         }
     }

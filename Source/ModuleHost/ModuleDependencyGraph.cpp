@@ -3,6 +3,7 @@
 #include "ModuleHost/ModuleDependencyGraph.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/unordered_set.h"
 
 namespace sw
@@ -160,7 +161,7 @@ namespace sw
             string cycleModules;
             for ( const string& name : uniqueSubgraph )
             {
-                if ( std::find( listOrder.begin(), listOrder.end(), name ) == listOrder.end() )
+                if ( VectorUtil::contains( listOrder, name ) == false )
                 {
                     if ( cycleModules.empty() == false )
                         cycleModules += ", ";

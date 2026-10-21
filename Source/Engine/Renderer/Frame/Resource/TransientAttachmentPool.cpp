@@ -2,6 +2,8 @@
 
 #include "Engine/Renderer/Frame/Resource/TransientAttachmentPool.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 
@@ -99,7 +101,7 @@ namespace sw
     bool TransientAttachmentPool::markCleared( const hashed_string& key )
     {
         std::scoped_lock<mutex> lock{ _clearedMutex };
-        if ( std::find( _listClearedThisFrame.begin(), _listClearedThisFrame.end(), key ) != _listClearedThisFrame.end() )
+        if ( VectorUtil::contains( _listClearedThisFrame, key ) )
             return false;
         _listClearedThisFrame.push_back( key );
         return true;

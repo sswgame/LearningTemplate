@@ -141,7 +141,7 @@ namespace sw::editor
 
     void registerPreviewSelection( EditorSelection& selection )
     {
-        if ( std::find( s_listPreviewSelection.begin(), s_listPreviewSelection.end(), &selection ) == s_listPreviewSelection.end() )
+        if ( VectorUtil::contains( s_listPreviewSelection, &selection ) == false )
             s_listPreviewSelection.push_back( &selection );
     }
 

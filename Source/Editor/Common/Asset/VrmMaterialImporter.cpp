@@ -151,7 +151,7 @@ namespace sw::editor
                 if ( pOutListIgnored == nullptr )
                     return;
                 const string name{ key };
-                if ( std::find( pOutListIgnored->begin(), pOutListIgnored->end(), name ) == pOutListIgnored->end() )
+                if ( VectorUtil::contains( *pOutListIgnored, name ) == false )
                     pOutListIgnored->push_back( name );
             }
 

@@ -175,7 +175,7 @@ namespace sw
             def._weightParameter = hashed_string( poseNodeJSON.get( "weight" ).asString() );
 
         // 종류마다 요구하는 값 — 지금은 blend_poses 하나다.
-        const bool bHasEmptyInput     = std::find( def._listInput.begin(), def._listInput.end(), hashed_string{} ) != def._listInput.end();
+        const bool bHasEmptyInput     = VectorUtil::contains( def._listInput, hashed_string{} );
         const bool bHasRequiredValues = def._listInput.size() == 2 && bHasEmptyInput == false && def._weightParameter.empty() == false;
         if ( bHasRequiredValues == false )
         {
@@ -590,12 +590,8 @@ namespace sw
 
     const AnimationGraphLink* AnimationGraphAsset::findFinishLink( int32 fromNodeID ) const
     {
-        for ( const AnimationGraphLink& link : _listLink )
-        {
-            if ( link._fromNode == fromNodeID && link._op == AnimationConditionOp::None )
-                return &link;
-        }
-        return nullptr;
+        return VectorUtil::findIf( _listLink, [&]( const AnimationGraphLink& link )
+        { return link._fromNode == fromNodeID && link._op == AnimationConditionOp::None; } );
     }
 
     bool AnimationGraphAsset::parseConditionOp( string_view text, AnimationConditionOp& outOp )

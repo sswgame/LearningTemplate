@@ -74,12 +74,8 @@ namespace sw
 
     bool ItemDef::hasTagUnder( TagID parentTag ) const
     {
-        for ( const hashed_string& ownTag : _listTag )
-        {
-            if ( TagID::request( ownTag.view() ).isSubtagOf( parentTag ) )
-                return true;
-        }
-        return false;
+        return VectorUtil::containsIf( _listTag, [&]( const hashed_string& ownTag )
+        { return TagID::request( ownTag.view() ).isSubtagOf( parentTag ); } );
     }
 
     int32 ItemCatalog::getMaxStack( const hashed_string& id ) const

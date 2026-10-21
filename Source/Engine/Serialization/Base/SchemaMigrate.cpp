@@ -3,6 +3,7 @@
 #include "Engine/Serialization/Base/SchemaMigrate.h"
 
 #include "Core/Concurrency/atomic.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/String/TagID.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -311,7 +312,7 @@ namespace sw
                     else
                         shownName = "#" + to_string( nameHash ); // 바이너리는 이름 없이 해시만 싣는다
                     const uint32 shownHash = static_cast<uint32>( hashed_string::computeHash( string_view{ shownName } ) );
-                    if ( std::find( listListedHash.begin(), listListedHash.end(), shownHash ) != listListedHash.end() )
+                    if ( VectorUtil::contains( listListedHash, shownHash ) )
                         continue;
                     listListedHash.push_back( shownHash );
 

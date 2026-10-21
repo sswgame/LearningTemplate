@@ -88,10 +88,8 @@ namespace sw
     {
         VectorUtil::removeIf( pService->_listRegisteredClient, [this]( const OnlineServiceClient* pClient )
         { return pClient == this; } );
-        const auto serviceIt = std::find( _listService.begin(), _listService.end(), pService );
-        if ( serviceIt == _listService.end() )
+        if ( VectorUtil::removeFirst( _listService, pService ) == 0 )
             return;
-        _listService.erase( serviceIt );
         cancelRequestsOf( pService->_registeredRange ); // 기반 소멸자에서 불리므로 getMethodRange(가상)는 부르지 않는다
     }
 

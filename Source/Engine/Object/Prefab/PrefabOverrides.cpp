@@ -3,6 +3,7 @@
 #include "Engine/Object/Prefab/PrefabOverrides.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
@@ -104,12 +105,8 @@ namespace sw
             /** @brief 키 · 원소 이름(타입)이 같은 컴포넌트입니다. 없으면 nullptr 입니다. */
             static KeyedComponent* findComponent( vector<KeyedComponent>& listComponent, string_view key, const utf8* pTypeName )
             {
-                for ( KeyedComponent& component : listComponent )
-                {
-                    if ( component._key == key && isSameText( component._node.getName(), pTypeName ) )
-                        return &component;
-                }
-                return nullptr;
+                return VectorUtil::findIf( listComponent, [&]( KeyedComponent& component )
+                { return component._key == key && isSameText( component._node.getName(), pTypeName ); } );
             }
 
             /** @brief 오브젝트 루트에서 덮어쓴 것으로 적지 않는 칸입니다 — 이름은 엔티티가, 판은 직렬화기가, 컴포넌트는 따로 견준다. */
@@ -229,7 +226,7 @@ namespace sw
                     appendAddedAfter( outList, nullptr );
                     for ( KeyedComponent& component : listBase )
                     {
-                        const bool bRemoved = std::find( listRemovedKey.begin(), listRemovedKey.end(), component._key ) != listRemovedKey.end();
+                        const bool bRemoved = VectorUtil::contains( listRemovedKey, component._key );
                         if ( bRemoved )
                             component._bUsed = true;
                         else

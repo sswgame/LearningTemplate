@@ -4,6 +4,7 @@
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/UserDataPath.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -505,12 +506,8 @@ namespace sw
 
     bool UserSettingsManager::hasPendingChanges() const
     {
-        for ( const SettingState& state : _listState )
-        {
-            if ( state._bPending )
-                return true;
-        }
-        return false;
+        return VectorUtil::containsIf( _listState, [&]( const SettingState& state )
+        { return state._bPending; } );
     }
 
     bool UserSettingsManager::isSettingEnabled( const hashed_string& settingID ) const

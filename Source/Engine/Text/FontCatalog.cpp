@@ -3,6 +3,7 @@
 #include "Engine/Text/FontCatalog.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
@@ -90,21 +91,13 @@ namespace sw
 
     const FontFamilyDesc* FontCatalogDesc::findFamily( string_view name ) const
     {
-        for ( const FontFamilyDesc& family : _listFamily )
-        {
-            if ( StringUtil::equals( family._name, name, true ) )
-                return &family;
-        }
-        return nullptr;
+        return VectorUtil::findIf( _listFamily, [&]( const FontFamilyDesc& family )
+        { return StringUtil::equals( family._name, name, true ); } );
     }
 
     const SystemFontFamilyDesc* FontCatalogDesc::findSystemFamily( string_view name ) const
     {
-        for ( const SystemFontFamilyDesc& family : _listSystemFamily )
-        {
-            if ( StringUtil::equals( family._name, name, true ) )
-                return &family;
-        }
-        return nullptr;
+        return VectorUtil::findIf( _listSystemFamily, [&]( const SystemFontFamilyDesc& family )
+        { return StringUtil::equals( family._name, name, true ); } );
     }
 } // namespace sw

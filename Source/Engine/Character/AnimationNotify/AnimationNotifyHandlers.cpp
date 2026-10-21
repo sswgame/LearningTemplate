@@ -3,6 +3,7 @@
 #include "Engine/Character/AnimationNotify/AnimationNotifyHandlers.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Audio/IAudioService.h"
@@ -233,7 +234,7 @@ namespace sw
                     if ( context._component.castFromTo( from, to, radius, kAllLayers, rayHit ) == false || rayHit._pObject == nullptr )
                         return;
                     const uint64 targetID = rayHit._pObject->getObjectID();
-                    if ( std::find( state._listHitObjectID.begin(), state._listHitObjectID.end(), targetID ) != state._listHitObjectID.end() )
+                    if ( VectorUtil::contains( state._listHitObjectID, targetID ) )
                         return;
                     state._listHitObjectID.push_back( targetID );
                     HitInfo hit = CharacterHitUtil::makeHitInfo( rayHit, &context._owner, to - from, context._entry.getFloatParam( s_damage ),

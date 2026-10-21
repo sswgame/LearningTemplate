@@ -3,6 +3,7 @@
 #include "Editor/Common/SourceControl/EditorSourceControl.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
@@ -177,12 +178,8 @@ namespace sw::editor
         const string repositoryPath = makeRepositoryPath( _repositoryRoot, absolutePath );
         if ( repositoryPath.empty() )
             return nullptr;
-        for ( const SourceControlLock& lock : _listLock )
-        {
-            if ( StringUtil::equals( lock._path, repositoryPath, true ) )
-                return &lock;
-        }
-        return nullptr;
+        return VectorUtil::findIf( _listLock, [&]( const SourceControlLock& lock )
+        { return StringUtil::equals( lock._path, repositoryPath, true ); } );
     }
 
     string EditorSourceControl::describeStatus( string_view absolutePath, bool bReadOnly ) const

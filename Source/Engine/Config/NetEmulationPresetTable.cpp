@@ -3,6 +3,7 @@
 #include "Engine/Config/NetEmulationPresetTable.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Network/Transport/NetEmulation.h"
 
 #include "Engine/Serialization/Format/ReflectedXMLFile.h"
@@ -71,12 +72,8 @@ namespace sw
 
     const NetEmulationPresetDef* NetEmulationPresetTable::findPreset( string_view name ) const
     {
-        for ( const NetEmulationPresetDef& preset : _listPreset )
-        {
-            if ( StringUtil::equals( preset._name, name, true ) )
-                return &preset;
-        }
-        return nullptr;
+        return VectorUtil::findIf( _listPreset, [&]( const NetEmulationPresetDef& preset )
+        { return StringUtil::equals( preset._name, name, true ); } );
     }
 
     bool NetEmulationPresetTable::tryGetConditions( string_view name, NetEmulationConditions& outConditions ) const

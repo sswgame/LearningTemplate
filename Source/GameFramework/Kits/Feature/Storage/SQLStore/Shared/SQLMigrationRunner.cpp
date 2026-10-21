@@ -4,6 +4,7 @@
 
 #include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/map.h"
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringBuilder.h"
@@ -158,7 +159,7 @@ namespace sw
                         return false;
                     }
                     const string stem    = formatText( "%#%#", string_view( fileName ).substr( 0, static_cast<size_t>( kVersionDigitCount + 1 ) ), file._name );
-                    const bool   bListed = std::find( listStem.begin(), listStem.end(), stem ) != listStem.end();
+                    const bool   bListed = VectorUtil::contains( listStem, stem );
                     if ( bListed == false )
                     {
                         outError = formatText( "migration file '%#' is not listed in %# of '%#'", fileName, SQLMigrationRunner::kListFileName, diskFolder );
@@ -235,7 +236,7 @@ namespace sw
             SQLMigrationRunnerInternal::MigrationFile file;
             if ( SQLMigrationRunnerInternal::parseFileName( FileUtil::getFileNamePart( filePath ), file ) == false || file._driverName.empty() )
                 continue; // 이름이 틀린 파일은 `loadMigrations` 가 오류로 멈춘다
-            if ( std::find( inoutListName.begin(), inoutListName.end(), file._driverName ) == inoutListName.end() )
+            if ( VectorUtil::contains( inoutListName, file._driverName ) == false )
                 inoutListName.push_back( file._driverName );
         }
         return true;

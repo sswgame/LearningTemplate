@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Network/NetDestruction/DestructionReplication.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
 #include "Core/Network/Connection/NetConnection.h"
@@ -178,12 +179,7 @@ namespace sw
 
     DestructionReplicationServer::Entry* DestructionReplicationServer::findEntry( uint32 netID )
     {
-        for ( Entry& entry : _listEntry )
-        {
-            if ( entry._netID == netID )
-                return &entry;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&Entry::_netID>( _listEntry, netID );
     }
 
     FractureComponentBase* DestructionReplicationServer::resolve( const Entry& entry ) const
@@ -498,12 +494,7 @@ namespace sw
 
     DestructionReplicationClient::Entry* DestructionReplicationClient::findEntry( uint32 netID )
     {
-        for ( Entry& entry : _listEntry )
-        {
-            if ( entry._netID == netID )
-                return &entry;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&Entry::_netID>( _listEntry, netID );
     }
 
     FractureComponentBase* DestructionReplicationClient::resolve( const Entry& entry ) const

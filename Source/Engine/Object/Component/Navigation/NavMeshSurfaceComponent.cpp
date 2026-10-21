@@ -2,6 +2,8 @@
 
 #include "Engine/Object/Component/Navigation/NavMeshSurfaceComponent.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include "Engine/Object/Component/Navigation/SceneNavigation.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -31,11 +33,7 @@ namespace sw
     {
         if ( _listAgentType.empty() )
             return agentType.empty() || agentType == defaultAgentType;
-        for ( const hashed_string& covered : _listAgentType )
-        {
-            if ( covered == agentType || ( agentType.empty() && covered == defaultAgentType ) )
-                return true;
-        }
-        return false;
+        return VectorUtil::containsIf( _listAgentType, [&]( const hashed_string& covered )
+        { return covered == agentType || ( agentType.empty() && covered == defaultAgentType ); } );
     }
 } // namespace sw

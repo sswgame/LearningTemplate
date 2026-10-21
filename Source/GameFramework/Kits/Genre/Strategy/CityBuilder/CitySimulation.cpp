@@ -684,7 +684,7 @@ namespace sw
                                           getRoadComponent( storage._accessTile ) != roadComponent;
             if ( bStorageRejected )
                 continue;
-            if ( std::find( storage._pDef->_listGood.begin(), storage._pDef->_listGood.end(), goodID ) == storage._pDef->_listGood.end() )
+            if ( VectorUtil::contains( storage._pDef->_listGood, goodID ) == false )
                 continue;
             if ( computeStorageFree( storage ) < amount )
                 continue;
@@ -798,7 +798,7 @@ namespace sw
                 const int2 next = GridTopology::getNeighbor( walker._tile, direction );
                 if ( isRoad( next._x, next._y ) == false || next == walker._previousTile )
                     continue;
-                const bool bVisited = std::find( walker._listVisited.begin(), walker._listVisited.end(), next ) != walker._listVisited.end();
+                const bool bVisited = VectorUtil::contains( walker._listVisited, next );
                 if ( pass == 0 && bVisited )
                     continue; // 첫 바퀴는 안 가 본 타일만 고른다
                 arrCandidate[candidateCount++] = next;

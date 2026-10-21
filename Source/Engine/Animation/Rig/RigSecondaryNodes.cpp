@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
@@ -324,7 +325,7 @@ namespace sw
                 {
                     for ( const CorrectiveBone& corrective : pose._listBone )
                     {
-                        if ( std::find( inoutListBone.begin(), inoutListBone.end(), corrective._bone ) == inoutListBone.end() )
+                        if ( VectorUtil::contains( inoutListBone, corrective._bone ) == false )
                             inoutListBone.push_back( corrective._bone );
                     }
                 }

@@ -2,6 +2,8 @@
 
 #include "Engine/UI/Debug/DebugHUD.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #if SW_DEV_COMMANDS_ENABLED
 
     #include "Core/Console/DevCommandRegistry.h"
@@ -389,12 +391,8 @@ namespace sw
             /** @brief 섹션 @p name 의 상자를 그리고 있으면 true 입니다(탐침). */
             bool hasSectionView( string_view name ) const
             {
-                for ( const SectionView& view : _listView )
-                {
-                    if ( StringUtil::equals( view._name, name, true ) )
-                        return true;
-                }
-                return false;
+                return VectorUtil::containsIf( _listView, [&]( const SectionView& view )
+                { return StringUtil::equals( view._name, name, true ); } );
             }
 
         private:

@@ -5,6 +5,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
@@ -866,12 +867,8 @@ namespace sw::editor
 
     bool ContentBrowserPanel::hasRoot( string_view displayName ) const
     {
-        for ( const ContentRoot& root : _listRoot )
-        {
-            if ( FileUtil::normalizePath( root._displayName ) == FileUtil::normalizePath( displayName ) )
-                return true;
-        }
-        return false;
+        return VectorUtil::containsIf( _listRoot, [&]( const ContentRoot& root )
+        { return FileUtil::normalizePath( root._displayName ) == FileUtil::normalizePath( displayName ); } );
     }
 
     void ContentBrowserPanel::refreshCurrentFolder()

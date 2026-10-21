@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -33,7 +34,7 @@ namespace sw
         _pLastSwapchainWriter = nullptr;
         for ( const RenderGraphPassDesc& pass : listPass )
         {
-            if ( std::find( pass._listOutput.begin(), pass._listOutput.end(), string( kSwapchainOutputName ) ) != pass._listOutput.end() )
+            if ( VectorUtil::contains( pass._listOutput, string( kSwapchainOutputName ) ) )
                 _pLastSwapchainWriter = &pass;
         }
 
@@ -60,7 +61,7 @@ namespace sw
             // D3D11 이 해제하며(OMSetRenderTargets 해저드), 뒤에서 깊이를 읽는 패스가 다시 읽기 전이를 받는다(언리얼 RDG 의 깊이 첨부 접근).
             // 순서는 쓰기 사슬을 따른다. 이 패스보다 **먼저 선언한** 읽는 패스는 앞 버전을 읽고 이 패스 앞에 온다.
             if ( pass._resolvedDepthAttachment.empty() == false &&
-                 std::find( listOutput.begin(), listOutput.end(), pass._resolvedDepthAttachment ) == listOutput.end() )
+                 VectorUtil::contains( listOutput, pass._resolvedDepthAttachment ) == false )
                 listOutput.push_back( pass._resolvedDepthAttachment );
 
             RenderGraphPassExecuteFn execute =

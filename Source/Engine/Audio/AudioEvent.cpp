@@ -130,12 +130,7 @@ namespace sw
 
     AudioEventDesc* AudioEventLibrary::findEvent( const hashed_string& name )
     {
-        for ( AudioEventDesc& event : _listEvent )
-        {
-            if ( event._name == name )
-                return &event;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&AudioEventDesc::_name>( _listEvent, name );
     }
 
     string AudioEventLibrary::toXMLText() const

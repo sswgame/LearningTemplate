@@ -3,6 +3,7 @@
 #include "Engine/Object/Prefab/PrefabAsset.h"
 
 #include "Core/Common/FourCcUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/UUID/UUID.h"
@@ -90,7 +91,7 @@ namespace sw
 
             static bool isOnStack( const PrefabPathStack& stack, const hashed_string& key )
             {
-                return std::find( stack.begin(), stack.end(), key ) != stack.end();
+                return VectorUtil::contains( stack, key );
             }
 
             /**
@@ -1029,12 +1030,8 @@ namespace sw
 
     bool PrefabAsset::hasResolvedNestedInstances() const
     {
-        for ( const PrefabInstanceNode& node : _listNestedInstance )
-        {
-            if ( node.isResolved() )
-                return true;
-        }
-        return false;
+        return VectorUtil::containsIf( _listNestedInstance, [&]( const PrefabInstanceNode& node )
+        { return node.isResolved(); } );
     }
 
     void PrefabCache::reload( string_view assetRelativePath, IRHIDevice* )
@@ -1166,11 +1163,11 @@ namespace sw
             {
                 if ( node.isResolved() )
                     continue;
-                const string childPath = PrefabAssetInternal::resolvePrefabPath( node._prefabPath.empty() ? node._prefabGuid : node._prefabPath );
-                const auto   stackIt   = std::find( stack.begin(), stack.end(), PrefabAssetInternal::makePathKey( PrefabAssetInternal::makePrefabCacheKey( childPath ) ) );
-                if ( stackIt != stack.end() )
+                const string                childPath  = PrefabAssetInternal::resolvePrefabPath( node._prefabPath.empty() ? node._prefabGuid : node._prefabPath );
+                const std::optional<size_t> stackIndex = VectorUtil::findIndex( stack, PrefabAssetInternal::makePathKey( PrefabAssetInternal::makePrefabCacheKey( childPath ) ) );
+                if ( stackIndex.has_value() )
                 {
-                    cycleFloor = MathUtil::min( cycleFloor, static_cast<size_t>( stackIt - stack.begin() ) );
+                    cycleFloor = MathUtil::min( cycleFloor, *stackIndex );
                     SW_LOG_ERROR( "Circular nested prefab reference: '%#' places '%#', which is already being loaded", asset.getName(), childPath );
                     continue;
                 }
@@ -1373,7 +1370,7 @@ namespace sw
         const uint32   createdCount = spawnNestedInstancesUnder( pRoot, asset, {}, listPartOverride, listSpawnedPath );
         for ( const PrefabPartOverride& part : listPartOverride )
         {
-            if ( std::find( listSpawnedPath.begin(), listSpawnedPath.end(), part._partPath ) == listSpawnedPath.end() )
+            if ( VectorUtil::contains( listSpawnedPath, part._partPath ) == false )
                 SW_LOG_WARNING( "Override of nested prefab part '%#' in '%#' is dropped - '%#' no longer spawns that part", part._partPath,
                                 pRoot != nullptr ? pRoot->getName().c_str() : "?", asset.getName() );
         }
@@ -1624,7 +1621,7 @@ namespace sw
             const string outputID   = AssetCookPath::toCookedPath( normalized.substr( root.size() + 1 ) );
             const string outputPath = out + outputID;
             const string outputKey  = StringUtil::toLower( outputPath.c_str() );
-            if ( std::find( listWrittenKey.begin(), listWrittenKey.end(), outputKey ) != listWrittenKey.end() )
+            if ( VectorUtil::contains( listWrittenKey, outputKey ) )
             {
                 SW_LOG_WARNING( "Prefab cook: '%#' would overwrite the cooked file another source already wrote ('%#') - skipped", normalized, outputPath );
                 ++outFailedCount;

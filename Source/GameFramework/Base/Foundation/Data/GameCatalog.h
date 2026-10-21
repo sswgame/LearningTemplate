@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
@@ -56,12 +57,7 @@ namespace sw
         template <typename TPredicate>
         const TDef* findIf( TPredicate&& predicate ) const
         {
-            for ( const TDef& def : _listDef )
-            {
-                if ( predicate( def ) )
-                    return &def;
-            }
-            return nullptr;
+            return VectorUtil::findIf( _listDef, predicate );
         }
 
         void clear()

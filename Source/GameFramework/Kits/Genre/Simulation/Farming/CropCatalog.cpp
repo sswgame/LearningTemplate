@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/Simulation/Farming/CropCatalog.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -26,7 +27,7 @@ namespace sw
             StringUtil::forEachToken( text, ",;| ", [&]( string_view token )
             {
                 const hashed_string season( token );
-                const bool          bKnown = listKnown.empty() || std::find( listKnown.begin(), listKnown.end(), season ) != listKnown.end();
+                const bool          bKnown = listKnown.empty() || VectorUtil::contains( listKnown, season );
                 if ( bKnown )
                 {
                     outListSeason.push_back( season );

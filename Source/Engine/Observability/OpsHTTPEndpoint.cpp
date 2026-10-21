@@ -2,6 +2,7 @@
 
 #include "Engine/Observability/OpsHTTPEndpoint.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -220,11 +221,6 @@ namespace sw
 
     OpsHTTPEndpoint::Connection* OpsHTTPEndpoint::findConnection( uint64 packedHandle )
     {
-        for ( Connection& connection : _listConnection )
-        {
-            if ( connection._packedHandle == packedHandle )
-                return &connection;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&Connection::_packedHandle>( _listConnection, packedHandle );
     }
 } // namespace sw

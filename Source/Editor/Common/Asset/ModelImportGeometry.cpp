@@ -5,6 +5,7 @@
 #include "pch.h"
 
 #include "Core/Container/LittleEndianUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
@@ -98,10 +99,10 @@ namespace sw::editor
         const size_t totalCount = inoutMesh._listVertex.size();
         for ( cgltf_size targetIndex = 0; targetIndex < primitive.targets_count; ++targetIndex )
         {
-            const hashed_string name    = makeMorphTargetName( pSourceMesh, targetIndex );
-            const auto          found   = std::find( inoutMesh._listMorphName.begin(), inoutMesh._listMorphName.end(), name );
-            const size_t        indexOf = static_cast<size_t>( found - inoutMesh._listMorphName.begin() );
-            if ( found == inoutMesh._listMorphName.end() )
+            const hashed_string         name    = makeMorphTargetName( pSourceMesh, targetIndex );
+            const std::optional<size_t> found   = VectorUtil::findIndex( inoutMesh._listMorphName, name );
+            const size_t                indexOf = found.has_value() ? *found : inoutMesh._listMorphName.size();
+            if ( found.has_value() == false )
             {
                 inoutMesh._listMorphName.push_back( name );
                 inoutMesh._listMorphPosition.emplace_back( totalCount, float3{} );
@@ -460,7 +461,7 @@ namespace sw::editor
                     ++promotedCount;
                     bPromoted = true;
                 }
-                if ( std::find( listRoot.begin(), listRoot.end(), rootIndex ) == listRoot.end() )
+                if ( VectorUtil::contains( listRoot, rootIndex ) == false )
                     listRoot.push_back( rootIndex );
             }
             if ( bPromoted == false )

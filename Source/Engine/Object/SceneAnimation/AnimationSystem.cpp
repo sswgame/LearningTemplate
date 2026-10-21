@@ -2,6 +2,7 @@
 
 #include "Engine/Object/SceneAnimation/AnimationSystem.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -150,16 +151,14 @@ namespace sw
 
     void AnimationSystem::registerLODClient( IAnimationLODClient* pClient )
     {
-        if ( pClient == nullptr || std::find( _listLODClient.begin(), _listLODClient.end(), pClient ) != _listLODClient.end() )
+        if ( pClient == nullptr || VectorUtil::contains( _listLODClient, pClient ) )
             return;
         _listLODClient.push_back( pClient );
     }
 
     void AnimationSystem::unregisterLODClient( IAnimationLODClient* pClient )
     {
-        const auto it = std::find( _listLODClient.begin(), _listLODClient.end(), pClient );
-        if ( it != _listLODClient.end() )
-            _listLODClient.erase( it );
+        VectorUtil::removeFirst( _listLODClient, pClient );
     }
 
     void AnimationSystem::setLODViews( const vector<AnimationLODView>& listView )
@@ -269,7 +268,7 @@ namespace sw
 
     void AnimationSystem::registerUnit( SkeletalMeshComponent* pUnit )
     {
-        if ( pUnit == nullptr || std::find( _listUnit.begin(), _listUnit.end(), pUnit ) != _listUnit.end() )
+        if ( pUnit == nullptr || VectorUtil::contains( _listUnit, pUnit ) )
             return;
         _listUnit.push_back( pUnit );
         _bOrderDirty = SW_TRUE;
@@ -277,10 +276,8 @@ namespace sw
 
     void AnimationSystem::unregisterUnit( SkeletalMeshComponent* pUnit )
     {
-        const auto it = std::find( _listUnit.begin(), _listUnit.end(), pUnit );
-        if ( it == _listUnit.end() )
+        if ( VectorUtil::removeFirst( _listUnit, pUnit ) == 0 )
             return;
-        _listUnit.erase( it );
         _bOrderDirty = SW_TRUE;
         // 지은 레벨에 남은 죽은 포인터를 다음 평가 전에 쓰지 않게 바로 비운다.
         _listLevel.clear();

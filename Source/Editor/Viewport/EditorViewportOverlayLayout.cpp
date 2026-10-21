@@ -68,12 +68,7 @@ namespace sw::editor
 
     EditorOverlayBarState* EditorViewportOverlayLayout::findBar( string_view barID )
     {
-        for ( EditorOverlayBarState& bar : _listBar )
-        {
-            if ( bar._id == barID )
-                return &bar;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&EditorOverlayBarState::_id>( _listBar, barID );
     }
 
     const EditorOverlayBarState* EditorViewportOverlayLayout::findBar( string_view barID ) const

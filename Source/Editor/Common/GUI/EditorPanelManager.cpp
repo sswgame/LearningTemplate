@@ -2,6 +2,7 @@
 
 #include "Editor/Common/GUI/EditorPanelManager.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Module/ModuleUnloadListener.h"
@@ -20,12 +21,8 @@ namespace sw::editor
             /** @brief 그 등록 줄로 만든 항목입니다. 없으면 nullptr 입니다. */
             static EditorPanelEntry* findEntryByRegistration( vector<EditorPanelEntry>& listPanel, const EditorPanelRegistration* pRegistration )
             {
-                for ( EditorPanelEntry& entry : listPanel )
-                {
-                    if ( entry._pRegistration == pRegistration && entry._pInstance != nullptr )
-                        return &entry;
-                }
-                return nullptr;
+                return VectorUtil::findIf( listPanel, [&]( EditorPanelEntry& entry )
+                { return entry._pRegistration == pRegistration && entry._pInstance != nullptr; } );
             }
 
             /** @brief 기억한 열린 id 목록에 @p id 가 있으면 빼고 true 입니다. */

@@ -39,12 +39,8 @@ namespace sw
     {
         if ( bExactMatch )
             return std::binary_search( _listTag.begin(), _listTag.end(), tag );
-        for ( const TagID& existingTag : _listTag )
-        {
-            if ( existingTag.isSubtagOf( tag ) || existingTag == tag )
-                return true;
-        }
-        return false;
+        return VectorUtil::containsIf( _listTag, [&]( const TagID& existingTag )
+        { return existingTag.isSubtagOf( tag ) || existingTag == tag; } );
     }
 
     bool TagContainer::hasAllTags( const TagContainer& required ) const

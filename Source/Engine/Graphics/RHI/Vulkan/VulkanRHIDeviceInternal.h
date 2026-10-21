@@ -8,6 +8,7 @@
  */
 #pragma once
 #include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
@@ -71,12 +72,8 @@ namespace sw
 
         static bool hasExtension( const vector<VkExtensionProperties>& listAvailableExt, const utf8* pName )
         {
-            for ( const VkExtensionProperties& ext : listAvailableExt )
-            {
-                if ( StringUtil::equals( ext.extensionName, pName ) )
-                    return true;
-            }
-            return false;
+            return VectorUtil::containsIf( listAvailableExt, [&]( const VkExtensionProperties& ext )
+            { return StringUtil::equals( ext.extensionName, pName ); } );
         }
     };
     /** @brief 확장 함수 포인터를 조회해 디버그 메신저를 만듭니다(없으면 EXTENSION_NOT_PRESENT). */

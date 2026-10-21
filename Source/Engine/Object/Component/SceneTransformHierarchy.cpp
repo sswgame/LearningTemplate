@@ -6,6 +6,7 @@
 
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Math/MathUtil.h"
 
@@ -269,12 +270,8 @@ namespace sw
             if ( listSlot.empty() == false )
                 return true;
         }
-        for ( const vector<uint32>& listSlot : _listPendingSlotScratch )
-        {
-            if ( listSlot.empty() == false )
-                return true;
-        }
-        return false;
+        return VectorUtil::containsIf( _listPendingSlotScratch, [&]( const vector<uint32>& listSlot )
+        { return listSlot.empty() == false; } );
     }
 
     void SceneTransformHierarchy::clearQueuedWrites()

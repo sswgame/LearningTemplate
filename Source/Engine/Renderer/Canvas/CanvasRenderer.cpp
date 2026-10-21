@@ -3,6 +3,7 @@
 #include "Engine/Renderer/Canvas/CanvasRenderer.h"
 
 #include "Core/Common/HashUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -490,12 +491,7 @@ namespace sw
 
     CanvasRenderer::TargetState* CanvasRenderer::findTarget( const hashed_string& path )
     {
-        for ( TargetState& state : _listTarget )
-        {
-            if ( state._path == path )
-                return &state;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&TargetState::_path>( _listTarget, path );
     }
 
     RHIDescriptorIndex CanvasRenderer::findTextureSrv( const CanvasTextureRef& texture ) const

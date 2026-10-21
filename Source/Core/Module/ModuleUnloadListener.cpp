@@ -4,6 +4,7 @@
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/String/RegistrationList.h"
 
 namespace sw
@@ -100,7 +101,7 @@ namespace sw
         for ( IModuleUnloadListener* pListener : listSnapshot )
         {
             const vector<IModuleUnloadListener*>& listLive = list._registeredListener.getItems();
-            if ( std::find( listLive.begin(), listLive.end(), pListener ) == listLive.end() )
+            if ( VectorUtil::contains( listLive, pListener ) == false )
                 continue; // 앞 리스너의 훑기 안에서 지워졌다
             ReleaseResult result{};
             result._pListenerName = pListener->getModuleUnloadListenerName();

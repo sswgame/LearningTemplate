@@ -3,6 +3,7 @@
 #include "Core/Common/FourCcUtil.h"
 #include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -207,8 +208,7 @@ namespace sw
         if ( pPermutation != nullptr )
         {
             // 양면 머티리얼은 후면 컬링을 끈다(언리얼 머티리얼의 Two Sided). 앞면 컬링 패스(외곽선 껍질)는 그대로 둔다. 껍질은 뒤집어 그려야 외곽선이다.
-            const bool bTwoSided = std::find( pPermutation->_listDefine.begin(), pPermutation->_listDefine.end(), string( kMaterialTwoSidedDefine ) ) !=
-                                   pPermutation->_listDefine.end();
+            const bool bTwoSided = VectorUtil::contains( pPermutation->_listDefine, string( kMaterialTwoSidedDefine ) );
             if ( bTwoSided && desc._cullMode == RHICullMode::Back )
             {
                 desc._cullMode = RHICullMode::None;

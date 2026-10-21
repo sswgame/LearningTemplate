@@ -341,16 +341,16 @@ namespace sw
         _pQueue->drainTopicChanges( _listTopicChangeScratch );
         for ( const MatchQueueTopicChange& change : _listTopicChangeScratch )
         {
-            const auto topicIt = std::find( _listSubscribedTopic.begin(), _listSubscribedTopic.end(), change._topic );
-            if ( change._bSubscribe != SW_FALSE && topicIt == _listSubscribedTopic.end() )
+            const bool bSubscribed = VectorUtil::contains( _listSubscribedTopic, change._topic );
+            if ( change._bSubscribe != SW_FALSE && bSubscribed == false )
             {
                 host.subscribeServerBus( change._topic, this );
                 _listSubscribedTopic.push_back( change._topic );
             }
-            else if ( change._bSubscribe == SW_FALSE && topicIt != _listSubscribedTopic.end() )
+            else if ( change._bSubscribe == SW_FALSE && bSubscribed )
             {
                 host.unsubscribeServerBus( change._topic, this );
-                _listSubscribedTopic.erase( topicIt );
+                VectorUtil::removeFirst( _listSubscribedTopic, change._topic ); // 위에서 있음을 확인했다
             }
         }
     }

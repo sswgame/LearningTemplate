@@ -2,6 +2,7 @@
 
 #include "Core/Diagnostics/DeadlockDetector.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Diagnostics/CallStackCapture.h"
 #include "Core/String/StringBuilder.h"
 
@@ -126,9 +127,7 @@ namespace sw
         std::scoped_lock<mutex> lock{ _mutex };
         ThreadState&            state = _mapThreadState[tid];
 
-        auto it = std::find( state._listHeldLock.begin(), state._listHeldLock.end(), pLock );
-        if ( it != state._listHeldLock.end() )
-            state._listHeldLock.erase( it );
+        VectorUtil::removeFirst( state._listHeldLock, pLock );
         state._mapAcquiredCallStack.erase( pLock );
 
         _mapLockOwner.erase( pLock );
@@ -155,7 +154,7 @@ namespace sw
             }
 
             std::thread::id ownerThread = ownerIt->second;
-            if ( ownerThread == startThreadID || std::find( listPath.begin(), listPath.end(), ownerThread ) != listPath.end() )
+            if ( ownerThread == startThreadID || VectorUtil::contains( listPath, ownerThread ) )
             {
                 // 대기 체인이 시작 스레드로 돌아왔거나 체인 안에서 순환이 생겼다. 교착 상태가 확정됐다.
                 listPath.push_back( ownerThread );

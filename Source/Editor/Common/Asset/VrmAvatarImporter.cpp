@@ -141,7 +141,7 @@ namespace sw::editor
             {
                 if ( pOutListIgnored == nullptr )
                     return;
-                if ( std::find( pOutListIgnored->begin(), pOutListIgnored->end(), path ) == pOutListIgnored->end() )
+                if ( VectorUtil::contains( *pOutListIgnored, path ) == false )
                     pOutListIgnored->push_back( path );
             }
 

@@ -306,7 +306,7 @@ namespace sw
                     continue;
 
                 const string normalized = FileUtil::normalizePath( filePath );
-                if ( std::find( listEmittedPath.begin(), listEmittedPath.end(), normalized ) != listEmittedPath.end() )
+                if ( VectorUtil::contains( listEmittedPath, normalized ) )
                     continue;
                 listEmittedPath.push_back( normalized );
 

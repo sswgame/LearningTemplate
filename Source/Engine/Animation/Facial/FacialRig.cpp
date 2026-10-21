@@ -2,6 +2,7 @@
 
 #include "Engine/Animation/Facial/FacialRig.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Animation/Skeletal/Skeleton.h"
@@ -92,7 +93,7 @@ namespace sw
     bool FacialRig::validate( const vector<hashed_string>& listMorphTargetName, const Skeleton& skeleton, string_view sourceLabel ) const
     {
         auto hasTarget = [&listMorphTargetName]( const hashed_string& name )
-        { return std::find( listMorphTargetName.begin(), listMorphTargetName.end(), name ) != listMorphTargetName.end(); };
+        { return VectorUtil::contains( listMorphTargetName, name ); };
         bool bValid       = true;
         auto checkTargets = [&]( const vector<FacialPose>& listPose )
         {

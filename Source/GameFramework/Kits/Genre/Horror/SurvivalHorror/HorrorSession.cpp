@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Horror/SurvivalHorror/HorrorSession.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -467,12 +468,8 @@ namespace sw
 
     bool HorrorSession::isLinked( const hashed_string& firstClue, const hashed_string& secondClue ) const
     {
-        for ( const HorrorClueLink& link : _listClueLink )
-        {
-            if ( link.isSame( firstClue, secondClue ) )
-                return true;
-        }
-        return false;
+        return VectorUtil::containsIf( _listClueLink, [&]( const HorrorClueLink& link )
+        { return link.isSame( firstClue, secondClue ); } );
     }
 
     HorrorPuzzleResult HorrorSession::submitDeduction( const hashed_string& deductionID, const hashed_string& answer )

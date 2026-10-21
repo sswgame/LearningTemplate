@@ -3,6 +3,7 @@
 #include "Engine/Localization/TextGatherer.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/set.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -486,12 +487,8 @@ namespace sw
 {
     bool TextGatherReport::hasErrors() const
     {
-        for ( const TextGatherIssue& issue : _listIssue )
-        {
-            if ( issue._bError )
-                return true;
-        }
-        return false;
+        return VectorUtil::containsIf( _listIssue, [&]( const TextGatherIssue& issue )
+        { return issue._bError; } );
     }
 
     TextGatherer::TextGatherer()

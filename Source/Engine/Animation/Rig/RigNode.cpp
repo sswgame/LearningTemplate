@@ -2,6 +2,7 @@
 
 #include "Engine/Animation/Rig/RigNode.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
@@ -214,7 +215,7 @@ namespace sw
         {
             for ( const string& member : _object.getMemberNames() )
             {
-                if ( std::find( _listUsedKey.begin(), _listUsedKey.end(), member ) == _listUsedKey.end() )
+                if ( VectorUtil::contains( _listUsedKey, member ) == false )
                 {
                     string message = "unknown key '";
                     message += member;

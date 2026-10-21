@@ -3,6 +3,7 @@
 #include "Engine/UI/Document/UIDocumentLoader.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Task/TaskTypes.h"
 
@@ -179,7 +180,7 @@ namespace sw
                         return fail( context, element, string( "'" ) + pTag + "' needs a _document path" );
                     node._fragment               = normalizeDocumentPath( pFragment );
                     vector<string>& listFragment = context._pAsset->_listFragment;
-                    if ( std::find( listFragment.begin(), listFragment.end(), node._fragment ) == listFragment.end() )
+                    if ( VectorUtil::contains( listFragment, node._fragment ) == false )
                         listFragment.push_back( node._fragment );
                 }
                 else if ( listChildWidget.empty() == false && pType->isDerivedFrom( PanelWidget::StaticType() ) == false )
@@ -341,7 +342,7 @@ namespace sw
                         return widget;
                     }
                     vector<string>& listStack  = context._listFragmentStack;
-                    const bool      bRecursive = std::find( listStack.begin(), listStack.end(), node._fragment ) != listStack.end();
+                    const bool      bRecursive = VectorUtil::contains( listStack, node._fragment );
                     const bool      bTooDeep   = listStack.size() >= kMaxFragmentDepth;
                     if ( bRecursive || bTooDeep )
                     {

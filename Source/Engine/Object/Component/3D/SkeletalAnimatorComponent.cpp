@@ -3,6 +3,7 @@
 #include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
@@ -340,7 +341,7 @@ namespace sw
                 listClip.push_back( bLoaded ? findClip( sample._clipName ) : nullptr );
             }
             // 표본 클립이 하나라도 없으면 그래프를 쓰지 않는다 — 없는 표본을 빼고 섞으면 데이터가 말한 것과 다른 포즈가 된다.
-            if ( std::find( listClip.begin(), listClip.end(), nullptr ) != listClip.end() )
+            if ( VectorUtil::contains( listClip, nullptr ) )
             {
                 bPlayable = false;
                 continue;
@@ -618,15 +619,13 @@ namespace sw
 
     void SkeletalAnimatorComponent::registerRootMotionModifier( IRootMotionModifier* pModifier )
     {
-        if ( pModifier != nullptr && std::find( _listRootMotionModifier.begin(), _listRootMotionModifier.end(), pModifier ) == _listRootMotionModifier.end() )
+        if ( pModifier != nullptr && VectorUtil::contains( _listRootMotionModifier, pModifier ) == false )
             _listRootMotionModifier.push_back( pModifier );
     }
 
     void SkeletalAnimatorComponent::unregisterRootMotionModifier( IRootMotionModifier* pModifier )
     {
-        const auto it = std::find( _listRootMotionModifier.begin(), _listRootMotionModifier.end(), pModifier );
-        if ( it != _listRootMotionModifier.end() )
-            _listRootMotionModifier.erase( it );
+        VectorUtil::removeFirst( _listRootMotionModifier, pModifier );
     }
 
     void SkeletalAnimatorComponent::applyRootMotion( SkeletalMeshComponent& unit )
@@ -939,16 +938,16 @@ namespace sw
     {
         for ( const AnimationClipCurve& curve : clip.getCurves() )
         {
-            const float32 value = curve.evaluate( time ) * weight;
-            const auto    it    = std::find( _listCurveName.begin(), _listCurveName.end(), curve._name );
-            if ( it == _listCurveName.end() )
+            const float32               value = curve.evaluate( time ) * weight;
+            const std::optional<size_t> found = VectorUtil::findIndex( _listCurveName, curve._name );
+            if ( found.has_value() == false )
             {
                 _listCurveName.push_back( curve._name );
                 _listCurveValue.push_back( value );
             }
             else
             {
-                _listCurveValue[static_cast<size_t>( it - _listCurveName.begin() )] += value;
+                _listCurveValue[*found] += value;
             }
         }
     }

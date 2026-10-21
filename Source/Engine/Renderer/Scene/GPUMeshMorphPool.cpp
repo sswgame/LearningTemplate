@@ -3,6 +3,7 @@
 #include "Engine/Renderer/Scene/GPUMeshMorphPool.h"
 
 #include "Core/Container/IndexFreeList.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -102,7 +103,7 @@ namespace sw
             if ( bSkipSkinMesh )
                 continue;
             const uint64 dataID = pMesh->getSkinDataID();
-            if ( std::find( listDataID.begin(), listDataID.end(), dataID ) != listDataID.end() )
+            if ( VectorUtil::contains( listDataID, dataID ) )
                 continue;
             listDataID.push_back( dataID );
             listSource.push_back( pMesh );
@@ -217,8 +218,8 @@ namespace sw
                                    _mapSkinBase.find( pMesh ) != _mapSkinBase.end();
             if ( bSkipMesh )
                 continue;
-            const auto sourceIt = std::find( _listSourceDataID.begin(), _listSourceDataID.end(), pMesh->getSkinDataID() );
-            if ( sourceIt == _listSourceDataID.end() )
+            const std::optional<size_t> sourceIndex = VectorUtil::findIndex( _listSourceDataID, pMesh->getSkinDataID() );
+            if ( sourceIndex.has_value() == false )
                 continue;
             const uint32 count = pMesh->getVertexCount();
             if ( _skinVertexBase + resultOffset + count > kMaxPoolVertices )
@@ -228,7 +229,7 @@ namespace sw
             }
             GPUSkinInstanceRow row{};
             row._resultOffset     = resultOffset;
-            row._sourceBase       = _listSourceBase[static_cast<size_t>( sourceIt - _listSourceDataID.begin() )];
+            row._sourceBase       = _listSourceBase[*sourceIndex];
             row._vertexCount      = count;
             row._paletteBase      = _skinBoneCount;
             row._morphTargetCount = pMesh->getMorphTargetCount();

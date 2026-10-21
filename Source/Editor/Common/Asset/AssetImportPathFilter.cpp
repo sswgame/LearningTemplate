@@ -3,6 +3,7 @@
 #include "Editor/Common/Asset/AssetImportPathFilter.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -31,23 +32,15 @@ namespace sw::editor
             /** @brief 경로 목록 중 하나가 디렉터리나 전체 경로의 부분 문자열인지 봅니다. */
             static bool containsAnyPath( const vector<string>& listPath, const string& dirName, const string& normalized )
             {
-                for ( const string& path : listPath )
-                {
-                    if ( dirName.find( path ) != string::npos || normalized.find( path ) != string::npos )
-                        return true;
-                }
-                return false;
+                return VectorUtil::containsIf( listPath, [&]( const string& path )
+                { return dirName.find( path ) != string::npos || normalized.find( path ) != string::npos; } );
             }
 
             /** @brief 패턴 목록 중 하나가 파일 이름이나 전체 경로에 맞는지 봅니다. */
             static bool matchesAnyPattern( const vector<string>& listPattern, const string& fileName, const string& normalized )
             {
-                for ( const string& pattern : listPattern )
-                {
-                    if ( AssetImportPathFilter::matchesWildcard( pattern, fileName ) || AssetImportPathFilter::matchesWildcard( pattern, normalized ) )
-                        return true;
-                }
-                return false;
+                return VectorUtil::containsIf( listPattern, [&]( const string& pattern )
+                { return AssetImportPathFilter::matchesWildcard( pattern, fileName ) || AssetImportPathFilter::matchesWildcard( pattern, normalized ); } );
             }
         };
     } // namespace

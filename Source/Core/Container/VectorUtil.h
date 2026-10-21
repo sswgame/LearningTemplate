@@ -62,6 +62,60 @@ namespace sw
         }
 
         /**
+         * @brief `predicate` 가 true 인 첫 원소의 주소입니다. 없으면 nullptr 입니다(언리얼 `TArray::FindByPredicate`).
+         * @details 조건이 둘 이상이라 `findBy` 의 멤버 키로 표현할 수 없는 찾기에 씁니다. 원소가 값인 배열에만 씁니다(포인터 원소는 가리키는 객체가 아니라 원소의 주소가 나온다).
+         *          const 배열이면 const 포인터로 나옵니다. 배열은 lvalue 로만 받습니다.
+         */
+        template <typename TVector, typename TPredicate>
+        [[nodiscard]] static auto findIf( TVector& list, TPredicate predicate ) -> decltype( std::addressof( list[0] ) )
+        {
+            for ( size_t index = 0; index < list.size(); ++index )
+            {
+                if ( predicate( list[index] ) )
+                    return std::addressof( list[index] );
+            }
+            return nullptr;
+        }
+
+        /** @brief `predicate` 가 true 인 원소가 있으면 true 입니다(언리얼 `TArray::ContainsByPredicate`). */
+        template <typename TVector, typename TPredicate>
+        [[nodiscard]] static bool containsIf( const TVector& list, TPredicate predicate )
+        {
+            for ( const auto& element : list )
+            {
+                if ( predicate( element ) )
+                    return true;
+            }
+            return false;
+        }
+
+        /** @brief `value` 와 같은 첫 원소의 인덱스입니다. 없으면 빈 값입니다(언리얼 `TArray::Find`). `findIndexBy` 는 멤버 키로 찾고, 이것은 원소 값 자체로 찾습니다. */
+        template <typename TVector, typename TValue>
+        [[nodiscard]] static std::optional<size_t> findIndex( const TVector& list, const TValue& value )
+        {
+            for ( size_t index = 0; index < list.size(); ++index )
+            {
+                if ( list[index] == value )
+                    return index;
+            }
+            return std::nullopt;
+        }
+
+        /**
+         * @brief `value` 와 같은 첫 원소를 지우고 지운 개수(0 또는 1)를 돌려줍니다. 남은 원소의 순서는 지킵니다(언리얼 `TArray::RemoveSingle`).
+         * @details 찾아서 지우는 `find` + `erase( it )` 손 코드를 대신합니다. 지운 개수는 알림이라 버려도 됩니다(`[[nodiscard]]` 가 아닙니다). 순서가 상관없으면 `removeSingleSwap` 이 원소를 덜 옮깁니다.
+         */
+        template <typename TVector, typename TValue>
+        static size_t removeFirst( TVector& list, const TValue& value )
+        {
+            const std::optional<size_t> index = findIndex( list, value );
+            if ( index.has_value() == false )
+                return 0;
+            list.erase( list.begin() + static_cast<ptrdiff_t>( *index ) );
+            return 1;
+        }
+
+        /**
          * @brief `value` 와 같은 첫 원소를 `removeAtSwap` 으로 지웁니다(언리얼 `TArray::RemoveSingleSwap`). 찾아서 지웠으면 true 입니다.
          * @details "찾기 → 마지막 원소로 덮기 → pop_back" 을 손으로 적지 않고 이것을 씁니다.
          */

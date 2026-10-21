@@ -5,6 +5,7 @@
 #include "Core/Common/HashUtil.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
@@ -449,7 +450,7 @@ namespace sw
                 if ( activePack.empty() == false && FileUtil::isDirectory( activePack ) )
                 {
                     const string normPack = FileUtil::normalizeSeparators( activePack );
-                    if ( std::find( _s_listResourceFolder.begin(), _s_listResourceFolder.end(), normPack ) == _s_listResourceFolder.end() )
+                    if ( VectorUtil::contains( _s_listResourceFolder, normPack ) == false )
                         _s_listResourceFolder.push_back( normPack );
                 }
                 const string gameDir = findLooseDomainFolder( path::kGamePack ).getDiskPath();
@@ -460,10 +461,10 @@ namespace sw
                     for ( const string& packFolder : listPackFolder )
                     {
                         const string normPack = FileUtil::normalizeSeparators( packFolder );
-                        if ( std::find( _s_listResourceFolder.begin(), _s_listResourceFolder.end(), normPack ) == _s_listResourceFolder.end() )
+                        if ( VectorUtil::contains( _s_listResourceFolder, normPack ) == false )
                             _s_listResourceFolder.push_back( normPack );
                     }
-                    if ( std::find( _s_listResourceFolder.begin(), _s_listResourceFolder.end(), gameDir ) == _s_listResourceFolder.end() )
+                    if ( VectorUtil::contains( _s_listResourceFolder, gameDir ) == false )
                         _s_listResourceFolder.push_back( gameDir );
                 }
             }
@@ -473,7 +474,7 @@ namespace sw
                 const string domainDir = findLooseDomainFolder( token ).getDiskPath();
                 if ( domainDir.empty() == false )
                 {
-                    if ( std::find( _s_listResourceFolder.begin(), _s_listResourceFolder.end(), domainDir ) == _s_listResourceFolder.end() )
+                    if ( VectorUtil::contains( _s_listResourceFolder, domainDir ) == false )
                         _s_listResourceFolder.push_back( domainDir );
                 }
             }

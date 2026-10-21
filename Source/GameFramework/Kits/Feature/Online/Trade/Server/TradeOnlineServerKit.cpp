@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 
 #include "GameFramework/Base/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Base/Online/Server/OnlineServerKit.h"
@@ -36,12 +37,8 @@ namespace sw
 
             bool isTradable( string_view assetID ) const override
             {
-                for ( const string& prefix : _listTradablePrefix )
-                {
-                    if ( StringUtil::startsWith( assetID, prefix ) )
-                        return true;
-                }
-                return false;
+                return VectorUtil::containsIf( _listTradablePrefix, [&]( const string& prefix )
+                { return StringUtil::startsWith( assetID, prefix ); } );
             }
             int32 getMaxLegsPerSide() const override { return _maxLegsPerSide; }
 
