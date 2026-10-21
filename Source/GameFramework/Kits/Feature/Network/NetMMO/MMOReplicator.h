@@ -2,7 +2,7 @@
  * @file MMOReplicator.h
  * @brief 엔티티가 수천 개여도 관찰자(플레이어)마다 근처의 중요한 엔티티를 정해진 바이트 안에서 보냅니다.
  * @details 동작은 세 부분으로 나뉜다.
- *          1. 관심 영역: 엔진의 공간 해시(`SpatialHashGrid2D`, XZ 평면의 점)로 근처 엔티티를 찾는다.
+ *          1. 관심 영역: Core 의 관심 영역 격자(`NetInterestGrid` — XZ 평면 공간 해시)로 근처 엔티티를 찾는다.
  *             나가는 반경을 들어오는 반경보다 크게 잡아서 경계에서 엔티티가 들락날락하지 않게 한다(히스테리시스).
  *          2. 전송: 틱마다 새로 보이는 엔티티를 신뢰 메시지 하나에 묶어 전체 상태로 보낸다(Core 가 64 KB까지 조각으로 나눠 전송한다). 갱신은 비신뢰 메시지로 보낸다.
  *             클라이언트는 받은 갱신 틱을 확인 메시지(`kUpdateAck`, 가장 새 틱과 그 앞 32틱의 비트)로 돌려보낸다.
@@ -27,10 +27,10 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 #include "Core/Network/Message/NetMessage.h"
+#include "Core/Network/Replication/NetInterestGrid.h"
 #include "Core/Network/Replication/NetParallel.h"
 #include "Core/Network/Replication/NetPrioritizer.h"
 #include "Core/Network/Replication/TickRingBuffer.h"
-#include "Core/Spatial/SpatialHashGrid2D.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -226,7 +226,7 @@ namespace sw
 
         unordered_map<uint32, MMOEntity>    _mapEntity;
         vector<Observer>                    _listObserver;
-        SpatialHashGrid2D                   _grid; ///< 엔티티 위치(XZ 평면의 점). 키는 `MMOReplicatorInternal::makeGridKey` 로 만든다
+        NetInterestGrid                     _interest; ///< 엔티티 위치(XZ 평면의 점)와 두 반경. 키는 `NetInterestGrid::makeKey`
         MMOReplicatorConfig                 _settings;
         IInterestPolicy                     _defaultPolicy;
         INetPeers*                          _pHost;

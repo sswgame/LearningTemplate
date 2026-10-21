@@ -18,12 +18,6 @@ namespace sw
     {
         struct MMOReplicatorInternal
         {
-            /**
-             * @brief 엔티티 id 를 공간 해시의 키로 바꿉니다.
-             * @details 격자는 키를 비교하고 해시하기만 하므로 세대는 항상 1이다. 세대 0은 무효 핸들이라 격자가 받지 않는다.
-             */
-            static SlotHandle makeGridKey( uint32 entityID ) { return SlotHandle::make( entityID, 1u ); }
-
             static void writeEntity( BitWriter& writer, const MMOEntity& entity, bool bWithType )
             {
                 writer.writeVarUint( entity._entityID );
@@ -64,7 +58,7 @@ namespace sw
     MMOReplicator::MMOReplicator()
         : _mapEntity{}
         , _listObserver{}
-        , _grid{}
+        , _interest{}
         , _settings{}
         , _defaultPolicy{}
         , _pHost{ nullptr }
@@ -90,15 +84,16 @@ namespace sw
             SW_LOG_ERROR( "MMOReplicator: refused to start - settings '%#'", rangeError.c_str() );
             return false;
         }
-        if ( settings._leaveRadius < settings._enterRadius )
+        // 반경 관계(나가는 >= 들어오는)는 관심 영역 격자 한 곳이 거절한다 — 클라이언트-서버 키트의 관심 영역도 같은 규칙이다.
+        string interestError;
+        if ( _interest.initialize( settings._cellSize, settings._enterRadius, settings._leaveRadius, interestError ) == false )
         {
-            SW_LOG_ERROR( "MMOReplicator: refused to start - leave radius %# is smaller than enter radius %#", settings._leaveRadius, settings._enterRadius );
+            SW_LOG_ERROR( "MMOReplicator: refused to start - %# (enter %#, leave %#)", interestError.c_str(), settings._enterRadius, settings._leaveRadius );
             return false;
         }
         _pHost    = pHost;
         _settings = settings;
         _pPolicy  = pPolicy != nullptr ? pPolicy : &_defaultPolicy;
-        _grid     = SpatialHashGrid2D{ settings._cellSize };
         _mapEntity.clear();
         _listObserver.clear();
         _sentUpdateCount = 0;
@@ -117,14 +112,13 @@ namespace sw
             return;
         }
         _mapEntity[entity._entityID] = entity;
-        _grid.update( MMOReplicatorInternal::makeGridKey( entity._entityID ), entity._position._x, entity._position._z, entity._position._x,
-                      entity._position._z );
+        _interest.setPoint( entity._entityID, entity._position );
     }
 
     void MMOReplicator::removeEntity( uint32 entityID )
     {
         _mapEntity.erase( entityID );
-        _grid.remove( MMOReplicatorInternal::makeGridKey( entityID ) );
+        _interest.removePoint( entityID );
     }
 
     void MMOReplicator::setObserver( int32 connectionID, uint32 entityID )
@@ -255,7 +249,7 @@ namespace sw
                 continue;
             }
             const bool bAlways = bAlwaysPolicy && _pPolicy->isAlwaysRelevant( connectionID, entityIter->second );
-            if ( bAlways == false && float3::getHorizontalDistance( center, entityIter->second._position ) > _settings._leaveRadius )
+            if ( bAlways == false && _interest.isOutsideLeaveRadius( center, entityIter->second._position ) )
                 listLeave.push_back( visible.first );
         }
         std::sort( listLeave.begin(), listLeave.end() );
@@ -271,13 +265,13 @@ namespace sw
         const bool bAlwaysPolicy = _pPolicy->hasAlwaysRelevant();
         // 2) 새로 보임: 들어오는 반경 안의 엔티티이다. 가까운 것부터 처리하고 틱마다 상한을 둔다.
         vector<SlotHandle>& listNear = scratch._listNear;
-        _grid.queryCircle( center._x, center._z, _settings._enterRadius, listNear );
+        _interest.queryEntering( center, listNear );
         if ( bAlwaysPolicy )
         {
             for ( const auto& entity : _mapEntity )
             {
                 if ( _pPolicy->isAlwaysRelevant( connectionID, entity.second ) )
-                    listNear.push_back( MMOReplicatorInternal::makeGridKey( entity.first ) );
+                    listNear.push_back( NetInterestGrid::makeKey( entity.first ) );
             }
         }
         // 거리는 한 번만 계산하고 (거리, id) 로 정렬한다. 비교마다 해시를 찾지 않으려는 것이다. 이미 보이는 엔티티는 뺀다.
@@ -285,7 +279,7 @@ namespace sw
         listRank.clear();
         for ( const SlotHandle nearKey : listNear )
         {
-            const uint32 entityID = nearKey.index();
+            const uint32 entityID = NetInterestGrid::getEntityID( nearKey );
             if ( observer._mapVisible.find( entityID ) != observer._mapVisible.end() )
                 continue;
             const auto entityIter = _mapEntity.find( entityID );
