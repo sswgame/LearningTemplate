@@ -34,7 +34,7 @@ namespace sw
     {
     }
 
-    bool RollbackSession::initialize( NetHost* pHost, IRollbackGame* pGame, int32 playerCount, int32 localPlayer, const RollbackConfig& settings )
+    bool RollbackSession::initialize( INetPeers* pHost, IRollbackGame* pGame, int32 playerCount, int32 localPlayer, const RollbackConfig& settings )
     {
         // 실패하면 시작하지 않은 세션으로 남긴다. 값을 범위 안으로 맞춰 돌지 않는다.
         // 설정 칸의 범위는 `RollbackConfig` 의 `PROPERTY( Min · Max )` 가 원본이다. 여기서는 칸 사이의 관계(내 번호 < 플레이어 수)만 따로 본다.

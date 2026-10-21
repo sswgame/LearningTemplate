@@ -7,6 +7,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Connection/NetConnection.h"
+#include "Core/Network/Connection/NetHostThread.h"
 #include "Core/Network/Message/NetStatsReport.h"
 #include "Core/Network/Transport/PlatformSocketUtil.h"
 #include "Core/Network/Transport/UDPNetTransport.h"
@@ -28,17 +29,51 @@ namespace sw
         {
             /** @brief UDP 포트의 가장 큰 값입니다. */
             static constexpr int32 kMaxPort = 65535;
+            /** @brief 리눅스만 한 포트를 `SO_REUSEPORT` 로 나눌 수 있습니다(`UDPPortSharing::ReusePort`). */
+#if defined( SW_PLATFORM_LINUX )
+            static constexpr bool kbCanSharePort = true;
+#else
+            static constexpr bool kbCanSharePort = false;
+#endif
+            /**
+             * @brief 샤드 배치가 열 수 있는 모양인가입니다. 틀리면 오류 로그와 false 입니다(다른 배치로 대신 열지 않는다).
+             * @details 서버는 샤드 1 개 이상, 클라이언트는 정확히 1 개다. 샤드 여럿은 고정된 첫 포트가 있어야 한다 — 배정이 "첫 포트 + 샤드" 를 알려 주므로
+             *          운영체제가 고른 포트(0)로는 계약을 지킬 수 없다. 연이은 포트의 마지막이 UDP 포트 범위를 넘어도 안 된다.
+             */
+            static bool isValidShardLayout( const GameNetSessionParams& params )
+            {
+                const bool bServer        = params._role == GameNetRole::Server;
+                const bool bBadShardCount = params._shardCount < 1 || ( bServer == false && params._shardCount != 1 );
+                if ( bBadShardCount )
+                {
+                    SW_LOG_ERROR( "Net session shard count %# - a server opens 1 or more shards and a client exactly 1", params._shardCount );
+                    return false;
+                }
+                const bool bBadPortSharing = params._bShardsSharePort && ( bServer == false || kbCanSharePort == false || params._shardCount < 2 );
+                if ( bBadPortSharing )
+                {
+                    SW_LOG_ERROR( "Net session port sharing is for a Linux server with 2 or more shards (%# shard(s))", params._shardCount );
+                    return false;
+                }
+                if ( params._shardCount > 1 && params._listenPort == 0 )
+                {
+                    SW_LOG_ERROR( "Net session %# shards on port 0 - shards need a fixed first port (the server assignment hands out first port + shard)", params._shardCount );
+                    return false;
+                }
+                const int32 lastPort = params._bShardsSharePort ? static_cast<int32>( params._listenPort ) : static_cast<int32>( params._listenPort ) + params._shardCount - 1;
+                if ( kMaxPort < lastPort )
+                {
+                    SW_LOG_ERROR( "Net session shards %#-%# run past the UDP port range", params._listenPort, lastPort );
+                    return false;
+                }
+                return true;
+            }
             /** @brief 비율(0~1)을 백분율로 바꾸는 배수입니다. */
             static constexpr float32 kPercent = 100.0f;
             /** @brief 초당 킬로비트(`NetConnectionStats::_sentBandwidth`)를 초당 바이트로 바꾸는 배수입니다(1000 / 8). */
             static constexpr float32 kBytesPerKilobit = 125.0f;
             /** @brief `net.traffic` 이 한 번에 보낼 수 있는 메시지 상한(신뢰 창 `NetConnection::kReliableWindow` 를 넘으면 보내기가 거절된다). */
             [[maybe_unused]] static constexpr int32 kMaxTrafficMessageCount = 200; // 개발 명령만 쓴다(Shipping 에는 없다)
-            /**
-             * @brief `net.traffic` 메시지의 종류 바이트입니다. 프레임워크 영역(`NetMessageRange::kFramework`) 바로 아래라 처리기가 없고, 받는 쪽 라우터가 버린다.
-             * @details 재전송 수치를 보려고 신뢰 메시지를 흘리는 용도다 — 키트가 없는 게임(Empty)의 세션은 연결 유지 패킷만 오가서 다시 보낼 것이 없다.
-             */
-            [[maybe_unused]] static constexpr uint8 kTrafficMessageKind = NetMessageRange::kFramework - 1;
             /** @brief 엔진의 세션입니다 — 개발 명령 `net.*` 이 읽는다(게임 스레드). 엔진 서비스가 묶이지 않았으면 nullptr 입니다. */
             [[maybe_unused]] static GameNetSession* findActiveSession() { return engine::findSubsystem<GameNetSession>(); } // 개발 명령만 쓴다(Shipping 에는 없다)
 
@@ -74,7 +109,8 @@ namespace sw
                 GameNetSession* pSession = findCommandSession( outReply );
                 if ( pSession == nullptr )
                     return true;
-                NetEmulationTransport* pEmulation = pSession->findEmulation();
+                // 샤드마다 흉내가 하나씩이고 모두 같은 조건이다 — 첫 샤드에서 읽고, 바꿀 때는 모두에 건다.
+                NetEmulationTransport* pEmulation = pSession->findEmulation( 0 );
                 if ( pEmulation == nullptr )
                 {
                     outReply = "net emulation is not available in this build";
@@ -97,7 +133,10 @@ namespace sw
                     const bool bInvalidSpikeArguments = listArgument.size() != 2 || StringUtil::parseFloat( listArgument[1], seconds ) == false || seconds < 0.0f;
                     if ( bInvalidSpikeArguments )
                         return false;
-                    pEmulation->startOutage( static_cast<float64>( seconds ) );
+                    for ( int32 shardIndex = 0; shardIndex < pSession->getShardCount(); ++shardIndex )
+                    {
+                        pSession->findEmulation( shardIndex )->startOutage( static_cast<float64>( seconds ) );
+                    }
                     outReply = "net emulation spike " + listArgument[1] + " s";
                     return true;
                 }
@@ -140,10 +179,14 @@ namespace sw
                     outReply = "net.emulation: " + error;
                     return true;
                 }
-                if ( bUp )
-                    pEmulation->setDefaultConditions( upConditions );
-                if ( bDown )
-                    pEmulation->setIncomingConditions( downConditions );
+                for ( int32 shardIndex = 0; shardIndex < pSession->getShardCount(); ++shardIndex )
+                {
+                    NetEmulationTransport* pShardEmulation = pSession->findEmulation( shardIndex );
+                    if ( bUp )
+                        pShardEmulation->setDefaultConditions( upConditions );
+                    if ( bDown )
+                        pShardEmulation->setIncomingConditions( downConditions );
+                }
                 outReply = describeEmulation( *pEmulation );
                 return true;
             }
@@ -188,15 +231,15 @@ namespace sw
                     return true;
                 messageCount = MathUtil::min( messageCount, kMaxTrafficMessageCount );
                 vector<uint8> payloadBytes( static_cast<size_t>( MathUtil::min( messageBytes, NetConnection::kMaxSingleMessageSize ) ), uint8{ 0 } );
-                payloadBytes[0] = kTrafficMessageKind;
+                payloadBytes[0] = GameNetSessionMessage::kTraffic;
                 vector<int32> listConnection;
-                pSession->getHost().collectConnected( listConnection );
+                pSession->getPeers().collectConnected( listConnection );
                 int32 sentCount = 0;
                 for ( const int32 connectionID : listConnection )
                 {
                     for ( int32 index = 0; index < messageCount; ++index )
                     {
-                        const bool bSent = pSession->getHost().sendMessage( connectionID, NetChannelType::ReliableOrdered, payloadBytes.data(), static_cast<int32>( payloadBytes.size() ) );
+                        const bool bSent = pSession->getPeers().sendMessage( connectionID, NetChannelType::ReliableOrdered, payloadBytes.data(), static_cast<int32>( payloadBytes.size() ) );
                         sentCount += bSent ? 1 : 0;
                     }
                 }
@@ -227,7 +270,7 @@ namespace sw
                 }
                 outReply = string( "net session: " ) + getEnumName( pSession->getRole() ) + ", connected " + to_string( pSession->getConnectedCount() );
                 if ( pSession->getRole() == GameNetRole::Server )
-                    outReply += ", port " + to_string( pSession->getListenPort() );
+                    outReply += ", port " + to_string( pSession->getListenPort() ) + ", shards " + to_string( pSession->getShardCount() );
                 return true;
             }
 #endif
@@ -262,18 +305,34 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @brief 포트 샤드 하나 — 소켓, 그것을 감싼 회선 흉내(Dev), 호스트, 네트워크 스레드입니다.
+     * @details 선언 순서가 소멸 순서를 정한다: 스레드 → 호스트 → 흉내 → 소켓(흉내는 안쪽 전송을 빌려 쓰고, 호스트는 흉내를 빌려 쓴다).
+     */
+    struct GameNetSession::Shard
+    {
+        unique_ptr<UDPNetTransport>       _transport{};
+        unique_ptr<NetEmulationTransport> _emulation{}; ///< `_transport` 를 감싼 회선 흉내(Dev). 호스트는 이것을 전송으로 쓴다
+        NetHost                           _host{};
+        NetHostThread                     _thread{};
+    };
+} // namespace sw
+
+namespace sw
+{
     GameNetSession::GameNetSession()
-        : _host{}
-        , _thread{}
+        : _listShard{}
+        , _peers{}
         , _router{}
-        , _transport{ nullptr }
-        , _emulation{ nullptr }
+        , _tickWriter{}
         , _connectFuture{}
         , _listEventScratch{}
         , _serverAddress{}
+        , _latestServerTick{ 0 }
         , _listenPort{ 0 }
         , _role{ GameNetRole::None }
         , _bConnectFailureReported{ SW_FALSE }
+        , _bServerTickKnown{ SW_FALSE }
     {
     }
 
@@ -342,20 +401,49 @@ namespace sw
             SW_LOG_ERROR( "Server config _listenAddress '%#' - the game port binds only 0.0.0.0 or 127.0.0.1", config._listenAddress.c_str() );
             return false;
         }
-        if ( config._gamePortShardCount != 1 )
-        {
-            SW_LOG_ERROR( "Server config _gamePortShardCount %# - the game net session opens one port (sharding is not implemented)", config._gamePortShardCount );
-            return false;
-        }
         if ( config._gamePort < 0 || GameNetSessionInternal::kMaxPort < config._gamePort )
         {
             SW_LOG_ERROR( "Server config _gamePort %# is not a UDP port - the game port stays closed", config._gamePort );
             return false;
         }
-        outParams._role          = GameNetRole::Server;
-        outParams._listenPort    = static_cast<uint16>( config._gamePort );
-        outParams._bLoopbackOnly = bLoopbackOnly;
+        // 샤드 배치(한 포트 나누기는 리눅스만 · 샤드 여럿은 고정 포트)는 `isValidShardLayout` 한 곳이 거절한다 — 다른 플랫폼에서 연이은 포트로 바꿔 열지 않는다.
+        outParams._role             = GameNetRole::Server;
+        outParams._listenPort       = static_cast<uint16>( config._gamePort );
+        outParams._shardCount       = config._gamePortShardCount;
+        outParams._bLoopbackOnly    = bLoopbackOnly;
+        outParams._bShardsSharePort = config._bGamePortReuse;
+        if ( GameNetSessionInternal::isValidShardLayout( outParams ) == false )
+        {
+            outParams = GameNetSessionParams{};
+            return false;
+        }
         return true;
+    }
+
+    unique_ptr<GameNetSession::Shard> GameNetSession::createShard( const GameNetSessionParams& params, uint16 transportPort, const NetEmulationConditions& emulationConditions )
+    {
+        unique_ptr<Shard> shard = make_unique<Shard>();
+        shard->_transport       = make_unique<UDPNetTransport>();
+        // 클라이언트는 서버 주소가 정한다 — 다른 기계의 서버면 그 답을 받아야 하므로 루프백에만 묶을 수 없다.
+        const bool           bServer       = params._role == GameNetRole::Server;
+        const bool           bLoopbackOnly = bServer ? params._bLoopbackOnly : params._serverAddress == NetAddress::makeLoopback( params._serverAddress._port );
+        const UDPPortSharing sharing       = params._bShardsSharePort ? UDPPortSharing::ReusePort : UDPPortSharing::Exclusive;
+        if ( shard->_transport->open( transportPort, bLoopbackOnly, sharing ) == false )
+        {
+            SW_LOG_ERROR( "Net session could not open UDP port %# (in use?)", transportPort );
+            return nullptr;
+        }
+        INetTransport* pHostTransport = shard->_transport.get();
+#if !defined( SW_SHIPPING )
+        // 회선 조절(개발 명령 net.emulation)이 실행 중에 조건을 바꿀 수 있게 늘 감싼다. 조건이 꺼져 있으면 그대로 넘긴다.
+        shard->_emulation = make_unique<NetEmulationTransport>( shard->_transport.get() );
+        shard->_emulation->setDefaultConditions( emulationConditions );
+        pHostTransport = shard->_emulation.get();
+#else
+        (void)emulationConditions;
+#endif
+        shard->_host.initialize( pHostTransport, params._hostSettings );
+        return shard;
     }
 
     bool GameNetSession::initialize( const GameNetSessionParams& params )
@@ -363,21 +451,11 @@ namespace sw
         shutdown();
         if ( params._role == GameNetRole::None )
             return false;
-        _transport                 = make_unique<UDPNetTransport>();
-        const uint16 transportPort = params._role == GameNetRole::Server ? params._listenPort : 0;
-        // 클라이언트는 서버 주소가 정한다 — 다른 기계의 서버면 그 답을 받아야 하므로 루프백에만 묶을 수 없다.
-        const bool bLoopbackOnly = params._role == GameNetRole::Server ? params._bLoopbackOnly : params._serverAddress == NetAddress::makeLoopback( params._serverAddress._port );
-        if ( _transport->open( transportPort, bLoopbackOnly ) == false )
-        {
-            SW_LOG_ERROR( "Net session could not open UDP port %# (in use?)", transportPort );
-            _transport.reset();
+        if ( GameNetSessionInternal::isValidShardLayout( params ) == false )
             return false;
-        }
-        INetTransport* pHostTransport = _transport.get();
+        NetEmulationConditions emulationConditions;
 #if !defined( SW_SHIPPING )
-        // 회선 조절(개발 명령 net.emulation)이 실행 중에 조건을 바꿀 수 있게 늘 감싼다. 조건이 꺼져 있으면 그대로 넘긴다.
-        _emulation                                 = make_unique<NetEmulationTransport>( _transport.get() );
-        NetEmulationConditions emulationConditions = NetEmulationConditions::makeFromGlobalVariables();
+        emulationConditions = NetEmulationConditions::makeFromGlobalVariables();
         if ( gv_netEmuPreset.empty() == false )
         {
             NetEmulationPresetTable presetTable;
@@ -386,39 +464,71 @@ namespace sw
                  presetTable.tryGetConditions( gv_netEmuPreset, emulationConditions ) == false )
                 SW_LOG_ERROR( "gv_netEmuPreset '%#' is not a preset (%#) - no emulation", gv_netEmuPreset.c_str(), presetTable.makePresetNames().c_str() );
         }
-        _emulation->setDefaultConditions( emulationConditions );
-        pHostTransport = _emulation.get();
 #endif
-        _host.initialize( pHostTransport, params._hostSettings );
-        if ( params._role == GameNetRole::Server )
+        const bool       bServer = params._role == GameNetRole::Server;
+        vector<NetHost*> listHost;
+        for ( int32 shardIndex = 0; shardIndex < params._shardCount; ++shardIndex )
         {
-            if ( _host.listen() == false )
+            // 샤드 n 은 첫 포트 + n(한 포트를 나누면 모두 첫 포트). 클라이언트는 운영체제가 고른 포트 하나다.
+            const uint16      shardOffset   = params._bShardsSharePort ? uint16{ 0 } : static_cast<uint16>( shardIndex );
+            const uint16      transportPort = bServer ? static_cast<uint16>( params._listenPort + shardOffset ) : uint16{ 0 };
+            unique_ptr<Shard> shard         = createShard( params, transportPort, emulationConditions );
+            if ( shard == nullptr )
             {
-                SW_LOG_ERROR( "Net session could not listen on UDP port %#", transportPort );
-                _emulation.reset();
-                _transport.reset();
+                shutdown();
                 return false;
             }
-            _listenPort = _transport->getLocalAddress()._port;
+            listHost.push_back( &shard->_host );
+            _listShard.push_back( std::move( shard ) );
         }
-        else
+        if ( _peers.initialize( listHost, params._hostSettings._maxConnections ) == false )
         {
-            _serverAddress = params._serverAddress;
-            _connectFuture = _host.connectAsync( _serverAddress );
-        }
-        if ( _thread.start( &_host ) == false )
-        {
-            SW_LOG_ERROR( "Net session could not start its network thread" );
-            _host.disconnectAll();
-            _emulation.reset();
-            _transport.reset();
+            shutdown();
             return false;
         }
-        _role = params._role;
-        if ( _role == GameNetRole::Server )
-            SW_LOG_INFO( "Net session listening on UDP port %#", _listenPort );
+        if ( bServer )
+        {
+            for ( const unique_ptr<Shard>& shard : _listShard )
+            {
+                if ( shard->_host.listen() == false )
+                {
+                    SW_LOG_ERROR( "Net session could not listen on UDP port %#", shard->_transport->getLocalAddress()._port );
+                    shutdown();
+                    return false;
+                }
+            }
+            _listenPort = _listShard.front()->_transport->getLocalAddress()._port;
+        }
         else
+        {
+            // 엔진 영역의 서버 틱은 클라이언트만 받는다 — 키트 · 게임 영역과 겹치지 않으므로 거절되면 이 라우터를 다른 누가 엔진 영역에 썼다는 결함이다.
+            if ( _router.registerHandler( this ) == false )
+            {
+                SW_LOG_ERROR( "Net session could not claim the engine message range - another handler holds it" );
+                shutdown();
+                return false;
+            }
+            _serverAddress = params._serverAddress;
+            _connectFuture = getClientHost().connectAsync( _serverAddress );
+        }
+        for ( const unique_ptr<Shard>& shard : _listShard )
+        {
+            if ( shard->_thread.start( &shard->_host ) == false )
+            {
+                SW_LOG_ERROR( "Net session could not start its network thread" );
+                shutdown();
+                return false;
+            }
+        }
+        _role = params._role;
+        if ( _role == GameNetRole::Client )
             SW_LOG_INFO( "Net session connecting to %#", _serverAddress.toString() );
+        else if ( getShardCount() == 1 )
+            SW_LOG_INFO( "Net session listening on UDP port %#", _listenPort );
+        else if ( params._bShardsSharePort )
+            SW_LOG_INFO( "Net session listening on UDP port %# (%# shards share the port)", _listenPort, getShardCount() );
+        else
+            SW_LOG_INFO( "Net session listening on UDP port %# (%# shards, ports %#-%#)", _listenPort, getShardCount(), _listenPort, _listenPort + getShardCount() - 1 );
         return true;
     }
 
@@ -441,28 +551,47 @@ namespace sw
 
     void GameNetSession::shutdown()
     {
-        if ( _role == GameNetRole::None && _transport == nullptr )
+        if ( _role == GameNetRole::None && _listShard.empty() )
             return;
         // 스레드를 먼저 멈춘다 — 끊기 패킷은 disconnectAll 이 바로 보낸다(update 를 돌 스레드가 없어도).
-        _thread.stop();
+        for ( const unique_ptr<Shard>& shard : _listShard )
+        {
+            shard->_thread.stop();
+        }
         // 마지막 update 뒤에 쌓인 연결 사건도 로그에 남긴다 — 접속 직후 종료 명령이 같은 틱에 오면 update 없이 여기로 온다.
         // 처리기에는 나눠 주지 않는다(키트 처리기는 onShutdown 에서 내려갔다).
         if ( _role != GameNetRole::None )
         {
             _listEventScratch.clear();
-            _host.drainEvents( _listEventScratch );
+            vector<NetHostEvent> listShardEvent;
+            for ( int32 shardIndex = 0; shardIndex < getShardCount(); ++shardIndex )
+            {
+                listShardEvent.clear();
+                _listShard[static_cast<size_t>( shardIndex )]->_host.drainEvents( listShardEvent );
+                for ( NetHostEvent event : listShardEvent )
+                {
+                    event._connectionID = _peers.makeConnectionID( shardIndex, event._connectionID );
+                    _listEventScratch.push_back( event );
+                }
+            }
             logEvents( EventPhase::Closing );
         }
-        _host.disconnectAll();
+        for ( const unique_ptr<Shard>& shard : _listShard )
+        {
+            shard->_host.disconnectAll();
+        }
         if ( _role != GameNetRole::None )
             SW_LOG_INFO( "Net session closed (%#)", getEnumName( _role ) );
-        _emulation.reset(); // 안쪽 전송보다 먼저 — 흉내는 안쪽을 빌려 쓴다
-        _transport.reset();
+        _router.unregisterHandler( this );
+        _peers.shutdown();
+        _listShard.clear(); // 샤드마다 스레드 → 호스트 → 흉내 → 소켓 순으로 내린다(`Shard` 의 선언 순서)
         _connectFuture = TaskFuture<NetConnectResult>{};
         _listEventScratch.clear();
+        _latestServerTick        = 0;
         _listenPort              = 0;
         _role                    = GameNetRole::None;
         _bConnectFailureReported = SW_FALSE;
+        _bServerTickKnown        = SW_FALSE;
     }
 
     void GameNetSession::update()
@@ -471,7 +600,7 @@ namespace sw
             return;
         reportConnectResult();
         _listEventScratch.clear();
-        (void)_router.pump( _host, nullptr, &_listEventScratch ); // 처리기가 없는 메시지는 버린다(맡은 키트가 없다)
+        (void)_router.pump( _peers, nullptr, &_listEventScratch ); // 처리기가 없는 메시지는 버린다(맡은 키트가 없다)
         logEvents( EventPhase::Running );
     }
 
@@ -483,9 +612,9 @@ namespace sw
             {
                 if ( event._kind == NetHostEvent::Kind::Connected )
                     SW_LOG_INFO( "Net session client %# connected from %# (%# connected)", event._connectionID,
-                                 _host.getConnectionAddress( event._connectionID ).toString(), _host.getConnectedCount() );
+                                 _peers.getConnectionAddress( event._connectionID ).toString(), _peers.getConnectedCount() );
                 else
-                    SW_LOG_INFO( "Net session client %# disconnected (%#, %# connected)", event._connectionID, toString( event._reason ), _host.getConnectedCount() );
+                    SW_LOG_INFO( "Net session client %# disconnected (%#, %# connected)", event._connectionID, toString( event._reason ), _peers.getConnectedCount() );
             }
             else if ( event._kind == NetHostEvent::Kind::Disconnected && phase == EventPhase::Running )
             {
@@ -501,7 +630,47 @@ namespace sw
 
     int32 GameNetSession::getConnectedCount() const
     {
-        return _role == GameNetRole::None ? 0 : _host.getConnectedCount();
+        return _role == GameNetRole::None ? 0 : _peers.getConnectedCount();
+    }
+
+    NetEmulationTransport* GameNetSession::findEmulation( int32 shardIndex )
+    {
+        const bool bOutOfRange = shardIndex < 0 || getShardCount() <= shardIndex;
+        return bOutOfRange ? nullptr : _listShard[static_cast<size_t>( shardIndex )]->_emulation.get();
+    }
+
+    NetHost& GameNetSession::getClientHost()
+    {
+        return _listShard.front()->_host;
+    }
+
+    void GameNetSession::sendServerTick( uint64 tick )
+    {
+        if ( _role != GameNetRole::Server )
+            return;
+        BitWriter& writer = _tickWriter.begin( GameNetSessionMessage::kServerTick );
+        writer.writeVarUint( tick );
+        (void)_tickWriter.broadcast( _peers, NetChannelType::UnreliableSequenced ); // 잃어도 다음 틱이 더 새 번호를 싣는다
+    }
+
+    bool GameNetSession::tryGetServerTick( uint64& outTick ) const
+    {
+        if ( _role != GameNetRole::Client || _bServerTickKnown == SW_FALSE )
+            return false;
+        outTick = _latestServerTick;
+        return true;
+    }
+
+    NetHandleResult GameNetSession::handleNetMessage( const NetMessageContext& context, BitReader& body )
+    {
+        (void)context;
+        const uint64 tick = body.readVarUint();
+        if ( body.hasOverflowed() )
+            return NetHandleResult::Malformed;
+        // 순서 있는 비신뢰 채널이라 옛 번호는 이미 걸러졌다. 다시 띄운 서버의 작은 번호도 그대로 받는다(새 연결의 첫 번호다).
+        _latestServerTick = tick;
+        _bServerTickKnown = SW_TRUE;
+        return NetHandleResult::Handled;
     }
 
     void GameNetSession::disconnectPeers()
@@ -509,17 +678,20 @@ namespace sw
         if ( _role == GameNetRole::None )
             return;
         _connectFuture = TaskFuture<NetConnectResult>{}; // 붙는 중이던 것도 버린다 — 끊긴 채로 남는다
-        _host.disconnectAll();
+        for ( const unique_ptr<Shard>& shard : _listShard )
+        {
+            shard->_host.disconnectAll();
+        }
         SW_LOG_INFO( "Net session disconnected its peers on request (%#)", getEnumName( _role ) );
     }
 
     bool GameNetSession::reconnect()
     {
-        const bool bCannotReconnect = _role != GameNetRole::Client || _connectFuture.isValid() || _host.getConnectedCount() > 0;
+        const bool bCannotReconnect = _role != GameNetRole::Client || _connectFuture.isValid() || getClientHost().getConnectedCount() > 0;
         if ( bCannotReconnect )
             return false;
         _bConnectFailureReported = SW_FALSE;
-        _connectFuture           = _host.connectAsync( _serverAddress );
+        _connectFuture           = getClientHost().connectAsync( _serverAddress );
         SW_LOG_INFO( "Net session reconnecting to %#", _serverAddress.toString() );
         return true;
     }
@@ -529,19 +701,21 @@ namespace sw
         NetEmulationReport report;
         if ( _role == GameNetRole::None )
             return report;
-        if ( _emulation != nullptr )
+        for ( const unique_ptr<Shard>& shard : _listShard )
         {
-            const NetEmulationStats stats = _emulation->getStats();
-            report._sentPacketCount       = stats._sentCount;
-            report._droppedPacketCount    = stats._droppedCount + stats._incomingDroppedCount;
+            if ( shard->_emulation == nullptr )
+                continue;
+            const NetEmulationStats stats = shard->_emulation->getStats();
+            report._sentPacketCount += stats._sentCount;
+            report._droppedPacketCount += stats._droppedCount + stats._incomingDroppedCount;
         }
         vector<int32> listConnection;
-        _host.collectConnected( listConnection );
+        _peers.collectConnected( listConnection );
         report._connectionCount = static_cast<int32>( listConnection.size() );
         for ( const int32 connectionID : listConnection )
         {
             NetConnectionStats stats;
-            if ( _host.getConnectionStats( connectionID, stats ) == false )
+            if ( _peers.getConnectionStats( connectionID, stats ) == false )
                 continue;
             report._resentMessageCount += stats._resentMessageCount;
             report._measuredLossPercent = MathUtil::max( report._measuredLossPercent, stats._packetLoss * GameNetSessionInternal::kPercent );
@@ -556,12 +730,12 @@ namespace sw
         if ( _role == GameNetRole::None )
             return report;
         vector<int32> listConnection;
-        _host.collectConnected( listConnection );
+        _peers.collectConnected( listConnection );
         report._connectionCount = static_cast<int32>( listConnection.size() );
         for ( const int32 connectionID : listConnection )
         {
             NetConnectionStats stats;
-            if ( _host.getConnectionStats( connectionID, stats ) == false )
+            if ( _peers.getConnectionStats( connectionID, stats ) == false )
                 continue;
             report._sentPacketCount += stats._sentPacketCount;
             report._receivedPacketCount += stats._receivedPacketCount;
@@ -572,7 +746,7 @@ namespace sw
             report._rttMilliseconds = MathUtil::max( report._rttMilliseconds, stats._rtt * constant::kMillisecondsPerSecond );
         }
         NetMessageKindTallyTable sentTally;
-        _host.copySentKindTally( sentTally );
+        _peers.addSentKindTally( sentTally );
         report.populateKinds( _router.getKindTally(), sentTally );
         return report;
     }
@@ -594,7 +768,7 @@ namespace sw
             SW_LOG_WARNING( "Net session could not connect to %# (%#)%#", _serverAddress.toString(), toString( result._reason ), bRetry ? " - retrying" : "" );
         _bConnectFailureReported = SW_TRUE;
         if ( bRetry )
-            _connectFuture = _host.connectAsync( _serverAddress );
+            _connectFuture = getClientHost().connectAsync( _serverAddress );
     }
 } // namespace sw
 

@@ -29,7 +29,7 @@
 
 namespace sw
 {
-    class NetHost;
+    class INetPeers;
 
     /** @brief 메시지 종류입니다. 메시지의 첫 바이트에 들어갑니다. */
     struct NetLockstepMessage
@@ -95,7 +95,7 @@ namespace sw
          * @brief 세션을 시작합니다. 플레이어 수가 1보다 작거나, 내 번호가 범위 밖이거나, 설정이 범위 밖이면 오류를 남기고 false 를 반환합니다.
          * @details 실패한 세션은 시작하지 않은 것과 같다. 입력을 예약하지 않고(`submitLocalInput` 이 false) 틱도 넘기지 않는다.
          */
-        [[nodiscard]] bool initialize( NetHost* pHost, int32 playerCount, int32 localPlayer, const LockstepConfig& settings );
+        [[nodiscard]] bool initialize( INetPeers* pHost, int32 playerCount, int32 localPlayer, const LockstepConfig& settings );
         /**
          * @brief 내 다음 입력을 다음 빈 틱에 예약해 보냅니다.
          * @details 이미 (지금 틱 + `kMaxInputLead`)까지 예약했으면 false 를 반환하므로 틱이 넘어간 뒤 다시 낸다.
@@ -153,7 +153,7 @@ namespace sw
         TickRingBuffer<vector<int64>> _listTickChecksum;  ///< 틱별로 플레이어마다 체크섬을 보관한다(-1이면 아직 못 받음). 창 [지금 − `kChecksumWindow`, 지금 + `kChecksumWindow`) 이 링 버퍼 한 바퀴이다
         vector<uint32>                _listNextInputTick; ///< 플레이어마다 다음에 올 입력 틱
         vector<uint32>                _listLeaveTick;     ///< 플레이어마다 빈 입력이 되는 틱. `kNoLeaveTick` 이면 이탈하지 않았다
-        NetHost*                      _pHost;
+        INetPeers*                    _pHost;
         int32                         _playerCount;
         int32                         _localPlayer;
         int32                         _inputDelay;

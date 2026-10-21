@@ -31,6 +31,7 @@
 #include "Engine/Config/GameSelection.h"
 #include "Engine/Config/Server/ServerConfig.h"
 #include "Engine/Module/ModuleImageHost.h"
+#include "Engine/Net/GameNetSession.h"
 #include "Engine/Observability/MetricRegistry.h"
 #include "Engine/Observability/DebugChannel.h"
 #include "Engine/Scene/SceneStateHash.h"
@@ -58,8 +59,6 @@ namespace sw
     /** @brief `-gv_debugChannelPort=N`: 디버그 채널(개발 명령 원격 실행, 루프백 TCP)을 이 포트에 엽니다(0=끄기). 토큰(`gv_debugChannelToken`)이 있어야 열립니다. Shipping 에는 없습니다. */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_debugChannelPort, 0, "디버그 채널 포트 (0=끄기, 루프백 전용, 토큰 필요)" );
     SW_TEST_GLOBAL_VARIABLE( string, gv_debugChannelToken, "", "디버그 채널 접속 토큰" );
-    /** @brief `-gv_stateHashHistory=N`: 서버가 틱마다 씬 상태 해시를 남기고 최근 N 틱을 보관합니다(0=끄기). 개발 명령 `state.hashes` 로 읽습니다. */
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_stateHashHistory, 0, "틱별 씬 상태 해시 이력 길이 (0=끄기)" );
 } // namespace sw
 
 namespace sw
@@ -454,9 +453,11 @@ namespace sw
 #if !defined( SW_SHIPPING )
             if ( StateHashHistory::get().isRecording() && engine::areEngineServicesBound() )
             {
-                Scene* pScene = engine::getSubsystem<SceneManager>().getActiveScene();
-                if ( pScene != nullptr && pScene->getObjectManager() != nullptr )
-                    StateHashHistory::get().record( _tickCount, SceneStateHash::compute( *pScene->getObjectManager() ) );
+                StateHashHistory::get().recordActiveScene( _tickCount );
+                // 클라이언트가 같은 틱 번호로 자기 해시를 남긴다(S7) — 이력을 남기는 서버만 보낸다.
+                GameNetSession* pNetSession = engine::findSubsystem<GameNetSession>();
+                if ( pNetSession != nullptr )
+                    pNetSession->sendServerTick( _tickCount );
             }
 #endif
             const bool bPausedStepCompleted = _bPaused == SW_TRUE && _pendingStepCount > 0 && --_pendingStepCount == 0;
@@ -608,8 +609,7 @@ namespace sw
 #if !defined( SW_SHIPPING )
     bool ServerApp::startDebugTools()
     {
-        if ( gv_stateHashHistory > 0 )
-            StateHashHistory::get().setCapacity( static_cast<uint32>( gv_stateHashHistory ) );
+        StateHashHistory::get().startFromLaunch();
         if ( gv_debugChannelPort <= 0 )
             return true;
         const uint16 port = static_cast<uint16>( gv_debugChannelPort );

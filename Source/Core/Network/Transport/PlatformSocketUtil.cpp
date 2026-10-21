@@ -65,13 +65,28 @@ namespace sw
 #endif
     }
 
-    uint64 PlatformSocketUtil::openUDPSocket( uint16 port, bool bLoopbackOnly )
+    uint64 PlatformSocketUtil::openUDPSocket( uint16 port, bool bLoopbackOnly, UDPPortSharing sharing )
     {
         if ( initialize() == false )
             return kInvalidSocket;
+#if defined( SW_PLATFORM_WINDOWS )
+        if ( sharing == UDPPortSharing::ReusePort )
+            return kInvalidSocket; // Windows 에는 커널이 나눠 주는 포트 공유가 없다(SO_REUSEADDR 는 뜻이 다르다)
+#endif
         const PlatformSocketUtilInternal::NativeSocket native = socket( AF_INET, SOCK_DGRAM, IPPROTO_UDP );
         if ( native == PlatformSocketUtilInternal::kNativeInvalid )
             return kInvalidSocket;
+#if !defined( SW_PLATFORM_WINDOWS )
+        if ( sharing == UDPPortSharing::ReusePort )
+        {
+            const int32 reuse = 1;
+            if ( setsockopt( native, SOL_SOCKET, SO_REUSEPORT, &reuse, sizeof( reuse ) ) != 0 )
+            {
+                closeSocket( static_cast<uint64>( native ) );
+                return kInvalidSocket;
+            }
+        }
+#endif
         sockaddr_in local{};
         local.sin_family      = AF_INET;
         local.sin_port        = htons( port );

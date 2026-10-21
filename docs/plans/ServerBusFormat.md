@@ -83,7 +83,7 @@
 ## 4. 같은 결함이 다른 곳에 있는가
 
 - 캐시 레코드(`readCache`)는 배포 중 다른 빌드가 읽으므로 버스와 같은 읽기(`MixedBuildCodec::decode`)로 바꿨습니다.
-- 영속 레코드(`readDurable`)는 모르는 필드를 보관했다가 다시 쓰는 구조가 먼저입니다. 그 전까지 모르는 필드를 거절합니다(조용히 지우지 않고 실패로 드러냄). 남은 일은 [PersistentRecordUnknownFields](Candidates-network.md)(옛 F-3)입니다.
+- 영속 레코드(`readDurable`)는 모르는 필드를 보관했다가 다시 쓰는 구조가 먼저입니다. 그 전까지 모르는 필드를 거절합니다(조용히 지우지 않고 실패로 드러냄). 구조는 들어갔고(ServiceRecordUtil::readDurableKeepingUnknown · encodeKeepingUnknown) 호출부 옮기기는 [PersistentRecordUnknownFields](PersistentRecordUnknownFields.md)(옛 F-3)에 있습니다.
 
 ## 6. 테스트
 

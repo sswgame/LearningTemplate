@@ -307,7 +307,8 @@ namespace sw::editor
         const string clientPath = settings._clientExecutablePath.empty() ? makeDefaultExecutablePath( "App" ) : settings._clientExecutablePath;
         const string port       = to_string( _port );
         const string clientArguments =
-            EditorNetPlaySessionInternal::quote( "-gv_netConnectAddress=127.0.0.1:" + port ) + " -gv_standardInputCommands=1 " + settings._clientArguments;
+            EditorNetPlaySessionInternal::quote( "-gv_netConnectAddress=127.0.0.1:" + port ) + " -gv_standardInputCommands=1" +
+            " -gv_stateHashHistory=" + to_string( kServerStateHashHistoryTicks ) + " " + settings._clientArguments; // 클라이언트도 서버 틱 번호로 해시를 남긴다(S7)
 
         // 서버를 먼저 띄운다. 클라이언트는 서버가 늦게 떠도 연결 시한 안에서 다시 시도하지만, 서버가 먼저 떠 있으면 첫 시도에 연결된다.
         // `App` 창은 띄우는 순서대로 나란히 놓는다. 리슨 호스트가 첫 위치이고, 전용 서버는 창이 없다.

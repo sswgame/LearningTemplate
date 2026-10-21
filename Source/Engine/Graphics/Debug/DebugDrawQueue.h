@@ -58,7 +58,7 @@ namespace sw
 {
     /**
      * @class DebugDrawQueue
-     * @brief 디버그 지오메트리 큐입니다. 게임 코드가 채우고 에디터 씬 뷰(`debug_draw` 시각화)가 그립니다.
+     * @brief 디버그 지오메트리 큐입니다. 게임 코드가 채우고 에디터 씬 뷰(`debug_draw` 시각화)가, `-gv_debugDrawGameView=1`(게임 뷰 툴바 단추)이면 게임 화면 위에도 캔버스로 그립니다(`DebugDrawCanvasUtil`).
      * @details - **보이는 목록은 프레임 끝에 확정됩니다**(`endFrame`). 그 프레임에 넣은 것은 게임 업데이트와 씬 틱 어디서 넣었든 다음 에디터
      *            프레임에 모두 보입니다. 그리는 쪽은 `getVisible*` 만 읽습니다.
      *          - **지속 시간**: 0 이면 한 프레임, 그보다 크면 그 시간(초) 동안 남습니다. 흐르는 시간은 `endFrame` 의 델타입니다.
@@ -82,6 +82,8 @@ namespace sw
         static constexpr const utf8* kDefaultCategoryName = "Default";
         /** @brief 화살표 머리 길이가 화살표 길이에서 차지하는 비율입니다. */
         static constexpr float32 kArrowHeadRatio = 0.2f;
+        /** @brief 구 하나를 그리는 원(XY, XZ, YZ 대원) 하나의 선분 수입니다. */
+        static constexpr uint32 kSphereCircleSegmentCount = 24;
 
         /** @brief 빈 디버그 드로우 큐로 만듭니다. */
         DebugDrawQueue();
@@ -124,6 +126,11 @@ namespace sw
         const vector<DebugSphere>& getVisibleSpheres() const { return _listVisibleSphere; }
         /** @brief 지난 `endFrame` 이 확정한 글자 목록입니다. */
         const vector<DebugText>& getVisibleTexts() const { return _listVisibleText; }
+        /**
+         * @brief 보이는 선과 구를 선분으로 이어 붙입니다. 구는 축마다 대원 하나(`kSphereCircleSegmentCount` 개의 선분), 2D 뷰(@p bFlat2D)면 XY 원 하나입니다.
+         * @details 에디터 씬 뷰(`debug_draw` 시각화)와 게임 뷰 겹치기(`DebugDrawCanvasUtil`)가 이 한 규칙으로 그린다. @p outListLine 을 비우지 않고 뒤에 붙인다.
+         */
+        void appendVisibleSegments( bool bFlat2D, vector<DebugLine>& outListLine ) const;
 
     private:
         /** @brief 빈 카테고리를 기본 이름으로 바꾸고 목록에 등록합니다. 잠근 채 부릅니다. */

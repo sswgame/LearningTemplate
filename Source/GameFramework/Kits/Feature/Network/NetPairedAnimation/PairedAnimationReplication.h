@@ -35,7 +35,7 @@
 namespace sw
 {
     class GameObjectManager;
-    class NetHost;
+    class INetPeers;
     class PairedAnimationSystem;
     class SkeletalAnimatorComponent;
 
@@ -128,7 +128,7 @@ namespace sw
         PairedAnimationReplicationServer();
 
         /** @brief @p pManager 의 오브젝트 번호표를 만들고 시작합니다. 보낸 기록은 비웁니다. */
-        void initialize( NetHost* pHost, GameObjectManager* pManager );
+        void initialize( INetPeers* pHost, GameObjectManager* pManager );
         /** @brief 끝난 세션의 끝, 새 세션의 상태, 들어온 연결의 상태 순서로 보냅니다(게임 스레드). */
         void update();
 
@@ -164,7 +164,7 @@ namespace sw
         vector<int32>                   _listJoiningConnection;
         PairedAnimationReplicationStats _stats;
         NetMessageWriter                _writer;
-        NetHost*                        _pHost;
+        INetPeers*                      _pHost;
         GameObjectManager*              _pManager;
     };
 } // namespace sw

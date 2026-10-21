@@ -22,6 +22,7 @@ namespace sw
     struct NetMessageRange
     {
         static constexpr uint8 kSize      = 0x10; ///< 영역 하나의 메시지 수.
+        static constexpr uint8 kEngine    = 0x00; ///< 엔진의 게임 세션(`GameNetSession`)이 쓰는 0x00..0x0F. 종류는 Engine 의 `GameNetSessionMessage` 에 있다.
         static constexpr uint8 kFramework = 0x10; ///< 프레임워크(네트워크 키트)가 쓰는 0x10..0x7F. 키트별 영역은 GameFramework 의 `NetKitMessageRange` 에 있다.
         static constexpr uint8 kGame      = 0x80; ///< 게임이 쓰는 메시지 0x80..0xFF.
 
@@ -39,7 +40,7 @@ namespace sw
      */
     struct NetWireVersion
     {
-        static constexpr uint32 kCore = 6; ///< 6: 데이터 패킷 본문 첫머리에 디버거 대기 1비트(`NetDebugHold`)가 추가됐다.
+        static constexpr uint32 kCore = 7; ///< 7: 엔진 세션 영역(`NetMessageRange::kEngine`)에 서버 틱 메시지가 생겼다. 6: 데이터 패킷 본문 첫머리에 디버거 대기 1비트(`NetDebugHold`)가 추가됐다.
 
         /** @brief 계층별 버전을 값 하나로 섞습니다. FNV-1a 이므로 순서도 결과에 반영됩니다. */
         static constexpr uint32 combine( std::initializer_list<uint32> listVersion )
@@ -209,6 +210,15 @@ namespace sw
             NetMessageKindTally& tally = _arrTally[pData[0]];
             ++tally._messageCount;
             tally._byteCount += static_cast<uint64>( size );
+        }
+        /** @brief 다른 표의 셈을 종류마다 더합니다(포트 샤드마다의 보낸 쪽 셈을 하나로 모을 때). */
+        void addTable( const NetMessageKindTallyTable& other )
+        {
+            for ( int32 kind = 0; kind < kKindCount; ++kind )
+            {
+                _arrTally[kind]._messageCount += other._arrTally[kind]._messageCount;
+                _arrTally[kind]._byteCount += other._arrTally[kind]._byteCount;
+            }
         }
         const NetMessageKindTally& get( uint8 kind ) const { return _arrTally[kind]; }
 

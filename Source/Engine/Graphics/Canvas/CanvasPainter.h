@@ -18,6 +18,7 @@
 
 namespace sw
 {
+    class FontService;
     class GlyphCache;
     class Texture2D;
 
@@ -178,5 +179,18 @@ namespace sw
         vector<float32>         _listOpacity;
         float32                 _uiScale;
         uint32                  _anchor; ///< 사각형에 붙일 화면 앵커 번호(없으면 invalid_index::kUint32)
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @struct CanvasTextLineUtil
+     * @brief 위젯 배치 없이 글 한 줄을 칠합니다(기본 글꼴 가족과 문화권 대체 체인, 셰이핑 · 커닝 없음). 개발 그림(테스트 이미지, 디버그 드로우 겹치기)이 쓴다.
+     */
+    struct SW_API CanvasTextLineUtil
+    {
+        /** @brief @p origin(기준선 위의 첫 글리프 원점, UI 단위)부터 왼쪽에서 오른쪽으로 칠합니다. 글꼴에 없는 글자는 건너뜁니다. */
+        static void drawLine( CanvasPainter& painter, FontService& fontService, string_view text, const float2& origin, const CanvasGlyphStyle& style, uint64 frameIndex );
     };
 } // namespace sw

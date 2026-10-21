@@ -222,6 +222,17 @@ SW_TEST_CASE( ServerRegistryTest, RecordRoundTripsAndRejectsBadInput )
     bytes[0] = static_cast<uint8>( ServerRecord::kFormatVersion + 1 );
     SW_EXPECT_FALSE( ServerRecord::decode( bytes, decoded ) ); // 다른 판
 
+    // 포트 샤딩 — 포트 수가 왕복하고, 배정은 계정마다 같은 샤드의 포트를 고른다. 포트 수 0 인 기록은 읽지 않는다.
+    status._descriptor._port      = 7777;
+    status._descriptor._portCount = 4;
+    SW_ASSERT_TRUE( ServerRecord::decode( ServerRecord::encode( status ), decoded ) );
+    SW_EXPECT_EQUAL( decoded._descriptor._portCount, uint8( 4 ) );
+    SW_EXPECT_EQUAL( decoded._descriptor.pickPort( 9 ), uint16( 7778 ) );
+    SW_EXPECT_EQUAL( decoded._descriptor.pickPort( 9 ), decoded._descriptor.pickPort( 9 ) );
+    SW_EXPECT_EQUAL( decoded._descriptor.pickPort( 12 ), uint16( 7777 ) );
+    status._descriptor._portCount = 0;
+    SW_EXPECT_FALSE( ServerRecord::decode( ServerRecord::encode( status ), decoded ) );
+
     uint64 serverID = 0;
     SW_EXPECT_TRUE( ServerRecord::parseMember( ServerRecord::makeMember( 77 ), serverID ) );
     SW_EXPECT_EQUAL( serverID, uint64( 77 ) );
