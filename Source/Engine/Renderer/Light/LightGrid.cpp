@@ -155,7 +155,8 @@ namespace sw
                 _listGlobalScratch.push_back( lightIndex );
                 continue;
             }
-            const bool   bLocal = lightType == shaderslot::kLightTypePoint || lightType == shaderslot::kLightTypeSpot || lightType == shaderslot::kLightTypeProbeVolume;
+            // 경계 구로 넣는 타입은 bindingslots.hlsli 의 비트 하나가 정한다(GPU 생산자 lightgrid.hlsl 과 같은 값).
+            const bool   bLocal = lightType < 32u && ( ( shaderslot::kLightGridLocalTypeMask >> lightType ) & 1u ) != 0u;
             ClusterRange range{};
             if ( bLocal == false || computeLightRange( viewProj, light, range ) == false )
                 continue;

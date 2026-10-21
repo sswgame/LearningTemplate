@@ -7,6 +7,7 @@
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/3D/LightProbeVolumeComponent.h"
 #include "Engine/Object/Component/3D/PointLightComponent.h"
+#include "Engine/Object/Component/3D/ReflectionProbeComponent.h"
 #include "Engine/Object/Component/3D/SpotLightComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -472,4 +473,55 @@ SW_TEST_CASE( SceneLightTest, CollectsBakedProbeVolumesAfterLights )
     // 프로브 목록을 받지 않으면 볼륨을 넣지 않는다(볼륨 원소가 빈 프로브 버퍼를 가리키지 않게).
     collectSceneLights( &scene, listLight );
     SW_EXPECT_EQUAL( size_t( 0 ), countLightOfType( listLight, sw::shaderslot::kLightTypeProbeVolume ) );
+}
+
+/**
+ * @brief [SceneLightTest] 쓸 수 있는 베이크를 가진 반사 프로브는 볼륨 뒤에 원소 하나로 모이고, 텍셀은 프로브 버퍼의 SH9 원소 뒤에 붙는다(IndirectLighting.md P4)
+ * @details 원소의 배치(bindingslots.hlsli 8 절)를 셰이더 `swSampleReflectionProbe` 가 그대로 읽는다 — 상자 중심 · 반 크기 · 섞는 폭 · 한 변 텍셀 수 · 단계 수 · 첫 텍셀 번호.
+ *          옮긴 뒤 다시 굽지 않은 프로브(찍은 위치가 다르다)는 넣지 않는다.
+ */
+SW_TEST_CASE( SceneLightTest, CollectsBakedReflectionProbesAfterVolumes )
+{
+    sw::Scene              scene( "SceneLightReflection" );
+    sw::GameObjectManager* pObjects = scene.getObjectManager();
+    SW_ASSERT_NOT_NULL( pObjects );
+    sw::LightProbeVolumeComponent* pVolume = addLightObject<sw::LightProbeVolumeComponent>( pObjects, "Volume" );
+    sw::ReflectionProbeComponent*  pProbe  = addLightObject<sw::ReflectionProbeComponent>( pObjects, "Probe" );
+    SW_ASSERT_NOT_NULL( pVolume );
+    SW_ASSERT_NOT_NULL( pProbe );
+    pVolume->setExtent( sw::float3{ 2.0f, 2.0f, 2.0f } );
+    pVolume->setSpacing( 2.0f );
+    sw::LightProbeGrid grid{};
+    grid._layout = pVolume->computeLayout();
+    grid._listProbe.assign( grid._layout.getProbeCount(), sw::SH9Color::makeConstant( sw::float3{ 0.5f, 0.5f, 0.5f } ) );
+    SW_ASSERT_TRUE( pVolume->adoptProbeData( std::move( grid ), "test/maps/volume.probes" ) );
+
+    pProbe->setExtent( sw::float3{ 6.0f, 4.0f, 8.0f } );
+    sw::ReflectionProbeData data{};
+    data._capturePosition = pProbe->getWorldPosition();
+    data._resolution      = 4;
+    data._levelCount      = 2;
+    data._listTexel.assign( 4 * 4 * 2, sw::float3{ 1.0f, 0.5f, 0.25f } );
+    SW_ASSERT_TRUE( pProbe->adoptProbeData( std::move( data ), "test/maps/probe.reflprobe" ) );
+
+    sw::vector<sw::GPULight> listLight;
+    sw::vector<sw::float4>   listProbe;
+    collectSceneLights( &scene, listLight, nullptr, &listProbe );
+    SW_ASSERT_EQUAL( size_t( 2 ), listLight.size() );
+    const size_t        shCount    = static_cast<size_t>( pVolume->computeLayout().getProbeCount() * sw::shaderslot::kLightProbeFloat4Count );
+    const sw::GPULight& reflection = listLight[1];
+    SW_EXPECT_EQUAL( static_cast<uint32>( reflection._directionType._w ), sw::shaderslot::kLightTypeReflectionProbe );
+    SW_EXPECT_NEAR_EQUAL( 3.0f, reflection._colorIntensity._x, 0.0f ); // 반 크기
+    SW_EXPECT_NEAR_EQUAL( 4.0f, reflection._colorIntensity._z, 0.0f );
+    SW_EXPECT_NEAR_EQUAL( 4.0f, reflection._params._x, 0.0f );                            // 한 변 텍셀 수
+    SW_EXPECT_NEAR_EQUAL( 2.0f, reflection._params._y, 0.0f );                            // 단계 수
+    SW_EXPECT_NEAR_EQUAL( static_cast<float32>( shCount ), reflection._params._z, 0.0f ); // 첫 텍셀 — SH9 원소 뒤
+    SW_ASSERT_EQUAL( shCount + size_t( 32 ), listProbe.size() );
+    SW_EXPECT_NEAR_EQUAL( 0.25f, listProbe[shCount]._z, 0.0f );
+
+    // 옮기고 다시 굽지 않은 프로브는 옛 자리의 반사라 넣지 않는다.
+    pProbe->setLocalPosition( sw::float3{ 5.0f, 0.0f, 0.0f } );
+    pObjects->flushSceneTransforms();
+    collectSceneLights( &scene, listLight, nullptr, &listProbe );
+    SW_EXPECT_EQUAL( size_t( 0 ), countLightOfType( listLight, sw::shaderslot::kLightTypeReflectionProbe ) );
 }

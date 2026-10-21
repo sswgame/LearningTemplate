@@ -13,7 +13,7 @@
 2. **새 시스템**:
    - Vfx V4 의 빌드 · 쿠킹 확인 → V5 실행(V0 ~ V3 · V6 · V7 들어감, V4 는 `wt/vfx4`, V5 테스트는 `wt/planleftB` — V4 뒤에 빌드된다) — [Vfx](Vfx.md). [병렬 가능]
    - 클러스터드 라이팅 S3 측정(실행 코드 `perf-compare lightCulling*` 들어감) — [ClusteredLighting](ClusteredLighting.md). [단독: 측정은 Release 에서 혼자]
-   - 간접 조명 P4 반사 프로브와 P5 · D2-6.4 의 셰이더 쿠킹 · 화면 확인(P5 · D2-6.4 코드는 `wt/planleftB`, 셰이더는 패치) — [IndirectLighting](IndirectLighting.md). [단독: 셰이더 재베이크]
+   - 간접 조명 P4 · P5 · D2-6.4 의 빌드 · 셰이더 쿠킹 · 화면 확인(코드는 `wt/planleftB`, 셰이더는 패치), P2 하늘 항 — [IndirectLighting](IndirectLighting.md). [단독: 셰이더 재베이크]
    - 월드 스트리밍 W6 에디터 UI · W7 측정 — [WorldStreaming](WorldStreaming.md) (W2 → W5 와 W7 데이터는 빌드 미확인으로 들어갔다 — 빌드 · 쿠킹 확인이 먼저). [단독: W7 의 히치 측정은 Release 에서 혼자]
 3. **기능 묶음**(분류는 결정 기록 5-12, 한 묶음에 단위가 여럿):
    1. 카메라 디렉터 · 직교 리그 [CameraRendererIntegration](CameraRendererIntegration.md)(S2 피사계 심도, S3 · S4 는 렌더러 기능 선행) → [GamepadVirtualCursor](GamepadVirtualCursor.md)(G2 게임 바인딩 정하기 · G3 실기), 에디터 시나리오 [GraphSaveScenarioRun](Candidates-editor.md#graphsavescenariorun) · [ScenarioRecorderAndInspectorGaps](Candidates-editor.md#scenariorecorderandinspectorgaps) (옛 `D4-5` → `D4-3` → `D3-5` · `D3-8` 에 대응). [병렬 가능]

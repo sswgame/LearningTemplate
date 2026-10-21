@@ -136,6 +136,13 @@ namespace sw
         inline constexpr uint32 kLightTypeShadow2D = SW_LIGHT_TYPE_SHADOW2D;
         /// @brief 라이트 프로브 볼륨 원소의 종류입니다. 빛 종류가 아니라서 `kLightTypeCount` 밖이고, 라이트 그리드는 경계 구로 클러스터에 넣습니다.
         inline constexpr uint32 kLightTypeProbeVolume = SW_LIGHT_TYPE_PROBE_VOLUME;
+        /// @brief 반사 프로브 원소의 종류입니다. 빛 종류가 아니라서 `kLightTypeCount` 밖이고, 텍셀은 라이트 프로브 버퍼(t13)에 SH9 원소와 함께 붙습니다.
+        inline constexpr uint32 kLightTypeReflectionProbe = SW_LIGHT_TYPE_REFLECTION_PROBE;
+        /// @brief 라이트 그리드가 경계 구로 클러스터에 넣는 타입의 비트(1 << 타입)입니다. CPU · GPU 생산자가 이 하나를 봅니다.
+        inline constexpr uint32 kLightGridLocalTypeMask = SW_LIGHT_GRID_LOCAL_TYPE_MASK;
+        static_assert( kLightGridLocalTypeMask == ( ( 1u << SW_LIGHT_TYPE_POINT ) | ( 1u << SW_LIGHT_TYPE_SPOT ) | ( 1u << SW_LIGHT_TYPE_REFLECTION_PROBE ) |
+                                                    ( 1u << SW_LIGHT_TYPE_PROBE_VOLUME ) ),
+                       "라이트 그리드의 지역 타입 비트가 타입 값과 맞지 않는다 (bindingslots.hlsli SW_LIGHT_GRID_LOCAL_TYPE_MASK)" );
         /// @brief 한 프레임에 GPU 로 보내는 라이트 수의 상한입니다. 넘으면 엔진이 잘라서 보내고 경고합니다.
         inline constexpr uint32 kMaxFrameLight = SW_MAX_FRAME_LIGHT;
 
@@ -358,7 +365,8 @@ namespace sw
         static_assert( kLightProbeBuffer == kLightGridBuffer + 1 && kLightProbeBuffer + 1 == kSrvSlotCount, "라이트 프로브는 라이트 그리드 다음이고 SRV 슬롯의 마지막이다" );
         static_assert( kLightTypeDirectional < kLightTypeCount && kLightTypePoint < kLightTypeCount &&
                            kLightTypeSpot < kLightTypeCount && kLightTypePoint2D < kLightTypeCount && kLightTypeGlobal2D < kLightTypeCount &&
-                           kLightTypeShadow2D >= kLightTypeCount && kLightTypeProbeVolume >= kLightTypeCount && kLightTypeProbeVolume != kLightTypeShadow2D,
+                           kLightTypeShadow2D >= kLightTypeCount && kLightTypeProbeVolume >= kLightTypeCount && kLightTypeProbeVolume != kLightTypeShadow2D &&
+                           kLightTypeReflectionProbe >= kLightTypeCount && kLightTypeReflectionProbe != kLightTypeShadow2D && kLightTypeReflectionProbe != kLightTypeProbeVolume,
                        "라이트 타입 값이 타입 수 안에 있어야 한다" );
         static_assert( SW_SLOT_ENGINE_TEX3 == kEngineTexture0 + kEngineTextureCount - 1, "엔진 텍스처 슬롯은 연속이어야 한다" );
         static_assert( kEngineGBufferMaterialTexture >= kSrvSlotCount && kEngineGBufferMaterialTexture < vk::kRangeSize && kEngineGBufferMaterialTexture < kMaterialTexture0,

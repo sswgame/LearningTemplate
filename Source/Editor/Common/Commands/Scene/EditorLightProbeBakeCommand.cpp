@@ -7,9 +7,8 @@
  */
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
-
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
+#include "Editor/Common/Commands/Scene/EditorBakeOutputPath.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
@@ -36,43 +35,6 @@ namespace sw::editor
     {
         struct EditorLightProbeBakeCommandInternal
         {
-            /// @brief 씬 파일 이름의 끝 — 이것을 떼고 볼륨 이름을 붙인다.
-            static constexpr string_view kSceneSuffix = ".scene.xml";
-
-            /** @brief 이 에디터 세션에서 `lighting.bakeProbes` 가 끝난 횟수입니다(탐침 `Editor.LightProbeBakeCount`). */
-            static uint32& getBakeRunCount()
-            {
-                static uint32 s_count{ 0 };
-                return s_count;
-            }
-
-            /**
-             * @brief 볼륨 하나의 `.probes` 리소스 경로입니다 — `<씬 경로에서 .scene.xml 을 뗀 것>.<오브젝트 이름 소문자>.probes`. 씬을 저장한 적이 없으면 빈 문자열입니다.
-             * @details 리소스 경로는 소문자만 받는다(CheckResourceCasing). 이름의 영숫자 밖 글자는 `_` 로 바꾼다.
-             */
-            static string makeProbeResourcePath( const Scene& scene, const LightProbeVolumeComponent& volume )
-            {
-                const string& sourcePath = scene.getSourcePath();
-                string        resourceID = ResourcePaths::toResourceID( sourcePath );
-                if ( resourceID.empty() )
-                    resourceID = sourcePath;
-                if ( resourceID.empty() )
-                    return {};
-                const size_t suffix = resourceID.rfind( kSceneSuffix );
-                string       path{ suffix == string::npos ? resourceID : resourceID.substr( 0, suffix ) };
-                string       name = StringUtil::toLower( volume.getOwner() != nullptr ? volume.getOwner()->getName().c_str() : "volume" );
-                for ( utf8& character : name )
-                {
-                    const bool bAllowed = ( 'a' <= character && character <= 'z' ) || ( '0' <= character && character <= '9' );
-                    if ( bAllowed == false )
-                        character = '_';
-                }
-                path += '.';
-                path += name;
-                path += LightProbeGrid::kExtension;
-                return path;
-            }
-
             /** @brief 볼륨 하나를 굽고 파일로 쓴 뒤 볼륨에 넘깁니다. 실패하면 이유를 @p outError 에 적습니다. */
             static bool bakeVolume( const Scene& scene, LightProbeVolumeComponent& volume, string& outError )
             {
@@ -82,7 +44,7 @@ namespace sw::editor
                 LightProbeGrid grid{};
                 if ( LightProbeBaker::bakeGrid( volume.computeLayout(), input, grid, &outError ) == false )
                     return false;
-                const string resourcePath = makeProbeResourcePath( scene, volume );
+                const string resourcePath = volume.getOwner() != nullptr ? makeSceneBakeResourcePath( scene, *volume.getOwner(), LightProbeGrid::kExtension ) : string{};
                 if ( resourcePath.empty() )
                 {
                     outError = "the scene has never been saved - save it before baking light probes";
