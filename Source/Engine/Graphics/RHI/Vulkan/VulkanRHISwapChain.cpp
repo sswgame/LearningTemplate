@@ -142,6 +142,7 @@ namespace sw
         _bRequestedVSync        = bVSync;
     }
 
+    // 길이 유지(긴 함수 정리 기준): 표면 능력 조회 · 형식 고르기 · 스왑체인 · 이미지 뷰 생성의 순서가 곧 의미라 나누지 않는다.
     bool VulkanRHISwapChain::create( VkPhysicalDevice physicalDevice, VkDevice device, uint32 width, uint32 height )
     {
         _bSurfaceEmpty = false;

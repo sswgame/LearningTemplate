@@ -713,6 +713,7 @@ namespace sw
         _pDevice->releaseTrackedResourceDeferred( std::move( owned ), RHIMemoryKey::makeBuffer( buffer ) );
     }
 
+    // 길이 유지(긴 함수 정리 기준): 서술 채우기 · 리소스 생성 · 뷰 · 초기 데이터 업로드의 순서가 곧 의미라 나누지 않는다.
     RHITextureHandle D3D12RHIResourceFactory::createTexture2D( const RHITextureDesc& desc )
     {
         if ( isRHITextureShapeValid( desc ) == false )

@@ -279,6 +279,7 @@ namespace sw
         record._state = newState;
     }
 
+    // 길이 유지(긴 함수 정리 기준): 같은 포맷 복사와 셰이더 블릿의 상태 전이 순서가 곧 의미라 나누지 않는다.
     void D3D12RHICommandContext::blitTexture( RHITextureHandle src, RHITextureHandle dst )
     {
         if ( _pCmdList == nullptr || ( src == 0 && dst == 0 ) )
@@ -787,6 +788,7 @@ namespace sw
         commandListForRecord()->SetPipelineState( pRecord->_pso.Get() );
     }
 
+    // 길이 유지(긴 함수 정리 기준): 상태 전이 · 타깃 바인딩 · 클리어 · 뷰포트의 순서가 곧 의미라 나누지 않는다.
     void D3D12RHICommandContext::beginRenderPass( const RHIRenderPassBeginInfo& beginInfo )
     {
         ensureRecording();

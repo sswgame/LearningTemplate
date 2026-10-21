@@ -78,6 +78,7 @@ namespace sw
         { writeConstantBufferSlot( buffer, slot, pData, size ); } );
     }
 
+    // 길이 유지(긴 함수 정리 기준): 루트 시그니처 · 힙 · 전역 리소스 생성의 순서가 곧 의미라 나누지 않는다.
     bool D3D12RHIDevice::createGlobalResources()
     {
         // 루트 시그니처(bindingslots.hlsli). 언리얼 FD3D12RootSignature 와 같은 배치: CB 는 루트 CBV, t/u 슬롯은 테이블, 텍스처는 배열 테이블.

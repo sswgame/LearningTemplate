@@ -316,6 +316,7 @@ namespace sw
                  : VK_IMAGE_ASPECT_DEPTH_BIT;
     }
 
+    // 길이 유지(긴 함수 정리 기준): 기능 확인 · 큐 · 확장 · 생성의 순서가 곧 의미라 나누지 않는다.
     bool VulkanRHIDevice::createLogicalDevice()
     {
         VkDeviceQueueCreateInfo queueCreateInfo{};

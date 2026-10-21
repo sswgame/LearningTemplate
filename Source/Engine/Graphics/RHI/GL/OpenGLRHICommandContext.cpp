@@ -174,6 +174,7 @@ namespace sw
             glUseProgram( pRecord->_program );
     }
 
+    // 길이 유지(긴 함수 정리 기준): 프레임버퍼 바인딩 · 드로우 버퍼 · 클리어 · 뷰포트의 순서가 곧 의미라 나누지 않는다.
     void OpenGLRHICommandContext::beginRenderPass( const RHIRenderPassBeginInfo& beginInfo )
     {
         if ( _pDevice->_bInitialized == SW_FALSE )

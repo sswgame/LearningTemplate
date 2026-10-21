@@ -18,6 +18,7 @@ namespace sw
 {
     SW_LOG_CALLER( "D3D12" );
 
+    // 길이 유지(긴 함수 정리 기준): 디바이스 · 큐 · 힙 · 전역 리소스 생성의 순서가 곧 의미라 나누지 않는다.
     bool D3D12RHIDevice::initializeInternal( const RHISwapChainDesc& desc )
     {
     #if defined( SW_DEBUG )

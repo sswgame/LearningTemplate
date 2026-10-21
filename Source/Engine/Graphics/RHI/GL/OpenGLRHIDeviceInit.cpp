@@ -44,6 +44,7 @@ namespace sw
     } // namespace
 #endif
 
+    // 길이 유지(긴 함수 정리 기준): 컨텍스트 · 확장 확인 · 기본 객체 생성의 순서가 곧 의미라 나누지 않는다(나누면 순서를 여러 곳에서 읽는다).
     bool OpenGLRHIDevice::initializeInternal( const RHISwapChainDesc& desc )
     {
         if ( _bInitialized == SW_TRUE )
@@ -281,6 +282,7 @@ namespace sw
         _frameStreamContext.reset();
     }
 
+    // 길이 유지(긴 함수 정리 기준): 생성의 역순으로 놓는 해제 목록이라 나누지 않는다.
     void OpenGLRHIDevice::shutdownInternal()
     {
         if ( _bInitialized == SW_FALSE )

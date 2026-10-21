@@ -29,6 +29,7 @@ namespace sw
         constexpr uint32 kDefaultDenominator = 1;
     } // namespace
 
+    // 길이 유지(긴 함수 정리 기준): 디바이스 · 스왑체인 · 상태 객체 생성의 순서가 곧 의미라 나누지 않는다.
     bool D3D11RHIDevice::initializeInternal( const RHISwapChainDesc& desc )
     {
         _pHWnd            = static_cast<HWND>( desc._pWindowHandle );
