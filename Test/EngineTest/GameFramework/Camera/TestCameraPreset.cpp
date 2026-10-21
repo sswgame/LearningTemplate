@@ -11,6 +11,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Format/Archive.h"
 
@@ -18,6 +19,7 @@
 #include "GameFramework/Base/Actor/Camera/CameraDirector.h"
 #include "GameFramework/Base/Actor/Camera/CameraDirectorComponent.h"
 #include "GameFramework/Base/Actor/Camera/CameraMode.h"
+#include "GameFramework/Base/Actor/Camera/CameraPoseUtil.h"
 #include "GameFramework/Base/Actor/Camera/CameraPreset.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Foundation/Framework/Save/ComponentStateStore.h"
@@ -917,4 +919,27 @@ SW_TEST_CASE( CameraPresetTest, PresetWarnsOnceAboutAnActionTheInputMapLacks )
     manager.endPlay();
     scope.unbind<InputManager>();
     input.shutdown();
+}
+
+/**
+ * @brief [CameraPresetTest] 종횡비는 창이 아니라 게임이 그려지는 뷰포트(엔진이 적는 `CameraRegistry` 의 크기)와 화면 사각형으로 센다 — 에디터 게임 뷰가 창의 일부여도 맞다
+ */
+SW_TEST_CASE( CameraPresetTest, AspectRatioFollowsTheGameViewportNotTheWindow )
+{
+    GameObjectManager manager;
+    GameObject*       pObject = manager.createGameObject( hashed_string( "AspectCamera" ) );
+    SW_ASSERT_NOT_NULL( pObject );
+    CameraComponent* pCamera = pObject->addComponent<CameraComponent>();
+    SW_ASSERT_NOT_NULL( pCamera );
+
+    // 뷰포트를 모르면(엔진 루프 밖) 기본 종횡비다.
+    SW_EXPECT_NEAR_EQUAL( CameraTarget::kDefaultAspectRatio, CameraPoseUtil::computeAspectRatio( *pCamera ), 1e-5f );
+
+    manager.getCameraRegistry().setViewportSize( 800, 400 ); // 게임 뷰 이미지 크기(창 크기와 무관)
+    SW_EXPECT_NEAR_EQUAL( 2.0f, CameraPoseUtil::computeAspectRatio( *pCamera ), 1e-5f );
+
+    CameraRenderOutput output = pCamera->getRenderOutput();
+    output._screenRect        = float4{ 0.0f, 0.0f, 0.5f, 1.0f }; // 왼쪽 반(분할 화면)
+    pCamera->setRenderOutput( output );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, CameraPoseUtil::computeAspectRatio( *pCamera ), 1e-5f );
 }

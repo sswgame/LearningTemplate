@@ -5,7 +5,9 @@
 #include "Core/Math/MatrixMath.h"
 
 #include "Engine/Object/Component/CameraComponent.h"
-#include "Engine/Window/IWindow.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 
 #include "GameFramework/Base/Actor/Camera/CameraPreset.h"
 
@@ -20,12 +22,14 @@ namespace sw
                 return CameraTarget::kDefaultAspectRatio;
             return static_cast<float32>( output._renderTextureWidth ) / static_cast<float32>( output._renderTextureHeight );
         }
-        const IWindow* pWindow = IWindow::getActiveWindow();
-        if ( pWindow == nullptr || pWindow->getHeight() == 0 )
+        const GameObject*        pOwner   = camera.getOwner();
+        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        const CameraRegistry*    pCameras = pManager != nullptr ? &pManager->getCameraRegistry() : nullptr;
+        if ( pCameras == nullptr || pCameras->getViewportHeight() == 0 )
             return CameraTarget::kDefaultAspectRatio;
-        // 화면 사각형(분할 화면, PiP)은 창의 일부다 — 가로 비율과 세로 비율을 곱해 센다.
-        const float32 width  = static_cast<float32>( pWindow->getWidth() ) * output._screenRect._z;
-        const float32 height = static_cast<float32>( pWindow->getHeight() ) * output._screenRect._w;
+        // 화면 사각형(분할 화면, PiP)은 뷰포트의 일부다 — 가로 비율과 세로 비율을 곱해 센다.
+        const float32 width  = static_cast<float32>( pCameras->getViewportWidth() ) * output._screenRect._z;
+        const float32 height = static_cast<float32>( pCameras->getViewportHeight() ) * output._screenRect._w;
         return height > 0.0f ? width / height : CameraTarget::kDefaultAspectRatio;
     }
 

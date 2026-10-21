@@ -611,9 +611,14 @@ namespace sw
     {
         // 주 출력 — 게임 뷰가 있으면 그것(게임 카메라 · 화면 UI · 화면 사각형 뷰), 씬 뷰만 있으면 씬 뷰, 둘 다 없으면 백버퍼다.
         const HostViewTarget& mainOutput = views.getMainOutput();
-        const uint32          vpWidth    = mainOutput._width;
-        const uint32          vpHeight   = mainOutput._height;
         const bool            bSceneMain = views.isSceneViewMain();
+        // 게임이 그려지는 픽셀 크기 — 주 출력이 있으면 그 크기(에디터 게임 뷰의 이미지), 없으면 백버퍼(게임 창)다. 창 크기가 아니다:
+        // 에디터의 게임 뷰는 창의 일부라 창 크기로 종횡비를 세면 카메라가 늘어난다. 카메라(종횡비 · 픽셀 퍼펙트)와 런타임 UI 가 이 값 하나를 쓴다.
+        const IWindow* const pMainWindow = IWindow::getActiveWindow();
+        const bool           bHasDevice  = _pRHI != nullptr && _pRHI->hasDevice();
+        const bool           bHasOutput  = mainOutput._width > 0 && mainOutput._height > 0;
+        const uint32         vpWidth     = bHasOutput ? mainOutput._width : ( bHasDevice ? _pRHI->getDevice().getBackBufferWidth() : ( pMainWindow != nullptr ? pMainWindow->getWidth() : 0 ) );
+        const uint32         vpHeight    = bHasOutput ? mainOutput._height : ( bHasDevice ? _pRHI->getDevice().getBackBufferHeight() : ( pMainWindow != nullptr ? pMainWindow->getHeight() : 0 ) );
         _frameDeltaSeconds               = deltaTime;
 
         if ( _headlessState._bHeadless )
@@ -699,18 +704,8 @@ namespace sw
                 pDebugHUD->update( _shellActions.getInputMap() );
 #endif
             // 뷰포트 0 은 "백버퍼 전체"(게임 창 — 패킷 · 캔버스 테스트 그림과 같은 규칙)다.
-            const IWindow* const pWindow      = IWindow::getActiveWindow();
-            const float32        contentScale = pWindow != nullptr ? pWindow->getContentScale() : 1.0f;
-            const bool           bHasDevice   = _pRHI != nullptr && _pRHI->hasDevice();
-            uint32               uiWidth      = vpWidth;
-            uint32               uiHeight     = vpHeight;
-            if ( uiWidth == 0 || uiHeight == 0 )
-            {
-                uiWidth  = bHasDevice ? _pRHI->getDevice().getBackBufferWidth() : ( pWindow != nullptr ? pWindow->getWidth() : 0 );
-                uiHeight = bHasDevice ? _pRHI->getDevice().getBackBufferHeight() : ( pWindow != nullptr ? pWindow->getHeight() : 0 );
-            }
-            const UIViewport viewport =
-                _pUISystem->computeViewport( float2{ static_cast<float32>( uiWidth ), static_cast<float32>( uiHeight ) }, contentScale );
+            const float32    contentScale = pMainWindow != nullptr ? pMainWindow->getContentScale() : 1.0f;
+            const UIViewport viewport     = _pUISystem->computeViewport( float2{ static_cast<float32>( vpWidth ), static_cast<float32>( vpHeight ) }, contentScale );
             // 음성 이벤트의 자막 — 오디오 스레드가 시작한 클립의 자막 키를 쌓아 두고, 가져가는 곳은 여기 하나다.
             if ( _pAudioService != nullptr && _pAudioService->isInitialized() )
             {
@@ -784,8 +779,7 @@ namespace sw
         _profileSession.onFrameEnd();
         // CPU 메모리 태그 표 옆에 GPU 메모리 표를 둔다. 보고 세션은 Utility 층이라 Graphics 의 장부를 볼 수 없어 여기서 잇는다.
         const bool bReportedNow = bReportedBefore == false && _profileSession.hasReported();
-        const bool bHasDevice   = _pRHI != nullptr && _pRHI->hasDevice();
-        if ( bReportedNow && bHasDevice )
+        if ( bReportedNow && bHasDevice ) // 프레임 앞에서 본 장치 — 프레임 안에서 장치를 만들거나 버리지 않는다
             _pRHI->getDevice().getMemoryLedger().report( _pRHI->getDevice().getBackendName() );
 
         if ( _pMemoryBudget != nullptr )
