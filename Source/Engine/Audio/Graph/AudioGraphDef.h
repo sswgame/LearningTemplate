@@ -131,6 +131,13 @@ namespace sw
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = "<text>" );
         /** @brief 파일 안에서만 정해지는 규칙을 검사합니다. 어긋나면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool validate( string_view sourceName ) const;
+        /** @brief 그래프를 읽기와 같은 XML 형식으로 씁니다(`loadFromXMLText` 가 다시 읽는다). */
+        string toXMLText() const;
+        /**
+         * @brief 검사를 통과한 그래프를 리소스 경로의 파일에 씁니다. 에디터의 소리 그래프 창이 저장하는 길이고, 저장한 파일은 핫 리로드가 클립 캐시에 다시 굳힌다.
+         * @return 검사 실패나 쓰기 실패면 오류를 남기고 false 입니다(읽을 수 없는 파일을 남기지 않는다).
+         */
+        [[nodiscard]] bool saveToResource( string_view resourcePath ) const;
         /**
          * @brief 처리 순서(입력이 먼저)를 노드 번호로 만듭니다. 입력을 간선으로 본 위상 정렬입니다.
          * @return 없는 노드를 가리키거나 고리가 있으면 false 입니다.

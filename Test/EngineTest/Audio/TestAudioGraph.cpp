@@ -172,3 +172,22 @@ SW_TEST_CASE( AudioGraphTest, UnknownGameParameterStopsTheVoice )
     SW_EXPECT_FALSE( engine.isPlaying( playingID ) );
     SW_EXPECT_TRUE( test::AudioTestUtil::computePeak( listOutput, 0, 0, sw::audio::kBlockFrameCount * 4 ) < 1e-6f );
 }
+
+/**
+ * @brief [AudioGraphTest] 그래프 창이 저장하는 XML(`toXMLText`)을 다시 읽으면 같은 그래프다(노드 · 연결 · 파라미터 곡선)
+ */
+SW_TEST_CASE( AudioGraphTest, XMLRoundTrip )
+{
+    sw::AudioGraphDef def;
+    SW_ASSERT_TRUE( def.loadFromXMLText( AudioGraphTestInternal::kToneGraphXML ) );
+    sw::AudioGraphDef again;
+    SW_ASSERT_TRUE( again.loadFromXMLText( def.toXMLText() ) );
+    SW_ASSERT_EQUAL( def._listNode.size(), again._listNode.size() );
+    SW_EXPECT_TRUE( again._output == def._output );
+    SW_EXPECT_NEAR_EQUAL( def._durationSeconds, again._durationSeconds, 1e-6f );
+    SW_ASSERT_EQUAL( size_t( 1 ), again._listNode[1]._listInput.size() );
+    SW_EXPECT_TRUE( again._listNode[1]._listInput[0] == def._listNode[0]._name );
+    SW_ASSERT_EQUAL( size_t( 1 ), again._listNode[1]._listParameter.size() );
+    SW_EXPECT_TRUE( again._listNode[1]._listParameter[0]._parameter == sw::hashed_string( "Level" ) );
+    SW_EXPECT_EQUAL( size_t( 2 ), again._listNode[1]._listParameter[0]._listPoint.size() );
+}

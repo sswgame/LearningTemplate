@@ -228,6 +228,34 @@ namespace sw
             .submit();
     }
 
+    bool AudioClipCache::findReadyPath( string_view path, hashed_string& outPath ) const
+    {
+        const string            wanted = FileUtil::normalizeSeparators( path );
+        std::scoped_lock<mutex> lock{ _mutex };
+        for ( const auto& entry : _mapPathToEntry )
+        {
+            const bool bSamePath = entry.second._status == AudioClipStatus::Ready && StringUtil::equals( FileUtil::normalizeSeparators( entry.first.view() ), wanted, true );
+            if ( bSamePath )
+            {
+                outPath = entry.first;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool AudioClipCache::reloadClip( const hashed_string& path )
+    {
+        shared_ptr<const AudioClipData> pClip = decodeClip( path );
+        if ( pClip == nullptr )
+        {
+            SW_LOG_ERROR( "Reload failed, keeping the previous sound: %#", path.c_str() );
+            return false;
+        }
+        storeResult( path, std::move( pClip ) );
+        return true;
+    }
+
     void AudioClipCache::addClip( const hashed_string& path, shared_ptr<const AudioClipData> pClip )
     {
         storeResult( path, std::move( pClip ) );

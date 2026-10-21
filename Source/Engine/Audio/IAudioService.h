@@ -146,12 +146,13 @@ namespace sw
         const string& getMixerPath() const { return _mixerPath; }
 
         /**
-         * @brief 그 경로가 지금 쓰는 오디오 데이터(믹서 그래프 · 이벤트 라이브러리)의 파일인지 반환합니다. 모르는 경로로 이름을 intern 하지 않습니다.
+         * @brief 그 경로가 지금 쓰는 오디오 데이터(믹서 그래프 · 이벤트 라이브러리 · 읽어 둔 소리 그래프)의 파일인지 반환합니다. 모르는 경로로 이름을 intern 하지 않습니다.
          * @details 핫 리로드가 바뀐 파일마다 묻는 길이다(`AudioReloadCache`).
          */
         bool isDataFile( string_view resourcePath ) const;
         /**
          * @brief 바뀐 오디오 데이터 파일을 다시 읽어 바꿉니다. 믹서 그래프면 `loadMixer`, 이벤트 라이브러리면 같은 이름으로 `loadEventLibrary`(쿨다운과 순서 커서는 이름으로 이어지고 재생 중인 인스턴스는 끝까지 옛 것을 씁니다).
+         *        소리 그래프면 클립 캐시가 다시 굳히고(`AudioClipCache::reloadClip`), 재생 중인 보이스는 옛 그래프로 끝까지 냅니다.
          * @return 읽기나 검사에 실패하면 false 이고 지금 것을 그대로 씁니다. 오디오 데이터 파일이 아니면 false 입니다.
          */
         [[nodiscard]] bool reloadDataFile( string_view resourcePath );
@@ -217,6 +218,8 @@ namespace sw
     private:
         /** @brief 오프라인 렌더 덤프를 WAV 로 씁니다(`gv_audioDumpPath`). 쌓인 것이 없으면 아무것도 하지 않습니다. */
         void writeOfflineDump();
+        /** @brief 소리 그래프 파일이고 클립 캐시가 이미 읽어 둔 것이면 캐시의 경로를 @p outGraphPath 에 돌려줍니다(핫 리로드 대상). */
+        [[nodiscard]] bool findLoadedGraphPath( string_view resourcePath, hashed_string& outGraphPath ) const;
 
     private:
         unique_ptr<AudioEngine> _pEngine;          /**< 오디오 엔진입니다. */

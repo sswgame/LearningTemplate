@@ -2,8 +2,9 @@
  * @file FarmVillageDirectorComponent.h
  * @brief HarvestValley 마을 사람의 하루 일정을 돌리는 디렉터입니다. 일정 데이터(`data/villagers.schedules.xml`)를 GameFramework `ScheduleSystem` 으로 돌리고 마을 사람마다 몸(프리팹)을 스폰합니다.
  * @details 농장 디렉터와 같은 오브젝트의 **뒤**에 붙입니다. 판 상태(`SessionStateComponent`)의 시계를 잠금 없이 읽으려면 같은 오브젝트여야 하고, 농장 디렉터가 판 상태를 연 뒤에 시작해야 한다.
- *          일정은 시계의 함수라 상태 바이트에는 머리만 싣는다 — 복원하면 그 시각의 계획을 다시 세워 같은 위치에 선다. 끼어들기(말 걸기)와 호감도를 쓰게 되면
- *          `ScheduleSaveState` 를 싣는다. 지금은 끼어들기를 거는 곳이 없어 복원할 상태가 시계에서 모두 나온다(실을 바이트가 없다).
+ *          상태 바이트에는 머리 다음에 일정 시스템의 저장 상태(`ScheduleSaveState` — 시각 · 끼어들기 · 끼어든 자리 · 호감도 · 약속 결과 · 예약)를 리플렉션 바이너리로 싣는다.
+ *          계획 자체는 싣지 않는다 — 그 상태로 다시 세우면 같은 계획이 나온다. 복원은 일정이 서 있으면 바로, 아직이면 `startGame` 이 일정을 세운 직후에 건다.
+ *          옛 판(머리만 있던 1 판)의 바이트는 읽지 않는다(버전이 다르면 읽기 실패).
  *          길: 마을 내비 격자(`_navOrigin` · `_navWidth` · `_navHeight` · `_navCellSize`, 장애물은 이름 목록 `_navObstacleNames` 의 씬 오브젝트 자리)를 세우고,
  *          일정의 화면 안 경로(고운 경로)를 그 격자의 A* 로 한다(`NavGridSchedulePathing`). 계획 경로는 곧은 선이라 도착 시각은 격자와 무관하다.
  *          몸은 `FarmVillagerComponent` 가 `NavAgent` 로 이 디렉터가 적은 일정상 위치를 쫓는다 — 언리얼의 "움직이는 목표로 이동" 과 같다. 시계를 감아
@@ -20,6 +21,7 @@
 
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleCatalog.h"
 #include "GameFramework/Base/Actor/AI/Schedule/SchedulePathing.h"
+#include "GameFramework/Base/Actor/AI/Schedule/ScheduleSaveState.h"
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleSystem.h"
 #include "GameFramework/Base/Actor/Navigation/GridPathfinder.h"
 #include "GameFramework/Base/Actor/Navigation/NavAgent.h"
@@ -98,7 +100,9 @@ namespace sw
         GridPathfinder         _pathfinder;
         NavGridSchedulePathing _finePathing; ///< 화면 안 경로(`_navGrid` · `_pathfinder` 를 빌린다 — 위 두 멤버보다 뒤에 선언한다)
         ScheduleSystem         _schedule;
-        vector<float3>         _listPosition;  ///< 마을 사람마다 이번 틱의 일정상 위치(뷰가 읽는다)
-        vector<float32>        _listBodySpeed; ///< 마을 사람마다 이번 틱 몸의 최고 속도(m/s)
+        ScheduleSaveState      _pendingSave;     ///< 일정이 서기 전에 읽은 저장 상태(`startGame` 이 건다)
+        bool                   _bHasPendingSave; ///< `_pendingSave` 를 아직 걸지 않았다
+        vector<float3>         _listPosition;    ///< 마을 사람마다 이번 틱의 일정상 위치(뷰가 읽는다)
+        vector<float32>        _listBodySpeed;   ///< 마을 사람마다 이번 틱 몸의 최고 속도(m/s)
     };
 } // namespace sw

@@ -616,6 +616,29 @@ class PackWriter:
         return bytes(packBytes)
 
 
+kLocalizationProjectSuffix = ".locproject.json"
+kTranslationTableSuffix = ".translation.json"
+
+
+def collectUnstagedTranslationTablesInternal(sourceDir: Path) -> set[str]:
+    """
+    도메인 폴더 안 로컬라이제이션 프로젝트(`*.locproject.json`)마다, 그 폴더의 `<문화권>.translation.json` 가운데 `stagedCultures` 밖 문화권의 표를
+    소문자 상대 경로로 돌려줍니다. 프로젝트를 읽지 못하면 오류로 멈춘다(어느 표가 출시 문화권인지 모른 채 패킹하지 않는다).
+    """
+    uniqueTable: set[str] = set()
+    for projectPath in sorted(sourceDir.rglob(f"*{kLocalizationProjectSuffix}")):
+        try:
+            project = json.loads(projectPath.read_text(encoding="utf-8"))
+            listStaged = [str(culture).lower() for culture in project["stagedCultures"]]
+        except (OSError, ValueError, KeyError) as error:
+            raise ConfigError(f"{projectPath}: localization project could not be read for culture staging ({error})") from error
+        for tablePath in projectPath.parent.glob(f"*{kTranslationTableSuffix}"):
+            culture = tablePath.name[: -len(kTranslationTableSuffix)].lower()
+            if culture not in listStaged:
+                uniqueTable.add(tablePath.relative_to(sourceDir).as_posix().lower())
+    return uniqueTable
+
+
 def collectPackFiles(sourceDir: Path, packConfig: dict, targetRhi: str = "dx12",
                      buildTarget: str = "") -> tuple[list[tuple[str, Path]], list[str]]:
     """
@@ -623,11 +646,15 @@ def collectPackFiles(sourceDir: Path, packConfig: dict, targetRhi: str = "dx12",
     """
     listPackFile: list[tuple[str, Path]] = []
     staleCooked: list[str] = []
+    uniqueUnstagedTable = collectUnstagedTranslationTablesInternal(sourceDir)
     for filePath in sorted(sourceDir.rglob("*")):
         if not filePath.is_file():
             continue
         rel = filePath.relative_to(sourceDir).as_posix()
         if not shouldIncludeFile(rel, packConfig, targetRhi=targetRhi, buildTarget=buildTarget):
+            continue
+        if rel.lower() in uniqueUnstagedTable:
+            # 출시 문화권(`stagedCultures`) 밖의 번역 표는 팩에 넣지 않는다(언리얼 Cultures to Stage). 런타임은 없는 표를 "아직 번역 없음" 으로 읽는다.
             continue
         if isCookedArtifact(rel):
             # 산출물은 스테이징에만 있다. 소스 트리에 남은 것은 낡은 쿠킹 잔재이고, Dev 런타임이 소스가

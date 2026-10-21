@@ -75,6 +75,12 @@ class ServerPackExclusionTest(unittest.TestCase):
             self.assertTrue(any(kind.matches(rel) for rel in listClient), kindName)
         self.assertGreater(len(listClient), len(self.mapPackFilesByTarget["Server"]))
 
+    def testServerExcludesAudioGraphs(self) -> None:
+        """소리 그래프(`*.audiograph.xml`)도 오디오다 — 서버는 그래프를 읽지 않고 팩에도 넣지 않는다(이벤트 라이브러리 · 믹서 XML 은 종류가 아니다)."""
+        kind = next(assetKind for assetKind in self.spec.listAssetKind if assetKind.name == "Audio")
+        self.assertTrue(kind.matches("game/x/audio/rain.audiograph.xml"))
+        self.assertFalse(kind.matches("engine/audio/default.audiomixer.xml"))
+
     def testFolderPatternMatchesWholeSegmentsOnly(self) -> None:
         """폴더 조각은 경로 조각 경계에서만 맞는다(`shaders/bin` 이 `myshaders/binary` 에 맞지 않는다)."""
         kind = next(assetKind for assetKind in self.spec.listAssetKind if assetKind.name == "ShaderBinary")

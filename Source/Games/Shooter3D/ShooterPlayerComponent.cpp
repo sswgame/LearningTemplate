@@ -672,6 +672,11 @@ namespace sw
         const WeaponState& weapon = getCurrentWeapon();
         pViewModel->setAmmo( weapon.getMagazineAmmo(), weapon.getReserveAmmo() );
         pViewModel->setWeaponName( weapon.getDef()._name );
+        // 손에 든 장비 아이템(무기의 외형 아이템)의 이름도 아이템 표의 원문이 키다. 아이템 표가 없거나 무기에 아이템이 없으면 이름 줄을 비운다.
+        const AppearanceDatabase* pDatabase = game::findSubsystem<AppearanceDatabase>();
+        const ItemCatalog*        pItems    = pDatabase != nullptr ? pDatabase->getItemCatalog() : nullptr;
+        const ItemDef*            pItem     = pItems != nullptr ? pItems->find( getWeaponItem( _weaponIndex ) ) : nullptr;
+        pViewModel->setItemName( pItem != nullptr ? string_view( pItem->_name ) : string_view{} );
     }
 
     void ShooterPlayerComponent::resetRound()

@@ -45,7 +45,7 @@
     "asset_kinds": [
         { "name": "Texture", "extensions": [ ".dds" ], "folders": [] },
         { "name": "ShaderBinary", "extensions": [], "folders": [ "shaders/bin" ] },
-        { "name": "Audio", "extensions": [ ".ogg", ".wav", ".mp3", ".flac" ], "folders": [] }
+        { "name": "Audio", "extensions": [ ".ogg", ".wav", ".mp3", ".flac", ".audiograph.xml" ], "folders": [] }
     ],
 
     "target_excluded_asset_kinds": [

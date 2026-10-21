@@ -117,6 +117,15 @@ namespace sw
          */
         void requestClip( const hashed_string& path );
 
+        /**
+         * @brief 그 경로(구분자 · 대소문자 무시)를 이 캐시가 준비해 두었으면 캐시의 이름을 @p outPath 에 돌려줍니다. 이름을 intern 하지 않습니다(핫 리로드가 바뀐 파일마다 묻는 길).
+         */
+        [[nodiscard]] bool findReadyPath( string_view path, hashed_string& outPath ) const;
+        /**
+         * @brief 준비된 경로를 지금 다시 디코드해 바꿉니다(소리 그래프 핫 리로드). 재생 중인 보이스는 옛 클립을 끝까지 씁니다(`shared_ptr`).
+         * @return 다시 읽기에 실패하면 오류를 남기고 false 이며 옛 클립을 그대로 둡니다(읽을 수 없는 파일로 소리를 지우지 않는다).
+         */
+        [[nodiscard]] bool reloadClip( const hashed_string& path );
         /** @brief 만든 클립을 경로 이름으로 넣습니다(테스트, 절차적 소리). 같은 이름이 있으면 교체합니다. */
         void addClip( const hashed_string& path, shared_ptr<const AudioClipData> pClip );
 

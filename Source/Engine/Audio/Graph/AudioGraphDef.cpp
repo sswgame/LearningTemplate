@@ -2,9 +2,12 @@
 
 #include "Engine/Audio/Graph/AudioGraphDef.h"
 
+#include "Core/File/FileUtil.h"
+
 #include "Engine/Audio/AudioMixerDesc.h"
 #include "Engine/Audio/Graph/AudioGraph.h"
 #include "Engine/Resource/ResourceIO.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
@@ -148,6 +151,27 @@ namespace sw
             }
         }
         return bValid;
+    }
+
+    string AudioGraphDef::toXMLText() const
+    {
+        return XMLSerializer::serialize( this, *StaticType() );
+    }
+
+    bool AudioGraphDef::saveToResource( string_view resourcePath ) const
+    {
+        if ( validate( resourcePath ) == false )
+        {
+            SW_LOG_ERROR( "%#: audio graph not saved - it does not pass validation", resourcePath );
+            return false;
+        }
+        const string filePath = ResourcePaths::getWritePath( resourcePath );
+        if ( FileUtil::writeTextFile( filePath, toXMLText() ) == false )
+        {
+            SW_LOG_ERROR( "%#: audio graph could not be written to '%#'", resourcePath, filePath );
+            return false;
+        }
+        return true;
     }
 
     bool AudioGraphDef::makeProcessingOrder( vector<uint32>& outListNodeIndex ) const
