@@ -66,8 +66,19 @@ namespace sw
 
     bool LightProbeBaker::bakeGrid( const LightProbeGridLayout& layout, const LightProbeBakeInput& input, LightProbeGrid& outGrid, string* pOutError )
     {
-        using Internal = LightProbeBakerInternal;
+        // 한 번에 굽기도 나눠 굽기와 같은 길이다 — 결과가 같다(`LightProbeBakeJob`).
         outGrid.clear();
+        LightProbeBakeJob job;
+        if ( job.begin( layout, input, pOutError ) == false )
+            return false;
+        (void)job.step( job.getProbeCount() );
+        return job.takeGrid( outGrid );
+    }
+
+    bool LightProbeBakeJob::begin( const LightProbeGridLayout& layout, const LightProbeBakeInput& input, string* pOutError )
+    {
+        using Internal           = LightProbeBakerInternal;
+        *this                    = LightProbeBakeJob{};
         const bool bMissingInput = input._pPhysics == nullptr || input._sampleCount == 0 || layout.getProbeCount() == 0;
         if ( bMissingInput )
         {
@@ -75,25 +86,34 @@ namespace sw
                 *pOutError = "light probe bake needs a physics scene, at least one sample and at least one probe";
             return false;
         }
-
+        _input = input;
         // 방향은 한 번만 만든다 — 모든 프로브가 같은 수열을 쓴다.
-        vector<float3> listDirection;
-        listDirection.reserve( input._sampleCount );
+        _listDirection.reserve( input._sampleCount );
         uint32 state = Internal::kSeed;
         for ( uint32 sampleIndex = 0; sampleIndex < input._sampleCount; ++sampleIndex )
         {
-            listDirection.push_back( SH9Color::makeUniformSphereDirection( state ) );
+            _listDirection.push_back( SH9Color::makeUniformSphereDirection( state ) );
         }
+        _weight       = 4.0f * MathUtil::kPi / static_cast<float32>( input._sampleCount );
+        _grid._layout = layout;
+        _grid._listProbe.assign( layout.getProbeCount(), SH9Color{} );
+        _nextProbeIndex = 0;
+        _bBegun         = true;
+        return true;
+    }
 
-        const IPhysicsQueryScene3D& physics = *input._pPhysics;
-        const float32               weight  = 4.0f * MathUtil::kPi / static_cast<float32>( input._sampleCount );
-        outGrid._layout                     = layout;
-        outGrid._listProbe.assign( layout.getProbeCount(), SH9Color{} );
-        for ( uint32 probeIndex = 0; probeIndex < layout.getProbeCount(); ++probeIndex )
+    bool LightProbeBakeJob::step( uint32 maxProbeCount )
+    {
+        using Internal = LightProbeBakerInternal;
+        if ( _bBegun == false )
+            return false;
+        const IPhysicsQueryScene3D& physics  = *_input._pPhysics;
+        const uint32                endIndex = MathUtil::min( getProbeCount(), _nextProbeIndex + maxProbeCount );
+        for ( ; _nextProbeIndex < endIndex; ++_nextProbeIndex )
         {
-            const float3 probePosition = layout.computeProbePosition( probeIndex );
-            SH9Color&    probe         = outGrid._listProbe[probeIndex];
-            for ( const float3& direction : listDirection )
+            const float3 probePosition = _grid._layout.computeProbePosition( _nextProbeIndex );
+            SH9Color&    probe         = _grid._listProbe[_nextProbeIndex];
+            for ( const float3& direction : _listDirection )
             {
                 PhysicsCastHit3D hit;
                 float3           radiance{ 0.0f, 0.0f, 0.0f };
@@ -101,15 +121,25 @@ namespace sw
                 {
                     // 닿은 면이 튕겨 보내는 빛 — 반사율 × 그 면이 받는 직접광(조명 식과 같은 단위).
                     const float3 surface = hit._point + hit._normal * Internal::kSurfaceOffset;
-                    radiance             = computeDirectLight( input, surface, hit._normal ) * input._bounceAlbedo;
+                    radiance             = LightProbeBaker::computeDirectLight( _input, surface, hit._normal ) * _input._bounceAlbedo;
                 }
                 else
                 {
-                    radiance = input._sky.evaluateRadiance( direction ); // 스카이가 없으면 세기 0 이라 0 이다
+                    radiance = _input._sky.evaluateRadiance( direction ); // 스카이가 없으면 세기 0 이라 0 이다
                 }
-                probe.addSample( direction, radiance, weight );
+                probe.addSample( direction, radiance, _weight );
             }
         }
+        return isDone();
+    }
+
+    bool LightProbeBakeJob::takeGrid( LightProbeGrid& outGrid )
+    {
+        if ( isDone() == false )
+            return false;
+        outGrid = std::move( _grid );
+        _grid.clear();
+        _bBegun = false;
         return true;
     }
 

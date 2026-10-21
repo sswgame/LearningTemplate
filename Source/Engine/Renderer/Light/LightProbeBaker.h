@@ -74,3 +74,41 @@ namespace sw
         static bool computeLightIncidence( const GPULight& light, const float3& position, float3& outToLight, float32& outAttenuation, float32& outDistance );
     };
 } // namespace sw
+
+namespace sw
+{
+    /**
+     * @class LightProbeBakeJob
+     * @brief 볼륨 하나의 굽기를 프로브 단위로 나눠 진행합니다(에디터의 비동기 굽기 — IndirectLighting P6). `LightProbeBaker::bakeGrid` 도 이 길 하나로 굽는다.
+     * @details 프로브는 서로 독립이고 방향 수열이 고정이라, 몇 번에 나눠 굽든 한 번에 구운 것과 비트까지 같다.
+     *          입력(라이트 · 하늘 · 레이 수 · 반사율)은 `begin` 때 복사해 두지만 물리 씬은 빌린다 — 굽는 동안 씬의 물리 셰이프가 바뀌면 결과가 섞인다.
+     *          그래서 에디터는 굽는 동안 씬 편집을 막는다(`EditorPlaySession::holdSceneEdits`).
+     */
+    class SW_API LightProbeBakeJob
+    {
+    public:
+        /**
+         * @brief 격자 @p layout 을 @p input 으로 굽기 시작합니다. 지난 진행은 버립니다.
+         * @return 입력이 모자라면(물리 씬이 없거나 레이 수가 0 이거나 프로브가 없다) false 이고 이유를 @p pOutError 에 적습니다.
+         */
+        [[nodiscard]] bool begin( const LightProbeGridLayout& layout, const LightProbeBakeInput& input, string* pOutError = nullptr );
+        /** @brief 다음 프로브를 @p maxProbeCount 개까지 굽습니다. 모두 구웠으면 true 입니다. `begin` 전이면 아무것도 하지 않고 false 입니다. */
+        bool step( uint32 maxProbeCount );
+        /** @brief 모든 프로브를 구웠으면 true 입니다. */
+        bool isDone() const { return _bBegun && _nextProbeIndex >= getProbeCount(); }
+        /** @brief 구운 프로브 수입니다. */
+        uint32 getBakedProbeCount() const { return _nextProbeIndex; }
+        /** @brief 격자의 프로브 수입니다(`begin` 전이면 0). */
+        uint32 getProbeCount() const { return static_cast<uint32>( _grid._listProbe.size() ); }
+        /** @brief 다 구운 격자를 넘깁니다. 아직 덜 구웠으면 false 이고 @p outGrid 는 그대로입니다. 넘긴 뒤 작업은 비어 있다. */
+        [[nodiscard]] bool takeGrid( LightProbeGrid& outGrid );
+
+    private:
+        LightProbeBakeInput _input{};
+        LightProbeGrid      _grid{};
+        vector<float3>      _listDirection;
+        float32             _weight{ 0.0f };
+        uint32              _nextProbeIndex{ 0 };
+        bool                _bBegun{ false };
+    };
+} // namespace sw

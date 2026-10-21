@@ -321,7 +321,28 @@ namespace sw::editor
 
     bool EditorPlaySession::areSceneEditsAllowed()
     {
-        return EditorSessionPolicy::areSceneEditsAllowed( isStopped() );
+        return EditorSessionPolicy::areSceneEditsAllowed( isStopped(), areSceneEditsHeld() );
+    }
+
+    void EditorPlaySession::holdSceneEdits()
+    {
+        PlaySessionData* pData = EditorPlaySessionInternal::data();
+        if ( pData != nullptr )
+            ++pData->_sceneEditHoldCount;
+    }
+
+    void EditorPlaySession::releaseSceneEdits()
+    {
+        PlaySessionData* pData = EditorPlaySessionInternal::data();
+        SW_ASSERT( pData == nullptr || pData->_sceneEditHoldCount > 0 );
+        if ( pData != nullptr && pData->_sceneEditHoldCount > 0 )
+            --pData->_sceneEditHoldCount;
+    }
+
+    bool EditorPlaySession::areSceneEditsHeld()
+    {
+        const PlaySessionData* pData = EditorPlaySessionInternal::data();
+        return pData != nullptr && pData->_sceneEditHoldCount > 0;
     }
 
     bool EditorPlaySession::hasPendingStep()
