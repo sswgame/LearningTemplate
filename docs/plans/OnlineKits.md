@@ -31,7 +31,7 @@
 | F2 | 백필(경기 중 빈자리) | F1 | 끝남(빌드 미확인) |
 | F3 | 재접속 유예 중 파티와 로비 유지 | 없음 | 끝남(빌드 미확인) |
 | F4 | 파티 채팅 채널 | D1 | 끝남(빌드 미확인) |
-| F5 | 전용 게임 서버 조립이 접속 인증기(`AccountConnectAuthenticator` 와 `MatchServerAgent`)를 UDP `NetHost` 에 끼우고 배정 주제를 구독 | F1, ServerDebug 의 GameNetSession | 남음 |
+| F5 | 전용 게임 서버 조립이 접속 인증기(`AccountConnectAuthenticator` 와 `MatchServerAgent`)를 UDP `NetHost` 에 끼우고 배정 주제를 구독 | F1, ServerDebug 의 GameNetSession | 끝남(빌드 미확인) |
 | G1 | A/B 실험(원격 설정 출시 비율과 지표) | 없음 | 끝남(빌드 미확인) |
 | G2 | 우편의 오프라인 푸시 연결(`IOfflinePushSender`) | 없음 | 끝남(빌드 미확인) |
 | G5 | 라이브 이벤트 시작의 오프라인 푸시(전체 대상이라 제공자의 토픽 발송이 필요하다) | G4 | 남음 |
@@ -64,8 +64,14 @@
 
 ### F5
 
-접속 인증기는 받아들이기 정책(`IConnectAdmission`)을 필수로 받고, `MatchServerAgent` 가 그 정책을 구현합니다(F1). 그러나 전용 게임 서버에서 `NetHost` 에 인증기를 끼우는 조립이 아직 없습니다.
-`GameNetSession`(`Engine/Net`)이 `NetHost` 를 만들므로 [ServerDebug](ServerDebug.md) 작업자와 겹칩니다. 그 일과 함께 합니다.
+2026-10-22(`wt/planleftA`, 빌드 미확인 — netcand 의 포트 샤딩 `3e430c317` 위). 게임 포트는 게임 인스턴스가 설 때 열리고 인증기를 만드는 온라인 키트는 그 뒤에 선다 — 그 순서 문제를 자리 하나로 풀었다.
+
+- 서버 설정 `ServerConfig::_bGameConnectTicket` 을 켜면 `GameNetSession::makeServerParams` 가 게임 포트를 암호화하고 인증기 자리에 `GameConnectSecurity`(Engine/Net)를 끼운다. 모든 샤드가 같은 자리를 쓴다.
+  암호 제공자(OpenSSL)는 GameFramework 모듈이 설 때 꺼내는 함수로 넣는다(`NetSecurity.cpp`) — 없으면 게임 포트를 열지 않는다.
+- 계정 키트의 새 조립 `gameConnect`(옵션 `ticketKeySecretEnvironment` · `serverName` 필수)가 로그인 서버와 같은 주 키로 티켓 확인기만 세우고 `AccountConnectAuthenticator` 를 자리에 묶는다(`start`), `stop` 이 푼다. 키 읽기는 `LoginTicketKey` 하나로 모았다.
+- 매칭 키트의 `gameServer` 옵션이 `MatchServerAgent` 를 세워 받아들이기 정책을 문맥(`OnlineServerKitContext::_pConnectAdmission`)에 내놓고, 배정 주제 구독 · 시한은 `MatchmakingServer` 가 돈다. 없으면 티켓이 맞는 모든 계정을 받는다(`AdmitEveryAccount`).
+- 묶이기 전에 온 접속은 거절한다. 서비스가 선 뒤에도 묶이지 않았으면 `ServerApp` 이 기동을 멈춘다(폴백 없음).
+- 남은 것: 클라이언트 쪽 — `GameNetSession` 클라이언트가 티켓(`NetConnectCredentials`)을 내밀어 붙는 길(지금 `-gv_netConnectAddress` 는 자격 없이 붙는다), 그리고 두 프로세스 시나리오 확인.
 
 ### F2
 

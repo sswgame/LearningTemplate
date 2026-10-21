@@ -29,6 +29,7 @@ namespace sw
     class IAccountPresence;
     class IAccountSessionControl;
     class IAccountStatSource;
+    class IConnectAdmission;
     class IEphemeralStore;
     class IGroupChannelMembership;
     class ILedgerPolicy;
@@ -92,6 +93,7 @@ namespace sw
         const IAccountStatSource* _pStatSource{ nullptr };       ///< 순위표 키트(접속한 계정의 통계, 매칭 실력)
         IOfflinePushSender*       _pOfflinePush{ nullptr };      ///< 라이브 운영 키트(오프라인 계정의 기기 푸시)
         ILiveEventControl*        _pLiveEventControl{ nullptr }; ///< 라이브 운영 키트(GM 의 이벤트 운영)
+        const IConnectAdmission*  _pConnectAdmission{ nullptr }; ///< 매칭 키트의 게임 서버 쪽(`gameServer` — 배정받은 계정만). 계정 키트의 `gameConnect` 가 읽는다
     };
 } // namespace sw
 

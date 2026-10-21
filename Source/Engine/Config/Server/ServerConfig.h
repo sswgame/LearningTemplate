@@ -87,6 +87,13 @@ namespace sw
         /** @brief 리눅스 전용 — 샤드(2 개 이상)를 포트 여러 개 대신 `SO_REUSEPORT` 한 포트로 엽니다. 다른 플랫폼에서 켜면 게임 포트를 열지 않고 오류입니다. */
         PROPERTY()
         bool _bGamePortReuse{ false };
+        /**
+         * @brief 게임 포트(UDP)가 계정 키트의 접속 티켓을 요구합니다 — 포트를 암호화하고 연결을 티켓의 세션 비밀에 묶습니다(`GameConnectSecurity`, OnlineKits F5).
+         * @details 켜면 온라인 설정에 티켓을 확인하는 조립(계정 키트의 `gameConnect`)이 있어야 합니다. 서버 서비스가 선 뒤 인증기가 묶이지 않았으면 서버는 기동을 멈춥니다.
+         *          매칭으로 배정받는 서버는 매칭 키트의 `gameServer` 옵션을 켜 배정받은 계정만 받습니다. Shipping 의 암호화 게임 포트는 이것이 켜져야 엽니다.
+         */
+        PROPERTY()
+        bool _bGameConnectTicket{ false };
         /** @brief 서비스(TCP — 로그인 · 채팅 · 거래) 포트입니다. 0 이면 서비스 서버를 열지 않습니다. */
         PROPERTY( Min = 0, Max = 65535 )
         int32 _servicePort{ 7780 };
