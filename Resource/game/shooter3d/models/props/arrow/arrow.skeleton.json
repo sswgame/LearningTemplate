@@ -1,0 +1,15 @@
+{
+  "_listBone": [
+    {
+      "_name": "root",
+      "_parentIndex": -1,
+      "_referencePose": {
+        "_translation": "-0,0,0",
+        "_rotation": "0,-0,-0,1",
+        "_scale": "1,1,1"
+      },
+      "_inverseBind": "1,-0,-0,-0,-0,1,0,0,-0,0,1,0,0,-0,-0,1"
+    }
+  ],
+  "_listAttachment": []
+}
