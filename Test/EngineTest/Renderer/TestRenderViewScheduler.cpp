@@ -364,8 +364,11 @@ SW_TEST_CASE( RenderViewModeTest, NamesAreUniqueAndLightingOnlyIsShaded )
     SW_EXPECT_FALSE( lightingOnly._bWireframe );
     SW_EXPECT_FALSE( lightingOnly._bAdditiveNoDepth );
 
-    // 범위 밖 값은 Lit 항목으로 떨어진다.
-    SW_EXPECT_TRUE( string( getRenderViewModeInfo( RenderViewMode::Count )._pName ) == string( "Lit" ) );
+    // 밖에서 들어온 번호는 거른다 — 범위 밖을 Lit 으로 바꾸지 않는다.
+    SW_EXPECT_TRUE( isRenderViewModeIndex( 0 ) );
+    SW_EXPECT_TRUE( isRenderViewModeIndex( static_cast<int32>( RenderViewMode::Count ) - 1 ) );
+    SW_EXPECT_FALSE( isRenderViewModeIndex( static_cast<int32>( RenderViewMode::Count ) ) );
+    SW_EXPECT_FALSE( isRenderViewModeIndex( -1 ) );
 }
 
 /**

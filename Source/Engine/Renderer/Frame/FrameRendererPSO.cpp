@@ -463,10 +463,28 @@ namespace sw
         return FrameRendererUtil::drawsMaterialInPass( passType, pPermutation != nullptr ? &pPermutation->_listDefine : nullptr );
     }
 
+    bool FrameRenderer::supportsViewMode( RenderViewMode viewMode ) const
+    {
+        // 와이어프레임 채우기가 없는 디바이스(Vulkan fillModeNonSolid 없음)는 와이어프레임 모드를 받지 않는다 — 솔리드 그림이 와이어프레임으로 통과하지 않게.
+        const bool bNeedsWireframe = getRenderViewModeInfo( viewMode )._bWireframe;
+        const bool bDrawable       = bNeedsWireframe == false || _pDevice == nullptr || _pDevice->getCapabilities()._bWireframeFill != SW_FALSE;
+        if ( bDrawable )
+            return true;
+        SW_LOG_ERROR( "View mode %# needs wireframe fill, which this device does not support - the mode is not applied", getRenderViewModeInfo( viewMode )._pName );
+        return false;
+    }
+
     void FrameRenderer::setViewMode( RenderViewMode viewMode )
     {
+        // 범위 밖 값을 Lit 으로 바꾸지 않는다 — 들어오는 번호는 부르는 쪽이 거른다(isRenderViewModeIndex).
         if ( viewMode >= RenderViewMode::Count )
-            viewMode = RenderViewMode::Lit;
+        {
+            SW_LOG_ERROR( "setViewMode: %# is not a view mode - the main output keeps its mode", static_cast<uint32>( viewMode ) );
+            SW_ASSERT( viewMode < RenderViewMode::Count );
+            return;
+        }
+        if ( supportsViewMode( viewMode ) == false )
+            return;
         const uint8 previous = _viewMode.exchange( static_cast<uint8>( viewMode ), std::memory_order_relaxed );
         if ( previous == static_cast<uint8>( viewMode ) )
             return;
@@ -477,14 +495,20 @@ namespace sw
 
     RenderViewMode FrameRenderer::getViewMode() const
     {
-        const uint8 raw = _viewMode.load( std::memory_order_relaxed );
-        return ( raw < static_cast<uint8>( RenderViewMode::Count ) ) ? static_cast<RenderViewMode>( raw ) : RenderViewMode::Lit;
+        // setViewMode 가 범위 밖 값을 받지 않으므로 그대로 바꾼다.
+        return static_cast<RenderViewMode>( _viewMode.load( std::memory_order_relaxed ) );
     }
 
     void FrameRenderer::setSceneViewMode( RenderViewMode viewMode )
     {
         if ( viewMode >= RenderViewMode::Count )
-            viewMode = RenderViewMode::Lit;
+        {
+            SW_LOG_ERROR( "setSceneViewMode: %# is not a view mode - the scene view keeps its mode", static_cast<uint32>( viewMode ) );
+            SW_ASSERT( viewMode < RenderViewMode::Count );
+            return;
+        }
+        if ( supportsViewMode( viewMode ) == false )
+            return;
         const uint8 previous = _sceneViewMode.exchange( static_cast<uint8>( viewMode ), std::memory_order_relaxed );
         if ( previous == static_cast<uint8>( viewMode ) )
             return;
@@ -493,7 +517,6 @@ namespace sw
 
     RenderViewMode FrameRenderer::getSceneViewMode() const
     {
-        const uint8 raw = _sceneViewMode.load( std::memory_order_relaxed );
-        return ( raw < static_cast<uint8>( RenderViewMode::Count ) ) ? static_cast<RenderViewMode>( raw ) : RenderViewMode::Lit;
+        return static_cast<RenderViewMode>( _sceneViewMode.load( std::memory_order_relaxed ) );
     }
 } // namespace sw

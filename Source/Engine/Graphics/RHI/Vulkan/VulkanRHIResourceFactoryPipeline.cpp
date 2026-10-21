@@ -26,6 +26,12 @@ namespace sw
 
     RHIPipelineStateHandle VulkanRHIResourceFactory::createPipelineState( const RHIPipelineStateDesc& desc )
     {
+        // 와이어프레임 채우기는 디바이스 기능 fillModeNonSolid 가 있어야 한다. 없으면 솔리드로 바꾸지 않고 셰이더 모듈을 만들기 전에 거절한다(아래 래스터 상태 주석).
+        if ( desc._fillMode == RHIFillMode::Wireframe && _pDevice->_bFillModeNonSolid == 0 )
+        {
+            SW_LOG_ERROR( "createPipelineState: wireframe fill needs the fillModeNonSolid device feature ('%#')", desc._vertexShaderPath );
+            return 0;
+        }
         // 서술체 해석(진입점 기본값 · define · 깊이 전용 판정 · RT 수)은 RHIShaderRequest 하나가 한다. 백엔드는 받기만 한다.
         // 백엔드가 desc 를 직접 읽으면 define(SW_FORWARD · 머티리얼 퍼뮤테이션 · SW_VIEWMODE_UNLIT)을 빠뜨려도 조용히 어긋난다.
         const RHIGraphicsShaderRequest request         = RHIShaderRequest::resolveGraphics( desc, ShaderTargetFormat::SPIRV_Vulkan );
@@ -134,9 +140,9 @@ namespace sw
         rasterizer.sType                   = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
         rasterizer.depthClampEnable        = VK_FALSE;
         rasterizer.rasterizerDiscardEnable = VK_FALSE;
-        // 기능을 못 켠 디바이스에서 LINE 을 요청하면 파이프라인 생성 자체가 거절된다. 화면이 비는 대신
-        // 솔리드로 그린다(요청은 "보기 방식" 이고, 그리지 못하는 것보다 다르게 보이는 편이 낫다).
-        const bool bUseWireframe = ( desc._fillMode == RHIFillMode::Wireframe ) && ( _pDevice->_bFillModeNonSolid != 0 );
+        // 기능을 못 켠 디바이스에서 LINE 을 요청하면 솔리드로 바꾸지 않고 거절한다 — 다른 그림이 와이어프레임으로 통과하면 안 된다.
+        // 렌더러는 능력(RHICapabilities::_bWireframeFill)을 보고 와이어프레임 보기 모드를 받지 않으므로 여기 닿으면 결함이다.
+        const bool bUseWireframe = desc._fillMode == RHIFillMode::Wireframe;
         rasterizer.polygonMode   = bUseWireframe ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
         rasterizer.lineWidth     = 1.0f;
         rasterizer.cullMode      = ( desc._cullMode == RHICullMode::Front ) ? VK_CULL_MODE_FRONT_BIT : ( ( desc._cullMode == RHICullMode::Back ) ? VK_CULL_MODE_BACK_BIT : VK_CULL_MODE_NONE );
