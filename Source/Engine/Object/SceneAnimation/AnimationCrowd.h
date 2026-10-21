@@ -202,6 +202,14 @@ namespace sw
          */
         AnimationCrowdBucket* joinBucket( AnimationCrowdBucket* pCurrent, const AnimationSharedPoseRequest& request, const shared_ptr<const Skeleton>& skeleton,
                                           const shared_ptr<Mesh>& sourceMesh, const shared_ptr<const AnimationClip>& clip );
+        /**
+         * @brief 리더 포즈를 따르는 유닛(옷 · 머리 부품)이 리더 묶음과 같은 클립 · 변형 칸의 묶음에 듭니다. 스켈레톤과 스킨 원본만 따르는 유닛의 것입니다.
+         * @details 리더 포즈가 클립 하나이므로 그 포즈를 본 이름으로 옮긴 결과(`SkeletalMeshComponent::copyLeaderPose`)와 같은 클립을 같은 시각에 자기 스켈레톤으로
+         *          샘플한 결과가 같다. 그래서 부품도 묶음 하나 · 결과 구간 하나를 나눈다.
+         * @return 묶음(소유는 군중). 스켈레톤이나 스킨 원본이 없으면 nullptr 입니다.
+         */
+        AnimationCrowdBucket* joinFollowerBucket( AnimationCrowdBucket* pCurrent, const AnimationCrowdBucket& leaderBucket, const shared_ptr<const Skeleton>& skeleton,
+                                                  const shared_ptr<Mesh>& sourceMesh );
         /** @brief 유닛이 묶음을 가리키기 시작하거나 그쳤음을 알립니다(참조 수이며, 가리키는 묶음은 지우지 않습니다). */
         static void addReference( AnimationCrowdBucket* pBucket );
         static void releaseReference( AnimationCrowdBucket* pBucket );
@@ -243,6 +251,9 @@ namespace sw
     private:
         /** @brief 클립 한 바퀴 안에서 유닛 시간에 가장 가까운 변형 구간을 고릅니다. */
         uint32 selectVariation( const AnimationSharedPoseRequest& request, float32 duration ) const;
+        /** @brief 키의 묶음을 찾고, 없으면 스킨 원본의 사본 메시로 만듭니다. */
+        AnimationCrowdBucket* findOrCreateBucket( const AnimationCrowdBucketKey& key, const shared_ptr<const Skeleton>& skeleton, const shared_ptr<const AnimationClip>& clip,
+                                                  const Mesh& sourceMesh );
 
         /** @brief 베이크한 VAT 메시 하나입니다. */
         struct VertexAnimationEntry

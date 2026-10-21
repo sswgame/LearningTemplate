@@ -39,9 +39,11 @@ namespace sw
         explicit CharacterAppearanceSocketTask( CharacterAppearanceComponent& owner );
 
         bool isAnimationActive() const override { return false; }
-        void runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override;
-        void finishAnimationFrame( SkeletalMeshComponent& unit ) override;
-        void onAnimationUnitDetached( SkeletalMeshComponent& unit ) override;
+        /** @brief 몸의 모델 공간을 읽어 소켓 위치만 고친다 — 군중 묶음을 나누는 몸이면 묶음의 포즈를 읽는다. */
+        AnimationPoseAccess getPoseAccess() const override { return AnimationPoseAccess::ReadsOnly; }
+        void                runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override;
+        void                finishAnimationFrame( SkeletalMeshComponent& unit ) override;
+        void                onAnimationUnitDetached( SkeletalMeshComponent& unit ) override;
 
     private:
         CharacterAppearanceComponent& _owner;
@@ -84,6 +86,12 @@ namespace sw
         /** @brief 몸과 부품을 보이거나 숨깁니다. 1인칭에서 몸을 숨길 때 씁니다. */
         void setPartsVisible( bool bVisible );
         bool isPartsVisible() const { return _bPartsVisible; }
+        /**
+         * @brief 이 칸(부품 주인 — 슬롯 또는 꾸미기 매개변수)들의 부품을 숨깁니다. 몸과 다른 칸은 `setPartsVisible` 을 따릅니다. 빈 목록이면 숨기는 칸이 없습니다.
+         * @details 1인칭에서 몸은 보이고 머리 칸 · 손 무기 칸만 숨길 때 쓴다. 다시 조립해도(장비 바꿈) 목록을 지킨다.
+         */
+        void                         setHiddenSlots( const vector<hashed_string>& listSlot );
+        const vector<hashed_string>& getHiddenSlots() const { return _listHiddenSlot; }
         /** @brief 스폰한 부품 오브젝트를 모두 지웁니다. 상태를 저장하기 전과 끝낼 때 부릅니다. 다음 조립에서 다시 스폰합니다. */
         void despawnParts();
 
@@ -161,7 +169,8 @@ namespace sw
         CharacterBoneArray                      _bodyBones; ///< 지난 포즈(모델 공간). 소켓 질의가 읽는다
         vector<SpawnedPart>                     _listSpawnedPart;
         vector<SlotOverride>                    _listSlotOverride;
-        TComponentHandle<SkeletalMeshComponent> _taskUnit; ///< 단계 작업을 등록한 몸 유닛
+        vector<hashed_string>                   _listHiddenSlot; ///< 보임과 따로 숨기는 칸(`setHiddenSlots`)
+        TComponentHandle<SkeletalMeshComponent> _taskUnit;       ///< 단계 작업을 등록한 몸 유닛
         uint32                                  _assembleCount;
         int32                                   _bodyPart;
         bool                                    _bPartsVisible;

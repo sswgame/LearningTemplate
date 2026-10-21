@@ -114,6 +114,37 @@ namespace
             return MathUtil::abs( MathUtil::abs( expected.dot( actual ) ) - 1.0f ) <= tolerance;
         }
     };
+
+    /** @brief 포즈를 읽기만 하는 작업입니다(외형 소켓 작업과 같은 모양). 끝 단계에서 본 모델 공간 행렬 수를 셉니다. */
+    class CrowdReaderTask final : public IAnimationPhaseTask
+    {
+    public:
+        bool                isAnimationActive() const override { return false; }
+        AnimationPoseAccess getPoseAccess() const override { return AnimationPoseAccess::ReadsOnly; }
+        void                runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override
+        {
+            (void)phase;
+            (void)unit;
+            (void)context;
+        }
+        void finishAnimationFrame( SkeletalMeshComponent& unit ) override { _seenBoneCount = static_cast<uint32>( unit.getModelSpaceTransforms().size() ); }
+
+        uint32 _seenBoneCount{ 0 };
+    };
+
+    /** @brief 포즈를 쓰는 작업입니다(IK 같은 후처리). 붙으면 유닛 포즈가 리더와 달라진다. */
+    class CrowdWriterTask final : public IAnimationPhaseTask
+    {
+    public:
+        bool                isAnimationActive() const override { return true; }
+        AnimationPoseAccess getPoseAccess() const override { return AnimationPoseAccess::Writes; }
+        void                runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override
+        {
+            (void)phase;
+            (void)unit;
+            (void)context;
+        }
+    };
 } // namespace
 
 /**
@@ -386,6 +417,61 @@ SW_TEST_CASE( AnimationCrowdTest, IdleBucketsRetireAfterKeepSeconds )
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( system.getCrowd().getBuckets().size() ) ); // 아직 쉰 지 0.5 초
     system.evaluate( 0.6f );
     SW_EXPECT_EQUAL( 0u, static_cast<uint32>( system.getCrowd().getBuckets().size() ) );
+}
+
+/**
+ * @brief [AnimationCrowdTest] 읽기 작업(외형 소켓)이 붙은 몸도 묶음을 나누고, 리더를 따르는 부품은 리더 묶음과 같은 클립 · 칸의 자기 묶음을 나눈다
+ * @details 읽기 작업은 묶음의 모델 공간을 읽는다. 부품이 포즈를 쓰는 작업을 받으면 리더와 포즈가 달라 혼자 평가한다.
+ */
+SW_TEST_CASE( AnimationCrowdTest, ReaderTasksAndLeaderFollowersShareBuckets )
+{
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
+    const shared_ptr<Skeleton> skeleton = TestAnimationCrowdInternal::makeSkeleton();
+    const shared_ptr<Mesh>     bodyMesh = TestAnimationCrowdInternal::makeSkinnedCube();
+    const shared_ptr<Mesh>     partMesh = TestAnimationCrowdInternal::makeSkinnedCube();
+    const string               folder   = TestAnimationCrowdInternal::writeClips( *skeleton );
+    SW_ASSERT_FALSE( folder.empty() );
+    SW_ASSERT_TRUE( bodyMesh->getSkinDataID() != partMesh->getSkinDataID() );
+
+    // 작업은 매니저보다 먼저 만든다 — 매니저가 컴포넌트를 지울 때 작업을 떼므로 그때까지 살아 있어야 한다.
+    CrowdReaderTask   reader;
+    CrowdWriterTask   writer;
+    GameObjectManager manager;
+    AnimationSystem&  system = manager.getSubsystem<AnimationSystem>();
+    system.setCrowdSettings( AnimationCrowdSettings{} );
+    SkeletalMeshComponent* pBody = TestAnimationCrowdInternal::createCharacter( manager, "Body", skeleton, bodyMesh, folder, "Wave", 0.27f );
+    SW_ASSERT_NOT_NULL( pBody );
+    pBody->registerAnimationPhaseTask( &reader );
+
+    GameObject*            pPartObject = manager.createGameObject( hashed_string( "Cloth" ) );
+    SkeletalMeshComponent* pPart       = pPartObject != nullptr ? pPartObject->addComponent<SkeletalMeshComponent>() : nullptr;
+    SW_ASSERT_NOT_NULL( pPart );
+    pPart->setShareCrowdPose( true );
+    pPart->setSkeleton( skeleton );
+    pPart->setMesh( partMesh );
+    pPart->resolveRenderAssets();
+    pPart->setLeaderPose( pBody );
+
+    system.evaluate( 0.0f );
+    SW_EXPECT_TRUE( pBody->getCrowdMode() == AnimationCrowdMode::Shared );
+    SW_EXPECT_TRUE( pPart->getCrowdMode() == AnimationCrowdMode::Shared );
+    SW_ASSERT_TRUE( pBody->findCrowdBucket() != nullptr && pPart->findCrowdBucket() != nullptr );
+    SW_EXPECT_TRUE( pBody->findCrowdBucket() != pPart->findCrowdBucket() ); // 스킨 원본이 달라 묶음이 다르다
+    SW_EXPECT_EQUAL( partMesh->getSkinDataID(), pPart->getMesh()->getSkinDataID() );
+    SW_EXPECT_TRUE( &pBody->findCrowdBucket()->getClip() == &pPart->findCrowdBucket()->getClip() );
+    const float64 clock = system.getCrowd().getClock();
+    SW_EXPECT_NEAR_EQUAL( pBody->findCrowdBucket()->computeTime( clock ), pPart->findCrowdBucket()->computeTime( clock ), 1e-6f );
+    SW_EXPECT_TRUE( TestAnimationCrowdInternal::isSameRotation( TestAnimationCrowdInternal::getBoneRotation( *pBody ), TestAnimationCrowdInternal::getBoneRotation( *pPart ),
+                                                                1e-5f ) );
+    SW_EXPECT_EQUAL( 0u, pPart->getPoseEvaluationCount() );
+    SW_EXPECT_EQUAL( skeleton->getBoneCount(), reader._seenBoneCount ); // 읽기 작업은 묶음의 모델 공간을 읽었다
+
+    // 부품이 포즈를 쓰는 작업을 받으면 혼자 평가한다(리더 포즈를 옮기고 자기 작업을 더한다).
+    pPart->registerAnimationPhaseTask( &writer );
+    system.evaluate( 0.05f );
+    SW_EXPECT_TRUE( pBody->getCrowdMode() == AnimationCrowdMode::Shared );
+    SW_EXPECT_TRUE( pPart->getCrowdMode() == AnimationCrowdMode::Solo );
+    SW_EXPECT_NULL( pPart->findCrowdBucket() );
 }
 
 /**

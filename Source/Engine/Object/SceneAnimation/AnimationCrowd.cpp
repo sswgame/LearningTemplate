@@ -194,11 +194,31 @@ namespace sw
         if ( pCurrent != nullptr && pCurrent->_key.isSameState( key ) )
             return pCurrent;
         key._variation = selectVariation( request, clip->getDuration() );
+        return findOrCreateBucket( key, skeleton, clip, *sourceMesh );
+    }
 
+    AnimationCrowdBucket* AnimationCrowd::joinFollowerBucket( AnimationCrowdBucket* pCurrent, const AnimationCrowdBucket& leaderBucket,
+                                                              const shared_ptr<const Skeleton>& skeleton, const shared_ptr<Mesh>& sourceMesh )
+    {
+        if ( skeleton == nullptr || sourceMesh == nullptr )
+            return nullptr;
+        // 클립 · 속도 · 루트 고정 · 변형 칸까지 리더 묶음과 같다 — 같은 시각을 재생한다. 스켈레톤과 스킨 원본만 따르는 유닛의 것이다.
+        // 리더가 칸을 옮기면 따라 옮긴다(`isSameState` 로 칸을 붙들지 않는다 — 붙들면 부품이 몸과 다른 위상으로 돈다).
+        AnimationCrowdBucketKey key = leaderBucket._key;
+        key._pSkeleton              = skeleton.get();
+        key._skinDataID             = sourceMesh->getSkinDataID();
+        if ( pCurrent != nullptr && pCurrent->_key == key )
+            return pCurrent;
+        return findOrCreateBucket( key, skeleton, leaderBucket._clip, *sourceMesh );
+    }
+
+    AnimationCrowdBucket* AnimationCrowd::findOrCreateBucket( const AnimationCrowdBucketKey& key, const shared_ptr<const Skeleton>& skeleton,
+                                                              const shared_ptr<const AnimationClip>& clip, const Mesh& sourceMesh )
+    {
         const auto found = _mapBucket.find( key );
         if ( found != _mapBucket.end() )
             return found->second;
-        unique_ptr<AnimationCrowdBucket> bucket = sw::make_unique<AnimationCrowdBucket>( key, skeleton, clip, Mesh::createSkinInstance( *sourceMesh ) );
+        unique_ptr<AnimationCrowdBucket> bucket = sw::make_unique<AnimationCrowdBucket>( key, skeleton, clip, Mesh::createSkinInstance( sourceMesh ) );
         bucket->_variationSpan                  = static_cast<float64>( clip->getDuration() ) / static_cast<float64>( MathUtil::max( _settings._variationsPerClip, 1u ) );
         bucket->_idleSince                      = _clock;
         AnimationCrowdBucket* pBucket           = bucket.get();
