@@ -155,7 +155,6 @@ namespace sw
                 return MailboxResult::Busy;
             }
 
-            /** @brief 만료 인덱스 하나를 처리할 트랜잭션을 붙입니다. 실패하면 false 를 반환하며 그 인덱스는 다음 정리가 다시 봅니다. */
             /** @brief 이동으로 바뀐 계정 보유자의 잔액을 모읍니다. */
             static void collectAccountChanges( const LedgerTransferOutcome& outcome, vector<MailboxBalanceChange>& outListChange )
             {
@@ -166,6 +165,7 @@ namespace sw
                 }
             }
 
+            /** @brief 만료 인덱스 하나를 처리할 트랜잭션을 붙입니다. 실패하면 false 를 반환하며 그 인덱스는 다음 정리가 다시 봅니다. */
             static bool stageExpiry( IServiceStoreConnection& connection, const ServiceRecord& index, string_view mailKey, int64 nowMs, ServiceTransaction& inoutTransaction,
                                      bool& outbReturned, bool& outbDiscarded, vector<MailboxBalanceChange>& outListChange )
             {

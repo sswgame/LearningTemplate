@@ -51,8 +51,7 @@ namespace sw::editor
             }
             case SelectionMode::Toggle:
             {
-                VectorUtil::removeFirst( _listSelectedObject, handle );
-                else if ( handle.isValid() )
+                if ( VectorUtil::removeFirst( _listSelectedObject, handle ) == 0 && ( handle.isValid() ) )
                     _listSelectedObject.push_back( handle );
                 break;
             }
@@ -80,8 +79,8 @@ namespace sw::editor
             }
             else if ( mode == SelectionMode::Toggle )
             {
-                VectorUtil::removeFirst( _listSelectedObject, handle );
-                else _listSelectedObject.push_back( handle );
+                if ( VectorUtil::removeFirst( _listSelectedObject, handle ) == 0 )
+                    _listSelectedObject.push_back( handle );
             }
             else if ( hasObject( pObj ) == false )
             {
@@ -150,8 +149,7 @@ namespace sw::editor
             }
             case SelectionMode::Toggle:
             {
-                VectorUtil::removeFirst( _listSelectedAsset, assetPath );
-                else if ( assetPath.empty() == false )
+                if ( VectorUtil::removeFirst( _listSelectedAsset, assetPath ) == 0 && ( assetPath.empty() == false ) )
                     _listSelectedAsset.emplace_back( assetPath );
                 break;
             }
@@ -176,8 +174,8 @@ namespace sw::editor
             }
             else if ( mode == SelectionMode::Toggle )
             {
-                VectorUtil::removeFirst( _listSelectedAsset, path );
-                else _listSelectedAsset.push_back( path );
+                if ( VectorUtil::removeFirst( _listSelectedAsset, path ) == 0 )
+                    _listSelectedAsset.push_back( path );
             }
             else if ( hasAsset( path ) == false )
             {

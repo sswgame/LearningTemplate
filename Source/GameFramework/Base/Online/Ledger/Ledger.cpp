@@ -299,11 +299,11 @@ namespace sw
     {
         const string_view key        = record._key;
         size_t            timeOffset = 0;
-        if ( key.starts_with( "acct/" ) )
+        if ( StringUtil::startsWith( key, "acct/" ) )
             timeOffset = 5 + static_cast<size_t>( ServiceKeyUtil::kHexWidth ) + 1; // "acct/<16 진>/"
-        else if ( key.starts_with( "sys/mint/" ) || key.starts_with( "sys/sink/" ) )
+        else if ( StringUtil::startsWith( key, "sys/mint/" ) || StringUtil::startsWith( key, "sys/sink/" ) )
             timeOffset = 9;
-        else if ( key.starts_with( "esc/" ) )
+        else if ( StringUtil::startsWith( key, "esc/" ) )
         {
             // "esc/<도메인>/<토큰>/" — 도메인과 토큰의 글자 규칙에 '/' 가 없으므로 슬래시 셋째 뒤가 시각이다
             size_t slashCount = 0;

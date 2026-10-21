@@ -160,8 +160,8 @@ namespace sw
         const bool bToggleSelection = bToggle && pUnit->_owner == _player && pUnit->isMobile() && isCommandable( world );
         if ( bToggleSelection )
         {
-            VectorUtil::removeFirst( _listSelected, unitID );
-            else addUnit( unitID );
+            if ( VectorUtil::removeFirst( _listSelected, unitID ) == 0 )
+                addUnit( unitID );
             return;
         }
         _listSelected.clear();
