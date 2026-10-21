@@ -116,6 +116,7 @@ namespace sw
                 const bool bStaleShaders = bVerifyShaders && verifyShaderFolder( shaderFolder ) == false;
                 if ( bStaleShaders )
                 {
+#if defined( SW_WITH_CLIENT_CODE )
                     // 낡았을 뿐이라면 쿠커가 있는 자리에서 스스로 고친다 — 셰이더 한 줄 고칠 때마다 손으로 다시 쿠킹하라고 요구할 이유는 없다.
                     SW_LOG_INFO( "Cooked shaders are stale - cooking them again before packing" );
                     const ShaderCookSummary summary = ShaderCookDriver::cookAllShaders();
@@ -125,6 +126,11 @@ namespace sw
                         SW_LOG_ERROR( "Cooked shaders do not match their sources - a Shipping build has no runtime compiler, so packing stops (App --cook-shaders)" );
                         return false;
                     }
+#else
+                    // 셰이더 쿠커는 렌더러(`Engine/Renderer/Cook`)에 있고 Server 타깃은 그 폴더를 짓지 않는다 — 고칠 수 없으니 굽지 않는다.
+                    SW_LOG_ERROR( "Cooked shaders are stale and this build has no shader cooker - cook them with App --cook-shaders" );
+                    return false;
+#endif
                 }
 
                 PackConfig   packConfig;

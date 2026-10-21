@@ -165,7 +165,7 @@ namespace sw
                 (void)pSurface;
                 (void)pKeys;
                 WaylandInputEvent event;
-                event._kind = WaylandInputKind::FocusIn;
+                event._kind = WaylandInputKind::FocusGained;
                 static_cast<State*>( pData )->pushInput( event );
             }
 
@@ -175,7 +175,7 @@ namespace sw
                 (void)serial;
                 (void)pSurface;
                 WaylandInputEvent event;
-                event._kind = WaylandInputKind::FocusOut;
+                event._kind = WaylandInputKind::FocusLost;
                 static_cast<State*>( pData )->pushInput( event );
             }
 

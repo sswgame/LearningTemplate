@@ -79,8 +79,10 @@ namespace sw
             static constexpr float64 kOpsIdleTimeoutSeconds = 10.0;
             /** @brief 프로세스 지표를 다시 읽는 간격입니다. 운영체제에 묻는 비용이 있고 스크레이퍼도 보통 15 초마다 읽으므로 초에 한 번이면 된다. */
             static constexpr int64 kProcessSampleIntervalMs = 1000;
-            /** @brief Dev 서버 루프의 명령(`executePauseCommand`)입니다. 표준 입력 `help` 와 디버그 채널 `help` 가 같은 줄을 보입니다. */
+#if SW_DEV_COMMANDS_ENABLED || !defined( SW_SHIPPING )
+            /** @brief Dev 서버 루프의 명령(`executePauseCommand`)입니다. 표준 입력 `help` 와 디버그 채널 `help` 가 같은 줄을 보입니다(쓰는 두 곳과 같은 조건). */
             static constexpr const utf8* kLoopCommandHelp = "pause | resume | step [N]";
+#endif
 
             static int64 nowMonotonicMs() { return MonotonicClock::nowNanoseconds() / constant::kNanosecondsPerMillisecond; }
         };

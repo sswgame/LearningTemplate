@@ -423,10 +423,10 @@ namespace sw
                     postWindowStateEvent( RawInputEvent::makePointerCrossing( input._kind == WaylandInputKind::PointerEnter ) );
                     break;
                 }
-                case WaylandInputKind::FocusIn:
-                case WaylandInputKind::FocusOut:
+                case WaylandInputKind::FocusGained:
+                case WaylandInputKind::FocusLost:
                 {
-                    const bool bFocused                = input._kind == WaylandInputKind::FocusIn;
+                    const bool bFocused                = input._kind == WaylandInputKind::FocusGained;
                     X11InputInternal::s_bWindowFocused = bFocused;
                     onPlatformFocusChanged( bFocused );
                     postWindowStateEvent( RawInputEvent::makeFocusChange( bFocused ) );

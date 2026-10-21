@@ -22,8 +22,9 @@ namespace sw
         PointerWheel, ///< `_wheel` 은 세로 칸(+ 위), `_horizontalWheel` 은 가로 칸
         PointerEnter,
         PointerLeave,
-        FocusIn,
-        FocusOut,
+        /// X11 헤더가 `FocusIn` · `FocusOut` 을 매크로로 정의한다(X.h) — 같은 번역 단위(InputManagerX11.cpp)에서 읽히므로 그 이름을 쓰지 않는다.
+        FocusGained,
+        FocusLost,
     };
 
     /** @brief 입력 하나입니다. */

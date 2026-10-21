@@ -370,7 +370,10 @@ namespace sw
             sw_delete_func( pPtr );
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief `unique_ptr<T[]>` 의 해제자입니다. 원소 소멸자를 부르지 않으므로(개수를 모른다) 소멸자가 하는 일이 없는 원소만 담습니다.
      * @details 소멸이 필요한 원소의 배열은 `vector<T>` 로 담습니다. 그런 `T` 로 이 해제자를 만들면 `sw_delete_array` 의 static_assert 가 막습니다.
@@ -386,31 +389,40 @@ namespace sw
     template <typename T, typename Deleter = default_delete<T>>
     using unique_ptr = std::unique_ptr<T, Deleter>;
 
-    template <typename T, typename... Args>
-    std::enable_if_t<std::is_array_v<T> == false, unique_ptr<T>> make_unique( Args&&... args )
-    {
-        if constexpr ( kUsesAlignedAllocation<T> )
-        {
-            void* pMem = Memory::allocateAligned( sizeof( T ), alignof( T ) );
-            if ( pMem == nullptr )
-                throw std::bad_alloc();
-            return unique_ptr<T>( sw_placement_new( pMem ) T( std::forward<Args>( args )... ) );
-        }
-        else
-        {
-            return unique_ptr<T>( sw_new T( std::forward<Args>( args )... ) );
-        }
-    }
-
     /**
-     * @brief 원소 @p count 개를 값 초기화한 배열을 sw 할당자로 잡아 `unique_ptr<T[]>` 로 돌려줍니다(`std::make_unique<T[]>` 와 같은 형태).
-     * @details 원소는 소멸자가 하는 일이 없는 타입이어야 합니다(`default_delete<T[]>`).
+     * @brief `make_unique<T>( 인자… )` 와 `make_unique<T[]>( 개수 )` 의 몸체입니다. 아래 변수 템플릿 `make_unique` 로만 부릅니다.
+     * @details 함수가 아니라 함수 객체인 이유: 함수 템플릿이면 std 타입 인자(STL 컨테이너 구성의 `vector` 등)가 인자 의존 탐색(ADL)으로
+     *          `std::make_unique` 를 끌어와 호출이 모호해진다(CI STL 빌드, `ServiceRetentionJob.cpp`). 일반 탐색이 객체를 찾으면 ADL 이 일어나지 않는다
+     *          (C++20 표준 라이브러리의 niebloid 와 같은 방식). 배열 형태는 `std::make_unique<T[]>` 처럼 원소를 값 초기화하고, 원소는 소멸자가 하는 일이 없는
+     *          타입이어야 한다(`default_delete<T[]>`).
      */
     template <typename T>
-    std::enable_if_t<std::is_array_v<T> && std::extent_v<T> == 0, unique_ptr<T>> make_unique( size_t count )
+    struct MakeUniqueFunction
     {
-        return unique_ptr<T>( sw_new_array_func<std::remove_extent_t<T>>( count ) );
-    }
+        template <typename... Args>
+        unique_ptr<T> operator()( Args&&... args ) const
+        {
+            if constexpr ( std::is_array_v<T> )
+            {
+                static_assert( std::extent_v<T> == 0 && sizeof...( Args ) == 1, "make_unique<T[]> takes the element count only" );
+                return unique_ptr<T>( sw_new_array_func<std::remove_extent_t<T>>( static_cast<size_t>( args )... ) );
+            }
+            else if constexpr ( kUsesAlignedAllocation<T> )
+            {
+                void* pMem = Memory::allocateAligned( sizeof( T ), alignof( T ) );
+                if ( pMem == nullptr )
+                    throw std::bad_alloc();
+                return unique_ptr<T>( sw_placement_new( pMem ) T( std::forward<Args>( args )... ) );
+            }
+            else
+            {
+                return unique_ptr<T>( sw_new T( std::forward<Args>( args )... ) );
+            }
+        }
+    };
+
+    template <typename T>
+    inline constexpr MakeUniqueFunction<T> make_unique{};
 
     template <typename T>
     using shared_ptr = std::shared_ptr<T>;
