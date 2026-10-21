@@ -25,81 +25,35 @@ namespace sw
 {
     SW_LOG_CALLER( "ShaderCooker" );
 
-    ShaderCookSummary ShaderCookDriver::cookAllShaders( string_view        resourceRoot,
-                                                        ShaderTargetFormat targetFormat,
-                                                        bool               bForceAll )
+    namespace
     {
-        string rootDir = string( resourceRoot );
-        if ( rootDir.empty() )
+        /** @brief `cookAllShaders` 의 단계들과 단계 사이에 넘기는 쿠킹 상태입니다. */
+        struct ShaderCookDriverInternal
         {
-            rootDir = ResourcePaths::getRootFolderPath();
-            if ( rootDir.empty() )
-                rootDir = "Resource";
-        }
+            /** @brief 쿠킹 한 번의 누적 상태입니다. */
+            struct CookState
+            {
+                ShaderCookSummary _summary{};
+                /** @brief 컴파일에 실패한 소스(정규화한 절대 경로)를 RHI 폴더마다 적는다. 그 소스는 스탬프에서 빼서 다음 쿠킹이 다시 시도한다. */
+                unordered_map<string, unordered_set<string>> _mapFailedSourceByDir;
+                /**
+                 * @brief 리플렉션은 RHI 폴더마다 파일 하나로 모은다. 셰이더마다 사이드카를 두면 팩 엔트리와
+                 *        압축 해제가 셰이더 수만큼 늘어난다(상용 엔진의 셰이더 라이브러리와 같은 이유).
+                 */
+                unordered_map<string, ShaderReflectionLibrary::EntryMap> _mapManifest;
+            };
 
-        if ( FileUtil::isDirectory( rootDir ) == false )
-        {
-            SW_LOG_ERROR( "Resource root directory does not exist: %#", rootDir.c_str() );
-            ShaderCookSummary nothingCooked{};
-            nothingCooked._failedCount = 1; // 쿠킹하지 못했다. 실패로 센다(`App --cook-shaders` 가 실패로 끝난다)
-            return nothingCooked;
-        }
+            /** @brief 쿠킹할 타깃 포맷 목록입니다. `Count` 면 네 RHI 모두입니다. */
+            static vector<ShaderTargetFormat> makeTargetFormatList( ShaderTargetFormat targetFormat )
+            {
+                if ( targetFormat != ShaderTargetFormat::Count )
+                    return { targetFormat };
+                return { ShaderTargetFormat::DXBC_D3D11, ShaderTargetFormat::DXIL_D3D12, ShaderTargetFormat::SPIRV_Vulkan, ShaderTargetFormat::SPIRV_OpenGL };
+            }
 
-        SW_LOG_INFO( "Starting batch shader cook across all domains in '%#'...", rootDir.c_str() );
-
-        // 1) 컴파일 대상 타깃 포맷 목록을 만든다
-        vector<ShaderTargetFormat> listTargetFormat;
-        if ( targetFormat == ShaderTargetFormat::Count )
-        {
-            listTargetFormat.push_back( ShaderTargetFormat::DXBC_D3D11 );
-            listTargetFormat.push_back( ShaderTargetFormat::DXIL_D3D12 );
-            listTargetFormat.push_back( ShaderTargetFormat::SPIRV_Vulkan );
-            listTargetFormat.push_back( ShaderTargetFormat::SPIRV_OpenGL );
-        }
-        else
-        {
-            listTargetFormat.push_back( targetFormat );
-        }
-
-        // 2) 렌더 파이프라인 에셋과 엔진 데이터로 요청을 한꺼번에 모은다
-        vector<ShaderCookRequest> listRequest;
-        if ( collectAllRequests( rootDir, listRequest ) == false )
-        {
-            SW_LOG_ERROR( "Shader cook requests could not be collected - engine default assets are missing or incomplete" );
-            ShaderCookSummary nothingCooked{};
-            nothingCooked._failedCount = 1; // 쿠킹하지 못했다. 실패로 센다(`App --cook-shaders` 가 실패로 끝난다)
-            return nothingCooked;
-        }
-
-        ShaderCookSummary summary{};
-        // 컴파일에 실패한 소스(정규화한 절대 경로)를 RHI 폴더마다 적는다. 그 소스는 스탬프에서 빼서 다음 쿠킹이 다시 시도한다.
-        unordered_map<string, unordered_set<string>> mapFailedSourceByDir;
-
-        // 리플렉션은 RHI 폴더마다 파일 하나로 모은다. 셰이더마다 사이드카를 두면 팩 엔트리와
-        // 압축 해제가 셰이더 수만큼 늘어난다(상용 엔진의 셰이더 라이브러리와 같은 이유).
-        unordered_map<string, ShaderReflectionLibrary::EntryMap> mapManifest;
-
-        // 3) 요청과 타깃 포맷마다 쿠킹한다
-        for ( const ShaderCookRequest& request : listRequest )
-        {
-            string absPath;
-            if ( FileUtil::exists( request._shaderPath ) )
-                absPath = request._shaderPath;
-            else
-                absPath = ResourcePaths::findLooseFile( request._shaderPath ).getDiskPath();
-
-            if ( FileUtil::exists( absPath ) == false )
-                continue;
-
-            const string normPath  = FileUtil::normalizeSeparators( absPath );
-            const size_t shaderPos = normPath.find( "/shaders/" );
-            if ( shaderPos == string::npos )
-                continue;
-
-            const string shaderDir = normPath.substr( 0, shaderPos + sizeof( "/shaders" ) - 1 );
-            const string stemLower = ShaderCooker::getStemLower( normPath );
-
-            for ( ShaderTargetFormat fmt : listTargetFormat )
+            /** @brief 요청 하나를 한 포맷으로 쿠킹하고(낡았을 때만) 그 바이너리의 리플렉션을 매니페스트에 넣습니다. */
+            static void cookRequestForFormat( const ShaderCookRequest& request, const string& absPath, const string& normPath, const string& shaderDir,
+                                              const string& stemLower, ShaderTargetFormat fmt, bool bForceAll, CookState& ioState )
             {
                 const string_view subfolder = ShaderCooker::getSubfolderForFormat( fmt );
                 const string_view ext       = ShaderCooker::getExtensionForFormat( fmt );
@@ -111,55 +65,110 @@ namespace sw
                 // `git pull` 이 소스와 산출물의 mtime 을 임의의 순서로 덮어쓴다. 소스가 바뀌었는데도
                 // "산출물이 더 새것"이 되어 그대로 넘어간다. 낡은 바이너리는 한 백엔드만 다른 이미지를 내
                 // 백엔드 버그처럼 보인다.
-                const bool bUpToDate = ( bForceAll == false ) && FileUtil::exists( outPath ) &&
-                                       ShaderCooker::isCookedOutputCurrent( outDir, normPath );
-
+                const bool bUpToDate = ( bForceAll == false ) && FileUtil::exists( outPath ) && ShaderCooker::isCookedOutputCurrent( outDir, normPath );
                 if ( bUpToDate == false )
                 {
                     ShaderCookResult result{};
                     if ( ShaderCooker::cookShader( absPath, outPath, request._entryPoint, request._stage, fmt, &request._listPermutation, &result ) )
                     {
-                        ++summary._cookedCount;
+                        ++ioState._summary._cookedCount;
                     }
                     else
                     {
-                        ++summary._failedCount;
-                        mapFailedSourceByDir[outDir].insert( normPath );
+                        ++ioState._summary._failedCount;
+                        ioState._mapFailedSourceByDir[outDir].insert( normPath );
                         SW_LOG_ERROR( "Shader cook failed: %# (%#) -> %#", normPath, request._entryPoint, outPath );
                     }
                 }
 
                 // 새로 쿠킹했든 이미 최신이든 매니페스트에는 항상 넣는다. 바이너리만 최신이고
                 // 리플렉션이 빠지면 런타임이 조용히 폴백하고, 배포 빌드에서는 그대로 실패한다.
-                if ( mapManifest[outDir].find( fileName ) == mapManifest[outDir].end() )
+                ShaderReflectionLibrary::EntryMap& manifest = ioState._mapManifest[outDir];
+                if ( manifest.find( fileName ) != manifest.end() )
+                    return;
+                vector<uint8> bytecode;
+                if ( FileUtil::readFile( outPath, bytecode ) && bytecode.empty() == false )
                 {
-                    vector<uint8> bytecode;
-                    if ( FileUtil::readFile( outPath, bytecode ) && bytecode.empty() == false )
-                    {
-                        ShaderReflectionData reflection = ShaderReflection::reflect( bytecode, fmt );
-                        // 쿠킹된 바이너리를 계약과 대조한다. 셰이더 헤더와 백엔드 상수가 한쪽만 바뀌면 여기서 이름과 숫자로 드러난다.
-                        summary._contractViolationCount += ShaderBindingValidator::validate( reflection, fmt, outPath );
-                        mapManifest[outDir].emplace( fileName, std::move( reflection ) );
-                    }
+                    ShaderReflectionData reflection = ShaderReflection::reflect( bytecode, fmt );
+                    // 쿠킹된 바이너리를 계약과 대조한다. 셰이더 헤더와 백엔드 상수가 한쪽만 바뀌면 여기서 이름과 숫자로 드러난다.
+                    ioState._summary._contractViolationCount += ShaderBindingValidator::validate( reflection, fmt, outPath );
+                    manifest.emplace( fileName, std::move( reflection ) );
                 }
             }
-        }
 
-        // 4) RHI 폴더별 리플렉션 매니페스트를 쓴다
-        for ( const auto& manifestPair : mapManifest )
-        {
-            if ( ShaderReflectionLibrary::save( manifestPair.second, manifestPair.first ) == false )
+            /** @brief 요청 하나를 모든 포맷으로 쿠킹합니다. 소스 파일이 없거나 `shaders` 폴더 밖이면 건너뜁니다. */
+            static void cookRequest( const ShaderCookRequest& request, const vector<ShaderTargetFormat>& listTargetFormat, bool bForceAll, CookState& ioState )
             {
-                // 매니페스트를 못 쓰면 이 폴더는 최신이 아니다 — 스탬프를 찍지 않는다(다음 쿠킹이 다시 판정한다).
-                SW_LOG_ERROR( "Shader reflection manifest could not be written: %#", manifestPair.first );
-                ++summary._failedCount;
-                continue;
+                const string absPath = FileUtil::exists( request._shaderPath ) ? request._shaderPath : ResourcePaths::findLooseFile( request._shaderPath ).getDiskPath();
+                if ( FileUtil::exists( absPath ) == false )
+                    return;
+                const string normPath  = FileUtil::normalizeSeparators( absPath );
+                const size_t shaderPos = normPath.find( "/shaders/" );
+                if ( shaderPos == string::npos )
+                    return;
+                const string shaderDir = normPath.substr( 0, shaderPos + sizeof( "/shaders" ) - 1 );
+                const string stemLower = ShaderCooker::getStemLower( normPath );
+                for ( ShaderTargetFormat fmt : listTargetFormat )
+                {
+                    cookRequestForFormat( request, absPath, normPath, shaderDir, stemLower, fmt, bForceAll, ioState );
+                }
             }
-            const auto failedIt = mapFailedSourceByDir.find( manifestPair.first );
-            ShaderCooker::writeCookStamp( manifestPair.first, ( failedIt != mapFailedSourceByDir.end() ) ? &failedIt->second : nullptr );
-        }
-        ShaderReflectionLibrary::clearCache();
 
+            /** @brief RHI 폴더별 리플렉션 매니페스트와 쿠킹 스탬프를 씁니다. 매니페스트를 못 쓴 폴더는 스탬프를 찍지 않습니다(다음 쿠킹이 다시 판정한다). */
+            static void writeManifestsAndStamps( CookState& ioState )
+            {
+                for ( const auto& manifestPair : ioState._mapManifest )
+                {
+                    if ( ShaderReflectionLibrary::save( manifestPair.second, manifestPair.first ) == false )
+                    {
+                        SW_LOG_ERROR( "Shader reflection manifest could not be written: %#", manifestPair.first );
+                        ++ioState._summary._failedCount;
+                        continue;
+                    }
+                    const auto failedIt = ioState._mapFailedSourceByDir.find( manifestPair.first );
+                    ShaderCooker::writeCookStamp( manifestPair.first, ( failedIt != ioState._mapFailedSourceByDir.end() ) ? &failedIt->second : nullptr );
+                }
+                ShaderReflectionLibrary::clearCache();
+            }
+        };
+    } // namespace
+
+    ShaderCookSummary ShaderCookDriver::cookAllShaders( string_view        resourceRoot,
+                                                        ShaderTargetFormat targetFormat,
+                                                        bool               bForceAll )
+    {
+        using Internal = ShaderCookDriverInternal;
+        // 루트를 주지 않으면 찾아 둔 리소스 루트다. 그것도 없으면 쿠킹하지 못한다(작업 폴더 기준 "Resource" 로 짐작하지 않는다).
+        const string rootDir = resourceRoot.empty() ? ResourcePaths::getRootFolderPath() : string( resourceRoot );
+        if ( rootDir.empty() || FileUtil::isDirectory( rootDir ) == false )
+        {
+            SW_LOG_ERROR( "Resource root directory does not exist: '%#'", rootDir.c_str() );
+            ShaderCookSummary nothingCooked{};
+            nothingCooked._failedCount = 1; // 쿠킹하지 못했다. 실패로 센다(`App --cook-shaders` 가 실패로 끝난다)
+            return nothingCooked;
+        }
+
+        SW_LOG_INFO( "Starting batch shader cook across all domains in '%#'...", rootDir.c_str() );
+
+        // 렌더 파이프라인 에셋과 엔진 데이터로 요청을 한꺼번에 모은다
+        vector<ShaderCookRequest> listRequest;
+        if ( collectAllRequests( rootDir, listRequest ) == false )
+        {
+            SW_LOG_ERROR( "Shader cook requests could not be collected - engine default assets are missing or incomplete" );
+            ShaderCookSummary nothingCooked{};
+            nothingCooked._failedCount = 1; // 쿠킹하지 못했다. 실패로 센다(`App --cook-shaders` 가 실패로 끝난다)
+            return nothingCooked;
+        }
+
+        const vector<ShaderTargetFormat> listTargetFormat = Internal::makeTargetFormatList( targetFormat );
+        Internal::CookState              state;
+        for ( const ShaderCookRequest& request : listRequest )
+        {
+            Internal::cookRequest( request, listTargetFormat, bForceAll, state );
+        }
+        Internal::writeManifestsAndStamps( state );
+
+        const ShaderCookSummary& summary = state._summary;
         if ( summary._contractViolationCount > 0 )
             SW_LOG_ERROR( "바인딩 계약 위반 %#건 — 위 [바인딩 계약] 로그를 보고 셰이더 선언이나 bindingslots.hlsli 를 고치십시오.", summary._contractViolationCount );
         if ( summary._failedCount > 0 )
