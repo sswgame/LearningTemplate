@@ -655,7 +655,7 @@ namespace sw
 
     void AbilitySystemComponent::playCueDef( TagID cueTag, GameplayCuePhase phase ) const
     {
-#if SW_WITH_CLIENT_CODE
+#if defined( SW_WITH_CLIENT_CODE )
         // 결정: 큐 태그 → 연출은 데이터(카탈로그의 `<GameplayCue>`)가 정한다. 큐를 내는 길은 이 함수 하나라 즉시 · 주기 · 걸림 · 해제가 모두 같은 표를 본다.
         const AbilityCatalog* pCatalog = findCatalog();
         const GameplayCueDef* pCueDef  = pCatalog != nullptr ? pCatalog->findCue( cueTag ) : nullptr;

@@ -61,7 +61,9 @@ namespace sw
          *          그 캐릭터의 클립 시각에 맞춰 한 번 기록하고, 그 뒤로는 바뀌지 않아 인스턴스를 다시 올리지 않는다. 셰이더의 `vertexAnimationPhase` 에 해당한다.
          */
         float32 _vertexAnimationPhase{ 0.0f };
-        uint32  _arrReserved[3]{}; ///< 원소를 128바이트(16의 배수)로 맞춘다. 셰이더의 `reserved0..2` 에 해당한다.
+        /** @brief 강조(상호작용 외곽선 · 감각 모드)입니다(`GPUInstanceHighlight::pack`, 0 이면 없음). 셰이더의 `highlight` 이고 `highlightoutline.hlsl` 이 읽습니다. */
+        uint32 _highlight{ 0 };
+        uint32 _arrReserved[2]{}; ///< 원소를 128바이트(16의 배수)로 맞춘다. 셰이더의 `reserved1..2` 에 해당한다.
     };
 } // namespace sw
 

@@ -37,6 +37,7 @@ namespace sw
         , _spriteInstanceData{}
         , _vertexAnimationPhase{ 0.0f }
         , _sortKey{ 0 }
+        , _highlight{ 0 }
         , _pPrimitiveRegistry{ nullptr }
         , _bVisible{ SW_TRUE }
         , _reserved{ 0 }
@@ -204,6 +205,15 @@ namespace sw
         if ( _spriteInstanceData == snapped )
             return;
         _spriteInstanceData = snapped;
+        markRenderStateDirty();
+    }
+
+    void MeshComponent::setHighlight( InstanceHighlightStyle style, const float3& color )
+    {
+        const uint32 packed = GPUInstanceHighlight::pack( style, color );
+        if ( _highlight == packed )
+            return;
+        _highlight = packed;
         markRenderStateDirty();
     }
 

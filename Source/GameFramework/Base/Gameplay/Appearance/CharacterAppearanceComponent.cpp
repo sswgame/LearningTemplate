@@ -143,6 +143,8 @@ namespace sw
         , _listSpawnedPart{}
         , _listSlotOverride{}
         , _taskUnit{}
+        , _pReloadDatabase{ nullptr }
+        , _reloadSubscription{}
         , _assembleCount{ 0 }
         , _bodyPart{ -1 }
         , _bPartsVisible{ true }
@@ -158,12 +160,26 @@ namespace sw
     {
         Component::onBeginPlay();
         _bStarted = SW_TRUE;
+        // 핫 리로드: 외형 데이터를 다시 읽으면(`AppearanceDatabase::reloadFromFolder`) 다시 조립한다 — 상태가 데이터 버전으로 다시 해석한다.
+        _pReloadDatabase = game::findSubsystem<AppearanceDatabase>();
+        if ( _pReloadDatabase != nullptr )
+            _reloadSubscription = _pReloadDatabase->registerReloaded( Delegate<void()>::create<&CharacterAppearanceComponent::onAppearanceDataReloaded>( this ) );
         if ( _presetID.empty() == false )
+            requestAssemble();
+    }
+
+    void CharacterAppearanceComponent::onAppearanceDataReloaded()
+    {
+        if ( _bStarted == SW_TRUE && _presetID.empty() == false )
             requestAssemble();
     }
 
     void CharacterAppearanceComponent::onEndPlay()
     {
+        if ( _pReloadDatabase != nullptr )
+            _pReloadDatabase->unregisterReloaded( _reloadSubscription );
+        _pReloadDatabase    = nullptr;
+        _reloadSubscription = DelegateHandle{};
         unregisterSocketTask();
         despawnParts();
         _bStarted = SW_FALSE;

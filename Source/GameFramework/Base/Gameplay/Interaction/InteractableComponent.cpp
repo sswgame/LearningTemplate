@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Character/Socket/SocketSetComponent.h"
+#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -31,6 +32,7 @@ namespace sw
         , _overrideDef{}
         , _pDef{ nullptr }
         , _seenCatalogReloadCount{ 0 }
+        , _appliedHighlight{ 0 }
         , _completedCount{ 0 }
         , _bHighlightRequested{ SW_FALSE }
         , _bHasOverride{ SW_FALSE }
@@ -98,6 +100,26 @@ namespace sw
             resolveDefinition();
         if ( _cooldownRemaining > 0.0f )
             _cooldownRemaining = MathUtil::max( 0.0f, _cooldownRemaining - deltaTime );
+        applyHighlightToMeshes();
+    }
+
+    void InteractableComponent::applyHighlightToMeshes()
+    {
+        const InteractionHighlight   request = getHighlightRequest();
+        const InteractionDef*        pDef    = getDefinition();
+        const InstanceHighlightStyle style   = request == InteractionHighlight::Outline ? InstanceHighlightStyle::Outline
+                                             : request == InteractionHighlight::Sense   ? InstanceHighlightStyle::Sense
+                                                                                        : InstanceHighlightStyle::None;
+        const float3                 color   = pDef != nullptr ? pDef->_highlightColor : float3{};
+        const uint32                 packed  = GPUInstanceHighlight::pack( style, color );
+        if ( packed == _appliedHighlight )
+            return;
+        _appliedHighlight  = packed;
+        GameObject* pOwner = getOwner();
+        if ( pOwner == nullptr )
+            return;
+        pOwner->forEachComponentOfType<MeshComponent>( [style, &color]( MeshComponent* pMesh )
+        { pMesh->setHighlight( style, color ); } );
     }
 
     void InteractableComponent::setDefinition( const InteractionDef& def )

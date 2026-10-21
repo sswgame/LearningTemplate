@@ -100,6 +100,7 @@ namespace sw
         float32                    _maxAngle{ 0.0f }; ///< 시선과 대상 사이의 허용 각(라디안). 0 이면 검사하지 않는다
         float32                    _cooldown{ 0.0f };
         InteractionHighlight       _highlight{ InteractionHighlight::Outline };
+        float3                     _highlightColor{ 1.0f, 0.85f, 0.3f }; ///< 강조 외곽선 색(RGB, 0..1). XML `highlightColor="r,g,b"`
         InteractionAuthority       _authority{ InteractionAuthority::Local };
         uint8                      _bLineOfSight{ SW_TRUE };
 

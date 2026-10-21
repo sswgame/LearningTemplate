@@ -9,6 +9,7 @@
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Delegate.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/String/hashed_string.h"
 
@@ -24,6 +25,7 @@
 
 namespace sw
 {
+    class AppearanceDatabase;
     class CharacterAppearanceComponent;
     class Equipment;
     class GameObjectManager;
@@ -164,6 +166,8 @@ namespace sw
         /** @brief 유닛 번호에 해당하는 오브젝트입니다. 몸이면 이 오브젝트입니다. */
         GameObject*        findUnitObject( GameObjectManager& manager, uint32 unitIndex ) const;
         GameObjectManager* findManager() const;
+        /** @brief 외형 데이터가 다시 읽혔습니다(`AppearanceDatabase::registerReloaded`). 다시 조립을 예약합니다. */
+        void onAppearanceDataReloaded();
 
     private:
         PROPERTY( Category = "Appearance", DisplayName = "Preset", Tooltip = "CharacterAppearance preset id (data/appearance/presets.xml)" )
@@ -180,7 +184,9 @@ namespace sw
         CharacterBoneArray                      _bodyBones; ///< 지난 포즈(모델 공간). 소켓 질의가 읽는다
         vector<SpawnedPart>                     _listSpawnedPart;
         vector<SlotOverride>                    _listSlotOverride;
-        TComponentHandle<SkeletalMeshComponent> _taskUnit; ///< 단계 작업을 등록한 몸 유닛
+        TComponentHandle<SkeletalMeshComponent> _taskUnit;           ///< 단계 작업을 등록한 몸 유닛
+        AppearanceDatabase*                     _pReloadDatabase;    ///< 다시 읽기를 구독한 외형 데이터(플레이 중에만)
+        DelegateHandle                          _reloadSubscription; ///< `_pReloadDatabase` 의 구독
         uint32                                  _assembleCount;
         int32                                   _bodyPart;
         bool                                    _bPartsVisible;

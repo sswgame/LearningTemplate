@@ -245,6 +245,8 @@ namespace sw
              * @details 투명 정렬(`sortTransparent`)의 첫 번째 키다. 바뀌면 그 프레임의 정렬이 순서를 바꾸고 투명 꼬리를 다시 방출한다.
              */
             uint32 _sortKey{ 0 };
+            /// @brief 강조(`GPUInstanceHighlight::pack`)입니다. MeshComponent 가 주고 GPUInstance::_highlight 로 전달됩니다(배치 키가 아니라 내용).
+            uint32 _highlight{ 0 };
             /**
              * @brief 스프라이트 프레임과 색입니다(GPUInstance::_sprite 로 전달됩니다). **내용**이며 배치 키가 아닙니다.
              * @details `operator==` 에는 포함되고 `hasSameBatchKey` 에는 포함되지 않는다. 프레임만 넘긴 스프라이트는 배치를 다시 나누지 않고
@@ -284,7 +286,7 @@ namespace sw
             bool operator==( const DrawCandidate& other ) const
             {
                 return _mesh == other._mesh && _material == other._material && _instance == other._instance &&
-                       _blendMode == other._blendMode && _spinSeed == other._spinSeed && _sprite == other._sprite &&
+                       _blendMode == other._blendMode && _spinSeed == other._spinSeed && _sprite == other._sprite && _highlight == other._highlight &&
                        Memory::compare( &_vertexAnimationPhase, &other._vertexAnimationPhase, sizeof( _vertexAnimationPhase ) ) == 0 &&
                        _permutationHash == other._permutationHash && _sortKey == other._sortKey && _bReverseCulling == other._bReverseCulling &&
                        Memory::compare( &_world, &other._world, sizeof( _world ) ) == 0 &&
@@ -308,7 +310,7 @@ namespace sw
             }
         };
         /// @brief 후보는 프리미티브마다 하나라 패딩이 곧 메모리 대역폭입니다. 필드 크기의 합을 정렬 단위로 올린 값을 넘으면(필드 사이에 구멍이 생기면) 빌드를 멈춥니다.
-        static_assert( sizeof( DrawCandidate ) <= ( sizeof( float4x4 ) + sizeof( float3 ) + sizeof( float32 ) * 2 + sizeof( uint32 ) * 3 +
+        static_assert( sizeof( DrawCandidate ) <= ( sizeof( float4x4 ) + sizeof( float3 ) + sizeof( float32 ) * 2 + sizeof( uint32 ) * 4 +
                                                     sizeof( shared_ptr<Mesh> ) * 3 + sizeof( GPUSpriteInstanceData ) + sizeof( uint64 ) +
                                                     sizeof( uint8 ) + sizeof( float32 ) + alignof( DrawCandidate ) - 1 ) /
                                                       alignof( DrawCandidate ) * alignof( DrawCandidate ),

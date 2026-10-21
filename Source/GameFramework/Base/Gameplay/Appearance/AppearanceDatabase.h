@@ -5,7 +5,9 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Delegate.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceRule.h"
@@ -59,6 +61,15 @@ namespace sw
          */
         [[nodiscard]] bool finishLoad( const ItemCatalog* pItemCatalog, const vector<hashed_string>* pListKnownBodyRegion = nullptr );
         void               clear();
+        /**
+         * @brief 실행 중인 데이터를 폴더에서 다시 읽고 구독자(`registerReloaded`)에게 알립니다(핫 리로드).
+         * @details 먼저 임시 데이터로 읽어 검사를 통과할 때만 이 데이터를 바꾼다 — 고치는 중의 깨진 파일이 돌고 있는 외형을 지우지 않는다.
+         *          통과하지 못하면 그 보고를 @p outReport 에 담고 false 이며 지금 데이터는 그대로다.
+         */
+        [[nodiscard]] bool reloadFromFolder( string_view folder, const ItemCatalog* pItemCatalog, string& outReport );
+        /** @brief 다시 읽은 뒤(`reloadFromFolder` 성공) 부를 델리게이트를 겁니다. 외형 컴포넌트가 다시 조립합니다. */
+        DelegateHandle registerReloaded( const Delegate<void()>& delegate );
+        void           unregisterReloaded( DelegateHandle handle );
 
         const SlotTable&                  getSlotTable() const { return _slotTable; }
         const EquipSetCatalog&            getSets() const { return _sets; }
@@ -97,6 +108,7 @@ namespace sw
         CharacterAppearanceCatalog _presets;
         AppearanceLoadReport       _report;
         const ItemCatalog*         _pItemCatalog;
+        MulticastDelegate<void()>  _reloadedMulticast;
         uint32                     _revision;
     };
 } // namespace sw

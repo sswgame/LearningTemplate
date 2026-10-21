@@ -19,6 +19,7 @@ namespace sw
         : _weaponCatalog{}
         , _itemCatalog{}
         , _appearanceDatabase{}
+        , _appearanceWatcher{}
     {
         // 상태 스냅샷에 오르는 컴포넌트 — 저장 전에 상태를 싣고 세운 것을 걷으며, 복원 뒤 돌려준다.
         registerDirector<ShooterDirectorComponent>();
@@ -37,7 +38,11 @@ namespace sw
                                                          [this]( const string& folder )
         {
             if ( _appearanceDatabase.loadFromFolder( folder, &_itemCatalog ) )
+            {
+                // 고친 외형 파일을 실행 중에 다시 읽는다. 팩 데이터면 디스크 폴더가 없어 감시하지 않는다(그 까닭은 감시자가 알린다).
+                (void)_appearanceWatcher.initialize( _appearanceDatabase, folder, &_itemCatalog );
                 return true;
+            }
             SW_LOG_ERROR( "[Shooter] appearance data report - %#", _appearanceDatabase.getReport().joined().c_str() );
             return false;
         } );
@@ -47,6 +52,12 @@ namespace sw
         // 아레나 씬(시작 맵)을 연다. 에디터가 자기 시작 씬을 열면 그 요청이 뒤에 와서 이긴다.
         (void)requestFirstScene();
         return true;
+    }
+
+    void Shooter3DGame::onUpdate( float32 deltaTime )
+    {
+        GameInstanceBase::onUpdate( deltaTime );
+        _appearanceWatcher.update();
     }
 } // namespace sw
 

@@ -228,3 +228,64 @@ SW_TEST_CASE( PhysicsWiringTest, ControllerTakesLaunchAndConveyorVelocity )
     SW_EXPECT_TRUE( x < 1.6f ); // 벽 앞(캡슐 반지름 0.3)에서 막혔다
     manager.endPlay();
 }
+
+/**
+ * @brief [PhysicsWiringTest] 움직이는 바닥 — 도는 판 위 캐릭터는 방향(yaw)도 판을 따라 돌고, 미끄러지듯 가는 판에서 뛰면 공중에서도 판의 속도를 잇는다
+ */
+SW_TEST_CASE( PhysicsWiringTest, ControllerFollowsMovingGroundYawAndKeepsItsMomentum )
+{
+    constexpr float32   kFrame = 1.0f / 60.0f;
+    GameObjectManager   manager;
+    RigidBodyComponent* pTurntable = spawnBox( manager, "Turntable", float3{ 0.0f, -0.5f, 0.0f }, float3{ 4.0f, 0.5f, 4.0f }, PhysicsBodyType::Kinematic, "Default" );
+    SW_ASSERT_NOT_NULL( pTurntable );
+    GameObject*                   pHero       = manager.createGameObject( hashed_string( "Hero" ) );
+    CharacterControllerComponent* pController = pHero->addComponent<CharacterControllerComponent>();
+    SW_ASSERT_NOT_NULL( pController );
+    pController->setLocalPosition( float3{ 2.0f, 0.02f, 0.0f } );
+    manager.beginPlay();
+    test::updateFrames( manager, 10 );
+    SW_ASSERT_TRUE( pController->isGrounded() );
+
+    // 초속 1 라디안으로 1 초 돌린다 — 캐릭터의 앞(+Z)도 약 1 라디안 돈다.
+    for ( uint32 frame = 1; frame <= 60; ++frame )
+    {
+        const float32 angle = kFrame * static_cast<float32>( frame );
+        float3        writtenPosition{};
+        quaternion    writtenRotation{};
+        PhysicsComponentUtil::writeWorldPose( *pTurntable, float3{ 0.0f, -0.5f, 0.0f }, quaternion::makeFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, angle ),
+                                              writtenPosition, writtenRotation );
+        test::updateFrames( manager, 1 );
+    }
+    float3     heroPosition{};
+    quaternion heroRotation{};
+    float3     heroScale{};
+    PhysicsComponentUtil::readWorldPose( *pController, heroPosition, heroRotation, heroScale );
+    const float3  forward = float3::transform( float3{ 0.0f, 0.0f, 1.0f }, heroRotation );
+    const float32 yaw     = MathUtil::atan2( forward._x, forward._z );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, yaw, 0.15f );
+    manager.endPlay();
+
+    // 판이 +X 로 초속 3 m 으로 간다 — 뛰어오른 뒤에도 수평으로 판을 따라간다(바닥 속도를 관성으로 잇는다).
+    GameObjectManager   slideManager;
+    RigidBodyComponent* pSlider = spawnBox( slideManager, "Slider", float3{ 0.0f, -0.5f, 0.0f }, float3{ 3.0f, 0.5f, 3.0f }, PhysicsBodyType::Kinematic, "Default" );
+    SW_ASSERT_NOT_NULL( pSlider );
+    GameObject*                   pJumper         = slideManager.createGameObject( hashed_string( "Jumper" ) );
+    CharacterControllerComponent* pJumpController = pJumper->addComponent<CharacterControllerComponent>();
+    SW_ASSERT_NOT_NULL( pJumpController );
+    pJumpController->setLocalPosition( float3{ 0.0f, 0.02f, 0.0f } );
+    slideManager.beginPlay();
+    test::updateFrames( slideManager, 10 );
+    for ( uint32 frame = 1; frame <= 30; ++frame )
+    {
+        pSlider->setWorldPosition( float3{ 3.0f * kFrame * static_cast<float32>( frame ), -0.5f, 0.0f } );
+        test::updateFrames( slideManager, 1 );
+    }
+    SW_ASSERT_TRUE( pJumpController->isGrounded() );
+    const float32 takeOffX = pJumpController->getWorldPosition()._x;
+    pJumpController->jump( 6.0f );
+    // 판은 멈춘다 — 공중의 캐릭터가 가는 것은 이은 관성뿐이다.
+    test::updateFrames( slideManager, 20 );
+    SW_EXPECT_FALSE( pJumpController->isGrounded() );
+    SW_EXPECT_TRUE( pJumpController->getWorldPosition()._x > takeOffX + 0.5f ); // 20 프레임 × 3 m/s ≈ 1 m
+    slideManager.endPlay();
+}
