@@ -125,38 +125,7 @@ namespace sw
             SW_PROFILE_SCOPE( "RT.GPUScene.uploadMeshes" );
             GPUSceneInternal::uploadMeshesVal( pDevice, _snapshot.getMutableBatches() );
         }
-        // 정점 풀: 배치 메시 모두를 한 정점 버퍼에 모은다. 집합이 같으면 아무것도 하지 않고, 바뀌면 들어오고 나간 메시의 구간만 고친다.
-        // 풀에 든 배치는 풀 버퍼와 시작 오프셋으로 그리고(같은 버퍼 → 멀티 드로우로 묶인다), 못 든 배치는 자기 정점 버퍼(오프셋 0)로 그린다.
-        // 이 구간의 시간이 C-43 의 전/후 측정값이다(docs/plans/WorldStreaming.md "측정").
-        {
-            SW_PROFILE_SCOPE( "RT.GPUScene.vertexPool" );
-            _listScratchPoolMesh.clear();
-            if ( _bVertexPoolEnabled != SW_FALSE )
-            {
-                _listScratchPoolMesh.reserve( _snapshot.getAllBatches().size() );
-                for ( const GPUMeshBatch& batch : _snapshot.getAllBatches() )
-                {
-                    // 동적 메시(프레임마다 새 메시 — 천)는 풀 밖이다. 넣으면 집합이 매 프레임 바뀌어 씬 전체 정점을 다시 올린다. 자기 정점 버퍼로 그린다.
-                    const bool bDynamicMesh = batch._mesh != nullptr && batch._mesh->isDynamic();
-                    if ( bDynamicMesh == false )
-                        _listScratchPoolMesh.push_back( batch._mesh.get() );
-                }
-            }
-            // 끈 상태면 빈 목록으로 빌드해 풀이 비워진다. 배치는 아래에서 자기 정점 버퍼(오프셋 0)로 돌아간다.
-            if ( _vertexPool.update( pDevice, _listScratchPoolMesh ) )
-                _bBatchTablesDirty = SW_TRUE;
-            for ( GPUMeshBatch& batch : _snapshot.getMutableBatches() )
-            {
-                const uint32 base = _vertexPool.baseOf( batch._mesh.get() );
-                if ( base != GPUMeshVertexPool::kInvalidBase && _vertexPool.getVertexBuffer() != 0 )
-                {
-                    batch._vertexBuffer = _vertexPool.getVertexBuffer();
-                    batch._firstVertex  = base;
-                }
-                else
-                    batch._firstVertex = 0;
-            }
-        }
+        updateVertexPool( pDevice );
         // 머티리얼 데이터 구조버퍼(셰이더 타입별). 값이 프레임마다 바뀔 수 있어 스냅샷 dirty 와 무관하게 매번 본다(바이트가 같으면 올리지 않는다).
         uploadMaterialGroups( pDevice );
         // 불투명 · 투명 배치는 같은 목록의 구간 뷰라(GPUSceneSnapshot) 위에서 덧쓴 GPU 필드를 따로 옮겨 적을 사본이 없다.
@@ -177,68 +146,129 @@ namespace sw
 
         const uint32 instanceCount = static_cast<uint32>( _snapshot.getInstances().size() );
         const uint32 argsCount     = static_cast<uint32>( _snapshot.getAllBatches().size() );
-
         if ( bCPUDirty )
+            uploadInstanceAndVisibleBuffers( pDevice, instanceCount );
+
+        SW_PROFILE_SCOPE( "RT.GPUScene.batchTables" );
+        uploadBatchTable( pDevice, argsCount );
+        // 컴퓨트가 개수를 만들려면 **가시 목록과 배치 구간이 둘 다** 있어야 한다. 하나라도 없으면 개수를
+        // 0 으로 올리면 안 된다. 컬링이 못 도는데 개수가 0 이면 그 프레임은 아무것도 안 그려진다.
+        // 그래서 "요청했다"(_bGPUIndirectCountsRequested)와 "실제로 된다"(_bGPUFillsIndirectCounts)를 나눠 둔다.
+        _bGPUFillsIndirectCounts =
+            ( _bGPUIndirectCountsRequested != SW_FALSE && _batchInfo._buffer != 0 && argsCount > 0 && hasAllVisibleBuffers() ) ? 1u : 0u;
+        populateIndirectCommands( argsCount );
+        ensureInstanceSlotStream( pDevice, instanceCount );
+        uploadIndirectArgs( pDevice, argsCount );
+
+        // 인자 버퍼를 하나라도 못 만들었으면 컴퓨트가 개수를 만들 수 없다. 개수 0 짜리 인자로 그리면
+        // 그 뷰는 빈 화면이 된다. 플래그를 내리고 CPU 개수로 되돌려 올린다.
+        if ( _bGPUFillsIndirectCounts != SW_FALSE && hasAllCullViewBuffers() == false )
         {
-            // UnorderedAccess 를 함께 요구한다. instanceanimation 컴퓨트가 월드 행렬을 고쳐 쓴다. 못 만드는
-            // 백엔드 · 드라이버면 슬롯이 SRV 전용으로 한 번 더 시도해 그리기는 그대로 살린다.
-            constexpr RHIBufferUsage kInstanceUsage =
-                RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource | RHIBufferUsage::UnorderedAccess;
-            {
-                SW_PROFILE_SCOPE( "RT.GPUScene.instanceBuffer" );
-                // 버퍼가 새로 만들어졌는지 봐야 한다. 새 버퍼에는 아직 아무것도 없으므로 구간만
-                // 올리면 나머지가 쓰레기다. 핸들이 바뀌었으면 다시 만들어진 것이다.
-                const RHIBufferHandle bufferBefore = _instances._buffer;
-                if ( _instances.ensureCapacity( pDevice, static_cast<uint32>( sizeof( GPUInstance ) ), instanceCount, kInstanceUsage, true, true,
-                                                _snapshot.getInstances().data() ) )
-                {
-                    constexpr uint32   kStride    = static_cast<uint32>( sizeof( GPUInstance ) );
-                    const GPUInstance* pSource    = _snapshot.getInstances().data();
-                    const bool         bRecreated = ( _instances._buffer != bufferBefore );
+            _bGPUFillsIndirectCounts = SW_FALSE;
+            refreshIndirectCounts( pDevice );
+        }
 
-                    const bool bFullInstanceUpload = bRecreated || _snapshot._bAllInstancesDirty != SW_FALSE || _snapshot._listDirtyInstanceRun.empty();
-                    if ( bFullInstanceUpload )
-                    {
-                        _instances.upload( pDevice, pSource, instanceCount * kStride );
-                    }
-                    else
-                    {
-                        // **바뀐 구간만, 그리고 한 번의 호출로 올린다.** 구간마다 따로 부르면 백엔드가
-                        // 스테이징 확보와 큐 제출을 그만큼 되풀이한다(DX12 에서 호출당 ~3.3 us).
-                        _listScratchCopyRegion.clear();
-                        _listScratchCopyRegion.reserve( _snapshot._listDirtyInstanceRun.size() );
-                        for ( const GPUInstanceRun& run : _snapshot._listDirtyInstanceRun )
-                        {
-                            if ( run._count == 0 || run._start >= instanceCount )
-                                continue;
-                            const uint32 count = MathUtil::min( run._count, instanceCount - run._start );
-                            _listScratchCopyRegion.push_back( RHIBufferCopyRegion{ run._start * kStride, run._start * kStride, count * kStride } );
-                        }
-                        if ( _listScratchCopyRegion.empty() == false )
-                        {
-                            pDevice->getResourceFactory()->updateStructuredBufferRegions( _instances._buffer, pSource,
-                                                                                          _listScratchCopyRegion.data(),
-                                                                                          static_cast<uint32>( _listScratchCopyRegion.size() ) );
-                        }
-                    }
-                }
+        _indirectCommandCount = argsCount;
+        _snapshot._bCPUDirty  = SW_FALSE;
+        _bBatchTablesDirty    = SW_FALSE;
+
+        return _instances._buffer != 0 && getIndirectArgsBuffer() != 0;
+    }
+
+    void GPUScene::updateVertexPool( IRHIDevice* pDevice )
+    {
+        // 정점 풀: 배치 메시 모두를 한 정점 버퍼에 모은다. 집합이 같으면 아무것도 하지 않고, 바뀌면 들어오고 나간 메시의 구간만 고친다.
+        // 풀에 든 배치는 풀 버퍼와 시작 오프셋으로 그리고(같은 버퍼 → 멀티 드로우로 묶인다), 못 든 배치는 자기 정점 버퍼(오프셋 0)로 그린다.
+        // 이 구간의 시간이 C-43 의 전/후 측정값이다(docs/plans/WorldStreaming.md "측정").
+        SW_PROFILE_SCOPE( "RT.GPUScene.vertexPool" );
+        _listScratchPoolMesh.clear();
+        if ( _bVertexPoolEnabled != SW_FALSE )
+        {
+            _listScratchPoolMesh.reserve( _snapshot.getAllBatches().size() );
+            for ( const GPUMeshBatch& batch : _snapshot.getAllBatches() )
+            {
+                // 동적 메시(프레임마다 새 메시 — 천)는 풀 밖이다. 넣으면 집합이 매 프레임 바뀌어 씬 전체 정점을 다시 올린다. 자기 정점 버퍼로 그린다.
+                const bool bDynamicMesh = batch._mesh != nullptr && batch._mesh->isDynamic();
+                if ( bDynamicMesh == false )
+                    _listScratchPoolMesh.push_back( batch._mesh.get() );
             }
-
-            // 가시 인스턴스 ID 버퍼. 컬링 컴퓨트가 살아남은 인스턴스의 **원본 인덱스**를 배치 구간에 압축해
-            // 넣고(언리얼 FInstanceCullingContext 의 InstanceIdBuffer), 정점 셰이더가 그 순서로 읽는다.
-            // **뷰마다 하나씩**이다. 목록은 절두체에 종속이라 메인 카메라로 거른 것을 그림자가 쓰면 안 된다.
-            constexpr RHIBufferUsage kVisibleUsage =
-                RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource | RHIBufferUsage::UnorderedAccess;
-            SW_PROFILE_SCOPE( "RT.GPUScene.visibleBuffers" );
-            for ( GPUCullViewResources& view : _listCullView )
+        }
+        // 끈 상태면 빈 목록으로 빌드해 풀이 비워진다. 배치는 아래에서 자기 정점 버퍼(오프셋 0)로 돌아간다.
+        if ( _vertexPool.update( pDevice, _listScratchPoolMesh ) )
+            _bBatchTablesDirty = SW_TRUE;
+        for ( GPUMeshBatch& batch : _snapshot.getMutableBatches() )
+        {
+            const uint32 base = _vertexPool.baseOf( batch._mesh.get() );
+            if ( base != GPUMeshVertexPool::kInvalidBase && _vertexPool.getVertexBuffer() != 0 )
             {
-                view._visibleInstances.ensureCapacity( pDevice, static_cast<uint32>( sizeof( uint32 ) ), instanceCount, kVisibleUsage, true,
-                                                       true, nullptr );
+                batch._vertexBuffer = _vertexPool.getVertexBuffer();
+                batch._firstVertex  = base;
+            }
+            else
+                batch._firstVertex = 0;
+        }
+    }
+
+    void GPUScene::uploadInstanceAndVisibleBuffers( IRHIDevice* pDevice, uint32 instanceCount )
+    {
+        // UnorderedAccess 를 함께 요구한다. instanceanimation 컴퓨트가 월드 행렬을 고쳐 쓴다. 못 만드는
+        // 백엔드 · 드라이버면 슬롯이 SRV 전용으로 한 번 더 시도해 그리기는 그대로 살린다.
+        constexpr RHIBufferUsage kInstanceUsage =
+            RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource | RHIBufferUsage::UnorderedAccess;
+        {
+            SW_PROFILE_SCOPE( "RT.GPUScene.instanceBuffer" );
+            // 버퍼가 새로 만들어졌는지 봐야 한다. 새 버퍼에는 아직 아무것도 없으므로 구간만
+            // 올리면 나머지가 쓰레기다. 핸들이 바뀌었으면 다시 만들어진 것이다.
+            const RHIBufferHandle bufferBefore = _instances._buffer;
+            if ( _instances.ensureCapacity( pDevice, static_cast<uint32>( sizeof( GPUInstance ) ), instanceCount, kInstanceUsage, true, true,
+                                            _snapshot.getInstances().data() ) )
+            {
+                const bool bRecreated          = ( _instances._buffer != bufferBefore );
+                const bool bFullInstanceUpload = bRecreated || _snapshot._bAllInstancesDirty != SW_FALSE || _snapshot._listDirtyInstanceRun.empty();
+                if ( bFullInstanceUpload )
+                    _instances.upload( pDevice, _snapshot.getInstances().data(), instanceCount * static_cast<uint32>( sizeof( GPUInstance ) ) );
+                else
+                    uploadDirtyInstanceRuns( pDevice, instanceCount );
             }
         }
 
-        SW_PROFILE_SCOPE( "RT.GPUScene.batchTables" );
+        // 가시 인스턴스 ID 버퍼. 컬링 컴퓨트가 살아남은 인스턴스의 **원본 인덱스**를 배치 구간에 압축해
+        // 넣고(언리얼 FInstanceCullingContext 의 InstanceIdBuffer), 정점 셰이더가 그 순서로 읽는다.
+        // **뷰마다 하나씩**이다. 목록은 절두체에 종속이라 메인 카메라로 거른 것을 그림자가 쓰면 안 된다.
+        constexpr RHIBufferUsage kVisibleUsage =
+            RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource | RHIBufferUsage::UnorderedAccess;
+        SW_PROFILE_SCOPE( "RT.GPUScene.visibleBuffers" );
+        for ( GPUCullViewResources& view : _listCullView )
+        {
+            view._visibleInstances.ensureCapacity( pDevice, static_cast<uint32>( sizeof( uint32 ) ), instanceCount, kVisibleUsage, true,
+                                                   true, nullptr );
+        }
+    }
 
+    void GPUScene::uploadDirtyInstanceRuns( IRHIDevice* pDevice, uint32 instanceCount )
+    {
+        // **바뀐 구간만, 그리고 한 번의 호출로 올린다.** 구간마다 따로 부르면 백엔드가
+        // 스테이징 확보와 큐 제출을 그만큼 되풀이한다(DX12 에서 호출당 ~3.3 us).
+        constexpr uint32 kStride = static_cast<uint32>( sizeof( GPUInstance ) );
+        _listScratchCopyRegion.clear();
+        _listScratchCopyRegion.reserve( _snapshot._listDirtyInstanceRun.size() );
+        for ( const GPUInstanceRun& run : _snapshot._listDirtyInstanceRun )
+        {
+            if ( run._count == 0 || run._start >= instanceCount )
+                continue;
+            const uint32 count = MathUtil::min( run._count, instanceCount - run._start );
+            _listScratchCopyRegion.push_back( RHIBufferCopyRegion{ run._start * kStride, run._start * kStride, count * kStride } );
+        }
+        if ( _listScratchCopyRegion.empty() == false )
+        {
+            pDevice->getResourceFactory()->updateStructuredBufferRegions( _instances._buffer, _snapshot.getInstances().data(),
+                                                                          _listScratchCopyRegion.data(),
+                                                                          static_cast<uint32>( _listScratchCopyRegion.size() ) );
+        }
+    }
+
+    void GPUScene::uploadBatchTable( IRHIDevice* pDevice, uint32 argsCount )
+    {
         // 배치 표: 컬링 컴퓨트는 "이 배치의 인스턴스는 어디서 시작하나" 를, 정점 셰이더는 모프 · 정점 풀 오프셋을 읽는다.
         _listScratchBatchInfo.resize( argsCount );
         for ( uint32 argIndex = 0; argIndex < argsCount; ++argIndex )
@@ -260,13 +290,10 @@ namespace sw
         if ( _batchInfo.ensureCapacity( pDevice, static_cast<uint32>( sizeof( GPUBatchInfo ) ), argsCount, kBatchInfoUsage, true, false,
                                         _listScratchBatchInfo.data() ) )
             _batchInfo.upload( pDevice, _listScratchBatchInfo.data(), argsCount * static_cast<uint32>( sizeof( GPUBatchInfo ) ) );
+    }
 
-        // 컴퓨트가 개수를 만들려면 **가시 목록과 배치 구간이 둘 다** 있어야 한다. 하나라도 없으면 개수를
-        // 0 으로 올리면 안 된다. 컬링이 못 도는데 개수가 0 이면 그 프레임은 아무것도 안 그려진다.
-        // 그래서 "요청했다"(_bGPUIndirectCountsRequested)와 "실제로 된다"(_bGPUFillsIndirectCounts)를 나눠 둔다.
-        _bGPUFillsIndirectCounts =
-            ( _bGPUIndirectCountsRequested != SW_FALSE && _batchInfo._buffer != 0 && argsCount > 0 && hasAllVisibleBuffers() ) ? 1u : 0u;
-
+    void GPUScene::populateIndirectCommands( uint32 argsCount )
+    {
         _listScratchIndirectCmd.resize( argsCount );
         for ( uint32 argIndex = 0; argIndex < argsCount; ++argIndex )
         {
@@ -284,24 +311,29 @@ namespace sw
             // 스트림은 네 API 모두 startInstance 부터 읽는다.
             cmd._startInstanceLocation = _snapshot.getAllBatches()[argIndex]._instanceBase;
         }
+    }
 
+    void GPUScene::ensureInstanceSlotStream( IRHIDevice* pDevice, uint32 instanceCount )
+    {
         // 인스턴스 슬롯 스트림: 항등 배열이다. 인스턴스 수만큼 커지면 다시 만든다.
-        if ( _instanceSlotStreamCapacity < instanceCount || _instanceSlotStream == 0 )
+        if ( _instanceSlotStreamCapacity >= instanceCount && _instanceSlotStream != 0 )
+            return;
+        if ( _instanceSlotStream != 0 )
+            pDevice->getResourceFactory()->destroyBuffer( _instanceSlotStream );
+        const uint32   capacity = MathUtil::max( instanceCount, 256u );
+        vector<uint32> listSlot( capacity );
+        for ( uint32 slotIndex = 0; slotIndex < capacity; ++slotIndex )
         {
-            if ( _instanceSlotStream != 0 )
-                pDevice->getResourceFactory()->destroyBuffer( _instanceSlotStream );
-            const uint32   capacity = MathUtil::max( instanceCount, 256u );
-            vector<uint32> listSlot( capacity );
-            for ( uint32 slotIndex = 0; slotIndex < capacity; ++slotIndex )
-            {
-                listSlot[slotIndex] = slotIndex;
-            }
-            _instanceSlotStream         = pDevice->getResourceFactory()->createVertexBuffer( listSlot.data(), capacity * static_cast<uint32>( sizeof( uint32 ) ) );
-            _instanceSlotStreamCapacity = ( _instanceSlotStream != 0 ) ? capacity : 0;
-            if ( _instanceSlotStream == 0 )
-                SW_LOG_ERROR( "인스턴스 슬롯 스트림을 만들지 못했습니다(%# 인스턴스) — 씬 드로우가 인스턴스를 찾지 못합니다.", capacity );
+            listSlot[slotIndex] = slotIndex;
         }
+        _instanceSlotStream         = pDevice->getResourceFactory()->createVertexBuffer( listSlot.data(), capacity * static_cast<uint32>( sizeof( uint32 ) ) );
+        _instanceSlotStreamCapacity = ( _instanceSlotStream != 0 ) ? capacity : 0;
+        if ( _instanceSlotStream == 0 )
+            SW_LOG_ERROR( "인스턴스 슬롯 스트림을 만들지 못했습니다(%# 인스턴스) — 씬 드로우가 인스턴스를 찾지 못합니다.", capacity );
+    }
 
+    void GPUScene::uploadIndirectArgs( IRHIDevice* pDevice, uint32 argsCount )
+    {
         // 간접 인자도 **뷰마다** 하나다. 뷰별로 개수가 다르게 나오기 때문이다.
         constexpr RHIBufferUsage kArgsUsage =
             RHIBufferUsage::UnorderedAccess | RHIBufferUsage::IndirectArgs | RHIBufferUsage::Raw | RHIBufferUsage::ShaderResource;
@@ -314,20 +346,6 @@ namespace sw
                                            argsCount * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ) );
             }
         }
-
-        // 인자 버퍼를 하나라도 못 만들었으면 컴퓨트가 개수를 만들 수 없다. 개수 0 짜리 인자로 그리면
-        // 그 뷰는 빈 화면이 된다. 플래그를 내리고 CPU 개수로 되돌려 올린다.
-        if ( _bGPUFillsIndirectCounts != SW_FALSE && hasAllCullViewBuffers() == false )
-        {
-            _bGPUFillsIndirectCounts = SW_FALSE;
-            refreshIndirectCounts( pDevice );
-        }
-
-        _indirectCommandCount = argsCount;
-        _snapshot._bCPUDirty  = SW_FALSE;
-        _bBatchTablesDirty    = SW_FALSE;
-
-        return _instances._buffer != 0 && getIndirectArgsBuffer() != 0;
     }
 
     bool GPUScene::hasAllVisibleBuffers() const
