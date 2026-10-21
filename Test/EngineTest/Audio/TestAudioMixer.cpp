@@ -301,3 +301,55 @@ SW_TEST_CASE( AudioMixerTest, SurroundLayoutAcceptsEffectsAndTheEngine )
     SW_EXPECT_TRUE( stereoOnly.supportsLayout( sw::AudioChannelLayout::Stereo ) );
     SW_EXPECT_FALSE( stereoOnly.supportsLayout( sw::AudioChannelLayout::Surround51 ) );
 }
+
+/**
+ * @brief [AudioMixerTest] 버스별 레이아웃 — 두 채널 버스는 5.1 출력에서도 두 채널이고, 부모의 FL FR 에만 더하며, 넓은 버스의 센드는 BS.775 로 접혀 들어온다
+ * @details ui(Stereo)에 직류 0.2 · 0.4 를 넣으면 master 의 FL · FR 이 그 값이고 나머지 채널은 0 이다. sfx(5.1)의 FC 에만 0.5 를 넣고 두 채널 리턴 버스(fx, 센드 0 dB)로 보내면
+ *          fx 의 왼쪽 · 오른쪽은 0.5 × 0.7071 이고, master 의 FC 에는 sfx 의 직접 경로 0.5 가 남는다. master 를 두 채널로 적은 그래프는 검사에서 거절한다.
+ */
+SW_TEST_CASE( AudioMixerTest, StereoBusInsideSurroundOutput )
+{
+    sw::AudioMixerDesc desc;
+    SW_ASSERT_TRUE( desc.loadFromXMLText( R"(<AudioMixerDesc><_listBus>
+        <AudioBusDesc _name="master" />
+        <AudioBusDesc _name="ui" _parent="master" _channels="Stereo" />
+        <AudioBusDesc _name="sfx" _parent="master"><_listSend><AudioSendDesc _bus="fx" _levelDb="0" /></_listSend></AudioBusDesc>
+        <AudioBusDesc _name="fx" _parent="master" _channels="Stereo" /></_listBus></AudioMixerDesc>)" ) );
+    sw::AudioMixer mixer;
+    SW_ASSERT_TRUE( mixer.initialize( desc, sw::AudioChannelLayout::Surround51 ) );
+    const uint32 uiIndex  = static_cast<uint32>( mixer.findBusIndex( sw::hashed_string( "ui" ) ) );
+    const uint32 sfxIndex = static_cast<uint32>( mixer.findBusIndex( sw::hashed_string( "sfx" ) ) );
+    const uint32 fxIndex  = static_cast<uint32>( mixer.findBusIndex( sw::hashed_string( "fx" ) ) );
+    SW_EXPECT_TRUE( mixer.getBusLayout( uiIndex ) == sw::AudioChannelLayout::Stereo );
+    SW_EXPECT_TRUE( mixer.getBusLayout( sfxIndex ) == sw::AudioChannelLayout::Surround51 );
+
+    mixer.beginBlock( sw::audio::kBlockFrameCount );
+    const sw::AudioBlockView ui = mixer.getBusInput( uiIndex );
+    SW_ASSERT_EQUAL( 2u, ui._channelCount );
+    const sw::AudioBlockView sfx = mixer.getBusInput( sfxIndex );
+    SW_ASSERT_EQUAL( 6u, sfx._channelCount );
+    for ( uint32 frameIndex = 0; frameIndex < sw::audio::kBlockFrameCount; ++frameIndex )
+    {
+        ui.getChannel( 0 )[frameIndex]  = 0.2f;
+        ui.getChannel( 1 )[frameIndex]  = 0.4f;
+        sfx.getChannel( 2 )[frameIndex] = 0.5f; // FC
+    }
+    sw::AudioBlockBuffer outputBuffer;
+    outputBuffer.allocate( sw::AudioChannelLayout::Surround51 );
+    const sw::AudioBlockView output = outputBuffer.makeView( sw::audio::kBlockFrameCount );
+    mixer.process( output );
+
+    constexpr float32 kCenterFold = 0.5f * 0.70710678f;
+    const uint32      lastFrame   = sw::audio::kBlockFrameCount - 1;
+    SW_EXPECT_NEAR_EQUAL( 0.2f + kCenterFold, output.getChannel( 0 )[lastFrame], 1e-4f ); // FL = ui 왼쪽 + fx 왼쪽
+    SW_EXPECT_NEAR_EQUAL( 0.4f + kCenterFold, output.getChannel( 1 )[lastFrame], 1e-4f ); // FR = ui 오른쪽 + fx 오른쪽
+    SW_EXPECT_NEAR_EQUAL( 0.5f, output.getChannel( 2 )[lastFrame], 1e-5f );               // FC = sfx 직접
+    for ( uint32 channelIndex = 3; channelIndex < 6; ++channelIndex )
+    {
+        SW_EXPECT_NEAR_EQUAL( 0.0f, output.getChannel( channelIndex )[lastFrame], 1e-6f );
+    }
+    SW_EXPECT_NEAR_EQUAL( kCenterFold, mixer.getBusPeak( fxIndex ), 1e-4f );
+
+    sw::AudioMixerDesc stereoMaster;
+    SW_EXPECT_FALSE( stereoMaster.loadFromXMLText( R"(<AudioMixerDesc><_listBus><AudioBusDesc _name="master" _channels="Stereo" /></_listBus></AudioMixerDesc>)" ) );
+}

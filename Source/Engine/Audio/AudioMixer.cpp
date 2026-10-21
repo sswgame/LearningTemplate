@@ -10,6 +10,22 @@ namespace sw
 {
     SW_LOG_CALLER( "AudioMixer" );
 
+    namespace
+    {
+        /** @brief 버스 데이터의 채널 구성을 출력 레이아웃 아래의 실제 레이아웃으로 풉니다. */
+        AudioChannelLayout resolveAudioMixerBusLayout( AudioBusChannels channels, AudioChannelLayout outputLayout )
+        {
+            switch ( channels )
+            {
+                case AudioBusChannels::Output:
+                    return outputLayout;
+                case AudioBusChannels::Stereo:
+                    return AudioChannelLayout::Stereo;
+            }
+            return outputLayout;
+        }
+    } // namespace
+
     AudioMixer::AudioMixer()
         : _desc{}
         , _listBusState{}
@@ -41,7 +57,17 @@ namespace sw
             bus._volumeDb               = busDesc._volumeDb;
             bus._bMuted                 = busDesc._bMuted ? SW_TRUE : SW_FALSE;
             bus._bSolo                  = busDesc._bSolo ? SW_TRUE : SW_FALSE;
-            bus._input.allocate( layout );
+            bus._layout                 = resolveAudioMixerBusLayout( busDesc._channels, layout );
+            bus._input.allocate( bus._layout );
+            // 넓은 버스가 두 채널 버스(부모 · 센드)로 갈 때 쓰는 BS.775 행렬이다. 레이아웃의 마스크는 늘 아는 스피커라 실패하지 않는다.
+            const uint32 busChannelCount = AudioChannelLayoutUtil::getChannelCount( bus._layout );
+            const bool   bWideBus        = busChannelCount > audio::kStereoChannelCount;
+            if ( bWideBus && AudioDownmix::makeForWaveMask( busChannelCount, AudioChannelLayoutUtil::getChannelMask( bus._layout ), bus._downmix ) == false )
+            {
+                SW_LOG_ERROR( "Bus '%#' has no downmix for %# channels", busDesc._name.c_str(), busChannelCount );
+                _listBusState.clear();
+                return false;
+            }
             for ( const AudioSendDesc& sendDesc : busDesc._listSend )
             {
                 Send send;
@@ -64,11 +90,10 @@ namespace sw
             for ( const AudioEffectDesc& effectDesc : busDesc._listEffect )
             {
                 // 지원하지 않는 레이아웃 · 읽지 못한 자원(임펄스 응답)은 조용히 건너뛰지 않고 그래프 전체를 오류로 멈춘다(오류는 createEffect 가 남긴다).
-                unique_ptr<IAudioEffect> pEffect = AudioEffectRegistry::createEffect( effectDesc, layout );
+                unique_ptr<IAudioEffect> pEffect = AudioEffectRegistry::createEffect( effectDesc, bus._layout );
                 if ( pEffect == nullptr )
                 {
-                    SW_LOG_ERROR( "Bus '%#' effect '%#' could not be created for %# output channels", busDesc._name.c_str(), effectDesc._type.c_str(),
-                                  AudioChannelLayoutUtil::getChannelCount( layout ) );
+                    SW_LOG_ERROR( "Bus '%#' effect '%#' could not be created for %# bus channels", busDesc._name.c_str(), effectDesc._type.c_str(), busChannelCount );
                     _listBusState.clear();
                     return false;
                 }
@@ -211,9 +236,8 @@ namespace sw
     void AudioMixer::process( const AudioBlockView& output )
     {
         SW_ASSERT( output._channelCount == AudioChannelLayoutUtil::getChannelCount( _layout ) );
-        const uint32  blockFrames  = MathUtil::min( output._frameCount, _blockFrameCount );
-        const uint32  channelCount = AudioChannelLayoutUtil::getChannelCount( _layout );
-        const float32 invFrames    = blockFrames > 0 ? 1.0f / static_cast<float32>( blockFrames ) : 0.0f;
+        const uint32  blockFrames = MathUtil::min( output._frameCount, _blockFrameCount );
+        const float32 invFrames   = blockFrames > 0 ? 1.0f / static_cast<float32>( blockFrames ) : 0.0f;
         updateDucking( blockFrames );
         for ( const uint32 busIndex : _listOrder )
         {
@@ -231,20 +255,8 @@ namespace sw
             {
                 if ( send._bPreFader == false )
                     continue;
-                const float32        targetGain = AudioMath::dbToLinear( send._levelDb );
-                const float32        step       = ( targetGain - send._gain ) * invFrames;
-                const AudioBlockView target     = _listBusState[send._targetIndex]._input.makeView( blockFrames );
-                for ( uint32 channelIndex = 0; channelIndex < channelCount; ++channelIndex )
-                {
-                    const float32* pSource = input.getChannel( channelIndex );
-                    float32*       pTarget = target.getChannel( channelIndex );
-                    float32        gain    = send._gain;
-                    for ( uint32 frameIndex = 0; frameIndex < blockFrames; ++frameIndex )
-                    {
-                        gain += step;
-                        pTarget[frameIndex] += pSource[frameIndex] * gain;
-                    }
-                }
+                const float32 targetGain = AudioMath::dbToLinear( send._levelDb );
+                accumulateBus( busIndex, input, send._targetIndex, send._gain, targetGain );
                 send._gain = targetGain;
             }
 
@@ -253,7 +265,7 @@ namespace sw
             const float32 startGain  = bus._bFirstBlock == SW_TRUE ? targetGain : bus._gain;
             const float32 gainStep   = ( targetGain - startGain ) * invFrames;
             float32       peak       = 0.0f;
-            for ( uint32 channelIndex = 0; channelIndex < channelCount; ++channelIndex )
+            for ( uint32 channelIndex = 0; channelIndex < input._channelCount; ++channelIndex )
             {
                 float32* pChannel = input.getChannel( channelIndex );
                 float32  gain     = startGain;
@@ -272,42 +284,63 @@ namespace sw
             {
                 if ( send._bPreFader )
                     continue;
-                const float32        sendTarget = AudioMath::dbToLinear( send._levelDb );
-                const float32        step       = ( sendTarget - send._gain ) * invFrames;
-                const AudioBlockView target     = _listBusState[send._targetIndex]._input.makeView( blockFrames );
-                for ( uint32 channelIndex = 0; channelIndex < channelCount; ++channelIndex )
-                {
-                    const float32* pSource  = input.getChannel( channelIndex );
-                    float32*       pTarget  = target.getChannel( channelIndex );
-                    float32        sendGain = send._gain;
-                    for ( uint32 frameIndex = 0; frameIndex < blockFrames; ++frameIndex )
-                    {
-                        sendGain += step;
-                        pTarget[frameIndex] += pSource[frameIndex] * sendGain;
-                    }
-                }
+                const float32 sendTarget = AudioMath::dbToLinear( send._levelDb );
+                accumulateBus( busIndex, input, send._targetIndex, send._gain, sendTarget );
                 send._gain = sendTarget;
             }
 
             if ( bus._parentIndex >= 0 )
-            {
-                const AudioBlockView parent = _listBusState[static_cast<size_t>( bus._parentIndex )]._input.makeView( blockFrames );
-                for ( uint32 channelIndex = 0; channelIndex < channelCount; ++channelIndex )
-                {
-                    const float32* pSource = input.getChannel( channelIndex );
-                    float32*       pParent = parent.getChannel( channelIndex );
-                    for ( uint32 frameIndex = 0; frameIndex < blockFrames; ++frameIndex )
-                    {
-                        pParent[frameIndex] += pSource[frameIndex];
-                    }
-                }
-            }
+                accumulateBus( busIndex, input, static_cast<uint32>( bus._parentIndex ), 1.0f, 1.0f );
         }
 
+        // master 는 출력 레이아웃이다(데이터 검사가 막는다). 그래서 채널 수가 출력과 같다.
         const AudioBlockView master = _listBusState[_masterIndex]._input.makeView( blockFrames );
-        for ( uint32 channelIndex = 0; channelIndex < channelCount; ++channelIndex )
+        for ( uint32 channelIndex = 0; channelIndex < output._channelCount; ++channelIndex )
         {
             Memory::copy( output.getChannel( channelIndex ), master.getChannel( channelIndex ), static_cast<size_t>( blockFrames ) * sizeof( float32 ) );
+        }
+    }
+
+    void AudioMixer::accumulateBus( uint32 sourceIndex, const AudioBlockView& source, uint32 targetIndex, float32 startGain, float32 targetGain )
+    {
+        const AudioBlockView target    = _listBusState[targetIndex]._input.makeView( source._frameCount );
+        const float32        invFrames = source._frameCount > 0 ? 1.0f / static_cast<float32>( source._frameCount ) : 0.0f;
+        const float32        step      = ( targetGain - startGain ) * invFrames;
+        const bool           bFoldDown = source._channelCount > target._channelCount;
+        if ( bFoldDown )
+        {
+            // 넓은 쪽 → 두 채널: 소스 채널마다 (왼쪽, 오른쪽) 계수로 더한다(LFE 계수는 0 이다).
+            const AudioDownmix& downmix = _listBusState[sourceIndex]._downmix;
+            SW_ASSERT( target._channelCount == audio::kStereoChannelCount && downmix._channelCount == source._channelCount );
+            float32* pLeft  = target.getChannel( 0 );
+            float32* pRight = target.getChannel( 1 );
+            for ( uint32 channelIndex = 0; channelIndex < source._channelCount; ++channelIndex )
+            {
+                const float32  leftWeight  = downmix._arrLeft[channelIndex];
+                const float32  rightWeight = downmix._arrRight[channelIndex];
+                const float32* pSource     = source.getChannel( channelIndex );
+                float32        gain        = startGain;
+                for ( uint32 frameIndex = 0; frameIndex < source._frameCount; ++frameIndex )
+                {
+                    gain += step;
+                    const float32 value = pSource[frameIndex] * gain;
+                    pLeft[frameIndex] += value * leftWeight;
+                    pRight[frameIndex] += value * rightWeight;
+                }
+            }
+            return;
+        }
+        // 같은 채널 수이거나 두 채널 → 넓은 쪽: 소스 채널을 같은 번호(FL FR …)에 더한다. 넓은 쪽의 나머지 채널은 그대로다.
+        for ( uint32 channelIndex = 0; channelIndex < source._channelCount; ++channelIndex )
+        {
+            const float32* pSource = source.getChannel( channelIndex );
+            float32*       pTarget = target.getChannel( channelIndex );
+            float32        gain    = startGain;
+            for ( uint32 frameIndex = 0; frameIndex < source._frameCount; ++frameIndex )
+            {
+                gain += step;
+                pTarget[frameIndex] += pSource[frameIndex] * gain;
+            }
         }
     }
 } // namespace sw

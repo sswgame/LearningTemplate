@@ -1158,3 +1158,15 @@ SW_TEST_CASE( AssetTypeRegistryTest, TypesAreUniqueAndLongerSuffixWins )
     SW_EXPECT_STREQ( "Texture", sw::string( sw::AssetTypeRegistry::findExcludeGroup( "engine/textures/Perlin.DDS" ) ).c_str() );
     SW_EXPECT_TRUE( sw::AssetTypeRegistry::findExcludeGroup( "game/empty/models/crate.mesh" ).empty() );
 }
+
+/**
+ * @brief [AssetTypeRegistryTest] 소리 그래프(`*.audiograph.xml`)는 소리 파일과 같이 전용 서버 패키지가 빼는 묶음 Audio 다
+ * @details 서버는 그래프를 읽지 않는다(팩에도 넣지 않는다). 믹서 설정 XML 은 제외 묶음이 없어 남는다.
+ */
+SW_TEST_CASE( AssetTypeRegistryTest, ServerTargetExcludesAudioGraphs )
+{
+    SW_EXPECT_TRUE( sw::ResourcePaths::isExcludedForTarget( "Server", "game/x/audio/rain.audiograph.xml" ) );
+    SW_EXPECT_TRUE( sw::ResourcePaths::isExcludedForTarget( "Server", "game/x/audio/rain.ogg" ) );
+    SW_EXPECT_FALSE( sw::ResourcePaths::isExcludedForTarget( "Server", "engine/audio/default.audiomixer.xml" ) );
+    SW_EXPECT_FALSE( sw::ResourcePaths::isExcludedForTarget( "Client", "game/x/audio/rain.audiograph.xml" ) );
+}

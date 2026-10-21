@@ -21,6 +21,23 @@
 namespace sw
 {
     /**
+     * @brief 버스 하나의 채널 구성입니다. Wwise 버스의 Channel Configuration, 언리얼 서브믹스의 채널 형식에 해당합니다.
+     * @details `Output` 은 장치 협상이 정한 출력 레이아웃을 그대로 쓰는 선언된 모드다(믹서 그래프는 채널 중립). `Stereo` 는 출력이 5.1 · 7.1 · 헤드폰이어도 두 채널(FL FR)로 처리한다 —
+     *          UI 처럼 앞 두 채널에만 나는 소리의 버스와, 채널 수에 비례하는 이펙트(리버브)의 비용을 줄이는 리턴 버스가 쓴다. 바이노럴 출력에서도 HRTF 를 걸지 않는다.
+     *          채널 수가 다른 버스로 갈 때(부모 · 센드) 두 채널 → 넓은 쪽은 FL FR 에 더하고, 넓은 쪽 → 두 채널은 ITU-R BS.775 다운믹스(`AudioDownmix`, LFE 버림)다.
+     *          master 는 장치로 나가므로 `Output` 이어야 한다(검사 오류).
+     */
+    ENUM()
+    enum class AudioBusChannels : uint8
+    {
+        Output = 0, ///< 출력 레이아웃(장치 · `audio.speakerMode`)과 같다.
+        Stereo,     ///< 출력과 상관없이 두 채널(FL FR)이다.
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @brief 버스 하나에서 다른 버스로 보내는 센드입니다. Wwise 의 aux send, 언리얼의 submix send 에 해당합니다.
      * @code
      *     <AudioSendDesc _bus="reverb" _levelDb="-12" />
@@ -126,6 +143,7 @@ namespace sw
      *     <AudioBusDesc _name="sfx" _parent="master" _volumeDb="0">
      *         <_listSend><AudioSendDesc _bus="reverb" _levelDb="-12" /></_listSend>
      *     </AudioBusDesc>
+     *     <AudioBusDesc _name="ui" _parent="master" _channels="Stereo" />
      * @endcode
      */
     REFLECT()
@@ -145,6 +163,8 @@ namespace sw
         vector<AudioDuckDesc> _listDuck{};
         PROPERTY( Tooltip = "Bus fader", Meta = "Units=dB" )
         float32 _volumeDb{ 0.0f };
+        PROPERTY( Tooltip = "Channels the bus mixes in: the output layout, or always stereo (front pair; folds down from wider buses)" )
+        AudioBusChannels _channels{ AudioBusChannels::Output };
         PROPERTY( Tooltip = "Starts muted" )
         bool _bMuted{ false };
         PROPERTY( Tooltip = "Starts soloed (every bus that is not on a soloed path goes silent)" )

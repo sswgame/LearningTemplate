@@ -19,6 +19,7 @@
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Localization/EngineDefaultAssetsSubsystem.h"
+#include "Engine/Localization/LocalizationDocuments.h"
 #include "Engine/Module/ModuleTypesSubsystem.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Object/SceneAnimation/AnimationCrowd.h"
@@ -140,6 +141,13 @@ namespace sw
                 (void)commandLine.getArgument( CommandLineArgument::PACK_DIR, params._packOutputDir ); // 비면 cookAllPacks 가 오류로 멈춘다
                 params._shaderFolder = shaderFolder;
                 params._buildTarget  = bDedicatedServer ? "Server" : "Client";
+                // 출시 문화권(`stagedCultures`) 밖의 번역 테이블은 팩에 넣지 않는다 — 규칙은 로컬라이제이션 층이 갖고 쿠커는 목록만 받는다.
+                string localizationError;
+                if ( LocalizationProject::collectUnstagedTranslationTables( params._resourceRoot, params._listExcludedSourceFile, localizationError ) == false )
+                {
+                    SW_LOG_ERROR( "Pack cook: a localization project could not be read for culture staging - %#", localizationError );
+                    return false;
+                }
                 if ( commandLine.isArgumentProvided( CommandLineArgument::GAME ) )
                 {
                     // 팩 폴더 이름은 게임 이름과 다를 수 있어(ThemeParkTycoon → themepark) 게임 설정의 팩 루트(`game/<폴더>`)에서 읽는다.

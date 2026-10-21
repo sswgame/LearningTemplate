@@ -485,6 +485,32 @@ namespace sw
         return VectorUtil::contains( _listStagedCulture, normalized );
     }
 
+    bool LocalizationProject::collectUnstagedTranslationTables( string_view folder, vector<string>& outListAbsPath, string& outError )
+    {
+        vector<string> listJSON;
+        (void)FileUtil::collectFiles( folder, ".json", listJSON, true ); // 폴더가 없으면 프로젝트도 없다
+        const size_t tableSuffixLength = string_view( TranslationTable::kExtension ).size();
+        for ( const string& projectPath : listJSON )
+        {
+            if ( StringUtil::endsWith( projectPath, kExtension, true ) == false )
+                continue;
+            LocalizationProject project;
+            if ( project.loadFromFile( projectPath, &outError ) == false )
+                return false;
+            const string projectFolder = FileUtil::getDirectoryPart( projectPath );
+            for ( const string& tablePath : listJSON )
+            {
+                const bool bTableOfProject = StringUtil::endsWith( tablePath, TranslationTable::kExtension, true ) && FileUtil::getDirectoryPart( tablePath ) == projectFolder;
+                if ( bTableOfProject == false )
+                    continue;
+                const string fileName = FileUtil::getFileNamePart( tablePath );
+                if ( project.isStagedCulture( string_view( fileName ).substr( 0, fileName.size() - tableSuffixLength ) ) == false )
+                    outListAbsPath.push_back( FileUtil::normalizePath( tablePath ) );
+            }
+        }
+        return true;
+    }
+
     string LocalizationProject::makeTranslationPath( string_view projectPath, string_view culture )
     {
         return makeSiblingPath( projectPath, CultureTable::normalizeCode( culture ) + TranslationTable::kExtension );

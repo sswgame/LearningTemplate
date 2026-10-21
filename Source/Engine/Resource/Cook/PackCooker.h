@@ -35,6 +35,12 @@ namespace sw
         string _shaderFolder;   ///< 담을 셰이더 바이너리 폴더(`dx12` 등, 쿠킹 표의 `shader_folder`)
         string _buildTarget;    ///< 빌드 타깃(`Game` · `Client` · `Server`) — 그 타깃이 빼는 종류를 팩에 넣지 않는다
         string _gamePackFolder; ///< 비우면 `Resource/game/` 의 모든 팩, 아니면 그 폴더(`empty`) 하나만 굽는다
+        /**
+         * @brief 담지 않을 소스 파일의 절대 경로(`FileUtil::normalizePath`)입니다. 비어 있을 수 있다.
+         * @details 이 층(Resource)이 읽을 수 없는 규칙으로 위 층이 정한다 — 출시 문화권(`stagedCultures`) 밖의 번역 테이블(`LocalizationProject::collectUnstagedTranslationTables`).
+         *          목록은 쿠킹 설정 해시에 들어가 바뀌면 팩을 다시 굽는다.
+         */
+        vector<string> _listExcludedSourceFile;
     };
 } // namespace sw
 

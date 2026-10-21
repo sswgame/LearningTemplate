@@ -20,6 +20,10 @@
 				<_slot _anchorMin="1,1" _anchorMax="1,1" _offsetMin="-448,-120" _offsetMax="-48,-84" />
 				<_style _alignment="End" />
 			</TextWidget>
+			<TextWidget _name="ItemName" _text="{bind:_itemName}" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="1,1" _anchorMax="1,1" _offsetMin="-448,-156" _offsetMax="-48,-124" />
+				<_style _alignment="End" />
+			</TextWidget>
 			<BoxPanel _name="Ammo" _spacing="8" _orientation="Horizontal" _visibility="HitTestInvisible">
 				<_slot _anchorMin="1,1" _anchorMax="1,1" _offsetMin="0,-84" _offsetMax="-48,-48" _bAutoSize="true" _growHorizontal="Begin" />
 				<TextWidget _name="MagazineAmmo" _text="{bind:_magazineAmmo}" _styleClass="hud" _bLocalized="false" />

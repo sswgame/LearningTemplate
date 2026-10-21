@@ -21,6 +21,7 @@ namespace sw
 {
     struct AudioPcm;
 
+    class AudioGraph;
     class AudioStreamSource;
     class TaskArgs;
 
@@ -29,6 +30,8 @@ namespace sw
      * @brief 재생할 소리 하나입니다. float32 교차 샘플이며, 채널은 1(모노)이나 2(스테레오)입니다. 그보다 많으면 읽을 때 스테레오로 줄입니다.
      * @details 긴 소리는 샘플 배열 대신 압축 바이트(`_pStream`)를 들고 보이스가 재생하는 만큼만 풉니다(`AudioStream.h`). 그때 `_listSample` 은 비어 있고
      *          `_frameCount` · `_sampleRate` · `_channelCount` 는 전체 소리의 값입니다.
+     *          소리 그래프(`*.audiograph.xml`)도 이 형식이다. 샘플 대신 굳힌 그래프(`_pGraph`)를 들고, 보이스마다 실행 상태를 만들어 재생하는 만큼 렌더한다
+     *          (모노 · 48 kHz, `_frameCount` 는 그래프 길이, `Graph/AudioGraph.h`).
      */
     struct SW_API AudioClipData
     {
@@ -44,12 +47,15 @@ namespace sw
 
         vector<float32>                     _listSample;        ///< 채널 교차 샘플([-1, 1]). 스트리밍 클립은 비어 있다.
         shared_ptr<const AudioStreamSource> _pStream{};         ///< 스트리밍 클립의 압축 바이트다(통째로 푼 클립은 nullptr).
+        shared_ptr<const AudioGraph>        _pGraph{};          ///< 소리 그래프다(파일 클립은 nullptr).
         uint32                              _frameCount{ 0 };   ///< 채널당 샘플 수다.
         uint32                              _sampleRate{ 0 };   ///< 원본 샘플레이트(Hz)
         uint16                              _channelCount{ 0 }; ///< 1 또는 2 다.
 
         /** @brief 스트리밍 클립인지입니다. */
         bool isStreamed() const { return _pStream != nullptr; }
+        /** @brief 소리 그래프인지입니다. */
+        bool isGraph() const { return _pGraph != nullptr; }
 
         /** @brief 길이(초)입니다. */
         float32 getDurationSeconds() const { return _sampleRate == 0 ? 0.0f : static_cast<float32>( _frameCount ) / static_cast<float32>( _sampleRate ); }
@@ -123,6 +129,15 @@ namespace sw
          */
         void requestClip( const hashed_string& path );
 
+        /**
+         * @brief 그 경로(구분자 · 대소문자 무시)를 이 캐시가 준비해 두었으면 캐시의 이름을 @p outPath 에 돌려줍니다. 이름을 intern 하지 않습니다(핫 리로드가 바뀐 파일마다 묻는 길).
+         */
+        [[nodiscard]] bool findReadyPath( string_view path, hashed_string& outPath ) const;
+        /**
+         * @brief 준비된 경로를 지금 다시 디코드해 바꿉니다(소리 그래프 핫 리로드). 재생 중인 보이스는 옛 클립을 끝까지 씁니다(`shared_ptr`).
+         * @return 다시 읽기에 실패하면 오류를 남기고 false 이며 옛 클립을 그대로 둡니다(읽을 수 없는 파일로 소리를 지우지 않는다).
+         */
+        [[nodiscard]] bool reloadClip( const hashed_string& path );
         /** @brief 만든 클립을 경로 이름으로 넣습니다(테스트, 절차적 소리). 같은 이름이 있으면 교체합니다. */
         void addClip( const hashed_string& path, shared_ptr<const AudioClipData> pClip );
 
@@ -130,8 +145,10 @@ namespace sw
         void clear();
 
     private:
-        /** @brief 바이트를 읽어 디코드합니다(리소스 → 파일 → 대체 디코더 순). */
+        /** @brief 바이트를 읽어 디코드합니다(리소스 → 파일 → 대체 디코더 순). 소리 그래프 파일이면 `decodeGraph` 로 넘깁니다. */
         shared_ptr<const AudioClipData> decodeClip( const hashed_string& path ) const;
+        /** @brief 소리 그래프 파일을 읽어 굳히고 그래뉼러 소스 클립을 풉니다. 읽기 · 검사 · 소스 실패면 오류를 남기고 nullptr 입니다. */
+        shared_ptr<const AudioClipData> decodeGraph( const hashed_string& path ) const;
         /** @brief 워커 태스크 본문입니다. 인자는 경로(문자열) 하나입니다. */
         void decodeClipTask( const TaskArgs& args );
         /** @brief 디코드 결과를 캐시에 적습니다. */

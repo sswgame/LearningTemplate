@@ -5,9 +5,11 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Audio/AudioMixer.h"
 #include "Engine/Audio/AudioMixerDesc.h"
+#include "Engine/Audio/Graph/AudioGraph.h"
 
 namespace sw
 {
@@ -41,6 +43,8 @@ namespace sw
         , _appliedPlayingID{ 0 }
         , _playedEventCount{ 0 }
         , _droppedEventCount{ 0 }
+        , _lastPublishNanoseconds{ 0 }
+        , _peakPublishNanoseconds{ 0 }
         , _peakRealVoiceCount{ 0 }
         , _blockCursor{ audio::kBlockFrameCount }
         , _layout{ AudioChannelLayout::Stereo }
@@ -947,6 +951,21 @@ namespace sw
         shared_ptr<const AudioClipData> pClip = _clipStore.findClip( slot._clipPath );
         if ( pClip == nullptr )
             return;
+        // 소리 그래프가 읽는 게임 파라미터는 로드한 라이브러리에 있어야 한다. 모르는 이름을 0 으로 읽지 않고 이 재생을 오류로 멈춘다.
+        uint64 graphSeed = 0;
+        if ( pClip->isGraph() )
+        {
+            for ( const hashed_string& parameterName : pClip->_pGraph->getParameterNames() )
+            {
+                if ( _mapParameter.find( parameterName ) == _mapParameter.end() )
+                {
+                    SW_LOG_ERROR( "Audio graph '%#' reads game parameter '%#', which no loaded event library declares", slot._clipPath.c_str(), parameterName.c_str() );
+                    freeVoice( slot );
+                    return;
+                }
+            }
+            graphSeed = _random.nextUint64(); // 그래프만 난수를 쓴다 — 파일 클립의 재생 순서가 바뀌지 않게
+        }
 
         // 음악 레이어와 스팅어는 정해진 렌더 프레임에 샘플 단위로 시작한다. 아직 이르면 그만큼 늦추고, 클립이 늦게 왔으면 그만큼 건너뛰어 박을 지킨다.
         const bool bScheduled = slot._musicSegment != -1;
@@ -959,7 +978,7 @@ namespace sw
             else
                 skipFrames = static_cast<float64>( _renderedFrameCount - slot._startFrame ) * static_cast<float64>( pClip->_sampleRate ) / static_cast<float64>( audio::kSampleRate );
         }
-        slot._voice.start( std::move( pClip ), slot._bLoop, delay, bScheduled == false );
+        slot._voice.start( std::move( pClip ), slot._bLoop, delay, bScheduled == false, graphSeed );
         if ( skipFrames > 0.0 )
             slot._voice.setPosition( skipFrames );
         slot._voice.setPaused( slot._bPausedRequest );
@@ -1093,7 +1112,18 @@ namespace sw
         const AudioClipData* pClip = slot._voice.getClip();
         if ( pClip != nullptr )
             slot._voice.setPlaybackRate( static_cast<float64>( pClip->_sampleRate ) / static_cast<float64>( audio::kSampleRate ) * static_cast<float64>( pitch ) );
-        slot._voice.setTarget( volume, direction, _layout );
+        // 소리 그래프의 노드 값은 이 에미터에서 본 게임 파라미터를 블록마다 받는다(이벤트 RTPC 와 같은 값, `AudioGraphDef.h`).
+        const bool bGraphClip = pClip != nullptr && pClip->isGraph();
+        if ( bGraphClip )
+        {
+            const vector<hashed_string>& listParameterName = pClip->_pGraph->getParameterNames();
+            for ( uint32 inputIndex = 0; inputIndex < listParameterName.size(); ++inputIndex )
+            {
+                slot._voice.setGraphParameter( inputIndex, findParameterValue( slot._emitterID, listParameterName[inputIndex] ) );
+            }
+        }
+        // 패닝은 보이스가 가는 버스의 레이아웃으로 한다(두 채널 버스의 3D 소리는 스테레오 팬, 출력이 바이노럴이어도 HRTF 없음).
+        slot._voice.setTarget( volume, direction, _pMixer->getBusLayout( slot._busIndex ) );
         slot._voice.setLowPass( lowPassHz );
         // 들림은 보이스 자신의 게인(거리, 가림, 파라미터, 페이드 목표)이다. 버스 페이더는 넣지 않는다(음소거된 버스의 프리 페이더 센드가 살아 있어야 한다).
         slot._audibility = volume * slot._voice.getFadeTarget();
@@ -1183,14 +1213,18 @@ namespace sw
 
     void AudioEngine::publishState( uint32 realCount, uint32 virtualCount )
     {
+        // 게시 자체의 비용을 잰다(E6: 이벤트 창 사본이 인스턴스 × 보이스를 훑는다). 이번 값은 다음 블록의 상태에 실린다.
+        const Stopwatch  publishStopwatch;
         AudioEngineStats stats;
-        stats._renderedFrameCount = _renderedFrameCount;
-        stats._realVoiceCount     = realCount;
-        stats._virtualVoiceCount  = virtualCount;
-        _peakRealVoiceCount       = MathUtil::max( _peakRealVoiceCount, realCount );
-        stats._peakRealVoiceCount = _peakRealVoiceCount;
-        stats._playedEventCount   = _playedEventCount;
-        stats._droppedEventCount  = _droppedEventCount;
+        stats._publishNanoseconds     = _lastPublishNanoseconds;
+        stats._peakPublishNanoseconds = _peakPublishNanoseconds;
+        stats._renderedFrameCount     = _renderedFrameCount;
+        stats._realVoiceCount         = realCount;
+        stats._virtualVoiceCount      = virtualCount;
+        _peakRealVoiceCount           = MathUtil::max( _peakRealVoiceCount, realCount );
+        stats._peakRealVoiceCount     = _peakRealVoiceCount;
+        stats._playedEventCount       = _playedEventCount;
+        stats._droppedEventCount      = _droppedEventCount;
         if ( _pMixer != nullptr )
         {
             stats._maxVoiceCount     = _pMixer->getDesc()._maxVoiceCount;
@@ -1268,5 +1302,7 @@ namespace sw
                 listStatus.push_back( status );
             }
         } );
+        _lastPublishNanoseconds = static_cast<uint64>( publishStopwatch.getElapsedNanoseconds() );
+        _peakPublishNanoseconds = MathUtil::max( _peakPublishNanoseconds, _lastPublishNanoseconds );
     }
 } // namespace sw

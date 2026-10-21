@@ -4,6 +4,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Localization/LocText.h"
+#include "Engine/Localization/LocalizationDocuments.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/StringTable.h"
 #include "Engine/Localization/TextFormatter.h"
@@ -452,4 +453,27 @@ SW_TEST_CASE( LocalizationManagerTest, CopyStateGivesAnIndependentManagerWithIts
     // 자기 자신에게 복사하는 것은 아무 일도 하지 않는다.
     copy.copyStateFrom( copy );
     SW_EXPECT_EQUAL( sw::string( "qps_ploc" ), copy.getCurrentLanguage() );
+}
+
+/**
+ * @brief [LocalizationManagerTest] 출시 문화권(`stagedCultures`) 밖의 번역 테이블만 팩 제외 목록에 든다(언리얼 Cultures to Stage)
+ * @details 팩 쿠커(`PackCookParams::_listExcludedSourceFile`)가 이 목록을 받는다. 프로젝트를 읽지 못하면 실패다 — 어느 테이블이 출시 문화권인지 모른 채 굽지 않는다.
+ */
+SW_TEST_CASE( LocalizationManagerTest, UnstagedTranslationTablesAreListedForPackExclusion )
+{
+    const sw::string folder = test::makeTempDirectory( "loc_staging" );
+    (void)LocalizationTestUtil::writeProject( folder, "en", R"([ "ko", "ja" ])", R"("stagedCultures": [ "ko" ])" ); // 테스트 준비 — 쓰기 실패는 아래 모으기 단언이 드러낸다
+    LocalizationTestUtil::writeTranslation( folder, "ko", R"("ui.quit": { "text": "종료" })" );
+    LocalizationTestUtil::writeTranslation( folder, "ja", R"("ui.quit": { "text": "終了" })" );
+
+    sw::vector<sw::string> listExcluded;
+    sw::string             error;
+    SW_ASSERT_TRUE( sw::LocalizationProject::collectUnstagedTranslationTables( folder, listExcluded, error ) );
+    SW_ASSERT_EQUAL( size_t{ 1 }, listExcluded.size() );
+    SW_EXPECT_TRUE( sw::StringUtil::endsWith( listExcluded[0], "ja.translation.json", true ) );
+
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( folder, "test.locproject.json" ), "{ broken" ) );
+    listExcluded.clear();
+    SW_EXPECT_FALSE( sw::LocalizationProject::collectUnstagedTranslationTables( folder, listExcluded, error ) );
+    SW_EXPECT_FALSE( error.empty() );
 }

@@ -12,1120 +12,1120 @@ msgstr ""
 #: engine/ui/key_rebind.ui.xml
 msgctxt "Already used by"
 msgid "Already used by"
-msgstr ""
+msgstr "使用中:"
 
 #. Context: TextWidget._text
 #: engine/ui/confirm_unsaved.ui.xml
 #: engine/ui/options.ui.xml
 msgctxt "Apply"
 msgid "Apply"
-msgstr ""
+msgstr "適用"
 
 #. Context: TextWidget._text
 #: engine/ui/confirm_unsaved.ui.xml
 #: engine/ui/key_rebind.ui.xml
 msgctxt "Cancel"
 msgid "Cancel"
-msgstr ""
+msgstr "キャンセル"
 
 #. Context: TextWidget._text
 #: engine/ui/debughud.ui.xml
 #: engine/ui/options.ui.xml
 msgctxt "Close"
 msgid "Close"
-msgstr ""
+msgstr "閉じる"
 
 #. Context: TextWidget._text
 #: engine/ui/debughud.ui.xml
 msgctxt "Corner"
 msgid "Corner"
-msgstr ""
+msgstr "位置"
 
 #. Context: TextWidget._text
 #: engine/ui/debughud.ui.xml
 msgctxt "Debug HUD"
 msgid "Debug HUD"
-msgstr ""
+msgstr "デバッグ HUD"
 
 #. Context: TextWidget._text
 #: engine/ui/options.ui.xml
 msgctxt "Defaults"
 msgid "Defaults"
-msgstr ""
+msgstr "初期設定"
 
 #. Context: TextWidget._text
 #: engine/ui/confirm_unsaved.ui.xml
 msgctxt "Discard"
 msgid "Discard"
-msgstr ""
+msgstr "破棄"
 
 #: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.ColumnActive"
 msgid "Active"
-msgstr ""
+msgstr "有効"
 
 #: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.ColumnBase"
 msgid "Base"
-msgstr ""
+msgstr "基本値"
 
 #: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.ColumnCooldown"
 msgid "Cooldown"
-msgstr ""
+msgstr "クールダウン"
 
 #: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.ColumnCount"
 msgid "Count"
-msgstr ""
+msgstr "数"
 
 #: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.ColumnCurrent"
 msgid "Current"
-msgstr ""
+msgstr "現在値"
 
 #: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.ColumnName"
 msgid "Name"
-msgstr ""
+msgstr "名前"
 
 #: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.ColumnRemaining"
 msgid "Remaining"
-msgstr ""
+msgstr "残り"
 
 #: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.ColumnStacks"
 msgid "Stacks"
-msgstr ""
+msgstr "スタック"
 
 #: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.ColumnTag"
 msgid "Tag"
-msgstr ""
+msgstr "タグ"
 
 #: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.HintNoTarget"
 msgid "Select an object with an AbilitySystemComponent, or pick one above."
-msgstr ""
+msgstr "AbilitySystemComponent を持つオブジェクトを選択するか、上で選んでください。"
 
 #: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.HintPlayOnly"
 msgid "Runtime ability state exists only during play. Press Play to inspect it."
-msgstr ""
+msgstr "実行中のアビリティ状態はプレイ中にのみ存在します。プレイを押して確認してください。"
 
 #: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.Infinite"
 msgid "Infinite"
-msgstr ""
+msgstr "無限"
 
 #: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.NoComponentsInScene"
 msgid "No AbilitySystemComponent in the active scene"
-msgstr ""
+msgstr "アクティブなシーンに AbilitySystemComponent がありません"
 
 #: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.PickTarget"
 msgid "Pick an ability system..."
-msgstr ""
+msgstr "アビリティシステムを選択..."
 
 #: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.SectionAbilities"
 msgid "Granted Abilities"
-msgstr ""
+msgstr "付与されたアビリティ"
 
 #: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.SectionAttributes"
 msgid "Attributes"
-msgstr ""
+msgstr "アトリビュート"
 
 #: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.SectionEffects"
 msgid "Active Effects"
-msgstr ""
+msgstr "有効なエフェクト"
 
 #: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.SectionTags"
 msgid "Owned Tags"
-msgstr ""
+msgstr "所有タグ"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.AddItem"
 msgid "Add Item"
-msgstr ""
+msgstr "項目を追加"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.AddModifier"
 msgid "Add Modifier"
-msgstr ""
+msgstr "モディファイアを追加"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.Axis"
 msgid "Axis"
-msgstr ""
+msgstr "軸"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.Bake"
 msgid "Bake"
-msgstr ""
+msgstr "ベイク"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.CPUOnly"
 msgid "(CPU only)"
-msgstr ""
+msgstr "(CPU のみ)"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.Center"
 msgid "Center"
-msgstr ""
+msgstr "中心"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.ControlPoints"
 msgid "Control Points"
-msgstr ""
+msgstr "制御点"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.CurveEditHint"
 msgid "Click to edit the curve"
-msgstr ""
+msgstr "クリックしてカーブを編集"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.DuplicateRow"
 msgid "Duplicate row"
-msgstr ""
+msgstr "行を複製"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.EnterNestedStack"
 msgid "Edit this group's nested stack"
-msgstr ""
+msgstr "このグループのネストされたスタックを編集"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.ExportWarp"
 msgid "Export as World Warp"
-msgstr ""
+msgstr "ワールドワープとして書き出す"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.FitBounds"
 msgid "Fit to Bounds"
-msgstr ""
+msgstr "境界に合わせる"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.GPUPreviewBlockedBy"
 msgid "CPU only:"
-msgstr ""
+msgstr "CPU のみ:"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.GPUPreviewBlockedByStack"
 msgid "CPU only (Recompute Normals)"
-msgstr ""
+msgstr "CPU のみ (法線の再計算)"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.HintPickTarget"
 msgid "Select an object whose mesh component uses a .mesh asset, then press Use Selection."
-msgstr ""
+msgstr "メッシュコンポーネントが .mesh アセットを使うオブジェクトを選択し、「選択を使用」を押してください。"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.HintSelectModifier"
 msgid "Select a modifier in the stack."
-msgstr ""
+msgstr "スタックからモディファイアを選択してください。"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.HintTargetGone"
 msgid "The target object no longer exists."
-msgstr ""
+msgstr "対象のオブジェクトはもう存在しません。"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.Mirror"
 msgid "Mirror"
-msgstr ""
+msgstr "ミラー"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.MoveRowDown"
 msgid "Move row down"
-msgstr ""
+msgstr "行を下へ移動"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.MoveRowUp"
 msgid "Move row up"
-msgstr ""
+msgstr "行を上へ移動"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.Name"
 msgid "Name"
-msgstr ""
+msgstr "名前"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.NestedDepth"
 msgid "Depth"
-msgstr ""
+msgstr "深さ"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.NestedEmpty"
 msgid "Empty - add modifiers to group them."
-msgstr ""
+msgstr "空です。モディファイアを追加してグループにします。"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.NestedStack"
 msgid "Nested Stack"
-msgstr ""
+msgstr "ネストされたスタック"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.NestedUp"
 msgid "Up"
-msgstr ""
+msgstr "上へ"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.NoTarget"
 msgid "No target"
-msgstr ""
+msgstr "対象なし"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.PlayPreviewTime"
 msgid "Play"
-msgstr ""
+msgstr "再生"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.PointIndex"
 msgid "Point"
-msgstr ""
+msgstr "点"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.PointPosition"
 msgid "Position"
-msgstr ""
+msgstr "位置"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.PreviewTime"
 msgid "Preview Time"
-msgstr ""
+msgstr "プレビュー時間"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.RecomputeNormals"
 msgid "Recompute Normals"
-msgstr ""
+msgstr "法線の再計算"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.Redo"
 msgid "Redo"
-msgstr ""
+msgstr "やり直し"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.ReferenceNoMatch"
 msgid "No object has component:"
-msgstr ""
+msgstr "次のコンポーネントを持つオブジェクトがありません:"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.ReferenceNone"
 msgid "(None)"
-msgstr ""
+msgstr "(なし)"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.ReloadStack"
 msgid "Reload Stack"
-msgstr ""
+msgstr "スタックを再読み込み"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.RemoveRow"
 msgid "Remove row"
-msgstr ""
+msgstr "行を削除"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.ResetLattice"
 msgid "Reset Lattice"
-msgstr ""
+msgstr "ラティスをリセット"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.ResetParams"
 msgid "Reset Parameters"
-msgstr ""
+msgstr "パラメーターをリセット"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.Rotation"
 msgid "Rotation"
-msgstr ""
+msgstr "回転"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.SaveStack"
 msgid "Save Stack"
-msgstr ""
+msgstr "スタックを保存"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.ShadedPreview"
 msgid "Shaded Preview"
-msgstr ""
+msgstr "シェーディングプレビュー"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.ShadedPreviewTooltip"
 msgid "Shade the target mesh with the stack result. Runs on a compute shader when every enabled modifier supports it, otherwise the CPU result is uploaded as vertices. Off leaves the original mesh and the wire preview."
-msgstr ""
+msgstr "スタックの結果で対象メッシュをシェーディングします。有効なモディファイアがすべて対応していればコンピュートシェーダーで実行し、そうでなければ CPU の結果を頂点としてアップロードします。オフにすると元のメッシュとワイヤープレビューのままです。"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.SpaceReference"
 msgid "Reference Object"
-msgstr ""
+msgstr "参照オブジェクト"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.Undo"
 msgid "Undo"
-msgstr ""
+msgstr "元に戻す"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.UseSelection"
 msgid "Use Selection"
-msgstr ""
+msgstr "選択を使用"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.UseSelectionForParam"
 msgid "Use Selection"
-msgstr ""
+msgstr "選択を使用"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.WarpExportPath"
 msgid "Warp File (.mfwarp)"
-msgstr ""
+msgstr "ワープファイル (.mfwarp)"
 
 #: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.WorldSpace"
 msgid "World Space"
-msgstr ""
+msgstr "ワールド空間"
 
 #: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
 msgctxt "EdSchedule.ColumnActivity"
 msgid "Activity"
-msgstr ""
+msgstr "行動"
 
 #: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
 msgctxt "EdSchedule.ColumnPlace"
 msgid "Place"
-msgstr ""
+msgstr "場所"
 
 #: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
 msgctxt "EdSchedule.ColumnSource"
 msgid "Source"
-msgstr ""
+msgstr "出典"
 
 #: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
 msgctxt "EdSchedule.ColumnTime"
 msgid "Time"
-msgstr ""
+msgstr "時刻"
 
 #: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
 msgctxt "EdSchedule.ColumnTravel"
 msgid "Travel"
-msgstr ""
+msgstr "移動"
 
 #: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
 msgctxt "EdSchedule.EmptyHint"
 msgid "No schedule system is running. Start play with NPCs that have schedules."
-msgstr ""
+msgstr "スケジュールシステムが動いていません。スケジュールを持つ NPC でプレイを始めてください。"
 
 #: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
 msgctxt "EdSchedule.EmptyPlan"
 msgid "No plan for today"
-msgstr ""
+msgstr "今日の予定はありません"
 
 #: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
 msgctxt "EdSchedule.FollowClock"
 msgid "Follow game clock"
-msgstr ""
+msgstr "ゲーム時計に合わせる"
 
 #: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
 msgctxt "EdSchedule.GameTime"
 msgid "Game time"
-msgstr ""
+msgstr "ゲーム時刻"
 
 #: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
 msgctxt "EdSchedule.NpcListTitle"
 msgid "NPCs"
-msgstr ""
+msgstr "NPC"
 
 #: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
 msgctxt "EdSchedule.RawTimeline"
 msgid "Raw timeline"
-msgstr ""
+msgstr "生のタイムライン"
 
 #: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
 msgctxt "EdSchedule.SelectNpcHint"
 msgid "Select an NPC on the left"
-msgstr ""
+msgstr "左で NPC を選択してください"
 
 #: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
 msgctxt "EdSchedule.SystemIndex"
 msgid "Schedule system"
-msgstr ""
+msgstr "スケジュールシステム"
 
 #: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
 msgctxt "EdSchedule.WhyNow"
 msgid "Why this activity now"
-msgstr ""
+msgstr "今この行動をする理由"
 
 #. Context: TextWidget._text
 #: engine/ui/confirm_countdown.ui.xml
 msgctxt "Keep"
 msgid "Keep"
-msgstr ""
+msgstr "維持"
 
 #. Context: TextWidget._text
 #: engine/ui/confirm_countdown.ui.xml
 msgctxt "Keep these display settings?"
 msgid "Keep these display settings?"
-msgstr ""
+msgstr "この表示設定を維持しますか?"
 
 #. Context: TextWidget._text
 #: engine/ui/loading.ui.xml
 msgctxt "Loading"
 msgid "Loading"
-msgstr ""
+msgstr "読み込み中"
 
 #: Source/GameFramework/Base/Foundation/Framework/Save/Autosave.cpp
 msgctxt "Notification.GameSaved"
 msgid "Game saved"
-msgstr ""
+msgstr "ゲームを保存しました"
 
 #: Source/Engine/UI/Screen/OptionsMenuScreen.cpp
 msgctxt "Notification.RestartRequired"
 msgid "Some changes take effect after a restart."
-msgstr ""
+msgstr "一部の変更は再起動後に反映されます。"
 
 #. Context: TextWidget._text
 #: engine/ui/debughud.ui.xml
 msgctxt "Opacity"
 msgid "Opacity"
-msgstr ""
+msgstr "不透明度"
 
 #. Context: TextWidget._text
 #: engine/ui/options.ui.xml
 #: engine/ui/pause.ui.xml
 msgctxt "Options"
 msgid "Options"
-msgstr ""
+msgstr "オプション"
 
 #. Context: TextWidget._text
 #: engine/ui/pause.ui.xml
 msgctxt "Paused"
 msgid "Paused"
-msgstr ""
+msgstr "一時停止中"
 
 #. Context: TextWidget._text
 #: engine/ui/key_rebind.ui.xml
 msgctxt "Press a key. Escape cancels; hold Escape for one second to bind it."
 msgid "Press a key. Escape cancels; hold Escape for one second to bind it."
-msgstr ""
+msgstr "キーを押してください。Esc でキャンセル、Esc を 1 秒押し続けると Esc を割り当てます。"
 
 #. Context: TextWidget._text
 #: engine/ui/pause.ui.xml
 msgctxt "Quit Game"
 msgid "Quit Game"
-msgstr ""
+msgstr "ゲームを終了"
 
 #. Context: TextWidget._text
 #: engine/ui/pause.ui.xml
 msgctxt "Resume"
 msgid "Resume"
-msgstr ""
+msgstr "再開"
 
 #. Context: TextWidget._text
 #: engine/ui/pause.ui.xml
 msgctxt "Return to Title"
 msgid "Return to Title"
-msgstr ""
+msgstr "タイトルに戻る"
 
 #. Context: TextWidget._text
 #: engine/ui/confirm_countdown.ui.xml
 #: engine/ui/options.ui.xml
 msgctxt "Revert"
 msgid "Revert"
-msgstr ""
+msgstr "元に戻す"
 
 #. Context: TextWidget._text
 #: engine/ui/confirm_countdown.ui.xml
 msgctxt "Reverting in"
 msgid "Reverting in"
-msgstr ""
+msgstr "元に戻すまで"
 
 #. Context: TextWidget._text
 #: engine/ui/debughud.ui.xml
 msgctxt "Sections"
 msgid "Sections"
-msgstr ""
+msgstr "セクション"
 
 #. Context: TextWidget._text
 #: engine/ui/debughud.ui.xml
 msgctxt "Show HUD (Ctrl+F3)"
 msgid "Show HUD (Ctrl+F3)"
-msgstr ""
+msgstr "HUD を表示 (Ctrl+F3)"
 
 #. Context: TextWidget._text
 #: engine/ui/options.ui.xml
 msgctxt "Some changes take effect after a restart."
 msgid "Some changes take effect after a restart."
-msgstr ""
+msgstr "一部の変更は再起動後に反映されます。"
 
 #. Context: TextWidget._text
 #: engine/ui/key_rebind.ui.xml
 msgctxt "Swap"
 msgid "Swap"
-msgstr ""
+msgstr "入れ替え"
 
 #. Context: TextWidget._text
 #: engine/ui/confirm_unsaved.ui.xml
 msgctxt "You have changes that are not applied."
 msgid "You have changes that are not applied."
-msgstr ""
+msgstr "適用していない変更があります。"
 
 #. Context: TextWidget._text
 #: engine/ui/parts/inputhint.ui.xml
 msgctxt "[action=UI.Accept] Select"
 msgid "[action=UI.Accept] Select"
-msgstr ""
+msgstr "[action=UI.Accept] 選択"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.accessibility.colorVision"
 msgid "Color Vision Mode"
-msgstr ""
+msgstr "色覚モード"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.accessibility.colorVision.deuteranopia"
 msgid "Deuteranopia"
-msgstr ""
+msgstr "2 型色覚 (緑)"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.accessibility.colorVision.protanopia"
 msgid "Protanopia"
-msgstr ""
+msgstr "1 型色覚 (赤)"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.accessibility.colorVision.tritanopia"
 msgid "Tritanopia"
-msgstr ""
+msgstr "3 型色覚 (青)"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.accessibility.reduceFlashing"
 msgid "Reduce Flashing"
-msgstr ""
+msgstr "点滅を減らす"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.accessibility.reduceMotion"
 msgid "Reduce Motion"
-msgstr ""
+msgstr "動きを減らす"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.accessibility.subtitleBackground"
 msgid "Subtitle Background"
-msgstr ""
+msgstr "字幕の背景"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.accessibility.subtitleSize"
 msgid "Subtitle Size"
-msgstr ""
+msgstr "字幕のサイズ"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.accessibility.subtitles"
 msgid "Subtitles"
-msgstr ""
+msgstr "字幕"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.accessibility.textSize"
 msgid "Text Size"
-msgstr ""
+msgstr "文字サイズ"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.accessibility.uiScale"
 msgid "UI Scale"
-msgstr ""
+msgstr "UI の拡大率"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.accessibility.uiTheme"
 msgid "UI Theme"
-msgstr ""
+msgstr "UI テーマ"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.accessibility.uiTheme.default"
 msgid "Default"
-msgstr ""
+msgstr "標準"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.accessibility.uiTheme.highcontrast"
 msgid "High Contrast"
-msgstr ""
+msgstr "ハイコントラスト"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.audio.ambientVolume"
 msgid "Ambient Volume"
-msgstr ""
+msgstr "環境音の音量"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.audio.masterVolume"
 msgid "Master Volume"
-msgstr ""
+msgstr "マスター音量"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.audio.musicVolume"
 msgid "Music Volume"
-msgstr ""
+msgstr "音楽の音量"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.audio.mute"
 msgid "Mute All"
-msgstr ""
+msgstr "すべてミュート"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.audio.sfxVolume"
 msgid "Effects Volume"
-msgstr ""
+msgstr "効果音の音量"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.audio.speakerMode"
 msgid "Speaker Setup"
-msgstr ""
+msgstr "スピーカー構成"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.audio.speakerMode.auto"
 msgid "Automatic"
-msgstr ""
+msgstr "自動"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.audio.speakerMode.headphones"
 msgid "Headphones (3D)"
-msgstr ""
+msgstr "ヘッドホン (3D)"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.audio.speakerMode.stereo"
 msgid "Stereo"
-msgstr ""
+msgstr "ステレオ"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.audio.speakerMode.surround51"
 msgid "5.1 Surround"
-msgstr ""
+msgstr "5.1 サラウンド"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.audio.speakerMode.surround71"
 msgid "7.1 Surround"
-msgstr ""
+msgstr "7.1 サラウンド"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.audio.uiVolume"
 msgid "Interface Volume"
-msgstr ""
+msgstr "インターフェースの音量"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.audio.voiceVolume"
 msgid "Voice Volume"
-msgstr ""
+msgstr "ボイスの音量"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.category.accessibility"
 msgid "Accessibility"
-msgstr ""
+msgstr "アクセシビリティ"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.category.audio"
 msgid "Audio"
-msgstr ""
+msgstr "オーディオ"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.category.controls"
 msgid "Controls"
-msgstr ""
+msgstr "操作"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.category.display"
 msgid "Display"
-msgstr ""
+msgstr "ディスプレイ"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.category.gameplay"
 msgid "Gameplay"
-msgstr ""
+msgstr "ゲームプレイ"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.category.graphics"
 msgid "Graphics"
-msgstr ""
+msgstr "グラフィックス"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.category.language"
 msgid "Language"
-msgstr ""
+msgstr "言語"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.category.privacy"
 msgid "Privacy"
-msgstr ""
+msgstr "プライバシー"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.common.off"
 msgid "Off"
-msgstr ""
+msgstr "オフ"
 
 #. Display-change confirmation dialog; seconds counts down
 #. Max length: 80
 msgctxt "settings.confirm.keepChanges"
 msgid "Keep these settings? Reverting in {seconds, plural, one {# second} other {# seconds}}."
-msgstr ""
+msgstr "この設定を維持しますか? {seconds} 秒後に元に戻ります。"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.controls.aimMode"
 msgid "Aim"
-msgstr ""
+msgstr "エイム"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.controls.crouchMode"
 msgid "Crouch"
-msgstr ""
+msgstr "しゃがみ"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.controls.gamepadSensitivity"
 msgid "Gamepad Sensitivity"
-msgstr ""
+msgstr "ゲームパッド感度"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.controls.hold"
 msgid "Hold"
-msgstr ""
+msgstr "長押し"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.controls.invertY"
 msgid "Invert Vertical Look"
-msgstr ""
+msgstr "上下の視点を反転"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.controls.mouseSensitivity"
 msgid "Mouse Sensitivity"
-msgstr ""
+msgstr "マウス感度"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.controls.pauseMenu"
 msgid "Pause Menu"
-msgstr ""
+msgstr "ポーズメニュー"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.controls.sprintMode"
 msgid "Sprint"
-msgstr ""
+msgstr "ダッシュ"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.controls.stickDeadzone"
 msgid "Stick Dead Zone"
-msgstr ""
+msgstr "スティックのデッドゾーン"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.controls.toggle"
 msgid "Toggle"
-msgstr ""
+msgstr "切り替え"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.display.resolution"
 msgid "Resolution"
-msgstr ""
+msgstr "解像度"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.display.vsync"
 msgid "Vertical Sync"
-msgstr ""
+msgstr "垂直同期"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.display.windowMode"
 msgid "Window Mode"
-msgstr ""
+msgstr "ウィンドウモード"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.display.windowMode.borderless"
 msgid "Borderless"
-msgstr ""
+msgstr "ボーダーレス"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.display.windowMode.windowed"
 msgid "Windowed"
-msgstr ""
+msgstr "ウィンドウ"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.gameplay.cameraShake"
 msgid "Camera Shake"
-msgstr ""
+msgstr "カメラの揺れ"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.gameplay.fieldOfView"
 msgid "Field of View"
-msgstr ""
+msgstr "視野角"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.gameplay.headBob"
 msgid "Head Bob"
-msgstr ""
+msgstr "頭の揺れ"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.gameplay.showTutorials"
 msgid "Show Tutorials"
-msgstr ""
+msgstr "チュートリアルを表示"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.graphics.effectsQuality"
 msgid "Effects Quality"
-msgstr ""
+msgstr "エフェクト品質"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.graphics.foliageDensity"
 msgid "Foliage Density"
-msgstr ""
+msgstr "植生の密度"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.graphics.motionBlur"
 msgid "Motion Blur"
-msgstr ""
+msgstr "モーションブラー"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.graphics.postQuality"
 msgid "Post-Processing Quality"
-msgstr ""
+msgstr "ポストプロセス品質"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.graphics.quality"
 msgid "Graphics Quality"
-msgstr ""
+msgstr "グラフィック品質"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.graphics.quality.custom"
 msgid "Custom"
-msgstr ""
+msgstr "カスタム"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.graphics.quality.high"
 msgid "High"
-msgstr ""
+msgstr "高"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.graphics.quality.low"
 msgid "Low"
-msgstr ""
+msgstr "低"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.graphics.quality.medium"
 msgid "Medium"
-msgstr ""
+msgstr "中"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.graphics.quality.ultra"
 msgid "Ultra"
-msgstr ""
+msgstr "最高"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.graphics.renderScale"
 msgid "Render Scale"
-msgstr ""
+msgstr "レンダースケール"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.graphics.shadowQuality"
 msgid "Shadow Quality"
-msgstr ""
+msgstr "影の品質"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.graphics.textureQuality"
 msgid "Texture Quality"
-msgstr ""
+msgstr "テクスチャ品質"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.graphics.upscaler"
 msgid "Upscaler"
-msgstr ""
+msgstr "アップスケーラー"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.graphics.upscaler.spatial"
 msgid "Spatial"
-msgstr ""
+msgstr "空間"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.graphics.viewDistance"
 msgid "View Distance"
-msgstr ""
+msgstr "描画距離"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.language.text"
 msgid "Text Language"
-msgstr ""
+msgstr "テキストの言語"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.privacy.crashReports"
 msgid "Crash Reports"
-msgstr ""
+msgstr "クラッシュレポート"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.privacy.crashReports.ask"
 msgid "Ask Each Time"
-msgstr ""
+msgstr "毎回確認する"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.privacy.crashReports.local"
 msgid "Keep Local"
-msgstr ""
+msgstr "ローカルに保存"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.privacy.crashReports.send"
 msgid "Send Automatically"
-msgstr ""
+msgstr "自動で送信"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.privacy.telemetry"
 msgid "Share Usage Data"
-msgstr ""
+msgstr "使用状況データを共有"
 
 #. Shown after applying settings marked apply=restart
 #. Max length: 80
 msgctxt "settings.restartRequired"
 msgid "{count, plural, one {# setting takes} other {# settings take}} effect after a restart."
-msgstr ""
+msgstr "{count} 件の設定は再起動後に反映されます。"

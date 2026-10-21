@@ -29,6 +29,11 @@ namespace sw
 
             /**
              * @brief Media Foundation · XAudio2 함수 표입니다. 처음 쓸 때 시스템 DLL 을 올려 한 번 채우고 프로세스 끝까지 둡니다.
+             * @details **수명.** 표는 DLL 마다 참조 하나(`LoadLibraryExW`)를 가지고(`_hMfPlat` …) 프로세스 끝까지 놓지 않는다. 함수 포인터가 그 참조에 기대므로
+             *          `GetModuleHandleW`(참조를 늘리지 않는다)로 빌린 모듈은 쓰지 않는다 — 다른 코드가 같은 DLL 을 내리면 포인터가 허공을 가리킨다.
+             *          백엔드를 닫을 때 내리지 않는 이유: 대체 디코더(`decodeWithMediaFoundation`)는 클립 캐시의 워커 태스크가 백엔드와 무관하게 부르고,
+             *          정적 소멸자 · `DllMain` 에서의 `FreeLibrary` 는 로더 잠금 아래라 금지다. 라이브러리 안의 전역 상태(Media Foundation 플랫폼 · COM)는
+             *          `MFStartup`/`MFShutdown` · `CoInitializeEx`/`CoUninitialize` 쌍이 닫는다(장치 열기 · 닫기와 디코드 한 번마다 짝을 맞춘다).
              * @details import 라이브러리를 링크하지 않는다 — 없을 수 있는 DLL 이라(Media Foundation 이 빠진 Windows N) 일반 import 면 프로세스가
              *          뜨지 못하고, 지연 로드(/DELAYLOAD)는 lld 썽크가 첫 호출의 float 인자를 망가뜨려 쓰지 않는다(docs/09_Decisions.md).
              *          함수가 없으면 그 기능이 꺼진다(오프라인 렌더 · 대체 디코더 없음).
@@ -50,6 +55,10 @@ namespace sw
                 PFN_MFCreateMFByteStreamOnStream       _pfnMFCreateMFByteStreamOnStream{ nullptr };
                 PFN_SHCreateMemStream                  _pfnSHCreateMemStream{ nullptr };
                 PFN_XAudio2Create                      _pfnXAudio2Create{ nullptr };
+                HMODULE                                _hMfPlat{ nullptr };      ///< mfplat.dll 참조(프로세스 끝까지)
+                HMODULE                                _hMfReadWrite{ nullptr }; ///< mfreadwrite.dll 참조
+                HMODULE                                _hShlwapi{ nullptr };     ///< shlwapi.dll 참조
+                HMODULE                                _hXAudio2{ nullptr };     ///< xaudio2_9.dll 참조
 
                 /** @brief Media Foundation 디코드에 필요한 함수가 모두 있으면 true 입니다. */
                 bool hasMediaFoundation() const
@@ -59,30 +68,31 @@ namespace sw
                 }
             };
 
-            /** @brief System32 의 @p pDllName 에서 @p pSymbol 을 찾습니다. DLL 이나 함수가 없으면 nullptr 입니다. */
+            /** @brief 참조를 가진 모듈 @p hModule 에서 @p pSymbol 을 찾습니다. 모듈이나 함수가 없으면 nullptr 입니다. */
             template <typename TFunction>
-            static TFunction findSystemFunction( const utf16* pDllName, const utf8* pSymbol )
+            static TFunction findSystemFunction( HMODULE hModule, const utf8* pSymbol )
             {
-                HMODULE hModule = GetModuleHandleW( pDllName );
-                if ( hModule == nullptr )
-                    hModule = LoadLibraryExW( pDllName, nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32 );
                 if ( hModule == nullptr )
                     return nullptr;
                 return reinterpret_cast<TFunction>( reinterpret_cast<void*>( GetProcAddress( hModule, pSymbol ) ) );
             }
 
-            /** @brief 시스템 DLL 을 올려 함수 표를 채웁니다. 없는 함수는 nullptr 로 남깁니다. */
+            /** @brief System32 의 DLL 마다 참조를 하나씩 잡고 함수 표를 채웁니다. 없는 DLL · 함수는 nullptr 로 남깁니다. */
             static SystemAudioAPI loadSystemAudioAPI()
             {
                 SystemAudioAPI api{};
-                api._pfnMFStartup         = findSystemFunction<SystemAudioAPI::PFN_MFStartup>( L"mfplat.dll", "MFStartup" );
-                api._pfnMFShutdown        = findSystemFunction<SystemAudioAPI::PFN_MFShutdown>( L"mfplat.dll", "MFShutdown" );
-                api._pfnMFCreateMediaType = findSystemFunction<SystemAudioAPI::PFN_MFCreateMediaType>( L"mfplat.dll", "MFCreateMediaType" );
+                api._hMfPlat              = LoadLibraryExW( L"mfplat.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32 );
+                api._hMfReadWrite         = LoadLibraryExW( L"mfreadwrite.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32 );
+                api._hShlwapi             = LoadLibraryExW( L"shlwapi.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32 );
+                api._hXAudio2             = LoadLibraryExW( L"xaudio2_9.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32 );
+                api._pfnMFStartup         = findSystemFunction<SystemAudioAPI::PFN_MFStartup>( api._hMfPlat, "MFStartup" );
+                api._pfnMFShutdown        = findSystemFunction<SystemAudioAPI::PFN_MFShutdown>( api._hMfPlat, "MFShutdown" );
+                api._pfnMFCreateMediaType = findSystemFunction<SystemAudioAPI::PFN_MFCreateMediaType>( api._hMfPlat, "MFCreateMediaType" );
                 api._pfnMFCreateSourceReaderFromByteStream =
-                    findSystemFunction<SystemAudioAPI::PFN_MFCreateSourceReaderFromByteStream>( L"mfreadwrite.dll", "MFCreateSourceReaderFromByteStream" );
-                api._pfnMFCreateMFByteStreamOnStream = findSystemFunction<SystemAudioAPI::PFN_MFCreateMFByteStreamOnStream>( L"mfplat.dll", "MFCreateMFByteStreamOnStream" );
-                api._pfnSHCreateMemStream            = findSystemFunction<SystemAudioAPI::PFN_SHCreateMemStream>( L"shlwapi.dll", "SHCreateMemStream" );
-                api._pfnXAudio2Create                = findSystemFunction<SystemAudioAPI::PFN_XAudio2Create>( L"xaudio2_9.dll", "XAudio2Create" );
+                    findSystemFunction<SystemAudioAPI::PFN_MFCreateSourceReaderFromByteStream>( api._hMfReadWrite, "MFCreateSourceReaderFromByteStream" );
+                api._pfnMFCreateMFByteStreamOnStream = findSystemFunction<SystemAudioAPI::PFN_MFCreateMFByteStreamOnStream>( api._hMfPlat, "MFCreateMFByteStreamOnStream" );
+                api._pfnSHCreateMemStream            = findSystemFunction<SystemAudioAPI::PFN_SHCreateMemStream>( api._hShlwapi, "SHCreateMemStream" );
+                api._pfnXAudio2Create                = findSystemFunction<SystemAudioAPI::PFN_XAudio2Create>( api._hXAudio2, "XAudio2Create" );
                 return api;
             }
 

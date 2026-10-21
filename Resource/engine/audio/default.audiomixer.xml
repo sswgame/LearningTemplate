@@ -2,6 +2,7 @@
 	엔진 기본 믹서 그래프(AudioMixerDesc). master 가 유일한 루트이고, 사용자 설정의 버스 볼륨(audio.busVolume)은 이 이름들로 찾아간다.
 	reverb 는 이펙트 리턴 버스다 — sfx · voice · ambient 가 센드로 보낸다(리버브만 나오도록 dry 0).
 	master 의 리미터가 출력 피크를 -1 dBFS 아래로 묶는다.
+	ui 는 두 채널 버스다(_channels="Stereo") — UI 소리는 앞 두 채널에만 나므로 5.1 · 7.1 · 헤드폰에서도 두 채널로 섞고 master 의 FL FR 에 더한다.
 	master 의 Muffle(로우패스, 평소 20 kHz = 거르지 않음)은 스냅샷이 내려 쓴다.
 	스냅샷: Underwater(물속) · PauseMenu(일시정지 메뉴) · Cave · Hall(리버브 존이 세기로 건다).
 	감쇠 프리셋은 소리(이벤트 · 클립)가 이름으로 고른다. 가림(0..1)은 최대에서 -12 dB · 900 Hz 로우패스다.
@@ -35,7 +36,7 @@
 				<AudioSendDesc _bus="reverb" _levelDb="-12" />
 			</_listSend>
 		</AudioBusDesc>
-		<AudioBusDesc _name="ui" _parent="master" />
+		<AudioBusDesc _name="ui" _parent="master" _channels="Stereo" />
 		<AudioBusDesc _name="reverb" _parent="master">
 			<_listEffect>
 				<AudioEffectDesc _type="Reverb">

@@ -35,11 +35,12 @@ namespace sw
         Mirrored  ///< 위 처리에 더해 오른쪽에서 왼쪽 표시 문자로 감쌉니다. RTL 배치를 확인하는 용도입니다(`qps-plocm`).
     };
 
-    /** @brief 숫자를 어떤 숫자 글자로 쓰는지 정합니다(`digits`: `latn`, `arab`). */
+    /** @brief 숫자를 어떤 숫자 글자로 쓰는지 정합니다(`digits`: `latn`, `arab`, `arabext`). */
     enum class NumeralSystem : uint8
     {
         Latin = 0,
-        ArabicIndic ///< U+0660..U+0669
+        ArabicIndic,        ///< U+0660..U+0669(아랍어)
+        ExtendedArabicIndic ///< U+06F0..U+06F9(페르시아어 · 우르두어)
     };
 } // namespace sw
 

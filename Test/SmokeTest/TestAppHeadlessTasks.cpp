@@ -1,7 +1,7 @@
 /**
  * @file TestAppHeadlessTasks.cpp
  * @brief AppHeadlessTasks::runTable — App 헤드리스 작업 표의 종료 코드 규칙(실패해도 뒤를 계속, `Finished` 에서 멈춤).
- * @details `CookAssets.py` 같은 호출자는 종료 코드로만 실패를 안다. 실패 하나가 뒤 작업을 막거나, `Finished` 뒤 작업이 돌면 그 규칙이 깨진다.
+ * @details 빌드의 CookAssets 타깃 · `MakePackage.py` 같은 호출자는 종료 코드로만 실패를 안다. 실패 하나가 뒤 작업을 막거나, `Finished` 뒤 작업이 돌면 그 규칙이 깨진다.
  */
 #include "pch.h"
 

@@ -20,6 +20,8 @@
 
 namespace sw
 {
+    class AudioGraphInstance;
+
     /**
      * @class AudioVoice
      * @brief 재생 중인 소리 하나입니다.
@@ -37,8 +39,10 @@ namespace sw
          * @brief 클립으로 재생을 시작합니다. 게인은 0 에서 첫 블록의 목표로 램프합니다(클릭 없음).
          * @param startDelayFrames 이 블록의 시작에서 몇 프레임 뒤에 소리를 낼지 정합니다(박자에 맞춘 시작). 그동안 위치는 진행하지 않습니다.
          * @param bRampIn false 면 첫 블록에서 게인을 0 에서 램프하지 않고 바로 적용합니다. 박에 맞춰 시작하는 음악 레이어는 첫 샘플이 정확해야 하기 때문입니다.
+         * @param graphSeed 소리 그래프 클립의 잡음 · 그래뉼러 난수 시드입니다(파일 클립은 쓰지 않는다). 엔진이 자기 난수에서 뽑아 결정성을 지킵니다.
+         * @details 소리 그래프 클립은 여기서 실행 상태(`AudioGraphInstance`)를 만들어 스트리밍 창에 디코더로 연다 — 스트리밍 클립이 디코더를 여는 것과 같은 자리의 할당이다.
          */
-        void start( shared_ptr<const AudioClipData> pClip, bool bLoop, uint32 startDelayFrames, bool bRampIn = true );
+        void start( shared_ptr<const AudioClipData> pClip, bool bLoop, uint32 startDelayFrames, bool bRampIn, uint64 graphSeed );
         /** @brief 보이스를 비웁니다(클립을 놓습니다). */
         void reset();
 
@@ -67,6 +71,8 @@ namespace sw
         void setFade( float32 targetGain, uint32 durationFrames, uint32 delayFrames, bool bStopAtEnd );
         /** @brief 일시정지합니다. 섞지도 진행하지도 않습니다. */
         void setPaused( bool bPaused ) { _bPaused = bPaused ? SW_TRUE : SW_FALSE; }
+        /** @brief 소리 그래프의 게임 파라미터 @p inputIndex(`AudioGraph::getParameterNames` 의 번호)에 이번 블록 값을 넣습니다. 그래프 클립이 아니면 어서션입니다. */
+        void setGraphParameter( uint32 inputIndex, float32 value );
 
         /** @brief 클립이 있고 끝나지 않았는지입니다. */
         bool isActive() const { return _pClip != nullptr && _bFinished == SW_FALSE; }
@@ -78,7 +84,7 @@ namespace sw
         float64 getPosition() const { return _position; }
         /** @brief 페이드가 향하는 목표 게인입니다. 들림 판정에 쓰며, 페이드인 첫 블록도 들리는 것으로 봅니다. */
         float32 getFadeTarget() const { return _fadeTarget; }
-        /** @brief 스트리밍 창입니다(스트리밍 클립이 아니면 닫혀 있다). 진단 · 테스트가 되감은 횟수를 읽는다. */
+        /** @brief 스트리밍 창입니다(스트리밍 · 그래프 클립이 아니면 닫혀 있다). 진단 · 테스트가 되감은 횟수를 읽는다. */
         const AudioStreamWindow& getStreamWindow() const { return _stream; }
         /** @brief 현재 적용 중인 페이드 게인입니다. */
         float32 getFadeGain() const { return _fadeGain; }
@@ -101,7 +107,8 @@ namespace sw
         shared_ptr<const AudioClipData> _pClip;                                  /**< 재생하는 클립입니다. */
         AudioBiquadFilter               _lowPass;                                /**< 보이스 로우패스입니다(소스 채널에 겁니다). */
         AudioBinauralFilter             _binaural;                               /**< 바이노럴 레이아웃에서 3D 모노 소리를 두 귀로 바꾸는 상태입니다. */
-        AudioStreamWindow               _stream;                                 /**< 스트리밍 클립의 디코더와 창입니다. */
+        AudioStreamWindow               _stream;                                 /**< 스트리밍 클립의 디코더와 창입니다. 소리 그래프도 이 창으로 읽습니다. */
+        AudioGraphInstance*             _pGraph;                                 /**< `_stream` 이 가진 그래프 실행 상태입니다(빌린 포인터, 그래프 클립이 아니면 nullptr). */
         float32                         _firstFrameLeft;                         /**< 스트리밍 루프 이음매 보간에 쓰는 클립 첫 프레임(왼쪽)입니다. */
         float32                         _firstFrameRight;                        /**< 같은 첫 프레임의 오른쪽입니다. */
         bool                            _bHaveFirstFrame;                        /**< 첫 프레임을 읽어 두었는지입니다. */

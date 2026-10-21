@@ -82,6 +82,7 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Inspector/InspectorPropertyLayout.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/InputMap/InputMapConflicts.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/AudioGraph/AudioGraphEditUtil.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/MapCheck/MapCheckRows.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Material/MaterialPreviewShading.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Packaging/PackagingProgressParser.cpp"

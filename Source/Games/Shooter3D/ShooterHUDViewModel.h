@@ -1,6 +1,6 @@
 /**
  * @file ShooterHUDViewModel.h
- * @brief 슈터 HUD 문서가 보이는 값(체력 · 탄약 · 무기 이름 · 조준선 · 맞음 표시)입니다 — 게임은 세터만 부르고, 문서의 `{bind:필드}` 가 위젯 칸에 잇습니다.
+ * @brief 슈터 HUD 문서가 보이는 값(체력 · 탄약 · 무기 이름 · 든 아이템 이름 · 조준선 · 맞음 표시)입니다 — 게임은 세터만 부르고, 문서의 `{bind:필드}` 가 위젯 칸에 잇습니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -37,6 +37,8 @@ namespace sw
         void setAmmo( int32 magazineAmmo, int32 reserveAmmo );
         /** @brief 무기 이름입니다(현지화 키 — 표에 없으면 원문이 보인다). */
         void setWeaponName( string_view weaponName );
+        /** @brief 손에 든 장비 아이템의 이름입니다(아이템 표 items.xml 의 원문이 현지화 키 — 표에 없으면 원문이 보인다). */
+        void setItemName( string_view itemName );
         /** @brief 조준선 · 맞음 표시를 보이거나 숨깁니다. */
         void setCrosshairShown( bool bShown );
         void setHitMarkerShown( bool bShown );
@@ -46,6 +48,7 @@ namespace sw
         int32            getMagazineAmmo() const { return _magazineAmmo; }
         int32            getReserveAmmo() const { return _reserveAmmo; }
         const string&    getWeaponName() const { return _weaponName; }
+        const string&    getItemName() const { return _itemName; }
         WidgetVisibility getCrosshairVisibility() const { return _crosshairVisibility; }
         WidgetVisibility getHitMarkerVisibility() const { return _hitMarkerVisibility; }
 
@@ -64,6 +67,8 @@ namespace sw
         int32 _reserveAmmo;
         PROPERTY( DisplayName = "Weapon Name", Tooltip = "Localization key (the source text when the table has no entry)" )
         string _weaponName;
+        PROPERTY( DisplayName = "Item Name", Tooltip = "Localization key of the held item (the source text when the table has no entry)" )
+        string _itemName;
         PROPERTY( DisplayName = "Crosshair Visibility" )
         WidgetVisibility _crosshairVisibility;
         PROPERTY( DisplayName = "Hit Marker Visibility" )

@@ -2,6 +2,7 @@
 
 #include "Engine/Audio/AudioClip.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Task/TaskManager.h"
 
@@ -9,6 +10,9 @@
 #include "Engine/Audio/AudioClipDecoder.h"
 #include "Engine/Audio/AudioDownmix.h"
 #include "Engine/Audio/AudioStream.h"
+#include "Engine/Audio/AudioTypes.h"
+#include "Engine/Audio/Graph/AudioGraph.h"
+#include "Engine/Audio/Graph/AudioGraphDef.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Resource/ResourcePaths.h"
@@ -226,6 +230,34 @@ namespace sw
             .submit();
     }
 
+    bool AudioClipCache::findReadyPath( string_view path, hashed_string& outPath ) const
+    {
+        const string            wanted = FileUtil::normalizeSeparators( path );
+        std::scoped_lock<mutex> lock{ _mutex };
+        for ( const auto& entry : _mapPathToEntry )
+        {
+            const bool bSamePath = entry.second._status == AudioClipStatus::Ready && StringUtil::equals( FileUtil::normalizeSeparators( entry.first.view() ), wanted, true );
+            if ( bSamePath )
+            {
+                outPath = entry.first;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool AudioClipCache::reloadClip( const hashed_string& path )
+    {
+        shared_ptr<const AudioClipData> pClip = decodeClip( path );
+        if ( pClip == nullptr )
+        {
+            SW_LOG_ERROR( "Reload failed, keeping the previous sound: %#", path.c_str() );
+            return false;
+        }
+        storeResult( path, std::move( pClip ) );
+        return true;
+    }
+
     void AudioClipCache::addClip( const hashed_string& path, shared_ptr<const AudioClipData> pClip )
     {
         storeResult( path, std::move( pClip ) );
@@ -242,6 +274,8 @@ namespace sw
         const string_view pathView = path.view();
         if ( ResourcePaths::isExcludedForHost( pathView ) )
             return nullptr; // 이 호스트의 패키지에 없는 종류 — 없는 것으로 친다(위 requestClip 과 같다)
+        if ( StringUtil::endsWith( pathView, AudioGraphDef::kExtension, true ) )
+            return decodeGraph( path );
         AudioPcm pcm;
         bool     bDecoded = false;
         if ( AudioClipDecoder::isSupportedExtension( pathView ) )
@@ -283,6 +317,38 @@ namespace sw
             SW_LOG_WARNING( "Unsupported sample format: %#", pathView );
             return nullptr;
         }
+        return pClip;
+    }
+
+    shared_ptr<const AudioClipData> AudioClipCache::decodeGraph( const hashed_string& path ) const
+    {
+        const string_view pathView = path.view();
+        AudioGraphDef     def;
+        if ( def.loadFromResource( pathView ) == false )
+            return nullptr; // 읽기 · 검사가 오류를 남겼다
+        // 그래뉼러 소스는 같은 캐시 규칙으로 푼다(이 작업 안에서 바로). 그래프 안의 그래프와 스트리밍 클립은 AudioGraph::create 가 오류로 멈춘다.
+        vector<shared_ptr<const AudioClipData>> listNodeClip( def._listNode.size() );
+        for ( size_t nodeIndex = 0; nodeIndex < def._listNode.size(); ++nodeIndex )
+        {
+            const AudioGraphNodeDesc& node = def._listNode[nodeIndex];
+            if ( node._clip.isSet() == false )
+                continue;
+            const string_view clipPath = node._clip.get();
+            if ( StringUtil::endsWith( clipPath, AudioGraphDef::kExtension, true ) )
+            {
+                SW_LOG_ERROR( "%#: node '%#' uses another audio graph '%#' as its clip", pathView, node._name.c_str(), clipPath );
+                return nullptr;
+            }
+            listNodeClip[nodeIndex] = decodeClip( hashed_string( clipPath ) );
+        }
+        shared_ptr<const AudioGraph> pGraph = AudioGraph::create( def, listNodeClip, pathView );
+        if ( pGraph == nullptr )
+            return nullptr;
+        shared_ptr<AudioClipData> pClip = make_shared<AudioClipData>();
+        pClip->_frameCount              = pGraph->getFrameCount();
+        pClip->_sampleRate              = audio::kSampleRate;
+        pClip->_channelCount            = 1;
+        pClip->_pGraph                  = std::move( pGraph );
         return pClip;
     }
 

@@ -13,6 +13,7 @@ namespace sw
         , _magazineAmmo{ 0 }
         , _reserveAmmo{ 0 }
         , _weaponName{}
+        , _itemName{}
         , _crosshairVisibility{ WidgetVisibility::Collapsed }
         , _hitMarkerVisibility{ WidgetVisibility::Collapsed }
     {
@@ -40,6 +41,11 @@ namespace sw
     void ShooterHUDViewModel::setWeaponName( string_view weaponName )
     {
         (void)setField( _weaponName, string( weaponName ), "_weaponName" );
+    }
+
+    void ShooterHUDViewModel::setItemName( string_view itemName )
+    {
+        (void)setField( _itemName, string( itemName ), "_itemName" );
     }
 
     void ShooterHUDViewModel::setCrosshairShown( bool bShown )

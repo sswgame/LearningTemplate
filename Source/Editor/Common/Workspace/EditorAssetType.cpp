@@ -19,6 +19,7 @@
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"
 #include "Engine/Audio/AudioEvent.h"
 #include "Engine/Audio/AudioMixerDesc.h"
+#include "Engine/Audio/Graph/AudioGraphDef.h"
 #include "Engine/Destruction/FractureAsset.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
 #include "Engine/Environment/Terrain/HeightfieldData.h"
@@ -61,6 +62,7 @@ namespace sw::editor
         constexpr string_view kArrMaterialExt[]        = { Material::kExtension };
         constexpr string_view kArrShaderExt[]          = { ".hlsl", ".hlsli" };
         constexpr string_view kArrAudioExt[]           = { ".wav" };
+        constexpr string_view kArrAudioGraphSuffix[]   = { AudioGraphDef::kExtension }; ///< 소리 그래프다. 클립 캐시가 읽어 둔 것을 오디오 서비스가 다시 굳힌다(엔진 캐시 `AudioData`)
         constexpr string_view kArrDataExt[]            = { ".xml", ".json" };
         constexpr string_view kArrAnimationSuffix[]    = { AnimationGraphAsset::kExtension };
         constexpr string_view kArrDialogueSuffix[]     = { DialogueGraphAsset::kExtension };
@@ -108,6 +110,7 @@ namespace sw::editor
             {        EditorAssetType::Shader,      MatchMode::Extension,          kArrShaderExt,          SW_COUNT_OF( kArrShaderExt ),                                nullptr,                                              nullptr},
             {      EditorAssetType::Material,      MatchMode::Extension,        kArrMaterialExt,        SW_COUNT_OF( kArrMaterialExt ),                             "Material",                                              nullptr},
             {         EditorAssetType::Audio,      MatchMode::Extension,           kArrAudioExt,           SW_COUNT_OF( kArrAudioExt ),                                nullptr,                                              nullptr},
+            {         EditorAssetType::Audio,       MatchMode::EndsWith,   kArrAudioGraphSuffix,   SW_COUNT_OF( kArrAudioGraphSuffix ), AssetReloadRoute::kAnyCacheHoldingPath,                                              nullptr},
             {EditorAssetType::AnimationGraph,       MatchMode::EndsWith,    kArrAnimationSuffix,    SW_COUNT_OF( kArrAnimationSuffix ),                                nullptr,                                              nullptr},
             { EditorAssetType::DialogueGraph,       MatchMode::EndsWith,     kArrDialogueSuffix,     SW_COUNT_OF( kArrDialogueSuffix ),                                nullptr,                                              nullptr},
             {    EditorAssetType::SpriteClip,       MatchMode::EndsWith,    kArrSpriteDocSuffix,    SW_COUNT_OF( kArrSpriteDocSuffix ),                           "SpriteClip",                                              nullptr},

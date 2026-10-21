@@ -121,6 +121,12 @@ namespace sw
 
         /** @brief 소스의 디코더를 열어 창을 비웁니다. 디코더를 열지 못하면 false 입니다. */
         [[nodiscard]] bool open( const AudioStreamSource& source );
+        /**
+         * @brief 이미 만든 디코더(@p channelCount 채널 교차 출력)로 창을 엽니다. 한 번에 @p chunkFrames 프레임씩 풉니다.
+         * @details 소리 그래프(`AudioGraphInstance`)가 이 길로 보이스의 창이 된다. 그래프는 게임 파라미터를 블록마다 받으므로 덩어리를 블록 길이로 줄여 늦음을 한 블록 안에 둔다.
+         * @return 디코더가 nullptr 이거나 채널이 1 · 2 가 아니거나 덩어리가 0 이면 false 입니다.
+         */
+        [[nodiscard]] bool openDecoder( unique_ptr<IAudioStreamDecoder> pDecoder, uint16 channelCount, uint32 chunkFrames );
         /** @brief 디코더를 놓고 창을 비웁니다. */
         void close();
         /** @brief 열려 있는지입니다. */
@@ -149,6 +155,7 @@ namespace sw
         uint32                          _windowStart{ 0 };
         uint32                          _windowFrames{ 0 };
         uint32                          _seekCount{ 0 };
+        uint32                          _chunkFrames{ kChunkFrames }; ///< 한 번에 푸는 프레임 수다(파일 스트림은 `kChunkFrames`, 소리 그래프는 블록 길이).
         uint16                          _channelCount{ 0 };
     };
 } // namespace sw

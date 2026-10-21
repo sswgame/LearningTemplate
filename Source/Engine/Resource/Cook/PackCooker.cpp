@@ -4,6 +4,7 @@
 
 #include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
@@ -123,6 +124,10 @@ namespace sw
             {
                 string canonical = JSONSerializer::serialize( &config, *PackConfig::StaticType() );
                 canonical.append( "\nshader=" ).append( params._shaderFolder ).append( "\ntarget=" ).append( params._buildTarget );
+                for ( const string& excludedPath : params._listExcludedSourceFile )
+                {
+                    canonical.append( "\nexclude=" ).append( excludedPath );
+                }
                 return HashUtil::computeStringHash64( canonical.c_str(), canonical.size(), false );
             }
 
@@ -170,6 +175,8 @@ namespace sw
                     bHasMeta = bHasMeta || StringUtil::endsWith( relativePath, ".meta", true );
                     if ( PackCooker::shouldIncludeFile( relativePath, config, params._shaderFolder, params._buildTarget ) == false )
                         continue;
+                    if ( VectorUtil::contains( params._listExcludedSourceFile, FileUtil::normalizePath( absPath ) ) )
+                        continue; // 위 층이 뺀 파일(출시 문화권 밖 번역 테이블 — 언리얼 Cultures to Stage). 런타임은 없는 테이블을 "아직 번역 없음" 으로 읽는다
                     // 산출물은 스테이징에만 있다. 소스 트리에 남은 것은 낡은 쿠킹 잔재이고, Dev 런타임이 소스가 없을 때 그것으로 물러나 실패를 가리므로 넣지 않는다.
                     if ( AssetCookPath::isCookedOutput( relativePath ) )
                     {

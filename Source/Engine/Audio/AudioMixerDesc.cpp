@@ -177,6 +177,13 @@ namespace sw
             SW_LOG_ERROR( "%#: the mixer needs exactly one root bus named '%#'", sourceName, AudioBusNames::kMaster );
             bValid = false;
         }
+        // master 는 장치로 나간다 — 출력 레이아웃이 아니면 장치 버퍼와 채널 수가 어긋난다.
+        const int32 masterIndex = findBusIndex( hashed_string( AudioBusNames::kMaster ) );
+        if ( masterIndex >= 0 && _listBus[static_cast<size_t>( masterIndex )]._channels != AudioBusChannels::Output )
+        {
+            SW_LOG_ERROR( "%#: the '%#' bus feeds the device and must use the output channels (_channels=\"Output\")", sourceName, AudioBusNames::kMaster );
+            bValid = false;
+        }
         if ( validateAttenuations( _listAttenuation, sourceName ) == false )
             bValid = false;
         if ( bValid && validateSnapshots( sourceName ) == false )

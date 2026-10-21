@@ -12,6 +12,7 @@
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/AudioMixerDesc.h"
 #include "Engine/Audio/AudioMusic.h"
+#include "Engine/Audio/Graph/AudioGraphDef.h"
 #include "Engine/Audio/NullAudioBackend.h"
 #include "Engine/Resource/ResourceIO.h"
 
@@ -410,7 +411,16 @@ namespace sw
             return false;
         const bool    bMixer = _mixerPath.empty() == false && StringUtil::equals( FileUtil::normalizeSeparators( _mixerPath ), FileUtil::normalizeSeparators( resourcePath ), true );
         hashed_string libraryName;
-        return bMixer || _pEngine->findEventLibraryName( resourcePath, libraryName );
+        hashed_string graphPath;
+        const bool    bLibrary = _pEngine->findEventLibraryName( resourcePath, libraryName );
+        const bool    bGraph   = findLoadedGraphPath( resourcePath, graphPath );
+        return bMixer || bLibrary || bGraph;
+    }
+
+    bool IAudioService::findLoadedGraphPath( string_view resourcePath, hashed_string& outGraphPath ) const
+    {
+        // 소리 그래프는 이벤트가 클립처럼 고르므로 클립 캐시가 읽어 둔 것만 다시 읽는다(아직 재생하지 않은 그래프는 처음 재생할 때 새로 읽힌다).
+        return StringUtil::endsWith( resourcePath, AudioGraphDef::kExtension, true ) && _pEngine->getClipStore().findReadyPath( resourcePath, outGraphPath );
     }
 
     bool IAudioService::reloadDataFile( string_view resourcePath )
@@ -418,6 +428,14 @@ namespace sw
         if ( _bInitialized == false || resourcePath.empty() )
             return false;
         const bool    bMixer = _mixerPath.empty() == false && StringUtil::equals( FileUtil::normalizeSeparators( _mixerPath ), FileUtil::normalizeSeparators( resourcePath ), true );
+        hashed_string graphPath;
+        if ( findLoadedGraphPath( resourcePath, graphPath ) )
+        {
+            const bool bReloaded = _pEngine->getClipStore().reloadClip( graphPath );
+            if ( bReloaded )
+                SW_LOG_INFO( "Audio graph reloaded (playing voices finish with the previous graph): %#", resourcePath );
+            return bReloaded;
+        }
         hashed_string libraryName;
         if ( bMixer == false && _pEngine->findEventLibraryName( resourcePath, libraryName ) == false )
             return false;

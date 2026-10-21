@@ -5,6 +5,7 @@
  *          `beginBlock` 을 호출하고, 보이스가 버스 입력에 더하고, `process` 가 처리 순서(보내는 쪽 먼저)대로 버스마다 페이더를 램프해 곱한다.
  *          그런 다음 센드 대상과 부모에 더하고 master 의 출력을 반환한다.
  *          페이더 게인 = 데이터 볼륨(dB) × 사용자 볼륨(설정 메뉴) × 스냅샷 오프셋(dB) × 음소거/솔로다.
+ *          버스마다 채널 구성이 있다(`AudioBusDesc::_channels`): 출력 레이아웃이거나 두 채널이다. 이펙트는 버스의 레이아웃으로 만들고, 채널 수가 다른 버스로 갈 때만 `accumulateBus` 가 바꾼다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -14,6 +15,7 @@
 
 #include "Engine/Audio/AudioBlock.h"
 #include "Engine/Audio/AudioChannelLayout.h"
+#include "Engine/Audio/AudioDownmix.h"
 #include "Engine/Audio/AudioMixerDesc.h"
 #include "Engine/Audio/DSP/AudioEffect.h"
 
@@ -34,8 +36,8 @@ namespace sw
 
         /**
          * @brief 데이터로 버스를 만듭니다. 데이터가 검사를 통과하지 못하면(이름이나 고리 문제) false 를 반환하고 그래프는 비어 있습니다.
-         * @param layout 모든 버스의 채널 구성입니다(장치가 정합니다). 버스 입력은 여기서 채널 수만큼 한 번에 잡습니다.
-         * @details 이펙트 종류가 레이아웃을 지원하지 않으면(종류 표의 지원 레이아웃) false 입니다(조용히 건너뛰지 않습니다).
+         * @param layout 출력 채널 구성입니다(장치가 정합니다). `_channels` 가 `Output` 인 버스가 이 레이아웃이고, `Stereo` 인 버스는 두 채널입니다. 버스 입력은 여기서 채널 수만큼 한 번에 잡습니다.
+         * @details 이펙트 종류가 버스의 레이아웃을 지원하지 않으면(종류 표의 지원 레이아웃) false 입니다(조용히 건너뛰지 않습니다).
          */
         [[nodiscard]] bool initialize( const AudioMixerDesc& desc, AudioChannelLayout layout );
 
@@ -57,10 +59,12 @@ namespace sw
         int32 getBusParentIndex( uint32 busIndex ) const { return _listBusState[busIndex]._parentIndex; }
         /** @brief 데이터 볼륨(dB)입니다. 사용자 볼륨 · 스냅샷 오프셋은 들어 있지 않습니다. */
         float32 getBusVolumeDb( uint32 busIndex ) const { return _listBusState[busIndex]._volumeDb; }
-        /** @brief 버스의 입력 블록(평면, 이번 블록 길이)을 반환합니다. 보이스가 여기에 더합니다. */
+        /** @brief 버스의 입력 블록(평면, 이번 블록 길이, 채널 수는 `getBusLayout`)을 반환합니다. 보이스가 여기에 더합니다. */
         AudioBlockView getBusInput( uint32 busIndex ) { return _listBusState[busIndex]._input.makeView( _blockFrameCount ); }
-        /** @brief 버스 입력의 채널 구성입니다. */
+        /** @brief 출력(master)의 채널 구성입니다. */
         AudioChannelLayout getChannelLayout() const { return _layout; }
+        /** @brief 버스 하나의 채널 구성입니다(`AudioBusDesc::_channels` 를 출력 레이아웃으로 푼 값). 보이스는 이 레이아웃으로 패닝합니다. */
+        AudioChannelLayout getBusLayout( uint32 busIndex ) const { return _listBusState[busIndex]._layout; }
         /** @brief 데이터가 정한 보이스 상한과 들림 임계값을 반환합니다. */
         const AudioMixerDesc& getDesc() const { return _desc; }
 
@@ -98,6 +102,11 @@ namespace sw
         void updateDucking( uint32 blockFrames );
         /** @brief 솔로가 걸린 버스가 있으면, 각 버스가 솔로 경로 위에 있는지 다시 셉니다. */
         void refreshSoloPaths();
+        /**
+         * @brief 버스 @p sourceIndex 의 블록 @p source 를 버스 @p targetIndex 의 입력에 게인을 @p startGain 에서 @p targetGain 으로 램프하며 더합니다.
+         * @details 채널 수가 같으면 채널끼리, 두 채널 → 넓은 쪽은 FL FR 에, 넓은 쪽 → 두 채널은 소스 버스의 다운믹스 행렬로 더한다.
+         */
+        void accumulateBus( uint32 sourceIndex, const AudioBlockView& source, uint32 targetIndex, float32 startGain, float32 targetGain );
 
     private:
         /** @brief 센드 하나의 실행 상태입니다. */
@@ -129,6 +138,7 @@ namespace sw
             vector<unique_ptr<IAudioEffect>> _listEffect{};
             vector<hashed_string>            _listEffectName{};
             hashed_string                    _name{};
+            AudioDownmix                     _downmix{}; ///< 3 채널 이상인 버스가 두 채널 버스로 갈 때의 행렬이다(두 채널 버스는 비어 있다).
             int32                            _parentIndex{ -1 };
             float32                          _volumeDb{ 0.0f };
             float32                          _volumeOffsetDb{ 0.0f };
@@ -136,6 +146,7 @@ namespace sw
             float32                          _userVolume{ 1.0f };
             float32                          _gain{ 0.0f }; ///< 지난 블록 끝의 페이더 게인(램프 시작점)
             float32                          _peak{ 0.0f };
+            AudioChannelLayout               _layout{ AudioChannelLayout::Stereo }; ///< 버스 입력의 채널 구성이다(`initialize` 가 데이터와 출력으로 정한다).
             uint8                            _bMuted      : 1;
             uint8                            _bSolo       : 1;
             uint8                            _bAudible    : 1; ///< 솔로 규칙에 따라 소리를 내도 되는지 나타낸다.

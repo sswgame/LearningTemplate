@@ -23,6 +23,7 @@ namespace sw::editor
         static constexpr const utf8* kPanelVisibilityFileName        = "windows.json";             ///< 패널 가시성(`EditorPanelVisibility`, 리플렉션 JSON)
         static constexpr const utf8* kAnimationGraphCanvasFileName   = "AnimationGraph.json";      ///< 노드 에디터 캔버스 상태
         static constexpr const utf8* kDialogueGraphCanvasFileName    = "DialogueGraphEditor.json"; ///< 노드 에디터 캔버스 상태
+        static constexpr const utf8* kAudioGraphCanvasFileName       = "AudioGraphEditor.json";    ///< 소리 그래프 캔버스 상태(노드 위치는 그래프 데이터에 있다)
         static constexpr const utf8* kAnimationGraphDocumentFileName = "AnimationGraphData.json";  ///< 경로가 없는 애니메이션 그래프 문서
         static constexpr const utf8* kDialogueGraphDocumentFileName  = "DialogueGraphData.json";   ///< 경로가 없는 대화 그래프 문서
         static constexpr const utf8* kSpriteClipDocumentFileName     = "SpriteClip.json";          ///< 경로가 없는 스프라이트 클립 문서

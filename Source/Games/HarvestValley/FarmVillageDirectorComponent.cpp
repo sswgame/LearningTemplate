@@ -10,7 +10,9 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Serialization/Base/SerializeContext.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/BinarySerializer.h"
 
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Base/Gameplay/SessionState/SessionStateComponent.h"
@@ -26,8 +28,9 @@ namespace sw
     {
         struct FarmVillageDirectorComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCcUtil::make( "FVIL" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr uint32 kStateTag           = FourCcUtil::make( "FVIL" );
+            static constexpr uint32 kStateVersion       = 2; ///< 2 판: 머리 뒤에 `ScheduleSaveState`(리플렉션 바이너리)
+            static constexpr uint32 kOldestStateVersion = 1; ///< 1 판: 머리만(이관 `migrateStateVersion1`)
 
             /** @brief 시계의 지금 시각을 0 일 0:00 부터 센 분으로 바꿉니다(일정 시스템의 시간 축). */
             static int32 computeAbsoluteMinute( const WorldClock& clock )
@@ -78,6 +81,8 @@ namespace sw
         , _pathfinder{}
         , _finePathing{ &_navGrid, &_pathfinder, SchedulePlane::XZ }
         , _schedule{}
+        , _pendingSave{}
+        , _bHasPendingSave{ false }
         , _listPosition{}
         , _listBodySpeed{}
     {
@@ -155,6 +160,13 @@ namespace sw
             return false; // 범위 밖 설정은 일정 시스템이 오류를 남겼다
         _listPosition.assign( static_cast<size_t>( _schedule.getNpcCount() ), float3{} );
         _listBodySpeed.assign( static_cast<size_t>( _schedule.getNpcCount() ), 0.0f );
+        if ( _bHasPendingSave )
+        {
+            // 일정이 서기 전에 읽은 저장(세이브 불러오기)을 지금 건다 — 끼어들기 · 호감도 · 약속 결과가 시계만으로는 나오지 않는다.
+            _schedule.restoreSaveState( _pendingSave );
+            _pendingSave     = ScheduleSaveState{};
+            _bHasPendingSave = false;
+        }
         for ( int32 npcIndex = 0; npcIndex < _schedule.getNpcCount(); ++npcIndex )
         {
             _schedule.setNpcLOD( npcIndex, ScheduleLOD::Near );
@@ -168,12 +180,54 @@ namespace sw
     void FarmVillageDirectorComponent::writeState( Archive& outArchive ) const
     {
         StateArchiveUtil::writeHeader( outArchive, FarmVillageDirectorComponentInternal::kStateTag, FarmVillageDirectorComponentInternal::kStateVersion );
+        ScheduleSaveState state;
+        if ( _bHasPendingSave )
+            state = _pendingSave; // 아직 걸지 않은 저장은 그대로 다시 싣는다(일정이 서기 전의 핫 리로드)
+        else
+            _schedule.fillSaveState( state );
+        // 실을 수 없으면 직렬화기가 아카이브를 오류 상태로 두어 저장 전체가 실패한다(이유는 직렬화기가 알린다).
+        if ( BinarySerializer::serialize( &state, *ScheduleSaveState::StaticType(), outArchive, SerializeContext::getDefault( SerializePurpose::SaveGame ) ) == false )
+            SW_LOG_ERROR( "[Village] the schedule save state could not be written" );
     }
 
     bool FarmVillageDirectorComponent::readState( Archive& archive )
     {
-        // 일정은 시계의 함수다 — 시작할 때 그 시각의 계획을 이미 세웠다.
-        return StateArchiveUtil::readHeader( archive, FarmVillageDirectorComponentInternal::kStateTag, FarmVillageDirectorComponentInternal::kStateVersion );
+        using Internal = FarmVillageDirectorComponentInternal;
+        uint32 version = 0;
+        if ( StateArchiveUtil::readHeaderInRange( archive, Internal::kStateTag, Internal::kOldestStateVersion, Internal::kStateVersion, version ) == false )
+            return false;
+        if ( version == Internal::kOldestStateVersion )
+        {
+            migrateStateVersion1();
+            return true;
+        }
+        return readStateVersion2( archive );
+    }
+
+    void FarmVillageDirectorComponent::migrateStateVersion1()
+    {
+        _pendingSave     = ScheduleSaveState{};
+        _bHasPendingSave = false;
+        SW_LOG_INFO( "[Village] state version 1 migrated: the schedule follows the clock (no saved interruptions or affinity)" );
+    }
+
+    bool FarmVillageDirectorComponent::readStateVersion2( Archive& archive )
+    {
+        // 임시에 끝까지 읽은 뒤에만 바꾼다(반쯤 읽은 상태를 남기지 않는다).
+        ScheduleSaveState state;
+        if ( BinarySerializer::deserialize( &state, *ScheduleSaveState::StaticType(), archive, SerializeContext::getDefault( SerializePurpose::SaveGame ) ) == false )
+        {
+            SW_LOG_ERROR( "[Village] the schedule save state could not be read" );
+            return false;
+        }
+        if ( _schedule.getNpcCount() > 0 )
+        {
+            _schedule.restoreSaveState( state );
+            return true;
+        }
+        _pendingSave     = std::move( state );
+        _bHasPendingSave = true;
+        return true;
     }
 
     void FarmVillageDirectorComponent::updateGame( float32 deltaTime )

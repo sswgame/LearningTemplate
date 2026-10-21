@@ -31,6 +31,8 @@ namespace sw
         uint32 _maxVoiceCount{ 0 };           ///< 믹서 그래프의 보이스 상한(실제 + 가상)이다. 그래프가 없으면 0 이다.
         uint32 _maxRealVoiceCount{ 0 };       ///< 믹서 그래프의 실제 보이스 상한이다. 넘는 보이스는 가상이 된다.
         uint64 _droppedSubtitleCueCount{ 0 }; ///< 게임 스레드가 가져가지 않아 상한(`AudioPublishedState::kMaxSubtitleCueCount`)을 넘겨 버린 자막 신호 수다.
+        uint64 _publishNanoseconds{ 0 };      ///< 지난 블록에서 게시(`AudioEngine::publishState`)에 쓴 오디오 스레드 시간(ns)이다. 인스턴스마다 보이스를 훑는 이벤트 창 사본이 대부분이다.
+        uint64 _peakPublishNanoseconds{ 0 };  ///< 지금까지 한 블록의 게시 시간 최댓값(ns)이다.
     };
 } // namespace sw
 

@@ -200,6 +200,12 @@ namespace sw
         static string makeTranslationPath( string_view projectPath, string_view culture );
         /** @brief @p culture 가 출시 문화권(`stagedCultures`)이면 true 입니다. */
         bool isStagedCulture( string_view culture ) const;
+        /**
+         * @brief @p folder 아래 프로젝트마다 그 폴더의 번역 테이블 중 출시 문화권 밖의 것을 @p outListAbsPath 에 더합니다(`FileUtil::normalizePath` 한 절대 경로).
+         * @details 팩 쿠킹이 담지 않는다(언리얼 Cultures to Stage — `PackCookParams::_listExcludedSourceFile`).
+         * @return 프로젝트를 읽지 못하면 false 이고 이유는 @p outError 입니다 — 어느 테이블이 출시 문화권인지 모른 채 팩을 굽지 않는다.
+         */
+        [[nodiscard]] static bool collectUnstagedTranslationTables( string_view folder, vector<string>& outListAbsPath, string& outError );
 
         string                        _name;
         string                        _sourceCulture;
