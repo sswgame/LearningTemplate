@@ -689,7 +689,7 @@ def describeKeyStyleInternal(entry: ConfigFileEntry) -> str:
     if entry.keyStyle == kKeyStyleXmlMember:
         return "XML 속성(값 하나)과 자식 요소(목록, 구조체)의 이름은 아래 필드 이름 그대로입니다. 모르는 이름은 로드 오류입니다."
     if entry.keyStyle == kKeyStyleXmlElementBare:
-        return "XML 자식 요소 이름은 아래 필드 이름에서 앞의 `_` 를 뗀 것입니다(`_startMap` → `<startMap>`). 모르는 요소는 로드 오류입니다."
+        return "XML 자식 요소 이름은 아래 필드 이름에서 앞의 `_` 를 뺀 것입니다(`_startMap` → `<startMap>`). 모르는 요소는 로드 오류입니다."
     if entry.keyStyle == kKeyStyleKeyTable:
         return "JSON 키는 아래 테이블의 키 그대로입니다. 모르는 키는 로드 오류이고, 읽기 코드가 이 테이블(`ConfigKeyDoc`)로 검사합니다."
     return ""

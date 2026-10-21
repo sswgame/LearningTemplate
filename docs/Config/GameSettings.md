@@ -14,7 +14,7 @@
 | 커밋 | 한다 |
 | 참고 | 시작 씬(`startMap` · `titleScene`)은 이 파일 하나다 — 모르는 원소는 로드 오류, 커스텀 값은 `<custom><prop key>`. `<Engine>` 요소는 아래 `PackEngineSettings` 가 읽는다 |
 
-XML 자식 요소 이름은 아래 필드 이름에서 앞의 `_` 를 뗀 것입니다(`_startMap` → `<startMap>`). 모르는 요소는 로드 오류입니다.
+XML 자식 요소 이름은 아래 필드 이름에서 앞의 `_` 를 뺀 것입니다(`_startMap` → `<startMap>`). 모르는 요소는 로드 오류입니다.
 
 ## 필드
 

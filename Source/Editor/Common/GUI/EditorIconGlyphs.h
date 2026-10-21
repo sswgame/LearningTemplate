@@ -110,7 +110,7 @@ namespace sw::editor::editoricon
     inline constexpr const utf8* kBug              = "\xee\x81\xa1"; ///< U+E061
     inline constexpr const utf8* kMap              = "\xee\x81\xa2"; ///< U+E062
 
-    /** @brief 아이콘 이름(상수에서 `k` 를 뗀 것)과 글리프입니다. 컴포넌트의 `REFLECT( Meta = "Icon=<이름>" )` 이 이 이름으로 찾습니다. */
+    /** @brief 아이콘 이름(상수에서 `k` 를 뺀 것)과 글리프입니다. 컴포넌트의 `REFLECT( Meta = "Icon=<이름>" )` 이 이 이름으로 찾습니다. */
     struct NamedIcon
     {
         const utf8* _pName;

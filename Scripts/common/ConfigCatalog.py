@@ -43,7 +43,7 @@ kListLayerOrder = (kLayerEngineDefault, kLayerGamePreset, kLayerPackData, kLayer
 kKeyStyleJsonMember = "json-member"
 #: XML 속성 · 자식 원소 = 멤버 이름 그대로(`_gravity="0,-9.81,0"`). 리플렉션 `XMLSerializer` 가 읽는다.
 kKeyStyleXmlMember = "xml-member"
-#: XML 자식 원소 = 멤버 이름에서 앞의 `_` 를 뗀 것(`<startMap>`). 손으로 읽는다(`GameSettings::loadRoot`).
+#: XML 자식 원소 = 멤버 이름에서 앞의 `_` 를 뺀 것(`<startMap>`). 손으로 읽는다(`GameSettings::loadRoot`).
 kKeyStyleXmlElementBare = "xml-element-bare"
 #: JSON 키 = `ConfigKeyDoc` 표의 키(snake_case). 손으로 읽는다.
 kKeyStyleKeyTable = "key-table"

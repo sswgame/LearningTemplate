@@ -1118,10 +1118,10 @@ def buildHeader(listNamed: list[tuple[str, int]]) -> str:
         constant = acronymRegistry.respellName("k" + name[0].upper() + name[1:], tuple(sorted(acronymRegistry.kEnforced)))
         listConstant.append(constant)
         lines.append('    inline constexpr const utf8* %s = "%s"; ///< U+%04X' % (constant.ljust(width), utf8Literal(code), code))
-    # 이름 → 글리프 표 — 리플렉션 메타(`REFLECT( Meta = "Icon=LightPoint" )`)가 아이콘을 이름으로 고른다. 이름은 상수에서 `k` 를 뗀 것이다.
+    # 이름 → 글리프 표 — 리플렉션 메타(`REFLECT( Meta = "Icon=LightPoint" )`)가 아이콘을 이름으로 고른다. 이름은 상수에서 `k` 를 뺀 것이다.
     lines += [
         "",
-        "    /** @brief 아이콘 이름(상수에서 `k` 를 뗀 것)과 글리프입니다. 컴포넌트의 `REFLECT( Meta = \"Icon=<이름>\" )` 이 이 이름으로 찾습니다. */",
+        "    /** @brief 아이콘 이름(상수에서 `k` 를 뺀 것)과 글리프입니다. 컴포넌트의 `REFLECT( Meta = \"Icon=<이름>\" )` 이 이 이름으로 찾습니다. */",
         "    struct NamedIcon",
         "    {",
         "        const utf8* _pName;",
