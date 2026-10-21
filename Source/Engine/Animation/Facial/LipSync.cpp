@@ -19,6 +19,68 @@ namespace sw
     {
         struct LipSyncInternal
         {
+            /// 포먼트를 잴 때 솎아 낼 목표 표본율입니다(포먼트는 4 kHz 아래라 그 두 배 남짓이면 된다).
+            static constexpr uint32 kFormantTargetRate = 16000;
+            /// LPC 차수의 상한입니다(표본율 kHz + 2 가 관례 — 16 kHz 면 18).
+            static constexpr uint32 kMaxLpcOrder = 24;
+            /// 포락선을 훑는 범위와 간격(Hz)입니다.
+            static constexpr float32 kFormantMinHz  = 150.0f;
+            static constexpr float32 kFormantMaxHz  = 4000.0f;
+            static constexpr float32 kFormantStepHz = 20.0f;
+            /// 프리엠퍼시스 계수입니다(고역을 올려 둘째 포먼트가 묻히지 않게).
+            static constexpr float32 kPreEmphasis = 0.97f;
+
+            /** @brief Levinson-Durbin 으로 자기상관 @p pAutocorrelation(0..order)에서 예측 계수 @p pOutCoefficient(1..order, [0] = 1)를 구합니다. 풀 수 없으면 false 입니다. */
+            static bool solveLpc( const float64* pAutocorrelation, uint32 order, float64* pOutCoefficient )
+            {
+                if ( pAutocorrelation[0] <= 0.0 )
+                    return false;
+                float64 arrPreviousCoefficient[kMaxLpcOrder + 1]{};
+                pOutCoefficient[0] = 1.0;
+                for ( uint32 index = 1; index <= order; ++index )
+                {
+                    pOutCoefficient[index] = 0.0;
+                }
+                float64 error = pAutocorrelation[0];
+                for ( uint32 step = 1; step <= order; ++step )
+                {
+                    float64 accumulated = pAutocorrelation[step];
+                    for ( uint32 index = 1; index < step; ++index )
+                    {
+                        accumulated += pOutCoefficient[index] * pAutocorrelation[step - index];
+                    }
+                    const float64 reflection = -accumulated / error;
+                    for ( uint32 index = 0; index <= order; ++index )
+                    {
+                        arrPreviousCoefficient[index] = pOutCoefficient[index];
+                    }
+                    for ( uint32 index = 1; index < step; ++index )
+                    {
+                        pOutCoefficient[index] = arrPreviousCoefficient[index] + reflection * arrPreviousCoefficient[step - index];
+                    }
+                    pOutCoefficient[step] = reflection;
+                    error *= 1.0 - reflection * reflection;
+                    if ( error <= 0.0 )
+                        return false;
+                }
+                return true;
+            }
+
+            /** @brief 예측 다항식 A(z) 의 주파수 @p hz 에서의 포락선 크기 1 / |A(e^jω)| 입니다. */
+            static float64 computeEnvelope( const float64* pCoefficient, uint32 order, float64 hz, float64 sampleRate )
+            {
+                const float64 omega = 2.0 * MathUtil::kPi64 * hz / sampleRate;
+                float64       real  = 0.0;
+                float64       imag  = 0.0;
+                for ( uint32 index = 0; index <= order; ++index )
+                {
+                    real += pCoefficient[index] * MathUtil::cos( omega * static_cast<float64>( index ) );
+                    imag -= pCoefficient[index] * MathUtil::sin( omega * static_cast<float64>( index ) );
+                }
+                const float64 magnitude = MathUtil::sqrt( real * real + imag * imag );
+                return magnitude > 0.0 ? 1.0 / magnitude : 0.0;
+            }
+
             /** @brief RBJ 대역 통과 바이쿼드(최고 이득 0 dB)입니다. */
             struct BandPass
             {
@@ -115,6 +177,14 @@ namespace sw
             if ( viseme._name.empty() || findVisemeIndex( viseme._name ) != static_cast<int32>( visemeIndex ) )
             {
                 SW_LOG_ERROR( "Lip sync settings '%#': viseme %# needs a unique, non-empty _name", sourceLabel, visemeIndex );
+                return false;
+            }
+            // 포먼트는 둘 다 비거나(모음 아님) 0 < F1 < F2 여야 한다.
+            const bool bNoFormant      = viseme._formantHz._x == 0.0f && viseme._formantHz._y == 0.0f;
+            const bool bOrderedFormant = 0.0f < viseme._formantHz._x && viseme._formantHz._x < viseme._formantHz._y;
+            if ( bNoFormant == false && bOrderedFormant == false )
+            {
+                SW_LOG_ERROR( "Lip sync settings '%#': viseme '%#' _formantHz must be \"0,0\" or \"F1,F2\" with 0 < F1 < F2", sourceLabel, viseme._name.c_str() );
                 return false;
             }
         }
@@ -276,6 +346,79 @@ namespace sw
         return static_cast<float32>( MathUtil::sqrt( sum / static_cast<float64>( MathUtil::max<size_t>( end - begin, 1u ) ) ) );
     }
 
+    bool LipSyncAnalyzer::tryComputeFormants( const float32* pSample, size_t sampleCount, uint32 sampleRate, float2& outFormantHz )
+    {
+        outFormantHz = float2{ 0.0f, 0.0f };
+        if ( pSample == nullptr || sampleRate == 0 )
+            return false;
+        // 솎아 내기 — 정수 배로 평균한다(평균이 낮은 통과 필터를 겸한다).
+        const uint32  decimation    = MathUtil::max( sampleRate / LipSyncInternal::kFormantTargetRate, 1u );
+        const float64 effectiveRate = static_cast<float64>( sampleRate ) / static_cast<float64>( decimation );
+        const size_t  count         = sampleCount / decimation;
+        const uint32  order         = MathUtil::min( static_cast<uint32>( effectiveRate / 1000.0 ) + 2u, LipSyncInternal::kMaxLpcOrder );
+        if ( count <= static_cast<size_t>( order ) * 2u )
+            return false;
+        vector<float64> listFrame( count );
+        float64         previous = 0.0;
+        for ( size_t index = 0; index < count; ++index )
+        {
+            float64 sum = 0.0;
+            for ( uint32 offset = 0; offset < decimation; ++offset )
+            {
+                sum += static_cast<float64>( pSample[index * decimation + offset] );
+            }
+            const float64 value = sum / static_cast<float64>( decimation );
+            // 프리엠퍼시스 · 해밍 창.
+            const float64 emphasized = value - static_cast<float64>( LipSyncInternal::kPreEmphasis ) * previous;
+            previous                 = value;
+            const float64 window     = 0.54 - 0.46 * MathUtil::cos( 2.0 * MathUtil::kPi64 * static_cast<float64>( index ) / static_cast<float64>( count - 1 ) );
+            listFrame[index]         = emphasized * window;
+        }
+        float64 arrAutocorrelation[LipSyncInternal::kMaxLpcOrder + 1]{};
+        for ( uint32 lag = 0; lag <= order; ++lag )
+        {
+            float64 sum = 0.0;
+            for ( size_t index = lag; index < count; ++index )
+            {
+                sum += listFrame[index] * listFrame[index - lag];
+            }
+            arrAutocorrelation[lag] = sum;
+        }
+        float64 arrCoefficient[LipSyncInternal::kMaxLpcOrder + 1]{};
+        if ( LipSyncInternal::solveLpc( arrAutocorrelation, order, arrCoefficient ) == false )
+            return false;
+
+        // 포락선을 훑어 가장 높은 봉우리 둘을 고르고 주파수 순으로 둔다 — 첫 둘을 고르면 배음 사이의 잔 봉우리에 속는다.
+        float64 arrPeakHz[2]{ 0.0, 0.0 };
+        float64 arrPeakHeight[2]{ 0.0, 0.0 };
+        float64 before  = LipSyncInternal::computeEnvelope( arrCoefficient, order, static_cast<float64>( LipSyncInternal::kFormantMinHz - LipSyncInternal::kFormantStepHz ), effectiveRate );
+        float64 current = LipSyncInternal::computeEnvelope( arrCoefficient, order, static_cast<float64>( LipSyncInternal::kFormantMinHz ), effectiveRate );
+        for ( float32 hz = LipSyncInternal::kFormantMinHz; hz < LipSyncInternal::kFormantMaxHz; hz += LipSyncInternal::kFormantStepHz )
+        {
+            const float64 after = LipSyncInternal::computeEnvelope( arrCoefficient, order, static_cast<float64>( hz + LipSyncInternal::kFormantStepHz ), effectiveRate );
+            const bool    bPeak = current > before && current >= after;
+            if ( bPeak && current > arrPeakHeight[1] )
+            {
+                // 둘째 자리에 넣고, 첫째보다 높으면 자리를 바꾼다(높이 순 두 칸).
+                arrPeakHz[1]     = static_cast<float64>( hz );
+                arrPeakHeight[1] = current;
+                if ( arrPeakHeight[1] > arrPeakHeight[0] )
+                {
+                    std::swap( arrPeakHz[0], arrPeakHz[1] );
+                    std::swap( arrPeakHeight[0], arrPeakHeight[1] );
+                }
+            }
+            before  = current;
+            current = after;
+        }
+        if ( arrPeakHeight[1] <= 0.0 )
+            return false;
+        const float64 lowHz  = MathUtil::min( arrPeakHz[0], arrPeakHz[1] );
+        const float64 highHz = MathUtil::max( arrPeakHz[0], arrPeakHz[1] );
+        outFormantHz         = float2{ static_cast<float32>( lowHz ), static_cast<float32>( highHz ) };
+        return true;
+    }
+
     void LipSyncAnalyzer::analyze( const vector<float32>& listSample, uint32 sampleRate, const LipSyncSettings& settings, VisemeTrack& outTrack )
     {
         outTrack            = VisemeTrack{};
@@ -330,7 +473,11 @@ namespace sw
                 arrShape[bandIndex] = bandSum > 0.0 ? static_cast<float32>( arrBandEnergy[bandIndex] / bandSum ) : 0.0f;
             }
             const float32 shapeLength = MathUtil::sqrt( arrShape[0] * arrShape[0] + arrShape[1] * arrShape[1] + arrShape[2] * arrShape[2] );
-            float32       maxScore    = -MathUtil::kMaxFloat;
+            // 유성 프레임(높은 대역이 주가 아닌)은 포먼트를 재 모음 비즘과 견준다 — 대역 셋으로는 가까운 모음(EE · OO 의 낮은 첫 포먼트)을 가르기 어렵다.
+            float2     formantHz{ 0.0f, 0.0f };
+            const bool bVoiced      = arrShape[2] < settings._unvoicedHighBandRatio;
+            const bool bHasFormants = bVoiced && tryComputeFormants( &listSample[begin], end - begin, sampleRate, formantHz );
+            float32    maxScore     = -MathUtil::kMaxFloat;
             for ( uint32 visemeIndex = 1; visemeIndex < visemeCount; ++visemeIndex )
             {
                 const float3& band          = settings._listViseme[visemeIndex]._bandShape;
@@ -339,7 +486,16 @@ namespace sw
                                                 ? ( arrShape[0] * band._x + arrShape[1] * band._y + arrShape[2] * band._z ) / ( shapeLength * profileLength )
                                                 : 0.0f;
                 listScore[visemeIndex]      = cosine * settings._sharpness;
-                maxScore                    = MathUtil::max( maxScore, listScore[visemeIndex] );
+                const LipSyncViseme& viseme = settings._listViseme[visemeIndex];
+                if ( bHasFormants && viseme.isVowel() )
+                {
+                    // 포먼트마다 상대 거리 — 1 이면 두 배 · 절반만큼 어긋남. 맞을수록 1 에 가까운 점수를 더한다.
+                    const float32 firstOffset  = ( formantHz._x - viseme._formantHz._x ) / viseme._formantHz._x;
+                    const float32 secondOffset = ( formantHz._y - viseme._formantHz._y ) / viseme._formantHz._y;
+                    const float32 distance     = MathUtil::sqrt( firstOffset * firstOffset + secondOffset * secondOffset );
+                    listScore[visemeIndex] += settings._formantWeight * ( 1.0f - MathUtil::min( distance, 1.0f ) );
+                }
+                maxScore = MathUtil::max( maxScore, listScore[visemeIndex] );
             }
             float32 sum = 0.0f;
             for ( uint32 visemeIndex = 1; visemeIndex < visemeCount; ++visemeIndex )

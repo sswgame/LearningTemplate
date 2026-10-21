@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  FrontierTown 키트 둘의 흐름 — 도시와 RTS 가 한 땅 · 한 지갑 · 한 시계를 나누며 판이 열리고, 공유 시계를 날 단위로 감아 도시의 달 결산이 돈다.
+  땅을 나누는 규칙(도시 땅에 짓지 못함 · 해병이 신전을 돌아감)은 EngineTest 의 KitCompositionTest.CityAndSkirmish* 가 같은 배치로 단언한다.
+  App -game=FrontierTown -scenario=game/frontiertown/automation/month.scenario.xml (종료 코드 0 = 통과)
+-->
+<Scenario name="frontiertown.month" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" input="exclusive">
+	<At frame="0"><Variable name="gv_frontierAutoPlay" value="0"/></At>
+	<At frame="10">
+		<Expect probe="Clock.Day" equals="0"/>
+		<Expect probe="Clock.Hour" near="6" tolerance="0.2"/>
+	</At>
+	<At frame="11"><AdvanceGameTime hours="24"/></At>
+	<At after="2"><Expect probe="Clock.Day" equals="1"/></At>
+	<At after="1"><AdvanceGameTime hours="24"/></At>
+	<At after="2"><AdvanceGameTime hours="24"/></At>
+	<At after="2">
+		<Expect probe="Clock.Day" equals="3"/>
+		<Record probe="Clock.Day"/>
+		<Pass/>
+	</At>
+</Scenario>

@@ -79,13 +79,14 @@ namespace sw
                 return copy;
             }
 
-            /** @brief 오브젝트에 유닛(스켈레탈 메시)을 붙이고 메시 id 를 풉니다. */
-            static SkeletalMeshComponent* addUnit( GameObject& object, const string& meshID )
+            /** @brief 오브젝트에 유닛(스켈레탈 메시)을 붙이고 메시 id 와 머티리얼(KayKit 아틀라스)을 풉니다. */
+            static SkeletalMeshComponent* addUnit( GameObject& object, const string& meshID, const string& materialPath )
             {
                 SkeletalMeshComponent* pUnit = object.addComponent<SkeletalMeshComponent>();
                 if ( pUnit == nullptr )
                     return nullptr;
                 pUnit->setMeshID( meshID.c_str() );
+                pUnit->setMaterialPath( materialPath );
                 pUnit->resolveRenderAssets();
                 return pUnit;
             }
@@ -169,7 +170,7 @@ namespace sw
     {
         // 무기 유닛입니다. 리그(CopyTransform)가 오른손 소켓 위치를 따라갑니다. 스킨이 없는 쇠뇌를 뿌리 본에 묶은 사본으로 그립니다.
         GameObject*            pWeapon     = objects.createGameObject( "RigWeapon" );
-        SkeletalMeshComponent* pWeaponUnit = ( pWeapon != nullptr ) ? BenchSceneRigInternal::addUnit( *pWeapon, _settings._rigWeaponMesh ) : nullptr;
+        SkeletalMeshComponent* pWeaponUnit = ( pWeapon != nullptr ) ? BenchSceneRigInternal::addUnit( *pWeapon, _settings._rigWeaponMesh, _settings._rigWeaponMaterial ) : nullptr;
         if ( pWeaponUnit == nullptr || pWeaponUnit->getMesh() == nullptr )
             return pWeaponUnit;
         (void)pWeapon->attachToParent( pKnight ); // 방금 만든 오브젝트끼리라 순환이 없어 실패하지 않는다
@@ -190,7 +191,7 @@ namespace sw
     {
         // 망토 유닛입니다. 데모 데이터에는 사슬 뼈가 네 개 있습니다. 뿌리 뼈는 가슴 위치를 따라가고(CopyTransform) 나머지는 스프링으로 움직입니다.
         GameObject*            pCape     = objects.createGameObject( "RigCape" );
-        SkeletalMeshComponent* pCapeUnit = ( pCape != nullptr ) ? BenchSceneRigInternal::addUnit( *pCape, _settings._rigCapeMesh ) : nullptr;
+        SkeletalMeshComponent* pCapeUnit = ( pCape != nullptr ) ? BenchSceneRigInternal::addUnit( *pCape, _settings._rigCapeMesh, _settings._rigCapeMaterial ) : nullptr;
         if ( pCapeUnit == nullptr || pCapeUnit->getMesh() == nullptr )
             return;
         (void)pCape->attachToParent( pKnight ); // 방금 만든 오브젝트끼리라 순환이 없어 실패하지 않는다
@@ -214,7 +215,7 @@ namespace sw
         GameObject* pKnight = objects.createGameObject( hashed_string( name.c_str(), name.size() ) );
         if ( pKnight == nullptr )
             return;
-        SkeletalMeshComponent*     pBody     = BenchSceneRigInternal::addUnit( *pKnight, _settings._knightMesh );
+        SkeletalMeshComponent*     pBody     = BenchSceneRigInternal::addUnit( *pKnight, _settings._knightMesh, _settings._knightMaterial );
         SkeletalAnimatorComponent* pAnimator = pKnight->addComponent<SkeletalAnimatorComponent>();
         if ( pBody == nullptr || pAnimator == nullptr )
             return;

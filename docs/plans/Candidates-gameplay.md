@@ -7,63 +7,6 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션 영역의 
 
 ## 기능
 
-### UserSettingsConsumers
-제목: 사용자 설정 값을 읽는 쪽 잇기
-옛번호: D4-2
-왜 필요한가: 옵션 메뉴 백엔드(`Source/Engine/UserSettings/`, 메뉴는 `Engine/UI/Screen/OptionsMenuScreen`)에 값만 있고 읽는 곳이 없는 대상이 남았다.
-남은 것:
-- 렌더러 몫: `gv_renderScale`(업스케일 패스) · 시야 거리 · 후처리 · 텍스처 · 이펙트 품질 · 모션 블러 · `gv_colorVisionMode` 의 톤맵 쪽(톤맵에 상수 버퍼가 없어 미뤘다 — 함수는 `colorvision.hlsli`, UI 캔버스는 이미 쓴다).
-- 머리 흔들림은 데이터(`<HeadBob>` · `FirstPersonCameraComponent::_headBob`)로 켜는데 켠 게임이 없다 — Shooter3D · VoxelCraft 1인칭에 진폭을 넣고 화면으로 확인한다. 카메라 세 값은 `CameraUserSettings` 가 읽는다.
-- X11 `setDisplayMode`(EWMH 전체 화면)는 리눅스 실기 미확인.
-
-### KitCompositionGames
-제목: 키트 조립의 두 번째 테스트 게임과 땅 쓰기
-옛번호: D4-4
-왜 필요한가: 틀 · 키트 전부 · 조립 테스트 둘(`KitCompositionTest`)과 `MeadowVillage` 는 들어갔다(규칙: `Source/GameFramework/Kits/` "키트 여럿을 한 게임에"). 필요해지기 전까지 남긴 몫이다.
-착수 조건 / 남은 것: 둘째 조립(RTS + City)의 테스트 게임이 필요해지면 MeadowVillage 모양으로 만든다. 격자 키트를 섞는 게임이 생기면 `SessionStateSettings::_land*` 와 키트의 `bindLand` 를 건다.
-함정: SRPG 는 전투 끝에 `releaseLand`. 공원 놀이기구 발자국은 상태 바이트에 싣지 않는다 — 지은 칸은 땅이 든다.
-
-### FacialAnimation
-제목: 얼굴 애니메이션의 남은 것
-옛번호: D4-6
-왜 필요한가: 얼굴(`FacialAnimationComponent`)은 있으나 립싱크와 얼굴 에셋이 합성 수준이다.
-남은 것: 음소 인식 립싱크(지금은 세 대역 모양 분류 — 모음 넷 · 치찰음 정도만 가른다), 실제 얼굴 에셋(KayKit 은 모프가 없다 — 합성 테스트 머리뿐), 스킨 없는 메시의 모프(GPU 모프 풀이 스키닝 컴퓨트 안에서만 가중치를 건다), 실시간 얼굴 입력(Live Link Face 자리).
-
-### PoweredRagdoll
-제목: 파워드 래그돌과 헤어 · 천
-옛번호: D4-6
-왜 필요한가: 관절 모터가 애니메이션 포즈를 쫓는 래그돌(전신 · 부분 래그돌 · 맞음 반응 · 기상 섞기는 `RagdollComponent`).
-남은 것: 헤어 카드 · 천(Jolt 소프트 바디 — 옛 D1-4), 가닥 헤어(TressFX)는 나중.
-
-### KayKitMaterials
-제목: KayKit 캐릭터 텍스처를 머티리얼로
-옛번호: D4-6
-왜 필요한가: 원본 GLB 에 든 `knight_texture` 등을 `textures_raw/` 로 옮겨 머티리얼을 만들어야 한다. 지금 캐릭터는 씬 기본 머티리얼(흰색)로 그려진다.
-착수 조건 / 남은 것: Shooter3D 팩에는 이미 꺼낸 아틀라스(`textures_raw/kaykit_*.png`) · `materials/kaykit_*.material` 이 있다. 나머지 게임에 같은 일을 한다.
-
-### ShooterStrideWarping
-제목: Shooter3D 발 미끄러짐 연결
-옛번호: D4-6
-왜 필요한가: 앞으로 걷기 · 달리기는 재생 속도 매칭(`LocomotionSpeedUtil`, 범위 0.6 ~ 1.8)으로 맞췄고, 범위를 넘는 몫은 리그 노드 `StrideWarping`(+ `LocomotionSpeedUtil::computeStrideScale`)이 맡는다.
-남은 것: Shooter3D 연결(`knight.rig.json` 에 노드를 두고 `ShooterAvatarComponent` 가 프레임마다 `stride_scale` · 이동 방향을 `setNodeControl` 로 넣기)과 화면 확인. 뒷걸음 · 옆걸음은 [ShooterCharacterIntegration](ShooterCharacterIntegration.md).
-
-### AnimationAdvancedFeatures
-제목: 애니메이션 고급 기능 후보
-옛번호: D4-16
-왜 필요한가: 전신 IK, 리타게팅 도구, 애니메이션 압축 · 샘플링 최적화. 모션 매칭은 보류라 [MotionMatching](MotionMatching.md) 에 따로 있다.
-착수 조건 / 남은 것: 합성 리그 벤치(`도구 - 합성 리그 생성기`)가 비용 곡선을 낸 뒤 병목이 확인되는 것부터 한다.
-
-### PreloadAndLod
-제목: 프리로딩 · LOD · 사전 준비
-옛번호: D4-7
-왜 필요한가: 컷이나 레벨 전환에서 LOD · 텍스처 · 셰이더가 바뀌는 게 보이지 않게 미리 올리고 준비해야 한다(로드맵 규모).
-남은 것:
-- 프리로드 세트: 미리 올릴 에셋 + 미리 만들 프리팹 · 우선순위, 쿠킹 때 레벨 · 시퀀스 · 샷의 참조를 따라 자동 수집(`collectReferencedPrefabPaths` 가 있다), `requestPreload` 가 진행률 · 완료를 준다, 프레임 예산(IO · 업로드 · PSO · 인스턴스 수), 참조 수 · LRU 로 내림(지금 캐시는 약한 참조라 고정 단계가 필요하다) — 언리얼 AssetManager 번들 · Addressables.
-- 프리팹 풀(숨겨 둔 인스턴스를 켜고 돌려받기 — 탄 · 손님 · 유닛), 시퀀서 사전 스폰(프리롤 동안 캐릭터를 숨겨 만들어 첫 포즈 · LOD · 머티리얼을 준비).
-- 메시 LOD: 임포트 때 `meshopt_simplify` 로 단계 생성, `.mesh` 판 올림, GPU 컬링이 화면 크기로 고름, 디더 크로스페이드, 컷 · 대기 뷰 강제 LOD, HLOD 는 나중.
-- 컷 준비(프리웜): 대기 뷰 신호(`CameraManagerComponent::setPendingView`, 시퀀서 컷 트랙의 프리롤)는 있고 듣는 쪽이 없다. LOD 선택은 대기 뷰 기준 LOD 도 구해 컷 첫 프레임부터 그 LOD(컷을 넘는 LOD 크로스페이드는 끈다), 스트리밍은 대기 뷰에서 보일 메시 · 텍스처 밉을 먼저 요청(언리얼 streaming source · AddViewLocation), PSO 는 대기 뷰 절두체 안 머티리얼의 PSO 를 미리 만들고, 그림자는 대기 뷰 기준 캐스케이드를 미리 맞춘다. 다중 뷰 렌더로 컷 1~2 프레임 전에 대기 뷰를 저해상도로 숨겨 그려 업로드 · PSO 를 강제로 데운다.
-착수 조건 / 남은 것: 선행 조건 셋이 아직 없다 — LOD 시스템, 밉 단위 텍스처 스트리밍(`AssetStreamingQueue` 는 에셋 단위 비동기 읽기), PSO 를 미리 만드는 창구(DX12 PSO 생성 히치).
-
 ### CharacterAppearanceIntegration
 제목: 캐릭터 외형의 통합 · 쿠킹 · 장비 잇기
 옛번호: D4-8

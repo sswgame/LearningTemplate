@@ -957,7 +957,9 @@
 					                            _farPlane="120"
 					                            _viewModelName="ViewWeapon"
 					                            _viewModelOffset="0.16,-0.15,0.42"
-					                            _viewModelYawOffset="3.1415927" />
+					                            _viewModelYawOffset="3.1415927">
+						<_headBob _verticalAmplitude="0.03" _lateralAmplitude="0.015" _strideLength="1.8" _referenceSpeed="4.5" _blendTime="0.15" />
+					</FirstPersonCameraComponent>
 					<HUDControllerComponent _componentName="HUDControllerComponent"
 					                        _bActive="true"
 					                        _documentPath="game/shooter3d/ui/hud.ui.xml" />

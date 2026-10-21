@@ -25,7 +25,6 @@ KayKit 기사 플레이어 · 스켈레톤 적 · 외형 프리셋 · 입력 맵
 ## 남은 것
 
 - S1 확인: 적을 쓰러뜨려 무기 · 방패가 떨어져 바닥에 눕는지, 시체가 걷힐 때 같이 사라지는지(Shooter3D autoplay 시나리오 스크린샷). 상자 크기는 원본 glb 의 POSITION 범위로 정했다(엔진의 X 뒤집기는 대칭이라 같다).
-- S2 임포트(빌드 뒤 첫 일): 사이드카 `models_raw/kaykit/skeleton_minion.clips.json` 을 아래 내용으로 만들고 `App --import-models` 로 다시 임포트해 사이드카 · `import.stamp` · 클립을 한 커밋으로 넣는다(사이드카만 넣으면 임포트 스탬프 검사가 깨진다). 시각 0.45 초는 지운 `_attackHitTime` 의 값이다 — 화면에서 칼이 닿는 프레임으로 고친다. 그 뒤 Shooter3D autoplay 시나리오로 적이 맞히는지(플레이어 체력이 준다)와 오류 줄이 없는지 본다. 발소리 알림(`FootL` · `FootR` → `Footstep`)도 같은 사이드카에 넣을 수 있다.
-  `{ "clips": { "1H_Melee_Attack_Chop": { "notifies": [ { "name": "Impact", "time": 0.45 } ] } } }`
-- S3 확인: 1인칭에서 아래를 보면 몸 · 다리가 보이고 머리 · 투구 · 몸 무기가 보이지 않는지, 3인칭으로 바꾸면 모두 돌아오는지(스크린샷). 기사 리그의 발 · 시선 · 손 IK(`knight.rig.json` — 대상 `RigLookTarget` 오브젝트 · `Weapon` 유닛)와 스프링 본(망토, `knight_cape.rig.json`)은 플레이어 몸에 아직 붙이지 않았다 — 대상 연결을 화면으로 확인하며 붙인다.
-- S4: 래그돌 쓰러짐(지금은 클립), 부위 히트박스(지금은 발에서 키까지 캡슐 하나, 중심 소켓 `Chest`), 물리 질의 히트스캔 · 시야(지금 상자 목록 · 캡슐), 외형 부품 풀(스켈레톤마다 프리팹을 세우고 지운다), 뒷걸음 · 옆걸음 발 미끄러짐([ShooterStrideWarping](Candidates-gameplay.md#shooterstridewarping)).
+- S2: 적 공격 클립(`1H_Melee_Attack_Chop`, `skeleton_minion`)에 `Impact` 알림을 다는 사이드카(`models_raw/kaykit/skeleton_minion.clips.json` — `skeleton_warrior.clips.json` 과 같은 형식)와 다시 임포트, 적 프리팹의 알림 표(`Impact` → `GameplayEvent`), `ShooterEnemyComponent::onAnimationNotify` 가 공격 단계에서 맞힘을 표시하고 `_attackHitTime` 속성을 지운다. 사이드카를 바꾸면 임포트 스탬프가 바뀌므로 임포트와 한 커밋이어야 한다.
+- S3: 1인칭 머리 숨기기는 리그 노드 `ScaleBone`(`weight_slot` 으로 켜고 끔)이 있다. 플레이어 몸 프리팹에 `PoseModifierComponent`(기사 리그)를 달고, 1인칭에서 몸 전체 대신 머리만 숨기면 몸의 무기와 시점 무기가 둘 다 보이므로 시점 무기 · 몸 무기 중 하나를 정하는 일이 같이 필요하다. 스프링 본(망토)은 `knight_cape.rig.json`, 왼손을 총에 붙이는 손 IK 는 `knight.rig.json` 의 `LeftHandGrip`(대상 소켓 `Grip`)으로 데이터가 있다 — 플레이어 몸에 리그를 연결할 때 같이 확인한다(지금 `player_body.prefab.xml` 에 `PoseModifierComponent` 가 없다).
+- S4: 래그돌 쓰러짐(지금은 클립), 부위 히트박스(지금은 발에서 키까지 캡슐 하나, 중심 소켓 `Chest`), 물리 질의 히트스캔 · 시야(지금 상자 목록 · 캡슐), 외형 부품 풀(스켈레톤마다 프리팹을 세우고 지운다), 뒷걸음 · 옆걸음 발 미끄러짐의 화면 확인([ShooterStrideWarping](ShooterStrideWarping.md) S2).

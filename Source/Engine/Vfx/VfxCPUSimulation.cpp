@@ -38,12 +38,13 @@ namespace sw
 
 namespace sw
 {
-    VfxCPUSimulation::VfxCPUSimulation( const VfxEmitterDef& def, uint64 seed )
+    VfxCPUSimulation::VfxCPUSimulation( const VfxEmitterDef& def, uint64 seed, float32 spawnScale )
         : _def{ def }
         , _seed{ seed }
         , _listParticle{}
         , _listBurstFired{}
         , _spawnedCount{ 0 }
+        , _spawnScale{ spawnScale }
         , _emitterSeconds{ 0.0f }
         , _spawnCarry{ 0.0f }
         , _pendingSeconds{ 0.0f }
@@ -52,6 +53,7 @@ namespace sw
         , _bWarnedStepLimit{ false }
     {
         SW_ASSERT( _def._maxParticles >= 1 );
+        SW_ASSERT( _spawnScale >= 0.0f );
         _listParticle.reserve( _def._maxParticles );
         _listBurstFired.resize( _def._listBurst.size(), 0 );
     }
@@ -109,25 +111,24 @@ namespace sw
         const float32 previousSeconds = _emitterSeconds;
         _emitterSeconds += stepSeconds;
 
-        uint32 spawnCount = 0;
+        // 버스트와 생성률은 생성 배율(이펙트 품질)을 곱해 같은 나머지에 쌓는다 — 배율이 1 이 아니어도 작은 버스트가 반올림으로 사라지지 않고 다음 몫에 이어진다.
         for ( size_t burstIndex = 0; burstIndex < _def._listBurst.size(); ++burstIndex )
         {
             const VfxBurstDef& burst = _def._listBurst[burstIndex];
             if ( _listBurstFired[burstIndex] == 0 && burst._time <= _emitterSeconds )
             {
                 _listBurstFired[burstIndex] = 1;
-                spawnCount += burst._count;
+                _spawnCarry += static_cast<float32>( burst._count ) * _spawnScale;
             }
         }
 
         // 생성률은 방출 시간(0.._duration) 안에서만 쌓는다.
         const float32 emitSeconds = MathUtil::min( _emitterSeconds, _def._duration ) - MathUtil::min( previousSeconds, _def._duration );
-        _spawnCarry += _def._spawnRate * emitSeconds;
+        _spawnCarry += _def._spawnRate * _spawnScale * emitSeconds;
         const float32 wholeCount = MathUtil::floor( _spawnCarry );
         _spawnCarry -= wholeCount;
-        spawnCount += static_cast<uint32>( wholeCount );
 
-        spawnParticles( spawnCount );
+        spawnParticles( static_cast<uint32>( wholeCount ) );
 
         if ( _emitterSeconds >= _def._duration )
         {

@@ -14,6 +14,7 @@ gv_serverExitAfterTicks = "ServerTest 가 배포 전용 서버를 정해진 틱 
 gv_arenaAutoPlay = "구운 게임의 팩 시나리오 · Test/QA/Games.json 골든이 배포본에서도 자동 플레이를 켠다"
 gv_farmAutoPlay = "구운 게임의 팩 시나리오 · Test/QA/Games.json 골든이 배포본에서도 자동 플레이를 켠다"
 gv_meadowAutoPlay = "Test/QA/Games.json 골든이 배포본에서도 자동 플레이를 켠다"
+gv_frontierAutoPlay = "Test/QA/Games.json 골든이 배포본에서도 자동 플레이를 켠다"
 gv_nileAutoPlay = "구운 게임의 팩 시나리오 · Test/QA/Games.json 골든이 배포본에서도 자동 플레이를 켠다"
 gv_parkAutoBuild = "구운 게임의 팩 시나리오 · Test/QA/Games.json 골든이 배포본에서도 자동 건설을 켠다"
 gv_shooterAutoPlay = "구운 게임의 팩 시나리오 · Test/QA/Games.json 골든이 배포본에서도 자동 플레이를 켠다"

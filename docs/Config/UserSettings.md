@@ -29,8 +29,8 @@
 | `graphics.viewDistance` | float | `1` | 0.25 ~ 2 (눈금 0.25) | confirm | `gv:gv_viewDistanceScale` |
 | `graphics.foliageDensity` | float | `1` | 0 ~ 1.5 (눈금 0.25) | confirm | `gv:gv_foliageDensity` |
 | `graphics.postQuality` | enum | `high` |  | confirm | `gv:gv_postQuality` |
-| `graphics.textureQuality` | enum | `high` |  | restart | `gv:gv_textureQuality` |
-| `graphics.effectsQuality` | enum | `high` |  | confirm | `gv:gv_effectsQuality` |
+| `graphics.textureQuality` | enum | `high` |  | restart | `gv:gv_textureMipDrop` |
+| `graphics.effectsQuality` | enum | `high` |  | confirm | `gv:gv_effectsSpawnScale` |
 | `graphics.motionBlur` | bool | `true` |  | confirm | `gv:gv_motionBlur` |
 | `audio.masterVolume` | float | `1` | 0 ~ 1 (눈금 0.05) | immediate | `handler:audio.busVolume` |
 | `audio.musicVolume` | float | `0.8` | 0 ~ 1 (눈금 0.05) | immediate | `handler:audio.busVolume` |
@@ -73,6 +73,12 @@
 | `controls.arenaFireball` | keyBinding | `` |  | confirm | `input.keyBinding` |
 | `controls.arenaHeal` | keyBinding | `` |  | confirm | `input.keyBinding` |
 | `controls.arenaDash` | keyBinding | `` |  | confirm | `input.keyBinding` |
+
+## `Resource/game/frontiertown/data/frontier.settings.xml`
+
+| id | 타입 | 기본값 | 범위 | 적용 | 대상 |
+|---|---|---|---|---|---|
+| `controls.frontierFastForward` | keyBinding | `` |  | confirm | `input.keyBinding` |
 
 ## `Resource/game/harvestvalley/data/farm.settings.xml`
 

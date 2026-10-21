@@ -20,7 +20,7 @@
 | C1 | 작업의 포즈 접근 형식(`AnimationPoseAccess`)과 읽기 작업이 붙은 유닛의 공유 | 코드와 `AnimationCrowdTest.ReaderTasksAndLeaderFollowersShareBuckets` 작성(빌드 미확인) |
 | C2 | 리더를 따르는 부품의 묶음(`joinFollowerBucket`), Shooter3D 적 군중 켜기 | 코드 · 데이터 작성(빌드 · 화면 미확인) |
 | C3 | 섞기 묶음(`joinBlendBucket`, `SkeletalAnimatorComponent::describeSharedPose` 의 페이드 요청) | 코드와 `AnimationCrowdTest.CrossfadeSharesABlendBucketThenRejoins` 작성(빌드 미확인) |
-| C4 | 메시 LOD 가 생기면 본 LOD 를 메시 LOD 와 묶기 | 착수 조건: 메시 LOD([PreloadAndLod](Candidates-gameplay.md#preloadandlod)) |
+| C4 | 메시 LOD 가 생기면 본 LOD 를 메시 LOD 와 묶기 | 착수 조건: 메시 LOD([PreloadAndLod](PreloadAndLod.md) P5) |
 
 ## 남은 것
 

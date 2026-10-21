@@ -9,15 +9,14 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
 // 그래픽: 품질 번들(`graphics.quality`)이 함께 바꾸는 값
-SW_EXTERN_GLOBAL_VARIABLE( float32, gv_renderScale );       ///< 3D 렌더 해상도 배율(0.5~1). 아직 렌더러가 읽지 않는다.
+SW_EXTERN_GLOBAL_VARIABLE( float32, gv_renderScale );       ///< 3D 렌더 해상도 배율(0.5~1). 화면 출력 뷰의 내부 해상도에 곱하고 Present 가 선형 업샘플한다(`RenderViewCollector`).
 SW_EXTERN_GLOBAL_VARIABLE( int32, gv_upscaler );            ///< 업스케일러(0 끔). 켜지면 `gv_renderScale` 은 업스케일러가 정한다.
 SW_EXTERN_GLOBAL_VARIABLE( int32, gv_shadowMapResolution ); ///< 그림자 맵 한 변의 텍셀 수입니다. 품질 단계마다의 값은 설정 스키마 `graphics.shadowQuality` 선택지의 `targetValue` 입니다.
-SW_EXTERN_GLOBAL_VARIABLE( float32, gv_viewDistanceScale ); ///< 시야 거리 배율. 아직 컬링이 읽지 않는다.
 SW_EXTERN_GLOBAL_VARIABLE( float32, gv_foliageDensity );    ///< 식생 밀도 배율. 식생 배치가 읽는다(env-world).
-SW_EXTERN_GLOBAL_VARIABLE( int32, gv_postQuality );         ///< 후처리 품질 0~3.
-SW_EXTERN_GLOBAL_VARIABLE( int32, gv_textureQuality );      ///< 텍스처 품질 0~3(밉 바이어스). 텍스처 스트리밍이 생기면 읽는다.
-SW_EXTERN_GLOBAL_VARIABLE( int32, gv_effectsQuality );      ///< 이펙트 품질 0~3. 파티클이 읽는다.
-SW_EXTERN_GLOBAL_VARIABLE( bool, gv_motionBlur );           ///< 모션 블러.
+SW_EXTERN_GLOBAL_VARIABLE( int32, gv_postQuality );         ///< 후처리 품질 0~3. 파이프라인 패스의 `_minPostQuality` 보다 낮으면 그 패스를 건너뛴다(SSAO · 블룸, `FrameRenderer::executePass`).
+SW_EXTERN_GLOBAL_VARIABLE( bool, gv_motionBlur );           ///< 모션 블러. 읽는 패스는 셰이더 쿠킹과 함께 들어온다(계획 문서 UserSettingsConsumers U3).
+// 아래 층이 읽는 설정 변수는 읽는 쪽에 있다(그 층은 이 헤더를 include 하지 못한다): 시야 거리 `gv_viewDistanceScale`(CameraComponent.cpp),
+// 텍스처 품질 `gv_textureMipDrop`(Texture2D.cpp), 이펙트 품질 `gv_effectsSpawnScale`(VfxComponent.cpp). 단계마다의 값은 스키마 선택지의 `targetValue` 다.
 
 // 게임플레이와 카메라
 SW_EXTERN_GLOBAL_VARIABLE( float32, gv_cameraFieldOfView ); ///< 1 인칭과 3 인칭 카메라 시야각(도)입니다. 카메라가 읽습니다.
@@ -25,7 +24,7 @@ SW_EXTERN_GLOBAL_VARIABLE( float32, gv_cameraShakeScale );  ///< 카메라 흔�
 SW_EXTERN_GLOBAL_VARIABLE( bool, gv_cameraHeadBob );        ///< 걷기 머리 흔들림입니다.
 
 // 접근성, UI, 자막
-SW_EXTERN_GLOBAL_VARIABLE( int32, gv_colorVisionMode );             ///< 색각 보정입니다(0 끔, 1 적색약, 2 녹색약, 3 청색약). 캔버스(UI)가 읽으며, 톤맵 쪽은 아직 읽지 않습니다(함수는 colorvision.hlsli).
+SW_EXTERN_GLOBAL_VARIABLE( int32, gv_colorVisionMode );             ///< 색각 보정입니다(0 끔, 1 적색약, 2 녹색약, 3 청색약). 캔버스(UI)가 겁니다. 렌더러는 화면 출력 뷰의 `g_CameraFrame.z` 에 방식을 싣고, 톤맵 쪽 셰이더(`postgrade.hlsli`)는 쿠킹과 함께 들어온다(UserSettingsConsumers U3).
 SW_EXTERN_GLOBAL_VARIABLE( float32, gv_uiScale );                   ///< 게임 UI 배율.
 SW_EXTERN_GLOBAL_VARIABLE( sw::string, gv_uiTheme );                ///< 게임 UI 테마 이름입니다(UISystem 이 테마 목록에서 고르며, 목록에 없으면 목록의 기본 테마를 씁니다).
 SW_EXTERN_GLOBAL_VARIABLE( float32, gv_uiTextScale );               ///< 게임 UI 글자 크기 배율입니다(줄여도 글은 12 UI 단위 밑으로 가지 않습니다. UIScaleUtil).

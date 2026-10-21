@@ -13,6 +13,10 @@
       "arguments": ["-gv_arenaAutoPlay=1"],
       "screenshot_frame": 180
     },
+    "FrontierTown": {
+      "arguments": ["-gv_frontierAutoPlay=1"],
+      "screenshot_frame": 180
+    },
     "HarvestValley": {
       "arguments": ["-gv_farmAutoPlay=1"],
       "screenshot_frame": 180

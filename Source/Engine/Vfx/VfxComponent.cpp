@@ -3,6 +3,7 @@
 #include "Engine/Vfx/VfxComponent.h"
 
 #include "Core/Common/HashUtil.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
@@ -22,6 +23,12 @@
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Physics/IPhysicsScene.h"
+
+/**
+ * @brief 이펙트 입자 생성 배율입니다. 사용자 설정 `graphics.effectsQuality` 선택지의 `targetValue` 가 넣는다(`engine.settings.xml`).
+ * @details Vfx 가 UserSettings 보다 아래 층이라 이 변수는 읽는 쪽인 여기에 둔다(설정은 이름으로 넣는다). 효과를 읽을 때 정하므로 바꾸면 다음에 읽는 효과부터 따른다.
+ */
+SW_GLOBAL_VARIABLE( float32, gv_effectsSpawnScale, 1.0f, "이펙트 입자 생성 배율 (사용자 설정 graphics.effectsQuality 의 targetValue)" );
 
 namespace sw
 {
@@ -275,9 +282,11 @@ namespace sw
         if ( effect.loadFromResource( _effectPath ) == false )
             return; // 효과 데이터가 무엇이 틀렸는지 오류를 남겼다 — 방출기 없이 아무것도 그리지 않는다
         _listSimulation.reserve( effect._listEmitter.size() );
+        // 이펙트 품질(사용자 설정 graphics.effectsQuality → 선택지의 targetValue)은 효과를 읽을 때 정한다 — 바꾸면 다음에 읽는 효과부터 따른다.
+        const float32 spawnScale = MathUtil::max( 0.0f, static_cast<float32>( gv_effectsSpawnScale ) );
         for ( uint32 emitterIndex = 0; emitterIndex < static_cast<uint32>( effect._listEmitter.size() ); ++emitterIndex )
         {
-            _listSimulation.emplace_back( effect._listEmitter[emitterIndex], HashUtil::combine( _seed, emitterIndex ) );
+            _listSimulation.emplace_back( effect._listEmitter[emitterIndex], HashUtil::combine( _seed, emitterIndex ), spawnScale );
         }
         _listPublished.resize( _listSimulation.size() );
         rebuildMeshEmitters();

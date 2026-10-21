@@ -1,8 +1,9 @@
 /**
  * @file LipSync.h
  * @brief 립싱크입니다. 음성 클립을 진폭과 주파수 대역 에너지로 나눠 비즘(viseme) 가중치 트랙으로 분석합니다(오프라인 임포트). 트랙이 없으면 진폭만 사용합니다(런타임).
- * @details 언리얼 립싱크 플러그인(OVR LipSync, 진폭 기반)에 해당한다. 음소 인식은 하지 않는다. 대역 에너지 형태를 데이터의 비즘 대역 테이블과
- *          비교하는 가벼운 분류다. 비즘에서 모프 타깃으로 가는 연결은 얼굴 리그(`FacialRig`)가 데이터로 정한다.
+ * @details 언리얼 립싱크 플러그인(OVR LipSync, 진폭 기반)에 해당한다. 단어 단위 음소 인식(음향 모델)은 하지 않는다. 대역 에너지 형태를 데이터의 비즘 대역 테이블과
+ *          비교하고, 유성 프레임은 선형 예측으로 잰 두 포먼트를 모음 비즘의 포먼트(`LipSyncViseme::_formantHz`)와 견줘 모음을 가른다.
+ *          비즘에서 모프 타깃으로 가는 연결은 얼굴 리그(`FacialRig`)가 데이터로 정한다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -30,6 +31,10 @@ namespace sw
         hashed_string _name;
         PROPERTY( Tooltip = "Energy ratio of the low, mid and high band (x, y, z) this viseme looks like" )
         float3 _bandShape{ 0.0f, 0.0f, 0.0f };
+        PROPERTY( Units = Hz, Tooltip = "First and second formant of a vowel viseme (0,0: not a vowel - the band shape alone decides)" )
+        float2 _formantHz{ 0.0f, 0.0f };
+
+        bool isVowel() const { return _formantHz._x > 0.0f && _formantHz._y > 0.0f; }
     };
 } // namespace sw
 
@@ -65,6 +70,10 @@ namespace sw
         float32 _fullRms{ 0.25f };
         PROPERTY( Min = 0.0, Tooltip = "Sharpness of the band shape comparison (inverse softmax temperature)" )
         float32 _sharpness{ 8.0f };
+        PROPERTY( Min = 0.0, Tooltip = "Score a vowel viseme gains when the frame's measured formants match its _formantHz (voiced frames only)" )
+        float32 _formantWeight{ 6.0f };
+        PROPERTY( Min = 0.0, Max = 1.0, Tooltip = "High band energy ratio above which a frame is unvoiced (hiss) and formants are not compared" )
+        float32 _unvoicedHighBandRatio{ 0.5f };
         PROPERTY( Tooltip = "Viseme the amplitude drives when there is no track" )
         hashed_string _fallbackViseme;
 
@@ -131,5 +140,10 @@ namespace sw
         static float32 computeRms( const vector<float32>& listSample, uint32 sampleRate, float32 time, float32 windowSeconds );
         /** @brief RMS 를 입 벌림 [0, 1] 로 바꿉니다(무음 아래 0, full 위 1). */
         static float32 computeOpenness( float32 rms, const LipSyncSettings& settings );
+        /**
+         * @brief 표본 한 창의 첫째 · 둘째 포먼트(Hz)를 잽니다 — 선형 예측(LPC) 포락선의 처음 두 봉우리입니다. 봉우리가 둘 없으면 false 입니다.
+         * @details 높은 표본율은 약 16 kHz 로 평균 솎아 내고(포먼트는 4 kHz 아래다), 프리엠퍼시스 · 해밍 창 · 자기상관 · Levinson-Durbin 을 거친다(Praat 의 Burg 대신 자기상관법).
+         */
+        [[nodiscard]] static bool tryComputeFormants( const float32* pSample, size_t sampleCount, uint32 sampleRate, float2& outFormantHz );
     };
 } // namespace sw

@@ -1274,6 +1274,24 @@
        "description": "Sharpness of the band shape comparison (inverse softmax temperature)"
       },
       {
+       "name": "_formantWeight",
+       "type": "float32",
+       "default": "6.0",
+       "min": "0.0",
+       "max": "",
+       "units": "",
+       "description": "Score a vowel viseme gains when the frame's measured formants match its _formantHz (voiced frames only)"
+      },
+      {
+       "name": "_unvoicedHighBandRatio",
+       "type": "float32",
+       "default": "0.5",
+       "min": "0.0",
+       "max": "1.0",
+       "units": "",
+       "description": "High band energy ratio above which a frame is unvoiced (hiss) and formants are not compared"
+      },
+      {
        "name": "_fallbackViseme",
        "type": "hashed_string",
        "default": "",
@@ -1305,6 +1323,15 @@
        "max": "",
        "units": "",
        "description": "Energy ratio of the low, mid and high band (x, y, z) this viseme looks like"
+      },
+      {
+       "name": "_formantHz",
+       "type": "float2",
+       "default": "0.0, 0.0",
+       "min": "",
+       "max": "",
+       "units": "Hz",
+       "description": "First and second formant of a vowel viseme (0,0: not a vowel - the band shape alone decides)"
       }
      ]
     }
@@ -3154,7 +3181,7 @@
    "type": "int32",
    "default": "0",
    "kind": "일반",
-   "description": "색각 보정 0 끔 1 적색약 2 녹색약 3 청색약 (사용자 설정 accessibility.colorVision, UI 캔버스만 — 톤맵 미구현)",
+   "description": "색각 보정 0 끔 1 적색약 2 녹색약 3 청색약 (사용자 설정 accessibility.colorVision, UI 캔버스 — 톤맵 셰이더는 쿠킹 대기)",
    "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
   },
   {
@@ -3438,12 +3465,12 @@
    "source": "Source/Editor/ImGuiEditor.cpp"
   },
   {
-   "name": "gv_effectsQuality",
-   "type": "int32",
-   "default": "2",
+   "name": "gv_effectsSpawnScale",
+   "type": "float32",
+   "default": "1.0",
    "kind": "일반",
-   "description": "이펙트 품질 0~3 (사용자 설정 graphics.effectsQuality)",
-   "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
+   "description": "이펙트 입자 생성 배율 (사용자 설정 graphics.effectsQuality 의 targetValue)",
+   "source": "Source/Engine/Vfx/VfxComponent.cpp"
   },
   {
    "name": "gv_emulatedGPUMemoryMb",
@@ -3500,6 +3527,14 @@
    "kind": "테스트",
    "description": "파괴 잎 셰이프를 온전한 동안 미리 짓는 시간(us, 스레드마다 4 ms 창마다). 0=처음 깨질 때 모두, 음수=상태를 시작할 때 모두(전/후 비교용)",
    "source": "Source/Engine/Destruction/FractureComponentBase.cpp"
+  },
+  {
+   "name": "gv_frontierAutoPlay",
+   "type": "int32",
+   "default": "0",
+   "kind": "테스트 · 배포본에도",
+   "description": "FrontierTown: 시계를 빨리 감아 달 결산과 RTS 를 스스로 돌린다 (1=켜기)",
+   "source": "Source/Games/FrontierTown/FrontierCityDirectorComponent.cpp"
   },
   {
    "name": "gv_gpuCulling",
@@ -3586,7 +3621,7 @@
    "type": "bool",
    "default": "true",
    "kind": "일반",
-   "description": "모션 블러 (사용자 설정 graphics.motionBlur)",
+   "description": "모션 블러 (사용자 설정 graphics.motionBlur, 렌더러 미구현 — UserSettingsConsumers U3 패치)",
    "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
   },
   {
@@ -3706,7 +3741,7 @@
    "type": "int32",
    "default": "2",
    "kind": "일반",
-   "description": "후처리 품질 0~3 (사용자 설정 graphics.postQuality)",
+   "description": "후처리 품질 0~3 — 패스의 _minPostQuality 보다 낮으면 건너뛴다 (사용자 설정 graphics.postQuality)",
    "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
   },
   {
@@ -3762,7 +3797,7 @@
    "type": "float32",
    "default": "1.0",
    "kind": "일반",
-   "description": "3D 렌더 해상도 배율 0.5~1 (사용자 설정 graphics.renderScale, 렌더러 미구현)",
+   "description": "3D 렌더 해상도 배율 0.5~1 (사용자 설정 graphics.renderScale, 화면 출력 뷰)",
    "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
   },
   {
@@ -3974,12 +4009,12 @@
    "source": "Source/Engine/Telemetry/TelemetryService.cpp"
   },
   {
-   "name": "gv_textureQuality",
+   "name": "gv_textureMipDrop",
    "type": "int32",
-   "default": "2",
+   "default": "0",
    "kind": "일반",
-   "description": "텍스처 품질 0~3 (사용자 설정 graphics.textureQuality)",
-   "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
+   "description": "텍스처를 읽을 때 버리는 위쪽 밉 수 (사용자 설정 graphics.textureQuality 의 targetValue, 다시 시작해야 반영)",
+   "source": "Source/Engine/Graphics/Texture/Texture2D.cpp"
   },
   {
    "name": "gv_tickBatch",
@@ -4170,8 +4205,8 @@
    "type": "float32",
    "default": "1.0",
    "kind": "일반",
-   "description": "시야 거리 배율 (사용자 설정 graphics.viewDistance)",
-   "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
+   "description": "시야 거리 배율 — 원근 카메라의 먼 평면에 곱한다 (사용자 설정 graphics.viewDistance)",
+   "source": "Source/Engine/Object/Component/CameraComponent.cpp"
   },
   {
    "name": "gv_viewMode",

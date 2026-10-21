@@ -27,6 +27,8 @@ namespace sw
         // ---- 에셋 ----
         PROPERTY( Category = "Assets", Tooltip = "Skinned knight mesh used by the character and rig benches" )
         string _knightMesh{};
+        PROPERTY( Category = "Assets", Tooltip = "Material of the knight (KayKit atlas)" )
+        string _knightMaterial{};
         PROPERTY( Category = "Assets" )
         string _knightSkeleton{};
         PROPERTY( Category = "Assets" )
@@ -55,8 +57,12 @@ namespace sw
         string _rigAimState{};
         PROPERTY( Category = "Assets" )
         string _rigWeaponMesh{};
+        PROPERTY( Category = "Assets", Tooltip = "Material of the rig weapon (KayKit atlas)" )
+        string _rigWeaponMaterial{};
         PROPERTY( Category = "Assets" )
         string _rigCapeMesh{};
+        PROPERTY( Category = "Assets", Tooltip = "Material of the rig cape (KayKit atlas)" )
+        string _rigCapeMaterial{};
         PROPERTY( Category = "Assets" )
         string _rigKnightRig{};
         PROPERTY( Category = "Assets" )
@@ -69,6 +75,8 @@ namespace sw
         string _rigWeaponSockets{};
         PROPERTY( Category = "Assets", Tooltip = "Skinned enemy mesh of the combat bench" )
         string _combatEnemyMesh{};
+        PROPERTY( Category = "Assets", Tooltip = "Material of the combat enemy (KayKit atlas)" )
+        string _combatEnemyMaterial{};
         PROPERTY( Category = "Assets" )
         string _combatEnemySkeleton{};
         PROPERTY( Category = "Assets" )
@@ -77,6 +85,8 @@ namespace sw
         string _combatEnemyData{};
         PROPERTY( Category = "Assets", Tooltip = "Sword mesh held in the enemy's right hand" )
         string _combatSwordMesh{};
+        PROPERTY( Category = "Assets", Tooltip = "Material of the sword (KayKit atlas)" )
+        string _combatSwordMaterial{};
         PROPERTY( Category = "Characters", Tooltip = "Distance in front of the combat enemy the bench shots are fired from", Min = 0.0, Units = m )
         float32 _combatShooterRange{};
 

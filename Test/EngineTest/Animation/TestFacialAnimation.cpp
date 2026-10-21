@@ -4,6 +4,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/AnimationClip.h"
+#include "Engine/Animation/Facial/FacialLiveSource.h"
 #include "Engine/Animation/Facial/FacialRig.h"
 #include "Engine/Animation/Facial/LipSync.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
@@ -11,6 +12,7 @@
 #include "Engine/Audio/LipSyncImport.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
+#include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Object/Component/3D/FacialAnimationComponent.h"
 #include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
@@ -27,6 +29,21 @@ using namespace sw;
 
 namespace
 {
+    /** @brief 표정 채널 하나(`Happy`)만 내는 실시간 입력입니다. */
+    class TestFacialLiveSource final : public IFacialLiveSource
+    {
+    public:
+        [[nodiscard]] bool tryGetChannel( const hashed_string& channel, float32& outWeight ) const override
+        {
+            if ( channel != hashed_string( "Happy" ) )
+                return false;
+            outWeight = _happy;
+            return true;
+        }
+
+        float32 _happy{ 0.0f };
+    };
+
     struct TestFacialAnimationInternal
     {
         static constexpr string_view kMeshPath     = "game/empty/models/testhead.mesh";
@@ -209,6 +226,34 @@ SW_TEST_CASE( FacialAnimationTest, ImportedTestHeadCarriesMorphTargetsAndWeightC
     SW_EXPECT_FALSE( broken.parseJSON( R"({ "_listViseme": [ { "_name": "AA" }, { "_name": "AA" } ] })", "duplicate pose" ) );
     SW_EXPECT_FALSE( broken.parseJSON( R"({ "_blink": { "_minInterval": 3.0, "_maxInterval": 1.0 } })", "unordered blink" ) );
     SW_EXPECT_TRUE( broken.getExpressions().empty() );
+}
+
+/**
+ * @brief [FacialAnimationTest] 선형 예측 포락선의 두 봉우리가 합성 모음의 포먼트에 닿는다 — 첫째 · 둘째 포먼트가 실제 값의 20 % 안이다
+ * @details 모음 셋(AA 750/1150, EE 300/2300, OO 320/800 Hz)을 한 프레임(1/30 초) 창으로 잰다. 무음 · 너무 짧은 창은 잴 수 없다.
+ */
+SW_TEST_CASE( FacialAnimationTest, LipSyncFormantsTrackSyntheticVowels )
+{
+    const float2 arrFormant[3] = {
+        float2{750.0f, 1150.0f},
+        float2{300.0f, 2300.0f},
+        float2{320.0f,  800.0f}
+    };
+    const size_t windowSamples = TestFacialAnimationInternal::kSampleRate / 30u;
+    for ( const float2& formant : arrFormant )
+    {
+        vector<float32> listSample;
+        TestFacialAnimationInternal::appendVowel( listSample, formant._x, formant._y, 0.2f );
+        float2 measured{};
+        SW_ASSERT_TRUE( LipSyncAnalyzer::tryComputeFormants( &listSample[windowSamples], windowSamples, TestFacialAnimationInternal::kSampleRate, measured ) );
+        SW_EXPECT_NEAR_EQUAL( formant._x, measured._x, formant._x * 0.2f );
+        SW_EXPECT_NEAR_EQUAL( formant._y, measured._y, formant._y * 0.2f );
+    }
+    vector<float32> listSilence;
+    TestFacialAnimationInternal::appendSilence( listSilence, 0.1f );
+    float2 unused{};
+    SW_EXPECT_FALSE( LipSyncAnalyzer::tryComputeFormants( listSilence.data(), listSilence.size(), TestFacialAnimationInternal::kSampleRate, unused ) );
+    SW_EXPECT_FALSE( LipSyncAnalyzer::tryComputeFormants( listSilence.data(), 8, TestFacialAnimationInternal::kSampleRate, unused ) );
 }
 
 /**
@@ -471,4 +516,61 @@ SW_TEST_CASE( FacialAnimationTest, AnimatorExpressionCurvesDriveExpressions )
     SW_EXPECT_NEAR_EQUAL( 0.5f, pAnimator->getCurveValue( hashed_string( "Happy" ) ), 0.0001f );
     SW_EXPECT_NEAR_EQUAL( 0.5f + pAnimator->getCurveValue( hashed_string( "smile" ) ), TestFacialAnimationInternal::getWeight( *pUnit, "smile" ), 0.0001f );
     SW_EXPECT_NEAR_EQUAL( 0.15f + pAnimator->getCurveValue( hashed_string( "mouthWide" ) ), TestFacialAnimationInternal::getWeight( *pUnit, "mouthWide" ), 0.0001f );
+}
+
+/**
+ * @brief [FacialAnimationTest] 스킨 없는 모프 메시도 유닛이 본 하나의 스킨 원본으로 바꿔 모프 가중치를 받는다 — 정점 · 타깃은 그대로다
+ * @details GPU 모프 가중치는 스키닝 컴퓨트 안에서만 걸린다. 스킨이 없으면 그 길에 들지 못하므로 `Mesh::createRigidSkinSource` 가 고정 본을 준다.
+ */
+SW_TEST_CASE( FacialAnimationTest, UnskinnedMorphMeshGetsARigidSkin )
+{
+    shared_ptr<Mesh> cube = MeshUtil::createUnitCube();
+    MeshMorphTarget  bulge{};
+    bulge._name = hashed_string( "bulge" );
+    bulge._listDelta.push_back( MeshMorphDelta{
+        0u, float3{ 0.0f, 0.5f, 0.0f },
+        float3{}
+    } );
+    cube->setMorphTargets( { bulge } );
+    SW_ASSERT_FALSE( cube->hasSkin() );
+
+    GameObjectManager      manager;
+    GameObject*            pObject = manager.createGameObject( hashed_string( "Prop" ) );
+    SkeletalMeshComponent* pUnit   = pObject->addComponent<SkeletalMeshComponent>();
+    SW_ASSERT_NOT_NULL( pUnit );
+    pUnit->setMesh( cube );
+    pUnit->resolveRenderAssets();
+    SW_ASSERT_NOT_NULL( pUnit->getMesh() );
+    SW_EXPECT_TRUE( pUnit->getMesh()->hasSkin() );
+    SW_EXPECT_EQUAL( 1u, pUnit->getMesh()->getSkinBoneCount() );
+    SW_EXPECT_EQUAL( cube->getVertices().size(), pUnit->getMesh()->getVertices().size() );
+    SW_EXPECT_EQUAL( 0, pUnit->findMorphTargetIndex( hashed_string( "bulge" ) ) );
+}
+
+/**
+ * @brief [FacialAnimationTest] 실시간 얼굴 입력의 표정 채널이 표정 가중치에 더해지고, 떼면 사라진다 — Live Link Face 자리
+ * @details 입력이 `Happy` 0.5 를 내면 smile = 0.5 × 1(리그), mouthWide = 0.5 × 0.3. 다음 프레임에 바꾼 값이 들어가고, 떼면 0 이다.
+ */
+SW_TEST_CASE( FacialAnimationTest, LiveSourceChannelsDriveExpressions )
+{
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
+    GameObjectManager         manager;
+    SkeletalMeshComponent*    pUnit = nullptr;
+    FacialAnimationComponent* pFace = TestFacialAnimationInternal::createHead( manager, pUnit );
+    SW_ASSERT_NOT_NULL( pFace );
+    TestFacialLiveSource source;
+    source._happy = 0.5f;
+    pFace->registerLiveSource( &source );
+    AnimationSystem& system = manager.getSubsystem<AnimationSystem>();
+    system.evaluate( 1.0f / 30.0f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, TestFacialAnimationInternal::getWeight( *pUnit, "smile" ), 0.0001f );
+    SW_EXPECT_NEAR_EQUAL( 0.15f, TestFacialAnimationInternal::getWeight( *pUnit, "mouthWide" ), 0.0001f );
+
+    source._happy = 1.0f;
+    system.evaluate( 1.0f / 30.0f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, TestFacialAnimationInternal::getWeight( *pUnit, "smile" ), 0.0001f );
+
+    pFace->unregisterLiveSource();
+    system.evaluate( 1.0f / 30.0f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, TestFacialAnimationInternal::getWeight( *pUnit, "smile" ), 0.0001f );
 }

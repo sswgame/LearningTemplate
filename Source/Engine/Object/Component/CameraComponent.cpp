@@ -2,6 +2,7 @@
 
 #include "Engine/Object/Component/CameraComponent.h"
 
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 
@@ -9,6 +10,12 @@
 #include "Engine/Common/RenderTargetDeclaration.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+
+/**
+ * @brief 시야 거리 배율입니다. 사용자 설정 `graphics.viewDistance` 가 넣고, 원근 카메라의 먼 평면에 곱한다(`getProjectionMatrix` — 절두체 컬링이 같은 평면으로 자른다).
+ * @details Object 가 UserSettings 보다 아래 층이라 이 변수는 읽는 쪽인 여기에 둔다(설정은 이름으로 넣는다).
+ */
+SW_GLOBAL_VARIABLE( float32, gv_viewDistanceScale, 1.0f, "시야 거리 배율 — 원근 카메라의 먼 평면에 곱한다 (사용자 설정 graphics.viewDistance)" );
 
 namespace sw
 {
@@ -138,7 +145,9 @@ namespace sw
             return float4x4::makeOrthographic( width, height, nearZ, farZ );
         }
         const float32 fov = _fovY > 1e-4f ? _fovY : 0.70f;
-        return float4x4::makePerspectiveFieldOfView( fov, aspect, nearZ, farZ );
+        // 시야 거리 사용자 설정(graphics.viewDistance)은 원근 카메라의 먼 평면을 늘이고 줄인다 — 절두체 컬링이 같은 평면으로 자른다. 직교(2D · 위에서 보기)는 데이터 그대로다.
+        const float32 viewFarZ = MathUtil::max( farZ * static_cast<float32>( gv_viewDistanceScale ), nearZ + 1e-3f );
+        return float4x4::makePerspectiveFieldOfView( fov, aspect, nearZ, viewFarZ );
     }
 
     float4x4 CameraComponent::getViewProjectionMatrix( float32 aspectRatio ) const

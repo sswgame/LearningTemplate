@@ -771,6 +771,7 @@ SW_TEST_CASE( UserSettingsTest, ShippedGameKeyBindingsNameRealInputMapActions )
         {   "game/abilityarena/data/arena.settings.xml",    "game/abilityarena/data/arena.input.xml"},
         {   "game/harvestvalley/data/farm.settings.xml",    "game/harvestvalley/data/farm.input.xml"},
         { "game/meadowvillage/data/meadow.settings.xml",  "game/meadowvillage/data/meadow.input.xml"},
+        {"game/frontiertown/data/frontier.settings.xml", "game/frontiertown/data/frontier.input.xml"},
         {        "game/nilecity/data/nile.settings.xml",         "game/nilecity/data/nile.input.xml"},
         {"game/starskirmish/data/skirmish.settings.xml", "game/starskirmish/data/skirmish.input.xml"},
         {       "game/themepark/data/park.settings.xml",        "game/themepark/data/park.input.xml"},

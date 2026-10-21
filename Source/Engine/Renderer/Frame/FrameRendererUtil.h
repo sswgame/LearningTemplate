@@ -488,7 +488,7 @@ namespace sw
         hashed_string _bloomParams{ "g_BloomParams" };
         /// @brief 카메라별 색 보정입니다 — x 노출 배율(2^EV), y 채도, z 대비, w 비네트 세기. `CameraPostProcessValues`, postgrade.hlsli.
         hashed_string _cameraGrade{ "g_CameraGrade" };
-        /// @brief 카메라별 화면 틀입니다 — x 레터박스로 남길 가로/세로 비율(0 = 없음), y 지금 뷰의 가로/세로 비율. postgrade.hlsli.
+        /// @brief 카메라별 화면 틀입니다 — x 레터박스로 남길 가로/세로 비율(0 = 없음), y 지금 뷰의 가로/세로 비율, z 색각 보정 방식(화면 출력 뷰만, 렌더 텍스처는 0). postgrade.hlsli.
         hashed_string _cameraFrame{ "g_CameraFrame" };
         hashed_string _outlineColor{ "g_OutlineColor" };
         hashed_string _outlineParams{ "g_OutlineParams" };

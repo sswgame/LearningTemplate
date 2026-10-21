@@ -20,6 +20,7 @@
 namespace sw
 {
     class FacialAnimationComponent;
+    class IFacialLiveSource;
     class Mesh;
     class SkeletalAnimatorComponent;
     class Skeleton;
@@ -35,6 +36,7 @@ namespace sw
 
         bool                isAnimationActive() const override;
         AnimationPoseAccess getPoseAccess() const override { return AnimationPoseAccess::Writes; }
+        void                prepareAnimationFrame( SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override;
         void                runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override;
         void                finishAnimationFrame( SkeletalMeshComponent& unit ) override;
         void                onAnimationUnitDetached( SkeletalMeshComponent& unit ) override;
@@ -82,6 +84,12 @@ namespace sw
 
         /** @brief 표정 가중치를 정합니다(리그에 없는 이름이면 false). 애니메이터의 같은 이름 커브와 더해집니다. */
         bool setExpressionWeight( const hashed_string& expressionName, float32 weight );
+        /**
+         * @brief 실시간 얼굴 입력을 겁니다(빌림 — 건 쪽이 수명을 쥐고 `unregisterLiveSource` 로 뗀다). 표정마다 같은 이름 채널의 값이 명시 가중치 · 애니메이터 커브에 더해진다.
+         * @details 값은 게임 스레드에서 프레임마다 옮겨 둔다(`prepareAnimationFrame`) — 워커의 얼굴 단계는 입력을 직접 읽지 않는다.
+         */
+        void registerLiveSource( const IFacialLiveSource* pSource );
+        void unregisterLiveSource();
         /** @brief 시선 목표(월드)를 정합니다. */
         void setLookAtTarget( const float3& worldPosition );
         /** @brief 시선을 놓습니다(눈은 애니메이션 그대로). */
@@ -141,6 +149,8 @@ namespace sw
         VisemeTrack                                 _speechTrack;
         vector<float32>                             _listSpeechSample;     ///< 트랙이 없을 때의 진폭 립싱크 표본(모노)
         vector<float32>                             _listExpressionWeight; ///< 리그 표정 순서의 명시 가중치
+        vector<float32>                             _listLiveWeight;       ///< 리그 표정 순서의 실시간 입력 값(게임 스레드가 프레임마다 옮겨 둔다, 입력이 없으면 0)
+        const IFacialLiveSource*                    _pLiveSource;          ///< 실시간 얼굴 입력(빌림, `registerLiveSource`)
         vector<vector<int32>>                       _listExpressionTarget; ///< 표정마다 타깃 → 메시 타깃 번호
         vector<vector<int32>>                       _listVisemeTarget;     ///< 비즘마다 타깃 → 메시 타깃 번호
         vector<int32>                               _listBlinkTarget;      ///< 깜빡임 타깃 → 메시 타깃 번호

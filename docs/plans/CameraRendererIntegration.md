@@ -25,7 +25,7 @@
 
 - 컷 신호는 카메라 쪽이 끝났다(디렉터 `consumeCut` → `CameraComponent::markCut` → `RenderViewSettings::_bCut`, 테스트 `CameraModeTest.DirectorComponentMarksTheCameraCutOnce` · `RenderViewCollectorTest.CameraPostProcessAndCutReachTheViewSettings`).
 - 지금 `_bCut` 은 TAA 기록만 리셋한다. 렌더러에 모션 벡터 · 자동 노출 · 모션 블러가 생기면 같은 신호로 모션 벡터 0 · 노출 즉시 맞춤 · 모션 블러 끔을 붙인다.
-- 대기 뷰 신호(`CameraManagerComponent::setPendingView`)를 듣는 쪽은 [PreloadAndLod](Candidates-gameplay.md#preloadandlod).
+- 대기 뷰 신호(`CameraManagerComponent::setPendingView`)를 듣는 쪽은 [PreloadAndLod](PreloadAndLod.md)(애니메이션 LOD 는 들어갔다, 메시 LOD · 밉 · PSO 는 P5 · P6).
 
 ### S4 다중 뷰 보임의 가려짐
 
