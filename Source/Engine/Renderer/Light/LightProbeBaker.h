@@ -6,7 +6,8 @@
  *          닿은 면의 밝기는 조명 식(`lighting.hlsli` `swShadeLights`)과 같은 식이다 — 반사율 × Σ 세기 × 감쇠 × max(0, n·l) × 그림자.
  *          그림자와 가림은 물리 레이캐스트로 봅니다(물리 셰이프가 없는 메시는 빛을 가리지 않는다). 면의 반사율은 볼륨이 정한 값 하나입니다
  *          (`LightProbeVolumeComponent::getBounceAlbedo` — 물리 씬은 머티리얼을 모른다).
- *          하늘은 스카이 컴포넌트(D3-7.4)의 SH 를 받습니다. 스카이가 없으면 0 입니다(폴백 없음 — 하늘이 없는 씬의 빈 방향은 어둡다).
+ *          하늘은 스카이 컴포넌트(D3-7.4)의 그러데이션을 빈 방향마다 그대로 셉니다(`SkyGradient::evaluateRadiance` — 셰이더 `sky.hlsl` 과 같은 식).
+ *          스카이가 없으면 세기 0 이라 0 입니다(폴백 없음 — 하늘이 없는 씬의 빈 방향은 어둡다).
  *          같은 씬 · 같은 볼륨이면 결과가 같습니다(방향 수열이 결정적이다).
  */
 #pragma once
@@ -17,6 +18,7 @@
 #include "Core/Math/SphericalHarmonics.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Engine/Environment/Sky/SkyGradient.h"
 #include "Engine/Graphics/Lighting/LightProbeGrid.h"
 #include "Engine/Graphics/Shader/Binding/GPULight.h"
 #include "Engine/Physics/IPhysicsQueryScene.h"
@@ -33,7 +35,7 @@ namespace sw
     struct LightProbeBakeInput
     {
         const IPhysicsQueryScene3D* _pPhysics{ nullptr };  ///< 레이를 쏠 물리 씬(필수)
-        const SH9Color*             _pSky{ nullptr };      ///< 하늘의 복사휘도. 없으면 하늘은 0 이다
+        SkyGradient                 _sky{};                ///< 빈 방향의 하늘(`SkyComponent::findSky`). 스카이가 없으면 세기 0 이라 하늘은 0 이다
         vector<GPULight>            _listLight;            ///< 씬 라이트(`collectSceneLights` 와 같은 원소)
         uint32                      _sampleCount{ 0 };     ///< 프로브마다 레이 수(0 이면 굽지 않는다)
         float32                     _bounceAlbedo{ 0.0f }; ///< 레이가 닿은 면의 반사율
@@ -47,7 +49,7 @@ namespace sw
     {
     public:
         /**
-         * @brief 씬과 볼륨에서 굽기 입력을 모읍니다 — 라이트(`collectSceneLights`), 물리 씬, 볼륨의 레이 수 · 반사율.
+         * @brief 씬과 볼륨에서 굽기 입력을 모읍니다 — 라이트(`collectSceneLights`), 하늘(`SkyComponent::findSky`), 물리 씬, 볼륨의 레이 수 · 반사율.
          * @return 3D 물리 씬이 없으면 false 이고 @p pOutError 에 이유를 적습니다(가림 없이 굽지 않는다).
          */
         [[nodiscard]] static bool collectInput( const Scene& scene, const LightProbeVolumeComponent& volume, LightProbeBakeInput& outInput, string* pOutError = nullptr );

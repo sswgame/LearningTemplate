@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Environment/Sky/SkyComponent.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Object/Component/3D/LightProbeVolumeComponent.h"
 #include "Engine/Object/Component/Physics/ScenePhysics.h"
@@ -55,8 +56,8 @@ namespace sw
             return false;
         }
         outInput._pPhysics = pPhysics;
-        // 하늘(D3-7.4 스카이 컴포넌트)은 아직 없다 — 빈 방향은 0 이다(폴백 없음).
-        outInput._pSky         = nullptr;
+        // 하늘이 없으면 findSky 가 세기 0 으로 비운다 — 빈 방향은 0 이다(폴백 없음).
+        (void)SkyComponent::findSky( *pObjects, outInput._sky );
         outInput._sampleCount  = volume.getBakeSampleCount();
         outInput._bounceAlbedo = volume.getBounceAlbedo();
         collectSceneLights( &scene, outInput._listLight );
@@ -102,9 +103,9 @@ namespace sw
                     const float3 surface = hit._point + hit._normal * Internal::kSurfaceOffset;
                     radiance             = computeDirectLight( input, surface, hit._normal ) * input._bounceAlbedo;
                 }
-                else if ( input._pSky != nullptr )
+                else
                 {
-                    radiance = input._pSky->evaluateRadiance( direction );
+                    radiance = input._sky.evaluateRadiance( direction ); // 스카이가 없으면 세기 0 이라 0 이다
                 }
                 probe.addSample( direction, radiance, weight );
             }
