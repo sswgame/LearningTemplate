@@ -316,7 +316,7 @@ namespace sw
          * @struct ScopedPoolMemoryTag
          * @brief 스코프 동안 이 스레드의 할당을 이름 풀의 태그(`MemoryTag::EngineMisc`)로 셉니다.
          * @details 풀의 블록(청크, 문자열 아레나, 샤드 맵)은 이름을 처음 넣은 하위 시스템의 것이 아니다. 둘러싼 스코프의 태그로 세면 같은 메모리가
-         *          "누가 먼저 넣었나"에 따라 태그를 옮겨 다닌다. 새 이름을 넣는 느린 경로와 저장소를 만드는 곳에서만 건다.
+         *          "누가 먼저 넣었나"에 따라 태그를 옮겨 다닌다. 새 이름을 넣는 느린 경로와 저장소를 만드는 곳에서만 붙인다.
          *          배포본(`kMemoryTagScopesEnabled` 가 아닌 구성)에서는 아무것도 하지 않습니다.
          */
         struct SW_API ScopedPoolMemoryTag

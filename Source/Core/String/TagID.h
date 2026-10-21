@@ -6,7 +6,7 @@
  *          (`""_tag`), 런타임 문자열은 `TagID::request` 로 만듭니다.
  *
  * @note 이 타입이 **Core 에 있는 이유**: 쓰는 것이 Core 기능뿐이고, 직렬화기가 TagID 의 기본 핸들러를 등록하려고 Object 를
- *       include 하면 Reflection · Serialization · Config 가 Engine 코어의 강결합 묶음에 묶입니다. 리플렉션이 필요한 태그
+ *       include 하면 Reflection · Serialization · Config 가 Engine 코어의 강결합 덩어리에 묶입니다. 리플렉션이 필요한 태그
  *       집합과 질의는 `Engine` 쪽 `Object/Component/TagSystem.h` 에 있습니다.
  */
 #pragma once

@@ -1,8 +1,8 @@
 /**
  * @file EnumNameTable.h
- * @brief 열거자 이름 표입니다. XML 카탈로그가 열거자를 이름으로 적을 때(대소문자 무시) 이름 → 열거자와 열거자 → 이름을 한 표로 합니다.
+ * @brief 열거자 이름 테이블입니다. XML 카탈로그가 열거자를 이름으로 적을 때(대소문자 무시) 이름 → 열거자와 열거자 → 이름을 한 테이블로 합니다.
  * @details 카탈로그마다 이름 배열과 `for ( index < 6 )` 같은 개수 상수를 손으로 두면 열거자를 더할 때 개수를 못 따라가 새 이름이 조용히 읽히지 않는다.
- *          표는 배열에서 개수를 읽고(`getCount`), 열거자의 끝 값(`Count`)이 있으면 호출한 쪽이 `static_assert( kTable.getCount() == static_cast<size_t>( E::Count ) )` 로 맞춥니다.
+ *          테이블은 배열에서 개수를 읽고(`getCount`), 열거자의 끝 값(`Count`)이 있으면 호출한 쪽이 `static_assert( kTable.getCount() == static_cast<size_t>( E::Count ) )` 로 맞춥니다.
  *          열거자는 0 부터 빈틈없이 이어지고 이름 배열의 순서와 같아야 한다(저장 값이 아니라 이름이 파일에 적히는 열거자 전용).
  *          리플렉션 `ENUM()` 으로 옮기지 않는 까닭: 데이터 파일이 `impulse` · `phaseEnter` 처럼 소문자로 적고 있어, 철자가 열거자 이름과 다르다. 옮기면 데이터를 다시 써야 한다.
  */
@@ -15,7 +15,7 @@ namespace sw
 {
     /**
      * @class EnumNameTable
-     * @brief 이름 배열을 가리키는 열거자 이름 표입니다. 배열은 정적 저장소에 있어야 합니다(`static constexpr const utf8* kArrName[]`).
+     * @brief 이름 배열을 가리키는 열거자 이름 테이블입니다. 배열은 정적 저장소에 있어야 합니다(`static constexpr const utf8* kArrName[]`).
      */
     template <typename E>
     class EnumNameTable

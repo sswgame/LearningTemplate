@@ -12,8 +12,8 @@ namespace sw
             static bool isNameCharacter( utf8 character ) { return isAsciiLetter( character ) || ( '0' <= character && character <= '9' ) || character == '_'; }
 
             /**
-             * @brief @p start 의 `[` 가 태그 모양인지 보고, 그렇다면 토큰을 채웁니다(`_offset` · `_text` · 이름 · 값 · 종류).
-             * @return 태그 모양이 아니면 false(그 `[` 는 글자다).
+             * @brief @p start 의 `[` 가 태그 형태인지 보고, 그렇다면 토큰을 채웁니다(`_offset` · `_text` · 이름 · 값 · 종류).
+             * @return 태그 형태가 아니면 false(그 `[` 는 글자다).
              */
             [[nodiscard]] static bool readTag( string_view markup, size_t start, MarkupToken& outToken )
             {
@@ -85,7 +85,7 @@ namespace sw
             inoutOffset = start + outToken._text.size();
             return true;
         }
-        // 글 — 다음 `[[` 나 태그 모양 `[` 앞까지(지금 자리의 모양이 아닌 `[` 는 글에 넣는다).
+        // 글 — 다음 `[[` 나 태그 형태 `[` 앞까지(지금 위치의 형태가 아닌 `[` 는 글에 넣는다).
         size_t      cursor = start + 1;
         MarkupToken probe{};
         while ( cursor < markup.size() )
