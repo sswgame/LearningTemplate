@@ -53,7 +53,8 @@ namespace sw
         IStreamTransport*       _pTransport{ nullptr };     ///< 빌려 쓴다. null 이면 플랫폼 전송을 만든다
         MetricRegistry*         _pMetricRegistry{ nullptr };
         ServiceHealthRegistry*  _pHealthRegistry{ nullptr };
-        uint16                  _gamePort{ 0 };                ///< 디렉터리에 알릴 게임(UDP) 포트
+        uint16                  _gamePort{ 0 };                ///< 디렉터리에 알릴 게임(UDP) 포트(샤드 여럿이면 첫 포트)
+        uint8                   _gamePortCount{ 1 };           ///< 디렉터리에 알릴 게임 포트 수(`ServerDescriptor::_portCount` — 연이은 포트 샤드 수, 한 포트를 나누면 1)
         uint8                   _bTLS{ SW_TRUE };              ///< 서비스 스트림을 TLS 1.3 으로 받는다(테스트와 봇은 끈다)
         uint8                   _bManualCacheTime{ SW_FALSE }; ///< 메모리 캐시의 만료를 `tick` 의 시각으로 측정한다(가짜 시각 테스트, 봇)
     };

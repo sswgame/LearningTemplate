@@ -18,6 +18,16 @@ namespace sw
         Error
     };
 
+    /** @brief UDP 포트를 다른 소켓과 나누는가입니다. */
+    enum class UDPPortSharing : uint8
+    {
+        Exclusive = 0, ///< 이 소켓만 그 포트를 쓴다
+        ReusePort      ///< 리눅스 `SO_REUSEPORT` — 같은 포트의 소켓 여럿에 커널이 4-튜플로 나눠 준다(포트 샤딩의 한 포트 판). 다른 플랫폼은 열지 못한다
+    };
+} // namespace sw
+
+namespace sw
+{
     struct SW_API PlatformSocketUtil
     {
         static constexpr uint64 kInvalidSocket = ~0ull;
@@ -27,8 +37,9 @@ namespace sw
         /**
          * @brief 논블로킹 UDP 소켓을 @p port 에 엽니다(0 = 아무 포트). 실패하면 `kInvalidSocket` 입니다.
          * @param bLoopbackOnly true 이면 127.0.0.1 에만 묶는다 — 모든 인터페이스에 묶으면 Windows 방화벽이 실행 파일마다 허용 창을 띄운다.
+         * @param sharing `ReusePort` 는 리눅스에서만 열린다 — 다른 플랫폼은 `kInvalidSocket` 이다(배타 소켓으로 대신 열지 않는다).
          */
-        static uint64 openUDPSocket( uint16 port, bool bLoopbackOnly );
+        static uint64 openUDPSocket( uint16 port, bool bLoopbackOnly, UDPPortSharing sharing );
         static void   closeSocket( uint64 socketHandle );
         /** @brief 실제로 묶인 포트입니다(0 으로 열었을 때). */
         static uint16              getBoundPort( uint64 socketHandle );

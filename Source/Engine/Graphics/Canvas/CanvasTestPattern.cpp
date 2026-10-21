@@ -2,43 +2,9 @@
 
 #include "Engine/Graphics/Canvas/CanvasTestPattern.h"
 
-#include "Core/Container/StringUtil.h"
-
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Text/FontService.h"
-#include "Engine/Text/GlyphCache.h"
-#include "Engine/Text/IFontRasterizer.h"
-
-namespace sw
-{
-    namespace
-    {
-        /** @brief 글 한 줄을 왼쪽에서 오른쪽으로 칠합니다. 셰이핑과 커닝은 없으며, 배치 단계가 생기기 전의 테스트 이미지입니다. */
-        void drawLine( CanvasPainter& painter, FontService& fontService, string_view text, const float2& origin, const CanvasGlyphStyle& style,
-                       uint64 frameIndex )
-        {
-            const FontFaceChain chain      = fontService.getFaceChain( FontSpec{} );
-            CanvasGlyphStyle    glyphStyle = style;
-            glyphStyle._bFauxBold          = chain._bFauxBold;
-            glyphStyle._bFauxItalic        = chain._bFauxItalic;
-            float32 penX                   = origin._x;
-            size_t  offset                 = 0;
-            while ( offset < text.size() )
-            {
-                const uint32     codepoint  = StringUtil::decodeUtf8( text, offset );
-                uint32           glyphIndex = 0;
-                const FontFaceID face       = fontService.findFaceForCodepoint( chain, codepoint, glyphIndex );
-                if ( face == kInvalidFontFaceID )
-                    continue;
-                (void)painter.drawGlyph( float2{ penX, origin._y }, face, glyphIndex, glyphStyle, fontService.getGlyphCache(), frameIndex );
-                GlyphMetrics metrics{};
-                if ( fontService.getRasterizer().findGlyphMetrics( face, glyphIndex, metrics ) )
-                    penX += metrics._advance * style._fontSize;
-            }
-        }
-    } // namespace
-} // namespace sw
 
 namespace sw
 {
@@ -83,13 +49,13 @@ namespace sw
         CanvasGlyphStyle title{};
         title._fontSize = 40.0f;
         title._color    = float4{ 1.0f, 1.0f, 1.0f, 1.0f };
-        drawLine( painter, *pFontService, "Canvas AaBb 0123", float2{ 48.0f, 230.0f }, title, frameIndex );
+        CanvasTextLineUtil::drawLine( painter, *pFontService, "Canvas AaBb 0123", float2{ 48.0f, 230.0f }, title, frameIndex );
         CanvasGlyphStyle outlined{};
         outlined._fontSize     = 32.0f;
         outlined._color        = float4{ 1.0f, 0.85f, 0.3f, 1.0f };
         outlined._outlineColor = float4{ 0.0f, 0.0f, 0.0f, 1.0f };
         outlined._outlineWidth = 2.0f;
         // 저장소 글꼴(라틴)에는 한글이 없으므로 문화권별 대체 글꼴 체인의 시스템 글꼴을 쓴다. 시스템 글꼴도 없으면 빈 네모(두부)로 나온다.
-        drawLine( painter, *pFontService, "UI 가나다 SDF", float2{ 48.0f, 290.0f }, outlined, frameIndex );
+        CanvasTextLineUtil::drawLine( painter, *pFontService, "UI 가나다 SDF", float2{ 48.0f, 290.0f }, outlined, frameIndex );
     }
 } // namespace sw

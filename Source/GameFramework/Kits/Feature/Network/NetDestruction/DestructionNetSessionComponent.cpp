@@ -55,7 +55,7 @@ namespace sw
         settings._hashInterval        = _hashInterval;
         settings._interpolationDelay  = _interpolationDelay;
         const DestructionNetSide side = pNetSession->getRole() == GameNetRole::Server ? DestructionNetSide::Server : DestructionNetSide::Client;
-        _session.initialize( pNetSession->getHost(), pNetSession->getRouter(), *pManager, side, settings );
+        _session.initialize( pNetSession->getPeers(), pNetSession->getRouter(), *pManager, side, settings );
     }
 
     void DestructionNetSessionComponent::onEndPlay()

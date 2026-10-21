@@ -28,7 +28,7 @@
 
 namespace sw
 {
-    class NetHost;
+    class INetPeers;
 
     /** @brief 메시지 종류입니다. 메시지의 첫 바이트에 들어갑니다. */
     struct NetTurnRelayMessage
@@ -183,7 +183,7 @@ namespace sw
          * @brief 중계를 시작합니다. 설정이 범위 밖이면 오류를 남기고 false 를 반환하며, 거절된 중계기는 메시지를 처리하지 않습니다.
          * @param tokenSeed 자리 토큰의 비밀 값입니다. 0이면 운영체제 난수를 쓰며, 테스트에서는 고정해도 됩니다.
          */
-        [[nodiscard]] bool initialize( NetHost* pHost, const TurnRelayConfig& settings, const ITurnPolicy* pPolicy = nullptr, uint64 tokenSeed = 0 );
+        [[nodiscard]] bool initialize( INetPeers* pHost, const TurnRelayConfig& settings, const ITurnPolicy* pPolicy = nullptr, uint64 tokenSeed = 0 );
         /** @brief 매 틱 호스트 `update` 뒤에 부릅니다. 신뢰 창이 차서 못 보낸 행동과 알림을 이어서 보냅니다. */
         void  update();
         uint8 getMessageRangeBase() const override { return NetKitMessageRange::kTurnRelay; }
@@ -232,7 +232,7 @@ namespace sw
         vector<int32>               _listBlockedScratch; ///< `flushPending` 에서 이번에 막힌 연결. 버퍼를 재사용한다
         EventBuffer<TurnRelayEvent> _eventBuffer;
         ITurnPolicy                 _defaultPolicy;
-        NetHost*                    _pHost;
+        INetPeers*                  _pHost;
         const ITurnPolicy*          _pPolicy;
         uint64                      _tokenSecret;
         uint64                      _tokenCount;
@@ -249,7 +249,7 @@ namespace sw
     public:
         TurnRelayClient();
 
-        void initialize( NetHost* pHost );
+        void initialize( INetPeers* pHost );
         /** @brief 방에 들어갑니다. 자리가 -1이면 빈 자리 어디든 받습니다. 전에 받은 토큰이 있으면 그 자리로 돌아갑니다. */
         void join( uint32 roomID, int32 seat = -1 );
         /** @brief 행동을 보내고 행동 번호를 반환합니다. 거절 알림에 이 번호가 붙습니다. 행동이 `NetTurnRelayMessage::kMaxActionBytes` 를 넘으면 보내지 않고 오류를 남긴 뒤 -1 을 반환합니다. */
@@ -274,7 +274,7 @@ namespace sw
     private:
         vector<TurnAction>          _listAction;
         EventBuffer<TurnRelayEvent> _eventBuffer;
-        NetHost*                    _pHost;
+        INetPeers*                  _pHost;
         uint32                      _roomID;
         uint32                      _token;
         int32                       _seat;

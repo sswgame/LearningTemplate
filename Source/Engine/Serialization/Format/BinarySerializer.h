@@ -98,6 +98,18 @@ namespace sw
         [[nodiscard]] static bool serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo, vector<uint8>& outListBuffer,
                                                       const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
 
+        /**
+         * @brief `serialize` 와 같고, 읽을 때 담아 둔 **이 빌드가 모르는 칸**(@p listUnknown, `deserializeSoft` 의 orphan 중 이름이 빈 것)을 받은 바이트 그대로 뒤에 싣습니다.
+         * @details 영속 레코드를 옛 빌드가 고쳐 다시 써도 새 빌드가 더한 칸의 값이 남는다(언리얼 `FPropertyTag` 보관, protobuf unknown fields 와 같은 자리).
+         *          아는 이름의 칸 · 읽지 못한 아는 칸(이름이 있다) · 다른 와이어 버전의 값은 싣지 않고 오류 로그와 false 입니다.
+         */
+        [[nodiscard]] static bool serializeKeepingUnknown( const void* pInstance, const TypeInfo& typeInfo, const vector<SchemaOrphanValue>& listUnknown, vector<uint8>& outListBuffer,
+                                                           const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
+        /** @brief 버전 머리를 붙인 `serializeKeepingUnknown` 입니다(`serializeVersioned` 와 같은 머리). */
+        [[nodiscard]] static bool serializeVersionedKeepingUnknown( uint32 version, const void* pInstance, const TypeInfo& typeInfo, const vector<SchemaOrphanValue>& listUnknown,
+                                                                    vector<uint8>&          outListBuffer,
+                                                                    const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
+
         /** @brief Archive 에 버전 바이너리로 직렬화합니다. 실패 규칙은 `serialize( ..., Archive& )` 와 같습니다. */
         [[nodiscard]] static bool serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo, Archive& outArchive,
                                                       const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );

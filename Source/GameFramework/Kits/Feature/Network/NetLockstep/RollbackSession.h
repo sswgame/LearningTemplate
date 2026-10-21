@@ -29,7 +29,7 @@
 
 namespace sw
 {
-    class NetHost;
+    class INetPeers;
 
     /**
      * @class IRollbackGame
@@ -98,7 +98,7 @@ namespace sw
          * @brief 세션을 시작합니다. 게임이 없거나, 플레이어 수가 1보다 작거나, 내 번호가 범위 밖이거나, 설정이 범위 밖이면 오류를 남기고 false 를 반환합니다.
          * @details 실패한 세션은 시작하지 않은 것과 같다. `advanceFrame` 이 false 를 반환한다.
          */
-        [[nodiscard]] bool initialize( NetHost* pHost, IRollbackGame* pGame, int32 playerCount, int32 localPlayer, const RollbackConfig& settings );
+        [[nodiscard]] bool initialize( INetPeers* pHost, IRollbackGame* pGame, int32 playerCount, int32 localPlayer, const RollbackConfig& settings );
         /** @brief 이번 프레임의 내 입력을 넣고 한 프레임 진행합니다. 필요하면 먼저 되감습니다. 너무 앞서 멈췄거나 시간 동기로 쉬었으면 false 를 반환합니다. */
         bool  advanceFrame( uint8 localInput );
         uint8 getMessageRangeBase() const override { return NetKitMessageRange::kLockstep; }
@@ -151,7 +151,7 @@ namespace sw
         vector<uint32>                _listNewFrameScratch; ///< 메시지 하나에서 새로 받은 프레임. 버퍼를 재사용한다
         NetInputSendWindow            _sendWindow;          ///< 내 입력. 모두가 확인한 다음 프레임부터 싣는다
         RollbackConfig                _settings;
-        NetHost*                      _pHost;
+        INetPeers*                    _pHost;
         IRollbackGame*                _pGame;
         int32                         _playerCount;
         int32                         _localPlayer;

@@ -29,6 +29,7 @@
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
 #include "Engine/Renderer/RenderThread.h"
+#include "Engine/Scene/SceneStateHash.h"
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/NativeWindowEvent.h"
 #include "Engine/Window/SplashWindow.h"
@@ -415,6 +416,8 @@ namespace sw
 
         _fixedTimestep.start();
         _devConsole.initialize( _window.get(), _bEnableEditor == SW_TRUE );
+        // 클라이언트 쪽 상태 해시 이력(서버 디버깅 S7) — `-gv_stateHashHistory=N` 이면 서버가 알린 틱마다 남긴다(아래 프레임 끝).
+        StateHashHistory::get().startFromLaunch();
 
         uint64 frameNumber      = 0;
         bool   bFrameClockShown = false;
@@ -486,6 +489,12 @@ namespace sw
             const ModuleFrameState& frameState = _moduleHost->getFrameState();
             _engine.update( frameTime._deltaTime, frameState._views, _sceneViewCameraProvider, frameState._bTickScene == SW_TRUE );
             _moduleHost->endEditorFrame();
+
+            // 클라이언트는 씬이 이번 프레임을 마친 뒤 서버가 알린 틱 번호로 해시를 남긴다 — 서버 이력과 같은 틱끼리 견준다(같은 틱은 한 번만 남는다).
+            uint64     serverTick        = 0;
+            const bool bRecordClientHash = StateHashHistory::get().isRecording() && pNetSession != nullptr && pNetSession->tryGetServerTick( serverTick );
+            if ( bRecordClientHash )
+                StateHashHistory::get().recordActiveScene( serverTick );
 
             _backendSwap.applyIfPending();
 

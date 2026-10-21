@@ -78,13 +78,13 @@ namespace sw
         int32 _gamePort{ 7777 };
         /**
          * @brief 게임 UDP 샤드 수입니다 — 서버는 `_gamePort` 부터 `_gamePort + _gamePortShardCount - 1` 까지 포트마다 소켓 하나(샤드마다 NetHost)를 엽니다.
-         * @details 두 플랫폼 공통 받기 분산 계약(포트 샤딩): 로그인 토큰이 클라이언트에게 샤드 포트를 알려 줍니다. 리눅스에서 `_bGamePortReuse` 를 켜면
-         *          같은 포트 하나에 `SO_REUSEPORT` 소켓 N 개(커널이 4-튜플로 나눔)로 바뀝니다. 1 이면 소켓 하나.
-         * @warning 아직 계약만 있다 — 게임 세션(`GameNetSession`)은 소켓 하나만 열고, 2 이상이면 포트를 열지 않고 오류를 남긴다.
+         * @details 두 플랫폼 공통 받기 분산 계약(포트 샤딩): 서버 배정(`ServerDescriptor::pickPort` — 계정마다 정해진 샤드)이 클라이언트에게 샤드 포트를 알려 줍니다.
+         *          리눅스에서 `_bGamePortReuse` 를 켜면 같은 포트 하나에 `SO_REUSEPORT` 소켓 N 개(커널이 4-튜플로 나눔)로 바뀝니다. 1 이면 소켓 하나.
+         *          2 이상이면 `_gamePort` 가 0 이 아니어야 합니다(연이은 포트가 배정의 계약이다). 키트는 샤드를 모른다(`GameNetSession::getPeers`).
          */
         PROPERTY( Min = 1, Max = 64 )
         int32 _gamePortShardCount{ 1 };
-        /** @brief 리눅스 전용 — 샤드를 포트 여러 개 대신 `SO_REUSEPORT` 한 포트로 엽니다. Windows 는 무시하고 포트 샤딩으로 엽니다. */
+        /** @brief 리눅스 전용 — 샤드(2 개 이상)를 포트 여러 개 대신 `SO_REUSEPORT` 한 포트로 엽니다. 다른 플랫폼에서 켜면 게임 포트를 열지 않고 오류입니다. */
         PROPERTY()
         bool _bGamePortReuse{ false };
         /** @brief 서비스(TCP — 로그인 · 채팅 · 거래) 포트입니다. 0 이면 서비스 서버를 열지 않습니다. */

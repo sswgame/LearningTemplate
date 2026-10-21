@@ -496,7 +496,8 @@ namespace sw
             {
                 assignment._serverID = picked._descriptor._serverID;
                 assignment._address  = picked._descriptor._address;
-                assignment._port     = picked._descriptor._port;
+                // 포트 샤딩 — 티켓(파티)은 한 샤드에 함께 간다. 대표 계정이 샤드를 정한다.
+                assignment._port = picked._descriptor.pickPort( ticket._listMember.empty() ? 0 : ticket._listMember.front()._accountID );
             }
             if ( ticket._listMember.empty() == false )
                 fillTeam( match, ticket._listMember.front()._accountID, assignment ); // 티켓 하나는 한 팀에 들어간다
@@ -545,7 +546,7 @@ namespace sw
             {
                 assignment._serverID = picked._descriptor._serverID;
                 assignment._address  = picked._descriptor._address;
-                assignment._port     = picked._descriptor._port;
+                assignment._port     = picked._descriptor.pickPort( member._accountID ); // 포트 샤딩 — 계정마다 정해진 샤드의 포트
             }
             fillTeam( match, member._accountID, assignment );
             _notificationBuffer.push( MatchQueueNotification{ assignment, member._accountID } );

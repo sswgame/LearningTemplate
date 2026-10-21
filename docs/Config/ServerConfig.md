@@ -26,8 +26,8 @@ JSON 키는 아래 필드 이름 그대로입니다(앞의 `_` 포함). 적지 �
 |---|---|---|---|---|---|
 | `_listenAddress` | `string` | `0.0.0.0` |  |  | 받는 주소(`0.0.0.0` 모두 · `127.0.0.1` 이 기계만)입니다. |
 | `_gamePort` | `int32` | `7777` | 0 ~ 65535 |  | 게임(UDP) 포트입니다. 전용 서버의 게임 인스턴스가 늘 이 포트를 엽니다(`GameNetSession::makeServerParams`, 받는 주소는 `_listenAddress`). 0 이면 운영체제가 고른 포트입니다 — 한 기계에서 서버를 여럿 띄우는 테스트용이고, 연 포트는 로그 `Net session listening on UDP port N` 에 남는다. 개발 빌드에서는 `-gv_netListenPort` 가 이 값보다 우선한다. |
-| `_gamePortShardCount` | `int32` | `1` | 1 ~ 64 |  | 게임 UDP 샤드 수입니다 — 서버는 `_gamePort` 부터 `_gamePort + _gamePortShardCount - 1` 까지 포트마다 소켓 하나(샤드마다 NetHost)를 엽니다. 두 플랫폼 공통 받기 분산 계약(포트 샤딩): 로그인 토큰이 클라이언트에게 샤드 포트를 알려 줍니다. 리눅스에서 `_bGamePortReuse` 를 켜면 같은 포트 하나에 `SO_REUSEPORT` 소켓 N 개(커널이 4-튜플로 나눔)로 바뀝니다. 1 이면 소켓 하나. @warning 아직 계약만 있다 — 게임 세션(`GameNetSession`)은 소켓 하나만 열고, 2 이상이면 포트를 열지 않고 오류를 남긴다. |
-| `_bGamePortReuse` | `bool` | `false` |  |  | 리눅스 전용 — 샤드를 포트 여러 개 대신 `SO_REUSEPORT` 한 포트로 엽니다. Windows 는 무시하고 포트 샤딩으로 엽니다. |
+| `_gamePortShardCount` | `int32` | `1` | 1 ~ 64 |  | 게임 UDP 샤드 수입니다 — 서버는 `_gamePort` 부터 `_gamePort + _gamePortShardCount - 1` 까지 포트마다 소켓 하나(샤드마다 NetHost)를 엽니다. 두 플랫폼 공통 받기 분산 계약(포트 샤딩): 서버 배정(`ServerDescriptor::pickPort` — 계정마다 정해진 샤드)이 클라이언트에게 샤드 포트를 알려 줍니다. 리눅스에서 `_bGamePortReuse` 를 켜면 같은 포트 하나에 `SO_REUSEPORT` 소켓 N 개(커널이 4-튜플로 나눔)로 바뀝니다. 1 이면 소켓 하나. 2 이상이면 `_gamePort` 가 0 이 아니어야 합니다(연이은 포트가 배정의 계약이다). 키트는 샤드를 모른다(`GameNetSession::getPeers`). |
+| `_bGamePortReuse` | `bool` | `false` |  |  | 리눅스 전용 — 샤드(2 개 이상)를 포트 여러 개 대신 `SO_REUSEPORT` 한 포트로 엽니다. 다른 플랫폼에서 켜면 게임 포트를 열지 않고 오류입니다. |
 | `_servicePort` | `int32` | `7780` | 0 ~ 65535 |  | 서비스(TCP — 로그인 · 채팅 · 거래) 포트입니다. 0 이면 서비스 서버를 열지 않습니다. |
 | `_opsPort` | `int32` | `0` | 0 ~ 65535 |  | 운영 HTTP 엔드포인트(`/metrics`, `/healthz`, `/readyz`. 평문이고 인증 없음) 포트입니다. 0 이면 열지 않습니다. 기본은 끔 — 한 기계에 서버 여럿(테스트 · 개발)이 뜨면 고정 포트가 부딪친다. 운영 설정 파일이 켠다(Prometheus 관례 9100 대). |
 | `_opsListenAddress` | `string` | `127.0.0.1` |  |  | 운영 엔드포인트가 받을 주소입니다. 기본 `127.0.0.1` 은 이 기계만 받습니다. 스크레이퍼가 다른 기계면 사설 주소를 준다(공용 인터페이스에 열지 말 것). |

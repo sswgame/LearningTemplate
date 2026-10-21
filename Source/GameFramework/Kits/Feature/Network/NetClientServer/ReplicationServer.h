@@ -23,7 +23,7 @@
 
 namespace sw
 {
-    class NetHost;
+    class INetPeers;
 
     /**
      * @class IReplicationPolicy
@@ -109,7 +109,7 @@ namespace sw
          * @brief 복제를 시작합니다. 설정이 범위 밖이면 오류를 남기고 false 를 반환합니다.
          * @details 거절된 서버는 호스트가 없는 서버와 같다. `sendSnapshots` 가 아무것도 보내지 않는다.
          */
-        [[nodiscard]] bool initialize( NetHost* pHost, const ReplicationServerConfig& settings, const IReplicationPolicy* pPolicy = nullptr );
+        [[nodiscard]] bool initialize( INetPeers* pHost, const ReplicationServerConfig& settings, const IReplicationPolicy* pPolicy = nullptr );
         void               beginTick( uint32 tick );
         /** @brief 이 틱의 엔티티를 등록합니다. 상태가 `NetSnapshot::kMaxEntityBytes` 를 넘으면 복제하지 않으며, 처음 한 번만 경고하고 그 뒤로는 횟수만 셉니다. */
         void setEntity( uint32 entityID, uint32 typeID, const vector<uint8>& buffer );
@@ -182,7 +182,7 @@ namespace sw
         vector<ClientState>                 _listClient;
         NetSnapshot                         _world;
         ReplicationServerConfig             _settings;
-        NetHost*                            _pHost;
+        INetPeers*                          _pHost;
         const IReplicationPolicy*           _pPolicy;
         IReplicationPolicy                  _defaultPolicy;
         NetParallelFor                      _parallel;

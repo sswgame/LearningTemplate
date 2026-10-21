@@ -27,6 +27,7 @@
 namespace sw
 {
     class DynamicBitset;
+    class NetMessageChannel;
 
     /** @brief 읽기 결과입니다. `Ok` 가 아니면 대상 객체는 바뀌지 않았습니다. 결과를 버리면 컴파일이 멈춥니다. */
     enum class [[nodiscard]] FixedReadResult : uint8
@@ -374,5 +375,26 @@ namespace sw
         [[noreturn]] static void             stopForMissingCodec( const hashed_string& fqn, const string& reason );
         [[nodiscard]] static bool            writeWithCodec( const FixedCodec& codec, const void* pObject, BitWriter& writer );
         [[nodiscard]] static FixedReadResult readWithCodec( const FixedCodec& codec, BitReader& reader, void* pObject );
+
+        // 스키마 해시 머리 없이 필드만 쓰고 읽는다. 같은 스키마임을 핸드셰이크가 확인한 채널(`NetMessageChannel`) 안에서만 뜻이 있으므로 그 클래스만 부른다 —
+        // 다른 길로 머리 없는 바이트를 만들면 다른 빌드의 바이트를 거절할 자리가 사라진다(ReflectionFormats.md 3.10).
+        friend class NetMessageChannel;
+        template <typename T>
+        [[nodiscard]] static bool writeBody( const T& object, BitWriter& writer )
+        {
+            return writeBodyWithCodec( requireCodec<T>(), &object, writer );
+        }
+        template <typename T>
+        [[nodiscard]] static FixedReadResult readBody( BitReader& reader, T& inoutObject )
+        {
+            const FixedCodec&     codec     = requireCodec<T>();
+            T                     temporary = inoutObject;
+            const FixedReadResult result    = readBodyWithCodec( codec, reader, &temporary );
+            if ( result == FixedReadResult::Ok )
+                inoutObject = std::move( temporary );
+            return result;
+        }
+        [[nodiscard]] static bool            writeBodyWithCodec( const FixedCodec& codec, const void* pObject, BitWriter& writer );
+        [[nodiscard]] static FixedReadResult readBodyWithCodec( const FixedCodec& codec, BitReader& reader, void* pObject );
     };
 } // namespace sw

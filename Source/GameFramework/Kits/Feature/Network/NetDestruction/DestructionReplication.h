@@ -46,7 +46,7 @@
 namespace sw
 {
     class GameObjectManager;
-    class NetHost;
+    class INetPeers;
 
     /** @brief 파괴 메시지 종류입니다. */
     struct NetDestructionMessage
@@ -111,7 +111,7 @@ namespace sw
     public:
         DestructionReplicationServer();
 
-        void initialize( NetHost* pHost, GameObjectManager* pManager, const DestructionReplicationConfig& settings );
+        void initialize( INetPeers* pHost, GameObjectManager* pManager, const DestructionReplicationConfig& settings );
         /** @brief 파괴 오브젝트를 번호로 등록합니다. 서버 쪽은 권한을 켜며, 같은 번호가 이미 있으면 교체합니다. */
         void registerObject( uint32 netID, FractureComponentBase& component );
         /** @brief 월드 틱 뒤에 부릅니다. 새 이벤트, 스냅숏, 자세, 해시 순서로 보냅니다. */
@@ -170,7 +170,7 @@ namespace sw
         DestructionReplicationConfig _settings;
         DestructionReplicationStats  _stats;
         NetMessageWriter             _writer;
-        NetHost*                     _pHost;
+        INetPeers*                   _pHost;
         GameObjectManager*           _pManager;
         float32                      _hashTime;
     };
@@ -193,7 +193,7 @@ namespace sw
     public:
         DestructionReplicationClient();
 
-        void initialize( NetHost* pHost, GameObjectManager* pManager, const DestructionReplicationConfig& settings );
+        void initialize( INetPeers* pHost, GameObjectManager* pManager, const DestructionReplicationConfig& settings );
         /** @brief 파괴 오브젝트를 번호로 등록합니다. 권한을 끄므로 충돌이 이벤트를 만들지 않습니다. */
         void registerObject( uint32 netID, FractureComponentBase& component );
         /** @brief 월드 틱 앞에 부릅니다. 지난 틱에 적용된 상태로 해시를 비교하고, 렌더 틱을 진행해 덩어리 자세를 보간합니다. */
@@ -272,7 +272,7 @@ namespace sw
         DestructionReplicationConfig _settings;
         DestructionReplicationStats  _stats;
         NetMessageWriter             _writer;
-        NetHost*                     _pHost;
+        INetPeers*                   _pHost;
         GameObjectManager*           _pManager;
         NetClock                     _clock; ///< 덩어리를 그리는 서버 틱의 시계. 흐른 시간으로 서버 틱을 추정하고(받은 가장 새 틱 + 지연까지) 보간 지연을 뺀 값이며 뒤로 가지 않는다. 표본 간격은 등록한 오브젝트 중 가장 긴 자세 간격이다
     };

@@ -20,7 +20,7 @@
 
 namespace sw
 {
-    class NetHost;
+    class INetPeers;
 
     /**
      * @brief 클라이언트 설정입니다. 범위는 칸의 `PROPERTY( Min · Max )` 이고, 벗어난 값은 `ReplicationClient::initialize` 가 오류로 거절합니다(`ConfigRangeUtil`).
@@ -55,7 +55,7 @@ namespace sw
          * @brief 호스트와 설정을 받아 시작합니다. 설정이 범위 밖이면 오류를 남기고 false 를 반환합니다.
          * @details 거절된 클라이언트는 호스트가 없는 클라이언트와 같다. 입력을 보내지 않는다.
          */
-        [[nodiscard]] bool initialize( NetHost* pHost, const ReplicationClientConfig& settings );
+        [[nodiscard]] bool initialize( INetPeers* pHost, const ReplicationClientConfig& settings );
         uint8              getMessageRangeBase() const override { return NetKitMessageRange::kClientServer; }
         uint16             getMessageKindMask() const override { return 1u << ( NetClientServerMessage::kSnapshot - NetKitMessageRange::kClientServer ); }
         NetHandleResult    handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
@@ -96,7 +96,7 @@ namespace sw
         NetSnapshot                 _decodeScratch; ///< 받은 델타를 복원하는 버퍼. 링 버퍼 슬롯과 맞바꿔 밀려난 스냅샷의 버퍼를 다음 복원이 재사용하므로 기준 슬롯을 덮어쓰지 않는다
         NetInputSendWindow          _inputWindow;   ///< 내 입력. 서버가 스냅샷에 실어 돌려준 확인 틱의 다음 틱부터 싣는다
         ReplicationClientConfig     _settings;
-        NetHost*                    _pHost;
+        INetPeers*                  _pHost;
         NetClock                    _clock; ///< 렌더 틱의 시계. 받은 스냅샷 틱의 하한에 흐른 시간을 더하고 지연을 뺀 값이며, 받은 가장 새 틱까지만 가고 되돌아가지 않는다
         uint64                      _decodeFailureCount;
         NetMessageWriter            _messageWriter; ///< 보낼 메시지. 버퍼를 재사용한다

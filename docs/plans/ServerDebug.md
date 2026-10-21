@@ -1,10 +1,9 @@
 # 서버 디버깅 계획 — 에디터에서 서버 · 멀티플레이를 손쉽게 보는 길
 
-> 상태: 구현중 · 선행: 없음 · 영역: network · 옛번호: D7-3 · 진행: 4/15
+> 상태: 구현중 · 선행: 없음 · 영역: network · 옛번호: D7-3 · 진행: 8/15
 
-S3(디버그 채널 · 씬 검사 명령 · Inspector 탭)는 끝났고, S6 · S7 의 프로세스 쪽(권위 고스트 · 틱별 해시 이력)은 들어갔습니다. 남은 것은 각 단위 절에 있습니다.
+S3(디버그 채널 · 씬 검사 명령 · Inspector 탭)와 S1 의 게임 포트 샤딩은 끝났고, S6(권위 고스트 · 게임 화면 겹치기) · S7(틱별 해시 이력 · 클라이언트 쪽 기록)은 들어갔습니다. 남은 것은 각 단위 절에 있습니다.
 방향 결정(여러 프로세스 먼저, 읽기 전용 디버그 채널, Multiplayer 창 하나)은 [결정 기록](../09_Decisions.md) 5-10 에 있습니다.
-S1 에서 남은 것은 아래 "남은 것 — S1" 절에 있습니다.
 
 ## 왜 필요한가
 
@@ -37,11 +36,6 @@ S1 에서 남은 것은 아래 "남은 것 — S1" 절에 있습니다.
 
 ## 단위 (위가 아래의 바닥)
 
-### S1 세션 — 남은 것
-
-게임 포트 샤딩: 전용 서버는 이제 서버 설정의 게임 포트를 늘 열지만(결정 기록 5-10) 소켓 하나뿐이라 `ServerConfig::_gamePortShardCount` 2 이상은 오류로 열지 않습니다(샤드마다 NetHost · 로그인 토큰의 샤드 포트).
-App · `GameNetSession`(`Engine/Net` — 엔진 수명이라 게임 모듈 리로드를 넘어 연결이 남는다) · 엔진 몫이라 2026-10-17 네트워크 작업(서버 · Core 네트워크 · 온라인 파일 소유)에서 남겼습니다. 같은 일이 `UdpSocketLayerScaling`(후보 문서 [Candidates-network](Candidates-network.md))의 포트 샤딩입니다. 운영 단위 O1 ~ O7 은 `OperationsAndDeployment`(같은 후보 문서, 옛 H-3)에 있습니다.
-
 ### S5 네트워크 프로파일러 — 남은 것
 
 Profiler 탭(시간축 그래프 · 메시지 종류별 비중, `net.stats` 질의)은 들어갔습니다. 종류별 셈은 받은 쪽(`NetMessageRouter`)과 보낸 쪽(`NetHost::copySentKindTally` — 큐에 넣은 것)이 같은 표(`NetMessageKindTallyTable`)를 쓰고, 보고 줄은 `kinds=` · `sentKinds=` 둘을 싣습니다(탭의 "Sent").
@@ -64,9 +58,10 @@ Profiler 탭(시간축 그래프 · 메시지 종류별 비중, `net.stats` 질�
 같은 이름의 오브젝트와 월드 위치 차이를 구해 서버 위치에 고스트 상자 · 어긋난 오브젝트에 선과 거리 글을 디버그 드로우 큐에 올립니다. 개발 명령 `net.ghost` 가 같은 차이를 글로 알립니다.
 확인은 ServerTest `AuthorityGhostDeltaMatchesHowFarTheServerMovedAnObject`(서버에서 옮긴 거리 = 보고된 차이)와 실행 중인 App 의 `net.ghost`(차이 6.299 m 가 옮긴 거리와 맞음)입니다.
 
-- 디버그 드로우 큐는 **에디터 씬 뷰만 그립니다**(`EditorVisualizerGeometry`) — 플레이어 App 의 게임 화면과 에디터 게임 뷰는 큐를 그리지 않는다. 게임 뷰 위에 겹치려면 게임 뷰에도 큐를 그리는 길이 필요하다.
-- 고스트가 실제로 그려지는지 눈으로 보는 확인: 에디터 씬 뷰 오버레이는 시나리오 스크린샷(렌더 결과)에 잡히지 않는다. 오버레이를 캡처하는 길이나 큐 항목 수 탐침이 필요하다.
-- 게임 뷰 툴바의 보기 단추: 지금은 실행 인자만 있다.
+게임 화면 겹치기(2026-10-22): `-gv_debugDrawGameView=1` 이면 큐를 주 출력의 캔버스(UI 패스)에 얇은 사각형 · 글리프로 싣는다(`DebugDrawCanvasUtil` — 새 패스 · 셰이더 없음, 깊이 테스트 없음).
+App 창 · 에디터 게임 뷰 · 스크린샷(`-gv_screenshot`)에 담긴다. 게임 뷰 툴바의 벌레 단추가 켜고 끄며 멀티 프로세스 재생 자식에게도 콘솔 줄로 보낸다. 구 펼치기는 씬 뷰와 같은 `DebugDrawQueue::appendVisibleSegments` 다.
+
+- 눈으로 보는 확인: 클라이언트 App 을 `-gv_authorityGhostPort … -gv_debugDrawGameView=1 -gv_screenshot=…` 로 띄워 고스트 상자 · 선 · 거리 글이 캡처에 보이는지 네 백엔드로 본다(빌드 · 실행 전이다).
 - 서버가 **실제로 가진** 위치를 읽는다(복제 키트가 마지막으로 알린 자세가 아니다). 복제 지연 · 보간 지연 숫자를 따로 보이려면 키트가 마지막 수신 자세를 `NetStatsReport` 처럼 싣는 창구를 정해야 한다.
 - 회전 · 히트박스(랙 보상 기록) 고스트: 지금은 위치만.
 
@@ -77,7 +72,10 @@ Profiler 탭(시간축 그래프 · 메시지 종류별 비중, `net.stats` 질�
 확인은 ServerTest `StateHashHistoryFindsTheFirstDivergentTick`(두 서버 중 하나의 오브젝트를 옮기면 처음 어긋난 틱이 옮긴 다음 틱으로 나옴)입니다.
 Sync 탭(2026-10-21)은 세션이 띄운 전용 서버(`-gv_stateHashHistory=3600` 을 늘 준다) · 주소로 붙은 다른 서버 · 저장한 이력 파일을 A · B 칸에 담아 견줍니다. `parseReport` 는 형식이 다른 줄을 건너뛰지 않고 거절합니다.
 
-- 클라이언트 쪽 기록: 기록은 `ServerApp` 에만 있다. 클라이언트(App) 가 서버 틱 번호에 맞춰 같은 해시를 남기는 길(`GameNetSession` 의 틱 번호)이 있어야 서버와 클라이언트를 비교한다.
+클라이언트 쪽 기록(2026-10-22): 이력을 남기는 전용 서버가 틱마다 `GameNetSession::sendServerTick` 으로 틱 번호를 보내고(엔진 영역 `GameNetSessionMessage::kServerTick`, `NetWireVersion::kCore` 7),
+App 클라이언트는 `-gv_stateHashHistory=N` 이면 씬이 프레임을 마친 뒤 받은 번호로 `StateHashHistory::recordActiveScene` 한다. 멀티 프로세스 재생은 클라이언트에도 이력 인자를 준다. 번호는 메시지가 닿은 때의 것이라 복제 지연이 있는 키트에서는 서버가 멈춘 동안이나 결정적 키트에서 두 이력이 맞는다.
+
+- Sync 탭의 클라이언트 원천: 클라이언트 이력은 그 프로세스의 개발 명령 `state.hashes` 로 읽힌다(표준 입력). 탭의 A · B 칸에 "클라이언트 N" 을 더하는 일이 남았다.
 - 키트별 해시: 파괴 해시 비교 · 롤백 세션 상태 바이트를 같은 이력에 다른 이름으로 더한다(지금은 씬 트랜스폼뿐).
 - 어긋난 오브젝트 짚기: 지금은 틱만 나온다. 해시를 오브젝트별로 나눠 보관하거나, 어긋난 틱에서 `object.dump` 두 벌을 비교하는 길이 필요하다.
 - 되감기: 의도 기록(`.swintent`)으로 그 틱까지 서버를 다시 돌려 한 틱씩 진행.
@@ -118,7 +116,7 @@ Sync 탭(2026-10-21)은 세션이 띄운 전용 서버(`-gv_stateHashHistory=360
 
 ## 순서
 
-S6 · S7 의 남은 것(게임 뷰 겹치기 · 클라이언트 쪽 해시 기록) → S8 의 남은 것(S2 중단점 친화 · S1 멀티 프로세스 재생 · S4 회선 조절 · S5 프로파일러 탭은 끝났다 — S5 의 남은 것은 그 절에). 나머지는 S1 의 세션 위에서 확인한다 — 에디터 시나리오 `engine/automation/editor/netplay.scenario.xml` 이 바닥이다. S3 · S5 는 디버그 HUD 의 섹션 레지스트리와 같은 원천을 쓴다.
+S6 · S7 의 남은 것(눈 확인 · Sync 탭 클라이언트 원천 · 키트별 해시) → S8 의 남은 것(S2 중단점 친화 · S1 멀티 프로세스 재생 · S4 회선 조절 · S5 프로파일러 탭은 끝났다 — S5 의 남은 것은 그 절에). 나머지는 S1 의 세션 위에서 확인한다 — 에디터 시나리오 `engine/automation/editor/netplay.scenario.xml` 이 바닥이다. S3 · S5 는 디버그 HUD 의 섹션 레지스트리와 같은 원천을 쓴다.
 
 ## 지키는 것
 

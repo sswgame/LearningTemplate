@@ -53,8 +53,6 @@ namespace sw::editor
      */
     struct SW_EDITOR_API EditorVisualizerGeometryUtil
     {
-        /** @brief 구 하나를 그리는 데 쓰는 원(XY, XZ, YZ 대원) 하나의 선분 수입니다. */
-        static constexpr uint32 kSphereCircleSegmentCount = 24;
         /** @brief 크기가 0 에 가까운 콜라이더도 보이도록 그리는 최소 반 크기(월드 단위)입니다. */
         static constexpr float32 kMinColliderHalfExtent = 0.05f;
 
@@ -66,7 +64,7 @@ namespace sw::editor
         static void computeColliderCorners( const BoxCollider2DComponent& collider, float3 ( &outArrCorner )[4] );
 
         /**
-         * @brief 디버그 큐가 확정한(`getVisible*`) 선과 구를 월드 선분으로 이어 붙입니다. 구는 대원 세 개이며 각각 `kSphereCircleSegmentCount` 개의 선분입니다.
+         * @brief 디버그 큐가 확정한(`getVisible*`) 선과 구를 월드 선분으로 이어 붙입니다. 구는 대원 세 개이며 각각 `DebugDrawQueue::kSphereCircleSegmentCount` 개의 선분입니다(펼치기는 `DebugDrawQueue::appendVisibleSegments`).
          * @param bFlat2D 2D 뷰(직교 카메라가 Z 축을 본다)이면 true 입니다. 구는 XY 평면의 원 하나만 만듭니다. 다른 두 대원은 그 뷰에서 중심을 지나는
          *                선으로 겹쳐 보일 뿐입니다.
          * @details @p outListSegment 를 비우지 않고 뒤에 붙인다. 호출하는 쪽이 프레임마다 재사용 버퍼를 비운다.

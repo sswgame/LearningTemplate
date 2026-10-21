@@ -388,7 +388,7 @@ namespace sw
         assignment._result   = ServerDirectoryResult::Ok;
         assignment._serverID = picked._descriptor._serverID;
         assignment._address  = picked._descriptor._address;
-        assignment._port     = picked._descriptor._port;
+        assignment._port     = picked._descriptor.pickPort( accountID ); // 포트 샤딩 — 계정마다 정해진 샤드의 포트
         return assignment;
     }
 
