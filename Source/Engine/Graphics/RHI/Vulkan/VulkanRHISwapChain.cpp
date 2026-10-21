@@ -8,6 +8,7 @@
     #include "Core/Common/X11Headers.h"
 
     #include <X11/Xlib-xcb.h>
+    #include <vulkan/vulkan_wayland.h>
     #include <vulkan/vulkan_xcb.h>
     #include <vulkan/vulkan_xlib.h>
     #include <xcb/xcb.h>
@@ -56,6 +57,28 @@ namespace sw
         }
         return true;
 #elif defined( SW_PLATFORM_LINUX )
+        if ( linuxWsi == 3 )
+        {
+            // Wayland — 핸들은 wl_surface*, 디스플레이는 wl_display* 다(`WaylandWindow`). 구조체의 두 포인터는 불완전 타입이라 Wayland 헤더가 없어도 된다.
+            PFN_vkCreateWaylandSurfaceKHR pCreateFn     = reinterpret_cast<PFN_vkCreateWaylandSurfaceKHR>( vkGetInstanceProcAddr( instance, "vkCreateWaylandSurfaceKHR" ) );
+            const bool                    bCannotCreate = pCreateFn == nullptr || pDisplayHandle == nullptr || pWindowHandle == nullptr;
+            if ( bCannotCreate )
+            {
+                SW_LOG_ERROR( "Cannot create a Wayland Vulkan surface (loader entry %#, display %#, surface %#)", pCreateFn != nullptr ? 1 : 0,
+                              pDisplayHandle != nullptr ? 1 : 0, pWindowHandle != nullptr ? 1 : 0 );
+                return false;
+            }
+            VkWaylandSurfaceCreateInfoKHR createInfo{};
+            createInfo.sType   = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
+            createInfo.display = static_cast<struct wl_display*>( pDisplayHandle );
+            createInfo.surface = static_cast<struct wl_surface*>( pWindowHandle );
+            if ( pCreateFn( instance, &createInfo, nullptr, &_surface ) != VK_SUCCESS )
+            {
+                SW_LOG_ERROR( "Failed to create Wayland Vulkan surface!" );
+                return false;
+            }
+            return true;
+        }
         Display* pDisplay = static_cast<Display*>( pDisplayHandle );
         Window   window   = static_cast<Window>( reinterpret_cast<uintptr_t>( pWindowHandle ) );
         if ( pDisplay == nullptr || window == 0 )

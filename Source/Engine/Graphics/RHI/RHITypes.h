@@ -10,6 +10,7 @@
 
 #include "Engine/Common/Common.h"
 #include "Engine/Common/EngineDefines.h"
+#include "Engine/Graphics/RHI/IRenderSurface.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -288,7 +289,10 @@ namespace sw
         void* _pWindowHandle{ nullptr }; ///< OS 윈도우 핸들 (HWND, Window XID 등)
 
         PROPERTY( Transient )
-        void* _pWindowDisplay{ nullptr }; ///< X11 Display 포인터 (리눅스 전용)
+        void* _pWindowDisplay{ nullptr }; ///< X11 Display* · wl_display*(리눅스 전용)
+
+        /// @brief 두 핸들의 창 시스템이다(`IRenderSurface::getSurfaceKind`). 리눅스 WSI(xlib · Wayland)와 GL 문맥(GLX)을 이것으로 고른다. 런타임 값이라 리플렉션하지 않는다.
+        NativeSurfaceKind _surfaceKind{ NativeSurfaceKind::Win32 };
 
         PROPERTY()
         uint32 _width{ 1280 }; ///< 스왑체인 너비 (픽셀)

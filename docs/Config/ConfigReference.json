@@ -4676,6 +4676,14 @@
    ]
   },
   {
+   "name": "SW_ENABLE_WAYLAND",
+   "type": "BOOL",
+   "default": "OFF",
+   "choices": [],
+   "description": "리눅스 클라이언트에 Wayland 창 계층을 짓는다",
+   "presets": []
+  },
+  {
    "name": "SW_GAMES",
    "type": "STRING",
    "default": "",

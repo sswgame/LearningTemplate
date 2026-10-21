@@ -126,14 +126,6 @@ Base 에 남긴 것: 계산한 키로 정렬하는 람다(`TimingJudge` 폭 합,
 ## 기능
 
 
-### Wayland
-제목: Linux 창 계층이 X11 뿐이다
-옛번호: D1-6
-왜 필요한가: `Engine/Window/Linux` 가 X11 이고 Wayland 를 찾지 못했습니다.
-남은 것: 창 생성 · 입력 · 디스플레이 모드 · 클립보드(옛 `D6-2` (4), [UiInputRemaining](Candidates-ui.md))가 대상입니다.
-설계 메모(2026-10-22): `IWindow::createPlatformWindow` 가 `WAYLAND_DISPLAY` 를 보고 `WaylandWindow`(`Engine/Window/Linux/Wayland/`)를 고르고, 없으면 X11 이다 — 고른 결과를 로그 한 줄로 남긴다. 의존은 `wayland-client` · `xkbcommon` · `wayland-protocols`(xdg-shell · xdg-decoration, `wayland-scanner` 로 구성 때 만든다)이고 Linux 클라이언트 타깃에만 링크한다(서버는 X11 처럼 찾지도 않는다). Vulkan 표면은 `VK_KHR_wayland_surface`, GL 은 EGL 이라 `IRenderSurface::getSurfaceDisplay` 가 `wl_display` 를 낸다. 착수 조건은 CI 리눅스 잡에 Wayland 컴포지터(weston headless)를 둘 수 있는가이다 — 확인할 길 없이 짓지 않는다.
-함정: 리눅스 확인은 CI 잡에서만 합니다(결정 기록 5-12).
-
 ## 조건부
 
 ### ModuleRenderPass

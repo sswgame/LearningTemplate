@@ -46,6 +46,11 @@ if(SW_TARGET_TYPE STREQUAL "")
 	endif()
 endif()
 
+# 리눅스 클라이언트의 Wayland 창 계층(`Engine/Window/Linux/Wayland`). 켜면 wayland-client · wayland-cursor · xkbcommon · wayland-protocols ·
+# wayland-scanner 가 모두 있어야 한다(없으면 구성이 선다). 실행에서 고르는 것은 환경 변수 `SW_WINDOW_BACKEND=wayland` 이다(기본은 X11).
+# 확인은 CI 리눅스 잡(headless weston)에서만 한다 — 로컬 WSL 빌드는 하지 않는다(결정 기록 5-12).
+option(SW_ENABLE_WAYLAND "리눅스 클라이언트에 Wayland 창 계층을 짓는다" OFF)
+
 if(NOT SW_TARGET_TYPE MATCHES "^(Game|Client|Server)$")
 	message(FATAL_ERROR "SW_TARGET_TYPE='${SW_TARGET_TYPE}' — one of Game, Client, Server")
 endif()

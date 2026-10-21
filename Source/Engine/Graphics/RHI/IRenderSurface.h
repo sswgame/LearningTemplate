@@ -14,6 +14,14 @@
 
 namespace sw
 {
+    /** @brief 표면의 창 시스템입니다 — 같은 리눅스에서도 X11 과 Wayland 는 핸들의 뜻이 다르다(WSI 확장 · GL 문맥을 고르는 기준). */
+    enum class NativeSurfaceKind : uint8
+    {
+        Win32 = 0, ///< 핸들 HWND, 디스플레이 없음
+        X11,       ///< 핸들 X11 Window, 디스플레이 Display*
+        Wayland,   ///< 핸들 wl_surface*, 디스플레이 wl_display*
+    };
+
     /**
      * @class IRenderSurface
      * @brief 스왑체인이 붙을 네이티브 표면입니다. `IWindow` 가 구현하고 `RHI` 와 `IRHIDevice` 가 사용합니다.
@@ -30,9 +38,11 @@ namespace sw
         /** @brief 대입을 금지합니다. */
         IRenderSurface& operator=( const IRenderSurface& ) = delete;
 
-        /** @brief 네이티브 표면 핸들입니다(HWND, X11 Window, NSView). */
+        /** @brief 핸들 · 디스플레이가 어느 창 시스템의 것인지입니다. */
+        virtual NativeSurfaceKind getSurfaceKind() const = 0;
+        /** @brief 네이티브 표면 핸들입니다(HWND, X11 Window, wl_surface*). */
         virtual void* getSurfaceHandle() const = 0;
-        /** @brief 네이티브 디스플레이 연결입니다(X11 Display*). 없으면 nullptr 입니다. */
+        /** @brief 네이티브 디스플레이 연결입니다(X11 Display*, wl_display*). 없으면 nullptr 입니다. */
         virtual void* getSurfaceDisplay() const = 0;
         /** @brief 표면 너비(픽셀)입니다. */
         virtual uint32 getSurfaceWidth() const = 0;

@@ -13,6 +13,8 @@ namespace sw
     {
         /** @brief X11: processMessages 가 XEvent* 를 lParam 에 실을 때 쓰는 메시지 코드입니다. */
         static constexpr uint32 kMessageX11 = 0x8001;
+        /** @brief Wayland: processMessages 가 `WaylandInputEvent*` 를 lParam 에 실을 때 쓰는 메시지 코드입니다(`Window/Linux/Wayland/WaylandInputEvent.h`). */
+        static constexpr uint32 kMessageWayland = 0x8002;
 
         /** @brief 네이티브 창 핸들입니다(Win32: HWND, X11: Window). */
         void* _pNativeWindow{ nullptr };

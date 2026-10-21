@@ -17,10 +17,11 @@ namespace
         {
         }
 
-        void*  getSurfaceHandle() const override { return nullptr; }
-        void*  getSurfaceDisplay() const override { return nullptr; }
-        uint32 getSurfaceWidth() const override { return 0; }
-        uint32 getSurfaceHeight() const override { return 0; }
+        sw::NativeSurfaceKind getSurfaceKind() const override { return sw::NativeSurfaceKind::Win32; }
+        void*                 getSurfaceHandle() const override { return nullptr; }
+        void*                 getSurfaceDisplay() const override { return nullptr; }
+        uint32                getSurfaceWidth() const override { return 0; }
+        uint32                getSurfaceHeight() const override { return 0; }
 
         [[nodiscard]] bool recreateSurface() override
         {

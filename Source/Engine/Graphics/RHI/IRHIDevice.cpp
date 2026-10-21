@@ -268,6 +268,7 @@ namespace sw
         RHISwapChainDesc swapChainDesc{};
         swapChainDesc._pWindowHandle  = _pSurface->getSurfaceHandle();
         swapChainDesc._pWindowDisplay = _pSurface->getSurfaceDisplay();
+        swapChainDesc._surfaceKind    = _pSurface->getSurfaceKind();
         swapChainDesc._width          = _pSurface->getSurfaceWidth();
         swapChainDesc._height         = _pSurface->getSurfaceHeight();
         _backBufferWidth              = swapChainDesc._width;
