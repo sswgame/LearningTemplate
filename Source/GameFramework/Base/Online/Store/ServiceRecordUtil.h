@@ -9,8 +9,9 @@
  *          오류 로그를 남기고 호출부가 실패를 돌려줍니다. 다시 만들 수 있는 캐시는 `readCache` 로 읽어 없는 것으로 봅니다.
  *          캐시는 배포 중에 빌드가 다른 서버가 읽으므로 서버 버스와 같은 읽기(`MixedBuildCodec::decode`)입니다. 버전이 같으면 모르는 이름의 필드는 건너뛰고,
  *          읽지 못한 아는 필드(모르는 열거자)와 다른 버전은 없는 것으로 봅니다. 영속 레코드는 옛 빌드가 모르는 필드를 버리고 다시 쓰면 새 빌드의 값이 지워지므로
- *          모르는 필드를 거절합니다. 읽고 고쳐 다시 쓰는 레코드는 `readDurableKeepingUnknown` 으로 모르는 칸을 담고 `encodeKeepingUnknown` 으로 그대로 다시 싣습니다
- *          (계획 `PersistentRecordUnknownFields` — 호출부가 옮겨 오면 `readDurable` 의 거절이 그 레코드에서 풀린다).
+ *          **레코드가 모르는 칸을 든다**: 영속 레코드 타입은 `ServiceRecordUnknownFields _unknownFields{};`(PROPERTY 가 아닌 칸)를 가져야 하고(`readDurable` 의 static_assert),
+ *          `readDurable` 이 같은 버전의 모르는 칸을 거기 담고 `encode` 가 그대로 다시 싣는다. 레코드를 복사해 고쳐 쓰는 서비스 코드는 손대지 않아도 칸이 따라간다
+ *          (계획 `PersistentRecordUnknownFields`). 버전이 다른 레코드는 이관 읽기(`deserializeVersioned`)이고 모르는 칸을 그대로 거절한다.
  *          A 는 `MaxCount` 를 보지 않으므로 쓰기와 두 읽기는 고정 배치형 코덱이 있는 타입이면 언제나 선언된 범위(`Min`, `Max`, `MaxCount`)도 확인합니다.
  *          코덱이 없는 타입(지역 목록 같은 문자열 목록)은 서비스가 쓰기 때와 같은 규칙으로 확인합니다.
  */
@@ -26,18 +27,20 @@
 #include "Engine/Serialization/Format/BinarySerializer.h"
 
 #include "GameFramework/Base/Online/Bus/MixedBuildCodec.h"
+#include "GameFramework/Base/Online/Store/ServiceRecordUnknownFields.h"
 
 namespace sw
 {
-    /**
-     * @brief 영속 레코드에서 이 빌드가 모르는 칸(배포 중 새 빌드가 더한 칸)입니다. 읽을 때 담아(`readDurableKeepingUnknown`) 같은 레코드를 다시 쓸 때 그대로 싣습니다.
-     * @details 칸마다 (이름 해시, 기록 타입 해시, 값 바이트)를 받은 그대로 든다. 맨 바깥 칸만이다 — 안쪽 구조체에 새로 더한 칸은 담지 않는다(그 칸을 더할 때는 버전을 올린다).
-     */
-    struct ServiceRecordUnknownFields
+    /** @brief @p T 가 모르는 칸을 드는 레코드(`ServiceRecordUnknownFields _unknownFields`)이면 true 입니다. */
+    template <typename T, typename = void>
+    struct ServiceRecordKeepsUnknown : std::false_type
     {
-        vector<SchemaOrphanValue> _listField{};
+    };
 
-        bool isEmpty() const { return _listField.empty(); }
+    template <typename T>
+    struct ServiceRecordKeepsUnknown<T, std::void_t<decltype( std::declval<T&>()._unknownFields )>>
+        : std::is_same<decltype( std::declval<T&>()._unknownFields ), ServiceRecordUnknownFields>
+    {
     };
 } // namespace sw
 
@@ -58,7 +61,13 @@ namespace sw
             string     reason;
             BitWriter  scratch;
             const bool bInRange = FixedLayout::findCodec<T>( reason ) == nullptr || FixedLayout::write( record, scratch );
-            if ( bInRange && BinarySerializer::serializeVersioned( version, &record, *T::StaticType(), outBytes ) )
+            bool       bWritten = false;
+            // 모르는 칸을 드는 레코드는 읽을 때 담은 칸을 받은 그대로 뒤에 싣는다(옛 빌드가 고쳐 써도 새 빌드의 값이 남는다).
+            if constexpr ( ServiceRecordKeepsUnknown<T>::value )
+                bWritten = bInRange && BinarySerializer::serializeVersionedKeepingUnknown( version, &record, *T::StaticType(), record._unknownFields._listField, outBytes );
+            else
+                bWritten = bInRange && BinarySerializer::serializeVersioned( version, &record, *T::StaticType(), outBytes );
+            if ( bWritten )
                 return true;
             outBytes.clear();
             SW_LOG_ERROR( "record %# (version %#) is not written: %#", T::StaticType()->_fullyQualifiedName.c_str(), version,
@@ -68,50 +77,23 @@ namespace sw
 
         /**
          * @brief 영속 레코드(@p key)를 읽습니다. 못 읽으면 손상이므로 오류 로그를 남기고 false 이며 @p outRecord 는 그대로입니다.
-         * @details false 를 받은 호출부는 레코드를 건너뛰지 않고 요청을 실패로 돌려줍니다.
+         * @details 버전이 같으면 이 빌드가 모르는 칸을 거절하지 않고 `outRecord._unknownFields` 에 담는다(`encode` 가 다시 싣는다). 아는 칸을 읽지 못했거나(모르는 열거자)
+         *          선언된 범위를 벗어나면 손상이다. 버전이 다르면 이관 읽기이며 모르는 칸이 있으면 손상이다. false 를 받은 호출부는 레코드를 건너뛰지 않고 요청을 실패로 돌려줍니다.
          */
         template <typename T>
         [[nodiscard]] static bool readDurable( const string_view key, const vector<uint8>& bytes, const uint32 version, T& outRecord )
         {
-            if ( read( bytes, version, outRecord ) )
-                return true;
-            SW_LOG_ERROR( "durable record %# (%#, version %#, %# bytes) is corrupt", string( key ).c_str(), T::StaticType()->_fullyQualifiedName.c_str(), version,
-                          static_cast<uint64>( bytes.size() ) );
-            return false;
-        }
-
-        /**
-         * @brief 영속 레코드(@p key)를 읽고, 이 빌드가 모르는 칸은 거절하지 않고 @p outUnknown 에 담습니다. 못 읽으면 손상이므로 오류 로그를 남기고 false 이며 두 출력은 그대로입니다.
-         * @details 버전이 정확히 같아야 한다(이관과 보관을 섞지 않는다). 아는 칸을 읽지 못했거나(모르는 열거자) 선언된 범위를 벗어나면 손상이다.
-         *          담은 칸은 `encodeKeepingUnknown` 으로 같은 레코드를 쓸 때 넘긴다 — 넘기지 않고 `encode` 로 쓰면 새 빌드의 값이 지워진다.
-         */
-        template <typename T>
-        [[nodiscard]] static bool readDurableKeepingUnknown( const string_view key, const vector<uint8>& bytes, const uint32 version, T& outRecord,
-                                                             ServiceRecordUnknownFields& outUnknown )
-        {
-            T                         decoded;
-            vector<SchemaOrphanValue> listUnknown;
-            if ( readKeepingUnknown( bytes, version, decoded, listUnknown ) )
+            static_assert( ServiceRecordKeepsUnknown<T>::value,
+                           "a durable record keeps the fields this build does not know - add `ServiceRecordUnknownFields _unknownFields{};` (not a PROPERTY) to the record type" );
+            T          decoded;
+            const bool bRead = isVersion( bytes, version ) ? readKeepingUnknown( bytes, version, decoded, decoded._unknownFields._listField ) : read( bytes, version, decoded );
+            if ( bRead )
             {
-                outRecord             = std::move( decoded );
-                outUnknown._listField = std::move( listUnknown );
+                outRecord = std::move( decoded );
                 return true;
             }
             SW_LOG_ERROR( "durable record %# (%#, version %#, %# bytes) is corrupt", string( key ).c_str(), T::StaticType()->_fullyQualifiedName.c_str(), version,
                           static_cast<uint64>( bytes.size() ) );
-            return false;
-        }
-
-        /** @brief `encode` 와 같고, 읽을 때 담은 모르는 칸(@p unknown)을 받은 그대로 다시 싣습니다. 못 쓰면 오류 로그를 남기고 false 이며 @p outBytes 는 비어 있습니다. */
-        template <typename T>
-        [[nodiscard]] static bool encodeKeepingUnknown( const uint32 version, const T& record, const ServiceRecordUnknownFields& unknown, vector<uint8>& outBytes )
-        {
-            outBytes.clear();
-            if ( isWithinDeclaredRange( record ) && BinarySerializer::serializeVersionedKeepingUnknown( version, &record, *T::StaticType(), unknown._listField, outBytes ) )
-                return true;
-            outBytes.clear();
-            SW_LOG_ERROR( "record %# (version %#, %# kept unknown field(s)) is not written", T::StaticType()->_fullyQualifiedName.c_str(), version,
-                          static_cast<uint64>( unknown._listField.size() ) );
             return false;
         }
 
@@ -124,6 +106,16 @@ namespace sw
         }
 
     private:
+        /** @brief 레코드 머리의 버전이 @p version 이면 true 입니다(`BinarySerializer::serializeVersioned` 가 쓴 머리와 같은 배치). */
+        static bool isVersion( const vector<uint8>& bytes, const uint32 version )
+        {
+            uint32 readVersion = 0;
+            if ( bytes.size() < sizeof( uint32 ) )
+                return false;
+            Memory::copy( &readVersion, bytes.data(), sizeof( uint32 ) );
+            return readVersion == version;
+        }
+
         /** @brief 판이 다르거나 모르는 필드가 있거나 깨졌거나, 코덱이 있는 타입인데 선언된 범위를 벗어나면 false 입니다. */
         template <typename T>
         [[nodiscard]] static bool read( const vector<uint8>& bytes, const uint32 version, T& outRecord )
@@ -143,11 +135,7 @@ namespace sw
         [[nodiscard]] static bool readKeepingUnknown( const vector<uint8>& bytes, const uint32 version, T& outRecord, vector<SchemaOrphanValue>& outListUnknown )
         {
             constexpr size_t kVersionSize = sizeof( uint32 );
-            if ( bytes.size() <= kVersionSize )
-                return false;
-            uint32 readVersion = 0;
-            Memory::copy( &readVersion, bytes.data(), kVersionSize ); // `BinarySerializer::serializeVersioned` 가 쓴 머리와 같은 배치다
-            if ( readVersion != version )
+            if ( bytes.size() <= kVersionSize || isVersion( bytes, version ) == false )
                 return false;
             const SoftReadResult result = BinarySerializer::deserializeSoft( &outRecord, *T::StaticType(), bytes.data() + kVersionSize, bytes.size() - kVersionSize, &outListUnknown );
             if ( result != SoftReadResult::Read )

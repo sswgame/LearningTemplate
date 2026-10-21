@@ -11,6 +11,8 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Base/Online/Store/ServiceRecordUnknownFields.h"
+
 namespace sw
 {
     /** @brief 모르는 열거자 테스트의 열거형입니다. */
@@ -50,7 +52,8 @@ namespace sw
         PROPERTY()
         uint64 _accountID{ 0 };
         PROPERTY()
-        BusTestColor _color{ BusTestColor::Red };
+        BusTestColor               _color{ BusTestColor::Red };
+        ServiceRecordUnknownFields _unknownFields{}; ///< 영속 레코드로도 쓴다(모르는 칸 보관 테스트). PROPERTY 가 아니다
     };
 } // namespace sw
 
@@ -71,7 +74,8 @@ namespace sw
         PROPERTY()
         BusTestColor _color{ BusTestColor::Red };
         PROPERTY()
-        int32 _extra{ 0 };
+        int32                      _extra{ 0 };
+        ServiceRecordUnknownFields _unknownFields{}; ///< 영속 레코드로도 쓴다(모르는 칸 보관 테스트). PROPERTY 가 아니다
     };
 } // namespace sw
 
