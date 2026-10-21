@@ -1,6 +1,6 @@
 # 그래픽스 후보
 
-> 상태: 후보 · 선행: 없음 · 영역: graphics · 옛번호: C-55, D2-1, D2-2, D2-5, D2-7, D2-9, D2-10, D2-14, E-3, E-13, G-12 · 진행: 해당없음
+> 상태: 후보 · 선행: 없음 · 영역: graphics · 옛번호: C-55, D2-2, D2-5, D2-9, D2-10, D2-14, E-3, E-13, G-12 · 진행: 해당없음
 
 이 문서는 그래픽스 · RHI · 셰이더 영역에서 착수 전인 후보의 목록입니다. 착수하면 그 절을 계획 문서로 옮기고 여기서 지웁니다.
 
@@ -13,12 +13,6 @@
 착수 조건 / 남은 것: 재고(`RT.GPUScene.vertexPool` 처럼) 이득이 있을 때 `SpanAllocator` 구조로 옮긴다.
 
 ## 기능
-
-### TwoDLightingExtras
-제목: 2D 조명의 남은 것
-옛번호: D2-1
-왜 필요한가: 2D 빛 텍스처 · 자유 모양 빛 · 부드러운 그림자 · 빛 블렌드 스타일이 없다.
-착수 조건 / 남은 것: 넷 모두 빛 컴포넌트(`Source/Engine/Object/Component/2D/Light2DComponent`)의 데이터부터 바꿔야 해 렌더러만 맡은 작업자는 시작하지 못했다(2026-10-17).
 
 ### DirectionalShadowRefinement
 제목: 방향광 그림자의 남은 것
@@ -40,16 +34,6 @@
 - 지오모프(LOD 튐)와 레이어 다섯 이상: 머티리얼 텍스처 칸은 16 개로 늘었지만 `.layerweights` · 스플랫 업로드 · 브러시 · 셰이더가 레이어 넷이다. 두 번째 스플랫이 필요하다.
 - 지형 LOD 교체 · 지형 쓰기의 비용과 식생 부분 계산은 계획 [TerrainEditCost](TerrainEditCost.md) 에 있다.
 함정: 머티리얼 텍스처 칸 16 — 에뮬 슬롯은 Vulkan t 밴드 뒤 t16..t31 이라 SRV 띠(지금 t0..t12)가 밴드 끝까지 자라도 밀리지 않고 DX11 은 정적 머티리얼 샘플러로 읽는다(옛 D2-6.3, 정본은 `ShaderBindingSlots.h` 헤더).
-
-### VrmRuntimeConsumption
-제목: VRM 임포트 결과를 런타임이 읽기
-옛번호: D2-7
-왜 필요한가: humanoid 본 표 · 표정 · 스프링 본 · 1인칭은 `<이름>.avatar.json` 으로 나오지만 데이터뿐이다. 런타임이 읽는 타입이 없다(표정 → 모프 가중치, 스프링 본 시뮬레이션, 1인칭 메시 숨김). 스키마 테스트는 JSON 객체와 `_version` · `_mapHumanBone` 만 본다.
-착수 조건 / 남은 것:
-- 런타임 타입은 `Engine/Character` · `Engine/Animation` 에, BC7 재임포트는 Editor 임포터에 있어 그래픽 작업자의 파일 밖이다.
-- 본 메시(`<이름>.mesh`)는 구간들을 다시 합친 것이라 디스크에 두 벌이다(VRoid 34k 삼각형 7 MB × 2). 엔진 메시에 머티리얼 구간이 생기면 하나로 줄인다.
-- VRoid 텍스처는 BC3 이다. BC7 은 Release 의 띠 병렬 압축으로 512² 한 장이 8 초라([검증과 측정](../08_Verification.md) 2절, 커밋 `e71f3b8ae`) 예전의 "Debug 10 분" 은 근거가 아니다. Release 로 BC7 임포트를 다시 한다.
-함정: `ModelImporterTest.SkinnedModelImportsSkeletonClipsAndAttachments` 는 Debug 에서 혼자 31 초라 EditorTest 한도를 30 → 120 초로 올려 두었다. 임포트를 줄이면 되돌린다.
 
 ### HalfResolutionBloomMeasurement
 제목: 반해상도 블룸의 Release 측정
