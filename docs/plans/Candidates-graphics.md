@@ -1,6 +1,6 @@
 # 그래픽스 후보
 
-> 상태: 후보 · 선행: 없음 · 영역: graphics · 옛번호: C-55, D2-1, D2-2, D2-5, D2-6, D2-7, D2-9, D2-10, D2-14, E-3, E-13, G-12 · 진행: 해당없음
+> 상태: 후보 · 선행: 없음 · 영역: graphics · 옛번호: C-55, D2-1, D2-2, D2-5, D2-7, D2-9, D2-10, D2-14, E-3, E-13, G-12 · 진행: 해당없음
 
 이 문서는 그래픽스 · RHI · 셰이더 영역에서 착수 전인 후보의 목록입니다. 착수하면 그 절을 계획 문서로 옮기고 여기서 지웁니다.
 
@@ -41,15 +41,6 @@
 - 지형 LOD 교체 · 지형 쓰기의 비용과 식생 부분 계산은 계획 [TerrainEditCost](TerrainEditCost.md) 에 있다.
 함정: 머티리얼 텍스처 칸 16 — 에뮬 슬롯은 Vulkan t 밴드 뒤 t16..t31 이라 SRV 띠(지금 t0..t12)가 밴드 끝까지 자라도 밀리지 않고 DX11 은 정적 머티리얼 샘플러로 읽는다(옛 D2-6.3, 정본은 `ShaderBindingSlots.h` 헤더).
 
-### ToonShadingCompletion
-제목: 툰 머티리얼(MToon 1.0)의 남은 것
-옛번호: D2-6
-왜 필요한가: `toon.hlsl` 은 MToon 1.0 체계이고 아래가 빠졌다.
-착수 조건 / 남은 것:
-- 포워드 전용 지킴: toon.hlsl 의 `SW_PASS_GBUFFER` 분기를 `#error "toon.hlsl is forward-only ..."` 로 바꾼다 — `MATERIAL_FORWARD_ONLY` 를 빠뜨린 머티리얼이 G버퍼에서 램버트로 조용히 칠해지지 않고 쿠킹에서 멈춘다. 커밋 훅(`CheckShaderStamps`)이 다시 굽기를 요구하므로 App 빌드가 있는 통합 때 `--cook-shaders` 와 함께 한다(G버퍼 분기의 "디퍼드 조명은 램버트로 칠한다" 주석도 그때 지운다).
-- UV 스크롤 애니메이션(`uvAnimation*`): VRM 머티리얼 임포터(`Source/Editor`)의 매핑과 같이 바꾼다.
-- 스킨 · 모프 메시의 탄젠트: 스키닝 · 모프 컴퓨트가 위치 · 노멀만 돌려 노멀 맵이 레스트 탄젠트를 쓴다. `GPUMorphVertex` 에 탄젠트 칸이 필요하다.
-
 ### VrmRuntimeConsumption
 제목: VRM 임포트 결과를 런타임이 읽기
 옛번호: D2-7
@@ -73,7 +64,6 @@
 착수 조건 / 남은 것:
 - Shipping 베이크: 쿠킹한 LightingOnly 변형으로 Shipping hostgpu 를 돌린다. Shipping 전체 빌드가 필요해 통합 담당의 Shipping 확인 때 돌린다.
 - Metallic 금속도 칸은 PBR([IndirectLighting](IndirectLighting.md) P5)과 함께 생긴다.
-- Shaded Wireframe: 패스가 둘 필요하다(셰이딩한 면 위에 같은 배치를 선으로 한 번 더). 착수 조건은 RHI 다 — `RHIPipelineStateDesc` 에 깊이 비교 함수(LessEqual)와 깊이 바이어스가 없어(네 백엔드) 겹쳐 그린 선이 면과 z-fighting 한다. 선 색은 보기 모드 define 하나(`swStoreSurface` 가 단색을 낸다)이고 G버퍼에는 셰이딩 모델 Unlit 으로 적으면 디퍼드도 그대로 된다. 디퍼드에서 툰은 `ForwardOnlyOpaque` 패스가 그리므로 그 패스에도 같은 겹침이 필요하다.
 함정: `swStoreSurface` 가 셰이더마다 명시한 거칠기 · 금속도를 받는다. `toon` · `sprite2dlit` 포워드 경로도 LightingOnly 에서는 회색으로 바뀐다.
 
 ### RealtimeGlobalIllumination
@@ -81,12 +71,6 @@
 옛번호: D2-14
 왜 필요한가: 실시간 전역 조명과 볼륨 표현이 없다. [IndirectLighting](IndirectLighting.md)의 프로브 뒤 단계다.
 착수 조건 / 남은 것: 라이트맵 또는 실시간 GI(Lumen · SDFGI · APV 갱신 방식 비교), 볼륨 안개 · 구름 · 대기 산란(`TerrainWaterVegetationRemainders` 의 안개 항목과 합침). 설계 문서가 먼저다. [ClusteredLighting](ClusteredLighting.md)이 선행이다.
-
-### ForwardHdrSceneColor
-제목: 포워드 파이프라인의 HDR 장면 색
-옛번호: 없음
-왜 필요한가: 3D 포워드 파이프라인 넷(`forwardpipeline` · `forwardpipelinestaged` · `forwardprepasspipeline` · `forwardtoonpipeline`)은 `SceneColor` 가 `R8G8B8A8_UNORM` 이라 1.0 에서 잘린 값을 Present 가 Reinhard(`x / (x + 1)`)로 눌러 화면 최대가 0.5(128)다. 밝게 비친 바닥은 이미 128 이라 더하기 블렌드 입자(Vfx 띠 · 불꽃)가 그 위에서 보이지 않는다(2026-10-21 통합 GPU 검증 — main 도 같다, 미리보기 PPM 최댓값 128). 언리얼 · 유니티 URP · 고도는 포워드도 HDR 장면 색(RGBA16F · R11G11B10)이 기본이다.
-착수 조건 / 남은 것: 의도한 룩 변경이다. `postchain.hlsl` 의 블룸 뒤 `saturate`(단계 파이프라인과 같은 그림을 내려고 둔 자름)를 지우고, 넷의 `SceneColor`(단계 파이프라인은 `BloomColor` 도)를 `R16G16B16A16_FLOAT` 로 바꾼다 — 형식만 바꾸면 그 자름 때문에 그대로 128 이다(확인함). 1.0 을 넘던 픽셀만 밝아지므로 골든 넷(Empty · NileCity · Shooter3D · StarSkirmish)을 `--record --runs 3` 로 다시 뜬다. 대역폭 차이를 Release 로 잰다. 2D 파이프라인은 톤맵을 안 하므로 그대로다.
 
 ## 관찰
 
