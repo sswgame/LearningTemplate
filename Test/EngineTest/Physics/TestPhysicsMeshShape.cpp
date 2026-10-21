@@ -214,7 +214,7 @@ SW_TEST_CASE( PhysicsMeshShapeTest, MissingMeshOrLoaderIsRejected )
         const ScopedMeshLoader loader{ sw::PhysicsMeshShapeCache::getLoadFunction() };
         const sw::string       missing = test::makeTempPath( "never_written.mesh" );
         SW_EXPECT_FALSE( addBody( *pScene, makeMeshShape( sw::PhysicsShapeType3D::TriangleMesh, missing ), sw::float3{}, sw::PhysicsBodyType::Static ).isValid() );
-        SW_EXPECT_TRUE( sw::PhysicsMeshShapeCache::acquire( missing ) == nullptr );
+        SW_EXPECT_TRUE( sw::PhysicsMeshShapeCache::acquire( ::test::makeTempResourceID( missing ) ) == nullptr );
         SW_EXPECT_EQUAL( static_cast<size_t>( 0 ), sw::PhysicsMeshShapeCache::getCachedCount() );
     }
 }

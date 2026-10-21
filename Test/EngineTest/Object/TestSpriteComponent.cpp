@@ -235,7 +235,7 @@ SW_TEST_CASE( SpriteComponentTest, ReloadedClipReachesSpritesThatHoldIt )
     clip._atlasPath            = kTextureB;
     clip._listFrame[1]._uvRect = sw::float4{ 0.5f, 0.5f, 0.5f, 0.5f };
     SW_ASSERT_TRUE( clip.saveToFile( clipPath ) );
-    SW_EXPECT_NEAR_EQUAL( 0.0f, sw::SharedAssetCache<sw::SpriteClipAsset>::acquire( clipPath )->findFrame( 1 )->_uvRect._x, 1e-4f ); // 사용 중에는 캐시가 옛 내용을 준다
+    SW_EXPECT_NEAR_EQUAL( 0.0f, sw::SharedAssetCache<sw::SpriteClipAsset>::acquire( ::test::makeTempResourceID( clipPath ) )->findFrame( 1 )->_uvRect._x, 1e-4f ); // 사용 중에는 캐시가 옛 내용을 준다
 
     sw::AssetManager resources;
     sw::IAssetCache* pCache = resources.findAssetCache( "SpriteClip" );

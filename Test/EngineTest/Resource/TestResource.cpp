@@ -198,7 +198,7 @@ SW_TEST_CASE( ResourceTest, AssetFormatAcceptsCurrentMaterialXML )
                                              static_cast<uint64>( sw::StringUtil::strlen( kCurrent ) ) ) );
 
     sw::shared_ptr<sw::Material> material = sw::Material::create();
-    SW_EXPECT_TRUE( material->loadFromFile( tempPath ) );
+    SW_EXPECT_TRUE( material->loadFromFile( ::test::makeTempResourceID( tempPath ) ) );
     SW_EXPECT_EQUAL( sw::string( "CurrentMat" ), material->getName() );
     SW_EXPECT_EQUAL( sw::string( test::getEngineDefaultAssets()._shaderForwardLit.get() ), material->getShaderPath() );
 }
@@ -222,7 +222,7 @@ SW_TEST_CASE( ResourceTest, AssetFormatRejectsLegacyMaterialXML )
                                              static_cast<uint64>( sw::StringUtil::strlen( kLegacy ) ) ) );
 
     sw::shared_ptr<sw::Material> material = sw::Material::create();
-    SW_EXPECT_FALSE( material->loadFromFile( tempPath ) );
+    SW_EXPECT_FALSE( material->loadFromFile( ::test::makeTempResourceID( tempPath ) ) );
 }
 
 /**
@@ -778,7 +778,7 @@ SW_TEST_CASE( ResourceTest, EnsureMetaGivesNoIdentityToAMissingAsset )
     SW_ASSERT_TRUE( resourceRoot.writeTextFile( "engine/materials/placeholder.txt", "" ) ); // 도메인 폴더가 있어야 경로가 풀린다
     const utf8*      pMissing      = "engine/materials/ensuremeta_missing_probe.material";
     const sw::string metaWritePath = resourceRoot.makePath( "engine/materials/ensuremeta_missing_probe.material.meta" );
-    SW_ASSERT_TRUE_MSG( sw::ResourcePaths::findLooseFile( pMissing ).getDiskPath().empty(), "탐침 경로에 실제 파일이 있다 — 시험 전제가 깨졌다" );
+    SW_ASSERT_TRUE_MSG( sw::ResourcePaths::findLooseFile( pMissing ).getDiskPath().empty(), "탐침 경로에 실제 파일이 있다 — 테스트 전제가 깨졌다" );
 
     sw::AssetDatabase db;
     SW_EXPECT_TRUE_MSG( db.ensureMeta( pMissing ).isNull(), "없는 에셋에 GUID 를 지었다" );
@@ -1013,10 +1013,11 @@ SW_TEST_CASE( ResourceTest, ParentDirectoryIDsAreRefused )
 }
 
 /**
- * @brief [ResourceTest] 팩 전용 모드에서는 리소스 루트 안을 가리키는 절대 경로로 낱개 파일을 읽을 수 없다
- * @details 루트 밖(임시 파일 · 세이브)은 그대로 읽는다. 절대 경로를 따로 막지 않으면 팩 전용 모드를 지나 낱개 에셋을 읽는다.
+ * @brief [ResourceTest] 리소스 입구는 OS 경로를 구성과 무관하게 거절하고, 디스크 파일은 디스크 입구 · 붙인 디스크 도메인으로 읽는다
+ * @details 예전에는 OS 절대 경로를 디스크에서 바로 읽고 팩 전용 모드만 루트 안 경로를 거절해, 잘못 넣은 호출이 Dev 를 지나 배포 테스트에서야
+ *          드러났다(계획 `DiskPathVsResourceId` 안 B). 이제 두 모드 모두 거절하고, 루트 밖 파일은 `readTextFile` 이나 `mountDiskDomain` 의 id 로 읽는다.
  */
-SW_TEST_CASE( ResourceTest, PackOnlyModeRefusesAbsolutePathsIntoTheResourceRoot )
+SW_TEST_CASE( ResourceTest, ResourceEntryRefusesOSPathsInEveryMode )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::ResourcePakManager& packManager = sw::ResourceIO::getPackManager();
@@ -1026,18 +1027,34 @@ SW_TEST_CASE( ResourceTest, PackOnlyModeRefusesAbsolutePathsIntoTheResourceRoot 
     const sw::string outsideRoot = test::makeTempPath( "sw_test_pack_only_outside.txt" );
     SW_ASSERT_TRUE( sw::FileUtil::exists( insideRoot ) );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( outsideRoot, "OUTSIDE" ) );
+    const sw::string outsideID = test::makeTempResourceID( outsideRoot );
+    SW_ASSERT_FALSE( outsideID.empty() );
 
-    packManager.setAllowLooseFiles( false );
     sw::string content;
+    for ( const bool bLoose : { false, true } )
     {
-        test::ScopedLogSuppressor suppressor;
-        SW_EXPECT_FALSE( sw::ResourceIO::readTextResource( insideRoot, content ) );
+        packManager.setAllowLooseFiles( bLoose );
+        {
+            SW_TEST_DEFENSIVE_SCOPE( "an OS path given to the resource entry" );
+            SW_EXPECT_FALSE( sw::ResourceIO::readTextResource( insideRoot, content ) );
+            SW_EXPECT_FALSE( sw::ResourceIO::readTextResource( outsideRoot, content ) );
+            SW_EXPECT_FALSE( sw::ResourceIO::hasResource( outsideRoot ) );
+        }
+        // 붙인 디스크 도메인은 팩 전용 모드에서도 디스크에서 읽는다.
+        content.clear();
+        SW_EXPECT_TRUE( sw::ResourceIO::readTextResource( outsideID, content ) );
+        SW_EXPECT_EQUAL( sw::string( "OUTSIDE" ), content );
+        SW_EXPECT_TRUE( sw::ResourceIO::hasResource( outsideID ) );
     }
-    SW_EXPECT_TRUE( sw::ResourceIO::readTextResource( outsideRoot, content ) );
+    content.clear();
+    SW_EXPECT_TRUE( sw::ResourceIO::readTextFile( outsideRoot, content ) );
     SW_EXPECT_EQUAL( sw::string( "OUTSIDE" ), content );
 
-    packManager.setAllowLooseFiles( true );
-    SW_EXPECT_TRUE( sw::ResourceIO::readTextResource( insideRoot, content ) );
+    // 리소스 루트 안 폴더는 붙일 수 없다 — 팩 전용 규칙을 지나 낱개 에셋을 읽는 길이 된다.
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a disk domain inside the resource root" );
+        SW_EXPECT_FALSE( sw::ResourcePaths::mountDiskDomain( "insideroot", sw::FileUtil::getDirectoryPart( insideRoot ) ) );
+    }
 
     packManager.setAllowLooseFiles( bWasLoose );
 }

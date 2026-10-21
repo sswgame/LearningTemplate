@@ -133,8 +133,9 @@ namespace sw
         if ( filePath.empty() || FileUtil::exists( filePath ) == false )
             return true;
 
+        // 플레이어 파일(`saveUserBindings` 가 디스크에 쓴 것)이라 디스크 입구로 읽는다.
         XMLDocument doc;
-        if ( doc.loadResource( filePath ) == false )
+        if ( doc.loadFile( filePath ) == false )
         {
             SW_LOG_WARNING( "Shell user bindings '%#' could not be read - the default keys are used", filePath );
             return false;

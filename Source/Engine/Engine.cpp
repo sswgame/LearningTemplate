@@ -506,9 +506,10 @@ namespace sw
 
     bool Engine::renderPortraits( string_view prefabList, string_view outputDirectory, uint32 size )
     {
-        if ( _pRHI == nullptr || _pRHI->hasDevice() == false )
+        const bool bHasDevice = _pRHI != nullptr && _pRHI->hasDevice();
+        if ( bHasDevice == false || _pSceneManager == nullptr )
             return false;
-        return PortraitBatchUtil::renderPrefabList( _pRHI->getDevice(), _pRenderThread, prefabList, outputDirectory, size );
+        return PortraitBatchUtil::renderPrefabList( _pRHI->getDevice(), _pSceneManager->getEngineServices(), _pRenderThread, prefabList, outputDirectory, size );
     }
 
     void Engine::requestQuit( int32 exitCode )

@@ -580,7 +580,7 @@ namespace sw::editor
     SW_EDITOR_PROPERTY_DRAWER( SelfTestDrawerProbe, "SelfTestDrawerProbe", EditorSelfTestDevToolsInternal::SelfTestPropertyDrawer );
     SW_EDITOR_SELF_TEST( PropertyDrawer, "inspector.propertyDrawerRegistered", 760, &EditorSelfTestDevToolsInternal::runPropertyDrawerRegistered );
     // 등록 항목 커맨드의 예제다. 테이블이 아닌 파일에서 한 줄로 추가한 커맨드가 팔레트에 나온다. 메뉴 경로가 없으면 팔레트와 단축키만 쓴다.
-    SW_EDITOR_COMMAND( SelfTestPing, "selftest.ping", 0, "Self Test Ping", editoricon::kBug, "SelfTest", "자체 시험과 시나리오가 쓰는 커맨드 — 로그 한 줄을 남깁니다",
+    SW_EDITOR_COMMAND( SelfTestPing, "selftest.ping", 0, "Self Test Ping", editoricon::kBug, "SelfTest", "자체 테스트와 시나리오가 쓰는 커맨드 — 로그 한 줄을 남깁니다",
                        "Write one log line (self-test)", {}, &EditorSelfTestDevToolsInternal::runPingCommand, nullptr, nullptr );
     SW_EDITOR_SELF_TEST( SceneViewGizmo, "sceneView.gizmoMovesTheSelection", 760, &EditorSelfTestDevToolsInternal::runGizmoMovesTheSelection );
     SW_EDITOR_SELF_TEST( SceneViewGridAndGizmo, "sceneView.gridAndGizmoDraw", 765, &EditorSelfTestDevToolsInternal::runGridAndGizmoDraw );

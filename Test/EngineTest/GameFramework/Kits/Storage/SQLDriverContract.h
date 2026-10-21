@@ -159,7 +159,7 @@ namespace test
 
             vector<SQLMigration> listMigration;
             string               error;
-            SW_ASSERT_TRUE_MSG( SQLMigrationRunner::loadMigrations( folder, driverName, listMigration, error ), error.c_str() );
+            SW_ASSERT_TRUE_MSG( SQLMigrationRunner::loadMigrations( ::test::makeTempResourceID( folder ), driverName, listMigration, error ), error.c_str() );
             SW_ASSERT_EQUAL( size_t( 2 ), listMigration.size() );
             SW_EXPECT_TRUE( listMigration[0]._sql.find( '\r' ) == string::npos ); // 줄 끝을 맞춘다 — 체크섬이 체크아웃마다 같다
             SW_ASSERT_TRUE_MSG( SQLMigrationRunner::apply( connection, listMigration, 100, error ), error.c_str() );
@@ -175,7 +175,7 @@ namespace test
             writeMigration( folder, "0004_broken.sql", "CREATE TABLE " + fourth + " ( id BIGINT ); THIS IS NOT SQL;" );
             writeMigration( folder, SQLMigrationRunner::kListFileName, R"({ "migrations": [ "0001_first", "0002_second", "0003_third", "0004_broken" ] })" );
             listMigration.clear();
-            SW_ASSERT_TRUE( SQLMigrationRunner::loadMigrations( folder, driverName, listMigration, error ) );
+            SW_ASSERT_TRUE( SQLMigrationRunner::loadMigrations( ::test::makeTempResourceID( folder ), driverName, listMigration, error ) );
             SW_EXPECT_FALSE( SQLMigrationRunner::apply( connection, listMigration, 300, error ) );
             SW_EXPECT_FALSE( hasTable( connection, third ) );
             SW_EXPECT_FALSE( hasTable( connection, fourth ) );
@@ -185,7 +185,7 @@ namespace test
             writeMigration( folder, SQLMigrationRunner::kListFileName, R"({ "migrations": [ "0001_first", "0002_second", "0003_third" ] })" );
             writeMigration( folder, "0001_first.sql", "CREATE TABLE " + first + " ( id BIGINT PRIMARY KEY, bytes {{blob}}, extra BIGINT );" );
             listMigration.clear();
-            SW_ASSERT_TRUE( SQLMigrationRunner::loadMigrations( folder, driverName, listMigration, error ) );
+            SW_ASSERT_TRUE( SQLMigrationRunner::loadMigrations( ::test::makeTempResourceID( folder ), driverName, listMigration, error ) );
             error.clear();
             SW_EXPECT_FALSE( SQLMigrationRunner::apply( connection, listMigration, 400, error ) );
             SW_EXPECT_TRUE( error.find( "changed after it was applied" ) != string::npos );
@@ -195,12 +195,12 @@ namespace test
             writeMigration( folder, "0006_gap.sql", "CREATE TABLE gap ( id BIGINT );" );
             writeMigration( folder, SQLMigrationRunner::kListFileName, R"({ "migrations": [ "0001_first", "0002_second", "0003_third", "0006_gap" ] })" );
             listMigration.clear();
-            SW_EXPECT_FALSE( SQLMigrationRunner::loadMigrations( folder, driverName, listMigration, error ) );
+            SW_EXPECT_FALSE( SQLMigrationRunner::loadMigrations( ::test::makeTempResourceID( folder ), driverName, listMigration, error ) );
 
             // 폴더에 목록에 없는 .sql 이 있으면 읽지 않는다(목록에 빠뜨린 마이그레이션을 조용히 건너뛰지 않는다).
             writeMigration( folder, SQLMigrationRunner::kListFileName, R"({ "migrations": [ "0001_first", "0002_second", "0003_third" ] })" );
             listMigration.clear();
-            SW_EXPECT_FALSE( SQLMigrationRunner::loadMigrations( folder, driverName, listMigration, error ) );
+            SW_EXPECT_FALSE( SQLMigrationRunner::loadMigrations( ::test::makeTempResourceID( folder ), driverName, listMigration, error ) );
             SW_EXPECT_TRUE( error.find( "is not listed" ) != string::npos );
         }
     };

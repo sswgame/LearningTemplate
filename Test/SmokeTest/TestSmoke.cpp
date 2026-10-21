@@ -1576,12 +1576,12 @@ SW_TEST_CASE( ArchitectureTest, MaterialCacheAcquireReleaseNoGPU )
     sw::MaterialCache& cache        = sw::engine::getSubsystem<sw::AssetManager>().getAssetCache<sw::MaterialCache>();
     cache.clear();
 
-    sw::Material* mat = cache.acquire( materialPath, nullptr );
+    sw::Material* mat = cache.acquire( ::test::makeTempResourceID( materialPath ), nullptr );
     SW_EXPECT_TRUE( mat != nullptr );
     if ( mat == nullptr )
         return;
 
-    sw::Material* again = cache.acquire( materialPath, nullptr );
+    sw::Material* again = cache.acquire( ::test::makeTempResourceID( materialPath ), nullptr );
     SW_EXPECT_EQUAL( mat, again );
 
     cache.release( materialPath );
@@ -1597,7 +1597,7 @@ SW_TEST_CASE( ArchitectureTest, MaterialCacheAcquireReleaseNoGPU )
     }
 
     // 다시 잡으면 참조가 1 이므로 한 번 놓는 것으로 사라진다 — 앞의 과다 release 가 셈을 흐리지 않았다.
-    SW_EXPECT_NOT_NULL( cache.acquire( materialPath, nullptr ) );
+    SW_EXPECT_NOT_NULL( cache.acquire( ::test::makeTempResourceID( materialPath ), nullptr ) );
     SW_EXPECT_TRUE( cache.isCached( materialPath ) );
     cache.release( materialPath );
     SW_EXPECT_FALSE( cache.isCached( materialPath ) );

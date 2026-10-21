@@ -84,6 +84,7 @@ namespace sw
         destroy();
     }
 
+    // 길이 유지(긴 함수 정리 기준): 디스플레이 · 프레임버퍼 설정 · 컨텍스트 생성의 순서가 곧 의미라 나누지 않는다.
     bool GlxPlatformContext::initialize( const RHISwapChainDesc& desc, OpenGLContextHandles& outHandles )
     {
         Display* pDpy = (Display*)desc._pWindowDisplay;

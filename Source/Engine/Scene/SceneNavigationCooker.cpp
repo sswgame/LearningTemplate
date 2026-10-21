@@ -39,7 +39,7 @@ namespace sw
 
 namespace sw
 {
-    bool SceneNavigationCooker::cookScene( string_view sceneResourcePath, NavMeshAsset& outAsset )
+    bool SceneNavigationCooker::cookScene( const SceneEngineServices& services, string_view sceneResourcePath, NavMeshAsset& outAsset )
     {
         outAsset = NavMeshAsset{};
         SceneDocument document;
@@ -48,7 +48,7 @@ namespace sw
             SW_LOG_ERROR( "Navmesh cook could not read scene '%#'", sceneResourcePath );
             return false;
         }
-        Scene scene{ "NavMeshCook" };
+        Scene scene{ "NavMeshCook", services };
         if ( scene.instantiate( document ) == false || scene.getObjectManager() == nullptr )
         {
             SW_LOG_ERROR( "Navmesh cook could not build scene '%#'", sceneResourcePath );
@@ -87,7 +87,7 @@ namespace sw
         return bAll;
     }
 
-    uint32 SceneNavigationCooker::cookAll( const string& resourceRoot, const string& cookedDir, const CookStore& store, uint32& outFailedCount )
+    uint32 SceneNavigationCooker::cookAll( const SceneEngineServices& services, const string& resourceRoot, const string& cookedDir, const CookStore& store, uint32& outFailedCount )
     {
         using Internal = SceneNavigationCookerInternal;
         if ( cookedDir.empty() )
@@ -119,7 +119,7 @@ namespace sw
                 if ( ResourceIO::readTextFile( filePath, text ) == false || text.find( Internal::kSurfaceMarker.data() ) == string::npos )
                     return CookStep::Skipped;
                 NavMeshAsset asset;
-                if ( cookScene( relativePath, asset ) == false )
+                if ( cookScene( services, relativePath, asset ) == false )
                     return CookStep::Failed;
                 if ( asset.getEntries().empty() )
                     return CookStep::Skipped;

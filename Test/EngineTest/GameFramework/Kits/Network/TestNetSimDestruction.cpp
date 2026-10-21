@@ -109,7 +109,7 @@ SW_TEST_CASE( NetSimDestructionTest, NetSessionHashRecordsMatchTheServer )
     NetSimHarness  harness;
     NetSimConfig   settings;
     settings._seed = 5u;
-    SW_ASSERT_TRUE( harness.initialize( settings, &game ) );
+    SW_ASSERT_TRUE( harness.initialize( sw::SceneEngineServices::makeFromBoundEngine(), settings, &game ) );
     SW_ASSERT_TRUE( harness.addClient( NetSimLinkConditions{} ) > 0 );
     harness.stepTicks( 240 );
     SW_ASSERT_TRUE( harness.addClient( NetSimLinkConditions{} ) > 0 ); // 늦은 참가 — 스냅숏으로 맞춘다

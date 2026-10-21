@@ -62,6 +62,26 @@ namespace test
         sw::FileUtil::ensureDirectoryExists( directory );
         return directory;
     }
+
+    sw::string makeTempResourceID( sw::string_view tempDiskPath )
+    {
+        const sw::string processDirectory = sw::FileUtil::normalizeSeparators( getProcessTempDirectory() );
+        sw::FileUtil::ensureDirectoryExists( processDirectory );
+        if ( sw::ResourcePaths::mountDiskDomain( kTempResourceDomain, processDirectory ) == false )
+        {
+            reportFailure( "makeTempResourceID", __FILE__, __LINE__, "프로세스 임시 폴더를 리소스 도메인으로 붙이지 못했다: " + processDirectory );
+            return {};
+        }
+        sw::string underProcess;
+        const bool bInside = sw::FileUtil::makeRelativePath( processDirectory, sw::FileUtil::normalizeSeparators( tempDiskPath ), underProcess ) &&
+                             underProcess.empty() == false && sw::ResourcePaths::hasParentDirectoryComponent( underProcess ) == false;
+        if ( bInside == false )
+        {
+            reportFailure( "makeTempResourceID", __FILE__, __LINE__, sw::string( "프로세스 임시 폴더 밖 경로다: " ) + sw::string( tempDiskPath ) );
+            return {};
+        }
+        return sw::string( kTempResourceDomain ) + "/" + sw::FileUtil::normalizeSeparators( underProcess );
+    }
 } // namespace test
 
 namespace test

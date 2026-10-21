@@ -166,7 +166,7 @@ class CheckWellKnownConstantsGate(LintGate):
     sourceSummary = f"{' · '.join(kLintProductRelDirs)} · 셰이더의 잘 알려진 상수 리터럴"
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
-        self.addFilesArgument(parser, "검사할 특정 파일 (생략 시 시험을 뺀 린트 대상 · 셰이더 전체)")
+        self.addFilesArgument(parser, "검사할 특정 파일 (생략 시 테스트를 뺀 린트 대상 · 셰이더 전체)")
 
     def prepareSourceScan(self, repositoryRoot: Path, args: argparse.Namespace) -> None:
         # 집이 사라지면(옮기면) 예외도 함께 낡는다 — 조용히 넘기지 않는다. 테스트용 가짜 저장소(자기 테스트)는 집이 없어도 된다.

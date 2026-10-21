@@ -72,6 +72,125 @@ namespace sw
                 const bool    bSign         = arrTangent[3] == 1.0f || arrTangent[3] == -1.0f;
                 return bUnitLength && bSign;
             }
+
+            /** @brief 정점 @p vertexCount 개를 읽어 @p pCursor 를 옮깁니다. 탄젠트가 쓰기가 낸 모양이 아니면 false 입니다. */
+            [[nodiscard]] static bool readVertices( const uint8*& pCursor, uint32 vertexCount, vector<RHIVertex>& outListVertex )
+            {
+                outListVertex.resize( vertexCount );
+                for ( RHIVertex& vertex : outListVertex )
+                {
+                    float32 arrValue[kFloatPerVertex]{};
+                    for ( float32& value : arrValue )
+                    {
+                        value = readFloat32( pCursor );
+                        pCursor += sizeof( float32 );
+                    }
+                    Memory::copy( vertex._arrPosition, arrValue + 0, sizeof( vertex._arrPosition ) );
+                    Memory::copy( vertex._arrNormal, arrValue + 3, sizeof( vertex._arrNormal ) );
+                    Memory::copy( vertex._arrUv, arrValue + 6, sizeof( vertex._arrUv ) );
+                    Memory::copy( vertex._arrColor, arrValue + 8, sizeof( vertex._arrColor ) );
+                    Memory::copy( vertex._arrTangent, arrValue + 12, sizeof( vertex._arrTangent ) );
+                    if ( isValidTangent( vertex._arrTangent ) == false )
+                    {
+                        SW_LOG_WARNING( "Mesh asset has a tangent that is not unit length with a +-1 sign - re-import the model" );
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            /** @brief 스킨 정점 @p vertexCount 개를 읽어 @p pCursor 를 옮깁니다. 뼈 번호가 뼈 수를 넘으면 false 입니다. */
+            [[nodiscard]] static bool readSkinVertices( const uint8*& pCursor, uint32 vertexCount, uint32 skinBoneCount, vector<MeshSkinVertex>& outListSkin )
+            {
+                outListSkin.resize( vertexCount );
+                for ( MeshSkinVertex& skin : outListSkin )
+                {
+                    for ( uint16& joint : skin._arrJoint )
+                    {
+                        joint = LittleEndianUtil::readUint16( pCursor );
+                        pCursor += sizeof( uint16 );
+                        if ( joint >= skinBoneCount )
+                        {
+                            SW_LOG_WARNING( "Mesh asset skin names bone %# but the skeleton has %# bones", joint, skinBoneCount );
+                            return false;
+                        }
+                    }
+                    for ( float32& weight : skin._arrWeight )
+                    {
+                        weight = readFloat32( pCursor );
+                        pCursor += sizeof( float32 );
+                    }
+                }
+                return true;
+            }
+
+            /** @brief 모프 타깃 덩어리 본문([@p pChunk, @p pChunkEnd))을 읽습니다. 길이 · 정점 번호가 맞지 않거나 본문을 다 쓰지 않으면 false 입니다. */
+            [[nodiscard]] static bool readMorphChunk( const uint8* pChunk, const uint8* pChunkEnd, uint32 vertexCount, vector<MeshMorphTarget>& outListTarget )
+            {
+                bool   bValid      = pChunkEnd - pChunk >= 4;
+                uint32 targetCount = bValid ? LittleEndianUtil::readUint32( pChunk ) : 0u;
+                pChunk += 4;
+                for ( uint32 targetIndex = 0; bValid && targetIndex < targetCount; ++targetIndex )
+                {
+                    bValid                  = pChunkEnd - pChunk >= 4;
+                    const uint32 nameLength = bValid ? LittleEndianUtil::readUint32( pChunk ) : 0u;
+                    bValid                  = bValid && static_cast<size_t>( pChunkEnd - pChunk ) >= 8u + nameLength;
+                    if ( bValid == false )
+                        break;
+                    MeshMorphTarget target{};
+                    target._name = hashed_string( string( reinterpret_cast<const utf8*>( pChunk + 4 ), nameLength ) );
+                    pChunk += 4 + nameLength;
+                    const uint32 deltaCount = LittleEndianUtil::readUint32( pChunk );
+                    pChunk += 4;
+                    bValid = static_cast<uint64>( pChunkEnd - pChunk ) >= static_cast<uint64>( deltaCount ) * kMorphDeltaSize;
+                    for ( uint32 deltaIndex = 0; bValid && deltaIndex < deltaCount; ++deltaIndex )
+                    {
+                        MeshMorphDelta delta{};
+                        delta._vertexIndex = LittleEndianUtil::readUint32( pChunk );
+                        float32 arrValue[6]{};
+                        for ( uint32 valueIndex = 0; valueIndex < 6; ++valueIndex )
+                        {
+                            arrValue[valueIndex] = readFloat32( pChunk + 4 + valueIndex * 4 );
+                        }
+                        delta._position = float3{ arrValue[0], arrValue[1], arrValue[2] };
+                        delta._normal   = float3{ arrValue[3], arrValue[4], arrValue[5] };
+                        pChunk += kMorphDeltaSize;
+                        bValid = delta._vertexIndex < vertexCount;
+                        target._listDelta.push_back( delta );
+                    }
+                    outListTarget.push_back( std::move( target ) );
+                }
+                return bValid && pChunk == pChunkEnd;
+            }
+
+            /** @brief 정점 · 스킨 뒤의 선택 덩어리를 모두 읽습니다. 모르는 이름 · 길이가 맞지 않는 덩어리는 깨진 파일로 보고 false 입니다. */
+            [[nodiscard]] static bool readOptionalChunks( const uint8* pCursor, const uint8* pEnd, uint32 vertexCount, MeshAssetData& ioData )
+            {
+                while ( pCursor < pEnd )
+                {
+                    if ( static_cast<size_t>( pEnd - pCursor ) < 8 )
+                    {
+                        SW_LOG_WARNING( "Mesh asset has a truncated chunk header" );
+                        return false;
+                    }
+                    const bool   bMorph      = Memory::compare( pCursor, kArrMorphChunk, 4 ) == 0;
+                    const uint32 chunkLength = LittleEndianUtil::readUint32( pCursor + 4 );
+                    const uint8* pChunk      = pCursor + 8;
+                    if ( bMorph == false || chunkLength > static_cast<size_t>( pEnd - pChunk ) )
+                    {
+                        SW_LOG_WARNING( "Mesh asset has an unknown or truncated chunk" );
+                        return false;
+                    }
+                    const uint8* pChunkEnd = pChunk + chunkLength;
+                    if ( readMorphChunk( pChunk, pChunkEnd, vertexCount, ioData._listMorphTarget ) == false )
+                    {
+                        SW_LOG_WARNING( "Mesh asset has a malformed morph target chunk" );
+                        return false;
+                    }
+                    pCursor = pChunkEnd;
+                }
+                return true;
+            }
         };
     } // namespace
 } // namespace sw
@@ -183,13 +302,14 @@ namespace sw
 
     bool MeshAssetFormat::readFromBytes( const uint8* pData, size_t size, MeshAssetData& outData, float32* pOutBoundingRadius )
     {
-        outData = MeshAssetData{};
+        using Internal = MeshAssetFormatInternal;
+        outData        = MeshAssetData{};
         if ( pData == nullptr || size < kHeaderSize )
         {
             SW_LOG_WARNING( "Mesh asset is shorter than its header (%# bytes)", size );
             return false;
         }
-        if ( Memory::compare( pData, MeshAssetFormatInternal::kArrMagic, sizeof( MeshAssetFormatInternal::kArrMagic ) ) != 0 )
+        if ( Memory::compare( pData, Internal::kArrMagic, sizeof( Internal::kArrMagic ) ) != 0 )
         {
             SW_LOG_WARNING( "Mesh asset has no SWMS magic" );
             return false;
@@ -198,7 +318,7 @@ namespace sw
         const uint32  version        = LittleEndianUtil::readUint32( pData + 4 );
         const uint32  vertexCount    = LittleEndianUtil::readUint32( pData + 8 );
         const uint32  vertexSize     = LittleEndianUtil::readUint32( pData + 12 );
-        const float32 boundingRadius = MeshAssetFormatInternal::readFloat32( pData + 16 );
+        const float32 boundingRadius = Internal::readFloat32( pData + 16 );
         const uint32  skinBoneCount  = LittleEndianUtil::readUint32( pData + 20 );
         if ( version != kVersion || vertexSize != kVertexSize )
         {
@@ -222,112 +342,19 @@ namespace sw
             return false;
         }
 
-        outData._listVertex.resize( vertexCount );
+        // 본문이 하나라도 깨졌으면 반쯤 읽은 데이터를 남기지 않는다.
         const uint8* pCursor = pData + kHeaderSize;
-        for ( RHIVertex& vertex : outData._listVertex )
+        bool         bRead   = Internal::readVertices( pCursor, vertexCount, outData._listVertex );
+        if ( bRead && skinBoneCount > 0 )
         {
-            float32 arrValue[MeshAssetFormatInternal::kFloatPerVertex]{};
-            for ( float32& value : arrValue )
-            {
-                value = MeshAssetFormatInternal::readFloat32( pCursor );
-                pCursor += sizeof( float32 );
-            }
-            Memory::copy( vertex._arrPosition, arrValue + 0, sizeof( vertex._arrPosition ) );
-            Memory::copy( vertex._arrNormal, arrValue + 3, sizeof( vertex._arrNormal ) );
-            Memory::copy( vertex._arrUv, arrValue + 6, sizeof( vertex._arrUv ) );
-            Memory::copy( vertex._arrColor, arrValue + 8, sizeof( vertex._arrColor ) );
-            Memory::copy( vertex._arrTangent, arrValue + 12, sizeof( vertex._arrTangent ) );
-            if ( MeshAssetFormatInternal::isValidTangent( vertex._arrTangent ) == false )
-            {
-                SW_LOG_WARNING( "Mesh asset has a tangent that is not unit length with a +-1 sign - re-import the model" );
-                outData = MeshAssetData{};
-                return false;
-            }
-        }
-        if ( skinBoneCount > 0 )
-        {
-            outData._listSkinVertex.resize( vertexCount );
-            for ( MeshSkinVertex& skin : outData._listSkinVertex )
-            {
-                for ( uint16& joint : skin._arrJoint )
-                {
-                    joint = LittleEndianUtil::readUint16( pCursor );
-                    pCursor += sizeof( uint16 );
-                    if ( joint >= skinBoneCount )
-                    {
-                        SW_LOG_WARNING( "Mesh asset skin names bone %# but the skeleton has %# bones", joint, skinBoneCount );
-                        outData = MeshAssetData{};
-                        return false;
-                    }
-                }
-                for ( float32& weight : skin._arrWeight )
-                {
-                    weight = MeshAssetFormatInternal::readFloat32( pCursor );
-                    pCursor += sizeof( float32 );
-                }
-            }
+            bRead                  = Internal::readSkinVertices( pCursor, vertexCount, skinBoneCount, outData._listSkinVertex );
             outData._skinBoneCount = skinBoneCount;
         }
-        // 선택 덩어리 — 모르는 이름 · 길이가 맞지 않는 덩어리는 깨진 파일로 본다.
-        const uint8* pEnd = pData + size;
-        while ( pCursor < pEnd )
+        bRead = bRead && Internal::readOptionalChunks( pCursor, pData + size, vertexCount, outData );
+        if ( bRead == false )
         {
-            if ( static_cast<size_t>( pEnd - pCursor ) < 8 )
-            {
-                SW_LOG_WARNING( "Mesh asset has a truncated chunk header" );
-                outData = MeshAssetData{};
-                return false;
-            }
-            const bool   bMorph      = Memory::compare( pCursor, MeshAssetFormatInternal::kArrMorphChunk, 4 ) == 0;
-            const uint32 chunkLength = LittleEndianUtil::readUint32( pCursor + 4 );
-            const uint8* pChunk      = pCursor + 8;
-            const uint8* pChunkEnd   = pChunk + chunkLength;
-            if ( bMorph == false || chunkLength > static_cast<size_t>( pEnd - pChunk ) )
-            {
-                SW_LOG_WARNING( "Mesh asset has an unknown or truncated chunk" );
-                outData = MeshAssetData{};
-                return false;
-            }
-            bool   bValid      = chunkLength >= 4;
-            uint32 targetCount = bValid ? LittleEndianUtil::readUint32( pChunk ) : 0u;
-            pChunk += 4;
-            for ( uint32 targetIndex = 0; bValid && targetIndex < targetCount; ++targetIndex )
-            {
-                bValid                  = pChunkEnd - pChunk >= 4;
-                const uint32 nameLength = bValid ? LittleEndianUtil::readUint32( pChunk ) : 0u;
-                bValid                  = bValid && static_cast<size_t>( pChunkEnd - pChunk ) >= 8u + nameLength;
-                if ( bValid == false )
-                    break;
-                MeshMorphTarget target{};
-                target._name = hashed_string( string( reinterpret_cast<const utf8*>( pChunk + 4 ), nameLength ) );
-                pChunk += 4 + nameLength;
-                const uint32 deltaCount = LittleEndianUtil::readUint32( pChunk );
-                pChunk += 4;
-                bValid = static_cast<uint64>( pChunkEnd - pChunk ) >= static_cast<uint64>( deltaCount ) * MeshAssetFormatInternal::kMorphDeltaSize;
-                for ( uint32 deltaIndex = 0; bValid && deltaIndex < deltaCount; ++deltaIndex )
-                {
-                    MeshMorphDelta delta{};
-                    delta._vertexIndex = LittleEndianUtil::readUint32( pChunk );
-                    float32 arrValue[6]{};
-                    for ( uint32 valueIndex = 0; valueIndex < 6; ++valueIndex )
-                    {
-                        arrValue[valueIndex] = MeshAssetFormatInternal::readFloat32( pChunk + 4 + valueIndex * 4 );
-                    }
-                    delta._position = float3{ arrValue[0], arrValue[1], arrValue[2] };
-                    delta._normal   = float3{ arrValue[3], arrValue[4], arrValue[5] };
-                    pChunk += MeshAssetFormatInternal::kMorphDeltaSize;
-                    bValid = delta._vertexIndex < vertexCount;
-                    target._listDelta.push_back( delta );
-                }
-                outData._listMorphTarget.push_back( std::move( target ) );
-            }
-            if ( bValid == false || pChunk != pChunkEnd )
-            {
-                SW_LOG_WARNING( "Mesh asset has a malformed morph target chunk" );
-                outData = MeshAssetData{};
-                return false;
-            }
-            pCursor = pChunkEnd;
+            outData = MeshAssetData{};
+            return false;
         }
         if ( pOutBoundingRadius != nullptr )
             *pOutBoundingRadius = boundingRadius;

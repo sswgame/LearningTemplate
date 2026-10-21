@@ -105,6 +105,19 @@ namespace sw
          */
         static LooseFilePath findLooseDomainFolder( string_view domainName, string_view subFolder = {} );
 
+        /**
+         * @brief 리소스 루트 **밖**의 디스크 폴더 하나를 도메인 이름으로 붙입니다. 그 도메인의 id(`<domainName>/<key>`)는 그 폴더의 파일로 풀립니다.
+         * @details 리소스 입구(`ResourceIO::read*Resource` · `hasResource`)는 리소스 id 만 받고 OS 경로는 오류로 거절합니다(계획 `DiskPathVsResourceId` 안 B).
+         *          루트 밖 디스크 파일(테스트 케이스 임시 폴더, 도구 작업 폴더)을 캐시 · 로더가 리소스로 읽어야 할 때 이 함수로 붙이고 id 로 부릅니다.
+         *          붙인 도메인은 낱개 파일 금지 구성(배포본)에서도 디스크에서 읽습니다 — 붙인 쪽이 고른 것이고, 팩에는 없습니다.
+         *          리소스 루트 **안**의 폴더는 붙일 수 없습니다(배포본의 팩 전용 규칙을 지나 낱개 에셋을 읽는 길이 된다).
+         * @return 이름이 비었거나 `/` · `:` · `..` 가 들었거나, 폴더가 없거나, 리소스 루트 안이거나, 같은 이름이 다른 폴더에 붙어 있으면 false 입니다(오류 로그).
+         *         같은 이름을 같은 폴더에 다시 붙이면 true 입니다.
+         */
+        [[nodiscard]] static bool mountDiskDomain( string_view domainName, string_view diskFolder );
+        /** @brief @p resourceID 가 `mountDiskDomain` 으로 붙인 도메인 아래면 true 입니다. 그 id 는 팩을 보지 않고 디스크에서만 읽습니다. */
+        static bool isMountedDiskDomainID( string_view resourceID );
+
         /** @brief `Resource/` 폴더의 절대 경로입니다. 표시와 감시용 최상위이며 검색 루트는 아닙니다. */
         static const string& getRootFolderPath();
         /** @brief 프로젝트 루트의 절대 경로입니다(`Resource/` 와 `Config/` 의 부모). */

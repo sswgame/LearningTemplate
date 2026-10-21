@@ -22,8 +22,8 @@ from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
 class _FixedGate(LintGate):
     """테스트용 게이트 — 받은 결과를 그대로 돌려준다. 본 루트를 남긴다."""
 
-    description = "시험용"
-    selfTestSkipReason = "시험용 — 등록되지 않는다"
+    description = "테스트용"
+    selfTestSkipReason = "테스트용 — 등록되지 않는다"
     seenRoot: Path | None = None
     result: GateResult | None = None
     bRaise = False
@@ -104,9 +104,9 @@ class LintGateShellTest(unittest.TestCase):
 class _ExemptGate(LintGate):
     """테스트용 — 표 한 줄, 훑기가 무엇을 보고 쓰는지 바깥에서 정한다."""
 
-    description = "시험용"
-    selfTestSkipReason = "시험용 — 등록되지 않는다"
-    mapExemption = {"Source/Allowed.cpp": "시험용 예외"}
+    description = "테스트용"
+    selfTestSkipReason = "테스트용 — 등록되지 않는다"
+    mapExemption = {"Source/Allowed.cpp": "테스트용 예외"}
     bSee = False
     bUse = False
 
@@ -118,7 +118,7 @@ class _ExemptGate(LintGate):
             self.seeExemption("Source/Allowed.cpp")
         if self.bUse:
             self.useExemption("Source/Allowed.cpp")
-        return GateResult(summary="시험")
+        return GateResult(summary="테스트")
 
 
 class LintGateExemptionTest(unittest.TestCase):

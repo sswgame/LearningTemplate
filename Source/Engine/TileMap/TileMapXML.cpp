@@ -89,6 +89,24 @@ namespace sw
         return true;
     }
 
+    bool TileMapXMLData::loadFromDiskFile( string_view diskPath )
+    {
+        if ( diskPath.empty() )
+            return false;
+
+        string text;
+        if ( ResourceIO::readTextFile( diskPath, text ) == false )
+        {
+            SW_LOG_ERROR( "TileMap file not found: %#", diskPath );
+            return false;
+        }
+
+        if ( loadFromXML( text ) == false )
+            return false;
+        _sourcePath = diskPath;
+        return true;
+    }
+
     bool TileMapXMLData::loadFromXML( string_view xml )
     {
         *this = {};

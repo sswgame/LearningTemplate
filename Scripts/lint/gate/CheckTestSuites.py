@@ -283,7 +283,7 @@ def checkCoreTestIsEngineFree(rootDir: Path) -> list[str]:
         for match in _kCoreTestForbiddenIncludeRe.finditer(code):
             line = code.count("\n", 0, match.start()) + 1
             errors.append(f"{relPath}:{line}: CoreTest 가 `{match.group(1)}` 를 include 합니다 — CoreTest 는 엔진 없이 Core 를 "
-                          f"시험합니다. 엔진 타입이 필요한 시험은 EngineTest 로 옮기거나 지역 대역을 쓰세요")
+                          f"테스트합니다. 엔진 타입이 필요한 테스트는 EngineTest 로 옮기거나 지역 대역을 쓰세요")
         for match in _kEngineNamespaceRe.finditer(code):
             line = code.count("\n", 0, match.start()) + 1
             errors.append(f"{relPath}:{line}: CoreTest 가 `{match.group(0)}` 를 부릅니다 — 프로세스의 엔진 서비스 대신 "

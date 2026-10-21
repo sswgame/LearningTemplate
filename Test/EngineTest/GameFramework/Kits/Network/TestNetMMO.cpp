@@ -364,7 +364,7 @@ SW_TEST_CASE( NetMMOTest, TeleportLeavesWithoutGhosts )
         } );
     }
     NetSimHarness harness;
-    SW_ASSERT_TRUE( harness.initialize( NetSimConfig{}, &game ) );
+    SW_ASSERT_TRUE( harness.initialize( sw::SceneEngineServices::makeFromBoundEngine(), NetSimConfig{}, &game ) );
     const int32 client = harness.addClient( NetSimLinkConditions{} );
 
     MMOCountGoal all{ client, static_cast<int32>( kNeighborCount + 1 ) };
@@ -401,7 +401,7 @@ SW_TEST_CASE( NetMMOTest, ReorderedUpdateDoesNotOverwriteNewer )
     NetSimConfig settings;
     settings._hostSettings._sendInterval = 1.0 / 60.0;
     NetSimHarness harness;
-    SW_ASSERT_TRUE( harness.initialize( settings, &game ) );
+    SW_ASSERT_TRUE( harness.initialize( sw::SceneEngineServices::makeFromBoundEngine(), settings, &game ) );
     NetEmulationConditions reorder;
     reorder._latency      = 0.03;
     reorder._jitter       = 0.02;
@@ -441,7 +441,7 @@ SW_TEST_CASE( NetMMOTest, OversizedStateIsRefusedByTheServer )
         51, 1, 1.0f
     } );
     NetSimHarness harness;
-    SW_ASSERT_TRUE( harness.initialize( NetSimConfig{}, &game ) );
+    SW_ASSERT_TRUE( harness.initialize( sw::SceneEngineServices::makeFromBoundEngine(), NetSimConfig{}, &game ) );
     const int32 client = harness.addClient( NetSimLinkConditions{} );
     harness.stepTicks( 60 );
 
@@ -478,7 +478,7 @@ SW_TEST_CASE( NetMMOTest, EntersShareOneReliableMessagePerTick )
         } );
     }
     NetSimHarness harness;
-    SW_ASSERT_TRUE( harness.initialize( NetSimConfig{}, &game ) );
+    SW_ASSERT_TRUE( harness.initialize( sw::SceneEngineServices::makeFromBoundEngine(), NetSimConfig{}, &game ) );
     const int32 client = harness.addClient( NetSimLinkConditions{} );
 
     // 들어옴이 나가는 틱의 서버 쪽 미확인 신뢰 수 — 엔티티마다 메시지 하나면 32 를 넘고, 묶으면 조각 17 남짓이다.
@@ -527,7 +527,7 @@ SW_TEST_CASE( NetMMOTest, UpdateBudgetFollowsTheConnectionCap )
         NetSimConfig settings;
         settings._hostSettings._maxBytesPerSecond = maxBytesPerSecond;
         NetSimHarness harness;
-        if ( harness.initialize( settings, &game ) == false )
+        if ( harness.initialize( sw::SceneEngineServices::makeFromBoundEngine(), settings, &game ) == false )
             return 0;
         (void)harness.addClient( NetSimLinkConditions{} );
         harness.stepTicks( 120 );
@@ -568,7 +568,7 @@ SW_TEST_CASE( NetMMOTest, LostUpdateIsResentSoonAfterTheAck )
     NetSimConfig settings;
     settings._hostSettings._sendInterval = 1.0 / 60.0;
     NetSimHarness harness;
-    SW_ASSERT_TRUE( harness.initialize( settings, &game ) );
+    SW_ASSERT_TRUE( harness.initialize( sw::SceneEngineServices::makeFromBoundEngine(), settings, &game ) );
     const int32 client = harness.addClient( NetSimLinkConditions{} );
     for ( uint32 tick = 0; tick < 120; ++tick )
     {

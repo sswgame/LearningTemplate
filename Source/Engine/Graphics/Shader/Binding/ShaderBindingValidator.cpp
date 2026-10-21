@@ -275,7 +275,7 @@ namespace sw
             return ShaderReservedLocation{};
         }
 
-        /// @brief 계약 표입니다. 값은 모두 shaderslot 에서 옵니다. 백엔드가 선언하지 않는 자리는 none() 입니다.
+        /// @brief 계약 표입니다. 값은 모두 shaderslot 에서 옵니다. 백엔드가 선언하지 않는 자리는 none() 입니다. 줄마다 리소스 하나인 등록 목록이라 나누지 않는다.
         const vector<ShaderReservedBinding>& reservedBindings()
         {
             static const vector<ShaderReservedBinding> s_list = []()
@@ -411,6 +411,242 @@ namespace sw
             }();
             return s_list;
         }
+        /**
+         * @brief 검사 규칙들입니다. 규칙마다 위반을 `report` 로 남기고 `_issueCount` 를 셉니다.
+         * @details `ShaderBindingValidator::validate` 가 1) 예약 리소스 2 · 3) 리소스마다 백엔드 자리 규칙과 뒤 리소스와의 충돌 5) 정점 입력 순서로 부릅니다.
+         *          2 · 3 은 리소스 하나씩 붙여 돌려 알림 순서가 예전(한 루프)과 같습니다.
+         */
+        struct ShaderBindingRuleChecks
+        {
+            using Internal = ShaderBindingValidatorInternal;
+
+            vector<ShaderBindingValidatorIssue>* _pOutIssue{ nullptr };
+            string_view                          _shaderLabel;
+            ShaderTargetFormat                   _targetFormat{};
+            bool                                 _bVulkan{ false };
+            bool                                 _bOpenGl{ false };
+            bool                                 _bDx12{ false };
+            uint32                               _issueCount{ 0 };
+
+            void report( const string& resource, string&& message ) { Internal::report( _pOutIssue, _shaderLabel, resource, std::move( message ), _issueCount ); }
+
+            /** @brief 1) 예약 리소스: 종류와 위치가 이 백엔드 계약과 같은가. */
+            void checkReservedBindings( const vector<Internal::ReflectedBinding>& listReflected )
+            {
+                const utf8* pLocationFormat = _bVulkan ? "set/binding" : "space/register";
+                for ( const Internal::ReflectedBinding& reflected : listReflected )
+                {
+                    const ShaderReservedBinding* pReserved{ nullptr };
+                    for ( const ShaderReservedBinding& reserved : reservedBindings() )
+                    {
+                        if ( reflected._name == reserved._name )
+                        {
+                            pReserved = &reserved;
+                            break;
+                        }
+                    }
+                    if ( pReserved == nullptr )
+                        continue;
+
+                    if ( Internal::kindMatches( pReserved->_kind, reflected._kind, _targetFormat ) == false )
+                        report( reflected._name, string( "종류가 계약과 다릅니다 — 기대 " ) + Internal::kindName( pReserved->_kind ) + ", 리플렉션 " + Internal::kindName( reflected._kind ) );
+
+                    const ShaderReservedLocation& expected = _bVulkan ? pReserved->_vulkan : ( _bOpenGl ? pReserved->_opengl : ( _bDx12 ? pReserved->_dx12 : pReserved->_dx11 ) );
+                    if ( expected._bDeclared == false )
+                    {
+                        report( reflected._name, string( "이 백엔드 계약에는 없는 예약 리소스가 선언돼 있습니다 (리플렉션 " ) +
+                                                     Internal::formatLocation( pLocationFormat, reflected._space, reflected._bindPoint ) + ")" );
+                        continue;
+                    }
+                    if ( reflected._bindPoint != expected._bind || reflected._space != expected._space )
+                    {
+                        report( reflected._name, string( "위치가 계약과 다릅니다 — 기대 " ) + Internal::formatLocation( pLocationFormat, expected._space, expected._bind ) +
+                                                     ", 리플렉션 " + Internal::formatLocation( pLocationFormat, reflected._space, reflected._bindPoint ) );
+                    }
+                }
+            }
+
+            /** @brief DX12 space0 슬롯 하나가 루트 시그니처의 슬롯 수 안인지 봅니다. */
+            void checkDx12SlotLimit( const Internal::ReflectedBinding& reflected )
+            {
+                const Internal::RegisterClass registerClass = Internal::registerClassOf( reflected._kind );
+                uint32                        limit         = 0;
+                switch ( registerClass )
+                {
+                    case Internal::RegisterClass::ConstantBuffer:
+                    {
+                        limit = shaderslot::kConstantBufferSlotCount;
+                        break;
+                    }
+                    case Internal::RegisterClass::ShaderResource:
+                    {
+                        limit = shaderslot::kSrvSlotCount;
+                        break;
+                    }
+                    case Internal::RegisterClass::UnorderedAccess:
+                    {
+                        limit = shaderslot::kComputeUavSlotCount;
+                        break;
+                    }
+                    case Internal::RegisterClass::Sampler:
+                    {
+                        limit = shaderslot::kStaticSamplerCount;
+                        break;
+                    }
+                    case Internal::RegisterClass::Other:
+                    {
+                        break;
+                    }
+                }
+                if ( limit > 0 && reflected._bindPoint >= limit )
+                    report( reflected._name, string( Internal::registerClassLetter( registerClass ) ) + to_string( reflected._bindPoint ) + " 은 루트 시그니처의 슬롯 수(" + to_string( limit ) + ")를 넘습니다" );
+            }
+
+            /** @brief 3) DX12: space0 = 슬롯(CB 는 루트 CBV, t · u 는 디스크립터 테이블, 그리고 정적 샘플러), space1 = 텍스처 배열(t0, 무제한), space2 = 루트 상수(b0). 그 밖은 루트 시그니처에 없다. */
+            void checkDx12Space( const Internal::ReflectedBinding& reflected )
+            {
+                namespace bindless = shaderslot::bindless;
+                if ( reflected._space == 0 )
+                {
+                    checkDx12SlotLimit( reflected );
+                }
+                else if ( reflected._space == bindless::kTextureSpace )
+                {
+                    const bool bKindOk                     = ( reflected._kind == ShaderBindingKind::Texture || reflected._kind == ShaderBindingKind::RwTexture );
+                    const bool bViolatesUnboundedArrayRule = bKindOk == false || reflected._bindPoint != 0 || ( reflected._bindCount != Internal::ReflectedBinding::kUnknownCount && reflected._bindCount != 0 );
+                    if ( bViolatesUnboundedArrayRule )
+                        report( reflected._name, "space1 은 무제한 텍스처 배열(t0 / u0, []) 전용입니다" );
+                }
+                else if ( reflected._space == shaderslot::kRootConstantSpace )
+                {
+                    if ( reflected._kind != ShaderBindingKind::ConstantBuffer || reflected._bindPoint != shaderslot::kRootConstantRegister )
+                        report( reflected._name, "space2 는 루트 상수(b0) 전용입니다" );
+                }
+                else
+                {
+                    report( reflected._name, string( "루트 시그니처에 없는 register space " ) + to_string( reflected._space ) + " 을 참조합니다" );
+                }
+            }
+
+            /** @brief 3) Vulkan: 세트 0 은 종류별 시프트 범위, 세트 1 은 텍스처 배열 · 샘플러 · RW 텍스처 배열 전용이다. 그 밖의 세트는 파이프라인 레이아웃에 없다. */
+            void checkVulkanSet( const Internal::ReflectedBinding& reflected )
+            {
+                namespace bindless = shaderslot::bindless;
+                namespace vk       = shaderslot::vk;
+                if ( reflected._space == 0 )
+                {
+                    const Internal::RegisterClass rangeClass = Internal::vulkanRangeClassOf( reflected._bindPoint );
+                    if ( rangeClass == Internal::RegisterClass::Other )
+                    {
+                        report( reflected._name, string( "세트 0 의 슬롯 범위 밖 binding " ) + to_string( reflected._bindPoint ) + " 입니다 (b 0.., t " + to_string( vk::kTShift ) + ".., u " +
+                                                     to_string( vk::kUShift ) + "..)" );
+                    }
+                    else if ( Internal::vulkanRangeAcceptsKind( rangeClass, reflected._kind ) == false )
+                    {
+                        report( reflected._name, string( "binding " ) + to_string( reflected._bindPoint ) + " 은 " + Internal::registerClassLetter( rangeClass ) + " 범위인데 리소스 종류가 " +
+                                                     Internal::kindName( reflected._kind ) + " 입니다" );
+                    }
+                }
+                else if ( reflected._space == bindless::kVkTextureSet )
+                {
+                    const bool bArray                  = ( reflected._bindPoint == bindless::kVkTextureBinding ) && ( reflected._kind == ShaderBindingKind::Texture || reflected._kind == ShaderBindingKind::Sampler );
+                    const bool bSampler                = ( reflected._bindPoint == bindless::kVkSamplerBinding || reflected._bindPoint == bindless::kVkShadowSamplerBinding ) && reflected._kind == ShaderBindingKind::Sampler;
+                    const bool bRwArray                = ( reflected._bindPoint == bindless::kVkRwTextureBinding ) && reflected._kind == ShaderBindingKind::RwTexture;
+                    const bool bUnknownBindlessBinding = bArray == false && bSampler == false && bRwArray == false;
+                    if ( bUnknownBindlessBinding )
+                        report( reflected._name, "세트 1 은 텍스처 배열(binding 0)·샘플러(binding 1·2)·RW 텍스처 배열(binding 3) 전용입니다" );
+                }
+                else
+                {
+                    report( reflected._name, string( "파이프라인 레이아웃에 없는 descriptor set " ) + to_string( reflected._space ) + " 을 참조합니다 (세트는 0·1)" );
+                }
+            }
+
+            /** @brief 2) 리소스 @p indexA 가 뒤의 리소스와 같은 자리를 차지하는지 봅니다(백엔드마다 이름공간이 다르다). */
+            void checkCollisionsAfter( const vector<Internal::ReflectedBinding>& listReflected, size_t indexA )
+            {
+                const Internal::ReflectedBinding& reflectedA = listReflected[indexA];
+                for ( size_t indexB = indexA + 1; indexB < listReflected.size(); ++indexB )
+                {
+                    const Internal::ReflectedBinding& reflectedB = listReflected[indexB];
+                    if ( reflectedA._bindPoint != reflectedB._bindPoint )
+                        continue;
+
+                    bool   bCollide{ false };
+                    string where;
+                    if ( _bVulkan )
+                    {
+                        bCollide = ( reflectedA._space == reflectedB._space );
+                        where    = Internal::formatLocation( "set/binding", reflectedA._space, reflectedA._bindPoint );
+                    }
+                    else if ( _bOpenGl )
+                    {
+                        const Internal::GlNamespace nsA = Internal::glNamespaceOf( reflectedA._kind );
+                        bCollide                        = ( nsA != Internal::GlNamespace::Other && nsA == Internal::glNamespaceOf( reflectedB._kind ) );
+                        where                           = string( Internal::glNamespaceName( nsA ) ) + " binding " + to_string( reflectedA._bindPoint );
+                    }
+                    else
+                    {
+                        const Internal::RegisterClass registerClassA = Internal::registerClassOf( reflectedA._kind );
+                        bCollide                                     = ( reflectedA._space == reflectedB._space && registerClassA != Internal::RegisterClass::Other && registerClassA == Internal::registerClassOf( reflectedB._kind ) );
+                        where                                        = string( Internal::registerClassLetter( registerClassA ) ) + to_string( reflectedA._bindPoint ) + " space" + to_string( reflectedA._space );
+                    }
+                    if ( bCollide )
+                        report( reflectedA._name, string( "'" ) + reflectedB._name + "' 와 같은 자리를 차지합니다 (" + where + ")" );
+                }
+            }
+
+            /** @brief 2 · 3) 리소스마다 백엔드 자리 규칙(DX12 space / Vulkan set · 범위 / GL set 0)을 보고 뒤 리소스와의 충돌을 봅니다. */
+            void checkSlotRulesAndCollisions( const vector<Internal::ReflectedBinding>& listReflected )
+            {
+                for ( size_t indexA = 0; indexA < listReflected.size(); ++indexA )
+                {
+                    const Internal::ReflectedBinding& reflectedA = listReflected[indexA];
+                    if ( _bDx12 && reflectedA._kind != ShaderBindingKind::Unknown )
+                        checkDx12Space( reflectedA );
+                    if ( _bVulkan && reflectedA._kind != ShaderBindingKind::Unknown )
+                        checkVulkanSet( reflectedA );
+                    if ( _bOpenGl && reflectedA._space != 0 )
+                    {
+                        report( reflectedA._name, string( "OpenGL 은 descriptor set 을 무시하는데 set " ) + to_string( reflectedA._space ) + " 로 선언돼 있습니다 — binding " +
+                                                      to_string( reflectedA._bindPoint ) + " 하나로 취급됩니다" );
+                    }
+                    checkCollisionsAfter( listReflected, indexA );
+                }
+            }
+
+            /**
+             * @brief 5) 정점 입력: 시맨틱이 정점 레이아웃 표(constant::arrVertexAttribute)에 있고, Vulkan · GL 은 location 까지 같은가.
+             * @details DX 는 시맨틱 이름으로 묶어 순서가 달라도 맞지만, 두 백엔드는 **선언 순서**가 location 이라 중간 속성을
+             *          빼먹으면 그 뒤가 한 칸씩 당겨진다(색을 읽으려다 노멀을 읽는다). 픽셀로는 늦게 드러난다.
+             */
+            void checkVertexInputs( const ShaderReflectionData& reflection )
+            {
+                for ( const ShaderVertexInputInfo& input : reflection._listVertexInput )
+                {
+                    const RHIVertexAttribute* pAttribute{ nullptr };
+                    for ( const RHIVertexAttribute& attribute : constant::arrVertexAttribute )
+                    {
+                        if ( input._semantic == attribute._pSemanticName )
+                        {
+                            pAttribute = &attribute;
+                            break;
+                        }
+                    }
+                    const string label = input._semantic + to_string( input._semanticIndex );
+                    if ( pAttribute == nullptr || input._semanticIndex != 0 )
+                    {
+                        report( label, "정점 레이아웃 표(constant::arrVertexAttribute)에 없는 정점 입력입니다 — 정점을 받는 셰이더는 SwVertexInput 을 쓸 것" );
+                        continue;
+                    }
+                    if ( ( _bVulkan || _bOpenGl ) && input._location != pAttribute->_location )
+                    {
+                        report( label, string( "location 이 정점 레이아웃 표와 다릅니다 — 기대 " ) + to_string( pAttribute->_location ) + ", 리플렉션 " +
+                                           to_string( input._location ) + " (Vulkan·GL 은 선언 순서로 location 을 매긴다 — SwVertexInput 을 쓸 것)" );
+                    }
+                }
+            }
+        };
     } // namespace
 
     const vector<ShaderReservedBinding>& ShaderBindingValidator::getReservedBindings()
@@ -421,226 +657,19 @@ namespace sw
     uint32 ShaderBindingValidator::validate( const ShaderReflectionData& reflection, ShaderTargetFormat targetFormat, string_view shaderLabel,
                                              vector<ShaderBindingValidatorIssue>* pOutIssue )
     {
-        using Internal     = ShaderBindingValidatorInternal;
-        namespace bindless = shaderslot::bindless;
-        namespace vk       = shaderslot::vk;
-        uint32 issueCount{ 0 };
+        vector<ShaderBindingValidatorInternal::ReflectedBinding> listReflected;
+        ShaderBindingValidatorInternal::collect( reflection, listReflected );
 
-        vector<Internal::ReflectedBinding> listReflected;
-        Internal::collect( reflection, listReflected );
-
-        const bool  bVulkan         = ( targetFormat == ShaderTargetFormat::SPIRV_Vulkan );
-        const bool  bOpenGl         = ( targetFormat == ShaderTargetFormat::SPIRV_OpenGL );
-        const bool  bDx12           = ( targetFormat == ShaderTargetFormat::DXIL_D3D12 );
-        const utf8* pLocationFormat = bVulkan ? "set/binding" : "space/register";
-
-        // 1) 예약 리소스: 종류와 위치
-        for ( const Internal::ReflectedBinding& reflected : listReflected )
-        {
-            const ShaderReservedBinding* pReserved{ nullptr };
-            for ( const ShaderReservedBinding& reserved : reservedBindings() )
-            {
-                if ( reflected._name == reserved._name )
-                {
-                    pReserved = &reserved;
-                    break;
-                }
-            }
-            if ( pReserved == nullptr )
-                continue;
-
-            if ( Internal::kindMatches( pReserved->_kind, reflected._kind, targetFormat ) == false )
-            {
-                Internal::report( pOutIssue, shaderLabel, reflected._name,
-                                  string( "종류가 계약과 다릅니다 — 기대 " ) + Internal::kindName( pReserved->_kind ) + ", 리플렉션 " + Internal::kindName( reflected._kind ),
-                                  issueCount );
-            }
-
-            const ShaderReservedLocation& expected = bVulkan ? pReserved->_vulkan : ( bOpenGl ? pReserved->_opengl : ( bDx12 ? pReserved->_dx12 : pReserved->_dx11 ) );
-            if ( expected._bDeclared == false )
-            {
-                Internal::report( pOutIssue, shaderLabel, reflected._name,
-                                  string( "이 백엔드 계약에는 없는 예약 리소스가 선언돼 있습니다 (리플렉션 " ) + Internal::formatLocation( pLocationFormat, reflected._space, reflected._bindPoint ) + ")",
-                                  issueCount );
-                continue;
-            }
-            if ( reflected._bindPoint != expected._bind || reflected._space != expected._space )
-            {
-                Internal::report( pOutIssue, shaderLabel, reflected._name,
-                                  string( "위치가 계약과 다릅니다 — 기대 " ) + Internal::formatLocation( pLocationFormat, expected._space, expected._bind ) +
-                                      ", 리플렉션 " + Internal::formatLocation( pLocationFormat, reflected._space, reflected._bindPoint ),
-                                  issueCount );
-            }
-        }
-
-        // 2) 이름공간 충돌 + 3) 백엔드별 자리 규칙 (DX12 space / Vulkan set·범위 / GL set 0)
-        for ( size_t indexA = 0; indexA < listReflected.size(); ++indexA )
-        {
-            const Internal::ReflectedBinding& reflectedA = listReflected[indexA];
-
-            if ( bDx12 && reflectedA._kind != ShaderBindingKind::Unknown )
-            {
-                // space0 = 슬롯(CB 는 루트 CBV, t · u 는 디스크립터 테이블, 그리고 정적 샘플러), space1 = 텍스처 배열(t0, 무제한), space2 = 루트 상수(b0). 그 밖은 루트 시그니처에 없다.
-                const Internal::RegisterClass registerClass = Internal::registerClassOf( reflectedA._kind );
-                if ( reflectedA._space == 0 )
-                {
-                    uint32 limit = 0;
-                    switch ( registerClass )
-                    {
-                        case Internal::RegisterClass::ConstantBuffer:
-                        {
-                            limit = shaderslot::kConstantBufferSlotCount;
-                            break;
-                        }
-                        case Internal::RegisterClass::ShaderResource:
-                        {
-                            limit = shaderslot::kSrvSlotCount;
-                            break;
-                        }
-                        case Internal::RegisterClass::UnorderedAccess:
-                        {
-                            limit = shaderslot::kComputeUavSlotCount;
-                            break;
-                        }
-                        case Internal::RegisterClass::Sampler:
-                        {
-                            limit = shaderslot::kStaticSamplerCount;
-                            break;
-                        }
-                        case Internal::RegisterClass::Other:
-                        {
-                            break;
-                        }
-                    }
-                    if ( limit > 0 && reflectedA._bindPoint >= limit )
-                    {
-                        Internal::report( pOutIssue, shaderLabel, reflectedA._name,
-                                          string( Internal::registerClassLetter( registerClass ) ) + to_string( reflectedA._bindPoint ) + " 은 루트 시그니처의 슬롯 수(" + to_string( limit ) + ")를 넘습니다",
-                                          issueCount );
-                    }
-                }
-                else if ( reflectedA._space == bindless::kTextureSpace )
-                {
-                    const bool bKindOk                     = ( reflectedA._kind == ShaderBindingKind::Texture || reflectedA._kind == ShaderBindingKind::RwTexture );
-                    const bool bViolatesUnboundedArrayRule = bKindOk == false || reflectedA._bindPoint != 0 || ( reflectedA._bindCount != Internal::ReflectedBinding::kUnknownCount && reflectedA._bindCount != 0 );
-                    if ( bViolatesUnboundedArrayRule )
-                        Internal::report( pOutIssue, shaderLabel, reflectedA._name, "space1 은 무제한 텍스처 배열(t0 / u0, []) 전용입니다", issueCount );
-                }
-                else if ( reflectedA._space == shaderslot::kRootConstantSpace )
-                {
-                    if ( reflectedA._kind != ShaderBindingKind::ConstantBuffer || reflectedA._bindPoint != shaderslot::kRootConstantRegister )
-                        Internal::report( pOutIssue, shaderLabel, reflectedA._name, "space2 는 루트 상수(b0) 전용입니다", issueCount );
-                }
-                else
-                {
-                    Internal::report( pOutIssue, shaderLabel, reflectedA._name,
-                                      string( "루트 시그니처에 없는 register space " ) + to_string( reflectedA._space ) + " 을 참조합니다", issueCount );
-                }
-            }
-            if ( bVulkan && reflectedA._kind != ShaderBindingKind::Unknown )
-            {
-                if ( reflectedA._space == 0 )
-                {
-                    const Internal::RegisterClass rangeClass = Internal::vulkanRangeClassOf( reflectedA._bindPoint );
-                    if ( rangeClass == Internal::RegisterClass::Other )
-                    {
-                        Internal::report( pOutIssue, shaderLabel, reflectedA._name,
-                                          string( "세트 0 의 슬롯 범위 밖 binding " ) + to_string( reflectedA._bindPoint ) + " 입니다 (b 0.., t " + to_string( vk::kTShift ) + ".., u " + to_string( vk::kUShift ) + "..)",
-                                          issueCount );
-                    }
-                    else if ( Internal::vulkanRangeAcceptsKind( rangeClass, reflectedA._kind ) == false )
-                    {
-                        Internal::report( pOutIssue, shaderLabel, reflectedA._name,
-                                          string( "binding " ) + to_string( reflectedA._bindPoint ) + " 은 " + Internal::registerClassLetter( rangeClass ) + " 범위인데 리소스 종류가 " + Internal::kindName( reflectedA._kind ) + " 입니다",
-                                          issueCount );
-                    }
-                }
-                else if ( reflectedA._space == bindless::kVkTextureSet )
-                {
-                    const bool bArray                  = ( reflectedA._bindPoint == bindless::kVkTextureBinding ) && ( reflectedA._kind == ShaderBindingKind::Texture || reflectedA._kind == ShaderBindingKind::Sampler );
-                    const bool bSampler                = ( reflectedA._bindPoint == bindless::kVkSamplerBinding || reflectedA._bindPoint == bindless::kVkShadowSamplerBinding ) && reflectedA._kind == ShaderBindingKind::Sampler;
-                    const bool bRwArray                = ( reflectedA._bindPoint == bindless::kVkRwTextureBinding ) && reflectedA._kind == ShaderBindingKind::RwTexture;
-                    const bool bUnknownBindlessBinding = bArray == false && bSampler == false && bRwArray == false;
-                    if ( bUnknownBindlessBinding )
-                        Internal::report( pOutIssue, shaderLabel, reflectedA._name, "세트 1 은 텍스처 배열(binding 0)·샘플러(binding 1·2)·RW 텍스처 배열(binding 3) 전용입니다", issueCount );
-                }
-                else
-                {
-                    Internal::report( pOutIssue, shaderLabel, reflectedA._name,
-                                      string( "파이프라인 레이아웃에 없는 descriptor set " ) + to_string( reflectedA._space ) + " 을 참조합니다 (세트는 0·1)", issueCount );
-                }
-            }
-            if ( bOpenGl && reflectedA._space != 0 )
-            {
-                Internal::report( pOutIssue, shaderLabel, reflectedA._name,
-                                  string( "OpenGL 은 descriptor set 을 무시하는데 set " ) + to_string( reflectedA._space ) + " 로 선언돼 있습니다 — binding " + to_string( reflectedA._bindPoint ) + " 하나로 취급됩니다",
-                                  issueCount );
-            }
-
-            for ( size_t indexB = indexA + 1; indexB < listReflected.size(); ++indexB )
-            {
-                const Internal::ReflectedBinding& reflectedB = listReflected[indexB];
-                if ( reflectedA._bindPoint != reflectedB._bindPoint )
-                    continue;
-
-                bool   bCollide{ false };
-                string where;
-                if ( bVulkan )
-                {
-                    bCollide = ( reflectedA._space == reflectedB._space );
-                    where    = Internal::formatLocation( "set/binding", reflectedA._space, reflectedA._bindPoint );
-                }
-                else if ( bOpenGl )
-                {
-                    const Internal::GlNamespace nsA = Internal::glNamespaceOf( reflectedA._kind );
-                    bCollide                        = ( nsA != Internal::GlNamespace::Other && nsA == Internal::glNamespaceOf( reflectedB._kind ) );
-                    where                           = string( Internal::glNamespaceName( nsA ) ) + " binding " + to_string( reflectedA._bindPoint );
-                }
-                else
-                {
-                    const Internal::RegisterClass registerClassA = Internal::registerClassOf( reflectedA._kind );
-                    bCollide                                     = ( reflectedA._space == reflectedB._space && registerClassA != Internal::RegisterClass::Other && registerClassA == Internal::registerClassOf( reflectedB._kind ) );
-                    where                                        = string( Internal::registerClassLetter( registerClassA ) ) + to_string( reflectedA._bindPoint ) + " space" + to_string( reflectedA._space );
-                }
-                if ( bCollide )
-                {
-                    Internal::report( pOutIssue, shaderLabel, reflectedA._name,
-                                      string( "'" ) + reflectedB._name + "' 와 같은 자리를 차지합니다 (" + where + ")", issueCount );
-                }
-            }
-        }
-
-        // 5) 정점 입력: 시맨틱이 정점 레이아웃 표(constant::arrVertexAttribute)에 있고, Vulkan · GL 은 location 까지 같은가.
-        //    DX 는 시맨틱 이름으로 묶어 순서가 달라도 맞지만, 두 백엔드는 **선언 순서**가 location 이라 중간 속성을
-        //    빼먹으면 그 뒤가 한 칸씩 당겨진다(색을 읽으려다 노멀을 읽는다). 픽셀로는 늦게 드러난다.
-        for ( const ShaderVertexInputInfo& input : reflection._listVertexInput )
-        {
-            const RHIVertexAttribute* pAttribute{ nullptr };
-            for ( const RHIVertexAttribute& attribute : constant::arrVertexAttribute )
-            {
-                if ( input._semantic == attribute._pSemanticName )
-                {
-                    pAttribute = &attribute;
-                    break;
-                }
-            }
-            const string label = input._semantic + to_string( input._semanticIndex );
-            if ( pAttribute == nullptr || input._semanticIndex != 0 )
-            {
-                Internal::report( pOutIssue, shaderLabel, label,
-                                  "정점 레이아웃 표(constant::arrVertexAttribute)에 없는 정점 입력입니다 — 정점을 받는 셰이더는 SwVertexInput 을 쓸 것",
-                                  issueCount );
-                continue;
-            }
-            if ( ( bVulkan || bOpenGl ) && input._location != pAttribute->_location )
-            {
-                Internal::report( pOutIssue, shaderLabel, label,
-                                  string( "location 이 정점 레이아웃 표와 다릅니다 — 기대 " ) + to_string( pAttribute->_location ) + ", 리플렉션 " +
-                                      to_string( input._location ) + " (Vulkan·GL 은 선언 순서로 location 을 매긴다 — SwVertexInput 을 쓸 것)",
-                                  issueCount );
-            }
-        }
-
-        return issueCount;
+        ShaderBindingRuleChecks checks{};
+        checks._pOutIssue    = pOutIssue;
+        checks._shaderLabel  = shaderLabel;
+        checks._targetFormat = targetFormat;
+        checks._bVulkan      = ( targetFormat == ShaderTargetFormat::SPIRV_Vulkan );
+        checks._bOpenGl      = ( targetFormat == ShaderTargetFormat::SPIRV_OpenGL );
+        checks._bDx12        = ( targetFormat == ShaderTargetFormat::DXIL_D3D12 );
+        checks.checkReservedBindings( listReflected );
+        checks.checkSlotRulesAndCollisions( listReflected );
+        checks.checkVertexInputs( reflection );
+        return checks._issueCount;
     }
 } // namespace sw

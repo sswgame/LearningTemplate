@@ -183,7 +183,7 @@ SW_TEST_CASE( ShaderCookRequestTest, RequestedShaderPathsAreUniqueAcrossDomains 
             continue;
         SW_EXPECT_TRUE_MSG( false, ( normPath + " 와 " + it->second + " 가 같은 셰이더의 사본이다 — 하나를 지우고 경로 하나로 부를 것" ).c_str() );
     }
-    SW_EXPECT_TRUE_MSG( mapDomainlessToPath.size() > 1, "셰이더 요청을 하나도 보지 못했다 — 이 시험이 아무것도 보지 않는다" );
+    SW_EXPECT_TRUE_MSG( mapDomainlessToPath.size() > 1, "셰이더 요청을 하나도 보지 못했다 — 이 테스트가 아무것도 보지 않는다" );
     SW_EXPECT_EQUAL( size_t{ 0 }, uniqueCopyPath.size() );
 }
 
@@ -310,7 +310,7 @@ SW_TEST_CASE( ShaderCookRequestTest, EveryViewModeVariantOfEveryMeshPassTypeIsRe
             ++checkedVariantCount;
         }
     }
-    SW_EXPECT_TRUE_MSG( checkedVariantCount > 0, "씬 메시 패스 종류가 하나도 없다 — 이 시험이 아무것도 보지 않는다" );
+    SW_EXPECT_TRUE_MSG( checkedVariantCount > 0, "씬 메시 패스 종류가 하나도 없다 — 이 테스트가 아무것도 보지 않는다" );
 }
 
 /**
@@ -369,7 +369,7 @@ SW_TEST_CASE( ShaderCookRequestTest, CookedManifestHoldsEveryRequest )
             }
         }
     }
-    SW_EXPECT_TRUE_MSG( checkedCount > 0, "쿠킹된 매니페스트를 하나도 찾지 못했다 — 이 시험이 아무것도 보지 않는다" );
+    SW_EXPECT_TRUE_MSG( checkedCount > 0, "쿠킹된 매니페스트를 하나도 찾지 못했다 — 이 테스트가 아무것도 보지 않는다" );
     SW_EXPECT_EQUAL( 0u, missingCount );
 }
 
@@ -442,7 +442,7 @@ SW_TEST_CASE( ShaderCookRequestTest, CookedFoldersHoldOnlyRequestedBinaries )
             ++orphanCount;
         }
     }
-    SW_EXPECT_TRUE_MSG( checkedCount > 0, "쿠킹된 바이너리를 하나도 찾지 못했다 — 이 시험이 아무것도 보지 않는다" );
+    SW_EXPECT_TRUE_MSG( checkedCount > 0, "쿠킹된 바이너리를 하나도 찾지 못했다 — 이 테스트가 아무것도 보지 않는다" );
     SW_EXPECT_EQUAL( 0u, orphanCount );
 }
 
@@ -522,7 +522,7 @@ SW_TEST_CASE( ShaderCookRequestTest, EveryRuntimeStaticSwitchCombinationIsReques
         }
     }
     // 툰 머티리얼(engine/materials/toon.material)의 Outline · TwoSided 가 런타임 스위치다 — 하나도 없으면 이 테스트는 눈이 멀었다.
-    SW_EXPECT_TRUE_MSG( runtimeComboCount >= 4, "런타임 정적 스위치를 가진 머티리얼이 없다 — 이 시험이 아무것도 보지 않는다" );
+    SW_EXPECT_TRUE_MSG( runtimeComboCount >= 4, "런타임 정적 스위치를 가진 머티리얼이 없다 — 이 테스트가 아무것도 보지 않는다" );
 }
 
 /**

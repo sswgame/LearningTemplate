@@ -407,6 +407,7 @@ namespace sw
         return true;
     }
 
+    // 길이 유지(긴 함수 정리 기준): 서술 채우기 · 리소스 생성 · 뷰의 순서가 곧 의미라 나누지 않는다.
     RHITextureHandle D3D11RHIResourceFactory::createTexture2D( const RHITextureDesc& desc )
     {
         const bool bInvalidTextureRequest = _pDevice == nullptr || desc._width == 0 || desc._height == 0;

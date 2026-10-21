@@ -1,6 +1,6 @@
 # 엔진 후보
 
-> 상태: 후보 · 선행: 없음 · 영역: engine · 옛번호: B-11, B-13, C-4, C-7, C-13, C-19, C-22, C-25, C-34, C-47, C-49, C-63, C-64, C-65, C-68, C-69, C-70, C-71, C-72, D1-3, D1-4, D1-6, D1-8, G-1, G-5, G-17, H-2 · 진행: 해당없음
+> 상태: 후보 · 선행: 없음 · 영역: engine · 옛번호: B-11, B-13, C-4, C-7, C-22, C-25, C-34, C-47, C-49, C-63, C-64, C-65, C-68, C-69, C-71, C-72, D1-3, D1-4, D1-6, D1-8, G-1, G-5, G-17, H-2 · 진행: 해당없음
 
 엔진 구조 · 물리 · 내비게이션 · 모듈 영역에서 아직 착수하지 않은 일의 목록입니다. 착수하면 그 절을 계획 문서로 옮기고 여기서 지웁니다. 순서는 [로드맵](Roadmap.md)이 가집니다.
 
@@ -39,19 +39,6 @@
 왜 필요한가: 조건부 후보의 묶음입니다 — 병렬 틱 임계값의 교차점, GameObject 레이아웃, 적응형 틱 임계값, 스폰 비용(~1.1 us, 잠금 여섯), 시퀀서 성능 수치.
 착수 조건: 측정해서 이기면 합니다. TickItem 인라인 재시도는 오브젝트의 틱 부기 49 B 를 먼저 줄여야 합니다.
 남은 것: 무버 일괄 틱의 다음 단계는 무버 데이터를 타입 배열(SoA)로 옮겨 일괄 함수가 컴포넌트를 읽지 않게 하는 것(대상 씬 컴포넌트의 칸 번호를 원소에) — 일괄 틱은 `GT.Frame` p99 0.75 배로 들어갔고 더 줄일 필요가 보이면 합니다. 파괴 잎 셰이프는 쿠킹 때 Jolt 셰이프를 `.fracture` 에 싣는 안(Chaos 가 지오메트리 컬렉션에 충돌을 같이 굽는 자리)을 Physics 에 셰이프 직렬화 함수가 생기면 다시 봅니다.
-
-### HeaderIncludeSlimming
-제목: include · 전방 선언 남은 후보
-옛번호: C-13
-왜 필요한가: `GameObjectManager.h` 의 값 멤버 서브시스템 4 개(`PrimitiveRegistry` · `ComponentRegistry` · `CameraRegistry` · `AnimationSystem`)를 `unique_ptr` 로 바꾸는 안은 보류입니다(2026-10-05 측정 기준 Physics/* · Navigation/* 이 헤더 무게의 대부분이었음). 이득은 `ninja -t deps` 전후 TU 수로 판정합니다.
-남은 것: `SceneNavigation` · `ScenePhysics` · `SceneAudio` 를 씬 서비스(`ISceneService`)로 옮겨 코어 헤더가 Physics · Audio · Navigation 을 퍼뜨리지 않게 합니다([EnginePartition](EnginePartition.md) 2 단계). OS 헤더를 `EngineMinimal.h` 에서 뺀 일은 끝났고, 리눅스 쪽 직접 include 는 CI 로 확인하며 빠진 파일이 나오면 그 파일에 include 를 더합니다.
-함정: `_store` · `_transformHierarchy` · `_structuralChangeBuffer` · `_tickScheduler` 는 헤더의 인라인 · 템플릿이 써서 포인터로 못 뺍니다.
-
-### EngineServiceInjection
-제목: 씬 · UI 쪽의 엔진 창구 직접 읽기
-옛번호: C-19
-왜 필요한가: `SceneEngineServices` 주입(S10)과 같은 패턴이 범위 밖에 남았습니다.
-남은 것: `FontService`, `SceneNavigationCooker` · `PortraitRenderer` 의 인자 없는 `Scene` 생성(`WidgetComponent` · `UISystem` · `SceneCooker` 는 끝났음). 서비스 클래스가 초기화 때 의존 서브시스템 포인터를 멤버로 받는 것(언리얼 `InitializeDependency`)은 고칠 때 함께 합니다.
 
 ### PreludeAndFwdCleanup
 제목: 작은 정리 후보
@@ -102,13 +89,6 @@
 Base 에 남긴 것: 계산한 키로 정렬하는 람다(`TimingJudge` 폭 합, `Inventory` 카탈로그 조회, `ScheduleCatalog` 인덱스 간접 정렬), `hashed_string` 키 정렬(`GameFlags`, `Crafting` 은 대소문자를 구분하는 저장 순서라 그대로), 반복자를 쓰는 `std::find`(`OnlineServiceClient` 지우기), 조건이 둘인 찾기 루프(`TimerQueue::findTimer`). `CompareUtil` 에 비교 함수를 받는 키 비교자(`hashed_string` 키용)가 생기면 `GameFlags` 를 옮깁니다.
 `Editor/Common` 에 남은 손 루프는 조건이 둘 이상이거나(`_id == id && _pInstance != nullptr`) C 배열(`kArrKindInfo`)이라 `findBy` 로 옮기지 않았습니다.
 끝난 곳: `Source/Editor/Panels/Inspector` 의 손으로 쓴 erase-remove 2건(`EditorPropertyGrid`)을 `VectorUtil::removeIf` 로 바꿨다(2026-10-21).
-
-### DiskPathVsResourceId
-제목: 디스크 경로와 리소스 id 가 같은 `string_view` 입구를 쓴다
-옛번호: C-70
-왜 필요한가: 2026-10-19 CI 실패의 근본 원인입니다. 쿠커 · 테스트가 디스크로 훑은 절대 경로를 리소스 id 입구에 넣어 Shipping(낱개 파일 불허)이 거절했습니다. `loadFromDiskFile` 계열로 고쳤으나 입구가 같아 같은 모양이 또 날 수 있습니다.
-남은 것: 경계를 형식으로 표현할 방법을 찾습니다. 경계는 "런타임 읽기만 배포에서 막는다"입니다.
-함정: `DiskFilePath` 형식으로 막는 안은 하지 않았습니다 — Shipping App 이 쿠킹 호스트라 디스크 입구를 컴파일에서 뺄 수는 없습니다.
 
 ## 기능
 

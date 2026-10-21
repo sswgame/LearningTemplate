@@ -305,7 +305,7 @@ namespace test
         NetSimHarness  harness;
         NetSimConfig   settings;
         settings._seed = options._seed;
-        if ( harness.initialize( settings, &game ) == false )
+        if ( harness.initialize( sw::SceneEngineServices::makeFromBoundEngine(), settings, &game ) == false )
             return result;
         const uint32 initialClientCount = options._rampUpTicks > 0 ? MathUtil::min( 1u, options._clientCount ) : options._clientCount;
         for ( uint32 index = 0; index < initialClientCount; ++index )

@@ -788,8 +788,10 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBasePublishesSceneLoadEvents )
         }
     };
 
-    const string scenePath = test::makeTempPath( "level_events.scene.xml" );
-    SW_ASSERT_TRUE( FileUtil::writeTextFile( scenePath, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+    // 쓰기는 디스크 경로, 읽기(씬 요청)는 리소스 id 다 — 리소스 입구는 OS 경로를 받지 않는다.
+    const string sceneFile = test::makeTempPath( "level_events.scene.xml" );
+    const string scenePath = ::test::makeTempResourceID( sceneFile );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( sceneFile, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
                                                         "<Scene formatVersion=\"2\" name=\"LevelEvents\">\n"
                                                         "  <WorldSettings _bStreaming=\"false\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"0\"><_cellGrid _cellSize=\"0\" _loadingRadius=\"0\"/></WorldSettings><entities>\n"
                                                         "    <entity id=\"101\" name=\"Hero\"/>\n"
@@ -852,7 +854,7 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBasePublishesSceneLoadEvents )
     SW_EXPECT_EQUAL( size_t( 1 ), listCompleted.size() );
 
     // 읽지 못하는 씬은 요청은 알리고 실패로 끝난다.
-    const string missingPath = test::makeTempPath( "no_such_level.scene.xml" );
+    const string missingPath = ::test::makeTempResourceID( test::makeTempPath( "no_such_level.scene.xml" ) );
     SW_ASSERT_TRUE( gameInstance.setEntranceScene( missingPath ) );
     {
         test::ScopedDefensiveTestLog expected( "a scene file that does not exist" );
@@ -1808,7 +1810,7 @@ SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterStatsAreInMetersAndReach
     SW_TEST_DEFENSIVE_SCOPE( "a pixel-era speed is rejected" );
     test::ScopedLogCollector logCollector;
     MonsterCatalog           pixelCatalog;
-    SW_ASSERT_TRUE( pixelCatalog.loadFromResource( path ) );
+    SW_ASSERT_TRUE( pixelCatalog.loadFromResource( ::test::makeTempResourceID( path ) ) );
     SW_EXPECT_NULL( pixelCatalog.findMonster( "bat" ) );
     SW_EXPECT_NOT_NULL( pixelCatalog.findMonster( "rat" ) );
     SW_EXPECT_TRUE_MSG( logCollector.countContaining( "<Monster id=\"bat\">" ) >= 1u, logCollector.joined().c_str() );
@@ -1838,7 +1840,7 @@ SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterArchetypeNamesAndUnknown
     SW_TEST_DEFENSIVE_SCOPE( "an unknown archetype name is reported" );
     test::ScopedLogCollector logCollector;
     MonsterCatalog           catalog;
-    SW_ASSERT_TRUE( catalog.loadFromResource( path ) );
+    SW_ASSERT_TRUE( catalog.loadFromResource( ::test::makeTempResourceID( path ) ) );
 
     for ( uint32 value = 0; value < kArchetypeCount; ++value )
     {

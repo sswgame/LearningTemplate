@@ -100,7 +100,7 @@ namespace sw
      * @brief `-gv_benchFaces=N`: 테스트 머리 N 개를 한 줄로 스폰합니다(얼굴 애니메이션 확인용). 모두 카메라를 바라보고(시선) 눈을 깜빡입니다.
      *        짝수 번째는 Talk 클립(모프 가중치 커브)을 재생하면서 Happy 표정을 0.6 으로 짓고, 홀수 번째는 테스트 음성을 말합니다(비즘 트랙).
      */
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_benchFaces, 0, "벤치 시험 머리 수 (0=사용 안 함, 모프 · 표정 · 립싱크 · 깜빡임 · 시선)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_benchFaces, 0, "벤치 테스트 머리 수 (0=사용 안 함, 모프 · 표정 · 립싱크 · 깜빡임 · 시선)" );
 
     /**
      * @brief `-gv_benchCombat=1`: KayKit 스켈레톤 적이 걸으며(발소리 알림, 바닥 재질) 무기 레이캐스트를 맞고(히트 존, 움찔), 180 프레임에 치명적인 피격으로 래그돌이 되고

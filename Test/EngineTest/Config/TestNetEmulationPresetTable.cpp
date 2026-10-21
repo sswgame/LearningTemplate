@@ -61,7 +61,7 @@ SW_TEST_CASE( NetEmulationPresetTableTest, BrokenTableIsRejectedAtLoad )
         SW_TEST_DEFENSIVE_SCOPE( "a broken preset table is reported" );
         test::ScopedLogCollector logCollector;
         NetEmulationPresetTable  table;
-        SW_EXPECT_FALSE_MSG( table.loadFromResource( path ), brokenCase._pXML );
+        SW_EXPECT_FALSE_MSG( table.loadFromResource( ::test::makeTempResourceID( path ) ), brokenCase._pXML );
         SW_EXPECT_TRUE( table._listPreset.empty() );
         SW_EXPECT_TRUE_MSG( logCollector.countContaining( brokenCase._pExpectedLog ) >= 1u, logCollector.joined().c_str() );
     }

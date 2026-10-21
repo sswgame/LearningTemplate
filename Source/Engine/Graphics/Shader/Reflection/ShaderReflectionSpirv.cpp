@@ -42,6 +42,30 @@ namespace sw
                 uint32         _arrayStride{ 0 };
             };
 
+            /** @brief OpVariable 하나입니다. */
+            struct SpirvVariable
+            {
+                uint32 _storageClass{ 0 };
+                uint32 _typeID{ 0 };
+            };
+
+            /** @brief 명령어를 한 번 훑어 모은 이름 · 데코레이션 · 타입 · 변수 표입니다. 리플렉션 단계는 이것만 읽습니다. */
+            struct SpirvModule
+            {
+                unordered_map<uint32, string>                        _mapName;
+                unordered_map<uint32, unordered_map<uint32, string>> _mapMemberName;
+                unordered_map<uint32, uint32>                        _mapBinding;
+                unordered_map<uint32, uint32>                        _mapDescriptorSet;
+                unordered_map<uint32, uint32>                        _mapLocation; ///< OpDecorate Location. 정점 입력 변수
+                uint32                                               _executionModel{ invalid_index::kUint32 };
+                unordered_map<uint32, uint32>                        _mapArrayStride;
+                unordered_map<uint32, uint32>                        _mapConstantValue;      ///< OpConstant(32비트 정수). 배열 길이 해석용
+                unordered_set<uint32>                                _uniqueBufferBlockType; ///< BufferBlock 데코레이션이 붙은 구조체 타입 id
+                unordered_map<uint32, unordered_map<uint32, uint32>> _mapMemberOffset;
+                unordered_map<uint32, SpirvType>                     _mapType;
+                unordered_map<uint32, SpirvVariable>                 _mapVariable;
+            };
+
             static string resolveSpirvTypeName( uint32 typeID, const unordered_map<uint32, SpirvType>& mapType, uint32& outSize )
             {
                 auto it = mapType.find( typeID );
@@ -112,6 +136,388 @@ namespace sw
                     }
                 }
             }
+
+            /** @brief 이름 · 데코레이션 명령어 하나를 표에 넣습니다. 그런 명령어가 아니면 false 입니다. */
+            [[nodiscard]] static bool parseAnnotation( const uint32* pInst, uint32 wordCount, uint32 opcode, SpirvModule& module )
+            {
+                if ( opcode == spirv::kOpEntryPoint && wordCount >= 3 )
+                {
+                    module._executionModel = pInst[1];
+                }
+                else if ( opcode == spirv::kOpName && wordCount >= 3 )
+                {
+                    const utf8*  pStr         = reinterpret_cast<const utf8*>( &pInst[2] );
+                    const size_t maxLen       = static_cast<size_t>( wordCount - 2 ) * 4;
+                    module._mapName[pInst[1]] = string( pStr, strnlen( pStr, maxLen ) );
+                }
+                else if ( opcode == spirv::kOpMemberName && wordCount >= 4 )
+                {
+                    const utf8*  pStr                         = reinterpret_cast<const utf8*>( &pInst[3] );
+                    const size_t maxLen                       = static_cast<size_t>( wordCount - 3 ) * 4;
+                    module._mapMemberName[pInst[1]][pInst[2]] = string( pStr, strnlen( pStr, maxLen ) );
+                }
+                else if ( opcode == spirv::kOpDecorate && wordCount >= 3 )
+                {
+                    const uint32 target     = pInst[1];
+                    const uint32 decoration = pInst[2];
+                    if ( decoration == spirv::kDecorationBinding && wordCount >= 4 )
+                        module._mapBinding[target] = pInst[3];
+                    else if ( decoration == spirv::kDecorationDescriptorSet && wordCount >= 4 )
+                        module._mapDescriptorSet[target] = pInst[3];
+                    else if ( decoration == spirv::kDecorationArrayStride && wordCount >= 4 )
+                        module._mapArrayStride[target] = pInst[3];
+                    else if ( decoration == spirv::kDecorationBufferBlock )
+                        module._uniqueBufferBlockType.insert( target );
+                    else if ( decoration == spirv::kDecorationLocation && wordCount >= 4 )
+                        module._mapLocation[target] = pInst[3];
+                }
+                else if ( opcode == spirv::kOpMemberDecorate && wordCount >= 5 )
+                {
+                    if ( pInst[3] == spirv::kDecorationOffset )
+                        module._mapMemberOffset[pInst[1]][pInst[2]] = pInst[4];
+                }
+                else
+                {
+                    return false;
+                }
+                return true;
+            }
+
+            /** @brief 타입 · 상수 · 변수 명령어 하나를 표에 넣습니다. 모르는 명령어는 건너뜁니다. */
+            static void parseTypeOrValue( const uint32* pInst, uint32 wordCount, uint32 opcode, SpirvModule& module )
+            {
+                using Kind                                = SpirvType::Kind;
+                unordered_map<uint32, SpirvType>& mapType = module._mapType;
+                if ( opcode == spirv::kOpTypeBool && wordCount >= 2 )
+                {
+                    mapType[pInst[1]] = SpirvType{ Kind::Bool, 32, 1, 0, 0, {}, 0 };
+                }
+                else if ( opcode == spirv::kOpTypeInt && wordCount >= 4 )
+                {
+                    // 결과, 폭, 부호(0 이면 부호 없음).
+                    mapType[pInst[1]] = SpirvType{ pInst[3] != 0 ? Kind::Int : Kind::Uint, pInst[2], 1, 0, 0, {}, 0 };
+                }
+                else if ( opcode == spirv::kOpTypeFloat && wordCount >= 3 )
+                {
+                    mapType[pInst[1]] = SpirvType{ Kind::Float, pInst[2], 1, 0, 0, {}, 0 };
+                }
+                else if ( opcode == spirv::kOpTypeVector && wordCount >= 4 )
+                {
+                    // 결과, 성분 타입, 성분 수.
+                    mapType[pInst[1]] = SpirvType{ Kind::Vector, 32, pInst[3], pInst[2], 0, {}, 0 };
+                }
+                else if ( opcode == spirv::kOpTypeMatrix && wordCount >= 4 )
+                {
+                    // 결과, 열 타입, 열 수.
+                    mapType[pInst[1]] = SpirvType{ Kind::Matrix, 32, pInst[3], pInst[2], 0, {}, 0 };
+                }
+                else if ( opcode == spirv::kOpTypeImage && wordCount >= 2 )
+                {
+                    // OpTypeImage: result, sampled type, Dim, Depth, Arrayed, MS, Sampled(1 = 샘플, 2 = 스토리지), Format.
+                    // Sampled 를 _count 에 담아 두면 리소스 분류가 RWTexture(스토리지 이미지)를 가릴 수 있다.
+                    const uint32 sampled = wordCount >= 8 ? pInst[7] : 0;
+                    mapType[pInst[1]]    = SpirvType{ Kind::Image, 0, sampled, 0, 0, {}, 0 };
+                }
+                else if ( opcode == spirv::kOpTypeSampler && wordCount >= 2 )
+                {
+                    mapType[pInst[1]] = SpirvType{ Kind::Sampler, 0, 0, 0, 0, {}, 0 };
+                }
+                else if ( opcode == spirv::kOpTypeSampledImage && wordCount >= 2 )
+                {
+                    mapType[pInst[1]] = SpirvType{ Kind::SampledImage, 0, 0, 0, 0, {}, 0 };
+                }
+                else if ( opcode == spirv::kOpTypeArray && wordCount >= 4 )
+                {
+                    // 결과, 원소 타입, 길이 상수 id.
+                    const auto   lenIt  = module._mapConstantValue.find( pInst[3] );
+                    const uint32 length = ( lenIt != module._mapConstantValue.end() ) ? lenIt->second : 0;
+                    mapType[pInst[1]]   = SpirvType{ Kind::Array, 0, length, pInst[2], 0, {}, 0 };
+                }
+                else if ( opcode == spirv::kOpTypeRuntimeArray && wordCount >= 3 )
+                {
+                    mapType[pInst[1]] = SpirvType{ Kind::RuntimeArray, 0, 0, pInst[2], 0, {}, 0 };
+                }
+                else if ( opcode == spirv::kOpTypeStruct && wordCount >= 2 )
+                {
+                    SpirvType st{ Kind::Struct, 0, 0, 0, 0, {}, 0 };
+                    for ( uint32 wordIndex = 2; wordIndex < wordCount; ++wordIndex )
+                    {
+                        st._listMemberTypeID.push_back( pInst[wordIndex] );
+                    }
+                    mapType[pInst[1]] = std::move( st );
+                }
+                else if ( opcode == spirv::kOpTypePointer && wordCount >= 4 )
+                {
+                    // 결과, 저장 클래스, 가리키는 타입.
+                    mapType[pInst[1]] = SpirvType{ Kind::Pointer, 0, 0, pInst[3], pInst[2], {}, 0 };
+                }
+                else if ( opcode == spirv::kOpConstant && wordCount >= 4 )
+                {
+                    // 32비트 정수 상수만(배열 길이). 타입 확인은 생략한다. 길이 id 로 조회할 때만 쓴다.
+                    module._mapConstantValue[pInst[2]] = pInst[3];
+                }
+                else if ( opcode == spirv::kOpVariable && wordCount >= 4 )
+                {
+                    // 결과 타입, 결과 id, 저장 클래스.
+                    module._mapVariable[pInst[2]] = SpirvVariable{ pInst[3], pInst[1] };
+                }
+            }
+
+            /** @brief 헤더(5 워드) 뒤의 명령어를 모두 훑어 표를 채웁니다. 길이가 깨진 명령어에서 멈춥니다. */
+            static void parseModule( const uint32* pWords, size_t wordCount, SpirvModule& outModule )
+            {
+                size_t offset = 5;
+                while ( offset < wordCount )
+                {
+                    const uint32 first = pWords[offset];
+                    // SPIR-V 명령어 헤더: 상위 16비트 = WordCount, 하위 16비트 = Opcode (스펙 2.3 "Physical Layout").
+                    const uint32 instructionWordCount = first >> 16;
+                    const uint32 opcode               = first & 0xFFFFu;
+                    if ( instructionWordCount == 0 || offset + instructionWordCount > wordCount )
+                        break;
+                    if ( parseAnnotation( pWords + offset, instructionWordCount, opcode, outModule ) == false )
+                        parseTypeOrValue( pWords + offset, instructionWordCount, opcode, outModule );
+                    offset += instructionWordCount;
+                }
+
+                // ArrayStride 데코레이션은 타입 정의 앞에 온다. 지금 붙인다.
+                for ( const auto& [typeID, stride] : outModule._mapArrayStride )
+                {
+                    auto it = outModule._mapType.find( typeID );
+                    if ( it != outModule._mapType.end() )
+                        it->second._arrayStride = stride;
+                }
+            }
+
+            /**
+             * @brief 변수의 포인터 → 배열(무제한/고정) → 구조체 순으로 벗겨 "블록 구조체" 타입 id 를 반환합니다.
+             * @details bindless `ConstantBuffer<T> name[]` 는 Uniform 포인터 → OpTypeRuntimeArray → Block 구조체다.
+             *          @p outIsArray 는 무제한/고정 배열이었으면 true 다(bindCount 0 으로 보고한다).
+             */
+            static uint32 resolveBlockStruct( const SpirvModule& module, uint32 pointerTypeID, bool& outIsArray )
+            {
+                outIsArray = false;
+                auto ptrIt = module._mapType.find( pointerTypeID );
+                if ( ptrIt == module._mapType.end() || ptrIt->second._kind != SpirvType::Kind::Pointer )
+                    return 0;
+                uint32 typeID = ptrIt->second._subTypeID;
+                for ( uint32 depth = 0; depth < 2; ++depth )
+                {
+                    auto it = module._mapType.find( typeID );
+                    if ( it == module._mapType.end() )
+                        return 0;
+                    if ( it->second._kind == SpirvType::Kind::RuntimeArray || it->second._kind == SpirvType::Kind::Array )
+                    {
+                        outIsArray = true;
+                        typeID     = it->second._subTypeID;
+                        continue;
+                    }
+                    break;
+                }
+                return typeID;
+            }
+
+            /** @brief 그 id 가 구조체 타입이면 그 타입입니다. 아니면 nullptr 입니다. */
+            static const SpirvType* findStructType( const SpirvModule& module, uint32 typeID )
+            {
+                auto it = module._mapType.find( typeID );
+                return ( it != module._mapType.end() && it->second._kind == SpirvType::Kind::Struct ) ? &it->second : nullptr;
+            }
+
+            /** @brief 구조체 멤버들을 CB 멤버 표에 넣습니다(@p baseOffset 은 감싼 구조체 안에서의 시작 오프셋입니다). */
+            static void appendStructMembers( SpirvModule& module, uint32 structTypeID, uint32 baseOffset, ShaderBufferInfo& outBuffer )
+            {
+                const SpirvType* pStruct = findStructType( module, structTypeID );
+                if ( pStruct == nullptr )
+                    return;
+                const auto& memberNameMap   = module._mapMemberName[structTypeID];
+                const auto& memberOffsetMap = module._mapMemberOffset[structTypeID];
+
+                uint32 memberIdx{ 0 };
+                for ( uint32 memberTypeID : pStruct->_listMemberTypeID )
+                {
+                    ShaderVariableInfo varInfo{};
+                    auto               mNameIt = memberNameMap.find( memberIdx );
+                    if ( mNameIt != memberNameMap.end() )
+                        varInfo._name = mNameIt->second;
+                    else
+                        varInfo._name = string( "member_" ) + to_string( memberIdx );
+
+                    auto mOffIt     = memberOffsetMap.find( memberIdx );
+                    varInfo._offset = baseOffset + ( ( mOffIt != memberOffsetMap.end() ) ? mOffIt->second : 0 );
+                    varInfo._type   = resolveSpirvTypeName( memberTypeID, module._mapType, varInfo._size );
+
+                    outBuffer._listVariable.push_back( varInfo );
+                    outBuffer._totalSize = MathUtil::max( outBuffer._totalSize, varInfo._offset + varInfo._size );
+                    ++memberIdx;
+                }
+            }
+
+            /** @brief 바인딩 한 자리의 이름 · 공간 · 번호입니다. */
+            struct BindingSlot
+            {
+                string _name;
+                uint32 _space{ 0 };
+                uint32 _bindPoint{ 0 };
+            };
+
+            /** @brief 진짜 cbuffer(Uniform 저장 클래스) 하나를 CB 레이아웃(멤버 오프셋 포함)으로 냅니다. */
+            static void appendConstantBuffer( SpirvModule& module, const BindingSlot& slot, uint32 blockTypeID, ShaderReflectionData& outData )
+            {
+                ShaderBufferInfo buf{};
+                buf._name          = slot._name;
+                buf._registerSpace = slot._space;
+                buf._bindPoint     = slot._bindPoint;
+                buf._totalSize     = 0;
+
+                const SpirvType* pBlock = findStructType( module, blockTypeID );
+                if ( pBlock != nullptr )
+                {
+                    // 엔진 cbuffer 는 맨 필드지만, `cbuffer { name_t x; }` 처럼 구조체 하나로 감싼 cbuffer 는 블록 멤버가
+                    // 구조체 하나다. 엔진과 머티리얼 패커는 필드 이름으로 찾으므로 한 겹 벗긴다(DX 리플렉터와 같은 규칙).
+                    const auto&  listMember = pBlock->_listMemberTypeID;
+                    const uint32 innerID    = ( listMember.size() == 1 && findStructType( module, listMember[0] ) != nullptr ) ? listMember[0] : 0;
+                    if ( innerID != 0 )
+                    {
+                        const auto&  offsetMap  = module._mapMemberOffset[blockTypeID];
+                        const auto   offIt      = offsetMap.find( 0u ); // 키가 uint32 다. 부호 있는 리터럴이면 이종 키 오버로드로 샌다
+                        const uint32 baseOffset = ( offIt != offsetMap.end() ) ? offIt->second : 0;
+                        appendStructMembers( module, innerID, baseOffset, buf );
+                    }
+                    else
+                    {
+                        appendStructMembers( module, blockTypeID, 0, buf );
+                    }
+                    buf._totalSize = MathUtil::align( buf._totalSize, 256u );
+                }
+
+                outData._listConstantBuffer.push_back( std::move( buf ) );
+            }
+
+            /**
+             * @brief StructuredBuffer<T> 의 원소 레이아웃을 냅니다.
+             * @details 블록 { T arr[] } 의 멤버 0 이 (런타임)배열이고 원소가 구조체면 그 필드들을 원소 레이아웃으로 낸다.
+             *          stride 는 배열 타입의 ArrayStride 다(std430: 예 float4+float+uint = 32).
+             */
+            static void appendStructuredElement( SpirvModule& module, const BindingSlot& slot, uint32 blockTypeID, ShaderReflectionData& outData )
+            {
+                const SpirvType* pBlock = findStructType( module, blockTypeID );
+                if ( pBlock == nullptr || pBlock->_listMemberTypeID.size() != 1 )
+                    return;
+                auto       arrIt  = module._mapType.find( pBlock->_listMemberTypeID[0] );
+                const bool bArray = arrIt != module._mapType.end() &&
+                                    ( arrIt->second._kind == SpirvType::Kind::RuntimeArray || arrIt->second._kind == SpirvType::Kind::Array );
+                if ( bArray == false || findStructType( module, arrIt->second._subTypeID ) == nullptr )
+                    return;
+                ShaderBufferInfo element{};
+                element._name          = slot._name;
+                element._registerSpace = slot._space;
+                element._bindPoint     = slot._bindPoint;
+                appendStructMembers( module, arrIt->second._subTypeID, 0, element );
+                element._totalSize = arrIt->second._arrayStride > 0 ? arrIt->second._arrayStride : element._totalSize;
+                if ( element._listVariable.empty() == false )
+                    outData._listStructuredElement.push_back( std::move( element ) );
+            }
+
+            /** @brief 바인딩 목록에 낼 리소스 종류 이름입니다. */
+            static const utf8* classifyResource( const SpirvModule& module, const SpirvVariable& var, uint32 blockTypeID, bool bIsStorageBuffer )
+            {
+                if ( bIsStorageBuffer )
+                    return "StorageBuffer";
+                if ( var._storageClass == spirv::kStorageClassUniform )
+                    return "ConstantBuffer";
+                if ( var._storageClass != spirv::kStorageClassUniformConstant )
+                    return "OtherResource";
+                // 포인터의 원소 타입으로 샘플러만 가른다. 배열(bindless)은 원소를 따라가서 본다.
+                auto pointeeIt = module._mapType.find( blockTypeID );
+                if ( pointeeIt == module._mapType.end() )
+                    return "TextureOrSampler";
+                if ( pointeeIt->second._kind == SpirvType::Kind::Sampler )
+                    return "Sampler";
+                if ( pointeeIt->second._kind == SpirvType::Kind::Image && pointeeIt->second._count == 2 )
+                    return "RWTexture"; // 스토리지 이미지(RWTexture2D)
+                return "TextureOrSampler";
+            }
+
+            /** @brief 바인딩 자리가 있는 변수 하나를 CB 레이아웃 · 구조화 원소 · 리소스 목록에 냅니다. */
+            static void reflectBoundVariable( SpirvModule& module, uint32 id, const SpirvVariable& var, uint32 bindPoint, ShaderReflectionData& outData )
+            {
+                const auto  nameIt = module._mapName.find( id );
+                const auto  setIt  = module._mapDescriptorSet.find( id );
+                BindingSlot slot{};
+                slot._name      = nameIt != module._mapName.end() ? nameIt->second : string( "Resource_" ) + to_string( id );
+                slot._space     = ( setIt != module._mapDescriptorSet.end() ) ? setIt->second : 0;
+                slot._bindPoint = bindPoint;
+
+                bool         bIsArray{ false };
+                const uint32 blockTypeID = resolveBlockStruct( module, var._typeID, bIsArray );
+
+                // SSBO 는 SPIR-V 버전에 따라 **두 가지**로 표현된다. StorageBuffer 저장 클래스(1.4+ / Vulkan 1.1+
+                // 타깃)이거나, 구식으로는 Uniform 저장 클래스에 구조체 타입이 BufferBlock 으로 데코레이션된다.
+                // 둘 다 봐야 한다. 앞쪽만 보면 GL 용 SPIR-V 의 StructuredBuffer 가 상수버퍼로 분류돼, 바인더가 그것을 CB 슬롯으로
+                // 걸고 bindStructuredBuffer 는 부르지 않는다(GL 에서 인스턴스 행렬이 모두 0 으로 읽혀 메시가 하나도 안 그려진다).
+                const bool bBufferBlock = var._storageClass == spirv::kStorageClassUniform && blockTypeID != 0 &&
+                                          module._uniqueBufferBlockType.find( blockTypeID ) != module._uniqueBufferBlockType.end();
+                const bool bIsStorageBuffer = var._storageClass == spirv::kStorageClassStorageBuffer || bBufferBlock;
+
+                // 진짜 cbuffer(Uniform storage class)만 "CB 레이아웃(멤버 오프셋 포함)" 으로 채운다.
+                // StructuredBuffer/RWStructuredBuffer(StorageBuffer storage class)는 구조체 원소 타입을 똑같은
+                // 방식으로 반영하지만 실제 cbuffer 가 아니다. 여기 포함시키면 ShaderBindingLayout 이
+                // ConstantBuffer 종류의 "가짜 CB" 슬롯(멤버 이름이 원소 구조체 필드와 겹침)을 만들어
+                // 엔진 CB 버퍼에 엉뚱한 오프셋으로 값을 덮어쓸 수 있다. 아래가 StructuredBuffer 로 따로 분류한다.
+                if ( var._storageClass == spirv::kStorageClassUniform && bIsStorageBuffer == false )
+                    appendConstantBuffer( module, slot, blockTypeID, outData );
+                if ( bIsStorageBuffer && blockTypeID != 0 )
+                    appendStructuredElement( module, slot, blockTypeID, outData );
+
+                ShaderReflectedBinding res{};
+                res._name          = slot._name;
+                res._registerSpace = slot._space;
+                res._bindPoint     = slot._bindPoint;
+                res._bindCount     = bIsArray ? 0u : 1u; ///< 무제한 배열([])은 0. DX 리플렉션의 BindCount 와 같은 뜻
+                res._type          = classifyResource( module, var, blockTypeID, bIsStorageBuffer );
+                outData._listResource.push_back( std::move( res ) );
+            }
+
+            /**
+             * @brief 정점 입력을 냅니다 — Input 저장 클래스에 Location 이 붙은 변수입니다.
+             * @details DXC 는 `in.var.<SEMANTIC>` 로 이름을 남기고 시스템 값(SV_VertexID 등)은 BuiltIn 이라 Location 이 없다.
+             */
+            static void appendVertexInputs( const SpirvModule& module, ShaderReflectionData& outData )
+            {
+                for ( const auto& [id, var] : module._mapVariable )
+                {
+                    if ( var._storageClass != spirv::kStorageClassInput )
+                        continue;
+                    auto locationIt = module._mapLocation.find( id );
+                    if ( locationIt == module._mapLocation.end() )
+                        continue;
+                    string name;
+                    auto   nameIt = module._mapName.find( id );
+                    if ( nameIt != module._mapName.end() )
+                        name = nameIt->second;
+                    constexpr string_view kPrefix = "in.var.";
+                    if ( StringUtil::startsWith( name, kPrefix ) )
+                        name = name.substr( kPrefix.size() );
+
+                    ShaderVertexInputInfo input{};
+                    input._location   = locationIt->second;
+                    size_t digitBegin = name.size();
+                    while ( digitBegin > 0 && StringUtil::isDigitChar( name[digitBegin - 1] ) )
+                    {
+                        --digitBegin;
+                    }
+                    input._semantic = name.substr( 0, digitBegin );
+                    for ( size_t digitIndex = digitBegin; digitIndex < name.size(); ++digitIndex )
+                    {
+                        input._semanticIndex = input._semanticIndex * 10 + static_cast<uint32>( name[digitIndex] - '0' );
+                    }
+                    outData._listVertexInput.push_back( std::move( input ) );
+                }
+                std::sort( outData._listVertexInput.begin(), outData._listVertexInput.end(),
+                           []( const ShaderVertexInputInfo& lhs, const ShaderVertexInputInfo& rhs )
+                { return lhs._location < rhs._location; } );
+            }
         };
     } // namespace
 } // namespace sw
@@ -122,6 +528,7 @@ namespace sw
 
     ShaderReflectionData ShaderReflectionUtil::reflectSpirv( const vector<uint8>& bytecode )
     {
+        using Internal = ShaderReflectionSpirvInternal;
         if ( bytecode.size() < 20 || ( bytecode.size() % 4 ) != 0 )
         {
             SW_LOG_WARNING( "SPIR-V bytecode size invalid." );
@@ -136,403 +543,19 @@ namespace sw
             return {};
         }
 
+        Internal::SpirvModule module;
+        Internal::parseModule( pWords, wordCount, module );
+
         ShaderReflectionData data{};
-
-        unordered_map<uint32, string>                                   mapName;
-        unordered_map<uint32, unordered_map<uint32, string>>            mapMemberName;
-        unordered_map<uint32, uint32>                                   mapBinding;
-        unordered_map<uint32, uint32>                                   mapDescriptorSet;
-        unordered_map<uint32, uint32>                                   mapLocation; ///< OpDecorate Location. 정점 입력 변수
-        uint32                                                          executionModel{ invalid_index::kUint32 };
-        unordered_map<uint32, uint32>                                   mapArrayStride;
-        unordered_map<uint32, uint32>                                   mapConstantValue;      ///< OpConstant(32비트 정수). 배열 길이 해석용
-        unordered_set<uint32>                                           uniqueBufferBlockType; ///< BufferBlock 데코레이션이 붙은 구조체 타입 id
-        unordered_map<uint32, unordered_map<uint32, uint32>>            mapMemberOffset;
-        unordered_map<uint32, ShaderReflectionSpirvInternal::SpirvType> mapType;
-
-        struct VariableInfo
+        for ( const auto& [id, var] : module._mapVariable )
         {
-            uint32 _storageClass{ 0 };
-            uint32 _typeID{ 0 };
-        };
-        unordered_map<uint32, VariableInfo> mapVariable;
-
-        size_t offset = 5;
-        while ( offset < wordCount )
-        {
-            const uint32 first = pWords[offset];
-            // SPIR-V 명령어 헤더: 상위 16비트 = WordCount, 하위 16비트 = Opcode (스펙 2.3 "Physical Layout").
-            const uint32 instructionWordCount = first >> 16;
-            const uint32 opcode               = first & 0xFFFFu;
-            if ( instructionWordCount == 0 || offset + instructionWordCount > wordCount )
-                break;
-
-            if ( opcode == spirv::kOpEntryPoint && instructionWordCount >= 3 )
-            {
-                executionModel = pWords[offset + 1];
-            }
-            else if ( opcode == spirv::kOpName && instructionWordCount >= 3 )
-            {
-                const uint32 target = pWords[offset + 1];
-                const utf8*  pStr   = reinterpret_cast<const utf8*>( &pWords[offset + 2] );
-                const size_t maxLen = static_cast<size_t>( instructionWordCount - 2 ) * 4;
-                mapName[target]     = string( pStr, strnlen( pStr, maxLen ) );
-            }
-            else if ( opcode == spirv::kOpMemberName && instructionWordCount >= 4 )
-            {
-                const uint32 target                = pWords[offset + 1];
-                const uint32 memberIndex           = pWords[offset + 2];
-                const utf8*  pStr                  = reinterpret_cast<const utf8*>( &pWords[offset + 3] );
-                const size_t maxLen                = static_cast<size_t>( instructionWordCount - 3 ) * 4;
-                mapMemberName[target][memberIndex] = string( pStr, strnlen( pStr, maxLen ) );
-            }
-            else if ( opcode == spirv::kOpDecorate && instructionWordCount >= 3 )
-            {
-                const uint32 target     = pWords[offset + 1];
-                const uint32 decoration = pWords[offset + 2];
-                if ( decoration == spirv::kDecorationBinding && instructionWordCount >= 4 )
-                    mapBinding[target] = pWords[offset + 3];
-                else if ( decoration == spirv::kDecorationDescriptorSet && instructionWordCount >= 4 )
-                    mapDescriptorSet[target] = pWords[offset + 3];
-                else if ( decoration == spirv::kDecorationArrayStride && instructionWordCount >= 4 )
-                    mapArrayStride[target] = pWords[offset + 3];
-                else if ( decoration == spirv::kDecorationBufferBlock )
-                    uniqueBufferBlockType.insert( target );
-                else if ( decoration == spirv::kDecorationLocation && instructionWordCount >= 4 )
-                    mapLocation[target] = pWords[offset + 3];
-            }
-            else if ( opcode == spirv::kOpMemberDecorate && instructionWordCount >= 5 )
-            {
-                const uint32 target      = pWords[offset + 1];
-                const uint32 memberIndex = pWords[offset + 2];
-                const uint32 decoration  = pWords[offset + 3];
-                if ( decoration == spirv::kDecorationOffset )
-                    mapMemberOffset[target][memberIndex] = pWords[offset + 4];
-            }
-            else if ( opcode == spirv::kOpTypeBool && instructionWordCount >= 2 )
-            {
-                mapType[pWords[offset + 1]] = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::Bool, 32, 1, 0, 0, {}, 0 };
-            }
-            else if ( opcode == spirv::kOpTypeInt && instructionWordCount >= 4 )
-            {
-                const uint32 id         = pWords[offset + 1];
-                const uint32 width      = pWords[offset + 2];
-                const uint32 signedness = pWords[offset + 3];
-                mapType[id]             = ShaderReflectionSpirvInternal::SpirvType{ signedness ? ShaderReflectionSpirvInternal::SpirvType::Kind::Int : ShaderReflectionSpirvInternal::SpirvType::Kind::Uint, width, 1, 0, 0, {}, 0 };
-            }
-            else if ( opcode == spirv::kOpTypeFloat && instructionWordCount >= 3 )
-            {
-                const uint32 id    = pWords[offset + 1];
-                const uint32 width = pWords[offset + 2];
-                mapType[id]        = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::Float, width, 1, 0, 0, {}, 0 };
-            }
-            else if ( opcode == spirv::kOpTypeVector && instructionWordCount >= 4 )
-            {
-                const uint32 id       = pWords[offset + 1];
-                const uint32 compType = pWords[offset + 2];
-                const uint32 count    = pWords[offset + 3];
-                mapType[id]           = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::Vector, 32, count, compType, 0, {}, 0 };
-            }
-            else if ( opcode == spirv::kOpTypeMatrix && instructionWordCount >= 4 )
-            {
-                const uint32 id         = pWords[offset + 1];
-                const uint32 columnType = pWords[offset + 2];
-                const uint32 count      = pWords[offset + 3];
-                mapType[id]             = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::Matrix, 32, count, columnType, 0, {}, 0 };
-            }
-            else if ( opcode == spirv::kOpTypeImage && instructionWordCount >= 2 )
-            {
-                // OpTypeImage: result, sampled type, Dim, Depth, Arrayed, MS, Sampled(1 = 샘플, 2 = 스토리지), Format.
-                // Sampled 를 _count 에 담아 두면 리소스 분류가 RWTexture(스토리지 이미지)를 가릴 수 있다.
-                const uint32 sampled        = instructionWordCount >= 8 ? pWords[offset + 7] : 0;
-                mapType[pWords[offset + 1]] = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::Image, 0, sampled, 0, 0, {}, 0 };
-            }
-            else if ( opcode == spirv::kOpTypeSampler && instructionWordCount >= 2 )
-            {
-                mapType[pWords[offset + 1]] = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::Sampler, 0, 0, 0, 0, {}, 0 };
-            }
-            else if ( opcode == spirv::kOpTypeSampledImage && instructionWordCount >= 2 )
-            {
-                mapType[pWords[offset + 1]] = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::SampledImage, 0, 0, 0, 0, {}, 0 };
-            }
-            else if ( opcode == spirv::kOpTypeArray && instructionWordCount >= 4 )
-            {
-                const uint32 id       = pWords[offset + 1];
-                const uint32 elemType = pWords[offset + 2];
-                const uint32 lengthID = pWords[offset + 3];
-                const auto   lenIt    = mapConstantValue.find( lengthID );
-                const uint32 length   = ( lenIt != mapConstantValue.end() ) ? lenIt->second : 0;
-                mapType[id]           = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::Array, 0, length, elemType, 0, {}, 0 };
-            }
-            else if ( opcode == spirv::kOpTypeRuntimeArray && instructionWordCount >= 3 )
-            {
-                const uint32 id       = pWords[offset + 1];
-                const uint32 elemType = pWords[offset + 2];
-                mapType[id]           = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::RuntimeArray, 0, 0, elemType, 0, {}, 0 };
-            }
-            else if ( opcode == spirv::kOpTypeStruct && instructionWordCount >= 2 )
-            {
-                const uint32                             id = pWords[offset + 1];
-                ShaderReflectionSpirvInternal::SpirvType st{ ShaderReflectionSpirvInternal::SpirvType::Kind::Struct, 0, 0, 0, 0, {}, 0 };
-                for ( uint32 wordIndex = 2; wordIndex < instructionWordCount; ++wordIndex )
-                {
-                    st._listMemberTypeID.push_back( pWords[offset + wordIndex] );
-                }
-                mapType[id] = std::move( st );
-            }
-            else if ( opcode == spirv::kOpTypePointer && instructionWordCount >= 4 )
-            {
-                const uint32 id           = pWords[offset + 1];
-                const uint32 storageClass = pWords[offset + 2];
-                const uint32 subType      = pWords[offset + 3];
-                mapType[id]               = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::Pointer, 0, 0, subType, storageClass, {}, 0 };
-            }
-            else if ( opcode == spirv::kOpConstant && instructionWordCount >= 4 )
-            {
-                // 32비트 정수 상수만(배열 길이). 타입 확인은 생략한다. 길이 id 로 조회할 때만 쓴다.
-                mapConstantValue[pWords[offset + 2]] = pWords[offset + 3];
-            }
-            else if ( opcode == spirv::kOpVariable && instructionWordCount >= 4 )
-            {
-                const uint32 typeID       = pWords[offset + 1];
-                const uint32 resultID     = pWords[offset + 2];
-                const uint32 storageClass = pWords[offset + 3];
-                mapVariable[resultID]     = VariableInfo{ storageClass, typeID };
-            }
-
-            offset += instructionWordCount;
-        }
-
-        // ArrayStride 데코레이션은 타입 정의 앞에 온다. 지금 붙인다.
-        for ( const auto& [typeID, stride] : mapArrayStride )
-        {
-            auto it = mapType.find( typeID );
-            if ( it != mapType.end() )
-                it->second._arrayStride = stride;
-        }
-
-        // 변수의 포인터 → 배열(무제한/고정) → 구조체 순으로 벗겨 "블록 구조체" 타입 id 를 반환한다.
-        // bindless `ConstantBuffer<T> name[]` 는 Uniform 포인터 → OpTypeRuntimeArray → Block 구조체다.
-        // outIsArray 는 무제한/고정 배열이었으면 true 다(bindCount 0 으로 보고한다).
-        auto resolveBlockStruct = [&]( uint32 pointerTypeID, bool& outIsArray ) -> uint32
-        {
-            outIsArray = false;
-            auto ptrIt = mapType.find( pointerTypeID );
-            if ( ptrIt == mapType.end() || ptrIt->second._kind != ShaderReflectionSpirvInternal::SpirvType::Kind::Pointer )
-                return 0;
-            uint32 typeID = ptrIt->second._subTypeID;
-            for ( uint32 depth = 0; depth < 2; ++depth )
-            {
-                auto it = mapType.find( typeID );
-                if ( it == mapType.end() )
-                    return 0;
-                if ( it->second._kind == ShaderReflectionSpirvInternal::SpirvType::Kind::RuntimeArray ||
-                     it->second._kind == ShaderReflectionSpirvInternal::SpirvType::Kind::Array )
-                {
-                    outIsArray = true;
-                    typeID     = it->second._subTypeID;
-                    continue;
-                }
-                break;
-            }
-            return typeID;
-        };
-
-        /** 구조체 멤버들을 CB 멤버 표에 넣습니다(baseOffset 은 감싼 구조체 안에서의 시작 오프셋입니다). */
-        auto appendStructMembers = [&]( uint32 structTypeID, uint32 baseOffset, ShaderBufferInfo& outBuffer )
-        {
-            auto structTypeIt = mapType.find( structTypeID );
-            if ( structTypeIt == mapType.end() || structTypeIt->second._kind != ShaderReflectionSpirvInternal::SpirvType::Kind::Struct )
-                return;
-            const auto& memberNameMap   = mapMemberName[structTypeID];
-            const auto& memberOffsetMap = mapMemberOffset[structTypeID];
-
-            uint32 memberIdx{ 0 };
-            for ( uint32 memberTypeID : structTypeIt->second._listMemberTypeID )
-            {
-                ShaderVariableInfo varInfo{};
-                auto               mNameIt = memberNameMap.find( memberIdx );
-                if ( mNameIt != memberNameMap.end() )
-                    varInfo._name = mNameIt->second;
-                else
-                    varInfo._name = string( "member_" ) + to_string( memberIdx );
-
-                auto mOffIt     = memberOffsetMap.find( memberIdx );
-                varInfo._offset = baseOffset + ( ( mOffIt != memberOffsetMap.end() ) ? mOffIt->second : 0 );
-                varInfo._type   = ShaderReflectionSpirvInternal::resolveSpirvTypeName( memberTypeID, mapType, varInfo._size );
-
-                outBuffer._listVariable.push_back( varInfo );
-                outBuffer._totalSize = MathUtil::max( outBuffer._totalSize, varInfo._offset + varInfo._size );
-                ++memberIdx;
-            }
-        };
-
-        for ( const auto& [id, var] : mapVariable )
-        {
-            const auto nameIt    = mapName.find( id );
-            const auto bindingIt = mapBinding.find( id );
-            const auto setIt     = mapDescriptorSet.find( id );
-            if ( bindingIt == mapBinding.end() )
+            const auto bindingIt = module._mapBinding.find( id );
+            if ( bindingIt == module._mapBinding.end() )
                 continue; // 푸시 상수 · 입출력 변수. 바인딩 자리가 없다
-
-            string name;
-            if ( nameIt != mapName.end() )
-                name = nameIt->second;
-            else
-                name = string( "Resource_" ) + to_string( id );
-
-            const uint32 space     = ( setIt != mapDescriptorSet.end() ) ? setIt->second : 0;
-            const uint32 bindPoint = bindingIt->second;
-
-            bool         bIsArray{ false };
-            const uint32 blockTypeID = resolveBlockStruct( var._typeID, bIsArray );
-
-            // SSBO 는 SPIR-V 버전에 따라 **두 가지**로 표현된다. StorageBuffer 저장 클래스(1.4+ / Vulkan 1.1+
-            // 타깃)이거나, 구식으로는 Uniform 저장 클래스에 구조체 타입이 BufferBlock 으로 데코레이션된다.
-            // 둘 다 봐야 한다. 앞쪽만 보면 GL 용 SPIR-V 의 StructuredBuffer 가 상수버퍼로 분류돼, 바인더가 그것을 CB 슬롯으로
-            // 걸고 bindStructuredBuffer 는 부르지 않는다(GL 에서 인스턴스 행렬이 모두 0 으로 읽혀 메시가 하나도 안 그려진다).
-            bool       bIsStorageBuffer        = ( var._storageClass == spirv::kStorageClassStorageBuffer );
-            const bool bPromoteToStorageBuffer = bIsStorageBuffer == false && var._storageClass == spirv::kStorageClassUniform &&
-                                                 blockTypeID != 0 && uniqueBufferBlockType.find( blockTypeID ) != uniqueBufferBlockType.end();
-            if ( bPromoteToStorageBuffer )
-                bIsStorageBuffer = true;
-
-            // 진짜 cbuffer(Uniform storage class)만 "CB 레이아웃(멤버 오프셋 포함)" 으로 채운다.
-            // StructuredBuffer/RWStructuredBuffer(StorageBuffer storage class)는 구조체 원소 타입을 똑같은
-            // 방식으로 반영하지만 실제 cbuffer 가 아니다. 여기 포함시키면 ShaderBindingLayout 이
-            // ConstantBuffer 종류의 "가짜 CB" 슬롯(멤버 이름이 원소 구조체 필드와 겹침)을 만들어
-            // 엔진 CB 버퍼에 엉뚱한 오프셋으로 값을 덮어쓸 수 있다. 아래 리소스 루프가 StructuredBuffer 로
-            // 올바르게 분류해 따로 처리한다.
-            if ( var._storageClass == spirv::kStorageClassUniform && bIsStorageBuffer == false )
-            {
-                ShaderBufferInfo buf{};
-                buf._name          = name;
-                buf._registerSpace = space;
-                buf._bindPoint     = bindPoint;
-                buf._totalSize     = 0;
-
-                auto blockIt = mapType.find( blockTypeID );
-                if ( blockIt != mapType.end() && blockIt->second._kind == ShaderReflectionSpirvInternal::SpirvType::Kind::Struct )
-                {
-                    // 엔진 cbuffer 는 맨 필드지만, `cbuffer { name_t x; }` 처럼 구조체 하나로 감싼 cbuffer 는 블록 멤버가
-                    // 구조체 하나다. 엔진과 머티리얼 패커는 필드 이름으로 찾으므로 한 겹 벗긴다(DX 리플렉터와 같은 규칙).
-                    const auto& listMember = blockIt->second._listMemberTypeID;
-                    uint32      innerID{ 0 };
-                    if ( listMember.size() == 1 )
-                    {
-                        auto innerIt = mapType.find( listMember[0] );
-                        if ( innerIt != mapType.end() && innerIt->second._kind == ShaderReflectionSpirvInternal::SpirvType::Kind::Struct )
-                            innerID = listMember[0];
-                    }
-                    if ( innerID != 0 )
-                    {
-                        const auto&  offsetMap  = mapMemberOffset[blockTypeID];
-                        const auto   offIt      = offsetMap.find( 0u ); // 키가 uint32 다. 부호 있는 리터럴이면 이종 키 오버로드로 샌다
-                        const uint32 baseOffset = ( offIt != offsetMap.end() ) ? offIt->second : 0;
-                        appendStructMembers( innerID, baseOffset, buf );
-                    }
-                    else
-                    {
-                        appendStructMembers( blockTypeID, 0, buf );
-                    }
-                    buf._totalSize = MathUtil::align( buf._totalSize, 256u );
-                }
-
-                data._listConstantBuffer.push_back( std::move( buf ) );
-            }
-
-            // StructuredBuffer<T> 의 원소 레이아웃: 블록 { T arr[] } 의 멤버 0 이 (런타임)배열이고 원소가 구조체면
-            // 그 필드들을 원소 레이아웃으로 낸다. stride 는 배열 타입의 ArrayStride 다(std430: 예 float4+float+uint = 32).
-            if ( bIsStorageBuffer && blockTypeID != 0 )
-            {
-                auto       blockIt             = mapType.find( blockTypeID );
-                const bool bWrapperStructBlock = blockIt != mapType.end() && blockIt->second._kind == ShaderReflectionSpirvInternal::SpirvType::Kind::Struct &&
-                                                 blockIt->second._listMemberTypeID.size() == 1;
-                if ( bWrapperStructBlock )
-                {
-                    auto arrIt = mapType.find( blockIt->second._listMemberTypeID[0] );
-                    if ( arrIt != mapType.end() &&
-                         ( arrIt->second._kind == ShaderReflectionSpirvInternal::SpirvType::Kind::RuntimeArray ||
-                           arrIt->second._kind == ShaderReflectionSpirvInternal::SpirvType::Kind::Array ) )
-                    {
-                        auto elemIt = mapType.find( arrIt->second._subTypeID );
-                        if ( elemIt != mapType.end() && elemIt->second._kind == ShaderReflectionSpirvInternal::SpirvType::Kind::Struct )
-                        {
-                            ShaderBufferInfo element{};
-                            element._name          = name;
-                            element._registerSpace = space;
-                            element._bindPoint     = bindPoint;
-                            appendStructMembers( arrIt->second._subTypeID, 0, element );
-                            element._totalSize = arrIt->second._arrayStride > 0 ? arrIt->second._arrayStride : element._totalSize;
-                            if ( element._listVariable.empty() == false )
-                                data._listStructuredElement.push_back( std::move( element ) );
-                        }
-                    }
-                }
-            }
-
-            ShaderReflectedBinding res{};
-            res._name          = name;
-            res._registerSpace = space;
-            res._bindPoint     = bindPoint;
-            res._bindCount     = bIsArray ? 0u : 1u; ///< 무제한 배열([])은 0. DX 리플렉션의 BindCount 와 같은 뜻
-            if ( bIsStorageBuffer )
-                res._type = "StorageBuffer";
-            else if ( var._storageClass == spirv::kStorageClassUniform )
-                res._type = "ConstantBuffer";
-            else if ( var._storageClass == spirv::kStorageClassUniformConstant )
-            {
-                // 포인터의 원소 타입으로 샘플러만 가른다. 배열(bindless)은 원소를 따라가서 본다.
-                res._type                = "TextureOrSampler";
-                auto       pointeeIt     = mapType.find( blockTypeID );
-                const bool bStorageImage = pointeeIt != mapType.end() && pointeeIt->second._kind == ShaderReflectionSpirvInternal::SpirvType::Kind::Image && pointeeIt->second._count == 2;
-                if ( pointeeIt != mapType.end() && pointeeIt->second._kind == ShaderReflectionSpirvInternal::SpirvType::Kind::Sampler )
-                    res._type = "Sampler";
-                else if ( bStorageImage )
-                    res._type = "RWTexture"; // 스토리지 이미지(RWTexture2D)
-            }
-            else
-                res._type = "OtherResource";
-            data._listResource.push_back( std::move( res ) );
+            Internal::reflectBoundVariable( module, id, var, bindingIt->second, data );
         }
-
-        // 정점 입력 — Input 저장 클래스에 Location 이 붙은 변수. DXC 는 `in.var.<SEMANTIC>` 로 이름을 남기고
-        // 시스템 값(SV_VertexID 등)은 BuiltIn 이라 Location 이 없다.
-        if ( executionModel == spirv::kExecutionModelVertex )
-        {
-            for ( const auto& [id, var] : mapVariable )
-            {
-                if ( var._storageClass != spirv::kStorageClassInput )
-                    continue;
-                auto locationIt = mapLocation.find( id );
-                if ( locationIt == mapLocation.end() )
-                    continue;
-                string name;
-                auto   nameIt = mapName.find( id );
-                if ( nameIt != mapName.end() )
-                    name = nameIt->second;
-                constexpr string_view kPrefix = "in.var.";
-                if ( StringUtil::startsWith( name, kPrefix ) )
-                    name = name.substr( kPrefix.size() );
-
-                ShaderVertexInputInfo input{};
-                input._location   = locationIt->second;
-                size_t digitBegin = name.size();
-                while ( digitBegin > 0 && StringUtil::isDigitChar( name[digitBegin - 1] ) )
-                {
-                    --digitBegin;
-                }
-                input._semantic = name.substr( 0, digitBegin );
-                for ( size_t digitIndex = digitBegin; digitIndex < name.size(); ++digitIndex )
-                {
-                    input._semanticIndex = input._semanticIndex * 10 + static_cast<uint32>( name[digitIndex] - '0' );
-                }
-                data._listVertexInput.push_back( std::move( input ) );
-            }
-            std::sort( data._listVertexInput.begin(), data._listVertexInput.end(),
-                       []( const ShaderVertexInputInfo& lhs, const ShaderVertexInputInfo& rhs )
-            { return lhs._location < rhs._location; } );
-        }
+        if ( module._executionModel == spirv::kExecutionModelVertex )
+            Internal::appendVertexInputs( module, data );
 
         SW_LOG_TRACE( "ConstantBuffers: %# BoundResources: %# VertexInputs: %#",
                       data._listConstantBuffer.size(), data._listResource.size(), data._listVertexInput.size() );

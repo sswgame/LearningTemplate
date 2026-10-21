@@ -194,6 +194,7 @@ namespace sw
         return true;
     }
 
+    // 길이 유지(긴 함수 정리 기준): 스테이징 확보 · 복사 · 장벽 · 제출의 순서가 곧 의미라 나누지 않는다.
     void VulkanRHIResourceFactory::updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource,
                                                                   const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
@@ -413,6 +414,7 @@ namespace sw
                                                    _pDevice->_frameFenceCounter + 1 );
     }
 
+    // 길이 유지(긴 함수 정리 기준): 서술 채우기 · 이미지 생성 · 메모리 · 뷰 · 초기 데이터 업로드의 순서가 곧 의미라 나누지 않는다.
     RHITextureHandle VulkanRHIResourceFactory::createTexture2D( const RHITextureDesc& desc )
     {
         const bool bInvalidTextureRequest = _pDevice->_device == nullptr || desc._width == 0 || desc._height == 0;
@@ -742,6 +744,7 @@ namespace sw
         return pRecord != nullptr ? static_cast<RHIFormat>( pRecord->_rhiFormat ) : RHIFormat::Unknown;
     }
 
+    // 길이 유지(긴 함수 정리 기준): 스테이징 생성 · 전이 · 복사 · 대기 · 매핑의 순서가 곧 의미라 나누지 않는다.
     bool VulkanRHIResourceFactory::readbackTexture2D( RHITextureHandle texture, uint32 mip, uint32 arraySlice, vector<uint8>& outBytes, RHITextureMipSpan& outLayout )
     {
         // **여기의 실패는 모두 소리를 낸다**(형제인 uploadTexture2D 와 같다). 리드백은 오프스크린 렌더 문제가

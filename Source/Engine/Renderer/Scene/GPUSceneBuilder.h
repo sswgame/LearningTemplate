@@ -140,6 +140,38 @@ namespace sw
     private:
         /** @brief `populateFromScene` 의 메시 쪽입니다(프리미티브 수집 · 나누기 · 투명 정렬). 바뀐 것이 없거나 후보가 없으면 일찍 끝난다. */
         void populateMeshesFromScene( Scene* pScene, const float3& cameraPos );
+
+        /** @brief 이번 프레임 수집의 입력입니다(레지스트리 목록과 지난 프레임과의 같음 여부). `populateMeshesFromScene` 이 한 번 정합니다. */
+        struct MeshCollectInput
+        {
+            Scene*                                _pScene{ nullptr };
+            const PrimitiveRegistry*              _pPrimitives{ nullptr };
+            const vector<ScenePrimitive*>*        _pListPrimitive{ nullptr };
+            const vector<PrimitiveInstanceEntry>* _pListInstanceEntry{ nullptr };
+            uint32                                _meshCount{ 0 }; ///< 슬롯 공간에서 메시 컴포넌트 수(그 뒤가 인스턴스 배치 항목)
+            uint32                                _slotCount{ 0 };
+            bool                                  _bHasCache{ false };        ///< 지난 프레임 후보가 있다
+            bool                                  _bSetSame{ false };         ///< 프리미티브 집합 세대가 같다
+            bool                                  _bPermutationSame{ false }; ///< 퍼뮤테이션 세대가 같다
+        };
+        /** @brief 수집 결과입니다. 두 수집(부분 · 전체)이 같은 뜻으로 채웁니다. */
+        struct MeshCollectResult
+        {
+            size_t _candidateCount{ 0 };
+            bool   _bPartialDone{ false }; ///< 부분 수집으로 끝났다(false 면 전체 수집이 필요하거나 전체 수집의 결과)
+            bool   _bKeysSame{ false };    ///< 배치 키가 지난 프레임과 같다(부분: 바뀐 후보 기준, 전체: 모든 후보의 키와 자리)
+            bool   _bContentSame{ false }; ///< 내용이 지난 프레임과 같다(부분: 바뀐 후보가 없다, 전체: 모든 후보의 내용과 자리)
+        };
+        /** @brief 더티 슬롯만 제자리에서 다시 채웁니다. 실릴지가 바뀌는 등 조건이 어긋나면 되돌리고 `_bPartialDone == false` 입니다. */
+        [[nodiscard]] MeshCollectResult collectDirtyCandidatesInPlace( const MeshCollectInput& input );
+        /** @brief 모든 슬롯을 다시 채우고(임계값을 넘으면 병렬) 지난 프레임과 슬롯마다 견준 뒤 앞으로 당깁니다. */
+        [[nodiscard]] MeshCollectResult collectAllCandidates( const MeshCollectInput& input );
+        /** @brief 전체 수집이 남긴 슬롯 표시로 실린 후보를 앞으로 당기고, 지난 프레임과 같은지를 하나로 줄입니다(직렬 구간). */
+        [[nodiscard]] MeshCollectResult compactCollectedCandidates( uint32 primitiveCount, bool bPrevAligned );
+        /** @brief 후보의 raw 페이로드를 채우고(@p bOnlyDirtySlots 면 더티 슬롯만), 배치 키가 바뀌었으면 분할 테이블을 다시 짓습니다. */
+        void fillPayloadsAndPartition( bool bOnlyDirtySlots, bool bBatchKeysSame );
+        /** @brief 투명을 정렬하고 배치를 제자리 갱신하거나 다시 지은 뒤 쓰지 않는 머티리얼 원소를 놓습니다. */
+        void rebuildBatches( const float3& cameraPos, bool bBatchKeysSame, bool bPartialCollect );
         /** @brief 수집한 인스턴스를 배치로 묶습니다. */
         void populateBatches();
         /**
@@ -197,6 +229,12 @@ namespace sw
          * @return 갱신했으면 true 입니다. 조건이 맞지 않아 전체 재구축이 필요하면 false 입니다.
          */
         bool refreshInstancesInPlace( bool bPartialCollect );
+        /** @brief 전체 제자리 갱신입니다. 접두부를 청크로 나눠 병렬로 고치고(바뀐 투명 순서면 블록 0 이 꼬리) 청크의 더티 구간을 잇습니다. 청크가 실패하면 false 입니다. */
+        [[nodiscard]] bool refreshAllInstancesParallel( const vector<GPUInstance>& listPublishedInstance, size_t slotCount, bool bTransparentOrderChanged, bool& ioTooManyRuns );
+        /** @brief 다시 만든 투명 꼬리를 더티 구간 하나로 이어 붙입니다(구간 상한을 넘으면 @p ioTooManyRuns). */
+        void appendTransparentTailRun( uint32 opaqueInstanceCount, bool& ioTooManyRuns );
+        /** @brief 부분 제자리 갱신입니다. 더티 프리미티브가 가리키는 인스턴스만 고치고 회전 인스턴스 수를 증감합니다. 매핑이 어긋나면 false 입니다. */
+        [[nodiscard]] bool refreshDirtyInstances( const vector<GPUInstance>& listPublishedInstance, size_t slotCount, bool& ioTooManyRuns );
         /** @brief 재구축 판단 캐시를 무효로 만듭니다. */
         void invalidateBuildCache();
         /**

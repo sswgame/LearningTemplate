@@ -98,7 +98,7 @@ class RuleTableTest(unittest.TestCase):
         with self.assertRaises(RuleConfigError):
             parseRules({"rules": [{"name": "x", "check": "orphan", "severity": "error", "include_patterns": ["*.mesh"], "exclude_patterns": ["a/*.mesh"]}]})
         parseRules({"rules": [{"name": "x", "check": "orphan", "severity": "error", "include_patterns": ["*.mesh"], "exclude_patterns": ["a/*.mesh"],
-                               "exclude_reason": "시험"}]})
+                               "exclude_reason": "테스트"}]})
 
 
 class HeaderReaderTest(unittest.TestCase):
@@ -189,7 +189,7 @@ class CheckTest(AssetValidationFixture):
         self.put("Resource/game/p/models/kept.mesh", makeMeshInternal(1))
         self.put("Resource/game/p/maps/a.scene.xml", '<Scene><x _meshID="game/p/models/kept.mesh"/></Scene>')
         rule = {"name": "o", "check": "orphan", "include_patterns": ["*.mesh"], "exclude_patterns": ["game/q/*.mesh"],
-                "exclude_reason": "시험"}
+                "exclude_reason": "테스트"}
         findings = self.findMessages(rule)
         self.assertEqual(1, len(findings), findings)
         self.assertIn("game/q/*.mesh", findings[0])

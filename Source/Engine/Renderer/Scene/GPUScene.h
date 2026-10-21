@@ -250,6 +250,20 @@ namespace sw
          * @details 바이트가 지난 업로드와 같으면 건너뛴다. 값이 바뀐 그룹만 올린다(언리얼의 더티 업로드).
          */
         void uploadMaterialGroups( IRHIDevice* pDevice );
+        /** @brief 배치 메시를 정점 풀에 모으고(동적 메시는 뺀다) 배치에 풀 버퍼와 시작 정점을 적습니다. 풀이 바뀌면 배치 표를 더티로 둡니다. */
+        void updateVertexPool( IRHIDevice* pDevice );
+        /** @brief 인스턴스 버퍼를 확보해 통째로 또는 바뀐 구간만 올리고, 뷰마다의 가시 인스턴스 ID 버퍼를 확보합니다. */
+        void uploadInstanceAndVisibleBuffers( IRHIDevice* pDevice, uint32 instanceCount );
+        /** @brief 스냅샷의 더티 인스턴스 구간을 한 번의 호출로 올립니다. */
+        void uploadDirtyInstanceRuns( IRHIDevice* pDevice, uint32 instanceCount );
+        /** @brief 배치 표(인스턴스 시작 · 모프 · 정점 풀 · VAT 오프셋 · 정렬 방식)를 만들어 올립니다. */
+        void uploadBatchTable( IRHIDevice* pDevice, uint32 argsCount );
+        /** @brief 배치마다의 간접 드로우 인자를 만듭니다(GPU 가 개수를 채우는 배치는 0 에서 시작). */
+        void populateIndirectCommands( uint32 argsCount );
+        /** @brief 항등 인스턴스 슬롯 스트림을 인스턴스 수 이상으로 확보합니다. */
+        void ensureInstanceSlotStream( IRHIDevice* pDevice, uint32 instanceCount );
+        /** @brief 뷰마다의 간접 인자 버퍼를 확보해 올립니다. */
+        void uploadIndirectArgs( IRHIDevice* pDevice, uint32 argsCount );
 
         /** @brief 패킷에서 받은 스냅샷입니다. 이 안의 것만 GT 가 만든 값입니다. */
         GPUSceneSnapshot _snapshot;

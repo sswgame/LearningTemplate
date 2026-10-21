@@ -12,6 +12,8 @@
 
 namespace sw
 {
+    class XMLNode;
+
     /**
      * @enum TransparencySortMode
      * @brief 같은 정렬 레이어와 순서 안에서 투명 물체의 앞뒤를 무엇으로 가를지 정합니다(유니티 `TransparencySortMode`).
@@ -101,6 +103,11 @@ namespace sw
         static string_view getEngineSettingsPath() { return "engine/data/render2d.xml"; }
 
     private:
+        /** @brief `<TransparencySort mode axis>` 하나를 읽습니다. 모르는 속성 · 열거자, 길이 0 인 축이면 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool readTransparencySort( const XMLNode& node, string_view sourceName );
+        /** @brief `<SortingLayers>` 의 `<Layer name>` 들을 차례로 붙입니다. 모르는 요소 · 이름 없음 · 같은 이름 둘이면 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool readSortingLayers( const XMLNode& node, string_view sourceName );
+
         vector<hashed_string> _listSortingLayer;  ///< 앞 항목이 먼저(뒤에) 그려집니다
         float3                _sortAxis;          ///< CustomAxis 의 축(정규화)
         uint32                _defaultLayerIndex; ///< `Default` 의 순번

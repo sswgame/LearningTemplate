@@ -181,7 +181,7 @@ SW_TEST_CASE( NetSimReplicationTest, MassRemovalStaysUnderMessageLimit )
         game._table._listEntity.push_back( NetEntityState{ vector<uint8>( 4, static_cast<uint8>( index ) ), kFirstID + index, 1 } );
     }
     NetSimHarness harness;
-    SW_ASSERT_TRUE( harness.initialize( NetSimConfig{}, &game ) );
+    SW_ASSERT_TRUE( harness.initialize( sw::SceneEngineServices::makeFromBoundEngine(), NetSimConfig{}, &game ) );
     const int32 client = harness.addClient( NetSimLinkConditions{} );
 
     EntityCountGoal full{ client, kEntityCount, 0 };
@@ -223,7 +223,7 @@ SW_TEST_CASE( NetSimReplicationTest, LowPriorityEntitiesAreNotStarved )
     NetSimConfig settings;
     settings._hostSettings._sendInterval = 1.0 / 60.0; // 스냅숏마다 한 패킷 — 순서만 채널이 앞 스냅숏을 지우지 않게
     NetSimHarness harness;
-    SW_ASSERT_TRUE( harness.initialize( settings, &game ) );
+    SW_ASSERT_TRUE( harness.initialize( sw::SceneEngineServices::makeFromBoundEngine(), settings, &game ) );
     const int32 client = harness.addClient( NetSimLinkConditions{} );
     harness.stepTicks( 60 );
 
@@ -266,7 +266,7 @@ SW_TEST_CASE( NetSimReplicationTest, LowPriorityStateLostInASnapshotIsResentSoon
     NetSimConfig settings;
     settings._hostSettings._sendInterval = 1.0 / 60.0;
     NetSimHarness harness;
-    SW_ASSERT_TRUE( harness.initialize( settings, &game ) );
+    SW_ASSERT_TRUE( harness.initialize( sw::SceneEngineServices::makeFromBoundEngine(), settings, &game ) );
     NetEmulationConditions lossy;
     lossy._latency  = 0.02;
     lossy._lossRate = 0.2f;

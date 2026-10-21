@@ -207,7 +207,7 @@ def runPatternInternal(tree: BuildTree, args: argparse.Namespace, listPassthroug
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="스위트 · 케이스 이름으로 시험을 그 케이스가 사는 실행 파일 · 폴더에서 돌린다")
+    parser = argparse.ArgumentParser(description="스위트 · 케이스 이름으로 테스트를 그 케이스가 사는 실행 파일 · 폴더에서 돌린다")
     parser.add_argument("pattern", nargs="?", help="--test_filter 패턴(예: SceneTest.* · \"A.*,B.Case\" · \"*\")")
     parser.add_argument("--changed", action="store_true", help="패턴 대신 바뀐 파일이 닿는 테스트만 돌린다(모르면 전체)")
     parser.add_argument("--base", default=None, help="--changed 의 기준(기본: main 브랜치면 origin/main, 아니면 main)")
@@ -218,7 +218,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--shuffle", nargs="?", const="random", default=None, help="순서를 섞는다 — 씨앗을 주면 그 순서를 다시 만든다")
     parser.add_argument("--list", action="store_true", help="돌리지 않고 어느 실행 파일에 어떤 케이스가 있는지만 찍는다")
     parser.add_argument("--verbose", dest="bVerbose", action="store_true", help="빌드 · 테스트 출력을 요약하지 않고 전부 흘린다(기본: 로그 파일 + 요약)")
-    parser.add_argument("--no-build", dest="bBuild", action="store_false", help="시험 빌드(all · AllTests)를 건너뛰고 있는 실행 파일로 돌린다")
+    parser.add_argument("--no-build", dest="bBuild", action="store_false", help="테스트 빌드(all · AllTests)를 건너뛰고 있는 실행 파일로 돌린다")
     # 모르는 인자는 실행 파일 몫이다. 위치 인자 REMAINDER 로 받으면 패턴 뒤의 --list · --repeat 까지 삼킨다.
     args, listPassthrough = parser.parse_known_args(argv)
     if bool(args.pattern) == args.changed:
@@ -233,7 +233,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"[RunTests] {' '.join(buildCommand)}", flush=True)
         buildResult = runDigested(buildCommand, getProjectRoot(), "test-build", bVerbose=args.bVerbose)
         if not buildResult.bSucceeded:
-            print("[RunTests] 시험 빌드가 졌습니다" if buildResult.bLaunched else "[RunTests] cmake 를 찾지 못했습니다 (PATH)", file=sys.stderr)
+            print("[RunTests] 테스트 빌드가 졌습니다" if buildResult.bLaunched else "[RunTests] cmake 를 찾지 못했습니다 (PATH)", file=sys.stderr)
             return 2
     try:
         if args.changed:

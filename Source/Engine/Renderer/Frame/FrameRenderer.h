@@ -39,6 +39,7 @@
 namespace sw
 {
     struct RenderFramePacket;
+    struct RenderPassTypeInfo;
     struct ShaderCompileResult;
     struct SkyGradient;
 
@@ -460,6 +461,10 @@ namespace sw
          *        GPUScene 의 컬링 슬롯 수를 정합니다. **업로드 전에**(셋업 단계) 불러야 합니다. 버퍼와 텍스처 생성은 기록 중에 할 수 없습니다.
          */
         void prepareExtraViews( const vector<RenderViewRequest>& listRequest );
+        /** @brief 이 카메라 id 의 추가 뷰입니다. 없으면 새로 만들어 목록 끝에 붙입니다. */
+        ViewTarget& findOrAddExtraView( uint64 viewID );
+        /** @brief 요청 하나로 추가 뷰를 준비합니다(설정 · 출력 · 렌더 텍스처 빌리기 · 컬링 상수버퍼 · 트랜지언트). 준비하지 못하면 이번 프레임에 그리지 않습니다. */
+        void prepareExtraView( const RenderViewRequest& request );
         /**
          * @brief 스냅샷에 든 이 뷰의 투명 순서를 뷰 자원(순번 테이블, 슬롯 스트림, 배치 순서)에 옮깁니다. 없으면 주 순서로 그립니다.
          * @details GPU 정렬 백엔드는 순번 테이블을 정렬 디스패치에 쓰고, 컬링이 없는 백엔드는 배치 안을 뷰 순서로 다시 배치한 슬롯 스트림을 드로우에 쓴다. 업로드 뒤, 기록 전에 부른다.
@@ -500,9 +505,42 @@ namespace sw
          *          않는다. 주의: 병렬 기록 스레드가 배리어를 정하게 하면 중복 배리어와 레이아웃 불일치가 생긴다.
          */
         void onGraphLevelPrologue( const RenderGraphLevelContext& context );
-        /** @brief 패스 타입에 맞는 실행 함수를 부릅니다. */
+        /** @brief 패스 타입에 맞는 실행 함수를 부릅니다. 공통 입력(`PassExecuteInput`)을 한 번 정하고 패스별 `execute*Pass` 로 나눠 줍니다. */
         void executePass( FramePassContext& context, RenderPassType passType, string_view passName, const hashed_string& depthAttachment,
                           const RenderGraphPassDesc* pPassDesc );
+
+        /** @brief 패스 하나를 실행할 때 패스별 실행 함수가 함께 쓰는 입력입니다. `executePass` 가 한 번 정합니다. */
+        struct PassExecuteInput
+        {
+            FramePassContext&                                      _context;
+            RenderPassType                                         _passType;
+            const RenderGraphPassDesc*                             _pPassDesc;         ///< 패스 서술(없으면 nullptr — 원본 이름으로 간다)
+            const vector<RenderGraphPassDesc::ResolvedAttachment>* _pDeclaredColor;    ///< 선언한 컬러 출력(선언 순서, 없으면 nullptr)
+            hashed_string                                          _passDepth;         ///< 바인딩할 뎁스. 선언이 없거나 이번 프레임에 없으면 빈 이름
+            bool                                                   _bTransparentBatch; ///< 이 패스가 투명 배치를 그리는지(테이블 플래그)
+        };
+        /** @brief 첨부의 이번 프레임 첫 사용이면 Clear, 아니면 Load 입니다(`markAttachmentCleared`). */
+        RHIRenderPassLoadOp colorLoadFor( const hashed_string& name );
+        /** @brief @p targetName 하나에 풀스크린 삼각형을 그립니다. 열지 못하면 아무것도 하지 않습니다. */
+        void executeFullscreenInto( FramePassContext& context, RHIPipelineStateHandle pso, const hashed_string& targetName, const float4& passClearColor );
+        /** @brief 일반 풀스크린 패스(테이블의 kGenericFullscreen)입니다. 선언한 입력을 모두 바인딩하고 선언한 출력 중 첫 번째로 있는 것에 그립니다. */
+        void executeGenericFullscreenPass( const PassExecuteInput& input, const RenderPassTypeInfo& info );
+        /** @brief ForwardOpaque · ForwardOnlyOpaque 입니다. 그림자 맵 입력을 바인딩하고 선언한 첫 컬러 출력에 그립니다. */
+        void executeForwardOpaquePass( const PassExecuteInput& input );
+        /** @brief G버퍼(알베도 · 노멀 MRT)입니다. 노멀 출력이 없거나 PSO 가 없으면 그리지 않습니다. */
+        void executeGBufferPass( const PassExecuteInput& input );
+        /** @brief 투명 큐(메시 투명 배치와 입자)입니다. */
+        void executeTransparentPass( const PassExecuteInput& input );
+        /** @brief 인버티드 헐 외곽선입니다. 와이어프레임 · 표면 값 보기에서는 빠집니다. */
+        void executeMeshOutlinePass( const PassExecuteInput& input );
+        /** @brief 하늘입니다. 씬에 하늘이 없거나 뎁스 · 컬러 출력이 없으면 그리지 않습니다. */
+        void executeSkyPass( const PassExecuteInput& input );
+        /** @brief TAA 와 히스토리 갱신입니다. 후처리를 끈 뷰와 컷 프레임은 원본을 넘깁니다. */
+        void executeTaaPass( const PassExecuteInput& input );
+        /** @brief 최종 출력(백버퍼 · 캡처 · 렌더 텍스처)으로의 블릿입니다. 화면 사각형 · 정수 업스케일 뷰포트를 적용합니다. */
+        void executePresentPass( const PassExecuteInput& input );
+        /** @brief 화면 2D 를 주 출력에 그립니다. 주 출력에 마지막으로 그리는 뷰만 그립니다. */
+        void executeCanvasPass( const PassExecuteInput& input );
         /**
          * @brief XML 이 선언한 입력을 **역할 이름으로** 모두 바인딩합니다. 풀스크린 패스가 공통으로 씁니다.
          * @details 역할은 로드 시점에 해석해 둔다(`_listResolvedInput`). 여기서 바인딩하는 목록과 검증이 대조한 목록이 같으므로
@@ -588,6 +626,13 @@ namespace sw
          *                      남은 입자는 모든 배치 뒤에 그린다. 투명 큐가 아닌 패스(외곽선 · 그림자 등)는 nullptr 이다.
          */
         void drawGPUBatches( FramePassContext& context, RHIPipelineStateHandle pso, bool bTransparentPass, const vector<GPUTransparentParticleSlot>* pParticleSlot );
+        /** @brief 그 PSO 의 레이아웃이 머티리얼 CB 슬롯을 거는지입니다. 거는 셰이더에서만 머티리얼 CB 가 멀티 드로우 병합 키다. */
+        bool layoutBindsMaterialCb( RHIPipelineStateHandle batchPSO ) const;
+        /** @brief @p other 가 @p head 와 같은 멀티 드로우 묶음에 들 수 있는지입니다(그릴 수 있고 정점 버퍼 · PSO · 머티리얼 바인딩이 같다). */
+        bool isSameDrawGroup( RHIPipelineStateHandle pso, RenderPassType passType, const GPUMeshBatch& head, const GPUMeshBatch& other ) const;
+        /** @brief 묶음 하나를 그립니다 — 바뀐 정점 버퍼 · 배치 PSO 만 다시 걸고, 머티리얼 바인딩 뒤 간접 인자 @p argIndex 부터 @p groupCount 개를 부릅니다. */
+        void drawBatchGroup( FramePassContext& context, RHIPipelineStateHandle pso, const GPUMeshBatch& head, RHIPipelineStateHandle& ioBoundPSO,
+                             RHIBufferHandle& ioBoundVertexBuffer, RHIBufferHandle argsBuffer, uint32 argIndex, uint32 groupCount );
         /** @brief 투명 큐(메시 투명 배치와 입자 그리기를 한 순서로)를 지금 열린 투명 패스에 그립니다. */
         void drawTransparentQueue( FramePassContext& context, RHIPipelineStateHandle pso );
         /** @brief 지금 그리는 뷰의 입자 자리입니다. 추가 뷰는 자기 순서가 있으면 그것, 없으면 주 시점의 것(그 뷰도 주 배치 순서로 그린다)입니다. */
@@ -648,6 +693,10 @@ namespace sw
          * @return graph.execute() 의 결과
          */
         bool submitGraph( IRHIDevice* pDevice );
+        /** @brief 이번 프레임에 그릴 추가 뷰 가운데 출력 종류가 @p outputKind 인 것을 그리고 그린 수를 돌려줍니다. */
+        uint32 renderExtraViewsOfKind( IRHIDevice* pDevice, RenderViewOutputKind outputKind );
+        /** @brief 주 시점의 그래프를 실행합니다. 병렬 기록이 되면 레벨마다 여러 리스트로, 아니면 주 리스트 하나로 직렬 기록해 제출합니다. */
+        [[nodiscard]] bool executeMainGraph( IRHIDevice* pDevice );
 
         /**
          * @brief execute() 와 executePacket() 이 공통으로 쓰는 뒷부분입니다. 스냅샷을 GPU 로 올리고, 기록 전에 준비해야 하는 것(콜백, 상수 버퍼 슬롯, 머티리얼 PSO)을 갖춘 뒤 그래프를 제출합니다.
@@ -806,6 +855,17 @@ namespace sw
         /// @brief `ensureMaterialPSOs` 가 이번 프레임 배치에서 모으는 변형 조건입니다. 중복이 없고, 프레임마다 다시 채웁니다.
         vector<MaterialPSORequest> _listOpaquePSORequestScratch;
         vector<MaterialPSORequest> _listTransparentPSORequestScratch;
+        /** @brief 이번 프레임에 그리는 뷰들의 보기 모드를 비트 집합으로 모읍니다(주 시점은 늘 들어갑니다). */
+        uint32 collectFrameViewModeMask() const;
+        /** @brief 배치 목록에서 (퍼뮤테이션, 컬 반전) 조합을 중복 없이 모읍니다. 퍼뮤테이션이 없는 배치도 넣습니다. */
+        static void collectMaterialPSORequests( vector_reference<const GPUMeshBatch> listBatch, vector<MaterialPSORequest>& outListRequest );
+        /** @brief 요청 하나에 대해 이번 프레임의 보기 모드마다 변형을 만들어 둡니다. @return 새 변형을 하나라도 만들었으면 true 입니다. */
+        bool ensureRequestMaterialPSOs( RHIPipelineStateHandle passPSO, RenderPassType passType, const MaterialPSORequest& request, uint32 viewModeMask );
+        /** @brief 변형 하나가 캐시에 없으면 만들어 넣습니다. @return 새로 만들었으면 true 입니다. */
+        bool ensureMaterialPSOVariant( RHIPipelineStateHandle passPSO, RenderPassType passType, const GPUShaderPermutation* pPermutation, uint64 permutationHash,
+                                       bool bReverseCulling, RenderViewMode viewMode );
+        /** @brief 패스 PSO 의 컬러 RT 수와 포맷을 정합니다. 고정 배열이 있으면 그것을, 없으면 출력 선언 순서를, 둘 다 없으면 RGBA8 을 씁니다. */
+        void fillPassRenderTargetFormats( RHIPipelineStateDesc& desc, const RenderGraphPassDesc* pPassDesc, const RHIFormat* pRtvFormats, uint32 numRenderTargets ) const;
         /// @brief 배치 하나가 한 프레임에 몇 개의 지오메트리 패스(그림자, 프리패스, 불투명, 반투명)에서 그려지는지의 어림값입니다.
         static constexpr uint32 _s_kDrawCbPassEstimate = 4;
         /// @brief 패스와 드로우별 상수 버퍼 슬롯 링입니다. 병렬 기록에서 드로우마다 하나씩 가져갑니다.

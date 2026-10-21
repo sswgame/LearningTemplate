@@ -17,7 +17,8 @@ namespace sw
 {
     SW_LOG_CALLER( "PortraitBatchUtil" );
 
-    bool PortraitBatchUtil::renderPrefabList( IRHIDevice& device, RenderThread* pRenderThread, string_view prefabList, string_view outputDirectory, uint32 size )
+    bool PortraitBatchUtil::renderPrefabList( IRHIDevice& device, const SceneEngineServices& services, RenderThread* pRenderThread, string_view prefabList,
+                                              string_view outputDirectory, uint32 size )
     {
         if ( prefabList.empty() )
             return false;
@@ -34,7 +35,7 @@ namespace sw
         (void)FileUtil::ensureDirectoryExists( directory );
 
         PortraitRenderer      portrait;
-        bool                  bAllSucceeded = portrait.initialize( &device );
+        bool                  bAllSucceeded = portrait.initialize( &device, services );
         const string_splitter parts( prefabList, { "," } );
         for ( const string_view part : parts.getSplitList() )
         {

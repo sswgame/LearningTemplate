@@ -429,40 +429,52 @@ namespace sw
 
         if ( _data._listProperty.empty() )
         {
-            for ( const ShaderVariableInfo& var : pSchemaCb->_listVariable )
-            {
-                MaterialProperty prop{};
-                prop._name       = var._name;
-                prop._offset     = var._offset;
-                prop._size       = var._size;
-                prop._shaderType = MaterialUtil::shaderTypeFromReflectionName( var._type, var._size );
-                prop._type       = prop._shaderType;
-                // 텍스처 인덱스 필드(이름 규칙 — MaterialUtil::isTextureIndexMember)는 텍스처 속성으로 둔다. uint 로 두면 0 이 들어가는데,
-                // 0 은 Vulkan 의 첫 실제 텍스처 · DX11 · GL 의 서수 0 이다. 텍스처 속성은 붙은 것이 없으면 kInvalidDescriptorIndex 를 넣는다.
-                if ( MaterialUtil::isTextureIndexMember( var._name, var._type, var._size ) )
-                    prop._type = MaterialPropertyType::Texture2D;
-                _data._listProperty.push_back( prop );
-            }
-            rebuildPackedBuffer();
-            // 순서대로 다시 쌓은 뒤 리플렉션 오프셋을 되돌린다
-            for ( MaterialProperty& prop : _data._listProperty )
-            {
-                for ( const ShaderVariableInfo& var : pSchemaCb->_listVariable )
-                {
-                    if ( var._name == prop._name )
-                    {
-                        prop._offset = var._offset;
-                        prop._size   = var._size;
-                        break;
-                    }
-                }
-            }
-            packPropertiesIntoBytes( pSchemaCb->_totalSize );
-            _desc._listProperty = _data._listProperty;
-            SW_LOG_TRACE( "Filled %# properties from shader reflection.", _data._listProperty.size() );
+            fillPropertiesFromSchema( *pSchemaCb );
             return true;
         }
+        const bool bAllPacked = matchPropertiesToSchema( *pSchemaCb );
+        packPropertiesIntoBytes( pSchemaCb->_totalSize );
+        _desc._listProperty = _data._listProperty;
+        return bAllPacked;
+    }
 
+    void Material::fillPropertiesFromSchema( const ShaderBufferInfo& schema )
+    {
+        for ( const ShaderVariableInfo& var : schema._listVariable )
+        {
+            MaterialProperty prop{};
+            prop._name       = var._name;
+            prop._offset     = var._offset;
+            prop._size       = var._size;
+            prop._shaderType = MaterialUtil::shaderTypeFromReflectionName( var._type, var._size );
+            prop._type       = prop._shaderType;
+            // 텍스처 인덱스 필드(이름 규칙 — MaterialUtil::isTextureIndexMember)는 텍스처 속성으로 둔다. uint 로 두면 0 이 들어가는데,
+            // 0 은 Vulkan 의 첫 실제 텍스처 · DX11 · GL 의 서수 0 이다. 텍스처 속성은 붙은 것이 없으면 kInvalidDescriptorIndex 를 넣는다.
+            if ( MaterialUtil::isTextureIndexMember( var._name, var._type, var._size ) )
+                prop._type = MaterialPropertyType::Texture2D;
+            _data._listProperty.push_back( prop );
+        }
+        rebuildPackedBuffer();
+        // 순서대로 다시 쌓은 뒤 리플렉션 오프셋을 되돌린다
+        for ( MaterialProperty& prop : _data._listProperty )
+        {
+            for ( const ShaderVariableInfo& var : schema._listVariable )
+            {
+                if ( var._name == prop._name )
+                {
+                    prop._offset = var._offset;
+                    prop._size   = var._size;
+                    break;
+                }
+            }
+        }
+        packPropertiesIntoBytes( schema._totalSize );
+        _desc._listProperty = _data._listProperty;
+        SW_LOG_TRACE( "Filled %# properties from shader reflection.", _data._listProperty.size() );
+    }
+
+    bool Material::matchPropertiesToSchema( const ShaderBufferInfo& schema )
+    {
         bool bAllPacked{ true };
         for ( MaterialProperty& prop : _data._listProperty )
         {
@@ -472,45 +484,42 @@ namespace sw
             if ( MaterialUtil::isNonBufferType( prop._type ) )
                 continue;
 
-            bool found{ false };
-            for ( const ShaderVariableInfo& var : pSchemaCb->_listVariable )
+            const ShaderVariableInfo* pVar = nullptr;
+            for ( const ShaderVariableInfo& candidate : schema._listVariable )
             {
-                if ( var._name != prop._name )
-                    continue;
-                found = true;
-
-                const MaterialPropertyType reflected =
-                    MaterialUtil::shaderTypeFromReflectionName( var._type, var._size );
-                if ( prop._shaderType == MaterialPropertyType::Unknown )
-                    prop._shaderType = reflected;
-                else if ( MaterialUtil::packedSizeOf( prop._shaderType ) != 0 && MaterialUtil::packedSizeOf( prop._shaderType ) != var._size )
+                if ( candidate._name == prop._name )
                 {
-                    // 기본 셰이더 타입으로 바꿨을 때 크기가 리플렉션과 맞으면 그 타입으로 바꾼다
-                    if ( MaterialUtil::packedSizeOf( MaterialUtil::defaultShaderTypeFor( prop._type ) ) == var._size )
-                        prop._shaderType = MaterialUtil::defaultShaderTypeFor( prop._type );
-                    else if ( reflected != MaterialPropertyType::Unknown )
-                        prop._shaderType = reflected;
-                    else
-                    {
-                        SW_LOG_WARNING( "Reflection size mismatch for '%#' (shaderType %# bytes vs %#).",
-                                        prop._name.c_str(), MaterialUtil::packedSizeOf( prop._shaderType ), var._size );
-                        bAllPacked = false;
-                    }
+                    pVar = &candidate;
+                    break;
                 }
-
-                prop._offset = var._offset;
-                prop._size   = var._size;
-                break;
             }
-            if ( found == false )
+            if ( pVar == nullptr )
             {
                 SW_LOG_WARNING( "Property '%#' missing in shader reflection.", prop._name.c_str() );
                 bAllPacked = false;
+                continue;
             }
+            const ShaderVariableInfo&  var       = *pVar;
+            const MaterialPropertyType reflected = MaterialUtil::shaderTypeFromReflectionName( var._type, var._size );
+            if ( prop._shaderType == MaterialPropertyType::Unknown )
+                prop._shaderType = reflected;
+            else if ( MaterialUtil::packedSizeOf( prop._shaderType ) != 0 && MaterialUtil::packedSizeOf( prop._shaderType ) != var._size )
+            {
+                // 기본 셰이더 타입으로 바꿨을 때 크기가 리플렉션과 맞으면 그 타입으로 바꾼다
+                if ( MaterialUtil::packedSizeOf( MaterialUtil::defaultShaderTypeFor( prop._type ) ) == var._size )
+                    prop._shaderType = MaterialUtil::defaultShaderTypeFor( prop._type );
+                else if ( reflected != MaterialPropertyType::Unknown )
+                    prop._shaderType = reflected;
+                else
+                {
+                    SW_LOG_WARNING( "Reflection size mismatch for '%#' (shaderType %# bytes vs %#).",
+                                    prop._name.c_str(), MaterialUtil::packedSizeOf( prop._shaderType ), var._size );
+                    bAllPacked = false;
+                }
+            }
+            prop._offset = var._offset;
+            prop._size   = var._size;
         }
-
-        packPropertiesIntoBytes( pSchemaCb->_totalSize );
-        _desc._listProperty = _data._listProperty;
         return bAllPacked;
     }
 

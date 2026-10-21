@@ -125,8 +125,10 @@ namespace sw
         /** @brief 빈 클립을 만듭니다. */
         SpriteClipAsset() = default;
 
-        /** @brief 파일(리소스 상대 경로나 절대 경로)을 읽습니다. 읽지 못하면 false 를 반환하고 내용은 비어 있습니다. */
+        /** @brief 리소스 id 의 클립을 읽습니다. OS 경로는 받지 않습니다(`loadFromDiskFile`). 읽지 못하면 false 를 반환하고 내용은 비어 있습니다. */
         [[nodiscard]] bool loadFromFile( string_view path );
+        /** @brief **디스크 파일**의 클립을 읽습니다. 리소스 id 로 풀지 않습니다(에디터 문서 · 도구 · 테스트용). 실패 규칙은 `loadFromFile` 과 같습니다. */
+        [[nodiscard]] bool loadFromDiskFile( string_view diskPath );
         /** @brief 파일로 씁니다(부모 폴더를 만듭니다). */
         [[nodiscard]] bool saveToFile( string_view path ) const;
         /** @brief JSON 본문을 읽습니다. 구문이 틀렸거나, 루트가 객체가 아니거나, 모르는 키 · 읽지 못한 값이 있으면 false 이고 내용은 비어 있습니다. */
@@ -184,5 +186,7 @@ namespace sw
     private:
         /** @brief 읽은 값의 의미를 고칩니다(음수 크기 · 테두리는 오류, 프레임 밖 구간은 자르고 알림). 어긋나 읽을 수 없으면 false 입니다. */
         [[nodiscard]] bool resolveLoadedValues( string_view sourceLabel );
+        /** @brief 읽은 본문을 클립으로 옮깁니다. 두 읽기 입구(`loadFromFile` · `loadFromDiskFile`)의 공통 단계입니다. */
+        [[nodiscard]] bool loadText( const string& text, string_view sourceLabel );
     };
 } // namespace sw

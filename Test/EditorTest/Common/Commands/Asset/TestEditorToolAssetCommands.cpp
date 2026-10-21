@@ -226,7 +226,7 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, ApplyToPrefabWritesThePrefabsFormatAn
     const string jsonPath = test::makeTempPath( "crate.prefab.json" );
     SW_ASSERT_TRUE( EditorToolAssetCommands::applyPrefabOverridesToTemplate( pObj, jsonPath ) );
     PrefabAsset reloaded;
-    SW_EXPECT_TRUE( reloaded.loadFromJSONFile( jsonPath ) );
+    SW_EXPECT_TRUE( reloaded.loadFromJSONFile( ::test::makeTempResourceID( jsonPath ) ) );
 
     const string scenePath = test::makeTempPath( "level.scene.xml" );
     const string kScene    = "<Scene name=\"Level\"/>\n";
@@ -343,7 +343,7 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, RevertingAnOverrideRemovesItFromTheSa
     SW_ASSERT_NOT_NULL( pInstance );
     GameObjectManager scratch;
     GameObject*       pCdo    = scratch.createGameObject( hashed_string( "Cdo" ) );
-    PrefabAsset*      pPrefab = engine::getSubsystem<AssetManager>().getAssetCache<sw::PrefabCache>().loadPrefab( prefabPath );
+    PrefabAsset*      pPrefab = engine::getSubsystem<AssetManager>().getAssetCache<sw::PrefabCache>().loadPrefab( ::test::makeTempResourceID( prefabPath ) );
     SW_ASSERT_TRUE( pPrefab != nullptr && pPrefab->applyStateTo( pCdo ) );
 
     vector<PrefabOverrideItem> listOverride;

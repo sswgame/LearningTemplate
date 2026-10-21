@@ -31,5 +31,5 @@ pawn_side = [
 "Source/Games/NileCity/NileDirectorComponent.*" = "명령 조종자 — 경영 게임은 폰이 없다(입력 → 키트 명령)"
 "Source/Games/StarSkirmish/SkirmishDirectorComponent.*" = "명령 조종자 — RTS 는 폰이 없다(입력 → RTSWorld 명령)"
 "Source/Games/ThemeParkTycoon/ParkDirectorComponent.*" = "명령 조종자 — 경영 게임은 폰이 없다(입력 → 공원 명령)"
-"Source/Games/MeadowVillage/MeadowFarmDirectorComponent.*" = "명령 조종자 — 조립 시험 마을의 시간 빨리 감기(게임 규칙 명령)"
-"Source/Games/MeadowVillage/MeadowTownDirectorComponent.*" = "명령 조종자 — 조립 시험 마을의 말 걸기(대화 명령)"
+"Source/Games/MeadowVillage/MeadowFarmDirectorComponent.*" = "명령 조종자 — 조립 테스트 마을의 시간 빨리 감기(게임 규칙 명령)"
+"Source/Games/MeadowVillage/MeadowTownDirectorComponent.*" = "명령 조종자 — 조립 테스트 마을의 말 걸기(대화 명령)"

@@ -396,15 +396,10 @@ namespace sw
             _snapshot.clearParticles();
     }
 
+    // 길이 유지(긴 함수 정리 기준): 수집 · 압축 · 페이로드 · 배치 단계는 이미 나뉘어 있고, 남은 본문은 단계를 고르는 결정 순서와 그 이유 주석이다.
     void GPUSceneBuilder::populateMeshesFromScene( Scene* pScene, const float3& cameraPos )
     {
-        if ( pScene == nullptr )
-        {
-            clear();
-            return;
-        }
-
-        GameObjectManager* pObjects = pScene->getObjectManager();
+        GameObjectManager* pObjects = pScene != nullptr ? pScene->getObjectManager() : nullptr;
         if ( pObjects == nullptr )
         {
             clear();
@@ -423,31 +418,34 @@ namespace sw
 
         const PrimitiveRegistry& primitives    = pObjects->getPrimitiveRegistry();
         const uint64             setGeneration = primitives.getSetGeneration();
-        const bool               bHasCache     = _listBuiltCandidate.empty() == false;
-        const bool               bSetSame      = bHasCache && ( setGeneration == _lastPrimitiveSetGeneration );
+        MeshCollectInput         input{};
+        input._pScene    = pScene;
+        input._bHasCache = _listBuiltCandidate.empty() == false;
+        input._bSetSame  = input._bHasCache && ( setGeneration == _lastPrimitiveSetGeneration );
         // 정렬 축이 바뀌어도(직교와 원근 카메라 전환) 투명 순서가 바뀐다. 카메라가 그대로인 것으로 보지 않는다.
-        const bool bCamSame = bHasCache && ( float3::getDistanceSquared( cameraPos, _lastCameraPos ) <= MathUtil::kEpsilon ) &&
+        const bool bCamSame = input._bHasCache && ( float3::getDistanceSquared( cameraPos, _lastCameraPos ) <= MathUtil::kEpsilon ) &&
                               ( float3::getDistanceSquared( _transparentSorter.getAxis(), _lastTransparentSortAxis ) <= MathUtil::kEpsilon );
         // 퍼뮤테이션은 프리미티브를 더럽히지 않는다. 머티리얼이나 인스턴스의 정적 스위치, 키워드, 멀티컴파일을
         // 바꾸면 그릴 셰이더가 달라지는데 씬에서는 아무 일도 일어나지 않은 것처럼 보인다. 세대로 가른다.
         const uint64 permutationGeneration = MaterialUtil::getPermutationGeneration();
-        const bool   bPermutationSame      = bHasCache && ( permutationGeneration == _lastPermutationGeneration );
+        input._bPermutationSame            = input._bHasCache && ( permutationGeneration == _lastPermutationGeneration );
 
         // 아무도 "바뀌었다" 고 말하지 않았고 카메라도 그대로면 **수집 자체를 하지 않는다**.
         // 바꾼 쪽이 알려 주므로 정지한 씬의 비용은 0에 수렴한다. 주의: 이 판단을 위해 모든 GameObject 의
         // Component 를 훑어 후보를 만들어 보면, 화면이 정지해 있어도 씬 크기만큼 비용이 든다.
-        const bool bNothingChanged = bSetSame && bCamSame && bPermutationSame && primitives.hasDirty() == false;
+        const bool bNothingChanged = input._bSetSame && bCamSame && input._bPermutationSame && primitives.hasDirty() == false;
         if ( bNothingChanged )
             return;
 
         // 렌더 상태가 바뀐 것과 월드 행렬만 바뀐 것을 따로 받는다. 뒤쪽은 다시 모으지 않는다(`copyCandidateTransforms`).
         pObjects->getPrimitiveRegistry().consumeDirty( _listDirtyPrimitive, _listTransformDirtyPrimitive );
 
-        const vector<ScenePrimitive*>&        listPrimitive     = primitives.getAll();
-        const vector<PrimitiveInstanceEntry>& listInstanceEntry = primitives.getInstanceEntries();
+        input._pPrimitives        = &primitives;
+        input._pListPrimitive     = &primitives.getAll();
+        input._pListInstanceEntry = &primitives.getInstanceEntries();
         // 프리미티브 번호 공간은 메시 컴포넌트 뒤에 인스턴스 배치의 항목들이 이어진 것이다. 아래 전부가 이 공간을 돈다.
-        const uint32 meshCount = static_cast<uint32>( listPrimitive.size() );
-        const uint32 slotCount = meshCount + static_cast<uint32>( listInstanceEntry.size() );
+        input._meshCount = static_cast<uint32>( input._pListPrimitive->size() );
+        input._slotCount = input._meshCount + static_cast<uint32>( input._pListInstanceEntry->size() );
 
         // 후보 배열을 **비우지 않고 제자리에 덮어쓴다.** `clear()` 와 `push_back` 은 원소마다
         // shared_ptr 셋의 참조 카운트를 내렸다(clear) 올린다(push_back). 프레임당 원자 연산이
@@ -456,10 +454,8 @@ namespace sw
         //
         // **필드는 모두 다시 채워야 한다.** 비우지 않으므로 채우지 않은 필드에는 지난 프레임 값이
         // 남는다. `DrawCandidate` 에 필드를 추가하면 아래 루프에도 같이 적는다.
-        if ( _listScratchCandidate.size() < slotCount )
-            _listScratchCandidate.resize( slotCount );
-
-        size_t candidateCount = 0;
+        if ( _listScratchCandidate.size() < input._slotCount )
+            _listScratchCandidate.resize( input._slotCount );
 
         // **바뀐 것만 다시 모은다.** 집합 세대가 그대로이면 레지스트리의 슬롯 배치가 그대로이므로, 지난
         // 프레임 후보를 그대로 두고 더티 프리미티브의 슬롯만 새로 채우면 된다(8000개 중 10개만
@@ -467,199 +463,17 @@ namespace sw
         //
         // 조건이 하나라도 어긋나면 **아래 전체 수집으로 떨어진다**. 부분 갱신이 틀리는 것보다 느린
         // 것이 낫고, 두 경로가 같은 `fillCandidateFromPrimitive` 를 쓰므로 채우는 규칙이 갈리지 않는다.
-        const bool bCanPartial = bSetSame && bPermutationSame && _listPrimitiveToCandidate.size() == slotCount &&
+        const bool bCanPartial = input._bSetSame && input._bPermutationSame && _listPrimitiveToCandidate.size() == input._slotCount &&
                                  _lastCandidateCount <= _listScratchCandidate.size() + _listBuiltCandidate.size() &&
-                                 _listDirtyPrimitive.size() * 4 < slotCount;
-        bool bPartialDone      = false;
-        bool bPartialKeysSame  = true;
-        bool bPartialAnyChange = false;
+                                 _listDirtyPrimitive.size() * 4 < input._slotCount;
+        MeshCollectResult collect{};
         if ( bCanPartial )
-        {
-            SW_PROFILE_SCOPE( "GT.GPUScene.build.collect" );
-            // 지난 프레임 후보를 작업 공간으로 가져온다. 이중 버퍼라 scratch 는 두 프레임 전 것이다.
-            _listScratchCandidate.swap( _listBuiltCandidate );
-            bPartialDone = _listScratchCandidate.size() >= _lastCandidateCount;
-
-            if ( bPartialDone )
-                moveTransformSlotsWithoutCandidate( meshCount );
-
-            for ( uint32 slot : _listDirtyPrimitive )
-            {
-                if ( bPartialDone == false )
-                    break;
-                if ( slot >= slotCount )
-                {
-                    bPartialDone = false;
-                    break;
-                }
-                const uint32 candidateIndex = _listPrimitiveToCandidate[slot];
-                const bool   bWasIncluded   = ( candidateIndex != kInvalidCandidateIndex );
-
-                _candidateProbe      = DrawCandidate{};
-                const bool bIncluded = ( slot < meshCount ) ? fillCandidateFromPrimitive( listPrimitive[slot], pScene, _candidateProbe )
-                                                            : fillCandidateFromInstanceEntry( listInstanceEntry[slot - meshCount], pScene, _candidateProbe );
-                if ( bIncluded )
-                    stampPermutationHash( _candidateProbe );
-                // 실릴지 말지가 바뀌면 슬롯 배치가 달라진다. 그때는 통째로 다시 모은다.
-                if ( bIncluded != bWasIncluded || ( bIncluded && candidateIndex >= _lastCandidateCount ) )
-                {
-                    bPartialDone = false;
-                    break;
-                }
-                if ( bIncluded == false )
-                    continue;
-
-                DrawCandidate& candidate = _listScratchCandidate[candidateIndex];
-                if ( candidate.hasSameBatchKey( _candidateProbe ) == false )
-                    bPartialKeysSame = false;
-                if ( candidate != _candidateProbe )
-                {
-                    bPartialAnyChange = true;
-                    candidate         = _candidateProbe;
-                }
-            }
-
-            if ( bPartialDone && _listTransformDirtyPrimitive.empty() == false )
-            {
-                // 행렬식의 부호가 바뀐 후보는 배치 키가 바뀐 것이다(컬 반전). 그때는 다시 나눈다.
-                if ( copyCandidateTransforms( primitives ) )
-                    bPartialKeysSame = false;
-                bPartialAnyChange = true;
-            }
-
-            if ( bPartialDone )
-            {
-                candidateCount = _lastCandidateCount;
-            }
-            else
-            {
-                // 되돌린다. 아래 전체 수집이 scratch 를 처음부터 채운다.
-                _listScratchCandidate.swap( _listBuiltCandidate );
-            }
-        }
+            collect = collectDirtyCandidatesInPlace( input );
         // 채우기와 제자리 갱신은 렌더 상태와 트랜스폼을 가리지 않고 "바뀐 슬롯" 목록 하나를 본다.
         _listDirtyPrimitive.insert( _listDirtyPrimitive.end(), _listTransformDirtyPrimitive.begin(), _listTransformDirtyPrimitive.end() );
-
-        // 레지스트리에는 그릴 수 있는 것만 들어 있다. 타입 검사가 없다.
-        //
-        // **워커가 자기 슬롯에서 비교까지 끝낸다**. 후보 채우기, 지난 후보와의 배치 키와 내용 비교, 퍼뮤테이션
-        // 해시 재사용이 그것이다. 직렬 패스로 같은 슬롯들을 다시 지나가지 않는다. 직렬에 남는 것은 앞으로 당기기와,
-        // 머티리얼, 인스턴스, 세대 중 하나가 달라진 슬롯의 해시 기록(지연 캐시라 직렬)뿐이다.
-        //
-        // raw 페이로드는 **여기서 쓰지 않는다.** 워커가 자기 슬롯의 raw 까지 쓰면 채우기 패스가 사라진 만큼이 수집과 배치에
-        // 도로 붙는다(실측). 정렬과 제자리 갱신이 다른 코어가 쓴 raw 를 원격 캐시에서 끌어온다. 이 스레드가 이어서 쓰고
-        // 이어서 읽는 편이 싸다.
-        bool bAllKeySame     = false;
-        bool bAllContentSame = false;
-        if ( bPartialDone == false )
-        {
-            SW_PROFILE_SCOPE( "GT.GPUScene.build.collect" );
-            const uint32 primitiveCount = slotCount;
-            _listCollectFlag.resize( primitiveCount );
-
-            // 지난 프레임의 "프리미티브에서 후보로" 테이블은 집합 세대가 같을 때만 의미가 있다(해제는 슬롯을 옮긴다).
-            // 테이블이 그 크기가 아니면 지난 후보와 짝을 지을 수 없으니 전부 "처음 본 것" 으로 처리한다.
-            const bool bPrevAligned = bHasCache && bSetSame && _listPrimitiveToCandidate.size() == primitiveCount;
-            if ( bPrevAligned == false )
-                _listPrimitiveToCandidate.assign( primitiveCount, kInvalidCandidateIndex );
-
-            // 워커는 컨테이너를 만지지 않는다. 포인터만 넘긴다(컨테이너 레이스 탐지기가 워커의 인덱싱을 잡는다).
-            // 지난 후보 배열은 **읽기만** 한다. const 로 꺼낸 포인터다.
-            struct CollectJob
-            {
-                GPUSceneBuilder*              _pBuilder{ nullptr };
-                Scene*                        _pScene{ nullptr };
-                ScenePrimitive* const*        _ppPrimitive{ nullptr };
-                const PrimitiveInstanceEntry* _pEntry{ nullptr };
-                uint32                        _meshCount{ 0 };
-                DrawCandidate*                _pCandidate{ nullptr };
-                uint8*                        _pFlag{ nullptr };
-                const uint32*                 _pPrevMap{ nullptr };
-                const DrawCandidate*          _pPrevCandidate{ nullptr };
-                uint32                        _prevCount{ 0 };
-                bool                          _bPermutationSame{ false };
-
-                void fillRange( uint32 start, uint32 end )
-                {
-                    for ( uint32 index = start; index < end; ++index )
-                    {
-                        DrawCandidate& candidate = _pCandidate[index];
-                        uint8          flag      = 0u;
-                        const bool     bFilled   = ( index < _meshCount ) ? _pBuilder->fillCandidateFromPrimitive( _ppPrimitive[index], _pScene, candidate )
-                                                                          : _pBuilder->fillCandidateFromInstanceEntry( _pEntry[index - _meshCount], _pScene, candidate );
-                        if ( bFilled )
-                        {
-                            flag                   = kCollectIncluded | kCollectNeedsStamp;
-                            const uint32 prevIndex = ( _pPrevMap != nullptr ) ? _pPrevMap[index] : kInvalidCandidateIndex;
-                            if ( prevIndex < _prevCount )
-                            {
-                                const DrawCandidate& prev = _pPrevCandidate[prevIndex];
-                                // 해시는 (머티리얼, 인스턴스, 퍼뮤테이션 세대)의 함수다. 셋이 같으면 지난 값이 그대로 맞고,
-                                // 그래야 키와 내용 비교도 의미가 있다(해시가 키에 들어 있다).
-                                const bool bSameShader = _bPermutationSame && prev._material == candidate._material && prev._instance == candidate._instance;
-                                if ( bSameShader )
-                                {
-                                    candidate._permutationHash = prev._permutationHash;
-                                    flag                       = kCollectIncluded;
-                                    if ( candidate.hasSameBatchKey( prev ) )
-                                    {
-                                        flag |= kCollectKeySame;
-                                        if ( candidate == prev )
-                                            flag |= kCollectContentSame;
-                                    }
-                                }
-                            }
-                        }
-                        _pFlag[index] = flag;
-                    }
-                }
-            };
-            CollectJob job{};
-            job._pBuilder         = this;
-            job._pScene           = pScene;
-            job._ppPrimitive      = listPrimitive.data();
-            job._pEntry           = listInstanceEntry.data();
-            job._meshCount        = meshCount;
-            job._pCandidate       = _listScratchCandidate.data();
-            job._pFlag            = _listCollectFlag.data();
-            job._pPrevMap         = bPrevAligned ? std::as_const( _listPrimitiveToCandidate ).data() : nullptr;
-            job._pPrevCandidate   = std::as_const( _listBuiltCandidate ).data();
-            job._prevCount        = static_cast<uint32>( _listBuiltCandidate.size() );
-            job._bPermutationSame = bPermutationSame;
-
-            engine::runParallel( primitiveCount, kParallelCollectPrimitiveCount, SW_DELEGATE_METHOD( ParallelBlockDelegate, &CollectJob::fillRange, &job ) );
-
-            // **앞으로 당긴다.** 모두 실리는 씬(벤치가 그렇다)에서는 슬롯이 그대로라 한 개도 옮기지 않는다.
-            // "지난 프레임과 같다" 는 슬롯마다의 표시를 여기서 하나로 줄인다. 위치까지 같아야 한다(prevIndex == 새 위치).
-            bAllKeySame     = bPrevAligned;
-            bAllContentSame = bPrevAligned;
-            for ( uint32 primitiveIndex = 0; primitiveIndex < primitiveCount; ++primitiveIndex )
-            {
-                const uint8  flag      = _listCollectFlag[primitiveIndex];
-                const uint32 prevIndex = _listPrimitiveToCandidate[primitiveIndex]; // 쓰기 전에 읽는다. 같은 테이블을 제자리에서 새로 쓴다.
-                if ( ( flag & kCollectIncluded ) == 0u )
-                {
-                    _listPrimitiveToCandidate[primitiveIndex] = kInvalidCandidateIndex;
-                    continue;
-                }
-                if ( candidateCount != primitiveIndex )
-                    _listScratchCandidate[candidateCount] = std::move( _listScratchCandidate[primitiveIndex] );
-                // 지연 캐시를 건드리는 해시는 여기 직렬 구간에서, 달라진 슬롯만 기록한다.
-                if ( ( flag & kCollectNeedsStamp ) != 0u )
-                    stampPermutationHash( _listScratchCandidate[candidateCount] );
-                const bool bSamePlace                     = ( prevIndex == candidateCount );
-                bAllKeySame                               = bAllKeySame && bSamePlace && ( flag & kCollectKeySame ) != 0u;
-                bAllContentSame                           = bAllContentSame && bSamePlace && ( flag & kCollectContentSame ) != 0u;
-                _listPrimitiveToCandidate[primitiveIndex] = static_cast<uint32>( candidateCount );
-                ++candidateCount;
-            }
-            // 걸러진 만큼 줄인다. 남은 원소는 여기서 소유권을 놓는다.
-            _listScratchCandidate.resize( candidateCount );
-            // 지난 후보가 더 많았다면(무언가 빠졌다) 같을 수 없다.
-            bAllKeySame     = bAllKeySame && ( candidateCount == _listBuiltCandidate.size() );
-            bAllContentSame = bAllContentSame && ( candidateCount == _listBuiltCandidate.size() );
-        }
-        _lastCandidateCount = candidateCount;
+        if ( collect._bPartialDone == false )
+            collect = collectAllCandidates( input );
+        _lastCandidateCount = collect._candidateCount;
 
         if ( _listScratchCandidate.empty() )
         {
@@ -668,32 +482,19 @@ namespace sw
         }
 
         // 더티 신호가 왔다고 내용이 실제로 달라졌다는 뜻은 아니다(집합 세대는 활성 토글 같은 것에도
-        // 오른다). 여기서 한 번 더 확인해 헛된 재구축을 막는다.
-        bool bContentSame = false;
-        {
-            SW_PROFILE_SCOPE( "GT.GPUScene.build.compare" );
-            // 부분 수집을 했으면 **무엇이 바뀌었는지 이미 안다**. 두 배열을 통째로 비교하지 않는다.
-            // (그리고 그때 `_listBuiltCandidate` 는 두 프레임 전 것이라 비교 대상이 될 수도 없다.)
-            // 전체 수집은 워커가 슬롯마다 비교를 끝냈다. 여기는 그 합만 읽는다(두 배열을 통째로 다시 비교하지 않는다).
-            bContentSame = bPartialDone ? ( bPartialAnyChange == false && _snapshot.getInstances().empty() == false )
-                                        : ( bAllContentSame && _snapshot.getInstances().empty() == false );
-        }
-
+        // 오른다). 여기서 한 번 더 확인해 헛된 재구축을 막는다. 부분 수집은 무엇이 바뀌었는지 이미 알고(그때 `_listBuiltCandidate` 는
+        // 두 프레임 전 것이라 비교 대상이 될 수도 없다), 전체 수집은 워커가 슬롯마다 비교를 끝냈다 — 여기는 그 합만 읽는다.
+        const bool bContentSame = collect._bContentSame && _snapshot.getInstances().empty() == false;
         if ( bContentSame && bCamSame )
         {
             // 부분 수집은 시작할 때 두 배열을 맞바꿨다. 최신 후보는 scratch 쪽이다. 기준으로 돌려놓지 않으면 다음 프레임이
             // 두 프레임 전 후보와 비교하고, 그 위의 분할 테이블이 실제 후보와 어긋난다.
-            if ( bPartialDone )
+            if ( collect._bPartialDone )
                 _listBuiltCandidate.swap( _listScratchCandidate );
             _lastPrimitiveSetGeneration = setGeneration;
             _lastPermutationGeneration  = permutationGeneration;
             return;
         }
-
-        const uint32 count = static_cast<uint32>( _listScratchCandidate.size() );
-        // 크기가 그대로면 raw 의 지난 프레임 값이 살아 있다. 부분 채우기의 전제다(전체 수집은 raw 를 통째로 새로 썼다).
-        const bool bRawKept = ( _listScratchRaw.size() == count );
-        _listScratchRaw.resize( count );
 
         // 물체가 움직이기만 했으면 배치 구성은 그대로다. 인스턴스 값만 새로 채우고, 나누기와
         // 정렬은 건너뛴다(움직이는 씬에서 이 정렬이 유일한 O(N log N) 이다).
@@ -703,67 +504,15 @@ namespace sw
         bool bBatchKeysSame = false;
         {
             SW_PROFILE_SCOPE( "GT.GPUScene.build.batchKeys" );
-            bBatchKeysSame = bPartialDone ? ( bContentSame == false && bPartialKeysSame )
-                                          : ( bContentSame == false && bAllKeySame );
+            bBatchKeysSame = bContentSame == false && collect._bKeysSame;
         }
-
+        const uint32 count = static_cast<uint32>( _listScratchCandidate.size() );
+        // 크기가 그대로면 raw 의 지난 프레임 값이 살아 있다. 부분 채우기의 전제다(전체 수집은 raw 를 통째로 새로 썼다).
+        const bool bRawKept = ( _listScratchRaw.size() == count );
+        _listScratchRaw.resize( count );
         if ( bContentSame == false )
-        {
-            SW_PROFILE_SCOPE( "GT.GPUScene.build.fill" );
-            // 이 스레드에서 그대로 채운다. 워커로 나누면 **모든 크기에서 느려진다**. 원소당 일이
-            // 필드 몇 개 복사뿐이라 디스패치와 대기가 일보다 비싸다(GPUSceneBuilder.h populateFromScene 주석의 측정값).
-            //
-            // 부분 수집을 했으면 **바뀐 후보만** 옮긴다. raw 는 후보에서 1:1 로 나오는 값이라, 손대지
-            // 않은 후보의 raw 는 지난 프레임 것이 그대로 맞다(전체 수집 프레임에는 raw 자체가
-            // 새로 만들어지므로 모두 채워야 한다).
-            // raw 는 **이 스레드가** 쓴다. 워커가 자기 슬롯의 raw 까지 쓰면 정렬과 제자리 갱신이 그 raw 를 원격 캐시에서
-            // 끌어와 배치 단계가 그만큼 느려진다(실측).
-            if ( bPartialDone && bRawKept )
-            {
-                for ( uint32 slot : _listDirtyPrimitive )
-                {
-                    if ( slot >= _listPrimitiveToCandidate.size() )
-                        continue;
-                    const uint32 candidateIndex = _listPrimitiveToCandidate[slot];
-                    if ( candidateIndex >= count )
-                        continue;
-                    fillPayload( _listScratchCandidate[candidateIndex], _listScratchRaw[candidateIndex] );
-                }
-            }
-            else
-            {
-                for ( uint32 candidateIndex = 0; candidateIndex < count; ++candidateIndex )
-                {
-                    fillPayload( _listScratchCandidate[candidateIndex], _listScratchRaw[candidateIndex] );
-                }
-            }
-
-            if ( bBatchKeysSame == false )
-            {
-                SW_PROFILE_SCOPE( "GT.GPUScene.build.partition" );
-                rebuildPartitionTables();
-            }
-        }
-
-        {
-            SW_PROFILE_SCOPE( "GT.GPUScene.build.batches" );
-            sortTransparent( cameraPos );
-
-            // 배치 구성이 그대로면 **다시 나누지 않는다**. 인스턴스 값만 제자리에서 갱신한다.
-            // 물체가 움직였다고 인스턴스와 배치 목록을 통째로 다시 만들면 GPUScene 빌드의 절반이 넘는다. 언리얼 GPUScene 도
-            // 프리미티브가 움직였다고 자료구조를 다시 만들지는 않는다.
-            const bool bRefreshed = bBatchKeysSame && refreshInstancesInPlace( bPartialDone );
-            if ( bRefreshed == false )
-            {
-                instanceWork().clear();
-                _snapshot.clearBatches();
-                populateBatches();
-            }
-            {
-                SW_PROFILE_SCOPE( "GT.GPUScene.build.free" );
-                _materialRegistry.freeUnusedMaterialElements( _snapshot );
-            }
-        }
+            fillPayloadsAndPartition( collect._bPartialDone && bRawKept, bBatchKeysSame );
+        rebuildBatches( cameraPos, bBatchKeysSame, collect._bPartialDone );
 
         // scratch 를 기준 집합으로 넘기고 낡은 기준을 scratch 로 돌려받는다. 복사 없이 두 버퍼를
         // 번갈아 쓰므로 프레임당 힙 할당이 생기지 않는다.
@@ -778,6 +527,266 @@ namespace sw
         // 발행은 링 슬롯의 포인터를 넘기는 것이다. 복사도 옮기기도 되복사도 없다(GPUInstanceRing.h).
         SW_PROFILE_SCOPE( "GT.GPUScene.build.publish" );
         publishInstances();
+    }
+
+    GPUSceneBuilder::MeshCollectResult GPUSceneBuilder::collectDirtyCandidatesInPlace( const MeshCollectInput& input )
+    {
+        SW_PROFILE_SCOPE( "GT.GPUScene.build.collect" );
+        const vector<ScenePrimitive*>&        listPrimitive     = *input._pListPrimitive;
+        const vector<PrimitiveInstanceEntry>& listInstanceEntry = *input._pListInstanceEntry;
+        MeshCollectResult                     result{};
+        bool                                  bKeysSame  = true;
+        bool                                  bAnyChange = false;
+        // 지난 프레임 후보를 작업 공간으로 가져온다. 이중 버퍼라 scratch 는 두 프레임 전 것이다.
+        _listScratchCandidate.swap( _listBuiltCandidate );
+        bool bDone = _listScratchCandidate.size() >= _lastCandidateCount;
+
+        if ( bDone )
+            moveTransformSlotsWithoutCandidate( input._meshCount );
+
+        for ( uint32 slot : _listDirtyPrimitive )
+        {
+            if ( bDone == false )
+                break;
+            if ( slot >= input._slotCount )
+            {
+                bDone = false;
+                break;
+            }
+            const uint32 candidateIndex = _listPrimitiveToCandidate[slot];
+            const bool   bWasIncluded   = ( candidateIndex != kInvalidCandidateIndex );
+
+            _candidateProbe      = DrawCandidate{};
+            const bool bIncluded = ( slot < input._meshCount ) ? fillCandidateFromPrimitive( listPrimitive[slot], input._pScene, _candidateProbe )
+                                                               : fillCandidateFromInstanceEntry( listInstanceEntry[slot - input._meshCount], input._pScene, _candidateProbe );
+            if ( bIncluded )
+                stampPermutationHash( _candidateProbe );
+            // 실릴지 말지가 바뀌면 슬롯 배치가 달라진다. 그때는 통째로 다시 모은다.
+            if ( bIncluded != bWasIncluded || ( bIncluded && candidateIndex >= _lastCandidateCount ) )
+            {
+                bDone = false;
+                break;
+            }
+            if ( bIncluded == false )
+                continue;
+
+            DrawCandidate& candidate = _listScratchCandidate[candidateIndex];
+            if ( candidate.hasSameBatchKey( _candidateProbe ) == false )
+                bKeysSame = false;
+            if ( candidate != _candidateProbe )
+            {
+                bAnyChange = true;
+                candidate  = _candidateProbe;
+            }
+        }
+
+        if ( bDone && _listTransformDirtyPrimitive.empty() == false )
+        {
+            // 행렬식의 부호가 바뀐 후보는 배치 키가 바뀐 것이다(컬 반전). 그때는 다시 나눈다.
+            if ( copyCandidateTransforms( *input._pPrimitives ) )
+                bKeysSame = false;
+            bAnyChange = true;
+        }
+
+        if ( bDone == false )
+        {
+            // 되돌린다. 전체 수집이 scratch 를 처음부터 채운다.
+            _listScratchCandidate.swap( _listBuiltCandidate );
+            return result;
+        }
+        result._candidateCount = _lastCandidateCount;
+        result._bPartialDone   = true;
+        result._bKeysSame      = bKeysSame;
+        result._bContentSame   = bAnyChange == false;
+        return result;
+    }
+
+    GPUSceneBuilder::MeshCollectResult GPUSceneBuilder::collectAllCandidates( const MeshCollectInput& input )
+    {
+        // 레지스트리에는 그릴 수 있는 것만 들어 있다. 타입 검사가 없다.
+        //
+        // **워커가 자기 슬롯에서 비교까지 끝낸다**. 후보 채우기, 지난 후보와의 배치 키와 내용 비교, 퍼뮤테이션
+        // 해시 재사용이 그것이다. 직렬 패스로 같은 슬롯들을 다시 지나가지 않는다. 직렬에 남는 것은 앞으로 당기기와,
+        // 머티리얼, 인스턴스, 세대 중 하나가 달라진 슬롯의 해시 기록(지연 캐시라 직렬)뿐이다.
+        //
+        // raw 페이로드는 **여기서 쓰지 않는다.** 워커가 자기 슬롯의 raw 까지 쓰면 채우기 패스가 사라진 만큼이 수집과 배치에
+        // 도로 붙는다(실측). 정렬과 제자리 갱신이 다른 코어가 쓴 raw 를 원격 캐시에서 끌어온다. 이 스레드가 이어서 쓰고
+        // 이어서 읽는 편이 싸다.
+        SW_PROFILE_SCOPE( "GT.GPUScene.build.collect" );
+        const uint32 primitiveCount = input._slotCount;
+        _listCollectFlag.resize( primitiveCount );
+
+        // 지난 프레임의 "프리미티브에서 후보로" 테이블은 집합 세대가 같을 때만 의미가 있다(해제는 슬롯을 옮긴다).
+        // 테이블이 그 크기가 아니면 지난 후보와 짝을 지을 수 없으니 전부 "처음 본 것" 으로 처리한다.
+        const bool bPrevAligned = input._bHasCache && input._bSetSame && _listPrimitiveToCandidate.size() == primitiveCount;
+        if ( bPrevAligned == false )
+            _listPrimitiveToCandidate.assign( primitiveCount, kInvalidCandidateIndex );
+
+        // 워커는 컨테이너를 만지지 않는다. 포인터만 넘긴다(컨테이너 레이스 탐지기가 워커의 인덱싱을 잡는다).
+        // 지난 후보 배열은 **읽기만** 한다. const 로 꺼낸 포인터다.
+        struct CollectJob
+        {
+            GPUSceneBuilder*              _pBuilder{ nullptr };
+            Scene*                        _pScene{ nullptr };
+            ScenePrimitive* const*        _ppPrimitive{ nullptr };
+            const PrimitiveInstanceEntry* _pEntry{ nullptr };
+            uint32                        _meshCount{ 0 };
+            DrawCandidate*                _pCandidate{ nullptr };
+            uint8*                        _pFlag{ nullptr };
+            const uint32*                 _pPrevMap{ nullptr };
+            const DrawCandidate*          _pPrevCandidate{ nullptr };
+            uint32                        _prevCount{ 0 };
+            bool                          _bPermutationSame{ false };
+
+            void fillRange( uint32 start, uint32 end )
+            {
+                for ( uint32 index = start; index < end; ++index )
+                {
+                    DrawCandidate& candidate = _pCandidate[index];
+                    uint8          flag      = 0u;
+                    const bool     bFilled   = ( index < _meshCount ) ? _pBuilder->fillCandidateFromPrimitive( _ppPrimitive[index], _pScene, candidate )
+                                                                      : _pBuilder->fillCandidateFromInstanceEntry( _pEntry[index - _meshCount], _pScene, candidate );
+                    if ( bFilled )
+                        flag = compareWithPrevious( index, candidate );
+                    _pFlag[index] = flag;
+                }
+            }
+
+            /** @brief 채운 후보를 지난 프레임의 같은 슬롯과 견줘 표시를 만듭니다. 셰이더가 같으면 지난 해시를 그대로 쓴다. */
+            uint8 compareWithPrevious( uint32 index, DrawCandidate& candidate ) const
+            {
+                const uint32 prevIndex = ( _pPrevMap != nullptr ) ? _pPrevMap[index] : kInvalidCandidateIndex;
+                if ( prevIndex >= _prevCount )
+                    return kCollectIncluded | kCollectNeedsStamp;
+                const DrawCandidate& prev = _pPrevCandidate[prevIndex];
+                // 해시는 (머티리얼, 인스턴스, 퍼뮤테이션 세대)의 함수다. 셋이 같으면 지난 값이 그대로 맞고,
+                // 그래야 키와 내용 비교도 의미가 있다(해시가 키에 들어 있다).
+                const bool bSameShader = _bPermutationSame && prev._material == candidate._material && prev._instance == candidate._instance;
+                if ( bSameShader == false )
+                    return kCollectIncluded | kCollectNeedsStamp;
+                candidate._permutationHash = prev._permutationHash;
+                uint8 flag                 = kCollectIncluded;
+                if ( candidate.hasSameBatchKey( prev ) )
+                {
+                    flag |= kCollectKeySame;
+                    if ( candidate == prev )
+                        flag |= kCollectContentSame;
+                }
+                return flag;
+            }
+        };
+        CollectJob job{};
+        job._pBuilder         = this;
+        job._pScene           = input._pScene;
+        job._ppPrimitive      = input._pListPrimitive->data();
+        job._pEntry           = input._pListInstanceEntry->data();
+        job._meshCount        = input._meshCount;
+        job._pCandidate       = _listScratchCandidate.data();
+        job._pFlag            = _listCollectFlag.data();
+        job._pPrevMap         = bPrevAligned ? std::as_const( _listPrimitiveToCandidate ).data() : nullptr;
+        job._pPrevCandidate   = std::as_const( _listBuiltCandidate ).data();
+        job._prevCount        = static_cast<uint32>( _listBuiltCandidate.size() );
+        job._bPermutationSame = input._bPermutationSame;
+
+        engine::runParallel( primitiveCount, kParallelCollectPrimitiveCount, SW_DELEGATE_METHOD( ParallelBlockDelegate, &CollectJob::fillRange, &job ) );
+        return compactCollectedCandidates( primitiveCount, bPrevAligned );
+    }
+
+    GPUSceneBuilder::MeshCollectResult GPUSceneBuilder::compactCollectedCandidates( uint32 primitiveCount, bool bPrevAligned )
+    {
+        // **앞으로 당긴다.** 모두 실리는 씬(벤치가 그렇다)에서는 슬롯이 그대로라 한 개도 옮기지 않는다.
+        // "지난 프레임과 같다" 는 슬롯마다의 표시를 여기서 하나로 줄인다. 위치까지 같아야 한다(prevIndex == 새 위치).
+        MeshCollectResult result{};
+        bool              bAllKeySame     = bPrevAligned;
+        bool              bAllContentSame = bPrevAligned;
+        size_t            candidateCount  = 0;
+        for ( uint32 primitiveIndex = 0; primitiveIndex < primitiveCount; ++primitiveIndex )
+        {
+            const uint8  flag      = _listCollectFlag[primitiveIndex];
+            const uint32 prevIndex = _listPrimitiveToCandidate[primitiveIndex]; // 쓰기 전에 읽는다. 같은 테이블을 제자리에서 새로 쓴다.
+            if ( ( flag & kCollectIncluded ) == 0u )
+            {
+                _listPrimitiveToCandidate[primitiveIndex] = kInvalidCandidateIndex;
+                continue;
+            }
+            if ( candidateCount != primitiveIndex )
+                _listScratchCandidate[candidateCount] = std::move( _listScratchCandidate[primitiveIndex] );
+            // 지연 캐시를 건드리는 해시는 여기 직렬 구간에서, 달라진 슬롯만 기록한다.
+            if ( ( flag & kCollectNeedsStamp ) != 0u )
+                stampPermutationHash( _listScratchCandidate[candidateCount] );
+            const bool bSamePlace                     = ( prevIndex == candidateCount );
+            bAllKeySame                               = bAllKeySame && bSamePlace && ( flag & kCollectKeySame ) != 0u;
+            bAllContentSame                           = bAllContentSame && bSamePlace && ( flag & kCollectContentSame ) != 0u;
+            _listPrimitiveToCandidate[primitiveIndex] = static_cast<uint32>( candidateCount );
+            ++candidateCount;
+        }
+        // 걸러진 만큼 줄인다. 남은 원소는 여기서 소유권을 놓는다.
+        _listScratchCandidate.resize( candidateCount );
+        // 지난 후보가 더 많았다면(무언가 빠졌다) 같을 수 없다.
+        result._candidateCount = candidateCount;
+        result._bKeysSame      = bAllKeySame && ( candidateCount == _listBuiltCandidate.size() );
+        result._bContentSame   = bAllContentSame && ( candidateCount == _listBuiltCandidate.size() );
+        return result;
+    }
+
+    void GPUSceneBuilder::fillPayloadsAndPartition( bool bOnlyDirtySlots, bool bBatchKeysSame )
+    {
+        const uint32 count = static_cast<uint32>( _listScratchCandidate.size() );
+        SW_PROFILE_SCOPE( "GT.GPUScene.build.fill" );
+        // 이 스레드에서 그대로 채운다. 워커로 나누면 **모든 크기에서 느려진다**. 원소당 일이
+        // 필드 몇 개 복사뿐이라 디스패치와 대기가 일보다 비싸다(GPUSceneBuilder.h populateFromScene 주석의 측정값).
+        //
+        // 부분 수집을 했으면 **바뀐 후보만** 옮긴다. raw 는 후보에서 1:1 로 나오는 값이라, 손대지
+        // 않은 후보의 raw 는 지난 프레임 것이 그대로 맞다(전체 수집 프레임에는 raw 자체가
+        // 새로 만들어지므로 모두 채워야 한다).
+        // raw 는 **이 스레드가** 쓴다. 워커가 자기 슬롯의 raw 까지 쓰면 정렬과 제자리 갱신이 그 raw 를 원격 캐시에서
+        // 끌어와 배치 단계가 그만큼 느려진다(실측).
+        if ( bOnlyDirtySlots )
+        {
+            for ( uint32 slot : _listDirtyPrimitive )
+            {
+                if ( slot >= _listPrimitiveToCandidate.size() )
+                    continue;
+                const uint32 candidateIndex = _listPrimitiveToCandidate[slot];
+                if ( candidateIndex >= count )
+                    continue;
+                fillPayload( _listScratchCandidate[candidateIndex], _listScratchRaw[candidateIndex] );
+            }
+        }
+        else
+        {
+            for ( uint32 candidateIndex = 0; candidateIndex < count; ++candidateIndex )
+            {
+                fillPayload( _listScratchCandidate[candidateIndex], _listScratchRaw[candidateIndex] );
+            }
+        }
+
+        if ( bBatchKeysSame == false )
+        {
+            SW_PROFILE_SCOPE( "GT.GPUScene.build.partition" );
+            rebuildPartitionTables();
+        }
+    }
+
+    void GPUSceneBuilder::rebuildBatches( const float3& cameraPos, bool bBatchKeysSame, bool bPartialCollect )
+    {
+        SW_PROFILE_SCOPE( "GT.GPUScene.build.batches" );
+        sortTransparent( cameraPos );
+
+        // 배치 구성이 그대로면 **다시 나누지 않는다**. 인스턴스 값만 제자리에서 갱신한다.
+        // 물체가 움직였다고 인스턴스와 배치 목록을 통째로 다시 만들면 GPUScene 빌드의 절반이 넘는다. 언리얼 GPUScene 도
+        // 프리미티브가 움직였다고 자료구조를 다시 만들지는 않는다.
+        const bool bRefreshed = bBatchKeysSame && refreshInstancesInPlace( bPartialCollect );
+        if ( bRefreshed == false )
+        {
+            instanceWork().clear();
+            _snapshot.clearBatches();
+            populateBatches();
+        }
+        {
+            SW_PROFILE_SCOPE( "GT.GPUScene.build.free" );
+            _materialRegistry.freeUnusedMaterialElements( _snapshot );
+        }
     }
 
     void GPUSceneBuilder::refreshReloadedTextures()
@@ -1024,10 +1033,7 @@ namespace sw
         // 상한을 넘기면 전체로 돌린다(그때는 구간 목록이 의미를 잃는다).
         _snapshot._listDirtyInstanceRun.clear();
         _snapshot._bAllInstancesDirty = SW_FALSE;
-        bool   bTooManyRuns           = false;
-        size_t lastDirtySlot          = static_cast<size_t>( -1 );
-
-        const uint32 rawCount = static_cast<uint32>( _listScratchRaw.size() );
+        bool bTooManyRuns             = false;
 
         // **바뀐 인스턴스만 훑는다.** 부분 수집을 했으면 어느 후보가 달라졌는지 알고, 후보에서 인스턴스로 가는
         // 역매핑이 있으니 그 슬롯만 고치면 된다. 8000개 중 10개가 움직일 때 이 루프가 59µs 에서 1µs 로 준다.
@@ -1040,205 +1046,30 @@ namespace sw
         const bool bFewDirty       = _listDirtyPrimitive.size() * 4 < _listScratchCandidate.size();
         const bool bPartialRefresh = bPartialCollect && bFewDirty && bTransparentOrderChanged == false &&
                                      _listCandidateToInstance.size() == _listScratchCandidate.size();
-        if ( bPartialRefresh == false )
-            _snapshot._spinInstanceCount = 0;
 
         SW_PROFILE_SCOPE( "GT.GPUScene.build.refresh.loop" );
         // 쓰기 슬롯을 잡는다. 전체 훑기는 슬롯 전부를 새로 쓰므로 낡은 내용이 상관없고, 부분 훑기는 건드리지 않을 위치가
         // 발행본과 같아야 하므로 먼저 맞춘다(슬롯이 발행된 뒤 바뀐 구간만).
         vector<GPUInstance>& work = instanceWork();
+        // 꼬리를 다시 만들 때는 접두부만 제자리 갱신한다.
+        const size_t slotCount = bTransparentOrderChanged ? opaqueInstanceCount : pPrevious->size();
         if ( bPartialRefresh )
         {
-            SW_PROFILE_SCOPE( "GT.GPUScene.build.refresh.sync" );
-            syncWriteSlotFromPublished();
+            {
+                SW_PROFILE_SCOPE( "GT.GPUScene.build.refresh.sync" );
+                syncWriteSlotFromPublished();
+            }
+            if ( refreshDirtyInstances( *pPrevious, slotCount, bTooManyRuns ) == false )
+                return false;
         }
         else
         {
+            _snapshot._spinInstanceCount = 0;
             work.resize( pPrevious->size() );
-        }
-        // 꼬리를 다시 만들 때는 접두부만 제자리 갱신한다.
-        const size_t slotCount = bTransparentOrderChanged ? opaqueInstanceCount : pPrevious->size();
-
-        // **전체 훑기는 청크로 나눠 병렬로 돈다.** 슬롯 구간이 연속이라 더티 구간도 청크 안에서 만들고
-        // 끝난 뒤 경계만 이어 붙인다. 부분 훑기는 더티 목록 순서라 구간이 흩어지므로 직렬 루프다.
-        //
-        // **투명 꼬리도 같은 병렬 구간에서 다시 만든다.** 블록 0이 꼬리다. 꼬리는 직렬(배치 방출)이고 접두부 갱신과
-        // 만지는 메모리가 겹치지 않는다. 접두부는 쓰기 슬롯의 [0, 불투명 수)를 포인터로 쓰고, 꼬리는 그 뒤에 붙인다.
-        // 접두부 청크를 다 기다린 뒤에 꼬리를 시작하면 두 시간이 더해진다. 호출하는 스레드가 첫 블록을 집으므로
-        // 꼬리는 대개 이 스레드가 돌고 워커들이 접두부를 나눠 갖는다. 워커가 먼저 집어도 결과는 같다.
-        if ( bPartialRefresh == false )
-        {
-            // 청크는 참여 스레드보다 넉넉히 많아야 한다(2048이면 불투명 6000개에 청크 셋이라 여섯 스레드 중 셋이 놀고,
-            // 갱신 구간이 청크 하나의 길이가 된다).
-            constexpr uint32 kRefreshChunkSize = 512;
-            const uint32     chunkCount        = static_cast<uint32>( ( slotCount + kRefreshChunkSize - 1 ) / kRefreshChunkSize );
-            _listRefreshChunk.resize( chunkCount );
-            for ( uint32 chunkIndex = 0; chunkIndex < chunkCount; ++chunkIndex )
-            {
-                InstanceRefreshChunk& chunk = _listRefreshChunk[chunkIndex];
-                chunk._start                = chunkIndex * kRefreshChunkSize;
-                chunk._end                  = static_cast<uint32>( MathUtil::min<size_t>( chunk._start + kRefreshChunkSize, slotCount ) );
-                chunk._spinCount            = 0;
-                chunk._runCount             = 0;
-                chunk._bFailed              = SW_FALSE;
-                chunk._bTooManyRun          = SW_FALSE;
-            }
-
-            // 꼬리가 병렬 구간 안에서 붙으므로 **붙일 공간을 먼저 확보한다**. 워커가 잡은 `data()` 가 재할당으로 옮겨지면 안 된다.
-            // 꼬리는 투명 원소마다 인스턴스 하나다.
-            if ( bTransparentOrderChanged )
-            {
-                const size_t tailCapacity = static_cast<size_t>( opaqueInstanceCount ) + _listScratchTransparentIdx.size();
-                work.reserve( tailCapacity );
-                _listInstanceSrcIndex.reserve( tailCapacity );
-            }
-
-            struct RefreshJob
-            {
-                GPUSceneBuilder*      _pBuilder{ nullptr };
-                GPUInstance*          _pInstance{ nullptr };
-                const GPUInstance*    _pPrevious{ nullptr };
-                const GPUInstance*    _pRaw{ nullptr };
-                const uint32*         _pSrcIndex{ nullptr };
-                uint32                _rawCount{ 0 };
-                InstanceRefreshChunk* _pChunk{ nullptr };
-                /// @brief 청크가 시작하는 블록 번호입니다. 1이면 블록 0이 투명 꼬리입니다.
-                uint32 _firstChunkBlock{ 0 };
-
-                void refreshRange( uint32 start, uint32 end )
-                {
-                    for ( uint32 blockIndex = start; blockIndex < end; ++blockIndex )
-                    {
-                        if ( blockIndex < _firstChunkBlock )
-                        {
-                            _pBuilder->rebuildTransparentTail();
-                            continue;
-                        }
-                        refreshInstanceChunk( _pInstance, _pPrevious, _pRaw, _pSrcIndex, _rawCount, _pChunk[blockIndex - _firstChunkBlock] );
-                    }
-                }
-            };
-            RefreshJob job{};
-            job._pBuilder        = this;
-            job._pInstance       = work.data();
-            job._pPrevious       = pPrevious->data();
-            job._pRaw            = _listScratchRaw.data();
-            job._pSrcIndex       = _listInstanceSrcIndex.data();
-            job._rawCount        = rawCount;
-            job._pChunk          = _listRefreshChunk.data();
-            job._firstChunkBlock = bTransparentOrderChanged ? 1u : 0u;
-
-            // 블록 하나면 나눌 것이 없다. 그래서 임계값은 2다.
-            engine::runParallel( chunkCount + job._firstChunkBlock, 2, SW_DELEGATE_METHOD( ParallelBlockDelegate, &RefreshJob::refreshRange, &job ) );
-
-            // 합친다. 실패가 하나면 전체 실패이고, 구간은 경계가 맞닿으면 잇고 상한을 넘으면 전체 더티다.
-            size_t totalRunCount = 0;
-            for ( const InstanceRefreshChunk& chunk : _listRefreshChunk )
-            {
-                if ( chunk._bFailed != SW_FALSE )
-                    return false;
-                _snapshot._spinInstanceCount += chunk._spinCount;
-                if ( chunk._bTooManyRun != SW_FALSE )
-                    bTooManyRuns = true;
-                totalRunCount += chunk._runCount;
-            }
-            if ( bTooManyRuns == false && totalRunCount > kMaxDirtyInstanceRun )
-                bTooManyRuns = true;
-            if ( bTooManyRuns == false )
-            {
-                for ( const InstanceRefreshChunk& chunk : _listRefreshChunk )
-                {
-                    for ( uint32 runIndex = 0; runIndex < chunk._runCount; ++runIndex )
-                    {
-                        const GPUInstanceRun& run = chunk._arrRun[runIndex];
-                        if ( _snapshot._listDirtyInstanceRun.empty() == false &&
-                             _snapshot._listDirtyInstanceRun.back()._start + _snapshot._listDirtyInstanceRun.back()._count == run._start )
-                            _snapshot._listDirtyInstanceRun.back()._count += run._count;
-                        else
-                            _snapshot._listDirtyInstanceRun.push_back( run );
-                    }
-                }
-            }
-        }
-
-        if ( bTransparentOrderChanged )
-        {
-            // 꼬리는 위 병렬 구간에서 이미 다시 만들었다. 통째로 새 값이다. 접두부 구간 뒤에 한 구간으로 이어 붙인다.
-            const uint32 tailCount = static_cast<uint32>( work.size() ) - opaqueInstanceCount;
-            if ( bTooManyRuns == false && tailCount > 0 )
-            {
-                if ( _snapshot._listDirtyInstanceRun.empty() == false &&
-                     _snapshot._listDirtyInstanceRun.back()._start + _snapshot._listDirtyInstanceRun.back()._count == opaqueInstanceCount )
-                    _snapshot._listDirtyInstanceRun.back()._count += tailCount;
-                else if ( _snapshot._listDirtyInstanceRun.size() >= kMaxDirtyInstanceRun )
-                    bTooManyRuns = true;
-                else
-                    _snapshot._listDirtyInstanceRun.push_back( GPUInstanceRun{ opaqueInstanceCount, tailCount } );
-            }
-        }
-
-        const size_t stepCount = bPartialRefresh ? _listDirtyPrimitive.size() : 0;
-        for ( size_t step = 0; step < stepCount; ++step )
-        {
-            size_t slot = step;
-            if ( bPartialRefresh )
-            {
-                const uint32 primitiveSlot = _listDirtyPrimitive[step];
-                if ( primitiveSlot >= _listPrimitiveToCandidate.size() )
-                    return false;
-                const uint32 candidateIndex = _listPrimitiveToCandidate[primitiveSlot];
-                if ( candidateIndex >= _listCandidateToInstance.size() )
-                    continue;
-                const uint32 instanceSlot = _listCandidateToInstance[candidateIndex];
-                if ( instanceSlot == kInvalidCandidateIndex )
-                    continue;
-                if ( instanceSlot >= slotCount )
-                    return false;
-                slot = instanceSlot;
-            }
-
-            const uint32 srcIndex = _listInstanceSrcIndex[slot];
-            if ( srcIndex >= rawCount )
+            if ( refreshAllInstancesParallel( *pPrevious, slotCount, bTransparentOrderChanged, bTooManyRuns ) == false )
                 return false;
-
-            // 배치 구성이 같으므로 _meshBatchIndex 와 _materialIndex 는 그대로다. 바뀐 것은
-            // 트랜스폼과 바운드, 회전 시드, 스프라이트 프레임과 색뿐이다. 판정과 복사는 청크 갱신과 **같은 헬퍼**다.
-            const GPUInstance& prev             = ( *pPrevious )[slot];
-            GPUInstance&       instance         = work[slot];
-            const GPUInstance& raw              = _listScratchRaw[srcIndex];
-            const bool         bChanged         = GPUSceneBuilderInternal::isPayloadChanged( prev, raw );
-            const uint32       previousSpinSeed = prev._spinSeed;
-            instance                            = prev;
-            GPUSceneBuilderInternal::copyPayload( raw, instance );
-            if ( bPartialRefresh )
-            {
-                const bool bSpinSeedRemoved = previousSpinSeed != 0 && instance._spinSeed == 0 && _snapshot._spinInstanceCount > 0;
-                if ( bSpinSeedRemoved )
-                    --_snapshot._spinInstanceCount;
-                else if ( previousSpinSeed == 0 && instance._spinSeed != 0 )
-                    ++_snapshot._spinInstanceCount;
-            }
-            else if ( instance._spinSeed != 0 )
-            {
-                ++_snapshot._spinInstanceCount;
-            }
-
-            if ( bChanged == false || bTooManyRuns )
-                continue;
-
-            if ( lastDirtySlot + 1 == slot && _snapshot._listDirtyInstanceRun.empty() == false )
-            {
-                ++_snapshot._listDirtyInstanceRun.back()._count;
-            }
-            else if ( _snapshot._listDirtyInstanceRun.size() >= kMaxDirtyInstanceRun )
-            {
-                bTooManyRuns = true;
-            }
-            else
-            {
-                _snapshot._listDirtyInstanceRun.push_back( GPUInstanceRun{ static_cast<uint32>( slot ), 1 } );
-            }
-            lastDirtySlot = slot;
+            if ( bTransparentOrderChanged )
+                appendTransparentTailRun( opaqueInstanceCount, bTooManyRuns );
         }
 
         if ( bTooManyRuns )
@@ -1257,6 +1088,176 @@ namespace sw
         // 스탬프는 원소에 찍는다. 인스턴스 8000개를 돌 필요 없이 배치가 기록해 둔 (배치, 원소) 쌍만 돈다.
         SW_PROFILE_SCOPE( "GT.GPUScene.build.refresh.stamp" );
         _materialRegistry.stampBatchElements( _snapshot.getAllBatches(), _batchElementTable.getBatchRanges(), _batchElementTable.getElementIndices() );
+        return true;
+    }
+
+    bool GPUSceneBuilder::refreshAllInstancesParallel( const vector<GPUInstance>& listPublishedInstance, size_t slotCount, bool bTransparentOrderChanged, bool& ioTooManyRuns )
+    {
+        // **전체 훑기는 청크로 나눠 병렬로 돈다.** 슬롯 구간이 연속이라 더티 구간도 청크 안에서 만들고
+        // 끝난 뒤 경계만 이어 붙인다.
+        //
+        // **투명 꼬리도 같은 병렬 구간에서 다시 만든다.** 블록 0이 꼬리다. 꼬리는 직렬(배치 방출)이고 접두부 갱신과
+        // 만지는 메모리가 겹치지 않는다. 접두부는 쓰기 슬롯의 [0, 불투명 수)를 포인터로 쓰고, 꼬리는 그 뒤에 붙인다.
+        // 접두부 청크를 다 기다린 뒤에 꼬리를 시작하면 두 시간이 더해진다. 호출하는 스레드가 첫 블록을 집으므로
+        // 꼬리는 대개 이 스레드가 돌고 워커들이 접두부를 나눠 갖는다. 워커가 먼저 집어도 결과는 같다.
+        vector<GPUInstance>& work = instanceWork();
+        // 청크는 참여 스레드보다 넉넉히 많아야 한다(2048이면 불투명 6000개에 청크 셋이라 여섯 스레드 중 셋이 놀고,
+        // 갱신 구간이 청크 하나의 길이가 된다).
+        constexpr uint32 kRefreshChunkSize = 512;
+        const uint32     chunkCount        = static_cast<uint32>( ( slotCount + kRefreshChunkSize - 1 ) / kRefreshChunkSize );
+        _listRefreshChunk.resize( chunkCount );
+        for ( uint32 chunkIndex = 0; chunkIndex < chunkCount; ++chunkIndex )
+        {
+            InstanceRefreshChunk& chunk = _listRefreshChunk[chunkIndex];
+            chunk._start                = chunkIndex * kRefreshChunkSize;
+            chunk._end                  = static_cast<uint32>( MathUtil::min<size_t>( chunk._start + kRefreshChunkSize, slotCount ) );
+            chunk._spinCount            = 0;
+            chunk._runCount             = 0;
+            chunk._bFailed              = SW_FALSE;
+            chunk._bTooManyRun          = SW_FALSE;
+        }
+
+        // 꼬리가 병렬 구간 안에서 붙으므로 **붙일 공간을 먼저 확보한다**. 워커가 잡은 `data()` 가 재할당으로 옮겨지면 안 된다.
+        // 꼬리는 투명 원소마다 인스턴스 하나다.
+        if ( bTransparentOrderChanged )
+        {
+            const size_t tailCapacity = static_cast<size_t>( _snapshot.getOpaqueInstanceCount() ) + _listScratchTransparentIdx.size();
+            work.reserve( tailCapacity );
+            _listInstanceSrcIndex.reserve( tailCapacity );
+        }
+
+        struct RefreshJob
+        {
+            GPUSceneBuilder*      _pBuilder{ nullptr };
+            GPUInstance*          _pInstance{ nullptr };
+            const GPUInstance*    _pPrevious{ nullptr };
+            const GPUInstance*    _pRaw{ nullptr };
+            const uint32*         _pSrcIndex{ nullptr };
+            uint32                _rawCount{ 0 };
+            InstanceRefreshChunk* _pChunk{ nullptr };
+            /// @brief 청크가 시작하는 블록 번호입니다. 1이면 블록 0이 투명 꼬리입니다.
+            uint32 _firstChunkBlock{ 0 };
+
+            void refreshRange( uint32 start, uint32 end )
+            {
+                for ( uint32 blockIndex = start; blockIndex < end; ++blockIndex )
+                {
+                    if ( blockIndex < _firstChunkBlock )
+                    {
+                        _pBuilder->rebuildTransparentTail();
+                        continue;
+                    }
+                    refreshInstanceChunk( _pInstance, _pPrevious, _pRaw, _pSrcIndex, _rawCount, _pChunk[blockIndex - _firstChunkBlock] );
+                }
+            }
+        };
+        RefreshJob job{};
+        job._pBuilder        = this;
+        job._pInstance       = work.data();
+        job._pPrevious       = listPublishedInstance.data();
+        job._pRaw            = _listScratchRaw.data();
+        job._pSrcIndex       = _listInstanceSrcIndex.data();
+        job._rawCount        = static_cast<uint32>( _listScratchRaw.size() );
+        job._pChunk          = _listRefreshChunk.data();
+        job._firstChunkBlock = bTransparentOrderChanged ? 1u : 0u;
+
+        // 블록 하나면 나눌 것이 없다. 그래서 임계값은 2다.
+        engine::runParallel( chunkCount + job._firstChunkBlock, 2, SW_DELEGATE_METHOD( ParallelBlockDelegate, &RefreshJob::refreshRange, &job ) );
+
+        // 합친다. 실패가 하나면 전체 실패이고, 구간은 경계가 맞닿으면 잇고 상한을 넘으면 전체 더티다.
+        size_t totalRunCount = 0;
+        for ( const InstanceRefreshChunk& chunk : _listRefreshChunk )
+        {
+            if ( chunk._bFailed != SW_FALSE )
+                return false;
+            _snapshot._spinInstanceCount += chunk._spinCount;
+            if ( chunk._bTooManyRun != SW_FALSE )
+                ioTooManyRuns = true;
+            totalRunCount += chunk._runCount;
+        }
+        if ( ioTooManyRuns == false && totalRunCount > kMaxDirtyInstanceRun )
+            ioTooManyRuns = true;
+        if ( ioTooManyRuns )
+            return true;
+        for ( const InstanceRefreshChunk& chunk : _listRefreshChunk )
+        {
+            for ( uint32 runIndex = 0; runIndex < chunk._runCount; ++runIndex )
+            {
+                const GPUInstanceRun& run = chunk._arrRun[runIndex];
+                if ( _snapshot._listDirtyInstanceRun.empty() == false &&
+                     _snapshot._listDirtyInstanceRun.back()._start + _snapshot._listDirtyInstanceRun.back()._count == run._start )
+                    _snapshot._listDirtyInstanceRun.back()._count += run._count;
+                else
+                    _snapshot._listDirtyInstanceRun.push_back( run );
+            }
+        }
+        return true;
+    }
+
+    void GPUSceneBuilder::appendTransparentTailRun( uint32 opaqueInstanceCount, bool& ioTooManyRuns )
+    {
+        // 꼬리는 병렬 구간에서 이미 다시 만들었다. 통째로 새 값이다. 접두부 구간 뒤에 한 구간으로 이어 붙인다.
+        const uint32 tailCount = static_cast<uint32>( instanceWork().size() ) - opaqueInstanceCount;
+        if ( ioTooManyRuns || tailCount == 0 )
+            return;
+        if ( _snapshot._listDirtyInstanceRun.empty() == false &&
+             _snapshot._listDirtyInstanceRun.back()._start + _snapshot._listDirtyInstanceRun.back()._count == opaqueInstanceCount )
+            _snapshot._listDirtyInstanceRun.back()._count += tailCount;
+        else if ( _snapshot._listDirtyInstanceRun.size() >= kMaxDirtyInstanceRun )
+            ioTooManyRuns = true;
+        else
+            _snapshot._listDirtyInstanceRun.push_back( GPUInstanceRun{ opaqueInstanceCount, tailCount } );
+    }
+
+    bool GPUSceneBuilder::refreshDirtyInstances( const vector<GPUInstance>& listPublishedInstance, size_t slotCount, bool& ioTooManyRuns )
+    {
+        // 부분 훑기는 더티 목록 순서라 구간이 흩어지므로 직렬 루프다. 회전 인스턴스 수는 증감으로 유지한다.
+        vector<GPUInstance>& work          = instanceWork();
+        const uint32         rawCount      = static_cast<uint32>( _listScratchRaw.size() );
+        size_t               lastDirtySlot = static_cast<size_t>( -1 );
+        for ( const uint32 primitiveSlot : _listDirtyPrimitive )
+        {
+            if ( primitiveSlot >= _listPrimitiveToCandidate.size() )
+                return false;
+            const uint32 candidateIndex = _listPrimitiveToCandidate[primitiveSlot];
+            if ( candidateIndex >= _listCandidateToInstance.size() )
+                continue;
+            const uint32 instanceSlot = _listCandidateToInstance[candidateIndex];
+            if ( instanceSlot == kInvalidCandidateIndex )
+                continue;
+            if ( instanceSlot >= slotCount )
+                return false;
+            const size_t slot     = instanceSlot;
+            const uint32 srcIndex = _listInstanceSrcIndex[slot];
+            if ( srcIndex >= rawCount )
+                return false;
+
+            // 배치 구성이 같으므로 _meshBatchIndex 와 _materialIndex 는 그대로다. 바뀐 것은
+            // 트랜스폼과 바운드, 회전 시드, 스프라이트 프레임과 색뿐이다. 판정과 복사는 청크 갱신과 **같은 헬퍼**다.
+            const GPUInstance& prev             = listPublishedInstance[slot];
+            GPUInstance&       instance         = work[slot];
+            const GPUInstance& raw              = _listScratchRaw[srcIndex];
+            const bool         bChanged         = GPUSceneBuilderInternal::isPayloadChanged( prev, raw );
+            const uint32       previousSpinSeed = prev._spinSeed;
+            instance                            = prev;
+            GPUSceneBuilderInternal::copyPayload( raw, instance );
+            const bool bSpinSeedRemoved = previousSpinSeed != 0 && instance._spinSeed == 0 && _snapshot._spinInstanceCount > 0;
+            if ( bSpinSeedRemoved )
+                --_snapshot._spinInstanceCount;
+            else if ( previousSpinSeed == 0 && instance._spinSeed != 0 )
+                ++_snapshot._spinInstanceCount;
+
+            if ( bChanged == false || ioTooManyRuns )
+                continue;
+
+            if ( lastDirtySlot + 1 == slot && _snapshot._listDirtyInstanceRun.empty() == false )
+                ++_snapshot._listDirtyInstanceRun.back()._count;
+            else if ( _snapshot._listDirtyInstanceRun.size() >= kMaxDirtyInstanceRun )
+                ioTooManyRuns = true;
+            else
+                _snapshot._listDirtyInstanceRun.push_back( GPUInstanceRun{ static_cast<uint32>( slot ), 1 } );
+            lastDirtySlot = slot;
+        }
         return true;
     }
 

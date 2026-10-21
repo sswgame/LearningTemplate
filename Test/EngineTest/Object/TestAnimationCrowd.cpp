@@ -408,21 +408,22 @@ SW_TEST_CASE( AnimationCrowdTest, CookedVertexAnimationMatchesRuntimeBake )
     SW_ASSERT_TRUE( skeleton->saveToFile( skeletonPath ) );
 
     VertexAnimationCookList list;
-    list._meshPath     = meshPath;
-    list._skeletonPath = skeletonPath;
-    list._clipFolder   = folder;
+    // 쿠커는 리소스 입구로 읽는다 — 임시 폴더는 리소스 id(`testtemp/…`)로 넘긴다. 쓰기(위 saveToFile)는 디스크 경로다.
+    list._meshPath     = ::test::makeTempResourceID( meshPath );
+    list._skeletonPath = ::test::makeTempResourceID( skeletonPath );
+    list._clipFolder   = ::test::makeTempResourceID( folder );
     list._listClip     = { hashed_string( "Wave" ), hashed_string( "Sway" ) };
     uint32 failedCount = 0;
     // 쿠킹 폴더를 비우면 메시 경로 곁에 쓴다 — 런타임이 같은 경로로 찾는다.
     SW_EXPECT_EQUAL( 2u, VertexAnimationCooker::cookList( list, string{}, 15.0f, failedCount ) );
     SW_EXPECT_EQUAL( 0u, failedCount );
 
-    const string cookedPath = MeshVertexAnimation::makeCookedPath( meshPath, hashed_string( "Wave" ) );
+    const string cookedPath = MeshVertexAnimation::makeCookedPath( list._meshPath, hashed_string( "Wave" ) );
     SW_EXPECT_TRUE( StringUtil::endsWith( cookedPath, "cube.wave.vat" ) );
     vector<uint8> cookedBytes;
     SW_ASSERT_TRUE( ResourceIO::readBinaryResource( cookedPath, cookedBytes ) );
     AnimationClip clip;
-    SW_ASSERT_TRUE( clip.loadFromResource( FileUtil::joinPath( folder, "wave.animclip" ) ) );
+    SW_ASSERT_TRUE( clip.loadFromResource( ::test::makeTempResourceID( FileUtil::joinPath( folder, "wave.animclip" ) ) ) );
     MeshVertexAnimation runtime;
     SW_ASSERT_TRUE( MeshVertexAnimationBaker::bake( *mesh, *skeleton, clip, 15.0f, false, runtime ) );
     vector<uint8> runtimeBytes;
@@ -435,7 +436,7 @@ SW_TEST_CASE( AnimationCrowdTest, CookedVertexAnimationMatchesRuntimeBake )
     // 쿠킹본이 있으면 런타임은 읽는다(굽지 않는다).
     AnimationCrowd crowd;
     crowd.setSettings( AnimationCrowdSettings{} );
-    SW_ASSERT_NOT_NULL( crowd.findVertexAnimationMesh( mesh, *skeleton, clip, false, meshPath ).get() );
+    SW_ASSERT_NOT_NULL( crowd.findVertexAnimationMesh( mesh, *skeleton, clip, false, list._meshPath ).get() );
     SW_EXPECT_EQUAL( 1u, crowd.getCookedVertexAnimationCount() );
 
     test::ScopedDefensiveTestLog expected( "a truncated or wrong-version vat is rejected" );

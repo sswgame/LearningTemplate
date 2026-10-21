@@ -290,7 +290,7 @@ SW_TEST_CASE( GlobalVariableTest, MultithreadedStringReadWriteThreadSafety )
     reader.join();
 
     SW_EXPECT_EQUAL( 0u, badReadCount.load() );
-    SW_EXPECT_TRUE_MSG( overlappedRead >= kMinOverlappedRead, "읽기가 쓰기와 거의 겹치지 않았다 — 아무것도 시험하지 않은 것이다" );
+    SW_EXPECT_TRUE_MSG( overlappedRead >= kMinOverlappedRead, "읽기가 쓰기와 거의 겹치지 않았다 — 아무것도 테스트하지 않은 것이다" );
 }
 
 /**

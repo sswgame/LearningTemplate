@@ -20,6 +20,7 @@ namespace sw
     enum class RHIBackend : uint32;
 
     struct float4;
+    struct ShaderBufferInfo;
     struct ShaderCompileResult;
     struct ShaderReflectionData;
 
@@ -253,6 +254,11 @@ namespace sw
         bool getScalarParameter( hashed_string name, float32& outValue ) const;
 
     private:
+        /** @brief 프로퍼티가 없는 머티리얼에 리플렉션 스키마의 멤버를 프로퍼티로 채우고(텍스처 인덱스 멤버는 텍스처 속성) 바이트를 쌓습니다. */
+        void fillPropertiesFromSchema( const ShaderBufferInfo& schema );
+        /** @brief 있는 프로퍼티를 스키마 멤버에 맞춰 오프셋 · 크기 · 셰이더 타입을 받습니다. 없거나 크기가 맞지 않는 프로퍼티가 있으면 false 입니다. */
+        [[nodiscard]] bool matchPropertiesToSchema( const ShaderBufferInfo& schema );
+
         /// @brief 비동기 파일 로드가 머티리얼이 아직 살아 있는지 확인하는 상태입니다. 소멸자가 포인터를 끊습니다.
         struct AsyncLoadState
         {

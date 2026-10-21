@@ -10,6 +10,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Common/EngineServices.h"
+#include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Text/FontService.h"
 #include "Engine/Text/IFontRasterizer.h"
 
@@ -174,7 +176,8 @@ namespace sw::test
         FakeFontRasterizer*     _pRasterizer; ///< FontService 이 소유한 가짜(설정을 고칠 때)
         unique_ptr<FontService> _fontService; ///< 테스트 대상
 
-        explicit FakeFontServiceFixture( const LocalizationManager* pLocalization = nullptr )
+        /** @param pLocalization 대체 목록을 묻는 곳. 기본값은 지금 묶인 엔진 범위의 것이다(엔진 서브시스템이 `initializeSubsystem` 에서 받는 것과 같다). */
+        explicit FakeFontServiceFixture( const LocalizationManager* pLocalization = engine::findSubsystem<LocalizationManager>() )
             : _pRasterizer{ nullptr }
             , _fontService{}
         {

@@ -73,7 +73,7 @@ class CheckAcronymSpellingGate(LintGate):
                             help="이 약어도 강제한다(UI · Gpu …, 쉼표로 여럿, `all` 은 전부) — 등록부의 kEnforced 에 더한다")
         parser.add_argument("--verbose", action="store_true", help="강제하지 않는 약어의 남은 철자 수를 약어별로 찍는다")
         parser.add_argument("--enforce-only", action="append", default=None,
-                            help="등록부의 kEnforced 대신 이 약어만 강제한다(시험용 — 등록부 상태와 무관하게 '강제 전엔 보고만' 을 본다)")
+                            help="등록부의 kEnforced 대신 이 약어만 강제한다(테스트용 — 등록부 상태와 무관하게 '강제 전엔 보고만' 을 본다)")
 
     sourceScanRoots = kLintTargetRelDirs
     sourceSuffixes = registry.kCodeSuffix

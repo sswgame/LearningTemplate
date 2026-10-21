@@ -259,9 +259,9 @@ SW_TEST_CASE( AppearanceTest, ExportedPresetRoundTripsAndOverlaysItsParent )
     SW_ASSERT_TRUE( doc.saveFile( path ) );
 
     const size_t presetCount = fixture._database.getPresets().getPresets().size();
-    SW_ASSERT_TRUE_MSG( fixture._database.loadPresetFile( path ), fixture._database.getReport().joined().c_str() );
+    SW_ASSERT_TRUE_MSG( fixture._database.loadPresetFile( ::test::makeTempResourceID( path ) ), fixture._database.getReport().joined().c_str() );
     SW_EXPECT_EQUAL( presetCount + 1, fixture._database.getPresets().getPresets().size() );
-    SW_ASSERT_TRUE_MSG( fixture._database.loadPresetFile( path ), fixture._database.getReport().joined().c_str() ); // 다시 올리면 바꾼다
+    SW_ASSERT_TRUE_MSG( fixture._database.loadPresetFile( ::test::makeTempResourceID( path ) ), fixture._database.getReport().joined().c_str() ); // 다시 올리면 바꾼다
     SW_EXPECT_EQUAL( presetCount + 1, fixture._database.getPresets().getPresets().size() );
 
     CharacterAppearanceSpec spec;

@@ -45,6 +45,7 @@ namespace sw
         return index < _listUavSourceBuffer.size() ? _listUavSourceBuffer[index] : RHIBufferHandle{ 0 };
     }
 
+    // 길이 유지(긴 함수 정리 기준): 세트 레이아웃 · 파이프라인 레이아웃 · 풀 · 세트 생성의 순서가 곧 의미라 나누지 않는다.
     bool VulkanRHIDevice::createDescriptorResources()
     {
         if ( _device == VK_NULL_HANDLE )

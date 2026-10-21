@@ -24,7 +24,7 @@
 - Editor: 2026-10-22 `wt/onlineclean` 에서 대조표 낱말(표 · 칸 · 자리 · 정본 · 창구 · 묶음 · 뿌리 · 든다 · 떼다 · 올리다 · 내리다 등) 239 개 파일을 뜻을 가려 다시 썼다. 생성 파일 `EditorIconGlyphs.h` 의 "뗀" 은 생성기(`GenerateEditorIcons.py`)에서 고쳐야 한다. 이전 기록: 주석 25 줄 이상인 파일(`Common/GUI`, `Commands`, `Viewport` 등)과 그보다 짧은 파일. `Common` 은 옛 어휘가 가장 많던 22 개를 2026-10-21 에 다시 썼고(서비스, 선택, 컨텍스트, 미리보기 창, 씬과 변환 커맨드, 로컬라이즈 테이블, 높이장 임포터 등), `Panels` 는 옛 어휘가 많던 23 개 파일을 다시 썼다(2026-10-21). 나머지는 옛 어휘가 파일당 10 곳 미만이다. `EditorIconGlyphs.h` 는 생성 파일이라 제외한다.
 - GameFramework: Base 헤더는 끝났다(2026-10-21). 다른 작업이 고치던 헤더 열한 개(`GameInstanceBase.h`, `IGame.h`, `GameSettings.h`, `GameDataXML.h`, Online 의 `ServerDirectoryControl.h`, `BlockingHTTPClient.h`, `GroupChannelMembership.h`, `ServiceReport.h`, `NetSecurity.h`, `OnlineServerKit.h`, `OnlineServiceHost.h`)와 Base 의 .cpp · .inl 이 남았다. Kits/Feature/Online 의 Account 밖 폴더(옛 어휘 꼬리표 · 그새 · 거두다 · 짓다 · 정본 · 견주다는 2026-10-21 `wt/kitclean` 에서 Kits/Feature 전체를 고쳤다. `NetPairedAnimation` 은 `wt/animation` 이 새로 만든 파일이라 남겼다).
 - Core: 열 폴더(Math · Process · Delegate · Memory · Diagnostics · CommandLine · Container · Task · LogSink · String)는 대조표 용어만 2026-10-21 정리했다(Network · File 도 같다). 문체 다듬기(이름 풀이 · 코드가 이미 말하는 말 지우기)는 Container 의 표준 컨테이너 대응 헤더(`deque` · `list` · `set` · `map` · `unordered_*` · `string` · `vector`)만 2026-10-22 에 끝났고, 나머지 아홉 폴더와 Container 의 다른 파일은 남았다. RuntimeAPI 는 손대지 않았다. Games 는 Empty 벤치 씬 일부와 VoxelCraft 전체.
-- 용어 '시험' → '테스트': `Scripts/**` · `Test/**` · `docs/Config/**` 약 300 곳(2026-10-13 셈)과 셰이더 주석 2 곳(`waterwaveprobe.hlsl` · `lighting2d.hlsli`). 셰이더는 바꾸면 `App --cook-shaders` 로 다시 쿠킹한다.
+- 용어 '시험' → '테스트': 문서 · 스크립트 · 테스트 · 소스 · 생성 설정 문서는 끝났다(2026-10-22, `wt/cleanup347`). 남은 것은 셰이더 주석 2 곳(`waterwaveprobe.hlsl` · `lighting2d.hlsli`)이고, 바꾸면 `App --cook-shaders` 로 다시 쿠킹하므로 셰이더를 다시 쿠킹하는 작업과 함께 한다. 대조표 자체(`10_WritingDocs.md`)와 `CLAUDE.md` · `.claude/agents` 는 고치지 않았다.
 함정: 파일이 겹쳐 미뤄진 정리입니다. 같은 폴더를 다른 작업이 건드리는 중이면 미룹니다.
 
 ### NamingAuditNext
@@ -49,7 +49,7 @@
 옛번호: C-74
 왜 필요한가: 빌드 조건이 바뀌어 근거가 무효가 된 측정을 다시 잰다. 2026-10-20 조사로 폐기 · 태그 · 낡은 값 표시는 끝냈고, 아래는 실제로 재야 하는 것이다(각각의 후보 절에 자세한 조건이 있다).
 남은 것:
-- `HalfResolutionBloomMeasurement`(옛 D2-9) · `TerrainWaterVegetationRemainders`(옛 D2-5 ⑹ · ⑺, Debug 값을 Release 로) · `HeaderIncludeSlimming` ②(옛 C-13, 2026-10-05 측정 기준이라 지금 TU 수로 다시 판정) · `RuntimeQualityAdjust` ②(옛 C-29, 13 ~ 20 ms 프레임의 Tracy) · `BuildSpeed` 5 단계(옛 C-2, 공유 설치가 조용할 때).
+- `HalfResolutionBloomMeasurement`(옛 D2-9) · `TerrainWaterVegetationRemainders`(옛 D2-5 ⑹ · ⑺, Debug 값을 Release 로) · `RuntimeQualityAdjust` ②(옛 C-29, 13 ~ 20 ms 프레임의 Tracy) · `BuildSpeed` 5 단계(옛 C-2, 공유 설치가 조용할 때).
 - `UdpSocketLayerScaling`(옛 B-10): Windows 서버 스레드 % 는 다른 빌드의 CPU 부하가 섞여 무효로 표시했다. 다른 빌드가 없을 때 다시 잰다.
 - 부하 기준선(`Test/Load/Baselines.json` 의 connect · replication · soak 은 커밋 `14c775c55`, 2026-10-15)은 온라인 B([리플렉션 형식 계획](ReflectionFormats.md)) 이전 값이다. B 가 들어간 뒤 `py -3 -m Scripts load suite baseline --runs 3 --record` 로 다시 뜬다(옛 C-29 ⑤).
 함정: 항목이 이름 체계로 옮겨지는 중이라 옛 번호는 `py -3 -m Scripts plans --find` 로 새 이름을 먼저 찾는다.

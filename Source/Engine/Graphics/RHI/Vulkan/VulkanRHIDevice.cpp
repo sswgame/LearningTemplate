@@ -138,6 +138,7 @@ namespace sw
         return _frameStreamContext.get();
     }
 
+    // 길이 유지(긴 함수 정리 기준): 인스턴스 · 물리 디바이스 · 논리 디바이스 · 스왑체인 생성의 순서가 곧 의미라 나누지 않는다.
     bool VulkanRHIDevice::initializeInternal( const RHISwapChainDesc& desc )
     {
         _pHWnd          = desc._pWindowHandle;
@@ -294,6 +295,7 @@ namespace sw
         RHILiveCommandListUtil::detachAll( _liveCmdListMutex, _listLiveCmd );
     }
 
+    // 길이 유지(긴 함수 정리 기준): 생성의 역순으로 놓는 해제 목록(GPU 유휴 대기 뒤)이라 나누지 않는다.
     void VulkanRHIDevice::shutdownInternal()
     {
         if ( _device )

@@ -2,7 +2,7 @@
     "_name": "SWGame",
     "_version": "1.0.0",
     "_kind": "Game",
-    "_description": "PixelTown — 탑다운 RPG 2D 시험 게임(타일 걸음 마을 · NPC 대화) — GF_Overworld 키트를 쓴다",
+    "_description": "PixelTown — 탑다운 RPG 2D 테스트 게임(타일 걸음 마을 · NPC 대화) — GF_Overworld 키트를 쓴다",
     "_listDependency": [
         {
             "_name": "GameFramework"

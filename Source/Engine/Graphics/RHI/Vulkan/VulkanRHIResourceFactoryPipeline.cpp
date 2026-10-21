@@ -24,6 +24,7 @@ namespace sw
 {
     SW_LOG_CALLER( "VulkanRHIResourceFactory" );
 
+    // 길이 유지(긴 함수 정리 기준): 파이프라인 상태 서술을 단계 순서로 채운 뒤 만드는 선형 목록이라 나누지 않는다.
     RHIPipelineStateHandle VulkanRHIResourceFactory::createPipelineState( const RHIPipelineStateDesc& desc )
     {
         // 서술체 해석(진입점 기본값 · define · 깊이 전용 판정 · RT 수)은 RHIShaderRequest 하나가 한다. 백엔드는 받기만 한다.

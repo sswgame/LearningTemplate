@@ -96,7 +96,7 @@ def generateLintTargets(outputPath: Path) -> None:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    return runGenerator(argv, tag=kTag, description="lint/gate · selftest 폴더 → CMake 린트 타깃 · 시험",
+    return runGenerator(argv, tag=kTag, description="lint/gate · selftest 폴더 → CMake 린트 타깃 · 테스트",
                         addArguments=lambda parser: parser.add_argument("output", type=Path, help="쓸 .cmake 파일"),
                         generate=lambda args: generateLintTargets(args.output))
 

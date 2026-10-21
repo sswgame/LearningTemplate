@@ -60,7 +60,7 @@ SW_TEST_CASE( RenderPassTest, XMLSerializationRoundtrip )
     SW_EXPECT_TRUE( passRes.saveToXMLFile( testPath ) );
 
     sw::RenderPassAsset loadedRes;
-    SW_EXPECT_TRUE( loadedRes.loadFromXMLFile( testPath ) );
+    SW_EXPECT_TRUE( loadedRes.loadFromXMLFile( ::test::makeTempResourceID( testPath ) ) );
     SW_EXPECT_EQUAL( sw::string( "UnitTestRenderPass" ), loadedRes.getDesc()._name );
     SW_EXPECT_EQUAL( size_t( 1 ), loadedRes.getDesc()._listAttachment.size() );
     SW_EXPECT_EQUAL( sw::string( "Color0" ), loadedRes.getDesc()._listAttachment[0]._name );
@@ -132,7 +132,7 @@ SW_TEST_CASE( RenderPassTest, PipelineXMLSerializationRoundtrip )
     SW_EXPECT_TRUE( pipeRes.saveToXMLFile( testPath ) );
 
     sw::RenderPipelineAsset loadedRes;
-    SW_EXPECT_TRUE( loadedRes.loadFromXMLFile( testPath ) );
+    SW_EXPECT_TRUE( loadedRes.loadFromXMLFile( ::test::makeTempResourceID( testPath ) ) );
     SW_EXPECT_EQUAL( sw::string( "UnitTestPipeline" ), loadedRes.getDesc()._name );
     SW_EXPECT_EQUAL( sw::string( "Forward" ), loadedRes.getDesc()._shadingModel );
     SW_EXPECT_EQUAL( size_t( 1 ), loadedRes.getDesc()._listAttachment.size() );
@@ -164,7 +164,7 @@ SW_TEST_CASE( RenderPassTest, PipelineRejectsLegacyRenderPassDescRoot )
     }
 
     sw::RenderPipelineAsset loaded;
-    SW_EXPECT_FALSE( loaded.loadFromXMLFile( testPath ) );
+    SW_EXPECT_FALSE( loaded.loadFromXMLFile( ::test::makeTempResourceID( testPath ) ) );
 }
 
 // ------------------------------------------------------------------------------
@@ -905,7 +905,7 @@ SW_TEST_CASE( RenderPassTest, PipelineExtendedStagesRoundtrip )
     SW_EXPECT_TRUE( pipeRes.saveToXMLFile( testPath ) );
 
     sw::RenderPipelineAsset loadedRes;
-    SW_EXPECT_TRUE( loadedRes.loadFromXMLFile( testPath ) );
+    SW_EXPECT_TRUE( loadedRes.loadFromXMLFile( ::test::makeTempResourceID( testPath ) ) );
     SW_EXPECT_EQUAL( size_t( 1 ), loadedRes.getGraphPass().size() );
 
     const sw::RenderGraphPassDesc& loadedPass = loadedRes.getGraphPass()[0];
@@ -967,7 +967,7 @@ SW_TEST_CASE( RenderPassTest, PipelineEmptyStagesSkipped )
 
     // 다시 로드했을 때 기본 빈 문자열 상태가 안전하게 유지되는지 검증
     sw::RenderPipelineAsset loadedRes;
-    SW_EXPECT_TRUE( loadedRes.loadFromXMLFile( testPath ) );
+    SW_EXPECT_TRUE( loadedRes.loadFromXMLFile( ::test::makeTempResourceID( testPath ) ) );
     const sw::RenderGraphPassDesc& loadedPass = loadedRes.getGraphPass()[0];
     SW_EXPECT_TRUE( loadedPass._geometryEntryPoint.empty() );
     SW_EXPECT_TRUE( loadedPass._hullEntryPoint.empty() );

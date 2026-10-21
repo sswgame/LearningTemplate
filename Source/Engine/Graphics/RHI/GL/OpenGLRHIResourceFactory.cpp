@@ -477,6 +477,7 @@ namespace sw
         return true;
     }
 
+    // 길이 유지(긴 함수 정리 기준): 텍스처 생성 · 저장소 할당 · 매개변수 · 초기 데이터의 순서가 곧 의미라 나누지 않는다.
     RHITextureHandle OpenGLRHIResourceFactory::createTexture2D( const RHITextureDesc& desc )
     {
         const bool bInvalidTextureRequest = _pDevice->_bInitialized == SW_FALSE || desc._width == 0 || desc._height == 0;

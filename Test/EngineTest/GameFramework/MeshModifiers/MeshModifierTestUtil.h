@@ -1,6 +1,6 @@
 /**
  * @file MeshModifierTestUtil.h
- * @brief 메시 모디파이어 테스트가 함께 쓰는 도우미 — 시험용 상자 메시, 비교, 결정적 매개변수 채우기, 가짜 외부 입력.
+ * @brief 메시 모디파이어 테스트가 함께 쓰는 도우미 — 테스트용 상자 메시, 비교, 결정적 매개변수 채우기, 가짜 외부 입력.
  */
 #pragma once
 #include "Core/Container/string.h"

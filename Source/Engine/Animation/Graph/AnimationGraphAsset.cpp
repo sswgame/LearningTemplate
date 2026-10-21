@@ -71,6 +71,19 @@ namespace sw
         return parseRoot( doc.getRoot() );
     }
 
+    bool AnimationGraphAsset::loadFromDiskFile( string_view diskPath )
+    {
+        SW_MEMORY_SCOPE( Animation );
+        clear();
+        if ( diskPath.empty() )
+            return false;
+
+        JSONDocument doc;
+        if ( doc.loadFile( diskPath ) == false )
+            return false;
+        return parseRoot( doc.getRoot() );
+    }
+
     bool AnimationGraphAsset::saveToFile( string_view path ) const
     {
         if ( path.empty() )

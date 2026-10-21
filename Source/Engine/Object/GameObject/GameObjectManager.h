@@ -554,6 +554,8 @@ namespace sw
         StructuralChangeBuffer _structuralChangeBuffer;
         /** @brief 트랜스폼 계층입니다. */
         SceneTransformHierarchy _transformHierarchy;
+        // 레지스트리 셋은 값 멤버로 둔다. 헤더가 Core 만 include 해 `unique_ptr` 로 빼도 퍼지는 include 가 줄지 않고, 3 개월 동안 1 ~ 3 번 바뀌어
+        // 다시 빌드를 아끼는 이득도 없다(2026-10-21 판정, 이 헤더는 같은 기간 112 번). 접근마다 간접 참조만 는다.
         /** @brief 그릴 수 있는 컴포넌트의 레지스트리입니다. */
         PrimitiveRegistry _primitiveRegistry;
         /** @brief 타입별 컴포넌트 레지스트리입니다(빛 포함). */

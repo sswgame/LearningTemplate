@@ -4119,7 +4119,7 @@ SW_TEST_CASE( RenderPassGPUTest, ReloadedTextureIsReboundToMaterialsAndBatches )
     if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend for the texture reload rebinding test" );
     // 지연 해제(DX12 · Vulkan)가 있으면 새 인덱스는 언제나 다르다 — 그것조차 없으면 이 테스트는 아무것도 보지 못한 것이다.
-    SW_EXPECT_TRUE_MSG( changedIndexCount > 0, "어느 백엔드에서도 다시 올린 텍스처의 인덱스가 바뀌지 않았습니다 — 시험이 결함을 볼 수 없습니다" );
+    SW_EXPECT_TRUE_MSG( changedIndexCount > 0, "어느 백엔드에서도 다시 올린 텍스처의 인덱스가 바뀌지 않았습니다 — 테스트가 결함을 볼 수 없습니다" );
 }
 
 /**
@@ -5403,7 +5403,7 @@ SW_TEST_CASE( RenderPassGPUTest, NormalsStayPerpendicularUnderNonUniformScale )
                 const sw::float3   expected          = sw::float3::transformVector( localNormal, world.invert().transpose() ).normalize();
                 const sw::float3   worldMatrixNormal = sw::float3::transformVector( localNormal, world ).normalize();
                 SW_ASSERT_TRUE_MSG( expected.dot( worldMatrixNormal ) < kBlindDotLimit,
-                                    ( label + "배치가 시험이 되지 않는다 — 월드 행렬로 옮긴 노멀이 기대와 거의 같다 " + describeVector( worldMatrixNormal ) ).c_str() );
+                                    ( label + "배치가 테스트가 되지 않는다 — 월드 행렬로 옮긴 노멀이 기대와 거의 같다 " + describeVector( worldMatrixNormal ) ).c_str() );
 
                 sw::FrameRenderer renderer;
                 const bool        bReady = renderer.initialize( device.get(), ::test::getEngineDefaultAssets()._defaultDeferredPipeline.c_str() ) && renderer.isReady();
@@ -7424,7 +7424,7 @@ SW_TEST_CASE( RenderPassGPUTest, CameraCutResetsTaaHistory )
         if ( bOk == false )
             continue;
         SW_LOG_INFO( "%#TaaColor R-B without cut %#, with cut %#", label, arrDiff[0], arrDiff[1] );
-        SW_EXPECT_TRUE_MSG( arrDiff[0] > 0, ( label + "컷 없이도 지난 색이 남지 않았다 — 시험이 TAA 기록을 재지 못한다 (R-B " + sw::to_string( arrDiff[0] ) + ")" ).c_str() );
+        SW_EXPECT_TRUE_MSG( arrDiff[0] > 0, ( label + "컷 없이도 지난 색이 남지 않았다 — 테스트가 TAA 기록을 재지 못한다 (R-B " + sw::to_string( arrDiff[0] ) + ")" ).c_str() );
         SW_EXPECT_TRUE_MSG( arrDiff[1] < -20, ( label + "컷 프레임에 지난 색이 섞였다 (R-B " + sw::to_string( arrDiff[1] ) + ")" ).c_str() );
     }
     if ( sweep.getReadyCount() == 0 )
@@ -7448,7 +7448,7 @@ SW_TEST_CASE( RenderPassGPUTest, PortraitRendererDrawsAPrefabInIsolation )
         const sw::Scene*     pActive      = sceneManager.getActiveScene();
         const size_t         activeCount  = pActive != nullptr && pActive->getObjectManager() != nullptr ? pActive->getObjectManager()->getAllGameObjects().size() : 0;
         sw::PortraitRenderer portrait;
-        bool                 bOk = portrait.initialize( device.get() );
+        bool                 bOk = portrait.initialize( device.get(), sceneManager.getEngineServices() );
         sw::PortraitRequest  request;
         request._prefabPath = kPrefab;
         request._width      = 96;

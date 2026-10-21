@@ -601,7 +601,7 @@ SW_TEST_CASE( TestFrameworkTest, RequiredBackendsAreReadByCookTableNames )
 
 /**
  * @brief [TestFrameworkTest] `--help` 를 주고 띄우면 도움말만 찍고 케이스를 하나도 돌리지 않은 채 종료 코드 0 으로 곧 끝난다
- * @details 하네스가 `--help` 를 모르면 엔진 명령줄이 모르는 인자로 무시하고 전체 시험을 돈다 — 도움말을 보려던 사람에게는 끝나지 않는 실행이다.
+ * @details 하네스가 `--help` 를 모르면 엔진 명령줄이 모르는 인자로 무시하고 전체 테스트를 돈다 — 도움말을 보려던 사람에게는 끝나지 않는 실행이다.
  *          필터는 건너뛰는 자식 역할 케이스 하나만 고르게 해, 고치기 전 하네스에서도 이 케이스가 자기 자신을 다시 띄우지 않는다.
  */
 SW_TEST_CASE( TestFrameworkTest, HelpPrintsUsageAndExitsWithoutRunningCases )

@@ -2,7 +2,7 @@
     "_name": "SWGame",
     "_version": "1.0.0",
     "_kind": "Game",
-    "_description": "VoxelCraft — 복셀 샌드박스 시험 게임(마인크래프트 장르) — GF_Voxel 키트(1인칭 시점은 GameFramework 기반의 FirstPersonLook)",
+    "_description": "VoxelCraft — 복셀 샌드박스 테스트 게임(마인크래프트 장르) — GF_Voxel 키트(1인칭 시점은 GameFramework 기반의 FirstPersonLook)",
     "_listDependency": [
         {
             "_name": "GameFramework"

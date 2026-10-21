@@ -335,5 +335,9 @@ namespace sw
         void issueBarriers( IRHICommandList* pCmdList );
         /** @brief compile() 끝에서 리소스 수명을 채우고, 쓰이지 않는 자원과 쓰인 적 없는 자원을 로그로 알립니다. */
         void computeResourceLifetimes();
+        /** @brief 병렬 기록 전에 모든 레벨의 패스 커맨드 리스트를 마련합니다(디바이스가 바뀌면 지난 것을 놓는다). 하나라도 못 만들면 false 이고 아무것도 내지 않습니다. */
+        [[nodiscard]] bool prepareParallelCommandLists( IRHIDevice* pDevice );
+        /** @brief 레벨 하나의 배리어를 첫 리스트 앞머리에 발행하고, 패스들을 병렬로 기록한 뒤 큐 순서대로 제출합니다. 모르는 패스면 false 입니다. */
+        [[nodiscard]] bool recordAndSubmitLevel( RenderGraphExecutionContext& context, const vector<hashed_string>& listLevelPass, TaskManager* pTaskManager, IRHIDevice* pDevice );
     };
 } // namespace sw

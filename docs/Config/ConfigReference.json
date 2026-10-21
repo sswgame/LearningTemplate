@@ -2677,7 +2677,7 @@
    "name": "gv_aiDirectorTrace",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "AIDirector: log every phase change, spawn, encounter and reward (1=on)",
    "source": "Source/GameFramework/Base/Actor/AI/Director/AIDirector.cpp"
   },
@@ -2685,7 +2685,7 @@
    "name": "gv_animationForceVertexAnimation",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "Draw every crowd-shared unit with vertex animation regardless of distance (verification)",
    "source": "Source/Engine/Object/SceneAnimation/AnimationSystem.cpp"
   },
@@ -2701,7 +2701,7 @@
    "name": "gv_animationRewind",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "Record animation rewind history (poses, graph state, notifies, curves, root motion)",
    "source": "Source/Engine/Object/SceneAnimation/AnimationRewind.cpp"
   },
@@ -2709,7 +2709,7 @@
    "name": "gv_animationRewindSeconds",
    "type": "float32",
    "default": "10.0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "Seconds of animation rewind history kept per unit",
    "source": "Source/Engine/Object/SceneAnimation/AnimationRewind.cpp"
   },
@@ -2717,7 +2717,7 @@
    "name": "gv_arenaAutoPlay",
    "type": "int32",
    "default": "0",
-   "kind": "시험 · 배포본에도",
+   "kind": "테스트 · 배포본에도",
    "description": "AbilityArena: 플레이어도 AI 가 조종 (1=켜기)",
    "source": "Source/Games/AbilityArena/ArenaDirectorComponent.cpp"
   },
@@ -2733,7 +2733,7 @@
    "name": "gv_assetLoadReport",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "엔진 종료 때 에셋 로드 표를 로그로 (1=켜기)",
    "source": "Source/Engine/Resource/AssetLoadProfiler.cpp"
   },
@@ -2741,7 +2741,7 @@
    "name": "gv_audioDumpPath",
    "type": "string",
    "default": "",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "오프라인 오디오 렌더를 내릴 때 이 WAV 로 남김(비면 끄기)",
    "source": "Source/Engine/Audio/IAudioService.cpp"
   },
@@ -2749,7 +2749,7 @@
    "name": "gv_authorityGhostPort",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "서버 디버그 채널 포트 - 서버 포즈를 고스트로 겹침 (0=끄기)",
    "source": "Source/Engine/Scene/AuthorityGhost.cpp"
   },
@@ -2757,7 +2757,7 @@
    "name": "gv_authorityGhostToken",
    "type": "string",
    "default": "",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "서버 디버그 채널 토큰",
    "source": "Source/Engine/Scene/AuthorityGhost.cpp"
   },
@@ -2765,7 +2765,7 @@
    "name": "gv_automationHashDump",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "Scene.TransformHash 를 읽을 때 오브젝트마다 이름 · 위치를 로그로 (1=켜기, 결정성 진단)",
    "source": "Source/Engine/Automation/AutomationRunner.cpp"
   },
@@ -2773,7 +2773,7 @@
    "name": "gv_benchAnimate",
    "type": "int32",
    "default": "1",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "벤치의 시간 구동 변화(회전·상하 이동·스케일) (0=멈춤, 픽셀 비교 검증용)",
    "source": "Source/Games/Empty/BenchScene.cpp"
   },
@@ -2781,7 +2781,7 @@
    "name": "gv_benchCharacterColumns",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "벤치 캐릭터를 N 열 격자로 세운다 (0=한 줄)",
    "source": "Source/Games/Empty/BenchScene.cpp"
   },
@@ -2789,7 +2789,7 @@
    "name": "gv_benchCharacters",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "벤치 스킨드 캐릭터 수 (0=사용 안 함, KayKit 기사 · Idle/Walking_A)",
    "source": "Source/Games/Empty/BenchScene.cpp"
   },
@@ -2797,7 +2797,7 @@
    "name": "gv_benchCharacterStagger",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "벤치 캐릭터 시작 시각을 흩는다 (0=모두 0 초)",
    "source": "Source/Games/Empty/BenchScene.cpp"
   },
@@ -2805,7 +2805,7 @@
    "name": "gv_benchCombat",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "벤치 전투 연출 (0=사용 안 함, KayKit 스켈레톤 — 알림 · 히트 존 · 래그돌 · 칼 떨어뜨리기)",
    "source": "Source/Games/Empty/BenchScene.cpp"
   },
@@ -2813,7 +2813,7 @@
    "name": "gv_benchCrowdShare",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "벤치 캐릭터 군중 포즈 공유 (0=캐릭터마다 사본 · 1=그룹 공유 + 먼 캐릭터 VAT)",
    "source": "Source/Games/Empty/BenchScene.cpp"
   },
@@ -2821,15 +2821,15 @@
    "name": "gv_benchFaces",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
-   "description": "벤치 시험 머리 수 (0=사용 안 함, 모프 · 표정 · 립싱크 · 깜빡임 · 시선)",
+   "kind": "테스트",
+   "description": "벤치 테스트 머리 수 (0=사용 안 함, 모프 · 표정 · 립싱크 · 깜빡임 · 시선)",
    "source": "Source/Games/Empty/BenchScene.cpp"
   },
   {
    "name": "gv_benchGround",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "격자 아래에 바닥 평면을 깝니다 (그림자를 받는 면)",
    "source": "Source/Games/Empty/BenchScene.cpp"
   },
@@ -2837,7 +2837,7 @@
    "name": "gv_benchInstanced",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "1 이면 큐브를 GameObject 없이 메시 인스턴스 배치로 만든다 (기본 0)",
    "source": "Source/Games/Empty/BenchScene.cpp"
   },
@@ -2845,7 +2845,7 @@
    "name": "gv_benchLightRadius",
    "type": "float32",
    "default": "0.0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "벤치 라이트 반경 (0=격자 간격에서 정한다)",
    "source": "Source/Games/Empty/BenchScene.cpp"
   },
@@ -2853,7 +2853,7 @@
    "name": "gv_benchLights",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "격자에 흩뿌릴 점광·스포트라이트 수 (주광은 별개)",
    "source": "Source/Games/Empty/BenchScene.cpp"
   },
@@ -2861,7 +2861,7 @@
    "name": "gv_benchMaterialChurn",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "프레임당 값을 무작위로 바꿀 머티리얼 인스턴스 수 (0=사용 안 함)",
    "source": "Source/Games/Empty/BenchScene.cpp"
   },
@@ -2869,7 +2869,7 @@
    "name": "gv_benchMaterialChurnAdd",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "프레임당 새로 붙이거나 떼어낼 머티리얼 인스턴스 수 (0=사용 안 함)",
    "source": "Source/Games/Empty/BenchScene.cpp"
   },
@@ -2877,7 +2877,7 @@
    "name": "gv_benchMaterialChurnKeyword",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "N 프레임마다 키워드·멀티컴파일을 흔듭니다 (0=사용 안 함)",
    "source": "Source/Games/Empty/BenchScene.cpp"
   },
@@ -2885,7 +2885,7 @@
    "name": "gv_benchMaterialInstances",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "벤치 큐브마다 MaterialInstance 부여 (배치를 큐브 수만큼 가른다)",
    "source": "Source/Games/Empty/BenchScene.cpp"
   },
@@ -2893,7 +2893,7 @@
    "name": "gv_benchMeshes",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "시작 시 생성할 벤치 큐브 수 (0=사용 안 함)",
    "source": "Source/Games/Empty/BenchScene.cpp"
   },
@@ -2901,7 +2901,7 @@
    "name": "gv_benchMeshMorph",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "벤치 도형의 정점을 GPU 가 매 프레임 변형합니다 (0=사용 안 함)",
    "source": "Source/Games/Empty/BenchScene.cpp"
   },
@@ -2909,7 +2909,7 @@
    "name": "gv_benchMeshShapes",
    "type": "int32",
    "default": "1",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "벤치가 섞어 쓸 도형 수 (1=큐브만 · 최대 5: 큐브·구·실린더·캡슐·원뿔)",
    "source": "Source/Games/Empty/BenchScene.cpp"
   },
@@ -2917,7 +2917,7 @@
    "name": "gv_benchMeshVariants",
    "type": "int32",
    "default": "1",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "벤치 메시 종류 수 (= 배치 수, 드로우 경로 측정용)",
    "source": "Source/Games/Empty/BenchScene.cpp"
   },
@@ -2925,7 +2925,7 @@
    "name": "gv_benchMovePercent",
    "type": "int32",
    "default": "100",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "프레임마다 위치·스케일을 다시 쓰는 큐브의 비율 (퍼센트, 기본 100)",
    "source": "Source/Games/Empty/BenchScene.cpp"
   },
@@ -2933,7 +2933,7 @@
    "name": "gv_benchProbeFrame",
    "type": "int32",
    "default": "180",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "한 번 일어나는 벤치 탐침(한글 글 · 씬 로드)을 거는 프레임(측정 창 워밍업 60 뒤)",
    "source": "Source/Games/Empty/BenchSceneProbes.cpp"
   },
@@ -2941,7 +2941,7 @@
    "name": "gv_benchRagdollPeriod",
    "type": "int32",
    "default": "60",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "래그돌 군중이 상태를 바꾸는 주기 (프레임)",
    "source": "Source/Games/Empty/BenchScene.cpp"
   },
@@ -2949,7 +2949,7 @@
    "name": "gv_benchRagdolls",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "벤치 래그돌 군중 수 (0=사용 안 함, KayKit 스켈레톤 — 쓰러지고 일어나기를 반복)",
    "source": "Source/Games/Empty/BenchScene.cpp"
   },
@@ -2957,7 +2957,7 @@
    "name": "gv_benchRig",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "후처리 리그 데모 기사 수 (0=사용 안 함, 발 디딤 · 시선 · 왼손 IK · 망토 스프링)",
    "source": "Source/Games/Empty/BenchSceneRig.cpp"
   },
@@ -2965,7 +2965,7 @@
    "name": "gv_benchRigEnabled",
    "type": "int32",
    "default": "1",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "리그 데모의 PoseModifierComponent 를 켤지 (0=대조군)",
    "source": "Source/Games/Empty/BenchSceneRig.cpp"
   },
@@ -2973,7 +2973,7 @@
    "name": "gv_benchRigView",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "리그 데모 카메라 (0 왼쪽 앞 · 1 정면 · 2 오른쪽 옆 · 3 오른쪽 뒤)",
    "source": "Source/Games/Empty/BenchSceneRig.cpp"
   },
@@ -2981,7 +2981,7 @@
    "name": "gv_benchSceneLoadPath",
    "type": "string",
    "default": "",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "탐침 프레임에 이 씬을 비동기로 연다(로드 중 최악 프레임 측정, 비우면 사용 안 함)",
    "source": "Source/Games/Empty/BenchSceneProbes.cpp"
   },
@@ -2989,7 +2989,7 @@
    "name": "gv_benchSpawnChurn",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "프레임마다 큐브 N 개를 지우고 같은 자리에 새로 만든다 (스폰·파괴·틱 레지스트리 측정)",
    "source": "Source/Games/Empty/BenchScene.cpp"
   },
@@ -2997,7 +2997,7 @@
    "name": "gv_benchTickMovers",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "큐브마다 틱 무버 컴포넌트 N 개 — 첫 번째가 틱 안에서 위치를 쓴다 (0=배치 쓰기)",
    "source": "Source/Games/Empty/BenchScene.cpp"
   },
@@ -3005,7 +3005,7 @@
    "name": "gv_benchTransparent",
    "type": "int32",
    "default": "25",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "벤치 큐브 중 투명으로 만들 비율 (퍼센트)",
    "source": "Source/Games/Empty/BenchScene.cpp"
   },
@@ -3013,7 +3013,7 @@
    "name": "gv_benchUiChurn",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "UI 벤치 — 프레임마다 글을 바꾸는 셀 수(앞쪽 보이는 셀 안에서 돈다)",
    "source": "Source/Engine/UI/Debug/UIBenchScreen.cpp"
   },
@@ -3021,7 +3021,7 @@
    "name": "gv_benchUiHangulGlyphs",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "탐침 프레임에 서로 다른 한글 음절 N 개의 긴 글을 띄운다(새 글리프 첫 프레임 측정, 0=사용 안 함)",
    "source": "Source/Games/Empty/BenchSceneProbes.cpp"
   },
@@ -3029,7 +3029,7 @@
    "name": "gv_benchUiMarkers",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "앞쪽 벤치 큐브 K 개에 화면 마커(숫자 글)를 붙인다 (0=사용 안 함)",
    "source": "Source/Games/Empty/BenchScene.cpp"
   },
@@ -3037,7 +3037,7 @@
    "name": "gv_benchUiNameplates",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "앞쪽 벤치 큐브 K 개에 RTS 이름표(이름 글 + HP 막대)를 붙인다 (0=사용 안 함)",
    "source": "Source/Games/Empty/BenchSceneProbes.cpp"
   },
@@ -3045,7 +3045,7 @@
    "name": "gv_benchUiOpacityPulse",
    "type": "bool",
    "default": "false",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "UI 벤치 — 프레임마다 화면 루트 불투명도를 바꿔 보이는 자손 전체를 다시 칠하게 한다 (조상 kTransform 비용 측정)",
    "source": "Source/Engine/UI/Debug/UIBenchScreen.cpp"
   },
@@ -3053,7 +3053,7 @@
    "name": "gv_benchUiWidgets",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "UI 벤치 — 격자 셀 수(셀마다 테두리 · 아이콘 · 글, 대부분 스크롤 밖) (0=사용 안 함)",
    "source": "Source/Engine/UI/Debug/UIBenchScreen.cpp"
   },
@@ -3061,7 +3061,7 @@
    "name": "gv_benchViews",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "격자를 둘러보는 캡처 카메라(렌더 텍스처 512²) 수 (0=사용 안 함)",
    "source": "Source/Games/Empty/BenchScene.cpp"
   },
@@ -3085,7 +3085,7 @@
    "name": "gv_cameraPreset",
    "type": "string",
    "default": "",
-   "kind": "시험 · 배포본에도",
+   "kind": "테스트 · 배포본에도",
    "description": "카메라 디렉터의 시작 프리셋 id (캡처 카메라 제외, 비우면 데이터대로)",
    "source": "Source/GameFramework/Base/Actor/Camera/CameraDirectorComponent.cpp"
   },
@@ -3101,8 +3101,8 @@
    "name": "gv_canvasTestPattern",
    "type": "bool",
    "default": "false",
-   "kind": "시험",
-   "description": "주 출력에 캔버스(화면 2D) 시험 그림을 그린다 — 사각형 · 자르기 · 그림자 · 글자",
+   "kind": "테스트",
+   "description": "주 출력에 캔버스(화면 2D) 테스트 그림을 그린다 — 사각형 · 자르기 · 그림자 · 글자",
    "source": "Source/Engine/Renderer/Frame/Packet/RenderPacketBuilder.cpp"
   },
   {
@@ -3117,7 +3117,7 @@
    "name": "gv_crashTest",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "일부러 크래시를 내 리포트 경로를 검증합니다 (1=널 쓰기 2=스택 오버플로 3=작업 스레드 스택 오버플로 4=abort 5=순수 가상 호출)",
    "source": "Source/Engine/Renderer/RHISubsystem.cpp"
   },
@@ -3125,7 +3125,7 @@
    "name": "gv_debugChannelPort",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "디버그 채널 포트 (0=끄기, 루프백 전용, 토큰 필요)",
    "source": "Source/Server/ServerApp.cpp"
   },
@@ -3133,7 +3133,7 @@
    "name": "gv_debugChannelToken",
    "type": "string",
    "default": "",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "디버그 채널 접속 토큰",
    "source": "Source/Server/ServerApp.cpp"
   },
@@ -3165,7 +3165,7 @@
    "name": "gv_debugHUDProbeSection",
    "type": "string",
    "default": "",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "자동화 탐침 DebugHUD.SectionShown 이 볼 디버그 HUD 섹션 이름",
    "source": "Source/Engine/UI/Debug/DebugHUD.cpp"
   },
@@ -3205,7 +3205,7 @@
    "name": "gv_devConsoleExec",
    "type": "string",
    "default": "",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "시작 씬이 열린 뒤 개발 콘솔로 돌릴 명령 (; 로 나눔)",
    "source": "Source/App/DevConsoleHost.cpp"
   },
@@ -3213,7 +3213,7 @@
    "name": "gv_devConsoleOpen",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "게임 창 개발 콘솔을 연 채로 시작 (1=열기)",
    "source": "Source/App/DevConsoleHost.cpp"
   },
@@ -3229,7 +3229,7 @@
    "name": "gv_dumpReflection",
    "type": "string",
    "default": "",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "첫 프레임에 이 이름들(쉼표로 여럿)의 리플렉션 등록 내용을 로그로 남긴다 — 타입 · enum (비우면 사용 안 함)",
    "source": "Source/Engine/Engine.cpp"
   },
@@ -3237,7 +3237,7 @@
    "name": "gv_dumpRenderGraph",
    "type": "bool",
    "default": "false",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "렌더 그래프를 컴파일할 때마다 레벨 · 패스 · 읽고 쓰는 자원을 로그로 남긴다",
    "source": "Source/Engine/Renderer/Frame/FrameRendererPassExecute.cpp"
   },
@@ -3245,7 +3245,7 @@
    "name": "gv_editorOpenPanel",
    "type": "string",
    "default": "",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "시작할 때 이 id 의 패널 하나만 연다, all 이면 전부 연다 (비우면 사용 안 함)",
    "source": "Source/Editor/Common/GUI/EditorDockLayout.cpp"
   },
@@ -3253,7 +3253,7 @@
    "name": "gv_editorPanelDump",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "N 번째 프레임에 에디터 ImGui 창별 드로우 통계를 덤프 (0=사용 안 함)",
    "source": "Source/Editor/Common/GUI/EditorPanelDump.cpp"
   },
@@ -3261,7 +3261,7 @@
    "name": "gv_editorPanelTimes",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "N 프레임 동안 에디터 패널마다 그리기 시간을 모아 한 번 로그로 찍는다 (0=끄기)",
    "source": "Source/Editor/Common/GUI/EditorPanelManager.cpp"
   },
@@ -3269,7 +3269,7 @@
    "name": "gv_editorPreviewScreenshot",
    "type": "string",
    "default": "",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "미리보기 씬 뷰포트의 렌더 타깃을 이 경로에 한 번 찍는다 (시나리오 눈 확인용, 비우면 안 함)",
    "source": "Source/Editor/Common/GUI/EditorPreviewViewport.cpp"
   },
@@ -3277,7 +3277,7 @@
    "name": "gv_editorProbeAsset",
    "type": "string",
    "default": "",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "탐침 Editor.ReferenceCount 가 볼 에셋의 리소스 id (시나리오용)",
    "source": "Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp"
   },
@@ -3285,7 +3285,7 @@
    "name": "gv_editorProbeBus",
    "type": "string",
    "default": "master",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "탐침 Editor.AudioMixerBusVolume 이 볼 믹서 버스 이름 (시나리오용)",
    "source": "Source/Editor/Panels/AudioMixer/AudioMixerPanel.cpp"
   },
@@ -3293,7 +3293,7 @@
    "name": "gv_editorProbeHierarchyObject",
    "type": "string",
    "default": "",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "탐침 Editor.HierarchyRowIndex 가 볼 오브젝트 이름 (시나리오용)",
    "source": "Source/Editor/Panels/Scene/HierarchyPanel.cpp"
   },
@@ -3301,7 +3301,7 @@
    "name": "gv_editorProbeObject",
    "type": "string",
    "default": "",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "탐침 Editor.HierarchyRowIcon · Editor.BillboardIcon 이 볼 오브젝트 이름 (시나리오용)",
    "source": "Source/Editor/SelfTest/EditorScenarioSteps.cpp"
   },
@@ -3309,7 +3309,7 @@
    "name": "gv_editorProbeOverlay",
    "type": "string",
    "default": "view",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "탐침 Editor.Overlay* 가 볼 씬 뷰 오버레이 바 id (view · transform · display · tools, 시나리오용)",
    "source": "Source/Editor/SelfTest/EditorScenarioSteps.cpp"
   },
@@ -3317,7 +3317,7 @@
    "name": "gv_editorProbePanel",
    "type": "string",
    "default": "",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "탐침 Editor.PanelOpen 이 볼 패널 id (시나리오용)",
    "source": "Source/Editor/SelfTest/EditorScenarioSteps.cpp"
   },
@@ -3325,7 +3325,7 @@
    "name": "gv_editorProbeProperty",
    "type": "string",
    "default": "",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "탐침 Editor.SelectedProperty 가 볼 <컴포넌트 타입>.<프로퍼티> (시나리오용)",
    "source": "Source/Editor/SelfTest/EditorScenarioSteps.cpp"
   },
@@ -3333,7 +3333,7 @@
    "name": "gv_editorProbeVisualizer",
    "type": "string",
    "default": "",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "탐침 Editor.VisualizerOn 이 볼 뷰포트 시각화 id (시나리오용)",
    "source": "Source/Editor/SelfTest/EditorScenarioSteps.cpp"
   },
@@ -3341,7 +3341,7 @@
    "name": "gv_editorRegistryDump",
    "type": "bool",
    "default": "false",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "시작할 때 에디터 레지스트리(패널 · 팝업 · 인스펙터 · 시각화 · 메뉴)를 로그로 덤프",
    "source": "Source/Editor/SelfTest/EditorExtensionRegistryDump.cpp"
   },
@@ -3349,16 +3349,16 @@
    "name": "gv_editorSelfTest",
    "type": "string",
    "default": "",
-   "kind": "시험",
-   "description": "에디터가 뜬 뒤 이름이 패턴에 맞는 에디터 자체 시험을 돌리고 끝낸다 (* · 쉼표, 비우면 사용 안 함)",
+   "kind": "테스트",
+   "description": "에디터가 뜬 뒤 이름이 패턴에 맞는 에디터 자체 테스트를 돌리고 끝낸다 (* · 쉼표, 비우면 사용 안 함)",
    "source": "Source/Editor/SelfTest/EditorSelfTest.cpp"
   },
   {
    "name": "gv_editorSelfTestReport",
    "type": "string",
    "default": "",
-   "kind": "시험",
-   "description": "에디터 자체 시험 결과를 쓸 파일 (비우면 로그에만)",
+   "kind": "테스트",
+   "description": "에디터 자체 테스트 결과를 쓸 파일 (비우면 로그에만)",
    "source": "Source/Editor/SelfTest/EditorSelfTest.cpp"
   },
   {
@@ -3373,7 +3373,7 @@
    "name": "gv_editorStateDir",
    "type": "string",
    "default": "",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "에디터 상태 폴더(Saved/Editor 대신, 프로젝트 루트 기준 상대 또는 절대 경로) — 자동화가 빈 폴더로 시작할 때 쓴다 (비우면 Saved/Editor)",
    "source": "Source/Editor/Common/EditorPaths.cpp"
   },
@@ -3397,7 +3397,7 @@
    "name": "gv_emulatedGPUMemoryMb",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "하드웨어 흉내: 사양 조사가 보고하는 비디오 메모리 상한(MB, 0=실제 값)",
    "source": "Source/Engine/UserSettings/HardwareProbe.cpp"
   },
@@ -3405,7 +3405,7 @@
    "name": "gv_environmentAnimate",
    "type": "int32",
    "default": "1",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "바람 · 파도 시간이 흐른다 (0=멈춤, 스크린샷 비교용)",
    "source": "Source/Engine/Environment/EnvironmentUtil.cpp"
   },
@@ -3413,7 +3413,7 @@
    "name": "gv_farmAutoPlay",
    "type": "int32",
    "default": "0",
-   "kind": "시험 · 배포본에도",
+   "kind": "테스트 · 배포본에도",
    "description": "HarvestValley: 농부도 AI 가 조종 (1=켜기)",
    "source": "Source/Games/HarvestValley/FarmDirectorComponent.cpp"
   },
@@ -3421,7 +3421,7 @@
    "name": "gv_firstScene",
    "type": "string",
    "default": "",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "팩 설정의 시작 씬 대신 처음 열 씬의 리소스 경로 (비우면 사용 안 함)",
    "source": "Source/GameFramework/Base/Foundation/Framework/Flow/GameInstanceBase.cpp"
   },
@@ -3429,7 +3429,7 @@
    "name": "gv_fixedFrameDelta",
    "type": "float32",
    "default": "0.0",
-   "kind": "시험 · 배포본에도",
+   "kind": "테스트 · 배포본에도",
    "description": "프레임마다 흘릴 고정 시간(초, 0=실시간) — 결정적 실행",
    "source": "Source/App/App.cpp"
   },
@@ -3445,7 +3445,7 @@
    "name": "gv_fractureShapeWarmMicroseconds",
    "type": "int32",
    "default": "500",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "파괴 잎 셰이프를 온전한 동안 미리 짓는 시간(us, 스레드마다 4 ms 창마다). 0=처음 깨질 때 모두, 음수=상태를 시작할 때 모두(전/후 비교용)",
    "source": "Source/Engine/Destruction/FractureComponentBase.cpp"
   },
@@ -3469,7 +3469,7 @@
    "name": "gv_ioEmuReadKilobytesPerSecond",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "디스크 흉내: 파일 읽기 대역폭(KB/s, 0=제한 없음)",
    "source": "Source/Core/File/PlatformFileUtil.cpp"
   },
@@ -3477,7 +3477,7 @@
    "name": "gv_ioEmuReadLatencyMs",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "디스크 흉내: 파일 읽기 한 번마다 더하는 지연(ms, 0=끔)",
    "source": "Source/Core/File/PlatformFileUtil.cpp"
   },
@@ -3485,7 +3485,7 @@
    "name": "gv_ioLogReads",
    "type": "bool",
    "default": "false",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "읽으려고 연 파일마다 경로 · 바이트 · 스레드를 로그로 남긴다(기동 · 히치의 동기 읽기 찾기)",
    "source": "Source/Core/File/PlatformFileUtil.cpp"
   },
@@ -3493,7 +3493,7 @@
    "name": "gv_lightCulling",
    "type": "int32",
    "default": "2",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "라이트 컬링 (0=그리드 없이 목록 전체, 1=CPU 클러스터 그리드, 2=GPU 클러스터 그리드)",
    "source": "Source/Engine/Renderer/Frame/FrameRenderer.cpp"
   },
@@ -3501,7 +3501,7 @@
    "name": "gv_meadowAutoPlay",
    "type": "int32",
    "default": "0",
-   "kind": "시험 · 배포본에도",
+   "kind": "테스트 · 배포본에도",
    "description": "MeadowVillage: 시계를 8 배로 흘려 날을 넘긴다 (1=켜기)",
    "source": "Source/Games/MeadowVillage/MeadowFarmDirectorComponent.cpp"
   },
@@ -3509,7 +3509,7 @@
    "name": "gv_memoryReport",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "다음 프레임에 메모리 태그 표(살아 있는 · 최고치 · 예산)를 한 번 남김 (1=남기기)",
    "source": "Source/Engine/Profiling/MemoryBudgetMonitor.cpp"
   },
@@ -3517,7 +3517,7 @@
    "name": "gv_memoryTracking",
    "type": "int32",
    "default": "-1",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "메모리 태그 추적 (-1=구성 기본, 0=끄기, 1=켜기)",
    "source": "Source/Engine/Profiling/MemoryBudgetMonitor.cpp"
   },
@@ -3549,7 +3549,7 @@
    "name": "gv_netConnectAddress",
    "type": "string",
    "default": "",
-   "kind": "시험 · 배포본에도",
+   "kind": "테스트 · 배포본에도",
    "description": "클라이언트로 붙을 게임 서버 주소 (주소:포트, 비면 끄기)",
    "source": "Source/Engine/Net/GameNetSession.cpp"
   },
@@ -3557,7 +3557,7 @@
    "name": "gv_netEmuBandwidthKilobytesPerSecond",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "네트워크 흉내: 회선 속도(KB/s, 0=제한 없음)",
    "source": "Source/Core/Network/Transport/NetEmulation.cpp"
   },
@@ -3565,7 +3565,7 @@
    "name": "gv_netEmuDuplicatePercent",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "네트워크 흉내: 중복(%) — PktDup",
    "source": "Source/Core/Network/Transport/NetEmulation.cpp"
   },
@@ -3573,7 +3573,7 @@
    "name": "gv_netEmuJitterMs",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "네트워크 흉내: ± 흔들림(ms) — PktLagVariance",
    "source": "Source/Core/Network/Transport/NetEmulation.cpp"
   },
@@ -3581,7 +3581,7 @@
    "name": "gv_netEmuLatencyMs",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "네트워크 흉내: 한쪽 지연(ms) — 언리얼 PktLag",
    "source": "Source/Core/Network/Transport/NetEmulation.cpp"
   },
@@ -3589,7 +3589,7 @@
    "name": "gv_netEmuLossPercent",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "네트워크 흉내: 손실(%) — PktLoss",
    "source": "Source/Core/Network/Transport/NetEmulation.cpp"
   },
@@ -3597,7 +3597,7 @@
    "name": "gv_netEmuPreset",
    "type": "string",
    "default": "",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "네트워크 흉내: 회선 프리셋 이름(engine/settings/netemulation.presets.xml — 비면 gv_netEmu* 낱값)",
    "source": "Source/Engine/Net/GameNetSession.cpp"
   },
@@ -3605,7 +3605,7 @@
    "name": "gv_netEmuReorderPercent",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "네트워크 흉내: 순서 뒤바뀜(%) — PktOrder",
    "source": "Source/Core/Network/Transport/NetEmulation.cpp"
   },
@@ -3613,7 +3613,7 @@
    "name": "gv_netListenPort",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "게임 네트워크 서버로 열 UDP 포트 (0=끄기)",
    "source": "Source/Engine/Net/GameNetSession.cpp"
   },
@@ -3621,7 +3621,7 @@
    "name": "gv_netLoopbackOnly",
    "type": "bool",
    "default": "true",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "게임 UDP 소켓을 127.0.0.1 에만 묶는다 (0=모든 인터페이스, 다른 기계와 붙을 때)",
    "source": "Source/Engine/Net/GameNetSession.cpp"
   },
@@ -3629,7 +3629,7 @@
    "name": "gv_nileAutoPlay",
    "type": "int32",
    "default": "0",
-   "kind": "시험 · 배포본에도",
+   "kind": "테스트 · 배포본에도",
    "description": "NileCity: 자동 계획으로 도시를 짓고 돌리기 (1=켜기)",
    "source": "Source/Games/NileCity/NileDirectorComponent.cpp"
   },
@@ -3637,7 +3637,7 @@
    "name": "gv_parkAutoBuild",
    "type": "int32",
    "default": "0",
-   "kind": "시험 · 배포본에도",
+   "kind": "테스트 · 배포본에도",
    "description": "ThemeParkTycoon: 돈이 모이면 자동으로 짓기 (1=켜기)",
    "source": "Source/Games/ThemeParkTycoon/ParkDirectorComponent.cpp"
   },
@@ -3661,7 +3661,7 @@
    "name": "gv_profileAllocSites",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "측정 구간의 할당을 콜스택별로 세어 상위 N 곳을 보고 (0=끄기)",
    "source": "Source/Engine/Profiling/FrameProfileSession.cpp"
   },
@@ -3669,7 +3669,7 @@
    "name": "gv_profileFrames",
    "type": "int32",
    "default": "0",
-   "kind": "시험 · 배포본에도",
+   "kind": "테스트 · 배포본에도",
    "description": "프레임 프로파일 측정 프레임 수 (0=사용 안 함)",
    "source": "Source/Engine/Profiling/FrameProfileSession.cpp"
   },
@@ -3677,7 +3677,7 @@
    "name": "gv_profileSeconds",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "프레임 프로파일 측정 시간(초, 0=사용 안 함)",
    "source": "Source/Engine/Profiling/FrameProfileSession.cpp"
   },
@@ -3685,7 +3685,7 @@
    "name": "gv_profileTracePath",
    "type": "string",
    "default": "",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "측정 창 전체를 이 경로에 트레이스로 저장 (비면 끄기)",
    "source": "Source/Engine/Profiling/FrameProfileSession.cpp"
   },
@@ -3757,7 +3757,7 @@
    "name": "gv_rhiSoftwareAdapter",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "소프트웨어 어댑터로 띄운다: 0=하드웨어, 1=WARP(DX11 · DX12) · CPU 디바이스(Vulkan)",
    "source": "Source/Engine/Graphics/RHI/IRHIDevice.cpp"
   },
@@ -3765,7 +3765,7 @@
    "name": "gv_scheduleTrace",
    "type": "string",
    "default": "",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "Schedule: log the why-am-I-here trace and today's timeline of this NPC id (* = all) when the value changes",
    "source": "Source/GameFramework/Base/Actor/AI/Schedule/ScheduleSystemDebug.cpp"
   },
@@ -3773,7 +3773,7 @@
    "name": "gv_screenshot",
    "type": "string",
    "default": "",
-   "kind": "시험 · 배포본에도",
+   "kind": "테스트 · 배포본에도",
    "description": "화면에 나간 그림(Present 결과)을 PPM 으로 덤프할 경로 (비면 사용 안 함)",
    "source": "Source/Engine/Renderer/RenderThread.cpp"
   },
@@ -3781,7 +3781,7 @@
    "name": "gv_screenshotAttachment",
    "type": "string",
    "default": "",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "Present 결과 대신 덤프할 트랜지언트 이름 (비면 Present 결과)",
    "source": "Source/Engine/Renderer/RenderThread.cpp"
   },
@@ -3789,7 +3789,7 @@
    "name": "gv_screenshotCount",
    "type": "int32",
    "default": "1",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "연속으로 찍을 스크린샷 수 (기본 1)",
    "source": "Source/Engine/Renderer/RenderThread.cpp"
   },
@@ -3797,7 +3797,7 @@
    "name": "gv_screenshotEditor",
    "type": "string",
    "default": "",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "에디터 UI 전체(ImGui 패널 + 플로팅 창)를 이 경로(.png)에 한 장 찍는다 (비면 사용 안 함)",
    "source": "Source/Editor/Common/Backend/EditorUICapture.cpp"
   },
@@ -3805,7 +3805,7 @@
    "name": "gv_screenshotEditorFrame",
    "type": "int32",
    "default": "60",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "-gv_screenshotEditor 를 찍을 에디터 UI 프레임 번호 (기본 60)",
    "source": "Source/Editor/Common/Backend/EditorUICapture.cpp"
   },
@@ -3813,7 +3813,7 @@
    "name": "gv_screenshotFrame",
    "type": "int32",
    "default": "10",
-   "kind": "시험 · 배포본에도",
+   "kind": "테스트 · 배포본에도",
    "description": "스크린샷을 찍을 프레임 번호 (기본 10)",
    "source": "Source/Engine/Renderer/RenderThread.cpp"
   },
@@ -3821,7 +3821,7 @@
    "name": "gv_screenshotInterval",
    "type": "int32",
    "default": "1",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "연속 스크린샷 사이 프레임 수 (기본 1)",
    "source": "Source/Engine/Renderer/RenderThread.cpp"
   },
@@ -3829,7 +3829,7 @@
    "name": "gv_screenshotQuit",
    "type": "bool",
    "default": "false",
-   "kind": "시험 · 배포본에도",
+   "kind": "테스트 · 배포본에도",
    "description": "요청한 스크린샷을 모두 찍으면 앱이 스스로 끝난다 (0, 파일을 쓰지 못했으면 14)",
    "source": "Source/Engine/Renderer/RenderThread.cpp"
   },
@@ -3837,7 +3837,7 @@
    "name": "gv_serverExitAfterTicks",
    "type": "int32",
    "default": "0",
-   "kind": "시험 · 배포본에도",
+   "kind": "테스트 · 배포본에도",
    "description": "이 틱 수를 돈 뒤 정상 종료 (0=끄기)",
    "source": "Source/Server/ServerApp.cpp"
   },
@@ -3853,7 +3853,7 @@
    "name": "gv_shooterAutoPlay",
    "type": "int32",
    "default": "0",
-   "kind": "시험 · 배포본에도",
+   "kind": "테스트 · 배포본에도",
    "description": "Shooter3D: 조준 · 사격도 AI 가 (1=켜기)",
    "source": "Source/Games/Shooter3D/ShooterDirectorComponent.cpp"
   },
@@ -3861,7 +3861,7 @@
    "name": "gv_shooterMotionTrace",
    "type": "string",
    "default": "",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "Shooter3D: 프레임마다 몸 · 본 · 카메라 · 적 자리를 CSV 로 (경로, 비면 끔)",
    "source": "Source/Games/Shooter3D/ShooterDirectorComponent.cpp"
   },
@@ -3869,7 +3869,7 @@
    "name": "gv_skirmishAutoPlay",
    "type": "int32",
    "default": "0",
-   "kind": "시험 · 배포본에도",
+   "kind": "테스트 · 배포본에도",
    "description": "StarSkirmish: 두 플레이어 모두 AI 로 돌리기 (1=켜기)",
    "source": "Source/Games/StarSkirmish/SkirmishDirectorComponent.cpp"
   },
@@ -3877,7 +3877,7 @@
    "name": "gv_standardInputCommands",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "표준 입력의 줄을 명령으로 받는다 (quit=종료, 1=켜기)",
    "source": "Source/App/DevConsoleHost.cpp"
   },
@@ -3885,7 +3885,7 @@
    "name": "gv_stateHashHistory",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "틱별 씬 상태 해시 이력 길이 (0=끄기)",
    "source": "Source/Server/ServerApp.cpp"
   },
@@ -3917,7 +3917,7 @@
    "name": "gv_telemetryFolder",
    "type": "string",
    "default": "",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "텔레메트리 스풀 폴더 (비면 사용자 폴더의 telemetry/)",
    "source": "Source/Engine/Telemetry/TelemetryService.cpp"
   },
@@ -3933,7 +3933,7 @@
    "name": "gv_tickBatch",
    "type": "bool",
    "default": "true",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "타입별 일괄 틱 경로를 쓴다(0 이면 모든 오브젝트를 칸 목록으로 — 전/후 비교용)",
    "source": "Source/Engine/Object/GameObject/Tick/TickRegistry.cpp"
   },
@@ -3941,7 +3941,7 @@
    "name": "gv_tickCostDispatch",
    "type": "bool",
    "default": "false",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "씬 틱 병렬 분배를 잰 비용으로 고른다(0 이면 항목 16 개 이상이면 늘 나눈다 — 기본)",
    "source": "Source/Engine/Object/GameObject/Tick/SceneTickScheduler.cpp"
   },
@@ -3957,7 +3957,7 @@
    "name": "gv_traceSaveOnExit",
    "type": "string",
    "default": "",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "종료할 때 최근 프레임의 타임라인을 이 경로에 트레이스로 저장 (비면 끄기)",
    "source": "Source/Engine/Profiling/ProfilerTraceExport.cpp"
   },
@@ -3965,7 +3965,7 @@
    "name": "gv_traceSlowTickMs",
    "type": "int32",
    "default": "0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "틱 본문이 N ms 를 넘으면 앞뒤 프레임을 트레이스로 저장 (0=끄기)",
    "source": "Source/Engine/Profiling/ProfilerTraceExport.cpp"
   },
@@ -3973,7 +3973,7 @@
    "name": "gv_tracy",
    "type": "bool",
    "default": "false",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "Tracy 프로파일러로 계측을 내보낸다(기동부터, 뷰어는 localhost 로 붙는다)",
    "source": "Source/Engine/Profiling/ProfilerBackend.cpp"
   },
@@ -3981,7 +3981,7 @@
    "name": "gv_tracyMemory",
    "type": "bool",
    "default": "false",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "Tracy 에 할당 · 해제를 메모리 태그별로 보낸다(느림, gv_tracy 와 같이)",
    "source": "Source/Engine/Profiling/ProfilerBackend.cpp"
   },
@@ -3997,7 +3997,7 @@
    "name": "gv_uiDebugSafeZone",
    "type": "float32",
    "default": "0.0",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "UI 안전 영역 흉내 — 각 변을 화면 크기의 이 비율(0..0.1)만큼 안쪽으로 민다",
    "source": "Source/Engine/UI/Layout/UIScale.cpp"
   },
@@ -4005,15 +4005,15 @@
    "name": "gv_uiDemo",
    "type": "bool",
    "default": "false",
-   "kind": "시험 · 배포본에도",
-   "description": "UI 시험 화면을 띄운다 — 글 · 버튼 다섯 · 슬라이더 · 체크 · 진행 · 콤보 · 입력 필드 · 그리기 견본(둥근 상자 · 자르기 · 9-슬라이스 · 오른쪽에서 왼쪽 글)",
+   "kind": "테스트 · 배포본에도",
+   "description": "UI 테스트 화면을 띄운다 — 글 · 버튼 다섯 · 슬라이더 · 체크 · 진행 · 콤보 · 입력 필드 · 그리기 견본(둥근 상자 · 자르기 · 9-슬라이스 · 오른쪽에서 왼쪽 글)",
    "source": "Source/Engine/UI/Debug/UIDemoScreen.cpp"
   },
   {
    "name": "gv_uiOptionsMenu",
    "type": "bool",
    "default": "false",
-   "kind": "시험 · 배포본에도",
+   "kind": "테스트 · 배포본에도",
    "description": "옵션 메뉴를 띄운다 — 사용자 설정 스키마에서 만든 탭 · 행(개발 확인 · 스크린샷)",
    "source": "Source/Engine/UI/Screen/OptionsMenuScreen.cpp"
   },
@@ -4069,7 +4069,7 @@
    "name": "gv_userSettingsApply",
    "type": "string",
    "default": "",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "사용자 설정을 메뉴와 같은 길로 바꾼다: \"id=value;id=value\" (자동화)",
    "source": "Source/App/UserSettingsHost.cpp"
   },
@@ -4077,7 +4077,7 @@
    "name": "gv_userSettingsAutoConfirm",
    "type": "bool",
    "default": "true",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "gv_userSettingsApply 의 화면 변경을 바로 확인한다 (false 면 카운트다운이 되돌린다)",
    "source": "Source/App/UserSettingsHost.cpp"
   },
@@ -4085,7 +4085,7 @@
    "name": "gv_userSettingsFile",
    "type": "string",
    "default": "",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "사용자 설정 파일 경로 (비면 사용자 폴더의 usersettings.json)",
    "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
   },
@@ -4093,7 +4093,7 @@
    "name": "gv_validateBindlessIndex",
    "type": "int32",
    "default": "kDefaultLevel",
-   "kind": "시험",
+   "kind": "테스트",
    "description": "셰이더에 넘기는 bindless 인덱스 검사 — 0 끔, 1 죽은 번호(Debug 기본), 2 '없음' 번호가 가는 자리까지",
    "source": "Source/Engine/Graphics/RHI/Support/BindlessIndexValidator.cpp"
   },
@@ -4125,7 +4125,7 @@
    "name": "gv_voxelAutoPlay",
    "type": "int32",
    "default": "0",
-   "kind": "시험 · 배포본에도",
+   "kind": "테스트 · 배포본에도",
    "description": "VoxelCraft: 걷기 · 부수기 · 놓기도 AI 가 (1=켜기)",
    "source": "Source/Games/VoxelCraft/VoxelDirectorComponent.cpp"
   },
@@ -4133,7 +4133,7 @@
    "name": "gv_wildWestAutoPlay",
    "type": "int32",
    "default": "0",
-   "kind": "시험 · 배포본에도",
+   "kind": "테스트 · 배포본에도",
    "description": "WildWest: 기수를 가장 가까운 말에 태운다 (1=켜기)",
    "source": "Source/Games/WildWest/WildWestDirectorComponent.cpp"
   },

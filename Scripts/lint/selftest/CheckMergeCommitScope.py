@@ -138,7 +138,7 @@ class CheckMergeCommitScopeGate(LintGate):
 
             setExpectedStaged = {"TheirsOnly.cpp", "TheirsAdded.cpp", "AutoMerged.cpp", "Conflict.cpp", "AddedInMerge.cpp"}
             if setStaged != setExpectedStaged:
-                errors.append(f"시험 병합의 staged 목록이 예상과 다릅니다: {sorted(setStaged)} (시험 자체가 틀렸다)")
+                errors.append(f"테스트 병합의 staged 목록이 예상과 다릅니다: {sorted(setStaged)} (테스트 자체가 틀렸다)")
             for name in ("AutoMerged.cpp", "Conflict.cpp", "AddedInMerge.cpp"):
                 if name not in setScoped:
                     errors.append(f"{name}: 병합으로 내용이 새로 생겼는데 검사 대상에서 빠졌습니다 — 검사 없이 커밋된다")
@@ -146,7 +146,7 @@ class CheckMergeCommitScopeGate(LintGate):
                 if name in setScoped:
                     errors.append(f"{name}: 한쪽 부모와 내용이 같은데 다시 검사합니다 — 병합 커밋이 느려진다")
         except RuntimeError as exception:
-            raise GateError(f"시험 저장소를 만들 수 없습니다: {exception}") from exception
+            raise GateError(f"테스트 저장소를 만들 수 없습니다: {exception}") from exception
         finally:
             removeTreeInternal(tempRoot)
 

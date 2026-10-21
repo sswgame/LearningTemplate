@@ -47,7 +47,7 @@ namespace
         {
             sw::CookJob           job( makeDesc( version ) );
             sw::vector<uint8>     bytes;
-            [[maybe_unused]] bool bRead = sw::ResourceIO::readBinaryResource( path, bytes );
+            [[maybe_unused]] bool bRead = sw::ResourceIO::readBinaryFile( path, bytes );
             SW_EXPECT_TRUE( bRead );
             SW_EXPECT_TRUE( job.getInputs().size() == 1 );
             return job.computeKey();
@@ -74,7 +74,7 @@ SW_TEST_CASE( CookJobTest, KeyFollowsRecordedInputsAndCookerVersion )
     {
         sw::CookJob       inner( TestCookJobInternal::makeDesc( 1 ) );
         sw::vector<uint8> bytes;
-        SW_ASSERT_TRUE( sw::ResourceIO::readBinaryResource( input, bytes ) );
+        SW_ASSERT_TRUE( sw::ResourceIO::readBinaryFile( input, bytes ) );
     }
     SW_EXPECT_EQUAL( size_t( 1 ), outer.getInputs().size() );
 }
@@ -87,15 +87,15 @@ SW_TEST_CASE( CookJobTest, ReadOutsideAJobDuringCookingFails )
     const sw::string input = TestCookJobInternal::makeTempPath( "outside.txt" );
     TestCookJobInternal::writeText( input, "outside" );
     sw::vector<uint8> bytes;
-    SW_EXPECT_TRUE( sw::ResourceIO::readBinaryResource( input, bytes ) );
+    SW_EXPECT_TRUE( sw::ResourceIO::readBinaryFile( input, bytes ) );
     {
         sw::CookSession session;
         SW_TEST_DEFENSIVE_SCOPE( "a resource read outside a cook job during cooking" );
-        SW_EXPECT_FALSE( sw::ResourceIO::readBinaryResource( input, bytes ) );
+        SW_EXPECT_FALSE( sw::ResourceIO::readBinaryFile( input, bytes ) );
         sw::string text;
-        SW_EXPECT_FALSE( sw::ResourceIO::readTextResource( input, text ) );
+        SW_EXPECT_FALSE( sw::ResourceIO::readTextFile( input, text ) );
     }
-    SW_EXPECT_TRUE( sw::ResourceIO::readBinaryResource( input, bytes ) );
+    SW_EXPECT_TRUE( sw::ResourceIO::readBinaryFile( input, bytes ) );
 }
 
 /**
@@ -111,7 +111,7 @@ SW_TEST_CASE( CookJobTest, RecordIsFreshOnlyWhileInputsAndVersionHold )
     {
         sw::CookJob       job( TestCookJobInternal::makeDesc( 1 ) );
         sw::vector<uint8> bytes;
-        SW_ASSERT_TRUE( sw::ResourceIO::readBinaryResource( input, bytes ) );
+        SW_ASSERT_TRUE( sw::ResourceIO::readBinaryFile( input, bytes ) );
         record = sw::CookRecord::make( job, output );
     }
     const sw::string recordPath = TestCookJobInternal::makeTempPath( "output.cookrec" );

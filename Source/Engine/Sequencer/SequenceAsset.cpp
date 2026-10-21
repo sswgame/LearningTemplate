@@ -76,6 +76,21 @@ namespace sw
         return readText( text, path );
     }
 
+    bool SequenceAsset::loadFromDiskFile( string_view diskPath )
+    {
+        *this = SequenceAsset{};
+        if ( diskPath.empty() )
+            return false;
+
+        string text;
+        if ( ResourceIO::readTextFile( diskPath, text ) == false )
+        {
+            SW_LOG_WARNING( "Could not read sequence file '%#'", diskPath );
+            return false;
+        }
+        return readText( text, diskPath );
+    }
+
     bool SequenceAsset::saveToFile( string_view path ) const
     {
         if ( path.empty() )

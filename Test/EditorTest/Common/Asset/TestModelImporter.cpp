@@ -277,7 +277,7 @@ SW_TEST_CASE( ModelImporterTest, StampTracksSourceChanges )
     SW_EXPECT_EQUAL( 1u, summary._importedCount );
     SW_EXPECT_TRUE( sw::FileUtil::exists( stampPath ) );
     sw::vector<sw::RHIVertex> listVertex;
-    SW_ASSERT_TRUE( sw::MeshAssetFormat::loadFromResource( meshPath, listVertex ) );
+    SW_ASSERT_TRUE( sw::MeshAssetFormat::loadFromResource( ::test::makeTempResourceID( meshPath ), listVertex ) );
     SW_EXPECT_EQUAL( size_t( 6 ), listVertex.size() );
     SW_EXPECT_TRUE( sw::editor::ModelImporter::importAllModels( resourceRoot, config, sw::editor::AssetImportMode::CheckOnly ).isClean() );
 
@@ -285,7 +285,7 @@ SW_TEST_CASE( ModelImporterTest, StampTracksSourceChanges )
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sourcePath, TestModelImporterInternal::makeTriangleGltf( 7.0f ) ) );
     SW_EXPECT_EQUAL( size_t( 1 ), sw::editor::ModelImporter::importAllModels( resourceRoot, config, sw::editor::AssetImportMode::CheckOnly )._listProblem.size() );
     SW_EXPECT_EQUAL( 1u, sw::editor::ModelImporter::importAllModels( resourceRoot, config, sw::editor::AssetImportMode::ImportStale )._importedCount );
-    SW_ASSERT_TRUE( sw::MeshAssetFormat::loadFromResource( meshPath, listVertex ) );
+    SW_ASSERT_TRUE( sw::MeshAssetFormat::loadFromResource( ::test::makeTempResourceID( meshPath ), listVertex ) );
     SW_EXPECT_TRUE( TestModelImporterInternal::containsPosition( listVertex, sw::float3{ -2.0f, 3.0f, 7.0f } ) );
 
     // 4) `.mesh` 를 손으로 바꿨다 — 어긋남이다.
@@ -609,7 +609,7 @@ SW_TEST_CASE( ModelImporterTest, FractureRuleWritesFractureAssetBesideTheMesh )
     SW_EXPECT_EQUAL( 1u, sw::editor::ModelImporter::importAllModels( resourceRoot, fractureConfig, sw::editor::AssetImportMode::ImportStale )._importedCount );
     const sw::string  fracturePath = sw::FileUtil::joinPath( resourceRoot, "game/probe/models/box.fracture" );
     sw::FractureAsset asset;
-    SW_ASSERT_TRUE( asset.loadFromResource( fracturePath ) );
+    SW_ASSERT_TRUE( asset.loadFromResource( ::test::makeTempResourceID( fracturePath ) ) );
     SW_EXPECT_EQUAL( 3u, asset.getPieceCount() );
     SW_EXPECT_EQUAL( size_t( 2 ), asset._graph._listLink.size() );
     SW_EXPECT_EQUAL( 5ull, asset._seed );

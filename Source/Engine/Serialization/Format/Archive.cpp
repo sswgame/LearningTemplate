@@ -43,17 +43,9 @@ namespace sw
     {
         if ( bReadMode )
         {
-            // saveFile 은 FileUtil 로 경로에 그대로 쓴다. 읽기만 리소스 시스템을 거치면 **쓴 곳과
-            // 다른 규칙으로 찾게 된다.** 세이브 파일처럼 리소스 루트 밖에 있는 파일은 Shipping
-            // 에서 느슨한 파일 조회가 꺼져 있어 팩에만 물어보고 그대로 실패한다. 그래서 쓴 것과
-            // 같은 규칙으로 먼저 찾고, 없을 때 리소스 id 로 해석한다(engine/... 같은 경로).
-            bool bLoaded = false;
-            if ( fileName.empty() == false && FileUtil::exists( fileName ) )
-                bLoaded = FileUtil::readFile( fileName, _bytes );
-
-            if ( bLoaded == false )
-                bLoaded = ResourceIO::readBinaryResource( fileName, _bytes );
-
+            // 파일 입구는 디스크 경로만 받는다 — `saveFile` 이 쓴 곳과 같은 규칙이다. 리소스 id 는 부르는 쪽이 `ResourceIO::readBinaryResource`
+            // 로 바이트를 읽어 버퍼 생성자로 넘긴다. 예전에는 디스크를 먼저 보고 없으면 리소스 id 로 다시 찾아, 두 종류의 경로가 한 입구로 들어왔다.
+            const bool bLoaded = fileName.empty() == false && ResourceIO::readBinaryFile( fileName, _bytes );
             if ( bLoaded )
             {
                 _pData    = _bytes.data();

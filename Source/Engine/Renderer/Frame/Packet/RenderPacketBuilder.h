@@ -79,6 +79,10 @@ namespace sw
          */
         void populateScene( RenderFramePacket& packet, const HostViewTargets& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, Scene* pActiveScene,
                             float32 deltaTime, const RHI& rhi, const FrameRenderer* pFrameRenderer );
+        /** @brief 애니메이션 LOD 가 다음 프레임에 볼 뷰(주 시점과 이번 프레임에 그리는 추가 뷰)를 씬의 애니메이션 시스템에 넘깁니다. */
+        void updateAnimationLODViews( const RenderFramePacket& packet, Scene& activeScene );
+        /** @brief GPUScene 을 씬에서 채우고 추가 뷰의 투명 순서 · GPU 업로드 요청을 만든 뒤 CPU 스냅샷을 패킷에 내보냅니다. */
+        void populateGPUSceneSnapshot( RenderFramePacket& packet, Scene* pActiveScene );
         /**
          * @brief 화면 2D(런타임 UI 의 캔버스, 월드 UI 캔버스, 개발 테스트 이미지), 글리프 아틀라스 구간, 색각 보정을 싣습니다.
          * @param bSceneMain 씬 뷰가 주 출력인 프레임이면 화면 UI 를 싣지 않습니다. UI 는 게임 화면(게임 뷰, 백버퍼)에만 있습니다.

@@ -292,7 +292,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         args.out.parent.mkdir(parents=True, exist_ok=True)
         args.out.write_text(json.dumps(snapshot, indent=1, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
         print(f"[{_kTag}] 타깃 {len(snapshot['targets'])} · 캐시 {len(snapshot['cache'])} · 생성 파일 {len(snapshot['generated'])}"
-              f"{' · 시험 ' + str(len(snapshot['ctest'])) if 'ctest' in snapshot else ''} → {args.out.as_posix()}")
+              f"{' · 테스트 ' + str(len(snapshot['ctest'])) if 'ctest' in snapshot else ''} → {args.out.as_posix()}")
         return 0
 
     if args.command == "diff":

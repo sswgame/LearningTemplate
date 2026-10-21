@@ -24,6 +24,7 @@ namespace sw
         destroy();
     }
 
+    // 길이 유지(긴 함수 정리 기준): 픽셀 포맷 · 임시 컨텍스트 · 실제 컨텍스트 생성의 순서가 곧 의미라 나누지 않는다.
     bool WglPlatformContext::initialize( const RHISwapChainDesc& desc, OpenGLContextHandles& outHandles )
     {
         HWND hWnd = static_cast<HWND>( desc._pWindowHandle );

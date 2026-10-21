@@ -49,332 +49,401 @@ namespace sw
         return true;
     }
 
-    uint32 RenderPipelineAsset::validate( string_view sourcePath )
+    namespace
     {
-        uint32 issueCount{ 0 };
-
-        auto findAttachment = [this]( string_view name ) -> const RenderPassAttachment*
+        /**
+         * @brief 파이프라인 검증 규칙들입니다. 규칙마다 찾은 문제를 오류 로그로 남기고 그 수를 돌려줍니다.
+         * @details `RenderPipelineAsset::validate` 가 순서대로 부르고 합을 냅니다. 패스의 해석 값(`_resolved*`)은 `resolveAndCheckPassAttachments` 가
+         *          채우고, 그 뒤 규칙들이 그 값을 읽습니다 — 실행도 같은 해석을 쓴다.
+         */
+        struct RenderPipelineValidationInternal
         {
-            for ( const RenderPassAttachment& attachment : _desc._listAttachment )
+            static const RenderPassAttachment* findAttachment( const RenderPipelineDesc& desc, string_view name )
             {
-                if ( attachment._name == name )
-                    return &attachment;
-            }
-            return nullptr;
-        };
-
-        // 1) 첨부: 포맷 표기가 RHIFormat 으로 해석되는가, 이름이 겹치지 않는가.
-        for ( uint32 attachmentIndex = 0; attachmentIndex < _desc._listAttachment.size(); ++attachmentIndex )
-        {
-            const RenderPassAttachment& attachment = _desc._listAttachment[attachmentIndex];
-            RHIFormat                   parsed{};
-            if ( engine::getSubsystem<TypeRegistry>().enumFromString( attachment._format, parsed ) == false )
-            {
-                SW_LOG_ERROR( "[%#] attachment '%#': 알 수 없는 포맷 '%#'", sourcePath, attachment._name, attachment._format );
-                ++issueCount;
-            }
-            else if ( isRHIFormatRenderable( parsed ) == false )
-            {
-                // 이름은 맞지만 첨부가 될 수 없는 포맷(Unknown · 블록 압축 · R32G32B32_FLOAT) — 트랜지언트를 만들 때 백엔드가 실패한다.
-                SW_LOG_ERROR( "[%#] attachment '%#': 포맷 '%#' 은 렌더 타깃이 될 수 없습니다", sourcePath, attachment._name, attachment._format );
-                ++issueCount;
-            }
-            for ( uint32 otherIndex = 0; otherIndex < attachmentIndex; ++otherIndex )
-            {
-                if ( _desc._listAttachment[otherIndex]._name == attachment._name )
+                for ( const RenderPassAttachment& attachment : desc._listAttachment )
                 {
-                    SW_LOG_ERROR( "[%#] attachment '%#' 이름이 중복됐습니다", sourcePath, attachment._name );
-                    ++issueCount;
-                    break;
+                    if ( attachment._name == name )
+                        return &attachment;
                 }
-            }
-            if ( isSupportedResolutionDivisor( attachment._resolutionDivisor ) == false )
-            {
-                SW_LOG_ERROR( "[%#] attachment '%#': _resolutionDivisor %# — 1 · 2 · 4 만 받습니다", sourcePath, attachment._name, attachment._resolutionDivisor );
-                ++issueCount;
-            }
-            // 역할 선언은 아는 글이어야 한다. 모르는 글을 조용히 이름 · 포맷 규칙으로 넘기면 선언한 사람이 왜 안 걸리는지 모른다.
-            RenderPassInputRole declaredRole{ RenderPassInputRole::Invalid };
-            if ( attachment._role.empty() == false && tryParseRenderPassInputRole( attachment._role, declaredRole ) == false )
-            {
-                SW_LOG_ERROR( "[%#] attachment '%#': 알 수 없는 역할 '%#' — SourceColor · SceneDepth · GBufferAlbedo · GBufferNormal · ShadowMap · "
-                              "AmbientOcclusion · BloomBright 중 하나입니다",
-                              sourcePath, attachment._name, attachment._role );
-                ++issueCount;
-            }
-        }
-
-        auto isDepthAttachment = [&]( const RenderPassAttachment* pAttachment ) -> bool
-        {
-            return pAttachment != nullptr && engine::getSubsystem<TypeRegistry>().enumFromString<RHIFormat>( pAttachment->_format ) == constant::kDepthStencilFormat;
-        };
-
-        // 2) 패스: 이름이 하나뿐인가, 타입 표기가 해석되는가, 입출력이 선언된 첨부를 가리키는가.
-        for ( size_t passIndex = 0; passIndex < _desc._listPass.size(); ++passIndex )
-        {
-            for ( size_t earlierIndex = 0; earlierIndex < passIndex; ++earlierIndex )
-            {
-                if ( _desc._listPass[earlierIndex]._name == _desc._listPass[passIndex]._name )
-                {
-                    SW_LOG_ERROR( "[%#] pass '%#' 가 두 번 선언됐습니다 — 이름은 패스의 열쇠라 뒤의 것은 버려집니다", sourcePath,
-                                  _desc._listPass[passIndex]._name );
-                    ++issueCount;
-                    break;
-                }
-            }
-        }
-        for ( RenderGraphPassDesc& pass : _desc._listPass )
-        {
-            pass._resolvedType = engine::getSubsystem<TypeRegistry>().enumFromString<RenderPassType>( pass._type );
-            pass._resolvedDepthAttachment =
-                pass._depthAttachment.empty() ? hashed_string{} : hashed_string( pass._depthAttachment.c_str() );
-            pass._listResolvedInput.clear();
-            pass._listResolvedOutput.clear();
-            pass._listResolvedColorOutput.clear();
-            // 역할은 첨부의 선언(`_role`)이 먼저, 그다음 원본 이름 · 포맷이다(resolveRenderPassInputRole).
-            auto resolveAttachment = [&]( const string& attachmentName ) -> RenderGraphPassDesc::ResolvedAttachment
-            {
-                const RenderPassAttachment*             pAttachment = findAttachment( attachmentName );
-                RenderGraphPassDesc::ResolvedAttachment resolved{};
-                resolved._attachment = hashed_string( attachmentName.c_str() );
-                resolved._role       = static_cast<uint8>(
-                    resolveRenderPassInputRole( attachmentName, isDepthAttachment( pAttachment ), pAttachment != nullptr ? string_view( pAttachment->_role ) : string_view{} ) );
-                return resolved;
-            };
-            for ( const string& inputName : pass._listInput )
-            {
-                pass._listResolvedInput.push_back( resolveAttachment( inputName ) );
-            }
-            for ( const string& outputName : pass._listOutput )
-            {
-                pass._listResolvedOutput.emplace_back( outputName.c_str() );
-                const RenderPassAttachment* pOutput = findAttachment( outputName );
-                if ( pOutput != nullptr && isDepthAttachment( pOutput ) == false )
-                    pass._listResolvedColorOutput.push_back( resolveAttachment( outputName ) );
-            }
-            if ( isPipelinePassType( pass._resolvedType ) == false )
-            {
-                SW_LOG_ERROR( "[%#] pass '%#': 알 수 없는 타입 '%#' — RenderPassType 에 없는 표기입니다",
-                              sourcePath, pass._name, pass._type );
-                ++issueCount;
+                return nullptr;
             }
 
-            for ( const string& inputName : pass._listInput )
+            static bool isDepthAttachment( const RenderPassAttachment* pAttachment )
             {
-                if ( findAttachment( inputName ) == nullptr )
-                {
-                    SW_LOG_ERROR( "[%#] pass '%#': 입력 '%#' 이 _attachments 에 없습니다", sourcePath, pass._name, inputName );
-                    ++issueCount;
-                }
-            }
-            for ( const string& outputName : pass._listOutput )
-            {
-                // 스왑체인은 파이프라인이 선언하는 첨부가 아니라 디바이스가 주는 백버퍼다.
-                if ( outputName == kSwapchainOutputName )
-                    continue;
-                if ( findAttachment( outputName ) == nullptr )
-                {
-                    SW_LOG_ERROR( "[%#] pass '%#': 출력 '%#' 이 _attachments 에 없습니다", sourcePath, pass._name, outputName );
-                    ++issueCount;
-                }
+                return pAttachment != nullptr && engine::getSubsystem<TypeRegistry>().enumFromString<RHIFormat>( pAttachment->_format ) == constant::kDepthStencilFormat;
             }
 
-            // 뎁스 첨부: 비어 있는 것은 "일부러 뎁스를 안 쓴다" 는 뜻이라 정상이다. 다만 이름을
-            // 적었으면 그 첨부가 실재하고 뎁스 포맷이어야 한다. 컬러 첨부를 뎁스로 바인딩하면
-            // 렌더 패스가 통째로 비호환이 된다.
-            if ( pass._depthAttachment.empty() == false )
+            /** @brief 1) 첨부: 포맷 표기가 RHIFormat 으로 해석되는가, 렌더 타깃이 될 수 있는가, 이름이 겹치지 않는가, 나눗수 · 역할 표기가 맞는가. */
+            static uint32 checkAttachments( const RenderPipelineDesc& desc, string_view sourcePath )
             {
-                const RenderPassAttachment* pDepthAttachment = findAttachment( pass._depthAttachment );
-                if ( pDepthAttachment == nullptr )
+                uint32 issueCount{ 0 };
+                for ( uint32 attachmentIndex = 0; attachmentIndex < desc._listAttachment.size(); ++attachmentIndex )
                 {
-                    SW_LOG_ERROR( "[%#] pass '%#': 뎁스 첨부 '%#' 이 _attachments 에 없습니다",
-                                  sourcePath, pass._name, pass._depthAttachment );
-                    ++issueCount;
+                    const RenderPassAttachment& attachment = desc._listAttachment[attachmentIndex];
+                    RHIFormat                   parsed{};
+                    if ( engine::getSubsystem<TypeRegistry>().enumFromString( attachment._format, parsed ) == false )
+                    {
+                        SW_LOG_ERROR( "[%#] attachment '%#': 알 수 없는 포맷 '%#'", sourcePath, attachment._name, attachment._format );
+                        ++issueCount;
+                    }
+                    else if ( isRHIFormatRenderable( parsed ) == false )
+                    {
+                        // 이름은 맞지만 첨부가 될 수 없는 포맷(Unknown · 블록 압축 · R32G32B32_FLOAT) — 트랜지언트를 만들 때 백엔드가 실패한다.
+                        SW_LOG_ERROR( "[%#] attachment '%#': 포맷 '%#' 은 렌더 타깃이 될 수 없습니다", sourcePath, attachment._name, attachment._format );
+                        ++issueCount;
+                    }
+                    for ( uint32 otherIndex = 0; otherIndex < attachmentIndex; ++otherIndex )
+                    {
+                        if ( desc._listAttachment[otherIndex]._name == attachment._name )
+                        {
+                            SW_LOG_ERROR( "[%#] attachment '%#' 이름이 중복됐습니다", sourcePath, attachment._name );
+                            ++issueCount;
+                            break;
+                        }
+                    }
+                    if ( isSupportedResolutionDivisor( attachment._resolutionDivisor ) == false )
+                    {
+                        SW_LOG_ERROR( "[%#] attachment '%#': _resolutionDivisor %# — 1 · 2 · 4 만 받습니다", sourcePath, attachment._name, attachment._resolutionDivisor );
+                        ++issueCount;
+                    }
+                    // 역할 선언은 아는 글이어야 한다. 모르는 글을 조용히 이름 · 포맷 규칙으로 넘기면 선언한 사람이 왜 안 걸리는지 모른다.
+                    RenderPassInputRole declaredRole{ RenderPassInputRole::Invalid };
+                    if ( attachment._role.empty() == false && tryParseRenderPassInputRole( attachment._role, declaredRole ) == false )
+                    {
+                        SW_LOG_ERROR( "[%#] attachment '%#': 알 수 없는 역할 '%#' — SourceColor · SceneDepth · GBufferAlbedo · GBufferNormal · ShadowMap · "
+                                      "AmbientOcclusion · BloomBright 중 하나입니다",
+                                      sourcePath, attachment._name, attachment._role );
+                        ++issueCount;
+                    }
                 }
-                else if ( engine::getSubsystem<TypeRegistry>().enumFromString<RHIFormat>( pDepthAttachment->_format ) != constant::kDepthStencilFormat )
-                {
-                    SW_LOG_ERROR( "[%#] pass '%#': 뎁스 첨부 '%#' 의 포맷이 '%#' 입니다 — 뎁스 포맷이어야 합니다",
-                                  sourcePath, pass._name, pass._depthAttachment, pDepthAttachment->_format );
-                    ++issueCount;
-                }
+                return issueCount;
             }
-            else
+
+            /** @brief 2-0) 패스 이름은 하나뿐이어야 한다 — 이름이 패스의 열쇠라 뒤의 것은 버려진다. */
+            static uint32 checkPassNamesUnique( const RenderPipelineDesc& desc, string_view sourcePath )
             {
-                // 뎁스를 쓰겠다고 출력에 적어 놓고 바인딩은 안 하는 것은 앞뒤가 안 맞는다.
+                uint32 issueCount{ 0 };
+                for ( size_t passIndex = 0; passIndex < desc._listPass.size(); ++passIndex )
+                {
+                    for ( size_t earlierIndex = 0; earlierIndex < passIndex; ++earlierIndex )
+                    {
+                        if ( desc._listPass[earlierIndex]._name == desc._listPass[passIndex]._name )
+                        {
+                            SW_LOG_ERROR( "[%#] pass '%#' 가 두 번 선언됐습니다 — 이름은 패스의 열쇠라 뒤의 것은 버려집니다", sourcePath,
+                                          desc._listPass[passIndex]._name );
+                            ++issueCount;
+                            break;
+                        }
+                    }
+                }
+                return issueCount;
+            }
+
+            /** @brief 패스 하나의 타입 · 뎁스 · 입출력 역할을 해석해 `_resolved*` 에 채웁니다. 역할은 첨부의 선언(`_role`)이 먼저, 그다음 원본 이름 · 포맷이다. */
+            static void resolvePass( const RenderPipelineDesc& desc, RenderGraphPassDesc& pass )
+            {
+                pass._resolvedType = engine::getSubsystem<TypeRegistry>().enumFromString<RenderPassType>( pass._type );
+                pass._resolvedDepthAttachment =
+                    pass._depthAttachment.empty() ? hashed_string{} : hashed_string( pass._depthAttachment.c_str() );
+                pass._listResolvedInput.clear();
+                pass._listResolvedOutput.clear();
+                pass._listResolvedColorOutput.clear();
+                auto resolveAttachment = [&desc]( const string& attachmentName ) -> RenderGraphPassDesc::ResolvedAttachment
+                {
+                    const RenderPassAttachment*             pAttachment = findAttachment( desc, attachmentName );
+                    RenderGraphPassDesc::ResolvedAttachment resolved{};
+                    resolved._attachment = hashed_string( attachmentName.c_str() );
+                    resolved._role       = static_cast<uint8>(
+                        resolveRenderPassInputRole( attachmentName, isDepthAttachment( pAttachment ), pAttachment != nullptr ? string_view( pAttachment->_role ) : string_view{} ) );
+                    return resolved;
+                };
+                for ( const string& inputName : pass._listInput )
+                {
+                    pass._listResolvedInput.push_back( resolveAttachment( inputName ) );
+                }
                 for ( const string& outputName : pass._listOutput )
                 {
-                    const RenderPassAttachment* pAttachment = findAttachment( outputName );
-                    if ( pAttachment == nullptr || engine::getSubsystem<TypeRegistry>().enumFromString<RHIFormat>( pAttachment->_format ) != constant::kDepthStencilFormat )
+                    pass._listResolvedOutput.emplace_back( outputName.c_str() );
+                    const RenderPassAttachment* pOutput = findAttachment( desc, outputName );
+                    if ( pOutput != nullptr && isDepthAttachment( pOutput ) == false )
+                        pass._listResolvedColorOutput.push_back( resolveAttachment( outputName ) );
+                }
+            }
+
+            /** @brief 2-1) 패스 하나의 타입 표기가 해석되는가, 입출력이 선언된 첨부를 가리키는가. */
+            static uint32 checkPassTypeAndAttachments( const RenderPipelineDesc& desc, const RenderGraphPassDesc& pass, string_view sourcePath )
+            {
+                uint32 issueCount{ 0 };
+                if ( isPipelinePassType( pass._resolvedType ) == false )
+                {
+                    SW_LOG_ERROR( "[%#] pass '%#': 알 수 없는 타입 '%#' — RenderPassType 에 없는 표기입니다",
+                                  sourcePath, pass._name, pass._type );
+                    ++issueCount;
+                }
+                for ( const string& inputName : pass._listInput )
+                {
+                    if ( findAttachment( desc, inputName ) == nullptr )
+                    {
+                        SW_LOG_ERROR( "[%#] pass '%#': 입력 '%#' 이 _attachments 에 없습니다", sourcePath, pass._name, inputName );
+                        ++issueCount;
+                    }
+                }
+                for ( const string& outputName : pass._listOutput )
+                {
+                    // 스왑체인은 파이프라인이 선언하는 첨부가 아니라 디바이스가 주는 백버퍼다.
+                    if ( outputName == kSwapchainOutputName )
+                        continue;
+                    if ( findAttachment( desc, outputName ) == nullptr )
+                    {
+                        SW_LOG_ERROR( "[%#] pass '%#': 출력 '%#' 이 _attachments 에 없습니다", sourcePath, pass._name, outputName );
+                        ++issueCount;
+                    }
+                }
+                return issueCount;
+            }
+
+            /**
+             * @brief 2-2) 뎁스 첨부: 비어 있는 것은 "일부러 뎁스를 안 쓴다" 는 뜻이라 정상이다. 다만 이름을 적었으면 그 첨부가 실재하고 뎁스 포맷이어야 한다.
+             * @details 컬러 첨부를 뎁스로 바인딩하면 렌더 패스가 통째로 비호환이 된다. 뎁스를 출력에 적어 놓고 바인딩하지 않는 것도 앞뒤가 맞지 않는다.
+             */
+            static uint32 checkPassDepth( const RenderPipelineDesc& desc, const RenderGraphPassDesc& pass, string_view sourcePath )
+            {
+                uint32 issueCount{ 0 };
+                if ( pass._depthAttachment.empty() == false )
+                {
+                    const RenderPassAttachment* pDepthAttachment = findAttachment( desc, pass._depthAttachment );
+                    if ( pDepthAttachment == nullptr )
+                    {
+                        SW_LOG_ERROR( "[%#] pass '%#': 뎁스 첨부 '%#' 이 _attachments 에 없습니다",
+                                      sourcePath, pass._name, pass._depthAttachment );
+                        ++issueCount;
+                    }
+                    else if ( isDepthAttachment( pDepthAttachment ) == false )
+                    {
+                        SW_LOG_ERROR( "[%#] pass '%#': 뎁스 첨부 '%#' 의 포맷이 '%#' 입니다 — 뎁스 포맷이어야 합니다",
+                                      sourcePath, pass._name, pass._depthAttachment, pDepthAttachment->_format );
+                        ++issueCount;
+                    }
+                    return issueCount;
+                }
+                for ( const string& outputName : pass._listOutput )
+                {
+                    if ( isDepthAttachment( findAttachment( desc, outputName ) ) == false )
                         continue;
                     SW_LOG_ERROR( "[%#] pass '%#': 뎁스 첨부 '%#' 을 출력으로 선언했는데 _depthAttachment 가 비어 "
                                   "있습니다 — 이대로면 뎁스 없이 그립니다",
                                   sourcePath, pass._name, outputName );
                     ++issueCount;
                 }
+                return issueCount;
             }
-        }
 
-        // 3) 컬러 첨부가 여러 개인 패스는 MRT 로 묶인다. 포맷은 서로 달라도 되지만 개수에는 한계가 있다.
-        for ( const RenderGraphPassDesc& pass : _desc._listPass )
-        {
-            uint32 colorCount{ 0 };
-            for ( const string& outputName : pass._listOutput )
+            /** @brief 2) 패스마다 해석 값을 채우고 타입 · 입출력 · 뎁스를 검사합니다. */
+            static uint32 resolveAndCheckPassAttachments( RenderPipelineDesc& desc, string_view sourcePath )
             {
-                const RenderPassAttachment* pAttachment = findAttachment( outputName );
-                if ( pAttachment == nullptr )
-                    continue;
-                RHIFormat fmt{};
-                if ( engine::getSubsystem<TypeRegistry>().enumFromString( pAttachment->_format, fmt ) && fmt != RHIFormat::D24_UNORM_S8_UINT )
-                    ++colorCount;
-            }
-            if ( colorCount > kMaxColorAttachments )
-            {
-                SW_LOG_ERROR( "[%#] pass '%#': 컬러 출력이 %#개로 한계(%#)를 넘습니다",
-                              sourcePath, pass._name, colorCount, static_cast<uint32>( kMaxColorAttachments ) );
-                ++issueCount;
-            }
-        }
-
-        // 3-0) 한 패스의 출력(컬러 · 깊이)은 크기가 같아야 한다 — 렌더 패스의 타깃은 한 크기다. 나눗수가 다르면 D3D 는 렌더 패스를 거부하고
-        //      Vulkan 은 프레임버퍼를 못 만든다.
-        for ( const RenderGraphPassDesc& pass : _desc._listPass )
-        {
-            const RenderPassAttachment* pFirst           = nullptr;
-            auto                        checkSameDivisor = [&]( string_view attachmentName )
-            {
-                const RenderPassAttachment* pAttachment = findAttachment( attachmentName );
-                if ( pAttachment == nullptr )
-                    return;
-                if ( pFirst == nullptr )
+                uint32 issueCount{ 0 };
+                for ( RenderGraphPassDesc& pass : desc._listPass )
                 {
-                    pFirst = pAttachment;
-                    return;
+                    resolvePass( desc, pass );
+                    issueCount += checkPassTypeAndAttachments( desc, pass, sourcePath );
+                    issueCount += checkPassDepth( desc, pass, sourcePath );
                 }
-                if ( pAttachment->_resolutionDivisor == pFirst->_resolutionDivisor )
-                    return;
-                SW_LOG_ERROR( "[%#] pass '%#': 출력 '%#'(나눗수 %#) 과 '%#'(나눗수 %#) 의 크기가 다릅니다 — 한 패스의 출력은 같은 크기여야 합니다",
-                              sourcePath, pass._name, pFirst->_name, pFirst->_resolutionDivisor, pAttachment->_name, pAttachment->_resolutionDivisor );
-                ++issueCount;
-            };
-            for ( const string& outputName : pass._listOutput )
-            {
-                checkSameDivisor( outputName );
+                return issueCount;
             }
-            if ( pass._depthAttachment.empty() == false )
-                checkSameDivisor( pass._depthAttachment );
-        }
 
-        // 3-1) 지오메트리 패스(ForwardOpaque · ForwardOnlyOpaque · GBuffer · Transparent)와 하늘(Sky)은 **선언한 컬러 출력**에 그린다. 컬러 출력이 없으면 그릴 곳이 없다
-        //      (없는 첨부의 핸들 0 은 백버퍼라, 그대로 두면 화면에 그린다).
-        for ( const RenderGraphPassDesc& pass : _desc._listPass )
-        {
-            const bool bGeometryColorPass = pass._resolvedType == RenderPassType::ForwardOpaque || pass._resolvedType == RenderPassType::ForwardOnlyOpaque ||
-                                            pass._resolvedType == RenderPassType::GBuffer || pass._resolvedType == RenderPassType::Transparent ||
-                                            pass._resolvedType == RenderPassType::Sky;
-            if ( bGeometryColorPass == false || pass._listResolvedColorOutput.empty() == false )
-                continue;
-            SW_LOG_ERROR( "[%#] pass '%#'(%#): 컬러 출력이 없습니다 — 지오메트리 패스는 _listOutput 에 선언한 컬러 첨부에 그립니다",
-                          sourcePath, pass._name, pass._type );
-            ++issueCount;
-        }
-
-        // 3-2) GBuffer 는 알베도 · 노멀을 한 MRT 패스로 쓴다(컬러 타깃 수는 패스 타입 표의 값). 수가 다르면 PSO 와 렌더 패스가 어긋나거나,
-        //      노멀이 없어 Lighting · SSAO 가 읽을 것이 없다.
-        for ( const RenderGraphPassDesc& pass : _desc._listPass )
-        {
-            const uint32 expectedColorCount      = getRenderPassTypeInfo( RenderPassType::GBuffer )._colorTargetCount;
-            const bool   bSkipGBufferOutputCheck = pass._resolvedType != RenderPassType::GBuffer || pass._listResolvedColorOutput.empty() ||
-                                                 pass._listResolvedColorOutput.size() == expectedColorCount;
-            if ( bSkipGBufferOutputCheck )
-                continue;
-            SW_LOG_ERROR( "[%#] pass '%#'(%#): 컬러 출력이 %#개입니다 — G버퍼는 알베도 · 노멀 %#개를 한 MRT 패스로 씁니다",
-                          sourcePath, pass._name, pass._type, static_cast<uint32>( pass._listResolvedColorOutput.size() ), expectedColorCount );
-            ++issueCount;
-        }
-
-        // 4) 풀스크린 패스의 입력이 그 타입의 계약과 맞는가. "선언만 있고 아무도 안 읽는 입력" 을 여기서 잡는다.
-        //    그런 입력은 오류 없이 지나가고, 그것을 만드는 패스(예: SSAO)만 매 프레임 돌고 버려진다.
-        //    실행은 같은 해석(_listResolvedInput)을 그대로 건다.
-        for ( const RenderGraphPassDesc& pass : _desc._listPass )
-        {
-            const RenderPassInputSignature* pContract = findRenderPassInputSignature( pass._resolvedType );
-            if ( pContract == nullptr )
-                continue;
-
-            uint32 sourceColorCount{ 0 };
-            for ( const RenderGraphPassDesc::ResolvedAttachment& input : pass._listResolvedInput )
+            /** @brief 3) 컬러 첨부가 여러 개인 패스는 MRT 로 묶인다. 포맷은 서로 달라도 되지만 개수에는 한계가 있다. */
+            static uint32 checkColorOutputLimit( const RenderPipelineDesc& desc, string_view sourcePath )
             {
-                const RenderPassInputRole role = static_cast<RenderPassInputRole>( input._role );
-                if ( role == RenderPassInputRole::SourceColor )
-                    ++sourceColorCount;
-                if ( pContract->reads( role ) )
-                    continue;
-                SW_LOG_ERROR( "[%#] pass '%#'(%#): 입력 '%#'(역할 %#) 은 이 패스 타입이 읽지 않습니다 — 선언만 있고 바인딩되지 않는 입력입니다",
-                              sourcePath, pass._name, pass._type, input._attachment.c_str(), getRenderPassInputRoleName( role ) );
-                ++issueCount;
-            }
-            if ( sourceColorCount > 1 )
-            {
-                SW_LOG_ERROR( "[%#] pass '%#'(%#): 가공할 컬러 입력(SourceColor 역할)이 %#개입니다 — 셰이더는 하나만 읽습니다",
-                              sourcePath, pass._name, pass._type, sourceColorCount );
-                ++issueCount;
-            }
-            for ( uint32 requiredIndex = 0; requiredIndex < pContract->_requiredCount; ++requiredIndex )
-            {
-                const RenderPassInputRole required = pContract->_arrRequired[requiredIndex];
-                bool                      bFound{ false };
-                for ( const RenderGraphPassDesc::ResolvedAttachment& input : pass._listResolvedInput )
+                uint32 issueCount{ 0 };
+                for ( const RenderGraphPassDesc& pass : desc._listPass )
                 {
-                    if ( static_cast<RenderPassInputRole>( input._role ) == required )
+                    uint32 colorCount{ 0 };
+                    for ( const string& outputName : pass._listOutput )
                     {
-                        bFound = true;
-                        break;
+                        const RenderPassAttachment* pAttachment = findAttachment( desc, outputName );
+                        if ( pAttachment == nullptr )
+                            continue;
+                        RHIFormat fmt{};
+                        if ( engine::getSubsystem<TypeRegistry>().enumFromString( pAttachment->_format, fmt ) && fmt != RHIFormat::D24_UNORM_S8_UINT )
+                            ++colorCount;
                     }
-                }
-                if ( bFound )
-                    continue;
-                SW_LOG_ERROR( "[%#] pass '%#'(%#): 필수 입력(역할 %#)이 선언되지 않았습니다 — 셰이더가 kInvalidIndex 를 읽습니다",
-                              sourcePath, pass._name, pass._type, getRenderPassInputRoleName( required ) );
-                ++issueCount;
-            }
-        }
-
-        // 3-3) Canvas(화면 2D)는 주 출력(Swapchain)에 그리고, Swapchain 을 쓰는 **마지막** 패스여야 한다 — 뒤에 Swapchain 을 쓰는 패스가 있으면
-        //      UI 가 덮이고, 스크린샷 캡처 → 백버퍼 복사(마지막 Swapchain 쓰기 패스 끝)가 UI 앞에서 일어난다. UI 가 없는 파이프라인(Canvas 없음)은 허용한다.
-        {
-            const RenderGraphPassDesc* pCanvas = nullptr;
-            for ( const RenderGraphPassDesc& pass : _desc._listPass )
-            {
-                const bool bWritesSwapchain =
-                    VectorUtil::contains( pass._listOutput, string( kSwapchainOutputName ) );
-                if ( pass._resolvedType == RenderPassType::Canvas )
-                {
-                    if ( bWritesSwapchain == false )
+                    if ( colorCount > kMaxColorAttachments )
                     {
-                        SW_LOG_ERROR( "[%#] pass '%#'(Canvas): 출력이 Swapchain 이 아닙니다 — Canvas 는 주 출력에 그립니다", sourcePath, pass._name );
+                        SW_LOG_ERROR( "[%#] pass '%#': 컬러 출력이 %#개로 한계(%#)를 넘습니다",
+                                      sourcePath, pass._name, colorCount, static_cast<uint32>( kMaxColorAttachments ) );
                         ++issueCount;
                     }
-                    pCanvas = &pass;
-                    continue;
                 }
-                if ( pCanvas != nullptr && bWritesSwapchain )
+                return issueCount;
+            }
+
+            /**
+             * @brief 3-0) 한 패스의 출력(컬러 · 깊이)은 크기가 같아야 한다 — 렌더 패스의 타깃은 한 크기다.
+             * @details 나눗수가 다르면 D3D 는 렌더 패스를 거부하고 Vulkan 은 프레임버퍼를 못 만든다.
+             */
+            static uint32 checkOutputDivisors( const RenderPipelineDesc& desc, string_view sourcePath )
+            {
+                uint32 issueCount{ 0 };
+                for ( const RenderGraphPassDesc& pass : desc._listPass )
                 {
-                    SW_LOG_ERROR( "[%#] pass '%#': Canvas '%#' 뒤에서 Swapchain 을 씁니다 — Canvas 는 Swapchain 을 쓰는 마지막 패스여야 합니다(UI 가 덮인다)",
-                                  sourcePath, pass._name, pCanvas->_name );
+                    const RenderPassAttachment* pFirst           = nullptr;
+                    auto                        checkSameDivisor = [&]( string_view attachmentName )
+                    {
+                        const RenderPassAttachment* pAttachment = findAttachment( desc, attachmentName );
+                        if ( pAttachment == nullptr )
+                            return;
+                        if ( pFirst == nullptr )
+                        {
+                            pFirst = pAttachment;
+                            return;
+                        }
+                        if ( pAttachment->_resolutionDivisor == pFirst->_resolutionDivisor )
+                            return;
+                        SW_LOG_ERROR( "[%#] pass '%#': 출력 '%#'(나눗수 %#) 과 '%#'(나눗수 %#) 의 크기가 다릅니다 — 한 패스의 출력은 같은 크기여야 합니다",
+                                      sourcePath, pass._name, pFirst->_name, pFirst->_resolutionDivisor, pAttachment->_name, pAttachment->_resolutionDivisor );
+                        ++issueCount;
+                    };
+                    for ( const string& outputName : pass._listOutput )
+                    {
+                        checkSameDivisor( outputName );
+                    }
+                    if ( pass._depthAttachment.empty() == false )
+                        checkSameDivisor( pass._depthAttachment );
+                }
+                return issueCount;
+            }
+
+            /**
+             * @brief 3-1 · 3-2) 지오메트리 패스와 하늘은 선언한 컬러 출력에 그리고, G버퍼는 알베도 · 노멀을 한 MRT 패스로 쓴다.
+             * @details 컬러 출력이 없으면 그릴 곳이 없다(없는 첨부의 핸들 0 은 백버퍼라, 그대로 두면 화면에 그린다). G버퍼의 컬러 수가 표의 값과 다르면
+             *          PSO 와 렌더 패스가 어긋나거나, 노멀이 없어 Lighting · SSAO 가 읽을 것이 없다.
+             */
+            static uint32 checkGeometryColorOutputs( const RenderPipelineDesc& desc, string_view sourcePath )
+            {
+                uint32       issueCount{ 0 };
+                const uint32 expectedGBufferColorCount = getRenderPassTypeInfo( RenderPassType::GBuffer )._colorTargetCount;
+                for ( const RenderGraphPassDesc& pass : desc._listPass )
+                {
+                    const bool bGeometryColorPass = pass._resolvedType == RenderPassType::ForwardOpaque || pass._resolvedType == RenderPassType::ForwardOnlyOpaque ||
+                                                    pass._resolvedType == RenderPassType::GBuffer || pass._resolvedType == RenderPassType::Transparent ||
+                                                    pass._resolvedType == RenderPassType::Sky;
+                    if ( bGeometryColorPass && pass._listResolvedColorOutput.empty() )
+                    {
+                        SW_LOG_ERROR( "[%#] pass '%#'(%#): 컬러 출력이 없습니다 — 지오메트리 패스는 _listOutput 에 선언한 컬러 첨부에 그립니다",
+                                      sourcePath, pass._name, pass._type );
+                        ++issueCount;
+                    }
+                    const bool bSkipGBufferOutputCheck = pass._resolvedType != RenderPassType::GBuffer || pass._listResolvedColorOutput.empty() ||
+                                                         pass._listResolvedColorOutput.size() == expectedGBufferColorCount;
+                    if ( bSkipGBufferOutputCheck )
+                        continue;
+                    SW_LOG_ERROR( "[%#] pass '%#'(%#): 컬러 출력이 %#개입니다 — G버퍼는 알베도 · 노멀 %#개를 한 MRT 패스로 씁니다",
+                                  sourcePath, pass._name, pass._type, static_cast<uint32>( pass._listResolvedColorOutput.size() ), expectedGBufferColorCount );
                     ++issueCount;
                 }
+                return issueCount;
             }
-        }
 
-        // 3-4) 하늘(Sky)은 깊이 테스트로 빈 곳만 칠한다 — 뎁스 첨부가 없으면 장면 위를 통째로 덮는다.
-        for ( const RenderGraphPassDesc& pass : _desc._listPass )
-        {
-            if ( pass._resolvedType != RenderPassType::Sky || pass._depthAttachment.empty() == false )
-                continue;
-            SW_LOG_ERROR( "[%#] pass '%#'(Sky): _depthAttachment 가 비어 있습니다 — 하늘은 깊이 테스트로 아무것도 그리지 않은 곳만 칠합니다", sourcePath, pass._name );
-            ++issueCount;
-        }
+            /**
+             * @brief 4) 풀스크린 패스의 입력이 그 타입의 계약과 맞는가. "선언만 있고 아무도 안 읽는 입력" 을 여기서 잡는다.
+             * @details 그런 입력은 오류 없이 지나가고, 그것을 만드는 패스(예: SSAO)만 매 프레임 돌고 버려진다. 실행은 같은 해석(_listResolvedInput)을 그대로 건다.
+             */
+            static uint32 checkInputContracts( const RenderPipelineDesc& desc, string_view sourcePath )
+            {
+                uint32 issueCount{ 0 };
+                for ( const RenderGraphPassDesc& pass : desc._listPass )
+                {
+                    const RenderPassInputSignature* pContract = findRenderPassInputSignature( pass._resolvedType );
+                    if ( pContract == nullptr )
+                        continue;
 
+                    uint32 sourceColorCount{ 0 };
+                    for ( const RenderGraphPassDesc::ResolvedAttachment& input : pass._listResolvedInput )
+                    {
+                        const RenderPassInputRole role = static_cast<RenderPassInputRole>( input._role );
+                        if ( role == RenderPassInputRole::SourceColor )
+                            ++sourceColorCount;
+                        if ( pContract->reads( role ) )
+                            continue;
+                        SW_LOG_ERROR( "[%#] pass '%#'(%#): 입력 '%#'(역할 %#) 은 이 패스 타입이 읽지 않습니다 — 선언만 있고 바인딩되지 않는 입력입니다",
+                                      sourcePath, pass._name, pass._type, input._attachment.c_str(), getRenderPassInputRoleName( role ) );
+                        ++issueCount;
+                    }
+                    if ( sourceColorCount > 1 )
+                    {
+                        SW_LOG_ERROR( "[%#] pass '%#'(%#): 가공할 컬러 입력(SourceColor 역할)이 %#개입니다 — 셰이더는 하나만 읽습니다",
+                                      sourcePath, pass._name, pass._type, sourceColorCount );
+                        ++issueCount;
+                    }
+                    for ( uint32 requiredIndex = 0; requiredIndex < pContract->_requiredCount; ++requiredIndex )
+                    {
+                        const RenderPassInputRole required = pContract->_arrRequired[requiredIndex];
+                        const bool                bFound   = std::any_of( pass._listResolvedInput.begin(), pass._listResolvedInput.end(),
+                                                                          [required]( const RenderGraphPassDesc::ResolvedAttachment& input )
+                                         { return static_cast<RenderPassInputRole>( input._role ) == required; } );
+                        if ( bFound )
+                            continue;
+                        SW_LOG_ERROR( "[%#] pass '%#'(%#): 필수 입력(역할 %#)이 선언되지 않았습니다 — 셰이더가 kInvalidIndex 를 읽습니다",
+                                      sourcePath, pass._name, pass._type, getRenderPassInputRoleName( required ) );
+                        ++issueCount;
+                    }
+                }
+                return issueCount;
+            }
+
+            /**
+             * @brief 3-3 · 3-4) Canvas(화면 2D)는 주 출력(Swapchain)에 그리고 Swapchain 을 쓰는 **마지막** 패스여야 하며, 하늘은 뎁스 첨부가 있어야 한다.
+             * @details 뒤에 Swapchain 을 쓰는 패스가 있으면 UI 가 덮이고, 스크린샷 캡처 → 백버퍼 복사(마지막 Swapchain 쓰기 패스 끝)가 UI 앞에서 일어난다.
+             *          UI 가 없는 파이프라인(Canvas 없음)은 허용한다. 하늘은 깊이 테스트로 빈 곳만 칠한다 — 뎁스 첨부가 없으면 장면 위를 통째로 덮는다.
+             */
+            static uint32 checkCanvasAndSky( const RenderPipelineDesc& desc, string_view sourcePath )
+            {
+                uint32                     issueCount{ 0 };
+                const RenderGraphPassDesc* pCanvas = nullptr;
+                for ( const RenderGraphPassDesc& pass : desc._listPass )
+                {
+                    const bool bWritesSwapchain = VectorUtil::contains( pass._listOutput, string( kSwapchainOutputName ) );
+                    if ( pass._resolvedType == RenderPassType::Canvas )
+                    {
+                        if ( bWritesSwapchain == false )
+                        {
+                            SW_LOG_ERROR( "[%#] pass '%#'(Canvas): 출력이 Swapchain 이 아닙니다 — Canvas 는 주 출력에 그립니다", sourcePath, pass._name );
+                            ++issueCount;
+                        }
+                        pCanvas = &pass;
+                        continue;
+                    }
+                    if ( pCanvas != nullptr && bWritesSwapchain )
+                    {
+                        SW_LOG_ERROR( "[%#] pass '%#': Canvas '%#' 뒤에서 Swapchain 을 씁니다 — Canvas 는 Swapchain 을 쓰는 마지막 패스여야 합니다(UI 가 덮인다)",
+                                      sourcePath, pass._name, pCanvas->_name );
+                        ++issueCount;
+                    }
+                }
+                for ( const RenderGraphPassDesc& pass : desc._listPass )
+                {
+                    if ( pass._resolvedType != RenderPassType::Sky || pass._depthAttachment.empty() == false )
+                        continue;
+                    SW_LOG_ERROR( "[%#] pass '%#'(Sky): _depthAttachment 가 비어 있습니다 — 하늘은 깊이 테스트로 아무것도 그리지 않은 곳만 칠합니다", sourcePath, pass._name );
+                    ++issueCount;
+                }
+                return issueCount;
+            }
+        };
+    } // namespace
+
+    uint32 RenderPipelineAsset::validate( string_view sourcePath )
+    {
+        using Internal = RenderPipelineValidationInternal;
+        // 순서가 있다 — 패스 해석(2)이 채운 `_resolved*` 를 뒤 규칙들이 읽는다.
+        uint32 issueCount = Internal::checkAttachments( _desc, sourcePath );
+        issueCount += Internal::checkPassNamesUnique( _desc, sourcePath );
+        issueCount += Internal::resolveAndCheckPassAttachments( _desc, sourcePath );
+        issueCount += Internal::checkColorOutputLimit( _desc, sourcePath );
+        issueCount += Internal::checkOutputDivisors( _desc, sourcePath );
+        issueCount += Internal::checkGeometryColorOutputs( _desc, sourcePath );
+        issueCount += Internal::checkInputContracts( _desc, sourcePath );
+        issueCount += Internal::checkCanvasAndSky( _desc, sourcePath );
         if ( issueCount > 0 )
             SW_LOG_ERROR( "[%#] 파이프라인 검증에서 %#건의 문제를 찾았습니다 — 렌더 결과가 어긋나거나 GPU 가 죽을 수 있습니다",
                           sourcePath, issueCount );
