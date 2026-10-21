@@ -25,6 +25,12 @@
 왜 필요한가: 게임 여럿을 빌드 한 번에 짓고 실행할 때 고르며 키트는 필요한 것만 싣는 구조입니다(2026-10-13 사용자 확정). 결정은 [결정 기록](../09_Decisions.md) 5-2, 쓰는 법은 `Source/Games/README.md` 입니다.
 남은 것: 새 호스트 테스트 `AppScenarioTest.EveryGamePackScenarioPassesOnEveryBackend` 를 네 백엔드로 아직 안 돌렸습니다(DX12 직접 실행으로 10 시나리오 통과만 확인).
 
+### NavMeshExtensions
+제목: 3D 내비메시 확장(막는 식생 · AbilityArena 적 · 장애물 캐시)의 실행 확인
+옛번호: D1-3
+왜 필요한가: 셋 다 코드는 들어갔고(2026-10-22) 빌드 · 실행 확인이 남았습니다. 막는 식생은 `FoliageLayer::_navBlockRadius`(`FoliageNavGeometry.cpp`), AbilityArena 적은 프리팹의 `NavMeshAgentComponent`, 장애물 캐시는 에이전트 종류의 `_obstacleMode = TileCache`(`Recast/RecastTileCache.*` — 타일 바이트가 높이 층 묶음이 되고 장애물은 `INavMesh::addCacheObstacle`)입니다.
+남은 것: 테스트 `FoliageTest.BlockingLayerAddsNavObstaclePerInstance` · `NavMeshTileCacheTest.*` 를 돌린다. AbilityArena `ai.scenario.xml` · `control.scenario.xml` 이 내비메시 이동으로도 통과하는지 본다. 장애물 캐시의 상자 요 부호(`NavMeshObstacleComponent::makeCacheObstacle` 의 atan2 와 Detour `addBoxObstacle` 의 `yRadians`)가 맞는지 돌린 직사각 장애물로 본다. 장애물이 많은 장면에서 다시 굽기와 캐시의 `GT.Navigation.*` 시간을 견준다 — 층은 압축하지 않는다(저장 압축기, 메모리는 타일마다 층 크기 × 3 바이트).
+
 ### StorageOwnershipLeftovers
 제목: 저장소 소유 정리의 잰 뒤에 정할 것
 옛번호: 없음
@@ -119,11 +125,6 @@ Base 에 남긴 것: 계산한 키로 정렬하는 람다(`TimingJudge` 폭 합,
 
 ## 기능
 
-### NavMeshExtensions
-제목: 3D 내비메시(Recast & Detour)의 남은 것
-옛번호: D1-3
-왜 필요한가: `Source/Engine/Navigation/` 의 3D 내비메시에 아래가 비었습니다.
-남은 것: (3) 장애물이 많고 자주 움직이면 TileCache(압축 층) — 지금은 타일을 통째로 다시 베이크합니다. 착수 조건은 움직이는 장애물로 타일 다시 굽기가 프레임을 넘기는 장면이 생기는 것입니다. 식생(`FoliageLayer::_navBlockRadius`, `FoliageNavGeometry.cpp`)과 AbilityArena 적(프리팹의 `NavMeshAgentComponent`)은 들어갔고, 확인 못 한 것은 AbilityArena `ai.scenario.xml` · `control.scenario.xml` 이 내비메시 이동으로도 통과하는지입니다.
 
 ### Wayland
 제목: Linux 창 계층이 X11 뿐이다

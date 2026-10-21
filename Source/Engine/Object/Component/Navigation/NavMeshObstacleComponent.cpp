@@ -108,6 +108,31 @@ namespace sw
         return true;
     }
 
+    bool NavMeshObstacleComponent::makeCacheObstacle( NavCacheObstacleDesc& outDesc ) const
+    {
+        const GameObject*     pOwner = getOwner();
+        const SceneComponent* pScene = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
+        if ( pScene == nullptr )
+            return false;
+        // 뚫는 부피(`makeVolume`)와 같은 자세 규칙이다 — 상자는 오브젝트의 요만 따른다(장애물 캐시의 상자는 Y 축으로만 돈다).
+        const float4x4 world = pScene->getWorldMatrix();
+        const float3   scale = world.getScale();
+        outDesc._center      = float3::transform( _center, world );
+        outDesc._bCylinder   = _shape == NavObstacleShape::Cylinder;
+        if ( outDesc._bCylinder )
+        {
+            const float32 radius = _halfExtents._x * MathUtil::max( MathUtil::abs( scale._x ), MathUtil::abs( scale._z ) );
+            outDesc._halfExtents = float3{ radius, _halfExtents._y * MathUtil::abs( scale._y ), radius };
+            outDesc._yaw         = 0.0f;
+            return true;
+        }
+        outDesc._halfExtents = float3{ _halfExtents._x * MathUtil::abs( scale._x ), _halfExtents._y * MathUtil::abs( scale._y ), _halfExtents._z * MathUtil::abs( scale._z ) };
+        // 오브젝트의 +X 축이 XZ 평면에서 향하는 각 — 요(Y 축 회전)다.
+        const float3 axisX = float3::transformVector( float3{ 1.0f, 0.0f, 0.0f }, world );
+        outDesc._yaw       = MathUtil::atan2( -axisX._z, axisX._x );
+        return true;
+    }
+
     bool NavMeshObstacleComponent::computeWorldBounds( AABB& outBounds ) const
     {
         NavConvexVolume volume;

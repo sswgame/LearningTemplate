@@ -22,6 +22,8 @@ class dtQueryFilter;
 
 namespace sw
 {
+    class RecastTileCache;
+
     /** @class RecastNavMesh @brief 파일 머리말 참고. */
     class RecastNavMesh final : public INavMesh
     {
@@ -48,6 +50,10 @@ namespace sw
         uint32             getRevision() const override { return _revision; }
         void               setOffMeshLinkEnabled( uint32 linkID, bool bEnabled ) override;
         bool               isOffMeshLinkEnabled( uint32 linkID ) const override;
+        NavObstacleMode    getObstacleMode() const override { return _agentType._obstacleMode; }
+        NavObstacleRef     addCacheObstacle( const NavCacheObstacleDesc& desc ) override;
+        void               removeCacheObstacle( NavObstacleRef obstacle ) override;
+        bool               updateCacheObstacles( float32 deltaSeconds ) override;
 
         [[nodiscard]] bool findNearestPoint( const float3& position, const float3& searchExtent, const NavQueryFilter& filter, NavLocation& outLocation ) const override;
         NavPathStatus      findPath( const float3& start, const float3& end, const float3& searchExtent, const NavQueryFilter& filter, NavPath& outPath ) const override;
@@ -67,8 +73,10 @@ namespace sw
         dtNavMeshQuery* acquireQuery( bool& outLocked ) const;
         void            releaseQuery( bool bLocked ) const;
         void            freeQueries();
-        /** @brief 타일 하나의 오프 메시 링크 폴리곤 표시를 막힌 목록에 맞춥니다(막힘 0, 아니면 영역 비트). */
+        /** @brief 타일 자리 하나(모든 층)의 오프 메시 링크 폴리곤 표시를 막힌 목록에 맞춥니다(막힘 0, 아니면 영역 비트). */
         void applyLinkFlags( int32 tileX, int32 tileZ );
+        /** @brief 든 모든 타일의 링크 표시를 다시 맞춥니다(막힌 링크가 있을 때 — 링크 막기 · 장애물 캐시가 타일을 다시 지은 뒤). */
+        void applyLinkFlagsToAllTiles();
 
         NavAgentTypeDef                 _agentType;
         NavTileGrid                     _grid;
@@ -77,6 +85,7 @@ namespace sw
         mutable dtNavMeshQuery*         _pSharedQuery;       ///< 슬롯 밖 스레드용(`_sharedQueryMutex`)
         mutable mutex                   _sharedQueryMutex;
         dtNavMesh*                      _pNavMesh;
+        unique_ptr<RecastTileCache>     _pTileCache; ///< 장애물 캐시(`NavObstacleMode::TileCache` 일 때만 있다)
         float32                         _minY;
         float32                         _maxY;
         uint32                          _revision;

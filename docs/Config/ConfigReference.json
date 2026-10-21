@@ -1126,6 +1126,24 @@
        "max": "",
        "units": "",
        "description": "Agents one crowd of this type holds"
+      },
+      {
+       "name": "_obstacleMode",
+       "type": "NavObstacleMode",
+       "default": "RebakeTiles",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "How moving obstacles change this navmesh: rebake touched tiles, or keep height layers and rebuild only on them (many, often moving obstacles)"
+      },
+      {
+       "name": "_maxCacheObstacleCount",
+       "type": "uint32",
+       "default": "256",
+       "min": "1",
+       "max": "65535",
+       "units": "",
+       "description": "Obstacles the tile cache holds at once (TileCache only)"
       }
      ]
     },
@@ -1154,7 +1172,15 @@
      ]
     }
    ],
-   "enums": []
+   "enums": [
+    {
+     "name": "NavObstacleMode",
+     "values": [
+      "RebakeTiles",
+      "TileCache"
+     ]
+    }
+   ]
   },
   {
    "page": "LipSyncSettings",

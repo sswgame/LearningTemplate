@@ -32,6 +32,7 @@ namespace sw
 {
     NavTileRebaker::NavTileRebaker()
         : _listDirtyArea{}
+        , _listObstacleArea{}
         , _rebakedTileCount{ 0 }
         , _dirtyLock{}
         , _bGeometryDirty{ false }
@@ -45,6 +46,7 @@ namespace sw
         _listDirtyArea.clear();
         _bGeometryDirty = false;
         _dirtyLock.unlock();
+        _listObstacleArea.clear();
         _bObstacleVolumeDirty = false;
     }
 
@@ -77,7 +79,50 @@ namespace sw
         }
     }
 
-    void NavTileRebaker::updateObstacles( const vector<NavMeshObstacleComponent*>& listObstacle, float32 moveThreshold )
+    void NavTileRebaker::invalidateObstacleArea( const AABB& bounds )
+    {
+        if ( bounds.isValid() )
+            _listObstacleArea.push_back( bounds );
+    }
+
+    void NavTileRebaker::forgetObstacle( NavMeshObstacleComponent& obstacle, const vector<unique_ptr<NavMeshRuntime>>& listRuntime )
+    {
+        if ( obstacle._bCarved == SW_TRUE )
+        {
+            invalidateObstacleArea( obstacle._carvedBounds );
+            _bObstacleVolumeDirty = true;
+        }
+        for ( const unique_ptr<NavMeshRuntime>& pRuntime : listRuntime )
+        {
+            if ( pRuntime->usesObstacleCache() )
+                pRuntime->removeCacheObstacle( &obstacle );
+        }
+        obstacle._bCarved = SW_FALSE;
+    }
+
+    void NavTileRebaker::updateObstacleCaches( const vector<unique_ptr<NavMeshRuntime>>& listRuntime, float32 deltaSeconds )
+    {
+        for ( const unique_ptr<NavMeshRuntime>& pRuntime : listRuntime )
+        {
+            if ( pRuntime->usesObstacleCache() )
+                (void)pRuntime->_pNavMesh->updateCacheObstacles( deltaSeconds ); // 다시 지었으면 내비메시 번호가 오른다 — 경로 캐시가 그것을 본다
+        }
+    }
+
+    void NavTileRebaker::addCarvedObstaclesToCache( NavMeshRuntime& runtime, const vector<NavMeshObstacleComponent*>& listObstacle )
+    {
+        for ( const NavMeshObstacleComponent* pObstacle : listObstacle )
+        {
+            NavCacheObstacleDesc desc;
+            if ( pObstacle->_bCarved == SW_FALSE || pObstacle->makeCacheObstacle( desc ) == false )
+                continue;
+            const NavObstacleRef ref = runtime._pNavMesh->addCacheObstacle( desc );
+            if ( ref != 0 )
+                runtime._listCacheObstacle.push_back( NavCacheObstacleEntry{ pObstacle, ref } );
+        }
+    }
+
+    void NavTileRebaker::updateObstacles( const vector<unique_ptr<NavMeshRuntime>>& listRuntime, const vector<NavMeshObstacleComponent*>& listObstacle, float32 moveThreshold )
     {
         using Internal = NavTileRebakerInternal;
         for ( NavMeshObstacleComponent* pObstacle : listObstacle )
@@ -85,11 +130,7 @@ namespace sw
             if ( SceneNavigationUtil::isLive( *pObstacle ) == false )
             {
                 if ( pObstacle->_bCarved == SW_TRUE )
-                {
-                    invalidateArea( pObstacle->_carvedBounds, false );
-                    pObstacle->_bCarved   = SW_FALSE;
-                    _bObstacleVolumeDirty = true;
-                }
+                    forgetObstacle( *pObstacle, listRuntime );
                 continue;
             }
             NavConvexVolume volume;
@@ -106,14 +147,26 @@ namespace sw
             if ( bChanged == false )
                 continue;
             if ( pObstacle->_bCarved == SW_TRUE )
-                invalidateArea( pObstacle->_carvedBounds, false );
-            invalidateArea( bounds, false );
+                invalidateObstacleArea( pObstacle->_carvedBounds );
+            invalidateObstacleArea( bounds );
             pObstacle->_carvedBounds   = bounds;
             pObstacle->_carvedPosition = center;
             pObstacle->_carvedYaw      = yaw;
             pObstacle->_bCarved        = SW_TRUE;
             pObstacle->_bShapeDirty    = SW_FALSE;
             _bObstacleVolumeDirty      = true;
+            // 캐시 종류 — 옛 장애물을 빼고 새 자세로 넣는다(타일은 다음 `updateObstacleCaches` 가 층에서 다시 짓는다).
+            NavCacheObstacleDesc desc;
+            const bool           bHasDesc = pObstacle->makeCacheObstacle( desc );
+            for ( const unique_ptr<NavMeshRuntime>& pRuntime : listRuntime )
+            {
+                if ( pRuntime->usesObstacleCache() == false )
+                    continue;
+                pRuntime->removeCacheObstacle( pObstacle );
+                const NavObstacleRef ref = bHasDesc ? pRuntime->_pNavMesh->addCacheObstacle( desc ) : NavObstacleRef{ 0 };
+                if ( ref != 0 )
+                    pRuntime->_listCacheObstacle.push_back( NavCacheObstacleEntry{ pObstacle, ref } );
+            }
         }
     }
 
@@ -126,21 +179,26 @@ namespace sw
         const bool bGeometryDirty = _bGeometryDirty;
         _bGeometryDirty           = false;
         _dirtyLock.unlock();
+        vector<AABB> listObstacleArea;
+        listObstacleArea.swap( _listObstacleArea );
         if ( listRuntime.empty() )
         {
             _bObstacleVolumeDirty = false;
             return;
         }
-        if ( listArea.empty() && _bObstacleVolumeDirty == false )
+        const bool bNothingChanged = listArea.empty() && listObstacleArea.empty() && _bObstacleVolumeDirty == false;
+        if ( bNothingChanged )
             return;
         SW_PROFILE_SCOPE( "GT.Navigation.invalidate" );
         if ( _bObstacleVolumeDirty )
         {
+            // 덧칠 부피는 다시 굽기 종류만 든다 — 캐시 종류는 장애물을 캐시로 받고 덧칠 부피를 받지 않는다(`INavMesh::bakeTile`).
             shared_ptr<vector<NavConvexVolume>> pVolume = make_shared<vector<NavConvexVolume>>();
             collectObstacleVolumes( listObstacle, *pVolume );
             for ( const unique_ptr<NavMeshRuntime>& pRuntime : listRuntime )
             {
-                pRuntime->_pVolume = pVolume;
+                if ( pRuntime->usesObstacleCache() == false )
+                    pRuntime->_pVolume = pVolume;
             }
             _bObstacleVolumeDirty = false;
         }
@@ -158,12 +216,18 @@ namespace sw
         vector<int2> listTile;
         for ( const unique_ptr<NavMeshRuntime>& pRuntime : listRuntime )
         {
-            for ( const AABB& area : listArea )
+            const bool bObstacleAreasApply = pRuntime->usesObstacleCache() == false;
+            for ( const vector<AABB>* pListArea : { &listArea, &listObstacleArea } )
             {
-                pRuntime->_pNavMesh->collectTilesOverlapping( area, listTile );
-                for ( const int2& tile : listTile )
+                if ( pListArea == &listObstacleArea && bObstacleAreasApply == false )
+                    continue;
+                for ( const AABB& area : *pListArea )
                 {
-                    pRuntime->addDirtyTile( tile );
+                    pRuntime->_pNavMesh->collectTilesOverlapping( area, listTile );
+                    for ( const int2& tile : listTile )
+                    {
+                        pRuntime->addDirtyTile( tile );
+                    }
                 }
             }
         }

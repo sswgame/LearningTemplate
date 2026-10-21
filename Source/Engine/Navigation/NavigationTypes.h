@@ -30,6 +30,8 @@ namespace sw
         static constexpr uint32 kMaxAreaCount = 16;
         /** @brief 걸을 수 없는 영역입니다(장애물, 구멍). 베이크에서 그 위치를 뺍니다. 테이블의 번호가 아닙니다. */
         static constexpr uint8 kNotWalkableArea = 0xFF;
+        /** @brief 장애물 캐시(`NavObstacleMode::TileCache`)에서 타일 자리 하나가 담는 높이 층의 상한입니다(다리 · 다층 건물). 내비메시의 타일 자리 수가 이만큼 곱해집니다. */
+        static constexpr uint32 kMaxCacheLayerCount = 4;
         /** @brief 경로가 낼 수 있는 꼭짓점의 상한입니다(넘으면 부분 경로). */
         static constexpr uint32 kMaxPathPointCount = 256;
     };
@@ -205,5 +207,24 @@ namespace sw
         NavCrowdMoveState _moveState{ NavCrowdMoveState::Idle };
         bool              _bOnNavMesh{ false };
         bool              _bOnOffMeshLink{ false }; ///< 오프 메시 링크를 건너는 중이다(군중이 링크를 따라 옮긴다)
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 장애물 캐시(`NavObstacleMode::TileCache`)에 넣은 장애물 하나의 번호입니다. 0 은 없음입니다. */
+    using NavObstacleRef = uint32;
+
+    /**
+     * @brief 장애물 캐시에 넣을 장애물 하나입니다(Detour TileCache 의 세운 원기둥 · 요 회전 상자).
+     * @details 상자는 `_center` 가 중심이고 `_halfExtents` 가 반 크기, `_yaw` 가 Y 축 회전(라디안)이다. 원기둥은 `_center` 가 중심이고 반지름 `_halfExtents.x`,
+     *          반 높이 `_halfExtents.y` 다(`NavMeshObstacleComponent` 의 모양 규칙과 같다). 몸 반지름만큼 넓히는 것은 캐시가 한다.
+     */
+    struct NavCacheObstacleDesc
+    {
+        float3  _center{};
+        float3  _halfExtents{ 0.5f, 0.5f, 0.5f };
+        float32 _yaw{ 0.0f };
+        bool    _bCylinder{ false };
     };
 } // namespace sw

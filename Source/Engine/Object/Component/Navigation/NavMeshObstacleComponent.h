@@ -45,6 +45,8 @@ namespace sw
 
         /** @brief 지금 오브젝트 자세의 뚫는 부피입니다(월드). 오브젝트가 없으면 false 입니다. */
         [[nodiscard]] bool makeVolume( NavConvexVolume& outVolume ) const;
+        /** @brief 지금 오브젝트 자세의 장애물 캐시 장애물입니다(월드, `NavObstacleMode::TileCache`). 오브젝트가 없으면 false 입니다. */
+        [[nodiscard]] bool makeCacheObstacle( NavCacheObstacleDesc& outDesc ) const;
         /** @brief 지금 자세의 월드 경계입니다. */
         [[nodiscard]] bool computeWorldBounds( AABB& outBounds ) const;
 
