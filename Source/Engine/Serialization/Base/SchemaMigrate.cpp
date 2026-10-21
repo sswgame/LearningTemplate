@@ -217,23 +217,62 @@ namespace sw
              * @details 기록 타입이 프로퍼티 타입과 **같을 때만** 제자리로 읽는다. 다르면 곧바로 이관(`tryCoerceBinaryPayload`)으로
              *          보낸다. 본 역직렬화 경로(`BinarySerializer` 의 태그 루프)와 같은 규칙이다. 기록 타입으로 프로퍼티 위치에
              *          먼저 읽으면 구조가 다른 타입(int32 → int16, string 등)에서 그 위치와 이웃 필드를 덮어쓴다.
+             *          프로퍼티 단위로 쓴다. 비트필드는 그 비트만 쓴다(값 주소로 쓰면 같은 바이트의 다른 플래그를 덮는다).
              * @param wireTypeName 기록 타입. 모르면 비웁니다(그때는 이관이 제 타입 읽기부터 합니다).
              */
-            [[nodiscard]] static bool applyOrphanBinary( MutableValueAddress value, hashed_string propTypeName, const SchemaOrphanValue& orphan,
-                                                         hashed_string wireTypeName, const SerializeContext& context )
+            [[nodiscard]] static bool applyOrphanBinary( const ResolvedPropertyPath& target, const SchemaOrphanValue& orphan, hashed_string wireTypeName,
+                                                         const SerializeContext& context )
             {
-                const uint8* pPayload    = orphan._listBinary.data();
-                const size_t payloadSize = orphan._listBinary.size();
-                // 기록된 버전으로 읽는다. orphan 은 그것을 읽은 스트림의 버전을 가지고 있다. 끝까지 읽혀야 받는다(본 경로의 `SerializerUtil::applyPropertyBinary` 와 같다).
+                const PropertyInfo& prop        = *target._pProp;
+                const uint8*        pPayload    = orphan._listBinary.data();
+                const size_t        payloadSize = orphan._listBinary.size();
+                // 기록된 버전으로 읽는다. orphan 은 그것을 읽은 스트림의 버전을 가지고 있다. 끝까지 읽혀야 받는다(`SerializerUtil::applyPropertyBinary`).
                 // 이관 함수가 bool 로 받으므로 객체째 실패도 적용 실패다(이관이 실패하면 읽기 전체가 실패한다).
-                if ( wireTypeName == propTypeName )
+                if ( wireTypeName == prop._typeName &&
+                     SerializerUtil::applyPropertyBinary( prop, target._owner, pPayload, payloadSize, context, orphan._wireVersion ) == FieldReadResult::Read )
+                    return true;
+                return tryCoercePropertyBinary( prop, target._owner, pPayload, payloadSize, context, wireTypeName, orphan._wireVersion ) == FieldReadResult::Read;
+            }
+
+            /**
+             * @brief 텍스트를 프로퍼티 하나에 강제 변환해 씁니다(`parseTextValueCoerced` 의 프로퍼티 판). 비트필드는 임시 bool 에 읽어 그 비트만 씁니다.
+             * @return 읽지 못하면 false 이고 값은 그대로입니다.
+             */
+            [[nodiscard]] static bool applyTextCoerced( const ResolvedPropertyPath& target, string_view text, const SerializeContext& context )
+            {
+                const PropertyInfo& prop   = *target._pProp;
+                void* const         pOwner = target._owner.get();
+                if ( prop._bIsBitField == SW_TRUE )
                 {
-                    size_t offset{ 0 };
-                    if ( SerializerUtil::deserializeValueBinary( value, propTypeName, pPayload, payloadSize, offset, context, orphan._wireVersion ) == FieldReadResult::Read &&
-                         offset == payloadSize )
-                        return true;
+                    bool bValue = prop.getValue<bool>( pOwner );
+                    if ( parseTextValueCoerced( MutableValueAddress{ &bValue }, hashed_string( "bool" ), text, context ) == false )
+                        return false;
+                    prop.setValue<bool>( pOwner, bValue );
+                    return true;
                 }
-                return tryCoerceBinaryPayload( value, propTypeName, pPayload, payloadSize, context, wireTypeName, orphan._wireVersion ) == FieldReadResult::Read;
+                void* const pValue = prop.getRawPtr( pOwner );
+                return pValue != nullptr && parseTextValueCoerced( MutableValueAddress{ pValue }, prop._typeName, text, context );
+            }
+
+            /**
+             * @brief 프로퍼티 하나의 값을 텍스트로 씁니다(`SerializerUtil::valueToText` 의 프로퍼티 판). 비트필드는 그 비트를 bool 로 씁니다.
+             * @return 값 주소가 없으면(접근자만 있는 프로퍼티) false 입니다.
+             */
+            [[nodiscard]] static bool propertyValueToText( StringBuilder<constant::kMaxBuffer8192>& ss, const ResolvedPropertyPath& source, const SerializeContext& context )
+            {
+                const PropertyInfo& prop   = *source._pProp;
+                void* const         pOwner = source._owner.get();
+                if ( prop._bIsBitField == SW_TRUE )
+                {
+                    const bool bValue = prop.getValue<bool>( pOwner );
+                    SerializerUtil::valueToText( ss, ValueAddress{ &bValue }, hashed_string( "bool" ), context );
+                    return true;
+                }
+                const void* const pValue = prop.getRawPtr( pOwner );
+                if ( pValue == nullptr )
+                    return false;
+                SerializerUtil::valueToText( ss, ValueAddress{ pValue }, prop._typeName, context );
+                return true;
             }
 
             /**
@@ -245,13 +284,12 @@ namespace sw
             [[nodiscard]] static bool applyOrphanAt( const MutableObjectAddress instance, const TypeInfo& typeInfo, const utf8* pPath, const SchemaOrphanValue& orphan,
                                                      hashed_string wireTypeHint, const SerializeContext& context )
             {
-                MutableValueAddress value{ nullptr };
-                const PropertyInfo* pProp = nullptr;
-                if ( resolvePropertyPath( instance, typeInfo, pPath, value, pProp ) == false )
+                ResolvedPropertyPath target;
+                if ( resolvePropertyPath( instance, typeInfo, pPath, target ) == false )
                     return false;
 
                 if ( orphan._text.empty() == false )
-                    return parseTextValueCoerced( value, pProp->_typeName, orphan._text, context );
+                    return applyTextCoerced( target, orphan._text, context );
                 if ( orphan._listBinary.empty() )
                     return false;
 
@@ -261,7 +299,7 @@ namespace sw
                 // 기록 타입이 적혀 있는데 모르면(지운 enum, 지운 타입) 바이트의 뜻을 모른다. 크기로 짐작해 옮기지 않는다(바이너리 필드 읽기와 같은 규칙이다).
                 if ( hint.empty() && orphan._wireTypeHash != 0 )
                     return false;
-                return applyOrphanBinary( value, pProp->_typeName, orphan, hint, context );
+                return applyOrphanBinary( target, orphan, hint, context );
             }
 
             /** @brief orphan 의 이름 해시입니다. 이름을 intern 하지 않은 orphan 은 해시만 가집니다. */
@@ -484,33 +522,30 @@ namespace sw
 
         const SerializeContext& context = _serializeContext;
 
-        MutableValueAddress        srcValue{ nullptr };
-        const PropertyInfo*        pSrcProp = nullptr;
+        ResolvedPropertyPath       source;
         const MutableObjectAddress srcRoot{ _pLegacyInstance != nullptr ? _pLegacyInstance : _pInstance };
         const TypeInfo*            pSrcType = _pLegacyTypeInfo != nullptr ? _pLegacyTypeInfo : _pTypeInfo;
-        if ( resolvePropertyPath( srcRoot, *pSrcType, pFromPath, srcValue, pSrcProp ) == false )
+        if ( resolvePropertyPath( srcRoot, *pSrcType, pFromPath, source ) == false )
             return false;
 
-        MutableValueAddress dstValue{ nullptr };
-        const PropertyInfo* pDstProp = nullptr;
-        if ( resolvePropertyPath( MutableObjectAddress{ _pInstance }, *_pTypeInfo, pToPath, dstValue, pDstProp ) == false )
+        ResolvedPropertyPath target;
+        if ( resolvePropertyPath( MutableObjectAddress{ _pInstance }, *_pTypeInfo, pToPath, target ) == false )
             return false;
 
         StringBuilder<constant::kMaxBuffer8192> ss;
-        SerializerUtil::valueToText( ss, srcValue, pSrcProp->_typeName, context );
-        return parseTextValueCoerced( dstValue, pDstProp->_typeName, ss.view(), context );
+        if ( SchemaMigrateInternal::propertyValueToText( ss, source, context ) == false )
+            return false;
+        return SchemaMigrateInternal::applyTextCoerced( target, ss.view(), context );
     }
 
     bool SchemaMigrateContext::setPropertyFromText( hashed_string propName, string_view text ) const
     {
         if ( _pInstance == nullptr || _pTypeInfo == nullptr )
             return false;
-        MutableValueAddress value{ nullptr };
-        const PropertyInfo* pProp = nullptr;
-        if ( resolvePropertyPath( MutableObjectAddress{ _pInstance }, *_pTypeInfo, propName.c_str(), value, pProp ) == false )
+        ResolvedPropertyPath target;
+        if ( resolvePropertyPath( MutableObjectAddress{ _pInstance }, *_pTypeInfo, propName.c_str(), target ) == false )
             return false;
-        const SerializeContext& context = _serializeContext;
-        return parseTextValueCoerced( value, pProp->_typeName, text, context );
+        return SchemaMigrateInternal::applyTextCoerced( target, text, _serializeContext );
     }
 
     bool isValueOnlyCoercion( hashed_string targetTypeName, hashed_string wireTypeName )
@@ -692,11 +727,9 @@ namespace sw
         return false;
     }
 
-    bool resolvePropertyPath( const MutableObjectAddress root, const TypeInfo& typeInfo, const utf8* pDottedPath, MutableValueAddress& outValue,
-                              const PropertyInfo*& pOutProp )
+    bool resolvePropertyPath( const MutableObjectAddress root, const TypeInfo& typeInfo, const utf8* pDottedPath, ResolvedPropertyPath& outResolved )
     {
-        outValue = MutableValueAddress{ nullptr };
-        pOutProp = nullptr;
+        outResolved = ResolvedPropertyPath{};
         if ( root.get() == nullptr || pDottedPath == nullptr )
             return false;
 
@@ -704,10 +737,9 @@ namespace sw
         if ( listPart.empty() )
             return false;
 
-        // 경로 중간의 구조체 값은 다음 부분의 객체 주소다.
-        void*               pCur      = root.get();
-        const TypeInfo*     pCurType  = &typeInfo;
-        const PropertyInfo* pLastProp = nullptr;
+        // 경로 중간의 구조체 값은 다음 부분의 객체 주소다. 끝의 프로퍼티는 주소를 꺼내지 않는다(비트필드는 값 주소가 없다).
+        void*           pCur     = root.get();
+        const TypeInfo* pCurType = &typeInfo;
 
         for ( size_t partIndex = 0; partIndex < listPart.size(); ++partIndex )
         {
@@ -716,21 +748,18 @@ namespace sw
             if ( pProp == nullptr )
                 return false;
 
-            void* pPropPtr = pProp->getRawPtr( pCur );
             if ( partIndex + 1 == listPart.size() )
             {
-                outValue = MutableValueAddress{ pPropPtr };
-                pOutProp = pProp;
+                outResolved = ResolvedPropertyPath{ MutableObjectAddress{ pCur }, pProp };
                 return true;
             }
 
             const TypeInfo* pNested = engine::getSubsystem<TypeRegistry>().findType( pProp->_typeName );
-            if ( pNested == nullptr )
+            void* const     pNext   = pProp->getRawPtr( pCur );
+            if ( pNested == nullptr || pNext == nullptr )
                 return false;
-            pCur      = pPropPtr;
-            pCurType  = pNested;
-            pLastProp = pProp;
-            (void)pLastProp;
+            pCur     = pNext;
+            pCurType = pNested;
         }
         return false;
     }

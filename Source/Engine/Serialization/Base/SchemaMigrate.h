@@ -163,7 +163,10 @@ namespace sw
         /** @brief 텍스트로 현재 인스턴스 프로퍼티를 설정합니다. */
         bool setPropertyFromText( hashed_string propName, string_view text ) const;
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief fromVersion 에서 toVersion 으로 옮기는 이관 함수입니다. false 를 반환하면 deserializeVersioned 가 실패합니다.
      * @details 스키마가 바뀌면 기본은 데이터를 다시 쓰는 것이다(결정 기록 5-4). 이관은 값 계산이 불가피한 예외에만 쓰고,
@@ -255,11 +258,22 @@ namespace sw
                                                      const SerializeContext& context );
 
     /**
-     * @brief 점 경로로 프로퍼티 값의 주소를 찾습니다.
-     * @param root @p typeInfo 객체의 주소입니다(첫 프로퍼티 오프셋을 더할 곳).
-     * @param outValue 찾은 프로퍼티 값 자체의 주소입니다. 찾지 못하면 널입니다.
+     * @brief 점 경로가 가리키는 프로퍼티와 그 프로퍼티를 가진 객체입니다(`resolvePropertyPath`).
+     * @details 값 주소를 담지 않는다. 비트필드는 값 주소가 없고, 그 바이트 주소에 쓰면 같은 바이트의 다른 플래그를 덮는다.
+     *          쓰는 쪽은 프로퍼티 단위 API(`SerializerUtil::applyPropertyBinary`, `tryCoercePropertyBinary` 등)로 쓴다.
      */
-    SW_API bool resolvePropertyPath( MutableObjectAddress root, const TypeInfo& typeInfo, const utf8* pDottedPath,
-                                     MutableValueAddress& outValue, const PropertyInfo*& pOutProp );
+    struct ResolvedPropertyPath
+    {
+        MutableObjectAddress _owner{ nullptr }; ///< 프로퍼티를 가진 객체의 주소입니다(경로 중간의 구조체 값이면 그 값).
+        const PropertyInfo*  _pProp = nullptr;  ///< 경로 끝의 프로퍼티입니다.
+    };
+
+    /**
+     * @brief 점 경로로 프로퍼티와 그것을 가진 객체를 찾습니다.
+     * @param root @p typeInfo 객체의 주소입니다(첫 프로퍼티 오프셋을 더할 곳).
+     * @param outResolved 찾은 프로퍼티와 그 주인 객체입니다. 찾지 못하면 비어 있습니다.
+     */
+    [[nodiscard]] SW_API bool resolvePropertyPath( MutableObjectAddress root, const TypeInfo& typeInfo, const utf8* pDottedPath,
+                                                   ResolvedPropertyPath& outResolved );
 
 } // namespace sw
