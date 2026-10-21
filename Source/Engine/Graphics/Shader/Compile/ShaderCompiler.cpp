@@ -26,6 +26,9 @@
 
 namespace sw
 {
+    // 안쪽 도우미(캐시 쓰기 · 컴파일 단계)도 로그를 남기므로 맨 앞에 둔다.
+    SW_LOG_CALLER( "ShaderCompiler" );
+
     namespace
     {
         struct ShaderCompilerInternal
@@ -236,86 +239,21 @@ namespace sw
                 formatstring( buf.data(), buf.capacity(), "%#.bin", Fmt( static_cast<uint64>( hash ), Format( 16, Format::Padding::Zero ).hex() ) );
                 return FileUtil::joinPath( cacheDir, buf.c_str() );
             }
-        };
-    } // namespace
-} // namespace sw
 
-namespace sw
-{
-    SW_LOG_CALLER( "ShaderCompiler" );
-
-    void ShaderCompiler::enableDiskCache( bool bEnable )
-    {
-        ShaderCompilerInternal::s_bDiskCacheEnabled.store( bEnable, std::memory_order_relaxed );
-    }
-
-    void ShaderCompiler::clearDiskCache()
-    {
-        const string cacheDir = ShaderCompilerInternal::getShaderCacheDirectory();
-        if ( cacheDir.empty() == false && FileUtil::isDirectory( cacheDir ) )
-        {
-            vector<string> listFile;
-            FileUtil::collectFiles( cacheDir, "", listFile, false );
-            for ( const string& file : listFile )
+            /** @brief 디스크 캐시가 켜져 있고 자리가 있으면 바이트코드를 씁니다. 못 쓰면 경고만 남깁니다(다음 컴파일이 다시 만든다). */
+            static void saveToCacheIfEnabled( const string& cachePath, const vector<uint8>& bytecode )
             {
-                if ( FileUtil::removeFile( file ) == false )
-                    SW_LOG_WARNING( "Failed to remove shader cache file %# - it stays in the cache", file.c_str() );
-            }
-        }
-    }
-
-    ShaderCompileResult ShaderCompiler::compileHlsl( const ShaderCompileDesc& desc )
-    {
-        ShaderCompileResult result{};
-        result._bSuccess = false;
-        result._bytecode.reserve( 4096 );
-
-        string absPathStr;
-        if ( FileUtil::exists( desc._filePath ) )
-            absPathStr = desc._filePath;
-        else
-            absPathStr = ResourcePaths::findLooseFile( desc._filePath ).getDiskPath();
-
-        if ( absPathStr.empty() || FileUtil::exists( absPathStr ) == false )
-        {
-            result._errorMessage = "Shader source file not found: " + desc._filePath;
-            // 부르는 쪽이 존재 여부를 먼저 검사하는 것이 정상이다. 없는 파일은 ERROR 가 아니라 조용히 실패한다.
-            return result;
-        }
-
-        string cachePath;
-        if ( ShaderCompilerInternal::s_bDiskCacheEnabled.load( std::memory_order_relaxed ) )
-        {
-            cachePath = ShaderCompilerInternal::computeCachePath( desc, absPathStr );
-            if ( cachePath.empty() == false && FileUtil::exists( cachePath ) )
-            {
-                vector<uint8> cachedBytes;
-                if ( FileUtil::readFile( cachePath, cachedBytes ) && cachedBytes.empty() == false )
-                {
-                    result._bytecode = std::move( cachedBytes );
-                    result._bSuccess = true;
-                    return result;
-                }
-            }
-        }
-
-        auto saveToCacheIfEnabled = [&]( const vector<uint8>& bytecode )
-        {
-            const bool bDiskCacheWritable = ShaderCompilerInternal::s_bDiskCacheEnabled.load( std::memory_order_relaxed ) && cachePath.empty() == false && bytecode.empty() == false;
-            if ( bDiskCacheWritable )
-            {
+                const bool bDiskCacheWritable = s_bDiskCacheEnabled.load( std::memory_order_relaxed ) && cachePath.empty() == false && bytecode.empty() == false;
+                if ( bDiskCacheWritable == false )
+                    return;
                 FileUtil::ensureParentDirectoryExists( cachePath );
                 if ( FileUtil::writeFile( cachePath, bytecode.data(), bytecode.size() ) == false )
                     SW_LOG_WARNING( "Could not write the shader cache '%#'", cachePath );
             }
-        };
-
-        string profile = ShaderCompilerInternal::getTargetProfile( desc._stage, desc._targetFormat );
 
 #if defined( SW_PLATFORM_WINDOWS )
-        BLOCK( "DXBC (D3D11) Compilation Path" )
-        {
-            if ( desc._targetFormat == ShaderTargetFormat::DXBC_D3D11 )
+            /** @brief FXC 로 DXBC(D3D11, 행 우선)를 컴파일합니다. 실패하면 오류 글을 담고 false 입니다. */
+            [[nodiscard]] static bool compileDxbc( const ShaderCompileDesc& desc, const string& absPathStr, const string& profile, ShaderCompileResult& outResult )
             {
                 UINT compileFlags = D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_PACK_MATRIX_ROW_MAJOR;
                 if ( desc._bDebugCodegen != SW_FALSE )
@@ -339,8 +277,8 @@ namespace sw
                 listMacro.push_back( { nullptr, nullptr } );
 
                 vector<string> listIncludeDir;
-                ShaderCompilerInternal::collectShaderIncludeDirs( absPathStr, listIncludeDir );
-                ShaderCompilerInternal::MultiRootD3DInclude includeHandler( std::move( listIncludeDir ) );
+                collectShaderIncludeDirs( absPathStr, listIncludeDir );
+                MultiRootD3DInclude includeHandler( std::move( listIncludeDir ) );
 
                 HRESULT hr = D3DCompileFromFile(
                     wPath.c_str(),
@@ -356,274 +294,275 @@ namespace sw
                 if ( FAILED( hr ) )
                 {
                     if ( errorBlob != nullptr )
-                        result._errorMessage = static_cast<const utf8*>( errorBlob->GetBufferPointer() );
+                        outResult._errorMessage = static_cast<const utf8*>( errorBlob->GetBufferPointer() );
                     else
-                        result._errorMessage = "Unknown DXBC compilation error.";
-                    SW_LOG_ERROR( "%#", result._errorMessage.c_str() );
-                    return result;
+                        outResult._errorMessage = "Unknown DXBC compilation error.";
+                    SW_LOG_ERROR( "%#", outResult._errorMessage.c_str() );
+                    return false;
                 }
 
                 const uint8* pData = static_cast<const uint8*>( codeBlob->GetBufferPointer() );
-                result._bytecode.assign( pData, pData + codeBlob->GetBufferSize() );
-                result._bSuccess = true;
-                saveToCacheIfEnabled( result._bytecode );
-
-                SW_LOG_TRACE( "Target: D3D11 (DXBC Row-Major), Size: %# bytes", static_cast<uint32>( result._bytecode.size() ) );
-                return result;
+                outResult._bytecode.assign( pData, pData + codeBlob->GetBufferSize() );
+                outResult._bSuccess = true;
+                SW_LOG_TRACE( "Target: D3D11 (DXBC Row-Major), Size: %# bytes", static_cast<uint32>( outResult._bytecode.size() ) );
+                return true;
             }
-        }
 #endif // SW_PLATFORM_WINDOWS
 
-#if !defined( SW_PLATFORM_WINDOWS )
-        // DXBC 를 낼 수 있는 건 FXC(d3dcompiler) 뿐이고 그건 Windows 전용이다. 위 블록이 통째로
-        // 빠지는 플랫폼에서 이 타깃이 그대로 아래 DXC 로 흘러가면 vs_5_0 같은 SM5 프로파일을
-        // 모른다며 "invalid profile vs_5_0" 로 죽는다. 그 메시지로는 "이 플랫폼엔 D3D11 이 없다" 는
-        // 진짜 이유가 드러나지 않아 부르는 쪽이 환경 문제와 셰이더 문제를 구분하지 못한다.
-        if ( desc._targetFormat == ShaderTargetFormat::DXBC_D3D11 )
-        {
-            result._bSuccess     = false;
-            result._errorMessage = "DXBC (D3D11) target is unavailable on this platform (requires Windows D3DCompiler).";
-            return result;
-        }
-#endif // !SW_PLATFORM_WINDOWS
-
 #if defined( SW_HAS_DXC_API )
-        BLOCK( "DXC Compiler (DXIL / SPIR-V) Path" )
-        {
-            static auto s_getDxCompilerHandle = []() -> void*
+            /** @brief DXC 컴파일 한 번의 결과입니다. */
+            enum class DxcOutcome : uint8
             {
-                string libName = ModuleImageUtil::formatSharedLibraryName( "dxcompiler" );
-                // 실행 파일 옆(배포 구성의 테스트는 TestBin 에 DXC 를 둔다) → Bin → 이름만.
-                const string   execDir       = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
-                vector<string> listCandidate = {
-                    execDir.empty() ? libName : FileUtil::joinPath( execDir, libName ),
-                    FileUtil::joinPath( FileUtil::getBinaryDirectory(), libName ),
-                    libName };
-                for ( const string& candidatePath : listCandidate )
-                {
-                    if ( FileUtil::isRegularFile( candidatePath ) )
-                    {
-                        void* pLibrary = ModuleImageUtil::loadDynamicLibrary( candidatePath );
-                        if ( pLibrary != nullptr )
-                            return pLibrary;
-                        SW_LOG_ERROR( "Failed to load %#", candidatePath.c_str() );
-                    }
-                }
-                return ModuleImageUtil::loadDynamicLibrary( libName );
+                Compiled, ///< 바이트코드를 얻었다
+                Rejected, ///< 셰이더 오류로 실패했다(오류 글을 담았다) — 다른 컴파일러로 넘기지 않는다
+                NoOutput, ///< DXC 를 못 쓰거나 출력이 없었다
             };
-            static void*                 s_pDxCompiler         = s_getDxCompilerHandle();
-            static DxcCreateInstanceProc s_fnDxcCreateInstance = ( s_pDxCompiler != nullptr )
-                                                                   ? reinterpret_cast<DxcCreateInstanceProc>( ModuleImageUtil::getDynamicSymbol( s_pDxCompiler, "DxcCreateInstance" ) )
-                                                                   : nullptr;
 
-            DxcCreateInstanceProc fnDxcCreateInstance = s_fnDxcCreateInstance;
-            if ( fnDxcCreateInstance == nullptr )
-                SW_LOG_ERROR( "DxcCreateInstance unavailable (libdxcompiler not loaded)" );
-
-            ShaderCompilerInternal::DxcComPtr<IDxcUtils>     utils;
-            ShaderCompilerInternal::DxcComPtr<IDxcCompiler3> compiler;
-
-            if ( fnDxcCreateInstance != nullptr )
+            /** @brief DXC 의 생성 함수입니다. 라이브러리는 처음 부를 때 한 번 찾습니다(실행 파일 옆 → Bin → 이름만). 못 찾으면 nullptr 입니다. */
+            static DxcCreateInstanceProc findDxcCreateInstance()
             {
-                HRESULT hrInit = fnDxcCreateInstance( CLSID_DxcUtils, IID_PPV_ARGS( ShaderCompilerInternal::dxcAddressOf( utils ) ) );
-                if ( SUCCEEDED( hrInit ) )
-                    fnDxcCreateInstance( CLSID_DxcCompiler, IID_PPV_ARGS( ShaderCompilerInternal::dxcAddressOf( compiler ) ) );
-                else
-                    SW_LOG_ERROR( "DxcCreateInstance(CLSID_DxcUtils) failed: 0x%#", hrInit );
+                static auto s_getDxCompilerHandle = []() -> void*
+                {
+                    string libName = ModuleImageUtil::formatSharedLibraryName( "dxcompiler" );
+                    // 실행 파일 옆(배포 구성의 테스트는 TestBin 에 DXC 를 둔다) → Bin → 이름만.
+                    const string   execDir       = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
+                    vector<string> listCandidate = {
+                        execDir.empty() ? libName : FileUtil::joinPath( execDir, libName ),
+                        FileUtil::joinPath( FileUtil::getBinaryDirectory(), libName ),
+                        libName };
+                    for ( const string& candidatePath : listCandidate )
+                    {
+                        if ( FileUtil::isRegularFile( candidatePath ) )
+                        {
+                            void* pLibrary = ModuleImageUtil::loadDynamicLibrary( candidatePath );
+                            if ( pLibrary != nullptr )
+                                return pLibrary;
+                            SW_LOG_ERROR( "Failed to load %#", candidatePath.c_str() );
+                        }
+                    }
+                    return ModuleImageUtil::loadDynamicLibrary( libName );
+                };
+                static void*                 s_pDxCompiler         = s_getDxCompilerHandle();
+                static DxcCreateInstanceProc s_fnDxcCreateInstance = ( s_pDxCompiler != nullptr )
+                                                                       ? reinterpret_cast<DxcCreateInstanceProc>( ModuleImageUtil::getDynamicSymbol( s_pDxCompiler, "DxcCreateInstance" ) )
+                                                                       : nullptr;
+                return s_fnDxcCreateInstance;
             }
 
-            if ( utils != nullptr && compiler != nullptr )
+            /** @brief 타깃(SPIR-V 레이아웃 · 레지스터 시프트, 타깃 매크로)과 스테이지에 따른 DXC 인자를 더합니다. 넣는 글은 모두 정적 수명입니다. */
+            static void appendDxcTargetArguments( const ShaderCompileDesc& desc, vector<LPCWSTR>& listArgument )
             {
-                ShaderCompilerInternal::DxcComPtr<IDxcIncludeHandler> includeHandler;
-                utils->CreateDefaultIncludeHandler( ShaderCompilerInternal::dxcAddressOf( includeHandler ) );
-
-                wstring                                             wPath = StringUtil::utf8ToUtf16( absPathStr.c_str() );
-                ShaderCompilerInternal::DxcComPtr<IDxcBlobEncoding> sourceBlob;
-                HRESULT                                             hrLoad = utils->LoadFile( wPath.c_str(), nullptr, ShaderCompilerInternal::dxcAddressOf( sourceBlob ) );
-
-                if ( SUCCEEDED( hrLoad ) )
+                if ( desc._targetFormat == ShaderTargetFormat::SPIRV_Vulkan )
                 {
-                    wstring wEntryPoint = StringUtil::utf8ToUtf16( desc._entryPoint.c_str() );
-                    wstring wProfile    = StringUtil::utf8ToUtf16( profile.c_str() );
-
-                    vector<LPCWSTR> listArgument;
-                    vector<wstring> listDefineArg;
-                    listDefineArg.reserve( desc._listDefine.size() );
-
-                    listArgument.push_back( wPath.c_str() );
-                    listArgument.push_back( L"-E" );
-                    listArgument.push_back( wEntryPoint.c_str() );
-                    listArgument.push_back( L"-T" );
-                    listArgument.push_back( wProfile.c_str() );
-                    listArgument.push_back( L"-Zpr" );
-
-                    vector<string>  listIncludeDir;
-                    vector<wstring> listIncludeDirW;
-                    ShaderCompilerInternal::collectShaderIncludeDirs( absPathStr, listIncludeDir );
-                    listIncludeDirW.reserve( listIncludeDir.size() );
-                    for ( const string& dir : listIncludeDir )
-                    {
-                        listIncludeDirW.push_back( StringUtil::utf8ToUtf16( dir.c_str() ) );
-                        listArgument.push_back( L"-I" );
-                        listArgument.push_back( listIncludeDirW.back().c_str() );
-                    }
-
-                    if ( desc._targetFormat == ShaderTargetFormat::SPIRV_Vulkan )
-                    {
-                        // 타깃 버전은 디바이스가 요구하는 최소 버전과 같은 값이다(constant::kVulkanRequiredMajor · kVulkanRequiredMinor). 이 타깃에서 DXC 는 HLSL `discard` 를
-                        // OpDemoteToHelperInvocation 으로 낸다 — 1.3 디바이스의 필수 기능이다.
-                        static const wstring s_targetEnv = StringUtil::utf8ToUtf16(
-                            ( string( "-fspv-target-env=vulkan" ) + to_string( constant::kVulkanRequiredMajor ) + "." +
-                              to_string( constant::kVulkanRequiredMinor ) )
-                                .c_str() );
-                        listArgument.push_back( L"-spirv" );
-                        listArgument.push_back( s_targetEnv.c_str() );
-                        listArgument.push_back( L"-fvk-use-dx-position-w" );
-                        // cbuffer · StructuredBuffer 를 DX 와 같은 규칙으로 패킹한다. 머티리얼 데이터 원소(g_SwMaterials)를
-                        // 엔진이 한 레이아웃으로 채우므로 백엔드마다 stride · 오프셋이 달라지면 안 된다(std430 은 float3 을 16 정렬).
-                        listArgument.push_back( L"-fvk-use-dx-layout" );
-                        // 세트 0 의 binding = 레지스터 종류별 시프트 + 번호(bindingslots.hlsli 6). 셰이더는 register(b#/t#/u#) 만
-                        // 쓰고 [[vk::binding]] 을 적지 않는다. 파이프라인 레이아웃(VulkanRHIDeviceDescriptor.cpp)이 같은 값으로 만든다.
-                        static const wstring s_bShift = StringUtil::utf8ToUtf16( to_string( shaderslot::vk::kBShift ).c_str() );
-                        static const wstring s_tShift = StringUtil::utf8ToUtf16( to_string( shaderslot::vk::kTShift ).c_str() );
-                        static const wstring s_uShift = StringUtil::utf8ToUtf16( to_string( shaderslot::vk::kUShift ).c_str() );
-                        listArgument.push_back( L"-fvk-b-shift" );
-                        listArgument.push_back( s_bShift.c_str() );
-                        listArgument.push_back( L"0" );
-                        listArgument.push_back( L"-fvk-t-shift" );
-                        listArgument.push_back( s_tShift.c_str() );
-                        listArgument.push_back( L"0" );
-                        listArgument.push_back( L"-fvk-u-shift" );
-                        listArgument.push_back( s_uShift.c_str() );
-                        listArgument.push_back( L"0" );
-                    }
-                    else if ( desc._targetFormat == ShaderTargetFormat::SPIRV_OpenGL )
-                    {
-                        listArgument.push_back( L"-spirv" );
-                        listArgument.push_back( L"-fspv-target-env=vulkan1.1" );
-                        listArgument.push_back( L"-fvk-use-dx-position-w" );
-                        listArgument.push_back( L"-fvk-use-dx-layout" ); // Vulkan 과 같은 이유. 네 백엔드 원소 레이아웃 일치
-                        listArgument.push_back( L"-fvk-b-shift" );
-                        listArgument.push_back( L"16" );
-                        listArgument.push_back( L"0" );
-                        // GL 의 u# → SSBO binding 은 계약(SW_GL_UAV_BINDING0)이 정한다. common.hlsli 의 OPENGL 용
-                        // RW 버퍼 매크로가 명시 binding 을 두지 않아 이 시프트가 적용된다. b/t 는 명시 binding 이라 시프트와 무관하다.
-                        static const wstring s_uavShift = StringUtil::utf8ToUtf16( to_string( shaderslot::gl::kUavBinding0 ).c_str() );
-                        listArgument.push_back( L"-fvk-u-shift" );
-                        listArgument.push_back( s_uavShift.c_str() );
-                        listArgument.push_back( L"0" );
-                    }
-
-                    listArgument.push_back( L"-D" );
-                    if ( desc._targetFormat == ShaderTargetFormat::DXIL_D3D12 )
-                    {
-                        listArgument.push_back( L"DX12=1" );
-                        // 네이티브 bindless 텍스처(common.hlsli SW_NATIVE_BINDLESS): 텍스처만 무제한 배열(t0 space1)이고, 버퍼는
-                        // space0 슬롯이다(CB 는 루트 CBV, t · u 는 디스크립터 테이블). SM6.6 힙 직접 인덱싱(ResourceDescriptorHeap)은 쓰지 않는다.
-                        listArgument.push_back( L"-D" );
-                        listArgument.push_back( L"SW_BINDLESS=1" );
-                    }
-                    else if ( desc._targetFormat == ShaderTargetFormat::SPIRV_Vulkan )
-                    {
-                        listArgument.push_back( L"VULKAN=1" );
-                        // 네이티브 bindless 텍스처는 세트 1 배열이다. 버퍼는 세트 0 의 슬롯(시프트된 binding)이다.
-                        listArgument.push_back( L"-D" );
-                        listArgument.push_back( L"SW_BINDLESS=1" );
-                    }
-                    else if ( desc._targetFormat == ShaderTargetFormat::SPIRV_OpenGL )
-                        listArgument.push_back( L"OPENGL=1" );
-                    else if ( desc._targetFormat == ShaderTargetFormat::DXBC_D3D11 )
-                        listArgument.push_back( L"DX11=1" );
-                    if ( desc._stage == ShaderStage::Compute )
-                    {
-                        // 컴퓨트에서만 선언되는 자원(RW 텍스처 배열 · 슬롯, binding.hlsli "텍스처 읽기" 절)의 스위치.
-                        listArgument.push_back( L"-D" );
-                        listArgument.push_back( L"SW_STAGE_COMPUTE=1" );
-                    }
-
-                    for ( const ShaderMacroDefine& def : desc._listDefine )
-                    {
-                        if ( def._name.empty() )
-                            continue;
-                        string defineStr = def._name;
-                        defineStr += "=";
-                        defineStr += def._value;
-                        listDefineArg.push_back( StringUtil::utf8ToUtf16( defineStr.c_str() ) );
-                        listArgument.push_back( L"-D" );
-                        listArgument.push_back( listDefineArg.back().c_str() );
-                    }
-
-                    // 디버그 코드젠은 빌드 구성이 아니라 **요청**이 정한다 (ShaderCompileDesc::_bDebugCodegen).
-                    if ( desc._bDebugCodegen != SW_FALSE )
-                    {
-                        listArgument.push_back( L"-Zi" );
-                        listArgument.push_back( L"-Od" );
-                    }
-
-                    DxcBuffer sourceBuffer{};
-                    sourceBuffer.Ptr      = sourceBlob->GetBufferPointer();
-                    sourceBuffer.Size     = sourceBlob->GetBufferSize();
-                    sourceBuffer.Encoding = DXC_CP_UTF8;
-
-                    ShaderCompilerInternal::DxcComPtr<IDxcResult> compileResult;
-                    HRESULT                                       hrCompile = compiler->Compile(
-                        &sourceBuffer,
-                        listArgument.data(),
-                        static_cast<uint32>( listArgument.size() ),
-                        ShaderCompilerInternal::dxcGet( includeHandler ),
-                        IID_PPV_ARGS( ShaderCompilerInternal::dxcAddressOf( compileResult ) ) );
-
-                    if ( FAILED( hrCompile ) )
-                        SW_LOG_ERROR( "DXC compiler->Compile failed with HRESULT: 0x%#", hrCompile );
-
-                    if ( SUCCEEDED( hrCompile ) )
-                    {
-                        HRESULT status = S_OK;
-                        compileResult->GetStatus( &status );
-
-                        ShaderCompilerInternal::DxcComPtr<IDxcBlobUtf8> errors;
-                        compileResult->GetOutput( DXC_OUT_ERRORS, IID_PPV_ARGS( ShaderCompilerInternal::dxcAddressOf( errors ) ), nullptr );
-
-                        if ( errors != nullptr && errors->GetStringLength() > 0 )
-                            result._errorMessage = errors->GetStringPointer();
-
-                        if ( FAILED( status ) )
-                        {
-                            SW_LOG_ERROR( "%#", result._errorMessage.c_str() );
-                            return result;
-                        }
-
-                        ShaderCompilerInternal::DxcComPtr<IDxcBlob> shaderBlob;
-                        compileResult->GetOutput( DXC_OUT_OBJECT, IID_PPV_ARGS( ShaderCompilerInternal::dxcAddressOf( shaderBlob ) ), nullptr );
-
-                        if ( shaderBlob != nullptr && shaderBlob->GetBufferSize() > 0 )
-                        {
-                            const uint8* pData = static_cast<const uint8*>( shaderBlob->GetBufferPointer() );
-                            result._bytecode.assign( pData, pData + shaderBlob->GetBufferSize() );
-                            if ( desc._targetFormat == ShaderTargetFormat::SPIRV_OpenGL )
-                                ShaderCompilerInternal::patchSpirvBuiltinsForOpenGL( result._bytecode );
-                            result._bSuccess = true;
-                            saveToCacheIfEnabled( result._bytecode );
-
-    #if defined( SW_DEBUG )
-                            const utf8* pFormatName = ( desc._targetFormat == ShaderTargetFormat::SPIRV_Vulkan )
-                                                        ? "Vulkan (SPIR-V, Vulkan API target)"
-                                                    : ( desc._targetFormat == ShaderTargetFormat::SPIRV_OpenGL )
-                                                        ? "OpenGL (SPIR-V vulkan1.1)"
-                                                        : "D3D12 (DXIL Row-Major)";
-                            SW_LOG_TRACE( "Target: %#", pFormatName );
-    #endif
-                            return result;
-                        }
-                    }
+                    // 타깃 버전은 디바이스가 요구하는 최소 버전과 같은 값이다(constant::kVulkanRequiredMajor · kVulkanRequiredMinor). 이 타깃에서 DXC 는 HLSL `discard` 를
+                    // OpDemoteToHelperInvocation 으로 낸다 — 1.3 디바이스의 필수 기능이다.
+                    static const wstring s_targetEnv = StringUtil::utf8ToUtf16(
+                        ( string( "-fspv-target-env=vulkan" ) + to_string( constant::kVulkanRequiredMajor ) + "." +
+                          to_string( constant::kVulkanRequiredMinor ) )
+                            .c_str() );
+                    listArgument.push_back( L"-spirv" );
+                    listArgument.push_back( s_targetEnv.c_str() );
+                    listArgument.push_back( L"-fvk-use-dx-position-w" );
+                    // cbuffer · StructuredBuffer 를 DX 와 같은 규칙으로 패킹한다. 머티리얼 데이터 원소(g_SwMaterials)를
+                    // 엔진이 한 레이아웃으로 채우므로 백엔드마다 stride · 오프셋이 달라지면 안 된다(std430 은 float3 을 16 정렬).
+                    listArgument.push_back( L"-fvk-use-dx-layout" );
+                    // 세트 0 의 binding = 레지스터 종류별 시프트 + 번호(bindingslots.hlsli 6). 셰이더는 register(b#/t#/u#) 만
+                    // 쓰고 [[vk::binding]] 을 적지 않는다. 파이프라인 레이아웃(VulkanRHIDeviceDescriptor.cpp)이 같은 값으로 만든다.
+                    static const wstring s_bShift = StringUtil::utf8ToUtf16( to_string( shaderslot::vk::kBShift ).c_str() );
+                    static const wstring s_tShift = StringUtil::utf8ToUtf16( to_string( shaderslot::vk::kTShift ).c_str() );
+                    static const wstring s_uShift = StringUtil::utf8ToUtf16( to_string( shaderslot::vk::kUShift ).c_str() );
+                    listArgument.push_back( L"-fvk-b-shift" );
+                    listArgument.push_back( s_bShift.c_str() );
+                    listArgument.push_back( L"0" );
+                    listArgument.push_back( L"-fvk-t-shift" );
+                    listArgument.push_back( s_tShift.c_str() );
+                    listArgument.push_back( L"0" );
+                    listArgument.push_back( L"-fvk-u-shift" );
+                    listArgument.push_back( s_uShift.c_str() );
+                    listArgument.push_back( L"0" );
                 }
+                else if ( desc._targetFormat == ShaderTargetFormat::SPIRV_OpenGL )
+                {
+                    listArgument.push_back( L"-spirv" );
+                    listArgument.push_back( L"-fspv-target-env=vulkan1.1" );
+                    listArgument.push_back( L"-fvk-use-dx-position-w" );
+                    listArgument.push_back( L"-fvk-use-dx-layout" ); // Vulkan 과 같은 이유. 네 백엔드 원소 레이아웃 일치
+                    listArgument.push_back( L"-fvk-b-shift" );
+                    listArgument.push_back( L"16" );
+                    listArgument.push_back( L"0" );
+                    // GL 의 u# → SSBO binding 은 계약(SW_GL_UAV_BINDING0)이 정한다. common.hlsli 의 OPENGL 용
+                    // RW 버퍼 매크로가 명시 binding 을 두지 않아 이 시프트가 적용된다. b/t 는 명시 binding 이라 시프트와 무관하다.
+                    static const wstring s_uavShift = StringUtil::utf8ToUtf16( to_string( shaderslot::gl::kUavBinding0 ).c_str() );
+                    listArgument.push_back( L"-fvk-u-shift" );
+                    listArgument.push_back( s_uavShift.c_str() );
+                    listArgument.push_back( L"0" );
+                }
+
+                listArgument.push_back( L"-D" );
+                if ( desc._targetFormat == ShaderTargetFormat::DXIL_D3D12 )
+                {
+                    listArgument.push_back( L"DX12=1" );
+                    // 네이티브 bindless 텍스처(common.hlsli SW_NATIVE_BINDLESS): 텍스처만 무제한 배열(t0 space1)이고, 버퍼는
+                    // space0 슬롯이다(CB 는 루트 CBV, t · u 는 디스크립터 테이블). SM6.6 힙 직접 인덱싱(ResourceDescriptorHeap)은 쓰지 않는다.
+                    listArgument.push_back( L"-D" );
+                    listArgument.push_back( L"SW_BINDLESS=1" );
+                }
+                else if ( desc._targetFormat == ShaderTargetFormat::SPIRV_Vulkan )
+                {
+                    listArgument.push_back( L"VULKAN=1" );
+                    // 네이티브 bindless 텍스처는 세트 1 배열이다. 버퍼는 세트 0 의 슬롯(시프트된 binding)이다.
+                    listArgument.push_back( L"-D" );
+                    listArgument.push_back( L"SW_BINDLESS=1" );
+                }
+                else if ( desc._targetFormat == ShaderTargetFormat::SPIRV_OpenGL )
+                    listArgument.push_back( L"OPENGL=1" );
+                else if ( desc._targetFormat == ShaderTargetFormat::DXBC_D3D11 )
+                    listArgument.push_back( L"DX11=1" );
+                if ( desc._stage == ShaderStage::Compute )
+                {
+                    // 컴퓨트에서만 선언되는 자원(RW 텍스처 배열 · 슬롯, binding.hlsli "텍스처 읽기" 절)의 스위치.
+                    listArgument.push_back( L"-D" );
+                    listArgument.push_back( L"SW_STAGE_COMPUTE=1" );
+                }
+            }
+
+            /**
+             * @brief DXC 로 DXIL · SPIR-V 를 컴파일합니다. 성공하면 바이트코드(OpenGL 이면 내장 변수를 바꾼 것)를 담습니다.
+             * @details 생성 · 소스 읽기 · 인자 · 컴파일 · 결과 읽기의 순서가 곧 의미이고 인자 글의 수명이 이 함수 안이라 더 나누지 않는다.
+             */
+            static DxcOutcome compileDxc( const ShaderCompileDesc& desc, const string& absPathStr, const string& profile, ShaderCompileResult& outResult )
+            {
+                DxcCreateInstanceProc fnDxcCreateInstance = findDxcCreateInstance();
+                if ( fnDxcCreateInstance == nullptr )
+                {
+                    SW_LOG_ERROR( "DxcCreateInstance unavailable (libdxcompiler not loaded)" );
+                    return DxcOutcome::NoOutput;
+                }
+
+                DxcComPtr<IDxcUtils>     utils;
+                DxcComPtr<IDxcCompiler3> compiler;
+                HRESULT                  hrInit = fnDxcCreateInstance( CLSID_DxcUtils, IID_PPV_ARGS( dxcAddressOf( utils ) ) );
+                if ( SUCCEEDED( hrInit ) )
+                    fnDxcCreateInstance( CLSID_DxcCompiler, IID_PPV_ARGS( dxcAddressOf( compiler ) ) );
                 else
+                    SW_LOG_ERROR( "DxcCreateInstance(CLSID_DxcUtils) failed: 0x%#", hrInit );
+                if ( utils == nullptr || compiler == nullptr )
+                    return DxcOutcome::NoOutput;
+
+                DxcComPtr<IDxcIncludeHandler> includeHandler;
+                utils->CreateDefaultIncludeHandler( dxcAddressOf( includeHandler ) );
+
+                wstring                     wPath = StringUtil::utf8ToUtf16( absPathStr.c_str() );
+                DxcComPtr<IDxcBlobEncoding> sourceBlob;
+                HRESULT                     hrLoad = utils->LoadFile( wPath.c_str(), nullptr, dxcAddressOf( sourceBlob ) );
+                if ( FAILED( hrLoad ) )
+                {
                     SW_LOG_ERROR( "DXC LoadFile failed: 0x%# (%#)", hrLoad, absPathStr.c_str() );
+                    return DxcOutcome::NoOutput;
+                }
+
+                wstring wEntryPoint = StringUtil::utf8ToUtf16( desc._entryPoint.c_str() );
+                wstring wProfile    = StringUtil::utf8ToUtf16( profile.c_str() );
+
+                // 인자 글의 수명: 아래 지역 벡터(경로 · 매크로)와 정적 글이 Compile 이 끝날 때까지 산다.
+                vector<LPCWSTR> listArgument;
+                vector<wstring> listDefineArg;
+                listDefineArg.reserve( desc._listDefine.size() );
+
+                listArgument.push_back( wPath.c_str() );
+                listArgument.push_back( L"-E" );
+                listArgument.push_back( wEntryPoint.c_str() );
+                listArgument.push_back( L"-T" );
+                listArgument.push_back( wProfile.c_str() );
+                listArgument.push_back( L"-Zpr" );
+
+                vector<string>  listIncludeDir;
+                vector<wstring> listIncludeDirW;
+                collectShaderIncludeDirs( absPathStr, listIncludeDir );
+                listIncludeDirW.reserve( listIncludeDir.size() );
+                for ( const string& dir : listIncludeDir )
+                {
+                    listIncludeDirW.push_back( StringUtil::utf8ToUtf16( dir.c_str() ) );
+                    listArgument.push_back( L"-I" );
+                    listArgument.push_back( listIncludeDirW.back().c_str() );
+                }
+
+                appendDxcTargetArguments( desc, listArgument );
+
+                for ( const ShaderMacroDefine& def : desc._listDefine )
+                {
+                    if ( def._name.empty() )
+                        continue;
+                    string defineStr = def._name;
+                    defineStr += "=";
+                    defineStr += def._value;
+                    listDefineArg.push_back( StringUtil::utf8ToUtf16( defineStr.c_str() ) );
+                    listArgument.push_back( L"-D" );
+                    listArgument.push_back( listDefineArg.back().c_str() );
+                }
+
+                // 디버그 코드젠은 빌드 구성이 아니라 **요청**이 정한다 (ShaderCompileDesc::_bDebugCodegen).
+                if ( desc._bDebugCodegen != SW_FALSE )
+                {
+                    listArgument.push_back( L"-Zi" );
+                    listArgument.push_back( L"-Od" );
+                }
+
+                DxcBuffer sourceBuffer{};
+                sourceBuffer.Ptr      = sourceBlob->GetBufferPointer();
+                sourceBuffer.Size     = sourceBlob->GetBufferSize();
+                sourceBuffer.Encoding = DXC_CP_UTF8;
+
+                DxcComPtr<IDxcResult> compileResult;
+                HRESULT               hrCompile = compiler->Compile(
+                    &sourceBuffer,
+                    listArgument.data(),
+                    static_cast<uint32>( listArgument.size() ),
+                    dxcGet( includeHandler ),
+                    IID_PPV_ARGS( dxcAddressOf( compileResult ) ) );
+                if ( FAILED( hrCompile ) )
+                {
+                    SW_LOG_ERROR( "DXC compiler->Compile failed with HRESULT: 0x%#", hrCompile );
+                    return DxcOutcome::NoOutput;
+                }
+
+                HRESULT status = S_OK;
+                compileResult->GetStatus( &status );
+
+                DxcComPtr<IDxcBlobUtf8> errors;
+                compileResult->GetOutput( DXC_OUT_ERRORS, IID_PPV_ARGS( dxcAddressOf( errors ) ), nullptr );
+                if ( errors != nullptr && errors->GetStringLength() > 0 )
+                    outResult._errorMessage = errors->GetStringPointer();
+                if ( FAILED( status ) )
+                {
+                    SW_LOG_ERROR( "%#", outResult._errorMessage.c_str() );
+                    return DxcOutcome::Rejected;
+                }
+
+                DxcComPtr<IDxcBlob> shaderBlob;
+                compileResult->GetOutput( DXC_OUT_OBJECT, IID_PPV_ARGS( dxcAddressOf( shaderBlob ) ), nullptr );
+                if ( shaderBlob == nullptr || shaderBlob->GetBufferSize() == 0 )
+                    return DxcOutcome::NoOutput;
+
+                const uint8* pData = static_cast<const uint8*>( shaderBlob->GetBufferPointer() );
+                outResult._bytecode.assign( pData, pData + shaderBlob->GetBufferSize() );
+                if ( desc._targetFormat == ShaderTargetFormat::SPIRV_OpenGL )
+                    patchSpirvBuiltinsForOpenGL( outResult._bytecode );
+                outResult._bSuccess = true;
+    #if defined( SW_DEBUG )
+                const utf8* pFormatName = ( desc._targetFormat == ShaderTargetFormat::SPIRV_Vulkan )
+                                            ? "Vulkan (SPIR-V, Vulkan API target)"
+                                        : ( desc._targetFormat == ShaderTargetFormat::SPIRV_OpenGL )
+                                            ? "OpenGL (SPIR-V vulkan1.1)"
+                                            : "D3D12 (DXIL Row-Major)";
+                SW_LOG_TRACE( "Target: %#", pFormatName );
+    #endif
+                return DxcOutcome::Compiled;
             }
 
     #if defined( SW_PLATFORM_WINDOWS )
-            // FXC 는 DXBC 만 만든다. SPIR-V 타깃(Vulkan · OpenGL)에는 절대 폴백하지 않는다.
-            if ( desc._targetFormat != ShaderTargetFormat::SPIRV_Vulkan && desc._targetFormat != ShaderTargetFormat::SPIRV_OpenGL )
+            /** @brief DXC 가 출력을 못 낸 DX 타깃을 FXC 로 컴파일합니다(기본 include 처리기, 타깃 매크로 없음). 성공하면 true 입니다. */
+            [[nodiscard]] static bool compileWithFxc( const ShaderCompileDesc& desc, const string& absPathStr, const string& profile, ShaderCompileResult& outResult )
             {
                 UINT                             compileFlags = D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_PACK_MATRIX_ROW_MAJOR;
                 Microsoft::WRL::ComPtr<ID3DBlob> codeBlob;
@@ -650,21 +589,121 @@ namespace sw
                     0,
                     codeBlob.GetAddressOf(),
                     errorBlob.GetAddressOf() );
+                if ( FAILED( hrFallback ) )
+                    return false;
 
-                if ( SUCCEEDED( hrFallback ) )
+                const uint8* pData = static_cast<const uint8*>( codeBlob->GetBufferPointer() );
+                outResult._bytecode.assign( pData, pData + codeBlob->GetBufferSize() );
+                outResult._bSuccess = true;
+                SW_LOG_TRACE( "Target: D3D12/11 (Row-Major)" );
+                return true;
+            }
+    #endif // SW_PLATFORM_WINDOWS
+#endif     // SW_HAS_DXC_API
+        };
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
+
+    void ShaderCompiler::enableDiskCache( bool bEnable )
+    {
+        ShaderCompilerInternal::s_bDiskCacheEnabled.store( bEnable, std::memory_order_relaxed );
+    }
+
+    void ShaderCompiler::clearDiskCache()
+    {
+        const string cacheDir = ShaderCompilerInternal::getShaderCacheDirectory();
+        if ( cacheDir.empty() == false && FileUtil::isDirectory( cacheDir ) )
+        {
+            vector<string> listFile;
+            FileUtil::collectFiles( cacheDir, "", listFile, false );
+            for ( const string& file : listFile )
+            {
+                if ( FileUtil::removeFile( file ) == false )
+                    SW_LOG_WARNING( "Failed to remove shader cache file %# - it stays in the cache", file.c_str() );
+            }
+        }
+    }
+
+    ShaderCompileResult ShaderCompiler::compileHlsl( const ShaderCompileDesc& desc )
+    {
+        using Internal = ShaderCompilerInternal;
+        ShaderCompileResult result{};
+        result._bSuccess = false;
+        result._bytecode.reserve( 4096 );
+
+        string absPathStr;
+        if ( FileUtil::exists( desc._filePath ) )
+            absPathStr = desc._filePath;
+        else
+            absPathStr = ResourcePaths::findLooseFile( desc._filePath ).getDiskPath();
+
+        if ( absPathStr.empty() || FileUtil::exists( absPathStr ) == false )
+        {
+            result._errorMessage = "Shader source file not found: " + desc._filePath;
+            // 부르는 쪽이 존재 여부를 먼저 검사하는 것이 정상이다. 없는 파일은 ERROR 가 아니라 조용히 실패한다.
+            return result;
+        }
+
+        string cachePath;
+        if ( Internal::s_bDiskCacheEnabled.load( std::memory_order_relaxed ) )
+        {
+            cachePath = Internal::computeCachePath( desc, absPathStr );
+            if ( cachePath.empty() == false && FileUtil::exists( cachePath ) )
+            {
+                vector<uint8> cachedBytes;
+                if ( FileUtil::readFile( cachePath, cachedBytes ) && cachedBytes.empty() == false )
                 {
-                    const uint8* pData = static_cast<const uint8*>( codeBlob->GetBufferPointer() );
-                    result._bytecode.assign( pData, pData + codeBlob->GetBufferSize() );
+                    result._bytecode = std::move( cachedBytes );
                     result._bSuccess = true;
-                    saveToCacheIfEnabled( result._bytecode );
-
-                    SW_LOG_TRACE( "Target: D3D12/11 (Row-Major)" );
                     return result;
                 }
             }
-    #endif // SW_PLATFORM_WINDOWS
         }
-#endif // SW_HAS_DXC_API
+
+        const string profile = Internal::getTargetProfile( desc._stage, desc._targetFormat );
+
+#if defined( SW_PLATFORM_WINDOWS )
+        if ( desc._targetFormat == ShaderTargetFormat::DXBC_D3D11 )
+        {
+            if ( Internal::compileDxbc( desc, absPathStr, profile, result ) )
+                Internal::saveToCacheIfEnabled( cachePath, result._bytecode );
+            return result;
+        }
+#else
+        // DXBC 를 낼 수 있는 건 FXC(d3dcompiler) 뿐이고 그건 Windows 전용이다. 위 블록이 통째로
+        // 빠지는 플랫폼에서 이 타깃이 그대로 아래 DXC 로 흘러가면 vs_5_0 같은 SM5 프로파일을
+        // 모른다며 "invalid profile vs_5_0" 로 죽는다. 그 메시지로는 "이 플랫폼엔 D3D11 이 없다" 는
+        // 진짜 이유가 드러나지 않아 부르는 쪽이 환경 문제와 셰이더 문제를 구분하지 못한다.
+        if ( desc._targetFormat == ShaderTargetFormat::DXBC_D3D11 )
+        {
+            result._bSuccess     = false;
+            result._errorMessage = "DXBC (D3D11) target is unavailable on this platform (requires Windows D3DCompiler).";
+            return result;
+        }
+#endif // SW_PLATFORM_WINDOWS
+
+#if defined( SW_HAS_DXC_API )
+        const Internal::DxcOutcome outcome = Internal::compileDxc( desc, absPathStr, profile, result );
+        if ( outcome == Internal::DxcOutcome::Compiled )
+        {
+            Internal::saveToCacheIfEnabled( cachePath, result._bytecode );
+            return result;
+        }
+        if ( outcome == Internal::DxcOutcome::Rejected )
+            return result;
+    #if defined( SW_PLATFORM_WINDOWS )
+        // FXC 는 DXBC 만 만든다. SPIR-V 타깃(Vulkan · OpenGL)에는 절대 폴백하지 않는다.
+        const bool bFxcTarget = desc._targetFormat != ShaderTargetFormat::SPIRV_Vulkan && desc._targetFormat != ShaderTargetFormat::SPIRV_OpenGL;
+        if ( bFxcTarget && Internal::compileWithFxc( desc, absPathStr, profile, result ) )
+        {
+            Internal::saveToCacheIfEnabled( cachePath, result._bytecode );
+            return result;
+        }
+    #endif // SW_PLATFORM_WINDOWS
+#endif     // SW_HAS_DXC_API
 
         if ( result._errorMessage.empty() )
             result._errorMessage = "Failed to compile shader with DXC and D3DCompiler (hrCompile/hrLoad failed)";
