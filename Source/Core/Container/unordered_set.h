@@ -89,26 +89,20 @@ namespace sw
             using pointer           = const value_type*;
             using reference         = const value_type&;
 
-            /** @brief 집합과 밀집 배열 인덱스로 만듭니다. */
             iterator( const unordered_set* pSet, size_t index )
                 : _pSet{ pSet }
                 , _index{ index } {}
 
-            /** @brief 다음 원소로 넘어갑니다. */
             iterator& operator++()
             {
                 ++_index;
                 return *this;
             }
 
-            /** @brief 같은지 비교합니다. */
-            bool operator==( const iterator& other ) const { return _index == other._index; }
-            /** @brief 다른지 비교합니다. */
-            bool operator!=( const iterator& other ) const { return _index != other._index; }
-            /** @brief 역참조합니다. */
+            bool      operator==( const iterator& other ) const { return _index == other._index; }
+            bool      operator!=( const iterator& other ) const { return _index != other._index; }
             reference operator*() const { return std::as_const( _pSet->_listDenseData ).data()[_index]._key; }
-            /** @brief 멤버에 접근합니다. */
-            pointer operator->() const { return &std::as_const( _pSet->_listDenseData ).data()[_index]._key; }
+            pointer   operator->() const { return &std::as_const( _pSet->_listDenseData ).data()[_index]._key; }
 
             const unordered_set* _pSet;
             size_t               _index;
@@ -155,7 +149,6 @@ namespace sw
             SW_SCOPED_RACE_WRITE_OTHER( other );
         }
 
-        /** @brief 복사 대입합니다. */
         unordered_set& operator=( const unordered_set& other )
         {
             if ( this != &other )
@@ -169,7 +162,6 @@ namespace sw
             return *this;
         }
 
-        /** @brief 이동 대입합니다. */
         unordered_set& operator=( unordered_set&& other ) noexcept
         {
             if ( this != &other )
@@ -183,14 +175,12 @@ namespace sw
             return *this;
         }
 
-        /** @brief 시작 이터레이터를 반환합니다. */
         iterator begin() const noexcept
         {
             SW_SCOPED_RACE_READ();
             return iterator( this, 0 );
         }
 
-        /** @brief 끝 이터레이터를 반환합니다. */
         iterator end() const noexcept
         {
             SW_SCOPED_RACE_READ();
@@ -212,14 +202,12 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 2) 조회 — 밀집 순회 · 버킷 검색
         // ------------------------------------------------------------------------------
-        /** @brief 비어 있는지 반환합니다. */
         bool empty() const noexcept
         {
             SW_SCOPED_RACE_READ();
             return _listDenseData.empty();
         }
 
-        /** @brief 원소 개수를 반환합니다. */
         size_type size() const noexcept
         {
             SW_SCOPED_RACE_READ();
@@ -229,7 +217,6 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 3) 변경 — insert/erase. erase 뒤 이터레이터가 무효화될 수 있다
         // ------------------------------------------------------------------------------
-        /** @brief 모든 원소를 제거합니다. */
         void clear() noexcept
         {
             SW_SCOPED_RACE_WRITE();
@@ -240,7 +227,6 @@ namespace sw
             }
         }
 
-        /** @brief 키를 찾습니다. */
         iterator find( const Key& key ) const
         {
             SW_SCOPED_RACE_READ();
@@ -296,18 +282,14 @@ namespace sw
         /** @brief 키와 같은 원소의 개수(0 또는 1)를 반환합니다. */
         size_type count( const Key& key ) const { return find( key ) != end() ? 1 : 0; }
 
-        /** @brief 이종 키로 원소 개수를 반환합니다. */
         template <typename K, typename = std::enable_if_t<!std::is_same_v<std::decay_t<K>, Key>>>
         size_type count( const K& key ) const { return find( key ) != end() ? 1 : 0; }
 
-        /** @brief 키가 있는지 확인합니다. */
         bool contains( const Key& key ) const { return find( key ) != end(); }
 
-        /** @brief 이종 키로 키가 있는지 확인합니다. */
         template <typename K, typename = std::enable_if_t<!std::is_same_v<std::decay_t<K>, Key>>>
         bool contains( const K& key ) const { return find( key ) != end(); }
 
-        /** @brief 원소를 삽입합니다. */
         pair<iterator, bool> insert( const value_type& value )
         {
             SW_SCOPED_RACE_WRITE();
@@ -328,7 +310,6 @@ namespace sw
             return { iterator( this, newIndex ), true };
         }
 
-        /** @brief 원소를 제자리에서 생성해 삽입합니다. */
         template <typename... Args>
         pair<iterator, bool> emplace( Args&&... args )
         {
@@ -356,7 +337,6 @@ namespace sw
             return { iterator( this, newIndex ), true };
         }
 
-        /** @brief pos 가 가리키는 원소를 제거합니다. */
         iterator erase( const_iterator pos )
         {
             if ( pos == end() )
@@ -365,7 +345,6 @@ namespace sw
             return iterator( this, pos._index );
         }
 
-        /** @brief 키와 같은 원소를 제거하고, 제거한 개수를 반환합니다. */
         size_type erase( const Key& key )
         {
             SW_SCOPED_RACE_WRITE();
