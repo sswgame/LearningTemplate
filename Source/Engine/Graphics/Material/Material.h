@@ -13,6 +13,7 @@
 
 #include "Engine/Graphics/Material/MaterialTypes.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
+#include "Engine/Graphics/Texture/TextureCache.h"
 
 namespace sw
 {
@@ -150,7 +151,8 @@ namespace sw
         /** @brief resolveTextureAssets 가 빌린 텍스처를 캐시에 반환합니다. */
         void releaseTextureAssets( IRHIDevice* pRHI );
         /**
-         * @brief 빌린 텍스처가 다시 업로드되었으면(`TextureCache::reload`) 새 SRV 인덱스를 받아 다시 패킹합니다.
+         * @brief 빌린 텍스처가 다시 업로드되었거나(`TextureCache::reload`) 비동기 로드가 끝났으면 새 SRV 인덱스를 받아 다시 패킹합니다.
+         * @details 로드 중인 텍스처 자리는 로드 중 텍스처(`EngineDefaultAssets::_loadingTexture`)를 샘플하다가, 준비되면 진짜로, 실패하면 누락 텍스처(마젠타)로 바꾼다.
          * @details 텍스처 핫 리로드는 같은 `Texture2D` 에 새 텍스처와 새 SRV 인덱스를 올리고 옛 인덱스는 반환한다. resolve 때 받은
          *          인덱스를 바이트(네이티브 bindless)와 슬롯 목록(DX11, GL)에 그대로 가지고 있으면 **반환한 슬롯**을 읽는다. 캐시의 reload
          *          세대가 그대로면 아무것도 하지 않으므로 매 빌드 불러도 싸다(`GPUSceneBuilder` 는 세대가 바뀐 빌드에서만 부른다).
@@ -255,6 +257,8 @@ namespace sw
 
         /** @brief Desc 를 런타임 상태에 적용합니다. */
         void applyDescToRuntime();
+        /** @brief 서수 @p ordinal 의 텍스처 로드가 끝났으면 대신 빌린 텍스처를 놓고 진짜(실패면 누락 체커)로 바꿉니다(`refreshTextureBindings`). */
+        void resolveArrivedTexture( TextureCache& textures, size_t ordinal );
         /** @brief 런타임 프로퍼티를 Desc 에 다시 씁니다(저장용). */
         void syncDescFromRuntime() const;
         /** @brief 비동기 로드 태스크 본문입니다. TaskArgs 에는 AsyncLoadState shared_ptr 와 경로 문자열이 들어 있습니다. */
@@ -273,7 +277,8 @@ namespace sw
         IRHIDevice*                _pRHIDevice;
         uint32                     _textureReloadGeneration; ///< SRV 인덱스를 받을 때의 `TextureCache::getReloadGeneration()`
         vector<string>             _listAcquiredTexturePath; ///< resolveTextureAssets 가 해석한 요청 경로(프로퍼티의 assetPath). refreshTextureBindings 가 프로퍼티와 맞춘다.
-        vector<string>             _listBorrowedTexturePath; ///< 위와 같은 순서로 캐시에서 실제로 빌린 경로(읽지 못하면 누락 텍스처). find 와 release 가 쓴다.
+        vector<TextureHandle>      _listTextureLoad;         ///< 위와 같은 순서의 텍스처 로드(`TextureCache::request`). 준비되면 참조를 쥐고, 실패하면 놓는다
+        vector<string>             _listBorrowedTexturePath; ///< 위와 같은 순서로 대신 빌린 경로(`acquire` · `release` 짝) — 로드 중이면 로드 중 텍스처, 실패면 누락 텍스처, 진짜가 붙었으면 빈 문자열
         vector<RHIDescriptorIndex> _listMaterialTextureSrv;  ///< 위 경로와 같은 순서의 백엔드 SRV 인덱스(에뮬레이션 백엔드의 슬롯 바인딩용)
         vector<hashed_string>      _listMaterialTextureName; ///< 위와 같은 순서의 프로퍼티 이름(인스턴스가 같은 슬롯을 덮어쓴다)
         RHIBlendMode               _blendMode;

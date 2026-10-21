@@ -10,6 +10,7 @@
 #include "Core/Container/string.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Binding/GPUSpriteInstanceData.h"
 #include "Engine/Object/GameObject/Registry/ScenePrimitive.h"
@@ -49,12 +50,17 @@ namespace sw
         /** @brief 읽은 메시 id 와 머티리얼 참조를 리소스로 해석합니다(`resolveRenderAssets`). 편집 중 되돌리기나 프리팹 드래그로 다시 만든 메시가 그려지게 합니다. */
         void onPostLoad() override { resolveRenderAssets(); }
         /**
-         * @brief `_meshID` 를 메시로 해석합니다. `.mesh` 경로이면 메시 캐시(`MeshCache::acquire`), 아니면 내장 도형을 씁니다.
+         * @brief `_meshID` 를 메시로 해석합니다. `.mesh` 경로이면 메시 캐시에 로드를 요청하고(`MeshCache::request`), 아니면 내장 도형을 씁니다.
          * @details 현재 메시가 현재 id 로 잡은 것이면 그대로 둔다(`_resolvedMeshID`. 머티리얼의 `_acquiredMaterialPath` 와 같은 규칙이다).
          *          "메시가 있으면 그대로"로 판정하면 id 를 바꿔도(인스펙터, 붙여넣기, 되돌리기) 이전 메시를 그린다. 비어 있으면 타입의
          *          기본(`getDefaultMeshID`)을 쓴다. 메시는 단위 큐브, 스프라이트는 사각형이다.
+         *
+         *          에셋이 아직 읽는 중이면 **메시 없이 둔다**(그리지 않는다 — 기본 메시로 대신 그리지 않는다). 도착하면 씬 프레임의 `AssetArrival` 단계가
+         *          메시를 넣고 렌더 에셋을 다시 해석한다(`resolveRenderAssets` — 파생 타입의 스킨 사본도 그때 만든다). 읽지 못한 에셋은 메시 없이 남는다.
          */
         void resolveRuntimeMesh();
+        /** @brief 메시 에셋을 아직 읽는 중이면 true 입니다(그때 `getMesh()` 는 nullptr 이다). */
+        bool isMeshLoading() const { return _meshLoad.isLoading(); }
         /** @brief 저장되는 메시 id 를 바꾸고 곧바로 해석합니다(프리미티브 이름 또는 `.mesh` 에셋 경로). */
         void setMeshID( string_view meshID );
         /** @brief 저장되는 메시 id 입니다(프리미티브 이름 또는 `.mesh` 에셋 경로). 비어 있으면 타입의 기본입니다. */
@@ -183,7 +189,14 @@ namespace sw
         void setSpriteInstanceData( const GPUSpriteInstanceData& data );
 
     private:
+        /** @brief 메시 로드를 기다리는 동안 씬 프레임마다 불립니다(`PrimitiveRegistry::addAssetWaiter`). 아직 기다리면 true 입니다. */
+        static bool updateMeshLoad( ScenePrimitive& primitive );
+        /** @brief 끝난 메시 로드의 결과를 메시로 삼고 핸들을 놓습니다. 실패면 메시 없이 둔다. */
+        void applyMeshLoad();
+
+    private:
         shared_ptr<Mesh>             _mesh;
+        MeshHandle                   _meshLoad; ///< 읽는 중인 메시 에셋 로드다(저장하지 않는다). 끝나면 `applyMeshLoad` 가 놓는다
         Material*                    _pMaterial;
         shared_ptr<MaterialInstance> _materialInstance;
         /** @brief 저장되는 메시 id 입니다. */

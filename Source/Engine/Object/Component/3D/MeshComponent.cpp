@@ -24,6 +24,7 @@ namespace sw
 
     MeshComponent::MeshComponent()
         : _mesh{}
+        , _meshLoad{}
         , _pMaterial{ nullptr }
         , _materialInstance{}
         , _meshID{}
@@ -102,12 +103,52 @@ namespace sw
     {
         const string_view   meshID = _meshID.empty() ? getDefaultMeshID() : string_view{ _meshID };
         const hashed_string hashedMeshID( string{ meshID }.c_str() );
-        if ( _mesh != nullptr && _resolvedMeshID == hashedMeshID )
+        const bool          bSameID = _resolvedMeshID == hashedMeshID;
+        if ( bSameID && ( _mesh != nullptr || _meshLoad.isLoading() ) )
             return;
-        // **공유되는** 메시를 받는다(`.mesh` 경로는 메시 캐시, 그 밖은 내장 도형). 컴포넌트마다 제 메시를 만들면 배치가 그만큼 갈린다.
-        // 읽지 못한 에셋은 메시 없이 남는다(그리지 않는다) — 캐시가 경로마다 한 번 경고하고, 핫 리로드 알림이 다시 해석한다.
-        _mesh           = MeshAssetFormat::isMeshAssetPath( meshID ) ? MeshCache::acquire( meshID ) : MeshUtil::acquirePrimitive( meshID );
         _resolvedMeshID = hashedMeshID;
+        // **공유되는** 메시를 받는다(`.mesh` 경로는 메시 캐시, 그 밖은 내장 도형). 컴포넌트마다 제 메시를 만들면 배치가 그만큼 갈린다.
+        if ( MeshAssetFormat::isMeshAssetPath( meshID ) == false )
+        {
+            _meshLoad.reset();
+            _mesh = MeshUtil::acquirePrimitive( meshID );
+            markRenderStateDirty();
+            return;
+        }
+        // 에셋은 워커에서 읽는다. 다 읽을 때까지 그리지 않고, 도착하면 `AssetArrival` 단계가 넣는다. 읽지 못한 에셋은 메시 없이 남는다(그리지 않는다) —
+        // 캐시가 경로마다 한 번 경고하고, 핫 리로드 알림이 다시 해석한다.
+        _meshLoad = MeshCache::request( meshID );
+        if ( _meshLoad.isLoading() == false )
+        {
+            applyMeshLoad();
+            return;
+        }
+        _mesh = nullptr;
+        markRenderStateDirty();
+        if ( _pPrimitiveRegistry != nullptr )
+            _pPrimitiveRegistry->addAssetWaiter( this, &MeshComponent::updateMeshLoad );
+    }
+
+    bool MeshComponent::updateMeshLoad( ScenePrimitive& primitive )
+    {
+        // 레지스트리에 들어오는 것은 메시 계열뿐이다(`ScenePrimitive.h` 의 불변식).
+        MeshComponent& self = static_cast<MeshComponent&>( primitive );
+        if ( self._meshLoad.isLoading() )
+            return true;
+        if ( self._meshLoad.isValid() == false )
+            return false; // 기다리는 사이 다른 id(내장 도형)로 바뀌었다
+        self.applyMeshLoad();
+        // 도착한 메시로 렌더 에셋을 다시 푼다 — 파생 타입(스켈레탈)이 스킨 사본을 이때 만든다. 메시 id 는 그대로라 메시를 다시 요청하지 않는다.
+        // 실패한 로드는 다시 풀지 않는다 — 메시가 없으면 다시 요청하므로 프레임마다 디스크를 읽게 된다(다음 해석 · 핫 리로드가 다시 시도한다).
+        if ( self._mesh != nullptr )
+            self.resolveRenderAssets();
+        return self._meshLoad.isLoading();
+    }
+
+    void MeshComponent::applyMeshLoad()
+    {
+        _mesh = _meshLoad.get();
+        _meshLoad.reset();
         markRenderStateDirty();
     }
 
@@ -116,6 +157,9 @@ namespace sw
         ScenePrimitive::onRegister( manager );
         _pPrimitiveRegistry = &manager.getPrimitiveRegistry();
         _pPrimitiveRegistry->add( this );
+        // 등록 전에 요청한 메시 로드가 아직 끝나지 않았으면 이제부터 씬 프레임이 기다린다.
+        if ( _meshLoad.isLoading() )
+            _pPrimitiveRegistry->addAssetWaiter( this, &MeshComponent::updateMeshLoad );
         // 픽셀 퍼펙트 카메라가 이미 정한 스냅 단위를 이어받는다(정한 뒤에 생긴 스프라이트도 격자에 붙는다).
         setPixelSnapUnit( manager.getCameraRegistry().getPixelSnapUnit() );
     }
@@ -163,6 +207,7 @@ namespace sw
     void MeshComponent::setMesh( shared_ptr<Mesh> mesh )
     {
         _mesh = std::move( mesh );
+        _meshLoad.reset(); // 런타임 지정이 이긴다 — 읽던 에셋이 도착해도 덮지 않는다
         // 지금 id 의 메시로 삼는다 — 시작 · 로드 뒤 해석이 런타임 지정을 덮지 않고, id 가 바뀌면 그 id 의 것으로 바뀐다.
         _resolvedMeshID = hashed_string( string{ _meshID.empty() ? getDefaultMeshID() : string_view{ _meshID } }.c_str() );
         markRenderStateDirty();

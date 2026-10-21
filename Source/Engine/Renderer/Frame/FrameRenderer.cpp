@@ -634,7 +634,10 @@ namespace sw
         if ( engine::areEngineServicesBound() )
         {
             SW_PROFILE_SCOPE( "RT.TextureRegionUpdates" );
-            (void)engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().flushRegionUpdates( pDevice );
+            TextureCache& textures = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
+            (void)textures.flushRegionUpdates( pDevice );
+            // 워커가 읽어 둔 비동기 텍스처를 올린다 — 디바이스를 쓰는 스레드는 여기다(DX11 즉시 컨텍스트 · GL). 프레임당 상한이 있다.
+            (void)textures.completePendingLoads( TextureCache::kMaxUploadsPerFrame );
         }
 
         _pDevice            = pDevice;

@@ -66,6 +66,7 @@ namespace sw
         , _pRHIDevice{ nullptr }
         , _textureReloadGeneration{ 0 }
         , _listAcquiredTexturePath{}
+        , _listTextureLoad{}
         , _listBorrowedTexturePath{}
         , _listMaterialTextureSrv{}
         , _listMaterialTextureName{}
@@ -164,34 +165,40 @@ namespace sw
 #endif
                 continue;
             }
-            // 못 읽은 텍스처는 마젠타 체커를 빌린다 — 흰색이면 화면에서 빠진 것을 알 수 없다(Shipping 도 같다).
-            string     borrowedPath = prop._assetPath;
-            Texture2D* pTexture     = textures.acquire( borrowedPath, pRHI );
-            if ( pTexture == nullptr )
-            {
-                borrowedPath = engine::getSubsystem<EngineDefaultAssets>()._missingTexture.get();
-                pTexture     = textures.acquire( borrowedPath, pRHI );
-                if ( pTexture == nullptr )
-                {
-                    // 체커는 엔진 필수 데이터다. 그것마저 없으면 흰색으로 그리지 않고 머티리얼 초기화가 실패한다.
-                    SW_LOG_ERROR( "Material '%#': texture '%#' for '%#' could not be loaded and neither could the missing-texture checker '%#'",
-                                  _desc._name.c_str(), prop._assetPath.c_str(), prop._name.c_str(), borrowedPath.c_str() );
-                    return false;
-                }
-                SW_LOG_ERROR( "Material '%#': texture '%#' for '%#' could not be loaded — sampling the missing-texture checker '%#'.",
-                              _desc._name.c_str(), prop._assetPath.c_str(), prop._name.c_str(), borrowedPath.c_str() );
-            }
-
             const uint32 ordinal = static_cast<uint32>( _listMaterialTextureSrv.size() );
             if ( bNativeBindless == false && ordinal >= shaderslot::kMaterialTextureCount )
             {
                 SW_LOG_WARNING( "Material '%#': 이 백엔드는 머티리얼 텍스처를 %#개까지만 바인딩합니다 — '%#' 는 흰색으로 남습니다.",
                                 _desc._name.c_str(), shaderslot::kMaterialTextureCount, prop._name.c_str() );
-                textures.release( borrowedPath, pRHI );
                 continue;
             }
 
+            // 진짜 텍스처는 워커가 읽는다. 다 읽기 전에는 로드 중 텍스처(회색), 못 읽으면 마젠타 체커를 빌린다 — 흰색이면 화면에서 빠진 것을 알 수 없다(Shipping 도 같다).
+            TextureHandle    load = textures.request( prop._assetPath, pRHI );
+            string           borrowedPath;
+            const Texture2D* pTexture = load.isReady() ? load.getBlock()->getTexture() : nullptr;
+            if ( pTexture == nullptr )
+            {
+                const bool bLoading = load.isLoading();
+                if ( bLoading == false )
+                {
+                    SW_LOG_ERROR( "Material '%#': texture '%#' for '%#' could not be loaded (%#) — sampling the missing-texture checker.", _desc._name.c_str(),
+                                  prop._assetPath.c_str(), prop._name.c_str(), load.getError().c_str() );
+                    load.reset();
+                }
+                borrowedPath = bLoading ? engine::getSubsystem<EngineDefaultAssets>()._loadingTexture.get() : engine::getSubsystem<EngineDefaultAssets>()._missingTexture.get();
+                pTexture     = textures.acquire( borrowedPath, pRHI );
+                if ( pTexture == nullptr )
+                {
+                    // 로드 중 텍스처와 체커는 엔진 필수 데이터다. 그것마저 없으면 흰색으로 그리지 않고 머티리얼 초기화가 실패한다.
+                    SW_LOG_ERROR( "Material '%#': texture '%#' for '%#' is not ready and the stand-in texture '%#' could not be loaded either", _desc._name.c_str(),
+                                  prop._assetPath.c_str(), prop._name.c_str(), borrowedPath.c_str() );
+                    return false;
+                }
+            }
+
             _listAcquiredTexturePath.push_back( prop._assetPath );
+            _listTextureLoad.push_back( std::move( load ) );
             _listBorrowedTexturePath.push_back( std::move( borrowedPath ) );
             _listMaterialTextureSrv.push_back( pTexture->getSrv() );
             _listMaterialTextureName.emplace_back( prop._name.c_str() );
@@ -223,8 +230,10 @@ namespace sw
                 break;
             if ( MaterialUtil::isTextureType( prop._type ) == false || prop._assetPath != _listAcquiredTexturePath[ordinal] )
                 continue;
-            const Texture2D*         pTexture = textures.find( _listBorrowedTexturePath[ordinal] );
-            const RHIDescriptorIndex srv      = pTexture != nullptr ? pTexture->getSrv() : kInvalidDescriptorIndex;
+            resolveArrivedTexture( textures, ordinal );
+            const string&            boundPath = _listBorrowedTexturePath[ordinal].empty() ? _listAcquiredTexturePath[ordinal] : _listBorrowedTexturePath[ordinal];
+            const Texture2D*         pTexture  = textures.find( boundPath );
+            const RHIDescriptorIndex srv       = pTexture != nullptr ? pTexture->getSrv() : kInvalidDescriptorIndex;
             if ( srv != _listMaterialTextureSrv[ordinal] )
             {
                 _listMaterialTextureSrv[ordinal] = srv;
@@ -235,6 +244,33 @@ namespace sw
             ++ordinal;
         }
         return bChanged;
+    }
+
+    void Material::resolveArrivedTexture( TextureCache& textures, size_t ordinal )
+    {
+        TextureHandle& load       = _listTextureLoad[ordinal];
+        string&        borrowed   = _listBorrowedTexturePath[ordinal];
+        const bool     bNoArrival = load.isValid() == false || load.isLoading() || borrowed.empty();
+        if ( bNoArrival )
+            return;
+        // 로드가 끝났다 — 대신 빌린 로드 중 텍스처를 놓고 진짜로 바꾼다. 실패면 마젠타 체커를 빌린다(흰색이면 빠진 것을 알 수 없다).
+        string standIn = std::move( borrowed );
+        borrowed.clear();
+        if ( load.hasFailed() )
+        {
+            SW_LOG_ERROR( "Material '%#': texture '%#' could not be loaded (%#) — sampling the missing-texture checker.", _desc._name.c_str(),
+                          _listAcquiredTexturePath[ordinal].c_str(), load.getError().c_str() );
+            load.reset();
+            borrowed = engine::getSubsystem<EngineDefaultAssets>()._missingTexture.get();
+            if ( textures.acquire( borrowed, _pRHIDevice ) == nullptr )
+            {
+                // 체커는 엔진 필수 데이터다 — 못 읽으면 로드 중 텍스처를 그대로 둔다(오류는 남았다).
+                SW_LOG_ERROR( "Material '%#': the missing-texture checker '%#' could not be loaded either", _desc._name.c_str(), borrowed.c_str() );
+                borrowed = std::move( standIn );
+                return;
+            }
+        }
+        textures.release( standIn, _pRHIDevice );
     }
 
     uint32 Material::findTextureSlot( hashed_string name ) const
@@ -256,10 +292,12 @@ namespace sw
             TextureCache& textures = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
             for ( const string& path : _listBorrowedTexturePath )
             {
-                textures.release( path, pRHI );
+                if ( path.empty() == false )
+                    textures.release( path, pRHI );
             }
         }
         _listAcquiredTexturePath.clear();
+        _listTextureLoad.clear(); // 진짜 텍스처의 참조는 핸들이 쥐었다 — 놓으면 캐시에 돌려준다
         _listBorrowedTexturePath.clear();
         _listMaterialTextureSrv.clear();
         _listMaterialTextureName.clear();

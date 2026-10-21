@@ -1,6 +1,6 @@
 # 리소스 비동기 로드와 디더 등장 계획 (2026-10-20)
 
-> 상태: 설계 · 선행: 없음 · 영역: engine · 옛번호: 없음 · 진행: 1/6
+> 상태: 구현중 · 선행: 없음 · 영역: engine · 옛번호: 없음 · 진행: 4/7
 
 모든 리소스를 비동기로 읽고, 로드가 끝난 오브젝트는 디더로 서서히 나타나게 합니다. 후보 `AsyncResourceLoading`(`Candidates-engine.md`)을 계획으로 올린 문서입니다.
 
@@ -44,13 +44,22 @@
 | 바이트 읽기 | `ResourceIO::readBinaryResource` 동기 22줄 · 21파일 | `readBinaryResourceAsync` 는 `AssetStreamingQueue` 만 씀(`AssetStreamingQueue.cpp:256`) | — |
 
 - 1절의 "오디오는 동기 전용"은 틀렸습니다. 오디오는 상태 열거형과 `requestClip` 이 이미 있어, 핸들 형식의 본보기입니다. 반대로 `AssetStreamingQueue` 는 바이트를 콜백으로 넘기고 버리므로(`AssetStreamingQueue.h:67-73`) 캐시를 채우지 않습니다. 공통 기반으로는 `readBinaryResourceAsync` 만 쓸 만합니다.
-- 설계 확정(A2 의 입력, `design-reviewer` 검토 전 초안):
+- 설계 검토(A2 착수, 2026-10-21, 작업자가 직접 함). 초안에서 고친 것:
+  - **풀 교착**: "기다리는 동안 태스크를 돕는다" 는 아무 태스크나 돕는 것이라, 워커 안의 동기 `acquire`(씬 로드 워커)가 자기 로드 태스크 뒤에 줄 서면 멈출 수 있다. 단계마다 먼저 집은(`claim`) 스레드 하나가 실행하게 바꿨다 — `wait()` 가 아직 아무도 집지 않은 단계를 그 자리에서 실행하고, 나중에 도는 태스크는 할 일이 없다(`AssetLoadBlock`, `Source/Engine/Resource/AssetHandle.h`). 대기는 원자 워드 하나(`Futex`)다.
+  - **텍스처 업로드 스레드(남은 확인 1)**: DX11 은 즉시 컨텍스트(`_deviceContext`)로, GL 은 스레드에 묶인 컨텍스트로 올린다(`D3D11RHIResourceFactory::uploadTexture2D`, `OpenGLRHIResourceFactory::uploadTexture2D`). 워커 업로드는 안 된다. 로드를 두 단계로 나눴다 — 로드(워커, `Texture2D::readImage`)와 완료(디바이스 스레드, `loadFromImage`). 완료는 렌더 스레드가 프레임마다 `TextureCache::completePendingLoads`(프레임당 `kMaxUploadsPerFrame`)로 하거나, 그 스레드에서 `wait()` 한 쪽이 한다.
+  - **막는 `wait` 는 준비 집합에 두지 않는다**: 완료 단계가 디바이스 스레드에만 오므로 게임 스레드가 막고 기다리면 오지 않을 수 있다. `AssetReadySet` 은 `isReady` · `isComplete` · `hasFailed` · 개수만 낸다(로딩 화면은 프레임마다 묻는다).
+  - **`T` 의 소유**: 핸들은 `AssetHandle<TBlock>` 이고 `get()` 은 `shared_ptr<T>` 다. 텍스처는 블록이 참조 하나를 쥐고 별칭 `shared_ptr` 로 내준다(블록이 사라질 때 `release`). 캐시가 먼저 사라지면 블록은 약한 참조라 놓을 것이 없다.
+  - **실패의 단일 출구**: 텍스처 로드 단계가 실패해도 완료 단계로 넘겨, 항목의 "올리는 중" 표시를 내리는 곳을 하나로 뒀다(실패한 로드가 표시를 남기는 길이 없다).
+  - **로드 중 텍스처는 데이터다**: `EngineDefaultAssets::_loadingTexture`(`engine/textures/loading.dds`, 중간 회색, `GenerateSpriteTextures.py`). 폴백이 아니라 정해진 로드 중 상태이고, 실패는 지금처럼 마젠타 체커다.
+  - **메시 도착**: 컴포넌트는 로드 중에 메시 없이 두고(그리지 않음), 씬 프레임의 새 단계 `AssetArrival`(`SceneFrameStepList.xxx`)이 `PrimitiveRegistry::updateAssetWaiters` 로 넣는다. `ScenePrimitive` 에 가상 함수를 더하지 않으려고 함수 포인터로 건다. 사본의 원본이 지금 필요한 곳(`BenchSceneRig`)은 `MeshCache::acquire` 로 동기 경로를 쓴다.
+- 설계 확정(A2 의 입력, 위 검토 전 초안):
   - `AssetLoadState { Loading, Ready, Failed }`. `Missing` 은 두지 않습니다 — 요청 없는 핸들은 만들 수 없게 합니다(오디오의 `Missing` 은 "핸들 없음"을 상태로 흉내 낸 것입니다).
   - `AssetHandle<T>`: 공유 상태 블록(원자 상태 + 결과 + 오류 문자열). `get()` 은 `Ready` 일 때만 값을 주고 아니면 `nullptr`(`[[nodiscard]]`). `wait()` 는 `Ready` 나 `Failed` 가 될 때까지 기다립니다(기다리는 동안 태스크를 돕습니다). 동기 `acquire` 는 `request(path).wait()` 로 같은 경로를 탑니다.
   - 종류별 캐시는 지금 반환 형식을 `T` 의 소유 방식(`Texture2D*` 참조 수, `shared_ptr`, 캐시 소유 `PrefabAsset*`)대로 두고, 핸들이 그 방식의 소유를 감쌉니다. 프리팹의 원시 포인터는 핸들이 캐시 항목의 세대를 쥐는 형식으로 바꿔야 합니다.
   - 준비 집합 `AssetReadySet`: 핸들 여럿을 모아 `isReady()` · `hasFailed()` 를 냅니다. 로딩 화면은 이것만 기다립니다. `MeshPreloadSet` 은 이것의 메시 전용 선구이므로 A3 에서 흡수합니다.
   - 오디오 `AudioClipStatus` 는 `AssetLoadState` 로 바꿔 호출처를 맞춥니다(5곳 안팎).
-- 남은 확인: (1) 텍스처의 GPU 업로드(`pTexture->loadFrom...( pDevice )`)가 워커에서 안전한지 디바이스별(DX11 · DX12 · Vulkan · GL) 규약 — 지금 `acquire` 는 게임 스레드에서 불리는 것으로 보이며, 워커 업로드가 안 되면 디코드는 워커, 업로드는 게임 스레드 큐로 나눠야 합니다(A3 앞에 확인). (2) 셰이더 런타임의 동기 호출 개수(C1 앞에).
+- 남은 확인: (1) 해결 — 위 검토의 "텍스처 업로드 스레드". (2) 셰이더 런타임의 동기 호출 개수(C2 앞에).
+- 남은 확인(A2 · A3 · C1 은 빌드 없이 구현함): 빌드와 테스트(`MeshAssetTest` 의 `ReadySetHoldsMeshesUntilCleared` · `AcquireWaitsOnTheSameLoadAsRequest` · `MeshComponentResolvesMeshAssetPath`). 첫 프레임에 텍스처를 읽는 GPU 테스트 · 시나리오가 로드 중 회색을 찍지 않는지 — `RenderPassGPUTest` 의 누락 텍스처 테스트는 첫 프레임이 회색이고 다음 갱신에서 마젠타가 되므로, 테스트가 준비 집합이나 몇 프레임을 기다려야 할 수 있다. 첫 프레임에 메시를 찍는 스크린샷 시나리오도 같다.
 - 함정: TAA 가 꺼진 품질 단계에서는 디더 패턴이 보입니다. B 단계에서 그 단계의 모양을 정해야 합니다(디더 대신 알파 페이드, 또는 등장을 즉시로).
 - 함정: 등장 비율은 GPU 씬 버퍼 레이아웃을 바꿔 셰이더 전체 재빌드가 듭니다. 그 단위는 혼자 돌립니다.
 
@@ -58,12 +67,13 @@
 
 | 단위 | 내용 | 비고 |
 |---|---|---|
-| A1 ✅ | 현재 리소스 핸들 형식과 동기 로드 호출처를 조사한다(종류별 실제 개수). 공유 서비스의 스레드 안전성을 확인한다. 상태가 드러나는 핸들 형식의 설계를 이 문서에 확정한다. | 읽기 전용. 완료(2026-10-20), 결과는 3절. `design-reviewer` 검토 후 A2 구현 |
-| A2 | 핸들 형식(`Loading` · `Ready` · `Failed`)과 준비 집합 선언 API. 동기 API 를 "기다리는 비동기"로 같은 경로에 둔다. | 핸들 형식이 바뀌어 여러 모듈이 다시 빌드됨 |
-| A3 | 텍스처 → 메시 순으로 옮김. 로드 중 규칙 적용. | A2 뒤 |
-| B1 | 프리미티브 "등장 비율"(0 ~ 1)과 불투명 패스의 스크린 공간 디더 클립. 그림자 패스에도 같은 클립. | 셰이더 전체 재빌드. 혼자 |
-| B2 | 등장 비율을 로드 완료 · 소멸 · LOD 전환 · 텔레포트에 연결한다. TAA 꺼진 단계의 모양을 정한다. | B1 뒤. GPU 화면 확인 필요 |
-| C1 | 오디오 → 프리팹 → 애니메이션 순으로 옮김. 캐릭터는 애니메이션 준비 뒤 스폰. 셰이더는 쿠킹 단계가 달라 마지막. | A3 뒤 |
+| A1 ✅ | 현재 리소스 핸들 형식과 동기 로드 호출처를 조사한다(종류별 실제 개수). 공유 서비스의 스레드 안전성을 확인한다. 상태가 드러나는 핸들 형식의 설계를 이 문서에 확정한다. | 읽기 전용. 완료(2026-10-20), 결과는 3절 |
+| A2 ✅ | 핸들 형식(`Loading` · `Ready` · `Failed`)과 준비 집합 선언 API. 동기 API 를 "기다리는 비동기"로 같은 경로에 둔다. | 완료(2026-10-21, 빌드 미확인). `AssetHandle.h` — 설계 검토는 3절 |
+| A3 ✅ | 텍스처 → 메시 순으로 옮김. 로드 중 규칙 적용. | 완료(2026-10-21, 빌드 미확인). `MeshCache::request` · `MeshComponent` 도착 단계 · `MeshPreloadSet` 를 준비 집합으로 흡수, `TextureCache::request` 두 단계 · `Material` 로드 중 회색 → 진짜 · 실패 체커 |
+| B1 | 프리미티브 "등장 비율"(0 ~ 1)과 불투명 패스의 스크린 공간 디더 클립. 그림자 패스에도 같은 클립. | 셰이더 전체 재빌드. 혼자. GPU 씬 버퍼 레이아웃을 바꾸므로 빌드 · GPU 확인 없이 하지 않았다 |
+| B2 | 등장 비율을 로드 완료 · 소멸 · LOD 전환 · 텔레포트에 연결한다. TAA 꺼진 단계의 모양을 정한다. | B1 뒤. GPU 화면 확인 필요. 로드 완료 연결점은 `MeshComponent::updateMeshLoad` |
+| C1 ✅ | 오디오 상태를 `AssetLoadState` 로 맞춘다(`AudioClipStatus` 삭제, 요청 없음은 빈 값 `findLoadState`). | 완료(2026-10-21, 빌드 미확인) |
+| C2 | 프리팹 → 애니메이션 순으로 옮김(프리팹 원시 포인터는 핸들이 캐시 항목을 쥐는 형식으로). 캐릭터는 애니메이션 준비 뒤 스폰. 셰이더는 쿠킹 단계가 달라 마지막. | C1 뒤. 프리팹 호출처 17줄 · 5파일 |
 
 ## 5. 검증
 
@@ -73,4 +83,4 @@
 
 ## 6. 결정 대기
 
-- 없음. 위 설계 초안은 A2 착수 전 `design-reviewer` 검토에서 확정합니다. 검토 중 쟁점이 되면 여기에 적습니다(후보: 프리팹 핸들의 수명 규약, 텍스처 업로드 스레드).
+- 없음. 텍스처 업로드 스레드는 3절 검토에서 정했다. 프리팹 핸들의 수명 규약은 C2 에서 정한다.

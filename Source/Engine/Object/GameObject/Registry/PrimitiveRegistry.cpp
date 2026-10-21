@@ -66,7 +66,15 @@ namespace sw
             return;
 
         std::scoped_lock<mutex> lock{ _mutex };
-        const uint32            slot = pComp->getPrimitiveIndex();
+        // 에셋을 기다리던 것도 뺀다 — 사라진 컴포넌트의 함수를 부르지 않는다.
+        for ( size_t waiterIndex = 0; waiterIndex < _listAssetWaiter.size(); ++waiterIndex )
+        {
+            if ( _listAssetWaiter[waiterIndex]._pPrimitive != pComp )
+                continue;
+            VectorUtil::removeAtSwap( _listAssetWaiter, waiterIndex );
+            break;
+        }
+        const uint32 slot = pComp->getPrimitiveIndex();
         // 슬롯이 정말 이 레지스트리의 것인지 확인한다. 인덱스는 컴포넌트가 들고 있어서, 다른 레지스트리가
         // 실수로 불리면 남의 목록을 그럴듯한 인덱스로 훼손할 수 있다.
         const bool bSlotNotOwned = slot == ScenePrimitive::kInvalidPrimitiveIndex || slot >= _listPrimitive.size() ||
@@ -96,6 +104,41 @@ namespace sw
         }
         pComp->setPrimitiveIndex( ScenePrimitive::kInvalidPrimitiveIndex );
         _setGeneration.fetch_add( 1, std::memory_order_relaxed );
+    }
+
+    void PrimitiveRegistry::addAssetWaiter( ScenePrimitive* pPrimitive, AssetWaitFunction pFunction )
+    {
+        SW_ASSERT( pPrimitive != nullptr && pFunction != nullptr );
+        std::scoped_lock<mutex> lock{ _mutex };
+        for ( AssetWaiter& waiter : _listAssetWaiter )
+        {
+            if ( waiter._pPrimitive != pPrimitive )
+                continue;
+            waiter._pFunction = pFunction;
+            return;
+        }
+        AssetWaiter& added = _listAssetWaiter.emplace_back();
+        added._pPrimitive  = pPrimitive;
+        added._pFunction   = pFunction;
+    }
+
+    void PrimitiveRegistry::updateAssetWaiters()
+    {
+        // 번호로 돈다 — 함수가 다시 걸면(addAssetWaiter) 같은 자리를 고치거나 뒤에 붙인다. 함수 안에서 프리미티브를 지우는 일(remove)은 없다:
+        // 컴포넌트 제거는 틱 밖의 파괴 단계에서만 일어난다. 그래서 함수를 부르는 동안 잠금을 쥐지 않는다(함수가 다시 걸 때 같은 잠금을 잡는다).
+        size_t waiterIndex = 0;
+        while ( waiterIndex < _listAssetWaiter.size() )
+        {
+            const AssetWaiter waiter      = _listAssetWaiter[waiterIndex];
+            const bool        bStillWaits = waiter._pFunction( *waiter._pPrimitive );
+            if ( bStillWaits )
+            {
+                ++waiterIndex;
+                continue;
+            }
+            std::scoped_lock<mutex> lock{ _mutex };
+            VectorUtil::removeAtSwap( _listAssetWaiter, waiterIndex );
+        }
     }
 
     void PrimitiveRegistry::markDirty( ScenePrimitive* pComp )

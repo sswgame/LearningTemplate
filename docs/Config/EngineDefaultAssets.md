@@ -26,6 +26,7 @@ enginedefaultassets.xml 의 엔진 셸 경로입니다. 읽기는 `XMLSerializer
 | `_defaultMaterial` | `DataPath` | — |  |  | 씬 폴백 머티리얼 |
 | `_missingMaterial` | `DataPath` | — |  |  | 못 읽은 머티리얼 대신 쓰는 마젠타 체커 |
 | `_missingTexture` | `DataPath` | — |  |  | 못 읽은 텍스처 대신 샘플하는 마젠타 체커 |
+| `_loadingTexture` | `DataPath` | — |  |  | 비동기로 읽는 텍스처가 도착하기 전에 샘플하는 중간 회색(실패 표시가 아니라 정해진 로드 중 상태) |
 | `_shellInputMap` | `DataPath` | — |  |  | App 셸 InputMap |
 | `_uiInputMap` | `DataPath` | — |  |  | 런타임 UI 의 행동 맵 — 탐색 · 확인 · 뒤로 · 탭(`UISystem`, Shipping 에도 있다) |
 | `_photoModeInputMap` | `DataPath` | — |  |  | 포토 모드 자유 카메라의 행동 맵 — 이동 · 오르내림 · 둘러보기 · 기울이기 · 줌 · 노출(`CameraDirectorComponent`, 포토 모드 동안만 읽는다) |

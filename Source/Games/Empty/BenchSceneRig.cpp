@@ -9,6 +9,7 @@
 #include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 #include "Engine/Character/Socket/SocketSet.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
@@ -170,10 +171,12 @@ namespace sw
         // 무기 유닛입니다. 리그(CopyTransform)가 오른손 소켓 위치를 따라갑니다. 스킨이 없는 쇠뇌를 뿌리 본에 묶은 사본으로 그립니다.
         GameObject*            pWeapon     = objects.createGameObject( "RigWeapon" );
         SkeletalMeshComponent* pWeaponUnit = ( pWeapon != nullptr ) ? BenchSceneRigInternal::addUnit( *pWeapon, _settings._rigWeaponMesh ) : nullptr;
-        if ( pWeaponUnit == nullptr || pWeaponUnit->getMesh() == nullptr )
+        // 사본을 만들 원본은 지금 있어야 한다 — 컴포넌트의 비동기 로드를 기다리지 않고 같은 로드를 동기로 받는다(`MeshCache::acquire`).
+        const shared_ptr<Mesh> weaponSource = MeshCache::acquire( _settings._rigWeaponMesh );
+        if ( pWeaponUnit == nullptr || weaponSource == nullptr )
             return pWeaponUnit;
         (void)pWeapon->attachToParent( pKnight ); // 방금 만든 오브젝트끼리라 순환이 없어 실패하지 않는다
-        pWeaponUnit->setMesh( BenchSceneRigInternal::createRigidSkinnedCopy( *pWeaponUnit->getMesh() ) );
+        pWeaponUnit->setMesh( BenchSceneRigInternal::createRigidSkinnedCopy( *weaponSource ) );
         pWeaponUnit->resolveRenderAssets();
         PoseModifierComponent* pWeaponRig = pWeapon->addComponent<PoseModifierComponent>();
         if ( pWeaponRig != nullptr )
@@ -189,13 +192,14 @@ namespace sw
     void BenchScene::spawnRigCape( GameObjectManager& objects, GameObject* pKnight, SkeletalMeshComponent* pBody, bool bRig )
     {
         // 망토 유닛입니다. 데모 데이터에는 사슬 뼈가 네 개 있습니다. 뿌리 뼈는 가슴 위치를 따라가고(CopyTransform) 나머지는 스프링으로 움직입니다.
-        GameObject*            pCape     = objects.createGameObject( "RigCape" );
-        SkeletalMeshComponent* pCapeUnit = ( pCape != nullptr ) ? BenchSceneRigInternal::addUnit( *pCape, _settings._rigCapeMesh ) : nullptr;
-        if ( pCapeUnit == nullptr || pCapeUnit->getMesh() == nullptr )
+        GameObject*            pCape      = objects.createGameObject( "RigCape" );
+        SkeletalMeshComponent* pCapeUnit  = ( pCape != nullptr ) ? BenchSceneRigInternal::addUnit( *pCape, _settings._rigCapeMesh ) : nullptr;
+        const shared_ptr<Mesh> capeSource = MeshCache::acquire( _settings._rigCapeMesh ); // 무기와 같다 — 사본의 원본은 동기로 받는다
+        if ( pCapeUnit == nullptr || capeSource == nullptr )
             return;
         (void)pCape->attachToParent( pKnight ); // 방금 만든 오브젝트끼리라 순환이 없어 실패하지 않는다
         pCapeUnit->setSkeletonPath( _settings._rigCapeSkeleton.c_str() );
-        pCapeUnit->setMesh( BenchSceneRigInternal::createCapeSkinnedCopy( *pCapeUnit->getMesh(), pCapeUnit->getSkeleton() ) );
+        pCapeUnit->setMesh( BenchSceneRigInternal::createCapeSkinnedCopy( *capeSource, pCapeUnit->getSkeleton() ) );
         pCapeUnit->resolveRenderAssets();
         PoseModifierComponent* pCapeRig = pCape->addComponent<PoseModifierComponent>();
         if ( pCapeRig != nullptr )

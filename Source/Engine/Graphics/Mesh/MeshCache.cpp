@@ -3,6 +3,7 @@
 #include "Engine/Graphics/Mesh/MeshCache.h"
 
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/Memory.h"
@@ -43,6 +44,19 @@ namespace sw
                 return s_set;
             }
 
+            /** @brief 읽는 중인 로드입니다. 같은 경로를 동시에 요청하면 같은 블록을 받습니다(이중 읽기 없음). 로드 단계가 끝나면 지웁니다. */
+            struct InFlightTable
+            {
+                mutex                                          _mutex;
+                unordered_map<string, weak_ptr<MeshLoadBlock>> _mapKeyToBlock;
+            };
+
+            static InFlightTable& getInFlightTable()
+            {
+                static InFlightTable s_table;
+                return s_table;
+            }
+
             /** @brief 테이블의 키입니다. 리소스 id 는 소문자로 찾으므로(`normalizePath`) 핫 리로드가 넘긴 철자도 같은 항목에 닿습니다. */
             static string makeKey( string_view path ) { return FileUtil::normalizePath( path ); }
 
@@ -78,41 +92,96 @@ namespace sw
 
 namespace sw
 {
+    MeshLoadBlock::MeshLoadBlock( string_view path )
+        : AssetLoadBlock{ MeshCache::kAssetKindName, path }
+        , _pMesh{}
+    {
+    }
+
+    bool MeshLoadBlock::runLoad( string& outError )
+    {
+        SW_MEMORY_SCOPE( Mesh );
+        const string_view path = getPath();
+        const string      key  = MeshCacheInternal::makeKey( path );
+
+        // 읽기는 잠금 밖에서 한다(파일 IO). 다른 길(`reloadShared` 뒤의 새 요청)이 먼저 넣었으면 그것을 받는다.
+        MeshAssetData  data{};
+        AssetLoadScope loadScope( "Mesh", path );
+        const bool     bLoaded = MeshAssetFormat::loadFromResource( path, data );
+        if ( bLoaded )
+        {
+            loadScope.setBytes( data._listVertex.size() * sizeof( RHIVertex ) + data._listSkinVertex.size() * sizeof( MeshSkinVertex ) );
+            loadScope.setSucceeded();
+            shared_ptr<Mesh> loaded = Mesh::create();
+            loaded->setVerticesWithTangents( std::move( data._listVertex ) );
+            if ( data._skinBoneCount > 0 )
+                loaded->setSkin( std::move( data._listSkinVertex ), data._skinBoneCount );
+            if ( data._listMorphTarget.empty() == false )
+                loaded->setMorphTargets( std::move( data._listMorphTarget ) );
+            _pMesh = MeshCacheInternal::getSharedTable().insertOrGetLive( key, std::move( loaded ) );
+        }
+
+        // 결과가 캐시에 든 **뒤에** 진행 중 표에서 뺀다 — 그 사이에 온 요청은 진행 중 블록이나 캐시 둘 중 하나를 반드시 본다.
+        {
+            MeshCacheInternal::InFlightTable& inFlight = MeshCacheInternal::getInFlightTable();
+            std::scoped_lock<mutex>           lock{ inFlight._mutex };
+            inFlight._mapKeyToBlock.erase( key );
+        }
+        if ( bLoaded == false )
+        {
+            MeshCacheInternal::warnLoadFailureOnce( path );
+            outError = "the mesh asset could not be read";
+            return false;
+        }
+        return true;
+    }
+} // namespace sw
+
+namespace sw
+{
     MeshCache::MeshCache()
     {
         PhysicsMeshShapeCache::setLoadFunction( &MeshCacheInternal::loadTrianglePositions );
     }
 
+    MeshHandle MeshCache::request( string_view path )
+    {
+        if ( path.empty() )
+        {
+            shared_ptr<MeshLoadBlock> pFailed = make_shared<MeshLoadBlock>( path );
+            pFailed->markFailedWithoutLoad( "the mesh path is empty" );
+            return MeshHandle{ std::move( pFailed ) };
+        }
+
+        const string                      key      = MeshCacheInternal::makeKey( path );
+        MeshCacheInternal::InFlightTable& inFlight = MeshCacheInternal::getInFlightTable();
+        shared_ptr<MeshLoadBlock>         pBlock;
+        {
+            std::scoped_lock<mutex> lock{ inFlight._mutex };
+            const auto              it = inFlight._mapKeyToBlock.find( key );
+            if ( it != inFlight._mapKeyToBlock.end() )
+                pBlock = it->second.lock();
+            if ( pBlock != nullptr )
+                return MeshHandle{ std::move( pBlock ) };
+
+            // 진행 중 표를 잡은 채 캐시를 본다 — 로드는 캐시에 넣은 뒤 표에서 빼므로, 여기서 둘 다 없으면 정말 아무도 읽지 않았다.
+            pBlock                = make_shared<MeshLoadBlock>( path );
+            shared_ptr<Mesh> live = MeshCacheInternal::getSharedTable().findLive( key );
+            if ( live != nullptr )
+            {
+                pBlock->_pMesh = std::move( live );
+                pBlock->markReadyWithoutLoad();
+                return MeshHandle{ std::move( pBlock ) };
+            }
+            inFlight._mapKeyToBlock[key] = pBlock;
+        }
+        AssetLoadBlock::startLoad( pBlock );
+        return MeshHandle{ std::move( pBlock ) };
+    }
+
     shared_ptr<Mesh> MeshCache::acquire( string_view path )
     {
-        SW_MEMORY_SCOPE( Mesh );
-        shared_ptr<Mesh> result;
-        if ( path.empty() )
-            return result;
-
-        result = MeshCacheInternal::findLive( path );
-        if ( result != nullptr )
-            return result;
-
-        // 읽기는 잠금 밖에서 한다(파일 IO). 둘이 같은 경로를 동시에 읽으면 먼저 넣은 쪽이 남고 다른 쪽은 그것을 받는다.
-        MeshAssetData  data{};
-        AssetLoadScope loadScope( "Mesh", path );
-        if ( MeshAssetFormat::loadFromResource( path, data ) == false )
-        {
-            MeshCacheInternal::warnLoadFailureOnce( path );
-            return result;
-        }
-        loadScope.setBytes( data._listVertex.size() * sizeof( RHIVertex ) + data._listSkinVertex.size() * sizeof( MeshSkinVertex ) );
-        loadScope.setSucceeded();
-        shared_ptr<Mesh> loaded = Mesh::create();
-        loaded->setVerticesWithTangents( std::move( data._listVertex ) );
-        if ( data._skinBoneCount > 0 )
-            loaded->setSkin( std::move( data._listSkinVertex ), data._skinBoneCount );
-        if ( data._listMorphTarget.empty() == false )
-            loaded->setMorphTargets( std::move( data._listMorphTarget ) );
-
-        result = MeshCacheInternal::getSharedTable().insertOrGetLive( MeshCacheInternal::makeKey( path ), std::move( loaded ) );
-        return result;
+        return request( path ).wait();
     }
 
     bool MeshCache::reloadShared( string_view path, IRHIDevice* pDevice )

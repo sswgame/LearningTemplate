@@ -36,6 +36,8 @@ namespace sw
         PROPERTY( Required )
         DataPath _missingTexture; ///< 못 읽은 텍스처 대신 샘플하는 마젠타 체커
         PROPERTY( Required )
+        DataPath _loadingTexture; ///< 비동기로 읽는 텍스처가 도착하기 전에 샘플하는 중간 회색(실패 표시가 아니라 정해진 로드 중 상태)
+        PROPERTY( Required )
         DataPath _shellInputMap; ///< App 셸 InputMap
         PROPERTY( Required )
         DataPath _uiInputMap; ///< 런타임 UI 의 행동 맵 — 탐색 · 확인 · 뒤로 · 탭(`UISystem`, Shipping 에도 있다)

@@ -17,8 +17,8 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Graphics/Mesh/MeshPreloadSet.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Resource/AssetHandle.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameDirectorComponent.h"
 #include "GameFramework/Base/Foundation/Framework/Presentation/MaterialTintCache.h"
@@ -214,7 +214,7 @@ namespace sw
         vector<int32>                        _listPendingUnit; ///< 모습을 맞출 유닛 슬롯(틱이 끝난 뒤 처리).
         MaterialTintCache                    _tintCache;       ///< 유닛 색(같은 색은 나눠 쓴다).
         vector<shared_ptr<MaterialInstance>> _listUnitLook;    ///< (팀 또는 자원 종류) x 2 + 선택 여부로 만든 유닛 모습 인스턴스.
-        MeshPreloadSet                       _unitModels;      ///< 모든 유닛 모델 — 판을 열 때 워커가 읽어 둔다(처음 짓는 건물 · 유닛이 게임 스레드에서 디스크를 읽지 않게).
+        AssetReadySet                        _unitModels;      ///< 모든 유닛 모델 — 판을 열 때 워커가 읽어 둔다(처음 짓는 건물 · 유닛이 게임 스레드에서 디스크를 읽지 않게). 집합이 핸들을 쥐어 약한 참조 캐시에 남긴다.
         float3                               _dragStart;
         float3                               _dragPoint;
         float32                              _timeScale;

@@ -9,12 +9,19 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Resource/AssetHandle.h"
 #include "Engine/Resource/Cache/IAssetCache.h"
 
 namespace sw
 {
+    struct DDSImageData;
+
     class IRHIDevice;
     class Texture2D;
+    class TextureLoadBlock;
+
+    /** @brief 텍스처 로드 핸들입니다. 핸들이 살아 있는 동안 준비된 텍스처의 참조 하나를 쥡니다(놓으면 `release` 와 같다). */
+    using TextureHandle = AssetHandle<TextureLoadBlock>;
 
     /**
      * @class TextureCache
@@ -48,11 +55,28 @@ namespace sw
         static constexpr const utf8* kCPUTexturePrefix = "cpu/";
 
         /**
+         * @brief 경로의 텍스처 로드를 요청합니다. 이미 올라가 있으면 `Ready` 핸들, 같은 경로를 읽는 중이면 그 로드의 핸들, 아니면 새 로드입니다.
+         * @details 로드는 두 단계다. DDS 읽기와 확인은 워커에서(`Texture2D::readImage`), GPU 업로드는 디바이스를 쓰는 스레드에서 한다 — DX11 은 즉시 컨텍스트로,
+         *          GL 은 스레드에 묶인 컨텍스트로 올리므로 워커에서 올릴 수 없다. 업로드는 렌더 스레드가 프레임마다 `completePendingLoads` 로 하거나, 그 스레드에서
+         *          `wait()` 한 쪽이 그 자리에서 한다. 렌더 텍스처 · CPU 텍스처는 읽을 파일이 없어 업로드 단계만 있다.
+         *          **수명 계약**: 핸들이 준비된 텍스처의 참조 하나를 쥐고, 마지막 핸들이 사라질 때 놓는다. 업로드가 끝나면 `getReloadGeneration` 이 올라
+         *          로드 중 텍스처를 빌려 둔 머티리얼이 새 SRV 를 받는다(`Material::refreshTextureBindings`).
+         */
+        TextureHandle request( string_view relativePath, IRHIDevice* pDevice );
+        /**
          * @brief 경로의 텍스처를 확보하고 GPU 에 업로드합니다(렌더 텍스처 경로면 렌더 타깃을 만듭니다). 실패하면 nullptr 입니다.
-         * @details **수명 계약**: 성공하면 참조를 하나 셉니다. 돌려준 포인터는 짝이 되는 `release` 까지 살아 있습니다(객체는 `unique_ptr` 이라
-         *          맵이 원소를 옮겨도 주소가 그대로입니다). 업로드는 잠금 밖에서 하고, 같은 경로를 동시에 원한 스레드는 그 결과를 기다려 받습니다.
+         * @details `request( path ).wait()` 와 같은 길이다 — 디바이스를 쓰는 스레드에서만 부른다(업로드를 그 자리에서 한다).
+         *          **수명 계약**: 성공하면 참조를 하나 셉니다. 돌려준 포인터는 짝이 되는 `release` 까지 살아 있습니다(객체는 `unique_ptr` 이라
+         *          맵이 원소를 옮겨도 주소가 그대로입니다). 같은 경로를 동시에 원한 스레드는 같은 로드를 기다려 받습니다.
          */
         Texture2D* acquire( string_view relativePath, IRHIDevice* pDevice );
+        /**
+         * @brief 워커가 읽기를 마친 텍스처를 GPU 에 올립니다(렌더 스레드, 프레임 기록 전, `FrameRenderer::executePacket`). 올린 수를 반환합니다.
+         * @details 한 프레임에 @p maxCount 개까지만 올린다 — 한꺼번에 도착한 수백 장이 한 프레임을 늘리지 않게(언리얼 텍스처 스트리밍의 프레임당 예산과 같다).
+         */
+        uint32 completePendingLoads( uint32 maxCount );
+        /** @brief 렌더 스레드가 한 프레임에 올리는 비동기 로드 수의 상한입니다(`completePendingLoads`). */
+        static constexpr uint32 kMaxUploadsPerFrame = 8;
         /** @brief 렌더 텍스처 경로(`rendertarget/...`)이면 true 입니다. */
         static bool isRenderTargetPath( string_view relativePath );
         /** @brief CPU 텍스처 경로(`cpu/...`)이면 true 입니다. */
@@ -93,9 +117,9 @@ namespace sw
          */
         const Texture2D* find( string_view relativePath ) const;
         /**
-         * @brief `reload` 가 텍스처를 다시 업로드한 횟수입니다.
-         * @details 다시 업로드하면 같은 `Texture2D` 에 **새 SRV 인덱스**가 붙습니다. 머티리얼은 resolve 때 받은 인덱스를 보관하므로, 이 값이
-         *          바뀌면 다시 받습니다(`Material::refreshTextureBindings`, `GPUSceneBuilder` 가 부릅니다).
+         * @brief 텍스처의 SRV 가 바뀌었을 수 있는 횟수입니다(`reload` · `resizeRenderTarget` 이 다시 올렸거나, 비동기 로드의 업로드가 끝났다).
+         * @details 다시 업로드하면 같은 `Texture2D` 에 **새 SRV 인덱스**가 붙고, 비동기 로드가 끝나면 로드 중 텍스처 대신 읽을 SRV 가 생깁니다. 머티리얼은 resolve 때
+         *          받은 인덱스를 보관하므로, 이 값이 바뀌면 다시 받습니다(`Material::refreshTextureBindings`, `GPUSceneBuilder` 가 부릅니다).
          */
         uint32 getReloadGeneration() const;
         /**
@@ -123,7 +147,58 @@ namespace sw
         void clear() override;
 
     private:
+        friend class TextureLoadBlock; // 로드 블록이 항목 표(`Impl`)에 결과를 적고 참조를 놓는다
         struct Impl;
-        unique_ptr<Impl> _impl;
+        shared_ptr<Impl> _impl; ///< 로드 블록이 약한 참조로 가리킨다 — 캐시가 먼저 사라지면 블록은 놓을 것이 없다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class TextureLoadBlock
+     * @brief 텍스처 로드 하나의 공유 상태입니다. 로드 단계(워커)는 DDS 를 읽고, 완료 단계(디바이스 스레드)는 GPU 에 올려 항목을 공개합니다.
+     * @details 준비되면 참조 하나를 쥐고 소멸할 때 놓는다. 로드 단계의 실패(파일 없음 · 포맷)도 완료 단계에서 드러낸다 — 항목 표의 "올리는 중" 표시를
+     *          내리는 곳을 완료 단계 하나로 두어, 실패한 로드가 표시를 남기는 길이 없게 한다.
+     */
+    class SW_API TextureLoadBlock final : public AssetLoadBlock, public std::enable_shared_from_this<TextureLoadBlock>
+    {
+    public:
+        using AssetType = Texture2D;
+
+        /** @brief 항목이 무엇으로 올라가는지입니다. */
+        enum class Source : uint8
+        {
+            File = 0,     ///< DDS 파일
+            RenderTarget, ///< `rendertarget/` — 알린 크기의 렌더 타깃
+            CPUBytes,     ///< `cpu/` — 캐시가 보관한 CPU 원본
+        };
+
+        TextureLoadBlock( string_view key, IRHIDevice* pDevice, Source source, Texture2D* pTexture, weak_ptr<TextureCache::Impl> pCache );
+        /** @brief 쥔 참조를 놓습니다(`TextureCache::release` 와 같은 길). */
+        ~TextureLoadBlock() override;
+
+        /** @brief 준비된 텍스처입니다. 블록(곧 참조)을 쥔 채 텍스처를 가리킵니다 — 받은 쪽이 쥐는 동안 참조가 남습니다. */
+        shared_ptr<Texture2D> getAsset() const;
+        /** @brief 텍스처 객체입니다(`Ready` 가 아니면 쓰지 않는다). 핸들이 살아 있는 동안 유효합니다. */
+        Texture2D* getTexture() const { return _pTexture; }
+
+    private:
+        [[nodiscard]] bool runLoad( string& outError ) override;
+        bool               hasCompletion() const override { return true; }
+        [[nodiscard]] bool runCompletion( string& outError ) override;
+        void               onAwaitingCompletion() override;
+
+    private:
+        friend class TextureCache;               // 캐시 적중은 단계를 거치지 않고 참조를 쥔 `Ready` 로 만든다 · 렌더 타깃 크기를 적는다
+        unique_ptr<DDSImageData>     _pImage;    ///< 로드 단계가 읽은 그림(파일만). 완료 단계가 올리고 버린다
+        string                       _loadError; ///< 로드 단계의 실패 이유 — 완료 단계가 드러낸다
+        weak_ptr<TextureCache::Impl> _pCache;
+        IRHIDevice*                  _pDevice;
+        Texture2D*                   _pTexture; ///< 항목의 텍스처 객체(항목이 소유한다)
+        uint32                       _renderTargetWidth;
+        uint32                       _renderTargetHeight;
+        Source                       _source;
+        bool                         _bHoldsReference; ///< 항목의 참조 하나를 쥐었는가(완료에 성공했거나 캐시 적중)
     };
 } // namespace sw

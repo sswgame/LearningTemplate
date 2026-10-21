@@ -81,31 +81,44 @@ namespace sw
     {
         if ( pDevice == nullptr || relativePath.empty() )
             return false;
-        if ( _handle != 0 )
-            releaseRHI( pDevice );
+        DDSImageData image;
+        if ( readImage( relativePath, image ) == false )
+            return false;
+        return loadFromImage( pDevice, relativePath, image );
+    }
 
+    bool Texture2D::readImage( string_view relativePath, DDSImageData& outImage )
+    {
         AssetLoadScope loadScope( "Texture", relativePath );
-        DDSImageData   image;
-        if ( DDSLoader::loadFromResource( relativePath, image ) == false || image.isValid() == false )
+        if ( DDSLoader::loadFromResource( relativePath, outImage ) == false || outImage.isValid() == false )
         {
             SW_LOG_ERROR( "Texture2D: failed to load '%#'", relativePath );
             return false;
         }
+        if ( toRHIFormatFromDxgi( outImage._dxgiFormat ) == RHIFormat::Unknown )
+        {
+            SW_LOG_ERROR( "Texture2D: '%#' uses DXGI format %# which RHIFormat does not cover yet", relativePath, outImage._dxgiFormat );
+            return false;
+        }
+        if ( outImage._depth > 1 )
+        {
+            SW_LOG_ERROR( "Texture2D: '%#' is a volume/array texture (depth=%#) — only 2D is supported", relativePath, outImage._depth );
+            return false;
+        }
+        loadScope.setBytes( outImage._bytes.size() );
+        loadScope.setSucceeded();
+        return true;
+    }
+
+    bool Texture2D::loadFromImage( IRHIDevice* pDevice, string_view relativePath, const DDSImageData& image )
+    {
+        if ( pDevice == nullptr || relativePath.empty() )
+            return false;
+        if ( _handle != 0 )
+            releaseRHI( pDevice );
 
         const RHIFormat format = toRHIFormatFromDxgi( image._dxgiFormat );
-        if ( format == RHIFormat::Unknown )
-        {
-            SW_LOG_ERROR( "Texture2D: '%#' uses DXGI format %# which RHIFormat does not cover yet", relativePath, image._dxgiFormat );
-            return false;
-        }
-        if ( image._depth > 1 )
-        {
-            SW_LOG_ERROR( "Texture2D: '%#' is a volume/array texture (depth=%#) — only 2D is supported", relativePath, image._depth );
-            return false;
-        }
-
-        loadScope.setBytes( image._bytes.size() );
-        loadScope.beginPhase( AssetLoadPhase::Upload );
+        SW_ASSERT( format != RHIFormat::Unknown ); // `readImage` 가 거른다
         RHITextureDesc desc{};
         desc._width                    = image._width;
         desc._height                   = image._height;
@@ -153,7 +166,6 @@ namespace sw
         _format   = format;
         SW_LOG_INFO( "Texture2D '%#' ready: %#×%#, %# mips, format %#, srv %#", _path.c_str(), _width, _height, _mipCount,
                      static_cast<uint32>( _format ), _srv );
-        loadScope.setSucceeded();
         return true;
     }
 

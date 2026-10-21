@@ -3,6 +3,7 @@
 <EngineDefaultAssets _defaultMaterial="engine/materials/defaultmaterial.material"
                      _missingMaterial="engine/materials/missingmaterial.material"
                      _missingTexture="engine/textures/missing.dds"
+                     _loadingTexture="engine/textures/loading.dds"
                      _shellInputMap="engine/input/default.input.xml"
                      _uiInputMap="engine/input/ui.input.xml"
                      _photoModeInputMap="engine/input/photomode.input.xml"

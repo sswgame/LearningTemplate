@@ -12,6 +12,8 @@
 
 namespace sw
 {
+    struct DDSImageData;
+
     class IRHIDevice;
 
     /**
@@ -30,8 +32,15 @@ namespace sw
         Texture2D( const Texture2D& )            = delete;
         Texture2D& operator=( const Texture2D& ) = delete;
 
-        /** @brief 리소스 상대 경로(전역 id, 예: engine/textures/random/grass.dds)의 DDS 를 GPU 에 업로드합니다. */
+        /** @brief 리소스 상대 경로(전역 id, 예: engine/textures/random/grass.dds)의 DDS 를 GPU 에 업로드합니다(`readImage` 다음 `loadFromImage`). */
         [[nodiscard]] bool loadFromResource( IRHIDevice* pDevice, string_view relativePath );
+        /**
+         * @brief 리소스의 DDS 를 읽고 이 엔진이 올릴 수 있는 형식인지 확인합니다. 디바이스를 쓰지 않으므로 어느 스레드에서든 부릅니다(비동기 로드의 워커 단계).
+         * @return 읽지 못했거나 포맷 · 차원이 맞지 않으면 오류를 남기고 false 를 반환합니다.
+         */
+        [[nodiscard]] static bool readImage( string_view relativePath, DDSImageData& outImage );
+        /** @brief `readImage` 가 읽은 그림을 GPU 에 올립니다. 디바이스를 쓰는 스레드에서만 부릅니다(DX11 즉시 컨텍스트 · GL 컨텍스트는 스레드에 묶인다). */
+        [[nodiscard]] bool loadFromImage( IRHIDevice* pDevice, string_view relativePath, const DDSImageData& image );
         /**
          * @brief 그리고 읽는 렌더 타깃으로 만듭니다(렌더 텍스처: CCTV 모니터, 백미러). 경로는 이름입니다(`rendertarget/<이름>`, 파일이 아닙니다).
          * @details 렌더러가 카메라의 이미지를 여기에 그리고, 머티리얼은 DDS 텍스처와 같은 SRV 로 읽습니다. 디바이스가 바뀌면 같은 크기로 다시 만듭니다(내용은 비어 있습니다).

@@ -938,8 +938,9 @@ namespace sw
 
     void AudioEngine::startWaitingVoice( VoiceSlot& slot )
     {
-        const AudioClipStatus status = _clipStore.getStatus( slot._clipPath );
-        if ( status == AudioClipStatus::Failed || status == AudioClipStatus::Missing )
+        // 엔트리가 없으면 캐시를 비운 뒤다(`clear`) — 요청이 사라졌으니 실패와 같이 보이스를 놓는다.
+        const std::optional<AssetLoadState> state = _clipStore.findLoadState( slot._clipPath );
+        if ( state.has_value() == false || *state == AssetLoadState::Failed )
         {
             freeVoice( slot );
             return;
