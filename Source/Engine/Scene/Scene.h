@@ -30,7 +30,7 @@ namespace sw
          * @details 묶음은 씬이 들고(기본 머티리얼 · 프리팹 캐시) 자기 오브젝트 매니저에 그대로 넘깁니다(물리 · 오디오 · 에셋). 빈 칸의 일은 건너뜁니다.
          */
         Scene( string_view name, const SceneEngineServices& services );
-        /** @brief 이름으로 씬을 만듭니다. 서비스 묶음은 바인딩된 표에서 한 번 읽습니다(`SceneEngineServices::makeFromBoundEngine`) — 테스트 · 쿠커용입니다. */
+        /** @brief 이름으로 씬을 만듭니다. 서비스 묶음은 바인딩된 표에서 한 번 읽습니다(`SceneEngineServices::makeFromBoundEngine`) — 테스트 · 넷 시뮬레이션 하네스용입니다. 엔진 코드(쿠커 · 초상화)는 묶음을 받는 생성자를 씁니다. */
         explicit Scene( string_view name );
         /** @brief 씬을 해제합니다. */
         virtual ~Scene();

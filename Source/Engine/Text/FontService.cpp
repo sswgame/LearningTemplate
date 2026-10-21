@@ -132,6 +132,8 @@ namespace sw
 
     SubsystemInitResult FontService::initializeSubsystem()
     {
+        // 의존 서비스는 시작할 때 한 번 받는다(언리얼 `InitializeDependency`) — 연쇄를 고를 때마다 전역 표를 찾지 않는다. 문화권 표는 서비스 범위에 먼저 묶인다.
+        _pLocalization = engine::findSubsystem<LocalizationManager>();
         return initialize( engine::getSubsystem<EngineDefaultAssets>()._fontCatalog.get() ) ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed;
     }
 
@@ -164,11 +166,10 @@ namespace sw
         FontFaceChain chain{};
         if ( _bInitialized == false )
             return chain;
-        const LocalizationManager* pLocalization = findLocalization();
-        const string               culture       = pLocalization != nullptr ? pLocalization->getCurrentLanguage() : string{};
-        const string_view          family        = spec._family.empty() ? string_view{ _catalog._defaultFamily } : string_view{ spec._family };
-        const uint64               chainKey      = FontServiceInternal::hashName( culture, FontServiceInternal::hashFamilyFace( family, spec._weight, spec._slant ) );
-        const auto                 iter          = _mapChain.find( chainKey );
+        const string      culture  = _pLocalization != nullptr ? _pLocalization->getCurrentLanguage() : string{};
+        const string_view family   = spec._family.empty() ? string_view{ _catalog._defaultFamily } : string_view{ spec._family };
+        const uint64      chainKey = FontServiceInternal::hashName( culture, FontServiceInternal::hashFamilyFace( family, spec._weight, spec._slant ) );
+        const auto        iter     = _mapChain.find( chainKey );
         if ( iter != _mapChain.end() )
         {
             chain = iter->second;
@@ -360,10 +361,4 @@ namespace sw
         return true;
     }
 
-    const LocalizationManager* FontService::findLocalization() const
-    {
-        if ( _pLocalization != nullptr )
-            return _pLocalization;
-        return engine::findSubsystem<LocalizationManager>();
-    }
 } // namespace sw

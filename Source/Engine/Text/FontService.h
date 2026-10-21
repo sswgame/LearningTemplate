@@ -74,7 +74,7 @@ namespace sw
         FontService();
         /**
          * @brief 래스터라이저(테스트는 결정적인 가짜)와 문화권 출처를 주입합니다.
-         * @param pLocalization 대체 목록을 묻는 곳. nullptr 이면 엔진 서비스(`engine::getSubsystem<LocalizationManager>()`)를 씁니다.
+         * @param pLocalization 대체 목록을 묻는 곳. nullptr 이면 문화권 대체 없이 카탈로그 기본 연쇄만 씁니다(부를 때 전역 표를 찾지 않습니다).
          */
         explicit FontService( unique_ptr<IFontRasterizer> rasterizer, const LocalizationManager* pLocalization = nullptr );
         ~FontService() override;
@@ -134,9 +134,6 @@ namespace sw
         FontFaceID openFontFile( const string& path, uint32 faceIndex, bool bResourcePath );
         /** @brief 처음이면 경고를 남기고 true 입니다(키 하나에 한 번). */
         bool markWarnedOnce( uint64 key );
-        /** @brief 지금 대체 목록을 묻는 곳입니다(주입하지 않았으면 엔진 서비스). */
-        const LocalizationManager* findLocalization() const;
-
         /** @brief 연 가족 면 하나입니다(없음도 캐시해 다시 찾지 않는다). */
         struct OpenedFamilyFace
         {
@@ -153,7 +150,7 @@ namespace sw
         unordered_map<uint64, FontFaceChain>    _mapChain;            ///< (FontSpec, 문화권)에서 연쇄를 찾는 맵입니다.
         unordered_map<string, vector<uint8>>    _mapMemoryFile;       ///< 등록한 메모리 폰트입니다(소문자 경로에서 바이트를 찾습니다).
         unordered_set<uint64>                   _uniqueWarned;        ///< 한 번 경고한 항목입니다(패밀리, 코드 포인트).
-        const LocalizationManager*              _pLocalization;       ///< 주입한 문화권 출처(nullptr = 엔진 서비스)
+        const LocalizationManager*              _pLocalization;       ///< 문화권 출처(생성자 주입, 엔진 서브시스템은 `initializeSubsystem` 이 한 번 받음. nullptr = 대체 없음)
         bool                                    _bInitialized;        ///< 기본 패밀리를 열었는지 나타냅니다.
     };
 } // namespace sw

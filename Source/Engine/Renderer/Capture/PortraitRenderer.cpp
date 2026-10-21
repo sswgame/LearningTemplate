@@ -5,7 +5,6 @@
 #include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -78,15 +77,21 @@ namespace sw
         shutdown();
     }
 
-    bool PortraitRenderer::initialize( IRHIDevice* pDevice )
+    bool PortraitRenderer::initialize( IRHIDevice* pDevice, const SceneEngineServices& services )
     {
         shutdown();
         if ( pDevice == nullptr )
             return false;
+        if ( services._pAssetManager == nullptr || services._pDefaultAssets == nullptr )
+        {
+            SW_LOG_ERROR( "Portrait: the scene services have no asset manager or default assets" );
+            return false;
+        }
         _pDevice  = pDevice;
+        _services = services;
         _renderer = make_unique<FrameRenderer>();
         // 포워드 파이프라인이다. TAA 가 없어(시간 누적 없음) 한 장으로 끝나는 이미지다.
-        if ( _renderer->initialize( pDevice, engine::getSubsystem<EngineDefaultAssets>()._defaultForwardPipeline.get() ) == false )
+        if ( _renderer->initialize( pDevice, services._pDefaultAssets->_defaultForwardPipeline.get() ) == false )
         {
             _renderer.reset();
             return false;
@@ -100,27 +105,29 @@ namespace sw
         if ( _renderer != nullptr )
             _renderer->shutdown();
         _renderer.reset();
-        _pDevice = nullptr;
+        _pDevice  = nullptr;
+        _services = SceneEngineServices{};
     }
 
     bool PortraitRenderer::renderPrefab( const PortraitRequest& request, vector<uint8>& outRgbaBytes )
     {
         outRgbaBytes.clear();
-        const bool bCannotRender = _renderer == nullptr || _pDevice == nullptr || request._prefabPath.empty() || engine::areEngineServicesBound() == false;
+        const bool bCannotRender = _renderer == nullptr || _pDevice == nullptr || request._prefabPath.empty();
         if ( bCannotRender )
             return false;
 
         // 스튜디오: 씬 매니저에 등록하지 않는 씬이라 틱하지 않고 게임 화면에 나오지 않는다.
-        Scene              studio( "PortraitStudio" );
+        AssetManager&      assetManager = *_services._pAssetManager;
+        Scene              studio( "PortraitStudio", _services );
         GameObjectManager* pManager = studio.getObjectManager();
-        GameObject*        pSubject = engine::getSubsystem<AssetManager>().getAssetCache<PrefabCache>().spawn( pManager, request._prefabPath, "PortraitSubject" );
+        GameObject*        pSubject = assetManager.getAssetCache<PrefabCache>().spawn( pManager, request._prefabPath, "PortraitSubject" );
         if ( pSubject == nullptr )
         {
             SW_LOG_ERROR( "Portrait: prefab '%#' could not be spawned", request._prefabPath.c_str() );
             return false;
         }
         // 스폰이 경로로 얻은 머티리얼을 GPU 에 초기화한다. 게임 루프에서는 틱마다 하는 일(`MaterialCache::initializePending`)인데 스튜디오는 틱하지 않는다.
-        engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().initializePending( _pDevice );
+        assetManager.getAssetCache<MaterialCache>().initializePending( _pDevice );
         float3  center{};
         float32 radius = 1.0f;
         if ( PortraitRendererInternal::computeSubjectSphere( *pManager, center, radius ) == false )

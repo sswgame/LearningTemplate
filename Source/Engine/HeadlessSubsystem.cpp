@@ -125,8 +125,8 @@ namespace sw
             const CookSession cookSession;
             uint32            sceneFailedCount = 0;
             // 쿠킹용 씬도 런타임 씬과 같은 엔진 서비스 묶음(씬 매니저의 것 — 의존 칸에 있다)으로 짓는다.
-            const uint32 sceneCount =
-                SceneCooker::cookAllScenes( engine::getSubsystem<SceneManager>().getEngineServices(), resourceRoot, cookedDir, cookStore, sceneFailedCount );
+            const SceneEngineServices& sceneServices = engine::getSubsystem<SceneManager>().getEngineServices();
+            const uint32               sceneCount    = SceneCooker::cookAllScenes( sceneServices, resourceRoot, cookedDir, cookStore, sceneFailedCount );
             // 프리팹 · GUID 레지스트리도 여기서 만든다 — 형식과 규칙을 쓰는 곳이 엔진 하나여야 한다.
             uint32                        prefabFailedCount          = 0;
             [[maybe_unused]] const uint32 prefabCount                = PrefabCache::cookAllPrefabs( resourceRoot, cookedDir, cookStore, prefabFailedCount );
@@ -139,7 +139,7 @@ namespace sw
                     : 0u;
             // 내비메시 — 표면이 놓인 씬마다 런타임 베이크와 같은 함수로 `<씬>.navmesh` 를 쓴다.
             uint32                        navMeshFailedCount = 0;
-            [[maybe_unused]] const uint32 navMeshCount       = SceneNavigationCooker::cookAll( resourceRoot, cookedDir, cookStore, navMeshFailedCount );
+            [[maybe_unused]] const uint32 navMeshCount       = SceneNavigationCooker::cookAll( sceneServices, resourceRoot, cookedDir, cookStore, navMeshFailedCount );
             SW_LOG_INFO( "Cooked %# scenes (%# failures), %# prefabs (%# failures), %# asset registries (%# failures), %# vertex animations (%# failures), "
                          "%# navmeshes (%# failures).",
                          sceneCount, sceneFailedCount, prefabCount, prefabFailedCount, registryCount, registryFailedCount, vertexAnimationCount,

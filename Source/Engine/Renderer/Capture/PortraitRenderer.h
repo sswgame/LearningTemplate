@@ -11,6 +11,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/EngineMinimal.h"
+#include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 
 namespace sw
 {
@@ -53,8 +54,11 @@ namespace sw
         PortraitRenderer( const PortraitRenderer& )            = delete;
         PortraitRenderer& operator=( const PortraitRenderer& ) = delete;
 
-        /** @brief 이 디바이스로 스튜디오 렌더러(포워드 파이프라인)를 만듭니다. */
-        [[nodiscard]] bool initialize( IRHIDevice* pDevice );
+        /**
+         * @brief 이 디바이스로 스튜디오 렌더러(포워드 파이프라인)를 만듭니다.
+         * @param services 스튜디오 씬을 지을 엔진 서비스 묶음(씬 매니저의 것)입니다. 에셋 매니저와 기본 에셋 칸이 비면 false 입니다 — 전역 표를 다시 찾지 않습니다.
+         */
+        [[nodiscard]] bool initialize( IRHIDevice* pDevice, const SceneEngineServices& services );
         void               shutdown();
 
         /**
@@ -66,5 +70,6 @@ namespace sw
     private:
         IRHIDevice*               _pDevice;
         unique_ptr<FrameRenderer> _renderer;
+        SceneEngineServices       _services{}; ///< `initialize` 가 받은 묶음(빌림). 스튜디오 씬과 프리팹 · 머티리얼 캐시를 이것으로 찾는다
     };
 } // namespace sw

@@ -7448,7 +7448,7 @@ SW_TEST_CASE( RenderPassGPUTest, PortraitRendererDrawsAPrefabInIsolation )
         const sw::Scene*     pActive      = sceneManager.getActiveScene();
         const size_t         activeCount  = pActive != nullptr && pActive->getObjectManager() != nullptr ? pActive->getObjectManager()->getAllGameObjects().size() : 0;
         sw::PortraitRenderer portrait;
-        bool                 bOk = portrait.initialize( device.get() );
+        bool                 bOk = portrait.initialize( device.get(), sceneManager.getEngineServices() );
         sw::PortraitRequest  request;
         request._prefabPath = kPrefab;
         request._width      = 96;
