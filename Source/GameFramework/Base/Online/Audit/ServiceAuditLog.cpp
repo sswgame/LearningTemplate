@@ -72,6 +72,21 @@ namespace sw
         return s_table;
     }
 
+    bool ServiceAuditLog::readTimeMs( const ServiceRecord& record, int64& outTimeMs )
+    {
+        constexpr size_t kUniqueWidth = 32;
+        constexpr size_t kTailWidth   = 1 + static_cast<size_t>( ServiceKeyUtil::kHexWidth ) + 1 + kUniqueWidth; // "/<시각>/<고유>"
+        const string&    key          = record._key;
+        const bool       bMalformed   = key.size() <= kTailWidth || key[key.size() - kTailWidth] != '/' || key[key.size() - 1 - kUniqueWidth] != '/';
+        if ( bMalformed )
+            return false;
+        uint64 timeMs = 0;
+        if ( ServiceKeyUtil::parseHex64( string_view( key ).substr( key.size() - kTailWidth + 1, static_cast<size_t>( ServiceKeyUtil::kHexWidth ) ), timeMs ) == false )
+            return false;
+        outTimeMs = static_cast<int64>( timeMs );
+        return true;
+    }
+
     string ServiceAuditLog::makeKey( const ServiceAuditEntry& entry, uint64 uniqueHigh, uint64 uniqueLow )
     {
         string key{ entry._subject };

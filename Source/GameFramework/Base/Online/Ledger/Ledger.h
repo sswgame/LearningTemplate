@@ -29,6 +29,13 @@ namespace sw
         static const hashed_string& getBalanceTable();
         static const hashed_string& getJournalTable();
         static const hashed_string& getHistoryTable();
+        /** @brief 분개 레코드에서 이동 시각을 읽습니다(보존 기간 쓸기 `ServiceRetention` 용). 형식이 틀리면 false 입니다. */
+        [[nodiscard]] static bool readJournalTimeMs( const ServiceRecord& record, int64& outTimeMs );
+        /**
+         * @brief 내역 레코드의 키 `<보유자>/<시각 16 진 16>/<분개 키>` 에서 이동 시각을 읽습니다. 계정과 발행 · 소각 보유자만 읽고, 맡김(에스크로) 보유자는 false 입니다.
+         * @details 맡김 키는 이름 안에 `/` 가 있어 시각 위치를 키만으로 정할 수 없다. 맡김 내역은 맡긴 거래가 끝나면 더 쌓이지 않으므로 쓸지 않고 남긴다.
+         */
+        [[nodiscard]] static bool readHistoryTimeMs( const ServiceRecord& record, int64& outTimeMs );
 
         /**
          * @brief 이동을 @p inoutTransaction 에 붙입니다. 커밋은 하지 않으며, 자기 레코드와 한 트랜잭션에 넣는 쪽(거래, 우편 수령, 구매 한도)이 씁니다.

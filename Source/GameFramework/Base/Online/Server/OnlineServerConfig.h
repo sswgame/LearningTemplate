@@ -137,6 +137,18 @@ namespace sw
         /** @brief 계정마다 한꺼번에 받는 요청 수입니다. */
         PROPERTY( Min = 1, Max = 1000000 )
         int32 _requestBurstPerAccount{ 30 };
+        /** @brief 감사 기록(`service_audit`)을 남기는 기간(일)입니다. 0 이면 지우지 않습니다. */
+        PROPERTY( Min = 0, Max = 36500 )
+        int32 _retentionAuditDays{ 365 };
+        /** @brief 원장 분개와 내역(`ledger_journal`, `ledger_history`)을 남기는 기간(일)입니다. 0 이면 지우지 않습니다. 분개 키는 멱등 키이기도 해서 이 기간이 지나면 같은 키의 재시도를 가리지 못합니다. */
+        PROPERTY( Min = 0, Max = 36500 )
+        int32 _retentionLedgerDays{ 400 };
+        /** @brief 닫힌 신고(`service_report`)를 남기는 기간(일)입니다. 0 이면 지우지 않습니다. 열린 신고는 지우지 않습니다. */
+        PROPERTY( Min = 0, Max = 36500 )
+        int32 _retentionReportDays{ 90 };
+        /** @brief 보존 기간 쓸기를 도는 시각(UTC 분, 0..1439)입니다. 저장소가 한가한 시간에 둡니다. */
+        PROPERTY( Min = 0, Max = 1439 )
+        int32 _retentionMinuteOfDay{ 5 * 60 };
 
         /** @brief 서버 설정 파일 경로에서 온라인 설정 파일 경로를 만듭니다(`x.json` → `x.online.json`). */
         static string makeConfigPath( string_view serverConfigPath );
