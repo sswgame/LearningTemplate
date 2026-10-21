@@ -176,6 +176,7 @@ namespace sw
 
     AutomationScenario::AutomationScenario()
         : _listStep{}
+        , _listScratchFolder{}
         , _load{}
         , _name{}
         , _sourcePath{}
@@ -336,9 +337,22 @@ namespace sw
                 }
                 continue;
             }
+            if ( string_view{ atNode.getName() } == "Scratch" )
+            {
+                AutomationScratchFolder folder;
+                folder._sourceID  = string( atNode.getAttributeText( "from", false ) );
+                folder._scratchID = string( atNode.getAttributeText( "as", false ) );
+                if ( AutomationScratch::isValidFolder( folder, reason ) == false )
+                {
+                    outError = _sourcePath + ": " + reason;
+                    return false;
+                }
+                _listScratchFolder.push_back( std::move( folder ) );
+                continue;
+            }
             if ( string_view{ atNode.getName() } != "At" )
             {
-                outError = _sourcePath + ": only <Load> and <At frame=\"N\"> may sit under <Scenario>, got <" + atNode.getName() + ">";
+                outError = _sourcePath + ": only <Load>, <Scratch> and <At frame=\"N\"> may sit under <Scenario>, got <" + atNode.getName() + ">";
                 return false;
             }
             uint32 frameIndex = 0;
