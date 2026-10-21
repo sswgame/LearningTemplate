@@ -283,8 +283,11 @@ SW_TEST_CASE( PhysicsWiringTest, ControllerFollowsMovingGroundYawAndKeepsItsMome
     SW_ASSERT_TRUE( pJumpController->isGrounded() );
     const float32 takeOffX = pJumpController->getWorldPosition()._x;
     pJumpController->jump( 6.0f );
-    // 판은 멈춘다 — 공중의 캐릭터가 가는 것은 이은 관성뿐이다.
-    test::updateFrames( slideManager, 20 );
+    // 뛰는 프레임에도 판은 그 속도로 간다 — 바닥을 떠나는 스텝이 그때의 바닥 속도를 싣는다(멈춘 바닥 위에서 뛰면 실을 속도가 없다).
+    pSlider->setWorldPosition( float3{ 3.0f * kFrame * 31.0f, -0.5f, 0.0f } );
+    test::updateFrames( slideManager, 1 );
+    // 그 뒤로 판은 멈춘다 — 공중의 캐릭터가 가는 것은 이은 관성뿐이다.
+    test::updateFrames( slideManager, 19 );
     SW_EXPECT_FALSE( pJumpController->isGrounded() );
     SW_EXPECT_TRUE( pJumpController->getWorldPosition()._x > takeOffX + 0.5f ); // 20 프레임 × 3 m/s ≈ 1 m
     slideManager.endPlay();
