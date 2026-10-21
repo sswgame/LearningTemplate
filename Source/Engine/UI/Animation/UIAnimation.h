@@ -31,6 +31,42 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 곡선 위 사건이 보는 지나감의 방향입니다. */
+    ENUM()
+    enum class UICurveCrossing : uint8
+    {
+        Rising = 0, ///< 값이 문턱 아래에서 문턱 이상으로 오를 때
+        Falling,    ///< 값이 문턱 위에서 문턱 이하로 내릴 때
+        Either      ///< 둘 다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @struct UIAnimationCurveEvent
+     * @brief 트랙 값이 문턱을 지날 때 화면에 보내는 명령입니다("키 사이 사건"인 `UIAnimationEvent` 와 달리 시각이 아니라 곡선 값에 붙는다).
+     * @details 예: 불투명도가 0.5 를 넘어 오를 때 소리, 크기가 1 로 돌아올 때 다음 연출. 시각을 손으로 맞추면 곡선 · 키를 바꿀 때마다 어긋나지만, 문턱은 곡선을 따라간다.
+     *          실수 트랙만 받는다(성분 `_component`). 거꾸로 재생에서는 그 재생 방향으로 값이 오르는지 내리는지를 본다. 한 프레임에 여러 번 지나면 여러 번 보낸다(키 사이마다 따로 본다).
+     */
+    REFLECT()
+    struct SW_API UIAnimationCurveEvent
+    {
+        REFLECT_BODY();
+
+        PROPERTY( DisplayName = "Threshold", Tooltip = "Fires when the track value crosses this value" )
+        float32 _threshold{ 0.0f };
+        PROPERTY( DisplayName = "Component", Min = 0, Max = 3, Tooltip = "Component of a vector value: 0 = x, 1 = y, 2 = z, 3 = w" )
+        int32 _component{ 0 };
+        PROPERTY( DisplayName = "Crossing" )
+        UICurveCrossing _crossing{ UICurveCrossing::Rising };
+        PROPERTY( DisplayName = "Command" )
+        hashed_string _command{};
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @struct UIAnimationTrack
      * @brief 위젯 하나의 프로퍼티 하나를 키로 움직이는 트랙입니다.
@@ -47,6 +83,8 @@ namespace sw
         string _property{};
         PROPERTY( DisplayName = "Keys", Tooltip = "Keys in time order" )
         vector<UIAnimationKey> _listKey{};
+        PROPERTY( DisplayName = "Curve Events", Tooltip = "Commands sent when this track's value crosses a threshold (float tracks only)" )
+        vector<UIAnimationCurveEvent> _listCurveEvent{};
     };
 } // namespace sw
 

@@ -13,6 +13,7 @@ namespace sw
     // 핸들은 ABI/RuntimeHandles.h 가 모아 들고 있다. EditorHandle 포함.
 
     struct HostSceneView;
+    struct HostViewTarget;
     struct NativeWindowEvent;
 
     class ISubsystemLocator;
@@ -24,24 +25,24 @@ namespace sw
     /** @brief EditorModule 이 exportEditorAPI 로 채우고 App 이 부르는 함수 포인터 테이블입니다. */
     struct EditorAPI
     {
-        EditorHandle ( *create )(){ nullptr };                                                                                /**< @brief 에디터 인스턴스를 생성합니다. */
-        void ( *destroy )( EditorHandle editor ){ nullptr };                                                                  /**< @brief 에디터 인스턴스를 파괴합니다. */
-        bool ( *initialize )( EditorHandle editor, WindowHandle window, RHIDeviceHandle rhiDevice ){ nullptr };               /**< @brief 윈도우 및 RHI 디바이스로 에디터를 초기화합니다. */
-        void ( *shutdown )( EditorHandle editor ){ nullptr };                                                                 /**< @brief 에디터를 종료합니다. */
-        void ( *updateUI )( EditorHandle editor ){ nullptr };                                                                 /**< @brief 메인 스레드에서 에디터 UI 및 플랫폼 윈도우를 갱신합니다. */
-        void ( *preRender )( EditorHandle editor, RHIDeviceHandle rhiDevice ){ nullptr };                                     /**< @brief 렌더링 직전에 호출됩니다. */
-        void ( *render )( EditorHandle editor, RHIDeviceHandle rhiDevice ){ nullptr };                                        /**< @brief GPU 에 에디터 UI DrawData 를 렌더링합니다. */
-        void ( *postPresent )( EditorHandle editor, RHIDeviceHandle rhiDevice ){ nullptr };                                   /**< @brief 렌더링 결과가 출력된 후 호출됩니다 (멀티 뷰포트 처리용). */
-        void ( *abandonPendingDraw )( EditorHandle editor ){ nullptr };                                                       /**< @brief 에디터 인스턴스를 없애기 직전에만 부릅니다(렌더 워커는 이미 비운 뒤). 렌더 대기 중인 draw 스냅샷 표시를 버리게 합니다. 모듈 리로드 중간에 부르면 UI 스레드와 렌더 스레드가 겹칩니다. */
-        bool ( *processEvent )( EditorHandle editor, const NativeWindowEvent* pEvent ){ nullptr };                            /**< @brief 네이티브 이벤트를 에디터로 전달합니다. */
-        void ( *getGameViewport )( EditorHandle editor, uint64* pRenderTarget, uint32* pWidth, uint32* pHeight ){ nullptr };  /**< @brief 이번 프레임 게임 뷰 RT 핸들과 크기를 조회합니다(패널이 안 보이면 0). */
-        void ( *getSceneViewport )( EditorHandle editor, uint64* pRenderTarget, uint32* pWidth, uint32* pHeight ){ nullptr }; /**< @brief 이번 프레임 씬 뷰 RT 핸들과 크기를 조회합니다(패널이 안 보이면 0). */
-        void* ( *getSceneViewCamera )(EditorHandle editor){ nullptr };                                                        /**< @brief 이번 프레임 씬 뷰 카메라(에디터 카메라, CameraComponent*)를 반환합니다. */
-        void ( *bindService )( const ISubsystemLocator* pService ){ nullptr };                                                /**< @brief 호스트 서비스 범위를 에디터 모듈에 주입하거나 nullptr 로 해제합니다. */
-        bool ( *isPlaying )( EditorHandle editor ){ nullptr };                                                                /**< @brief 에디터 시뮬레이션(PIE)이 실행 중인지 반환합니다. */
-        bool ( *isPaused )( EditorHandle editor ){ nullptr };                                                                 /**< @brief 에디터 시뮬레이션이 일시정지인지 반환합니다. */
-        void ( *stopSimulation )( EditorHandle editor ){ nullptr };                                                           /**< @brief 에디터 시뮬레이션(PIE)을 정지합니다(핫 리로드 등). */
-        void ( *endFrame )( EditorHandle editor ){ nullptr };                                                                 /**< @brief 월드 틱 이후 Step 소비 등 프레임 마감을 합니다. */
+        EditorHandle ( *create )(){ nullptr };                                                                  /**< @brief 에디터 인스턴스를 생성합니다. */
+        void ( *destroy )( EditorHandle editor ){ nullptr };                                                    /**< @brief 에디터 인스턴스를 파괴합니다. */
+        bool ( *initialize )( EditorHandle editor, WindowHandle window, RHIDeviceHandle rhiDevice ){ nullptr }; /**< @brief 윈도우 및 RHI 디바이스로 에디터를 초기화합니다. */
+        void ( *shutdown )( EditorHandle editor ){ nullptr };                                                   /**< @brief 에디터를 종료합니다. */
+        void ( *updateUI )( EditorHandle editor ){ nullptr };                                                   /**< @brief 메인 스레드에서 에디터 UI 및 플랫폼 윈도우를 갱신합니다. */
+        void ( *preRender )( EditorHandle editor, RHIDeviceHandle rhiDevice ){ nullptr };                       /**< @brief 렌더링 직전에 호출됩니다. */
+        void ( *render )( EditorHandle editor, RHIDeviceHandle rhiDevice ){ nullptr };                          /**< @brief GPU 에 에디터 UI DrawData 를 렌더링합니다. */
+        void ( *postPresent )( EditorHandle editor, RHIDeviceHandle rhiDevice ){ nullptr };                     /**< @brief 렌더링 결과가 출력된 후 호출됩니다 (멀티 뷰포트 처리용). */
+        void ( *abandonPendingDraw )( EditorHandle editor ){ nullptr };                                         /**< @brief 에디터 인스턴스를 없애기 직전에만 부릅니다(렌더 워커는 이미 비운 뒤). 렌더 대기 중인 draw 스냅샷 표시를 버리게 합니다. 모듈 리로드 중간에 부르면 UI 스레드와 렌더 스레드가 겹칩니다. */
+        bool ( *processEvent )( EditorHandle editor, const NativeWindowEvent* pEvent ){ nullptr };              /**< @brief 네이티브 이벤트를 에디터로 전달합니다. */
+        void ( *getGameViewport )( EditorHandle editor, HostViewTarget* pOutTarget ){ nullptr };                /**< @brief 이번 프레임 게임 뷰 RT 핸들 · 크기 · 창 안 자리를 씁니다(패널이 안 보이면 빈 값). */
+        void ( *getSceneViewport )( EditorHandle editor, HostViewTarget* pOutTarget ){ nullptr };               /**< @brief 이번 프레임 씬 뷰 RT 핸들 · 크기 · 창 안 자리를 씁니다(패널이 안 보이면 빈 값). */
+        void* ( *getSceneViewCamera )(EditorHandle editor){ nullptr };                                          /**< @brief 이번 프레임 씬 뷰 카메라(에디터 카메라, CameraComponent*)를 반환합니다. */
+        void ( *bindService )( const ISubsystemLocator* pService ){ nullptr };                                  /**< @brief 호스트 서비스 범위를 에디터 모듈에 주입하거나 nullptr 로 해제합니다. */
+        bool ( *isPlaying )( EditorHandle editor ){ nullptr };                                                  /**< @brief 에디터 시뮬레이션(PIE)이 실행 중인지 반환합니다. */
+        bool ( *isPaused )( EditorHandle editor ){ nullptr };                                                   /**< @brief 에디터 시뮬레이션이 일시정지인지 반환합니다. */
+        void ( *stopSimulation )( EditorHandle editor ){ nullptr };                                             /**< @brief 에디터 시뮬레이션(PIE)을 정지합니다(핫 리로드 등). */
+        void ( *endFrame )( EditorHandle editor ){ nullptr };                                                   /**< @brief 월드 틱 이후 Step 소비 등 프레임 마감을 합니다. */
         /** @brief 이번 프레임에 보인 미리보기 씬 뷰(툴 창)를 @p pOutView 에 최대 @p capacity 개 씁니다. 쓴 개수를 반환합니다(`HostSceneView`, Engine 의 값 타입). */
         uint32 ( *getSceneViews )( EditorHandle editor, HostSceneView* pOutView, uint32 capacity ){ nullptr };
     };

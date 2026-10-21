@@ -265,7 +265,7 @@ namespace sw
             }
         }
         const SceneComponent* pScene        = pOwner->getPrimarySceneComponent();
-        const bool            bMarkerHidden = pScene == nullptr || inoutView._pCamera == nullptr || isActive() == false || _bHidden == SW_TRUE;
+        const bool            bMarkerHidden = pScene == nullptr || inoutView._pCamera == nullptr || isActive() == false || _bHidden == SW_TRUE || shouldShowMarker() == false;
         if ( bMarkerHidden )
         {
             WidgetMarkerPlacement hidden{};
@@ -319,6 +319,11 @@ namespace sw
     {
         (void)marker;
         (void)placement;
+    }
+
+    bool WidgetComponent::shouldShowMarker()
+    {
+        return true;
     }
 
     float2 WidgetComponent::getWorldTextureSize() const

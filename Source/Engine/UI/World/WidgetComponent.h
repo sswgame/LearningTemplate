@@ -164,6 +164,11 @@ namespace sw
     protected:
         /** @brief 화면 마커를 이번 프레임 위치에 놓았을 때 부릅니다(보일 때만). 파생 클래스(목표 마커)가 방향 화살표와 거리 텍스트를 쓰는 곳입니다. 기본은 아무것도 하지 않습니다. */
         virtual void onMarkerPlaced( Widget& marker, const WidgetMarkerPlacement& placement );
+        /**
+         * @brief 이번 프레임에 화면 마커를 보일지 파생 클래스가 정합니다(목표 마커는 퀘스트 목표가 열렸을 때만). 기본은 true 입니다.
+         * @details `updateScreenMarker`(UI 갱신, 병렬 틱 밖)가 부르므로 다른 오브젝트의 게임 상태를 읽어도 된다. `setHidden` 은 코드가 거는 숨김이고 이것은 데이터가 정하는 보임이다.
+         */
+        virtual bool shouldShowMarker();
 
     private:
         /** @brief 콘텐츠를 UI 시스템의 마커 화면에 붙입니다(등록과 콘텐츠가 모두 있을 때). */

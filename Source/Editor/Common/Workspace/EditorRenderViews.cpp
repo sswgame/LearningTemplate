@@ -61,6 +61,14 @@ namespace sw::editor
         }
     }
 
+    void EditorRenderViews::markViewDrawn( EditorViewKind kind, const float2& imageClientPos )
+    {
+        EditorViewTarget& view = _arrViewTarget[static_cast<uint32>( kind )];
+        view._windowX          = static_cast<int32>( MathUtil::round( imageClientPos._x ) );
+        view._windowY          = static_cast<int32>( MathUtil::round( imageClientPos._y ) );
+        view._bDrawn           = SW_TRUE;
+    }
+
     void EditorRenderViews::destroyViewTargets()
     {
         for ( uint32 kindIndex = 0; kindIndex < static_cast<uint32>( EditorViewKind::Count ); ++kindIndex )

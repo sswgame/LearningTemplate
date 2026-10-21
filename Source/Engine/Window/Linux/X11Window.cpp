@@ -8,6 +8,8 @@
 
 #if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
     #include "Core/Common/X11Headers.h"
+
+    #include <poll.h>
 #endif
 
 namespace sw
@@ -22,8 +24,71 @@ namespace sw
         constexpr int32 kDefaultRestoreY = 100;
     } // namespace
 
+#if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
+    namespace
+    {
+        /** @brief 클립보드 주인에게 변환을 청한 뒤 답(`SelectionNotify`)을 기다리는 한 번의 길이(ms)입니다. */
+        constexpr int32 kClipboardPollMs = 10;
+        /** @brief 위 기다림의 최대 횟수입니다. 붙여넣기 한 번이 메인 스레드를 최대 200 ms 멈춘다(GLFW · SDL 도 같은 동기 대기다). */
+        constexpr int32 kClipboardPollCount = 20;
+        /** @brief 클립보드 속성을 한 번에 읽는 최대 길이(32 비트 단위)입니다. 64 MB 다. */
+        constexpr int64 kClipboardMaxLongs = int64{ 1 } << 24;
+
+        struct X11ClipboardWait
+        {
+            /** @brief `XChangeProperty` 한 번에 보낼 수 있는 바이트입니다(요청 최대 크기는 4 바이트 단위이고, 요청 머리 몫을 뺀다). */
+            static size_t getMaxSingleTransferBytes( Display* pDisplay )
+            {
+                constexpr int64 kRequestHeaderBytes = 64;
+                const int64     extended            = XExtendedMaxRequestSize( pDisplay );
+                const int64     units               = extended != 0 ? extended : XMaxRequestSize( pDisplay );
+                return static_cast<size_t>( units * 4 - kRequestHeaderBytes );
+            }
+
+            /**
+             * @brief 창 @p win 에 온 @p eventType 이벤트 중 @p accept 가 받는 것 하나를 최대 `kClipboardPollMs` × `kClipboardPollCount` 동안 기다려 꺼냅니다.
+             * @details 다른 종류의 이벤트는 큐에 남아 `processMessages` 가 받는다. 같은 종류인데 @p accept 가 거절한 것(다른 속성의 PropertyNotify)은 버린다 — 창은 그것을 쓰지 않는다.
+             */
+            template <typename Accept>
+            static bool waitForEvent( Display* pDisplay, Window win, int32 eventType, XEvent& outEvent, Accept&& accept )
+            {
+                for ( int32 attempt = 0; attempt < kClipboardPollCount; ++attempt )
+                {
+                    while ( XCheckTypedWindowEvent( pDisplay, win, eventType, &outEvent ) != 0 )
+                    {
+                        if ( accept( outEvent ) )
+                            return true;
+                    }
+                    pollfd connection{ ConnectionNumber( pDisplay ), POLLIN, 0 };
+                    (void)poll( &connection, 1, kClipboardPollMs );
+                }
+                return false;
+            }
+
+            /** @brief 창 속성 @p property 를 읽고 지웁니다(INCR 은 지워야 다음 조각이 온다). 8 비트 형식이면 바이트를 @p outBytes 에 담습니다. 읽지 못하면 false 입니다. */
+            static bool takeProperty( Display* pDisplay, Window win, Atom property, Atom& outType, string& outBytes )
+            {
+                int32       format     = 0;
+                uint64      itemCount  = 0;
+                uint64      bytesAfter = 0;
+                uint8*      pData      = nullptr;
+                const int32 result     = XGetWindowProperty( pDisplay, win, property, 0, kClipboardMaxLongs, 1, AnyPropertyType, &outType, &format, &itemCount, &bytesAfter, &pData );
+                const bool  bBytes     = format == 8 && pData != nullptr;
+                if ( result == 0 && bBytes )
+                    outBytes.assign( reinterpret_cast<const utf8*>( pData ), static_cast<size_t>( itemCount ) );
+                if ( pData != nullptr )
+                    XFree( pData );
+                if ( result != 0 )
+                    SW_LOG_WARNING( "Clipboard property could not be read (X error %#) - nothing pasted", result );
+                return result == 0;
+            }
+        };
+    } // namespace
+#endif
+
     X11Window::X11Window()
-        : _pX11Display{ nullptr }
+        : _clipboardText{}
+        , _pX11Display{ nullptr }
         , _x11Window{ 0 }
         , _x11WmDelete{ 0 }
         , _reservedX11{ 0 }
@@ -67,7 +132,8 @@ namespace sw
 
         XSelectInput( pDisplay, win,
                       ExposureMask | KeyPressMask | KeyReleaseMask | StructureNotifyMask |
-                          ButtonPressMask | ButtonReleaseMask | PointerMotionMask | FocusChangeMask );
+                          ButtonPressMask | ButtonReleaseMask | PointerMotionMask | FocusChangeMask |
+                          PropertyChangeMask ); // 클립보드의 큰 글(INCR) 조각 알림이다(`readClipboardText`)
         XFlush( pDisplay );
 
         _pX11Display  = pDisplay;
@@ -94,6 +160,7 @@ namespace sw
             XCloseDisplay( pDisplay );
             _pX11Display = nullptr;
         }
+        _clipboardText.clear(); // 창이 없어지면 서버가 선택 주인을 거둔다
     }
 
     void X11Window::applyWindowVisibility( bool bShow )
@@ -231,6 +298,10 @@ namespace sw
             XEvent event;
             XNextEvent( pDisplay, &event );
 
+            // 선택 이벤트는 입력이 아니다 — 외부 처리기(ImGui)가 먹기 전에 답한다. 답하지 않으면 붙여넣는 프로그램이 시간 제한까지 기다린다.
+            if ( handleSelectionEvent( &event ) )
+                continue;
+
             if ( _customHandler.isBound() )
             {
                 NativeWindowEvent windowEvent{};
@@ -273,6 +344,149 @@ namespace sw
         }
 
         return _bShouldClose == SW_FALSE;
+    }
+
+    bool X11Window::writeClipboardText( string_view text )
+    {
+        if ( _pX11Display == nullptr || _x11Window == 0 )
+            return false;
+        Display*     pDisplay  = static_cast<Display*>( _pX11Display );
+        const Window win       = static_cast<Window>( _x11Window );
+        const Atom   clipboard = XInternAtom( pDisplay, "CLIPBOARD", 0 );
+        _clipboardText         = string( text );
+        XSetSelectionOwner( pDisplay, clipboard, win, CurrentTime );
+        XFlush( pDisplay );
+        if ( XGetSelectionOwner( pDisplay, clipboard ) == win )
+            return true;
+        _clipboardText.clear();
+        return false;
+    }
+
+    bool X11Window::readClipboardText( string& outText )
+    {
+        if ( _pX11Display == nullptr || _x11Window == 0 )
+            return false;
+        Display*     pDisplay  = static_cast<Display*>( _pX11Display );
+        const Window win       = static_cast<Window>( _x11Window );
+        const Atom   clipboard = XInternAtom( pDisplay, "CLIPBOARD", 0 );
+        const Window owner     = XGetSelectionOwner( pDisplay, clipboard );
+        if ( owner == 0 )
+            return false;
+        if ( owner == win )
+        {
+            outText = _clipboardText;
+            return true;
+        }
+
+        // 주인에게 UTF-8 로 바꿔 이 창의 속성에 적어 달라고 청하고, 답(`SelectionNotify`)만 골라 기다린다. 다른 이벤트는 큐에 남아 `processMessages` 가 받는다.
+        const Atom utf8String = XInternAtom( pDisplay, "UTF8_STRING", 0 );
+        const Atom property   = XInternAtom( pDisplay, "SW_CLIPBOARD", 0 );
+        XConvertSelection( pDisplay, clipboard, utf8String, property, win, CurrentTime );
+        XFlush( pDisplay );
+        XEvent reply{};
+        if ( X11ClipboardWait::waitForEvent( pDisplay, win, SelectionNotify, reply, []( const XEvent& )
+        { return true; } ) == false )
+        {
+            SW_LOG_WARNING( "Clipboard owner did not answer within %# ms - nothing pasted", kClipboardPollMs * kClipboardPollCount );
+            return false;
+        }
+        if ( reply.xselection.property == 0 )
+            return false; // 주인이 UTF-8 글을 주지 않았다(이미지 등)
+
+        string bytes;
+        Atom   type = 0;
+        if ( X11ClipboardWait::takeProperty( pDisplay, win, property, type, bytes ) == false )
+            return false;
+        if ( type == utf8String )
+        {
+            outText = std::move( bytes );
+            return true;
+        }
+        if ( type != XInternAtom( pDisplay, "INCR", 0 ) )
+            return false;
+
+        // INCR(ICCCM 2.7.2) — 큰 글은 조각으로 온다. INCR 속성을 지운 것(위 `takeProperty`)이 시작 신호이고, 주인이 조각을 쓸 때마다 PropertyNotify(새 값)가 온다.
+        // 조각을 읽고 지우면 다음 조각이 오고, 길이 0 인 조각이 끝이다. 창은 PropertyChangeMask 를 늘 받는다(`initializeWindow`) — 시작 신호 전에 받고 있어야 첫 조각을 놓치지 않는다.
+        outText.clear();
+        for ( ;; )
+        {
+            XEvent     notify{};
+            const auto isNewValue = [property]( const XEvent& event )
+            {
+                return event.xproperty.atom == property && event.xproperty.state == PropertyNewValue;
+            };
+            if ( X11ClipboardWait::waitForEvent( pDisplay, win, PropertyNotify, notify, isNewValue ) == false )
+            {
+                SW_LOG_WARNING( "Clipboard owner stopped sending a large (INCR) text after %# bytes - nothing pasted", static_cast<uint64>( outText.size() ) );
+                outText.clear();
+                return false;
+            }
+            string chunk;
+            Atom   chunkType = 0;
+            if ( X11ClipboardWait::takeProperty( pDisplay, win, property, chunkType, chunk ) == false )
+            {
+                outText.clear();
+                return false;
+            }
+            if ( chunk.empty() )
+                return true;
+            outText += chunk;
+        }
+    }
+
+    bool X11Window::handleSelectionEvent( const void* pEvent )
+    {
+        const XEvent& event    = *static_cast<const XEvent*>( pEvent );
+        Display*      pDisplay = static_cast<Display*>( _pX11Display );
+        if ( event.type == SelectionClear )
+        {
+            // 다른 프로그램이 클립보드를 가져갔다 — 들고 있던 글은 더 내줄 일이 없다.
+            if ( event.xselectionclear.selection == XInternAtom( pDisplay, "CLIPBOARD", 0 ) )
+                _clipboardText.clear();
+            return true;
+        }
+        if ( event.type != SelectionRequest )
+            return false;
+
+        // 붙여넣는 프로그램에 답한다: TARGETS 면 줄 수 있는 형식, UTF8_STRING 이면 글. 그 밖의 형식은 속성 0 으로 거절한다.
+        const XSelectionRequestEvent& request    = event.xselectionrequest;
+        const Atom                    targets    = XInternAtom( pDisplay, "TARGETS", 0 );
+        const Atom                    utf8String = XInternAtom( pDisplay, "UTF8_STRING", 0 );
+        const Atom                    property   = request.property != 0 ? request.property : request.target; // 옛 클라이언트는 속성 없이 청한다(ICCCM)
+        const bool                    bOwned     = request.selection == XInternAtom( pDisplay, "CLIPBOARD", 0 ) && request.owner == static_cast<Window>( _x11Window );
+        XSelectionEvent               reply{};
+        reply.type      = SelectionNotify;
+        reply.display   = request.display;
+        reply.requestor = request.requestor;
+        reply.selection = request.selection;
+        reply.target    = request.target;
+        reply.time      = request.time;
+        reply.property  = 0;
+        if ( bOwned && request.target == targets )
+        {
+            const Atom arrTarget[] = { targets, utf8String };
+            XChangeProperty( pDisplay, request.requestor, property, XA_ATOM, 32, PropModeReplace, reinterpret_cast<const uint8*>( arrTarget ), 2 );
+            reply.property = property;
+        }
+        else if ( bOwned && request.target == utf8String )
+        {
+            // 요청 한 번보다 큰 글은 INCR 로 나눠 보내야 한다 — 보내는 쪽 INCR 은 없어서 거절한다(받는 쪽은 `readClipboardText` 가 받는다).
+            if ( _clipboardText.size() > X11ClipboardWait::getMaxSingleTransferBytes( pDisplay ) )
+            {
+                SW_LOG_WARNING( "Clipboard text (%# bytes) is larger than one X request - refused to the pasting program", static_cast<uint64>( _clipboardText.size() ) );
+            }
+            else
+            {
+                XChangeProperty( pDisplay, request.requestor, property, utf8String, 8, PropModeReplace, reinterpret_cast<const uint8*>( _clipboardText.c_str() ),
+                                 static_cast<int32>( _clipboardText.size() ) );
+                reply.property = property;
+            }
+        }
+        XEvent replyEvent{};
+        replyEvent.xselection = reply;
+        XSendEvent( pDisplay, request.requestor, 0, 0, &replyEvent );
+        XFlush( pDisplay );
+        return true;
     }
 #else
     bool X11Window::initializeWindow( const utf8* pTitle, uint32 width, uint32 height )

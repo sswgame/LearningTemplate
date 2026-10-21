@@ -51,6 +51,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Pipeline/RenderPassAsset.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
 #include "Engine/Scene/CommandStack.h"
@@ -103,15 +104,19 @@ namespace sw::editor
                 return pInput != nullptr && pInput->isOsDeviceInputBlocked();
             }
 
-            /** @brief 뷰의 렌더 타깃 핸들과 크기를 C ABI 출력 인자에 씁니다. @p pView 가 없으면 0 이며, 이번 프레임에 그 뷰를 그리지 않았다는 뜻입니다. */
-            static void writeViewport( const EditorViewTarget* pView, uint64* pRenderTarget, uint32* pWidth, uint32* pHeight )
+            /** @brief 뷰의 렌더 타깃 핸들 · 크기 · 창 안 자리를 호스트 형식으로 씁니다. @p pView 가 없으면 빈 값이며, 이번 프레임에 그 뷰를 그리지 않았다는 뜻입니다. */
+            static void writeViewport( const EditorViewTarget* pView, HostViewTarget* pOutTarget )
             {
-                if ( pRenderTarget != nullptr )
-                    *pRenderTarget = ( pView != nullptr ) ? pView->_renderTarget : 0;
-                if ( pWidth != nullptr )
-                    *pWidth = ( pView != nullptr ) ? pView->_width : 0;
-                if ( pHeight != nullptr )
-                    *pHeight = ( pView != nullptr ) ? pView->_height : 0;
+                if ( pOutTarget == nullptr )
+                    return;
+                *pOutTarget = HostViewTarget{};
+                if ( pView == nullptr )
+                    return;
+                pOutTarget->_renderTarget = pView->_renderTarget;
+                pOutTarget->_width        = pView->_width;
+                pOutTarget->_height       = pView->_height;
+                pOutTarget->_windowX      = pView->_windowX;
+                pOutTarget->_windowY      = pView->_windowY;
             }
 
             /** @brief ImGui 할당을 sw 할당자로 보냅니다. 할당 헤더에 태그가 기록되어 메모리 프로파일러의 Editor 항목으로 집계됩니다. */
@@ -970,17 +975,17 @@ namespace sw::editor
         return false;
     }
 
-    void ImGuiEditor::getGameViewport( uint64* pRenderTarget, uint32* pWidth, uint32* pHeight ) const
+    void ImGuiEditor::getGameViewport( HostViewTarget* pOutTarget ) const
     {
         const bool bRequest = _editorContext != nullptr && EditorViewTargetUtil::shouldRequestGameView( _editorContext->getSubsystem<EditorRenderViews>().wasViewDrawn( EditorViewKind::Game ) );
-        ImGuiEditorInternal::writeViewport( bRequest ? &_editorContext->getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Game ) : nullptr, pRenderTarget, pWidth, pHeight );
+        ImGuiEditorInternal::writeViewport( bRequest ? &_editorContext->getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Game ) : nullptr, pOutTarget );
     }
 
-    void ImGuiEditor::getSceneViewport( uint64* pRenderTarget, uint32* pWidth, uint32* pHeight ) const
+    void ImGuiEditor::getSceneViewport( HostViewTarget* pOutTarget ) const
     {
         const bool bRequest = _editorContext != nullptr && EditorViewTargetUtil::shouldRequestSceneView( _editorContext->getSubsystem<EditorRenderViews>().wasViewDrawn( EditorViewKind::Scene ),
                                                                                                          _editorContext->getSubsystem<EditorRenderViews>().wasViewDrawn( EditorViewKind::Game ) );
-        ImGuiEditorInternal::writeViewport( bRequest ? &_editorContext->getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Scene ) : nullptr, pRenderTarget, pWidth, pHeight );
+        ImGuiEditorInternal::writeViewport( bRequest ? &_editorContext->getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Scene ) : nullptr, pOutTarget );
     }
 
     uint32 ImGuiEditor::getSceneViews( HostSceneView* pOutView, uint32 capacity ) const

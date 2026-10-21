@@ -230,10 +230,12 @@ namespace sw
             _bPointerKnown = SW_FALSE;
             return;
         }
-        // 창 픽셀을 UI 단위로 바꾼다(지난 `update` 뷰포트의 배율을 쓴다. 입력은 이번 프레임 레이아웃 앞이라 지난 프레임에 그린 화면 기준이다).
+        // 창 픽셀을 UI 단위로 바꾼다(지난 `update` 뷰포트의 자리와 배율을 쓴다. 입력은 이번 프레임 레이아웃 앞이라 지난 프레임에 그린 화면 기준이다).
+        // 에디터 게임 뷰면 창 픽셀에서 패널 안 이미지 자리를 빼야 게임 뷰 픽셀이다(`UIViewport::_pointerOrigin`).
         const int2     pixel   = pMouse->getPosition();
         const float32  uiScale = viewport._uiScale > 0.0f ? viewport._uiScale : 1.0f;
-        const float2   position{ static_cast<float32>( pixel._x ) / uiScale, static_cast<float32>( pixel._y ) / uiScale };
+        const float2   position{ static_cast<float32>( pixel._x - viewport._pointerOrigin._x ) / uiScale,
+                               static_cast<float32>( pixel._y - viewport._pointerOrigin._y ) / uiScale };
         UIPointerEvent event{};
         event._position      = position;
         event._delta         = _bPointerKnown == SW_TRUE ? float2{ position._x - _lastPointerPosition._x, position._y - _lastPointerPosition._y } : float2{};

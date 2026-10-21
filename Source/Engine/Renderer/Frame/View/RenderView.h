@@ -170,12 +170,18 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 호스트(에디터)가 만든 오프스크린 출력 하나입니다. 렌더 타깃이 0이면 이번 프레임에 그 뷰를 그리지 않습니다. */
+    /**
+     * @brief 호스트(에디터)가 만든 오프스크린 출력 하나입니다. 렌더 타깃이 0이면 이번 프레임에 그 뷰를 그리지 않습니다.
+     * @details `_windowX` · `_windowY` 는 이 출력의 왼쪽 위가 주 창 클라이언트의 어느 픽셀에 보였는지다(에디터 패널의 이미지 자리). 런타임 UI 는 창 픽셀 포인터를
+     *          이만큼 빼서 출력 픽셀로 옮긴다(`UIViewport::_pointerOrigin`). 이미지는 렌더 타깃 크기 그대로 보이므로(늘이지 않는다) 배율은 없다.
+     */
     struct HostViewTarget
     {
         RHITextureHandle _renderTarget{ 0 };
         uint32           _width{ 0 };
         uint32           _height{ 0 };
+        int32            _windowX{ 0 };
+        int32            _windowY{ 0 };
 
         /** @brief 그릴 수 있는 출력인지 나타냅니다. */
         bool isValid() const { return _renderTarget != 0 && _width > 0 && _height > 0; }

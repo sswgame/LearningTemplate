@@ -8,6 +8,7 @@
 namespace sw
 {
     struct HostSceneView;
+    struct HostViewTarget;
     struct NativeWindowEvent;
 
     class CameraComponent;
@@ -56,10 +57,10 @@ namespace sw
         // ------------------------------------------------------------------------------
         /** @brief 네이티브 이벤트를 ImGui 플랫폼 레이어에 전달합니다. */
         virtual bool processEvent( const NativeWindowEvent& event ) = 0;
-        /** @brief 이번 프레임 게임 뷰의 렌더 타깃 핸들과 크기를 조회합니다. 게임 뷰 패널이 보이지 않으면 0 입니다. */
-        virtual void getGameViewport( uint64* pRenderTarget, uint32* pWidth, uint32* pHeight ) const = 0;
-        /** @brief 이번 프레임 씬 뷰의 렌더 타깃 핸들과 크기를 조회합니다. 씬 뷰가 보이지 않으면 0 입니다. 두 뷰가 모두 보이지 않으면 씬 뷰 렌더 타깃을 반환합니다. */
-        virtual void getSceneViewport( uint64* pRenderTarget, uint32* pWidth, uint32* pHeight ) const = 0;
+        /** @brief 이번 프레임 게임 뷰의 렌더 타깃 핸들 · 크기 · 창 안 자리를 @p pOutTarget 에 씁니다. 게임 뷰 패널이 보이지 않으면 빈 값입니다. */
+        virtual void getGameViewport( HostViewTarget* pOutTarget ) const = 0;
+        /** @brief 이번 프레임 씬 뷰의 렌더 타깃 핸들 · 크기 · 창 안 자리를 씁니다. 씬 뷰가 보이지 않으면 빈 값입니다. 두 뷰가 모두 보이지 않으면 씬 뷰 렌더 타깃을 씁니다. */
+        virtual void getSceneViewport( HostViewTarget* pOutTarget ) const = 0;
         /** @brief 이번 프레임 씬 뷰를 그리는 카메라(에디터 카메라)를 반환합니다. */
         virtual CameraComponent* getSceneViewCamera() const = 0;
         /** @brief 이번 프레임에 보인 미리보기 씬 뷰(툴 창)를 @p pOutView 에 최대 @p capacity 개 씁니다. 쓴 개수를 반환합니다. */

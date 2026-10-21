@@ -23,7 +23,9 @@
 
 #include "Engine/Graphics/Canvas/DebugDrawCanvas.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Input/KeyCodeUtil.h"
 #include "Engine/Input/Map/InputMap.h"
+#include "Engine/Input/RawInputEvent.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Scene/Scene.h"
@@ -32,12 +34,60 @@
 
 namespace sw::editor
 {
+    namespace
+    {
+        /** @brief 보조 창에서 게임으로 넘기는 단추입니다(ImGui 번호와 게임 단추의 짝). 순서가 `_forwardedButtonMask` 의 비트다. */
+        struct ForwardedButton
+        {
+            ImGuiMouseButton _imguiButton;
+            MouseButton      _button;
+        };
+        constexpr ForwardedButton kForwardedButtons[] = {
+            {  ImGuiMouseButton_Left,   MouseButton::Left},
+            { ImGuiMouseButton_Right,  MouseButton::Right},
+            {ImGuiMouseButton_Middle, MouseButton::Middle}
+        };
+    } // namespace
+
     SW_EDITOR_PANEL( GameViewPanel, GameViewPanel::kPanelID, EditorPanelCategory::Core, 350 );
 
     GameViewPanel::GameViewPanel()
         : _aspect{ EditorGameViewAspect::Free }
         , _bNoCameraHintShown{ false }
+        , _forwardedButtonMask{ 0 }
     {
+    }
+
+    void GameViewPanel::forwardDetachedPointer()
+    {
+        InputManager* pInput = findSubsystem<InputManager>();
+        if ( pInput == nullptr )
+            return;
+        const ImGuiViewport* pMainViewport = ImGui::GetMainViewport();
+        const bool           bDetached     = ImGui::GetWindowViewport() != pMainViewport;
+        const bool           bHovered      = ImGui::IsWindowHovered( ImGuiHoveredFlags_RootAndChildWindows );
+        if ( bDetached == false && _forwardedButtonMask == 0 )
+            return; // 주 창에 있으면 주 창의 메시지가 게임으로 간다(`ImGuiEditor::processEvent`)
+        const ImGuiIO& io       = ImGui::GetIO();
+        const int32    x        = static_cast<int32>( MathUtil::round( io.MousePos.x - pMainViewport->Pos.x ) );
+        const int32    y        = static_cast<int32>( MathUtil::round( io.MousePos.y - pMainViewport->Pos.y ) );
+        const bool     bForward = bDetached && bHovered;
+        if ( bForward && ( io.MouseDelta.x != 0.0f || io.MouseDelta.y != 0.0f ) )
+            (void)pInput->postRawEvent( RawInputEvent::makeMouseMove( x, y ) ); // 큐가 차면 이 프레임의 이동만 잃는다 — 다음 이동이 위치를 다시 준다
+        for ( uint32 index = 0; index < static_cast<uint32>( std::size( kForwardedButtons ) ); ++index )
+        {
+            const ForwardedButton& button       = kForwardedButtons[index];
+            const uint8            bit          = static_cast<uint8>( 1u << index );
+            const bool             bPressedHere = bForward && ImGui::IsMouseClicked( button._imguiButton );
+            if ( bPressedHere && pInput->postRawEvent( RawInputEvent::makeMouseButtonDown( button._button, x, y ) ) )
+                _forwardedButtonMask = static_cast<uint8>( _forwardedButtonMask | bit );
+            // 뗌은 넣은 누름의 짝이면 패널 밖이어도 넣는다 — 안 넣으면 게임에서 단추가 눌린 채 남는다.
+            const bool bReleasedForwarded = ( _forwardedButtonMask & bit ) != 0 && ImGui::IsMouseReleased( button._imguiButton );
+            if ( bReleasedForwarded && pInput->postRawEvent( RawInputEvent::makeMouseButtonUp( button._button, x, y ) ) )
+                _forwardedButtonMask = static_cast<uint8>( _forwardedButtonMask & ~bit );
+        }
+        if ( bForward && io.MouseWheel != 0.0f )
+            (void)pInput->postRawEvent( RawInputEvent::makeMouseWheel( io.MouseWheel ) );
     }
 
     void GameViewPanel::onPanelCollapsed()
@@ -74,13 +124,14 @@ namespace sw::editor
             if ( EditorViewTargetUtil::needsResize( view._width, view._height, width, height ) )
                 pEditorContext->getSubsystem<EditorRenderViews>().ensureViewTargetSize( EditorViewKind::Game, width, height );
         }
-        // 이 패널이 보이는 프레임만 게임 뷰를 그린다(접힘 · 닫힘 · 다른 탭이면 drawContent 가 불리지 않는다 — 게임 뷰 RT 요청 0).
-        pEditorContext->getSubsystem<EditorRenderViews>().markViewDrawn( EditorViewKind::Game );
-
         // 레터박스 — 남는 쪽은 비워 둔다. 이미지는 RT 크기 그대로(늘이지 않는다).
         const ImVec2 origin = ImGui::GetCursorScreenPos();
         const ImVec2 imagePos{ origin.x + rect._offset._x, origin.y + rect._offset._y };
         const ImVec2 imageSize{ rect._size._x, rect._size._y };
+        // 이 패널이 보이는 프레임만 게임 뷰를 그린다(접힘 · 닫힘 · 다른 탭이면 drawContent 가 불리지 않는다 — 게임 뷰 RT 요청 0).
+        // 이미지 자리도 함께 알린다 — 런타임 UI 가 창 픽셀 포인터를 게임 뷰 픽셀로 옮긴다(`HostViewTarget::_windowX`).
+        pEditorContext->getSubsystem<EditorRenderViews>().markViewDrawn( EditorViewKind::Game, float2{ imagePos.x - ImGui::GetMainViewport()->Pos.x, imagePos.y - ImGui::GetMainViewport()->Pos.y } );
+        forwardDetachedPointer();
         ImGui::SetCursorScreenPos( imagePos );
         const void* pTextureID        = pEditorContext->getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Game )._pTextureID;
         const bool  bCanDrawGameImage = pTextureID != nullptr && imageSize.x > 1.0f && imageSize.y > 1.0f;

@@ -168,12 +168,10 @@ namespace sw
         if ( hasEditor() == false )
             return;
 
-        HostViewTarget& game = frameState._views._game;
         if ( _editorAPI.getGameViewport != nullptr )
-            _editorAPI.getGameViewport( _editor, &game._renderTarget, &game._width, &game._height );
-        HostViewTarget& scene = frameState._views._scene;
+            _editorAPI.getGameViewport( _editor, &frameState._views._game );
         if ( _editorAPI.getSceneViewport != nullptr )
-            _editorAPI.getSceneViewport( _editor, &scene._renderTarget, &scene._width, &scene._height );
+            _editorAPI.getSceneViewport( _editor, &frameState._views._scene );
         // 툴 창의 미리보기 씬 — 보이는 창만 온다(`Engine::update` 이 씬마다 따로 그린다).
         if ( _editorAPI.getSceneViews != nullptr )
             frameState._views._sceneViewCount = _editorAPI.getSceneViews( _editor, frameState._views._arrSceneView, kMaxHostSceneView );
