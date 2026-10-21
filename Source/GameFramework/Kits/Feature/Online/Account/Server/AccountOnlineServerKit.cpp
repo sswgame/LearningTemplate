@@ -1,20 +1,17 @@
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
-
-#include "Engine/Config/Server/ServerSecret.h"
 
 #include "GameFramework/Base/Online/Security/NetSecurity.h"
 #include "GameFramework/Base/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Base/Online/Server/OnlineServerKit.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
-#include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/NetSecurityLoginCrypto.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProviderSet.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Rule/AccountNameIndex.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/AccountServer.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginService.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginTicketKey.h"
 
 // 계정 키트의 서버 조립 — 로그인 서비스 · 바인딩을 만들고 신원(디렉터리) · 접속 상태 · 세션 끊기 · 이름 찾기를 문맥에 내놓는다.
 // 옵션:
@@ -34,30 +31,6 @@ namespace sw
         {
             [[maybe_unused]] static constexpr uint32 kLightHashMemoryKiB  = 256; ///< 테스트용 가벼운 Argon2id
             [[maybe_unused]] static constexpr uint32 kLightHashIterations = 1;
-            [[maybe_unused]] static constexpr uint8  kDevTicketKeyByte    = 0x5A; ///< 개발용 주 키(모든 바이트 같은 값). Shipping 은 쓰지 않는다
-            static constexpr int32                   kHexDigitsPerChunk   = ServiceKeyUtil::kHexWidth;
-            static constexpr int32                   kBytesPerChunk       = 8;
-
-            /** @brief 16 진수 64 자를 32 바이트로 읽습니다(앞쪽이 상위 비트). 형식이 틀리면 false 입니다. */
-            [[nodiscard]] static bool parseTicketKey( string_view text, uint8 ( &outArrKey )[LoginTicketAuthority::kMasterKeySize] )
-            {
-                const string_view trimmed = StringUtil::trim( text );
-                if ( trimmed.size() != static_cast<size_t>( LoginTicketAuthority::kMasterKeySize ) * 2 )
-                    return false;
-                const string lower = StringUtil::toLower( string( trimmed ).c_str() );
-                for ( int32 chunkIndex = 0; chunkIndex < LoginTicketAuthority::kMasterKeySize / kBytesPerChunk; ++chunkIndex )
-                {
-                    uint64 value = 0;
-                    if ( ServiceKeyUtil::parseHex64( string_view( lower ).substr( static_cast<size_t>( chunkIndex * kHexDigitsPerChunk ), kHexDigitsPerChunk ), value ) == false )
-                        return false;
-                    for ( int32 byteIndex = 0; byteIndex < kBytesPerChunk; ++byteIndex )
-                    {
-                        const int32 shift                                  = ( kBytesPerChunk - 1 - byteIndex ) * 8;
-                        outArrKey[chunkIndex * kBytesPerChunk + byteIndex] = static_cast<uint8>( ( value >> shift ) & 0xFFu );
-                    }
-                }
-                return true;
-            }
         };
 
         /**
@@ -106,7 +79,7 @@ namespace sw
 #endif
                 }
                 uint8 arrTicketKey[LoginTicketAuthority::kMasterKeySize];
-                if ( readTicketKey( ticketKeyEnvironment, arrTicketKey, outError ) == false )
+                if ( LoginTicketKey::readFromEnvironment( ticketKeyEnvironment, arrTicketKey, outError ) == false )
                     return false;
                 _loginService.initialize( context._pStore, &_crypto, loginSettings, arrTicketKey );
                 Memory::set( arrTicketKey, 0, sizeof( arrTicketKey ) );
@@ -176,36 +149,6 @@ namespace sw
                         outError = "platform login provider names must be unique and valid";
                         return false;
                     }
-                }
-                return true;
-            }
-
-            /** @brief 옵션의 환경 변수에서 주 키를 읽습니다. 변수를 정하지 않았으면 Dev 는 개발용 키(경고), Shipping 은 실패입니다. */
-            [[nodiscard]] static bool readTicketKey( const string& environment, uint8 ( &outArrKey )[LoginTicketAuthority::kMasterKeySize], string& outError )
-            {
-                if ( environment.empty() )
-                {
-#if defined( SW_SHIPPING )
-                    outError = "the game ticket master key is required - set the ticketKeySecretEnvironment option";
-                    return false;
-#else
-                    SW_LOG_WARNING( "Account kit: no ticketKeySecretEnvironment - using the development ticket key (Dev only)" );
-                    Memory::set( outArrKey, AccountOnlineServerKitInternal::kDevTicketKeyByte, sizeof( outArrKey ) );
-                    return true;
-#endif
-                }
-                string secret;
-                if ( ServerSecret::read( environment, secret ) == false || secret.empty() )
-                {
-                    outError = "the game ticket master key environment variable '" + environment + "' is not set";
-                    return false;
-                }
-                const bool bParsed = AccountOnlineServerKitInternal::parseTicketKey( secret, outArrKey );
-                Memory::set( secret.data(), 0, secret.size() );
-                if ( bParsed == false )
-                {
-                    outError = "the game ticket master key must be 64 hexadecimal digits (32 bytes)";
-                    return false;
                 }
                 return true;
             }

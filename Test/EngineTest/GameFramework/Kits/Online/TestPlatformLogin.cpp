@@ -20,6 +20,7 @@
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProviderConfig.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProviderSet.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/ProfileAPILoginProvider.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/Platform/TicketQueryLoginProvider.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginService.h"
 #include "GameFramework/Kits/Feature/Online/Account/Shared/API/LoopbackPkceLoginClient.h"
 #include "GameFramework/Kits/Feature/Online/Account/Shared/API/SystemExternalBrowser.h"
@@ -70,6 +71,25 @@ namespace
                     return;
                 }
                 const string body = "{\"resultcode\":\"00\",\"response\":{\"id\":\"n-1\",\"nickname\":\"Nick\"}}";
+                outResponse._bodyBytes.assign( reinterpret_cast<const uint8*>( body.data() ), reinterpret_cast<const uint8*>( body.data() ) + body.size() );
+                return;
+            }
+            if ( request._path == "/ticket" )
+            {
+                // 티켓 확인 API 흉내 — 키가 맞고 티켓이 abc123 이면 결과 OK 와 주체, 다른 티켓이면 결과가 다른 200 이다(거절로 읽혀야 한다).
+                const HTTPHeader* pKey    = request.findQuery( "key" );
+                const HTTPHeader* pTicket = request.findQuery( "ticket" );
+                const HTTPHeader* pApp    = request.findQuery( "appid" );
+                const bool        bKeyOk  = pKey != nullptr && pKey->_value == "secret-key";
+                const bool        bAppOk  = pApp != nullptr && pApp->_value == "480";
+                if ( bKeyOk == false || bAppOk == false )
+                {
+                    outResponse._statusCode = 403;
+                    return;
+                }
+                const bool   bGood = pTicket != nullptr && pTicket->_value == "abc123";
+                const string body  = bGood ? "{\"response\":{\"params\":{\"result\":\"OK\",\"steamid\":\"76561198000000001\"}}}"
+                                           : "{\"response\":{\"error\":{\"errorcode\":101,\"errordesc\":\"Invalid ticket\"}}}";
                 outResponse._bodyBytes.assign( reinterpret_cast<const uint8*>( body.data() ), reinterpret_cast<const uint8*>( body.data() ) + body.size() );
                 return;
             }
@@ -351,6 +371,53 @@ SW_TEST_CASE( PlatformLoginTest, ProfileAPIProviderReadsTheSubjectPath )
     SW_EXPECT_TRUE( fixture.verify( provider, "bad" )._bRejected == SW_TRUE ); // 401
     fixture._handler._bDown = SW_TRUE;
     SW_EXPECT_TRUE( fixture.verify( provider, "good" )._bUnavailable == SW_TRUE ); // 503
+}
+
+/**
+ * @brief [PlatformLoginTest] 티켓 확인 API 제공자는 키 · 티켓을 쿼리로 보내 결과 경로가 성공 값일 때만 주체를 받는다 — 다른 결과 · 403 · 쿼리에 못 싣는 티켓은 거절, 503 은 쓸 수 없음
+ * @details 게임 플랫폼 사용자 인증 티켓(OnlineKits A5)을 제품 코드 없이 데이터로 정의한다. 키는 환경 변수가 원본이고 테스트는 직접 넘긴다.
+ */
+SW_TEST_CASE( PlatformLoginTest, TicketQueryProviderChecksTheResultPath )
+{
+    IssuerFixture               fixture;
+    PlatformLoginProviderConfig settings;
+    settings._name                 = "steam";
+    settings._kind                 = PlatformLoginProviderKind::TicketQuery;
+    settings._profileURL           = fixture.makeURL( "/ticket?appid=480" );
+    settings._ticketParam          = "ticket";
+    settings._keyParam             = "key";
+    settings._keySecretEnvironment = "SW_TEST_TICKET_KEY";
+    settings._resultPath           = "response.params.result";
+    settings._resultValue          = "OK";
+    settings._subjectPath          = "response.params.steamid";
+    SW_ASSERT_TRUE( PlatformLoginProviderFactory::isValidSettings( settings ) );
+    TicketQueryLoginProvider provider{ settings, "secret-key", &fixture._client };
+    SW_EXPECT_TRUE( provider.makeRequestURL( "abc123" ).find( "/ticket?appid=480&key=secret-key&ticket=abc123" ) != string::npos );
+
+    const PlatformLoginVerification good = fixture.verify( provider, "abc123" );
+    SW_ASSERT_TRUE( good.isVerified() );
+    SW_EXPECT_EQUAL( string( "76561198000000001" ), good._subject );
+    SW_EXPECT_TRUE( fixture.verify( provider, "ffff00" )._bRejected == SW_TRUE );    // 200 이지만 결과가 OK 가 아니다
+    SW_EXPECT_TRUE( fixture.verify( provider, "abc&key=x" )._bRejected == SW_TRUE ); // 쿼리에 못 싣는 티켓 — 묻지 않고 거절
+    TicketQueryLoginProvider wrongKey{ settings, "other-key", &fixture._client };
+    SW_EXPECT_TRUE( fixture.verify( wrongKey, "abc123" )._bRejected == SW_TRUE ); // 403
+    fixture._handler._bDown = SW_TRUE;
+    SW_EXPECT_TRUE( fixture.verify( provider, "abc123" )._bUnavailable == SW_TRUE ); // 503
+
+    // 데이터로 읽힌다. 필수 칸이 빠지면 오류다.
+    vector<PlatformLoginProviderConfig> listSettings;
+    string                              error;
+    SW_ASSERT_TRUE( PlatformLoginProviderFactory::readSettings( "{\"providers\":[{\"name\":\"steam\",\"kind\":\"ticketQuery\",\"profileUrl\":\"https://x/a?appid=1\","
+                                                                "\"ticketParam\":\"ticket\",\"keyParam\":\"key\",\"keySecretEnvironment\":\"K\",\"resultPath\":\"r\","
+                                                                "\"resultValue\":\"OK\",\"subjectPath\":\"s\"}]}",
+                                                                listSettings, error ) );
+    SW_EXPECT_TRUE( listSettings[0]._kind == PlatformLoginProviderKind::TicketQuery );
+    SW_EXPECT_FALSE( PlatformLoginProviderFactory::readSettings( "{\"providers\":[{\"name\":\"steam\",\"kind\":\"ticketQuery\",\"profileUrl\":\"https://x/a\"}]}", listSettings,
+                                                                 error ) );
+    // 키 환경 변수가 없으면 만들지 않는다(서버 기동 실패 — 키 없는 확인으로 대신 뜨지 않는다).
+    HTTPClient unused;
+    settings._keySecretEnvironment = "SW_TEST_TICKET_KEY_THAT_IS_NOT_SET";
+    SW_EXPECT_TRUE( PlatformLoginProviderFactory::create( settings, nullptr, &unused ) == nullptr );
 }
 
 SW_TEST_CASE( PlatformLoginTest, ProviderSettingsComeFromData )

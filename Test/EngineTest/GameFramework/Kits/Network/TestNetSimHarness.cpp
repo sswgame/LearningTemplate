@@ -7,6 +7,7 @@
 #include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Scene/Scene.h"
 
 #include "GameFramework/Kits/Feature/Network/NetClientServer/ReplicationClient.h"
 #include "GameFramework/Kits/Feature/Network/NetClientServer/ReplicationServer.h"
@@ -356,6 +357,48 @@ namespace
         result._droppedCount  = harness.getDroppedPacketCount();
         return result;
     }
+
+    /** @brief 빌려 준 씬을 세는 씬 공급자입니다(에디터의 `NetSimPreviewSceneSource` 자리 — 씬 매니저 없이). */
+    class CountingSceneSource final : public INetSimSceneSource
+    {
+    public:
+        Scene* acquireScene( NetSimRole role, int32 worldIndex ) override
+        {
+            if ( _bRefuse )
+                return nullptr;
+            _listScene.push_back( make_unique<Scene>( role == NetSimRole::Server ? "LentServer" : "LentClient" ) );
+            _listWorldIndex.push_back( worldIndex );
+            return _listScene.back().get();
+        }
+        void releaseScene( Scene& scene ) override
+        {
+            for ( size_t index = 0; index < _listScene.size(); ++index )
+            {
+                if ( _listScene[index].get() != &scene )
+                    continue;
+                _listScene.erase( _listScene.begin() + static_cast<std::ptrdiff_t>( index ) );
+                _listWorldIndex.erase( _listWorldIndex.begin() + static_cast<std::ptrdiff_t>( index ) );
+                ++_releasedCount;
+                return;
+            }
+            ++_unknownReleaseCount;
+        }
+        bool owns( const Scene& scene ) const
+        {
+            for ( const unique_ptr<Scene>& pScene : _listScene )
+            {
+                if ( pScene.get() == &scene )
+                    return true;
+            }
+            return false;
+        }
+
+        vector<unique_ptr<Scene>> _listScene;
+        vector<int32>             _listWorldIndex;
+        uint32                    _releasedCount{ 0 };
+        uint32                    _unknownReleaseCount{ 0 };
+        bool                      _bRefuse{ false };
+    };
 } // namespace
 
 /**
@@ -393,6 +436,69 @@ SW_TEST_CASE( NetSimHarnessTest, EveryWorldRunsItsOwnSceneAndPhysics )
     {
         SW_EXPECT_NEAR_EQUAL( 0.5f, pCrate->getWorldPosition()._y, 0.05f );
     }
+}
+
+/**
+ * @brief [NetSimHarnessTest] 씬 공급자를 주면 월드가 빌린 씬에서 돌고, 내릴 때 모두 돌려준다. 공급자가 씬을 주지 못하면 그 월드는 만들어지지 않는다
+ * @details 에디터의 한 프로세스 재생은 미리보기 씬을 빌려 월드마다 따로 그린다(ServerDebug S8). 공급자 없이 하니스가 씬을 만드는 길은 위 케이스들이다.
+ */
+SW_TEST_CASE( NetSimHarnessTest, WorldsRunOnScenesLentBySceneSource )
+{
+    CountingSceneSource source;
+    {
+        CrateGame     game;
+        NetSimHarness harness;
+        NetSimConfig  settings;
+        settings._pSceneSource = &source;
+        SW_ASSERT_TRUE( harness.initialize( sw::SceneEngineServices::makeFromBoundEngine(), settings, &game ) );
+        SW_ASSERT_TRUE( harness.addClient( {} ) > 0 );
+        SW_ASSERT_TRUE( harness.addClient( {} ) > 0 );
+        SW_EXPECT_EQUAL( size_t{ 3 }, source._listScene.size() );
+        SW_EXPECT_TRUE( source.owns( harness.getServer().getScene() ) );
+        vector<NetSimWorld*> listClient;
+        harness.collectClients( listClient );
+        for ( NetSimWorld* pClient : listClient )
+        {
+            SW_EXPECT_TRUE( source.owns( pClient->getScene() ) );
+        }
+        harness.stepTicks( 200 );
+        SW_EXPECT_TRUE( harness.areAllClientsConnected() );
+
+        source._bRefuse = true;
+        SW_EXPECT_EQUAL( -1, harness.addClient( {} ) ); // 씬이 없으면 월드도 없다
+        SW_EXPECT_EQUAL( 2, harness.getClientCount() );
+    }
+    SW_EXPECT_TRUE( source._listScene.empty() );
+    SW_EXPECT_EQUAL( 3u, source._releasedCount );
+    SW_EXPECT_EQUAL( 0u, source._unknownReleaseCount );
+}
+
+/**
+ * @brief [NetSimHarnessTest] 입력 초점은 한 번에 한 월드뿐이다 — 옮기면 앞 월드가 놓고, 없는 번호는 거절하며, −1 은 모두 놓는다
+ */
+SW_TEST_CASE( NetSimHarnessTest, InputFocusBelongsToOneWorldAtATime )
+{
+    CrateGame     game;
+    NetSimHarness harness;
+    SW_ASSERT_TRUE( harness.initialize( sw::SceneEngineServices::makeFromBoundEngine(), NetSimConfig{}, &game ) );
+    const int32 clientA = harness.addClient( {} );
+    const int32 clientB = harness.addClient( {} );
+    SW_ASSERT_TRUE( clientA > 0 && clientB > 0 );
+    SW_EXPECT_EQUAL( -1, harness.getInputFocus() );
+
+    SW_EXPECT_TRUE( harness.setInputFocus( clientA ) );
+    SW_EXPECT_TRUE( harness.findClient( clientA )->hasInputFocus() );
+    SW_EXPECT_FALSE( harness.findClient( clientB )->hasInputFocus() );
+    SW_EXPECT_TRUE( harness.setInputFocus( clientB ) );
+    SW_EXPECT_FALSE( harness.findClient( clientA )->hasInputFocus() );
+    SW_EXPECT_EQUAL( clientB, harness.getInputFocus() );
+
+    SW_EXPECT_FALSE( harness.setInputFocus( 99 ) ); // 없는 월드 — 초점은 그대로
+    SW_EXPECT_EQUAL( clientB, harness.getInputFocus() );
+    SW_EXPECT_TRUE( harness.setInputFocus( 0 ) );
+    SW_EXPECT_TRUE( harness.getServer().hasInputFocus() );
+    SW_EXPECT_TRUE( harness.setInputFocus( -1 ) );
+    SW_EXPECT_EQUAL( -1, harness.getInputFocus() );
 }
 
 /**

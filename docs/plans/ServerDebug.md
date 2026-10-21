@@ -40,8 +40,14 @@ S3(디버그 채널 · 씬 검사 명령 · Inspector 탭)와 S1 의 게임 포�
 
 Profiler 탭(시간축 그래프 · 메시지 종류별 비중, `net.stats` 질의)은 들어갔습니다. 종류별 셈은 받은 쪽(`NetMessageRouter`)과 보낸 쪽(`NetHost::copySentKindTally` — 큐에 넣은 것)이 같은 표(`NetMessageKindTallyTable`)를 쓰고, 보고 줄은 `kinds=` · `sentKinds=` 둘을 싣습니다(탭의 "Sent").
 
-- 트레이스에 메시지 흐름을 남긴다: 보낼 때 · 받을 때 같은 메시지 id 로 흐름 이벤트(`s` · `f`)를 타임라인에 기록하면, 합친 트레이스(S1)에서 뷰어가 프로세스 사이 화살표를 그린다.
-  합치기는 흐름 이벤트를 그대로 옮긴다 — 남은 것은 타임라인에 흐름 사건 칸을 두고 송수신 지점에서 찍는 일이다.
+- 트레이스의 메시지 흐름(2026-10-22, `wt/planleftA`, 빌드 미확인): **모든 채널**의 메시지가 보낸 곳 · 받은 곳에서 `NetFlowLog::record`(`Core/Network/Connection`, 프로세스 링 4096 칸)에 찍힌다.
+  저장(`writeTraceFile`)이 그 구간의 흐름을 "Net messages" 줄에 1 us 구간 + 흐름 이벤트(`s`, `f` + `bp:e`)로 쓴다. 합친 트레이스(S1)에서 같은 id 가 화살표로 이어진다.
+  링은 타임라인이 기록하는 동안만 남긴다(`ProfilerTimeline::setRecording` 이 `NetFlowLog::addRecorder` · `removeRecorder`). 링이 Network 층에 있는 까닭은 Core 층 규칙(네트워크는 진단을 include 하지 못한다)이다.
+  id 는 양쪽이 따로 계산한다(`NetFlowLog::makeFlowID` — 연결 토큰 · 보낸 쪽 · 채널 · 번호). 찍는 곳은 `NetConnection::recordFlow` 하나이고, 연결 신원은 `NetHost` 가 연결이 맺어질 때 `setFlowIdentity` 로 준다.
+  번호는 채널마다 양쪽이 같게 아는 값이다 — 신뢰 순서는 넣은 · 꺼낸 순번(넣을 때 · 꺼낼 때 찍는다), 신뢰 순서 없음은 선의 신뢰 ID(처음 보낼 때 · 받아들일 때), 비신뢰 · 순서만은 (패킷 번호 << 8 | 패킷 안 자리)(패킷을 쓸 때 · 읽을 때).
+  그래서 선 형식에 칸을 더하지 않았다(Dev 와 Shipping 의 선 형식이 갈라지지 않는다).
+  확인은 CoreTest `NetworkTest.EveryChannelPairsItsSendAndReceiveFlows`(네 채널 · 두 방향) · `ProfilerTimelineTest.NetFlowIDMatchesOnBothEndsAndSeparatesDirections` · `NetFlowsAreKeptOnlyWhileATimelineRecords`, EngineTest `NetFlowsAreWrittenAsBoundFlowEvents` 이다.
+  남은 것: 실제 두 프로세스 합친 트레이스에서 화살표를 눈으로 보는 확인(`netplay.scenario.xml` + `-gv_traceSaveOnExit`).
 - 스냅숏 크기 · 오브젝트별 복제 빈도: 공통 원천이 없다(복제 키트마다 따로 센다 — 예 `DestructionReplicationStats`). 키트가 셈을 `NetStatsReport` 에 싣는 창구를 정한 뒤 그래프를 더한다.
 - 탭이 보이지 않을 때도 기록하기: 지금은 탭이 보일 때와 `netplay.profile` 동안만 묻는다. 세션 프레임 단계에서 늘 묻게 하면 창을 닫아도 남지만 자식 로그에 2 Hz 줄이 늘 쌓인다.
 - 부하 봇(`Tools/OnlineLoadBot`)을 붙여 숫자가 오르는 시나리오(지금 확인은 `net.traffic` 부하의 `netprofiler.scenario.xml`).
@@ -75,13 +81,23 @@ Sync 탭의 클라이언트 원천(2026-10-22): 칸마다 세션 클라이언트
 - 어긋난 오브젝트 짚기: 지금은 틱만 나온다. 해시를 오브젝트별로 나눠 보관하거나, 어긋난 틱에서 `object.dump` 두 벌을 비교하는 길이 필요하다.
 - 되감기: 의도 기록(`.swintent`)으로 그 틱까지 서버를 다시 돌려 한 틱씩 진행.
 
-### S8 한 프로세스 가상 서버를 에디터에서 (장기)
+### S8 한 프로세스 가상 서버를 에디터에서
 
-`NetSimHarness` 를 에디터 재생에 잇습니다. 서버 월드 + 클라이언트 월드 N 이 한 프로세스에서 돌고 에디터 탭마다 클라이언트 화면이 나옵니다.
+`NetSimHarness` 를 에디터 재생에 잇습니다. 서버 월드 + 클라이언트 월드 N 이 한 프로세스에서 돌고 월드마다 화면이 나옵니다. 결정적이고 한 디버거에서 서버 · 클라이언트에 모두 중단점을 걸 수 있다(언리얼 기본 PIE).
+바닥은 다중 월드의 단계 1 ~ 4(미리보기 씬 · 씬마다 렌더러 · 호스트 씬 뷰 · 미리보기 뷰포트)다.
 
-- 결정적이고 한 디버거에서 서버 · 클라이언트에 모두 중단점을 걸 수 있다(언리얼 기본 PIE).
-- 선행 조건: **다중 월드 · 월드별 렌더**(EditorMultiWorld). 지금 엔진은 활성 씬 하나만 틱하고 그린다.
-- 이유: S1 로 거의 모든 일이 되므로, 다중 월드가 다른 이유로 들어온 뒤에 얹는다.
+2026-10-22(`wt/planleftA`, 빌드 · 화면 미확인) 세 조각이 들어갔다.
+
+1. 씬 공급자: `NetSimConfig::_pSceneSource`(`INetSimSceneSource`)를 주면 월드가 빌린 씬에서 돌고 `stop` 이 돌려준다. 못 빌리면 그 월드는 만들어지지 않는다(`initialize` false · `addClient` −1). 비우면 하니스가 씬을 만들어 가진다(화면 없는 테스트).
+   에디터용 공급자는 `NetSimPreviewSceneSource`(키트) — `SceneManager` 미리보기 씬, 정책은 틱 없음(하니스가 틱한다) · 물리 켬 · 오디오 끔 · 플레이 없음. 확인: EngineTest `NetSimHarnessTest.WorldsRunOnScenesLentBySceneSource`.
+2. `EditorNetSimSession` 과 Multiplayer 창의 **In process** 탭(새 에디터 확장 `GF_EditorPlugIn_NetSimulation`): 게임은 `NetSimGameRegistry` 에 올라온 것(키트 세션을 구현한 게임)만 고른다. 프레임 시간을 모아 고정 스텝으로 `step` 하고(한 프레임 4 스텝까지),
+   월드마다 미리보기 뷰포트(`EditorPreviewViewport::attachScene` — 남의 씬을 붙여 그린다, 씬은 내리지 않는다)를 나란히 그린다. 탭이 세션을 가지므로 탭이 보일 때만 진행한다.
+3. 입력 초점: `NetSimHarness::setInputFocus` · `NetSimWorld::hasInputFocus` — 한 번에 한 월드뿐이고, 탭에서 월드 칸을 클릭하면 옮겨 간다. 게임 세션은 이 값이 참일 때만 입력을 읽는다(계약). 확인: `NetSimHarnessTest.InputFocusBelongsToOneWorldAtATime`.
+
+남은 것:
+- 올라온 게임이 아직 없다 — 게임 하나가 `INetSimGame` 을 구현해 `NetSimGameRegistry::registerGame` 으로 올리고 세션이 `hasInputFocus` 로 입력을 거르는 일(게임 쪽).
+- 카메라는 오빗 카메라다 — 클라이언트 폰 카메라를 따르는 보기는 게임 세션이 카메라를 알리는 창구가 필요하다.
+- 에디터 시나리오(클라이언트 둘 + 서버, 한 클라이언트에서 움직이면 다른 창의 그 오브젝트가 움직임)와 네 백엔드 캡처.
 
 ## 운영 단위 (실제 운용에 도움이 되는 것 — 디버깅 단위 S1 ~ S5 뒤에 순서를 정한다)
 
@@ -101,7 +117,7 @@ Sync 탭의 클라이언트 원천(2026-10-22): 칸마다 세션 클라이언트
 
 ## 순서
 
-S6 · S7 의 남은 것(눈 확인 · 키트별 해시 · 어긋난 오브젝트 짚기 · 되감기) → S8(S2 중단점 친화 · S1 멀티 프로세스 재생 · S4 회선 조절 · S5 프로파일러 탭은 끝났다 — S5 의 남은 것은 그 절에). 나머지는 S1 의 세션 위에서 확인한다 — 에디터 시나리오 `engine/automation/editor/netplay.scenario.xml` 이 바닥이다. S3 · S5 는 디버그 HUD 의 섹션 레지스트리와 같은 원천을 쓴다.
+S6 · S7 의 남은 것(눈 확인 · Sync 탭 클라이언트 원천 · 키트별 해시) → S8 의 남은 것(S2 중단점 친화 · S1 멀티 프로세스 재생 · S4 회선 조절 · S5 프로파일러 탭은 끝났다 — S5 의 남은 것은 그 절에). 나머지는 S1 의 세션 위에서 확인한다 — 에디터 시나리오 `engine/automation/editor/netplay.scenario.xml` 이 바닥이다. S3 · S5 는 디버그 HUD 의 섹션 레지스트리와 같은 원천을 쓴다.
 
 ## 지키는 것
 

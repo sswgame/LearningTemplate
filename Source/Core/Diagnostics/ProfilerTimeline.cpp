@@ -9,6 +9,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Network/Connection/NetFlowLog.h"
 
 #include <thread>
 
@@ -76,6 +77,7 @@ namespace sw
 
     ProfilerTimeline::~ProfilerTimeline()
     {
+        setRecording( false ); // 흐름 링의 기록 수를 되돌린다
         for ( atomic<ThreadBuffer*>& slot : _arrThreadBuffer )
         {
             sw_delete( slot.exchange( nullptr, std::memory_order_acq_rel ) );
@@ -120,6 +122,23 @@ namespace sw
         _arrThreadBuffer[index].store( pBuffer, std::memory_order_release );
         cache._pBuffer = pBuffer;
         return pBuffer;
+    }
+
+    void ProfilerTimeline::setRecording( bool bRecording )
+    {
+        const bool bWasRecording = _bRecording.exchange( bRecording, std::memory_order_relaxed );
+#if SW_NET_FLOW_LOG_ENABLED
+        // 타임라인이 기록하는 동안 네트워크 흐름도 남긴다 — 트레이스 저장이 같은 구간의 흐름을 함께 쓴다(`NetFlowLog`).
+        if ( bWasRecording != bRecording )
+        {
+            if ( bRecording )
+                NetFlowLog::addRecorder();
+            else
+                NetFlowLog::removeRecorder();
+        }
+#else
+        (void)bWasRecording; // 흐름 링은 트레이스 내보내기가 있는 구성에만 있다
+#endif
     }
 
     void ProfilerTimeline::recordEvent( uint32 slot, uint64 beginNanos, uint64 endNanos, uint16 depth )

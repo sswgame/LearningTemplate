@@ -110,6 +110,12 @@ namespace sw
          *          조명과 톤맵은 효과가 아니라 이미지를 만드는 단계라 이 비트가 없다.
          */
         static constexpr uint32 kSkipsWithoutPostProcess = SW_BIT( 14 );
+        /**
+         * @brief 파이프라인이 선언한 컬러 출력에 그린다 — 선언이 없으면 로드가 실패한다(`RenderPipelineAsset::validate` 3-1).
+         * @details 실행은 이름(SceneColor · TaaColor 등)으로 타깃을 짐작하지 않는다. 짐작하던 길은 없는 첨부의 핸들 0(백버퍼)을 열었다.
+         *          `kGenericFullscreen` 패스도 같은 규칙이다(표의 `makeInfo` 가 함께 붙인다).
+         */
+        static constexpr uint32 kDrawsDeclaredColor = SW_BIT( 15 );
     };
 } // namespace sw
 
@@ -134,8 +140,6 @@ namespace sw
         const utf8* _pExcludedMaterialDefine{ nullptr };
         /** @brief 고정 컬러 포맷(`_colorTargetCount` 개)입니다. nullptr 이면 패스가 선언한 출력의 포맷을 씁니다. */
         const RHIFormat* _pColorFormat{ nullptr };
-        /** @brief 풀스크린 패스가 타깃 첨부의 클리어 색 선언이 없을 때 쓰는 색입니다. nullptr 이면 렌더러의 클리어 색을 씁니다. */
-        const float4* _pDefaultClear{ nullptr };
         /** @brief 이 패스 타입이 읽는 입력의 역할입니다. `kHasInputContract` 일 때만 의미가 있습니다. */
         RenderPassInputSignature _inputContract{};
         /** @brief 테이블의 항목 순서를 검사하는 용도입니다. 항목 번호가 이 값입니다. */

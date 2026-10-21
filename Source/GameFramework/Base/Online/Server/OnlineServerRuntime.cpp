@@ -162,7 +162,7 @@ namespace sw
                 return false;
             }
         }
-        if ( registerServer( settings, outError ) == false )
+        if ( registerServer( outError ) == false )
             return false;
 
         if ( parts._pHealthRegistry != nullptr )
@@ -250,6 +250,14 @@ namespace sw
         context._pConfig                = &parts._config;
         context._serverID               = serverID;
         context._nowMs                  = nowMs;
+        ServerDescriptor& descriptor    = context._serverDescriptor;
+        descriptor._serverID            = serverID;
+        descriptor._kind                = parts._config._serverKind;
+        descriptor._region              = parts._config._region;
+        descriptor._address             = parts._config._publicAddress;
+        descriptor._port                = settings._gamePort;
+        descriptor._portCount           = settings._gamePortCount;
+        descriptor._capacity            = parts._config._capacity;
         return true;
     }
 
@@ -360,19 +368,12 @@ namespace sw
         return true;
     }
 
-    bool OnlineServerRuntime::registerServer( const OnlineServerRuntimeConfig& settings, string& outError )
+    bool OnlineServerRuntime::registerServer( string& outError )
     {
         Parts& parts = *_parts;
         if ( parts._config._publicAddress.empty() )
             return true; // 서비스 전용 서버 — 게임 서버로 고를 대상이 아니다
-        ServerDescriptor descriptor;
-        descriptor._serverID  = parts._context._serverID;
-        descriptor._kind      = parts._config._serverKind;
-        descriptor._region    = parts._config._region;
-        descriptor._address   = parts._config._publicAddress;
-        descriptor._port      = settings._gamePort;
-        descriptor._portCount = settings._gamePortCount;
-        descriptor._capacity  = parts._config._capacity;
+        const ServerDescriptor& descriptor = parts._context._serverDescriptor;
         if ( parts._registration.initialize( parts._context._pRouter, descriptor ) == false )
         {
             outError = "this server could not be registered in the server directory (kind '" + descriptor._kind + "', region '" + descriptor._region + "')";

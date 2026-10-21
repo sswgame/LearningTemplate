@@ -101,7 +101,7 @@ namespace sw
         [[nodiscard]] bool createStores( OnlineServerRuntimeConfig& settings, int64 nowMs, string& outError );
         [[nodiscard]] bool createKits( const OnlineServerRuntimeConfig& settings, string& outError );
         [[nodiscard]] bool startHost( OnlineServerRuntimeConfig& settings, string& outError );
-        [[nodiscard]] bool registerServer( const OnlineServerRuntimeConfig& settings, string& outError );
+        [[nodiscard]] bool registerServer( string& outError );
 
         unique_ptr<Parts> _parts;
         uint8             _bInitialized;

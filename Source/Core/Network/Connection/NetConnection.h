@@ -131,6 +131,12 @@ namespace sw
         /** @brief 보낼 줄에서 기다리는 비신뢰 메시지 수입니다. 0 보다 크면 앞 패킷이 다 싣지 못했다(대역폭 포화). */
         int32  getQueuedUnreliableCount() const { return static_cast<int32>( _listOutgoingUnreliable.size() ); }
         uint16 getNextPacketSequence() const { return _nextPacketSequence; }
+        /**
+         * @brief 트레이스 흐름 id 를 만들 연결 신원(양쪽 솔트의 XOR 토큰, 이쪽이 서버인가)을 줍니다. `NetHost` 가 연결이 맺어질 때 부릅니다. `reset` 이 지웁니다.
+         * @details 신원이 있는 동안 모든 채널의 메시지가 흐름을 남긴다(`NetFlowLog` — 타임라인이 기록할 때만). 채널마다 양쪽이 같게 아는 번호가 다르다(`recordFlow`).
+         *          비신뢰 · 순서만 · 신뢰 순서 없음은 보낸 곳 · 받은 곳을 선(패킷을 쓸 때 · 읽을 때)에서 찍고, 신뢰 순서는 넣을 때 · 꺼낼 때 찍는다.
+         */
+        void setFlowIdentity( uint64 connectionToken, bool bLocalIsServer );
 
     private:
         struct SentPacket
@@ -232,6 +238,7 @@ namespace sw
             int32       _budgetBits{ 0 };
             int32       _usedBits{ 0 };
             int32       _written{ 0 };
+            uint16      _sequence{ 0 }; ///< 이 패킷의 번호 — 비신뢰 · 순서만 메시지의 흐름 id 가 (번호, 패킷 안 자리)다
 
             /** @brief 메시지 하나를 "더 있다" 1비트와 함께 씁니다. 예산이나 메시지 수 상한을 넘으면 쓰지 않고 false 를 반환합니다. */
             [[nodiscard]] bool tryWriteMessage( NetChannelType channel, uint16 messageID, const vector<uint8>& buffer, bool bMore );
@@ -248,8 +255,16 @@ namespace sw
 
         /** @brief 패킷의 메시지를 모두 읽어 `_listParsedScratch` 에 둡니다. 깨졌으면 false 이고, 그때는 아무것도 적용하지 않습니다. */
         [[nodiscard]] bool parseMessages( BitReader& reader );
-        /** @brief 읽은 메시지 하나를 채널 규칙대로 받은 큐나 신뢰 슬롯에 넣습니다(중복 · 창 밖 · 늦은 순서만은 버린다). */
-        void dispatchParsedMessage( ParsedMessage& message );
+        /**
+         * @brief 읽은 메시지 하나를 채널 규칙대로 받은 큐나 신뢰 슬롯에 넣습니다(중복 · 창 밖 · 늦은 순서만은 버린다).
+         * @param sequence 그 메시지를 실은 패킷 번호, @p position 패킷 안의 자리(0 부터) — 비신뢰 · 순서만 메시지의 흐름 id 다
+         */
+        void dispatchParsedMessage( ParsedMessage& message, uint16 sequence, uint32 position );
+        /**
+         * @brief 메시지 하나의 흐름 사건을 남깁니다(`NetFlowLog`). 흐름 신원(`setFlowIdentity`)이 없으면 아무것도 하지 않습니다.
+         * @param wireIndex 양쪽이 같게 아는 메시지 번호 — 신뢰 순서는 넣은 · 꺼낸 순번, 신뢰 순서 없음은 신뢰 ID, 비신뢰 · 순서만은 (패킷 번호 << 8 | 자리)
+         */
+        void recordFlow( NetChannelType channel, uint64 wireIndex, const uint8* pData, size_t size, bool bReceive ) const;
 
         /** @brief 다시 쓸 메시지 버퍼 하나를 꺼냅니다. 없으면 빈 버퍼입니다(처음 쓸 때 할당한다). */
         vector<uint8> acquireBuffer();
@@ -283,7 +298,12 @@ namespace sw
         vector<NetDeliveryNotice>                                                _listDeliveryNotice;   ///< 판정이 나서 `drainDeliveryNotices` 를 기다리는 전달 통지.
         NetConnectionStats                                                       _stats;
         float64                                                                  _lastStatsTime;
-        float64                                                                  _lastAckRequestTime; ///< 확인을 요청한 패킷을 마지막으로 보낸 시각.
+        float64                                                                  _lastAckRequestTime;   ///< 확인을 요청한 패킷을 마지막으로 보낸 시각.
+        uint64                                                                   _orderedSentCount;     ///< 신뢰 순서 채널에 넣은 메시지 수
+        uint64                                                                   _orderedReceivedCount; ///< 신뢰 순서 채널에서 꺼낸 메시지 수
+        uint64                                                                   _flowToken;            ///< 흐름 id 의 연결 토큰(`setFlowIdentity`)
+        uint8                                                                    _bFlowIdentity;        ///< 흐름 신원이 있다 — 없으면 흐름을 남기지 않는다
+        uint8                                                                    _bFlowLocalServer;     ///< 이쪽이 서버다
         uint16                                                                   _nextPacketSequence;
         uint16                                                                   _nextReliableSendID;
         uint16                                                                   _oldestUnackedReliableID;

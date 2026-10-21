@@ -341,4 +341,54 @@ SW_TEST_CASE( ProfilerTraceExportTest, MarkersAndHostNameAreWritten )
     SW_EXPECT_EQUAL( sw::string( "PC1" ), trace._meta._hostName );
 }
 
+/**
+ * @brief [ProfilerTraceExportTest] 네트워크 흐름은 "Net messages" 줄에 구간 하나와 흐름 이벤트(보냄 `s`, 받음 `f` + `bp:e`)로 나가고 id 는 16 진 글이다
+ * @details 흐름 이벤트는 감싸는 구간에 묶여야 뷰어가 화살표를 그린다. 같은 시각의 1 us 구간이 그 자리다. 읽기(`parseTraceJSON`)는 구간만 읽는다.
+ */
+SW_TEST_CASE( ProfilerTraceExportTest, NetFlowsAreWrittenAsBoundFlowEvents )
+{
+    sw::ProfilerTraceMeta meta = makeMeta();
+    meta._listFlow.push_back( { 3000, 0x1ABCull, 0x81, false } );
+    meta._listFlow.push_back( { 4000, 0x1ABCull, 0x81, true } );
+    const sw::string json = sw::ProfilerTraceExport::makeTraceJSON( makeThreads(), {}, { "a", "b" }, meta );
+
+    sw::JSONDocument document;
+    SW_ASSERT_TRUE( document.parse( json ) );
+    const sw::JSONValue events       = document.getRoot().get( "traceEvents" );
+    int64               flowTid      = -1;
+    uint32              sliceCount   = 0;
+    bool                bFoundStart  = false;
+    bool                bFoundFinish = false;
+    for ( size_t index = 0; index < events.size(); ++index )
+    {
+        const sw::JSONValue event = events.at( index );
+        const sw::string    phase = event.get( "ph" ).asString();
+        if ( phase == "M" && event.get( "args" ).get( "name" ).asString() == "Net messages" )
+            flowTid = event.get( "tid" ).read<int64>().value();
+        if ( phase == "X" && event.get( "cat" ).asString() == "net" )
+            ++sliceCount;
+        if ( phase == "s" )
+        {
+            bFoundStart = true;
+            SW_EXPECT_EQUAL( sw::string( "0x1ABC" ), event.get( "id" ).asString() );
+            SW_EXPECT_EQUAL( 3.0, event.get( "ts" ).read<float64>().value() );
+        }
+        if ( phase == "f" )
+        {
+            bFoundFinish = true;
+            SW_EXPECT_EQUAL( sw::string( "0x1ABC" ), event.get( "id" ).asString() );
+            SW_EXPECT_EQUAL( sw::string( "e" ), event.get( "bp" ).asString() );
+            SW_EXPECT_EQUAL( flowTid, event.get( "tid" ).read<int64>().value() );
+        }
+    }
+    SW_EXPECT_TRUE( flowTid > 0 );
+    SW_EXPECT_EQUAL( 2u, sliceCount );
+    SW_EXPECT_TRUE( bFoundStart );
+    SW_EXPECT_TRUE( bFoundFinish );
+
+    sw::ProfilerLoadedTrace trace;
+    sw::string              error;
+    SW_EXPECT_TRUE( sw::ProfilerTraceExport::parseTraceJSON( json, trace, error ) );
+}
+
 #endif // SW_PROFILER_TRACE_ENABLED

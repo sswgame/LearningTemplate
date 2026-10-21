@@ -5,6 +5,7 @@
 #include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Rule/MatchModeCatalog.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchQueueService.h"
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchServerAgent.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchmakingServer.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/PartyLobbyService.h"
 
@@ -15,6 +16,8 @@
 //   mode          `<id>:<팀 수>x<팀 인원>`(예: `duo:2x2`) — 데이터 파일 없이 도는 도구 · 테스트용(여러 번 적는다).
 //   maxPartySize  파티 최대 인원(기본 4).
 //   reconnectGraceMs  떠난 계정을 파티와 로비에 남겨 둘 밀리초(기본 60000, 0 이면 바로 뺀다).
+//   gameServer    이 서버가 매칭이 배정하는 전용 게임 서버다(기본 false). 배정 주제(`mm.assign.<서버 id>`)를 받아 배정받은 계정만
+//                 게임 포트에 들인다 — 받아들이기 정책을 문맥(`_pConnectAdmission`)에 내놓고 계정 키트의 `gameConnect` 가 쓴다(OnlineKits F5).
 // 채팅 키트가 있으면 파티 채널 멤버를 맞춘다.
 
 namespace sw
@@ -40,9 +43,11 @@ namespace sw
                 , _partyLobby{}
                 , _queue{}
                 , _server{}
+                , _agent{}
                 , _maxPartySize{ MatchmakingOnlineServerKitInternal::kDefaultMaxPartySize }
                 , _reconnectGraceMs{ MatchmakingOnlineServerKitInternal::kDefaultReconnectGraceMs }
                 , _bStarted{ false }
+                , _bGameServer{ false }
             {
             }
 
@@ -54,7 +59,8 @@ namespace sw
                                             {         "catalog",       catalogPath},
                                             {            "mode",       listCompact},
                                             {    "maxPartySize",     _maxPartySize},
-                                            {"reconnectGraceMs", _reconnectGraceMs}
+                                            {"reconnectGraceMs", _reconnectGraceMs},
+                                            {      "gameServer",      _bGameServer}
                 },
                                         outError ) == false )
                     return false;
@@ -84,6 +90,11 @@ namespace sw
                 }
                 if ( registerHostService( context, entry, &_server, outError ) == false )
                     return false;
+                if ( _bGameServer )
+                {
+                    _agent.initialize( context._serverDescriptor );
+                    context._pConnectAdmission = &_agent;
+                }
                 return true;
             }
 
@@ -115,7 +126,7 @@ namespace sw
                     outError = "matchmaking option reconnectGraceMs must be 0 or more";
                     return false;
                 }
-                _server.initialize( &_partyLobby, &_queue, nullptr, context._pPresence );
+                _server.initialize( &_partyLobby, &_queue, _bGameServer ? &_agent : nullptr, context._pPresence ); // 배정 구독 · 시한은 서버가 돈다
                 _server.setReconnectGrace( _reconnectGraceMs );
                 _server.setGroupChannels( context._pGroupChannels );
                 _bStarted = true;
@@ -138,9 +149,11 @@ namespace sw
             PartyLobbyService           _partyLobby;
             MatchQueueService           _queue;
             MatchmakingServer           _server;
+            MatchServerAgent            _agent; ///< `gameServer` 일 때만 쓴다 — 배정받은 계정 목록(접속 인증기가 네트워크 스레드에서 묻는다)
             int32                       _maxPartySize;
             int32                       _reconnectGraceMs;
             bool                        _bStarted;
+            bool                        _bGameServer;
         };
     } // namespace
 } // namespace sw

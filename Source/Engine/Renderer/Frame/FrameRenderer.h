@@ -505,17 +505,20 @@ namespace sw
          *          않는다. 주의: 병렬 기록 스레드가 배리어를 정하게 하면 중복 배리어와 레이아웃 불일치가 생긴다.
          */
         void onGraphLevelPrologue( const RenderGraphLevelContext& context );
-        /** @brief 패스 타입에 맞는 실행 함수를 부릅니다. 공통 입력(`PassExecuteInput`)을 한 번 정하고 패스별 `execute*Pass` 로 나눠 줍니다. */
-        void executePass( FramePassContext& context, RenderPassType passType, string_view passName, const hashed_string& depthAttachment,
-                          const RenderGraphPassDesc* pPassDesc );
+        /**
+         * @brief 패스 타입에 맞는 실행 함수를 부릅니다. 공통 입력(`PassExecuteInput`)을 한 번 정하고 패스별 `execute*Pass` 로 나눠 줍니다.
+         * @details 패스 서술을 참조로 받는다 — 서술 없이 원본 이름(SceneColor · TaaColor 등)으로 타깃을 짐작하던 길을 형식으로 막았다.
+         *          컬러 타깃은 서술의 `_listResolvedColorOutput` 이고 로드가 그 선언을 요구한다(`RenderPassTraitFlag::kDrawsDeclaredColor`).
+         */
+        void executePass( FramePassContext& context, const RenderGraphPassDesc& passDesc );
 
         /** @brief 패스 하나를 실행할 때 패스별 실행 함수가 함께 쓰는 입력입니다. `executePass` 가 한 번 정합니다. */
         struct PassExecuteInput
         {
             FramePassContext&                                      _context;
             RenderPassType                                         _passType;
-            const RenderGraphPassDesc*                             _pPassDesc;         ///< 패스 서술(없으면 nullptr — 원본 이름으로 간다)
-            const vector<RenderGraphPassDesc::ResolvedAttachment>* _pDeclaredColor;    ///< 선언한 컬러 출력(선언 순서, 없으면 nullptr)
+            const RenderGraphPassDesc&                             _passDesc;          ///< 패스 서술
+            const vector<RenderGraphPassDesc::ResolvedAttachment>& _declaredColor;     ///< 선언한 컬러 출력(선언 순서). kDrawsDeclaredColor 패스는 비어 있지 않다
             hashed_string                                          _passDepth;         ///< 바인딩할 뎁스. 선언이 없거나 이번 프레임에 없으면 빈 이름
             bool                                                   _bTransparentBatch; ///< 이 패스가 투명 배치를 그리는지(테이블 플래그)
         };
@@ -721,8 +724,11 @@ namespace sw
         // ------------------------------------------------------------------------------
         /** @brief 어태치먼트 클리어 색을 찾습니다. */
         [[nodiscard]] bool tryGetAttachmentClearColor( string_view attachmentName, float4& outClearColor ) const;
-        /** @brief 어태치먼트 클리어 색을 반환합니다. 없으면 기본값을 반환합니다. */
-        float4 getAttachmentClearColorOrDefault( string_view attachmentName, const float4& fallback ) const;
+        /**
+         * @brief 패스 타깃의 클리어 색입니다. 파이프라인 XML 의 첨부 선언(풀이 든 값)이 원본이고, 풀에 없는 이름(백버퍼)은 렌더러의 클리어 색입니다.
+         * @details 호출부가 기본값을 넘기지 않는다 — 패스마다 적던 기본값이 선언과 갈라지는 길을 형식으로 막는다.
+         */
+        float4 getTargetClearColor( string_view attachmentName ) const;
         /**
          * @brief 트랜지언트 텍스처와 그 SRV 를 한 번의 조회로 찾습니다. 없으면 빈 값입니다.
          * @details 이름 하나로 둘 다 필요한 곳(registerPassTexture)이 패스마다 여러 번 돈다. 조회를 한 번만 하므로 해시도 한 번이다.
@@ -742,7 +748,7 @@ namespace sw
          */
         PresentTarget resolvePresentTarget() const;
         /** @brief 이 패스가 Swapchain 을 쓰는 마지막 패스면 true 입니다. 스크린샷 캡처를 백버퍼로 복사하는 일을 이 패스 끝에서 합니다. */
-        bool isLastSwapchainWriter( const RenderGraphPassDesc* pPassDesc ) const;
+        bool isLastSwapchainWriter( const RenderGraphPassDesc& passDesc ) const;
         /** @brief 패스 타입으로 파이프라인의 패스 서술을 찾습니다. */
         const RenderGraphPassDesc* findPassDescByType( RenderPassType passType ) const;
 

@@ -1131,3 +1131,84 @@ SW_TEST_CASE( AppSmokeTest, BenchFrameMatchesGoldenImage )
     if ( checkedCount == 0 )
         SW_TEST_SKIP( "no usable RHI backend on this machine — run where a GPU and driver exist" );
 }
+
+/**
+ * @brief [AppSmokeTest] 배포본(Shipping)이 구운 팩의 첫 씬을 골든 이미지와 같게 그린다(`Test/AppTest/Golden/shippingframe_<백엔드>.ppm.z`)
+ * @details 배포본에는 벤치 스위치가 없어 `BenchFrameMatchesGoldenImage` 가 건너뛴다. 이 케이스는 Empty 팩 시나리오 `shippingframe` 가
+ *          고정 틱 30 프레임에서 찍은 그림을 쓴다(시나리오 실행기와 `Screenshot` 단계는 배포본에도 있다). 기준을 새로 뜨려면 Shipping 빌드에서
+ *          `SW_UPDATE_GOLDEN=1` 로 이 케이스를 돌린다. 기준이 없으면 윈도우에서는 실패다(벤치 골든과 같은 규칙 — 조용히 넘기지 않는다).
+ */
+SW_TEST_CASE( AppSmokeTest, ShippingSceneMatchesGoldenImage )
+{
+#if defined( SW_SHIPPING ) == false
+    SW_TEST_SKIP( "this case compares the Shipping build; Debug/Release compare the bench frame (BenchFrameMatchesGoldenImage)" );
+#else
+    constexpr uint32      kChannelTolerance = 2;
+    constexpr const utf8* kScenarioPath     = "game/empty/automation/shippingframe.scenario.xml";
+    constexpr const utf8* kImagePath        = "Saved/Automation/game.empty.shippingframe/shippingframe.ppm";
+    #if defined( SW_RHI_TARGET_DX11 )
+    constexpr const utf8* kBackendName = "dx11";
+    #elif defined( SW_RHI_TARGET_VULKAN )
+    constexpr const utf8* kBackendName = "vk";
+    #elif defined( SW_RHI_TARGET_OPENGL )
+    constexpr const utf8* kBackendName = "gl";
+    #else
+    constexpr const utf8* kBackendName = "dx12";
+    #endif
+    #if defined( SW_PLATFORM_WINDOWS )
+    constexpr const utf8* kGoldenPlatformSuffix = "";
+    constexpr bool        kMissingGoldenFails   = true;
+    #else
+    constexpr const utf8* kGoldenPlatformSuffix = ".linux";
+    constexpr bool        kMissingGoldenFails   = false;
+    #endif
+
+    if ( test::AppTestUtil::readPackRoot( sw::GameSelection::getName() ) != "game/empty" )
+        SW_TEST_SKIP( "the Shipping golden image is the Empty game's first scene; this preset runs another game" );
+    const string goldenDirectory = findGoldenDirectory();
+    SW_ASSERT_TRUE_MSG( goldenDirectory.empty() == false, "Test/AppTest/Golden 을 찾지 못했습니다 — 작업 폴더가 build/<프리셋>/Bin 입니까?" );
+
+    (void)FileUtil::tryRemoveFile( kImagePath ); // 지난 실행의 그림을 읽지 않게 지운다
+    string                    scenarioLines;
+    const test::AppRunOutcome outcome = test::AppTestUtil::runScenario( kScenarioPath, "", scenarioLines );
+    if ( test::hasRunHere( outcome ) == false )
+        SW_TEST_SKIP( "no usable RHI backend on this machine — run where a GPU and driver exist" );
+    if ( outcome == test::AppRunOutcome::Failed )
+        return; // 실패는 runScenario 가 기록했다
+
+    vector<uint8> screenshotBytes;
+    PpmImage      actual{};
+    const bool    bRead = FileUtil::readFile( kImagePath, screenshotBytes ) && parsePpm( screenshotBytes, actual );
+    SW_ASSERT_TRUE_MSG( bRead, ( string( "스크린샷을 읽지 못했습니다: " ) + kImagePath ).c_str() );
+
+    const string imageName  = string( "shippingframe_" ) + kBackendName;
+    const string goldenPath = FileUtil::joinPath( goldenDirectory, imageName + kGoldenPlatformSuffix + ".ppm.z" );
+    const utf8*  pUpdate    = std::getenv( "SW_UPDATE_GOLDEN" );
+    if ( pUpdate != nullptr && pUpdate[0] == '1' )
+    {
+        vector<uint8> goldenBytes;
+        SW_EXPECT_TRUE( CompressionStream::compressBuffer( screenshotBytes.data(), screenshotBytes.size(), goldenBytes, CompressionCodecType::Zlib, 9,
+                                                           &getGoldenCodecRegistry() ) );
+        SW_EXPECT_TRUE_MSG( FileUtil::writeFile( goldenPath, goldenBytes.data(), goldenBytes.size() ), goldenPath.c_str() );
+        SW_LOG_WARNING( "Golden image updated: %#", goldenPath.c_str() );
+        return;
+    }
+    if ( kMissingGoldenFails == false && FileUtil::exists( goldenPath ) == false )
+    {
+        SW_LOG_WARNING( "No golden image for this platform yet - record it with SW_UPDATE_GOLDEN=1: %#", goldenPath.c_str() );
+        return;
+    }
+
+    vector<uint8> goldenBytes;
+    vector<uint8> goldenPpmBytes;
+    PpmImage      expected{};
+    const bool    bGolden = FileUtil::readFile( goldenPath, goldenBytes ) &&
+                         CompressionStream::decompressBuffer( goldenBytes.data(), goldenBytes.size(), goldenPpmBytes, &getGoldenCodecRegistry() ) &&
+                         parsePpm( goldenPpmBytes, expected );
+    SW_ASSERT_TRUE_MSG( bGolden, ( "골든 이미지를 읽지 못했습니다(Shipping 에서 SW_UPDATE_GOLDEN=1 로 뜬다): " + goldenPath ).c_str() );
+    const GoldenDifference difference = compareImage( expected, actual, kChannelTolerance );
+    const string           message    = imageName + ": " + sw::to_string( difference._pixelOverTolerance ) +
+                           " pixel(s) differ by more than the tolerance, max channel difference " + sw::to_string( difference._maxChannelDifference );
+    SW_EXPECT_TRUE_MSG( difference._pixelOverTolerance == 0, message.c_str() );
+#endif
+}

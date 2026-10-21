@@ -62,8 +62,7 @@ namespace sw
         static_assert( kGPUTimestampSlotFrameBegin < constant::kMaxGPUTimestampSlot, "타임스탬프 예약 칸이 백엔드 칸 수를 넘는다" );
         static constexpr auto kDefaultMainPassName = "DefaultMainPass";
         // 첨부의 클리어 색은 파이프라인 XML 의 선언이 정본이다 — 이름으로 짐작해 첨부를 만들 때 쓰던 색(SceneColor · 깊이 · 블룸)은 지웠다.
-        static constexpr float4 kBlackClear  = { 0.0f, 0.0f, 0.0f, 1.0f };
-        static constexpr float4 kNormalClear = { 0.5f, 0.5f, 1.0f, 1.0f };
+        static constexpr float4 kBlackClear = { 0.0f, 0.0f, 0.0f, 1.0f };
 
         /**
          * @brief 뷰의 내부 해상도 한 축(픽셀)을 냅니다. 정수 업스케일(`RenderViewSettings::_upscaleZoom`)이면 출력 사각형 픽셀 / 배율의 내림이고, 아니면
@@ -413,22 +412,7 @@ namespace sw
         {
             return getRenderPassTypeInfo( passType )._colorTargetCount > 0;
         }
-
-        /**
-         * @brief 이름 목록에서 맵에 실제로 있는 첫 이름을 반환합니다(없으면 nullptr).
-         * @details 키 존재만 보고 값은 건드리지 않으므로 어떤 어태치먼트 맵이든 받는다.
-         */
-        template <typename TAttachmentMap>
-        static const utf8* pickFirstExisting( const TAttachmentMap&              mapAttachment,
-                                              std::initializer_list<const utf8*> listName )
-        {
-            for ( const utf8* pName : listName )
-            {
-                if ( mapAttachment.find( pName ) != mapAttachment.end() )
-                    return pName;
-            }
-            return nullptr;
-        }
+        // 이름 목록에서 있는 첫 첨부를 고르던 도우미(`pickFirstExisting`)는 지웠다 — 선언 대신 이름으로 짐작하는 모양이라 다시 쓰지 못하게 했다.
     };
 } // namespace sw
 

@@ -808,6 +808,7 @@ namespace sw
                 slot._lastReceiveTime = packet._nowSeconds;
                 slot._lastSendTime    = -1.0;
                 slot._connection.reset();
+                slot._connection.setFlowIdentity( slot.getConnectionToken(), false ); // 트레이스 흐름 id(`NetFlowLog`)의 연결 신원
                 _clientIndex = static_cast<int32>( packet._valueA );
                 pushEvent( NetHostEvent{ 0, NetDisconnectReason::None, NetHostEvent::Kind::Connected } );
                 return;
@@ -919,6 +920,7 @@ namespace sw
         slot._lastReceiveTime = packet._nowSeconds;
         slot._lastSendTime    = -1.0;
         slot._connection.reset();
+        slot._connection.setFlowIdentity( slot.getConnectionToken(), true ); // 트레이스 흐름 id(`NetFlowLog`)의 연결 신원
         slot._security = std::move( security );
         // 키 확인 태그는 서버에서 클라이언트로 가는 키로 빈 데이터를 봉인한 값이다. 수락을 다시 보낼 때도 같은 태그를 쓴다.
         if ( slot._security != nullptr )

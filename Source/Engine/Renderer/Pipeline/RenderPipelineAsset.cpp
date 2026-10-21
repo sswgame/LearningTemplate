@@ -314,7 +314,7 @@ namespace sw
             }
 
             /**
-             * @brief 3-1 · 3-2) 지오메트리 패스와 하늘은 선언한 컬러 출력에 그리고, G버퍼는 알베도 · 노멀을 한 MRT 패스로 쓴다.
+             * @brief 3-1 · 3-2) 컬러를 그리는 패스(kDrawsDeclaredColor)는 선언한 컬러 출력에 그리고, G버퍼는 알베도 · 노멀을 한 MRT 패스로 쓴다.
              * @details 컬러 출력이 없으면 그릴 곳이 없다(없는 첨부의 핸들 0 은 백버퍼라, 그대로 두면 화면에 그린다). G버퍼의 컬러 수가 표의 값과 다르면
              *          PSO 와 렌더 패스가 어긋나거나, 노멀이 없어 Lighting · SSAO 가 읽을 것이 없다.
              */
@@ -324,12 +324,13 @@ namespace sw
                 const uint32 expectedGBufferColorCount = getRenderPassTypeInfo( RenderPassType::GBuffer )._colorTargetCount;
                 for ( const RenderGraphPassDesc& pass : desc._listPass )
                 {
-                    const bool bGeometryColorPass = pass._resolvedType == RenderPassType::ForwardOpaque || pass._resolvedType == RenderPassType::ForwardOnlyOpaque ||
-                                                    pass._resolvedType == RenderPassType::GBuffer || pass._resolvedType == RenderPassType::Transparent ||
-                                                    pass._resolvedType == RenderPassType::Sky;
-                    if ( bGeometryColorPass && pass._listResolvedColorOutput.empty() )
+                    // 컬러를 그리는 패스(표의 kDrawsDeclaredColor — 지오메트리 · 하늘 · 외곽선 껍질 · TAA · 일반 풀스크린)는 선언한 컬러 출력에 그린다.
+                    // 실행은 이름으로 타깃을 짐작하지 않으므로 선언이 없으면 그릴 곳이 없다(옛 짐작은 없는 첨부의 핸들 0 — 백버퍼 — 를 열었다).
+                    const bool bDrawsColor = isPipelinePassType( pass._resolvedType ) &&
+                                             getRenderPassTypeInfo( pass._resolvedType ).hasFlag( RenderPassTraitFlag::kDrawsDeclaredColor );
+                    if ( bDrawsColor && pass._listResolvedColorOutput.empty() )
                     {
-                        SW_LOG_ERROR( "[%#] pass '%#'(%#): 컬러 출력이 없습니다 — 지오메트리 패스는 _listOutput 에 선언한 컬러 첨부에 그립니다",
+                        SW_LOG_ERROR( "[%#] pass '%#'(%#): 컬러 출력이 없습니다 — 이 패스는 _listOutput 에 선언한 컬러 첨부에 그립니다",
                                       sourcePath, pass._name, pass._type );
                         ++issueCount;
                     }

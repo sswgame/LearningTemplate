@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
+#include "Core/Network/Connection/NetFlowLog.h"
 
 namespace sw
 {
@@ -12,6 +13,9 @@ namespace sw
         struct NetConnectionInternal
         {
             static constexpr int32 kChannelBits = 2;
+
+            /** @brief 비신뢰 · 순서만 메시지의 흐름 번호입니다 — (패킷 번호 << 8 | 패킷 안 자리). 자리는 `kMessageCountMax`(255) 아래다. */
+            static uint64 makeWirePosition( uint16 sequence, int32 position ) { return ( static_cast<uint64>( sequence ) << 8 ) | static_cast<uint64>( position & 0xFF ); }
             static_assert( static_cast<int32>( NetChannelType::Count ) <= ( 1 << kChannelBits ), "every channel must fit in the channel field" );
             static constexpr float64 kRttSmoothing  = 0.1;
             static constexpr float64 kLossSmoothing = 0.1;
@@ -82,6 +86,11 @@ namespace sw
         , _stats{}
         , _lastStatsTime{ 0.0 }
         , _lastAckRequestTime{ -1.0e9 }
+        , _orderedSentCount{ 0 }
+        , _orderedReceivedCount{ 0 }
+        , _flowToken{ 0 }
+        , _bFlowIdentity{ SW_FALSE }
+        , _bFlowLocalServer{ SW_FALSE }
         , _nextPacketSequence{ 0 }
         , _nextReliableSendID{ 0 }
         , _oldestUnackedReliableID{ 0 }
@@ -111,6 +120,11 @@ namespace sw
         _stats                   = NetConnectionStats{};
         _lastStatsTime           = 0.0;
         _lastAckRequestTime      = -1.0e9;
+        _orderedSentCount        = 0;
+        _orderedReceivedCount    = 0;
+        _flowToken               = 0; // 끊긴 연결의 신원으로 새 연결의 흐름을 찍지 않는다
+        _bFlowIdentity           = SW_FALSE;
+        _bFlowLocalServer        = SW_FALSE;
         _nextPacketSequence      = 0;
         _nextReliableSendID      = 0;
         _oldestUnackedReliableID = 0;
@@ -234,7 +248,37 @@ namespace sw
             pMessage->_channel      = channel;
             ++_nextReliableSendID;
         }
+        if ( channel == NetChannelType::ReliableOrdered )
+        {
+            recordFlow( channel, _orderedSentCount, pData, static_cast<size_t>( size ), false );
+            ++_orderedSentCount;
+        }
         return true;
+    }
+
+    void NetConnection::setFlowIdentity( uint64 connectionToken, bool bLocalIsServer )
+    {
+        _flowToken        = connectionToken;
+        _bFlowIdentity    = SW_TRUE;
+        _bFlowLocalServer = bLocalIsServer ? SW_TRUE : SW_FALSE;
+    }
+
+    void NetConnection::recordFlow( NetChannelType channel, uint64 wireIndex, const uint8* pData, size_t size, bool bReceive ) const
+    {
+#if SW_NET_FLOW_LOG_ENABLED
+        if ( _bFlowIdentity == SW_FALSE )
+            return;
+        // 보낸 쪽이 서버인가 — 보낼 때는 이쪽, 받을 때는 상대다.
+        const bool  bFromServer = ( _bFlowLocalServer != SW_FALSE ) != bReceive;
+        const uint8 kind        = ( pData != nullptr && size > 0 ) ? pData[0] : static_cast<uint8>( 0 );
+        NetFlowLog::record( NetFlowLog::makeFlowID( _flowToken, bFromServer, channel, wireIndex ), kind, bReceive );
+#else
+        (void)channel;
+        (void)wireIndex;
+        (void)pData;
+        (void)size;
+        (void)bReceive;
+#endif
     }
 
     bool NetConnection::receiveMessage( NetChannelType channel, vector<uint8>& outBuffer )
@@ -247,6 +291,11 @@ namespace sw
         outBuffer.swap( _arrIncoming[channelIndex].front() );
         recycleBuffer( _arrIncoming[channelIndex].front() );
         _arrIncoming[channelIndex].pop_front();
+        if ( channel == NetChannelType::ReliableOrdered )
+        {
+            recordFlow( channel, _orderedReceivedCount, outBuffer.data(), outBuffer.size(), true );
+            ++_orderedReceivedCount;
+        }
         return true;
     }
 
@@ -258,6 +307,11 @@ namespace sw
             return false;
         vector<uint8>& message = _arrIncoming[channelIndex].front();
         inoutBytes.insert( inoutBytes.end(), message.begin(), message.end() );
+        if ( channel == NetChannelType::ReliableOrdered )
+        {
+            recordFlow( channel, _orderedReceivedCount, message.data(), message.size(), true );
+            ++_orderedReceivedCount;
+        }
         recycleBuffer( message );
         _arrIncoming[channelIndex].pop_front();
         return true;
@@ -376,6 +430,8 @@ namespace sw
                 break;
             if ( pMessage->_lastSentTime >= 0.0 )
                 ++_stats._resentMessageCount;
+            else if ( pMessage->_channel == NetChannelType::ReliableUnordered )
+                recordFlow( pMessage->_channel, messageID, pMessage->_buffer.data(), pMessage->_buffer.size(), false ); // 재전송은 같은 메시지라 처음만 찍는다
             pMessage->_lastSentTime                    = body._time;
             pMessage->_bResendNow                      = SW_FALSE;
             sent._arrReliableID[sent._reliableCount++] = messageID;
@@ -389,6 +445,8 @@ namespace sw
         while ( sequencedWritten < _listOutgoingSequenced.size() &&
                 body.tryWriteMessage( NetChannelType::UnreliableSequenced, _nextSequencedSendID, _listOutgoingSequenced[sequencedWritten], false ) )
         {
+            const vector<uint8>& written = _listOutgoingSequenced[sequencedWritten];
+            recordFlow( NetChannelType::UnreliableSequenced, NetConnectionInternal::makeWirePosition( body._sequence, body._written - 1 ), written.data(), written.size(), false );
             ++_nextSequencedSendID;
             ++sequencedWritten;
         }
@@ -406,6 +464,8 @@ namespace sw
                 break; // 순서를 지키려고 뒤의 메시지도 다음 패킷으로 미룬다
             if ( body.tryWriteMessage( NetChannelType::Unreliable, 0, front._buffer, false ) == false )
                 break;
+            recordFlow( NetChannelType::Unreliable, NetConnectionInternal::makeWirePosition( body._sequence, body._written - 1 ), front._buffer.data(), front._buffer.size(),
+                        false );
             if ( front._bNotified == SW_TRUE )
             {
                 sent._arrNotifiedTag[sent._notifiedCount]  = front._noticeTag;
@@ -445,6 +505,7 @@ namespace sw
         body._time        = time;
         body._resendDelay = computeResendDelay();
         body._budgetBits  = maxBytes * 8 - writer.getBitCount() - 8;
+        body._sequence    = sequence;
         // 조각(1KB)은 패킷을 거의 채운다. 앞 패킷이 순서만과 비신뢰 메시지를 남겼으면 이번에는 그쪽부터 싣고 번갈아 간다.
         // 그러면 큰 신뢰 전송 동안 스냅샷이 굶지 않고, 비신뢰가 많아도 신뢰가 굶지 않는다. 한 번 앞섰으면 다음은 신뢰부터 싣는다.
         const bool bUnreliableFirst = _bUnreliableFirst != SW_FALSE;
@@ -497,7 +558,7 @@ namespace sw
         return true;
     }
 
-    void NetConnection::dispatchParsedMessage( ParsedMessage& message )
+    void NetConnection::dispatchParsedMessage( ParsedMessage& message, uint16 sequence, uint32 position )
     {
         switch ( message._channel )
         {
@@ -515,6 +576,7 @@ namespace sw
                     return;
                 if ( message._channel == NetChannelType::ReliableUnordered )
                 {
+                    recordFlow( message._channel, message._id, message._buffer.data(), message._buffer.size(), true );
                     pIncoming->_bDelivered = SW_TRUE;
                     _arrIncoming[static_cast<int32>( NetChannelType::ReliableUnordered )].push_back( std::move( message._buffer ) );
                     return;
@@ -541,11 +603,13 @@ namespace sw
                     pStream = &_listSequencedReceive.back();
                 }
                 pStream->_lastID = message._id;
+                recordFlow( message._channel, NetConnectionInternal::makeWirePosition( sequence, static_cast<int32>( position ) ), message._buffer.data(), message._buffer.size(), true );
                 _arrIncoming[static_cast<int32>( NetChannelType::UnreliableSequenced )].push_back( std::move( message._buffer ) );
                 return;
             }
             case NetChannelType::Unreliable:
             {
+                recordFlow( message._channel, NetConnectionInternal::makeWirePosition( sequence, static_cast<int32>( position ) ), message._buffer.data(), message._buffer.size(), true );
                 _arrIncoming[static_cast<int32>( NetChannelType::Unreliable )].push_back( std::move( message._buffer ) );
                 return;
             }
@@ -582,9 +646,9 @@ namespace sw
             _bAckPending = SW_TRUE;
         processAcks( time, ack, ackBits );
 
-        for ( ParsedMessage& message : _listParsedScratch )
+        for ( size_t position = 0; position < _listParsedScratch.size(); ++position )
         {
-            dispatchParsedMessage( message );
+            dispatchParsedMessage( _listParsedScratch[position], sequence, static_cast<uint32>( position ) );
         }
         for ( IncomingReliable* pIncoming = _incomingReliable.find( _nextReliableReceiveID ); pIncoming != nullptr;
               pIncoming                   = _incomingReliable.find( _nextReliableReceiveID ) )

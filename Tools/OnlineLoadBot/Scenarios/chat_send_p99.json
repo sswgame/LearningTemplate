@@ -1,0 +1,17 @@
+{
+    "_name": "chat_send_p99",
+    "_botCount": 2000,
+    "_rampUpSeconds": 30,
+    "_durationSeconds": 240,
+    "_seed": 7,
+    "_region": "kr",
+    "_listStep": [
+        { "_action": "login", "_mode": "guest" },
+        { "_action": "chat_join", "_channel": "world.p99" },
+        { "_action": "repeat", "_count": 60, "_listStep": [
+            { "_action": "chat_send", "_channel": "world.p99", "_text": "p99 {bot} #{seq}" },
+            { "_action": "wait", "_minMs": 1000, "_maxMs": 3000 }
+        ] },
+        { "_action": "logout" }
+    ]
+}

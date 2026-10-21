@@ -15,6 +15,7 @@
 
 #include "Engine/Observability/ServiceFactoryList.h"
 
+#include "GameFramework/Base/Online/Directory/ServerRecord.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -30,6 +31,7 @@ namespace sw
     class IAccountSessionControl;
     class IAccountStatSource;
     class IBalanceNotice;
+    class IConnectAdmission;
     class IEphemeralStore;
     class IGroupChannelMembership;
     class ILedgerPolicy;
@@ -79,7 +81,8 @@ namespace sw
         ServiceHealthRegistry*    _pHealthRegistry{ nullptr };
         const OnlineServerConfig* _pConfig{ nullptr };
         uint64                    _serverID{ 1 };
-        int64                     _nowMs{ 0 }; ///< 시작 시각(UTC 밀리초). 테스트는 가짜 시각을 넣는다
+        ServerDescriptor          _serverDescriptor{}; ///< 이 서버의 설명(id · 종류 · 지역 · 공개 주소 · 게임 포트와 수). 디렉터리 등록과 매칭 백필이 같은 값을 쓴다
+        int64                     _nowMs{ 0 };         ///< 시작 시각(UTC 밀리초). 테스트는 가짜 시각을 넣는다
 
         // 키트가 `initialize` 에서 내놓고 다른 키트가 `start` 에서 읽는다. 내놓는 키트가 없으면 null 이다.
         IAccountDirectory*        _pAccountDirectory{ nullptr }; ///< 계정 키트
@@ -94,6 +97,7 @@ namespace sw
         const IAccountStatSource* _pStatSource{ nullptr };       ///< 순위표 키트(접속한 계정의 통계, 매칭 실력)
         IOfflinePushSender*       _pOfflinePush{ nullptr };      ///< 라이브 운영 키트(오프라인 계정의 기기 푸시)
         ILiveEventControl*        _pLiveEventControl{ nullptr }; ///< 라이브 운영 키트(GM 의 이벤트 운영)
+        const IConnectAdmission*  _pConnectAdmission{ nullptr }; ///< 매칭 키트의 게임 서버 쪽(`gameServer` — 배정받은 계정만). 계정 키트의 `gameConnect` 가 읽는다
     };
 } // namespace sw
 

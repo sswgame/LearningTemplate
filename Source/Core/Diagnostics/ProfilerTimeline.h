@@ -69,8 +69,8 @@ namespace sw
         ProfilerTimeline( const ProfilerTimeline& )            = delete;
         ProfilerTimeline& operator=( const ProfilerTimeline& ) = delete;
 
-        /** @brief 기록을 켜거나 끕니다. 끄면 새 사건만 멈추고 남은 사건은 그대로 읽힙니다. */
-        void setRecording( bool bRecording ) { _bRecording.store( bRecording, std::memory_order_relaxed ); }
+        /** @brief 기록을 켜거나 끕니다. 끄면 새 사건만 멈추고 남은 사건은 그대로 읽힙니다. 기록 중인 타임라인이 하나라도 있으면 네트워크 흐름(`NetFlowLog`)도 남깁니다. */
+        void setRecording( bool bRecording );
         /** @brief 기록 중이면 true 입니다. */
         bool isRecording() const { return _bRecording.load( std::memory_order_relaxed ); }
 

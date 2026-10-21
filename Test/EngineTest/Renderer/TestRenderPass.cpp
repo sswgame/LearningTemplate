@@ -606,16 +606,45 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
         SW_EXPECT_TRUE( res.validate( "unit-test" ) > 0u );
     }
 
-    // 3) Swapchain 은 첨부로 선언하지 않는 예약어라 통과해야 한다
+    // 3) Swapchain 은 첨부로 선언하지 않는 예약어라 통과해야 한다(화면에 낼 색 입력은 Present 의 필수 입력이다)
+    {
+        sw::RenderPipelineAsset  res;
+        sw::RenderPipelineDesc&  desc = res.getDesc();
+        sw::RenderPassAttachment source{};
+        source._name = "SceneColor";
+        desc._listAttachment.push_back( source );
+        sw::RenderGraphPassDesc pass{};
+        pass._name = "Blit";
+        pass._type = "Present";
+        pass._listInput.push_back( "SceneColor" );
+        pass._listOutput.push_back( "Swapchain" );
+        desc._listPass.push_back( pass );
+        SW_EXPECT_EQUAL( 0u, res.validate( "unit-test" ) );
+    }
+    // 3-1) 화면에 낼 색을 선언하지 않은 Present 는 오류다 — 실행은 이름 후보로 짐작하지 않는다
     {
         sw::RenderPipelineAsset res;
-        sw::RenderPipelineDesc& desc = res.getDesc();
         sw::RenderGraphPassDesc pass{};
         pass._name = "Blit";
         pass._type = "Present";
         pass._listOutput.push_back( "Swapchain" );
-        desc._listPass.push_back( pass );
-        SW_EXPECT_EQUAL( 0u, res.validate( "unit-test" ) );
+        res.getDesc()._listPass.push_back( pass );
+        SW_EXPECT_EQUAL( 1u, res.validate( "unit-test" ) );
+    }
+    // 3-2) 컬러를 그리는 패스(외곽선 껍질 · TAA · 일반 풀스크린)도 컬러 출력 선언이 없으면 오류다
+    for ( const utf8* pType : { "MeshOutline", "TAA", "Tonemap" } )
+    {
+        sw::RenderPipelineAsset  res;
+        sw::RenderPassAttachment source{};
+        source._name = "SceneColor";
+        res.getDesc()._listAttachment.push_back( source );
+        sw::RenderGraphPassDesc pass{};
+        pass._name = "NoColor";
+        pass._type = pType;
+        if ( sw::string_view( pType ) != "MeshOutline" )
+            pass._listInput.push_back( "SceneColor" ); // 계약의 필수 입력은 채워 컬러 출력 오류 하나만 남긴다
+        res.getDesc()._listPass.push_back( pass );
+        SW_EXPECT_TRUE_MSG( res.validate( "unit-test" ) == 1u, pType );
     }
 
     // 4) 알 수 없는 첨부 포맷
@@ -1250,16 +1279,29 @@ SW_TEST_CASE( RenderPassTest, CanvasAfterSwapchainWriterIsRejected )
         pass._listOutput.push_back( pOutput );
         return pass;
     };
+    // Present 는 화면에 낼 색(SourceColor)을 필수 입력으로 받는다 — 각 판에 그 첨부와 입력을 함께 둔다.
+    auto addPresent = []( sw::RenderPipelineAsset& res )
+    {
+        sw::RenderPassAttachment source{};
+        source._name = "PresentSource";
+        res.getDesc()._listAttachment.push_back( source );
+        sw::RenderGraphPassDesc pass{};
+        pass._name = "Present";
+        pass._type = "Present";
+        pass._listInput.push_back( "PresentSource" );
+        pass._listOutput.push_back( "Swapchain" );
+        res.getDesc()._listPass.push_back( pass );
+    };
     {
         sw::RenderPipelineAsset res;
-        res.getDesc()._listPass.push_back( makePass( "Present", "Present", "Swapchain" ) );
+        addPresent( res );
         res.getDesc()._listPass.push_back( makePass( "Canvas", "Canvas", "Swapchain" ) );
         SW_EXPECT_EQUAL( 0u, res.validate( "unit-test" ) );
     }
     {
         sw::RenderPipelineAsset res;
         res.getDesc()._listPass.push_back( makePass( "Canvas", "Canvas", "Swapchain" ) );
-        res.getDesc()._listPass.push_back( makePass( "Present", "Present", "Swapchain" ) );
+        addPresent( res );
         SW_EXPECT_EQUAL( 1u, res.validate( "unit-test" ) );
     }
     {
@@ -1267,7 +1309,7 @@ SW_TEST_CASE( RenderPassTest, CanvasAfterSwapchainWriterIsRejected )
         sw::RenderPassAttachment attachment{};
         attachment._name = "UIColor";
         res.getDesc()._listAttachment.push_back( attachment );
-        res.getDesc()._listPass.push_back( makePass( "Present", "Present", "Swapchain" ) );
+        addPresent( res );
         res.getDesc()._listPass.push_back( makePass( "Canvas", "Canvas", "UIColor" ) );
         SW_EXPECT_EQUAL( 1u, res.validate( "unit-test" ) );
     }
@@ -1276,7 +1318,7 @@ SW_TEST_CASE( RenderPassTest, CanvasAfterSwapchainWriterIsRejected )
         sw::RenderPassAttachment attachment{};
         attachment._name = "SceneColor";
         res.getDesc()._listAttachment.push_back( attachment );
-        res.getDesc()._listPass.push_back( makePass( "Present", "Present", "Swapchain" ) );
+        addPresent( res );
         sw::RenderGraphPassDesc canvas = makePass( "Canvas", "Canvas", "Swapchain" );
         canvas._listInput.push_back( "SceneColor" );
         res.getDesc()._listPass.push_back( canvas );

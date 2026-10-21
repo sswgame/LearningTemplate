@@ -6,6 +6,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 
+#include "Engine/Net/GameConnectSecurity.h"
 #include "Engine/Resource/ResourcePaths.h"
 
 #include "GameFramework/Base/Online/Security/OpenSSL/OpenSSLNetSecurityProvider.h"
@@ -49,6 +50,17 @@ namespace sw
         static OpenSSLNetSecurityProvider s_provider; // GameFramework 안 — 게임 · 키트 모듈 리로드에 살아남는다
         return s_provider;
     }
+
+    /**
+     * @brief 전용 서버의 접속 티켓 게임 포트(`GameConnectSecurity`, Engine)가 이 제공자를 쓰게, GameFramework 모듈이 서고 내려갈 때 꺼내는 함수를 넣고 뺍니다.
+     * @details Engine 은 OpenSSL 구현을 모른다. 함수를 넣는 것이라 제공자는 처음 쓸 때 만든다(정적 초기화 순서에 기대지 않는다).
+     */
+    struct NetSecurityGameConnectRegistrar
+    {
+        NetSecurityGameConnectRegistrar() { GameConnectSecurity::get().setProviderAccessor( &NetSecurity::getProvider ); }
+        ~NetSecurityGameConnectRegistrar() { GameConnectSecurity::get().setProviderAccessor( nullptr ); }
+    };
+    const NetSecurityGameConnectRegistrar s_netSecurityGameConnectRegistrar;
 
     bool NetSecurity::ensureDevCertificate( string& outCertificateFile, string& outPrivateKeyFile, string& outError )
     {

@@ -16,6 +16,7 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/NetEmulationPresetTable.h"
 #include "Engine/Config/Server/ServerConfig.h"
+#include "Engine/Net/GameConnectSecurity.h"
 #include "Engine/Observability/ServerServiceRegistry.h"
 #include "Engine/Reflection/EnumName.h"
 
@@ -416,6 +417,22 @@ namespace sw
         {
             outParams = GameNetSessionParams{};
             return false;
+        }
+        if ( config._bGameConnectTicket )
+        {
+            // 접속 티켓(OnlineKits F5): 게임 포트를 암호화하고 연결을 계정 키트가 낸 티켓의 세션 비밀에 묶는다. 인증기는 서버 서비스가 선 뒤에 묶이므로
+            // 자리(`GameConnectSecurity`)를 끼워 두고, 묶이기 전에 온 접속은 거절한다. 암호 제공자가 없으면(GameFramework 가 안 섰다) 열지 않는다.
+            GameConnectSecurity&  security  = GameConnectSecurity::get();
+            INetSecurityProvider* pProvider = security.findProvider();
+            if ( pProvider == nullptr )
+            {
+                SW_LOG_ERROR( "Server config _bGameConnectTicket needs the network security provider (GameFramework) - the game port stays closed" );
+                outParams = GameNetSessionParams{};
+                return false;
+            }
+            outParams._hostSettings._security._mode           = NetSecurityMode::Encrypted;
+            outParams._hostSettings._security._pProvider      = pProvider;
+            outParams._hostSettings._security._pAuthenticator = &security;
         }
         return true;
     }

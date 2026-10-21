@@ -68,6 +68,31 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @class INetSimSceneSource
+     * @brief 하니스 월드의 씬을 빌려 주는 쪽입니다. 에디터의 한 프로세스 재생은 `SceneManager` 의 미리보기 씬을 빌려 주어(`NetSimPreviewSceneSource`)
+     *        월드마다 자기 렌더 타깃에 그린다(ServerDebug S8).
+     * @details 빌린 씬은 하니스가 틱한다(`GameObjectManager::update` 를 직접 부른다) — 빌려 주는 쪽은 씬 매니저가 그 씬을 틱하지 않게 해야 한다.
+     *          씬을 빌려 주지 못하면 nullptr 을 돌려주고, 그 월드는 만들어지지 않는다(`initialize` false · `addClient` −1).
+     */
+    class INetSimSceneSource
+    {
+    public:
+        INetSimSceneSource()          = default;
+        virtual ~INetSimSceneSource() = default;
+
+        INetSimSceneSource( const INetSimSceneSource& )            = delete;
+        INetSimSceneSource& operator=( const INetSimSceneSource& ) = delete;
+
+        /** @brief @p role · @p worldIndex 월드의 씬을 빌려 줍니다. 못 하면 nullptr 입니다. */
+        virtual Scene* acquireScene( NetSimRole role, int32 worldIndex ) = 0;
+        /** @brief 빌려 준 씬을 돌려받습니다. 월드가 플레이를 끝낸 뒤 부릅니다. */
+        virtual void releaseScene( Scene& scene ) = 0;
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 하니스 설정입니다. */
     struct NetSimConfig
     {
@@ -75,6 +100,11 @@ namespace sw
         float64       _tickInterval{ 1.0 / 60.0 }; ///< 고정 스텝(초). 오브젝트 틱과 망 시각이 모두 이 간격으로 진행한다
         uint32        _seed{ 1u };                 ///< 망, 연결별 흉내, 챌린지 솔트의 시드
         uint16        _serverPort{ 7000 };         ///< 서버 엔드포인트 포트. 클라이언트는 그다음 번호부터 차례로 받고 다시 쓰지 않는다
+        /**
+         * @brief 월드의 씬을 빌려 주는 쪽입니다. 비우면 하니스가 월드마다 씬을 만들어 가진다(화면 없는 테스트 · 게임 자동화 — 두 가지 다 명시적인 쓰임이다).
+         * @details 하니스보다 오래 살아야 한다. 에디터 재생은 `NetSimPreviewSceneSource` 를 준다.
+         */
+        INetSimSceneSource* _pSceneSource{ nullptr };
     };
 } // namespace sw
 
@@ -200,7 +230,9 @@ namespace sw
     class SW_KIT_API NetSimWorld
     {
     public:
-        NetSimWorld( const SceneEngineServices& services, NetSimRole role, int32 worldIndex, INetTransport* pTransport, const NetHostConfig& hostSettings );
+        /** @brief @p pBorrowedScene 이 비면 월드가 @p services 로 씬을 만들어 가진다. 있으면 @p pSceneSource 에서 빌린 씬이고 `stop` 이 돌려준다. */
+        NetSimWorld( const SceneEngineServices& services, NetSimRole role, int32 worldIndex, INetTransport* pTransport, const NetHostConfig& hostSettings,
+                     INetSimSceneSource* pSceneSource, Scene* pBorrowedScene );
         ~NetSimWorld();
 
         NetSimWorld( const NetSimWorld& )            = delete;
@@ -214,6 +246,11 @@ namespace sw
         uint32 getLocalTick() const { return _localTick; }
         /** @brief 클라이언트가 서버에 연결돼 있으면 true 입니다. 서버 월드는 항상 true 입니다. */
         bool isConnected() const;
+        /**
+         * @brief 이 월드가 사람의 입력을 받는 월드이면 true 입니다(`NetSimHarness::setInputFocus`). 한 번에 하나뿐입니다.
+         * @details 게임 세션은 입력(키보드 · 패드 · 가상 입력)을 이 값이 참일 때만 읽는다 — 한 프로세스에서 클라이언트 여럿이 같은 입력을 읽으면 모두 같이 움직인다.
+         */
+        bool hasInputFocus() const { return _bInputFocus; }
 
         Scene&             getScene() { return *_pScene; }
         GameObjectManager& getObjectManager();
@@ -239,13 +276,16 @@ namespace sw
         NetSimTrafficCounter       _counter; ///< 호스트 → 카운터 → 흉내 → 루프백 엔드포인트 순서로 거친다
         NetHost                    _host;
         NetMessageRouter           _router;
-        unique_ptr<Scene>          _pScene;
+        unique_ptr<Scene>          _pOwnedScene;  ///< 빌려 주는 쪽이 없을 때 월드가 만든 씬
+        INetSimSceneSource*        _pSceneSource; ///< 빌린 씬이면 돌려줄 곳
+        Scene*                     _pScene;       ///< 쓰는 씬(만든 것 또는 빌린 것)
         unique_ptr<INetSimSession> _pSession;
         vector<NetReceivedMessage> _listUnhandled;
         vector<NetHostEvent>       _listEvent;
         int32                      _worldIndex;
         uint32                     _localTick;
         NetSimRole                 _role;
+        bool                       _bInputFocus;
     };
 } // namespace sw
 
@@ -294,6 +334,14 @@ namespace sw
         void removeClient( int32 worldIndex );
         /** @brief 클라이언트 회선의 조건을 바꿉니다. 다음 송신부터 적용됩니다. */
         void setLinkConditions( int32 worldIndex, const NetSimLinkConditions& conditions );
+        /**
+         * @brief 사람의 입력을 받을 월드를 @p worldIndex 하나로 정합니다(다른 월드는 모두 놓는다). −1 이면 아무 월드도 받지 않습니다.
+         * @return 그 번호의 월드가 있으면(또는 −1 이면) true. 없는 번호면 초점을 바꾸지 않고 false 입니다.
+         * @details 에디터의 한 프로세스 재생이 포커스된 클라이언트 창의 월드를 넘긴다. 늦게 들어온 클라이언트는 초점 없이 시작한다.
+         */
+        bool setInputFocus( int32 worldIndex );
+        /** @brief 입력을 받는 월드 번호입니다. 없으면 −1 입니다. */
+        int32 getInputFocus() const;
 
         NetSimWorld&       getServer() { return *_pServer; }
         const NetSimWorld& getServer() const { return *_pServer; }

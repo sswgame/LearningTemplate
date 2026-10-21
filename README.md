@@ -15,7 +15,7 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 <!-- status-board:start -->
 | 순위 | 업무(계획 문서) | 상태 | 진행 | 선행 | 영역 | 옛번호 |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | [DataDriven](docs/plans/DataDriven.md) — 데이터 주도 구조 정리 계획 (2026-10-16) | 구현중 | 12/14 | 없음 | engine | C-30, C-36 |
+| 1 | [DataDriven](docs/plans/DataDriven.md) — 데이터 주도 구조 정리 계획 (2026-10-16) | 구현중 | 13/14 | 없음 | engine | C-30, C-36 |
 | 2 | [Vfx](docs/plans/Vfx.md) — 파티클 · VFX 구현 단위 (`D2-11`) | 구현중 | 6/8 | 없음 | graphics | D2-11 |
 | 3 | [CameraRendererIntegration](docs/plans/CameraRendererIntegration.md) — 카메라의 렌더러 쪽 연결과 다중 뷰 검증 | 구현중 | 1/4 | 없음 | gameplay | D4-5 |
 | 5 | [SerializerSilentSkips](docs/plans/SerializerSilentSkips.md) — 직렬화가 조용히 넘기는 곳 (2026-10-21) | 구현중 | 4/4 | 없음 | engine | C-66 |
@@ -37,7 +37,7 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [IndirectLighting](docs/plans/IndirectLighting.md) — 간접 조명 구현 단위 (`D2-12`) | 구현중 | 5/7 | ClusteredLighting | graphics | D2-12 |
 | - | [LongFunctions](docs/plans/LongFunctions.md) — 긴 함수 정리 기준 (2026-10-18) | 구현중 | 해당없음 | 없음 | project | C-18 |
 | - | [MmoUpdateAckViaDelivery](docs/plans/MmoUpdateAckViaDelivery.md) — MMO 갱신 확인을 NetConnection 전달 통지로 | 구현중 | 3/4 | 없음 | network | G-8 |
-| - | [OnlineKits](docs/plans/OnlineKits.md) — 온라인 키트 마감 계획 (2026-10-21) | 구현중 | 24/34 | 없음 | network | D7-5 |
+| - | [OnlineKits](docs/plans/OnlineKits.md) — 온라인 키트 마감 계획 (2026-10-21) | 구현중 | 25/34 | 없음 | network | D7-5 |
 | - | [PairedAnimation](docs/plans/PairedAnimation.md) — 페어드 애니메이션(여러 개체가 한 타임라인으로 도는 애니메이션) | 구현중 | 6/6 | 없음 | gameplay | D4-6 |
 | - | [PanelIDLiterals](docs/plans/PanelIDLiterals.md) — 패널을 id 글자로 여는 남은 호출 | 구현중 | 2/3 | 없음 | editor | 없음 |
 | - | [PatchDeltaDelivery](docs/plans/PatchDeltaDelivery.md) — 패치 · 델타 업데이트 배포 구조 | 구현중 | 3/6 | 없음 | network | G-16 |

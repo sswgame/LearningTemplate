@@ -31,6 +31,7 @@
 #include "Engine/Config/GameSelection.h"
 #include "Engine/Config/Server/ServerConfig.h"
 #include "Engine/Module/ModuleImageHost.h"
+#include "Engine/Net/GameConnectSecurity.h"
 #include "Engine/Net/GameNetSession.h"
 #include "Engine/Observability/MetricRegistry.h"
 #include "Engine/Observability/DebugChannel.h"
@@ -192,6 +193,12 @@ namespace sw
         // 게임 인스턴스 뒤에 시작한다. 서비스가 게임이 정한 상태(게임 서비스 등)를 볼 수 있게 하고, 종료는 그 반대 순서다.
         if ( startServerServices() == false )
             return false;
+        // 게임 포트가 접속 티켓을 요구하는데 확인할 조립이 서지 않았으면 모든 접속을 거절하는 서버가 된다 — 그런 서버로 뜨지 않는다.
+        if ( _pServerConfig->_bGameConnectTicket && GameConnectSecurity::get().isAuthenticatorBound() == false )
+        {
+            SW_LOG_ERROR( "Server config _bGameConnectTicket is on but no online kit bound a game connect authenticator (add the account kit 'gameConnect')" );
+            return false;
+        }
 
         _bSignalHandlerInstalled = ShutdownSignal::install() ? SW_TRUE : SW_FALSE;
         if ( _bSignalHandlerInstalled == SW_FALSE )

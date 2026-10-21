@@ -11,14 +11,11 @@ namespace sw
         /// G버퍼 MRT 의 고정 포맷입니다: [0] 알베도, [1] 노멀.
         constexpr RHIFormat kArrGBufferColorFormat[] = { RHIFormat::R8G8B8A8_UNORM, RHIFormat::R16G16B16A16_FLOAT };
 
-        /// SSAO 의 기본 클리어(가림 없음)입니다.
-        constexpr float4 kNoOcclusionClear{ 1.0f, 1.0f, 1.0f, 1.0f };
-
         using Role = RenderPassInputRole;
         using Flag = RenderPassTraitFlag;
 
         /// 씬 메시를 그려 화면 색을 만드는 지오메트리 패스의 공통 플래그입니다.
-        constexpr uint32 kSceneColorPassFlags = Flag::kDrawsSceneMeshes | Flag::kUsesMaterialShader | Flag::kAppliesViewMode;
+        constexpr uint32 kSceneColorPassFlags = Flag::kDrawsSceneMeshes | Flag::kUsesMaterialShader | Flag::kAppliesViewMode | Flag::kDrawsDeclaredColor;
 
         struct RenderPassTypeInfoInternal
         {
@@ -90,7 +87,7 @@ namespace sw
                     {
                         info._pDefaultShader = &EngineDefaultAssets::_shaderDeferredLighting;
                         info._inputContract  = makeContract( { Role::GBufferAlbedo, Role::GBufferNormal, Role::SceneDepth }, { Role::ShadowMap } );
-                        info._flags          = Flag::kGenericFullscreen | Flag::kHasInputContract;
+                        info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract;
                         break;
                     }
                     case RenderPassType::Transparent:
@@ -103,10 +100,10 @@ namespace sw
                     }
                     case RenderPassType::SSAO:
                     {
+                        // 클리어(가림 없음 = 흰색)는 AO 첨부의 선언이다.
                         info._pDefaultShader = &EngineDefaultAssets::_shaderSsao;
-                        info._pDefaultClear  = &kNoOcclusionClear;
                         info._inputContract  = makeContract( { Role::GBufferNormal, Role::SceneDepth }, {} );
-                        info._flags          = Flag::kGenericFullscreen | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess;
+                        info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess;
                         break;
                     }
                     case RenderPassType::Bloom:
@@ -114,7 +111,7 @@ namespace sw
                         // BloomBright(반해상도 밝은 부분)를 선언하면 그것을 업샘플해 더하고, 없으면 원본에서 밝은 부분을 직접 구한다.
                         info._pDefaultShader = &EngineDefaultAssets::_shaderPostBloom;
                         info._inputContract  = makeContract( { Role::SourceColor }, { Role::AmbientOcclusion, Role::BloomBright } );
-                        info._flags          = Flag::kGenericFullscreen | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess;
+                        info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess;
                         break;
                     }
                     case RenderPassType::BloomDownsample:
@@ -124,21 +121,21 @@ namespace sw
                         info._pDefaultShader = &EngineDefaultAssets::_shaderPostBloom;
                         info._pPassDefine    = kPassBloomDownsampleDefine;
                         info._inputContract  = makeContract( { Role::SourceColor }, {} );
-                        info._flags          = Flag::kGenericFullscreen | Flag::kHasInputContract;
+                        info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract;
                         break;
                     }
                     case RenderPassType::Outline:
                     {
                         info._pDefaultShader = &EngineDefaultAssets::_shaderPostOutline;
                         info._inputContract  = makeContract( { Role::SourceColor, Role::SceneDepth }, {} );
-                        info._flags          = Flag::kGenericFullscreen | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess;
+                        info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess;
                         break;
                     }
                     case RenderPassType::TAA:
                     {
                         info._pDefaultShader = &EngineDefaultAssets::_shaderTaa;
                         info._inputContract  = makeContract( { Role::SourceColor }, {} );
-                        info._flags          = Flag::kHasInputContract;
+                        info._flags          = Flag::kHasInputContract | Flag::kDrawsDeclaredColor;
                         break;
                     }
                     case RenderPassType::Tonemap:
@@ -147,15 +144,15 @@ namespace sw
                         info._pDefaultShader  = &EngineDefaultAssets::_shaderTonemap;
                         info._psoFallbackType = RenderPassType::Present;
                         info._inputContract   = makeContract( { Role::SourceColor }, {} );
-                        info._flags           = Flag::kGenericFullscreen | Flag::kHasInputContract;
+                        info._flags           = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract;
                         break;
                     }
                     case RenderPassType::Present:
                     {
-                        // 입력은 모두 선택이다. 선언이 없으면 "가장 나중 컬러" 로 폴백하고(resolvePresentSource),
+                        // 화면에 낼 색(SourceColor)은 필수 입력이다 — 옛 코드는 선언이 없으면 "가장 나중 컬러" 를 이름 후보로 짐작했다(resolvePresentSource).
                         // 후처리 체인(postchain.hlsl)을 겸하면 깊이 · AO 를 읽는다.
                         info._pDefaultShader = &EngineDefaultAssets::_shaderFullscreenBlit;
-                        info._inputContract  = makeContract( {}, { Role::SourceColor, Role::SceneDepth, Role::AmbientOcclusion } );
+                        info._inputContract  = makeContract( { Role::SourceColor }, { Role::SceneDepth, Role::AmbientOcclusion } );
                         info._flags          = Flag::kHasInputContract;
                         break;
                     }
@@ -166,7 +163,7 @@ namespace sw
                         info._pDefaultShader          = &EngineDefaultAssets::_shaderToon;
                         info._pPassDefine             = kPassMeshOutlineDefine;
                         info._pRequiredMaterialDefine = kMaterialOutlineDefine;
-                        info._flags                   = Flag::kDepthTest | Flag::kDepthWrite | Flag::kDrawsSceneMeshes | Flag::kUsesMaterialShader | Flag::kCullFront;
+                        info._flags                   = Flag::kDepthTest | Flag::kDepthWrite | Flag::kDrawsSceneMeshes | Flag::kUsesMaterialShader | Flag::kCullFront | Flag::kDrawsDeclaredColor;
                         break;
                     }
                     case RenderPassType::Sky:
@@ -175,7 +172,7 @@ namespace sw
                         // 하늘 값은 패스 상수(g_Sky*)로 받는다. 입력은 그려 둔 장면 색 · 깊이 뒤에 서게 하는 순서 선언이라 둘 다 선택이다(셰이더는 읽지 않는다).
                         info._pDefaultShader = &EngineDefaultAssets::_shaderSky;
                         info._inputContract  = makeContract( {}, { Role::SourceColor, Role::SceneDepth } );
-                        info._flags          = Flag::kDepthTest | Flag::kHasInputContract;
+                        info._flags          = Flag::kDepthTest | Flag::kHasInputContract | Flag::kDrawsDeclaredColor;
                         break;
                     }
                     case RenderPassType::Canvas:

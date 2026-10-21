@@ -47,6 +47,27 @@ namespace sw
             out += to_string( fraction );
         }
 
+        /** @brief `0x` 와 대문자 16 진 숫자(적어도 @p minDigits 자리)입니다. */
+        string makeHexText( uint64 value, uint32 minDigits )
+        {
+            constexpr const utf8* kDigits    = "0123456789ABCDEF";
+            constexpr uint32      kMaxDigits = 16;
+            utf8                  arrDigit[kMaxDigits]{};
+            uint32                count = 0;
+            do
+            {
+                arrDigit[kMaxDigits - 1 - count] = kDigits[value & 0xFull];
+                ++count;
+                value >>= 4;
+            } while ( value != 0 && count < kMaxDigits );
+            while ( count < minDigits && count < kMaxDigits )
+            {
+                arrDigit[kMaxDigits - 1 - count] = '0';
+                ++count;
+            }
+            return "0x" + string( string_view{ arrDigit + ( kMaxDigits - count ), count } );
+        }
+
         void appendQuoted( string& out, string_view text )
         {
             out += '"';
@@ -162,6 +183,29 @@ namespace sw
             json += ",{\"name\":\"Frame\",\"cat\":\"frame\",\"ph\":\"i\",\"s\":\"g\",\"pid\":" + pid + ",\"tid\":0,\"ts\":";
             appendMicroseconds( json, frameBegin );
             json += '}';
+        }
+
+        if ( meta._listFlow.empty() == false )
+        {
+            // 흐름은 스레드 줄 뒤의 한 줄("Net messages")에 모은다. 흐름 이벤트는 감싸는 구간에 묶여야 뷰어가 그리므로(`bp:e`) 사건마다 1 us 구간을 함께 둔다.
+            // id 는 16 진 글이다 — 53 비트 안이지만 글로 두면 뷰어 · 합치기가 수로 바꾸지 않는다.
+            const string tid = to_string( listThread.size() + 1 );
+            json += ",{\"name\":\"thread_name\",\"ph\":\"M\",\"pid\":" + pid + ",\"tid\":" + tid + ",\"args\":{\"name\":\"Net messages\"}}";
+            for ( const NetFlowEvent& flow : meta._listFlow )
+            {
+                const string kindText = makeHexText( flow._kind, 2 );
+                const string idText   = makeHexText( flow._id, 1 );
+                json += ",{\"name\":";
+                appendQuoted( json, string( flow._bReceive ? "recv " : "send " ) + kindText );
+                json += ",\"cat\":\"net\",\"ph\":\"X\",\"pid\":" + pid + ",\"tid\":" + tid + ",\"ts\":";
+                appendMicroseconds( json, flow._nanos );
+                json += ",\"dur\":1}";
+                json += ",{\"name\":\"net\",\"cat\":\"net\",\"ph\":\"";
+                json += flow._bReceive ? "f\",\"bp\":\"e\"" : "s\"";
+                json += ",\"id\":\"" + idText + "\",\"pid\":" + pid + ",\"tid\":" + tid + ",\"ts\":";
+                appendMicroseconds( json, flow._nanos );
+                json += '}';
+            }
         }
         json += "]}\n";
         return json;
@@ -406,7 +450,21 @@ namespace sw
                 outReply = "cannot create the folder of " + path;
                 return false;
             }
-            if ( FileUtil::writeTextFile( path, ProfilerTraceExport::makeTraceJSON( listThread, listFrameBegin, listSlotName, meta ) ) == false )
+            // 네트워크 흐름은 저장하는 사건의 시간 구간만 담는다(흐름 링은 프로세스 하나 — `NetFlowLog::collect`).
+            ProfilerTraceMeta metaWithFlow = meta;
+            uint64            beginNanos   = ~0ull;
+            uint64            endNanos     = 0;
+            for ( const ProfilerTimelineThread& thread : listThread )
+            {
+                for ( const ProfilerTimelineEvent& event : thread._listEvent )
+                {
+                    beginNanos = event._beginNanos < beginNanos ? event._beginNanos : beginNanos;
+                    endNanos   = event._endNanos > endNanos ? event._endNanos : endNanos;
+                }
+            }
+            if ( beginNanos <= endNanos )
+                NetFlowLog::collect( beginNanos, endNanos, metaWithFlow._listFlow );
+            if ( FileUtil::writeTextFile( path, ProfilerTraceExport::makeTraceJSON( listThread, listFrameBegin, listSlotName, metaWithFlow ) ) == false )
             {
                 outReply = "cannot write " + path;
                 return false;
@@ -417,7 +475,7 @@ namespace sw
                 eventCount += thread._listEvent.size();
             }
             outReply = "saved " + path + " (" + to_string( listThread.size() ) + " threads, " + to_string( eventCount ) + " events, " +
-                       to_string( listFrameBegin.size() ) + " frame marks)";
+                       to_string( listFrameBegin.size() ) + " frame marks, " + to_string( metaWithFlow._listFlow.size() ) + " net flows)";
             return true;
         }
 

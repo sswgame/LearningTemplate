@@ -8,6 +8,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/OidcLoginProvider.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/ProfileAPILoginProvider.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/Platform/TicketQueryLoginProvider.h"
 #include "GameFramework/Kits/Feature/Online/Account/Shared/Protocol/AccountTypes.h"
 
 namespace sw
@@ -16,7 +17,10 @@ namespace sw
     {
         struct PlatformLoginProviderSettingsInternal
         {
-            static constexpr const utf8* kKnownKeys[] = { "name", "kind", "issuer", "jwksUrl", "clientIds", "requireNonce", "profileUrl", "subjectPath", "displayNamePath" };
+            static constexpr const utf8* kKnownKeys[] = { "name", "kind", "issuer", "jwksUrl",
+                                                          "clientIds", "requireNonce", "profileUrl", "subjectPath",
+                                                          "displayNamePath", "ticketParam", "keyParam", "keySecretEnvironment",
+                                                          "resultPath", "resultValue" };
 
             static bool isKnownKey( string_view key ) { return VectorUtil::contains( kKnownKeys, key ); }
 
@@ -42,6 +46,8 @@ namespace sw
                 return nullptr;
             return make_unique<OidcLoginProvider>( settings, pProvider, pHTTPClient );
         }
+        if ( settings._kind == PlatformLoginProviderKind::TicketQuery )
+            return TicketQueryLoginProvider::create( settings, pHTTPClient ); // 비밀 키를 읽지 못하면 nullptr(그 함수가 알린다)
         return make_unique<ProfileAPILoginProvider>( settings, pHTTPClient );
     }
 
@@ -84,17 +90,24 @@ namespace sw
                 settings._kind = PlatformLoginProviderKind::Oidc;
             else if ( kind == "profile" )
                 settings._kind = PlatformLoginProviderKind::AccessTokenProfile;
+            else if ( kind == "ticketQuery" )
+                settings._kind = PlatformLoginProviderKind::TicketQuery;
             else
             {
                 outError = "provider '" + settings._name + "' has an unknown kind '" + kind + "'";
                 return false;
             }
-            settings._issuer          = Internal::readText( entry, "issuer", "" );
-            settings._jwksURL         = Internal::readText( entry, "jwksUrl", "" );
-            settings._profileURL      = Internal::readText( entry, "profileUrl", "" );
-            settings._subjectPath     = Internal::readText( entry, "subjectPath", settings._kind == PlatformLoginProviderKind::Oidc ? "sub" : "id" );
-            settings._displayNamePath = Internal::readText( entry, "displayNamePath", "" );
-            bool bRequireNonce        = settings._bRequireNonce != SW_FALSE; // 없으면 설정의 초기값이다
+            settings._issuer               = Internal::readText( entry, "issuer", "" );
+            settings._jwksURL              = Internal::readText( entry, "jwksUrl", "" );
+            settings._profileURL           = Internal::readText( entry, "profileUrl", "" );
+            settings._subjectPath          = Internal::readText( entry, "subjectPath", settings._kind == PlatformLoginProviderKind::Oidc ? "sub" : "id" );
+            settings._displayNamePath      = Internal::readText( entry, "displayNamePath", "" );
+            settings._ticketParam          = Internal::readText( entry, "ticketParam", "" );
+            settings._keyParam             = Internal::readText( entry, "keyParam", "" );
+            settings._keySecretEnvironment = Internal::readText( entry, "keySecretEnvironment", "" );
+            settings._resultPath           = Internal::readText( entry, "resultPath", "" );
+            settings._resultValue          = Internal::readText( entry, "resultValue", "" );
+            bool bRequireNonce             = settings._bRequireNonce != SW_FALSE; // 없으면 설정의 초기값이다
             if ( entry.readOptionalInto( "requireNonce", bRequireNonce ) == false )
             {
                 outError = "provider '" + settings._name + "' has a requireNonce that is not true or false";
@@ -121,6 +134,13 @@ namespace sw
             return false;
         if ( settings._kind == PlatformLoginProviderKind::Oidc )
             return settings._issuer.empty() == false && settings._jwksURL.empty() == false && settings._listClientID.empty() == false;
+        if ( settings._kind == PlatformLoginProviderKind::TicketQuery )
+        {
+            const bool bHasQuery  = settings._profileURL.empty() == false && settings._ticketParam.empty() == false;
+            const bool bHasKey    = settings._keyParam.empty() == false && settings._keySecretEnvironment.empty() == false;
+            const bool bHasResult = settings._resultPath.empty() == false && settings._resultValue.empty() == false;
+            return bHasQuery && bHasKey && bHasResult;
+        }
         return settings._profileURL.empty() == false;
     }
 } // namespace sw
