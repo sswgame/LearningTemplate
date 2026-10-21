@@ -40,10 +40,10 @@ namespace sw
      */
     struct NetKitWireVersion
     {
-        static constexpr uint32 kClientServer    = 4; ///< 버전 4부터 스냅샷 머리에 처리한 입력 틱 대신 소유자 상태 칸(입력 틱 + 상태)을 싣는다
+        static constexpr uint32 kClientServer    = 5; ///< 버전 5부터 입력 메시지의 보던 틱이 메시지마다가 아니라 입력 항목마다의 스탬프다(4: 소유자 상태 칸)
         static constexpr uint32 kLockstep        = 3;
         static constexpr uint32 kTurnRelay       = 3; ///< 버전 3부터 행동 상한이 8 KB이다
-        static constexpr uint32 kMMO             = 3; ///< 버전 3부터 새로 보임을 틱마다 메시지 하나로 보낸다
+        static constexpr uint32 kMMO             = 4; ///< 버전 4부터 갱신 확인 메시지(옛 `kUpdateAck`)가 없고 연결 계층의 전달 통지로 판정한다
         static constexpr uint32 kDestruction     = 2; ///< 버전 2부터 스냅샷을 조각이 아니라 메시지 하나로 보낸다
         static constexpr uint32 kPairedAnimation = 1;
     };

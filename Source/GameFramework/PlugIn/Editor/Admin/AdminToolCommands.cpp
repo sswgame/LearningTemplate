@@ -9,6 +9,8 @@
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 
+#include "GameFramework/PlugIn/Editor/Admin/AdminToolPanel.h"
+
 namespace sw::editor
 {
     namespace
@@ -16,7 +18,7 @@ namespace sw::editor
         void openAdminToolPanel()
         {
             EditorContext* pContext = EditorContext::get();
-            if ( pContext != nullptr && pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "admin.tool", true ) )
+            if ( pContext != nullptr && pContext->getSubsystem<EditorPanelManager>().setPanelOpen<AdminToolPanel>( true ) )
                 SW_LOG_INFO( "GM Tool panel opened" );
         }
     } // namespace

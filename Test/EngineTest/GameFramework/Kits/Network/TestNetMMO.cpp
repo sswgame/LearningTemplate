@@ -98,23 +98,8 @@ namespace
             , _listEvent{}
             , _mapLastStamp{}
             , _regressionCount{ 0 }
-            , _serverConnectionID{ -1 }
         {
-            world.getRouter().registerHandler( &_view );
-        }
-
-        void onHostEvent( NetSimWorld& world, const NetHostEvent& event ) override
-        {
-            (void)world;
-            if ( event._kind == NetHostEvent::Kind::Connected )
-                _serverConnectionID = event._connectionID;
-        }
-
-        void onTickEnd( NetSimWorld& world, float32 deltaTime ) override
-        {
-            (void)deltaTime;
-            if ( _serverConnectionID >= 0 )
-                _view.sendAck( world.getPeers(), _serverConnectionID );
+            world.getRouter().registerHandler( &_view ); // 갱신 확인은 보내지 않는다 — 서버가 연결 계층의 전달 통지로 판정한다
         }
 
         void onTickBegin( NetSimWorld& world, float32 deltaTime ) override
@@ -153,7 +138,6 @@ namespace
         vector<MMOClientEvent>        _listEvent;
         unordered_map<uint32, uint32> _mapLastStamp;
         int32                         _regressionCount;
-        int32                         _serverConnectionID;
     };
 
     class MMONetSimGame final : public INetSimGame
@@ -280,11 +264,13 @@ SW_TEST_CASE( NetMMOTest, ObserversSeeNearbyEntitiesWithinBudgetAndHysteresis )
             {
                 SW_EXPECT_TRUE( NetHandleResult::Handled == view.handleMessage( 0, buffer ) );
             }
-            // 클라이언트는 받은 갱신 틱을 틱마다 확인한다 — 서버는 그것으로 잃은 갱신을 가린다.
-            view.sendAck( clientHost, 0 );
-            while ( serverHost.receiveMessage( connectionID, channel, buffer ) )
+            // 서버는 연결 계층의 전달 통지로 잃은 갱신을 가린다 — 클라이언트는 확인을 보내지 않는다(라우터 없이 직접 넘긴다).
+            NetInbound serverInbound;
+            serverHost.drainInbound( serverInbound );
+            SW_EXPECT_TRUE( serverInbound._listMessage.empty() );
+            for ( const NetDeliveryNotice& notice : serverInbound._listDeliveryNotice )
             {
-                SW_EXPECT_TRUE( NetHandleResult::Handled == server.handleMessage( connectionID, buffer ) );
+                server.onDeliveryNotice( notice );
             }
             vector<MMOClientEvent> listEvent;
             view.drainEvents( listEvent );
@@ -541,11 +527,11 @@ SW_TEST_CASE( NetMMOTest, UpdateBudgetFollowsTheConnectionCap )
 }
 
 /**
- * @brief [NetMMOTest] 잃은 갱신의 엔티티는 확인을 보고 곧 다시 간다 — 서버가 보낸 순간 "안 바뀜" 으로 보고 한 차례를 통째로 기다리지 않는다
+ * @brief [NetMMOTest] 잃은 갱신의 엔티티는 연결 계층의 손실 통지(`NetDeliveryNotice`)를 보고 곧 다시 간다 — 서버가 보낸 순간 "안 바뀜" 으로 보고 한 차례를 통째로 기다리지 않는다
  * @details 먼 엔티티(낮은 우선도) 하나가 바뀐 직후 내리막을 30 틱 모두 잃는다. 그 사이 서버는 그 갱신을 보낸다(바뀜 가속). 회선이 돌아온 뒤
  *          클라이언트가 새 상태를 볼 때까지의 틱을 측정한다. 가까운 여덟이 틱마다 바뀌어 예산(200 B)을 채운다.
  */
-SW_TEST_CASE( NetMMOTest, LostUpdateIsResentSoonAfterTheAck )
+SW_TEST_CASE( NetMMOTest, LostUpdateIsResentSoonAfterTheLossNotice )
 {
     constexpr uint32 kFarID = 200;
     MMONetSimGame    game;
@@ -608,7 +594,7 @@ SW_TEST_CASE( NetMMOTest, LostUpdateIsResentSoonAfterTheAck )
         ++ticksToSee;
     }
     SW_LOG_INFO( "[NetMMO] far entity changed during a 30-tick downstream blackout: seen %# ticks after the link came back", ticksToSee );
-    // 판정 없이(보낸 순간 "안 바뀜") 13 틱, 확인으로 판정하면 4 틱. 고친 값 + 3.
+    // 판정 없이(보낸 순간 "안 바뀜") 13 틱, 키트 확인 메시지로 판정하던 때 4 틱. 그 값 + 3(전달 통지로 바꾼 뒤 값은 빌드 후 다시 잰다).
     SW_EXPECT_TRUE( ticksToSee <= 7u );
 }
 

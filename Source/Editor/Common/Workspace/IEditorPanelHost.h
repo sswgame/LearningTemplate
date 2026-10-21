@@ -6,6 +6,8 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 
+#include "Editor/Common/Workspace/EditorPanelID.h"
+
 namespace sw::editor
 {
     /**
@@ -19,10 +21,10 @@ namespace sw::editor
     public:
         virtual ~IEditorPanelHost() = default;
 
-        /** @brief 패널을 열고 그 창(탭)을 다음 프레임에 앞으로 둡니다. 그 id 의 패널이 없으면 false 입니다. */
-        virtual bool focusPanel( string_view panelID ) = 0;
+        /** @brief 패널을 열고 그 창(탭)을 다음 프레임에 앞으로 둡니다. 그 id 의 패널이 없으면 false 입니다. id 는 형식(`EditorPanelID`)이라 글자를 넘길 수 없습니다. */
+        virtual bool focusPanel( EditorPanelID panelID ) = 0;
         /** @brief 지금 배치를 임시 레이아웃으로 저장하고 @p keepPanelID 밖의 패널을 닫은 뒤 그 패널을 앞으로 둡니다. 저장하지 못했으면 false 입니다. */
-        [[nodiscard]] virtual bool maximizePanel( string_view keepPanelID ) = 0;
+        [[nodiscard]] virtual bool maximizePanel( EditorPanelID keepPanelID ) = 0;
         /** @brief 최대화 전 배치(임시 레이아웃)를 다음 프레임에 되읽습니다. 그 파일이 없으면 false 입니다. */
         [[nodiscard]] virtual bool restoreMaximizedLayout() = 0;
 

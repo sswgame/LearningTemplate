@@ -1,0 +1,20 @@
+<UIDocument _schemaVersion="1">
+	<!-- 툴팁 화면 — UITooltipService 가 연다. Body 를 포인터 옆으로 옮기고(렌더 변환) Text 에 위젯 설명 글을 넣는다. 클릭과 호버를 받지 않는다(호버를 빼앗으면 툴팁이 깜빡인다). -->
+	<UIScreenDesc _layer="Overlay" _bTakesFocus="false" _bShowCursor="false" />
+	<CanvasPanel _visibility="HitTestInvisible">
+		<BorderPanel _name="Body" _styleClass="tooltip" _contentPadding="10,6,10,6">
+			<_slot _anchorMin="0,0"
+			       _anchorMax="0,0"
+			       _offsetMin="0,0"
+			       _offsetMax="0,0"
+			       _maxSize="420,0"
+			       _bAutoSize="true"
+			       _growHorizontal="End"
+			       _growVertical="End" />
+			<_background _color="0.08,0.08,0.1,0.92" _cornerRadius="4,4,4,4" />
+			<TextWidget _name="Text" _styleClass="tooltip-text">
+				<_style _fontSize="18" />
+			</TextWidget>
+		</BorderPanel>
+	</CanvasPanel>
+</UIDocument>

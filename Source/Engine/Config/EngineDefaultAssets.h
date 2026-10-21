@@ -88,6 +88,8 @@ namespace sw
         PROPERTY( Required )
         DataPath _uiSubtitles; ///< 자막 화면(`UISubtitleService`)
         PROPERTY( Required )
+        DataPath _uiTooltip; ///< 툴팁 화면(`UITooltipService`)
+        PROPERTY( Required )
         DataPath _uiDebugHUD; ///< 디버그 HUD 설정 창(`DebugHUD`, 개발 빌드)
         PROPERTY( Required )
         DataPath _debugHUDSettingsSchema; ///< 디버그 HUD 설정 스키마(`DebugHUD`, 개발 빌드)

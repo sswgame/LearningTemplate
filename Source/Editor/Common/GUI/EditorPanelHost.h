@@ -29,8 +29,8 @@ namespace sw::editor
         const utf8*                  getSubsystemName() const override { return kSubsystemName; }
         span<const utf8* const>      getSubsystemDependencies() const override;
 
-        bool               focusPanel( string_view panelID ) override;
-        [[nodiscard]] bool maximizePanel( string_view keepPanelID ) override;
+        bool               focusPanel( EditorPanelID panelID ) override;
+        [[nodiscard]] bool maximizePanel( EditorPanelID keepPanelID ) override;
         [[nodiscard]] bool restoreMaximizedLayout() override;
         [[nodiscard]] bool saveFocusedDirtyDocument() override;
         [[nodiscard]] bool saveAllDirtyDocuments() override;

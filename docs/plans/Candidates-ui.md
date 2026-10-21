@@ -51,13 +51,6 @@
 착수 조건: 월드 위젯에 입력이 필요해질 때(옛 계획 runtime-ui 4-6 뒤). 보일 때만 칠하기(절두체 판정)는 월드 위젯이 수십 개를 넘을 때.
 함정: World 렌더 텍스처는 내용이 바뀔 때만 다시 그리지만 화면에 안 보일 때도 칠하기는 돈다.
 
-### UiTooltipAndCursor
-제목: 런타임 UI 툴팁과 커서 모양
-옛번호: 없음
-왜 필요한가: 호버 경로 추적과 `:hover` 스타일은 있지만(`UIPointerState`, `Widget::onHoverChanged`), 일정 시간 머물면 설명을 띄우는 툴팁과 호버한 위젯에 따라 커서 모양(화살표 · 손가락 · 텍스트)을 바꾸는 길이 없다. 입력 쪽 커서는 보이기 · 숨기기(`InputManager::setCursorVisible`)와 가상 커서뿐이다.
-남은 것: 위젯이 툴팁 내용과 커서 모양을 선언하고, 호버 경로의 잎에서 지연 후 띄우는 형식. 커서 모양은 플랫폼 창 쪽(Windows · X11)에 모양을 바꾸는 함수가 든다.
-착수 조건: 설정 · 편집 화면처럼 설명이 필요한 런타임 UI가 생길 때. 월드 위젯 호버는 [WorldWidgetInput](#worldwidgetinput) 이 선행이다.
-
 ### ScreenReaderSupport
 제목: 스크린 리더
 옛번호: G-9

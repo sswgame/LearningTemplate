@@ -1167,5 +1167,5 @@ namespace sw::editor
             _bEditing = false;
     }
 
-    SW_EDITOR_PANEL( MeshModifiersPanel, "meshmodifiers.stack", EditorPanelCategory::Custom, 9010 );
+    SW_EDITOR_PANEL( MeshModifiersPanel, MeshModifiersPanel::kPanelID, EditorPanelCategory::Custom, 9010 );
 } // namespace sw::editor

@@ -950,6 +950,44 @@ namespace sw
         return pEntry != nullptr && pEntry->_bPressed == SW_TRUE;
     }
 
+    bool InputMap::tryGetActionPressInstant( ActionHandle handle, InputPressInstant& outInstant ) const
+    {
+        const ActionEntry* pEntry      = getActionFromHandle( handle );
+        const bool         bNotPressed = pEntry == nullptr || pEntry->_bPressed == SW_FALSE || _pInput == nullptr;
+        if ( bNotPressed )
+            return false;
+        bool bFound = false;
+        for ( size_t bindingIndex = 0; bindingIndex < pEntry->_listBinding.size(); ++bindingIndex )
+        {
+            if ( pEntry->_listBindingState[bindingIndex]._bPressed == SW_FALSE )
+                continue;
+            const ActionBinding& binding = pEntry->_listBinding[bindingIndex];
+            // 바인딩이 완성된 순간 — 단일 슬롯은 그 슬롯, 조합 키(수정자 + 트리거)·단축키는 이번 프레임에 눌린 슬롯 중 늦은 것이다.
+            int32 slotCount = 0;
+            if ( binding._kind == BindingKind::SingleSlot || binding._kind == BindingKind::Shortcut )
+                slotCount = 1;
+            else if ( binding._kind == BindingKind::Chord )
+                slotCount = 2;
+            bool              bBindingFound = false;
+            InputPressInstant bindingInstant{};
+            for ( int32 slotIndex = 0; slotIndex < slotCount; ++slotIndex )
+            {
+                InputPressInstant slotInstant{};
+                if ( _pInput->tryGetPressInstant( binding._arrSlot[slotIndex], slotInstant ) == false )
+                    continue;
+                if ( bBindingFound == false || slotInstant._frameFraction > bindingInstant._frameFraction )
+                    bindingInstant = slotInstant;
+                bBindingFound = true;
+            }
+            if ( bBindingFound == false )
+                continue;
+            if ( bFound == false || bindingInstant._frameFraction < outInstant._frameFraction )
+                outInstant = bindingInstant;
+            bFound = true;
+        }
+        return bFound;
+    }
+
     bool InputMap::wasActionReleased( const hashed_string& action ) const
     {
         const ActionEntry* pEntry = findAction( action );

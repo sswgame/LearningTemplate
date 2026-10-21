@@ -432,6 +432,15 @@
        "description": "자막 화면(`UISubtitleService`)"
       },
       {
+       "name": "_uiTooltip",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "툴팁 화면(`UITooltipService`)"
+      },
+      {
        "name": "_uiDebugHUD",
        "type": "DataPath",
        "default": "",
@@ -4056,6 +4065,14 @@
    "kind": "일반",
    "description": "게임 UI 테마 이름 default · highcontrast (사용자 설정 accessibility.uiTheme)",
    "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
+  },
+  {
+   "name": "gv_uiTooltipDelay",
+   "type": "float32",
+   "default": "0.5",
+   "kind": "일반",
+   "description": "런타임 UI 툴팁이 뜨기까지 위젯 위에 머무는 시간(초)",
+   "source": "Source/Engine/UI/Screen/UITooltipService.cpp"
   },
   {
    "name": "gv_upscaler",

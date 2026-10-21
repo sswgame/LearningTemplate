@@ -440,5 +440,5 @@ namespace sw::editor
 
     // 세션의 등록 줄은 여기 둔다 — EngineTest 가 세션 .cpp 를 에디터 없이 직접 컴파일한다.
     SW_EDITOR_SUBSYSTEM( AdminToolSession, 9200 );
-    SW_EDITOR_PANEL( AdminToolPanel, "admin.tool", EditorPanelCategory::Custom, 9200 );
+    SW_EDITOR_PANEL( AdminToolPanel, AdminToolPanel::kPanelID, EditorPanelCategory::Custom, 9200 );
 } // namespace sw::editor

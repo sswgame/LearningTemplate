@@ -1188,7 +1188,7 @@ namespace sw
             return;
         }
         _outputDirectory = "Saved/Automation/" + _scenario.getName();
-        if ( skipIfStepsAreMissingFromThisBuild() )
+        if ( skipIfStepsAreMissingFromThisBuild() || prepareScratchFolders() == false )
             return;
         SW_LOG_INFO( "[Scenario] %# loaded from %# (%# step(s), fixed delta %#)", _scenario.getName().c_str(), string( scenarioPath ).c_str(),
                      static_cast<uint32>( _scenario.getSteps().size() ), _scenario.getFixedDelta() );
@@ -1206,7 +1206,23 @@ namespace sw
             return false;
         }
         _outputDirectory = "Saved/Automation/" + _scenario.getName();
-        return skipIfStepsAreMissingFromThisBuild() == false;
+        return skipIfStepsAreMissingFromThisBuild() == false && prepareScratchFolders();
+    }
+
+    bool AutomationRunner::prepareScratchFolders()
+    {
+        for ( const AutomationScratchFolder& folder : _scenario.getScratchFolders() )
+        {
+            string error;
+            if ( AutomationScratch::prepare( folder, error ) == false )
+            {
+                SW_LOG_ERROR( "[Scenario] %#: scratch folder %# could not be prepared: %#", _scenario.getName().c_str(), folder._scratchID.c_str(), error.c_str() );
+                finish( AutomationResult::LoadError, error );
+                return false;
+            }
+            SW_LOG_INFO( "[Scenario] %#: %# copied to %# (fresh for this run)", _scenario.getName().c_str(), folder._sourceID.c_str(), folder._scratchID.c_str() );
+        }
+        return true;
     }
 
     bool AutomationRunner::skipIfStepsAreMissingFromThisBuild()

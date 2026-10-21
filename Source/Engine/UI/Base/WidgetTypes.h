@@ -43,6 +43,22 @@ namespace sw
         LeftToRight, ///< 왼쪽에서 오른쪽으로 고정합니다.
         RightToLeft  ///< 오른쪽에서 왼쪽으로 고정합니다.
     };
+
+    /**
+     * @brief 포인터가 위젯 위에 있을 때의 커서 모양입니다(UMG 의 Cursor, Godot 의 mouse_default_cursor_shape). `Inherit` 는 부모를 따르고, 루트까지 그러면 화살표입니다.
+     * @details OS 커서로 옮기는 것은 `UITooltipService::toCursorShape`(→ `CursorShape`)다. `Inherit` 를 뺀 값은 `CursorShape` 와 같은 순서로 둔다.
+     */
+    ENUM()
+    enum class UICursorShape : uint8
+    {
+        Inherit = 0,      ///< 부모를 따릅니다.
+        Arrow,            ///< 기본 화살표
+        Hand,             ///< 누를 수 있는 것(단추 · 링크)
+        TextBeam,         ///< 글을 고르거나 쓰는 곳(I 빔)
+        ResizeHorizontal, ///< 좌우로 크기 바꾸기
+        ResizeVertical,   ///< 위아래로 크기 바꾸기
+        NotAllowed,       ///< 할 수 없음
+    };
 } // namespace sw
 
 namespace sw

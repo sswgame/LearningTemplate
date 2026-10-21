@@ -48,6 +48,7 @@ namespace sw
         int32 makeConnectionID( int32 shardIndex, int32 localConnectionID ) const { return shardIndex * _connectionStride + localConnectionID; }
 
         [[nodiscard]] bool sendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size ) override;
+        [[nodiscard]] bool sendNotifiedMessage( int32 connectionID, const uint8* pData, int32 size, uint32 tag ) override;
         int32              broadcast( NetChannelType channel, const uint8* pData, int32 size, int32 exceptID = -1 ) override;
         void               disconnect( int32 connectionID ) override;
         /** @brief 샤드마다 꺼내 하나로 모읍니다. 모든 샤드의 사건이 모든 메시지보다 앞에 오고, 연결 ID 는 접어 넣은 값입니다. */

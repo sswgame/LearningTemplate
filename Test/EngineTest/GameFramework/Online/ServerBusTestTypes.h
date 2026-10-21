@@ -12,6 +12,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Base/Online/Store/ServiceRecordUnknownFields.h"
+#include "GameFramework/Kits/Feature/Online/Account/Shared/Protocol/AccountTypes.h"
 
 namespace sw
 {
@@ -110,5 +111,29 @@ namespace sw
         string _label{};
         PROPERTY()
         uint64 _accountID{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief 계정 해지 알림(`AccountRevokeNotice`, `account.revoke`)을 필드 하나 더한 새 빌드의 본문입니다(의미 버전은 같습니다).
+     * @details 서버 둘 테스트(`OnlineMultiServerTest`)가 이 바이트를 옛 빌드의 계정 서버에 보내, 보안 알림이 혼합 빌드에서도 연결을 닫는지 봅니다.
+     */
+    REFLECT()
+    struct BusTestRevokeNoticeNextBuild
+    {
+        REFLECT_BODY();
+        static constexpr uint32 kBusVersion = 1;
+        PROPERTY( MaxCount = LoginConstant::kMaxReasonCodeSize )
+        string _reasonCode{};
+        PROPERTY()
+        uint64 _accountID{ 0 };
+        PROPERTY()
+        uint64 _sessionID{ 0 };
+        PROPERTY()
+        LoginRevokeReason _reason{ LoginRevokeReason::None };
+        PROPERTY()
+        int32 _issuedByShard{ 0 }; ///< 새 빌드가 더한 필드 — 옛 빌드는 건너뛴다
     };
 } // namespace sw

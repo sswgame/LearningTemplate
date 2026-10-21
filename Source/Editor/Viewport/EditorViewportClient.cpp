@@ -160,7 +160,7 @@ namespace sw::editor
                 SW_LOG_WARNING( "The layout before maximizing is gone - use Panel > Reset Layout" );
             return;
         }
-        if ( pContext->getSubsystem<IEditorPanelHost>().maximizePanel( "scene_view" ) )
+        if ( pContext->getSubsystem<IEditorPanelHost>().maximizePanel( editorpanel::kSceneView ) )
             _bMaximized = SW_TRUE;
     }
 

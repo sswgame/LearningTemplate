@@ -8,6 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Automation/AutomationScratch.h"
 #include "Engine/Input/Virtual/IVirtualInputSource.h"
 
 namespace sw
@@ -110,21 +111,24 @@ namespace sw
         const vector<AutomationStep>& getSteps() const { return _listStep; }
         /** @brief 부하 선언입니다(`<Load>` 가 없으면 `_bDeclared` 가 false). 부하 시나리오는 `<Pass/>` 를 두지 않고 측정 창이 끝내며, `timeoutFrames` 를 보지 않는다. */
         const AutomationLoad& getLoad() const { return _load; }
+        /** @brief 이 시나리오가 쓰는 폴더의 사본 선언입니다(루트 아래 `<Scratch from as>`, 여럿 가능). 실행기가 시작할 때 사본을 새로 만든다(`AutomationScratch::prepare`). */
+        const vector<AutomationScratchFolder>& getScratchFolders() const { return _listScratchFolder; }
 
     private:
         /** @brief `<Load>` 요소를 읽습니다. 모르는 속성 · 틀린 값이면 false 와 이유입니다. */
         [[nodiscard]] bool parseLoad( const XMLNode& node, string& outReason );
 
-        vector<AutomationStep>   _listStep;
-        AutomationLoad           _load;
-        string                   _name;
-        string                   _sourcePath;
-        float32                  _fixedDelta;
-        uint32                   _timeoutFrames;
-        uint32                   _startTimeoutFrames;
-        AutomationStartCondition _startCondition;
-        VirtualInputMode         _inputMode;
-        bool                     _bIsolated;
-        bool                     _bRequiresEditor;
+        vector<AutomationStep>          _listStep;
+        vector<AutomationScratchFolder> _listScratchFolder;
+        AutomationLoad                  _load;
+        string                          _name;
+        string                          _sourcePath;
+        float32                         _fixedDelta;
+        uint32                          _timeoutFrames;
+        uint32                          _startTimeoutFrames;
+        AutomationStartCondition        _startCondition;
+        VirtualInputMode                _inputMode;
+        bool                            _bIsolated;
+        bool                            _bRequiresEditor;
     };
 } // namespace sw

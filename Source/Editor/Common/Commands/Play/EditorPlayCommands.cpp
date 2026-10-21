@@ -89,7 +89,7 @@ namespace sw::editor
         pData->_bOptionsApplied = SW_TRUE;
         // Simulate 는 씬 뷰로 지켜보는 세션이라 게임 뷰를 키우지 않는다(유니티 Maximize On Play 도 게임 뷰의 플레이에만).
         if ( getPreferences<EditorPlayPreferences>()._bMaximizeOnPlay && pData->_bSimulate == SW_FALSE )
-            pData->_bMaximizedForPlay = pContext->getSubsystem<IEditorPanelHost>().maximizePanel( "game_view" ) ? SW_TRUE : SW_FALSE;
+            pData->_bMaximizedForPlay = pContext->getSubsystem<IEditorPanelHost>().maximizePanel( editorpanel::kGameView ) ? SW_TRUE : SW_FALSE;
     }
 
     void EditorPlayCommands::toggleEject()
@@ -109,14 +109,14 @@ namespace sw::editor
             }
             EditorPlaySession::simulate();
             pData->_bEjected = SW_TRUE;
-            (void)pContext->getSubsystem<IEditorPanelHost>().focusPanel( "scene_view" ); // 패널이 없으면 세션만 바뀐다
+            (void)pContext->getSubsystem<IEditorPanelHost>().focusPanel( editorpanel::kSceneView ); // 패널이 없으면 세션만 바뀐다
             return;
         }
         if ( pData->_bEjected == SW_TRUE )
         {
             EditorPlaySession::play();
             pData->_bEjected = SW_FALSE;
-            (void)pContext->getSubsystem<IEditorPanelHost>().focusPanel( "game_view" ); // 패널이 없으면 세션만 바뀐다
+            (void)pContext->getSubsystem<IEditorPanelHost>().focusPanel( editorpanel::kGameView ); // 패널이 없으면 세션만 바뀐다
         }
     }
 

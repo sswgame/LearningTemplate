@@ -69,6 +69,13 @@ namespace sw
         return pShard != nullptr && pShard->sendMessage( localConnectionID, channel, pData, size );
     }
 
+    bool NetHostShardSet::sendNotifiedMessage( int32 connectionID, const uint8* pData, int32 size, uint32 tag )
+    {
+        int32    localConnectionID = -1;
+        NetHost* pShard            = findShard( connectionID, localConnectionID );
+        return pShard != nullptr && pShard->sendNotifiedMessage( localConnectionID, pData, size, tag );
+    }
+
     int32 NetHostShardSet::broadcast( NetChannelType channel, const uint8* pData, int32 size, int32 exceptID )
     {
         int32          exceptLocalID = -1;
@@ -108,6 +115,11 @@ namespace sw
                 message._connectionID = makeConnectionID( shardIndex, message._connectionID );
                 message._offset += byteBase;
                 outInbound._listMessage.push_back( message );
+            }
+            for ( NetDeliveryNotice notice : _shardInbound._listDeliveryNotice )
+            {
+                notice._connectionID = makeConnectionID( shardIndex, notice._connectionID );
+                outInbound._listDeliveryNotice.push_back( notice );
             }
         }
     }

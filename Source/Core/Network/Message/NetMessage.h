@@ -108,6 +108,13 @@ namespace sw
             (void)connectionID;
             (void)reason;
         }
+        /**
+         * @brief 영역 안에서 이 처리기가 전달 통지를 달아 보내는(`INetPeers::sendNotifiedMessage`) 종류의 마스크입니다. 비트 n 이 (영역 + n)입니다.
+         * @details 라우터는 그 종류의 판정을 이 처리기의 `onDeliveryNotice` 에 넘긴다. 받는 종류 마스크와 따로 세며, 한 종류를 둘이 보내겠다고 하면 나중 것을 받지 않는다.
+         */
+        virtual uint16 getNotifiedKindMask() const { return 0; }
+        /** @brief 이 처리기가 보낸 전달 통지 메시지 하나의 판정입니다(라우터 `pump` 가 사건 뒤, 메시지 앞에 부른다). */
+        virtual void onDeliveryNotice( const NetDeliveryNotice& notice ) { (void)notice; }
 
         /** @brief @p kind 가 이 처리기의 영역과 마스크 안이면 true 를 반환합니다. */
         bool isMessageKindHandled( uint8 kind ) const;
@@ -181,16 +188,22 @@ namespace sw
          */
         static int32 relayToOtherPeers( INetPeers& peers, const NetMessageContext& context );
         uint64       getMalformedCount() const { return _malformedCount; }
+        /** @brief 그 종류를 보낸다고 등록한 처리기가 없어 버린 전달 통지 수입니다(첫 번째는 오류 로그도 남긴다 — 보낸 쪽이 처리기를 등록하지 않았다). */
+        uint64 getUnclaimedNoticeCount() const { return _unclaimedNoticeCount; }
         /** @brief `pump` 가 지금까지 꺼낸 종류별 메시지 수와 바이트입니다(받은 쪽 셈 — 처리기가 없는 메시지도 센다. 보낸 쪽은 `INetPeers::addSentKindTally`). */
         const NetMessageKindTallyTable& getKindTally() const { return _kindTally; }
 
     private:
         void rebuildKindTable();
+        /** @brief 전달 통지 하나를 그 종류를 보내는 처리기에 넘깁니다. 없으면 세고 버립니다. */
+        void dispatchNotice( const NetDeliveryNotice& notice );
 
         vector<INetMessageHandler*> _listHandler; ///< 등록 순서대로 보관한다.
         INetMessageHandler*         _arrKindHandler[kKindCount];
-        NetMessageKindTallyTable    _kindTally; ///< `pump` 가 메시지마다 더한다(꺼내는 반복 안의 덧셈 둘 — 따로 훑지 않는다).
-        NetInbound                  _inbound;   ///< `pump` 가 다시 쓰는 버퍼.
+        INetMessageHandler*         _arrNoticeHandler[kKindCount]; ///< 종류마다 그 종류를 전달 통지로 보내는 처리기(`getNotifiedKindMask`).
+        NetMessageKindTallyTable    _kindTally;                    ///< `pump` 가 메시지마다 더한다(꺼내는 반복 안의 덧셈 둘 — 따로 훑지 않는다).
+        NetInbound                  _inbound;                      ///< `pump` 가 다시 쓰는 버퍼.
         uint64                      _malformedCount;
+        uint64                      _unclaimedNoticeCount;
     };
 } // namespace sw

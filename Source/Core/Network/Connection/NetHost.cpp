@@ -1034,6 +1034,16 @@ namespace sw
         return bQueued;
     }
 
+    bool NetHost::sendNotifiedMessage( int32 connectionID, const uint8* pData, int32 size, uint32 tag )
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        NetHostSlot*            pSlot   = _slotTable.findConnected( connectionID );
+        const bool              bQueued = pSlot != nullptr && pSlot->_connection.sendNotifiedMessage( pData, size, tag );
+        if ( bQueued )
+            _sentKindTally.add( pData, size );
+        return bQueued;
+    }
+
     void NetHost::addSentKindTally( NetMessageKindTallyTable& outTable ) const
     {
         std::scoped_lock<mutex> lock{ _mutex };
@@ -1132,6 +1142,12 @@ namespace sw
             NetHostSlot& slot = _slotTable.get( index );
             if ( slot._state != NetConnectionState::Connected )
                 continue;
+            const size_t firstNotice = outInbound._listDeliveryNotice.size();
+            slot._connection.drainDeliveryNotices( outInbound._listDeliveryNotice );
+            for ( size_t noticeIndex = firstNotice; noticeIndex < outInbound._listDeliveryNotice.size(); ++noticeIndex )
+            {
+                outInbound._listDeliveryNotice[noticeIndex]._connectionID = index;
+            }
             for ( int32 channel = 0; channel < static_cast<int32>( NetChannelType::Count ); ++channel )
             {
                 // 메시지를 아레나 뒤에 바로 덧붙인다(중간 버퍼를 거치지 않는다).

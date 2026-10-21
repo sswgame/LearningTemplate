@@ -25,10 +25,14 @@ namespace sw
         static constexpr uint8 kInput       = NetKitMessageRange::kClientServer + 2;
         static_assert( NetMessageRange::isInRange( kInput, NetKitMessageRange::kClientServer ), "message kinds must stay inside the kit's range" );
 
-        static constexpr int32 kMaxInputBytes = 255; ///< 틱 하나의 입력 상한. 클라이언트는 넘는 입력을 보내지 않고, 서버는 넘는 길이를 손상된 메시지로 본다
-        static constexpr int32 kMaxInputCount = 32;  ///< 입력 메시지 하나에 싣는 입력 수의 상한이자, 클라이언트가 확인을 기다리며 보관하는 입력 수의 상한이다. 두 쪽이 같은 값을 쓴다
-        /** @brief 입력 묶음의 전송 형식입니다. 길이를 붙인 덩어리로 보내며 스탬프는 쓰지 않습니다. 스탬프를 켜면 와이어 버전을 올려야 합니다. */
-        static constexpr NetInputFormat kInputFormat{ 0, kMaxInputBytes, kMaxInputCount, SW_FALSE };
+        static constexpr int32 kMaxInputBytes      = 255; ///< 틱 하나의 입력 상한. 클라이언트는 넘는 입력을 보내지 않고, 서버는 넘는 길이를 손상된 메시지로 본다
+        static constexpr int32 kMaxInputCount      = 32;  ///< 입력 메시지 하나에 싣는 입력 수의 상한이자, 클라이언트가 확인을 기다리며 보관하는 입력 수의 상한이다. 두 쪽이 같은 값을 쓴다
+        static constexpr int32 kViewTickStampScale = 256; ///< 입력 항목 스탬프는 그 입력을 만들 때 보던 틱(소수) × 이 값이다(1/256 틱 단위)
+        /**
+         * @brief 입력 묶음의 전송 형식입니다. 길이를 붙인 덩어리로 보내고, 항목마다 스탬프(그 입력을 만들 때 보던 틱 × `kViewTickStampScale`)를 싣습니다.
+         * @details 스탬프가 항목마다라서 다시 보낸 옛 입력도 그 입력의 보던 틱으로 랙 보정한다(메시지마다 하나면 옛 입력을 최신 틱으로 판정한다). 형식을 바꾸면 와이어 버전을 올린다.
+         */
+        static constexpr NetInputFormat kInputFormat{ 0, kMaxInputBytes, kMaxInputCount, SW_TRUE };
     };
 } // namespace sw
 

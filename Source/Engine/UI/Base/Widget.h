@@ -167,6 +167,17 @@ namespace sw
         // --- 스타일 ---------------------------------------------------------------
         /** @brief 포인터가 이 위젯(또는 자손) 위에 있으면 true 입니다(호버 경로, 스타일 `:hover`). */
         bool isHovered() const { return _bHovered; }
+
+        // --- 툴팁과 커서 -----------------------------------------------------------
+        /**
+         * @brief 포인터가 머물면 띄울 설명 글입니다(비면 없음). 바뀌어도 무효화하지 않습니다(이 위젯의 그림이 아니다). 툴팁 서비스가 호버 경로의 가장 가까운 것을 띄웁니다.
+         * @details 글은 그대로 보인다 — 현지화는 문서의 키 바인딩(`{loc:…}`)이 이 필드에 쓴다.
+         */
+        const string& getTooltip() const { return _tooltip; }
+        void          setTooltip( const string& tooltip ) { _tooltip = tooltip; }
+        /** @brief 포인터가 이 위젯 위에 있을 때의 커서 모양입니다(`Inherit` 면 부모를 따른다). 바뀌어도 무효화하지 않습니다. */
+        UICursorShape getCursorShape() const { return _cursorShape; }
+        void          setCursorShape( UICursorShape shape ) { _cursorShape = shape; }
         /**
          * @brief 스타일 선택자가 보는 이 위젯의 상태(`UIStyleState` 비트)입니다. 기본은 호버, 포커스, 꺼짐이고, 누름, 켜짐, 선택은 해당 위젯이 더합니다.
          * @details 상태가 바뀌면 위젯이 `kStyle` 로 무효화한다(스타일 순회가 다시 계산한다).
@@ -237,6 +248,8 @@ namespace sw
         WidgetLayoutSlot _slot;
         PROPERTY( DisplayName = "Navigation" )
         WidgetNavigation _navigation;
+        PROPERTY( DisplayName = "Tooltip", Tooltip = "Text shown when the pointer rests on this widget (empty: none; the nearest ancestor's tooltip shows instead)" )
+        string _tooltip;
 
         unique_ptr<WidgetPaintCache>       _paintCache;       ///< 마지막으로 칠한 사각형(물리 픽셀)입니다. `UIPaintPass` 가 채우며, 처음 칠할 때 만듭니다.
         shared_ptr<const UIComputedStyle>  _computedStyle;    ///< 계산된 스타일입니다(같은 조건의 위젯이 공유하며, `UIStylePass` 가 정합니다).
@@ -262,6 +275,8 @@ namespace sw
         WidgetVisibility _visibility;
         PROPERTY( DisplayName = "Flow Direction", Tooltip = "Inherit follows the parent (the culture at the root); fix LeftToRight for numbers and clocks" )
         UIFlowDirection _flowDirection;
+        PROPERTY( DisplayName = "Cursor", Tooltip = "Mouse cursor over this widget; Inherit follows the parent (Arrow at the root)" )
+        UICursorShape _cursorShape;
         PROPERTY( DisplayName = "Enabled" )
         bool _bEnabled;
         bool _bRightToLeft; ///< 마지막 arrange 에서 해석한 흐름 방향입니다(UILayoutPass 가 기록합니다).

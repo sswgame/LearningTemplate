@@ -190,11 +190,12 @@ namespace sw
             return false;
         }
         // 틱이 건너뛰면 그 틱부터 다시 쌓고, 틱이 줄면(새 게임 판) 확인까지 비우고 다시 쌓는다. 같은 틱이면 처음 값이 남고 지금 창만 다시 보낸다.
-        (void)_inputWindow.push( tick, listInput.data(), static_cast<int32>( listInput.size() ) );
+        // 스탬프는 이 입력을 만든 순간 보던 틱이다 — 다시 보낼 때도 이 값이 같이 가서 서버가 옛 입력을 그 입력의 시점으로 랙 보정한다.
+        const uint32 viewTickStamp = static_cast<uint32>( MathUtil::max( 0.0f, getRenderTick() ) * static_cast<float32>( NetClientServerMessage::kViewTickStampScale ) );
+        (void)_inputWindow.push( tick, listInput.data(), static_cast<int32>( listInput.size() ), viewTickStamp );
         if ( _pHost == nullptr )
             return true;
         BitWriter& writer = _messageWriter.begin( NetClientServerMessage::kInput );
-        writer.writeVarUint( static_cast<uint64>( MathUtil::max( 0.0f, getRenderTick() ) * 256.0f ) );
         // 서버가 확인한 다음 틱부터 메시지 상한 안에서 오래된 입력부터 싣는다. 못 실은 새 입력은 확인이 올라간 뒤 다음 메시지가 싣는다.
         NetSendBudget budget( NetConnection::kMaxSingleMessageSize );
         budget.reserveBits( writer.getBitCount() );

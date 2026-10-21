@@ -23,6 +23,7 @@ namespace sw
         documents._notifications        = assets._uiNotifications.get();
         documents._notificationEntry    = assets._uiNotificationEntry.get();
         documents._subtitles            = assets._uiSubtitles.get();
+        documents._tooltip              = assets._uiTooltip.get();
         documents._debugHUD             = assets._uiDebugHUD.get();
         return documents;
     }

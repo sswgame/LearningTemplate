@@ -63,6 +63,13 @@ namespace sw
         uint8                  _bRepeat    : 1;
         uint8                  _bSynthetic : 1; /**< 가상 입력 원천(`IVirtualInputSource`)이 낸 이벤트입니다. `InputManager::beginFrame` 이 켭니다. */
         [[maybe_unused]] uint8 _reserved   : 6;
+        /**
+         * @brief 프레임 안의 자리입니다. 0 은 이 프레임 창의 시작(지난 `beginFrame`), 1 은 이번 `beginFrame` 입니다(서브틱 입력).
+         * @details OS 이벤트는 `beginFrame` 이 `_timeMicroseconds` 로 채운다. 가상 이벤트(리플레이 · 시나리오)는 녹화된 값 그대로이고(파일에 저장된다), 손으로 지은 가상 이벤트는 0(프레임 시작)이다.
+         */
+        float32 _frameFraction;
+        /** @brief 이벤트가 큐에 들어온 시각(단조 시계 마이크로초, `InputManager::postRawEvent`)입니다. 가상 이벤트는 쓰지 않습니다. */
+        int64 _timeMicroseconds;
 
         union
         {
@@ -104,6 +111,8 @@ namespace sw
             , _bRepeat{ SW_FALSE }
             , _bSynthetic{ SW_FALSE }
             , _reserved{ 0 }
+            , _frameFraction{ 0.0f }
+            , _timeMicroseconds{ 0 }
             , _payload{} {}
 
         static RawInputEvent makeKeyDown( Key key, uint16 vk = 0, bool bRepeat = false, uint8 modifierMask = 0 )

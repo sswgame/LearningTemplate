@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Network/NetClientServer/ReplicationServer.h"
 
+#include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
 #include "Core/Network/Connection/NetHost.h"
 #include "Core/Network/Message/NetSendBudget.h"
@@ -268,14 +269,9 @@ namespace sw
 
     bool ReplicationServer::handleInput( ClientState& client, BitReader& reader )
     {
-        const uint32 viewTick = static_cast<uint32>( reader.readVarUint() );
-        if ( reader.hasOverflowed() )
-            return false;
         // 이미 꺼낸 틱과 이미 가진 틱은 버퍼에 넣지 않고 넘긴다. 길이나 개수가 상한을 넘거나 모자라면 하나도 넣지 않고 손상된 메시지로 본다.
-        if ( client._input.read( reader ) == false )
-            return false;
-        client._viewTick = static_cast<float32>( viewTick ) / 256.0f;
-        return true;
+        // 보던 틱은 항목마다의 스탬프로 온다 — 꺼낼 때(`popInput`) 그 입력의 값으로 정한다.
+        return client._input.read( reader );
     }
 
     bool ReplicationServer::popInput( int32 connectionID, uint32 tick, vector<uint8>& outInputBuffer, bool& outbExact )
@@ -291,6 +287,11 @@ namespace sw
             client._lastInput = pEntry->_bytes;
             client._bHasInput = SW_TRUE;
             outbExact         = pEntry->_tick == tick;
+            // 서버 클램프: 클라이언트가 보던 틱은 지금 꺼내는 틱보다 앞일 수 없고, `_maxViewLagTicks` 보다 오래 되감지 않는다(랙 보정 남용을 막는다).
+            const float32 claimedViewTick = static_cast<float32>( pEntry->_stamp ) / static_cast<float32>( NetClientServerMessage::kViewTickStampScale );
+            const float32 newestViewTick  = static_cast<float32>( tick );
+            const float32 oldestViewTick  = MathUtil::max( 0.0f, newestViewTick - static_cast<float32>( _settings._maxViewLagTicks ) );
+            client._viewTick              = MathUtil::clamp( claimedViewTick, oldestViewTick, newestViewTick );
         }
         // 이 틱까지는 다 썼다. 더 받지 않고, 확인 틱이 넘어가므로 클라이언트도 다시 싣지 않는다.
         client._input.setWindow( tick + 1u, NetInputReceiveBuffer::kNoWindowEnd );

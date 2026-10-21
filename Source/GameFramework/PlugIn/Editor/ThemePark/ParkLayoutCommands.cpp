@@ -9,6 +9,8 @@
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 
+#include "GameFramework/PlugIn/Editor/ThemePark/ParkLayoutPanel.h"
+
 namespace sw::editor
 {
     namespace
@@ -17,7 +19,7 @@ namespace sw::editor
         void openParkLayoutPanel()
         {
             EditorContext* pContext = EditorContext::get();
-            if ( pContext != nullptr && pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "themepark.layout", true ) )
+            if ( pContext != nullptr && pContext->getSubsystem<EditorPanelManager>().setPanelOpen<ParkLayoutPanel>( true ) )
                 SW_LOG_INFO( "Park Layout panel opened" );
         }
         // [/doc:command-open]

@@ -1,6 +1,6 @@
 # 네트워크 후보
 
-> 상태: 후보 · 선행: 없음 · 영역: network · 옛번호: B-9, B-10, C-54, D7-1, D7-2, D7-5, D7-6, D7-9, G-2, G-8, G-15, G-16, H-3 · 진행: 해당없음
+> 상태: 후보 · 선행: 없음 · 영역: network · 옛번호: B-9, B-10, C-54, D7-1, D7-2, D7-5, D7-6, D7-9, G-15, H-3 · 진행: 해당없음
 
 이 문서는 네트워크 · 서버 · 온라인 서비스 영역에서 아직 착수하지 않은 후보의 목록입니다. 착수하면 그 절을 계획 문서로 옮기고 여기서 지웁니다. 서버 디버깅은 [ServerDebug](ServerDebug.md), 서버 버스 형식은 [ServerBusFormat](ServerBusFormat.md)에 있습니다.
 
@@ -82,44 +82,11 @@
 
 ## 조건부
 
-### SubtickInput
-제목: CS2 식 서브틱 입력
-옛번호: G-2
-착수 조건: 넷 게임이 생기면(2026-10-05 제안; 지금 넷 키트를 쓰는 테스트 게임은 0).
-왜 필요한가: `RawInputEvent` · `NativeWindowEvent` 에 시각이 없다(`MSG::time` 을 버림).
-남은 것:
-- B1 사건 시각 + 입력 리플레이 판 4.
-- B2 프레임 안 자리와 그 순간까지의 시선 누적(시계 주입).
-- B3 `InputMap` 이 행동별 "누른 순간" 을 준다.
-- B4 클릭 순간의 시선으로 발사(쿨다운 남은 몫은 이미 고침).
-- B5 넷 입력 항목마다 스탬프 · `viewTick`. 지금은 메시지마다 하나라 다시 보낸 옛 입력도 최신으로 판정한다. 자리는 있다: `NetInputFormat::_bStamped` · `NetInputSendWindow::push( …, stamp )` · `NetInputEntry::_stamp`, 켜면 `kClientServer` 판을 올린다. 서버 클램프(랙 보정 `LagCompensationHistory::raycastAt(float)` 는 있다).
-- B6(선택) Win32 입력 스레드: 먼저 `GetMessageTime` 해상도를 재고, 에디터 · 콘솔이 먼저 소비하는 판정을 우회하지 않게.
-함정: 롤백 · 락스텝 키트에는 넣지 않는다(프레임 단위 결정성이 계약).
-
-### MmoUpdateAckViaDelivery
-제목: MMO 갱신 확인을 NetConnection 전달 통지로
-옛번호: G-8
-착수 조건: 패킷 확인 → 메시지 전달 통지가 Core 에 생기면.
-왜 필요한가: 키트 확인 메시지(`kUpdateAck`)를 지우고 그 통지로 판정한다(언리얼 NAK 자리).
-
 ### StoreProviderIntegration
 제목: 스토어 제공자(Steam · Epic) 연동
 옛번호: G-15
 착수 조건: 출시 플랫폼이 정해지면.
 왜 필요한가: 업적 · 클라우드 세이브 · 오버레이 · 친구가 없다. 온라인 서비스의 제공자 추상에 붙일 자리는 있다.
-
-### PatchDeltaDelivery
-제목: 패치 · 델타 업데이트 배포 구조
-옛번호: G-16
-착수 조건: 출시 일정이 잡히면(크래시 컨텍스트와 텔레메트리 코드는 있다).
-왜 필요한가: 팩 단위 차분 배포 · 버전 관리가 없다.
-
-### ServerBusFormatLeftovers
-제목: 서버 버스 형식의 남은 확인 셋
-옛번호: 없음
-왜 필요한가: [ServerBusFormat](ServerBusFormat.md) 은 구현이 모두 들어가 문서를 요약으로 줄였지만, 확인하지 못한 셋이 남았습니다.
-남은 것: (1) 6절 테스트의 통과 기록 — 통합 때 Debug 빌드를 세운 것까지만 확인했으므로 해당 스위트를 실제로 돌려 적습니다. (2) 7절 측정이 [검증과 측정](../08_Verification.md) 에 없어 Release 로 재서 옮깁니다. (3) 해지 알림 서버 둘 테스트를 쓰지 않았습니다.
-함정: 측정은 Release 로만 합니다.
 
 ## 보류
 

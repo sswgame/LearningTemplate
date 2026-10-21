@@ -1,6 +1,6 @@
 # 에디터 후보
 
-> 상태: 후보 · 선행: 없음 · 영역: editor · 옛번호: B-3, B-4, D3-1, D3-1.2, D3-3, D3-4, D3-5, D3-8, D3-9, D3-10, D3-13 · 진행: 해당없음
+> 상태: 후보 · 선행: 없음 · 영역: editor · 옛번호: B-3, B-4, D3-1, D3-1.2, D3-3, D3-4, D3-5, D3-8, D3-9, D3-10 · 진행: 해당없음
 
 에디터 패널, 에디터 플러그인, 에디터 시나리오의 착수 전 후보 목록입니다. 착수하면 절을 계획 문서로 옮기고 여기서 지웁니다. 이미 계획 문서가 있는 일은 [EditorMultiWorld](EditorMultiWorld.md)(다중 월드 · 툴 창)와 [EditorUX](EditorUX.md)(UX 남은 결함)에 있습니다.
 
@@ -37,28 +37,6 @@
 - 빈상태창: 어빌리티 디버거 · 오디오 이벤트 · 리그 디버그 · 시퀀서 `RigSlot` 트랙 · UI 디자이너 앵커 프리셋은 빈 상태(안내 글)까지만 봤다. 이 기능들을 쓰는 데이터(리그 · 오디오 이벤트 라이브러리)가 저장소에 없다. NPC 일정 디버그 창은 HarvestValley 마을 사람(`FarmVillageDirectorComponent`)으로 실물이 생겼지만 에디터에서 열어 보지 않았다.
 - 포토모드: 포토 모드는 게임 HUD 를 그대로 둔다. 의도인지 확인.
 - 팝업잘림: 뷰포트 옵션 팝업은 패널이 화면 오른쪽 끝이면 메인 창 밖으로 나가 클라이언트 캡처에 안 잡힌다.
-
-### PanelIDLiterals
-제목: 패널을 id 글자로 여는 남은 호출
-옛번호: 없음
-왜 필요한가: 패널 열기 요청은 패널 형식(`requestOpenPanel<T>()`)으로 바꿨지만(2026-10-20) 같은 모양이 남았다. `EditorPlayCommands.cpp` 의 `focusPanel( "scene_view" )` · `"game_view"`(Common 이 Panels 를 모른다),
-GameFramework 에디터 플러그인의 `setPanelOpen( "admin.tool" )` · `"gimmick_graph"` · `"charactereditor.main"`, `EditorSelfTestDevTools.cpp` 의 `ImGui::SetWindowFocus( "Scene" )`(창 제목 글). 오타는 실행 중 false 로만 드러난다.
-남은 것: 같은 모듈이면 `setPanelOpen<T>()` 로, 층이 막히면 id 상수를 아래 층(패널 호스트 창구)으로 내린다.
-
-### ScenarioWritesSourceTree
-제목: 에디터 시나리오가 저장소 소스 트리에 직접 쓴다
-옛번호: 없음
-왜 필요한가: 에디터 시나리오를 한 번 돌리면 추적 중인 리소스가 바뀌거나 잔여 파일이 남는다(2026-10-20 DX12 묶음에서 확인).
-`animgraphlayers/animgraphlayers.animgraph.json` 이 줄바꿈이 바뀐 채 남고, `assetmanage` 가 `new_material.material` · `new_material_2.material` 을 남기고 추적 중인 `probe.material(.meta)` 를 지운다.
-잔여 파일이 있으면 다음 실행이 다른 이름(`new_material_2`)을 만들고 검증의 `[orphans]` 경고로 시나리오가 진다 — 중단된 실행(옛 프로세스)이 남긴 파일이 다음 실행을 지게 한 것으로 보이며 정확한 원인은 확인하지 못했다.
-근본 원인: 시나리오가 `Resource/` 원본에 쓴다. 증상(파일 지우기 · 되돌리기)이 아니라 시나리오가 쓰는 곳을 실행마다 비우는 임시 폴더로 옮기는 것이 구조적 해결이다.
-남은 것: 시나리오 에셋 쓰기를 임시 마운트로 보내는 길(엔진이 쓰기 가능한 임시 루트를 제공), 그 전까지 시나리오 시작 전에 작업 트리가 깨끗한지 확인하는 게이트를 둘지 판단.
-
-### DesignerDataToolsAudit
-제목: 디자이너용 데이터 도구 점검
-옛번호: D3-13
-왜 필요한가: 스크립팅 층을 두지 않으므로([결정 기록](../09_Decisions.md) 2절) 코드 없이 로직 · 재질을 짜는 도구가 중요하다.
-착수 조건 / 남은 것: 머티리얼 그래프, 상태 머신 · 행동 트리 편집기, 파티클 에디터(`D2-11` P2)가 있는지 현재 상태를 코드로 확인하고 빠진 것을 항목으로 쪼갠다. 확인 전에는 있다 없다를 단정하지 않는다.
 
 ## 기능
 

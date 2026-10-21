@@ -74,19 +74,29 @@ namespace
         }
     };
 
-    /** @brief 손으로 지은 입력 메시지 — [@p firstTick, @p firstTick + 개수) 틱의 입력을 오래된 것부터 싣는다(보는 틱 0). */
-    vector<uint8> makeInputMessage( uint32 firstTick, const vector<vector<uint8>>& listPayload )
+    /**
+     * @brief 손으로 지은 입력 메시지 — [@p firstTick, @p firstTick + 개수) 틱의 입력을 오래된 것부터 싣는다.
+     * @param listViewTick 항목마다의 보던 틱(스탬프 = 값 × `kViewTickStampScale`)입니다. 비면 모두 0 입니다.
+     */
+    vector<uint8> makeStampedInputMessage( uint32 firstTick, const vector<vector<uint8>>& listPayload, const vector<float32>& listViewTick )
     {
         BitWriter writer;
         writer.writeBits( NetClientServerMessage::kInput, 8 );
-        writer.writeVarUint( 0 ); // 보는 틱 × 256
         writer.writeVarUint( firstTick );
         writer.writeVarUint( listPayload.size() );
-        for ( const vector<uint8>& payload : listPayload )
+        for ( size_t index = 0; index < listPayload.size(); ++index )
         {
-            writer.writeBlob( payload.data(), static_cast<int32>( payload.size() ) );
+            const float32 viewTick = index < listViewTick.size() ? listViewTick[index] : 0.0f;
+            writer.writeVarUint( static_cast<uint64>( viewTick * static_cast<float32>( NetClientServerMessage::kViewTickStampScale ) ) );
+            writer.writeBlob( listPayload[index].data(), static_cast<int32>( listPayload[index].size() ) );
         }
         return writer.getBytes();
+    }
+
+    /** @brief 보던 틱이 모두 0 인 입력 메시지입니다(`makeStampedInputMessage`). */
+    vector<uint8> makeInputMessage( uint32 firstTick, const vector<vector<uint8>>& listPayload )
+    {
+        return makeStampedInputMessage( firstTick, listPayload, vector<float32>{} );
     }
 
     /** @brief 흉내 거르개 — `_bDropping` 인 동안 보내는 패킷을 모두 버립니다(한 방향 연속 손실). */
@@ -238,6 +248,35 @@ SW_TEST_CASE( NetClientServerTest, RedundantInputsSkipKnownTicksAndKeepLaterPayl
     SW_ASSERT_TRUE( server.popInput( 0, 6, input, bExact ) );
     SW_ASSERT_EQUAL( size_t{ 2 }, input.size() );
     SW_EXPECT_EQUAL( 6, static_cast<int32>( input[1] ) );
+}
+
+/**
+ * @brief [NetClientServerTest] 보던 틱은 입력 항목마다 온다 — 다시 실려 온 옛 입력은 그 입력의 보던 틱으로 랙 보정하고, 서버는 앞선 값과 너무 오래된 값을 잘라 낸다(서브틱 입력 B5)
+ * @details 메시지마다 보던 틱 하나를 실으면 다시 보낸 옛 입력도 최신 틱으로 판정한다(옛 형식의 결함).
+ */
+SW_TEST_CASE( NetClientServerTest, ViewTickTravelsWithEachInputAndIsClampedByTheServer )
+{
+    ReplicationServerConfig settings;
+    settings._maxViewLagTicks = 32;
+    ReplicationServer server;
+    SW_ASSERT_TRUE( server.initialize( nullptr, settings, nullptr ) );
+
+    // 틱 10 은 8.5 를 보며, 틱 11 은 9 를 보며 만들었다. 둘이 한 메시지에 다시 실려 와도 각자의 값이다. 틱 12 는 앞선 값(50), 틱 13 은 너무 오래된 값(0)을 주장한다.
+    SW_ASSERT_TRUE( NetHandleResult::Handled == server.handleMessage( 0, makeStampedInputMessage( 10, { { 1 }, { 2 }, { 3 }, { 4 } }, { 8.5f, 9.0f, 50.0f, 0.0f } ) ) );
+    vector<uint8> input;
+    bool          bExact = false;
+    SW_ASSERT_TRUE( server.popInput( 0, 10, input, bExact ) );
+    SW_EXPECT_NEAR_EQUAL( 8.5f, server.getClientViewTick( 0 ), 1.0e-3f );
+    SW_ASSERT_TRUE( server.popInput( 0, 11, input, bExact ) );
+    SW_EXPECT_NEAR_EQUAL( 9.0f, server.getClientViewTick( 0 ), 1.0e-3f );
+    SW_ASSERT_TRUE( server.popInput( 0, 12, input, bExact ) );
+    SW_EXPECT_NEAR_EQUAL( 12.0f, server.getClientViewTick( 0 ), 1.0e-3f ); // 꺼내는 틱보다 앞설 수 없다
+    SW_ASSERT_TRUE( server.popInput( 0, 13, input, bExact ) );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, server.getClientViewTick( 0 ), 1.0e-3f ); // 13 - 32 < 0 이므로 아래 끝은 0 이다
+
+    SW_ASSERT_TRUE( NetHandleResult::Handled == server.handleMessage( 0, makeStampedInputMessage( 100, { { 5 } }, { 1.0f } ) ) );
+    SW_ASSERT_TRUE( server.popInput( 0, 100, input, bExact ) );
+    SW_EXPECT_NEAR_EQUAL( 68.0f, server.getClientViewTick( 0 ), 1.0e-3f ); // 32 틱보다 오래 되감지 않는다
 }
 
 SW_TEST_CASE( NetClientServerTest, ReplicationInterpolatesOverLossyLatencyAndCarriesRedundantInputs )
@@ -970,6 +1009,9 @@ SW_TEST_CASE( NetClientServerTest, ServerRefusesOutOfRangeSettings )
     ReplicationServerConfig noTickInterval;
     noTickInterval._tickInterval = 0.0f;
     SW_EXPECT_FALSE( server.initialize( nullptr, noTickInterval ) );
+    ReplicationServerConfig tooLongViewLag;
+    tooLongViewLag._maxViewLagTicks = 257;
+    SW_EXPECT_FALSE( server.initialize( nullptr, tooLongViewLag ) );
     ReplicationServerConfig atLimit;
     atLimit._snapshotBudgetBytes = NetConnection::kMaxSingleMessageSize;
     atLimit._historySize         = 2;

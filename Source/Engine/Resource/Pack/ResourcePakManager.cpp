@@ -140,6 +140,21 @@ namespace sw
             }
 
             /**
+             * @brief 전체 경로 해시 @p pathHash 를 지운 패치 팩 중 가장 우선순위가 높은 것의 인덱스입니다. 없으면 목록 크기입니다.
+             * @details 그 인덱스보다 앞(우선순위가 높은) 팩만 그 경로를 줄 수 있다 — 패치보다 아래 팩의 같은 경로는 없는 것이다.
+             */
+            static size_t findRemovingPackIndex( const vector<MountedPack>& listMountedPack, uint64 pathHash )
+            {
+                for ( size_t packIndex = 0; packIndex < listMountedPack.size(); ++packIndex )
+                {
+                    const vector<uint64>& listRemoved = listMountedPack[packIndex]._listRemovedPathHash;
+                    if ( std::binary_search( listRemoved.begin(), listRemoved.end(), pathHash ) )
+                        return packIndex;
+                }
+                return listMountedPack.size();
+            }
+
+            /**
              * @brief 경로를 가진 팩을 찾아 `visit( mounted, pathHash, pathInPack )` 을 부릅니다. 방문자가 true 를 반환하면 멈춥니다.
              * @details 두 단계입니다. 전체 경로의 해시로 모든 팩을 보고, 그다음 경로가 도메인으로 시작하면(`engine/…`) 그 도메인 팩에서
              *          나머지 경로로 봅니다. `hasFile` · `readFile` · `readTextFile` 이 함께 씁니다. 잠금은 부르는 쪽이 쥡니다.
@@ -148,10 +163,12 @@ namespace sw
             template <typename VisitFn>
             static bool visitPacksWithFile( const vector<MountedPack>& listMountedPack, string_view relativePath, VisitFn&& visit )
             {
-                const uint64 pathHash = HashUtil::computeStringHash64( relativePath );
-                for ( const MountedPack& mounted : listMountedPack )
+                const uint64 pathHash  = HashUtil::computeStringHash64( relativePath );
+                const size_t packLimit = findRemovingPackIndex( listMountedPack, pathHash );
+                for ( size_t packIndex = 0; packIndex < packLimit; ++packIndex )
                 {
-                    const bool bPackHasFile = mounted._pReader != nullptr && mounted._pReader->hasFile( pathHash ) && visit( mounted, pathHash, relativePath );
+                    const MountedPack& mounted      = listMountedPack[packIndex];
+                    const bool         bPackHasFile = mounted._pReader != nullptr && mounted._pReader->hasFile( pathHash ) && visit( mounted, pathHash, relativePath );
                     if ( bPackHasFile )
                         return true;
                 }
@@ -162,8 +179,9 @@ namespace sw
                     return false;
 
                 const uint64 subHash = HashUtil::computeStringHash64( subPath );
-                for ( const MountedPack& mounted : listMountedPack )
+                for ( size_t packIndex = 0; packIndex < packLimit; ++packIndex )
                 {
+                    const MountedPack& mounted = listMountedPack[packIndex];
                     if ( mounted._pReader == nullptr || matchPackDomain( mounted._domainName, queryDomain ) == false )
                         continue;
                     if ( mounted._pReader->hasFile( subHash ) && visit( mounted, subHash, subPath ) )
@@ -212,6 +230,23 @@ namespace sw
 
     bool ResourcePakManager::mountPack( string_view packFilePath, int32 priority )
     {
+        return mountReader( packFilePath, priority, vector<uint64>{} );
+    }
+
+    bool ResourcePakManager::mountPatchPack( string_view packFilePath, int32 priority, const vector<string>& listRemovedPath )
+    {
+        vector<uint64> listRemovedPathHash;
+        listRemovedPathHash.reserve( listRemovedPath.size() );
+        for ( const string& removedPath : listRemovedPath )
+        {
+            listRemovedPathHash.push_back( HashUtil::computeStringHash64( removedPath ) );
+        }
+        std::sort( listRemovedPathHash.begin(), listRemovedPathHash.end() );
+        return mountReader( packFilePath, priority, std::move( listRemovedPathHash ) );
+    }
+
+    bool ResourcePakManager::mountReader( string_view packFilePath, int32 priority, vector<uint64> listRemovedPathHash )
+    {
         if ( packFilePath.empty() )
             return false;
 
@@ -258,9 +293,10 @@ namespace sw
             FileUtil::removeExtension( fileNamePart, stem );
 
             MountedPack mounted{};
-            mounted._domainName = string( stem );
-            mounted._priority   = effectivePriority;
-            mounted._pReader    = std::move( pReader );
+            mounted._domainName          = string( stem );
+            mounted._priority            = effectivePriority;
+            mounted._pReader             = std::move( pReader );
+            mounted._listRemovedPathHash = std::move( listRemovedPathHash );
 
             _listMountedPack.push_back( std::move( mounted ) );
 
@@ -319,10 +355,20 @@ namespace sw
             return;
 
         std::scoped_lock<mutex> lock( _vfsMutex );
-        for ( const MountedPack& mounted : _listMountedPack )
+        // 패치 팩이 지운 경로는 그 패치보다 아래 팩에서 나온 항목이면 뺀다(`visitPacksWithFile` 과 같은 규칙).
+        vector<string> listPackEntry;
+        for ( size_t packIndex = 0; packIndex < _listMountedPack.size(); ++packIndex )
         {
-            if ( mounted._pReader != nullptr )
-                mounted._pReader->collectFolderEntries( relativeFolder, outListPath );
+            const MountedPack& mounted = _listMountedPack[packIndex];
+            if ( mounted._pReader == nullptr )
+                continue;
+            listPackEntry.clear();
+            mounted._pReader->collectFolderEntries( relativeFolder, listPackEntry );
+            for ( string& entryPath : listPackEntry )
+            {
+                if ( ResourcePakManagerInternal::findRemovingPackIndex( _listMountedPack, HashUtil::computeStringHash64( entryPath ) ) > packIndex )
+                    outListPath.push_back( std::move( entryPath ) );
+            }
         }
 
         // 도메인 팩은 도메인을 뗀 경로로 담겨 있다(`visitPacksWithFile` 의 둘째 단계와 같은 규칙).
@@ -331,15 +377,18 @@ namespace sw
         if ( ResourcePakManagerInternal::trySplitDomainPrefix( relativeFolder, queryDomain, subFolder ) == false )
             return;
         vector<string> listPathInPack;
-        for ( const MountedPack& mounted : _listMountedPack )
+        for ( size_t packIndex = 0; packIndex < _listMountedPack.size(); ++packIndex )
         {
+            const MountedPack& mounted = _listMountedPack[packIndex];
             if ( mounted._pReader == nullptr || ResourcePakManagerInternal::matchPackDomain( mounted._domainName, queryDomain ) == false )
                 continue;
             listPathInPack.clear();
             mounted._pReader->collectFolderEntries( subFolder, listPathInPack );
             for ( const string& pathInPack : listPathInPack )
             {
-                outListPath.push_back( FileUtil::joinPath( queryDomain, pathInPack ) );
+                string fullPath = FileUtil::joinPath( queryDomain, pathInPack );
+                if ( ResourcePakManagerInternal::findRemovingPackIndex( _listMountedPack, HashUtil::computeStringHash64( fullPath ) ) > packIndex )
+                    outListPath.push_back( std::move( fullPath ) );
             }
         }
     }
