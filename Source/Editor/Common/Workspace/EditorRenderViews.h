@@ -33,6 +33,8 @@ namespace sw::editor
         void*  _pTextureID{ nullptr };
         uint32 _width{ 0 };
         uint32 _height{ 0 };
+        int32  _windowX{ 0 };       ///< 이번 프레임에 이미지 왼쪽 위가 놓인 주 창 클라이언트 픽셀(`markViewDrawn`). 호스트가 포인터를 뷰 픽셀로 옮긴다
+        int32  _windowY{ 0 };       ///< 위와 같습니다(세로)
         uint8  _bDrawn{ SW_FALSE }; ///< 이번 UI 프레임에 패널이 이 뷰를 그렸다(보인다). 프레임을 시작할 때 지운다
     };
 } // namespace sw::editor
@@ -86,8 +88,11 @@ namespace sw::editor
         void destroyViewTarget( EditorViewKind kind );
         /** @brief 뷰 렌더 타깃을 모두 해제합니다(미리보기 타깃 포함). */
         void destroyViewTargets();
-        /** @brief 패널이 이번 프레임에 그 뷰를 그렸다고 알립니다. 셸은 그린 뷰만 호스트에 요청합니다. */
-        void markViewDrawn( EditorViewKind kind ) { _arrViewTarget[static_cast<uint32>( kind )]._bDrawn = SW_TRUE; }
+        /**
+         * @brief 패널이 이번 프레임에 그 뷰를 그렸다고 알립니다. 셸은 그린 뷰만 호스트에 요청합니다.
+         * @param imageScreenPos 이미지 왼쪽 위의 ImGui 화면 좌표입니다. 주 뷰포트 기준(주 창 클라이언트 픽셀)으로 바꿔 둡니다 — 그린 프레임마다 자리가 함께 오므로 낡지 않습니다.
+         */
+        void markViewDrawn( EditorViewKind kind, const float2& imageScreenPos );
         /** @brief 이번 프레임에 그 뷰를 그렸으면 true 입니다. */
         bool wasViewDrawn( EditorViewKind kind ) const { return getViewTarget( kind )._bDrawn == SW_TRUE; }
         /** @brief UI 프레임을 시작할 때 그린 뷰 표시를 지웁니다(미리보기 타깃 포함). */

@@ -52,10 +52,10 @@ namespace sw::editor
         void abandonPendingDraw() override;
         /** @brief 네이티브 이벤트를 ImGui 플랫폼 레이어에 전달합니다. */
         bool processEvent( const NativeWindowEvent& event ) override;
-        /** @brief 이번 프레임 게임 뷰의 렌더 타깃 핸들과 크기를 조회합니다. */
-        void getGameViewport( uint64* pRenderTarget, uint32* pWidth, uint32* pHeight ) const override;
-        /** @brief 이번 프레임 씬 뷰의 렌더 타깃 핸들과 크기를 조회합니다. */
-        void getSceneViewport( uint64* pRenderTarget, uint32* pWidth, uint32* pHeight ) const override;
+        /** @brief 이번 프레임 게임 뷰의 렌더 타깃 핸들 · 크기 · 창 안 자리를 씁니다. */
+        void getGameViewport( HostViewTarget* pOutTarget ) const override;
+        /** @brief 이번 프레임 씬 뷰의 렌더 타깃 핸들 · 크기 · 창 안 자리를 씁니다. */
+        void getSceneViewport( HostViewTarget* pOutTarget ) const override;
         /** @brief 이번 프레임 씬 뷰를 그리는 카메라를 반환합니다. */
         CameraComponent* getSceneViewCamera() const override;
         /** @brief 이번 프레임에 보인 미리보기 씬 뷰(툴 창)를 씁니다(`EditorRenderViews::collectSceneViews`). */

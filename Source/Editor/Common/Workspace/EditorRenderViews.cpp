@@ -12,6 +12,8 @@
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 
+#include <imgui.h>
+
 namespace sw::editor
 {
     namespace
@@ -59,6 +61,16 @@ namespace sw::editor
         {
             preview._target._bDrawn = SW_FALSE;
         }
+    }
+
+    void EditorRenderViews::markViewDrawn( EditorViewKind kind, const float2& imageScreenPos )
+    {
+        // 다중 뷰포트에서 ImGui 화면 좌표는 데스크톱 좌표다. 주 뷰포트의 자리를 빼면 주 창 클라이언트 픽셀(입력 장치의 마우스 좌표)이 된다.
+        const ImVec2      mainPos = ImGui::GetMainViewport()->Pos;
+        EditorViewTarget& view    = _arrViewTarget[static_cast<uint32>( kind )];
+        view._windowX             = static_cast<int32>( MathUtil::round( imageScreenPos._x - mainPos.x ) );
+        view._windowY             = static_cast<int32>( MathUtil::round( imageScreenPos._y - mainPos.y ) );
+        view._bDrawn              = SW_TRUE;
     }
 
     void EditorRenderViews::destroyViewTargets()

@@ -347,6 +347,30 @@ SW_TEST_CASE( UIInputTest, PointerPositionIsInUIUnits )
 }
 
 /**
+ * @brief [UIInputTest] 화면이 창 안 (600, 400) 에 놓였으면(에디터 게임 뷰) 창 (900, 620) 은 화면 픽셀 (300, 220), 배율 2 에서 UI (150, 110) 인 첫 버튼 위다
+ * @details 변이: `UIInputRouter::processPointer` 가 `UIViewport::_pointerOrigin` 을 빼지 않으면 UI (450, 310) 이라 버튼 밖이고 게임이 Fire 를 본다.
+ */
+SW_TEST_CASE( UIInputTest, PointerPositionSubtractsViewportOrigin )
+{
+    UIInputFixture fixture;
+    fixture._viewport._size          = sw::float2{ 960.0f, 540.0f };
+    fixture._viewport._physicalSize  = sw::float2{ 1920.0f, 1080.0f };
+    fixture._viewport._uiScale       = 2.0f;
+    fixture._viewport._pointerOrigin = sw::int2{ 600, 400 };
+    fixture.openMenu( 1 );
+    fixture._listButton[0]->_bHandleBubble = true;
+    fixture.runFrame(); // 자리와 배율이 든 뷰포트를 UI 에 한 번 넘긴다
+
+    SW_EXPECT_TRUE( fixture._input.postRawEvent( sw::RawInputEvent::makeMouseMove( 900, 620 ) ) );
+    SW_EXPECT_TRUE( fixture._input.postRawEvent( sw::RawInputEvent::makeMouseButtonDown( sw::MouseButton::Left, 900, 620 ) ) );
+    fixture.beginFrame();
+    SW_EXPECT_TRUE( fixture._input.getInputMap().wasActionTriggered( "Fire" ) );
+    SW_EXPECT_FALSE( fixture.wasTriggeredForGame( "Fire" ) );
+    SW_EXPECT_EQUAL( fixture._listButton[0]->getID(), fixture._ui.getInputRouter().getPointerState().getHoveredWidget() );
+    fixture.endFrame();
+}
+
+/**
  * @brief [UIInputTest] 오른쪽 스틱(`UI.Scroll`)은 포커스 항목이 든 스크롤 목록을 스틱 속도 × 시간만큼 옮기고, 쓴 스틱은 먹힌 입력이다
  * @details 아래로 끝까지 기울이면 1200 × 1/60 = 프레임마다 20. 변이: `UISystem::processScroll` 을 부르지 않으면 오프셋이 0 으로 남는다.
  */
