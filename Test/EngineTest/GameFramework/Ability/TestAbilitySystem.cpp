@@ -1121,3 +1121,35 @@ SW_TEST_CASE( AbilitySystemTest, AttributeBaseValuesRoundTripThroughSaveBytes )
         SW_EXPECT_FALSE( AbilityAttributeSaveUtil::applyBaseValues( *pBare, listRead ) );
     }
 }
+
+/**
+ * @brief [AbilitySystemTest] 큐 표 — 큐 태그는 가장 가까운 조상의 `<GameplayCue>` 가 맡고, 보여 줄 것이 없는 정의는 로드 오류다
+ */
+SW_TEST_CASE( AbilitySystemTest, GameplayCueTableResolvesTheNearestAncestor )
+{
+    constexpr const utf8* kCueXML = R"(<AbilityCatalog>
+  <GameplayCue tag="GameplayCue.Hit" sound="Hit" positional="false"/>
+  <GameplayCue tag="GameplayCue.Hit.Fire" prefab="game/test/prefabs/flame.prefab.xml" offset="0,1,0"/>
+</AbilityCatalog>)";
+    AbilityCatalog        catalog;
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kCueXML, "AbilitySystemTest.Cue" ) );
+    SW_EXPECT_EQUAL( 2u, catalog.getCueCount() );
+
+    const GameplayCueDef* pFire = catalog.findCue( "GameplayCue.Hit.Fire"_tag );
+    SW_ASSERT_NOT_NULL( pFire );
+    SW_EXPECT_TRUE( pFire->_prefab == hashed_string( "game/test/prefabs/flame.prefab.xml" ) );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, pFire->_offset._y, 0.0001f );
+    const GameplayCueDef* pPhysical = catalog.findCue( "GameplayCue.Hit.Physical"_tag ); // 정의가 없으면 조상 "GameplayCue.Hit"
+    SW_ASSERT_NOT_NULL( pPhysical );
+    SW_EXPECT_TRUE( pPhysical->_soundEvent == hashed_string( "Hit" ) );
+    SW_EXPECT_TRUE( pPhysical->_bPositional == SW_FALSE );
+    SW_EXPECT_NULL( catalog.findCue( "GameplayCue.Heal"_tag ) );
+
+    constexpr const utf8* kEmptyCueXML = R"(<AbilityCatalog><GameplayCue tag="GameplayCue.Nothing"/></AbilityCatalog>)";
+    AbilityCatalog        badCatalog;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a gameplay cue with neither prefab nor sound" );
+        (void)badCatalog.loadFromXMLText( kEmptyCueXML, "AbilitySystemTest.EmptyCue" ); // 아래 개수가 본다
+    }
+    SW_EXPECT_EQUAL( 0u, badCatalog.getCueCount() );
+}

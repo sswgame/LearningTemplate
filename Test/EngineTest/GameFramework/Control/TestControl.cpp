@@ -717,7 +717,6 @@ SW_TEST_CASE( ControlTest, RemoteControllerReadsWindowBytes )
     PawnComponent*    pLocalPawn  = Internal::spawnAnalogPawn( localManager, "Local" );
     PawnComponent*    pRemotePawn = Internal::spawnAnalogPawn( remoteManager, "Remote" );
     auto*             pRemote     = remoteManager.createGameObject( hashed_string( "Remote" ) )->addComponent<RemoteControllerComponent>();
-    pRemote->setReceiveBuffer( &buffer );
     localManager.beginPlay();
     remoteManager.beginPlay();
     AIControllerComponent* pAI = Internal::possessWithWanderingAI( localManager, *pLocalPawn );
@@ -739,6 +738,17 @@ SW_TEST_CASE( ControlTest, RemoteControllerReadsWindowBytes )
         {
             SW_ASSERT_TRUE( Internal::deliver( window, buffer ) );
             window.acknowledge( buffer.getFirstMissingTick() );
+            // 키트 쪽 일 — 받은 틱의 바이트를 의도로 읽어 조종자에 사본으로 넣는다(조종자는 버퍼를 빌리지 않는다).
+            for ( uint32 receivedTick = pRemote->getNextInputTick(); receivedTick <= tick; ++receivedTick )
+            {
+                const NetInputEntry* pEntry = buffer.find( receivedTick );
+                if ( pEntry == nullptr )
+                    continue;
+                BitReader     reader( pEntry->_bytes.data(), static_cast<int32>( pEntry->_bytes.size() ) );
+                ControlIntent received;
+                SW_ASSERT_TRUE( received.read( reader ) );
+                pRemote->receiveIntent( receivedTick, received );
+            }
         }
         if ( tick < kLagTicks )
             continue;
@@ -765,7 +775,7 @@ SW_TEST_CASE( ControlTest, RemoteControllerReadsWindowBytes )
     SW_EXPECT_EQUAL( 1u, pRemote->getMissingTickCount() );
     SW_EXPECT_TRUE( pRemotePawn->getIntent()._move._x == lastIntent._move._x && pRemotePawn->getIntent()._move._y == lastIntent._move._y );
     SW_EXPECT_EQUAL( 0u, pRemotePawn->getIntent()._buttonTriggered );
-    pRemote->setReceiveBuffer( nullptr );
+    pRemote->clearReceived();
 }
 
 /**

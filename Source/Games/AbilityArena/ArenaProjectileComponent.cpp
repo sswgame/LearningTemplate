@@ -8,7 +8,6 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Base/Foundation/Framework/Presentation/GameSound.h"
 #include "GameFramework/Base/Gameplay/Ability/AbilitySystemComponent.h"
 
 #include "Games/AbilityArena/ArenaDirectorComponent.h"
@@ -113,7 +112,7 @@ namespace sw
                 (void)pAbilitySystem->applyGameplayEffectSpecToSelf( spec ); // 대상 태그 조건에 막히면 무효 핸들 — 안 걸리는 것이 규칙이다
             if ( extraSpec.isValid() )
                 (void)pAbilitySystem->applyGameplayEffectSpecToSelf( extraSpec ); // 대상 태그 조건에 막히면 무효 핸들 — 안 걸리는 것이 규칙이다
-            (void)GameSound::postEvent( "ProjectileHit" );                        // 재생 id 는 쓰지 않는다(원샷)
+            // 피격음은 이펙트의 큐(`GameplayCue.Hit.*`)가 카탈로그의 `<GameplayCue>` 로 낸다 — 여기서 따로 내지 않는다.
         } ) );
     }
 

@@ -365,6 +365,8 @@ namespace sw
         void updateActiveEffects( float32 deltaTime );
         /** @brief 이펙트 하나의 큐를 내보냅니다. */
         void dispatchCues( const GameplayEffectSpec& spec, GameplayCuePhase phase, float32 magnitude );
+        /** @brief 카탈로그의 큐 정의(`<GameplayCue>`)가 있으면 그 연출(프리팹 · 소리)을 틱 뒤에 냅니다. 클라이언트 코드가 없는 빌드에서는 아무것도 하지 않습니다. */
+        void playCueDef( TagID cueTag, GameplayCuePhase phase ) const;
         /** @brief 지우라고 표시된 이펙트와 스펙을 실제로 지웁니다. 잠금이 풀렸을 때만 실행합니다. */
         void compactPendingRemovals();
 

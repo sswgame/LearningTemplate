@@ -115,6 +115,7 @@ namespace sw
         : _mapEffect{}
         , _mapAbility{}
         , _mapAbilitySet{}
+        , _mapCue{}
         , _mapAbilityFactory{}
         , _mapAttributeSetFactory{}
         , _mapExecutionFactory{}
@@ -182,11 +183,46 @@ namespace sw
         _mapAbilitySet.insert_or_assign( def._id, def );
     }
 
+    void AbilityCatalog::addCue( const GameplayCueDef& def )
+    {
+        if ( def._cueTag.isValid() == false )
+        {
+            SW_LOG_WARNING( "addCue: a gameplay cue without a tag was ignored" );
+            return;
+        }
+        _mapCue.insert_or_assign( def._cueTag._id, def );
+    }
+
     void AbilityCatalog::clearDefinitions()
     {
         _mapEffect.clear();
         _mapAbility.clear();
         _mapAbilitySet.clear();
+        _mapCue.clear();
+    }
+
+    const GameplayCueDef* AbilityCatalog::findCue( TagID cueTag ) const
+    {
+        if ( cueTag.isValid() == false || _mapCue.empty() )
+            return nullptr;
+        // 같은 태그부터 조상 쪽으로 찾는다("GameplayCue.Hit.Fire", "GameplayCue.Hit", "GameplayCue"). 조상 id 는 intern 하지 않고 해시만 구한다.
+        const utf8* pTagText = cueTag.getString();
+        if ( pTagText == nullptr )
+        {
+            const auto mapIter = _mapCue.find( cueTag._id );
+            return mapIter != _mapCue.end() ? &mapIter->second : nullptr;
+        }
+        const size_t tagLength = StringUtil::strlen( pTagText );
+        for ( size_t charIndex = tagLength; charIndex > 0; --charIndex )
+        {
+            const bool bBoundary = charIndex == tagLength || pTagText[charIndex] == '.';
+            if ( bBoundary == false )
+                continue;
+            const auto mapIter = _mapCue.find( TagID::computeID( pTagText, charIndex ) );
+            if ( mapIter != _mapCue.end() )
+                return &mapIter->second;
+        }
+        return nullptr;
     }
 
     shared_ptr<const GameplayEffectDef> AbilityCatalog::findEffect( const hashed_string& effectID ) const
@@ -276,8 +312,17 @@ namespace sw
             ++loadedCount;
         }
 
+        for ( XMLNode node = root.findChild( "GameplayCue" ); node; node = node.findNextSibling( "GameplayCue" ) )
+        {
+            GameplayCueDef def;
+            if ( readCue( node, sourceName, def ) == false )
+                continue;
+            addCue( def );
+            ++loadedCount;
+        }
+
         if ( loadedCount == 0 )
-            SW_LOG_WARNING( "%#: no <GameplayEffect>, <Ability> or <AbilitySet> entries", sourceName );
+            SW_LOG_WARNING( "%#: no <GameplayEffect>, <Ability>, <AbilitySet> or <GameplayCue> entries", sourceName );
         return loadedCount;
     }
 
@@ -376,6 +421,34 @@ namespace sw
         if ( bInstantWithLasting )
         {
             SW_LOG_ERROR( "%#: effect '%#' is Instant but has <GrantAbility> or <OngoingRequiredTag> - skipped", sourceName, pID );
+            return false;
+        }
+        return true;
+    }
+
+    bool AbilityCatalog::readCue( const XMLNode& node, string_view sourceName, GameplayCueDef& outDef )
+    {
+        const utf8* pTag = node.findAttribute( "tag" );
+        if ( StringUtil::isNullOrEmpty( pTag ) )
+        {
+            SW_LOG_ERROR( "%#: <GameplayCue> without a tag - skipped", sourceName );
+            return false;
+        }
+        outDef._cueTag     = TagID::request( string_view( pTag ) );
+        outDef._prefab     = GameDataXML::readName( node, "prefab" );
+        outDef._soundEvent = GameDataXML::readName( node, "sound" );
+        bool bValid        = GameDataXML::readOptionalFloat3( node, "offset", sourceName, outDef._offset );
+        bValid             = GameDataXML::readOptionalFlag( node, "onRemoved", outDef._bOnRemoved ) && bValid;
+        bValid             = GameDataXML::readOptionalFlag( node, "positional", outDef._bPositional ) && bValid;
+        if ( bValid == false )
+        {
+            SW_LOG_ERROR( "%#: gameplay cue '%#' has invalid fields - skipped", sourceName, pTag );
+            return false;
+        }
+        // 보여 줄 것이 없는 정의는 적은 사람의 실수다 — 조용히 아무것도 하지 않는 큐로 두지 않는다.
+        if ( outDef._prefab.empty() && outDef._soundEvent.empty() )
+        {
+            SW_LOG_ERROR( "%#: gameplay cue '%#' has neither prefab nor sound - skipped", sourceName, pTag );
             return false;
         }
         return true;
