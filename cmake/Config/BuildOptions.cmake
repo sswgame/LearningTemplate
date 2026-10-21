@@ -133,6 +133,15 @@ endif()
 
 option(SW_ENABLE_TRACY "Tracy 프로파일러 클라이언트 링크(개발 빌드, Shipping 은 무시)" ${swTracyDefault})
 
+# 복합 문자 셰이핑 — HarfBuzz(셰이퍼, MIT) + SheenBidi(전체 UAX #9 수준, Apache 2.0). 엔진 인터페이스(ITextShaper · TextBidi) 뒤에 있고
+# 헤더는 Source/Engine/Text/HarfBuzz · Text/SheenBidi 에서만 include 한다(CheckThirdPartyIsolation). 켜면 두 패키지가 필수다(못 찾으면 구성이 선다).
+# 기본 꺼짐: vcpkg 설치 트리를 워크트리끼리 나눠 쓰므로 패키지는 main 에서 먼저 설치한다(docs/plans/ThirdPartyGaps.md). 설치한 뒤 ON 으로 바꾼다.
+option(SW_ENABLE_COMPLEX_TEXT "HarfBuzz + SheenBidi 복합 문자 셰이핑(아랍어 연결형 · 전체 양방향). 끄면 단순 셰이퍼 · 단순 양방향" OFF)
+# 두 패키지는 vcpkg.json 의 선택 기능 `complex-text` 에 있다 — 기능 없이 켜면 패키지가 설치되지 않은 채 find_package 에서야 선다. 이유를 말하고 먼저 선다.
+if(SW_ENABLE_COMPLEX_TEXT AND NOT "complex-text" IN_LIST VCPKG_MANIFEST_FEATURES)
+	message(FATAL_ERROR "SW_ENABLE_COMPLEX_TEXT=ON needs the vcpkg manifest feature: configure with -DVCPKG_MANIFEST_FEATURES=complex-text")
+endif()
+
 # 활성화할 대상 게임 팩 선택 (Source/Games/ 하위 디렉터리 이름)
 set(SW_ACTIVE_GAME "Empty" CACHE STRING "활성 게임(Source/Games 폴더 이름) — Bin/Modules/SWGame · Shipping 이 굽는 게임. Dev 는 실행할 때 -game=<게임> 으로 다른 게임도 고른다")
 file(GLOB swGamePresetFiles RELATIVE "${CMAKE_SOURCE_DIR}/Config/Game" "${CMAKE_SOURCE_DIR}/Config/Game/*.json")

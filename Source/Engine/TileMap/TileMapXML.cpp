@@ -45,6 +45,34 @@ namespace sw
                 return textLayerCount <= 1;
             }
 
+            /** @brief 공백으로 나눈 정수들(부호 허용)을 읽습니다. 숫자가 아닌 조각이 있으면 false 입니다. */
+            [[nodiscard]] static bool parseIntList( string_view text, vector<int32>& outListValue )
+            {
+                outListValue.clear();
+                auto isSpaceAt = [&text]( size_t index )
+                { return text[index] == ' ' || text[index] == '\n' || text[index] == '\r' || text[index] == '\t'; };
+                size_t cursor = 0;
+                while ( cursor < text.size() )
+                {
+                    while ( cursor < text.size() && isSpaceAt( cursor ) )
+                    {
+                        ++cursor;
+                    }
+                    const size_t start = cursor;
+                    while ( cursor < text.size() && isSpaceAt( cursor ) == false )
+                    {
+                        ++cursor;
+                    }
+                    if ( cursor == start )
+                        break;
+                    int32 value = 0;
+                    if ( StringUtil::parseInt( text.substr( start, cursor - start ), value ) == false )
+                        return false;
+                    outListValue.push_back( value );
+                }
+                return true;
+            }
+
             /** @brief `<t>` 하나에서 레이어 값을 읽습니다. 본문 레이어는 "0" 으로 시작하면 0 이고, 없으면 레이어 표의 기본값입니다. 깨진 숫자는 false 입니다. */
             [[nodiscard]] static bool readFlag( const XMLNode& tileNode, const TileFlagLayerInfo& info, uint8& outFlag )
             {
@@ -302,6 +330,33 @@ namespace sw
             }
         }
 
+        // 데이터 레이어 — 이름 · 기본값 필수, 이름은 겹치지 않고, 값 수 = 셀 수. 하나라도 어긋나면 맵째 읽기 오류다(모자란 칸을 기본값으로 메우지 않는다).
+        XMLNode dataLayers = root.findChild( "dataLayers" );
+        for ( XMLNode layerNode = dataLayers.isValid() ? dataLayers.findChild( "layer" ) : XMLNode{}; layerNode; layerNode = layerNode.findNextSibling( "layer" ) )
+        {
+            DataLayer                  layer;
+            const std::optional<int32> defaultValue = layerNode.readRequiredAttribute<int32>( "default" );
+            layer._name                             = string( layerNode.getAttributeText( "name" ) );
+            const bool bHeaderValid                 = layer._name.empty() == false && defaultValue.has_value() && findDataLayer( layer._name ) < 0;
+            if ( bHeaderValid == false )
+            {
+                SW_LOG_ERROR( "TileMap '%#': <dataLayers><layer> needs a unique non-empty name and a default (name '%#')", _name, layer._name );
+                *this = {};
+                return false;
+            }
+            layer._defaultValue      = *defaultValue;
+            const utf8* pValues      = layerNode.getText();
+            const bool  bValuesValid = TileMapXMLInternal::parseIntList( pValues != nullptr ? string_view( pValues ) : string_view{}, layer._listValue ) &&
+                                      layer._listValue.size() == count;
+            if ( bValuesValid == false )
+            {
+                SW_LOG_ERROR( "TileMap '%#': data layer '%#' needs %# integer values (one per cell)", _name, layer._name, static_cast<uint32>( count ) );
+                *this = {};
+                return false;
+            }
+            _listDataLayer.push_back( std::move( layer ) );
+        }
+
         if ( bValid == false )
         {
             SW_LOG_ERROR( "TileMap '%#' has invalid attribute values (listed above)", _name );
@@ -325,9 +380,61 @@ namespace sw
             getFlagLayer( info._layer ).assign( count, info._defaultValue );
         }
         _listVisual.assign( count, Visual{} );
+        for ( DataLayer& layer : _listDataLayer )
+        {
+            layer._listValue.assign( count, layer._defaultValue );
+        }
         _listWarp.clear();
         if ( _tileSetPath.empty() == false || _listTileCell.empty() == false )
             _listTileCell.assign( count, 0 );
+        return true;
+    }
+
+    int32 TileMapXMLData::findDataLayer( string_view name ) const
+    {
+        for ( size_t layerIndex = 0; layerIndex < _listDataLayer.size(); ++layerIndex )
+        {
+            if ( _listDataLayer[layerIndex]._name == name )
+                return static_cast<int32>( layerIndex );
+        }
+        return -1;
+    }
+
+    bool TileMapXMLData::addDataLayer( string_view name, int32 defaultValue )
+    {
+        if ( name.empty() || findDataLayer( name ) >= 0 )
+            return false;
+        DataLayer layer;
+        layer._name         = string( name );
+        layer._defaultValue = defaultValue;
+        layer._listValue.assign( static_cast<size_t>( MathUtil::max( _width, 0 ) ) * static_cast<size_t>( MathUtil::max( _height, 0 ) ), defaultValue );
+        _listDataLayer.push_back( std::move( layer ) );
+        return true;
+    }
+
+    bool TileMapXMLData::getCellData( int32 layerIndex, int32 x, int32 y, int32& outValue ) const
+    {
+        const bool bOutside = layerIndex < 0 || static_cast<size_t>( layerIndex ) >= _listDataLayer.size() || x < 0 || y < 0 || x >= _width || y >= _height;
+        if ( bOutside )
+            return false;
+        const vector<int32>& listValue = _listDataLayer[static_cast<size_t>( layerIndex )]._listValue;
+        const size_t         cellIndex = static_cast<size_t>( y ) * static_cast<size_t>( _width ) + static_cast<size_t>( x );
+        if ( cellIndex >= listValue.size() )
+            return false;
+        outValue = listValue[cellIndex];
+        return true;
+    }
+
+    bool TileMapXMLData::setCellData( int32 layerIndex, int32 x, int32 y, int32 value )
+    {
+        const bool bOutside = layerIndex < 0 || static_cast<size_t>( layerIndex ) >= _listDataLayer.size() || x < 0 || y < 0 || x >= _width || y >= _height;
+        if ( bOutside )
+            return false;
+        vector<int32>& listValue = _listDataLayer[static_cast<size_t>( layerIndex )]._listValue;
+        const size_t   cellIndex = static_cast<size_t>( y ) * static_cast<size_t>( _width ) + static_cast<size_t>( x );
+        if ( cellIndex >= listValue.size() )
+            return false;
+        listValue[cellIndex] = value;
         return true;
     }
 
@@ -501,6 +608,28 @@ namespace sw
                 }
             }
             tileLayer.appendChild( "cells", string_view{ cells } );
+        }
+
+        // 데이터 레이어는 있을 때만 쓴다(없는 맵은 이전과 바이트까지 같다). 값은 한 행씩 줄을 바꿔 적고, 배열이 짧으면 모자란 칸은 그 레이어의 기본값이다(위 `<t>` 와 같은 규칙).
+        if ( _listDataLayer.empty() == false )
+        {
+            XMLNode dataLayers = root.appendChild( "dataLayers" );
+            for ( const DataLayer& layer : _listDataLayer )
+            {
+                string values = "\n";
+                for ( int32 y = 0; y < _height; ++y )
+                {
+                    for ( int32 x = 0; x < _width; ++x )
+                    {
+                        const size_t cellIndex = static_cast<size_t>( y ) * static_cast<size_t>( _width ) + static_cast<size_t>( x );
+                        values += to_string( cellIndex < layer._listValue.size() ? layer._listValue[cellIndex] : layer._defaultValue );
+                        values += ( x + 1 < _width ) ? " " : "\n";
+                    }
+                }
+                XMLNode layerNode = dataLayers.appendChild( "layer", string_view{ values } );
+                layerNode.appendAttribute( "name", layer._name );
+                layerNode.appendAttribute( "default", layer._defaultValue );
+            }
         }
 
         return doc.saveToString();

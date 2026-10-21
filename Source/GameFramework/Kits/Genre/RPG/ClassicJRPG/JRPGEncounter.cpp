@@ -11,8 +11,7 @@ namespace sw
     JRPGEncounterWalker::JRPGEncounterWalker()
         : _random{}
         , _pCatalog{ nullptr }
-        , _stepsSinceEncounter{ kNoEncounterYet }
-        , _totalSteps{ 0 }
+        , _counter{}
     {
     }
 
@@ -20,37 +19,36 @@ namespace sw
     {
         _pCatalog = pCatalog;
         _random.setSeed( seed );
-        _stepsSinceEncounter = kNoEncounterYet;
-        _totalSteps          = 0;
+        _counter.reset();
     }
 
     const JRPGEncounterGroup* JRPGEncounterWalker::step( const hashed_string& areaID )
     {
-        ++_totalSteps;
-        if ( _stepsSinceEncounter < kNoEncounterYet )
-            ++_stepsSinceEncounter;
+        _counter.advance();
         const JRPGAreaDef* pArea = _pCatalog != nullptr ? _pCatalog->findArea( areaID ) : nullptr;
         if ( pArea == nullptr || pArea->_listGroup.empty() )
             return nullptr;
-        if ( _stepsSinceEncounter <= pArea->_graceSteps )
-            return nullptr;
-        // 걸음마다 난수를 하나 쓴다(유예 중에는 쓰지 않는다).
-        if ( _random.nextChance( pArea->_rate ) == false )
+        // 판정은 기반 걸음 조우 규칙(확률 + 유예)이다. 걸음마다 난수를 하나 쓰고, 유예 중에는 쓰지 않는다.
+        StepEncounterRule rule;
+        rule._mode       = StepEncounterMode::Chance;
+        rule._rate       = pArea->_rate;
+        rule._graceSteps = pArea->_graceSteps;
+        if ( _counter.roll( rule, &_random ) == false )
             return nullptr;
 
         const int32 groupIndex = _random.pickWeightedIndexInt( pArea->_listGroup, []( const JRPGEncounterGroup& group )
         { return group._weight; } );
         if ( groupIndex < 0 )
             return nullptr;
-        _stepsSinceEncounter = 0;
+        _counter.markEncounter();
         return pArea->_listGroup.data() + groupIndex;
     }
 
     void JRPGEncounterWalker::writeState( Archive& outArchive ) const
     {
         StateArchiveUtil::writeRandom( outArchive, _random );
-        outArchive << _stepsSinceEncounter;
-        outArchive << _totalSteps;
+        outArchive << _counter.getStepsSinceEncounter();
+        outArchive << _counter.getTotalSteps();
     }
 
     bool JRPGEncounterWalker::readState( Archive& archive )
@@ -62,12 +60,11 @@ namespace sw
             return false;
         archive >> stepsSinceEncounter;
         archive >> totalSteps;
-        const bool bValid = archive.isOk() && 0 <= stepsSinceEncounter && stepsSinceEncounter <= kNoEncounterYet && 0 <= totalSteps;
-        if ( bValid == false )
+        StepEncounterCounter counter;
+        if ( archive.isOk() == false || counter.restore( stepsSinceEncounter, totalSteps ) == false )
             return false;
-        _random              = random;
-        _stepsSinceEncounter = stepsSinceEncounter;
-        _totalSteps          = totalSteps;
+        _random  = random;
+        _counter = counter;
         return true;
     }
 } // namespace sw

@@ -13,6 +13,7 @@
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Renderer/Module/ModuleRenderPassRegistry.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
 
@@ -390,6 +391,7 @@ namespace sw
                 case RenderPassType::BloomDownsample:
                 case RenderPassType::Outline:
                 case RenderPassType::Tonemap:
+                case RenderPassType::Module:
                 case RenderPassType::ForwardOpaqueNoDepthWrite:
                 case RenderPassType::GPUCull:
                 case RenderPassType::InstanceAnimation:
@@ -437,6 +439,12 @@ namespace sw
 
         // 클리어 색은 타깃 첨부의 선언이다(SSAO 의 흰색 = 가림 없음도 AOColor 선언에 있다).
         const float4 targetClear = getTargetClearColor( pTarget->view() );
+        if ( input._passType == RenderPassType::Module )
+        {
+            // 모듈 패스는 PSO 를 종류가 아니라 모듈 이름으로 찾고, 상수를 레지스트리에서 값으로 복사해 온다(executeModulePass).
+            executeModulePass( context, passDesc, *pTarget, targetClear );
+            return;
+        }
         // 후처리를 끈 뷰(CCTV, 표면 값 보기 모드)에서 효과 패스(테이블의 kSkipsWithoutPostProcess)는 효과를 적용하지 않는다. 포맷이 같으면 원본을 복사하고,
         // 다르면 그 패스 셰이더가 SW_PASS_FLAG_SKIP_POST 를 보고 원본을 그대로 낸다(복사는 같은 포맷끼리만 된다). 원본 색을 읽지 않는 효과(SSAO)는
         // 기본 클리어로 지우기만 한다(SSAO 의 흰색은 가림 없음).
@@ -768,6 +776,32 @@ namespace sw
             context._pCmd->blitTexture( target._texture, 0 );
         if ( target._bCaptureFromOutput == SW_TRUE && bLastWriter )
             _capture.copyPresentFromOutput( *context._pCmd, target._texture, target._width, target._height, target._format );
+    }
+
+    void FrameRenderer::executeModulePass( FramePassContext& context, const RenderGraphPassDesc& passDesc, const hashed_string& target, const float4& targetClear )
+    {
+        // 렌더 스레드(병렬 기록 워커)에서 모듈 코드를 부르지 않는다. 레지스트리는 락 안에서 상수를 **값으로** 복사해 줄 뿐이다 — 모듈이 언로드되어도(핫 리로드)
+        // 이 위치에서 그 모듈의 함수 · vtable 을 밟을 일이 없다. 상수 이름은 모듈 셰이더의 패스 상수 필드 이름이다(바인더가 리플렉션 이름으로 맞춘다).
+        RHIPipelineStateHandle                     pso{ 0 };
+        const bool                                 bHasPSO = _pPSOCache->findModulePassPSO( passDesc._resolvedModulePass, pso ) && pso != 0;
+        vector<ModuleRenderPassRegistry::Constant> listConstant;
+        const bool                                 bRegistered = ModuleRenderPassRegistry::get().copyConstants( passDesc._resolvedModulePass, listConstant );
+        if ( bHasPSO == false || bRegistered == false )
+        {
+            if ( ModuleRenderPassRegistry::get().noteMissingOnce( passDesc._resolvedModulePass ) )
+                SW_LOG_ERROR( "Module pass '%#' (pipeline pass '%#') is not drawn: %#", passDesc._resolvedModulePass.c_str(), passDesc._name,
+                              bRegistered == false ? "no module registered it (ModuleRenderPassRegistry)" : "its PSO could not be created (see the shader error above)" );
+            return;
+        }
+        for ( const ModuleRenderPassRegistry::Constant& constant : listConstant )
+        {
+            context._passValues.setFloat4( constant._name, constant._value );
+        }
+        // 지울지는 실제로 그릴 때 정한다 — 그리지 않은 패스가 "지웠다" 고 적으면 뒤 패스가 지우지 않은 첨부를 불러 온다.
+        if ( beginColorPass( context, target.view(), "", targetClear, colorLoadFor( target ), RHIRenderPassLoadOp::Load ) == false )
+            return;
+        drawFullscreen( context, pso );
+        context._pCmd->endRenderPass();
     }
 
     bool FrameRenderer::beginColorPass( FramePassContext& context, string_view colorName, string_view depthName, const float4& clearColor,

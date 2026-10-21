@@ -22,23 +22,3 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션 영역의 
 왜 필요한가: 에디터 Simulate 중 Pause 는 씬 틱이 멈춰 포토 모드(`Source/GameFramework/Base/Actor/Camera/PhotoModeCamera` · `CameraDirectorComponent`)가 갱신되지 않는다.
 착수 조건 / 남은 것: 게임 카메라가 없는 상황이라 고치지 않았다 — 포토 모드 갱신을 씬 틱 밖으로 옮길지는 에디터 쪽 요구가 생기면.
 설계 메모: 포토 모드를 켤 때 롤은 이어받고 기울이기 입력을 둔다(`PhotoModeCamera.h` 에 이미 있다). 조작은 `EngineDefaultAssets::_photoModeInputMap` 에서 읽어 게임 모듈에 읽기 전용으로 보인다(`CameraDirectorComponent.h` 에 이미 있다).
-
-## 조건부
-
-### InteractionSpatialGrid
-제목: 상호작용 대상의 공유 공간 격자
-옛번호: G-4
-왜 필요한가: 지금 하는 쪽은 등록된 대상 목록을 한 번 돈다(대상 16 · 10k 오브젝트에서 +2~6 us).
-착수 조건 / 남은 것: 하는 쪽 · 대상이 모두 수천일 때. 대상이 움직일 수 있어 격자를 프레임마다 맞추는 비용이 목록을 도는 비용과 같으므로, 하는 쪽이 여럿일 때만 씬당 하나(`SpatialHashGrid2D`, 셀 = 최대 상호작용 반경)를 틱 앞에 맞춘다.
-
-### TilemapCellDataLayers
-제목: 타일맵 칸 데이터를 일반 레이어로
-옛번호: G-6
-왜 필요한가: 지금 레이어는 0/1(`kArrTileFlagLayerInfo`)이고 워프 · 역할 · 스폰은 전용 원소다.
-착수 조건 / 남은 것: 두 번째 장르가 칸마다 다른 값(지형 비용 · 발소리)을 원하면. 값 종류를 정수로 넓히고 에디터 페인트 · 형식 테스트를 같이 바꾼다(Godot TileSet custom data 모양).
-
-### StepEncounterRules
-제목: 걸음 조우 판정 둘
-옛번호: G-7
-왜 필요한가: Overworld `shouldEncounterOnStep` 의 결정적 주기와 ClassicJRPG `JRPGEncounterWalker` 의 확률 + 유예가 따로 있다.
-착수 조건 / 남은 것: 오버월드 위에 JRPG · 몬스터 수집 게임이 서면 기반 `World/` 로 하나를 올린다.

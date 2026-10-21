@@ -2581,6 +2581,9 @@
             "text": "아틀라스를 나눌 격자의 행 수(1~64)입니다.",
             "sourceHash": "2581cf7b719bdade"
         },
+        "EditorTileMap.AddDataLayerTip": {
+            "text": "이 맵에 이름 붙은 정수 데이터 레이어(지형 비용, 발소리)를 더합니다. 이름은 겹치면 안 됩니다."
+        },
         "EditorTileMap.ApplyEdgeTip": {
             "text": "이 가장자리의 모든 칸을 대상 맵으로 가는, 걸을 수 있는 워프로 바꿉니다.",
             "sourceHash": "6b3bc3e76d363b8c"
@@ -2596,6 +2599,18 @@
         "EditorTileMap.BrushTip": {
             "text": "누르고 끄는 칸마다 칠합니다 (B)",
             "sourceHash": "6d08017bc405180c"
+        },
+        "EditorTileMap.DataLayerDefaultTip": {
+            "text": "새 레이어의 모든 칸 값이자 지우기가 칠하는 값입니다."
+        },
+        "EditorTileMap.DataLayerNameTip": {
+            "text": "새 데이터 레이어의 이름입니다. 게임은 이 이름으로 레이어를 읽습니다."
+        },
+        "EditorTileMap.DataLayerRejectedStatus": {
+            "text": "데이터 레이어를 더하지 못했습니다: 이름이 비었거나 이미 있습니다"
+        },
+        "EditorTileMap.DataValueTip": {
+            "text": "고른 데이터 레이어에 칠할 정수입니다."
         },
         "EditorTileMap.EdgeTargetTip": {
             "text": "이 가장자리(북, 동, 남, 서)를 벗어나면 이어지는 맵입니다.",

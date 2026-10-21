@@ -7,8 +7,21 @@
 #include "Engine/Text/IFontRasterizer.h"
 #include "Engine/Text/TextItemizer.h"
 
+#if defined( SW_TEXT_COMPLEX_SHAPING )
+    #include "Engine/Text/HarfBuzz/ComplexTextShaper.h"
+#endif
+
 namespace sw
 {
+    unique_ptr<ITextShaper> ITextShaper::createDefault()
+    {
+#if defined( SW_TEXT_COMPLEX_SHAPING )
+        return ComplexTextShaperUtil::create();
+#else
+        return make_unique<SimpleTextShaper>();
+#endif
+    }
+
     void SimpleTextShaper::shape( const IFontRasterizer& rasterizer, const ShapingRun& run, vector<ShapedGlyph>& inoutListGlyph ) const
     {
         size_t offset         = 0;

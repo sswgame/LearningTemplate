@@ -1,6 +1,6 @@
 # 프로젝트 후보
 
-> 상태: 후보 · 선행: 없음 · 영역: project · 옛번호: C-11, C-16, C-17, C-57, C-74, C-75, C-76, G-11, H-1 · 진행: 해당없음
+> 상태: 후보 · 선행: 없음 · 영역: project · 옛번호: C-11, C-16, C-17, C-57, C-74, C-75, C-76, H-1 · 진행: 해당없음
 
 저장소 규칙, 서드파티, 리소스처럼 한 영역에 속하지 않는 착수 전 후보의 목록입니다. 착수하면 절을 계획 문서로 옮기고 여기서 지웁니다. 긴 함수 정리는 [LongFunctions](LongFunctions.md) 로 착수했습니다.
 
@@ -88,16 +88,6 @@
 `FormatIncludeOrder` → `CheckIncludeOrder.fixText`, `FormatNamespaceBlocks` → `CheckNamespaceBlocks`, `RunDiscardReasons` → `CheckDiscardReason.findFallibleDiscards`,
 셀프테스트 둘 → 자기 게이트. 판정을 `lint/` 의 틀 모듈(층 1)로 옮기면 예외 줄이 지워지고 게이트 · 픽서 · 보고서가 같은 자리를 import 한다.
 착수 조건: 없음. 같은 파일을 고치는 다른 작업이 `Scripts/lint` 에 없을 때.
-
-## 조건부
-
-### ThirdPartyGaps
-제목: 서드파티 빈자리
-옛번호: G-11
-왜 필요한가: 2026-10-05 후보 중 사용자가 고르지 않은 것입니다. 리눅스 오디오 출력 없음(`XAudio2AudioBackend` 만, 리눅스는 `NullAudioBackend`) → miniaudio(퍼블릭 도메인/MIT-0). `gv_renderScale` 을 읽는 업스케일 없음 → AMD FidelityFX FSR(MIT). 아랍어 셰이핑 없음(양방향은 `Engine/Text/TextBidi` 단순판 — 포개진 방향 제어 문자 · 숫자 앞뒤 기호 규칙 미지원) → HarfBuzz(MIT) + SheenBidi(Apache 2.0).
-착수 조건: 사용자가 해당 빈자리를 고를 때.
-남은 것: 꽂을 자리는 `Engine/Text/ITextShaper` — 런 하나, 같은 글꼴 바이트 `IFontRasterizer::findFaceBytes` 로 `hb_face` 를 만든다. SheenBidi 는 `TextBidi` 를 대신한다.
-함정: 들이면 Jolt · Recast · Tracy 처럼 엔진 인터페이스 뒤 + 격리 게이트로 하고, vcpkg 변경은 main 에서 먼저 한다.
 
 ## 보류
 

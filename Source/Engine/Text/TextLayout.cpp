@@ -199,7 +199,7 @@ namespace sw
 {
     TextLayoutEngine::TextLayoutEngine( FontService& fontService )
         : _fontService{ fontService }
-        , _shaper{}
+        , _pShaper{ ITextShaper::createDefault() }
         , _listRunScratch{}
         , _listShapedScratch{}
         , _listBreakScratch{}
@@ -231,7 +231,7 @@ namespace sw
         for ( ShapingRun& run : _listRunScratch )
         {
             run._byteOffset += static_cast<uint32>( segmentStart ); // 클러스터를 전체 텍스트 기준으로 맞춘다
-            _shaper.shape( rasterizer, run, _listShapedScratch );
+            _pShaper->shape( rasterizer, run, _listShapedScratch );
         }
         for ( size_t index = firstGlyph; index < _listShapedScratch.size(); ++index )
         {

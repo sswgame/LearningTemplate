@@ -12,18 +12,13 @@ namespace sw
 {
     SW_LOG_CALLER( "OverworldTileMover" );
 
-    SW_KIT_API bool shouldEncounterOnStep( float32 encounterRate, uint32 stepCount )
+    StepEncounterRule OverworldTileMover::makeEncounterRule( const OverworldTileMoverSettings& settings )
     {
-        // 0이면 **조우가 나지 않는다**. 야생 조우를 끄려고 `setEncounterRate( 0 )` 을 부르는 경우가 이에 해당한다.
-        if ( encounterRate <= 0.0f )
-            return false;
-        // 1 이상이면 매 걸음 조우한다. 1/rate 를 uint32 로 자르면 그 구간이 통째로 0이 되어
-        // "주기 0" 이 된다. 이것을 다른 주기로 바꾸면 **높은 확률이 낮은 빈도**가 되어 버린다.
-        if ( encounterRate >= 1.0f )
-            return true;
-
-        const uint32 period = static_cast<uint32>( 1.0f / encounterRate );
-        return period <= 1u || ( stepCount % period ) == 0u;
+        StepEncounterRule rule;
+        rule._mode       = StepEncounterMode::Period;
+        rule._rate       = settings._encounterRate;
+        rule._graceSteps = 0;
+        return rule;
     }
 
     OverworldTileMover::OverworldTileMover()
@@ -33,7 +28,7 @@ namespace sw
         , _tile{ 1, 1 }
         , _pendingWarpSpawn{ 1, 1 }
         , _settings{}
-        , _encounterStepCounter{ 0 }
+        , _encounterSteps{}
         , _bMoved{ SW_FALSE }
         , _bWarpPending{ SW_FALSE }
         , _bEncounterPending{ SW_FALSE }
@@ -156,7 +151,8 @@ namespace sw
         _loco.writeState( outArchive );
         outArchive << string_view( _pendingWarpMap );
         StateArchiveUtil::writeInt2( outArchive, _pendingWarpSpawn );
-        outArchive << _encounterStepCounter;
+        // 조우 셈은 조우 칸 걸음 수만 싣는다(주기 판정은 그것만 본다, 유예 0). 바이트는 예전 `uint32` 칸 그대로다.
+        outArchive << static_cast<uint32>( _encounterSteps.getTotalSteps() );
         outArchive << static_cast<uint8>( _bMoved );
         outArchive << static_cast<uint8>( _bWarpPending );
         outArchive << static_cast<uint8>( _bEncounterPending );
@@ -172,7 +168,11 @@ namespace sw
             return false;
         archive >> restored._pendingWarpMap;
         StateArchiveUtil::readInt2( archive, restored._pendingWarpSpawn );
-        archive >> restored._encounterStepCounter;
+        uint32 encounterSteps = 0;
+        archive >> encounterSteps;
+        if ( encounterSteps > static_cast<uint32>( StepEncounterCounter::kNoEncounterYet ) ||
+             restored._encounterSteps.restore( StepEncounterCounter::kNoEncounterYet, static_cast<int32>( encounterSteps ) ) == false )
+            return false;
         uint8 arrFlag[5]{ SW_FALSE, SW_FALSE, SW_FALSE, SW_FALSE, SW_FALSE };
         for ( uint8& flag : arrFlag )
         {
@@ -215,9 +215,10 @@ namespace sw
         }
         else if ( _pTileMap->isEncounterTile( _tile._x, _tile._y ) )
         {
-            ++_encounterStepCounter;
-            if ( shouldEncounterOnStep( _settings._encounterRate, _encounterStepCounter ) )
+            _encounterSteps.advance();
+            if ( _encounterSteps.roll( makeEncounterRule( _settings ), nullptr ) )
             {
+                _encounterSteps.markEncounter();
                 _bEncounterPending = SW_TRUE;
                 SW_LOG_TRACE( "Wild encounter at (%#,%#)", _tile._x, _tile._y );
             }

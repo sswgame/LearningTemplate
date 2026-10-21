@@ -9,6 +9,7 @@
 #include "Core/Container/string.h"
 #include "Core/Math/VectorMath.h"
 
+#include "GameFramework/Base/World/Encounter/StepEncounter.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/World/Overworld/PlayerLocomotion.h"
 
@@ -23,19 +24,11 @@ namespace sw
     // 1) OverworldTileMover. 의도를 받아 한 칸 이동하고, 워프, 조우, 상호작용 플래그를 세운다
     //    화면 전환 중에는 setInputEnabled(false) 로 입력을 막는다
     // ------------------------------------------------------------------------------
-    /**
-     * @brief 이번 걸음에 야생 조우가 나는지 판정합니다. `OverworldTileMover` 가 쓰는 판정 그대로입니다.
-     * @param encounterRate 0 ~ 1. **0 이면 언제나 false** 이고, 1 이상이면 매 걸음 true.
-     * @param stepCount 조우 타일을 밟은 누적 걸음 수(1 부터).
-     * @details 테스트가 직접 호출할 수 있게 `tryStep` 밖에 둡니다. 조우를 끄려고 넣은 0 은 실제로 끄는 값이어야 합니다.
-     */
-    SW_KIT_API bool shouldEncounterOnStep( float32 encounterRate, uint32 stepCount );
-
     /** @brief 이동 축 데드존, 걸음 시간, 조우율입니다. 버튼과 이동 액션 이름은 폰의 스키마(`PawnComponent`)가 정합니다. */
     struct OverworldTileMoverSettings
     {
         float32 _moveDeadZone{ 0.5f };   ///< 이보다 작게 기운 이동 축은 걸음으로 보지 않는다
-        float32 _encounterRate{ 0.33f }; ///< 수풀에서 한 걸음당 조우할 확률이다. 주기로 바꿔 쓸 수도 있다
+        float32 _encounterRate{ 0.33f }; ///< 조우 칸 걸음의 조우율이다. 결정적 주기(`StepEncounterMode::Period`, `1/rate` 걸음마다)로 읽는다. 0 은 끈다
         float32 _stepSeconds{ 0.18f };   ///< 한 칸을 밟는 시간이다. 걷는 연출과 다음 입력 잠금이 같은 값을 쓴다
     };
 } // namespace sw
@@ -65,6 +58,11 @@ namespace sw
         void                              setEncounterRate( float32 rate ) { _settings._encounterRate = rate; }
         void                              setSettings( const OverworldTileMoverSettings& settings ) { _settings = settings; }
         const OverworldTileMoverSettings& getSettings() const { return _settings; }
+        /**
+         * @brief 이동 설정이 정하는 조우 규칙입니다(기반 `StepEncounterRule`). 오버월드는 난수 없는 주기 판정, 유예 0 입니다.
+         * @details 확률 + 유예 판정(클래식 JRPG · 몬스터 수집)은 장르 키트가 지역 표와 자기 난수로 같은 `StepEncounterCounter` 를 돌린다.
+         */
+        static StepEncounterRule makeEncounterRule( const OverworldTileMoverSettings& settings );
         /** @brief 타일 좌표를 설정합니다. */
         void setPosition( int32 x, int32 y );
         /** @brief 입력 허용 여부를 설정합니다. */
@@ -113,7 +111,7 @@ namespace sw
         int2                       _tile;             ///< 현재 타일 좌표
         int2                       _pendingWarpSpawn; ///< 워프 후 배치될 타일 좌표
         OverworldTileMoverSettings _settings;
-        uint32                     _encounterStepCounter;
+        StepEncounterCounter       _encounterSteps; ///< 조우 칸 걸음만 센다
         uint8                      _bMoved            : 1;
         uint8                      _bWarpPending      : 1;
         uint8                      _bEncounterPending : 1;

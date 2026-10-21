@@ -11,6 +11,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/Text/TextTypes.h"
 
@@ -61,6 +62,12 @@ namespace sw
     class SW_API ITextShaper
     {
     public:
+        /**
+         * @brief 이 빌드의 셰이퍼를 만듭니다. 복합 문자 빌드(`SW_ENABLE_COMPLEX_TEXT`)는 HarfBuzz 셰이퍼(`Text/HarfBuzz/`), 아니면 단순 셰이퍼(`SimpleTextShaper`)입니다.
+         * @details 고르는 것은 빌드 구성이다 — 실행 중에 라이브러리가 없다고 다른 셰이퍼로 물러나는 길은 없다(구성이 패키지를 못 찾으면 구성이 선다).
+         */
+        static unique_ptr<ITextShaper> createDefault();
+
         ITextShaper()          = default;
         virtual ~ITextShaper() = default;
 

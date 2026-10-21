@@ -5,6 +5,10 @@
 #include "Engine/Localization/PseudoLocalizer.h"
 #include "Engine/Text/TextItemizer.h"
 
+#if defined( SW_TEXT_COMPLEX_SHAPING )
+    #include "Engine/Text/SheenBidi/ComplexBidi.h"
+#endif
+
 namespace sw
 {
     namespace
@@ -81,6 +85,16 @@ namespace sw
 namespace sw
 {
     void TextBidi::resolveLevels( const vector<uint32>& listCodepoint, TextDirection paragraphDirection, vector<uint8>& outListLevel )
+    {
+#if defined( SW_TEXT_COMPLEX_SHAPING )
+        // 복합 문자 빌드는 전체 UAX #9 가 수준을 정한다(빌드가 고른다 — 실행 중에 바뀌지 않는다).
+        ComplexBidiUtil::resolveLevels( listCodepoint, paragraphDirection, outListLevel );
+#else
+        resolveSimpleLevels( listCodepoint, paragraphDirection, outListLevel );
+#endif
+    }
+
+    void TextBidi::resolveSimpleLevels( const vector<uint32>& listCodepoint, TextDirection paragraphDirection, vector<uint8>& outListLevel )
     {
         using Internal          = TextBidiInternal;
         using BidiClass         = Internal::BidiClass;

@@ -39,31 +39,74 @@ namespace sw::editor
 {
     namespace
     {
-        DXGI_FORMAT resolveFormatInternal( string_view formatStr, bool bSrgb )
+        /**
+         * @brief 규칙의 `format` 이름을 DXGI 형식으로 바꿉니다. 이름 표는 `TextureImportFormatUtil` 하나이고, 모르는 이름이면 false 입니다(BC7 로 가지 않는다).
+         * @details sRGB 짝이 없는 형식(BC4 · BC5 · BC6H · R16G16B16A16_FLOAT · R8)은 @p bSrgb 와 무관하게 UNORM 이며, 원본 바이트를 곡선 없이 그대로 옮긴다.
+         */
+        [[nodiscard]] bool resolveFormatInternal( string_view formatStr, bool bSrgb, DXGI_FORMAT& outFormat )
         {
-            if ( formatStr == "BC1_UNORM" || formatStr == "bc1" )
-                return bSrgb ? DXGI_FORMAT_BC1_UNORM_SRGB : DXGI_FORMAT_BC1_UNORM;
-            if ( formatStr == "BC2_UNORM" || formatStr == "bc2" )
-                return bSrgb ? DXGI_FORMAT_BC2_UNORM_SRGB : DXGI_FORMAT_BC2_UNORM;
-            if ( formatStr == "BC3_UNORM" || formatStr == "bc3" )
-                return bSrgb ? DXGI_FORMAT_BC3_UNORM_SRGB : DXGI_FORMAT_BC3_UNORM;
-            if ( formatStr == "BC4_UNORM" || formatStr == "bc4" )
-                return DXGI_FORMAT_BC4_UNORM;
-            if ( formatStr == "BC5_UNORM" || formatStr == "bc5" )
-                return DXGI_FORMAT_BC5_UNORM;
-            if ( formatStr == "BC6H_UF16" || formatStr == "bc6h" )
-                return DXGI_FORMAT_BC6H_UF16;
-            if ( formatStr == "BC7_UNORM" || formatStr == "bc7" )
-                return bSrgb ? DXGI_FORMAT_BC7_UNORM_SRGB : DXGI_FORMAT_BC7_UNORM;
-            if ( formatStr == "B8G8R8A8_UNORM" || formatStr == "bgra8" )
-                return bSrgb ? DXGI_FORMAT_B8G8R8A8_UNORM_SRGB : DXGI_FORMAT_B8G8R8A8_UNORM;
-            if ( formatStr == "R8G8B8A8_UNORM" || formatStr == "rgba8" )
-                return bSrgb ? DXGI_FORMAT_R8G8B8A8_UNORM_SRGB : DXGI_FORMAT_R8G8B8A8_UNORM;
-
-            if ( formatStr == "R16G16B16A16_FLOAT" || formatStr == "rgba16f" )
-                return DXGI_FORMAT_R16G16B16A16_FLOAT;
-
-            return bSrgb ? DXGI_FORMAT_BC7_UNORM_SRGB : DXGI_FORMAT_BC7_UNORM;
+            TextureImportFormat format{};
+            if ( TextureImportFormatUtil::parse( formatStr, format ) == false )
+                return false;
+            switch ( format )
+            {
+                case TextureImportFormat::BC1:
+                {
+                    outFormat = bSrgb ? DXGI_FORMAT_BC1_UNORM_SRGB : DXGI_FORMAT_BC1_UNORM;
+                    return true;
+                }
+                case TextureImportFormat::BC2:
+                {
+                    outFormat = bSrgb ? DXGI_FORMAT_BC2_UNORM_SRGB : DXGI_FORMAT_BC2_UNORM;
+                    return true;
+                }
+                case TextureImportFormat::BC3:
+                {
+                    outFormat = bSrgb ? DXGI_FORMAT_BC3_UNORM_SRGB : DXGI_FORMAT_BC3_UNORM;
+                    return true;
+                }
+                case TextureImportFormat::BC4:
+                {
+                    outFormat = DXGI_FORMAT_BC4_UNORM;
+                    return true;
+                }
+                case TextureImportFormat::BC5:
+                {
+                    outFormat = DXGI_FORMAT_BC5_UNORM;
+                    return true;
+                }
+                case TextureImportFormat::BC6H:
+                {
+                    outFormat = DXGI_FORMAT_BC6H_UF16;
+                    return true;
+                }
+                case TextureImportFormat::BC7:
+                {
+                    outFormat = bSrgb ? DXGI_FORMAT_BC7_UNORM_SRGB : DXGI_FORMAT_BC7_UNORM;
+                    return true;
+                }
+                case TextureImportFormat::B8G8R8A8:
+                {
+                    outFormat = bSrgb ? DXGI_FORMAT_B8G8R8A8_UNORM_SRGB : DXGI_FORMAT_B8G8R8A8_UNORM;
+                    return true;
+                }
+                case TextureImportFormat::R8G8B8A8:
+                {
+                    outFormat = bSrgb ? DXGI_FORMAT_R8G8B8A8_UNORM_SRGB : DXGI_FORMAT_R8G8B8A8_UNORM;
+                    return true;
+                }
+                case TextureImportFormat::R16G16B16A16Float:
+                {
+                    outFormat = DXGI_FORMAT_R16G16B16A16_FLOAT;
+                    return true;
+                }
+                case TextureImportFormat::R8:
+                {
+                    outFormat = DXGI_FORMAT_R8_UNORM;
+                    return true;
+                }
+            }
+            return false;
         }
 
         /**
@@ -187,9 +230,11 @@ namespace sw::editor
             if ( outputDir.empty() == false )
                 FileUtil::ensureDirectoryExists( outputDir );
 
-            const wstring wOutPath = StringUtil::utf8ToUtf16( string( outputPath ).c_str() );
-            const HRESULT hrSave   = DirectX::SaveToDDSFile( finalImage.GetImages(), finalImage.GetImageCount(), finalImage.GetMetadata(), DirectX::DDS_FLAGS_NONE,
-                                                             wOutPath.c_str() );
+            // 엔진 `DDSLoader` 의 옛 머리(DX9 픽셀 형식) 경로는 1 채널 휘도(L8)를 모른다. R8_UNORM 은 DX10 머리로 써서 DXGI 번호(61)를 그대로 싣는다.
+            // 다른 형식은 옛 머리 그대로 둔다 — 이미 커밋된 DDS 의 바이트가 바뀌지 않게 한다.
+            const DirectX::DDS_FLAGS saveFlags = finalImage.GetMetadata().format == DXGI_FORMAT_R8_UNORM ? DirectX::DDS_FLAGS_FORCE_DX10_EXT : DirectX::DDS_FLAGS_NONE;
+            const wstring            wOutPath  = StringUtil::utf8ToUtf16( string( outputPath ).c_str() );
+            const HRESULT            hrSave    = DirectX::SaveToDDSFile( finalImage.GetImages(), finalImage.GetImageCount(), finalImage.GetMetadata(), saveFlags, wOutPath.c_str() );
             if ( FAILED( hrSave ) )
             {
                 SW_LOG_ERROR( "DirectX::SaveToDDSFile failed (hr=0x%#) for %#", Fmt( static_cast<uint32>( hrSave ), Format( 8, Format::Padding::Zero ).hex() ),
@@ -266,8 +311,8 @@ namespace sw::editor
          */
         [[nodiscard]] bool importHdrTextureInternal( string_view sourcePath, string_view outputPath, const TextureImportRule& rule, TextureImportResult* pOutResult )
         {
-            const DXGI_FORMAT targetFormat = resolveFormatInternal( rule._format, false );
-            if ( targetFormat != DXGI_FORMAT_BC6H_UF16 && targetFormat != DXGI_FORMAT_R16G16B16A16_FLOAT )
+            DXGI_FORMAT targetFormat = DXGI_FORMAT_UNKNOWN;
+            if ( resolveFormatInternal( rule._format, false, targetFormat ) == false || ( targetFormat != DXGI_FORMAT_BC6H_UF16 && targetFormat != DXGI_FORMAT_R16G16B16A16_FLOAT ) )
             {
                 SW_LOG_ERROR( "HDR source needs format bc6h or rgba16f (rule '%#'): %#", rule._format.c_str(), sourcePath );
                 return false;
@@ -431,7 +476,12 @@ namespace sw::editor
 
         applyChannelManipulations( rawImage, rule, totalPixels );
 
-        const DXGI_FORMAT targetFormat = resolveFormatInternal( rule._format, rule._bSrgb == SW_TRUE );
+        DXGI_FORMAT targetFormat = DXGI_FORMAT_UNKNOWN;
+        if ( resolveFormatInternal( rule._format, rule._bSrgb == SW_TRUE, targetFormat ) == false )
+        {
+            SW_LOG_ERROR( "Unknown texture format '%#' (rule '%#'): %#", rule._format.c_str(), rule._name.c_str(), sourcePath );
+            return false;
+        }
 
         // 2) DirectXTex 기본 Image 구성
         DirectX::Image baseImage{};
@@ -536,11 +586,15 @@ namespace sw::editor
             return 0;
 
         // 규칙은 해석한 결과로 섞는다. "bc7" 과 "BC7_UNORM", BGRA 와 ARGB 처럼 같은 결과를 내는 표기는 같은 해시가 된다.
+        // 모르는 형식은 임포트도 실패하므로 해시를 만들지 않는다(0 = 읽지 못함과 같은 뜻).
+        DXGI_FORMAT resolvedFormat = DXGI_FORMAT_UNKNOWN;
+        if ( resolveFormatInternal( rule._format, rule._bSrgb == SW_TRUE, resolvedFormat ) == false )
+            return 0;
         const SwizzleLayout&                   layout = swizzleLayoutInternal( rule._swizzle );
         StringBuilder<constant::kMaxBuffer256> ruleText;
         ruleText.appendFormat( "importer=%#;format=%#;channel=%#%#%#%#;opaque=%#;mips=%#;srgb=%#;invertGreen=%#",
                                TextureImporterInternal::kImporterVersion,
-                               static_cast<uint32>( resolveFormatInternal( rule._format, rule._bSrgb == SW_TRUE ) ),
+                               static_cast<uint32>( resolvedFormat ),
                                static_cast<uint32>( layout._arrSourceChannel[0] ), static_cast<uint32>( layout._arrSourceChannel[1] ),
                                static_cast<uint32>( layout._arrSourceChannel[2] ), static_cast<uint32>( layout._arrSourceChannel[3] ),
                                static_cast<uint32>( layout._bForceOpaqueAlpha ), static_cast<uint32>( rule._bGenerateMips ), static_cast<uint32>( rule._bSrgb ),

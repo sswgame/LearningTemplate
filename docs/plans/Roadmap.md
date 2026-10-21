@@ -32,7 +32,8 @@
 5. **새로 쓴 정리**: [SerializerSilentSkips](SerializerSilentSkips.md)(S1 바이너리 · S2 텍스트 형식 · S3 원소 안 객체째 실패 · S4 바이너리 객체째 실패와 비트필드 이관 들어감, 병합 때 테스트 · 씬 로드 확인) · [FunctorLambdaCommonization](Candidates-engine.md#functorlambdacommonization) · [DiskPathVsResourceId](DiskPathVsResourceId.md)(안 B 들어감 — 리소스 입구는 리소스 id 만, 루트 밖은 `mountDiskDomain`. 빌드 · 테스트로 남은 OS 경로 호출부 확인) · [InvalidMeasurementCleanup](Candidates-project.md#invalidmeasurementcleanup) · [DecisionMeasurementColumn](Candidates-project.md#decisionmeasurementcolumn) · [CarriedOverChecks](Candidates-project.md#carriedoverchecks) — 순서는 정리 → 기능. [병렬 가능]
 6. **구조 단순화 네 정책**: 필수 설정(HC) → 팩 쿠킹을 C++ 로(PK) → 에셋 종류 등록 줄 하나(AT) → 텍스트 형식 역할별 하나(TX) — [StructureSimplification](StructureSimplification.md). DataDriven D8 · D9 와 겹치는 지점은 그 문서 2절. [단독: AT1 은 `AssetFormat.h`, HC3 은 `GameConfig.h` 를 바꿔 여러 모듈이 다시 빌드됨]
 7. **Scripts 구조**(import 루트 하나 · 3층 · 층 게이트) — [ScriptsStructure](ScriptsStructure.md). 구현은 끝났고 5절 측정 · 6절 확인이 남았다. [병렬 가능]
-8. **빌드 속도 12 단계**(리플렉션 헤더 팬아웃) — [BuildSpeed](BuildSpeed.md). [단독: 빌드가 도는 동안은 측정이 무효라 다른 작업이 모두 끝난 뒤 혼자]
+8. **조건부에서 착수한 일**(2026-10-22 사용자 결정, 빌드 없이 작성 — 빌드 · 테스트 확인부터): [ModuleRenderPass](ModuleRenderPass.md) · [CrossFileObjectReference](CrossFileObjectReference.md) · [SingleChannelDdsImport](SingleChannelDdsImport.md) · [ThirdPartyGaps](ThirdPartyGaps.md)(T2 는 main 에서 vcpkg 기능 설치가 먼저, F1 · F2 업스케일은 설계만) · [InteractionSpatialGrid](InteractionSpatialGrid.md) · [TilemapCellDataLayers](TilemapCellDataLayers.md) · [StepEncounterRules](StepEncounterRules.md). [병렬 가능]
+9. **빌드 속도 12 단계**(리플렉션 헤더 팬아웃) — [BuildSpeed](BuildSpeed.md). [단독: 빌드가 도는 동안은 측정이 무효라 다른 작업이 모두 끝난 뒤 혼자]
 
 ## 지금 하지 않는 것
 

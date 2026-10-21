@@ -757,6 +757,15 @@ namespace sw
          * @param pRtvFormatOverride 컬러 RT 포맷을 이 배열로 고정합니다(Present 변형). nullptr 이면 테이블의 고정 포맷을 쓰고, 없으면 출력 선언 순서를 따릅니다.
          */
         RHIPipelineStateHandle createPSOForPassType( RenderPassType passType, const RHIFormat* pRtvFormatOverride = nullptr );
+        /** @brief `createPSOForPassType` 의 몸체입니다. 패스 서술을 직접 받습니다 — 같은 종류의 패스가 여럿인 모듈 패스가 패스마다 부릅니다. */
+        RHIPipelineStateHandle createPSOForPass( RenderPassType passType, const RenderGraphPassDesc* pPassDesc, const RHIFormat* pRtvFormatOverride );
+        /** @brief 파이프라인의 모듈 패스(`RenderPassType::Module`)마다 PSO 를 셋업에서 만듭니다(키 = `_resolvedModulePass`). 기록 중에는 만들지 않습니다. */
+        void createModulePassPSOs();
+        /**
+         * @brief 모듈 패스 하나를 그립니다(일반 풀스크린 실행). 상수는 `ModuleRenderPassRegistry` 에서 값으로 복사해 옵니다 — 모듈 코드는 부르지 않습니다.
+         * @details 등록되지 않은 이름 · PSO 가 없는 패스는 오류를 한 번 남기고 그리지 않습니다(다른 셰이더로 대신 그리지 않는다).
+         */
+        void executeModulePass( FramePassContext& context, const RenderGraphPassDesc& passDesc, const hashed_string& target, const float4& targetClear );
         /** @brief 패스의 엔진 PSO 를 찾습니다. 없으면 테이블이 정한 대체 패스(`_psoFallbackType`)의 PSO 를 반환합니다. */
         RHIPipelineStateHandle findPassPSO( RenderPassType passType ) const;
 

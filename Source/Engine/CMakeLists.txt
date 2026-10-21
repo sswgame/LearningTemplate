@@ -154,6 +154,14 @@ target_link_libraries(Engine PRIVATE renderdoc)
 target_link_libraries(Engine PRIVATE recastnavigation)
 # 글자 래스터화 — FreeType(x64-windows 는 freetype.dll, 리눅스는 정적). 헤더는 Text/FreeType 에서만 include 한다(Engine/Text/IFontRasterizer.h 뒤).
 target_link_libraries(Engine PRIVATE freetype)
+# 복합 문자 셰이핑 — HarfBuzz(ITextShaper 뒤) + SheenBidi(TextBidi 의 수준 뒤). 헤더는 Text/HarfBuzz · Text/SheenBidi 에서만 include 한다.
+# 구현 소스는 늘 GLOB 에 들고 `SW_TEXT_COMPLEX_SHAPING` 이 없으면 빈 TU 다(Tracy 와 같은 방식). 켜면 두 패키지가 필수다(ThirdParty/harfbuzz · sheenbidi).
+if(SW_ENABLE_COMPLEX_TEXT)
+	target_link_libraries(Engine PRIVATE harfbuzz sheenbidi)
+	# PUBLIC — 테스트가 이 빌드의 셰이퍼를 알고 기대값을 고른다(TestTextShaper).
+	target_compile_definitions(Engine PUBLIC SW_TEXT_COMPLEX_SHAPING)
+	message(STATUS "[Engine] Complex text shaping enabled (HarfBuzz + SheenBidi)")
+endif()
 
 # ------------------------------------------------------------------------------
 # 5) RHI 링크 — Shipping 은 백엔드 하나를 Engine 에 정적 링크, Dev 는 RHI_* MODULE 을 런타임에 로드

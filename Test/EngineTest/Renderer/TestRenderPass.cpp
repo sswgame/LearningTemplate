@@ -28,6 +28,7 @@
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
 #include "Engine/Renderer/Frame/Resource/TransientAttachmentPool.h"
 #include "Engine/Renderer/Graph/RenderGraph.h"
+#include "Engine/Renderer/Module/ModuleRenderPassRegistry.h"
 #include "Engine/Renderer/Pipeline/RenderPassAsset.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
@@ -1220,6 +1221,36 @@ SW_TEST_CASE( RenderPassTest, GBufferSkipsForwardOnlyMaterials )
     SW_EXPECT_FALSE( sw::FrameRendererUtil::drawsMaterialInPass( sw::RenderPassType::ForwardOnlyOpaque, nullptr ) );
     // 포워드 파이프라인의 불투명 패스는 거르지 않는다 — 툰도 그린다.
     SW_EXPECT_TRUE( sw::FrameRendererUtil::drawsMaterialInPass( sw::RenderPassType::ForwardOpaque, &toon->getCachedShaderDefines() ) );
+}
+
+/**
+ * @brief [RenderPassTest] 모듈 패스 — 파이프라인 타입이고 일반 풀스크린 실행을 탄다. 등록은 이름당 하나이며 수명 객체가 소멸할 때 풀린다. 상수는 값으로 복사된다
+ * @details 모듈 경계를 넘는 것은 이름 · 상수뿐이다(ModuleRenderPassRegistry.h 머리말). 렌더러가 받는 것은 복사본이라 모듈이 내려가도 렌더 스레드가 모듈 코드를 밟지 않는다.
+ */
+SW_TEST_CASE( RenderPassTest, ModulePassRegistrationIsScopedAndCopiesConstants )
+{
+    SW_EXPECT_TRUE( sw::isPipelinePassType( sw::RenderPassType::Module ) );
+    const sw::RenderPassTypeInfo& info = sw::getRenderPassTypeInfo( sw::RenderPassType::Module );
+    SW_EXPECT_TRUE( info.hasFlag( sw::RenderPassTraitFlag::kGenericFullscreen ) );
+    SW_EXPECT_TRUE( info._pDefaultShader == nullptr ); // 셰이더는 패스의 `_shaderPath` 가 정한다
+
+    sw::ModuleRenderPassRegistry&                      registry = sw::ModuleRenderPassRegistry::get();
+    const sw::hashed_string                            key( "Test.ModulePass" );
+    sw::vector<sw::ModuleRenderPassRegistry::Constant> listConstant;
+    {
+        sw::ModuleRenderPassRegistration registration( "Test.ModulePass" );
+        SW_ASSERT_TRUE( registration.isRegistered() );
+        SW_EXPECT_FALSE( registry.registerPass( key ) ); // 두 모듈이 한 이름을 나눠 쓰지 않는다
+        SW_EXPECT_TRUE( registration.setConstant( "g_TestTint", sw::float4{ 1.0f, 0.5f, 0.25f, 1.0f } ) );
+        SW_EXPECT_TRUE( registration.setConstant( "g_TestTint", sw::float4{ 0.0f, 0.5f, 0.25f, 1.0f } ) ); // 같은 이름은 덮어쓴다
+        SW_ASSERT_TRUE( registry.copyConstants( key, listConstant ) );
+        SW_ASSERT_EQUAL( size_t( 1 ), listConstant.size() );
+        SW_EXPECT_NEAR_EQUAL( 0.0f, listConstant[0]._value._x, 1e-6f );
+    }
+    SW_EXPECT_FALSE( registry.isRegistered( key ) ); // 수명 객체가 풀었다
+    SW_EXPECT_FALSE( registry.copyConstants( key, listConstant ) );
+    SW_EXPECT_TRUE( listConstant.empty() );
+    SW_EXPECT_FALSE( registry.setConstant( key, sw::hashed_string( "g_TestTint" ), sw::float4{} ) );
 }
 
 /**

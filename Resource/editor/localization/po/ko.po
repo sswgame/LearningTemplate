@@ -3239,6 +3239,11 @@ msgid "Number of grid rows the atlas is cut into, 1 to 64."
 msgstr "아틀라스를 나눌 격자의 행 수(1~64)입니다."
 
 #: Source/Editor/Panels/TileMap/TileMapPanel.cpp
+msgctxt "EditorTileMap.AddDataLayerTip"
+msgid "Add a named integer data layer (terrain cost, footstep sound) to this map. The name must be new."
+msgstr "이 맵에 이름 붙은 정수 데이터 레이어(지형 비용, 발소리)를 더합니다. 이름은 겹치면 안 됩니다."
+
+#: Source/Editor/Panels/TileMap/TileMapPanel.cpp
 msgctxt "EditorTileMap.ApplyEdgeTip"
 msgid "Turn every cell on this edge into a walkable warp to the target map."
 msgstr "이 가장자리의 모든 칸을 대상 맵으로 가는, 걸을 수 있는 워프로 바꿉니다."
@@ -3257,6 +3262,26 @@ msgstr "칠할 아틀라스 칸 인덱스(0~255)입니다."
 msgctxt "EditorTileMap.BrushTip"
 msgid "Paint every cell you press and drag over (B)"
 msgstr "누르고 끄는 칸마다 칠합니다 (B)"
+
+#: Source/Editor/Panels/TileMap/TileMapPanel.cpp
+msgctxt "EditorTileMap.DataLayerDefaultTip"
+msgid "Value of every cell of the new layer, and the value Erase paints."
+msgstr "새 레이어의 모든 칸 값이자 지우기가 칠하는 값입니다."
+
+#: Source/Editor/Panels/TileMap/TileMapPanel.cpp
+msgctxt "EditorTileMap.DataLayerNameTip"
+msgid "Name of the new data layer. The game reads the layer by this name."
+msgstr "새 데이터 레이어의 이름입니다. 게임은 이 이름으로 레이어를 읽습니다."
+
+#: Source/Editor/Panels/TileMap/TileMapPanel.cpp
+msgctxt "EditorTileMap.DataLayerRejectedStatus"
+msgid "Data layer not added: the name is empty or already used"
+msgstr "데이터 레이어를 더하지 못했습니다: 이름이 비었거나 이미 있습니다"
+
+#: Source/Editor/Panels/TileMap/TileMapPanel.cpp
+msgctxt "EditorTileMap.DataValueTip"
+msgid "Integer to paint on the selected data layer."
+msgstr "고른 데이터 레이어에 칠할 정수입니다."
 
 #: Source/Editor/Panels/TileMap/TileMapPanel.cpp
 msgctxt "EditorTileMap.EdgeTargetTip"

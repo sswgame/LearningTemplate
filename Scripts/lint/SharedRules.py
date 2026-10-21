@@ -51,6 +51,8 @@ kListLibraryRule: tuple[LibraryRule, ...] = (
     LibraryRule("OpenSSL", ("openssl/",), ("Source/GameFramework/Base/Online/Security/OpenSSL/",), ("openssl", "OpenSSL::SSL", "OpenSSL::Crypto"),
                 "Source/GameFramework/CMakeLists.txt"),
     LibraryRule("FreeType", ("ft2build.h", "freetype/"), ("Source/Engine/Text/FreeType/",), ("freetype", "Freetype::Freetype")),
+    LibraryRule("HarfBuzz", ("hb.h", "hb-", "harfbuzz/"), ("Source/Engine/Text/HarfBuzz/",), ("harfbuzz", "harfbuzz::harfbuzz")),
+    LibraryRule("SheenBidi", ("SheenBidi.h", "SheenBidi/"), ("Source/Engine/Text/SheenBidi/",), ("sheenbidi", "SheenBidi::SheenBidi", "sheenbidi::sheenbidi")),
     LibraryRule("RenderDoc", ("renderdoc_app.h",), ("Source/Engine/Renderer/Capture/",), ("renderdoc",)),
     LibraryRule("SQLite", ("sqlite3.h", "sqlite3ext.h"), ("Source/GameFramework/Kits/Feature/Storage/SQLStore/Shared/Driver/SQLite/",),
                 ("unofficial::sqlite3::sqlite3", "SQLite::SQLite3"), "Source/GameFramework/Kits/Feature/Storage/SQLStore/Shared/CMakeLists.txt"),

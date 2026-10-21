@@ -405,6 +405,38 @@ namespace sw::editor
     }
 
     /**
+     * @brief [EditorTexturePipelineTest] `R8_UNORM` 규칙은 R 채널만 남긴 1 채널 DDS(DX10 머리, DXGI 61)를 내고 엔진 로더가 그것을 읽는다
+     * @details 옛 머리로 쓰면 로더가 L8 을 몰라 실패한다. 모르는 형식 이름은 설정 로드에서 거절된다(예전에는 BC7 로 조용히 갔다).
+     */
+    SW_TEST_CASE( EditorTexturePipelineTest, SingleChannelR8ImportRoundTrips )
+    {
+        const uint8  arrSourcePixel[8] = { 10, 20, 30, 40, 200, 210, 220, 230 };
+        const string sourcePath        = test::makeTempPath( "mask_r8.tga" );
+        SW_ASSERT_TRUE( TestTexturePipelineInternal::writeTga( sourcePath, 2, 1, vector<uint8>( arrSourcePixel, arrSourcePixel + 8 ) ) );
+
+        TextureImportRule rule;
+        rule._format         = "R8_UNORM";
+        rule._bSrgb          = SW_FALSE;
+        rule._bGenerateMips  = SW_FALSE;
+        const string ddsPath = test::makeTempPath( "mask_r8.dds" );
+        SW_ASSERT_TRUE( TextureImporter::importTexture( sourcePath, ddsPath, rule ) );
+
+        DDSImageData dds;
+        SW_ASSERT_TRUE( DDSLoader::loadFromDiskFile( ddsPath, dds ) );
+        SW_EXPECT_EQUAL( 61u, dds._dxgiFormat );
+        SW_ASSERT_TRUE( dds._bytes.size() == 2 );
+        SW_EXPECT_TRUE( dds._bytes[0] == 10 && dds._bytes[1] == 200 );
+
+        TextureImportRule unknownRule;
+        unknownRule._format = "R8_SNORM";
+        SW_EXPECT_FALSE( TextureImporter::importTexture( sourcePath, test::makeTempPath( "mask_unknown.dds" ), unknownRule ) );
+
+        TextureImportConfig config;
+        SW_EXPECT_FALSE( config.loadFromJSONString( R"({"rules":[{"name":"Mask","format":"R8_SNORM"}]})" ) );
+        SW_EXPECT_TRUE( config.loadFromJSONString( R"({"rules":[{"name":"Mask","format":"r8","srgb":false}]})" ) );
+    }
+
+    /**
      * @brief [EditorTexturePipelineTest] 그린 반전이 어떤 스위즐에서도 초록에 걸린다
      * @details 스위즐이 초록을 0번으로 보낸 뒤 반전이 그대로 1번을 뒤집으면 **파랑을 뒤집고 초록은 그대로 남긴다.**
      *          이 테스트가 보는 것이 그것이다.
