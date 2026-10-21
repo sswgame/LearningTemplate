@@ -39,6 +39,7 @@ namespace sw
             using PFN_snd_pcm_hw_params_free             = void ( * )( void* );
             using PFN_snd_pcm_hw_params_any              = int32 ( * )( void*, void* );
             using PFN_snd_pcm_hw_params_get_channels_max = int32 ( * )( const void*, uint32* );
+            using PFN_snd_config_update_free_global      = int32 ( * )();
 
             /** @brief 교차 블록을 엔진 순서(FL FR FC LFE BL BR SL SR)에서 ALSA 순서(FL FR RL RR FC LFE SL SR)로 옮깁니다. */
             static void reorderToAlsa( const float32* pSource, float32* pTarget, uint32 frameCount, uint32 channelCount )
@@ -68,13 +69,14 @@ namespace sw
         AlsaAudioBackendInternal::PFN_snd_pcm_hw_params_free             _pfnHwParamsFree;
         AlsaAudioBackendInternal::PFN_snd_pcm_hw_params_any              _pfnHwParamsAny;
         AlsaAudioBackendInternal::PFN_snd_pcm_hw_params_get_channels_max _pfnHwParamsGetChannelsMax;
-        vector<float32>                                                  _listRender;   /**< 엔진이 렌더한 블록(엔진 채널 순서)입니다. */
-        vector<float32>                                                  _listDevice;   /**< 장치에 쓰는 블록(ALSA 채널 순서)입니다. */
-        thread                                                           _streamThread; /**< 스트림 스레드입니다. */
-        void*                                                            _pLibrary;     /**< `libasound.so.2` 핸들입니다. */
-        void*                                                            _pPcm;         /**< 열린 재생 장치입니다. */
-        atomic<bool>                                                     _bStopping;    /**< 스트림 스레드를 멈추라는 표시입니다. */
-        uint32                                                           _channelCount; /**< 스트림의 채널 수입니다. */
+        AlsaAudioBackendInternal::PFN_snd_config_update_free_global      _pfnConfigFreeGlobal; /**< `snd_pcm_open` 이 읽어 둔 전역 설정 트리를 놓습니다(닫는 길). */
+        vector<float32>                                                  _listRender;          /**< 엔진이 렌더한 블록(엔진 채널 순서)입니다. */
+        vector<float32>                                                  _listDevice;          /**< 장치에 쓰는 블록(ALSA 채널 순서)입니다. */
+        thread                                                           _streamThread;        /**< 스트림 스레드입니다. */
+        void*                                                            _pLibrary;            /**< `libasound.so.2` 핸들입니다. */
+        void*                                                            _pPcm;                /**< 열린 재생 장치입니다. */
+        atomic<bool>                                                     _bStopping;           /**< 스트림 스레드를 멈추라는 표시입니다. */
+        uint32                                                           _channelCount;        /**< 스트림의 채널 수입니다. */
 
         AlsaAudioBackendImpl()
             : _pfnOpen{ nullptr }
@@ -87,6 +89,7 @@ namespace sw
             , _pfnHwParamsFree{ nullptr }
             , _pfnHwParamsAny{ nullptr }
             , _pfnHwParamsGetChannelsMax{ nullptr }
+            , _pfnConfigFreeGlobal{ nullptr }
             , _listRender{}
             , _listDevice{}
             , _streamThread{}
@@ -111,9 +114,11 @@ namespace sw
             _pfnHwParamsAny            = reinterpret_cast<AlsaAudioBackendInternal::PFN_snd_pcm_hw_params_any>( ModuleImageUtil::getDynamicSymbol( _pLibrary, "snd_pcm_hw_params_any" ) );
             _pfnHwParamsGetChannelsMax = reinterpret_cast<AlsaAudioBackendInternal::PFN_snd_pcm_hw_params_get_channels_max>(
                 ModuleImageUtil::getDynamicSymbol( _pLibrary, "snd_pcm_hw_params_get_channels_max" ) );
+            _pfnConfigFreeGlobal = reinterpret_cast<AlsaAudioBackendInternal::PFN_snd_config_update_free_global>(
+                ModuleImageUtil::getDynamicSymbol( _pLibrary, "snd_config_update_free_global" ) );
             const bool bCoreFunctions  = _pfnOpen != nullptr && _pfnClose != nullptr && _pfnSetParams != nullptr && _pfnWritei != nullptr && _pfnRecover != nullptr;
             const bool bQueryFunctions = _pfnDrop != nullptr && _pfnHwParamsMalloc != nullptr && _pfnHwParamsFree != nullptr && _pfnHwParamsAny != nullptr &&
-                                         _pfnHwParamsGetChannelsMax != nullptr;
+                                         _pfnHwParamsGetChannelsMax != nullptr && _pfnConfigFreeGlobal != nullptr;
             return bCoreFunctions && bQueryFunctions;
         }
     };
@@ -240,6 +245,13 @@ namespace sw
         {
             (void)_impl->_pfnClose( _impl->_pPcm ); // 닫는 길이라 실패해도 할 일이 없다
             _impl->_pPcm = nullptr;
+        }
+        // snd_pcm_open 은 열기에 실패해도 alsa.conf 트리를 라이브러리 전역 캐시에 남긴다(CI ASan 의 LeakSanitizer 누수가 이것이었다).
+        // 장치를 닫은 뒤 · 라이브러리를 내리기 전에 놓는다. 이 프로세스에서 libasound 를 쓰는 곳은 이 백엔드 하나다.
+        if ( _impl->_pfnConfigFreeGlobal != nullptr )
+        {
+            (void)_impl->_pfnConfigFreeGlobal(); // 캐시를 비우는 것뿐이라 실패해도 닫기는 이어 간다
+            _impl->_pfnConfigFreeGlobal = nullptr;
         }
         if ( _impl->_pLibrary != nullptr )
         {
