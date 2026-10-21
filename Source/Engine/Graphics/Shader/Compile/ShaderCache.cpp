@@ -29,6 +29,52 @@ namespace sw
                                                         ShaderCooker::computePermutationHash( desc._listDefine ),
                                                         ShaderCooker::getExtensionForFormat( desc._targetFormat ) );
         }
+
+        /** @brief 인메모리 캐시의 키입니다 — 경로 · 진입점 · 스테이지 · 타깃 · 코드젠 · define 전부입니다. */
+        string makeMemoryCacheKey( const ShaderCompileDesc& desc )
+        {
+            StringBuilder<constant::kMaxBuffer256> sb;
+            sb.append( desc._filePath ).append( '_' ).append( desc._entryPoint ).append( '_' ).append( static_cast<int32>( desc._stage ) ).append( '_' ).append( static_cast<int32>( desc._targetFormat ) );
+            sb.append( desc._bDebugCodegen != SW_FALSE ? "_dbg" : "_opt" );
+            for ( const auto& def : desc._listDefine )
+            {
+                sb.append( '_' ).append( def._name ).append( '=' ).append( def._value );
+            }
+            return string( sb.c_str(), sb.size() );
+        }
+
+        /** @brief 디스크 파일이 있고 비어 있지 않으면 그 바이트를 읽어 true 입니다(로컬 라이브 수정 캐시). */
+        [[nodiscard]] bool readNonEmptyFile( const string& path, vector<uint8>& outBytes )
+        {
+            return FileUtil::exists( path ) && FileUtil::readFile( path, outBytes ) && outBytes.empty() == false;
+        }
+
+        /**
+         * @brief 쿠킹된 바이너리가 지금 소스에서 나온 것인지입니다. 배포 구성은 늘 true 입니다.
+         * @details **신선도는 `cook.stamp` 의 내용 해시로 본다.** mtime 비교는 안 된다. 이 저장소는 쿠킹된 바이너리까지 커밋하므로
+         *          `git pull` 이 둘의 시간 순서를 임의로 뒤집어, 소스가 바뀌었는데도 "바이너리가 더 새것"이라 낡은 것을 쓴다.
+         *          검사는 개발 빌드 전용이다. 배포에는 다시 컴파일할 길이 없어 거부하면 폴백이 아니라 빈 화면이고, 배포물의 신선도는
+         *          쿠킹이 같은 스탬프로 이미 막는다(CookAssets.py --verify-shaders).
+         */
+        bool isPrecookedCurrent( const string& precookedRelPath, const string& sourceAbsPath )
+        {
+#if !defined( SW_SHIPPING )
+            if ( sourceAbsPath.empty() )
+                return true;
+            const string precookedAbsPath = ResourcePaths::findLooseFile( precookedRelPath ).getDiskPath();
+            if ( precookedAbsPath.empty() || FileUtil::exists( precookedAbsPath ) == false )
+                return true;
+            const string binDirAbs = FileUtil::getDirectoryPart( FileUtil::normalizeSeparators( precookedAbsPath ) );
+            if ( ShaderCooker::isCookedOutputCurrent( binDirAbs, sourceAbsPath ) )
+                return true;
+            SW_LOG_TRACE( "Pre-cooked shader does not match the current source — recompiling: %#", precookedRelPath.c_str() );
+            return false;
+#else
+            (void)precookedRelPath;
+            (void)sourceAbsPath;
+            return true;
+#endif
+        }
     } // namespace
 } // namespace sw
 
@@ -108,100 +154,55 @@ namespace sw
     ShaderCompileResult ShaderCache::getOrCompile( const ShaderCompileDesc& desc )
     {
         SW_MEMORY_SCOPE( Shader );
-        string absPath;
-        string cacheKey;
-        uint64 currentSourceHash{ 0 };
-
-        absPath = ResourcePaths::findLooseFile( desc._filePath ).getDiskPath();
-
-        StringBuilder<constant::kMaxBuffer256> sb;
-        sb.append( desc._filePath ).append( '_' ).append( desc._entryPoint ).append( '_' ).append( static_cast<int32>( desc._stage ) ).append( '_' ).append( static_cast<int32>( desc._targetFormat ) );
-        sb.append( desc._bDebugCodegen != SW_FALSE ? "_dbg" : "_opt" );
-        for ( const auto& def : desc._listDefine )
-        {
-            sb.append( '_' ).append( def._name ).append( '=' ).append( def._value );
-        }
-        cacheKey.assign( sb.c_str(), sb.size() );
-
-        if ( absPath.empty() == false )
-            currentSourceHash = ShaderCooker::computeEffectiveSourceHash( absPath );
+        const string absPath           = ResourcePaths::findLooseFile( desc._filePath ).getDiskPath();
+        string       cacheKey          = makeMemoryCacheKey( desc );
+        const uint64 currentSourceHash = absPath.empty() == false ? ShaderCooker::computeEffectiveSourceHash( absPath ) : 0u;
 
         // 0) 인메모리 캐시 조회
         {
             std::scoped_lock<mutex> lock{ _mutexCache };
-            const auto              iter = _mapCache.find( cacheKey );
-            if ( iter != _mapCache.end() )
-            {
-                if ( iter->second._lastTimestamp == currentSourceHash && currentSourceHash != 0 )
-                    return iter->second._result;
-            }
+            const auto              iter      = _mapCache.find( cacheKey );
+            const bool              bFreshHit = iter != _mapCache.end() && iter->second._lastTimestamp == currentSourceHash && currentSourceHash != 0;
+            if ( bFreshHit )
+                return iter->second._result;
         }
 
         // 1순위(로컬 라이브 수정 캐시: Saved/ShaderCache/). 파일 이름에 퍼뮤테이션 해시가 들어간다(헤더 주석 참고).
         // 경로는 **실시간 컴파일이 실제로 쓰는 요청**으로 정한다. 아래 3순위가 그 요청으로 컴파일해 여기에 쓰고, 핫 리로드도 같은 요청으로 쓴다.
+        // 경로에 이미 유효 소스 해시가 들어 있다. 찾혔다는 것이 곧 "이 소스에서 나온 것"이다.
         const ShaderCompileDesc liveDesc       = makeLiveCompileDesc( desc );
         const string            localCachePath = makeLocalCachePath( liveDesc );
-        if ( FileUtil::exists( localCachePath ) )
+        vector<uint8>           cacheBytes;
+        if ( readNonEmptyFile( localCachePath, cacheBytes ) )
         {
-            // 경로에 이미 유효 소스 해시가 들어 있다. 찾혔다는 것이 곧 "이 소스에서 나온 것"이다.
-            {
-                vector<uint8> cacheBytes;
-                if ( FileUtil::readFile( localCachePath, cacheBytes ) && cacheBytes.empty() == false )
-                {
-                    SW_LOG_TRACE( "Loaded live override shader from local cache: %#", localCachePath.c_str() );
-                    ShaderCompileResult result{};
-                    result._bytecode = std::move( cacheBytes );
-                    result._bSuccess = true;
-
-                    storeEntry( std::move( cacheKey ), desc, result, currentSourceHash );
-                    return result;
-                }
-            }
+            SW_LOG_TRACE( "Loaded live override shader from local cache: %#", localCachePath.c_str() );
+            ShaderCompileResult result{};
+            result._bytecode = std::move( cacheBytes );
+            result._bSuccess = true;
+            storeEntry( std::move( cacheKey ), desc, result, currentSourceHash );
+            return result;
         }
 
         // 2순위(Git 사전 컴파일 정식 바이너리 패스트 패스: Resource/<domain>/shaders/bin/<rhi>/ 또는 .pack)
         //
         // **지금 소스에서 나오지 않은(낡은) 바이너리는 쓰지 않는다.** 있기만 하면 이기게 두면 HLSL 을 고쳐도 화면이
         // 그대로이고(다시 쿠킹 전까지), 엔진 셰이더에 대해 라이브 컴파일 경로가 사실상 도달 불가가 된다.
-        const string precookedRelPath = makePrecookedRelativePath( desc );
-        bool         bPrecookedUsable = true;
-#if !defined( SW_SHIPPING )
-        // **신선도는 `cook.stamp` 의 내용 해시로 본다.** mtime 비교는 안 된다. 이 저장소는 쿠킹된 바이너리까지 커밋하므로
-        // `git pull` 이 둘의 시간 순서를 임의로 뒤집어, 소스가 바뀌었는데도 "바이너리가 더 새것"이라 낡은 것을 쓴다.
-        // 검사는 개발 빌드 전용이다. 배포에는 다시 컴파일할 길이 없어
-        // 거부하면 폴백이 아니라 빈 화면이고, 배포물의 신선도는 쿠킹이 같은 스탬프로 이미 막는다
-        // (CookAssets.py --verify-shaders).
-        if ( absPath.empty() == false )
-        {
-            const string precookedAbsPath = ResourcePaths::findLooseFile( precookedRelPath ).getDiskPath();
-            if ( precookedAbsPath.empty() == false && FileUtil::exists( precookedAbsPath ) )
-            {
-                const string binDirAbs = FileUtil::getDirectoryPart( FileUtil::normalizeSeparators( precookedAbsPath ) );
-                if ( ShaderCooker::isCookedOutputCurrent( binDirAbs, absPath ) == false )
-                {
-                    SW_LOG_TRACE( "Pre-cooked shader does not match the current source — recompiling: %#", precookedRelPath.c_str() );
-                    bPrecookedUsable = false;
-                }
-            }
-        }
-#endif
-
+        const string  precookedRelPath = makePrecookedRelativePath( desc );
         vector<uint8> precookedBytes;
-        const bool    bPrecookedBinaryLoaded = bPrecookedUsable && ResourceIO::readBinaryResource( precookedRelPath, precookedBytes ) && precookedBytes.empty() == false;
+        const bool    bPrecookedBinaryLoaded = isPrecookedCurrent( precookedRelPath, absPath ) && ResourceIO::readBinaryResource( precookedRelPath, precookedBytes ) &&
+                                            precookedBytes.empty() == false;
         if ( bPrecookedBinaryLoaded )
         {
             SW_LOG_TRACE( "Loaded pre-cooked shader binary: %# (%zu bytes)", precookedRelPath.c_str(), precookedBytes.size() );
             ShaderCompileResult result{};
             result._bytecode = std::move( precookedBytes );
             result._bSuccess = true;
-
             storeEntry( std::move( cacheKey ), desc, result, currentSourceHash );
             return result;
         }
 
         // 3순위(런타임 DXC 컴파일 폴백, 개발 모드 전용)
 #if !defined( SW_SHIPPING )
-        BLOCK( "캐시 미스: HLSL 컴파일 및 로컬 캐시 업데이트" )
         // 라이브 컴파일은 Debug 에서 디버그 코드젠으로 한다(makeLiveCompileDesc). RenderDoc 에서 셰이더를 한 줄씩 볼 수 있어야 한다.
         // 쿠커는 이 경로를 타지 않으므로 쿠킹된 바이너리는 빌드 구성과 무관하게 늘 최적화된 것이다.
         ShaderCompileResult compiledResult = ShaderCompiler::compileHlsl( liveDesc );
@@ -212,7 +213,6 @@ namespace sw
                 FileUtil::ensureDirectoryExists( localDir );
             if ( FileUtil::writeFile( localCachePath, compiledResult._bytecode.data(), compiledResult._bytecode.size() ) == false )
                 SW_LOG_WARNING( "Could not write the shader cache '%#' - the next run recompiles it", localCachePath );
-
             storeEntry( std::move( cacheKey ), desc, compiledResult, currentSourceHash );
         }
         return compiledResult;
