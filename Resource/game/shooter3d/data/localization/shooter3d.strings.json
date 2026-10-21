@@ -43,6 +43,13 @@
                 "game/shooter3d/data/items.xml"
             ]
         },
+        "Longbow": {
+            "source": "Longbow",
+            "context": "Item name",
+            "origins": [
+                "game/shooter3d/data/items.xml"
+            ]
+        },
         "Notched Blade": {
             "source": "Notched Blade",
             "context": "Item name",
