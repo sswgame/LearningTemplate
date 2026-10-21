@@ -11,6 +11,7 @@
 
 #include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Localization/LocText.h"
+#include "Engine/Scene/SceneStateHash.h"
 
 #include <imgui.h>
 
@@ -26,6 +27,8 @@ namespace sw::editor
             static constexpr float32 kFieldWidthInFonts = 10.0f;
             /** @brief 경로 칸의 너비(글자 크기 배수)입니다. */
             static constexpr float32 kPathWidthInFonts = 20.0f;
+            /** @brief 클라이언트에게 묻는 최근 틱 수입니다. 답은 로그 한 줄(틱마다 약 22 바이트)이라 세션 서버 이력(3600 틱)보다 짧게 묻는다. */
+            static constexpr int32 kClientHistoryTicks = 512;
             /** @brief 칸 이름입니다(탭 · 명령 답). */
             static constexpr const utf8* kArrSourceName[EditorStateHashCompare::kSourceCount] = { "A", "B" };
 
@@ -59,6 +62,14 @@ namespace sw::editor
                     return false;
                 }
                 return true;
+            }
+
+            /** @brief 클라이언트(프로세스 @p processIndex)의 마지막 이력 답을 칸에 담습니다. 답이 오류 형식이면 이력 답 수가 늘지 않으므로 여기 오지 않는다. */
+            [[nodiscard]] static bool loadClientReport( int32 sourceIndex, const EditorNetPlayProcessStatus& status )
+            {
+                string text;
+                StateHashHistory::writeReport( status._listStateHash, text );
+                return getCompare().loadFromReport( sourceIndex, status._label, text );
             }
 
             /** @brief 비교 결과 한 줄입니다(탭 · 명령 답). */
@@ -130,7 +141,8 @@ namespace sw::editor
     /**
      * @class MultiplayerSyncTab
      * @brief Sync 탭 — 틱별 상태 해시 이력 두 벌(A · B)을 모아 처음 어긋난 틱을 보입니다(서버 디버깅 S7).
-     * @details 원천은 세션이 띄운 전용 서버(디버그 채널의 `state.hashes`), 주소 · 토큰으로 붙은 다른 서버, 저장한 이력 파일이다. 계산은 `EditorStateHashCompare`.
+     * @details 원천은 세션이 띄운 전용 서버(디버그 채널의 `state.hashes`), 세션의 클라이언트(표준 입력의 `state.hashline` — 서버가 알린 틱 번호로 남긴 이력),
+     *          주소 · 토큰으로 붙은 다른 서버, 저장한 이력 파일이다. 계산은 `EditorStateHashCompare`.
      *          읽기는 누를 때만 한다(채널 요청은 답을 기다린다).
      */
     class MultiplayerSyncTab final : public IMultiplayerTab
@@ -143,10 +155,16 @@ namespace sw::editor
     private:
         /** @brief 칸 하나의 원천 고르기 · 저장 줄입니다. */
         void drawSource( int32 sourceIndex );
+        /** @brief 칸 하나의 클라이언트 원천 단추들입니다. 누르면 그 프로세스의 표준 입력에 `state.hashline` 을 묻고, 답이 오면(`pollClientReplies`) 칸에 담는다. */
+        void drawClientSources( int32 sourceIndex );
+        /** @brief 기다리는 클라이언트 답이 왔으면 칸에 담습니다. 프레임마다 부릅니다. */
+        void pollClientReplies();
 
-        fixed_string<constant::kMaxPathSize>  _arrPath[EditorStateHashCompare::kSourceCount];    ///< 칸마다 파일 경로(편집 칸)
-        fixed_string<constant::kMaxBuffer64>  _arrAddress[EditorStateHashCompare::kSourceCount]; ///< 칸마다 채널 주소(편집 칸)
-        fixed_string<constant::kMaxBuffer128> _arrToken[EditorStateHashCompare::kSourceCount];   ///< 칸마다 채널 토큰(편집 칸)
+        fixed_string<constant::kMaxPathSize>  _arrPath[EditorStateHashCompare::kSourceCount];               ///< 칸마다 파일 경로(편집 칸)
+        fixed_string<constant::kMaxBuffer64>  _arrAddress[EditorStateHashCompare::kSourceCount];            ///< 칸마다 채널 주소(편집 칸)
+        fixed_string<constant::kMaxBuffer128> _arrToken[EditorStateHashCompare::kSourceCount];              ///< 칸마다 채널 토큰(편집 칸)
+        int32                                 _arrPendingProcess[EditorStateHashCompare::kSourceCount];     ///< 칸마다 답을 기다리는 클라이언트 프로세스 번호(-1 이면 없다)
+        uint32                                _arrPendingReportCount[EditorStateHashCompare::kSourceCount]; ///< 물을 때의 그 프로세스 이력 답 수 — 늘면 새 답이다
     };
 } // namespace sw::editor
 
@@ -156,7 +174,65 @@ namespace sw::editor
         : _arrPath{}
         , _arrAddress{}
         , _arrToken{}
+        , _arrPendingProcess{ -1, -1 }
+        , _arrPendingReportCount{}
     {
+        static_assert( EditorStateHashCompare::kSourceCount == 2, "the pending client table is initialized for two sources" );
+    }
+
+    void MultiplayerSyncTab::drawClientSources( int32 sourceIndex )
+    {
+        EditorNetPlaySession* pSession = MultiplayerSyncTabInternal::findSession();
+        if ( pSession == nullptr || pSession->isRunning() == false )
+            return;
+        // 0 번은 서버다. 클라이언트는 이력을 디버그 채널이 아니라 표준 입력 명령의 답(로그 한 줄)으로 낸다.
+        for ( int32 processIndex = 1; processIndex < pSession->getProcessCount(); ++processIndex )
+        {
+            const EditorNetPlayProcessStatus status = pSession->getProcessStatus( processIndex );
+            ImGui::PushID( processIndex );
+            if ( processIndex > 1 )
+                ImGui::SameLine();
+            const bool bWaiting = _arrPendingProcess[sourceIndex] == processIndex;
+            ImGui::BeginDisabled( status._bRunning == false || bWaiting );
+            if ( ImGui::Button( status._label.c_str() ) )
+            {
+                const string command = "state.hashline " + to_string( MultiplayerSyncTabInternal::kClientHistoryTicks );
+                if ( pSession->sendProcessCommand( processIndex, command ) )
+                {
+                    _arrPendingProcess[sourceIndex]     = processIndex;
+                    _arrPendingReportCount[sourceIndex] = status._stateHashReportCount;
+                }
+                else
+                {
+                    SW_LOG_WARNING( "Sync could not ask %# for its history (the process has exited)", status._label );
+                }
+            }
+            ImGui::EndDisabled();
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "SyncClient" ) );
+            ImGui::PopID();
+        }
+    }
+
+    void MultiplayerSyncTab::pollClientReplies()
+    {
+        EditorNetPlaySession* pSession = MultiplayerSyncTabInternal::findSession();
+        for ( int32 sourceIndex = 0; sourceIndex < EditorStateHashCompare::kSourceCount; ++sourceIndex )
+        {
+            const int32 processIndex = _arrPendingProcess[sourceIndex];
+            if ( processIndex < 0 )
+                continue;
+            if ( pSession == nullptr || pSession->isRunning() == false )
+            {
+                _arrPendingProcess[sourceIndex] = -1; // 세션이 끝났다 — 답이 올 곳이 없다
+                continue;
+            }
+            const EditorNetPlayProcessStatus status = pSession->getProcessStatus( processIndex );
+            if ( status._stateHashReportCount == _arrPendingReportCount[sourceIndex] )
+                continue;
+            _arrPendingProcess[sourceIndex] = -1;
+            if ( MultiplayerSyncTabInternal::loadClientReport( sourceIndex, status ) == false )
+                SW_LOG_WARNING( "Sync could not take %#'s history: %#", status._label, MultiplayerSyncTabInternal::getCompare().getLastError() );
+        }
     }
 
     void MultiplayerSyncTab::drawSource( int32 sourceIndex )
@@ -178,6 +254,8 @@ namespace sw::editor
                 SW_LOG_WARNING( "Sync could not read the session server's history: %#", reason );
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "SyncSessionServer" ) );
+        ImGui::SameLine();
+        drawClientSources( sourceIndex );
 
         ImGui::SetNextItemWidth( ImGui::GetFontSize() * MultiplayerSyncTabInternal::kFieldWidthInFonts );
         ImGui::InputTextWithHint( "##SyncAddress", "127.0.0.1:<port>", _arrAddress[sourceIndex].data(), _arrAddress[sourceIndex].capacity() );
@@ -215,6 +293,7 @@ namespace sw::editor
 
     void MultiplayerSyncTab::drawTab( const MultiplayerTabContext& /*context*/ )
     {
+        pollClientReplies();
         for ( int32 sourceIndex = 0; sourceIndex < EditorStateHashCompare::kSourceCount; ++sourceIndex )
         {
             drawSource( sourceIndex );

@@ -69,6 +69,15 @@ namespace sw
 
         /** @brief 샘플을 한 줄에 하나(`<tick> <16자리 16진 해시>`)로 씁니다. */
         static void writeReport( const vector<StateHashSample>& listSample, string& outText );
+        /** @brief 한 줄 판의 머리입니다. 자식 프로세스의 로그 줄에서 이 머리를 찾아 이력을 거둡니다(에디터 Sync 탭의 클라이언트 원천). */
+        static constexpr const utf8* kReportLinePrefix = "State hash history:";
+        /** @brief 샘플을 한 줄(`kReportLinePrefix <tick>:<16자리 16진 해시>,…`)로 씁니다. 표준 입력 명령의 답이 로그 한 줄로 나가는 길(멀티 프로세스 재생)에 쓴다. */
+        static void writeReportLine( const vector<StateHashSample>& listSample, string& outText );
+        /**
+         * @brief @p line 에서 `kReportLinePrefix` 를 찾아 뒤의 샘플을 읽습니다. 머리가 없으면 false 이고, 머리 뒤 첫 덩이의 항목이 하나라도 형식이 다르면 목록을 비우고 false 입니다.
+         * @details 샘플이 없으면 머리 뒤가 `-` 다(빈 이력도 답이다).
+         */
+        [[nodiscard]] static bool tryParseReportLine( string_view line, vector<StateHashSample>& outListSample );
         /** @brief `writeReport` 의 글을 되읽습니다. 빈 줄은 건너뛰고, 형식이 다른 줄이 하나라도 있으면 목록을 비우고 false 입니다. */
         [[nodiscard]] static bool parseReport( string_view text, vector<StateHashSample>& outListSample );
         /**

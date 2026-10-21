@@ -22,6 +22,7 @@
  *          - 서버 일시정지와 한 틱 진행은 서버 표준 입력에 `pause`, `step N`, `resume` 을 보내서 처리한다(전용 서버의 Dev 명령).
  *          - 회선 조절은 그 프로세스의 표준 입력에 `net.emulation …` 을 보낸다(`sendProcessCommand`). 답 줄 가운데 `NetEmulationReport` 줄은 프로세스마다 마지막 것을 보관한다.
  *          - `NetStatsReport` 줄(`net.stats` 의 답 — Profiler 탭이 0.5 초마다 묻는다)도 프로세스마다 마지막 것을 보관한다. 이 줄은 에디터 로그 · 마지막 줄로 옮기지 않는다(Output Log 를 메운다).
+ *          - 상태 해시 이력 한 줄(`state.hashline` 의 답, `StateHashHistory::kReportLinePrefix`)도 같다 — Sync 탭이 클라이언트 이력을 이 길로 읽는다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -36,6 +37,8 @@
 #include "Editor/Common/EditorSubsystem.h"
 #include "Editor/Common/Workspace/EditorNetPlayPresetStore.h"
 #include "Editor/Common/Workspace/EditorNetPlaySettings.h"
+
+#include "Engine/Scene/SceneStateHash.h"
 
 #include <chrono>
 #include <thread>
@@ -55,17 +58,19 @@ namespace sw::editor
     /** @brief 패널이 그리는 프로세스 하나의 상태 복사본입니다. */
     struct EditorNetPlayProcessStatus
     {
-        string             _label;
-        string             _lastLine;
-        string             _tracePath;
-        NetEmulationReport _emulationReport{};         ///< 마지막으로 받은 `net.emulation stats` 의 답
-        uint32             _emulationReportCount{ 0 }; ///< 받은 보고 수 — 새 보고가 왔는지 이 값으로 본다
-        NetStatsReport     _statsReport{};             ///< 마지막으로 받은 `net.stats` 의 답(Profiler 탭)
-        uint32             _statsReportCount{ 0 };     ///< 받은 `net.stats` 보고 수
-        int32              _processID{ 0 };
-        int32              _exitCode{ 0 };
-        bool               _bRunning{ false };
-        bool               _bConnected{ false }; ///< 클라이언트가 서버에 연결되었다는 줄(`Net session connected to`)을 남겼다
+        string                  _label;
+        string                  _lastLine;
+        string                  _tracePath;
+        NetEmulationReport      _emulationReport{};         ///< 마지막으로 받은 `net.emulation stats` 의 답
+        uint32                  _emulationReportCount{ 0 }; ///< 받은 보고 수 — 새 보고가 왔는지 이 값으로 본다
+        NetStatsReport          _statsReport{};             ///< 마지막으로 받은 `net.stats` 의 답(Profiler 탭)
+        uint32                  _statsReportCount{ 0 };     ///< 받은 `net.stats` 보고 수
+        vector<StateHashSample> _listStateHash{};           ///< 마지막으로 받은 `state.hashline` 의 답(Sync 탭의 클라이언트 원천)
+        uint32                  _stateHashReportCount{ 0 }; ///< 받은 이력 답 수 — 새 답이 왔는지 이 값으로 본다
+        int32                   _processID{ 0 };
+        int32                   _exitCode{ 0 };
+        bool                    _bRunning{ false };
+        bool                    _bConnected{ false }; ///< 클라이언트가 서버에 연결되었다는 줄(`Net session connected to`)을 남겼다
     };
 } // namespace sw::editor
 

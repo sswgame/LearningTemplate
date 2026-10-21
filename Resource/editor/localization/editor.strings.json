@@ -2814,6 +2814,12 @@
                 "Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp"
             ]
         },
+        "EditorMultiplayer.SyncClient": {
+            "source": "Read this client's state hash history (the latest ticks it recorded under the server tick numbers)",
+            "origins": [
+                "Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp"
+            ]
+        },
         "EditorMultiplayer.SyncCompare": {
             "source": "Find the earliest tick both histories hold with different state hashes (scene transforms: name, active, world position)",
             "origins": [

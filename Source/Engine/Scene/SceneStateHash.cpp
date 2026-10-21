@@ -174,6 +174,60 @@ namespace sw
         }
     }
 
+    void StateHashHistory::writeReportLine( const vector<StateHashSample>& listSample, string& outText )
+    {
+        outText = kReportLinePrefix;
+        outText += ' ';
+        if ( listSample.empty() )
+        {
+            outText += '-';
+            return;
+        }
+        string block;
+        writeReport( listSample, block ); // `<tick> <hash>\n` 줄들 — 한 줄 판은 공백을 ':' 로, 줄 끝을 ',' 로 바꾼다
+        for ( utf8& ch : block )
+        {
+            if ( ch == ' ' )
+                ch = ':';
+            else if ( ch == '\n' )
+                ch = ',';
+        }
+        block.pop_back(); // 마지막 ','
+        outText += block;
+    }
+
+    bool StateHashHistory::tryParseReportLine( string_view line, vector<StateHashSample>& outListSample )
+    {
+        const size_t prefixAt = line.find( kReportLinePrefix );
+        if ( prefixAt == string_view::npos )
+            return false;
+        outListSample.clear();
+        string_view body = StringUtil::trim( line.substr( prefixAt + string_view( kReportLinePrefix ).size() ) );
+        body             = body.substr( 0, body.find_first_of( " \t" ) ); // 로그 꼬리는 읽지 않는다
+        if ( body == "-" )
+            return true;
+        size_t itemStart = 0;
+        while ( itemStart <= body.size() )
+        {
+            size_t itemEnd = body.find( ',', itemStart );
+            if ( itemEnd == string_view::npos )
+                itemEnd = body.size();
+            const string_view item  = body.substr( itemStart, itemEnd - itemStart );
+            const size_t      colon = item.find( ':' );
+            StateHashSample   sample;
+            const bool        bHasTick = colon != string_view::npos && StringUtil::parseUint64( item.substr( 0, colon ), sample._tick );
+            const bool        bHasHash = bHasTick && StringUtil::parseUint64( item.substr( colon + 1 ), sample._hash, 16 );
+            if ( bHasHash == false )
+            {
+                outListSample.clear();
+                return false;
+            }
+            outListSample.push_back( sample );
+            itemStart = itemEnd + 1;
+        }
+        return true;
+    }
+
     bool StateHashHistory::parseReport( string_view text, vector<StateHashSample>& outListSample )
     {
         outListSample.clear();
