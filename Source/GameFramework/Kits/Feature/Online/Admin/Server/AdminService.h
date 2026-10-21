@@ -23,6 +23,7 @@ namespace sw
     class IAccountDirectory;
     class IAccountNameIndex;
     class IAccountSessionControl;
+    class IBalanceNotice;
     class ILedgerPolicy;
     class ILiveEventControl;
     class IServerDirectoryControl;
@@ -40,6 +41,7 @@ namespace sw
         const ILedgerPolicy*     _pPolicy{ nullptr };         ///< 지급 상한이다. 게임이 CurrencyCatalog 를 넘긴다
         MetricRegistry*          _pMetricRegistry{ nullptr };
         IServerDirectoryControl* _pDirectoryControl{ nullptr }; ///< 점검과 공지 명령을 넘긴다. 서버 디렉터리 키트가 없으면 null 이고 그 명령은 Unavailable 이다
+        IBalanceNotice*          _pBalanceNotice{ nullptr };    ///< 지급과 회수로 바뀐 잔액을 그 계정에 알린다. 경제 키트가 없으면 null 이고 알리지 않는다
         ILiveEventControl*       _pLiveEventControl{ nullptr }; ///< 라이브 이벤트 명령을 넘긴다. 라이브 운영 키트가 없으면 null 이고 그 명령은 Unavailable 이다
     };
 } // namespace sw

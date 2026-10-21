@@ -3,6 +3,7 @@
  * @brief 경제 키트의 클라이언트입니다. `OnlineServiceClient` 에 등록하는 `IOnlineClientService` 이며, 지갑, 내역, 구매, 영수증 지급 요청을 보내고 잔액 캐시를 보관합니다.
  * @details - 성공 응답의 잔액을 캐시에 넣는다. 지갑 전체 응답은 스냅샷이고 구매와 지급 응답은 바뀐 것만 담는다. 다른 키트(거래, 우편, GM)의 응답에 포함된 잔액도 게임이 `applyBalances` 로 넘긴다.
  *          - **로컬 지갑은 원장의 읽기 사본이다.** 온라인 게임은 `Wallet::add`, `trySpend`, `charge` 를 부르지 않고 `applyLedgerBalances( wallet )` 로만 맞춘다. 서버가 원본이기 때문이다.
+ *          - 요청 없이 바뀐 잔액(GM 지급 · 회수, 환불 회수)은 서버가 알림(`kPushBalanceChanged`)으로 보내며, 받으면 캐시를 그 값으로 덮는다.
  *          - 구매와 지급을 재시도할 때는 **같은** 멱등 키를 쓴다. 응답의 `_idempotencyKey` 를 다시 넘기며, 새 키는 새 구매로 취급한다.
  *          - 요청 · 응답 규칙은 `OnlineKitClient` 에 있다.
  */
@@ -48,6 +49,8 @@ namespace sw
 
         // IOnlineClientService
         const OnlineProtocolEntry& getProtocol() const override { return EconomyProtocol::kOnlineEntry; }
+        /** @brief 잔액 변경 알림(`kPushBalanceChanged`)을 받으면 바뀐 잔액을 캐시에 넣습니다. */
+        void onServicePush( uint16 kind, BitReader& body ) override;
 
     private:
         void onCallSucceeded( const Call& call, const EconomyReply& reply ) override;

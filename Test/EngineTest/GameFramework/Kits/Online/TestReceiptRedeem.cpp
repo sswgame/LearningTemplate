@@ -128,13 +128,17 @@ SW_TEST_CASE( ReceiptRedeemTest, StoreRefundRevokesTheGrantOnceEvenIntoDebt )
     vector<ReceiptRefundNotice> listNotice;
     fixture._registry.pollRefunds( listNotice );
     SW_ASSERT_EQUAL( listNotice.size(), size_t( 1 ) );
-    SW_EXPECT_TRUE( EconomyStoreLogic::revokeRefund( fixture._database, fixture._currencies, listNotice[0], 5000 ) == EconomyResult::Ok );
+    vector<EconomyBalanceChange> listChange;
+    SW_EXPECT_TRUE( EconomyStoreLogic::revokeRefund( fixture._database, fixture._currencies, listNotice[0], 5000, listChange ) == EconomyResult::Ok );
     SW_EXPECT_EQUAL( fixture.readPaid( 1 ), int64( -70 ) ); // 이미 쓴 70 은 빚으로 남는다
-    SW_EXPECT_TRUE( EconomyStoreLogic::revokeRefund( fixture._database, fixture._currencies, listNotice[0], 5000 ) == EconomyResult::AlreadyRefunded );
+    SW_ASSERT_EQUAL( listChange.size(), size_t( 1 ) );      // 회수로 바뀐 잔액을 알림으로 보낼 수 있다
+    SW_EXPECT_EQUAL( listChange[0]._accountID, AccountID( 1 ) );
+    SW_EXPECT_EQUAL( listChange[0]._balance._amount, int64( -70 ) );
+    SW_EXPECT_TRUE( EconomyStoreLogic::revokeRefund( fixture._database, fixture._currencies, listNotice[0], 5000, listChange ) == EconomyResult::AlreadyRefunded );
     SW_EXPECT_EQUAL( fixture.readPaid( 1 ), int64( -70 ) );
 
     ReceiptRefundNotice early{ "fake", "tx10", 6000 }; // 지급 전에 환불이 먼저 왔다
-    SW_EXPECT_TRUE( EconomyStoreLogic::revokeRefund( fixture._database, fixture._currencies, early, 6000 ) == EconomyResult::Ok );
+    SW_EXPECT_TRUE( EconomyStoreLogic::revokeRefund( fixture._database, fixture._currencies, early, 6000, listChange ) == EconomyResult::Ok );
     SW_EXPECT_TRUE( fixture.redeem( "fake|gem100|tx10|ok", 2 ) == EconomyResult::ReceiptRefunded );
     SW_EXPECT_EQUAL( fixture.readPaid( 2 ), int64( 0 ) );
 }
@@ -167,8 +171,9 @@ SW_TEST_CASE( ReceiptRedeemTest, WithdrawalReturnsOnlyTheUnusedPartWithinTheWind
     SW_EXPECT_EQUAL( reply._listWithdrawn[0]._amount, int64( 70 ) ); // 쓴 30 을 뺀 나머지
     SW_EXPECT_EQUAL( fixture.readPaid( 1 ), int64( 0 ) );
     SW_EXPECT_TRUE( EconomyStoreLogic::withdrawPurchase( fixture._database, fixture._currencies, input, reply ) == EconomyResult::AlreadyRefunded );
-    ReceiptRefundNotice refund{ "fake", "tx20", 3000 }; // 청약철회 뒤에 온 스토어 환불은 다시 거두지 않는다
-    SW_EXPECT_TRUE( EconomyStoreLogic::revokeRefund( fixture._database, fixture._currencies, refund, 3000 ) == EconomyResult::AlreadyRefunded );
+    vector<EconomyBalanceChange> listChange;
+    ReceiptRefundNotice          refund{ "fake", "tx20", 3000 }; // 청약철회 뒤에 온 스토어 환불은 다시 거두지 않는다
+    SW_EXPECT_TRUE( EconomyStoreLogic::revokeRefund( fixture._database, fixture._currencies, refund, 3000, listChange ) == EconomyResult::AlreadyRefunded );
     SW_EXPECT_EQUAL( fixture.readPaid( 1 ), int64( 0 ) );
 }
 

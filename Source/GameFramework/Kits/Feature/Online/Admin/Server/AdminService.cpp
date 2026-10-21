@@ -13,6 +13,7 @@
 #include "GameFramework/Base/Online/Directory/ServerDirectoryControl.h"
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/Base/Online/Identity/AccountSessionControl.h"
+#include "GameFramework/Base/Online/Ledger/IBalanceNotice.h"
 #include "GameFramework/Base/Online/Sanction/ServiceSanction.h"
 #include "GameFramework/Base/Online/Store/ServiceStore.h"
 #include "GameFramework/Base/Online/Store/ServiceStoreUtil.h"
@@ -227,6 +228,9 @@ namespace sw
             const bool bForwardToLiveOps = AdminMethod::isLiveEventMethod( pending._method ) && inoutReply._result == AdminResult::Ok;
             if ( bForwardToLiveOps && forwardLiveEventCall( pending, inoutReply ) )
                 return; // 라이브 운영 키트의 완료가 응답한다
+            const bool bBalanceChanged = pending._method == AdminMethod::kAdjustAsset && inoutReply._result == AdminResult::Ok && inoutReply._bReplayed == SW_FALSE;
+            if ( bBalanceChanged && _settings._pBalanceNotice != nullptr )
+                _settings._pBalanceNotice->notifyBalancesChanged( pending._targetID, inoutReply._listBalance ); // 대상 계정이 접속해 있으면 지갑이 바로 맞는다
             const bool bSanctionChanged = pending._method == AdminMethod::kSetSanction && inoutReply._result == AdminResult::Ok && inoutReply._bReplayed == SW_FALSE;
             if ( bSanctionChanged && _settings._pBus != nullptr )
                 (void)ServiceSanctionBus::kChangedTopic.publish( *_settings._pBus, ServiceSanctionChanged{ pending._targetID } ); // 실패는 발행이 로그로 남겼다. 채팅은 묵힘 시한 안에 다시 읽는다

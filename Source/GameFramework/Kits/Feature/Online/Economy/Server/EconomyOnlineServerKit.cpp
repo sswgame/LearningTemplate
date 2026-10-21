@@ -73,6 +73,7 @@ namespace sw
                 settings._pReceiptRegistry       = &_receiptRegistry;
                 settings._pMetricRegistry        = context._pMetricRegistry;
                 settings._pScheduler             = context._pScheduler; // 원장 보존 검사를 매일 서버 하나가 돌린다
+                settings._pPresence              = context._pPresence;  // 계정 키트(다른 서버에 붙은 계정에 잔액 변경 알림을 중계)
                 settings._bAcceptSandboxReceipts = bAcceptSandbox ? SW_TRUE : SW_FALSE;
                 if ( _service.initialize( context._pStore, settings ) == false )
                 {
@@ -82,7 +83,8 @@ namespace sw
                 _bServiceStarted = true;
                 if ( registerHostService( context, entry, &_service, outError ) == false )
                     return false;
-                context._pLedgerPolicy = &_currencyCatalog;
+                context._pLedgerPolicy  = &_currencyCatalog;
+                context._pBalanceNotice = &_service; // GM 키트가 지급 · 회수 뒤에 부른다
                 return true;
             }
 

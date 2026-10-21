@@ -97,6 +97,7 @@ namespace sw
                 settings._pSessionControl   = context._pSessionControl;
                 settings._pBus              = context._pBus;
                 settings._pPolicy           = context._pLedgerPolicy;
+                settings._pBalanceNotice    = context._pBalanceNotice; // 경제 키트(지급 · 회수 뒤 잔액 변경 알림)
                 settings._pMetricRegistry   = context._pMetricRegistry;
                 settings._pDirectoryControl = context._pDirectoryControl;
                 settings._pNameIndex        = context._pNameIndex; // 접속하지 않은 계정도 이름으로 찾는다

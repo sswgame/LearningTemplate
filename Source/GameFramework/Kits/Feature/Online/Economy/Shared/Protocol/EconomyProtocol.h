@@ -32,18 +32,27 @@ namespace sw
         WithdrawPurchase,
         Count,
     };
+
+    /** @brief 경제 알림 이름입니다. 열거자 순서가 와이어 번호(`OnlineMethodTable`)입니다. 새 알림은 `Count` 앞에만 더합니다. */
+    ENUM( Count = Count )
+    enum class EconomyPushName : uint8
+    {
+        BalanceChanged,
+        Count,
+    };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 경제 서비스 메서드 번호입니다. 번호는 열거자 순서에서 나오며 그 이름 순서가 온라인 스키마 해시에 섞입니다(`OnlineMethodTable`). */
-    struct EconomyMethod : OnlineMethodTable<EconomyMethodName, OnlineMethodRange::kEconomy, OnlineNoPushName>
+    struct EconomyMethod : OnlineMethodTable<EconomyMethodName, OnlineMethodRange::kEconomy, EconomyPushName>
     {
-        static constexpr uint16 kGetWallet        = toMethod( EconomyMethodName::GetWallet );
-        static constexpr uint16 kGetHistory       = toMethod( EconomyMethodName::GetHistory );
-        static constexpr uint16 kPurchase         = toMethod( EconomyMethodName::Purchase ); ///< 멱등 키가 필수이다
-        static constexpr uint16 kRedeemReceipt    = toMethod( EconomyMethodName::RedeemReceipt );
-        static constexpr uint16 kWithdrawPurchase = toMethod( EconomyMethodName::WithdrawPurchase ); ///< 유상 구매 청약철회이다. 기한 안에 쓰지 않은 만큼 회수한다
+        static constexpr uint16 kGetWallet          = toMethod( EconomyMethodName::GetWallet );
+        static constexpr uint16 kGetHistory         = toMethod( EconomyMethodName::GetHistory );
+        static constexpr uint16 kPurchase           = toMethod( EconomyMethodName::Purchase ); ///< 멱등 키가 필수이다
+        static constexpr uint16 kRedeemReceipt      = toMethod( EconomyMethodName::RedeemReceipt );
+        static constexpr uint16 kWithdrawPurchase   = toMethod( EconomyMethodName::WithdrawPurchase ); ///< 유상 구매 청약철회이다. 기한 안에 쓰지 않은 만큼 회수한다
+        static constexpr uint16 kPushBalanceChanged = toPush( EconomyPushName::BalanceChanged );       ///< `EconomyBalanceChanged`. 요청 없이 잔액이 바뀌었다(GM 지급 · 회수, 환불 회수). 클라이언트는 캐시를 그 값으로 덮는다
     };
 } // namespace sw
 
@@ -178,6 +187,19 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 잔액 변경 알림의 본문입니다. 바뀐 자산의 잔액 절댓값을 싣습니다. 서버 간 push 중계에도 실립니다. */
+    REFLECT()
+    struct SW_KIT_API EconomyBalanceChanged
+    {
+        REFLECT_BODY();
+        static constexpr uint32 kBusVersion = 1; ///< push 중계(`OnlinePushRelay`)의 의미 버전(docs/plans/ServerBusFormat.md 3.4)
+        PROPERTY( MaxCount = OnlineLimit::kMaxBalanceCount )
+        vector<LedgerBalance> _listBalance{}; ///< 상한은 `OnlineLimit::kMaxBalanceCount` 와 같다
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @struct EconomyProtocol
      * @brief 경제 키트의 메시지 타입 목록과 등록 항목입니다. 본문은 고정 배치형(B)이며 `MessageTypes::write` · `read` 로만 쓰고 읽습니다.
@@ -185,7 +207,7 @@ namespace sw
      */
     struct SW_KIT_API EconomyProtocol
     {
-        using MessageTypes = OnlineMessageTypes<EconomyPurchaseRequest, EconomyRedeemRequest, EconomyWithdrawRequest, EconomyHistoryRequest, EconomyReply>;
+        using MessageTypes = OnlineMessageTypes<EconomyPurchaseRequest, EconomyRedeemRequest, EconomyWithdrawRequest, EconomyHistoryRequest, EconomyReply, EconomyBalanceChanged>;
 
         static const OnlineProtocolEntry kOnlineEntry; ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
 

@@ -8,6 +8,8 @@
 #include "Engine/Observability/MetricRegistry.h"
 
 #include "GameFramework/Base/Online/Config/RemoteConfig.h"
+#include "GameFramework/Base/Online/Identity/AccountPresence.h"
+#include "GameFramework/Base/Online/Identity/OnlinePushRelay.h"
 #include "GameFramework/Base/Online/Ledger/LedgerAudit.h"
 #include "GameFramework/Base/Online/Store/ServiceStore.h"
 #include "GameFramework/Base/Online/Store/ServiceStoreUtil.h"
@@ -137,15 +139,16 @@ namespace sw
             {
             }
 
-            void run( IServiceStoreConnection& connection ) override { _result = EconomyStoreLogic::revokeRefund( connection, *_pCurrencies, _notice, _nowMs ); }
-            void complete() override { _pService->completeRefund( _result ); }
+            void run( IServiceStoreConnection& connection ) override { _result = EconomyStoreLogic::revokeRefund( connection, *_pCurrencies, _notice, _nowMs, _listChange ); }
+            void complete() override { _pService->completeRefund( _result, _listChange ); }
 
         private:
-            ReceiptRefundNotice    _notice;
-            EconomyService*        _pService;
-            const CurrencyCatalog* _pCurrencies;
-            int64                  _nowMs;
-            EconomyResult          _result;
+            ReceiptRefundNotice          _notice;
+            vector<EconomyBalanceChange> _listChange;
+            EconomyService*              _pService;
+            const CurrencyCatalog*       _pCurrencies;
+            int64                        _nowMs;
+            EconomyResult                _result;
         };
     } // namespace
 } // namespace sw
@@ -156,6 +159,8 @@ namespace sw
         : _listPendingCall{}
         , _metrics{}
         , _settings{}
+        , _mapPresenceRequestToNotice{}
+        , _pHost{ nullptr }
         , _pStore{ nullptr }
         , _pMetricRegistry{ nullptr }
         , _nextCallID{ 1 }
@@ -285,6 +290,7 @@ namespace sw
 
     void EconomyService::onServiceTick( OnlineServiceHost& host, int64 nowMs )
     {
+        _pHost = &host;
         (void)host;
         update( nowMs );
     }
@@ -428,6 +434,45 @@ namespace sw
         _bAuditRunHeld = SW_FALSE;
     }
 
+    void EconomyService::onHostShutdown( OnlineServiceHost& host )
+    {
+        (void)host;
+        _pHost = nullptr;
+        _mapPresenceRequestToNotice.clear(); // 접속 상태 답은 호스트가 이미 회수했다
+    }
+
+    void EconomyService::notifyBalancesChanged( AccountID accountID, const vector<LedgerBalance>& listBalance )
+    {
+        const bool bNothingToSend = _pHost == nullptr || accountID == kInvalidAccountID || listBalance.empty();
+        if ( bNothingToSend )
+            return;
+        EconomyBalanceChanged changed;
+        changed._listBalance = listBalance;
+        BitWriter body;
+        if ( EconomyProtocol::MessageTypes::write( body, changed ) == false )
+        {
+            SW_LOG_WARNING( "EconomyService: a balance notice for account %# is too large to send", accountID );
+            return;
+        }
+        if ( _pHost->sendPush( accountID, EconomyMethod::kPushBalanceChanged, body ) )
+            return; // 이 서버에 붙어 있다
+        if ( _settings._pPresence == nullptr )
+            return; // 서버가 하나이고 붙어 있지 않다. 다음 로그인이 지갑을 읽는다
+        const uint64 requestID                 = _settings._pPresence->submitFindByAccount( accountID, AccountPresenceDelegate::create<&EconomyService::onBalancePresenceFound>( this ) );
+        _mapPresenceRequestToNotice[requestID] = std::move( changed );
+    }
+
+    void EconomyService::onBalancePresenceFound( const AccountPresenceResult& result )
+    {
+        const auto noticeIt = _mapPresenceRequestToNotice.find( result._requestID );
+        if ( noticeIt == _mapPresenceRequestToNotice.end() )
+            return;
+        const EconomyBalanceChanged changed = std::move( noticeIt->second );
+        _mapPresenceRequestToNotice.erase( noticeIt );
+        if ( result.isOnline() )
+            (void)_settings._pPresence->sendRemotePush( result._identity._accountID, EconomyPushName::BalanceChanged, changed ); // 붙어 있지 않으면 보내지 않는다
+    }
+
     void EconomyService::pollRefunds()
     {
         if ( _settings._pReceiptRegistry == nullptr )
@@ -441,9 +486,13 @@ namespace sw
         }
     }
 
-    void EconomyService::completeRefund( EconomyResult result )
+    void EconomyService::completeRefund( EconomyResult result, const vector<EconomyBalanceChange>& listChange )
     {
         --_pendingRefundCount;
+        for ( const EconomyBalanceChange& change : listChange )
+        {
+            notifyBalancesChanged( change._accountID, vector<LedgerBalance>{ change._balance } );
+        }
         if ( result != EconomyResult::Ok && result != EconomyResult::AlreadyRefunded )
             SW_LOG_ERROR( "EconomyService: a store refund could not be revoked (%#) - the store will resend or an operator revokes it", static_cast<int32>( result ) );
         if ( _pMetricRegistry == nullptr )
@@ -482,4 +531,10 @@ namespace sw
         if ( pLatency != nullptr )
             pLatency->observe( static_cast<float64>( MonotonicClock::nowNanoseconds() - pending._receivedNanoseconds ) * 1e-9 );
     }
+} // namespace sw
+
+namespace sw
+{
+    const OnlinePushRelayEntry kEconomyBalanceChangedRelay{ "Economy.BalanceChanged", EconomyMethod{}, EconomyPushName::BalanceChanged, EconomyProtocol::MessageTypes{},
+                                                            OnlinePushBody<EconomyBalanceChanged>{} };
 } // namespace sw

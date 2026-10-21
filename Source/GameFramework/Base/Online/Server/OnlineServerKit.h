@@ -29,6 +29,7 @@ namespace sw
     class IAccountPresence;
     class IAccountSessionControl;
     class IAccountStatSource;
+    class IBalanceNotice;
     class IEphemeralStore;
     class IGroupChannelMembership;
     class ILedgerPolicy;
@@ -87,6 +88,7 @@ namespace sw
         IAccountSessionControl*   _pSessionControl{ nullptr };   ///< 계정 키트
         const IAccountBlockList*  _pBlockList{ nullptr };        ///< 친구 키트
         const ILedgerPolicy*      _pLedgerPolicy{ nullptr };     ///< 경제 키트(화폐 카탈로그)
+        IBalanceNotice*           _pBalanceNotice{ nullptr };    ///< 경제 키트(요청 없이 바뀐 잔액을 계정에 알림)
         IServerDirectoryControl*  _pDirectoryControl{ nullptr }; ///< 서버 디렉터리 키트(점검과 공지 바꾸기)
         IGroupChannelMembership*  _pGroupChannels{ nullptr };    ///< 채팅 키트(길드와 파티 채널 멤버)
         const IAccountStatSource* _pStatSource{ nullptr };       ///< 순위표 키트(접속한 계정의 통계, 매칭 실력)

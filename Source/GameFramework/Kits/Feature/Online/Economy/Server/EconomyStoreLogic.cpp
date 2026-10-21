@@ -347,9 +347,11 @@ namespace sw
         return s_table;
     }
 
-    EconomyResult EconomyStoreLogic::revokeRefund( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const ReceiptRefundNotice& notice, int64 nowMs )
+    EconomyResult EconomyStoreLogic::revokeRefund( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const ReceiptRefundNotice& notice, int64 nowMs,
+                                                   vector<EconomyBalanceChange>& outListChange )
     {
         using Internal = EconomyStoreLogicInternal;
+        outListChange.clear();
         string redeemKey;
         if ( Internal::makeRedeemKey( notice._storeName, notice._transactionID, redeemKey ) == false )
             return EconomyResult::InvalidRequest;
@@ -394,7 +396,14 @@ namespace sw
                 return toEconomyResult( staged );
             const ServiceStoreResult committed = connection.commit( transaction );
             if ( committed == ServiceStoreResult::Ok )
+            {
+                for ( const LedgerTransferOutcome::HolderBalance& holderBalance : outcome._listHolderBalance )
+                {
+                    if ( holderBalance._holder._kind == LedgerHolderKind::Account )
+                        outListChange.push_back( EconomyBalanceChange{ holderBalance._holder._accountID, holderBalance._balance } );
+                }
                 return EconomyResult::Ok;
+            }
             if ( committed != ServiceStoreResult::Conflict )
                 return EconomyResult::Unavailable;
         }

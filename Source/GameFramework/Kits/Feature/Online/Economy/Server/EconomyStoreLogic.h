@@ -13,11 +13,22 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Base/Online/Store/ServiceStore.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptValidator.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Shared/Protocol/EconomyProtocol.h"
+
+namespace sw
+{
+    /** @brief 회수로 잔액이 바뀐 계정 하나와 그 자산의 잔액입니다. */
+    struct EconomyBalanceChange
+    {
+        AccountID     _accountID{ kInvalidAccountID };
+        LedgerBalance _balance{};
+    };
+} // namespace sw
 
 namespace sw
 {
@@ -77,10 +88,12 @@ namespace sw
                                             EconomyReply& outReply );
         /**
          * @brief 스토어 환불 알림으로 지급한 재화를 회수합니다. 빚을 허용하며(이미 쓴 재화도 회수한다) 사유는 "refund.revoke" 입니다.
+         * @param outListChange 회수로 잔액이 바뀐 계정과 그 잔액입니다. 회수하지 않았으면(이미 환불했거나 지급 전이다) 비어 있습니다.
          * @details 지급 분개(`rcpt.<스토어>` 범위, 거래 id 토큰)를 찾아 같은 다리를 거꾸로 소각으로 보낸다. 환불 표시를 같은 트랜잭션에 쓰므로 두 번 오면 아무것도 하지 않는다.
          *          지급 전에 환불이 먼저 오면 표시만 남기고, 뒤에 온 지급은 ReceiptRefunded 로 거절된다. 청약철회한 거래면 이미 돌려받았으므로 표시만 본다.
          */
-        static EconomyResult revokeRefund( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const ReceiptRefundNotice& notice, int64 nowMs );
+        static EconomyResult revokeRefund( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const ReceiptRefundNotice& notice, int64 nowMs,
+                                           vector<EconomyBalanceChange>& outListChange );
         /**
          * @brief 유상 구매를 청약철회합니다. 지급한 계정만, 기한 안에, 아직 쓰지 않은 만큼만 회수하며 빚은 만들지 않습니다. 회수한 양은 `_listWithdrawn` 입니다.
          * @details 사유는 "iap.withdraw" 이고 분개 키는 `withdraw.<스토어>` 범위의 거래 id 토큰이라 다시 와도 한 번만 적용된다. 실제 결제 환불은 스토어나 결제 대행이 회수한 양으로 한다.
