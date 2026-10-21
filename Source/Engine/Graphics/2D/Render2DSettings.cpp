@@ -133,72 +133,22 @@ namespace sw
         bool bHasLayers = false;
         for ( XMLNode child = root.findChild(); child.isValid(); child = child.findNextSibling() )
         {
+            bool bRead = false;
             if ( StringUtil::equals( child.getName(), "TransparencySort", true ) )
             {
-                static constexpr const utf8* kArrKnown[] = { "mode", "axis" };
-                if ( XMLNameCheck::reportUnknownAttributes( child, kArrKnown, sourceName ) == false )
-                    return false;
-                const string_view modeName = child.getAttributeText( "mode" );
-                bool              bFound   = modeName.empty();
-                for ( const Internal::SortModeName& entry : Internal::kArrSortModeName )
-                {
-                    if ( StringUtil::equals( modeName, entry._pName, true ) )
-                    {
-                        loaded._sortMode = entry._mode;
-                        bFound           = true;
-                    }
-                }
-                if ( bFound == false )
-                {
-                    SW_LOG_ERROR( "%#: unknown transparency sort mode '%#' (Auto, Distance, ViewAxis, CustomAxis)", sourceName, modeName );
-                    return false;
-                }
-                const string_view axisText = child.getAttributeText( "axis" );
-                if ( axisText.empty() == false )
-                {
-                    float3 axis{};
-                    if ( Internal::parseFloat3( axisText, axis ) == false || axis.getLengthSquared() <= MathUtil::kEpsilon )
-                    {
-                        SW_LOG_ERROR( "%#: transparency sort axis '%#' must be three numbers with a non-zero length", sourceName, axisText );
-                        return false;
-                    }
-                    axis.normalize();
-                    loaded._sortAxis = axis;
-                }
+                bRead = loaded.readTransparencySort( child, sourceName );
             }
             else if ( StringUtil::equals( child.getName(), "SortingLayers", true ) )
             {
                 bHasLayers = true;
-                for ( XMLNode layerNode = child.findChild(); layerNode.isValid(); layerNode = layerNode.findNextSibling() )
-                {
-                    static constexpr const utf8* kArrKnown[] = { "name" };
-                    if ( StringUtil::equals( layerNode.getName(), "Layer", true ) == false )
-                    {
-                        SW_LOG_ERROR( "%#: unknown element <%#> in <SortingLayers> (only <Layer name=\"...\"/>)", sourceName, layerNode.getName() );
-                        return false;
-                    }
-                    if ( XMLNameCheck::reportUnknownAttributes( layerNode, kArrKnown, sourceName ) == false )
-                        return false;
-                    const string_view name = layerNode.getAttributeText( "name" );
-                    if ( name.empty() )
-                    {
-                        SW_LOG_ERROR( "%#: a sorting layer has no name", sourceName );
-                        return false;
-                    }
-                    const hashed_string layerName( name );
-                    if ( loaded.findSortingLayer( layerName ) >= 0 )
-                    {
-                        SW_LOG_ERROR( "%#: sorting layer '%#' is listed twice", sourceName, name );
-                        return false;
-                    }
-                    loaded._listSortingLayer.push_back( layerName );
-                }
+                bRead      = loaded.readSortingLayers( child, sourceName );
             }
             else
             {
                 SW_LOG_ERROR( "%#: unknown element <%#> (TransparencySort, SortingLayers)", sourceName, child.getName() );
-                return false;
             }
+            if ( bRead == false )
+                return false;
         }
 
         if ( bHasLayers == false )
@@ -219,6 +169,70 @@ namespace sw
         }
         loaded._defaultLayerIndex = static_cast<uint32>( defaultIndex );
         *this                     = loaded;
+        return true;
+    }
+
+    bool Render2DSettings::readTransparencySort( const XMLNode& node, string_view sourceName )
+    {
+        using Internal                           = Render2DSettingsInternal;
+        static constexpr const utf8* kArrKnown[] = { "mode", "axis" };
+        if ( XMLNameCheck::reportUnknownAttributes( node, kArrKnown, sourceName ) == false )
+            return false;
+        const string_view modeName = node.getAttributeText( "mode" );
+        bool              bFound   = modeName.empty();
+        for ( const Internal::SortModeName& entry : Internal::kArrSortModeName )
+        {
+            if ( StringUtil::equals( modeName, entry._pName, true ) )
+            {
+                _sortMode = entry._mode;
+                bFound    = true;
+            }
+        }
+        if ( bFound == false )
+        {
+            SW_LOG_ERROR( "%#: unknown transparency sort mode '%#' (Auto, Distance, ViewAxis, CustomAxis)", sourceName, modeName );
+            return false;
+        }
+        const string_view axisText = node.getAttributeText( "axis" );
+        if ( axisText.empty() )
+            return true;
+        float3 axis{};
+        if ( Internal::parseFloat3( axisText, axis ) == false || axis.getLengthSquared() <= MathUtil::kEpsilon )
+        {
+            SW_LOG_ERROR( "%#: transparency sort axis '%#' must be three numbers with a non-zero length", sourceName, axisText );
+            return false;
+        }
+        axis.normalize();
+        _sortAxis = axis;
+        return true;
+    }
+
+    bool Render2DSettings::readSortingLayers( const XMLNode& node, string_view sourceName )
+    {
+        static constexpr const utf8* kArrKnown[] = { "name" };
+        for ( XMLNode layerNode = node.findChild(); layerNode.isValid(); layerNode = layerNode.findNextSibling() )
+        {
+            if ( StringUtil::equals( layerNode.getName(), "Layer", true ) == false )
+            {
+                SW_LOG_ERROR( "%#: unknown element <%#> in <SortingLayers> (only <Layer name=\"...\"/>)", sourceName, layerNode.getName() );
+                return false;
+            }
+            if ( XMLNameCheck::reportUnknownAttributes( layerNode, kArrKnown, sourceName ) == false )
+                return false;
+            const string_view name = layerNode.getAttributeText( "name" );
+            if ( name.empty() )
+            {
+                SW_LOG_ERROR( "%#: a sorting layer has no name", sourceName );
+                return false;
+            }
+            const hashed_string layerName( name );
+            if ( findSortingLayer( layerName ) >= 0 )
+            {
+                SW_LOG_ERROR( "%#: sorting layer '%#' is listed twice", sourceName, name );
+                return false;
+            }
+            _listSortingLayer.push_back( layerName );
+        }
         return true;
     }
 
