@@ -28,8 +28,9 @@ namespace sw
     {
         struct FarmVillageDirectorComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCcUtil::make( "FVIL" );
-            static constexpr uint32 kStateVersion = 2; ///< 2 판: 머리 뒤에 `ScheduleSaveState`(리플렉션 바이너리)
+            static constexpr uint32 kStateTag           = FourCcUtil::make( "FVIL" );
+            static constexpr uint32 kStateVersion       = 2; ///< 2 판: 머리 뒤에 `ScheduleSaveState`(리플렉션 바이너리)
+            static constexpr uint32 kOldestStateVersion = 1; ///< 1 판: 머리만(이관 `migrateStateVersion1`)
 
             /** @brief 시계의 지금 시각을 0 일 0:00 부터 센 분으로 바꿉니다(일정 시스템의 시간 축). */
             static int32 computeAbsoluteMinute( const WorldClock& clock )
@@ -191,8 +192,27 @@ namespace sw
 
     bool FarmVillageDirectorComponent::readState( Archive& archive )
     {
-        if ( StateArchiveUtil::readHeader( archive, FarmVillageDirectorComponentInternal::kStateTag, FarmVillageDirectorComponentInternal::kStateVersion ) == false )
+        using Internal = FarmVillageDirectorComponentInternal;
+        uint32 version = 0;
+        if ( StateArchiveUtil::readHeaderInRange( archive, Internal::kStateTag, Internal::kOldestStateVersion, Internal::kStateVersion, version ) == false )
             return false;
+        if ( version == Internal::kOldestStateVersion )
+        {
+            migrateStateVersion1();
+            return true;
+        }
+        return readStateVersion2( archive );
+    }
+
+    void FarmVillageDirectorComponent::migrateStateVersion1()
+    {
+        _pendingSave     = ScheduleSaveState{};
+        _bHasPendingSave = false;
+        SW_LOG_INFO( "[Village] state version 1 migrated: the schedule follows the clock (no saved interruptions or affinity)" );
+    }
+
+    bool FarmVillageDirectorComponent::readStateVersion2( Archive& archive )
+    {
         // 임시에 끝까지 읽은 뒤에만 바꾼다(반쯤 읽은 상태를 남기지 않는다).
         ScheduleSaveState state;
         if ( BinarySerializer::deserialize( &state, *ScheduleSaveState::StaticType(), archive, SerializeContext::getDefault( SerializePurpose::SaveGame ) ) == false )
