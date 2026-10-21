@@ -17,7 +17,7 @@ namespace sw::editor
             static constexpr string_view kHostSuitesPrefix = "Host suites";
             static constexpr string_view kRepeatPrefix     = "Repeating all tests (iteration ";
 
-            /** @brief 케이스 이름 꼴(`이름.이름` — 영문자 · 숫자 · 밑줄, 점 하나)인지입니다. */
+            /** @brief 케이스 이름 형태(`이름.이름` — 영문자 · 숫자 · 밑줄, 점 하나)인지입니다. */
             static bool isCaseName( string_view text )
             {
                 const size_t dot                  = text.find( '.' );
@@ -76,7 +76,7 @@ namespace sw::editor
             const string_view line = StringUtil::trimEnd( rawLine );
             if ( StringUtil::startsWith( line, EditorTestOutputParserInternal::kHostSuitesPrefix ) )
                 break;
-            // 케이스 줄은 두 칸 들여 쓴 이름 하나다(로그로 같이 나오는 줄은 앞에 시각 · 태그가 붙어 걸리지 않는다).
+            // 케이스 줄은 공백 두 개로 들여 쓴 이름 하나다(로그로 같이 나오는 줄은 앞에 시각 · 태그가 붙어 걸리지 않는다).
             if ( StringUtil::startsWith( line, "  " ) == false )
                 continue;
             const string_view name = StringUtil::trim( line );

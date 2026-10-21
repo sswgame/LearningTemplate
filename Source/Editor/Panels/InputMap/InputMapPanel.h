@@ -64,7 +64,7 @@ namespace sw::editor
         void drawBindingRow( const hashed_string& action, uint32 bindIndex, const ActionBinding& binding );
         /** @brief 바인딩의 발화 규칙(트리거) 콤보입니다. */
         void drawTriggerCombo( const hashed_string& action, uint32 bindIndex );
-        /** @brief 트리거 콤보 뒤의 발화 시간 · 누름 횟수 · Negate 칸입니다. 오른쪽 끝 @p rightEdgeX 에 안 들어가면 다음 줄로 내립니다. */
+        /** @brief 트리거 콤보 뒤의 발화 시간 · 누름 횟수 · Negate 필드입니다. 오른쪽 끝 @p rightEdgeX 에 안 들어가면 다음 줄로 내립니다. */
         void drawTriggerOptions( const hashed_string& action, uint32 bindIndex, const ActionBinding& binding, float32 rightEdgeX );
         /** @brief 선택한 액션이 낀 키 충돌 목록과 다시 잡기 · 비우기 버튼입니다. */
         void drawActionConflicts( const hashed_string& action );

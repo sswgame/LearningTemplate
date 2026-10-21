@@ -309,7 +309,7 @@ namespace sw::editor
         const SwizzleLayout& swizzleLayoutInternal( TextureSwizzle swizzle )
         {
             // BGRA 와 ARGB 는 같은 것이다. D3D9 의 `D3DFMT_A8R8G8B8` 은 메모리에서 B, G, R, A 순서이고 DXGI 는 그것을 `B8G8R8A8`
-            // 이라 부른다. 열거형 주석의 "레거시 ARGB" 가 그 뜻이다. RGBA 를 왼쪽으로 한 칸 돌린 GBAR 은 어떻게 읽어도
+            // 이라 부른다. 열거형 주석의 "레거시 ARGB" 가 그 뜻이다. RGBA 를 왼쪽으로 한 채널 돌린 GBAR 은 어떻게 읽어도
             // ARGB 가 아니므로 주의한다.
             static constexpr SwizzleLayout kRgba{
                 { 0, 1, 2, 3 },
@@ -351,7 +351,7 @@ namespace sw::editor
             static constexpr string_view kImportedTextureFolder = "textures";
             /** @brief 스탬프의 헤더 줄입니다. 형식이나 판정이 바뀌면 올립니다. 이전 스탬프는 모두 어긋남이 되어 한 번 다시 임포트합니다. */
             static constexpr string_view kImportStampHeader = "SWTEXIMPORT 1";
-            /** @brief 임포터(인코더) 버전입니다. 같은 원본과 규칙에서 다른 바이트가 나오게 바꿨다면 올립니다. DirectXTex 판을 올린 것도 그렇습니다. 원본 해시에 섞입니다. */
+            /** @brief 임포터(인코더) 버전입니다. 같은 원본과 규칙에서 다른 바이트가 나오게 바꿨다면 올립니다. DirectXTex 버전을 올린 것도 그렇습니다. 원본 해시에 섞입니다. */
             static constexpr uint32 kImporterVersion = 1;
 
             /** @brief 임포트하는 원본 이미지 확장자인지 확인합니다. `.dds`, `import.stamp`, `.meta` 같은 파일은 원본이 아닙니다. */

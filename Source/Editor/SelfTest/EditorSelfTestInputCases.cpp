@@ -336,7 +336,7 @@ namespace sw::editor
                     }
                     case 4:
                     {
-                        (void)pressOnMark( "theme.swatch.violet", false ); // 버튼은 뗄 때 눌린다. 떼는 위치도 스와치 위여야 한다
+                        (void)pressOnMark( "theme.swatch.violet", false ); // 버튼은 놓을 때 눌린다. 놓는 위치도 스와치 위여야 한다
                         return EditorSelfTestStep::Continue;
                     }
                     case 5:

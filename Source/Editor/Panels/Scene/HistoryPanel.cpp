@@ -67,7 +67,7 @@ namespace sw::editor
                 EditorChrome::endToolbar();
             }
 
-            /** @brief 명령 내역 표를 그립니다. 줄을 누르면 그 시점으로 이동합니다. */
+            /** @brief 명령 내역 테이블을 그립니다. 줄을 누르면 그 시점으로 이동합니다. */
             static void drawTable( CommandStack& cmdStack )
             {
                 const size_t cmdCount  = cmdStack.getCommandCount();
@@ -117,7 +117,7 @@ namespace sw::editor
                             ImGui::TextUnformatted( "" );
 
                         ImGui::TableNextColumn();
-                        // 명령 이름은 ImGui 라벨로 쓰지 않는다 — "##" 가 든 이름은 그 뒤가 숨겨진다. 라벨 없는 줄 위에 글을 따로 그린다.
+                        // 명령 이름은 ImGui 라벨로 쓰지 않는다 — "##" 가 포함된 이름은 그 뒤가 숨겨진다. 라벨 없는 줄 위에 글을 따로 그린다.
                         const utf8* pCmdLabel = cmd._label.empty() == false ? cmd._label.c_str() : "Command";
 
                         if ( bIsUndone )

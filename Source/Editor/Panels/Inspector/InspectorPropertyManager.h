@@ -41,14 +41,14 @@ namespace sw::editor
         /** @brief 타입 이름에 위젯을 겁니다. 같은 이름이 있으면 바꿉니다. */
         void                registerType( string_view typeName, unique_ptr<IInspectorProperty> pProperty );
         IInspectorProperty* find( string_view typeName ) const;
-        /** @brief `ReflectBuiltins.xxx` 의 내장 타입마다 위젯을 등록합니다(`InspectorWidgetFor<T>` 가 갈래를 정합니다). */
+        /** @brief `ReflectBuiltins.xxx` 의 내장 타입마다 위젯을 등록합니다(`InspectorWidgetFor<T>` 가 분기를 정합니다). */
         void registerDefaults();
         /** @brief 그리기 확장 등록 줄(`SW_EDITOR_PROPERTY_DRAWER`)과 맞춥니다. 세대가 같으면 바로 돌아갑니다. */
         void syncWithRegistry();
         /** @brief 등록 줄이 [@p pBegin, @p pEnd)(언로드되는 모듈 이미지) 안인 그리기를 지웁니다(가렸던 내장 위젯은 복원한다). 지운 수입니다. */
         uint32 releaseDrawersWithin( const void* pBegin, const void* pEnd );
 
-        /** @brief CallInEditor 인자 칸 하나를 그 C++ 타입의 위젯으로 그립니다. 값이 바뀌었으면 true 입니다. */
+        /** @brief CallInEditor 인자 필드 하나를 그 C++ 타입의 위젯으로 그립니다. 값이 바뀌었으면 true 입니다. */
         static bool drawMethodArg( const utf8* pLabel, InspectorMethodArgSlot& slot );
 
     private:

@@ -1,6 +1,6 @@
 /**
  * @file GameViewPanel.h
- * @brief 활성 씬의 게임 카메라 출력만 보이는 Game 창입니다 — 격자 · 기즈모 · 선택 외곽선 없이 화면 UI 까지 든 게임 화면.
+ * @brief 활성 씬의 게임 카메라 출력만 보이는 Game 창입니다 — 격자 · 기즈모 · 선택 외곽선 없이 화면 UI 까지 포함한 게임 화면.
  */
 #pragma once
 #include "Core/Common/Types.h"

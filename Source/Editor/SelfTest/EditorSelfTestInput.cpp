@@ -43,7 +43,7 @@ namespace sw::editor
                 vector<NamedMark>    _listMark;
                 float2               _heldMousePosition{};
                 uint32               _heldMouseViewportID{ 0 };
-                bool                 _bHoldMouse{ false }; ///< 누른 채 두는 동안 프레임마다 커서를 이 자리로 다시 넣는다(플랫폼이 실제 커서를 넣어 호버가 풀리지 않게)
+                bool                 _bHoldMouse{ false }; ///< 누른 채 두는 동안 프레임마다 커서를 이 위치로 다시 넣는다(플랫폼이 실제 커서를 넣어 호버가 풀리지 않게)
                 bool                 _bEnabled{ false };
             };
 

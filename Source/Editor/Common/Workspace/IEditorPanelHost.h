@@ -1,6 +1,6 @@
 /**
  * @file IEditorPanelHost.h
- * @brief 아래 층(커맨드 · 작업 공간 · 뷰포트)이 패널과 도킹을 부르는 창구입니다. 구현은 GUI 층(`EditorPanelHost`)에 있습니다.
+ * @brief 아래 층(커맨드 · 작업 공간 · 뷰포트)이 패널과 도킹을 부르는 진입점입니다. 구현은 GUI 층(`EditorPanelHost`)에 있습니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -12,7 +12,7 @@ namespace sw::editor
      * @class IEditorPanelHost
      * @brief 패널 열기 · 최대화와 도구 문서 저장을 패널 매니저 · 도킹을 모르고 부르는 인터페이스입니다(`EditorContext::getPanelHost`).
      * @details 커맨드는 ImGui 없는 동작이라 패널 매니저(GUI)를 include 하지 않습니다. 언리얼에서 에셋 편집기를 여는 쪽이
-     *          `UAssetEditorSubsystem` 창구만 보고 탭 매니저(Slate)를 모르는 것과 같습니다.
+     *          `UAssetEditorSubsystem` 진입점만 보고 탭 매니저(Slate)를 모르는 것과 같습니다.
      */
     class IEditorPanelHost
     {

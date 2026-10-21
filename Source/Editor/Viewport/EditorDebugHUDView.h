@@ -21,7 +21,7 @@ namespace sw::editor
 {
     /**
      * @class EditorDebugHUDView
-     * @brief 씬 뷰의 HUD 상자입니다(언리얼 에디터 뷰포트의 `stat` 표시 자리 — 뷰포트마다 켜고, 내용은 게임과 같은 통계 체계).
+     * @brief 씬 뷰의 HUD 상자입니다(언리얼 에디터 뷰포트의 `stat` 표시에 해당 — 뷰포트마다 켜고, 내용은 게임과 같은 통계 체계).
      * @details 게임 HUD(`DebugHUD`)는 런타임 UI 라 게임 뷰에만 그려진다. 씬 뷰는 에디터 카메라 화면이라 같은 섹션 본문을 4 Hz 로 불러 ImGui 로 그린다.
      *          섹션 켜짐은 게임 HUD 와 같은 설정(`debug.hudSections`)이고, 이 상자를 켜고 끄는 것만 뷰마다다(툴바 `HUD`).
      *          `kUsesFrameProfiler` 섹션은 프로파일러가 꺼져 있으면 건너뛰고 한 줄로 알린다(씬 뷰가 프로파일러를 켜지 않는다).
@@ -38,7 +38,7 @@ namespace sw::editor
         uint32 getDrawnSectionCount() const { return _drawnSectionCount; }
 
     private:
-        /** @brief 섹션 하나의 적힌 줄입니다. 등록 포인터로 짝을 찾는다(모듈이 내려가면 레지스트리 판 번호가 바뀌어 다시 짓는다). */
+        /** @brief 섹션 하나의 적힌 줄입니다. 등록 포인터로 짝을 찾는다(모듈이 언로드되면 레지스트리 버전 번호가 바뀌어 다시 만든다). */
         struct SectionSlot
         {
             const DebugHUDSectionRegistration* _pRegistration;

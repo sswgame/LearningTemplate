@@ -37,7 +37,7 @@ namespace sw::editor
         /**
          * @brief @p selection 의 오브젝트에 기즈모를 그리고 조작합니다. 편집이 막혔거나(Play) 선택이 비면 진행 중인 드래그를 정리하고 반환합니다.
          * @details 드래그 중 다른 선택이 넘어오면 앞 드래그를 그 선택의 범위에 정리한다. @p selection 은 이 기즈모보다 오래 살거나 그 전에 `endDrag` 가 불려야 한다
-         *          (미리보기 창은 기즈모와 선택을 함께 든다). 표면 붙이기는 메인 선택에만 쓴다(활성 씬을 레이캐스트한다).
+         *          (미리보기 창은 기즈모와 선택을 함께 가진다). 표면 붙이기는 메인 선택에만 쓴다(활성 씬을 레이캐스트한다).
          */
         void draw( EditorSelection& selection, const float32* pView, const float32* pProj, const float2& canvasPos, const float2& canvasSize,
                    const ViewportToolbarSettings& settings );

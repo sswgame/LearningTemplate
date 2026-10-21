@@ -30,7 +30,7 @@ namespace sw::editor
     {
         struct BugItPanelInternal
         {
-            /** @brief BugIt 폴더들의 루트입니다(`BugItReport::makeInputs` 가 쓰는 자리와 같다). */
+            /** @brief BugIt 폴더들의 루트입니다(`BugItReport::makeInputs` 가 쓰는 경로와 같다). */
             static string makeRoot()
             {
                 return FileUtil::joinPath( path::kSavedFolder, BugItReport::kFolderName );

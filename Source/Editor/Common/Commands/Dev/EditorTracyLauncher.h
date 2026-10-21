@@ -2,8 +2,8 @@
  * @file EditorTracyLauncher.h
  * @brief 에디터의 "Tracy 열기" — Tracy 출력을 켜고 같은 판(0.14.1) 외부 뷰어를 띄워 localhost 에 붙입니다(ImGui 없음).
  * @details 언리얼 에디터 → Unreal Insights 와 같은 방식입니다. Tracy 뷰어를 에디터 도킹 창으로 넣지 않는 이유는 `Source/Engine/Profiling/README.md`
- *          ("에디터 안의 뷰어") 에 있습니다 — 뷰어는 자기 ImGui(판 고정) · capstone · freetype · zstd · nfd · curl … 를 끌고 와 한 프로세스에
- *          ImGui 두 벌을 만들거나 에디터의 ImGui 판을 묶습니다.
+ *          ("에디터 안의 뷰어") 에 있습니다 — 뷰어는 자기 ImGui(버전 고정) · capstone · freetype · zstd · nfd · curl … 를 끌고 와 한 프로세스에
+ *          ImGui 두 벌을 만들거나 에디터의 ImGui 버전을 묶습니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -19,7 +19,7 @@ namespace sw::editor
     {
         Launched,          ///< 출력을 켜고 뷰어를 띄웠다
         TracyNotCompiled,  ///< 이 빌드에 Tracy 가 없다(Shipping · SW_ENABLE_TRACY=OFF)
-        ViewerNotFound,    ///< 뷰어 실행 파일을 찾지 못했다(`gv_tracyViewerPath` 가 가리키는 자리)
+        ViewerNotFound,    ///< 뷰어 실행 파일을 찾지 못했다(`gv_tracyViewerPath` 가 가리키는 경로)
         ViewerLaunchFailed ///< 뷰어 프로세스를 띄우지 못했다
     };
 } // namespace sw::editor
@@ -36,8 +36,8 @@ namespace sw::editor
         static const utf8* getViewerFileName();
 
         /**
-         * @brief 설정한 자리 @p configuredPath(파일이거나 그 파일이 든 폴더)에서 뷰어 실행 파일을 찾습니다. 상대 경로면 @p projectRoot 기준입니다.
-         * @details 자리의 정본은 설정(`gv_tracyViewerPath`, 기본 `Tools/Tracy`) 하나다. 그 자리에 없으면 다른 자리를 더 뒤지지 않는다.
+         * @brief 설정한 경로 @p configuredPath(파일이거나 그 파일이 있는 폴더)에서 뷰어 실행 파일을 찾습니다. 상대 경로면 @p projectRoot 기준입니다.
+         * @details 경로의 원본은 설정(`gv_tracyViewerPath`, 기본 `Tools/Tracy`) 하나다. 그 경로에 없으면 다른 경로를 더 뒤지지 않는다.
          * @return 있는 파일을 찾았으면 true 입니다. @p configuredPath 가 비면 false 입니다.
          */
         [[nodiscard]] static bool findViewerPath( string_view configuredPath, string_view projectRoot, string& outPath );

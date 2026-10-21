@@ -75,7 +75,7 @@ namespace sw::editor
         {
             /**
              * @brief 등록된 프레임 단계를 `_order` 순서로 모두 부릅니다.
-             * @details 개수와 항목을 매번 다시 읽는다. 단계가 모듈을 올리거나 내려 목록이 바뀌어도 지난 배열을 읽지 않는다.
+             * @details 개수와 항목을 매번 다시 읽는다. 단계가 모듈을 로드하거나 언로드해 목록이 바뀌어도 지난 배열을 읽지 않는다.
              */
             static void runFrameSteps( EditorContext& context )
             {
@@ -159,7 +159,7 @@ namespace sw::editor
                     SW_LOG_ERROR( "Splash: could not read %#", pEngineDefaultAssets->_defaultForwardPipeline.c_str() );
             }
 
-            /** @brief 인스턴스가 내려가기 전에 선택 · 미저장 표시를 엔진(`EditSessionState`)에 맡깁니다. 다음 인스턴스가 `resumeEditSession` 으로 찾아갑니다. */
+            /** @brief 인스턴스가 종료하기 전에 선택 · 미저장 표시를 엔진(`EditSessionState`)에 맡깁니다. 다음 인스턴스가 `resumeEditSession` 으로 찾아갑니다. */
             static void storeEditSession( EditorContext& context )
             {
                 EditSessionState* pSession      = editor::findSubsystem<EditSessionState>();
@@ -857,7 +857,7 @@ namespace sw::editor
             ++_lastDrawSnapshotSequence;
             {
                 SW_EDITOR_PROFILE_SCOPE( "GT.Editor.captureDrawSnapshot" );
-                // 에디터 UI 캡처 요청이 있으면 이 프레임의 모든 뷰포트 합본도 넘긴다. 잘림 지표는 창 상태가 남아 있는 지금 잰다.
+                // 에디터 UI 캡처 요청이 있으면 이 프레임의 모든 뷰포트 합본도 넘긴다. 잘림 지표는 창 상태가 남아 있는 지금 측정한다.
                 EditorUICaptureJob captureJob{};
                 const bool         bCapture = _pUICapture != nullptr && _pUICapture->takeJob( captureJob );
                 _arrDrawSnapshot[writeSlot].capture( _lastDrawSnapshotSequence, bCapture ? &captureJob : nullptr );
@@ -893,7 +893,7 @@ namespace sw::editor
 
             // 에디터 UI 캡처: 같은 프레임의 모든 뷰포트 합본을 캡처 텍스처에 한 번 더 그린다. GL 의 플로팅 창 렌더(아래)보다 먼저다 — 그것은 컨텍스트를 바꾼다.
             // `renderJob` 은 자기가 연 패스를 닫고 돌아온다(GL 은 기본 프레임버퍼로 되돌아온다). 아래 플로팅 창이 자기 창에 그리려면 그래야 한다.
-            // 합본의 주인은 메인 뷰포트라 백엔드의 메인 버퍼 링을 한 칸 더 쓴다. 링 크기가 이 횟수를 센다(`kImGuiDrawsPerViewportPerFrame`) — 그리는 횟수를 늘리면 그 값도 올린다.
+            // 합본의 주인은 메인 뷰포트라 백엔드의 메인 버퍼 링을 한 슬롯 더 쓴다. 링 크기가 이 횟수를 센다(`kImGuiDrawsPerViewportPerFrame`) — 그리는 횟수를 늘리면 그 값도 올린다.
             ImDrawData* const pCaptureDrawData = _arrDrawSnapshot[slot].findCaptureDrawData();
             const bool        bCapture         = pCaptureDrawData != nullptr && _pUICapture != nullptr && _rendererBackend != nullptr;
             if ( bCapture )
@@ -1037,7 +1037,7 @@ namespace sw::editor
         if ( _platformBackend != nullptr )
         {
             // 무인 자동화 중이면 플랫폼이 조회한 실제 커서를 지운다. Win32 는 GetCursorPos 와 커서 아래 뷰포트, X11 은 XQueryPointer 의 위치와 버튼이 해당한다.
-            // 테스트가 커서를 놓은 프레임(버튼을 떼는 프레임)에 실제 커서가 마지막 위치가 되면 ImGui 가 버튼 뗌을 다음 프레임으로 미뤄 뷰포트 비행이 그 차이만큼 돈다.
+            // 테스트가 커서를 놓은 프레임(버튼을 놓는 프레임)에 실제 커서가 마지막 위치가 되면 ImGui 가 버튼 놓기를 다음 프레임으로 미뤄 뷰포트 비행이 그 차이만큼 돈다.
             const ScopedImGuiOsInputFilter osInputFilter{ ImGuiEditorInternal::isOsDeviceInputBlocked() };
             _platformBackend->newFrame();
         }

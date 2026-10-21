@@ -32,7 +32,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    /** @brief 필드에 든 현재 값의 상태입니다. 미리보기 글과 색을 정합니다. */
+    /** @brief 필드에 있는 현재 값의 상태입니다. 미리보기 글과 색을 정합니다. */
     enum class InspectorHandleState : uint8
     {
         Empty,     ///< 무효 핸들 — "대상 없음", 정상 값

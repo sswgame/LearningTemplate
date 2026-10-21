@@ -30,8 +30,8 @@ namespace sw::editor
 {
     /**
      * @brief 세션 하나의 구성입니다. 패널의 프리셋이 이 구성을 저장합니다.
-     * @details 창 배치 칸(`_bArrangeWindows` …)은 `App` 프로세스(리슨 호스트 · 클라이언트)마다 창 크기와 위치 인자(`-W` · `-H` · `-WinX` · `-WinY`)를
-     *          나란히 준다(`EditorNetPlaySession::makeWindowArguments`). 언리얼 PIE 가 클라이언트 창을 겹치지 않게 놓는 것과 같은 자리다.
+     * @details 창 배치 필드(`_bArrangeWindows` …)은 `App` 프로세스(리슨 호스트 · 클라이언트)마다 창 크기와 위치 인자(`-W` · `-H` · `-WinX` · `-WinY`)를
+     *          나란히 준다(`EditorNetPlaySession::makeWindowArguments`). 언리얼 PIE 가 클라이언트 창을 겹치지 않게 놓는 것에 해당한다.
      */
     REFLECT()
     struct EditorNetPlaySettings

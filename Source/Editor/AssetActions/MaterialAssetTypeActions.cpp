@@ -19,7 +19,7 @@ namespace sw::editor
             static constexpr Color kSphereSpecular{ Color::fromBytes( 255, 255, 255, 240 ) };
         };
 
-        /** @brief 머티리얼 — 스페큘러 음영을 넣은 구 썸네일. 열기는 머티리얼 패널이 맡는다(종류 표의 패널 제목). */
+        /** @brief 머티리얼 — 스페큘러 음영을 넣은 구 썸네일. 열기는 머티리얼 패널이 맡는다(종류 테이블의 패널 제목). */
         class MaterialAssetTypeActions final : public IEditorAssetTypeActions
         {
         public:

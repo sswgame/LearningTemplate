@@ -185,7 +185,7 @@ namespace sw::editor
         void applyMove( uint32 generation, uint32 parentOrdinal, uint32 fromIndex, uint32 toIndex );
         /**
          * @brief 인스펙터 위에 고른 위젯의 Slot 필드를 그립니다 — 부모 패널이 읽는 필드만(`UIPreviewLogic::findSlotFields`) 보입니다(상자 · 겹침 · 격자 · 흐름 · 캔버스 …).
-         * @details 되돌리기는 슬롯 손잡이와 같다 — 끄는 동안은 슬롯을 바로 고치고, 손을 떼면 `_slot` 텍스트 전후 한 쌍을 `pushPropertyEdit` 로 남긴다.
+         * @details 되돌리기는 슬롯 손잡이와 같다 — 끄는 동안은 슬롯을 바로 고치고, 손을 놓으면 `_slot` 텍스트 전후 한 쌍을 `pushPropertyEdit` 로 남긴다.
          */
         void drawSlotSection( Widget& widget );
         /** @brief 방금 그린 Slot 필드 컨트롤 하나의 편집을 맺습니다. @p frameText 는 그 컨트롤을 그리기 전 `_slot` 텍스트, @p bImmediate 는 콤보 · 체크처럼 한 번에 끝나는 편집입니다. */

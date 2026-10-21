@@ -61,7 +61,7 @@ namespace sw::editor
             }
 
             /**
-             * @brief 창의 X 단추를 시나리오가 누를 수 있게 `panel.close.<제목>` 으로 남긴다(ImGui 가 단추를 그린 자리와 같은 식으로 구한다).
+             * @brief 창의 X 단추를 시나리오가 누를 수 있게 `panel.close.<제목>` 으로 남긴다(ImGui 가 단추를 그린 위치와 같은 식으로 구한다).
              * @details 떠 있는 창은 제목 표시줄 오른쪽 끝, 도킹된 창은 보이는 탭의 오른쪽 끝이다. 안 보이는 탭과 접힌 창은 남기지 않는다.
              */
             static void noteCloseButton( const utf8* pTitle, const bool* pOpen )
@@ -252,7 +252,7 @@ namespace sw::editor
             flags |= ImGuiWindowFlags_NoResize;
         }
 
-        // 바는 부르는 패널의 뷰포트에 묶는다. 묶지 않으면 패널 밖으로 넘친 바를 멀티 뷰포트가 자기 OS 창으로 떼어 내 화면 아무 데나 띄운다.
+        // 바는 부르는 패널의 뷰포트에 묶는다. 묶지 않으면 패널 밖으로 넘친 바를 멀티 뷰포트가 자기 OS 창으로 분리해 화면 아무 데나 띄운다.
         ImGui::SetNextWindowViewport( ImGui::GetWindowViewport()->ID );
         if ( desc._maxWidth > 0.0f )
         {

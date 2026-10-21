@@ -135,7 +135,7 @@ namespace sw::editor
 
     void EditorViewportToolbar::drawDisplayBar( ViewportToolbarSettings& settings, bool bVertical )
     {
-        // 씬 뷰 HUD — 게임 HUD 와 같은 섹션(언리얼 뷰포트 stat 자리). 켜고 끄기는 뷰마다, 섹션은 오른쪽 클릭 팝업(게임 HUD 와 같은 설정).
+        // 씬 뷰 HUD — 게임 HUD 와 같은 섹션(언리얼 뷰포트 stat 에 해당). 켜고 끄기는 뷰마다, 섹션은 오른쪽 클릭 팝업(게임 HUD 와 같은 설정).
         if ( EditorWidgets::drawIconToggle( "##hud", editoricon::kChart, settings._bShowHUD,
                                             SW_LOCKEY( "EdCommon", "ViewportHUD" ) ) )
             settings._bShowHUD = ( settings._bShowHUD == false );
@@ -229,7 +229,7 @@ namespace sw::editor
         {
             ImGui::Text( "Multi-Object Alignment" );
             ImGui::Separator();
-            // 항목 · 구분선은 커맨드 표의 메뉴 경로 칸(`commandmenu::kViewportAlign`)에서 나온다.
+            // 항목 · 구분선은 커맨드 테이블의 메뉴 경로 필드(`commandmenu::kViewportAlign`)에서 나온다.
             EditorCommandGUI::drawMenuItems( commandmenu::kViewportAlign );
             ImGui::EndPopup();
         }

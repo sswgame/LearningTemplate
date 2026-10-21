@@ -59,7 +59,7 @@ namespace sw::editor
         static bool needsResize( uint32 currentWidth, uint32 currentHeight, uint32 targetWidth, uint32 targetHeight );
         /**
          * @brief 게임 뷰 이미지 사각형을 정합니다. @p available 은 패널 내용 영역 크기입니다.
-         * @details `Free` 는 영역 전체를 쓰고, `Ratio16x9` 는 영역 안에 16:9 로 가장 크게 넣어 가운데에 둔다. 크기는 렌더 타깃 크기와 같도록 정수 픽셀로 내린다.
+         * @details `Free` 는 영역 전체를 쓰고, `Ratio16x9` 는 영역 안에 16:9 로 가장 크게 넣어 가운데에 둔다. 크기는 렌더 타깃 크기와 같도록 정수 픽셀로 버림한다.
          */
         static EditorViewRect fitViewImage( const float2& available, EditorGameViewAspect aspect );
         /** @brief 화면 비율 선택에 보이는 이름을 반환합니다. */

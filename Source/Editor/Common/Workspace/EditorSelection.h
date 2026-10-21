@@ -51,7 +51,7 @@ namespace sw::editor
         EditorSelection()                                    = default;
         EditorSelection( const EditorSelection& )            = delete;
         EditorSelection& operator=( const EditorSelection& ) = delete;
-        /** @brief 미리보기 씬에 묶인 채 사라지면 묶음을 풉니다(`unbindPreviewScope`). 그래야 목록(`editor::getPreviewSelections`)에 빈 포인터가 남지 않습니다. */
+        /** @brief 미리보기 씬에 묶인 채 사라지면 바인딩을 해제합니다(`unbindPreviewScope`). 그래야 목록(`editor::getPreviewSelections`)에 빈 포인터가 남지 않습니다. */
         ~EditorSelection() override;
 
         // EditorSubsystem. EditorContext 가 의존 순서로 초기화하고 역순으로 종료하고 소멸한다.
@@ -96,7 +96,7 @@ namespace sw::editor
          * @details 창이 씬을 만든 직후 부르고, 창이 닫힐 때 `unbindPreviewScope` 로 해제한다. 묶인 동안 씬과 스택은 이 선택보다 오래 살아야 한다.
          */
         void bindPreviewScope( Scene& scene, CommandStack& stack );
-        /** @brief 묶음을 해제하고 선택을 비웁니다. 이 선택이 대상 선택이었으면 메인 선택으로 되돌립니다(`editor::setFocusedSelection`). */
+        /** @brief 바인딩을 해제하고 선택을 비웁니다. 이 선택이 대상 선택이었으면 메인 선택으로 되돌립니다(`editor::setFocusedSelection`). */
         void unbindPreviewScope();
         /** @brief 미리보기 씬에 묶인 선택이면 true 입니다. */
         bool isPreviewScope() const { return _pPreviewScene != nullptr; }

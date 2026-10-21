@@ -43,7 +43,7 @@ namespace sw::editor
             static constexpr uint32 kMaxTextureSide = 8192;
             /** @brief 결과를 이만큼만 들고 오래된 것부터 버립니다. 시나리오는 요청 직후 결과를 읽는다. */
             static constexpr size_t kMaxResultCount = 64;
-            /** @brief 마젠타 판정 문턱입니다(0..255). 보라색 머티리얼 썸네일(약 160,60,220)은 걸리지 않는다. */
+            /** @brief 마젠타 판정 임계값입니다(0..255). 보라색 머티리얼 썸네일(약 160,60,220)은 걸리지 않는다. */
             static constexpr uint8 kMagentaMinRedBlue = 230;
             static constexpr uint8 kMagentaMaxGreen   = 40;
             /** @brief 스크롤 여유가 이 픽셀보다 크면 내용이 넘친 것으로 봅니다(반올림 오차를 거른다). */

@@ -86,7 +86,7 @@ namespace sw::editor
                 EditorWidgets::drawPropertyRowLabel( pLabel, kLabelWidth * EditorThemeUtil::getDpiScale() );
             }
 
-            /** @brief 목록 순서를 한 칸 옮깁니다. @p index 와 @p index + @p step 이 범위 안이어야 합니다. */
+            /** @brief 목록 순서를 한 항목 옮깁니다. @p index 와 @p index + @p step 이 범위 안이어야 합니다. */
             template <typename T>
             static void swapItems( vector<T>& inoutList, int32 index, int32 step )
             {
@@ -445,7 +445,7 @@ namespace sw::editor
 
     void AnimationGraphLayerEditor::drawMaskEntries( AnimationBoneMaskDef& inoutMask, const utf8*& pInoutEdit )
     {
-        // 프리셋의 항목은 그 파일이 정본이다 — 여기서 고치면 저장할 때 버려지므로 보이기만 한다.
+        // 프리셋의 항목은 그 파일이 원본이다 — 여기서 고치면 저장할 때 버려지므로 보이기만 한다.
         const bool bPreset = inoutMask._filePath.empty() == false;
         ImGui::BeginDisabled( bPreset );
         string committed;

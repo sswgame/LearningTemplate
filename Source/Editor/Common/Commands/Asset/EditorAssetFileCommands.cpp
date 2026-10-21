@@ -38,7 +38,7 @@ namespace sw::editor
 
             /**
              * @brief 새 에셋 틀의 표입니다. 한 줄이 Add 메뉴 항목 하나입니다.
-             * @details 머티리얼은 엔진 머티리얼을 베낀다(손으로 지은 머티리얼 XML 은 퍼뮤테이션을 빠뜨리기 쉽다).
+             * @details 머티리얼은 엔진 머티리얼을 베낀다(손으로 만든 머티리얼 XML 은 퍼뮤테이션을 빠뜨리기 쉽다).
              */
             static constexpr EditorNewAssetTemplate kArrNewAssetTemplate[] = {
                 {"material", "Material", "new_material",   ".material", &selectDefaultMaterial,     nullptr, "name=\"DefaultMaterial\""},
@@ -63,7 +63,7 @@ namespace sw::editor
                     return false;
                 if ( FileUtil::removeFile( sourceAbs ) )
                     return true;
-                (void)FileUtil::tryRemoveFile( destinationAbs ); // 원본이 남았으니 사본을 거둔다 — 실패해도 원본은 그대로다
+                (void)FileUtil::tryRemoveFile( destinationAbs ); // 원본이 남았으니 사본을 회수한다 — 실패해도 원본은 그대로다
                 return false;
             }
         };

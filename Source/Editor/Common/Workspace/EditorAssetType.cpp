@@ -43,7 +43,7 @@ namespace sw::editor
             RawHeightfield  ///< `heightfields_raw/` 아래의 높이장 원본이다. 같은 `.png` 라도 텍스처 원본이 아니다(`HeightfieldImporter::isRawHeightfieldPath`)
         };
 
-        // 이 표가 확장자 → 에디터 종류의 정본이다. 엔진이 읽는 포맷의 철자는 그 포맷 타입의 `kExtension` 을 가리키고(문자열을 다시 적지 않는다),
+        // 이 테이블이 확장자 → 에디터 종류의 원본이다. 엔진이 읽는 포맷의 철자는 그 포맷 타입의 `kExtension` 을 가리키고(문자열을 다시 적지 않는다),
         // 씬 · 프리팹은 쿠킹 규칙(`AssetCookPath`)을, 카탈로그 데이터는 `.xml` · `.json` 을 따른다. 계약은 `EditorAssetTypeTest` 의
         // `EveryEngineFormatMapsToItsKind` · `EveryResourceDataKindIsData` 가 지킨다. 옛 맨 접미사(`.seq` · `.sprite` · `.dialogue` · `.tilemap`)는 두지 않는다.
         // 여기 적는 확장자는 이 저장소가 실제로 읽거나 쓰는 것만 둔다. 엔진은 HLSL 전용이므로 `.glsl` 등은 없고,

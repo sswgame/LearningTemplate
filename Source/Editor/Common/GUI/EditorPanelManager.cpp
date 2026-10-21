@@ -147,7 +147,7 @@ namespace sw::editor
             if ( pExisting != nullptr )
             {
                 listSorted.push_back( std::move( *pExisting ) );
-                pExisting->_pRegistration = nullptr; // 옮긴 자리 — 3) 에서 다시 옮기지 않게
+                pExisting->_pRegistration = nullptr; // 옮긴 항목 — 3) 에서 다시 옮기지 않게
                 continue;
             }
             unique_ptr<IEditorPanel> pPanel = registration._pCreate();

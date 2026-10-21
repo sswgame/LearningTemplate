@@ -158,7 +158,7 @@ namespace sw::editor
     /**
      * @class MultiplayerInspectorTab
      * @brief Inspector 탭 — 전용 서버의 하이어라키(`scene.tree`) · 컴포넌트 값(`object.dump`)을 보이고 개발 명령 입력줄을 디버그 채널로 보냅니다(서버 디버깅 S3).
-     * @details 언리얼 PIE 의 서버 월드 아웃라이너 자리. 세션이 띄운 전용 서버에는 세션이 고른 포트 · 토큰으로 붙고(`EditorNetPlaySession::getDebugChannelPort`),
+     * @details 언리얼 PIE 의 서버 월드 아웃라이너에 해당. 세션이 띄운 전용 서버에는 세션이 고른 포트 · 토큰으로 붙고(`EditorNetPlaySession::getDebugChannelPort`),
      *          이미 떠 있는 서버에는 주소 · 토큰으로 붙는다. 요청은 루프백에서 답을 기다리는 동기 방식이라 누를 때만 묻는다(프레임마다 묻지 않는다).
      *          리슨 호스트(App)는 채널을 열지 않아 이 탭의 대상이 아니다.
      */
@@ -177,9 +177,9 @@ namespace sw::editor
         /** @brief 입력줄 결과와 입력줄입니다. */
         void drawConsole();
 
-        fixed_string<constant::kMaxBuffer64>  _address;             ///< 주소로 붙기 — `127.0.0.1:<포트>`(편집 칸)
-        fixed_string<constant::kMaxBuffer128> _token;               ///< 주소로 붙기 — 토큰(편집 칸)
-        fixed_string<constant::kMaxBuffer512> _commandLine;         ///< 입력줄(편집 칸)
+        fixed_string<constant::kMaxBuffer64>  _address;             ///< 주소로 붙기 — `127.0.0.1:<포트>`(편집 필드)
+        fixed_string<constant::kMaxBuffer128> _token;               ///< 주소로 붙기 — 토큰(편집 필드)
+        fixed_string<constant::kMaxBuffer512> _commandLine;         ///< 입력줄(편집 필드)
         bool                                  _bScrollConsoleToEnd; ///< 새 결과가 왔으니 다음 그리기에서 끝으로 스크롤
     };
 } // namespace sw::editor
@@ -262,7 +262,7 @@ namespace sw::editor
                 ImGui::TableSetupColumn( "Components" );
                 ImGui::TableSetupScrollFreeze( 0, 1 );
                 ImGui::TableHeadersRow();
-                // 덤프가 고른 이름을 바꾸므로 고를 이름을 모아 두었다가 표를 닫은 뒤 묻는다(요청은 표를 다시 채우지 않지만 순서를 분명히 한다).
+                // 덤프가 고른 이름을 바꾸므로 고를 이름을 모아 두었다가 테이블을 닫은 뒤 묻는다(요청은 테이블을 다시 채우지 않지만 순서를 분명히 한다).
                 string pickedName;
                 for ( const EditorRemoteObjectRow& row : inspector.getObjectRows() )
                 {

@@ -1,6 +1,6 @@
 /**
  * @file EditorColliderHandleMath.h
- * @brief 콜라이더 크기 손잡이의 계산입니다 — 셰이프의 손잡이 위치와, 손잡이를 끈 자리에서 새 크기를 구하는 일(ImGui 없음, EditorTest 가 본다).
+ * @brief 콜라이더 크기 손잡이의 계산입니다 — 셰이프의 손잡이 위치와, 손잡이를 끈 위치에서 새 크기를 구하는 일(ImGui 없음, EditorTest 가 본다).
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -29,7 +29,7 @@ namespace sw::editor
         float32            _sign{ 1.0f };    ///< 로컬 축의 양(+1)과 음(-1)
         float3             _center{};        ///< 셰이프 중심(월드)
         float3             _direction{};     ///< 중심에서 손잡이로 향하는 단위 벡터(월드)
-        float3             _position{};      ///< 손잡이 자리(월드)
+        float3             _position{};      ///< 손잡이 위치(월드)
     };
 } // namespace sw::editor
 
@@ -38,9 +38,9 @@ namespace sw::editor
     /**
      * @struct EditorColliderHandleMath
      * @brief 유니티 Box Collider · Sphere Collider · Capsule Collider 의 편집 손잡이에 해당하는 계산입니다.
-     * @details 셰이프는 바디의 월드 배율을 먹여(`PhysicsComponentUtil::makeScaledShape`) 월드 크기로 놓고, 끈 자리의 거리를 배율로 나눠 저장 값(배율 전)으로 되돌린다.
+     * @details 셰이프는 바디의 월드 배율을 먹여(`PhysicsComponentUtil::makeScaledShape`) 월드 크기로 놓고, 끈 위치의 거리를 배율로 나눠 저장 값(배율 전)으로 되돌린다.
      *          그래서 보이는 손잡이가 곧 물리가 판정하는 면이다. 배율을 되돌리는 비율은 `makeScaledShape` 에 단위 셰이프를 먹여 구한다 — 배율 규칙이 한 곳에만 있다.
-     *          크기는 중심을 지키며 양쪽으로 같이 변한다(손잡이를 끈 자리가 곧 새 가장자리).
+     *          크기는 중심을 지키며 양쪽으로 같이 변한다(손잡이를 끈 위치가 곧 새 가장자리).
      */
     struct EditorColliderHandleMath
     {
@@ -55,7 +55,7 @@ namespace sw::editor
                                     vector<ColliderHandle>& outListHandle );
 
         /**
-         * @brief 손잡이를 중심에서 바깥으로 @p outwardDistance(월드, m) 떨어진 자리로 끌었을 때의 셰이프를 돌려줍니다.
+         * @brief 손잡이를 중심에서 바깥으로 @p outwardDistance(월드, m) 떨어진 위치로 끌었을 때의 셰이프를 돌려줍니다.
          * @details 거리는 `kMinExtent` 로 아래를 막는다. 캡슐의 반 높이는 거리에서 (월드) 반지름을 뺀 값이고 0 아래로 내려가지 않는다. 배율이 0 인 축은 바꾸지 않는다.
          */
         static PhysicsShapeDesc3D applyDrag( const PhysicsShapeDesc3D& shape, const ColliderHandle& handle, float32 outwardDistance, const float3& bodyScale );

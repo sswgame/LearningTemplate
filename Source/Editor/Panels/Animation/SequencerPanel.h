@@ -59,15 +59,15 @@ namespace sw::editor
         void drawItemFields();
         /** @brief 키 트랙 목록 · 고른 트랙의 채널 값 · 커브 편집기를 그립니다. */
         void drawKeyTracks();
-        /** @brief 트랙 줄 오른쪽의 키 띠(키 자리 · 지금 프레임)를 그립니다. 띠를 누르면 그 트랙을 고르고 그 프레임으로 갑니다. */
+        /** @brief 트랙 줄 오른쪽의 키 띠(키 위치 · 지금 프레임)를 그립니다. 띠를 누르면 그 트랙을 고르고 그 프레임으로 갑니다. */
         void drawKeyStrip( const SequenceKeyTrack& track, int32 trackIndex );
         /** @brief 고른 트랙의 이름 · 대상 · 키 단추 · 채널 값을 그립니다. */
         void drawSelectedTrack( SequenceKeyTrack& track );
-        /** @brief 트랙 글 칸 하나입니다. 손을 떼며 바뀌었으면 편집으로 기록하고, @p bPreviewOnEdit 이면 현재 프레임을 다시 미리 봅니다. */
+        /** @brief 트랙 텍스트 필드 하나입니다. 손을 놓으며 바뀌었으면 편집으로 기록하고, @p bPreviewOnEdit 이면 현재 프레임을 다시 미리 봅니다. */
         void drawTrackTextField( const utf8* pLabel, string& inoutText, const utf8* pTooltip, bool bPreviewOnEdit );
         /** @brief 키 추가 · 삭제 · 이전 · 다음 키 이동 단추와 대상을 못 찾았다는 안내입니다. @p pArrCurrent 는 대상의 지금 채널 값입니다. */
         void drawKeyButtons( SequenceKeyTrack& track, float32 frame, const float32* pArrCurrent, bool bTargetFound );
-        /** @brief 채널마다 키 표식 · 값 드래그 칸 · 곡선 열기 단추 한 줄을 그립니다. */
+        /** @brief 채널마다 키 표식 · 값 드래그 필드 · 곡선 열기 단추 한 줄을 그립니다. */
         void drawChannelRows( SequenceKeyTrack& track, float32 frame, const float32* pArrCurrent );
         /** @brief 커브 단추로 고른 채널의 커브 편집기를 그립니다. */
         void drawChannelCurve();

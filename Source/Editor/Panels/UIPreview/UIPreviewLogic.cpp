@@ -42,7 +42,7 @@ namespace sw::editor
             static constexpr string_view kPseudoAccented = "qps_ploc";
             static constexpr string_view kPseudoMirrored = "qps_plocm";
 
-            /// 앵커 프리셋 표 한 줄입니다(`UIPreviewAnchorPreset` 순서).
+            /// 앵커 프리셋 테이블 한 줄입니다(`UIPreviewAnchorPreset` 순서).
             struct AnchorPresetRow
             {
                 const utf8* _pMark;
@@ -67,7 +67,7 @@ namespace sw::editor
             };
             static_assert( sizeof( kArrAnchorPreset ) / sizeof( kArrAnchorPreset[0] ) == static_cast<size_t>( UIPreviewAnchorPreset::Count ), "anchor preset table size" );
 
-            /** @brief 프리셋 @p preset 의 표 줄입니다. 범위 밖이면 첫 줄(좌상)입니다. */
+            /** @brief 프리셋 @p preset 의 테이블 줄입니다. 범위 밖이면 첫 줄(좌상)입니다. */
             static const AnchorPresetRow& findAnchorPresetRow( UIPreviewAnchorPreset preset )
             {
                 const uint32 index = static_cast<uint32>( preset );

@@ -474,7 +474,7 @@ namespace sw::editor
             const float32                displayMul   = bRotation ? MathUtil::kRadianToDegree : 1.0f;
             const std::optional<float32> keyedValue   = track.evaluateChannel( channelIndex, frame );
             float32                      value        = ( keyedValue.has_value() ? *keyedValue : currentValue ) * displayMul;
-            // 키가 있는 프레임이면 표식을 강조색으로 — 언리얼 Sequencer 채널 줄의 키 마름모 자리.
+            // 키가 있는 프레임이면 표식을 강조색으로 — 언리얼 Sequencer 채널 줄의 키 마름모에 해당한다.
             ImGui::TextColored( bKeyed ? ImGui::GetStyleColorVec4( ImGuiCol_CheckMark ) : ImGui::GetStyleColorVec4( ImGuiCol_TextDisabled ), bKeyed ? "<>" : "--" );
             ImGui::SameLine();
             ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x * 0.6f );

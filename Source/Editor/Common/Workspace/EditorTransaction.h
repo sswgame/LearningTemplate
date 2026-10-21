@@ -23,7 +23,7 @@ namespace sw::editor
      * @class EditorTransaction
      * @brief GameObject 편집을 Undo/Redo 에 기록하는 트랜잭션 관리자입니다.
      * @details 오브젝트 편집(수정 · 생성 · 삭제)은 엔진의 데이터 명령(`ObjectUndoUtil`)으로 기록해 에디터 모듈 핫 리로드를 넘깁니다. 문서 편집
-     *          (`push` · `recordDocumentText`)은 패널의 코드를 쥔 모듈 명령이라 모듈이 내려갈 때 떼어집니다(`ImGuiEditor::shutdown`).
+     *          (`push` · `recordDocumentText`)은 패널의 코드를 쥔 모듈 명령이라 모듈이 언로드될 때 분리됩니다(`ImGuiEditor::shutdown`).
      */
     class SW_EDITOR_API EditorTransaction
     {

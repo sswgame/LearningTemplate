@@ -241,7 +241,7 @@ namespace sw::editor
 {
     bool CatalogXMLText::parse( string_view text, string& outError )
     {
-        // 읽다가 실패하면 앞에서 채운 요소와 루트 번호가 남아 `isParsed()` 가 참이 된다 — 실패하면 모두 비워 "깨진 문서는 표가 없다" 를 지킨다.
+        // 읽다가 실패하면 앞에서 채운 요소와 루트 번호가 남아 `isParsed()` 가 참이 된다 — 실패하면 모두 비워 "깨진 문서는 테이블이 없다" 를 지킨다.
         if ( parseInternal( text, outError ) )
             return true;
         _listElement.clear();

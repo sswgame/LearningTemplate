@@ -47,7 +47,7 @@ namespace sw::editor
                 listExpanded.push_back( std::move( entry ) );
                 continue;
             }
-            // 와일드카드는 마지막 구성요소 한 곳만 지원한다(`Config/Game/*.json`). 폴더 자리에 있는 `*` 는 풀지 않는다.
+            // 와일드카드는 마지막 구성요소 한 곳만 지원한다(`Config/Game/*.json`). 폴더 위치에 있는 `*` 는 확장하지 않는다.
             const size_t slash = entry._relativePath.rfind( '/' );
             if ( slash == string::npos || entry._relativePath.find( '*' ) < slash )
                 continue;

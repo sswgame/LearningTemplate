@@ -81,7 +81,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    /** @brief 폴더 이동 이력의 항목 하나입니다. 돌아갈 때 브레드크럼도 그때 모양 그대로 되살립니다. */
+    /** @brief 폴더 이동 이력의 항목 하나입니다. 돌아갈 때 브레드크럼도 그때 형태 그대로 복원합니다. */
     struct ContentBrowserHistoryEntry
     {
         string                      _folderPathAbs;

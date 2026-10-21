@@ -20,7 +20,7 @@ namespace sw::editor
     struct EditorNavigationCommands
     {
         /**
-         * @brief 이미 마련한 내비메시를 버리고 설정 표의 에이전트 종류마다 다시 베이크합니다.
+         * @brief 이미 마련한 내비메시를 버리고 설정 테이블의 에이전트 종류마다 다시 베이크합니다.
          * @return 내비메시가 선 에이전트 종류 수입니다. 기하가 없는 종류는 세지 않으며 씬에 기하가 없으면 0 입니다.
          */
         static uint32 bakeAll( GameObjectManager& manager );

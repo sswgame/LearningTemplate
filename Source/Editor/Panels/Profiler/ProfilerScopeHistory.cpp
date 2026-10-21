@@ -21,7 +21,7 @@ namespace sw::editor
         {
             /** @brief 안 불린 프레임 표시입니다. */
             static constexpr float32 kNoSample = -1.0f;
-            /** @brief 캡처 파일의 첫 줄입니다(형식 판). */
+            /** @brief 캡처 파일의 첫 줄입니다(형식 버전). */
             static constexpr const utf8* kCaptureHeader = "SWProfilerCapture 1";
             /** @brief 읽는 캡처의 창 크기 상한(프레임)입니다 — 틀린 파일이 거대한 고리를 만들지 않게. */
             static constexpr uint64 kMaxLoadedWindow = 100000;

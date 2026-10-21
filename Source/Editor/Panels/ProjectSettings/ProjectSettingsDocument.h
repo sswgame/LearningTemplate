@@ -20,7 +20,7 @@ namespace sw::editor
      * @brief 설정 타입 하나의 현재 값과 기본값 인스턴스를 만들어 두고, 파일과 주고받습니다.
      * @details 인스턴스는 타입의 기본 생성자(`$ctor`)로 만든다 — 설정 타입마다 템플릿 코드를 두지 않고 색인이 알려 주는 이름만으로 연다.
      *          파일에는 기본값과 다른 값만 적는다(언리얼 `Default*.ini` 와 같다). 기본값을 다시 적은 줄은 코드의 기본값을 바꿔도 따라가지 않는 옛 값이 된다.
-     *          읽기는 `ConfigManager::readConfigJSON` 으로 엄격하게 하므로 모르는 키나 범위 밖 값이 든 파일은 `Invalid` 이고, 그동안 저장을 막는다.
+     *          읽기는 `ConfigManager::readConfigJSON` 으로 엄격하게 하므로 모르는 키나 범위 밖 값이 있는 파일은 `Invalid` 이고, 그동안 저장을 막는다.
      *          요소 모드(`open` 의 요소 이름)는 XML 파일 안의 요소 하나(팩 `gamesettings.xml` 의 `<Engine>`)만 읽고 쓴다(`ConfigManager::readConfigXMLElement`).
      *          저장은 그 요소의 글만 바꾸고 파일의 나머지(다른 요소 · 주석)는 그대로 둔다. 요소 안의 주석은 저장하면 사라진다.
      */
@@ -35,7 +35,7 @@ namespace sw::editor
         /**
          * @brief @p type 의 인스턴스를 만들고 @p absolutePath 의 파일 값을 입힙니다. @p elementName 이 있으면 그 XML 파일 안의 그 요소 값입니다.
          * @return `Loaded` 면 파일 값을 입혔고, `Missing` 이면 파일(요소 모드는 요소)이 없어 기본값입니다. `Invalid` 면 파일이 틀렸거나 타입에 기본 생성자가 없어 열지 못했습니다.
-         *         `Invalid` 일 때도 가능하면 기본값 인스턴스를 들고 있어, 창이 오류를 보이며 Reset 으로 고칠 수 있습니다.
+         *         `Invalid` 일 때도 가능하면 기본값 인스턴스를 보관하고 있어, 창이 오류를 보이며 Reset 으로 고칠 수 있습니다.
          */
         [[nodiscard]] ConfigReadResult open( const TypeInfo& type, string_view absolutePath, string_view elementName = {} );
         /** @brief 인스턴스를 해제합니다. */

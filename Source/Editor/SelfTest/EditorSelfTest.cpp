@@ -46,7 +46,7 @@ namespace sw::editor
                 return s_state;
             }
 
-            /** @brief 글자열 @p text 가 `*` 를 든 패턴 @p pattern 하나에 맞는지 봅니다. */
+            /** @brief 글자열 @p text 가 `*` 를 포함한 패턴 @p pattern 하나에 맞는지 봅니다. */
             static bool matchesGlob( string_view text, string_view pattern )
             {
                 if ( pattern.empty() )

@@ -39,7 +39,7 @@ namespace sw::editor
             static constexpr Color kDetailText{ Color::fromBytes( 150, 155, 170, 200 ) };
             static constexpr Color kGameObjectBadge{ 0.95f, 0.85f, 0.30f, 1.0f };
 
-            /** @brief 배지 색 — 파일 항목은 콘텐츠 브라우저와 같은 종류 색(애셋 종류 표)이다. */
+            /** @brief 배지 색 — 파일 항목은 콘텐츠 브라우저와 같은 종류 색(애셋 종류 테이블)이다. */
             static Color getCategoryColor( const QuickLauncherItem& item )
             {
                 if ( item._category == "GameObject" )
@@ -230,7 +230,7 @@ namespace sw::editor
         resultsDesc._kind = editor::EditorSectionKind::Child;
         if ( EditorChrome::beginSection( resultsDesc ) )
         {
-            // 열 자리는 이번 목록의 가장 넓은 종류 표시와 글자 크기에서 정한다(고정 x 는 배율 · 글꼴이 바뀌면 겹친다). 종류는 몇 가지뿐이라 바뀔 때만 측정한다.
+            // 열 위치는 이번 목록의 가장 넓은 종류 표시와 글자 크기에서 정한다(고정 x 는 배율 · 글꼴이 바뀌면 겹친다). 종류는 몇 가지뿐이라 바뀔 때만 측정한다.
             float32       widestBadgeWidth{ 0.0f };
             const string* pMeasuredCategory{ nullptr };
             for ( const QuickLauncherItem* pItem : listFiltered )

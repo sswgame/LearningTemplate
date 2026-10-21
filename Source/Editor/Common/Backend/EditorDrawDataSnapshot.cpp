@@ -17,7 +17,7 @@ namespace sw::editor
     {
         struct EditorDrawDataSnapshotInternal
         {
-            /** @brief @p src 의 원소를 @p outDst 에 옮겨 담습니다. 담을 자리가 있으면 버퍼를 다시 잡지 않는다(`ImVector::operator=` 는 먼저 해제한다). */
+            /** @brief @p src 의 원소를 @p outDst 에 옮겨 담습니다. 담을 공간이 있으면 버퍼를 다시 잡지 않는다(`ImVector::operator=` 는 먼저 해제한다). */
             template <typename T>
             static void copyVector( const ImVector<T>& src, ImVector<T>& outDst )
             {

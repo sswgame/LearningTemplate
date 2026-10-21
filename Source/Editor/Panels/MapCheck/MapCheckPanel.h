@@ -1,6 +1,6 @@
 /**
  * @file MapCheckPanel.h
- * @brief 맵 검사 창입니다. `ValidationIssueLog` 의 결과를 표로 보이고, 줄을 누르면 그 오브젝트를 고릅니다(언리얼 Map Check).
+ * @brief 맵 검사 창입니다. `ValidationIssueLog` 의 결과를 테이블로 보이고, 줄을 누르면 그 오브젝트를 고릅니다(언리얼 Map Check).
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -24,7 +24,7 @@ namespace sw::editor
 
         /** @brief 창 제목입니다. */
         const utf8* getPanelTitle() const override { return "Map Check"; }
-        /** @brief 거르기 · 표를 그립니다. */
+        /** @brief 거르기 · 테이블을 그립니다. */
         void drawContent() override;
         /** @brief 필요할 때 여는 도구라 닫힌 채 시작합니다. */
         bool isToolPanel() const override { return true; }

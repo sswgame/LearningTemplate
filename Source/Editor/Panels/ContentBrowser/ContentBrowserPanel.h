@@ -93,7 +93,7 @@ namespace sw::editor
         [[nodiscard]] bool createNewAsset( const EditorNewAssetTemplate& assetTemplate );
         /** @brief 에셋을 같은 폴더에 복제하고 사본을 선택합니다. */
         bool duplicateAsset( string_view absolutePath );
-        /** @brief 에셋 이름을 그 자리에서 바꾸는 입력을 시작합니다. 입력란에는 확장자를 뺀 이름이 들어갑니다. 폴더는 받지 않습니다. */
+        /** @brief 에셋 이름을 제자리에서 바꾸는 입력을 시작합니다. 입력란에는 확장자를 뺀 이름이 들어갑니다. 폴더는 받지 않습니다. */
         void beginRename( string_view absolutePath );
         /** @brief 이름을 바꾸는 중인 에셋의 경로를 반환합니다. 없으면 빈 문자열입니다. */
         const string& getRenamingPath() const { return _fileActions.getRenamingPath(); }

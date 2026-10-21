@@ -1,7 +1,7 @@
 /**
  * @file EditorThemeConfig.h
  * @brief 에디터 테마의 실행 값입니다. 토큰 파일(`EditorThemeTokens`)을 해석한 값이고, 적용과 조회는 `EditorThemeUtil`(GUI)이 하며, 값은 에디터 서브시스템 `EditorTheme` 이 듭니다.
- * @details 색 · 크기의 기본값을 여기 두지 않는다. 정본은 토큰 파일 하나다(두 곳에 두면 한쪽만 고쳐진다). 테마를 읽기 전의 값은 의미가 없다.
+ * @details 색 · 크기의 기본값을 여기 두지 않는다. 원본은 토큰 파일 하나다(두 곳에 두면 한쪽만 고쳐진다). 테마를 읽기 전의 값은 의미가 없다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -61,7 +61,7 @@ namespace sw::editor
 {
     /**
      * @class EditorTheme
-     * @brief 지금 적용된 테마 값을 드는 에디터 서브시스템입니다. 조회 · 교체는 `EditorThemeUtil` 이 `editor::findSubsystem<EditorTheme>()` 로 합니다.
+     * @brief 지금 적용된 테마 값을 가진 에디터 서브시스템입니다. 조회 · 교체는 `EditorThemeUtil` 이 `editor::findSubsystem<EditorTheme>()` 로 합니다.
      */
     class EditorTheme final : public EditorSubsystem
     {
@@ -74,10 +74,10 @@ namespace sw::editor
         /** @brief 폴더에서 읽어 둔 토큰 벌입니다(`EditorThemeUtil` 이 처음 쓸 때 채운다). */
         vector<EditorThemeConfig>& getAvailable() { return _listAvailable; }
 
-        /** @brief 토큰 파일이 바뀌었다고 알립니다(핫 리로드 — 에셋 표의 처리기가 부른다). 다음 UI 프레임이 다시 읽는다. */
+        /** @brief 토큰 파일이 바뀌었다고 알립니다(핫 리로드 — 에셋 테이블의 처리기가 부른다). 다음 UI 프레임이 다시 읽는다. */
         void markTokensChanged() { _bTokensChanged = SW_TRUE; }
         /**
-         * @brief 핫 리로드가 바뀐 토큰 파일을 알릴 때 부릅니다(에셋 종류 표의 처리기). 활성 에디터의 테마에 표시를 남기고, 다음 UI 프레임이 모두 다시 읽고 적용합니다.
+         * @brief 핫 리로드가 바뀐 토큰 파일을 알릴 때 부릅니다(에셋 종류 테이블의 처리기). 활성 에디터의 테마에 표시를 남기고, 다음 UI 프레임이 모두 다시 읽고 적용합니다.
          * @return 늘 true 입니다(처리했으니 엔진 캐시 리로드는 하지 않는다).
          */
         [[nodiscard]] static bool importChangedTokenFile( string_view relativePath );

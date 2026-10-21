@@ -6,7 +6,7 @@
  *          렌더 타깃에 한 번 더 그리고, endFrame 뒤에 읽어 파일로 쓴다. 네 백엔드가 같은 ImGui 렌더러 백엔드로 같은 목록을 그리므로 결과가 같고, 창 위치 · 가림 ·
  *          포커스와 무관하다. 언리얼의 `FScreenshotRequest`(UI 포함 스크린샷)와 Slate 위젯 리플렉터 캡처, 유니티의 `ScreenCapture` 에 해당한다.
  *
- *          흐름: 시나리오 단계(`CaptureEditorUI`)나 `-gv_screenshotEditor` 가 `request` → UI 스레드가 ImGui 를 닫은 뒤 `takeJob`(창 잘림 지표를 이때 잰다) →
+ *          흐름: 시나리오 단계(`CaptureEditorUI`)나 `-gv_screenshotEditor` 가 `request` → UI 스레드가 ImGui 를 닫은 뒤 `takeJob`(창 잘림 지표를 이때 측정한다) →
  *          스냅샷이 합본을 복사 → 렌더 스레드 `renderJob`(present 훅) → `finishJob`(postPresent, GPU 를 기다려 읽는다) → `findResult`.
  *          주의: 읽기는 GPU 를 기다린다. 캡처하는 프레임만 그렇고, 요청이 없으면 아무 일도 하지 않는다.
  *          주의: OpenGL 은 FBO 의 0 행이 아래쪽이라 읽은 뒤 뒤집는다(엔진 텍스처와 달리 ImGui GL 렌더러는 클립 원점을 보고 위아래를 바꿔 그린다).
@@ -88,7 +88,7 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         /** @brief present 훅 안에서 합본 @p drawData 를 캡처 텍스처에 그립니다. 읽기는 `finishJob` 이 합니다. */
         void renderJob( IRHIDevice& device, IImGuiRendererBackend& rendererBackend, ImDrawData& drawData, const EditorUICaptureJob& job );
-        /** @brief endFrame 뒤(postPresent)에 부릅니다. 그린 캡처가 있으면 읽어 파일로 쓰고 결과를 올립니다. */
+        /** @brief endFrame 뒤(postPresent)에 부릅니다. 그린 캡처가 있으면 읽어 파일로 쓰고 결과를 전달합니다. */
         void finishJob( IRHIDevice& device );
         /** @brief 캡처 텍스처를 놓습니다. 렌더 스레드가 쉬는 동안(에디터 종료) 부릅니다. */
         void releaseRHI( IRHIDevice* pDevice );

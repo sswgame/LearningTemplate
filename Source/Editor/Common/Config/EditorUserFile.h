@@ -30,7 +30,7 @@ namespace sw::editor
 
         /**
          * @brief 깨진 @p filePath 를 `<filePath>.corrupt` 로 옮기고, 어디로 옮겼는지와 @p reason 을 오류로 남깁니다. 이전 `.corrupt` 는 덮어씁니다.
-         * @return 원래 자리에서 치웠으면 true. 옮기지 못했으면 false(그 이유도 오류로 남긴다) — 이때 새 파일을 쓰면 깨진 원본이 사라진다.
+         * @return 원래 위치에서 치웠으면 true. 옮기지 못했으면 false(그 이유도 오류로 남긴다) — 이때 새 파일을 쓰면 깨진 원본이 사라진다.
          */
         [[nodiscard]] static bool quarantineCorruptFile( string_view filePath, string_view reason );
     };

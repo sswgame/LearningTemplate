@@ -1,6 +1,6 @@
 /**
  * @file EditorViewportRayPick.cpp
- * @brief 뷰포트 피킹 — 컴포넌트가 선언한 월드 경계(`SceneComponent::getWorldBounds`) · 종류별 순서 표 · 기본 반지름 폴백
+ * @brief 뷰포트 피킹 — 컴포넌트가 선언한 월드 경계(`SceneComponent::getWorldBounds`) · 종류별 순서 테이블 · 기본 반지름 폴백
  */
 #include "pch.h"
 
@@ -58,12 +58,12 @@ namespace sw::editor
             }
 
             /**
-             * @brief 같은 거리일 때 어느 종류가 이기는지 정하는 표의 한 줄입니다. **경계는 표가 아니라 컴포넌트가 선언합니다**(`SceneComponent::getWorldBounds`).
-             * @details 표는 순서와 편집 여유만 정한다 — 경계를 표가 계산하면(로컬 스케일) 부모가 키운 물체는 클릭이 빗나가고, 게임이
+             * @brief 같은 거리일 때 어느 종류가 이기는지 정하는 테이블의 한 줄입니다. **경계는 테이블이 아니라 컴포넌트가 선언합니다**(`SceneComponent::getWorldBounds`).
+             * @details 테이블은 순서와 편집 여유만 정한다 — 경계를 테이블이 계산하면(로컬 스케일) 부모가 키운 물체는 클릭이 빗나가고, 게임이
              *          만든 컴포넌트는 경계가 있어도 기본 반지름으로만 집힌다.
              *          `_order3D`/`_order2D` 는 낮은 값이 먼저 보이고 같은 거리에서는 먼저 본 쪽이 남는다(2D 모드에서는 스프라이트가 메시보다 앞선다).
              *          `_pickPadding` 은 얇은 2D 경계를 집기 쉽게 더하는 여유다 — 편집 편의라 엔진 경계에는 넣지 않는다.
-             *          표에 없는 종류는 선언한 경계로 표 다음 순서에 집힌다.
+             *          테이블에 없는 종류는 선언한 경계로 테이블 다음 순서에 집힌다.
              */
             struct PickOrderRow
             {
@@ -83,7 +83,7 @@ namespace sw::editor
 
             static constexpr uint32 kOrderRowCount = static_cast<uint32>( sizeof( _s_arrOrder ) / sizeof( _s_arrOrder[0] ) );
 
-            /** @brief 컴포넌트에 맞는 표 줄입니다. 타입 사슬을 파생에서 기반으로 오르며 가장 가까운 줄을 고릅니다(스프라이트는 메시이기도 하다). */
+            /** @brief 컴포넌트에 맞는 테이블 줄입니다. 타입 사슬을 파생에서 기반으로 오르며 가장 가까운 줄을 고릅니다(스프라이트는 메시이기도 하다). */
             static const PickOrderRow* findOrderRow( const Component* pComp )
             {
                 for ( const TypeInfo* pType = pComp->getTypeInfo(); pType != nullptr; pType = pType->getParentType() )
@@ -108,7 +108,7 @@ namespace sw::editor
 
             /**
              * @brief 오브젝트 하나: 경계를 선언한 컴포넌트를 순서대로 보고, 못 잡았으면 모든 씬 컴포넌트를 기본 반지름으로 봅니다.
-             * @details 기본 반지름 길은 경계가 없는 컴포넌트(빈 트랜스폼 · 빛)와, 게임이 만든 컴포넌트를 집게 하는 자리다. 경계가 맞은 오브젝트에서는
+             * @details 기본 반지름 경로는 경계가 없는 컴포넌트(빈 트랜스폼 · 빛)와, 게임이 만든 컴포넌트를 집게 하는 곳이다. 경계가 맞은 오브젝트에서는
              *          타지 않는다 — 기본 반지름 구가 선언한 경계보다 커서 더 가까운 t 를 내면 선택 컴포넌트가 뒤바뀐다.
              */
             static void hitTestObject( GameObject* pObj, const EditorPickRay& ray, bool b2DMode, EditorPickResult& ioBest )
@@ -162,7 +162,7 @@ namespace sw::editor
 
         pManager->forEachGameObject( [&]( GameObject* pObj )
         {
-            // 화면을 그리는 에디터 카메라는 레이가 출발하는 자리에 있어 기본 반지름 구가 늘 가장 가깝다 — 집지 않는다
+            // 화면을 그리는 에디터 카메라는 레이가 출발하는 위치에 있어 기본 반지름 구가 늘 가장 가깝다 — 집지 않는다
             // (언리얼 · 유니티의 에디터 카메라는 씬 오브젝트가 아니다).
             const CameraComponent* pCamera = pObj != nullptr ? pObj->getComponent<CameraComponent>() : nullptr;
             if ( pCamera != nullptr && pCamera->getRole() == CameraRole::Viewport )

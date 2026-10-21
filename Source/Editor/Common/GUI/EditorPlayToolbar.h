@@ -1,7 +1,7 @@
 /**
  * @file EditorPlayToolbar.h
  * @brief 메뉴 막대 아래 에디터 상단 툴바 — Play · Simulate · Pause · Step · Stop · 카메라에서 시작 · 시간 배율 · 자동 플레이입니다.
- * @details 유니티 · 언리얼처럼 재생 단추는 어느 뷰를 열어 두든 같은 자리에 있습니다. 씬 뷰 · 게임 뷰 패널에는 없습니다.
+ * @details 유니티 · 언리얼처럼 재생 단추는 어느 뷰를 열어 두든 같은 위치에 있습니다. 씬 뷰 · 게임 뷰 패널에는 없습니다.
  */
 #pragma once
 #include "Core/Common/Types.h"

@@ -81,7 +81,7 @@ namespace sw::editor
          * @brief 맨 위 단계를 꺼내고 그 단계가 숨긴 오브젝트를 다시 보이게 합니다.
          * @param pManager 오브젝트를 다시 보이게 할 씬의 매니저입니다. nullptr 이면 단계만 꺼냅니다.
          * @param outFrame 꺼낸 단계입니다.
-         * @return 단계가 있어 내렸으면 true 입니다.
+         * @return 단계가 있어 빠져나왔으면 true 입니다.
          */
         [[nodiscard]] bool pop( GameObjectManager* pManager, PrefabIsolationFrame& outFrame );
         /** @brief 모든 단계를 버립니다. 오브젝트는 다시 보이게 하지 않으며, 씬을 비우거나 문서를 바꿀 때 씁니다. */

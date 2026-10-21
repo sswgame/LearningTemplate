@@ -26,6 +26,6 @@ namespace sw::editor
         ScopedImGuiOsInputFilter& operator=( const ScopedImGuiOsInputFilter& ) = delete;
 
     private:
-        int32 _firstIndex; ///< 범위를 열 때의 큐 길이 — 이 자리부터 지운다. 꺼져 있으면 -1
+        int32 _firstIndex; ///< 범위를 열 때의 큐 길이 — 이 위치부터 지운다. 꺼져 있으면 -1
     };
 } // namespace sw::editor

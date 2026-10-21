@@ -17,7 +17,7 @@ namespace sw::editor
 {
     /**
      * @class ModulesPanel
-     * @brief `Bin/Modules` 의 매니페스트(빌드가 복사한 카탈로그)을 읽어 종류별 표를 그립니다. 체크를 바꾸면 미리보기를 묻고, 확인하면
+     * @brief `Bin/Modules` 의 매니페스트(빌드가 복사한 카탈로그)을 읽어 종류별 테이블을 그립니다. 체크를 바꾸면 미리보기를 묻고, 확인하면
      *        `Source/Games/<활성 게임>/SWGame.module.json` 의 `_listModuleOverride` 를 고칩니다. 적용은 Build(매니페스트가 구성 의존이라 ninja 가 다시 구성한다) 뒤 다시 시작입니다.
      */
     class ModulesPanel final : public IEditorPanel
@@ -51,7 +51,7 @@ namespace sw::editor
         string                               _pendingModule;  ///< 미리보기 중인 모듈(비면 묻지 않는다)
         int32                                _kindFilter;     ///< 보일 종류(`ModuleKind` 값, -1 은 전부)
         int32                                _stateFilter;    ///< 0 전부 · 1 켜진 것만 · 2 꺼진 것만
-        bool                                 _bOpenPreview;   ///< 이번 프레임에 확인 창을 연다(표 밖 ID 로 열려고 미룬다)
+        bool                                 _bOpenPreview;   ///< 이번 프레임에 확인 창을 연다(테이블 밖 ID 로 열려고 미룬다)
         vector<ModuleInactiveEntry>          _listNewlyInactive;
         vector<string>                       _listNewlyActive;
         bool                                 _bPendingEnabled;

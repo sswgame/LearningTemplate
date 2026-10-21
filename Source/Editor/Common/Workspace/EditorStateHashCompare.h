@@ -42,12 +42,12 @@ namespace sw::editor
 {
     /**
      * @class EditorStateHashCompare
-     * @brief 이력 두 칸(A · B)과 그 비교입니다. 게임(UI) 스레드에서만 부릅니다. 채널 읽기는 답이 올 때까지 부른 스레드를 붙잡습니다.
+     * @brief 이력 슬롯 두 개(A · B)과 그 비교입니다. 게임(UI) 스레드에서만 부릅니다. 채널 읽기는 답이 올 때까지 부른 스레드를 붙잡습니다.
      */
     class SW_EDITOR_API EditorStateHashCompare
     {
     public:
-        /** @brief 이력 칸 수입니다(A · B). */
+        /** @brief 이력 슬롯 수입니다(A · B). */
         static constexpr int32 kSourceCount = 2;
         /** @brief 채널에서 한 번에 묻는 틱 수의 상한입니다 — 서버 이력 용량보다 크면 가진 만큼만 온다. */
         static constexpr uint32 kMaxRequestedTicks = 65536;
@@ -58,7 +58,7 @@ namespace sw::editor
 
 #if SW_DEV_COMMANDS_ENABLED
         /**
-         * @brief 디버그 채널로 붙은 서버의 이력 전부(`state.hashes 0 <상한>`)를 칸 @p sourceIndex 에 담습니다. 실패하면 false 이고 칸은 그대로입니다.
+         * @brief 디버그 채널로 붙은 서버의 이력 전부(`state.hashes 0 <상한>`)를 슬롯 @p sourceIndex 에 담습니다. 실패하면 false 이고 슬롯은 그대로입니다.
          * @details 디버그 채널은 개발 명령과 함께만 있다(배포 구성에는 없다 — `DebugChannel.h`).
          */
         [[nodiscard]] bool loadFromChannel( int32 sourceIndex, const NetAddress& remote, string_view token );

@@ -99,7 +99,7 @@ namespace sw::editor
         _position += moveDir * speed;
 
         // 누르는 프레임에 새 누름으로 지우고, 키로 옮긴 프레임이 하나라도 있으면 비행이다(맥락 메뉴가 놓을 때 본다).
-        // 마우스로 돌린 것은 맥락 메뉴가 끌기 거리(끌기 문턱)로 가린다 — 누를 때의 손떨림 한 픽셀로 메뉴가 막히지 않게 여기서는 세지 않는다.
+        // 마우스로 돌린 것은 맥락 메뉴가 끌기 거리(끌기 임계값)로 가린다 — 누를 때의 손떨림 한 픽셀로 메뉴가 막히지 않게 여기서는 세지 않는다.
         if ( ImGui::IsMouseClicked( ImGuiMouseButton_Right ) )
             _bFlownThisRightHold = SW_FALSE;
         const bool bMoved = moveDir._x != 0.0f || moveDir._y != 0.0f || moveDir._z != 0.0f;
@@ -184,7 +184,7 @@ namespace sw::editor
         // 외부(개발 명령 bugitgo, teleport)가 에디터 카메라를 옮겼으면 씬 뷰가 그 위치와 시선을 이어받는다. 덮어쓰면 명령이 한 프레임도 유지되지 않는다.
         const bool bSameCamera   = _lastAppliedCameraID == pCamera->getComponentID();
         const bool bMovedOutside = bSameCamera && ( pCamera->getLocalPosition() - _lastAppliedPosition ).getLength() > EditorViewportCameraInternal::kExternalMoveTolerance;
-        // 이 씬 뷰가 처음 쓰는 카메라가 새로 만든 자리에 있지 않으면 앞 에디터 인스턴스가 놓은 것이다(백엔드 교체 · 에디터 리로드) — 기본 포즈로 덮지 않고 이어받는다.
+        // 이 씬 뷰가 처음 쓰는 카메라가 새로 만든 위치에 있지 않으면 앞 에디터 인스턴스가 놓은 것이다(백엔드 교체 · 에디터 리로드) — 기본 포즈로 덮지 않고 이어받는다.
         const bool bFirstApply  = _lastAppliedCameraID == 0;
         const bool bPlacedEarly = bFirstApply && ( pCamera->getLocalPosition() - EditorCamera::getSpawnPosition() ).getLength() > EditorViewportCameraInternal::kExternalMoveTolerance;
         if ( bMovedOutside || bPlacedEarly )

@@ -77,7 +77,7 @@ namespace sw::editor
         void drawComponentContextMenu( GameObject* pObj, Component* pComp, EditorWorkspace& workspace, bool& bOutRemove );
         /** @brief 컴포넌트 우클릭 메뉴의 복사 · 값 붙여넣기 · 새 컴포넌트로 붙여넣기 항목입니다. */
         void drawComponentCopyPasteItems( GameObject* pObj, Component* pComp, EditorWorkspace& workspace );
-        /** @brief 컴포넌트 우클릭 메뉴의 위로 · 아래로 옮기기 항목입니다. 주 씬 컴포넌트와는 자리를 바꾸지 않습니다. */
+        /** @brief 컴포넌트 우클릭 메뉴의 위로 · 아래로 옮기기 항목입니다. 주 씬 컴포넌트와는 순서를 바꾸지 않습니다. */
         void drawComponentMoveItems( GameObject* pObj, Component* pComp );
         /** @brief 컴포넌트 우클릭 메뉴의 프리셋 하위 메뉴(이름 붙여 저장, 저장한 프리셋 적용)입니다. */
         void drawComponentPresetsMenu( Component* pComp );

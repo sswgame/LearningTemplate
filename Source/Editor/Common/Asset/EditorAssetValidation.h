@@ -29,7 +29,7 @@ namespace sw::editor
     /**
      * @class EditorAssetValidation
      * @brief 바뀐 에셋을 모아 두었다가 검증 스크립트를 한 번에 돌리고, 오류는 Error · 경고는 Warning 로그로 남깁니다(언리얼 Data Validation 의
-     *        "저장할 때 검증" 과 같은 자리).
+     *        "저장할 때 검증" 에 해당한다).
      * @details 규칙과 검사는 파이썬 한 곳(`Scripts/common/AssetValidation.py`)에 있다 — 커밋 훅 · CI · 이 에디터가 같은 코드를 부른다.
      *          스크립트가 없는 실행(배포된 에디터 없음 · 저장소 밖)이면 한 번 알리고 꺼진다. 검증은 저장을 막지 않는다 — 결과를 보고 사람이 고친다.
      */

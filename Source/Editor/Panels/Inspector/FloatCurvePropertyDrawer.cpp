@@ -50,7 +50,7 @@ namespace sw::editor
                 EditorSelfTestMarks::note( mark.c_str() );
 
                 const ImGuiID popupID = ImGui::GetID( "CurveEditor" );
-                // 창 가운데에 연다 — 인스펙터는 오른쪽 끝이라 누른 자리에 열면 편집기가 창 밖으로 나간다.
+                // 창 가운데에 연다 — 인스펙터는 오른쪽 끝이라 누른 위치에 열면 편집기가 창 밖으로 나간다.
                 ImGui::SetNextWindowPos( ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2{ 0.5f, 0.5f } );
                 ImGui::SetNextWindowSize( ImVec2{ 640.0f * scale, 360.0f * scale }, ImGuiCond_Appearing );
                 if ( ImGui::BeginPopupEx( popupID, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoScrollbar ) == false )
@@ -62,7 +62,7 @@ namespace sw::editor
                     _openPopupID    = popupID;
                 }
                 ImGui::TextUnformatted( prop._name.c_str() );
-                // 끄는 중 · 칸 입력 중이 아니면 값에서 다시 뜬다(Undo · 다른 곳의 편집이 편집기에 보인다).
+                // 끄는 중 · 필드 입력 중이 아니면 값에서 다시 뜬다(Undo · 다른 곳의 편집이 편집기에 보인다).
                 if ( _state._drag == EditorCurveDrag::None && ImGui::IsAnyItemActive() == false )
                     _state._working = *pCurve;
                 if ( EditorCurveEditor::drawEditor( _state ) )

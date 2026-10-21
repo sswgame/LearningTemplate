@@ -135,7 +135,7 @@ namespace sw::editor
 
     void AnimationGraphPanel::drawInspector()
     {
-        // 유니티 Animator 의 Layers 탭처럼 상태 기계(캔버스)와 그 위에 얹는 레이어를 탭으로 나눈다.
+        // 유니티 Animator 의 Layers 탭처럼 상태 기계(캔버스)와 그 위에 적용하는 레이어를 탭으로 나눈다.
         if ( ImGui::BeginTabBar( "##AnimationGraphInspectorTabs" ) == false )
             return;
         const bool bGraphTab = ImGui::BeginTabItem( "Graph" );

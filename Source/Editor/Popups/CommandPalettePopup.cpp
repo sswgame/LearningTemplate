@@ -142,7 +142,7 @@ namespace sw::editor
             entry._category = desc._category;
             entry._label    = desc._label;
             entry._detail   = desc._detail;
-            // 이 델리게이트는 나중에 불린다. 그때 컨텍스트가 있는지 그 자리에서 확인한다.
+            // 이 델리게이트는 나중에 불린다. 그때 컨텍스트가 있는지 그 시점에 확인한다.
             entry._action = [commandID]()
             {
                 EditorContext* pRunContext = EditorContext::get();
@@ -212,7 +212,7 @@ namespace sw::editor
 
             ImGui::Separator();
 
-            // 이어진 일치를 먼저, 흩어진 일치를 뒤에 둔다(각 묶음 안은 등록 순서). 흩어진 일치만으로 줄을 세우면 Enter 가 뜻밖의 커맨드를 고른다
+            // 이어진 일치를 먼저, 흩어진 일치를 뒤에 둔다(각 그룹 안은 등록 순서). 흩어진 일치만으로 줄을 세우면 Enter 가 뜻밖의 커맨드를 고른다
             // — "Open the GM" 이 "Open the paired animation editor (... alignment ...)" 에 먼저 걸렸다.
             vector<const CommandPaletteEntry*> listFiltered;
             vector<const CommandPaletteEntry*> listScattered;

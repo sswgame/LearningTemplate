@@ -204,7 +204,7 @@ namespace sw::editor
                 }
             }
 
-            /** @brief 사각형 값 @p listRect 를 전체 배열 @p inoutListValue(너비 @p resolution)의 같은 자리에 넣습니다. */
+            /** @brief 사각형 값 @p listRect 를 전체 배열 @p inoutListValue(너비 @p resolution)의 같은 위치에 넣습니다. */
             template <typename T>
             static void pasteRect( const vector<T>& listRect, uint32 resolution, const TerrainSampleRect& rect, vector<T>& inoutListValue )
             {

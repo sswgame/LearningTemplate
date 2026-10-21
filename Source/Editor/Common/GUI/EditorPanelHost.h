@@ -13,7 +13,7 @@ namespace sw::editor
 
     /**
      * @class EditorPanelHost
-     * @brief 아래 층이 보는 패널 창구의 GUI 층 구현입니다. `EditorContext` 가 패널 매니저 뒤에 만들고 앞에 지웁니다.
+     * @brief 아래 층이 보는 패널 진입점의 GUI 층 구현입니다. `EditorContext` 가 패널 매니저 뒤에 만들고 앞에 지웁니다.
      */
     class EditorPanelHost final : public EditorSubsystem, public IEditorPanelHost
     {

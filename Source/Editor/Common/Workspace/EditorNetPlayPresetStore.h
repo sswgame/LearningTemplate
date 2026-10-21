@@ -1,7 +1,7 @@
 /**
  * @file EditorNetPlayPresetStore.h
  * @brief 멀티 프로세스 재생의 사용자 프리셋(이름 붙인 `EditorNetPlaySettings`)을 사용자 파일 하나에 저장 · 고르기 · 지우기를 합니다. ImGui 에 의존하지 않습니다.
- * @details 파일은 `Saved/Editor/NetPlayPresets.json` 이고 커밋하지 않는다(결정 기록 D7-3.3). 바꾸는 호출은 그 자리에서 파일을 다시 쓴다 — 에디터가 죽어도
+ * @details 파일은 `Saved/Editor/NetPlayPresets.json` 이고 커밋하지 않는다(결정 기록 D7-3.3). 바꾸는 호출은 즉시 파일을 다시 쓴다 — 에디터가 죽어도
  *          마지막으로 고른 프리셋이 남는다. 깨진 파일은 환경설정 · 단축키와 같은 한 경로(`EditorUserFile::quarantineCorruptFile`)로 치운다.
  */
 #pragma once
@@ -56,7 +56,7 @@ namespace sw::editor
     private:
         /** @brief 이름이 비지 않고 겹치지 않으며 고른 이름이 목록에 있으면 true 입니다. 아니면 @p outReason 에 첫 이유를 적습니다. */
         [[nodiscard]] static bool isConsistent( const EditorNetPlayPresetFile& file, string& outReason );
-        /** @brief 이름의 자리입니다. 없으면 `invalid_index::kUint32` 입니다. */
+        /** @brief 이름의 인덱스입니다. 없으면 `invalid_index::kUint32` 입니다. */
         uint32 findPresetIndex( string_view name ) const;
         /** @brief @p file 을 `_filePath` 에 쓰고, 썼을 때만 지금 목록으로 들입니다 — 쓰지 못한 변경이 메모리에만 남아 파일과 어긋나지 않게 합니다. */
         [[nodiscard]] bool commitFile( EditorNetPlayPresetFile&& file );

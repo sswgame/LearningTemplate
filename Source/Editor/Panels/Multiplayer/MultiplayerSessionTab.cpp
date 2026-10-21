@@ -53,8 +53,8 @@ namespace sw::editor
         void drawProcessTable( EditorNetPlaySession& session );
         void drawLog( EditorNetPlaySession& session );
 
-        fixed_string<constant::kMaxBuffer64>  _presetName;      ///< 저장할 프리셋 이름(편집 칸). 비어 있으면 고른 프리셋을 덮는다
-        fixed_string<constant::kMaxBuffer256> _clientArguments; ///< 클라이언트마다 붙일 인자(편집 칸)
+        fixed_string<constant::kMaxBuffer64>  _presetName;      ///< 저장할 프리셋 이름(편집 필드). 비어 있으면 고른 프리셋을 덮는다
+        fixed_string<constant::kMaxBuffer256> _clientArguments; ///< 클라이언트마다 붙일 인자(편집 필드)
         int32                                 _stepTickCount;   ///< "Step" 이 서버를 돌릴 틱 수
         int32                                 _logSource;       ///< 로그 거르기 — -1 이면 모두, 아니면 프로세스 번호
         bool                                  _bFollowLog;      ///< 새 줄이 오면 끝으로 스크롤

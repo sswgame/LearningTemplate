@@ -212,7 +212,7 @@ namespace sw::editor
             {   "##gizmoRotate",    editoricon::kRotate,    "gizmo.rotate"},
             {    "##gizmoScale",     editoricon::kScale,     "gizmo.scale"},
         };
-        // 툴팁은 지금 문화권의 글이라 상수 표에 넣지 않고 그릴 때 찾는다.
+        // 툴팁은 지금 문화권의 글이라 상수 테이블에 넣지 않고 그릴 때 찾는다.
         const utf8* const arrTooltip[] = {
             SW_LOCKEY( "EdCommon", "GizmoTranslate" ),
             SW_LOCKEY( "EdCommon", "GizmoRotate" ),

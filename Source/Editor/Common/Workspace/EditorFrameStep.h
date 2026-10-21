@@ -39,7 +39,7 @@ namespace sw::editor
 {
     /**
      * @struct EditorFrameStepRegistration
-     * @brief UI 프레임 단계 하나입니다. 셸은 단계를 모르고 순서대로 부르기만 합니다(언리얼 에디터의 Tick 델리게이트 자리).
+     * @brief UI 프레임 단계 하나입니다. 셸은 단계를 모르고 순서대로 부르기만 합니다(언리얼 에디터의 Tick 델리게이트에 해당).
      * @details 단계는 ImGui 프레임 안(NewFrame 과 Render 사이)에서 UI 스레드가 부른다. 그래서 ImGui 를 그려도 된다. 순서는 `_order` 가 정하고,
      *          셸이 아는 단계의 값은 `EditorFrameStepOrder` 에 있다. 같은 id 의 둘째 등록은 거절되고, 핫 리로드 중에는 새 이미지의 등록이 옛 것을 대체한다.
      */

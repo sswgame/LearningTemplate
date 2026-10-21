@@ -94,7 +94,7 @@ namespace sw::editor
         }
     };
 
-    /** @brief 지운 위젯을 되돌리기 항목 둘(지우기를 되돌리기 · 다시 하기)이 나눠 들고 있는 상자입니다. */
+    /** @brief 지운 위젯을 되돌리기 항목 둘(지우기를 되돌리기 · 다시 하기)이 나눠 보관하고 있는 상자입니다. */
     struct UIPreviewPanel::RemovedWidget
     {
         unique_ptr<Widget> _pWidget{};
@@ -477,7 +477,7 @@ namespace sw::editor
     {
         if ( _bResolutionTableAttempted == false )
         {
-            // 표 경로는 엔진 기본 에셋 표가 정본이다. 읽지 못하면(이유는 표가 알린다) 목록이 비어 미리보기를 세우지 않는다.
+            // 테이블 경로는 엔진 기본 에셋 테이블이 원본이다. 읽지 못하면(이유는 테이블이 알린다) 목록이 비어 미리보기를 세우지 않는다.
             _bResolutionTableAttempted                = true;
             const EngineDefaultAssets* pDefaultAssets = editor::findSubsystem<const EngineDefaultAssets>();
             if ( pDefaultAssets == nullptr || _resolutionTable.loadFromResource( pDefaultAssets->_uiResolutionPresets.get() ) == false )
@@ -735,7 +735,7 @@ namespace sw::editor
 
     void UIPreviewPanel::afterStructureEdit( UIScreen& screen, uint32 selectedOrdinal )
     {
-        // 위젯이 붙거나 떨어졌다 — 호버 경로가 옛 위젯 번호를 들고 있을 수 있어 비우고, 고름과 기준 값을 새 구조에 맞춘다.
+        // 위젯이 붙거나 떨어졌다 — 호버 경로가 옛 위젯 번호를 보관하고 있을 수 있어 비우고, 고름과 기준 값을 새 구조에 맞춘다.
         WidgetTree& tree = screen.getTree();
         _pointer.clearHover();
         _bPointerInside  = false;
@@ -1368,7 +1368,7 @@ namespace sw::editor
         UIScreen* pScreen = generation == _generation ? findPreviewScreen() : nullptr;
         if ( pScreen == nullptr || fromIndex == toIndex )
             return;
-        // 자식을 떼고 끼워도 부모의 문서 순서 번호는 그대로다(부모가 자식보다 앞에 온다).
+        // 자식을 분리하고 끼워도 부모의 문서 순서 번호는 그대로다(부모가 자식보다 앞에 온다).
         WidgetTree& tree = pScreen->getTree();
         _pointer.clearHover();
         unique_ptr<Widget> moved = UIPreviewLogic::detachWidget( tree, parentOrdinal, fromIndex );

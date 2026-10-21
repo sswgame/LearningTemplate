@@ -29,7 +29,7 @@ namespace sw::editor
         static constexpr float32 kNotOverridden = -1.0f;
 
         PROPERTY()
-        string _themeName{ "dark" }; ///< 테마 토큰 벌 이름(`Resource/editor/theme/<이름>.tokens.json`). 이 초기값이 환경설정 기본값의 유일한 자리다 — 그 벌이 없으면 에디터가 서지 않는다
+        string _themeName{ "dark" }; ///< 테마 토큰 벌 이름(`Resource/editor/theme/<이름>.tokens.json`). 이 초기값이 환경설정 기본값의 유일한 위치다 — 그 벌이 없으면 에디터가 서지 않는다
 
         PROPERTY( Min = -1.0, Max = 1.0 )
         float32 _themeAccentR{ kNotOverridden }; ///< 덮어쓴 강조색 R(0..1, 음수면 토큰 값)

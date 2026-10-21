@@ -332,7 +332,7 @@ namespace sw::editor
     {
         const string absolutePath = CatalogPanelInternal::makeAbsolutePath( resourceID );
         string       text;
-        // 읽지 못하면 고르지 않는다 — 앞 파일의 글을 든 채 고르면 저장할 때 앞 파일의 내용을 이 파일에 쓴다.
+        // 읽지 못하면 고르지 않는다 — 앞 파일의 글을 가진 채 고르면 저장할 때 앞 파일의 내용을 이 파일에 쓴다.
         if ( FileUtil::readTextFile( absolutePath, text ) == false )
         {
             SW_LOG_ERROR( "Could not read catalog file '%#'", absolutePath.c_str() );

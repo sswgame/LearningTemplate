@@ -27,7 +27,7 @@ namespace sw::editor
             EditorSelection*         _pPreviewSelection{ nullptr }; ///< 미리보기 창의 선택을 고쳤으면 그 선택(기록은 그 창의 스택). 메인이면 nullptr
         };
 
-        /** @brief 편집 중인 위젯 표입니다. trackPod 와 trackString 이 **같은 표를 씁니다**(각자 맵을 들면 한쪽만 고칠 때 갈라집니다). */
+        /** @brief 편집 중인 위젯 표입니다. trackPod 와 trackString 이 **같은 테이블을 씁니다**(각자 맵을 들면 한쪽만 고칠 때 갈라집니다). */
         unordered_map<ImGuiID, PendingEdit>& getPendingEdits()
         {
             static unordered_map<ImGuiID, PendingEdit> s_mapPending;
@@ -138,7 +138,7 @@ namespace sw::editor
             const string label = InspectorPropertyLayout::makeUndoLabel( edit._label.c_str() );
             if ( edit._pPreviewSelection != nullptr )
             {
-                // 미리보기 창의 편집은 그 창의 스택에 남긴다. 그 사이 창이 내려갔거나 다른 선택을 겨누면 선택이 없을 수 있어 남기지 않는다.
+                // 미리보기 창의 편집은 그 창의 스택에 남긴다. 그 사이 창이 닫혔거나 다른 선택을 겨누면 선택이 없을 수 있어 남기지 않는다.
                 if ( editor::getFocusedSelection() != edit._pPreviewSelection )
                     continue;
                 for ( size_t index = 0; index < edit._listTarget.size(); ++index )

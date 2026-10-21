@@ -155,8 +155,8 @@ namespace sw::editor
         if ( pRHIDevice == nullptr )
             return false;
 
-        // 이 백엔드는 Vulkan 전용이다. 핸들은 `IRHIDevice::queryNativeHandles` 로 받는다 — 모듈 경계를 넘는 것은 판 번호가 든
-        // POD(RHINativeHandles) 하나이고 VulkanRHIDevice 의 레이아웃 · vtable 이 아니다. 판이 다르면 Engine 이 거절한다.
+        // 이 백엔드는 Vulkan 전용이다. 핸들은 `IRHIDevice::queryNativeHandles` 로 받는다 — 모듈 경계를 넘는 것은 버전 번호가 든
+        // POD(RHINativeHandles) 하나이고 VulkanRHIDevice 의 레이아웃 · vtable 이 아니다. 버전이 다르면 Engine 이 거절한다.
         if ( pRHIDevice->getBackendType() != RHIBackend::Vulkan )
             return false;
 
@@ -184,7 +184,7 @@ namespace sw::editor
             return false;
         }
 
-        // ImageCount 는 이 백엔드에서 뷰포트별 정점 · 인덱스 버퍼 링의 칸 수일 뿐이다(스왑체인 이미지 수와 상관없다). 칸이 GPU 에서 돌아오는 시간으로 정한다 —
+        // ImageCount 는 이 백엔드에서 뷰포트별 정점 · 인덱스 버퍼 링의 슬롯 수일 뿐이다(스왑체인 이미지 수와 상관없다). 슬롯이 GPU 에서 돌아오는 시간으로 정한다 —
         // 캡처 프레임은 메인 뷰포트를 두 번 그린다(`kImGuiDrawBufferRingSize`). ImGui 는 MinImageCount 이상을 요구한다.
         const uint32 minImages = vkNative._minImageCount >= 2 ? vkNative._minImageCount : 2;
         const uint32 ringSize  = kImGuiDrawBufferRingSize > minImages ? kImGuiDrawBufferRingSize : minImages;

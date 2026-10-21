@@ -79,7 +79,7 @@ namespace sw::editor
 
             /**
              * @brief Net Mode 가 Standalone 이 아니면 멀티 프로세스 재생의 Play · Stop 을 그리고 true 입니다(에디터 안 재생 단추는 그리지 않는다).
-             * @details 언리얼 PIE 의 Net Mode 드롭다운과 같은 자리 — Play 가 서버 · 클라이언트 프로세스를 띄우고 Stop 이 모두 끈다.
+             * @details 언리얼 PIE 의 Net Mode 드롭다운에 해당한다 — Play 가 서버 · 클라이언트 프로세스를 띄우고 Stop 이 모두 끈다.
              */
             static bool drawNetPlayControls( EditorContext& context )
             {

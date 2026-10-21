@@ -98,7 +98,7 @@ namespace sw::editor
             /** @brief 뷰포트 호버 색이 강조색에서 흰색 쪽으로 가는 비율과 알파입니다. */
             static constexpr float32 kHoverWhiten = 0.45f;
             static constexpr float32 kHoverAlpha  = 0.75f;
-            /** @brief 둥글기를 한 슬라이더로 묶을 때 스크롤바 둥글기는 입력 칸 둥글기의 이 배수입니다. */
+            /** @brief 둥글기를 한 슬라이더로 묶을 때 스크롤바 둥글기는 입력 필드 둥글기의 이 배수입니다. */
             static constexpr float32 kScrollbarRadiusPerFrameRadius = 2.0f;
 
             static ImVec4 toImVec4( const Color& color, float32 alphaMultiplier = 1.0f )
@@ -305,7 +305,7 @@ namespace sw::editor
     {
         EditorTheme& theme = getSubsystem<EditorTheme>();
         EditorThemeInternal::loadAvailableThemes( theme.getAvailable() );
-        // 지금 벌을 새 값으로 다시 적용하고, 사용자가 덮어쓴 강조색 · 둥글기는 설정에서 다시 얹는다. 못 하면 오류를 남기고 지금 테마를 둔다.
+        // 지금 벌을 새 값으로 다시 적용하고, 사용자가 덮어쓴 강조색 · 둥글기는 설정에서 다시 적용한다. 못 하면 오류를 남기고 지금 테마를 둔다.
         if ( loadFromConfig() )
             SW_LOG_INFO( "Editor theme tokens reloaded (%# set(s))", theme.getAvailable().size() );
     }
@@ -326,7 +326,7 @@ namespace sw::editor
         const float32 scale = ( dpiScale > 0.0f ) ? dpiScale : 1.0f;
         if ( EditorThemeInternal::dpiScale() == scale )
             return;
-        // 테마는 96 DPI 기준 값을 들고 있으므로 새 배율로 다시 적용하면 된다.
+        // 테마는 96 DPI 기준 값을 보관하고 있으므로 새 배율로 다시 적용하면 된다.
         EditorThemeInternal::dpiScale() = scale;
         applyTheme( getActiveTheme() );
         ImGui::GetStyle().FontScaleDpi = scale;
@@ -339,7 +339,7 @@ namespace sw::editor
 
     bool EditorThemeUtil::loadFromConfig()
     {
-        // 테마 이름의 정본은 설정(`EditorConfig::_themeName`)이다. 그 벌이 없으면 다른 벌로 바꿔 끼우지 않는다 — 고친 이름이 무시된 것을 아무도 모른다.
+        // 테마 이름의 원본은 설정(`EditorConfig::_themeName`)이다. 그 벌이 없으면 다른 벌로 바꿔 끼우지 않는다 — 고친 이름이 무시된 것을 아무도 모른다.
         const EditorConfig&      editorConfig = EditorConfig::getActive();
         const EditorThemeConfig* pTheme       = EditorThemeInternal::findAvailable( editorConfig._themeName );
         if ( pTheme == nullptr )

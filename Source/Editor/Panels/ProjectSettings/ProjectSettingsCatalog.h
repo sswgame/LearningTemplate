@@ -37,7 +37,7 @@ namespace sw::editor
         [[nodiscard]] static bool parseReference( string_view referenceJSON, vector<ProjectSettingsEntry>& outListEntry );
 
         /**
-         * @brief 경로에 `*` 가 든 항목을 @p projectRoot 아래의 실제 파일로 풀어 파일마다 항목 하나로 바꿉니다. 파일이 없으면 그 항목은 사라집니다.
+         * @brief 경로에 `*` 가 있는 항목을 @p projectRoot 아래의 실제 파일로 풀어 파일마다 항목 하나로 바꿉니다. 파일이 없으면 그 항목은 사라집니다.
          * @details 풀린 항목의 `_page` 는 `<페이지>/<확장자 없는 파일 이름>` 입니다. 순서는 파일 이름 사전순입니다.
          */
         static void expandWildcards( string_view projectRoot, vector<ProjectSettingsEntry>& inoutListEntry );

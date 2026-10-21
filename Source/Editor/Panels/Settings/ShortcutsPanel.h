@@ -38,9 +38,9 @@ namespace sw::editor
         void pollShortcutCapture( EditorCommandRegistry& registry );
         /** @brief 충돌을 묻는 줄(바꾸기 · 취소)입니다. */
         void drawConflictPrompt( EditorCommandRegistry& registry );
-        /** @brief 커맨드별 조합 표입니다. 표를 그리다 레지스트리를 다시 만들면 그 자리에서 그만둡니다. */
+        /** @brief 커맨드별 조합 표입니다. 테이블을 그리다 레지스트리를 다시 만들면 즉시 그만둡니다. */
         void drawShortcutTable( EditorCommandRegistry& registry );
-        /** @brief 표의 한 줄을 그립니다. 되돌리기 단추를 눌러 조합을 지웠으면 true 입니다(호출한 쪽이 저장하고 레지스트리를 다시 만든다). */
+        /** @brief 테이블의 한 줄을 그립니다. 되돌리기 단추를 눌러 조합을 지웠으면 true 입니다(호출한 쪽이 저장하고 레지스트리를 다시 만든다). */
         [[nodiscard]] bool drawShortcutRow( const EditorCommandDesc& desc, const utf8* pShortcutLabel );
         void               finishCapture();
         void               applyShortcut( const EditorCommandDesc& desc, const EditorCommandShortcut& shortcut );

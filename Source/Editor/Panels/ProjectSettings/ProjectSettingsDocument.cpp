@@ -46,7 +46,7 @@ namespace sw::editor
                 return value.isObject() && value.getMemberNames().empty() == false;
             }
 
-            /** @brief @p source 에서 @p listEqual 에 든 경로를 뺀 말단의 수입니다. */
+            /** @brief @p source 에서 @p listEqual 에 포함된 경로를 뺀 말단의 수입니다. */
             static uint32 countKept( const JSONValue& source, const string& prefix, const vector<string>& listEqual )
             {
                 uint32 keptCount{ 0 };
@@ -62,7 +62,7 @@ namespace sw::editor
             }
 
             /**
-             * @brief @p source 의 말단을 @p destination 으로 옮기되 @p listEqual 에 든 경로는 뺍니다.
+             * @brief @p source 의 말단을 @p destination 으로 옮기되 @p listEqual 에 포함된 경로는 뺍니다.
              * @details 말단이 하나도 남지 않는 구조체 필드는 만들지 않는다. JSONValue 핸들은 형제를 더하면 무효가 되므로, 필드 하나를 다 채운 뒤에 다음 필드를 받는다.
              */
             static void copyDifference( const JSONValue& source, const JSONValue& destination, const string& prefix, const vector<string>& listEqual )

@@ -309,7 +309,7 @@ namespace sw::editor
                 EditorTransformCommands::distributeSelectedObjects( TAxis );
             }
 
-            /** @brief 선택한 오브젝트를 스폰한 프리팹의 경로입니다. 프리팹 인스턴스가 아니면 비어 있습니다. 놓인 프리팹 표는 메인 씬의 것이라 메인 선택을 본다. */
+            /** @brief 선택한 오브젝트를 스폰한 프리팹의 경로입니다. 프리팹 인스턴스가 아니면 비어 있습니다. 놓인 프리팹 테이블은 메인 씬의 것이라 메인 선택을 본다. */
             static string findSelectedPrefabPath( GameObject*& pOutObj )
             {
                 EditorContext* pContext = EditorContext::get();

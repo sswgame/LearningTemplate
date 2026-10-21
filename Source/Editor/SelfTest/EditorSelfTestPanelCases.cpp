@@ -151,7 +151,7 @@ namespace sw::editor
                         // 우클릭 Delete 와 같은 경로로 확인 모달을 열고 확인한다.
                         pPanel->requestDeleteAsset( FileUtil::joinPath( probe._folderAbs, kDeletedFileName ) );
                         (void)context.expect( pPanel->confirmDeleteAsset(), "confirming the delete did not delete the asset" );
-                        // 파일 감시도 같은 변경을 알리지만 프레임이 지난 뒤다. 지운 직후 그 자리에서 다시 읽어야 한다.
+                        // 파일 감시도 같은 변경을 알리지만 프레임이 지난 뒤다. 지운 직후 바로 다시 읽어야 한다.
                         (void)context.expect( pPanel->isFolderRefreshPending(), "deleting an asset did not refresh the folder listing" );
                         enterPhase( probe, kPhaseWaitDeleted, stepIndex );
                         return EditorSelfTestStep::Continue;

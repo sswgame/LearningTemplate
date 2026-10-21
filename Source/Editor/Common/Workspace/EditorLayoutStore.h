@@ -29,7 +29,7 @@ namespace sw::editor
         static constexpr uint32 kMaxNameLength = 64;
 
         /**
-         * @brief 사람이 적은 이름을 파일 이름으로 쓸 수 있게 다듬습니다. 앞뒤 공백을 떼고, 받지 않는 문자가 있거나 비었거나 너무 길면 false 입니다.
+         * @brief 사람이 적은 이름을 파일 이름으로 쓸 수 있게 다듬습니다. 앞뒤 공백을 제거하고, 받지 않는 문자가 있거나 비었거나 너무 길면 false 입니다.
          */
         [[nodiscard]] static bool sanitizeName( string_view name, string& outName );
         /** @brief 기본 레이아웃 폴더(`Saved/Editor/Layouts`)입니다. 에디터 상태 폴더를 찾지 못하면 빈 문자열입니다. */
@@ -42,7 +42,7 @@ namespace sw::editor
         static void collectNames( string_view folder, vector<string>& outListName );
         /** @brief 레이아웃 파일 둘을 씁니다. 폴더가 없으면 만듭니다. */
         [[nodiscard]] static bool save( string_view folder, string_view name, string_view imguiIniText, const KeyValueMap& panelVisibility );
-        /** @brief 레이아웃 파일 둘을 읽습니다. 가시성 파일은 없어도 됩니다(빈 표). */
+        /** @brief 레이아웃 파일 둘을 읽습니다. 가시성 파일은 없어도 됩니다(빈 테이블). */
         [[nodiscard]] static bool load( string_view folder, string_view name, string& outImguiIniText, KeyValueMap& outPanelVisibility );
         /** @brief 레이아웃 파일 둘을 지웁니다. */
         [[nodiscard]] static bool remove( string_view folder, string_view name );

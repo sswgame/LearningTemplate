@@ -1,7 +1,7 @@
 /**
  * @file EditorColorUtil.h
  * @brief `sw::Color` 와 ImGui 색 값(`ImVec4` · `ImU32`) 사이의 변환을 한곳에 둡니다.
- * @details 에디터 코드는 색을 `Color` 로 들고, ImGui 에 넘기는 자리에서만 여기를 거칩니다. `toImU32` 는 `IM_COL32` 와 같은 값(`Color::toAbgr`)입니다.
+ * @details 에디터 코드는 색을 `Color` 로 보관하고, ImGui 에 넘기는 지점에서만 여기를 거칩니다. `toImU32` 는 `IM_COL32` 와 같은 값(`Color::toAbgr`)입니다.
  */
 #pragma once
 #include "Core/Common/Types.h"

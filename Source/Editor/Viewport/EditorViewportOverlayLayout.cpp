@@ -12,7 +12,7 @@ namespace sw::editor
     {
         struct EditorViewportOverlayLayoutInternal
         {
-            /** @brief 바가 놓일 수 있는 남는 자리(뷰포트 − 바, 음수면 0)입니다. */
+            /** @brief 바가 놓일 수 있는 남는 공간(뷰포트 − 바, 음수면 0)입니다. */
             static float2 computeFreeSpace( const float2& barSize, const float2& viewSize )
             {
                 return float2{ MathUtil::max( viewSize._x - barSize._x, 0.0f ), MathUtil::max( viewSize._y - barSize._y, 0.0f ) };

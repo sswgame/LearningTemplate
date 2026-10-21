@@ -158,7 +158,7 @@ namespace sw::editor
          * @details 오브젝트 id 만 받으면 활성 씬으로 읽고 써서 미리보기 창(프리팹 창)의 인스턴스를 놓친다 — 그래서 id 가 아니라 오브젝트를 받는다.
          */
         void setPlacedPrefabPath( const GameObject& object, string_view prefabPath );
-        /** @brief 놓은 인스턴스로 기록된 프리팹 경로입니다(오브젝트가 사는 씬의 표). 중첩 부품은 여기 없습니다(`findPrefabPath`). 없으면 빈 문자열입니다. */
+        /** @brief 놓은 인스턴스로 기록된 프리팹 경로입니다(오브젝트가 사는 씬의 테이블). 중첩 부품은 여기 없습니다(`findPrefabPath`). 없으면 빈 문자열입니다. */
         string_view getPlacedPrefabPath( const GameObject& object ) const;
         /**
          * @brief @p pObject 가 인스턴스인 프리팹의 경로입니다 — 아직 바깥 인스턴스 아래에 붙은 중첩 부품이면 그 부품의 원본 프리팹, 아니면 놓은 인스턴스 기록입니다.

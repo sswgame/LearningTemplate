@@ -575,7 +575,7 @@ namespace sw::editor
 
     void TileMapPanel::drawLayerControls()
     {
-        // 목록은 Visual · Warp 다음에 플래그 레이어 표 순서다. 순번 ↔ 레이어는 getPaintLayerIndex / selectPaintLayer 가 정한다.
+        // 목록은 Visual · Warp 다음에 플래그 레이어 테이블 순서다. 순번 ↔ 레이어는 getPaintLayerIndex / selectPaintLayer 가 정한다.
         const utf8* arrLayerName[kFixedPaintLayerCount + kTileFlagLayerCount] = { "Visual", "Warp", "Tile" };
         for ( size_t flagIndex = 0; flagIndex < kTileFlagLayerCount; ++flagIndex )
         {

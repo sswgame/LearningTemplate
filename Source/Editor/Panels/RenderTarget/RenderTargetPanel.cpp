@@ -146,7 +146,7 @@ namespace sw::editor
         _lastGeneration = generation;
         pRegistry->snapshot( _listTarget );
 
-        // 목록이 새로 만들어졌으면 들고 있던 텍스처 id 는 **이미 사라진 핸들**을 가리킬 수 있다.
+        // 목록이 새로 만들어졌으면 보관하고 있던 텍스처 id 는 **이미 사라진 핸들**을 가리킬 수 있다.
         // 창 크기가 바뀌면 트랜지언트가 모두 다시 만들어지는데, 그때 그대로 그리면 백엔드가 죽는다.
         releasePreviewTexture();
     }
@@ -510,7 +510,7 @@ namespace sw::editor
     {
         refreshTargetsIfStale();
 
-        // 고른 것이 사라졌으면(파이프라인이 바뀌었다) 선택을 놓는다. 없는 이름을 들고 있으면
+        // 고른 것이 사라졌으면(파이프라인이 바뀌었다) 선택을 놓는다. 없는 이름을 보관하고 있으면
         // 미리보기가 영영 빈 채로 남는다.
         if ( _selectedName.empty() == false && findByName( _listTarget, _selectedName ) == nullptr )
             _selectedName.clear();

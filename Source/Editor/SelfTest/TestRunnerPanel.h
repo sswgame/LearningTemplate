@@ -1,7 +1,7 @@
 /**
  * @file TestRunnerPanel.h
- * @brief Test Runner 창 — 에디터 자체 테스트(그 자리에서), 자동화 시나리오 · 단위 테스트(새 프로세스로)을 목록에서 골라 돌리고 결과를 봅니다.
- * @details 언리얼 Session Frontend > Automation · 유니티 Test Runner 의 자리입니다. 자체 테스트는 `EditorSelfTestRunner::requestRun` 으로 이 에디터 안에서,
+ * @brief Test Runner 창 — 에디터 자체 테스트(같은 프로세스에서), 자동화 시나리오 · 단위 테스트(새 프로세스로)을 목록에서 골라 돌리고 결과를 봅니다.
+ * @details 언리얼 Session Frontend > Automation · 유니티 Test Runner 에 해당합니다. 자체 테스트는 `EditorSelfTestRunner::requestRun` 으로 이 에디터 안에서,
  *          시나리오는 프로세스 하나를 통째로 쓰므로 `App -scenario … -unattended` 새 프로세스로, 단위 테스트는 `TestBin/<이름>Test.exe --test_filter=` 새 프로세스로
  *          (작업 폴더 Bin) 돌립니다. 출력 읽기는 ImGui 없는 `EditorTestOutputParser` 입니다.
  */
@@ -34,7 +34,7 @@ namespace sw::editor
         bool        isToolPanel() const override { return true; }
 
     private:
-        /** @brief 에디터 자체 테스트 탭 — 레지스트리 목록(영역별 묶음) · 체크 · 검색 · Run Selected · Run All · 결과 색. */
+        /** @brief 에디터 자체 테스트 탭 — 레지스트리 목록(영역별 그룹) · 체크 · 검색 · Run Selected · Run All · 결과 색. */
         void drawSelfTestTab();
         /** @brief 시나리오 탭 — `Resource/<영역>/automation/<이름>.scenario.xml` 목록, 고른 것을 새 프로세스로. */
         void drawScenarioTab();

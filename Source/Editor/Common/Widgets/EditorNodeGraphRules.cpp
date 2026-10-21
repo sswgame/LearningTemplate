@@ -10,7 +10,7 @@ namespace sw::editor
     {
         outListIndex.clear();
         const EditorListFilter listFilter{ filter };
-        // 묶음이 처음 나온 순서를 지키며 묶음마다 모은다(정렬하지 않는다 — 패널이 적은 순서가 곧 보일 순서다).
+        // 그룹이 처음 나온 순서를 지키며 그룹마다 모은다(정렬하지 않는다 — 패널이 적은 순서가 곧 보일 순서다).
         vector<string_view> listCategory;
         for ( const EditorGraphNodeKind& kind : listKind )
         {

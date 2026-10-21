@@ -24,7 +24,7 @@ namespace sw::editor
         /** @brief 테마 설정 대화상자를 닫습니다(에디터 자체 테스트가 열었던 것을 되돌린다). */
         static void closeThemeDialog();
 
-        /** @brief 커맨드 표의 메뉴(File / Edit / Build) · Assets / Panel 메뉴와 RHI 상태줄을 그립니다. */
+        /** @brief 커맨드 테이블의 메뉴(File / Edit / Build) · Assets / Panel 메뉴와 RHI 상태줄을 그립니다. */
         static void draw( EditorDockLayout& dockLayout );
 
         /** @brief Workspace에 쌓인 패널 열기 요청을 소비합니다. */
@@ -36,7 +36,7 @@ namespace sw::editor
         static void processSceneSession();
 
     private:
-        // draw() 가 순서대로 부르는 조각들. 커맨드 표에서 나오지 않는 메뉴 하나가 곧 함수 하나다.
+        // draw() 가 순서대로 부르는 조각들. 커맨드 테이블에서 나오지 않는 메뉴 하나가 곧 함수 하나다.
         /** @brief 애셋 종류별 도구 패널을 여는 Assets 메뉴를 그립니다. */
         static void drawAssetsMenu();
         /** @brief 패널 표시 토글과 도킹 레이아웃 초기화를 담은 Panel 메뉴를 그립니다. */
@@ -45,7 +45,7 @@ namespace sw::editor
         static void drawNamedLayoutMenu( EditorDockLayout& dockLayout );
         /**
          * @brief 메뉴바 오른쪽의 빌드 상태와 RHI·FPS 표시를 그립니다.
-         * @details 지난 프레임에 측정한 너비로 오른쪽 끝에 붙이고, 마지막 메뉴와 겹칠 자리면 그 프레임은 그리지 않습니다.
+         * @details 지난 프레임에 측정한 너비로 오른쪽 끝에 붙이고, 마지막 메뉴와 겹칠 위치면 그 프레임은 그리지 않습니다.
          */
         static void drawStatusArea();
         /** @brief 라이브 코딩 빌드가 끝난 순간(Compiling → Success / Failed)을 알림으로 띄웁니다. 상태 영역을 그리지 않는 프레임에도 부릅니다. */

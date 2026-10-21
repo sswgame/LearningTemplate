@@ -167,7 +167,7 @@ namespace sw::editor
             {
                 ImGui::EndTable();
                 saveAndRebuild();
-                return; // 레지스트리를 다시 만들었다 — 이 프레임의 표는 낡았다
+                return; // 레지스트리를 다시 만들었다 — 이 프레임의 테이블은 낡았다
             }
         }
         ImGui::EndTable();

@@ -166,7 +166,7 @@ namespace sw::editor
         static string makeDefaultExecutablePath( const utf8* pBaseName );
         /**
          * @brief `App` 창 @p windowIndex 번째(0 부터 — 리슨 호스트가 있으면 호스트가 0)의 창 크기 · 위치 인자(`-W=… -H=… -WinX=… -WinY=…`)입니다.
-         * @details 창은 왼쪽 위부터 `_windowColumnCount` 개씩 한 줄에 놓고 다음 줄로 내려간다. 칸 사이는 창 틀(제목 줄 · 테두리)만큼 띄운다 — 위치는 틀의 왼쪽 위이고
+         * @details 창은 왼쪽 위부터 `_windowColumnCount` 개씩 한 줄에 놓고 다음 줄로 내려간다. 셀 사이는 창 틀(제목 줄 · 테두리)만큼 띄운다 — 위치는 틀의 왼쪽 위이고
          *          크기는 클라이언트 영역이기 때문이다. 창 배치를 끈 구성이면 빈 문자열이다.
          */
         static string makeWindowArguments( const EditorNetPlaySettings& settings, int32 windowIndex );

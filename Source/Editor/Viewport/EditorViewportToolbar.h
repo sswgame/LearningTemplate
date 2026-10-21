@@ -39,7 +39,7 @@ namespace sw::editor
 {
     /**
      * @class EditorViewportToolbar
-     * @brief 씬 뷰 오버레이 바들의 내용입니다(보기 · 표시 · 도구 · 트랜스폼). 바 창 · 자리는 `EditorViewportOverlays` 가 정합니다.
+     * @brief 씬 뷰 오버레이 바들의 내용입니다(보기 · 표시 · 도구 · 트랜스폼). 바 창 · 위치는 `EditorViewportOverlays` 가 정합니다.
      * @details 바가 왼쪽 · 오른쪽에 붙으면 @p bVertical 이 참이고 항목을 세로로 쌓는다.
      */
     class EditorViewportToolbar

@@ -38,7 +38,7 @@ namespace sw::editor
 
             static constexpr float32 kDiameter = 26.0f; ///< 배지 지름(배율 1)
 
-            /** @brief 컴포넌트의 월드 자리입니다. 씬 컴포넌트면 그것, 아니면 오브젝트의 주 씬 컴포넌트입니다. */
+            /** @brief 컴포넌트의 월드 위치입니다. 씬 컴포넌트면 그것, 아니면 오브젝트의 주 씬 컴포넌트입니다. */
             static bool findWorldPosition( GameObject& object, Component& component, float3& outPosition )
             {
                 const SceneComponent* pScene = isA<SceneComponent>( &component ) ? static_cast<const SceneComponent*>( &component ) : object.getPrimarySceneComponent();
@@ -96,7 +96,7 @@ namespace sw::editor
                                               EditorColorUtil::toImU32( color.withAlpha( 1.0f ) ), item._row._pGlyph );
                     if ( EditorSelfTestMarks::isEnabled() )
                     {
-                        // 상호작용 없는 항목으로 자리만 남긴다 — 캔버스의 누름(피킹)을 뺏지 않는다.
+                        // 상호작용 없는 항목으로 공간만 남긴다 — 캔버스의 누름(피킹)을 뺏지 않는다.
                         ImGui::ItemAdd( ImRect{
                                             ImVec2{center.x - radius, center.y - radius},
                                             ImVec2{center.x + radius, center.y + radius}

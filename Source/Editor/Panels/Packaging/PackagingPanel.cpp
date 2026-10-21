@@ -36,7 +36,7 @@ namespace sw::editor
             static constexpr const utf8* kScriptRelativePath = "Scripts/dev/MakePackage.py";
             /** @brief 진입점이 받는 타깃 이름입니다(`--target`). */
             static constexpr const utf8* kArrTarget[] = { "Client", "Server" };
-            /** @brief 쿠킹 표의 백엔드 이름입니다(`--rhi` · `SW_SHIPPING_RHI_BACKEND`). 맨 앞은 "프리셋 기본값" 이다. */
+            /** @brief 쿠킹 테이블의 백엔드 이름입니다(`--rhi` · `SW_SHIPPING_RHI_BACKEND`). 맨 앞은 "프리셋 기본값" 이다. */
 #define SW_PACKAGING_BACKEND_NAME( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) #Backend,
             static constexpr const utf8* kArrBackend[] = { "(preset default)", SW_RHI_BACKEND_TABLE( SW_PACKAGING_BACKEND_NAME ) };
 #undef SW_PACKAGING_BACKEND_NAME
@@ -97,7 +97,7 @@ namespace sw::editor
         , _pJob{ make_unique<EditorExternalToolJob>() }
         , _listGame{}
         , _listLine{}
-        , _outputFolder{} // 비면 진입점의 기본 산출 폴더(`MakePackage.py --output` 의 기본값이 정본이다)
+        , _outputFolder{} // 비면 진입점의 기본 산출 폴더(`MakePackage.py --output` 의 기본값이 원본이다)
         , _progress{}
         , _gameIndex{ 0 }
         , _targetIndex{ 0 }

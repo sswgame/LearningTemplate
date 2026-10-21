@@ -23,7 +23,7 @@ namespace sw::editor
             static constexpr Color kCubeRight{ Color::fromBytes( 35, 95, 195, 255 ) };
         };
 
-        /** @brief 프리팹 — 등각 큐브 썸네일. 뷰포트에 끌어 놓으면 그 자리에 스폰한다(열기는 프리팹 편집기 패널). */
+        /** @brief 프리팹 — 등각 큐브 썸네일. 뷰포트에 끌어 놓으면 그 위치에 스폰한다(열기는 프리팹 편집기 패널). */
         class PrefabAssetTypeActions final : public IEditorAssetTypeActions
         {
         public:

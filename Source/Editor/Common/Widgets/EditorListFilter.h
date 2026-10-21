@@ -29,7 +29,7 @@ namespace sw::editor
     class SW_EDITOR_API EditorListFilter
     {
     public:
-        /** @brief 검색 문자열을 받아 앞뒤 공백을 뗀 상태로 보관합니다. nullptr 은 빈 필터입니다. */
+        /** @brief 검색 문자열을 받아 앞뒤 공백을 제거한 상태로 보관합니다. nullptr 은 빈 필터입니다. */
         explicit EditorListFilter( const utf8* pFilter );
         /** @brief string_view 오버로드입니다. */
         explicit EditorListFilter( string_view filter );
@@ -37,7 +37,7 @@ namespace sw::editor
         /** @brief 필터가 실제로 걸려 있는지 반환합니다. 공백만 입력한 것은 걸리지 않은 것으로 봅니다. */
         bool isActive() const { return _filter.empty() == false; }
 
-        /** @brief 앞뒤 공백을 뗀 필터 문자열입니다. 0건 안내에 그대로 쓸 수 있습니다. */
+        /** @brief 앞뒤 공백을 제거한 필터 문자열입니다. 0건 안내에 그대로 쓸 수 있습니다. */
         string_view getText() const { return _filter; }
 
         /**
