@@ -9,6 +9,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
+#include <algorithm>
+
 namespace sw
 {
     SW_LOG_CALLER( "PairedAnimation" );
@@ -20,9 +22,11 @@ namespace sw
         , _sessionID{ 0 }
         , _seenReloadCount{ 0 }
         , _bSystemUser{ SW_FALSE }
+        , _bStartOnPlay{ SW_FALSE }
+        , _bStartPending{ SW_FALSE }
+        , _reserved{ 0 }
     {
-        // 세션은 씬의 프레임 시스템이 갱신한다. 자기 틱은 없다.
-        setCanEverTick( false );
+        // 세션은 씬의 프레임 시스템이 갱신한다. 틱은 `_bStartOnPlay` 의 첫 시작만 한다.
     }
 
     PairedAnimationComponent::~PairedAnimationComponent() = default;
@@ -36,7 +40,29 @@ namespace sw
         if ( pManager == nullptr )
             return;
         PairedAnimationSystem::getOrCreate( *pManager ).registerUser();
-        _bSystemUser = SW_TRUE;
+        _bSystemUser   = SW_TRUE;
+        _bStartPending = _bStartOnPlay;
+    }
+
+    void PairedAnimationComponent::onTick( float32 deltaTime )
+    {
+        Component::onTick( deltaTime );
+        if ( _bStartPending == SW_FALSE )
+            return;
+        _bStartPending              = SW_FALSE;
+        GameObject*        pOwner   = getOwner();
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        if ( pManager == nullptr )
+            return;
+        // 세션은 다른 오브젝트의 애니메이터를 바꾼다 — 틱 뒤에 시작한다.
+        pManager->executeOrDeferPostTickOnComponent( *this, []( PairedAnimationComponent& component, GameObjectManager& manager )
+        {
+            (void)manager;
+            const PairedAnimationStartResult result = component.startSession( {} );
+            if ( result != PairedAnimationStartResult::Started )
+                SW_LOG_ERROR( "'%#': paired animation '%#' did not start on play (result %#)", component.getOwner()->getName().c_str(),
+                              component._pairedAnimationPath.c_str(), static_cast<uint32>( result ) );
+        } );
     }
 
     void PairedAnimationComponent::onEndPlay()
@@ -104,11 +130,46 @@ namespace sw
         listBinding.reserve( listOtherBinding.size() + 1 );
         listBinding.push_back( PairedAnimationBinding{ hashed_string( _role ), TComponentHandle<SkeletalAnimatorComponent>( pAnimator ) } );
         listBinding.insert( listBinding.end(), listOtherBinding.begin(), listOtherBinding.end() );
+        if ( appendRoleComponentBindings( *pManager, listBinding ) == false )
+            return PairedAnimationStartResult::ParticipantMissing;
         uint32                           sessionID = 0;
         const PairedAnimationStartResult result    = PairedAnimationSystem::getOrCreate( *pManager ).startSession( *pManager, _def, listBinding, sessionID );
         if ( result == PairedAnimationStartResult::Started )
             _sessionID = sessionID;
         return result;
+    }
+
+    bool PairedAnimationComponent::appendRoleComponentBindings( GameObjectManager& manager, vector<PairedAnimationBinding>& inoutListBinding ) const
+    {
+        vector<GameObject*> listObject;
+        manager.getAllGameObjects( listObject );
+        for ( const PairedAnimationRoleDef& role : _def->getRoles() )
+        {
+            const bool bBound = std::any_of( inoutListBinding.begin(), inoutListBinding.end(), [&role]( const PairedAnimationBinding& binding )
+            { return binding._role == role._name; } );
+            if ( bBound )
+                continue;
+            const SkeletalAnimatorComponent* pFound = nullptr;
+            for ( GameObject* pObject : listObject )
+            {
+                const PairedAnimationComponent*  pOther     = pObject->getComponent<PairedAnimationComponent>();
+                const bool                       bNamesRole = pOther != nullptr && pOther != this && pOther->_pairedAnimationPath == _pairedAnimationPath && hashed_string( pOther->_role ) == role._name;
+                const SkeletalAnimatorComponent* pAnimator  = bNamesRole ? pObject->getComponent<SkeletalAnimatorComponent>() : nullptr;
+                if ( pAnimator == nullptr )
+                    continue;
+                if ( pFound != nullptr )
+                {
+                    // 같은 역할을 적은 프롭이 둘이면 어느 쪽인지 고를 수 없다 — 조용히 첫째를 고르지 않는다.
+                    SW_LOG_ERROR( "'%#': paired animation '%#' role '%#' is named by more than one object ('%#' and '%#')", getOwner()->getName().c_str(),
+                                  _pairedAnimationPath.c_str(), role._name.c_str(), pFound->getOwner()->getName().c_str(), pObject->getName().c_str() );
+                    return false;
+                }
+                pFound = pAnimator;
+            }
+            if ( pFound != nullptr )
+                inoutListBinding.push_back( PairedAnimationBinding{ role._name, TComponentHandle<SkeletalAnimatorComponent>( pFound ) } );
+        }
+        return true;
     }
 
     void PairedAnimationComponent::abortSession()

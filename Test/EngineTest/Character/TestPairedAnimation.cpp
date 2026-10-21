@@ -567,6 +567,59 @@ SW_TEST_CASE( PairedAnimationTest, ComponentStartsWithEditedAssetAfterCacheReloa
 }
 
 /**
+ * @brief [PairedAnimationTest] 역할 컴포넌트 — 넘기지 않은 역할은 같은 에셋 · 그 역할을 적은 다른 컴포넌트(프롭)의 애니메이터로 묶고, 그런 컴포넌트가 둘이면 거절한다
+ */
+SW_TEST_CASE( PairedAnimationTest, ComponentBindsRolesNamedByOtherComponents )
+{
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
+    const string folder = TestPairedAnimationInternal::writeClips( "pairedrolecomponents", 0.0f );
+    SW_ASSERT_FALSE( folder.empty() );
+    const string path = FileUtil::joinPath( test::makeTempPath( "pairedrolecomponentsasset" ), "props.pairedanim.xml" );
+    FileUtil::ensureParentDirectoryExists( path );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( path, R"(<PairedAnimation duration="1">
+        <Role name="Leader" anchor="true" required="true" clip="Lead" enterBlend="0" exitState="Idle" exitBlend="0"/>
+        <Role name="Follower" required="true" clip="Follow" align="none" enterBlend="0" exitState="Idle" exitBlend="0"/>
+    </PairedAnimation>)" ) );
+
+    GameObjectManager          manager;
+    SkeletalAnimatorComponent* pLeader   = TestPairedAnimationInternal::addParticipant( manager, "Leader", folder, false );
+    SkeletalAnimatorComponent* pFollower = TestPairedAnimationInternal::addParticipant( manager, "Follower", folder, false );
+    SW_ASSERT_TRUE( pLeader != nullptr && pFollower != nullptr );
+    PairedAnimationComponent* pStarter = pLeader->getOwner()->addComponent<PairedAnimationComponent>();
+    PairedAnimationComponent* pProp    = pFollower->getOwner()->addComponent<PairedAnimationComponent>();
+    SW_ASSERT_TRUE( pStarter != nullptr && pProp != nullptr );
+    pStarter->setRole( "Leader" );
+    pStarter->setPairedAnimationPath( path );
+    pProp->setRole( "Follower" );
+    pProp->setPairedAnimationPath( path );
+    pStarter->dispatchBeginPlay();
+    pProp->dispatchBeginPlay();
+
+    SW_ASSERT_TRUE( pStarter->startSession( {} ) == PairedAnimationStartResult::Started );
+    PairedAnimationSystem*        pSystem  = PairedAnimationSystem::find( manager );
+    const PairedAnimationSession* pSession = pSystem != nullptr ? pSystem->findSession( pStarter->getSessionID() ) : nullptr;
+    SW_ASSERT_NOT_NULL( pSession );
+    SW_EXPECT_TRUE( pSession->hasParticipant( TComponentHandle<SkeletalAnimatorComponent>( pFollower ) ) );
+    pStarter->abortSession();
+    pSystem->runBeforeTick( manager, TestPairedAnimationInternal::kStep );
+
+    // 같은 역할을 적은 프롭이 하나 더 — 어느 쪽인지 고를 수 없다.
+    SkeletalAnimatorComponent* pSecond = TestPairedAnimationInternal::addParticipant( manager, "SecondFollower", folder, false );
+    SW_ASSERT_NOT_NULL( pSecond );
+    PairedAnimationComponent* pSecondProp = pSecond->getOwner()->addComponent<PairedAnimationComponent>();
+    SW_ASSERT_NOT_NULL( pSecondProp );
+    pSecondProp->setRole( "Follower" );
+    pSecondProp->setPairedAnimationPath( path );
+    pSecondProp->dispatchBeginPlay();
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "two props name the same role" );
+        SW_EXPECT_TRUE( pStarter->startSession( {} ) == PairedAnimationStartResult::ParticipantMissing );
+    }
+    SharedAssetCache<PairedAnimationDef> cache;
+    cache.clear();
+}
+
+/**
  * @brief [PairedAnimationTest] 스냅샷 — 이상적인 상태(`makeAtElapsedTime`)가 시각에 맞게 역할 단계와 알림 커서를 정하고, 바이트로 썼다 읽어도 같으며, 깨진 바이트는 거절한다
  * @details 역할은 순서대로 Leader(앵커) · Follower · Prop(0.5 초에 들어옴), 알림 `Release` 는 0.3 초다.
  */
