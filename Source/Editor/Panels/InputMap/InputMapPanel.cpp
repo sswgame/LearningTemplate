@@ -7,6 +7,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
 
+#include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
@@ -27,6 +28,7 @@
 #include "Engine/Input/Virtual/InputReplay.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include <imgui.h>
 
@@ -219,7 +221,7 @@ namespace sw::editor
         , _inputMap{}
         , _replay{}
         , _inputMapPath{ getSubsystem<const EngineDefaultAssets>()._shellInputMap } // 처음 여는 맵은 셸 맵이다 — 경로의 원본은 enginedefaultassets.xml
-        , _replayFilePath{ "engine/replay/demo_01.swreplay" }
+        , _replayFilePath{ getEditorToolDefaults()._inputReplayFile }               // 처음 가리키는 파일 — 원본은 editortooldefaults.json
         , _newActionName{ "" }
         , _selectedAction{ "" }
         , _arrActionFilter{}
@@ -1055,13 +1057,14 @@ namespace sw::editor
         ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorInputMap", "ReplayHint" ) );
         ImGui::Separator();
 
-        EditorWidgets::drawTextField( "Replay File", _replayFilePath, 260.0f );
+        (void)_replayFilePath.drawField( "##ReplayFile", 260.0f ); // 확정한 경로만 Save · Load 가 쓴다
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "ReplayFileTip" ) );
 
         ImGui::SameLine();
         if ( ImGui::Button( "Save Replay" ) )
         {
-            if ( _replay.saveToFile( _replayFilePath.c_str() ) == false )
+            const string diskPath = ResourcePaths::makeAbsolutePath( _replayFilePath.get() ); // 파일은 디스크 경로로만 열린다 — 리소스 id 를 작업 디렉터리 상대로 읽지 않는다
+            if ( diskPath.empty() || _replay.saveToFile( diskPath ) == false )
                 SW_LOG_ERROR( "Could not save input replay '%#'", _replayFilePath.c_str() );
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "SaveReplayTip" ) );
@@ -1071,7 +1074,8 @@ namespace sw::editor
         {
             if ( pInput != nullptr && pInput->getVirtualInput() == &_replay )
                 pInput->detachVirtualInput();
-            if ( _replay.loadFromFile( _replayFilePath.c_str() ) == false )
+            const string diskPath = ResourcePaths::makeAbsolutePath( _replayFilePath.get() );
+            if ( diskPath.empty() || _replay.loadFromFile( diskPath ) == false )
                 SW_LOG_ERROR( "Could not load input replay '%#'", _replayFilePath.c_str() );
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "LoadReplayTip" ) );

@@ -1758,6 +1758,15 @@
        "description": "UI 미리보기 패널이 처음 여는 UI 문서(리소스 경로)"
       },
       {
+       "name": "_inputReplayFile",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "입력 맵 패널의 리플레이 탭이 처음 가리키는 .swreplay 파일(리소스 경로)"
+      },
+      {
        "name": "_clearColor",
        "type": "float4",
        "default": "",

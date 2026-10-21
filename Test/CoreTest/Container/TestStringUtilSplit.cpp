@@ -54,18 +54,20 @@ SW_TEST_CASE( StringUtilSplitTest, ForEachTokenSkipsEmptyTokensAndStops )
     SW_EXPECT_EQUAL( 2u, count );
 }
 
-SW_TEST_CASE( StringUtilSplitTest, ParseFloatListStopsAtBadTokenAndMaxCount )
+SW_TEST_CASE( StringUtilSplitTest, ParseExactFloatsRequiresExactCountOfNumbers )
 {
     float32 arrValue[3]{ 9.0f, 9.0f, 9.0f };
-    SW_EXPECT_EQUAL( 3u, StringUtil::parseFloatList( "(1, 0.5 -2)", " ,()", arrValue, 3 ) );
+    SW_EXPECT_TRUE( StringUtil::parseExactFloats( "(1, 0.5 -2)", " ,()", arrValue, 3 ) );
     SW_EXPECT_NEAR_EQUAL( 1.0f, arrValue[0], 1e-6f );
     SW_EXPECT_NEAR_EQUAL( 0.5f, arrValue[1], 1e-6f );
     SW_EXPECT_NEAR_EQUAL( -2.0f, arrValue[2], 1e-6f );
 
-    SW_EXPECT_EQUAL( 2u, StringUtil::parseFloatList( "4 5 6 7", " ", arrValue, 2 ) );
-    SW_EXPECT_NEAR_EQUAL( -2.0f, arrValue[2], 1e-6f ); // 상한 뒤 칸은 그대로
-
-    SW_EXPECT_EQUAL( 1u, StringUtil::parseFloatList( "8 x 9", " ", arrValue, 3 ) );
-    SW_EXPECT_NEAR_EQUAL( 5.0f, arrValue[1], 1e-6f ); // 못 읽은 칸은 그대로
-    SW_EXPECT_EQUAL( 0u, StringUtil::parseFloatList( "", " ", arrValue, 3 ) );
+    // 실패하면 출력은 그대로다: 남는 토큰(숫자든 아니든) · 모자란 토큰 · 숫자 아닌 토큰 · 빈 글.
+    SW_EXPECT_FALSE( StringUtil::parseExactFloats( "4 5 6 7", " ", arrValue, 3 ) );
+    SW_EXPECT_FALSE( StringUtil::parseExactFloats( "4 5 6 x", " ", arrValue, 3 ) );
+    SW_EXPECT_FALSE( StringUtil::parseExactFloats( "4 5", " ", arrValue, 3 ) );
+    SW_EXPECT_FALSE( StringUtil::parseExactFloats( "8 x 9", " ", arrValue, 3 ) );
+    SW_EXPECT_FALSE( StringUtil::parseExactFloats( "", " ", arrValue, 3 ) );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, arrValue[0], 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( -2.0f, arrValue[2], 1e-6f );
 }

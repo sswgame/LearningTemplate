@@ -993,19 +993,33 @@ namespace sw
         return StringUtilInternal::parseFiniteFloatToken( token, outValue );
     }
 
-    uint32 StringUtil::parseFloatList( string_view text, string_view separators, float32* pOutValue, uint32 maxCount )
+    bool StringUtil::parseExactFloats( string_view text, string_view separators, float32* pOutValue, uint32 count )
     {
-        if ( pOutValue == nullptr || maxCount == 0 )
-            return 0;
-        uint32 readCount = 0;
+        if ( pOutValue == nullptr || count == 0 )
+            return false;
+        // 1차: 개수와 숫자 여부만 확인한다(출력은 건드리지 않는다). 2차: 검증된 토큰을 쓴다.
+        uint32 tokenCount = 0;
+        bool   bValid     = true;
         forEachToken( text, separators, [&]( string_view token )
         {
-            if ( parseFloat( token, pOutValue[readCount] ) == false )
+            float32 value = 0.0f;
+            if ( tokenCount >= count || parseFloat( token, value ) == false )
+            {
+                bValid = false;
                 return false;
-            ++readCount;
-            return readCount < maxCount;
+            }
+            ++tokenCount;
+            return true;
         } );
-        return readCount;
+        if ( bValid == false || tokenCount != count )
+            return false;
+        uint32 writeIndex = 0;
+        forEachToken( text, separators, [&]( string_view token )
+        {
+            if ( parseFloat( token, pOutValue[writeIndex++] ) == false ) // 1차에서 검증한 토큰이라 실패하지 않는다
+                bValid = false;
+        } );
+        return bValid;
     }
 
     bool StringUtil::parseDouble( string_view token, float64& outValue )

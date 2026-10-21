@@ -58,7 +58,7 @@ namespace sw
             [[nodiscard]] static bool parseFloat3( string_view text, float3& outValue )
             {
                 float32 arrValue[3]{};
-                if ( StringUtil::parseFloatList( text, " ", arrValue, 3 ) != 3 )
+                if ( StringUtil::parseExactFloats( text, " ", arrValue, 3 ) == false )
                     return false;
                 outValue = float3{ arrValue[0], arrValue[1], arrValue[2] };
                 return true;

@@ -10,11 +10,12 @@ namespace sw::editor
     void EditorNotificationManager::push( string_view title, string_view message, NotificationType type,
                                           float32 durationSec, float32 progress )
     {
+        SW_ASSERT( durationSec > 0.0f ); // 표시 시간이 없는 알림은 호출 오류다 — 조용히 다른 값으로 바꾸지 않는다
         NotificationItem item;
         item._title       = string{ title };
         item._message     = string{ message };
         item._type        = type;
-        item._durationSec = durationSec > 0.5f ? durationSec : 4.0f;
+        item._durationSec = durationSec;
         item._elapsedSec  = 0.0f;
         item._progress    = progress;
 

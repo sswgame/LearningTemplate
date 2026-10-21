@@ -301,11 +301,10 @@ namespace sw
         [[nodiscard]] static bool parseFloat( string_view token, float32& outValue );
 
         /**
-         * @brief @p separators 로 나뉜 실수(`"1 0.5 0"` · `"(1, 2, 3)"`)를 앞에서부터 최대 @p maxCount 개 읽고 읽은 개수를 반환합니다(할당 없음).
-         * @details 숫자가 아닌 토큰을 만나면 거기서 멈춥니다. @p maxCount 개를 읽은 뒤의 토큰은 보지 않습니다.
-         *          읽지 못한 칸은 바꾸지 않으므로, 개수가 꼭 맞아야 하면 반환값을 @p maxCount 와 비교합니다.
+         * @brief @p separators 로 나뉜 실수(`"1 0.5 0"` · `"(1, 2, 3)"`)가 정확히 @p count 개일 때만 읽습니다(할당 없음).
+         * @details 토큰이 모자라거나 남거나 숫자가 아니면 false 이고 @p pOutValue 는 그대로입니다(개수 비교를 호출부에 맡기지 않는 형식).
          */
-        static uint32 parseFloatList( string_view text, string_view separators, float32* pOutValue, uint32 maxCount );
+        [[nodiscard]] static bool parseExactFloats( string_view text, string_view separators, float32* pOutValue, uint32 count );
 
         /**
          * @brief string_view 토큰을 64비트 실수로 파싱합니다(할당 없음).
