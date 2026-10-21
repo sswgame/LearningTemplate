@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatService.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Network/BitStream.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -446,12 +447,12 @@ namespace sw
 
     void ChatService::removeLocalMember( AccountID accountID, Member& member, const string& channelID )
     {
-        member._listChannel.erase( std::remove( member._listChannel.begin(), member._listChannel.end(), channelID ), member._listChannel.end() );
+        VectorUtil::removeValue( member._listChannel, channelID );
         const auto channelIt = _mapChannelToMember.find( channelID );
         if ( channelIt == _mapChannelToMember.end() )
             return;
         vector<AccountID>& listMember = channelIt->second;
-        listMember.erase( std::remove( listMember.begin(), listMember.end(), accountID ), listMember.end() );
+        VectorUtil::removeValue( listMember, accountID );
         if ( listMember.empty() == false )
             return;
         _mapChannelToMember.erase( channelIt );
@@ -468,7 +469,7 @@ namespace sw
         if ( pMember == nullptr )
             return ChatResult::TargetOffline;
         const string id( channelID );
-        if ( std::find( pMember->_listChannel.begin(), pMember->_listChannel.end(), id ) != pMember->_listChannel.end() )
+        if ( VectorUtil::contains( pMember->_listChannel, id ) )
             return ChatResult::Ok;
         if ( static_cast<int32>( pMember->_listChannel.size() ) >= ChatLimit::kMaxChannelPerMember )
             return ChatResult::TooManyChannels;
@@ -603,7 +604,7 @@ namespace sw
         ChatChannelKind kind     = ChatChannelKind::Whisper;
         if ( bWhisper == false )
         {
-            const bool bMember = std::find( member._listChannel.begin(), member._listChannel.end(), send._channelID ) != member._listChannel.end();
+            const bool bMember = VectorUtil::contains( member._listChannel, send._channelID );
             if ( ChatChannelID::parseKind( send._channelID, kind ) == false || bMember == false )
             {
                 completeSimple( method, send._requestTag, ChatResult::NotMember );
@@ -747,7 +748,7 @@ namespace sw
         for ( const ChatMessage& message : listMessage )
         {
             const bool bTrim = _settings._historyTrimEvery > 0 && message._sequence % static_cast<uint32>( _settings._historyTrimEvery ) == 0;
-            if ( bTrim && std::find( listTrimChannel.begin(), listTrimChannel.end(), message._channelID ) == listTrimChannel.end() )
+            if ( bTrim && VectorUtil::contains( listTrimChannel, message._channelID ) == false )
                 listTrimChannel.push_back( message._channelID );
         }
         _bHistoryWriting = SW_TRUE;
@@ -819,7 +820,7 @@ namespace sw
         if ( memberIt == _mapAccountToMember.end() )
             return false;
         const vector<string>& listChannel = memberIt->second._listChannel;
-        return std::find( listChannel.begin(), listChannel.end(), string( channelID ) ) != listChannel.end();
+        return VectorUtil::contains( listChannel, channelID );
     }
 
     void ChatService::reportMessage( AccountID accountID, const ChatReportRequest& request, int64 nowMs, uint64 requestTag )

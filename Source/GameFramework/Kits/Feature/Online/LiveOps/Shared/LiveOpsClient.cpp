@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/LiveOps/Shared/LiveOpsClient.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Network/BitStream.h"
 
 namespace sw
@@ -41,12 +42,7 @@ namespace sw
 
     bool LiveOpsClient::hasEventKind( string_view kind ) const
     {
-        for ( const LiveEventState& state : _listEvent )
-        {
-            if ( state._kind == kind )
-                return true;
-        }
-        return false;
+        return VectorUtil::containsBy<&LiveEventState::_kind>( _listEvent, kind );
     }
 
     void LiveOpsClient::onServicePush( uint16 kind, BitReader& body )

@@ -145,6 +145,19 @@ namespace sw
             return removeCount;
         }
 
+        /**
+         * @brief `value` 와 같은 원소를 모두 지우고 지운 개수를 돌려줍니다. 남은 원소의 순서는 지킵니다.
+         * @details 값 하나를 지우는 `erase( std::remove( ... ), end )` 도 `erase` 의 둘째 인자를 빠뜨리기 쉬워서 이것을 씁니다. 지운 개수는 알림이라 버려도 됩니다.
+         */
+        template <typename TVector, typename TValue>
+        static size_t removeValue( TVector& list, const TValue& value )
+        {
+            const auto   newEnd      = std::remove( list.begin(), list.end(), value );
+            const size_t removeCount = static_cast<size_t>( list.end() - newEnd );
+            list.erase( newEnd, list.end() );
+            return removeCount;
+        }
+
         /** @brief 오름차순(`operator<`)으로 정렬하고 같은(`operator==`) 이웃을 하나만 남깁니다. */
         template <typename TVector>
         static void sortUnique( TVector& list )

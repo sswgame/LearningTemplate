@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/Online/Economy/Shared/Catalog/OfferCatalog.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -69,12 +70,7 @@ namespace sw
 
     const OfferDef* OfferCatalog::findOffer( string_view id ) const
     {
-        for ( const OfferDef& def : _listOffer )
-        {
-            if ( def._id == id )
-                return &def;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&OfferDef::_id>( _listOffer, id );
     }
 
     const OfferDef* OfferCatalog::findOfferByProduct( string_view storeName, string_view productID ) const

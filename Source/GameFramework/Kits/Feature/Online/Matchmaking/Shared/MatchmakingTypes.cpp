@@ -2,6 +2,8 @@
 
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Shared/MatchmakingTypes.h"
 
+#include "Core/Container/VectorUtil.h"
+
 namespace sw
 {
     bool isValidMatchModeID( string_view modeID )
@@ -19,22 +21,12 @@ namespace sw
 
     bool PartySnapshot::hasMember( AccountID accountID ) const
     {
-        for ( const AccountID memberID : _listMemberID )
-        {
-            if ( memberID == accountID )
-                return true;
-        }
-        return false;
+        return VectorUtil::contains( _listMemberID, accountID );
     }
 
     bool LobbySnapshot::hasMember( AccountID accountID ) const
     {
-        for ( const LobbyMember& member : _listMember )
-        {
-            if ( member._accountID == accountID )
-                return true;
-        }
-        return false;
+        return VectorUtil::containsBy<&LobbyMember::_accountID>( _listMember, accountID );
     }
 
     bool LobbySnapshot::isEveryoneReady() const

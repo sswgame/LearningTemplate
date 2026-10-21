@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchmakingServer.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Network/BitStream.h"
 
 #include "GameFramework/Base/Online/Bus/ServerBus.h"
@@ -16,9 +17,150 @@ namespace sw
 {
     namespace
     {
-        struct MatchmakingServerConstant
+        struct MatchmakingServerInternal
         {
             static constexpr int64 kDefaultReconnectGraceMs = 60000; ///< 60초이다. 모바일 앱 전환과 짧은 끊김을 넘길 만큼이다
+
+            /** @brief 본문을 읽은 결과이다. */
+            enum class ReadStatus : uint8
+            {
+                Ok,
+                UnknownMethod,
+                Malformed,
+            };
+
+            /** @brief 요청 본문에서 읽은 값이다. 메서드마다 쓰는 필드가 달라 한 구조체에 모은다. */
+            struct Request
+            {
+                MatchmakingIDRequest    _idRequest;
+                MatchmakingReadyRequest _readyRequest;
+                MatchmakingModeRequest  _modeRequest;
+                LobbySnapshot           _lobby;
+            };
+
+            /** @brief 메서드에 맞는 본문을 `outRequest` 로 읽는다. 본문이 없는 메서드는 읽지 않고 Ok 이다. */
+            static ReadStatus readRequest( uint16 method, BitReader& body, Request& outRequest )
+            {
+                FixedReadResult readResult = FixedReadResult::Ok;
+                switch ( method )
+                {
+                    case MatchmakingMethod::kPartyInvite:
+                    case MatchmakingMethod::kPartyAccept:
+                    case MatchmakingMethod::kPartyKick:
+                    case MatchmakingMethod::kLobbyJoin:
+                    case MatchmakingMethod::kLobbyLeave:
+                    case MatchmakingMethod::kLobbyStart:
+                    {
+                        readResult = MatchmakingProtocol::MessageTypes::read( body, outRequest._idRequest );
+                        break;
+                    }
+                    case MatchmakingMethod::kLobbyReady:
+                    {
+                        readResult = MatchmakingProtocol::MessageTypes::read( body, outRequest._readyRequest );
+                        break;
+                    }
+                    case MatchmakingMethod::kLobbyCreate:
+                    {
+                        readResult = MatchmakingProtocol::MessageTypes::read( body, outRequest._lobby );
+                        break;
+                    }
+                    case MatchmakingMethod::kLobbyList:
+                    case MatchmakingMethod::kQueueJoin:
+                    {
+                        readResult = MatchmakingProtocol::MessageTypes::read( body, outRequest._modeRequest );
+                        break;
+                    }
+                    case MatchmakingMethod::kPartyCreate:
+                    case MatchmakingMethod::kPartyLeave:
+                    case MatchmakingMethod::kQueueLeave:
+                    {
+                        break;
+                    }
+                    default:
+                    {
+                        return ReadStatus::UnknownMethod;
+                    }
+                }
+                return readResult == FixedReadResult::Ok ? ReadStatus::Ok : ReadStatus::Malformed;
+            }
+
+            /** @brief 읽은 요청을 파티 · 로비 서비스나 큐 서비스로 보낸다. `tag` 는 응답을 되찾는 대기 테이블 번호이다. */
+            static void dispatch( PartyLobbyService& partyLobby, MatchQueueService& queue, const OnlineCallContext& context, const Request& request, uint64 tag )
+            {
+                const AccountID accountID = context._accountID;
+                switch ( context._method )
+                {
+                    case MatchmakingMethod::kPartyCreate:
+                    {
+                        partyLobby.createParty( accountID, tag );
+                        break;
+                    }
+                    case MatchmakingMethod::kPartyInvite:
+                    {
+                        partyLobby.inviteToParty( accountID, request._idRequest._id, tag );
+                        break;
+                    }
+                    case MatchmakingMethod::kPartyAccept:
+                    {
+                        partyLobby.acceptPartyInvite( accountID, request._idRequest._id, tag );
+                        break;
+                    }
+                    case MatchmakingMethod::kPartyLeave:
+                    {
+                        partyLobby.leaveParty( accountID, tag );
+                        break;
+                    }
+                    case MatchmakingMethod::kPartyKick:
+                    {
+                        partyLobby.kickFromParty( accountID, request._idRequest._id, tag );
+                        break;
+                    }
+                    case MatchmakingMethod::kLobbyCreate:
+                    {
+                        partyLobby.createLobby( accountID, request._lobby, context._nowMs, tag );
+                        break;
+                    }
+                    case MatchmakingMethod::kLobbyList:
+                    {
+                        partyLobby.listLobbies( request._modeRequest._modeID, tag );
+                        break;
+                    }
+                    case MatchmakingMethod::kLobbyJoin:
+                    {
+                        partyLobby.joinLobby( accountID, request._idRequest._id, tag );
+                        break;
+                    }
+                    case MatchmakingMethod::kLobbyLeave:
+                    {
+                        partyLobby.leaveLobby( accountID, request._idRequest._id, tag );
+                        break;
+                    }
+                    case MatchmakingMethod::kLobbyReady:
+                    {
+                        partyLobby.setLobbyReady( accountID, request._readyRequest._lobbyID, request._readyRequest._bReady == SW_TRUE, tag );
+                        break;
+                    }
+                    case MatchmakingMethod::kLobbyStart:
+                    {
+                        partyLobby.startLobby( accountID, request._idRequest._id, tag );
+                        break;
+                    }
+                    case MatchmakingMethod::kQueueJoin:
+                    {
+                        queue.joinQueue( accountID, request._modeRequest._modeID, request._modeRequest._region, context._nowMs, tag );
+                        break;
+                    }
+                    case MatchmakingMethod::kQueueLeave:
+                    {
+                        queue.leaveQueue( accountID, tag );
+                        break;
+                    }
+                    default:
+                    {
+                        break;
+                    }
+                }
+            }
         };
     } // namespace
 } // namespace sw
@@ -44,7 +186,7 @@ namespace sw
         , _pGroupChannels{ nullptr }
         , _pHost{ nullptr }
         , _nowMs{ 0 }
-        , _reconnectGraceMs{ MatchmakingServerConstant::kDefaultReconnectGraceMs }
+        , _reconnectGraceMs{ MatchmakingServerInternal::kDefaultReconnectGraceMs }
     {
     }
 
@@ -72,7 +214,7 @@ namespace sw
             for ( const auto& [accountID, graceEndMs] : _mapAccountToGraceEnd )
             {
                 (void)graceEndMs;
-                _pPartyLobby->removeAccount( accountID ); // 내려가는 서버는 유예를 지킬 수 없다. 남기면 파티 기록의 시한(30분)까지 빈자리가 된다
+                _pPartyLobby->removeAccount( accountID ); // 종료하는 서버는 유예를 지킬 수 없다. 남기면 파티 기록의 시한(30분)까지 빈 슬롯이 된다
             }
         }
         _mapAccountToGraceEnd.clear();
@@ -107,130 +249,25 @@ namespace sw
             (void)host.respondError( context._token, OnlineError::kUnavailable );
             return;
         }
-        const AccountID         accountID = context._accountID;
-        MatchmakingIDRequest    idRequest;
-        MatchmakingReadyRequest readyRequest;
-        MatchmakingModeRequest  modeRequest;
-        LobbySnapshot           lobby;
-        FixedReadResult         readResult = FixedReadResult::Ok;
-        switch ( context._method )
+        MatchmakingServerInternal::Request request;
+        switch ( MatchmakingServerInternal::readRequest( context._method, body, request ) )
         {
-            case MatchmakingMethod::kPartyInvite:
-            case MatchmakingMethod::kPartyAccept:
-            case MatchmakingMethod::kPartyKick:
-            case MatchmakingMethod::kLobbyJoin:
-            case MatchmakingMethod::kLobbyLeave:
-            case MatchmakingMethod::kLobbyStart:
-            {
-                readResult = MatchmakingProtocol::MessageTypes::read( body, idRequest );
-                break;
-            }
-            case MatchmakingMethod::kLobbyReady:
-            {
-                readResult = MatchmakingProtocol::MessageTypes::read( body, readyRequest );
-                break;
-            }
-            case MatchmakingMethod::kLobbyCreate:
-            {
-                readResult = MatchmakingProtocol::MessageTypes::read( body, lobby );
-                break;
-            }
-            case MatchmakingMethod::kLobbyList:
-            case MatchmakingMethod::kQueueJoin:
-            {
-                readResult = MatchmakingProtocol::MessageTypes::read( body, modeRequest );
-                break;
-            }
-            case MatchmakingMethod::kPartyCreate:
-            case MatchmakingMethod::kPartyLeave:
-            case MatchmakingMethod::kQueueLeave:
-            {
-                break;
-            }
-            default:
+            case MatchmakingServerInternal::ReadStatus::UnknownMethod:
             {
                 (void)host.respondError( context._token, OnlineError::kNotFound );
                 return;
             }
-        }
-        if ( readResult != FixedReadResult::Ok )
-        {
-            (void)host.respondError( context._token, OnlineError::kInvalidRequest );
-            return;
-        }
-        const uint64 tag = _pendingTable.add( context._token );
-        switch ( context._method )
-        {
-            case MatchmakingMethod::kPartyCreate:
+            case MatchmakingServerInternal::ReadStatus::Malformed:
             {
-                _pPartyLobby->createParty( accountID, tag );
-                break;
+                (void)host.respondError( context._token, OnlineError::kInvalidRequest );
+                return;
             }
-            case MatchmakingMethod::kPartyInvite:
-            {
-                _pPartyLobby->inviteToParty( accountID, idRequest._id, tag );
-                break;
-            }
-            case MatchmakingMethod::kPartyAccept:
-            {
-                _pPartyLobby->acceptPartyInvite( accountID, idRequest._id, tag );
-                break;
-            }
-            case MatchmakingMethod::kPartyLeave:
-            {
-                _pPartyLobby->leaveParty( accountID, tag );
-                break;
-            }
-            case MatchmakingMethod::kPartyKick:
-            {
-                _pPartyLobby->kickFromParty( accountID, idRequest._id, tag );
-                break;
-            }
-            case MatchmakingMethod::kLobbyCreate:
-            {
-                _pPartyLobby->createLobby( accountID, lobby, context._nowMs, tag );
-                break;
-            }
-            case MatchmakingMethod::kLobbyList:
-            {
-                _pPartyLobby->listLobbies( modeRequest._modeID, tag );
-                break;
-            }
-            case MatchmakingMethod::kLobbyJoin:
-            {
-                _pPartyLobby->joinLobby( accountID, idRequest._id, tag );
-                break;
-            }
-            case MatchmakingMethod::kLobbyLeave:
-            {
-                _pPartyLobby->leaveLobby( accountID, idRequest._id, tag );
-                break;
-            }
-            case MatchmakingMethod::kLobbyReady:
-            {
-                _pPartyLobby->setLobbyReady( accountID, readyRequest._lobbyID, readyRequest._bReady == SW_TRUE, tag );
-                break;
-            }
-            case MatchmakingMethod::kLobbyStart:
-            {
-                _pPartyLobby->startLobby( accountID, idRequest._id, tag );
-                break;
-            }
-            case MatchmakingMethod::kQueueJoin:
-            {
-                _pQueue->joinQueue( accountID, modeRequest._modeID, modeRequest._region, context._nowMs, tag );
-                break;
-            }
-            case MatchmakingMethod::kQueueLeave:
-            {
-                _pQueue->leaveQueue( accountID, tag );
-                break;
-            }
-            default:
+            case MatchmakingServerInternal::ReadStatus::Ok:
             {
                 break;
             }
         }
+        MatchmakingServerInternal::dispatch( *_pPartyLobby, *_pQueue, context, request, _pendingTable.add( context._token ) );
     }
 
     void MatchmakingServer::onServiceTick( OnlineServiceHost& host, int64 nowMs )
@@ -388,7 +425,7 @@ namespace sw
         const bool             bSyncHere = _pGroupChannels != nullptr && bLocal && party._partyID != 0;
         if ( bSyncHere == false )
             return; // 다른 서버의 멤버는 그 서버가 맞춘다
-        const bool bMember = std::find( party._listMemberID.begin(), party._listMemberID.end(), recipientID ) != party._listMemberID.end();
+        const bool bMember = VectorUtil::contains( party._listMemberID, recipientID );
         if ( bMember )
             _pGroupChannels->addGroupMember( GroupChannelKind::Party, party._partyID, recipientID, _nowMs );
         else

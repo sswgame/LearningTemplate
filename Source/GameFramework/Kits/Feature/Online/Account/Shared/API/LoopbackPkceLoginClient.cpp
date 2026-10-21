@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/Online/Account/Shared/API/LoopbackPkceLoginClient.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/IStreamTransport.h"
@@ -18,7 +19,7 @@ namespace sw
     {
         struct LoopbackPkceLoginClientInternal
         {
-            static constexpr int32 kVerifierBytes  = 32; ///< base64url 로 43자이다. RFC 7636 의 43~128자 범위에 든다
+            static constexpr int32 kVerifierBytes  = 32; ///< base64url 로 43자이다. RFC 7636 의 43~128자 범위 안이다
             static constexpr int32 kStateBytes     = 16;
             static constexpr utf8  kCallbackPath[] = "/callback";
             static constexpr utf8  kDonePage[]     = "<html><body>Sign-in finished. You can close this window and return to the game.</body></html>";
@@ -237,12 +238,7 @@ namespace sw
 
     const PkceLoginProviderConfig* LoopbackPkceLoginClient::findSettings( string_view provider ) const
     {
-        for ( const PkceLoginProviderConfig& settings : _listProviderSettings )
-        {
-            if ( settings._provider == provider )
-                return &settings;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&PkceLoginProviderConfig::_provider>( _listProviderSettings, provider );
     }
 
     bool LoopbackPkceLoginClient::makeRandomText( int32 byteCount, string& outText )

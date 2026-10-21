@@ -2,6 +2,8 @@
 
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/LiveEventRules.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include "GameFramework/Base/Online/Config/RemoteConfig.h"
 #include "GameFramework/Base/Online/Directory/ServerRecord.h"
 #include "GameFramework/Base/Online/Schedule/ServiceScheduler.h"
@@ -46,7 +48,7 @@ namespace sw
     {
         if ( buildVersion < definition._minBuildVersion )
             return false;
-        if ( definition._listRegion.empty() == false && std::find( definition._listRegion.begin(), definition._listRegion.end(), region ) == definition._listRegion.end() )
+        if ( definition._listRegion.empty() == false && VectorUtil::contains( definition._listRegion, region ) == false )
             return false;
         if ( definition._rolloutBasisPoints >= RemoteConfigValue::kFullRolloutPoints )
             return true;

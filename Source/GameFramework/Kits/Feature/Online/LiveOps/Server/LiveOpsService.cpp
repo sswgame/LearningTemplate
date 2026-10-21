@@ -4,6 +4,7 @@
 
 #include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Network/Message/NetRequest.h"
 
 #include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"
@@ -262,12 +263,7 @@ namespace sw
 
     const LiveEventDefinition* LiveOpsService::findEvent( string_view eventID ) const
     {
-        for ( const LiveEventDefinition& definition : _listEvent )
-        {
-            if ( definition._eventID == eventID )
-                return &definition;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&LiveEventDefinition::_eventID>( _listEvent, eventID );
     }
 
     void LiveOpsService::computeActiveEvents( AccountID accountID, string_view region, uint32 buildVersion, int64 nowMs, bool bClientOnly,

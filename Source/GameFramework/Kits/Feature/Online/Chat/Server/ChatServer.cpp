@@ -2,12 +2,11 @@
 
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatServer.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Network/BitStream.h"
 
 #include "GameFramework/Base/Online/Bus/ServerBus.h"
 #include "GameFramework/Kits/Feature/Online/Chat/Shared/ChatProtocol.h"
-
-#include <algorithm>
 
 namespace sw
 {
@@ -135,7 +134,7 @@ namespace sw
             else
             {
                 host.unsubscribeServerBus( change._topic, this );
-                _listSubscribedTopic.erase( std::remove( _listSubscribedTopic.begin(), _listSubscribedTopic.end(), change._topic ), _listSubscribedTopic.end() );
+                VectorUtil::removeValue( _listSubscribedTopic, change._topic );
             }
         }
 

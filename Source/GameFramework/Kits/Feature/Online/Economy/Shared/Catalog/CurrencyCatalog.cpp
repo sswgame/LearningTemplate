@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/Online/Economy/Shared/Catalog/CurrencyCatalog.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -45,12 +46,7 @@ namespace sw
 
     const CurrencyDef* CurrencyCatalog::findCurrency( string_view id ) const
     {
-        for ( const CurrencyDef& def : _listCurrency )
-        {
-            if ( def._id == id )
-                return &def;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&CurrencyDef::_id>( _listCurrency, id );
     }
 
     int64 CurrencyCatalog::getBalanceCap( string_view assetID ) const

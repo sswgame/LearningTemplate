@@ -2,6 +2,8 @@
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProviderConfig.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/OidcLoginProvider.h"
@@ -16,15 +18,7 @@ namespace sw
         {
             static constexpr const utf8* kKnownKeys[] = { "name", "kind", "issuer", "jwksUrl", "clientIds", "requireNonce", "profileUrl", "subjectPath", "displayNamePath" };
 
-            static bool isKnownKey( string_view key )
-            {
-                for ( const utf8* pKnown : kKnownKeys )
-                {
-                    if ( key == pKnown )
-                        return true;
-                }
-                return false;
-            }
+            static bool isKnownKey( string_view key ) { return VectorUtil::contains( kKnownKeys, key ); }
 
             static string readText( const JSONValue& object, const utf8* pKey, string_view fallback )
             {
