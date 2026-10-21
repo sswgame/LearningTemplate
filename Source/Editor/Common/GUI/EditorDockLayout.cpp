@@ -4,7 +4,6 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
-#include "Core/File/KeyValueFile.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 
@@ -104,7 +103,7 @@ namespace sw::editor
      * @details 하나만 열기는 화면 캡처용이다. 전부 띄우면 서로를 가려 마지막에 등록된 것이 위로 오므로 원하는 패널이 캡처에
      *          나오지 않는다. 전부 열기는 `-gv_editorPanelDump` 가 도구 패널까지 측정하게 하려는 것이다. 도구 패널은 기본이 닫힘이라
      *          덤프가 기본 레이아웃의 다섯 개만 본다. 그래서 전부 열기는 기본 도킹을 적용하지 않고 모두 떠 있는 창으로 둔다.
-     *          어느 쪽이든 저장된 레이아웃을 읽지도 쓰지도 않는다. 저장하면 그 가시성이 `windows.ini` 에 굳어, 다음 실행부터
+     *          어느 쪽이든 저장된 레이아웃을 읽지도 쓰지도 않는다. 저장하면 그 가시성이 `windows.json` 에 굳어, 다음 실행부터
      *          그 패널만 열린다.
      *          id 는 패널의 `SW_EDITOR_PANEL` 이 정한 값이다(예: `render_targets`, `profiler`, `material`).
      */
@@ -127,7 +126,7 @@ namespace sw::editor
 
     EditorDockLayout::EditorDockLayout()
         : _imguiIniPath{}
-        , _windowsIniPath{}
+        , _panelVisibilityPath{}
         , _pendingLayoutIni{}
         , _pendingLayoutVisibility{}
         , _lastDockspaceWidth{ 0.0f }
@@ -152,15 +151,15 @@ namespace sw::editor
         if ( targetFolder.empty() )
             return false;
 
-        KeyValueMap visibilityKv;
+        EditorPanelVisibility visibility;
         for ( const EditorPanelEntry& entry : pContext->getSubsystem<EditorPanelManager>().getPanels() )
         {
             if ( entry._pInstance != nullptr )
-                visibilityKv[entry._id] = entry._pInstance->isOpen() ? "1" : "0";
+                visibility._mapOpen[entry._id] = entry._pInstance->isOpen();
         }
         size_t            iniSize  = 0;
         const utf8* const pIniText = ImGui::SaveIniSettingsToMemory( &iniSize );
-        const bool        bSaved   = EditorLayoutStore::save( targetFolder, safeName, string_view( pIniText, iniSize ), visibilityKv );
+        const bool        bSaved   = EditorLayoutStore::save( targetFolder, safeName, string_view( pIniText, iniSize ), visibility );
         if ( bSaved )
             SW_LOG_INFO( "Saved layout '%#' to %#", safeName.c_str(), targetFolder.c_str() );
         else
@@ -191,13 +190,13 @@ namespace sw::editor
 
         // 가시성을 먼저 적용한다. 다시 열린 패널의 창이 이번 프레임에 만들어지면서 읽은 도킹 설정을 받는다.
         EditorContext* pContext = EditorContext::get();
-        if ( pContext != nullptr && _pendingLayoutVisibility.empty() == false )
+        if ( pContext != nullptr && _pendingLayoutVisibility._mapOpen.empty() == false )
         {
             for ( const EditorPanelEntry& entry : pContext->getSubsystem<EditorPanelManager>().getPanels() )
             {
-                // 적지 않은 패널은 지금 상태 그대로다. 깨진 줄은 읽기가 키와 함께 알리고, 그 패널도 지금 상태로 둔다.
+                // 적지 않은 패널은 지금 상태 그대로다.
                 bool bOpen = entry._pInstance != nullptr && entry._pInstance->isOpen();
-                if ( entry._pInstance != nullptr && KeyValueFile::readOptionalInto( _pendingLayoutVisibility, entry._id, bOpen ) )
+                if ( entry._pInstance != nullptr && _pendingLayoutVisibility.findOpen( entry._id, bOpen ) )
                     entry._pInstance->setOpen( bOpen );
             }
         }
@@ -212,24 +211,24 @@ namespace sw::editor
         _bFrontTabPending   = SW_TRUE;
         _frontTabFrameCount = 0;
         _pendingLayoutIni.clear();
-        _pendingLayoutVisibility.clear();
+        _pendingLayoutVisibility._mapOpen.clear();
     }
 
     void EditorDockLayout::initializePersistencePaths()
     {
         _imguiIniPath.clear();
-        _windowsIniPath.clear();
+        _panelVisibilityPath.clear();
 
         const string imguiPath   = EditorPaths::resolveEditorStateFile( EditorPaths::kImguiIniFileName );
-        const string windowsPath = EditorPaths::resolveEditorStateFile( EditorPaths::kWindowsIniFileName );
+        const string windowsPath = EditorPaths::resolveEditorStateFile( EditorPaths::kPanelVisibilityFileName );
         if ( imguiPath.empty() || windowsPath.empty() )
         {
             SW_LOG_WARNING( "Failed to resolve Saved/Editor - layout will not persist." );
             return;
         }
 
-        _imguiIniPath   = imguiPath;
-        _windowsIniPath = windowsPath;
+        _imguiIniPath        = imguiPath;
+        _panelVisibilityPath = windowsPath;
         SW_LOG_TRACE( "Layout persistence dir: %#", FileUtil::getDirectoryPart( imguiPath ).c_str() );
     }
 
@@ -255,7 +254,7 @@ namespace sw::editor
             return;
 
         // 진단 스위치가 켜져 있으면 저장된 가시성을 읽지 않는다. 도구 패널은 기본이 닫힘이고
-        // windows.ini 도 닫힘으로 기억하므로, 등록 시점에 열어 두어도 여기서 곧바로 닫힌다.
+        // windows.json 도 닫힘으로 기억하므로, 등록 시점에 열어 두어도 여기서 곧바로 닫힌다.
         if ( isOpeningAllPanels() )
         {
             for ( const EditorPanelEntry& entry : pContext->getSubsystem<EditorPanelManager>().getPanels() )
@@ -263,7 +262,7 @@ namespace sw::editor
                 if ( entry._pInstance != nullptr )
                     entry._pInstance->setOpen( true );
             }
-            SW_LOG_INFO( "gv_editorOpenPanel=all: 등록된 패널을 전부 열었습니다 (windows.ini 복원 건너뜀)." );
+            SW_LOG_INFO( "gv_editorOpenPanel=all: 등록된 패널을 전부 열었습니다 (windows.json 복원 건너뜀)." );
             return;
         }
 
@@ -293,13 +292,16 @@ namespace sw::editor
             return;
         }
 
-        if ( _windowsIniPath.empty() || FileUtil::exists( _windowsIniPath ) == false )
+        if ( _panelVisibilityPath.empty() )
             return;
 
-        KeyValueMap visibilityKv;
-        if ( KeyValueFile::loadFile( _windowsIniPath, visibilityKv ) == false )
+        // 처음 실행이면 파일이 없다(등록한 기본 가시성 그대로). 깨진 파일은 키와 함께 오류를 남기고 지금 상태로 둔다.
+        EditorPanelVisibility  visibility;
+        const ConfigReadResult visibilityResult = visibility.loadFile( _panelVisibilityPath );
+        if ( visibilityResult != ConfigReadResult::Loaded )
         {
-            SW_LOG_WARNING( "Failed to open windows.ini: %#", _windowsIniPath.c_str() );
+            if ( visibilityResult == ConfigReadResult::Invalid )
+                SW_LOG_WARNING( "Panel visibility file is not valid - panels keep their registered visibility: %#", _panelVisibilityPath.c_str() );
             return;
         }
 
@@ -307,13 +309,13 @@ namespace sw::editor
         {
             if ( entry._pInstance == nullptr )
                 continue;
-            // 적지 않은 패널은 지금 상태 그대로다. 깨진 줄은 읽기가 키와 함께 알리고, 그 패널도 지금 상태로 둔다.
+            // 적지 않은 패널은 지금 상태 그대로다.
             bool bOpen = entry._pInstance->isOpen();
-            if ( KeyValueFile::readOptionalInto( visibilityKv, entry._id, bOpen ) )
+            if ( visibility.findOpen( entry._id, bOpen ) )
                 entry._pInstance->setOpen( bOpen );
         }
 
-        SW_LOG_TRACE( "Restored panel visibility from %#", _windowsIniPath.c_str() );
+        SW_LOG_TRACE( "Restored panel visibility from %#", _panelVisibilityPath.c_str() );
     }
 
     void EditorDockLayout::save()
@@ -324,21 +326,20 @@ namespace sw::editor
 
         // 스위치로 정한 가시성(전부 열기, 하나만 열기)을 사용자의 레이아웃으로 굳히지 않는다. 스위치를 한 번 켰다고
         // 다음 실행부터 모든 패널이 열리거나 그 패널 하나만 열려서는 안 된다.
-        if ( _windowsIniPath.empty() == false && isPanelOverrideActive() == false )
+        if ( _panelVisibilityPath.empty() == false && isPanelOverrideActive() == false )
         {
-            KeyValueMap visibilityKv;
+            EditorPanelVisibility visibility;
             for ( const EditorPanelEntry& entry : pContext->getSubsystem<EditorPanelManager>().getPanels() )
             {
                 if ( entry._pInstance == nullptr )
                     continue;
-                visibilityKv[entry._id] = entry._pInstance->isOpen() ? "1" : "0";
+                visibility._mapOpen[entry._id] = entry._pInstance->isOpen();
             }
 
-            if ( KeyValueFile::saveFile( _windowsIniPath, visibilityKv, "Editor panel visibility (1=open, 0=closed)",
-                                         "WindowVisibility" ) )
-                SW_LOG_TRACE( "Saved panel visibility to %#", _windowsIniPath.c_str() );
+            if ( visibility.saveFile( _panelVisibilityPath ) )
+                SW_LOG_TRACE( "Saved panel visibility to %#", _panelVisibilityPath.c_str() );
             else
-                SW_LOG_WARNING( "Failed to write windows.ini: %#", _windowsIniPath.c_str() );
+                SW_LOG_WARNING( "Failed to write the panel visibility file: %#", _panelVisibilityPath.c_str() );
         }
 
         // 도킹 레이아웃도 같다. 스위치가 만든 배치(전부 떠 있는 창, 기본 배치)를 사용자의 imgui.ini 에 쓰지 않는다.

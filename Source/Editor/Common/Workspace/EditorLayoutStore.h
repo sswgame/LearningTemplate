@@ -6,13 +6,14 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/File/KeyValueFile.h"
+
+#include "Editor/Common/Workspace/EditorPanelVisibility.h"
 
 namespace sw::editor
 {
     /**
      * @class EditorLayoutStore
-     * @brief 레이아웃 하나는 폴더 안의 파일 둘입니다 — `<이름>.imgui.ini`(ImGui 도킹 · 창 배치)와 `<이름>.windows.ini`(패널 가시성).
+     * @brief 레이아웃 하나는 폴더 안의 파일 둘입니다 — `<이름>.imgui.ini`(ImGui 도킹 · 창 배치, ImGui 의 형식)와 `<이름>.windows.json`(패널 가시성, `EditorPanelVisibility`).
      * @details 기본 폴더는 `Saved/Editor/Layouts/`(앱이 쓰는 상태라 git 이 무시합니다). 이름은 영숫자 · 공백 · `_` · `-` 만 받습니다 —
      *          파일 이름이 되므로 경로 문자(`/` · `..`)가 섞이면 안 됩니다. 도킹 배치를 읽고 쓰는 일(ImGui)은 `EditorDockLayout` 이 합니다.
      */
@@ -24,7 +25,7 @@ namespace sw::editor
         /** @brief 도킹 배치 파일의 접미사입니다. */
         static constexpr const utf8* kImguiSuffix = ".imgui.ini";
         /** @brief 패널 가시성 파일의 접미사입니다. */
-        static constexpr const utf8* kVisibilitySuffix = ".windows.ini";
+        static constexpr const utf8* kVisibilitySuffix = ".windows.json";
         /** @brief 이름의 최대 길이(바이트)입니다. */
         static constexpr uint32 kMaxNameLength = 64;
 
@@ -41,9 +42,9 @@ namespace sw::editor
         /** @brief 폴더의 레이아웃 이름을 사전순으로 채웁니다(도킹 배치 파일이 있는 것만). */
         static void collectNames( string_view folder, vector<string>& outListName );
         /** @brief 레이아웃 파일 둘을 씁니다. 폴더가 없으면 만듭니다. */
-        [[nodiscard]] static bool save( string_view folder, string_view name, string_view imguiIniText, const KeyValueMap& panelVisibility );
-        /** @brief 레이아웃 파일 둘을 읽습니다. 가시성 파일은 없어도 됩니다(빈 표). */
-        [[nodiscard]] static bool load( string_view folder, string_view name, string& outImguiIniText, KeyValueMap& outPanelVisibility );
+        [[nodiscard]] static bool save( string_view folder, string_view name, string_view imguiIniText, const EditorPanelVisibility& panelVisibility );
+        /** @brief 레이아웃 파일 둘을 읽습니다. 가시성 파일은 없어도 됩니다(빈 표). 깨진 가시성 파일은 경고를 남기고 빈 표입니다(도킹 배치는 읽는다). */
+        [[nodiscard]] static bool load( string_view folder, string_view name, string& outImguiIniText, EditorPanelVisibility& outPanelVisibility );
         /** @brief 레이아웃 파일 둘을 지웁니다. */
         [[nodiscard]] static bool remove( string_view folder, string_view name );
     };

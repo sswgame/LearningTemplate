@@ -31,10 +31,10 @@ SW_TEST_CASE( EditorLayoutStoreTest, SaveLoadListRemoveRoundTrip )
     const string folder = test::makeTempPath( "sw_layout_store" );
     (void)FileUtil::removeDirectory( folder ); // 앞 실행이 남긴 것 — 없으면 그대로
 
-    KeyValueMap visibility;
-    visibility["hierarchy"] = "1";
-    visibility["history"]   = "0";
-    const string iniText    = "[Window][Hierarchy]\nPos=0,0\nSize=200,400\n";
+    EditorPanelVisibility visibility;
+    visibility._mapOpen["hierarchy"] = true;
+    visibility._mapOpen["history"]   = false;
+    const string iniText             = "[Window][Hierarchy]\nPos=0,0\nSize=200,400\n";
     SW_ASSERT_TRUE( EditorLayoutStore::save( folder, "Beta", iniText, visibility ) );
     SW_ASSERT_TRUE( EditorLayoutStore::save( folder, "Alpha", iniText, visibility ) );
 
@@ -44,12 +44,14 @@ SW_TEST_CASE( EditorLayoutStoreTest, SaveLoadListRemoveRoundTrip )
     SW_EXPECT_STREQ( "Alpha", listName[0].c_str() );
     SW_EXPECT_STREQ( "Beta", listName[1].c_str() );
 
-    string      loadedIni;
-    KeyValueMap loadedVisibility;
+    string                loadedIni;
+    EditorPanelVisibility loadedVisibility;
     SW_ASSERT_TRUE( EditorLayoutStore::load( folder, "Beta", loadedIni, loadedVisibility ) );
     SW_EXPECT_TRUE( loadedIni == iniText );
-    SW_EXPECT_TRUE( KeyValueFile::readRequired<bool>( loadedVisibility, "hierarchy" ) == true );
-    SW_EXPECT_TRUE( KeyValueFile::readRequired<bool>( loadedVisibility, "history" ) == false );
+    bool bHierarchyOpen = false;
+    bool bHistoryOpen   = true;
+    SW_EXPECT_TRUE( loadedVisibility.findOpen( "hierarchy", bHierarchyOpen ) && bHierarchyOpen );
+    SW_EXPECT_TRUE( loadedVisibility.findOpen( "history", bHistoryOpen ) && bHistoryOpen == false );
 
     SW_EXPECT_TRUE( EditorLayoutStore::remove( folder, "Beta" ) );
     EditorLayoutStore::collectNames( folder, listName );

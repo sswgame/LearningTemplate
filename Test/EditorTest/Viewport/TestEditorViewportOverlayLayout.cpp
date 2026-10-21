@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
+
 #include "Editor/Viewport/EditorViewportOverlayLayout.h"
 
 #include "TestFramework/TestFramework.h"
@@ -69,11 +71,12 @@ SW_TEST_CASE( EditorViewportOverlayLayoutTest, SaveLoadAndReset )
     pView->_fraction   = float2{ 0.0f, 0.25f };
     pView->_bCollapsed = true;
     pView->_bVisible   = false;
-    KeyValueMap mapData;
-    saved.writeTo( "scene", mapData );
+    const string path  = test::makeTempPath( "sw_overlay_layout.json" );
+    SW_ASSERT_TRUE( saved.saveFile( path ) );
 
     EditorViewportOverlayLayout loaded;
-    loaded.readFrom( "scene", mapData );
+    SW_ASSERT_TRUE( loaded.loadFile( path ) == ConfigReadResult::Loaded );
+    (void)FileUtil::removeFile( path ); // 테스트 파일 정리 — 실패해도 다음 실행이 덮어쓴다
     loaded.registerBar( makeBar( "view", EditorOverlayDock::Top, 0.0f, 0.0f ) );
     const EditorOverlayBarState* pLoaded = loaded.findBar( "view" );
     SW_ASSERT_NOT_NULL( pLoaded );
