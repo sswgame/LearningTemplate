@@ -7,7 +7,6 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
 #include "Core/Network/Connection/NetConnection.h"
-#include "Core/Network/Connection/NetFlowLog.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/NetTransport.h"
 #include "Core/Process/Process.h"
@@ -62,18 +61,6 @@ namespace sw
                 }
                 return NetDisconnectReason::Rejected;
             }
-#if SW_NET_FLOW_LOG_ENABLED
-            /**
-             * @brief 신뢰 순서 메시지 하나의 흐름 사건을 남깁니다(트레이스의 프로세스 사이 화살표). 타임라인 기록이 꺼져 있으면 원자 하나 읽고 돌아온다.
-             * @param bFromServer 메시지를 보낸 쪽이 서버인가(보낼 때는 이 호스트, 받을 때는 상대)
-             * @param orderedIndex 그 연결 · 방향의 신뢰 순서 채널에서 몇 번째 메시지인가(0 부터)
-             */
-            static void recordFlow( const NetHostSlot& slot, bool bFromServer, uint64 orderedIndex, const uint8* pData, int32 size, bool bReceive )
-            {
-                const uint8 kind = ( pData != nullptr && size > 0 ) ? pData[0] : static_cast<uint8>( 0 );
-                NetFlowLog::record( NetFlowLog::makeFlowID( slot.getConnectionToken(), bFromServer, orderedIndex ), kind, bReceive );
-            }
-#endif
         };
     } // namespace
 } // namespace sw
@@ -821,6 +808,7 @@ namespace sw
                 slot._lastReceiveTime = packet._nowSeconds;
                 slot._lastSendTime    = -1.0;
                 slot._connection.reset();
+                slot._connection.setFlowIdentity( slot.getConnectionToken(), false ); // 트레이스 흐름 id(`NetFlowLog`)의 연결 신원
                 _clientIndex = static_cast<int32>( packet._valueA );
                 pushEvent( NetHostEvent{ 0, NetDisconnectReason::None, NetHostEvent::Kind::Connected } );
                 return;
@@ -932,6 +920,7 @@ namespace sw
         slot._lastReceiveTime = packet._nowSeconds;
         slot._lastSendTime    = -1.0;
         slot._connection.reset();
+        slot._connection.setFlowIdentity( slot.getConnectionToken(), true ); // 트레이스 흐름 id(`NetFlowLog`)의 연결 신원
         slot._security = std::move( security );
         // 키 확인 태그는 서버에서 클라이언트로 가는 키로 빈 데이터를 봉인한 값이다. 수락을 다시 보낼 때도 같은 태그를 쓴다.
         if ( slot._security != nullptr )
@@ -1043,13 +1032,7 @@ namespace sw
         NetHostSlot* pSlot   = _slotTable.findConnected( connectionID );
         const bool   bQueued = pSlot != nullptr && pSlot->_connection.sendMessage( channel, pData, size );
         if ( bQueued )
-        {
             _sentKindTally.add( pData, size );
-#if SW_NET_FLOW_LOG_ENABLED
-            if ( channel == NetChannelType::ReliableOrdered )
-                NetHostInternal::recordFlow( *pSlot, _bServer != SW_FALSE, pSlot->_connection.getOrderedSentCount() - 1, pData, size, false );
-#endif
-        }
         return bQueued;
     }
 
@@ -1086,11 +1069,6 @@ namespace sw
             {
                 if ( slot._connection.receiveMessage( static_cast<NetChannelType>( channel ), outBuffer ) )
                 {
-#if SW_NET_FLOW_LOG_ENABLED
-                    if ( static_cast<NetChannelType>( channel ) == NetChannelType::ReliableOrdered )
-                        NetHostInternal::recordFlow( slot, _bServer == SW_FALSE, slot._connection.getOrderedReceivedCount() - 1, outBuffer.data(),
-                                                     static_cast<int32>( outBuffer.size() ), true );
-#endif
                     outConnectionID = index;
                     outChannel      = static_cast<NetChannelType>( channel );
                     _receiveCursor  = index; // 다음에는 같은 연결부터 이어서 비운다.
@@ -1169,11 +1147,6 @@ namespace sw
                     message._size         = end - offset;
                     message._channel      = static_cast<NetChannelType>( channel );
                     outInbound._listMessage.push_back( message );
-#if SW_NET_FLOW_LOG_ENABLED
-                    if ( message._channel == NetChannelType::ReliableOrdered )
-                        NetHostInternal::recordFlow( slot, _bServer == SW_FALSE, slot._connection.getOrderedReceivedCount() - 1, outInbound._bytes.data() + offset,
-                                                     message._size, true );
-#endif
                     offset = end;
                 }
             }

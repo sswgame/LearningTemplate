@@ -46,12 +46,14 @@ App · `GameNetSession`(`Engine/Net` — 엔진 수명이라 게임 모듈 리�
 
 Profiler 탭(시간축 그래프 · 메시지 종류별 비중, `net.stats` 질의)은 들어갔습니다. 종류별 셈은 받은 쪽(`NetMessageRouter`)과 보낸 쪽(`NetHost::copySentKindTally` — 큐에 넣은 것)이 같은 표(`NetMessageKindTallyTable`)를 쓰고, 보고 줄은 `kinds=` · `sentKinds=` 둘을 싣습니다(탭의 "Sent").
 
-- 트레이스의 메시지 흐름(2026-10-22, `wt/planleftA`, 빌드 미확인): `NetHost` 가 **신뢰 순서 채널** 메시지를 큐에 넣을 때와 꺼낼 때 `NetFlowLog::record`(`Core/Network/Connection`, 프로세스 링 4096 칸)에 찍고,
+- 트레이스의 메시지 흐름(2026-10-22, `wt/planleftA`, 빌드 미확인): **모든 채널**의 메시지가 보낸 곳 · 받은 곳에서 `NetFlowLog::record`(`Core/Network/Connection`, 프로세스 링 4096 칸)에 찍힌다.
   저장(`writeTraceFile`)이 그 구간의 흐름을 "Net messages" 줄에 1 us 구간 + 흐름 이벤트(`s`, `f` + `bp:e`)로 쓴다. 합친 트레이스(S1)에서 같은 id 가 화살표로 이어진다.
   링은 타임라인이 기록하는 동안만 남긴다(`ProfilerTimeline::setRecording` 이 `NetFlowLog::addRecorder` · `removeRecorder`). 링이 Network 층에 있는 까닭은 Core 층 규칙(네트워크는 진단을 include 하지 못한다)이다.
-  id 는 양쪽이 따로 계산한다(`NetFlowLog::makeFlowID` — 연결 토큰 · 보낸 쪽 · 그 채널의 몇 번째 메시지, `NetConnection::getOrderedSentCount` · `getOrderedReceivedCount`). 신뢰 순서는 보낸 순서대로 한 번씩 넘기므로 프로토콜에 칸을 더하지 않았다.
-  확인은 CoreTest `NetworkTest.ReliableOrderedMessagesPairTheirSendAndReceiveFlows`(두 방향 · 비신뢰 제외) · `ProfilerTimelineTest.NetFlowIDMatchesOnBothEndsAndSeparatesDirections` · `NetFlowsAreKeptOnlyWhileATimelineRecords`, EngineTest `NetFlowsAreWrittenAsBoundFlowEvents` 이다.
-  남은 것: 비신뢰 · 순서만 · 신뢰 순서 없음 채널(보낸 N 번째 ≠ 받은 N 번째라 같은 id 를 만들 길이 없다 — 헤더에 흐름 id 를 싣는 Dev 전용 칸이 필요), 실제 두 프로세스 합친 트레이스에서 화살표를 눈으로 보는 확인(`netplay.scenario.xml` + `-gv_traceSaveOnExit`).
+  id 는 양쪽이 따로 계산한다(`NetFlowLog::makeFlowID` — 연결 토큰 · 보낸 쪽 · 채널 · 번호). 찍는 곳은 `NetConnection::recordFlow` 하나이고, 연결 신원은 `NetHost` 가 연결이 맺어질 때 `setFlowIdentity` 로 준다.
+  번호는 채널마다 양쪽이 같게 아는 값이다 — 신뢰 순서는 넣은 · 꺼낸 순번(넣을 때 · 꺼낼 때 찍는다), 신뢰 순서 없음은 선의 신뢰 ID(처음 보낼 때 · 받아들일 때), 비신뢰 · 순서만은 (패킷 번호 << 8 | 패킷 안 자리)(패킷을 쓸 때 · 읽을 때).
+  그래서 선 형식에 칸을 더하지 않았다(Dev 와 Shipping 의 선 형식이 갈라지지 않는다).
+  확인은 CoreTest `NetworkTest.EveryChannelPairsItsSendAndReceiveFlows`(네 채널 · 두 방향) · `ProfilerTimelineTest.NetFlowIDMatchesOnBothEndsAndSeparatesDirections` · `NetFlowsAreKeptOnlyWhileATimelineRecords`, EngineTest `NetFlowsAreWrittenAsBoundFlowEvents` 이다.
+  남은 것: 실제 두 프로세스 합친 트레이스에서 화살표를 눈으로 보는 확인(`netplay.scenario.xml` + `-gv_traceSaveOnExit`).
 - 스냅숏 크기 · 오브젝트별 복제 빈도: 공통 원천이 없다(복제 키트마다 따로 센다 — 예 `DestructionReplicationStats`). 키트가 셈을 `NetStatsReport` 에 싣는 창구를 정한 뒤 그래프를 더한다.
 - 탭이 보이지 않을 때도 기록하기: 지금은 탭이 보일 때와 `netplay.profile` 동안만 묻는다. 세션 프레임 단계에서 늘 묻게 하면 창을 닫아도 남지만 자식 로그에 2 Hz 줄이 늘 쌓인다.
 - 부하 봇(`Tools/OnlineLoadBot`)을 붙여 숫자가 오르는 시나리오(지금 확인은 `net.traffic` 부하의 `netprofiler.scenario.xml`).

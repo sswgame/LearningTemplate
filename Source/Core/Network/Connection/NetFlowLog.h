@@ -1,8 +1,8 @@
 /**
  * @file NetFlowLog.h
- * @brief 신뢰 순서 메시지를 보낸 곳 · 받은 곳을 프로세스 링에 남깁니다. 트레이스 내보내기가 흐름 이벤트(`s` · `f`)로 써서 합친 트레이스에 프로세스 사이 화살표를 그립니다.
- * @details - **id 는 양쪽이 따로 계산한다**(`makeFlowID` — 연결 토큰 · 보낸 쪽 · 그 채널에서 몇 번째 메시지). 신뢰 순서 채널은 보낸 순서 그대로 한 번씩 넘기므로
- *            "보낸 N 번째 = 받은 N 번째" 다(`NetConnection::getOrderedSentCount` · `getOrderedReceivedCount`). 그래서 프로토콜에 칸을 더하지 않는다.
+ * @brief 네트워크 메시지(모든 채널)를 보낸 곳 · 받은 곳을 프로세스 링에 남깁니다. 트레이스 내보내기가 흐름 이벤트(`s` · `f`)로 써서 합친 트레이스에 프로세스 사이 화살표를 그립니다.
+ * @details - **id 는 양쪽이 따로 계산한다**(`makeFlowID` — 연결 토큰 · 보낸 쪽 · 채널 · 양쪽이 같게 아는 번호). 신뢰 순서는 "보낸 N 번째 = 받은 N 번째" 이고,
+ *            신뢰 순서 없음은 선의 신뢰 ID, 비신뢰 · 순서만은 (패킷 번호, 패킷 안 자리)다 — 셋 다 이미 선에 있거나 양쪽이 같은 순서로 세므로 프로토콜에 칸을 더하지 않는다.
  *          - **기록하는 쪽이 있을 때만 남긴다**: 타임라인 기록이 켜진 동안(`ProfilerTimeline::setRecording` 이 `addRecorder` · `removeRecorder`)만이다. 없으면 원자 하나 읽고 돌아온다.
  *          - 링은 Network 층에 있다 — Core 층 규칙상 네트워크가 진단(`ProfilerTimeline`)을 include 하지 못하므로, 진단 · 엔진이 이 링을 읽는다.
  *          - **스레드**: 어느 스레드에서 불러도 된다. 칸은 원자 덧셈으로 잡고 칸마다 도장(쓴 번호 + 1, 쓰는 중 0)으로 읽는 쪽이 덮이는 중인 칸을 버린다.
@@ -12,6 +12,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Network/NetTypes.h"
 
 /** @brief 메시지 흐름 링이 컴파일되는 구성이면 1 입니다(트레이스 내보내기 `SW_PROFILER_TRACE_ENABLED` 와 같은 조건). */
 #if defined( SW_SHIPPING )
@@ -47,10 +48,11 @@ namespace sw
         static constexpr uint32 kCapacity = 4096;
 
         /**
-         * @brief 양쪽이 따로 계산해도 같은 흐름 id 입니다 — 연결 토큰(양쪽 솔트의 XOR) · 보낸 쪽이 서버인가 · 신뢰 순서 채널에서 몇 번째 메시지인가(0 부터).
-         * @details 값은 53 비트 안이다(트레이스 뷰어가 JSON 수를 배정밀도로 읽는다). 위 33 비트가 연결과 방향, 아래 20 비트가 순서 번호(약 백만 메시지마다 돈다 — 트레이스 한 판은 몇 초다).
+         * @brief 양쪽이 따로 계산해도 같은 흐름 id 입니다 — 연결 토큰(양쪽 솔트의 XOR) · 보낸 쪽이 서버인가 · 채널 · 그 채널에서 양쪽이 같게 아는 메시지 번호.
+         * @details 번호는 채널마다 다르다(`NetConnection::recordFlow`): 신뢰 순서는 넣은 · 꺼낸 순번, 신뢰 순서 없음은 신뢰 ID, 비신뢰 · 순서만은 (패킷 번호 << 8 | 패킷 안 자리).
+         *          값은 53 비트 안이다(트레이스 뷰어가 JSON 수를 배정밀도로 읽는다). 위 27 비트가 연결과 방향, 2 비트가 채널, 아래 24 비트가 번호(돌면 겹친다 — 트레이스 한 판은 몇 초다).
          */
-        static uint64 makeFlowID( uint64 connectionToken, bool bFromServer, uint64 orderedIndex );
+        static uint64 makeFlowID( uint64 connectionToken, bool bFromServer, NetChannelType channel, uint64 wireIndex );
 
         /** @brief 기록하는 쪽을 하나 더합니다 · 뺍니다(타임라인 기록이 켜지고 꺼질 때). 하나라도 있으면 `record` 가 남깁니다. */
         static void addRecorder();

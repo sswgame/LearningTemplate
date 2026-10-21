@@ -36,14 +36,18 @@ namespace sw
         constexpr uint32 kReceiveBit = 0x100u;
     } // namespace
 
-    uint64 NetFlowLog::makeFlowID( uint64 connectionToken, bool bFromServer, uint64 orderedIndex )
+    uint64 NetFlowLog::makeFlowID( uint64 connectionToken, bool bFromServer, NetChannelType channel, uint64 wireIndex )
     {
-        constexpr uint64 kIndexBits      = 20;
-        constexpr uint64 kConnectionBits = 33;
-        // 방향은 토큰에 황금비를 섞어 가른다 — 같은 연결의 두 방향이 같은 순서 번호를 쓴다.
+        constexpr uint64 kIndexBits      = 24;
+        constexpr uint64 kChannelBits    = 2;
+        constexpr uint64 kConnectionBits = 27;
+        static_assert( kIndexBits + kChannelBits + kConnectionBits == 53, "the flow id must fit a double's mantissa" );
+        static_assert( static_cast<uint64>( NetChannelType::Count ) <= ( 1ull << kChannelBits ), "the channel field must hold every channel" );
+        // 방향은 토큰에 황금비를 섞어 가른다 — 같은 연결의 두 방향이 같은 번호를 쓴다.
         const uint64 direction  = bFromServer ? HashUtil::kGoldenRatio64 : 0ull;
         const uint64 connection = HashUtil::mix64( connectionToken ^ direction ) & ( ( 1ull << kConnectionBits ) - 1ull );
-        return ( connection << kIndexBits ) | ( orderedIndex & ( ( 1ull << kIndexBits ) - 1ull ) );
+        const uint64 channelBit = static_cast<uint64>( channel ) & ( ( 1ull << kChannelBits ) - 1ull );
+        return ( connection << ( kIndexBits + kChannelBits ) ) | ( channelBit << kIndexBits ) | ( wireIndex & ( ( 1ull << kIndexBits ) - 1ull ) );
     }
 
     void NetFlowLog::addRecorder()

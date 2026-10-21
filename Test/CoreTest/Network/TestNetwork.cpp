@@ -774,10 +774,11 @@ SW_TEST_CASE( NetworkTest, HostsHandshakeExchangeAndSurviveBadNetworks )
 
 #if SW_NET_FLOW_LOG_ENABLED
 /**
- * @brief [NetworkTest] 신뢰 순서 메시지는 보낸 곳과 받은 곳의 흐름 id 가 하나씩 짝지어지고, 비신뢰 메시지는 흐름을 남기지 않는다(두 방향 모두)
- * @details 두 호스트가 한 프로세스라 흐름 링 하나에 양쪽이 쌓인다. 다른 케이스의 흐름과 섞이지 않게 종류 바이트(0xE1 · 0xE2)로 거른다.
+ * @brief [NetworkTest] 모든 채널의 메시지가 보낸 곳과 받은 곳에서 같은 흐름 id 를 하나씩 남긴다(두 방향 — 신뢰 순서 · 신뢰 순서 없음 · 순서만 · 비신뢰)
+ * @details 두 호스트가 한 프로세스라 흐름 링 하나에 양쪽이 쌓인다. 다른 케이스의 흐름과 섞이지 않게 종류 바이트(0xE1 ~ 0xE6)로 거른다.
+ *          id 는 채널마다 양쪽이 같게 아는 번호로 만든다 — 신뢰 순서는 순번, 신뢰 순서 없음은 신뢰 ID, 비신뢰 · 순서만은 (패킷 번호, 패킷 안 자리).
  */
-SW_TEST_CASE( NetworkTest, ReliableOrderedMessagesPairTheirSendAndReceiveFlows )
+SW_TEST_CASE( NetworkTest, EveryChannelPairsItsSendAndReceiveFlows )
 {
     NetHostConfig settings;
     settings._maxConnections = 2;
@@ -788,46 +789,73 @@ SW_TEST_CASE( NetworkTest, ReliableOrderedMessagesPairTheirSendAndReceiveFlows )
     pair.run( 0.3 );
     SW_ASSERT_TRUE( pair.getClient( 0 ).getConnectionState( 0 ) == NetConnectionState::Connected );
 
+    struct FlowCase
+    {
+        uint8          _kind;
+        NetChannelType _channel;
+        int32          _count;
+        bool           _bFromServer;
+    };
+    // 순서만은 같은 종류의 아직 나가지 않은 것을 새것으로 바꾸므로 하나만 보낸다.
+    const FlowCase arrCase[] = {
+        {0xE1,     NetChannelType::ReliableOrdered, 3, false},
+        {0xE3,          NetChannelType::Unreliable, 2, false},
+        {0xE4, NetChannelType::UnreliableSequenced, 1, false},
+        {0xE5,   NetChannelType::ReliableUnordered, 2, false},
+        {0xE2,     NetChannelType::ReliableOrdered, 1,  true},
+        {0xE6,          NetChannelType::Unreliable, 1,  true},
+    };
+
     ProfilerTimeline timeline; // 기록 중인 타임라인이 있어야 흐름이 남는다
     timeline.setRecording( true );
-    constexpr int32 kSentCount = 3;
-    for ( int32 index = 0; index < kSentCount; ++index )
+    size_t serverExpected = 0;
+    size_t clientExpected = 0;
+    for ( const FlowCase& flowCase : arrCase )
     {
-        SW_ASSERT_TRUE( pair.getClient( 0 ).sendMessage( 0, NetChannelType::ReliableOrdered, makeMessage( 0xE1 + ( index << 8 ) ) ) );
+        for ( int32 index = 0; index < flowCase._count; ++index )
+        {
+            const vector<uint8> message = makeMessage( flowCase._kind + ( index << 8 ) );
+            if ( flowCase._bFromServer )
+                SW_EXPECT_EQUAL( 1, pair.getServer().broadcast( flowCase._channel, message.data(), static_cast<int32>( message.size() ) ) );
+            else
+                SW_ASSERT_TRUE( pair.getClient( 0 ).sendMessage( 0, flowCase._channel, message ) );
+        }
+        ( flowCase._bFromServer ? clientExpected : serverExpected ) += static_cast<size_t>( flowCase._count );
     }
-    SW_ASSERT_TRUE( pair.getClient( 0 ).sendMessage( 0, NetChannelType::Unreliable, makeMessage( 0xE1 ) ) ); // 흐름 없음
-    const vector<uint8> reply = makeMessage( 0xE2 );
-    SW_EXPECT_EQUAL( 1, pair.getServer().broadcast( NetChannelType::ReliableOrdered, reply.data(), static_cast<int32>( reply.size() ) ) );
-    vector<vector<uint8>> listReceived;
-    for ( int32 frame = 0; frame < 60 && listReceived.size() < static_cast<size_t>( kSentCount + 1 ); ++frame )
+    vector<vector<uint8>> listServerReceived;
+    size_t                clientReceived = 0;
+    for ( int32 frame = 0; frame < 60 && ( listServerReceived.size() < serverExpected || clientReceived < clientExpected ); ++frame )
     {
         pair.run( 1.0 / 60.0 );
-        drainServerMessages( pair, listReceived );
+        drainServerMessages( pair, listServerReceived );
+        int32          connectionID = -1;
+        NetChannelType channel      = NetChannelType::Unreliable;
+        vector<uint8>  buffer;
+        while ( pair.getClient( 0 ).receiveMessage( connectionID, channel, buffer ) )
+        {
+            ++clientReceived;
+        }
     }
-    int32          connectionID = -1;
-    NetChannelType channel      = NetChannelType::Unreliable;
-    vector<uint8>  buffer;
-    SW_ASSERT_TRUE( pair.getClient( 0 ).receiveMessage( connectionID, channel, buffer ) );
     timeline.setRecording( false );
+    SW_ASSERT_EQUAL( serverExpected, listServerReceived.size() );
+    SW_ASSERT_EQUAL( clientExpected, clientReceived );
 
     vector<NetFlowEvent> listFlow;
     NetFlowLog::collect( 0, ~0ull, listFlow );
-    for ( const uint8 kind : { static_cast<uint8>( 0xE1 ), static_cast<uint8>( 0xE2 ) } )
+    for ( const FlowCase& flowCase : arrCase )
     {
         vector<uint64> listSent;
         vector<uint64> listReceivedID;
         for ( const NetFlowEvent& flow : listFlow )
         {
-            if ( flow._kind == kind )
+            if ( flow._kind == flowCase._kind )
                 ( flow._bReceive ? listReceivedID : listSent ).push_back( flow._id );
         }
-        const size_t expectedCount = kind == 0xE1 ? static_cast<size_t>( kSentCount ) : 1u;
-        SW_EXPECT_EQUAL( expectedCount, listSent.size() );
-        SW_ASSERT_EQUAL( listSent.size(), listReceivedID.size() );
-        for ( size_t index = 0; index < listSent.size(); ++index )
-        {
-            SW_EXPECT_EQUAL( listSent[index], listReceivedID[index] ); // 보낸 N 번째 = 받은 N 번째
-        }
+        const string label = "kind " + sw::to_string( static_cast<uint32>( flowCase._kind ) );
+        SW_EXPECT_TRUE_MSG( listSent.size() == static_cast<size_t>( flowCase._count ), label.c_str() );
+        std::sort( listSent.begin(), listSent.end() );
+        std::sort( listReceivedID.begin(), listReceivedID.end() );
+        SW_EXPECT_TRUE_MSG( listSent == listReceivedID, label.c_str() ); // 보낸 것마다 같은 id 의 받은 것이 하나
     }
 }
 #endif
