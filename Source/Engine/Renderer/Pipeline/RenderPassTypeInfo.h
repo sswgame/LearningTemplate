@@ -162,6 +162,12 @@ namespace sw
         RenderPassType _type{ RenderPassType::Invalid };
         /** @brief 이 패스의 엔진 PSO 가 없을 때 대신 쓸 패스 타입입니다. Invalid 면 대체하지 않습니다. */
         RenderPassType _psoFallbackType{ RenderPassType::Invalid };
+        /**
+         * @brief 엔진 내부 슬롯이 대신 그리는 파이프라인 패스 타입입니다 — PSO 의 컬러 출력 포맷을 그 패스의 선언에서 읽습니다. Invalid 면 자기 선언을 씁니다.
+         * @details 내부 슬롯(`ForwardOpaqueNoDepthWrite`)은 XML 에 나오지 않아 자기 선언이 없다. 선언 없이 만들면 포맷을 알 수 없어 장면 색이 HDR 일 때
+         *          PSO(RGBA8)와 렌더 타깃이 어긋났다(D3D12 ExecuteIndirect 검증 · Vulkan 렌더 패스 비호환). 셰이더 · 깊이 · 블렌드는 그대로 자기 표에서 정한다(쿠커와 같은 답).
+         */
+        RenderPassType _targetSourceType{ RenderPassType::Invalid };
         /** @brief `RenderPassTraitFlag` 의 합입니다. */
         uint32 _flags{ 0 };
         /** @brief 출력 선언이 없을 때의 컬러 RT 수입니다. */

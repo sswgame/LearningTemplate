@@ -237,9 +237,10 @@ namespace sw
                     }
                     case RenderPassType::ForwardOpaqueNoDepthWrite:
                     {
-                        // 깊이 프리패스가 돈 프레임의 불투명 패스다. 깊이는 테스트만 한다.
-                        info._pDefaultShader = &EngineDefaultAssets::_shaderForwardLit;
-                        info._flags          = Flag::kDepthTest | kSceneColorPassFlags;
+                        // 깊이 프리패스가 돈 프레임의 불투명 패스다. 깊이는 테스트만 하고, 그리는 대상은 ForwardOpaque 패스의 선언이다.
+                        info._pDefaultShader   = &EngineDefaultAssets::_shaderForwardLit;
+                        info._flags            = Flag::kDepthTest | kSceneColorPassFlags;
+                        info._targetSourceType = RenderPassType::ForwardOpaque;
                         break;
                     }
                     case RenderPassType::GPUCull:

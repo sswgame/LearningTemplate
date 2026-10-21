@@ -768,7 +768,7 @@ namespace
             if ( bOk )
                 bOk = renderPresentCaptureOf( device.get(), cube._scene, ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str(), listShadow, layoutShadow );
             if ( bOk )
-                bOk = renderPresentCaptureOf( device.get(), cube._scene, emptyShadowPath.c_str(), listEmptyShadow, layoutEmptyShadow );
+                bOk = renderPresentCaptureOf( device.get(), cube._scene, test::makeTempResourceID( emptyShadowPath ).c_str(), listEmptyShadow, layoutEmptyShadow );
 
             if ( bOk && layoutShadow._width == layoutEmptyShadow._width )
             {
@@ -4614,7 +4614,7 @@ SW_TEST_CASE( RenderPassGPUTest, RenamedAttachmentsRenderTheSameImage )
         if ( bOk )
             bOk = renderPresentCaptureOf( device.get(), cube._scene, ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str(), listReference, layoutReference );
         if ( bOk )
-            bOk = renderPresentCaptureOf( device.get(), cube._scene, renamedPath.c_str(), listRenamed, layoutRenamed );
+            bOk = renderPresentCaptureOf( device.get(), cube._scene, test::makeTempResourceID( renamedPath ).c_str(), listRenamed, layoutRenamed );
 
         const bool bComparable = bOk && layoutReference._width == layoutRenamed._width && layoutReference._height == layoutRenamed._height;
         if ( bComparable )
@@ -4635,7 +4635,7 @@ SW_TEST_CASE( RenderPassGPUTest, RenamedAttachmentsRenderTheSameImage )
             test::ScopedLogCollector collector;
             sw::vector<uint8>        listBroken;
             sw::RHITextureMipSpan    layoutBroken{};
-            (void)renderPresentCaptureOf( device.get(), cube._scene, brokenPath.c_str(), listBroken, layoutBroken );
+            (void)renderPresentCaptureOf( device.get(), cube._scene, test::makeTempResourceID( brokenPath ).c_str(), listBroken, layoutBroken );
             SW_EXPECT_TRUE_MSG( collector.countContaining( "컬러 출력이 없습니다" ) == 1, ( sw::string( pName ) + ": " + collector.joined() ).c_str() );
         }
     }
@@ -4711,7 +4711,7 @@ SW_TEST_CASE( RenderPassGPUTest, RenamedGBufferAttachmentsRenderTheSameImage )
         if ( bOk )
             bOk = renderPresentCaptureOf( device.get(), cube._scene, ::test::getEngineDefaultAssets()._defaultDeferredPipeline.c_str(), listReference, layoutReference );
         if ( bOk )
-            bOk = renderPresentCaptureOf( device.get(), cube._scene, renamedPath.c_str(), listRenamed, layoutRenamed );
+            bOk = renderPresentCaptureOf( device.get(), cube._scene, test::makeTempResourceID( renamedPath ).c_str(), listRenamed, layoutRenamed );
 
         const bool bComparable = bOk && layoutReference._width == layoutRenamed._width && layoutReference._height == layoutRenamed._height;
         if ( bComparable )
@@ -4967,7 +4967,7 @@ SW_TEST_CASE( RenderPassGPUTest, DepthPrepassRendersTheSameImage )
         if ( bOk )
             bOk = renderPresentCaptureOf( device.get(), cube._scene, "engine/pipeline/forwardprepasspipeline.xml", listPrepass, layoutPrepass );
         if ( bOk )
-            bOk = renderPresentCaptureOf( device.get(), cube._scene, renamedPath.c_str(), listRenamed, layoutRenamed );
+            bOk = renderPresentCaptureOf( device.get(), cube._scene, test::makeTempResourceID( renamedPath ).c_str(), listRenamed, layoutRenamed );
 
         const bool bComparable = bOk && layoutReference._width == layoutPrepass._width && layoutReference._width == layoutRenamed._width;
         if ( bComparable )
@@ -6262,7 +6262,7 @@ SW_TEST_CASE( RenderPassGPUTest, HalfResolutionAttachmentCoversItsWholeTarget )
         if ( bOk )
         {
             sw::FrameRenderer renderer;
-            bOk = renderer.initialize( device.get(), halfPath ) && renderer.isReady();
+            bOk = renderer.initialize( device.get(), test::makeTempResourceID( halfPath ) ) && renderer.isReady();
             SW_EXPECT_TRUE_MSG( bOk, ( label + "반해상도 블룸 파이프라인을 만들지 못했다" ).c_str() );
             constexpr uint32 kWarmupFrameCount = 3;
             for ( uint32 frameIndex = 0; frameIndex < kWarmupFrameCount && bOk; ++frameIndex )
@@ -6304,7 +6304,7 @@ SW_TEST_CASE( RenderPassGPUTest, HalfResolutionAttachmentCoversItsWholeTarget )
 
 /**
  * @brief [RenderPassGPUTest] 반 크기 원본을 읽는 블룸은 그 원본의 텍셀로 비켜 읽는다 — 4 백엔드
- * @details `forwardpipelinestaged.xml` 의 SceneColor · SceneDepth · BloomColor 를 나눗수 2 로 바꾸면 PostBloom 은 반 크기 원본을 읽어 반 크기에 쓴다. 블룸의 블러는
+ * @details `forwardpipelinestaged.xml` 의 SceneColor · SceneDepth · DepthOfFieldColor · BloomColor 를 나눗수 2 로 바꾸면 PostBloom 은 반 크기 원본(피사계 심도 출력)을 읽어 반 크기에 쓴다. 블룸의 블러는
  *          원본 텍셀 반 칸을 비켜 두 번 읽으므로 출력 텍셀마다 이웃 넷의 평균이 된다. 프레임 텍셀로 비키면 반의 반 칸이라 자기 텍셀 쪽으로 기운다.
  *          CPU 로 두 비킴(원본 텍셀 0.5 칸 · 0.25 칸, 바이리니어)을 흉내 내 GPU 결과가 어느 쪽에 가까운지 본다(비킴은 좌우 · 위아래 대칭이라 행 방향이 상관없다).
  */
@@ -6312,8 +6312,8 @@ SW_TEST_CASE( RenderPassGPUTest, HalfResolutionBloomBlursByTheSourceTexel )
 {
     sw::string pipelineText;
     SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( "engine/pipeline/forwardpipelinestaged.xml", pipelineText ) );
-    // 깊이도 같이 나눈다 — 한 패스의 출력(색 · 깊이)은 같은 크기여야 한다(파이프라인 검증).
-    for ( const utf8* pName : { "SceneColor", "SceneDepth", "BloomColor" } )
+    // 깊이도 같이 나눈다 — 한 패스의 출력(색 · 깊이)은 같은 크기여야 한다(파이프라인 검증). 블룸의 원본은 피사계 심도의 출력(조리개 0 이면 장면 색 그대로)이다.
+    for ( const utf8* pName : { "SceneColor", "SceneDepth", "DepthOfFieldColor", "BloomColor" } )
     {
         const sw::string declaration = sw::string( "<RenderPassAttachment _name=\"" ) + pName + "\"";
         SW_ASSERT_TRUE( pipelineText.find( declaration ) != sw::string::npos );
@@ -6401,13 +6401,13 @@ SW_TEST_CASE( RenderPassGPUTest, HalfResolutionBloomBlursByTheSourceTexel )
         if ( bOk )
         {
             sw::FrameRenderer renderer;
-            bOk = renderer.initialize( device.get(), halfPath ) && renderer.isReady();
+            bOk = renderer.initialize( device.get(), test::makeTempResourceID( halfPath ) ) && renderer.isReady();
             SW_EXPECT_TRUE_MSG( bOk, ( label + "반해상도 원본 · 블룸 파이프라인을 만들지 못했다" ).c_str() );
             for ( uint32 frameIndex = 0; frameIndex < 3 && bOk; ++frameIndex )
             {
                 bOk = renderSceneFrame( renderer, device.get(), stage._scene );
             }
-            bOk = bOk && sceneColor.readTransient( renderer, "SceneColor" ) && bloomColor.readTransient( renderer, "BloomColor" );
+            bOk = bOk && sceneColor.readTransient( renderer, "DepthOfFieldColor" ) && bloomColor.readTransient( renderer, "BloomColor" );
             SW_EXPECT_TRUE_MSG( bOk, ( label + "그리거나 되읽지 못했다" ).c_str() );
             renderer.shutdown();
         }
