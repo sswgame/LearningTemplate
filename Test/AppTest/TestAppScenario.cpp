@@ -8,6 +8,7 @@
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Automation/AutomationScenario.h"
+#include "Engine/Automation/ScenarioRecorder.h"
 #include "Engine/Config/GameSelection.h"
 #include "Engine/Resource/ResourcePaths.h"
 
@@ -347,8 +348,10 @@ SW_TEST_CASE( AppScenarioTest, RecordedPlayReplaysOnEveryBackend )
         if ( sourceOutcome == test::AppRunOutcome::Failed )
             continue; // 실패는 runScenario 가 기록했다 — 녹화가 없으니 다시 돌릴 것이 없다
         SW_EXPECT_TRUE_MSG( sw::FileUtil::exists( recordedPath ), ( recordedPath + " was not written" ).c_str() );
-        sw::string                replayLines;
-        const test::AppRunOutcome replayOutcome = test::AppTestUtil::runScenario( recordedPath, pSwitch, replayLines, "-game=HarvestValley" );
+        sw::string replayLines;
+        // 쓰기는 디스크 경로, 읽기는 붙인 도메인의 id 다(시나리오 입구는 리소스 id 만 받는다).
+        const sw::string          replayID      = sw::ScenarioRecorder::makeReplayID( recordedPath );
+        const test::AppRunOutcome replayOutcome = test::AppTestUtil::runScenario( replayID, pSwitch, replayLines, "-game=HarvestValley" );
         // 녹화를 낸 백엔드가 다시 돌 때 서지 못하거나 건너뛰면 왕복을 확인하지 못한 것이다.
         SW_EXPECT_TRUE_MSG( test::hasRunHere( replayOutcome ), ( recordedPath + " " + pSwitch + " did not run after the recording run did\n" + replayLines ).c_str() );
     }

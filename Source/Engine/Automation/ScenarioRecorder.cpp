@@ -3,6 +3,7 @@
 #include "Engine/Automation/ScenarioRecorder.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/File/FileUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Automation/AutomationProbe.h"
@@ -11,6 +12,7 @@
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 namespace sw
 {
@@ -624,5 +626,25 @@ namespace sw
         if ( bUnsafeScenarioPath )
             return false;
         return true;
+    }
+
+    bool ScenarioRecorder::mountSavedDomain( string_view workingFolder )
+    {
+        const string savedFolder = FileUtil::joinPath( workingFolder, path::kSavedFolder );
+        if ( FileUtil::ensureDirectoryExists( savedFolder ) == false )
+        {
+            SW_LOG_ERROR( "[Scenario] could not create '%#' for the '%#' domain", savedFolder.c_str(), kSavedDomain );
+            return false;
+        }
+        return ResourcePaths::mountDiskDomain( kSavedDomain, savedFolder ); // 거절하면 이유를 로그로 남긴다
+    }
+
+    string ScenarioRecorder::makeReplayID( string_view outputPath )
+    {
+        if ( isAllowedOutputPath( outputPath ) == false )
+            return {};
+        // `Saved/` 를 도메인 이름으로 바꾼다. 나머지는 표기 그대로 둔다(리눅스는 대소문자를 가린다 — `ResourcePaths::findLooseFile` 이 원래 표기로 다시 찾는다).
+        const size_t firstSlash = outputPath.find( '/' );
+        return string( kSavedDomain ) + string( outputPath.substr( firstSlash ) );
     }
 } // namespace sw

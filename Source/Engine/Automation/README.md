@@ -102,7 +102,8 @@ frame 900 <ExpectVisited> #3: AI.State(FarmAutoFarmer) never went through 'Till 
 에디터 기능을 잇는 흐름 시나리오는 `engine/automation/editor/flow*.scenario.xml` 이고, 기능별 표는 [에디터 시나리오 표](../../../docs/plans/EditorScenarios.md) 에 있습니다.
 
 **결정적 재생과 녹화.** `-scenario-record=<Saved/Automation/...scenario.xml>` 를 주면 씬 플레이 첫 프레임부터 입력(시나리오가 낸 가상 입력 포함)을 적고, 끝날 때 `-scenario-record-probes` 의 탐침 값을 끝 프레임의 `<Expect>` 로 씁니다.
-녹화를 다시 돌리면 같은 입력과 같은 고정 틱이므로 같은 값이 나와야 합니다. `AppScenarioTest.RecordedPlayReplaysOnEveryBackend` 가 이 왕복을 네 백엔드에서 확인합니다.
+녹화를 다시 돌리면 같은 입력과 같은 고정 틱이므로 같은 값이 나와야 합니다. 다시 돌릴 때는 디스크 경로가 아니라 id 를 줍니다 — 시나리오 실행은 작업 폴더의 `Saved` 를 디스크 도메인 `saved` 로 붙이므로
+`Saved/Automation/Recorded/a.scenario.xml` 은 `-scenario=saved/Automation/Recorded/a.scenario.xml` 입니다(`ScenarioRecorder::makeReplayID`, 녹화를 마칠 때 로그에도 찍힌다). `AppScenarioTest.RecordedPlayReplaysOnEveryBackend` 가 이 왕복을 네 백엔드에서 확인합니다.
 
 **로그 게이트.** `<Pass/>` 에 닿은 시나리오도 선언하지 않은 `[Warning]` · `[Error]` 를 남겼으면 실패입니다(`AutomationLogPolicy`). 실행기는 시나리오 구간의 줄과, 프로세스 전체에서 빠진 현지화 키(`LocalizationManager::getMissingKeys`)를 봅니다.
 `AppScenarioTest` 는 같은 판정을 프로세스 출력 전체(기동 · 종료 포함)에 다시 겁니다. 시나리오가 일부러 내는 줄은 그 시나리오에 `<ExpectLog contains="…">` 로 적고,

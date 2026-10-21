@@ -95,15 +95,18 @@ namespace sw
             SW_LOG_ERROR( "[ScenarioRecord] could not write %#", _recordPath.c_str() );
             return;
         }
-        SW_LOG_INFO( "[ScenarioRecord] wrote %# (%# step(s), %# checkpoint(s), %# event(s) skipped)", _recordPath.c_str(), output._writtenStepCount,
-                     static_cast<uint32>( settings._listCheckpoint.size() ), output._skippedEventCount );
+        SW_LOG_INFO( "[ScenarioRecord] wrote %# (%# step(s), %# checkpoint(s), %# event(s) skipped) - replay with -scenario=%#", _recordPath.c_str(),
+                     output._writtenStepCount, static_cast<uint32>( settings._listCheckpoint.size() ), output._skippedEventCount,
+                     ScenarioRecorder::makeReplayID( _recordPath ).c_str() );
     }
 
     bool AutomationSession::begin( string_view scenarioArgument, string_view reportPath, bool bKeepGoing, uint32 completedScreenshotCount )
     {
         _reportPath    = string( reportPath );
         _workingFolder = FileUtil::getCurrentPath();
-        _pChain        = make_unique<AutomationScenarioChain>();
+        // 녹화(`Saved/Automation/…`)를 id(`saved/…`)로 다시 돌릴 수 있게 붙인다. 못 붙이면 오류가 남고 그 id 를 읽는 단계만 읽기 오류로 진다.
+        (void)ScenarioRecorder::mountSavedDomain( _workingFolder );
+        _pChain = make_unique<AutomationScenarioChain>();
         _pChain->begin( AutomationScenarioChain::splitList( scenarioArgument ), bKeepGoing );
         if ( _pChain->isActive() == false )
         {

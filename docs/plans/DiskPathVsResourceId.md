@@ -45,6 +45,6 @@ C 는 B 뒤에도 같은 결함이 다시 나올 때 합니다. 디스크 입구
 ## 5. 남은 확인
 
 - 2026-10-22 통합: nogpu 테스트의 `is an OS path` 오류는 의도한 거절(`ResourceTest.ResourceEntryRefusesOSPathsInEveryMode`)만 남았다. 같이 고친 것 — VAT 쿠커가 쿠킹 폴더 없이 id 를 디스크 경로로 쓰던 것(메시 곁의 디스크 자리로), 퍼즈 대상이 OS 임시 경로를 리소스 입구에 넘겨 아무것도 먹이지 못하던 것.
-- **녹화 시나리오**: App 의 `-scenario=Saved/Automation/Recorded/<x>.scenario.xml`(녹화 재생)이 거절된다 — `Saved` 는 리소스 루트 밖 디스크 폴더다. `Saved` 를 디스크 도메인(`saved`)으로 붙이고 녹화가 그 id 를 쓰게 할지, 시나리오 목록에 디스크 입구를 둘지 정한다(리눅스 대소문자 주의 — 아래).
+- 녹화 시나리오는 `saved` 도메인으로 붙여 id 로 다시 돌린다(결정 기록 5-4, `ScenarioRecorder::makeReplayID`). id 의 도메인 뒤는 표기를 그대로 두므로 리눅스도 원래 표기로 찾는다.
 - 전체 빌드와 `EngineTest` · `EditorTest` · `SmokeTest` 를 Debug · Shipping 으로 돌려 `is an OS path, not a resource id` 오류 줄을 0 으로 만든다. Shipping 쿠킹(`--cook-scenes`)과 에디터 도구 문서 열기 · 저장을 확인한다.
 - 리눅스: 붙인 도메인의 새 파일 쓰기 경로(`ResourcePaths::makeAbsolutePath`)는 키를 소문자로 붙인다 — 대소문자가 섞인 케이스 폴더에 id 로 **쓰는** 테스트가 있으면 디스크 경로로 쓴다.

@@ -1,12 +1,14 @@
 #include "pch.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/File/FileUtil.h"
 
 #include "Engine/Automation/AutomationScenario.h"
 #include "Engine/Automation/ScenarioRecorder.h"
 #include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -185,6 +187,26 @@ SW_TEST_CASE( ScenarioRecorderTest, OutputPathStaysUnderSavedAutomation )
     SW_EXPECT_FALSE( sw::ScenarioRecorder::isAllowedOutputPath( "Saved/BugIt/a.scenario.xml" ) );
     SW_EXPECT_FALSE( sw::ScenarioRecorder::isAllowedOutputPath( "C:/Saved/Automation/a.scenario.xml" ) );
     SW_EXPECT_FALSE( sw::ScenarioRecorder::isAllowedOutputPath( "Saved/Automation/a.xml" ) );
+}
+
+/**
+ * @brief [ScenarioRecorderTest] 디스크 경로로 쓴 녹화는 붙인 `saved` 도메인의 id 로 다시 읽힌다 — 시나리오 입구는 리소스 id 만 받는다
+ */
+SW_TEST_CASE( ScenarioRecorderTest, RecordingIsReadBackThroughTheSavedDomain )
+{
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+    constexpr const utf8* kOutputPath = "Saved/Automation/Recorded/UnitReplay.scenario.xml";
+    SW_EXPECT_EQUAL( sw::string( "saved/Automation/Recorded/UnitReplay.scenario.xml" ), sw::ScenarioRecorder::makeReplayID( kOutputPath ) );
+    SW_EXPECT_TRUE( sw::ScenarioRecorder::makeReplayID( "Saved/BugIt/a.scenario.xml" ).empty() );
+
+    SW_ASSERT_TRUE( sw::ScenarioRecorder::mountSavedDomain( sw::FileUtil::getCurrentPath() ) );
+    SW_ASSERT_TRUE( sw::FileUtil::ensureParentDirectoryExists( kOutputPath ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( kOutputPath, R"(<Scenario name="UnitReplay"><At frame="1"><Pass/></At></Scenario>)" ) );
+    sw::AutomationScenario scenario;
+    sw::string             error;
+    SW_EXPECT_TRUE_MSG( scenario.loadFromPath( sw::ScenarioRecorder::makeReplayID( kOutputPath ), error ), error.c_str() );
+    SW_EXPECT_TRUE( scenario.getName() == "UnitReplay" );
+    (void)sw::FileUtil::tryRemoveFile( kOutputPath ); // 다음 실행이 새로 쓴다
 }
 
 /**
