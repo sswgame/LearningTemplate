@@ -53,7 +53,7 @@ SW_TEST_CASE( MaterialTest, MaterialLoadAndSave )
     SW_EXPECT_TRUE( sw::FileUtil::exists( tempPath ) );
 
     sw::shared_ptr<sw::Material> reloadedMaterial = sw::Material::create();
-    bool                         reloadOk         = reloadedMaterial->loadFromFile( tempPath );
+    bool                         reloadOk         = reloadedMaterial->loadFromFile( ::test::makeTempResourceID( tempPath ) );
     SW_EXPECT_TRUE( reloadOk );
     SW_EXPECT_EQUAL( material->getName(), reloadedMaterial->getName() );
 }
@@ -132,7 +132,7 @@ SW_TEST_CASE( MaterialTest, StaticSwitchOffKeywordWhenDisabled )
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( tempPath, reinterpret_cast<const uint8*>( xml ), static_cast<uint64>( sw::StringUtil::strlen( xml ) ) ) );
 
     sw::shared_ptr<sw::Material> material = sw::Material::create();
-    SW_ASSERT_TRUE( material->loadFromFile( tempPath ) );
+    SW_ASSERT_TRUE( material->loadFromFile( ::test::makeTempResourceID( tempPath ) ) );
 
     auto has = [&material]( const utf8* pDefine )
     {
@@ -176,7 +176,7 @@ SW_TEST_CASE( MaterialTest, MaterialEnumBitFlagPack )
     SW_EXPECT_TRUE( sw::FileUtil::writeFile( tempPath, reinterpret_cast<const uint8*>( xml ), static_cast<uint64>( sw::StringUtil::strlen( xml ) ) ) );
 
     sw::shared_ptr<sw::Material> material = sw::Material::create();
-    SW_EXPECT_TRUE( material->loadFromFile( tempPath ) );
+    SW_EXPECT_TRUE( material->loadFromFile( ::test::makeTempResourceID( tempPath ) ) );
 
     const uint32* shade = reinterpret_cast<const uint32*>( material->getParameterData( "shadeMode" ) );
     const uint32* flags = reinterpret_cast<const uint32*>( material->getParameterData( "flags" ) );
@@ -264,7 +264,7 @@ SW_TEST_CASE( MaterialTest, MaterialDefaultAndInstanceOverride )
     instance->setName( "TestMic" );
     SW_EXPECT_TRUE( instance->saveToFile( tempPath ) );
     sw::shared_ptr<sw::MaterialInstance> reloaded = sw::MaterialInstance::create( material.get() );
-    SW_EXPECT_TRUE( reloaded->loadFromFile( tempPath ) );
+    SW_EXPECT_TRUE( reloaded->loadFromFile( ::test::makeTempResourceID( tempPath ) ) );
     SW_EXPECT_TRUE( reloaded->isParameterOverridden( sw::hashed_string( "color" ) ) );
 }
 
@@ -1000,7 +1000,7 @@ SW_TEST_CASE( MaterialTest, InstanceTextureOverrideRoundTripsAsAnAssetPath )
     SW_EXPECT_TRUE_MSG( text.find( "assetPath=\"engine/textures/perlin.dds\"" ) != sw::string::npos, text.c_str() );
 
     sw::shared_ptr<sw::MaterialInstance> reloaded = sw::MaterialInstance::create( parent.get() );
-    SW_ASSERT_TRUE( reloaded->loadFromFile( path ) );
+    SW_ASSERT_TRUE( reloaded->loadFromFile( ::test::makeTempResourceID( path ) ) );
     SW_EXPECT_TRUE_MSG( reloaded->getTextureParameter( sw::hashed_string( "albedoMap" ) ) == "engine/textures/perlin.dds", text.c_str() );
     SW_EXPECT_TRUE( reloaded->isParameterOverridden( sw::hashed_string( "albedoMap" ) ) );
 
@@ -1110,9 +1110,9 @@ SW_TEST_CASE( MaterialTest, FormatCheckDoesNotNeedTheAssetManager )
 
         test::ScopedDefensiveTestLog expected( "material files newer than this build" );
         sw::shared_ptr<sw::Material> material = sw::Material::create();
-        SW_EXPECT_FALSE( material->loadFromFile( futureMaterialPath ) );
+        SW_EXPECT_FALSE( material->loadFromFile( ::test::makeTempResourceID( futureMaterialPath ) ) );
         sw::shared_ptr<sw::MaterialInstance> instance = sw::MaterialInstance::create( material.get() );
-        SW_EXPECT_FALSE( instance->loadFromFile( futureInstancePath ) );
+        SW_EXPECT_FALSE( instance->loadFromFile( ::test::makeTempResourceID( futureInstancePath ) ) );
     }
     SW_EXPECT_TRUE( sw::engine::areEngineServicesBound() );
 }

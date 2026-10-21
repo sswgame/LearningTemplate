@@ -475,7 +475,7 @@ SW_TEST_CASE( RetargetTest, BakeClipFileWritesTargetClip )
     AnimationClip baked;
     AnimationClip source;
     Skeleton      minion;
-    SW_ASSERT_TRUE( baked.loadFromResource( outPath ) );
+    SW_ASSERT_TRUE( baked.loadFromResource( ::test::makeTempResourceID( outPath ) ) );
     SW_ASSERT_TRUE( source.loadFromResource( TestRetargetInternal::kKnightWalk ) );
     SW_ASSERT_TRUE( minion.loadFromResource( TestRetargetInternal::kMinionSkeleton ) );
     SW_EXPECT_NEAR_EQUAL( source.getDuration(), baked.getDuration(), 1e-3f );

@@ -167,8 +167,8 @@ SW_TEST_CASE( SpriteClipAssetTest, CacheSharesOneClipPerPath )
     const sw::string path = test::makeTempPath( "shared.sprite.json" );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( path, kClipWithoutAnimations ) );
 
-    sw::shared_ptr<const sw::SpriteClipAsset> first  = sw::SharedAssetCache<sw::SpriteClipAsset>::acquire( path );
-    sw::shared_ptr<const sw::SpriteClipAsset> second = sw::SharedAssetCache<sw::SpriteClipAsset>::acquire( path );
+    sw::shared_ptr<const sw::SpriteClipAsset> first  = sw::SharedAssetCache<sw::SpriteClipAsset>::acquire( ::test::makeTempResourceID( path ) );
+    sw::shared_ptr<const sw::SpriteClipAsset> second = sw::SharedAssetCache<sw::SpriteClipAsset>::acquire( ::test::makeTempResourceID( path ) );
     SW_ASSERT_NOT_NULL( first.get() );
     SW_EXPECT_TRUE( first.get() == second.get() );
     SW_EXPECT_EQUAL( 3, first->getFrameCount() );
@@ -180,7 +180,7 @@ SW_TEST_CASE( SpriteClipAssetTest, CacheSharesOneClipPerPath )
     SW_ASSERT_TRUE( edited.parseJSON( kClipWithoutAnimations ) );
     edited._listFrame.pop_back();
     SW_ASSERT_TRUE( edited.saveToFile( path ) );
-    sw::shared_ptr<const sw::SpriteClipAsset> reloaded = sw::SharedAssetCache<sw::SpriteClipAsset>::acquire( path );
+    sw::shared_ptr<const sw::SpriteClipAsset> reloaded = sw::SharedAssetCache<sw::SpriteClipAsset>::acquire( ::test::makeTempResourceID( path ) );
     SW_ASSERT_NOT_NULL( reloaded.get() );
     SW_EXPECT_EQUAL( 2, reloaded->getFrameCount() );
 

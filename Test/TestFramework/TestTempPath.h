@@ -34,6 +34,18 @@ namespace test
 
     /** @brief 이 프로세스의 임시 폴더 — `<임시 폴더>/sw_<pid>`. 케이스 폴더가 전부 그 아래에 생긴다(실행기가 끝에 거둔다). */
     sw::string getProcessTempDirectory();
+
+    /** @brief 프로세스 임시 폴더를 붙이는 리소스 도메인 이름입니다(`makeTempResourceID`). */
+    inline constexpr const utf8* kTempResourceDomain = "testtemp";
+
+    /**
+     * @brief 프로세스 임시 폴더 아래 디스크 경로(`makeTempPath` · `makeTempDirectory` 가 준 것)를 리소스 id(`testtemp/<...>`)로 바꿉니다.
+     * @details 리소스 입구(`ResourceIO::read*Resource`, 그 위의 로더 · 캐시)는 OS 경로를 받지 않는다(계획 `DiskPathVsResourceId` 안 B). 임시 파일을
+     *          리소스로 읽는 케이스는 쓰기에는 디스크 경로를, 읽기에는 이 id 를 쓴다. 처음 부르면 프로세스 임시 폴더를 도메인 `testtemp` 로 붙인다
+     *          (`ResourcePaths::mountDiskDomain` — 낱개 파일을 막는 배포 구성에서도 디스크에서 읽힌다).
+     * @return 프로세스 임시 폴더 밖 경로이거나 도메인을 붙이지 못하면 케이스를 실패로 기록하고 빈 문자열입니다.
+     */
+    sw::string makeTempResourceID( sw::string_view tempDiskPath );
     /** @brief 이 케이스의 임시 폴더 — `<임시 폴더>/sw_<pid>/<스위트_케이스>`(케이스 이름이 비면 프로세스 폴더). */
     sw::string getCaseTempDirectory( const sw::string& testName );
 } // namespace test

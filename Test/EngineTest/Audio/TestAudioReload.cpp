@@ -60,7 +60,7 @@ SW_TEST_CASE( AudioReloadTest, EventLibraryReloadsFromTheChangedFile )
     sw::unique_ptr<sw::IAudioService> pService = sw::IAudioService::createNull();
     SW_ASSERT_TRUE( pService->initialize() );
     sw::AudioEventLibrary library;
-    SW_ASSERT_TRUE( library.loadFromResource( path ) );
+    SW_ASSERT_TRUE( library.loadFromResource( ::test::makeTempResourceID( path ) ) );
     SW_ASSERT_TRUE( pService->getEngine().loadEventLibrary( sw::hashed_string( path ), library ) );
     SW_EXPECT_TRUE( pService->getEngine().hasEvent( sw::hashed_string( "Alpha" ) ) );
     SW_EXPECT_TRUE( pService->isDataFile( path ) );
@@ -96,12 +96,12 @@ SW_TEST_CASE( AudioReloadTest, MixerGraphReloadsFromTheChangedFile )
 
     sw::unique_ptr<sw::IAudioService> pService = sw::IAudioService::createNull();
     SW_ASSERT_TRUE( pService->initialize() );
-    SW_ASSERT_TRUE( pService->loadMixer( mixerPath ) );
+    SW_ASSERT_TRUE( pService->loadMixer( ::test::makeTempResourceID( mixerPath ) ) );
     SW_EXPECT_STREQ( mixerPath.c_str(), pService->getMixerPath().c_str() );
     SW_EXPECT_TRUE( pService->isDataFile( mixerPath ) );
 
     sw::AudioEventLibrary library;
-    SW_ASSERT_TRUE( library.loadFromResource( libraryPath ) );
+    SW_ASSERT_TRUE( library.loadFromResource( ::test::makeTempResourceID( libraryPath ) ) );
     SW_EXPECT_FALSE( pService->getEngine().loadEventLibrary( sw::hashed_string( libraryPath ), library ) ); // 'extra' 버스가 아직 없다
 
     AudioReloadTestInternal::write( mixerPath, AudioReloadTestInternal::makeMixerXML( "extra" ) );

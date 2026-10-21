@@ -46,7 +46,7 @@ namespace sw
             if ( sw::FileUtil::exists( binPath ) == false )
             {
                 sw::PrefabAsset cooked;
-                if ( cooked.loadFromXMLFile( path ) )
+                if ( cooked.loadFromXMLFile( ::test::makeTempResourceID( path ) ) )
                     (void)cooked.saveToBinaryFile( binPath ); // 못 쓰면 Shipping 의 로드가 실패로 드러난다
             }
             return path;
@@ -69,7 +69,7 @@ namespace sw
         [[nodiscard]] bool writeCookedBeside( const sw::string& sourcePath, bool bJSON )
         {
             sw::PrefabAsset cooked;
-            if ( ( bJSON ? cooked.loadFromJSONFile( sourcePath ) : cooked.loadFromXMLFile( sourcePath ) ) == false )
+            if ( ( bJSON ? cooked.loadFromJSONFile( ::test::makeTempResourceID( sourcePath ) ) : cooked.loadFromXMLFile( ::test::makeTempResourceID( sourcePath ) ) ) == false )
                 return false;
             return cooked.saveToBinaryFile( sw::AssetCookPath::toCookedPath( sourcePath ) ); // 런타임 로더 · 쿠커와 같은 이름 규칙
         }
@@ -107,11 +107,11 @@ namespace sw
 
             sw::vector<sw::PrefabInstanceNode> listNode( 2 );
             listNode[0]._name        = "WheelL";
-            listNode[0]._prefabPath  = wheelPath;
+            listNode[0]._prefabPath  = ::test::makeTempResourceID( wheelPath );
             listNode[0]._attachKey   = "Axle#0";
             listNode[0]._overrideXML = kWheelMovedOverride;
             listNode[1]._name        = "WheelR";
-            listNode[1]._prefabPath  = wheelPath;
+            listNode[1]._prefabPath  = ::test::makeTempResourceID( wheelPath );
             (void)asset.setNestedInstances( std::move( listNode ) ); // 목록 규칙을 지킨다 — 어기면 아래 스폰이 드러낸다
             return asset;
         }
@@ -172,17 +172,17 @@ SW_TEST_CASE( PrefabTest, XMLAndJSONBinaryRoundtrip )
     SW_EXPECT_TRUE( src.saveToBinaryFile( binPath ) );
 
     sw::PrefabAsset fromXML;
-    SW_EXPECT_TRUE( fromXML.loadFromXMLFile( xmlPath ) );
+    SW_EXPECT_TRUE( fromXML.loadFromXMLFile( ::test::makeTempResourceID( xmlPath ) ) );
     SW_EXPECT_TRUE( fromXML.isValid() );
     SW_EXPECT_EQUAL( src.getName(), fromXML.getName() );
 
     sw::PrefabAsset fromJSON;
-    SW_EXPECT_TRUE( fromJSON.loadFromJSONFile( jsonPath ) );
+    SW_EXPECT_TRUE( fromJSON.loadFromJSONFile( ::test::makeTempResourceID( jsonPath ) ) );
     SW_EXPECT_TRUE( fromJSON.isValid() );
     SW_EXPECT_EQUAL( src.getName(), fromJSON.getName() );
 
     sw::PrefabAsset fromBin;
-    SW_EXPECT_TRUE( fromBin.loadFromBinaryFile( binPath ) );
+    SW_EXPECT_TRUE( fromBin.loadFromBinaryFile( ::test::makeTempResourceID( binPath ) ) );
     SW_EXPECT_TRUE( fromBin.isValid() );
     SW_EXPECT_EQUAL( src.getName(), fromBin.getName() );
 }
@@ -206,7 +206,7 @@ SW_TEST_CASE( PrefabTest, MissingSourceDoesNotFallBackToCookedBinaryInDev )
     sw::PrefabAsset* pLoaded{ nullptr };
     {
         SW_TEST_DEFENSIVE_SCOPE( "prefab whose source is gone" );
-        pLoaded = manager.loadPrefab( orphanSourcePath );
+        pLoaded = manager.loadPrefab( ::test::makeTempResourceID( orphanSourcePath ) );
     }
 #if defined( SW_SHIPPING )
     SW_EXPECT_NOT_NULL( pLoaded );
@@ -247,8 +247,8 @@ SW_TEST_CASE( PrefabTest, CacheKeyNormalizesPathAndExtension )
     SW_EXPECT_TRUE( src.saveToBinaryFile( binPath ) );
 
     sw::PrefabCache  manager;
-    sw::PrefabAsset* fromXML  = manager.loadPrefab( xmlPath );
-    sw::PrefabAsset* fromJSON = manager.loadPrefab( jsonPath );
+    sw::PrefabAsset* fromXML  = manager.loadPrefab( ::test::makeTempResourceID( xmlPath ) );
+    sw::PrefabAsset* fromJSON = manager.loadPrefab( ::test::makeTempResourceID( jsonPath ) );
     SW_ASSERT_NOT_NULL( fromXML );
     SW_EXPECT_EQUAL( fromXML, fromJSON );
 
@@ -261,7 +261,7 @@ SW_TEST_CASE( PrefabTest, CacheKeyNormalizesPathAndExtension )
             ch = '/';
     }
     if ( slashFlipped != xmlPath )
-        SW_EXPECT_EQUAL( fromXML, manager.loadPrefab( slashFlipped ) );
+        SW_EXPECT_EQUAL( fromXML, manager.loadPrefab( ::test::makeTempResourceID( slashFlipped ) ) );
 }
 
 /**
@@ -351,11 +351,11 @@ SW_TEST_CASE( PrefabTest, ConvertingAPrefabKeepsItsComponents )
     const sw::string      xmlPath  = test::makeTempPath( "crate_back.prefab.xml" );
     SW_ASSERT_TRUE( source.saveToJSONFile( jsonPath ) );
     sw::PrefabAsset fromJSON;
-    SW_ASSERT_TRUE( fromJSON.loadFromJSONFile( jsonPath ) );
+    SW_ASSERT_TRUE( fromJSON.loadFromJSONFile( ::test::makeTempResourceID( jsonPath ) ) );
     SW_EXPECT_TRUE( fromJSON.getStateFormat() == sw::PrefabStateFormat::JSON );
     SW_ASSERT_TRUE( fromJSON.saveToXMLFile( xmlPath ) );
     sw::PrefabAsset fromXML;
-    SW_ASSERT_TRUE( fromXML.loadFromXMLFile( xmlPath ) );
+    SW_ASSERT_TRUE( fromXML.loadFromXMLFile( ::test::makeTempResourceID( xmlPath ) ) );
 
     sw::GameObjectManager check;
     for ( const sw::PrefabAsset* pAsset : { &fromJSON, &fromXML } )
@@ -470,8 +470,8 @@ SW_TEST_CASE( PrefabTest, SaveToFileWritesThePathsFormatAndRefusesOtherPaths )
     SW_ASSERT_TRUE( crate.saveToFile( xmlPath ) );
     sw::PrefabAsset fromJSON;
     sw::PrefabAsset fromXML;
-    SW_EXPECT_TRUE( fromJSON.loadFromJSONFile( jsonPath ) );
-    SW_EXPECT_TRUE( fromXML.loadFromXMLFile( xmlPath ) );
+    SW_EXPECT_TRUE( fromJSON.loadFromJSONFile( ::test::makeTempResourceID( jsonPath ) ) );
+    SW_EXPECT_TRUE( fromXML.loadFromXMLFile( ::test::makeTempResourceID( xmlPath ) ) );
 
     const sw::string scenePath = test::makeTempPath( "level.scene.xml" );
     const sw::string kScene    = "<Scene name=\"Level\"/>\n";
@@ -657,7 +657,7 @@ SW_TEST_CASE( PrefabTest, CookedPrefabMatchesItsSource )
         sw::PrefabAsset  fromSource;
         sw::PrefabAsset  fromCooked;
         const sw::string sourcePath = sourceRoot + pair._pSource;
-        SW_ASSERT_TRUE_MSG( pair._bJSON ? fromSource.loadFromJSONFile( sourcePath ) : fromSource.loadFromXMLFile( sourcePath ), pair._pSource );
+        SW_ASSERT_TRUE_MSG( pair._bJSON ? fromSource.loadFromJSONFile( ::test::makeTempResourceID( sourcePath ) ) : fromSource.loadFromXMLFile( ::test::makeTempResourceID( sourcePath ) ), pair._pSource );
         SW_ASSERT_TRUE_MSG( fromCooked.loadFromBinaryFile( cookedRoot + pair._pCooked ), pair._pCooked );
         SW_EXPECT_EQUAL( fromSource.getName(), fromCooked.getName() );
 
@@ -699,8 +699,8 @@ SW_TEST_CASE( PrefabTest, ComponentNameSurvivesEveryPrefabFormat )
     sw::PrefabAsset fromXML;
     sw::PrefabAsset fromJSON;
     sw::PrefabAsset fromCooked;
-    SW_ASSERT_TRUE( fromXML.loadFromXMLFile( xmlPath ) );
-    SW_ASSERT_TRUE( fromJSON.loadFromJSONFile( jsonPath ) );
+    SW_ASSERT_TRUE( fromXML.loadFromXMLFile( ::test::makeTempResourceID( xmlPath ) ) );
+    SW_ASSERT_TRUE( fromJSON.loadFromJSONFile( ::test::makeTempResourceID( jsonPath ) ) );
     SW_ASSERT_TRUE( fromCooked.loadFromBinaryFile( sw::AssetCookPath::toCookedPath( jsonPath ) ) );
 
     sw::GameObjectManager check;
@@ -730,13 +730,13 @@ SW_TEST_CASE( PrefabTest, XMLPrefabReadsOnlyTheSavedShape )
     {
         SW_TEST_DEFENSIVE_SCOPE( "a prefab file that is not in the saved shape" );
         sw::PrefabAsset bare;
-        SW_EXPECT_FALSE( bare.loadFromXMLFile( barePath ) );
+        SW_EXPECT_FALSE( bare.loadFromXMLFile( ::test::makeTempResourceID( barePath ) ) );
         sw::PrefabAsset empty;
-        SW_EXPECT_FALSE( empty.loadFromXMLFile( emptyPath ) );
+        SW_EXPECT_FALSE( empty.loadFromXMLFile( ::test::makeTempResourceID( emptyPath ) ) );
     }
 
     sw::PrefabAsset childName;
-    SW_ASSERT_TRUE( childName.loadFromXMLFile( childNamePath ) );
+    SW_ASSERT_TRUE( childName.loadFromXMLFile( ::test::makeTempResourceID( childNamePath ) ) );
     SW_EXPECT_STREQ( "childname.prefab", childName.getName().c_str() ); // 이름 속성이 없으면 파일 이름이다
 }
 
@@ -755,7 +755,7 @@ SW_TEST_CASE( PrefabTest, NestedInstancesSurviveEveryPrefabFormat )
     sw::vector<sw::PrefabInstanceNode> listNode  = cart.getNestedInstances();
     sw::PrefabInstanceNode             hubcap{};
     hubcap._name        = "Hubcap";
-    hubcap._prefabPath  = wheelPath;
+    hubcap._prefabPath  = ::test::makeTempResourceID( wheelPath );
     hubcap._parentIndex = 1; // WheelR 에 붙는다
     listNode.push_back( hubcap );
     SW_ASSERT_TRUE( cart.setNestedInstances( listNode ) );
@@ -770,9 +770,9 @@ SW_TEST_CASE( PrefabTest, NestedInstancesSurviveEveryPrefabFormat )
     sw::PrefabAsset fromXML;
     sw::PrefabAsset fromJSON;
     sw::PrefabAsset fromBinary;
-    SW_ASSERT_TRUE( fromXML.loadFromXMLFile( xmlPath ) );
-    SW_ASSERT_TRUE( fromJSON.loadFromJSONFile( jsonPath ) );
-    SW_ASSERT_TRUE( fromBinary.loadFromBinaryFile( binPath ) );
+    SW_ASSERT_TRUE( fromXML.loadFromXMLFile( ::test::makeTempResourceID( xmlPath ) ) );
+    SW_ASSERT_TRUE( fromJSON.loadFromJSONFile( ::test::makeTempResourceID( jsonPath ) ) );
+    SW_ASSERT_TRUE( fromBinary.loadFromBinaryFile( ::test::makeTempResourceID( binPath ) ) );
     for ( const sw::PrefabAsset* pLoaded : { &fromXML, &fromJSON, &fromBinary } )
     {
         SW_ASSERT_EQUAL( size_t( 3 ), pLoaded->getNestedInstances().size() );
@@ -786,7 +786,7 @@ SW_TEST_CASE( PrefabTest, NestedInstancesSurviveEveryPrefabFormat )
 
     // 부모가 자기보다 뒤인 목록은 받지 않는다.
     sw::vector<sw::PrefabInstanceNode> listBroken( 1 );
-    listBroken[0]._prefabPath  = wheelPath;
+    listBroken[0]._prefabPath  = ::test::makeTempResourceID( wheelPath );
     listBroken[0]._parentIndex = 0;
     {
         SW_TEST_DEFENSIVE_SCOPE( "a nested instance whose parent does not come before it" );
@@ -906,10 +906,10 @@ SW_TEST_CASE( PrefabTest, CircularNestedPrefabIsALoadError )
     sw::GameObject*       pOuter = nullptr;
     {
         SW_TEST_DEFENSIVE_SCOPE( "circular nested prefabs" );
-        SW_EXPECT_NULL( prefabs.loadPrefab( pathA ) );
-        SW_EXPECT_NULL( prefabs.loadPrefab( pathB ) );
-        SW_EXPECT_NULL( prefabs.loadPrefab( pathSelf ) );
-        SW_EXPECT_NOT_NULL( prefabs.loadPrefab( pathOuter ) );
+        SW_EXPECT_NULL( prefabs.loadPrefab( ::test::makeTempResourceID( pathA ) ) );
+        SW_EXPECT_NULL( prefabs.loadPrefab( ::test::makeTempResourceID( pathB ) ) );
+        SW_EXPECT_NULL( prefabs.loadPrefab( ::test::makeTempResourceID( pathSelf ) ) );
+        SW_EXPECT_NOT_NULL( prefabs.loadPrefab( ::test::makeTempResourceID( pathOuter ) ) );
         pOuter = prefabs.spawn( &objects, pathOuter, "Outer" );
     }
     SW_ASSERT_NOT_NULL( pOuter );
@@ -937,7 +937,7 @@ SW_TEST_CASE( PrefabTest, CookFlattensNestedInstancesSoTheOriginalIsNotRead )
     sw::PrefabAsset                    train = sw::makeWheelPrefab( 1.0f );
     sw::vector<sw::PrefabInstanceNode> listCar( 1 );
     listCar[0]._name       = "Car";
-    listCar[0]._prefabPath = cartPath;
+    listCar[0]._prefabPath = ::test::makeTempResourceID( cartPath );
     SW_ASSERT_TRUE( train.setNestedInstances( listCar ) );
     SW_ASSERT_TRUE( sw::writeWithCooked( train, trainPath ) );
     SW_ASSERT_TRUE( sw::writeWithCooked( sw::makeCartPrefab( sourceRoot + "/missing.prefab.xml" ), sourceRoot + "/broken_cart.prefab.xml" ) );
@@ -1047,7 +1047,7 @@ SW_TEST_CASE( PrefabTest, ApplyToOuterPrefabKeepsEditsOfPartsInsideParts )
     sw::PrefabAsset                    train = sw::makeWheelPrefab( 1.0f );
     sw::vector<sw::PrefabInstanceNode> listCar( 1 );
     listCar[0]._name       = "Car";
-    listCar[0]._prefabPath = cartPath;
+    listCar[0]._prefabPath = ::test::makeTempResourceID( cartPath );
     SW_ASSERT_TRUE( train.setNestedInstances( listCar ) );
     SW_ASSERT_TRUE( sw::writeWithCooked( train, trainPath ) );
 

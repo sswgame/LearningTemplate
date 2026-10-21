@@ -355,7 +355,7 @@ SW_TEST_CASE( SocketImportTest, CreatesDraftAndNeverOverwritesHumanFile )
     SW_ASSERT_TRUE( SocketImportUtil::writeIfMissing( path, draft, bWritten ) );
     SW_EXPECT_FALSE( bWritten );
     SocketSet onDisk;
-    SW_ASSERT_TRUE( onDisk.loadFromResource( path, Internal::makeKinds() ) );
+    SW_ASSERT_TRUE( onDisk.loadFromResource( ::test::makeTempResourceID( path ), Internal::makeKinds() ) );
     SW_EXPECT_NEAR_EQUAL( 0.42f, onDisk.findSocket( hashed_string( "Muzzle" ) )->_translation._z, 1.0e-6f );
 }
 

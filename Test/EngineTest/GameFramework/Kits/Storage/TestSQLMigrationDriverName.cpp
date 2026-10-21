@@ -47,7 +47,7 @@ SW_TEST_CASE( SQLMigrationDriverNameTest, MissingDialectBranchIsCaughtForTheAdde
     SW_ASSERT_TRUE( SQLMigrationRunner::collectDialectDriverNames( folder, listDriverName, error ) );
     SW_ASSERT_EQUAL( size_t( 2 ), listDriverName.size() );
     vector<SQLMigration> listMigration;
-    SW_EXPECT_TRUE( SQLMigrationRunner::loadMigrations( folder, "postgres", listMigration, error ) );
+    SW_EXPECT_TRUE( SQLMigrationRunner::loadMigrations( ::test::makeTempResourceID( folder ), "postgres", listMigration, error ) );
     listMigration.clear();
-    SW_EXPECT_FALSE( SQLMigrationRunner::loadMigrations( folder, "sqlite", listMigration, error ) );
+    SW_EXPECT_FALSE( SQLMigrationRunner::loadMigrations( ::test::makeTempResourceID( folder ), "sqlite", listMigration, error ) );
 }

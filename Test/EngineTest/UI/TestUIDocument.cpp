@@ -422,7 +422,7 @@ SW_TEST_CASE( UIDocumentTest, ReloadRebuildsAndKeepsFocusByName )
     UIDocumentFixture fixture;
     const sw::string  path = test::makeTempPath( "reload.ui.xml" );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( path, UIReloadTestUtil::makeReloadDocument( false, "Old" ) ) );
-    const sw::UIScreenHandle handle  = fixture._ui.openScreen( path );
+    const sw::UIScreenHandle handle  = fixture._ui.openScreen( ::test::makeTempResourceID( path ) );
     sw::UIScreen*            pScreen = fixture._ui.findScreen( handle );
     SW_ASSERT_NOT_NULL( pScreen );
     Util::runFrame( fixture._input, fixture._ui );

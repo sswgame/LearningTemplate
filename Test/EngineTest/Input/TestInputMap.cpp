@@ -630,7 +630,7 @@ SW_TEST_CASE( InputMapTest, EditorSavedDefinitionReloadsWithTheSameBindings )
     SW_ASSERT_TRUE( edited.saveToResource( savedPath ) );
 
     sw::InputMap reloaded;
-    SW_ASSERT_TRUE( reloaded.loadFromResource( savedPath ) );
+    SW_ASSERT_TRUE( reloaded.loadFromResource( ::test::makeTempResourceID( savedPath ) ) );
     expectSameBindings( edited, reloaded );
 
     sw::InputSlot confirmSlot{};
@@ -727,7 +727,7 @@ SW_TEST_CASE( InputMapTest, GamepadStickAxisFeedsOneDimensionalAction )
     const sw::string axisPath = test::makeTempPath( "stick_axis.input.xml" );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( axisPath, "<InputMap><action name=\"Zoom\"><stick stick=\"Right\" axis=\"Y\" scaleY=\"4\" scaleByDelta=\"1\"/></action></InputMap>" ) );
     sw::InputMap loaded;
-    SW_ASSERT_TRUE( loaded.loadFromResource( axisPath ) );
+    SW_ASSERT_TRUE( loaded.loadFromResource( ::test::makeTempResourceID( axisPath ) ) );
     SW_ASSERT_TRUE( loaded.getBindingCount( "Zoom" ) == 1u );
     SW_EXPECT_TRUE( loaded.getBinding( "Zoom", 0 )->_stickAxis == sw::GamepadStickAxis::Y );
     {
@@ -736,13 +736,13 @@ SW_TEST_CASE( InputMapTest, GamepadStickAxisFeedsOneDimensionalAction )
         const sw::string badPath = test::makeTempPath( "stick_axis_bad.input.xml" );
         SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( badPath, "<InputMap><action name=\"Bad\"><stick stick=\"Right\" axis=\"Z\"/></action></InputMap>" ) );
         sw::InputMap bad;
-        SW_EXPECT_FALSE( bad.loadFromResource( badPath ) );
+        SW_EXPECT_FALSE( bad.loadFromResource( ::test::makeTempResourceID( badPath ) ) );
         SW_EXPECT_EQUAL( 0u, bad.getBindingCount( "Bad" ) );
     }
     const sw::string savedPath = test::makeTempPath( "stick_axis_saved.input.xml" );
     SW_ASSERT_TRUE( loaded.saveToResource( savedPath ) );
     sw::InputMap reloaded;
-    SW_ASSERT_TRUE( reloaded.loadFromResource( savedPath ) );
+    SW_ASSERT_TRUE( reloaded.loadFromResource( ::test::makeTempResourceID( savedPath ) ) );
     SW_ASSERT_TRUE( reloaded.getBindingCount( "Zoom" ) == 1u );
     SW_EXPECT_TRUE( reloaded.getBinding( "Zoom", 0 )->_stickAxis == sw::GamepadStickAxis::Y );
 }
@@ -762,7 +762,7 @@ SW_TEST_CASE( InputMapTest, ShippedInputMapsSurviveTheEditorSave )
         const sw::string savedPath = test::makeTempPath( "shipped.input.xml" );
         SW_ASSERT_TRUE( original.saveToResource( savedPath ) );
         sw::InputMap reloaded;
-        SW_ASSERT_TRUE( reloaded.loadFromResource( savedPath ) );
+        SW_ASSERT_TRUE( reloaded.loadFromResource( ::test::makeTempResourceID( savedPath ) ) );
         expectSameBindings( original, reloaded );
     }
 }
@@ -1188,7 +1188,7 @@ SW_TEST_CASE( InputMapTest, Axis1DBindingFollowsTheActionTrigger )
     {
         test::ScopedLogCollector logs;
         SW_TEST_DEFENSIVE_SCOPE( "a continuous binding with a Pressed trigger is warned about and read as Down" );
-        SW_ASSERT_TRUE( inputMap.loadFromResource( definitionPath ) );
+        SW_ASSERT_TRUE( inputMap.loadFromResource( ::test::makeTempResourceID( definitionPath ) ) );
         SW_EXPECT_TRUE_MSG( logs.countContaining( "'Move'" ) == 1u, logs.joined().c_str() );
     }
 
@@ -1223,7 +1223,7 @@ SW_TEST_CASE( InputMapTest, Axis1DBindingFollowsTheActionTrigger )
     const sw::string savedDefinitionPath = test::makeTempPath( "axis_trigger_saved.input.xml" );
     SW_ASSERT_TRUE( inputMap.saveToResource( savedDefinitionPath ) );
     sw::InputMap reloadedDefinition;
-    SW_ASSERT_TRUE( reloadedDefinition.loadFromResource( savedDefinitionPath ) );
+    SW_ASSERT_TRUE( reloadedDefinition.loadFromResource( ::test::makeTempResourceID( savedDefinitionPath ) ) );
     const sw::ActionBinding* pReloadedSwitch = reloadedDefinition.getBinding( "SwitchWeapon", 0 );
     SW_ASSERT_NOT_NULL( pReloadedSwitch );
     SW_EXPECT_TRUE( pReloadedSwitch->_trigger == sw::ActionTrigger::Pressed );
@@ -1267,7 +1267,7 @@ SW_TEST_CASE( InputMapTest, Axis1DBindsTwoGamepadButtons )
     sw::InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
     sw::InputMap& inputMap = input.getInputMap();
-    SW_ASSERT_TRUE( inputMap.loadFromResource( definitionPath ) );
+    SW_ASSERT_TRUE( inputMap.loadFromResource( ::test::makeTempResourceID( definitionPath ) ) );
 
     const sw::ActionBinding* pAxis = inputMap.getBinding( "Zoom", 0 );
     SW_ASSERT_NOT_NULL( pAxis );
@@ -1294,7 +1294,7 @@ SW_TEST_CASE( InputMapTest, Axis1DBindsTwoGamepadButtons )
     const sw::string savedDefinitionPath = test::makeTempPath( "axis_gamepad_saved.input.xml" );
     SW_ASSERT_TRUE( inputMap.saveToResource( savedDefinitionPath ) );
     sw::InputMap reloadedDefinition;
-    SW_ASSERT_TRUE( reloadedDefinition.loadFromResource( savedDefinitionPath ) );
+    SW_ASSERT_TRUE( reloadedDefinition.loadFromResource( ::test::makeTempResourceID( savedDefinitionPath ) ) );
     const sw::ActionBinding* pReloaded = reloadedDefinition.getBinding( "Zoom", 0 );
     SW_ASSERT_NOT_NULL( pReloaded );
     SW_EXPECT_TRUE( pReloaded->_arrSlot[1] == sw::InputSlot::fromGamepadButton( sw::GamepadButton::DPadUp, 1 ) );
@@ -1798,7 +1798,7 @@ SW_TEST_CASE( InputMapTest, TriggerTimeAndNegateRoundTripThroughXML )
     sw::InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
     sw::InputMap& inputMap = input.getInputMap();
-    SW_ASSERT_TRUE( inputMap.loadFromResource( definitionPath ) );
+    SW_ASSERT_TRUE( inputMap.loadFromResource( ::test::makeTempResourceID( definitionPath ) ) );
     SW_ASSERT_EQUAL( 2u, inputMap.getBindingCount( "Charge" ) );
     SW_EXPECT_NEAR_EQUAL( 0.75f, inputMap.getBinding( "Charge", 0 )->_triggerTime, 1.0e-6f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, inputMap.getBinding( "Charge", 1 )->_triggerTime, 1.0e-6f ); // 적지 않았으면 맵 값을 쓴다
@@ -1905,7 +1905,7 @@ SW_TEST_CASE( InputMapTest, MultiTapRoundTripsThroughXML )
                                                                  "</InputMap>\n" ) );
 
     sw::InputMap inputMap;
-    SW_ASSERT_TRUE( inputMap.loadFromResource( definitionPath ) );
+    SW_ASSERT_TRUE( inputMap.loadFromResource( ::test::makeTempResourceID( definitionPath ) ) );
     SW_ASSERT_EQUAL( 2u, inputMap.getBindingCount( "Roll" ) );
     SW_EXPECT_TRUE( inputMap.getBinding( "Roll", 0 )->_trigger == sw::ActionTrigger::MultiTap );
     SW_EXPECT_EQUAL( 3u, static_cast<uint32>( inputMap.getBinding( "Roll", 0 )->_tapCount ) );
@@ -1922,7 +1922,7 @@ SW_TEST_CASE( InputMapTest, MultiTapRoundTripsThroughXML )
     SW_EXPECT_TRUE( savedText.find( "\"DoubleTap\"" ) != sw::string::npos );
 
     sw::InputMap reloaded;
-    SW_ASSERT_TRUE( reloaded.loadFromResource( savedPath ) );
+    SW_ASSERT_TRUE( reloaded.loadFromResource( ::test::makeTempResourceID( savedPath ) ) );
     SW_ASSERT_EQUAL( 2u, reloaded.getBindingCount( "Roll" ) );
     SW_EXPECT_TRUE( reloaded.getBinding( "Roll", 0 )->_trigger == sw::ActionTrigger::MultiTap );
     SW_EXPECT_EQUAL( 3u, static_cast<uint32>( reloaded.getBinding( "Roll", 0 )->_tapCount ) );
@@ -1940,12 +1940,12 @@ SW_TEST_CASE( InputMapTest, VirtualCursorMapRejectsBindingsTheCursorTurnsIntoThe
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( okPath, "<InputMap virtualCursor=\"RightStick\"><action name=\"Place\"><bind source=\"mouse\" code=\"Left\"/></action>"
                                                          "<action name=\"Move\"><bind source=\"gamepad\" code=\"LeftStick\"/></action></InputMap>" ) );
     sw::InputMap okMap;
-    SW_ASSERT_TRUE( okMap.loadFromResource( okPath ) );
+    SW_ASSERT_TRUE( okMap.loadFromResource( ::test::makeTempResourceID( okPath ) ) );
     SW_EXPECT_TRUE( okMap.getVirtualCursorStick() == sw::InputMapVirtualCursor::RightStick );
     const sw::string savedPath = test::makeTempPath( "cursor_saved.input.xml" );
     SW_ASSERT_TRUE( okMap.saveToResource( savedPath ) );
     sw::InputMap reloaded;
-    SW_ASSERT_TRUE( reloaded.loadFromResource( savedPath ) );
+    SW_ASSERT_TRUE( reloaded.loadFromResource( ::test::makeTempResourceID( savedPath ) ) );
     SW_EXPECT_TRUE( reloaded.getVirtualCursorStick() == sw::InputMapVirtualCursor::RightStick );
 
     const sw::string buttonPath = test::makeTempPath( "cursor_button.input.xml" );
@@ -1959,18 +1959,18 @@ SW_TEST_CASE( InputMapTest, VirtualCursorMapRejectsBindingsTheCursorTurnsIntoThe
     {
         SW_TEST_DEFENSIVE_SCOPE( "input maps whose bindings fight the virtual cursor" );
         sw::InputMap buttonMap;
-        SW_EXPECT_FALSE( buttonMap.loadFromResource( buttonPath ) );
+        SW_EXPECT_FALSE( buttonMap.loadFromResource( ::test::makeTempResourceID( buttonPath ) ) );
         sw::InputMap stickMap;
-        SW_EXPECT_FALSE( stickMap.loadFromResource( stickPath ) );
+        SW_EXPECT_FALSE( stickMap.loadFromResource( ::test::makeTempResourceID( stickPath ) ) );
         sw::InputMap unknownMap;
-        SW_EXPECT_FALSE( unknownMap.loadFromResource( unknownPath ) );
+        SW_EXPECT_FALSE( unknownMap.loadFromResource( ::test::makeTempResourceID( unknownPath ) ) );
     }
 
     // 맵이 커서를 적지 않으면 끈다 — 같은 패드 A 바인딩도 그대로 읽힌다.
     const sw::string offPath = test::makeTempPath( "cursor_off.input.xml" );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( offPath, "<InputMap><action name=\"Place\"><bind source=\"gamepad\" code=\"A\"/></action></InputMap>" ) );
     sw::InputMap offMap;
-    SW_ASSERT_TRUE( offMap.loadFromResource( offPath ) );
+    SW_ASSERT_TRUE( offMap.loadFromResource( ::test::makeTempResourceID( offPath ) ) );
     SW_EXPECT_TRUE( offMap.getVirtualCursorStick() == sw::InputMapVirtualCursor::Off );
 }
 
@@ -1983,7 +1983,7 @@ SW_TEST_CASE( InputMapTest, UserBindingsAndRebindRejectTheVirtualCursorInputs )
     const sw::string mapPath = test::makeTempPath( "cursor_user_map.input.xml" );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( mapPath, "<InputMap virtualCursor=\"LeftStick\"><action name=\"Confirm\"><bind source=\"key\" code=\"K\"/></action></InputMap>" ) );
     sw::InputMap inputMap;
-    SW_ASSERT_TRUE( inputMap.loadFromResource( mapPath ) );
+    SW_ASSERT_TRUE( inputMap.loadFromResource( ::test::makeTempResourceID( mapPath ) ) );
     SW_ASSERT_EQUAL( 1u, inputMap.getBindingCount( "Confirm" ) );
 
     const sw::string singleKind = sw::BindingKinds::toName( sw::BindingKind::SingleSlot );

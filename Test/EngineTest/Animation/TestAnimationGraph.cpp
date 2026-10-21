@@ -74,7 +74,7 @@ SW_TEST_CASE( AnimationGraphTest, LoadFromFileMatchesParseJSON )
     SW_EXPECT_TRUE( source.saveToFile( filePath ) );
 
     AnimationGraphAsset loaded;
-    SW_EXPECT_TRUE( loaded.loadFromFile( filePath ) );
+    SW_EXPECT_TRUE( loaded.loadFromFile( ::test::makeTempResourceID( filePath ) ) );
 
     AnimationGraphAsset parsed;
     SW_EXPECT_TRUE( parsed.parseJSON( source.toJSON() ) );

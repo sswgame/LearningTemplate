@@ -87,7 +87,7 @@ SW_TEST_CASE( AnimationNotify2DTest, SpriteClipRangeCarriesNotifies )
     const string path = test::makeTempPath( "attack.sprite.json" );
     SW_ASSERT_TRUE( clip.saveToFile( path ) );
     SpriteClipAsset loaded;
-    SW_ASSERT_TRUE( loaded.loadFromFile( path ) );
+    SW_ASSERT_TRUE( loaded.loadFromFile( ::test::makeTempResourceID( path ) ) );
     SW_ASSERT_EQUAL( size_t( 1 ), loaded._listAnimation.size() );
     SW_ASSERT_EQUAL( size_t( 1 ), loaded._listAnimation[0]._listNotify.size() );
     SW_EXPECT_NEAR_EQUAL( 0.2f, loaded._listAnimation[0]._listNotify[0]._duration, 1e-6f );

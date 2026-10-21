@@ -250,7 +250,7 @@ SW_TEST_CASE( SequencerTest, JSONRoundTripThroughFileKeepsValues )
     SW_ASSERT_TRUE( source.saveToFile( path ) );
 
     sw::SequenceAsset loaded;
-    SW_ASSERT_TRUE( loaded.loadFromFile( path ) );
+    SW_ASSERT_TRUE( loaded.loadFromFile( ::test::makeTempResourceID( path ) ) );
 
     SW_EXPECT_EQUAL( source._frameMin, loaded._frameMin );
     SW_EXPECT_EQUAL( source._frameMax, loaded._frameMax );

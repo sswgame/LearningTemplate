@@ -81,7 +81,7 @@ SW_TEST_CASE( MeshAssetTest, WriteThenReadRoundTripsEveryField )
     const sw::string path = test::makeTempPath( "roundtrip.mesh" );
     SW_ASSERT_TRUE( sw::MeshAssetFormat::saveToFile( path, listWritten ) );
     sw::vector<sw::RHIVertex> listLoaded;
-    SW_ASSERT_TRUE( sw::MeshAssetFormat::loadFromResource( path, listLoaded ) );
+    SW_ASSERT_TRUE( sw::MeshAssetFormat::loadFromResource( ::test::makeTempResourceID( path ), listLoaded ) );
     SW_EXPECT_EQUAL( listWritten.size(), listLoaded.size() );
 }
 
@@ -146,8 +146,8 @@ SW_TEST_CASE( MeshAssetTest, CacheSharesOneMeshPerPathAndReloadsInPlace )
     const sw::string path = test::makeTempPath( "shared.mesh" );
     SW_ASSERT_TRUE( sw::MeshAssetFormat::saveToFile( path, makeTestTriangles( 1, 1.0f ) ) );
 
-    const sw::shared_ptr<sw::Mesh> first  = sw::MeshCache::acquire( path );
-    const sw::shared_ptr<sw::Mesh> second = sw::MeshCache::acquire( path );
+    const sw::shared_ptr<sw::Mesh> first  = sw::MeshCache::acquire( ::test::makeTempResourceID( path ) );
+    const sw::shared_ptr<sw::Mesh> second = sw::MeshCache::acquire( ::test::makeTempResourceID( path ) );
     SW_ASSERT_NOT_NULL( first.get() );
     SW_EXPECT_TRUE( first == second );
     SW_EXPECT_EQUAL( 3u, first->getVertexCount() );
@@ -160,7 +160,7 @@ SW_TEST_CASE( MeshAssetTest, CacheSharesOneMeshPerPathAndReloadsInPlace )
     SW_EXPECT_TRUE( sw::MeshCache::reloadShared( path, nullptr ) );
     SW_EXPECT_EQUAL( 9u, first->getVertexCount() );
     SW_EXPECT_TRUE( first->getContentID() != contentBefore ); // 정점 풀이 다시 올릴 근거
-    SW_EXPECT_TRUE( sw::MeshCache::acquire( path ) == first );
+    SW_EXPECT_TRUE( sw::MeshCache::acquire( ::test::makeTempResourceID( path ) ) == first );
 
     // 깨진 파일로 다시 읽으면 옛 정점을 지킨다.
     const uint8 arrGarbage[3] = { 1, 2, 3 };
@@ -195,7 +195,7 @@ SW_TEST_CASE( MeshAssetTest, PreloadSetHoldsMeshesUntilCleared )
 
     sw::MeshCache cache;
     SW_EXPECT_TRUE( cache.isCached( pathA ) );
-    SW_EXPECT_EQUAL( 6u, sw::MeshCache::acquire( pathB )->getVertexCount() );
+    SW_EXPECT_EQUAL( 6u, sw::MeshCache::acquire( ::test::makeTempResourceID( pathB ) )->getVertexCount() );
 
     preload.clear();
     SW_EXPECT_EQUAL( 0u, preload.getLoadedCount() );
@@ -218,11 +218,11 @@ SW_TEST_CASE( MeshAssetTest, MeshComponentResolvesMeshAssetPath )
     const sw::PropertyInfo* pMeshID = pMesh->getTypeInfo()->findPropertyInHierarchy( sw::hashed_string( "_meshID" ) );
     SW_ASSERT_NOT_NULL( pMeshID );
 
-    SW_ASSERT_TRUE( sw::SerializerUtil::applyPropertyText( *pMeshID, sw::MutableObjectAddress{ pMesh }, path, context ) );
+    SW_ASSERT_TRUE( sw::SerializerUtil::applyPropertyText( *pMeshID, sw::MutableObjectAddress{ pMesh }, ::test::makeTempResourceID( path ), context ) );
     pMesh->onPropertyChanged( pMeshID->_name );
     SW_ASSERT_NOT_NULL( pMesh->getRawMesh() );
     SW_EXPECT_EQUAL( 6u, pMesh->getRawMesh()->getVertexCount() );
-    SW_EXPECT_TRUE( pMesh->getRawMesh() == sw::MeshCache::acquire( path ).get() );
+    SW_EXPECT_TRUE( pMesh->getRawMesh() == sw::MeshCache::acquire( ::test::makeTempResourceID( path ) ).get() );
 
     // 세터도 같은 길이다.
     pMesh->setMeshID( "Sphere" );
@@ -268,7 +268,7 @@ SW_TEST_CASE( MeshAssetTest, SkinStreamRoundTripsAndRejectsOutOfRangeJoints )
 
     const sw::string path = test::makeTempPath( "skinned.mesh" );
     SW_ASSERT_TRUE( sw::MeshAssetFormat::saveToFile( path, written ) );
-    sw::shared_ptr<sw::Mesh> mesh = sw::MeshCache::acquire( path );
+    sw::shared_ptr<sw::Mesh> mesh = sw::MeshCache::acquire( ::test::makeTempResourceID( path ) );
     SW_ASSERT_NOT_NULL( mesh.get() );
     SW_EXPECT_TRUE( mesh->hasSkin() );
     SW_EXPECT_EQUAL( 3u, mesh->getSkinBoneCount() );
@@ -327,7 +327,7 @@ SW_TEST_CASE( MeshAssetTest, MorphTargetChunkRoundTripsAndRejectsMalformedChunks
     // 캐시가 메시에 타깃을 싣는다(이름 → 번호).
     const sw::string path = test::makeTempPath( "morph.mesh" );
     SW_ASSERT_TRUE( sw::MeshAssetFormat::saveToFile( path, written ) );
-    sw::shared_ptr<sw::Mesh> mesh = sw::MeshCache::acquire( path );
+    sw::shared_ptr<sw::Mesh> mesh = sw::MeshCache::acquire( ::test::makeTempResourceID( path ) );
     SW_ASSERT_NOT_NULL( mesh.get() );
     SW_EXPECT_EQUAL( 2u, mesh->getMorphTargetCount() );
     SW_EXPECT_EQUAL( 1, mesh->findMorphTargetIndex( sw::hashed_string( "blinkLeft" ) ) );

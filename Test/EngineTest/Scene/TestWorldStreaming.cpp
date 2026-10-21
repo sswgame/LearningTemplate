@@ -61,7 +61,7 @@ SW_TEST_CASE( WorldStreamingTest, WorldSettingsRoundTripThroughXMLAndBinary )
     const sw::string xmlPath = test::makeTempPath( "stream_town.scene.xml" );
     SW_ASSERT_TRUE( doc.saveXML( xmlPath ) );
     sw::SceneDocument readXML{};
-    SW_ASSERT_TRUE( readXML.loadXML( xmlPath ) );
+    SW_ASSERT_TRUE( readXML.loadXML( ::test::makeTempResourceID( xmlPath ) ) );
     SW_EXPECT_TRUE( readXML._worldSettings._bStreaming );
     SW_EXPECT_EQUAL( 10.0f, readXML._worldSettings._cellGrid._cellSize );
     SW_EXPECT_EQUAL( 5.0f, readXML._worldSettings._cellGrid._loadingRadius );
@@ -76,7 +76,7 @@ SW_TEST_CASE( WorldStreamingTest, WorldSettingsRoundTripThroughXMLAndBinary )
     const sw::string binPath = test::makeTempPath( "stream_town.scene.bin" );
     SW_ASSERT_TRUE( doc.saveBinary( binPath ) );
     sw::SceneDocument readBinary{};
-    SW_ASSERT_TRUE( readBinary.loadBinary( binPath ) );
+    SW_ASSERT_TRUE( readBinary.loadBinary( ::test::makeTempResourceID( binPath ) ) );
     SW_EXPECT_TRUE( readBinary._worldSettings._bStreaming );
     SW_EXPECT_EQUAL( 4u, readBinary._worldSettings._maxCellLoadsPerFrame );
     SW_ASSERT_EQUAL( size_t( 1 ), readBinary._listStreamingCell.size() );
@@ -110,9 +110,9 @@ SW_TEST_CASE( WorldStreamingTest, SceneWithoutUsableWorldSettingsIsRejected )
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( noGridPath, noGrid ) );
 
     sw::SceneDocument doc{};
-    SW_EXPECT_FALSE( doc.loadXML( noSettingsPath ) );
-    SW_EXPECT_FALSE( doc.loadXML( oldFormatPath ) );
-    SW_EXPECT_FALSE( doc.loadXML( noGridPath ) );
+    SW_EXPECT_FALSE( doc.loadXML( ::test::makeTempResourceID( noSettingsPath ) ) );
+    SW_EXPECT_FALSE( doc.loadXML( ::test::makeTempResourceID( oldFormatPath ) ) );
+    SW_EXPECT_FALSE( doc.loadXML( ::test::makeTempResourceID( noGridPath ) ) );
 }
 
 /**

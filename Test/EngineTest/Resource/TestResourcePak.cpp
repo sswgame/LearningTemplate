@@ -417,13 +417,11 @@ SW_TEST_CASE( ResourcePakTest, LooseFileOverrideOption )
 {
     const sw::GlobalVfsScope vfsScope;
 
-    const sw::string packPath  = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_loose_opt.pack" );
-    const sw::string loosePath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_loose_file.xml" );
+    const sw::string packPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_loose_opt.pack" );
 
     SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::None, {
                                                                                                                    { "test_loose_file.xml", "CONTENT_IN_PACK" }
     } ) );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( loosePath, "CONTENT_ON_DISK" ) );
 
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::ResourcePakManager& packManager = sw::ResourceIO::getPackManager();
@@ -436,10 +434,16 @@ SW_TEST_CASE( ResourcePakTest, LooseFileOverrideOption )
     SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( "test_loose_file.xml", content ) );
     SW_EXPECT_EQUAL( content, "CONTENT_IN_PACK" );
 
-    // 2. 모딩/개발용 Loose File 우선 모드 활성화: 디스크의 낱개 파일이 우선
-    packManager.setAllowLooseFiles( true );
-    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( loosePath, content ) );
-    SW_EXPECT_EQUAL( content, "CONTENT_ON_DISK" );
+    // 2. 모딩/개발용 Loose File 우선 모드 활성화: 검색 루트의 낱개 파일이 같은 키의 팩 항목보다 먼저다.
+    //    리소스 입구는 리소스 id 만 받으므로 같은 키를 임시 루트의 검색 폴더(`common/`)에 둔다.
+    {
+        const test::ScopedTempResourceRoot tempRoot;
+        SW_ASSERT_TRUE( tempRoot.writeTextFile( "common/test_loose_file.xml", "CONTENT_ON_DISK" ) );
+        SW_ASSERT_TRUE( sw::ResourcePaths::setSearchPriority( sw::ResourcePaths::getSearchPriority() ) ); // 방금 만든 도메인 폴더를 검색 루트에 넣는다
+        packManager.setAllowLooseFiles( true );
+        SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( "test_loose_file.xml", content ) );
+        SW_EXPECT_EQUAL( content, "CONTENT_ON_DISK" );
+    }
 
     packManager.setAllowLooseFiles( true );
     packManager.unmountAll();
@@ -448,7 +452,7 @@ SW_TEST_CASE( ResourcePakTest, LooseFileOverrideOption )
 /**
  * @brief [ResourcePakTest] 텍스트 읽기와 바이너리 읽기가 **같은 것을 고른다**
  * @details `readTextResource` 와 `readBinaryResource` 는 찾는 순서가 같아야 한다 —
- *          절대경로 → 낱개 파일 → 팩 → 낱개 폴백. 둘은 한 자리(`readResourceCommon`)를 같이 쓴다 — 순서를
+ *          낱개 파일 → 팩(OS 경로는 오류). 둘은 한 자리(`readResourceCommon`)를 같이 쓴다 — 순서를
  *          **두 벌로 따로** 적으면 한쪽만 고칠 때 같은 키로 텍스트와 바이너리가 서로 다른 파일을 읽는다.
  * @note 덮는 것은 "둘 중 하나가 어떤 소스를 아예 안 보게 되는" 변이다(팩을 건너뛰게 만들면 깨진다). 낱개 파일과 팩이 경쟁할 때의
  *       우선순위는 `LooseFileWinsOnlyWhenLooseFilesAreAllowed` 가 본다.
