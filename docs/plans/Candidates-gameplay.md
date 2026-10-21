@@ -27,12 +27,12 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션 영역의 
 제목: 애니메이션 LOD 와 군중 공유
 옛번호: D4-6
 왜 필요한가: 애니메이션 LOD(`AnimationLOD.h` — 리그 노드도 화면 크기 `min_screen_size` 로 꺼진다)와 군중 공유(`AnimationCrowd.h`)는 들어갔다.
+2026-10-22 `wt/animleft` 가 코드 · 데이터를 썼다(빌드 · 화면 미확인) — 작업마다 포즈 접근 형식(`IAnimationPhaseTask::getPoseAccess`, 순수 가상 `Writes` · `ReadsOnly`)을 정해 쓰는 작업이 꼭 하나일 때만 묻고(외형 소켓 작업은 읽기),
+리더를 따르는 부품은 리더 묶음과 같은 클립 · 칸의 자기 묶음(`AnimationCrowd::joinFollowerBucket`), 반복 클립 둘 사이의 페이드는 섞기 묶음(`joinBlendBucket` — 같은 출발 칸 · 같은 프레임에 같은 전이를 시작한 유닛이 한 묶음, 가중치는 멤버가 정함)을 나눈다.
+Shooter3D 적 프리팹이 `_bShareCrowdPose` 를 켜고 스킨드 외형 부품은 몸의 값을 따른다. 테스트는 `AnimationCrowdTest.ReaderTasksAndLeaderFollowersShareBuckets` · `CrossfadeSharesABlendBucketThenRejoins`. 착수했으니 계획 문서로 옮길 차례다(README 진행 표가 생성물이라 병합 때 옮긴다).
 남은 것:
+- 확인: Shooter3D autoplay 에서 `GT.Animation.crowdSharedUnits` 가 적 수만큼 오르고 쫓는 동안 `crowdSoloUnits` 가 0 근처인지, 적 무기 · 방패가 손을 따라가는지(스크린샷). 섞기 묶음이 끝나 들어간 클립의 묶음으로 갈 때 반 칸 안쪽 시각 차이가 튀어 보이는지. 적 30 마리 `GT.Animation` 전후(Release).
 - 메시 LOD 가 생기면 본 LOD 를 메시 LOD 와 묶기([PreloadAndLod](#preloadandlod)).
-- 군중의 섞기 묶음(언리얼 Animation Sharing 의 블렌드 액터 — 지금 섞는 유닛은 사본으로 혼자 평가), Shooter3D 군중 켜기.
-- Shooter3D 군중 켜기의 선행(2026-10-21 코드로 확인): 적 몸에는 애니메이터 작업 말고 외형의 소켓 작업(`CharacterAppearanceSocketTask`)이 붙어 `SkeletalMeshComponent::describeSharedPose` 가 늘 거짓이고(작업 수 ≠ 1),
-  옷 · 머리 부품은 몸을 리더로 따라 몸에 따르는 유닛이 있다. 프리팹의 `_bShareCrowdPose` 만 켜면 모두 사본(`Solo`)으로 돌 뿐이다. 먼저 작업이 포즈를 쓰는지 읽기만 하는지를 형식으로 나누고(읽기 작업은 묶음의 포즈를 읽게),
-  리더를 따르는 부품이 묶음 포즈를 따르게 해야 한다.
 
 ### FacialAnimation
 제목: 얼굴 애니메이션의 남은 것

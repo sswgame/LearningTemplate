@@ -574,10 +574,27 @@ namespace sw
             return;
         AnimationSharedPoseRequest      request{};
         shared_ptr<const AnimationClip> clip;
+        shared_ptr<const AnimationClip> nextClip;
         if ( describeSharedPose( request ) )
-            clip = findSolePoseWriter()->findSharedPoseClip( request._pClip );
+        {
+            const IAnimationPhaseTask* pWriter = findSolePoseWriter();
+            clip                               = pWriter->findSharedPoseClip( request._pClip );
+            if ( request._pNextClip != nullptr )
+                nextClip = pWriter->findSharedPoseClip( request._pNextClip );
+        }
 
-        if ( clip != nullptr )
+        const bool bBlending = request._pNextClip != nullptr;
+        if ( clip != nullptr && bBlending )
+        {
+            // 반복 클립 둘 사이의 페이드 — 같은 프레임에 같은 전이를 시작한 유닛과 섞기 묶음을 나눈다(VAT 로 가지 않는다).
+            AnimationCrowdBucket* pBlendBucket = nextClip != nullptr ? crowd.joinBlendBucket( _pCrowdBucket, request, _skeleton, _skinSourceMesh, clip, nextClip ) : nullptr;
+            if ( pBlendBucket != nullptr )
+            {
+                enterCrowdBucket( crowd, *pBlendBucket, bVisible );
+                return;
+            }
+        }
+        else if ( clip != nullptr )
         {
             // 아주 멀면 VAT — 따르는 유닛이 없고 재생 속도가 1 일 때(셰이더는 VAT 시계를 그대로 흘린다).
             const bool bUseVertexAnimation = _lodState._bVertexAnimation == SW_TRUE && _bHasDependents == SW_FALSE && request._playRate == 1.0f;
