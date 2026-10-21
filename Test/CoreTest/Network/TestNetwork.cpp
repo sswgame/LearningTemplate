@@ -1400,7 +1400,7 @@ SW_TEST_CASE( NetworkTest, MessageRouterDispatchesByRangeAndKeepsUnhandled )
     SW_EXPECT_EQUAL( router.getKindTally().get( 0x80 )._messageCount, uint64{ 0 } );
     // 보낸 쪽(클라이언트 호스트)은 큐에 넣은 메시지를 같은 표로 센다 — 받은 쪽 셈과 같아야 한다(신뢰 채널, 잃은 것 없음).
     NetMessageKindTallyTable sentTally;
-    pair.getClient( 0 ).copySentKindTally( sentTally );
+    pair.getClient( 0 ).addSentKindTally( sentTally );
     SW_EXPECT_EQUAL( sentTally.get( 0x82 )._messageCount, uint64{ 2 } );
     SW_EXPECT_EQUAL( sentTally.get( 0x82 )._byteCount, uint64{ 6 } );
     NetStatsReport report;

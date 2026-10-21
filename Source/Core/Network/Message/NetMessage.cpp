@@ -20,21 +20,21 @@ namespace sw
         return _writer;
     }
 
-    bool NetMessageWriter::send( NetHost& host, int32 connectionID, NetChannelType channel ) const
+    bool NetMessageWriter::send( INetPeers& peers, int32 connectionID, NetChannelType channel ) const
     {
-        return host.sendMessage( connectionID, channel, _writer.getBytes().data(), _writer.getByteCount() );
+        return peers.sendMessage( connectionID, channel, _writer.getBytes().data(), _writer.getByteCount() );
     }
 
-    int32 NetMessageWriter::broadcast( NetHost& host, NetChannelType channel, int32 exceptID ) const
+    int32 NetMessageWriter::broadcast( INetPeers& peers, NetChannelType channel, int32 exceptID ) const
     {
-        return host.broadcast( channel, _writer.getBytes().data(), _writer.getByteCount(), exceptID );
+        return peers.broadcast( channel, _writer.getBytes().data(), _writer.getByteCount(), exceptID );
     }
 
-    int32 NetMessageWriter::sendToPeers( NetHost& host, NetChannelType channel ) const
+    int32 NetMessageWriter::sendToPeers( INetPeers& peers, NetChannelType channel ) const
     {
-        if ( host.isServer() )
-            return broadcast( host, channel );
-        return send( host, 0, channel ) ? 1 : 0;
+        if ( peers.isServer() )
+            return broadcast( peers, channel );
+        return send( peers, 0, channel ) ? 1 : 0;
     }
 
     bool INetMessageHandler::isMessageKindHandled( uint8 kind ) const
@@ -145,9 +145,9 @@ namespace sw
         }
     }
 
-    int32 NetMessageRouter::pump( NetHost& host, vector<NetReceivedMessage>* pOutUnhandled, vector<NetHostEvent>* pOutListEvent )
+    int32 NetMessageRouter::pump( INetPeers& peers, vector<NetReceivedMessage>* pOutUnhandled, vector<NetHostEvent>* pOutListEvent )
     {
-        host.drainInbound( _inbound );
+        peers.drainInbound( _inbound );
         for ( const NetHostEvent& event : _inbound._listEvent )
         {
             dispatchEvent( event );
@@ -171,11 +171,11 @@ namespace sw
         return static_cast<int32>( _inbound._listMessage.size() );
     }
 
-    int32 NetMessageRouter::relayToOtherPeers( NetHost& host, const NetMessageContext& context )
+    int32 NetMessageRouter::relayToOtherPeers( INetPeers& peers, const NetMessageContext& context )
     {
-        const bool bCannotRelay = host.isServer() == false || context._pMessage == nullptr || context._messageSize <= 0;
+        const bool bCannotRelay = peers.isServer() == false || context._pMessage == nullptr || context._messageSize <= 0;
         if ( bCannotRelay )
             return 0;
-        return host.broadcast( context._channel, context._pMessage, context._messageSize, context._connectionID );
+        return peers.broadcast( context._channel, context._pMessage, context._messageSize, context._connectionID );
     }
 } // namespace sw

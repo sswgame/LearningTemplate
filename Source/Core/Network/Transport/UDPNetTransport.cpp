@@ -17,10 +17,10 @@ namespace sw
         close();
     }
 
-    bool UDPNetTransport::open( uint16 port, bool bLoopbackOnly )
+    bool UDPNetTransport::open( uint16 port, bool bLoopbackOnly, UDPPortSharing sharing )
     {
         close();
-        _socketHandle = PlatformSocketUtil::openUDPSocket( port, bLoopbackOnly );
+        _socketHandle = PlatformSocketUtil::openUDPSocket( port, bLoopbackOnly, sharing );
         if ( _socketHandle == PlatformSocketUtil::kInvalidSocket )
             return false;
         _localAddress = NetAddress::makeLoopback( PlatformSocketUtil::getBoundPort( _socketHandle ) );

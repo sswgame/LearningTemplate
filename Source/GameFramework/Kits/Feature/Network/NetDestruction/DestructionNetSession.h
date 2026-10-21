@@ -25,7 +25,7 @@ namespace sw
 {
     class FractureComponent;
     class GameObjectManager;
-    class NetHost;
+    class INetPeers;
     class NetMessageRouter;
 
     /** @brief 세션의 이쪽 역할입니다. */
@@ -71,7 +71,7 @@ namespace sw
          * @brief @p manager 의 파괴 오브젝트를 이름순 번호로 등록하고 복제 처리기를 @p router 에 답니다. 클라이언트면 피해를 내는 기믹을 끕니다.
          * @details 이미 시작했으면 먼저 `shutdown` 한다. @p router 와 @p host 는 `shutdown` 까지 살아 있어야 한다.
          */
-        void initialize( NetHost& host, NetMessageRouter& router, GameObjectManager& manager, DestructionNetSide side, const DestructionReplicationConfig& settings );
+        void initialize( INetPeers& host, NetMessageRouter& router, GameObjectManager& manager, DestructionNetSide side, const DestructionReplicationConfig& settings );
         /** @brief 처리기를 떼고 클라이언트면 해시 대조 요약 한 줄을 남깁니다. 두 번 불러도 됩니다. */
         void shutdown();
         /** @brief 서버는 새 사건 · 자세 · 해시를 보내고(틱 번호를 하나 올린다), 클라이언트는 받은 상태를 적용합니다. 그 뒤 사건 수가 바뀐 오브젝트의 해시를 남깁니다. */

@@ -35,11 +35,11 @@ namespace sw
 
         /** @brief 비우고 종류 바이트를 씁니다. 본문은 돌려준 `BitWriter` 에 이어 씁니다. */
         BitWriter&         begin( uint8 kind );
-        [[nodiscard]] bool send( NetHost& host, int32 connectionID, NetChannelType channel ) const;
+        [[nodiscard]] bool send( INetPeers& peers, int32 connectionID, NetChannelType channel ) const;
         /** @brief 연결된 모두에게 보냅니다. @p exceptID 는 제외합니다. 반환값은 보낸 수입니다. */
-        int32 broadcast( NetHost& host, NetChannelType channel, int32 exceptID = -1 ) const;
+        int32 broadcast( INetPeers& peers, NetChannelType channel, int32 exceptID = -1 ) const;
         /** @brief 상대 모두에게 보냅니다. 서버는 연결된 모두에게, 클라이언트는 서버(연결 0)에게 보냅니다. 반환값은 보낸 수이며, 락스텝이나 롤백처럼 모두가 같은 메시지를 나눌 때 씁니다. */
-        int32 sendToPeers( NetHost& host, NetChannelType channel ) const;
+        int32 sendToPeers( INetPeers& peers, NetChannelType channel ) const;
 
         const vector<uint8>& getBytes() const { return _writer.getBytes(); }
         int32                getByteCount() const { return _writer.getByteCount(); }
@@ -140,7 +140,7 @@ namespace sw
      * @class NetMessageRouter
      * @brief 받은 메시지를 종류(첫 바이트)마다 맡은 처리기 하나에게 바로 전달합니다(종류 256개짜리 테이블). 연결 사건은 메시지보다 먼저 모든 처리기에 알립니다.
      * @details - 처리기는 빌려 쓴다. 라우터보다 오래 살아야 하며, 먼저 없앨 때는 `unregisterHandler` 로 뺀다. 한 종류를 둘이 맡으려 하면 나중 것을 받지 않는다(`registerHandler` 가 false 를 반환한다).
-     *          - `pump` 는 호스트에서 사건과 메시지를 잠금 한 번에 꺼내(`NetHost::drainInbound`) 잠금 밖에서 나눠 준다. 처리기는 그 안에서 보내도 된다.
+     *          - `pump` 는 호스트에서 사건과 메시지를 잠금 한 번에 꺼내(`INetPeers::drainInbound` — 호스트 하나든 포트 샤드 묶음이든) 잠금 밖에서 나눠 준다. 처리기는 그 안에서 보내도 된다.
      *          - 깨진 메시지(처리기가 Malformed 를 반환)는 세고(`getMalformedCount`) 버린다.
      * @code
      *     router.registerHandler( &replicationServer );
@@ -170,18 +170,18 @@ namespace sw
         /** @brief 연결 사건 하나를 모든 처리기에 등록 순서대로 알립니다. */
         void dispatchEvent( const NetHostEvent& event );
         /**
-         * @brief @p host 에 쌓인 연결 사건과 받은 메시지를 모두 꺼내 사건부터 나눠 줍니다. 반환값은 꺼낸 메시지 수입니다.
+         * @brief @p peers 에 쌓인 연결 사건과 받은 메시지를 모두 꺼내 사건부터 나눠 줍니다. 반환값은 꺼낸 메시지 수입니다.
          * @param pOutUnhandled 처리기가 없는 메시지를 뒤에 붙입니다(nullptr 이면 버립니다).
          * @param pOutListEvent 꺼낸 사건을 뒤에 붙입니다(처리기 말고도 게임이 알아야 할 때 씁니다).
          */
-        int32 pump( NetHost& host, vector<NetReceivedMessage>* pOutUnhandled = nullptr, vector<NetHostEvent>* pOutListEvent = nullptr );
+        int32 pump( INetPeers& peers, vector<NetReceivedMessage>* pOutUnhandled = nullptr, vector<NetHostEvent>* pOutListEvent = nullptr );
         /**
          * @brief 서버가 받은 메시지를 보낸 연결을 뺀 모두에게 **받은 채널 그대로** 다시 보냅니다. 클라이언트에서는 하지 않고 0을 반환합니다. 반환값은 보낸 수입니다.
          * @details 처리기 안에서 부른다(@p context 의 메시지 바이트는 처리기 호출 동안만 유효하다).
          */
-        static int32 relayToOtherPeers( NetHost& host, const NetMessageContext& context );
+        static int32 relayToOtherPeers( INetPeers& peers, const NetMessageContext& context );
         uint64       getMalformedCount() const { return _malformedCount; }
-        /** @brief `pump` 가 지금까지 꺼낸 종류별 메시지 수와 바이트입니다(받은 쪽 셈 — 처리기가 없는 메시지도 센다. 보낸 쪽은 `NetHost::copySentKindTally`). */
+        /** @brief `pump` 가 지금까지 꺼낸 종류별 메시지 수와 바이트입니다(받은 쪽 셈 — 처리기가 없는 메시지도 센다. 보낸 쪽은 `INetPeers::addSentKindTally`). */
         const NetMessageKindTallyTable& getKindTally() const { return _kindTally; }
 
     private:

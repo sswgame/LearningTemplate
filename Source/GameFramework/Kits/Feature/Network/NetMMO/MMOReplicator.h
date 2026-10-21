@@ -39,7 +39,7 @@
 
 namespace sw
 {
-    class NetHost;
+    class INetPeers;
 
     /** @brief 메시지 종류입니다. 메시지의 첫 바이트에 들어갑니다. */
     struct NetMMOMessage
@@ -154,7 +154,7 @@ namespace sw
          * @brief 호스트, 설정, 정책을 받아 시작합니다. 설정이 범위 밖이거나 나가는 반경이 들어오는 반경보다 작으면 오류를 남기고 false 를 반환합니다.
          * @details 거절된 복제기는 호스트가 없는 복제기와 같다. `update` 가 아무것도 보내지 않는다.
          */
-        [[nodiscard]] bool initialize( NetHost* pHost, const MMOReplicatorConfig& settings, const IInterestPolicy* pPolicy = nullptr );
+        [[nodiscard]] bool initialize( INetPeers* pHost, const MMOReplicatorConfig& settings, const IInterestPolicy* pPolicy = nullptr );
         /** @brief 엔티티를 추가하거나 갱신합니다. 상태가 `NetMMOMessage::kMaxStateBytes` 를 넘으면 받지 않고 그 엔티티는 지난 값을 유지합니다. 처음 한 번만 경고하고 그 뒤로는 횟수만 셉니다. */
         void setEntity( const MMOEntity& entity );
         void removeEntity( uint32 entityID );
@@ -229,7 +229,7 @@ namespace sw
         SpatialHashGrid2D                   _grid; ///< 엔티티 위치(XZ 평면의 점). 키는 `MMOReplicatorInternal::makeGridKey` 로 만든다
         MMOReplicatorConfig                 _settings;
         IInterestPolicy                     _defaultPolicy;
-        NetHost*                            _pHost;
+        INetPeers*                          _pHost;
         const IInterestPolicy*              _pPolicy;
         uint64                              _sentUpdateCount;
         uint64                              _oversizedEntityCount;
@@ -275,7 +275,7 @@ namespace sw
         void onConnectionOpened( int32 connectionID ) override;
         void drainEvents( vector<MMOClientEvent>& outListEvent );
         /** @brief 받은 갱신 틱을 서버에 확인합니다. 틱마다 한 번 부르며, 받은 것이 없으면 보내지 않습니다. @p connectionID 는 서버 연결입니다. */
-        void sendAck( NetHost& host, int32 connectionID );
+        void sendAck( INetPeers& host, int32 connectionID );
 
         const MMOEntity* findEntity( uint32 entityID ) const;
         int32            getEntityCount() const { return static_cast<int32>( _mapEntity.size() ); }

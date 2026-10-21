@@ -38,7 +38,7 @@ namespace sw
         INetMessageHandler* pHandler = nullptr;
         if ( _bServer == SW_TRUE )
         {
-            _server.initialize( &pNetSession->getHost(), pManager );
+            _server.initialize( &pNetSession->getPeers(), pManager );
             pHandler = &_server;
         }
         else

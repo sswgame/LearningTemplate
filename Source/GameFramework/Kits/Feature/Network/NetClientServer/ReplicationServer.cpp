@@ -29,7 +29,7 @@ namespace sw
     {
     }
 
-    bool ReplicationServer::initialize( NetHost* pHost, const ReplicationServerConfig& settings, const IReplicationPolicy* pPolicy )
+    bool ReplicationServer::initialize( INetPeers* pHost, const ReplicationServerConfig& settings, const IReplicationPolicy* pPolicy )
     {
         // 실패하면 호스트 없는 서버로 남기고 지난 설정을 그대로 둔다. 값을 범위 안으로 맞춰 돌지 않는다.
         _pHost                  = nullptr;

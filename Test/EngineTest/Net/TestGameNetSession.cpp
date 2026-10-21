@@ -168,7 +168,7 @@ SW_TEST_CASE( GameNetSessionTest, ServerParamsComeFromTheServerConfig )
 }
 
 /**
- * @brief [GameNetSessionTest] 열 수 없는 서버 설정(특정 인터페이스 주소 · 주소가 아닌 글 · 샤드 2 개 이상)은 다른 값으로 대신 열지 않고 거절한다
+ * @brief [GameNetSessionTest] 열 수 없는 서버 설정(특정 인터페이스 주소 · 주소가 아닌 글 · 포트 0 의 샤드 여럿 · 범위를 넘는 연이은 포트 · 리눅스가 아닌 한 포트 나누기)은 다른 값으로 대신 열지 않고 거절한다
  */
 SW_TEST_CASE( GameNetSessionTest, ServerParamsRefuseAConfigTheyCannotOpen )
 {
@@ -179,9 +179,129 @@ SW_TEST_CASE( GameNetSessionTest, ServerParamsRefuseAConfigTheyCannotOpen )
     config._listenAddress = "not-an-address";
     SW_EXPECT_FALSE( GameNetSession::makeServerParams( config, params ) );
     config._listenAddress      = "127.0.0.1";
-    config._gamePortShardCount = 2;
+    config._gamePort           = 0;
+    config._gamePortShardCount = 2; // 운영체제가 고른 포트로는 "첫 포트 + 샤드" 배정을 지킬 수 없다
     SW_EXPECT_FALSE( GameNetSession::makeServerParams( config, params ) );
     SW_EXPECT_TRUE( params._role == GameNetRole::None );
+    config._gamePort = 65535; // 둘째 샤드가 65536 이 된다
+    SW_EXPECT_FALSE( GameNetSession::makeServerParams( config, params ) );
+#if !defined( SW_PLATFORM_LINUX )
+    config._gamePort       = 7777;
+    config._bGamePortReuse = true; // SO_REUSEPORT 는 리눅스만 — 연이은 포트로 바꿔 열지 않는다
+    SW_EXPECT_FALSE( GameNetSession::makeServerParams( config, params ) );
+#endif
+}
+
+/**
+ * @brief [GameNetSessionTest] 샤드 여럿의 서버 설정은 첫 포트와 샤드 수를 그대로 넘긴다
+ */
+SW_TEST_CASE( GameNetSessionTest, ServerParamsCarryTheShardLayout )
+{
+    ServerConfig config;
+    config._listenAddress      = "127.0.0.1";
+    config._gamePort           = 7777;
+    config._gamePortShardCount = 4;
+    GameNetSessionParams params;
+    SW_ASSERT_TRUE( GameNetSession::makeServerParams( config, params ) );
+    SW_EXPECT_EQUAL( 4, params._shardCount );
+    SW_EXPECT_EQUAL( 7777u, static_cast<uint32>( params._listenPort ) );
+    SW_EXPECT_FALSE( params._bShardsSharePort );
+}
+
+/**
+ * @brief [GameNetSessionTest] 샤드 둘인 서버는 연이은 두 포트를 열고, 각 포트에 붙은 클라이언트가 접힌 연결 ID(샤드 × 간격 + 샤드 안의 ID)로 하나의 목록에 보인다
+ * @details 키트는 `getPeers()` 만 보므로, 두 ID 가 겹치지 않고 각 ID 로 보낸 메시지가 그 샤드의 클라이언트에게만 닿아야 한다.
+ */
+SW_TEST_CASE( GameNetSessionTest, ShardedServerFoldsBothShardsIntoOnePeerList )
+{
+    // 연이은 두 포트가 비어 있어야 한다 — 하나를 고르고 다음 포트도 열어 본다.
+    uint16 firstPort = 0;
+    for ( int32 attempt = 0; attempt < 8 && firstPort == 0; ++attempt )
+    {
+        const uint16    candidate = findFreePort();
+        UDPNetTransport probe;
+        const bool      bNextFree = candidate != 0 && candidate < 65535 && probe.open( static_cast<uint16>( candidate + 1 ), true );
+        probe.close();
+        firstPort = bNextFree ? candidate : uint16{ 0 };
+    }
+    SW_ASSERT_TRUE( firstPort != 0 );
+
+    GameNetSessionParams serverParams;
+    serverParams._role                         = GameNetRole::Server;
+    serverParams._listenPort                   = firstPort;
+    serverParams._shardCount                   = 2;
+    serverParams._hostSettings._maxConnections = 8;
+    GameNetSession server;
+    SW_ASSERT_TRUE( server.initialize( serverParams ) );
+    SW_EXPECT_EQUAL( 2, server.getShardCount() );
+    SW_EXPECT_EQUAL( firstPort, server.getListenPort() );
+
+    GameNetSessionParams firstParams;
+    firstParams._role                 = GameNetRole::Client;
+    firstParams._serverAddress        = NetAddress::makeLoopback( firstPort );
+    GameNetSessionParams secondParams = firstParams;
+    secondParams._serverAddress       = NetAddress::makeLoopback( static_cast<uint16>( firstPort + 1 ) );
+    GameNetSession first;
+    GameNetSession second;
+    SW_ASSERT_TRUE( first.initialize( firstParams ) );
+    SW_ASSERT_TRUE( second.initialize( secondParams ) );
+    const Deadline deadline = Deadline::afterMilliseconds( kConnectWaitMilliseconds );
+    while ( ( first.getConnectedCount() == 0 || second.getConnectedCount() == 0 || server.getConnectedCount() < 2 ) && deadline.isExpired() == false )
+    {
+        first.update();
+        second.update();
+        server.update();
+        std::this_thread::sleep_for( std::chrono::milliseconds( 20 ) );
+    }
+    SW_ASSERT_EQUAL( 2, server.getConnectedCount() );
+
+    vector<int32> listConnection;
+    server.getPeers().collectConnected( listConnection );
+    SW_ASSERT_EQUAL( size_t{ 2 }, listConnection.size() );
+    SW_EXPECT_EQUAL( 0, listConnection[0] ); // 첫 샤드의 첫 연결
+    SW_EXPECT_EQUAL( 8, listConnection[1] ); // 둘째 샤드의 첫 연결 = 1 × 간격(8) + 0
+    SW_EXPECT_TRUE( server.getPeers().getConnectionAddress( 8 ).isValid() );
+    SW_EXPECT_TRUE( server.getPeers().getConnectionState( 16 ) == NetConnectionState::Disconnected ); // 없는 샤드
+
+    first.shutdown();
+    second.shutdown();
+    server.shutdown();
+}
+
+/**
+ * @brief [GameNetSessionTest] 서버가 보낸 서버 틱 번호를 클라이언트가 받아 답한다(클라이언트 쪽 상태 해시 기록이 이 번호를 쓴다)
+ */
+SW_TEST_CASE( GameNetSessionTest, ClientLearnsTheServerTick )
+{
+    const uint16 port = findFreePort();
+    SW_ASSERT_TRUE( port != 0 );
+    GameNetSessionParams serverParams;
+    serverParams._role       = GameNetRole::Server;
+    serverParams._listenPort = port;
+    GameNetSession server;
+    SW_ASSERT_TRUE( server.initialize( serverParams ) );
+    GameNetSessionParams clientParams;
+    clientParams._role          = GameNetRole::Client;
+    clientParams._serverAddress = NetAddress::makeLoopback( port );
+    GameNetSession client;
+    SW_ASSERT_TRUE( client.initialize( clientParams ) );
+
+    uint64 tick = 0;
+    SW_EXPECT_FALSE( client.tryGetServerTick( tick ) ); // 아직 받지 않았다
+    const Deadline deadline = Deadline::afterMilliseconds( kConnectWaitMilliseconds );
+    while ( client.tryGetServerTick( tick ) == false && deadline.isExpired() == false )
+    {
+        server.sendServerTick( 42 );
+        server.update();
+        client.update();
+        std::this_thread::sleep_for( std::chrono::milliseconds( 20 ) );
+    }
+    SW_ASSERT_TRUE( client.tryGetServerTick( tick ) );
+    SW_EXPECT_EQUAL( uint64{ 42 }, tick );
+    SW_EXPECT_FALSE( server.tryGetServerTick( tick ) ); // 서버는 받는 쪽이 아니다
+
+    client.shutdown();
+    server.shutdown();
 }
 
 /**

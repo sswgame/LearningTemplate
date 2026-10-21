@@ -80,7 +80,7 @@ namespace sw
     {
     }
 
-    bool MMOReplicator::initialize( NetHost* pHost, const MMOReplicatorConfig& settings, const IInterestPolicy* pPolicy )
+    bool MMOReplicator::initialize( INetPeers* pHost, const MMOReplicatorConfig& settings, const IInterestPolicy* pPolicy )
     {
         // 실패하면 호스트 없는 복제기로 남기고 지난 설정을 그대로 둔다. 값을 범위 안으로 맞춰 돌지 않는다.
         _pHost                  = nullptr;
@@ -475,7 +475,7 @@ namespace sw
             _receivedBits |= 1u << ( age - 1u );
     }
 
-    void MMOClientView::sendAck( NetHost& host, int32 connectionID )
+    void MMOClientView::sendAck( INetPeers& host, int32 connectionID )
     {
         if ( _bHasUpdate == SW_FALSE )
             return;
