@@ -453,14 +453,7 @@ namespace sw
 
         // 주 시점이 읽는 렌더 텍스처(CCTV 모니터)를 먼저 그린다. 주 시점의 패스 시드는 추가 뷰가 덮어쓰므로 보존해 둔다.
         _mainSeedScratch          = _frameContext;
-        uint32 renderedExtraCount = 0;
-        for ( unique_ptr<ViewTarget>& pView : _listExtraView )
-        {
-            if ( pView->_bRenderThisFrame == SW_FALSE || pView->_outputKind != RenderViewOutputKind::RenderTexture )
-                continue;
-            renderExtraView( pDevice, *pView );
-            ++renderedExtraCount;
-        }
+        uint32 renderedExtraCount = renderExtraViewsOfKind( pDevice, RenderViewOutputKind::RenderTexture );
         // 주 시점의 시드와 클리어 기록으로 돌아온다(추가 뷰가 자기 값을 덮어썼다).
         _frameContext = _mainSeedScratch;
         _bHasExecutedDepthPrepass.store( 0 );
@@ -473,51 +466,52 @@ namespace sw
                 _pMainOutputCanvasView = pView.get();
         }
 
+        const bool bOk = executeMainGraph( pDevice );
+
+        // 화면 사각형 뷰(분할 화면, PiP)는 주 시점 위에 겹친다.
+        renderedExtraCount += renderExtraViewsOfKind( pDevice, RenderViewOutputKind::ScreenRect );
+        // 호스트 타깃 뷰(에디터 씬 뷰)는 자기 RT 에 그린다. 이번 프레임에 그린 렌더 텍스처(CCTV)를 읽을 수 있도록 마지막에 그린다.
+        renderedExtraCount += renderExtraViewsOfKind( pDevice, RenderViewOutputKind::HostTarget );
+        _frameContext               = _mainSeedScratch;
+        _lastRenderedExtraViewCount = renderedExtraCount;
+        return bOk;
+    }
+
+    uint32 FrameRenderer::renderExtraViewsOfKind( IRHIDevice* pDevice, RenderViewOutputKind outputKind )
+    {
+        uint32 renderedCount = 0;
+        for ( unique_ptr<ViewTarget>& pView : _listExtraView )
+        {
+            if ( pView->_bRenderThisFrame == SW_FALSE || pView->_outputKind != outputKind )
+                continue;
+            renderExtraView( pDevice, *pView );
+            ++renderedCount;
+        }
+        return renderedCount;
+    }
+
+    bool FrameRenderer::executeMainGraph( IRHIDevice* pDevice )
+    {
         // 병렬 기록이 가능하면(백엔드 capability, TaskManager, 레벨이 나올 만큼 컴파일된 그래프) 레벨마다 여러 리스트로 기록한다.
         // 첫 프레임처럼 그래프가 아직 컴파일되지 않았으면(getExecutionOrder() 가 비어 있으면) 직렬 경로로 간다.
         const bool bCanRunParallel = _pTaskManager != nullptr &&
                                      pDevice->getCapabilities()._bParallelCommandRecording != SW_FALSE &&
                                      _graph.getExecutionOrder().size() > 1;
-        bool bOk = false;
         if ( bCanRunParallel )
-        {
-            bOk = _graph.executeParallel( _graphContext, _pTaskManager, pDevice );
-        }
-        else
-        {
-            // 직렬 경로도 그래프가 추론한 배리어를 쓴다. 패스가 기록하는 리스트와 **같은 것**을 넘긴다.
-            if ( _mainView._commandList == nullptr )
-                _mainView._commandList = pDevice->createCommandList();
-            IRHICommandList* pMainCmd = _mainView._commandList.get();
-            if ( pMainCmd != nullptr )
-            {
-                // 직렬 경로의 패스는 시드의 리스트에 기록한다(그래프가 패스에 리스트를 주지 않는다). 그래서 시드를 이 리스트로 돌린다.
-                _frameContext._pCmd = pMainCmd;
-                pMainCmd->beginCommandList();
-                bOk = _graph.execute( _graphContext, pMainCmd );
-                pMainCmd->endCommandList();
-                pDevice->executeCommandList( pMainCmd );
-            }
-        }
+            return _graph.executeParallel( _graphContext, _pTaskManager, pDevice );
 
-        // 화면 사각형 뷰(분할 화면, PiP)는 주 시점 위에 겹친다.
-        for ( unique_ptr<ViewTarget>& pView : _listExtraView )
-        {
-            if ( pView->_bRenderThisFrame == SW_FALSE || pView->_outputKind != RenderViewOutputKind::ScreenRect )
-                continue;
-            renderExtraView( pDevice, *pView );
-            ++renderedExtraCount;
-        }
-        // 호스트 타깃 뷰(에디터 씬 뷰)는 자기 RT 에 그린다. 이번 프레임에 그린 렌더 텍스처(CCTV)를 읽을 수 있도록 마지막에 그린다.
-        for ( unique_ptr<ViewTarget>& pView : _listExtraView )
-        {
-            if ( pView->_bRenderThisFrame == SW_FALSE || pView->_outputKind != RenderViewOutputKind::HostTarget )
-                continue;
-            renderExtraView( pDevice, *pView );
-            ++renderedExtraCount;
-        }
-        _frameContext               = _mainSeedScratch;
-        _lastRenderedExtraViewCount = renderedExtraCount;
+        // 직렬 경로도 그래프가 추론한 배리어를 쓴다. 패스가 기록하는 리스트와 **같은 것**을 넘긴다.
+        if ( _mainView._commandList == nullptr )
+            _mainView._commandList = pDevice->createCommandList();
+        IRHICommandList* pMainCmd = _mainView._commandList.get();
+        if ( pMainCmd == nullptr )
+            return false;
+        // 직렬 경로의 패스는 시드의 리스트에 기록한다(그래프가 패스에 리스트를 주지 않는다). 그래서 시드를 이 리스트로 돌린다.
+        _frameContext._pCmd = pMainCmd;
+        pMainCmd->beginCommandList();
+        const bool bOk = _graph.execute( _graphContext, pMainCmd );
+        pMainCmd->endCommandList();
+        pDevice->executeCommandList( pMainCmd );
         return bOk;
     }
 
