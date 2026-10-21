@@ -67,7 +67,7 @@ namespace sw
             { kExtension, AssetSuffixRole::Plain },
         };
         /** @brief 이 에셋 종류입니다(등록은 `TileMapXML.cpp` 의 `SW_ASSET_TYPE`). */
-        static constexpr AssetTypeDef kAssetType{ "TileMapXMLData", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0 };
+        static constexpr AssetTypeDef kAssetType{ "TileMapXMLData", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
         /**
          * @brief 타일맵 하나가 가질 수 있는 최대 셀 수입니다 (2048 x 2048).

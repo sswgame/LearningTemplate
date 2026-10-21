@@ -36,7 +36,7 @@ namespace sw
             { kExtension, AssetSuffixRole::Plain },
         };
         /** @brief 이 에셋 종류입니다(등록은 `HeightfieldData.cpp` 의 `SW_ASSET_TYPE`). */
-        static constexpr AssetTypeDef kAssetType{ "HeightfieldData", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0 };
+        static constexpr AssetTypeDef kAssetType{ "HeightfieldData", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
         static constexpr uint32       kVersion       = 1u;
         static constexpr uint32       kFlagHoleMask  = 1u;
         static constexpr uint32       kMaxResolution = 8193u;

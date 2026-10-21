@@ -11,8 +11,7 @@
         "  module = RHI_* 모듈 이름(매니페스트 · 타깃), source_folder = Source/Engine/Graphics/RHI/<폴더>(그 아래 .cpp 가 그 백엔드의 장치 소스 전부),",
         "  graphics_libs = 플랫폼 그래픽 라이브러리 INTERFACE 타깃(cmake/Modules/Platform), shipping_define = 배포 빌드가 백엔드 하나를 Engine 에 넣을 때 붙이는 매크로.",
         "  CMake 는 configure 가 쓴 generated/sw/config/CookContract.cmake 로 읽는다. 백엔드가 어느 플랫폼에 있는지는 모듈 매니페스트 _listPlatform 이 정본이다.",
-        "asset_kinds: 빌드 타깃이 뺄 수 있는 에셋 종류 — extensions(소문자 확장자) 또는 folders(경로 조각 'a/b' — 그 폴더 아래 전부)로 고른다.",
-        "target_excluded_asset_kinds: 빌드 타깃(SW_TARGET_TYPE)마다 패키지에서 빼는 종류. 쿠커(--build-target)는 그 파일을 팩에 넣지 않고,",
+        "target_excluded_asset_kinds: 빌드 타깃(SW_TARGET_TYPE)마다 패키지에서 빼는 묶음 — 엔진 에셋 종류의 제외 묶음 이름(AssetTypeDef::_excludeGroup, 모르는 이름은 AssetTypeRegistryTest 가 막는다). 쿠커(--build-target)는 그 파일을 팩에 넣지 않고,",
         "  같은 호스트의 런타임(ResourcePaths::setHostTarget)은 그 종류를 읽지 않고 없는 것으로 친다(파일 없음 오류를 내지 않는다).",
         "  전용 서버: 텍스처 · 셰이더 바이너리 · 오디오를 뺀다. 메시 · 애니메이션은 충돌 · 소켓 · 히트박스 · 루트 모션 때문에 남긴다."
     ],
@@ -28,12 +27,6 @@
           "module": "RHI_Vulkan", "source_folder": "Vulkan", "graphics_libs": "sw_graphics_vulkan_libs", "shipping_define": "SW_RHI_TARGET_VULKAN" },
         { "name": "OpenGL", "shader_folder": "opengl", "shader_target": "SPIRV_OpenGL", "command_line_argument": "OPENGL", "command_line_name": "gl",
           "module": "RHI_GL", "source_folder": "GL", "graphics_libs": "sw_graphics_gl_libs", "shipping_define": "SW_RHI_TARGET_OPENGL" }
-    ],
-
-    "asset_kinds": [
-        { "name": "Texture", "extensions": [ ".dds" ], "folders": [] },
-        { "name": "ShaderBinary", "extensions": [], "folders": [ "shaders/bin" ] },
-        { "name": "Audio", "extensions": [ ".ogg", ".wav", ".mp3", ".flac" ], "folders": [] }
     ],
 
     "target_excluded_asset_kinds": [

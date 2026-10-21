@@ -7,6 +7,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Common/AssetTypeRegistry.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 
@@ -23,6 +24,13 @@ namespace sw
     class SW_API Texture2D final : public RHIRenderResource
     {
     public:
+        /** @brief 텍스처 파일의 접미사입니다(쿠킹한 DDS). */
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            { ".dds", AssetSuffixRole::Plain },
+        };
+        /** @brief 텍스처 에셋 종류입니다(등록은 `Texture2D.cpp` 의 `SW_ASSET_TYPE`). 전용 서버 패키지가 빼는 묶음 `Texture` 다. */
+        static constexpr AssetTypeDef kAssetType{ "Texture", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, "Texture" };
+
         /** @brief 빈 텍스처로 만듭니다. */
         Texture2D();
         /** @brief GPU 자원이 남아 있으면 경고만 남깁니다. 해제는 releaseRHI 로 명시합니다. */

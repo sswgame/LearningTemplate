@@ -51,6 +51,7 @@ namespace sw
         uint32             _suffixCount;   ///< `_pSuffix` 의 수
         string_view        _cookedSuffix;  ///< 쿠킹본 접미사(쿠킹하지 않는 종류는 빈 글)
         AssetFormatVersion _formatVersion; ///< 저작 XML 의 현재 판. 저장 형태가 호환되지 않게 바뀌면 올린다
+        string_view        _excludeGroup;  ///< 빌드 타깃이 패키지에서 뺄 수 있는 묶음(`Texture` · `ShaderBinary` · `Audio`). 없으면 빈 글 — 쿠킹 표의 `target_excluded_asset_kinds` 가 이 이름을 가리킨다
     };
 } // namespace sw
 
@@ -87,6 +88,10 @@ namespace sw
 
         /** @brief @p path 끝에 맞는 접미사입니다 — 가장 긴 것이 먼저, 길이가 같으면 등록 순이다. 대소문자는 가리지 않습니다. */
         static AssetSuffixMatch findSuffix( string_view path );
+        /** @brief @p path 가 맞은 종류의 제외 묶음(`_excludeGroup`)입니다. 맞은 종류가 없거나 묶음이 없으면 빈 글입니다. */
+        static string_view findExcludeGroup( string_view path );
+        /** @brief @p group 을 제외 묶음으로 가진 종류가 올라와 있으면 true 입니다(쿠킹 표가 모르는 묶음 이름을 가리키지 않는지 테스트가 본다). */
+        static bool hasExcludeGroup( string_view group );
 
         /** @brief 올리지 못한 등록(겹친 이름 · 접미사)을 사람이 읽는 글로 @p outListProblem 에 더합니다. */
         static void collectProblems( vector<string>& outListProblem );

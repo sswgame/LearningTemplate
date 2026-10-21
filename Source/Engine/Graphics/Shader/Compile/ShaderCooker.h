@@ -9,6 +9,7 @@
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Common/AssetTypeRegistry.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 
 namespace sw
@@ -70,6 +71,17 @@ namespace sw
      */
     struct SW_API ShaderCooker
     {
+        /** @brief 쿠킹한 셰이더 산출물의 접미사입니다(백엔드 바이너리 셋, 리플렉션 매니페스트, 쿠킹 스탬프). */
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            {              ".dxil", AssetSuffixRole::Plain},
+            {              ".dxbc", AssetSuffixRole::Plain},
+            {               ".spv", AssetSuffixRole::Plain},
+            {"reflection.manifest", AssetSuffixRole::Plain},
+            {         "cook.stamp", AssetSuffixRole::Plain},
+        };
+        /** @brief 셰이더 바이너리 에셋 종류입니다(등록은 `ShaderCooker.cpp` 의 `SW_ASSET_TYPE`). 전용 서버 패키지가 빼는 묶음 `ShaderBinary` 다. */
+        static constexpr AssetTypeDef kAssetType{ "ShaderBinary", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, "ShaderBinary" };
+
         /**
          * @brief 셰이더 하나를 지정한 포맷과 스테이지로 컴파일해 디스크에 바이너리로 저장합니다.
          * @param sourcePath 원본 HLSL 소스 파일 경로

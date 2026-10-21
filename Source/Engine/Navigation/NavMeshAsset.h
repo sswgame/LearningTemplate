@@ -50,7 +50,7 @@ namespace sw
             { kExtension, AssetSuffixRole::Plain },
         };
         /** @brief 이 에셋 종류입니다(등록은 `NavMeshAsset.cpp` 의 `SW_ASSET_TYPE`). */
-        static constexpr AssetTypeDef kAssetType{ "NavMeshAsset", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0 };
+        static constexpr AssetTypeDef kAssetType{ "NavMeshAsset", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
         /** @brief 형식 버전입니다. 바꾸면 쿠킹본을 다시 만듭니다. */
         static constexpr uint32 kVersion = 1;
 

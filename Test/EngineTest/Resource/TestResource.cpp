@@ -26,6 +26,8 @@
 #include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
 
+#include "sw/config/CookContract.gen.h"
+
 #include <fstream>
 
 // ------------------------------------------------------------------------------
@@ -1124,4 +1126,12 @@ SW_TEST_CASE( AssetTypeRegistryTest, TypesAreUniqueAndLongerSuffixWins )
     SW_EXPECT_FALSE( sw::AssetCookPath::isCookableSource( "maps/a.scene", sw::SceneDocument::kAssetType ) );
     SW_EXPECT_STREQ( "maps/a.scene.bin", sw::AssetCookPath::toCookedPath( "maps/a.scene" ).c_str() );
     SW_EXPECT_STREQ( "prefabs/B.prefab.bin", sw::AssetCookPath::toCookedPath( "prefabs/B.prefab.json" ).c_str() );
+
+    // 쿠킹 표의 타깃 제외는 종류 표의 제외 묶음 이름만 가리킨다(AT5). 모르는 이름이면 그 묶음은 아무것도 빼지 않는다 — 여기서 막는다.
+#define SW_TEST_EXCLUDED_GROUP_ROW( Target, Group ) SW_EXPECT_TRUE_MSG( sw::AssetTypeRegistry::hasExcludeGroup( #Group ), #Target " excludes unknown asset group " #Group );
+    SW_TARGET_EXCLUDED_GROUP_TABLE( SW_TEST_EXCLUDED_GROUP_ROW )
+#undef SW_TEST_EXCLUDED_GROUP_ROW
+    SW_EXPECT_STREQ( "ShaderBinary", sw::string( sw::AssetTypeRegistry::findExcludeGroup( "engine/shaders/bin/dx12/reflection.manifest" ) ).c_str() );
+    SW_EXPECT_STREQ( "Texture", sw::string( sw::AssetTypeRegistry::findExcludeGroup( "engine/textures/Perlin.DDS" ) ).c_str() );
+    SW_EXPECT_TRUE( sw::AssetTypeRegistry::findExcludeGroup( "game/empty/models/crate.mesh" ).empty() );
 }

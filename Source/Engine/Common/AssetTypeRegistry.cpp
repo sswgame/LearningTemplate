@@ -131,6 +131,24 @@ namespace sw
         return AssetSuffixMatch{};
     }
 
+    string_view AssetTypeRegistry::findExcludeGroup( string_view path )
+    {
+        const AssetSuffixMatch match = findSuffix( path );
+        return match.isMatched() ? match._pType->_excludeGroup : string_view{};
+    }
+
+    bool AssetTypeRegistry::hasExcludeGroup( string_view group )
+    {
+        AssetTypeRegistryInternal::Table& table = AssetTypeRegistryInternal::getTable();
+        std::scoped_lock<mutex>           lock( table._mutex );
+        for ( const AssetTypeDef* pType : table._listType )
+        {
+            if ( group.empty() == false && StringUtil::equals( pType->_excludeGroup, group, true ) )
+                return true;
+        }
+        return false;
+    }
+
     void AssetTypeRegistry::collectProblems( vector<string>& outListProblem )
     {
         AssetTypeRegistryInternal::Table& table = AssetTypeRegistryInternal::getTable();

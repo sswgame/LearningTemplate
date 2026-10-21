@@ -9,6 +9,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Common/AssetTypeRegistry.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -32,20 +33,6 @@ namespace sw
              *          반대 순서로 잡는 곳은 없습니다.
              */
             inline static std::once_flag _s_initOnce{};
-
-            /**
-             * @brief 정규화한 경로 @p normalized 가 제외 줄 하나(확장자 또는 폴더 조각)에 맞으면 true 입니다.
-             * @details 폴더 조각은 경로 처음이거나 '/' 뒤에서 시작해 '/' 로 끝나야 한다(`shaders/bin` 이 `myshaders/binary` 에 맞지 않게).
-             */
-            static bool matchesAssetExclusion( string_view normalized, string_view extension, string_view folder )
-            {
-                if ( extension.empty() == false )
-                    return StringUtil::endsWith( normalized, extension );
-                const size_t position            = normalized.find( folder );
-                const bool   bFolderSegmentMatch = folder.empty() == false && position != string_view::npos && ( position == 0 || normalized[position - 1] == '/' ) &&
-                                                 position + folder.size() < normalized.size() && normalized[position + folder.size()] == '/';
-                return bFolderSegmentMatch;
-            }
 
             /**
              * @brief 구성 때 구운 `EngineConfig.json` 사본의 `_listResourcePriority` 입니다. 읽지 못하면 오류를 남기고 빈 목록입니다.
@@ -612,42 +599,30 @@ namespace sw
 
     vector<string> ResourcePaths::_s_listResourceFolder;
 
-    vector<string> ResourcePaths::_s_listHostExcludedExtension;
-
-    vector<string> ResourcePaths::_s_listHostExcludedFolder;
+    vector<string> ResourcePaths::_s_listHostExcludedGroup;
 
     void ResourcePaths::setHostTarget( string_view buildTargetName )
     {
-        _s_listHostExcludedExtension.clear();
-        _s_listHostExcludedFolder.clear();
-#define SW_ADD_HOST_EXCLUSION( Target, Kind, Extension, Folder )    \
-    if ( buildTargetName == #Target )                               \
-    {                                                               \
-        if ( string_view{ Extension }.empty() == false )            \
-            _s_listHostExcludedExtension.emplace_back( Extension ); \
-        else                                                        \
-            _s_listHostExcludedFolder.emplace_back( Folder );       \
-    }
-        SW_TARGET_ASSET_EXCLUSION_TABLE( SW_ADD_HOST_EXCLUSION )
-#undef SW_ADD_HOST_EXCLUSION
-        if ( _s_listHostExcludedExtension.empty() == false || _s_listHostExcludedFolder.empty() == false )
-            SW_LOG_INFO( "Host target %# does not read %# asset extensions and %# asset folders", string( buildTargetName ).c_str(),
-                         _s_listHostExcludedExtension.size(), _s_listHostExcludedFolder.size() );
+        _s_listHostExcludedGroup.clear();
+#define SW_ADD_HOST_EXCLUDED_GROUP( Target, Group ) \
+    if ( buildTargetName == #Target )               \
+        _s_listHostExcludedGroup.emplace_back( #Group );
+        SW_TARGET_EXCLUDED_GROUP_TABLE( SW_ADD_HOST_EXCLUDED_GROUP )
+#undef SW_ADD_HOST_EXCLUDED_GROUP
+        if ( _s_listHostExcludedGroup.empty() == false )
+            SW_LOG_INFO( "Host target %# does not read %# asset groups", string( buildTargetName ).c_str(), _s_listHostExcludedGroup.size() );
     }
 
     bool ResourcePaths::isExcludedForHost( string_view resourcePath )
     {
-        if ( _s_listHostExcludedExtension.empty() && _s_listHostExcludedFolder.empty() )
+        if ( _s_listHostExcludedGroup.empty() )
             return false;
-        const string normalized = FileUtil::normalizePath( resourcePath );
-        for ( const string& extension : _s_listHostExcludedExtension )
+        const string_view group = AssetTypeRegistry::findExcludeGroup( resourcePath );
+        if ( group.empty() )
+            return false;
+        for ( const string& excluded : _s_listHostExcludedGroup )
         {
-            if ( ResourcePathsInternal::matchesAssetExclusion( normalized, extension, string_view{} ) )
-                return true;
-        }
-        for ( const string& folder : _s_listHostExcludedFolder )
-        {
-            if ( ResourcePathsInternal::matchesAssetExclusion( normalized, string_view{}, folder ) )
+            if ( StringUtil::equals( excluded, group, true ) )
                 return true;
         }
         return false;
@@ -657,12 +632,14 @@ namespace sw
     {
         if ( buildTargetName.empty() )
             return false;
-        const string normalized = FileUtil::normalizePath( resourcePath );
-#define SW_MATCH_TARGET_EXCLUSION( Target, Kind, Extension, Folder )                                                   \
-    if ( buildTargetName == #Target && ResourcePathsInternal::matchesAssetExclusion( normalized, Extension, Folder ) ) \
+        const string_view group = AssetTypeRegistry::findExcludeGroup( resourcePath );
+        if ( group.empty() )
+            return false;
+#define SW_MATCH_TARGET_EXCLUDED_GROUP( Target, Group )                            \
+    if ( buildTargetName == #Target && StringUtil::equals( group, #Group, true ) ) \
         return true;
-        SW_TARGET_ASSET_EXCLUSION_TABLE( SW_MATCH_TARGET_EXCLUSION )
-#undef SW_MATCH_TARGET_EXCLUSION
+        SW_TARGET_EXCLUDED_GROUP_TABLE( SW_MATCH_TARGET_EXCLUDED_GROUP )
+#undef SW_MATCH_TARGET_EXCLUDED_GROUP
         return false;
     }
 

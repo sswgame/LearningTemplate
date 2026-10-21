@@ -32,9 +32,9 @@ class ToolRequiredValuesTest(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "ProgramFiles"):
                 Host.resolveGitExecutable()
 
-    def testCookContractWithoutAssetKindsStops(self) -> None:
+    def testCookContractWithoutTargetExclusionStops(self) -> None:
         spec = json.loads((kRepositoryRoot / kCookContractConfigRelative).read_text(encoding="utf-8"))
-        del spec["asset_kinds"]
+        del spec["target_excluded_asset_kinds"]
         with self.assertRaises(KeyError):
             CookContractSpec(spec)
 

@@ -47,7 +47,7 @@ namespace sw
             { kExtension, AssetSuffixRole::Plain },
         };
         /** @brief 이 에셋 종류입니다(등록은 `AnimationBoneMask.cpp` 의 `SW_ASSET_TYPE`). */
-        static constexpr AssetTypeDef kAssetType{ "AnimationBoneMaskDef", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0 };
+        static constexpr AssetTypeDef kAssetType{ "AnimationBoneMaskDef", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
         hashed_string                  _name{};
         string                         _filePath{}; ///< 프리셋 파일에서 읽었으면 그 경로입니다. 그래프를 쓸 때 본문 대신 이 경로를 씁니다.

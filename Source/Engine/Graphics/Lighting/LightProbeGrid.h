@@ -57,7 +57,7 @@ namespace sw
             { kExtension, AssetSuffixRole::Plain },
         };
         /** @brief 이 에셋 종류입니다(등록은 `LightProbeGrid.cpp` 의 `SW_ASSET_TYPE`). */
-        static constexpr AssetTypeDef kAssetType{ "LightProbeGrid", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0 };
+        static constexpr AssetTypeDef kAssetType{ "LightProbeGrid", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
         LightProbeGridLayout _layout{};
         vector<SH9Color>     _listProbe; ///< 프로브마다 하나, 번호 순서(`LightProbeGridLayout::computeProbeIndex`)

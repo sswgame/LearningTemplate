@@ -22,7 +22,7 @@ namespace sw
     {
     public:
         /** @brief 머티리얼 인스턴스 에셋 종류입니다(등록은 `MaterialInstance.cpp` 의 `SW_ASSET_TYPE`). 경로에 정해진 접미사가 없어 접미사를 두지 않는다. 판 0. */
-        static constexpr AssetTypeDef kAssetType{ "MaterialInstance", nullptr, 0, {}, 0 };
+        static constexpr AssetTypeDef kAssetType{ "MaterialInstance", nullptr, 0, {}, 0, {} };
 
         /**
          * @brief 생성 키입니다. create() 만 만들 수 있습니다.

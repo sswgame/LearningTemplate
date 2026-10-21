@@ -61,7 +61,7 @@ namespace sw
             { kExtension, AssetSuffixRole::Plain },
         };
         /** @brief 이 에셋 종류입니다(등록은 `MeshAssetFormat.cpp` 의 `SW_ASSET_TYPE`). */
-        static constexpr AssetTypeDef kAssetType{ "MeshAssetFormat", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0 };
+        static constexpr AssetTypeDef kAssetType{ "MeshAssetFormat", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
         /** @brief 경로가 메시 에셋(`.mesh`)을 가리키는지 확인합니다. 내장 도형 이름("Cube" 등)은 해당하지 않습니다. */
         static bool isMeshAssetPath( string_view path );

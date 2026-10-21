@@ -82,8 +82,8 @@ namespace sw
         static bool hasParentDirectoryComponent( string_view path );
 
         /**
-         * @brief 이 프로세스를 띄운 호스트의 빌드 타깃(`"Client"`, `"Server"`)을 정합니다. 그 타깃이 패키지에서 빼는 에셋 종류
-         *        (`Config/Engine/CookContract.json` 의 `target_excluded_asset_kinds`. 서버는 텍스처, 셰이더 바이너리, 오디오)는 이 호출 뒤부터
+         * @brief 이 프로세스를 띄운 호스트의 빌드 타깃(`"Client"`, `"Server"`)을 정합니다. 그 타깃이 패키지에서 빼는 에셋 묶음
+         *        (`Config/Engine/CookContract.json` 의 `target_excluded_asset_kinds` — 묶음은 종류 표 `AssetTypeDef::_excludeGroup`. 서버는 텍스처, 셰이더 바이너리, 오디오)는 이 호출 뒤부터
          *        **없는 것**으로 취급합니다. 읽기는 조용히 false 를 반환하고 `hasResource` 도 false 입니다("파일 없음" 경고와 오류를 남기지 않습니다).
          * @details 팩 쿠커(`PackCooker`, `isExcludedForTarget`)가 같은 테이블로 그 파일을 팩에서 뺀다. 엔진 기동 첫머리(`Engine::initialize`)에서
          *          한 번 부르고, 그 뒤로는 읽기만 한다. 비우면(`""`) 아무것도 빼지 않는다(테스트 하네스).
@@ -162,12 +162,11 @@ namespace sw
         static string makeUniqueSavePath( string_view absoluteFolder, string_view fileName );
 
     private:
-        static atomic<bool>   _s_bInitialize;               ///< initialize() 가 성공했는지
-        static string         _s_projectFolderPath;         ///< 프로젝트 루트
-        static string         _s_resourceRootFolderPath;    ///< Resource/ 최상위 루트(유일한 기준점)
-        static vector<string> _s_listSearchPriority;        ///< 검색 우선순위 토큰 목록
-        static vector<string> _s_listResourceFolder;        ///< findLooseFile 의 검색 루트 목록
-        static vector<string> _s_listHostExcludedExtension; ///< 이 호스트가 읽지 않는 확장자(소문자, `.dds`)
-        static vector<string> _s_listHostExcludedFolder;    ///< 이 호스트가 읽지 않는 폴더 조각(소문자, `shaders/bin`)
+        static atomic<bool>   _s_bInitialize;            ///< initialize() 가 성공했는지
+        static string         _s_projectFolderPath;      ///< 프로젝트 루트
+        static string         _s_resourceRootFolderPath; ///< Resource/ 최상위 루트(유일한 기준점)
+        static vector<string> _s_listSearchPriority;     ///< 검색 우선순위 토큰 목록
+        static vector<string> _s_listResourceFolder;     ///< findLooseFile 의 검색 루트 목록
+        static vector<string> _s_listHostExcludedGroup;  ///< 이 호스트가 읽지 않는 에셋 묶음(`Texture` · `ShaderBinary` · `Audio`, 종류 표의 `_excludeGroup`)
     };
 } // namespace sw
