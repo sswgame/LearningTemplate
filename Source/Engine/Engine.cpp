@@ -308,6 +308,8 @@ namespace sw
             _startup.addSubsystem( sw::make_unique<ModuleTypesSubsystem>( &_startup ) );
             // 창 · 디바이스 · 렌더러 · 렌더 스레드 · 라이브 셰이더 · 씬의 디바이스 — 클라이언트 호스트의 것이다(전용 서버는 거른다).
             // 객체를 서로 참조로 넘긴다(같은 목록 — 의존이 먼저 서고 나중에 소멸한다).
+            // Server 타깃은 렌더러 폴더(`Engine/Renderer/`)를 짓지 않는다(cmake/Engine/BuildLayout.cmake `SW_UNBUILT_ENGINE_FOLDERS`) — 단계를 넣지도 않는다.
+#if defined( SW_WITH_CLIENT_CODE )
             RHISubsystem& rhiSubsystem = _startup.addSubsystem( sw::make_unique<RHISubsystem>() );
             _pRHISubsystem             = &rhiSubsystem;
             unique_ptr<FrameRenderer> frameRenderer;
@@ -322,6 +324,7 @@ namespace sw
             pRenderThreadSubsystem = &_startup.addSubsystem( sw::make_unique<RenderThreadSubsystem>( rhiSubsystem, frameRendererSubsystem ) );
             pLiveShaderSubsystem   = &_startup.addSubsystem( sw::make_unique<LiveShaderSubsystem>( frameRendererSubsystem, *pRenderThreadSubsystem ) );
             _startup.addSubsystem( sw::make_unique<SceneRHISubsystem>( rhiSubsystem ) );
+#endif
             _pInputManager = &_startup.addSubsystem( sw::make_unique<InputManager>() );
             {
                 // 설정 표는 Config 서브시스템이다 — 엔진 · 게임 설정을 읽고 주 표로 알린다(Resource 가 그 뒤에 서서 팩 루트를 안다). 다시 읽기 알림은 엔진 루프가 받는다.
@@ -387,13 +390,19 @@ namespace sw
         // 초기화의 순서는 손으로 적지 않는다. 서브시스템마다 먼저 서야 하는 것을 적고, 여기서는 위상 순서로 부른다. 종료와 해제는 그 역순이다(`shutdown`).
         const bool bStarted = _startup.getCollection().initializeAll( hostMask );
         // 서지 않은 것(전용 서버 · 헤드리스 · 실패)은 nullptr 다. 실패의 이유는 App 이 종료 코드를 고를 때 읽는다.
+#if defined( SW_WITH_CLIENT_CODE )
         _pRHI          = _pRHISubsystem->findRHI();
         _rhiInitResult = _pRHISubsystem->getInitResult();
         _pRenderThread = pRenderThreadSubsystem->findRenderThread();
-#if !defined( SW_SHIPPING )
+    #if !defined( SW_SHIPPING )
         _pShaderRecompiler = pLiveShaderSubsystem->findShaderRecompiler();
-#else
+    #else
         (void)pLiveShaderSubsystem; // 배포본은 라이브 리로드가 없다
+    #endif
+#else
+        // Server 타깃 — 렌더 단계가 없다. RHI · 렌더 스레드 · 패킷 빌더는 nullptr 로 남고, 아래 루프는 그것을 보고 건너뛴다.
+        (void)pRenderThreadSubsystem;
+        (void)pLiveShaderSubsystem;
 #endif
         if ( bStarted == false )
         {
@@ -503,9 +512,18 @@ namespace sw
 
     bool Engine::renderPortraits( string_view prefabList, string_view outputDirectory, uint32 size )
     {
+#if defined( SW_WITH_CLIENT_CODE )
         if ( _pRHI == nullptr || _pRHI->hasDevice() == false )
             return false;
         return PortraitBatchUtil::renderPrefabList( _pRHI->getDevice(), _pRenderThread, prefabList, outputDirectory, size );
+#else
+        // Server 타깃에는 렌더러가 없다 — 초상화를 그릴 수 없다는 것을 알리고 실패한다.
+        (void)prefabList;
+        (void)outputDirectory;
+        (void)size;
+        SW_LOG_ERROR( "--render-portraits needs the renderer - the %# target does not build it", build::kTargetName );
+        return false;
+#endif
     }
 
     void Engine::requestQuit( int32 exitCode )
@@ -543,10 +561,14 @@ namespace sw
     EngineFrameContext Engine::makeFrameContext() const
     {
         EngineFrameContext context;
-        context._pInput                   = _pInputManager;
+        context._pInput = _pInputManager;
+#if defined( SW_WITH_CLIENT_CODE )
         context._completedScreenshotCount = _pRenderThread != nullptr ? _pRenderThread->getCompletedScenarioScreenshotCount() : 0u;
-        context._deltaSeconds             = _frameDeltaSeconds;
-        const Scene* pActiveScene         = _pSceneManager != nullptr ? _pSceneManager->getActiveScene() : nullptr;
+#else
+        context._completedScreenshotCount = 0u; // Server 타깃 — 렌더 스레드가 없어 찍은 사진이 없다
+#endif
+        context._deltaSeconds     = _frameDeltaSeconds;
+        const Scene* pActiveScene = _pSceneManager != nullptr ? _pSceneManager->getActiveScene() : nullptr;
         if ( pActiveScene != nullptr )
             context._activeSceneID = pActiveScene->getSourcePath().empty() ? pActiveScene->getName() : pActiveScene->getSourcePath();
         return context;
@@ -724,6 +746,7 @@ namespace sw
         // 이번 틱에 경로로 잡힌 머티리얼(메시의 저장된 참조)을 패킷을 내기 **전에** 올린다. 컴포넌트는 디바이스를 모른다(`MaterialCache::requestInitialize`).
         // 올리기는 bindless 표에 등록하므로 렌더 스레드가 지난 프레임을 병렬로 기록하는 동안 하면 안 된다 — 올릴 것이 있는 프레임(씬 로드 ·
         // 처음 쓰는 머티리얼의 스폰)만 렌더 스레드를 기다린다.
+#if defined( SW_WITH_CLIENT_CODE )
         if ( _pRHI != nullptr && _pRHI->hasDevice() )
         {
             MaterialCache& materials = engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>();
@@ -768,6 +791,11 @@ namespace sw
                 _pRenderThread->submit( packet );
             }
         }
+#else
+        // Server 타깃 — 렌더러가 없어 올릴 머티리얼도 낼 패킷도 없다(뷰 · 카메라 조회는 쓰지 않는다).
+        (void)bSceneMain;
+        (void)sceneViewCameraProvider;
+#endif
     }
 
     void Engine::endFrame()
@@ -803,9 +831,11 @@ namespace sw
             }
         }
         // `-gv_screenshotQuit`: 요청한 사진을 모두 찍었으면 그 결과(0 또는 쓰기 실패)로 끝낸다. 관찰자(시나리오)의 코드가 먼저 요청됐으면 그것이 이긴다.
+#if defined( SW_WITH_CLIENT_CODE )
         const int32 captureExitCode = RenderThread::getCaptureExitCode();
         if ( captureExitCode != RenderThread::kNoCaptureExitCode )
             requestQuit( captureExitCode );
+#endif
         if ( _pInputManager != nullptr )
             _pInputManager->endFrame();
         // 이번 프레임에 넣은 디버그 도형을 보이는 목록으로 확정하고, 씬이 흘린 시간만큼 지속 시간을 줄인다(일시정지면 그대로 남는다).
@@ -814,6 +844,9 @@ namespace sw
 
     bool Engine::applyPendingBackendChange()
     {
+#if !defined( SW_WITH_CLIENT_CODE )
+        return false; // Server 타깃 — RHI 단계가 없어 바꿀 백엔드가 없다
+#else
         if ( _pRHI == nullptr )
             return false;
 
@@ -858,6 +891,7 @@ namespace sw
                      _pPacketBuilder->isMergeBatchesAcrossMaterials() ? 1 : 0,
                      _pRHI->getDevice().supportsNativeBindlessSampling() ? 1 : 0 );
         return true;
+#endif
     }
 
     bool Engine::rebindSceneAfterDeviceRecreate()
@@ -892,14 +926,22 @@ namespace sw
 
     void Engine::setPresentHook( PresentHookDelegate presentHook )
     {
+#if defined( SW_WITH_CLIENT_CODE )
         if ( _pRenderThread != nullptr )
             _pRenderThread->setPresentHook( std::move( presentHook ) );
+#else
+        (void)presentHook; // Server 타깃 — 표시할 화면이 없다
+#endif
     }
 
     void Engine::setPostPresentHook( PresentHookDelegate postPresentHook )
     {
+#if defined( SW_WITH_CLIENT_CODE )
         if ( _pRenderThread != nullptr )
             _pRenderThread->setPostPresentHook( std::move( postPresentHook ) );
+#else
+        (void)postPresentHook; // Server 타깃 — 표시할 화면이 없다
+#endif
     }
 
     void Engine::updateShellActions( float32 deltaTime )

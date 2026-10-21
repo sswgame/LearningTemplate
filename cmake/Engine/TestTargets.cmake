@@ -439,6 +439,8 @@ function(sw_addTestExecutable TARGET_NAME)
 
 	file(GLOB_RECURSE swSources CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
 	sw_excludeSourcesOfInactiveKits(swSources)
+	# 이 타깃이 짓지 않는 Engine 폴더(전용 서버의 렌더러)를 include 하는 테스트도 짓지 않는다.
+	sw_excludeSourcesIncludingUnbuiltEngineFolders(swSources)
 	if(SW_SHIPPING_BUILD)
 		sw_excludeUnbuiltSources(swSources "/${TARGET_NAME}/Dev/")
 	endif()

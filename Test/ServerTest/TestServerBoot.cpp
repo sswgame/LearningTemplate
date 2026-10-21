@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Common/BuildInfo.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Network/Connection/NetHost.h"
@@ -234,7 +235,10 @@ SW_TEST_CASE( ServerBootTest, StartsTicksAndExitsWithoutWindowOrGPU )
     const size_t skippedLine = run._output.find( "startup steps not run" );
     SW_ASSERT_TRUE_MSG( skippedLine != string::npos, "the dedicated server did not report the client-only startup steps it skipped" );
     const string skipped = run._output.substr( skippedLine, run._output.find( '\n', skippedLine ) - skippedLine );
-    SW_EXPECT_TRUE( skipped.find( "RHI" ) != string::npos && skipped.find( "FrameRenderer" ) != string::npos && skipped.find( "UserSettings" ) != string::npos );
+    SW_EXPECT_TRUE( skipped.find( "UserSettings" ) != string::npos );
+    // Game 타깃의 서버는 렌더 단계를 넣고 건너뛴다. Server 타깃은 렌더러 폴더를 짓지 않아 단계가 아예 없다(cmake/Engine/BuildLayout.cmake `SW_UNBUILT_ENGINE_FOLDERS`).
+    const bool bRenderStepsListed = skipped.find( "RHI" ) != string::npos && skipped.find( "FrameRenderer" ) != string::npos;
+    SW_EXPECT_TRUE_MSG( bRenderStepsListed == sw::build::kWithClientCode, skipped.c_str() );
     // 기동 뒤의 줄에는 서버 틱 번호가 붙는다(멀티 프로세스 재생의 Output Log 가 서버 줄을 틱으로 맞춰 본다) — 기동 중의 줄에는 없다.
     SW_EXPECT_TRUE_MSG( run._output.find( "[tick=60] - Dedicated server shutdown requested (TickLimit) after 60 ticks" ) != string::npos,
                         "the shutdown line does not carry the server tick" );
