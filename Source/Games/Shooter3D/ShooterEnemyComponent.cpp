@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Character/Hit/RagdollComponent.h"
 #include "Engine/Character/Socket/SocketBindingComponent.h"
 #include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
 #include "Engine/Object/Component/Navigation/NavMeshAgentComponent.h"
@@ -27,7 +28,8 @@ namespace sw
     {
         struct ShooterEnemyComponentInternal
         {
-            static constexpr const utf8* kAttackButton = "Attack"; ///< 폰 스키마의 휘두르기 버튼(AI 조종자가 누른다)
+            static constexpr const utf8* kAttackButton = "Attack";     ///< 폰 스키마의 휘두르기 버튼(AI 조종자가 누른다)
+            static constexpr const utf8* kSwingLands   = "SwingLands"; ///< 알림 표가 공격 클립의 `Impact` 에 붙인 게임플레이 이벤트
 
             /** @brief 최대 체력만 정한 체력 설정을 만듭니다. 실드 · 회복 · 기절은 기본값(꺼짐)입니다. */
             static VitalitySettings makeVitalitySettings( float32 maxHealth )
@@ -50,7 +52,6 @@ namespace sw
         , _stopFraction{ 0.85f }
         , _damage{ 9.0f }
         , _attackInterval{ 1.5f }
-        , _attackHitTime{ 0.45f }
         , _attackLength{ 1.0f }
         , _riseTime{ 1.6f }
         , _staggerTime{ 0.4f }
@@ -69,6 +70,7 @@ namespace sw
         , _bHitPending{ SW_FALSE }
         , _bAttackLanded{ SW_FALSE }
         , _bAttackStarting{ SW_FALSE }
+        , _bSwingLanding{ SW_FALSE }
         , _reserved{ 0 }
     {
         setCanEverTick( true );
@@ -115,10 +117,10 @@ namespace sw
             pPawn->requestControlRotation( yaw, 0.0f );
     }
 
-    void ShooterEnemyComponent::applyDamage( float32 amount )
+    bool ShooterEnemyComponent::applyDamage( float32 amount )
     {
         if ( isAlive() == false )
-            return;
+            return false;
         (void)_vitality.applyDamage( amount ); // 결과는 아래 isAlive 로 읽는다
         _vitality.discardEvents();             // 피해 알림은 notifyHealthChanged 가 맡는다
         // 체력 신호 — HP 바가 보이기 · 숨기기를 스스로 정한다(프리팹의 `_bShowWhenHurt` · `_bHideWhenDead`). 쓰러짐은 읽기(`isDead`)가 정한다.
@@ -127,7 +129,7 @@ namespace sw
         {
             enterPhase( ShooterEnemyPhase::Dying );
             requestDropSocketParts();
-            return;
+            return true;
         }
         // 일어나는 중 · 휘두르는 중에는 클립을 끊지 않는다(맞은 표시는 HP 바).
         if ( _phase == ShooterEnemyPhase::Chasing || _phase == ShooterEnemyPhase::Staggered )
@@ -135,6 +137,32 @@ namespace sw
             _bHitPending = SW_TRUE;
             enterPhase( ShooterEnemyPhase::Staggered );
         }
+        return false;
+    }
+
+    void ShooterEnemyComponent::onHitReceived( const HitInfo& hit )
+    {
+        HealthSourceComponent::onHitReceived( hit );
+        if ( applyDamage( hit._damage * hit._damageMultiplier ) == false )
+            return;
+        // 쓰러졌다 — 래그돌로 넘기고 맞은 바디에 맞은 방향의 충격량을 준다. 래그돌이 없는 프리팹은 데이터 오류다(쓰러짐 클립만 돈다).
+        GameObject*       pOwner   = getOwner();
+        RagdollComponent* pRagdoll = pOwner != nullptr ? pOwner->getComponent<RagdollComponent>() : nullptr;
+        if ( pRagdoll == nullptr )
+        {
+            SW_LOG_ERROR( "Enemy '%#' has no RagdollComponent - it cannot collapse into a ragdoll", pOwner != nullptr ? pOwner->getName().c_str() : "(no owner)" );
+            return;
+        }
+        pRagdoll->startRagdoll( hit._direction * hit._impulse, hit._bodyIndex );
+    }
+
+    void ShooterEnemyComponent::onAnimationNotify( const AnimationNotifyInfo& notify )
+    {
+        HealthSourceComponent::onAnimationNotify( notify );
+        const bool bSwingLands = notify._event == hashed_string( ShooterEnemyComponentInternal::kSwingLands ) && _phase == ShooterEnemyPhase::Attacking &&
+                                 _bAttackLanded == SW_FALSE;
+        if ( bSwingLands )
+            _bSwingLanding = SW_TRUE;
     }
 
     HealthReading ShooterEnemyComponent::getHealthReading() const
@@ -150,6 +178,8 @@ namespace sw
     {
         _phase     = phase;
         _phaseTime = 0.0f;
+        // 지난 휘두름의 늦은 알림이 새 단계로 넘어오지 않게 단계마다 지운다.
+        _bSwingLanding = SW_FALSE;
         if ( phase == ShooterEnemyPhase::Attacking )
         {
             _bAttackLanded   = SW_FALSE;
@@ -196,13 +226,14 @@ namespace sw
             }
             case ShooterEnemyPhase::Attacking:
             {
-                // 클립의 맞는 시각에 손이 닿는 거리면 한 번 맞힌다.
-                if ( _bAttackLanded == SW_FALSE && _phaseTime >= _attackHitTime )
+                // 클립 알림(SwingLands)이 알린 닿는 시각에 손이 닿는 거리면 한 번 맞힌다.
+                if ( _bSwingLanding == SW_TRUE && _bAttackLanded == SW_FALSE )
                 {
                     _bAttackLanded = SW_TRUE;
                     if ( distance < _reach * 1.25f )
                         requestPlayerDamage( pDirector->getPlayer() );
                 }
+                _bSwingLanding = SW_FALSE;
                 if ( _phaseTime >= _attackLength )
                     enterPhase( ShooterEnemyPhase::Chasing );
                 break;

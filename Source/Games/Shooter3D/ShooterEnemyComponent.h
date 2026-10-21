@@ -39,8 +39,12 @@ namespace sw
      *          씁니다(위치 · 요 · 애니메이터 파라미터 · HP 바 — 체력 원천 알림 `notifyHealthChanged`). 내비메시 에이전트(`SteerOnly`)는 그 위치를 다음 갱신에서 받는다.
      *          애니메이터 그래프(`data/anim/skeleton.animgraph.json`)는 파라미터 `Move`(0 서기 · 1 걷기 · 2 달리기) ·
      *          `Attack` · `Hit`(트리거) · `Dead` 로 움직입니다. 플레이어를 때리는 것은 다른 오브젝트에 쓰는 일이라 틱 뒤로 미룹니다.
-     *          맞음(`applyDamage`)은 플레이어의 사격이 틱 뒤에 겁니다. 히트박스는 발에서 `_height` 까지의 캡슐(반지름 `_radius`)입니다 —
-     *          물리 질의 · 부위 히트박스가 들어오면 그쪽으로 옮긴다(소켓 `Chest` 가 히트박스 중심 위치).
+     *          **휘두름이 닿는 시각의 정본은 클립 데이터다** — 공격 클립의 알림 `Impact` 를 알림 표(`characters/skeleton_minion/skeleton_minion.notifies.xml`)가
+     *          `GameplayEvent` `SwingLands` 로 보내고(`onAnimationNotify`), 다음 틱이 손 닿는 거리면 플레이어를 때린다. 초 단위 속성으로 두면 클립이 바뀔 때 어긋난다.
+     *          **맞음**은 플레이어의 물리 질의 히트스캔이 틱 뒤에 `CharacterHitUtil::deliverHit` 으로 보낸다(`onHitReceived`). 히트박스는 같은 오브젝트의
+     *          `RagdollComponent`(물리 에셋 `skeleton_warrior.physics.xml` — 뼈마다 바디와 히트 존 배율)이고, 피해는 기본 피해 × 히트 존 배율이다.
+     *          쓰러지면 래그돌로 넘긴다(맞은 바디에 충격량). 쓰러지지 않은 맞음의 몸 흔들림은 래그돌 컴포넌트가 같은 맞음으로 스스로 한다.
+     *          `_radius` · `_height` 는 몸 이동 · 내비 에이전트 · 자동 조준이 쓰는 몸 크기다(판정에는 쓰지 않는다).
      */
     REFLECT( Category = "Shooter3D", DisplayName = "Shooter Enemy", Tooltip = "Skeleton enemy that rises, walks to the player, swings, staggers when hit and collapses" )
     class ShooterEnemyComponent : public HealthSourceComponent
@@ -52,11 +56,13 @@ namespace sw
         virtual ~ShooterEnemyComponent() override = default;
 
         void onTick( float32 deltaTime ) override;
+        /** @brief 무기 판정이 맞혔습니다(틱 밖 · 게임 스레드). 기본 피해 × 히트 존 배율을 깎고, 쓰러지면 맞은 바디에 충격량을 주며 래그돌로 넘깁니다. */
+        void onHitReceived( const HitInfo& hit ) override;
+        /** @brief 클립 알림의 게임플레이 이벤트입니다(게임 스레드, 애니메이션 마무리). `SwingLands` 면 이번 휘두름이 닿는 시각입니다. */
+        void onAnimationNotify( const AnimationNotifyInfo& notify ) override;
 
         /** @brief 스폰합니다 — 디렉터 · 발 위치 · 요 · 체력 · 속도(게임 스레드). */
         void launch( GameObjectHandle director, const float3& position, float32 yaw, float32 health, float32 speed );
-        /** @brief 맞았다 — 체력을 깎고 움찔하거나 쓰러진다(틱 밖 · 게임 스레드). */
-        void applyDamage( float32 amount );
 
         bool isLaunched() const { return _bLaunched == SW_TRUE; }
         bool isAlive() const { return _bLaunched == SW_TRUE && _vitality.isAlive(); }
@@ -77,7 +83,9 @@ namespace sw
         GameObjectHandle getDirector() const { return _director; }
 
     private:
-        void enterPhase( ShooterEnemyPhase phase );
+        /** @brief 체력을 깎고 움찔하거나 쓰러진다(틱 밖 · 게임 스레드). 이번 피해로 쓰러졌으면 true 입니다(이미 쓰러졌으면 false). */
+        [[nodiscard]] bool applyDamage( float32 amount );
+        void               enterPhase( ShooterEnemyPhase phase );
         /** @brief 같은 오브젝트의 애니메이터 파라미터를 씁니다(자기 오브젝트). */
         void updateAnimator( float32 moveCode );
         /** @brief 플레이어를 때리는 것을 틱 뒤로 미룹니다. */
@@ -103,8 +111,6 @@ namespace sw
         float32 _damage;
         PROPERTY( Category = "Enemy", DisplayName = "Attack Interval", Tooltip = "Seconds between swings", Min = 0.0, Units = s )
         float32 _attackInterval;
-        PROPERTY( Category = "Enemy", DisplayName = "Attack Hit Time", Tooltip = "Seconds into the swing when the blade lands", Min = 0.0, Units = s )
-        float32 _attackHitTime;
         PROPERTY( Category = "Enemy", DisplayName = "Attack Length", Tooltip = "Seconds the swing locks movement", Min = 0.0, Units = s )
         float32 _attackLength;
         PROPERTY( Category = "Enemy", DisplayName = "Rise Time", Tooltip = "Seconds spent rising from the ground before chasing", Min = 0.0, Units = s )
@@ -131,6 +137,7 @@ namespace sw
         uint8             _bHitPending     : 1; ///< 다음 틱에 애니메이터에 Hit 트리거를 건다
         uint8             _bAttackLanded   : 1; ///< 이번 휘두름이 이미 맞았다
         uint8             _bAttackStarting : 1; ///< 다음 틱에 애니메이터에 Attack 트리거를 건다
-        uint8             _reserved        : 4;
+        uint8             _bSwingLanding   : 1; ///< 클립 알림이 이번 휘두름이 닿는 시각을 알렸다 — 다음 틱이 거리를 보고 때린다
+        uint8             _reserved        : 3;
     };
 } // namespace sw

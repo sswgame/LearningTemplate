@@ -1,0 +1,7 @@
+{
+  "nodes": [
+    { "type": "StrideWarping", "name": "Stride", "pelvis": "hips", "min_scale": 0.5, "max_scale": 2.0, "max_pelvis_drop": 0.15,
+      "feet": [ { "root": "upperleg.l", "mid": "lowerleg.l", "end": "foot.l" }, { "root": "upperleg.r", "mid": "lowerleg.r", "end": "foot.r" } ] },
+    { "type": "ScaleBone", "name": "HideHead", "bone": "head", "weight_slot": "FirstPersonHead" }
+  ]
+}

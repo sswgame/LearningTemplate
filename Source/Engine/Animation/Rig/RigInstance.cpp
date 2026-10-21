@@ -174,6 +174,18 @@ namespace sw
             _listTargetValue[targetIndex] = value;
     }
 
+    bool RigInstance::tryGetOwnTargetBinding( uint32 targetIndex, int32& outBone, BoneTransform& outCombinedOffset ) const
+    {
+        if ( targetIndex >= _listTargetDef.size() )
+            return false;
+        const int32 bone = _listTargetBone[targetIndex];
+        if ( bone == kExternalBone )
+            return false;
+        outBone           = bone == kModelOriginBone ? -1 : bone;
+        outCombinedOffset = _listTargetOffset[targetIndex];
+        return true;
+    }
+
     bool RigInstance::resolveTarget( uint32 targetIndex, RigPoseBuffer& pose, float3& outPosition, quaternion& outRotation ) const
     {
         if ( targetIndex >= _listTargetDef.size() )

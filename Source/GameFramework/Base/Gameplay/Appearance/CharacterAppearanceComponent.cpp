@@ -141,6 +141,7 @@ namespace sw
         , _bodyBones{}
         , _listSpawnedPart{}
         , _listSlotOverride{}
+        , _listHiddenOwner{}
         , _taskUnit{}
         , _assembleCount{ 0 }
         , _bodyPart{ -1 }
@@ -211,6 +212,25 @@ namespace sw
         if ( pManager == nullptr )
             return;
         // 메시 보임은 렌더 상태이므로, 틱 안이면 틱 뒤에 적용한다.
+        pManager->executeOrDeferPostTickOnComponent( *this,
+                                                     []( CharacterAppearanceComponent& appearance, GameObjectManager& manager )
+        { appearance.applyVisibility( manager ); } );
+    }
+
+    void CharacterAppearanceComponent::setOwnerPartsHidden( const hashed_string& owner, bool bHidden )
+    {
+        auto       found      = std::find( _listHiddenOwner.begin(), _listHiddenOwner.end(), owner );
+        const bool bWasHidden = found != _listHiddenOwner.end();
+        if ( bWasHidden == bHidden )
+            return;
+        if ( bHidden )
+            _listHiddenOwner.push_back( owner );
+        else
+            _listHiddenOwner.erase( found );
+        GameObjectManager* pManager = findManager();
+        if ( pManager == nullptr )
+            return;
+        // 메시 보임은 렌더 상태이므로, 틱 안이면 틱 뒤에 적용한다(setPartsVisible 과 같은 길).
         pManager->executeOrDeferPostTickOnComponent( *this,
                                                      []( CharacterAppearanceComponent& appearance, GameObjectManager& manager )
         { appearance.applyVisibility( manager ); } );
@@ -494,10 +514,12 @@ namespace sw
             { mesh.setVisible( _bPartsVisible ); } );
         for ( const SpawnedPart& spawned : _listSpawnedPart )
         {
-            GameObject* pObject = manager.resolveGameObject( spawned._object );
+            GameObject* pObject      = manager.resolveGameObject( spawned._object );
+            const bool  bOwnerHidden = std::find( _listHiddenOwner.begin(), _listHiddenOwner.end(), spawned._owner ) != _listHiddenOwner.end();
+            const bool  bVisible     = _bPartsVisible && bOwnerHidden == false;
             if ( pObject != nullptr )
-                Internal::forEachMesh( *pObject, [this]( MeshComponent& mesh )
-                { mesh.setVisible( _bPartsVisible ); } );
+                Internal::forEachMesh( *pObject, [bVisible]( MeshComponent& mesh )
+                { mesh.setVisible( bVisible ); } );
         }
     }
 

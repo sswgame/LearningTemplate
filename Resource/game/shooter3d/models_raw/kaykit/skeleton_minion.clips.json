@@ -1,0 +1,9 @@
+{
+  "clips": {
+    "1H_Melee_Attack_Chop": {
+      "notifies": [
+        { "name": "Impact", "time": 0.45 }
+      ]
+    }
+  }
+}

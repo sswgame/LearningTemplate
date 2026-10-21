@@ -4,8 +4,11 @@
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
+#include "Core/Math/MatrixMath.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Animation/AnimationJSONUtil.h"
 #include "Engine/Animation/Rig/RigNodeLibrary.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -121,21 +124,49 @@ namespace sw
         return false;
     }
 
-    bool RigAsset::rewriteNodeSettings( string_view jsonText, string_view sourceLabel, const vector<RigNodeSaveParams>& listNode, string& outJSONText )
+    bool RigAsset::rewriteSettings( string_view jsonText, string_view sourceLabel, const RigSaveParams& saveParams, string& outJSONText )
     {
         JSONDocument document;
         if ( document.parse( jsonText, sourceLabel ) == false )
         {
-            SW_LOG_ERROR( "Rig '%#': malformed JSON, node settings not saved", sourceLabel );
+            SW_LOG_ERROR( "Rig '%#': malformed JSON, rig settings not saved", sourceLabel );
             return false;
         }
         const JSONValue nodes = document.getRoot().get( "nodes" );
         if ( nodes.isValid() == false )
         {
-            SW_LOG_ERROR( "Rig '%#': no 'nodes', node settings not saved", sourceLabel );
+            SW_LOG_ERROR( "Rig '%#': no 'nodes', rig settings not saved", sourceLabel );
             return false;
         }
-        for ( const RigNodeSaveParams& params : listNode )
+        const JSONValue targets = document.getRoot().get( "targets" );
+        for ( const RigTargetSaveParams& params : saveParams._listTarget )
+        {
+            bool bFound = false;
+            for ( size_t index = 0; targets.isValid() && index < targets.size(); ++index )
+            {
+                const JSONValue target = targets.at( index );
+                const bool      bNamed = hashed_string( target.get( "name" ).asString() ) == params._name;
+                if ( bNamed == false )
+                    continue;
+                bFound = true;
+                // 읽기(`readFloat3` · `readRotationDegrees`)와 같은 배치로 쓴다 — 회전은 도 단위 [피치, 요, 롤].
+                const float3 degrees           = params._rotation.getEulerAngles() * MathUtil::kRadianToDegree;
+                const bool   bHasTranslation   = params._translation.getLengthSquared() > 0.0f;
+                const bool   bHasRotation      = degrees.getLengthSquared() > 0.0f;
+                const bool   bWriteTranslation = bHasTranslation || target.has( "translation" );
+                const bool   bWriteRotation    = bHasRotation || target.has( "rotation" );
+                if ( bWriteTranslation )
+                    AnimationJSONUtil::writeFloats( target.set( "translation" ), &params._translation._x, 3 );
+                if ( bWriteRotation )
+                    AnimationJSONUtil::writeFloats( target.set( "rotation" ), &degrees._x, 3 );
+            }
+            if ( bFound == false )
+            {
+                SW_LOG_ERROR( "Rig '%#': target '%#' is not in the file, rig settings not saved", sourceLabel, params._name.c_str() );
+                return false;
+            }
+        }
+        for ( const RigNodeSaveParams& params : saveParams._listNode )
         {
             bool bFound = false;
             for ( size_t index = 0; index < nodes.size(); ++index )
@@ -152,7 +183,7 @@ namespace sw
             }
             if ( bFound == false )
             {
-                SW_LOG_ERROR( "Rig '%#': node '%#' is not in the file, node settings not saved", sourceLabel, params._name.c_str() );
+                SW_LOG_ERROR( "Rig '%#': node '%#' is not in the file, rig settings not saved", sourceLabel, params._name.c_str() );
                 return false;
             }
         }

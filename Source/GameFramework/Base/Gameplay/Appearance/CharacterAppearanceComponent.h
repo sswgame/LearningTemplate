@@ -84,6 +84,11 @@ namespace sw
         /** @brief 몸과 부품을 보이거나 숨깁니다. 1인칭에서 몸을 숨길 때 씁니다. */
         void setPartsVisible( bool bVisible );
         bool isPartsVisible() const { return _bPartsVisible; }
+        /**
+         * @brief 주인(슬롯 이름, 예: `MainHand`)이 @p owner 인 부품만 숨기거나 다시 보입니다. 몸 전체 보임(`setPartsVisible`)과 함께 적용됩니다.
+         * @details 1인칭에서 몸은 보이되 손에 든 총(시점 무기)과 겹치는 몸의 무기만 숨길 때 쓴다. 다시 조립해도 그대로 남는다.
+         */
+        void setOwnerPartsHidden( const hashed_string& owner, bool bHidden );
         /** @brief 스폰한 부품 오브젝트를 모두 지웁니다. 상태를 저장하기 전과 끝낼 때 부릅니다. 다음 조립에서 다시 스폰합니다. */
         void despawnParts();
 
@@ -161,7 +166,8 @@ namespace sw
         CharacterBoneArray                      _bodyBones; ///< 지난 포즈(모델 공간). 소켓 질의가 읽는다
         vector<SpawnedPart>                     _listSpawnedPart;
         vector<SlotOverride>                    _listSlotOverride;
-        TComponentHandle<SkeletalMeshComponent> _taskUnit; ///< 단계 작업을 등록한 몸 유닛
+        vector<hashed_string>                   _listHiddenOwner; ///< 숨긴 부품 주인(`setOwnerPartsHidden`)
+        TComponentHandle<SkeletalMeshComponent> _taskUnit;        ///< 단계 작업을 등록한 몸 유닛
         uint32                                  _assembleCount;
         int32                                   _bodyPart;
         bool                                    _bPartsVisible;

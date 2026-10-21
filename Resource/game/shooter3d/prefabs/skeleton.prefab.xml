@@ -32,6 +32,14 @@
 			                           _syncWeight="1"
 			                           _bExtractRootMotion="false"
 			                           _bPlayOnBegin="true" />
+			<AnimationNotifyComponent _componentName="AnimationNotifyComponent"
+			                          _bActive="true"
+			                          _notifyTablePath="game/shooter3d/characters/skeleton_minion/skeleton_minion.notifies.xml" />
+			<RagdollComponent _componentName="RagdollComponent"
+			                  _bActive="true"
+			                  _physicsAssetPath="game/shooter3d/characters/skeleton_warrior/skeleton_warrior.physics.xml"
+			                  _bRagdollOnFatalHit="false"
+			                  _bAutoGetUp="false" />
 			<CharacterAppearanceComponent _componentName="CharacterAppearanceComponent"
 			                              _bActive="true"
 			                              _presetID="SkeletonMinion"
@@ -69,7 +77,6 @@
 			                       _reach="1.7"
 			                       _damage="9"
 			                       _attackInterval="1.5"
-			                       _attackHitTime="0.45"
 			                       _attackLength="1"
 			                       _riseTime="1.6"
 			                       _staggerTime="0.4"

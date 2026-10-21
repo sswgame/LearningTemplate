@@ -1,0 +1,5 @@
+<!-- KayKit 스켈레톤(미니언 클립 폴더 — 적 프리팹 skeleton.prefab.xml)의 알림 표. 클립 알림 이름(곁 데이터 models_raw/kaykit/skeleton_minion.clips.json) → 처리기 + 인자.
+     Impact 는 휘두름이 닿는 시각이다 — ShooterEnemyComponent::onAnimationNotify 가 이벤트 SwingLands 로 받아 손 닿는 거리면 플레이어를 때린다. -->
+<AnimationNotifies>
+    <Notify name="Impact" handler="GameplayEvent" event="SwingLands"/>
+</AnimationNotifies>

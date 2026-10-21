@@ -6,6 +6,7 @@
 
 #include "Engine/Animation/AnimationClip.h"
 #include "Engine/Animation/Skeletal/LocomotionSpeedUtil.h"
+#include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 #include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -58,6 +59,7 @@ namespace sw
         , _minPlayRate{ 0.6f }
         , _maxPlayRate{ 1.8f }
         , _minLocomotionFootSpeed{ 0.3f }
+        , _strideNode{ "Stride" }
         , _locomotion{ 0.25f }
         , _mapClipFootSpeed{}
         , _aimWeight{ 0.0f }
@@ -66,6 +68,7 @@ namespace sw
         , _bodyYaw{ 0.0f }
         , _lastHitReaction{ 0 }
         , _bYawReady{ SW_FALSE }
+        , _bStrideWarned{ SW_FALSE }
         , _reserved{ 0 }
     {
         setCanEverTick( true );
@@ -79,16 +82,16 @@ namespace sw
         _mapClipFootSpeed.clear(); // 클립을 다시 읽었을 수 있다(핫 리로드)
     }
 
-    float32 ShooterAvatarComponent::computeLocomotionPlayRate( const SkeletalAnimatorComponent& animator, LocomotionDirection direction, float32 moveSpeed )
+    float32 ShooterAvatarComponent::findLocomotionFootSpeed( const SkeletalAnimatorComponent& animator, LocomotionDirection direction )
     {
         const bool bLocomotion = direction != LocomotionDirection::Idle && direction != LocomotionDirection::Airborne;
         if ( bLocomotion == false )
-            return 1.0f;
+            return 0.0f;
         const AnimationClip*         pClip  = animator.findClip( animator.getCurrentStateName() );
         const GameObject*            pOwner = getOwner();
         const SkeletalMeshComponent* pUnit  = pOwner != nullptr ? pOwner->getComponent<SkeletalMeshComponent>() : nullptr;
         if ( pClip == nullptr || pUnit == nullptr )
-            return 1.0f;
+            return 0.0f;
         auto found = _mapClipFootSpeed.find( pClip );
         if ( found == _mapClipFootSpeed.end() )
         {
@@ -97,9 +100,31 @@ namespace sw
                                                                              LocomotionSpeedUtil::kDefaultSampleCount );
             found                   = _mapClipFootSpeed.emplace( pClip, footSpeed ).first;
         }
-        if ( found->second < _minLocomotionFootSpeed )
-            return 1.0f;
-        return LocomotionSpeedUtil::computePlayRate( moveSpeed, found->second, _minPlayRate, _maxPlayRate );
+        return found->second < _minLocomotionFootSpeed ? 0.0f : found->second;
+    }
+
+    void ShooterAvatarComponent::updateStrideWarping( float32 strideScale, const float3& worldVelocity )
+    {
+        GameObject*            pOwner = getOwner();
+        PoseModifierComponent* pRig   = pOwner != nullptr ? pOwner->getComponent<PoseModifierComponent>() : nullptr;
+        if ( pRig == nullptr || pRig->isRigReady() == false )
+            return;
+        // 노드 조절은 모델 공간 수평 방향이다. 몸은 요만 돈다(KayKit 은 +Z 가 앞) — 월드 속도를 몸 요의 반대로 돌린다.
+        const float32       cosYaw  = MathUtil::cos( _bodyYaw );
+        const float32       sinYaw  = MathUtil::sin( _bodyYaw );
+        const float32       modelX  = cosYaw * worldVelocity._x - sinYaw * worldVelocity._z;
+        const float32       modelZ  = sinYaw * worldVelocity._x + cosYaw * worldVelocity._z;
+        const float32       length  = MathUtil::sqrt( modelX * modelX + modelZ * modelZ );
+        const bool          bMoving = length > 1.0e-4f;
+        const hashed_string stride( _strideNode );
+        bool                bApplied = pRig->setNodeControl( stride, hashed_string( "stride_scale" ), bMoving ? strideScale : 1.0f );
+        bApplied                     = pRig->setNodeControl( stride, hashed_string( "direction_x" ), bMoving ? modelX / length : 0.0f ) && bApplied;
+        bApplied                     = pRig->setNodeControl( stride, hashed_string( "direction_z" ), bMoving ? modelZ / length : 0.0f ) && bApplied;
+        if ( bApplied == false && _bStrideWarned == SW_FALSE )
+        {
+            _bStrideWarned = SW_TRUE;
+            SW_LOG_ERROR( "Body rig '%#' has no StrideWarping node '%#' - backward and sideways steps slide", pRig->getRigPath().c_str(), _strideNode.c_str() );
+        }
     }
 
     void ShooterAvatarComponent::onTick( float32 deltaTime )
@@ -145,9 +170,14 @@ namespace sw
         parameters.setFloat( hashed_string( ShooterAnimationParameter::kMove ), computeMoveCode( direction, forward, _runThreshold ) );
         parameters.setBool( hashed_string( ShooterAnimationParameter::kDead ), bAlive == false );
         // 발 미끄러짐 — 이동 클립의 발 속도에 실제 수평 속도를 맞춘다(언리얼 재생 속도 매칭). 쓰러지면 클립 속도 그대로.
-        const float3& velocity  = pPlayer->getMoveVelocity();
-        const float32 moveSpeed = MathUtil::sqrt( velocity._x * velocity._x + velocity._z * velocity._z );
-        pAnimator->setPlayRate( bAlive ? computeLocomotionPlayRate( *pAnimator, direction, moveSpeed ) : 1.0f );
+        // 재생 속도 범위를 넘는 몫(빠른 뒷걸음 · 옆걸음)은 리그의 보폭 워핑 노드(`Stride`)가 보폭으로 맞춘다.
+        const float3& velocity    = pPlayer->getMoveVelocity();
+        const float32 moveSpeed   = MathUtil::sqrt( velocity._x * velocity._x + velocity._z * velocity._z );
+        const float32 footSpeed   = bAlive ? findLocomotionFootSpeed( *pAnimator, direction ) : 0.0f;
+        const float32 playRate    = footSpeed > 0.0f ? LocomotionSpeedUtil::computePlayRate( moveSpeed, footSpeed, _minPlayRate, _maxPlayRate ) : 1.0f;
+        const float32 strideScale = footSpeed > 0.0f ? LocomotionSpeedUtil::computeStrideScale( moveSpeed, footSpeed, playRate ) : 1.0f;
+        pAnimator->setPlayRate( playRate );
+        updateStrideWarping( strideScale, velocity );
 
         // 상체 — 겨눈 자세는 늘, 쏘는 동작은 막 쏜 동안. 맞음 · 쓰러짐 동안은 비켜선다.
         const bool    bUpperBodyFree = bAlive && _hitTimer <= 0.0f;
