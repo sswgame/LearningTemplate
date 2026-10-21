@@ -16,7 +16,7 @@ namespace sw
     /**
      * @class TaskNodePool
      * @brief 태스크 노드는 64개 슬랩으로, 스테이지는 소유 목록 + 자유 목록으로, 병렬 그룹은 lock-free 풀로 재사용합니다.
-     * @details 매니저가 소유하지만, 매니저가 사라질 때 핸들이 쥔 노드 · 스테이지가 남아 있으면 그 핸들들의 몫이 됩니다(`detachOwner`).
+     * @details 매니저가 소유하지만, 매니저가 사라질 때 핸들이 쥔 노드 · 스테이지가 남아 있으면 그 핸들들의 책임이 됩니다(`detachOwner`).
      *          그 뒤 놓이는 노드 · 스테이지는 남은 수를 내리고, 마지막 것이 풀을 소멸시킵니다. 참조 수를 세는 비용은 매니저가 사라질 때 한 번뿐입니다.
      */
     class TaskNodePool
@@ -43,7 +43,7 @@ namespace sw
         StageNode* allocateStage();
         /** @brief 마지막 참조가 놓인 스테이지를 돌려줍니다. */
         void deallocateStage( StageNode* pStage );
-        /** @brief 강제 정리(`clear`)용입니다. 남은 태스크가 있는 스테이지의 수를 비우고 그 몫의 참조를 놓습니다(핸들의 참조는 둔다). 아무것도 돌고 있지 않을 때만 부르십시오. */
+        /** @brief 강제 정리(`clear`)용입니다. 남은 태스크가 있는 스테이지의 수를 비우고 그 참조를 놓습니다(핸들의 참조는 둔다). 아무것도 돌고 있지 않을 때만 부르십시오. */
         void resetAllStages();
 
         /** @brief 병렬 그룹을 꺼냅니다. 풀이 비어 있으면 힙에서 만듭니다. */

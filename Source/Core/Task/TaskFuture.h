@@ -268,7 +268,7 @@ namespace sw
             using ReturnType = std::invoke_result_t<F, const T&>;
 
             // **원본이 무효하면 결과도 무효다.** 유효한(그러나 아무도 값을 넣어 주지 않는) future 를 반환하면 그것을 `wait()` 할 때
-            // **영원히 멈춘다.** 호출부마다 우회하게 두지 않고 뿌리를 여기서 막는다. 무효한 future 는 `wait()` 가 바로 돌아오고,
+            // **영원히 멈춘다.** 호출부마다 우회하게 두지 않고 근본 원인을 여기서 막는다. 무효한 future 는 `wait()` 가 바로 돌아오고,
             // `waitFor` 는 false 이며, `isValid()` 로 확인할 수 있다. "무효가 들어오면 무효가 나간다" 가 체인 전체에 전해진다.
             // (`fallback()` 은 이 경우 값을 채워 완료시킨다.)
             if ( _pState == nullptr )
@@ -446,8 +446,8 @@ namespace sw
 
     /**
      * @brief 여러 TaskFuture 가 모두 완료되면 결과를 벡터로 모아 주는 future 를 반환합니다(Promise.all / WhenAll).
-     * @details 결과 벡터는 입력과 **길이가 같고** 순서도 그대로입니다. 유효하지 않은 future 자리는 기본값으로 남습니다. 그런
-     *          future 는 `then` 이 콜백을 걸어 주지 않으므로 기다릴 수 없기 때문입니다. 목록이 비었거나 모두 유효하지 않으면
+     * @details 결과 벡터는 입력과 **길이가 같고** 순서도 그대로입니다. 유효하지 않은 future 슬롯은 기본값으로 남습니다. 그런
+     *          future 는 `then` 이 콜백을 등록해 주지 않으므로 기다릴 수 없기 때문입니다. 목록이 비었거나 모두 유효하지 않으면
      *          **이미 완료된 future** 를 반환합니다.
      */
     template <typename T>
@@ -463,7 +463,7 @@ namespace sw
                 ++validCount;
         }
 
-        // 빈 목록도, 모두 유효하지 않은 목록도 여기로 온다. 자리는 남기고 기본값으로 채운다.
+        // 빈 목록도, 모두 유효하지 않은 목록도 여기로 온다. 슬롯은 남기고 기본값으로 채운다.
         if ( validCount == 0 )
         {
             TaskPromise<vector<T>> promise;

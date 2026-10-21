@@ -330,7 +330,7 @@ namespace sw
         TaskCallable        _callable;
         StageNode*          _parentStage{ nullptr }; ///< 남은 태스크가 있는 동안만 유효하다. 그동안 스테이지가 스스로를 잡고 있다
 
-        atomic<int32> _unresolvedDependencies{ 1 }; ///< 1 = 빌더 의존성(`submit` 이 푼다) + 선행 태스크 수 + 병렬 그룹 1
+        atomic<int32> _unresolvedDependencies{ 1 }; ///< 1 = 빌더 의존성(`submit` 이 해제한다) + 선행 태스크 수 + 병렬 그룹 1
 
         TaskThreadAffinity _affinity = TaskThreadAffinity::Any;
         TaskPriority       _priority{ TaskPriority::Normal };
@@ -351,7 +351,7 @@ namespace sw
 
         /**
          * @brief 이 노드가 든 풀입니다(슬랩을 만들 때 한 번 정한다). 매니저는 풀이 압니다(`TaskNodePool::getOwner`).
-         * @details 노드가 매니저를 직접 가리키지 않는 까닭: 핸들이 매니저보다 오래 살면 풀이 그 핸들들의 몫으로 남고(`detachOwner`),
+         * @details 노드가 매니저를 직접 가리키지 않는 까닭: 핸들이 매니저보다 오래 살면 풀이 그 핸들들이 책임지고 남고(`detachOwner`),
          *          그때 매니저가 사라졌다는 것을 노드마다 고치지 않고 풀 하나가 알린다.
          */
         TaskNodePool* _pPool{ nullptr };

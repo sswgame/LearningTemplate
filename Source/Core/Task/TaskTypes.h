@@ -197,7 +197,7 @@ namespace sw
         }
 
         /**
-         * @brief 타입을 묻지 않고 값의 자리를 돌려줍니다. 비었으면 nullptr 입니다.
+         * @brief 타입을 묻지 않고 값의 주소를 돌려줍니다. 비었으면 nullptr 입니다.
          * @details 담긴 타입을 다른 길(리플렉션 타입 이름 · `EnumInfo::_size`)로 아는 쪽만 씁니다 — 크기 검사가 없습니다.
          */
         const void* getRawPtr() const
@@ -232,13 +232,13 @@ namespace sw
 {
     /**
      * @class TaskArgs
-     * @brief 위치 기반 태스크 인자 묶음입니다.
+     * @brief 위치 기반 태스크 인자 팩입니다.
      * @details MakeTaskArgs<T0,T1,...>(...) 로 만들고 get<T0>(0), get<T1>(1), ... 로 읽습니다.
      */
     class TaskArgs
     {
     public:
-        /** @brief 빈 인자 묶음입니다. */
+        /** @brief 빈 인자 팩입니다. */
         TaskArgs() = default;
 
         /** @brief 가변 인자로 값을 채웁니다. */
@@ -432,7 +432,7 @@ namespace sw
 
         /**
          * @brief 태스크의 본문과, 본문 안에서 만든 자식 태스크가 모두 끝났는지 반환합니다. 기다리지 않고 묻기만 합니다.
-         * @details UE 의 `FGraphEvent::IsComplete()` · Unity 의 `JobHandle.IsCompleted` 자리입니다. 취소된 태스크도 실행 차례가
+         * @details UE 의 `FGraphEvent::IsComplete()` · Unity 의 `JobHandle.IsCompleted` 에 해당합니다. 취소된 태스크도 실행 차례가
          *          지나면 끝난 것으로 봅니다. true 를 본 스레드에는 그 태스크(와 자식)가 쓴 것이 보입니다. 빈 핸들은 기다릴
          *          것이 없으므로 true 입니다(`isStageComplete` 와 같습니다).
          */

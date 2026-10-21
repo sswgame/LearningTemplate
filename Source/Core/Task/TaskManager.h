@@ -58,9 +58,9 @@ namespace sw
         /** @brief 모든 워커 스레드를 멈추고 풀을 종료합니다. */
         void shutdown();
 
-        /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
+        /** @brief 서브시스템 이름입니다(다른 선언의 의존 항목이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "Task";
-        /** @brief 기동 순서의 자리 — 워커 수는 논리 CPU 수입니다. 소멸자가 태스크를 기다리는 객체는 이것에 의존해 먼저 놓는다. */
+        /** @brief 기동 순서 위치 — 워커 수는 논리 CPU 수입니다. 소멸자가 태스크를 기다리는 객체는 이것에 의존해 먼저 놓는다. */
         SubsystemInitResult initializeSubsystem() override;
         void                shutdownSubsystem() override;
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
@@ -174,7 +174,7 @@ namespace sw
         bool isStageComplete( const TaskStageHandle& stage );
 
         /**
-         * @brief 만들 때(빌더) 걸어 둔 임시 잠금 의존성을 풀고 태스크를 스케줄러에 제출합니다.
+         * @brief 만들 때(빌더) 걸어 둔 임시 잠금 의존성을 해제하고 태스크를 스케줄러에 제출합니다.
          * @details runBefore · runAfter 같은 의존성 설정을 마친 뒤 불러, 작업이 준비됐음을 알립니다.
          */
         void submit( const TaskHandle& handle );
@@ -245,7 +245,7 @@ namespace sw
         bool isWorkerThread() const;
 
         /**
-         * @brief 태스크 본문을 실행할 수 있는 스레드의 최대 수입니다. 워커 수 + 기다리는 동안 다른 일을 돕는 스레드 몫(`kMaxHelperThreadCount`).
+         * @brief 태스크 본문을 실행할 수 있는 스레드의 최대 수입니다. 워커 수 + 기다리는 동안 다른 일을 돕는 스레드 분(`kMaxHelperThreadCount`).
          * @details 스레드마다 하나씩 쓰는 스크래치(플러시 DFS 스택 · 더티 루트 · 트랜스폼 쓰기 큐) 배열의 크기입니다. **워커가 아닌
          *          스레드도 태스크를 실행합니다.** `waitStage` · `waitAll` · `runParallel` 이 기다리는 동안 `helpOrSpin` 으로 준비된
          *          잡을 아무거나 돕는데, 메인 스레드뿐 아니라 렌더 스레드(패스 기록 대기) · 로더 스레드(스트리밍 대기)도 그 경로를
@@ -344,7 +344,7 @@ namespace sw
          * @param bHelpLowQueue false 면 Low 줄(백그라운드 I/O)은 돕지 않습니다(`runParallel` 의 합류 대기 — 그 줄은 합류를 앞당기지 않는다).
          * @return 계속 돌아야 하면 true, 스핀 예산을 다 써서 이제 잠들 차례면 false(예산은 다시 채우고, 깬 뒤 첫 걸음에 큐를 보게 해 둡니다)
          * @details `waitForJoin` 과 `waitAll` 이 함께 씁니다. 둘이 다른 것은 잠드는 방법뿐입니다. 큐에 넣는 쪽은 모두 세대를 올립니다(`submit` ·
-         *          티켓 · 묶음 끝의 `wakeSleepingWorkers`). `submitWithoutWake` 만 하고 깨우지 않은 묶음은 대기자도 깨우기 전까지 보지 않습니다 — 워커와 같습니다.
+         *          티켓 · 배치 끝의 `wakeSleepingWorkers`). `submitWithoutWake` 만 하고 깨우지 않은 배치는 대기자도 깨우기 전까지 보지 않습니다 — 워커와 같습니다.
          */
         bool helpOrSpin( WaitSpinState& inoutState, bool bHelpLowQueue );
         /** @brief @p join 이 0 이 될 때까지 기다립니다. 메인 작업을 실행하고, 다른 일을 돕고(@p bHelpLowQueue 가 false 면 Low 줄은 빼고), 잠깐 스핀하다가 자기 슬롯에서 잠듭니다. */
@@ -398,7 +398,7 @@ namespace sw
             atomic<uint32> _word; ///< 0 에서 시작한다(래퍼의 기본 생성). 값 자체에는 의미가 없고 바뀌었는지만 본다
         };
 
-        /** @brief 워커 하나의 자리입니다. 고정 크기 lock-free 데크 · 잠드는 워드 · 스레드 핸들을 가집니다. */
+        /** @brief 워커 하나의 슬롯입니다. 고정 크기 lock-free 데크 · 잠드는 워드 · 스레드 핸들을 가집니다. */
         struct WorkerSlot
         {
             WorkStealingDeque<uintptr_t> _queue{ 4096 }; ///< 항목은 태스크 노드(짝수)이거나 병렬 그룹의 티켓(홀수)이다
@@ -426,7 +426,7 @@ namespace sw
          * @brief 작업이 들어올 때마다 오르는 세대입니다. 스핀 중인 워커는 **이 값만 읽습니다.**
          * @details 스핀 중에 매번 큐를 뒤지면(`tryTakeItem`) 전역 MPMC 큐의 CAS 와 데크마다의 steal 을 워커 전부가 동시에 반복해서
          *          건드려, 스핀을 늘릴 때 게임 · 렌더 스레드의 코어까지 빼앗습니다. 읽기 전용 캐시 라인 하나만 보면 경합이 없고,
-         *          세대가 바뀌었을 때만 큐를 건드립니다. `submitWithoutWake` 는 세대를 올리지 않고, 묶음 끝의
+         *          세대가 바뀌었을 때만 큐를 건드립니다. `submitWithoutWake` 는 세대를 올리지 않고, 배치 끝의
          *          `wakeSleepingWorkers` 가 한 번 올립니다.
          */
         alignas( 64 ) atomic<uint32> _workEpoch;
