@@ -461,6 +461,10 @@ namespace sw
          *        GPUScene 의 컬링 슬롯 수를 정합니다. **업로드 전에**(셋업 단계) 불러야 합니다. 버퍼와 텍스처 생성은 기록 중에 할 수 없습니다.
          */
         void prepareExtraViews( const vector<RenderViewRequest>& listRequest );
+        /** @brief 이 카메라 id 의 추가 뷰입니다. 없으면 새로 만들어 목록 끝에 붙입니다. */
+        ViewTarget& findOrAddExtraView( uint64 viewID );
+        /** @brief 요청 하나로 추가 뷰를 준비합니다(설정 · 출력 · 렌더 텍스처 빌리기 · 컬링 상수버퍼 · 트랜지언트). 준비하지 못하면 이번 프레임에 그리지 않습니다. */
+        void prepareExtraView( const RenderViewRequest& request );
         /**
          * @brief 스냅샷에 든 이 뷰의 투명 순서를 뷰 자원(순번 테이블, 슬롯 스트림, 배치 순서)에 옮깁니다. 없으면 주 순서로 그립니다.
          * @details GPU 정렬 백엔드는 순번 테이블을 정렬 디스패치에 쓰고, 컬링이 없는 백엔드는 배치 안을 뷰 순서로 다시 배치한 슬롯 스트림을 드로우에 쓴다. 업로드 뒤, 기록 전에 부른다.

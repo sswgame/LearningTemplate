@@ -33,84 +33,7 @@ namespace sw
         const uint32 requestCount = MathUtil::min( static_cast<uint32>( listRequest.size() ), kMaxExtraRenderView );
         for ( uint32 requestIndex = 0; requestIndex < requestCount; ++requestIndex )
         {
-            const RenderViewRequest& request = listRequest[requestIndex];
-            ViewTarget*              pView   = nullptr;
-            for ( unique_ptr<ViewTarget>& pExisting : _listExtraView )
-            {
-                if ( pExisting->_viewID == request._viewID )
-                {
-                    pView = pExisting.get();
-                    break;
-                }
-            }
-            if ( pView == nullptr )
-            {
-                _listExtraView.push_back( make_unique<ViewTarget>() );
-                pView          = _listExtraView.back().get();
-                pView->_viewID = request._viewID;
-            }
-            ViewTarget& view       = *pView;
-            view._bSeenThisFrame   = SW_TRUE;
-            view._settings         = request._settings;
-            view._outputKind       = request._outputKind;
-            view._bRenderThisFrame = request._bRender;
-            view._outputWidth      = request._outputWidth;
-            view._outputHeight     = request._outputHeight;
-            view._hostTarget       = request._outputKind == RenderViewOutputKind::HostTarget ? request._hostTarget : RHITextureHandle{ 0 };
-            if ( view._outputKind == RenderViewOutputKind::HostTarget && view._hostTarget == 0 )
-                view._bRenderThisFrame = SW_FALSE;
-
-            // 렌더 텍스처는 캐시에서 빌린다 — 머티리얼이 같은 경로로 읽는다. 크기는 텍스처의 실제 크기다(먼저 만든 쪽이 정했다).
-            const bool bRenderTexture       = view._outputKind == RenderViewOutputKind::RenderTexture;
-            const bool bBorrowRenderTexture = bRenderTexture && ( view._outputPath == request._renderTexture ) == false && engine::areEngineServicesBound();
-            if ( bBorrowRenderTexture )
-            {
-                TextureCache& textures = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
-                if ( view._pOutputTexture != nullptr )
-                    textures.release( view._outputPath.view(), _pDevice );
-                textures.declareRenderTarget( request._renderTexture.view(), request._outputWidth, request._outputHeight );
-                view._pOutputTexture = textures.acquire( request._renderTexture.view(), _pDevice );
-                view._outputPath     = request._renderTexture;
-            }
-            if ( bRenderTexture )
-            {
-                if ( view._pOutputTexture == nullptr || view._pOutputTexture->isRHIValid() == false )
-                {
-                    view._bRenderThisFrame = SW_FALSE;
-                    continue;
-                }
-                view._outputWidth  = view._pOutputTexture->getWidth();
-                view._outputHeight = view._pOutputTexture->getHeight();
-            }
-
-            // 컬링 · 정렬 상수버퍼는 뷰마다 자기 것이다(나눠 쓰면 뒤 업로드가 앞 디스패치를 덮어쓴다). 그림자 패스의 컬링도 뷰마다 자기 슬롯 · 상수버퍼다
-            // (정렬은 그림자에 필요 없다 — 깊이만 쓴다).
-            const bool bCullCb                     = view._cullInput._cullCb.isValid() || view._cullInput._cullCb.create( _pDevice, sizeof( FrameRendererUtil::GPUCullParams ) );
-            const bool bSortCb                     = view._cullInput._sortCb.isValid() || view._cullInput._sortCb.create( _pDevice, sizeof( FrameRendererUtil::GPUSortParams ) );
-            const bool bShadowCullCb               = view._shadowCullInput._cullCb.isValid() || view._shadowCullInput._cullCb.create( _pDevice, sizeof( FrameRendererUtil::GPUCullParams ) );
-            const bool bConstantBufferCreateFailed = bCullCb == false || bSortCb == false || bShadowCullCb == false;
-            if ( bConstantBufferCreateFailed )
-            {
-                SW_LOG_ERROR( "Failed to create the cull / sort constant buffers of extra view %# - it is not drawn", view._viewID );
-                view._bRenderThisFrame = SW_FALSE;
-                continue;
-            }
-            view._cullInput.setViewProjection( request._viewProj );
-            view._cullInput._position = request._position;
-            // 방향광 그림자는 이 뷰의 카메라에 맞춘 것이다. 게임 스레드가 채우지 않았으면(쉬는 뷰 · 그림자 빛 없음) 주 시점의 것을 쓴다.
-            view._shadow = request._shadow._bValid == SW_TRUE ? request._shadow : _mainView._shadow;
-            view._shadowCullInput.setViewProjection( view._shadow._cullViewProj );
-            view._shadowCullInput._position = request._position;
-
-            if ( view._bRenderThisFrame == SW_TRUE )
-            {
-                // 정수 업스케일(화면 사각형 뷰)이면 사각형 픽셀 / 배율(내림)이다. 렌더 텍스처 · 호스트 타깃은 자기 크기에 그대로 그린다.
-                const float32 scale  = MathUtil::clamp( view._settings._resolutionScale, 0.1f, 2.0f );
-                const uint32  zoom   = view._outputKind == RenderViewOutputKind::ScreenRect ? view._settings._upscaleZoom : 0u;
-                const uint32  width  = FrameRendererUtil::computeViewPoolExtent( static_cast<float32>( view._outputWidth ), scale, zoom );
-                const uint32  height = FrameRendererUtil::computeViewPoolExtent( static_cast<float32>( view._outputHeight ), scale, zoom );
-                (void)ensureViewTransients( view, width, height );
-            }
+            prepareExtraView( listRequest[requestIndex] );
         }
 
         // 이번 요청에 없는 뷰(카메라가 사라졌다)는 놓는다. 남은 뷰의 컬링 칸은 목록 순서로 고정 칸 뒤에 붙는다 — 뷰마다 둘(시점, 그림자).
@@ -129,6 +52,84 @@ namespace sw
             _listExtraView[viewIndex]->_shadowCullSlot = kFirstExtraCullView + viewIndex * kCullSlotsPerExtraView + 1u;
         }
         _gpuScene.setCullViewCount( _pDevice, kFirstExtraCullView + static_cast<uint32>( _listExtraView.size() ) * kCullSlotsPerExtraView );
+    }
+
+    FrameRenderer::ViewTarget& FrameRenderer::findOrAddExtraView( uint64 viewID )
+    {
+        for ( unique_ptr<ViewTarget>& pExisting : _listExtraView )
+        {
+            if ( pExisting->_viewID == viewID )
+                return *pExisting;
+        }
+        _listExtraView.push_back( make_unique<ViewTarget>() );
+        ViewTarget& view = *_listExtraView.back();
+        view._viewID     = viewID;
+        return view;
+    }
+
+    void FrameRenderer::prepareExtraView( const RenderViewRequest& request )
+    {
+        ViewTarget& view       = findOrAddExtraView( request._viewID );
+        view._bSeenThisFrame   = SW_TRUE;
+        view._settings         = request._settings;
+        view._outputKind       = request._outputKind;
+        view._bRenderThisFrame = request._bRender;
+        view._outputWidth      = request._outputWidth;
+        view._outputHeight     = request._outputHeight;
+        view._hostTarget       = request._outputKind == RenderViewOutputKind::HostTarget ? request._hostTarget : RHITextureHandle{ 0 };
+        if ( view._outputKind == RenderViewOutputKind::HostTarget && view._hostTarget == 0 )
+            view._bRenderThisFrame = SW_FALSE;
+
+        // 렌더 텍스처는 캐시에서 빌린다 — 머티리얼이 같은 경로로 읽는다. 크기는 텍스처의 실제 크기다(먼저 만든 쪽이 정했다).
+        const bool bRenderTexture       = view._outputKind == RenderViewOutputKind::RenderTexture;
+        const bool bBorrowRenderTexture = bRenderTexture && ( view._outputPath == request._renderTexture ) == false && engine::areEngineServicesBound();
+        if ( bBorrowRenderTexture )
+        {
+            TextureCache& textures = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
+            if ( view._pOutputTexture != nullptr )
+                textures.release( view._outputPath.view(), _pDevice );
+            textures.declareRenderTarget( request._renderTexture.view(), request._outputWidth, request._outputHeight );
+            view._pOutputTexture = textures.acquire( request._renderTexture.view(), _pDevice );
+            view._outputPath     = request._renderTexture;
+        }
+        if ( bRenderTexture )
+        {
+            if ( view._pOutputTexture == nullptr || view._pOutputTexture->isRHIValid() == false )
+            {
+                view._bRenderThisFrame = SW_FALSE;
+                return;
+            }
+            view._outputWidth  = view._pOutputTexture->getWidth();
+            view._outputHeight = view._pOutputTexture->getHeight();
+        }
+
+        // 컬링 · 정렬 상수버퍼는 뷰마다 자기 것이다(나눠 쓰면 뒤 업로드가 앞 디스패치를 덮어쓴다). 그림자 패스의 컬링도 뷰마다 자기 슬롯 · 상수버퍼다
+        // (정렬은 그림자에 필요 없다 — 깊이만 쓴다).
+        const bool bCullCb                     = view._cullInput._cullCb.isValid() || view._cullInput._cullCb.create( _pDevice, sizeof( FrameRendererUtil::GPUCullParams ) );
+        const bool bSortCb                     = view._cullInput._sortCb.isValid() || view._cullInput._sortCb.create( _pDevice, sizeof( FrameRendererUtil::GPUSortParams ) );
+        const bool bShadowCullCb               = view._shadowCullInput._cullCb.isValid() || view._shadowCullInput._cullCb.create( _pDevice, sizeof( FrameRendererUtil::GPUCullParams ) );
+        const bool bConstantBufferCreateFailed = bCullCb == false || bSortCb == false || bShadowCullCb == false;
+        if ( bConstantBufferCreateFailed )
+        {
+            SW_LOG_ERROR( "Failed to create the cull / sort constant buffers of extra view %# - it is not drawn", view._viewID );
+            view._bRenderThisFrame = SW_FALSE;
+            return;
+        }
+        view._cullInput.setViewProjection( request._viewProj );
+        view._cullInput._position = request._position;
+        // 방향광 그림자는 이 뷰의 카메라에 맞춘 것이다. 게임 스레드가 채우지 않았으면(쉬는 뷰 · 그림자 빛 없음) 주 시점의 것을 쓴다.
+        view._shadow = request._shadow._bValid == SW_TRUE ? request._shadow : _mainView._shadow;
+        view._shadowCullInput.setViewProjection( view._shadow._cullViewProj );
+        view._shadowCullInput._position = request._position;
+
+        if ( view._bRenderThisFrame == SW_FALSE )
+            return;
+        // 정수 업스케일(화면 사각형 뷰)이면 사각형 픽셀 / 배율(내림)이다. 렌더 텍스처 · 호스트 타깃은 자기 크기에 그대로 그린다.
+        const float32 scale  = MathUtil::clamp( view._settings._resolutionScale, 0.1f, 2.0f );
+        const uint32  zoom   = view._outputKind == RenderViewOutputKind::ScreenRect ? view._settings._upscaleZoom : 0u;
+        const uint32  width  = FrameRendererUtil::computeViewPoolExtent( static_cast<float32>( view._outputWidth ), scale, zoom );
+        const uint32  height = FrameRendererUtil::computeViewPoolExtent( static_cast<float32>( view._outputHeight ), scale, zoom );
+        (void)ensureViewTransients( view, width, height );
     }
 
     void FrameRenderer::releaseExtraView( ViewTarget& view )
