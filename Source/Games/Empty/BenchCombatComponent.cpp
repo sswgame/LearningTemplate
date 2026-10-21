@@ -68,6 +68,7 @@ namespace sw
         SocketSetComponent*        pSockets  = pEnemy->addComponent<SocketSetComponent>();
         RagdollComponent*          pRagdoll  = pEnemy->addComponent<RagdollComponent>();
         pUnit->setMeshID( settings._combatEnemyMesh );
+        pUnit->setMaterialPath( settings._combatEnemyMaterial );
         pUnit->setSkeletonPath( settings._combatEnemySkeleton );
         pUnit->resolveRenderAssets();
         pUnit->setAnimateWhenOffscreen( true );
@@ -121,6 +122,7 @@ namespace sw
         pSwordBody->setLayer( hashed_string( "Debris" ) );
         pSwordBody->setMaterial( hashed_string( "Metal" ) );
         pSwordMesh->setMeshID( settings._combatSwordMesh );
+        pSwordMesh->setMaterialPath( settings._combatSwordMaterial );
         (void)pBinding;
         outListObject.push_back( pSword->getHandle() );
 

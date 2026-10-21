@@ -19,12 +19,6 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션 영역의 
 왜 필요한가: 관절 모터가 애니메이션 포즈를 쫓는 래그돌(전신 · 부분 래그돌 · 맞음 반응 · 기상 섞기는 `RagdollComponent`).
 남은 것: 헤어 카드 · 천(Jolt 소프트 바디 — 옛 D1-4), 가닥 헤어(TressFX)는 나중.
 
-### KayKitMaterials
-제목: KayKit 캐릭터 텍스처를 머티리얼로
-옛번호: D4-6
-왜 필요한가: 원본 GLB 에 든 `knight_texture` 등을 `textures_raw/` 로 옮겨 머티리얼을 만들어야 한다. 지금 캐릭터는 씬 기본 머티리얼(흰색)로 그려진다.
-착수 조건 / 남은 것: Shooter3D 팩에는 이미 꺼낸 아틀라스(`textures_raw/kaykit_*.png`) · `materials/kaykit_*.material` 이 있다. 나머지 게임에 같은 일을 한다.
-
 ### AnimationAdvancedFeatures
 제목: 애니메이션 고급 기능 후보
 옛번호: D4-16

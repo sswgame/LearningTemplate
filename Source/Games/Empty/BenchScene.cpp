@@ -619,6 +619,7 @@ namespace sw
                 continue;
             pMesh->setShareCrowdPose( gv_benchCrowdShare != 0 );
             pMesh->setMeshID( _settings._knightMesh.c_str() );
+            pMesh->setMaterialPath( _settings._knightMaterial );
             pMesh->setSkeletonPath( _settings._knightSkeleton.c_str() );
             pMesh->resolveRenderAssets();
             // 기사는 +Z 방향을 봅니다. 카메라(-Z 쪽)를 보도록 돌립니다. 격자로 배치하면 열과 행으로 펼치고, 행은 +Z 쪽으로 멀어집니다.
