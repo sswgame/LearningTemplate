@@ -209,12 +209,7 @@ namespace sw
 
     WitcherAlchemy::ChargeEntry* WitcherAlchemy::findCharge( const hashed_string& itemID )
     {
-        for ( ChargeEntry& entry : _listCharge )
-        {
-            if ( entry._itemID == itemID )
-                return &entry;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&ChargeEntry::_itemID>( _listCharge, itemID );
     }
 
     WitcherUseResult WitcherAlchemy::evaluateUse( const hashed_string& itemID, const Inventory& inventory, WitcherAlchemyKind kind ) const

@@ -503,12 +503,8 @@ namespace sw
 
     const ConquestSite* ConquestWorld::findSite( const hashed_string& siteID ) const
     {
-        for ( const ConquestSite& site : _listSite )
-        {
-            if ( site._pDef->_id == siteID )
-                return &site;
-        }
-        return nullptr;
+        return VectorUtil::findIf( _listSite, [&]( const ConquestSite& site )
+        { return site._pDef->_id == siteID; } );
     }
 
     const ConquestUnit* ConquestWorld::findUnit( int32 unitID ) const

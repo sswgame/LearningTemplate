@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
@@ -58,7 +59,7 @@ namespace sw
         vector<hashed_string> _listSeason{}; ///< 자라는 계절이다(`seasons`, 필수). 시계의 계절 이름이며 `WorldClockSettings::_listSeason` 과 같다
 
         /** @brief @p season 에 자라면 true 를 반환합니다. */
-        bool growsIn( const hashed_string& season ) const { return std::find( _listSeason.begin(), _listSeason.end(), season ) != _listSeason.end(); }
+        bool growsIn( const hashed_string& season ) const { return VectorUtil::contains( _listSeason, season ); }
     };
 } // namespace sw
 

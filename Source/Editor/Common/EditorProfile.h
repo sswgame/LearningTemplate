@@ -1,8 +1,8 @@
 /**
  * @file EditorProfile.h
- * @brief 에디터 모듈의 프레임 계측 구간(`SW_EDITOR_PROFILE_SCOPE`)입니다 — 엔진의 `SW_PROFILE_SCOPE` 와 같은 표에 쌓입니다.
- * @details 엔진 매크로는 `engine::getSubsystem<FrameProfiler>()`(엔진 내부 서비스 표)를 부르므로 에디터 모듈은 쓸 수 없다. 여기서는 에디터 서비스 로케이터로
- *          프로파일러를 받아 같은 표에 등록한다. 구간 이름은 엔진이 복사해 든다(`FrameProfiler::registerScope`) — 모듈을 다시 올려도 표가 매달린
+ * @brief 에디터 모듈의 프레임 계측 구간(`SW_EDITOR_PROFILE_SCOPE`)입니다 — 엔진의 `SW_PROFILE_SCOPE` 와 같은 테이블에 쌓입니다.
+ * @details 엔진 매크로는 `engine::getSubsystem<FrameProfiler>()`(엔진 내부 서비스 테이블)를 부르므로 에디터 모듈은 쓸 수 없다. 여기서는 에디터 서비스 로케이터로
+ *          프로파일러를 받아 같은 테이블에 등록한다. 구간 이름은 엔진이 복사해 보관한다(`FrameProfiler::registerScope`) — 모듈을 다시 로드해도 테이블이 매달린
  *          포인터를 들지 않는다. 지점은 함수 지역 static 이라 모듈을 다시 올리면 다시 등록되고, 같은 이름은 같은 슬롯이다.
  */
 #pragma once
@@ -14,7 +14,7 @@ namespace sw::editor
 {
     /**
      * @struct EditorProfileUtil
-     * @brief `SW_EDITOR_PROFILE_SCOPE` 의 등록 창구입니다.
+     * @brief `SW_EDITOR_PROFILE_SCOPE` 의 등록 진입점입니다.
      */
     struct EditorProfileUtil
     {

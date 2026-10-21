@@ -36,7 +36,7 @@ namespace sw::editor
                 {"Environment", { 0.55f, 0.80f, 0.95f, 1.0f }},
             };
 
-            /** @brief 리플렉션 Category 표 — `Icon` 메타가 없는 컴포넌트(키트 · 게임)가 여기서 맞는다. */
+            /** @brief 리플렉션 Category 테이블 — `Icon` 메타가 없는 컴포넌트(키트 · 게임)가 여기서 맞는다. */
             struct CategoryRow
             {
                 const utf8* _pCategory;
@@ -70,7 +70,7 @@ namespace sw::editor
             static constexpr EditorComponentIconRow kDefaultRow{ editoricon::kComponent, kNeutral, false };
             static constexpr EditorComponentIconRow kObjectRow{ editoricon::kGameObject, kNeutral, false };
 
-            /** @brief 타입 → 줄 캐시입니다. 뷰포트 빌보드가 프레임마다 모든 컴포넌트를 묻는다(오브젝트 8000 개면 메타 조회가 수백만 번). 타입 표 세대가 바뀌면 비운다. */
+            /** @brief 타입 → 줄 캐시입니다. 뷰포트 빌보드가 프레임마다 모든 컴포넌트를 묻는다(오브젝트 8000 개면 메타 조회가 수백만 번). 타입 테이블 세대가 바뀌면 비운다. */
             struct RowCache
             {
                 unordered_map<const TypeInfo*, EditorComponentIconRow> _mapRow;
@@ -126,7 +126,7 @@ namespace sw::editor
         const TypeRegistry* pRegistry = editor::findSubsystem<TypeRegistry>();
         if ( pType == nullptr || pRegistry == nullptr )
             return EditorComponentIconInternal::findRowUncached( pType );
-        // 모듈 언로드 · 리로드면 같은 주소에 다른 타입이 올 수 있다 — 타입 표 세대가 바뀌면 캐시를 비운다.
+        // 모듈 언로드 · 리로드면 같은 주소에 다른 타입이 올 수 있다 — 타입 테이블 세대가 바뀌면 캐시를 비운다.
         EditorComponentIconInternal::RowCache& cache      = EditorComponentIconInternal::getRowCache();
         const uint32                           generation = pRegistry->getGeneration();
         if ( cache._generation != generation )

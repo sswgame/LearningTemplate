@@ -13,8 +13,8 @@ namespace sw::editor
 
     /**
      * @class EditorPreviewGizmo
-     * @brief 미리보기 창이 값으로 드는 기즈모입니다. 대상은 창 선택(`EditorPreviewPanel::getPreviewSelection`)이고 조작은 그 창의 스택에 남습니다.
-     * @details 창 틀(`Common/GUI`)은 뷰포트 층(`Viewport`)을 include 하지 못하므로 기즈모를 쓰는 창(`Panels/`)이 이것을 든다. 쓰는 순서:
+     * @brief 미리보기 창이 값으로 가진 기즈모입니다. 대상은 창 선택(`EditorPreviewPanel::getPreviewSelection`)이고 조작은 그 창의 스택에 남습니다.
+     * @details 창 틀(`Common/GUI`)은 뷰포트 층(`Viewport`)을 include 하지 못하므로 기즈모를 쓰는 창(`Panels/`)이 이것을 가진다. 쓰는 순서:
      *          `drawPreviewViewport( size, gizmo.hasMouse() )` 로 뷰포트를 그린 바로 뒤에 `draw( *this )` 를 부른다 — 기즈모 위 · 드래그 중에는 오빗 입력을 넘기지 않는다.
      */
     class SW_EDITOR_API EditorPreviewGizmo

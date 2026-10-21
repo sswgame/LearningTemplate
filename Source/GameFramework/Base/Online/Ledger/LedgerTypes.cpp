@@ -19,7 +19,7 @@ namespace sw
 
             static bool isLowerOrDigit( utf8 ch ) { return ( 'a' <= ch && ch <= 'z' ) || ( '0' <= ch && ch <= '9' ); }
 
-            /** @brief 글자가 모두 [0-9a-z] 또는 @p pExtra 에 든 것이고 길이가 1..@p maxSize 인가입니다. */
+            /** @brief 글자가 모두 [0-9a-z] 또는 @p pExtra 에 포함된 것이고 길이가 1..@p maxSize 인가입니다. */
             static bool isTokenText( string_view text, int32 maxSize, const utf8* pExtra )
             {
                 if ( text.empty() || text.size() > static_cast<size_t>( maxSize ) )

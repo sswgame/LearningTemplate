@@ -2,6 +2,7 @@
 
 #include "Engine/Animation/Graph/AnimationGraphAsset.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
@@ -174,7 +175,7 @@ namespace sw
             def._weightParameter = hashed_string( poseNodeJSON.get( "weight" ).asString() );
 
         // 종류마다 요구하는 값 — 지금은 blend_poses 하나다.
-        const bool bHasEmptyInput     = std::find( def._listInput.begin(), def._listInput.end(), hashed_string{} ) != def._listInput.end();
+        const bool bHasEmptyInput     = VectorUtil::contains( def._listInput, hashed_string{} );
         const bool bHasRequiredValues = def._listInput.size() == 2 && bHasEmptyInput == false && def._weightParameter.empty() == false;
         if ( bHasRequiredValues == false )
         {
@@ -446,22 +447,12 @@ namespace sw
 
     const AnimationBoneMaskDef* AnimationGraphAsset::findBoneMask( const hashed_string& name ) const
     {
-        for ( const AnimationBoneMaskDef& mask : _listBoneMask )
-        {
-            if ( mask._name == name )
-                return &mask;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&AnimationBoneMaskDef::_name>( _listBoneMask, name );
     }
 
     const AnimationGraphLayerDef* AnimationGraphAsset::findLayer( const hashed_string& name ) const
     {
-        for ( const AnimationGraphLayerDef& layer : _listLayer )
-        {
-            if ( layer._name == name )
-                return &layer;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&AnimationGraphLayerDef::_name>( _listLayer, name );
     }
 
     string AnimationGraphAsset::toJSON() const
@@ -567,24 +558,14 @@ namespace sw
 
     const AnimationGraphNode* AnimationGraphAsset::findNode( int32 nodeID ) const
     {
-        for ( const AnimationGraphNode& node : _listNode )
-        {
-            if ( node._id == nodeID )
-                return &node;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&AnimationGraphNode::_id>( _listNode, nodeID );
     }
 
     const AnimationGraphNode* AnimationGraphAsset::findNodeByName( string_view name ) const
     {
         if ( name.empty() )
             return nullptr;
-        for ( const AnimationGraphNode& node : _listNode )
-        {
-            if ( node._name == name )
-                return &node;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&AnimationGraphNode::_name>( _listNode, name );
     }
 
     const AnimationGraphNode* AnimationGraphAsset::findEntryNode() const
@@ -609,12 +590,8 @@ namespace sw
 
     const AnimationGraphLink* AnimationGraphAsset::findFinishLink( int32 fromNodeID ) const
     {
-        for ( const AnimationGraphLink& link : _listLink )
-        {
-            if ( link._fromNode == fromNodeID && link._op == AnimationConditionOp::None )
-                return &link;
-        }
-        return nullptr;
+        return VectorUtil::findIf( _listLink, [&]( const AnimationGraphLink& link )
+        { return link._fromNode == fromNodeID && link._op == AnimationConditionOp::None; } );
     }
 
     bool AnimationGraphAsset::parseConditionOp( string_view text, AnimationConditionOp& outOp )

@@ -2,7 +2,7 @@
  * @file EditorContextMenuExtension.h
  * @brief 하이어라키의 게임 오브젝트 · 콘텐츠 브라우저의 에셋 · 씬 뷰포트 우클릭 메뉴에 항목 하나를 더하는 등록 줄(`SW_EDITOR_CONTEXT_MENU_ENTRY`)입니다.
  * @details 언리얼의 `UToolMenus` 확장(`LevelEditor.ActorContextMenu` · `ContentBrowser.AssetContextMenu`)과 유니티의 `[MenuItem("GameObject/...")]` ·
- *          `[MenuItem("Assets/...")]` 자리다. 메뉴를 그리는 패널은 항목을 모르고, 자기 종류의 항목을 순서대로 그리기만 한다.
+ *          `[MenuItem("Assets/...")]` 에 해당한다. 메뉴를 그리는 패널은 항목을 모르고, 자기 종류의 항목을 순서대로 그리기만 한다.
  *          이 헤더는 ImGui 를 쓰지 않는다(EditorTest 가 목록 규칙을 테스트한다).
  */
 #pragma once
@@ -26,7 +26,7 @@ namespace sw::editor
     {
         GameObject, ///< 하이어라키에서 게임 오브젝트 하나를 우클릭한 메뉴. `_pGameObject` · `_pManager` 가 채워진다
         Asset,      ///< 콘텐츠 브라우저에서 파일이나 폴더 하나를 우클릭한 메뉴. `_pAssetPath` · `_bIsDirectory` 가 채워진다
-        Viewport,   ///< 씬 뷰포트를 우클릭한(끌지 않고 놓은) 메뉴. 언리얼 `LevelEditor.LevelViewportContextMenu` 자리. `_pManager` 는 늘, 맞은 오브젝트가 있으면 `_pGameObject` 도, 바닥 평면과 만나면 `_worldPosition` 도 채워진다
+        Viewport,   ///< 씬 뷰포트를 우클릭한(끌지 않고 놓은) 메뉴. 언리얼 `LevelEditor.LevelViewportContextMenu` 에 해당. `_pManager` 는 늘, 맞은 오브젝트가 있으면 `_pGameObject` 도, 바닥 평면과 만나면 `_worldPosition` 도 채워진다
     };
 
     /**
@@ -69,7 +69,7 @@ namespace sw::editor
 {
     /**
      * @struct EditorContextMenuExtensionUtil
-     * @brief 한 메뉴 종류의 확장 항목을 고르는 창구입니다.
+     * @brief 한 메뉴 종류의 확장 항목을 고르는 진입점입니다.
      */
     struct EditorContextMenuExtensionUtil
     {
@@ -94,7 +94,7 @@ namespace sw::editor
 
         /**
          * @brief @p menuKind 메뉴의 항목을 `_order` 순서로 하나씩 @p visit 에 넘깁니다. @p visit 가 동작 함수를 고르면(nullptr 이 아니면) 그것을 돌려줍니다.
-         * @details 고른 동작은 순회가 끝난 뒤 부르는 쪽이 부른다. 동작이 모듈을 내려 목록이 바뀌어도 순회 중인 배열을 읽지 않는다.
+         * @details 고른 동작은 순회가 끝난 뒤 부르는 쪽이 부른다. 동작이 모듈을 언로드해 목록이 바뀌어도 순회 중인 배열을 읽지 않는다.
          */
         template <typename TVisit>
         static auto visitEntries( EditorContextMenuKind menuKind, TVisit&& visit ) -> void ( * )( const EditorContextMenuTarget& )

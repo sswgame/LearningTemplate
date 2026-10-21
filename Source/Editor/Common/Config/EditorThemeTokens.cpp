@@ -19,7 +19,7 @@ namespace sw::editor
     {
         struct EditorThemeTokensInternal
         {
-            /** @brief 색 토큰 하나: 토큰 키, 읽은 글자, 해석한 값의 자리입니다. 표 한 줄이 해석과 오류 문장을 함께 정한다. */
+            /** @brief 색 토큰 하나: 토큰 키, 읽은 글자, 해석한 값을 담는 필드입니다. 테이블 한 줄이 해석과 오류 문장을 함께 정한다. */
             struct ColorRow
             {
                 const utf8* _pKey;

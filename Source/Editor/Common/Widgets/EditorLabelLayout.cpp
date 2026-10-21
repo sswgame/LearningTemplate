@@ -43,7 +43,7 @@ namespace sw::editor
         string_view remaining = text;
         while ( outListLine.size() + 1 < maxLineCount && pfnMeasure( remaining, pUserData ) > width )
         {
-            // 폭에 드는 가장 긴 앞부분(글자 경계)을 찾는다. 첫 글자는 넘쳐도 싣는다 — 빈 줄이 끝없이 생기지 않게.
+            // 폭에 들어가는 가장 긴 앞부분(글자 경계)을 찾는다. 첫 글자는 넘쳐도 싣는다 — 빈 줄이 끝없이 생기지 않게.
             size_t fitEnd = 0;
             while ( fitEnd < remaining.size() )
             {

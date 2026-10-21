@@ -57,7 +57,7 @@ namespace sw::editor
          * @details 결과 유무와 대기 여부를 **같은 락 안에서 한 번에** 읽는다. 따로 읽으면(`take` 가 false 인 뒤 `isPending` 을 부르면)
          *          그 사이 워커가 끝나 "대기 아님 · 결과는 아직 안 꺼냄" 이 보이고, 그 틈에 새 요청을 올리면 끝난 결과를 읽지도 못하고 버린다.
          *          그래서 "비었으면 요청" 같은 판단은 이 반환값 하나로 한다.
-         *          `Ready` 이면 @p outResult 에 결과가 들어 있고 완료 표시가 내려간다(같은 결과를 두 번 주지 않는다).
+         *          `Ready` 이면 @p outResult 에 결과가 들어 있고 완료 플래그가 해제된다(같은 결과를 두 번 주지 않는다).
          *          `Running` 이면 워커가 아직 실행 중이고, `Idle` 이면 요청이 없거나 결과를 이미 가져갔다. 이 둘이면 @p outResult 는 그대로다.
          */
         EditorTaskPoll take( TResult& outResult )

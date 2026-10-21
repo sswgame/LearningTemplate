@@ -1,6 +1,6 @@
 /**
  * @file BugItPanel.h
- * @brief 버그 리포트 창입니다. 메모를 붙여 지금 상태를 `Saved/BugIt/<시각>/` 에 모으고, 지난 폴더를 열거나 경로를 복사하거나 그 자리로 돌아갑니다(언리얼 BugIt).
+ * @brief 버그 리포트 창입니다. 메모를 붙여 지금 상태를 `Saved/BugIt/<시각>/` 에 모으고, 지난 폴더를 열거나 경로를 복사하거나 그 위치로 돌아갑니다(언리얼 BugIt).
  * @details 모으기는 커맨드 `help.reportBug` 와 같은 `BugItReport::makeInputs` → `BugItReport::capture` 이고, 이 창은 메모 칸과 지난 폴더 목록만 더합니다.
  */
 #pragma once
@@ -35,7 +35,7 @@ namespace sw::editor
 
         /** @brief 창 제목입니다. */
         const utf8* getPanelTitle() const override { return "Bug Report"; }
-        /** @brief 메모 칸 · 모으기 단추 · 폴더 목록을 그립니다. */
+        /** @brief 메모 필드 · 모으기 단추 · 폴더 목록을 그립니다. */
         void drawContent() override;
         /** @brief 필요할 때 여는 도구라 닫힌 채 시작합니다. */
         bool isToolPanel() const override { return true; }
@@ -51,7 +51,7 @@ namespace sw::editor
     private:
         /** @brief `Saved/BugIt` 아래 폴더를 다시 읽어 최근 것이 먼저 오게 줄을 만듭니다. */
         void refreshRows();
-        /** @brief 폴더 줄 @p row 의 단추(탐색기 · 경로 복사 · 그 자리로)를 그립니다. */
+        /** @brief 폴더 줄 @p row 의 단추(탐색기 · 경로 복사 · 그 위치로)를 그립니다. */
         void drawRowActions( const BugItPanelRow& row ) const;
 
     private:

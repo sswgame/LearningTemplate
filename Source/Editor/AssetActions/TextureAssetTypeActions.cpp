@@ -38,7 +38,7 @@ namespace sw::editor
                 const float32 centerX = minPos._x + width * 0.5f;
                 const float32 centerY = minPos._y + height * 0.5f;
 
-                // 체크무늬 배경. 격자는 정수 인덱스로 돈다 — 위치는 곱셈 한 번, 칸 색은 인덱스 합의 홀짝이다.
+                // 체크무늬 배경. 격자는 정수 인덱스로 돈다 — 위치는 곱셈 한 번, 셀 색은 인덱스 합의 홀짝이다.
                 constexpr float32 kCheckerSize = 6.0f;
                 const float32     startX       = minPos._x + 4.0f;
                 const float32     startY       = minPos._y + 4.0f;

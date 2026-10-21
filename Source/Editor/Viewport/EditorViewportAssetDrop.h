@@ -15,7 +15,7 @@ namespace sw::editor
     /**
      * @struct EditorViewportAssetDrop
      * @brief 씬 뷰 캔버스의 애셋 드롭입니다. 상태가 없어 정적 함수 하나입니다.
-     * @details 종류마다 무엇을 만드는지는 `EditorAssetCommands::dropAt`(에셋 종류 동작)이 정합니다. 여기서는 놓을 자리만 고릅니다.
+     * @details 종류마다 무엇을 만드는지는 `EditorAssetCommands::dropAt`(에셋 종류 동작)이 정합니다. 여기서는 놓을 위치만 고릅니다.
      */
     struct EditorViewportAssetDrop
     {

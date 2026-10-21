@@ -72,7 +72,7 @@ namespace sw::editor
     private:
         // ------------------------------------------------------------------------------
         // 기동 단계. 단계마다 작은 서브시스템 클래스(아래 중첩 클래스 — 정의는 `ImGuiEditor.cpp`)가 이 함수들을 부르고, 순서는 단계마다 선언한 의존이 정한다.
-        // 실패하면 목록이 초기화에 성공한 단계만 역순으로 종료한다. 초기화가 실패하면 그 단계가 만든 것은 그 자리에서 놓는다.
+        // 실패하면 목록이 초기화에 성공한 단계만 역순으로 종료한다. 초기화가 실패하면 그 단계가 만든 것은 그 시점에 해제한다.
         // ------------------------------------------------------------------------------
         /** @brief 환경설정과 에디터 데이터(`EditorToolDefaults`)를 읽습니다. 단계 `EditorData`. */
         SubsystemInitResult initializeEditorData();
@@ -91,7 +91,7 @@ namespace sw::editor
         /** @brief 에디터 컨텍스트, 테마, 기본 패널, 단축키, Undo 편집 리스너, UI 배율, 시작 씬. 단계 `EditorContext`. */
         SubsystemInitResult initializeEditorContext();
         void                shutdownEditorContext();
-        /** @brief 창 닫기 질의 처리기(이 DLL 의 메서드를 가리킨다 — 가장 먼저 내린다). 단계 `WindowCloseQuery`. */
+        /** @brief 창 닫기 질의 처리기(이 DLL 의 메서드를 가리킨다 — 가장 먼저 종료한다). 단계 `WindowCloseQuery`. */
         SubsystemInitResult initializeWindowCloseQuery();
         void                shutdownWindowCloseQuery();
         bool                onWindowCloseQuery();

@@ -60,7 +60,7 @@ namespace sw::editor
                 }
             }
 
-            /** @brief 눈금 간격 @p step 에 맞는 소수 자리 꼴입니다(1 이상은 정수, 0.1 은 한 자리 …). */
+            /** @brief 눈금 간격 @p step 에 맞는 소수 자릿수입니다(1 이상은 정수, 0.1 은 한 자리 …). */
             static const utf8* getTickFormat( float32 step )
             {
                 if ( step >= 1.0f )
@@ -125,7 +125,7 @@ namespace sw::editor
                 FloatCurveKey& key       = curve._listKey[state._selectedKey];
                 bool           bFinished = false;
                 const float32  width     = 110.0f * EditorThemeUtil::getDpiScale();
-                // 이름을 칸 앞에 둔다(ImGui 기본은 칸 뒤라 "0.000 Time 0.240 Value" 처럼 이름과 값이 어긋나 읽힌다).
+                // 이름을 필드 앞에 둔다(ImGui 기본은 필드 뒤라 "0.000 Time 0.240 Value" 처럼 이름과 값이 어긋나 읽힌다).
                 ImGui::AlignTextToFramePadding();
                 ImGui::TextUnformatted( "Time" );
                 ImGui::SameLine();
@@ -224,7 +224,7 @@ namespace sw::editor
                 {
                     state._drag       = EditorCurveDrag::None;
                     state._bDragMoved = false;
-                    // 고른 Cubic 키의 접선 손잡이가 먼저다(키 점과 겹치지 않는 자리).
+                    // 고른 Cubic 키의 접선 손잡이가 먼저다(키 점과 겹치지 않는 위치).
                     if ( state._selectedKey < curve._listKey.size() && curve._listKey[state._selectedKey]._interpolation == CurveInterpolation::Cubic )
                     {
                         const FloatCurveKey& key = curve._listKey[state._selectedKey];

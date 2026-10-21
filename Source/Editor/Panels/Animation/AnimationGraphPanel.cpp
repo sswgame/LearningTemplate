@@ -2,6 +2,7 @@
 
 #include "Editor/Panels/Animation/AnimationGraphPanel.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
 
@@ -135,7 +136,7 @@ namespace sw::editor
 
     void AnimationGraphPanel::drawInspector()
     {
-        // 유니티 Animator 의 Layers 탭처럼 상태 기계(캔버스)와 그 위에 얹는 레이어를 탭으로 나눈다.
+        // 유니티 Animator 의 Layers 탭처럼 상태 기계(캔버스)와 그 위에 적용하는 레이어를 탭으로 나눈다.
         if ( ImGui::BeginTabBar( "##AnimationGraphInspectorTabs" ) == false )
             return;
         const bool bGraphTab = ImGui::BeginTabItem( "Graph" );
@@ -531,12 +532,12 @@ namespace sw::editor
         vector<int32> listOrdered;
         for ( const int32 nodeID : _listSelectionOrder )
         {
-            if ( std::find( listNow.begin(), listNow.end(), nodeID ) != listNow.end() )
+            if ( VectorUtil::contains( listNow, nodeID ) )
                 listOrdered.push_back( nodeID );
         }
         for ( const int32 nodeID : listNow )
         {
-            if ( std::find( listOrdered.begin(), listOrdered.end(), nodeID ) == listOrdered.end() )
+            if ( VectorUtil::contains( listOrdered, nodeID ) == false )
                 listOrdered.push_back( nodeID );
         }
         // 편집 대상은 캔버스 선택이 **바뀐 프레임에만** 따라간다 — 인스펙터의 전이 목록으로 고른 것을 매 프레임 덮지 않는다.

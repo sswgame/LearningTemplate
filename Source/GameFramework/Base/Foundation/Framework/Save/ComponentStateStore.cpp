@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Foundation/Framework/Save/ComponentStateStore.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/RegistrationList.h"
 
@@ -81,12 +82,8 @@ namespace sw
 
     const ComponentStateStore::Entry* ComponentStateStore::findEntry( const hashed_string& typeName, uint64 componentID ) const
     {
-        for ( const Entry& entry : _listEntry )
-        {
-            if ( entry._typeName == typeName && entry._componentID == componentID )
-                return &entry;
-        }
-        return nullptr;
+        return VectorUtil::findIf( _listEntry, [&]( const Entry& entry )
+        { return entry._typeName == typeName && entry._componentID == componentID; } );
     }
 
     void ComponentStateStore::remapComponentIDs( const vector<SavedComponentID>& listRemap )

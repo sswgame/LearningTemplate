@@ -4,6 +4,7 @@
 
 #include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Localization/CultureInfo.h"
@@ -452,7 +453,7 @@ namespace sw
             for ( string& culture : loaded._listStagedCulture )
             {
                 culture            = CultureTable::normalizeCode( culture );
-                const bool bListed = std::find( loaded._listCulture.begin(), loaded._listCulture.end(), culture ) != loaded._listCulture.end();
+                const bool bListed = VectorUtil::contains( loaded._listCulture, culture );
                 if ( error.empty() && bListed == false )
                     error = string( sourceName ) + ": stagedCultures '" + culture + "' is not in cultures";
             }
@@ -481,7 +482,7 @@ namespace sw
     bool LocalizationProject::isStagedCulture( string_view culture ) const
     {
         const string normalized = CultureTable::normalizeCode( culture );
-        return std::find( _listStagedCulture.begin(), _listStagedCulture.end(), normalized ) != _listStagedCulture.end();
+        return VectorUtil::contains( _listStagedCulture, normalized );
     }
 
     string LocalizationProject::makeTranslationPath( string_view projectPath, string_view culture )

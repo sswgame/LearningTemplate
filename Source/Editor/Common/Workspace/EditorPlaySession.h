@@ -52,7 +52,7 @@ namespace sw::editor
             string         _prefabPath; ///< 씬이 이 오브젝트에 연결한 프리팹 경로(`Scene::getEntityPrefabPath`). 씬을 다시 만들 때 복원한다
             /**
              * @brief 중첩 프리팹 부품 표시(`PrefabInstanceRegistry`)입니다. `_bNestedPart` 가 false 면 부품이 아닙니다.
-             * @details 레지스트리는 놓인 오브젝트의 표시를 거두므로, 플레이 중에 지워진 부품을 원래 id 로 되살릴 때 이 값으로 다시 기록한다.
+             * @details 레지스트리는 놓인 오브젝트의 표시를 제거하므로, 플레이 중에 지워진 부품을 원래 id 로 복원할 때 이 값으로 다시 기록한다.
              */
             PrefabNestedPart _nestedPart;
             bool             _bNestedPart{ false };
@@ -117,7 +117,7 @@ namespace sw::editor
 {
     /**
      * @class EditorPlaySessionState
-     * @brief 플레이 세션 상태(`PlaySessionData`)를 드는 에디터 서브시스템입니다. 조작은 정적 파사드 `EditorPlaySession` 이 합니다.
+     * @brief 플레이 세션 상태(`PlaySessionData`)를 가진 에디터 서브시스템입니다. 조작은 정적 파사드 `EditorPlaySession` 이 합니다.
      */
     class EditorPlaySessionState final : public EditorSubsystem
     {

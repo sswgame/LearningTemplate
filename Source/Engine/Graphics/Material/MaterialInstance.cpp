@@ -577,7 +577,7 @@ namespace sw
                             continue;
                         for ( const string& option : mc._listOption )
                         {
-                            _listCachedDefine.erase( std::remove( _listCachedDefine.begin(), _listCachedDefine.end(), option ), _listCachedDefine.end() );
+                            VectorUtil::removeValue( _listCachedDefine, option );
                         }
                         break;
                     }
@@ -590,7 +590,7 @@ namespace sw
                 const utf8* pKey = keyword.c_str();
                 if ( pKey == nullptr )
                     continue;
-                _listCachedDefine.erase( std::remove( _listCachedDefine.begin(), _listCachedDefine.end(), string( pKey ) ), _listCachedDefine.end() );
+                VectorUtil::removeValue( _listCachedDefine, string( pKey ) );
                 if ( enabled )
                     MaterialUtil::appendUniqueDefine( _listCachedDefine, pKey );
             }

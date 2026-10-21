@@ -48,7 +48,7 @@ namespace sw
         /**
          * @brief 오류 코드를 결과로 바꿉니다. 키트 표보다 먼저 공통 오류 `kVersionMismatch` 를 `UpdateRequired` 로 바꿉니다.
          * @details 키트 표(`fromErrorCode`)는 모르는 코드를 대개 `Unavailable`(다시 시도)로 바꾼다. 해시 불일치는 다시 접속하지 않으므로 재시도를 부르면 안 된다.
-         *          그래서 키트 표가 아니라 이 한 곳에서 막는다. 결과 열거형에 `UpdateRequired` 가 없으면 컴파일되지 않는다.
+         *          그래서 키트 테이블이 아니라 이 한 곳에서 막는다. 결과 열거형에 `UpdateRequired` 가 없으면 컴파일되지 않는다.
          *          `readResponse` 를 쓰지 않는 키트 클라이언트(거래)도 오류 응답은 이 함수로 바꾼다.
          */
         template <typename TProtocol, typename TReply>

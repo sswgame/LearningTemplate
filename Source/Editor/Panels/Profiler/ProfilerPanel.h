@@ -129,7 +129,7 @@ namespace sw::editor
         [[nodiscard]] bool loadTraceFile( string_view path );
         /**
          * @brief Profiler 창을 열고 @p path 를 불러와 다음 그리기에서 Timeline 탭을 고릅니다. 창이 없거나 불러오지 못하면 false 입니다(이유는 로그 · 상태 줄에 남는다).
-         * @details 멀티 프로세스 재생의 Stop 뒤에 합친 트레이스를 저절로 여는 자리다(`EditorNetPlaySession::takeUnopenedMergedTrace`, 이 창의 프레임 단계가 부른다 — 창이 닫혀 있어도 돈다).
+         * @details 멀티 프로세스 재생의 Stop 뒤에 합친 트레이스를 저절로 여는 곳이다(`EditorNetPlaySession::takeUnopenedMergedTrace`, 이 창의 프레임 단계가 부른다 — 창이 닫혀 있어도 돈다).
          */
         [[nodiscard]] static bool openTraceInTimeline( EditorPanelManager& panelManager, string_view path );
 #endif

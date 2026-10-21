@@ -2,6 +2,8 @@
 
 #include "Engine/Character/Fit/FitSolver.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Character/Fit/FitPartData.h"
 #include "Engine/Character/Fit/FitTables.h"
@@ -165,7 +167,7 @@ namespace sw
                             for ( uint32 corner = 0; corner < 3 && bAllHidden; ++corner )
                             {
                                 const uint16 region = innerPart._listVertexRegion[geometry._listIndex[triangle * 3 + corner]];
-                                bAllHidden          = std::find( listHiddenIndex.begin(), listHiddenIndex.end(), region ) != listHiddenIndex.end();
+                                bAllHidden          = VectorUtil::contains( listHiddenIndex, region );
                             }
                             if ( bAllHidden )
                                 innerPart._listHidden[triangle] = SW_TRUE;

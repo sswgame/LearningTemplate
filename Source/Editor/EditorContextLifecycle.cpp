@@ -80,12 +80,12 @@ namespace sw::editor
         _scope.addSubsystem( make_unique<EditorTheme>() );
         _scope.addSubsystem( make_unique<EditorUICapture>() );
         _scope.addSubsystem( make_unique<EditorExtensionSubsystems>( _scope ) ); // 확장이 기여한 서브시스템(SW_EDITOR_SUBSYSTEM) — 프레임 앞 syncExtensionRegistrations 가 만든다
-        // 확장 모듈이 언로드되기 전에 그 모듈의 등록 줄로 만든 인스턴스를 지운다 — 훑는 매니저들에 의존하므로 그들보다 먼저 내려간다.
+        // 확장 모듈이 언로드되기 전에 그 모듈의 등록 줄로 만든 인스턴스를 지운다 — 훑는 매니저들에 의존하므로 그들보다 먼저 종료된다.
         _scope.addSubsystem( make_unique<EditorModuleUnloadListener>( *this ) );
 
         setActive( this );
 
-        // 에디터 UI 문구 — 엔진 표와 따로 올려 에디터가 있는 동안만 쓰인다. 탑재하지 못하면 SW_LOCKEY 자리에 키 이름이 보인다.
+        // 에디터 UI 문구 — 엔진 테이블과 따로 로드해 에디터가 있는 동안만 쓰인다. 탑재하지 못하면 SW_LOCKEY 위치에 키 이름이 보인다.
         // 주의: 지역화 관리자는 엔진 서비스다. 멤버 `findSubsystem` 은 이 컨텍스트의 범위만 보므로 `editor::findSubsystem`(호스트까지 찾는다)을 쓴다.
         LocalizationManager* const pLocalization = editor::findSubsystem<LocalizationManager>();
         if ( pLocalization == nullptr )
@@ -102,12 +102,12 @@ namespace sw::editor
         if ( findEditorScope() == &_scope )
             setActive( nullptr );
 
-        LocalizationManager* const pLocalization = editor::findSubsystem<LocalizationManager>(); // 엔진 서비스 — 탑재와 같은 창구
+        LocalizationManager* const pLocalization = editor::findSubsystem<LocalizationManager>(); // 엔진 서비스 — 탑재와 같은 진입점
         if ( pLocalization != nullptr )
             pLocalization->unmountProjects( LocalizationScope::Editor );
 
         // 초기화한 것을 역순으로 종료하고, 모두를 역순으로 소멸시킨다(넷 플레이 세션의 자식 프로세스 종료도 여기 — 엔진 로거는 아직 있다).
-        // 확장이 기여한 서브시스템은 내장 서브시스템을 쓸 수 있다 — 그들보다 먼저 내린다.
+        // 확장이 기여한 서브시스템은 내장 서브시스템을 쓸 수 있다 — 그들보다 먼저 종료한다.
         if ( EditorExtensionSubsystems* pExtensions = findSubsystem<EditorExtensionSubsystems>() )
             pExtensions->releaseAll();
         _scope.destroyAll(); // 뷰 렌더 타깃은 EditorRenderViews 의 종료가 놓는다

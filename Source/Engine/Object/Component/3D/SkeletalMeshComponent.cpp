@@ -3,6 +3,7 @@
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 
 #include "Core/Common/HashUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
@@ -386,7 +387,7 @@ namespace sw
         if ( pUpstream == nullptr || pUpstream == this )
             return;
         const TComponentHandle<SkeletalMeshComponent> handle{ pUpstream };
-        if ( std::find( _listDependency.begin(), _listDependency.end(), handle ) != _listDependency.end() )
+        if ( VectorUtil::contains( _listDependency, handle ) )
             return;
         _listDependency.push_back( handle );
         notifyOrderChanged();
@@ -396,16 +397,14 @@ namespace sw
     {
         if ( pUpstream == nullptr )
             return;
-        const auto it = std::find( _listDependency.begin(), _listDependency.end(), TComponentHandle<SkeletalMeshComponent>{ pUpstream } );
-        if ( it == _listDependency.end() )
+        if ( VectorUtil::removeFirst( _listDependency, TComponentHandle<SkeletalMeshComponent>{ pUpstream } ) == 0 )
             return;
-        _listDependency.erase( it );
         notifyOrderChanged();
     }
 
     void SkeletalMeshComponent::registerAnimationPhaseTask( IAnimationPhaseTask* pTask )
     {
-        if ( pTask == nullptr || std::find( _listTask.begin(), _listTask.end(), pTask ) != _listTask.end() )
+        if ( pTask == nullptr || VectorUtil::contains( _listTask, pTask ) )
             return;
         _listTask.push_back( pTask );
         _bPoseDirty = SW_TRUE;
@@ -413,10 +412,8 @@ namespace sw
 
     void SkeletalMeshComponent::unregisterAnimationPhaseTask( IAnimationPhaseTask* pTask )
     {
-        const auto it = std::find( _listTask.begin(), _listTask.end(), pTask );
-        if ( it == _listTask.end() )
+        if ( VectorUtil::removeFirst( _listTask, pTask ) == 0 )
             return;
-        _listTask.erase( it );
         pTask->onAnimationUnitDetached( *this );
         _bPoseDirty = SW_TRUE;
     }

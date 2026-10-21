@@ -5,6 +5,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
@@ -367,7 +368,7 @@ namespace sw::editor
                     sourceControl.requestRefresh();
             }
 
-            // 확장 항목(`SW_EDITOR_CONTEXT_MENU_ENTRY`). 고른 동작은 메뉴를 닫은 뒤 부른다 — 동작이 모듈을 내려 목록이 바뀌어도 순회 중인 배열을 읽지 않는다.
+            // 확장 항목(`SW_EDITOR_CONTEXT_MENU_ENTRY`). 고른 동작은 메뉴를 닫은 뒤 부른다 — 동작이 모듈을 언로드해 목록이 바뀌어도 순회 중인 배열을 읽지 않는다.
             EditorContextMenuTarget extensionTarget{};
             extensionTarget._kind         = EditorContextMenuKind::Asset;
             extensionTarget._pAssetPath   = entry._absolutePath.c_str();
@@ -866,12 +867,8 @@ namespace sw::editor
 
     bool ContentBrowserPanel::hasRoot( string_view displayName ) const
     {
-        for ( const ContentRoot& root : _listRoot )
-        {
-            if ( FileUtil::normalizePath( root._displayName ) == FileUtil::normalizePath( displayName ) )
-                return true;
-        }
-        return false;
+        return VectorUtil::containsIf( _listRoot, [&]( const ContentRoot& root )
+        { return FileUtil::normalizePath( root._displayName ) == FileUtil::normalizePath( displayName ); } );
     }
 
     void ContentBrowserPanel::refreshCurrentFolder()

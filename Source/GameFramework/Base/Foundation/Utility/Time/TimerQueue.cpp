@@ -138,11 +138,7 @@ namespace sw
 
     const TimerQueue::Timer* TimerQueue::findTimer( TimerHandle handle ) const
     {
-        for ( const Timer& timer : _listTimer )
-        {
-            if ( timer._handle == handle && timer._bCancelled == SW_FALSE )
-                return &timer;
-        }
-        return nullptr;
+        return VectorUtil::findIf( _listTimer, [&]( const Timer& timer )
+        { return timer._handle == handle && timer._bCancelled == SW_FALSE; } );
     }
 } // namespace sw

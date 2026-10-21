@@ -2,6 +2,8 @@
 
 #include "Editor/Panels/InputMap/InputMapConflicts.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include "Engine/Input/Map/InputMap.h"
 
 namespace sw::editor
@@ -84,11 +86,7 @@ namespace sw::editor
 
     bool InputMapConflicts::involves( const vector<InputMapConflict>& listConflict, const hashed_string& action )
     {
-        for ( const InputMapConflict& conflict : listConflict )
-        {
-            if ( conflict._actionA == action || conflict._actionB == action )
-                return true;
-        }
-        return false;
+        return VectorUtil::containsIf( listConflict, [&]( const InputMapConflict& conflict )
+        { return conflict._actionA == action || conflict._actionB == action; } );
     }
 } // namespace sw::editor

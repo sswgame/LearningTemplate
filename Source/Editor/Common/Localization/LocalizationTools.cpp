@@ -367,7 +367,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 코드 뿌리 아래의 소스 파일(`kArrCodeExtension`)에서 문구를 모읍니다. 출처는 저장소 기준 상대 경로입니다. */
+            /** @brief 코드 루트 아래의 소스 파일(`kArrCodeExtension`)에서 문구를 모읍니다. 출처는 저장소 기준 상대 경로입니다. */
             static void gatherCodeRoots( const LocalizationProject& project, string_view repositoryRoot, TextGatherer& gatherer )
             {
                 for ( const string& codeRoot : project._listCodeRoot )
@@ -399,7 +399,7 @@ namespace sw
                 }
             }
 
-            /** @brief 에셋 뿌리 아래의 XML · 대화 파일에서 문구를 모읍니다. 출처는 리소스 id 입니다. */
+            /** @brief 에셋 루트 아래의 XML · 대화 파일에서 문구를 모읍니다. 출처는 리소스 id 입니다. */
             static void gatherAssetRoots( const LocalizationProject& project, TextGatherer& gatherer )
             {
                 for ( const string& assetRoot : project._listAssetRoot )
@@ -438,7 +438,7 @@ namespace sw
     {
         outListProjectPath.clear();
         // 에디터 모듈은 엔진 서비스를 서비스 테이블로만 접근한다. EngineServices.h 는 Engine, App, 테스트 전용이다.
-        // 엔진 문자열 프로젝트 경로는 데이터에서 읽은 표에만 있다 — 표가 없으면 대신 쓸 값이 없으므로 오류로 알리고 엔진 프로젝트를 빼고 모은다.
+        // 엔진 문자열 프로젝트 경로는 데이터에서 읽은 테이블에만 있다 — 테이블이 없으면 대신 쓸 값이 없으므로 오류로 알리고 엔진 프로젝트를 빼고 모은다.
         const EngineDefaultAssets* pDefaultAssets = editor::findSubsystem<const EngineDefaultAssets>();
         if ( pDefaultAssets != nullptr )
             outListProjectPath.push_back( LocalizationToolsInternal::resolveAbsolutePath( pDefaultAssets->_localizationProject.get() ) );

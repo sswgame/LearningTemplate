@@ -28,7 +28,7 @@ namespace sw::editor
         /** @brief 타입 이름과 프로퍼티 이름으로 키를 만듭니다. 인스펙터는 선언한 타입을 고르는 `makePropertyKey` 를 씁니다. */
         static string makeKey( string_view typeName, string_view propertyName );
         /**
-         * @brief @p type 에서 보이는 프로퍼티 @p prop 의 키입니다. 타입 자리는 @p type 부터 기반 쪽으로 올라가며 그 이름의 프로퍼티를 처음 선언한 타입입니다.
+         * @brief @p type 에서 보이는 프로퍼티 @p prop 의 키입니다. 소유 타입은 @p type 부터 기반 쪽으로 올라가며 그 이름의 프로퍼티를 처음 선언한 타입입니다.
          * @details 파생 타입이 같은 이름을 다시 선언하면 파생 타입이 이긴다(리플렉션의 병합 규칙과 같다).
          */
         static string makePropertyKey( const TypeInfo& type, const PropertyInfo& prop );

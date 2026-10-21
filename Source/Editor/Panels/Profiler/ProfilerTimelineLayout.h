@@ -44,7 +44,7 @@ namespace sw::editor
         static void layoutRects( const vector<ProfilerTimelineThread>& listThread, uint64 visibleBegin, uint64 visibleEnd, float32 width,
                                  vector<ProfilerTimelineRect>& outListRect, vector<uint16>& outListLaneCount );
 
-        /** @brief @p pivotX(픽셀) 자리를 그대로 두고 범위를 @p factor 배로 줄이거나 늘립니다(1 보다 작으면 확대). 범위는 @p limitBegin · @p limitEnd 안에 둡니다. */
+        /** @brief @p pivotX(픽셀) 위치를 그대로 두고 범위를 @p factor 배로 줄이거나 늘립니다(1 보다 작으면 확대). 범위는 @p limitBegin · @p limitEnd 안에 둡니다. */
         static void zoom( uint64& inoutBegin, uint64& inoutEnd, float32 pivotX, float32 width, float32 factor, uint64 limitBegin, uint64 limitEnd );
         /** @brief 범위를 @p deltaPixels 만큼 옮깁니다(양수 = 화면을 오른쪽으로 끌기 = 이른 시각으로). 범위는 한도 안에 둡니다. */
         static void pan( uint64& inoutBegin, uint64& inoutEnd, float32 deltaPixels, float32 width, uint64 limitBegin, uint64 limitEnd );

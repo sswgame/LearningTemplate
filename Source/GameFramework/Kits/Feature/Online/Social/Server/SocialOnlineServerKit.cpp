@@ -11,7 +11,7 @@
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialServer.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialService.h"
 
-// 친구 키트의 서버 조립 — 친구 · 길드 서비스와 바인딩을 올리고, 차단 목록을 기반 인터페이스(`IAccountBlockList`)로 문맥에 내놓는다(채팅이 차단을 지킨다).
+// 친구 키트의 서버 조립 — 친구 · 길드 서비스와 바인딩을 만들고, 차단 목록을 기반 인터페이스(`IAccountBlockList`)로 문맥에 내놓는다(채팅이 차단을 지킨다).
 // 옵션:
 //   guildLevelExperience  레벨 2 부터의 누적 경험치(같은 키를 레벨 순서로 여러 번). 늘어나야 하며 없으면 모든 길드가 레벨 1 이다.
 // 접속 상태는 계정 키트가, 이름 찾기는 계정 키트의 이름 인덱스가 준다(없으면 이름으로 신청하기가 NotFound 로 끝난다).
@@ -112,7 +112,7 @@ namespace sw
 
             void shutdown() override
             {
-                // 친구 · 길드 로직은 저장소 일을 회수한 뒤(호스트와 저장소를 내린 뒤) 내린다 — 서비스 계약.
+                // 친구 · 길드 로직은 저장소 일을 회수한 뒤(호스트와 저장소를 종료한 뒤) 종료한다 — 서비스 계약.
                 if ( _bStarted )
                 {
                     _guildService.shutdown();

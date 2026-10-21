@@ -107,6 +107,72 @@ namespace sw
                 outReply._result    = EconomyResult::Ok;
                 return true;
             }
+
+            /**
+             * @brief 가격 항목과 지급 항목으로 구매 분개 요청을 짭니다.
+             * @details 구매를 여기서 끝내야 하면 그 결과를 돌려주고, 이어 가도 되면 빈 값입니다. 가격이 모자라면 같은 키로 이미 산 것인지 먼저 확인합니다.
+             *          첫 구매로 잔액이 줄어든 뒤의 재시도가 "부족" 을 받으면 안 되기 때문입니다.
+             */
+            [[nodiscard]] static std::optional<EconomyResult> buildPurchaseRequest( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const OfferDef& offer,
+                                                                                    const EconomyPurchaseInput& input, EconomyReply& outReply, LedgerTransferRequest& outRequest )
+            {
+                const LedgerHolder account = LedgerHolder::makeAccount( input._accountID );
+                const int64        count   = input._count;
+                outRequest._journalKey     = input._journalKey;
+                outRequest._reason         = "shop.buy";
+                outRequest._memo           = offer._id;
+                outRequest._pPolicy        = &currencies;
+                outRequest._timeMs         = input._nowMs;
+                outRequest._actorID        = input._accountID;
+                outRequest._actorKind      = LedgerActorKind::Player;
+                for ( const OfferPrice& price : offer._listPrice )
+                {
+                    if ( price._amount > LedgerConstant::kMaxAmount / count )
+                        return EconomyResult::InvalidRequest;
+                    const EconomyResult priced = appendPriceLegs( connection, currencies, price, price._amount * count, account, outRequest );
+                    if ( priced == EconomyResult::Ok )
+                        continue;
+                    if ( findReplay( connection, outRequest, input._accountID, outReply ) )
+                        return outReply._result;
+                    return priced;
+                }
+                for ( const OfferGrant& grant : offer._listGrant )
+                {
+                    if ( grant._amount > LedgerConstant::kMaxAmount / count )
+                        return EconomyResult::InvalidRequest;
+                    outRequest._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), account, grant._assetID, grant._amount * count } );
+                }
+                return std::nullopt;
+            }
+
+            /**
+             * @brief 계정별 구매 한도가 있는 상품이면 구매 수를 늘려 @p inoutTransaction 에 붙입니다.
+             * @details 구매를 여기서 끝내야 하면 그 결과(저장소 오류, 한도 초과)를 돌려주고, 이어 가도 되면 빈 값입니다.
+             */
+            [[nodiscard]] static std::optional<EconomyResult> stageAccountLimit( IServiceStoreConnection& connection, const OfferDef& offer, const EconomyPurchaseInput& input,
+                                                                                 ServiceTransaction& inoutTransaction )
+            {
+                if ( offer._limitPerAccount <= 0 )
+                    return std::nullopt;
+                const int64              count    = input._count;
+                const string             countKey = makePurchaseCountKey( input._accountID, offer._id );
+                ServiceRecord            countRecord;
+                const ServiceStoreResult read = connection.readRecord( EconomyStoreLogic::getPurchaseCountTable(), countKey, countRecord );
+                if ( read != ServiceStoreResult::Ok && read != ServiceStoreResult::NotFound )
+                    return EconomyResult::Unavailable;
+                int64 bought = 0;
+                if ( read == ServiceStoreResult::Ok )
+                {
+                    BitReader reader( countRecord._bytes.data(), static_cast<int32>( countRecord._bytes.size() ) );
+                    bought = reader.readVarInt();
+                }
+                if ( bought + count > offer._limitPerAccount )
+                    return EconomyResult::LimitReached;
+                BitWriter writer;
+                writer.writeVarInt( bought + count );
+                inoutTransaction.put( EconomyStoreLogic::getPurchaseCountTable(), countKey, writer.getBytes(), countRecord._version );
+                return std::nullopt;
+            }
         };
     } // namespace
 } // namespace sw
@@ -167,39 +233,14 @@ namespace sw
         if ( pOffer->isOnSale( input._nowMs ) == false )
             return EconomyStoreLogicInternal::finish( outReply, EconomyResult::NotOnSale );
 
-        const LedgerHolder account = LedgerHolder::makeAccount( input._accountID );
-        const int64        count   = input._count;
         // 재시도는 잔액과 한도 판정보다 먼저 지난 결과를 확인한다. 가상 화폐 분개 항목은 지금 잔액으로 짜므로 다시 짜면 처음과 다를 수 있다.
         if ( EconomyStoreLogicInternal::findReplay( connection, EconomyStoreLogicInternal::makePurchaseProbe( input, pOffer->_id ), input._accountID, outReply ) )
             return EconomyStoreLogicInternal::finish( outReply, outReply._result );
         for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
         {
             LedgerTransferRequest request;
-            request._journalKey = input._journalKey;
-            request._reason     = "shop.buy";
-            request._memo       = pOffer->_id;
-            request._pPolicy    = &currencies;
-            request._timeMs     = input._nowMs;
-            request._actorID    = input._accountID;
-            request._actorKind  = LedgerActorKind::Player;
-            for ( const OfferPrice& price : pOffer->_listPrice )
-            {
-                if ( price._amount > LedgerConstant::kMaxAmount / count )
-                    return EconomyStoreLogicInternal::finish( outReply, EconomyResult::InvalidRequest );
-                const EconomyResult priced = EconomyStoreLogicInternal::appendPriceLegs( connection, currencies, price, price._amount * count, account, request );
-                if ( priced == EconomyResult::Ok )
-                    continue;
-                // 부족 판정 전에 같은 키로 이미 산 것인지 확인한다. 첫 구매로 잔액이 줄어든 뒤의 재시도가 "부족" 을 받으면 안 되기 때문이다.
-                if ( EconomyStoreLogicInternal::findReplay( connection, request, input._accountID, outReply ) )
-                    return EconomyStoreLogicInternal::finish( outReply, outReply._result );
-                return EconomyStoreLogicInternal::finish( outReply, priced );
-            }
-            for ( const OfferGrant& grant : pOffer->_listGrant )
-            {
-                if ( grant._amount > LedgerConstant::kMaxAmount / count )
-                    return EconomyStoreLogicInternal::finish( outReply, EconomyResult::InvalidRequest );
-                request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), account, grant._assetID, grant._amount * count } );
-            }
+            if ( const std::optional<EconomyResult> early = EconomyStoreLogicInternal::buildPurchaseRequest( connection, currencies, *pOffer, input, outReply, request ) )
+                return EconomyStoreLogicInternal::finish( outReply, *early );
 
             ServiceTransaction    transaction;
             LedgerTransferOutcome outcome;
@@ -216,25 +257,8 @@ namespace sw
                 outReply._bReplayed = SW_TRUE;
                 return EconomyStoreLogicInternal::finish( outReply, EconomyResult::Ok );
             }
-            if ( pOffer->_limitPerAccount > 0 )
-            {
-                const string             countKey = EconomyStoreLogicInternal::makePurchaseCountKey( input._accountID, pOffer->_id );
-                ServiceRecord            countRecord;
-                const ServiceStoreResult read = connection.readRecord( getPurchaseCountTable(), countKey, countRecord );
-                if ( read != ServiceStoreResult::Ok && read != ServiceStoreResult::NotFound )
-                    return EconomyStoreLogicInternal::finish( outReply, EconomyResult::Unavailable );
-                int64 bought = 0;
-                if ( read == ServiceStoreResult::Ok )
-                {
-                    BitReader reader( countRecord._bytes.data(), static_cast<int32>( countRecord._bytes.size() ) );
-                    bought = reader.readVarInt();
-                }
-                if ( bought + count > pOffer->_limitPerAccount )
-                    return EconomyStoreLogicInternal::finish( outReply, EconomyResult::LimitReached );
-                BitWriter writer;
-                writer.writeVarInt( bought + count );
-                transaction.put( getPurchaseCountTable(), countKey, writer.getBytes(), countRecord._version );
-            }
+            if ( const std::optional<EconomyResult> early = EconomyStoreLogicInternal::stageAccountLimit( connection, *pOffer, input, transaction ) )
+                return EconomyStoreLogicInternal::finish( outReply, *early );
             const ServiceStoreResult committed = connection.commit( transaction );
             if ( committed == ServiceStoreResult::Ok )
             {
@@ -323,9 +347,11 @@ namespace sw
         return s_table;
     }
 
-    EconomyResult EconomyStoreLogic::revokeRefund( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const ReceiptRefundNotice& notice, int64 nowMs )
+    EconomyResult EconomyStoreLogic::revokeRefund( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const ReceiptRefundNotice& notice, int64 nowMs,
+                                                   vector<EconomyBalanceChange>& outListChange )
     {
         using Internal = EconomyStoreLogicInternal;
+        outListChange.clear();
         string redeemKey;
         if ( Internal::makeRedeemKey( notice._storeName, notice._transactionID, redeemKey ) == false )
             return EconomyResult::InvalidRequest;
@@ -370,7 +396,14 @@ namespace sw
                 return toEconomyResult( staged );
             const ServiceStoreResult committed = connection.commit( transaction );
             if ( committed == ServiceStoreResult::Ok )
+            {
+                for ( const LedgerTransferOutcome::HolderBalance& holderBalance : outcome._listHolderBalance )
+                {
+                    if ( holderBalance._holder._kind == LedgerHolderKind::Account )
+                        outListChange.push_back( EconomyBalanceChange{ holderBalance._holder._accountID, holderBalance._balance } );
+                }
                 return EconomyResult::Ok;
+            }
             if ( committed != ServiceStoreResult::Conflict )
                 return EconomyResult::Unavailable;
         }

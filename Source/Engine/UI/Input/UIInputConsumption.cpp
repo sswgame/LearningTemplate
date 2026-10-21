@@ -2,6 +2,7 @@
 
 #include "Engine/UI/Input/UIInputConsumption.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Input/InputManager.h"
@@ -190,12 +191,7 @@ namespace sw
 
     bool UIInputConsumption::isSlotConsumed( const InputSlot& slot ) const
     {
-        for ( const ConsumedSlot& entry : _listConsumedSlot )
-        {
-            if ( entry._slot == slot )
-                return true;
-        }
-        return false;
+        return VectorUtil::containsBy<&ConsumedSlot::_slot>( _listConsumedSlot, slot );
     }
 
     void UIInputConsumption::clear()

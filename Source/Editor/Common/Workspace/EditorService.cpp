@@ -3,6 +3,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/Config/EditorToolDefaults.h"
@@ -64,13 +65,13 @@ namespace sw::editor
 
     EditorToolDefaults& getEditorToolDefaults()
     {
-        // **참조를 반환하는 API 에는 "없다" 고 답할 자리가 없다.** 값의 정본은 editortooldefaults.json 이고 헤더는 형식만 가지므로
+        // **참조를 반환하는 API 에는 "없다" 고 답할 방법이 없다.** 값의 원본은 editortooldefaults.json 이고 헤더는 형식만 가지므로
         // 지어낼 기본값도 없다(빈 글꼴 목록 · 0 색). 기동(`ImGuiEditor::initializeEditorData`)은 파일을 못 읽으면 서지 않으니,
         // 연결 전에 묻는 것은 호출 순서의 결함이다 — 모든 구성에서 이유를 남기고 멈춘다.
         if ( s_pEditorToolDefaults == nullptr )
         {
             SW_LOG_ERROR( "EditorToolDefaults is read before the editor bound it (setEditorToolDefaults) - call order is wrong" );
-            Logger::flushGlobalForCrash(); // 비동기 싱크가 들고 있는 위 한 줄을 멈추기 전에 내보낸다
+            Logger::flushGlobalForCrash(); // 비동기 싱크가 보관하고 있는 위 한 줄을 멈추기 전에 내보낸다
             std::abort();
         }
         return *s_pEditorToolDefaults;
@@ -140,13 +141,13 @@ namespace sw::editor
 
     void registerPreviewSelection( EditorSelection& selection )
     {
-        if ( std::find( s_listPreviewSelection.begin(), s_listPreviewSelection.end(), &selection ) == s_listPreviewSelection.end() )
+        if ( VectorUtil::contains( s_listPreviewSelection, &selection ) == false )
             s_listPreviewSelection.push_back( &selection );
     }
 
     void unregisterPreviewSelection( EditorSelection& selection )
     {
-        s_listPreviewSelection.erase( std::remove( s_listPreviewSelection.begin(), s_listPreviewSelection.end(), &selection ), s_listPreviewSelection.end() );
+        VectorUtil::removeValue( s_listPreviewSelection, &selection );
     }
 
     GameObjectManager* getActiveObjectManager()

@@ -51,7 +51,7 @@ namespace sw
 
     bool MatchModeCatalog::loadMode( const XMLNode& node, string_view sourceName )
     {
-        // 정의의 id 칸(`_modeID`)은 와이어 · 저장 이름이라 데이터의 `id` 속성은 손으로 읽는다.
+        // 정의의 id 필드(`_modeID`)은 와이어 · 저장 이름이라 데이터의 `id` 속성은 손으로 읽는다.
         MatchModeDefinition mode;
         bool                bValid = GameDataXML::readFields( node, mode, sourceName, { "id" } );
         const utf8*         pID    = node.findAttribute( "id" );

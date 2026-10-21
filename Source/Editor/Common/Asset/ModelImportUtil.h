@@ -198,7 +198,7 @@ namespace sw::editor
         [[nodiscard]] static bool readFloats( const cgltf_accessor* pAccessor, cgltf_size index, float32* pOutValue, cgltf_size count );
         /**
          * @brief 접근자 하나를 통째로 float 배열로 읽습니다(`cgltf_accessor_unpack_floats` — 희소 · 정규화 정수 포함). 원소마다 @p componentCount 칸입니다.
-         * @details 접근자가 없거나, 원소의 칸 수가 다르거나, 다 읽지 못하면 오류를 남기고 false 입니다. 원소 하나씩 읽다 실패한 칸을 0 으로 남기던 읽기를 대신한다.
+         * @details 접근자가 없거나, 원소의 성분 수가 다르거나, 다 읽지 못하면 오류를 남기고 false 입니다. 원소 하나씩 읽다 실패한 성분을 0 으로 남기던 읽기를 대신한다.
          */
         [[nodiscard]] static bool unpackFloats( const cgltf_accessor* pAccessor, cgltf_size componentCount, vector<float32>& outListValue );
         /** @brief `unpackFloats` 의 선택 속성판입니다. 접근자가 없으면 빈 배열로 true(부르는 쪽이 뜻을 정한다), 원소가 @p elementCount 보다 적으면 오류입니다. */
@@ -220,7 +220,7 @@ namespace sw::editor
         static void appendPrimitiveTriangles( const cgltf_primitive& primitive, const float32 ( &arrWorld )[16], uint32 baseVertex, cgltf_size vertexCount,
                                               MergedMesh& inoutMesh );
 
-        /** @brief 정점 하나의 JOINTS_0 과 미리 읽은 WEIGHTS_0(@p pWeight, `kInfluenceCount` 칸)를 본 번호와 합이 1 인 가중치로 바꿉니다. 관절 번호를 읽지 못하면 false 입니다. */
+        /** @brief 정점 하나의 JOINTS_0 과 미리 읽은 WEIGHTS_0(@p pWeight, `kInfluenceCount` 개)를 본 번호와 합이 1 인 가중치로 바꿉니다. 관절 번호를 읽지 못하면 false 입니다. */
         [[nodiscard]] static bool readSkinInfluence( const SkinBinding& skin, const cgltf_accessor* pJoint, const float32* pWeight, cgltf_size vertexIndex, ImportVertex& inoutVertex );
 
         /**
@@ -350,7 +350,7 @@ namespace sw::editor
 
         // ModelImportVrm.cpp: VRM 아바타(humanoid · 표정 · 스프링 본 · 1인칭)
 
-        /** @brief cgltf 데이터에서 glTF 번호 → 엔진 이름 표를 채웁니다(노드는 `makeNodeName`, 모프 타깃은 `makeMorphTargetName`). */
+        /** @brief cgltf 데이터에서 glTF 번호 → 엔진 이름 테이블을 채웁니다(노드는 `makeNodeName`, 모프 타깃은 `makeMorphTargetName`). */
         static void populateVrmGltfNames( const cgltf_data& data, VrmGltfNames& outNames );
 
         /**

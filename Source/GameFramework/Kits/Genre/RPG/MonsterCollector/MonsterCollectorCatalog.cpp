@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/RPG/MonsterCollector/MonsterCollectorCatalog.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Reflection/EnumName.h"
@@ -65,12 +66,7 @@ namespace sw
 
     bool MonsterSpeciesDef::hasType( const hashed_string& type ) const
     {
-        for ( const hashed_string& entry : _listType )
-        {
-            if ( entry == type )
-                return true;
-        }
-        return false;
+        return VectorUtil::contains( _listType, type );
     }
 
     int32 MonsterNatureDef::computePercent( MonsterStat stat ) const

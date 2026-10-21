@@ -1,8 +1,8 @@
 /**
  * @file EditorNetConditions.h
  * @brief 회선 조절(서버 디버깅 S4)의 패널 값과 자식 프로세스에 보내는 명령 글을 정의합니다. ImGui 에 의존하지 않습니다.
- * @details Multiplayer 창 Conditions 탭과 개발 명령 `netplay.command` 가 쓰고, `EditorTest` 가 프리셋 표 · 명령 글 · 대상 읽기를 테스트한다.
- *          조건 자체(프리셋 값, 덮어쓰기 글의 키)는 Core `NetEmulationConditions` 가 정본이고, 여기는 패널 단위(ms · % · KB/s)로 옮기는 일만 한다.
+ * @details Multiplayer 창 Conditions 탭과 개발 명령 `netplay.command` 가 쓰고, `EditorTest` 가 프리셋 테이블 · 명령 글 · 대상 읽기를 테스트한다.
+ *          조건 자체(프리셋 값, 덮어쓰기 글의 키)는 Core `NetEmulationConditions` 가 원본이고, 여기는 패널 단위(ms · % · KB/s)로 옮기는 일만 한다.
  */
 #pragma once
 #include "Core/Common/Types.h"

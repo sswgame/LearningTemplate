@@ -6,7 +6,7 @@
  *            `ThumbMetacarpal` · `ThumbProximal` 이다. 유니티 Mecanim 근육 값(armStretch, min/max 등)은 엔진에 대응이 없어 옮기지 않는다.
  *          - 표정: 0.x `blendShapeGroups[] { presetName, binds[] { mesh, index, weight 0..100 } }` · 1.0 `expressions { preset, custom }`
  *            `{ morphTargetBinds[] { node, index, weight 0..1 } }`. 머티리얼 색 · 텍스처 표정은 옮기지 않는다(무시 목록).
- *          - 스프링 본: 0.x `secondaryAnimation.boneGroups`(뿌리 본 + 그룹 값) · 1.0 `VRMC_springBone.springs`(관절마다 값). 0.x 의 키 `stiffiness` 는 원본 철자다.
+ *          - 스프링 본: 0.x `secondaryAnimation.boneGroups`(루트 본 + 그룹 값) · 1.0 `VRMC_springBone.springs`(관절마다 값). 0.x 의 키 `stiffiness` 는 원본 철자다.
  *          - 1인칭: 0.x `firstPerson { firstPersonBone, firstPersonBoneOffset, meshAnnotations[] { mesh, firstPersonFlag } }` ·
  *            1.0 `firstPerson.meshAnnotations[] { node, type }` 와 `lookAt.offsetFromHeadBone`(본은 humanoid head). 시선(lookAt)의 나머지는 옮기지 않는다.
  */
@@ -141,7 +141,7 @@ namespace sw::editor
             {
                 if ( pOutListIgnored == nullptr )
                     return;
-                if ( std::find( pOutListIgnored->begin(), pOutListIgnored->end(), path ) == pOutListIgnored->end() )
+                if ( VectorUtil::contains( *pOutListIgnored, path ) == false )
                     pOutListIgnored->push_back( path );
             }
 
@@ -235,7 +235,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 0.x 의 "없음" 이 -1 인 노드 칸(center · firstPersonBone)이 노드를 가리키는지 봅니다. 없거나 음수면 false 이고, 정수가 아니면 @p outbInvalid 입니다. */
+            /** @brief 0.x 의 "없음" 이 -1 인 노드 필드(center · firstPersonBone)가 노드를 가리키는지 봅니다. 없거나 음수면 false 이고, 정수가 아니면 @p outbInvalid 입니다. */
             static bool refersToNode( const JSONValue& value, bool& outbInvalid )
             {
                 outbInvalid = false;
@@ -301,7 +301,7 @@ namespace sw::editor
                 return false;
             }
 
-            /** @brief @p root 와 그 자손을 깊이 우선 순서로 모읍니다(0.x 스프링 뿌리 아래 흔들리는 본들). 순환은 노드 수에서 끊습니다. */
+            /** @brief @p root 와 그 자손을 깊이 우선 순서로 모읍니다(0.x 스프링 루트 아래 흔들리는 본들). 순환은 노드 수에서 끊습니다. */
             static void collectDescendants( const VrmGltfNames& names, uint32 root, vector<uint32>& outListNode )
             {
                 outListNode.clear();
@@ -464,7 +464,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 0.x 의 secondaryAnimation 을 읽습니다. 뿌리 본마다 사슬 하나입니다. */
+            /** @brief 0.x 의 secondaryAnimation 을 읽습니다. 루트 본마다 사슬 하나입니다. */
             [[nodiscard]] static bool readVrm0Springs( const JSONValue& secondary, const VrmGltfNames& names, VrmAvatarDef& inoutDef, vector<string>* pOutListIgnored, string& outError )
             {
                 collectUnknownKeys( secondary, kArrVrm0SecondaryKey, "VRM.secondaryAnimation", pOutListIgnored );
@@ -806,7 +806,7 @@ namespace sw::editor
                 }
             }
 
-            /** @brief 스프링 본(콜라이더 · 콜라이더 묶음 · 스프링)을 @p root 에 씁니다. 묶음과 스프링은 앞 목록의 번호로 가리킵니다. */
+            /** @brief 스프링 본(콜라이더 · 콜라이더 그룹 · 스프링)을 @p root 에 씁니다. 그룹과 스프링은 앞 목록의 번호로 가리킵니다. */
             static void writeSprings( const JSONValue& root, const VrmAvatarDef& def )
             {
                 {

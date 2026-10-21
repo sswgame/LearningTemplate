@@ -100,12 +100,7 @@ namespace sw
 
     WitcherBestiary::Entry* WitcherBestiary::findEntryMutable( const hashed_string& monsterID )
     {
-        for ( Entry& entry : _listEntry )
-        {
-            if ( entry._monsterID == monsterID )
-                return &entry;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&Entry::_monsterID>( _listEntry, monsterID );
     }
 
     const WitcherBestiary::Entry* WitcherBestiary::findEntry( const hashed_string& monsterID ) const

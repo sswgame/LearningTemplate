@@ -22,7 +22,7 @@ namespace sw::editor
 {
     /**
      * @class ISourceControlProvider
-     * @brief 버전 관리 공급자(언리얼 `ISourceControlProvider` 의 작은 판) — 잠금 목록 · 잠그기 · 풀기 명령과 그 출력 해석만 듭니다.
+     * @brief 버전 관리 공급자(언리얼 `ISourceControlProvider` 의 작은 버전) — 잠금 목록 · 잠그기 · 풀기 명령과 그 출력 해석만 듭니다.
      * @details 공급자는 프로세스를 띄우지 않는다. 그래서 명령 문자열 · 출력 해석을 단위 테스트로 보고, 띄우기 · 기다리기는 한 자리
      *          (`EditorExternalToolJob`)에 둔다. 빈 명령은 "할 일이 없다" 이다(`NullSourceControlProvider`).
      */

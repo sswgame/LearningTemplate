@@ -13,7 +13,7 @@ namespace sw::editor
         {
             /** @brief 제목 조각 사이의 구분입니다(UTF-8 em dash). */
             static constexpr string_view kSeparator = " \xE2\x80\x94 ";
-            /** @brief 씬이 없을 때 씬 자리에 쓰는 글입니다. */
+            /** @brief 씬이 없을 때 씬 이름 위치에 쓰는 글입니다. */
             static constexpr string_view kNoScene = "(no scene)";
         };
     } // namespace
@@ -23,7 +23,7 @@ namespace sw::editor
 {
     string EditorWindowTitleUtil::makeTitle( string_view gameName, string_view scenePath, bool bDirty, const utf8* pPlayState )
     {
-        // 경로의 마지막 조각(`/` · `\` 뒤)에서 씬 접미사를 뗀다.
+        // 경로의 마지막 조각(`/` · `\` 뒤)에서 씬 접미사를 제거한다.
         string_view sceneName;
         FileUtil::getFileNamePart( scenePath, sceneName );
         if ( StringUtil::endsWith( sceneName, kSceneSuffix, true ) )

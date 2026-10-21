@@ -3,12 +3,11 @@
 #include "GameFramework/Kits/Feature/Online/Economy/Shared/API/EconomyMirror.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Base/Gameplay/Inventory/Shop.h"
-
-#include <algorithm>
 
 namespace sw
 {
@@ -78,7 +77,7 @@ namespace sw
             for ( int32 slot = 0; slot < inoutInventory.getSlotCount(); ++slot )
             {
                 const InventorySlot& held = inoutInventory.getSlot( slot );
-                if ( held.isEmpty() == false && std::find( listHeld.begin(), listHeld.end(), held._itemID ) == listHeld.end() )
+                if ( held.isEmpty() == false && VectorUtil::contains( listHeld, held._itemID ) == false )
                     listHeld.push_back( held._itemID );
             }
             for ( const hashed_string& itemID : listHeld )

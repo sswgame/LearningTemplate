@@ -262,7 +262,7 @@ namespace sw::editor
     {
         const uint64 high = HashUtil::computeStringHash64( resourceID.data(), resourceID.size(), false );
         const uint64 low  = HashUtil::computeStringHash64( resourceID.data(), resourceID.size(), false, high ^ HashUtil::kGoldenRatio64 );
-        // 8-4-4-4-12 자리 16 진. 셋째 묶음 첫 자리는 버전 4, 넷째 묶음 첫 자리는 변형(8..b)이다.
+        // 8-4-4-4-12 글자 16 진. 셋째 그룹 첫 글자는 버전 4, 넷째 그룹 첫 글자는 변형(8..b)이다.
         auto appendHex = []( string& inoutText, uint64 value, uint32 digitCount )
         {
             static constexpr utf8 kArrDigit[] = "0123456789abcdef";

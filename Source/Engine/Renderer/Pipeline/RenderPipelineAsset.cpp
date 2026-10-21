@@ -3,6 +3,7 @@
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -345,7 +346,7 @@ namespace sw
             for ( const RenderGraphPassDesc& pass : _desc._listPass )
             {
                 const bool bWritesSwapchain =
-                    std::find( pass._listOutput.begin(), pass._listOutput.end(), string( kSwapchainOutputName ) ) != pass._listOutput.end();
+                    VectorUtil::contains( pass._listOutput, string( kSwapchainOutputName ) );
                 if ( pass._resolvedType == RenderPassType::Canvas )
                 {
                     if ( bWritesSwapchain == false )

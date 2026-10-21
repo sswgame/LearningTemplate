@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/Network/NetTurnRelay/TurnRelay.h"
 
 #include "Core/Common/HashUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
 #include "Core/Network/Connection/NetHost.h"
@@ -112,12 +113,7 @@ namespace sw
 
     TurnRoom* TurnRelayServer::findRoomMutable( uint32 roomID )
     {
-        for ( TurnRoom& room : _listRoom )
-        {
-            if ( room._roomID == roomID )
-                return &room;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&TurnRoom::_roomID>( _listRoom, roomID );
     }
 
     const TurnRoom* TurnRelayServer::findRoom( uint32 roomID ) const

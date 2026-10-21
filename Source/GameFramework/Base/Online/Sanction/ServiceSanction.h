@@ -1,7 +1,7 @@
 /**
  * @file ServiceSanction.h
  * @brief 계정 제재입니다. 종류(채팅 금지, 정지, 영구 정지)마다 끝 시각과 사유 코드를 계정마다 레코드 하나(`service_sanction`, 키는 계정 16 진)에 둡니다.
- * @details GM 키트(GF_Admin)가 판 조건으로 쓰고, 계정 키트는 로그인 · 재접속에서, 채팅 키트는 말하기에서 읽는다(저장소 스레드). 지난 제재 이력은 감사 로그가 갖는다.
+ * @details GM 키트(GF_Admin)가 버전 조건으로 쓰고, 계정 키트는 로그인 · 재접속에서, 채팅 키트는 말하기에서 읽는다(저장소 스레드). 지난 제재 이력은 감사 로그가 갖는다.
  *          쓰는 쪽과 읽는 쪽이 다른 키트라 기반에 둔다. 넥슨과 엔씨 GM 툴의 "계정 제재(종류, 기간, 사유)" 항목과 같다.
  */
 #pragma once
@@ -30,7 +30,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 계정 하나의 제재 상태입니다. 관리자 조회 응답에 고정 배치형으로 실립니다. `_version` 은 레코드 판이라 `PROPERTY` 가 아니며 와이어에 싣지 않습니다. */
+    /** @brief 계정 하나의 제재 상태입니다. 관리자 조회 응답에 고정 배치형으로 실립니다. `_version` 은 레코드 버전이라 `PROPERTY` 가 아니며 와이어에 싣지 않습니다. */
     REFLECT()
     struct ServiceSanctionState
     {
@@ -51,7 +51,7 @@ namespace sw
     struct SW_GF_API ServiceSanction
     {
         static const hashed_string& getTable();
-        /** @brief 읽습니다. 레코드가 없으면 `Ok` 와 빈 상태(판 0)입니다. */
+        /** @brief 읽습니다. 레코드가 없으면 `Ok` 와 빈 상태(버전 0)입니다. */
         [[nodiscard]] static ServiceStoreResult readState( IServiceStoreConnection& connection, uint64 accountID, ServiceSanctionState& outState );
         /** @brief 지금(@p nowMs) @p kind 가 걸려 있는가입니다. */
         static bool isActive( const ServiceSanctionState& state, ServiceSanctionKind kind, int64 nowMs );

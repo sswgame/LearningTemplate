@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Storage/CacheStore/Server/Driver/Resp/RespEphemeralStore.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -173,7 +174,7 @@ namespace sw
         const bool bCannotSubscribe = _bInitialized == SW_FALSE || _bShutdown == SW_TRUE || EphemeralRequest::isValidKey( channel ) == false;
         if ( bCannotSubscribe )
             return;
-        if ( std::find( _listChannel.begin(), _listChannel.end(), channel ) != _listChannel.end() )
+        if ( VectorUtil::contains( _listChannel, channel ) )
             return;
         _listChannel.emplace_back( channel );
         uint64 targetAckCount = 0;
@@ -197,10 +198,8 @@ namespace sw
 
     void RespEphemeralStore::unsubscribe( string_view channel )
     {
-        const auto channelIt = std::find( _listChannel.begin(), _listChannel.end(), channel );
-        if ( channelIt == _listChannel.end() )
+        if ( VectorUtil::removeFirst( _listChannel, channel ) == 0 )
             return;
-        _listChannel.erase( channelIt );
         uint64 targetAckCount = 0;
         {
             std::scoped_lock<mutex> lock{ _mutex };

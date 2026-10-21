@@ -107,7 +107,7 @@ namespace sw::editor
         vector<ModelImportTexture> _listTexture;
         /** @brief 머티리얼이 지원하지 않는 VRM 키의 이름입니다. 값이 효과 없는 기본값이면 빠집니다. 임포트가 경고로 알립니다. */
         vector<string> _listIgnoredMaterialKey;
-        /** @brief VRM 이면 humanoid 본 표 · 표정 · 스프링 본 · 1인칭 정보입니다(`VrmAvatarImporter`). VRM 이 아니면 비어 있습니다. */
+        /** @brief VRM 이면 humanoid 본 테이블 · 표정 · 스프링 본 · 1인칭 정보입니다(`VrmAvatarImporter`). VRM 이 아니면 비어 있습니다. */
         VrmAvatarDef _avatar;
         /** @brief 아바타 정보에서 모르는 키와 옮기지 않는 값의 경로입니다. 임포트가 경고로 알립니다. */
         vector<string> _listIgnoredAvatarKey;
@@ -135,7 +135,7 @@ namespace sw::editor
      *
      *          VRM 은 머티리얼에 MToon 값이 있다(0.x 는 `extensions.VRM`, 1.0 은 `VRMC_materials_mtoon`). 머티리얼마다 `sections/<머티리얼>.mesh` 와 툰 머티리얼
      *          `materials/<머티리얼>.material` 을 옆 폴더에 더 쓰고, 그 머티리얼이 쓰는 내장 이미지를 `<x>/textures_raw/<y>/` 로 꺼낸다(`VrmMaterialImporter`).
-     *          humanoid 본 표 · 표정 · 스프링 본 · 1인칭은 본과 모프 타깃 이름으로 풀어 옆 폴더의 `<y>.avatar.json` 에 쓴다(`VrmAvatarImporter`).
+     *          humanoid 본 테이블 · 표정 · 스프링 본 · 1인칭은 본과 모프 타깃 이름으로 풀어 옆 폴더의 `<y>.avatar.json` 에 쓴다(`VrmAvatarImporter`).
      */
     struct ModelImporter
     {
@@ -153,7 +153,7 @@ namespace sw::editor
 
         /**
          * @brief 핫 리로드가 넘긴 파일이 모델 원본이면 임포트합니다. `models_raw/` 아래의 원본을 옆 `models/` 의 `.mesh` 로 만듭니다.
-         * @details 임포트한 `.mesh` 를 쓰면 다음 감시 이벤트로 들어오고, 메시 캐시가 그 자리에서 다시 읽는다. `models_raw/` 밖의 원본은 경고만 한다.
+         * @details 임포트한 `.mesh` 를 쓰면 다음 감시 이벤트로 들어오고, 메시 캐시가 그 즉시 다시 읽는다. `models_raw/` 밖의 원본은 경고만 한다.
          * @return 모델 원본이었으면 true 입니다. 임포트했든 경고만 했든 같으며, 호출자는 캐시를 다시 읽지 않습니다. `.mesh` 이면 false 입니다.
          */
         [[nodiscard]] static bool importChangedSourceModel( string_view relativePath );

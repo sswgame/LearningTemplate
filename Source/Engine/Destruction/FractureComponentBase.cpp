@@ -2,6 +2,7 @@
 
 #include "Engine/Destruction/FractureComponentBase.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Time/MonotonicClock.h"
@@ -363,12 +364,8 @@ namespace sw
                 FractureComponentBaseInternal::makeLeafHull( asset, leaf, scale, -0.01f, shape._listPoint );
                 vector<PhysicsBodyHandle> listBody;
                 (void)_scene.overlapShape( shape, position, rotation, PhysicsQueryFilter{}, listBody );
-                for ( const PhysicsBodyHandle& body : listBody )
-                {
-                    if ( _scene.getBodyType( body ) == PhysicsBodyType::Static && _scene.getBodyUserData( body ) != ignoreUserData )
-                        return true;
-                }
-                return false;
+                return VectorUtil::containsIf( listBody, [&]( const PhysicsBodyHandle& body )
+                { return _scene.getBodyType( body ) == PhysicsBodyType::Static && _scene.getBodyUserData( body ) != ignoreUserData; } );
             }
 
         protected:
@@ -535,12 +532,8 @@ namespace sw
                 FractureComponentBaseInternal::makeConvexPolygon( listPoint, FractureComponentBaseInternal::kMaxPolygonPoint2D, shape._listPoint );
                 vector<PhysicsBodyHandle> listBody;
                 (void)_scene.overlapShape( shape, float2{ position._x, position._y }, FractureComponentBaseInternal::getAngleZ( rotation ), PhysicsQueryFilter{}, listBody );
-                for ( const PhysicsBodyHandle& body : listBody )
-                {
-                    if ( _scene.getBodyType( body ) == PhysicsBodyType::Static && _scene.getBodyUserData( body ) != ignoreUserData )
-                        return true;
-                }
-                return false;
+                return VectorUtil::containsIf( listBody, [&]( const PhysicsBodyHandle& body )
+                { return _scene.getBodyType( body ) == PhysicsBodyType::Static && _scene.getBodyUserData( body ) != ignoreUserData; } );
             }
 
         protected:
@@ -1499,22 +1492,12 @@ namespace sw
 
     FractureGroupRuntime* FractureComponentBase::findRuntime( uint32 groupID )
     {
-        for ( FractureGroupRuntime& runtime : _listRuntime )
-        {
-            if ( runtime._groupID == groupID )
-                return &runtime;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&FractureGroupRuntime::_groupID>( _listRuntime, groupID );
     }
 
     const FractureGroupRuntime* FractureComponentBase::findRuntime( uint32 groupID ) const
     {
-        for ( const FractureGroupRuntime& runtime : _listRuntime )
-        {
-            if ( runtime._groupID == groupID )
-                return &runtime;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&FractureGroupRuntime::_groupID>( _listRuntime, groupID );
     }
 
     uint32 FractureComponentBase::getDynamicBodyCount() const

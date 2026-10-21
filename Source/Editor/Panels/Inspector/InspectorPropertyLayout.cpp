@@ -8,7 +8,7 @@
 #include "Engine/Reflection/ReflectionTypes.h"
 
 // 인스펙터는 에디터 기능이라 Shipping 에는 없다 — 에디터 메타데이터(카테고리 · 표시 이름 · 숨김)도 Shipping 빌드에서 빠진다.
-// 타입 사슬은 메타데이터를 읽지 않아 모든 구성에 있다(`InspectorComponentManager` 가 쓰고, EditorTest 는 Shipping 에서도 짓는다).
+// 타입 사슬은 메타데이터를 읽지 않아 모든 구성에 있다(`InspectorComponentManager` 가 쓰고, EditorTest 는 Shipping 에서도 빌드한다).
 namespace sw::editor
 {
     void InspectorPropertyLayout::collectTypeChain( const TypeInfo& type, vector<const TypeInfo*>& outListType )
@@ -43,7 +43,7 @@ namespace sw::editor
                                                          vector<InspectorPropertyGroup>& outListGroup )
     {
         outListGroup.clear();
-        // 상속분은 기반 → 파생 순으로 온다(파생이 같은 이름을 다시 선언하면 그 자리에서 바뀐다 — `TypeInfo::getPropertiesWithBase`).
+        // 상속분은 기반 → 파생 순으로 온다(파생이 같은 이름을 다시 선언하면 그 위치에서 바뀐다 — `TypeInfo::getPropertiesWithBase`).
         type.forEachProperty( [&]( const PropertyInfo& prop )
         {
             if ( prop._metadata->_bHideInInspector == SW_TRUE )

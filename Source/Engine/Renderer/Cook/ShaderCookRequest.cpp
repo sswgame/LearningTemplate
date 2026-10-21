@@ -9,6 +9,7 @@
 #include "pch.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
@@ -152,7 +153,7 @@ namespace sw
                         material.setStaticSwitch( hashed_string( listRuntimeSwitch[switchIndex] ), ( combo & ( 1u << switchIndex ) ) != 0 );
                     }
                     const vector<string>& listDefine = material.getCachedShaderDefines();
-                    if ( std::find( outListDefine.begin(), outListDefine.end(), listDefine ) == outListDefine.end() )
+                    if ( VectorUtil::contains( outListDefine, listDefine ) == false )
                         outListDefine.push_back( listDefine );
                 }
             }

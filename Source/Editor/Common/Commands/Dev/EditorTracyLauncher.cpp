@@ -16,9 +16,9 @@ namespace sw::editor
     SW_LOG_CALLER( "EditorTracy" );
 
     /**
-     * @brief `-gv_tracyViewerPath=<경로>`: "Tracy 열기" 가 띄울 Tracy 뷰어(tracy-profiler, 같은 판 0.14.1). 파일이나 그 파일이 든 폴더.
+     * @brief `-gv_tracyViewerPath=<경로>`: "Tracy 열기" 가 띄울 Tracy 뷰어(tracy-profiler, 같은 버전 0.14.1). 파일이나 그 파일이 있는 폴더.
      * @details 상대 경로는 프로젝트 루트 기준이다. 기본은 저장소 안 `Tools/Tracy`(저장소에 넣지 않는다 — `.gitignore`, `Source/Engine/Profiling/README.md`).
-     *          자리의 정본은 이 설정 하나이고, 찾기(`EditorTracyLauncher::findViewerPath`)는 다른 자리를 더 뒤지지 않는다.
+     *          경로의 원본은 이 설정 하나이고, 찾기(`EditorTracyLauncher::findViewerPath`)는 다른 경로를 더 뒤지지 않는다.
      */
     SW_GLOBAL_VARIABLE( sw::string, gv_tracyViewerPath, "Tools/Tracy", "Tracy 뷰어(tracy-profiler 0.14.1) 경로 — 파일이나 폴더, 상대 경로는 프로젝트 루트 기준" );
 

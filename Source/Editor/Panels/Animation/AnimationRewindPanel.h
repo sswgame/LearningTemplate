@@ -1,7 +1,7 @@
 /**
  * @file AnimationRewindPanel.h
  * @brief 애니메이션 되감기 창 — 기록을 켜고, 고른 캐릭터의 기록을 시간 막대로 훑으며 뼈대(디버그 드로우) · 상태 · 알림 · 커브 · 루트 모션을 봅니다.
- * @details 언리얼 Rewind Debugger 의 자리입니다. 훑으면 PIE 를 멈추고(`EditorPlaySession::pause`) 씬의 애니메이션을 기록된 시각으로 겁니다.
+ * @details 언리얼 Rewind Debugger 에 해당합니다. 훑으면 PIE 를 멈추고(`EditorPlaySession::pause`) 씬의 애니메이션을 기록된 시각으로 겁니다.
  *          "Resume" 이 되감기를 풀고 플레이를 잇습니다.
  */
 #pragma once

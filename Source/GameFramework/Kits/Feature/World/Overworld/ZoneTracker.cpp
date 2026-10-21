@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/World/Overworld/ZoneTracker.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 
 namespace sw
 {
@@ -35,12 +36,7 @@ namespace sw
 
     bool ZoneDef::hasTag( const hashed_string& tag ) const
     {
-        for ( const hashed_string& existingTag : _listTag )
-        {
-            if ( existingTag == tag )
-                return true;
-        }
-        return false;
+        return VectorUtil::contains( _listTag, tag );
     }
 
     void ZoneDef::addTag( const hashed_string& tag )

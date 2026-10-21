@@ -41,7 +41,7 @@ namespace sw::editor
         [[nodiscard]] static AssetImportSummary importAllHeightfields( string_view resourceRoot, AssetImportMode mode );
         /** @brief 원본 경로의 결과 경로입니다(`…/heightfields_raw/x.png` → `…/heightfields/x.heightfield`). */
         static string makeImportedHeightfieldPath( string_view rawPath );
-        /** @brief 원본 바이트 + 곁 구멍 마스크 + 임포터 판의 해시입니다. */
+        /** @brief 원본 바이트 + 곁 구멍 마스크 + 임포터 버전의 해시입니다. */
         static uint64 computeSourceHash( string_view sourcePath );
         /** @brief 원본 파일이면 true 입니다(곁 파일 `_holes` 와 스플랫 원본 `_splat` 은 아닙니다). */
         static bool isSourceHeightfield( string_view path );

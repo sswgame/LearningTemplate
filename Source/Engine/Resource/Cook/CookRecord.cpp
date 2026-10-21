@@ -4,6 +4,7 @@
 
 #include "Core/Common/Defines.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringBuilder.h"
 
@@ -148,12 +149,8 @@ namespace sw
 
     const CookInput* CookRecord::findChangedInput() const
     {
-        for ( const CookInput& input : _listInput )
-        {
-            if ( input.computeCurrentHash() != input._contentHash )
-                return &input;
-        }
-        return nullptr;
+        return VectorUtil::findIf( _listInput, [&]( const CookInput& input )
+        { return input.computeCurrentHash() != input._contentHash; } );
     }
 
     DerivedDataCache::DerivedDataCache( string rootPath )

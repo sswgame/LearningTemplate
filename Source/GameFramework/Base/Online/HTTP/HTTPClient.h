@@ -56,7 +56,7 @@ namespace sw
 
         /** @brief 전송(넘겨받는다)을 띄웁니다. */
         [[nodiscard]] bool initialize( unique_ptr<IStreamTransport> transport, const StreamTransportConfig& transportSettings, const HTTPClientConfig& settings );
-        /** @brief 날아가던 요청은 전송 실패로 끝나고 다음 `pollResponses` 가 거둔다. */
+        /** @brief 날아가던 요청은 전송 실패로 끝나고 다음 `pollResponses` 가 회수한다. */
         void shutdown();
 
         /** @brief @p host 의 `https://` 요청에 쓸 TLS 컨텍스트를 등록합니다. 빌려 쓰므로 이 객체보다 오래 살아야 합니다. */

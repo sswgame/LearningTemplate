@@ -7,10 +7,14 @@
 
 #include "Engine/Observability/ServiceHealthRegistry.h"
 
+#include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"
 #include "GameFramework/Base/Online/Bus/EphemeralServerBus.h"
 #include "GameFramework/Base/Online/Cache/MemoryEphemeralStore.h"
 #include "GameFramework/Base/Online/Config/RemoteConfig.h"
 #include "GameFramework/Base/Online/Directory/ServerRegistration.h"
+#include "GameFramework/Base/Online/Ledger/Ledger.h"
+#include "GameFramework/Base/Online/Report/ServiceReport.h"
+#include "GameFramework/Base/Online/Schedule/ServiceRetentionJob.h"
 #include "GameFramework/Base/Online/Schedule/ServiceScheduler.h"
 #include "GameFramework/Base/Online/Security/NetSecurity.h"
 #include "GameFramework/Base/Online/Server/OnlineServerKit.h"
@@ -30,6 +34,46 @@ namespace sw
             static constexpr int64 kRemoteConfigReloadMs = 60000;
 
             static bool isMemoryDriver( string_view driver ) { return driver.empty() || driver == OnlineStoreDriverTable::kMemoryDriverName; }
+
+            static constexpr int64 kDayMs = 24 * constant::kSecondsPerHour * constant::kMillisecondsPerSecond;
+            /** @brief 분개를 내역보다 하루 더 남긴다 — 내역이 가리키는 분개가 먼저 사라지지 않게 한다. */
+            static constexpr int64 kJournalExtraDays = 1;
+
+            static ServiceRetentionRule makeRetentionRule( const hashed_string& table, int64 days, ServiceRetentionTimeFn pfnReadTime )
+            {
+                ServiceRetentionRule rule;
+                rule._table       = table;
+                rule._retentionMs = days * kDayMs;
+                rule._pfnReadTime = pfnReadTime;
+                return rule;
+            }
+
+            /** @brief 설정의 보존 일수(0 이면 지우지 않음)로 쓸기 규칙을 만듭니다. */
+            static vector<ServiceRetentionRule> makeRetentionRules( const OnlineServerConfig& config )
+            {
+                vector<ServiceRetentionRule> listRule;
+                if ( config._retentionAuditDays > 0 )
+                    listRule.push_back( makeRetentionRule( ServiceAuditLog::getTable(), config._retentionAuditDays, &ServiceAuditLog::readTimeMs ) );
+                if ( config._retentionLedgerDays > 0 )
+                {
+                    listRule.push_back( makeRetentionRule( Ledger::getHistoryTable(), config._retentionLedgerDays, &Ledger::readHistoryTimeMs ) );
+                    listRule.push_back( makeRetentionRule( Ledger::getJournalTable(), config._retentionLedgerDays + kJournalExtraDays, &Ledger::readJournalTimeMs ) );
+                }
+                if ( config._retentionReportDays > 0 )
+                {
+                    ServiceRetentionRule rule = makeRetentionRule( ServiceReportStore::getTable(), config._retentionReportDays, &ServiceReportStore::readClosedTimeMs );
+                    rule._keyPrefix           = "closed/";
+                    listRule.push_back( std::move( rule ) );
+                }
+                return listRule;
+            }
+
+            static ServiceRetentionJobConfig makeRetentionSettings( const OnlineServerConfig& config )
+            {
+                ServiceRetentionJobConfig settings;
+                settings._minuteOfDay = config._retentionMinuteOfDay;
+                return settings;
+            }
 
             /** @brief 비밀을 0 으로 덮고 비웁니다. 드라이버에 넘긴 뒤 부릅니다. */
             static void wipeSecret( string& inoutSecret )
@@ -65,6 +109,7 @@ namespace sw
         unique_ptr<IStreamTransport>   _ownedTransport{};
         unique_ptr<ITLSContext>        _tlsContext{};
         ServiceScheduler               _scheduler{};
+        ServiceRetentionJob            _retention{};
         RemoteConfig                   _remoteConfig{};
         OnlineServiceHost              _host{};
         unique_ptr<EphemeralServerBus> _bus{};
@@ -97,7 +142,7 @@ namespace sw
     {
         SW_ASSERT( _bInitialized == SW_FALSE );
         _parts        = make_unique<Parts>();
-        _bInitialized = SW_TRUE; // 실패해도 `shutdown` 이 만든 것까지 내린다
+        _bInitialized = SW_TRUE; // 실패해도 `shutdown` 이 만든 것까지 정리한다
         Parts& parts  = *_parts;
 
         parts._config           = settings._config;
@@ -185,6 +230,11 @@ namespace sw
         parts._bus            = make_unique<EphemeralServerBus>( nullptr, serverID ); // 라우터는 호스트가 연 뒤에 묶는다
         parts._busFront       = make_unique<ServerBus>( *parts._bus );
         parts._scheduler.initialize( parts._store.get(), serverID );
+        if ( parts._retention.initialize( parts._store.get(), &parts._scheduler, Internal::makeRetentionRules( parts._config ), Internal::makeRetentionSettings( parts._config ) ) == false )
+        {
+            outError = "the retention sweep job could not be scheduled";
+            return false;
+        }
         parts._remoteConfig.requestReload( *parts._store );
         parts._nextRemoteConfigReloadMs = nowMs + Internal::kRemoteConfigReloadMs;
 
@@ -212,7 +262,7 @@ namespace sw
         vector<const OnlineServerKitEntry*> listEntryByFactory( listFactory.size(), nullptr );
         if ( parts._config._listKit.empty() )
         {
-            // 띄울 키트는 운영자가 고른다. 빌드에 든 키트를 모두 띄우면 데이터가 필요한 키트(경제의 카탈로그)가 기동을 막고, 띄울 생각이 없던 포트가 열린다.
+            // 띄울 키트는 운영자가 고른다. 빌드에 포함된 키트를 모두 띄우면 데이터가 필요한 키트(경제의 카탈로그)가 기동을 막고, 띄울 생각이 없던 포트가 열린다.
             outError = "the online service config lists no kits (_listKit)";
             return false;
         }
@@ -347,8 +397,9 @@ namespace sw
             if ( instance._kit != nullptr )
                 instance._kit->stop();
         }
-        // 둘 다 시작하지 않았어도 내려도 된다 — 호스트는 자기 초기화 비트를 보고, 스케줄러는 목록과 저장소 포인터를 비울 뿐이다.
+        // 둘 다 시작하지 않았어도 종료해도 된다 — 호스트는 자기 초기화 비트를 보고, 스케줄러는 목록과 저장소 포인터를 비울 뿐이다.
         parts._host.shutdown();
+        parts._retention.shutdown(); // 저장소가 살아 있을 때 맡긴 쓸기를 회수한다
         parts._scheduler.shutdown();
         if ( parts._store != nullptr )
         {
@@ -374,7 +425,7 @@ namespace sw
         if ( _bInitialized == SW_FALSE )
             return;
         Parts& parts = *_parts;
-        // 메모리 캐시의 만료(TTL)를 서비스와 같은 시계로 잰다 — 캐시가 제 단조 시계를 쓰면 가짜 시계에서 서버 등록 · 매칭 표가 서비스 시각보다 먼저 만료된다.
+        // 메모리 캐시의 만료(TTL)를 서비스와 같은 시계로 계산한다 — 캐시가 제 단조 시계를 쓰면 가짜 시계에서 서버 등록 · 매칭 테이블이 서비스 시각보다 먼저 만료된다.
         if ( parts._bMemoryCache == SW_TRUE && parts._bManualCacheTime == SW_TRUE )
             parts._memoryCacheDatabase.setManualTimeMs( nowMs );
         parts._host.update( nowMs );

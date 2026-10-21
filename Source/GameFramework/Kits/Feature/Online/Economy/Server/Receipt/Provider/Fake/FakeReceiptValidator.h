@@ -1,7 +1,7 @@
 /**
  * @file FakeReceiptValidator.h
  * @brief 가짜 스토어 "fake" 입니다. 영수증 `fake|<상품 id>|<거래 id>|<ok|invalid|refunded|retry|sandbox>` 를 그대로 믿고 다음 `pollCompletions` 에서 결과를 냅니다. 결과는 결정적입니다.
- * @details 개발 서버와 테스트 전용이다(`isDevelopmentOnly`). 서명이 없으므로 Shipping 서버의 경제 서비스는 이것이 든 레지스트리를 거절한다.
+ * @details 개발 서버와 테스트 전용이다(`isDevelopmentOnly`). 서명이 없으므로 Shipping 서버의 경제 서비스는 이것을 가진 레지스트리를 거절한다.
  */
 #pragma once
 #include "Core/Container/vector.h"

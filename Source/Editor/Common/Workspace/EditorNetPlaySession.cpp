@@ -36,7 +36,7 @@ namespace sw::editor
         uint32             _statsReportCount{ 0 };     ///< 받은 `net.stats` 보고 수(게임 스레드)
         atomic<int32>      _exitCode{ 0 };
         atomic<uint32>     _exited{ 0 };    ///< 읽기 스레드가 파이프 끝을 보고 종료 코드를 거뒀다
-        int32              _processID{ 0 }; ///< 띄울 때의 pid(거둔 뒤에도 패널에 보인다)
+        int32              _processID{ 0 }; ///< 띄울 때의 pid(회수한 뒤에도 패널에 보인다)
         bool               _bExitReported{ false };
         bool               _bConnected{ false }; ///< 클라이언트가 서버에 연결됐다는 줄을 남겼다
     };

@@ -2,6 +2,7 @@
 
 #include "Engine/Animation/AnimationClip.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
@@ -144,12 +145,7 @@ namespace sw
 
     const AnimationClipCurve* AnimationClip::findCurve( const hashed_string& name ) const
     {
-        for ( const AnimationClipCurve& curve : _listCurve )
-        {
-            if ( curve._name == name )
-                return &curve;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&AnimationClipCurve::_name>( _listCurve, name );
     }
 
     bool AnimationClip::compressFrom( const AnimationRawClip& rawClip, const IAnimationCodec& codec, const AnimationCodecSettings& settings, AnimationCodecStats* pOutStats )

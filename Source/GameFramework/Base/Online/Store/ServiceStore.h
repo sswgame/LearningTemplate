@@ -1,15 +1,15 @@
 /**
  * @file ServiceStore.h
  * @brief 서비스(계정, 경제, 거래)의 저장 계약을 정의합니다.
- * @details (표, 키)로 레코드(바이트와 버전)를 찾고, 조건부 쓰기를 트랜잭션으로 묶고, 키 범위를 읽는다.
+ * @details (테이블, 키)로 레코드(바이트와 버전)를 찾고, 조건부 쓰기를 트랜잭션으로 묶고, 키 범위를 읽는다.
  *          이 모든 것을 저장소 스레드에서 도는 "작업"으로 요청하는 비동기 인터페이스도 여기서 정의한다.
  *
  *          - 버전(`ServiceRecord::_version`)은 저장소 전체에서 커밋마다 오르는 수이다. 지웠다 다시 만든 키도 옛 버전을 다시 받지 않으므로 ABA 가 없다. 빈틈은 있어도 된다.
  *          - 쓰기는 모두 트랜잭션이다. 쓰기마다 기대 버전을 준다. `kAnyVersion` 은 조건 없음이고, `kAbsentVersion` 은 "없어야 한다"이다.
  *            하나라도 어긋나면 아무것도 쓰지 않고 `Conflict` 를 반환한다. `requireVersion` 은 쓰지 않고 버전만 본다. 읽은 값이 그새 바뀌지 않았는지 확인할 때 쓴다.
  *          - `Unavailable` 은 "적용됐는지 모른다"를 포함한다. 돈이나 아이템이 움직이는 커밋은 같은 트랜잭션에 멱등 기록(`ServiceIdempotency`)을 넣어 결과를 가려야 한다.
- *          - 키는 ASCII(`[0-9a-z_./-]`, 256 B 이하)이고 순서는 바이트 사전순이다. 숫자는 `ServiceKeyUtil::appendHex64`(고정 16 자리)로 써야 순서가 맞는다.
- *            표 이름은 `hashed_string` 이라 대소문자를 가리지 않으므로 소문자로만 쓴다.
+ *          - 키는 ASCII(`[0-9a-z_./-]`, 256 B 이하)이고 순서는 바이트 사전순이다. 숫자는 `ServiceKeyUtil::appendHex64`(고정 16자)로 써야 순서가 맞는다.
+ *            테이블 이름은 `hashed_string` 이라 대소문자를 가리지 않으므로 소문자로만 쓴다.
  *          - 비동기: 서비스는 저장 왕복 하나를 `IServiceStoreWork` 로 묶어 `submit` 한다.
  *            `run` 은 저장소 스레드에서 돌고(동기 연결 API), `complete` 는 맡긴 스레드가 `pollCompletions` 를 부를 때 돈다.
  *            게임 스레드와 네트워크 스레드는 DB 를 기다리지 않는다.
@@ -76,7 +76,7 @@ namespace sw
 {
     /**
      * @class ServiceTransaction
-     * @brief 한 번에 적용할 쓰기와 조건의 묶음(트랜잭션)입니다.
+     * @brief 한 번에 적용할 쓰기와 조건의 그룹(트랜잭션)입니다.
      */
     class SW_GF_API ServiceTransaction
     {

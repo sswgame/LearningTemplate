@@ -4,6 +4,7 @@
 
 #include "Core/Common/Defines.h"
 #include "Core/Container/TopologicalSortUtil.h"
+#include "Core/Container/VectorUtil.h"
 
 namespace sw
 {
@@ -282,7 +283,7 @@ namespace sw
                 if ( dependentIndex == SubsystemCollectionInternal::kNotFound )
                     continue;
                 vector<uint32>& listDependency = outGraph._listDependency[dependentIndex];
-                if ( std::find( listDependency.begin(), listDependency.end(), nodeIndex ) == listDependency.end() )
+                if ( VectorUtil::contains( listDependency, nodeIndex ) == false )
                     listDependency.push_back( nodeIndex );
             }
         }

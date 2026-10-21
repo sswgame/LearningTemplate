@@ -166,7 +166,7 @@ namespace sw::editor
         }
         /**
          * @brief ImGui 가 X 로 내린 열림 표시를 닫기 요청으로 바꿉니다. `draw()` 가 창을 연 직후 부릅니다.
-         * @details ImGui 는 X 를 누르면 그 프레임에 `p_open` 만 내린다. 그대로 두면 미저장 편집이 확인 없이 닫힌다.
+         * @details ImGui 는 X 를 누르면 그 프레임에 `p_open` 만 false 로 만든다. 그대로 두면 미저장 편집이 확인 없이 닫힌다.
          */
         void absorbCloseButton()
         {
@@ -239,7 +239,7 @@ namespace sw::editor
         virtual void revertDocument() {}
 
     private:
-        /** @brief 열림 표시를 내리고 `onPanelClosed` 를 부릅니다. 패널을 닫는 유일한 위치입니다. */
+        /** @brief 열림 표시를 끄고 `onPanelClosed` 를 부릅니다. 패널을 닫는 유일한 위치입니다. */
         void closeNow()
         {
             _bOpen = false;

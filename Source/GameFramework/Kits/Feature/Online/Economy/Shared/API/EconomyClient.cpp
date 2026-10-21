@@ -14,6 +14,15 @@ namespace sw
     {
     }
 
+    void EconomyClient::onServicePush( uint16 kind, BitReader& body )
+    {
+        if ( kind != EconomyMethod::kPushBalanceChanged )
+            return;
+        EconomyBalanceChanged changed;
+        if ( EconomyProtocol::MessageTypes::read( body, changed ) == FixedReadResult::Ok )
+            applyBalances( changed._listBalance, false );
+    }
+
     uint64 EconomyClient::requestWallet( const ReplyDelegate& onReply )
     {
         return sendCall( EconomyMethod::kGetWallet, BitWriter{}, NetIdempotencyKey{}, onReply );

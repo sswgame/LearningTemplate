@@ -2,6 +2,7 @@
 
 #include "Engine/Character/Hit/RagdollComponent.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/AnimationClip.h"
@@ -271,7 +272,7 @@ namespace sw
         vector<uint8> listDetached( bodyCount, SW_FALSE );
         for ( size_t body = 0; body < bodyCount && body < _asset->_listBody.size(); ++body )
         {
-            if ( std::find( listBone.begin(), listBone.end(), _asset->_listBody[body]._bone ) != listBone.end() )
+            if ( VectorUtil::contains( listBone, _asset->_listBody[body]._bone ) )
                 listDetached[body] = SW_TRUE;
         }
         // 관절을 먼저 지운다. 빠진 바디를 잇는 관절이 남으면 솔버가 넓은 단계 밖의 바디를 만진다.

@@ -21,16 +21,16 @@ namespace sw::editor
 
     /**
      * @brief 콘텐츠 브라우저 Add 메뉴가 만드는 새 에셋 하나의 틀입니다.
-     * @details 종류를 더할 때는 `EditorAssetFileCommands.cpp` 의 `kArrNewAssetTemplate` 에 한 줄을 더합니다. Add 메뉴와 `createAsset` 이 그 표를 함께 읽습니다.
-     *          글은 `_pfnSourcePath`(베낄 엔진 기본 에셋 칸) 와 `_pText`(그대로 쓰는 글) 가운데 하나만 채웁니다.
+     * @details 종류를 더할 때는 `EditorAssetFileCommands.cpp` 의 `kArrNewAssetTemplate` 에 한 줄을 더합니다. Add 메뉴와 `createAsset` 이 그 테이블을 함께 읽습니다.
+     *          글은 `_pfnSourcePath`(베낄 엔진 기본 에셋 항목) 와 `_pText`(그대로 쓰는 글) 가운데 하나만 채웁니다.
      */
     struct EditorNewAssetTemplate
     {
-        const utf8* _pID{ nullptr };     ///< 표 안에서 겹치지 않는 이름. Add 메뉴 표지는 `contentBrowser.add.<id>` 다
+        const utf8* _pID{ nullptr };     ///< 테이블 안에서 겹치지 않는 이름. Add 메뉴 표지는 `contentBrowser.add.<id>` 다
         const utf8* _pLabel{ nullptr };  ///< Add 메뉴 라벨
         const utf8* _pStem{ nullptr };   ///< 기본 이름 줄기(`new_material`)
         const utf8* _pSuffix{ nullptr }; ///< 붙는 확장자(`.material`)
-        /** @brief 베낄 엔진 기본 에셋 칸을 고릅니다. 경로의 정본은 `enginedefaultassets.xml` 이다. 손으로 지은 글이 퍼뮤테이션 같은 칸을 빠뜨리기 쉬운 종류가 쓴다 */
+        /** @brief 베낄 엔진 기본 에셋 항목을 고릅니다. 경로의 원본은 `enginedefaultassets.xml` 이다. 손으로 만든 글이 퍼뮤테이션 같은 항목을 빠뜨리기 쉬운 종류가 쓴다 */
         const DataPath& ( *_pfnSourcePath )(const EngineDefaultAssets&){ nullptr };
         const utf8* _pText{ nullptr };          ///< 그대로 쓰는 글
         const utf8* _pNameAttribute{ nullptr }; ///< 베낀 글의 이름 속성 전체(`name="DefaultMaterial"`). 새 에셋은 `name="<줄기>"` 로 바꾼다. nullptr 이면 그대로 둔다
@@ -54,7 +54,7 @@ namespace sw::editor
         /** @brief @p folderAbs 안에서 비어 있는 `<stem><suffix>` 경로입니다. 있으면 `<stem>_2<suffix>` 부터 셉니다. */
         static string makeUniquePath( string_view folderAbs, string_view stem, string_view suffix );
         /**
-         * @brief 글 안의 @p oldID 를 @p newID 로 바꿉니다. 경로 글자(`[a-z0-9_./-]`)가 바로 앞뒤에 붙은 자리는 바꾸지 않습니다(`a.material` 이 `aa.material` 안에서 바뀌지 않게).
+         * @brief 글 안의 @p oldID 를 @p newID 로 바꿉니다. 경로 글자(`[a-z0-9_./-]`)가 바로 앞뒤에 붙은 곳은 바꾸지 않습니다(`a.material` 이 `aa.material` 안에서 바뀌지 않게).
          * @return 바꾼 수입니다. 대소문자는 가리지 않고 찾는다.
          */
         static uint32 replaceReference( string& inoutText, string_view oldID, string_view newID );

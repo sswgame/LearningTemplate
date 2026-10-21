@@ -58,7 +58,7 @@ namespace sw
 {
     /**
      * @class OnlinePushRelayEntry
-     * @brief 중계할 수 있는 알림 하나의 등록 항목입니다. 만들면 오르고 파괴되면 내립니다. 키트 서버 `.cpp` 의 이름 공간 범위에 둡니다.
+     * @brief 중계할 수 있는 알림 하나의 등록 항목입니다. 만들면 등록되고 파괴되면 제거됩니다. 키트 서버 `.cpp` 의 이름 공간 범위에 둡니다.
      */
     class SW_GF_API OnlinePushRelayEntry final : private ServiceFactoryNode
     {

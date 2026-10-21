@@ -18,10 +18,10 @@ namespace sw::editor
     {
         struct EditorRenderViewsInternal
         {
-            /** @brief R8G8B8A8_UNORM 텍스처 전체를 한 색으로 올립니다. 올린 텍스처는 셰이더 읽기 상태입니다. */
+            /** @brief R8G8B8A8_UNORM 텍스처 전체를 한 색으로 업로드합니다. 업로드한 텍스처는 셰이더 읽기 상태입니다. */
             static bool fillTextureWithColor( IRHIResourceFactory& resource, RHITextureHandle texture, uint32 width, uint32 height, const float4& color )
             {
-                // 메모리에서 R · G · B · A 순서가 되도록 낮은 바이트부터 채운다(엔진은 리틀 엔디언 64 비트만 짓는다).
+                // 메모리에서 R · G · B · A 순서가 되도록 낮은 바이트부터 채운다(엔진은 리틀 엔디언 64 비트만 빌드한다).
                 const uint32 packedColor = static_cast<uint32>( toUnorm8( color._x ) ) | ( static_cast<uint32>( toUnorm8( color._y ) ) << 8 ) |
                                            ( static_cast<uint32>( toUnorm8( color._z ) ) << 16 ) | ( static_cast<uint32>( toUnorm8( color._w ) ) << 24 );
                 const vector<uint32> listPixel( static_cast<size_t>( width ) * height, packedColor );

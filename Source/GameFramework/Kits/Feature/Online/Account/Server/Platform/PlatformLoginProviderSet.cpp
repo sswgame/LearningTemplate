@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProviderSet.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 
@@ -76,11 +77,8 @@ namespace sw
         }
         if ( address._bSecure == SW_FALSE )
             return true;
-        for ( const string& host : inoutListHost )
-        {
-            if ( host == address._host )
-                return true;
-        }
+        if ( VectorUtil::contains( inoutListHost, address._host ) )
+            return true;
         if ( trustFile.empty() )
         {
             outError = "https URL '" + string( url ) + "' needs platformTrustFile (a CA bundle PEM that verifies the provider)";

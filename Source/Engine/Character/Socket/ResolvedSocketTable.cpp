@@ -2,6 +2,8 @@
 
 #include "Engine/Character/Socket/ResolvedSocketTable.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Character/Fit/SurfaceBvh.h"
 
@@ -66,12 +68,7 @@ namespace sw
 
     const ResolvedSocketTable::Unit* ResolvedSocketTable::findUnit( uint32 unitIndex ) const
     {
-        for ( const Unit& unit : _listUnit )
-        {
-            if ( unit._unitIndex == unitIndex )
-                return &unit;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&Unit::_unitIndex>( _listUnit, unitIndex );
     }
 
     bool ResolvedSocketTable::addUnit( const hashed_string& prefix, uint32 unitIndex, const SocketSet& sockets, const CharacterBoneArray& bindBones,

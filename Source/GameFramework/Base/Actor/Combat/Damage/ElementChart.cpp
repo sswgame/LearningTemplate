@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Actor/Combat/Damage/ElementChart.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -36,12 +37,7 @@ namespace sw
 
     bool ElementChart::hasElement( const hashed_string& element ) const
     {
-        for ( const hashed_string& candidate : _listElement )
-        {
-            if ( candidate == element )
-                return true;
-        }
-        return false;
+        return VectorUtil::contains( _listElement, element );
     }
 
     void ElementChart::setMultiplier( const hashed_string& attack, const hashed_string& defend, float32 multiplier )

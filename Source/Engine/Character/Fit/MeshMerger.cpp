@@ -2,6 +2,8 @@
 
 #include "Engine/Character/Fit/MeshMerger.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include "Engine/Character/Fit/FitSolver.h"
 #include "Engine/Character/Fit/GeometryCut.h"
 
@@ -105,7 +107,7 @@ namespace sw
         {
             const hashed_string group    = MeshMergerInternal::getMaterialGroup( listSource[sourceIndex], pHooks );
             listSourceGroup[sourceIndex] = group;
-            if ( std::find( listGroup.begin(), listGroup.end(), group ) == listGroup.end() )
+            if ( VectorUtil::contains( listGroup, group ) == false )
                 listGroup.push_back( group );
         }
         outMerged._listPart.resize( listSource.size() );

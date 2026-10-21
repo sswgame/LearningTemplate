@@ -5,6 +5,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/Memory.h"
 
@@ -85,7 +86,7 @@ namespace sw::editor
                 return counts;
             }
 
-            /** @brief 레벨 보기 토글 칩 하나("이름 (줄 수)")를 그립니다. @p pMark 가 있으면 시나리오용 이름표를 남깁니다. */
+            /** @brief 레벨 보기 토글 칩 하나("이름 (줄 수)")를 그립니다. @p pMark 가 있으면 시나리오용 레이블을 남깁니다. */
             static void drawLevelChip( bool& inoutEnabled, const utf8* pName, size_t count, const Color& color, const utf8* pTooltip, const utf8* pMark )
             {
                 ImGui::SameLine();
@@ -590,12 +591,7 @@ namespace sw::editor
 
     bool ConsolePanel::isMessageInSnapshot( string_view message ) const
     {
-        for ( const LogEntry& entry : _listDrawSnapshot )
-        {
-            if ( entry._message == message )
-                return true;
-        }
-        return false;
+        return VectorUtil::containsBy<&LogEntry::_message>( _listDrawSnapshot, message );
     }
 
     bool ConsolePanel::isMessageVisible( string_view message ) const
@@ -681,7 +677,7 @@ namespace sw::editor
     {
         if ( ImGui::BeginPopup( "##LogTagFilter" ) == false )
             return;
-        // 지금 들고 있는 로그에 나온 태그만 보인다(순서는 처음 나온 순서).
+        // 지금 보관하고 있는 로그에 나온 태그만 보인다(순서는 처음 나온 순서).
         vector<string> listTag;
         for ( const LogEntry& entry : _listDrawSnapshot )
         {
@@ -721,7 +717,7 @@ namespace sw::editor
 
     void ConsolePanel::onLogWritten( const LogEntry& entry )
     {
-        // 어느 스레드 · 어느 스코프에서 쓴 로그든 콘솔이 들고 있는 사본은 에디터 몫이다.
+        // 어느 스레드 · 어느 스코프에서 쓴 로그든 콘솔이 보관하고 있는 사본은 에디터 담당이다.
         SW_MEMORY_SCOPE( Editor );
         std::scoped_lock<mutex> lock{ _entriesMutex };
         _listEntry.push_back( entry );

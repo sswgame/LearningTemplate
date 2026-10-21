@@ -27,7 +27,7 @@ namespace sw::editor
     /**
      * @class EditorShortcutOverrides
      * @brief 사용자가 바꾼 단축키입니다(기본과 다른 커맨드만). 파일은 `{ "edit.undo": [ "Ctrl+U", "" ] }` 꼴입니다(첫 값이 주 조합, 둘째가 보조, "" 는 없음).
-     * @details 커맨드 레지스트리를 만든 뒤(표 + 등록 줄) 입힙니다. 없는 커맨드 id 는 남겨 둡니다 — 확장 모듈을 다시 켜면 돌아옵니다(유니티 Shortcuts Manager 와 같다).
+     * @details 커맨드 레지스트리를 만든 뒤(테이블 + 등록 줄) 입힙니다. 없는 커맨드 id 는 남겨 둡니다 — 확장 모듈을 다시 켜면 돌아옵니다(유니티 Shortcuts Manager 와 같다).
      */
     class SW_EDITOR_API EditorShortcutOverrides
     {

@@ -86,7 +86,7 @@ namespace sw::editor
         static const Color& getOverlayBgColor();
         /** @brief 씬 뷰 선택 외곽선입니다. 강조색(파랑 계열)은 격자 · 카메라 프러스텀과 섞여 쓰지 않습니다. */
         static const Color& getSelectionOutlineColor();
-        /** @brief 2D 미리보기 · 그래프에서 고른 칸 · 지금 프레임을 짚는 색입니다. */
+        /** @brief 2D 미리보기 · 그래프에서 고른 셀 · 지금 프레임을 짚는 색입니다. */
         static const Color& getHighlightColor();
         /** @brief 꺼진 토글 단추 색입니다(켜진 것은 강조색). */
         static const Color& getToggleInactiveColor();
@@ -97,7 +97,7 @@ namespace sw::editor
         static const Color& getColliderWireColor();
         /** @brief 씬 뷰 카메라 프러스텀 색입니다. */
         static const Color& getCameraWireColor();
-        /** @brief 씬 뷰 위에 겹쳐 그리는 이름표 색입니다(시각화 레이블). */
+        /** @brief 씬 뷰 위에 겹쳐 그리는 시각화 레이블 색입니다. */
         static const Color& getViewportLabelColor();
 
         // ----------------------------------------------------------------------
@@ -146,7 +146,7 @@ namespace sw::editor
         static Color getAssetColorForPath( string_view path, bool bIsDirectory = false );
 
         /**
-         * @brief "아이콘 + 공백 두 칸 + 라벨" 문자열을 만듭니다. ImGui 라벨 앞에 아이콘을 붙일 때 씁니다.
+         * @brief "아이콘 + 공백 두 개 + 라벨" 문자열을 만듭니다. ImGui 라벨 앞에 아이콘을 붙일 때 씁니다.
          * @details 반환값은 호출한 스레드의 고정 버퍼이므로 다음 호출 전까지만 유효하다. ImGui 호출 인자로 바로 넘긴다. 한 호출에 두 번 넘기면
          *          두 번째가 첫 번째를 덮어쓴다. 그런 경우에는 지역 fixed_string 을 쓴다.
          */

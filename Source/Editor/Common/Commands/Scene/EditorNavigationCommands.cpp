@@ -15,7 +15,7 @@ namespace sw::editor
     {
         SceneNavigation&      navigation = manager.getSubsystem<SceneNavigation>();
         const NavMeshSettings settings   = navigation.getSettings();
-        navigation.setSettings( settings ); // 같은 표를 다시 걸어 마련해 둔 내비메시를 버린다
+        navigation.setSettings( settings ); // 같은 테이블을 다시 걸어 마련해 둔 내비메시를 버린다
         uint32 bakedCount{ 0 };
         for ( const NavAgentTypeDef& agentType : settings._listAgentType )
         {

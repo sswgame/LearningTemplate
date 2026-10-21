@@ -153,7 +153,7 @@ namespace sw::editor
     /**
      * @class MultiplayerProfilerTab
      * @brief Profiler 탭 — 고른 대상 프로세스의 연결 · 트래픽 수치를 시간축 그래프로, 받은 메시지를 종류별 비중으로 보입니다(서버 디버깅 S5).
-     * @details 언리얼 Network Insights · 유니티 Netcode Runtime Stats Monitor 의 자리. 보일 때만 0.5 초마다 자식 프로세스에 `net.stats` 를 묻는다 —
+     * @details 언리얼 Network Insights · 유니티 Netcode Runtime Stats Monitor 에 해당. 보일 때만 0.5 초마다 자식 프로세스에 `net.stats` 를 묻는다 —
      *          자식은 이미 세는 연결 통계와 라우터 셈을 한 줄로 옮길 뿐이라 프레임에 수집이 더해지지 않는다. 시계열 · 비중 계산은 `EditorNetProfilerHistory`.
      */
     class MultiplayerProfilerTab final : public IMultiplayerTab
@@ -166,7 +166,7 @@ namespace sw::editor
     private:
         /** @brief 대상의 시계열을 칸마다 한 장씩 그립니다. */
         void drawGraphs( const EditorNetProfilerTrack& track );
-        /** @brief 메시지 종류별 비중 표를 그립니다. */
+        /** @brief 메시지 종류별 비중 테이블을 그립니다. */
         void drawKindShares( const EditorNetProfilerTrack& track );
 
         vector<float32>            _listValueScratch;

@@ -3,6 +3,7 @@
 #include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Reflection/ReflectionCore.h"
@@ -104,12 +105,7 @@ namespace sw
 
             static bool isHandRead( string_view attribute, std::initializer_list<string_view> listHandRead )
             {
-                for ( const string_view handRead : listHandRead )
-                {
-                    if ( handRead == attribute )
-                        return true;
-                }
-                return false;
+                return VectorUtil::contains( listHandRead, attribute );
             }
         };
     } // namespace

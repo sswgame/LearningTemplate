@@ -1,9 +1,9 @@
 /**
  * @file CatalogDocument.h
- * @brief 카탈로그 XML 한 파일을 표로 편집하는 문서 상태입니다 — 원문, 저장된 원문, 되돌리기 스택, 훑은 결과, 원소 이름별 표(행 · 열). ImGui 를 모릅니다.
+ * @brief 카탈로그 XML 한 파일을 테이블로 편집하는 문서 상태입니다 — 원문, 저장된 원문, 되돌리기 스택, 훑은 결과, 원소 이름별 표(행 · 열). ImGui 를 모릅니다.
  * @details 원문이 유일한 진실입니다. 셀을 고치면 `CatalogXMLText` 가 원문의 그 구간만 바꾸고 새 원문을 다시 훑습니다(주석 · 들여쓰기가 그대로 남는다).
  *          되돌리기는 원문 스냅숏 스택입니다 — 카탈로그 파일은 작아서 스냅숏이 싸고, 셀 · 행 편집과 글 상자 편집이 한 스택에 섭니다.
- *          언리얼 `UDataTable` 편집기가 행을 표로 고치고 CSV · JSON 으로 가져오고 내보내는 것에 해당하지만, 이 엔진의 카탈로그는 손으로 읽는 XML 이라 행은 리플렉션 구조체가 아니라 XML 원소입니다.
+ *          언리얼 `UDataTable` 편집기가 행을 테이블로 고치고 CSV · JSON 으로 가져오고 내보내는 것에 해당하지만, 이 엔진의 카탈로그는 손으로 읽는 XML 이라 행은 리플렉션 구조체가 아니라 XML 원소입니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -16,12 +16,12 @@ namespace sw::editor
 {
     /**
      * @class CatalogDocument
-     * @brief 표 편집기가 고치는 카탈로그 파일 하나입니다.
+     * @brief 테이블 편집기가 고치는 카탈로그 파일 하나입니다.
      */
     class CatalogDocument
     {
     public:
-        /** @brief 같은 이름의 원소(루트의 자식)를 한 표로 묶은 것입니다. */
+        /** @brief 같은 이름의 원소(루트의 자식)를 한 테이블로 묶은 것입니다. */
         struct Group
         {
             string         _name{};
@@ -58,10 +58,10 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         [[nodiscard]] bool setCell( int32 elementIndex, string_view column, string_view value );
         [[nodiscard]] bool unsetCell( int32 elementIndex, string_view column );
-        /** @brief @p groupName 표의 끝에 행을 더합니다. 열은 그 표의 열을 따르고 `id` · `name` 은 "new" 로 채웁니다. 표가 없으면 속성 없는 행(`id="new"` 하나)을 더합니다. */
+        /** @brief @p groupName 테이블의 끝에 행을 더합니다. 열은 그 테이블의 열을 따르고 `id` · `name` 은 "new" 로 채웁니다. 테이블이 없으면 속성 없는 행(`id="new"` 하나)을 더합니다. */
         [[nodiscard]] bool addRow( string_view groupName );
         [[nodiscard]] bool removeRow( int32 elementIndex );
-        /** @brief 글 상자 편집입니다. 훑지 못하는 글도 받습니다(`isParsed` 가 false 가 되고 표는 비어 보입니다). 되돌리기 항목은 호출마다 쌓지 않고 @p bPushUndo 가 true 일 때만 쌓습니다. */
+        /** @brief 글 상자 편집입니다. 훑지 못하는 글도 받습니다(`isParsed` 가 false 가 되고 테이블은 비어 보입니다). 되돌리기 항목은 호출마다 쌓지 않고 @p bPushUndo 가 true 일 때만 쌓습니다. */
         void replaceText( string_view text, bool bPushUndo );
 
         bool canUndo() const { return _listUndo.empty() == false; }

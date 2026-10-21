@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/JSONWebToken.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/String/Base64Util.h"
 
@@ -208,11 +209,7 @@ namespace sw
 
     const NetPublicKey* JwksKeyCache::findKey( string_view keyID ) const
     {
-        for ( const Entry& entry : _listEntry )
-        {
-            if ( entry._keyID == keyID )
-                return &entry._publicKey;
-        }
-        return nullptr;
+        const Entry* pEntry = VectorUtil::findBy<&Entry::_keyID>( _listEntry, keyID );
+        return pEntry != nullptr ? &pEntry->_publicKey : nullptr;
     }
 } // namespace sw

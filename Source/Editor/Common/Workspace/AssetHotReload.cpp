@@ -126,7 +126,7 @@ namespace sw::editor
         // 감시 접두어는 **절대 경로**여야 한다 — 이벤트의 `_directory` 는 감시자가 열어 둔 절대 경로(리소스 루트)이고,
         // 접두어 비교는 그 둘을 그대로 맞춰 본다(상대 경로를 주면 비교가 항상 실패한다).
         _resourceWatchHandle = _pFileWatchDispatcher->registerWatch( ResourcePaths::getRootFolderPath(), listExtension, fileWatchDelegate );
-        // 디스크 목록을 든 화면(콘텐츠 브라우저)이 다시 읽을 때를 알도록, 종류와 무관하게 모든 변경을 센다.
+        // 디스크 목록을 가진 화면(콘텐츠 브라우저)이 다시 읽을 때를 알도록, 종류와 무관하게 모든 변경을 센다.
         FileWatchMatchDelegate treeWatchDelegate{ SW_DELEGATE_METHOD( FileWatchMatchDelegate, &AssetHotReload::onResourceTreeChanged, this ) };
         _contentWatchHandle = _pFileWatchDispatcher->registerWatch( ResourcePaths::getRootFolderPath(), {}, treeWatchDelegate );
         return _resourceWatchHandle.isValid();
@@ -163,7 +163,7 @@ namespace sw::editor
     void AssetHotReload::onResourceFileChanged( const FileChangeEvent& changeEvent )
     {
         // 저장은 원자적이다(임시 파일 → 이름 바꿔 끼우기, `FileUtil::writeTextFile`) — 그 저장은 Modified 가 아니라 새 이름(RenamedNewName)으로 온다.
-        // 바깥 편집기의 "안전한 저장" 도 같다. 새로 생긴 파일(Added)은 아직 든 캐시가 없어 할 일이 없지만 검증은 돈다.
+        // 바깥 편집기의 "안전한 저장" 도 같다. 새로 생긴 파일(Added)은 아직 가진 캐시가 없어 할 일이 없지만 검증은 돈다.
         const bool bContentChanged = changeEvent._action == FileWatcherAction::Modified || changeEvent._action == FileWatcherAction::RenamedNewName ||
                                      changeEvent._action == FileWatcherAction::Added;
         if ( bContentChanged == false )
@@ -194,7 +194,7 @@ namespace sw::editor
         if ( route._pCacheKindName == nullptr )
             return ReloadOutcome::NotTracked;
 
-        // 에디터는 `EngineServices.h` 를 볼 수 없다(모듈 경계). 호스트가 넘겨준 서비스를 쓴다. 에셋 관리자가 없는 실행(헤드리스 도구)은 든 캐시가 없다.
+        // 에디터는 `EngineServices.h` 를 볼 수 없다(모듈 경계). 호스트가 넘겨준 서비스를 쓴다. 에셋 관리자가 없는 실행(헤드리스 도구)은 가진 캐시가 없다.
         AssetManager* pResources = findSubsystem<AssetManager>();
         if ( pResources == nullptr )
             return ReloadOutcome::NotTracked;
@@ -203,7 +203,7 @@ namespace sw::editor
         IRHIDevice*    pDevice  = ( pContext != nullptr ) ? pContext->getSubsystem<EditorRenderViews>().getRHIDevice() : nullptr;
         if ( route._pCacheKindName[0] == '\0' )
         {
-            // 모듈이 올린 캐시 — 이름 대신 그 경로를 든 캐시가 다시 읽는다. 아무도 읽지 않은 파일이면 할 일이 없다(다음에 읽는 쪽이 새 내용을 읽는다).
+            // 모듈이 로드한 캐시 — 이름 대신 그 경로를 가진 캐시가 다시 읽는다. 아무도 읽지 않은 파일이면 할 일이 없다(다음에 읽는 쪽이 새 내용을 읽는다).
             if ( reloadInCachesHolding( *pResources, relativePath, pDevice ) == 0 )
                 return ReloadOutcome::NotTracked;
         }

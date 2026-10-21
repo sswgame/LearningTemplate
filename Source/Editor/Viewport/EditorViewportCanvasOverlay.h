@@ -14,7 +14,7 @@ namespace sw::editor
 
     /**
      * @class EditorViewportCanvasOverlay
-     * @brief 씬 뷰 캔버스의 격자, 자, 방향 큐브를 그립니다. 상태는 자의 두 끝점뿐입니다.
+     * @brief 씬 뷰 캔버스의 격자, 자, 방향 큐브를 그립니다. 상태는 자의 양 끝 두 점뿐입니다.
      * @details `EditorViewportClient` 가 값 멤버로 들고 직접 부릅니다. 오버레이 바(보기 · 표시 · 도구 · 트랜스폼)는 `EditorViewportOverlays` 이고,
      *          HUD 박스는 `EditorDebugHUDView` 입니다.
      */

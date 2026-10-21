@@ -160,11 +160,8 @@ namespace sw
         const bool bToggleSelection = bToggle && pUnit->_owner == _player && pUnit->isMobile() && isCommandable( world );
         if ( bToggleSelection )
         {
-            const auto selectedIter = std::find( _listSelected.begin(), _listSelected.end(), unitID );
-            if ( selectedIter != _listSelected.end() )
-                _listSelected.erase( selectedIter );
-            else
-                addUnit( unitID );
+            VectorUtil::removeFirst( _listSelected, unitID );
+            else addUnit( unitID );
             return;
         }
         _listSelected.clear();

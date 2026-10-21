@@ -1,6 +1,6 @@
 /**
  * @file EditorThumbnailCache.h
- * @brief 콘텐츠 브라우저 썸네일로 쓸 텍스처를 ImGui 텍스처 id 로 들고 있는 작은 LRU 캐시입니다.
+ * @brief 콘텐츠 브라우저 썸네일로 쓸 텍스처를 ImGui 텍스처 id 로 보관하고 있는 작은 LRU 캐시입니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -18,7 +18,7 @@ namespace sw::editor
      * @class EditorThumbnailCache
      * @brief 텍스처 에셋을 엔진 텍스처 캐시(`TextureCache::acquire`)로 빌려 ImGui 에 등록하고, 최근에 그린 것만 남깁니다(언리얼 썸네일 풀과 같다).
      * @details `findTexture` 는 이번 프레임에 그릴 id 를 돌려주고, 없으면 읽기를 예약합니다. 실제 읽기는 `update` 가 프레임마다 하나씩 합니다.
-     *          DDS 를 읽고 GPU 에 올리는 일이 UI 스레드에서 돌기 때문에, 폴더를 열 때 수십 장을 한 프레임에 읽어 멈추지 않게 나눕니다.
+     *          DDS 를 읽고 GPU 에 업로드하는 일이 UI 스레드에서 돌기 때문에, 폴더를 열 때 수십 장을 한 프레임에 읽어 멈추지 않게 나눕니다.
      *          해제는 ImGui 등록을 먼저 풀고(`unregisterTexture` 는 그린 스냅샷이 끝난 뒤 디스크립터를 놓는다) 텍스처 캐시의 참조를 놓습니다.
      *          모든 호출은 UI 스레드에서 합니다.
      */
@@ -35,7 +35,7 @@ namespace sw::editor
 
         /** @brief 예약한 읽기 하나를 처리하고 넘친 썸네일을 놓습니다. 프레임마다 그리기 전에 한 번 부릅니다. */
         void update();
-        /** @brief 들고 있는 썸네일을 모두 놓습니다(패널 종료, 디바이스 교체). */
+        /** @brief 보관하고 있는 썸네일을 모두 놓습니다(패널 종료, 디바이스 교체). */
         void clear();
 
         /**
@@ -43,7 +43,7 @@ namespace sw::editor
          * @details 읽지 못한 경로는 기억해 두고 다시 읽지 않습니다(`clear` 가 잊는다).
          */
         void* findTexture( string_view resourceID );
-        /** @brief 지금 들고 있는 썸네일 수입니다. */
+        /** @brief 지금 보관하고 있는 썸네일 수입니다. */
         uint32 getCachedCount() const { return static_cast<uint32>( _listEntry.size() ); }
 
     private:

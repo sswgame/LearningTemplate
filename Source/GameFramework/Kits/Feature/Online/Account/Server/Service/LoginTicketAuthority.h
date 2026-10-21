@@ -20,7 +20,7 @@ namespace sw
 {
     class ILoginCrypto;
 
-    /** @brief 게임 서버가 표에서 읽은 것입니다. */
+    /** @brief 게임 서버가 테이블에서 읽은 것입니다. */
     struct NetGameTicketClaim
     {
         uint64 _accountID{ 0 };

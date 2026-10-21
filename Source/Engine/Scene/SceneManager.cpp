@@ -737,7 +737,7 @@ namespace sw
     bool SceneManager::isPersistent( const GameObject* pObject ) const
     {
         return pObject != nullptr &&
-               std::find( _listPersistentObjectID.begin(), _listPersistentObjectID.end(), pObject->getObjectID() ) != _listPersistentObjectID.end();
+               VectorUtil::contains( _listPersistentObjectID, pObject->getObjectID() );
     }
 
     void SceneManager::carryPersistentObjects( Scene* pFrom, Scene* pTo )

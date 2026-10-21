@@ -8,6 +8,7 @@
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Object/Component/Component.h"
@@ -511,12 +512,7 @@ namespace sw
                     {
                         // 본 목록에 없으면 이번 프레임에 만들어져 아직 병합되지 않은 것이다. 그때만 대기 목록을 훑는다
                         // (항상 훑으면 프레임에 100 개를 만들고 100 개를 지울 때 만 번 비교한다).
-                        auto pendingIt = std::find( _listPendingAdd.begin(), _listPendingAdd.end(), pObj );
-                        if ( pendingIt != _listPendingAdd.end() )
-                        {
-                            *pendingIt = _listPendingAdd.back();
-                            _listPendingAdd.pop_back();
-                        }
+                        (void)VectorUtil::removeSingleSwap( _listPendingAdd, pObj ); // 없으면 이미 빠진 것이다
                     }
                     const auto nameIt = _mapNameToObject.find( pObj->getName() );
                     if ( nameIt != _mapNameToObject.end() && nameIt->second._pObject == pObj )

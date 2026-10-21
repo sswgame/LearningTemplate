@@ -8,7 +8,7 @@
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatServer.h"
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatService.h"
 
-// 채팅 키트의 서버 조립 — 채팅 서비스와 바인딩을 올린다. 표시 이름과 접속 여부는 계정 키트(필수), 다른 서버 귓속말은 접속 상태, 차단은 친구 키트의 차단 목록을 받는다.
+// 채팅 키트의 서버 조립 — 채팅 서비스와 바인딩을 만든다. 표시 이름과 접속 여부는 계정 키트(필수), 다른 서버 귓속말은 접속 상태, 차단은 친구 키트의 차단 목록을 받는다.
 // 길드와 파티 채널의 멤버 창(`IGroupChannelMembership`)을 문맥에 내놓는다. 친구 키트(길드)와 매칭 키트(파티)가 자기 이벤트에서 부른다.
 // 옵션:
 //   bannedWords  금칙어 파일(프로젝트 루트 기준). 기본 `Config/Server/chat_banned_words.txt`. `none` 이면 거르지 않는다.

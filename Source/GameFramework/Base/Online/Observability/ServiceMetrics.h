@@ -31,7 +31,7 @@ namespace sw
         ServiceMetrics();
 
         /**
-         * @brief 등록합니다. 메서드 라벨은 @p TMethodName(키트의 메서드 이름 표, `OnlineMethodTable`), 결과 라벨은 @p TResult 의 열거자 이름(`ENUM()`)을
+         * @brief 등록합니다. 메서드 라벨은 @p TMethodName(키트의 메서드 이름 테이블, `OnlineMethodTable`), 결과 라벨은 @p TResult 의 열거자 이름(`ENUM()`)을
          *        snake_case 로 바꾼 것입니다(`NotSignedIn` → `not_signed_in`). 번호는 각각 `0 .. Count - 1` 입니다.
          * @details 시리즈 수는 메서드 × 결과 + 메서드 + 1 이라 서비스당 수십 개다.
          */

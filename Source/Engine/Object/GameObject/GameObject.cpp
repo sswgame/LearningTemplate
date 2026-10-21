@@ -2,6 +2,7 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/AABB.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -740,10 +741,10 @@ namespace sw
         const bool bInvalidMoveRequest = pComp == nullptr || pComp->getOwner() != this || direction == 0 || isComponentMutationFrozen();
         if ( bInvalidMoveRequest )
             return false;
-        const auto it = std::find( _listComponent.begin(), _listComponent.end(), pComp );
-        if ( it == _listComponent.end() )
+        const std::optional<size_t> found = VectorUtil::findIndex( _listComponent, pComp );
+        if ( found.has_value() == false )
             return false;
-        const size_t index  = static_cast<size_t>( it - _listComponent.begin() );
+        const size_t index  = *found;
         const size_t target = direction < 0 ? index - 1 : index + 1;
         if ( ( direction < 0 && index == 0 ) || target >= _listComponent.size() )
             return false;
@@ -770,13 +771,11 @@ namespace sw
         // **순서를 지키며 뺀다**(swap-remove 금지). 목록 순서에는 의미가 있다. primary 는 "살아 있는 첫 SceneComponent", `getComponent<T>` 는
         // 첫 일치, 안정 키(`ComponentStableKey`)는 같은 타입 안의 순번이다. 살아 있는 동안은 primary 캐시가 가려 주지만 저장했다 다시 읽으면
         // 바뀐 순서가 그대로 굳는다. 목록은 대개 네 개 이하다.
-        const auto it = std::find( _listComponent.begin(), _listComponent.end(), pComp );
-        if ( it == _listComponent.end() )
+        if ( VectorUtil::removeFirst( _listComponent, pComp ) == 0 )
         {
             SW_LOG_ERROR( "Failed to remove component '%#' from actor list.", pComp->getComponentName().c_str() );
             return false;
         }
-        _listComponent.erase( it );
         // 씬 컴포넌트면 primary 였을 수 있다. 캐시로 판단하지 않는다. 지연 제거(틱 중)는 컴포넌트를 삭제 대기로 남기고, 그 사이
         // `getPrimarySceneComponent` 가 캐시를 다음 씬 컴포넌트로 옮겨 둘 수 있다(그러면 캐시로는 primary 였는지 알 수 없다).
         const bool bWasScene = pComp->isSceneComponent();

@@ -2,6 +2,8 @@
 
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Rule/MatchMaker.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
 
 #include <algorithm>
@@ -184,12 +186,7 @@ namespace sw
 
     bool MatchMaker::hasTicket( uint64 ticketID ) const
     {
-        for ( const MatchTicket& ticket : _listTicket )
-        {
-            if ( ticket._ticketID == ticketID )
-                return true;
-        }
-        return false;
+        return VectorUtil::containsBy<&MatchTicket::_ticketID>( _listTicket, ticketID );
     }
 
     void MatchMaker::process( int64 nowMs, vector<MatchFormed>& outListMatch, vector<MatchTicket>& outListTimedOut )
@@ -291,7 +288,7 @@ namespace sw
 
     bool MatchMaker::partitionIntoTeams( const vector<int32>& listTicketIndex, MatchFormed& outMatch ) const
     {
-        // 큰 티켓부터 넣는다. 작은 티켓이 먼저 자리를 나눠 가지면 파티가 들어갈 팀이 남지 않기 때문이다.
+        // 큰 티켓부터 넣는다. 작은 티켓이 먼저 슬롯을 나눠 가지면 파티가 들어갈 팀이 남지 않기 때문이다.
         vector<int32> listOrder = listTicketIndex;
         std::stable_sort( listOrder.begin(), listOrder.end(), MatchMakerInternal::TicketSizeOrder{ &_listTicket } );
         outMatch._listTeam.assign( static_cast<size_t>( _definition._teamCount ), MatchFormedTeam{} );

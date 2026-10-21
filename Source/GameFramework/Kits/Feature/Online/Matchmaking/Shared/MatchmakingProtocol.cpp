@@ -9,7 +9,7 @@ namespace sw
 {
     namespace
     {
-        constexpr uint32 kMatchmakingRecordVersion = 1; ///< 캐시 기록(A)의 판이다. 필드를 빼거나 뜻을 바꿀 때 올린다. 옛 기록은 읽지 못해 버려지고 다시 만들어진다
+        constexpr uint32 kMatchmakingRecordVersion = 1; ///< 캐시 기록(A)의 버전이다. 필드를 빼거나 뜻을 바꿀 때 올린다. 옛 기록은 읽지 못해 버려지고 다시 만들어진다
     } // namespace
 } // namespace sw
 

@@ -69,7 +69,31 @@ namespace sw
             uint64        _version{ 0 };
         };
 
+        /** @brief 거래를 닫아 커밋한 결과입니다. `_bRetry` 이면 상대가 그사이 바꿨으므로 다시 읽고 다시 시도합니다. 아니면 `_result` 가 Ok 일 때 닫은 것입니다. */
+        struct CloseOutcome
+        {
+            TradeResult _result{ TradeResult::Ok };
+            bool        _bRetry{ false };
+        };
+
+        /** @brief 정산을 붙인 트랜잭션이 커밋에서 충돌했을 때 분개로 확인하려고 남기는 값입니다. */
+        struct SettlementStage
+        {
+            LedgerTransferRequest _request{};
+            bool                  _bStaged{ false }; ///< 이 시도가 분개를 새로 붙였으면 true 이다(이미 있던 분개를 되풀이한 것이면 false)
+        };
+
         TradeResult readSession( uint64 tradeID, SessionRead& outSession );
+        /** @brief 거래를 @p reason 이유로 Cancelled 로 닫아 커밋합니다. 닫은 스냅숏은 @p outClosed 에 담습니다. */
+        CloseOutcome commitClose( const SessionRead& session, TradeCloseReason reason, int64 nowMs, TradeSnapshot& outClosed );
+        /**
+         * @brief 둘 다 확정한 거래의 정산 분개를 @p inoutTransaction 에 붙이고 @p inoutNext 를 닫습니다(Settled 또는 Failed).
+         * @details 정산할 항목이 없으면 원장을 건드리지 않고 Settled 로 닫습니다. 잔액이나 상한이 모자라면 원장 부분을 붙이지 않고 Failed 로 닫습니다. Ok 가 아니면 호출부가 그 결과로 끝냅니다.
+         */
+        TradeResult stageSettlement( uint64 tradeID, const TradeCommand& command, int64 nowMs, TradeSnapshot& inoutNext, ServiceTransaction& inoutTransaction, SettlementStage& outStage,
+                                     LedgerTransferOutcome& outLedger );
+        /** @brief 닫힌 거래를 트랜잭션에 붙이고 정산 감사 기록을 남깁니다(취소는 남기지 않습니다). 레코드를 못 쓰면 false 입니다. */
+        [[nodiscard]] bool stageClosedTrade( const SessionRead& session, const TradeSnapshot& closed, uint64 tradeID, int64 nowMs, ServiceTransaction& inoutTransaction );
         /** @brief 닫힌 레코드, 활성 링크 지우기, 주인 인덱스 지우기를 트랜잭션에 붙입니다. 레코드를 못 쓰면 false 이며 호출부는 요청을 Invalid 로 끝냅니다. */
         [[nodiscard]] bool stageClose( const SessionRead& session, const TradeSnapshot& closed, ServiceTransaction& inoutTransaction );
         /** @brief 잠그는 쪽의 항목을 원장 잔액과 비교합니다. 미리 확인하는 것이며 정산할 때 다시 확인합니다. */

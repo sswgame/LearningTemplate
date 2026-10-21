@@ -1,6 +1,6 @@
 /**
  * @file VrmAvatarImporter.h
- * @brief VRM 의 아바타 정보(humanoid 본 표 · 표정 · 스프링 본 · 1인칭)를 읽어 엔진 이름(본 · 모프 타깃)으로 풀고, 모델 옆 폴더의 `<이름>.avatar.json` 으로 씁니다.
+ * @brief VRM 의 아바타 정보(humanoid 본 테이블 · 표정 · 스프링 본 · 1인칭)를 읽어 엔진 이름(본 · 모프 타깃)으로 풀고, 모델 옆 폴더의 `<이름>.avatar.json` 으로 씁니다.
  * @details 0.x(`extensions.VRM` 의 humanoid · blendShapeMaster · secondaryAnimation · firstPerson)와 1.0(`VRMC_vrm` · `VRMC_springBone`)을 한 모양으로 모은다.
  *          이름은 1.0 의 것을 쓴다(0.x 의 표정 프리셋 joy 는 happy, 엄지 Proximal 은 Metacarpal). 본은 glTF 노드 번호가 아니라 스켈레톤 본 이름이고,
  *          표정은 메시 · 타깃 번호가 아니라 엔진 메시의 모프 타깃 이름이다(`ModelImportUtil::makeMorphTargetName` 과 같은 규칙).
@@ -88,7 +88,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    /** @brief 스프링 하나가 함께 피하는 충돌체 묶음입니다. `_listCollider` 는 `VrmAvatarDef::_listCollider` 의 번호입니다. */
+    /** @brief 스프링 하나가 함께 피하는 충돌체 그룹입니다. `_listCollider` 는 `VrmAvatarDef::_listCollider` 의 번호입니다. */
     struct VrmSpringColliderGroup
     {
         string         _name;
@@ -113,8 +113,8 @@ namespace sw::editor
 namespace sw::editor
 {
     /**
-     * @brief 흔들리는 사슬 하나입니다. 관절은 뿌리에서 끝으로 놓입니다.
-     * @details 0.x 의 boneGroup 은 뿌리 본만 적고 그 아래 모든 자손이 흔들린다. 그래서 뿌리마다 사슬 하나를 만들고 자손을 깊이 우선 순서로 넣는다(각 관절의 부모는 스켈레톤이 안다).
+     * @brief 흔들리는 사슬 하나입니다. 관절은 루트에서 끝으로 놓입니다.
+     * @details 0.x 의 boneGroup 은 루트 본만 적고 그 아래 모든 자손이 흔들린다. 그래서 루트마다 사슬 하나를 만들고 자손을 깊이 우선 순서로 넣는다(각 관절의 부모는 스켈레톤이 안다).
      */
     struct VrmSpring
     {

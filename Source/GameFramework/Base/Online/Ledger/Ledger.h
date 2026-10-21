@@ -1,6 +1,6 @@
 /**
  * @file Ledger.h
- * @brief 원장을 정의합니다. 표 셋(`ledger_balance`, `ledger_journal`, `ledger_history`) 위의 복식 이동입니다.
+ * @brief 원장을 정의합니다. 테이블 세 개(`ledger_balance`, `ledger_journal`, `ledger_history`) 위의 복식 이동입니다.
  * @details 모두 저장소 스레드(`IServiceStoreWork::run`)에서 도는 동기 함수이다.
  *          PlayFab Economy v2 의 거래 기록이나 Nakama 의 wallet_ledger(단식)와 달리 복식이며 분개 키로 멱등하다. 회계의 차변과 대변이 같다.
  *
@@ -29,6 +29,13 @@ namespace sw
         static const hashed_string& getBalanceTable();
         static const hashed_string& getJournalTable();
         static const hashed_string& getHistoryTable();
+        /** @brief 분개 레코드에서 이동 시각을 읽습니다(보존 기간 쓸기 `ServiceRetention` 용). 형식이 틀리면 false 입니다. */
+        [[nodiscard]] static bool readJournalTimeMs( const ServiceRecord& record, int64& outTimeMs );
+        /**
+         * @brief 내역 레코드의 키 `<보유자>/<시각 16 진 16>/<분개 키>` 에서 이동 시각을 읽습니다. 계정 · 발행 · 소각 · 맡김(에스크로) 보유자의 키를 읽고, 모르는 키는 false 입니다.
+         * @details 맡김 키는 `esc/<도메인>/<토큰>` 이고 도메인(`[0-9a-z_]`)과 토큰(`[0-9a-z_.-]`)의 글자 규칙에 `/` 가 없어, 슬래시 셋째 뒤가 시각이다.
+         */
+        [[nodiscard]] static bool readHistoryTimeMs( const ServiceRecord& record, int64& outTimeMs );
 
         /**
          * @brief 이동을 @p inoutTransaction 에 붙입니다. 커밋은 하지 않으며, 자기 레코드와 한 트랜잭션에 넣는 쪽(거래, 우편 수령, 구매 한도)이 씁니다.

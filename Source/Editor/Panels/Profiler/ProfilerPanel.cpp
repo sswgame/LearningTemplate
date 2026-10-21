@@ -220,7 +220,7 @@ namespace sw::editor
 {
     SW_EDITOR_PANEL( ProfilerPanel, ProfilerPanel::kPanelID, EditorPanelCategory::Core, 500 );
 #if SW_PROFILER_TRACE_ENABLED
-    // 패널보다 앞 — 이번 프레임에 연 창이 그대로 그려진다(`EditorFrameStepOrder::kCommands` 와 같은 자리).
+    // 패널보다 앞 — 이번 프레임에 연 창이 그대로 그려진다(`EditorFrameStepOrder::kCommands` 와 같은 위치).
     SW_EDITOR_FRAME_STEP( ProfilerOpenMergedNetPlayTrace, "profiler.openMergedNetPlayTrace", EditorFrameStepOrder::kCommands + 10,
                           &ProfilerPanelInternal::openMergedNetPlayTrace );
 #endif

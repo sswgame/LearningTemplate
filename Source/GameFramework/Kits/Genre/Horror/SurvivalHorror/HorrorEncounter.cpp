@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Horror/SurvivalHorror/HorrorEncounter.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -103,12 +104,7 @@ namespace sw
 
     HorrorInvestigator* HorrorEncounter::findInvestigator( int32 actorID )
     {
-        for ( HorrorInvestigator& investigator : _listInvestigator )
-        {
-            if ( investigator._actorID == actorID )
-                return &investigator;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&HorrorInvestigator::_actorID>( _listInvestigator, actorID );
     }
 
     void HorrorEncounter::defeatIfBroken( HorrorInvestigator& investigator )

@@ -133,7 +133,7 @@ namespace sw
             const FileWatchPollResult poll = _fileWatcher->pollEvents( listEvent );
             if ( poll._bWatchLost )
             {
-                // 워커가 이유를 이미 오류로 남겼다. 다시 걸어도 같은 실패가 되풀이되므로 감시를 내리고, 마지막 리스캔은 아래에서 처리한다.
+                // 워커가 이유를 이미 오류로 남겼다. 다시 걸어도 같은 실패가 되풀이되므로 감시를 해제하고, 마지막 리스캔은 아래에서 처리한다.
                 SW_LOG_ERROR( "FileWatchDispatcher: file watching stopped - changes under the watch root are no longer reloaded" );
                 _fileWatcher->stopWatching();
                 _fileWatcher.reset();
@@ -199,7 +199,7 @@ namespace sw
 
             bool bAnyMatch{ false };
             // **콜백이 감시를 등록 · 해제할 수 있다.** 리로드 콜백이 자기 감시를 다시 걸면
-            // `_listWatch` 가 순회 도중 재할당되고, 범위 for 가 들고 있던 참조가 해제된 메모리를
+            // `_listWatch` 가 순회 도중 재할당되고, 범위 for 가 보관하고 있던 참조가 해제된 메모리를
             // 가리킨다. 인덱스로 돌면서 델리게이트를 **부르기 전에 복사**한다.
             // `MulticastDelegate::broadcast` 도 같은 이유로 같은 모양을 쓴다.
             //
@@ -306,7 +306,7 @@ namespace sw
                     continue;
 
                 const string normalized = FileUtil::normalizePath( filePath );
-                if ( std::find( listEmittedPath.begin(), listEmittedPath.end(), normalized ) != listEmittedPath.end() )
+                if ( VectorUtil::contains( listEmittedPath, normalized ) )
                     continue;
                 listEmittedPath.push_back( normalized );
 

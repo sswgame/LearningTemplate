@@ -160,7 +160,7 @@ namespace sw::editor
 
     bool EditorSiblingOrder::isFolder( const GameObject& object )
     {
-        // 묻기만 하므로 태그 표에 올리지 않는다 — `TagID::request` 는 프로세스 태그 표를 키우고, 계층 창이 매 프레임 이 길을 부른다.
+        // 묻기만 하므로 태그 테이블에 올리지 않는다 — `TagID::request` 는 프로세스 태그 테이블을 키우고, 계층 창이 매 프레임 이 길을 부른다.
         const string_view folderTagName{ kFolderTagName };
         return object.hasTag( TagID{ TagID::computeID( folderTagName.data(), folderTagName.size() ), kFolderTagName }, true );
     }

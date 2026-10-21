@@ -2,6 +2,8 @@
 
 #include "Engine/UserSettings/UserSettingsHandlerRegistry.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include "Engine/UserSettings/UserSettingsSchema.h"
 
 namespace sw
@@ -121,21 +123,11 @@ namespace sw
 
     const UserSettingsHandlerRegistry::HandlerEntry* UserSettingsHandlerRegistry::findHandlerEntry( const hashed_string& name ) const
     {
-        for ( const HandlerEntry& entry : _listHandler )
-        {
-            if ( entry._name == name )
-                return &entry;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&HandlerEntry::_name>( _listHandler, name );
     }
 
     const UserSettingsHandlerRegistry::ProviderEntry* UserSettingsHandlerRegistry::findProviderEntry( const hashed_string& name ) const
     {
-        for ( const ProviderEntry& entry : _listProvider )
-        {
-            if ( entry._name == name )
-                return &entry;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&ProviderEntry::_name>( _listProvider, name );
     }
 } // namespace sw

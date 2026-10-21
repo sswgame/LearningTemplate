@@ -30,9 +30,9 @@ namespace sw::editor
 {
     /**
      * @class EditorViewportOverlays
-     * @brief 씬 뷰의 오버레이 바 넷(보기 · 표시 · 도구 · 트랜스폼)을 뷰포트 이미지 위에 그립니다.
-     * @details 바마다 손잡이를 끌어 뷰포트 안 어디든 옮기고, 놓은 자리가 가장자리에서 16 px(× DPI) 안이면 그 쪽에 붙입니다(왼쪽 · 오른쪽이면 세로로 쌓는다).
-     *          손잡이 오른쪽 클릭 · 씬 뷰 툴바의 Overlays 메뉴로 바마다 보이기/숨기기와 기본 위치 복원을 합니다. 자리 · 붙은 쪽 · 접힘 · 보임은
+     * @brief 씬 뷰의 오버레이 바 네 개(보기 · 표시 · 도구 · 트랜스폼)을 뷰포트 이미지 위에 그립니다.
+     * @details 바마다 손잡이를 끌어 뷰포트 안 어디든 옮기고, 놓은 위치가 가장자리에서 16 px(× DPI) 안이면 그 쪽에 붙입니다(왼쪽 · 오른쪽이면 세로로 쌓는다).
+     *          손잡이 오른쪽 클릭 · 씬 뷰 툴바의 Overlays 메뉴로 바마다 보이기/숨기기와 기본 위치 복원을 합니다. 위치 · 붙은 쪽 · 접힘 · 보임은
      *          `Saved/Editor/ViewportOverlays.ini` 의 `scene.` 칸에 저장합니다(게임 뷰에는 바가 없다). 바는 자식 창이라 그 위의 마우스는 뷰포트
      *          조작(피킹 · 호버 · 궤도)으로 새지 않는다 — 캔버스의 `IsItemHovered` 가 거짓이 된다.
      */
@@ -45,14 +45,14 @@ namespace sw::editor
         void draw( const float2& canvasMin, const float2& canvasSize, ViewportToolbarSettings& settings, bool bHasSelection );
         /** @brief 씬 뷰 툴바에 둘 Overlays 메뉴(바마다 보이기 · 기본 위치)입니다. */
         void drawOverlaysMenu();
-        /** @brief 모든 바를 기본 자리 · 보임으로 되돌리고 저장합니다. */
+        /** @brief 모든 바를 기본 위치 · 보임으로 되돌리고 저장합니다. */
         void resetToDefault();
         /** @brief 바를 보이거나 숨기고 저장합니다. 그 id 의 바가 없으면 false 입니다. */
         bool setBarVisible( string_view barID, bool bVisible );
 
         const EditorViewportOverlayLayout& getLayout() const { return _layout; }
         /**
-         * @brief 오른쪽 위 구석을 가리는 바의 안쪽 여백(픽셀, 지난 프레임 자리)입니다 — x 는 오른쪽에 붙은 바의 폭, y 는 위에 붙은 바의 아래 끝.
+         * @brief 오른쪽 위 구석을 가리는 바의 안쪽 여백(픽셀, 지난 프레임 위치)입니다 — x 는 오른쪽에 붙은 바의 폭, y 는 위에 붙은 바의 아래 끝.
          *        씬 뷰 HUD 상자 · 방향 큐브가 바 아래에 놓이게 한다.
          */
         float2 computeTopRightInset() const;
@@ -67,11 +67,11 @@ namespace sw::editor
         void                     drawBarMenuItems();
         /**
          * @brief 바의 손잡이를 그리고 끌기 · 놓기 · 오른쪽 클릭 메뉴를 처리합니다. 놓으면 가까운 가장자리에 붙이고 저장합니다.
-         * @param position 이번 프레임의 바 자리(캔버스 기준), @param innerSize 여백을 뺀 캔버스 크기, @param margin 가장자리 여백(DPI 반영)
+         * @param position 이번 프레임의 바 위치(캔버스 기준), @param innerSize 여백을 뺀 캔버스 크기, @param margin 가장자리 여백(DPI 반영)
          */
         void drawBarGrip( EditorOverlayBarState& state, EditorOverlayBarRuntime& runtime, const float2& position, const float2& canvasSize, const float2& innerSize,
                           float32 margin, float32 scale );
-        /** @brief 이번 프레임에 먼저 놓인 바와 겹치면 가장자리에서 먼 쪽으로 밀어 낸 자리입니다. */
+        /** @brief 이번 프레임에 먼저 놓인 바와 겹치면 가장자리에서 먼 쪽으로 밀어 낸 위치입니다. */
         float2 pushOutOfPlacedBars( EditorOverlayDock dock, const float2& position, const float2& size ) const;
 
         /** @brief 이번 프레임에 놓인 바 하나(겹침 피하기)입니다. */

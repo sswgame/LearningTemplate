@@ -17,11 +17,13 @@
 #include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Message/NetRequest.h"
 
+#include "GameFramework/Base/Online/Ledger/IBalanceNotice.h"
 #include "GameFramework/Base/Online/Observability/ServiceMetrics.h"
 #include "GameFramework/Base/Online/Schedule/ServiceScheduler.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
@@ -31,9 +33,12 @@
 
 namespace sw
 {
+    struct AccountPresenceResult;
+    struct EconomyBalanceChange;
     struct LedgerAuditReport;
 
     class CurrencyCatalog;
+    class IAccountPresence;
     class IServiceStore;
     class IServiceStoreWork;
     class MetricRegistry;
@@ -50,7 +55,8 @@ namespace sw
         MetricRegistry*           _pMetricRegistry{ nullptr };                                                            ///< 없으면 지표를 세지 않는다
         int64                     _withdrawalWindowMs{ 7 * constant::kSecondsPerDay * constant::kMillisecondsPerSecond }; ///< 청약철회 기한이다(전자상거래법의 7일)
         ServiceScheduler*         _pScheduler{ nullptr };                                                                 ///< 원장 보존 검사를 예약한다. 없으면 검사하지 않는다(테스트는 `requestLedgerAudit`)
-        int32                     _auditMinuteOfDay{ 4 * 60 + 30 };                                                       ///< 보존 검사 시각(UTC 분)이다. 표 전체를 읽으므로 한가한 시간에 둔다
+        int32                     _auditMinuteOfDay{ 4 * 60 + 30 };                                                       ///< 보존 검사 시각(UTC 분)이다. 테이블 전체를 읽으므로 한가한 시간에 둔다
+        IAccountPresence*         _pPresence{ nullptr };                                                                  ///< 다른 서버에 붙은 계정에 잔액 변경 알림을 중계한다. 서버가 하나면 null 이다
         uint8                     _bAcceptSandboxReceipts{ SW_FALSE };
     };
 } // namespace sw
@@ -74,7 +80,7 @@ namespace sw
 namespace sw
 {
     /** @class EconomyService @brief 경제 요청 처리기입니다. */
-    class SW_KIT_SERVER_API EconomyService final : public IOnlineHostService, public IScheduledJobHandler
+    class SW_KIT_SERVER_API EconomyService final : public IOnlineHostService, public IScheduledJobHandler, public IBalanceNotice
     {
     public:
         using ReplyDelegate = Delegate<void( const EconomyReply& )>;
@@ -100,6 +106,9 @@ namespace sw
         const OnlineProtocolEntry& getProtocol() const override { return EconomyProtocol::kOnlineEntry; }
         void                       onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
         void                       onServiceTick( OnlineServiceHost& host, int64 nowMs ) override;
+        void                       onHostShutdown( OnlineServiceHost& host ) override;
+        // IBalanceNotice: 이 서버에 붙은 계정이면 바로, 다른 서버에 붙었으면 접속 상태를 찾아 중계한다
+        void notifyBalancesChanged( AccountID accountID, const vector<LedgerBalance>& listBalance ) override;
         // IScheduledJobHandler — 보존 검사 회차를 차지했다
         void onScheduledRun( const ScheduledRun& run ) override;
         /** @brief 보존 검사 한 번을 맡깁니다. 예약 회차와 테스트가 부릅니다. 이미 도는 중이면 무시합니다. */
@@ -112,8 +121,8 @@ namespace sw
 
         /** @brief 작업(work)의 `complete` 가 호출합니다. 응답과 지표를 처리합니다. */
         void completeCall( uint64 callID, const EconomyReply& reply );
-        /** @brief 환불 회수 작업의 `complete` 가 호출합니다. 지표와 로그만 남깁니다. */
-        void  completeRefund( EconomyResult result );
+        /** @brief 환불 회수 작업의 `complete` 가 호출합니다. 지표와 로그를 남기고 회수로 바뀐 잔액을 계정에 알립니다. */
+        void  completeRefund( EconomyResult result, const vector<EconomyBalanceChange>& listChange );
         int32 getPendingCallCount() const { return static_cast<int32>( _listPendingCall.size() ); }
 
     private:
@@ -135,18 +144,21 @@ namespace sw
         void pollReceipts();
         /** @brief 환불 알림을 거두어 회수 작업을 맡깁니다. */
         void pollRefunds();
+        void onBalancePresenceFound( const AccountPresenceResult& result );
 
-        vector<PendingCall>  _listPendingCall;
-        ServiceMetrics       _metrics;
-        EconomyServiceConfig _settings;
-        IServiceStore*       _pStore;
-        MetricRegistry*      _pMetricRegistry; ///< 환불 결과 지표를 센다(설정에서 복사)
-        uint64               _nextCallID;
-        int32                _pendingRefundCount;
-        ScheduledRun         _auditRun;
-        uint8                _bAuditPending;
-        uint8                _bAuditRunHeld;
-        uint8                _bLastAuditBalanced;
-        int64                _nowMs;
+        vector<PendingCall>                          _listPendingCall;
+        ServiceMetrics                               _metrics;
+        EconomyServiceConfig                         _settings;
+        unordered_map<uint64, EconomyBalanceChanged> _mapPresenceRequestToNotice; ///< 접속 상태를 묻는 중인 잔액 변경 알림(받는 계정은 결과에 있다)
+        OnlineServiceHost*                           _pHost;                      ///< `onServiceTick` 이 붙잡는다. 알림을 이 서버에 붙은 계정에 바로 보낸다
+        IServiceStore*                               _pStore;
+        MetricRegistry*                              _pMetricRegistry; ///< 환불 결과 지표를 센다(설정에서 복사)
+        uint64                                       _nextCallID;
+        int32                                        _pendingRefundCount;
+        ScheduledRun                                 _auditRun;
+        uint8                                        _bAuditPending;
+        uint8                                        _bAuditRunHeld;
+        uint8                                        _bLastAuditBalanced;
+        int64                                        _nowMs;
     };
 } // namespace sw

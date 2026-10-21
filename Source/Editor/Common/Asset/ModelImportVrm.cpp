@@ -5,6 +5,7 @@
 #include "pch.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
@@ -28,7 +29,7 @@ namespace sw::editor
             {
                 if ( bone.empty() || skeleton.findBoneIndex( hashed_string( bone ) ) >= 0 )
                     return;
-                if ( std::find( inoutListMissing.begin(), inoutListMissing.end(), bone ) == inoutListMissing.end() )
+                if ( VectorUtil::contains( inoutListMissing, bone ) == false )
                     inoutListMissing.push_back( bone );
             }
 

@@ -58,7 +58,7 @@ namespace sw::editor
         if ( ImGui::BeginMainMenuBar() == false )
             return;
 
-        // File · Edit · Build 는 커맨드 표의 메뉴 경로 · 순서 칸에서 나온다(`EditorCommandGUI.cpp`).
+        // File · Edit · Build 는 커맨드 테이블의 메뉴 경로 · 순서 칸에서 나온다(`EditorCommandGUI.cpp`).
         EditorCommandGUI::drawMainMenus();
         drawAssetsMenu();
         drawPanelMenu( dockLayout );
@@ -161,7 +161,7 @@ namespace sw::editor
         if ( pCompiler != nullptr )
             notifyLiveCodingResult( *pCompiler );
 
-        // 상태 영역은 지난 프레임에 측정한 너비로 오른쪽 끝에 붙인다. 메뉴와 겹칠 자리면 이번 프레임은 그리지 않는다 — 창을 줄여도 메뉴가
+        // 상태 영역은 지난 프레임에 측정한 너비로 오른쪽 끝에 붙인다. 메뉴와 겹칠 위치면 이번 프레임은 그리지 않는다 — 창을 줄여도 메뉴가
         // 가려지지 않고, 넓히면 다시 나온다. 첫 프레임은 너비를 모르므로 오른쪽 끝에서 그려 측정한다.
         const float32 menuEndX     = ImGui::GetCursorPosX();
         const float32 statusStartX = ImGui::GetWindowWidth() - EditorMenuBarInternal::_s_statusAreaWidth - ImGui::GetStyle().WindowPadding.x;

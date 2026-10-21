@@ -23,7 +23,7 @@ namespace sw::editor
 
     namespace
     {
-        /** @brief 파일 뿌리입니다. */
+        /** @brief 파일 루트입니다. */
         static constexpr ConfigKeyDoc kArrModelImportRootKeyDoc[] = {
             { "rules", "object[]", "", "규칙 목록(아래 키). 첫 매칭이 이긴다. 맞는 규칙이 없는 원본은 기본값(옮기지 않음 · 애니메이션 모두 · ACL)" },
         };

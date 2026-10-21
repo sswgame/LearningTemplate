@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGParty.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -35,12 +36,7 @@ namespace sw
 {
     bool JRPGMember::knowsSpell( const hashed_string& spellID ) const
     {
-        for ( const hashed_string& entry : _listSpell )
-        {
-            if ( entry == spellID )
-                return true;
-        }
-        return false;
+        return VectorUtil::contains( _listSpell, spellID );
     }
 
     int32 JRPGMember::findProficiency( const hashed_string& manualID ) const

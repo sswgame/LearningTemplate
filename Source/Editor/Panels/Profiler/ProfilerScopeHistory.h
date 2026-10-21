@@ -90,7 +90,7 @@ namespace sw::editor
         explicit ProfilerScopeHistory( uint32 windowFrame = kDefaultWindowFrame );
 
         /**
-         * @brief 프로파일러가 새 프레임을 집계했으면 그 값을 한 칸 담습니다.
+         * @brief 프로파일러가 새 프레임을 집계했으면 그 값을 한 항목 담습니다.
          * @return 담았으면 true 입니다. 프레임 수가 그대로이면 false 이며, 같은 프레임에 두 번 그리거나 프로파일러가 꺼져 있을 때가 해당합니다.
          */
         bool capture( const FrameProfiler& profiler );

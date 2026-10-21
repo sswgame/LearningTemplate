@@ -2,6 +2,8 @@
 
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 
+#include "Core/Container/VectorUtil.h"
+
 namespace sw
 {
     namespace
@@ -324,7 +326,7 @@ namespace sw
         if ( info._pPassDefine != nullptr )
         {
             const string passDefine{ info._pPassDefine };
-            if ( std::find( selection._listDefine.begin(), selection._listDefine.end(), passDefine ) == selection._listDefine.end() )
+            if ( VectorUtil::contains( selection._listDefine, passDefine ) == false )
                 selection._listDefine.push_back( passDefine );
         }
         return selection;

@@ -34,7 +34,7 @@ namespace sw
         /** @brief @p pTLSContext 가 있으면 세션을 만든다(실패하면 false). 핸들은 연결을 맺거나 받은 뒤 `setHandle` 로 넣는다. */
         [[nodiscard]] bool initialize( ITLSContext* pTLSContext );
         void               setHandle( StreamConnectionHandle handle ) { _handle = handle; }
-        /** @brief 평문을 선에 올립니다(TLS 핸드셰이크 전이면 세션이 모았다가 보낸다). */
+        /** @brief 평문을 연결에 싣습니다(TLS 핸드셰이크 전이면 세션이 모았다가 보낸다). */
         [[nodiscard]] bool writePlain( IStreamTransport& transport, const uint8* pData, size_t size );
         /** @brief 받은 바이트를 평문으로 복호화해 @p outPlainBytes 뒤에 붙입니다. TLS 실패면 false. */
         [[nodiscard]] bool readReceived( IStreamTransport& transport, const uint8* pData, int32 size, vector<uint8>& outPlainBytes );

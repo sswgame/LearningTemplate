@@ -1,7 +1,7 @@
 /**
  * @file CatalogXMLText.h
  * @brief 카탈로그 XML 원문을 훑어 원소 · 속성의 위치를 알아내고, 원문을 직접 고치는(속성 값 바꾸기 · 더하기 · 빼기, 원소 더하기 · 빼기) 도우미입니다. ImGui 를 모릅니다.
- * @details 표 편집기는 XML 을 DOM 으로 읽어 다시 쓰지 않습니다 — 데이터 파일의 주석과 들여쓰기가 사라지기 때문입니다(`XMLDocument` 는 주석을 읽지 않는다).
+ * @details 테이블 편집기는 XML 을 DOM 으로 읽어 다시 쓰지 않습니다 — 데이터 파일의 주석과 들여쓰기가 사라지기 때문입니다(`XMLDocument` 는 주석을 읽지 않는다).
  *          대신 원문에서 위치를 찾아 그 구간만 바꿉니다. 한 번 고치면 새 원문이 나오고, 위치는 새 원문을 다시 훑어 얻습니다.
  *          엔티티는 값을 읽을 때 풀고(`&amp;` → `&`) 쓸 때 다시 입니다(`XMLDocument::escapeString`).
  *          지원하는 문법은 카탈로그가 쓰는 것뿐입니다: 원소, 속성(작은 · 큰따옴표), 주석, CDATA, 처리 명령, `<!DOCTYPE>`. 이름공간은 이름 문자열 그대로 둡니다.
@@ -20,7 +20,7 @@ namespace sw::editor
         string _value{}; ///< 엔티티를 푼 값
         uint32 _nameBegin{ 0 };
         uint32 _valueBegin{ 0 }; ///< 여는 따옴표 바로 뒤
-        uint32 _valueEnd{ 0 };   ///< 닫는 따옴표 자리
+        uint32 _valueEnd{ 0 };   ///< 닫는 따옴표 위치
     };
 } // namespace sw::editor
 
@@ -70,7 +70,7 @@ namespace sw::editor
         int32                            getRootIndex() const { return _rootIndex; }
         const vector<CatalogXMLElement>& getElements() const { return _listElement; }
         const CatalogXMLElement&         getElement( int32 index ) const { return _listElement[static_cast<size_t>( index )]; }
-        /** @brief 루트의 자식(표의 행)을 문서 순서로 반환합니다. */
+        /** @brief 루트의 자식(테이블의 행)을 문서 순서로 반환합니다. */
         const vector<int32>& getRowIndices() const { return _listElement[static_cast<size_t>( _rootIndex )]._listChild; }
 
         // ------------------------------------------------------------------------------

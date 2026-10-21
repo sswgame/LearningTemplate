@@ -3,6 +3,7 @@
 #include "Engine/Character/Fit/FitTables.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 
 #include "Engine/Character/CharacterDataReader.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
@@ -215,12 +216,7 @@ namespace sw
 
     const FitLayerDef* FitTables::findLayer( const hashed_string& name ) const
     {
-        for ( const FitLayerDef& layer : _listLayer )
-        {
-            if ( layer._name == name )
-                return &layer;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&FitLayerDef::_name>( _listLayer, name );
     }
 
     int32 FitTables::findRegionIndex( const hashed_string& name ) const
@@ -235,12 +231,7 @@ namespace sw
 
     const FitProfileDef* FitTables::findProfile( const hashed_string& name ) const
     {
-        for ( const FitProfileDef& profile : _listProfile )
-        {
-            if ( profile._name == name )
-                return &profile;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&FitProfileDef::_name>( _listProfile, name );
     }
 
     void FitTables::collectInteractions( const hashed_string& innerProfile, const hashed_string& outerProfile, vector<const FitInteractionDef*>& outListInteraction ) const

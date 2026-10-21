@@ -4,6 +4,7 @@
 
 #include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/XMLSerializer.h"
@@ -154,12 +155,7 @@ namespace sw
         const hashed_string& wanted = name.empty() ? _defaultAgentType : name;
         if ( wanted.empty() )
             return _listAgentType.empty() ? nullptr : &_listAgentType.front();
-        for ( const NavAgentTypeDef& agentType : _listAgentType )
-        {
-            if ( agentType._name == wanted )
-                return &agentType;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&NavAgentTypeDef::_name>( _listAgentType, wanted );
     }
 
     bool NavMeshSettings::findAreaIndex( const hashed_string& name, uint8& outIndex ) const

@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/RPG/MonsterCollector/MonsterInstance.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -391,12 +392,8 @@ namespace sw
 
     bool MonsterStorage::hasUsableMonster() const
     {
-        for ( const MonsterInstance& monster : _listParty )
-        {
-            if ( monster.isFainted() == false )
-                return true;
-        }
-        return false;
+        return VectorUtil::containsIf( _listParty, [&]( const MonsterInstance& monster )
+        { return monster.isFainted() == false; } );
     }
 
     void MonsterStorage::writeState( Archive& outArchive ) const

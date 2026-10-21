@@ -294,12 +294,7 @@ namespace sw
 
     WesternLawState::RegionRecord* WesternLawState::findRecordMutable( const hashed_string& regionID )
     {
-        for ( RegionRecord& record : _listRecord )
-        {
-            if ( record._regionID == regionID )
-                return &record;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&RegionRecord::_regionID>( _listRecord, regionID );
     }
 
     const WesternLawState::RegionRecord* WesternLawState::findRecord( const hashed_string& regionID ) const

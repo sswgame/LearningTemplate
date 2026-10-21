@@ -3,6 +3,7 @@
 #include "Engine/Automation/AutomationLogCapture.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Automation/AutomationLogPolicy.h"
@@ -80,12 +81,8 @@ namespace sw
     bool AutomationLogCapture::containsLine( string_view needle ) const
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        for ( const AutomationLogLine& line : _listLogLine )
-        {
-            if ( string_view( line._message ).find( needle ) != string_view::npos )
-                return true;
-        }
-        return false;
+        return VectorUtil::containsIf( _listLogLine, [&]( const AutomationLogLine& line )
+        { return string_view( line._message ).find( needle ) != string_view::npos; } );
     }
 
     void AutomationLogCapture::onLogWritten( const LogEntry& entry )

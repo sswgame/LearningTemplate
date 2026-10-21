@@ -22,10 +22,10 @@ namespace sw::editor
             static constexpr float32 kActionColumnWidth = 70.0f;
             static constexpr float32 kChildColumnWidth  = 64.0f;
             static constexpr int32   kExtraColumnCount  = 2;  ///< 자식 수 · 행 동작
-            static constexpr int32   kMaxVisibleRows    = 12; ///< 넘으면 표 안에서 세로로 스크롤한다
+            static constexpr int32   kMaxVisibleRows    = 12; ///< 넘으면 테이블 안에서 세로로 스크롤한다
 
             /**
-             * @brief 그룹 표의 바깥 높이입니다 — 행 수만큼(최대 `kMaxVisibleRows`)만 차지합니다.
+             * @brief 그룹 테이블의 바깥 높이입니다 — 행 수만큼(최대 `kMaxVisibleRows`)만 차지합니다.
              * @details 스크롤 표(ScrollX · ScrollY)에 바깥 높이 0 을 주면 ImGui 는 남은 높이를 모두 준다. 그러면 첫 그룹이 패널을 다 차지해
              *          그 아래의 "Add row" 단추와 다음 그룹이 창 밖으로 밀린다.
              */

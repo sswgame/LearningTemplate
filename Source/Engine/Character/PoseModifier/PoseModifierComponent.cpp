@@ -2,6 +2,7 @@
 
 #include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
@@ -421,7 +422,7 @@ namespace sw
             listPending.pop_back();
             if ( pCurrent == _pUnit )
                 return true;
-            if ( std::find( listVisited.begin(), listVisited.end(), pCurrent ) != listVisited.end() )
+            if ( VectorUtil::contains( listVisited, pCurrent ) )
                 continue;
             listVisited.push_back( pCurrent );
             for ( const TComponentHandle<SkeletalMeshComponent> handle : pCurrent->getAnimationDependencies() )

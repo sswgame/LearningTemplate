@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
@@ -88,15 +89,7 @@ namespace sw
 
         bool isActive( int64 nowMs ) const { return _startMs <= nowMs && ( _endMs == 0 || nowMs < _endMs ); }
         bool appliesTo( string_view kind ) const { return _scope == kScopeAll || _scope == kind; }
-        bool allowsAccount( AccountID accountID ) const
-        {
-            for ( const AccountID allowed : _listAllowedAccount )
-            {
-                if ( allowed == accountID )
-                    return true;
-            }
-            return false;
-        }
+        bool allowsAccount( AccountID accountID ) const { return VectorUtil::contains( _listAllowedAccount, accountID ); }
         /** @brief 클라이언트에 보이는 부분입니다. 허용 목록은 빠집니다. */
         MaintenanceView makeView() const { return MaintenanceView{ _scope, _messageKey, _startMs, _endMs }; }
     };

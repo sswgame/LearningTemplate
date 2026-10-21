@@ -3,6 +3,7 @@
 #include "Engine/UI/Animation/UIStyleTransition.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Reflection/ReflectionTypes.h"
@@ -363,12 +364,7 @@ namespace sw
 {
     const UIStyleTransitionSpec::Entry* UIStyleTransitionSpec::findEntry( UIStyleField field ) const
     {
-        for ( const Entry& entry : _listEntry )
-        {
-            if ( entry._field == field )
-                return &entry;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&Entry::_field>( _listEntry, field );
     }
 
     bool UIStyleTransitionSpec::parse( string_view text, UIStyleTransitionSpec& outSpec, string& outError )
@@ -527,7 +523,7 @@ namespace sw
             state->_shown._setMask |= UIStyleFieldTable::makeBit( channel._field ); // 새 스타일이 정하지 않은 필드도 옮기는 동안은 정한 것으로 보인다
         }
         WidgetTree* pTree = widget.getTree();
-        if ( pTree != nullptr && std::find( pTree->_listStyleTransition.begin(), pTree->_listStyleTransition.end(), widget.getID() ) == pTree->_listStyleTransition.end() )
+        if ( pTree != nullptr && VectorUtil::contains( pTree->_listStyleTransition, widget.getID() ) == false )
             pTree->_listStyleTransition.push_back( widget.getID() );
     }
 

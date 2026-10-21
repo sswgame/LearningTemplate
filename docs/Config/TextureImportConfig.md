@@ -17,7 +17,7 @@ JSON 키는 아래 테이블의 키 그대로입니다. 모르는 키는 로드 
 
 ## 필드
 
-파일 뿌리입니다.
+파일 루트입니다.
 
 원본: [`Source/Editor/Common/Asset/TextureImportConfig.cpp`](../../Source/Editor/Common/Asset/TextureImportConfig.cpp)
 

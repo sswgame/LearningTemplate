@@ -3,7 +3,7 @@
  * @brief 로컬 저장 설정으로 프런트를 만듭니다. "file" 과 "memory" 는 기반이 만들고, 그 밖(예: 키트 `GF_SQLStore` 의 "sqlite")은 그 키트가 등록한 백엔드를 씁니다.
  * @details 기반은 키트를 include 하지 못하므로 등록 함수를 둔다. 등록되지 않은 이름은 기동 오류다(다른 저장소로 바꾸지 않는다).
  *          키트는 등록을 손으로 부르지 않고 `.cpp` 의 정적 `LocalStoreBackendRegistration` 하나로 둔다. 모듈이 로드되면 오르고,
- *          언로드 직전에는 바닥 표가 모듈 언로드 리스너(`IModuleUnloadListener`)로서 그 이미지의 만들기 함수를 지운다. 핫 리로드가 옛 이미지의
+ *          언로드 직전에는 바닥 테이블이 모듈 언로드 리스너(`IModuleUnloadListener`)로서 그 이미지의 만들기 함수를 지운다. 핫 리로드가 옛 이미지의
  *          언로드를 미뤄도(정적 소멸자가 새 이미지의 등록 뒤에 돈다) 옛 함수가 남거나 새 등록을 지우지 않는다.
  *          모든 저장소는 전용 스레드 하나(`ThreadedLocalStore`) 위에 선다. 경로는 `UserDataPath::resolve( 게임 이름, _root )`.
  */
@@ -36,7 +36,7 @@ namespace sw
 
     /**
      * @struct LocalStoreFactory
-     * @brief 로컬 저장 공장 · 바닥 레지스트리입니다. 바닥 표는 잠금으로 지키므로 모듈 로더 스레드에서 올려도 된다.
+     * @brief 로컬 저장 공장 · 바닥 레지스트리입니다. 바닥 테이블은 잠금으로 지키므로 모듈 로더 스레드에서 등록해도 된다.
      */
     struct SW_GF_API LocalStoreFactory
     {
@@ -50,7 +50,7 @@ namespace sw
                                                          string& outError );
 
     private:
-        /** @brief 바닥을 이름으로 올립니다. 기반 이름이거나 같은 이름이 이미 있으면 오류다(앞 것을 덮지 않는다). */
+        /** @brief 바닥을 이름으로 등록합니다. 기반 이름이거나 같은 이름이 이미 있으면 오류다(앞 것을 덮지 않는다). */
         static void registerBackend( const utf8* pBackendName, LocalSlotStorageCreateFunction createFunction );
         /** @brief @p createFunction 으로 등록한 항목만 해제합니다. 언로드 리스너가 이미 지웠거나 새 이미지의 같은 이름 항목은 건드리지 않는다. */
         static void unregisterBackend( LocalSlotStorageCreateFunction createFunction );

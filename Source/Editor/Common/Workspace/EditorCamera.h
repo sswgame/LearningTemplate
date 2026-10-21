@@ -28,8 +28,8 @@ namespace sw::editor
          */
         static CameraComponent* ensure( Scene* pScene );
         /**
-         * @brief `ensure` 가 새로 만든 카메라의 위치입니다. 씬 뷰는 처음 쓰는 카메라가 이 자리가 아니면 이미 놓인 카메라로 보고 그 포즈를 이어받습니다
-         *        (에디터 모듈을 다시 올리는 백엔드 교체 · 핫 리로드는 씬과 함께 카메라 오브젝트를 넘긴다).
+         * @brief `ensure` 가 새로 만든 카메라의 위치입니다. 씬 뷰는 처음 쓰는 카메라가 이 위치가 아니면 이미 놓인 카메라로 보고 그 포즈를 이어받습니다
+         *        (에디터 모듈을 다시 로드하는 백엔드 교체 · 핫 리로드는 씬과 함께 카메라 오브젝트를 넘긴다).
          */
         static float3 getSpawnPosition() { return float3( 2.15f, 1.55f, 2.65f ); }
     };

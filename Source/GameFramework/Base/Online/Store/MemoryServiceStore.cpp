@@ -24,7 +24,7 @@ namespace sw
                 return HashUtil::computeStringHash64( static_cast<const utf8*>( pData ), size, false, hash );
             }
 
-            /** @brief 내리는 중인 앞의 연결 — 모든 호출이 Unavailable 입니다. */
+            /** @brief 종료하는 중인 앞의 연결 — 모든 호출이 Unavailable 입니다. */
             class ClosedConnection final : public IServiceStoreConnection
             {
             public:
@@ -117,7 +117,7 @@ namespace sw
             }
             return ServiceStoreResult::Ok;
         }
-        // 내림차순 — 커서 바로 앞(커서가 없으면 접두어 범위 끝)에서 거꾸로 걷는다. 키는 ASCII(키 규칙)라 접두어 + 0x7F 가 범위 끝이다.
+        // 내림차순 — 커서 바로 앞(커서가 없으면 접두어 범위 끝)에서 거꾸로 순회한다. 키는 ASCII(키 규칙)라 접두어 + 0x7F 가 범위 끝이다.
         string upperKey{ keyPrefix };
         upperKey.push_back( static_cast<utf8>( 0x7F ) );
         auto it = cursorKey.empty() ? entries.upper_bound( string_view{ upperKey } ) : entries.lower_bound( cursorKey );
@@ -286,7 +286,7 @@ namespace sw
 
     MemoryServiceStore::~MemoryServiceStore()
     {
-        // 거두지 않은 일은 complete 없이 버린다 — 서비스가 먼저 내려가 complete 가 가리킬 곳이 없다(SQL 구현도 같다).
+        // 회수하지 않은 일은 complete 없이 버린다 — 서비스가 먼저 종료해 complete 가 가리킬 곳이 없다(SQL 구현도 같다).
         std::scoped_lock<mutex> lock{ _mutex };
         _listCompleted.clear();
     }
@@ -317,7 +317,7 @@ namespace sw
 
     int32 MemoryServiceStore::pollCompletions()
     {
-        // complete 안에서 새 일을 맡길 수 있다 — 꺼낸 목록을 따로 돌고, 새로 쌓인 것은 다음 poll 이 거둔다(SQL 구현과 같은 순서 약속).
+        // complete 안에서 새 일을 맡길 수 있다 — 꺼낸 목록을 따로 돌고, 새로 쌓인 것은 다음 poll 이 회수한다(SQL 구현과 같은 순서 약속).
         vector<unique_ptr<IServiceStoreWork>> listReady;
         {
             std::scoped_lock<mutex> lock{ _mutex };

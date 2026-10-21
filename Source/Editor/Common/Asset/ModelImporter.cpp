@@ -9,6 +9,7 @@
 #include "Core/Common/FourCcUtil.h"
 #include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
@@ -316,10 +317,10 @@ namespace sw::editor
                     const string           clipName  = animation.name != nullptr ? string( animation.name ) : "clip" + to_string( static_cast<uint64>( animationIndex ) );
                     if ( rule._listClipName.empty() == false )
                     {
-                        const auto itRequested = std::find( rule._listClipName.begin(), rule._listClipName.end(), clipName );
-                        if ( itRequested == rule._listClipName.end() )
+                        const std::optional<size_t> requestedIndex = VectorUtil::findIndex( rule._listClipName, clipName );
+                        if ( requestedIndex.has_value() == false )
                             continue;
-                        listRequestedFound[static_cast<size_t>( itRequested - rule._listClipName.begin() )] = SW_TRUE;
+                        listRequestedFound[*requestedIndex] = SW_TRUE;
                     }
 
                     // 모프 가중치 채널은 타깃 이름의 커브가 된다. 가중치만 움직이는 클립(말하기)도 그 길이를 가진다.

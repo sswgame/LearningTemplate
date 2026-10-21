@@ -2,10 +2,10 @@
  * @file ServiceReport.h
  * @brief 플레이어 신고 레코드입니다. 신고한 순간의 문맥(채팅이면 그 메시지와 앞 메시지들)을 스냅숏으로 남기고, GM 도구가 열린 신고를 읽어 처리합니다.
  * @details - 신고를 쓰는 키트(채팅)와 처리하는 키트(GM)가 서로 include 하지 않도록 형식을 기반 `Online/` 에 둡니다. 제재(`ServiceSanction`)와 같은 구조입니다.
- *          - 표 `service_report` 의 키는 `<상태>/<만든 시각 16진>/<신고자 16진>.<고유 16진>` 이며 상태는 `open` 과 `closed` 입니다.
+ *          - 테이블 `service_report` 의 키는 `<상태>/<만든 시각 16진>/<신고자 16진>.<고유 16진>` 이며 상태는 `open` 과 `closed` 입니다.
  *            키 순서가 시간 순서라 GM 도구는 `open/` 을 최근 것부터 읽습니다. 처리하면 같은 트랜잭션에서 `open/` 키를 지우고 `closed/` 키로 옮깁니다.
- *          - 값은 판 머리가 붙은 자기 기술형(A, `ServiceRecordUtil`)입니다. 문맥 줄은 신고할 때의 사본이라 원본 기록이 보존 기간으로 지워져도 남습니다.
- *          - 보존 기간 정리는 운영(DB 쪽 작업)이 맡습니다. 게임 코드에는 신고를 지우는 함수가 없습니다.
+ *          - 값은 버전 헤더가 붙은 자기 기술형(A, `ServiceRecordUtil`)입니다. 문맥 줄은 신고할 때의 사본이라 원본 기록이 보존 기간으로 지워져도 남습니다.
+ *          - 닫힌 신고의 보존 기간 정리는 서버 런타임의 예약 작업(`ServiceRetentionJob`)만 합니다. 게임 코드에는 신고를 지우는 함수가 없습니다.
  *          Nakama 의 신고 기능은 없고, PlayFab 의 `ReportPlayer` 와 국내 게임사 GM 툴의 신고 큐에 해당합니다.
  */
 #pragma once
@@ -108,6 +108,8 @@ namespace sw
     struct SW_GF_API ServiceReportStore
     {
         static const hashed_string& getTable(); ///< "service_report"
+        /** @brief 닫힌 신고(`closed/<만든 시각 16 진>/…`)의 만든 시각을 읽습니다(보존 기간 쓸기 `ServiceRetention` 용). 열린 신고와 틀린 키는 false 입니다. */
+        [[nodiscard]] static bool readClosedTimeMs( const ServiceRecord& record, int64& outTimeMs );
         /** @brief 열린 신고의 키를 만듭니다. @p uniqueID 는 같은 신고자가 같은 밀리초에 낸 신고를 가릅니다. */
         static string makeOpenKey( int64 createdMs, AccountID reporterID, uint64 uniqueID );
         /** @brief 비어 있지 않고 @p maxSize 바이트 이하이며 `[0-9a-z_.]` 만 있으면 true 입니다. 종류와 사유 코드의 규칙입니다. */

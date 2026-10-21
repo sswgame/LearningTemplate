@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/RunMap.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -95,7 +96,7 @@ namespace sw
         if ( targetIndex < 0 )
             return false;
         const vector<int32>& listNext = _listNode[static_cast<size_t>( neighborIndex )]._listNext;
-        return std::find( listNext.begin(), listNext.end(), targetIndex ) != listNext.end();
+        return VectorUtil::contains( listNext, targetIndex );
     }
 
     hashed_string RunMap::pickKind( const RunMapSettings& settings, int32 floor, const hashed_string& previousKind, GameRandom& random ) const
@@ -151,7 +152,7 @@ namespace sw
                     nextColumn = column; // 엇갈리면 곧게 편다
                 const int32    nextIndex = findOrAddNode( floor + 1, nextColumn );
                 vector<int32>& listNext  = _listNode[static_cast<size_t>( nodeIndex )]._listNext;
-                if ( std::find( listNext.begin(), listNext.end(), nextIndex ) == listNext.end() )
+                if ( VectorUtil::contains( listNext, nextIndex ) == false )
                     listNext.push_back( nextIndex );
                 nodeIndex = nextIndex;
                 column    = nextColumn;
@@ -215,7 +216,7 @@ namespace sw
     {
         vector<int32> listChoice;
         collectChoices( listChoice );
-        if ( std::find( listChoice.begin(), listChoice.end(), nodeIndex ) == listChoice.end() )
+        if ( VectorUtil::contains( listChoice, nodeIndex ) == false )
             return false;
         _current = nodeIndex;
         return true;

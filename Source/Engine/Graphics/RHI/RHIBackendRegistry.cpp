@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/RHI/RHIBackendRegistry.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Module/ModuleImageUtil.h"
 
@@ -119,12 +120,7 @@ namespace sw
 
     const RHIBackendEntry* RHIBackendRegistry::findBackend( RHIBackend backend ) const
     {
-        for ( const RHIBackendEntry& entry : _listEntry )
-        {
-            if ( entry._backend == backend )
-                return &entry;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&RHIBackendEntry::_backend>( _listEntry, backend );
     }
 
     string RHIBackendRegistry::describeRegisteredBackends() const

@@ -25,6 +25,110 @@ namespace sw
                 return operation == LoginOperation::Login || operation == LoginOperation::GuestLogin || operation == LoginOperation::PlatformLogin ||
                        operation == LoginOperation::Resume;
             }
+
+            /** @brief 요청 본문을 읽어 로그인 서비스로 보낸 결과이다. */
+            enum class DispatchStatus : uint8
+            {
+                Ok,
+                UnknownMethod,
+                Malformed,
+            };
+
+            /** @brief `TRequest` 를 읽고, 읽기에 성공하면 `call` 에 넘긴다. 읽기에 실패하면 서비스를 부르지 않는다. */
+            template <typename TRequest, typename TCall>
+            static DispatchStatus readThen( BitReader& body, TCall&& call )
+            {
+                TRequest request;
+                if ( AccountProtocol::MessageTypes::read( body, request ) != FixedReadResult::Ok )
+                    return DispatchStatus::Malformed;
+                call( request );
+                return DispatchStatus::Ok;
+            }
+
+            /**
+             * @brief 메서드에 맞는 본문을 읽어 로그인 서비스의 해당 함수를 부른다.
+             * @details `pToken` 은 로그인한 세션의 토큰이다. 로그인 전 메서드(등록 · 로그인 · 재개)는 쓰지 않으므로 nullptr 이어도 된다.
+             *          메서드마다 읽는 요청이 달라 경우마다 한 줄씩 부르는 짧은 디스패처라 한 함수로 둔다.
+             */
+            static DispatchStatus dispatch( LoginService& loginService, const OnlineCallContext& context, const LoginSessionToken* pToken, uint64 tag, BitReader& body )
+            {
+                const int64 nowMs = context._nowMs;
+                switch ( context._method )
+                {
+                    case AccountMethod::kRegister:
+                    {
+                        return readThen<AccountCredentialRequest>( body, [&]( const AccountCredentialRequest& request )
+                        { loginService.registerAccount( LoginCredential{ request._loginName, request._password }, nowMs, tag ); } );
+                    }
+                    case AccountMethod::kLogin:
+                    {
+                        return readThen<AccountLoginRequest>( body, [&]( const AccountLoginRequest& request )
+                        { loginService.login( LoginCredential{ request._loginName, request._password }, request._clientInfo, context._remoteKey, nowMs, tag ); } );
+                    }
+                    case AccountMethod::kGuestLogin:
+                    {
+                        return readThen<AccountGuestLoginRequest>( body, [&]( const AccountGuestLoginRequest& request )
+                        { loginService.guestLogin( request._arrDeviceSecret, request._clientInfo, context._remoteKey, nowMs, tag ); } );
+                    }
+                    case AccountMethod::kPlatformLogin:
+                    {
+                        return readThen<AccountPlatformRequest>( body, [&]( const AccountPlatformRequest& request )
+                        { loginService.platformLogin( request._provider, request._ticketBytes, request._clientInfo, context._remoteKey, nowMs, tag ); } );
+                    }
+                    case AccountMethod::kResume:
+                    {
+                        return readThen<AccountResumeRequest>( body, [&]( const AccountResumeRequest& request )
+                        { loginService.resumeSession( request._token, request._clientInfo, context._remoteKey, nowMs, tag ); } );
+                    }
+                    case AccountMethod::kLogout:
+                    {
+                        loginService.logout( *pToken, nowMs, tag );
+                        return DispatchStatus::Ok;
+                    }
+                    case AccountMethod::kLinkCredential:
+                    {
+                        return readThen<AccountCredentialRequest>( body, [&]( const AccountCredentialRequest& request )
+                        { loginService.linkCredential( *pToken, LoginCredential{ request._loginName, request._password }, nowMs, tag ); } );
+                    }
+                    case AccountMethod::kLinkPlatform:
+                    {
+                        return readThen<AccountPlatformRequest>( body, [&]( const AccountPlatformRequest& request )
+                        { loginService.linkPlatform( *pToken, request._provider, request._ticketBytes, nowMs, tag ); } );
+                    }
+                    case AccountMethod::kIssueGameTicket:
+                    {
+                        AccountGameTicketRequest request;
+                        if ( AccountProtocol::MessageTypes::read( body, request ) != FixedReadResult::Ok || request._serverID.empty() )
+                            return DispatchStatus::Malformed; // 서버 id 가 없으면 발급할 곳이 없다
+                        loginService.issueGameTicket( *pToken, hashed_string( request._serverID ), nowMs, tag );
+                        return DispatchStatus::Ok;
+                    }
+                    case AccountMethod::kUnlinkPlatform:
+                    {
+                        return readThen<AccountProviderRequest>( body, [&]( const AccountProviderRequest& request )
+                        { loginService.unlinkPlatform( *pToken, request._provider, nowMs, tag ); } );
+                    }
+                    case AccountMethod::kListLinks:
+                    {
+                        loginService.listLinks( *pToken, nowMs, tag );
+                        return DispatchStatus::Ok;
+                    }
+                    case AccountMethod::kRequestDeletion:
+                    {
+                        loginService.requestDeletion( *pToken, nowMs, tag );
+                        return DispatchStatus::Ok;
+                    }
+                    case AccountMethod::kCancelDeletion:
+                    {
+                        loginService.cancelDeletion( *pToken, nowMs, tag );
+                        return DispatchStatus::Ok;
+                    }
+                    default:
+                    {
+                        return DispatchStatus::UnknownMethod;
+                    }
+                }
+            }
         };
     } // namespace
 } // namespace sw
@@ -97,115 +201,23 @@ namespace sw
             (void)host.respondError( context._token, OnlineError::kUnauthenticated );
             return;
         }
-        const uint64    tag        = _nextTag++;
-        const int64     nowMs      = context._nowMs;
-        FixedReadResult readResult = FixedReadResult::Ok;
-        switch ( context._method )
+        const uint64 tag = _nextTag++;
+        switch ( AccountServerInternal::dispatch( *_pLoginService, context, pSession != nullptr ? &pSession->_token : nullptr, tag, body ) )
         {
-            case AccountMethod::kRegister:
-            {
-                AccountCredentialRequest request;
-                readResult = AccountProtocol::MessageTypes::read( body, request );
-                if ( readResult == FixedReadResult::Ok )
-                    _pLoginService->registerAccount( LoginCredential{ request._loginName, request._password }, nowMs, tag );
-                break;
-            }
-            case AccountMethod::kLogin:
-            {
-                AccountLoginRequest request;
-                readResult = AccountProtocol::MessageTypes::read( body, request );
-                if ( readResult == FixedReadResult::Ok )
-                    _pLoginService->login( LoginCredential{ request._loginName, request._password }, request._clientInfo, context._remoteKey, nowMs, tag );
-                break;
-            }
-            case AccountMethod::kGuestLogin:
-            {
-                AccountGuestLoginRequest request;
-                readResult = AccountProtocol::MessageTypes::read( body, request );
-                if ( readResult == FixedReadResult::Ok )
-                    _pLoginService->guestLogin( request._arrDeviceSecret, request._clientInfo, context._remoteKey, nowMs, tag );
-                break;
-            }
-            case AccountMethod::kPlatformLogin:
-            {
-                AccountPlatformRequest request;
-                readResult = AccountProtocol::MessageTypes::read( body, request );
-                if ( readResult == FixedReadResult::Ok )
-                    _pLoginService->platformLogin( request._provider, request._ticketBytes, request._clientInfo, context._remoteKey, nowMs, tag );
-                break;
-            }
-            case AccountMethod::kResume:
-            {
-                AccountResumeRequest request;
-                readResult = AccountProtocol::MessageTypes::read( body, request );
-                if ( readResult == FixedReadResult::Ok )
-                    _pLoginService->resumeSession( request._token, request._clientInfo, context._remoteKey, nowMs, tag );
-                break;
-            }
-            case AccountMethod::kLogout:
-            {
-                _pLoginService->logout( pSession->_token, nowMs, tag );
-                break;
-            }
-            case AccountMethod::kLinkCredential:
-            {
-                AccountCredentialRequest request;
-                readResult = AccountProtocol::MessageTypes::read( body, request );
-                if ( readResult == FixedReadResult::Ok )
-                    _pLoginService->linkCredential( pSession->_token, LoginCredential{ request._loginName, request._password }, nowMs, tag );
-                break;
-            }
-            case AccountMethod::kLinkPlatform:
-            {
-                AccountPlatformRequest request;
-                readResult = AccountProtocol::MessageTypes::read( body, request );
-                if ( readResult == FixedReadResult::Ok )
-                    _pLoginService->linkPlatform( pSession->_token, request._provider, request._ticketBytes, nowMs, tag );
-                break;
-            }
-            case AccountMethod::kIssueGameTicket:
-            {
-                AccountGameTicketRequest request;
-                readResult = AccountProtocol::MessageTypes::read( body, request );
-                if ( readResult == FixedReadResult::Ok && request._serverID.empty() )
-                    readResult = FixedReadResult::ValidateFailed; // 서버 id 가 없으면 발급할 곳이 없다
-                if ( readResult == FixedReadResult::Ok )
-                    _pLoginService->issueGameTicket( pSession->_token, hashed_string( request._serverID ), nowMs, tag );
-                break;
-            }
-            case AccountMethod::kUnlinkPlatform:
-            {
-                AccountProviderRequest request;
-                readResult = AccountProtocol::MessageTypes::read( body, request );
-                if ( readResult == FixedReadResult::Ok )
-                    _pLoginService->unlinkPlatform( pSession->_token, request._provider, nowMs, tag );
-                break;
-            }
-            case AccountMethod::kListLinks:
-            {
-                _pLoginService->listLinks( pSession->_token, nowMs, tag );
-                break;
-            }
-            case AccountMethod::kRequestDeletion:
-            {
-                _pLoginService->requestDeletion( pSession->_token, nowMs, tag );
-                break;
-            }
-            case AccountMethod::kCancelDeletion:
-            {
-                _pLoginService->cancelDeletion( pSession->_token, nowMs, tag );
-                break;
-            }
-            default:
+            case AccountServerInternal::DispatchStatus::UnknownMethod:
             {
                 (void)host.respondError( context._token, OnlineError::kNotFound );
                 return;
             }
-        }
-        if ( readResult != FixedReadResult::Ok )
-        {
-            (void)host.respondError( context._token, OnlineError::kInvalidRequest );
-            return;
+            case AccountServerInternal::DispatchStatus::Malformed:
+            {
+                (void)host.respondError( context._token, OnlineError::kInvalidRequest );
+                return;
+            }
+            case AccountServerInternal::DispatchStatus::Ok:
+            {
+                break;
+            }
         }
         _mapTagToCall[tag] = PendingCall{ context._token, context._connection, context._method };
     }

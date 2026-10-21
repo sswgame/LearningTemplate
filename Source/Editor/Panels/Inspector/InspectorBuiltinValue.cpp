@@ -30,7 +30,7 @@ namespace sw::editor
                 return value.getPtr<T>();
             }
 
-            /** @brief 내장 타입 값 하나를 글로 씁니다. 타입이 늘었는데 여기 갈래가 없으면 컴파일되지 않습니다. */
+            /** @brief 내장 타입 값 하나를 글로 씁니다. 타입이 늘었는데 여기 분기가 없으면 컴파일되지 않습니다. */
             template <typename T>
             static void formatValue( const void* pValue, utf8* pOutBuf, uint32 capacity )
             {

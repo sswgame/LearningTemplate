@@ -85,7 +85,7 @@ namespace sw::editor
         if ( _pEditor == nullptr )
             return false;
 
-        // ed::Begin 이 캔버스 크기로 쓰는 값과 같다(남은 자리 전부).
+        // ed::Begin 이 캔버스 크기로 쓰는 값과 같다(남은 영역 전부).
         const ImVec2 available = ImGui::GetContentRegionAvail();
         _previousCanvasSize    = _canvasSize;
         _canvasSize            = float2{ available.x, available.y };
@@ -114,7 +114,7 @@ namespace sw::editor
 
     bool EditorNodeGraph::drawAddNodePopup( const vector<EditorGraphNodeKind>& listKind, uint32& outKindID, float2& outCanvasPosition )
     {
-        // 캔버스 안의 마우스 자리는 캔버스 좌표다 — 팝업을 그리려고 멈추기(Suspend) 전에 잡는다.
+        // 캔버스 안의 마우스 위치는 캔버스 좌표다 — 팝업을 그리려고 멈추기(Suspend) 전에 잡는다.
         const ImVec2 canvasMouse = ImGui::GetMousePos();
         ed::Suspend();
         if ( ed::ShowBackgroundContextMenu() )

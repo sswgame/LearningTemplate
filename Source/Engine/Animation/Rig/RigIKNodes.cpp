@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
@@ -96,13 +97,13 @@ namespace sw
                     uint32 bone = 0;
                     if ( context.findBone( spec._bone, bone ) == false )
                         return false;
-                    const auto it = std::find( listChainBone.begin(), listChainBone.end(), bone );
-                    if ( it == listChainBone.end() )
+                    const std::optional<size_t> chainFound = VectorUtil::findIndex( listChainBone, bone );
+                    if ( chainFound.has_value() == false )
                     {
                         SW_LOG_ERROR( "Rig '%#': limit bone '%#' is not in the chain", context._label, spec._bone.c_str() );
                         return false;
                     }
-                    const size_t   chainIndex = static_cast<size_t>( it - listChainBone.begin() );
+                    const size_t   chainIndex = *chainFound;
                     RigJointLimit& limit      = outListLimit[chainIndex];
                     limit                     = spec._limit;
                     limit._referenceRotation  = context._pSkeleton->getBone( bone )._referencePose._rotation;

@@ -149,7 +149,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief `state` 속성("down", "up")을 읽습니다. 없으면 누르고 떼는 한 번(`PressState::Tap`)이고, 모르는 값이면 false 입니다. */
+            /** @brief `state` 속성("down", "up")을 읽습니다. 없으면 누르고 놓는 한 번(`PressState::Tap`)이고, 모르는 값이면 false 입니다. */
             enum class PressState : uint8
             {
                 Tap,
@@ -237,7 +237,7 @@ namespace sw::editor
 
             /**
              * @brief @p mark 가 그린 창의 보이는 영역 밖(스크롤 아래 · 접힌 위)이면 실패로 알리고 true 를 반환합니다.
-             * @details 잘린 위젯의 사각형을 누르면 그 자리에 보이는 다른 위젯이나 빈 곳이 받아, 단계는 성공하고 뒤의 기대만 엉뚱하게 진다.
+             * @details 잘린 위젯의 사각형을 누르면 그 위치에 보이는 다른 위젯이나 빈 곳이 받아, 단계는 성공하고 뒤의 기대만 엉뚱하게 진다.
              */
             static bool reportClippedMark( AutomationRunner& runner, const AutomationStep& step, const string& mark )
             {
@@ -287,8 +287,8 @@ namespace sw::editor
                     return true;
                 }
                 // 누름과 뗌을 두 프레임으로 나누고, 뗌 앞에서 다시 레이블 위로 옮긴다. 그 사이에 플랫폼이 실제 커서를 넣기 때문이다.
-                // 수정자(Ctrl+클릭 다중 선택 등)는 누르기 전에 누르고, 뗀 뒤에 놓는다.
-                // state="down" 은 누른 채로 두고(드래그, 뷰포트 비행), state="up" 은 그 버튼을 뗀다. 그 사이 프레임에 다른 단계(키를 누른 채)를 넣을 수 있다.
+                // 수정자(Ctrl+클릭 다중 선택 등)는 누르기 전에 누르고, 놓은 뒤에 해제한다.
+                // state="down" 은 누른 채로 두고(드래그, 뷰포트 비행), state="up" 은 그 버튼을 놓는다. 그 사이 프레임에 다른 단계(키를 누른 채)를 넣을 수 있다.
                 if ( state == PressState::Up )
                 {
                     EditorSelfTestInput::setMouseButton( button, false );
@@ -313,7 +313,7 @@ namespace sw::editor
                 if ( state == PressState::Down )
                     return true;
                 EditorSelfTestInput::waitNextFrame();
-                // 누른 뒤 위젯이 사라졌으면(닫힌 팝업) 그 자리에서 뗀다 — 그래도 떼는 것은 해야 버튼이 눌린 채로 남지 않는다.
+                // 누른 뒤 위젯이 사라졌으면(닫힌 팝업) 그 자리에서 놓는다 — 그래도 놓아야 버튼이 눌린 채로 남지 않는다.
                 if ( EditorSelfTestInput::moveMouseToMark( mark, anchor ) == false )
                     SW_LOG_INFO( "[Scenario] editor widget '%#' was gone when the click released", mark.c_str() );
                 EditorSelfTestInput::setMouseButton( button, false );
@@ -372,7 +372,7 @@ namespace sw::editor
 
             /**
              * @brief 레이블 가운데를 누르고 (dx, dy) 픽셀만큼 드래그해 놓습니다. 키와 핸들 드래그에 씁니다. 프레임마다 커서를 다시 넣으며, 넣지 않은 프레임에는 플랫폼이 실제 커서를 넣습니다.
-             * @details 누름, 절반 이동, 끝 이동, 뗌을 네 프레임에 나눈다. 수정자는 누르기 전에 누르고 뗀 뒤에 놓는다.
+             * @details 누름, 절반 이동, 끝 이동, 놓기를 네 프레임에 나눈다. 수정자는 누르기 전에 누르고 놓은 뒤에 해제한다.
              */
             static bool runDrag( AutomationRunner& runner, const AutomationStep& step )
             {
@@ -533,7 +533,7 @@ namespace sw::editor
                 return validate( step, { "key", "state" }, "key", outError ) && parseKey( step, args, outError );
             }
 
-            /** @brief 수정자를 누르고 키를 눌렀다 뗀 뒤 수정자를 거꾸로 뗍니다. ImGui 가 이벤트를 프레임에 나눠 처리하므로 한 단계로 충분합니다. */
+            /** @brief 수정자를 누르고 키를 눌렀다 놓은 뒤 수정자를 거꾸로 해제합니다. ImGui 가 이벤트를 프레임에 나눠 처리하므로 한 단계로 충분합니다. */
             static bool runKey( AutomationRunner& runner, const AutomationStep& step )
             {
                 KeyArgs args;
@@ -895,7 +895,7 @@ namespace sw::editor
             /**
              * @brief 편집 중인 씬의 내용 해시입니다. 오브젝트마다 (이름, 부모 이름, 상태 XML — 다른 오브젝트 참조는 빼고)를 이름 순으로 접습니다.
              * @details 씬 뷰 카메라(에디터 카메라 오브젝트)는 뺀다 — 카메라를 움직이는 것은 편집이 아니다. 상태 XML 은 저장과 같은 직렬화기라 인스펙터로 고친 값이 다 들어간다.
-             *          `-gv_automationHashDump=1` 이면 오브젝트마다 해시를 로그로 남긴다(두 시점의 로그를 견줘 바뀐 오브젝트를 찾는다).
+             *          `-gv_automationHashDump=1` 이면 오브젝트마다 해시를 로그로 남긴다(두 시점의 로그를 비교해 바뀐 오브젝트를 찾는다).
              */
             static bool computeSceneContentHash( uint64& outHash )
             {

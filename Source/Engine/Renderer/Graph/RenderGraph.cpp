@@ -2,6 +2,7 @@
 
 #include "Engine/Renderer/Graph/RenderGraph.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Task/TaskManager.h"
 
@@ -166,7 +167,7 @@ namespace sw
             if ( from == to )
                 return;
             auto& listAdjacent = adjacency[from];
-            if ( std::find( listAdjacent.begin(), listAdjacent.end(), to ) == listAdjacent.end() )
+            if ( VectorUtil::contains( listAdjacent, to ) == false )
             {
                 listAdjacent.push_back( to );
                 ++mapInDegree[to];

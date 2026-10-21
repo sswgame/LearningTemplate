@@ -3,6 +3,7 @@
 #include "Engine/Destruction/DestructionDamage.h"
 
 #include "Core/Container/LittleEndianUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
@@ -211,7 +212,7 @@ namespace sw
         {
             _listScratchStrain[entry._leaf] = entry._strain;
             const uint32 groupID            = _listLeafGroup[entry._leaf];
-            if ( std::find( listDirtyGroup.begin(), listDirtyGroup.end(), groupID ) == listDirtyGroup.end() )
+            if ( VectorUtil::contains( listDirtyGroup, groupID ) == false )
                 listDirtyGroup.push_back( groupID );
         }
         const uint32 brokenNodeBefore = outChange._brokenNodeCount;
@@ -287,7 +288,7 @@ namespace sw
             _listLinkBroken[link] = SW_TRUE;
             ++outChange._brokenLinkCount;
             const uint32 otherGroup = _listLeafGroup[data._leafB];
-            if ( std::find( listDirtyGroup.begin(), listDirtyGroup.end(), otherGroup ) == listDirtyGroup.end() )
+            if ( VectorUtil::contains( listDirtyGroup, otherGroup ) == false )
                 listDirtyGroup.push_back( otherGroup );
         }
 

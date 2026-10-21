@@ -4,6 +4,7 @@
 
 #include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
@@ -543,12 +544,7 @@ namespace sw
         if ( _pCatalog == nullptr )
             return false;
         const int32 appointmentIndex = _pCatalog->findAppointmentIndex( appointmentID );
-        for ( const int32 brokenIndex : _listBrokenAppointment )
-        {
-            if ( brokenIndex == appointmentIndex )
-                return true;
-        }
-        return false;
+        return VectorUtil::contains( _listBrokenAppointment, appointmentIndex );
     }
 
     int32 ScheduleSystem::getDay() const

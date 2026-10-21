@@ -11,7 +11,7 @@ namespace sw::editor
 {
     /**
      * @class EditorCurveProbeComponent
-     * @brief `FloatCurve` 프로퍼티 하나를 든 컴포넌트입니다. 시나리오 `curveedit` 가 개발 명령 `component.add` 로 달아 인스펙터의 커브 편집기를 누릅니다.
+     * @brief `FloatCurve` 프로퍼티 하나를 가진 컴포넌트입니다. 시나리오 `curveedit` 가 개발 명령 `component.add` 로 달아 인스펙터의 커브 편집기를 누릅니다.
      * @details 기본 커브는 키 둘((0, 0) · (1, 1))입니다.
      */
     REFLECT( HideInMenu, DisplayName = "Curve Probe", Tooltip = "Automation: a curve property the curve editor scenario edits" )

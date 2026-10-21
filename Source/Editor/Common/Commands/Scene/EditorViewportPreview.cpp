@@ -63,7 +63,7 @@ namespace sw::editor
 
         /**
          * @brief 프리뷰가 `MaterialCache` 에서 잡아 둔 머티리얼 경로입니다. 비어 있으면 잡은 것이 없습니다.
-         * @details `acquire` 는 참조를 하나 올립니다. 프리뷰가 드는 참조는 **하나뿐**입니다 — 부를 때마다 올리기만 하면 편집할 때마다
+         * @details `acquire` 는 참조를 하나 늘립니다. 프리뷰가 가진 참조는 **하나뿐**입니다 — 부를 때마다 늘리기만 하면 편집할 때마다
          *          참조가 쌓여 그 머티리얼은 캐시에서 영영 지워지지 않습니다. 같은 경로면 다시 잡지 않고, 다른 경로로 갈
          *          때는 새 것을 메시에 건 **뒤에** 옛 것을 놓습니다(놓는 순간 사라질 수 있으므로 순서가 중요합니다).
          */
@@ -181,7 +181,7 @@ namespace sw::editor
             AssetManager* pResources = editor::findSubsystem<AssetManager>();
             if ( pResources != nullptr )
             {
-                // 같은 경로를 다시 걸 때는 이미 들고 있는 참조를 그대로 쓴다. 부를 때마다 올리면 편집 한 번에 참조가 하나씩 쌓이고,
+                // 같은 경로를 다시 걸 때는 이미 보관하고 있는 참조를 그대로 쓴다. 부를 때마다 올리면 편집 한 번에 참조가 하나씩 쌓이고,
                 // 그 머티리얼은 캐시에서 영영 지워지지 않는다.
                 const bool bAlreadyHeld = ( s_acquiredPreviewMaterialPath == assetPath );
                 Material*  pCached      = pResources->getAssetCache<MaterialCache>().acquire( assetPath, nullptr );
@@ -189,7 +189,7 @@ namespace sw::editor
                 {
                     if ( bAlreadyHeld )
                     {
-                        // 방금 올린 참조는 곧바로 되돌린다. 프리뷰가 드는 참조는 언제나 하나다.
+                        // 방금 늘린 참조는 곧바로 되돌린다. 프리뷰가 가진 참조는 언제나 하나다.
                         pResources->getAssetCache<MaterialCache>().release( assetPath );
                     }
                     else
@@ -216,7 +216,7 @@ namespace sw::editor
             pMesh->setMaterial( pMaterial );
 
         // 옛 참조는 **새 것을 건 뒤에** 놓는다. 먼저 놓으면 참조가 0 이 되어 캐시가 지우는데,
-        // 메시가 아직 그 포인터를 들고 있을 수 있다.
+        // 메시가 아직 그 포인터를 보관하고 있을 수 있다.
         if ( previousAcquiredPath.empty() == false )
         {
             AssetManager* pResources = editor::findSubsystem<AssetManager>();

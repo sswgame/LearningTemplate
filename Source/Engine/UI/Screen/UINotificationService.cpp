@@ -2,6 +2,7 @@
 
 #include "Engine/UI/Screen/UINotificationService.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/UI/Base/PanelWidget.h"
@@ -165,12 +166,8 @@ namespace sw
             if ( entry._desc._text == text )
                 return &entry;
         }
-        for ( Entry& entry : _listQueued )
-        {
-            if ( entry._desc._text == text )
-                return &entry;
-        }
-        return nullptr;
+        return VectorUtil::findIf( _listQueued, [&]( Entry& entry )
+        { return entry._desc._text == text; } );
     }
 
     UIScreen* UINotificationService::acquireScreen()

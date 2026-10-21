@@ -125,7 +125,7 @@ namespace sw::editor
          * @param listDrawnName 인스펙터 확장이 이미 그린 프로퍼티 이름입니다. 다시 그리지 않습니다.
          */
         void drawTypeProperties( void* pInstance, const TypeInfo* pTypeInfo, const utf8* pSectionTitle, const vector<hashed_string>& listDrawnName );
-        /** @brief 속성 표의 한 행을 그립니다 — 이름 칸(혼합 표시 · 즐겨찾기 별 · 이름 · 행 메뉴 · 되돌리기 버튼)과 값 칸(위젯). @p bDisabled 면 값 위젯을 막습니다. */
+        /** @brief 속성 테이블의 한 행을 그립니다 — 이름 필드(혼합 표시 · 즐겨찾기 별 · 이름 · 행 메뉴 · 되돌리기 버튼)과 값 필드(위젯). @p bDisabled 면 값 위젯을 막습니다. */
         void drawPropertyRow( MutableObjectAddress instance, const TypeInfo& typeInfo, const PropertyInfo& prop, bool bDisabled, bool bFavoriteTarget, ObjectAddress defaultInstance );
         /** @brief 이름 글을 오른쪽 클릭하면 열리는 행 메뉴(즐겨찾기 · 기본값 · 복사 · 붙여넣기)입니다. */
         void drawPropertyRowMenu( MutableObjectAddress instance, const PropertyInfo& prop, const string& favoriteKey, bool bFavoriteTarget, bool bFavorite, ObjectAddress defaultInstance );
@@ -159,7 +159,7 @@ namespace sw::editor
         void notifyPropertyEdited( const PropertyInfo& prop );
         /** @brief 타입의 메서드(FUNCTION) 목록을 그립니다. */
         void drawTypeMethods( void* pInstance, const TypeInfo* pTypeInfo );
-        /** @brief 타입의 이벤트(멀티캐스트 델리게이트 PROPERTY) 목록을 기반 클래스부터 그립니다. 인자 없는 이벤트는 그 자리에서 호출할 수 있습니다. */
+        /** @brief 타입의 이벤트(멀티캐스트 델리게이트 PROPERTY) 목록을 기반 클래스부터 그립니다. 인자 없는 이벤트는 즉시 호출할 수 있습니다. */
         void drawTypeEvents( void* pInstance, const TypeInfo* pTypeInfo );
         /** @brief FUNCTION 을 호출하고 반환값을 "Last result" 행에 씁니다. 인자 없는 Run 버튼과 Invoke 버튼이 같은 경로를 씁니다. */
         void invokeTypeMethod( void* pInstance, const TypeInfo* pTypeInfo, const FunctionInfo& method, const TaskArgs& args );

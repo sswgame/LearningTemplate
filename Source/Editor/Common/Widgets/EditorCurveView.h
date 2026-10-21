@@ -38,7 +38,7 @@ namespace sw::editor
         void fitToCurve( const FloatCurve& curve, float32 paddingRatio = 0.1f );
         /** @brief 화면 점 @p screen 에서 @p radius 픽셀 안의 가장 가까운 키입니다. 없으면 `invalid_index::kUint32` 입니다. */
         uint32 findKeyAt( const FloatCurve& curve, const float2& screen, float32 radius ) const;
-        /** @brief 키 접선 손잡이의 화면 자리입니다. 키에서 접선 방향으로 화면 길이 @p lengthPixels 떨어진 점이다. @p bLeave 면 나가는 쪽(오른쪽)입니다. */
+        /** @brief 키 접선 손잡이의 화면 위치입니다. 키에서 접선 방향으로 화면 길이 @p lengthPixels 떨어진 점이다. @p bLeave 면 나가는 쪽(오른쪽)입니다. */
         float2 computeTangentHandle( const FloatCurveKey& key, bool bLeave, float32 lengthPixels ) const;
         /** @brief 손잡이를 화면 점 @p handle 로 끌었을 때의 기울기(값/시간)입니다. 손잡이가 키와 같은 세로줄이면 기울기를 크게 잡는다. */
         float32 computeTangentFromHandle( const FloatCurveKey& key, const float2& handle ) const;

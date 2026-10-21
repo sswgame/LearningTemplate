@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Rule/WesternHorse.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -179,12 +180,7 @@ namespace sw
 
     bool WesternHorse::hasAbility( const hashed_string& abilityID ) const
     {
-        for ( const hashed_string& ability : _listAbility )
-        {
-            if ( ability == abilityID )
-                return true;
-        }
-        return false;
+        return VectorUtil::contains( _listAbility, abilityID );
     }
 
     float32 WesternHorse::computeRegenScale( float32 core ) const

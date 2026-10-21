@@ -2,6 +2,7 @@
 
 #include "ModuleHost/ModuleHost.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Task/TaskManager.h"
@@ -316,7 +317,7 @@ namespace sw
 #if !defined( SW_SHIPPING )
         for ( const string& name : listModuleName )
         {
-            const bool bGameScope = name == sw::config::kTargetGameModule || std::find( _listGameScopeModule.begin(), _listGameScopeModule.end(), name ) != _listGameScopeModule.end();
+            const bool bGameScope = name == sw::config::kTargetGameModule || VectorUtil::contains( _listGameScopeModule, name );
             if ( bGameScope )
             {
                 // 게임 상태는 새 이미지가 넘겨받을 유일한 것이다. 저장하지 못했으면 언로드하지 않는다. 옛 게임이 그대로 돈다.

@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Network/NetPairedAnimation/PairedAnimationReplication.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Network/BitStream.h"
 #include "Core/Network/Connection/NetHost.h"
 
@@ -23,7 +24,7 @@ namespace sw
         /** @brief 세션 id 목록에 @p sessionID 가 있으면 true 입니다. */
         bool containsPairedSessionID( const vector<uint32>& listSessionID, uint32 sessionID )
         {
-            return std::find( listSessionID.begin(), listSessionID.end(), sessionID ) != listSessionID.end();
+            return VectorUtil::contains( listSessionID, sessionID );
         }
     } // namespace
 } // namespace sw
@@ -177,9 +178,7 @@ namespace sw
     void PairedAnimationReplicationServer::onConnectionClosed( int32 connectionID, NetDisconnectReason reason )
     {
         (void)reason;
-        const auto iter = std::find( _listJoiningConnection.begin(), _listJoiningConnection.end(), connectionID );
-        if ( iter != _listJoiningConnection.end() )
-            _listJoiningConnection.erase( iter );
+        VectorUtil::removeFirst( _listJoiningConnection, connectionID );
     }
 
     bool PairedAnimationReplicationServer::makeSessionState( const PairedAnimationSession& session, PairedAnimationNetState& outState ) const

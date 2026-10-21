@@ -3,6 +3,7 @@
 #include "Engine/UserSettings/UserSettingsSchema.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
@@ -567,12 +568,7 @@ namespace sw
 
     const UserSettingCategoryDef* UserSettingsSchema::findCategory( const hashed_string& id ) const
     {
-        for ( const UserSettingCategoryDef& category : _listCategory )
-        {
-            if ( category._id == id )
-                return &category;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&UserSettingCategoryDef::_id>( _listCategory, id );
     }
 
     const ScalabilityGroupDef* UserSettingsSchema::findScalabilityGroupOf( const hashed_string& settingID ) const

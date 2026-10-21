@@ -142,7 +142,7 @@ namespace sw::editor
         pManager->getAllGameObjects( listObject );
         for ( const GameObject* pObject : listObject )
         {
-            (void)ObjectValidation::reportGameObject( *pObject, false ); // 결과는 ValidationIssueLog 에 남고 표가 읽는다
+            (void)ObjectValidation::reportGameObject( *pObject, false ); // 결과는 ValidationIssueLog 에 남고 테이블이 읽는다
         }
         SW_LOG_INFO( "Map Check: %# object(s) checked in %# ms", listObject.size(), stopwatch.getElapsedMilliseconds() );
         return static_cast<uint32>( listObject.size() );

@@ -77,7 +77,7 @@ namespace sw::editor
                 return hostOutcome;
         }
 
-        // 에디터 도구 시드는 에디터가 들고 있다. 깨진 파일이면 이전 값을 그대로 둔다(읽기 실패는 loadFromHostPath 가 키 이름과 오류로 알린다).
+        // 에디터 도구 시드는 에디터가 보관하고 있다. 깨진 파일이면 이전 값을 그대로 둔다(읽기 실패는 loadFromHostPath 가 키 이름과 오류로 알린다).
         const string toolDefaultsPath = EditorPaths::resolveProjectRelativePath( config::kFileRuntimeEditorToolDefaults );
         if ( FileUtil::pathsEqualNormalized( toolDefaultsPath, fullPath ) == false )
             return ReloadOutcome::NotTracked;

@@ -2,6 +2,7 @@
 
 #include "Engine/Animation/AnimationJSONUtil.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Animation/Skeletal/Pose.h"
@@ -21,7 +22,7 @@ namespace sw
         bool bKnown = true;
         for ( const string& memberName : object.getMemberNames() )
         {
-            const bool bFound = std::find( listKnownKey.begin(), listKnownKey.end(), string_view( memberName ) ) != listKnownKey.end();
+            const bool bFound = VectorUtil::contains( listKnownKey, string_view( memberName ) );
             if ( bFound )
                 continue;
             SW_LOG_ERROR( "%#: unknown key '%#'", context, memberName.c_str() );

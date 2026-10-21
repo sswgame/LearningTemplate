@@ -3,6 +3,7 @@
 #include "GameFramework/Base/Gameplay/Appearance/UserAppearancePresetStore.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
@@ -45,22 +46,14 @@ namespace sw
 
     UserAppearancePreset* UserAppearancePresetStore::findMutablePreset( string_view name )
     {
-        for ( UserAppearancePreset& preset : _listPreset )
-        {
-            if ( string_view( preset._name.c_str(), preset._name.size() ) == name )
-                return &preset;
-        }
-        return nullptr;
+        return VectorUtil::findIf( _listPreset, [&]( UserAppearancePreset& preset )
+        { return string_view( preset._name.c_str(), preset._name.size() ) == name; } );
     }
 
     const UserAppearancePreset* UserAppearancePresetStore::findPresetByName( string_view name ) const
     {
-        for ( const UserAppearancePreset& preset : _listPreset )
-        {
-            if ( string_view( preset._name.c_str(), preset._name.size() ) == name )
-                return &preset;
-        }
-        return nullptr;
+        return VectorUtil::findIf( _listPreset, [&]( const UserAppearancePreset& preset )
+        { return string_view( preset._name.c_str(), preset._name.size() ) == name; } );
     }
 
     int32 UserAppearancePresetStore::savePreset( string_view name, const AppearanceSelection& selection )

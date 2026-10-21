@@ -19,7 +19,7 @@ namespace sw::editor
             /**
              * @brief EditorCommandKey 순서와 1:1로 맞춘 표시 이름 표입니다.
              * @details 문자 키를 문자 코드 오프셋으로 계산하면 F 키·Space 가 예외가 되어 분기가 늘어납니다.
-             *          열거형을 하나 늘릴 때 여기 한 줄만 늘어나도록 표로 둡니다 (아래 static_assert 가
+             *          열거형을 하나 늘릴 때 여기 한 줄만 늘어나도록 테이블로 둡니다 (아래 static_assert 가
              *          개수 불일치를 컴파일 타임에 잡습니다).
              */
             inline static const utf8* const _s_arrKeyName[] = {
@@ -34,7 +34,7 @@ namespace sw::editor
                            "EditorCommandKey 와 표시 이름 표의 개수가 다릅니다" );
 
             // 개수만 보는 static_assert 는 **가운데 삽입**을 잡지 못한다(이름을 하나 더하면 개수가 다시 맞는다).
-            // 그 경우는 열거형 값의 자리를 고정한 헤더의 static_assert 가 잡는다. `EditorCommandKey` 선언 바로 아래에 있다.
+            // 그 경우는 열거형 값의 번호를 고정한 헤더의 static_assert 가 잡는다. `EditorCommandKey` 선언 바로 아래에 있다.
 
             /** @brief 수정자와 키 이름을 outLabel 뒤에 붙입니다. 키가 없으면 아무것도 하지 않습니다. */
             static void appendShortcut( const EditorCommandShortcut& shortcut, fixed_string<constant::kMaxBuffer64>& outLabel )
@@ -104,7 +104,7 @@ namespace sw::editor
                 }
             };
 
-            /** @brief 같은 메뉴에서 이웃한 두 순서가 다른 묶음이면 true 입니다(사이에 구분선). */
+            /** @brief 같은 메뉴에서 이웃한 두 순서가 다른 그룹이면 true 입니다(사이에 구분선). */
             static bool isGroupBoundary( int32 previousOrder, int32 order )
             {
                 return ( previousOrder / commandmenu::kGroupSpan ) != ( order / commandmenu::kGroupSpan );

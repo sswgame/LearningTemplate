@@ -3,6 +3,7 @@
 #include "Engine/Character/Fit/BodyShape.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/Skeletal/Pose.h"
@@ -100,12 +101,7 @@ namespace sw
 
     const BoneProportionEntry* BoneProportion::findBone( const hashed_string& bone ) const
     {
-        for ( const BoneProportionEntry& entry : _listEntry )
-        {
-            if ( entry._bone == bone )
-                return &entry;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&BoneProportionEntry::_bone>( _listEntry, bone );
     }
 
     void BoneProportion::apply( CharacterBoneArray& inoutBones ) const
@@ -227,12 +223,7 @@ namespace sw
 
     const BodyShapeAxis* BodyShapeSet::findAxis( const hashed_string& name ) const
     {
-        for ( const BodyShapeAxis& axis : _listAxis )
-        {
-            if ( axis._name == name )
-                return &axis;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&BodyShapeAxis::_name>( _listAxis, name );
     }
 
     bool BodyShapeSet::validate( const AppearanceGeometry* pBody, const CharacterBoneArray* pBones, string* pOutError ) const

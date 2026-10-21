@@ -4,7 +4,7 @@
  * @details - 경제 서비스와 같은 구조이다. 요청이 들어오는 경로는 둘이며 `onServiceRequest` 는 로그인한 GM 연결의 요청이고 `submitCall` 은 같은 프로세스와 테스트의 요청이다. 작업 하나가 명령 하나이다.
  *          - 조회는 계정 키트의 이름 색인(`IAccountNameIndex`, 저장소)으로 이름이나 id 를 찾으므로 접속하지 않은 계정도 찾는다. 접속 여부만 이 프로세스의 계정 디렉터리로 채운다.
  *          - 세션 끊기는 새로 적용된 정지에서만 한다. 재시도로 받은 지난 결과에서는 다시 끊지 않는다.
- *          - 점검과 공지 명령은 등급만 저장소에서 확인하고 서버 디렉터리 키트(`IServerDirectoryControl`)에 넘긴다. 효과와 감사 기록은 그 키트가 쓰고, 완료는 `update` 가 거둔다.
+ *          - 점검과 공지 명령은 등급만 저장소에서 확인하고 서버 디렉터리 키트(`IServerDirectoryControl`)에 넘긴다. 효과와 감사 기록은 그 키트가 쓰고, 완료는 `update` 가 회수한다.
  *          - 운영 포트는 GM 전용 호스트로 따로 두는 것을 권한다. 사설망과 TLS 를 쓴다. 첫 관리자는 서버 조립 단계가 기동할 때 `seedRole` 로 넣는다.
  */
 #pragma once
@@ -23,6 +23,7 @@ namespace sw
     class IAccountDirectory;
     class IAccountNameIndex;
     class IAccountSessionControl;
+    class IBalanceNotice;
     class ILedgerPolicy;
     class ILiveEventControl;
     class IServerDirectoryControl;
@@ -40,6 +41,7 @@ namespace sw
         const ILedgerPolicy*     _pPolicy{ nullptr };         ///< 지급 상한이다. 게임이 CurrencyCatalog 를 넘긴다
         MetricRegistry*          _pMetricRegistry{ nullptr };
         IServerDirectoryControl* _pDirectoryControl{ nullptr }; ///< 점검과 공지 명령을 넘긴다. 서버 디렉터리 키트가 없으면 null 이고 그 명령은 Unavailable 이다
+        IBalanceNotice*          _pBalanceNotice{ nullptr };    ///< 지급과 회수로 바뀐 잔액을 그 계정에 알린다. 경제 키트가 없으면 null 이고 알리지 않는다
         ILiveEventControl*       _pLiveEventControl{ nullptr }; ///< 라이브 이벤트 명령을 넘긴다. 라이브 운영 키트가 없으면 null 이고 그 명령은 Unavailable 이다
     };
 } // namespace sw
@@ -96,7 +98,7 @@ namespace sw
         };
 
         void startCall( AccountID adminID, uint16 method, const AdminRequest& request, const NetIdempotencyKey& idempotencyKey, int64 nowMs, PendingCall pending );
-        /** @brief 등급을 확인한 점검과 공지 명령을 서버 디렉터리 키트에 넘깁니다. 넘겼으면 true 이며 완료는 `update` 가 거둔다. */
+        /** @brief 등급을 확인한 점검과 공지 명령을 서버 디렉터리 키트에 넘깁니다. 넘겼으면 true 이며 완료는 `update` 가 회수한다. */
         [[nodiscard]] bool forwardDirectoryCall( const PendingCall& pending );
         /** @brief 등급을 확인한 라이브 이벤트 명령을 라이브 운영 키트에 넘깁니다. 목록은 바로 @p inoutReply 에 채우고 false, 바꾸기는 넘기고 true 입니다. */
         [[nodiscard]] bool forwardLiveEventCall( const PendingCall& pending, AdminReply& inoutReply );

@@ -37,6 +37,18 @@ namespace sw
         return s_table;
     }
 
+    bool ServiceReportStore::readClosedTimeMs( const ServiceRecord& record, int64& outTimeMs )
+    {
+        const string_view key = record._key;
+        if ( StringUtil::startsWith( key, ServiceReportInternal::kClosedPrefix ) == false )
+            return false;
+        uint64 timeMs = 0;
+        if ( ServiceKeyUtil::parseHex64( key.substr( ServiceReportInternal::kClosedPrefix.size(), static_cast<size_t>( ServiceKeyUtil::kHexWidth ) ), timeMs ) == false )
+            return false;
+        outTimeMs = static_cast<int64>( timeMs );
+        return true;
+    }
+
     string ServiceReportStore::makeOpenKey( int64 createdMs, AccountID reporterID, uint64 uniqueID )
     {
         string key{ ServiceReportInternal::kOpenPrefix };

@@ -19,7 +19,7 @@ namespace sw::editor
 {
     /**
      * @brief 컴포넌트 타입 하나의 인스펙터 확장입니다. 그 타입과 **하위 타입** 모두에 걸립니다(기반 → 파생 순서로 차례로 그립니다).
-     * @details 언리얼 `IDetailCustomization` 의 자리입니다. 확장은 자기 구역을 더 그리고, 직접 그린 반사 프로퍼티만 감춥니다(`collectDrawnProperties`
+     * @details 언리얼 `IDetailCustomization` 에 해당합니다. 확장은 자기 구역을 더 그리고, 직접 그린 반사 프로퍼티만 감춥니다(`collectDrawnProperties`
      *          — 언리얼 `HideProperty`). 나머지 반사 프로퍼티는 인스펙터가 상속분까지 그립니다(`InspectorPropertyLayout`).
      */
     class SW_EDITOR_API IInspectorComponent

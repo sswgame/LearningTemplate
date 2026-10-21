@@ -13,7 +13,7 @@ namespace sw::editor
 {
     namespace
     {
-        /** @brief 파일 뿌리입니다. */
+        /** @brief 파일 루트입니다. */
         static constexpr ConfigKeyDoc kArrTextureImportRootKeyDoc[] = {
             {"presets",   "object", "", "프리셋 이름 → 규칙(아래 키). 위에서 아래로 읽으니 부모 프리셋을 먼저 적는다"},
             {  "rules", "object[]", "",             "규칙 목록(아래 키). 첫 매칭이 이긴다 — 조건 없는 규칙은 맨 끝에"},
@@ -129,7 +129,7 @@ namespace sw::editor
 
         SW_LOG_INFO( "Loaded TextureImportConfig: %# presets, %# rules.", _mapPreset.size(), _listRule.size() );
 
-        // 규칙을 적어 두었는데 아무 일도 일어나지 않는 것(조건 없는 규칙이 중간에 있다)은 로드 오류가 아니라 경고다 — 그 자리를 이름으로 짚어 준다.
+        // 규칙을 적어 두었는데 아무 일도 일어나지 않는 것(조건 없는 규칙이 중간에 있다)은 로드 오류가 아니라 경고다 — 그 위치를 이름으로 짚어 준다.
         const size_t shadowingIndex = findShadowingRuleIndex();
         if ( shadowingIndex < _listRule.size() )
         {

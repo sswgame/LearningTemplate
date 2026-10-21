@@ -10,6 +10,7 @@
 #include "GameFramework/Base/Online/Identity/AccountPresence.h"
 #include "GameFramework/Base/Online/Identity/OfflinePush.h"
 #include "GameFramework/Base/Online/Identity/OnlinePushRelay.h"
+#include "GameFramework/Base/Online/Ledger/IBalanceNotice.h"
 #include "GameFramework/Base/Online/Mail/ServiceMail.h"
 #include "GameFramework/Base/Online/Store/ServiceStore.h"
 #include "GameFramework/Base/Online/Store/ServiceStoreUtil.h"
@@ -414,6 +415,13 @@ namespace sw
         {
             if ( _arrExpiredCounter[actionIndex] != nullptr && arrCount[actionIndex] > 0 )
                 _arrExpiredCounter[actionIndex]->add( static_cast<uint64>( arrCount[actionIndex] ) );
+        }
+        if ( _settings._pBalanceNotice != nullptr )
+        {
+            for ( const MailboxBalanceChange& change : stats._listChange )
+            {
+                _settings._pBalanceNotice->notifyBalancesChanged( change._accountID, vector<LedgerBalance>{ change._balance } ); // 돌려받은 계정이 접속해 있으면 지갑이 바로 맞는다
+            }
         }
         if ( stats._failedCount > 0 )
             SW_LOG_WARNING( "Mail sweep left %# expired mails for the next pass", stats._failedCount );

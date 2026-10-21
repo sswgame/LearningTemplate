@@ -101,7 +101,7 @@ namespace sw::editor
         }
         EditorChrome::endToolbar();
 
-        // 화면 방식 · 해상도 확인 — 게임 메뉴의 "이 화면을 유지할까요? N 초" 대화상자 자리다.
+        // 화면 방식 · 해상도 확인 — 게임 메뉴의 "이 화면을 유지할까요? N 초" 대화상자에 해당한다.
         if ( settings.isAwaitingConfirm() )
         {
             ImGui::Text( "Keep these display settings? Reverting in %.0f s", static_cast<float64>( settings.getConfirmSecondsLeft() ) );

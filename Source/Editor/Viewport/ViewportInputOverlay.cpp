@@ -57,7 +57,7 @@ namespace sw::editor
                 uint32 color( const Color& base ) const { return fade( base, _alpha ); }
             };
 
-            /** @brief 페이스 버튼 하나의 자리와 색입니다. 다이아몬드의 네 버튼이 이 표 한 줄씩입니다. */
+            /** @brief 페이스 버튼 하나의 위치와 색입니다. 다이아몬드의 네 버튼이 이 테이블 한 줄씩입니다. */
             struct FaceButton
             {
                 GamepadButton _button;

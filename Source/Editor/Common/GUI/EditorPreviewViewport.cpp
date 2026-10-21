@@ -44,7 +44,7 @@ namespace sw::editor
             static constexpr float32 kMaxPitch              = 1.5f;
             static constexpr float32 kRotateRadiansPerPixel = 0.01f;
             static constexpr float32 kZoomStepScale         = 0.9f;
-            /** @brief 스크린샷을 찍기 전에 그릴 프레임 수입니다 — 첫 프레임은 클리어 색이고 렌더러 · PSO 를 세우는 데 몇 프레임 걸린다. */
+            /** @brief 스크린샷을 찍기 전에 그릴 프레임 수입니다 — 첫 프레임은 클리어 색이고 렌더러 · PSO 를 준비하는 데 몇 프레임 걸린다. */
             static constexpr uint32 kScreenshotWarmupFrames = 30;
         };
     } // namespace
@@ -102,7 +102,7 @@ namespace sw::editor
 
         SceneManager* pSceneManager = findSubsystem<SceneManager>();
         if ( _pScene != nullptr && pSceneManager != nullptr )
-            (void)pSceneManager->destroyPreviewScene( _pScene ); // 매니저가 먼저 내려갔으면 그 shutdown 이 이미 내렸다
+            (void)pSceneManager->destroyPreviewScene( _pScene ); // 매니저가 먼저 종료했으면 그 shutdown 이 이미 정리했다
         _pScene              = nullptr;
         _sceneKey            = kInvalidSceneKey;
         _submittedFrameCount = 0;

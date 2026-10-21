@@ -6,7 +6,7 @@
  *          - 붙을 때 `help` 를 한 번 물어 입력줄 자동완성의 명령 이름(`getCommandNames`)을 채운다. 답의 둘째 줄부터 `  <사용법> - <설명>` 이고 사용법의 첫 낱말이 이름이다.
  *          - 하이어라키는 `scene.tree` 의 답(`<id> <이름> parent=… active=… components=…`)을 줄마다 `EditorRemoteObjectRow` 로 나눈다.
  *          - 값은 `object.dump <이름>` 의 답을 그대로 보인다(`Type.property = value`).
- *          언리얼 PIE 의 서버 월드 아웃라이너 · 유니티 Multiplayer Play Mode 의 가상 플레이어 인스펙터 자리이다. 에디터가 띄운 세션이 아니어도 주소 · 포트 · 토큰으로 붙는다.
+ *          언리얼 PIE 의 서버 월드 아웃라이너 · 유니티 Multiplayer Play Mode 의 가상 플레이어 인스펙터에 해당한다. 에디터가 띄운 세션이 아니어도 주소 · 포트 · 토큰으로 붙는다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -69,7 +69,7 @@ namespace sw::editor
         /** @brief 지금(또는 마지막으로) 붙은 주소입니다. */
         const NetAddress& getRemoteAddress() const { return _remoteAddress; }
 
-        /** @brief `scene.tree` 를 물어 하이어라키를 새로 채웁니다. 실패하면 false 이고 표는 그대로 둡니다. */
+        /** @brief `scene.tree` 를 물어 하이어라키를 새로 채웁니다. 실패하면 false 이고 테이블은 그대로 둡니다. */
         [[nodiscard]] bool refreshTree();
         /** @brief `object.dump <이름>` 을 물어 덤프 글을 채우고 그 이름을 고른 오브젝트로 둡니다. 실패하면 false 이고 덤프 글은 오류 글입니다. */
         [[nodiscard]] bool dumpObject( string_view name );
@@ -92,7 +92,7 @@ namespace sw::editor
         [[nodiscard]] static bool parseObjectRows( string_view treeBody, vector<EditorRemoteObjectRow>& outListRow );
 
     private:
-        /** @brief 요청 하나를 보냅니다. 끊겼으면 연결 상태를 내리고 오류 글을 남깁니다. */
+        /** @brief 요청 하나를 보냅니다. 끊겼으면 연결 상태를 해제하고 오류 글을 남깁니다. */
         [[nodiscard]] bool request( string_view commandLine, string& outBody );
         void               appendConsoleLine( string line );
 

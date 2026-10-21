@@ -1,6 +1,6 @@
 /**
  * @file EditorComponentMenu.h
- * @brief "Add Component" 목록(검색 칸 + 묶음별 항목)입니다. Hierarchy 의 오른쪽 클릭 메뉴와 인스펙터의 Add Component 단추가 같이 씁니다.
+ * @brief "Add Component" 목록(검색 필드 + 그룹별 항목)입니다. Hierarchy 의 오른쪽 클릭 메뉴와 인스펙터의 Add Component 단추가 같이 씁니다.
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -24,7 +24,7 @@ namespace sw::editor
     {
         /**
          * @brief 검색 칸과 컴포넌트 종류 목록을 그립니다. 메뉴에 숨긴 타입(`HideInMenu`)은 빠집니다.
-         * @param search 검색어 버퍼(부르는 쪽이 들고 있다 — 열 때마다 비울지는 부르는 쪽이 정한다).
+         * @param search 검색어 버퍼(부르는 쪽이 보관하고 있다 — 열 때마다 비울지는 부르는 쪽이 정한다).
          * @param pMarkPrefix 이름 머리(`<머리>.search` · `<머리>.<타입>`).
          * @param bFocusSearch true 면 검색 칸에 초점을 둔다(팝업을 막 열었을 때). 그때 Enter 는 검색에 맞는 첫 항목을 고른다.
          * @param outbFailed 더하기가 실패했으면 true 가 된다(부르는 쪽이 알림 창을 연다).

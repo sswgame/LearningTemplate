@@ -29,7 +29,7 @@ namespace sw::editor
 {
     /**
      * @class IMultiplayerTab
-     * @brief 탭 하나입니다. 창이 등록마다 하나를 만들어 들고 있으므로 편집 칸 같은 상태를 멤버로 둡니다.
+     * @brief 탭 하나입니다. 창이 등록마다 하나를 만들어 보관하고 있으므로 편집 필드 같은 상태를 멤버로 둡니다.
      * @details 확장 모듈이 다시 로드되면 창이 등록 세대를 보고 인스턴스를 새로 만든다(상태는 사라진다).
      */
     class IMultiplayerTab

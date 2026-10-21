@@ -2,6 +2,7 @@
 
 #include "Games/StarSkirmish/SkirmishUnitComponent.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Automation/AutomationProbe.h"
@@ -125,7 +126,7 @@ namespace sw
         for ( const SkirmishUnitModel& entry : SkirmishUnitComponentInternal::kArrUnitModel )
         {
             string path = makeModelPath( entry._pModel );
-            if ( std::find( listPath.begin(), listPath.end(), path ) == listPath.end() )
+            if ( VectorUtil::contains( listPath, path ) == false )
                 listPath.push_back( std::move( path ) );
         }
         return listPath;

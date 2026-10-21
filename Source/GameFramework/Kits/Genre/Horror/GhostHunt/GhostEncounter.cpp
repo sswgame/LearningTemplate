@@ -281,12 +281,7 @@ namespace sw
     {
         if ( ghostID == 0 )
             return nullptr;
-        for ( GhostInstance& ghost : _listGhost )
-        {
-            if ( ghost._id == ghostID )
-                return &ghost;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&GhostInstance::_id>( _listGhost, ghostID );
     }
 
     int32 GhostEncounter::countRemaining() const

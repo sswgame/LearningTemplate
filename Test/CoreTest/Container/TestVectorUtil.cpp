@@ -92,6 +92,19 @@ SW_TEST_CASE( VectorUtilTest, RemoveIfKeepsOrderAndCounts )
 }
 
 /**
+ * @brief [VectorUtilTest] removeValue 는 같은 값을 모두 지우고 남은 순서를 지키며 지운 개수를 돌려준다
+ */
+SW_TEST_CASE( VectorUtilTest, RemoveValueKeepsOrderAndCounts )
+{
+    sw::vector<int32> list{ 1, 2, 1, 3, 1 };
+    SW_EXPECT_EQUAL( size_t{ 3 }, sw::VectorUtil::removeValue( list, 1 ) );
+    SW_EXPECT_EQUAL( size_t{ 2 }, list.size() );
+    SW_EXPECT_EQUAL( 2, list[0] );
+    SW_EXPECT_EQUAL( 3, list[1] );
+    SW_EXPECT_EQUAL( size_t{ 0 }, sw::VectorUtil::removeValue( list, 9 ) );
+}
+
+/**
  * @brief [VectorUtilTest] sortUnique 는 정렬한 뒤 같은 이웃을 하나만 남기고, 비교자를 주면 그 비교자로 같음을 판단한다
  */
 SW_TEST_CASE( VectorUtilTest, SortUniqueDropsDuplicates )

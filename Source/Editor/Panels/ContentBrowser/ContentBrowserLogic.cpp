@@ -11,10 +11,10 @@ namespace sw::editor
     {
         struct ContentBrowserLogicInternal
         {
-            /** @brief 즐겨찾기 묶음 조각의 이름입니다(누를 수 없다). */
+            /** @brief 즐겨찾기 그룹 조각의 이름입니다(누를 수 없다). */
             static constexpr const utf8* kFavoritesLabel = "Favorites";
 
-            /** @brief 구분자를 `/` 로 맞추고 끝 슬래시를 뗀 경로입니다(대소문자는 그대로 — 탐색은 실제 이름을 쓴다). */
+            /** @brief 구분자를 `/` 로 맞추고 끝 슬래시를 제거한 경로입니다(대소문자는 그대로 — 탐색은 실제 이름을 쓴다). */
             static string makeFolderPath( string_view path ) { return FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( path ) ); }
         };
     } // namespace
@@ -42,7 +42,7 @@ namespace sw::editor
         }
 
         outListCrumb.push_back( ContentBrowserCrumb{ string{ rootLabel }, root } );
-        // 루트 뒤의 폴더마다 한 조각 — 조각의 경로는 원래 경로의 그 자리까지다(대소문자 · 구분자 그대로).
+        // 루트 뒤의 폴더마다 한 조각 — 조각의 경로는 원래 경로의 그 위치까지다(대소문자 · 구분자 그대로).
         const string_view folderView{ folder };
         size_t            start = root.size() + 1;
         while ( start < folderView.size() )

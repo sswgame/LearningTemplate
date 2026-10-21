@@ -283,6 +283,52 @@ namespace sw
         return s_table;
     }
 
+    bool Ledger::readJournalTimeMs( const ServiceRecord& record, int64& outTimeMs )
+    {
+        BitReader reader( record._bytes.data(), static_cast<int32>( record._bytes.size() ) );
+        if ( reader.readVarUint() != LedgerInternal::kJournalFormat )
+            return false;
+        const int64 timeMs = reader.readVarInt();
+        if ( reader.hasOverflowed() )
+            return false;
+        outTimeMs = timeMs;
+        return true;
+    }
+
+    bool Ledger::readHistoryTimeMs( const ServiceRecord& record, int64& outTimeMs )
+    {
+        const string_view key        = record._key;
+        size_t            timeOffset = 0;
+        if ( key.starts_with( "acct/" ) )
+            timeOffset = 5 + static_cast<size_t>( ServiceKeyUtil::kHexWidth ) + 1; // "acct/<16 진>/"
+        else if ( key.starts_with( "sys/mint/" ) || key.starts_with( "sys/sink/" ) )
+            timeOffset = 9;
+        else if ( key.starts_with( "esc/" ) )
+        {
+            // "esc/<도메인>/<토큰>/" — 도메인과 토큰의 글자 규칙에 '/' 가 없으므로 슬래시 셋째 뒤가 시각이다
+            size_t slashCount = 0;
+            for ( size_t index = 0; index < key.size() && slashCount < 3; ++index )
+            {
+                if ( key[index] == '/' )
+                {
+                    ++slashCount;
+                    timeOffset = index + 1;
+                }
+            }
+            if ( slashCount < 3 )
+                return false;
+        }
+        else
+            return false;
+        if ( key.size() < timeOffset + static_cast<size_t>( ServiceKeyUtil::kHexWidth ) )
+            return false;
+        uint64 timeMs = 0;
+        if ( ServiceKeyUtil::parseHex64( key.substr( timeOffset, static_cast<size_t>( ServiceKeyUtil::kHexWidth ) ), timeMs ) == false )
+            return false;
+        outTimeMs = static_cast<int64>( timeMs );
+        return true;
+    }
+
     const hashed_string& Ledger::getHistoryTable()
     {
         static const hashed_string s_table{ "ledger_history" };

@@ -44,7 +44,7 @@ namespace sw::editor
         pScene->getObjectManager()->flushSceneTransforms(); // 기즈모가 읽는 월드 행렬을 이번 프레임 값으로
         _gizmo.draw( selection, arrView, arrProj, viewport.getImagePosition(), imageSize, _settings );
 
-        // 클릭 피킹 — 왼쪽 끌기는 오빗이라 끌지 않고 뗀 클릭만 집는다. 기즈모 위의 클릭은 기즈모의 것이다.
+        // 클릭 피킹 — 왼쪽 끌기는 오빗이라 끌지 않고 놓은 클릭만 집는다. 기즈모 위의 클릭은 기즈모의 것이다.
         const ImGuiIO& io             = ImGui::GetIO();
         const float2&  imagePos       = viewport.getImagePosition();
         const bool     bInsideImage   = imagePos._x <= io.MousePos.x && io.MousePos.x < imagePos._x + imageSize._x && imagePos._y <= io.MousePos.y && io.MousePos.y < imagePos._y + imageSize._y;

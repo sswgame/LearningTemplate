@@ -7,7 +7,7 @@
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardServer.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardService.h"
 
-// 순위표 키트의 서버 조립 — 순위표 서비스와 바인딩을 올리고, 보드 · 업적 정의 데이터를 등록하며, 시즌 정산을 예약 작업에 건다.
+// 순위표 키트의 서버 조립 — 순위표 서비스와 바인딩을 만들고, 보드 · 업적 정의 데이터를 등록하며, 시즌 정산을 예약 작업에 건다.
 // 표시 이름과 접속 여부는 계정 키트, 다른 서버 계정의 업적 알림은 접속 상태를 받는다.
 // 옵션:
 //   catalog  보드 · 업적 정의(리소스 경로, `<LeaderboardCatalog>`).
@@ -109,7 +109,7 @@ namespace sw
 
             void shutdown() override
             {
-                // 순위표 로직은 맡긴 저장 일을 회수한 뒤(저장소를 내린 뒤) 내린다 — 서비스 계약.
+                // 순위표 로직은 맡긴 저장 일을 회수한 뒤(저장소를 종료한 뒤) 종료한다 — 서비스 계약.
                 if ( _bStarted )
                     _service.shutdown();
                 _bStarted = false;

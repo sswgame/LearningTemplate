@@ -47,7 +47,7 @@ namespace sw::editor
         void drawPresetsPopup();
         /** @brief 핀 고정된 즐겨찾기 변수 섹션을 그립니다. */
         void drawPinnedSection( GlobalVariableManager& gvm );
-        /** @brief 모듈별 묶음 또는 평면 모드로 변수 테이블을 그립니다. */
+        /** @brief 모듈별 그룹 또는 평면 모드로 변수 테이블을 그립니다. */
         void drawVariableTable( const vector<GlobalVariableInfo*>& listFiltered );
         /** @brief 기본 창 크기를 반환합니다. */
         float2 getInitialPanelSize() const override { return float2{ 680.0f, 480.0f }; }

@@ -2,6 +2,7 @@
 
 #include "Engine/UI/UISystem.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
@@ -417,12 +418,12 @@ namespace sw
                 continue;
             for ( const string& sheet : current->_listStyleSheet )
             {
-                if ( std::find( outListStyleSheet.begin(), outListStyleSheet.end(), sheet ) == outListStyleSheet.end() )
+                if ( VectorUtil::contains( outListStyleSheet, sheet ) == false )
                     outListStyleSheet.push_back( sheet );
             }
             for ( const string& fragment : current->_listFragment )
             {
-                if ( std::find( listDocument.begin(), listDocument.end(), fragment ) == listDocument.end() )
+                if ( VectorUtil::contains( listDocument, fragment ) == false )
                     listDocument.push_back( fragment );
             }
         }
@@ -537,7 +538,7 @@ namespace sw
                 continue;
             for ( const string& fragment : document->_listFragment )
             {
-                if ( std::find( listDocument.begin(), listDocument.end(), fragment ) == listDocument.end() )
+                if ( VectorUtil::contains( listDocument, fragment ) == false )
                     listDocument.push_back( fragment );
             }
         }

@@ -2,6 +2,8 @@
 
 #include "Engine/Physics/PhysicsSettings.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
@@ -119,12 +121,7 @@ namespace sw
 
     const PhysicsMaterialDef* PhysicsSettings::findMaterial( const hashed_string& name ) const
     {
-        for ( const PhysicsMaterialDef& material : _listMaterial )
-        {
-            if ( material._name == name )
-                return &material;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&PhysicsMaterialDef::_name>( _listMaterial, name );
     }
 
     CollisionLayers PhysicsSettings::makeCollisionLayers() const

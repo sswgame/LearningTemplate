@@ -15,7 +15,7 @@ namespace sw::editor
         uint64 _totalNanos{ 0 };  ///< 이 경로로 불린 시간의 합
         uint64 _selfNanos{ 0 };   ///< 합에서 자식 구간을 뺀 시간
         uint32 _slot{ 0 };        ///< `FrameProfiler` 슬롯 — 이름은 `FrameProfiler::findScopeName`
-        uint32 _parent{ 0 };      ///< 부모 노드 번호(뿌리는 `kNoParent`)
+        uint32 _parent{ 0 };      ///< 부모 노드 번호(루트는 `kNoParent`)
         uint32 _threadIndex{ 0 }; ///< 녹화의 스레드 번호
         uint32 _callCount{ 0 };   ///< 불린 횟수
         uint32 _firstChild{ 0 };  ///< 첫 자식 노드 번호(없으면 `kNoParent`)
@@ -37,11 +37,11 @@ namespace sw::editor
         /** @brief 부모 · 자식 · 형제가 없음을 뜻하는 노드 번호입니다. */
         static constexpr uint32 kNoParent = 0xFFFFFFFFu;
 
-        /** @brief @p listThread 의 사건을 호출 트리로 접어 @p outListNode 에 채웁니다(먼저 비운다). 스레드마다 뿌리가 여럿일 수 있다. */
+        /** @brief @p listThread 의 사건을 호출 트리로 접어 @p outListNode 에 채웁니다(먼저 비운다). 스레드마다 루트가 여럿일 수 있다. */
         static void compute( const vector<ProfilerTimelineThread>& listThread, vector<ProfilerCallNode>& outListNode );
         /** @brief 형제를 합 시간이 큰 순으로 다시 잇습니다(노드 번호는 그대로, `_firstChild` · `_nextSibling` 만 바뀐다). */
         static void sortChildrenByTotal( vector<ProfilerCallNode>& inoutListNode );
-        /** @brief 뿌리 노드 번호를 스레드 순 · 합 시간이 큰 순으로 @p outListRoot 에 담습니다. */
+        /** @brief 루트 노드 번호를 스레드 순 · 합 시간이 큰 순으로 @p outListRoot 에 담습니다. */
         static void collectRoots( const vector<ProfilerCallNode>& listNode, vector<uint32>& outListRoot );
     };
 } // namespace sw::editor

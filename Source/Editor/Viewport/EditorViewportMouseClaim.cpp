@@ -15,7 +15,7 @@ namespace sw::editor
     {
         if ( frameIndex == s_currentFrame )
             return;
-        // 지난 프레임에 아무도 다시 잡지 않았으면 소유자의 그리기 함수가 돌지 않은 것이다 — 풀 기회를 놓쳤으니 거둔다
+        // 지난 프레임에 아무도 다시 잡지 않았으면 소유자의 그리기 함수가 돌지 않은 것이다 — 풀 기회를 놓쳤으니 회수한다
         if ( s_pMouseOwner != nullptr && s_renewedFrame != s_currentFrame )
             s_pMouseOwner = nullptr;
         s_currentFrame = frameIndex;

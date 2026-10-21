@@ -94,8 +94,8 @@ namespace sw::editor
             }
 
             /**
-             * @brief 묶음(`beginTransaction` …)을 걸 스택들 — 전역 스택과 미리보기 창의 스택입니다.
-             * @details 묶음은 어느 씬의 기록이 들어올지 모른다(기록마다 오브젝트의 씬이 스택을 고른다). 모두에 걸고, 기록이 들지 않은 빈 묶음은 스택이 버린다.
+             * @brief 그룹(`beginTransaction` …)을 걸 스택들 — 전역 스택과 미리보기 창의 스택입니다.
+             * @details 그룹은 어느 씬의 기록이 들어올지 모른다(기록마다 오브젝트의 씬이 스택을 고른다). 모두에 걸고, 기록이 들지 않은 빈 그룹은 스택이 버린다.
              */
             static void collectRecordStacks( vector<CommandStack*>& outListStack )
             {

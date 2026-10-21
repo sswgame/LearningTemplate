@@ -31,7 +31,7 @@ namespace sw::editor
                 string_view _key;
                 float32     _default;
             };
-            /** @brief `kArrVrm0Float` 의 자리입니다. 순서가 표와 같아야 한다(아래 static_assert). */
+            /** @brief `kArrVrm0Float` 의 인덱스입니다. 순서가 테이블과 같아야 한다(아래 static_assert). */
             enum Vrm0FloatSlot : uint32
             {
                 Vrm0Cutoff,
@@ -51,7 +51,7 @@ namespace sw::editor
                 Vrm0BumpScale,
                 Vrm0FloatCount,
             };
-            /** @brief 0.x 에서 옮기는 실수 키와 그 기본값입니다. 기본값의 원본은 이 표 하나다(읽는 코드에 폴백을 적지 않는다). */
+            /** @brief 0.x 에서 옮기는 실수 키와 그 기본값입니다. 기본값의 원본은 이 테이블 하나다(읽는 코드에 폴백을 적지 않는다). */
             static constexpr Vrm0Float kArrVrm0Float[] = {
                 {                  "_Cutoff", 0.5f},
                 {               "_BlendMode", 0.0f},
@@ -151,7 +151,7 @@ namespace sw::editor
                 if ( pOutListIgnored == nullptr )
                     return;
                 const string name{ key };
-                if ( std::find( pOutListIgnored->begin(), pOutListIgnored->end(), name ) == pOutListIgnored->end() )
+                if ( VectorUtil::contains( *pOutListIgnored, name ) == false )
                     pOutListIgnored->push_back( name );
             }
 

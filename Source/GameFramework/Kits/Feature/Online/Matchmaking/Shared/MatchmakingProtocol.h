@@ -4,7 +4,7 @@
  * @details 요청, 응답, 알림, 서버 버스 본문은 `REFLECT` 구조체 하나씩이고 고정 배치형(B)이다. 바이트 배치는 `PROPERTY` 선언 순서와 키가 정한다.
  *          업무 결과는 응답 본문(`MatchmakingReply::_result`)에 담으며 거래와 경제 키트도 같다.
  *          공통 오류(`OnlineError`)만 오류 코드로 오며, 로그인 없음, 손상된 본문, 시한 초과가 해당한다. 클라이언트는 `fromErrorCode` 로 이를 결과에 맞춘다.
- *          캐시 기록(파티, 로비)은 자기 기술형(A)이며 기록 판이 다르면 읽지 않는다.
+ *          캐시 기록(파티, 로비)은 자기 기술형(A)이며 기록 버전이 다르면 읽지 않는다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -182,15 +182,15 @@ namespace sw
         static const OnlineProtocolEntry kOnlineEntry; ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
 
         /**
-         * @brief 캐시 기록을 읽고 씁니다. 배포 중에 다른 빌드의 서버가 읽을 수 있으므로 자기 기술형(A)이며 기록 판을 머리에 둡니다.
-         * @details 다시 만들 수 있는 캐시이므로 `ServiceRecordUtil::readCache` 로 읽습니다. 다른 판이거나 모르는 필드가 있거나 선언된 범위(멤버 수 같은)를
+         * @brief 캐시 기록을 읽고 씁니다. 배포 중에 다른 빌드의 서버가 읽을 수 있으므로 자기 기술형(A)이며 기록 버전을 머리에 둡니다.
+         * @details 다시 만들 수 있는 캐시이므로 `ServiceRecordUtil::readCache` 로 읽습니다. 다른 버전이거나 모르는 필드가 있거나 선언된 범위(멤버 수 같은)를
          *          벗어나면 로그 없이 false 이고, 읽는 쪽은 그 파티나 로비가 없는 것으로 봅니다.
          */
         [[nodiscard]] static bool encodeParty( const PartySnapshot& party, vector<uint8>& outBytes );
         [[nodiscard]] static bool decodeParty( const vector<uint8>& bytes, PartySnapshot& outParty );
         [[nodiscard]] static bool encodeLobby( const LobbySnapshot& lobby, vector<uint8>& outBytes );
         [[nodiscard]] static bool decodeLobby( const vector<uint8>& bytes, LobbySnapshot& outLobby );
-        /** @brief 캐시 값 하나에 든 id(16진 문자열)입니다. 계정에서 파티로 가는 인덱스와 임대 주인이 쓰는 값입니다. */
+        /** @brief 캐시 값 하나에 포함된 id(16진 문자열)입니다. 계정에서 파티로 가는 인덱스와 임대 주인이 쓰는 값입니다. */
         static vector<uint8>      encodeID( uint64 id );
         [[nodiscard]] static bool decodeID( const vector<uint8>& bytes, uint64& outID );
 

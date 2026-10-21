@@ -227,18 +227,14 @@ namespace sw
             if ( session._snapshot.isClosed() )
                 return command._kind == TradeCommandKind::Confirm ? Internal::toClosedResult( session._snapshot ) : TradeResult::WrongState; // 재시도이거나 다른 서버가 먼저 처리한 경우이다
 
-            ServiceTransaction transaction;
             if ( isIdleExpired( session._snapshot, _settings, nowMs ) )
             {
-                TradeSnapshot closed = session._snapshot;
-                TradeStateMachine::close( closed, TradeState::Cancelled, TradeCloseReason::Timeout, nowMs );
-                if ( stageClose( session, closed, transaction ) == false )
-                    return TradeResult::Invalid;
-                const ServiceStoreResult committed = _connection.commit( transaction );
-                if ( committed == ServiceStoreResult::Conflict )
+                TradeSnapshot      closed;
+                const CloseOutcome outcome = commitClose( session, TradeCloseReason::Timeout, nowMs, closed );
+                if ( outcome._bRetry )
                     continue;
-                if ( committed != ServiceStoreResult::Ok )
-                    return TradeResult::Unavailable;
+                if ( outcome._result != TradeResult::Ok )
+                    return outcome._result;
                 outSnapshot = closed;
                 return TradeResult::WrongState;
             }
@@ -254,65 +250,19 @@ namespace sw
                     return funds;
             }
 
-            LedgerTransferRequest request;
-            const bool            bSettle = next._state == TradeState::Open && next.isBothConfirmed();
-            bool                  bStaged = false;
-            if ( bSettle )
+            ServiceTransaction transaction;
+            SettlementStage    settlement;
+            if ( next._state == TradeState::Open && next.isBothConfirmed() )
             {
-                if ( TradeStoreLogicInternal::makeJournalKey( tradeID, request._journalKey ) == false )
-                    return TradeResult::Invalid;
-                request._reason    = "trade.settle";
-                request._pPolicy   = _pLedgerPolicy;
-                request._timeMs    = nowMs;
-                request._actorKind = LedgerActorKind::Player;
-                request._actorID   = command._actorID; // 마지막 확정이다. 분개는 두 계정 모두의 내역에 들어간다
-                for ( int32 sideIndex = 0; sideIndex < 2; ++sideIndex )
-                {
-                    const TradeSide& giver    = next._arrSide[sideIndex];
-                    const TradeSide& receiver = next._arrSide[1 - sideIndex];
-                    for ( const TradeLeg& leg : giver._listLeg )
-                    {
-                        request._listPosting.push_back(
-                            LedgerPosting{ LedgerHolder::makeAccount( giver._accountID ), LedgerHolder::makeAccount( receiver._accountID ), leg._assetID, leg._amount } );
-                    }
-                }
-                if ( request._listPosting.empty() )
-                {
-                    TradeStateMachine::close( next, TradeState::Settled, TradeCloseReason::None, nowMs ); // 빈 거래도 닫는다. 원장은 건드리지 않는다
-                }
-                else
-                {
-                    const LedgerResult staged = Ledger::stageTransfer( _connection, request, transaction, outLedger );
-                    if ( staged == LedgerResult::InsufficientFunds || staged == LedgerResult::CapExceeded )
-                    {
-                        transaction.clear(); // 원장 부분은 붙지 않았으므로 거래만 실패로 닫는다
-                        TradeStateMachine::close( next, TradeState::Failed,
-                                                  staged == LedgerResult::InsufficientFunds ? TradeCloseReason::InsufficientFunds : TradeCloseReason::CapExceeded, nowMs );
-                    }
-                    else if ( staged != LedgerResult::Ok )
-                    {
-                        return staged == LedgerResult::Unavailable ? TradeResult::Unavailable : TradeResult::Invalid;
-                    }
-                    else
-                    {
-                        bStaged = outLedger._bReplayed == SW_FALSE;
-                        TradeStateMachine::close( next, TradeState::Settled, TradeCloseReason::None, nowMs ); // 분개가 이미 있으면 정산은 끝난 것이다
-                    }
-                }
+                const TradeResult settled = stageSettlement( tradeID, command, nowMs, next, transaction, settlement, outLedger );
+                if ( settled != TradeResult::Ok )
+                    return settled;
             }
 
             if ( next.isClosed() )
             {
-                if ( stageClose( session, next, transaction ) == false )
+                if ( stageClosedTrade( session, next, tradeID, nowMs, transaction ) == false )
                     return TradeResult::Invalid;
-                ServiceAuditEntry audit;
-                audit._actor   = "system";
-                audit._action  = next._state == TradeState::Settled ? "trade.settle" : "trade.fail";
-                audit._subject = "trade." + ServiceKeyUtil::makeHex64( tradeID );
-                audit._after   = Internal::describeForAudit( next );
-                audit._timeMs  = nowMs < 0 ? 0 : nowMs;
-                if ( next._state != TradeState::Cancelled )
-                    ServiceAuditLog::stageEntry( transaction, audit, tradeID, Internal::kSettleAuditUnique );
             }
             else if ( Internal::stageSession( next, session._ownerServerID, session._version, transaction ) == false )
             {
@@ -328,7 +278,7 @@ namespace sw
             if ( committed == ServiceStoreResult::Conflict || committed == ServiceStoreResult::Unavailable )
             {
                 // 다른 서버나 앞선 시도가 같은 분개로 이미 정산했는지 원장이 가려 준다. 응답이 유실된 경우도 포함한다. 분개가 있으면 다음 반복의 읽기가 Settled 이다.
-                if ( bStaged && Ledger::resolveConflict( _connection, request, outLedger ) == LedgerResult::Ok )
+                if ( settlement._bStaged && Ledger::resolveConflict( _connection, settlement._request, outLedger ) == LedgerResult::Ok )
                     continue;
                 if ( committed == ServiceStoreResult::Unavailable )
                     return TradeResult::Unavailable;
@@ -350,16 +300,12 @@ namespace sw
             outSnapshot = session._snapshot;
             if ( isIdleExpired( session._snapshot, _settings, nowMs ) == false )
                 return TradeResult::WrongState;
-            TradeSnapshot closed = session._snapshot;
-            TradeStateMachine::close( closed, TradeState::Cancelled, TradeCloseReason::Timeout, nowMs );
-            ServiceTransaction transaction;
-            if ( stageClose( session, closed, transaction ) == false )
-                return TradeResult::Invalid;
-            const ServiceStoreResult committed = _connection.commit( transaction );
-            if ( committed == ServiceStoreResult::Conflict )
+            TradeSnapshot      closed;
+            const CloseOutcome outcome = commitClose( session, TradeCloseReason::Timeout, nowMs, closed );
+            if ( outcome._bRetry )
                 continue;
-            if ( committed != ServiceStoreResult::Ok )
-                return TradeResult::Unavailable;
+            if ( outcome._result != TradeResult::Ok )
+                return outcome._result;
             outSnapshot = closed;
             return TradeResult::Ok;
         }
@@ -384,16 +330,12 @@ namespace sw
             outSnapshot = session._snapshot;
             if ( session._snapshot.isClosed() )
                 return TradeResult::WrongState;
-            TradeSnapshot closed = session._snapshot;
-            TradeStateMachine::close( closed, TradeState::Cancelled, reason, nowMs );
-            ServiceTransaction transaction;
-            if ( stageClose( session, closed, transaction ) == false )
-                return TradeResult::Invalid;
-            const ServiceStoreResult committed = _connection.commit( transaction );
-            if ( committed == ServiceStoreResult::Conflict )
+            TradeSnapshot      closed;
+            const CloseOutcome outcome = commitClose( session, reason, nowMs, closed );
+            if ( outcome._bRetry )
                 continue;
-            if ( committed != ServiceStoreResult::Ok )
-                return TradeResult::Unavailable;
+            if ( outcome._result != TradeResult::Ok )
+                return outcome._result;
             outSnapshot = closed;
             return TradeResult::Ok;
         }
@@ -415,26 +357,23 @@ namespace sw
                 continue;
             for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
             {
-                SessionRead        session;
-                const TradeResult  read = readSession( tradeID, session );
-                ServiceTransaction transaction;
+                SessionRead       session;
+                const TradeResult read = readSession( tradeID, session );
                 if ( read == TradeResult::NotFound || ( read == TradeResult::Ok && session._snapshot.isClosed() ) )
                 {
+                    ServiceTransaction transaction;
                     transaction.erase( getOwnerTable(), owned._key );
                     (void)_connection.commit( transaction );
                     break;
                 }
                 if ( read != TradeResult::Ok )
                     return read;
-                TradeSnapshot closed = session._snapshot;
-                TradeStateMachine::close( closed, TradeState::Cancelled, TradeCloseReason::ServerRestart, nowMs );
-                if ( stageClose( session, closed, transaction ) == false )
-                    return TradeResult::Invalid;
-                const ServiceStoreResult committed = _connection.commit( transaction );
-                if ( committed == ServiceStoreResult::Conflict )
+                TradeSnapshot      closed;
+                const CloseOutcome outcome = commitClose( session, TradeCloseReason::ServerRestart, nowMs, closed );
+                if ( outcome._bRetry )
                     continue;
-                if ( committed != ServiceStoreResult::Ok )
-                    return TradeResult::Unavailable;
+                if ( outcome._result != TradeResult::Ok )
+                    return outcome._result;
                 outListClosed.push_back( closed );
                 break;
             }
@@ -454,6 +393,76 @@ namespace sw
             return TradeResult::Unavailable; // 손상은 읽기가 오류 로그로 남겼다
         outSession._version = raw._version;
         return TradeResult::Ok;
+    }
+
+    TradeStoreLogic::CloseOutcome TradeStoreLogic::commitClose( const SessionRead& session, TradeCloseReason reason, int64 nowMs, TradeSnapshot& outClosed )
+    {
+        outClosed = session._snapshot;
+        TradeStateMachine::close( outClosed, TradeState::Cancelled, reason, nowMs );
+        ServiceTransaction transaction;
+        if ( stageClose( session, outClosed, transaction ) == false )
+            return CloseOutcome{ TradeResult::Invalid, false };
+        const ServiceStoreResult committed = _connection.commit( transaction );
+        if ( committed == ServiceStoreResult::Conflict )
+            return CloseOutcome{ TradeResult::Ok, true };
+        return CloseOutcome{ committed == ServiceStoreResult::Ok ? TradeResult::Ok : TradeResult::Unavailable, false };
+    }
+
+    TradeResult TradeStoreLogic::stageSettlement( uint64 tradeID, const TradeCommand& command, int64 nowMs, TradeSnapshot& inoutNext, ServiceTransaction& inoutTransaction,
+                                                  SettlementStage& outStage, LedgerTransferOutcome& outLedger )
+    {
+        LedgerTransferRequest& request = outStage._request;
+        if ( TradeStoreLogicInternal::makeJournalKey( tradeID, request._journalKey ) == false )
+            return TradeResult::Invalid;
+        request._reason    = "trade.settle";
+        request._pPolicy   = _pLedgerPolicy;
+        request._timeMs    = nowMs;
+        request._actorKind = LedgerActorKind::Player;
+        request._actorID   = command._actorID; // 마지막 확정이다. 분개는 두 계정 모두의 내역에 들어간다
+        for ( int32 sideIndex = 0; sideIndex < 2; ++sideIndex )
+        {
+            const TradeSide& giver    = inoutNext._arrSide[sideIndex];
+            const TradeSide& receiver = inoutNext._arrSide[1 - sideIndex];
+            for ( const TradeLeg& leg : giver._listLeg )
+            {
+                request._listPosting.push_back(
+                    LedgerPosting{ LedgerHolder::makeAccount( giver._accountID ), LedgerHolder::makeAccount( receiver._accountID ), leg._assetID, leg._amount } );
+            }
+        }
+        if ( request._listPosting.empty() )
+        {
+            TradeStateMachine::close( inoutNext, TradeState::Settled, TradeCloseReason::None, nowMs ); // 빈 거래도 닫는다. 원장은 건드리지 않는다
+            return TradeResult::Ok;
+        }
+        const LedgerResult staged = Ledger::stageTransfer( _connection, request, inoutTransaction, outLedger );
+        if ( staged == LedgerResult::InsufficientFunds || staged == LedgerResult::CapExceeded )
+        {
+            inoutTransaction.clear(); // 원장 부분은 붙지 않았으므로 거래만 실패로 닫는다
+            TradeStateMachine::close( inoutNext, TradeState::Failed, staged == LedgerResult::InsufficientFunds ? TradeCloseReason::InsufficientFunds : TradeCloseReason::CapExceeded,
+                                      nowMs );
+            return TradeResult::Ok;
+        }
+        if ( staged != LedgerResult::Ok )
+            return staged == LedgerResult::Unavailable ? TradeResult::Unavailable : TradeResult::Invalid;
+        outStage._bStaged = outLedger._bReplayed == SW_FALSE;
+        TradeStateMachine::close( inoutNext, TradeState::Settled, TradeCloseReason::None, nowMs ); // 분개가 이미 있으면 정산은 끝난 것이다
+        return TradeResult::Ok;
+    }
+
+    bool TradeStoreLogic::stageClosedTrade( const SessionRead& session, const TradeSnapshot& closed, uint64 tradeID, int64 nowMs, ServiceTransaction& inoutTransaction )
+    {
+        if ( stageClose( session, closed, inoutTransaction ) == false )
+            return false;
+        if ( closed._state == TradeState::Cancelled )
+            return true;
+        ServiceAuditEntry audit;
+        audit._actor   = "system";
+        audit._action  = closed._state == TradeState::Settled ? "trade.settle" : "trade.fail";
+        audit._subject = "trade." + ServiceKeyUtil::makeHex64( tradeID );
+        audit._after   = TradeStoreLogicInternal::describeForAudit( closed );
+        audit._timeMs  = nowMs < 0 ? 0 : nowMs;
+        ServiceAuditLog::stageEntry( inoutTransaction, audit, tradeID, TradeStoreLogicInternal::kSettleAuditUnique );
+        return true;
     }
 
     bool TradeStoreLogic::stageClose( const SessionRead& session, const TradeSnapshot& closed, ServiceTransaction& inoutTransaction )

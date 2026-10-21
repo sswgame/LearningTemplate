@@ -1,11 +1,11 @@
 /**
  * @file LedgerItemInstance.h
  * @brief 인스턴스 아이템(내구도, 강화처럼 한 개마다 상태가 있는 아이템)입니다. 원장은 개수만 가지므로 아이템 하나를 개수 1 짜리 자산 `item.<정의>-<id 16진>` 으로 두고,
- *        상태는 표 `item_state`(키 = 그 자산 id)의 레코드로 둡니다.
+ *        상태는 테이블 `item_state`(키 = 그 자산 id)의 레코드로 둡니다.
  * @details - 상태 레코드의 키가 주인이 아니라 자산 id 이므로, 원장 이동(거래, 우편, 맡김)이 개수 1 을 옮기면 상태는 따로 옮기지 않아도 새 주인의 것이 됩니다.
  *          - 원장이 인스턴스 자산을 따로 지킵니다. 다리 하나의 양은 1 이어야 하고, 어느 보유자도 2 개 이상 가질 수 없습니다(`Ledger::stageTransfer`).
  *          - 만들기는 발행 1 개와 상태 레코드("없어야 함")를 한 트랜잭션에, 없애기는 소각 1 개와 상태 지우기를 한 트랜잭션에 넣습니다.
- *          - 상태 값은 판 머리가 붙은 자기 기술형(A, `ServiceRecordUtil`)입니다. 상태를 바꾸는 쪽(게임 서버의 강화, 수리)은 읽은 판을 조건으로 씁니다.
+ *          - 상태 값은 버전 헤더가 붙은 자기 기술형(A, `ServiceRecordUtil`)입니다. 상태를 바꾸는 쪽(게임 서버의 강화, 수리)은 읽은 버전을 조건으로 씁니다.
  *          PlayFab Economy v2 의 stack id 와 인스턴스 속성, 국내 MMO 의 아이템 고유 번호와 같은 구조입니다.
  */
 #pragma once
@@ -45,7 +45,7 @@ namespace sw
     struct SW_GF_API LedgerItemInstance
     {
         static constexpr uint32 kRecordVersion   = 1;
-        static constexpr int32  kMaxDefIDSize    = 24; ///< `item.` + 정의 + `-` + 16진 16자가 자산 id 상한(48) 안에 든다
+        static constexpr int32  kMaxDefIDSize    = 24; ///< `item.` + 정의 + `-` + 16진 16자가 자산 id 상한(48) 안에 들어간다
         static constexpr int32  kMaxEnhanceLevel = 100;
 
         static const hashed_string& getStateTable(); ///< "item_state"
@@ -68,7 +68,7 @@ namespace sw
                                                         string_view reason, int64 nowMs, ServiceTransaction& inoutTransaction );
         /** @brief 상태를 읽습니다. 없으면 NotFound, 손상이면 오류 로그와 Invalid 입니다. @p outVersion 은 바꿀 때의 조건입니다. */
         [[nodiscard]] static ServiceStoreResult readState( IServiceStoreConnection& connection, string_view assetID, LedgerItemState& outState, uint64& outVersion );
-        /** @brief 바꾼 상태를 읽은 판 @p version 을 조건으로 넣습니다. 규칙 밖이거나 쓸 수 없으면 false 이고 트랜잭션은 그대로입니다. */
+        /** @brief 바꾼 상태를 읽은 버전 @p version 을 조건으로 넣습니다. 규칙 밖이거나 쓸 수 없으면 false 이고 트랜잭션은 그대로입니다. */
         [[nodiscard]] static bool stageWriteState( ServiceTransaction& inoutTransaction, const LedgerItemState& state, uint64 version );
     };
 } // namespace sw

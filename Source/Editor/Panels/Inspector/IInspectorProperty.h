@@ -38,7 +38,7 @@ namespace sw::editor
          *         enum · 컨테이너 · 중첩 구조체 같은 일반 경로로 넘어갑니다.
          * @param instance @p prop 을 가진 객체입니다. 값 주소가 아니다 — 값은 `prop.getValuePtr<T>( instance.get() )` 로 찾는다.
          * @param grid 그리는 그리드입니다. ImGui 위젯 하나로 끝나지 않는 편집(팝업 편집기 · 끌기를 놓을 때 한 번)은
-         *             `grid.applyPropertyTextAsEdit` 로 값을 입혀 통지 · 되돌리기를 그리드에 맡깁니다(언리얼 IPropertyHandle 의 자리).
+         *             `grid.applyPropertyTextAsEdit` 로 값을 입혀 통지 · 되돌리기를 그리드에 맡깁니다(언리얼 IPropertyHandle 에 해당).
          * @note ImGui 위젯으로 고친 값의 변경 통지는 구현이 하지 않습니다. `EditorPropertyGrid::drawPropertyWidget` 이
          *       ImGui 편집 플래그로 한곳에서 판정합니다.
          */

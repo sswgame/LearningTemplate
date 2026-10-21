@@ -3,6 +3,7 @@
 #include "Editor/Viewport/EditorViewportOverlayLayout.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/JSONSerializer.h"
@@ -13,7 +14,7 @@ namespace sw::editor
     {
         struct EditorViewportOverlayLayoutInternal
         {
-            /** @brief 바가 놓일 수 있는 남는 자리(뷰포트 − 바, 음수면 0)입니다. */
+            /** @brief 바가 놓일 수 있는 남는 공간(뷰포트 − 바, 음수면 0)입니다. */
             static float2 computeFreeSpace( const float2& barSize, const float2& viewSize )
             {
                 return float2{ MathUtil::max( viewSize._x - barSize._x, 0.0f ), MathUtil::max( viewSize._y - barSize._y, 0.0f ) };
@@ -42,22 +43,12 @@ namespace sw::editor
 
     EditorOverlayBarState* EditorViewportOverlayLayout::findBar( string_view barID )
     {
-        for ( EditorOverlayBarState& bar : _listBar )
-        {
-            if ( bar._id == barID )
-                return &bar;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&EditorOverlayBarState::_id>( _listBar, barID );
     }
 
     const EditorOverlayBarState* EditorViewportOverlayLayout::findBar( string_view barID ) const
     {
-        for ( const EditorOverlayBarState& bar : _listBar )
-        {
-            if ( bar._id == barID )
-                return &bar;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&EditorOverlayBarState::_id>( _listBar, barID );
     }
 
     void EditorViewportOverlayLayout::resetToDefault()

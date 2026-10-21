@@ -2,6 +2,7 @@
 
 #include "Editor/Viewport/EditorViewportOverlays.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
@@ -27,7 +28,7 @@ namespace sw::editor
             static constexpr float32     kSnapDistance = 16.0f; ///< 가장자리에 붙는 거리(배율 1)
             static constexpr float32     kEdgeMargin   = 6.0f;  ///< 가장자리에 붙은 바와 뷰포트 테두리 사이(배율 1)
 
-            /** @brief 바 하나의 고정 정보입니다(제목 · 기본 자리 · 내용). */
+            /** @brief 바 하나의 고정 정보입니다(제목 · 기본 위치 · 내용). */
             struct BarDesc
             {
                 const utf8*       _pID;
@@ -108,12 +109,7 @@ namespace sw::editor
 
     const EditorOverlayBarRuntime* EditorViewportOverlays::findRuntime( string_view barID ) const
     {
-        for ( const EditorOverlayBarRuntime& runtime : _listRuntime )
-        {
-            if ( runtime._id == barID )
-                return &runtime;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&EditorOverlayBarRuntime::_id>( _listRuntime, barID );
     }
 
     void EditorViewportOverlays::resetToDefault()
@@ -229,7 +225,7 @@ namespace sw::editor
         const EditorViewportOverlaysInternal::BarDesc* pDesc   = EditorViewportOverlaysInternal::findDesc( state._id );
         EditorOverlayBarRuntime&                       runtime = getRuntime( state._id );
         const float32                                  scale   = EditorThemeUtil::getDpiScale();
-        // 가장자리에 붙은 바는 테두리에서 조금 띄운다 — 뷰포트 안쪽 자리(여백을 뺀 크기)에서 자리를 셈한다.
+        // 가장자리에 붙은 바는 테두리에서 조금 띄운다 — 뷰포트 안쪽 영역(여백을 뺀 크기)에서 위치를 계산한다.
         const float32 margin = EditorViewportOverlaysInternal::kEdgeMargin * scale;
         const float2  innerSize{ MathUtil::max( canvasSize._x - margin * 2.0f, 1.0f ), MathUtil::max( canvasSize._y - margin * 2.0f, 1.0f ) };
         float2        position = EditorViewportOverlayLayout::computePosition( state, runtime._lastSize, innerSize );
@@ -328,7 +324,7 @@ namespace sw::editor
         if ( runtime._bDragging && ImGui::IsItemDeactivated() )
         {
             runtime._bDragging = false;
-            // 놓은 자리(여백 안쪽 기준)로 붙은 쪽 · 비율을 정한다.
+            // 놓은 위치(여백 안쪽 기준)로 붙은 쪽 · 비율을 정한다.
             EditorViewportOverlayLayout::applyDrop( state, float2{ runtime._dragPosition._x - margin, runtime._dragPosition._y - margin }, runtime._lastSize, innerSize,
                                                     EditorViewportOverlaysInternal::kSnapDistance * scale );
             save();

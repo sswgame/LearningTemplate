@@ -53,7 +53,7 @@ namespace sw::editor
             rel = string( config::kFileRuntimeEditorToolDefaults );
 
         const string absPath = EditorPaths::resolveProjectRelativePath( rel );
-        // 값의 정본은 이 파일 하나다 — 없으면 대신 쓸 값이 없다(헤더는 형식만 가진다).
+        // 값의 원본은 이 파일 하나다 — 없으면 대신 쓸 값이 없다(헤더는 형식만 가진다).
         if ( FileUtil::isRegularFile( absPath ) == false )
         {
             SW_LOG_ERROR( "Editor tool defaults %# is missing - the editor needs this data file", absPath );

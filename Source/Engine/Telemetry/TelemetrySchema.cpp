@@ -3,6 +3,7 @@
 #include "Engine/Telemetry/TelemetrySchema.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -90,12 +91,7 @@ namespace sw
 
     const TelemetryFieldDef* TelemetryEventDef::findField( const hashed_string& name ) const
     {
-        for ( const TelemetryFieldDef& field : _listField )
-        {
-            if ( field._name == name )
-                return &field;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&TelemetryFieldDef::_name>( _listField, name );
     }
 
     TelemetrySchema::TelemetrySchema()
@@ -137,12 +133,7 @@ namespace sw
 
     const TelemetryEventDef* TelemetrySchema::findEvent( const hashed_string& eventID ) const
     {
-        for ( const TelemetryEventDef& event : _listEvent )
-        {
-            if ( event._id == eventID )
-                return &event;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&TelemetryEventDef::_id>( _listEvent, eventID );
     }
 
     bool TelemetrySchema::loadRoot( const XMLNode& root, string_view sourceName )

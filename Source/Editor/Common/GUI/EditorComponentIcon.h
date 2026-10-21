@@ -31,11 +31,11 @@ namespace sw::editor
 {
     /**
      * @struct EditorComponentIcon
-     * @brief 언리얼 Outliner · Details 의 클래스 아이콘(`ClassIcon.<Class>` 스타일), 유니티 Inspector 머리 아이콘, Godot 씬 트리 노드 아이콘의 자리입니다.
+     * @brief 언리얼 Outliner · Details 의 클래스 아이콘(`ClassIcon.<Class>` 스타일), 유니티 Inspector 머리 아이콘, Godot 씬 트리 노드 아이콘에 해당합니다.
      * @details 아이콘은 컴포넌트 선언이 정합니다 — `REFLECT( ..., Meta = "Icon=LightPoint, IconColor=Light, Billboard" )`.
-     *          `Icon` 은 `editoricon::kArrNamedIcon` 의 이름(상수에서 `k` 를 뗀 것), `IconColor` 는 Light · Camera · Audio · Physics · Navigation · Environment
+     *          `Icon` 은 `editoricon::kArrNamedIcon` 의 이름(상수에서 `k` 를 뺀 것), `IconColor` 는 Light · Camera · Audio · Physics · Navigation · Environment
      *          (없으면 중립색), `Billboard` 는 뷰포트에 빌보드로 그릴 종류입니다.
-     *          찾는 순서: 메타를 타입 자신부터 부모로 올라가며 → 리플렉션 Category 표 → `editoricon::kComponent`. 키트 · 게임 컴포넌트도 같은 메타로 아이콘을 갖습니다.
+     *          찾는 순서: 메타를 타입 자신부터 부모로 올라가며 → 리플렉션 Category 테이블 → `editoricon::kComponent`. 키트 · 게임 컴포넌트도 같은 메타로 아이콘을 갖습니다.
      *          모르는 아이콘 · 색 이름은 `EditorComponentIconTest` 가 모든 등록 타입을 훑어 막습니다.
      */
     struct SW_EDITOR_API EditorComponentIcon

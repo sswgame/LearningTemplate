@@ -79,7 +79,7 @@ namespace sw::editor
     {
         if ( _bLocalizationDirty == SW_TRUE )
         {
-            // 읽지 못한 표는 비어 보이고, 저장은 그 파일을 덮지 않는다(`saveLocalization`).
+            // 읽지 못한 테이블은 비어 보이고, 저장은 그 파일을 덮지 않는다(`saveLocalization`).
             if ( EditorDataTableCommands::loadLocalizationProject( _localizationSheet._projectPath, _localizationSheet ) == false )
                 SW_LOG_WARNING( "Some localization files could not be read - see the warnings above" );
             _bLocalizationLoaded = SW_TRUE;
@@ -334,8 +334,8 @@ namespace sw::editor
         constexpr ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY |
                                           ImGuiTableFlags_SizingStretchProp;
 
-        // 표를 열기 **전에** 걸러 둔다. 표가 남은 영역을 모두 차지하므로 0건 안내를 표 뒤에 그리면
-        // 화면 밖으로 밀린다. 표를 아예 열지 않아야 보인다. 행마다 필터를 다시 만들지 않는 효과도 있다.
+        // 테이블을 열기 **전에** 걸러 둔다. 테이블이 남은 영역을 모두 차지하므로 0건 안내를 테이블 뒤에 그리면
+        // 화면 밖으로 밀린다. 테이블을 아예 열지 않아야 보인다. 행마다 필터를 다시 만들지 않는 효과도 있다.
         const EditorListFilter filter{ _localizationFilter.c_str() };
 
         vector<size_t>& listVisibleIndex = _listVisibleLocalizationIndex;
@@ -491,7 +491,7 @@ namespace sw::editor
 
             if ( _bGameDataRaw == SW_TRUE || _gameDataDocument.isParsed() == false )
             {
-                // XML 원문 텍스트 상자 - 표로 못 읽는 문서도 여기서 고친다
+                // XML 원문 텍스트 상자 - 테이블로 못 읽는 문서도 여기서 고친다
                 vector<utf8> arrEditBuffer;
                 arrEditBuffer.resize( _selectedGameDataRawText.size() + 4096, 0 );
                 if ( _selectedGameDataRawText.empty() == false )
@@ -554,7 +554,7 @@ namespace sw::editor
             _selectedGameDataIndex = -1;
             _selectedGameDataRawText.clear();
             _savedGameDataRawText.clear();
-            (void)_gameDataDocument.load( string_view() ); // 읽은 것이 없다 - 표를 비운다
+            (void)_gameDataDocument.load( string_view() ); // 읽은 것이 없다 - 테이블을 비운다
             _gameDataTable.reset();
             _bGameDataDirty = SW_FALSE;
             syncDocumentDirty();

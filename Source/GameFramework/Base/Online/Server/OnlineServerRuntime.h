@@ -78,7 +78,7 @@ namespace sw
 
         /** @brief 조립하고 받기 시작합니다. 실패하면 false 와 @p outError 이며, 만든 것은 `shutdown` 이 정리합니다. @p nowMs 는 서비스 시각(UTC 밀리초)입니다. */
         [[nodiscard]] bool initialize( OnlineServerRuntimeConfig settings, int64 nowMs, string& outError );
-        /** @brief 만든 역순으로 내립니다. 두 번 불러도 됩니다. */
+        /** @brief 만든 역순으로 종료합니다. 두 번 불러도 됩니다. */
         void shutdown();
         /** @brief 호스트, 예약 작업, 키트, 서버 등록 하트비트를 돌립니다. */
         void update( int64 nowMs );
@@ -89,7 +89,7 @@ namespace sw
         int32              getConnectionCount() const;
         /** @brief 붙은 키트 이름입니다(시작 순서). */
         void collectKitNames( vector<string>& outListName ) const;
-        /** @brief 키트가 내놓은 인터페이스와 기반이 든 문맥입니다(테스트와 진단). */
+        /** @brief 키트가 내놓은 인터페이스와 기반을 가진 문맥입니다(테스트와 진단). */
         const OnlineServerKitContext& getContext() const;
         /** @brief 메모리 캐시이면 그 데이터베이스입니다(가짜 시각을 넣는 테스트). 아니면 nullptr 입니다. */
         MemoryEphemeralDatabase* findMemoryCacheDatabase();

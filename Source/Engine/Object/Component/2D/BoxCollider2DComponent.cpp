@@ -2,6 +2,7 @@
 
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
@@ -294,7 +295,7 @@ namespace sw
             const bool bMovedBody     = std::find_if( listMoved.begin(), listMoved.end(), [&hit]( const BoxCollider2DComponent* pOther )
                 { return pOther->_body == hit._body; } ) != listMoved.end();
             const bool bStartedInside = hit._fraction <= 0.0f;
-            const bool bStillInside   = std::find( listAtEnd.begin(), listAtEnd.end(), hit._body ) != listAtEnd.end();
+            const bool bStillInside   = VectorUtil::contains( listAtEnd, hit._body );
             // 출발점 · 도착점의 겹침은 센서가 낸다. 지나친 것만 남는다.
             const bool bSensorReports = bStartedInside || bStillInside;
             if ( bMovedBody || bSensorReports )

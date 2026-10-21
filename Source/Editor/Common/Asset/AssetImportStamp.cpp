@@ -5,6 +5,7 @@
 #include "Core/Common/HashUtil.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/map.h"
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringBuilder.h"
@@ -88,7 +89,7 @@ namespace sw::editor
                 } );
             }
 
-            /** @brief 스탬프 본문입니다. 줄은 경로 순이라 같은 표는 같은 바이트입니다. */
+            /** @brief 스탬프 본문입니다. 줄은 경로 순이라 같은 테이블은 같은 바이트입니다. */
             static string makeStampText( string_view header, const map<string, StampEntry>& mapEntry )
             {
                 string text = string( header ) + "\n";
@@ -131,7 +132,7 @@ namespace sw::editor
                 if ( bStampExists && FileUtil::readTextFile( stampPath, existingText ) )
                 {
                     // 체크아웃이 줄 끝을 CRLF 로 바꿔 둘 수 있으므로 CR 은 빼고 비교한다.
-                    existingText.erase( std::remove( existingText.begin(), existingText.end(), '\r' ), existingText.end() );
+                    VectorUtil::removeValue( existingText, '\r' );
                     if ( existingText == stampText )
                         return;
                 }

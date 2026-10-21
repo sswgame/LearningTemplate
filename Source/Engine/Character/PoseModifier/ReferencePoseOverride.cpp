@@ -3,6 +3,7 @@
 #include "Engine/Character/PoseModifier/ReferencePoseOverride.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 
 #include "Engine/Character/CharacterDataReader.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
@@ -186,12 +187,7 @@ namespace sw
 
     const BoneOverride* ReferencePoseOverride::findOverride( const hashed_string& bone ) const
     {
-        for ( const BoneOverride& boneOverride : _listOverride )
-        {
-            if ( boneOverride._bone == bone )
-                return &boneOverride;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&BoneOverride::_bone>( _listOverride, bone );
     }
 
     void ReferencePoseOverride::addMirrorPair( const hashed_string& left, const hashed_string& right )

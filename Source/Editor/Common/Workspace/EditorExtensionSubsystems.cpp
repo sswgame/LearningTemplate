@@ -28,7 +28,7 @@ namespace sw::editor
             return;
         _syncedGeneration = list.getGeneration();
 
-        // 1) 등록 목록에서 사라진 줄의 인스턴스를 내린다(정상 경로에서는 releaseSubsystemsWithin 이 먼저 했다 — 여기는 줄을 직접 뺀 경우)
+        // 1) 등록 목록에서 사라진 항목의 인스턴스를 종료한다(정상 경로에서는 releaseSubsystemsWithin 이 먼저 했다 — 여기는 줄을 직접 뺀 경우)
         for ( size_t index = _listEntry.size(); index-- > 0; )
         {
             if ( SubsystemRegistry::find( _listEntry[index]._pRegistration->_pID ) != _listEntry[index]._pRegistration )

@@ -142,7 +142,7 @@ namespace sw::editor
         drawFilters();
         const EditorListFilter filter{ _filter.c_str() };
 
-        // 표와 상세를 위아래로 나눈다 — 상세가 있으면 표는 남은 높이의 60% 를 쓴다
+        // 테이블과 상세를 위아래로 나눈다 — 상세가 있으면 테이블은 남은 높이의 60% 를 쓴다
         const float32 listHeight = _selectedModule.empty() ? 0.0f : ImGui::GetContentRegionAvail().y * 0.6f;
         ImGui::BeginChild( "##ModuleList", ImVec2( 0.0f, listHeight ) );
         for ( const ModuleKind kind : ModulesPanelInternal::kArrKindOrder )

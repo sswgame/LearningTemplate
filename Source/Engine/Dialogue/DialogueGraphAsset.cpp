@@ -3,6 +3,7 @@
 #include "Engine/Dialogue/DialogueGraphAsset.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/Memory.h"
 
@@ -132,12 +133,7 @@ namespace sw
 
     const DialogueAssetNode* DialogueGraphAsset::findNode( int32 nodeID ) const
     {
-        for ( const DialogueAssetNode& node : _listNode )
-        {
-            if ( node._id == nodeID )
-                return &node;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&DialogueAssetNode::_id>( _listNode, nodeID );
     }
 
     int32 DialogueGraphAsset::encodePin( int32 nodeID, int32 pinOffset )

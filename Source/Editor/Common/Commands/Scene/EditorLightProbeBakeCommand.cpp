@@ -1,9 +1,9 @@
 /**
  * @file EditorLightProbeBakeCommand.cpp
  * @brief 에디터 커맨드 "Bake Light Probes"(`lighting.bakeProbes`) — Build 메뉴와 커맨드 팔레트에서 활성 씬의 라이트 프로브 볼륨을 굽습니다(IndirectLighting.md P6).
- * @details 선택한 오브젝트 중 볼륨이 있으면 그것만, 없으면 씬의 모든 볼륨을 굽는다(언리얼 Build Lighting 의 선택 굽기와 같은 나눔).
+ * @details 선택한 오브젝트 중 볼륨이 있으면 그것만, 없으면 씬의 모든 볼륨을 베이크한다(언리얼 Build Lighting 의 선택 베이크와 같은 구분).
  *          결과는 씬 파일 옆 `<씬 이름>.<오브젝트 이름(소문자)>.probes` 에 쓰고 볼륨의 `_probeDataPath` 에 적는다 — 씬을 저장해야 경로가 남으므로 씬을 고친 것으로 표시한다.
- *          굽기는 동기다. 진행은 볼륨마다 로그 한 줄과 끝난 뒤 알림 하나로 보인다(볼륨 하나가 수 초를 넘으면 비동기 작업으로 옮긴다 — 계획 문서 P6 의 남은 것).
+ *          베이크는 동기다. 진행은 볼륨마다 로그 한 줄과 끝난 뒤 알림 하나로 보인다(볼륨 하나가 수 초를 넘으면 비동기 작업으로 옮긴다 — 계획 문서 P6 의 남은 것).
  */
 #include "pch.h"
 
@@ -36,7 +36,7 @@ namespace sw::editor
     {
         struct EditorLightProbeBakeCommandInternal
         {
-            /// @brief 씬 파일 이름의 끝 — 이것을 떼고 볼륨 이름을 붙인다.
+            /// @brief 씬 파일 이름의 끝 — 이것을 제거하고 볼륨 이름을 붙인다.
             static constexpr string_view kSceneSuffix = ".scene.xml";
 
             /** @brief 이 에디터 세션에서 `lighting.bakeProbes` 가 끝난 횟수입니다(탐침 `Editor.LightProbeBakeCount`). */
@@ -73,7 +73,7 @@ namespace sw::editor
                 return path;
             }
 
-            /** @brief 볼륨 하나를 굽고 파일로 쓴 뒤 볼륨에 넘깁니다. 실패하면 이유를 @p outError 에 적습니다. */
+            /** @brief 볼륨 하나를 베이크하고 파일로 쓴 뒤 볼륨에 넘깁니다. 실패하면 이유를 @p outError 에 적습니다. */
             static bool bakeVolume( const Scene& scene, LightProbeVolumeComponent& volume, string& outError )
             {
                 LightProbeBakeInput input{};
@@ -175,7 +175,7 @@ namespace sw::editor
                 }
             }
 
-            /** @brief 편집 상태에서만 켠다 — 플레이 중에 구우면 플레이가 움직인 오브젝트의 빛을 굽는다. */
+            /** @brief 편집 상태에서만 켠다 — 플레이 중에 베이크하면 플레이가 움직인 오브젝트의 빛을 베이크한다. */
             static bool isEnabled() { return EditorPlaySession::areSceneEditsAllowed() && editor::getActiveObjectManager() != nullptr; }
 
             [[nodiscard]] static bool readBakeRunCount( const GameObjectManager* /*pManager*/, float64& outValue )

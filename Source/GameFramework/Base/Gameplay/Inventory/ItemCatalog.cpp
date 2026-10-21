@@ -3,6 +3,7 @@
 #include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -68,22 +69,13 @@ namespace sw
 
     bool ItemDef::hasTag( const hashed_string& tag ) const
     {
-        for ( const hashed_string& ownTag : _listTag )
-        {
-            if ( ownTag == tag )
-                return true;
-        }
-        return false;
+        return VectorUtil::contains( _listTag, tag );
     }
 
     bool ItemDef::hasTagUnder( TagID parentTag ) const
     {
-        for ( const hashed_string& ownTag : _listTag )
-        {
-            if ( TagID::request( ownTag.view() ).isSubtagOf( parentTag ) )
-                return true;
-        }
-        return false;
+        return VectorUtil::containsIf( _listTag, [&]( const hashed_string& ownTag )
+        { return TagID::request( ownTag.view() ).isSubtagOf( parentTag ); } );
     }
 
     int32 ItemCatalog::getMaxStack( const hashed_string& id ) const

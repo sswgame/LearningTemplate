@@ -750,12 +750,8 @@ namespace sw
 {
     const ResolvedPart* ResolvedAppearance::findPart( const hashed_string& owner, const hashed_string& partName ) const
     {
-        for ( const ResolvedPart& part : _listPart )
-        {
-            if ( part._owner == owner && part._partName == partName )
-                return &part;
-        }
-        return nullptr;
+        return VectorUtil::findIf( _listPart, [&]( const ResolvedPart& part )
+        { return part._owner == owner && part._partName == partName; } );
     }
 
     bool ResolvedAppearance::hasOwner( const hashed_string& owner ) const
@@ -770,12 +766,8 @@ namespace sw
 
     const ResolvedMorph* ResolvedAppearance::findMorph( const hashed_string& owner, const hashed_string& name ) const
     {
-        for ( const ResolvedMorph& morph : _listMorph )
-        {
-            if ( morph._owner == owner && morph._name == name )
-                return &morph;
-        }
-        return nullptr;
+        return VectorUtil::findIf( _listMorph, [&]( const ResolvedMorph& morph )
+        { return morph._owner == owner && morph._name == name; } );
     }
 
     uint32 ResolvedAppearance::countTrace( const hashed_string& source ) const

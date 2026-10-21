@@ -3,6 +3,7 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -273,12 +274,7 @@ namespace sw::editor
 
     bool EditorWorkspace::isObjectLocked( uint64 objectID ) const
     {
-        for ( const uint64 lockedID : _listLockedObjectID )
-        {
-            if ( lockedID == objectID )
-                return true;
-        }
-        return false;
+        return VectorUtil::contains( _listLockedObjectID, objectID );
     }
 
     void EditorWorkspace::setObjectLocked( uint64 objectID, bool bLocked )

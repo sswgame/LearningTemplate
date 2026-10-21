@@ -26,7 +26,7 @@ namespace sw::editor
             static constexpr float32 kFieldWidthInFonts = 10.0f;
             /** @brief 경로 칸의 너비(글자 크기 배수)입니다. */
             static constexpr float32 kPathWidthInFonts = 20.0f;
-            /** @brief 칸 이름입니다(탭 · 명령 답). */
+            /** @brief 슬롯 이름입니다(탭 · 명령 답). */
             static constexpr const utf8* kArrSourceName[EditorStateHashCompare::kSourceCount] = { "A", "B" };
 
             /** @brief 탭과 `netplay.sync` 가 같이 쓰는 비교입니다(창을 닫았다 열어도 남는다). */
@@ -141,12 +141,12 @@ namespace sw::editor
         void drawTab( const MultiplayerTabContext& context ) override;
 
     private:
-        /** @brief 칸 하나의 원천 고르기 · 저장 줄입니다. */
+        /** @brief 슬롯 하나의 원천 고르기 · 저장 줄입니다. */
         void drawSource( int32 sourceIndex );
 
-        fixed_string<constant::kMaxPathSize>  _arrPath[EditorStateHashCompare::kSourceCount];    ///< 칸마다 파일 경로(편집 칸)
-        fixed_string<constant::kMaxBuffer64>  _arrAddress[EditorStateHashCompare::kSourceCount]; ///< 칸마다 채널 주소(편집 칸)
-        fixed_string<constant::kMaxBuffer128> _arrToken[EditorStateHashCompare::kSourceCount];   ///< 칸마다 채널 토큰(편집 칸)
+        fixed_string<constant::kMaxPathSize>  _arrPath[EditorStateHashCompare::kSourceCount];    ///< 칸마다 파일 경로(편집 필드)
+        fixed_string<constant::kMaxBuffer64>  _arrAddress[EditorStateHashCompare::kSourceCount]; ///< 칸마다 채널 주소(편집 필드)
+        fixed_string<constant::kMaxBuffer128> _arrToken[EditorStateHashCompare::kSourceCount];   ///< 칸마다 채널 토큰(편집 필드)
     };
 } // namespace sw::editor
 

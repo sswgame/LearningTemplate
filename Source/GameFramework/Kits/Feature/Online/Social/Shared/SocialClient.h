@@ -4,7 +4,7 @@
  * @details - 요청마다 결과 델리게이트를 `OnlineServiceClient::update` 스레드에서 정확히 한 번 부른다. 업무 결과는 `_reply._result` 에, 전송 오류와 공통 오류는 `_errorCode` 에 있으며
  *            이때 `_reply._result` 는 `SocialProtocol::fromErrorCode` 로 맞춘다.
  *          - 관계나 길드를 바꾸는 요청에는 멱등 키를 싣는다. 다시 연결한 뒤 재전송해도 두 번 적용되지 않게 하려는 것이다.
- *          - 로그인한 뒤 `listLinks` 를 먼저 부른다. 서버가 그때 이 계정의 관계를 메모리에 올려야 친구의 접속 상태 알림이 온다.
+ *          - 로그인한 뒤 `listLinks` 를 먼저 부른다. 서버가 그때 이 계정의 관계를 메모리에 로드해야 친구의 접속 상태 알림이 온다.
  *
  *          언리얼 Online Services 의 비동기 호출과 완료 델리게이트에 해당한다.
  */

@@ -54,7 +54,7 @@ namespace sw::editor
         if ( pEditorContext == nullptr )
             return;
 
-        // Play 중 게임 입력은 이 패널 위에서만 게임으로 간다(`ImGuiEditor::processEvent`). 씬 뷰 위의 입력은 에디터 카메라 몫이다.
+        // Play 중 게임 입력은 이 패널 위에서만 게임으로 간다(`ImGuiEditor::processEvent`). 씬 뷰 위의 입력은 에디터 카메라 담당이다.
         pEditorContext->getSubsystem<EditorRenderViews>().setGameViewFocused( ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows ) );
         if ( pEditorContext->getSubsystem<EditorRenderViews>().isGameViewFocused() )
             EditorScreenshotCommands::noteFocusedView( EditorViewKind::Game );
@@ -88,7 +88,7 @@ namespace sw::editor
             ImGui::Dummy( ImVec2{ MathUtil::max( imageSize.x, 1.0f ), MathUtil::max( imageSize.y, 1.0f ) } );
         EditorSelfTestMarks::note( "gameView.canvas" );
 
-        // 게임 카메라가 없으면(꺼짐 · 지움) 그릴 눈이 없다 — 지난 그림 위에 안내를 띄운다(유니티 "No cameras rendering").
+        // 게임 카메라가 없으면(꺼짐 · 지움) 그릴 눈이 없다 — 지난 이미지 위에 안내를 띄운다(유니티 "No cameras rendering").
         Scene*                 pScene      = editor::getActiveScene();
         const CameraComponent* pGameCamera = pScene != nullptr ? pScene->getActiveGameCamera() : nullptr;
         _bNoCameraHintShown                = CameraRegistry::isUsableCamera( pGameCamera ) == false;
@@ -133,7 +133,7 @@ namespace sw::editor
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "GameViewAspect" ) );
 
             ImGui::SameLine();
-            // 유니티 게임 뷰의 Maximize On Play 자리 — 값은 환경설정(Editor/Play)이고 바꾸면 바로 저장한다.
+            // 유니티 게임 뷰의 Maximize On Play 에 해당 — 값은 환경설정(Editor/Play)이고 바꾸면 바로 저장한다.
             EditorPlayPreferences& playPreferences = *static_cast<EditorPlayPreferences*>( EditorSettingsInstance<EditorPlayPreferences>::getInstance() );
             if ( ImGui::Checkbox( "Max", &playPreferences._bMaximizeOnPlay ) && EditorPreferencesStore::saveAll( EditorPreferencesStore::getDefaultFilePath() ) == false )
                 SW_LOG_WARNING( "Editor preferences could not be saved" );

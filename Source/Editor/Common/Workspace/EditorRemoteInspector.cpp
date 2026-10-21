@@ -51,7 +51,7 @@ namespace sw::editor
             /** @brief `<id> <이름> parent=<이름> active=<0|1> components=<목록>` 한 줄을 나눕니다. */
             [[nodiscard]] static bool parseObjectRow( string_view line, EditorRemoteObjectRow& outRow )
             {
-                // 이름에 빈칸이 있을 수 있어 뒤에서부터 칸을 찾는다 — 칸 머리 셋은 서버가 늘 같은 순서로 적는다.
+                // 이름에 공백이 있을 수 있어 뒤에서부터 열을 찾는다 — 열 머리 세 개는 서버가 늘 같은 순서로 적는다.
                 const size_t parentAt     = line.rfind( " parent=" );
                 const size_t activeAt     = line.rfind( " active=" );
                 const size_t componentsAt = line.rfind( " components=" );

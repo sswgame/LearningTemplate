@@ -42,7 +42,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 알림을 보내지 않는 키트가 `OnlineMethodTable` 의 알림 표로 고르는 빈 열거형입니다. 열거자가 없으므로 이름을 찾지 않습니다. */
+    /** @brief 알림을 보내지 않는 키트가 `OnlineMethodTable` 의 알림 테이블로 고르는 빈 열거형입니다. 열거자가 없으므로 이름을 찾지 않습니다. */
     enum class OnlineNoPushName : uint8
     {
         Count,
@@ -53,7 +53,7 @@ namespace sw
      *        메서드는 @p RangeBase + 1 부터, 알림은 @p RangeBase + 0x80 부터 연속입니다. 알림이 없는 키트는 @p TPushName 으로 `OnlineNoPushName` 을 적습니다.
      * @details 키트의 `XxxMethod` 가 이 테이블을 상속해 와이어 상수를 `toMethod` 와 `toPush` 로 만들고, 등록 항목(`OnlineProtocolEntry`)이 이 테이블을 받아
      *          두 열거형의 이름 순서를 온라인 스키마 해시에 섞습니다. 그래서 같은 타입을 받는 두 메서드의 번호를 맞바꾸면(열거자 순서를 바꾸면) 해시가 바뀌어
-     *          빌드가 다른 서버와 클라이언트가 접속 때 갈립니다. 번호를 손으로 적는 곳이 없으므로 표 밖의 번호가 생기지 않습니다.
+     *          빌드가 다른 서버와 클라이언트가 접속 때 갈립니다. 번호를 손으로 적는 곳이 없으므로 테이블 밖의 번호가 생기지 않습니다.
      *          서비스 지표(`ServiceMetrics::initialize`)는 메서드 열거자 이름의 snake_case 를 메서드 라벨로 씁니다.
      *          새 메서드와 알림은 열거형 끝(`Count` 앞)에 더합니다. 중간에 넣어도 해시가 바뀌어 접속에서 갈리지만, 지표 라벨의 번호가 밀립니다.
      */
@@ -71,7 +71,7 @@ namespace sw
 
         static constexpr uint16 toMethod( TMethodName name ) { return static_cast<uint16>( kFirstMethod + static_cast<uint16>( name ) ); }
         static constexpr uint16 toPush( TPushName name ) { return static_cast<uint16>( kFirstPush + static_cast<uint16>( name ) ); }
-        /** @brief 0부터 시작하는 번호입니다(열거자 순서). 지표와 표의 인덱스로 씁니다. 모르는 메서드이면 -1 입니다. */
+        /** @brief 0부터 시작하는 번호입니다(열거자 순서). 지표와 테이블의 인덱스로 씁니다. 모르는 메서드이면 -1 입니다. */
         static constexpr int32 toIndex( uint16 method )
         {
             const int32 index = static_cast<int32>( method ) - static_cast<int32>( kFirstMethod );
@@ -99,7 +99,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 공통 오류 코드 하나를 키트 결과 하나로 바꾸는 표의 한 줄입니다(`OnlineError::toResult`). */
+    /** @brief 공통 오류 코드 하나를 키트 결과 하나로 바꾸는 테이블의 한 줄입니다(`OnlineError::toResult`). */
     template <typename TResult>
     struct OnlineErrorResult
     {
@@ -127,7 +127,7 @@ namespace sw
         static constexpr uint16 kInternal        = 255;
 
         /**
-         * @brief @p errorCode 를 키트 표 @p arrRow 에서 찾아 키트 결과로 바꿉니다. 표에 없으면 @p fallback 입니다.
+         * @brief @p errorCode 를 키트 테이블 @p arrRow 에서 찾아 키트 결과로 바꿉니다. 테이블에 없으면 @p fallback 입니다.
          * @details 결과 열거형과 테이블, 기본값(대개 `Unavailable`)은 키트가 가진다. 키트마다 받는 코드가 다르기 때문이다.
          */
         template <typename TResult, size_t Count>

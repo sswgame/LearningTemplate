@@ -244,7 +244,7 @@ namespace sw::editor
         const bool bHovered = ImGui::IsItemHovered();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "AtlasCellTip" ) );
 
-        // 칸 격자와 고른 프레임 사각형을 그림 위에 그린다.
+        // 셀 격자와 고른 프레임 사각형을 이미지 위에 그린다.
         static constexpr Color kSliceGrid{ Color::fromBytes( 255, 255, 255, 90 ) };
         ImDrawList*            pDrawList = ImGui::GetWindowDrawList();
         for ( int32 column = 1; column < _sliceColumns; ++column )

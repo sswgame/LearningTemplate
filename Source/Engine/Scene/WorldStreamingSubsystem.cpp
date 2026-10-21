@@ -2,6 +2,7 @@
 
 #include "Engine/Scene/WorldStreamingSubsystem.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
@@ -151,7 +152,7 @@ namespace sw
                 const bool      bSettled = slot._bLoaded || slot._bFailed; // 이미 올라 있거나 짓지 못한 셀이다
                 if ( bSettled )
                     continue;
-                if ( std::find( _listScratchLoad.begin(), _listScratchLoad.end(), indexIt->second ) == _listScratchLoad.end() )
+                if ( VectorUtil::contains( _listScratchLoad, indexIt->second ) == false )
                     _listScratchLoad.push_back( indexIt->second );
             }
         }

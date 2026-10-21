@@ -9,11 +9,11 @@
 #include "GameFramework/Kits/Feature/Online/Economy/Shared/Catalog/CurrencyCatalog.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Shared/Catalog/OfferCatalog.h"
 
-// 경제 키트의 서버 조립 — 화폐 · 상품 카탈로그를 읽어 경제 서비스를 올리고, 화폐 카탈로그를 원장 정책(계정 잔액 상한)으로 문맥에 내놓는다(우편함 · GM · 거래가 쓴다).
+// 경제 키트의 서버 조립 — 화폐 · 상품 카탈로그를 읽어 경제 서비스를 만들고, 화폐 카탈로그를 원장 정책(계정 잔액 상한)으로 문맥에 내놓는다(우편함 · GM · 거래가 쓴다).
 // 옵션:
 //   currencyCatalog        화폐 카탈로그(리소스 경로, `<CurrencyCatalog>`). 필수.
 //   offerCatalog           상품 카탈로그(리소스 경로, `<OfferCatalog>`). 필수.
-//   fakeReceipts           1 이면 가짜 영수증 제공자("fake")를 올린다(Dev 만 — Shipping 경제 서비스가 거절한다).
+//   fakeReceipts           1 이면 가짜 영수증 제공자("fake")를 등록한다(Dev 만 — Shipping 경제 서비스가 거절한다).
 //   acceptSandboxReceipts  1 이면 스토어의 샌드박스 영수증을 받는다(스테이징 서버).
 
 namespace sw
@@ -73,6 +73,7 @@ namespace sw
                 settings._pReceiptRegistry       = &_receiptRegistry;
                 settings._pMetricRegistry        = context._pMetricRegistry;
                 settings._pScheduler             = context._pScheduler; // 원장 보존 검사를 매일 서버 하나가 돌린다
+                settings._pPresence              = context._pPresence;  // 계정 키트(다른 서버에 붙은 계정에 잔액 변경 알림을 중계)
                 settings._bAcceptSandboxReceipts = bAcceptSandbox ? SW_TRUE : SW_FALSE;
                 if ( _service.initialize( context._pStore, settings ) == false )
                 {
@@ -82,7 +83,8 @@ namespace sw
                 _bServiceStarted = true;
                 if ( registerHostService( context, entry, &_service, outError ) == false )
                     return false;
-                context._pLedgerPolicy = &_currencyCatalog;
+                context._pLedgerPolicy  = &_currencyCatalog;
+                context._pBalanceNotice = &_service; // GM 키트가 지급 · 회수 뒤에 부른다
                 return true;
             }
 

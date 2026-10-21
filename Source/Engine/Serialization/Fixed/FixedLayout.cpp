@@ -5,6 +5,7 @@
 #include "Core/Common/BitUtil.h"
 #include "Core/Common/HashUtil.h"
 #include "Core/Container/DynamicBitset.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
@@ -41,7 +42,7 @@ namespace sw
             {
                 if ( codec._dependencyState.load( std::memory_order_acquire ) == FixedDependencyState::Valid )
                     return true;
-                if ( std::find( listVisited.begin(), listVisited.end(), &codec ) != listVisited.end() )
+                if ( VectorUtil::contains( listVisited, &codec ) )
                     return true;
                 if ( static_cast<int32>( listVisited.size() ) >= kMaxDependencyDepth )
                 {
