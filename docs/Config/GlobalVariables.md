@@ -126,6 +126,7 @@
 | `gv_rhiBackBufferFormat` | `int32` | `0` | 일반 | 요청 백버퍼 포맷: 0=R8G8B8A8_UNORM, 1=B8G8R8A8_UNORM (실제 채택값은 getBackBufferFormat) | [IRHIDevice.cpp](../../Source/Engine/Graphics/RHI/IRHIDevice.cpp) |
 | `gv_rhiBackend` | `RHIBackend` | `SW_RHI_BACKEND_DEFAULT` | 일반 | Current RHI Backend | [RHI.cpp](../../Source/Engine/Graphics/RHI/RHI.cpp) |
 | `gv_rhiSoftwareAdapter` | `int32` | `0` | 시험 | 소프트웨어 어댑터로 띄운다: 0=하드웨어, 1=WARP(DX11 · DX12) · CPU 디바이스(Vulkan) | [IRHIDevice.cpp](../../Source/Engine/Graphics/RHI/IRHIDevice.cpp) |
+| `gv_textureMipDrop` | `int32` | `0` | 일반 | 텍스처를 읽을 때 버리는 위쪽 밉 수 (사용자 설정 graphics.textureQuality 의 targetValue, 다시 시작해야 반영) | [Texture2D.cpp](../../Source/Engine/Graphics/Texture/Texture2D.cpp) |
 | `gv_validateBindlessIndex` | `int32` | `kDefaultLevel` | 시험 | 셰이더에 넘기는 bindless 인덱스 검사 — 0 끔, 1 죽은 번호(Debug 기본), 2 '없음' 번호가 가는 자리까지 | [BindlessIndexValidator.cpp](../../Source/Engine/Graphics/RHI/Support/BindlessIndexValidator.cpp) |
 
 ## `Source/Engine/Net`
@@ -147,6 +148,7 @@
 | `gv_animationRewindSeconds` | `float32` | `10.0` | 시험 | Seconds of animation rewind history kept per unit | [AnimationRewind.cpp](../../Source/Engine/Object/SceneAnimation/AnimationRewind.cpp) |
 | `gv_tickBatch` | `bool` | `true` | 시험 | 타입별 일괄 틱 경로를 쓴다(0 이면 모든 오브젝트를 칸 목록으로 — 전/후 비교용) | [TickRegistry.cpp](../../Source/Engine/Object/GameObject/Tick/TickRegistry.cpp) |
 | `gv_tickCostDispatch` | `bool` | `false` | 시험 | 씬 틱 병렬 분배를 잰 비용으로 고른다(0 이면 항목 16 개 이상이면 늘 나눈다 — 기본) | [SceneTickScheduler.cpp](../../Source/Engine/Object/GameObject/Tick/SceneTickScheduler.cpp) |
+| `gv_viewDistanceScale` | `float32` | `1.0` | 일반 | 시야 거리 배율 — 원근 카메라의 먼 평면에 곱한다 (사용자 설정 graphics.viewDistance) | [CameraComponent.cpp](../../Source/Engine/Object/Component/CameraComponent.cpp) |
 
 ## `Source/Engine/Profiling`
 
@@ -232,30 +234,33 @@
 | `gv_cameraFieldOfView` | `float32` | `70.0` | 일반 | 카메라 시야각(도) (사용자 설정 gameplay.fieldOfView) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_cameraHeadBob` | `bool` | `true` | 일반 | 걷기 머리 흔들림 (사용자 설정 gameplay.headBob) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_cameraShakeScale` | `float32` | `1.0` | 일반 | 카메라 흔들림 배율 0~1 (사용자 설정 gameplay.cameraShake) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
-| `gv_colorVisionMode` | `int32` | `0` | 일반 | 색각 보정 0 끔 1 적색약 2 녹색약 3 청색약 (사용자 설정 accessibility.colorVision, UI 캔버스만 — 톤맵 미구현) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
+| `gv_colorVisionMode` | `int32` | `0` | 일반 | 색각 보정 0 끔 1 적색약 2 녹색약 3 청색약 (사용자 설정 accessibility.colorVision, UI 캔버스 — 톤맵 셰이더는 쿠킹 대기) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_debugHUD` | `bool` | `false` | 일반 | 디버그 HUD 표시 — Dev 전용, 단축키 Ctrl+F3 · 명령 hud (사용자 설정 debug.hud) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_debugHUDCorner` | `int32` | `0` | 일반 | 디버그 HUD 모서리 0 왼위 1 오위 2 왼아래 3 오아래 (사용자 설정 debug.hudCorner) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_debugHUDOpacity` | `float32` | `0.85` | 일반 | 디버그 HUD 불투명도 0.2~1 (사용자 설정 debug.hudOpacity) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_debugHUDSections` | `string` | — | 일반 | 디버그 HUD 섹션 켬 · 끔 — 공백으로 나눈 '이름'(켬) · '-이름'(끔), 적지 않은 섹션은 기본 (사용자 설정 debug.hudSections) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
-| `gv_effectsQuality` | `int32` | `2` | 일반 | 이펙트 품질 0~3 (사용자 설정 graphics.effectsQuality) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_emulatedGPUMemoryMb` | `int32` | `0` | 시험 | 하드웨어 흉내: 사양 조사가 보고하는 비디오 메모리 상한(MB, 0=실제 값) | [HardwareProbe.cpp](../../Source/Engine/UserSettings/HardwareProbe.cpp) |
 | `gv_foliageDensity` | `float32` | `1.0` | 일반 | 식생 밀도 배율 (사용자 설정 graphics.foliageDensity) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
-| `gv_motionBlur` | `bool` | `true` | 일반 | 모션 블러 (사용자 설정 graphics.motionBlur) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
-| `gv_postQuality` | `int32` | `2` | 일반 | 후처리 품질 0~3 (사용자 설정 graphics.postQuality) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
+| `gv_motionBlur` | `bool` | `true` | 일반 | 모션 블러 (사용자 설정 graphics.motionBlur, 렌더러 미구현 — UserSettingsConsumers U3 패치) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
+| `gv_postQuality` | `int32` | `2` | 일반 | 후처리 품질 0~3 — 패스의 _minPostQuality 보다 낮으면 건너뛴다 (사용자 설정 graphics.postQuality) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_reduceFlashing` | `bool` | `false` | 일반 | 번쩍임 줄이기 (사용자 설정 accessibility.reduceFlashing) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
-| `gv_renderScale` | `float32` | `1.0` | 일반 | 3D 렌더 해상도 배율 0.5~1 (사용자 설정 graphics.renderScale, 렌더러 미구현) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
+| `gv_renderScale` | `float32` | `1.0` | 일반 | 3D 렌더 해상도 배율 0.5~1 (사용자 설정 graphics.renderScale, 화면 출력 뷰) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_shadowMapResolution` | `int32` | `2048` | 일반 | 그림자 맵 한 변 텍셀 수 (사용자 설정 graphics.shadowQuality 의 targetValue) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_subtitleBackgroundOpacity` | `float32` | `0.5` | 일반 | 자막 배경 불투명도 0~1 (사용자 설정 accessibility.subtitleBackground) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_subtitles` | `bool` | `true` | 일반 | 자막 표시 (사용자 설정 accessibility.subtitles) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_subtitleSize` | `int32` | `1` | 일반 | 자막 크기 0 작게 1 보통 2 크게 (사용자 설정 accessibility.subtitleSize) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
-| `gv_textureQuality` | `int32` | `2` | 일반 | 텍스처 품질 0~3 (사용자 설정 graphics.textureQuality) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_uiReduceMotion` | `bool` | `false` | 일반 | UI 움직임 줄이기 — UI 애니메이션 · 트윈 · 스타일 전환이 바로 끝 값으로 (사용자 설정 accessibility.reduceMotion) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_uiScale` | `float32` | `1.0` | 일반 | 게임 UI 배율 (사용자 설정 accessibility.uiScale) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_uiTextScale` | `float32` | `1.0` | 일반 | 게임 UI 글자 크기 배율 (사용자 설정 accessibility.textSize) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_uiTheme` | `string` | `default` | 일반 | 게임 UI 테마 이름 default · highcontrast (사용자 설정 accessibility.uiTheme) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_upscaler` | `int32` | `0` | 일반 | 업스케일러 (0 끔, 사용자 설정 graphics.upscaler) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_userSettingsFile` | `string` | — | 시험 | 사용자 설정 파일 경로 (비면 사용자 폴더의 usersettings.json) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
-| `gv_viewDistanceScale` | `float32` | `1.0` | 일반 | 시야 거리 배율 (사용자 설정 graphics.viewDistance) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
+
+## `Source/Engine/Vfx`
+
+| 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
+|---|---|---|---|---|---|
+| `gv_effectsSpawnScale` | `float32` | `1.0` | 일반 | 이펙트 입자 생성 배율 (사용자 설정 graphics.effectsQuality 의 targetValue) | [VfxComponent.cpp](../../Source/Engine/Vfx/VfxComponent.cpp) |
 
 ## `Source/GameFramework/Base`
 

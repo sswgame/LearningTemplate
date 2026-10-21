@@ -2,12 +2,19 @@
 
 #include "Engine/Graphics/Texture/Texture2D.h"
 
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Resource/AssetLoadProfiler.h"
 #include "Engine/Resource/Image/DDSLoader.h"
+
+/**
+ * @brief 텍스처를 읽을 때 버리는 위쪽 밉 수입니다. 사용자 설정 `graphics.textureQuality` 선택지의 `targetValue` 가 넣는다(`engine.settings.xml`, 다시 시작해야 반영).
+ * @details Graphics 가 UserSettings 보다 아래 층이라 이 변수는 읽는 쪽인 여기에 둔다(설정은 이름으로 넣는다).
+ */
+SW_GLOBAL_VARIABLE( int32, gv_textureMipDrop, 0, "텍스처를 읽을 때 버리는 위쪽 밉 수 (사용자 설정 graphics.textureQuality 의 targetValue, 다시 시작해야 반영)" );
 
 namespace sw
 {
@@ -77,6 +84,27 @@ namespace sw
         }
     }
 
+    Texture2DMipDrop Texture2D::computeMipDrop( RHIFormat format, uint32 width, uint32 height, uint32 mipCount, int32 requestedDrop )
+    {
+        Texture2DMipDrop         drop{};
+        const RHIFormatBlockInfo block = getRHIFormatBlockInfo( format );
+        while ( static_cast<int32>( drop._mipCount ) < requestedDrop && drop._mipCount + 1 < mipCount )
+        {
+            const uint32 nextWidth     = width >> ( drop._mipCount + 1 );
+            const uint32 nextHeight    = height >> ( drop._mipCount + 1 );
+            const bool   bLargeEnough  = nextWidth >= kMinMipDropExtent && nextHeight >= kMinMipDropExtent;
+            const bool   bBlockAligned = nextWidth % block._blockWidth == 0 && nextHeight % block._blockHeight == 0;
+            if ( bLargeEnough == false || bBlockAligned == false )
+                break;
+            RHITextureMipSpan span{};
+            if ( computeRHITextureMipLayout( format, width, height, drop._mipCount, span ) == false )
+                break;
+            drop._skippedBytes += span._sizeBytes;
+            ++drop._mipCount;
+        }
+        return drop;
+    }
+
     bool Texture2D::loadFromResource( IRHIDevice* pDevice, string_view relativePath )
     {
         if ( pDevice == nullptr || relativePath.empty() )
@@ -106,10 +134,18 @@ namespace sw
 
         loadScope.setBytes( image._bytes.size() );
         loadScope.beginPhase( AssetLoadPhase::Upload );
+        // 텍스처 품질(gv_textureMipDrop) — DDS 페이로드는 밉 0 부터 이어지므로 버린 밉의 바이트를 건너뛰고 남은 밉 사슬을 올린다.
+        const uint32           fileMipCount = image._mipCount > 0 ? image._mipCount : 1;
+        const Texture2DMipDrop drop         = computeMipDrop( format, image._width, image._height, fileMipCount, static_cast<int32>( gv_textureMipDrop ) );
+        if ( drop._skippedBytes >= image._bytes.size() )
+        {
+            SW_LOG_ERROR( "Texture2D: '%#' payload (%# bytes) is shorter than its mip chain (%# mips)", relativePath, image._bytes.size(), fileMipCount );
+            return false;
+        }
         RHITextureDesc desc{};
-        desc._width                    = image._width;
-        desc._height                   = image._height;
-        desc._mipLevels                = image._mipCount > 0 ? image._mipCount : 1;
+        desc._width                    = image._width >> drop._mipCount;
+        desc._height                   = image._height >> drop._mipCount;
+        desc._mipLevels                = fileMipCount - drop._mipCount;
         desc._format                   = format;
         desc._bIsShaderResource        = SW_TRUE;
         IRHIResourceFactory* pResource = pDevice->getResourceFactory();
@@ -122,8 +158,8 @@ namespace sw
 
         // DDS 페이로드는 밉 0 부터 행 빈틈없이 이어진 배치다. uploadTexture2D 의 규약과 같다.
         RHITextureUploadDesc upload{};
-        upload._pData     = image.getPixels();
-        upload._sizeBytes = static_cast<uint32>( image._bytes.size() );
+        upload._pData     = image.getPixels() + drop._skippedBytes;
+        upload._sizeBytes = static_cast<uint32>( image._bytes.size() - drop._skippedBytes );
         upload._mipLevels = desc._mipLevels;
         if ( pResource->uploadTexture2D( _handle, upload ) == false )
         {

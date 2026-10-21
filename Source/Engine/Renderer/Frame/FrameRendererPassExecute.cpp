@@ -13,6 +13,7 @@
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
+#include "Engine/UserSettings/UserSettingsVariables.h"
 
 namespace sw
 {
@@ -333,7 +334,10 @@ namespace sw
             // 후처리를 끈 뷰(CCTV, 표면 값 보기 모드)에서 효과 패스(테이블의 kSkipsWithoutPostProcess)는 효과를 적용하지 않는다. 포맷이 같으면 원본을 복사하고,
             // 다르면 그 패스 셰이더가 SW_PASS_FLAG_SKIP_POST 를 보고 원본을 그대로 낸다(복사는 같은 포맷끼리만 된다). 원본 색을 읽지 않는 효과(SSAO)는
             // 기본 클리어로 지우기만 한다(SSAO 의 흰색은 가림 없음).
-            const bool bSkipEffect = info.hasFlag( RenderPassTraitFlag::kSkipsWithoutPostProcess ) && _pActiveView->_settings.usesPostProcess() == false;
+            // 후처리 품질(gv_postQuality)이 패스의 최소 품질(`_minPostQuality`, 검증이 건너뛸 수 있는 타입에만 허락한다)보다 낮아도 같은 길로 건너뛴다.
+            const bool bBelowPostQuality = pPassDesc->_minPostQuality > static_cast<int32>( gv_postQuality );
+            const bool bPostOff          = _pActiveView->_settings.usesPostProcess() == false || bBelowPostQuality;
+            const bool bSkipEffect       = info.hasFlag( RenderPassTraitFlag::kSkipsWithoutPostProcess ) && bPostOff;
             if ( bSkipEffect )
             {
                 RHITextureHandle source{ 0 };
@@ -352,6 +356,16 @@ namespace sw
                 }
                 else if ( info._inputContract.reads( RenderPassInputRole::SourceColor ) && source != 0 )
                 {
+                    // 셰이더가 SW_PASS_FLAG_SKIP_POST 를 보고 원본을 낸다. 뷰의 후처리는 켜 있고 품질로만 건너뛰는 패스는 이 패스의 상수에만 비트를 더한다.
+                    if ( bBelowPostQuality )
+                    {
+                        uint32       passFlags  = 0;
+                        uint32       valueSize  = 0;
+                        const uint8* pFlagBytes = context._passValues.find( passConstantNames()._flags, valueSize );
+                        if ( pFlagBytes != nullptr && valueSize == sizeof( uint32 ) )
+                            Memory::copy( &passFlags, pFlagBytes, sizeof( uint32 ) );
+                        context._passValues.setUint( passConstantNames()._flags, passFlags | shaderslot::kPassFlagSkipPost );
+                    }
                     executeFullscreenPass( pso, *pTarget, targetClear );
                 }
                 else if ( beginColorPass( context, pTarget->view(), "", targetClear, RHIRenderPassLoadOp::Clear, RHIRenderPassLoadOp::Load ) )

@@ -64,8 +64,11 @@ namespace sw
         /** @brief 튄 입자를 닿은 면에서 띄우는 거리(방출기 로컬 미터)입니다. 다음 단계의 선분이 같은 면에서 시작해 다시 닿지 않게 한다. */
         static constexpr float32 kCollisionSkin = 0.001f;
 
-        /** @brief @p def 의 복사본으로 시뮬레이션을 만듭니다. @p def 는 `VfxEffectDef::validate` 를 통과한 방출기여야 합니다. @p seed 가 방출기의 씨앗입니다. */
-        VfxCPUSimulation( const VfxEmitterDef& def, uint64 seed );
+        /**
+         * @brief @p def 의 복사본으로 시뮬레이션을 만듭니다. @p def 는 `VfxEffectDef::validate` 를 통과한 방출기여야 합니다. @p seed 가 방출기의 씨앗입니다.
+         * @param spawnScale 생성률과 버스트 수에 곱하는 배율(0 이상)입니다. 이펙트 품질 사용자 설정(`gv_effectsSpawnScale`)을 `VfxComponent` 가 넘깁니다.
+         */
+        VfxCPUSimulation( const VfxEmitterDef& def, uint64 seed, float32 spawnScale );
 
         /**
          * @brief 프레임 시간 @p deltaSeconds 만큼 나아갑니다. 고정 간격으로 나눠 `step` 을 부르고, 남는 시간은 다음 호출로 넘깁니다.
@@ -115,6 +118,7 @@ namespace sw
         vector<Particle> _listParticle;
         vector<uint8>    _listBurstFired;
         uint64           _spawnedCount;
+        float32          _spawnScale; ///< 생성률 · 버스트 수에 곱한다(이펙트 품질)
         float32          _emitterSeconds;
         float32          _spawnCarry;
         float32          _pendingSeconds;

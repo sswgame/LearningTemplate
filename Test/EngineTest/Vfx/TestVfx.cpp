@@ -256,9 +256,9 @@ SW_TEST_CASE( VfxEffectDefTest, UnknownNamesFailTheLoad )
 SW_TEST_CASE( VfxCPUSimulationTest, SameSeedGivesSameParticles )
 {
     const sw::VfxEmitterDef emitter = sw::makeValidEmitter( "Sparks" );
-    sw::VfxCPUSimulation    first( emitter, 7 );
-    sw::VfxCPUSimulation    second( emitter, 7 );
-    sw::VfxCPUSimulation    other( emitter, 8 );
+    sw::VfxCPUSimulation    first( emitter, 7, 1.0f );
+    sw::VfxCPUSimulation    second( emitter, 7, 1.0f );
+    sw::VfxCPUSimulation    other( emitter, 8, 1.0f );
 
     const sw::vector<sw::GPUParticle> listFirst  = sw::runSteps( first, 45 );
     const sw::vector<sw::GPUParticle> listSecond = sw::runSteps( second, 45 );
@@ -288,7 +288,7 @@ SW_TEST_CASE( VfxCPUSimulationTest, ParticlesExpireAndTheEmitterFinishes )
     emitter._spawnRate        = 0.0f;
     emitter._duration         = 1.0f;
     emitter._listBurst.push_back( sw::makeBurst( 0.0f, 10 ) );
-    sw::VfxCPUSimulation simulation( emitter, 1 );
+    sw::VfxCPUSimulation simulation( emitter, 1, 1.0f );
 
     simulation.step( sw::kTestStepSeconds, nullptr );
     SW_EXPECT_EQUAL( uint32( 10 ), simulation.getAliveCount() );
@@ -309,10 +309,29 @@ SW_TEST_CASE( VfxCPUSimulationTest, SpawnRateEmitsPerSecond )
     emitter._spawnRate        = 30.0f;
     emitter._lifetimeMin      = 10.0f; // 이 테스트 동안 아무도 죽지 않는다
     emitter._lifetimeMax      = 10.0f;
-    sw::VfxCPUSimulation simulation( emitter, 1 );
+    sw::VfxCPUSimulation simulation( emitter, 1, 1.0f );
 
     (void)sw::runSteps( simulation, 60 ); // 1 초
     SW_EXPECT_NEAR_EQUAL( 30.0f, static_cast<float32>( simulation.getAliveCount() ), 1.0f );
+}
+
+/**
+ * @brief [VfxCPUSimulationTest] 생성 배율(이펙트 품질)은 생성률과 버스트 수에 함께 곱한다 — 배율 0.5 면 절반이다
+ */
+SW_TEST_CASE( VfxCPUSimulationTest, SpawnScaleScalesRateAndBursts )
+{
+    sw::VfxEmitterDef emitter = sw::makeValidEmitter( "Stream" );
+    emitter._spawnRate        = 30.0f;
+    emitter._lifetimeMin      = 10.0f;
+    emitter._lifetimeMax      = 10.0f;
+    emitter._listBurst.push_back( sw::makeBurst( 0.0f, 10 ) );
+    sw::VfxCPUSimulation full( emitter, 1, 1.0f );
+    sw::VfxCPUSimulation half( emitter, 1, 0.5f );
+
+    (void)sw::runSteps( full, 60 );
+    (void)sw::runSteps( half, 60 );
+    SW_EXPECT_NEAR_EQUAL( 40.0f, static_cast<float32>( full.getAliveCount() ), 1.0f );
+    SW_EXPECT_NEAR_EQUAL( 20.0f, static_cast<float32>( half.getAliveCount() ), 1.0f );
 }
 
 /**
@@ -324,7 +343,7 @@ SW_TEST_CASE( VfxCPUSimulationTest, FullPoolDropsNewParticlesAndWarnsOnce )
     emitter._maxParticles     = 8;
     emitter._lifetimeMin      = 10.0f;
     emitter._lifetimeMax      = 10.0f;
-    sw::VfxCPUSimulation simulation( emitter, 1 );
+    sw::VfxCPUSimulation simulation( emitter, 1, 1.0f );
 
     test::ScopedLogCollector collector;
     (void)sw::runSteps( simulation, 60 );
@@ -341,7 +360,7 @@ SW_TEST_CASE( VfxCPUSimulationTest, LongFrameRunsAtMostTheStepLimit )
     emitter._spawnRate        = 60.0f;
     emitter._lifetimeMin      = 10.0f;
     emitter._lifetimeMax      = 10.0f;
-    sw::VfxCPUSimulation simulation( emitter, 1 );
+    sw::VfxCPUSimulation simulation( emitter, 1, 1.0f );
 
     test::ScopedLogCollector collector;
     simulation.update( 1.0f, nullptr ); // 60 단계 몫 — 상한 8 단계만 돈다
@@ -363,7 +382,7 @@ SW_TEST_CASE( VfxCPUSimulationTest, WrittenParticlesFollowTheLifeCurves )
     emitter._velocityMin = sw::float3( 0.0f, 0.0f, 0.0f );
     emitter._velocityMax = sw::float3( 0.0f, 0.0f, 0.0f );
     emitter._gravity     = sw::float3( 0.0f, 0.0f, 0.0f );
-    sw::VfxCPUSimulation simulation( emitter, 1 );
+    sw::VfxCPUSimulation simulation( emitter, 1, 1.0f );
 
     const sw::vector<sw::GPUParticle> listParticle = sw::runSteps( simulation, 30 ); // 0.5 초 = 수명의 절반
     SW_ASSERT_EQUAL( size_t( 1 ), listParticle.size() );
@@ -417,7 +436,7 @@ SW_TEST_CASE( VfxCPUSimulationTest, RibbonParticlesAreWrittenInBirthOrder )
     emitter._renderMode       = sw::VfxRenderMode::Ribbon;
     emitter._lifetimeMin      = 0.5f; // 수명이 같으면 태어난 순서 = 수명 비율이 큰 순서
     emitter._lifetimeMax      = 0.5f;
-    sw::VfxCPUSimulation simulation( emitter, 3 );
+    sw::VfxCPUSimulation simulation( emitter, 3, 1.0f );
 
     const sw::vector<sw::GPUParticle> listParticle = sw::runSteps( simulation, 50 ); // 앞 입자들이 죽어 마지막 입자와 자리를 바꾼 뒤
     SW_ASSERT_TRUE( listParticle.size() > 2 );
@@ -445,7 +464,7 @@ SW_TEST_CASE( VfxCPUSimulationTest, CollisionBouncesOrKills )
     sw::VfxEmitterDef bounce       = emitter;
     bounce._collision._mode        = sw::VfxCollisionMode::Bounce;
     bounce._collision._restitution = 0.5f;
-    sw::VfxCPUSimulation bounceSimulation( bounce, 1 );
+    sw::VfxCPUSimulation bounceSimulation( bounce, 1, 1.0f );
     for ( uint32 stepIndex = 0; stepIndex < 30; ++stepIndex ) // 0.5 초 — 0.083 초 뒤에 바닥에 닿는다
     {
         bounceSimulation.step( sw::kTestStepSeconds, &floor );
@@ -457,14 +476,14 @@ SW_TEST_CASE( VfxCPUSimulationTest, CollisionBouncesOrKills )
 
     sw::VfxEmitterDef kill = emitter;
     kill._collision._mode  = sw::VfxCollisionMode::Kill;
-    sw::VfxCPUSimulation killSimulation( kill, 1 );
+    sw::VfxCPUSimulation killSimulation( kill, 1, 1.0f );
     for ( uint32 stepIndex = 0; stepIndex < 30; ++stepIndex )
     {
         killSimulation.step( sw::kTestStepSeconds, &floor );
     }
     SW_EXPECT_EQUAL( uint32( 0 ), killSimulation.getAliveCount() );
 
-    sw::VfxCPUSimulation noCollision( emitter, 1 ); // 충돌이 꺼져 있으면 질의가 있어도 뚫고 내려간다
+    sw::VfxCPUSimulation noCollision( emitter, 1, 1.0f ); // 충돌이 꺼져 있으면 질의가 있어도 뚫고 내려간다
     for ( uint32 stepIndex = 0; stepIndex < 30; ++stepIndex )
     {
         noCollision.step( sw::kTestStepSeconds, &floor );

@@ -91,6 +91,7 @@
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
+		<!-- 후처리 품질(graphics.postQuality) high 부터 돈다 — 낮으면 AOColor 를 가림 없음(흰색)으로 지운다. -->
 		<RenderGraphPassDesc _name="SSAO"
 		                     _type="SSAO"
 		                     _vertexEntryPoint="VSMain"
@@ -98,7 +99,8 @@
 		                     _cullMode="Back"
 		                     _bEnableDepthTest="true"
 		                     _bEnableDepthWrite="true"
-		                     _bEnableBlend="false">
+		                     _bEnableBlend="false"
+		                     _minPostQuality="2">
 			<_listInput>
 				<item>GBufferNormal</item>
 				<item>SceneDepth</item>
@@ -182,6 +184,7 @@
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
+		<!-- 후처리 품질 medium 부터 돈다 — low 면 원본(LitColor)을 그대로 넘긴다(블룸 · AO 적용 없음). -->
 		<RenderGraphPassDesc _name="PostBloom"
 		                     _type="Bloom"
 		                     _vertexEntryPoint="VSMain"
@@ -189,7 +192,8 @@
 		                     _cullMode="Back"
 		                     _bEnableDepthTest="true"
 		                     _bEnableDepthWrite="true"
-		                     _bEnableBlend="false">
+		                     _bEnableBlend="false"
+		                     _minPostQuality="1">
 			<_listInput>
 				<item>LitColor</item>
 				<item>AOColor</item>

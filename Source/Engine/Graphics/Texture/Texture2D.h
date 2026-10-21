@@ -12,6 +12,16 @@
 
 namespace sw
 {
+    /** @brief 텍스처 품질이 읽을 때 버리는 위쪽 밉입니다(`Texture2D::computeMipDrop`). */
+    struct Texture2DMipDrop
+    {
+        uint32 _mipCount{ 0 };     ///< 버리는 밉 수
+        uint64 _skippedBytes{ 0 }; ///< 페이로드 앞에서 건너뛸 바이트(버린 밉들의 크기 합)
+    };
+} // namespace sw
+
+namespace sw
+{
     class IRHIDevice;
 
     /**
@@ -75,6 +85,15 @@ namespace sw
 
         /** @brief DDS 가 알려 주는 DXGI 포맷 번호를 RHIFormat 으로 바꿉니다. 대응이 없으면 Unknown 입니다. */
         static RHIFormat toRHIFormatFromDxgi( uint32 dxgiFormat );
+        /**
+         * @brief 텍스처 품질(`gv_textureMipDrop`)로 버릴 위쪽 밉을 고릅니다. 밉 사슬이 있는 텍스처만 줄이고, 남은 밉 0 은 `kMinMipDropExtent` 이상이고
+         *        블록 크기의 배수여야 합니다(BC 는 4 의 배수 — 아니면 백엔드가 만들지 못한다). 마지막 밉 하나는 늘 남깁니다.
+         * @details 밉이 하나뿐인 텍스처(UI 아이콘 · 글꼴 아틀라스 · 룩업 표)는 줄이지 않는다. 화면에 1:1 로 그리는 것이라 밉을 만들지 않기 때문이다.
+         */
+        static Texture2DMipDrop computeMipDrop( RHIFormat format, uint32 width, uint32 height, uint32 mipCount, int32 requestedDrop );
+
+        /** @brief 밉을 버린 뒤 밉 0 의 짧은 변이 이보다 작아지지 않습니다(작은 텍스처는 버려도 얻는 메모리가 없다). */
+        static constexpr uint32 kMinMipDropExtent = 64;
 
     private:
         /** @brief 이 텍스처를 업로드한 디바이스입니다. 통보가 내 것인지 가릴 때 씁니다. */

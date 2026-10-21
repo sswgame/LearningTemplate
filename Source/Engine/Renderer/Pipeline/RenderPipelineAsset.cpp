@@ -374,6 +374,23 @@ namespace sw
             ++issueCount;
         }
 
+        // 3-5) 후처리 품질로 건너뛰는 패스(_minPostQuality)는 후처리를 끈 뷰처럼 건너뛸 수 있는 타입(kSkipsWithoutPostProcess — 원본을 넘기거나 기본 클리어)만이다.
+        //      다른 타입을 건너뛰면 출력 첨부에 지난 프레임 값이 남는다.
+        for ( const RenderGraphPassDesc& pass : _desc._listPass )
+        {
+            const bool bSkippable = getRenderPassTypeInfo( pass._resolvedType ).hasFlag( RenderPassTraitFlag::kSkipsWithoutPostProcess );
+            if ( pass._minPostQuality < 0 )
+            {
+                SW_LOG_ERROR( "[%#] pass '%#': _minPostQuality %# — 0 이상이어야 합니다", sourcePath, pass._name, pass._minPostQuality );
+                ++issueCount;
+            }
+            else if ( pass._minPostQuality > 0 && bSkippable == false )
+            {
+                SW_LOG_ERROR( "[%#] pass '%#'(%#): _minPostQuality 는 후처리를 건너뛸 수 있는 타입(SSAO · Bloom · Outline)만 받습니다", sourcePath, pass._name, pass._type );
+                ++issueCount;
+            }
+        }
+
         if ( issueCount > 0 )
             SW_LOG_ERROR( "[%#] 파이프라인 검증에서 %#건의 문제를 찾았습니다 — 렌더 결과가 어긋나거나 GPU 가 죽을 수 있습니다",
                           sourcePath, issueCount );

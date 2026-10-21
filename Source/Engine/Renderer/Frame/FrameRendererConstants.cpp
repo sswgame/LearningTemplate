@@ -97,7 +97,10 @@ namespace sw
         context._passValues.setFloat4( passConstantNames()._cameraGrade, float4{ MathUtil::pow( 2.0f, post._exposureCompensation ), MathUtil::max( 0.0f, post._saturation ),
                                                                                  MathUtil::max( 0.0f, post._contrast ), MathUtil::saturate( post._vignetteIntensity ) } );
         const float32 viewAspect = pool.getHeight() > 0 ? static_cast<float32>( pool.getWidth() ) / static_cast<float32>( pool.getHeight() ) : 0.0f;
-        context._passValues.setFloat4( passConstantNames()._cameraFrame, float4{ MathUtil::max( 0.0f, post._letterboxAspectRatio ), viewAspect, 0.0f, 0.0f } );
+        // 색각 보정은 화면 · 호스트 출력 뷰만 건다. 렌더 텍스처는 주 화면에 그려진 뒤 그 뷰의 톤맵에서 보정된다(두 번 걸지 않는다).
+        const bool    bScreenOutput   = _pActiveView->_pOutputTexture == nullptr;
+        const float32 colorVisionMode = bScreenOutput ? static_cast<float32>( _canvasFrame._colorVisionMode ) : 0.0f;
+        context._passValues.setFloat4( passConstantNames()._cameraFrame, float4{ MathUtil::max( 0.0f, post._letterboxAspectRatio ), viewAspect, colorVisionMode, 0.0f } );
         // 패스 플래그: 비트는 bindingslots.hlsli 의 SW_PASS_FLAG_*(C++ 는 shaderslot::kPassFlag*)가 기준이다. 후처리는 뷰마다 끌 수 있다(CCTV).
         uint32 flags = ( _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling() ) ? shaderslot::kPassFlagNativeBindless : 0u;
         if ( _pActiveView->_settings.usesPostProcess() == false )

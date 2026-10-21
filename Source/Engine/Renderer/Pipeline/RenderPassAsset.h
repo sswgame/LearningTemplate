@@ -263,6 +263,14 @@ namespace sw
 
         PROPERTY()
         bool _bEnableBlend{ false };
+
+        /**
+         * @brief 이 패스가 도는 최소 후처리 품질(`gv_postQuality`, 사용자 설정 graphics.postQuality 의 선택지 순번 0 낮음 ~ 3 최고)입니다. 0 이면 늘 돕니다.
+         * @details 품질이 이보다 낮으면 후처리를 끈 뷰와 같이 건너뛴다(원본을 넘기거나 기본 클리어 — SSAO 는 가림 없음). 그래서 건너뛸 수 있는 타입
+         *          (`RenderPassTraitFlag::kSkipsWithoutPostProcess`)만 0 보다 큰 값을 받는다(검증이 막는다). 언리얼 sg.PostProcessQuality 에 해당한다.
+         */
+        PROPERTY()
+        int32 _minPostQuality{ 0 };
     };
 } // namespace sw
 

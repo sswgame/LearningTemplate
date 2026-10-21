@@ -29,8 +29,8 @@
 | `graphics.viewDistance` | float | `1` | 0.25 ~ 2 (눈금 0.25) | confirm | `gv:gv_viewDistanceScale` |
 | `graphics.foliageDensity` | float | `1` | 0 ~ 1.5 (눈금 0.25) | confirm | `gv:gv_foliageDensity` |
 | `graphics.postQuality` | enum | `high` |  | confirm | `gv:gv_postQuality` |
-| `graphics.textureQuality` | enum | `high` |  | restart | `gv:gv_textureQuality` |
-| `graphics.effectsQuality` | enum | `high` |  | confirm | `gv:gv_effectsQuality` |
+| `graphics.textureQuality` | enum | `high` |  | restart | `gv:gv_textureMipDrop` |
+| `graphics.effectsQuality` | enum | `high` |  | confirm | `gv:gv_effectsSpawnScale` |
 | `graphics.motionBlur` | bool | `true` |  | confirm | `gv:gv_motionBlur` |
 | `audio.masterVolume` | float | `1` | 0 ~ 1 (눈금 0.05) | immediate | `handler:audio.busVolume` |
 | `audio.musicVolume` | float | `0.8` | 0 ~ 1 (눈금 0.05) | immediate | `handler:audio.busVolume` |

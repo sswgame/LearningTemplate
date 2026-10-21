@@ -13,6 +13,7 @@
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Object/SceneAnimation/AnimationLOD.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/UserSettings/UserSettingsVariables.h"
 
 namespace sw
 {
@@ -58,6 +59,15 @@ namespace sw
             }
 
             /**
+             * @brief 화면에 나가는 뷰(주 시점 · 화면 사각형)의 내부 해상도에 사용자 렌더 스케일(`gv_renderScale`, 옵션 메뉴 graphics.renderScale)을 곱합니다.
+             * @details Present 가 출력 크기로 선형 업샘플한다. 렌더 텍스처 뷰는 자기 크기가 데이터라 곱하지 않고, 정수 업스케일 뷰는 배율을 보지 않는다.
+             */
+            static float32 applyUserRenderScale( float32 cameraScale )
+            {
+                return MathUtil::clamp( cameraScale * static_cast<float32>( gv_renderScale ), 0.1f, 2.0f );
+            }
+
+            /**
              * @brief 보임 오브젝트(모니터)가 화면들 중 가장 크게 보이는 크기(경계 구 지름 / 화면 높이, 애니메이션 LOD 와 같은 식)입니다. 어느 화면에도 없으면 0 입니다.
              * @details 메시가 없으면 오브젝트 위치(반지름 1)로 봅니다. 오브젝트가 없으면(파괴됐다) 볼 것이 없으니 0 입니다.
              */
@@ -92,7 +102,9 @@ namespace sw
     {
         if ( pMainCamera == nullptr )
             return RenderViewSettings{};
-        return RenderViewCollectorInternal::makeSettings( *pMainCamera );
+        RenderViewSettings settings = RenderViewCollectorInternal::makeSettings( *pMainCamera );
+        settings._resolutionScale   = RenderViewCollectorInternal::applyUserRenderScale( settings._resolutionScale );
+        return settings;
     }
 
     float32 RenderViewCollector::computeAspect( const RenderViewSettings& settings, uint32 outputWidth, uint32 outputHeight )
@@ -154,9 +166,10 @@ namespace sw
             {
                 if ( outputWidth == 0 || outputHeight == 0 )
                     continue;
-                request._outputKind   = RenderViewOutputKind::ScreenRect;
-                request._outputWidth  = MathUtil::max( 1u, static_cast<uint32>( static_cast<float32>( outputWidth ) * output._screenRect._z + 0.5f ) );
-                request._outputHeight = MathUtil::max( 1u, static_cast<uint32>( static_cast<float32>( outputHeight ) * output._screenRect._w + 0.5f ) );
+                request._outputKind                = RenderViewOutputKind::ScreenRect;
+                request._settings._resolutionScale = RenderViewCollectorInternal::applyUserRenderScale( request._settings._resolutionScale );
+                request._outputWidth               = MathUtil::max( 1u, static_cast<uint32>( static_cast<float32>( outputWidth ) * output._screenRect._z + 0.5f ) );
+                request._outputHeight              = MathUtil::max( 1u, static_cast<uint32>( static_cast<float32>( outputHeight ) * output._screenRect._w + 0.5f ) );
             }
             // 정수 업스케일이면 실제로 그리는 크기(사각형 / 배율의 내림)의 비율이다(주 시점의 computeAspect 와 같은 규칙).
             const uint32  zoom           = request._settings._upscaleZoom;

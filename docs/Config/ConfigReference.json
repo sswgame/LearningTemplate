@@ -3101,7 +3101,7 @@
    "type": "int32",
    "default": "0",
    "kind": "일반",
-   "description": "색각 보정 0 끔 1 적색약 2 녹색약 3 청색약 (사용자 설정 accessibility.colorVision, UI 캔버스만 — 톤맵 미구현)",
+   "description": "색각 보정 0 끔 1 적색약 2 녹색약 3 청색약 (사용자 설정 accessibility.colorVision, UI 캔버스 — 톤맵 셰이더는 쿠킹 대기)",
    "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
   },
   {
@@ -3377,12 +3377,12 @@
    "source": "Source/Editor/ImGuiEditor.cpp"
   },
   {
-   "name": "gv_effectsQuality",
-   "type": "int32",
-   "default": "2",
+   "name": "gv_effectsSpawnScale",
+   "type": "float32",
+   "default": "1.0",
    "kind": "일반",
-   "description": "이펙트 품질 0~3 (사용자 설정 graphics.effectsQuality)",
-   "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
+   "description": "이펙트 입자 생성 배율 (사용자 설정 graphics.effectsQuality 의 targetValue)",
+   "source": "Source/Engine/Vfx/VfxComponent.cpp"
   },
   {
    "name": "gv_emulatedGPUMemoryMb",
@@ -3525,7 +3525,7 @@
    "type": "bool",
    "default": "true",
    "kind": "일반",
-   "description": "모션 블러 (사용자 설정 graphics.motionBlur)",
+   "description": "모션 블러 (사용자 설정 graphics.motionBlur, 렌더러 미구현 — UserSettingsConsumers U3 패치)",
    "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
   },
   {
@@ -3645,7 +3645,7 @@
    "type": "int32",
    "default": "2",
    "kind": "일반",
-   "description": "후처리 품질 0~3 (사용자 설정 graphics.postQuality)",
+   "description": "후처리 품질 0~3 — 패스의 _minPostQuality 보다 낮으면 건너뛴다 (사용자 설정 graphics.postQuality)",
    "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
   },
   {
@@ -3709,7 +3709,7 @@
    "type": "float32",
    "default": "1.0",
    "kind": "일반",
-   "description": "3D 렌더 해상도 배율 0.5~1 (사용자 설정 graphics.renderScale, 렌더러 미구현)",
+   "description": "3D 렌더 해상도 배율 0.5~1 (사용자 설정 graphics.renderScale, 화면 출력 뷰)",
    "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
   },
   {
@@ -3937,12 +3937,12 @@
    "source": "Source/Engine/Telemetry/TelemetryService.cpp"
   },
   {
-   "name": "gv_textureQuality",
+   "name": "gv_textureMipDrop",
    "type": "int32",
-   "default": "2",
+   "default": "0",
    "kind": "일반",
-   "description": "텍스처 품질 0~3 (사용자 설정 graphics.textureQuality)",
-   "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
+   "description": "텍스처를 읽을 때 버리는 위쪽 밉 수 (사용자 설정 graphics.textureQuality 의 targetValue, 다시 시작해야 반영)",
+   "source": "Source/Engine/Graphics/Texture/Texture2D.cpp"
   },
   {
    "name": "gv_tickBatch",
@@ -4133,8 +4133,8 @@
    "type": "float32",
    "default": "1.0",
    "kind": "일반",
-   "description": "시야 거리 배율 (사용자 설정 graphics.viewDistance)",
-   "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
+   "description": "시야 거리 배율 — 원근 카메라의 먼 평면에 곱한다 (사용자 설정 graphics.viewDistance)",
+   "source": "Source/Engine/Object/Component/CameraComponent.cpp"
   },
   {
    "name": "gv_viewMode",

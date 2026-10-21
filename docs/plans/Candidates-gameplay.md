@@ -7,15 +7,6 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션 영역의 
 
 ## 기능
 
-### UserSettingsConsumers
-제목: 사용자 설정 값을 읽는 쪽 잇기
-옛번호: D4-2
-왜 필요한가: 옵션 메뉴 백엔드(`Source/Engine/UserSettings/`, 메뉴는 `Engine/UI/Screen/OptionsMenuScreen`)에 값만 있고 읽는 곳이 없는 대상이 남았다.
-남은 것:
-- 렌더러 몫: `gv_renderScale`(업스케일 패스) · 시야 거리 · 후처리 · 텍스처 · 이펙트 품질 · 모션 블러 · `gv_colorVisionMode` 의 톤맵 쪽(톤맵에 상수 버퍼가 없어 미뤘다 — 함수는 `colorvision.hlsli`, UI 캔버스는 이미 쓴다).
-- 머리 흔들림은 데이터(`<HeadBob>` · `FirstPersonCameraComponent::_headBob`)로 켜는데 켠 게임이 없다 — Shooter3D · VoxelCraft 1인칭에 진폭을 넣고 화면으로 확인한다. 카메라 세 값은 `CameraUserSettings` 가 읽는다.
-- X11 `setDisplayMode`(EWMH 전체 화면)는 리눅스 실기 미확인.
-
 ### KitCompositionGames
 제목: 키트 조립의 두 번째 테스트 게임과 땅 쓰기
 옛번호: D4-4

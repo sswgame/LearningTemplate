@@ -70,17 +70,19 @@
 		<Option value="high"/>
 		<Option value="ultra"/>
 	</Setting>
-	<Setting id="graphics.textureQuality" category="graphics" type="enum" default="high" apply="restart" target="gv:gv_textureQuality" text="settings.graphics.textureQuality">
-		<Option value="low"/>
-		<Option value="medium"/>
-		<Option value="high"/>
-		<Option value="ultra"/>
+	<!-- 텍스처 품질 — 읽을 때 위쪽 밉을 버린다(언리얼 텍스처 LOD 바이어스). ultra 는 high 와 같다(원본이 최고 해상도다). -->
+	<Setting id="graphics.textureQuality" category="graphics" type="enum" default="high" apply="restart" target="gv:gv_textureMipDrop" text="settings.graphics.textureQuality">
+		<Option value="low" targetValue="2"/>
+		<Option value="medium" targetValue="1"/>
+		<Option value="high" targetValue="0"/>
+		<Option value="ultra" targetValue="0"/>
 	</Setting>
-	<Setting id="graphics.effectsQuality" category="graphics" type="enum" default="high" target="gv:gv_effectsQuality" text="settings.graphics.effectsQuality">
-		<Option value="low"/>
-		<Option value="medium"/>
-		<Option value="high"/>
-		<Option value="ultra"/>
+	<!-- 이펙트 품질 — 입자 생성률 · 버스트 수에 곱한다. ultra 는 데이터 그대로다(풀 크기를 넘기지 않는다). -->
+	<Setting id="graphics.effectsQuality" category="graphics" type="enum" default="high" target="gv:gv_effectsSpawnScale" text="settings.graphics.effectsQuality">
+		<Option value="low" targetValue="0.25"/>
+		<Option value="medium" targetValue="0.5"/>
+		<Option value="high" targetValue="1"/>
+		<Option value="ultra" targetValue="1"/>
 	</Setting>
 	<Setting id="graphics.motionBlur" category="graphics" type="bool" default="true" target="gv:gv_motionBlur" text="settings.graphics.motionBlur"/>
 
