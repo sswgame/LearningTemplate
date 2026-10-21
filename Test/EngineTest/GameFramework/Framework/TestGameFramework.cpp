@@ -2358,22 +2358,22 @@ SW_TEST_CASE( GameFrameworkTest, OverworldTileMover_ZeroEncounterRateNeverEncoun
 {
     for ( uint32 stepCount = 1; stepCount <= 30; ++stepCount )
     {
-        SW_EXPECT_TRUE_MSG( shouldEncounterOnStep( 0.0f, stepCount ) == false, "확률 0 인데 조우가 났습니다" );
-        SW_ASSERT_TRUE( shouldEncounterOnStep( -1.0f, stepCount ) == false );
+        SW_EXPECT_TRUE_MSG( StepEncounterCounter::isPeriodicEncounter( 0.0f, stepCount ) == false, "확률 0 인데 조우가 났습니다" );
+        SW_ASSERT_TRUE( StepEncounterCounter::isPeriodicEncounter( -1.0f, stepCount ) == false );
     }
 
     // 1 이상은 매 걸음이다 — "세 걸음마다" 로 떨어지면 안 된다.
     for ( uint32 stepCount = 1; stepCount <= 10; ++stepCount )
     {
-        SW_EXPECT_TRUE_MSG( shouldEncounterOnStep( 1.0f, stepCount ), "확률 1 인데 조우가 안 납니다" );
-        SW_EXPECT_TRUE_MSG( shouldEncounterOnStep( 2.0f, stepCount ), "확률 2 인데 조우가 안 납니다" );
+        SW_EXPECT_TRUE_MSG( StepEncounterCounter::isPeriodicEncounter( 1.0f, stepCount ), "확률 1 인데 조우가 안 납니다" );
+        SW_EXPECT_TRUE_MSG( StepEncounterCounter::isPeriodicEncounter( 2.0f, stepCount ), "확률 2 인데 조우가 안 납니다" );
     }
 
     // 0.33 이면 세 걸음마다 한 번이다.
     int32 encounterCount = 0;
     for ( uint32 stepCount = 1; stepCount <= 30; ++stepCount )
     {
-        if ( shouldEncounterOnStep( 0.33f, stepCount ) )
+        if ( StepEncounterCounter::isPeriodicEncounter( 0.33f, stepCount ) )
             ++encounterCount;
     }
     SW_EXPECT_EQUAL( int32( 10 ), encounterCount );

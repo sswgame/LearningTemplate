@@ -116,6 +116,10 @@ namespace sw::editor
         , _warpTy{ 1 }
         , _lastPaintCell{}
         , _rectStartCell{}
+        , _newDataLayerName{}
+        , _newDataLayerDefault{ 0 }
+        , _dataLayerIndex{ 0 }
+        , _paintDataValue{ 1 }
         , _layer{ PaintLayer::Flag }
         , _flagLayer{ TileFlagLayer::Walkable }
         , _tool{ PaintTool::Brush }
@@ -314,6 +318,14 @@ namespace sw::editor
                         color                         = EditorColorUtil::toImU32( Color::fromArgb( TileMapPanelInternal::kOpaqueAlphaMask | rgb ) );
                         break;
                     }
+                    case PaintLayer::Data:
+                    {
+                        // 기본값인 칸은 빈 칸 색, 기본값과 다른 칸은 데이터 색이다(값은 스포이트로 읽는다).
+                        int32 value = 0;
+                        if ( _map.getCellData( _dataLayerIndex, tileX, tileY, value ) && value != _map._listDataLayer[static_cast<size_t>( _dataLayerIndex )]._defaultValue )
+                            color = EditorColorUtil::toImU32( EditorThemeUtil::getAccentColor() );
+                        break;
+                    }
                 }
 
                 const ImVec2 p0( origin.x + static_cast<float32>( tileX ) * cell, origin.y + static_cast<float32>( tileY ) * cell );
@@ -452,6 +464,17 @@ namespace sw::editor
                 }
                 break;
             }
+            case PaintLayer::Data:
+            {
+                if ( _dataLayerIndex < 0 || static_cast<size_t>( _dataLayerIndex ) >= _map._listDataLayer.size() )
+                    break;
+                const vector<int32>& listValue = _map._listDataLayer[static_cast<size_t>( _dataLayerIndex )]._listValue;
+                for ( size_t cellIndex = 0; cellIndex < cellCount && cellIndex < listValue.size(); ++cellIndex )
+                {
+                    outListValue[cellIndex] = static_cast<uint64>( static_cast<uint32>( listValue[cellIndex] ) );
+                }
+                break;
+            }
         }
     }
 
@@ -500,7 +523,48 @@ namespace sw::editor
                 _bErase = _map.getFlagLayer( _flagLayer )[tileIndex] == 0;
                 break;
             }
+            case PaintLayer::Data:
+            {
+                int32 value = 0;
+                if ( _map.getCellData( _dataLayerIndex, x, y, value ) )
+                {
+                    _paintDataValue = value;
+                    _bErase         = false;
+                }
+                break;
+            }
         }
+    }
+
+    void TileMapPanel::drawDataLayerControls()
+    {
+        if ( _layer == PaintLayer::Data )
+        {
+            ImGui::InputInt( "Value", &_paintDataValue );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "DataValueTip" ) );
+        }
+        ImGui::Separator();
+        ImGui::TextUnformatted( "Data Layers" );
+        ImGui::InputText( "Name##dataLayer", _newDataLayerName.data(), _newDataLayerName.capacity() );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "DataLayerNameTip" ) );
+        ImGui::InputInt( "Default##dataLayer", &_newDataLayerDefault );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "DataLayerDefaultTip" ) );
+        if ( ImGui::Button( "Add Data Layer" ) )
+        {
+            // 빈 이름 · 겹치는 이름은 맵이 거절한다 — 읽기도 같은 규칙으로 거절하므로 저장할 수 없는 맵을 만들지 않는다.
+            if ( _map.addDataLayer( _newDataLayerName.c_str(), _newDataLayerDefault ) )
+            {
+                _layer          = PaintLayer::Data;
+                _dataLayerIndex = static_cast<int32>( _map._listDataLayer.size() ) - 1;
+                _newDataLayerName.clear();
+                notifyDocumentEdited( "Add Tile Map Data Layer", "tilemap-datalayer" );
+            }
+            else
+            {
+                _status = SW_LOCKEY( "EditorTileMap", "DataLayerRejectedStatus" );
+            }
+        }
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "AddDataLayerTip" ) );
     }
 
     uint32 TileMapPanel::countSelectedFlagCells() const
@@ -575,14 +639,18 @@ namespace sw::editor
 
     void TileMapPanel::drawLayerControls()
     {
-        // 목록은 Visual · Warp 다음에 플래그 레이어 표 순서다. 순번 ↔ 레이어는 getPaintLayerIndex / selectPaintLayer 가 정한다.
-        const utf8* arrLayerName[kFixedPaintLayerCount + kTileFlagLayerCount] = { "Visual", "Warp", "Tile" };
-        for ( size_t flagIndex = 0; flagIndex < kTileFlagLayerCount; ++flagIndex )
+        // 목록은 Visual · Warp · Tile 다음에 플래그 레이어 표 순서, 그 뒤에 맵의 데이터 레이어 순서다. 순번 ↔ 레이어는 getPaintLayerIndex / selectPaintLayer 가 정한다.
+        vector<const utf8*> listLayerName = { "Visual", "Warp", "Tile" };
+        for ( const TileFlagLayerInfo& info : kArrTileFlagLayerInfo )
         {
-            arrLayerName[kFixedPaintLayerCount + flagIndex] = kArrTileFlagLayerInfo[flagIndex]._pName;
+            listLayerName.push_back( info._pName );
+        }
+        for ( const TileMapXMLData::DataLayer& dataLayer : _map._listDataLayer )
+        {
+            listLayerName.push_back( dataLayer._name.c_str() );
         }
         int32 layerIndex = getPaintLayerIndex();
-        if ( ImGui::Combo( "Layer", &layerIndex, arrLayerName, static_cast<int32>( SW_COUNT_OF( arrLayerName ) ) ) )
+        if ( ImGui::Combo( "Layer", &layerIndex, listLayerName.data(), static_cast<int32>( listLayerName.size() ) ) )
             selectPaintLayer( layerIndex );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "LayerTip" ) );
 
@@ -618,6 +686,7 @@ namespace sw::editor
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "UseTileSetTip" ) );
             drawTilePalette();
         }
+        drawDataLayerControls();
 
         ImGui::Separator();
         ImGui::TextUnformatted( "Edge Warp Presets" );
@@ -710,6 +779,13 @@ namespace sw::editor
         _nameBuffer  = data._name.c_str();
         _inputWidth  = data._width;
         _inputHeight = data._height;
+        // 새 맵에 고른 데이터 레이어가 없으면 플래그 레이어로 돌아간다(옛 번호로 다른 레이어를 칠하지 않는다).
+        const bool bDataLayerGone = _layer == PaintLayer::Data && ( _dataLayerIndex < 0 || static_cast<size_t>( _dataLayerIndex ) >= _map._listDataLayer.size() );
+        if ( bDataLayerGone )
+        {
+            _layer          = PaintLayer::Flag;
+            _dataLayerIndex = 0;
+        }
         refreshTileSet();
     }
 
@@ -815,6 +891,18 @@ namespace sw::editor
                 _map.getFlagLayer( _flagLayer )[tileIndex] = _bErase ? 0 : 1;
                 break;
             }
+            case PaintLayer::Data:
+            {
+                if ( _dataLayerIndex < 0 || static_cast<size_t>( _dataLayerIndex ) >= _map._listDataLayer.size() )
+                    return;
+                // 지우기는 그 레이어의 기본값으로 되돌린다(0 이 아니다 — 기본값은 맵 데이터가 정한다).
+                const int32 value = _bErase ? _map._listDataLayer[static_cast<size_t>( _dataLayerIndex )]._defaultValue : _paintDataValue;
+                int32       current{ 0 };
+                if ( _map.getCellData( _dataLayerIndex, x, y, current ) && current == value )
+                    return; // 끌어 칠할 때 같은 셀을 프레임마다 되돌리기 기록에 넣지 않는다
+                (void)_map.setCellData( _dataLayerIndex, x, y, value );
+                break;
+            }
             case PaintLayer::Tile:
             {
                 const vector<TileBrush>& listBrush = _tileSet.getBrushes();
@@ -918,6 +1006,8 @@ namespace sw::editor
     {
         if ( _layer == PaintLayer::Flag )
             return kFixedPaintLayerCount + static_cast<int32>( _flagLayer );
+        if ( _layer == PaintLayer::Data )
+            return kFixedPaintLayerCount + static_cast<int32>( kTileFlagLayerCount ) + _dataLayerIndex;
         return static_cast<int32>( _layer );
     }
 
@@ -928,8 +1018,15 @@ namespace sw::editor
             _layer = static_cast<PaintLayer>( layerIndex );
             return;
         }
-        _layer     = PaintLayer::Flag;
-        _flagLayer = static_cast<TileFlagLayer>( layerIndex - kFixedPaintLayerCount );
+        const int32 flagIndex = layerIndex - kFixedPaintLayerCount;
+        if ( flagIndex < static_cast<int32>( kTileFlagLayerCount ) )
+        {
+            _layer     = PaintLayer::Flag;
+            _flagLayer = static_cast<TileFlagLayer>( flagIndex );
+            return;
+        }
+        _layer          = PaintLayer::Data;
+        _dataLayerIndex = flagIndex - static_cast<int32>( kTileFlagLayerCount );
     }
 
     bool TileMapPanel::isInBounds( int32 x, int32 y ) const

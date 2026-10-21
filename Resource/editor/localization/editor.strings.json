@@ -3876,6 +3876,12 @@
                 "Source/Editor/Panels/Animation/SpriteClipPanel.cpp"
             ]
         },
+        "EditorTileMap.AddDataLayerTip": {
+            "source": "Add a named integer data layer (terrain cost, footstep sound) to this map. The name must be new.",
+            "origins": [
+                "Source/Editor/Panels/TileMap/TileMapPanel.cpp"
+            ]
+        },
         "EditorTileMap.ApplyEdgeTip": {
             "source": "Turn every cell on this edge into a walkable warp to the target map.",
             "origins": [
@@ -3896,6 +3902,30 @@
         },
         "EditorTileMap.BrushTip": {
             "source": "Paint every cell you press and drag over (B)",
+            "origins": [
+                "Source/Editor/Panels/TileMap/TileMapPanel.cpp"
+            ]
+        },
+        "EditorTileMap.DataLayerDefaultTip": {
+            "source": "Value of every cell of the new layer, and the value Erase paints.",
+            "origins": [
+                "Source/Editor/Panels/TileMap/TileMapPanel.cpp"
+            ]
+        },
+        "EditorTileMap.DataLayerNameTip": {
+            "source": "Name of the new data layer. The game reads the layer by this name.",
+            "origins": [
+                "Source/Editor/Panels/TileMap/TileMapPanel.cpp"
+            ]
+        },
+        "EditorTileMap.DataLayerRejectedStatus": {
+            "source": "Data layer not added: the name is empty or already used",
+            "origins": [
+                "Source/Editor/Panels/TileMap/TileMapPanel.cpp"
+            ]
+        },
+        "EditorTileMap.DataValueTip": {
+            "source": "Integer to paint on the selected data layer.",
             "origins": [
                 "Source/Editor/Panels/TileMap/TileMapPanel.cpp"
             ]

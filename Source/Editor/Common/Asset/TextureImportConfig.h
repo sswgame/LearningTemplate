@@ -28,7 +28,47 @@ namespace sw::editor
         ARGB,
         RGB1,
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
+    /**
+     * @enum TextureImportFormat
+     * @brief 임포트 결과의 픽셀 형식입니다. 규칙의 `format` 이름은 `TextureImportFormatUtil::parse` 로만 이 값이 됩니다.
+     * @details 이름 표는 하나뿐입니다. 설정 로드가 모르는 이름을 거절하고, 임포터는 이 열거형을 DXGI 로 바꿀 뿐이라 "모르는 이름이면 BC7" 같은 기본값이 설 자리가 없습니다.
+     */
+    enum class TextureImportFormat : uint8
+    {
+        BC1 = 0,
+        BC2,
+        BC3,
+        BC4,
+        BC5,
+        BC6H,
+        BC7,
+        B8G8R8A8,
+        R8G8B8A8,
+        R16G16B16A16Float,
+        /** @brief 1 채널(R8_UNORM, DXGI 61). 마스크 · 높이 같은 데이터 텍스처이며 원본의 R 채널만 남습니다. DDS 는 DX10 머리로 씁니다. */
+        R8,
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /**
+     * @struct TextureImportFormatUtil
+     * @brief `format` 이름(`BC7_UNORM` · `bc7` …)과 `TextureImportFormat` 을 잇는 유일한 표입니다.
+     */
+    struct TextureImportFormatUtil
+    {
+        /** @brief @p name 을 형식으로 읽습니다. 모르는 이름이면 false 이고 @p outFormat 은 그대로입니다. */
+        [[nodiscard]] static bool parse( string_view name, TextureImportFormat& outFormat );
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
     /**
      * @struct TextureImportRule
      * @brief 텍스처 임포트와 압축 규칙입니다.
@@ -111,7 +151,7 @@ namespace sw::editor
 
     private:
         /**
-         * @brief 프리셋이나 규칙 객체 하나를 @p inoutRule 에 읽습니다. 객체가 아니거나 모르는 키, 모르는 swizzle 이면 오류를 남기고 false 입니다.
+         * @brief 프리셋이나 규칙 객체 하나를 @p inoutRule 에 읽습니다. 객체가 아니거나 모르는 키, 모르는 swizzle · format 이면 오류를 남기고 false 입니다.
          * @details 키 테이블은 `TextureImportConfig.cpp` 의 `kArrTextureImportRuleKeyDoc` 에 있다. 생성 문서는 `docs/Config/TextureImportConfig.md` 이다.
          */
         [[nodiscard]] static bool parseRuleObject( const sw::JSONValue& jsonValue, TextureImportRule& inoutRule, string_view context );

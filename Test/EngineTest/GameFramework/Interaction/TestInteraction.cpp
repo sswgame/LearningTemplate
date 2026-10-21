@@ -34,6 +34,7 @@
 #include "GameFramework/Base/Gameplay/Interaction/InteractionCatalog.h"
 #include "GameFramework/Base/Gameplay/Interaction/InteractionSelector.h"
 #include "GameFramework/Base/Gameplay/Interaction/InteractionSession.h"
+#include "GameFramework/Base/Gameplay/Interaction/InteractionSpatialIndex.h"
 #include "GameFramework/Base/Gameplay/Interaction/InteractorComponent.h"
 #include "GameFramework/Base/Gameplay/Interaction/SmartObjectComponent.h"
 
@@ -243,6 +244,63 @@ SW_TEST_CASE( InteractionTest, WorldLineOfSightSkipsBlockedTarget )
     SW_EXPECT_TRUE( pInteractor->getFocus() == pNear->getHandle() );
     SW_EXPECT_TRUE( pFar->getComponent<InteractableComponent>()->getHighlightRequest() == InteractionHighlight::None ); // 강조가 옮겨 갔다
     manager.endPlay();
+}
+
+/**
+ * @brief [InteractionTest] 하는 쪽이 둘이면 씬이 대상 격자를 틱 앞에 맞추고, 각자 격자에서 받은 후보로 목록을 돈 것과 같은 대상을 고른다. 마지막 하는 쪽이 빠지면 격자를 뗀다
+ */
+SW_TEST_CASE( InteractionTest, SharedSpatialGridServesSeveralInteractors )
+{
+    GameObjectManager    manager;
+    InteractionDef       def = InteractionTestInternal::makeDef( "Use", InteractionInputMode::Press );
+    InteractorComponent* arrInteractor[2]{};
+    const float32        arrPlayerX[2] = { 0.0f, 100.0f };
+    for ( size_t playerIndex = 0; playerIndex < 2; ++playerIndex )
+    {
+        GameObject* pPlayer = manager.createGameObject( hashed_string( playerIndex == 0 ? "PlayerA" : "PlayerB" ) );
+        pPlayer->addComponent<SceneComponent>()->setLocalPosition( float3{ arrPlayerX[playerIndex], 0.0f, 0.0f } );
+        arrInteractor[playerIndex] = pPlayer->addComponent<InteractorComponent>();
+        arrInteractor[playerIndex]->setEyeOffset( float3{} );
+    }
+    // 하는 쪽마다 앞 2 m 에 대상 하나, 그 사이 먼 곳에 대상 여럿(어느 쪽에도 닿지 않는다).
+    GameObject* arrNear[2]{};
+    for ( size_t playerIndex = 0; playerIndex < 2; ++playerIndex )
+    {
+        arrNear[playerIndex] = manager.createGameObject( hashed_string( playerIndex == 0 ? "NearA" : "NearB" ) );
+        arrNear[playerIndex]->addComponent<SceneComponent>()->setLocalPosition( float3{ arrPlayerX[playerIndex], 0.0f, 2.0f } );
+        arrNear[playerIndex]->addComponent<InteractableComponent>()->setDefinition( def );
+    }
+    for ( int32 farIndex = 0; farIndex < 8; ++farIndex )
+    {
+        GameObject* pFar = manager.createGameObject( hashed_string( "Far" ) );
+        pFar->addComponent<SceneComponent>()->setLocalPosition( float3{ 30.0f + 5.0f * static_cast<float32>( farIndex ), 0.0f, 2.0f } );
+        pFar->addComponent<InteractableComponent>()->setDefinition( def );
+    }
+
+    manager.beginPlay();
+    for ( int32 frame = 0; frame < 2; ++frame )
+    {
+        arrInteractor[0]->setInput( false );
+        arrInteractor[1]->setInput( false );
+        manager.update( 1.0f / 60.0f );
+    }
+    const InteractionSpatialIndex* pIndex = InteractionSpatialIndex::find( manager );
+    SW_ASSERT_TRUE( pIndex != nullptr );
+    SW_EXPECT_EQUAL( 2u, pIndex->getInteractorCount( InteractionSpace::Space3D ) );
+    SW_EXPECT_TRUE( pIndex->hasGrid( InteractionSpace::Space3D ) );
+    SW_EXPECT_FALSE( pIndex->hasGrid( InteractionSpace::Space2D ) ); // 2D 하는 쪽이 없다 — 맞추지 않는다
+    SW_EXPECT_TRUE( arrInteractor[0]->getFocus() == arrNear[0]->getHandle() );
+    SW_EXPECT_TRUE( arrInteractor[1]->getFocus() == arrNear[1]->getHandle() );
+
+    // 하나가 2D 로 옮기면 3D 사용자는 하나라 격자를 맞추지 않고 목록을 돈다 — 고르기는 그대로다.
+    arrInteractor[1]->setSpace( InteractionSpace::Space2D );
+    arrInteractor[0]->setInput( false );
+    manager.update( 1.0f / 60.0f );
+    SW_EXPECT_FALSE( pIndex->hasGrid( InteractionSpace::Space3D ) );
+    SW_EXPECT_TRUE( arrInteractor[0]->getFocus() == arrNear[0]->getHandle() );
+
+    manager.endPlay();
+    SW_EXPECT_TRUE( InteractionSpatialIndex::find( manager ) == nullptr );
 }
 
 /**

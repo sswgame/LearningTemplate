@@ -14,7 +14,8 @@ namespace sw
 
     /**
      * @brief 셀마다 켜고 끄는 타일 플래그 레이어입니다.
-     * @details 레이어를 추가하면 값 하나와 `kArrTileFlagLayerInfo` 의 항목 하나를 추가한다. XML 읽기와 쓰기, 에디터의 레이어 목록과 색,
+     * @details 엔진이 아는 0/1 레이어만 여기 둔다. 장르마다 다른 칸 값(지형 비용 · 발소리)은 맵 데이터의 `TileMapXMLData::DataLayer` 로 둔다.
+     *          레이어를 추가하면 값 하나와 `kArrTileFlagLayerInfo` 의 항목 하나를 추가한다. XML 읽기와 쓰기, 에디터의 레이어 목록과 색,
      *          페인트가 그 테이블을 순회하고, 런타임 `TileMap` 은 레이어 값으로 셀을 조회한다(`isFlagSet`).
      */
     enum class TileFlagLayer : uint8
@@ -100,6 +101,19 @@ namespace sw
             string _pairID{};
         };
 
+        /**
+         * @brief 칸마다 정수 하나를 드는 이름 붙은 데이터 레이어입니다(지형 비용 · 발소리 · 지역 번호 같은 게임 값). Godot TileSet custom data 와 같은 모양입니다.
+         * @details 플래그 레이어(0/1, 엔진 표 `kArrTileFlagLayerInfo`)와 달리 이름과 기본값은 **맵 데이터**가 정한다 — 장르가 새 값을 원해도 엔진 코드를 고치지 않는다.
+         *          XML 은 `<dataLayers><layer name=".." default="..">행 우선 정수들</layer></dataLayers>` 이고, 레이어가 없는 맵은 이 요소를 쓰지 않는다(기존 맵과 바이트까지 같다).
+         *          이름 · 기본값은 필수이고 이름은 겹치지 않으며, 값 수는 셀 수와 같아야 한다 — 모자란 값을 기본값으로 메우지 않고 읽기 오류다.
+         */
+        struct DataLayer
+        {
+            string        _name{};
+            int32         _defaultValue{ 0 };
+            vector<int32> _listValue{}; ///< 셀마다 값(행 우선, y 는 아래로)
+        };
+
         string         _name{};
         string         _sourcePath{};
         string         _scenePath{};
@@ -121,13 +135,27 @@ namespace sw
         vector<string> _listPaletteName{};
         /** @brief 셀마다 팔레트 번호 + 1 (0 = 빈 셀)이며, 행 우선(y 는 아래로)입니다. 타일 레이어가 없으면 비어 있습니다. */
         vector<uint16> _listTileCell{};
+        /** @brief 이름 붙은 정수 데이터 레이어들입니다(`DataLayer`). 순서는 파일에 적힌 순서이고 에디터 목록도 이 순서입니다. */
+        vector<DataLayer> _listDataLayer{};
+
+        /** @brief 이름으로 데이터 레이어 번호를 찾습니다. 없으면 -1 입니다. */
+        SW_API int32 findDataLayer( string_view name ) const;
+        /**
+         * @brief 데이터 레이어를 더하고 모든 셀을 @p defaultValue 로 채웁니다.
+         * @return 이름이 비었거나 이미 있으면 아무것도 바꾸지 않고 false 입니다.
+         */
+        [[nodiscard]] SW_API bool addDataLayer( string_view name, int32 defaultValue );
+        /** @brief 셀의 데이터 값을 읽습니다. 레이어 번호나 좌표가 밖이면 false 이고 @p outValue 는 그대로입니다. */
+        [[nodiscard]] SW_API bool getCellData( int32 layerIndex, int32 x, int32 y, int32& outValue ) const;
+        /** @brief 셀의 데이터 값을 씁니다. 레이어 번호나 좌표가 밖이면 false 입니다. */
+        SW_API bool setCellData( int32 layerIndex, int32 x, int32 y, int32 value );
 
         /** @brief 레이어 하나의 셀 배열입니다. */
         vector<uint8>& getFlagLayer( TileFlagLayer layer ) { return _arrFlagLayer[static_cast<size_t>( layer )]; }
         /** @brief 레이어 하나의 셀 배열입니다. */
         const vector<uint8>& getFlagLayer( TileFlagLayer layer ) const { return _arrFlagLayer[static_cast<size_t>( layer )]; }
         /**
-         * @brief 크기를 바꾸고 모든 셀을 기본값으로 채웁니다(플래그 레이어는 테이블의 기본값입니다). 워프를 비웁니다.
+         * @brief 크기를 바꾸고 모든 셀을 기본값으로 채웁니다(플래그 레이어는 테이블의 기본값, 데이터 레이어는 그 레이어의 기본값입니다). 워프를 비웁니다.
          * @return 크기가 `isSizeSupported` 밖이면 아무것도 바꾸지 않고 false 를 반환합니다.
          */
         [[nodiscard]] SW_API bool resetTiles( int32 width, int32 height );

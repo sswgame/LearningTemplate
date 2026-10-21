@@ -1,6 +1,6 @@
 # 게임플레이 후보
 
-> 상태: 후보 · 선행: 없음 · 영역: gameplay · 옛번호: D4-2,D4-4,D4-6,D4-7,D4-8,D4-9,D4-10,D4-11,D4-12,D4-13,D4-14,D4-15,D4-16,D4-17,G-4,G-6,G-7 · 진행: 해당없음
+> 상태: 후보 · 선행: 없음 · 영역: gameplay · 옛번호: D4-2,D4-4,D4-6,D4-7,D4-8,D4-9,D4-10,D4-11,D4-12,D4-13,D4-14,D4-15,D4-16,D4-17 · 진행: 해당없음
 
 GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션 영역의 착수 전 후보 목록입니다. 착수하면 그 절을 계획 문서로 옮기고 여기서 지웁니다.
 이미 계획 문서가 있는 일의 남은 것은 그 문서에 있습니다: [PairedAnimation](PairedAnimation.md) · [EditorCharacterEditor](EditorCharacterEditor.md) · [MotionMatching](MotionMatching.md).
@@ -143,23 +143,3 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션 영역의 
 왜 필요한가: `moveCharacter` 가 딛은 바닥의 속도(선속도 + 회전)를 실어 주게 됐지만(2026-10-20, 결정은 `IPhysicsCharacterScene.h` 머리말과 `JoltPhysicsSceneQuery.cpp`), 아래 셋은 하지 않았다.
 남은 것: (1) 바닥이 돌 때 캐릭터의 방향(yaw)이 따라 돌지 않는다 — 위치만 돈다. (2) 점프로 바닥을 떠난 뒤의 관성이 없다 — 바닥 속도는 딛고 있는 스텝에만 얹히므로, 컴포넌트가 점프 순간의 바닥 속도를 `_airVelocity` 로 이어야 한다. (3) 네트워크 틱 동기: 서버와 클라이언트가 바닥 위치를 같은 틱에 맞춰야 캐릭터 예측이 어긋나지 않는다.
 함정: 큰 Kinematic 메시(공중 요새)는 캐릭터 쓸기 충돌 비용이 크다 — 측정 전에 단순 상자로 바닥을 대신할 수 있는지 먼저 본다.
-
-## 조건부
-
-### InteractionSpatialGrid
-제목: 상호작용 대상의 공유 공간 격자
-옛번호: G-4
-왜 필요한가: 지금 하는 쪽은 등록된 대상 목록을 한 번 돈다(대상 16 · 10k 오브젝트에서 +2~6 us).
-착수 조건 / 남은 것: 하는 쪽 · 대상이 모두 수천일 때. 대상이 움직일 수 있어 격자를 프레임마다 맞추는 비용이 목록을 도는 비용과 같으므로, 하는 쪽이 여럿일 때만 씬당 하나(`SpatialHashGrid2D`, 셀 = 최대 상호작용 반경)를 틱 앞에 맞춘다.
-
-### TilemapCellDataLayers
-제목: 타일맵 칸 데이터를 일반 레이어로
-옛번호: G-6
-왜 필요한가: 지금 레이어는 0/1(`kArrTileFlagLayerInfo`)이고 워프 · 역할 · 스폰은 전용 원소다.
-착수 조건 / 남은 것: 두 번째 장르가 칸마다 다른 값(지형 비용 · 발소리)을 원하면. 값 종류를 정수로 넓히고 에디터 페인트 · 형식 테스트를 같이 바꾼다(Godot TileSet custom data 모양).
-
-### StepEncounterRules
-제목: 걸음 조우 판정 둘
-옛번호: G-7
-왜 필요한가: Overworld `shouldEncounterOnStep` 의 결정적 주기와 ClassicJRPG `JRPGEncounterWalker` 의 확률 + 유예가 따로 있다.
-착수 조건 / 남은 것: 오버월드 위에 JRPG · 몬스터 수집 게임이 서면 기반 `World/` 로 하나를 올린다.

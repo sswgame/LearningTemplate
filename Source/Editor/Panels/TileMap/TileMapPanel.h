@@ -73,7 +73,8 @@ namespace sw::editor
             Visual = 0,
             Warp,
             Tile,
-            Flag
+            Flag,
+            Data ///< 맵 데이터가 정한 정수 데이터 레이어(`TileMapXMLData::DataLayer`). `_dataLayerIndex` 가 고른다
         };
         /** @brief 레이어 목록에서 플래그 레이어보다 앞에 오는 항목 수입니다. Visual, Warp, Tile 이 해당합니다. */
         static constexpr int32 kFixedPaintLayerCount = 3;
@@ -102,7 +103,9 @@ namespace sw::editor
         void paintCell( int32 x, int32 y );
         /** @brief 가장자리 워프를 페인트합니다. */
         void paintEdgeWarp( int32 edge );
-        /** @brief 레이어 목록에서 현재 레이어의 순번을 반환합니다. Visual, Warp, 플래그 레이어 순서입니다. */
+        /** @brief 데이터 레이어 값 · 새 데이터 레이어 만들기 컨트롤을 그립니다. */
+        void drawDataLayerControls();
+        /** @brief 레이어 목록에서 현재 레이어의 순번을 반환합니다. Visual, Warp, Tile, 플래그 레이어, 데이터 레이어 순서입니다. */
         int32 getPaintLayerIndex() const;
         /** @brief 레이어 목록의 순번으로 레이어를 선택합니다. */
         void selectPaintLayer( int32 layerIndex );
@@ -162,8 +165,12 @@ namespace sw::editor
         int32                                 _atlasID;
         int32                                 _warpTx;
         int32                                 _warpTy;
-        int2                                  _lastPaintCell; ///< 지난 프레임에 칠한 셀. `_bStrokeActive` 일 때만 의미가 있다
-        int2                                  _rectStartCell; ///< Rect 도구로 누른 셀. `_bRectActive` 일 때만 의미가 있다
+        int2                                  _lastPaintCell;       ///< 지난 프레임에 칠한 셀. `_bStrokeActive` 일 때만 의미가 있다
+        int2                                  _rectStartCell;       ///< Rect 도구로 누른 셀. `_bRectActive` 일 때만 의미가 있다
+        fixed_string<constant::kMaxBuffer64>  _newDataLayerName;    ///< 새 데이터 레이어 이름 입력란
+        int32                                 _newDataLayerDefault; ///< 새 데이터 레이어의 기본값 입력란
+        int32                                 _dataLayerIndex;      ///< 칠할 데이터 레이어(`_map._listDataLayer` 번호). `_layer == Data` 일 때만 의미가 있다
+        int32                                 _paintDataValue;      ///< 데이터 레이어에 칠할 값(지우기는 그 레이어의 기본값)
         PaintLayer                            _layer;
         TileFlagLayer                         _flagLayer;
         PaintTool                             _tool;

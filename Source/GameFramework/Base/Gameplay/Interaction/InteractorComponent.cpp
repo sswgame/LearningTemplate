@@ -15,6 +15,7 @@
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Gameplay/Interaction/InteractableComponent.h"
 #include "GameFramework/Base/Gameplay/Interaction/InteractionAuthority.h"
+#include "GameFramework/Base/Gameplay/Interaction/InteractionSpatialIndex.h"
 
 namespace sw
 {
@@ -93,6 +94,8 @@ namespace sw
         , _bWasHeld{ SW_FALSE }
         , _bPressed{ SW_FALSE }
         , _bPairedStartPending{ SW_FALSE }
+        , _bSpatialIndexUser{ SW_FALSE }
+        , _listGridTarget{}
     {
     }
 
@@ -100,6 +103,13 @@ namespace sw
     {
         Component::onBeginPlay();
         setTickGroup( TickGroup::PostPhysics );
+        GameObject*        pOwner   = getOwner();
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        if ( pManager != nullptr )
+        {
+            InteractionSpatialIndex::registerInteractor( *pManager, _space );
+            _bSpatialIndexUser = SW_TRUE;
+        }
     }
 
     void InteractorComponent::onEndPlay()
@@ -108,7 +118,25 @@ namespace sw
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager != nullptr )
             setFocus( *pManager, GameObjectHandle{}, TComponentHandle<InteractableComponent>{} );
+        if ( pManager != nullptr && _bSpatialIndexUser == SW_TRUE )
+            InteractionSpatialIndex::unregisterInteractor( *pManager, _space );
+        _bSpatialIndexUser = SW_FALSE;
         Component::onEndPlay();
+    }
+
+    void InteractorComponent::setSpace( InteractionSpace space )
+    {
+        if ( space == _space )
+            return;
+        GameObject*        pOwner   = getOwner();
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        // 세어진 공간과 `_space` 가 어긋나면 뗄 때 다른 공간의 수를 줄인다. 사용자를 함께 옮긴다.
+        if ( pManager != nullptr && _bSpatialIndexUser == SW_TRUE )
+        {
+            InteractionSpatialIndex::registerInteractor( *pManager, space );
+            InteractionSpatialIndex::unregisterInteractor( *pManager, _space );
+        }
+        _space = space;
     }
 
     void InteractorComponent::setInput( bool bHeld )
@@ -140,29 +168,48 @@ namespace sw
     {
         _listCandidate.clear();
         _listCandidateComponent.clear();
-        // 씬 전체를 순회하지 않고 등록된 상호작용 대상만 본다(`ComponentRegistry`). 닿지 않는 것(거리, 시야각)은 여기서 거르며, 고르기와 같은 판정이다.
+        // 하는 쪽이 여럿이면 씬이 틱 앞에 맞춘 공유 격자에서 눈 둘레만 받는다(`InteractionSpatialIndex`). 아니면 등록된 대상 목록(`ComponentRegistry`)을
+        // 한 번 돈다. 둘 다 씬 전체는 돌지 않고, 닿는지 · 쓸 수 있는지는 `considerCandidate` 한 곳이 현재 위치로 판정한다.
+        const InteractionSpatialIndex* pIndex = InteractionSpatialIndex::find( manager );
+        if ( pIndex != nullptr && pIndex->hasGrid( viewer._space ) )
+        {
+            pIndex->queryTargets( viewer, _listGridTarget );
+            for ( const TComponentHandle<InteractableComponent> target : _listGridTarget )
+            {
+                InteractableComponent* pInteractable = manager.resolveComponent( target );
+                if ( pInteractable != nullptr )
+                    considerCandidate( *pInteractable, owner, viewer );
+            }
+            return;
+        }
         for ( InteractableComponent* pInteractable : manager.getComponentRegistry().getAll<InteractableComponent>() )
         {
-            const GameObject*     pObject = pInteractable != nullptr ? pInteractable->getOwner() : nullptr;
-            const SceneComponent* pScene  = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
-            const bool            bUsable = pScene != nullptr && pObject != &owner && pInteractable->isPendingDestroy() == false && pInteractable->isActive() &&
-                                 pObject->isActiveInHierarchy() && pInteractable->getDefinition() != nullptr;
-            if ( bUsable == false || pInteractable->isAvailableFor( owner ) == false )
-                continue;
-            const InteractionDef* pDef = pInteractable->getDefinition();
-            InteractionCandidate  candidate;
-            candidate._position             = pScene->getWorldPosition();
-            candidate._objectID             = pObject->getObjectID();
-            candidate._maxDistance          = pDef->_maxDistance;
-            candidate._maxAngle             = pDef->_maxAngle;
-            candidate._priority             = pInteractable->getPriority();
-            candidate._bRequiresLineOfSight = pDef->_bLineOfSight;
-            float32 distance{ 0.0f };
-            if ( InteractionSelector::isInReach( viewer, candidate, distance ) == false )
-                continue;
-            _listCandidate.push_back( candidate );
-            _listCandidateComponent.push_back( TComponentHandle<InteractableComponent>{ pInteractable } );
+            if ( pInteractable != nullptr )
+                considerCandidate( *pInteractable, owner, viewer );
         }
+    }
+
+    void InteractorComponent::considerCandidate( InteractableComponent& interactable, const GameObject& owner, const InteractionView& viewer )
+    {
+        const GameObject*     pObject = interactable.getOwner();
+        const SceneComponent* pScene  = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
+        const bool            bUsable = pScene != nullptr && pObject != &owner && interactable.isPendingDestroy() == false && interactable.isActive() &&
+                             pObject->isActiveInHierarchy() && interactable.getDefinition() != nullptr;
+        if ( bUsable == false || interactable.isAvailableFor( owner ) == false )
+            return;
+        const InteractionDef* pDef = interactable.getDefinition();
+        InteractionCandidate  candidate;
+        candidate._position             = pScene->getWorldPosition();
+        candidate._objectID             = pObject->getObjectID();
+        candidate._maxDistance          = pDef->_maxDistance;
+        candidate._maxAngle             = pDef->_maxAngle;
+        candidate._priority             = interactable.getPriority();
+        candidate._bRequiresLineOfSight = pDef->_bLineOfSight;
+        float32 distance{ 0.0f };
+        if ( InteractionSelector::isInReach( viewer, candidate, distance ) == false )
+            return;
+        _listCandidate.push_back( candidate );
+        _listCandidateComponent.push_back( TComponentHandle<InteractableComponent>{ &interactable } );
     }
 
     void InteractorComponent::setFocus( GameObjectManager& manager, GameObjectHandle focus, TComponentHandle<InteractableComponent> focusComponent )

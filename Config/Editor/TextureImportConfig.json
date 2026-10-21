@@ -34,6 +34,13 @@
       "srgb": true,
       "invert_green": false,
       "swizzle": "RGBA"
+    },
+    "Base_Mask": {
+      "format": "R8_UNORM",
+      "generate_mips": true,
+      "srgb": false,
+      "invert_green": false,
+      "swizzle": "RGBA"
     }
   },
   "rules": [
@@ -95,6 +102,11 @@
       "inherits": "Base_Default",
       "include_patterns": ["*/textures_raw/avatarsample_d/*"],
       "format": "BC3_UNORM"
+    },
+    {
+      "name": "Mask_Textures",
+      "inherits": "Base_Mask",
+      "include_patterns": ["*_mask.*"]
     },
     {
       "name": "Fallback_Default",

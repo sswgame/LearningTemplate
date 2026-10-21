@@ -396,3 +396,50 @@ SW_TEST_CASE( TileMapXMLTest, SavedBytesMatchTheExistingFormat )
     SW_ASSERT_TRUE( legacy.loadFromXML( kLegacyInput ) );
     SW_EXPECT_TRUE_MSG( legacy.toXML() == kLegacyXML, "옛 손글 맵을 읽어 쓴 바이트가 기존 형식과 다르다" );
 }
+
+/**
+ * @brief [TileMapXMLTest] 이름 붙은 정수 데이터 레이어가 칸마다 값(음수 포함)을 왕복하고, 크기를 바꾸면 그 레이어의 기본값으로 찬다
+ * @details 이름 없는 · 겹치는 · 기본값 없는 · 값 수가 셀 수와 다른 레이어는 맵째 읽기 오류다(모자란 칸을 기본값으로 메우지 않는다).
+ */
+SW_TEST_CASE( TileMapXMLTest, DataLayersRoundTripAndRejectBrokenLayers )
+{
+    sw::TileMapXMLData data = makeSampleMap();
+    SW_ASSERT_TRUE( data.addDataLayer( "cost", 1 ) );
+    SW_ASSERT_TRUE( data.addDataLayer( "footstep", 0 ) );
+    SW_EXPECT_FALSE( data.addDataLayer( "cost", 5 ) ); // 겹치는 이름
+    SW_EXPECT_FALSE( data.addDataLayer( "", 5 ) );
+    const int32 costLayer = data.findDataLayer( "cost" );
+    SW_ASSERT_EQUAL( 0, costLayer );
+    SW_EXPECT_TRUE( data.setCellData( costLayer, 2, 1, -3 ) );
+    SW_EXPECT_TRUE( data.setCellData( data.findDataLayer( "footstep" ), 0, 0, 7 ) );
+    SW_EXPECT_FALSE( data.setCellData( costLayer, 3, 0, 9 ) ); // 맵 밖
+    SW_EXPECT_FALSE( data.setCellData( 5, 0, 0, 9 ) );         // 없는 레이어
+
+    sw::TileMapXMLData restored;
+    SW_ASSERT_TRUE( restored.loadFromXML( data.toXML() ) );
+    SW_ASSERT_EQUAL( size_t( 2 ), restored._listDataLayer.size() );
+    int32 value = 0;
+    SW_EXPECT_TRUE( restored.getCellData( restored.findDataLayer( "cost" ), 2, 1, value ) && value == -3 );
+    SW_EXPECT_TRUE( restored.getCellData( restored.findDataLayer( "cost" ), 0, 0, value ) && value == 1 );
+    SW_EXPECT_TRUE( restored.getCellData( restored.findDataLayer( "footstep" ), 0, 0, value ) && value == 7 );
+    SW_EXPECT_TRUE( restored.toXML() == data.toXML() );
+
+    SW_ASSERT_TRUE( restored.resetTiles( 4, 4 ) );
+    SW_EXPECT_TRUE( restored.getCellData( restored.findDataLayer( "cost" ), 3, 3, value ) && value == 1 );
+
+    const sw::string_view kHead       = "<TileMap><name>Bad</name><width>2</width><height>1</height><tiles><t>1</t><t>1</t></tiles><dataLayers>";
+    const sw::string_view arrBroken[] = {
+        "<layer default=\"0\">1 2</layer>",                                                             // 이름 없음
+        "<layer name=\"cost\">1 2</layer>",                                                             // 기본값 없음
+        "<layer name=\"cost\" default=\"0\">1</layer>",                                                 // 값이 셀보다 적다
+        "<layer name=\"cost\" default=\"0\">1 x</layer>",                                               // 숫자가 아니다
+        "<layer name=\"cost\" default=\"0\">1 2</layer><layer name=\"cost\" default=\"0\">1 2</layer>", // 겹치는 이름
+    };
+    for ( const sw::string_view broken : arrBroken )
+    {
+        sw::TileMapXMLData map;
+        const sw::string   xml = sw::string( kHead ) + sw::string( broken ) + "</dataLayers></TileMap>";
+        SW_EXPECT_FALSE( map.loadFromXML( xml ) );
+        SW_EXPECT_TRUE( map._listDataLayer.empty() && map._width == 0 );
+    }
+}

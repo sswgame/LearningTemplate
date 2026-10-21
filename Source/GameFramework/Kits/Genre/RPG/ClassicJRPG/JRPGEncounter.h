@@ -9,6 +9,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
+#include "GameFramework/Base/World/Encounter/StepEncounter.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGCatalog.h"
 
@@ -25,7 +26,7 @@ namespace sw
     public:
         static constexpr uint32 kStateTag       = FourCcUtil::make( "JENC" );
         static constexpr uint32 kStateVersion   = 1;
-        static constexpr int32  kNoEncounterYet = 0x3fffffff;
+        static constexpr int32  kNoEncounterYet = StepEncounterCounter::kNoEncounterYet;
 
         JRPGEncounterWalker();
 
@@ -33,19 +34,18 @@ namespace sw
         /** @brief @p areaID 에서 한 걸음 걷습니다. 조우하면 그 무리를 반환하고, 아니면 nullptr 을 반환합니다(모르는 지역이나 무리가 없는 지역도 nullptr 입니다). */
         const JRPGEncounterGroup* step( const hashed_string& areaID );
         /** @brief 유예를 처음부터 다시 셉니다(마을에서 나왔을 때나 성수를 썼을 때 호출합니다). */
-        void restartGrace() { _stepsSinceEncounter = 0; }
+        void restartGrace() { _counter.restartGrace(); }
         /** @brief 난수, 조우 뒤 걸음, 총 걸음을 씁니다. 카탈로그는 싣지 않습니다. */
         void writeState( Archive& outArchive ) const;
         /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */
         [[nodiscard]] bool readState( Archive& archive );
 
-        int32 getStepsSinceEncounter() const { return _stepsSinceEncounter; }
-        int32 getTotalSteps() const { return _totalSteps; }
+        int32 getStepsSinceEncounter() const { return _counter.getStepsSinceEncounter(); }
+        int32 getTotalSteps() const { return _counter.getTotalSteps(); }
 
     private:
-        GameRandom         _random;
-        const JRPGCatalog* _pCatalog;
-        int32              _stepsSinceEncounter;
-        int32              _totalSteps;
+        GameRandom           _random;
+        const JRPGCatalog*   _pCatalog;
+        StepEncounterCounter _counter; ///< 기반 걸음 조우 셈(확률 + 유예 판정은 `StepEncounterRule::Chance`)
     };
 } // namespace sw

@@ -36,7 +36,7 @@ JSON 키는 아래 테이블의 키 그대로입니다. 모르는 키는 로드 
 |---|---|---|---|---|---|
 | `name` | `string` | — |  |  | 규칙 이름(로그 · 경고에 나온다). 프리셋은 키가 이름이다 |
 | `inherits` | `string` | — |  |  | 값을 물려받을 프리셋 이름 — 위에 정의되지 않은 이름은 로드 오류 |
-| `format` | `string` | `BC7_UNORM` |  |  | DXGI 포맷 이름(BC7_UNORM · BC5_UNORM · BC6H_UF16 · B8G8R8A8_UNORM · R8G8B8A8_UNORM …) |
+| `format` | `string` | `BC7_UNORM` |  |  | DXGI 포맷 이름(BC1~BC5_UNORM · BC6H_UF16 · BC7_UNORM · B8G8R8A8_UNORM · R8G8B8A8_UNORM · R16G16B16A16_FLOAT · R8_UNORM) — 그 밖은 로드 오류 |
 | `swizzle` | `string` | `RGBA` |  |  | 채널 순서: RGBA · BGRA · ARGB · RGB1 — 그 밖은 로드 오류 |
 | `generate_mips` | `bool` | `true` |  |  | 밉맵을 만든다 |
 | `srgb` | `bool` | `true` |  |  | sRGB 색 공간으로 읽는다(노멀 · 데이터 텍스처는 false) |

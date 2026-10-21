@@ -64,7 +64,8 @@ namespace sw
         void setInput( bool bHeld );
         /** @brief 2D 의 시선(좌우)입니다. */
         void setFacing2D( const float3& facing ) { _facing2D = facing; }
-        void setSpace( InteractionSpace space ) { _space = space; }
+        /** @brief 공간을 바꿉니다. 플레이 중이면 공유 격자(`InteractionSpatialIndex`)의 사용자도 옮깁니다(게임 스레드, 틱 밖). */
+        void setSpace( InteractionSpace space );
         void setEyeOffset( const float3& eyeOffset ) { _eyeOffset = eyeOffset; }
         /** @brief 진행 중인 상호작용을 취소합니다. 맞았을 때나 컷신에서 씁니다. */
         void cancelInteraction();
@@ -77,6 +78,8 @@ namespace sw
     private:
         void makeView( InteractionView& outViewer ) const;
         void gatherCandidates( GameObjectManager& manager, const GameObject& owner, const InteractionView& viewer );
+        /** @brief 대상 하나가 쓸 수 있고 닿으면 후보 목록에 넣습니다. 목록을 도는 길과 격자 질의 길이 같은 판정을 쓰는 자리입니다. */
+        void considerCandidate( InteractableComponent& interactable, const GameObject& owner, const InteractionView& viewer );
         void setFocus( GameObjectManager& manager, GameObjectHandle focus, TComponentHandle<InteractableComponent> focusComponent );
         /** @brief 진행 중인 상호작용을 이어 갑니다. 진행 중에는 대상을 바꾸지 않고, 대상을 쓸 수 없게 됐거나 멀어지면 취소합니다. */
         void updateActiveSession( GameObjectManager& manager, const InteractionView& viewer, float32 deltaTime, bool bHeld, bool bPressed );
@@ -126,5 +129,7 @@ namespace sw
         uint8                                           _bWasHeld;
         uint8                                           _bPressed;
         uint8                                           _bPairedStartPending; ///< 페어드 애니메이션 시작을 틱 뒤로 미뤘다. 그 사이 취소되면 내려 시작하지 않는다
+        uint8                                           _bSpatialIndexUser;   ///< `InteractionSpatialIndex` 에 `_space` 의 사용자로 세어졌다(BeginPlay ~ EndPlay)
+        vector<TComponentHandle<InteractableComponent>> _listGridTarget;      ///< 공유 격자 질의 결과(틱마다 다시 채운다)
     };
 } // namespace sw
