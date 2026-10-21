@@ -11,6 +11,13 @@
 
 #include "Editor/Common/EditorSubsystem.h"
 
+namespace sw
+{
+    struct FunctionParameterInfo;
+
+    class GameObjectManager;
+} // namespace sw
+
 namespace sw::editor
 {
     struct EditorPropertyDrawerRegistration;
@@ -48,8 +55,12 @@ namespace sw::editor
         /** @brief 등록 줄이 [@p pBegin, @p pEnd)(언로드되는 모듈 이미지) 안인 그리기를 지웁니다(가렸던 내장 위젯은 복원한다). 지운 수입니다. */
         uint32 releaseDrawersWithin( const void* pBegin, const void* pEnd );
 
-        /** @brief CallInEditor 인자 칸 하나를 그 C++ 타입의 위젯으로 그립니다. 값이 바뀌었으면 true 입니다. */
-        static bool drawMethodArg( const utf8* pLabel, InspectorMethodArgSlot& slot );
+        /**
+         * @brief CallInEditor 인자 칸 하나를 그 C++ 타입의 위젯으로 그립니다. 값이 바뀌었으면 true 입니다.
+         * @details 타입 핸들 인자(`FunctionParameterInfo::_handleTargetTypeName`)는 프로퍼티와 같은 선택기를 그린다 — @p pManager(편집 대상의 씬)에서 대상 타입의
+         *          컴포넌트만 고를 수 있다. 씬이나 대상 타입이 없으면 선택기 대신 오류 글이다(정수 입력으로 물러서지 않는다).
+         */
+        static bool drawMethodArg( const utf8* pLabel, InspectorMethodArgSlot& slot, const FunctionParameterInfo& parameter, const GameObjectManager* pManager );
 
     private:
         /** @brief 내장 표(`ReflectBuiltins.xxx`)의 위젯을 모두 다시 겁니다. */

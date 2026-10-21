@@ -42,7 +42,7 @@ namespace sw
             /** @brief `findEditedArea` 가 바뀐 청크 둘레로 더 넓히는 칸 수입니다. 높이 질의는 셀의 두 샘플을, 노멀은 그 이웃 샘플을 읽는다. */
             static constexpr uint32 kEditedAreaMarginCells = 2;
             /** @brief `writeState` 형식 버전입니다. 형식을 바꾸면 올린다. */
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr uint32 kStateVersion = 2; ///< 2: 구멍 마스크를 더했고, 높이의 해상도가 다시 읽은 것과 달라도 되살린다(크기 바꾸기)
 
             /** @brief 지형마다의 스플랫 텍스처 경로(`cpu/terrain/<번호>`)를 새로 냅니다. 놓인 경로를 다시 쓰지 않도록 번호는 프로세스 안에서 늘기만 한다. */
             static string makeCPUSplatPath()
@@ -148,6 +148,8 @@ namespace sw
         , _splatRevision{ 0 }
         , _bOriginDirty{ false }
         , _bHeightsWritten{ false }
+        , _bHolesWritten{ false }
+        , _bResolutionReplaced{ false }
         , _loadedHeightfieldPath{}
     {
         setCanEverTick( true );
@@ -289,8 +291,10 @@ namespace sw
         _listChunkGeneration.clear();
         _listChunkSplatRevision.clear();
         ++_heightfieldGeneration; // 실패해도 오른다 — 비워진 높이장으로 만든 바디도 낡았다
-        _splatRevision   = 0;
-        _bHeightsWritten = false;
+        _splatRevision       = 0;
+        _bHeightsWritten     = false;
+        _bHolesWritten       = false;
+        _bResolutionReplaced = false;
         releaseCPUSplat(); // 칠한 것은 버리고 디스크 가중치로 다시 만든다
         if ( _heightfieldPath.empty() )
             return false;
@@ -323,27 +327,48 @@ namespace sw
     {
         if ( _listChunk.empty() || _heightfield.writeHeightSamples( listHeight, rect ) == false )
             return false;
-        using Internal = TerrainComponentInternal;
-        ++_heightfieldGeneration;
+        using Internal   = TerrainComponentInternal;
         _bHeightsWritten = true;
-        // 충돌은 바뀐 샘플을 가진 청크만 낡는다(청크 경계 샘플은 양쪽 청크가 쓴다).
-        TerrainSampleRect chunkRect = Internal::findChunksOfSamples( _layout, rect );
-        for ( uint32 chunkZ = chunkRect._minZ; chunkZ <= chunkRect._maxZ; ++chunkZ )
-        {
-            for ( uint32 chunkX = chunkRect._minX; chunkX <= chunkRect._maxX; ++chunkX )
-            {
-                _listChunkGeneration[static_cast<size_t>( chunkZ ) * _layout._chunkCountX + chunkX] = _heightfieldGeneration;
-            }
-        }
-        // 메시는 노멀이 이웃 샘플을 읽으므로 한 샘플 바깥까지 다시 만든다.
+        // 충돌은 바뀐 샘플을 가진 청크만 낡는다(청크 경계 샘플은 양쪽 청크가 쓴다). 메시는 노멀이 이웃 샘플을 읽으므로 한 샘플 바깥까지 다시 만든다.
         const uint32      last = _heightfield.getResolution() - 1;
         TerrainSampleRect grown{};
         grown.include( rect._minX > 0 ? rect._minX - 1 : 0, rect._minZ > 0 ? rect._minZ - 1 : 0 );
         grown.include( MathUtil::min( rect._maxX + 1, last ), MathUtil::min( rect._maxZ + 1, last ) );
-        chunkRect = Internal::findChunksOfSamples( _layout, grown );
-        for ( uint32 chunkZ = chunkRect._minZ; chunkZ <= chunkRect._maxZ; ++chunkZ )
+        markChunksEdited( Internal::findChunksOfSamples( _layout, rect ), Internal::findChunksOfSamples( _layout, grown ), rect );
+        return true;
+    }
+
+    bool TerrainComponent::writeHoles( const vector<uint8>& listHole, const TerrainSampleRect& cellRect )
+    {
+        if ( _listChunk.empty() || _heightfield.writeHoleCells( listHole, cellRect ) == false )
+            return false;
+        _bHolesWritten = true;
+        // 셀 c 는 청크 c / 칸 하나에만 든다 — 충돌과 메시 모두 그 청크만 낡는다(노멀은 구멍을 보지 않는다).
+        const uint32      cells = _layout._chunkCells;
+        TerrainSampleRect chunkRect{};
+        chunkRect.include( cellRect._minX / cells, cellRect._minZ / cells );
+        chunkRect.include( cellRect._maxX / cells, cellRect._maxZ / cells );
+        TerrainSampleRect sampleRect{};
+        sampleRect.include( cellRect._minX, cellRect._minZ );
+        sampleRect.include( cellRect._maxX + 1, cellRect._maxZ + 1 );
+        markChunksEdited( chunkRect, chunkRect, sampleRect );
+        return true;
+    }
+
+    void TerrainComponent::markChunksEdited( const TerrainSampleRect& generationChunks, const TerrainSampleRect& meshChunks, const TerrainSampleRect& sampleRect )
+    {
+        using Internal = TerrainComponentInternal;
+        ++_heightfieldGeneration;
+        for ( uint32 chunkZ = generationChunks._minZ; chunkZ <= generationChunks._maxZ; ++chunkZ )
         {
-            for ( uint32 chunkX = chunkRect._minX; chunkX <= chunkRect._maxX; ++chunkX )
+            for ( uint32 chunkX = generationChunks._minX; chunkX <= generationChunks._maxX; ++chunkX )
+            {
+                _listChunkGeneration[static_cast<size_t>( chunkZ ) * _layout._chunkCountX + chunkX] = _heightfieldGeneration;
+            }
+        }
+        for ( uint32 chunkZ = meshChunks._minZ; chunkZ <= meshChunks._maxZ; ++chunkZ )
+        {
+            for ( uint32 chunkX = meshChunks._minX; chunkX <= meshChunks._maxX; ++chunkX )
             {
                 const uint32 chunkIndex = chunkZ * _layout._chunkCountX + chunkX;
                 Chunk&       chunk      = _listChunk[chunkIndex];
@@ -355,20 +380,75 @@ namespace sw
         }
         // 큰 사각형은 청크 메시를 프레임마다 나눠 다시 만든다(남은 것은 틱이 이어서). 브러시 한 번(청크 넷 이하)은 바로 끝난다.
         (void)rebuildStaleChunkMeshes( Internal::kMaxChunkMeshRebuildsPerFrame );
+        invalidateNavigation( sampleRect );
+    }
+
+    void TerrainComponent::invalidateNavigation( const TerrainSampleRect& sampleRect )
+    {
         // 내비메시는 바뀐 자리의 타일만 워커가 다시 굽는다(타일은 XZ 로 고르므로 높이는 범위 전체로 둔다).
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        if ( pManager != nullptr )
+        if ( pManager == nullptr )
+            return;
+        const float3 low  = _heightfield.getSamplePosition( sampleRect._minX, sampleRect._minZ );
+        const float3 high = _heightfield.getSamplePosition( sampleRect._maxX, sampleRect._maxZ );
+        const AABB   box{
+            float3{ low._x, _heightfield.getOrigin()._y + _heightMin,  low._z},
+            float3{high._x, _heightfield.getOrigin()._y + _heightMax, high._z}
+        };
+        pManager->getSubsystem<SceneNavigation>().invalidateArea( box, true );
+    }
+
+    bool TerrainComponent::isResolutionUsable( uint32 resolution ) const
+    {
+        TerrainChunkLayout layout{};
+        return resolution >= 2 && TerrainMeshBuilder::makeLayout( resolution, _chunkCells, layout );
+    }
+
+    bool TerrainComponent::replaceHeightfield( uint32 resolution, const vector<float32>& listHeight, const vector<uint8>& listHole )
+    {
+        TerrainChunkLayout layout{};
+        const bool         bLayoutFits = resolution >= 2 && TerrainMeshBuilder::makeLayout( resolution, _chunkCells, layout );
+        if ( _listChunk.empty() )
+            return false;
+        if ( bLayoutFits == false )
         {
-            const float3 low  = _heightfield.getSamplePosition( rect._minX, rect._minZ );
-            const float3 high = _heightfield.getSamplePosition( rect._maxX, rect._maxZ );
-            const AABB   box{
-                float3{ low._x, _heightfield.getOrigin()._y + _heightMin,  low._z},
-                float3{high._x, _heightfield.getOrigin()._y + _heightMax, high._z}
-            };
-            pManager->getSubsystem<SceneNavigation>().invalidateArea( box, true );
+            SW_LOG_ERROR( "Terrain '%#': resolution %# does not divide into chunks of %# cells (resolution - 1 must be a multiple)", _heightfieldPath.c_str(), resolution, _chunkCells );
+            return false;
         }
+        if ( _heightfield.replaceSamples( resolution, listHeight, listHole ) == false )
+        {
+            SW_LOG_ERROR( "Terrain '%#': %# heights and %# hole cells do not fit resolution %#", _heightfieldPath.c_str(), static_cast<uint32>( listHeight.size() ),
+                          static_cast<uint32>( listHole.size() ), resolution );
+            return false;
+        }
+        _layout              = layout;
+        _bHeightsWritten     = true;
+        _bHolesWritten       = true;
+        _bResolutionReplaced = true;
+        ++_heightfieldGeneration;
+        createChunks();
+        _listChunkGeneration.assign( _layout.getChunkCount(), _heightfieldGeneration );
+        // 청크 배치가 바뀌었다 — 스플랫으로 만든 것도 모든 청크가 바뀐 것으로 친다(`findEditedArea`).
+        _listChunkSplatRevision.assign( _layout.getChunkCount(), _splatRevision );
+        TerrainSampleRect all{};
+        all.include( 0, 0 );
+        all.include( resolution - 1, resolution - 1 );
+        invalidateNavigation( all );
         return true;
+    }
+
+    bool TerrainComponent::resampleHeightfield( uint32 resolution )
+    {
+        const uint32 current = _heightfield.getResolution();
+        if ( _heightfield.isValid() == false || resolution == current )
+            return false;
+        vector<float32> listHeight;
+        vector<uint8>   listHole;
+        if ( TerrainHeightfield::resampleHeights( _heightfield.getHeightSamples(), current, resolution, listHeight ) == false ||
+             TerrainHeightfield::resampleHoles( _heightfield.getHoleCells(), current, resolution, listHole ) == false )
+            return false;
+        return replaceHeightfield( resolution, listHeight, listHole );
     }
 
     bool TerrainComponent::writeLayerWeights( const vector<float4>& listWeight, const TerrainSampleRect& rect )
@@ -492,8 +572,16 @@ namespace sw
         {
             const vector<float32>& listHeight = _heightfield.getHeightSamples();
             outArchive << _heightfield.getResolution();
+            outArchive << _bResolutionReplaced;
             outArchive << static_cast<uint32>( listHeight.size() );
             outArchive.writeBytes( listHeight.data(), listHeight.size() * sizeof( float32 ) );
+        }
+        const bool bHoles = _bHolesWritten && _heightfield.isValid();
+        outArchive << bHoles;
+        if ( bHoles )
+        {
+            outArchive << _heightfield.getResolution();
+            outArchive << _heightfield.getHoleCells(); // 비었으면 구멍 없음
         }
         const bool bSplat = _splatRevision > 0 && _heightfield.getSplatWidth() > 0;
         outArchive << bSplat;
@@ -520,17 +608,58 @@ namespace sw
         {
             uint32 resolution{ 0 };
             uint32 sampleCount{ 0 };
-            archive >> resolution >> sampleCount;
-            // 크기를 먼저 견준다 — 맞지 않는 수로 버퍼를 잡지 않는다.
-            const bool        bFits = archive.isOk() && resolution > 0 && resolution == _heightfield.getResolution() && sampleCount == _heightfield.getHeightSamples().size();
-            vector<float32>   listHeight( bFits ? sampleCount : 0u );
-            const bool        bRead = bFits && archive.readBytes( listHeight.data(), static_cast<uint64>( sampleCount ) * sizeof( float32 ) );
-            TerrainSampleRect all{};
-            all.include( 0, 0 );
-            all.include( resolution - 1, resolution - 1 );
-            if ( bRead == false || writeHeights( listHeight, all ) == false )
+            bool   bResized{ false };
+            archive >> resolution >> bResized >> sampleCount;
+            // 크기를 먼저 견준다 — 맞지 않는 수로 버퍼를 잡지 않는다. 해상도가 달라도 되는 것은 크기를 바꾼 편집(`replaceHeightfield`)뿐이다 —
+            // 디스크 에셋을 다른 해상도로 다시 가져왔으면 낡은 편집이 그것을 덮지 않는다.
+            const uint32    current    = _heightfield.getResolution();
+            const bool      bSameSize  = resolution == current;
+            const bool      bSizeKnown = bSameSize || ( bResized && isResolutionUsable( resolution ) );
+            const bool      bFits      = archive.isOk() && bSizeKnown && static_cast<uint64>( sampleCount ) == static_cast<uint64>( resolution ) * resolution;
+            vector<float32> listHeight( bFits ? sampleCount : 0u );
+            const bool      bRead    = bFits && archive.readBytes( listHeight.data(), static_cast<uint64>( sampleCount ) * sizeof( float32 ) );
+            bool            bWritten = false;
+            if ( bRead && bSameSize )
+            {
+                TerrainSampleRect all{};
+                all.include( 0, 0 );
+                all.include( resolution - 1, resolution - 1 );
+                bWritten = writeHeights( listHeight, all );
+            }
+            else if ( bRead )
+            {
+                vector<uint8> listHole;
+                bWritten = TerrainHeightfield::resampleHoles( _heightfield.getHoleCells(), current, resolution, listHole ) && replaceHeightfield( resolution, listHeight, listHole );
+            }
+            if ( bWritten == false )
             {
                 SW_LOG_WARNING( "Terrain '%#': unsaved height edits (%#x%#) do not fit the reloaded heightfield - keeping the asset values", _heightfieldPath.c_str(), resolution, resolution );
+                return;
+            }
+        }
+        bool bHoles{ false };
+        archive >> bHoles;
+        if ( bHoles )
+        {
+            uint32        resolution{ 0 };
+            vector<uint8> listHole;
+            archive >> resolution >> listHole;
+            const uint32 cells    = resolution >= 2 ? resolution - 1 : 0u;
+            const bool   bSizeOk  = listHole.empty() || listHole.size() == static_cast<size_t>( cells ) * cells;
+            const bool   bFits    = archive.isOk() && cells > 0 && resolution == _heightfield.getResolution() && bSizeOk;
+            bool         bWritten = false;
+            if ( bFits )
+            {
+                // 빈 마스크는 구멍 없음이다 — 다시 읽은 에셋에 구멍이 있어도 모두 0 으로 쓴다.
+                vector<uint8>     listAll = listHole.empty() ? vector<uint8>( static_cast<size_t>( cells ) * cells, 0u ) : std::move( listHole );
+                TerrainSampleRect all{};
+                all.include( 0, 0 );
+                all.include( cells - 1, cells - 1 );
+                bWritten = writeHoles( listAll, all );
+            }
+            if ( bWritten == false )
+            {
+                SW_LOG_WARNING( "Terrain '%#': unsaved hole edits (%#x%#) do not fit the reloaded heightfield - keeping the asset values", _heightfieldPath.c_str(), resolution, resolution );
                 return;
             }
         }

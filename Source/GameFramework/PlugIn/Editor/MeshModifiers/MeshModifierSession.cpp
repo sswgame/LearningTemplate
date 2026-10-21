@@ -213,6 +213,7 @@ namespace sw::editor
         , _listSourcePosition{}
         , _listUndo{}
         , _listRedo{}
+        , _savedStackText{}
         , _meshPath{}
         , _sourceBounds{}
         , _target{}
@@ -253,9 +254,26 @@ namespace sw::editor
             _listSourcePosition.push_back( float3{ vertex._arrPosition } );
         }
         _sourceBounds = MeshModifierBounds::makeFromPoints( _listSourcePosition );
-        (void)loadSidecar(); // 사이드카가 없으면 빈 스택으로 시작한다
-        _bPreviewDirty = true;
+        (void)loadSidecar();                         // 사이드카가 없으면 빈 스택으로 시작한다
+        _savedStackText = _stack.makeJSONText( -1 ); // 사이드카가 없으면 빈 스택이 저장된 상태다
+        _bPreviewDirty  = true;
         return true;
+    }
+
+    bool MeshModifierSession::isStackUnsaved() const
+    {
+        return hasTarget() && _stack.makeJSONText( -1 ) != _savedStackText;
+    }
+
+    void MeshModifierSession::revertStackToSaved()
+    {
+        if ( hasTarget() == false || isStackUnsaved() == false )
+            return;
+        recordUndo();
+        if ( _stack.readJSONText( _savedStackText ) == false )
+            SW_LOG_ERROR( "Mesh modifier stack of %# could not be restored to its saved state - undo brings the edits back", _meshPath.c_str() );
+        _selectedIndex = MathUtil::min( _selectedIndex, _stack.getModifierCount() - 1 );
+        _bPreviewDirty = true;
     }
 
     void MeshModifierSession::shutdownSubsystem()
@@ -287,6 +305,7 @@ namespace sw::editor
         _selectedControlPoint = -1;
         _listUndo.clear();
         _listRedo.clear();
+        _savedStackText.clear();
         _bPreviewDirty      = true;
         _bStagePreviewDirty = true;
         _bInputBoundsDirty  = true;
@@ -523,7 +542,7 @@ namespace sw::editor
         return pMesh != nullptr ? pMesh->getWorldMatrix() : float4x4{};
     }
 
-    bool MeshModifierSession::saveSidecar() const
+    bool MeshModifierSession::saveSidecar()
     {
         if ( hasTarget() == false )
             return false;
@@ -533,6 +552,7 @@ namespace sw::editor
             SW_LOG_ERROR( "Failed to write mesh modifier stack %#", path.c_str() );
             return false;
         }
+        _savedStackText = _stack.makeJSONText( -1 );
         SW_LOG_INFO( "Mesh modifier stack saved to %#", path.c_str() );
         return true;
     }
@@ -549,8 +569,9 @@ namespace sw::editor
             SW_LOG_WARNING( "Mesh modifier stack %# could not be read", path.c_str() );
             return false;
         }
-        _selectedIndex = _stack.getModifierCount() > 0 ? 0 : -1;
-        _bPreviewDirty = true;
+        _savedStackText = _stack.makeJSONText( -1 );
+        _selectedIndex  = _stack.getModifierCount() > 0 ? 0 : -1;
+        _bPreviewDirty  = true;
         return true;
     }
 

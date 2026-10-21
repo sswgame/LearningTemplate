@@ -9,6 +9,7 @@
 #include "Core/Container/ComponentHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/String/hashed_string.h"
 
 namespace sw
 {
@@ -45,6 +46,8 @@ namespace sw::editor
     {
         /** @brief 필드의 대상 타입입니다. 타입 핸들이 아니거나(`_handleTargetTypeName` 이 빔) 레지스트리에 없으면 nullptr 입니다. */
         static const TypeInfo* findTargetType( const TypeRegistry& registry, const PropertyInfo& prop );
+        /** @brief 대상 타입 이름(`PropertyInfo` · `FunctionParameterInfo` 의 `_handleTargetTypeName`)의 타입입니다. 비었거나 레지스트리에 없으면 nullptr 입니다. */
+        static const TypeInfo* findTargetType( const TypeRegistry& registry, const hashed_string& targetTypeName );
         /** @brief @p manager 에서 @p targetType 이나 그 파생 컴포넌트를 모아 라벨 순으로 정렬해 채웁니다. 비우고 채웁니다. */
         static void collectChoices( const GameObjectManager& manager, const TypeInfo& targetType, vector<InspectorComponentChoice>& outListChoice );
         /** @brief 컴포넌트 하나의 라벨("오브젝트 이름 / 이름#n")입니다. */

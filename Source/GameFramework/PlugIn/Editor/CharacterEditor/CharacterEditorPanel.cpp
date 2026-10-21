@@ -2,20 +2,27 @@
 
 #include "GameFramework/PlugIn/Editor/CharacterEditor/CharacterEditorPanel.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/GUI/EditorPanelManager.h"
+#include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
+#include "Editor/Viewport/EditorProjectedLineRenderer.h"
 
 #include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Character/Fit/FitSolver.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Scene/Scene.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Base/Foundation/Data/GamePackDataUtil.h"
@@ -23,6 +30,7 @@
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceResolver.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceSelection.h"
 #include "GameFramework/Base/Gameplay/Appearance/CharacterAppearance.h"
+#include "GameFramework/Base/Gameplay/Appearance/CharacterAppearanceComponent.h"
 #include "GameFramework/PlugIn/Editor/CharacterEditor/Model/CharacterEditorPackData.h"
 
 #include <imgui.h>
@@ -33,15 +41,19 @@ namespace sw::editor
     {
         struct CharacterEditorPanelInternal
         {
-            static constexpr const utf8* kDefaultPresetPath     = "editor/characterpresets.txt";
-            static constexpr const utf8* kDefaultExportID       = "MyCharacter";
-            static constexpr float32     kDragSpeed             = 0.005f;
-            static constexpr float32     kRotationDragSpeed     = 0.5f;
-            static constexpr float32     kPathButtonsWidth      = 240.0f;
-            static constexpr float32     kSocketListHeight      = 140.0f;
-            static constexpr float32     kBoneTreeHeight        = 200.0f;
-            static constexpr float32     kPresetListHeight      = 90.0f;
-            static constexpr float32     kExplanationListHeight = 130.0f;
+            static constexpr const utf8* kDefaultPresetPath        = "editor/characterpresets.txt";
+            static constexpr const utf8* kDefaultExportID          = "MyCharacter";
+            static constexpr float32     kDragSpeed                = 0.005f;
+            static constexpr float32     kRotationDragSpeed        = 0.5f;
+            static constexpr float32     kPathButtonsWidth         = 240.0f;
+            static constexpr float32     kSocketListHeight         = 140.0f;
+            static constexpr float32     kBoneTreeHeight           = 200.0f;
+            static constexpr float32     kPresetListHeight         = 90.0f;
+            static constexpr float32     kExplanationListHeight    = 130.0f;
+            static constexpr float32     kPreviewHeight            = 260.0f; ///< 미리보기 뷰포트 높이(96 DPI 픽셀)
+            static constexpr float32     kPreviewFrameRadius       = 1.4f;   ///< 미리보기 카메라가 담는 반지름(m) — 사람 키 하나
+            static constexpr float32     kSocketAxisLength         = 0.08f;  ///< 미리보기 소켓 축 길이(m)
+            static constexpr float32     kSelectedSocketAxisLength = 0.18f;  ///< 고른 소켓의 축 길이(m)
 
             /** @brief 입력칸의 글을 이름으로 바꿉니다. 비어 있으면 빈 이름입니다. */
             static hashed_string makeName( const utf8* pText )
@@ -87,7 +99,8 @@ namespace sw::editor
                 uint32 _equippedSlotCount{ 0 };
                 uint32 _traceCount{ 0 };
                 uint32 _presetCount{ 0 };
-                uint32 _exportCount{ 0 }; ///< 이 실행에서 데이터 프리셋으로 내보낸 수
+                uint32 _exportCount{ 0 };          ///< 이 실행에서 데이터 프리셋으로 내보낸 수
+                uint32 _previewAssembleCount{ 0 }; ///< 미리보기 몸을 조립한 수(미리보기 탭을 그릴 때 게시)
             };
             static Published& getPublished()
             {
@@ -125,10 +138,15 @@ namespace sw::editor
                 outValue = static_cast<float64>( getPublished()._presetCount );
                 return true;
             }
+            [[nodiscard]] static bool readPreviewAssembleCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                outValue = static_cast<float64>( getPublished()._previewAssembleCount );
+                return true;
+            }
         };
     } // namespace
 
-    SW_EDITOR_PANEL( CharacterEditorPanel, "charactereditor.main", EditorPanelCategory::Custom, 9020 );
+    SW_EDITOR_PANEL( CharacterEditorPanel, CharacterEditorPanel::kPanelID, EditorPanelCategory::Custom, 9020 );
 
     SW_AUTOMATION_PROBE( editorCharacterEditorBoneCount, "Editor.CharacterEditorBoneCount", "Bones of the skeleton the Character Editor has loaded", &CharacterEditorPanelInternal::readBoneCount );
     SW_AUTOMATION_PROBE( editorCharacterEditorSocketCount, "Editor.CharacterEditorSocketCount", "Sockets in the socket file the Character Editor has loaded", &CharacterEditorPanelInternal::readSocketCount );
@@ -139,12 +157,14 @@ namespace sw::editor
     SW_AUTOMATION_PROBE( editorCharacterEditorExportCount, "Editor.CharacterEditorExportCount", "Data presets the Character Editor exported in this run",
                          &CharacterEditorPanelInternal::readExportCount );
     SW_AUTOMATION_PROBE( editorCharacterEditorPresetCount, "Editor.CharacterEditorPresetCount", "Presets in the Character Editor's preset store", &CharacterEditorPanelInternal::readPresetCount );
+    SW_AUTOMATION_PROBE( editorCharacterEditorPreviewAssembleCount, "Editor.CharacterEditorPreviewAssembleCount",
+                         "Times the Character Editor preview body was assembled (published while the Preview tab draws)", &CharacterEditorPanelInternal::readPreviewAssembleCount );
 } // namespace sw::editor
 
 namespace sw::editor
 {
     CharacterEditorPanel::CharacterEditorPanel()
-        : IEditorPanel( false )
+        : EditorPreviewPanel{ EditorAssetType::Data, true }
         , _sockets{}
         , _pose{}
         , _appearance{}
@@ -178,14 +198,24 @@ namespace sw::editor
         , _packRoot{}
         , _packDataPath{}
         , _packDataMessage{}
+        , _previewPresetID{}
+        , _previewBody{}
+        , _previewBodyRevision{ 0 }
+        , _previewDatabaseRevision{ 0 }
+        , _bPreviewBodyDressed{ false }
+        , _bModelsWereDirty{ false }
         , _packDataState{ PackDataState::Unread }
     {
         _presetStore.setDatabase( &_database );
     }
 
-    void CharacterEditorPanel::drawContent()
+    void CharacterEditorPanel::drawDocumentContent()
     {
         ensurePackData();
+        beginPreviewFrame();
+        updateFocusedDocument();
+        if ( _packDataState == PackDataState::Ready )
+            ensureDocumentLoaded(); // 팩 데이터가 경로 칸을 채운 뒤에 읽는다
         if ( _packDataState == PackDataState::Missing )
         {
             const string hint = "This game has no character editor data (" + _packDataPath + ")";
@@ -243,6 +273,14 @@ namespace sw::editor
                 drawAppearanceTab();
                 ImGui::EndTabItem();
             }
+            // 미리보기는 탭 하나다 — 다른 탭의 줄을 밀지 않고, 가려진 탭은 그리지 않는다(뷰포트를 부른 프레임만 렌더한다).
+            const bool bPreviewTab = ImGui::BeginTabItem( "Preview" );
+            EditorSelfTestMarks::note( "charactereditor.tab.preview" );
+            if ( bPreviewTab )
+            {
+                drawPreviewTab();
+                ImGui::EndTabItem();
+            }
             ImGui::EndTabBar();
         }
     }
@@ -276,16 +314,176 @@ namespace sw::editor
                 SW_LOG_INFO( "Reference pose file saved to %#", writePath.c_str() );
         }
         if ( bSaved )
+        {
             _status.clear();
+            acknowledgePreviewEdits();
+        }
         return bSaved;
     }
 
     void CharacterEditorPanel::syncDocumentDirty()
     {
-        if ( _sockets.isDirty() || _pose.isDirty() )
+        // 소켓 · 포즈 편집은 모델 안의 기록이고, 미리보기 씬 편집(인스펙터로 몸을 고친 것)은 창 스택이다 — 둘 다 문서의 미저장이다.
+        // 모델이 되돌리기로 저장 상태에 돌아오면 dirty 를 내리고, 그 뒤 기반 클래스가 창 스택의 새 편집을 다시 올린다.
+        const bool bModelsDirty = _sockets.isDirty() || _pose.isDirty();
+        if ( bModelsDirty )
             markDocumentDirty();
-        else
+        else if ( _bModelsWereDirty )
             clearDocumentDirty();
+        _bModelsWereDirty = bModelsDirty;
+        EditorPreviewPanel::syncDocumentDirty();
+    }
+
+    bool CharacterEditorPanel::acceptsDocumentPath( string_view assetPath ) const
+    {
+        return StringUtil::endsWith( assetPath, SocketSet::kExtension );
+    }
+
+    ToolAssetLoadResult CharacterEditorPanel::loadDocument()
+    {
+        // 콘텐츠 브라우저에서 고른 소켓 파일이 있으면 그것을, 없으면 경로 칸(팩 데이터의 소켓 파일)을 연다.
+        const string_view focused = getMatchingFocusedPath();
+        if ( focused.empty() == false )
+        {
+            acceptFocusedDocument();
+            std::snprintf( _path.data(), _path.max_size(), "%s", string( focused ).c_str() );
+        }
+        if ( _path.empty() )
+            return ToolAssetLoadResult::Missing;
+        if ( ResourcePaths::findLooseFile( string_view( _path.c_str() ) ).getDiskPath().empty() )
+            return ToolAssetLoadResult::Missing; // 새 소켓 파일 — 저장하면 만든다
+        return loadSocketFile() ? ToolAssetLoadResult::Loaded : ToolAssetLoadResult::Malformed;
+    }
+
+    bool CharacterEditorPanel::loadSocketFile()
+    {
+        const string readPath = ResourcePaths::findLooseFile( string_view( _path.c_str() ) ).getDiskPath();
+        if ( readPath.empty() || _sockets.loadFromFile( readPath ) == false )
+        {
+            _status = "Socket file could not be loaded (see log)";
+            return false;
+        }
+        _status.clear();
+        _selectedSocket  = hashed_string{};
+        _bExternalChange = false;
+        _reloadGuard.reset( SharedAssetCache<SocketSet>::getReloadCount() );
+        return true;
+    }
+
+    void CharacterEditorPanel::populatePreviewScene( Scene& scene )
+    {
+        (void)scene; // 몸은 외형 데이터를 읽은 뒤에 세운다(`syncPreviewBody`)
+        getPreviewViewport().frameSphere( float3{ 0.0f, 1.0f, 0.0f }, CharacterEditorPanelInternal::kPreviewFrameRadius );
+        _previewBody         = GameObjectHandle{};
+        _bPreviewBodyDressed = false;
+    }
+
+    void CharacterEditorPanel::drawPreviewTab()
+    {
+        if ( _bDatabaseLoaded == false )
+        {
+            EditorWidgets::drawEmptyHint( "Load the appearance data (Appearance tab) to dress the preview body." );
+            return;
+        }
+        syncPreviewBody();
+        const GameObjectManager*            pManager    = findPreviewManager();
+        const GameObject*                   pBody       = pManager != nullptr ? pManager->resolveGameObject( _previewBody ) : nullptr;
+        const CharacterAppearanceComponent* pAppearance = pBody != nullptr ? pBody->getComponent<CharacterAppearanceComponent>() : nullptr;
+        const AppearanceSelection&          selection   = _appearance.getSelection();
+        ImGui::TextDisabled( "Wearing %s on base preset '%s' (assembled %u times)", selection._listSlot.empty() ? "no slot items" : "the selection",
+                             selection._basePresetID.empty() ? _previewPresetID.c_str() : selection._basePresetID.c_str(), pAppearance != nullptr ? pAppearance->getAssembleCount() : 0u );
+        CharacterEditorPanelInternal::getPublished()._previewAssembleCount = pAppearance != nullptr ? pAppearance->getAssembleCount() : 0u;
+        const float2  available                                            = float2{ ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y };
+        const float32 minHeight                                            = CharacterEditorPanelInternal::kPreviewHeight * EditorThemeUtil::getDpiScale();
+        drawPreviewViewport( float2{ available._x, available._y > minHeight ? available._y : minHeight }, false );
+        EditorSelfTestMarks::note( "charactereditor.previewScene" );
+        if ( pAppearance != nullptr )
+            drawSocketAxes( *pAppearance );
+    }
+
+    void CharacterEditorPanel::drawSocketAxes( const CharacterAppearanceComponent& appearance )
+    {
+        using Internal                        = CharacterEditorPanelInternal;
+        const EditorPreviewViewport& viewport = getPreviewViewport();
+        const float2                 position = viewport.getImagePosition();
+        const float2                 size     = viewport.getImageSize();
+        if ( size._x <= 0.0f || size._y <= 0.0f )
+            return;
+        float4x4 viewProjection{};
+        float3   eye{};
+        viewport.computeViewProjection( size._x / size._y, viewProjection, eye );
+        EditorProjectedLineRenderer renderer{ ImGui::GetWindowDrawList(), viewProjection, position, size };
+        // 몸이 조립한 소켓(저장된 소켓 파일)의 자리다 — 편집 중인 값은 저장하면 다음 조립에 보인다. 고른 소켓은 길고 밝게 긋는다.
+        const float4 arrAxisColor[3] = {
+            float4{ 1.0f, 0.25f, 0.25f, 1.0f},
+            float4{ 0.3f,  1.0f,  0.3f, 1.0f},
+            float4{0.35f,  0.5f,  1.0f, 1.0f}
+        };
+        const float3 arrAxis[3] = {
+            float3{1.0f, 0.0f, 0.0f},
+            float3{0.0f, 1.0f, 0.0f},
+            float3{0.0f, 0.0f, 1.0f}
+        };
+        for ( const SocketDef& socket : _sockets.getSockets().getSockets() )
+        {
+            float4x4 world{};
+            if ( appearance.findSocketWorldTransform( socket._name, world ) == false )
+                continue;
+            const bool       bSelected = socket._name == _selectedSocket;
+            const float32    length    = bSelected ? Internal::kSelectedSocketAxisLength : Internal::kSocketAxisLength;
+            const float32    alpha     = bSelected ? 1.0f : 0.6f;
+            const float3     origin    = world.getTranslation();
+            const quaternion rotation  = world.getRotation();
+            for ( uint32 axis = 0; axis < 3; ++axis )
+            {
+                const float4& color = arrAxisColor[axis];
+                renderer.drawLine( origin, origin + float3::transform( arrAxis[axis], rotation ) * length, float4{ color._x, color._y, color._z, alpha } );
+            }
+        }
+    }
+
+    void CharacterEditorPanel::syncPreviewBody()
+    {
+        GameObjectManager* pManager = findPreviewManager();
+        if ( pManager == nullptr )
+            return;
+        GameObject* pBody = pManager->resolveGameObject( _previewBody );
+        if ( pBody == nullptr )
+        {
+            pBody = pManager->createGameObject( hashed_string( "PreviewCharacter" ) );
+            if ( pBody == nullptr )
+            {
+                _status = "The preview body could not be created";
+                return;
+            }
+            const bool bComponents = pBody->addComponent<SkeletalMeshComponent>() != nullptr && pBody->addComponent<CharacterAppearanceComponent>() != nullptr;
+            if ( bComponents == false )
+            {
+                pManager->destroyObject( pBody );
+                _status = "The preview body could not take its components";
+                return;
+            }
+            _previewBody         = pBody->getHandle();
+            _bPreviewBodyDressed = false;
+        }
+        CharacterAppearanceComponent* pAppearance = pBody->getComponent<CharacterAppearanceComponent>();
+        const bool                    bChanged    = _bPreviewBodyDressed == false || _previewBodyRevision != _appearance.getRevision() || _previewDatabaseRevision != _database.getRevision();
+        if ( pAppearance == nullptr || bChanged == false )
+            return;
+        // 기준 프리셋이 없는 선택은 팩 데이터의 미리보기 몸 위에 입힌다(데이터가 정한 몸 — 코드에 몸을 두지 않는다).
+        AppearanceSelection selection = _appearance.getSelection();
+        if ( selection._basePresetID.empty() )
+            selection._basePresetID = _previewPresetID;
+        pAppearance->previewSelection( selection, _database );
+        _previewBodyRevision     = _appearance.getRevision();
+        _previewDatabaseRevision = _database.getRevision();
+        _bPreviewBodyDressed     = true;
+    }
+
+    GameObjectManager* CharacterEditorPanel::findPreviewManager() const
+    {
+        Scene* pScene = getPreviewScene();
+        return pScene != nullptr ? pScene->getObjectManager() : nullptr;
     }
 
     void CharacterEditorPanel::revertDocument()
@@ -310,23 +508,12 @@ namespace sw::editor
         ImGui::InputText( "##SocketPath", _path.data(), _path.max_size() );
         ImGui::SameLine();
         if ( ImGui::Button( "Load" ) )
-        {
-            const string readPath = ResourcePaths::findLooseFile( string_view( _path.c_str() ) ).getDiskPath();
-            if ( readPath.empty() || _sockets.loadFromFile( readPath ) == false )
-                _status = "Socket file could not be loaded (see log)";
-            else
-            {
-                _status.clear();
-                _selectedSocket  = hashed_string{};
-                _bExternalChange = false;
-                _reloadGuard.reset( SharedAssetCache<SocketSet>::getReloadCount() );
-            }
-        }
+            reloadDocument(); // 경로 칸의 소켓 파일을 다시 읽는다 — 읽음 · 못 읽음 표시와 미저장 기준은 문서 계약이 맞춘다
         EditorSelfTestMarks::note( "charactereditor.loadSockets" );
         ImGui::SameLine();
         ImGui::BeginDisabled( canSaveDocument() == false );
         if ( ImGui::Button( "Save" ) )
-            (void)saveDocument(); // 실패 이유는 상태 줄에 남는다
+            (void)saveDocumentAndClearDirty(); // 저장 경로는 하나다 — 실패 이유는 상태 줄에 남는다
         ImGui::EndDisabled();
         ImGui::SameLine();
         if ( ImGui::Button( "New" ) )
@@ -505,7 +692,7 @@ namespace sw::editor
         ImGui::SameLine();
         ImGui::BeginDisabled( _pose.isDirty() == false );
         if ( ImGui::Button( "Save pose" ) )
-            (void)saveDocument(); // 실패 이유는 상태 줄에 남는다
+            (void)saveDocumentAndClearDirty(); // 저장 경로는 하나다 — 실패 이유는 상태 줄에 남는다
         ImGui::EndDisabled();
 
         ImGui::BeginDisabled( _pose.canUndo() == false );
@@ -1016,6 +1203,7 @@ namespace sw::editor
         _refPosePath      = data._refPosePath;
         _itemsPath        = data._itemsPath;
         _appearanceFolder = data._appearanceFolder;
+        _previewPresetID  = hashed_string( string_view( data._previewPresetID ) );
         // 프리셋 내보내기 폴더는 외형 폴더에서 파생한다(정본은 팩 데이터의 외형 폴더 하나).
         const string exportFolder = FileUtil::joinPath( data._appearanceFolder, AppearanceDatabase::kPresetFolder );
         std::snprintf( _exportFolder.data(), _exportFolder.max_size(), "%s", exportFolder.c_str() );

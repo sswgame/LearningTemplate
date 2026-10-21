@@ -242,9 +242,43 @@ namespace sw::editor
         session.refreshPreview();
     }
 
+    bool MeshModifiersPanel::saveDocument()
+    {
+        MeshModifierSession* pSession = findSubsystem<MeshModifierSession>();
+        return pSession != nullptr && pSession->saveSidecar(); // 실패는 saveSidecar 가 알린다
+    }
+
+    bool MeshModifiersPanel::canSaveDocument() const
+    {
+        const MeshModifierSession* pSession = findSubsystem<MeshModifierSession>();
+        return pSession != nullptr && pSession->isStackUnsaved();
+    }
+
+    void MeshModifiersPanel::syncDocumentDirty()
+    {
+        // 편집 기록은 세션 안에 있어 패널이 편집마다 알리지 않는다 — 그리기마다 세션의 스택을 정본으로 다시 맞춘다(`CharacterEditorPanel` 과 같은 모양).
+        if ( canSaveDocument() )
+            markDocumentDirty();
+        else
+            clearDocumentDirty();
+    }
+
+    void MeshModifiersPanel::revertDocument()
+    {
+        MeshModifierSession* pSession = findSubsystem<MeshModifierSession>();
+        if ( pSession != nullptr )
+            pSession->revertStackToSaved();
+    }
+
     void MeshModifiersPanel::drawTargetRow( MeshModifierSession& session )
     {
+        // 저장하지 않은 스택이 있으면 대상을 바꾸지 않는다 — 바꾸면 세션이 스택을 비워 편집이 조용히 사라진다.
+        const bool bUnsaved = session.isStackUnsaved();
+        ImGui::BeginDisabled( bUnsaved );
         const bool bUseSelection = ImGui::Button( SW_LOCKEY( "EdMeshModifiers", "UseSelection" ) );
+        ImGui::EndDisabled();
+        if ( bUnsaved && ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenDisabled ) )
+            ImGui::SetTooltip( "Save or reload the modifier stack before picking another mesh" );
         EditorSelfTestMarks::note( "meshmodifiers.useSelection" );
         if ( bUseSelection )
         {
@@ -1137,7 +1171,7 @@ namespace sw::editor
         ImGui::EndDisabled();
 
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kSave, SW_LOCKEY( "EdMeshModifiers", "SaveStack" ) ) ) )
-            (void)session.saveSidecar(); // 실패는 saveSidecar 가 알린다
+            (void)saveDocumentAndClearDirty(); // 저장 경로는 하나다(`saveDocument` → `saveSidecar`) — 실패는 saveSidecar 가 알린다
         ImGui::SameLine();
         if ( ImGui::Button( SW_LOCKEY( "EdMeshModifiers", "ReloadStack" ) ) )
         {

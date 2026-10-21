@@ -134,3 +134,48 @@ SW_TEST_CASE( TerrainBrushTest, PaintLayerKeepsSumOne )
     SW_EXPECT_NEAR_EQUAL( 1.0f, weight._x + weight._y + weight._z + weight._w, 1e-6f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, listWeight[1]._x, 1e-6f );
 }
+
+/**
+ * @brief [TerrainBrushTest] 구멍 칠하기는 셀 중심 격자로 셀을 고르고, 감쇠 가중치가 반 이상인 셀만 켜고 끈다 · 모드마다 고치는 배열이 하나다
+ * @details 변이: `makeHoleGrid` 가 원점을 반 셀 옮기지 않으면 중심 셀 대신 그 왼쪽 아래 샘플 자리를 골라 첫 비교가 진다.
+ */
+SW_TEST_CASE( TerrainBrushTest, HoleBrushTogglesCellsByCenter )
+{
+    TerrainBrushGrid sampleGrid{};
+    sampleGrid._origin          = float2{ 0.0f, 0.0f };
+    sampleGrid._cellSize        = float2{ 1.0f, 1.0f };
+    sampleGrid._resolution      = 5; // 셀 4 × 4
+    const TerrainBrushGrid grid = TerrainBrush::makeHoleGrid( sampleGrid );
+    SW_EXPECT_EQUAL( 4u, grid._resolution );
+
+    TerrainBrushSettings settings;
+    settings._mode    = TerrainBrushMode::CutHole;
+    settings._radius  = 0.6f;
+    settings._falloff = 0.0f;
+    vector<TerrainBrushSample> listSample;
+    TerrainBrush::collectSamples( float2{ 2.5f, 1.5f }, grid, settings, listSample ); // 셀 (2, 1) 의 중심
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( listSample.size() ) );
+    SW_EXPECT_EQUAL( 2u, listSample[0]._sampleX );
+    SW_EXPECT_EQUAL( 1u, listSample[0]._sampleZ );
+
+    vector<uint8> listHole( 16, 0u );
+    SW_EXPECT_TRUE( TerrainBrush::applyHole( listHole, grid._resolution, listSample, settings ) );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( listHole[1 * 4 + 2] ) );
+    SW_EXPECT_FALSE( TerrainBrush::applyHole( listHole, grid._resolution, listSample, settings ) ); // 이미 구멍 — 바뀐 것이 없다
+    settings._mode = TerrainBrushMode::FillHole;
+    SW_EXPECT_TRUE( TerrainBrush::applyHole( listHole, grid._resolution, listSample, settings ) );
+    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( listHole[1 * 4 + 2] ) );
+
+    // 가장자리 셀(가중치 반 미만)은 바꾸지 않는다.
+    const vector<TerrainBrushSample> listEdge{
+        TerrainBrushSample{ 0, 0, 0.25f }
+    };
+    settings._mode = TerrainBrushMode::CutHole;
+    SW_EXPECT_FALSE( TerrainBrush::applyHole( listHole, grid._resolution, listEdge, settings ) );
+
+    SW_EXPECT_TRUE( TerrainBrush::getTarget( TerrainBrushMode::CutHole ) == TerrainBrushTarget::Hole );
+    SW_EXPECT_TRUE( TerrainBrush::getTarget( TerrainBrushMode::PaintLayer ) == TerrainBrushTarget::LayerWeight );
+    SW_EXPECT_TRUE( TerrainBrush::getTarget( TerrainBrushMode::Smooth ) == TerrainBrushTarget::Height );
+    vector<float32> listHeight( 25, 0.0f );
+    SW_EXPECT_FALSE( TerrainBrush::applyHeight( listHeight, 5, listSample, settings, 0.0f, 1.0f ) ); // 구멍 모드는 높이를 고치지 않는다
+}

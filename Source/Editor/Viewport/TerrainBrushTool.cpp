@@ -43,6 +43,7 @@ namespace sw::editor
             static constexpr uint32  kCircleSegment = 48;
             static constexpr float32 kLift          = 0.05f; ///< 선이 지형에 묻히지 않게 띄우는 높이
             static constexpr uint32  kLayerCount    = TerrainComponent::kMaxLayerCount;
+            static constexpr uint32  kMaxResolution = 4097; ///< 해상도 고르기의 상한(4096 셀 + 1). 높이 배열이 1,600 만 샘플(64 MB)이다
 
             /**
              * @brief 드래그 하나의 되돌리기 자료입니다. 닿은 사각형 안의 편집 전 · 후 값만 담습니다(행 우선, 사각형 너비).
@@ -50,26 +51,45 @@ namespace sw::editor
              */
             struct EditRecord
             {
-                GameObjectHandle  _object{};
-                TerrainSampleRect _rect{};
-                vector<float32>   _listHeightBefore;
-                vector<float32>   _listHeightAfter;
-                vector<float4>    _listWeightBefore;
-                vector<float4>    _listWeightAfter;
-                bool              _bPaint{ false };
+                GameObjectHandle   _object{};
+                TerrainSampleRect  _rect{};
+                vector<float32>    _listHeightBefore;
+                vector<float32>    _listHeightAfter;
+                vector<float4>     _listWeightBefore;
+                vector<float4>     _listWeightAfter;
+                vector<uint8>      _listHoleBefore;
+                vector<uint8>      _listHoleAfter;
+                TerrainBrushTarget _target{ TerrainBrushTarget::Height };
             };
 
-            /** @brief 진행 중인 드래그입니다. 사본은 지형 전체이고 `_rect` 는 드래그가 지금까지 닿은 사각형입니다. */
+            /**
+             * @brief 크기 바꾸기 하나의 되돌리기 자료입니다. 사각형으로 담을 수 없어(배열 크기가 바뀐다) 전후 해상도의 높이 · 구멍 전체를 담는다.
+             * @details 되돌리기와 다시 하기 모두 `TerrainComponent::replaceHeightfield` 한 길로 쓴다.
+             */
+            struct ResizeRecord
+            {
+                GameObjectHandle _object{};
+                uint32           _resolutionBefore{ 0 };
+                uint32           _resolutionAfter{ 0 };
+                vector<float32>  _listHeightBefore;
+                vector<float32>  _listHeightAfter;
+                vector<uint8>    _listHoleBefore;
+                vector<uint8>    _listHoleAfter;
+            };
+
+            /** @brief 진행 중인 드래그입니다. 사본은 지형 전체이고 `_rect` 는 드래그가 지금까지 닿은 사각형입니다(구멍은 셀 좌표). */
             struct Stroke
             {
-                GameObjectHandle  _object{};
-                TerrainSampleRect _rect{};
-                vector<float32>   _listHeightBefore;
-                vector<float32>   _listHeight;
-                vector<float4>    _listWeightBefore;
-                vector<float4>    _listWeight;
-                float32           _flattenHeight{ 0.0f };
-                bool              _bPaint{ false };
+                GameObjectHandle   _object{};
+                TerrainSampleRect  _rect{};
+                vector<float32>    _listHeightBefore;
+                vector<float32>    _listHeight;
+                vector<float4>     _listWeightBefore;
+                vector<float4>     _listWeight;
+                vector<uint8>      _listHoleBefore;
+                vector<uint8>      _listHole;
+                float32            _flattenHeight{ 0.0f };
+                TerrainBrushTarget _target{ TerrainBrushTarget::Height };
             };
 
             struct State
@@ -78,6 +98,8 @@ namespace sw::editor
                 Stroke                     _stroke{};
                 vector<TerrainBrushSample> _listSample; ///< 프레임마다 지우고 채우는 재사용 버퍼(UI 스레드 하나만 쓴다)
                 GameObjectHandle           _lastEdited{};
+                GameObjectHandle           _lastHovered{};         ///< 마지막으로 브러시 레이가 닿은 지형(크기 바꾸기 대상의 다음 후보)
+                uint32                     _resizeResolution{ 0 }; ///< 설정 창이 고른 새 해상도(0 이면 지금 해상도를 보인다)
                 bool                       _bStroking{ false };
                 bool                       _bUnsaved{ false };
                 bool                       _bHit{ false };
@@ -170,14 +192,16 @@ namespace sw::editor
                 return pTerrain != nullptr && pTerrain->getHeightfield().isValid() ? pTerrain : nullptr;
             }
 
-            /** @brief 브러시 격자입니다. 높이는 샘플 격자, 칠하기는 스플랫 텍셀 격자(텍셀 중심이 지형 가장자리에 맞는다)입니다. */
-            static bool makeGrid( const TerrainHeightfield& heightfield, bool bPaint, TerrainBrushGrid& outGrid )
+            /** @brief 브러시 격자입니다. 높이는 샘플 격자, 구멍은 셀 중심 격자, 칠하기는 스플랫 텍셀 격자(텍셀 중심이 지형 가장자리에 맞는다)입니다. */
+            static bool makeGrid( const TerrainHeightfield& heightfield, TerrainBrushTarget target, TerrainBrushGrid& outGrid )
             {
                 outGrid._origin = float2{ heightfield.getOrigin()._x, heightfield.getOrigin()._z };
-                if ( bPaint == false )
+                if ( target != TerrainBrushTarget::LayerWeight )
                 {
                     outGrid._cellSize   = heightfield.getCellSize();
                     outGrid._resolution = heightfield.getResolution();
+                    if ( target == TerrainBrushTarget::Hole )
+                        outGrid = TerrainBrush::makeHoleGrid( outGrid );
                     return true;
                 }
                 // 브러시는 정사각형 스플랫만 다룬다(결정 기록 5-5).
@@ -204,10 +228,17 @@ namespace sw::editor
                 }
             }
 
-            /** @brief 사각형 값 @p listRect 를 전체 배열 @p inoutListValue(너비 @p resolution)의 같은 자리에 넣습니다. */
+            /**
+             * @brief 사각형 값 @p listRect 를 전체 배열 @p inoutListValue(너비 @p resolution)의 같은 자리에 넣습니다.
+             * @return 사각형이 배열을 벗어나거나 값 수가 맞지 않으면(크기를 바꾼 지형) false 이고 아무것도 바꾸지 않습니다.
+             */
             template <typename T>
-            static void pasteRect( const vector<T>& listRect, uint32 resolution, const TerrainSampleRect& rect, vector<T>& inoutListValue )
+            [[nodiscard]] static bool pasteRect( const vector<T>& listRect, uint32 resolution, const TerrainSampleRect& rect, vector<T>& inoutListValue )
             {
+                const bool bInside   = rect.isEmpty() == false && rect._maxX < resolution && inoutListValue.size() >= static_cast<size_t>( rect._maxZ + 1 ) * resolution;
+                const bool bCountFit = listRect.size() == static_cast<size_t>( rect._maxX - rect._minX + 1 ) * ( rect._maxZ - rect._minZ + 1 );
+                if ( bInside == false || bCountFit == false )
+                    return false;
                 size_t index{ 0 };
                 for ( uint32 z = rect._minZ; z <= rect._maxZ; ++z )
                 {
@@ -216,6 +247,7 @@ namespace sw::editor
                         inoutListValue[static_cast<size_t>( z ) * resolution + x] = listRect[index++];
                     }
                 }
+                return true;
             }
 
             /** @brief 되돌리기 자료의 한쪽(@p bAfter)을 지형에 다시 씁니다. 지형이 사라졌으면 아무것도 하지 않습니다. */
@@ -224,44 +256,111 @@ namespace sw::editor
                 TerrainComponent* pTerrain = findTerrain( record._object );
                 if ( pTerrain == nullptr )
                     return;
+                // 크기가 바뀐 지형(다시 읽은 에셋 · 크기 바꾸기 뒤)이면 사각형이 맞지 않아 쓰지 않는다.
                 const TerrainHeightfield& heightfield = pTerrain->getHeightfield();
-                if ( record._bPaint )
+                bool                      bWritten    = false;
+                switch ( record._target )
                 {
-                    vector<float4> listWeight;
-                    if ( heightfield.readSplatWeights( listWeight ) == false )
-                        return;
-                    pasteRect( bAfter ? record._listWeightAfter : record._listWeightBefore, heightfield.getSplatWidth(), record._rect, listWeight );
-                    (void)pTerrain->writeLayerWeights( listWeight, record._rect ); // 크기가 바뀐 지형(다시 읽은 에셋)이면 거절된다
+                    case TerrainBrushTarget::LayerWeight:
+                    {
+                        vector<float4> listWeight;
+                        bWritten = heightfield.readSplatWeights( listWeight ) &&
+                                   pasteRect( bAfter ? record._listWeightAfter : record._listWeightBefore, heightfield.getSplatWidth(), record._rect, listWeight ) &&
+                                   pTerrain->writeLayerWeights( listWeight, record._rect );
+                        break;
+                    }
+                    case TerrainBrushTarget::Hole:
+                    {
+                        vector<uint8> listHole;
+                        bWritten = heightfield.readHoleCells( listHole ) &&
+                                   pasteRect( bAfter ? record._listHoleAfter : record._listHoleBefore, heightfield.getResolution() - 1, record._rect, listHole ) &&
+                                   pTerrain->writeHoles( listHole, record._rect );
+                        break;
+                    }
+                    case TerrainBrushTarget::Height:
+                    {
+                        vector<float32> listHeight = heightfield.getHeightSamples();
+                        bWritten                   = pasteRect( bAfter ? record._listHeightAfter : record._listHeightBefore, heightfield.getResolution(), record._rect, listHeight ) &&
+                                   pTerrain->writeHeights( listHeight, record._rect );
+                        break;
+                    }
                 }
-                else
+                if ( bWritten == false )
                 {
-                    vector<float32> listHeight = heightfield.getHeightSamples();
-                    pasteRect( bAfter ? record._listHeightAfter : record._listHeightBefore, heightfield.getResolution(), record._rect, listHeight );
-                    (void)pTerrain->writeHeights( listHeight, record._rect ); // 크기가 바뀐 지형이면 거절된다
+                    SW_LOG_WARNING( "Terrain edit was not undone or redone - the terrain no longer has the edited size" );
+                    return;
                 }
                 getState()._bUnsaved = true;
+            }
+
+            /** @brief 크기 바꾸기 자료의 한쪽(@p bAfter)을 지형에 씁니다. 지형이 사라졌으면 아무것도 하지 않습니다. */
+            static void applyResizeRecord( const ResizeRecord& record, bool bAfter )
+            {
+                TerrainComponent* pTerrain = findTerrain( record._object );
+                if ( pTerrain == nullptr )
+                    return;
+                const bool bWritten = bAfter ? pTerrain->replaceHeightfield( record._resolutionAfter, record._listHeightAfter, record._listHoleAfter )
+                                             : pTerrain->replaceHeightfield( record._resolutionBefore, record._listHeightBefore, record._listHoleBefore );
+                if ( bWritten )
+                    getState()._bUnsaved = true;
+            }
+
+            /** @brief 지형 @p terrain 을 해상도 @p resolution 으로 다시 표본화하고 되돌리기 하나(`Resize Terrain`)를 남깁니다. */
+            static bool resizeTerrain( State& state, TerrainComponent& terrain, uint32 resolution )
+            {
+                const TerrainHeightfield& heightfield = terrain.getHeightfield();
+                shared_ptr<ResizeRecord>  record      = make_shared<ResizeRecord>();
+                record->_object                       = terrain.getOwner()->getHandle();
+                record->_resolutionBefore             = heightfield.getResolution();
+                record->_listHeightBefore             = heightfield.getHeightSamples();
+                record->_listHoleBefore               = heightfield.getHoleCells();
+                if ( terrain.resampleHeightfield( resolution ) == false )
+                    return false;
+                record->_resolutionAfter = heightfield.getResolution();
+                record->_listHeightAfter = heightfield.getHeightSamples();
+                record->_listHoleAfter   = heightfield.getHoleCells();
+                EditorTransaction::push( SW_DELEGATE_LAMBDA( Delegate<void()>, [record]()
+                { applyResizeRecord( *record, false ); } ),
+                                         SW_DELEGATE_LAMBDA( Delegate<void()>, [record]()
+                { applyResizeRecord( *record, true ); } ),
+                                         "Resize Terrain" );
+                state._lastEdited = record->_object;
+                state._bUnsaved   = true;
+                return true;
             }
 
             /** @brief 드래그를 시작합니다. 지형 값 전부를 사본과 편집 전 사본으로 복사합니다. */
             static bool beginStroke( State& state, TerrainComponent& terrain, const float3& hit )
             {
-                const bool                bPaint      = state._settings._mode == TerrainBrushMode::PaintLayer;
+                const TerrainBrushTarget  target      = TerrainBrush::getTarget( state._settings._mode );
                 const TerrainHeightfield& heightfield = terrain.getHeightfield();
                 Stroke&                   stroke      = state._stroke;
                 stroke                                = Stroke{};
                 stroke._object                        = terrain.getOwner()->getHandle();
-                stroke._bPaint                        = bPaint;
+                stroke._target                        = target;
                 stroke._flattenHeight                 = hit._y;
-                if ( bPaint )
+                switch ( target )
                 {
-                    if ( heightfield.readSplatWeights( stroke._listWeight ) == false )
-                        return false;
-                    stroke._listWeightBefore = stroke._listWeight;
-                }
-                else
-                {
-                    stroke._listHeight       = heightfield.getHeightSamples();
-                    stroke._listHeightBefore = stroke._listHeight;
+                    case TerrainBrushTarget::LayerWeight:
+                    {
+                        if ( heightfield.readSplatWeights( stroke._listWeight ) == false )
+                            return false;
+                        stroke._listWeightBefore = stroke._listWeight;
+                        break;
+                    }
+                    case TerrainBrushTarget::Hole:
+                    {
+                        if ( heightfield.readHoleCells( stroke._listHole ) == false )
+                            return false;
+                        stroke._listHoleBefore = stroke._listHole;
+                        break;
+                    }
+                    case TerrainBrushTarget::Height:
+                    {
+                        stroke._listHeight       = heightfield.getHeightSamples();
+                        stroke._listHeightBefore = stroke._listHeight;
+                        break;
+                    }
                 }
                 state._bStroking = true;
                 return true;
@@ -272,7 +371,7 @@ namespace sw::editor
             {
                 Stroke&          stroke = state._stroke;
                 TerrainBrushGrid grid{};
-                if ( makeGrid( terrain.getHeightfield(), stroke._bPaint, grid ) == false )
+                if ( makeGrid( terrain.getHeightfield(), stroke._target, grid ) == false )
                     return;
                 TerrainBrush::collectSamples( float2{ hit._x, hit._z }, grid, state._settings, state._listSample );
                 if ( state._listSample.empty() )
@@ -283,15 +382,25 @@ namespace sw::editor
                     frameRect.include( sample._sampleX, sample._sampleZ );
                 }
                 bool bChanged = false;
-                if ( stroke._bPaint )
+                switch ( stroke._target )
                 {
-                    bChanged = TerrainBrush::applyLayerWeight( stroke._listWeight, grid._resolution, state._listSample, state._settings, deltaTime ) &&
-                               terrain.writeLayerWeights( stroke._listWeight, frameRect );
-                }
-                else
-                {
-                    bChanged = TerrainBrush::applyHeight( stroke._listHeight, grid._resolution, state._listSample, state._settings, stroke._flattenHeight, deltaTime ) &&
-                               terrain.writeHeights( stroke._listHeight, frameRect );
+                    case TerrainBrushTarget::LayerWeight:
+                    {
+                        bChanged = TerrainBrush::applyLayerWeight( stroke._listWeight, grid._resolution, state._listSample, state._settings, deltaTime ) &&
+                                   terrain.writeLayerWeights( stroke._listWeight, frameRect );
+                        break;
+                    }
+                    case TerrainBrushTarget::Hole:
+                    {
+                        bChanged = TerrainBrush::applyHole( stroke._listHole, grid._resolution, state._listSample, state._settings ) && terrain.writeHoles( stroke._listHole, frameRect );
+                        break;
+                    }
+                    case TerrainBrushTarget::Height:
+                    {
+                        bChanged = TerrainBrush::applyHeight( stroke._listHeight, grid._resolution, state._listSample, state._settings, stroke._flattenHeight, deltaTime ) &&
+                                   terrain.writeHeights( stroke._listHeight, frameRect );
+                        break;
+                    }
                 }
                 if ( bChanged == false )
                     return;
@@ -311,23 +420,37 @@ namespace sw::editor
                     shared_ptr<EditRecord> record = make_shared<EditRecord>();
                     record->_object               = stroke._object;
                     record->_rect                 = stroke._rect;
-                    record->_bPaint               = stroke._bPaint;
+                    record->_target               = stroke._target;
                     const TerrainHeightfield& hf  = findTerrain( stroke._object )->getHeightfield();
-                    if ( stroke._bPaint )
+                    const utf8*               pName{ "Sculpt Terrain" };
+                    switch ( stroke._target )
                     {
-                        extractRect( stroke._listWeightBefore, hf.getSplatWidth(), stroke._rect, record->_listWeightBefore );
-                        extractRect( stroke._listWeight, hf.getSplatWidth(), stroke._rect, record->_listWeightAfter );
-                    }
-                    else
-                    {
-                        extractRect( stroke._listHeightBefore, hf.getResolution(), stroke._rect, record->_listHeightBefore );
-                        extractRect( stroke._listHeight, hf.getResolution(), stroke._rect, record->_listHeightAfter );
+                        case TerrainBrushTarget::LayerWeight:
+                        {
+                            extractRect( stroke._listWeightBefore, hf.getSplatWidth(), stroke._rect, record->_listWeightBefore );
+                            extractRect( stroke._listWeight, hf.getSplatWidth(), stroke._rect, record->_listWeightAfter );
+                            pName = "Paint Terrain";
+                            break;
+                        }
+                        case TerrainBrushTarget::Hole:
+                        {
+                            extractRect( stroke._listHoleBefore, hf.getResolution() - 1, stroke._rect, record->_listHoleBefore );
+                            extractRect( stroke._listHole, hf.getResolution() - 1, stroke._rect, record->_listHoleAfter );
+                            pName = "Paint Terrain Holes";
+                            break;
+                        }
+                        case TerrainBrushTarget::Height:
+                        {
+                            extractRect( stroke._listHeightBefore, hf.getResolution(), stroke._rect, record->_listHeightBefore );
+                            extractRect( stroke._listHeight, hf.getResolution(), stroke._rect, record->_listHeightAfter );
+                            break;
+                        }
                     }
                     EditorTransaction::push( SW_DELEGATE_LAMBDA( Delegate<void()>, [record]()
                     { applyRecord( *record, false ); } ),
                                              SW_DELEGATE_LAMBDA( Delegate<void()>, [record]()
                     { applyRecord( *record, true ); } ),
-                                             stroke._bPaint ? "Paint Terrain" : "Sculpt Terrain" );
+                                             pName );
                     ++state._strokeCount;
                 }
                 stroke           = Stroke{};
@@ -363,13 +486,55 @@ namespace sw::editor
                 }
             }
 
-            /** @brief 브러시 설정 창입니다(모드 · 반경 · 세기 · 감쇠 · 레이어 · 저장). */
+            /** @brief 크기 바꾸기 대상입니다. 마지막으로 고친 지형, 없으면 마지막으로 브러시가 닿은 지형입니다. */
+            static TerrainComponent* findResizeTarget( const State& state )
+            {
+                TerrainComponent* pEdited = findTerrain( state._lastEdited );
+                return pEdited != nullptr ? pEdited : findTerrain( state._lastHovered );
+            }
+
+            /**
+             * @brief 해상도 줄입니다. 대상 지형(`findResizeTarget`, 없으면 비활성)의 해상도를 고르고 `Resize` 로 다시 표본화합니다.
+             * @details 고를 수 있는 해상도는 청크 칸의 배수 + 1 가운데 `TerrainComponent::isResolutionUsable` 이 받는 것뿐이다 — 나뉘지 않는 값을 쓸 수 없다.
+             */
+            static void drawResizeControls( State& state )
+            {
+                TerrainComponent* pTerrain = findResizeTarget( state );
+                ImGui::BeginDisabled( pTerrain == nullptr || state._bStroking );
+                const uint32 current = pTerrain != nullptr ? pTerrain->getHeightfield().getResolution() : 0u;
+                if ( state._resizeResolution == 0 || pTerrain == nullptr )
+                    state._resizeResolution = current;
+                const string preview = state._resizeResolution > 0 ? to_string( state._resizeResolution ) : string{ "-" };
+                ImGui::SetNextItemWidth( 120.0f );
+                if ( ImGui::BeginCombo( "Resolution", preview.c_str() ) )
+                {
+                    for ( uint32 resolution = 2; pTerrain != nullptr && resolution <= kMaxResolution; ++resolution )
+                    {
+                        if ( pTerrain->isResolutionUsable( resolution ) == false )
+                            continue;
+                        const string label = to_string( resolution ) + ( resolution == current ? " (current)" : "" );
+                        if ( ImGui::Selectable( label.c_str(), resolution == state._resizeResolution ) )
+                            state._resizeResolution = resolution;
+                    }
+                    ImGui::EndCombo();
+                }
+                ImGui::SameLine();
+                ImGui::BeginDisabled( state._resizeResolution == current );
+                if ( ImGui::Button( "Resize" ) && pTerrain != nullptr )
+                    (void)resizeTerrain( state, *pTerrain, state._resizeResolution ); // 실패는 지형이 알린다
+                ImGui::EndDisabled();
+                ImGui::EndDisabled();
+                if ( ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenDisabled ) )
+                    ImGui::SetTooltip( "Resample the heights and holes of the last edited terrain to a new resolution (undoable)" );
+            }
+
+            /** @brief 브러시 설정 창입니다(모드 · 반경 · 세기 · 감쇠 · 레이어 · 해상도 · 저장). */
             static void drawSettingsWindow( State& state, const EditorViewportVisualizerArgs& args )
             {
                 ImGui::SetNextWindowPos( ImVec2{ args._canvasPos._x + 12.0f, args._canvasPos._y + 48.0f }, ImGuiCond_FirstUseEver );
                 if ( ImGui::Begin( "Terrain Brush###TerrainBrushTool", nullptr, ImGuiWindowFlags_AlwaysAutoResize ) )
                 {
-                    static const utf8* const s_arrModeName[] = { "Raise", "Lower", "Flatten", "Paint Layer", "Smooth" };
+                    static const utf8* const s_arrModeName[] = { "Raise", "Lower", "Flatten", "Paint Layer", "Smooth", "Cut Hole", "Fill Hole" };
                     static_assert( static_cast<size_t>( IM_ARRAYSIZE( s_arrModeName ) ) == static_cast<size_t>( TerrainBrushMode::Count ), "Terrain brush mode names follow TerrainBrushMode" );
                     int32 mode = static_cast<int32>( state._settings._mode );
                     if ( ImGui::Combo( "Mode", &mode, s_arrModeName, IM_ARRAYSIZE( s_arrModeName ) ) )
@@ -383,6 +548,7 @@ namespace sw::editor
                         if ( ImGui::SliderInt( "Layer", &layer, 0, static_cast<int32>( kLayerCount ) - 1 ) )
                             state._settings._layerIndex = static_cast<uint32>( layer );
                     }
+                    drawResizeControls( state );
                     ImGui::BeginDisabled( findTerrain( state._lastEdited ) == nullptr );
                     if ( ImGui::Button( state._bUnsaved ? "Save Terrain *" : "Save Terrain" ) )
                         saveLastEdited( state );
@@ -411,12 +577,12 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief `terrain.brush <raise|lower|flatten|paint|smooth> [radius] [strength] [layer]` — 시나리오가 브러시를 고정 값으로 맞춥니다. */
+            /** @brief `terrain.brush <raise|lower|flatten|paint|smooth|hole|fill> [radius] [strength] [layer]` — 시나리오가 브러시를 고정 값으로 맞춥니다. */
             static bool runBrush( const vector<string>& listArgument, string& outReply )
             {
                 if ( listArgument.empty() || listArgument.size() > 4 )
                     return false;
-                static const utf8* const s_arrModeName[] = { "raise", "lower", "flatten", "paint", "smooth" };
+                static const utf8* const s_arrModeName[] = { "raise", "lower", "flatten", "paint", "smooth", "hole", "fill" };
                 static_assert( static_cast<size_t>( IM_ARRAYSIZE( s_arrModeName ) ) == static_cast<size_t>( TerrainBrushMode::Count ), "Terrain brush command names follow TerrainBrushMode" );
                 TerrainBrushSettings settings   = getState()._settings;
                 bool                 bKnownMode = false;
@@ -443,6 +609,31 @@ namespace sw::editor
                 settings._layerIndex = static_cast<uint32>( layer );
                 getState()._settings = settings;
                 outReply             = "terrain brush " + listArgument[0];
+                return true;
+            }
+
+            /** @brief `terrain.resize <resolution>` — 크기 바꾸기 대상 지형(`findResizeTarget`)을 새 해상도로 다시 표본화합니다(되돌리기 하나를 남긴다). */
+            static bool runResize( const vector<string>& listArgument, string& outReply )
+            {
+                float32    value{ 0.0f };
+                const bool bParsed = listArgument.size() == 1 && StringUtil::parseFloat( listArgument[0], value ) && value >= 2.0f;
+                if ( bParsed == false )
+                    return false;
+                State&            state    = getState();
+                TerrainComponent* pTerrain = findResizeTarget( state );
+                if ( pTerrain == nullptr )
+                {
+                    outReply = "no terrain to resize (brush or hover a terrain first)";
+                    return false;
+                }
+                const uint32 resolution = static_cast<uint32>( value );
+                if ( resizeTerrain( state, *pTerrain, resolution ) == false )
+                {
+                    outReply = "terrain resize to " + listArgument[0] + " failed (resolution - 1 must be a multiple of the chunk cells)";
+                    return false;
+                }
+                state._resizeResolution = resolution;
+                outReply                = "terrain resized to " + listArgument[0];
                 return true;
             }
         };
@@ -477,6 +668,12 @@ namespace sw::editor
         float3        hit{};
         const bool    bRay = EditorViewportProjectionUtil::makeMouseRay( args._pViewProj->invert(), args._canvasPos, args._canvasSize, ray );
         state._bHit        = bRay && Internal::traceTerrain( *args._pObjectManager, ray, hit );
+        if ( state._bHit )
+        {
+            const TerrainComponent* pHovered = TerrainComponent::findTerrainAt( *args._pObjectManager, hit._x, hit._z );
+            if ( pHovered != nullptr && pHovered->getOwner() != nullptr )
+                state._lastHovered = pHovered->getOwner()->getHandle();
+        }
 
         if ( state._bHit )
         {
@@ -523,6 +720,8 @@ namespace sw::editor
                          &TerrainBrushToolInternal::readHit );
     SW_AUTOMATION_PROBE( editorTerrainBrushToolActive, "Editor.TerrainBrushToolActive", "1 when the terrain tool (scene view Terrain toggle) ran this or the last frame",
                          &TerrainBrushToolInternal::readToolActive );
-    SW_DEV_COMMAND( TerrainBrush, "terrain.brush", "terrain.brush <raise|lower|flatten|paint|smooth> [radius] [strength] [layer]",
+    SW_DEV_COMMAND( TerrainBrush, "terrain.brush", "terrain.brush <raise|lower|flatten|paint|smooth|hole|fill> [radius] [strength] [layer]",
                     "Set the terrain brush of the scene view terrain tool", &TerrainBrushToolInternal::runBrush );
+    SW_DEV_COMMAND( TerrainResize, "terrain.resize", "terrain.resize <resolution>", "Resample the last edited (or hovered) terrain to a new resolution, undoable",
+                    &TerrainBrushToolInternal::runResize );
 } // namespace sw::editor

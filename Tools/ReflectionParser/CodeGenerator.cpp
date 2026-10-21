@@ -137,8 +137,13 @@ namespace sw
                 for ( const ParsedParameterInfo& parameter : listParameter )
                 {
                     const string typeName = session._typeNameMap.normalize( parameter._typeName );
-                    emit.linef( "::sw::FunctionParameterInfo( %#, %#, %#, %# ),", CodeEmit::quoted( parameter._name ), CodeEmit::quoted( typeName ),
-                                CodeEmit::quoted( parameter._defaultValue ), bWithTypeOps ? makeTypeOpsExpr( typeName ) : string( "nullptr" ) );
+                    const string typeOps  = bWithTypeOps ? makeTypeOpsExpr( typeName ) : string( "nullptr" );
+                    if ( parameter._handleTargetTypeName.empty() )
+                        emit.linef( "::sw::FunctionParameterInfo( %#, %#, %#, %# ),", CodeEmit::quoted( parameter._name ), CodeEmit::quoted( typeName ),
+                                    CodeEmit::quoted( parameter._defaultValue ), typeOps );
+                    else
+                        emit.linef( "::sw::FunctionParameterInfo( %#, %#, %#, %#, %# ),", CodeEmit::quoted( parameter._name ), CodeEmit::quoted( typeName ),
+                                    CodeEmit::quoted( parameter._defaultValue ), typeOps, CodeEmit::hs( parameter._handleTargetTypeName ) );
                 }
                 emit.pop();
                 emit.line( "};" );
@@ -154,8 +159,11 @@ namespace sw
                 {
                     if ( paramIndex > 0 )
                         b.append( ", " );
-                    b.appendFormat( "args.get<%#>( %# )", session._typeNameMap.normalize( listParameter[paramIndex]._typeName ),
-                                    static_cast<uint32>( paramIndex ) );
+                    // 타입 핸들 인자는 썽크가 앞에서 확인해 만든 지역 변수(`emitMethodInvoker`)다.
+                    if ( listParameter[paramIndex]._handleTargetTypeName.empty() == false )
+                        b.appendFormat( "typedArg%#", static_cast<uint32>( paramIndex ) );
+                    else
+                        b.appendFormat( "args.get<%#>( %# )", session._typeNameMap.normalize( listParameter[paramIndex]._typeName ), static_cast<uint32>( paramIndex ) );
                 }
                 return string( b.view() );
             }
@@ -265,6 +273,9 @@ namespace sw
         }
 
         emitFileHeader( buffer );
+        // 타입 핸들 인자의 확인(`ComponentHandleArgument`)은 씬 매니저를 보므로, 그런 인자가 있는 산출물만 그 헤더를 넣는다(모든 .gen.cpp 가 매니저를 끌어오지 않는다).
+        if ( hasHandleArgument() )
+            buffer.append( "#include \"Engine/Object/GameObject/ComponentHandleArgument.h\"\n\n" );
         buffer.append( _session._config._emitGeneratedNsOpen );
         for ( size_t typeIndex = 0; typeIndex < _header._listType.size(); ++typeIndex )
         {
@@ -289,6 +300,22 @@ namespace sw
             _fixedCodec.appendSchemaLine( buffer, typeIndex );
         }
         return string( buffer.view() );
+    }
+
+    bool CodeGenerator::hasHandleArgument() const
+    {
+        for ( const ParsedTypeInfo& typeInfo : _header._listType )
+        {
+            for ( const ParsedFunctionInfo& method : typeInfo._listMethod )
+            {
+                for ( const ParsedParameterInfo& parameter : method._listParameter )
+                {
+                    if ( parameter._handleTargetTypeName.empty() == false )
+                        return true;
+                }
+            }
+        }
+        return false;
     }
 
     void CodeGenerator::emitFileHeader( CodeEmitBuffer& outBuffer ) const
@@ -550,6 +577,17 @@ namespace sw
         else
         {
             emit.linef( "auto* self = static_cast<%#*>( objPtr );", typeInfo._fullyQualifiedName );
+            // 타입 핸들 인자는 이 컴포넌트의 씬에서 대상 타입을 확인해 만든다. 틀리면 확인 쪽이 오류를 남기고 메서드를 부르지 않는다(파서가 컴포넌트의 비정적 메서드만 받는다).
+            for ( size_t paramIndex = 0; paramIndex < method._listParameter.size(); ++paramIndex )
+            {
+                const ParsedParameterInfo& parameter = method._listParameter[paramIndex];
+                if ( parameter._handleTargetTypeName.empty() )
+                    continue;
+                emit.linef( "::%# typedArg%#{};", parameter._canonicalTypeName, static_cast<uint32>( paramIndex ) );
+                emit.linef( "if ( ::sw::ComponentHandleArgument::cast( *self, args.get<::sw::ComponentHandle>( %# ), typedArg%#, %# ) == false )", static_cast<uint32>( paramIndex ),
+                            static_cast<uint32>( paramIndex ), CodeEmit::quoted( typeInfo._fullyQualifiedName + "::" + method._name ) );
+                emit.line( "    return ::sw::TaskValue{};" );
+            }
             if ( method._bConstructor != SW_FALSE )
             {
                 emit.linef( "sw_placement_new( self ) %#(%#);", typeInfo._fullyQualifiedName, callArgs ); // `Style/PlacementNew` 와 같은 모양

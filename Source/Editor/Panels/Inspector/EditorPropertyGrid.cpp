@@ -966,7 +966,8 @@ namespace sw::editor
                     formatstring( label.data(), label.capacity(), "arg%# (%#)", paramIndex, parameter._typeName.c_str() );
                 else
                     formatstring( label.data(), label.capacity(), "%# (%#)", parameter._name.c_str(), parameter._typeName.c_str() );
-                InspectorPropertyManager::drawMethodArg( label.c_str(), listSlot[paramIndex] );
+                const GameObject* pEditOwner = getEditOwner();
+                InspectorPropertyManager::drawMethodArg( label.c_str(), listSlot[paramIndex], parameter, pEditOwner != nullptr ? pEditOwner->getManager() : nullptr );
                 ImGui::PopID();
             }
 

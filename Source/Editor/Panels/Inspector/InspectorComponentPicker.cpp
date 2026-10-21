@@ -13,9 +13,14 @@ namespace sw::editor
 {
     const TypeInfo* InspectorComponentPickerUtil::findTargetType( const TypeRegistry& registry, const PropertyInfo& prop )
     {
-        if ( prop._handleTargetTypeName.empty() )
+        return findTargetType( registry, prop._handleTargetTypeName );
+    }
+
+    const TypeInfo* InspectorComponentPickerUtil::findTargetType( const TypeRegistry& registry, const hashed_string& targetTypeName )
+    {
+        if ( targetTypeName.empty() )
             return nullptr;
-        return registry.findType( prop._handleTargetTypeName );
+        return registry.findType( targetTypeName );
     }
 
     string InspectorComponentPickerUtil::makeLabel( const Component& component )
