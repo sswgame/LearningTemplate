@@ -182,7 +182,7 @@ namespace
             : _server{}
             , _listEntity{}
         {
-            SW_EXPECT_TRUE( _server.initialize( &world.getHost(), ReplicationServerConfig{} ) );
+            SW_EXPECT_TRUE( _server.initialize( &world.getPeers(), ReplicationServerConfig{} ) );
             world.getRouter().registerHandler( &_server );
             for ( uint32 index = 0; index < NetCompressionBenchInternal::kEntityCount; ++index )
             {
@@ -245,7 +245,7 @@ namespace
         {
             ReplicationClientConfig settings;
             settings._tickInterval = 1.0f / 60.0f;
-            SW_EXPECT_TRUE( _client.initialize( &world.getHost(), settings ) );
+            SW_EXPECT_TRUE( _client.initialize( &world.getPeers(), settings ) );
             world.getRouter().registerHandler( &_client );
         }
 

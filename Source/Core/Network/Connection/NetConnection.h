@@ -49,6 +49,7 @@ namespace sw
         uint64  _ackedPacketCount{ 0 };
         uint64  _resentMessageCount{ 0 };
         uint64  _expiredUnreliableCount{ 0 }; ///< 줄에서 나이 상한을 넘겨 버린 비신뢰 메시지(대역폭이 포화돼 오래 기다린 것).
+        int32   _pendingReliableCount{ 0 };   ///< 확인을 기다리는 신뢰 메시지 수(`NetConnection::getPendingReliableCount`). 사본을 만들 때 채운다(`NetHost::getConnectionStats`).
     };
 } // namespace sw
 

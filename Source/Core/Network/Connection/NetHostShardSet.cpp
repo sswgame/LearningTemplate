@@ -148,6 +148,11 @@ namespace sw
         return connectedCount;
     }
 
+    int32 NetHostShardSet::getClientIndex() const
+    {
+        return getShardCount() == 1 ? _listShard.front()->getClientIndex() : -1;
+    }
+
     void NetHostShardSet::collectConnected( vector<int32>& outListConnection ) const
     {
         outListConnection.clear();

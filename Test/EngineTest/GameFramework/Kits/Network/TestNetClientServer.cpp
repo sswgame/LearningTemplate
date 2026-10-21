@@ -632,7 +632,7 @@ SW_TEST_CASE( NetClientServerTest, ReconnectOnSameSlotResetsHandlerState )
             second.update( time );
         }
     };
-    const auto sendInput = []( NetHost& host, uint32 tick )
+    const auto sendInput = []( INetPeers& host, uint32 tick )
     {
         const vector<uint8> message = makeInputMessage( tick, { vector<uint8>{ static_cast<uint8>( tick + 1 ) } } );
         return host.sendMessage( 0, NetChannelType::ReliableOrdered, message );

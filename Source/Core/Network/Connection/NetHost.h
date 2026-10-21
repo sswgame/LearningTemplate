@@ -196,8 +196,10 @@ namespace sw
         virtual NetConnectionState getConnectionState( int32 connectionID ) const                               = 0;
         [[nodiscard]] virtual bool getConnectionStats( int32 connectionID, NetConnectionStats& outStats ) const = 0;
         virtual NetAddress         getConnectionAddress( int32 connectionID ) const                             = 0;
-        virtual int32              getConnectedCount() const                                                    = 0;
-        virtual void               collectConnected( vector<int32>& outListConnection ) const                   = 0;
+        /** @brief 클라이언트에서 서버가 준 자기 번호(서버 쪽 연결 ID)입니다. 연결 전이거나 서버면 -1 입니다. */
+        virtual int32 getClientIndex() const                                     = 0;
+        virtual int32 getConnectedCount() const                                  = 0;
+        virtual void  collectConnected( vector<int32>& outListConnection ) const = 0;
         /** @brief 연결마다의 보내기 상한(초당 바이트)입니다. 샤드 묶음은 샤드마다 같은 설정을 쓴다. */
         virtual int32 getMaxBytesPerSecond() const                      = 0;
         virtual bool  isConnectionSaturated( int32 connectionID ) const = 0;
@@ -290,7 +292,7 @@ namespace sw
         NetAddress           getConnectionAddress( int32 connectionID ) const override;
         int32                getConnectedCount() const override;
         /** @brief 클라이언트에서 서버가 준 자기 번호(서버 쪽 연결 ID)를 반환합니다. 연결 전이면 -1 입니다. */
-        int32 getClientIndex() const;
+        int32 getClientIndex() const override;
         void  collectConnected( vector<int32>& outListConnection ) const override;
         /** @brief 이 호스트가 지금 디버거 대기를 알리는지 반환합니다. 마지막 `update` 기준이며(`NetHostConfig::_debugHold`), Shipping 은 항상 false 입니다. */
         bool   isDebugHoldAnnounced() const;

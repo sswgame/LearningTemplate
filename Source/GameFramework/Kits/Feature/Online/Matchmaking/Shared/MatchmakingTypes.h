@@ -187,7 +187,9 @@ namespace sw
         PROPERTY()
         int32 _averageRating{ 0 }; ///< 남은 사람들의 평균 실력이다
         PROPERTY()
-        uint16 _port{ 0 };
+        uint16 _port{ 0 }; ///< 게임 서버의 첫 게임 포트이다(`ServerDescriptor::_port`)
+        PROPERTY( Min = 1, Max = 64 )
+        uint8 _portCount{ 1 }; ///< 게임 포트 수(포트 샤딩, `ServerDescriptor::_portCount`). 채운 사람의 포트는 `ServerDescriptor::pickShardPort` 가 계정마다 고른다
     };
 } // namespace sw
 

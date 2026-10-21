@@ -57,10 +57,12 @@ namespace sw
          * @brief @p accountID 가 붙을 게임 포트입니다. 계정마다 늘 같은 샤드라 다시 배정받아도 같은 포트이고, 계정이 고르게 퍼진다(나머지 연산).
          * @details 포트 수 0 은 만들 수 없는 값이다 — 기록을 읽을 때 거절하고(`ServerRecord::readStatus`), 서버는 설정의 1 이상을 싣는다.
          */
-        uint16 pickPort( uint64 accountID ) const
+        uint16 pickPort( uint64 accountID ) const { return pickShardPort( _port, _portCount, accountID ); }
+        /** @brief 첫 포트 @p firstPort 부터 @p portCount 개인 서버에서 @p accountID 의 포트입니다. 배정(디렉터리 · 매칭 · 백필)이 모두 이 규칙 하나를 쓴다. */
+        static uint16 pickShardPort( uint16 firstPort, uint8 portCount, uint64 accountID )
         {
-            SW_ASSERT( _portCount > 0 );
-            return static_cast<uint16>( _port + accountID % _portCount );
+            SW_ASSERT( portCount > 0 );
+            return static_cast<uint16>( firstPort + accountID % portCount );
         }
     };
 } // namespace sw

@@ -67,7 +67,7 @@ namespace test
         {
             (void)world.getScene().instantiate( document );
             _objects.collect( world.getObjectManager() );
-            _replication.initialize( &world.getHost(), &world.getObjectManager(), replicationConfig );
+            _replication.initialize( &world.getPeers(), &world.getObjectManager(), replicationConfig );
             for ( uint32 index = 0; index < static_cast<uint32>( _objects._listFracture.size() ); ++index )
             {
                 _replication.registerObject( index + 1, *_objects._listFracture[index] );
@@ -106,7 +106,7 @@ namespace test
                     pBarrel->setActive( false );
             }
             _objects.collect( world.getObjectManager() );
-            _replication.initialize( &world.getHost(), &world.getObjectManager(), replicationConfig );
+            _replication.initialize( &world.getPeers(), &world.getObjectManager(), replicationConfig );
             for ( uint32 index = 0; index < static_cast<uint32>( _objects._listFracture.size() ); ++index )
             {
                 _replication.registerObject( index + 1, *_objects._listFracture[index] );

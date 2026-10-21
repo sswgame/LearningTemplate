@@ -215,9 +215,10 @@ namespace sw
 
         Scene&             getScene() { return *_pScene; }
         GameObjectManager& getObjectManager();
-        NetHost&           getHost() { return _host; }
-        NetMessageRouter&  getRouter() { return _router; }
-        INetSimSession*    getSession() const { return _pSession.get(); }
+        /** @brief 키트가 보내고 연결을 묻는 창구입니다(게임 세션의 `GameNetSession::getPeers` 와 같은 모양). 호스트 자체(연결 · 진행)는 하니스만 다룬다. */
+        INetPeers&        getPeers() { return _host; }
+        NetMessageRouter& getRouter() { return _router; }
+        INetSimSession*   getSession() const { return _pSession.get(); }
         /** @brief 라우터의 핸들러가 받지 않은 메시지(게임 영역 등)입니다. 틱마다 비우고 다시 채웁니다. */
         const vector<NetReceivedMessage>& getUnhandledMessages() const { return _listUnhandled; }
         /** @brief 이 월드의 엔드포인트가 보내고 받은 양입니다. */

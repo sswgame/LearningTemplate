@@ -57,10 +57,12 @@ namespace sw
         [[nodiscard]] bool getConnectionStats( int32 connectionID, NetConnectionStats& outStats ) const override;
         NetAddress         getConnectionAddress( int32 connectionID ) const override;
         int32              getConnectedCount() const override;
-        void               collectConnected( vector<int32>& outListConnection ) const override;
-        int32              getMaxBytesPerSecond() const override;
-        bool               isConnectionSaturated( int32 connectionID ) const override;
-        void               addSentKindTally( NetMessageKindTallyTable& outTable ) const override;
+        /** @brief 샤드 하나(클라이언트)면 그 호스트의 번호, 샤드 여럿(서버)이면 -1 입니다. */
+        int32 getClientIndex() const override;
+        void  collectConnected( vector<int32>& outListConnection ) const override;
+        int32 getMaxBytesPerSecond() const override;
+        bool  isConnectionSaturated( int32 connectionID ) const override;
+        void  addSentKindTally( NetMessageKindTallyTable& outTable ) const override;
 
     private:
         /** @brief 묶음의 연결 ID 를 샤드와 샤드 안의 ID 로 풉니다. 범위 밖이면 nullptr 입니다. */

@@ -1217,7 +1217,8 @@ namespace sw
         const NetHostSlot*      pSlot = _slotTable.findConnected( connectionID );
         if ( pSlot == nullptr )
             return false;
-        outStats = pSlot->_connection.getStats();
+        outStats                       = pSlot->_connection.getStats();
+        outStats._pendingReliableCount = pSlot->_connection.getPendingReliableCount();
         return true;
     }
 

@@ -34,7 +34,7 @@ namespace
             : _server{}
             , _pTable{ pTable }
         {
-            SW_EXPECT_TRUE( _server.initialize( &world.getHost(), pTable->_settings, pTable->_pPolicy ) );
+            SW_EXPECT_TRUE( _server.initialize( &world.getPeers(), pTable->_settings, pTable->_pPolicy ) );
             world.getRouter().registerHandler( &_server );
         }
 
@@ -75,7 +75,7 @@ namespace
         {
             ReplicationClientConfig settings;
             settings._tickInterval = kReplicationTickSeconds;
-            SW_EXPECT_TRUE( _client.initialize( &world.getHost(), settings ) );
+            SW_EXPECT_TRUE( _client.initialize( &world.getPeers(), settings ) );
             world.getRouter().registerHandler( &_client );
         }
 
