@@ -214,6 +214,12 @@ namespace sw
         void rebuildSkinSources( IRHIDevice* pDevice, const vector<Mesh*>& listSkinMesh );
         /** @brief 모프 메시 집합을 맞춥니다. 들어온 메시의 레스트만 올립니다. @return 어느 모프 메시의 구간이라도 바뀌었으면 true 입니다. */
         bool updateMorphMeshes( IRHIDevice* pDevice, const vector<Mesh*>& listMorphMesh );
+        /** @brief 목록의 메시를 이번 갱신 번호로 표시하고, 처음 보거나 내용이 바뀐 메시를 `_listScratchAdded` 에 모읍니다. @return 무엇이든 바뀌었으면 true 입니다. */
+        bool markListedMorphMeshes( const vector<Mesh*>& listMorphMesh, uint64 retireStamp );
+        /** @brief 이번 목록에 없는 메시의 구간과 칸을 돌려줍니다. @return 하나라도 지웠으면 true 입니다. */
+        bool sweepUnlistedMorphMeshes( uint64 retireStamp );
+        /** @brief 들어온 메시에 구간과 칸을 주고 레스트를 올립니다. @return 자리가 모자라면 false 입니다(호출자가 다시 채웁니다). */
+        [[nodiscard]] bool placeAddedMorphMeshes( IRHIDevice* pDevice );
         /** @brief 모프 구간을 더 큰 새 레스트 버퍼로 다시 채웁니다. 살아 있는 모프 메시를 앞에서부터 다시 잇습니다. */
         void repackMorph( IRHIDevice* pDevice );
         /** @brief 메시의 모프 구간과 칸을 돌려줍니다(구간은 `retireStamp` 뒤에 다시 나갑니다). */

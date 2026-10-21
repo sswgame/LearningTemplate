@@ -272,8 +272,37 @@ namespace sw
 
     bool GPUMeshMorphPool::updateMorphMeshes( IRHIDevice* pDevice, const vector<Mesh*>& listMorphMesh )
     {
-        const uint64 retireStamp = _updateCount + constant::kMaxFrameCountInFlight;
+        const uint64 retireStamp   = _updateCount + constant::kMaxFrameCountInFlight;
+        const bool   bMarkedChange = markListedMorphMeshes( listMorphMesh, retireStamp );
+        const bool   bChanged      = sweepUnlistedMorphMeshes( retireStamp ) || bMarkedChange;
+        if ( _mapMorphEntry.empty() )
+        {
+            // 모프 메시가 없다 — 모프 구간을 통째로 놓는다. 스킨 구간은 0 에서 시작한다.
+            const bool bHadMorph = _rest.isValid() || _morphAllocator.getCapacity() > 0;
+            _rest.release( pDevice );
+            _morphAllocator.reset( 0 );
+            _listPoolMorph.clear();
+            _listFreeMorphSlot.clear();
+            _listDeformProgramGeneration.clear();
+            _morphLiveVertexCount = 0;
+            return bChanged || bHadMorph;
+        }
+        if ( bChanged == false )
+            return false;
 
+        // 칸이 바뀌었을 수 있다 — 다음 updateDeformPrograms 가 프로그램 표를 다시 올린다(같은 칸에 다른 메시가 들어와 번호가 우연히 같을 수 있다).
+        _listDeformProgramGeneration.clear();
+        // 예산 때문에 못 들어간 메시는 집합이 바뀐 프레임에만 다시 시도한다.
+        _listScratchAdded.insert( _listScratchAdded.end(), _listScratchRetry.begin(), _listScratchRetry.end() );
+
+        // 3) 들어온 메시에 구간과 칸을 준다. 하나라도 자리가 없으면 새 버퍼로 다시 채운다.
+        if ( _rest.isValid() == false || placeAddedMorphMeshes( pDevice ) == false )
+            repackMorph( pDevice );
+        return true;
+    }
+
+    bool GPUMeshMorphPool::markListedMorphMeshes( const vector<Mesh*>& listMorphMesh, uint64 retireStamp )
+    {
         // 1) 표시: 처음 보거나 내용이 바뀐 메시는 새 구간이 필요하다.
         bool bChanged = false;
         _listScratchAdded.clear();
@@ -309,7 +338,11 @@ namespace sw
             _listScratchAdded.push_back( pMesh );
             bChanged = true;
         }
+        return bChanged;
+    }
 
+    bool GPUMeshMorphPool::sweepUnlistedMorphMeshes( uint64 retireStamp )
+    {
         // 2) 쓸기: 이번 목록에 없는 메시의 구간과 칸을 돌려준다. 포인터는 따라가지 않는다.
         _listScratchRemoved.clear();
         for ( const auto& [pMesh, entry] : _mapMorphEntry )
@@ -321,35 +354,12 @@ namespace sw
         {
             releaseMorphEntry( _mapMorphEntry.find( pMesh )->second, retireStamp );
             _mapMorphEntry.erase( pMesh );
-            bChanged = true;
         }
+        return _listScratchRemoved.empty() == false;
+    }
 
-        if ( _mapMorphEntry.empty() )
-        {
-            // 모프 메시가 없다 — 모프 구간을 통째로 놓는다. 스킨 구간은 0 에서 시작한다.
-            const bool bHadMorph = _rest.isValid() || _morphAllocator.getCapacity() > 0;
-            _rest.release( pDevice );
-            _morphAllocator.reset( 0 );
-            _listPoolMorph.clear();
-            _listFreeMorphSlot.clear();
-            _listDeformProgramGeneration.clear();
-            _morphLiveVertexCount = 0;
-            return bChanged || bHadMorph;
-        }
-        if ( bChanged == false )
-            return false;
-
-        // 칸이 바뀌었을 수 있다 — 다음 updateDeformPrograms 가 프로그램 표를 다시 올린다(같은 칸에 다른 메시가 들어와 번호가 우연히 같을 수 있다).
-        _listDeformProgramGeneration.clear();
-        // 예산 때문에 못 들어간 메시는 집합이 바뀐 프레임에만 다시 시도한다.
-        _listScratchAdded.insert( _listScratchAdded.end(), _listScratchRetry.begin(), _listScratchRetry.end() );
-
-        // 3) 들어온 메시에 구간과 칸을 준다. 하나라도 자리가 없으면 새 버퍼로 다시 채운다.
-        if ( _rest.isValid() == false )
-        {
-            repackMorph( pDevice );
-            return true;
-        }
+    bool GPUMeshMorphPool::placeAddedMorphMeshes( IRHIDevice* pDevice )
+    {
         _listScratchRest.clear();
         _listScratchRegion.clear();
         for ( const Mesh* pMesh : _listScratchAdded )
@@ -357,10 +367,7 @@ namespace sw
             MorphEntry&  entry = _mapMorphEntry.find( pMesh )->second;
             const uint32 base  = _morphAllocator.allocate( entry._count );
             if ( base == SpanAllocator::kInvalidOffset )
-            {
-                repackMorph( pDevice );
-                return true;
-            }
+                return false;
             entry._base = base;
             entry._slot = allocateFreeListIndex( _listPoolMorph, _listFreeMorphSlot, pMesh );
             _morphLiveVertexCount += entry._count;
