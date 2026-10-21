@@ -661,3 +661,8 @@ namespace sw
         return index < static_cast<uint32>( std::size( AnimationGraphAssetInternal::kArrLayerBlendText ) ) ? AnimationGraphAssetInternal::kArrLayerBlendText[index] : "";
     }
 } // namespace sw
+
+namespace sw
+{
+    SW_ASSET_TYPE( AnimationGraphAsset, AnimationGraphAsset::kAssetType );
+} // namespace sw

@@ -10,7 +10,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-#include "Engine/Resource/AssetTypeRegistry.h"
+#include "Engine/Common/AssetTypeRegistry.h"
 #include "Engine/Scene/WorldSettings.h"
 
 namespace sw

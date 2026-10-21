@@ -14,6 +14,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Audio/AudioSpatial.h"
+#include "Engine/Common/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -188,6 +189,12 @@ namespace sw
         REFLECT_BODY();
         /** @brief 이벤트 라이브러리 파일의 접미사입니다. 에디터 종류 표(`EditorAssetType.cpp`)가 이 값을 씁니다. */
         static constexpr string_view kExtension = ".audioevents.xml";
+        /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            { kExtension, AssetSuffixRole::Plain },
+        };
+        /** @brief 이 에셋 종류입니다(등록은 `AudioEvent.cpp` 의 `SW_ASSET_TYPE`). */
+        static constexpr AssetTypeDef kAssetType{ "AudioEventLibrary", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0 };
 
         PROPERTY( Tooltip = "Game parameters (RTPC)" )
         vector<AudioParameterDesc> _listParameter{};

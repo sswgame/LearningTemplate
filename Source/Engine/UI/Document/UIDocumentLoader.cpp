@@ -504,3 +504,8 @@ namespace sw
         return root;
     }
 } // namespace sw
+
+namespace sw
+{
+    SW_ASSET_TYPE( UIDocumentAsset, UIDocumentAsset::kAssetType );
+} // namespace sw

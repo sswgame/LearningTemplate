@@ -251,3 +251,8 @@ namespace sw
         }
     }
 } // namespace sw
+
+namespace sw
+{
+    SW_ASSET_TYPE( DialogueGraphAsset, DialogueGraphAsset::kAssetType );
+} // namespace sw

@@ -19,6 +19,8 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Common/AssetTypeRegistry.h"
+
 namespace sw
 {
     /**
@@ -27,11 +29,17 @@ namespace sw
      */
     struct SW_API HeightfieldData
     {
-        static constexpr uint32      kMagic         = FourCcUtil::make( "SWHF" );
-        static constexpr string_view kExtension     = ".heightfield";
-        static constexpr uint32      kVersion       = 1u;
-        static constexpr uint32      kFlagHoleMask  = 1u;
-        static constexpr uint32      kMaxResolution = 8193u;
+        static constexpr uint32      kMagic     = FourCcUtil::make( "SWHF" );
+        static constexpr string_view kExtension = ".heightfield";
+        /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            { kExtension, AssetSuffixRole::Plain },
+        };
+        /** @brief 이 에셋 종류입니다(등록은 `HeightfieldData.cpp` 의 `SW_ASSET_TYPE`). */
+        static constexpr AssetTypeDef kAssetType{ "HeightfieldData", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0 };
+        static constexpr uint32       kVersion       = 1u;
+        static constexpr uint32       kFlagHoleMask  = 1u;
+        static constexpr uint32       kMaxResolution = 8193u;
 
         vector<uint16> _listHeight;   ///< N × N 배열이다. 인덱스는 z × N + x 다.
         vector<uint8>  _listHoleCell; ///< (N−1) × (N−1), 비었으면 구멍이 없다

@@ -178,3 +178,8 @@ namespace sw
         outSiblingPath  = string{ stemPath } + string{ Skeleton::kExtension };
     }
 } // namespace sw
+
+namespace sw
+{
+    SW_ASSET_TYPE( SkeletonBoneLOD, SkeletonBoneLOD::kAssetType );
+} // namespace sw

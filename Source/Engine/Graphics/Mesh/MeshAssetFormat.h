@@ -8,6 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Common/AssetTypeRegistry.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 
@@ -55,6 +56,12 @@ namespace sw
         static constexpr uint32 kSkinVertexSize = 24;
         /** @brief 메시 에셋 확장자입니다. */
         static constexpr string_view kExtension = ".mesh";
+        /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            { kExtension, AssetSuffixRole::Plain },
+        };
+        /** @brief 이 에셋 종류입니다(등록은 `MeshAssetFormat.cpp` 의 `SW_ASSET_TYPE`). */
+        static constexpr AssetTypeDef kAssetType{ "MeshAssetFormat", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0 };
 
         /** @brief 경로가 메시 에셋(`.mesh`)을 가리키는지 확인합니다. 내장 도형 이름("Cube" 등)은 해당하지 않습니다. */
         static bool isMeshAssetPath( string_view path );

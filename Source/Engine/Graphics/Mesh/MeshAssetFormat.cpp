@@ -375,3 +375,8 @@ namespace sw
         return bRead;
     }
 } // namespace sw
+
+namespace sw
+{
+    SW_ASSET_TYPE( MeshAssetFormat, MeshAssetFormat::kAssetType );
+} // namespace sw

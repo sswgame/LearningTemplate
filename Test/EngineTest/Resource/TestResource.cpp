@@ -1100,6 +1100,9 @@ SW_TEST_CASE( AssetTypeRegistryTest, TypesAreUniqueAndLongerSuffixWins )
     {
         SW_EXPECT_TRUE_MSG( sw::AssetTypeRegistry::findType( pExpected->_name ) != nullptr, sw::string( pExpected->_name ).c_str() );
     }
+    // 접미사 상수(`kExtension`)를 가진 엔진 타입은 모두 종류로 등록한다(AT2 · AT3 — 33 종, 교환 형식 `.po` · `.xlf` 는 에셋이 아니라 뺐다). 하나라도 링크에서
+    // 빠지면 수가 모자란다 — 어느 것이 빠졌는지는 위 목록과 `collectTypes` 로 본다.
+    SW_EXPECT_TRUE_MSG( sw::AssetTypeRegistry::collectTypes().size() >= 37u, ( "registered asset types: " + sw::to_string( sw::AssetTypeRegistry::collectTypes().size() ) ).c_str() );
 
     for ( const sw::AssetTypeDef* pType : sw::AssetTypeRegistry::collectTypes() )
     {

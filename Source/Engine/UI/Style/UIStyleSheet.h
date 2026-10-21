@@ -9,6 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Common/AssetTypeRegistry.h"
 #include "Engine/UI/Style/WidgetStyle.h"
 
 namespace sw
@@ -96,9 +97,15 @@ namespace sw
      */
     struct UIStyleSheetAsset
     {
-        static constexpr uint32 kVersion           = 1;
-        static constexpr utf8   kExtension[]       = ".uistyle.xml";
-        static constexpr utf8   kRootElementName[] = "UIStyleSheet";
+        static constexpr uint32 kVersion     = 1;
+        static constexpr utf8   kExtension[] = ".uistyle.xml";
+        /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            { kExtension, AssetSuffixRole::Plain },
+        };
+        /** @brief 이 에셋 종류입니다(등록은 `UIStyleSheet.cpp` 의 `SW_ASSET_TYPE`). */
+        static constexpr AssetTypeDef kAssetType{ "UIStyleSheetAsset", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0 };
+        static constexpr utf8         kRootElementName[] = "UIStyleSheet";
 
         string              _path{};
         vector<UIStyleRule> _listRule{}; ///< 시트 안의 순서입니다(같은 특정도에서는 뒤의 규칙이 이깁니다).

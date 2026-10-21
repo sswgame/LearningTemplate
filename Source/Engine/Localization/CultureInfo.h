@@ -11,6 +11,8 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Common/AssetTypeRegistry.h"
+
 namespace sw
 {
     /** @brief CLDR 복수형 범주입니다. 이름은 ICU MessageFormat 의 키워드(`zero`, `one`, `two`, `few`, `many`, `other`)와 같습니다. */
@@ -173,6 +175,12 @@ namespace sw
     public:
         /** @brief 문화권 테이블 파일의 접미사입니다. */
         static constexpr const utf8* kExtension = ".cultures.json";
+        /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            { kExtension, AssetSuffixRole::Plain },
+        };
+        /** @brief 이 에셋 종류입니다(등록은 `CultureInfo.cpp` 의 `SW_ASSET_TYPE`). */
+        static constexpr AssetTypeDef kAssetType{ "CultureTable", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0 };
 
         /** @brief 언어 코드의 정규 표기입니다. 소문자로 쓰고 `-` 는 `_` 로 바꿉니다(`ko-KR` → `ko_kr`). */
         static string normalizeCode( string_view code );

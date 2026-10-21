@@ -175,3 +175,8 @@ namespace sw
         return bValid;
     }
 } // namespace sw
+
+namespace sw
+{
+    SW_ASSET_TYPE( VfxEffectDef, VfxEffectDef::kAssetType );
+} // namespace sw

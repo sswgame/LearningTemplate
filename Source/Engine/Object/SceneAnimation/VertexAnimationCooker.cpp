@@ -212,3 +212,8 @@ namespace sw
         return tally.getWrittenCount();
     }
 } // namespace sw
+
+namespace sw
+{
+    SW_ASSET_TYPE( VertexAnimationCookList, VertexAnimationCookList::kAssetType );
+} // namespace sw

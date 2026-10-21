@@ -12,6 +12,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Common/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -88,6 +89,12 @@ namespace sw
     {
         /** @brief 트랙 파일 확장자입니다(음성 파일의 확장자를 이것으로 바꾼다). */
         static constexpr string_view kExtension = ".visemes.json";
+        /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            { kExtension, AssetSuffixRole::Plain },
+        };
+        /** @brief 이 에셋 종류입니다(등록은 `LipSync.cpp` 의 `SW_ASSET_TYPE`). */
+        static constexpr AssetTypeDef kAssetType{ "VisemeTrack", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0 };
 
         vector<hashed_string> _listViseme;
         vector<float32>       _listWeight; ///< 프레임 우선(`[frame * visemeCount + viseme]`)

@@ -185,3 +185,8 @@ namespace sw
         return true;
     }
 } // namespace sw
+
+namespace sw
+{
+    SW_ASSET_TYPE( AnimationBoneMaskDef, AnimationBoneMaskDef::kAssetType );
+} // namespace sw

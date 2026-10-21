@@ -11,9 +11,9 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Task/TaskTypes.h"
 
+#include "Engine/Common/AssetTypeRegistry.h"
 #include "Engine/Graphics/Material/MaterialTypes.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
-#include "Engine/Resource/AssetTypeRegistry.h"
 
 namespace sw
 {

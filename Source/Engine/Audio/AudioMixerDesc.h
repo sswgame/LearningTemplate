@@ -14,6 +14,7 @@
 
 #include "Engine/Audio/AudioSpatial.h"
 #include "Engine/Audio/AudioTypes.h"
+#include "Engine/Common/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Base/DataPath.h"
 
@@ -247,6 +248,12 @@ namespace sw
         REFLECT_BODY();
         /** @brief 믹서 그래프 파일의 접미사입니다. 에디터 종류 표(`EditorAssetType.cpp`)가 이 값을 씁니다. */
         static constexpr string_view kExtension = ".audiomixer.xml";
+        /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            { kExtension, AssetSuffixRole::Plain },
+        };
+        /** @brief 이 에셋 종류입니다(등록은 `AudioMixerDesc.cpp` 의 `SW_ASSET_TYPE`). */
+        static constexpr AssetTypeDef kAssetType{ "AudioMixerDesc", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0 };
 
         PROPERTY( Tooltip = "Buses (submixes); the master bus is the only root" )
         vector<AudioBusDesc> _listBus{};

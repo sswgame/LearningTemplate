@@ -14,6 +14,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Engine/Common/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Utility/FloatCurve.h"
 
@@ -225,6 +226,12 @@ namespace sw
 
         /** @brief 효과 파일의 접미사입니다. 데이터 종류 표(`SW_RESOURCE_DATA_KIND`)가 이 값으로 파일을 찾습니다. */
         static constexpr string_view kExtension = ".vfx.xml";
+        /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            { kExtension, AssetSuffixRole::Plain },
+        };
+        /** @brief 이 에셋 종류입니다(등록은 `VfxEffectDef.cpp` 의 `SW_ASSET_TYPE`). */
+        static constexpr AssetTypeDef kAssetType{ "VfxEffectDef", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0 };
 
         PROPERTY( Tooltip = "Emitters; each one is a separate transparent sort candidate" )
         vector<VfxEmitterDef> _listEmitter{};

@@ -173,3 +173,8 @@ namespace sw
         return nullptr;
     }
 } // namespace sw
+
+namespace sw
+{
+    SW_ASSET_TYPE( AudioEventLibrary, AudioEventLibrary::kAssetType );
+} // namespace sw

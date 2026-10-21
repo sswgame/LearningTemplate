@@ -354,3 +354,8 @@ namespace sw
         }
     }
 } // namespace sw
+
+namespace sw
+{
+    SW_ASSET_TYPE( VisemeTrack, VisemeTrack::kAssetType );
+} // namespace sw

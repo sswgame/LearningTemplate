@@ -212,3 +212,8 @@ namespace sw
         return readFromBytes( bytes.data(), bytes.size(), pOutError );
     }
 } // namespace sw
+
+namespace sw
+{
+    SW_ASSET_TYPE( LightProbeGrid, LightProbeGrid::kAssetType );
+} // namespace sw

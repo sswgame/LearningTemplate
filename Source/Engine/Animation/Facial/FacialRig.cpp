@@ -156,3 +156,8 @@ namespace sw
         return -1;
     }
 } // namespace sw
+
+namespace sw
+{
+    SW_ASSET_TYPE( FacialRig, FacialRig::kAssetType );
+} // namespace sw

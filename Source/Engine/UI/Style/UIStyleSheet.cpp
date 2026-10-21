@@ -414,3 +414,8 @@ namespace sw
         (void)SerializerUtil::applyPropertyText( *assignment._pNestedProperty, MutableObjectAddress{ pNested }, assignment._text, SerializeContext::getDefault( SerializePurpose::Authoring ) ); // 읽을 때 이미 확인했다
     }
 } // namespace sw
+
+namespace sw
+{
+    SW_ASSET_TYPE( UIStyleSheetAsset, UIStyleSheetAsset::kAssetType );
+} // namespace sw

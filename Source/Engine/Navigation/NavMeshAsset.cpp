@@ -262,3 +262,8 @@ namespace sw
         };
     }
 } // namespace sw
+
+namespace sw
+{
+    SW_ASSET_TYPE( NavMeshAsset, NavMeshAsset::kAssetType );
+} // namespace sw

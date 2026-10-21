@@ -164,3 +164,8 @@ namespace sw
         return true;
     }
 } // namespace sw
+
+namespace sw
+{
+    SW_ASSET_TYPE( RetargetProfile, RetargetProfile::kAssetType );
+} // namespace sw
