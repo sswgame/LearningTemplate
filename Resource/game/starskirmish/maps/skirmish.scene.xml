@@ -169,5 +169,485 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
+		<entity id="6" name="Cc0.rock_a">
+			<GameObject _schemaVersion="0" _name="Cc0.rock_a" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-24,0,-40"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/starskirmish/models/kaykit_space/rock_a.mesh"
+					               _materialPath="game/starskirmish/materials/kaykit_space.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="7" name="Cc0.rock_b">
+			<GameObject _schemaVersion="0" _name="Cc0.rock_b" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-20,0,-40"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/starskirmish/models/kaykit_space/rock_b.mesh"
+					               _materialPath="game/starskirmish/materials/kaykit_space.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="8" name="Cc0.rocks_a">
+			<GameObject _schemaVersion="0" _name="Cc0.rocks_a" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-16,0,-40"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/starskirmish/models/kaykit_space/rocks_a.mesh"
+					               _materialPath="game/starskirmish/materials/kaykit_space.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="9" name="Cc0.rocks_b">
+			<GameObject _schemaVersion="0" _name="Cc0.rocks_b" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-12,0,-40"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/starskirmish/models/kaykit_space/rocks_b.mesh"
+					               _materialPath="game/starskirmish/materials/kaykit_space.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="10" name="Cc0.terrain_low">
+			<GameObject _schemaVersion="0" _name="Cc0.terrain_low" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-8,0,-40"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/starskirmish/models/kaykit_space/terrain_low.mesh"
+					               _materialPath="game/starskirmish/materials/kaykit_space.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="11" name="Cc0.terrain_slope">
+			<GameObject _schemaVersion="0" _name="Cc0.terrain_slope" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-4,0,-40"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/starskirmish/models/kaykit_space/terrain_slope.mesh"
+					               _materialPath="game/starskirmish/materials/kaykit_space.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="12" name="Cc0.terrain_slope_inner_corner">
+			<GameObject _schemaVersion="0" _name="Cc0.terrain_slope_inner_corner" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0,-40"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/starskirmish/models/kaykit_space/terrain_slope_inner_corner.mesh"
+					               _materialPath="game/starskirmish/materials/kaykit_space.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="13" name="Cc0.terrain_slope_outer_corner">
+			<GameObject _schemaVersion="0" _name="Cc0.terrain_slope_outer_corner" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="4,0,-40"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/starskirmish/models/kaykit_space/terrain_slope_outer_corner.mesh"
+					               _materialPath="game/starskirmish/materials/kaykit_space.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="14" name="Cc0.terrain_tall">
+			<GameObject _schemaVersion="0" _name="Cc0.terrain_tall" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="8,0,-40"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/starskirmish/models/kaykit_space/terrain_tall.mesh"
+					               _materialPath="game/starskirmish/materials/kaykit_space.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="15" name="Cc0.craft_cargo_a">
+			<GameObject _schemaVersion="0" _name="Cc0.craft_cargo_a" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-30,0,-48"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/starskirmish/models/craft_cargo_a.mesh"
+					               _materialPath="game/starskirmish/materials/kenney_space.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="16" name="Cc0.craft_racer">
+			<GameObject _schemaVersion="0" _name="Cc0.craft_racer" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-26,0,-48"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/starskirmish/models/craft_racer.mesh"
+					               _materialPath="game/starskirmish/materials/kenney_space.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="17" name="Cc0.craft_speeder_a">
+			<GameObject _schemaVersion="0" _name="Cc0.craft_speeder_a" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-22,0,-48"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/starskirmish/models/craft_speeder_a.mesh"
+					               _materialPath="game/starskirmish/materials/kenney_space.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="18" name="Cc0.craft_speeder_b">
+			<GameObject _schemaVersion="0" _name="Cc0.craft_speeder_b" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-18,0,-48"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/starskirmish/models/craft_speeder_b.mesh"
+					               _materialPath="game/starskirmish/materials/kenney_space.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="19" name="Cc0.crater">
+			<GameObject _schemaVersion="0" _name="Cc0.crater" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-14,0,-48"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/starskirmish/models/crater.mesh"
+					               _materialPath="game/starskirmish/materials/kenney_space.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="20" name="Cc0.hangar_large_a">
+			<GameObject _schemaVersion="0" _name="Cc0.hangar_large_a" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-10,0,-48"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/starskirmish/models/hangar_large_a.mesh"
+					               _materialPath="game/starskirmish/materials/kenney_space.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="21" name="Cc0.hangar_round_a">
+			<GameObject _schemaVersion="0" _name="Cc0.hangar_round_a" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-6,0,-48"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/starskirmish/models/hangar_round_a.mesh"
+					               _materialPath="game/starskirmish/materials/kenney_space.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="22" name="Cc0.hangar_small_a">
+			<GameObject _schemaVersion="0" _name="Cc0.hangar_small_a" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-2,0,-48"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/starskirmish/models/hangar_small_a.mesh"
+					               _materialPath="game/starskirmish/materials/kenney_space.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="23" name="Cc0.machine_generator">
+			<GameObject _schemaVersion="0" _name="Cc0.machine_generator" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="2,0,-48"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/starskirmish/models/machine_generator.mesh"
+					               _materialPath="game/starskirmish/materials/kenney_space.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="24" name="Cc0.machine_wireless">
+			<GameObject _schemaVersion="0" _name="Cc0.machine_wireless" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="6,0,-48"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/starskirmish/models/machine_wireless.mesh"
+					               _materialPath="game/starskirmish/materials/kenney_space.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="25" name="Cc0.platform_large">
+			<GameObject _schemaVersion="0" _name="Cc0.platform_large" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="10,0,-48"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/starskirmish/models/platform_large.mesh"
+					               _materialPath="game/starskirmish/materials/kenney_space.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="26" name="Cc0.rock_crystals">
+			<GameObject _schemaVersion="0" _name="Cc0.rock_crystals" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="14,0,-48"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/starskirmish/models/rock_crystals.mesh"
+					               _materialPath="game/starskirmish/materials/kenney_space.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="27" name="Cc0.structure">
+			<GameObject _schemaVersion="0" _name="Cc0.structure" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="18,0,-48"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/starskirmish/models/structure.mesh"
+					               _materialPath="game/starskirmish/materials/kenney_space.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="28" name="Cc0.turret_double">
+			<GameObject _schemaVersion="0" _name="Cc0.turret_double" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="22,0,-48"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/starskirmish/models/turret_double.mesh"
+					               _materialPath="game/starskirmish/materials/kenney_space.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="29" name="Cc0.turret_single">
+			<GameObject _schemaVersion="0" _name="Cc0.turret_single" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="26,0,-48"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/starskirmish/models/turret_single.mesh"
+					               _materialPath="game/starskirmish/materials/kenney_space.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
 	</entities>
 </Scene>

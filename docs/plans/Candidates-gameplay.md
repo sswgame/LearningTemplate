@@ -1,9 +1,9 @@
 # 게임플레이 후보
 
-> 상태: 후보 · 선행: 없음 · 영역: gameplay · 옛번호: D4-2,D4-4,D4-6,D4-7,D4-9,D4-10,D4-12,D4-14,D4-15,D4-16,D4-17,G-4,G-6,G-7 · 진행: 해당없음
+> 상태: 후보 · 선행: 없음 · 영역: gameplay · 옛번호: D4-2,D4-4,D4-6,D4-7,D4-9,D4-10,D4-14,D4-16,G-4,G-6,G-7 · 진행: 해당없음
 
 GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션 영역의 착수 전 후보 목록입니다. 착수하면 그 절을 계획 문서로 옮기고 여기서 지웁니다.
-이미 계획 문서가 있는 일의 남은 것은 그 문서에 있습니다: [PairedAnimation](PairedAnimation.md) · [EditorCharacterEditor](EditorCharacterEditor.md) · [MotionMatching](MotionMatching.md) · [CharacterAppearanceIntegration](CharacterAppearanceIntegration.md) · [AbilitySystemExtensions](AbilitySystemExtensions.md) · [IntentNetworkWiring](IntentNetworkWiring.md) · [MovingGroundFollowUps](MovingGroundFollowUps.md).
+이미 계획 문서가 있는 일의 남은 것은 그 문서에 있습니다: [PairedAnimation](PairedAnimation.md) · [EditorCharacterEditor](EditorCharacterEditor.md) · [MotionMatching](MotionMatching.md) · [CharacterAppearanceIntegration](CharacterAppearanceIntegration.md) · [AbilitySystemExtensions](AbilitySystemExtensions.md) · [IntentNetworkWiring](IntentNetworkWiring.md) · [MovingGroundFollowUps](MovingGroundFollowUps.md) · [InteractionHighlightAndMontage](InteractionHighlightAndMontage.md) · [WildWestHorseMount](WildWestHorseMount.md) · [GameSceneCc0Meshes](GameSceneCc0Meshes.md).
 
 ## 기능
 
@@ -84,33 +84,12 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션 영역의 
 - 큼(L): 제약 · 파티클/VFX · 에셋 레지스트리 · DDC · 증분 쿠킹 · 월드 편집 도구 · 전술 AI · 볼류메트릭 안개/빛/구름 · 캐릭터 셰이딩 · 모션 캡처 공정 · 대규모 좌표 · PCG 저작 그래프 · GI/반사 프로브 · 플랫폼 서비스 · 패치/DLC · 모드/UGC.
 - 아주 큼(XL): 비주얼 스크립팅 · 월드 파티션/스트리밍/HLOD · 음성 채팅(온라인 구성은 옛 D7-5).
 
-### InteractionHighlightAndMontage
-제목: 상호작용 강조 패스와 몽타주 실행 확인
-옛번호: D4-12
-왜 필요한가: 상호작용 · 기믹(`GameFramework/Base/Gameplay/Interaction` · `Gimmick` · `Spline` README)의 남은 두 조각이다.
-남은 것:
-- 렌더러: `InteractableComponent::getHighlightRequest`(Outline · Sense)를 읽는 외곽선 · 감각 모드 패스.
-- 실행 확인: 상호작용 단계 몽타주가 애니메이터를 실제로 부르는지(그래프 에셋이 있는 씬). 3D 기믹 변형의 겹침은 `GimmickGenreTest.Gimmick3DTriggerVariantsReceiveOverlapsInA3DScene` 이 본다.
-
 ### PhotoModePauseUpdate
 제목: 포토 모드 갱신을 씬 틱 밖으로
 옛번호: D4-14
 왜 필요한가: 에디터 Simulate 중 Pause 는 씬 틱이 멈춰 포토 모드(`Source/GameFramework/Base/Actor/Camera/PhotoModeCamera` · `CameraDirectorComponent`)가 갱신되지 않는다.
 착수 조건 / 남은 것: 에디터 쪽 요구가 생기면. 2026-10-22 확인: Play 중 Pause 는 씬 틱이 멈추지 않는다(`EditorModuleHost::queryTickScene` — 일시정지이면서 플레이 중이면 씬을 돌린다), 그래서 포토 모드(실제 경과 `GameTimeScale::getUnscaledDeltaTime`)는 이미 돈다. 멈추는 것은 Simulate + Pause 뿐이고 Simulate 에는 게임 모듈 · 게임 카메라가 없어 고칠 대상이 없다.
 설계 메모: 포토 모드를 켤 때 롤은 이어받고 기울이기 입력을 둔다(`PhotoModeCamera.h` 에 이미 있다). 조작은 `EngineDefaultAssets::_photoModeInputMap` 에서 읽어 게임 모듈에 읽기 전용으로 보인다(`CameraDirectorComponent.h` 에 이미 있다).
-
-### WildWestHorseMount
-제목: WildWest 승마의 말 모델
-옛번호: D4-15
-왜 필요한가: 말 모델이 저장소에 없어 말과 기수가 큐브 · 캡슐 자리 표시다(`Source/Games/WildWest`, 2026-10-16).
-남은 것: 네발 말 glTF(걸음새 클립 넷: 걷기 · 속보 · 구보 · 질주, 안장 소켓)를 `Resource/game/wildwest/models_raw/` 에 들이고 `MountMovementComponent` 의 `_gaitParameter` · 좌석 `_socketName` 을 잇는다.
-함정: KayKit · Kenney 에 말이 없다.
-
-### GameSceneCc0Meshes
-제목: 게임별 씬이 새로 들인 CC0 메시를 부르게 한다
-옛번호: D4-17
-왜 필요한가: 2026-10-17 `res3` 가 여섯 게임에 CC0 모델 팩(KayKit Dungeon · Space Base, Kenney Nature · Fantasy Town)의 원본을 배치했지만 씬 · 프리팹 · 코드는 아직 자리 표시 큐브를 쓴다.
-남은 것: 게임마다 씬이 새 메시를 부르게 바꿔 에셋 검증 `orphans` 경고를 없앤다. 배치 목록은 `ModelImportConfig.json` 과 게임별 `credits.md`.
 
 ## 조건부
 

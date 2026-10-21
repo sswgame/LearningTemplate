@@ -1,0 +1,86 @@
+{
+  "_comment": "게임 씬에 CC0 모델을 놓는 데이터 — Scripts/dev/MakeCc0SceneProps.py 가 읽는다. replace 는 이름 접두어의 자리 표시 큐브를 메시로 바꾸고, showcases 는 남은 메시를 게임 영역 밖 줄에 놓는다. 크기 · 색은 화면 확인 전 추정이다(계획 GameSceneCc0Meshes).",
+  "games": [
+    {
+      "game": "wildwest",
+      "scene": "game/wildwest/maps/prairie.scene.xml",
+      "material": "game/wildwest/materials/wood.material",
+      "replace": [
+        { "entityPrefix": "Cactus_", "meshes": ["cactus_tall.mesh", "cactus_short.mesh"], "scale": [1, 1, 1], "material": "game/wildwest/materials/cactus.material" },
+        { "entityPrefix": "Rock_", "meshes": ["rock_large_a.mesh", "rock_large_b.mesh", "rock_small_a.mesh", "rock_tall_a.mesh"], "scale": [1, 1, 1], "material": "game/wildwest/materials/rock.material" },
+        { "entityPrefix": "Fence_", "meshes": ["fence_simple.mesh", "fence_planks.mesh", "fence_corner.mesh", "fence_gate.mesh"], "scale": [1, 1, 1], "material": "game/wildwest/materials/wood.material" }
+      ]
+    },
+    {
+      "game": "shooter3d",
+      "scene": "game/shooter3d/maps/arena.scene.xml",
+      "material": "game/shooter3d/materials/kaykit_dungeon.material",
+      "showcases": [
+        {
+          "origin": [-27, 0, -30], "step": [3, 0, 0],
+          "meshes": [
+            "kaykit_dungeon/barrel_large.mesh", "kaykit_dungeon/barrel_small.mesh", "kaykit_dungeon/barrier.mesh", "kaykit_dungeon/barrier_column.mesh",
+            "kaykit_dungeon/barrier_corner.mesh", "kaykit_dungeon/barrier_half.mesh", "kaykit_dungeon/box_large.mesh", "kaykit_dungeon/box_small.mesh",
+            "kaykit_dungeon/column.mesh", "kaykit_dungeon/crates_stacked.mesh", "kaykit_dungeon/floor_tile_large.mesh", "kaykit_dungeon/floor_tile_small.mesh",
+            "kaykit_dungeon/keg.mesh", "kaykit_dungeon/pillar.mesh", "kaykit_dungeon/wall.mesh", "kaykit_dungeon/wall_broken.mesh",
+            "kaykit_dungeon/wall_corner.mesh", "kaykit_dungeon/wall_doorway.mesh", "kaykit_dungeon/wall_half.mesh"
+          ]
+        }
+      ]
+    },
+    {
+      "game": "starskirmish",
+      "scene": "game/starskirmish/maps/skirmish.scene.xml",
+      "material": "game/starskirmish/materials/kaykit_space.material",
+      "showcases": [
+        {
+          "origin": [-24, 0, -40], "step": [4, 0, 0],
+          "meshes": [
+            "kaykit_space/rock_a.mesh", "kaykit_space/rock_b.mesh", "kaykit_space/rocks_a.mesh", "kaykit_space/rocks_b.mesh", "kaykit_space/terrain_low.mesh",
+            "kaykit_space/terrain_slope.mesh", "kaykit_space/terrain_slope_inner_corner.mesh", "kaykit_space/terrain_slope_outer_corner.mesh", "kaykit_space/terrain_tall.mesh"
+          ]
+        },
+        {
+          "origin": [-30, 0, -48], "step": [4, 0, 0], "material": "game/starskirmish/materials/kenney_space.material",
+          "meshes": [
+            "craft_cargo_a.mesh", "craft_racer.mesh", "craft_speeder_a.mesh", "craft_speeder_b.mesh", "crater.mesh", "hangar_large_a.mesh", "hangar_round_a.mesh",
+            "hangar_small_a.mesh", "machine_generator.mesh", "machine_wireless.mesh", "platform_large.mesh", "rock_crystals.mesh", "structure.mesh",
+            "turret_double.mesh", "turret_single.mesh"
+          ]
+        }
+      ]
+    },
+    {
+      "game": "harvestvalley",
+      "scene": "game/harvestvalley/maps/farm.scene.xml",
+      "material": "game/harvestvalley/materials/town_palette.material",
+      "showcases": [
+        { "origin": [-20, 0, -20], "step": [3, 0, 0], "meshes": ["cart.mesh", "crops_dirt_row.mesh", "crops_dirt_single.mesh"] }
+      ]
+    },
+    {
+      "game": "meadowvillage",
+      "scene": "game/meadowvillage/maps/meadow.scene.xml",
+      "material": "game/meadowvillage/materials/nature.material",
+      "showcases": [
+        { "origin": [-20, 0, -20], "step": [3, 0, 0], "meshes": ["crops_dirt_single.mesh", "ground_grass.mesh", "ground_path_tile.mesh", "ground_river_tile.mesh"] }
+      ]
+    },
+    {
+      "game": "nilecity",
+      "scene": "game/nilecity/maps/nile.scene.xml",
+      "material": "game/nilecity/materials/nature.material",
+      "showcases": [
+        {
+          "origin": [-30, 0, -30], "step": [4, 0, 0], "material": "game/nilecity/materials/palette.material",
+          "meshes": ["building_type_a.mesh", "building_type_b.mesh", "building_type_c.mesh", "building_type_d.mesh", "building_type_e.mesh", "building_type_f.mesh", "building_type_g.mesh"]
+        },
+        {
+          "origin": [-30, 0, -36], "step": [3, 0, 0],
+          "meshes": ["crops_dirt_row.mesh", "crops_wheat_stage_a.mesh", "crops_wheat_stage_b.mesh", "fence_low.mesh", "planter.mesh", "statue_block.mesh",
+                     "statue_column.mesh", "statue_head.mesh", "statue_obelisk.mesh", "tree_large.mesh"]
+        }
+      ]
+    }
+  ]
+}

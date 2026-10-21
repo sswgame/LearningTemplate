@@ -1114,5 +1114,385 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
+		<entity id="56" name="Cc0.barrel_large">
+			<GameObject _schemaVersion="0" _name="Cc0.barrel_large" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-27,0,-30"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/shooter3d/models/kaykit_dungeon/barrel_large.mesh"
+					               _materialPath="game/shooter3d/materials/kaykit_dungeon.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="57" name="Cc0.barrel_small">
+			<GameObject _schemaVersion="0" _name="Cc0.barrel_small" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-24,0,-30"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/shooter3d/models/kaykit_dungeon/barrel_small.mesh"
+					               _materialPath="game/shooter3d/materials/kaykit_dungeon.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="58" name="Cc0.barrier">
+			<GameObject _schemaVersion="0" _name="Cc0.barrier" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-21,0,-30"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/shooter3d/models/kaykit_dungeon/barrier.mesh"
+					               _materialPath="game/shooter3d/materials/kaykit_dungeon.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="59" name="Cc0.barrier_column">
+			<GameObject _schemaVersion="0" _name="Cc0.barrier_column" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-18,0,-30"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/shooter3d/models/kaykit_dungeon/barrier_column.mesh"
+					               _materialPath="game/shooter3d/materials/kaykit_dungeon.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="60" name="Cc0.barrier_corner">
+			<GameObject _schemaVersion="0" _name="Cc0.barrier_corner" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-15,0,-30"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/shooter3d/models/kaykit_dungeon/barrier_corner.mesh"
+					               _materialPath="game/shooter3d/materials/kaykit_dungeon.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="61" name="Cc0.barrier_half">
+			<GameObject _schemaVersion="0" _name="Cc0.barrier_half" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-12,0,-30"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/shooter3d/models/kaykit_dungeon/barrier_half.mesh"
+					               _materialPath="game/shooter3d/materials/kaykit_dungeon.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="62" name="Cc0.box_large">
+			<GameObject _schemaVersion="0" _name="Cc0.box_large" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-9,0,-30"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/shooter3d/models/kaykit_dungeon/box_large.mesh"
+					               _materialPath="game/shooter3d/materials/kaykit_dungeon.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="63" name="Cc0.box_small">
+			<GameObject _schemaVersion="0" _name="Cc0.box_small" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-6,0,-30"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/shooter3d/models/kaykit_dungeon/box_small.mesh"
+					               _materialPath="game/shooter3d/materials/kaykit_dungeon.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="64" name="Cc0.column">
+			<GameObject _schemaVersion="0" _name="Cc0.column" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-3,0,-30"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/shooter3d/models/kaykit_dungeon/column.mesh"
+					               _materialPath="game/shooter3d/materials/kaykit_dungeon.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="65" name="Cc0.crates_stacked">
+			<GameObject _schemaVersion="0" _name="Cc0.crates_stacked" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0,-30"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/shooter3d/models/kaykit_dungeon/crates_stacked.mesh"
+					               _materialPath="game/shooter3d/materials/kaykit_dungeon.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="66" name="Cc0.floor_tile_large">
+			<GameObject _schemaVersion="0" _name="Cc0.floor_tile_large" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="3,0,-30"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/shooter3d/models/kaykit_dungeon/floor_tile_large.mesh"
+					               _materialPath="game/shooter3d/materials/kaykit_dungeon.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="67" name="Cc0.floor_tile_small">
+			<GameObject _schemaVersion="0" _name="Cc0.floor_tile_small" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="6,0,-30"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/shooter3d/models/kaykit_dungeon/floor_tile_small.mesh"
+					               _materialPath="game/shooter3d/materials/kaykit_dungeon.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="68" name="Cc0.keg">
+			<GameObject _schemaVersion="0" _name="Cc0.keg" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="9,0,-30"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/shooter3d/models/kaykit_dungeon/keg.mesh"
+					               _materialPath="game/shooter3d/materials/kaykit_dungeon.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="69" name="Cc0.pillar">
+			<GameObject _schemaVersion="0" _name="Cc0.pillar" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="12,0,-30"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/shooter3d/models/kaykit_dungeon/pillar.mesh"
+					               _materialPath="game/shooter3d/materials/kaykit_dungeon.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="70" name="Cc0.wall">
+			<GameObject _schemaVersion="0" _name="Cc0.wall" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="15,0,-30"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/shooter3d/models/kaykit_dungeon/wall.mesh"
+					               _materialPath="game/shooter3d/materials/kaykit_dungeon.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="71" name="Cc0.wall_broken">
+			<GameObject _schemaVersion="0" _name="Cc0.wall_broken" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="18,0,-30"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/shooter3d/models/kaykit_dungeon/wall_broken.mesh"
+					               _materialPath="game/shooter3d/materials/kaykit_dungeon.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="72" name="Cc0.wall_corner">
+			<GameObject _schemaVersion="0" _name="Cc0.wall_corner" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="21,0,-30"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/shooter3d/models/kaykit_dungeon/wall_corner.mesh"
+					               _materialPath="game/shooter3d/materials/kaykit_dungeon.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="73" name="Cc0.wall_doorway">
+			<GameObject _schemaVersion="0" _name="Cc0.wall_doorway" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="24,0,-30"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/shooter3d/models/kaykit_dungeon/wall_doorway.mesh"
+					               _materialPath="game/shooter3d/materials/kaykit_dungeon.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="74" name="Cc0.wall_half">
+			<GameObject _schemaVersion="0" _name="Cc0.wall_half" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="27,0,-30"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/shooter3d/models/kaykit_dungeon/wall_half.mesh"
+					               _materialPath="game/shooter3d/materials/kaykit_dungeon.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
 	</entities>
 </Scene>

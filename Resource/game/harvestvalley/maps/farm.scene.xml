@@ -797,5 +797,65 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
+		<entity id="36" name="Cc0.cart">
+			<GameObject _schemaVersion="0" _name="Cc0.cart" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-20,0,-20"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/harvestvalley/models/cart.mesh"
+					               _materialPath="game/harvestvalley/materials/town_palette.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="37" name="Cc0.crops_dirt_row">
+			<GameObject _schemaVersion="0" _name="Cc0.crops_dirt_row" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-17,0,-20"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/harvestvalley/models/crops_dirt_row.mesh"
+					               _materialPath="game/harvestvalley/materials/town_palette.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="38" name="Cc0.crops_dirt_single">
+			<GameObject _schemaVersion="0" _name="Cc0.crops_dirt_single" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-14,0,-20"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/harvestvalley/models/crops_dirt_single.mesh"
+					               _materialPath="game/harvestvalley/materials/town_palette.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
 	</entities>
 </Scene>
