@@ -38,10 +38,11 @@ namespace sw::editor
 namespace sw::editor
 {
     EditorNetProfilerSeries::EditorNetProfilerSeries( int32 capacity )
-        : _listSample{ static_cast<size_t>( MathUtil::max( capacity, 1 ) ) }
+        : _listSample{ static_cast<size_t>( capacity ) }
         , _nextIndex{ 0 }
         , _count{ 0 }
     {
+        SW_ASSERT( capacity > 0 ); // 용량 0 은 호출 오류다 — 1 로 올려 쓰지 않는다(링 버퍼가 나머지 연산으로 도므로 0 이면 못 돈다)
     }
 
     void EditorNetProfilerSeries::push( const EditorNetProfilerSample& sample )

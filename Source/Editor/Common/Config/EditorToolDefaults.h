@@ -38,6 +38,9 @@ namespace sw::editor
         DataPath _uiPreviewDocument; ///< UI 미리보기 패널이 처음 여는 UI 문서(리소스 경로)
 
         PROPERTY( Required )
+        DataPath _inputReplayFile; ///< 입력 맵 패널의 리플레이 탭이 처음 가리키는 .swreplay 파일(리소스 경로)
+
+        PROPERTY( Required )
         float4 _clearColor{}; ///< 씬 뷰 · 게임 뷰 렌더 타깃 클리어 색
 
         PROPERTY( Required )

@@ -185,7 +185,7 @@ namespace sw
                 {
                     constexpr uint32 kCount = sizeof( T ) / sizeof( float32 );
                     float32          arrValue[4]{};
-                    if ( source._bText == false || StringUtil::parseFloatList( source._text, kVectorSeparators, arrValue, kCount ) != kCount )
+                    if ( source._bText == false || StringUtil::parseExactFloats( source._text, kVectorSeparators, arrValue, kCount ) == false )
                         return false;
                     outValue = TaskValue{ T( arrValue ) };
                     return true;
@@ -193,7 +193,7 @@ namespace sw
                 else if constexpr ( std::is_same_v<T, quaternion> )
                 {
                     float32 arrValue[4]{};
-                    if ( source._bText == false || StringUtil::parseFloatList( source._text, kVectorSeparators, arrValue, 4 ) != 4 )
+                    if ( source._bText == false || StringUtil::parseExactFloats( source._text, kVectorSeparators, arrValue, 4 ) == false )
                         return false;
                     outValue = TaskValue{ quaternion( arrValue[0], arrValue[1], arrValue[2], arrValue[3] ) };
                     return true;

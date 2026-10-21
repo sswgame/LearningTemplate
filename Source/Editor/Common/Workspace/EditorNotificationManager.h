@@ -27,7 +27,7 @@ namespace sw::editor
         string           _title;
         string           _message;
         NotificationType _type{ NotificationType::Info };
-        float32          _durationSec{ 4.0f };
+        float32          _durationSec{ 4.0f }; ///< 0 보다 커야 한다(`push` 가 단언)
         float32          _elapsedSec{ 0.0f };
         float32          _progress{ -1.0f }; ///< 0.0 ~ 1.0 이면 프로그레스 바 표시, 음수면 미표시
     };
@@ -55,7 +55,8 @@ namespace sw::editor
 
         /**
          * @brief 알림을 하나 쌓습니다. **메인 스레드에서만 부릅니다.**
-         * @details 목록에는 락이 없습니다. `update` 와 그리기가 프레임마다 같은 벡터를 순회하고 지우므로, 다른 스레드에서 push
+         * @details @p durationSec 은 0 보다 커야 합니다(아니면 단언하며, 다른 값으로 바꿔 쓰지 않습니다).
+         * 목록에는 락이 없습니다. `update` 와 그리기가 프레임마다 같은 벡터를 순회하고 지우므로, 다른 스레드에서 push
          *          하면 순회 중 재할당으로 죽습니다. 백그라운드에서 알리고 싶으면 결과를 큐에 담아 메인 스레드에서 꺼내 push
          *          하십시오(`EditorBackgroundIO` 의 publish 방식. 파일 대화 상자는 `FileUtil::pumpFileDialogResults` 가 그렇게
          *          넘겨줍니다).
