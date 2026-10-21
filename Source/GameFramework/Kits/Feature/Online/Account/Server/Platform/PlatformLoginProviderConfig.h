@@ -24,8 +24,13 @@ namespace sw
     /** @brief 제공자 방식입니다. */
     enum class PlatformLoginProviderKind : uint8
     {
-        Oidc = 0,          ///< 티켓이 OIDC ID 토큰(JWT, 선택적으로 `|<nonce>`)이며 JWKS 로 서명을 확인한다
-        AccessTokenProfile ///< 티켓이 액세스 토큰이다. 프로필 API 를 `Authorization: Bearer` 로 호출해 주체 id 를 얻는다
+        Oidc = 0,           ///< 티켓이 OIDC ID 토큰(JWT, 선택적으로 `|<nonce>`)이며 JWKS 로 서명을 확인한다
+        AccessTokenProfile, ///< 티켓이 액세스 토큰이다. 프로필 API 를 `Authorization: Bearer` 로 호출해 주체 id 를 얻는다
+        /**
+         * @brief 티켓(16 진 글)과 서버 비밀 키를 확인 API 의 쿼리 인자로 보내 주체 id 를 얻는다(`TicketQueryLoginProvider`).
+         * @details 세션 티켓을 웹 API 로 확인하는 제공자(예: 게임 플랫폼의 사용자 인증 티켓)를 데이터로 정의한다 — 주소 · 인자 이름 · 결과 경로가 설정이다.
+         */
+        TicketQuery
     };
 } // namespace sw
 
@@ -34,14 +39,19 @@ namespace sw
     /** @brief 제공자 하나의 설정입니다. 시간은 밀리초입니다. */
     struct PlatformLoginProviderConfig
     {
-        vector<string>            _listClientID{};       ///< Oidc 에서 `aud` 로 받아들이는 client id 이다. 플랫폼마다 다를 수 있다
-        string                    _name{};               ///< `[a-z0-9_]` 형식이며 16자 이하이다. 저장 키에 들어간다
-        string                    _issuer{};             ///< Oidc 에서 `iss` 와 같아야 한다
-        string                    _jwksURL{};            ///< Oidc
-        string                    _profileURL{};         ///< AccessTokenProfile
-        string                    _subjectPath{ "sub" }; ///< 프로필 응답 JSON 이나 Oidc 토큰 본문에서 주체 id 를 찾는 점 경로이다(예: "response.id")
-        string                    _displayNamePath{};    ///< 표시 이름 힌트의 점 경로이다. 비우면 힌트가 없다
-        int64                     _clockSkewMs{ 60000 }; ///< exp 와 iat 의 허용 오차이다
+        vector<string>            _listClientID{};         ///< Oidc 에서 `aud` 로 받아들이는 client id 이다. 플랫폼마다 다를 수 있다
+        string                    _name{};                 ///< `[a-z0-9_]` 형식이며 16자 이하이다. 저장 키에 들어간다
+        string                    _issuer{};               ///< Oidc 에서 `iss` 와 같아야 한다
+        string                    _jwksURL{};              ///< Oidc
+        string                    _profileURL{};           ///< AccessTokenProfile
+        string                    _subjectPath{ "sub" };   ///< 프로필 응답 JSON 이나 Oidc 토큰 본문에서 주체 id 를 찾는 점 경로이다(예: "response.id")
+        string                    _displayNamePath{};      ///< 표시 이름 힌트의 점 경로이다. 비우면 힌트가 없다
+        string                    _ticketParam{};          ///< TicketQuery — 티켓을 싣는 쿼리 인자 이름
+        string                    _keyParam{};             ///< TicketQuery — 서버 비밀 키를 싣는 쿼리 인자 이름
+        string                    _keySecretEnvironment{}; ///< TicketQuery — 서버 비밀 키를 담은 환경 변수 이름(키는 설정 파일에 쓰지 않는다)
+        string                    _resultPath{};           ///< TicketQuery — 확인 결과 글의 점 경로(예: "response.params.result")
+        string                    _resultValue{};          ///< TicketQuery — 성공일 때 그 경로의 글(예: "OK")
+        int64                     _clockSkewMs{ 60000 };   ///< exp 와 iat 의 허용 오차이다
         int64                     _jwksRefreshMs{ 3600000 };
         int64                     _minRefetchMs{ 30000 }; ///< 모르는 kid 때문에 JWKS 를 다시 받는 최소 간격이다. 키 회전에 대응하면서 요청이 몰리는 것을 막는다
         int64                     _requestTimeoutMs{ 10000 };
@@ -58,7 +68,8 @@ namespace sw
         /** @brief 설정으로 공통 구현을 만듭니다. @p pHTTPClient 는 빌려 쓰며 이 제공자만 응답을 회수합니다. 응답을 다른 쪽과 나누지 않습니다. 설정이 틀리면 nullptr 을 반환합니다. */
         static unique_ptr<IPlatformLoginProvider> create( const PlatformLoginProviderConfig& settings, INetSecurityProvider* pProvider, HTTPClient* pHTTPClient );
         /**
-         * @brief `{"providers":[{"name","kind":"oidc|profile","issuer","jwksUrl","clientIDs":[…],"requireNonce","profileUrl","subjectPath","displayNamePath"}]}` 를 읽습니다.
+         * @brief `{"providers":[{"name","kind":"oidc|profile|ticketQuery","issuer","jwksUrl","clientIDs":[…],"requireNonce","profileUrl","subjectPath","displayNamePath",
+         *        "ticketParam","keyParam","keySecretEnvironment","resultPath","resultValue"}]}` 를 읽습니다.
          * @details 모르는 키, 빠진 필수 키, 규칙에 맞지 않는 이름은 오류(@p outError)로 처리한다. 철자가 틀린 설정이 조용히 기본값이 되지 않게 하려는 것이다.
          */
         [[nodiscard]] static bool readSettings( string_view jsonText, vector<PlatformLoginProviderConfig>& outListSettings, string& outError );
