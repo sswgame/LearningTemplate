@@ -7,6 +7,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Network/Transport/NetTransport.h"
+#include "Core/Network/Transport/PlatformSocketUtil.h"
 
 namespace sw
 {
@@ -19,8 +20,11 @@ namespace sw
         UDPNetTransport( const UDPNetTransport& )            = delete;
         UDPNetTransport& operator=( const UDPNetTransport& ) = delete;
 
-        /** @brief 포트를 엽니다(0 = 아무 포트 — 클라이언트). @p bLoopbackOnly 가 true 이면 이 기계(127.0.0.1)의 상대만 받는다 — 테스트 · 개발 실행용. */
-        [[nodiscard]] bool open( uint16 port, bool bLoopbackOnly );
+        /**
+         * @brief 포트를 엽니다(0 = 아무 포트 — 클라이언트). @p bLoopbackOnly 가 true 이면 이 기계(127.0.0.1)의 상대만 받는다 — 테스트 · 개발 실행용.
+         * @param sharing 포트 샤딩의 한 포트 판(`UDPPortSharing::ReusePort`, 리눅스만). 기본은 배타 소켓.
+         */
+        [[nodiscard]] bool open( uint16 port, bool bLoopbackOnly, UDPPortSharing sharing = UDPPortSharing::Exclusive );
         void               close();
         bool               isOpen() const;
 

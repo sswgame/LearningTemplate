@@ -99,7 +99,7 @@ namespace sw
 
         /**
          * @brief 점검 창과 공지의 저장소 레코드를 읽고 씁니다. 둘 다 영속 레코드이므로 자기 기술형(A)이며 레코드 버전을 머리에 둡니다.
-         * @details 다른 버전이거나 모르는 필드가 있거나 깨졌으면 손상으로 보고 오류 로그를 남기며 false 입니다(`ServiceRecordUtil::readDurable`).
+         * @details 이 빌드가 모르는 필드는 레코드의 `_unknownFields` 에 담고(다시 쓸 때 그대로 싣는다), 다른 버전이거나 아는 필드를 읽지 못했거나 깨졌으면 손상으로 보고 오류 로그를 남기며 false 입니다(`ServiceRecordUtil::readDurable`).
          *          공지는 선언된 범위도 확인합니다. 점검 창은 고정 배치형 코덱이 없으므로 서버가 읽은 값을 쓰기와 같은 규칙으로 다시 확인합니다.
          */
         [[nodiscard]] static bool encodeMaintenance( const MaintenanceWindow& window, vector<uint8>& outBytes );

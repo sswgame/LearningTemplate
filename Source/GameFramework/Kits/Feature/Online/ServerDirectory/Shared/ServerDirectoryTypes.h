@@ -16,6 +16,7 @@
 
 #include "GameFramework/Base/Online/Directory/ServerRecord.h"
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
+#include "GameFramework/Base/Online/Store/ServiceRecordUnknownFields.h"
 
 namespace sw
 {
@@ -92,6 +93,8 @@ namespace sw
         bool allowsAccount( AccountID accountID ) const { return VectorUtil::contains( _listAllowedAccount, accountID ); }
         /** @brief 클라이언트에 보이는 부분입니다. 허용 목록은 빠집니다. */
         MaintenanceView makeView() const { return MaintenanceView{ _scope, _messageKey, _startMs, _endMs }; }
+        /// 이 빌드가 모르는 칸(배포 중 새 빌드가 더한 칸)이다. PROPERTY 가 아니다 — 영속 읽기가 담고 쓰기가 그대로 싣는다(`ServiceRecordUtil`).
+        ServiceRecordUnknownFields _unknownFields{};
     };
 } // namespace sw
 
@@ -116,6 +119,8 @@ namespace sw
         uint8 _bLiteralText{ SW_FALSE };
 
         bool isActive( int64 nowMs ) const { return _startMs <= nowMs && ( _endMs == 0 || nowMs < _endMs ); }
+        /// 이 빌드가 모르는 칸(배포 중 새 빌드가 더한 칸)이다. PROPERTY 가 아니다 — 영속 읽기가 담고 쓰기가 그대로 싣는다(`ServiceRecordUtil`).
+        ServiceRecordUnknownFields _unknownFields{};
     };
 } // namespace sw
 

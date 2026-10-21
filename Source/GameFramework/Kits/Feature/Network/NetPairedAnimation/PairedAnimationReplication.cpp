@@ -136,7 +136,7 @@ namespace sw
     {
     }
 
-    void PairedAnimationReplicationServer::initialize( NetHost* pHost, GameObjectManager* pManager )
+    void PairedAnimationReplicationServer::initialize( INetPeers* pHost, GameObjectManager* pManager )
     {
         _pHost    = pHost;
         _pManager = pManager;

@@ -17,6 +17,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
+#include "GameFramework/Base/Online/Store/ServiceRecordUnknownFields.h"
 #include "GameFramework/Base/Online/Store/ServiceStore.h"
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -84,6 +85,8 @@ namespace sw
         int64 _resolvedMs{ 0 };
         PROPERTY()
         ServiceReportStatus _status{ ServiceReportStatus::Open };
+        /// 이 빌드가 모르는 칸(배포 중 새 빌드가 더한 칸)이다. PROPERTY 가 아니다 — 영속 읽기가 담고 쓰기가 그대로 싣는다(`ServiceRecordUtil`).
+        ServiceRecordUnknownFields _unknownFields{};
     };
 } // namespace sw
 

@@ -15,6 +15,7 @@
 
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Base/Online/Service/OnlineProtocolRegistry.h"
+#include "GameFramework/Base/Online/Store/ServiceRecordUnknownFields.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Shared/TradeTypes.h"
 
@@ -171,6 +172,8 @@ namespace sw
         TradeSnapshot _snapshot{};
         PROPERTY()
         uint64 _ownerServerID{ 0 };
+        /// 이 빌드가 모르는 칸(배포 중 새 빌드가 더한 칸)이다. PROPERTY 가 아니다 — 영속 읽기가 담고 쓰기가 그대로 싣는다(`ServiceRecordUtil`).
+        ServiceRecordUnknownFields _unknownFields{};
     };
 } // namespace sw
 
@@ -188,7 +191,7 @@ namespace sw
 
         /**
          * @brief 거래 레코드를 읽고 씁니다. 영속 레코드이므로 자기 기술형(A)이며 레코드 버전을 머리에 둡니다.
-         * @details 다른 버전이거나 모르는 필드가 있거나 선언된 범위를 벗어나면 손상으로 보고 오류 로그를 남기며 false 입니다(`ServiceRecordUtil::readDurable`).
+         * @details 이 빌드가 모르는 필드는 레코드의 `_unknownFields` 에 담고(다시 쓸 때 그대로 싣는다), 다른 버전이거나 아는 필드를 읽지 못했거나 선언된 범위를 벗어나면 손상으로 보고 오류 로그를 남기며 false 입니다(`ServiceRecordUtil::readDurable`).
          *          필드를 더하면 옛 레코드의 그 필드는 기본값으로 채워집니다. 필드를 빼거나 뜻을 바꾸면 버전을 올리고 데이터를 다시 씁니다.
          */
         [[nodiscard]] static bool encodeSession( const TradeSessionRecord& record, vector<uint8>& outBytes );

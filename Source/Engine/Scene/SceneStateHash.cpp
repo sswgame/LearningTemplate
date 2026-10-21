@@ -5,10 +5,14 @@
 #include "Core/Common/BitUtil.h"
 #include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
 
 #include <algorithm>
 #include <charconv>
@@ -35,6 +39,15 @@ namespace sw
         };
     } // namespace
 
+    /**
+     * @brief `-gv_stateHashHistory=N`: 틱마다 씬 상태 해시를 남기고 최근 N 틱을 보관합니다(0=끄기). 개발 명령 `state.hashes` 로 읽습니다.
+     * @details 전용 서버는 자기 틱으로, 클라이언트 App 은 서버가 알린 틱으로 남긴다(`StateHashHistory::recordActiveScene`). 에디터 멀티 프로세스 재생이 둘 다에 준다.
+     */
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_stateHashHistory, 0, "틱별 씬 상태 해시 이력 길이 (0=끄기)" );
+} // namespace sw
+
+namespace sw
+{
     uint64 SceneStateHash::compute( const GameObjectManager& manager )
     {
         vector<SceneStateHashInternal::Entry> listEntry;
@@ -78,6 +91,25 @@ namespace sw
     {
         static StateHashHistory s_history;
         return s_history;
+    }
+
+    void StateHashHistory::startFromLaunch()
+    {
+        if ( gv_stateHashHistory > 0 )
+            setCapacity( static_cast<uint32>( gv_stateHashHistory ) );
+    }
+
+    void StateHashHistory::recordActiveScene( uint64 tick )
+    {
+        if ( isRecording() == false || engine::areEngineServicesBound() == false )
+            return;
+        StateHashSample latest;
+        if ( tryGetLatest( latest ) && latest._tick == tick )
+            return;
+        const Scene* pScene = engine::getSubsystem<SceneManager>().getActiveScene();
+        if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
+            return;
+        record( tick, SceneStateHash::compute( *pScene->getObjectManager() ) );
     }
 
     void StateHashHistory::setCapacity( uint32 capacity )
@@ -140,6 +172,60 @@ namespace sw
             }
             outText += '\n';
         }
+    }
+
+    void StateHashHistory::writeReportLine( const vector<StateHashSample>& listSample, string& outText )
+    {
+        outText = kReportLinePrefix;
+        outText += ' ';
+        if ( listSample.empty() )
+        {
+            outText += '-';
+            return;
+        }
+        string block;
+        writeReport( listSample, block ); // `<tick> <hash>\n` 줄들 — 한 줄 판은 공백을 ':' 로, 줄 끝을 ',' 로 바꾼다
+        for ( utf8& ch : block )
+        {
+            if ( ch == ' ' )
+                ch = ':';
+            else if ( ch == '\n' )
+                ch = ',';
+        }
+        block.pop_back(); // 마지막 ','
+        outText += block;
+    }
+
+    bool StateHashHistory::tryParseReportLine( string_view line, vector<StateHashSample>& outListSample )
+    {
+        const size_t prefixAt = line.find( kReportLinePrefix );
+        if ( prefixAt == string_view::npos )
+            return false;
+        outListSample.clear();
+        string_view body = StringUtil::trim( line.substr( prefixAt + string_view( kReportLinePrefix ).size() ) );
+        body             = body.substr( 0, body.find_first_of( " \t" ) ); // 로그 꼬리는 읽지 않는다
+        if ( body == "-" )
+            return true;
+        size_t itemStart = 0;
+        while ( itemStart <= body.size() )
+        {
+            size_t itemEnd = body.find( ',', itemStart );
+            if ( itemEnd == string_view::npos )
+                itemEnd = body.size();
+            const string_view item  = body.substr( itemStart, itemEnd - itemStart );
+            const size_t      colon = item.find( ':' );
+            StateHashSample   sample;
+            const bool        bHasTick = colon != string_view::npos && StringUtil::parseUint64( item.substr( 0, colon ), sample._tick );
+            const bool        bHasHash = bHasTick && StringUtil::parseUint64( item.substr( colon + 1 ), sample._hash, 16 );
+            if ( bHasHash == false )
+            {
+                outListSample.clear();
+                return false;
+            }
+            outListSample.push_back( sample );
+            itemStart = itemEnd + 1;
+        }
+        return true;
     }
 
     bool StateHashHistory::parseReport( string_view text, vector<StateHashSample>& outListSample )

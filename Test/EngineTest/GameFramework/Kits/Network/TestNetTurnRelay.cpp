@@ -63,7 +63,7 @@ namespace
                 world.getRouter().registerHandler( pServer );
             if ( pClient != nullptr )
             {
-                pClient->initialize( &world.getHost() );
+                pClient->initialize( &world.getPeers() );
                 world.getRouter().registerHandler( pClient );
             }
         }
@@ -97,7 +97,7 @@ namespace
         {
             if ( world.isServer() )
             {
-                SW_EXPECT_TRUE( _server.initialize( &world.getHost(), TurnRelayConfig{ _seatCount }, _pPolicy, _tokenSeed ) );
+                SW_EXPECT_TRUE( _server.initialize( &world.getPeers(), TurnRelayConfig{ _seatCount }, _pPolicy, _tokenSeed ) );
                 return make_unique<TurnRelayNetSimSession>( world, &_server, nullptr );
             }
             return make_unique<TurnRelayNetSimSession>( world, nullptr, _pNextClient );
@@ -359,7 +359,7 @@ SW_TEST_CASE( NetTurnRelayTest, LiveSeatCannotBeReclaimed )
     body.writeVarInt( -1 );
     body.writeUint32( clientA.getToken() );
     body.writeVarUint( 0 );
-    SW_ASSERT_TRUE( writer.send( harness.findClient( intruderWorld )->getHost(), 0, NetChannelType::ReliableOrdered ) );
+    SW_ASSERT_TRUE( writer.send( harness.findClient( intruderWorld )->getPeers(), 0, NetChannelType::ReliableOrdered ) );
     harness.stepTicks( 10 );
     SW_EXPECT_TRUE( hasDeniedEvent( intruder, TurnRejectReason::SeatInUse ) );
     SW_EXPECT_EQUAL( -1, intruder.getSeat() );

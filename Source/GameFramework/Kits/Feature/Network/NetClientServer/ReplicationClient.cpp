@@ -24,7 +24,7 @@ namespace sw
     {
     }
 
-    bool ReplicationClient::initialize( NetHost* pHost, const ReplicationClientConfig& settings )
+    bool ReplicationClient::initialize( INetPeers* pHost, const ReplicationClientConfig& settings )
     {
         // 실패하면 호스트 없는 클라이언트로 남기고 지난 설정을 그대로 둔다. 값을 범위 안으로 맞춰 돌지 않는다.
         _pHost                  = nullptr;

@@ -11,6 +11,7 @@
 | `maps/toonshowcase.scene.xml` | 셀 셰이딩과 외곽선 | 아래 |
 | `maps/twod.scene.xml` | 2D 기능 전체 | 아래 |
 | `maps/destructionshowcase.scene.xml` | 파괴 | Destruction |
+| `maps/destructionnet.scene.xml` | 파괴 복제 — 쇼케이스에 `DestructionNetSessionComponent` 오브젝트 하나를 더했다(서버 `-gv_netListenPort` · 클라이언트 `-gv_netConnectAddress`) | NetDestruction |
 | `maps/gimmickshowcase.scene.xml` | 발판, 횃불, 스프링 같은 기믹 | Gimmick |
 | `maps/spriteui.scene.xml` | 머리 위 HP 바 같은 월드 UI | GameFramework |
 | `maps/clothshowcase.scene.xml` | 천(`ClothComponent`) — 윗변 고정 커튼이 정적 구에 걸치고, 양 끝 고정 깃발이 처진다 | 아래 |

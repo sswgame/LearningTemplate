@@ -13,18 +13,18 @@ namespace sw
         : _mutex{}
         , _mapAccountToExpected{}
         , _newMatchBuffer{}
-        , _serverID{ 0 }
+        , _descriptor{}
     {
     }
 
-    void MatchServerAgent::initialize( uint64 serverID )
+    void MatchServerAgent::initialize( const ServerDescriptor& descriptor )
     {
-        _serverID = serverID;
+        _descriptor = descriptor;
     }
 
     string MatchServerAgent::getAssignTopic() const
     {
-        return MatchQueueService::makeAssignTopic( _serverID );
+        return MatchQueueService::makeAssignTopic( _descriptor._serverID );
     }
 
     bool MatchServerAgent::handleAssign( const ServerBusMessage& message, int64 nowMs )
@@ -47,7 +47,10 @@ namespace sw
     bool MatchServerAgent::requestBackfill( ServerBus& bus, const MatchBackfillRequest& request ) const
     {
         MatchBackfillRequest sent = request;
-        sent._serverID            = _serverID;
+        sent._serverID            = _descriptor._serverID;
+        sent._address             = _descriptor._address;
+        sent._port                = _descriptor._port;
+        sent._portCount           = _descriptor._portCount;
         return MatchQueueBus::kBackfillTopic.publish( bus, sent._modeID, sent );
     }
 

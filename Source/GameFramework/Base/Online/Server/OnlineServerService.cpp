@@ -86,6 +86,8 @@ namespace sw
         settings._pMetricRegistry = context._pMetricRegistry;
         settings._pHealthRegistry = context._pHealthRegistry;
         settings._gamePort        = static_cast<uint16>( serverConfig._gamePort );
+        // 연이은 포트 샤드면 배정이 계정마다 한 포트를 고른다. 한 포트를 나누면(`_bGamePortReuse`) 커널이 나누므로 알릴 포트는 하나다.
+        settings._gamePortCount = static_cast<uint8>( serverConfig._bGamePortReuse ? 1 : serverConfig._gamePortShardCount );
         if ( NetAddress::parse( serverConfig._listenAddress, static_cast<uint16>( serverConfig._servicePort ), settings._listenAddress ) == false )
         {
             outError = "server config _listenAddress '" + serverConfig._listenAddress + "' is not an IPv4 address";

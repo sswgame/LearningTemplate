@@ -120,7 +120,7 @@ namespace sw
         // 시점이 한 프레임에 크게 돌아도(마우스 휙 · 표적 바꾸기) 몸은 각속도 상한으로 따라간다.
         _bodyYaw   = _bYawReady == SW_TRUE ? OrientationUtil::turnTowardAngle( _bodyYaw, pPlayer->getLookYaw(), _turnRate * step ) : pPlayer->getLookYaw();
         _bYawReady = SW_TRUE;
-        pScene->setLocalPosition( pPlayer->getFeetPosition() );
+        pScene->setLocalPosition( pPlayer->getDisplayFeetPosition() );
         pScene->setLocalRotation( float3{ 0.0f, _bodyYaw, 0.0f } );
         if ( pAnimator == nullptr )
             return;

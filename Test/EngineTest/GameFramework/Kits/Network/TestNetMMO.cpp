@@ -49,7 +49,7 @@ namespace
             : _server{}
             , _pTable{ pTable }
         {
-            SW_EXPECT_TRUE( _server.initialize( &world.getHost(), pTable->_settings ) );
+            SW_EXPECT_TRUE( _server.initialize( &world.getPeers(), pTable->_settings ) );
             world.getRouter().registerHandler( &_server );
         }
 
@@ -114,7 +114,7 @@ namespace
         {
             (void)deltaTime;
             if ( _serverConnectionID >= 0 )
-                _view.sendAck( world.getHost(), _serverConnectionID );
+                _view.sendAck( world.getPeers(), _serverConnectionID );
         }
 
         void onTickBegin( NetSimWorld& world, float32 deltaTime ) override
@@ -487,9 +487,9 @@ SW_TEST_CASE( NetMMOTest, EntersShareOneReliableMessagePerTick )
     for ( int32 tick = 0; tick < 120 && hasMMOEntityCount( harness, &all ) == false; ++tick )
     {
         harness.stepTicks( 1 );
-        const NetConnection* pConnection = harness.getServer().getHost().findConnection( 0 );
-        if ( pConnection != nullptr )
-            maxPending = MathUtil::max( maxPending, pConnection->getPendingReliableCount() );
+        NetConnectionStats stats;
+        if ( harness.getServer().getPeers().getConnectionStats( 0, stats ) )
+            maxPending = MathUtil::max( maxPending, stats._pendingReliableCount );
     }
     SW_ASSERT_TRUE_MSG( hasMMOEntityCount( harness, &all ), "every neighbor enters" );
     SW_EXPECT_TRUE_MSG( maxPending <= 20, "the enters of one tick take the fragments of one message, not one window slot per entity" );

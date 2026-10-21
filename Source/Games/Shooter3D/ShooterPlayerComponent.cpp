@@ -395,13 +395,19 @@ namespace sw
 
     float3 ShooterPlayerComponent::getEyePosition() const
     {
-        return getFeetPosition() + float3{ 0.0f, _bodyEyeHeight > 0.0f ? _bodyEyeHeight : _eyeHeight, 0.0f };
+        return getDisplayFeetPosition() + float3{ 0.0f, _bodyEyeHeight > 0.0f ? _bodyEyeHeight : _eyeHeight, 0.0f };
     }
 
     float3 ShooterPlayerComponent::getFeetPosition() const
     {
         const ShooterBodyMovementComponent* pMovement = findMovement();
         return pMovement != nullptr ? pMovement->getFeetPosition() : _spawnPosition;
+    }
+
+    float3 ShooterPlayerComponent::getDisplayFeetPosition() const
+    {
+        const ShooterBodyMovementComponent* pMovement = findMovement();
+        return pMovement != nullptr ? pMovement->getDisplayFeetPosition() : _spawnPosition;
     }
 
     float3 ShooterPlayerComponent::getMoveVelocity() const

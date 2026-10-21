@@ -82,7 +82,7 @@ namespace sw
     {
     }
 
-    bool TurnRelayServer::initialize( NetHost* pHost, const TurnRelayConfig& settings, const ITurnPolicy* pPolicy, uint64 tokenSeed )
+    bool TurnRelayServer::initialize( INetPeers* pHost, const TurnRelayConfig& settings, const ITurnPolicy* pPolicy, uint64 tokenSeed )
     {
         // 실패하면 호스트 없는 중계기로 남긴다. 메시지와 `update` 가 아무것도 하지 않는다. 값을 범위 안으로 맞춰 돌지 않는다.
         _pHost                  = nullptr;
@@ -441,7 +441,7 @@ namespace sw
     {
     }
 
-    void TurnRelayClient::initialize( NetHost* pHost )
+    void TurnRelayClient::initialize( INetPeers* pHost )
     {
         _pHost = pHost;
     }

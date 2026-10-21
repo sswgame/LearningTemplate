@@ -1,6 +1,6 @@
 # 네트워크 후보
 
-> 상태: 후보 · 선행: 없음 · 영역: network · 옛번호: B-9, B-10, C-54, D7-1, D7-2, D7-5, D7-6, D7-7, D7-8, D7-9, F-3, G-2, G-8, G-15, G-16, H-3 · 진행: 해당없음
+> 상태: 후보 · 선행: 없음 · 영역: network · 옛번호: B-9, B-10, C-54, D7-1, D7-2, D7-5, D7-6, D7-9, G-2, G-8, G-15, G-16, H-3 · 진행: 해당없음
 
 이 문서는 네트워크 · 서버 · 온라인 서비스 영역에서 아직 착수하지 않은 후보의 목록입니다. 착수하면 그 절을 계획 문서로 옮기고 여기서 지웁니다. 서버 디버깅은 [ServerDebug](ServerDebug.md), 서버 버스 형식은 [ServerBusFormat](ServerBusFormat.md)에 있습니다.
 
@@ -19,7 +19,7 @@
 남은 것:
 - 리눅스 측정: Windows 측정은 [검증과 측정](../08_Verification.md) 2절 "UDP 소켓 계층" 에 있다(패킷당 약 6.5 us, 대부분 `recvfrom`/`sendto`). 그 표의 서버 스레드 %(14 · 54 %)는 다른 빌드가 CPU 를 20 ~ 46 % 쓰던 때 값이라 무효다. 패킷당 시간만 참고한다. 리눅스(WSL Release, `ulimit -n 8192` 뒤 같은 필터)와 함께 다른 빌드가 없을 때 Windows 를 다시 재서 나란히 놓는다.
 - 일괄 받기 · 보내기: 시스템 호출이 지배적이면 `INetTransport` 일괄 받기 · 보내기 하나의 계약 — 리눅스 `recvmmsg`/`sendmmsg`(+ GSO/GRO), Windows RIO(+ USO/URO, 없으면 `WSARecvMsg`).
-- 포트 샤딩: 스레드 하나가 차면 포트 샤딩(두 플랫폼 같은 계약 — 로그인 토큰이 포트를 준다, 리눅스는 `SO_REUSEPORT` 를 선택) + 샤드마다 `NetHost`. [ServerDebug](ServerDebug.md) S1 ⑤ 와 같은 일이다.
+- 포트 샤딩은 들어갔다(`GameNetSession` 샤드마다 `NetHost` · 스레드, 키트는 `NetHostShardSet`, 배정이 `ServerDescriptor::pickPort` 로 샤드 포트를 준다, 리눅스는 `SO_REUSEPORT` 한 포트도). 전후 측정은 아래 함정대로 남았다.
 함정: 일괄 받기와 샤딩 모두 `NetUDPBenchTest` 숫자로 전후를 측정한다.
 
 ### EpollAndRealStoreVerification
@@ -55,8 +55,7 @@
 왜 필요한가: `GF_NetSimulation` · `GF_NetDestruction` 의 파괴 복제는 가상 서버에서 확인했다. 실제 세션 위의 파괴 복제(`DestructionNetSessionComponent` · `DestructionNetSession`)와 해시 로그 비교(`Scripts/dev/CompareDestructionHashLogs.py`)는 들어갔지만 빌드 · 실행 확인 전이다.
 남은 것:
 - 사건 지연 측정: 파괴 사건은 "신뢰 · 순서 없음" 채널(N21b)이다. 250 ms · 손실 15 % 의 사건 지연 평균 · 최대 전/후를 `NetSimDestructionMatrixTest` 로그(`max event lag … mean …`)로 잰다(빌드 뒤). 남은 최대는 한 메시지가 거듭 잃는 몫이다. 덩어리 멈춤 확정(신뢰 자세)도 받는 쪽이 틱으로 끼우므로 옮길 수 있다 — 재고 나서.
-- 컴포넌트를 둘 씬: 쇼케이스 씬(`destructionshowcase.scene.xml`)은 키트 없는 Empty 의 것이고 여러 테스트 · 쿠커가 읽는다. 정함(2026-10-21): 쇼케이스는 그대로 두고 네트워크용 씬을 따로 둔다 —
-  에디터에서 쇼케이스를 열고(`scene.open`) 빈 오브젝트 하나에 `DestructionNetSessionComponent` 를 달아(`component.add`) `destructionnet.scene.xml` 로 저장한다(`scene.saveAs`). 손으로 XML 을 쓰지 않는다. 빌드 · 실행이 필요해 남았다.
+- 컴포넌트를 둘 씬: 들어갔다(2026-10-22) — `game/empty/maps/destructionnet.scene.xml` 은 쇼케이스 글을 그대로 옮기고 `DestructionNetSessionComponent` 오브젝트 하나를 에디터 저장과 같은 형식으로 더했다(테스트 `DestructionShowcaseTest.NetworkSceneAddsTheSessionComponentToTheShowcase`, 실행 전).
 - 두 로그 견주기: 서버 `Server -gv_firstScene=<씬> -gv_netListenPort=7777` ↔ 클라이언트 `App -gv_firstScene=<씬> -gv_netConnectAddress=127.0.0.1:7777`. 리눅스 서버 ↔ Windows 클라이언트는 CI 잡 몫이다(결정 기록 5-12).
 함정: 같은 입력의 해시가 구성을 넘어 같은 것은 `DestructionDamageTest.EventLogHashMatchesTheRecordedValueOnEveryBuild`(해시 다섯)가 지킨다. Windows Debug · Release · Shipping 같은 값을 확인했고, 리눅스 clang 에서 다르면 CI 잡이 진다.
 
@@ -75,36 +74,11 @@
 왜 필요한가: 버스 · 캐시 왕복을 루프백에서만 쟀다.
 남은 것: 실제 지연(루프백이 아닌 망)에서의 버스 · 캐시 왕복 측정.
 
-### NetChannelSchemaHashHandshake
-제목: 넷 채널 등록 API 로 스키마 해시를 핸드셰이크 버전에 섞기
-옛번호: D7-7
-왜 필요한가: 지금은 메시지마다 스트림 머리의 64 비트 해시가 실려, 배치가 다른 빌드의 바이트는 읽기가 `SchemaMismatch` 로 거절한다. Mech · Horror 스냅샷은 B 로 옮겼다(단계 4-a). 계획은 [리플렉션 형식](ReflectionFormats.md) 3.3 · 3.10 · 5절 "게임 넷 연결".
-착수 조건: 이 스냅샷을 채널에 싣는 게임이 생길 때. 지금은 호출부가 테스트뿐이라 범용 API 를 미리 두지 않았다.
-남은 것: 채널 객체에 `registerMessage<T>( kind )` 를 두고, 등록한 타입의 해시가 `NetHostConfig::_wireVersion` 에 섞이게 해 핸드셰이크가 `VersionMismatch` 로 먼저 거절하게 한다. 확인을 마친 채널 안에서만 본문만 쓰는 경로(3.10)를 만들어 메시지마다 싣는 해시 8 바이트를 뺀다.
-함정: 등록이 버전을 만들므로 섞는 일을 따로 부를 자리가 없어야 한다.
-
-### RollbackPrediction
-제목: 클라이언트 예측 · 롤백과 관심 영역 복제
-옛번호: D7-8
-왜 필요한가: 상태 동기화와 파괴 동기화는 있지만 입력 예측 · 서버 보정 · 롤백, 그리고 관심 영역(relevancy)으로 복제 대상을 거르는 층이 없다. 설계는 결정 기록 5-12 `D7-8` 행으로 정했다(서버 권위 + 내 폰만 재시뮬레이션 + 허용 오차 비교, 64인 이하 30 Hz, 첫 게임 Shooter3D). 선행 잠복 결함 셋(`NetOwnerState`, `PredictionReconcileResult`, `RollbackConfig` 범위 거절)은 고쳤다.
-남은 것:
-- `MMOReplicator` 의 관심 영역 격자를 Core 부품으로 빼 두 키트가 함께 쓴다.
-- Shooter3D 의 내 폰을 `ClientPrediction` + `findOwnerState` 로 예측한다.
-- 보정 오차를 부드럽게 녹이는 시각 보정(언리얼 smoothing).
-함정: 월드 전체 롤백은 `NetworkExtensionIdeas` 쪽이다. 규모 방향은 `UdpSocketLayerScaling` 이다.
-
 ### NetworkExtensionIdeas
 제목: 네트워크 확장 후보
 옛번호: D7-9
 왜 필요한가: 쓰는 게임이 생기면 설계한다.
-남은 것: 물리 객체 예측(`RollbackPrediction` 5단계), 음성 채팅, 치팅 방어 체계(서버 검증 규칙 목록 · 이상 탐지), 서버 오케스트레이션(매칭 뒤 인스턴스 할당 · 확장).
-
-### PersistentRecordUnknownFields
-제목: 영속 레코드의 모르는 필드 보관
-옛번호: F-3
-왜 필요한가: 영속 레코드(`ServiceRecordUtil::readDurable`)는 배포 중 옛 빌드가 새 빌드의 레코드를 읽으면 모르는 필드 때문에 거절한다(조용히 지우지 않고 요청 실패). 모르는 필드를 버리고 읽게 하면 옛 빌드가 고쳐 다시 쓸 때 새 빌드의 값이 지워진다.
-남은 것: 레코드가 orphan 바이트를 가지고 쓰기 때 그대로 다시 싣는 구조가 먼저다(언리얼 `FPropertyTag` 보관, protobuf unknown fields 보존과 같은 것).
-함정: 캐시 레코드(`readCache`)는 이미 서버 버스와 같은 혼합 빌드 읽기다([서버 버스 계획](ServerBusFormat.md) 4절).
+남은 것: 물리 객체 예측([RollbackPrediction](RollbackPrediction.md) 다음), 음성 채팅, 치팅 방어 체계(서버 검증 규칙 목록 · 이상 탐지), 서버 오케스트레이션(매칭 뒤 인스턴스 할당 · 확장).
 
 ## 조건부
 

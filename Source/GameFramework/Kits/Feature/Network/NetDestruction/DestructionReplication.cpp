@@ -151,7 +151,7 @@ namespace sw
     {
     }
 
-    void DestructionReplicationServer::initialize( NetHost* pHost, GameObjectManager* pManager, const DestructionReplicationConfig& settings )
+    void DestructionReplicationServer::initialize( INetPeers* pHost, GameObjectManager* pManager, const DestructionReplicationConfig& settings )
     {
         _pHost    = pHost;
         _pManager = pManager;
@@ -456,7 +456,7 @@ namespace sw
     {
     }
 
-    void DestructionReplicationClient::initialize( NetHost* pHost, GameObjectManager* pManager, const DestructionReplicationConfig& settings )
+    void DestructionReplicationClient::initialize( INetPeers* pHost, GameObjectManager* pManager, const DestructionReplicationConfig& settings )
     {
         _pHost    = pHost;
         _pManager = pManager;

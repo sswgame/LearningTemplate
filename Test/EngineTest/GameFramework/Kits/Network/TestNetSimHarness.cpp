@@ -65,7 +65,7 @@ namespace
                 const string name = string{ "Crate" } + sw::to_string( index );
                 _listCrate.push_back( spawnBox( manager, name.c_str(), position, float3{ 0.5f, 0.5f, 0.5f }, PhysicsBodyType::Dynamic ) );
             }
-            SW_EXPECT_TRUE( _server.initialize( &world.getHost(), ReplicationServerConfig{}, nullptr ) );
+            SW_EXPECT_TRUE( _server.initialize( &world.getPeers(), ReplicationServerConfig{}, nullptr ) );
             world.getRouter().registerHandler( &_server );
         }
 
@@ -115,7 +115,7 @@ namespace
             (void)spawnBox( world.getObjectManager(), "Floor", float3{ 0.0f, -0.5f, 0.0f }, float3{ 20.0f, 0.5f, 20.0f }, PhysicsBodyType::Static );
             ReplicationClientConfig settings;
             settings._tickInterval = kTickSeconds;
-            SW_EXPECT_TRUE( _client.initialize( &world.getHost(), settings ) );
+            SW_EXPECT_TRUE( _client.initialize( &world.getPeers(), settings ) );
             world.getRouter().registerHandler( &_client );
         }
 
@@ -251,7 +251,7 @@ namespace
         {
             if ( event._kind != NetHostEvent::Kind::Connected || _bStarted )
                 return;
-            NetHost& host = world.getHost();
+            INetPeers& host = world.getPeers();
             if ( world.isServer() && host.getConnectedCount() < _playerCount - 1 )
                 return;
             SW_EXPECT_TRUE( _session.initialize( &host, _playerCount, world.isServer() ? 0 : host.getClientIndex() + 1, LockstepConfig{ kLockstepDelay } ) );
@@ -459,7 +459,7 @@ SW_TEST_CASE( NetSimHarnessTest, LateJoinConvergesAndLeaveNotifiesServer )
         bSawRemoteDisconnect = bSawRemoteDisconnect || ( event._kind == NetHostEvent::Kind::Disconnected && event._reason == NetDisconnectReason::Remote );
     }
     SW_EXPECT_TRUE( bSawRemoteDisconnect );
-    SW_EXPECT_EQUAL( 2, harness.getServer().getHost().getConnectedCount() );
+    SW_EXPECT_EQUAL( 2, harness.getServer().getPeers().getConnectedCount() );
     // 남은 클라이언트는 계속 받는다.
     harness.stepTicks( 30 );
     SW_EXPECT_TRUE( computeProxyError( harness, secondClient ) < 0.01f );
@@ -511,13 +511,13 @@ SW_TEST_CASE( NetSimHarnessTest, SpoofedConnectRequestsDoNotFillTheServer )
         SW_ASSERT_TRUE( harness.addClient( spoofed ) > 0 );
     }
     harness.stepTicks( 30 );
-    SW_EXPECT_EQUAL( 0, harness.getServer().getHost().getConnectedCount() );
+    SW_EXPECT_EQUAL( 0, harness.getServer().getPeers().getConnectedCount() );
 
     const int32 realClient = harness.addClient( NetSimLinkConditions{} );
     harness.stepTicks( 30 );
     SW_ASSERT_NOT_NULL( harness.findClient( realClient ) );
     SW_EXPECT_TRUE( harness.findClient( realClient )->isConnected() );
-    SW_EXPECT_EQUAL( 1, harness.getServer().getHost().getConnectedCount() );
+    SW_EXPECT_EQUAL( 1, harness.getServer().getPeers().getConnectedCount() );
 }
 
 /**

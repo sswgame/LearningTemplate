@@ -168,6 +168,49 @@ namespace sw
 namespace sw
 {
     /**
+     * @class INetPeers
+     * @brief 키트 · 라우터가 연결에 보내고 연결을 묻는 창구입니다. 호스트 하나(`NetHost`)도, 포트 샤드 여럿을 묶은 것(`NetHostShardSet`)도 이 모양입니다.
+     * @details 키트는 호스트가 몇 개인지 모른다 — 연결 ID 만 다룬다. 샤드 묶음은 연결 ID 에 샤드 번호를 접어 넣으므로(`NetHostShardSet`) 같은 ID 가 두 샤드에서 겹치지 않는다.
+     *          스레드: 구현은 모든 함수를 어느 스레드에서나 부를 수 있게 한다(`NetHost` 의 잠금 약속과 같다). `drainInbound` 만 한 스레드(라우터를 pump 하는 게임 스레드)가 부른다.
+     */
+    class SW_API INetPeers
+    {
+    public:
+        INetPeers()          = default;
+        virtual ~INetPeers() = default;
+
+        INetPeers( const INetPeers& )            = delete;
+        INetPeers& operator=( const INetPeers& ) = delete;
+
+        [[nodiscard]] virtual bool sendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size ) = 0;
+        [[nodiscard]] bool         sendMessage( int32 connectionID, NetChannelType channel, const vector<uint8>& buffer )
+        {
+            return sendMessage( connectionID, channel, buffer.data(), static_cast<int32>( buffer.size() ) );
+        }
+        /** @brief 연결된 모두에게 보냅니다. @p exceptID 는 제외합니다(-1 이면 제외 없음). 반환값은 보낸 수입니다. */
+        virtual int32 broadcast( NetChannelType channel, const uint8* pData, int32 size, int32 exceptID = -1 ) = 0;
+        virtual void  disconnect( int32 connectionID )                                                         = 0;
+        /** @brief 쌓인 연결 사건과 받은 메시지를 모두 꺼냅니다(`NetHost::drainInbound` 와 같은 약속 — 사건이 메시지보다 앞에 온다). */
+        virtual void               drainInbound( NetInbound& outInbound )                                       = 0;
+        virtual bool               isServer() const                                                             = 0;
+        virtual NetConnectionState getConnectionState( int32 connectionID ) const                               = 0;
+        [[nodiscard]] virtual bool getConnectionStats( int32 connectionID, NetConnectionStats& outStats ) const = 0;
+        virtual NetAddress         getConnectionAddress( int32 connectionID ) const                             = 0;
+        /** @brief 클라이언트에서 서버가 준 자기 번호(서버 쪽 연결 ID)입니다. 연결 전이거나 서버면 -1 입니다. */
+        virtual int32 getClientIndex() const                                     = 0;
+        virtual int32 getConnectedCount() const                                  = 0;
+        virtual void  collectConnected( vector<int32>& outListConnection ) const = 0;
+        /** @brief 연결마다의 보내기 상한(초당 바이트)입니다. 샤드 묶음은 샤드마다 같은 설정을 쓴다. */
+        virtual int32 getMaxBytesPerSecond() const                      = 0;
+        virtual bool  isConnectionSaturated( int32 connectionID ) const = 0;
+        /** @brief 큐에 넣은 메시지의 종류별 셈입니다. @p outTable 에 **더합니다**(샤드 묶음은 샤드마다 더한다) — 새로 셀 때는 빈 표를 넘긴다. */
+        virtual void addSentKindTally( NetMessageKindTallyTable& outTable ) const = 0;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @class NetHost
      * @brief 서버는 `listen`, 클라이언트는 `connect` 로 시작한 뒤 `update( 시각 )` 를 부르는 네트워크 호스트입니다.
      * @details `update` 는 매 프레임 직접 부르거나 `NetHostThread` 에 맡긴다. 클라이언트에서 서버 연결의 ID는 0이다.
@@ -181,14 +224,14 @@ namespace sw
      *     future.then( []( const NetConnectResult& result ) { ... } ); // 결과는 update 를 돈 스레드에서 — 잠금 밖
      * @endcode
      */
-    class SW_API NetHost
+    class SW_API NetHost final : public INetPeers
     {
     public:
         static constexpr int32 kMaxDatagramPerUpdate = 512; ///< `update` 한 번에 받는 데이터그램 한도. 나머지는 소켓 버퍼에 남겨 다음 호출에서 받는다.
         static constexpr int32 kMaxPacketsPerSend    = 8;   ///< 한 번의 전송에서 연결마다 보내는 패킷 상한. 대역폭 토큰이 남고 보낼 것이 있으면 여러 개를 보낸다.
 
         NetHost();
-        ~NetHost();
+        ~NetHost() override;
 
         NetHost( const NetHost& )            = delete;
         NetHost& operator=( const NetHost& ) = delete;
@@ -212,21 +255,21 @@ namespace sw
         /** @brief 받을 데이터그램이 생기거나 @p timeoutSeconds 가 지날 때까지 잠듭니다. `update` 를 도는 스레드가 부릅니다. */
         bool waitForReceive( float64 timeoutSeconds );
 
-        [[nodiscard]] bool sendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size );
+        [[nodiscard]] bool sendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size ) override;
         [[nodiscard]] bool sendMessage( int32 connectionID, NetChannelType channel, const vector<uint8>& buffer )
         {
             return sendMessage( connectionID, channel, buffer.data(), static_cast<int32>( buffer.size() ) );
         }
         /** @brief 연결된 모두에게 보냅니다. @p exceptID 는 제외합니다. 반환값은 보낸 수입니다. */
-        int32 broadcast( NetChannelType channel, const uint8* pData, int32 size, int32 exceptID = -1 );
+        int32 broadcast( NetChannelType channel, const uint8* pData, int32 size, int32 exceptID = -1 ) override;
         /**
-         * @brief 지금까지 보내기 큐에 넣은 메시지의 종류별 셈을 복사합니다(`sendMessage` · `broadcast` 가 연결마다 센다 — 받은 쪽 셈은 `NetMessageRouter::getKindTally`).
-         * @details 큐에 넣은 것을 센다. 대역폭에 막혀 늦게 나가거나 다시 보낸 바이트는 연결 통계(`NetConnectionStats`)의 몫이다. 잠금을 잡고 표 하나(4 KiB)를 복사한다 — `net.stats` 처럼 느리게 묻는 쪽이 쓴다.
+         * @brief 지금까지 보내기 큐에 넣은 메시지의 종류별 셈을 @p outTable 에 더합니다(`sendMessage` · `broadcast` 가 연결마다 센다 — 받은 쪽 셈은 `NetMessageRouter::getKindTally`).
+         * @details 큐에 넣은 것을 센다. 대역폭에 막혀 늦게 나가거나 다시 보낸 바이트는 연결 통계(`NetConnectionStats`)의 몫이다. 잠금을 잡고 표 하나(4 KiB)를 더한다 — `net.stats` 처럼 느리게 묻는 쪽이 쓴다.
          */
-        void copySentKindTally( NetMessageKindTallyTable& outTable ) const;
+        void addSentKindTally( NetMessageKindTallyTable& outTable ) const override;
         /** @brief 받은 메시지 하나를 꺼냅니다. 연결 순서대로, 채널은 신뢰 순서, 신뢰 순서 없음, 순서만, 비신뢰 순(채널 값 순)으로 확인합니다. */
         [[nodiscard]] bool receiveMessage( int32& outConnectionID, NetChannelType& outChannel, vector<uint8>& outBuffer );
-        void               disconnect( int32 connectionID );
+        void               disconnect( int32 connectionID ) override;
         void               disconnectAll();
         void               drainEvents( vector<NetHostEvent>& outListEvent );
         /**
@@ -235,22 +278,22 @@ namespace sw
          *          사건을 먼저 처리하면 같은 슬롯에 새로 연결된 클라이언트의 메시지를 옛 연결의 상태로 읽지 않는다.
          *          `receiveMessage` 나 `drainEvents` 와 섞어 쓰지 않는다(`NetMessageRouter::pump` 가 이 함수를 쓴다).
          */
-        void drainInbound( NetInbound& outInbound );
+        void drainInbound( NetInbound& outInbound ) override;
 
-        bool               isServer() const;
-        NetConnectionState getConnectionState( int32 connectionID ) const;
+        bool               isServer() const override;
+        NetConnectionState getConnectionState( int32 connectionID ) const override;
         /** @brief 연결 통계의 사본입니다. 연결돼 있지 않으면 false 를 반환합니다. 다른 스레드가 `update` 하는 중에도 안전합니다. */
-        [[nodiscard]] bool getConnectionStats( int32 connectionID, NetConnectionStats& outStats ) const;
+        [[nodiscard]] bool getConnectionStats( int32 connectionID, NetConnectionStats& outStats ) const override;
         /**
          * @brief 연결 객체를 그대로 빌려줍니다.
          * @warning 잠금 밖으로 나가는 포인터이므로 `update` 를 도는 다른 스레드가 없을 때만(한 스레드에서 쓰거나 테스트에서) 쓴다. 스레드가 돌고 있으면 `getConnectionStats` 를 쓴다.
          */
         const NetConnection* findConnection( int32 connectionID ) const;
-        NetAddress           getConnectionAddress( int32 connectionID ) const;
-        int32                getConnectedCount() const;
+        NetAddress           getConnectionAddress( int32 connectionID ) const override;
+        int32                getConnectedCount() const override;
         /** @brief 클라이언트에서 서버가 준 자기 번호(서버 쪽 연결 ID)를 반환합니다. 연결 전이면 -1 입니다. */
-        int32 getClientIndex() const;
-        void  collectConnected( vector<int32>& outListConnection ) const;
+        int32 getClientIndex() const override;
+        void  collectConnected( vector<int32>& outListConnection ) const override;
         /** @brief 이 호스트가 지금 디버거 대기를 알리는지 반환합니다. 마지막 `update` 기준이며(`NetHostConfig::_debugHold`), Shipping 은 항상 false 입니다. */
         bool   isDebugHoldAnnounced() const;
         uint64 getRejectedPacketCount() const;
@@ -263,12 +306,12 @@ namespace sw
         /** @brief 이 호스트의 프로토콜 ID(`NetProtocol::makeProtocolID( 게임 ID, 와이어 버전 )`)입니다. */
         uint32 getProtocolID() const;
         /** @brief 연결마다의 보내기 상한(초당 바이트, `NetHostConfig::_maxBytesPerSecond`)입니다. 키트가 틱 예산을 계산할 때 씁니다(`NetSendBudget::computeTickBudget`). */
-        int32 getMaxBytesPerSecond() const;
+        int32 getMaxBytesPerSecond() const override;
         /**
          * @brief 이 연결이 포화됐는가입니다. 대역폭 토큰을 다 썼거나 앞 패킷이 비신뢰 메시지를 다 싣지 못했으면 true 입니다. 연결돼 있지 않으면 false 입니다.
          * @details 키트는 포화된 연결에 이번 틱의 비신뢰 복제(위치 · 효과)를 건너뛴다. 쌓아 두면 늦은 것이 몰려 나간다. 언리얼 `UNetConnection::IsNetReady` 가 거짓인 자리이다.
          */
-        bool isConnectionSaturated( int32 connectionID ) const;
+        bool isConnectionSaturated( int32 connectionID ) const override;
 
         /** @brief 패킷 본문의 첫 3비트로, 핸드셰이크 단계와 데이터와 끊김을 구분합니다. */
         enum class PacketType : uint8

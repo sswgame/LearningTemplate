@@ -240,6 +240,50 @@ namespace sw
         std::sort( outListCategory.begin(), outListCategory.end(), HashedStringLexicalLess{} );
     }
 
+    void DebugDrawQueue::appendVisibleSegments( bool bFlat2D, vector<DebugLine>& outListLine ) const
+    {
+        outListLine.insert( outListLine.end(), _listVisibleLine.begin(), _listVisibleLine.end() );
+
+        // 구는 축마다 대원 하나씩 — 어느 방향에서 봐도 윤곽이 보인다. 2D 뷰는 XY 원 하나다.
+        constexpr float32 kStep       = ( MathUtil::kPi * 2.0f ) / static_cast<float32>( kSphereCircleSegmentCount );
+        const uint32      circleCount = bFlat2D ? 1u : 3u;
+        for ( const DebugSphere& sphere : _listVisibleSphere )
+        {
+            for ( uint32 axisIndex = 0; axisIndex < circleCount; ++axisIndex )
+            {
+                for ( uint32 segmentIndex = 0; segmentIndex < kSphereCircleSegmentCount; ++segmentIndex )
+                {
+                    const float32 cosA = MathUtil::cos( kStep * static_cast<float32>( segmentIndex ) ) * sphere._radius;
+                    const float32 sinA = MathUtil::sin( kStep * static_cast<float32>( segmentIndex ) ) * sphere._radius;
+                    const float32 cosB = MathUtil::cos( kStep * static_cast<float32>( segmentIndex + 1 ) ) * sphere._radius;
+                    const float32 sinB = MathUtil::sin( kStep * static_cast<float32>( segmentIndex + 1 ) ) * sphere._radius;
+                    float3        offsetA{};
+                    float3        offsetB{};
+                    if ( axisIndex == 0 )
+                    {
+                        offsetA = float3{ cosA, sinA, 0.0f };
+                        offsetB = float3{ cosB, sinB, 0.0f };
+                    }
+                    else if ( axisIndex == 1 )
+                    {
+                        offsetA = float3{ cosA, 0.0f, sinA };
+                        offsetB = float3{ cosB, 0.0f, sinB };
+                    }
+                    else
+                    {
+                        offsetA = float3{ 0.0f, cosA, sinA };
+                        offsetB = float3{ 0.0f, cosB, sinB };
+                    }
+                    DebugLine& line = outListLine.emplace_back();
+                    line._from      = sphere._center + offsetA;
+                    line._to        = sphere._center + offsetB;
+                    line._color     = sphere._color;
+                    line._category  = sphere._category;
+                }
+            }
+        }
+    }
+
     hashed_string DebugDrawQueue::registerCategoryLocked( const hashed_string& category )
     {
         const hashed_string resolved = category.empty() ? hashed_string( kDefaultCategoryName ) : category;

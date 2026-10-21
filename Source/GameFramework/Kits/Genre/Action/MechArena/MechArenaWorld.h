@@ -35,6 +35,8 @@ namespace sw
 
     class Archive;
     class BitWriter;
+    class NetMessageChannel;
+    class NetMessageWriter;
 
     /** @brief 판 규칙의 수치입니다. 시간은 초, 거리는 m 입니다. */
     struct MechArenaSettings
@@ -210,9 +212,10 @@ namespace sw
      *     world.start();
      *     world.setInput( amuro, input );
      *     world.update( deltaTime );
-     *     if ( world.writeState( writer ) == false ) // 범위 밖 값이면 잘라 쓰지 않고 실패한다
+     *     // 기동: MechArenaWorld::registerSnapshotMessage( channel, kSnapshotKind ) → channel.seal( base, hostSettings ) → 그 설정으로 호스트를 연다
+     *     if ( world.writeSnapshotMessage( channel, kSnapshotKind, writer ) == false ) // 범위 밖 값이면 잘라 쓰지 않고 실패한다
      *         return false;
-     *     // writer 의 바이트를 넷 키트의 스냅샷에 싣는다
+     *     (void)writer.broadcast( peers, NetChannelType::UnreliableSequenced );
      * @endcode
      */
     class SW_KIT_API MechArenaWorld
@@ -242,14 +245,16 @@ namespace sw
 
         /** @brief 지금 상태를 스냅샷으로 만듭니다. */
         void makeSnapshot( MechArenaSnapshot& outSnapshot ) const;
+        /** @brief 스냅샷(`MechArenaSnapshot`)을 넷 채널의 종류 @p kind 로 등록합니다. 채널을 봉인하기 전에 부르고, 그 채널이 내준 호스트 설정으로 연결한다(핸드셰이크가 스키마를 확인한다). */
+        [[nodiscard]] static bool registerSnapshotMessage( NetMessageChannel& inoutChannel, uint8 kind );
         /**
-         * @brief 서버 권위 상태(`MechArenaSnapshot`)를 고정 배치형 바이트로 씁니다(`FixedLayout::write`).
-         * @return 범위 밖 값(255 개를 넘는 조종사, 1 보다 작은 판 크기 등)이 있으면 잘라 쓰지 않고 false 이며, @p outWriter 에는 쓰다 만 비트가 남습니다.
+         * @brief 서버 권위 상태(`MechArenaSnapshot`)를 봉인한 채널의 메시지(종류 바이트 + 스키마 해시 없는 본문)로 씁니다. 받는 쪽은 `NetMessageChannel::readMessage` 로 읽는다.
+         * @return 범위 밖 값(255 개를 넘는 조종사, 1 보다 작은 판 크기 등)이 있거나, 채널이 봉인 전이거나, 그 종류에 스냅샷을 등록하지 않았으면 false 입니다(잘라 쓰지 않는다).
          */
-        [[nodiscard]] bool writeState( BitWriter& outWriter ) const;
+        [[nodiscard]] bool writeSnapshotMessage( const NetMessageChannel& channel, uint8 kind, NetMessageWriter& outWriter ) const;
         /**
          * @brief 세이브와 핫 리로드용 전체 상태를 씁니다. 팀 이름, 판(`MatchState`), 걸음, 조종사(덱과 스킬 id, 위치, 속도, 입력, 타이머, 체력, 부스트,
-         *        록온, 근접 타임라인, 무기, 쿨다운, 전적), 탄을 씁니다. 넷 스냅샷(`writeState( BitWriter& )`)은 화면용으로 양자화되어 복원할 수 없으므로 따로 둡니다.
+         *        록온, 근접 타임라인, 무기, 쿨다운, 전적), 탄을 씁니다. 넷 스냅샷(`writeSnapshotMessage`)은 화면용으로 양자화되어 복원할 수 없으므로 따로 둡니다.
          *        설정과 카탈로그는 `initialize` 에서 받은 것이라 싣지 않고, 알림은 읽을 때 비웁니다.
          */
         void writeState( Archive& outArchive ) const;

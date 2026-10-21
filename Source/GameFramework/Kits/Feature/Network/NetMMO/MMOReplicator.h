@@ -2,7 +2,7 @@
  * @file MMOReplicator.h
  * @brief 엔티티가 수천 개여도 관찰자(플레이어)마다 근처의 중요한 엔티티를 정해진 바이트 안에서 보냅니다.
  * @details 동작은 세 부분으로 나뉜다.
- *          1. 관심 영역: 엔진의 공간 해시(`SpatialHashGrid2D`, XZ 평면의 점)로 근처 엔티티를 찾는다.
+ *          1. 관심 영역: Core 의 관심 영역 격자(`NetInterestGrid` — XZ 평면 공간 해시)로 근처 엔티티를 찾는다.
  *             나가는 반경을 들어오는 반경보다 크게 잡아서 경계에서 엔티티가 들락날락하지 않게 한다(히스테리시스).
  *          2. 전송: 틱마다 새로 보이는 엔티티를 신뢰 메시지 하나에 묶어 전체 상태로 보낸다(Core 가 64 KB까지 조각으로 나눠 전송한다). 갱신은 비신뢰 메시지로 보낸다.
  *             클라이언트는 받은 갱신 틱을 확인 메시지(`kUpdateAck`, 가장 새 틱과 그 앞 32틱의 비트)로 돌려보낸다.
@@ -27,10 +27,10 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 #include "Core/Network/Message/NetMessage.h"
+#include "Core/Network/Replication/NetInterestGrid.h"
 #include "Core/Network/Replication/NetParallel.h"
 #include "Core/Network/Replication/NetPrioritizer.h"
 #include "Core/Network/Replication/TickRingBuffer.h"
-#include "Core/Spatial/SpatialHashGrid2D.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -39,7 +39,7 @@
 
 namespace sw
 {
-    class NetHost;
+    class INetPeers;
 
     /** @brief 메시지 종류입니다. 메시지의 첫 바이트에 들어갑니다. */
     struct NetMMOMessage
@@ -154,7 +154,7 @@ namespace sw
          * @brief 호스트, 설정, 정책을 받아 시작합니다. 설정이 범위 밖이거나 나가는 반경이 들어오는 반경보다 작으면 오류를 남기고 false 를 반환합니다.
          * @details 거절된 복제기는 호스트가 없는 복제기와 같다. `update` 가 아무것도 보내지 않는다.
          */
-        [[nodiscard]] bool initialize( NetHost* pHost, const MMOReplicatorConfig& settings, const IInterestPolicy* pPolicy = nullptr );
+        [[nodiscard]] bool initialize( INetPeers* pHost, const MMOReplicatorConfig& settings, const IInterestPolicy* pPolicy = nullptr );
         /** @brief 엔티티를 추가하거나 갱신합니다. 상태가 `NetMMOMessage::kMaxStateBytes` 를 넘으면 받지 않고 그 엔티티는 지난 값을 유지합니다. 처음 한 번만 경고하고 그 뒤로는 횟수만 셉니다. */
         void setEntity( const MMOEntity& entity );
         void removeEntity( uint32 entityID );
@@ -226,10 +226,10 @@ namespace sw
 
         unordered_map<uint32, MMOEntity>    _mapEntity;
         vector<Observer>                    _listObserver;
-        SpatialHashGrid2D                   _grid; ///< 엔티티 위치(XZ 평면의 점). 키는 `MMOReplicatorInternal::makeGridKey` 로 만든다
+        NetInterestGrid                     _interest; ///< 엔티티 위치(XZ 평면의 점)와 두 반경. 키는 `NetInterestGrid::makeKey`
         MMOReplicatorConfig                 _settings;
         IInterestPolicy                     _defaultPolicy;
-        NetHost*                            _pHost;
+        INetPeers*                          _pHost;
         const IInterestPolicy*              _pPolicy;
         uint64                              _sentUpdateCount;
         uint64                              _oversizedEntityCount;
@@ -275,7 +275,7 @@ namespace sw
         void onConnectionOpened( int32 connectionID ) override;
         void drainEvents( vector<MMOClientEvent>& outListEvent );
         /** @brief 받은 갱신 틱을 서버에 확인합니다. 틱마다 한 번 부르며, 받은 것이 없으면 보내지 않습니다. @p connectionID 는 서버 연결입니다. */
-        void sendAck( NetHost& host, int32 connectionID );
+        void sendAck( INetPeers& host, int32 connectionID );
 
         const MMOEntity* findEntity( uint32 entityID ) const;
         int32            getEntityCount() const { return static_cast<int32>( _mapEntity.size() ); }

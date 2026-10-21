@@ -4,6 +4,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
 
+#include "Engine/Net/NetMessageChannel.h"
 #include "Engine/Serialization/Fixed/FixedLayout.h"
 #include "Engine/Serialization/Format/Archive.h"
 
@@ -63,11 +64,16 @@ namespace sw
         }
     }
 
-    bool HorrorMatch::writeState( BitWriter& outWriter ) const
+    bool HorrorMatch::registerSnapshotMessage( NetMessageChannel& inoutChannel, uint8 kind )
+    {
+        return inoutChannel.registerMessage<HorrorSnapshot>( kind );
+    }
+
+    bool HorrorMatch::writeSnapshotMessage( const NetMessageChannel& channel, uint8 kind, NetMessageWriter& outWriter ) const
     {
         HorrorSnapshot snapshot;
         makeSnapshot( snapshot );
-        return FixedLayout::write( snapshot, outWriter );
+        return channel.writeMessage( kind, snapshot, outWriter );
     }
 
     void HorrorMatch::writeState( Archive& outArchive ) const

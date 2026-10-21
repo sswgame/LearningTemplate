@@ -22,7 +22,7 @@ namespace
         {
             (void)world.getScene().instantiate( document ); // 쇼케이스 문서는 테스트 머리에서 읽었다
             const sw::DestructionNetSide side = world.isServer() ? sw::DestructionNetSide::Server : sw::DestructionNetSide::Client;
-            _session.initialize( world.getHost(), world.getRouter(), world.getObjectManager(), side, sw::DestructionReplicationConfig{} );
+            _session.initialize( world.getPeers(), world.getRouter(), world.getObjectManager(), side, sw::DestructionReplicationConfig{} );
         }
 
         void onTickBegin( sw::NetSimWorld& world, float32 deltaTime ) override

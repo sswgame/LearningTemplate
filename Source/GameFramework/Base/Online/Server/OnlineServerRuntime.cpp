@@ -366,12 +366,13 @@ namespace sw
         if ( parts._config._publicAddress.empty() )
             return true; // 서비스 전용 서버 — 게임 서버로 고를 대상이 아니다
         ServerDescriptor descriptor;
-        descriptor._serverID = parts._context._serverID;
-        descriptor._kind     = parts._config._serverKind;
-        descriptor._region   = parts._config._region;
-        descriptor._address  = parts._config._publicAddress;
-        descriptor._port     = settings._gamePort;
-        descriptor._capacity = parts._config._capacity;
+        descriptor._serverID  = parts._context._serverID;
+        descriptor._kind      = parts._config._serverKind;
+        descriptor._region    = parts._config._region;
+        descriptor._address   = parts._config._publicAddress;
+        descriptor._port      = settings._gamePort;
+        descriptor._portCount = settings._gamePortCount;
+        descriptor._capacity  = parts._config._capacity;
         if ( parts._registration.initialize( parts._context._pRouter, descriptor ) == false )
         {
             outError = "this server could not be registered in the server directory (kind '" + descriptor._kind + "', region '" + descriptor._region + "')";

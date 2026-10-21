@@ -10,6 +10,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
+#include "GameFramework/Base/Online/Store/ServiceRecordUnknownFields.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -93,6 +94,8 @@ namespace sw
         LiveEventRecurrence _recurrence{ LiveEventRecurrence::Once };
         PROPERTY( Min = 0, Max = 1 )
         uint8 _bClientVisible{ SW_TRUE };
+        /// 이 빌드가 모르는 칸(배포 중 새 빌드가 더한 칸)이다. PROPERTY 가 아니다 — 영속 읽기가 담고 쓰기가 그대로 싣는다(`ServiceRecordUtil`).
+        ServiceRecordUnknownFields _unknownFields{};
     };
 } // namespace sw
 
@@ -147,6 +150,8 @@ namespace sw
         string _locale{}; ///< 언어 코드이다(예: "ko-KR")
         PROPERTY()
         int64 _registeredMs{ 0 }; ///< 서버가 등록 시각으로 덮어쓴다
+        /// 이 빌드가 모르는 칸(배포 중 새 빌드가 더한 칸)이다. PROPERTY 가 아니다 — 영속 읽기가 담고 쓰기가 그대로 싣는다(`ServiceRecordUtil`).
+        ServiceRecordUnknownFields _unknownFields{};
     };
 } // namespace sw
 

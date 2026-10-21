@@ -53,6 +53,7 @@ namespace sw
         ServiceKeyUtil::writeString( outWriter, descriptor._region );
         ServiceKeyUtil::writeString( outWriter, descriptor._address );
         outWriter.writeBits( descriptor._port, 16 );
+        outWriter.writeBits( descriptor._portCount, 8 );
         outWriter.writeVarUint( descriptor._buildVersion );
         outWriter.writeVarInt( descriptor._capacity );
         outWriter.writeVarInt( status._heartbeatMs );
@@ -70,12 +71,16 @@ namespace sw
         if ( bTextOk == false )
             return false;
         descriptor._port         = static_cast<uint16>( reader.readBits( 16 ) );
+        descriptor._portCount    = static_cast<uint8>( reader.readBits( 8 ) );
         descriptor._buildVersion = static_cast<uint32>( reader.readVarUint() );
         descriptor._capacity     = static_cast<int32>( reader.readVarInt() );
         outStatus._heartbeatMs   = reader.readVarInt();
         outStatus._load          = static_cast<int32>( reader.readVarInt() );
         const uint32 state       = reader.readBits( 8 );
-        if ( reader.hasOverflowed() || state >= static_cast<uint32>( ServerState::Count ) )
+        // 포트 수 0 이나 상한 밖은 배정이 없는 포트를 알리게 된다 — 1 로 맞추지 않고 기록을 거절한다.
+        const bool bPortCountInRange = 1 <= descriptor._portCount && descriptor._portCount <= ServerDescriptor::kMaxPortCount;
+        const bool bRejected         = reader.hasOverflowed() || state >= static_cast<uint32>( ServerState::Count ) || bPortCountInRange == false;
+        if ( bRejected )
             return false;
         outStatus._state = static_cast<ServerState>( state );
         return true;

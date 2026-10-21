@@ -23,22 +23,24 @@ namespace sw::editor
     /** @brief 자식 프로세스 하나입니다. 읽기 스레드가 로그 줄을 쌓고, 게임 스레드가 `update` 에서 꺼냅니다. */
     struct EditorNetPlaySession::ChildProcess
     {
-        Process            _process{};
-        sw::thread         _reader{};
-        mutex              _mutex{};
-        vector<string>     _listPendingLine{}; ///< 읽기 스레드가 넣는다(_mutex)
-        string             _label{};
-        string             _lastLine{};
-        string             _tracePath{};
-        NetEmulationReport _emulationReport{};         ///< 마지막 `net.emulation stats` 답(게임 스레드)
-        uint32             _emulationReportCount{ 0 }; ///< 받은 보고 수(게임 스레드)
-        NetStatsReport     _statsReport{};             ///< 마지막 `net.stats` 답(게임 스레드)
-        uint32             _statsReportCount{ 0 };     ///< 받은 `net.stats` 보고 수(게임 스레드)
-        atomic<int32>      _exitCode{ 0 };
-        atomic<uint32>     _exited{ 0 };    ///< 읽기 스레드가 파이프 끝을 보고 종료 코드를 거뒀다
-        int32              _processID{ 0 }; ///< 띄울 때의 pid(회수한 뒤에도 패널에 보인다)
-        bool               _bExitReported{ false };
-        bool               _bConnected{ false }; ///< 클라이언트가 서버에 연결됐다는 줄을 남겼다
+        Process                 _process{};
+        sw::thread              _reader{};
+        mutex                   _mutex{};
+        vector<string>          _listPendingLine{}; ///< 읽기 스레드가 넣는다(_mutex)
+        string                  _label{};
+        string                  _lastLine{};
+        string                  _tracePath{};
+        NetEmulationReport      _emulationReport{};         ///< 마지막 `net.emulation stats` 답(게임 스레드)
+        uint32                  _emulationReportCount{ 0 }; ///< 받은 보고 수(게임 스레드)
+        NetStatsReport          _statsReport{};             ///< 마지막 `net.stats` 답(게임 스레드)
+        uint32                  _statsReportCount{ 0 };     ///< 받은 `net.stats` 보고 수(게임 스레드)
+        vector<StateHashSample> _listStateHash{};           ///< 마지막 `state.hashline` 답(게임 스레드, Sync 탭)
+        uint32                  _stateHashReportCount{ 0 };
+        atomic<int32>           _exitCode{ 0 };
+        atomic<uint32>          _exited{ 0 };    ///< 읽기 스레드가 파이프 끝을 보고 종료 코드를 거뒀다
+        int32                   _processID{ 0 }; ///< 띄울 때의 pid(회수한 뒤에도 패널에 보인다)
+        bool                    _bExitReported{ false };
+        bool                    _bConnected{ false }; ///< 클라이언트가 서버에 연결됐다는 줄을 남겼다
     };
 } // namespace sw::editor
 
@@ -307,7 +309,8 @@ namespace sw::editor
         const string clientPath = settings._clientExecutablePath.empty() ? makeDefaultExecutablePath( "App" ) : settings._clientExecutablePath;
         const string port       = to_string( _port );
         const string clientArguments =
-            EditorNetPlaySessionInternal::quote( "-gv_netConnectAddress=127.0.0.1:" + port ) + " -gv_standardInputCommands=1 " + settings._clientArguments;
+            EditorNetPlaySessionInternal::quote( "-gv_netConnectAddress=127.0.0.1:" + port ) + " -gv_standardInputCommands=1" +
+            " -gv_stateHashHistory=" + to_string( kServerStateHashHistoryTicks ) + " " + settings._clientArguments; // 클라이언트도 서버 틱 번호로 해시를 남긴다(S7)
 
         // 서버를 먼저 띄운다. 클라이언트는 서버가 늦게 떠도 연결 시한 안에서 다시 시도하지만, 서버가 먼저 떠 있으면 첫 시도에 연결된다.
         // `App` 창은 띄우는 순서대로 나란히 놓는다. 리슨 호스트가 첫 위치이고, 전용 서버는 창이 없다.
@@ -370,6 +373,12 @@ namespace sw::editor
                     ++child._statsReportCount;
                     continue;
                 }
+                // Sync 탭이 물은 이력(한 줄)도 보관만 한다 — 수천 틱이 한 줄이라 Output Log 에 옮기지 않는다. 형식이 틀린 줄은 버리지 않고 로그로 넘긴다.
+                if ( StateHashHistory::tryParseReportLine( line, child._listStateHash ) )
+                {
+                    ++child._stateHashReportCount;
+                    continue;
+                }
                 // 자식의 오류 줄은 경고로 남긴다. 에디터 로그의 오류 수는 에디터 자신의 오류만 센다. 줄에는 자식의 로그 수준 레이블이 그대로 있다.
                 if ( line.find( "[Error]" ) != string::npos )
                     SW_LOG_WARNING( "[%#] %#", child._label, line );
@@ -430,6 +439,8 @@ namespace sw::editor
         status._emulationReportCount = child._emulationReportCount;
         status._statsReport          = child._statsReport;
         status._statsReportCount     = child._statsReportCount;
+        status._listStateHash        = child._listStateHash;
+        status._stateHashReportCount = child._stateHashReportCount;
         status._processID            = child._processID;
         status._bRunning             = child._exited.load() == 0;
         status._bConnected           = child._bConnected;

@@ -15,11 +15,13 @@
 #include "Editor/Common/Widgets/EditorDebugHUDControls.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorNetPlaySession.h"
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/ViewportInputOverlay.h"
 
+#include "Engine/Graphics/Canvas/DebugDrawCanvas.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Localization/LocText.h"
@@ -143,6 +145,26 @@ namespace sw::editor
             ImGui::SameLine();
             // 게임 HUD(`DebugHUD`) — 런타임 UI 라 게임 뷰에 그대로 그려진다(멈춤 · 일시정지에는 숨는다). 게임 값(`DebugOverlayState`)은 HUD 의 overlay 섹션이다.
             EditorDebugHUDControls::drawMasterToggle( "gameView.hud" );
+
+            ImGui::SameLine();
+            // 디버그 드로우 겹치기(서버 디버깅 S6) — 이 에디터의 게임 뷰와, 멀티 프로세스 재생이 띄운 자식 프로세스(클라이언트의 권위 고스트) 모두에 같은 값을 건다.
+            const bool bDebugDrawShown = DebugDrawCanvasUtil::isGameViewOverlayEnabled();
+            if ( EditorWidgets::drawIconToggle( "##gameViewDebugDraw", editoricon::kBug, bDebugDrawShown,
+                                                "Debug draw in the game view - lines, spheres and text from DebugDrawQueue (authority ghosts too). Sent to net play children" ) )
+            {
+                DebugDrawCanvasUtil::setGameViewOverlayEnabled( bDebugDrawShown == false );
+                EditorContext* pContext = EditorContext::get();
+                const utf8*    pCommand = bDebugDrawShown ? "gv_debugDrawGameView 0" : "gv_debugDrawGameView 1";
+                if ( pContext != nullptr )
+                {
+                    EditorNetPlaySession& session = pContext->getSubsystem<EditorNetPlaySession>();
+                    for ( int32 processIndex = 0; processIndex < session.getProcessCount(); ++processIndex )
+                    {
+                        (void)session.sendProcessCommand( processIndex, pCommand ); // 끝난 프로세스는 false — 받을 쪽이 없다
+                    }
+                }
+            }
+            EditorSelfTestMarks::note( "gameView.debugDraw" );
 
             ImGui::SameLine();
             if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kCamera, "##GameViewScreenshot" ) ) )

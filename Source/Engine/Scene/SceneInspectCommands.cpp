@@ -200,6 +200,29 @@ namespace sw
                 StateHashHistory::writeReport( listSample, outReply );
                 return true;
             }
+
+            /** @brief `state.hashline <count>` — 가장 최근 @p count 틱의 이력을 한 줄(`StateHashHistory::writeReportLine`)로 답합니다. 표준 입력으로 묻는 에디터 Sync 탭이 쓴다. */
+            static bool runStateHashLine( const vector<string>& listArgument, string& outReply )
+            {
+                uint64     count     = 0;
+                const bool bHasCount = listArgument.size() == 1 && StringUtil::parseUint64( listArgument[0], count );
+                if ( bHasCount == false || count == 0 )
+                    return false;
+                if ( StateHashHistory::get().isRecording() == false )
+                {
+                    outReply = "state hash history is off - start with -gv_stateHashHistory=<ticks>";
+                    return false;
+                }
+                vector<StateHashSample> listSample;
+                StateHashSample         latest;
+                if ( StateHashHistory::get().tryGetLatest( latest ) )
+                {
+                    const uint64 fromTick = latest._tick + 1 > count ? latest._tick + 1 - count : 0;
+                    StateHashHistory::get().collect( fromTick, static_cast<uint32>( count ), listSample );
+                }
+                StateHashHistory::writeReportLine( listSample, outReply );
+                return true;
+            }
         };
     } // namespace
 
@@ -210,6 +233,8 @@ namespace sw
     SW_DEV_COMMAND( StateHash, "state.hash", "state.hash", "Print the state hash of the active scene right now", &SceneInspectCommandsInternal::runStateHash );
     SW_DEV_COMMAND( StateHashes, "state.hashes", "state.hashes <fromTick> <count>", "Print the recorded per-tick state hashes (needs -gv_stateHashHistory)",
                     &SceneInspectCommandsInternal::runStateHashes );
+    SW_DEV_COMMAND( StateHashLine, "state.hashline", "state.hashline <count>", "Print the latest <count> recorded state hashes on one line (the editor Sync tab reads client histories this way)",
+                    &SceneInspectCommandsInternal::runStateHashLine );
 } // namespace sw
 
 #endif

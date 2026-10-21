@@ -10,6 +10,8 @@
 #include "Engine/Environment/Sky/SkyComponent.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/Canvas/CanvasTestPattern.h"
+#include "Engine/Graphics/Canvas/DebugDrawCanvas.h"
+#include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/Upload/GPUUploadQueue.h"
@@ -351,6 +353,20 @@ namespace sw
         }
         if ( bUIReady )
             pUISystem->collectWorldCanvases( packet._canvas._listTarget ); // 월드 공간 UI 의 렌더 텍스처
+        // 디버그 드로우 겹치기 — UI 위, 테스트 그림 아래. 주 시점이 카메라에서 온 패킷만(행렬이 없으면 그릴 눈이 없다).
+        const bool bSubmitDebugDraw = bSceneMain == false && DebugDrawCanvasUtil::isGameViewOverlayEnabled() && packet._bHasViewProj == SW_TRUE && pRHI != nullptr && pRHI->hasDevice();
+        if ( bSubmitDebugDraw )
+        {
+            const uint32 canvasWidth  = packet._viewportWidth > 0 ? packet._viewportWidth : pRHI->getDevice().getBackBufferWidth();
+            const uint32 canvasHeight = packet._viewportHeight > 0 ? packet._viewportHeight : pRHI->getDevice().getBackBufferHeight();
+            const float2 targetSize{ static_cast<float32>( canvasWidth ), static_cast<float32>( canvasHeight ) };
+            if ( packet._canvas._mainOutput.isEmpty() )
+                packet._canvas._mainOutput._targetSize = targetSize;
+            const uint32 paintedCount = DebugDrawCanvasUtil::paint( engine::getSubsystem<DebugDrawQueue>(), packet._viewProj, targetSize, pFontService,
+                                                                    engine::getSubsystem<FrameProfiler>().getFrameCount(), packet._canvas._mainOutput );
+            if ( paintedCount > 0 )
+                packet._canvas._contentRevision = 0; // 겹친 도형은 프레임마다 바뀐다 — 내용 번호 없이 늘 올린다(테스트 그림과 같다)
+        }
         const bool bSubmitTestPattern = bSceneMain == false && gv_canvasTestPattern && pRHI != nullptr && pRHI->hasDevice();
         if ( bSubmitTestPattern )
         {

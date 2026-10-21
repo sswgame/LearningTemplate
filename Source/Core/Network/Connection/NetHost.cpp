@@ -1034,10 +1034,10 @@ namespace sw
         return bQueued;
     }
 
-    void NetHost::copySentKindTally( NetMessageKindTallyTable& outTable ) const
+    void NetHost::addSentKindTally( NetMessageKindTallyTable& outTable ) const
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        outTable = _sentKindTally;
+        outTable.addTable( _sentKindTally );
     }
 
     int32 NetHost::broadcast( NetChannelType channel, const uint8* pData, int32 size, int32 exceptID )
@@ -1217,7 +1217,8 @@ namespace sw
         const NetHostSlot*      pSlot = _slotTable.findConnected( connectionID );
         if ( pSlot == nullptr )
             return false;
-        outStats = pSlot->_connection.getStats();
+        outStats                       = pSlot->_connection.getStats();
+        outStats._pendingReliableCount = pSlot->_connection.getPendingReliableCount();
         return true;
     }
 

@@ -123,7 +123,7 @@ namespace
         void onTickEnd( NetSimWorld& world, float32 deltaTime ) override
         {
             (void)deltaTime;
-            NetHost& host = world.getHost();
+            INetPeers& host = world.getPeers();
             if ( _player < 0 )
             {
                 const bool bConnected = world.isServer() ? host.getConnectedCount() > 0 : world.isConnected();
@@ -326,7 +326,7 @@ namespace
 
         void onHostEvent( NetSimWorld& world, const NetHostEvent& event ) override
         {
-            NetHost&   host           = world.getHost();
+            INetPeers& host           = world.getPeers();
             const bool bNotStartEvent = world.isServer() == false || _bStarted || event._kind != NetHostEvent::Kind::Connected || host.getConnectedCount() < _playerCount - 1;
             if ( bNotStartEvent )
                 return;
@@ -358,7 +358,7 @@ namespace
     private:
         void start()
         {
-            NetHost& host = _pWorld->getHost();
+            INetPeers& host = _pWorld->getPeers();
             SW_EXPECT_TRUE( _session.initialize( &host, _playerCount, _pWorld->isServer() ? 0 : host.getClientIndex() + 1, LockstepConfig{ 3 } ) );
             _bStarted = true;
         }

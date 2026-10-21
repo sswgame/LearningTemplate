@@ -162,7 +162,11 @@ namespace
             : _bus{ pHub, serverID }
             , _agent{}
         {
-            _agent.initialize( serverID );
+            ServerDescriptor descriptor;
+            descriptor._serverID = serverID;
+            descriptor._address  = "127.0.0.1";
+            descriptor._port     = 7777;
+            _agent.initialize( descriptor );
             _bus.subscribe( _agent.getAssignTopic() );
         }
 

@@ -4,6 +4,7 @@
 
 #include "Core/Network/BitStream.h"
 
+#include "Engine/Net/NetMessageChannel.h"
 #include "Engine/Serialization/Fixed/FixedLayout.h"
 #include "Engine/Serialization/Format/Archive.h"
 
@@ -428,7 +429,14 @@ SW_TEST_CASE( MechArenaTest, StateBytesRoundTripAndReplayDeterministically )
     MechFixture fixture;
     SW_ASSERT_TRUE( fixture.load() );
 
-    auto runScript = [&]( BitWriter& outWriter )
+    // 스냅샷은 넷 채널에 등록한 종류로 본문만 싣는다(NetChannelSchemaHashHandshake).
+    constexpr uint8   kSnapshotKind = 0x80;
+    NetMessageChannel channel;
+    SW_ASSERT_TRUE( MechArenaWorld::registerSnapshotMessage( channel, kSnapshotKind ) );
+    NetHostConfig hostSettings;
+    SW_ASSERT_TRUE( channel.seal( NetHostConfig{}, hostSettings ) );
+
+    auto runScript = [&]( NetMessageWriter& outWriter )
     {
         MechArenaWorld world;
         fixture.initialize( world );
@@ -451,34 +459,36 @@ SW_TEST_CASE( MechArenaTest, StateBytesRoundTripAndReplayDeterministically )
             world.setInput( second, inputSecond );
             world.update( kMechArenaStep );
         }
-        const bool bWritten = world.writeState( outWriter );
+        const bool bWritten = world.writeSnapshotMessage( channel, kSnapshotKind, outWriter );
         SW_EXPECT_TRUE( bWritten );
         return world.getTick();
     };
 
-    BitWriter firstRun;
-    BitWriter secondRun;
+    NetMessageWriter firstRun;
+    NetMessageWriter secondRun;
     SW_EXPECT_EQUAL( runScript( firstRun ), 240u );
     (void)runScript( secondRun );
     SW_ASSERT_EQUAL( firstRun.getByteCount(), secondRun.getByteCount() );
     SW_EXPECT_TRUE( firstRun.getBytes() == secondRun.getBytes() );
 
-    // 읽어서 다시 쓰면 같은 바이트다.
+    // 본문만 실린 메시지를 같은 채널로 읽어 다시 쓰면 같은 바이트다(스키마 해시 8 바이트는 핸드셰이크 버전에 섞였다).
     MechArenaSnapshot     snapshot;
-    const FixedReadResult result = FixedLayout::read( firstRun.getBytes().data(), firstRun.getByteCount(), snapshot );
+    BitReader             body( firstRun.getBytes().data() + 1, firstRun.getByteCount() - 1 );
+    const FixedReadResult result = channel.readMessage( kSnapshotKind, body, snapshot );
     SW_ASSERT_TRUE_MSG( result == FixedReadResult::Ok, FixedLayout::toString( result ) );
     SW_EXPECT_EQUAL( snapshot._tick, 240u );
     SW_EXPECT_EQUAL( static_cast<int32>( snapshot._listPilot.size() ), 2 );
     SW_EXPECT_EQUAL( static_cast<int32>( snapshot._listTeamGauge.size() ), 2 );
     SW_EXPECT_TRUE( snapshot._phase == MatchPhase::InProgress );
-    BitWriter  rewritten;
-    const bool bRewritten = FixedLayout::write( snapshot, rewritten );
+    NetMessageWriter rewritten;
+    const bool       bRewritten = channel.writeMessage( kSnapshotKind, snapshot, rewritten );
     SW_EXPECT_TRUE( bRewritten );
     SW_EXPECT_TRUE( rewritten.getBytes() == firstRun.getBytes() );
 
     // 모자란 바이트는 거절하고 대상은 그대로다.
     MechArenaSnapshot     broken;
-    const FixedReadResult shortResult = FixedLayout::read( firstRun.getBytes().data(), firstRun.getByteCount() / 2, broken );
+    BitReader             shortBody( firstRun.getBytes().data() + 1, firstRun.getByteCount() / 2 );
+    const FixedReadResult shortResult = channel.readMessage( kSnapshotKind, shortBody, broken );
     SW_EXPECT_TRUE( shortResult == FixedReadResult::Truncated );
     SW_EXPECT_TRUE( FixedLayout::equals( broken, MechArenaSnapshot{} ) );
 }

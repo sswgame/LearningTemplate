@@ -14,6 +14,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 
+#include "GameFramework/Base/Online/Directory/ServerRecord.h"
 #include "GameFramework/Base/Online/Identity/ConnectAdmission.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Shared/MatchmakingTypes.h"
@@ -34,11 +35,12 @@ namespace sw
 
         MatchServerAgent();
 
-        void   initialize( uint64 serverID );
+        /** @brief 이 게임 서버의 설명(서버 id · 주소 · 첫 게임 포트 · 포트 수)을 받습니다. 백필 요청의 서버 정보는 이것으로 채운다 — 부르는 쪽이 따로 적지 않는다. */
+        void   initialize( const ServerDescriptor& descriptor );
         string getAssignTopic() const;
         /** @brief 배정 주제(`MatchQueueBus::kAssignTopic`)의 메시지를 처리합니다. 읽지 못했으면(읽기가 로그와 카운터를 남겼다) false 를 반환합니다. */
         [[nodiscard]] bool handleAssign( const ServerBusMessage& message, int64 nowMs );
-        /** @brief 경기 중 빈 슬롯을 권한 매처에 보냅니다(버스 `mm.backfill.<모드>`). 요청의 서버 id 는 이 서버로 채웁니다. 보내지 못했으면 false 이며 발행이 로그에 남겼습니다. */
+        /** @brief 경기 중 빈 슬롯를 권한 매처에 보냅니다(버스 `mm.backfill.<모드>`). 요청의 서버 id · 주소 · 포트 · 포트 수는 이 서버의 설명으로 채웁니다(포트 샤딩 — 매처가 채운 사람마다 샤드 포트를 고른다). 보내지 못했으면 false 이며 발행이 로그에 남겼습니다. */
         [[nodiscard]] bool requestBackfill( ServerBus& bus, const MatchBackfillRequest& request ) const;
         /** @brief 시한이 지난 접속 예정자를 지웁니다. */
         void update( int64 nowMs );
@@ -62,6 +64,6 @@ namespace sw
         mutable mutex                      _mutex; ///< 접속 예정자 목록을 지킨다(인증기는 네트워크 스레드)
         unordered_map<AccountID, Expected> _mapAccountToExpected;
         EventBuffer<MatchFormed>           _newMatchBuffer;
-        uint64                             _serverID;
+        ServerDescriptor                   _descriptor; ///< 이 게임 서버(백필 요청에 싣는다)
     };
 } // namespace sw

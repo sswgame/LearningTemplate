@@ -202,7 +202,7 @@ namespace sw
         if ( pLink == nullptr )
             return false;
         _pServer = unique_ptr<NetSimWorld>( createWorld( NetSimRole::Server, 0, *pLink ) );
-        if ( _pServer->getHost().listen() == false )
+        if ( _pServer->_host.listen() == false )
         {
             SW_LOG_ERROR( "NetSimHarness: server host failed to listen" );
             shutdown();
@@ -271,7 +271,7 @@ namespace sw
         ++_nextWorldIndex;
         applyLinkConditions( worldIndex, conditions );
         unique_ptr<NetSimWorld> pWorld = unique_ptr<NetSimWorld>( createWorld( NetSimRole::Client, worldIndex, *pLink ) );
-        if ( pWorld->getHost().connect( _pServer->getAddress() ) == false )
+        if ( pWorld->_host.connect( _pServer->getAddress() ) == false )
         {
             SW_LOG_ERROR( "NetSimHarness: client %# failed to start connecting", worldIndex );
             return -1;
@@ -290,8 +290,8 @@ namespace sw
             if ( world.getWorldIndex() != worldIndex )
                 continue;
             // 끊김 알림을 흉내 큐에 넣는다. 엔드포인트(Link)는 남아 있으므로 이후 망 단계에서 마저 내보낸다.
-            world.getHost().disconnectAll();
-            world.getHost().update( _time );
+            world._host.disconnectAll();
+            world._host.update( _time );
             _listClient.erase( _listClient.begin() + static_cast<std::ptrdiff_t>( index ) );
             return;
         }
@@ -372,10 +372,10 @@ namespace sw
     void NetSimHarness::updateNetwork()
     {
         // 1) 송신: 이번 틱에 쌓인 메시지가 패킷이 되어 흉내 큐로 간다.
-        _pServer->getHost().update( _time );
+        _pServer->_host.update( _time );
         for ( unique_ptr<NetSimWorld>& pWorld : _listClient )
         {
-            pWorld->getHost().update( _time );
+            pWorld->_host.update( _time );
         }
         // 2) 흉내 큐에서 전달 시각이 된 패킷을 망에 싣고 망이 배달한다. 떠난 클라이언트의 엔드포인트도 처리한다. 끊김 알림이 아직 큐에 있을 수 있기 때문이다.
         for ( unique_ptr<Link>& pLink : _listLink )
@@ -384,10 +384,10 @@ namespace sw
         }
         _pNetwork->deliverInFlight();
         // 3) 수신: 같은 시각이므로 송신 간격에 막혀 다시 보내지는 않는다.
-        _pServer->getHost().update( _time );
+        _pServer->_host.update( _time );
         for ( unique_ptr<NetSimWorld>& pWorld : _listClient )
         {
-            pWorld->getHost().update( _time );
+            pWorld->_host.update( _time );
         }
     }
 

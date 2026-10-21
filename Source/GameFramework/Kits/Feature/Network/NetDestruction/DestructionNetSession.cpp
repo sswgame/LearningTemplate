@@ -35,7 +35,7 @@ namespace sw
         shutdown();
     }
 
-    void DestructionNetSession::initialize( NetHost& host, NetMessageRouter& router, GameObjectManager& manager, DestructionNetSide side,
+    void DestructionNetSession::initialize( INetPeers& host, NetMessageRouter& router, GameObjectManager& manager, DestructionNetSide side,
                                             const DestructionReplicationConfig& settings )
     {
         shutdown();

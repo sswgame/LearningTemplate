@@ -2,11 +2,14 @@
 
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Graphics/Texture/Texture2D.h"
+#include "Engine/Text/FontService.h"
 #include "Engine/Text/GlyphAtlas.h"
 #include "Engine/Text/GlyphCache.h"
+#include "Engine/Text/IFontRasterizer.h"
 
 namespace sw
 {
@@ -423,5 +426,30 @@ namespace sw
         const float2           topLeft   = transform.transformPoint( position );
         outQuad._rect                    = float4{ topLeft._x * _uiScale, topLeft._y * _uiScale, size._x * _uiScale, size._y * _uiScale };
         outQuad._axis                    = float4{ transform._axisX._x, transform._axisX._y, transform._axisY._x, transform._axisY._y };
+    }
+} // namespace sw
+
+namespace sw
+{
+    void CanvasTextLineUtil::drawLine( CanvasPainter& painter, FontService& fontService, string_view text, const float2& origin, const CanvasGlyphStyle& style, uint64 frameIndex )
+    {
+        const FontFaceChain chain      = fontService.getFaceChain( FontSpec{} );
+        CanvasGlyphStyle    glyphStyle = style;
+        glyphStyle._bFauxBold          = chain._bFauxBold;
+        glyphStyle._bFauxItalic        = chain._bFauxItalic;
+        float32 penX                   = origin._x;
+        size_t  offset                 = 0;
+        while ( offset < text.size() )
+        {
+            const uint32     codepoint  = StringUtil::decodeUtf8( text, offset );
+            uint32           glyphIndex = 0;
+            const FontFaceID face       = fontService.findFaceForCodepoint( chain, codepoint, glyphIndex );
+            if ( face == kInvalidFontFaceID )
+                continue;
+            (void)painter.drawGlyph( float2{ penX, origin._y }, face, glyphIndex, glyphStyle, fontService.getGlyphCache(), frameIndex );
+            GlyphMetrics metrics{};
+            if ( fontService.getRasterizer().findGlyphMetrics( face, glyphIndex, metrics ) )
+                penX += metrics._advance * style._fontSize;
+        }
     }
 } // namespace sw

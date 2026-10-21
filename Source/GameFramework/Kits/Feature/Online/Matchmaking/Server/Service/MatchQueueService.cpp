@@ -420,8 +420,10 @@ namespace sw
         assignment._outcome  = MatchQueueOutcome::Found;
         assignment._serverID = request._serverID;
         assignment._address  = request._address;
-        assignment._port     = request._port;
-        assignment._team     = backfilled._team;
+        // 포트 샤딩 — 티켓(파티)은 한 샤드에 함께 간다. 대표 계정이 샤드를 정한다(새 경기 배정과 같은 규칙).
+        const AccountID leaderID = backfilled._ticket._listMember.empty() ? AccountID{ 0 } : backfilled._ticket._listMember.front()._accountID;
+        assignment._port         = ServerDescriptor::pickShardPort( request._port, request._portCount, leaderID );
+        assignment._team         = backfilled._team;
         for ( const MatchMember& member : backfilled._ticket._listMember )
         {
             assignment._listTeammate.push_back( member._accountID ); // 경기 중인 팀원은 게임 서버가 알려 준다
@@ -496,7 +498,8 @@ namespace sw
             {
                 assignment._serverID = picked._descriptor._serverID;
                 assignment._address  = picked._descriptor._address;
-                assignment._port     = picked._descriptor._port;
+                // 포트 샤딩 — 티켓(파티)은 한 샤드에 함께 간다. 대표 계정이 샤드를 정한다.
+                assignment._port = picked._descriptor.pickPort( ticket._listMember.empty() ? 0 : ticket._listMember.front()._accountID );
             }
             if ( ticket._listMember.empty() == false )
                 fillTeam( match, ticket._listMember.front()._accountID, assignment ); // 티켓 하나는 한 팀에 들어간다
@@ -545,7 +548,7 @@ namespace sw
             {
                 assignment._serverID = picked._descriptor._serverID;
                 assignment._address  = picked._descriptor._address;
-                assignment._port     = picked._descriptor._port;
+                assignment._port     = picked._descriptor.pickPort( member._accountID ); // 포트 샤딩 — 계정마다 정해진 샤드의 포트
             }
             fillTeam( match, member._accountID, assignment );
             _notificationBuffer.push( MatchQueueNotification{ assignment, member._accountID } );

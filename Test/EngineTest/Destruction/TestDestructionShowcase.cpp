@@ -11,6 +11,7 @@
 #include "Engine/Scene/SceneDocument.h"
 
 #include "GameFramework/Base/Gameplay/Gimmick/Genre/ShooterGimmicks.h"
+#include "GameFramework/Kits/Feature/Network/NetDestruction/DestructionNetSessionComponent.h"
 
 #include "TestFramework/Harness/TestTick.h"
 #include "TestFramework/TestFramework.h"
@@ -53,5 +54,29 @@ SW_TEST_CASE( DestructionShowcaseTest, FuseBarrelChainBreaksWallAndCrates )
         brokenCrateCount += pCrate->getComponent<sw::FractureComponent>()->isFractured() ? 1u : 0u;
     }
     SW_EXPECT_TRUE( brokenCrateCount >= 1 );
+    manager.endPlay();
+}
+
+/**
+ * @brief [DestructionShowcaseTest] 네트워크용 씬(destructionnet.scene.xml)은 쇼케이스와 같은 파괴 오브젝트에 세션 컴포넌트 하나를 더한다 — 세션 없이(혼자) 돌면 쇼케이스와 같이 부서진다
+ * @details 씬 글은 쇼케이스를 그대로 옮기고 오브젝트 하나만 더해 손으로 썼다(에디터 저장과 같은 형식). 서버 · 클라이언트 실행은 컴포넌트 머리말의 명령이다.
+ */
+SW_TEST_CASE( DestructionShowcaseTest, NetworkSceneAddsTheSessionComponentToTheShowcase )
+{
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+    sw::SceneDocument doc;
+    SW_ASSERT_TRUE( doc.loadXML( "game/empty/maps/destructionnet.scene.xml" ) );
+    sw::Scene scene{ "DestructionNet" };
+    SW_ASSERT_TRUE( scene.instantiate( doc ) );
+    sw::GameObjectManager& manager  = *scene.getObjectManager();
+    sw::GameObject*        pSession = manager.findGameObjectByName( "DestructionNetSession" );
+    SW_ASSERT_NOT_NULL( pSession );
+    SW_EXPECT_NOT_NULL( pSession->getComponent<sw::DestructionNetSessionComponent>() );
+    sw::GameObject* pFuse = manager.findGameObjectByName( "BarrelFuse" );
+    SW_ASSERT_NOT_NULL( pFuse );
+
+    manager.beginPlay();
+    test::updateFrames( manager, 240 );
+    SW_EXPECT_TRUE( pFuse->getComponent<sw::ExplosiveBarrelComponent>()->hasExploded() );
     manager.endPlay();
 }

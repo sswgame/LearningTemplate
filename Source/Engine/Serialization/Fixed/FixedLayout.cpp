@@ -413,7 +413,16 @@ namespace sw
             // 변환할 옛 B 데이터가 없어 레지스트리가 아직 없으므로 거절합니다.
             return FixedReadResult::SchemaMismatch;
         }
+        return readBodyWithCodec( codec, reader, pObject );
+    }
 
+    bool FixedLayout::writeBodyWithCodec( const FixedCodec& codec, const void* pObject, BitWriter& writer )
+    {
+        return codec._pWrite( writer, pObject );
+    }
+
+    FixedReadResult FixedLayout::readBodyWithCodec( const FixedCodec& codec, BitReader& reader, void* pObject )
+    {
         const FixedReadResult result = codec._pRead( reader, pObject );
         // 모자란 스트림은 0 을 읽으므로 그 전에 범위 · 열거자 검사가 먼저 걸릴 수 있습니다. 원인은 잘림입니다.
         if ( reader.hasOverflowed() )
