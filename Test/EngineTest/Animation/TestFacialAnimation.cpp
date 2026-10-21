@@ -99,7 +99,11 @@ namespace
             return unit.getMorphWeights()[static_cast<size_t>( targetIndex )];
         }
 
-        /** @brief 두 포먼트 봉우리로 모양을 낸 120 Hz 목소리(배음 합)입니다 — 모음 하나를 흉내 냅니다. */
+        /**
+         * @brief 두 포먼트 봉우리로 모양을 낸 120 Hz 목소리(배음 합)입니다 — 모음 하나를 흉내 냅니다.
+         * @details 배음 크기는 실제 목소리처럼 옥타브마다 -6 dB(1/f) 기운다(성문 -12 dB + 입술 방사 +6 dB). 분석의 프리엠퍼시스가 이 기울기를 편다고 보므로,
+         *          평평한 원천이면 낮은 포먼트가 위쪽 배음으로 끌린다(EE 300 Hz → 370 Hz).
+         */
         static void appendVowel( vector<float32>& inoutListSample, float32 firstFormant, float32 secondFormant, float32 seconds )
         {
             auto resonance = []( float32 frequency, float32 centre, float32 width )
@@ -107,12 +111,14 @@ namespace
                 const float32 offset = ( frequency - centre ) / width;
                 return 1.0f / ( 1.0f + offset * offset );
             };
-            vector<float32> listHarmonicFrequency;
-            vector<float32> listHarmonicAmplitude;
-            float32         amplitudeSum = 0.0f;
-            for ( float32 frequency = 120.0f; frequency < 7000.0f; frequency += 120.0f )
+            constexpr float32 kPitchHz = 120.0f;
+            vector<float32>   listHarmonicFrequency;
+            vector<float32>   listHarmonicAmplitude;
+            float32           amplitudeSum = 0.0f;
+            for ( float32 frequency = kPitchHz; frequency < 7000.0f; frequency += kPitchHz )
             {
-                const float32 amplitude = resonance( frequency, firstFormant, 120.0f ) + 0.7f * resonance( frequency, secondFormant, 180.0f );
+                const float32 sourceTilt = kPitchHz / frequency;
+                const float32 amplitude  = sourceTilt * ( resonance( frequency, firstFormant, 120.0f ) + 0.7f * resonance( frequency, secondFormant, 180.0f ) );
                 listHarmonicFrequency.push_back( frequency );
                 listHarmonicAmplitude.push_back( amplitude );
                 amplitudeSum += amplitude;
@@ -239,9 +245,6 @@ SW_TEST_CASE( FacialAnimationTest, ImportedTestHeadCarriesMorphTargetsAndWeightC
  */
 SW_TEST_CASE( FacialAnimationTest, LipSyncFormantsTrackSyntheticVowels )
 {
-    // 알려진 실패(2026-10-22 통합에서 처음 돌림): 120 Hz 배음뿐인 합성 모음에서 LPC 포먼트가 배음에 끌린다(EE 의 300 Hz → 370 Hz, OO 는 둘째 포먼트를
-    // 못 찾는다). 극점으로 구해도 같다 — 신호부터 다시 정한다(계획 FacialAnimation F5).
-    SW_TEST_SKIP( "known failure - LPC formants lock onto the 120 Hz harmonics of the synthetic vowel (FacialAnimation F5)" );
     const float2 arrFormant[3] = {
         float2{750.0f, 1150.0f},
         float2{300.0f, 2300.0f},

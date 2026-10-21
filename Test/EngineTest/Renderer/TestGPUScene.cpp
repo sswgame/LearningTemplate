@@ -2529,13 +2529,11 @@ SW_TEST_CASE( GPUSceneTest, MaterialCbIsAMergeKeyOnlyWhenTheShaderBindsIt )
 
 /**
  * @brief [GPUSceneTest] 메시만 바뀐 인스턴스 하나짜리 배치는 다시 나누지 않고 배치의 메시만 바꾼다(지형 LOD 교체 — TerrainEditCost T4)
- * @details 배치 수 · 인스턴스 자리는 그대로이고 바뀐 인스턴스 구간 하나만 더럽다. 옛 메시를 가리키는 배치가 남으면 안 된다.
+ * @details 배치 수 · 인스턴스 자리는 그대로다. 인스턴스 원소에는 메시가 없고 두 메시의 바운드가 같으니 더러운 인스턴스 구간도 없다 — 바뀐 것은 배치 표뿐이다.
+ *          옛 메시를 가리키는 배치가 남으면 안 된다.
  */
 SW_TEST_CASE( GPUSceneTest, MeshSwapOfSingleInstanceBatchKeepsTheBatches )
 {
-    // 알려진 실패(2026-10-22 통합에서 처음 돌림): 메시만 바꾼 배치 교체 뒤 인스턴스 더티 구간이 0 개다(기대 1). 인스턴스 원소는 메시와 무관해
-    // 기대가 맞는지부터 본다(계획 TerrainEditCost T4).
-    SW_TEST_SKIP( "known failure - the mesh swap leaves no dirty instance run; check the expectation first (TerrainEditCost T4)" );
     sw::Scene scene( "MeshSwapScene" );
     SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
 
@@ -2569,7 +2567,8 @@ SW_TEST_CASE( GPUSceneTest, MeshSwapOfSingleInstanceBatchKeepsTheBatches )
 
     SW_ASSERT_EQUAL( 8u, static_cast<uint32>( swapped.getAllBatches().size() ) );
     SW_EXPECT_TRUE( swapped._bAllInstancesDirty == SW_FALSE );
-    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( swapped._listDirtyInstanceRun.size() ) );
+    SW_EXPECT_TRUE( swapped._listDirtyInstanceRun.empty() );
+    SW_EXPECT_TRUE( swapped._bCPUDirty != SW_FALSE ); // 배치 표(메시 · 정점 구간)는 올라간다
     bool bNewMeshDrawn = false;
     for ( const sw::GPUMeshBatch& batch : swapped.getAllBatches() )
     {

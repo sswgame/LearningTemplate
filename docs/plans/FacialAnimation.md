@@ -16,9 +16,7 @@
 
 ## F5 확인과 자음
 
-- **2026-10-22 통합에서 처음 돌린 결과**: `LipSyncFormantsTrackSyntheticVowels` 가 진다(지금은 알려진 실패로 건너뛴다). 120 Hz 배음뿐인 합성 모음에서
-  LPC 포먼트가 배음에 끌려 EE 의 300 Hz 가 370 Hz(배음 360)로 잡히고, OO(320 · 800 Hz)는 둘째 포먼트를 못 찾는다. 극점(근)으로 구해 봐도 380 Hz 였다 —
-  선 스펙트럼에서는 배음 간격의 반보다 가까이 잡을 수 없다. 합성 신호를 성문 펄스 + 공명 필터(배음 사이의 연속 포락선)로 바꾸거나 실제 음성으로 잰다.
-- 빌드 뒤 `FacialAnimationTest`(새 `LipSyncFormantsTrackSyntheticVowels` · `UnskinnedMorphMeshGetsARigidSkin` · `LiveSourceChannelsDriveExpressions`, 기존 `LipSyncAnalyzerSeparatesSyntheticVowels`)를 돌린다.
-  합성 모음이 아닌 실제 음성(`game/empty/voice/testline.wav`)으로 트랙을 다시 만들어(`App --import-lipsync`) 모음이 갈리는지 본다.
+- `FacialAnimationTest` 11 케이스가 통과한다(2026-10-22). 포먼트 테스트가 지던 것은 합성 모음의 원천이 평평해서였다 — 분석의 프리엠퍼시스는 실제 목소리의
+  -6 dB/옥타브 기울기를 편다고 보므로, 평평한 원천에 걸면 낮은 포먼트가 위쪽 배음으로 끌렸다(EE 300 → 370 Hz). 테스트 신호에 1/f 기울기를 넣었다(`appendVowel` 주석).
+- 합성 모음이 아닌 실제 음성(`game/empty/voice/testline.wav`)으로 트랙을 다시 만들어(`App --import-lipsync`) 모음이 갈리는지 본다.
 - 자음 비즘(PP · FF · SS)은 아직 대역 형태만 본다 — 파열음은 무음 뒤 짧은 터짐(에너지 상승률)으로, 마찰음은 영교차율로 가를 수 있다.
