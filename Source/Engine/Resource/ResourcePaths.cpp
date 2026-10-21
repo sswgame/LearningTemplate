@@ -25,6 +25,35 @@ namespace sw
             inline static mutex                         _s_pathCacheMutex{};
             inline static unordered_map<uint64, string> _s_mapResolvedPath{};
 
+            /** @brief `mountDiskDomain` 으로 붙인 도메인 하나입니다. */
+            struct MountedDiskDomain
+            {
+                string _domain; ///< 소문자 도메인 이름(`/` 없음)
+                string _folder; ///< 정규화한 절대 디스크 폴더(끝 `/` 없음)
+            };
+            inline static mutex                     _s_diskDomainMutex{};
+            inline static vector<MountedDiskDomain> _s_listDiskDomain{};
+
+            /** @brief 소문자 id 의 첫 성분이 붙인 도메인이면 그 폴더와 나머지 키를 줍니다. */
+            static bool findMountedDiskDomain( string_view lowerRel, string& outRoot, string& outKeyUnderRoot )
+            {
+                const size_t firstSlash = lowerRel.find( '/' );
+                if ( firstSlash == string_view::npos || firstSlash == 0 )
+                    return false;
+                const string_view       domain = lowerRel.substr( 0, firstSlash );
+                std::scoped_lock<mutex> lock( _s_diskDomainMutex );
+                for ( const MountedDiskDomain& mounted : _s_listDiskDomain )
+                {
+                    if ( mounted._domain == domain )
+                    {
+                        outRoot         = mounted._folder;
+                        outKeyUnderRoot = string( lowerRel.substr( firstSlash + 1 ) );
+                        return true;
+                    }
+                }
+                return false;
+            }
+
             /**
              * @brief `initialize()` 본문을 프로세스당 한 번만 돌립니다.
              * @details 늦게 온 스레드는 첫 호출이 **끝날 때까지 막힙니다.** 그래서 초기화 도중의 빈 경로를
@@ -67,6 +96,11 @@ namespace sw
             {
                 outRoot.clear();
                 outKeyUnderRoot.clear();
+
+                // 0. 붙인 디스크 도메인(`mountDiskDomain`)은 리소스 루트와 무관하게 그 폴더로 푼다.
+                const bool bResourceID = lowerRel.empty() == false && FileUtil::isAbsolutePath( lowerRel ) == false;
+                if ( bResourceID && findMountedDiskDomain( lowerRel, outRoot, outKeyUnderRoot ) )
+                    return true;
 
                 const string& resourceRoot      = ResourcePaths::getRootFolderPath();
                 const bool    bUnresolvablePath = resourceRoot.empty() || lowerRel.empty() || FileUtil::isAbsolutePath( lowerRel );
@@ -413,6 +447,52 @@ namespace sw
             return LooseFilePath( FileUtil::normalizeSeparators( targetDir ) );
 
         return {};
+    }
+
+    bool ResourcePaths::mountDiskDomain( string_view domainName, string_view diskFolder )
+    {
+        const string domain       = FileUtil::normalizePath( domainName );
+        const bool   bInvalidName = domain.empty() || domain.find_first_of( "/\\:" ) != string::npos || domain == "." || domain == "..";
+        if ( bInvalidName )
+        {
+            SW_LOG_ERROR( "Cannot mount disk domain '%#' - the name is one path component without ':'", domainName );
+            return false;
+        }
+        const string folder = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( diskFolder ) );
+        if ( FileUtil::isAbsolutePath( folder ) == false || FileUtil::isDirectory( folder ) == false )
+        {
+            SW_LOG_ERROR( "Cannot mount disk domain '%#' - '%#' is not an existing absolute folder", domainName, diskFolder );
+            return false;
+        }
+        const string root = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( _s_resourceRootFolderPath ) );
+        if ( root.empty() == false && FileUtil::startsWithPathComponent( FileUtil::normalizePath( folder ), FileUtil::normalizePath( root ) ) )
+        {
+            SW_LOG_ERROR( "Cannot mount disk domain '%#' - '%#' is inside the resource root (packs-only builds would read loose assets)", domainName, diskFolder );
+            return false;
+        }
+        {
+            std::scoped_lock<mutex> lock( ResourcePathsInternal::_s_diskDomainMutex );
+            for ( const ResourcePathsInternal::MountedDiskDomain& mounted : ResourcePathsInternal::_s_listDiskDomain )
+            {
+                if ( mounted._domain != domain )
+                    continue;
+                if ( FileUtil::normalizePath( mounted._folder ) == FileUtil::normalizePath( folder ) )
+                    return true;
+                SW_LOG_ERROR( "Cannot mount disk domain '%#' at '%#' - it is already mounted at '%#'", domainName, diskFolder, mounted._folder );
+                return false;
+            }
+            ResourcePathsInternal::_s_listDiskDomain.push_back( ResourcePathsInternal::MountedDiskDomain{ domain, folder } );
+        }
+        clearPathCache();
+        return true;
+    }
+
+    bool ResourcePaths::isMountedDiskDomainID( string_view resourceID )
+    {
+        string root;
+        string key;
+        return resourceID.empty() == false && FileUtil::isAbsolutePath( resourceID ) == false &&
+               ResourcePathsInternal::findMountedDiskDomain( FileUtil::normalizePath( resourceID ), root, key );
     }
 
     const string& ResourcePaths::getRootFolderPath()

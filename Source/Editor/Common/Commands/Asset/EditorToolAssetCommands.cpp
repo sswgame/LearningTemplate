@@ -85,13 +85,12 @@ namespace sw::editor
                 return EditorPaths::resolveEditorStateFile( desc._pDefaultFileName );
             }
 
+            // 도구 문서는 디스크 파일이다(받은 리소스 id 를 낱개 파일로 풀었거나 `Saved/Editor` 기본 문서) — 디스크 입구로 읽는다. 저장(`writeDocument`)도 디스크다.
             template <typename TAsset>
             [[nodiscard]] static bool readDocument( TAsset& outData, const string& resolved )
             {
-                return outData.loadFromFile( resolved );
+                return outData.loadFromDiskFile( resolved );
             }
-
-            [[nodiscard]] static bool readDocument( TileMapXMLData& outData, const string& resolved ) { return outData.load( resolved ); }
 
             template <typename TAsset>
             [[nodiscard]] static bool writeDocument( const TAsset& data, const string& resolved )
@@ -113,7 +112,7 @@ namespace sw::editor
             static ToolAssetLoadResult loadToolDocument( const ToolDocumentDesc& desc, TAsset& outData, string_view path, string* pOutStatus )
             {
                 const string resolved = resolveDocumentPath( desc, path );
-                if ( resolved.empty() || ResourceIO::hasResource( resolved ) == false )
+                if ( resolved.empty() || FileUtil::isRegularFile( resolved ) == false )
                 {
                     if ( pOutStatus != nullptr )
                         *pOutStatus = resolved.empty() ? ( string( "No " ) + desc._pLabel + " file yet" ) : ( "No file yet: " + makeShownPath( path, resolved ) );

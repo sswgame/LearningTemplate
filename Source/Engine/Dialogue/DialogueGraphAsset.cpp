@@ -53,6 +53,23 @@ namespace sw
         return readText( text, path );
     }
 
+    bool DialogueGraphAsset::loadFromDiskFile( string_view diskPath )
+    {
+        SW_MEMORY_SCOPE( Script );
+        _listNode.clear();
+        _listLink.clear();
+        if ( diskPath.empty() )
+            return false;
+
+        string text;
+        if ( ResourceIO::readTextFile( diskPath, text ) == false )
+        {
+            SW_LOG_WARNING( "Could not read dialogue graph file '%#'", diskPath );
+            return false;
+        }
+        return readText( text, diskPath );
+    }
+
     bool DialogueGraphAsset::saveToFile( string_view path ) const
     {
         if ( path.empty() )

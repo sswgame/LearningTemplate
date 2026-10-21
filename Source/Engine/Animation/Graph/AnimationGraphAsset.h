@@ -210,8 +210,10 @@ namespace sw
         /** @brief 빈 그래프를 만듭니다. */
         AnimationGraphAsset() = default;
 
-        /** @brief JSON 파일을 읽습니다. */
+        /** @brief 리소스 id 의 JSON 을 읽습니다(낱개 파일 또는 팩). OS 경로는 받지 않습니다 — 디스크 파일은 `loadFromDiskFile` 입니다. */
         [[nodiscard]] bool loadFromFile( string_view path );
+        /** @brief **디스크 파일**의 JSON 을 읽습니다. 리소스 id 로 풀지 않고 팩을 보지 않습니다(에디터 문서 · 도구 · 테스트용). */
+        [[nodiscard]] bool loadFromDiskFile( string_view diskPath );
         /** @brief JSON 파일을 씁니다. */
         [[nodiscard]] bool saveToFile( string_view path ) const;
         /** @brief JSON 본문을 파싱합니다. */

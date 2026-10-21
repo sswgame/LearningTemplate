@@ -43,9 +43,29 @@ namespace sw
             SW_LOG_WARNING( "Could not read sprite clip '%#'", path );
             return false;
         }
-        const string label{ path };
+        return loadText( text, path );
+    }
+
+    bool SpriteClipAsset::loadFromDiskFile( string_view diskPath )
+    {
+        clear();
+        if ( diskPath.empty() )
+            return false;
+
+        string text;
+        if ( ResourceIO::readTextFile( diskPath, text ) == false )
+        {
+            SW_LOG_WARNING( "Could not read sprite clip file '%#'", diskPath );
+            return false;
+        }
+        return loadText( text, diskPath );
+    }
+
+    bool SpriteClipAsset::loadText( const string& text, string_view sourceLabel )
+    {
+        const string label{ sourceLabel };
         // 키는 대소문자까지 맞아야 하고, 모르는 키 · 읽지 못한 값은 오류다(`readConfigJSON` 이 로그로 알린다).
-        if ( ConfigManager::readConfigJSON( *this, text, label.c_str() ) && resolveLoadedValues( path ) )
+        if ( ConfigManager::readConfigJSON( *this, text, label.c_str() ) && resolveLoadedValues( sourceLabel ) )
             return true;
         clear();
         return false;

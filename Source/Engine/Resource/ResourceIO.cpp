@@ -17,19 +17,10 @@
 
 namespace sw
 {
+    SW_LOG_CALLER( "ResourceIO" );
+
     namespace
     {
-        /** @brief 절대 경로가 리소스 루트 안이면 true 입니다(팩 전용 모드가 막아야 하는 낱개 에셋). */
-        bool isInsideResourceRoot( string_view absolutePath )
-        {
-            const string& root = ResourcePaths::getRootFolderPath();
-            if ( root.empty() )
-                return false;
-            const string normalized = FileUtil::normalizeSeparators( absolutePath );
-            return normalized.size() > root.size() && StringUtil::startsWith( normalized, root, true ) &&
-                   ( normalized[root.size()] == '/' || root.back() == '/' );
-        }
-
         /**
          * @brief 마운트된 팩을 든 매니저입니다. 엔진 서비스가 바인딩되지 않았으면(엔진 없이 도는 도구 · 쿠커 · 테스트) nullptr 이고, 그때는 마운트된 팩이 없다.
          * @details 낱개 파일 정책은 이 함수와 `isLooseFileAllowed` 한 곳에서만 본다 — 부르는 쪽이 `ResourceIO` 가 실패한 뒤 디스크를 다시 읽지 않게.
@@ -46,56 +37,53 @@ namespace sw
         }
 
         /**
+         * @brief 리소스 id 가 아닌 OS 경로를 리소스 입구에 넣었으면 오류를 남기고 true 입니다(계획 `DiskPathVsResourceId` 안 B).
+         * @details 리소스 입구는 **리소스 id 만** 받는다. 디스크 파일은 디스크 입구(`ResourceIO::readTextFile` · `readBinaryFile`, 로더의 `*FromDiskFile`)로
+         *          읽고, 루트 밖 폴더를 리소스로 읽어야 하면 `ResourcePaths::mountDiskDomain` 으로 붙인다. 예전에는 OS 절대 경로를 디스크에서 바로 읽고
+         *          배포 구성만 루트 안 경로를 거절해, 잘못 넣은 호출이 Dev 테스트를 지나 Shipping 에서야 드러났다(2026-10-19 CI).
+         */
+        bool rejectsOSPath( string_view relativePath )
+        {
+            if ( FileUtil::isAbsolutePath( relativePath ) == false )
+                return false;
+            SW_LOG_ERROR( "'%#' is an OS path, not a resource id - read disk files through ResourceIO::readTextFile / readBinaryFile or a loader's "
+                          "*FromDiskFile entry, or mount the folder with ResourcePaths::mountDiskDomain",
+                          relativePath );
+            return true;
+        }
+
+        /**
          * @brief 리소스 하나를 찾아 읽습니다. **순서는 텍스트 · 바이너리가 같습니다.**
          * @param readFromDisk 디스크 절대 경로에서 읽는 방법.
          * @param readFromPack 마운트된 팩에서 읽는 방법(팩 매니저를 받고, 찾았으면 팩 경로를 `outPackPath` 에 담습니다).
-         * @details 순서는 넷입니다. (0) OS 절대 경로면 디스크에서 바로, (1) 낱개 파일 우선이 켜져
-         *          있으면 디스크, (2) 마운트된 팩, (3) 낱개 경로를 풀지 못한 경우의 마지막 폴백입니다.
+         * @details 인자는 리소스 id 하나다 — OS 경로는 오류로 거절한다(`rejectsOSPath`). 순서는 둘입니다. (1) 낱개 파일 우선이 켜져 있거나 붙인 디스크
+         *          도메인(`ResourcePaths::mountDiskDomain`)이면 디스크, (2) 마운트된 팩. 붙인 도메인은 팩에 없으므로 (2) 를 보지 않는다.
+         *          풀지 못한 id 를 작업 폴더 기준 경로로 다시 열어 보는 마지막 단계는 없앴다 — 리소스 id 가 아닌 것을 디스크에서 찾는 폴백이었다.
          *
          *          `readTextResource` 와 `readBinaryResource` 가 이 순서 하나를 씁니다 — 두 벌이면 한쪽만 고쳐 텍스트와
          *          바이너리가 다른 파일을 읽게 됩니다.
-         *
-         *          경로를 한 번만 풀고, 3단계는 **1단계가 경로를 풀지 못한 경우에만** 의미가 있습니다(같은 경로를 두 번 묻지 않는다).
          */
         template <typename DiskReadFn, typename PackReadFn>
         [[nodiscard]] bool readResourceCommon( string_view relativePath, string* pOutAbsPath,
                                                const DiskReadFn& readFromDisk, const PackReadFn& readFromPack )
         {
-            if ( relativePath.empty() )
+            if ( relativePath.empty() || rejectsOSPath( relativePath ) )
                 return false;
             // 이 호스트가 읽지 않는 에셋 종류(전용 서버의 텍스처 · 셰이더 바이너리 · 오디오)는 없는 것으로 친다 — 서버 팩에는 들어 있지도 않다.
             if ( ResourcePaths::isExcludedForHost( relativePath ) )
                 return false;
-
-            // 0. OS 절대 경로(임시 파일, 외부 세이브 등)면 디스크에서 바로 읽는다. 단, 팩 전용 모드(낱개 파일 금지 — 배포 구성)에서 리소스 루트
-            //    **안**을 가리키면 거절한다 — 절대 경로로 적기만 하면 팩 전용 모드를 지나 낱개 에셋을 읽게 된다.
-            const ResourcePakManager* pPackManager = findPackManager();
-            const bool                bLooseFirst  = isLooseFileAllowed( pPackManager );
-            if ( FileUtil::isAbsolutePath( relativePath ) )
-            {
-                if ( bLooseFirst == false && isInsideResourceRoot( relativePath ) )
-                {
-                    SW_LOG_WARNING( "Refusing a loose read of '%#' — this build reads resources from packs only", relativePath );
-                    return false;
-                }
-                if ( FileUtil::isRegularFile( relativePath ) == false )
-                    return false;
-                if ( pOutAbsPath != nullptr )
-                    *pOutAbsPath = string( relativePath );
-                return readFromDisk( relativePath );
-            }
-
             if ( ResourcePaths::hasParentDirectoryComponent( relativePath ) )
             {
                 SW_LOG_WARNING( "Refusing resource id '%#' — '..' would leave the resource root", relativePath );
                 return false;
             }
 
-            // 낱개 경로는 **여기서 한 번만** 푼다.
-            string loosePath;
-            if ( bLooseFirst )
+            // 1. 낱개 경로는 **여기서 한 번만** 푼다.
+            const ResourcePakManager* pPackManager = findPackManager();
+            const bool                bDiskDomain  = ResourcePaths::isMountedDiskDomainID( relativePath );
+            if ( isLooseFileAllowed( pPackManager ) || bDiskDomain )
             {
-                loosePath = ResourcePaths::findLooseFile( relativePath ).getDiskPath();
+                const string loosePath = ResourcePaths::findLooseFile( relativePath ).getDiskPath();
                 if ( loosePath.empty() == false && FileUtil::isRegularFile( loosePath ) )
                 {
                     if ( pOutAbsPath != nullptr )
@@ -103,6 +91,8 @@ namespace sw
                     return readFromDisk( loosePath );
                 }
             }
+            if ( bDiskDomain )
+                return false;
 
             // 2. 마운트된 팩에서 O(1) 해시로 찾아 압축을 풀어 읽는다(엔진 밖이면 마운트된 팩이 없다)
             const string normalizedKey = FileUtil::normalizePath( relativePath );
@@ -113,17 +103,6 @@ namespace sw
                     *pOutAbsPath = "[" + FileUtil::getFileNamePart( mountedPackPath ) + "]:" + normalizedKey;
                 return true;
             }
-
-            // 3. 낱개 경로를 **못 푼 경우에만** 상대 경로 그대로 마지막으로 본다.
-            //    풀렸는데 없었다면 위에서 이미 확인했으므로 다시 묻지 않는다.
-            const bool bLooseFallback = bLooseFirst && loosePath.empty() && FileUtil::isRegularFile( relativePath );
-            if ( bLooseFallback )
-            {
-                if ( pOutAbsPath != nullptr )
-                    *pOutAbsPath = string( relativePath );
-                return readFromDisk( relativePath );
-            }
-
             return false;
         }
     } // namespace
@@ -131,8 +110,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "ResourceIO" );
-
     bool ResourceIO::readTextResource( string_view relativePath, string& outText,
                                        string* pOutAbsPath )
     {
@@ -160,6 +137,16 @@ namespace sw
             return false;
         }
         return CookJob::admitRead( filePath, reinterpret_cast<const uint8*>( outText.data() ), outText.size() );
+    }
+
+    bool ResourceIO::readBinaryFile( string_view filePath, vector<uint8>& outBytes )
+    {
+        if ( FileUtil::readFile( filePath, outBytes ) == false )
+        {
+            CookJob::admitMissingRead( filePath );
+            return false;
+        }
+        return CookJob::admitRead( filePath, outBytes.data(), outBytes.size() );
     }
 
     bool ResourceIO::readBinaryResource( string_view relativePath, vector<uint8>& outBytes )
@@ -207,29 +194,26 @@ namespace sw
 
     bool ResourceIO::hasResource( string_view relativePath )
     {
-        if ( relativePath.empty() || ResourcePaths::isExcludedForHost( relativePath ) )
+        // 찾는 규칙은 읽기(`readResourceCommon`)와 같다 — OS 경로는 오류, 붙인 디스크 도메인은 디스크만, 나머지는 낱개 파일(허용될 때) · 팩.
+        if ( relativePath.empty() || rejectsOSPath( relativePath ) )
+            return false;
+        const bool bUnreadableHere = ResourcePaths::isExcludedForHost( relativePath ) || ResourcePaths::hasParentDirectoryComponent( relativePath );
+        if ( bUnreadableHere )
             return false;
 
-        // 0. OS 절대 경로면 디스크에서 바로 확인한다
-        // 판정은 `FileUtil::isAbsolutePath` 가 기준이다 — 손으로 적은 복사본을 두면 기준과 답이 갈린다.
-        if ( FileUtil::isAbsolutePath( relativePath ) )
-            return FileUtil::exists( relativePath );
-
-        const string              normalizedKey = FileUtil::normalizePath( relativePath );
-        const ResourcePakManager* pPackManager  = findPackManager();
-        if ( pPackManager != nullptr && pPackManager->hasFile( normalizedKey ) )
-            return true;
-
-        if ( isLooseFileAllowed( pPackManager ) )
+        const ResourcePakManager* pPackManager = findPackManager();
+        const bool                bDiskDomain  = ResourcePaths::isMountedDiskDomainID( relativePath );
+        if ( isLooseFileAllowed( pPackManager ) || bDiskDomain )
         {
             const string absPath = ResourcePaths::findLooseFile( relativePath ).getDiskPath();
             if ( absPath.empty() == false && FileUtil::exists( absPath ) )
                 return true;
-
-            return FileUtil::exists( relativePath );
         }
+        if ( bDiskDomain )
+            return false;
 
-        return false;
+        const string normalizedKey = FileUtil::normalizePath( relativePath );
+        return pPackManager != nullptr && pPackManager->hasFile( normalizedKey );
     }
 
     ResourceFolderListing ResourceIO::collectResources( string_view relativeFolder, string_view extension, vector<string>& outListPath )
@@ -247,7 +231,7 @@ namespace sw
         vector<string>            listCandidate;
         bool                      bFolderFound = false;
         const ResourcePakManager* pPackManager = findPackManager();
-        if ( isLooseFileAllowed( pPackManager ) )
+        if ( isLooseFileAllowed( pPackManager ) || ResourcePaths::isMountedDiskDomainID( folder ) )
         {
             const string diskFolder = ResourcePaths::findLooseFile( folder ).getDiskPath();
             if ( diskFolder.empty() == false && FileUtil::isDirectory( diskFolder ) )

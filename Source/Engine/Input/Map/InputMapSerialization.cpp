@@ -1138,8 +1138,9 @@ namespace sw
         if ( filePath.empty() )
             return false;
 
+        // 사용자 바인딩은 `saveUserBindings` 가 디스크에 쓴 플레이어 파일이다 — 리소스 id 가 아니므로 디스크 입구로 읽는다.
         XMLDocument doc;
-        if ( doc.loadResource( filePath ) == false )
+        if ( doc.loadFile( filePath ) == false )
             return false;
 
         XMLNode root = doc.getRoot( "UserBindings" );

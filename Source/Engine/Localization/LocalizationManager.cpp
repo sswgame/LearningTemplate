@@ -23,17 +23,15 @@ namespace sw
     {
         struct LocalizationManagerInternal
         {
-            /** @brief 리소스 경로 또는 절대 경로의 글을 읽습니다(팩 안이면 팩에서). */
-            [[nodiscard]] static bool readLocalizationFile( string_view path, string& outText )
-            {
-                // 디스크에 있는 경로(테스트와 도구의 절대 경로)는 그대로 읽는다. 리소스 조회는 못 찾으면 오류를 남긴다.
-                if ( FileUtil::isRegularFile( path ) )
-                    return FileUtil::readTextFile( path, outText );
-                return ResourceIO::readTextResource( path, outText );
-            }
+            /**
+             * @brief 리소스 id 의 글을 읽습니다(낱개 파일 또는 팩).
+             * @details 프로젝트 · 테이블 · 번역 경로는 모두 리소스 id 다. 루트 밖 폴더(테스트 임시 폴더, 도구 작업 폴더)는 `ResourcePaths::mountDiskDomain`
+             *          으로 붙여 id 로 부른다 — 예전에는 디스크를 먼저 보고 없으면 리소스로 다시 찾아 두 종류의 경로가 한 입구로 들어왔다.
+             */
+            [[nodiscard]] static bool readLocalizationFile( string_view path, string& outText ) { return ResourceIO::readTextResource( path, outText ); }
 
             /** @brief 그 파일이 있는지 확인합니다. 없는 번역 테이블을 읽어 "File not found" 오류를 남기지 않게 먼저 묻습니다. */
-            static bool hasLocalizationFile( string_view path ) { return ResourceIO::hasResource( path ) || FileUtil::exists( path ); }
+            static bool hasLocalizationFile( string_view path ) { return ResourceIO::hasResource( path ); }
 
             /** @brief 두 경로가 같은 파일인지 확인합니다. 구분자와 대소문자를 무시하고, 한쪽이 절대 경로면 뒤쪽을 맞춰 봅니다. */
             static bool isSamePath( string_view lhs, string_view rhs )
