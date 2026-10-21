@@ -203,20 +203,30 @@ namespace sw
             if ( view._bRender == SW_TRUE )
                 view._shadow = ShadowSetupUtil::makeViewShadowFor( pLight != nullptr ? pShadowLight : nullptr, view._viewProj, packet._shadow );
         }
+        updateAnimationLODViews( packet, *pActiveScene );
+        populateGPUSceneSnapshot( packet, pActiveScene );
+    }
+
+    void RenderPacketBuilder::updateAnimationLODViews( const RenderFramePacket& packet, Scene& activeScene )
+    {
         // 애니메이션 LOD 의 뷰 — 주 시점과 이번 프레임에 그리는 추가 뷰(CCTV · 분할 화면). 다음 프레임 평가가 이것으로 가시성 · 화면 크기를 본다.
         // 갱신 주기로 쉬는 추가 뷰는 넣지 않는다 — 그 뷰에만 보이는 캐릭터는 그 뷰가 그리는 프레임에만 포즈를 만든다.
-        if ( pActiveScene->getObjectManager() != nullptr )
+        GameObjectManager* pObjects = activeScene.getObjectManager();
+        if ( pObjects == nullptr )
+            return;
+        _listAnimationLODView.clear();
+        if ( packet._bHasViewProj == SW_TRUE )
+            _listAnimationLODView.push_back( AnimationLODView::make( packet._viewProj, packet._cameraPos ) );
+        for ( const RenderViewRequest& view : packet._listView )
         {
-            _listAnimationLODView.clear();
-            if ( packet._bHasViewProj == SW_TRUE )
-                _listAnimationLODView.push_back( AnimationLODView::make( packet._viewProj, packet._cameraPos ) );
-            for ( const RenderViewRequest& view : packet._listView )
-            {
-                if ( view._bRender == SW_TRUE )
-                    _listAnimationLODView.push_back( AnimationLODView::make( view._viewProj, view._position ) );
-            }
-            pActiveScene->getObjectManager()->getSubsystem<AnimationSystem>().setLODViews( _listAnimationLODView );
+            if ( view._bRender == SW_TRUE )
+                _listAnimationLODView.push_back( AnimationLODView::make( view._viewProj, view._position ) );
         }
+        pObjects->getSubsystem<AnimationSystem>().setLODViews( _listAnimationLODView );
+    }
+
+    void RenderPacketBuilder::populateGPUSceneSnapshot( RenderFramePacket& packet, Scene* pActiveScene )
+    {
         _gpuSceneBuilder->populateFromScene( pActiveScene, packet._cameraPos );
         // 추가 뷰(CCTV · PiP)는 자기 눈으로 투명을 정렬한다 — 주 카메라 순서로 그리면 반대편을 보는 뷰에서 앞뒤가 뒤집힌다.
         _gpuSceneBuilder->computeViewTransparentOrders( packet._listView );
@@ -229,10 +239,8 @@ namespace sw
             _gpuUploadQueue->flush();
         }
 
-        {
-            SW_PROFILE_SCOPE( "GT.Packet.export" );
-            _gpuSceneBuilder->exportCPUSnapshot( packet._gpuScene );
-        }
+        SW_PROFILE_SCOPE( "GT.Packet.export" );
+        _gpuSceneBuilder->exportCPUSnapshot( packet._gpuScene );
     }
 
     RenderPacketBuilder::ScenePreviewBuilder& RenderPacketBuilder::getOrCreateScenePreviewBuilder( uint32 sceneKey )
