@@ -75,7 +75,9 @@ namespace sw
         // ---- 디렉터, 몸, 조종자가 읽는 것(이 컴포넌트가 쓰지 않는 그룹) ----
         float3 getEyePosition() const;
         /** @brief 발 위치입니다(몸 이동의 위치이며, 없으면 처음 위치). */
-        float3             getFeetPosition() const;
+        float3 getFeetPosition() const;
+        /** @brief 그릴 발 자리입니다 — 시뮬레이션 자리에 예측 보정을 녹이는 오프셋을 더한 것(몸 · 카메라). 판정(사격 · 감독)은 `getFeetPosition` 입니다. */
+        float3             getDisplayFeetPosition() const;
         float32            getHealth() const { return _vitality.getHealth(); }
         float32            getMaxHealth() const { return _maxHealth; }
         bool               isAlive() const { return _vitality.isAlive(); }

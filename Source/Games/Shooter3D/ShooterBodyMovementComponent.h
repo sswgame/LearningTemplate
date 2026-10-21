@@ -16,6 +16,28 @@
 
 namespace sw
 {
+    /** @brief 몸 이동 한 걸음의 입력입니다. 폰 의도에서 만들고(`ShooterBodyMovementComponent::makeInput`) 네트워크로도 보낸다(클라이언트 예측의 입력). */
+    struct ShooterMoveInput
+    {
+        float3 _move{ 0.0f, 0.0f, 0.0f }; ///< 월드 XZ 이동(길이 1 이하)
+        uint8  _bSprint{ SW_FALSE };
+        uint8  _bJump{ SW_FALSE };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 몸 이동의 상태입니다. 같은 상태와 입력이면 서버와 클라이언트가 같은 다음 상태를 낸다(`ShooterBodyMovementComponent::simulate`). */
+    struct ShooterMoveState
+    {
+        float3  _position{ 0.0f, 0.0f, 0.0f }; ///< 발
+        float32 _verticalSpeed{ 0.0f };
+        uint8   _bOnGround{ SW_TRUE };
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class ShooterBodyMovementComponent
      * @brief 같은 오브젝트의 `PawnComponent` 의도(이동 축 · 조종 요 · `_jumpButton` · `_sprintButton`)만 읽는 운동학 몸 이동입니다. 물리 바디 없이 아레나 상자 목록으로
@@ -38,6 +60,25 @@ namespace sw
          * @return 이 걸음에서 땅에 내려앉았으면 true 입니다(착지음).
          */
         bool stepMovement( const vector<ShooterArenaBox>& listBox, float32 deltaTime );
+        /** @brief 지금 폰 의도를 걸음 입력으로 만듭니다. 멈춤이거나 폰이 없으면 빈 입력입니다. */
+        ShooterMoveInput makeInput() const;
+        /**
+         * @brief 한 걸음의 순수 계산입니다 — 이 컴포넌트의 속도 · 중력 · 반경으로 @p state 에 @p input 을 적용한 다음 상태를 돌려줍니다(멤버는 바꾸지 않는다).
+         * @details `stepMovement` 와 네트워크 예측(`ShooterNetPawnComponent` — 서버 시뮬레이션 · 클라이언트 재시뮬레이션)이 이 한 함수를 쓴다. @p outbLanded 는 이 걸음에 내려앉았으면 true.
+         */
+        ShooterMoveState simulate( const vector<ShooterArenaBox>& listBox, const ShooterMoveState& state, const ShooterMoveInput& input, float32 deltaTime, bool& outbLanded ) const;
+        ShooterMoveState getState() const;
+        /** @brief 상태를 바꿉니다(네트워크가 정한 상태). @p moveVelocity 는 지난 걸음의 수평 속도입니다. */
+        void setState( const ShooterMoveState& state, const float3& moveVelocity );
+        /**
+         * @brief 네트워크가 이 몸을 움직이는가입니다. 켜면 `stepMovement` 는 아무것도 하지 않는다 — 고정 틱의 네트워크 걸음(`ShooterNetPawnComponent`)이 `simulate` · `setState` 로 움직인다.
+         * @details 한 프레임에 두 길이 같은 몸을 움직이지 않게 하는 스위치다.
+         */
+        void setNetDriven( bool bNetDriven ) { _bNetDriven = bNetDriven ? SW_TRUE : SW_FALSE; }
+        bool isNetDriven() const { return _bNetDriven == SW_TRUE; }
+        /** @brief 그릴 자리에 더하는 오프셋입니다(예측 보정을 녹이는 시각 보정 — `PredictionSmoother`). 시뮬레이션 자리는 바뀌지 않는다. */
+        void   setDisplayOffset( const float3& offset ) { _displayOffset = offset; }
+        float3 getDisplayFeetPosition() const { return _position + _displayOffset; }
         /** @brief 발을 @p feet 로 옮기고 속도를 0 으로 둡니다(스폰 · 판 다시 시작). */
         void teleport( const float3& feet );
         /** @brief 멈춰 둡니다 — 의도를 버리고 제자리(수평 속도 0). */
@@ -70,11 +111,13 @@ namespace sw
         PROPERTY( Category = "Movement", DisplayName = "Radius", Tooltip = "Body radius against the blockers", Min = 0.0, Units = m )
         float32 _radius;
 
-        float3  _position;     ///< 발
-        float3  _moveVelocity; ///< 지난 걸음의 수평 속도
+        float3  _position;      ///< 발
+        float3  _moveVelocity;  ///< 지난 걸음의 수평 속도
+        float3  _displayOffset; ///< 그릴 때만 더하는 오프셋(예측 보정 녹이기)
         float32 _verticalSpeed;
         uint8   _bOnGround  : 1;
         uint8   _bSuspended : 1;
-        uint8   _reserved   : 6;
+        uint8   _bNetDriven : 1;
+        uint8   _reserved   : 5;
     };
 } // namespace sw
