@@ -31,6 +31,12 @@
  * 셰이더 안의 기능 스위치(외부 define 이 아니다 — 쿠킹 퍼뮤테이션 수가 늘지 않는다)
  *   SW_MATERIAL_READ_IN_VERTEX   머티리얼을 정점에서 읽는다
  *   SW_MATERIAL_USES_TANGENT     정점 탄젠트를 월드로 옮겨 `SwPixelContext.tangent` 로 넘긴다(노멀 맵)
+ *   SW_MATERIAL_NONE             머티리얼이 없는 사용자(gbuffer · shadowdepth — 머티리얼 없는 배치의 패스 셰이더). 머티리얼 구조체 · 읽기 · 위치 오프셋 훅이 없고,
+ *                                알파 컷오프(MATERIAL_ALPHA_CUTOFF)는 쓸 수 없다. 깊이 패스에서는 이 셰이더가 같은 자리를 못 만드는 배치를 뼈대가 빼 준다
+ *                                (깊이 프리패스의 MATERIAL_VERTEX_DEFORM · 그림자의 MATERIAL_SHADOW_CAST_OFF).
+ *
+ * 깊이 패스(SW_PASS_SHADOW · SW_PASS_DEPTH_PREPASS)에서 알파 컷오프가 아니면 정점 → 픽셀 칸은 위치(와 등장 디더)뿐이다 — 그림자 맵은 패스마다 모든 메시를 그리므로
+ * 쓰이지 않는 색 · 노멀 · 사용자 칸을 정점 단계가 내보내지 않는다.
  *
  * 훅 안에서 이른 반환(중간 `return`)을 쓰지 않는다. 뼈대는 출구가 하나이고 훅이 인라인되어도 그래야 한다 — Vfx V5 에서 드라이버가 이른 반환 모양을 틀리게
  * 컴파일했을 가능성이 있다(docs/plans/Vfx.md V4 남은 확인). 형식으로 막지 못하는 틈이라 리뷰가 본다.
@@ -50,6 +56,22 @@
 
 #if defined( SW_PASS_SHADOW ) && defined( SW_PASS_DEPTH_PREPASS )
 #error "SW_PASS_SHADOW and SW_PASS_DEPTH_PREPASS are exclusive pass kinds"
+#endif
+
+#if defined( SW_MATERIAL_DEPTH_PASS ) && !defined( MATERIAL_ALPHA_CUTOFF )
+#define SW_MATERIAL_DEPTH_ONLY 1 // 깊이만 쓰고 픽셀이 읽을 것이 없다 — 보간 칸이 위치뿐이다
+#endif
+
+#if defined( SW_MATERIAL_NONE )
+#if defined( SW_MATERIAL_READ_IN_VERTEX )
+#error "SW_MATERIAL_NONE has no material to read: SW_MATERIAL_READ_IN_VERTEX is invalid"
+#endif
+#if defined( MATERIAL_ALPHA_CUTOFF )
+#error "SW_MATERIAL_NONE has no material alpha: MATERIAL_ALPHA_CUTOFF must be drawn by the material shader (FrameRendererUtil::drawsDepthWithMaterialShader)"
+#endif
+#if !defined( SW_PASS_GBUFFER ) && !defined( SW_MATERIAL_DEPTH_PASS )
+#error "a material-less shader draws only the G-buffer or a depth pass (SW_PASS_GBUFFER, SW_PASS_SHADOW, SW_PASS_DEPTH_PREPASS)"
+#endif
 #endif
 
 // 조건식 안의 `defined` 산술은 컴파일러마다 다르므로(FXC) 조합을 풀어 쓴다.
@@ -92,6 +114,7 @@ struct SwVertexContext
 	float3         localNormal;
 	float3         worldPosition; ///< 뼈대가 만든 월드 위치(월드 위치 오프셋을 더하기 전)
 	float3         worldNormal;
+	float4         clipPosition;  ///< 월드 위치 오프셋 · 외곽선이 반영된 최종 클립 위치. **사용자 보간 칸 훅에서만 채워진다**(다른 훅에서는 0). 읽기만 한다 — 위치는 뼈대가 만든다
 #if defined( SW_MATERIAL_READ_IN_VERTEX )
 	SwMaterialData material;      ///< 머티리얼을 정점에서 읽는 셰이더에만 있다
 #endif
@@ -110,6 +133,7 @@ struct SwOutlineOffset
 struct SwMaterialInterpolants
 {
 	float4 position      : SV_POSITION;
+#if !defined( SW_MATERIAL_DEPTH_ONLY )
 	float4 color         : COLOR;
 	float2 uv            : TEXCOORD0;
 	float3 normal        : TEXCOORD1;
@@ -117,10 +141,11 @@ struct SwMaterialInterpolants
 #if defined( SW_MATERIAL_USES_TANGENT )
 	float4 tangent       : TEXCOORD3; // xyz 월드 탄젠트 · w 바이탄젠트 부호(정점 탄젠트 그대로)
 #endif
-#if !defined( SW_MATERIAL_READ_IN_VERTEX )
+#if !defined( SW_MATERIAL_READ_IN_VERTEX ) && !defined( SW_MATERIAL_NONE )
 	nointerpolation uint materialIndex : TEXCOORD4; // GPUScene 인스턴스가 준 머티리얼 원소
 #endif
 	SW_MATERIAL_VARYINGS_TYPE user; // 사용자 보간 칸(시맨틱은 사용자 구조체가 정한다)
+#endif
 	SW_APPEARANCE_VARYING // 등장 디더 변형만 등장 비율을 넘긴다(binding.hlsli 8-1)
 };
 
@@ -136,7 +161,7 @@ struct SwPixelContext
 	float4 tangent;
 #endif
 	SW_MATERIAL_VARYINGS_TYPE user;
-#if !defined( SW_MATERIAL_READ_IN_VERTEX )
+#if !defined( SW_MATERIAL_READ_IN_VERTEX ) && !defined( SW_MATERIAL_NONE )
 	SwMaterialData material;      ///< 머티리얼을 픽셀에서 읽는 셰이더에만 있다
 #endif
 };

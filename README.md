@@ -23,7 +23,7 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | 7 | [ScriptsStructure](docs/plans/ScriptsStructure.md) — Scripts 구조 — import 루트 하나 · 3층 · 층 게이트 (2026-10-21) | 측정대기 | 10/10 | 없음 | project | 없음 |
 | 8 | [ModuleRenderPass](docs/plans/ModuleRenderPass.md) — 모듈이 렌더 패스를 등록하는 창구 | 구현중 | 1/3 | 없음 | engine | G-1 |
 | 9 | [BuildSpeed](docs/plans/BuildSpeed.md) — 빌드 속도 계획 | 구현대기 | 6/13 | 다른 작업이 모두 끝난 뒤 혼자 | quality | C-2 |
-| 10 | [MaterialShaderHooks](docs/plans/MaterialShaderHooks.md) — 머티리얼 셰이더 훅 구조 | 설계 | 4/10 | 없음 | graphics | 없음 |
+| 10 | [MaterialShaderHooks](docs/plans/MaterialShaderHooks.md) — 머티리얼 셰이더 훅 구조 | 설계 | 8/10 | 없음 | graphics | 없음 |
 | - | [AutomationSplit](docs/plans/AutomationSplit.md) — Automation 분리 | 설계 | 0/4 | 없음 | engine | 없음 |
 | - | [DesignerDataToolsAudit](docs/plans/DesignerDataToolsAudit.md) — 디자이너용 데이터 도구 점검 | 구현대기 | 1/6 | 없음 | editor | D3-13 |
 | - | [AbilitySystemExtensions](docs/plans/AbilitySystemExtensions.md) — 어빌리티 시스템의 다음 조각 | 구현중 | 5/5 | 없음 | gameplay | D4-11 |

@@ -1,11 +1,8 @@
-#include "lighting.hlsli"
-
-// 보기 모드 Roughness · Metallic 이 보이는 값 — 지형은 거친 유전체다(PBR 칸이 없다).
-static const float kSurfaceRoughness = 1.0f;
-static const float kSurfaceMetallic  = 0.0f;
-
 /**
  * terrain.hlsl — 지형(TerrainComponent). 스플랫 맵(RGBA = 레이어 0..3 가중치)으로 레이어 넷을 섞는다.
+ *
+ * 머티리얼 셰이더 뼈대(materialshader.hlsli · materialshadermain.hlsli)의 사용자다. 이 파일은 표면 훅만 정의한다 — 조명(기본 PBR) · 보기 모드 ·
+ * G버퍼 서명 · 정점 변환은 뼈대가 한다.
  *
  * 레이어 하나 = 색(layerNColor) × 디테일 맵의 자기 채널(타일링 무늬, 0.5 가 중립). 디테일은 위에서 내려 찍거나(평면), 세 축에서 찍어
  * 노멀로 섞는다(3 축 — 절벽에서 늘어지지 않는다, layerTriplanar 가 레이어마다 고른다). 가파른 면은 절벽 레이어가 덮는다(terrainParams.zw).
@@ -13,15 +10,11 @@ static const float kSurfaceMetallic  = 0.0f;
  * (절벽 덮기는 그림에만 있다 — 배치는 경사 필터로 가린다).
  * 정점 UV 는 지형 정규 좌표(0..1)다. 스플랫 텍셀 중심을 지형 가장자리에 맞추려고 너비로 반 텍셀 옮긴다(CPU 와 같은 규칙).
  */
+#include "lighting.hlsli"
 
-struct PSInput
-{
-	float4 position                    : SV_POSITION;
-	float2 uv                          : TEXCOORD0;
-	float3 normal                      : TEXCOORD1;
-	nointerpolation uint materialIndex : TEXCOORD2;
-	float3 worldPosition               : TEXCOORD3;
-};
+// 보기 모드 Roughness · Metallic 이 보이는 값 — 지형은 거친 유전체다(PBR 칸이 없다).
+static const float kSurfaceRoughness = 1.0f;
+static const float kSurfaceMetallic  = 0.0f;
 
 // terrain.material 의 프로퍼티와 같은 이름 · 타입이다.
 SW_MATERIAL_BEGIN
@@ -38,18 +31,14 @@ SW_MATERIAL_BEGIN
 }
 SW_MATERIAL_END
 
-PSInput VSMain( SwVertexInput input )
-{
-	PSInput        output;
-	SwInstanceData instance = swLoadInstance( input.instanceSlot );
-	float4 worldPosition    = swComputeWorldPosition( input.position, instance.world );
-	output.position         = swComputeClipPosition( worldPosition, g_ViewProj );
-	output.worldPosition    = worldPosition.xyz;
-	output.uv               = input.uv;
-	output.normal           = swComputeWorldNormal( input.normal, instance.world );
-	output.materialIndex    = instance.materialIndex;
-	return output;
-}
+#if defined( MATERIAL_ALPHA_CUTOFF )
+#error "terrain.hlsl has no alpha cutoff property (SwMaterialSurface.alphaCutoff) — add one to the material struct and fill it in computeMaterialSurface"
+#endif
+
+// 훅 선택(materialshader.hlsli) — 기본 PBR 조명, 사용자 보간 칸 없음.
+#define SW_MATERIAL_DEFAULT_LIGHTING
+#define SW_MATERIAL_DEFAULT_VARYINGS
+#include "materialshader.hlsli"
 
 /** @brief 가중치 넷을 합 1 로 나눈다. 합이 0 이면 레이어 0 이다(C++ TerrainHeightfield::normalizeWeights 와 같다). */
 float4 normalizeWeights( float4 weight )
@@ -58,14 +47,14 @@ float4 normalizeWeights( float4 weight )
 	return ( total <= 1e-5f ) ? float4( 1.0f, 0.0f, 0.0f, 0.0f ) : weight / total;
 }
 
-SW_SURFACE_OUTPUT PSMain( PSInput input )
+SwMaterialSurface computeMaterialSurface( SwPixelContext context )
 {
-	const float3   normal   = normalize( input.normal );
-	SwMaterialData material = SW_MATERIAL( input.materialIndex );
+	const float3   normal   = context.normal;
+	SwMaterialData material = context.material;
 
 	// 스플랫 — 텍셀 중심을 지형 가장자리에 맞춘다.
 	const float  splatWidth = material.terrainParams.x;
-	const float2 splatUv    = ( splatWidth > 1.0f ) ? input.uv * ( ( splatWidth - 1.0f ) / splatWidth ) + 0.5f / splatWidth : input.uv;
+	const float2 splatUv    = ( splatWidth > 1.0f ) ? context.uv * ( ( splatWidth - 1.0f ) / splatWidth ) + 0.5f / splatWidth : context.uv;
 	float4 weight = ( material.splatMap == kInvalidIndex ) ? float4( 1.0f, 0.0f, 0.0f, 0.0f ) : swSampleMaterialTexture( material.splatMap, splatUv );
 	weight        = normalizeWeights( weight );
 
@@ -81,9 +70,9 @@ SW_SURFACE_OUTPUT PSMain( PSInput input )
 
 	// 디테일 — 평면(위에서) 하나와 3 축 셋. 평면 표본은 3 축의 xz 면과 같다.
 	const float  tiling      = material.terrainParams.y;
-	const float4 detailTop   = swSampleMaterialTexture( material.detailMap, input.worldPosition.xz * tiling );
-	const float4 detailFront = swSampleMaterialTexture( material.detailMap, input.worldPosition.xy * tiling );
-	const float4 detailSide  = swSampleMaterialTexture( material.detailMap, input.worldPosition.zy * tiling );
+	const float4 detailTop   = swSampleMaterialTexture( material.detailMap, context.worldPosition.xz * tiling );
+	const float4 detailFront = swSampleMaterialTexture( material.detailMap, context.worldPosition.xy * tiling );
+	const float4 detailSide  = swSampleMaterialTexture( material.detailMap, context.worldPosition.zy * tiling );
 	float3       axisWeight  = pow( abs( normal ), 4.0f );
 	axisWeight /= max( axisWeight.x + axisWeight.y + axisWeight.z, 1e-5f );
 	const float4 detailTriplanar = detailSide * axisWeight.x + detailTop * axisWeight.y + detailFront * axisWeight.z;
@@ -94,16 +83,15 @@ SW_SURFACE_OUTPUT PSMain( PSInput input )
 	float3 albedo = material.layer0Color.rgb * shade.x * weight.x + material.layer1Color.rgb * shade.y * weight.y + material.layer2Color.rgb * shade.z * weight.z +
 	                material.layer3Color.rgb * shade.w * weight.w;
 	// 큰 무늬 — 같은 디테일 맵을 훨씬 넓게 찍어 타일 반복을 깬다.
-	const float macro = swSampleMaterialTexture( material.detailMap, input.worldPosition.xz * tiling * 0.071f ).x;
+	const float macro = swSampleMaterialTexture( material.detailMap, context.worldPosition.xz * tiling * 0.071f ).x;
 	albedo *= lerp( 0.85f, 1.12f, macro );
 
-#if defined( SW_PASS_GBUFFER )
-	return swStoreSurface( float4( 0.0f, 0.0f, 0.0f, 0.0f ), float4( albedo, 1.0f ), normal, input.worldPosition, kSurfaceRoughness, kSurfaceMetallic );
-#elif SW_VIEWMODE_SKIPS_LIGHTING
-	return swStoreSurface( float4( albedo, 1.0f ), float4( albedo, 1.0f ), normal, input.worldPosition, kSurfaceRoughness, kSurfaceMetallic );
-#else
-	const float  shadow = swSampleShadowAtWorld( input.worldPosition, normal );
-	const float3 lit    = swShadeLights( albedo, input.worldPosition, normal, shadow, kSurfaceRoughness, kSurfaceMetallic );
-	return swStoreSurface( float4( lit, 1.0f ), float4( albedo, 1.0f ), normal, input.worldPosition, kSurfaceRoughness, kSurfaceMetallic );
-#endif
+	SwMaterialSurface surface;
+	surface.albedo    = float4( albedo, 1.0f );
+	surface.normal    = normal;
+	surface.roughness = kSurfaceRoughness;
+	surface.metallic  = kSurfaceMetallic;
+	return surface;
 }
+
+#include "materialshadermain.hlsli"

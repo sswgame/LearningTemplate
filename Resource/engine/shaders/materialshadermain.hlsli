@@ -7,6 +7,7 @@
  *   본 패스(포워드)   `SW_SURFACE_OUTPUT` 하나: 표면 훅 → 조명 훅 → 보기 모드 → swStoreSurface
  *   G버퍼(SW_PASS_GBUFFER)  조명 훅을 컴파일 아웃하고 표면만 적는다(셰이딩은 디퍼드 조명 패스가 한다)
  *   깊이(SW_PASS_SHADOW · SW_PASS_DEPTH_PREPASS)  위치만 만든다. 픽셀은 알파 컷오프 머티리얼만 오린다
+ *   머티리얼 없는 사용자(SW_MATERIAL_NONE)  위치 오프셋 훅이 없다 — 이 셰이더가 같은 자리를 못 만드는 배치는 깊이 패스에서 한 점으로 모아 뺀다
  * 클립 위치는 정점 단계의 한 곳에서만 만든다(`swComputeWorldPosition` → 훅의 오프셋 → `swComputeClipPosition`). 그림자는 빛 행렬, 나머지는 카메라 행렬이다.
  *
  * 출구가 하나다 — 진입점과 도우미 모두 마지막에 한 번만 반환한다.
@@ -39,11 +40,12 @@ SwMaterialInterpolants VSMain( SwVertexInput input, uint vertexId : SV_VertexID 
 	context.worldPosition = worldPosition.xyz;
 	// 월드 노멀은 월드 행렬이 아니라 그 3x3 의 여인수 행렬로 옮긴다(binding.hlsli swComputeWorldNormal) — 비균등 스케일에서도 조명이 맞는다.
 	context.worldNormal        = swComputeWorldNormal( context.localNormal, context.instance.world );
+	context.clipPosition       = float4( 0.0f, 0.0f, 0.0f, 0.0f );
 #if defined( SW_MATERIAL_READ_IN_VERTEX )
 	context.material = SW_MATERIAL( context.instance.materialIndex );
 #endif
 
-#if defined( MATERIAL_VERTEX_DEFORM )
+#if defined( MATERIAL_VERTEX_DEFORM ) && !defined( SW_MATERIAL_NONE )
 	// 정점 셰이더가 정점을 옮기는 머티리얼(바람 · 파도) — 오프셋만 받고 위치는 여기서 만든다.
 	worldPosition.xyz += computeWorldPositionOffset( context );
 #endif
@@ -55,7 +57,16 @@ SwMaterialInterpolants VSMain( SwVertexInput input, uint vertexId : SV_VertexID 
 #if defined( SW_PASS_MESH_OUTLINE )
 	clipPosition.xy += outline.clipOffset;
 #endif
+#if defined( SW_MATERIAL_NONE ) && defined( SW_PASS_DEPTH_PREPASS ) && defined( MATERIAL_VERTEX_DEFORM )
+	// 정점을 옮기는 머티리얼(바람 · 파도)의 깊이 프리패스 — 이 셰이더는 옮긴 자리를 못 만든다. 남기면 기본 패스의 옮긴 정점이 프리패스 깊이에 가려 구멍이 난다.
+	// 클립 공간 밖 한 점으로 모아 아무것도 그리지 않는다(드로우는 그대로 나가지만 래스터가 없다). 그 머티리얼의 그림자는 머티리얼 셰이더가 그린다.
+	clipPosition = float4( 0.0f, 0.0f, -1.0f, 1.0f );
+#elif defined( SW_MATERIAL_NONE ) && defined( SW_PASS_SHADOW ) && defined( MATERIAL_SHADOW_CAST_OFF )
+	// 그림자를 드리우지 않는 머티리얼(풀) — 같은 방식으로 뺀다.
+	clipPosition = float4( 0.0f, 0.0f, -1.0f, 1.0f );
+#endif
 	output.position      = clipPosition;
+#if !defined( SW_MATERIAL_DEPTH_ONLY )
 	output.worldPosition = worldPosition.xyz;
 	output.color         = input.color;
 	// UV 는 정점 속성이다. 위치로 지어내면(`position.xy * 0.5 + 0.5`) 원점 중심 단위 도형이 아닐 때 텍스처가 엉뚱하게 붙는다.
@@ -66,12 +77,14 @@ SwMaterialInterpolants VSMain( SwVertexInput input, uint vertexId : SV_VertexID 
 	const float4 localTangent = swLoadMorphedTangent( context.instance.meshBatchIndex, vertexId, input.tangent );
 	output.tangent            = float4( mul( float4( localTangent.xyz, 0.0f ), context.instance.world ).xyz, localTangent.w );
 #endif
-#if !defined( SW_MATERIAL_READ_IN_VERTEX )
+#if !defined( SW_MATERIAL_READ_IN_VERTEX ) && !defined( SW_MATERIAL_NONE )
 	output.materialIndex = context.instance.materialIndex;
 #endif
 #if defined( SW_MATERIAL_CUSTOM_VARYINGS )
-	output.user = computeMaterialVaryings( context );
+	context.clipPosition = clipPosition;
+	output.user          = computeMaterialVaryings( context );
 #endif
+#endif // !SW_MATERIAL_DEPTH_ONLY
 	SW_APPEARANCE_WRITE( output, context.instance )
 	return output;
 }
@@ -79,6 +92,7 @@ SwMaterialInterpolants VSMain( SwVertexInput input, uint vertexId : SV_VertexID 
 // ------------------------------------------------------------------------------
 // 2) 픽셀 단계
 // ------------------------------------------------------------------------------
+#if !defined( SW_MATERIAL_DEPTH_ONLY )
 /** @brief 보간된 값(과 픽셀에서 읽는 셰이더의 머티리얼)으로 픽셀 문맥을 만든다. 양면 머티리얼의 뒷면은 노멀을 뒤집는다. */
 SwPixelContext swMakePixelContext( SwMaterialInterpolants input, bool bFrontFace )
 {
@@ -96,7 +110,7 @@ SwPixelContext swMakePixelContext( SwMaterialInterpolants input, bool bFrontFace
 	context.tangent       = input.tangent;
 #endif
 	context.user          = input.user;
-#if !defined( SW_MATERIAL_READ_IN_VERTEX )
+#if !defined( SW_MATERIAL_READ_IN_VERTEX ) && !defined( SW_MATERIAL_NONE )
 	// 머티리얼은 인스턴스의 materialIndex 로 버퍼에서 읽는다 — 드로우별 바인딩 없음. 픽셀 단계에서만 읽는다(binding.hlsli 9 절).
 	context.material      = SW_MATERIAL( input.materialIndex );
 #endif
@@ -123,6 +137,7 @@ float4 swComputeSelectedLighting( SwPixelContext context, SwMaterialSurface surf
 #endif
 	return lit;
 }
+#endif // !SW_MATERIAL_DEPTH_ONLY
 
 #if defined( SW_MATERIAL_DEPTH_PASS )
 

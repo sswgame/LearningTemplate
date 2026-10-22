@@ -1,50 +1,29 @@
-#include "binding.hlsli"
-
-struct PSInput
-{
-	float4 position : SV_POSITION;
-	float4 color    : COLOR;
-	float3 normal   : TEXCOORD0;
-	SW_APPEARANCE_VARYING // 등장 디더 변형만 등장 비율을 넘긴다(binding.hlsli 8-1)
-};
+/**
+ * gbuffer.hlsl — 머티리얼 셰이더가 없는 배치의 G버퍼 패스. 정점 색이 알베도, 거친 유전체다.
+ *
+ * 머티리얼 셰이더 뼈대(materialshader.hlsli · materialshadermain.hlsli)의 **머티리얼 없는 사용자**(SW_MATERIAL_NONE)다 — 머티리얼 구조체가 없고 표면 훅만 정의한다.
+ * 정점 로드(VAT · 모프 · 스킨) · 위치 · 노멀 · G버퍼 서명 · 보기 모드는 뼈대가 한다(머티리얼 셰이더의 G버퍼 패스와 같은 코드다).
+ */
+#include "lighting.hlsli"
 
 // 머티리얼 셰이더가 없는 배치의 표면 — 거친 유전체다(terrain · foliage 와 같은 값).
 static const float kSurfaceRoughness = 1.0f;
 static const float kSurfaceMetallic  = 0.0f;
 
-struct PSOutput
-{
-	float4 albedo   : SV_TARGET0;
-	float4 normal   : SV_TARGET1;
-	float4 material : SV_TARGET2;
-};
+// 훅 선택(materialshader.hlsli) — 머티리얼 없음. G버퍼 패스는 조명을 계산하지 않으므로(디퍼드 조명 패스가 한다) 조명 훅은 "조명 없음"을 고른다.
+#define SW_MATERIAL_NONE
+#define SW_MATERIAL_UNLIT
+#define SW_MATERIAL_DEFAULT_VARYINGS
+#include "materialshader.hlsli"
 
-PSInput VSMain(SwVertexInput input, uint vertexId : SV_VertexID)
+SwMaterialSurface computeMaterialSurface( SwPixelContext context )
 {
-	PSInput output;
-	SwInstanceData instance = swLoadInstance(input.instanceSlot);
-	float3 localPosition;
-	float3 localNormal;
-	swLoadAnimatedVertex(instance, vertexId, input.position, input.normal, localPosition, localNormal);
-	float4x4 world = instance.world;
-	// 위치는 깊이 프리패스와 **같은 함수**로 만든다(binding.hlsli swComputeWorldPosition).
-	float4 worldPosition = swComputeWorldPosition(localPosition, world);
-	output.position = swComputeClipPosition(worldPosition, g_ViewProj);
-	output.color = input.color;
-	// 노멀은 여인수 행렬로 옮긴다(binding.hlsli swComputeWorldNormal) — 월드 행렬을 곱하면 비균등 스케일에서 기운다.
-	output.normal = swComputeWorldNormal(localNormal, world);
-	SW_APPEARANCE_WRITE( output, instance )
-	return output;
+	SwMaterialSurface surface;
+	surface.albedo    = context.color;
+	surface.normal    = context.normal;
+	surface.roughness = kSurfaceRoughness;
+	surface.metallic  = kSurfaceMetallic;
+	return surface;
 }
 
-PSOutput PSMain(PSInput input)
-{
-	SW_APPEARANCE_CLIP( input )
-	PSOutput output;
-	float3 encodedNormal = saturate(normalize(input.normal) * 0.5f + 0.5f);
-	// 알파는 셰이딩 모델(binding.hlsli SW_GBUFFER_SHADING — 보기 모드 Unlit 이면 조명 없이)이다.
-	output.albedo = float4(input.color.rgb, SW_GBUFFER_SHADING);
-	output.normal = float4(encodedNormal, 1.0f);
-	output.material = swEncodeGbufferMaterial(kSurfaceRoughness, kSurfaceMetallic);
-	return output;
-}
+#include "materialshadermain.hlsli"
