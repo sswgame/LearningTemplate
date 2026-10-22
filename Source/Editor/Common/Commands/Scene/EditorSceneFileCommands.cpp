@@ -94,10 +94,13 @@ namespace sw::editor
 
     bool EditorSceneFileCommands::loadScene( string_view path )
     {
-        // 리소스 트리 안이면 리소스 id 로 연다. 절대 경로, 프로젝트 기준 경로, id 모두 받는다. 밖이면 받은 경로를 그대로 쓴다.
-        string loadPath = ResourcePaths::toResourceID( path );
+        // 리소스 id 로 연다. 절대 경로, 프로젝트 기준 경로, id 모두 받는다(붙인 디스크 도메인 아래면 그 도메인의 id). 그 밖의 OS 경로는 열 수 없다.
+        const string loadPath = ResourcePaths::toResourceID( path );
         if ( loadPath.empty() )
-            loadPath = string{ path };
+        {
+            SW_LOG_ERROR( "Open Scene: '%#' is outside the resource root and every mounted disk domain", path );
+            return false;
+        }
 
         SceneManager* pSceneManager = editor::findSubsystem<SceneManager>();
         if ( pSceneManager == nullptr )

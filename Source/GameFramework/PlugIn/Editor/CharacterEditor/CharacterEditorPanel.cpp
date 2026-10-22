@@ -357,6 +357,7 @@ namespace sw::editor
 
     bool CharacterEditorPanel::loadSocketFile()
     {
+        ensureKindTable(); // 문서는 첫 그리기 전에 열릴 수 있다(시나리오 · 콘텐츠 브라우저) — 종류 표 없이 읽으면 모든 kind 가 모르는 종류다
         const string readPath = ResourcePaths::findLooseFile( string_view( _path.c_str() ) ).getDiskPath();
         if ( readPath.empty() || _sockets.loadFromFile( readPath ) == false )
         {
@@ -1120,7 +1121,8 @@ namespace sw::editor
             return;
         }
         // 이 창의 데이터와 실행 중인 게임의 데이터에 올린다 — 씬의 컴포넌트는 게임 서비스(`AppearanceDatabase`)에서 프리셋을 푼다.
-        if ( _database.loadPresetFile( writePath ) == false )
+        // 쓰기는 디스크 경로, 읽기는 리소스 id 다(리소스 입구는 OS 경로를 받지 않는다).
+        if ( _database.loadPresetFile( resourceID ) == false )
         {
             _status = "Exported preset has errors - " + _database.getReport().joined();
             return;
@@ -1128,7 +1130,7 @@ namespace sw::editor
         AppearanceDatabase* pGameData = game::findSubsystem<AppearanceDatabase>();
         if ( pGameData == nullptr )
             SW_LOG_WARNING( "Exported appearance preset '%#' - this game has no AppearanceDatabase service, so scenes use it after the game loads it", presetID.c_str() );
-        else if ( pGameData->loadPresetFile( writePath ) == false )
+        else if ( pGameData->loadPresetFile( resourceID ) == false )
         {
             _status = "The game's appearance data rejected the preset - " + pGameData->getReport().joined();
             return;

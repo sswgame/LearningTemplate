@@ -10,6 +10,8 @@
 #include "Editor/Common/EditorPaths.h"
 #include "Editor/Common/EditorUtil.h"
 
+#include "Engine/Resource/ResourcePaths.h"
+
 namespace sw::editor
 {
     SW_LOG_CALLER( "AssetValidation" );
@@ -51,6 +53,9 @@ namespace sw::editor
     void EditorAssetValidation::requestValidation( string_view resourceRelativePath )
     {
         if ( _bDisabled == SW_TRUE || resourceRelativePath.empty() )
+            return;
+        // 규칙은 저장소 리소스(`Resource/`)의 것이다 — 붙인 디스크 도메인(시나리오의 `saved`)의 파일은 저장소의 guid 표로 볼 수 없다.
+        if ( ResourcePaths::isMountedDiskDomainID( ResourcePaths::toResourceID( resourceRelativePath ) ) )
             return;
         const string path = FileUtil::normalizeSeparators( resourceRelativePath );
         for ( const string& pending : _listPendingPath )

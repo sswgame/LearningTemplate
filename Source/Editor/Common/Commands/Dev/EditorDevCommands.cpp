@@ -392,10 +392,17 @@ namespace sw::editor
                     outReply = "could not write the prefab '" + absolutePath + "'";
                     return false;
                 }
+                // 캐시 · 놓인 프리팹 표는 리소스 id 로 찾는다 — 작업 폴더의 `Saved/` 는 시나리오가 붙인 디스크 도메인이다.
+                const string prefabID = ResourcePaths::toResourceID( absolutePath );
+                if ( prefabID.empty() )
+                {
+                    outReply = "'" + absolutePath + "' is not under a mounted disk domain - run it from a scenario";
+                    return false;
+                }
                 // 같은 경로를 다시 만들면 캐시의 옛 내용으로 스폰하지 않게 다음 로드가 파일을 다시 읽게 한다.
                 if ( AssetManager* pResources = editor::findSubsystem<AssetManager>() )
-                    pResources->getAssetCache<PrefabCache>().reload( absolutePath, nullptr );
-                pContext->getSubsystem<EditorWorkspace>().setPlacedPrefabPath( *pObject, absolutePath );
+                    pResources->getAssetCache<PrefabCache>().reload( prefabID, nullptr );
+                pContext->getSubsystem<EditorWorkspace>().setPlacedPrefabPath( *pObject, prefabID );
                 pContext->getSubsystem<EditorWorkspace>().markSceneDirty();
                 outReply = "created prefab " + absolutePath + " from " + pObject->getName().c_str();
                 return true;
@@ -403,7 +410,7 @@ namespace sw::editor
 
             /**
              * @brief 프리팹 인스턴스 하나를 활성 씬 루트에 스폰하고 고릅니다. 콘텐츠 브라우저에서 끌어 놓기와 같은 경로이고 되돌리기를 하나 남깁니다.
-             * @details `Saved/` 로 시작하는 경로는 `prefab.create` 가 만든 임시 프리팹(작업 폴더 기준)이고, 나머지는 리소스 id 다.
+             * @details `Saved/` 로 시작하는 경로는 `prefab.create` 가 만든 임시 프리팹(작업 폴더 기준)이라 시나리오가 붙인 `saved` 도메인의 id 로 바꿔 스폰하고, 나머지는 리소스 id 다.
              */
             static bool runSpawnPrefab( const vector<string>& listArgument, string& outReply )
             {
@@ -411,8 +418,18 @@ namespace sw::editor
                 if ( listArgument.size() != 1 || pManager == nullptr )
                     return false;
                 string path = listArgument[0];
-                if ( StringUtil::startsWith( path, "Saved/", true ) && resolveTempAssetPath( listArgument[0], path, outReply ) == false )
-                    return false;
+                if ( StringUtil::startsWith( path, "Saved/", true ) )
+                {
+                    string absolutePath;
+                    if ( resolveTempAssetPath( listArgument[0], absolutePath, outReply ) == false )
+                        return false;
+                    path = ResourcePaths::toResourceID( absolutePath ); // 시나리오가 붙인 `saved` 도메인의 id
+                    if ( path.empty() )
+                    {
+                        outReply = "'" + absolutePath + "' is not under a mounted disk domain - run it from a scenario";
+                        return false;
+                    }
+                }
                 const GameObject* pSpawned = EditorAssetCommands::spawnPrefab( pManager, path.c_str(), nullptr );
                 if ( pSpawned == nullptr )
                 {
