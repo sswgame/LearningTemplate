@@ -384,30 +384,38 @@ namespace sw
         _shaderLayoutBackend         = backend;
         _shaderLayoutCacheGeneration = ShaderReflectionLibrary::getCacheGeneration();
 
-        ShaderCompileDesc desc{};
-        desc._filePath     = _desc._shaderPath;
-        desc._entryPoint   = getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint;
-        desc._stage        = ShaderStage::Pixel;
-        desc._targetFormat = RHI::getShaderTargetFormat( pDevice->getBackendType() );
         ShaderReflectionData reflection{};
-        if ( ShaderReflectionLibrary::getOrReflect( desc, reflection ) == false )
+        if ( reflectMaterialSchema( _desc._shaderPath, RHI::getShaderTargetFormat( pDevice->getBackendType() ), reflection ) == false )
         {
-            SW_LOG_ERROR( "머티리얼 '%#' 의 셰이더 리플렉션을 찾지 못했습니다 ('%#') — XML 순서 패킹으로 남습니다.", _desc._name.c_str(), _desc._shaderPath.c_str() );
+            SW_LOG_ERROR( "머티리얼 '%#' 의 셰이더 리플렉션을 찾지 못했습니다 ('%#') — 바이트를 비우고 올리지 않습니다.", _desc._name.c_str(), _desc._shaderPath.c_str() );
+            discardBytesAfterLayoutError();
             return false;
         }
+        const bool bAllPacked = syncPropertiesFromReflection( reflection );
+        return bAllPacked && _elementStride != 0;
+    }
+
+    bool Material::reflectMaterialSchema( const string& shaderPath, ShaderTargetFormat targetFormat, ShaderReflectionData& outReflection )
+    {
+        ShaderCompileDesc desc{};
+        desc._filePath     = shaderPath;
+        desc._entryPoint   = getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint;
+        desc._stage        = ShaderStage::Pixel;
+        desc._targetFormat = targetFormat;
+        if ( ShaderReflectionLibrary::getOrReflect( desc, outReflection ) == false )
+            return false;
         // 머티리얼을 정점 셰이더만 읽는 셰이더(바람에 흔드는 식생 · 파도를 옮기는 물)는 픽셀 스테이지에 스키마가 없다 — 정점 스테이지에서 찾는다.
         // 두 스테이지가 함께 읽는 셰이더는 GL(ARB_gl_spirv)이 링크를 거절하므로 스키마는 한 스테이지에만 있다.
-        if ( hasMaterialSchema( reflection ) == false )
+        if ( hasMaterialSchema( outReflection ) == false )
         {
             ShaderCompileDesc    vertexDesc = desc;
             ShaderReflectionData vertexReflection{};
             vertexDesc._entryPoint = getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint;
             vertexDesc._stage      = ShaderStage::Vertex;
             if ( ShaderReflectionLibrary::getOrReflect( vertexDesc, vertexReflection ) && hasMaterialSchema( vertexReflection ) )
-                reflection = std::move( vertexReflection );
+                outReflection = std::move( vertexReflection );
         }
-        const bool bAllPacked = syncPropertiesFromReflection( reflection );
-        return bAllPacked && _elementStride != 0;
+        return true;
     }
 
     bool Material::isShaderLayoutSynced( RHIBackend backend ) const
@@ -464,8 +472,9 @@ namespace sw
         // 못 찾으면 조용히 틀리지 않고 알린다.
         if ( pSchemaCb == nullptr )
         {
-            SW_LOG_ERROR( "머티리얼 '%#' 의 셰이더에 머티리얼 스키마가 없습니다 — SW_MATERIAL_BEGIN/END 또는 MaterialCB 를 선언해야 합니다.",
-                          _desc._name.c_str() );
+            SW_LOG_ERROR( "머티리얼 '%#' 의 셰이더에 머티리얼 스키마가 없습니다 ('%#') — SW_MATERIAL_BEGIN/END 또는 MaterialCB 를 선언해야 합니다.",
+                          _desc._name.c_str(), _desc._shaderPath.c_str() );
+            discardBytesAfterLayoutError();
             return false;
         }
 
@@ -477,7 +486,18 @@ namespace sw
         const bool bAllPacked = matchPropertiesToSchema( *pSchemaCb );
         packPropertiesIntoBytes( pSchemaCb->_totalSize );
         _desc._listProperty = _data._listProperty;
+        // 불일치는 오류다 — 일부만 맞춘 바이트(적지 않은 칸의 0 = Vulkan 의 첫 실제 텍스처)를 올리지 않는다. 바이트가 비면 GPUScene 은 건너뛰고
+        // 인스턴스는 updateRHI 가 false 를 돌려준다.
+        if ( bAllPacked == false )
+            discardBytesAfterLayoutError();
         return bAllPacked;
+    }
+
+    void Material::discardBytesAfterLayoutError()
+    {
+        _data._bytes.clear();
+        _elementStride = 0;
+        ++_bufferGeneration;
     }
 
     void Material::fillPropertiesFromSchema( const ShaderBufferInfo& schema )
@@ -537,7 +557,8 @@ namespace sw
             }
             if ( pVar == nullptr )
             {
-                SW_LOG_WARNING( "Property '%#' missing in shader reflection.", prop._name.c_str() );
+                SW_LOG_ERROR( "Material '%#' lists property '%#' that the shader struct does not have - remove it from the .material file (%#)",
+                              _desc._name.c_str(), prop._name.c_str(), _desc._shaderPath.c_str() );
                 bAllPacked = false;
                 continue;
             }
@@ -554,8 +575,8 @@ namespace sw
                     prop._shaderType = reflected;
                 else
                 {
-                    SW_LOG_WARNING( "Reflection size mismatch for '%#' (shaderType %# bytes vs %#).",
-                                    prop._name.c_str(), MaterialUtil::packedSizeOf( prop._shaderType ), var._size );
+                    SW_LOG_ERROR( "Material '%#' property '%#' size mismatch (shaderType %# bytes vs shader %#, %#)",
+                                  _desc._name.c_str(), prop._name.c_str(), MaterialUtil::packedSizeOf( prop._shaderType ), var._size, _desc._shaderPath.c_str() );
                     bAllPacked = false;
                 }
             }
@@ -576,7 +597,7 @@ namespace sw
             }
             if ( bListed == false )
             {
-                SW_LOG_ERROR( "Material '%#' does not list shader field '%#' - add it to the .material file", _desc._name.c_str(), var._name.c_str() );
+                SW_LOG_ERROR( "Material '%#' does not list shader field '%#' - add it to the .material file (%#)", _desc._name.c_str(), var._name.c_str(), _desc._shaderPath.c_str() );
                 bAllPacked = false;
             }
         }

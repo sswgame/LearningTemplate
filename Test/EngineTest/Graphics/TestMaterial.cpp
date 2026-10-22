@@ -10,6 +10,7 @@
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Material/MaterialUtil.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
 #include "Engine/Resource/ResourcePaths.h"
 
@@ -872,16 +873,9 @@ SW_TEST_CASE( MaterialTest, PackingDoesNotClobberTheNextPropertySlot )
 
     reflection._listConstantBuffer.push_back( cb );
 
-    // 재매핑에 실패하므로 sync 는 false 를 돌려준다 — 그 자체는 기대한 결과다.
-    (void)material->syncPropertiesFromReflection( reflection );
-
-    const sw::vector<uint8> buffer = material->getBuffer();
-    SW_ASSERT_TRUE( buffer.size() >= 12 );
-
-    float32 tintValue{ 0.0f };
-    sw::Memory::copy( &tintValue, buffer.data() + 8, sizeof( tintValue ) );
-    SW_EXPECT_TRUE_MSG( tintValue > 0.24f && tintValue < 0.26f,
-                        "옆 프로퍼티(_tint)의 값이 _mask 의 16바이트 쓰기에 덮였습니다" );
+    // 재매핑에 실패하므로 sync 는 false 이고 바이트는 비어 GPU 에 올라가지 않는다 — 덮인 옆 값이 화면에 나가는 길이 없다.
+    SW_EXPECT_FALSE( material->syncPropertiesFromReflection( reflection ) );
+    SW_EXPECT_TRUE_MSG( material->getBuffer().empty(), "레이아웃 오류 뒤에 바이트가 남았습니다" );
 }
 
 /**
@@ -989,6 +983,112 @@ SW_TEST_CASE( MaterialTest, ShaderFieldMissingFromTheMaterialFailsTheSync )
         SW_EXPECT_FALSE( material->syncPropertiesFromReflection( reflection ) );
     }
     SW_EXPECT_TRUE_MSG( logs.countContaining( "does not list shader field 'albedoMap'" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE( material->getBuffer().empty() );
+}
+
+/**
+ * @brief [MaterialTest] 머티리얼에만 있는 필드(셰이더 구조체에 없는 프로퍼티)도 동기화 오류다 — 바이트를 비워 올리지 않는다
+ */
+SW_TEST_CASE( MaterialTest, MaterialFieldMissingFromTheShaderFailsTheSync )
+{
+    const sw::string xml =
+        "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+        "<MaterialDesc formatVersion=\"0\" name=\"ExtraProbe\" shaderPath=\"engine/shaders/forwardlit.hlsl\">"
+        "  <_properties>"
+        "    <item name=\"color\" type=\"Color\" shaderType=\"Float4\" defaultValue=\"1 1 1 1\"/>"
+        "    <item name=\"ghost\" type=\"Float\" shaderType=\"Float\" defaultValue=\"1\"/>"
+        "  </_properties>"
+        "</MaterialDesc>";
+    sw::shared_ptr<sw::Material> material = sw::Material::create();
+    SW_ASSERT_TRUE( material->loadFromXML( xml ) );
+
+    sw::ShaderReflectionData reflection{};
+    sw::ShaderBufferInfo     element{};
+    element._name      = "g_SwMaterials";
+    element._totalSize = 16;
+    sw::ShaderVariableInfo varColor{};
+    varColor._name = "color";
+    varColor._type = "Float4";
+    varColor._size = 16;
+    element._listVariable.push_back( varColor );
+    reflection._listStructuredElement.push_back( element );
+
+    test::ScopedLogCollector logs;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "material lists a field the shader lacks" );
+        SW_EXPECT_FALSE( material->syncPropertiesFromReflection( reflection ) );
+    }
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "lists property 'ghost'" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE( material->getBuffer().empty() );
+}
+
+/**
+ * @brief [MaterialTest] 머티리얼 스키마가 없는 리플렉션은 오류다 — XML 순서 바이트로 남지 않는다
+ */
+SW_TEST_CASE( MaterialTest, ReflectionWithoutMaterialSchemaFailsTheSync )
+{
+    const sw::string xml =
+        "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+        "<MaterialDesc formatVersion=\"0\" name=\"NoSchemaProbe\" shaderPath=\"engine/shaders/forwardlit.hlsl\">"
+        "  <_properties>"
+        "    <item name=\"color\" type=\"Color\" shaderType=\"Float4\" defaultValue=\"1 1 1 1\"/>"
+        "  </_properties>"
+        "</MaterialDesc>";
+    sw::shared_ptr<sw::Material> material = sw::Material::create();
+    SW_ASSERT_TRUE( material->loadFromXML( xml ) );
+
+    sw::ShaderReflectionData reflection{};
+    sw::ShaderBufferInfo     passCb{};
+    passCb._name = "PassCB";
+    sw::ShaderVariableInfo var{};
+    var._name = "viewProj";
+    var._type = "Float4x4";
+    var._size = 64;
+    passCb._listVariable.push_back( var );
+    reflection._listConstantBuffer.push_back( passCb );
+
+    test::ScopedLogCollector logs;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "reflection without material schema" );
+        SW_EXPECT_FALSE( material->syncPropertiesFromReflection( reflection ) );
+    }
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "머티리얼 스키마가 없습니다" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE( material->getBuffer().empty() );
+}
+
+/**
+ * @brief [MaterialTest] 저장소의 모든 .material 이 자기 셰이더의 머티리얼 구조체와 필드가 일치한다(셰이더에만 · XML 에만 있는 필드 없음)
+ * @details 일치하지 않으면 로드 뒤 첫 동기화에서 오류가 나고 바이트가 비어 화면에서 사라진다. 그 오류를 렌더 전에 한 번에 모아 보여 준다.
+ */
+SW_TEST_CASE( MaterialTest, EveryRepositoryMaterialMatchesItsShaderStruct )
+{
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+    const sw::string engineDir = sw::ResourcePaths::findLooseDomainFolder( "engine", "materials" ).getDiskPath();
+    if ( engineDir.empty() )
+        SW_TEST_SKIP( "Resource/engine/materials 를 찾지 못했습니다" );
+    const sw::string       resourceRoot = sw::FileUtil::getDirectoryPart( sw::FileUtil::getDirectoryPart( engineDir ) );
+    sw::vector<sw::string> listFile;
+    SW_ASSERT_TRUE( sw::FileUtil::collectFiles( resourceRoot, ".material", listFile, true ) );
+
+    uint32     checked{ 0 };
+    sw::string failures;
+    for ( const sw::string& path : listFile )
+    {
+        sw::string xml;
+        if ( sw::FileUtil::readTextFile( path, xml ) == false )
+            continue;
+        sw::shared_ptr<sw::Material> material = sw::Material::create();
+        if ( material->loadFromXML( xml ) == false || material->getDesc()._shaderPath.empty() )
+            continue;
+        sw::ShaderReflectionData reflection{};
+        if ( sw::Material::reflectMaterialSchema( material->getDesc()._shaderPath, sw::ShaderTargetFormat::SPIRV_Vulkan, reflection ) == false )
+            SW_TEST_SKIP( "셰이더 리플렉션을 구하지 못했습니다(App.exe --cook-shaders 필요)" );
+        if ( material->syncPropertiesFromReflection( reflection ) == false )
+            failures.append( path ).append( ", " );
+        ++checked;
+    }
+    SW_EXPECT_TRUE_MSG( checked > 0, "머티리얼을 하나도 검사하지 못했다" );
+    SW_EXPECT_TRUE_MSG( failures.empty(), failures.c_str() );
 }
 
 /**

@@ -488,7 +488,9 @@ namespace sw
                     continue;
                 // 레이아웃의 기준은 셰이더다. 이 백엔드의 리플렉션으로 오프셋 · stride 를 맞춘 뒤 바이트를 읽는다(맞춰져 있으면 그냥 지나간다 —
                 // 인스턴스가 있는 머티리얼은 위 applyInstanceCbs 의 updateRHI 가 이미 맞췄다).
-                pMaterial->ensureShaderLayout( pDevice );
+                // 실패(오류는 이미 남았다)하면 바이트가 비어 stride 에 끼지 않고 원소는 복사되지 않는다. 레거시 MaterialCB 는 stride 0 으로 false 지만 바이트가 있다.
+                if ( pMaterial->ensureShaderLayout( pDevice ) == false && pMaterial->getBuffer().empty() )
+                    continue;
                 uint32 entryStride = pMaterial->getElementStride();
                 if ( entryStride == 0 )
                     entryStride = static_cast<uint32>( pMaterial->getBuffer().size() );

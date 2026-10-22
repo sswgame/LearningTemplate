@@ -19,6 +19,7 @@
 namespace sw
 {
     enum class RHIBackend : uint32;
+    enum class ShaderTargetFormat : uint8;
 
     struct float4;
     struct ShaderBufferInfo;
@@ -108,16 +109,18 @@ namespace sw
          * @return 모든 프로퍼티를 셰이더 칸에 맞췄고, 셰이더 구조체의 필드를 머티리얼이 모두 적었으면 true 입니다. 스키마가 없거나 적지 않은 필드가 있으면
          *         오류를 남기고 false 입니다 — 적지 않은 칸을 0 으로 두고 넘어가지 않는다(텍스처 인덱스의 0 은 첫 실제 텍스처다).
          */
-        bool syncPropertiesFromReflection( const ShaderReflectionData& reflectionData );
+        [[nodiscard]] bool syncPropertiesFromReflection( const ShaderReflectionData& reflectionData );
         /** @brief 리플렉션에 머티리얼 스키마(`g_SwMaterials` 원소 또는 MaterialCB)가 있으면 true 입니다. */
         static bool hasMaterialSchema( const ShaderReflectionData& reflectionData );
+        /** @brief 셰이더의 머티리얼 스키마가 든 리플렉션을 구합니다(픽셀 스테이지, 없으면 정점 스테이지). 얻지 못하면 false 입니다. `ensureShaderLayout` 과 로드 검증이 함께 씁니다. */
+        [[nodiscard]] static bool reflectMaterialSchema( const string& shaderPath, ShaderTargetFormat targetFormat, ShaderReflectionData& outReflection );
         /**
          * @brief 이 디바이스 백엔드의 셰이더 리플렉션(g_SwMaterials 원소 레이아웃)으로 프로퍼티 오프셋과 원소 stride 를 맞춥니다.
          * @details 이미 맞춰져 있으면(`isShaderLayoutSynced`) 아무것도 하지 않는다. GPUScene 과 인스턴스(`MaterialInstance::updateRHI`)가 바이트를
          *          읽기 전에 부른다. 레이아웃의 기준은 셰이더다.
          * @return 원소 stride 를 얻었고 동기화가 성공했으면(`syncPropertiesFromReflection`) true 입니다.
          */
-        bool ensureShaderLayout( IRHIDevice* pDevice );
+        [[nodiscard]] bool ensureShaderLayout( IRHIDevice* pDevice );
         /**
          * @brief 프로퍼티 오프셋과 stride 가 지금 이 백엔드의 셰이더 레이아웃에 맞춰져 있는지 나타냅니다.
          * @details 다시 로드하면(`loadFromXML`, 에셋 핫 리로드, 에디터 미리보기) XML 순서로 다시 쌓이므로 풀리고, 셰이더 리플렉션 캐시가
@@ -270,6 +273,8 @@ namespace sw
         void fillPropertiesFromSchema( const ShaderBufferInfo& schema );
         /** @brief 있는 프로퍼티를 스키마 멤버에 맞춰 오프셋 · 크기 · 셰이더 타입을 받습니다. 없거나 크기가 맞지 않는 프로퍼티가 있으면 false 입니다. */
         [[nodiscard]] bool matchPropertiesToSchema( const ShaderBufferInfo& schema );
+        /** @brief 레이아웃 오류 뒤 바이트와 stride 를 비운다 — 틀린 바이트(적지 않은 칸의 0)가 GPU 에 올라가지 않게 한다. */
+        void discardBytesAfterLayoutError();
 
         /// @brief 비동기 파일 로드가 머티리얼이 아직 살아 있는지 확인하는 상태입니다. 소멸자가 포인터를 끊습니다.
         struct AsyncLoadState

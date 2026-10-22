@@ -667,6 +667,7 @@
 
 - **런타임 UI 를 위해 RHI 에 R8 텍스처, 영역 업로드, 프리멀티플라이 블렌드, 가위 사각형을 더했습니다**(2026-10-06). 사각형 클리핑은 가위로 합니다(Slate, Dear ImGui, Godot 과 같고 배치가 끊기지 않음).
   둥근 모서리 클리핑만 셰이더에서 합니다.
+- **머티리얼 XML 과 셰이더 구조체의 필드 불일치는 오류다 — 폴백 없음**(2026-10-23): 셰이더에만 있는 필드(0 으로 채우면 텍스처 인덱스가 Vulkan 의 첫 실제 텍스처가 된다) · XML 에만 있는 필드 · 리플렉션을 얻지 못함은 모두 `Material::syncPropertiesFromReflection` / `ensureShaderLayout` 이 오류(머티리얼 · 필드 · 셰이더 경로)를 남기고 바이트를 비운다. 두 함수는 `[[nodiscard]]` 이고 `MaterialTest.EveryRepositoryMaterialMatchesItsShaderStruct` 가 저장소의 모든 .material 을 한 번에 검사한다.
 - **프리멀티플라이 블렌드는 PSO 비트(`_bPremultipliedAlpha`)이고, 머티리얼 블렌드 enum 에는 넣지 않습니다**(2026-10-06). 언리얼도 머티리얼의 `EBlendMode` 와 RHI 블렌드 상태가 따로입니다. 머티리얼이 원하게 되면 그때 enum 에 더합니다.
 - **보기 모드는 뷰마다의 설정입니다**(`RenderViewSettings::_viewMode`, 2026-10-10). 에디터 씬 뷰 툴바는 씬 뷰에만 걸고 게임 뷰는 주 출력 모드(Lit)로 그립니다 — 언리얼 뷰 패밀리마다의 View Mode, 유니티 Scene 뷰 Draw Mode 와 같습니다.
   Normals · Depth · Overdraw 는 표면 값을 보이므로 후처리 · 톤맵을 건너뜁니다(언리얼 버퍼 시각화와 같다). Overdraw 는 RHI 에 블렌드를 더하지 않고 알파 0 의 프리멀티플라이로 더하며, 깊이 테스트는 남기고 쓰기만 끕니다(테스트를 끄면 Vulkan 이 깊이 첨부 없는 PSO 로 만든다).
