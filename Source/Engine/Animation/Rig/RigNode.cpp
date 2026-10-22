@@ -153,13 +153,12 @@ namespace sw
         const utf8* const pValue = readAttribute( key, bRequired );
         if ( pValue == nullptr )
             return bRequired == false;
-        const string_view text{ pValue };
-        if ( text != "true" && text != "false" )
+        // 쓰는 쪽(`XMLNode::appendAttribute( bool )` 의 1/0)과 같은 문법 하나로 읽는다 — 리그만의 true/false 문법을 두면 엔진이 쓴 파일을 못 읽는다.
+        if ( StringUtil::tryParseBool( string_view{ pValue }, outValue ) == false )
         {
-            fail( makeKeyMessage( key, "must be true or false" ) );
+            fail( makeKeyMessage( key, "must be a boolean (true/false/1/0)" ) );
             return false;
         }
-        outValue = text == "true";
         return true;
     }
 

@@ -17,7 +17,7 @@ using namespace sw;
 
 namespace
 {
-    constexpr int64 kNowMs = 1000000; ///< 테스트 벽시계(초로 1000)
+    constexpr int64 kAppleNowMs = 1000000; ///< 테스트 벽시계(초로 1000)
 
     /** @brief 가짜 애플 — `/jwks`, `/token`(client secret 확인 뒤 코드 교환), `/revoke`. */
     class FakeAppleHandler final : public IHTTPRequestHandler
@@ -106,7 +106,7 @@ namespace
         NetPublicKey                           _idPublicKey{};
         sw::string                             _idPrivateKeyPem{};
         sw::unique_ptr<IPlatformLoginProvider> _provider;
-        int64                                  _nowMs{ kNowMs };
+        int64                                  _nowMs{ kAppleNowMs };
 
         AppleFixture()
             : _handler{}

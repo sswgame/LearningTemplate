@@ -6,6 +6,7 @@
 #include "Engine/Animation/AnimationJSONUtil.h"
 #include "Engine/Animation/Facial/FacialRig.h"
 #include "Engine/Animation/Facial/LipSync.h"
+#include "Engine/Animation/Facial/LiveLinkFace.h"
 #include "Engine/Animation/Graph/AnimationBoneMask.h"
 #include "Engine/Animation/Graph/AnimationGraphAsset.h"
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
@@ -508,6 +509,20 @@ namespace
         static bool isVisemeTrack( sw::string_view resourceID ) { return endsWith( resourceID, sw::VisemeTrack::kExtension ); }
         static bool isFacialRig( sw::string_view resourceID ) { return endsWith( resourceID, sw::FacialRig::kExtension ); }
         static bool isVrmAvatar( sw::string_view resourceID ) { return endsWith( resourceID, ".avatar.xml" ); }
+        /** @brief Live Link Face 패킷 배치 표(`livelinkface.xml`)와 머리마다의 연결 표(`<머리>.livelinkface.xml`) — 연결 표는 가리키는 배치 표까지 읽어야 성공한다. */
+        static bool               isLiveLinkFaceLayout( sw::string_view resourceID ) { return resourceID == "livelinkface.xml" || endsWith( resourceID, "/livelinkface.xml" ); }
+        static bool               isLiveLinkFaceMapping( sw::string_view resourceID ) { return endsWith( resourceID, ".livelinkface.xml" ); }
+        [[nodiscard]] static bool loadLiveLinkFaceLayout( const sw::string& resourceID )
+        {
+            sw::LiveLinkFaceLayout layout;
+            return layout.loadFromResource( resourceID );
+        }
+        [[nodiscard]] static bool loadLiveLinkFaceMapping( const sw::string& resourceID )
+        {
+            sw::LiveLinkFaceMapping mapping;
+            sw::LiveLinkFaceLayout  layout;
+            return mapping.loadFromResource( resourceID, layout );
+        }
 
         /** @brief VRM 아바타 임포트 산출물(`<모델>.avatar.xml`) — 런타임은 이 파일 대신 임포트가 옮긴 얼굴 리그 · 후처리 리그를 읽는다(VrmRuntimeAssets) — 여기는 humanoid · 1인칭 기록이다. 루트 `VrmAvatar` 에 `_version` 속성과 `_mapHumanBone` 요소가 있는지만 본다. */
         [[nodiscard]] static bool loadVrmAvatar( const sw::string& resourceID )
@@ -586,6 +601,8 @@ namespace
             {            "visemes",         &isVisemeTrack,                      &loadCatalog<sw::VisemeTrack>},
             {             "facial",           &isFacialRig,                        &loadCatalog<sw::FacialRig>},
             {          "vrmavatar",           &isVrmAvatar,                                     &loadVrmAvatar},
+            { "livelinkfacelayout",  &isLiveLinkFaceLayout,                            &loadLiveLinkFaceLayout},
+            {"livelinkfacemapping", &isLiveLinkFaceMapping,                           &loadLiveLinkFaceMapping},
         };
 
         /**

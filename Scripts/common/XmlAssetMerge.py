@@ -123,7 +123,8 @@ def parseXmlAsset(text: str) -> XmlAsset:
 
 
 def escapeAttributeInternal(value: str) -> str:
-    return (value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+    # pugixml 은 속성 값에서 `>` 를 이스케이프하지 않는다(요소 텍스트에서만 `&gt;`) — 엔진 저장기와 같게 둔다.
+    return (value.replace("&", "&amp;").replace("<", "&lt;").replace('"', "&quot;")
             .replace("\n", "&#10;").replace("\r", "&#13;").replace("\t", "&#9;"))
 
 
@@ -134,7 +135,8 @@ def escapeTextInternal(value: str) -> str:
 def wrapStartTagInternal(indent: str, tag: str, listAttribute: list[str], tail: str) -> str:
     """엔진 저장기와 같은 접기 — 120 열을 넘고 속성이 둘 이상이면 첫 속성 옆 열에 나머지를 세운다."""
     line = f"{indent}<{tag}{''.join(' ' + attribute for attribute in listAttribute)}{tail}"
-    if len(line) <= kWrapColumn or len(listAttribute) < 2:
+    # 엔진은 UTF-8 바이트 수로 잰다(`wrapLongElementLines` 의 `line.size()`) — 글자 수로 재면 한글 줄을 다르게 접는다.
+    if len(line.encode("utf-8")) <= kWrapColumn or len(listAttribute) < 2:
         return line
     alignment = " " * (len(tag) + 2)
     listLine = [f"{indent}<{tag} {listAttribute[0]}"]
